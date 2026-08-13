@@ -183,6 +183,59 @@ impl BigInteger {
         let start = words.iter().position(|&w| w != 0).unwrap();
         BigInteger::new(1, words[start..].to_vec())
     }
+
+    /// Creates a `BigInteger` from a big-endian, two's-complement byte slice.
+    ///
+    /// The most-significant byte comes first. A set top bit in that byte means
+    /// the value is negative (two's complement). An empty slice is zero.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bc_math::big_integer::BigInteger;
+    ///
+    /// let n = BigInteger::from_bytes_be(&[0xFF]); // -1
+    /// ```
+    pub fn from_bytes_be(bytes: &[u8]) -> Self {
+        if bytes.is_empty() {
+            return BigInteger::new(0, Vec::new());
+        }
+        if bytes[0] & 0x80 != 0 {
+            // 最高位為 1：兩補數負數
+            BigInteger::new(-1, make_magnitude_be_negative(bytes))
+        } else {
+            // 非負：magnitude 為空時代表 0
+            let magnitude = make_magnitude_be(bytes);
+            let sign = if magnitude.is_empty() { 0 } else { 1 };
+            BigInteger::new(sign, magnitude)
+        }
+    }
+
+    /// Creates a `BigInteger` from a little-endian, two's-complement byte slice.
+    ///
+    /// The least-significant byte comes first, so the sign lives in the top bit
+    /// of the *last* byte. An empty slice is zero.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bc_math::big_integer::BigInteger;
+    ///
+    /// let n = BigInteger::from_bytes_le(&[0xFF]); // -1
+    /// ```
+    pub fn from_bytes_le(bytes: &[u8]) -> Self {
+        if bytes.is_empty() {
+            return BigInteger::new(0, Vec::new());
+        }
+        // little-endian：最高位元組在尾端，符號位取最後一個位元組
+        if bytes[bytes.len() - 1] & 0x80 != 0 {
+            BigInteger::new(-1, make_magnitude_le_negative(bytes))
+        } else {
+            let magnitude = make_magnitude_le(bytes);
+            let sign = if magnitude.is_empty() { 0 } else { 1 };
+            BigInteger::new(sign, magnitude)
+        }
+    }
 }
 
 fn make_magnitude_be(buffer: &[u8]) -> Vec<u32> {
@@ -567,5 +620,103 @@ mod tests {
     fn make_magnitude_le_negative_minus_128() {
         // LE 的 0x80（單一位元組）= -128
         assert_eq!(make_magnitude_le_negative(&[0x80]), vec![128]);
+    }
+
+    #[test]
+    fn from_bytes_be_empty_is_zero() {
+        let n = BigInteger::from_bytes_be(&[]);
+        assert_eq!(n.sign, 0);
+        assert!(n.magnitude.is_empty());
+    }
+
+    #[test]
+    fn from_bytes_be_zero() {
+        let n = BigInteger::from_bytes_be(&[0x00, 0x00]);
+        assert_eq!(n.sign, 0);
+        assert!(n.magnitude.is_empty());
+    }
+
+    #[test]
+    fn from_bytes_be_positive() {
+        let n = BigInteger::from_bytes_be(&[0x05]);
+        assert_eq!(n.sign, 1);
+        assert_eq!(n.magnitude, vec![5]);
+    }
+
+    #[test]
+    fn from_bytes_be_leading_zero_forces_positive() {
+        // 0x80 單獨會被當負數；前綴一個 0x00 才是正的 128
+        let n = BigInteger::from_bytes_be(&[0x00, 0x80]);
+        assert_eq!(n.sign, 1);
+        assert_eq!(n.magnitude, vec![128]);
+    }
+
+    #[test]
+    fn from_bytes_be_minus_one() {
+        let n = BigInteger::from_bytes_be(&[0xFF]);
+        assert_eq!(n.sign, -1);
+        assert_eq!(n.magnitude, vec![1]);
+    }
+
+    #[test]
+    fn from_bytes_be_minus_128() {
+        let n = BigInteger::from_bytes_be(&[0x80]);
+        assert_eq!(n.sign, -1);
+        assert_eq!(n.magnitude, vec![128]);
+    }
+
+    #[test]
+    fn from_bytes_be_matches_from_i32() {
+        // 用 i32 的 big-endian 位元組重建，應與 from_i32 結果一致
+        for value in [0, 1, -1, 5, -5, 255, -255, 65536, -65536, i32::MAX, i32::MIN] {
+            let n = BigInteger::from_bytes_be(&value.to_be_bytes());
+            let expected = BigInteger::from_i32(value);
+            assert_eq!(n.sign, expected.sign, "sign mismatch for {value}");
+            assert_eq!(n.magnitude, expected.magnitude, "magnitude mismatch for {value}");
+        }
+    }
+
+    #[test]
+    fn from_bytes_le_empty_is_zero() {
+        let n = BigInteger::from_bytes_le(&[]);
+        assert_eq!(n.sign, 0);
+        assert!(n.magnitude.is_empty());
+    }
+
+    #[test]
+    fn from_bytes_le_leading_zero_forces_positive() {
+        // LE：符號在尾端。[0x80, 0x00] 尾端最高位為 0 → 正的 128
+        let n = BigInteger::from_bytes_le(&[0x80, 0x00]);
+        assert_eq!(n.sign, 1);
+        assert_eq!(n.magnitude, vec![128]);
+    }
+
+    #[test]
+    fn from_bytes_le_minus_one() {
+        let n = BigInteger::from_bytes_le(&[0xFF]);
+        assert_eq!(n.sign, -1);
+        assert_eq!(n.magnitude, vec![1]);
+    }
+
+    #[test]
+    fn from_bytes_le_matches_from_i32() {
+        // 用 i32 的 little-endian 位元組重建，應與 from_i32 結果一致
+        for value in [0, 1, -1, 5, -5, 255, -255, 65536, -65536, i32::MAX, i32::MIN] {
+            let n = BigInteger::from_bytes_le(&value.to_le_bytes());
+            let expected = BigInteger::from_i32(value);
+            assert_eq!(n.sign, expected.sign, "sign mismatch for {value}");
+            assert_eq!(n.magnitude, expected.magnitude, "magnitude mismatch for {value}");
+        }
+    }
+
+    #[test]
+    fn from_bytes_le_matches_be_reversed() {
+        // 同一個數：BE 位元組反轉即為 LE 位元組，兩者結果必須相同
+        let be = [0xFF, 0x00, 0x00]; // -65536
+        let le: Vec<u8> = be.iter().rev().copied().collect();
+        let a = BigInteger::from_bytes_be(&be);
+        let b = BigInteger::from_bytes_le(&le);
+        assert_eq!(a.sign, b.sign);
+        assert_eq!(a.magnitude, b.magnitude);
     }
 }
