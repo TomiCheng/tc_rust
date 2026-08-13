@@ -71,6 +71,32 @@ impl BigInteger {
             .get_or_init(|| calc_bit_length(self.sign, &self.magnitude))
     }
 
+    /// Returns the number of bits in the two's-complement representation of this
+    /// value that differ from the sign bit. For non-negative values this is the
+    /// ordinary population count; for negative values it is `popcount(|n| - 1)`.
+    ///
+    /// The result is computed once and cached.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bc_math::big_integer::BigInteger;
+    ///
+    /// assert_eq!(BigInteger::from_u32(0b101).bit_count(), 2);
+    /// assert_eq!(BigInteger::from_i32(-1).bit_count(), 0);
+    /// assert_eq!(BigInteger::from_i32(-8).bit_count(), 3);
+    /// ```
+    pub fn bit_count(&self) -> u32 {
+        *self.bits.get_or_init(|| {
+            if self.sign < 0 {
+                // 負數：bitCount = popcount(|n| - 1)
+                bit_count_negative(&self.magnitude)
+            } else {
+                self.magnitude.iter().map(|w| w.count_ones()).sum()
+            }
+        })
+    }
+
     /// Creates a `BigInteger` from an unsigned 32-bit value.
     ///
     /// # Examples
@@ -326,6 +352,25 @@ fn bit_len(x: u32) -> u32 {
     u32::BITS - x.leading_zeros()
 }
 
+/// 計算負數的 bitCount，等於 `popcount(magnitude - 1)`。
+///
+/// `magnitude` 為 big-endian、非空（負數必非零）。減 1 從最低位（尾端）借位。
+fn bit_count_negative(magnitude: &[u32]) -> u32 {
+    let mut borrow = true; // 減 1：一開始就欠一個借位
+    let mut count = 0;
+    for &w in magnitude.iter().rev() {
+        let v = if borrow {
+            let (r, b) = w.overflowing_sub(1);
+            borrow = b; // w == 0 時借位繼續往高位傳
+            r
+        } else {
+            w
+        };
+        count += v.count_ones();
+    }
+    count
+}
+
 fn make_magnitude_be(buffer: &[u8]) -> Vec<u32> {
     // 去除前導零位元組；全零（或空）緩衝區會得到空切片
     let start = buffer.iter().position(|&b| b != 0).unwrap_or(buffer.len());
@@ -458,6 +503,47 @@ mod tests {
         assert_eq!(n.bit_length(), 3);
         assert_eq!(n.bit_length(), 3);
         assert!(n.bit_length.get().is_some()); // 快取已填入
+    }
+
+    #[test]
+    fn bit_count_zero() {
+        assert_eq!(BigInteger::from_u32(0).bit_count(), 0);
+    }
+
+    #[test]
+    fn bit_count_positive() {
+        assert_eq!(BigInteger::from_u32(0b101).bit_count(), 2);
+        assert_eq!(BigInteger::from_u32(0b111).bit_count(), 3);
+        assert_eq!(BigInteger::from_u32(0xFF).bit_count(), 8);
+        assert_eq!(BigInteger::from_u32(u32::MAX).bit_count(), 32);
+    }
+
+    #[test]
+    fn bit_count_positive_multi_word() {
+        // u64::MAX 全為 1，共 64 個
+        assert_eq!(BigInteger::from_u64(u64::MAX).bit_count(), 64);
+    }
+
+    #[test]
+    fn bit_count_negative() {
+        // 負數：popcount(|n| - 1)
+        assert_eq!(BigInteger::from_i32(-1).bit_count(), 0); // |−1|−1 = 0
+        assert_eq!(BigInteger::from_i32(-2).bit_count(), 1); // 1 = 0b1
+        assert_eq!(BigInteger::from_i32(-8).bit_count(), 3); // 7 = 0b111
+    }
+
+    #[test]
+    fn bit_count_negative_multi_word_borrow() {
+        // -(2^32)：|n|-1 = 2^32-1 = 0xFFFF_FFFF，借位跨字，共 32 個 1
+        assert_eq!(BigInteger::from_i64(-(1 << 32)).bit_count(), 32);
+    }
+
+    #[test]
+    fn bit_count_is_cached() {
+        let n = BigInteger::from_u32(0b101);
+        assert_eq!(n.bit_count(), 2);
+        assert_eq!(n.bit_count(), 2);
+        assert!(n.bits.get().is_some());
     }
 
     #[test]
