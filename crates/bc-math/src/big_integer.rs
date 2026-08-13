@@ -51,6 +51,26 @@ impl BigInteger {
         self.sign == 0
     }
 
+    /// Returns the number of bits in the minimal two's-complement representation
+    /// of this value, excluding the sign bit. Zero has a bit length of `0`.
+    ///
+    /// The result is computed once and cached.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bc_math::big_integer::BigInteger;
+    ///
+    /// assert_eq!(BigInteger::from_u32(0).bit_length(), 0);
+    /// assert_eq!(BigInteger::from_u32(5).bit_length(), 3); // 0b101
+    /// assert_eq!(BigInteger::from_i32(-8).bit_length(), 3); // 負的 2 次方少 1
+    /// ```
+    pub fn bit_length(&self) -> u32 {
+        *self
+            .bit_length
+            .get_or_init(|| calc_bit_length(self.sign, &self.magnitude))
+    }
+
     /// Creates a `BigInteger` from an unsigned 32-bit value.
     ///
     /// # Examples
@@ -284,6 +304,28 @@ impl PartialEq for BigInteger {
 
 impl Eq for BigInteger {}
 
+/// 計算 magnitude（big-endian、無前導零）的位元長度，不含符號位。
+fn calc_bit_length(sign: i32, magnitude: &[u32]) -> u32 {
+    // 無前導零，故第一個字即最高位字；空 magnitude 代表 0
+    let Some((&first, rest)) = magnitude.split_first() else {
+        return 0;
+    };
+
+    // 低位每個滿字貢獻 u32::BITS 位，加上最高位字的有效位數
+    let mut bit_length = u32::BITS * rest.len() as u32 + bit_len(first);
+
+    // 負的 2 次方（整個 magnitude 只有單一設定位元）時，少 1 位
+    if sign < 0 && first.is_power_of_two() && rest.iter().all(|&w| w == 0) {
+        bit_length -= 1;
+    }
+    bit_length
+}
+
+/// 單一字的位元長度（最高設定位元的位置 + 1）；`x` 為 0 時得 0。
+fn bit_len(x: u32) -> u32 {
+    u32::BITS - x.leading_zeros()
+}
+
 fn make_magnitude_be(buffer: &[u8]) -> Vec<u32> {
     // 去除前導零位元組；全零（或空）緩衝區會得到空切片
     let start = buffer.iter().position(|&b| b != 0).unwrap_or(buffer.len());
@@ -369,6 +411,53 @@ mod tests {
         // 空位元組與全零位元組都應是零
         assert!(BigInteger::from_bytes_be(&[]).is_zero());
         assert!(BigInteger::from_bytes_be(&[0, 0, 0]).is_zero());
+    }
+
+    #[test]
+    fn bit_length_zero() {
+        assert_eq!(BigInteger::from_u32(0).bit_length(), 0);
+    }
+
+    #[test]
+    fn bit_length_positive() {
+        assert_eq!(BigInteger::from_u32(1).bit_length(), 1); // 0b1
+        assert_eq!(BigInteger::from_u32(5).bit_length(), 3); // 0b101
+        assert_eq!(BigInteger::from_u32(8).bit_length(), 4); // 0b1000
+        assert_eq!(BigInteger::from_u32(255).bit_length(), 8);
+        assert_eq!(BigInteger::from_u32(256).bit_length(), 9);
+    }
+
+    #[test]
+    fn bit_length_negative_non_power_of_two() {
+        // 非 2 次方的負數，位元長度與正數相同
+        assert_eq!(BigInteger::from_i32(-5).bit_length(), 3);
+        assert_eq!(BigInteger::from_i32(-7).bit_length(), 3);
+    }
+
+    #[test]
+    fn bit_length_negative_power_of_two_is_one_less() {
+        // 負的 2 次方少 1 位：-8 為 3（+8 為 4）
+        assert_eq!(BigInteger::from_i32(-8).bit_length(), 3);
+        assert_eq!(BigInteger::from_i32(-1).bit_length(), 0); // -1 = -2^0
+        assert_eq!(BigInteger::from_i32(-256).bit_length(), 8);
+    }
+
+    #[test]
+    fn bit_length_multi_word() {
+        // 2^32：magnitude [1, 0]，位元長度 33；負的則為 32
+        assert_eq!(BigInteger::from_u64(1 << 32).bit_length(), 33);
+        assert_eq!(BigInteger::from_i64(-(1 << 32)).bit_length(), 32);
+        // u64::MAX 佔滿 64 位
+        assert_eq!(BigInteger::from_u64(u64::MAX).bit_length(), 64);
+    }
+
+    #[test]
+    fn bit_length_is_cached_and_stable() {
+        // 多次呼叫結果一致（第一次計算後快取）
+        let n = BigInteger::from_u32(5);
+        assert_eq!(n.bit_length(), 3);
+        assert_eq!(n.bit_length(), 3);
+        assert!(n.bit_length.get().is_some()); // 快取已填入
     }
 
     #[test]
