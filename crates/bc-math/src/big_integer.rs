@@ -3,7 +3,8 @@ use std::sync::OnceLock;
 #[derive(Clone, Debug)]
 pub struct BigInteger {
     sign: i32,
-    magnitude: Vec<u32>,
+    /// 不可變、big-endian、無前導零；不可變型別故用 `Box<[u32]>` 而非 `Vec<u32>`。
+    magnitude: Box<[u32]>,
     /// 惰性快取：設定位元數 (population count)。
     bits: OnceLock<u32>,
     /// 惰性快取：位元長度。
@@ -11,10 +12,11 @@ pub struct BigInteger {
 }
 
 impl BigInteger {
+    // 施工端用 `Vec<u32>` 傳入，儲存時落地成 `Box<[u32]>`。
     fn new(sign: i32, magnitude: Vec<u32>) -> Self {
         BigInteger {
             sign,
-            magnitude,
+            magnitude: magnitude.into_boxed_slice(),
             bits: OnceLock::new(),
             bit_length: OnceLock::new(),
         }
@@ -170,7 +172,7 @@ impl BigInteger {
             return BigInteger::new(0, Vec::new());
         }
         // `unsigned_abs` avoids overflow on `i64::MIN`; reuse `from_u64`'s word split.
-        let magnitude = BigInteger::from_u64(value.unsigned_abs()).magnitude;
+        let magnitude = Vec::from(BigInteger::from_u64(value.unsigned_abs()).magnitude);
         let sign = if value < 0 { -1 } else { 1 };
         BigInteger::new(sign, magnitude)
     }
@@ -189,7 +191,7 @@ impl BigInteger {
             return BigInteger::new(0, Vec::new());
         }
         // `unsigned_abs` avoids overflow on `i128::MIN`; reuse `from_u128`'s word split.
-        let magnitude = BigInteger::from_u128(value.unsigned_abs()).magnitude;
+        let magnitude = Vec::from(BigInteger::from_u128(value.unsigned_abs()).magnitude);
         let sign = if value < 0 { -1 } else { 1 };
         BigInteger::new(sign, magnitude)
     }
@@ -398,14 +400,14 @@ mod tests {
     fn from_u32_positive() {
         let n = BigInteger::from_u32(5);
         assert_eq!(n.sign, 1);
-        assert_eq!(n.magnitude, vec![5]);
+        assert_eq!(n.magnitude.to_vec(), vec![5]);
     }
 
     #[test]
     fn from_u32_max() {
         let n = BigInteger::from_u32(u32::MAX);
         assert_eq!(n.sign, 1);
-        assert_eq!(n.magnitude, vec![u32::MAX]);
+        assert_eq!(n.magnitude.to_vec(), vec![u32::MAX]);
     }
 
     #[test]
@@ -416,7 +418,7 @@ mod tests {
 
         let max = BigInteger::from_u16(u16::MAX);
         assert_eq!(max.sign, 1);
-        assert_eq!(max.magnitude, vec![u32::from(u16::MAX)]);
+        assert_eq!(max.magnitude.to_vec(), vec![u32::from(u16::MAX)]);
     }
 
     #[test]
@@ -427,7 +429,7 @@ mod tests {
 
         let max = BigInteger::from_u8(u8::MAX);
         assert_eq!(max.sign, 1);
-        assert_eq!(max.magnitude, vec![u32::from(u8::MAX)]);
+        assert_eq!(max.magnitude.to_vec(), vec![u32::from(u8::MAX)]);
     }
 
     #[test]
@@ -442,7 +444,7 @@ mod tests {
         // Fits in one word -> no leading zero word.
         let n = BigInteger::from_u64(5);
         assert_eq!(n.sign, 1);
-        assert_eq!(n.magnitude, vec![5]);
+        assert_eq!(n.magnitude.to_vec(), vec![5]);
     }
 
     #[test]
@@ -450,14 +452,14 @@ mod tests {
         // 0x0000_0001_0000_0002 -> [1, 2] big-endian.
         let n = BigInteger::from_u64((1 << 32) | 2);
         assert_eq!(n.sign, 1);
-        assert_eq!(n.magnitude, vec![1, 2]);
+        assert_eq!(n.magnitude.to_vec(), vec![1, 2]);
     }
 
     #[test]
     fn from_u64_max() {
         let n = BigInteger::from_u64(u64::MAX);
         assert_eq!(n.sign, 1);
-        assert_eq!(n.magnitude, vec![u32::MAX, u32::MAX]);
+        assert_eq!(n.magnitude.to_vec(), vec![u32::MAX, u32::MAX]);
     }
 
     #[test]
@@ -471,14 +473,14 @@ mod tests {
     fn from_i32_positive() {
         let n = BigInteger::from_i32(5);
         assert_eq!(n.sign, 1);
-        assert_eq!(n.magnitude, vec![5]);
+        assert_eq!(n.magnitude.to_vec(), vec![5]);
     }
 
     #[test]
     fn from_i32_negative() {
         let n = BigInteger::from_i32(-5);
         assert_eq!(n.sign, -1);
-        assert_eq!(n.magnitude, vec![5]);
+        assert_eq!(n.magnitude.to_vec(), vec![5]);
     }
 
     #[test]
@@ -486,43 +488,43 @@ mod tests {
         // -i32::MIN would overflow; magnitude is 2^31.
         let n = BigInteger::from_i32(i32::MIN);
         assert_eq!(n.sign, -1);
-        assert_eq!(n.magnitude, vec![1 << 31]);
+        assert_eq!(n.magnitude.to_vec(), vec![1 << 31]);
     }
 
     #[test]
     fn from_i32_max() {
         let n = BigInteger::from_i32(i32::MAX);
         assert_eq!(n.sign, 1);
-        assert_eq!(n.magnitude, vec![i32::MAX as u32]);
+        assert_eq!(n.magnitude.to_vec(), vec![i32::MAX as u32]);
     }
 
     #[test]
     fn from_i16_negative_and_min() {
         let neg = BigInteger::from_i16(-5);
         assert_eq!(neg.sign, -1);
-        assert_eq!(neg.magnitude, vec![5]);
+        assert_eq!(neg.magnitude.to_vec(), vec![5]);
 
         let min = BigInteger::from_i16(i16::MIN);
         assert_eq!(min.sign, -1);
-        assert_eq!(min.magnitude, vec![i16::MIN.unsigned_abs() as u32]);
+        assert_eq!(min.magnitude.to_vec(), vec![i16::MIN.unsigned_abs() as u32]);
     }
 
     #[test]
     fn from_i8_negative_and_min() {
         let neg = BigInteger::from_i8(-5);
         assert_eq!(neg.sign, -1);
-        assert_eq!(neg.magnitude, vec![5]);
+        assert_eq!(neg.magnitude.to_vec(), vec![5]);
 
         let min = BigInteger::from_i8(i8::MIN);
         assert_eq!(min.sign, -1);
-        assert_eq!(min.magnitude, vec![i8::MIN.unsigned_abs() as u32]);
+        assert_eq!(min.magnitude.to_vec(), vec![i8::MIN.unsigned_abs() as u32]);
     }
 
     #[test]
     fn from_i64_negative_two_words() {
         let n = BigInteger::from_i64(-((1i64 << 32) | 2));
         assert_eq!(n.sign, -1);
-        assert_eq!(n.magnitude, vec![1, 2]);
+        assert_eq!(n.magnitude.to_vec(), vec![1, 2]);
     }
 
     #[test]
@@ -530,19 +532,19 @@ mod tests {
         // -i64::MIN would overflow; magnitude is 2^63 -> high word 0x8000_0000.
         let n = BigInteger::from_i64(i64::MIN);
         assert_eq!(n.sign, -1);
-        assert_eq!(n.magnitude, vec![1 << 31, 0]);
+        assert_eq!(n.magnitude.to_vec(), vec![1 << 31, 0]);
     }
 
     #[test]
     fn from_i128_negative_and_min() {
         let neg = BigInteger::from_i128(-5);
         assert_eq!(neg.sign, -1);
-        assert_eq!(neg.magnitude, vec![5]);
+        assert_eq!(neg.magnitude.to_vec(), vec![5]);
 
         // magnitude of i128::MIN is 2^127 -> top word 0x8000_0000, rest zero.
         let min = BigInteger::from_i128(i128::MIN);
         assert_eq!(min.sign, -1);
-        assert_eq!(min.magnitude, vec![1 << 31, 0, 0, 0]);
+        assert_eq!(min.magnitude.to_vec(), vec![1 << 31, 0, 0, 0]);
     }
 
     #[test]
@@ -556,7 +558,7 @@ mod tests {
     fn from_u128_single_word() {
         let n = BigInteger::from_u128(5);
         assert_eq!(n.sign, 1);
-        assert_eq!(n.magnitude, vec![5]);
+        assert_eq!(n.magnitude.to_vec(), vec![5]);
     }
 
     #[test]
@@ -566,14 +568,14 @@ mod tests {
         let value = (3u128 << 64) | 4;
         let n = BigInteger::from_u128(value);
         assert_eq!(n.sign, 1);
-        assert_eq!(n.magnitude, vec![3, 0, 4]);
+        assert_eq!(n.magnitude.to_vec(), vec![3, 0, 4]);
     }
 
     #[test]
     fn from_u128_max() {
         let n = BigInteger::from_u128(u128::MAX);
         assert_eq!(n.sign, 1);
-        assert_eq!(n.magnitude, vec![u32::MAX, u32::MAX, u32::MAX, u32::MAX]);
+        assert_eq!(n.magnitude.to_vec(), vec![u32::MAX, u32::MAX, u32::MAX, u32::MAX]);
     }
 
     #[test]
@@ -726,7 +728,7 @@ mod tests {
     fn from_bytes_be_positive() {
         let n = BigInteger::from_bytes_be(&[0x05]);
         assert_eq!(n.sign, 1);
-        assert_eq!(n.magnitude, vec![5]);
+        assert_eq!(n.magnitude.to_vec(), vec![5]);
     }
 
     #[test]
@@ -734,21 +736,21 @@ mod tests {
         // 0x80 單獨會被當負數；前綴一個 0x00 才是正的 128
         let n = BigInteger::from_bytes_be(&[0x00, 0x80]);
         assert_eq!(n.sign, 1);
-        assert_eq!(n.magnitude, vec![128]);
+        assert_eq!(n.magnitude.to_vec(), vec![128]);
     }
 
     #[test]
     fn from_bytes_be_minus_one() {
         let n = BigInteger::from_bytes_be(&[0xFF]);
         assert_eq!(n.sign, -1);
-        assert_eq!(n.magnitude, vec![1]);
+        assert_eq!(n.magnitude.to_vec(), vec![1]);
     }
 
     #[test]
     fn from_bytes_be_minus_128() {
         let n = BigInteger::from_bytes_be(&[0x80]);
         assert_eq!(n.sign, -1);
-        assert_eq!(n.magnitude, vec![128]);
+        assert_eq!(n.magnitude.to_vec(), vec![128]);
     }
 
     #[test]
@@ -774,14 +776,14 @@ mod tests {
         // LE：符號在尾端。[0x80, 0x00] 尾端最高位為 0 → 正的 128
         let n = BigInteger::from_bytes_le(&[0x80, 0x00]);
         assert_eq!(n.sign, 1);
-        assert_eq!(n.magnitude, vec![128]);
+        assert_eq!(n.magnitude.to_vec(), vec![128]);
     }
 
     #[test]
     fn from_bytes_le_minus_one() {
         let n = BigInteger::from_bytes_le(&[0xFF]);
         assert_eq!(n.sign, -1);
-        assert_eq!(n.magnitude, vec![1]);
+        assert_eq!(n.magnitude.to_vec(), vec![1]);
     }
 
     #[test]
