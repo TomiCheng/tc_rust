@@ -77,6 +77,50 @@ impl BigInteger {
         BigInteger::new(1, magnitude)
     }
 
+    /// Creates a `BigInteger` from a signed 32-bit value.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bc_math::big_integer::BigInteger;
+    ///
+    /// let n = BigInteger::from_i32(-5);
+    /// ```
+    pub fn from_i32(value: i32) -> Self {
+        if value == 0 {
+            return BigInteger::new(0, Vec::new());
+        }
+        let sign = if value < 0 { -1 } else { 1 };
+        // `unsigned_abs` yields the magnitude as `u32`, avoiding overflow on `i32::MIN`.
+        BigInteger::new(sign, vec![value.unsigned_abs()])
+    }
+
+    /// Creates a `BigInteger` from a signed 16-bit value.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bc_math::big_integer::BigInteger;
+    ///
+    /// let n = BigInteger::from_i16(-5);
+    /// ```
+    pub fn from_i16(value: i16) -> Self {
+        BigInteger::from_i32(i32::from(value))
+    }
+
+    /// Creates a `BigInteger` from a signed 8-bit value.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bc_math::big_integer::BigInteger;
+    ///
+    /// let n = BigInteger::from_i8(-5);
+    /// ```
+    pub fn from_i8(value: i8) -> Self {
+        BigInteger::from_i32(i32::from(value))
+    }
+
     /// Creates a `BigInteger` from an unsigned 128-bit value.
     ///
     /// # Examples
@@ -178,6 +222,64 @@ mod tests {
         let n = BigInteger::from_u64(u64::MAX);
         assert_eq!(n.sign, 1);
         assert_eq!(n.magnitude, vec![u32::MAX, u32::MAX]);
+    }
+
+    #[test]
+    fn from_i32_zero() {
+        let n = BigInteger::from_i32(0);
+        assert_eq!(n.sign, 0);
+        assert!(n.magnitude.is_empty());
+    }
+
+    #[test]
+    fn from_i32_positive() {
+        let n = BigInteger::from_i32(5);
+        assert_eq!(n.sign, 1);
+        assert_eq!(n.magnitude, vec![5]);
+    }
+
+    #[test]
+    fn from_i32_negative() {
+        let n = BigInteger::from_i32(-5);
+        assert_eq!(n.sign, -1);
+        assert_eq!(n.magnitude, vec![5]);
+    }
+
+    #[test]
+    fn from_i32_min() {
+        // -i32::MIN would overflow; magnitude is 2^31.
+        let n = BigInteger::from_i32(i32::MIN);
+        assert_eq!(n.sign, -1);
+        assert_eq!(n.magnitude, vec![1 << 31]);
+    }
+
+    #[test]
+    fn from_i32_max() {
+        let n = BigInteger::from_i32(i32::MAX);
+        assert_eq!(n.sign, 1);
+        assert_eq!(n.magnitude, vec![i32::MAX as u32]);
+    }
+
+    #[test]
+    fn from_i16_negative_and_min() {
+        let neg = BigInteger::from_i16(-5);
+        assert_eq!(neg.sign, -1);
+        assert_eq!(neg.magnitude, vec![5]);
+
+        let min = BigInteger::from_i16(i16::MIN);
+        assert_eq!(min.sign, -1);
+        assert_eq!(min.magnitude, vec![i16::MIN.unsigned_abs() as u32]);
+    }
+
+    #[test]
+    fn from_i8_negative_and_min() {
+        let neg = BigInteger::from_i8(-5);
+        assert_eq!(neg.sign, -1);
+        assert_eq!(neg.magnitude, vec![5]);
+
+        let min = BigInteger::from_i8(i8::MIN);
+        assert_eq!(min.sign, -1);
+        assert_eq!(min.magnitude, vec![i8::MIN.unsigned_abs() as u32]);
     }
 
     #[test]
