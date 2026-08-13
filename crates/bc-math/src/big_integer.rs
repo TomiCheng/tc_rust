@@ -53,6 +53,25 @@ impl BigInteger {
         self.sign == 0
     }
 
+    /// Returns the absolute value.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bc_math::big_integer::BigInteger;
+    ///
+    /// assert_eq!(BigInteger::from_i32(-5).abs(), BigInteger::from_i32(5));
+    /// ```
+    pub fn abs(self) -> BigInteger {
+        if self.sign >= 0 {
+            // 已非負：原封不動（連已算好的快取都保留）
+            self
+        } else {
+            // 負 → 正：搬移 buffer 重用；快取須重置（|n| 的 bit_length 等與 n 不同）
+            BigInteger::new(1, Vec::from(self.magnitude))
+        }
+    }
+
     /// Returns the number of bits in the minimal two's-complement representation
     /// of this value, excluding the sign bit. Zero has a bit length of `0`.
     ///
@@ -672,6 +691,33 @@ mod tests {
         assert_eq!(a.bit_length(), 4);
         let b = -a; // a 的 magnitude buffer 搬進 b，快取重置
         assert_eq!(b.bit_length(), 3);
+    }
+
+    #[test]
+    fn abs_of_negative_and_positive() {
+        assert_eq!(BigInteger::from_i32(-5).abs(), BigInteger::from_i32(5));
+        assert_eq!(BigInteger::from_i32(5).abs(), BigInteger::from_i32(5));
+    }
+
+    #[test]
+    fn abs_zero_is_zero() {
+        let z = BigInteger::from_i32(0).abs();
+        assert_eq!(z.sign, 0);
+        assert!(z.magnitude.is_empty());
+    }
+
+    #[test]
+    fn abs_resets_cache_for_negative() {
+        // -8 的 bit_length 為 3；取絕對值後為 8，應重算為 4
+        let a = BigInteger::from_i32(-8);
+        assert_eq!(a.bit_length(), 3);
+        assert_eq!(a.abs().bit_length(), 4);
+    }
+
+    #[test]
+    fn abs_is_idempotent() {
+        let a = BigInteger::from_i64(-123456789);
+        assert_eq!(a.clone().abs().abs(), a.abs());
     }
 
     #[test]
