@@ -1,4 +1,5 @@
 use std::cmp::Ordering;
+use std::ops::Neg;
 use std::sync::OnceLock;
 
 #[derive(Clone, Debug)]
@@ -349,6 +350,17 @@ impl PartialOrd for BigInteger {
     }
 }
 
+impl Neg for BigInteger {
+    type Output = BigInteger;
+
+    /// 取負：只翻轉符號，magnitude 長度不變，故直接搬移（重用）buffer。
+    fn neg(self) -> BigInteger {
+        // `Vec::from` 接手 Box 的配置（O(1)），`new` 再 `into_boxed_slice` 收回（O(1)）；
+        // 全程無新配置。快取則透過 `new` 重置（`-n` 的 bit_length/bit_count 與 `n` 不同）。
+        BigInteger::new(-self.sign, Vec::from(self.magnitude))
+    }
+}
+
 /// 計算 magnitude（big-endian、無前導零）的位元長度，不含符號位。
 fn calc_bit_length(sign: i32, magnitude: &[u32]) -> u32 {
     // 無前導零，故第一個字即最高位字；空 magnitude 代表 0
@@ -626,6 +638,40 @@ mod tests {
         // 排序後應為 -5, 0, 1, 3（由小到大）
         let expected = [-5, 0, 1, 3].map(BigInteger::from_i32);
         assert_eq!(v, expected);
+    }
+
+    #[test]
+    fn neg_flips_sign_keeps_magnitude() {
+        let n = -BigInteger::from_i32(5);
+        assert_eq!(n.sign, -1);
+        assert_eq!(n.magnitude.to_vec(), vec![5]);
+
+        let p = -BigInteger::from_i32(-5);
+        assert_eq!(p.sign, 1);
+        assert_eq!(p.magnitude.to_vec(), vec![5]);
+    }
+
+    #[test]
+    fn neg_zero_is_zero() {
+        let z = -BigInteger::from_i32(0);
+        assert_eq!(z.sign, 0);
+        assert!(z.magnitude.is_empty());
+    }
+
+    #[test]
+    fn neg_is_involution() {
+        // -(-a) == a
+        let a = BigInteger::from_i64(-123456789);
+        assert_eq!(-(-a.clone()), a);
+    }
+
+    #[test]
+    fn neg_resets_cache() {
+        // 對 8 先算好 bit_length（快取 4），取負後應重算為 3（負的 2 次方少 1）
+        let a = BigInteger::from_i32(8);
+        assert_eq!(a.bit_length(), 4);
+        let b = -a; // a 的 magnitude buffer 搬進 b，快取重置
+        assert_eq!(b.bit_length(), 3);
     }
 
     #[test]
