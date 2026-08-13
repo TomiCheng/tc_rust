@@ -185,6 +185,65 @@ impl BigInteger {
     }
 }
 
+fn make_magnitude_be(buffer: &[u8]) -> Vec<u32> {
+    // 去除前導零位元組；全零（或空）緩衝區會得到空切片
+    let start = buffer.iter().position(|&b| b != 0).unwrap_or(buffer.len());
+
+    buffer[start..]
+        .rchunks(size_of::<u32>()) // 從低位端每 4 位元組切一塊
+        .rev() // 反轉，讓最高位的字排在前面
+        .map(|chunk| chunk.iter().fold(0u32, |acc, &b| (acc << 8) | b as u32))
+        .collect()
+}
+
+/// 將 big-endian 兩補數負數位元組還原成其絕對值的 magnitude。
+///
+/// 前提：`buffer` 代表負數（最高位元組的最高位為 1）。
+fn make_magnitude_be_negative(buffer: &[u8]) -> Vec<u32> {
+    // 兩補數轉絕對值：全部反相，再從最低位 (尾端) 加 1
+    let mut inverse: Vec<u8> = buffer.iter().map(|&b| !b).collect();
+    for b in inverse.iter_mut().rev() {
+        if *b == 0xFF {
+            *b = 0; // 0xFF + 1 = 0x00，進位繼續往高位
+        } else {
+            *b += 1; // 沒有進位，結束
+            break;
+        }
+    }
+    // 反相後即為絕對值的 BE 位元組，交給既有 helper 去零、打包
+    make_magnitude_be(&inverse)
+}
+
+fn make_magnitude_le(buffer: &[u8]) -> Vec<u32> {
+    // little-endian：最高位在尾端，所以去除「尾端」的零位元組
+    let end = buffer.iter().rposition(|&b| b != 0).map_or(0, |i| i + 1);
+
+    buffer[..end]
+        .chunks(size_of::<u32>()) // 從低位端每 4 位元組切一塊（低位字先出）
+        .rev() // 反轉，讓最高位的字排在前面
+        .map(|chunk| chunk.iter().rev().fold(0u32, |acc, &b| (acc << 8) | b as u32))
+        .collect()
+}
+
+/// 將 little-endian 兩補數負數位元組還原成其絕對值的 magnitude。
+///
+/// 前提：`buffer` 代表負數（最高位元組的最高位為 1；最高位元組在尾端）。
+fn make_magnitude_le_negative(buffer: &[u8]) -> Vec<u32> {
+    // 兩補數轉絕對值：全部反相，再從最低位 (前端) 加 1
+    let mut inverse: Vec<u8> = buffer.iter().map(|&b| !b).collect();
+    for b in inverse.iter_mut() {
+        if *b == 0xFF {
+            *b = 0; // 0xFF + 1 = 0x00，進位繼續往高位
+        } else {
+            *b += 1; // 沒有進位，結束
+            break;
+        }
+    }
+    // 反相後即為絕對值的 LE 位元組，交給既有 helper 去零、打包
+    make_magnitude_le(&inverse)
+}
+
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -376,5 +435,137 @@ mod tests {
         let n = BigInteger::from_u128(u128::MAX);
         assert_eq!(n.sign, 1);
         assert_eq!(n.magnitude, vec![u32::MAX, u32::MAX, u32::MAX, u32::MAX]);
+    }
+
+    #[test]
+    fn make_magnitude_be_empty() {
+        assert_eq!(make_magnitude_be(&[]), Vec::<u32>::new());
+    }
+
+    #[test]
+    fn make_magnitude_be_all_zero() {
+        // 全零位元組視同 0，得到空 magnitude
+        assert_eq!(make_magnitude_be(&[0, 0, 0]), Vec::<u32>::new());
+    }
+
+    #[test]
+    fn make_magnitude_be_single_byte() {
+        assert_eq!(make_magnitude_be(&[0x05]), vec![0x05]);
+    }
+
+    #[test]
+    fn make_magnitude_be_strips_leading_zeros() {
+        // 前導零 + 殘塊：只保留有效位元組
+        assert_eq!(make_magnitude_be(&[0, 0, 0xAA, 0xBB]), vec![0xAABB]);
+    }
+
+    #[test]
+    fn make_magnitude_be_partial_then_full_word() {
+        // 殘塊(AABB) + 一個滿字(CCDDEEFF)
+        let buffer = [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF];
+        assert_eq!(make_magnitude_be(&buffer), vec![0x0000_AABB, 0xCCDD_EEFF]);
+    }
+
+    #[test]
+    fn make_magnitude_be_exact_word() {
+        // 剛好 4 位元組，單一滿字
+        assert_eq!(make_magnitude_be(&[1, 2, 3, 4]), vec![0x0102_0304]);
+    }
+
+    #[test]
+    fn make_magnitude_be_keeps_interior_zero() {
+        // 中間的零位元組必須保留，只有最高位端的零才剝除
+        let buffer = [0x01, 0x00, 0x00, 0x00, 0x00];
+        assert_eq!(make_magnitude_be(&buffer), vec![0x01, 0x0000_0000]);
+    }
+
+    #[test]
+    fn make_magnitude_le_empty() {
+        assert_eq!(make_magnitude_le(&[]), Vec::<u32>::new());
+    }
+
+    #[test]
+    fn make_magnitude_le_all_zero() {
+        // 全零位元組視同 0，得到空 magnitude
+        assert_eq!(make_magnitude_le(&[0, 0, 0]), Vec::<u32>::new());
+    }
+
+    #[test]
+    fn make_magnitude_le_single_byte() {
+        assert_eq!(make_magnitude_le(&[0x05]), vec![0x05]);
+    }
+
+    #[test]
+    fn make_magnitude_le_strips_trailing_zeros() {
+        // little-endian 的無意義零在尾端；[00,01] 代表 0x0100
+        assert_eq!(make_magnitude_le(&[0x00, 0x01]), vec![0x0100]);
+    }
+
+    #[test]
+    fn make_magnitude_le_partial_high_word() {
+        // 0xAABBCCDDEEFF 的 LE 表示；最高位字 (AABB) 為殘塊
+        let buffer = [0xFF, 0xEE, 0xDD, 0xCC, 0xBB, 0xAA];
+        assert_eq!(make_magnitude_le(&buffer), vec![0x0000_AABB, 0xCCDD_EEFF]);
+    }
+
+    #[test]
+    fn make_magnitude_le_two_words() {
+        // 2^32：LE 為 [00,00,00,00,01]，magnitude 為 [1, 0]
+        let buffer = [0x00, 0x00, 0x00, 0x00, 0x01];
+        assert_eq!(make_magnitude_le(&buffer), vec![1, 0]);
+    }
+
+    #[test]
+    fn make_magnitude_le_matches_be_reversed() {
+        // 同一個數：BE 輸入反轉即為其 LE 輸入，兩者 magnitude 必須相同
+        let be = [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF];
+        let le: Vec<u8> = be.iter().rev().copied().collect();
+        assert_eq!(make_magnitude_be(&be), make_magnitude_le(&le));
+    }
+
+    #[test]
+    fn make_magnitude_be_negative_minus_one() {
+        // 0xFF = -1，絕對值 magnitude 為 [1]
+        assert_eq!(make_magnitude_be_negative(&[0xFF]), vec![1]);
+        // 多位元組的 -1：0xFFFF 仍是 -1
+        assert_eq!(make_magnitude_be_negative(&[0xFF, 0xFF]), vec![1]);
+    }
+
+    #[test]
+    fn make_magnitude_be_negative_minus_128() {
+        // 0x80 = -128
+        assert_eq!(make_magnitude_be_negative(&[0x80]), vec![128]);
+    }
+
+    #[test]
+    fn make_magnitude_be_negative_carry_propagates() {
+        // 0xFF0000 = -65536；反相加 1 的進位會傳到新的高位字
+        assert_eq!(make_magnitude_be_negative(&[0xFF, 0x00, 0x00]), vec![0x0001_0000]);
+    }
+
+    #[test]
+    fn make_magnitude_be_negative_strips_sign_extension() {
+        // 0xFFFFFF80 = -128，前導的 0xFF 符號延伸不影響絕對值
+        assert_eq!(
+            make_magnitude_be_negative(&[0xFF, 0xFF, 0xFF, 0x80]),
+            vec![128]
+        );
+    }
+
+    #[test]
+    fn make_magnitude_le_negative_matches_be_reversed() {
+        // 對同一個負數：BE 輸入反轉即為 LE 輸入，兩者絕對值 magnitude 必須相同
+        let be = [0xFF, 0x00, 0x00]; // -65536
+        let le: Vec<u8> = be.iter().rev().copied().collect();
+        assert_eq!(
+            make_magnitude_be_negative(&be),
+            make_magnitude_le_negative(&le)
+        );
+    }
+
+    #[test]
+    fn make_magnitude_le_negative_minus_128() {
+        // LE 的 0x80（單一位元組）= -128
+        assert_eq!(make_magnitude_le_negative(&[0x80]), vec![128]);
     }
 }
