@@ -1,7 +1,13 @@
+use std::sync::OnceLock;
+
 #[derive(Clone, Debug)]
 pub struct BigInteger {
     sign: i32,
     magnitude: Vec<u32>,
+    /// 惰性快取：設定位元數 (population count)。
+    bits: OnceLock<u32>,
+    /// 惰性快取：位元長度。
+    bit_length: OnceLock<u32>,
 }
 
 impl BigInteger {
@@ -9,9 +15,38 @@ impl BigInteger {
         BigInteger {
             sign,
             magnitude,
-            //bits: OnceLock::new(),
-            //bit_length: OnceLock::new(),
+            bits: OnceLock::new(),
+            bit_length: OnceLock::new(),
         }
+    }
+
+    /// Returns the sign of this value: `-1` (negative), `0` (zero), or `1` (positive).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bc_math::big_integer::BigInteger;
+    ///
+    /// assert_eq!(BigInteger::from_i32(-5).sign(), -1);
+    /// assert_eq!(BigInteger::from_i32(0).sign(), 0);
+    /// assert_eq!(BigInteger::from_i32(5).sign(), 1);
+    /// ```
+    pub fn sign(&self) -> i32 {
+        self.sign
+    }
+
+    /// Returns `true` if this value is zero.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bc_math::big_integer::BigInteger;
+    ///
+    /// assert!(BigInteger::from_u32(0).is_zero());
+    /// assert!(!BigInteger::from_u32(5).is_zero());
+    /// ```
+    pub fn is_zero(&self) -> bool {
+        self.sign == 0
     }
 
     /// Creates a `BigInteger` from an unsigned 32-bit value.
@@ -238,6 +273,15 @@ impl BigInteger {
     }
 }
 
+impl PartialEq for BigInteger {
+    /// 相等只看數值（`sign` + `magnitude`），刻意忽略惰性快取欄位。
+    fn eq(&self, other: &Self) -> bool {
+        self.sign == other.sign && self.magnitude == other.magnitude
+    }
+}
+
+impl Eq for BigInteger {}
+
 fn make_magnitude_be(buffer: &[u8]) -> Vec<u32> {
     // 去除前導零位元組；全零（或空）緩衝區會得到空切片
     let start = buffer.iter().position(|&b| b != 0).unwrap_or(buffer.len());
@@ -306,6 +350,48 @@ mod tests {
         let n = BigInteger::from_u32(0);
         assert_eq!(n.sign, 0);
         assert!(n.magnitude.is_empty());
+    }
+
+    #[test]
+    fn sign_reports_all_three_states() {
+        assert_eq!(BigInteger::from_i32(-42).sign(), -1);
+        assert_eq!(BigInteger::from_i32(0).sign(), 0);
+        assert_eq!(BigInteger::from_i32(42).sign(), 1);
+    }
+
+    #[test]
+    fn is_zero_matches_sign() {
+        assert!(BigInteger::from_i32(0).is_zero());
+        assert!(!BigInteger::from_i32(1).is_zero());
+        assert!(!BigInteger::from_i32(-1).is_zero());
+        // 空位元組與全零位元組都應是零
+        assert!(BigInteger::from_bytes_be(&[]).is_zero());
+        assert!(BigInteger::from_bytes_be(&[0, 0, 0]).is_zero());
+    }
+
+    #[test]
+    fn eq_same_value_from_different_sources() {
+        // 同一個數、不同建構路徑，應相等
+        assert_eq!(BigInteger::from_i32(128), BigInteger::from_bytes_be(&[0x00, 0x80]));
+        assert_eq!(BigInteger::from_u64(0), BigInteger::from_i32(0));
+    }
+
+    #[test]
+    fn eq_distinguishes_sign_and_magnitude() {
+        assert_ne!(BigInteger::from_i32(5), BigInteger::from_i32(-5)); // 同 magnitude、異號
+        assert_ne!(BigInteger::from_i32(5), BigInteger::from_i32(6)); // 同號、異 magnitude
+    }
+
+    #[test]
+    fn eq_ignores_cache_state() {
+        // 兩個相同的值，其中一個先觸發快取欄位，相等性不應改變
+        let a = BigInteger::from_i32(42);
+        let b = BigInteger::from_i32(42);
+        // 對 a 的快取寫入值（模擬已計算），b 保持未計算
+        a.bit_length.set(6).unwrap();
+        a.bits.set(3).unwrap();
+        assert!(b.bit_length.get().is_none());
+        assert_eq!(a, b); // 快取狀態不同，仍相等
     }
 
     #[test]
