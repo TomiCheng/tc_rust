@@ -1,3 +1,4 @@
+use std::cmp::Ordering;
 use std::sync::OnceLock;
 
 #[derive(Clone, Debug)]
@@ -330,6 +331,24 @@ impl PartialEq for BigInteger {
 
 impl Eq for BigInteger {}
 
+impl Ord for BigInteger {
+    fn cmp(&self, other: &Self) -> Ordering {
+        // 符號不同：負 < 零 < 正，直接由符號決定
+        if self.sign != other.sign {
+            return self.sign.cmp(&other.sign);
+        }
+        // 同號（含兩者皆零，magnitude 皆空 → Equal）：比絕對值，負號時翻轉
+        let mag = compare_magnitude(&self.magnitude, &other.magnitude);
+        if self.sign < 0 { mag.reverse() } else { mag }
+    }
+}
+
+impl PartialOrd for BigInteger {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other)) // 全序，永遠有結果
+    }
+}
+
 /// 計算 magnitude（big-endian、無前導零）的位元長度，不含符號位。
 fn calc_bit_length(sign: i32, magnitude: &[u32]) -> u32 {
     // 無前導零，故第一個字即最高位字；空 magnitude 代表 0
@@ -350,6 +369,12 @@ fn calc_bit_length(sign: i32, magnitude: &[u32]) -> u32 {
 /// 單一字的位元長度（最高設定位元的位置 + 1）；`x` 為 0 時得 0。
 fn bit_len(x: u32) -> u32 {
     u32::BITS - x.leading_zeros()
+}
+
+/// 比較兩個 magnitude（big-endian、無前導零）代表的絕對值大小。
+fn compare_magnitude(x: &[u32], y: &[u32]) -> Ordering {
+    // 無前導零：字數多者絕對值大；字數相同再逐字（最高位在前）比字典序
+    x.len().cmp(&y.len()).then_with(|| x.cmp(y))
 }
 
 /// 計算負數的 bitCount，等於 `popcount(magnitude - 1)`。
@@ -544,6 +569,63 @@ mod tests {
         assert_eq!(n.bit_count(), 2);
         assert_eq!(n.bit_count(), 2);
         assert!(n.bits.get().is_some());
+    }
+
+    #[test]
+    fn cmp_same_sign_positive() {
+        assert_eq!(BigInteger::from_i32(5).cmp(&BigInteger::from_i32(3)), Ordering::Greater);
+        assert_eq!(BigInteger::from_i32(3).cmp(&BigInteger::from_i32(5)), Ordering::Less);
+        assert_eq!(BigInteger::from_i32(5).cmp(&BigInteger::from_i32(5)), Ordering::Equal);
+    }
+
+    #[test]
+    fn cmp_same_sign_negative_is_flipped() {
+        // 同負號：絕對值大者反而小
+        assert_eq!(BigInteger::from_i32(-5).cmp(&BigInteger::from_i32(-3)), Ordering::Less);
+        assert_eq!(BigInteger::from_i32(-3).cmp(&BigInteger::from_i32(-5)), Ordering::Greater);
+    }
+
+    #[test]
+    fn cmp_different_signs() {
+        assert_eq!(BigInteger::from_i32(5).cmp(&BigInteger::from_i32(-8)), Ordering::Greater);
+        assert_eq!(BigInteger::from_i32(-8).cmp(&BigInteger::from_i32(5)), Ordering::Less);
+    }
+
+    #[test]
+    fn cmp_with_zero() {
+        assert_eq!(BigInteger::from_i32(0).cmp(&BigInteger::from_i32(-3)), Ordering::Greater);
+        assert_eq!(BigInteger::from_i32(0).cmp(&BigInteger::from_i32(5)), Ordering::Less);
+        assert_eq!(BigInteger::from_i32(0).cmp(&BigInteger::from_i32(0)), Ordering::Equal);
+    }
+
+    #[test]
+    fn cmp_by_word_count() {
+        // 字數多者絕對值大（依賴無前導零不變量）
+        let big = BigInteger::from_u64(1 << 32); // magnitude [1, 0]，2 字
+        let small = BigInteger::from_u32(u32::MAX); // magnitude [0xFFFFFFFF]，1 字
+        assert_eq!(big.cmp(&small), Ordering::Greater);
+    }
+
+    #[test]
+    fn cmp_operators_and_min_max() {
+        // 實作 Ord 後，運算子與 min/max/sort 自動可用
+        let a = BigInteger::from_i32(-10);
+        let b = BigInteger::from_i32(7);
+        assert!(a < b);
+        assert!(b >= a);
+        assert_eq!(a.clone().min(b.clone()), a);
+        assert_eq!(a.clone().max(b.clone()), b);
+
+        let mut v = vec![
+            BigInteger::from_i32(3),
+            BigInteger::from_i32(-5),
+            BigInteger::from_i32(0),
+            BigInteger::from_i32(1),
+        ];
+        v.sort();
+        // 排序後應為 -5, 0, 1, 3（由小到大）
+        let expected = [-5, 0, 1, 3].map(BigInteger::from_i32);
+        assert_eq!(v, expected);
     }
 
     #[test]
