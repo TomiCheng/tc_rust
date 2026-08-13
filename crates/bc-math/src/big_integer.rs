@@ -121,6 +121,44 @@ impl BigInteger {
         BigInteger::from_i32(i32::from(value))
     }
 
+    /// Creates a `BigInteger` from a signed 64-bit value.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bc_math::big_integer::BigInteger;
+    ///
+    /// let n = BigInteger::from_i64(-5);
+    /// ```
+    pub fn from_i64(value: i64) -> Self {
+        if value == 0 {
+            return BigInteger::new(0, Vec::new());
+        }
+        // `unsigned_abs` avoids overflow on `i64::MIN`; reuse `from_u64`'s word split.
+        let magnitude = BigInteger::from_u64(value.unsigned_abs()).magnitude;
+        let sign = if value < 0 { -1 } else { 1 };
+        BigInteger::new(sign, magnitude)
+    }
+
+    /// Creates a `BigInteger` from a signed 128-bit value.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bc_math::big_integer::BigInteger;
+    ///
+    /// let n = BigInteger::from_i128(-5);
+    /// ```
+    pub fn from_i128(value: i128) -> Self {
+        if value == 0 {
+            return BigInteger::new(0, Vec::new());
+        }
+        // `unsigned_abs` avoids overflow on `i128::MIN`; reuse `from_u128`'s word split.
+        let magnitude = BigInteger::from_u128(value.unsigned_abs()).magnitude;
+        let sign = if value < 0 { -1 } else { 1 };
+        BigInteger::new(sign, magnitude)
+    }
+
     /// Creates a `BigInteger` from an unsigned 128-bit value.
     ///
     /// # Examples
@@ -280,6 +318,33 @@ mod tests {
         let min = BigInteger::from_i8(i8::MIN);
         assert_eq!(min.sign, -1);
         assert_eq!(min.magnitude, vec![i8::MIN.unsigned_abs() as u32]);
+    }
+
+    #[test]
+    fn from_i64_negative_two_words() {
+        let n = BigInteger::from_i64(-((1i64 << 32) | 2));
+        assert_eq!(n.sign, -1);
+        assert_eq!(n.magnitude, vec![1, 2]);
+    }
+
+    #[test]
+    fn from_i64_min() {
+        // -i64::MIN would overflow; magnitude is 2^63 -> high word 0x8000_0000.
+        let n = BigInteger::from_i64(i64::MIN);
+        assert_eq!(n.sign, -1);
+        assert_eq!(n.magnitude, vec![1 << 31, 0]);
+    }
+
+    #[test]
+    fn from_i128_negative_and_min() {
+        let neg = BigInteger::from_i128(-5);
+        assert_eq!(neg.sign, -1);
+        assert_eq!(neg.magnitude, vec![5]);
+
+        // magnitude of i128::MIN is 2^127 -> top word 0x8000_0000, rest zero.
+        let min = BigInteger::from_i128(i128::MIN);
+        assert_eq!(min.sign, -1);
+        assert_eq!(min.magnitude, vec![1 << 31, 0, 0, 0]);
     }
 
     #[test]
