@@ -1,6 +1,6 @@
 use std::cmp::Ordering;
 use std::ops::{Add, Mul, Neg, Shl, Shr, Sub};
-use std::sync::OnceLock;
+use std::sync::{LazyLock, OnceLock};
 
 /// 一個 magnitude 字的位元數（= 32）。集中定義，避免散落的 magic number。
 const WORD_BITS: usize = u32::BITS as usize;
@@ -344,6 +344,18 @@ impl BigInteger {
         }
     }
 }
+
+/// 常用小值常數，對應 bc-csharp 的 `BigInteger.Zero/One/Two/Three`。
+///
+/// 以 `LazyLock` 承載：`BigInteger` 需堆積配置，無法作為 `const`；改成執行期
+/// 初始化一次的靜態變數（即 C# `static readonly` 的 Rust 版）。能安放在 `static`
+/// 是因為 `BigInteger` 為 `Sync`（惰性快取用 `OnceLock` 而非 `RefCell`）。
+///
+/// 取用時 `&*ONE` 得到 `&BigInteger`，可直接當運算子的運算元：`&x + &*ONE`。
+pub static ZERO: LazyLock<BigInteger> = LazyLock::new(|| BigInteger::from_u32(0));
+pub static ONE: LazyLock<BigInteger> = LazyLock::new(|| BigInteger::from_u32(1));
+pub static TWO: LazyLock<BigInteger> = LazyLock::new(|| BigInteger::from_u32(2));
+pub static THREE: LazyLock<BigInteger> = LazyLock::new(|| BigInteger::from_u32(3));
 
 impl PartialEq for BigInteger {
     /// 相等只看數值（`sign` + `magnitude`），刻意忽略惰性快取欄位。
@@ -1326,6 +1338,24 @@ mod tests {
                 assert_eq!(&(&a << n) >> n, a);
             }
         }
+    }
+
+    #[test]
+    fn small_constants_have_expected_values() {
+        assert_eq!(*ZERO, BigInteger::from_u32(0));
+        assert_eq!(*ONE, BigInteger::from_u32(1));
+        assert_eq!(*TWO, BigInteger::from_u32(2));
+        assert_eq!(*THREE, BigInteger::from_u32(3));
+        assert!(ZERO.is_zero());
+    }
+
+    #[test]
+    fn small_constants_usable_as_operands() {
+        // &*ONE 可直接當運算元，且共用同一份實體
+        let x = BigInteger::from_u32(41);
+        assert_eq!(&x + &*ONE, BigInteger::from_u32(42));
+        assert_eq!(&x - &*TWO, BigInteger::from_u32(39));
+        assert_eq!(&*THREE * &*THREE, BigInteger::from_u32(9));
     }
 
     #[test]
