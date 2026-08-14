@@ -443,6 +443,35 @@ fn add_magnitudes(x: &[u32], y: &[u32]) -> Vec<u32> {
     trim_leading_zeros(result)
 }
 
+/// 兩個 magnitude（big-endian、無前導零）相減，回傳 `x - y`（無前導零）。
+///
+/// 前提：數值上 `x >= y`（呼叫端用 `compare_magnitude` 確保），故結果非負。
+fn sub_magnitudes(x: &[u32], y: &[u32]) -> Vec<u32> {
+    debug_assert!(
+        compare_magnitude(x, y) != Ordering::Less,
+        "sub_magnitudes 需要 x >= y"
+    );
+
+    let mut result = x.to_vec();
+    let offset = result.len() - y.len(); // y 對齊 result 低位端
+    let mut borrow = 0i64;
+    for i in (0..y.len()).rev() {
+        let diff = result[offset + i] as i64 - y[i] as i64 - borrow;
+        result[offset + i] = diff as u32; // 負則回繞，等同借位
+        borrow = (diff < 0) as i64; // 0 或 1
+    }
+    // 剩餘借位往更高位傳
+    let mut i = offset;
+    while borrow != 0 && i > 0 {
+        i -= 1;
+        let (v, b) = result[i].overflowing_sub(1);
+        result[i] = v;
+        borrow = b as i64;
+    }
+
+    trim_leading_zeros(result) // 高位相消可能縮短
+}
+
 /// 計算負數的 bitCount，等於 `popcount(magnitude - 1)`。
 ///
 /// `magnitude` 為 big-endian、非空（負數必非零）。減 1 從最低位（尾端）借位。
@@ -790,6 +819,48 @@ mod tests {
         let a = [0x1234_5678, 0x9ABC_DEF0];
         let b = [0xFFFF_FFFF];
         assert_eq!(add_magnitudes(&a, &b), add_magnitudes(&b, &a));
+    }
+
+    #[test]
+    fn sub_magnitudes_simple() {
+        assert_eq!(sub_magnitudes(&[8], &[3]), vec![5]);
+    }
+
+    #[test]
+    fn sub_magnitudes_borrow_across_word() {
+        // 2^32 - 1 = 0xFFFF_FFFF
+        assert_eq!(sub_magnitudes(&[1, 0], &[1]), vec![u32::MAX]);
+    }
+
+    #[test]
+    fn sub_magnitudes_borrow_chain() {
+        // 2^64 - 1 = 0xFFFF_FFFF_FFFF_FFFF
+        assert_eq!(sub_magnitudes(&[1, 0, 0], &[1]), vec![u32::MAX, u32::MAX]);
+    }
+
+    #[test]
+    fn sub_magnitudes_equal_is_zero() {
+        assert_eq!(sub_magnitudes(&[5], &[5]), Vec::<u32>::new());
+    }
+
+    #[test]
+    fn sub_magnitudes_shrinks_result() {
+        // (2^32 + 5) - (2^32 + 3) = 2；高位相消，結果縮成一字
+        assert_eq!(sub_magnitudes(&[1, 5], &[1, 3]), vec![2]);
+    }
+
+    #[test]
+    fn sub_magnitudes_with_empty_is_identity() {
+        assert_eq!(sub_magnitudes(&[7], &[]), vec![7]);
+    }
+
+    #[test]
+    fn sub_magnitudes_inverts_add() {
+        // (a + b) - b == a
+        let a = [0x1234_5678, 0x9ABC_DEF0];
+        let b = [0xFEDC_BA98];
+        let sum = add_magnitudes(&a, &b);
+        assert_eq!(sub_magnitudes(&sum, &b), a.to_vec());
     }
 
     #[test]
