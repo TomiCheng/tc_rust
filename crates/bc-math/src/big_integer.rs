@@ -2,6 +2,9 @@ use std::cmp::Ordering;
 use std::ops::{Add, Mul, Neg, Shl, Shr, Sub};
 use std::sync::OnceLock;
 
+/// 一個 magnitude 字的位元數（= 32）。集中定義，避免散落的 magic number。
+const WORD_BITS: usize = u32::BITS as usize;
+
 #[derive(Clone, Debug)]
 pub struct BigInteger {
     sign: i32,
@@ -466,9 +469,35 @@ impl Shl<u32> for &BigInteger {
 impl Shr<u32> for &BigInteger {
     type Output = BigInteger;
 
-    /// 右移 `n` 位（算術右移：等同對 `2^n` 向負無窮取整除法）。
+    /// 右移 `n` 位（算術右移：等同 `floor(self / 2^n)`，向負無窮取整）。
+    ///
+    /// 非負數等同截斷；負數若移出的低位有非零，會再向下多退一（floor 修正）。
     fn shr(self, n: u32) -> BigInteger {
-        todo!()
+        if self.sign == 0 || n == 0 {
+            return self.clone(); // 0 >> n = 0；x >> 0 = x
+        }
+        let n = n as usize;
+
+        // 移出位元數超過整個 magnitude 容量：非負 → 0；負 → -1（floor 落在 -1）
+        let total_bits = self.magnitude.len() * WORD_BITS;
+        if n >= total_bits {
+            return if self.sign < 0 {
+                BigInteger::from_i32(-1)
+            } else {
+                BigInteger::from_u32(0)
+            };
+        }
+
+        let mut magnitude = shift_right_magnitude(&self.magnitude, n);
+
+        // 負數 floor 修正：截斷往零靠，若真的丟了低位，需往負無窮再多退一
+        if self.sign < 0 && any_low_bits_set(&self.magnitude, n) {
+            magnitude = add_magnitudes(&magnitude, &[1]);
+        }
+
+        // 正數可能移空 → 0；負數經上面修正後必非空
+        let sign = if magnitude.is_empty() { 0 } else { self.sign };
+        BigInteger::new(sign, magnitude)
     }
 }
 
@@ -652,6 +681,60 @@ fn shift_left_magnitude(mag: &[u32], n: usize) -> Vec<u32> {
     }
 
     new_mag
+}
+
+/// 將 magnitude（big-endian、無前導零）右移 `n` 位，回傳結果（無前導零）。
+///
+/// 前提：`mag` 非空，且 `n` 小於總位元數 `mag.len() * WORD_BITS`。
+/// 「整個移光成零」的情形由呼叫端先攔掉（直接回零），不進本函式。
+fn shift_right_magnitude(mag: &[u32], n: usize) -> Vec<u32> {
+    debug_assert!(!mag.is_empty(), "shift_right_magnitude 需要非空 magnitude");
+    debug_assert!(
+        n < mag.len() * WORD_BITS,
+        "shift_right_magnitude: n 不可 >= 總位元數（移光成零應由呼叫端處理）"
+    );
+
+    let word_shift = n / WORD_BITS; // 從低位端整字丟棄數
+    let bit_shift = n % WORD_BITS; // 字內再右移幾位
+    let src_len = mag.len() - word_shift; // 丟掉低位字後剩餘的高位字數
+    let src = &mag[..src_len]; // 保留的高位段（big-endian）
+
+    if bit_shift == 0 {
+        // 剛好整字倍數：直接取高位段（mag[0] != 0，本就無前導零）
+        return src.to_vec();
+    }
+
+    let carry_shift = WORD_BITS - bit_shift; // 高位鄰字要左移多少才落到本字頂端
+    let mut result = vec![0u32; src_len];
+
+    // 最高字沒有更高鄰字可帶入
+    result[0] = src[0] >> bit_shift;
+    // 其餘每字：自身右移，補上「更高位鄰字」落下的低位
+    for i in 1..src_len {
+        result[i] = (src[i] >> bit_shift) | (src[i - 1] << carry_shift);
+    }
+
+    trim_leading_zeros(result) // result[0] 可能被移成 0，需去前導零
+}
+
+/// 檢查 magnitude（big-endian）最低 `n` 位是否有任何設定位元。
+///
+/// 供負數右移的 floor 修正：被移出的低位若非零，代表截斷有損失，需向下多退一。
+/// 前提：`n` 小於總位元數（呼叫端已保證），故 `word_shift <= len - 1`。
+fn any_low_bits_set(mag: &[u32], n: usize) -> bool {
+    let word_shift = n / WORD_BITS; // 低位端整字數
+    let bit_shift = n % WORD_BITS; // 再上一字要看的低位位數
+    let len = mag.len();
+
+    // 最低 word_shift 個整字，只要有一個非零就成立
+    if mag[len - word_shift..].iter().any(|&w| w != 0) {
+        return true;
+    }
+    // 再上一字的低 bit_shift 位（bit_shift == 0 時無此殘位）
+    if bit_shift != 0 && mag[len - word_shift - 1] & ((1u32 << bit_shift) - 1) != 0 {
+        return true;
+    }
+    false
 }
 
 /// 計算負數的 bitCount，等於 `popcount(magnitude - 1)`。
@@ -1163,6 +1246,84 @@ mod tests {
                 let got = &BigInteger::from_i64(a) << n;
                 let want = BigInteger::from_i128((a as i128) << n);
                 assert_eq!(got, want, "{a} << {n}");
+            }
+        }
+    }
+
+    #[test]
+    fn shr_within_word() {
+        assert_eq!(&BigInteger::from_u32(40) >> 3, BigInteger::from_u32(5));
+        assert_eq!(&BigInteger::from_u32(2) >> 1, BigInteger::from_u32(1));
+    }
+
+    #[test]
+    fn shr_whole_words() {
+        // 剛好整字倍數（bit_shift == 0）
+        assert_eq!(&BigInteger::from_u64(1 << 32) >> 32, BigInteger::from_u32(1));
+        assert_eq!(&BigInteger::from_u128(1 << 64) >> 64, BigInteger::from_u32(1));
+    }
+
+    #[test]
+    fn shr_positive_truncates_toward_zero() {
+        // 正數：等同截斷，低位直接丟棄
+        assert_eq!(&BigInteger::from_u32(9) >> 3, BigInteger::from_u32(1)); // 9/8 = 1
+        assert_eq!(&BigInteger::from_u32(7) >> 3, BigInteger::from_u32(0)); // 7/8 = 0
+    }
+
+    #[test]
+    fn shr_negative_floors_toward_neg_inf() {
+        // 負數：向負無窮取整（非整除時比截斷多退一）
+        assert_eq!(&BigInteger::from_i32(-8) >> 3, BigInteger::from_i32(-1)); // 整除，-1
+        assert_eq!(&BigInteger::from_i32(-9) >> 3, BigInteger::from_i32(-2)); // floor(-1.125) = -2
+        assert_eq!(&BigInteger::from_i32(-1) >> 1, BigInteger::from_i32(-1)); // floor(-0.5) = -1
+    }
+
+    #[test]
+    fn shr_shifts_everything_out() {
+        // 移出位元超過整個 magnitude：非負 → 0；負 → -1
+        assert_eq!(&BigInteger::from_u32(5) >> 100, BigInteger::from_u32(0));
+        assert_eq!(&BigInteger::from_i32(-5) >> 100, BigInteger::from_i32(-1));
+        // 邊界：剛好等於容量（單字 → 32 位）
+        assert_eq!(&BigInteger::from_u32(0xFFFF_FFFF) >> 32, BigInteger::from_u32(0));
+        assert_eq!(&BigInteger::from_i32(-1) >> 32, BigInteger::from_i32(-1));
+    }
+
+    #[test]
+    fn shr_zero_and_by_zero() {
+        assert_eq!(&BigInteger::from_i32(0) >> 10, BigInteger::from_i32(0));
+        assert_eq!(&BigInteger::from_i32(7) >> 0, BigInteger::from_i32(7));
+        assert_eq!(&BigInteger::from_i32(-7) >> 0, BigInteger::from_i32(-7));
+    }
+
+    #[test]
+    fn shr_cross_word() {
+        // 跨字補位：2^32 >> 1 = 2^31
+        assert_eq!(&BigInteger::from_u64(1 << 32) >> 1, BigInteger::from_u64(1 << 31));
+        // 高位相消縮短：(2^32 + 1) >> 1 = 2^31
+        assert_eq!(&BigInteger::from_u64((1 << 32) + 1) >> 1, BigInteger::from_u64(1 << 31));
+    }
+
+    #[test]
+    fn shr_matches_i128_reference() {
+        // a >> n == floor(a / 2^n)；原生 i128 的算術右移即 floor
+        let vals = [0i64, 1, -1, 7, -7, 255, -256, 0xFFFF_FFFF, -(0xFFFF_FFFFi64), 1 << 40, -(1 << 40)];
+        for &a in &vals {
+            for n in [0u32, 1, 5, 31, 32, 33, 40, 41, 64] {
+                let got = &BigInteger::from_i64(a) >> n;
+                let want = BigInteger::from_i128((a as i128) >> n);
+                assert_eq!(got, want, "{a} >> {n}");
+            }
+        }
+    }
+
+    #[test]
+    fn shl_shr_round_trip() {
+        // (a << n) >> n == a（左移不丟位，右移可完整還原）
+        let vals = [0i64, 1, -1, 12345, -12345, 0xFFFF_FFFF, -(0xFFFF_FFFFi64)];
+        for &a in &vals {
+            for n in [0u32, 1, 7, 31, 32, 40] {
+                let a = BigInteger::from_i64(a);
+                assert_eq!(&(&a << n) >> n, a);
             }
         }
     }
