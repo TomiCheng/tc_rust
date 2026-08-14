@@ -200,6 +200,33 @@ impl BigInteger {
         self ^ &(&*ONE << n)
     }
 
+    /// Returns the index of the lowest set bit (the number of trailing zero
+    /// bits), or `None` if this value is zero.
+    ///
+    /// The sign is irrelevant: a value and its negation share the same lowest
+    /// set bit, since two's-complement negation preserves trailing zeros.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bc_math::big_integer::BigInteger;
+    ///
+    /// assert_eq!(BigInteger::from_u32(0b1100).get_lowest_set_bit(), Some(2));
+    /// assert_eq!(BigInteger::from_u32(1).get_lowest_set_bit(), Some(0));
+    /// assert_eq!(BigInteger::from_u32(0).get_lowest_set_bit(), None);
+    /// assert_eq!(BigInteger::from_i32(-12).get_lowest_set_bit(), Some(2));
+    /// ```
+    pub fn get_lowest_set_bit(&self) -> Option<u32> {
+        // 從低位端（尾端）掃第一個非零字，回「跳過的零字 × 32 + 字內 trailing_zeros」。
+        // 符號無關；零的 magnitude 為空 → iter 空 → 自然回 None。
+        self.magnitude
+            .iter()
+            .rev()
+            .enumerate()
+            .find(|&(_, &w)| w != 0)
+            .map(|(i, &w)| i as u32 * u32::BITS + w.trailing_zeros())
+    }
+
     /// Creates a `BigInteger` from an unsigned 32-bit value.
     ///
     /// # Examples
@@ -1421,6 +1448,31 @@ mod tests {
                 assert_eq!(x.clear_bit(n), BigInteger::from_i128((a as i128) & !bit), "clear_bit({a},{n})");
                 assert_eq!(x.flip_bit(n), BigInteger::from_i128((a as i128) ^ bit), "flip_bit({a},{n})");
             }
+        }
+    }
+
+    #[test]
+    fn get_lowest_set_bit_basic() {
+        assert_eq!(BigInteger::from_u32(0).get_lowest_set_bit(), None);
+        assert_eq!(BigInteger::from_u32(1).get_lowest_set_bit(), Some(0));
+        assert_eq!(BigInteger::from_u32(0b1100).get_lowest_set_bit(), Some(2));
+        assert_eq!(BigInteger::from_u32(8).get_lowest_set_bit(), Some(3));
+        // 跨零字：2^40 magnitude = [256, 0]，最低設定位在 40
+        assert_eq!(BigInteger::from_u64(1 << 40).get_lowest_set_bit(), Some(40));
+        // 整字邊界：2^32
+        assert_eq!(BigInteger::from_u64(1 << 32).get_lowest_set_bit(), Some(32));
+        // 負數與絕對值相同
+        assert_eq!(BigInteger::from_i32(-12).get_lowest_set_bit(), Some(2));
+        assert_eq!(BigInteger::from_i32(-1).get_lowest_set_bit(), Some(0));
+    }
+
+    #[test]
+    fn get_lowest_set_bit_matches_trailing_zeros() {
+        // 對照原生 u64::trailing_zeros（非零值）
+        let vals: [u64; 7] = [1, 2, 0b1100, 255, 256, 1 << 40, u64::MAX];
+        for &a in &vals {
+            let got = BigInteger::from_u64(a).get_lowest_set_bit();
+            assert_eq!(got, Some(a.trailing_zeros()), "value {a}");
         }
     }
 
