@@ -131,6 +131,11 @@ impl BigInteger {
         })
     }
 
+    /// 是否為 2 的次方（正數且僅一個設定位）。供 `Mul` 的 `<< k` 捷徑判斷。
+    fn is_power_of_two(&self) -> bool {
+        self.sign > 0 && self.bit_count() == 1
+    }
+
     /// Returns `true` if bit `n` (zero-indexed, two's-complement) is set.
     ///
     /// # Examples
@@ -613,13 +618,26 @@ impl Mul for &BigInteger {
         if self.sign == 0 || rhs.sign == 0 {
             return BigInteger::from_u32(0);
         }
-        // TODO: 加上最佳化捷徑（需先有 Shl/Shr 位移）：
-        //   - self == rhs 時走 square()（平方比一般乘法快）
-        //   - 任一為 ±2^k 時（quick_pow2_check）用 shift_left 取代乘法
-        //   - 大數改用 Karatsuba
-        // 目前一律走 schoolbook：符號相乘定號，magnitude 交給 multiply_magnitudes
-        let magnitude = multiply_magnitudes(&self.magnitude, &rhs.magnitude);
-        BigInteger::new(self.sign * rhs.sign, magnitude)
+        let sign = self.sign * rhs.sign;
+
+        // 捷徑 1：某運算元為 2^k → 乘法退化成 << k（k = bit_length - 1）
+        if self.is_power_of_two() {
+            let magnitude = shift_left_magnitude(&rhs.magnitude, (self.bit_length() - 1) as usize);
+            return BigInteger::new(sign, magnitude);
+        }
+        if rhs.is_power_of_two() {
+            let magnitude = shift_left_magnitude(&self.magnitude, (rhs.bit_length() - 1) as usize);
+            return BigInteger::new(sign, magnitude);
+        }
+
+        // 捷徑 2：同一份運算元（`&x * &x`）→ 平方（~2 倍快）。
+        // 其餘走 schoolbook；Karatsuba 之類的大數最佳化留待日後。
+        let magnitude = if std::ptr::eq(self, rhs) {
+            square_magnitude(&self.magnitude)
+        } else {
+            multiply_magnitudes(&self.magnitude, &rhs.magnitude)
+        };
+        BigInteger::new(sign, magnitude)
     }
 }
 
@@ -808,6 +826,69 @@ fn multiply_magnitudes(x: &[u32], y: &[u32]) -> Vec<u32> {
     }
 
     trim_leading_zeros(result)
+}
+
+/// 平方（利用對稱性 `x[i]·x[j]` 只算一次再乘 2，約為通用乘法兩倍快）。
+///
+/// 回傳 `x²` 的 magnitude（big-endian、無前導零）。與 `multiply_magnitudes(x, x)`
+/// 結果相同，僅乘法次數約少一半（複雜度仍為 O(n²)）。
+fn square_magnitude(x: &[u32]) -> Vec<u32> {
+    if x.is_empty() {
+        return Vec::new();
+    }
+    let n = x.len();
+    let mut w = vec![0u32; 2 * n];
+
+    // 用帶號索引，方便處理「遞減到 -1」的邊界檢查
+    let mut w_base: isize = (2 * n - 1) as isize;
+
+    for i in (1..n).rev() {
+        let v = x[i] as u64;
+
+        // 對角項 x[i]²
+        let mut c = v * v + w[w_base as usize] as u64;
+        w[w_base as usize] = c as u32;
+        c >>= 32;
+
+        // 非對角項 2·x[i]·x[j]：算一次乘 2
+        for j in (0..i).rev() {
+            let prod = v * x[j] as u64;
+            w_base -= 1;
+            // (prod as u32) << 1 是低 32 位乘 2；prod >> 31 補回乘 2 溢出低位的部分
+            c += w[w_base as usize] as u64 + (((prod as u32) << 1) as u64);
+            w[w_base as usize] = c as u32;
+            c = (c >> 32) + (prod >> 31);
+        }
+
+        w_base -= 1;
+        c += w[w_base as usize] as u64;
+        w[w_base as usize] = c as u32;
+
+        w_base -= 1;
+        if w_base >= 0 {
+            w[w_base as usize] = (c >> 32) as u32;
+        } else {
+            debug_assert_eq!(c >> 32, 0);
+        }
+
+        w_base += i as isize;
+    }
+
+    // 最低字 x[0]²
+    let mut c = x[0] as u64;
+    c = c * c + w[w_base as usize] as u64;
+    w[w_base as usize] = c as u32;
+
+    w_base -= 1;
+    if w_base >= 0 {
+        // C# 此處為 int += 會 wrap；用 wrapping_add 對齊語義並避免 debug panic
+        let idx = w_base as usize;
+        w[idx] = w[idx].wrapping_add((c >> 32) as u32);
+    } else {
+        debug_assert_eq!(c >> 32, 0);
+    }
+
+    trim_leading_zeros(w)
 }
 
 /// 將 magnitude（big-endian、無前導零）左移 `n` 位，回傳結果（無前導零）。
@@ -1601,6 +1682,68 @@ mod tests {
     }
 
     #[test]
+    fn is_power_of_two_predicate() {
+        assert!(BigInteger::from_u32(1).is_power_of_two()); // 2^0
+        assert!(BigInteger::from_u32(2).is_power_of_two());
+        assert!(BigInteger::from_u32(8).is_power_of_two());
+        assert!(BigInteger::from_u64(1 << 40).is_power_of_two());
+        assert!(!BigInteger::from_u32(3).is_power_of_two()); // 0b11
+        assert!(!BigInteger::from_u32(0).is_power_of_two()); // 零
+        assert!(!BigInteger::from_i32(-8).is_power_of_two()); // 負數
+    }
+
+    #[test]
+    fn square_magnitude_matches_multiply() {
+        // 平方須與通用乘法 x·x 完全一致（含滿進位、跨字、含零字）
+        let cases: [&[u32]; 10] = [
+            &[1],
+            &[u32::MAX],
+            &[0x1_0000],
+            &[1, 0],
+            &[u32::MAX, u32::MAX],
+            &[0x1234_5678, 0x9ABC_DEF0],
+            &[1, 2, 3],
+            &[u32::MAX, 0, u32::MAX],
+            &[0xDEAD_BEEF, 0x0000_0001, 0xFFFF_FFFF, 0x8000_0000],
+            &[u32::MAX, u32::MAX, u32::MAX, u32::MAX, u32::MAX],
+        ];
+        for x in cases {
+            assert_eq!(square_magnitude(x), multiply_magnitudes(x, x), "x = {x:?}");
+        }
+    }
+
+    #[test]
+    fn square_magnitude_matches_u128_reference() {
+        // 小值：拿原生 u128 平方當獨立參照
+        let vals: [u64; 6] = [1, 2, 0xFFFF_FFFF, 0x1_0000_0000, 0x1234_5678_9ABC, u64::MAX];
+        for &a in &vals {
+            let x = BigInteger::from_u64(a);
+            let got = square_magnitude(&x.magnitude);
+            let want = Vec::from(BigInteger::from_u128(a as u128 * a as u128).magnitude);
+            assert_eq!(got, want, "{a}²");
+        }
+    }
+
+    #[test]
+    fn square_magnitude_fuzz_vs_multiply() {
+        // 用簡單 LCG 產生各種長度的 magnitude，對照通用乘法
+        let mut state = 0x1234_5678u64;
+        let mut next = || {
+            state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
+            (state >> 32) as u32
+        };
+        for len in 1..=8usize {
+            for _ in 0..20 {
+                let mut x: Vec<u32> = (0..len).map(|_| next()).collect();
+                if x[0] == 0 {
+                    x[0] = 1; // 確保無前導零
+                }
+                assert_eq!(square_magnitude(&x), multiply_magnitudes(&x, &x), "x = {x:?}");
+            }
+        }
+    }
+
+    #[test]
     fn mul_operator_signs() {
         assert_eq!(&BigInteger::from_i32(5) * &BigInteger::from_i32(3), BigInteger::from_i32(15));
         assert_eq!(&BigInteger::from_i32(-5) * &BigInteger::from_i32(3), BigInteger::from_i32(-15));
@@ -1632,6 +1775,27 @@ mod tests {
         let a = BigInteger::from_i64(-123456789012);
         let b = BigInteger::from_i64(987654321);
         assert_eq!(&a * &b, &b * &a);
+    }
+
+    #[test]
+    fn mul_shortcuts_match_reference() {
+        // 冪次捷徑（含 2^k 運算元）與平方捷徑須與原生 i128 一致
+        let vals = [
+            1i64, -1, 2, -2, 8, -8, 7, -7, 1024, -1024,
+            0xFFFF_FFFF, -(0xFFFF_FFFFi64), 1 << 40, -(1 << 40),
+        ];
+        for &a in &vals {
+            for &b in &vals {
+                let got = &BigInteger::from_i64(a) * &BigInteger::from_i64(b);
+                let want = BigInteger::from_i128(a as i128 * b as i128);
+                assert_eq!(got, want, "{a} * {b}");
+            }
+        }
+        // 平方捷徑：&x * &x 同址 → 走 square_magnitude（非 2^k 者）
+        for &a in &vals {
+            let x = BigInteger::from_i64(a);
+            assert_eq!(&x * &x, BigInteger::from_i128(a as i128 * a as i128), "{a}²");
+        }
     }
 
     #[test]
