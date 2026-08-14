@@ -156,6 +156,50 @@ impl BigInteger {
         ((word >> (n % u32::BITS)) & 1) != 0
     }
 
+    /// Returns this value with bit `n` set to 1.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bc_math::big_integer::BigInteger;
+    ///
+    /// assert_eq!(BigInteger::from_u32(0b101).set_bit(1), BigInteger::from_u32(0b111));
+    /// ```
+    pub fn set_bit(&self, n: u32) -> BigInteger {
+        // 第 n 位設 1：self | (1 << n)
+        self | &(&*ONE << n)
+    }
+
+    /// Returns this value with bit `n` cleared to 0.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bc_math::big_integer::BigInteger;
+    ///
+    /// assert_eq!(BigInteger::from_u32(0b101).clear_bit(0), BigInteger::from_u32(0b100));
+    /// ```
+    pub fn clear_bit(&self, n: u32) -> BigInteger {
+        // 第 n 位設 0：self & ~(1 << n)
+        let mask = &*ONE << n; // 1 << n
+        let inv = !&mask; // ~(1 << n)
+        self & &inv
+    }
+
+    /// Returns this value with bit `n` flipped.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bc_math::big_integer::BigInteger;
+    ///
+    /// assert_eq!(BigInteger::from_u32(0b101).flip_bit(2), BigInteger::from_u32(0b001));
+    /// ```
+    pub fn flip_bit(&self, n: u32) -> BigInteger {
+        // 翻轉第 n 位：self ^ (1 << n)
+        self ^ &(&*ONE << n)
+    }
+
     /// Creates a `BigInteger` from an unsigned 32-bit value.
     ///
     /// # Examples
@@ -1348,6 +1392,34 @@ mod tests {
                 let got = BigInteger::from_i64(a).test_bit(n);
                 let want = (((a as i128) >> n) & 1) == 1;
                 assert_eq!(got, want, "test_bit({a}, {n})");
+            }
+        }
+    }
+
+    #[test]
+    fn set_clear_flip_bit_basic() {
+        let five = BigInteger::from_u32(0b101);
+        assert_eq!(five.set_bit(1), BigInteger::from_u32(0b111)); // 5 | 2 = 7
+        assert_eq!(five.set_bit(0), BigInteger::from_u32(0b101)); // 已是 1，不變
+        assert_eq!(five.clear_bit(0), BigInteger::from_u32(0b100)); // 5 & ~1 = 4
+        assert_eq!(five.clear_bit(1), BigInteger::from_u32(0b101)); // 已是 0，不變
+        assert_eq!(five.flip_bit(2), BigInteger::from_u32(0b001)); // 5 ^ 4 = 1
+        assert_eq!(five.set_bit(10), BigInteger::from_u32(0b100_0000_0101)); // 跨到高位
+        // 負數：-1 = ...1111，清第 0 位 → -2
+        assert_eq!(BigInteger::from_i32(-1).clear_bit(0), BigInteger::from_i32(-2));
+    }
+
+    #[test]
+    fn set_clear_flip_bit_matches_i128_reference() {
+        // 拿原生 i128 的 |、& ~、^ 當獨立參照
+        let vals = [0i64, 1, -1, 5, -5, 255, -256, 0xFFFF_FFFF, -(0xFFFF_FFFFi64)];
+        for &a in &vals {
+            for n in 0..70u32 {
+                let x = BigInteger::from_i64(a);
+                let bit = 1i128 << n;
+                assert_eq!(x.set_bit(n), BigInteger::from_i128((a as i128) | bit), "set_bit({a},{n})");
+                assert_eq!(x.clear_bit(n), BigInteger::from_i128((a as i128) & !bit), "clear_bit({a},{n})");
+                assert_eq!(x.flip_bit(n), BigInteger::from_i128((a as i128) ^ bit), "flip_bit({a},{n})");
             }
         }
     }
