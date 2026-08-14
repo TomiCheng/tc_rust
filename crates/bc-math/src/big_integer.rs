@@ -1,5 +1,5 @@
 use std::cmp::Ordering;
-use std::ops::{Add, Mul, Neg, Shl, Shr, Sub};
+use std::ops::{Add, Mul, Neg, Not, Shl, Shr, Sub};
 use std::sync::{LazyLock, OnceLock};
 
 /// 一個 magnitude 字的位元數（= 32）。集中定義，避免散落的 magic number。
@@ -400,6 +400,17 @@ impl Neg for &BigInteger {
 
     fn neg(self) -> BigInteger {
         BigInteger::new(-self.sign, Vec::from(&*self.magnitude))
+    }
+}
+
+impl Not for &BigInteger {
+    type Output = BigInteger;
+
+    /// 位元 NOT（兩補數）：`!x = -(x + 1)`。
+    fn not(self) -> BigInteger {
+        // self + &*ONE 產生 owned 暫時值，接著的一元 `-` 命中 owned Neg，
+        // 直接重用該暫時值的 buffer；整條 `!x` 只有 `+` 那次配置。
+        -(self + &*ONE)
     }
 }
 
@@ -1059,6 +1070,33 @@ mod tests {
     fn abs_is_idempotent() {
         let a = BigInteger::from_i64(-123456789);
         assert_eq!(a.clone().abs().abs(), a.abs());
+    }
+
+    #[test]
+    fn not_basic_identity() {
+        // !x = -(x + 1)
+        assert_eq!(!&BigInteger::from_i32(0), BigInteger::from_i32(-1)); // ~0 = -1
+        assert_eq!(!&BigInteger::from_i32(5), BigInteger::from_i32(-6)); // ~5 = -6
+        assert_eq!(!&BigInteger::from_i32(-1), BigInteger::from_i32(0)); // ~-1 = 0
+        assert_eq!(!&BigInteger::from_i32(-8), BigInteger::from_i32(7)); // ~-8 = 7
+    }
+
+    #[test]
+    fn not_is_involution() {
+        // !!x == x
+        let a = BigInteger::from_i64(-123456789);
+        assert_eq!(!&!&a, a);
+    }
+
+    #[test]
+    fn not_matches_i128_reference() {
+        // 拿原生 i128 的位元 NOT 當獨立參照
+        let vals = [0i64, 1, -1, 5, -5, 255, -256, 0xFFFF_FFFF, -(0xFFFF_FFFFi64), 1 << 40, -(1 << 40)];
+        for &a in &vals {
+            let got = !&BigInteger::from_i64(a);
+            let want = BigInteger::from_i128(!(a as i128));
+            assert_eq!(got, want, "!{a}");
+        }
     }
 
     #[test]
