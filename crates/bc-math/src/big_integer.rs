@@ -1,5 +1,5 @@
 use std::cmp::Ordering;
-use std::ops::{Add, Neg, Sub};
+use std::ops::{Add, Mul, Neg, Sub};
 use std::sync::OnceLock;
 
 #[derive(Clone, Debug)]
@@ -432,6 +432,23 @@ impl Sub for &BigInteger {
     }
 }
 
+impl Mul for &BigInteger {
+    type Output = BigInteger;
+
+    fn mul(self, rhs: &BigInteger) -> BigInteger {
+        if self.sign == 0 || rhs.sign == 0 {
+            return BigInteger::from_u32(0);
+        }
+        // TODO: 加上最佳化捷徑（需先有 Shl/Shr 位移）：
+        //   - self == rhs 時走 square()（平方比一般乘法快）
+        //   - 任一為 ±2^k 時（quick_pow2_check）用 shift_left 取代乘法
+        //   - 大數改用 Karatsuba
+        // 目前一律走 schoolbook：符號相乘定號，magnitude 交給 multiply_magnitudes
+        let magnitude = multiply_magnitudes(&self.magnitude, &rhs.magnitude);
+        BigInteger::new(self.sign * rhs.sign, magnitude)
+    }
+}
+
 /// 為每個固定寬度整數型別生成無損的 `From<$t> for BigInteger`，委派給對應建構函式。
 macro_rules! impl_from_primitive {
     ($($t:ty => $ctor:ident),* $(,)?) => {
@@ -541,6 +558,33 @@ fn sub_magnitudes(x: &[u32], y: &[u32]) -> Vec<u32> {
     }
 
     trim_leading_zeros(result) // 高位相消可能縮短
+}
+
+/// 兩個 magnitude（big-endian、無前導零）相乘，回傳結果（無前導零）。
+///
+/// 乘積最多 `x.len() + y.len()` 字，先配足再 trim。
+fn multiply_magnitudes(x: &[u32], y: &[u32]) -> Vec<u32> {
+    if x.is_empty() || y.is_empty() {
+        return Vec::new(); // 任一為零 → 0
+    }
+    let mut result = vec![0u32; x.len() + y.len()];
+
+    // 對 y 的每個字（由低位到高位），把整個 x 乘上去、加進 result 對應視窗
+    for i in (0..y.len()).rev() {
+        let a = y[i] as u64;
+        if a != 0 {
+            let mut carry = 0u64;
+            for j in (0..x.len()).rev() {
+                let pos = i + 1 + j; // 此 y 字對齊的視窗；a·x[j]+result[pos]+carry ≤ 2^64-1
+                let v = a * x[j] as u64 + result[pos] as u64 + carry;
+                result[pos] = v as u32;
+                carry = v >> 32;
+            }
+            result[i] = carry as u32; // 進位落在視窗上方一格
+        }
+    }
+
+    trim_leading_zeros(result)
 }
 
 /// 計算負數的 bitCount，等於 `popcount(magnitude - 1)`。
@@ -932,6 +976,85 @@ mod tests {
         let b = [0xFEDC_BA98];
         let sum = add_magnitudes(&a, &b);
         assert_eq!(sub_magnitudes(&sum, &b), a.to_vec());
+    }
+
+    #[test]
+    fn multiply_magnitudes_simple() {
+        assert_eq!(multiply_magnitudes(&[5], &[3]), vec![15]);
+    }
+
+    #[test]
+    fn multiply_magnitudes_with_zero() {
+        assert_eq!(multiply_magnitudes(&[5], &[]), Vec::<u32>::new());
+        assert_eq!(multiply_magnitudes(&[], &[5]), Vec::<u32>::new());
+    }
+
+    #[test]
+    fn multiply_magnitudes_grows_to_two_words() {
+        // 0x1_0000_0000 = 2^32：0x10000 * 0x10000
+        assert_eq!(multiply_magnitudes(&[0x1_0000], &[0x1_0000]), vec![1, 0]);
+    }
+
+    #[test]
+    fn multiply_magnitudes_max_words() {
+        // (2^32 - 1)^2 = 0xFFFFFFFE_00000001
+        assert_eq!(multiply_magnitudes(&[u32::MAX], &[u32::MAX]), vec![0xFFFF_FFFE, 0x0000_0001]);
+    }
+
+    #[test]
+    fn multiply_magnitudes_matches_u64_reference() {
+        // 用原生 u128 乘積當參照，涵蓋多字與進位
+        let vals: [u64; 6] = [1, 2, 0xFFFF_FFFF, 0x1_0000_0000, 0x1234_5678_9ABC, u64::MAX];
+        for &a in &vals {
+            for &b in &vals {
+                let x = BigInteger::from_u64(a);
+                let y = BigInteger::from_u64(b);
+                let got = multiply_magnitudes(&x.magnitude, &y.magnitude);
+                let want = Vec::from(BigInteger::from_u128(a as u128 * b as u128).magnitude);
+                assert_eq!(got, want, "{a} * {b}");
+            }
+        }
+    }
+
+    #[test]
+    fn multiply_magnitudes_is_commutative() {
+        let a = [0x1234_5678, 0x9ABC_DEF0];
+        let b = [0xFEDC_BA98, 0x7654_3210];
+        assert_eq!(multiply_magnitudes(&a, &b), multiply_magnitudes(&b, &a));
+    }
+
+    #[test]
+    fn mul_operator_signs() {
+        assert_eq!(&BigInteger::from_i32(5) * &BigInteger::from_i32(3), BigInteger::from_i32(15));
+        assert_eq!(&BigInteger::from_i32(-5) * &BigInteger::from_i32(3), BigInteger::from_i32(-15));
+        assert_eq!(&BigInteger::from_i32(5) * &BigInteger::from_i32(-3), BigInteger::from_i32(-15));
+        assert_eq!(&BigInteger::from_i32(-5) * &BigInteger::from_i32(-3), BigInteger::from_i32(15));
+    }
+
+    #[test]
+    fn mul_with_zero() {
+        assert_eq!(&BigInteger::from_i32(0) * &BigInteger::from_i32(7), BigInteger::from_i32(0));
+        assert_eq!(&BigInteger::from_i32(7) * &BigInteger::from_i32(0), BigInteger::from_i32(0));
+    }
+
+    #[test]
+    fn mul_matches_i128_reference() {
+        // 用原生 i128 乘積當參照，涵蓋各種符號與大小組合（值控制在乘積不溢位 i128）
+        let vals = [0i64, 1, -1, 7, -7, 0xFFFF_FFFF, -(0xFFFF_FFFFi64), 1 << 40, -(1 << 40)];
+        for &a in &vals {
+            for &b in &vals {
+                let got = &BigInteger::from_i64(a) * &BigInteger::from_i64(b);
+                let want = BigInteger::from_i128(a as i128 * b as i128);
+                assert_eq!(got, want, "{a} * {b}");
+            }
+        }
+    }
+
+    #[test]
+    fn mul_is_commutative() {
+        let a = BigInteger::from_i64(-123456789012);
+        let b = BigInteger::from_i64(987654321);
+        assert_eq!(&a * &b, &b * &a);
     }
 
     #[test]
