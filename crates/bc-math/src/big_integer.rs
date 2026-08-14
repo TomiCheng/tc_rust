@@ -1,5 +1,5 @@
 use std::cmp::Ordering;
-use std::ops::Neg;
+use std::ops::{Add, Neg, Sub};
 use std::sync::OnceLock;
 
 #[derive(Clone, Debug)]
@@ -377,6 +377,58 @@ impl Neg for BigInteger {
         // `Vec::from` 接手 Box 的配置（O(1)），`new` 再 `into_boxed_slice` 收回（O(1)）；
         // 全程無新配置。快取則透過 `new` 重置（`-n` 的 bit_length/bit_count 與 `n` 不同）。
         BigInteger::new(-self.sign, Vec::from(self.magnitude))
+    }
+}
+
+impl Neg for &BigInteger {
+    type Output = BigInteger;
+
+    fn neg(self) -> BigInteger {
+        BigInteger::new(-self.sign, Vec::from(&*self.magnitude))
+    }
+}
+
+impl Add for &BigInteger {
+    type Output = BigInteger;
+
+    fn add(self, rhs: &BigInteger) -> BigInteger {
+        if self.sign == 0 {
+            rhs.clone()
+        } else if rhs.sign == 0 {
+            self.clone()
+        } else if self.sign == rhs.sign {
+            // 同號：magnitude 相加，沿用符號
+            BigInteger::new(self.sign, add_magnitudes(&self.magnitude, &rhs.magnitude))
+        } else if rhs.sign < 0 {
+            self - &(-rhs)
+        } else {
+            rhs - &(-self)
+        }
+    }
+}
+
+impl Sub for &BigInteger {
+    type Output = BigInteger;
+
+    fn sub(self, rhs: &BigInteger) -> BigInteger {
+        if rhs.sign == 0 {
+            return self.clone();
+        } else if self.sign == 0 {
+            return -rhs;
+        } else if self.sign != rhs.sign {
+            return self + &(-rhs);
+        } else {
+            // 同號：比 magnitude，大減小，結果符號 = 較大者的符號
+            match compare_magnitude(&self.magnitude, &rhs.magnitude) {
+                Ordering::Equal => BigInteger::from_u32(0),
+                Ordering::Greater => {
+                    BigInteger::new(self.sign, sub_magnitudes(&self.magnitude, &rhs.magnitude))
+                }
+                Ordering::Less => {
+                    BigInteger::new(-self.sign, sub_magnitudes(&rhs.magnitude, &self.magnitude))
+                }
+            }
+        }
     }
 }
 
@@ -861,6 +913,76 @@ mod tests {
         let b = [0xFEDC_BA98];
         let sum = add_magnitudes(&a, &b);
         assert_eq!(sub_magnitudes(&sum, &b), a.to_vec());
+    }
+
+    #[test]
+    fn add_operator_same_sign() {
+        assert_eq!(&BigInteger::from_i32(5) + &BigInteger::from_i32(3), BigInteger::from_i32(8));
+        assert_eq!(&BigInteger::from_i32(-5) + &BigInteger::from_i32(-3), BigInteger::from_i32(-8));
+    }
+
+    #[test]
+    fn add_operator_different_signs() {
+        assert_eq!(&BigInteger::from_i32(5) + &BigInteger::from_i32(-3), BigInteger::from_i32(2));
+        assert_eq!(&BigInteger::from_i32(-5) + &BigInteger::from_i32(3), BigInteger::from_i32(-2));
+        assert_eq!(&BigInteger::from_i32(3) + &BigInteger::from_i32(-5), BigInteger::from_i32(-2));
+        assert_eq!(&BigInteger::from_i32(5) + &BigInteger::from_i32(-5), BigInteger::from_i32(0));
+    }
+
+    #[test]
+    fn add_operator_with_zero() {
+        assert_eq!(&BigInteger::from_i32(0) + &BigInteger::from_i32(7), BigInteger::from_i32(7));
+        assert_eq!(&BigInteger::from_i32(7) + &BigInteger::from_i32(0), BigInteger::from_i32(7));
+    }
+
+    #[test]
+    fn sub_operator_basic() {
+        assert_eq!(&BigInteger::from_i32(8) - &BigInteger::from_i32(3), BigInteger::from_i32(5));
+        assert_eq!(&BigInteger::from_i32(3) - &BigInteger::from_i32(8), BigInteger::from_i32(-5));
+        assert_eq!(&BigInteger::from_i32(5) - &BigInteger::from_i32(-3), BigInteger::from_i32(8));
+        assert_eq!(&BigInteger::from_i32(-5) - &BigInteger::from_i32(3), BigInteger::from_i32(-8));
+        assert_eq!(&BigInteger::from_i32(5) - &BigInteger::from_i32(5), BigInteger::from_i32(0));
+    }
+
+    #[test]
+    fn add_matches_i128_reference() {
+        // 用原生 i128 算和當獨立參照，涵蓋各種符號與大小組合
+        let vals = [0i64, 1, -1, 5, -5, 255, -256, 1 << 32, -(1 << 32), i64::MAX, i64::MIN];
+        for &a in &vals {
+            for &b in &vals {
+                let got = &BigInteger::from_i64(a) + &BigInteger::from_i64(b);
+                let want = BigInteger::from_i128(a as i128 + b as i128);
+                assert_eq!(got, want, "{a} + {b}");
+            }
+        }
+    }
+
+    #[test]
+    fn sub_matches_i128_reference() {
+        let vals = [0i64, 1, -1, 5, -5, 255, -256, 1 << 32, -(1 << 32), i64::MAX, i64::MIN];
+        for &a in &vals {
+            for &b in &vals {
+                let got = &BigInteger::from_i64(a) - &BigInteger::from_i64(b);
+                let want = BigInteger::from_i128(a as i128 - b as i128);
+                assert_eq!(got, want, "{a} - {b}");
+            }
+        }
+    }
+
+    #[test]
+    fn add_commutative_and_sub_relation() {
+        let a = BigInteger::from_i64(123456789012);
+        let b = BigInteger::from_i64(-98765432109);
+        assert_eq!(&a + &b, &b + &a); // a + b == b + a
+        assert_eq!(&a - &b, -(&b - &a)); // a - b == -(b - a)
+    }
+
+    #[test]
+    fn add_multi_word_carry() {
+        // (2^64 - 1) + 1 = 2^64
+        let a = BigInteger::from_u64(u64::MAX);
+        let one = BigInteger::from_u32(1);
+        assert_eq!(&a + &one, BigInteger::from_i128(u64::MAX as i128 + 1));
     }
 
     #[test]
