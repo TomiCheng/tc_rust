@@ -131,6 +131,31 @@ impl BigInteger {
         })
     }
 
+    /// Returns `true` if bit `n` (zero-indexed, two's-complement) is set.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bc_math::big_integer::BigInteger;
+    ///
+    /// assert!(BigInteger::from_u32(0b101).test_bit(0));
+    /// assert!(!BigInteger::from_u32(0b101).test_bit(1));
+    /// assert!(BigInteger::from_i32(-1).test_bit(99)); // -1 = ...1111，每位皆 1
+    /// ```
+    pub fn test_bit(&self, n: u32) -> bool {
+        if self.sign < 0 {
+            // 兩補數恆等式：x 為負時，第 n 位與 ~x（非負）的第 n 位相反
+            return !self.not().test_bit(n);
+        }
+        let word_num = (n / u32::BITS) as usize;
+        if word_num >= self.magnitude.len() {
+            return false; // 超出 magnitude：正數更高位皆 0
+        }
+        // big-endian：低位字在尾端，取第 word_num 個低位字
+        let word = self.magnitude[self.magnitude.len() - 1 - word_num];
+        ((word >> (n % u32::BITS)) & 1) != 0
+    }
+
     /// Creates a `BigInteger` from an unsigned 32-bit value.
     ///
     /// # Examples
@@ -1285,6 +1310,44 @@ mod tests {
                 assert_eq!(&x & &y, BigInteger::from_i128((a as i128) & (b as i128)), "{a} & {b}");
                 assert_eq!(&x | &y, BigInteger::from_i128((a as i128) | (b as i128)), "{a} | {b}");
                 assert_eq!(&x ^ &y, BigInteger::from_i128((a as i128) ^ (b as i128)), "{a} ^ {b}");
+            }
+        }
+    }
+
+    #[test]
+    fn test_bit_positive() {
+        let n = BigInteger::from_u32(0b1010);
+        assert!(!n.test_bit(0));
+        assert!(n.test_bit(1));
+        assert!(!n.test_bit(2));
+        assert!(n.test_bit(3));
+        assert!(!n.test_bit(4)); // 超出最高設定位
+        assert!(!n.test_bit(1000));
+    }
+
+    #[test]
+    fn test_bit_negative() {
+        // -1 = ...1111，任意位皆 1
+        let neg1 = BigInteger::from_i32(-1);
+        assert!(neg1.test_bit(0));
+        assert!(neg1.test_bit(31));
+        assert!(neg1.test_bit(1000));
+        // -2 = ...1110
+        let neg2 = BigInteger::from_i32(-2);
+        assert!(!neg2.test_bit(0));
+        assert!(neg2.test_bit(1));
+        assert!(neg2.test_bit(1000));
+    }
+
+    #[test]
+    fn test_bit_matches_i128_reference() {
+        // 拿原生 i128 的算術右移取位當獨立參照（負數 >> 會符號延伸，正好對應兩補數）
+        let vals = [0i64, 1, -1, 5, -5, 255, -256, 0xFFFF_FFFF, -(0xFFFF_FFFFi64), 1 << 40, -(1 << 40)];
+        for &a in &vals {
+            for n in 0..96u32 {
+                let got = BigInteger::from_i64(a).test_bit(n);
+                let want = (((a as i128) >> n) & 1) == 1;
+                assert_eq!(got, want, "test_bit({a}, {n})");
             }
         }
     }
