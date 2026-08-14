@@ -1,5 +1,5 @@
 use std::cmp::Ordering;
-use std::ops::{Add, BitAnd, Mul, Neg, Not, Shl, Shr, Sub};
+use std::ops::{Add, BitAnd, BitOr, BitXor, Mul, Neg, Not, Shl, Shr, Sub};
 use std::sync::{LazyLock, OnceLock};
 
 /// 一個 magnitude 字的位元數（= 32）。集中定義，避免散落的 magic number。
@@ -427,30 +427,42 @@ impl Not for &BigInteger {
 impl BitAnd for &BigInteger {
     type Output = BigInteger;
 
-    /// 位元 AND（兩補數語義）。
+    /// 位元 AND（兩補數語義）。負 AND 負 → 負。
     fn bitand(self, rhs: &BigInteger) -> BigInteger {
         if self.sign == 0 || rhs.sign == 0 {
-            return BigInteger::from_u32(0); // 任一為 0 → 0
+            return BigInteger::from_u32(0); // x & 0 = 0
         }
+        bitwise(self, rhs, self.sign < 0 && rhs.sign < 0, |a, b| a & b)
+    }
+}
 
-        // 兩運算元攤成同長度的兩補數字；長度取兩者 magnitude 字數的 max 已足夠
-        // （AND 只會清除位元，結果不會超過較長者；負數的符號延伸與 Not 進位另行處理）。
-        let len = self.magnitude.len().max(rhs.magnitude.len());
-        let a = to_twos_complement_words(self, len);
-        let b = to_twos_complement_words(rhs, len);
+impl BitOr for &BigInteger {
+    type Output = BigInteger;
 
-        let result_neg = self.sign < 0 && rhs.sign < 0; // 負 AND 負 = 負
-        let mut result = vec![0u32; len];
-        for i in 0..len {
-            let mut w = a[i] & b[i];
-            if result_neg {
-                w = !w; // 負結果：先存 |result|-1 的字，稍後整體 Not 回負
-            }
-            result[i] = w;
+    /// 位元 OR（兩補數語義）。負 OR 任意 → 負。
+    fn bitor(self, rhs: &BigInteger) -> BigInteger {
+        if self.sign == 0 {
+            return rhs.clone(); // 0 | x = x
         }
+        if rhs.sign == 0 {
+            return self.clone(); // x | 0 = x
+        }
+        bitwise(self, rhs, self.sign < 0 || rhs.sign < 0, |a, b| a | b)
+    }
+}
 
-        let result = BigInteger::from_checked_magnitude(1, result); // 去前導零 + 全零歸零
-        if result_neg { !&result } else { result }
+impl BitXor for &BigInteger {
+    type Output = BigInteger;
+
+    /// 位元 XOR（兩補數語義）。符號相異 → 負。
+    fn bitxor(self, rhs: &BigInteger) -> BigInteger {
+        if self.sign == 0 {
+            return rhs.clone(); // 0 ^ x = x
+        }
+        if rhs.sign == 0 {
+            return self.clone(); // x ^ 0 = x
+        }
+        bitwise(self, rhs, (self.sign < 0) != (rhs.sign < 0), |a, b| a ^ b)
     }
 }
 
@@ -830,6 +842,30 @@ fn to_twos_complement_words(x: &BigInteger, len: usize) -> Vec<u32> {
         }
     }
     words
+}
+
+/// 位元運算共用骨架：兩運算元攤成同長度兩補數字，逐字套 `op`，`result_neg` 決定結果符號。
+///
+/// 長度取兩者 magnitude 字數的 max 已足夠：多出的高位字都是符號延伸，收尾 trim 掉；
+/// 負結果先在迴圈裡整體反相存成 `|result| - 1`，最後 `!` 一次轉回負（進位長大由 Not 吸收）。
+///
+/// 前提：`a`、`b` 皆非零（零的捷徑由各運算子先處理）。
+fn bitwise(a: &BigInteger, b: &BigInteger, result_neg: bool, op: impl Fn(u32, u32) -> u32) -> BigInteger {
+    let len = a.magnitude.len().max(b.magnitude.len());
+    let aw = to_twos_complement_words(a, len);
+    let bw = to_twos_complement_words(b, len);
+
+    let mut result = vec![0u32; len];
+    for i in 0..len {
+        let mut w = op(aw[i], bw[i]);
+        if result_neg {
+            w = !w; // 負結果：先存 |result| - 1 的字
+        }
+        result[i] = w;
+    }
+
+    let result = BigInteger::from_checked_magnitude(1, result); // 去前導零 + 全零歸零
+    if result_neg { !&result } else { result }
 }
 
 /// 計算負數的 bitCount，等於 `popcount(magnitude - 1)`。
@@ -1217,17 +1253,38 @@ mod tests {
     }
 
     #[test]
-    fn bitand_matches_i128_reference() {
-        // 拿原生 i128 的位元 AND 當獨立參照，涵蓋各種符號與跨字組合
+    fn bitor_basic() {
+        assert_eq!(&BigInteger::from_u32(12) | &BigInteger::from_u32(10), BigInteger::from_u32(14));
+        assert_eq!(&BigInteger::from_i32(-8) | &BigInteger::from_i32(6), BigInteger::from_i32(-2));
+        assert_eq!(&BigInteger::from_i32(-1) | &BigInteger::from_i32(-1), BigInteger::from_i32(-1));
+        // 一方為 0 → 另一方
+        assert_eq!(&BigInteger::from_u32(0) | &BigInteger::from_i32(-5), BigInteger::from_i32(-5));
+        assert_eq!(&BigInteger::from_i32(7) | &BigInteger::from_u32(0), BigInteger::from_i32(7));
+    }
+
+    #[test]
+    fn bitxor_basic() {
+        assert_eq!(&BigInteger::from_u32(5) ^ &BigInteger::from_u32(3), BigInteger::from_u32(6));
+        assert_eq!(&BigInteger::from_i32(-1) ^ &BigInteger::from_i32(5), BigInteger::from_i32(-6));
+        assert_eq!(&BigInteger::from_i32(-1) ^ &BigInteger::from_i32(-1), BigInteger::from_i32(0));
+        // 一方為 0 → 另一方
+        assert_eq!(&BigInteger::from_u32(0) ^ &BigInteger::from_i32(-5), BigInteger::from_i32(-5));
+        assert_eq!(&BigInteger::from_i32(7) ^ &BigInteger::from_u32(0), BigInteger::from_i32(7));
+    }
+
+    #[test]
+    fn bitwise_matches_i128_reference() {
+        // 拿原生 i128 的 & / | / ^ 當獨立參照，涵蓋各種符號與跨字組合
         let vals = [
             0i64, 1, -1, 5, -5, 12, -12, 255, -256,
             0xFFFF_FFFF, -(0xFFFF_FFFFi64), 1 << 40, -(1 << 40),
         ];
         for &a in &vals {
             for &b in &vals {
-                let got = &BigInteger::from_i64(a) & &BigInteger::from_i64(b);
-                let want = BigInteger::from_i128((a as i128) & (b as i128));
-                assert_eq!(got, want, "{a} & {b}");
+                let (x, y) = (BigInteger::from_i64(a), BigInteger::from_i64(b));
+                assert_eq!(&x & &y, BigInteger::from_i128((a as i128) & (b as i128)), "{a} & {b}");
+                assert_eq!(&x | &y, BigInteger::from_i128((a as i128) | (b as i128)), "{a} | {b}");
+                assert_eq!(&x ^ &y, BigInteger::from_i128((a as i128) ^ (b as i128)), "{a} ^ {b}");
             }
         }
     }
