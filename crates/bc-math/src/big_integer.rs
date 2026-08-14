@@ -432,6 +432,25 @@ impl Sub for &BigInteger {
     }
 }
 
+/// 為每個固定寬度整數型別生成無損的 `From<$t> for BigInteger`，委派給對應建構函式。
+macro_rules! impl_from_primitive {
+    ($($t:ty => $ctor:ident),* $(,)?) => {
+        $(
+            impl From<$t> for BigInteger {
+                /// 無損轉換（固定寬度整數必可表示）。
+                fn from(value: $t) -> Self {
+                    BigInteger::$ctor(value)
+                }
+            }
+        )*
+    };
+}
+
+impl_from_primitive! {
+    u8 => from_u8, u16 => from_u16, u32 => from_u32, u64 => from_u64, u128 => from_u128,
+    i8 => from_i8, i16 => from_i16, i32 => from_i32, i64 => from_i64, i128 => from_i128,
+}
+
 /// 計算 magnitude（big-endian、無前導零）的位元長度，不含符號位。
 fn calc_bit_length(sign: i32, magnitude: &[u32]) -> u32 {
     // 無前導零，故第一個字即最高位字；空 magnitude 代表 0
@@ -975,6 +994,24 @@ mod tests {
         let b = BigInteger::from_i64(-98765432109);
         assert_eq!(&a + &b, &b + &a); // a + b == b + a
         assert_eq!(&a - &b, -(&b - &a)); // a - b == -(b - a)
+    }
+
+    #[test]
+    fn from_trait_matches_constructors() {
+        // From / into 與既有建構函式結果一致，涵蓋全部寬度
+        assert_eq!(BigInteger::from(5u8), BigInteger::from_u8(5));
+        assert_eq!(BigInteger::from(5u16), BigInteger::from_u16(5));
+        assert_eq!(BigInteger::from(5u32), BigInteger::from_u32(5));
+        assert_eq!(BigInteger::from(u64::MAX), BigInteger::from_u64(u64::MAX));
+        assert_eq!(BigInteger::from(u128::MAX), BigInteger::from_u128(u128::MAX));
+        assert_eq!(BigInteger::from(-5i8), BigInteger::from_i8(-5));
+        assert_eq!(BigInteger::from(-5i16), BigInteger::from_i16(-5));
+        assert_eq!(BigInteger::from(i32::MIN), BigInteger::from_i32(i32::MIN));
+        assert_eq!(BigInteger::from(i64::MIN), BigInteger::from_i64(i64::MIN));
+        assert_eq!(BigInteger::from(i128::MIN), BigInteger::from_i128(i128::MIN));
+        // Into 亦可用（型別標註觸發）
+        let a: BigInteger = 42u32.into();
+        assert_eq!(a, BigInteger::from_u32(42));
     }
 
     #[test]
