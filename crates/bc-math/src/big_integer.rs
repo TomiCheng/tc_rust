@@ -408,6 +408,41 @@ fn compare_magnitude(x: &[u32], y: &[u32]) -> Ordering {
     x.len().cmp(&y.len()).then_with(|| x.cmp(y))
 }
 
+/// 去除 big-endian magnitude 的前導零字。
+fn trim_leading_zeros(mut v: Vec<u32>) -> Vec<u32> {
+    let start = v.iter().position(|&w| w != 0).unwrap_or(v.len());
+    v.drain(..start);
+    v
+}
+
+/// 兩個 magnitude（big-endian、無前導零）相加，回傳結果（無前導零）。
+fn add_magnitudes(x: &[u32], y: &[u32]) -> Vec<u32> {
+    let (long, short) = if x.len() >= y.len() { (x, y) } else { (y, x) };
+
+    // 預留一個前導字容納最高位進位；長者先放入 result[1..]
+    let mut result = vec![0u32; long.len() + 1];
+    result[1..].copy_from_slice(long);
+
+    // 從最低位（尾端）把 short 加進去，進位隨 u64 高位帶著走
+    let mut carry = 0u64;
+    let mut ri = result.len();
+    for i in (0..short.len()).rev() {
+        ri -= 1;
+        carry += result[ri] as u64 + short[i] as u64;
+        result[ri] = carry as u32;
+        carry >>= 32;
+    }
+    // 剩餘進位繼續往更高位傳（result[0] 為 0，必能吸收，不會下溢）
+    while carry != 0 {
+        ri -= 1;
+        carry += result[ri] as u64;
+        result[ri] = carry as u32;
+        carry >>= 32;
+    }
+
+    trim_leading_zeros(result)
+}
+
 /// 計算負數的 bitCount，等於 `popcount(magnitude - 1)`。
 ///
 /// `magnitude` 為 big-endian、非空（負數必非零）。減 1 從最低位（尾端）借位。
@@ -718,6 +753,43 @@ mod tests {
     fn abs_is_idempotent() {
         let a = BigInteger::from_i64(-123456789);
         assert_eq!(a.clone().abs().abs(), a.abs());
+    }
+
+    #[test]
+    fn add_magnitudes_simple() {
+        assert_eq!(add_magnitudes(&[5], &[3]), vec![8]);
+    }
+
+    #[test]
+    fn add_magnitudes_carry_grows_word() {
+        // 0xFFFFFFFF + 1 = 0x1_0000_0000
+        assert_eq!(add_magnitudes(&[u32::MAX], &[1]), vec![1, 0]);
+    }
+
+    #[test]
+    fn add_magnitudes_carry_chain() {
+        // (2^64 - 1) + 1 = 2^64
+        assert_eq!(add_magnitudes(&[u32::MAX, u32::MAX], &[1]), vec![1, 0, 0]);
+    }
+
+    #[test]
+    fn add_magnitudes_different_lengths() {
+        // 2^32 + 5 = 0x1_0000_0005
+        assert_eq!(add_magnitudes(&[1, 0], &[5]), vec![1, 5]);
+    }
+
+    #[test]
+    fn add_magnitudes_with_empty_is_identity() {
+        assert_eq!(add_magnitudes(&[5], &[]), vec![5]);
+        assert_eq!(add_magnitudes(&[], &[5]), vec![5]);
+        assert_eq!(add_magnitudes(&[], &[]), Vec::<u32>::new());
+    }
+
+    #[test]
+    fn add_magnitudes_is_commutative() {
+        let a = [0x1234_5678, 0x9ABC_DEF0];
+        let b = [0xFFFF_FFFF];
+        assert_eq!(add_magnitudes(&a, &b), add_magnitudes(&b, &a));
     }
 
     #[test]
