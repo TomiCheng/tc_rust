@@ -1,5 +1,5 @@
 use std::cmp::Ordering;
-use std::ops::{Add, Mul, Neg, Sub};
+use std::ops::{Add, Mul, Neg, Shl, Shr, Sub};
 use std::sync::OnceLock;
 
 #[derive(Clone, Debug)]
@@ -449,6 +449,29 @@ impl Mul for &BigInteger {
     }
 }
 
+impl Shl<u32> for &BigInteger {
+    type Output = BigInteger;
+
+    /// 左移 `n` 位（相當於乘以 `2^n`）。
+    fn shl(self, n: u32) -> BigInteger {
+        if self.sign == 0 || n == 0 {
+            return self.clone(); // 0 << n = 0；x << 0 = x
+        }
+        // 左移不改符號；magnitude 交給 helper（u32 位元量 → usize 供索引）
+        let magnitude = shift_left_magnitude(&self.magnitude, n as usize);
+        BigInteger::new(self.sign, magnitude)
+    }
+}
+
+impl Shr<u32> for &BigInteger {
+    type Output = BigInteger;
+
+    /// 右移 `n` 位（算術右移：等同對 `2^n` 向負無窮取整除法）。
+    fn shr(self, n: u32) -> BigInteger {
+        todo!()
+    }
+}
+
 /// 為每個固定寬度整數型別生成無損的 `From<$t> for BigInteger`，委派給對應建構函式。
 macro_rules! impl_from_primitive {
     ($($t:ty => $ctor:ident),* $(,)?) => {
@@ -585,6 +608,50 @@ fn multiply_magnitudes(x: &[u32], y: &[u32]) -> Vec<u32> {
     }
 
     trim_leading_zeros(result)
+}
+
+/// 將 magnitude（big-endian、無前導零）左移 `n` 位，回傳結果（無前導零）。
+///
+/// 前提：`mag` 非空（移位零由呼叫端擋掉）。
+fn shift_left_magnitude(mag: &[u32], n: usize) -> Vec<u32> {
+    debug_assert!(!mag.is_empty(), "shift_left_magnitude 需要非空 magnitude");
+
+    let n_ints = n >> 5; // n / 32：要往低位補幾個整字
+    let n_bits = n & 0x1F; // n % 32：字內再移幾位
+    let mag_len = mag.len();
+    let mut new_mag: Vec<u32>;
+
+    if n_bits == 0 {
+        // 剛好整字倍數：mag 放前面，尾端補 n_ints 個零字
+        new_mag = vec![0u32; mag_len + n_ints];
+        new_mag[0..mag_len].copy_from_slice(mag);
+    } else {
+        let mut i = 0;
+        let n_bits2 = 32 - n_bits;
+        let high_bits = mag[0] >> n_bits2; // 最高字移出頂端的位元
+
+        if high_bits != 0 {
+            // 溢出頂端 → 需要多一個前導字
+            new_mag = vec![0u32; mag_len + n_ints + 1];
+            new_mag[i] = high_bits;
+            i += 1;
+        } else {
+            new_mag = vec![0u32; mag_len + n_ints];
+        }
+
+        // 逐字左移，並把下一字的高位帶進來（跨字進位）
+        let mut m = mag[0];
+        for j in 0..(mag_len - 1) {
+            let next = mag[j + 1];
+            new_mag[i] = (m << n_bits) | (next >> n_bits2);
+            i += 1;
+            m = next;
+        }
+        // 最低字沒有下一字可帶
+        new_mag[i] = mag[mag_len - 1] << n_bits;
+    }
+
+    new_mag
 }
 
 /// 計算負數的 bitCount，等於 `popcount(magnitude - 1)`。
@@ -1055,6 +1122,49 @@ mod tests {
         let a = BigInteger::from_i64(-123456789012);
         let b = BigInteger::from_i64(987654321);
         assert_eq!(&a * &b, &b * &a);
+    }
+
+    #[test]
+    fn shl_within_word() {
+        assert_eq!(&BigInteger::from_u32(1) << 1, BigInteger::from_u32(2));
+        assert_eq!(&BigInteger::from_u32(5) << 3, BigInteger::from_u32(40));
+    }
+
+    #[test]
+    fn shl_whole_words() {
+        // 剛好整字倍數（n_bits == 0）
+        assert_eq!(&BigInteger::from_u32(1) << 32, BigInteger::from_u64(1 << 32));
+        assert_eq!(&BigInteger::from_u32(1) << 64, BigInteger::from_u128(1 << 64));
+    }
+
+    #[test]
+    fn shl_cross_word_carry() {
+        // 移出頂端需要新前導字：0x8000_0000 << 1 = 0x1_0000_0000
+        assert_eq!(&BigInteger::from_u32(0x8000_0000) << 1, BigInteger::from_u64(1 << 32));
+    }
+
+    #[test]
+    fn shl_preserves_sign() {
+        assert_eq!(&BigInteger::from_i32(-1) << 4, BigInteger::from_i32(-16));
+    }
+
+    #[test]
+    fn shl_zero_and_by_zero() {
+        assert_eq!(&BigInteger::from_i32(0) << 10, BigInteger::from_i32(0));
+        assert_eq!(&BigInteger::from_i32(7) << 0, BigInteger::from_i32(7));
+    }
+
+    #[test]
+    fn shl_matches_i128_reference() {
+        // a << n == a * 2^n；值與位移量控制在不溢位 i128
+        let vals = [0i64, 1, -1, 7, -7, 0xFFFF_FFFF, -(0xFFFF_FFFFi64)];
+        for &a in &vals {
+            for n in [0u32, 1, 5, 31, 32, 33, 64] {
+                let got = &BigInteger::from_i64(a) << n;
+                let want = BigInteger::from_i128((a as i128) << n);
+                assert_eq!(got, want, "{a} << {n}");
+            }
+        }
     }
 
     #[test]
