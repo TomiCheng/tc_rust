@@ -1,5 +1,5 @@
 use std::cmp::Ordering;
-use std::ops::{Add, Mul, Neg, Not, Shl, Shr, Sub};
+use std::ops::{Add, BitAnd, Mul, Neg, Not, Shl, Shr, Sub};
 use std::sync::{LazyLock, OnceLock};
 
 /// 一個 magnitude 字的位元數（= 32）。集中定義，避免散落的 magic number。
@@ -25,6 +25,16 @@ impl BigInteger {
             bits: OnceLock::new(),
             bit_length: OnceLock::new(),
         }
+    }
+
+    /// 檢查版建構式（對應 bc-csharp `new BigInteger(sign, mag, checkMag: true)`）：
+    /// 去前導零；若全為零則符號歸 0，維持「無前導零 / sign==0 ⟺ magnitude 空」不變量。
+    ///
+    /// 用於位元運算等「結果 magnitude 可能帶前導零或全零」的場合；`new` 本身不做檢查。
+    fn from_checked_magnitude(sign: i32, magnitude: Vec<u32>) -> Self {
+        let magnitude = trim_leading_zeros(magnitude);
+        let sign = if magnitude.is_empty() { 0 } else { sign };
+        BigInteger::new(sign, magnitude)
     }
 
     /// Returns the sign of this value: `-1` (negative), `0` (zero), or `1` (positive).
@@ -414,6 +424,36 @@ impl Not for &BigInteger {
     }
 }
 
+impl BitAnd for &BigInteger {
+    type Output = BigInteger;
+
+    /// 位元 AND（兩補數語義）。
+    fn bitand(self, rhs: &BigInteger) -> BigInteger {
+        if self.sign == 0 || rhs.sign == 0 {
+            return BigInteger::from_u32(0); // 任一為 0 → 0
+        }
+
+        // 兩運算元攤成同長度的兩補數字；長度取兩者 magnitude 字數的 max 已足夠
+        // （AND 只會清除位元，結果不會超過較長者；負數的符號延伸與 Not 進位另行處理）。
+        let len = self.magnitude.len().max(rhs.magnitude.len());
+        let a = to_twos_complement_words(self, len);
+        let b = to_twos_complement_words(rhs, len);
+
+        let result_neg = self.sign < 0 && rhs.sign < 0; // 負 AND 負 = 負
+        let mut result = vec![0u32; len];
+        for i in 0..len {
+            let mut w = a[i] & b[i];
+            if result_neg {
+                w = !w; // 負結果：先存 |result|-1 的字，稍後整體 Not 回負
+            }
+            result[i] = w;
+        }
+
+        let result = BigInteger::from_checked_magnitude(1, result); // 去前導零 + 全零歸零
+        if result_neg { !&result } else { result }
+    }
+}
+
 impl Add for &BigInteger {
     type Output = BigInteger;
 
@@ -760,6 +800,38 @@ fn any_low_bits_set(mag: &[u32], n: usize) -> bool {
     false
 }
 
+/// 把 `x` 展成 `len` 個字的兩補數表示（big-endian、符號延伸），供位元運算逐字處理。
+///
+/// - 零 / 正數：magnitude 右對齊，上方補 `0`。
+/// - 負數：`-m` 的兩補數 = `~(m - 1)`，故取 `(x + 1)` 的 magnitude（值 = `m - 1`）右對齊後
+///   **整體反相**；連上方 padding 的 `0` 也翻成 `0xFFFF_FFFF`，即符號延伸（無限個 1）。
+///
+/// 前提：`len` 至少容得下該來源 magnitude 的字數（呼叫端以兩運算元取 max 保證）。
+fn to_twos_complement_words(x: &BigInteger, len: usize) -> Vec<u32> {
+    let mut words = vec![0u32; len];
+    if x.sign == 0 {
+        return words; // 0 → 全 0
+    }
+
+    let negative = x.sign < 0;
+    // 負數要讓 (x + 1) 這個暫時值活到 copy 完；用「延後初始化」的 let 延長其壽命，免 clone。
+    let neg_tmp;
+    let src: &[u32] = if negative {
+        neg_tmp = x + &*ONE;
+        &neg_tmp.magnitude
+    } else {
+        &x.magnitude
+    };
+
+    words[len - src.len()..].copy_from_slice(src); // big-endian 右對齊
+    if negative {
+        for w in &mut words {
+            *w = !*w; // 整體反相 → 兩補數（含上方符號延伸）
+        }
+    }
+    words
+}
+
 /// 計算負數的 bitCount，等於 `popcount(magnitude - 1)`。
 ///
 /// `magnitude` 為 big-endian、非空（負數必非零）。減 1 從最低位（尾端）借位。
@@ -1096,6 +1168,67 @@ mod tests {
             let got = !&BigInteger::from_i64(a);
             let want = BigInteger::from_i128(!(a as i128));
             assert_eq!(got, want, "!{a}");
+        }
+    }
+
+    #[test]
+    fn twos_complement_words_layout() {
+        // 正數：magnitude 右對齊、上方補 0
+        assert_eq!(to_twos_complement_words(&BigInteger::from_u32(5), 3), vec![0, 0, 5]);
+        // 零：全 0
+        assert_eq!(to_twos_complement_words(&BigInteger::from_u32(0), 2), vec![0, 0]);
+        // -1：無限個 1 → 每字皆 0xFFFF_FFFF
+        assert_eq!(
+            to_twos_complement_words(&BigInteger::from_i32(-1), 2),
+            vec![0xFFFF_FFFF, 0xFFFF_FFFF]
+        );
+        // -2 = ...1110 → 低字 0xFFFF_FFFE
+        assert_eq!(to_twos_complement_words(&BigInteger::from_i32(-2), 1), vec![0xFFFF_FFFE]);
+        // -256 → 低字 0xFFFF_FF00，上方字符號延伸為 0xFFFF_FFFF
+        assert_eq!(
+            to_twos_complement_words(&BigInteger::from_i32(-256), 2),
+            vec![0xFFFF_FFFF, 0xFFFF_FF00]
+        );
+    }
+
+    #[test]
+    fn twos_complement_words_matches_i128_reference() {
+        // 拿原生 i64→i128 的兩補數位元當對照（取低 2 個 32-bit 字）
+        let vals = [0i64, 1, -1, 5, -5, 255, -256, 0xFFFF_FFFF, -(0xFFFF_FFFFi64)];
+        for &a in &vals {
+            let words = to_twos_complement_words(&BigInteger::from_i64(a), 2);
+            let bits = a as u64; // 兩補數位元模式
+            assert_eq!(words, vec![(bits >> 32) as u32, bits as u32], "value {a}");
+        }
+    }
+
+    #[test]
+    fn bitand_basic() {
+        // 正 & 正
+        assert_eq!(&BigInteger::from_u32(12) & &BigInteger::from_u32(10), BigInteger::from_u32(8));
+        // 負 & 正（-8 = ...11111000）
+        assert_eq!(&BigInteger::from_i32(-8) & &BigInteger::from_i32(6), BigInteger::from_i32(0));
+        assert_eq!(&BigInteger::from_i32(-8) & &BigInteger::from_i32(12), BigInteger::from_i32(8));
+        // 負 & 負 → 負
+        assert_eq!(&BigInteger::from_i32(-1) & &BigInteger::from_i32(-1), BigInteger::from_i32(-1));
+        assert_eq!(&BigInteger::from_i32(-2) & &BigInteger::from_i32(-3), BigInteger::from_i32(-4));
+        // 任一為 0
+        assert_eq!(&BigInteger::from_u32(0) & &BigInteger::from_i32(-5), BigInteger::from_u32(0));
+    }
+
+    #[test]
+    fn bitand_matches_i128_reference() {
+        // 拿原生 i128 的位元 AND 當獨立參照，涵蓋各種符號與跨字組合
+        let vals = [
+            0i64, 1, -1, 5, -5, 12, -12, 255, -256,
+            0xFFFF_FFFF, -(0xFFFF_FFFFi64), 1 << 40, -(1 << 40),
+        ];
+        for &a in &vals {
+            for &b in &vals {
+                let got = &BigInteger::from_i64(a) & &BigInteger::from_i64(b);
+                let want = BigInteger::from_i128((a as i128) & (b as i128));
+                assert_eq!(got, want, "{a} & {b}");
+            }
         }
     }
 
