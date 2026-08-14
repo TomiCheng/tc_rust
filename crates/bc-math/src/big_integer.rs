@@ -765,31 +765,43 @@ fn trim_leading_zeros(mut v: Vec<u32>) -> Vec<u32> {
     v
 }
 
+/// 原地加法：`x += y`（big-endian，低位對齊）。
+///
+/// 前提：`x.len() >= y.len()`，且 `x` 已預留足夠長度容納進位（最高位不溢出）。
+/// 供除法內圈與 `add_magnitudes` 使用，避免每次相加都配置。
+fn add_in_place(x: &mut [u32], y: &[u32]) {
+    debug_assert!(x.len() >= y.len(), "add_in_place 需要 x.len() >= y.len()");
+
+    let mut carry = 0u64;
+    let mut xi = x.len();
+
+    // 先把 y 逐字加進 x 的低位端（兩者尾端對齊），進位隨 u64 高位帶著走
+    for &yw in y.iter().rev() {
+        xi -= 1;
+        carry += x[xi] as u64 + yw as u64;
+        x[xi] = carry as u32;
+        carry >>= 32;
+    }
+    // 剩餘進位繼續往更高位傳（xi > 0 護欄避免下溢，並讓下方 assert 給清楚訊息）
+    while carry != 0 && xi > 0 {
+        xi -= 1;
+        carry += x[xi] as u64;
+        x[xi] = carry as u32;
+        carry >>= 32;
+    }
+
+    debug_assert!(carry == 0, "add_in_place 溢位：x 未預留足夠長度");
+}
+
 /// 兩個 magnitude（big-endian、無前導零）相加，回傳結果（無前導零）。
 fn add_magnitudes(x: &[u32], y: &[u32]) -> Vec<u32> {
     let (long, short) = if x.len() >= y.len() { (x, y) } else { (y, x) };
 
-    // 預留一個前導字容納最高位進位；長者先放入 result[1..]
+    // 預留一個前導 0 字容納最高位進位；長者放進 result[1..]
     let mut result = vec![0u32; long.len() + 1];
     result[1..].copy_from_slice(long);
 
-    // 從最低位（尾端）把 short 加進去，進位隨 u64 高位帶著走
-    let mut carry = 0u64;
-    let mut ri = result.len();
-    for i in (0..short.len()).rev() {
-        ri -= 1;
-        carry += result[ri] as u64 + short[i] as u64;
-        result[ri] = carry as u32;
-        carry >>= 32;
-    }
-    // 剩餘進位繼續往更高位傳（result[0] 為 0，必能吸收，不會下溢）
-    while carry != 0 {
-        ri -= 1;
-        carry += result[ri] as u64;
-        result[ri] = carry as u32;
-        carry >>= 32;
-    }
-
+    add_in_place(&mut result, short); // 加法與進位傳遞交給原地核心；前導 0 字吸收進位
     trim_leading_zeros(result)
 }
 
@@ -803,23 +815,36 @@ fn sub_magnitudes(x: &[u32], y: &[u32]) -> Vec<u32> {
     );
 
     let mut result = x.to_vec();
-    let offset = result.len() - y.len(); // y 對齊 result 低位端
+    sub_in_place(&mut result, y); // 減法與借位傳遞交給原地核心
+    trim_leading_zeros(result) // 高位相消可能縮短
+}
+
+/// 原地減法：`x -= y`（big-endian，低位對齊）。
+///
+/// 前提：數值上 `x >= y`（呼叫端保證），故不會借位溢出頂端。
+/// 供除法內圈與 `sub_magnitudes` 使用，避免每次相減都配置。
+fn sub_in_place(x: &mut [u32], y: &[u32]) {
+    debug_assert!(x.len() >= y.len(), "sub_in_place 需要 x.len() >= y.len()");
+
     let mut borrow = 0i64;
-    for i in (0..y.len()).rev() {
-        let diff = result[offset + i] as i64 - y[i] as i64 - borrow;
-        result[offset + i] = diff as u32; // 負則回繞，等同借位
+    let mut xi = x.len();
+
+    // 先把 y 從 x 的低位端逐字減掉（兩者尾端對齊）
+    for &yw in y.iter().rev() {
+        xi -= 1;
+        let diff = x[xi] as i64 - yw as i64 - borrow;
+        x[xi] = diff as u32; // 負則回繞，等同借位
         borrow = (diff < 0) as i64; // 0 或 1
     }
-    // 剩餘借位往更高位傳
-    let mut i = offset;
-    while borrow != 0 && i > 0 {
-        i -= 1;
-        let (v, b) = result[i].overflowing_sub(1);
-        result[i] = v;
+    // 剩餘借位往更高位傳（xi > 0 護欄避免下溢，並讓下方 assert 給清楚訊息）
+    while borrow != 0 && xi > 0 {
+        xi -= 1;
+        let (v, b) = x[xi].overflowing_sub(1);
+        x[xi] = v;
         borrow = b as i64;
     }
 
-    trim_leading_zeros(result) // 高位相消可能縮短
+    debug_assert!(borrow == 0, "sub_in_place：x < y（借位溢出頂端）");
 }
 
 /// 兩個 magnitude（big-endian、無前導零）相乘，回傳結果（無前導零）。
@@ -1579,6 +1604,29 @@ mod tests {
     }
 
     #[test]
+    fn add_in_place_basic() {
+        // x += y，低位對齊；x 須預留進位空間
+        let mut x = vec![0, 5];
+        add_in_place(&mut x, &[3]);
+        assert_eq!(x, vec![0, 8]);
+
+        // 跨字進位由預留的前導字吸收
+        let mut x = vec![0, u32::MAX];
+        add_in_place(&mut x, &[1]);
+        assert_eq!(x, vec![1, 0]);
+
+        // 進位鏈：0xFFFF_FFFF_FFFF_FFFF + 1
+        let mut x = vec![0, u32::MAX, u32::MAX];
+        add_in_place(&mut x, &[1]);
+        assert_eq!(x, vec![1, 0, 0]);
+
+        // 等長相加
+        let mut x = vec![0, 0x1000_0000];
+        add_in_place(&mut x, &[0, 0x2000_0000]);
+        assert_eq!(x, vec![0, 0x3000_0000]);
+    }
+
+    #[test]
     fn add_magnitudes_simple() {
         assert_eq!(add_magnitudes(&[5], &[3]), vec![8]);
     }
@@ -1613,6 +1661,29 @@ mod tests {
         let a = [0x1234_5678, 0x9ABC_DEF0];
         let b = [0xFFFF_FFFF];
         assert_eq!(add_magnitudes(&a, &b), add_magnitudes(&b, &a));
+    }
+
+    #[test]
+    fn sub_in_place_basic() {
+        // x -= y，低位對齊；前提 x >= y
+        let mut x = vec![8];
+        sub_in_place(&mut x, &[3]);
+        assert_eq!(x, vec![5]);
+
+        // 跨字借位：2^32 - 1
+        let mut x = vec![1, 0];
+        sub_in_place(&mut x, &[1]);
+        assert_eq!(x, vec![0, u32::MAX]);
+
+        // 借位鏈：2^64 - 1
+        let mut x = vec![1, 0, 0];
+        sub_in_place(&mut x, &[1]);
+        assert_eq!(x, vec![0, u32::MAX, u32::MAX]);
+
+        // 相等 → 全 0（不 trim，原地保留長度）
+        let mut x = vec![5];
+        sub_in_place(&mut x, &[5]);
+        assert_eq!(x, vec![0]);
     }
 
     #[test]
