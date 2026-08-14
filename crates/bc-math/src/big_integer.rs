@@ -85,6 +85,27 @@ impl BigInteger {
         }
     }
 
+    /// Returns `self²` (always non-negative).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bc_math::big_integer::BigInteger;
+    ///
+    /// assert_eq!(BigInteger::from_i32(-7).square(), BigInteger::from_i32(49));
+    /// ```
+    pub fn square(&self) -> BigInteger {
+        if self.sign == 0 {
+            return BigInteger::from_u32(0);
+        }
+        // 2^k 的平方 = 2^(2k) = self << k（k = bit_length-1）；is_power_of_two 保證為正
+        if self.is_power_of_two() {
+            return self << (self.bit_length() - 1);
+        }
+        // 平方恆正；square_magnitude 已 trim，直接生建構
+        BigInteger::new(1, square_magnitude(&self.magnitude))
+    }
+
     /// Returns the number of bits in the minimal two's-complement representation
     /// of this value, excluding the sign bit. Zero has a bit length of `0`.
     ///
@@ -1721,6 +1742,18 @@ mod tests {
             let got = square_magnitude(&x.magnitude);
             let want = Vec::from(BigInteger::from_u128(a as u128 * a as u128).magnitude);
             assert_eq!(got, want, "{a}²");
+        }
+    }
+
+    #[test]
+    fn square_method_matches_reference() {
+        let vals = [0i64, 1, -1, 2, -2, 8, -8, 7, -7, 1024, 0xFFFF_FFFF, -(0xFFFF_FFFFi64), 1 << 40];
+        for &a in &vals {
+            let x = BigInteger::from_i64(a);
+            // 對照原生 i128 平方（負數平方為正）
+            assert_eq!(x.square(), BigInteger::from_i128(a as i128 * a as i128), "{a}²");
+            // 與 &x * &x 一致
+            assert_eq!(x.square(), &x * &x, "{a}² method vs *");
         }
     }
 
