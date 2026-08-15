@@ -986,33 +986,43 @@ fn shift_left_magnitude(mag: &[u32], n: usize) -> Vec<u32> {
 /// 前提：`mag` 非空，且 `n` 小於總位元數 `mag.len() * WORD_BITS`。
 /// 「整個移光成零」的情形由呼叫端先攔掉（直接回零），不進本函式。
 fn shift_right_magnitude(mag: &[u32], n: usize) -> Vec<u32> {
-    debug_assert!(!mag.is_empty(), "shift_right_magnitude 需要非空 magnitude");
-    debug_assert!(
-        n < mag.len() * WORD_BITS,
-        "shift_right_magnitude: n 不可 >= 總位元數（移光成零應由呼叫端處理）"
-    );
+    let mut result = mag.to_vec();
+    shift_right_in_place(&mut result, n); // 位移與跨字補位交給原地核心（前提檢查在其中）
+    trim_leading_zeros(result) // 原地版高位補 0，去掉空出的前導零字即得緊湊結果
+}
 
-    let word_shift = n / WORD_BITS; // 從低位端整字丟棄數
-    let bit_shift = n % WORD_BITS; // 字內再右移幾位
-    let src_len = mag.len() - word_shift; // 丟掉低位字後剩餘的高位字數
-    let src = &mag[..src_len]; // 保留的高位段（big-endian）
+/// 原地右移 `n` 位（big-endian，固定長度，高位空出處填 0，不 trim）。
+///
+/// 供除法內圈使用。前提：`mag` 非空，且 `n < mag.len() * WORD_BITS`。
+fn shift_right_in_place(mag: &mut [u32], n: usize) {
+    debug_assert!(!mag.is_empty(), "shift_right_in_place 需要非空 mag");
+    debug_assert!(n < mag.len() * WORD_BITS, "shift_right_in_place: n 超出總位元數");
 
-    if bit_shift == 0 {
-        // 剛好整字倍數：直接取高位段（mag[0] != 0，本就無前導零）
-        return src.to_vec();
+    let n_ints = n / WORD_BITS; // 整字搬移數
+    let n_bits = n % WORD_BITS; // 字內位移
+    let end = mag.len() - 1; // 最低位字索引（big-endian）
+
+    // 階段 1：整字搬移（往低位方向搬 n_ints 格），空出的高位字填 0
+    if n_ints != 0 {
+        for i in (n_ints..=end).rev() {
+            mag[i] = mag[i - n_ints];
+        }
+        for w in &mut mag[..n_ints] {
+            *w = 0;
+        }
     }
 
-    let carry_shift = WORD_BITS - bit_shift; // 高位鄰字要左移多少才落到本字頂端
-    let mut result = vec![0u32; src_len];
-
-    // 最高字沒有更高鄰字可帶入
-    result[0] = src[0] >> bit_shift;
-    // 其餘每字：自身右移，補上「更高位鄰字」落下的低位
-    for i in 1..src_len {
-        result[i] = (src[i] >> bit_shift) | (src[i - 1] << carry_shift);
+    // 階段 2：字內右移 n_bits，補入高位鄰字掉下來的位
+    if n_bits != 0 {
+        let n_bits2 = WORD_BITS - n_bits;
+        let mut m = mag[end];
+        for i in (n_ints + 1..=end).rev() {
+            let next = mag[i - 1];
+            mag[i] = (m >> n_bits) | (next << n_bits2);
+            m = next;
+        }
+        mag[n_ints] >>= n_bits; // 最高有效字沒有更高鄰字可帶入
     }
-
-    trim_leading_zeros(result) // result[0] 可能被移成 0，需去前導零
 }
 
 /// 檢查 magnitude（big-endian）最低 `n` 位是否有任何設定位元。
@@ -2019,6 +2029,45 @@ mod tests {
             for n in [0u32, 1, 7, 31, 32, 40] {
                 let a = BigInteger::from_i64(a);
                 assert_eq!(&(&a << n) >> n, a);
+            }
+        }
+    }
+
+    #[test]
+    fn shift_right_in_place_basic() {
+        // 純字內位移（n < 32）
+        let mut m = vec![0x0000_0001u32, 0x0000_0000]; // 2^32
+        shift_right_in_place(&mut m, 1);
+        assert_eq!(m, vec![0, 0x8000_0000]); // 2^31
+
+        // 整字位移（n 為 32 倍數）
+        let mut m = vec![3u32, 0]; // 3 * 2^32
+        shift_right_in_place(&mut m, 32);
+        assert_eq!(m, vec![0, 3]);
+
+        // 混合（word + bit）：floor((2^32 + 2^31) / 2^33) = 0
+        let mut m = vec![1u32, 0x8000_0000];
+        shift_right_in_place(&mut m, 33);
+        assert_eq!(m, vec![0, 0]);
+    }
+
+    #[test]
+    fn shift_right_in_place_matches_allocating() {
+        // 原地版右移後去前導零，應與配置版 shift_right_magnitude 一致
+        let cases: [&[u32]; 4] = [
+            &[0x1234_5678, 0x9ABC_DEF0],
+            &[u32::MAX, u32::MAX, u32::MAX],
+            &[1, 0, 0],
+            &[0xFFFF_FFFF, 0x0000_0001],
+        ];
+        for x in cases {
+            for n in [1usize, 5, 31, 32, 33, 63, 64] {
+                if n >= x.len() * 32 {
+                    continue;
+                }
+                let mut m = x.to_vec();
+                shift_right_in_place(&mut m, n);
+                assert_eq!(trim_leading_zeros(m), shift_right_magnitude(x, n), "x={x:?} n={n}");
             }
         }
     }
