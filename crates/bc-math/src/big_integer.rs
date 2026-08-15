@@ -1,5 +1,5 @@
 use std::cmp::Ordering;
-use std::ops::{Add, BitAnd, BitOr, BitXor, Mul, Neg, Not, Shl, Shr, Sub};
+use std::ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Neg, Not, Rem, Shl, Shr, Sub};
 use std::sync::{LazyLock, OnceLock};
 
 /// 一個 magnitude 字的位元數（= 32）。集中定義，避免散落的 magic number。
@@ -104,6 +104,38 @@ impl BigInteger {
         }
         // 平方恆正；square_magnitude 已 trim，直接生建構
         BigInteger::new(1, square_magnitude(&self.magnitude))
+    }
+
+    /// Returns the truncated quotient and remainder `(self / divisor, self % divisor)`.
+    ///
+    /// Division truncates toward zero: the quotient's sign is the product of the
+    /// operand signs, and the remainder takes the dividend's sign.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `divisor` is zero.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bc_math::big_integer::BigInteger;
+    ///
+    /// let (q, r) = BigInteger::from_i32(-7).div_rem(&BigInteger::from_i32(2));
+    /// assert_eq!(q, BigInteger::from_i32(-3)); // 截斷向零
+    /// assert_eq!(r, BigInteger::from_i32(-1)); // 餘數跟被除數同號
+    /// ```
+    pub fn div_rem(&self, divisor: &BigInteger) -> (BigInteger, BigInteger) {
+        if divisor.sign == 0 {
+            panic!("attempt to divide by zero");
+        }
+        if self.sign == 0 {
+            return (BigInteger::from_u32(0), BigInteger::from_u32(0)); // 0 / y = (0, 0)
+        }
+        let (q_mag, r_mag) = div_magnitudes(&self.magnitude, &divisor.magnitude);
+        // 截斷向零：商號 = 兩號相乘；餘號 = 被除數號。空 magnitude 由 from_checked 歸 0
+        let quotient = BigInteger::from_checked_magnitude(self.sign * divisor.sign, q_mag);
+        let remainder = BigInteger::from_checked_magnitude(self.sign, r_mag);
+        (quotient, remainder)
     }
 
     /// Returns the number of bits in the minimal two's-complement representation
@@ -662,6 +694,24 @@ impl Mul for &BigInteger {
     }
 }
 
+impl Div for &BigInteger {
+    type Output = BigInteger;
+
+    /// 截斷除法的商（見 [`BigInteger::div_rem`]）。除數為 0 時 panic。
+    fn div(self, rhs: &BigInteger) -> BigInteger {
+        self.div_rem(rhs).0
+    }
+}
+
+impl Rem for &BigInteger {
+    type Output = BigInteger;
+
+    /// 截斷除法的餘數（見 [`BigInteger::div_rem`]）。除數為 0 時 panic。
+    fn rem(self, rhs: &BigInteger) -> BigInteger {
+        self.div_rem(rhs).1
+    }
+}
+
 impl Shl<u32> for &BigInteger {
     type Output = BigInteger;
 
@@ -1023,6 +1073,130 @@ fn shift_right_in_place(mag: &mut [u32], n: usize) {
         }
         mag[n_ints] >>= n_bits; // 最高有效字沒有更高鄰字可帶入
     }
+}
+
+/// 原地右移 1 位（big-endian）。除法內圈的高頻特化版，比通用版省去 word 搬移判斷。
+fn shift_right_one_in_place(mag: &mut [u32]) {
+    debug_assert!(!mag.is_empty(), "shift_right_one_in_place 需要非空 mag");
+    // 由高位字往低位處理：每字右移 1，補入高位鄰字掉下來的最低位。
+    // 讀 mag[i-1] 時它尚未被改（處理順序在後），故不需 carry 變數。
+    for i in (1..mag.len()).rev() {
+        mag[i] = (mag[i] >> 1) | (mag[i - 1] << (WORD_BITS - 1));
+    }
+    mag[0] >>= 1; // 最高字沒有更高鄰字
+}
+
+/// 長除法（位移相減法）：回傳 `(商, 餘)` 的 magnitude（皆 big-endian、無前導零）。
+///
+/// `dividend`、`divisor` 皆 big-endian、無前導零。呼叫端須保證 `divisor` 非零。
+fn div_magnitudes(dividend: &[u32], divisor: &[u32]) -> (Vec<u32>, Vec<u32>) {
+    debug_assert!(!dividend.is_empty() && dividend[0] != 0, "div_magnitudes: 被除數須無前導零");
+    debug_assert!(!divisor.is_empty() && divisor[0] != 0, "div_magnitudes: 除數須非零且無前導零");
+
+    let mut x = dividend.to_vec(); // 可變工作副本 → 最後成為餘數
+    let y = divisor; // 除數不變
+    let mut x_start = 0; // x 的有效起點；相減後會往前推進
+
+    let mut xy_cmp = compare_magnitude(&x[x_start..], y);
+    let mut count: Vec<u32>;
+
+    if xy_cmp == Ordering::Greater {
+        let y_bit_length = calc_bit_length(1, y) as usize;
+        let mut x_bit_length = calc_bit_length(1, &x[x_start..]) as usize;
+        let mut shift = x_bit_length as isize - y_bit_length as isize;
+
+        let mut i_count: Vec<u32>; // 目前這個 c 對應的商位（= 2^shift）
+        let mut i_count_start = 0;
+
+        let mut c: Vec<u32>; // 除數左移後的版本
+        let mut c_start = 0;
+        let mut c_bit_length = y_bit_length;
+
+        if shift > 0 {
+            // c = y << shift；對應商位 i_count = 1 << shift
+            i_count = vec![0u32; (shift as usize / WORD_BITS) + 1];
+            i_count[0] = 1u32 << (shift as usize % WORD_BITS);
+            c = shift_left_magnitude(y, shift as usize);
+            c_bit_length += shift as usize;
+        } else {
+            i_count = vec![1u32];
+            c = y.to_vec();
+        }
+
+        count = vec![0u32; i_count.len()];
+
+        loop {
+            if c_bit_length < x_bit_length
+                || compare_magnitude(&x[x_start..], &c[c_start..]) != Ordering::Less
+            {
+                // x >= c：x -= c，商累加 i_count
+                sub_in_place(&mut x[x_start..], &c[c_start..]);
+                add_in_place(&mut count, &i_count);
+
+                // 跳過相減後 x 新產生的前導零字
+                while x[x_start] == 0 {
+                    x_start += 1;
+                    if x_start == x.len() {
+                        // 餘數為 0
+                        return (trim_leading_zeros(count), trim_leading_zeros(x));
+                    }
+                }
+
+                x_bit_length = WORD_BITS * (x.len() - x_start - 1) + bit_len(x[x_start]) as usize;
+
+                if x_bit_length <= y_bit_length {
+                    if x_bit_length < y_bit_length {
+                        // x < y：餘數就是現在的 x
+                        return (trim_leading_zeros(count), trim_leading_zeros(x));
+                    }
+                    xy_cmp = compare_magnitude(&x[x_start..], y);
+                    if xy_cmp != Ordering::Greater {
+                        break; // x <= y
+                    }
+                }
+            }
+
+            // 把 c（連同 i_count）右移，逼近 x 的位長
+            shift = c_bit_length as isize - x_bit_length as isize;
+            // NB: c 只剩 1 bit 的情形無害
+            if shift == 1 {
+                let first_c = c[c_start] >> 1;
+                let first_x = x[x_start];
+                if first_c > first_x {
+                    shift += 1;
+                }
+            }
+            if shift < 2 {
+                shift_right_one_in_place(&mut c[c_start..]);
+                c_bit_length -= 1;
+                shift_right_one_in_place(&mut i_count[i_count_start..]);
+            } else {
+                shift_right_in_place(&mut c[c_start..], shift as usize);
+                c_bit_length -= shift as usize;
+                shift_right_in_place(&mut i_count[i_count_start..], shift as usize);
+            }
+
+            // 右移後高位可能空出零字，推進起點
+            while c[c_start] == 0 {
+                c_start += 1;
+            }
+            while i_count[i_count_start] == 0 {
+                i_count_start += 1;
+            }
+        }
+    } else {
+        count = vec![0u32]; // x < y（商 0）或 x == y（下面補 1）
+    }
+
+    if xy_cmp == Ordering::Equal {
+        // x 恰等於 y：商 +1，餘數歸零
+        add_in_place(&mut count, &[1]);
+        for w in &mut x[x_start..] {
+            *w = 0;
+        }
+    }
+
+    (trim_leading_zeros(count), trim_leading_zeros(x))
 }
 
 /// 檢查 magnitude（big-endian）最低 `n` 位是否有任何設定位元。
@@ -2070,6 +2244,143 @@ mod tests {
                 assert_eq!(trim_leading_zeros(m), shift_right_magnitude(x, n), "x={x:?} n={n}");
             }
         }
+    }
+
+    #[test]
+    fn shift_right_one_in_place_basic() {
+        let mut m = vec![0x0000_0002u32];
+        shift_right_one_in_place(&mut m);
+        assert_eq!(m, vec![1]);
+
+        // 跨字：2^32 >> 1 = 2^31，低位鄰字的最低位補到高位鄰字頂端
+        let mut m = vec![1u32, 0x0000_0000];
+        shift_right_one_in_place(&mut m);
+        assert_eq!(m, vec![0, 0x8000_0000]);
+
+        // 奇數最高字：最低位落到下一字頂端
+        let mut m = vec![0x0000_0003u32, 0x0000_0000];
+        shift_right_one_in_place(&mut m);
+        assert_eq!(m, vec![1, 0x8000_0000]);
+    }
+
+    #[test]
+    fn shift_right_one_matches_shift_right_in_place() {
+        // 1 位特化版須與通用版 shift_right_in_place(_, 1) 結果相同
+        let cases: [&[u32]; 4] = [
+            &[0x1234_5678, 0x9ABC_DEF0],
+            &[u32::MAX, u32::MAX, u32::MAX],
+            &[1, 0, 0],
+            &[0xFFFF_FFFF, 0x0000_0001],
+        ];
+        for x in cases {
+            let mut a = x.to_vec();
+            let mut b = x.to_vec();
+            shift_right_one_in_place(&mut a);
+            shift_right_in_place(&mut b, 1);
+            assert_eq!(a, b, "x={x:?}");
+        }
+    }
+
+    // 拿原生 u128 的 / 與 % 對照：div_magnitudes 回傳 (商, 餘)，皆已 trim
+    fn check_divide(dividend: u128, divisor: u128) {
+        let x = Vec::from(BigInteger::from_u128(dividend).magnitude);
+        let y = Vec::from(BigInteger::from_u128(divisor).magnitude);
+        let (q, r) = div_magnitudes(&x, &y);
+        assert_eq!(
+            q,
+            Vec::from(BigInteger::from_u128(dividend / divisor).magnitude),
+            "{dividend} / {divisor}"
+        );
+        assert_eq!(
+            r,
+            Vec::from(BigInteger::from_u128(dividend % divisor).magnitude),
+            "{dividend} % {divisor}"
+        );
+    }
+
+    #[test]
+    fn divide_magnitude_matches_u128() {
+        let cases: [(u128, u128); 14] = [
+            (10, 3),
+            (3, 10), // 被除數 < 除數：商 0、餘數 = 被除數
+            (100, 10), // 整除
+            (7, 7), // 相等：商 1、餘數 0
+            (2, 1),
+            (0xFFFF_FFFF_FFFF_FFFF, 0xFFFF_FFFF),
+            (1 << 64, 1 << 32),
+            (12_345_678_901_234_567_890, 987_654_321),
+            ((1u128 << 100) + 12345, (1u128 << 50) + 7),
+            (u128::MAX, 3),
+            (u128::MAX, u128::MAX),
+            (u128::MAX, 0xFFFF_FFFF_FFFF_FFFF),
+            (0x1_0000_0000_0000_0000, 2),
+            (999_999_999_999, 1),
+        ];
+        for (a, b) in cases {
+            check_divide(a, b);
+        }
+    }
+
+    #[test]
+    fn divide_magnitude_fuzz() {
+        // LCG 產生 128-bit 被除數與 64-bit 除數，跟原生 u128 對照
+        let mut state = 0x9E37_79B9u64;
+        let mut next = || {
+            state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
+            state
+        };
+        for _ in 0..500 {
+            let a = ((next() as u128) << 64) | (next() as u128);
+            let b = (next() as u128).max(1); // 除數非零
+            if a == 0 {
+                continue;
+            }
+            check_divide(a, b);
+        }
+    }
+
+    #[test]
+    fn div_rem_matches_i128_reference() {
+        // 截斷除法：對照原生 i128 的 / 與 %，涵蓋各種符號與大小
+        let vals = [
+            0i64, 1, -1, 7, -7, 8, -8, 100, -100,
+            0xFFFF_FFFF, -(0xFFFF_FFFFi64), 1 << 40, -(1 << 40), i64::MAX, i64::MIN,
+        ];
+        for &a in &vals {
+            for &b in &vals {
+                if b == 0 {
+                    continue; // 零除另外測
+                }
+                let (x, y) = (BigInteger::from_i64(a), BigInteger::from_i64(b));
+                let (q, r) = x.div_rem(&y);
+                assert_eq!(q, BigInteger::from_i128(a as i128 / b as i128), "{a} / {b}");
+                assert_eq!(r, BigInteger::from_i128(a as i128 % b as i128), "{a} % {b}");
+                // 運算子須與 div_rem 一致
+                assert_eq!(&x / &y, q, "{a} / {b} 運算子");
+                assert_eq!(&x % &y, r, "{a} % {b} 運算子");
+                // 商 × 除數 + 餘 == 被除數
+                assert_eq!(&(&q * &y) + &r, x, "{a} = q*b + r");
+            }
+        }
+    }
+
+    #[test]
+    fn div_rem_zero_dividend() {
+        let (q, r) = BigInteger::from_i32(0).div_rem(&BigInteger::from_i32(7));
+        assert_eq!(q, BigInteger::from_i32(0));
+        assert_eq!(r, BigInteger::from_i32(0));
+    }
+
+    #[test]
+    #[should_panic(expected = "divide by zero")]
+    fn div_by_zero_panics() {
+        let _ = &BigInteger::from_i32(5) / &BigInteger::from_i32(0);
+    }
+
+    #[test]
+    #[should_panic(expected = "divide by zero")]
+    fn rem_by_zero_panics() {
+        let _ = &BigInteger::from_i32(5) % &BigInteger::from_i32(0);
     }
 
     #[test]
