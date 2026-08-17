@@ -260,6 +260,41 @@ impl BigInteger {
         a
     }
 
+    /// Returns the modular multiplicative inverse of `self` modulo `modulus`:
+    /// the value `x` in `[0, modulus)` with `self * x ≡ 1 (mod modulus)`, or
+    /// `None` if `self` and `modulus` are not coprime.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `modulus` is not positive.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bc_math::big_integer::BigInteger;
+    ///
+    /// // 3⁻¹ ≡ 5 (mod 7)，因為 3·5 = 15 ≡ 1
+    /// assert_eq!(
+    ///     BigInteger::from_i32(3).mod_inverse(&BigInteger::from_i32(7)),
+    ///     Some(BigInteger::from_i32(5))
+    /// );
+    /// // 4 與 6 不互質 → 無反元素
+    /// assert_eq!(BigInteger::from_i32(4).mod_inverse(&BigInteger::from_i32(6)), None);
+    /// ```
+    pub fn mod_inverse(&self, modulus: &BigInteger) -> Option<BigInteger> {
+        if modulus.sign <= 0 {
+            panic!("modulus must be positive");
+        }
+        // 先約簡成 [0, modulus)（非負），避開 extended_gcd 對負 a 的邊界
+        let d = self.rem_euclid(modulus);
+        let (gcd, x) = extended_gcd(&d, modulus);
+        if gcd != *ONE {
+            return None; // 不互質 → 無反元素
+        }
+        // x 滿足 d·x ≡ 1 (mod modulus)；調進 [0, modulus)
+        Some(if x.sign < 0 { &x + modulus } else { x })
+    }
+
     /// Parses a `BigInteger` from a string in the given radix (`2..=36`).
     ///
     /// An optional leading `+`/`-` sign is allowed. Digits use `0-9` then
@@ -3324,6 +3359,59 @@ mod tests {
                 assert_eq!(ax.rem_euclid(&m), g.rem_euclid(&m), "bezout({a},{b})");
             }
         }
+    }
+
+    #[test]
+    fn mod_inverse_basic() {
+        // 3⁻¹ ≡ 5 (mod 7)
+        assert_eq!(
+            BigInteger::from_i32(3).mod_inverse(&BigInteger::from_i32(7)),
+            Some(BigInteger::from_i32(5))
+        );
+        // 不互質 → None
+        assert_eq!(BigInteger::from_i32(4).mod_inverse(&BigInteger::from_i32(6)), None);
+        // 負 self 先約簡：-3 ≡ 4 (mod 7)，其反元素驗 (-3)·inv ≡ 1
+        let m = BigInteger::from_i32(7);
+        let inv = BigInteger::from_i32(-3).mod_inverse(&m).unwrap();
+        assert_eq!((&BigInteger::from_i32(-3) * &inv).rem_euclid(&m), BigInteger::from_i32(1));
+    }
+
+    #[test]
+    fn mod_inverse_matches_reference() {
+        fn gcd_i128(mut a: i128, mut b: i128) -> i128 {
+            while b != 0 {
+                (a, b) = (b, a % b);
+            }
+            a.abs()
+        }
+        let moduli = [2i128, 3, 7, 13, 26, 97, 100];
+        for &m in &moduli {
+            let big_m = BigInteger::from_i128(m);
+            for a in 1..m {
+                let big_a = BigInteger::from_i128(a);
+                match big_a.mod_inverse(&big_m) {
+                    Some(inv) => {
+                        // 互質：a·inv ≡ 1 (mod m)，且 inv ∈ [0, m)
+                        assert_eq!(
+                            (&big_a * &inv).rem_euclid(&big_m),
+                            BigInteger::from_i32(1),
+                            "{a}⁻¹ mod {m}"
+                        );
+                        assert!(inv.sign() >= 0 && inv < big_m, "{a}⁻¹ mod {m} 超出 [0,m)");
+                    }
+                    None => {
+                        // None：a 與 m 不互質
+                        assert_ne!(gcd_i128(a, m), 1, "{a} mod {m} 其實互質，不該回 None");
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    #[should_panic(expected = "modulus must be positive")]
+    fn mod_inverse_non_positive_modulus_panics() {
+        let _ = BigInteger::from_i32(3).mod_inverse(&BigInteger::from_i32(0));
     }
 
     #[test]
