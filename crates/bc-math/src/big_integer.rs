@@ -1,9 +1,41 @@
 use std::cmp::Ordering;
 use std::ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Neg, Not, Rem, Shl, Shr, Sub};
+use std::str::FromStr;
 use std::sync::{LazyLock, OnceLock};
 
 /// 一個 magnitude 字的位元數（= 32）。集中定義，避免散落的 magic number。
 const WORD_BITS: usize = u32::BITS as usize;
+
+/// Error returned when parsing a [`BigInteger`] from a string fails.
+///
+/// Describes problems with the input string only; an out-of-range radix is a
+/// caller error and panics instead.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ParseBigIntegerError {
+    /// The input had no digits (empty string, or only a sign).
+    Empty,
+    /// A character was not a valid digit for the radix (invalid character, or
+    /// a digit greater than or equal to the radix).
+    InvalidDigit {
+        /// Character index (into the original string) of the offending character.
+        index: usize,
+        /// The offending character.
+        ch: char,
+    },
+}
+
+impl std::fmt::Display for ParseBigIntegerError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ParseBigIntegerError::Empty => f.write_str("cannot parse integer from empty string"),
+            ParseBigIntegerError::InvalidDigit { index, ch } => {
+                write!(f, "invalid digit '{ch}' at position {index}")
+            }
+        }
+    }
+}
+
+impl std::error::Error for ParseBigIntegerError {}
 
 #[derive(Clone, Debug)]
 pub struct BigInteger {
@@ -136,6 +168,54 @@ impl BigInteger {
         let quotient = BigInteger::from_checked_magnitude(self.sign * divisor.sign, q_mag);
         let remainder = BigInteger::from_checked_magnitude(self.sign, r_mag);
         (quotient, remainder)
+    }
+
+    /// Parses a `BigInteger` from a string in the given radix (`2..=36`).
+    ///
+    /// An optional leading `+`/`-` sign is allowed. Digits use `0-9` then
+    /// `a-z`/`A-Z` (case-insensitive) up to the radix.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `radix` is not in `2..=36`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bc_math::big_integer::BigInteger;
+    ///
+    /// assert_eq!(BigInteger::from_str_radix("ff", 16).unwrap(), BigInteger::from_u32(255));
+    /// assert_eq!(BigInteger::from_str_radix("-101", 2).unwrap(), BigInteger::from_i32(-5));
+    /// ```
+    pub fn from_str_radix(s: &str, radix: u32) -> Result<BigInteger, ParseBigIntegerError> {
+        assert!((2..=36).contains(&radix), "radix must be in 2..=36, got {radix}");
+
+        // 剝掉可選符號前綴；offset 記錄剝了幾個字元（供錯誤位置換算回原始 s）
+        let (sign_neg, digits, offset) = if let Some(rest) = s.strip_prefix('-') {
+            (true, rest, 1)
+        } else if let Some(rest) = s.strip_prefix('+') {
+            (false, rest, 1)
+        } else {
+            (false, s, 0)
+        };
+
+        if digits.is_empty() {
+            return Err(ParseBigIntegerError::Empty); // "" / "-" / "+"
+        }
+
+        let radix_big = BigInteger::from_u32(radix);
+        let mut result = BigInteger::from_u32(0);
+        for (i, ch) in digits.chars().enumerate() {
+            let d = ch.to_digit(radix).ok_or(ParseBigIntegerError::InvalidDigit {
+                index: i + offset, // 換算回原始字串的位置
+                ch,
+            })?;
+            // result = result * radix + d（radix 為 2 的次方時 Mul 自動走位移）
+            result = &(&result * &radix_big) + &BigInteger::from_u32(d);
+        }
+
+        // 套符號；result 為 0 時 Neg 仍是 0（不會有負零）
+        Ok(if sign_neg { -result } else { result })
     }
 
     /// Returns the number of bits in the minimal two's-complement representation
@@ -709,6 +789,15 @@ impl Rem for &BigInteger {
     /// 截斷除法的餘數（見 [`BigInteger::div_rem`]）。除數為 0 時 panic。
     fn rem(self, rhs: &BigInteger) -> BigInteger {
         self.div_rem(rhs).1
+    }
+}
+
+impl FromStr for BigInteger {
+    type Err = ParseBigIntegerError;
+
+    /// Parses in radix 10（讓 `"123".parse::<BigInteger>()` 可用）。
+    fn from_str(s: &str) -> Result<BigInteger, ParseBigIntegerError> {
+        BigInteger::from_str_radix(s, 10)
     }
 }
 
@@ -2361,6 +2450,85 @@ mod tests {
                 // 商 × 除數 + 餘 == 被除數
                 assert_eq!(&(&q * &y) + &r, x, "{a} = q*b + r");
             }
+        }
+    }
+
+    #[test]
+    fn parse_error_display() {
+        assert_eq!(
+            ParseBigIntegerError::Empty.to_string(),
+            "cannot parse integer from empty string"
+        );
+        assert_eq!(
+            ParseBigIntegerError::InvalidDigit { index: 3, ch: 'x' }.to_string(),
+            "invalid digit 'x' at position 3"
+        );
+    }
+
+    #[test]
+    fn from_str_radix_basic() {
+        assert_eq!(BigInteger::from_str_radix("0", 10).unwrap(), BigInteger::from_i32(0));
+        assert_eq!(BigInteger::from_str_radix("255", 10).unwrap(), BigInteger::from_u32(255));
+        assert_eq!(BigInteger::from_str_radix("ff", 16).unwrap(), BigInteger::from_u32(255));
+        assert_eq!(BigInteger::from_str_radix("FF", 16).unwrap(), BigInteger::from_u32(255)); // 大寫
+        assert_eq!(BigInteger::from_str_radix("1010", 2).unwrap(), BigInteger::from_u32(10));
+        assert_eq!(BigInteger::from_str_radix("z", 36).unwrap(), BigInteger::from_u32(35));
+        assert_eq!(BigInteger::from_str_radix("-100", 10).unwrap(), BigInteger::from_i32(-100));
+        assert_eq!(BigInteger::from_str_radix("+42", 10).unwrap(), BigInteger::from_i32(42));
+        assert_eq!(BigInteger::from_str_radix("-0", 10).unwrap(), BigInteger::from_i32(0)); // 無負零
+        assert_eq!(BigInteger::from_str_radix("007", 10).unwrap(), BigInteger::from_u32(7)); // 前導零
+    }
+
+    #[test]
+    fn from_str_radix_errors() {
+        assert_eq!(BigInteger::from_str_radix("", 10), Err(ParseBigIntegerError::Empty));
+        assert_eq!(BigInteger::from_str_radix("-", 10), Err(ParseBigIntegerError::Empty));
+        assert_eq!(BigInteger::from_str_radix("+", 10), Err(ParseBigIntegerError::Empty));
+        // 非法字元
+        assert_eq!(
+            BigInteger::from_str_radix("12x", 10),
+            Err(ParseBigIntegerError::InvalidDigit { index: 2, ch: 'x' })
+        );
+        // 位數超出 radix：'8' 在八進制
+        assert_eq!(
+            BigInteger::from_str_radix("18", 8),
+            Err(ParseBigIntegerError::InvalidDigit { index: 1, ch: '8' })
+        );
+        // 錯誤位置換算回原始 s（符號 offset）
+        assert_eq!(
+            BigInteger::from_str_radix("-12x", 10),
+            Err(ParseBigIntegerError::InvalidDigit { index: 3, ch: 'x' })
+        );
+    }
+
+    #[test]
+    fn from_str_trait_and_parse() {
+        // .parse() 走 radix 10
+        let a: BigInteger = "123456789012345678901234567890".parse().unwrap();
+        let b = BigInteger::from_str_radix("123456789012345678901234567890", 10).unwrap();
+        assert_eq!(a, b);
+        // 超出原生 u128 也能解析：2^128
+        let big: BigInteger = "340282366920938463463374607431768211456".parse().unwrap();
+        assert_eq!(big, &BigInteger::from_u128(u128::MAX) + &BigInteger::from_u32(1));
+    }
+
+    #[test]
+    fn from_str_radix_roundtrip_decimal() {
+        // 十進制：i128 → Display 字串 → 解析回來（涵蓋各符號與 i128::MIN）
+        let vals = [0i128, 1, -1, 255, -256, 123456789, -987654321, i128::MAX, i128::MIN];
+        for &v in &vals {
+            let parsed = BigInteger::from_str_radix(&v.to_string(), 10).unwrap();
+            assert_eq!(parsed, BigInteger::from_i128(v), "{v}");
+        }
+    }
+
+    #[test]
+    fn from_str_radix_roundtrip_hex() {
+        // 十六進制（正數，用原生 {:x} 產生字串）
+        let vals = [0u128, 1, 255, 0xDEAD_BEEF, u128::MAX];
+        for &v in &vals {
+            let parsed = BigInteger::from_str_radix(&format!("{v:x}"), 16).unwrap();
+            assert_eq!(parsed, BigInteger::from_u128(v), "{v:x}");
         }
     }
 
