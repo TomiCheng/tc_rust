@@ -236,6 +236,30 @@ impl BigInteger {
         }
     }
 
+    /// Returns the greatest common divisor of `self` and `other`, always
+    /// non-negative. Signs are ignored (works on absolute values).
+    ///
+    /// `gcd(0, 0)` is `0`; `gcd(a, 0)` is `|a|`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bc_math::big_integer::BigInteger;
+    ///
+    /// assert_eq!(BigInteger::from_i32(-12).gcd(&BigInteger::from_i32(18)), BigInteger::from_i32(6));
+    /// ```
+    pub fn gcd(&self, other: &BigInteger) -> BigInteger {
+        // 取絕對值輾轉相除：a, b 非負，餘數也非負；b 歸零時 a 即 gcd
+        let mut a = self.clone().abs();
+        let mut b = other.clone().abs();
+        while b.sign != 0 {
+            let r = &a % &b;
+            a = b;
+            b = r;
+        }
+        a
+    }
+
     /// Parses a `BigInteger` from a string in the given radix (`2..=36`).
     ///
     /// An optional leading `+`/`-` sign is allowed. Digits use `0-9` then
@@ -1692,6 +1716,34 @@ fn div_magnitudes(dividend: &[u32], divisor: &[u32]) -> (Vec<u32>, Vec<u32>) {
     }
 
     (trim_leading_zeros(count), trim_leading_zeros(x))
+}
+
+/// 擴展歐幾里得：回傳 `(gcd(a, b), x)`，其中 `x` 滿足 `a·x ≡ gcd (mod b)`。
+///
+/// 前提：`b` 為正、`a` 非負（呼叫端若有負值，先用 `rem_euclid` 約簡）。
+/// 一路輾轉相除（`div_rem`）約簡 `(u3, v3)`，同時把 `a` 的係數 `(u1, v1)` 帶著走；
+/// 維持不變量 `u3 ≡ a·u1 (mod b)`，收斂時 `u3 = gcd`、`u1 = x`。
+fn extended_gcd(a: &BigInteger, b: &BigInteger) -> (BigInteger, BigInteger) {
+    let mut u1 = (*ONE).clone();
+    let mut v1 = (*ZERO).clone();
+    let mut u3 = a.clone();
+    let mut v3 = b.clone();
+
+    if v3.sign() > 0 {
+        loop {
+            let (q, r) = u3.div_rem(&v3);
+            u3 = v3;
+            v3 = r;
+
+            let old_u1 = u1;
+            u1 = v1.clone(); // v1 稍後 `&v1 * &q` 還要用，不能 move → clone
+            if v3.sign() <= 0 {
+                break;
+            }
+            v1 = &old_u1 - &(&v1 * &q); // v1 = old_u1 - v1 * q
+        }
+    }
+    (u3, u1) // (gcd, 係數 x)
 }
 
 /// 檢查 magnitude（big-endian）最低 `n` 位是否有任何設定位元。
@@ -3199,6 +3251,79 @@ mod tests {
     #[should_panic(expected = "divisor of zero")]
     fn rem_euclid_by_zero_panics() {
         let _ = BigInteger::from_i32(5).rem_euclid(&BigInteger::from_i32(0));
+    }
+
+    #[test]
+    fn gcd_basic() {
+        assert_eq!(BigInteger::from_i32(30).gcd(&BigInteger::from_i32(18)), BigInteger::from_i32(6));
+        assert_eq!(BigInteger::from_i32(-12).gcd(&BigInteger::from_i32(18)), BigInteger::from_i32(6)); // 負看絕對值
+        assert_eq!(BigInteger::from_i32(17).gcd(&BigInteger::from_i32(5)), BigInteger::from_i32(1)); // 互質
+        assert_eq!(BigInteger::from_i32(0).gcd(&BigInteger::from_i32(5)), BigInteger::from_i32(5));
+        assert_eq!(BigInteger::from_i32(5).gcd(&BigInteger::from_i32(0)), BigInteger::from_i32(5));
+        assert_eq!(BigInteger::from_i32(0).gcd(&BigInteger::from_i32(0)), BigInteger::from_i32(0));
+    }
+
+    #[test]
+    fn gcd_matches_native() {
+        fn gcd_i128(mut a: i128, mut b: i128) -> i128 {
+            (a, b) = (a.abs(), b.abs());
+            while b != 0 {
+                (a, b) = (b, a % b);
+            }
+            a
+        }
+        let vals = [0i128, 1, -1, 12, -12, 18, 30, 100, 17, 35, -49, 1 << 40];
+        for &a in &vals {
+            for &b in &vals {
+                assert_eq!(
+                    BigInteger::from_i128(a).gcd(&BigInteger::from_i128(b)),
+                    BigInteger::from_i128(gcd_i128(a, b)),
+                    "gcd({a},{b})"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn extended_gcd_basic() {
+        // gcd(30, 18) = 6，且 30·x ≡ 6 (mod 18)
+        let (g, x) = extended_gcd(&BigInteger::from_i32(30), &BigInteger::from_i32(18));
+        assert_eq!(g, BigInteger::from_i32(6));
+        let m = BigInteger::from_i32(18);
+        assert_eq!((&BigInteger::from_i32(30) * &x).rem_euclid(&m), g.rem_euclid(&m));
+
+        // 互質：gcd = 1，x 為反元素（3·x ≡ 1 mod 7 → x = 5）
+        let (g, x) = extended_gcd(&BigInteger::from_i32(3), &BigInteger::from_i32(7));
+        assert_eq!(g, BigInteger::from_i32(1));
+        assert_eq!(
+            (&BigInteger::from_i32(3) * &x).rem_euclid(&BigInteger::from_i32(7)),
+            BigInteger::from_i32(1)
+        );
+    }
+
+    #[test]
+    fn extended_gcd_matches_native() {
+        fn gcd_i128(mut a: i128, mut b: i128) -> i128 {
+            a = a.abs();
+            b = b.abs();
+            while b != 0 {
+                let t = b;
+                b = a % b;
+                a = t;
+            }
+            a
+        }
+        let vals = [1i128, 2, 3, 6, 12, 30, 18, 100, 17, 35, 49, 128];
+        for &a in &vals {
+            for &b in &vals {
+                let (g, x) = extended_gcd(&BigInteger::from_i128(a), &BigInteger::from_i128(b));
+                assert_eq!(g, BigInteger::from_i128(gcd_i128(a, b)), "gcd({a},{b})");
+                // Bézout 同餘：a·x ≡ gcd (mod b)
+                let m = BigInteger::from_i128(b);
+                let ax = &BigInteger::from_i128(a) * &x;
+                assert_eq!(ax.rem_euclid(&m), g.rem_euclid(&m), "bezout({a},{b})");
+            }
+        }
     }
 
     #[test]
