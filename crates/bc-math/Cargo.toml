@@ -5,4 +5,10 @@ edition.workspace = true
 license.workspace = true
 repository.workspace = true
 
+[features]
+default = ["std"]
+# 開啟時：使用標準庫（`bit_length`/`bit_count` 用 OnceLock 惰性快取）。
+# 關閉（--no-default-features）時：no_std + alloc，快取改為每次重算。
+std = []
+
 [dependencies]

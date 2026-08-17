@@ -1,8 +1,19 @@
-use std::cmp::Ordering;
-use std::hash::{Hash, Hasher};
-use std::ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Neg, Not, Rem, Shl, Shr, Sub};
-use std::str::FromStr;
-use std::sync::{LazyLock, OnceLock};
+use core::cmp::Ordering;
+use core::hash::{Hash, Hasher};
+use core::ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Neg, Not, Rem, Shl, Shr, Sub};
+use core::str::FromStr;
+#[cfg(feature = "std")]
+use std::sync::OnceLock;
+
+// no_std 下沒有 std prelude，需從 alloc 顯式引入這些型別／巨集；
+// std build 由 prelude 提供，故僅在關閉 std 時引入，避免重複 import 警告。
+#[cfg(not(feature = "std"))]
+use alloc::{
+    boxed::Box,
+    string::{String, ToString},
+    vec,
+    vec::Vec,
+};
 
 // 質數相關運算（Miller-Rabin、隨機質數生成）拆到子模組，隔離 `rand` 相依，
 // 讓本檔維持純算術。子模組是本模組的子孫，看得到 sign/magnitude 等私有項目。
@@ -29,8 +40,8 @@ pub enum ParseBigIntegerError {
     },
 }
 
-impl std::fmt::Display for ParseBigIntegerError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl core::fmt::Display for ParseBigIntegerError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             ParseBigIntegerError::Empty => f.write_str("cannot parse integer from empty string"),
             ParseBigIntegerError::InvalidDigit { index, ch } => {
@@ -40,7 +51,7 @@ impl std::fmt::Display for ParseBigIntegerError {
     }
 }
 
-impl std::error::Error for ParseBigIntegerError {}
+impl core::error::Error for ParseBigIntegerError {}
 
 /// Error returned by the `try_to_bytes_*_into` methods when the destination
 /// buffer is smaller than the encoding requires.
@@ -52,8 +63,8 @@ pub struct BufferTooSmall {
     pub available: usize,
 }
 
-impl std::fmt::Display for BufferTooSmall {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl core::fmt::Display for BufferTooSmall {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(
             f,
             "buffer too small: need {} bytes, got {}",
@@ -62,20 +73,20 @@ impl std::fmt::Display for BufferTooSmall {
     }
 }
 
-impl std::error::Error for BufferTooSmall {}
+impl core::error::Error for BufferTooSmall {}
 
 /// Error returned when a [`BigInteger`] is out of range for the target integer
 /// type in a `TryFrom`/`TryInto` conversion.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct TryFromBigIntegerError(());
 
-impl std::fmt::Display for TryFromBigIntegerError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl core::fmt::Display for TryFromBigIntegerError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.write_str("number out of range for the target integer type")
     }
 }
 
-impl std::error::Error for TryFromBigIntegerError {}
+impl core::error::Error for TryFromBigIntegerError {}
 
 #[derive(Clone, Debug)]
 pub struct BigInteger {
@@ -83,8 +94,11 @@ pub struct BigInteger {
     /// 不可變、big-endian、無前導零；不可變型別故用 `Box<[u32]>` 而非 `Vec<u32>`。
     magnitude: Box<[u32]>,
     /// 惰性快取：設定位元數 (population count)。
+    /// 僅 std：no_std 下 `OnceLock` 不可用，改為每次重算（見存取器）。
+    #[cfg(feature = "std")]
     bits: OnceLock<u32>,
     /// 惰性快取：位元長度。
+    #[cfg(feature = "std")]
     bit_length: OnceLock<u32>,
 }
 
@@ -94,7 +108,9 @@ impl BigInteger {
         BigInteger {
             sign,
             magnitude: magnitude.into_boxed_slice(),
+            #[cfg(feature = "std")]
             bits: OnceLock::new(),
+            #[cfg(feature = "std")]
             bit_length: OnceLock::new(),
         }
     }
@@ -210,7 +226,7 @@ impl BigInteger {
         if self.is_power_of_two() {
             let bits = (self.bit_length() - 1) as u64 * exp as u64;
             let shift = u32::try_from(bits).expect("pow: result exceeds u32::MAX bits");
-            return &*ONE << shift;
+            return &BigInteger::from_u32(1) << shift;
         }
         // 逐位平方相乘：從最低位掃 exp，遇 1 就把當前的 z（= self^(2^i)）乘進 y
         let mut exp = exp;
@@ -344,7 +360,7 @@ impl BigInteger {
         // 先約簡成 [0, modulus)（非負），避開 extended_gcd 對負 a 的邊界
         let d = self.rem_euclid(modulus);
         let (gcd, x) = extended_gcd(&d, modulus);
-        if gcd != *ONE {
+        if gcd != BigInteger::from_u32(1) {
             return None; // 不互質 → 無反元素
         }
         // x 滿足 d·x ≡ 1 (mod modulus)；調進 [0, modulus)
@@ -375,7 +391,7 @@ impl BigInteger {
         if m.sign <= 0 {
             panic!("modulus must be positive");
         }
-        if *m == *ONE {
+        if *m == BigInteger::from_u32(1) {
             return BigInteger::from_u32(0); // 任何數 mod 1 = 0
         }
         if e.sign == 0 {
@@ -520,9 +536,17 @@ impl BigInteger {
     /// assert_eq!(BigInteger::from_i32(-8).bit_length(), 3); // 負的 2 次方少 1
     /// ```
     pub fn bit_length(&self) -> u32 {
-        *self
-            .bit_length
-            .get_or_init(|| calc_bit_length(self.sign, &self.magnitude))
+        // std：惰性快取；no_std：無 OnceLock 欄位，每次重算（O(n) 掃 magnitude）。
+        #[cfg(feature = "std")]
+        {
+            *self
+                .bit_length
+                .get_or_init(|| calc_bit_length(self.sign, &self.magnitude))
+        }
+        #[cfg(not(feature = "std"))]
+        {
+            calc_bit_length(self.sign, &self.magnitude)
+        }
     }
 
     /// Returns the number of bytes in the minimal two's-complement (signed)
@@ -577,14 +601,25 @@ impl BigInteger {
     /// assert_eq!(BigInteger::from_i32(-8).bit_count(), 3);
     /// ```
     pub fn bit_count(&self) -> u32 {
-        *self.bits.get_or_init(|| {
-            if self.sign < 0 {
-                // 負數：bitCount = popcount(|n| - 1)
-                bit_count_negative(&self.magnitude)
-            } else {
-                self.magnitude.iter().map(|w| w.count_ones()).sum()
-            }
-        })
+        // std：惰性快取；no_std：無 OnceLock 欄位，每次重算。
+        #[cfg(feature = "std")]
+        {
+            *self.bits.get_or_init(|| self.compute_bit_count())
+        }
+        #[cfg(not(feature = "std"))]
+        {
+            self.compute_bit_count()
+        }
+    }
+
+    /// 實際計算設定位元數；由 [`BigInteger::bit_count`] 快取或直接呼叫。
+    fn compute_bit_count(&self) -> u32 {
+        if self.sign < 0 {
+            // 負數：bitCount = popcount(|n| - 1)
+            bit_count_negative(&self.magnitude)
+        } else {
+            self.magnitude.iter().map(|w| w.count_ones()).sum()
+        }
     }
 
     /// 是否為 2 的次方（正數且僅一個設定位）。供 `Mul` 的 `<< k` 捷徑判斷。
@@ -628,7 +663,7 @@ impl BigInteger {
     /// ```
     pub fn set_bit(&self, n: u32) -> BigInteger {
         // 第 n 位設 1：self | (1 << n)
-        self | &(&*ONE << n)
+        self | &(&BigInteger::from_u32(1) << n)
     }
 
     /// Returns this value with bit `n` cleared to 0.
@@ -642,7 +677,7 @@ impl BigInteger {
     /// ```
     pub fn clear_bit(&self, n: u32) -> BigInteger {
         // 第 n 位設 0：self & ~(1 << n)
-        let mask = &*ONE << n; // 1 << n
+        let mask = &BigInteger::from_u32(1) << n; // 1 << n
         let inv = !&mask; // ~(1 << n)
         self & &inv
     }
@@ -658,7 +693,7 @@ impl BigInteger {
     /// ```
     pub fn flip_bit(&self, n: u32) -> BigInteger {
         // 翻轉第 n 位：self ^ (1 << n)
-        self ^ &(&*ONE << n)
+        self ^ &(&BigInteger::from_u32(1) << n)
     }
 
     /// Returns the index of the lowest set bit (the number of trailing zero
@@ -1130,18 +1165,6 @@ impl BigInteger {
     }
 }
 
-/// 常用小值常數，對應 bc-csharp 的 `BigInteger.Zero/One/Two/Three`。
-///
-/// 以 `LazyLock` 承載：`BigInteger` 需堆積配置，無法作為 `const`；改成執行期
-/// 初始化一次的靜態變數（即 C# `static readonly` 的 Rust 版）。能安放在 `static`
-/// 是因為 `BigInteger` 為 `Sync`（惰性快取用 `OnceLock` 而非 `RefCell`）。
-///
-/// 取用時 `&*ONE` 得到 `&BigInteger`，可直接當運算子的運算元：`&x + &*ONE`。
-pub static ZERO: LazyLock<BigInteger> = LazyLock::new(|| BigInteger::from_u32(0));
-pub static ONE: LazyLock<BigInteger> = LazyLock::new(|| BigInteger::from_u32(1));
-pub static TWO: LazyLock<BigInteger> = LazyLock::new(|| BigInteger::from_u32(2));
-pub static THREE: LazyLock<BigInteger> = LazyLock::new(|| BigInteger::from_u32(3));
-
 impl PartialEq for BigInteger {
     /// 相等只看數值（`sign` + `magnitude`），刻意忽略惰性快取欄位。
     fn eq(&self, other: &Self) -> bool {
@@ -1203,9 +1226,9 @@ impl Not for &BigInteger {
 
     /// 位元 NOT（兩補數）：`!x = -(x + 1)`。
     fn not(self) -> BigInteger {
-        // self + &*ONE 產生 owned 暫時值，接著的一元 `-` 命中 owned Neg，
+        // self + 1 產生 owned 暫時值，接著的一元 `-` 命中 owned Neg，
         // 直接重用該暫時值的 buffer；整條 `!x` 只有 `+` 那次配置。
-        -(self + &*ONE)
+        -(self + &BigInteger::from_u32(1))
     }
 }
 
@@ -1316,7 +1339,7 @@ impl Mul for &BigInteger {
 
         // 捷徑 2：同一份運算元（`&x * &x`）→ 平方（~2 倍快）。
         // 其餘走 schoolbook；Karatsuba 之類的大數最佳化留待日後。
-        let magnitude = if std::ptr::eq(self, rhs) {
+        let magnitude = if core::ptr::eq(self, rhs) {
             square_magnitude(&self.magnitude)
         } else {
             multiply_magnitudes(&self.magnitude, &rhs.magnitude)
@@ -1352,9 +1375,9 @@ impl FromStr for BigInteger {
     }
 }
 
-impl std::fmt::Display for BigInteger {
+impl core::fmt::Display for BigInteger {
     /// 十進制輸出（委派 `to_str_radix(10)`）；`{}`、`to_string()` 皆走此。
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.write_str(&self.to_str_radix(10))
     }
 }
@@ -1904,8 +1927,8 @@ fn div_magnitudes(dividend: &[u32], divisor: &[u32]) -> (Vec<u32>, Vec<u32>) {
 /// 一路輾轉相除（`div_rem`）約簡 `(u3, v3)`，同時把 `a` 的係數 `(u1, v1)` 帶著走；
 /// 維持不變量 `u3 ≡ a·u1 (mod b)`，收斂時 `u3 = gcd`、`u1 = x`。
 fn extended_gcd(a: &BigInteger, b: &BigInteger) -> (BigInteger, BigInteger) {
-    let mut u1 = (*ONE).clone();
-    let mut v1 = (*ZERO).clone();
+    let mut u1 = BigInteger::from_u32(1);
+    let mut v1 = BigInteger::from_u32(0);
     let mut u3 = a.clone();
     let mut v3 = b.clone();
 
@@ -1963,7 +1986,7 @@ fn to_twos_complement_words(x: &BigInteger, len: usize) -> Vec<u32> {
     // 負數要讓 (x + 1) 這個暫時值活到 copy 完；用「延後初始化」的 let 延長其壽命，免 clone。
     let neg_tmp;
     let src: &[u32] = if negative {
-        neg_tmp = x + &*ONE;
+        neg_tmp = x + &BigInteger::from_u32(1);
         &neg_tmp.magnitude
     } else {
         &x.magnitude
@@ -3719,24 +3742,6 @@ mod tests {
     #[should_panic(expected = "divide by zero")]
     fn rem_by_zero_panics() {
         let _ = &BigInteger::from_i32(5) % &BigInteger::from_i32(0);
-    }
-
-    #[test]
-    fn small_constants_have_expected_values() {
-        assert_eq!(*ZERO, BigInteger::from_u32(0));
-        assert_eq!(*ONE, BigInteger::from_u32(1));
-        assert_eq!(*TWO, BigInteger::from_u32(2));
-        assert_eq!(*THREE, BigInteger::from_u32(3));
-        assert!(ZERO.is_zero());
-    }
-
-    #[test]
-    fn small_constants_usable_as_operands() {
-        // &*ONE 可直接當運算元，且共用同一份實體
-        let x = BigInteger::from_u32(41);
-        assert_eq!(&x + &*ONE, BigInteger::from_u32(42));
-        assert_eq!(&x - &*TWO, BigInteger::from_u32(39));
-        assert_eq!(&*THREE * &*THREE, BigInteger::from_u32(9));
     }
 
     #[test]
