@@ -203,6 +203,9 @@ impl BigInteger {
             return Err(ParseBigIntegerError::Empty); // "" / "-" / "+"
         }
 
+        // TODO(效能): 目前逐字元，每位做一次大數乘法 → O(位數²) 且每位 3 次配置。
+        //   可改分塊：一次吃 chunk 位（如十進制 19 位）用原生 u64 解析，再乘 radix^chunk，
+        //   大乘次數少約 18 倍（仍 O(D²)，僅常數變小）。對密碼學尺寸目前夠用，暫不改。
         let radix_big = BigInteger::from_u32(radix);
         let mut result = BigInteger::from_u32(0);
         for (i, ch) in digits.chars().enumerate() {
