@@ -221,6 +221,50 @@ impl BigInteger {
         Ok(if sign_neg { -result } else { result })
     }
 
+    /// Formats this value as a string in the given radix (`2..=36`).
+    ///
+    /// Negative values get a leading `-`. Digits use `0-9` then lowercase
+    /// `a-z`. Inverse of [`BigInteger::from_str_radix`].
+    ///
+    /// # Panics
+    ///
+    /// Panics if `radix` is not in `2..=36`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bc_math::big_integer::BigInteger;
+    ///
+    /// assert_eq!(BigInteger::from_u32(255).to_str_radix(16), "ff");
+    /// assert_eq!(BigInteger::from_i32(-5).to_str_radix(2), "-101");
+    /// ```
+    pub fn to_str_radix(&self, radix: u32) -> String {
+        assert!((2..=36).contains(&radix), "radix must be in 2..=36, got {radix}");
+
+        if self.sign == 0 {
+            return "0".to_string();
+        }
+
+        // TODO(效能): 對稱於 from_str_radix，逐位一次大數 div_rem → O(位數²)。
+        //   可分塊：除以 radix^chunk，一次把 u64 餘數格式化 chunk 位。暫不改。
+        let radix_big = BigInteger::from_u32(radix);
+        let mut n = BigInteger::new(1, self.magnitude.to_vec()); // |self|（正的複本）
+        let mut digits = Vec::new(); // 低位在前
+        while n.sign != 0 {
+            let (q, r) = n.div_rem(&radix_big);
+            let d = if r.sign == 0 { 0 } else { r.magnitude[0] }; // 餘數 0..radix-1
+            digits.push(char::from_digit(d, radix).expect("digit < radix <= 36"));
+            n = q;
+        }
+
+        let mut result = String::new();
+        if self.sign < 0 {
+            result.push('-');
+        }
+        result.extend(digits.iter().rev()); // 反轉成高位在前
+        result
+    }
+
     /// Returns the number of bits in the minimal two's-complement representation
     /// of this value, excluding the sign bit. Zero has a bit length of `0`.
     ///
@@ -801,6 +845,13 @@ impl FromStr for BigInteger {
     /// Parses in radix 10（讓 `"123".parse::<BigInteger>()` 可用）。
     fn from_str(s: &str) -> Result<BigInteger, ParseBigIntegerError> {
         BigInteger::from_str_radix(s, 10)
+    }
+}
+
+impl std::fmt::Display for BigInteger {
+    /// 十進制輸出（委派 `to_str_radix(10)`）；`{}`、`to_string()` 皆走此。
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.to_str_radix(10))
     }
 }
 
@@ -2532,6 +2583,50 @@ mod tests {
         for &v in &vals {
             let parsed = BigInteger::from_str_radix(&format!("{v:x}"), 16).unwrap();
             assert_eq!(parsed, BigInteger::from_u128(v), "{v:x}");
+        }
+    }
+
+    #[test]
+    fn to_str_radix_basic() {
+        assert_eq!(BigInteger::from_i32(0).to_str_radix(10), "0");
+        assert_eq!(BigInteger::from_u32(255).to_str_radix(10), "255");
+        assert_eq!(BigInteger::from_u32(255).to_str_radix(16), "ff");
+        assert_eq!(BigInteger::from_u32(10).to_str_radix(2), "1010");
+        assert_eq!(BigInteger::from_u32(35).to_str_radix(36), "z");
+        assert_eq!(BigInteger::from_i32(-100).to_str_radix(10), "-100");
+        assert_eq!(BigInteger::from_i32(-5).to_str_radix(2), "-101");
+    }
+
+    #[test]
+    fn display_is_decimal() {
+        assert_eq!(BigInteger::from_i32(-12345).to_string(), "-12345");
+        assert_eq!(format!("{}", BigInteger::from_u32(42)), "42");
+    }
+
+    #[test]
+    fn to_str_radix_matches_native() {
+        // 對照原生格式化（正數，各原生支援的 radix）
+        let vals = [0u128, 1, 255, 0xDEAD_BEEF, u128::MAX];
+        for &v in &vals {
+            let n = BigInteger::from_u128(v);
+            assert_eq!(n.to_str_radix(10), v.to_string(), "{v} dec");
+            assert_eq!(n.to_str_radix(16), format!("{v:x}"), "{v} hex");
+            assert_eq!(n.to_str_radix(2), format!("{v:b}"), "{v} bin");
+            assert_eq!(n.to_str_radix(8), format!("{v:o}"), "{v} oct");
+        }
+    }
+
+    #[test]
+    fn to_from_str_radix_roundtrip() {
+        // to_str_radix ↔ from_str_radix 來回，涵蓋各符號、i128::MIN、各 radix（含 36）
+        let vals = [0i128, 1, -1, 255, -256, 123456789, -987654321, i128::MAX, i128::MIN];
+        for &v in &vals {
+            let n = BigInteger::from_i128(v);
+            for radix in [2u32, 8, 10, 16, 36] {
+                let s = n.to_str_radix(radix);
+                let back = BigInteger::from_str_radix(&s, radix).unwrap();
+                assert_eq!(back, n, "v={v} radix={radix}");
+            }
         }
     }
 
