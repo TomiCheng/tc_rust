@@ -205,6 +205,37 @@ impl BigInteger {
         (quotient, remainder)
     }
 
+    /// Returns the least non-negative remainder of `self` divided by `other`
+    /// (Euclidean modulo). The result is always in `[0, |other|)`.
+    ///
+    /// Unlike `%` (which takes the dividend's sign), this is always non-negative.
+    /// Works for any non-zero `other`, including negative.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `other` is zero.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bc_math::big_integer::BigInteger;
+    ///
+    /// assert_eq!(BigInteger::from_i32(-7).rem_euclid(&BigInteger::from_i32(3)), BigInteger::from_i32(2));
+    /// assert_eq!(BigInteger::from_i32(-7).rem_euclid(&BigInteger::from_i32(-3)), BigInteger::from_i32(2));
+    /// ```
+    pub fn rem_euclid(&self, other: &BigInteger) -> BigInteger {
+        if other.sign == 0 {
+            panic!("attempt to calculate the remainder with a divisor of zero");
+        }
+        let r = self % other; // 截斷餘數：符號同 self，落在 (-|other|, |other|)
+        if r.sign < 0 {
+            // 補上 |other| 使結果非負：other 正就加、負就減
+            if other.sign > 0 { &r + other } else { &r - other }
+        } else {
+            r
+        }
+    }
+
     /// Parses a `BigInteger` from a string in the given radix (`2..=36`).
     ///
     /// An optional leading `+`/`-` sign is allowed. Digits use `0-9` then
@@ -3138,6 +3169,36 @@ mod tests {
                 assert_eq!(back, n, "v={v} radix={radix}");
             }
         }
+    }
+
+    #[test]
+    fn rem_euclid_matches_native() {
+        // 對照原生 i128::rem_euclid，涵蓋各種符號
+        let vals = [0i128, 1, -1, 7, -7, 100, -100, 3, -3, 12345, -12345];
+        for &a in &vals {
+            for &b in &vals {
+                if b == 0 {
+                    continue;
+                }
+                let got = BigInteger::from_i128(a).rem_euclid(&BigInteger::from_i128(b));
+                assert_eq!(got, BigInteger::from_i128(a.rem_euclid(b)), "{a} rem_euclid {b}");
+            }
+        }
+    }
+
+    #[test]
+    fn rem_euclid_is_non_negative() {
+        // 結果永遠非負（落在 [0, |other|)），且負除數也適用
+        assert_eq!(BigInteger::from_i32(-7).rem_euclid(&BigInteger::from_i32(3)), BigInteger::from_i32(2));
+        assert_eq!(BigInteger::from_i32(-7).rem_euclid(&BigInteger::from_i32(-3)), BigInteger::from_i32(2));
+        assert_eq!(BigInteger::from_i32(7).rem_euclid(&BigInteger::from_i32(-3)), BigInteger::from_i32(1));
+        assert!(BigInteger::from_i32(-100).rem_euclid(&BigInteger::from_i32(7)).sign() >= 0);
+    }
+
+    #[test]
+    #[should_panic(expected = "divisor of zero")]
+    fn rem_euclid_by_zero_panics() {
+        let _ = BigInteger::from_i32(5).rem_euclid(&BigInteger::from_i32(0));
     }
 
     #[test]
