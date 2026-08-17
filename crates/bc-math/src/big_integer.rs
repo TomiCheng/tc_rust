@@ -609,6 +609,25 @@ impl BigInteger {
         }
     }
 
+    /// Creates a non-negative `BigInteger` from a big-endian, **unsigned** byte
+    /// slice: the top bit is data, never a sign. An empty (or all-zero) slice
+    /// is zero.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bc_math::big_integer::BigInteger;
+    ///
+    /// // 有別於 from_bytes_be：0x80 是 128，不是 -128
+    /// assert_eq!(BigInteger::from_bytes_be_unsigned(&[0x80]), BigInteger::from_u32(128));
+    /// ```
+    pub fn from_bytes_be_unsigned(bytes: &[u8]) -> Self {
+        // 一律非負：最高位是資料，不是符號
+        let magnitude = make_magnitude_be(bytes);
+        let sign = if magnitude.is_empty() { 0 } else { 1 };
+        BigInteger::new(sign, magnitude)
+    }
+
     /// Creates a `BigInteger` from a little-endian, two's-complement byte slice.
     ///
     /// The least-significant byte comes first, so the sign lives in the top bit
@@ -633,6 +652,23 @@ impl BigInteger {
             let sign = if magnitude.is_empty() { 0 } else { 1 };
             BigInteger::new(sign, magnitude)
         }
+    }
+
+    /// Creates a non-negative `BigInteger` from a little-endian, **unsigned**
+    /// byte slice: the top bit (of the last byte) is data, never a sign. An
+    /// empty (or all-zero) slice is zero.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bc_math::big_integer::BigInteger;
+    ///
+    /// assert_eq!(BigInteger::from_bytes_le_unsigned(&[0x00, 0x80]), BigInteger::from_u32(0x8000));
+    /// ```
+    pub fn from_bytes_le_unsigned(bytes: &[u8]) -> Self {
+        let magnitude = make_magnitude_le(bytes);
+        let sign = if magnitude.is_empty() { 0 } else { 1 };
+        BigInteger::new(sign, magnitude)
     }
 }
 
@@ -2583,6 +2619,34 @@ mod tests {
         for &v in &vals {
             let parsed = BigInteger::from_str_radix(&format!("{v:x}"), 16).unwrap();
             assert_eq!(parsed, BigInteger::from_u128(v), "{v:x}");
+        }
+    }
+
+    #[test]
+    fn from_bytes_unsigned_top_bit_is_data() {
+        // 關鍵差異：unsigned 版不把最高位當符號
+        assert_eq!(BigInteger::from_bytes_be_unsigned(&[0x80]), BigInteger::from_u32(128));
+        assert_eq!(BigInteger::from_bytes_be(&[0x80]), BigInteger::from_i32(-128)); // 對照 signed
+        assert_eq!(BigInteger::from_bytes_be_unsigned(&[0xFF]), BigInteger::from_u32(255));
+        // 多位元組
+        assert_eq!(BigInteger::from_bytes_be_unsigned(&[0xFF, 0xFF]), BigInteger::from_u32(0xFFFF));
+        // LE：最高位元組在尾端
+        assert_eq!(BigInteger::from_bytes_le_unsigned(&[0x00, 0x80]), BigInteger::from_u32(0x8000));
+        assert_eq!(BigInteger::from_bytes_le_unsigned(&[0x34, 0x12]), BigInteger::from_u32(0x1234));
+        // 空 / 全零 → 0
+        assert_eq!(BigInteger::from_bytes_be_unsigned(&[]), BigInteger::from_u32(0));
+        assert_eq!(BigInteger::from_bytes_le_unsigned(&[0, 0, 0]), BigInteger::from_u32(0));
+    }
+
+    #[test]
+    fn from_bytes_unsigned_matches_u128() {
+        // 拿原生 u128 的 big-endian / little-endian 位元組當對照
+        let vals = [0u128, 1, 255, 0x8000, 0xDEAD_BEEF, u128::MAX];
+        for &v in &vals {
+            let be = v.to_be_bytes();
+            let le = v.to_le_bytes();
+            assert_eq!(BigInteger::from_bytes_be_unsigned(&be), BigInteger::from_u128(v), "{v} be");
+            assert_eq!(BigInteger::from_bytes_le_unsigned(&le), BigInteger::from_u128(v), "{v} le");
         }
     }
 
