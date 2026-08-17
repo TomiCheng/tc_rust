@@ -684,6 +684,26 @@ impl BigInteger {
             .map(|(i, &w)| i as u32 * u32::BITS + w.trailing_zeros())
     }
 
+    /// Returns the bitwise AND of `self` with the complement of `other`
+    /// (`self & !other`), in two's-complement semantics.
+    ///
+    /// Clears every bit of `self` that is set in `other` — a convenient
+    /// "mask off" operation.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bc_math::big_integer::BigInteger;
+    ///
+    /// let a = BigInteger::from_u32(0b1110);
+    /// let b = BigInteger::from_u32(0b0110);
+    /// assert_eq!(a.and_not(&b), BigInteger::from_u32(0b1000)); // 清掉 b 有的位元
+    /// ```
+    pub fn and_not(&self, other: &BigInteger) -> BigInteger {
+        // 直接複用既有 operator：!other 走 Not，再與 self 做 BitAnd
+        self & &!other
+    }
+
     /// Creates a `BigInteger` from an unsigned 32-bit value.
     ///
     /// # Examples
@@ -2682,6 +2702,29 @@ mod tests {
         assert!(!BigInteger::from_u32(3).is_power_of_two()); // 0b11
         assert!(!BigInteger::from_u32(0).is_power_of_two()); // 零
         assert!(!BigInteger::from_i32(-8).is_power_of_two()); // 負數
+    }
+
+    #[test]
+    fn and_not_basic() {
+        // 基本遮罩：清掉 other 中為 1 的位元
+        assert_eq!(
+            BigInteger::from_u32(0b1110).and_not(&BigInteger::from_u32(0b0110)),
+            BigInteger::from_u32(0b1000)
+        );
+        // a & !a = 0
+        let a = BigInteger::from_u32(0xDEAD_BEEF);
+        assert_eq!(a.and_not(&a), BigInteger::from_u32(0));
+        // a & !0 = a
+        assert_eq!(a.and_not(&BigInteger::from_u32(0)), a);
+
+        // 對拍 native i64（含負數的二補數語義）：a & !b
+        for a in [-13i64, -1, 0, 5, 42, 255] {
+            for b in [-8i64, -1, 0, 3, 42, 128] {
+                let expected = a & !b;
+                let got = BigInteger::from_i64(a).and_not(&BigInteger::from_i64(b));
+                assert_eq!(got, BigInteger::from_i64(expected), "a={a}, b={b}");
+            }
+        }
     }
 
     #[test]
