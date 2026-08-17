@@ -1,4 +1,5 @@
 use std::cmp::Ordering;
+use std::hash::{Hash, Hasher};
 use std::ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Neg, Not, Rem, Shl, Shr, Sub};
 use std::str::FromStr;
 use std::sync::{LazyLock, OnceLock};
@@ -1125,6 +1126,16 @@ impl PartialEq for BigInteger {
 }
 
 impl Eq for BigInteger {}
+
+impl Hash for BigInteger {
+    /// Hashes the numeric value only (`sign` + `magnitude`), matching [`PartialEq`]
+    /// and skipping the lazy cache fields. The no-leading-zeros invariant makes the
+    /// magnitude canonical, so equal values always hash equally.
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.sign.hash(state);
+        self.magnitude.hash(state);
+    }
+}
 
 impl Ord for BigInteger {
     fn cmp(&self, other: &Self) -> Ordering {
@@ -2671,6 +2682,37 @@ mod tests {
         assert!(!BigInteger::from_u32(3).is_power_of_two()); // 0b11
         assert!(!BigInteger::from_u32(0).is_power_of_two()); // 零
         assert!(!BigInteger::from_i32(-8).is_power_of_two()); // 負數
+    }
+
+    #[test]
+    fn hash_matches_eq() {
+        use std::collections::hash_map::DefaultHasher;
+        use std::hash::{Hash, Hasher};
+
+        fn hash_of(x: &BigInteger) -> u64 {
+            let mut h = DefaultHasher::new();
+            x.hash(&mut h);
+            h.finish()
+        }
+
+        // 相等的值（不同建構路徑）必須雜湊相同
+        let a = BigInteger::from_i64(1_000_000_007);
+        let prod = &BigInteger::from_i32(1_000_000) * &BigInteger::from_i32(1000);
+        let b = &prod + &BigInteger::from_i32(7);
+        assert_eq!(a, b);
+        assert_eq!(hash_of(&a), hash_of(&b));
+
+        // 正負同絕對值不得相等，雜湊也應不同（極大機率）
+        assert_ne!(hash_of(&BigInteger::from_i32(42)), hash_of(&BigInteger::from_i32(-42)));
+
+        // 能當 HashSet 的 key
+        use std::collections::HashSet;
+        let mut set = HashSet::new();
+        set.insert(BigInteger::from_i32(-42));
+        set.insert(BigInteger::from_i32(42));
+        set.insert(BigInteger::from_i64(1_000_000_007));
+        assert!(set.contains(&b)); // 用等值的不同實例查得到
+        assert_eq!(set.len(), 3);
     }
 
     #[test]
