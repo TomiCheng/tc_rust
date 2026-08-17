@@ -7,3 +7,7 @@ version = "0.1.0"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/TomiCheng/bc-rust"
+
+[workspace.dependencies]
+# 只取 RngCore 等 trait；預設 no_std（default-features = false），熵來源由呼叫端提供。
+rand_core = { version = "0.9", default-features = false }

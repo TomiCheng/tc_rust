@@ -12,3 +12,4 @@ default = ["std"]
 std = []
 
 [dependencies]
+rand_core = { workspace = true }
