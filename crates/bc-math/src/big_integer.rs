@@ -4,6 +4,10 @@ use std::ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Neg, Not, Rem, Shl, Shr, Su
 use std::str::FromStr;
 use std::sync::{LazyLock, OnceLock};
 
+// 質數相關運算（Miller-Rabin、隨機質數生成）拆到子模組，隔離 `rand` 相依，
+// 讓本檔維持純算術。子模組是本模組的子孫，看得到 sign/magnitude 等私有項目。
+mod prime;
+
 /// 一個 magnitude 字的位元數（= 32）。集中定義，避免散落的 magic number。
 const WORD_BITS: usize = u32::BITS as usize;
 
