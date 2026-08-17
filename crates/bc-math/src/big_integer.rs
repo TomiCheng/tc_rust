@@ -295,6 +295,65 @@ impl BigInteger {
         Some(if x.sign < 0 { &x + modulus } else { x })
     }
 
+    /// Returns `self.pow(e) mod m` (modular exponentiation) via square-and-multiply.
+    ///
+    /// A negative exponent computes `(self^|e|)^{-1} mod m`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `m` is not positive, or if `e` is negative and `self` has no
+    /// inverse modulo `m`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bc_math::big_integer::BigInteger;
+    ///
+    /// // 3^4 = 81 ≡ 4 (mod 7)
+    /// assert_eq!(
+    ///     BigInteger::from_i32(3).mod_pow(&BigInteger::from_i32(4), &BigInteger::from_i32(7)),
+    ///     BigInteger::from_i32(4)
+    /// );
+    /// ```
+    pub fn mod_pow(&self, e: &BigInteger, m: &BigInteger) -> BigInteger {
+        if m.sign <= 0 {
+            panic!("modulus must be positive");
+        }
+        if *m == *ONE {
+            return BigInteger::from_u32(0); // 任何數 mod 1 = 0
+        }
+        if e.sign == 0 {
+            return BigInteger::from_u32(1); // a^0 = 1
+        }
+        if self.sign == 0 {
+            return BigInteger::from_u32(0); // 0^e = 0（此時 e > 0）
+        }
+
+        // TODO(效能): 每步用全長 `%` 約簡。RSA 尺寸可改 Montgomery（奇模數）/
+        //   Barrett（偶模數）約簡，避開昂貴除法，快數倍。目前先求正確。
+        let neg_exp = e.sign < 0;
+        let exp = if neg_exp { -e } else { e.clone() };
+
+        let base = self.rem_euclid(m); // base ∈ [0, m)
+        let mut result = BigInteger::from_u32(1);
+        for i in (0..exp.bit_length()).rev() {
+            // 平方-乘：高位 → 低位
+            result = &result.square() % m;
+            if exp.test_bit(i) {
+                result = &(&result * &base) % m;
+            }
+        }
+
+        if neg_exp {
+            // a^(-e) mod m = (a^e mod m)⁻¹；base 與 m 不互質時無解
+            result
+                .mod_inverse(m)
+                .expect("mod_pow: base not invertible modulo m for negative exponent")
+        } else {
+            result
+        }
+    }
+
     /// Parses a `BigInteger` from a string in the given radix (`2..=36`).
     ///
     /// An optional leading `+`/`-` sign is allowed. Digits use `0-9` then
@@ -3412,6 +3471,64 @@ mod tests {
     #[should_panic(expected = "modulus must be positive")]
     fn mod_inverse_non_positive_modulus_panics() {
         let _ = BigInteger::from_i32(3).mod_inverse(&BigInteger::from_i32(0));
+    }
+
+    #[test]
+    fn mod_pow_basic() {
+        let seven = BigInteger::from_i32(7);
+        // 3^4 = 81 ≡ 4 (mod 7)
+        assert_eq!(BigInteger::from_i32(3).mod_pow(&BigInteger::from_i32(4), &seven), BigInteger::from_i32(4));
+        // a^0 = 1
+        assert_eq!(BigInteger::from_i32(5).mod_pow(&BigInteger::from_i32(0), &seven), BigInteger::from_i32(1));
+        // mod 1 = 0
+        assert_eq!(BigInteger::from_i32(5).mod_pow(&BigInteger::from_i32(3), &BigInteger::from_i32(1)), BigInteger::from_i32(0));
+        // 0^e = 0（e > 0）
+        assert_eq!(BigInteger::from_i32(0).mod_pow(&BigInteger::from_i32(5), &seven), BigInteger::from_i32(0));
+        // 負指數：3^(-1) ≡ 5 (mod 7)
+        assert_eq!(BigInteger::from_i32(3).mod_pow(&BigInteger::from_i32(-1), &seven), BigInteger::from_i32(5));
+    }
+
+    #[test]
+    fn mod_pow_matches_native() {
+        fn modpow_u128(mut base: u128, mut exp: u128, m: u128) -> u128 {
+            let mut r = 1u128 % m;
+            base %= m;
+            while exp > 0 {
+                if exp & 1 == 1 {
+                    r = r * base % m;
+                }
+                base = base * base % m;
+                exp >>= 1;
+            }
+            r
+        }
+        let bases = [0u128, 1, 2, 3, 7, 10, 12345];
+        let exps = [0u128, 1, 2, 5, 10, 100];
+        let mods = [1u128, 2, 7, 13, 1000, 65537]; // 小 mod，原生中間值不溢位
+        for &b in &bases {
+            for &ex in &exps {
+                for &m in &mods {
+                    let got = BigInteger::from_u128(b)
+                        .mod_pow(&BigInteger::from_u128(ex), &BigInteger::from_u128(m));
+                    assert_eq!(got, BigInteger::from_u128(modpow_u128(b, ex, m)), "{b}^{ex} mod {m}");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn mod_pow_fermat_little_theorem() {
+        // 費馬小定理：p 質數、a 不被 p 整除 → a^(p-1) ≡ 1 (mod p)
+        let p = BigInteger::from_i32(65537); // Fermat 質數 2^16+1，指數 65536 = 16 次平方
+        let a = BigInteger::from_i32(12345);
+        let e = &p - &BigInteger::from_u32(1);
+        assert_eq!(a.mod_pow(&e, &p), BigInteger::from_u32(1));
+    }
+
+    #[test]
+    #[should_panic(expected = "modulus must be positive")]
+    fn mod_pow_non_positive_modulus_panics() {
+        let _ = BigInteger::from_i32(3).mod_pow(&BigInteger::from_i32(2), &BigInteger::from_i32(0));
     }
 
     #[test]
