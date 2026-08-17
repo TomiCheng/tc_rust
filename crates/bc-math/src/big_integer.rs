@@ -173,6 +173,57 @@ impl BigInteger {
         BigInteger::new(1, square_magnitude(&self.magnitude))
     }
 
+    /// Returns `self` raised to the non-negative power `exp` (`self^exp`).
+    ///
+    /// `x.pow(0)` is `1` for every `x`, including `0`. This is ordinary,
+    /// non-modular exponentiation via square-and-multiply; for the modular
+    /// form see [`BigInteger::mod_pow`].
+    ///
+    /// # Panics
+    ///
+    /// Panics only if the result would exceed `u32::MAX` bits — an
+    /// astronomically large value that realistic inputs never reach.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bc_math::big_integer::BigInteger;
+    ///
+    /// assert_eq!(BigInteger::from_i32(3).pow(4), BigInteger::from_i32(81));
+    /// assert_eq!(BigInteger::from_i32(-2).pow(3), BigInteger::from_i32(-8));
+    /// assert_eq!(BigInteger::from_i32(7).pow(0), BigInteger::from_i32(1));
+    /// ```
+    pub fn pow(&self, exp: u32) -> BigInteger {
+        if exp == 0 {
+            return BigInteger::from_u32(1); // x^0 = 1（含 0^0 = 1，依慣例）
+        }
+        if self.sign == 0 {
+            return BigInteger::from_u32(0); // 0^exp = 0（此時 exp > 0）
+        }
+        // 正的 2^k：(2^k)^exp = 2^(k·exp)，一次位移取代整串乘法
+        // （is_power_of_two 要求 sign > 0，故不會把負底的符號算錯）
+        if self.is_power_of_two() {
+            let bits = (self.bit_length() - 1) as u64 * exp as u64;
+            let shift = u32::try_from(bits).expect("pow: result exceeds u32::MAX bits");
+            return &*ONE << shift;
+        }
+        // 逐位平方相乘：從最低位掃 exp，遇 1 就把當前的 z（= self^(2^i)）乘進 y
+        let mut exp = exp;
+        let mut y = BigInteger::from_u32(1);
+        let mut z = self.clone();
+        loop {
+            if exp & 1 == 1 {
+                y = &y * &z;
+            }
+            exp >>= 1;
+            if exp == 0 {
+                break;
+            }
+            z = z.square();
+        }
+        y
+    }
+
     /// Returns the truncated quotient and remainder `(self / divisor, self % divisor)`.
     ///
     /// Division truncates toward zero: the quotient's sign is the product of the
@@ -2620,6 +2671,37 @@ mod tests {
         assert!(!BigInteger::from_u32(3).is_power_of_two()); // 0b11
         assert!(!BigInteger::from_u32(0).is_power_of_two()); // 零
         assert!(!BigInteger::from_i32(-8).is_power_of_two()); // 負數
+    }
+
+    #[test]
+    fn pow_basic() {
+        assert_eq!(BigInteger::from_i32(2).pow(10), BigInteger::from_i32(1024));
+        assert_eq!(BigInteger::from_i32(3).pow(4), BigInteger::from_i32(81));
+        assert_eq!(BigInteger::from_i32(-2).pow(3), BigInteger::from_i32(-8)); // 奇次負底 → 負
+        assert_eq!(BigInteger::from_i32(-2).pow(4), BigInteger::from_i32(16)); // 偶次負底 → 正
+        assert_eq!(BigInteger::from_i32(5).pow(0), BigInteger::from_i32(1)); // x^0 = 1
+        assert_eq!(BigInteger::from_i32(0).pow(0), BigInteger::from_i32(1)); // 0^0 = 1（慣例）
+        assert_eq!(BigInteger::from_i32(0).pow(5), BigInteger::from_i32(0)); // 0^n = 0
+        assert_eq!(BigInteger::from_i32(7).pow(1), BigInteger::from_i32(7)); // x^1 = x
+    }
+
+    #[test]
+    fn pow_matches_native() {
+        // 對拍 native i128：底 −6..=6、指數 0..=12，避開 i128 溢位
+        for base in -6i128..=6 {
+            for e in 0u32..=12 {
+                let expected = base.pow(e);
+                let got = BigInteger::from_i128(base).pow(e);
+                assert_eq!(got, BigInteger::from_i128(expected), "base={base}, e={e}");
+            }
+        }
+    }
+
+    #[test]
+    fn pow_power_of_two_shortcut() {
+        // 2 的冪底走位移捷徑，須與逐位乘法版一致
+        assert_eq!(BigInteger::from_i32(2).pow(64), BigInteger::from_u128(1u128 << 64));
+        assert_eq!(BigInteger::from_i32(8).pow(20), BigInteger::from_i32(2).pow(60)); // 8^20 = 2^60
     }
 
     #[test]
