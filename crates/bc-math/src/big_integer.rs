@@ -285,6 +285,42 @@ impl BigInteger {
             .get_or_init(|| calc_bit_length(self.sign, &self.magnitude))
     }
 
+    /// Returns the number of bytes in the minimal two's-complement (signed)
+    /// representation — the length [`BigInteger::to_bytes_be`] produces.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bc_math::big_integer::BigInteger;
+    ///
+    /// assert_eq!(BigInteger::from_i32(0).byte_length(), 1);
+    /// assert_eq!(BigInteger::from_i32(128).byte_length(), 2); // 需符號位元組 → [00 80]
+    /// assert_eq!(BigInteger::from_i32(-128).byte_length(), 1); // [80]
+    /// ```
+    pub fn byte_length(&self) -> usize {
+        // bit_length() 已含符號與負 2 次方的處理；+1 容納符號位元。零 → 0/8+1 = 1
+        self.bit_length() as usize / 8 + 1
+    }
+
+    /// Returns the number of bytes in the minimal unsigned (magnitude)
+    /// representation — the length [`BigInteger::to_bytes_be_unsigned`] produces.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bc_math::big_integer::BigInteger;
+    ///
+    /// assert_eq!(BigInteger::from_u32(128).byte_length_unsigned(), 1); // [80]
+    /// assert_eq!(BigInteger::from_u32(256).byte_length_unsigned(), 2); // [01 00]
+    /// ```
+    pub fn byte_length_unsigned(&self) -> usize {
+        if self.sign == 0 {
+            return 1; // 零輸出 [0]
+        }
+        // 只看 magnitude 的位元長度（sign=1 避開 bit_length 對負數的 quirk）
+        (calc_bit_length(1, &self.magnitude) as usize).div_ceil(8)
+    }
+
     /// Returns the number of bits in the two's-complement representation of this
     /// value that differ from the sign bit. For non-negative values this is the
     /// ordinary population count; for negative values it is `popcount(|n| - 1)`.
@@ -671,6 +707,25 @@ impl BigInteger {
         BigInteger::new(sign, magnitude)
     }
 
+    /// 把 `n = out.len()` 個位元組的 big-endian 編碼寫進 `out`（零配置核心）。
+    ///
+    /// 先把 `|self|` 右對齊寫入、左邊補 0（超出 magnitude 的高位、以及零，自然補 0）；
+    /// `signed` 且為負時再對整段取兩補數。`out.len()` 須等於對應的 `byte_length*`。
+    fn write_magnitude_be(&self, out: &mut [u8], signed: bool) {
+        let n = out.len();
+        for j in 0..n {
+            // 第 j 個低位位元組：取自第 j/4 個低位字的第 j%4 個位元組
+            out[n - 1 - j] = if j / 4 < self.magnitude.len() {
+                (self.magnitude[self.magnitude.len() - 1 - j / 4] >> (8 * (j % 4))) as u8
+            } else {
+                0
+            };
+        }
+        if signed && self.sign < 0 {
+            twos_complement_in_place(out); // 負數：整段兩補數
+        }
+    }
+
     /// Returns the magnitude (absolute value) as minimal big-endian bytes,
     /// **without** any sign. Zero is `[0]`; the top bit is data, not a sign.
     ///
@@ -683,20 +738,22 @@ impl BigInteger {
     /// assert_eq!(BigInteger::from_i32(-128).to_bytes_be_unsigned(), vec![0x80]); // 只看絕對值
     /// ```
     pub fn to_bytes_be_unsigned(&self) -> Vec<u8> {
-        magnitude_to_bytes_be(&self.magnitude)
+        let mut v = vec![0u8; self.byte_length_unsigned()];
+        self.write_magnitude_be(&mut v, false);
+        v
     }
 
     /// Little-endian counterpart of [`BigInteger::to_bytes_be_unsigned`].
     pub fn to_bytes_le_unsigned(&self) -> Vec<u8> {
-        let mut bytes = magnitude_to_bytes_be(&self.magnitude);
-        bytes.reverse(); // BE 最小位元組反轉即 LE
-        bytes
+        let mut v = self.to_bytes_be_unsigned();
+        v.reverse(); // BE 最小位元組反轉即 LE
+        v
     }
 
     /// Returns the minimal two's-complement big-endian bytes (with sign).
     ///
     /// Inverse of [`BigInteger::from_bytes_be`]. Zero is `[0]`. A leading
-    /// `0x00` (non-negative) or `0xFF` (negative) byte is prepended when needed
+    /// `0x00` (non-negative) or `0xFF` (negative) byte is included when needed
     /// so the sign bit reads correctly.
     ///
     /// # Examples
@@ -708,31 +765,80 @@ impl BigInteger {
     /// assert_eq!(BigInteger::from_i32(-129).to_bytes_be(), vec![0xFF, 0x7F]);
     /// ```
     pub fn to_bytes_be(&self) -> Vec<u8> {
-        if self.sign == 0 {
-            return vec![0];
-        }
-        let mut bytes = magnitude_to_bytes_be(&self.magnitude);
-        if self.sign > 0 {
-            // 非負：最高位為 1 會被誤讀成負 → 前補 0x00
-            if bytes[0] & 0x80 != 0 {
-                bytes.insert(0, 0x00);
-            }
-        } else {
-            // 負：整段取兩補數（~bytes + 1，同寬度）
-            twos_complement_in_place(&mut bytes);
-            // 最高位不是 1 會被誤讀成正 → 前補 0xFF
-            if bytes[0] & 0x80 == 0 {
-                bytes.insert(0, 0xFF);
-            }
-        }
-        bytes
+        let mut v = vec![0u8; self.byte_length()];
+        self.write_magnitude_be(&mut v, true);
+        v
     }
 
     /// Little-endian counterpart of [`BigInteger::to_bytes_be`].
     pub fn to_bytes_le(&self) -> Vec<u8> {
-        let mut bytes = self.to_bytes_be();
-        bytes.reverse();
-        bytes
+        let mut v = self.to_bytes_be();
+        v.reverse();
+        v
+    }
+
+    /// Writes the signed (two's-complement) big-endian encoding into the front
+    /// of `dst` and returns the number of bytes written (= [`BigInteger::byte_length`]).
+    /// Allocation-free buffer version of [`BigInteger::to_bytes_be`].
+    ///
+    /// # Panics
+    ///
+    /// Panics if `dst.len() < self.byte_length()`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bc_math::big_integer::BigInteger;
+    ///
+    /// let n = BigInteger::from_i32(-129);
+    /// let mut buf = [0u8; 8];
+    /// let len = n.to_bytes_be_into(&mut buf);
+    /// assert_eq!(&buf[..len], &[0xFF, 0x7F]);
+    /// ```
+    pub fn to_bytes_be_into(&self, dst: &mut [u8]) -> usize {
+        let n = self.byte_length();
+        assert!(dst.len() >= n, "to_bytes_be_into: buffer too small (need {n}, got {})", dst.len());
+        self.write_magnitude_be(&mut dst[..n], true);
+        n
+    }
+
+    /// Little-endian counterpart of [`BigInteger::to_bytes_be_into`].
+    ///
+    /// # Panics
+    ///
+    /// Panics if `dst.len() < self.byte_length()`.
+    pub fn to_bytes_le_into(&self, dst: &mut [u8]) -> usize {
+        let n = self.byte_length();
+        assert!(dst.len() >= n, "to_bytes_le_into: buffer too small (need {n}, got {})", dst.len());
+        self.write_magnitude_be(&mut dst[..n], true);
+        dst[..n].reverse();
+        n
+    }
+
+    /// Allocation-free buffer version of [`BigInteger::to_bytes_be_unsigned`];
+    /// returns the number of bytes written (= [`BigInteger::byte_length_unsigned`]).
+    ///
+    /// # Panics
+    ///
+    /// Panics if `dst.len() < self.byte_length_unsigned()`.
+    pub fn to_bytes_be_unsigned_into(&self, dst: &mut [u8]) -> usize {
+        let n = self.byte_length_unsigned();
+        assert!(dst.len() >= n, "to_bytes_be_unsigned_into: buffer too small (need {n}, got {})", dst.len());
+        self.write_magnitude_be(&mut dst[..n], false);
+        n
+    }
+
+    /// Little-endian counterpart of [`BigInteger::to_bytes_be_unsigned_into`].
+    ///
+    /// # Panics
+    ///
+    /// Panics if `dst.len() < self.byte_length_unsigned()`.
+    pub fn to_bytes_le_unsigned_into(&self, dst: &mut [u8]) -> usize {
+        let n = self.byte_length_unsigned();
+        assert!(dst.len() >= n, "to_bytes_le_unsigned_into: buffer too small (need {n}, got {})", dst.len());
+        self.write_magnitude_be(&mut dst[..n], false);
+        dst[..n].reverse();
+        n
     }
 }
 
@@ -1535,22 +1641,6 @@ fn bit_count_negative(magnitude: &[u32]) -> u32 {
         count += v.count_ones();
     }
     count
-}
-
-/// magnitude（big-endian、無前導零字）→ 最小 big-endian 位元組（去前導零位元組）。
-/// 零（空 magnitude）回 `[0]`。
-fn magnitude_to_bytes_be(magnitude: &[u32]) -> Vec<u8> {
-    if magnitude.is_empty() {
-        return vec![0]; // 零
-    }
-    let mut bytes = Vec::with_capacity(magnitude.len() * size_of::<u32>());
-    for &w in magnitude {
-        bytes.extend_from_slice(&w.to_be_bytes());
-    }
-    // 最高位字非零 → 必有非零位元組；去掉最高字內的前導零位元組
-    let start = bytes.iter().position(|&b| b != 0).unwrap();
-    bytes.drain(..start);
-    bytes
 }
 
 /// 對位元組陣列原地取兩補數：`bytes = ~bytes + 1`（同寬度，進位由低位端往高位傳）。
@@ -2732,6 +2822,28 @@ mod tests {
     }
 
     #[test]
+    fn byte_length_matches_output() {
+        // signed：byte_length() 須等於 to_bytes_be() 實際長度
+        let vals = [
+            0i128, 1, -1, 127, 128, -128, -129, 255, -256, 256,
+            0xDEAD_BEEF, -(0xDEAD_BEEFi128), 1 << 64, -(1i128 << 64), i128::MAX, i128::MIN,
+        ];
+        for &v in &vals {
+            let n = BigInteger::from_i128(v);
+            assert_eq!(n.byte_length(), n.to_bytes_be().len(), "signed {v}");
+        }
+        // unsigned：byte_length_unsigned() 須等於 to_bytes_be_unsigned() 實際長度
+        let uvals = [0u128, 1, 128, 255, 256, 0x8000, 0xDEAD_BEEF, u128::MAX];
+        for &v in &uvals {
+            let n = BigInteger::from_u128(v);
+            assert_eq!(n.byte_length_unsigned(), n.to_bytes_be_unsigned().len(), "unsigned {v}");
+        }
+        // 負數 unsigned 長度只看絕對值
+        assert_eq!(BigInteger::from_i32(-128).byte_length_unsigned(), 1);
+        assert_eq!(BigInteger::from_i32(-256).byte_length_unsigned(), 2);
+    }
+
+    #[test]
     fn to_bytes_be_specific() {
         // 非負：最高位為 1 → 前補 0x00
         assert_eq!(BigInteger::from_i32(0).to_bytes_be(), vec![0]);
@@ -2749,6 +2861,49 @@ mod tests {
         assert_eq!(BigInteger::from_u32(0).to_bytes_be_unsigned(), vec![0]);
         // LE 是 BE 反轉
         assert_eq!(BigInteger::from_i32(-129).to_bytes_le(), vec![0x7F, 0xFF]);
+    }
+
+    #[test]
+    fn to_bytes_into_matches_allocating() {
+        // _into 版寫進 buffer 前端，回傳長度，內容須與配置版一致
+        let vals = [
+            0i128, 1, -1, 127, 128, -128, -129, 255, -256, 256,
+            0xDEAD_BEEF, -(0xDEAD_BEEFi128), 1 << 64, -(1i128 << 64), i128::MAX, i128::MIN,
+        ];
+        for &v in &vals {
+            let n = BigInteger::from_i128(v);
+            let mut buf = [0u8; 32]; // 刻意比需要大
+            // signed BE / LE
+            let len = n.to_bytes_be_into(&mut buf);
+            assert_eq!(&buf[..len], n.to_bytes_be().as_slice(), "be {v}");
+            assert_eq!(len, n.byte_length(), "be len {v}");
+            let len = n.to_bytes_le_into(&mut buf);
+            assert_eq!(&buf[..len], n.to_bytes_le().as_slice(), "le {v}");
+            // unsigned BE / LE
+            let len = n.to_bytes_be_unsigned_into(&mut buf);
+            assert_eq!(&buf[..len], n.to_bytes_be_unsigned().as_slice(), "be_u {v}");
+            assert_eq!(len, n.byte_length_unsigned(), "be_u len {v}");
+            let len = n.to_bytes_le_unsigned_into(&mut buf);
+            assert_eq!(&buf[..len], n.to_bytes_le_unsigned().as_slice(), "le_u {v}");
+        }
+    }
+
+    #[test]
+    fn to_bytes_into_exact_buffer() {
+        // 剛好 byte_length() 大小的 buffer 也能用
+        let n = BigInteger::from_i32(128);
+        let mut buf = vec![0u8; n.byte_length()];
+        let len = n.to_bytes_be_into(&mut buf);
+        assert_eq!(len, 2);
+        assert_eq!(buf, vec![0x00, 0x80]);
+    }
+
+    #[test]
+    #[should_panic(expected = "buffer too small")]
+    fn to_bytes_be_into_panics_when_too_small() {
+        let n = BigInteger::from_i32(128); // 需要 2 bytes
+        let mut buf = [0u8; 1];
+        n.to_bytes_be_into(&mut buf);
     }
 
     #[test]
