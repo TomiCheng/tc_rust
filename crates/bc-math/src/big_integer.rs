@@ -59,6 +59,19 @@ impl std::fmt::Display for BufferTooSmall {
 
 impl std::error::Error for BufferTooSmall {}
 
+/// Error returned when a [`BigInteger`] is out of range for the target integer
+/// type in a `TryFrom`/`TryInto` conversion.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TryFromBigIntegerError(());
+
+impl std::fmt::Display for TryFromBigIntegerError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("number out of range for the target integer type")
+    }
+}
+
+impl std::error::Error for TryFromBigIntegerError {}
+
 #[derive(Clone, Debug)]
 pub struct BigInteger {
     sign: i32,
@@ -1178,6 +1191,58 @@ impl_from_primitive! {
     u8 => from_u8, u16 => from_u16, u32 => from_u32, u64 => from_u64, u128 => from_u128,
     i8 => from_i8, i16 => from_i16, i32 => from_i32, i64 => from_i64, i128 => from_i128,
 }
+
+/// 為每個無號整數型別生成 `TryFrom<&BigInteger>`：負數或超出範圍回 `Err`。
+macro_rules! impl_try_from_big_unsigned {
+    ($($t:ty),* $(,)?) => {
+        $(
+            impl TryFrom<&BigInteger> for $t {
+                type Error = TryFromBigIntegerError;
+
+                fn try_from(value: &BigInteger) -> Result<$t, TryFromBigIntegerError> {
+                    if value.sign() < 0 {
+                        return Err(TryFromBigIntegerError(())); // 負數無法轉無號
+                    }
+                    const BYTES: usize = size_of::<$t>();
+                    let n = value.byte_length_unsigned();
+                    if n > BYTES {
+                        return Err(TryFromBigIntegerError(())); // 位元組數超出目標
+                    }
+                    // magnitude 位元組右對齊寫進固定寬度 buffer，上方補 0
+                    let mut buf = [0u8; BYTES];
+                    value.to_bytes_be_unsigned_into(&mut buf[BYTES - n..]);
+                    Ok(<$t>::from_be_bytes(buf))
+                }
+            }
+        )*
+    };
+}
+
+/// 為每個有號整數型別生成 `TryFrom<&BigInteger>`：超出範圍回 `Err`。
+macro_rules! impl_try_from_big_signed {
+    ($($t:ty),* $(,)?) => {
+        $(
+            impl TryFrom<&BigInteger> for $t {
+                type Error = TryFromBigIntegerError;
+
+                fn try_from(value: &BigInteger) -> Result<$t, TryFromBigIntegerError> {
+                    const BYTES: usize = size_of::<$t>();
+                    let n = value.byte_length();
+                    if n > BYTES {
+                        return Err(TryFromBigIntegerError(()));
+                    }
+                    // 兩補數位元組右對齊寫入；上方以符號延伸填滿（負 0xFF、非負 0x00）
+                    let mut buf = if value.sign() < 0 { [0xFFu8; BYTES] } else { [0u8; BYTES] };
+                    value.to_bytes_be_into(&mut buf[BYTES - n..]);
+                    Ok(<$t>::from_be_bytes(buf))
+                }
+            }
+        )*
+    };
+}
+
+impl_try_from_big_unsigned!(u8, u16, u32, u64, u128);
+impl_try_from_big_signed!(i8, i16, i32, i64, i128);
 
 /// 計算 magnitude（big-endian、無前導零）的位元長度，不含符號位。
 fn calc_bit_length(sign: i32, magnitude: &[u32]) -> u32 {
@@ -3172,6 +3237,55 @@ mod tests {
         let b = BigInteger::from_i64(-98765432109);
         assert_eq!(&a + &b, &b + &a); // a + b == b + a
         assert_eq!(&a - &b, -(&b - &a)); // a - b == -(b - a)
+    }
+
+    #[test]
+    fn try_into_primitive_ok() {
+        assert_eq!(u32::try_from(&BigInteger::from_u32(255)), Ok(255u32));
+        assert_eq!(i32::try_from(&BigInteger::from_i32(-5)), Ok(-5i32));
+        assert_eq!(u8::try_from(&BigInteger::from_u32(200)), Ok(200u8));
+        assert_eq!(i8::try_from(&BigInteger::from_i32(-128)), Ok(-128i8)); // i8::MIN
+        assert_eq!(i8::try_from(&BigInteger::from_i32(127)), Ok(127i8)); // i8::MAX
+        assert_eq!(u128::try_from(&BigInteger::from_u128(u128::MAX)), Ok(u128::MAX));
+        assert_eq!(i128::try_from(&BigInteger::from_i128(i128::MIN)), Ok(i128::MIN));
+        assert_eq!(i128::try_from(&BigInteger::from_i128(i128::MAX)), Ok(i128::MAX));
+        // TryInto 也可用（TryFrom 的對偶）
+        let x: u64 = (&BigInteger::from_u64(12345)).try_into().unwrap();
+        assert_eq!(x, 12345);
+    }
+
+    #[test]
+    fn try_into_primitive_out_of_range() {
+        assert!(u8::try_from(&BigInteger::from_u32(256)).is_err()); // 太大
+        assert!(i8::try_from(&BigInteger::from_i32(200)).is_err()); // > i8::MAX
+        assert!(i8::try_from(&BigInteger::from_i32(-129)).is_err()); // < i8::MIN
+        assert!(u32::try_from(&BigInteger::from_i32(-1)).is_err()); // 負數轉無號
+        // 超出 u128 / i128
+        let two_128 = &BigInteger::from_u128(u128::MAX) + &BigInteger::from_u32(1); // 2^128
+        assert!(u128::try_from(&two_128).is_err());
+        assert!(i128::try_from(&two_128).is_err());
+        // 2^127：放不進 i128，但放得進 u128
+        let two_127 = &BigInteger::from_i128(i128::MAX) + &BigInteger::from_u32(1);
+        assert!(i128::try_from(&two_127).is_err());
+        assert_eq!(u128::try_from(&two_127), Ok(1u128 << 127));
+    }
+
+    #[test]
+    fn try_into_primitive_matches_native_bounds() {
+        // 邊界對照原生 i64::try_from(i128) / u64::try_from(u128)
+        let vals = [
+            0i128, 1, -1, i64::MAX as i128, i64::MAX as i128 + 1,
+            i64::MIN as i128, i64::MIN as i128 - 1,
+        ];
+        for &v in &vals {
+            let big = BigInteger::from_i128(v);
+            assert_eq!(i64::try_from(&big).ok(), i64::try_from(v).ok(), "i64 {v}");
+        }
+        let uvals = [0u128, 1, u64::MAX as u128, u64::MAX as u128 + 1];
+        for &v in &uvals {
+            let big = BigInteger::from_u128(v);
+            assert_eq!(u64::try_from(&big).ok(), u64::try_from(v).ok(), "u64 {v}");
+        }
     }
 
     #[test]
