@@ -37,6 +37,28 @@ impl std::fmt::Display for ParseBigIntegerError {
 
 impl std::error::Error for ParseBigIntegerError {}
 
+/// Error returned by the `try_to_bytes_*_into` methods when the destination
+/// buffer is smaller than the encoding requires.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct BufferTooSmall {
+    /// Number of bytes the encoding needs.
+    pub needed: usize,
+    /// Number of bytes the buffer provides.
+    pub available: usize,
+}
+
+impl std::fmt::Display for BufferTooSmall {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "buffer too small: need {} bytes, got {}",
+            self.needed, self.available
+        )
+    }
+}
+
+impl std::error::Error for BufferTooSmall {}
+
 #[derive(Clone, Debug)]
 pub struct BigInteger {
     sign: i32,
@@ -778,8 +800,51 @@ impl BigInteger {
     }
 
     /// Writes the signed (two's-complement) big-endian encoding into the front
-    /// of `dst` and returns the number of bytes written (= [`BigInteger::byte_length`]).
-    /// Allocation-free buffer version of [`BigInteger::to_bytes_be`].
+    /// of `dst`, returning the number of bytes written (= [`BigInteger::byte_length`]),
+    /// or [`BufferTooSmall`] if `dst` is too short. Allocation-free.
+    pub fn try_to_bytes_be_into(&self, dst: &mut [u8]) -> Result<usize, BufferTooSmall> {
+        let n = self.byte_length();
+        if dst.len() < n {
+            return Err(BufferTooSmall { needed: n, available: dst.len() });
+        }
+        self.write_magnitude_be(&mut dst[..n], true);
+        Ok(n)
+    }
+
+    /// Little-endian counterpart of [`BigInteger::try_to_bytes_be_into`].
+    pub fn try_to_bytes_le_into(&self, dst: &mut [u8]) -> Result<usize, BufferTooSmall> {
+        let n = self.byte_length();
+        if dst.len() < n {
+            return Err(BufferTooSmall { needed: n, available: dst.len() });
+        }
+        self.write_magnitude_be(&mut dst[..n], true);
+        dst[..n].reverse();
+        Ok(n)
+    }
+
+    /// Unsigned (magnitude) big-endian counterpart of [`BigInteger::try_to_bytes_be_into`].
+    pub fn try_to_bytes_be_unsigned_into(&self, dst: &mut [u8]) -> Result<usize, BufferTooSmall> {
+        let n = self.byte_length_unsigned();
+        if dst.len() < n {
+            return Err(BufferTooSmall { needed: n, available: dst.len() });
+        }
+        self.write_magnitude_be(&mut dst[..n], false);
+        Ok(n)
+    }
+
+    /// Little-endian counterpart of [`BigInteger::try_to_bytes_be_unsigned_into`].
+    pub fn try_to_bytes_le_unsigned_into(&self, dst: &mut [u8]) -> Result<usize, BufferTooSmall> {
+        let n = self.byte_length_unsigned();
+        if dst.len() < n {
+            return Err(BufferTooSmall { needed: n, available: dst.len() });
+        }
+        self.write_magnitude_be(&mut dst[..n], false);
+        dst[..n].reverse();
+        Ok(n)
+    }
+
+    /// Panicking version of [`BigInteger::try_to_bytes_be_into`]; returns the
+    /// number of bytes written. Allocation-free.
     ///
     /// # Panics
     ///
@@ -796,10 +861,7 @@ impl BigInteger {
     /// assert_eq!(&buf[..len], &[0xFF, 0x7F]);
     /// ```
     pub fn to_bytes_be_into(&self, dst: &mut [u8]) -> usize {
-        let n = self.byte_length();
-        assert!(dst.len() >= n, "to_bytes_be_into: buffer too small (need {n}, got {})", dst.len());
-        self.write_magnitude_be(&mut dst[..n], true);
-        n
+        self.try_to_bytes_be_into(dst).unwrap_or_else(|e| panic!("to_bytes_be_into: {e}"))
     }
 
     /// Little-endian counterpart of [`BigInteger::to_bytes_be_into`].
@@ -808,24 +870,16 @@ impl BigInteger {
     ///
     /// Panics if `dst.len() < self.byte_length()`.
     pub fn to_bytes_le_into(&self, dst: &mut [u8]) -> usize {
-        let n = self.byte_length();
-        assert!(dst.len() >= n, "to_bytes_le_into: buffer too small (need {n}, got {})", dst.len());
-        self.write_magnitude_be(&mut dst[..n], true);
-        dst[..n].reverse();
-        n
+        self.try_to_bytes_le_into(dst).unwrap_or_else(|e| panic!("to_bytes_le_into: {e}"))
     }
 
-    /// Allocation-free buffer version of [`BigInteger::to_bytes_be_unsigned`];
-    /// returns the number of bytes written (= [`BigInteger::byte_length_unsigned`]).
+    /// Panicking version of [`BigInteger::try_to_bytes_be_unsigned_into`].
     ///
     /// # Panics
     ///
     /// Panics if `dst.len() < self.byte_length_unsigned()`.
     pub fn to_bytes_be_unsigned_into(&self, dst: &mut [u8]) -> usize {
-        let n = self.byte_length_unsigned();
-        assert!(dst.len() >= n, "to_bytes_be_unsigned_into: buffer too small (need {n}, got {})", dst.len());
-        self.write_magnitude_be(&mut dst[..n], false);
-        n
+        self.try_to_bytes_be_unsigned_into(dst).unwrap_or_else(|e| panic!("to_bytes_be_unsigned_into: {e}"))
     }
 
     /// Little-endian counterpart of [`BigInteger::to_bytes_be_unsigned_into`].
@@ -834,11 +888,7 @@ impl BigInteger {
     ///
     /// Panics if `dst.len() < self.byte_length_unsigned()`.
     pub fn to_bytes_le_unsigned_into(&self, dst: &mut [u8]) -> usize {
-        let n = self.byte_length_unsigned();
-        assert!(dst.len() >= n, "to_bytes_le_unsigned_into: buffer too small (need {n}, got {})", dst.len());
-        self.write_magnitude_be(&mut dst[..n], false);
-        dst[..n].reverse();
-        n
+        self.try_to_bytes_le_unsigned_into(dst).unwrap_or_else(|e| panic!("to_bytes_le_unsigned_into: {e}"))
     }
 }
 
@@ -2727,6 +2777,14 @@ mod tests {
     }
 
     #[test]
+    fn buffer_too_small_display() {
+        assert_eq!(
+            BufferTooSmall { needed: 2, available: 1 }.to_string(),
+            "buffer too small: need 2 bytes, got 1"
+        );
+    }
+
+    #[test]
     fn parse_error_display() {
         assert_eq!(
             ParseBigIntegerError::Empty.to_string(),
@@ -2904,6 +2962,27 @@ mod tests {
         let n = BigInteger::from_i32(128); // 需要 2 bytes
         let mut buf = [0u8; 1];
         n.to_bytes_be_into(&mut buf);
+    }
+
+    #[test]
+    fn try_to_bytes_into_ok_and_err() {
+        let n = BigInteger::from_i32(128); // 需要 2 bytes
+
+        // 夠大 → Ok(寫入長度)，內容正確
+        let mut buf = [0u8; 4];
+        assert_eq!(n.try_to_bytes_be_into(&mut buf), Ok(2));
+        assert_eq!(&buf[..2], &[0x00, 0x80]);
+
+        // 太小 → Err(帶需要 vs 提供的長度)，不 panic
+        let mut small = [0u8; 1];
+        assert_eq!(
+            n.try_to_bytes_be_into(&mut small),
+            Err(BufferTooSmall { needed: 2, available: 1 })
+        );
+
+        // 其餘三個變體的 Err 也帶正確長度
+        assert_eq!(n.try_to_bytes_le_into(&mut small).unwrap_err().needed, 2);
+        assert_eq!(n.try_to_bytes_be_unsigned_into(&mut small), Ok(1)); // 128 unsigned 只要 1 byte
     }
 
     #[test]
