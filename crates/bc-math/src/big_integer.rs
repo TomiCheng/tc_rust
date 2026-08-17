@@ -670,6 +670,70 @@ impl BigInteger {
         let sign = if magnitude.is_empty() { 0 } else { 1 };
         BigInteger::new(sign, magnitude)
     }
+
+    /// Returns the magnitude (absolute value) as minimal big-endian bytes,
+    /// **without** any sign. Zero is `[0]`; the top bit is data, not a sign.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bc_math::big_integer::BigInteger;
+    ///
+    /// assert_eq!(BigInteger::from_u32(128).to_bytes_be_unsigned(), vec![0x80]);
+    /// assert_eq!(BigInteger::from_i32(-128).to_bytes_be_unsigned(), vec![0x80]); // 只看絕對值
+    /// ```
+    pub fn to_bytes_be_unsigned(&self) -> Vec<u8> {
+        magnitude_to_bytes_be(&self.magnitude)
+    }
+
+    /// Little-endian counterpart of [`BigInteger::to_bytes_be_unsigned`].
+    pub fn to_bytes_le_unsigned(&self) -> Vec<u8> {
+        let mut bytes = magnitude_to_bytes_be(&self.magnitude);
+        bytes.reverse(); // BE 最小位元組反轉即 LE
+        bytes
+    }
+
+    /// Returns the minimal two's-complement big-endian bytes (with sign).
+    ///
+    /// Inverse of [`BigInteger::from_bytes_be`]. Zero is `[0]`. A leading
+    /// `0x00` (non-negative) or `0xFF` (negative) byte is prepended when needed
+    /// so the sign bit reads correctly.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bc_math::big_integer::BigInteger;
+    ///
+    /// assert_eq!(BigInteger::from_i32(128).to_bytes_be(), vec![0x00, 0x80]);
+    /// assert_eq!(BigInteger::from_i32(-129).to_bytes_be(), vec![0xFF, 0x7F]);
+    /// ```
+    pub fn to_bytes_be(&self) -> Vec<u8> {
+        if self.sign == 0 {
+            return vec![0];
+        }
+        let mut bytes = magnitude_to_bytes_be(&self.magnitude);
+        if self.sign > 0 {
+            // 非負：最高位為 1 會被誤讀成負 → 前補 0x00
+            if bytes[0] & 0x80 != 0 {
+                bytes.insert(0, 0x00);
+            }
+        } else {
+            // 負：整段取兩補數（~bytes + 1，同寬度）
+            twos_complement_in_place(&mut bytes);
+            // 最高位不是 1 會被誤讀成正 → 前補 0xFF
+            if bytes[0] & 0x80 == 0 {
+                bytes.insert(0, 0xFF);
+            }
+        }
+        bytes
+    }
+
+    /// Little-endian counterpart of [`BigInteger::to_bytes_be`].
+    pub fn to_bytes_le(&self) -> Vec<u8> {
+        let mut bytes = self.to_bytes_be();
+        bytes.reverse();
+        bytes
+    }
 }
 
 /// 常用小值常數，對應 bc-csharp 的 `BigInteger.Zero/One/Two/Three`。
@@ -1471,6 +1535,35 @@ fn bit_count_negative(magnitude: &[u32]) -> u32 {
         count += v.count_ones();
     }
     count
+}
+
+/// magnitude（big-endian、無前導零字）→ 最小 big-endian 位元組（去前導零位元組）。
+/// 零（空 magnitude）回 `[0]`。
+fn magnitude_to_bytes_be(magnitude: &[u32]) -> Vec<u8> {
+    if magnitude.is_empty() {
+        return vec![0]; // 零
+    }
+    let mut bytes = Vec::with_capacity(magnitude.len() * size_of::<u32>());
+    for &w in magnitude {
+        bytes.extend_from_slice(&w.to_be_bytes());
+    }
+    // 最高位字非零 → 必有非零位元組；去掉最高字內的前導零位元組
+    let start = bytes.iter().position(|&b| b != 0).unwrap();
+    bytes.drain(..start);
+    bytes
+}
+
+/// 對位元組陣列原地取兩補數：`bytes = ~bytes + 1`（同寬度，進位由低位端往高位傳）。
+fn twos_complement_in_place(bytes: &mut [u8]) {
+    let mut carry = true; // 加 1：一開始就有一個進位待處理
+    for b in bytes.iter_mut().rev() {
+        *b = !*b;
+        if carry {
+            let (v, c) = b.overflowing_add(1);
+            *b = v;
+            carry = c;
+        }
+    }
 }
 
 fn make_magnitude_be(buffer: &[u8]) -> Vec<u32> {
@@ -2636,6 +2729,60 @@ mod tests {
         // 空 / 全零 → 0
         assert_eq!(BigInteger::from_bytes_be_unsigned(&[]), BigInteger::from_u32(0));
         assert_eq!(BigInteger::from_bytes_le_unsigned(&[0, 0, 0]), BigInteger::from_u32(0));
+    }
+
+    #[test]
+    fn to_bytes_be_specific() {
+        // 非負：最高位為 1 → 前補 0x00
+        assert_eq!(BigInteger::from_i32(0).to_bytes_be(), vec![0]);
+        assert_eq!(BigInteger::from_i32(127).to_bytes_be(), vec![0x7F]);
+        assert_eq!(BigInteger::from_i32(128).to_bytes_be(), vec![0x00, 0x80]);
+        assert_eq!(BigInteger::from_i32(255).to_bytes_be(), vec![0x00, 0xFF]);
+        assert_eq!(BigInteger::from_i32(256).to_bytes_be(), vec![0x01, 0x00]);
+        // 負：兩補數，必要時前補 0xFF
+        assert_eq!(BigInteger::from_i32(-1).to_bytes_be(), vec![0xFF]);
+        assert_eq!(BigInteger::from_i32(-128).to_bytes_be(), vec![0x80]);
+        assert_eq!(BigInteger::from_i32(-129).to_bytes_be(), vec![0xFF, 0x7F]);
+        assert_eq!(BigInteger::from_i32(-256).to_bytes_be(), vec![0xFF, 0x00]);
+        // unsigned：128 不補 0（最高位是資料）
+        assert_eq!(BigInteger::from_u32(128).to_bytes_be_unsigned(), vec![0x80]);
+        assert_eq!(BigInteger::from_u32(0).to_bytes_be_unsigned(), vec![0]);
+        // LE 是 BE 反轉
+        assert_eq!(BigInteger::from_i32(-129).to_bytes_le(), vec![0x7F, 0xFF]);
+    }
+
+    #[test]
+    fn to_from_bytes_roundtrip_signed() {
+        let vals = [
+            0i128, 1, -1, 127, 128, -128, -129, 255, -256, 256, 0xDEAD, -0xDEAD,
+            1 << 64, -(1i128 << 64), i128::MAX, i128::MIN,
+        ];
+        for &v in &vals {
+            let n = BigInteger::from_i128(v);
+            assert_eq!(BigInteger::from_bytes_be(&n.to_bytes_be()), n, "{v} be");
+            assert_eq!(BigInteger::from_bytes_le(&n.to_bytes_le()), n, "{v} le");
+        }
+    }
+
+    #[test]
+    fn to_from_bytes_roundtrip_unsigned() {
+        let vals = [0u128, 1, 128, 255, 256, 0x8000, 0xDEAD_BEEF, u128::MAX];
+        for &v in &vals {
+            let n = BigInteger::from_u128(v);
+            assert_eq!(BigInteger::from_bytes_be_unsigned(&n.to_bytes_be_unsigned()), n, "{v} be");
+            assert_eq!(BigInteger::from_bytes_le_unsigned(&n.to_bytes_le_unsigned()), n, "{v} le");
+        }
+    }
+
+    #[test]
+    fn to_bytes_unsigned_matches_native() {
+        // 正數對照原生 to_be_bytes（去前導零）
+        let vals = [1u128, 255, 256, 0xDEAD_BEEF, u128::MAX];
+        for &v in &vals {
+            let native = v.to_be_bytes();
+            let start = native.iter().position(|&b| b != 0).unwrap();
+            assert_eq!(BigInteger::from_u128(v).to_bytes_be_unsigned(), native[start..].to_vec(), "{v}");
+        }
     }
 
     #[test]
