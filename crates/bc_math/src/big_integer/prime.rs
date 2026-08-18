@@ -77,23 +77,86 @@ impl BigInteger {
     }
 
     /// Returns the smallest probable prime strictly greater than `self`.
-    pub fn next_probable_prime(&self, _rng: &mut dyn Rng) -> BigInteger {
-        // TODO(質數): 從 max(self+1, 2) 起，湊成奇數後逐次 +2，直到 is_probable_prime。
-        todo!("next_probable_prime")
+    /// For `self < 2` (including negatives) this is `2`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bc_math::big_integer::BigInteger;
+    /// # use rand_core::TryRng;
+    /// # struct DemoRng(u64);
+    /// # impl TryRng for DemoRng {
+    /// #     type Error = core::convert::Infallible;
+    /// #     fn try_next_u32(&mut self) -> Result<u32, Self::Error> { Ok(self.try_next_u64()? as u32) }
+    /// #     fn try_next_u64(&mut self) -> Result<u64, Self::Error> { self.0 = self.0.wrapping_mul(0x5851_F42D_4C95_7F2D).wrapping_add(1); Ok(self.0) }
+    /// #     fn try_fill_bytes(&mut self, dst: &mut [u8]) -> Result<(), Self::Error> { for c in dst.chunks_mut(8) { c.copy_from_slice(&self.try_next_u64()?.to_le_bytes()[..c.len()]); } Ok(()) }
+    /// # }
+    /// # let mut rng = DemoRng(1);
+    /// // the next prime after 7 is 11 (9 is composite)
+    /// assert_eq!(BigInteger::from_u32(7).next_probable_prime(&mut rng), BigInteger::from_u32(11));
+    /// assert_eq!(BigInteger::from_i32(-5).next_probable_prime(&mut rng), BigInteger::from_u32(2));
+    /// ```
+    pub fn next_probable_prime(&self, rng: &mut dyn Rng) -> BigInteger {
+        let two = BigInteger::from_u32(2);
+        if self < &two {
+            return two; // self < 2（含負數 / 0 / 1）→ 大於它的最小質數是 2
+        }
+        // 大於 self 的最小奇數：self+1；若為偶則 set_bit(0) 進到 self+2
+        let mut n = (self + &BigInteger::from_u32(1)).set_bit(0);
+        while !n.is_probable_prime(100, rng) {
+            n = &n + &two;
+        }
+        n
     }
 
-    /// Generates a random probable prime with exactly `bit_length` bits.
+    /// Generates a random probable prime with exactly `bit_length` bits, using a
+    /// default certainty of 100 (error probability at most `2^-100`).
     ///
     /// # Panics
     ///
     /// Panics if `bit_length < 2`.
-    pub fn probable_prime(bit_length: u32, _rng: &mut dyn Rng) -> BigInteger {
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bc_math::big_integer::BigInteger;
+    /// # use rand_core::TryRng;
+    /// # struct DemoRng(u64);
+    /// # impl TryRng for DemoRng {
+    /// #     type Error = core::convert::Infallible;
+    /// #     fn try_next_u32(&mut self) -> Result<u32, Self::Error> { Ok(self.try_next_u64()? as u32) }
+    /// #     fn try_next_u64(&mut self) -> Result<u64, Self::Error> { self.0 = self.0.wrapping_mul(0x5851_F42D_4C95_7F2D).wrapping_add(1); Ok(self.0) }
+    /// #     fn try_fill_bytes(&mut self, dst: &mut [u8]) -> Result<(), Self::Error> { for c in dst.chunks_mut(8) { c.copy_from_slice(&self.try_next_u64()?.to_le_bytes()[..c.len()]); } Ok(()) }
+    /// # }
+    /// # let mut rng = DemoRng(1);
+    /// let p = BigInteger::probable_prime(32, &mut rng);
+    /// assert_eq!(p.bit_length(), 32);
+    /// assert!(p.is_probable_prime(40, &mut rng));
+    /// ```
+    pub fn probable_prime(bit_length: u32, rng: &mut dyn Rng) -> BigInteger {
         if bit_length < 2 {
             panic!("bit_length must be at least 2");
         }
-        // TODO(質數): 反覆 random_bits（最高位、最低位設 1 → 正確長度的奇數）
-        //   + is_probable_prime，直到命中；對齊 bc-csharp with_random_certainty。
-        todo!("probable_prime")
+        if bit_length == 2 {
+            // 僅有的兩個 2-bit 質數，隨機挑一個
+            return if BigInteger::random_bits(1, rng).is_zero() {
+                BigInteger::from_u32(2)
+            } else {
+                BigInteger::from_u32(3)
+            };
+        }
+        // TODO(效能): (1) bc-csharp 命中失敗時會 XOR 擾動幾個字組再測，省得每次全新生成；
+        //   此處簡化為整個重生。(2) is_probable_prime 未做 FIPS「大隨機候選減輪」，一律跑
+        //   ⌈certainty/2⌉ 輪，比 bc-csharp 對大數的 4~8 輪慢。
+        let certainty = 100; // 預設確信度（對齊 bc-csharp with_probable_prime）
+        loop {
+            let candidate = BigInteger::random_bits(bit_length, rng)
+                .set_bit(bit_length - 1) // 最高位設 1 → 精確位長
+                .set_bit(0); // 最低位設 1 → 奇數
+            if candidate.is_probable_prime(certainty, rng) {
+                return candidate;
+            }
+        }
     }
 
     /// Miller-Rabin primality test over `rounds` random bases, working in the
@@ -279,6 +342,57 @@ mod tests {
             }
             Ok(())
         }
+    }
+
+    #[test]
+    fn next_probable_prime_known() {
+        let mut rng = SeqRng(0x1357_9BDF_2468_ACE0);
+        let cases = [
+            (0u32, 2), (1, 2), (2, 3), (3, 5), (4, 5), (5, 7), (6, 7),
+            (7, 11), (8, 11), (10, 11), (13, 17), (14, 17), (89, 97),
+            (97, 101), (7918, 7919), (7919, 7927),
+        ];
+        for (n, expected) in cases {
+            assert_eq!(
+                BigInteger::from_u32(n).next_probable_prime(&mut rng),
+                BigInteger::from_u32(expected),
+                "next after {n}"
+            );
+        }
+        // 負數 → 2
+        assert_eq!(BigInteger::from_i32(-5).next_probable_prime(&mut rng), BigInteger::from_u32(2));
+        // 連續呼叫得遞增質數序列：2 → 3, 5, 7, 11, 13, 17
+        let mut p = BigInteger::from_u32(2);
+        let mut seq = Vec::new();
+        for _ in 0..6 {
+            p = p.next_probable_prime(&mut rng);
+            seq.push(p.clone());
+        }
+        let expected: Vec<_> = [3u32, 5, 7, 11, 13, 17].iter().map(|&x| BigInteger::from_u32(x)).collect();
+        assert_eq!(seq, expected);
+    }
+
+    #[test]
+    fn probable_prime_generates() {
+        let mut rng = SeqRng(0xABCD_1234_5678_9ABC);
+        for bits in [3u32, 8, 16, 32, 64] {
+            let p = BigInteger::probable_prime(bits, &mut rng);
+            assert_eq!(p.bit_length(), bits, "bit_length for {bits}");
+            assert!(p.test_bit(0), "{bits}-bit 應為奇數");
+            assert!(p.is_probable_prime(40, &mut rng), "{bits}-bit 應為質數");
+        }
+        // bit_length == 2 → 只可能是 2 或 3
+        for _ in 0..10 {
+            let p = BigInteger::probable_prime(2, &mut rng);
+            assert!(p == BigInteger::from_u32(2) || p == BigInteger::from_u32(3));
+        }
+    }
+
+    #[test]
+    #[should_panic(expected = "bit_length must be at least 2")]
+    fn probable_prime_too_small_panics() {
+        let mut rng = SeqRng(1);
+        BigInteger::probable_prime(1, &mut rng);
     }
 
     #[test]
