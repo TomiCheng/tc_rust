@@ -20,6 +20,23 @@ impl BigInteger {
     ///
     /// `rng` supplies the random witnesses — passed in (rather than sourced
     /// internally) to keep this usable under `no_std`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bc_math::big_integer::BigInteger;
+    /// # use rand_core::RngCore;
+    /// # struct DemoRng(u64);
+    /// # impl RngCore for DemoRng {
+    /// #     fn next_u32(&mut self) -> u32 { self.next_u64() as u32 }
+    /// #     fn next_u64(&mut self) -> u64 { self.0 = self.0.wrapping_mul(0x5851_F42D_4C95_7F2D).wrapping_add(1); self.0 }
+    /// #     fn fill_bytes(&mut self, dst: &mut [u8]) { for c in dst.chunks_mut(8) { c.copy_from_slice(&self.next_u64().to_le_bytes()[..c.len()]); } }
+    /// # }
+    /// # let mut rng = DemoRng(1);
+    /// // `rng` is any `rand_core::RngCore` (e.g. from the `rand` crate)
+    /// assert!(BigInteger::from_u32(7919).is_probable_prime(40, &mut rng)); // 質數
+    /// assert!(!BigInteger::from_u32(7917).is_probable_prime(40, &mut rng)); // 合數
+    /// ```
     pub fn is_probable_prime(&self, certainty: u32, rng: &mut dyn RngCore) -> bool {
         if certainty == 0 {
             return true; // certainty 0 → 不驗，一律當質數
