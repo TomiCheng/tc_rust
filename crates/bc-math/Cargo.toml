@@ -13,3 +13,10 @@ std = []
 
 [dependencies]
 rand_core = { workspace = true }
+
+[dev-dependencies]
+criterion = "0.5"
+
+[[bench]]
+name = "mod_pow"
+harness = false
