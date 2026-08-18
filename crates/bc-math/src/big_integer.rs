@@ -412,7 +412,7 @@ impl BigInteger {
 
         // 奇模數用 Montgomery（RSA 主力，最快）；偶模數 R = 2^k 不可逆，退回 Barrett
         let result = if m.magnitude[m.magnitude.len() - 1] & 1 == 1 {
-            BigInteger::mod_pow_monty(&base, &exp, m)
+            BigInteger::mod_pow_monty(&base, &exp, m, true)
         } else {
             BigInteger::mod_pow_barrett(&base, &exp, m)
         };
@@ -586,13 +586,16 @@ impl BigInteger {
         inverse_u32(d)
     }
 
-    /// Computes `b^e mod m` by sliding-window exponentiation in the Montgomery
-    /// domain. Requires `0 <= b < m`, `e >= 1`, and `m` **odd** and `> 1`.
+    /// Computes `b^e` mod `m` by sliding-window exponentiation in the Montgomery
+    /// domain. Requires `e >= 1` and `m` **odd** and `> 1`.
     ///
-    /// Converts `b` into Montgomery form (`b·R mod m`, `R = 2^(32n)`), runs the
-    /// window loop with [`square_monty`]/[`multiply_monty`] over an odd-power
-    /// table, then converts back with [`montgomery_reduce`].
-    fn mod_pow_monty(b: &BigInteger, e: &BigInteger, m: &BigInteger) -> BigInteger {
+    /// `convert` controls the domain conversions:
+    /// - `true`: `b` is an ordinary residue (`0 <= b < m`); it is converted in
+    ///   (`b·R mod m`) and the result converted back out — returns `b^e mod m`.
+    /// - `false`: `b` is already in Montgomery form; no conversion is done —
+    ///   returns `b^e · R mod m` (still in the Montgomery domain). Used by the
+    ///   Miller-Rabin test to compare against `R`/`-R` without converting.
+    fn mod_pow_monty(b: &BigInteger, e: &BigInteger, m: &BigInteger, convert: bool) -> BigInteger {
         let n = m.magnitude.len();
         let pow_r = 32 * n;
         // m 有 ≥2 位頂端餘裕時，可省略每步的條件減（值仍安放於 n 字內）
@@ -600,9 +603,12 @@ impl BigInteger {
         let m_prime = m.m_prime();
         let mut y_acc_m = vec![0u32; n + 1]; // Montgomery 乘法的暫存累加器
 
-        // b1 = b·R mod m（轉進 Montgomery 域），再左補零成剛好 n 字
-        let b1 = &(b << (pow_r as u32)) % m;
-        let mut z_val = b1.magnitude.to_vec();
+        // convert=true：把 b 轉進 Montgomery 域（b·R mod m）；false：b 已在域內，直接用
+        let mut z_val = if convert {
+            (&(b << (pow_r as u32)) % m).magnitude.to_vec()
+        } else {
+            b.magnitude.to_vec()
+        };
         debug_assert!(z_val.len() <= n);
         if z_val.len() < n {
             let mut tmp = vec![0u32; n];
@@ -668,8 +674,39 @@ impl BigInteger {
             square_monty(&mut y_acc_m, &mut y_val, &m.magnitude, m_prime, small_monty_modulus);
         }
 
-        // 轉回普通形式：y·R⁻¹ mod m（montgomery_reduce 內含最終條件減）
-        montgomery_reduce(&mut y_val, &m.magnitude, m_prime);
+        if convert {
+            // 轉回普通形式：y·R⁻¹ mod m（montgomery_reduce 內含最終條件減）
+            montgomery_reduce(&mut y_val, &m.magnitude, m_prime);
+        } else if small_monty_modulus && compare_to(&y_val, &m.magnitude).is_ge() {
+            // 留在域內，但 small 模式下省略了條件減 → 這裡補一次拉回 [0, m)
+            sub_in_place(&mut y_val, &m.magnitude);
+        }
+        BigInteger::from_checked_magnitude(1, y_val)
+    }
+
+    /// Squares a Montgomery-form value once: `b² · R⁻¹ mod m` (stays in the
+    /// Montgomery domain). Requires `m` odd and `> 1`. Companion to
+    /// [`BigInteger::mod_pow_monty`] with `convert = false`, for the
+    /// Miller-Rabin squaring chain.
+    #[allow(dead_code)] // TODO(質數): rabin_miller 接上後移除此 allow
+    fn mod_square_monty(b: &BigInteger, m: &BigInteger) -> BigInteger {
+        let n = m.magnitude.len();
+        let pow_r = 32 * n;
+        let small_monty_modulus = (m.bit_length() as usize) + 2 <= pow_r;
+        let m_prime = m.m_prime();
+        let mut y_acc_m = vec![0u32; n + 1];
+
+        // b 已在 Montgomery 域，左補零成剛好 n 字
+        let z_val = b.magnitude.to_vec();
+        debug_assert!(z_val.len() <= n);
+        let mut y_val = vec![0u32; n];
+        y_val[n - z_val.len()..].copy_from_slice(&z_val);
+
+        square_monty(&mut y_acc_m, &mut y_val, &m.magnitude, m_prime, small_monty_modulus);
+
+        if small_monty_modulus && compare_to(&y_val, &m.magnitude).is_ge() {
+            sub_in_place(&mut y_val, &m.magnitude);
+        }
         BigInteger::from_checked_magnitude(1, y_val)
     }
 
@@ -3371,6 +3408,52 @@ mod tests {
     }
 
     #[test]
+    fn monty_domain_primitives() {
+        // convert=false 與 mod_square_monty 都在 Montgomery 域運作：
+        // 餵 Montgomery 形式的 a（= a·R mod m），域內運算後 montgomery_reduce 轉回，
+        // 應等於普通形式的 a^e mod m / a² mod m。
+        fn to_words(v: &BigInteger, n: usize) -> Vec<u32> {
+            let mut w = vec![0u32; n];
+            w[n - v.magnitude.len()..].copy_from_slice(&v.magnitude);
+            w
+        }
+        fn from_monty(y_mont: &BigInteger, m: &BigInteger) -> BigInteger {
+            let n = m.magnitude.len();
+            let mut buf = to_words(y_mont, n);
+            montgomery_reduce(&mut buf, &m.magnitude, m.m_prime());
+            BigInteger::from_checked_magnitude(1, buf)
+        }
+        let moduli = [
+            BigInteger::from_u32(97),                    // small_monty_modulus = true
+            BigInteger::from_u64(0x1_0000_0001),
+            BigInteger::from_str_radix("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFF61", 16).unwrap(), // = false
+        ];
+        let raws = [
+            BigInteger::from_u32(2),
+            BigInteger::from_u64(0x1234_5678_9ABC),
+            BigInteger::from_str_radix("A1B2C3D4E5F60718", 16).unwrap(),
+        ];
+        let exps = [1u32, 2, 3, 17, 100];
+        for m in &moduli {
+            let n = m.magnitude.len();
+            for raw in &raws {
+                let a = raw.rem_euclid(m); // 0 <= a < m
+                let a_mont = &(&a << (32 * n as u32)) % m; // â = a·R mod m
+                // 域內平方：â² → Montgomery a²；轉回 == a² mod m
+                let sq = BigInteger::mod_square_monty(&a_mont, m);
+                assert_eq!(from_monty(&sq, m), &(&a * &a) % m, "square m={m} a={a}");
+                // 域內冪次(convert=false)：â^e → Montgomery a^e；轉回 == convert=true
+                for &ev in &exps {
+                    let e = BigInteger::from_u32(ev);
+                    let y_false = BigInteger::mod_pow_monty(&a_mont, &e, m, false);
+                    let expected = BigInteger::mod_pow_monty(&a, &e, m, true);
+                    assert_eq!(from_monty(&y_false, m), expected, "pow m={m} a={a} e={ev}");
+                }
+            }
+        }
+    }
+
+    #[test]
     fn mod_pow_monty_matches_barrett() {
         // 奇模數：Montgomery 路徑必與已驗證的 Barrett 路徑一致
         let odds = [
@@ -3386,7 +3469,7 @@ mod tests {
                 for &ev in &exps {
                     let exp = BigInteger::from_u32(ev);
                     assert_eq!(
-                        BigInteger::mod_pow_monty(&base, &exp, m),
+                        BigInteger::mod_pow_monty(&base, &exp, m, true),
                         BigInteger::mod_pow_barrett(&base, &exp, m),
                         "m={m} base={base} exp={exp}"
                     );
