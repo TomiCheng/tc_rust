@@ -570,6 +570,18 @@ impl BigInteger {
         y
     }
 
+    /// Montgomery constant `m' = (-m mod 2^32)^{-1} mod 2^32`, derived from the
+    /// low word of `m` (which must be odd). Precomputed once for Montgomery
+    /// reduction so the low words cancel without dividing by `m`.
+    #[allow(dead_code)] // TODO(效能): mod_pow_monty 接上後移除此 allow
+    fn get_m_quote(&self) -> u32 {
+        debug_assert!(self.sign > 0);
+        let m_low = self.magnitude[self.magnitude.len() - 1]; // big-endian → 尾端為低字
+        let d = 0u32.wrapping_sub(m_low); // -m_low mod 2^32
+        debug_assert!(d & 1 == 1); // m 奇 → 低字奇 → d 奇（才有反元素）
+        inverse_u32(d)
+    }
+
     /// Parses a `BigInteger` from a string in the given radix (`2..=36`).
     ///
     /// An optional leading `+`/`-` sign is allowed. Digits use `0-9` then
@@ -1726,10 +1738,33 @@ fn get_window_list(mag: &[u32], extra_bits: usize) -> Vec<u32> {
     result
 }
 
+/// 奇數 `d` 在 mod 2³² 的反元素：`d · inverse_u32(d) ≡ 1 (mod 2³²)`。
+/// Newton 迭代 `x ← x·(2 − d·x)`，每步正確低位位元數翻倍（3→6→12→24→48），
+/// 4 步蓋過 32 位。`wrapping_mul` 天然即 mod 2³²，無需另取模。
+#[allow(dead_code)] // TODO(效能): Montgomery 接上後移除此 allow
+fn inverse_u32(d: u32) -> u32 {
+    debug_assert!(d & 1 == 1);
+    let mut x = d; // 種子：奇數自逆 mod 8（d·d ≡ 1 mod 8）
+    x = x.wrapping_mul(2u32.wrapping_sub(d.wrapping_mul(x)));
+    x = x.wrapping_mul(2u32.wrapping_sub(d.wrapping_mul(x)));
+    x = x.wrapping_mul(2u32.wrapping_sub(d.wrapping_mul(x)));
+    x = x.wrapping_mul(2u32.wrapping_sub(d.wrapping_mul(x)));
+    x
+}
+
 /// 比較兩個 magnitude（big-endian、無前導零）代表的絕對值大小。
 fn compare_magnitude(x: &[u32], y: &[u32]) -> Ordering {
     // 無前導零：字數多者絕對值大；字數相同再逐字（最高位在前）比字典序
     x.len().cmp(&y.len()).then_with(|| x.cmp(y))
+}
+
+/// 比較兩個可能帶前導零字的 magnitude（如 Montgomery 的定長 buffer）：
+/// 先各自跳過前導零，再交給 [`compare_magnitude`]（後者要求無前導零）。
+#[allow(dead_code)] // TODO(效能): Montgomery 接上後移除此 allow
+fn compare_to(x: &[u32], y: &[u32]) -> Ordering {
+    let x = &x[x.iter().position(|&w| w != 0).unwrap_or(x.len())..];
+    let y = &y[y.iter().position(|&w| w != 0).unwrap_or(y.len())..];
+    compare_magnitude(x, y)
 }
 
 /// 去除 big-endian magnitude 的前導零字。
@@ -2962,6 +2997,41 @@ mod tests {
         // 負數：截斷向零、符號保留（-(0x7EADBEEF_00000001) 砍低字 → -0x7EADBEEF）
         let neg = BigInteger::from_i64(-0x7EAD_BEEF_0000_0001);
         assert_eq!(neg.divide_words(1), BigInteger::from_i64(-0x7EAD_BEEF));
+    }
+
+    #[test]
+    fn compare_to_skips_leading_zeros() {
+        use core::cmp::Ordering;
+        assert_eq!(compare_to(&[0, 0, 5], &[5]), Ordering::Equal); // 前導零不影響值
+        assert_eq!(compare_to(&[0, 1, 0], &[1]), Ordering::Greater); // 2^32 > 1
+        assert_eq!(compare_to(&[0, 0], &[0]), Ordering::Equal); // 皆為 0
+        assert_eq!(compare_to(&[3], &[0, 0, 4]), Ordering::Less);
+        assert_eq!(compare_to(&[0, 7], &[0, 0, 7]), Ordering::Equal);
+    }
+
+    #[test]
+    fn inverse_u32_is_modular_inverse() {
+        // d · inverse_u32(d) ≡ 1 (mod 2³²)，對各種奇數
+        for d in [1u32, 3, 5, 7, 0x12345679, 0x8000_0001, 0xDEAD_BEEF, 0xFFFF_FFFF] {
+            assert_eq!(d & 1, 1, "測資須為奇數 d={d:#x}");
+            assert_eq!(d.wrapping_mul(inverse_u32(d)), 1, "d={d:#x}");
+        }
+    }
+
+    #[test]
+    fn get_m_quote_property() {
+        // m' 滿足 m_low · m' ≡ -1 (mod 2³²)，即 wrapping_mul == u32::MAX
+        let odds = [
+            BigInteger::from_u32(97),
+            BigInteger::from_u64(0xFFFF_FFFF_FFFF_FFFB),
+            BigInteger::from_str_radix("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFF61", 16).unwrap(),
+        ];
+        for m in &odds {
+            let m_low = *m.magnitude.last().unwrap();
+            assert_eq!(m_low & 1, 1, "模數須為奇數 m={m}");
+            let mq = m.get_m_quote();
+            assert_eq!(m_low.wrapping_mul(mq), u32::MAX, "m={m}");
+        }
     }
 
     #[test]
