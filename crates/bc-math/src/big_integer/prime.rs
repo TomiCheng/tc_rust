@@ -46,31 +46,54 @@ impl BigInteger {
         todo!("probable_prime")
     }
 
-    /// One Miller-Rabin round: tests `self` (an odd `n > 2`) against the single
-    /// witness `base`. Returns `false` if `base` proves `self` composite, `true`
-    /// otherwise (probably prime for this witness).
+    /// Miller-Rabin primality test over `rounds` random bases, working in the
+    /// Montgomery domain. `self` = n must be **odd** and larger than the
+    /// trial-division limit (so a valid witness range exists).
+    ///
+    /// Compares `a^r` against `R` ("1") and `n − R` ("-1") without converting
+    /// out of Montgomery form each step. Returns `false` as soon as a base
+    /// witnesses compositeness, otherwise `true` (probably prime).
     #[allow(dead_code)] // TODO(質數): is_probable_prime 接上後移除此 allow
-    fn miller_rabin_round(&self, base: &BigInteger) -> bool {
+    fn miller_rabin_test(&self, rounds: u32, rng: &mut dyn RngCore) -> bool {
+        let n = self;
         let one = BigInteger::from_u32(1);
-        let n_minus_1 = self - &one; // n-1（n 為奇 → n-1 為偶）
 
-        // n-1 = d · 2^s，d 為奇：s = n-1 尾端零位數，d = (n-1) >> s
+        // n − 1 = r · 2^s，r 為奇
+        let n_minus_1 = n - &one;
         let s = n_minus_1.get_lowest_set_bit().expect("n > 1 so n-1 > 0");
-        let d = &n_minus_1 >> s;
+        let r = &n_minus_1 >> s;
 
-        // x = base^d mod n
-        let mut x = base.mod_pow(&d, self);
-        if x == one || x == n_minus_1 {
-            return true; // 這一輪過關
-        }
-        // 連續平方 s-1 次，看是否出現 n-1（1..s 恰好 s-1 次，且不會下溢）
-        for _ in 1..s {
-            x = &x.square() % self; // x = x² mod n
-            if x == n_minus_1 {
-                return true;
+        // Montgomery 域的「1」與「-1」：R mod n、n − (R mod n)（R = 2^(32·字數)）
+        let mont_one = &(&one << (32 * n.magnitude.len() as u32)) % n;
+        let mont_minus_one = n - &mont_one;
+
+        for _ in 0..rounds {
+            // 隨機見證 a：拒絕 0、≥n、以及會退化成基底 ±1 的 a（== R、== n−R）
+            let a = loop {
+                let a = BigInteger::random_bits(n.bit_length(), rng);
+                if a.is_zero() || &a >= n || a == mont_one || a == mont_minus_one {
+                    continue;
+                }
+                break a;
+            };
+
+            // y = a^r（convert=false，留在 Montgomery 域）→ 有效基底為 a·R⁻¹
+            let mut y = BigInteger::mod_pow_monty(&a, &r, n, false);
+            if y != mont_one {
+                let mut j = 0;
+                while y != mont_minus_one {
+                    j += 1;
+                    if j == s {
+                        return false; // 平方 s 次仍沒 -1 → 合數
+                    }
+                    y = BigInteger::mod_square_monty(&y, n);
+                    if y == mont_one {
+                        return false; // 提早變 1（1 的非平凡平方根）→ 合數
+                    }
+                }
             }
         }
-        false // base 是見證數 → n 確定為合數
+        true
     }
 
     /// A uniformly random non-negative integer in `[0, 2^bit_length)`
@@ -205,6 +228,37 @@ mod tests {
                 let v = self.next_u64().to_le_bytes();
                 chunk.copy_from_slice(&v[..chunk.len()]);
             }
+        }
+    }
+
+    #[test]
+    fn miller_rabin_test_known() {
+        let mut rng = SeqRng(0x00C0_FFEE_1234_5678);
+        // 質數 → true（含 2¹²⁷−1 Mersenne 質數）
+        let primes = [
+            BigInteger::from_u32(97),
+            BigInteger::from_u32(7919),
+            BigInteger::from_u32(104729),
+            BigInteger::from_str_radix("7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", 16).unwrap(),
+        ];
+        for p in &primes {
+            assert!(p.miller_rabin_test(20, &mut rng), "prime {p} 應通過");
+        }
+        // 合數 → false（含 Carmichael 561/1105/1729/2821/8911、2¹²⁸−1）
+        let composites = [
+            BigInteger::from_u32(9),
+            BigInteger::from_u32(15),
+            BigInteger::from_u32(25),
+            BigInteger::from_u32(91),
+            BigInteger::from_u32(561),
+            BigInteger::from_u32(1105),
+            BigInteger::from_u32(1729),
+            BigInteger::from_u32(2821),
+            BigInteger::from_u32(8911),
+            BigInteger::from_str_radix("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", 16).unwrap(),
+        ];
+        for c in &composites {
+            assert!(!c.miller_rabin_test(20, &mut rng), "composite {c} 應判為合數");
         }
     }
 
