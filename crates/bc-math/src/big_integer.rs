@@ -405,13 +405,17 @@ impl BigInteger {
             return BigInteger::from_u32(0); // 0^e = 0（此時 e > 0）
         }
 
-        // 滑動視窗指數化 + Barrett 約簡，取代逐位掃描與逐步長除法。
-        // TODO(效能): 奇模數可再上 Montgomery（residue 座標系）再快一截。
+        // 滑動視窗指數化；奇模數走 Montgomery、偶模數走 Barrett。
         let neg_exp = e.sign < 0;
         let exp = if neg_exp { -e } else { e.clone() };
         let base = self.rem_euclid(m); // base ∈ [0, m)
 
-        let result = BigInteger::mod_pow_barrett(&base, &exp, m);
+        // 奇模數用 Montgomery（RSA 主力，最快）；偶模數 R = 2^k 不可逆，退回 Barrett
+        let result = if m.magnitude[m.magnitude.len() - 1] & 1 == 1 {
+            BigInteger::mod_pow_monty(&base, &exp, m)
+        } else {
+            BigInteger::mod_pow_barrett(&base, &exp, m)
+        };
 
         if neg_exp {
             // a^(-e) mod m = (a^e mod m)⁻¹；base 與 m 不互質時無解
@@ -488,8 +492,9 @@ impl BigInteger {
             let r3 = r2.remainder_words(k + 1);
 
             x1 = &r1 - &r3;
-            if x.sign < 0 {
-                x1 = &x1 + mr; // 負輸入時把結果補回非負（mod_pow 用不到，通用性保留）
+            if x1.sign < 0 {
+                // r1 < r3 → 差為負，補回 b^(k+1) = mr（HAC 14.42；判斷 x1 而非輸入 x）
+                x1 = &x1 + mr;
             }
         }
 
@@ -573,13 +578,99 @@ impl BigInteger {
     /// Montgomery constant `m' = (-m mod 2^32)^{-1} mod 2^32`, derived from the
     /// low word of `m` (which must be odd). Precomputed once for Montgomery
     /// reduction so the low words cancel without dividing by `m`.
-    #[allow(dead_code)] // TODO(效能): mod_pow_monty 接上後移除此 allow
     fn m_prime(&self) -> u32 {
         debug_assert!(self.sign > 0);
         let m_low = self.magnitude[self.magnitude.len() - 1]; // big-endian → 尾端為低字
         let d = 0u32.wrapping_sub(m_low); // -m_low mod 2^32
         debug_assert!(d & 1 == 1); // m 奇 → 低字奇 → d 奇（才有反元素）
         inverse_u32(d)
+    }
+
+    /// Computes `b^e mod m` by sliding-window exponentiation in the Montgomery
+    /// domain. Requires `0 <= b < m`, `e >= 1`, and `m` **odd** and `> 1`.
+    ///
+    /// Converts `b` into Montgomery form (`b·R mod m`, `R = 2^(32n)`), runs the
+    /// window loop with [`square_monty`]/[`multiply_monty`] over an odd-power
+    /// table, then converts back with [`montgomery_reduce`].
+    fn mod_pow_monty(b: &BigInteger, e: &BigInteger, m: &BigInteger) -> BigInteger {
+        let n = m.magnitude.len();
+        let pow_r = 32 * n;
+        // m 有 ≥2 位頂端餘裕時，可省略每步的條件減（值仍安放於 n 字內）
+        let small_monty_modulus = (m.bit_length() as usize) + 2 <= pow_r;
+        let m_prime = m.m_prime();
+        let mut y_acc_m = vec![0u32; n + 1]; // Montgomery 乘法的暫存累加器
+
+        // b1 = b·R mod m（轉進 Montgomery 域），再左補零成剛好 n 字
+        let b1 = &(b << (pow_r as u32)) % m;
+        let mut z_val = b1.magnitude.to_vec();
+        debug_assert!(z_val.len() <= n);
+        if z_val.len() < n {
+            let mut tmp = vec![0u32; n];
+            tmp[(n - z_val.len())..].copy_from_slice(&z_val);
+            z_val = tmp;
+        }
+
+        // 視窗寬度；小 RSA 指數（單字、設定位 ≤2，如 3 / 65537）維持 extra_bits=0
+        let mut extra_bits = 0;
+        if e.magnitude.len() > 1 || e.bit_count() > 2 {
+            let exp_length = e.bit_length();
+            while exp_length > EXP_WINDOW_THRESHOLDS[extra_bits] {
+                extra_bits += 1;
+            }
+        }
+
+        // 奇次方表（Montgomery 域）：odd_powers[i] = z^(2i+1)
+        let num_powers = 1usize << extra_bits;
+        let mut odd_powers = vec![Vec::new(); num_powers];
+        odd_powers[0] = z_val.clone();
+
+        let mut z_squared = z_val.clone();
+        square_monty(&mut y_acc_m, &mut z_squared, &m.magnitude, m_prime, small_monty_modulus);
+
+        for i in 1..num_powers {
+            odd_powers[i] = odd_powers[i - 1].clone();
+            multiply_monty(&mut y_acc_m, &mut odd_powers[i], &z_squared, &m.magnitude, m_prime, small_monty_modulus);
+        }
+
+        let window_list = get_window_list(&e.magnitude, extra_bits);
+        debug_assert!(window_list.len() > 1);
+
+        let mut window = window_list[0];
+        let mut mul_t = window & 0xFF;
+        let mut last_zeros = window >> 8;
+
+        // 同 mod_pow_barrett 的守衛：last_zeros==0 時不走 z² 捷徑，避免下溢
+        let mut y_val: Vec<u32>;
+        if mul_t == 1 && last_zeros >= 1 {
+            y_val = z_squared;
+            last_zeros -= 1;
+        } else {
+            y_val = odd_powers[(mul_t >> 1) as usize].clone();
+        }
+
+        let mut window_pos = 1;
+        while {
+            window = window_list[window_pos];
+            window_pos += 1;
+            window
+        } != u32::MAX
+        {
+            mul_t = window & 0xFF;
+            let bits = last_zeros + bit_len(mul_t);
+            for _ in 0..bits {
+                square_monty(&mut y_acc_m, &mut y_val, &m.magnitude, m_prime, small_monty_modulus);
+            }
+            multiply_monty(&mut y_acc_m, &mut y_val, &odd_powers[(mul_t >> 1) as usize], &m.magnitude, m_prime, small_monty_modulus);
+            last_zeros = window >> 8;
+        }
+
+        for _ in 0..last_zeros {
+            square_monty(&mut y_acc_m, &mut y_val, &m.magnitude, m_prime, small_monty_modulus);
+        }
+
+        // 轉回普通形式：y·R⁻¹ mod m（montgomery_reduce 內含最終條件減）
+        montgomery_reduce(&mut y_val, &m.magnitude, m_prime);
+        BigInteger::from_checked_magnitude(1, y_val)
     }
 
     /// Parses a `BigInteger` from a string in the given radix (`2..=36`).
@@ -1741,7 +1832,6 @@ fn get_window_list(mag: &[u32], extra_bits: usize) -> Vec<u32> {
 /// 奇數 `d` 在 mod 2³² 的反元素：`d · inverse_u32(d) ≡ 1 (mod 2³²)`。
 /// Newton 迭代 `x ← x·(2 − d·x)`，每步正確低位位元數翻倍（3→6→12→24→48），
 /// 4 步蓋過 32 位。`wrapping_mul` 天然即 mod 2³²，無需另取模。
-#[allow(dead_code)] // TODO(效能): Montgomery 接上後移除此 allow
 fn inverse_u32(d: u32) -> u32 {
     debug_assert!(d & 1 == 1);
     let mut x = d; // 種子：奇數自逆 mod 8（d·d ≡ 1 mod 8）
@@ -1754,7 +1844,6 @@ fn inverse_u32(d: u32) -> u32 {
 
 /// 單字（n=1）Montgomery 乘法：回傳 `x·y·R⁻¹ mod m`（R = 2³²）。
 /// `m` 為奇 u32；`m_prime = -m⁻¹ mod 2³²`（見 [`BigInteger::m_prime`]）。
-#[allow(dead_code)] // TODO(效能): multiply_monty / square_monty 接上後移除此 allow
 fn multiply_monty_n_is_one(x: u32, y: u32, m: u32, m_prime: u32) -> u32 {
     let mut carry = x as u64 * y as u64; // 完整乘積
     let t = (carry as u32).wrapping_mul(m_prime); // 選 t 使加上 t·m 後低 32 位歸零
@@ -1775,7 +1864,6 @@ fn multiply_monty_n_is_one(x: u32, y: u32, m: u32, m_prime: u32) -> u32 {
 /// `a` 是長度 `n+1` 的暫存累加器；`x`/`y`/`m` 各 `n` 字（big-endian，且 `x,y < m`）；
 /// `m_prime = -m⁻¹ mod 2³²`。`small_monty_modulus` 為真時省略最終條件減（頂端有餘裕，
 /// 由呼叫端統一處理）。邊乘邊約簡（CIOS），全程只有乘法與位移，無長除法。
-#[allow(dead_code)] // TODO(效能): mod_pow_monty 接上後移除此 allow
 fn multiply_monty(a: &mut [u32], x: &mut [u32], y: &[u32], m: &[u32], m_prime: u32, small_monty_modulus: bool) {
     let n = m.len();
     if n == 1 {
@@ -1850,7 +1938,6 @@ fn multiply_monty(a: &mut [u32], x: &mut [u32], y: &[u32], m: &[u32], m_prime: u
 ///
 /// 註：bak 以 `i32` 索引來讓 `0..=(i-1)` 在 `i=0` 時為空；此處改用 usize 的 `0..i`
 /// 等價範圍，避免下溢。
-#[allow(dead_code)] // TODO(效能): mod_pow_monty 接上後移除此 allow
 fn square_monty(a: &mut [u32], x: &mut [u32], m: &[u32], m_prime: u32, small_monty_modulus: bool) {
     let n = m.len();
     if n == 1 {
@@ -1932,7 +2019,6 @@ fn square_monty(a: &mut [u32], x: &mut [u32], m: &[u32], m_prime: u32, small_mon
 /// Montgomery reduction：`x ← x·R⁻¹ mod m`（原地），把 Montgomery 域的值轉回普通形式。
 /// 要求 `x.len() == m.len() == n` 且 `x < m`（非通用約簡，不收雙倍長度輸入）。
 /// 逐字用 `t·m` 消掉低字再右移一字，共 n 輪。
-#[allow(dead_code)] // TODO(效能): mod_pow_monty 接上後移除此 allow
 fn montgomery_reduce(x: &mut [u32], m: &[u32], m_prime: u32) {
     debug_assert!(x.len() == m.len());
     let n = m.len();
@@ -1971,7 +2057,6 @@ fn compare_magnitude(x: &[u32], y: &[u32]) -> Ordering {
 
 /// 比較兩個可能帶前導零字的 magnitude（如 Montgomery 的定長 buffer）：
 /// 先各自跳過前導零，再交給 [`compare_magnitude`]（後者要求無前導零）。
-#[allow(dead_code)] // TODO(效能): Montgomery 接上後移除此 allow
 fn compare_to(x: &[u32], y: &[u32]) -> Ordering {
     let x = &x[x.iter().position(|&w| w != 0).unwrap_or(x.len())..];
     let y = &y[y.iter().position(|&w| w != 0).unwrap_or(y.len())..];
@@ -3286,6 +3371,31 @@ mod tests {
     }
 
     #[test]
+    fn mod_pow_monty_matches_barrett() {
+        // 奇模數：Montgomery 路徑必與已驗證的 Barrett 路徑一致
+        let odds = [
+            BigInteger::from_u32(97),
+            BigInteger::from_u64(0xFFFF_FFFF_FFFF_FFFB),
+            BigInteger::from_str_radix("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFF61", 16).unwrap(),
+        ];
+        let bases = [2i64, 3, 7, 1234567, -55];
+        let exps = [1u32, 2, 3, 17, 65537, 123456];
+        for m in &odds {
+            for &bv in &bases {
+                let base = BigInteger::from_i64(bv).rem_euclid(m); // 0 <= base < m
+                for &ev in &exps {
+                    let exp = BigInteger::from_u32(ev);
+                    assert_eq!(
+                        BigInteger::mod_pow_monty(&base, &exp, m),
+                        BigInteger::mod_pow_barrett(&base, &exp, m),
+                        "m={m} base={base} exp={exp}"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
     fn montgomery_reduce_matches() {
         // reduce(a·R mod m) = a mod m（把 Montgomery 域轉回普通形式）
         fn to_words(v: &BigInteger, n: usize) -> Vec<u32> {
@@ -3448,6 +3558,15 @@ mod tests {
                     x % m,
                     "m={m}, x={x}"
                 );
+            }
+            // 乘積 sweep：x = a·b（a,b < m ⇒ x < m²），涵蓋 r1<r3 需要 mr 修正的情形
+            for ai in 0u32..12 {
+                let a = &(&m_minus_1 * &BigInteger::from_u32(0x2545_F491 ^ ai)) % m; // a ∈ [0, m)
+                for bi in 0u32..12 {
+                    let b = &(&m_minus_1 * &BigInteger::from_u32(0x9E37_79B9 ^ bi)) % m; // b ∈ [0, m)
+                    let x = &a * &b; // x < m²
+                    assert_eq!(BigInteger::reduce_barrett(&x, m, &mr, &yu), &x % m, "m={m}, x={x}");
+                }
             }
         }
     }
