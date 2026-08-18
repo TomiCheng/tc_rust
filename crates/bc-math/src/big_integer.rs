@@ -688,7 +688,6 @@ impl BigInteger {
     /// Montgomery domain). Requires `m` odd and `> 1`. Companion to
     /// [`BigInteger::mod_pow_monty`] with `convert = false`, for the
     /// Miller-Rabin squaring chain.
-    #[allow(dead_code)] // TODO(質數): rabin_miller 接上後移除此 allow
     fn mod_square_monty(b: &BigInteger, m: &BigInteger) -> BigInteger {
         let n = m.magnitude.len();
         let pow_r = 32 * n;
@@ -708,6 +707,17 @@ impl BigInteger {
             sub_in_place(&mut y_val, &m.magnitude);
         }
         BigInteger::from_checked_magnitude(1, y_val)
+    }
+
+    /// Returns `|self| mod m` as a single word (sign ignored). `m` must be
+    /// non-zero. Fast path for small-prime trial division.
+    fn remainder_u32(&self, m: u32) -> u32 {
+        debug_assert!(m > 0);
+        let mut acc = 0u64;
+        for &word in self.magnitude.iter() {
+            acc = ((acc << 32) | word as u64) % m as u64; // 逐字帶餘數（big-endian）
+        }
+        acc as u32
     }
 
     /// Parses a `BigInteger` from a string in the given radix (`2..=36`).

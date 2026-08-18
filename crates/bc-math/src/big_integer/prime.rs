@@ -20,10 +20,42 @@ impl BigInteger {
     ///
     /// `rng` supplies the random witnesses — passed in (rather than sourced
     /// internally) to keep this usable under `no_std`.
-    pub fn is_probable_prime(&self, _certainty: u32, _rng: &mut dyn RngCore) -> bool {
-        // TODO(質數): 前置篩（n<2 邊界、偶數、小質數試除）後，跑隨機見證的
-        //   Miller-Rabin 迴圈（約 certainty/2 輪），每輪委派 miller_rabin_round。
-        todo!("is_probable_prime")
+    pub fn is_probable_prime(&self, certainty: u32, rng: &mut dyn RngCore) -> bool {
+        if certainty == 0 {
+            return true; // certainty 0 → 不驗，一律當質數
+        }
+        let n = self.clone().abs(); // 忽略符號（abs 以值接收，先 clone）
+        if !n.test_bit(0) {
+            return n == BigInteger::from_u32(2); // 偶數 → 只有 2（0 也走這，0==2 為 false）
+        }
+        if n == BigInteger::from_u32(1) {
+            return false;
+        }
+        if n == BigInteger::from_u32(3) {
+            return true; // 最小奇質數；MR 對它無合法見證，特判掉
+        }
+        // n：奇數且 ≥ 5
+        if n.has_small_factor() {
+            return false; // 有真小因數 → 確定合數
+        }
+        // 無真小因數（小質數或大數）→ Miller-Rabin，⌈certainty/2⌉ 輪隨機見證
+        n.miller_rabin_test(certainty.div_ceil(2), rng)
+    }
+
+    /// Trial division by the small primes in [`PRIME_LISTS`]. Returns `true` if a
+    /// *proper* small factor is found (`self` is then composite); `false`
+    /// otherwise (`self` is itself a small prime, or has no small factor).
+    fn has_small_factor(&self) -> bool {
+        let num_lists = (self.bit_length() as usize).saturating_sub(1).min(PRIME_LISTS.len());
+        for i in 0..num_lists {
+            let rem = self.remainder_u32(PRIME_PRODUCTS[i]); // 一次大數 mod 乘積
+            for &prime in PRIME_LISTS[i] {
+                if rem % prime == 0 {
+                    return *self != BigInteger::from_u32(prime); // 整除且非自身 → 真因數
+                }
+            }
+        }
+        false
     }
 
     /// Returns the smallest probable prime strictly greater than `self`.
@@ -53,7 +85,6 @@ impl BigInteger {
     /// Compares `a^r` against `R` ("1") and `n − R` ("-1") without converting
     /// out of Montgomery form each step. Returns `false` as soon as a base
     /// witnesses compositeness, otherwise `true` (probably prime).
-    #[allow(dead_code)] // TODO(質數): is_probable_prime 接上後移除此 allow
     fn miller_rabin_test(&self, rounds: u32, rng: &mut dyn RngCore) -> bool {
         let n = self;
         let one = BigInteger::from_u32(1);
@@ -102,7 +133,6 @@ impl BigInteger {
     ///
     /// The base primitive for choosing Miller-Rabin witnesses; prime generation
     /// composes this with forcing the top/bottom bits.
-    #[allow(dead_code)] // TODO(質數): 見證挑選 / probable_prime 接上後移除此 allow
     fn random_bits(bit_length: u32, rng: &mut dyn RngCore) -> BigInteger {
         if bit_length == 0 {
             return BigInteger::from_u32(0);
@@ -120,7 +150,6 @@ impl BigInteger {
 /// 小質數試除表：3～1289 的質數，依「該組乘積 < 2³²」分組。
 /// 試除時每組只做「一次大數 mod 乘積」得 u32，再對組內各質數做便宜的 u32 取餘，
 /// 把昂貴的大數除法從「每質數一次」攤成「每組一次」。純字面值 → 可 `const`。
-#[allow(dead_code)] // TODO(質數): is_probable_prime 的試除接上後移除此 allow
 const PRIME_LISTS: &[&[u32]] = &[
     &[3, 5, 7, 11, 13, 17, 19, 23],
     &[29, 31, 37, 41, 43],
@@ -190,7 +219,6 @@ const PRIME_LISTS: &[&[u32]] = &[
 
 /// 各組質數的乘積（皆 < 2³²）。用 `const fn` 於編譯期由 [`PRIME_LISTS`] 算出，
 /// 不手抄；乘積若溢位 u32，const 求值會直接編譯失敗（分組已保證不溢位）。
-#[allow(dead_code)] // TODO(質數): is_probable_prime 的試除接上後移除此 allow
 const PRIME_PRODUCTS: [u32; PRIME_LISTS.len()] = {
     let mut out = [0u32; PRIME_LISTS.len()];
     let mut i = 0;
@@ -229,6 +257,36 @@ mod tests {
                 chunk.copy_from_slice(&v[..chunk.len()]);
             }
         }
+    }
+
+    #[test]
+    fn is_probable_prime_known() {
+        let mut rng = SeqRng(0x00DE_FACED_BAD_5EED);
+        let cert = 40;
+        // 質數 → true（含小質數、> 表上限的 1291、2¹²⁷−1）
+        for p in [2u32, 3, 5, 7, 11, 13, 97, 1289, 1291, 7919, 104729] {
+            assert!(BigInteger::from_u32(p).is_probable_prime(cert, &mut rng), "prime {p}");
+        }
+        assert!(
+            BigInteger::from_str_radix("7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", 16)
+                .unwrap()
+                .is_probable_prime(cert, &mut rng),
+            "2^127-1"
+        );
+        // 合數 → false（含偶數、小合數、Carmichael、平方、2¹²⁸−1）
+        for c in [0u32, 1, 4, 6, 9, 15, 25, 91, 561, 1105, 1729, 2821, 100000] {
+            assert!(!BigInteger::from_u32(c).is_probable_prime(cert, &mut rng), "composite {c}");
+        }
+        assert!(
+            !BigInteger::from_str_radix("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", 16)
+                .unwrap()
+                .is_probable_prime(cert, &mut rng),
+            "2^128-1"
+        );
+        // 負數走 abs：-97 視為 97 → true
+        assert!(BigInteger::from_i32(-97).is_probable_prime(cert, &mut rng));
+        // certainty == 0 → 一律 true（即使合數）
+        assert!(BigInteger::from_u32(9).is_probable_prime(0, &mut rng));
     }
 
     #[test]
