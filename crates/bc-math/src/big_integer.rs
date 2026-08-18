@@ -574,7 +574,7 @@ impl BigInteger {
     /// low word of `m` (which must be odd). Precomputed once for Montgomery
     /// reduction so the low words cancel without dividing by `m`.
     #[allow(dead_code)] // TODO(效能): mod_pow_monty 接上後移除此 allow
-    fn get_m_quote(&self) -> u32 {
+    fn m_prime(&self) -> u32 {
         debug_assert!(self.sign > 0);
         let m_low = self.magnitude[self.magnitude.len() - 1]; // big-endian → 尾端為低字
         let d = 0u32.wrapping_sub(m_low); // -m_low mod 2^32
@@ -1750,6 +1750,217 @@ fn inverse_u32(d: u32) -> u32 {
     x = x.wrapping_mul(2u32.wrapping_sub(d.wrapping_mul(x)));
     x = x.wrapping_mul(2u32.wrapping_sub(d.wrapping_mul(x)));
     x
+}
+
+/// 單字（n=1）Montgomery 乘法：回傳 `x·y·R⁻¹ mod m`（R = 2³²）。
+/// `m` 為奇 u32；`m_prime = -m⁻¹ mod 2³²`（見 [`BigInteger::m_prime`]）。
+#[allow(dead_code)] // TODO(效能): multiply_monty / square_monty 接上後移除此 allow
+fn multiply_monty_n_is_one(x: u32, y: u32, m: u32, m_prime: u32) -> u32 {
+    let mut carry = x as u64 * y as u64; // 完整乘積
+    let t = (carry as u32).wrapping_mul(m_prime); // 選 t 使加上 t·m 後低 32 位歸零
+    let um = m as u64;
+    let prod2 = um * t as u64; // t·m
+    carry += (prod2 as u32) as u64;
+    debug_assert!(carry as u32 == 0); // 低 32 位確實被消掉（Montgomery 不變量）
+    carry = (carry >> 32) + (prod2 >> 32); // = (x·y + t·m) / 2³²，落在 [0, 2m)
+    if carry >= um {
+        carry -= um; // 最終條件減至 [0, m)（標準 Montgomery：>=，非 >）
+    }
+    debug_assert!(carry < um);
+    carry as u32
+}
+
+/// 多字 Montgomery 乘法：`x ← x·y·R⁻¹ mod m`（原地寫回 `x`），R = 2^(32·n)。
+///
+/// `a` 是長度 `n+1` 的暫存累加器；`x`/`y`/`m` 各 `n` 字（big-endian，且 `x,y < m`）；
+/// `m_prime = -m⁻¹ mod 2³²`。`small_monty_modulus` 為真時省略最終條件減（頂端有餘裕，
+/// 由呼叫端統一處理）。邊乘邊約簡（CIOS），全程只有乘法與位移，無長除法。
+#[allow(dead_code)] // TODO(效能): mod_pow_monty 接上後移除此 allow
+fn multiply_monty(a: &mut [u32], x: &mut [u32], y: &[u32], m: &[u32], m_prime: u32, small_monty_modulus: bool) {
+    let n = m.len();
+    if n == 1 {
+        x[0] = multiply_monty_n_is_one(x[0], y[0], m[0], m_prime);
+        return;
+    }
+
+    let y0 = y[n - 1];
+    let mut a_max: u32;
+    {
+        // 第 0 輪：用 x 的最低字掃 y，同時算約簡乘數 t 並消掉低字
+        let xi = x[n - 1] as u64;
+
+        let mut carry = xi * y0 as u64;
+        let t = (carry as u32).wrapping_mul(m_prime) as u64;
+
+        let mut prod2 = t.wrapping_mul(m[n - 1] as u64);
+        carry += (prod2 as u32) as u64;
+        debug_assert!(carry as u32 == 0);
+        carry = (carry >> 32) + (prod2 >> 32);
+
+        for j in (0..=(n - 2)).rev() {
+            let prod1 = xi * y[j] as u64;
+            prod2 = t.wrapping_mul(m[j] as u64);
+
+            carry += (prod1 & 0xFFFF_FFFF) + (prod2 as u32) as u64;
+            a[j + 2] = carry as u32;
+            carry = (carry >> 32) + (prod1 >> 32) + (prod2 >> 32);
+        }
+
+        a[1] = carry as u32;
+        a_max = (carry >> 32) as u32;
+    }
+
+    for i in (0..=(n - 2)).rev() {
+        // 第 i 輪：把 x[i]·y 累加進 a，並用 t·m 消掉新的低字
+        let a0 = a[n];
+        let xi = x[i] as u64;
+        let mut prod1 = xi * y0 as u64;
+        let mut carry = (prod1 & 0xFFFF_FFFF) + a0 as u64;
+        let t = (carry as u32).wrapping_mul(m_prime) as u64;
+
+        let mut prod2 = t.wrapping_mul(m[n - 1] as u64);
+        carry += (prod2 as u32) as u64;
+        debug_assert!(carry as u32 == 0);
+        carry = (carry >> 32) + (prod1 >> 32) + (prod2 >> 32);
+
+        for j in (0..=(n - 2)).rev() {
+            prod1 = xi * y[j] as u64;
+            prod2 = t.wrapping_mul(m[j] as u64);
+
+            carry += (prod1 & 0xFFFF_FFFF) + (prod2 as u32) as u64 + a[j + 1] as u64;
+            a[j + 2] = carry as u32;
+            carry = (carry >> 32) + (prod1 >> 32) + (prod2 >> 32);
+        }
+
+        carry += a_max as u64;
+        a[1] = carry as u32;
+        a_max = (carry >> 32) as u32;
+    }
+
+    a[0] = a_max;
+    if !small_monty_modulus && compare_to(a, m).is_ge() {
+        sub_in_place(a, m); // 最終條件減至 [0, m)
+    }
+    x[0..n].copy_from_slice(&a[1..(n + 1)]); // 丟掉溢位字 a[0]，結果寫回 x
+}
+
+/// 多字 Montgomery 平方：`x ← x²·R⁻¹ mod m`（原地）。等同 `multiply_monty(x, x, …)`，
+/// 但利用「交叉項 x_i·x_j 出現兩次」只算一半再 `×2`（`<<1` 配 `>>31` 帶進位）省一半乘法。
+/// 參數語義同 [`multiply_monty`]。
+///
+/// 註：bak 以 `i32` 索引來讓 `0..=(i-1)` 在 `i=0` 時為空；此處改用 usize 的 `0..i`
+/// 等價範圍，避免下溢。
+#[allow(dead_code)] // TODO(效能): mod_pow_monty 接上後移除此 allow
+fn square_monty(a: &mut [u32], x: &mut [u32], m: &[u32], m_prime: u32, small_monty_modulus: bool) {
+    let n = m.len();
+    if n == 1 {
+        let x_val = x[0];
+        x[0] = multiply_monty_n_is_one(x_val, x_val, m[0], m_prime);
+        return;
+    }
+
+    let x0 = x[n - 1] as u64;
+    let mut a_max: u32;
+    {
+        let mut carry = x0 * x0;
+        let t = (carry as u32).wrapping_mul(m_prime) as u64;
+
+        let mut prod2 = t.wrapping_mul(m[n - 1] as u64);
+        carry += (prod2 as u32) as u64;
+        debug_assert!(carry as u32 == 0);
+        carry = (carry >> 32) + (prod2 >> 32);
+
+        for j in (0..(n - 1)).rev() {
+            let prod1 = x0 * x[j] as u64;
+            prod2 = t.wrapping_mul(m[j] as u64);
+
+            carry += (prod2 & 0xFFFF_FFFF) + ((prod1 as u32) << 1) as u64;
+            a[j + 2] = carry as u32;
+            carry = (carry >> 32) + (prod1 >> 31) + (prod2 >> 32);
+        }
+
+        a[1] = carry as u32;
+        a_max = (carry >> 32) as u32;
+    }
+
+    for i in (0..(n - 1)).rev() {
+        let a0 = a[n];
+        let t = a0.wrapping_mul(m_prime) as u64;
+        let mut carry = t.wrapping_mul(m[n - 1] as u64).wrapping_add(a0 as u64);
+        debug_assert!(carry as u32 == 0);
+        carry >>= 32;
+
+        for j in ((i + 1)..(n - 1)).rev() {
+            carry += t * m[j] as u64 + a[j + 1] as u64;
+            a[j + 2] = carry as u32;
+            carry >>= 32;
+        }
+
+        let xi = x[i] as u64;
+        {
+            let prod1 = xi * xi; // 對角項 x_i²（不乘 2）
+            let prod2 = t.wrapping_mul(m[i] as u64);
+
+            carry += (prod1 & 0xFFFF_FFFF) + (prod2 as u32) as u64 + a[i + 1] as u64;
+            a[i + 2] = carry as u32;
+            carry = (carry >> 32) + (prod1 >> 32) + (prod2 >> 32);
+        }
+
+        for j in (0..i).rev() {
+            let prod1 = xi * x[j] as u64; // 交叉項 x_i·x_j（乘 2）
+            let prod2 = t * m[j] as u64;
+
+            carry += (prod2 & 0xFFFF_FFFF) + ((prod1 as u32) << 1) as u64 + a[j + 1] as u64;
+            a[j + 2] = carry as u32;
+            carry = (carry >> 32) + (prod1 >> 31) + (prod2 >> 32);
+        }
+
+        carry += a_max as u64;
+        a[1] = carry as u32;
+        a_max = (carry >> 32) as u32;
+    }
+
+    a[0] = a_max;
+
+    if !small_monty_modulus && compare_to(a, m).is_ge() {
+        sub_in_place(a, m);
+    }
+
+    x[0..n].copy_from_slice(&a[1..(n + 1)]);
+}
+
+/// Montgomery reduction：`x ← x·R⁻¹ mod m`（原地），把 Montgomery 域的值轉回普通形式。
+/// 要求 `x.len() == m.len() == n` 且 `x < m`（非通用約簡，不收雙倍長度輸入）。
+/// 逐字用 `t·m` 消掉低字再右移一字，共 n 輪。
+#[allow(dead_code)] // TODO(效能): mod_pow_monty 接上後移除此 allow
+fn montgomery_reduce(x: &mut [u32], m: &[u32], m_prime: u32) {
+    debug_assert!(x.len() == m.len());
+    let n = m.len();
+
+    for _ in 0..n {
+        let x0 = x[n - 1];
+        let t = x0.wrapping_mul(m_prime) as u64;
+
+        let mut carry = t * m[n - 1] as u64 + x0 as u64;
+        debug_assert!(carry as u32 == 0); // 低字被消掉
+        carry >>= 32;
+
+        if n >= 2 {
+            for j in (0..(n - 1)).rev() {
+                carry += t * m[j] as u64 + x[j] as u64;
+                x[j + 1] = carry as u32;
+                carry >>= 32;
+            }
+        }
+
+        x[0] = carry as u32;
+        debug_assert!(carry >> 32 == 0);
+    }
+
+    // 結果落在 [0, m]，用 >= 修正到 [0, m)（bak 用 >，結果恰為 m 時會漏減）
+    if compare_to(x, m).is_ge() {
+        sub_in_place(x, m);
+    }
 }
 
 /// 比較兩個 magnitude（big-endian、無前導零）代表的絕對值大小。
@@ -3019,7 +3230,138 @@ mod tests {
     }
 
     #[test]
-    fn get_m_quote_property() {
+    fn multiply_monty_n_is_one_matches() {
+        // r = x·y·R⁻¹ mod m  ⟺  r·2³² ≡ x·y (mod m)（R = 2³²）
+        for &m in &[3u32, 5, 97, 0x8000_0001, 0xFFFF_FFFB] {
+            let m_prime = inverse_u32(0u32.wrapping_sub(m)); // -m⁻¹ mod 2³²
+            let samples = [0u32, 1, 2, m / 2, m - 1, 12345 % m, 0xFFFF % m];
+            for &x in &samples {
+                for &y in &samples {
+                    let r = multiply_monty_n_is_one(x, y, m, m_prime);
+                    assert!(r < m, "m={m} x={x} y={y} r={r}");
+                    let lhs = ((r as u64) << 32) % m as u64;
+                    let rhs = (x as u64 * y as u64) % m as u64;
+                    assert_eq!(lhs, rhs, "m={m} x={x} y={y}");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn multiply_monty_matches() {
+        // MonPro(a·R mod m, b) = a·b mod m（普通形式），R = 2^(32n)
+        fn to_words(v: &BigInteger, n: usize) -> Vec<u32> {
+            let mut w = vec![0u32; n];
+            w[n - v.magnitude.len()..].copy_from_slice(&v.magnitude);
+            w
+        }
+        let moduli = [
+            BigInteger::from_u32(97),                    // n=1（走單字特例）
+            BigInteger::from_u64(0x1_0000_0001),         // n=2
+            BigInteger::from_str_radix("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFF61", 16).unwrap(), // n=4
+        ];
+        let vals = [
+            BigInteger::from_u32(0),
+            BigInteger::from_u32(1),
+            BigInteger::from_u64(0x1234_5678_9ABC),
+            BigInteger::from_str_radix("A1B2C3D4E5F60718", 16).unwrap(),
+        ];
+        for m in &moduli {
+            let n = m.magnitude.len();
+            let m_prime = m.m_prime();
+            for a in &vals {
+                let a_mont = &(a << (32 * n as u32)) % m; // a·R mod m
+                let x = to_words(&a_mont, n);
+                for b in &vals {
+                    let y = to_words(&(b % m), n); // b mod m
+                    let mut acc = vec![0u32; n + 1];
+                    let mut xx = x.clone();
+                    multiply_monty(&mut acc, &mut xx, &y, &m.magnitude, m_prime, false);
+                    let got = BigInteger::from_checked_magnitude(1, xx);
+                    let expected = &(a * b) % m;
+                    assert_eq!(got, expected, "m={m} a={a} b={b}");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn montgomery_reduce_matches() {
+        // reduce(a·R mod m) = a mod m（把 Montgomery 域轉回普通形式）
+        fn to_words(v: &BigInteger, n: usize) -> Vec<u32> {
+            let mut w = vec![0u32; n];
+            w[n - v.magnitude.len()..].copy_from_slice(&v.magnitude);
+            w
+        }
+        let moduli = [
+            BigInteger::from_u32(97),
+            BigInteger::from_u64(0x1_0000_0001),
+            BigInteger::from_str_radix("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFF61", 16).unwrap(),
+        ];
+        let vals = [
+            BigInteger::from_u32(0),
+            BigInteger::from_u32(1),
+            BigInteger::from_u64(0x1234_5678_9ABC),
+            BigInteger::from_str_radix("A1B2C3D4E5F60718", 16).unwrap(),
+        ];
+        for m in &moduli {
+            let n = m.magnitude.len();
+            let m_prime = m.m_prime();
+            for a in &vals {
+                let a_mont = &(a << (32 * n as u32)) % m; // a·R mod m（< m）
+                let mut x = to_words(&a_mont, n);
+                montgomery_reduce(&mut x, &m.magnitude, m_prime);
+                let got = BigInteger::from_checked_magnitude(1, x);
+                let expected = a % m;
+                assert_eq!(got, expected, "m={m} a={a}");
+            }
+        }
+    }
+
+    #[test]
+    fn square_monty_matches_multiply() {
+        // square_monty(x) 必等於 multiply_monty(x, x)（後者已驗證，當 oracle）
+        fn to_words(v: &BigInteger, n: usize) -> Vec<u32> {
+            let mut w = vec![0u32; n];
+            w[n - v.magnitude.len()..].copy_from_slice(&v.magnitude);
+            w
+        }
+        let moduli = [
+            BigInteger::from_u32(97),
+            BigInteger::from_u64(0x1_0000_0001),
+            BigInteger::from_str_radix("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFF61", 16).unwrap(),
+        ];
+        let vals = [
+            BigInteger::from_u32(0),
+            BigInteger::from_u32(1),
+            BigInteger::from_u64(0x1234_5678_9ABC),
+            BigInteger::from_str_radix("A1B2C3D4E5F60718", 16).unwrap(),
+        ];
+        for m in &moduli {
+            let n = m.magnitude.len();
+            let m_prime = m.m_prime();
+            for v in &vals {
+                let x = to_words(&(v % m), n); // 任意 x < m 都成立
+                let mut xs = x.clone();
+                let mut acc1 = vec![0u32; n + 1];
+                square_monty(&mut acc1, &mut xs, &m.magnitude, m_prime, false);
+
+                let mut xm = x.clone();
+                let y = x.clone();
+                let mut acc2 = vec![0u32; n + 1];
+                multiply_monty(&mut acc2, &mut xm, &y, &m.magnitude, m_prime, false);
+
+                assert_eq!(
+                    BigInteger::from_checked_magnitude(1, xs),
+                    BigInteger::from_checked_magnitude(1, xm),
+                    "m={m} v={v}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn m_prime_property() {
         // m' 滿足 m_low · m' ≡ -1 (mod 2³²)，即 wrapping_mul == u32::MAX
         let odds = [
             BigInteger::from_u32(97),
@@ -3029,8 +3371,8 @@ mod tests {
         for m in &odds {
             let m_low = *m.magnitude.last().unwrap();
             assert_eq!(m_low & 1, 1, "模數須為奇數 m={m}");
-            let mq = m.get_m_quote();
-            assert_eq!(m_low.wrapping_mul(mq), u32::MAX, "m={m}");
+            let mp = m.m_prime();
+            assert_eq!(m_low.wrapping_mul(mp), u32::MAX, "m={m}");
         }
     }
 
