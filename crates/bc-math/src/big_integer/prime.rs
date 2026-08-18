@@ -5,7 +5,7 @@
 //! can reach the parent's private items (`sign`, `magnitude`, `BigInteger::new`).
 
 use super::BigInteger;
-use rand_core::RngCore;
+use rand_core::Rng;
 
 // no_std 下 `vec!` 巨集需從 alloc 引入；std 由 prelude 提供。
 #[cfg(not(feature = "std"))]
@@ -25,19 +25,20 @@ impl BigInteger {
     ///
     /// ```
     /// use bc_math::big_integer::BigInteger;
-    /// # use rand_core::RngCore;
+    /// # use rand_core::TryRng;
     /// # struct DemoRng(u64);
-    /// # impl RngCore for DemoRng {
-    /// #     fn next_u32(&mut self) -> u32 { self.next_u64() as u32 }
-    /// #     fn next_u64(&mut self) -> u64 { self.0 = self.0.wrapping_mul(0x5851_F42D_4C95_7F2D).wrapping_add(1); self.0 }
-    /// #     fn fill_bytes(&mut self, dst: &mut [u8]) { for c in dst.chunks_mut(8) { c.copy_from_slice(&self.next_u64().to_le_bytes()[..c.len()]); } }
+    /// # impl TryRng for DemoRng {
+    /// #     type Error = core::convert::Infallible;
+    /// #     fn try_next_u32(&mut self) -> Result<u32, Self::Error> { Ok(self.try_next_u64()? as u32) }
+    /// #     fn try_next_u64(&mut self) -> Result<u64, Self::Error> { self.0 = self.0.wrapping_mul(0x5851_F42D_4C95_7F2D).wrapping_add(1); Ok(self.0) }
+    /// #     fn try_fill_bytes(&mut self, dst: &mut [u8]) -> Result<(), Self::Error> { for c in dst.chunks_mut(8) { c.copy_from_slice(&self.try_next_u64()?.to_le_bytes()[..c.len()]); } Ok(()) }
     /// # }
     /// # let mut rng = DemoRng(1);
-    /// // `rng` is any `rand_core::RngCore` (e.g. from the `rand` crate)
+    /// // `rng` is any `rand_core::Rng` (e.g. from the `rand` crate)
     /// assert!(BigInteger::from_u32(7919).is_probable_prime(40, &mut rng)); // 質數
     /// assert!(!BigInteger::from_u32(7917).is_probable_prime(40, &mut rng)); // 合數
     /// ```
-    pub fn is_probable_prime(&self, certainty: u32, rng: &mut dyn RngCore) -> bool {
+    pub fn is_probable_prime(&self, certainty: u32, rng: &mut dyn Rng) -> bool {
         if certainty == 0 {
             return true; // certainty 0 → 不驗，一律當質數
         }
@@ -76,7 +77,7 @@ impl BigInteger {
     }
 
     /// Returns the smallest probable prime strictly greater than `self`.
-    pub fn next_probable_prime(&self, _rng: &mut dyn RngCore) -> BigInteger {
+    pub fn next_probable_prime(&self, _rng: &mut dyn Rng) -> BigInteger {
         // TODO(質數): 從 max(self+1, 2) 起，湊成奇數後逐次 +2，直到 is_probable_prime。
         todo!("next_probable_prime")
     }
@@ -86,7 +87,7 @@ impl BigInteger {
     /// # Panics
     ///
     /// Panics if `bit_length < 2`.
-    pub fn probable_prime(bit_length: u32, _rng: &mut dyn RngCore) -> BigInteger {
+    pub fn probable_prime(bit_length: u32, _rng: &mut dyn Rng) -> BigInteger {
         if bit_length < 2 {
             panic!("bit_length must be at least 2");
         }
@@ -102,7 +103,7 @@ impl BigInteger {
     /// Compares `a^r` against `R` ("1") and `n − R` ("-1") without converting
     /// out of Montgomery form each step. Returns `false` as soon as a base
     /// witnesses compositeness, otherwise `true` (probably prime).
-    fn miller_rabin_test(&self, rounds: u32, rng: &mut dyn RngCore) -> bool {
+    fn miller_rabin_test(&self, rounds: u32, rng: &mut dyn Rng) -> bool {
         let n = self;
         let one = BigInteger::from_u32(1);
 
@@ -150,7 +151,7 @@ impl BigInteger {
     ///
     /// The base primitive for choosing Miller-Rabin witnesses; prime generation
     /// composes this with forcing the top/bottom bits.
-    fn random_bits(bit_length: u32, rng: &mut dyn RngCore) -> BigInteger {
+    fn random_bits(bit_length: u32, rng: &mut dyn Rng) -> BigInteger {
         if bit_length == 0 {
             return BigInteger::from_u32(0);
         }
@@ -256,23 +257,27 @@ const PRIME_PRODUCTS: [u32; PRIME_LISTS.len()] = {
 #[cfg(test)]
 mod tests {
     use super::BigInteger;
-    use rand_core::RngCore;
+    use core::convert::Infallible;
+    use rand_core::TryRng;
 
     /// 測試用的確定性 RNG（LCG），讓隨機測試可重現，不必加相依。
+    /// rand_core 0.10：實作 `TryRng`（Error = Infallible），即自動獲得 `Rng`。
     struct SeqRng(u64);
-    impl RngCore for SeqRng {
-        fn next_u32(&mut self) -> u32 {
-            self.next_u64() as u32
+    impl TryRng for SeqRng {
+        type Error = Infallible;
+        fn try_next_u32(&mut self) -> Result<u32, Infallible> {
+            Ok(self.try_next_u64()? as u32)
         }
-        fn next_u64(&mut self) -> u64 {
+        fn try_next_u64(&mut self) -> Result<u64, Infallible> {
             self.0 = self.0.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
-            self.0
+            Ok(self.0)
         }
-        fn fill_bytes(&mut self, dst: &mut [u8]) {
+        fn try_fill_bytes(&mut self, dst: &mut [u8]) -> Result<(), Infallible> {
             for chunk in dst.chunks_mut(8) {
-                let v = self.next_u64().to_le_bytes();
+                let v = self.try_next_u64()?.to_le_bytes();
                 chunk.copy_from_slice(&v[..chunk.len()]);
             }
+            Ok(())
         }
     }
 
