@@ -22,6 +22,10 @@ mod prime;
 /// 一個 magnitude 字的位元數（= 32）。集中定義，避免散落的 magic number。
 const WORD_BITS: usize = u32::BITS as usize;
 
+/// 滑動視窗指數化的視窗寬度門檻：指數位元長度超過第 i 個門檻，就多用一個
+/// extra_bit（視窗更寬）。純整數字面值 → 可 `const`（不像堆積型常數需執行期初始化）。
+const EXP_WINDOW_THRESHOLDS: [u32; 8] = [7, 25, 81, 241, 673, 1793, 4609, u32::MAX];
+
 /// Error returned when parsing a [`BigInteger`] from a string fails.
 ///
 /// Describes problems with the input string only; an out-of-range radix is a
@@ -401,25 +405,13 @@ impl BigInteger {
             return BigInteger::from_u32(0); // 0^e = 0（此時 e > 0）
         }
 
-        // Barrett 約簡取代逐步的長除法 `%`：依 m 預算 mr / yu（整個迴圈共用），
-        // 每步的平方 / 乘積都用 reduce_barrett 拉回 [0, m)。
-        // TODO(效能): 奇模數可再上 Montgomery；指數掃描可再上滑動視窗，各再快一截。
+        // 滑動視窗指數化 + Barrett 約簡，取代逐位掃描與逐步長除法。
+        // TODO(效能): 奇模數可再上 Montgomery（residue 座標系）再快一截。
         let neg_exp = e.sign < 0;
         let exp = if neg_exp { -e } else { e.clone() };
         let base = self.rem_euclid(m); // base ∈ [0, m)
 
-        let k = m.magnitude.len();
-        let mr = &BigInteger::from_u32(1) << (32 * (k as u32 + 1)); // 2^(32(k+1))
-        let yu = &(&BigInteger::from_u32(1) << (64 * k as u32)) / m; // ⌊2^(64k) / m⌋
-
-        let mut result = BigInteger::from_u32(1);
-        for i in (0..exp.bit_length()).rev() {
-            // 平方-乘：高位 → 低位，每步用 Barrett 約簡
-            result = BigInteger::reduce_barrett(&result.square(), m, &mr, &yu);
-            if exp.test_bit(i) {
-                result = BigInteger::reduce_barrett(&(&result * &base), m, &mr, &yu);
-            }
-        }
+        let result = BigInteger::mod_pow_barrett(&base, &exp, m);
 
         if neg_exp {
             // a^(-e) mod m = (a^e mod m)⁻¹；base 與 m 不互質時無解
@@ -507,6 +499,75 @@ impl BigInteger {
         }
 
         x1
+    }
+
+    /// Computes `b^e mod m` by sliding-window exponentiation with Barrett
+    /// reduction. Requires `0 <= b < m`, `e >= 1`, and `m > 1`.
+    ///
+    /// Precomputes the Barrett constants once and a table of odd powers
+    /// `b^1, b^3, …`, then walks the exponent window-by-window (from
+    /// [`get_window_list`]): each window does `bits` squarings plus one
+    /// multiply by the matching odd power.
+    fn mod_pow_barrett(b: &BigInteger, e: &BigInteger, m: &BigInteger) -> BigInteger {
+        let k = m.magnitude.len();
+        let mr = &BigInteger::from_u32(1) << (32 * (k as u32 + 1)); // 2^(32(k+1))
+        let yu = &(&BigInteger::from_u32(1) << (64 * k as u32)) / m; // ⌊2^(64k) / m⌋
+
+        // 依指數長度選視窗寬度：越長越值得用更寬的視窗
+        let mut extra_bits = 0;
+        let exp_length = e.bit_length();
+        while exp_length > EXP_WINDOW_THRESHOLDS[extra_bits] {
+            extra_bits += 1;
+        }
+
+        // 奇次方預算表：odd_powers[i] = b^(2i+1)（b¹, b³, b⁵, …）
+        let num_powers = 1usize << extra_bits;
+        let mut odd_powers = vec![BigInteger::from_u32(0); num_powers];
+        odd_powers[0] = b.clone();
+        let b2 = BigInteger::reduce_barrett(&b.square(), m, &mr, &yu);
+        for i in 1..num_powers {
+            odd_powers[i] = BigInteger::reduce_barrett(&(&odd_powers[i - 1] * &b2), m, &mr, &yu);
+        }
+
+        let window_list = get_window_list(&e.magnitude, extra_bits);
+        debug_assert!(window_list.len() > 1);
+
+        let mut window = window_list[0];
+        let mut mul_t = window & 0xFF;
+        let mut last_zeros = window >> 8;
+
+        // 第一個視窗：mul_t==1 時可用 b² 起頭省一步，但僅在 last_zeros>=1 才成立
+        // （last_zeros==0 時 -=1 會下溢，改走 odd_powers[0] = b）
+        let mut y: BigInteger;
+        if mul_t == 1 && last_zeros >= 1 {
+            y = b2.clone();
+            last_zeros -= 1;
+        } else {
+            y = odd_powers[(mul_t >> 1) as usize].clone();
+        }
+
+        let mut window_pos = 1;
+        while {
+            window = window_list[window_pos];
+            window_pos += 1;
+            window
+        } != u32::MAX
+        {
+            mul_t = window & 0xFF;
+            // 補上一個視窗尾端的零平方，再加上這個視窗 mul_t 的位元數
+            let bits = last_zeros + bit_len(mul_t);
+            for _ in 0..bits {
+                y = BigInteger::reduce_barrett(&y.square(), m, &mr, &yu);
+            }
+            y = BigInteger::reduce_barrett(&(&y * &odd_powers[(mul_t >> 1) as usize]), m, &mr, &yu);
+            last_zeros = window >> 8;
+        }
+
+        // 最後一個視窗尾端剩餘的零平方
+        for _ in 0..last_zeros {
+            y = BigInteger::reduce_barrett(&y.square(), m, &mr, &yu);
+        }
+        y
     }
 
     /// Parses a `BigInteger` from a string in the given radix (`2..=36`).
@@ -1605,6 +1666,64 @@ fn calc_bit_length(sign: i32, magnitude: &[u32]) -> u32 {
 /// 單一字的位元長度（最高設定位元的位置 + 1）；`x` 為 0 時得 0。
 fn bit_len(x: u32) -> u32 {
     u32::BITS - x.leading_zeros()
+}
+
+/// 把一個視窗編碼成 `mul_t | (zeros << 8)`：`mul_t` 正規化成奇數，拆出的尾端
+/// 零併進 `zeros`（= 這個視窗之後要補幾次平方）。供滑動視窗指數化使用。
+fn create_window_entry(mut mul_t: u32, mut zeros: u32) -> u32 {
+    debug_assert!(mul_t > 0);
+    let tz = mul_t.trailing_zeros();
+    mul_t >>= tz;
+    zeros += tz;
+    mul_t | (zeros << 8)
+}
+
+/// 從高位到低位掃描指數 `mag`（big-endian，MSW 在前），拆成一串視窗項，最後
+/// 以 `u32::MAX` 收尾。每項含「奇數乘數 `mul_t`」與「後續零平方次數 `zeros`」，
+/// 由 [`create_window_entry`] 編碼；`extra_bits` 決定視窗最大寬度（`2^extra_bits`）。
+fn get_window_list(mag: &[u32], extra_bits: usize) -> Vec<u32> {
+    let mut v = mag[0];
+    debug_assert!(v != 0);
+    let leading_bits = bit_len(v) as usize;
+    let total_bits = ((mag.len() - 1) << 5) + leading_bits;
+    let result_size = (total_bits + extra_bits) / (1 + extra_bits) + 1;
+    let mut result = vec![0u32; result_size];
+    let mut result_pos = 0;
+    let mut bit_pos = 33 - leading_bits;
+    v = v.wrapping_shl(bit_pos as u32);
+
+    let mut mul_t = 1u32;
+    let mul_t_limit = 1u32 << extra_bits;
+    let mut zeros = 0u32;
+
+    let mut i = 0;
+    loop {
+        while bit_pos < 32 {
+            bit_pos += 1;
+            if mul_t < mul_t_limit {
+                mul_t = (mul_t << 1) | (v >> 31);
+            } else if (v as i32) < 0 {
+                // mul_t 已滿寬且下一位為 1 → 收掉當前視窗，另起新的
+                result[result_pos] = create_window_entry(mul_t, zeros);
+                result_pos += 1;
+                mul_t = 1;
+                zeros = 0;
+            } else {
+                zeros += 1; // 下一位為 0 → 累積一次平方
+            }
+            v <<= 1;
+        }
+        i += 1;
+        if i == mag.len() {
+            result[result_pos] = create_window_entry(mul_t, zeros);
+            result_pos += 1;
+            break;
+        }
+        v = mag[i];
+        bit_pos = 0;
+    }
+    result[result_pos] = u32::MAX;
+    result
 }
 
 /// 比較兩個 magnitude（big-endian、無前導零）代表的絕對值大小。
@@ -2843,6 +2962,38 @@ mod tests {
         // 負數：截斷向零、符號保留（-(0x7EADBEEF_00000001) 砍低字 → -0x7EADBEEF）
         let neg = BigInteger::from_i64(-0x7EAD_BEEF_0000_0001);
         assert_eq!(neg.divide_words(1), BigInteger::from_i64(-0x7EAD_BEEF));
+    }
+
+    #[test]
+    fn get_window_list_reconstructs_exponent() {
+        // 把視窗項串回整數：每項先接上 mul_t 的位元，再補 zeros 個 0 位元
+        fn reconstruct(list: &[u32]) -> BigInteger {
+            let mut e = BigInteger::from_u32(0);
+            for &w in list {
+                if w == u32::MAX {
+                    break;
+                }
+                let mul_t = w & 0xFF;
+                let zeros = w >> 8;
+                e = &(&e << bit_len(mul_t)) + &BigInteger::from_u32(mul_t);
+                e = &e << zeros;
+            }
+            e
+        }
+
+        let exps = [
+            BigInteger::from_u32(1),
+            BigInteger::from_u32(13),
+            BigInteger::from_u32(0xFFFF_FFFF),
+            BigInteger::from_u64(0x1234_5678_9ABC_DEF0), // 尾端有 0，測 zeros 收尾
+            BigInteger::from_str_radix("FFEEDDCCBBAA99887766554433221100F0F0", 16).unwrap(),
+        ];
+        for e in &exps {
+            for extra_bits in 0usize..=4 {
+                let list = get_window_list(&e.magnitude, extra_bits);
+                assert_eq!(reconstruct(&list), *e, "e={e}, extra_bits={extra_bits}");
+            }
+        }
     }
 
     #[test]
