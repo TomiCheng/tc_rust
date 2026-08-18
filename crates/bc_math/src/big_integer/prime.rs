@@ -145,16 +145,30 @@ impl BigInteger {
                 BigInteger::from_u32(3)
             };
         }
-        // TODO(效能): (1) bc-csharp 命中失敗時會 XOR 擾動幾個字組再測，省得每次全新生成；
-        //   此處簡化為整個重生。(2) is_probable_prime 未做 FIPS「大隨機候選減輪」，一律跑
-        //   ⌈certainty/2⌉ 輪，比 bc-csharp 對大數的 4~8 輪慢。
         let certainty = 100; // 預設確信度（對齊 bc-csharp with_probable_prime）
+        let rounds = mr_iterations(certainty, bit_length, true); // 隨機候選 → FIPS 減輪
         loop {
-            let candidate = BigInteger::random_bits(bit_length, rng)
-                .set_bit(bit_length - 1) // 最高位設 1 → 精確位長
-                .set_bit(0); // 最低位設 1 → 奇數
-            if candidate.is_probable_prime(certainty, rng) {
-                return candidate;
+            // 生成基底候選：大奇數、精確位長
+            let base = BigInteger::random_bits(bit_length, rng)
+                .set_bit(bit_length - 1)
+                .set_bit(0);
+            let mut words = base.magnitude.to_vec(); // big-endian 字組
+            let n_words = words.len();
+
+            // 測基底，再逐一 XOR「中間字組」重測 —— 不動 MSW[0]（保位長）、不動 LSW[last]
+            // （保奇偶），省得每次全新 fill_bytes；中間字組（index 1..n_words-1）用完就重生。
+            let mut j = 0;
+            loop {
+                // 候選必為大奇數：只需試除 + Miller-Rabin（免完整前置篩）
+                let candidate = BigInteger::new(1, words.clone());
+                if !candidate.has_small_factor() && candidate.miller_rabin_test(rounds, rng) {
+                    return candidate;
+                }
+                j += 1;
+                if j >= n_words - 1 {
+                    break; // 中間字組試完（n_words ≤ 2 時無中間字，立即重生）
+                }
+                words[j] ^= rng.next_u32(); // 擾動一個中間字組
             }
         }
     }
@@ -226,6 +240,30 @@ impl BigInteger {
         bytes[0] &= 0xFFu8 >> excess;
         BigInteger::from_bytes_be_unsigned(&bytes)
     }
+}
+
+/// Miller-Rabin 輪數：基本值 `⌈certainty/2⌉`（每輪誤判率 ≤ 1/4）。
+/// 當候選是**新鮮隨機生成**（`randomly_selected`）時，套用 FIPS 186-4 表：位數越大、
+/// 越不可能是強偽質數，需要的輪數越少（≥1024→4、≥512→8、≥256→16）。< 256 位不減。
+fn mr_iterations(certainty: u32, bit_length: u32, randomly_selected: bool) -> u32 {
+    let mut iterations = certainty.div_ceil(2);
+    if randomly_selected {
+        let base = if bit_length >= 1024 {
+            4
+        } else if bit_length >= 512 {
+            8
+        } else if bit_length >= 256 {
+            16
+        } else {
+            50
+        };
+        if certainty < 100 {
+            iterations = iterations.min(base);
+        } else {
+            iterations = iterations - 50 + base; // certainty≥100 → ⌈certainty/2⌉≥50，不下溢
+        }
+    }
+    iterations
 }
 
 /// 小質數試除表：3～1289 的質數，依「該組乘積 < 2³²」分組。
@@ -345,6 +383,26 @@ mod tests {
     }
 
     #[test]
+    fn mr_iterations_table() {
+        use super::mr_iterations;
+        // randomly_selected=false → 一律 ⌈certainty/2⌉，不看位數
+        assert_eq!(mr_iterations(100, 2048, false), 50);
+        assert_eq!(mr_iterations(80, 2048, false), 40);
+        assert_eq!(mr_iterations(1, 2048, false), 1);
+        // < 256 位 → 即使隨機也不減（base=50）
+        assert_eq!(mr_iterations(100, 128, true), 50);
+        assert_eq!(mr_iterations(64, 200, true), 32); // min(50, 32)
+        // ≥ 256 位 + 隨機 → 減輪
+        assert_eq!(mr_iterations(100, 256, true), 16); // 50-50+16
+        assert_eq!(mr_iterations(100, 512, true), 8);
+        assert_eq!(mr_iterations(100, 1024, true), 4);
+        assert_eq!(mr_iterations(100, 2048, true), 4);
+        assert_eq!(mr_iterations(200, 1024, true), 54); // 100-50+4
+        assert_eq!(mr_iterations(80, 1024, true), 4); // min(4, 40)
+        assert_eq!(mr_iterations(6, 1024, true), 3); // min(4, 3)
+    }
+
+    #[test]
     fn next_probable_prime_known() {
         let mut rng = SeqRng(0x1357_9BDF_2468_ACE0);
         let cases = [
@@ -375,7 +433,8 @@ mod tests {
     #[test]
     fn probable_prime_generates() {
         let mut rng = SeqRng(0xABCD_1234_5678_9ABC);
-        for bits in [3u32, 8, 16, 32, 64] {
+        // 128-bit（4 字組）會走到 XOR 擾動路徑（中間字組）
+        for bits in [3u32, 8, 16, 32, 64, 128] {
             let p = BigInteger::probable_prime(bits, &mut rng);
             assert_eq!(p.bit_length(), bits, "bit_length for {bits}");
             assert!(p.test_bit(0), "{bits}-bit 應為奇數");
