@@ -7,6 +7,10 @@
 use super::BigInteger;
 use rand_core::RngCore;
 
+// no_std 下 `vec!` 巨集需從 alloc 引入；std 由 prelude 提供。
+#[cfg(not(feature = "std"))]
+use alloc::vec;
+
 impl BigInteger {
     /// Miller-Rabin probabilistic primality test.
     ///
@@ -69,12 +73,24 @@ impl BigInteger {
         false // base 是見證數 → n 確定為合數
     }
 
-    /// A uniformly random non-negative integer with exactly `bit_length` bits
-    /// (the top bit is forced set, so the width is always exactly `bit_length`).
-    #[allow(dead_code)] // TODO(質數): probable_prime / 見證挑選接上後移除此 allow
-    fn random_bits(_bit_length: u32, _rng: &mut dyn RngCore) -> BigInteger {
-        // TODO(質數): 取 ceil(bit_length/8) 個隨機位元組，遮罩多餘高位，組成 magnitude。
-        todo!("random_bits")
+    /// A uniformly random non-negative integer in `[0, 2^bit_length)`
+    /// (`bit_length == 0` yields zero). The excess high bits of the top byte
+    /// are masked off, so the result has at most `bit_length` bits.
+    ///
+    /// The base primitive for choosing Miller-Rabin witnesses; prime generation
+    /// composes this with forcing the top/bottom bits.
+    #[allow(dead_code)] // TODO(質數): 見證挑選 / probable_prime 接上後移除此 allow
+    fn random_bits(bit_length: u32, rng: &mut dyn RngCore) -> BigInteger {
+        if bit_length == 0 {
+            return BigInteger::from_u32(0);
+        }
+        let n_bytes = bit_length.div_ceil(8) as usize; // ⌈bit_length / 8⌉
+        let mut bytes = vec![0u8; n_bytes];
+        rng.fill_bytes(&mut bytes);
+        // 遮掉最高位元組多出來的高位，使總位元數 ≤ bit_length
+        let excess = 8 * n_bytes as u32 - bit_length; // 0..=7
+        bytes[0] &= 0xFFu8 >> excess;
+        BigInteger::from_bytes_be_unsigned(&bytes)
     }
 }
 
@@ -172,6 +188,43 @@ const PRIME_PRODUCTS: [u32; PRIME_LISTS.len()] = {
 #[cfg(test)]
 mod tests {
     use super::BigInteger;
+    use rand_core::RngCore;
+
+    /// 測試用的確定性 RNG（LCG），讓隨機測試可重現，不必加相依。
+    struct SeqRng(u64);
+    impl RngCore for SeqRng {
+        fn next_u32(&mut self) -> u32 {
+            self.next_u64() as u32
+        }
+        fn next_u64(&mut self) -> u64 {
+            self.0 = self.0.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+            self.0
+        }
+        fn fill_bytes(&mut self, dst: &mut [u8]) {
+            for chunk in dst.chunks_mut(8) {
+                let v = self.next_u64().to_le_bytes();
+                chunk.copy_from_slice(&v[..chunk.len()]);
+            }
+        }
+    }
+
+    #[test]
+    fn random_bits_in_range() {
+        let mut rng = SeqRng(0x1234_5678_9ABC_DEF0);
+        for bits in [0u32, 1, 7, 8, 9, 32, 33, 100, 256] {
+            for _ in 0..50 {
+                let x = BigInteger::random_bits(bits, &mut rng);
+                assert!(x.sign() >= 0, "非負 bits={bits}");
+                assert!(x.bit_length() <= bits, "應 < 2^{bits}，但 bit_length={}", x.bit_length());
+            }
+        }
+        // bit_length == 0 → 0
+        assert_eq!(BigInteger::random_bits(0, &mut rng), BigInteger::from_u32(0));
+        // 有隨機性：兩次 128 位不應相同（極大機率）
+        let a = BigInteger::random_bits(128, &mut rng);
+        let b = BigInteger::random_bits(128, &mut rng);
+        assert_ne!(a, b);
+    }
 
     #[test]
     fn prime_module_reaches_private_fields() {
