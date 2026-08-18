@@ -401,18 +401,23 @@ impl BigInteger {
             return BigInteger::from_u32(0); // 0^e = 0（此時 e > 0）
         }
 
-        // TODO(效能): 每步用全長 `%` 約簡。RSA 尺寸可改 Montgomery（奇模數）/
-        //   Barrett（偶模數）約簡，避開昂貴除法，快數倍。目前先求正確。
+        // Barrett 約簡取代逐步的長除法 `%`：依 m 預算 mr / yu（整個迴圈共用），
+        // 每步的平方 / 乘積都用 reduce_barrett 拉回 [0, m)。
+        // TODO(效能): 奇模數可再上 Montgomery；指數掃描可再上滑動視窗，各再快一截。
         let neg_exp = e.sign < 0;
         let exp = if neg_exp { -e } else { e.clone() };
-
         let base = self.rem_euclid(m); // base ∈ [0, m)
+
+        let k = m.magnitude.len();
+        let mr = &BigInteger::from_u32(1) << (32 * (k as u32 + 1)); // 2^(32(k+1))
+        let yu = &(&BigInteger::from_u32(1) << (64 * k as u32)) / m; // ⌊2^(64k) / m⌋
+
         let mut result = BigInteger::from_u32(1);
         for i in (0..exp.bit_length()).rev() {
-            // 平方-乘：高位 → 低位
-            result = &result.square() % m;
+            // 平方-乘：高位 → 低位，每步用 Barrett 約簡
+            result = BigInteger::reduce_barrett(&result.square(), m, &mr, &yu);
             if exp.test_bit(i) {
-                result = &(&result * &base) % m;
+                result = BigInteger::reduce_barrett(&(&result * &base), m, &mr, &yu);
             }
         }
 
@@ -424,6 +429,84 @@ impl BigInteger {
         } else {
             result
         }
+    }
+
+    /// Drops the lowest `w` magnitude words: `⌊self / (2^32)^w⌋` (truncated
+    /// toward zero, sign preserved). A Barrett-reduction building block.
+    ///
+    /// Keeps the high words, whose leading word is non-zero by the
+    /// no-leading-zeros invariant, so no trimming is actually needed here.
+    fn divide_words(&self, w: usize) -> BigInteger {
+        let n = self.magnitude.len();
+        if w >= n {
+            return BigInteger::from_u32(0); // 砍光（含超量）→ 0
+        }
+        // 砍掉低位 w 個字，留高位；最高位字非零，故無前導零可修
+        let mag = self.magnitude[..n - w].to_vec();
+        BigInteger::from_checked_magnitude(self.sign, mag)
+    }
+
+    /// Keeps the lowest `w` magnitude words: `self mod (2^32)^w` (sign
+    /// preserved). A Barrett-reduction building block.
+    ///
+    /// Unlike [`BigInteger::divide_words`], the kept high word can be zero (or
+    /// the whole window all-zero), so `from_checked_magnitude` trims / zeroes
+    /// it to keep the no-leading-zeros invariant.
+    fn remainder_words(&self, w: usize) -> BigInteger {
+        let n = self.magnitude.len();
+        if w >= n {
+            return self.clone(); // 要的比現有多 → 整個 self（已正規化）
+        }
+        // 留低位 w 個字；高端可能有零字或全零 → 修剪 / 歸零
+        let mag = self.magnitude[n - w..].to_vec();
+        BigInteger::from_checked_magnitude(self.sign, mag)
+    }
+
+    /// Barrett reduction: computes `x mod m` using precomputed constants,
+    /// replacing the long division in `%` with word-shifts and multiplies.
+    ///
+    /// `mr = 2^(32·(k+1))` and `yu = ⌊2^(64·k) / m⌋` (a scaled reciprocal of
+    /// `m`), where `k = m.magnitude.len()`. Both are computed once by the
+    /// caller and reused across the many reductions of a `mod_pow`.
+    ///
+    /// Intended for `0 <= x < m²` (the `mod_pow` case), but also handles a
+    /// negative `x` via the `mr` correction.
+    fn reduce_barrett(x: &BigInteger, m: &BigInteger, mr: &BigInteger, yu: &BigInteger) -> BigInteger {
+        let x_len = x.bit_length();
+        let m_len = m.bit_length();
+        if x_len < m_len {
+            return x.clone(); // x < m，已是餘數
+        }
+
+        let mut x1 = x.clone();
+
+        // x 只比 m 大一點點（差 <= 1 個位元）時，估計反而繞遠路，直接靠底下的減法修正
+        if x_len - m_len > 1 {
+            let k = m.magnitude.len();
+            debug_assert!(k >= 1);
+
+            // q3 ≈ ⌊x / m⌋：只用「砍字組 + 乘預算倒數 yu」估出商，避開長除法
+            let q1 = x.divide_words(k - 1);
+            let q2 = &q1 * yu;
+            let q3 = q2.divide_words(k + 1);
+
+            // x1 = (x mod b^(k+1)) − (q3·m mod b^(k+1))；差就是餘數（可能還差幾個 m）
+            let r1 = x.remainder_words(k + 1);
+            let r2 = &q3 * m;
+            let r3 = r2.remainder_words(k + 1);
+
+            x1 = &r1 - &r3;
+            if x.sign < 0 {
+                x1 = &x1 + mr; // 負輸入時把結果補回非負（mod_pow 用不到，通用性保留）
+            }
+        }
+
+        // Barrett 估計最多差 1~2 個 m，減幾次修正到 [0, m)
+        while &x1 >= m {
+            x1 = &x1 - m;
+        }
+
+        x1
     }
 
     /// Parses a `BigInteger` from a string in the given radix (`2..=36`).
@@ -2729,6 +2812,115 @@ mod tests {
         assert!(!BigInteger::from_u32(3).is_power_of_two()); // 0b11
         assert!(!BigInteger::from_u32(0).is_power_of_two()); // 零
         assert!(!BigInteger::from_i32(-8).is_power_of_two()); // 負數
+    }
+
+    #[test]
+    fn divide_words_matches_shift() {
+        // 非負數砍掉低 w 個字 == 右移 32·w 位（Shr 為 floor，正數下與截斷一致）
+        let vals = [
+            BigInteger::from_u128(0x1122_3344_5566_7788_99AA_BBCC_DDEE_FF00),
+            BigInteger::from_u128(u128::MAX),
+            BigInteger::from_u64(0xDEAD_BEEF_0000_0001),
+            BigInteger::from_u32(0x8000_0001),
+        ];
+        for x in &vals {
+            for w in 0usize..=5 {
+                let got = x.divide_words(w);
+                let expected = x >> (32 * w as u32);
+                assert_eq!(got, expected, "x={x}, w={w}");
+            }
+        }
+    }
+
+    #[test]
+    fn divide_words_edge_cases() {
+        // w >= 字數 → 0
+        let x = BigInteger::from_u64(0xDEAD_BEEF_0000_0001); // 2 個字
+        assert_eq!(x.divide_words(2), BigInteger::from_u32(0));
+        assert_eq!(x.divide_words(9), BigInteger::from_u32(0));
+        // 零本身
+        assert_eq!(BigInteger::from_u32(0).divide_words(0), BigInteger::from_u32(0));
+        // 負數：截斷向零、符號保留（-(0x7EADBEEF_00000001) 砍低字 → -0x7EADBEEF）
+        let neg = BigInteger::from_i64(-0x7EAD_BEEF_0000_0001);
+        assert_eq!(neg.divide_words(1), BigInteger::from_i64(-0x7EAD_BEEF));
+    }
+
+    #[test]
+    fn reduce_barrett_matches_mod() {
+        // 依 m 預算 Barrett 常數 mr / yu（正式版由 mod_pow_barrett 算一次）
+        fn barrett_params(m: &BigInteger) -> (BigInteger, BigInteger) {
+            let k = m.magnitude.len() as u32;
+            let one = BigInteger::from_u32(1);
+            let mr = &one << (32 * (k + 1)); // 2^(32(k+1))
+            let hi = &one << (64 * k); // 2^(64k)
+            let yu = &hi / m; // ⌊2^(64k) / m⌋
+            (mr, yu)
+        }
+
+        let moduli = [
+            BigInteger::from_u32(97),
+            BigInteger::from_u64(0xFFFF_FFFB), // 接近 1 個字上限
+            BigInteger::from_u64(0x1_0000_000F), // 2 個字
+            BigInteger::from_str_radix("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFF61", 16).unwrap(), // 多字大模數
+        ];
+
+        for m in &moduli {
+            let (mr, yu) = barrett_params(m);
+            let one = BigInteger::from_u32(1);
+            let m_minus_1 = m - &one;
+            // 涵蓋 x < m、= m、剛過 m、以及接近 m² 的大值（觸發估計路徑）
+            let xs = [
+                BigInteger::from_u32(0),
+                one.clone(),
+                m_minus_1.clone(),
+                m.clone(),
+                m + &one,
+                &(m * &BigInteger::from_u32(2)) + &BigInteger::from_u32(3),
+                &m_minus_1 * &m_minus_1, // (m-1)² ~ m²
+                &(m * m) - &one,         // m² - 1
+            ];
+            for x in &xs {
+                assert_eq!(
+                    BigInteger::reduce_barrett(x, m, &mr, &yu),
+                    x % m,
+                    "m={m}, x={x}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn remainder_words_matches_mod() {
+        // 留低 w 個字 == self mod 2^(32·w)；截斷向零，故對任意符號都與 `%` 一致
+        let vals = [
+            BigInteger::from_u128(0x1122_3344_5566_7788_99AA_BBCC_DDEE_FF00),
+            BigInteger::from_i128(-0x1122_3344_5566_7788_99AA_BBCC_DDEE_FF00),
+            BigInteger::from_u64(0xDEAD_BEEF_0000_0001),
+        ];
+        for x in &vals {
+            for w in 0usize..=5 {
+                let modulus = &BigInteger::from_u32(1) << (32 * w as u32); // 2^(32w)
+                let got = x.remainder_words(w);
+                let expected = x % &modulus;
+                assert_eq!(got, expected, "x={x}, w={w}");
+            }
+        }
+    }
+
+    #[test]
+    fn remainder_words_trims_leading_zero_words() {
+        // 留下的高位字為零 → 必須修剪：0x1_00000000_00000005 留低 2 字 [0,5] → 5
+        let x = BigInteger::from_u128(0x1_0000_0000_0000_0005);
+        assert_eq!(x.remainder_words(2), BigInteger::from_u32(5));
+
+        // 留下的字全為零 → 必須歸零（且 sign 正規化成 0）：2·2^64 留低 2 字 [0,0] → 0
+        let y = BigInteger::from_u128(0x2_0000_0000_0000_0000);
+        assert_eq!(y.remainder_words(2), BigInteger::from_u32(0));
+
+        // w == 0 → self mod 1 == 0
+        assert_eq!(x.remainder_words(0), BigInteger::from_u32(0));
+        // w >= 字數 → 整個 self
+        assert_eq!(x.remainder_words(9), x);
     }
 
     #[test]
