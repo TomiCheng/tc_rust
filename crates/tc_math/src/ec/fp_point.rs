@@ -9,7 +9,7 @@
 
 use alloc::sync::Arc;
 use alloc::vec::Vec;
-use core::ops::Neg;
+use core::ops::{Add, Neg};
 
 use crate::ec::CoordinateSystem;
 use crate::ec::fp_curve::FpCurve;
@@ -107,8 +107,32 @@ impl FpPoint {
         FpPoint::new(Arc::clone(&self.curve), x3, y3)
     }
 
+    /// Affine point addition of two distinct, non-infinity points via the
+    /// secant-slope formula `γ = (y₂ − y₁)/(x₂ − x₁)`, `x₃ = γ² − x₁ − x₂`,
+    /// `y₃ = γ(x₁ − x₃) − y₁`.
+    ///
+    /// Handles the coincident cases: `P == Q` delegates to [`Self::twice`], and
+    /// `P == -Q` returns the point at infinity. Callers ([`Add`]) must have
+    /// already handled the infinity operands.
+    fn add_affine(&self, b: &FpPoint) -> Self {
+        let (x1, y1) = self.coords.as_ref().expect("add_affine: lhs not infinity");
+        let (x2, y2) = b.coords.as_ref().expect("add_affine: rhs not infinity");
+        let dx = x2 - x1;
+        let dy = y2 - y1;
+        if dx.is_zero() {
+            if dy.is_zero() {
+                return self.twice(); // P == Q → 2P
+            }
+            return FpPoint::infinity(Arc::clone(&self.curve)); // P == −Q → O
+        }
+        let gamma = &dy / &dx; // (y2−y1)/(x2−x1)，含一次反元素
+        let x3 = &(&gamma.square() - x1) - x2; // γ² − x1 − x2
+        let y3 = &(&gamma * &(x1 - &x3)) - y1; // γ(x1 − x3) − y1
+        FpPoint::new(Arc::clone(&self.curve), x3, y3)
+    }
+
     // TODO(ec-point)：其餘點運算待實作（對應 bc FpPoint / ECPointBase）：
-    //   add / subtract / scalar multiply。（Jacobian 等座標系再加 twice_* 子函式。）
+    //   subtract / scalar multiply。（Jacobian 等座標系再加 add_*/twice_* 子函式。）
 }
 
 /// Point negation: the additive inverse (negate `Y`, keep `X` and `Z`).
@@ -127,6 +151,32 @@ impl Neg for &FpPoint {
                 coords: Some((x.clone(), -y)), // (X, −Y)
                 zs: self.zs.clone(),           // 照抄 Z（affine 空、投影 [Z]）
             },
+        }
+    }
+}
+
+/// Point addition (the group law).
+///
+/// Corresponds to `Add` in Bouncy Castle. Handles the infinity operands here
+/// and delegates the per-coordinate-system formula to a helper. Only affine
+/// coordinates are implemented for now.
+impl Add for &FpPoint {
+    type Output = FpPoint;
+
+    fn add(self, rhs: &FpPoint) -> FpPoint {
+        debug_assert!(
+            self.curve.q() == rhs.curve.q(),
+            "add: points on different curves"
+        );
+        if self.is_infinity() {
+            return rhs.clone(); // O + Q = Q
+        }
+        if rhs.is_infinity() {
+            return self.clone(); // P + O = P
+        }
+        match self.curve.coordinate_system() {
+            CoordinateSystem::Affine => self.add_affine(rhs),
+            _ => todo!("add: only affine coordinates are implemented"),
         }
     }
 }
@@ -206,6 +256,37 @@ mod tests {
         assert!(FpPoint::infinity(Arc::clone(&curve)).twice().is_infinity());
         // y = 0（P = −P）→ 2P = O。
         assert!(point17(&curve, 5, 0).twice().is_infinity());
+    }
+
+    #[test]
+    fn add_distinct_points() {
+        let curve = curve17();
+        // G + 2G = 3G = (10, 6)。
+        let sum = &point17(&curve, 5, 1) + &point17(&curve, 6, 3);
+        assert_eq!(sum.x().unwrap().as_ref(), &BigInteger::from_u32(10));
+        assert_eq!(sum.y().unwrap().as_ref(), &BigInteger::from_u32(6));
+    }
+
+    #[test]
+    fn add_same_point_doubles() {
+        let curve = curve17();
+        // G + G = 2G = (6, 3)。
+        let g = point17(&curve, 5, 1);
+        let sum = &g + &g;
+        assert_eq!(sum.x().unwrap().as_ref(), &BigInteger::from_u32(6));
+        assert_eq!(sum.y().unwrap().as_ref(), &BigInteger::from_u32(3));
+    }
+
+    #[test]
+    fn add_inverse_and_identity() {
+        let curve = curve17();
+        let g = point17(&curve, 5, 1);
+        // P + (−P) = O。
+        assert!((&g + &(-&g)).is_infinity());
+        // P + O = P、O + P = P。
+        let inf = FpPoint::infinity(Arc::clone(&curve));
+        assert_eq!((&g + &inf).x().unwrap().as_ref(), &BigInteger::from_u32(5));
+        assert_eq!((&inf + &g).x().unwrap().as_ref(), &BigInteger::from_u32(5));
     }
 
     #[test]
