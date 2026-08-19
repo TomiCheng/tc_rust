@@ -6,9 +6,12 @@
 //!
 //! [`FpPoint`]: crate::ec::fp_point::FpPoint
 
+use alloc::sync::Arc;
+
 use crate::big_integer::BigInteger;
 use crate::ec::CoordinateSystem;
 use crate::ec::fp_field_element::FpFieldElement;
+use crate::ec::fp_point::FpPoint;
 
 /// A short-Weierstrass elliptic curve `y^2 = x^3 + ax + b` over GF(q).
 ///
@@ -124,6 +127,30 @@ impl FpCurve {
         self.coordinate_system = coordinate_system;
         self
     }
+
+    /// Recovers the point with x-coordinate `x1` and the given y-parity from the
+    /// curve equation `y^2 = x^3 + ax + b`.
+    ///
+    /// `y_tilde` is the low bit of the desired `y` (0 or 1), as carried by a
+    /// compressed SEC encoding. Returns `None` if `x1` is not the x-coordinate
+    /// of any point on the curve (the right-hand side is not a quadratic
+    /// residue).
+    ///
+    /// Corresponds to `DecompressPoint` in Bouncy Castle. Takes `self` as an
+    /// `Arc` so the recovered point can hold a back-reference to the curve.
+    pub fn decompress_point(self: &Arc<Self>, y_tilde: u32, x1: BigInteger) -> Option<FpPoint> {
+        let x = self.field_element(x1);
+        // rhs = x³ + ax + b（Horner：(x² + a)·x + b）
+        let rhs = &(&(&x.square() + self.a()) * &x) + self.b();
+        let y = rhs.sqrt()?; // None = x 不在曲線上（rhs 非二次剩餘）
+        // 選奇偶相符的根：y 最低位 ≠ y_tilde → 換另一個根 −y（q 為奇質數，翻轉奇偶）
+        let y = if y.as_ref().test_bit(0) != (y_tilde == 1) {
+            -&y
+        } else {
+            y
+        };
+        Some(FpPoint::new(Arc::clone(self), x, y))
+    }
 }
 
 #[cfg(test)]
@@ -152,6 +179,36 @@ mod tests {
         assert!(c.a().is_zero());
         assert_eq!(c.b().as_ref(), &BigInteger::from_u32(7));
         assert_eq!(c.coordinate_system(), CoordinateSystem::Affine);
+    }
+
+    // 教科書曲線 y² = x³ + 2x + 2 over GF(17)。
+    fn curve17() -> Arc<FpCurve> {
+        Arc::new(FpCurve::new(
+            BigInteger::from_u32(17),
+            BigInteger::from_u32(2),
+            BigInteger::from_u32(2),
+            None,
+            None,
+        ))
+    }
+
+    #[test]
+    fn decompress_recovers_point() {
+        let curve = curve17();
+        // x=5 → G=(5,1)。y_tilde=1（y 奇）→ (5,1)。
+        let p = curve.decompress_point(1, BigInteger::from_u32(5)).unwrap();
+        assert_eq!(p.x().unwrap().as_ref(), &BigInteger::from_u32(5));
+        assert_eq!(p.y().unwrap().as_ref(), &BigInteger::from_u32(1));
+        // y_tilde=0（y 偶）→ 另一根 (5,16)。
+        let q = curve.decompress_point(0, BigInteger::from_u32(5)).unwrap();
+        assert_eq!(q.y().unwrap().as_ref(), &BigInteger::from_u32(16));
+    }
+
+    #[test]
+    fn decompress_rejects_non_curve_x() {
+        let curve = curve17();
+        // x=1：rhs = 1+2+2 = 5，非二次剩餘 → None。
+        assert!(curve.decompress_point(0, BigInteger::from_u32(1)).is_none());
     }
 
     #[test]
