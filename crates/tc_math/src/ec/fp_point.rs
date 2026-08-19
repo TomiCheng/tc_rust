@@ -194,6 +194,29 @@ impl FpPoint {
     //   Jacobian 等座標系的 add_*/twice_* 子函式、mul_wnaf、encode/decode_point。
 }
 
+/// Two points are equal iff they lie on the same curve and have the same
+/// coordinates (both the point at infinity, or the same affine `(x, y)`).
+//
+// TODO(ec-projective)：直接比對儲存的座標，只對 affine 正確。加入投影座標系後，
+// eq 必須先 normalize 兩點再比較，因為 (X,Y,Z) 與 (λ²X,λ³Y,λZ) 是同一點。
+impl PartialEq for FpPoint {
+    fn eq(&self, other: &Self) -> bool {
+        (Arc::ptr_eq(&self.curve, &other.curve) || self.curve == other.curve)
+            && self.coords == other.coords
+    }
+}
+
+impl Eq for FpPoint {}
+
+impl core::fmt::Debug for FpPoint {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match &self.coords {
+            None => write!(f, "FpPoint(infinity)"),
+            Some((x, y)) => write!(f, "FpPoint({}, {})", x.as_ref(), y.as_ref()),
+        }
+    }
+}
+
 /// Encodes a field-element value as fixed-length `len` big-endian bytes
 /// (left-padded with zeros), as required by the SEC point encoding.
 fn fixed_be(v: &BigInteger, len: usize) -> Vec<u8> {
@@ -448,6 +471,21 @@ mod tests {
 
         // 無窮遠點 → 單一 0x00。
         assert_eq!(FpPoint::infinity(Arc::clone(&curve)).encode(true), vec![0x00]);
+    }
+
+    #[test]
+    fn eq_and_debug() {
+        let curve = curve17();
+        let g = point17(&curve, 5, 1);
+        // 同曲線同座標 → 相等；不同座標 / 無窮遠點 → 不等。
+        assert_eq!(g, point17(&curve, 5, 1));
+        assert_ne!(g, point17(&curve, 6, 3));
+        let inf = FpPoint::infinity(Arc::clone(&curve));
+        assert_eq!(inf, FpPoint::infinity(Arc::clone(&curve)));
+        assert_ne!(g, inf);
+        // Debug。
+        assert_eq!(alloc::format!("{g:?}"), "FpPoint(5, 1)");
+        assert_eq!(alloc::format!("{inf:?}"), "FpPoint(infinity)");
     }
 
     #[test]

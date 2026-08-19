@@ -35,6 +35,19 @@ pub struct FpCurve {
     coordinate_system: CoordinateSystem,
 }
 
+/// Two curves are equal iff they share the same field modulus and coefficients.
+///
+/// Corresponds to `Equals` in Bouncy Castle (`ECCurve` compares field, `a`,
+/// `b`). Configuration such as the coordinate system, order, and cofactor is
+/// not part of the mathematical identity and is excluded.
+impl PartialEq for FpCurve {
+    fn eq(&self, other: &Self) -> bool {
+        self.q == other.q && self.a == other.a && self.b == other.b
+    }
+}
+
+impl Eq for FpCurve {}
+
 impl FpCurve {
     /// Creates the curve `y^2 = x^3 + ax + b` over GF(`q`).
     ///
