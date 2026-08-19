@@ -9,7 +9,7 @@
 
 use alloc::sync::Arc;
 use alloc::vec::Vec;
-use core::ops::{Add, Neg};
+use core::ops::{Add, Neg, Sub};
 
 use crate::ec::CoordinateSystem;
 use crate::ec::fp_curve::FpCurve;
@@ -181,6 +181,17 @@ impl Add for &FpPoint {
     }
 }
 
+/// Point subtraction: `self - rhs = self + (-rhs)`.
+///
+/// Corresponds to `Subtract` in Bouncy Castle (`Add(b.Negate())`).
+impl Sub for &FpPoint {
+    type Output = FpPoint;
+
+    fn sub(self, rhs: &FpPoint) -> FpPoint {
+        self + &(-rhs)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -275,6 +286,18 @@ mod tests {
         let sum = &g + &g;
         assert_eq!(sum.x().unwrap().as_ref(), &BigInteger::from_u32(6));
         assert_eq!(sum.y().unwrap().as_ref(), &BigInteger::from_u32(3));
+    }
+
+    #[test]
+    fn subtract_is_add_of_negation() {
+        let curve = curve17();
+        let g = point17(&curve, 5, 1);
+        // 3G − G = 2G = (6, 3)。
+        let r = &point17(&curve, 10, 6) - &g;
+        assert_eq!(r.x().unwrap().as_ref(), &BigInteger::from_u32(6));
+        assert_eq!(r.y().unwrap().as_ref(), &BigInteger::from_u32(3));
+        // G − G = O。
+        assert!((&g - &g).is_infinity());
     }
 
     #[test]
