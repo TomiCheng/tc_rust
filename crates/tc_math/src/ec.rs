@@ -8,8 +8,10 @@ pub mod coordinate_system;
 pub mod fp_curve;
 pub mod fp_field_element;
 pub mod fp_point;
+pub mod point_codec;
 
 pub use coordinate_system::CoordinateSystem;
 pub use fp_curve::FpCurve;
 pub use fp_field_element::FpFieldElement;
 pub use fp_point::FpPoint;
+pub use point_codec::PointDecodeError;

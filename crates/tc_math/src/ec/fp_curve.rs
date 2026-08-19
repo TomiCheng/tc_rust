@@ -12,6 +12,7 @@ use crate::big_integer::BigInteger;
 use crate::ec::CoordinateSystem;
 use crate::ec::fp_field_element::FpFieldElement;
 use crate::ec::fp_point::FpPoint;
+use crate::ec::point_codec::PointDecodeError;
 
 /// A short-Weierstrass elliptic curve `y^2 = x^3 + ax + b` over GF(q).
 ///
@@ -151,6 +152,95 @@ impl FpCurve {
         };
         Some(FpPoint::new(Arc::clone(self), x, y))
     }
+
+    /// The byte length of a field-element encoding, `⌈bitlen(q) / 8⌉`.
+    ///
+    /// Corresponds to `FieldElementEncodingLength` in Bouncy Castle.
+    pub fn field_element_encoding_length(&self) -> usize {
+        (self.q.bit_length() as usize).div_ceil(8)
+    }
+
+    /// Returns `true` if the affine point `(x, y)` satisfies the curve equation
+    /// `y^2 = x^3 + ax + b`.
+    fn contains_affine(&self, x: &FpFieldElement, y: &FpFieldElement) -> bool {
+        // rhs = x³ + ax + b（Horner：(x² + a)·x + b）
+        let rhs = &(&(&x.square() + self.a()) * x) + self.b();
+        y.square() == rhs
+    }
+
+    // 從位元組解析一個座標並確認落在 [0, q)（解不可信輸入，不能讓 field_element panic）。
+    fn parse_coordinate(&self, bytes: &[u8]) -> Result<FpFieldElement, PointDecodeError> {
+        let v = BigInteger::from_bytes_be_unsigned(bytes);
+        if &v >= self.q() {
+            return Err(PointDecodeError::CoordinateOutOfRange);
+        }
+        Ok(self.field_element(v))
+    }
+
+    /// Decodes a point from its SEC (X9.62 / SEC 1) encoding.
+    ///
+    /// Handles the point-at-infinity (`0x00`), compressed (`0x02`/`0x03`),
+    /// uncompressed (`0x04`), and hybrid (`0x06`/`0x07`) encodings. Decoded
+    /// coordinates are validated to lie on the curve.
+    ///
+    /// Corresponds to `DecodePoint` in Bouncy Castle. Takes `self` as an `Arc`
+    /// so the decoded point can hold its curve back-reference.
+    pub fn decode_point(self: &Arc<Self>, encoded: &[u8]) -> Result<FpPoint, PointDecodeError> {
+        let len = self.field_element_encoding_length();
+        let (&type_byte, rest) = encoded.split_first().ok_or(PointDecodeError::Empty)?;
+
+        match type_byte {
+            0x00 => {
+                // 無窮遠點:只有前綴 1 byte。
+                if rest.is_empty() {
+                    Ok(FpPoint::infinity(Arc::clone(self)))
+                } else {
+                    Err(PointDecodeError::InvalidLength)
+                }
+            }
+            0x02 | 0x03 => {
+                // 壓縮:prefix + X（decompress 內含 sqrt 驗證在曲線上）。
+                if rest.len() != len {
+                    return Err(PointDecodeError::InvalidLength);
+                }
+                let x = BigInteger::from_bytes_be_unsigned(rest);
+                if &x >= self.q() {
+                    return Err(PointDecodeError::CoordinateOutOfRange);
+                }
+                let y_tilde = (type_byte & 1) as u32;
+                self.decompress_point(y_tilde, x)
+                    .ok_or(PointDecodeError::NotOnCurve)
+            }
+            0x04 => {
+                // 未壓縮:prefix + X + Y。
+                if rest.len() != 2 * len {
+                    return Err(PointDecodeError::InvalidLength);
+                }
+                let x = self.parse_coordinate(&rest[..len])?;
+                let y = self.parse_coordinate(&rest[len..])?;
+                if !self.contains_affine(&x, &y) {
+                    return Err(PointDecodeError::NotOnCurve);
+                }
+                Ok(FpPoint::new(Arc::clone(self), x, y))
+            }
+            0x06 | 0x07 => {
+                // 混合:同未壓縮，前綴另帶 Y 奇偶（0x07 = 奇）。
+                if rest.len() != 2 * len {
+                    return Err(PointDecodeError::InvalidLength);
+                }
+                let x = self.parse_coordinate(&rest[..len])?;
+                let y = self.parse_coordinate(&rest[len..])?;
+                if y.as_ref().test_bit(0) != (type_byte == 0x07) {
+                    return Err(PointDecodeError::InconsistentHybridY);
+                }
+                if !self.contains_affine(&x, &y) {
+                    return Err(PointDecodeError::NotOnCurve);
+                }
+                Ok(FpPoint::new(Arc::clone(self), x, y))
+            }
+            other => Err(PointDecodeError::UnknownEncoding(other)),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -202,6 +292,70 @@ mod tests {
         // y_tilde=0（y 偶）→ 另一根 (5,16)。
         let q = curve.decompress_point(0, BigInteger::from_u32(5)).unwrap();
         assert_eq!(q.y().unwrap().as_ref(), &BigInteger::from_u32(16));
+    }
+
+    #[test]
+    fn encoding_length_is_ceil_bits_over_8() {
+        assert_eq!(curve17().field_element_encoding_length(), 1); // 17 → 5 bits → 1 byte
+        assert_eq!(secp256k1().field_element_encoding_length(), 32); // 256 bits → 32 bytes
+    }
+
+    #[test]
+    fn contains_affine_checks_curve_equation() {
+        let curve = curve17();
+        let x = curve.field_element(BigInteger::from_u32(5));
+        // (5,1) 在曲線上、(5,2) 不在。
+        assert!(curve.contains_affine(&x, &curve.field_element(BigInteger::from_u32(1))));
+        assert!(!curve.contains_affine(&x, &curve.field_element(BigInteger::from_u32(2))));
+    }
+
+    #[test]
+    fn decode_infinity_and_errors() {
+        let curve = curve17();
+        assert!(curve.decode_point(&[0x00]).unwrap().is_infinity());
+        assert!(matches!(curve.decode_point(&[0x00, 0x00]), Err(PointDecodeError::InvalidLength)));
+        assert!(matches!(curve.decode_point(&[]), Err(PointDecodeError::Empty)));
+        assert!(matches!(curve.decode_point(&[0x04, 5]), Err(PointDecodeError::InvalidLength)));
+        assert!(matches!(curve.decode_point(&[0x09, 5]), Err(PointDecodeError::UnknownEncoding(9))));
+    }
+
+    #[test]
+    fn decode_compressed() {
+        let curve = curve17();
+        // 0x03（y 奇）+ X=5 → (5,1)。
+        let p = curve.decode_point(&[0x03, 5]).unwrap();
+        assert_eq!(p.x().unwrap().as_ref(), &BigInteger::from_u32(5));
+        assert_eq!(p.y().unwrap().as_ref(), &BigInteger::from_u32(1));
+        // 0x02（y 偶）→ 另一根 (5,16)。
+        assert_eq!(
+            curve.decode_point(&[0x02, 5]).unwrap().y().unwrap().as_ref(),
+            &BigInteger::from_u32(16)
+        );
+        // x=1：rhs=5 非二次剩餘 → NotOnCurve。
+        assert!(matches!(curve.decode_point(&[0x02, 1]), Err(PointDecodeError::NotOnCurve)));
+    }
+
+    #[test]
+    fn decode_uncompressed_and_hybrid() {
+        let curve = curve17();
+        // 0x04 + X + Y = (5,1)。
+        let p = curve.decode_point(&[0x04, 5, 1]).unwrap();
+        assert_eq!(p.x().unwrap().as_ref(), &BigInteger::from_u32(5));
+        assert_eq!(p.y().unwrap().as_ref(), &BigInteger::from_u32(1));
+        // 混合 0x07（y 奇）與 (5,1) 一致 → ok。
+        assert!(curve.decode_point(&[0x07, 5, 1]).is_ok());
+        // 混合 0x06（宣稱 y 偶）但 y=1 奇 → InconsistentHybridY。
+        assert!(matches!(
+            curve.decode_point(&[0x06, 5, 1]),
+            Err(PointDecodeError::InconsistentHybridY)
+        ));
+        // 不在曲線 (5,2) → NotOnCurve。
+        assert!(matches!(curve.decode_point(&[0x04, 5, 2]), Err(PointDecodeError::NotOnCurve)));
+        // 座標越界 x=17(=q) → CoordinateOutOfRange。
+        assert!(matches!(
+            curve.decode_point(&[0x04, 17, 1]),
+            Err(PointDecodeError::CoordinateOutOfRange)
+        ));
     }
 
     #[test]
