@@ -4,7 +4,7 @@
 //! (`Org.BouncyCastle.Math.EC.FpFieldElement`). Binary-field (F2m) elements and
 //! the common field-element abstraction will live in sibling modules later.
 
-use core::ops::{Add, Sub};
+use core::ops::{Add, Neg, Sub};
 
 use crate::big_integer::BigInteger;
 
@@ -54,6 +54,62 @@ impl FpFieldElement {
             x,
             r: self.r.clone(),
         }
+    }
+
+    /// Reduces `x` modulo `q`, using the precomputed residue `r` for a fast path
+    /// when available. Mirrors Bouncy Castle's `ModReduce`.
+    ///
+    /// `x` may be negative or much larger than `q`; the result lands in
+    /// `[0, q)`. Used by multiplication and squaring.
+    fn mod_reduce(&self, x: BigInteger) -> BigInteger {
+        let q = &self.q;
+
+        // r == None：沒有快速形式，退回通用取模（非負餘數）。
+        let r = match &self.r {
+            None => return x.rem_euclid(q),
+            Some(r) => r,
+        };
+
+        let one = BigInteger::from_u32(1); // 這條路徑會用到好幾次，綁一次重用
+        let negative = x.sign() < 0;
+        let mut x = if negative { x.abs() } else { x }; // 先取絕對值，最後再補回符號
+        let q_len = q.bit_length();
+
+        if r.sign() > 0 {
+            // pseudo-Mersenne：反覆把 ≥ 2^qLen 的高位「折」下來。
+            let q_mod = &one << q_len; // 2^qLen
+            let r_is_one = r == &one;
+            while x.bit_length() > q_len + 1 {
+                let u = &x >> q_len; // 高位部分
+                let v = &x % &q_mod; // 低 qLen 位
+                let u = if r_is_one { u } else { &u * r };
+                x = &u + &v;
+            }
+        } else {
+            // Barrett：mu = −r 為預算倒數，估商 quot 後扣掉 quot·q。
+            let d = ((q_len - 1) & 31) + 1;
+            let mu = -r;
+            let u = &mu * &(&x >> (q_len - d));
+            let quot = &u >> (q_len + d);
+            let v = &quot * q;
+            let bk1 = &one << (q_len + d); // 2^(qLen+d)
+            let v = &v % &bk1;
+            x = &x % &bk1;
+            x = &x - &v;
+            if x.sign() < 0 {
+                x = &x + &bk1;
+            }
+        }
+
+        // 收尾：把 x 拉進 [0, q)。
+        while &x >= q {
+            x = &x - q;
+        }
+        // 原值為負且結果非零 → 取相反元素 q − x。
+        if negative && !x.is_zero() {
+            x = q - &x;
+        }
+        x
     }
 
     /// Computes the reduction residue `r` used to speed up reduction modulo `q`,
@@ -181,6 +237,24 @@ impl Sub for &FpFieldElement {
     }
 }
 
+/// Field negation: the additive inverse `(-x) mod q`, i.e. `q - x` (and `0` for
+/// zero).
+///
+/// Corresponds to `Negate` in Bouncy Castle.
+impl Neg for &FpFieldElement {
+    type Output = FpFieldElement;
+
+    fn neg(self) -> FpFieldElement {
+        if self.x.is_zero() {
+            // −0 = 0；bc 直接回傳自身，這裡回傳等值副本。
+            self.clone()
+        } else {
+            // 0 < x < q ⇒ q − x ∈ (0, q)。
+            self.with_value(&self.q - &self.x)
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -236,6 +310,19 @@ mod tests {
     }
 
     #[test]
+    fn neg_is_additive_inverse() {
+        let q = BigInteger::from_u32(7);
+        let a = field_element(q.clone(), BigInteger::from_u32(3));
+        // −3 ≡ 4 (mod 7)。
+        assert_eq!((-&a).as_ref(), &BigInteger::from_u32(4));
+        // a + (−a) = 0。
+        assert!((&a + &(-&a)).is_zero());
+        // −0 = 0。
+        let zero = field_element(q, BigInteger::from_u32(0));
+        assert!((-&zero).is_zero());
+    }
+
+    #[test]
     fn add_one_wraps_at_q() {
         let q = BigInteger::from_u32(7);
         // 一般情形：3 + 1 = 4。
@@ -250,5 +337,59 @@ mod tests {
     fn residue_small_prime_is_none() {
         // 位元長度 < 96 → 無快速形式。
         assert!(FpFieldElement::calculate_residue(&BigInteger::from_u32(97)).is_none());
+    }
+
+    // 對給定的 q，用一組測資交叉驗證 mod_reduce 與通用取模一致（含負數）。
+    fn check_mod_reduce(q: &BigInteger) {
+        let r = FpFieldElement::calculate_residue(q);
+        let fe = FpFieldElement::new(q.clone(), BigInteger::from_u32(0), r);
+        let samples = [
+            q - &BigInteger::from_u32(1),
+            q - &BigInteger::from_u32(12345),
+            BigInteger::from_u32(2),
+            q >> 1,
+        ];
+        for a in &samples {
+            for b in &samples {
+                let prod = a * b; // 可能接近 q²，涵蓋快速路徑主要輸入範圍
+                assert_eq!(fe.mod_reduce(prod.clone()), prod.rem_euclid(q));
+                let neg = -&prod;
+                assert_eq!(fe.mod_reduce(neg.clone()), neg.rem_euclid(q));
+            }
+        }
+        // 已在 [0, q) 的值：約簡應為原值。
+        let inside = q - &BigInteger::from_u32(7);
+        assert_eq!(fe.mod_reduce(inside.clone()), inside);
+    }
+
+    fn secp256k1_prime() -> BigInteger {
+        BigInteger::from_str_radix(
+            "fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f",
+            16,
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn mod_reduce_pseudo_mersenne_matches_generic() {
+        // secp256k1：r > 0，走 pseudo-Mersenne 快速路徑。
+        check_mod_reduce(&secp256k1_prime());
+    }
+
+    #[test]
+    fn mod_reduce_barrett_matches_generic() {
+        // NIST P-256：byte 對齊、頂端非全 1 → r < 0，走 Barrett 快速路徑。
+        let p = BigInteger::from_str_radix(
+            "ffffffff00000001000000000000000000000000ffffffffffffffffffffffff",
+            16,
+        )
+        .unwrap();
+        check_mod_reduce(&p);
+    }
+
+    #[test]
+    fn mod_reduce_generic_matches() {
+        // 小質數：r == None，走通用取模路徑。
+        check_mod_reduce(&BigInteger::from_u32(97));
     }
 }
