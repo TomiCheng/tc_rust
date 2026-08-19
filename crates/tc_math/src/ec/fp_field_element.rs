@@ -174,6 +174,27 @@ impl FpFieldElement {
         self.with_value(self.mod_reduce(self.x.square()))
     }
 
+    /// Returns the multiplicative inverse `x^{-1} mod q`.
+    ///
+    /// Corresponds to `Invert` in Bouncy Castle.
+    ///
+    /// # Panics
+    ///
+    /// Panics if this element is zero (no inverse exists), mirroring bc's
+    /// `ArithmeticException`.
+    //
+    // TODO(ec-ct)：bc 的 Invert 走 constant-time safegcd（BigIntegers.ModOddInverse
+    // → Mod.ModOddInverse，Bernstein–Yang）以防側通道。這裡先用通用的
+    // BigInteger::mod_inverse（extended Euclid，變動時間）—— 正確但會洩漏時序。
+    // 之後為「安全性」移植 safegcd（需要 Nat 定長 limb 層）。
+    pub fn invert(&self) -> Self {
+        let inv = self
+            .x
+            .mod_inverse(&self.q)
+            .expect("FpFieldElement::invert: element is not invertible (zero)");
+        self.with_value(inv)
+    }
+
     /// Returns `self + 1` in the field.
     ///
     /// Corresponds to `AddOne` in Bouncy Castle. Fast path: since `x < q`, the
@@ -375,6 +396,27 @@ mod tests {
         let xv = &q - &BigInteger::from_u32(7);
         let x = field_element(q, xv);
         assert_eq!(x.square().as_ref(), (&x * &x).as_ref());
+    }
+
+    #[test]
+    fn invert_is_multiplicative_inverse() {
+        let q = BigInteger::from_u32(7);
+        // 3⁻¹ ≡ 5 (mod 7)，且 3 · 3⁻¹ = 1。
+        let a = field_element(q.clone(), BigInteger::from_u32(3));
+        assert_eq!(a.invert().as_ref(), &BigInteger::from_u32(5));
+        assert!((&a * &a.invert()).is_one());
+
+        // 大體域:a · a⁻¹ = 1。
+        let q = secp256k1_prime();
+        let a = field_element(q.clone(), &q - &BigInteger::from_u32(123456));
+        assert!((&a * &a.invert()).is_one());
+    }
+
+    #[test]
+    #[should_panic(expected = "not invertible")]
+    fn invert_zero_panics() {
+        let q = BigInteger::from_u32(7);
+        field_element(q, BigInteger::from_u32(0)).invert();
     }
 
     #[test]
