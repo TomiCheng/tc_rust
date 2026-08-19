@@ -4,7 +4,7 @@
 //! (`Org.BouncyCastle.Math.EC.FpFieldElement`). Binary-field (F2m) elements and
 //! the common field-element abstraction will live in sibling modules later.
 
-use core::ops::Add;
+use core::ops::{Add, Sub};
 
 use crate::big_integer::BigInteger;
 
@@ -163,6 +163,24 @@ impl Add for &FpFieldElement {
     }
 }
 
+/// Field subtraction: `(x - b.x) mod q`.
+///
+/// Corresponds to `Subtract` in Bouncy Castle (`ModSubtract`). Both operands
+/// must belong to the same field.
+impl Sub for &FpFieldElement {
+    type Output = FpFieldElement;
+
+    fn sub(self, rhs: &FpFieldElement) -> FpFieldElement {
+        debug_assert!(self.q == rhs.q, "sub: field elements from different fields");
+        // 不變式 0 ≤ x, rhs.x < q ⇒ 差 ∈ (−q, q)；為負時加一次 q 回到 [0, q)。
+        let mut diff = &self.x - &rhs.x;
+        if diff.sign() < 0 {
+            diff = &diff + &self.q;
+        }
+        self.with_value(diff)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -204,6 +222,17 @@ mod tests {
         // 加 0 為單位元。
         let zero = field_element(q, BigInteger::from_u32(0));
         assert_eq!((&a + &zero).as_ref(), &BigInteger::from_u32(5));
+    }
+
+    #[test]
+    fn sub_borrows_modulo_q() {
+        let q = BigInteger::from_u32(7);
+        let a = field_element(q.clone(), BigInteger::from_u32(3));
+        let b = field_element(q.clone(), BigInteger::from_u32(5));
+        // 3 − 5 = −2 ≡ 5 (mod 7)。
+        assert_eq!((&a - &b).as_ref(), &BigInteger::from_u32(5));
+        // 無借位情形：5 − 3 = 2。
+        assert_eq!((&b - &a).as_ref(), &BigInteger::from_u32(2));
     }
 
     #[test]
