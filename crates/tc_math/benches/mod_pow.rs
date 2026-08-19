@@ -1,9 +1,9 @@
 //! `mod_pow` 效能對照：現行的 Barrett 版 vs 舊的逐步 `% m` 版。
 //!
-//! 跑：`cargo bench -p bc-math`
+//! 跑：`cargo bench -p tc_math`
 //! 基準線 `mod_pow_simple` 只用公開 API 重寫舊演算法，好跟現行 `mod_pow` 並排比。
 
-use bc_math::big_integer::BigInteger;
+use tc_math::big_integer::BigInteger;
 use criterion::{Criterion, black_box, criterion_group, criterion_main};
 
 /// 舊版：逐位平方-乘，每步用全長 `% m` 約簡（Barrett 之前的做法）。

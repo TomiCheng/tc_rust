@@ -1,5 +1,6 @@
 [package]
-name = "bc_math"
+name = "tc_math"
+description = "A pure-Rust big-integer and number-theory library, ported from the Bouncy Castle C# library as a learning project."
 version.workspace = true
 edition.workspace = true
 license.workspace = true

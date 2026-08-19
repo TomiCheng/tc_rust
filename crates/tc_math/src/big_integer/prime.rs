@@ -24,7 +24,7 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use bc_math::big_integer::BigInteger;
+    /// use tc_math::big_integer::BigInteger;
     /// # use rand_core::TryRng;
     /// # struct DemoRng(u64);
     /// # impl TryRng for DemoRng {
@@ -82,7 +82,7 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use bc_math::big_integer::BigInteger;
+    /// use tc_math::big_integer::BigInteger;
     /// # use rand_core::TryRng;
     /// # struct DemoRng(u64);
     /// # impl TryRng for DemoRng {
@@ -119,7 +119,7 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use bc_math::big_integer::BigInteger;
+    /// use tc_math::big_integer::BigInteger;
     /// # use rand_core::TryRng;
     /// # struct DemoRng(u64);
     /// # impl TryRng for DemoRng {
