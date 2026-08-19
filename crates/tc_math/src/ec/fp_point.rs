@@ -90,6 +90,31 @@ impl FpPoint {
         &self.curve
     }
 
+    /// Returns `true` if this point is valid: the point at infinity, or an
+    /// affine point that lies on the curve and belongs to the correct subgroup.
+    ///
+    /// Corresponds to `IsValid` in Bouncy Castle. Validating an untrusted point
+    /// this way rejects invalid-curve and small-subgroup inputs.
+    pub fn is_valid(&self) -> bool {
+        match &self.coords {
+            None => true, // 無窮遠點一律有效
+            Some((x, y)) => self.curve.contains_affine(x, y) && self.satisfies_order(),
+        }
+    }
+
+    /// Returns `true` if this point lies in the curve's order-`n` subgroup
+    /// (`bc SatisfiesOrder`). Assumes the point is not the point at infinity.
+    fn satisfies_order(&self) -> bool {
+        // cofactor == 1：群為質數階，曲線上任何點都在(唯一)子群。
+        if self.curve.cofactor().is_some_and(|h| h == &BigInteger::from_u32(1)) {
+            return true;
+        }
+        match self.curve.order() {
+            None => true,                        // 階未知 → 無法檢查（bc 亦然）
+            Some(n) => (self * n).is_infinity(), // n·P == O
+        }
+    }
+
     /// Returns the affine x-coordinate, or `None` at infinity.
     pub fn x(&self) -> Option<&FpFieldElement> {
         self.coords.as_ref().map(|(x, _)| x)
@@ -471,6 +496,24 @@ mod tests {
 
         // 無窮遠點 → 單一 0x00。
         assert_eq!(FpPoint::infinity(Arc::clone(&curve)).encode(true), vec![0x00]);
+    }
+
+    #[test]
+    fn is_valid_checks_curve_and_order() {
+        // curve17 附上階 n=19（cofactor 未知）→ 觸發 n·P 子群檢查。
+        let curve = Arc::new(FpCurve::new(
+            BigInteger::from_u32(17),
+            BigInteger::from_u32(2),
+            BigInteger::from_u32(2),
+            Some(BigInteger::from_u32(19)),
+            None,
+        ));
+        // (5,1) 在曲線上且 19·G=O → valid。
+        assert!(point17(&curve, 5, 1).is_valid());
+        // 無窮遠點 → valid。
+        assert!(FpPoint::infinity(Arc::clone(&curve)).is_valid());
+        // 不在曲線 (5,2) → invalid。
+        assert!(!point17(&curve, 5, 2).is_valid());
     }
 
     #[test]

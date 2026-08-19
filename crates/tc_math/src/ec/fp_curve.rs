@@ -175,7 +175,7 @@ impl FpCurve {
 
     /// Returns `true` if the affine point `(x, y)` satisfies the curve equation
     /// `y^2 = x^3 + ax + b`.
-    fn contains_affine(&self, x: &FpFieldElement, y: &FpFieldElement) -> bool {
+    pub(crate) fn contains_affine(&self, x: &FpFieldElement, y: &FpFieldElement) -> bool {
         // rhs = x³ + ax + b（Horner：(x² + a)·x + b）
         let rhs = &(&(&x.square() + self.a()) * x) + self.b();
         y.square() == rhs
