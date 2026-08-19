@@ -6,6 +6,7 @@
 //! The point at infinity is represented by absent coordinates.
 
 use alloc::sync::Arc;
+use core::ops::Neg;
 
 use crate::ec::fp_curve::FpCurve;
 use crate::ec::fp_field_element::FpFieldElement;
@@ -14,6 +15,7 @@ use crate::ec::fp_field_element::FpFieldElement;
 ///
 /// `coords` is `None` for the point at infinity (the group identity), otherwise
 /// `Some((x, y))`.
+#[derive(Clone)]
 pub struct FpPoint {
     // 回指所屬曲線（提供 a、b、體域）。
     curve: Arc<FpCurve>,
@@ -61,9 +63,26 @@ impl FpPoint {
         self.coords.as_ref().map(|(_, y)| y)
     }
 
-    // TODO(ec-point)：點運算待實作（對應 bc FpPoint / ECPointBase）：
-    //   negate / add / twice(倍點) / subtract / scalar multiply。
+    // TODO(ec-point)：其餘點運算待實作（對應 bc FpPoint / ECPointBase）：
+    //   add / twice(倍點) / subtract / scalar multiply。
     //   affine 加法/倍點公式需要曲線係數 a（self.curve.a()）與體域運算。
+}
+
+/// Point negation: the additive inverse `-(x, y) = (x, -y)`.
+///
+/// Corresponds to `Negate` in Bouncy Castle (affine coordinates).
+impl Neg for &FpPoint {
+    type Output = FpPoint;
+
+    fn neg(self) -> FpPoint {
+        match &self.coords {
+            None => self.clone(), // −O = O
+            Some((x, y)) => FpPoint {
+                curve: Arc::clone(&self.curve),
+                coords: Some((x.clone(), -y)), // (x, −y)
+            },
+        }
+    }
 }
 
 #[cfg(test)]
@@ -103,5 +122,22 @@ mod tests {
         assert!(!p.is_infinity());
         assert_eq!(p.x().unwrap().as_ref(), &BigInteger::from_u32(2));
         assert_eq!(p.y().unwrap().as_ref(), &BigInteger::from_u32(3));
+    }
+
+    #[test]
+    fn negate_flips_y() {
+        let curve = secp256k1();
+        let x = curve.field_element(BigInteger::from_u32(2));
+        let y = curve.field_element(BigInteger::from_u32(3));
+        let p = FpPoint::new(Arc::clone(&curve), x, y);
+        let neg = -&p;
+        // x 不變，y → q − 3。
+        assert_eq!(neg.x().unwrap().as_ref(), &BigInteger::from_u32(2));
+        assert_eq!(
+            neg.y().unwrap().as_ref(),
+            &(curve.q() - &BigInteger::from_u32(3))
+        );
+        // −O = O。
+        assert!((-&FpPoint::infinity(curve)).is_infinity());
     }
 }
