@@ -4,6 +4,8 @@
 //! (`Org.BouncyCastle.Math.EC.FpFieldElement`). Binary-field (F2m) elements and
 //! the common field-element abstraction will live in sibling modules later.
 
+use core::ops::Add;
+
 use crate::big_integer::BigInteger;
 
 /// An element of the prime field GF(p).
@@ -39,6 +41,19 @@ impl FpFieldElement {
     /// [`calculate_residue`]: FpFieldElement::calculate_residue
     pub(crate) fn new(q: BigInteger, x: BigInteger, r: Option<BigInteger>) -> Self {
         FpFieldElement { q, x, r }
+    }
+
+    /// Creates a new element in the same field (sharing `q` and `r`) holding the
+    /// value `x`, which the caller must already have reduced into `[0, q)`.
+    ///
+    /// Corresponds to the `new FpFieldElement(q, r, result)` pattern used
+    /// throughout Bouncy Castle's arithmetic methods.
+    fn with_value(&self, x: BigInteger) -> Self {
+        FpFieldElement {
+            q: self.q.clone(),
+            x,
+            r: self.r.clone(),
+        }
     }
 
     /// Computes the reduction residue `r` used to speed up reduction modulo `q`,
@@ -95,6 +110,22 @@ impl FpFieldElement {
         self.x.bit_length() == 1
     }
 
+    /// Returns `self + 1` in the field.
+    ///
+    /// Corresponds to `AddOne` in Bouncy Castle. Fast path: since `x < q`, the
+    /// sum is at most `q`, so the only reduction needed is mapping `q` back to
+    /// `0` — no general modular reduction.
+    pub fn add_one(&self) -> Self {
+        let x2 = &self.x + &BigInteger::from_u32(1);
+        // x < q ⇒ x+1 ≤ q；唯一環繞是 x+1 == q → 0。
+        let x2 = if x2 == self.q {
+            BigInteger::from_u32(0)
+        } else {
+            x2
+        };
+        self.with_value(x2)
+    }
+
     // TODO(ec-fp)：以下運算待實作（對應 bc FpFieldElement），全部 mod q：
     //   add / subtract / multiply / divide(= self × b⁻¹) / negate(q − x) /
     //   square / invert(mod_inverse) / sqrt(Tonelli–Shanks，依 q mod 4/8 分支)。
@@ -110,6 +141,25 @@ impl FpFieldElement {
 impl AsRef<BigInteger> for FpFieldElement {
     fn as_ref(&self) -> &BigInteger {
         &self.x
+    }
+}
+
+/// Field addition: `(x + b.x) mod q`.
+///
+/// Corresponds to `Add` in Bouncy Castle (`ModAdd`). Both operands must belong
+/// to the same field.
+impl Add for &FpFieldElement {
+    type Output = FpFieldElement;
+
+    fn add(self, rhs: &FpFieldElement) -> FpFieldElement {
+        debug_assert!(self.q == rhs.q, "add: field elements from different fields");
+        // 不變式 0 ≤ x, rhs.x < q ⇒ 和 < 2q，最多減一次 q 即回到 [0, q)，
+        // 不必整除取模（bc ModAdd 的做法）。
+        let mut sum = &self.x + &rhs.x;
+        if sum >= self.q {
+            sum = &sum - &self.q;
+        }
+        self.with_value(sum)
     }
 }
 
@@ -142,6 +192,29 @@ mod tests {
         // r = 2^256 − p = 2^32 + 977 = 4294968273。
         let r = FpFieldElement::calculate_residue(&p);
         assert_eq!(r, Some(BigInteger::from_u64(4_294_968_273)));
+    }
+
+    #[test]
+    fn add_wraps_modulo_q() {
+        let q = BigInteger::from_u32(7);
+        let a = field_element(q.clone(), BigInteger::from_u32(5));
+        let b = field_element(q.clone(), BigInteger::from_u32(4));
+        // 5 + 4 = 9 ≡ 2 (mod 7)。
+        assert_eq!((&a + &b).as_ref(), &BigInteger::from_u32(2));
+        // 加 0 為單位元。
+        let zero = field_element(q, BigInteger::from_u32(0));
+        assert_eq!((&a + &zero).as_ref(), &BigInteger::from_u32(5));
+    }
+
+    #[test]
+    fn add_one_wraps_at_q() {
+        let q = BigInteger::from_u32(7);
+        // 一般情形：3 + 1 = 4。
+        let a = field_element(q.clone(), BigInteger::from_u32(3));
+        assert_eq!(a.add_one().as_ref(), &BigInteger::from_u32(4));
+        // 環繞：q−1 加一 → 0。
+        let top = field_element(q, BigInteger::from_u32(6));
+        assert!(top.add_one().is_zero());
     }
 
     #[test]
