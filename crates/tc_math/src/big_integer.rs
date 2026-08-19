@@ -1592,11 +1592,11 @@ impl Sub for &BigInteger {
 
     fn sub(self, rhs: &BigInteger) -> BigInteger {
         if rhs.sign == 0 {
-            return self.clone();
+            self.clone()
         } else if self.sign == 0 {
-            return -rhs;
+            -rhs
         } else if self.sign != rhs.sign {
-            return self + &(-rhs);
+            self + &(-rhs)
         } else {
             // 同號：比 magnitude，大減小，結果符號 = 較大者的符號
             match compare_magnitude(&self.magnitude, &rhs.magnitude) {

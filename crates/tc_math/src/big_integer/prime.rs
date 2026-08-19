@@ -68,7 +68,7 @@ impl BigInteger {
         for i in 0..num_lists {
             let rem = self.remainder_u32(PRIME_PRODUCTS[i]); // 一次大數 mod 乘積
             for &prime in PRIME_LISTS[i] {
-                if rem % prime == 0 {
+                if rem.is_multiple_of(prime) {
                     return *self != BigInteger::from_u32(prime); // 整除且非自身 → 真因數
                 }
             }

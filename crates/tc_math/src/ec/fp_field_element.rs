@@ -165,7 +165,7 @@ impl FpFieldElement {
 
         // 主迴圈：j 由高位 n-1 掃到 s+1。
         let mut j = n - 1;
-        while j >= s + 1 {
+        while j > s {
             ql = self.mod_reduce(&ql * &qh);
             if k.test_bit(j) {
                 qh = self.mod_reduce(&ql * lucas_q);
