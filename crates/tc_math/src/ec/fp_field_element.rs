@@ -260,6 +260,57 @@ impl FpFieldElement {
         self.with_value(self.mod_reduce(self.x.square()))
     }
 
+    /// Returns `(self * b - x * y) mod q` with a single reduction.
+    ///
+    /// Corresponds to `MultiplyMinusProduct` in Bouncy Castle — a fused
+    /// operation used by point-arithmetic formulas to save modular reductions.
+    pub fn multiply_minus_product(&self, b: &Self, x: &Self, y: &Self) -> Self {
+        let ab = &self.x * &b.x;
+        let xy = &x.x * &y.x;
+        self.with_value(self.mod_reduce(&ab - &xy))
+    }
+
+    /// Returns `(self * b + x * y) mod q` with a single reduction.
+    ///
+    /// Corresponds to `MultiplyPlusProduct` in Bouncy Castle.
+    pub fn multiply_plus_product(&self, b: &Self, x: &Self, y: &Self) -> Self {
+        let ab = &self.x * &b.x;
+        let xy = &x.x * &y.x;
+        self.with_value(self.mod_reduce(self.plus_correct(&ab + &xy)))
+    }
+
+    /// Returns `(self^2 - x * y) mod q` with a single reduction.
+    ///
+    /// Corresponds to `SquareMinusProduct` in Bouncy Castle.
+    pub fn square_minus_product(&self, x: &Self, y: &Self) -> Self {
+        let aa = self.x.square();
+        let xy = &x.x * &y.x;
+        self.with_value(self.mod_reduce(&aa - &xy))
+    }
+
+    /// Returns `(self^2 + x * y) mod q` with a single reduction.
+    ///
+    /// Corresponds to `SquarePlusProduct` in Bouncy Castle.
+    pub fn square_plus_product(&self, x: &Self, y: &Self) -> Self {
+        let aa = self.x.square();
+        let xy = &x.x * &y.x;
+        self.with_value(self.mod_reduce(self.plus_correct(&aa + &xy)))
+    }
+
+    /// Barrett overflow correction for the "plus" fused products: when `r < 0`
+    /// (Barrett) and `sum` exceeds `2 * bitlen(q)` bits, pre-subtract
+    /// `q * 2^bitlen(q)` to bring `sum` into [`Self::mod_reduce`]'s Barrett
+    /// input range. Mirrors bc's guard in `MultiplyPlusProduct`.
+    fn plus_correct(&self, sum: BigInteger) -> BigInteger {
+        if let Some(r) = &self.r {
+            let q_len = self.q.bit_length();
+            if r.sign() < 0 && sum.bit_length() > q_len << 1 {
+                return &sum - &(&self.q << q_len);
+            }
+        }
+        sum
+    }
+
     /// Returns the multiplicative inverse `x^{-1} mod q`.
     ///
     /// Corresponds to `Invert` in Bouncy Castle.
@@ -777,6 +828,32 @@ mod tests {
             16,
         )
         .unwrap()
+    }
+
+    fn p256_prime() -> BigInteger {
+        // NIST P-256：byte 對齊、頂端非全 1 → Barrett residue（r < 0）。
+        BigInteger::from_str_radix(
+            "ffffffff00000001000000000000000000000000ffffffffffffffffffffffff",
+            16,
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn fused_products_match_naive() {
+        // fused a·b±x·y / a²±x·y 應等於樸素運算；含 Barrett 質數驗 plus 修正。
+        for q in [secp256k1_prime(), p256_prime()] {
+            let fe = |v: BigInteger| field_element(q.clone(), v);
+            let a = fe(&q - &BigInteger::from_u32(3));
+            let b = fe(&q - &BigInteger::from_u32(5));
+            let x = fe(&q - &BigInteger::from_u32(7));
+            let y = fe(&q - &BigInteger::from_u32(11));
+
+            assert_eq!(a.multiply_minus_product(&b, &x, &y), &(&a * &b) - &(&x * &y));
+            assert_eq!(a.multiply_plus_product(&b, &x, &y), &(&a * &b) + &(&x * &y));
+            assert_eq!(a.square_minus_product(&x, &y), &a.square() - &(&x * &y));
+            assert_eq!(a.square_plus_product(&x, &y), &a.square() + &(&x * &y));
+        }
     }
 
     #[test]
