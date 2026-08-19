@@ -7,6 +7,7 @@
 //! [`FpPoint`]: crate::ec::fp_point::FpPoint
 
 use crate::big_integer::BigInteger;
+use crate::ec::CoordinateSystem;
 use crate::ec::fp_field_element::FpFieldElement;
 
 /// A short-Weierstrass elliptic curve `y^2 = x^3 + ax + b` over GF(q).
@@ -25,6 +26,9 @@ pub struct FpCurve {
     // 群階與 cofactor（未必已知）。
     order: Option<BigInteger>,
     cofactor: Option<BigInteger>,
+    // 點的座標系。MVP 只支援 Affine（bc 預設是 JacobianModified，等實作 Jacobian
+    // 再改預設）。
+    coordinate_system: CoordinateSystem,
 }
 
 impl FpCurve {
@@ -47,7 +51,15 @@ impl FpCurve {
         let r = FpFieldElement::calculate_residue(&q);
         let a = Self::make_field_element(&q, a, &r);
         let b = Self::make_field_element(&q, b, &r);
-        FpCurve { q, r, a, b, order, cofactor }
+        FpCurve {
+            q,
+            r,
+            a,
+            b,
+            order,
+            cofactor,
+            coordinate_system: CoordinateSystem::Affine,
+        }
     }
 
     /// Builds a field element for this curve's field from an integer,
@@ -95,6 +107,23 @@ impl FpCurve {
     pub fn cofactor(&self) -> Option<&BigInteger> {
         self.cofactor.as_ref()
     }
+
+    /// Returns the coordinate system points on this curve use.
+    ///
+    /// Corresponds to `CoordinateSystem` in Bouncy Castle.
+    pub fn coordinate_system(&self) -> CoordinateSystem {
+        self.coordinate_system
+    }
+
+    /// Returns this curve configured to use `coordinate_system` for its points.
+    ///
+    /// Corresponds to `Configure().SetCoordinateSystem(...)` in Bouncy Castle.
+    /// Note: only [`CoordinateSystem::Affine`] point arithmetic is implemented
+    /// so far; other systems will be added later.
+    pub fn with_coordinate_system(mut self, coordinate_system: CoordinateSystem) -> Self {
+        self.coordinate_system = coordinate_system;
+        self
+    }
 }
 
 #[cfg(test)]
@@ -122,6 +151,13 @@ mod tests {
         let c = secp256k1();
         assert!(c.a().is_zero());
         assert_eq!(c.b().as_ref(), &BigInteger::from_u32(7));
+        assert_eq!(c.coordinate_system(), CoordinateSystem::Affine);
+    }
+
+    #[test]
+    fn with_coordinate_system_overrides_default() {
+        let c = secp256k1().with_coordinate_system(CoordinateSystem::JacobianModified);
+        assert_eq!(c.coordinate_system(), CoordinateSystem::JacobianModified);
     }
 
     #[test]
