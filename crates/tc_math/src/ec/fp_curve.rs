@@ -8,6 +8,8 @@
 
 use alloc::sync::Arc;
 
+use rand_core::Rng;
+
 use crate::big_integer::BigInteger;
 use crate::ec::CoordinateSystem;
 use crate::ec::fp_field_element::FpFieldElement;
@@ -148,6 +150,50 @@ impl FpCurve {
     /// Corresponds to `IsValidFieldElement` in Bouncy Castle.
     pub fn is_valid_field_element(&self, x: &BigInteger) -> bool {
         x.sign() >= 0 && x < &self.q
+    }
+
+    /// Returns a uniformly random field element in `[0, q)`.
+    ///
+    /// Corresponds to `RandomFieldElement` in Bouncy Castle. Two independent
+    /// samples are multiplied to blunt the timing side-channel of the (not
+    /// constant-time) rejection-sampling comparison. Pass a cryptographically
+    /// secure RNG when the value must be unpredictable.
+    pub fn random_field_element(&self, rng: &mut dyn Rng) -> FpFieldElement {
+        let a = self.field_element(self.impl_random_field_element(rng));
+        let b = self.field_element(self.impl_random_field_element(rng));
+        &a * &b
+    }
+
+    /// Returns a uniformly random non-zero field element in `[1, q)`.
+    ///
+    /// Corresponds to `RandomFieldElementMult` in Bouncy Castle. See
+    /// [`Self::random_field_element`] for the two-sample rationale.
+    pub fn random_field_element_mult(&self, rng: &mut dyn Rng) -> FpFieldElement {
+        let a = self.field_element(self.impl_random_field_element_mult(rng));
+        let b = self.field_element(self.impl_random_field_element_mult(rng));
+        &a * &b
+    }
+
+    // rejection sampling：均勻取 [0, q)。
+    fn impl_random_field_element(&self, rng: &mut dyn Rng) -> BigInteger {
+        let bits = self.q.bit_length();
+        loop {
+            let x = BigInteger::random_bits(bits, rng);
+            if x < self.q {
+                return x;
+            }
+        }
+    }
+
+    // rejection sampling：均勻取 [1, q)（非零）。
+    fn impl_random_field_element_mult(&self, rng: &mut dyn Rng) -> BigInteger {
+        let bits = self.q.bit_length();
+        loop {
+            let x = BigInteger::random_bits(bits, rng);
+            if x.sign() > 0 && x < self.q {
+                return x;
+            }
+        }
     }
 
     /// Returns the coordinate system points on this curve use.
@@ -313,6 +359,40 @@ impl FpCurve {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use core::convert::Infallible;
+    use rand_core::TryRng;
+
+    // 決定性測試用 RNG（LCG）。
+    struct SeqRng(u64);
+    impl TryRng for SeqRng {
+        type Error = Infallible;
+        fn try_next_u32(&mut self) -> Result<u32, Infallible> {
+            Ok(self.try_next_u64()? as u32)
+        }
+        fn try_next_u64(&mut self) -> Result<u64, Infallible> {
+            self.0 = self.0.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+            Ok(self.0)
+        }
+        fn try_fill_bytes(&mut self, dst: &mut [u8]) -> Result<(), Infallible> {
+            for chunk in dst.chunks_mut(8) {
+                let v = self.try_next_u64()?.to_le_bytes();
+                chunk.copy_from_slice(&v[..chunk.len()]);
+            }
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn random_field_element_in_range() {
+        let curve = curve17();
+        let mut rng = SeqRng(0xDEAD_BEEF);
+        for _ in 0..64 {
+            // field element 型別保證 [0, q)；確認不 panic 且值 < q。
+            assert!(curve.random_field_element(&mut rng).as_ref() < curve.q());
+            // mult 版必非零。
+            assert!(!curve.random_field_element_mult(&mut rng).is_zero());
+        }
+    }
 
     // secp256k1: y^2 = x^3 + 7 over GF(p).
     fn secp256k1() -> FpCurve {
