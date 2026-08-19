@@ -48,6 +48,17 @@ impl PartialEq for FpCurve {
 
 impl Eq for FpCurve {}
 
+/// Hashes the field modulus and coefficients (matching [`PartialEq`]).
+///
+/// Corresponds to `GetHashCode` in Bouncy Castle.
+impl core::hash::Hash for FpCurve {
+    fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
+        self.q.hash(state);
+        self.a.hash(state);
+        self.b.hash(state);
+    }
+}
+
 impl FpCurve {
     /// Creates the curve `y^2 = x^3 + ax + b` over GF(`q`).
     ///
@@ -125,6 +136,20 @@ impl FpCurve {
         self.cofactor.as_ref()
     }
 
+    /// Returns the field size in bits (the bit length of `q`).
+    ///
+    /// Corresponds to `FieldSize` in Bouncy Castle.
+    pub fn field_size(&self) -> u32 {
+        self.q.bit_length()
+    }
+
+    /// Returns `true` if `x` is a valid field element, i.e. `0 <= x < q`.
+    ///
+    /// Corresponds to `IsValidFieldElement` in Bouncy Castle.
+    pub fn is_valid_field_element(&self, x: &BigInteger) -> bool {
+        x.sign() >= 0 && x < &self.q
+    }
+
     /// Returns the coordinate system points on this curve use.
     ///
     /// Corresponds to `CoordinateSystem` in Bouncy Castle.
@@ -140,6 +165,25 @@ impl FpCurve {
     pub fn with_coordinate_system(mut self, coordinate_system: CoordinateSystem) -> Self {
         self.coordinate_system = coordinate_system;
         self
+    }
+
+    /// Returns the point at infinity (the group identity) on this curve.
+    ///
+    /// Corresponds to `Infinity` in Bouncy Castle.
+    pub fn infinity(self: &Arc<Self>) -> FpPoint {
+        FpPoint::infinity(Arc::clone(self))
+    }
+
+    /// Creates the affine point `(x, y)` on this curve.
+    ///
+    /// Corresponds to `CreatePoint` in Bouncy Castle. Does not check that the
+    /// point lies on the curve (use [`FpPoint::is_valid`] for that).
+    ///
+    /// # Panics
+    ///
+    /// Panics if `x` or `y` is not in `[0, q)`.
+    pub fn create_point(self: &Arc<Self>, x: BigInteger, y: BigInteger) -> FpPoint {
+        FpPoint::new(Arc::clone(self), self.field_element(x), self.field_element(y))
     }
 
     /// Recovers the point with x-coordinate `x1` and the given y-parity from the
@@ -171,6 +215,16 @@ impl FpCurve {
     /// Corresponds to `FieldElementEncodingLength` in Bouncy Castle.
     pub fn field_element_encoding_length(&self) -> usize {
         (self.q.bit_length() as usize).div_ceil(8)
+    }
+
+    /// The byte length of an affine point's SEC encoding: `1 + len` when
+    /// compressed, `1 + 2*len` when uncompressed (`len` is the field-element
+    /// encoding length).
+    ///
+    /// Corresponds to `GetAffinePointEncodingLength` in Bouncy Castle.
+    pub fn affine_point_encoding_length(&self, compressed: bool) -> usize {
+        let len = self.field_element_encoding_length();
+        if compressed { 1 + len } else { 1 + 2 * len }
     }
 
     /// Returns `true` if the affine point `(x, y)` satisfies the curve equation
@@ -376,6 +430,53 @@ mod tests {
         let curve = curve17();
         // x=1：rhs = 1+2+2 = 5，非二次剩餘 → None。
         assert!(curve.decompress_point(0, BigInteger::from_u32(1)).is_none());
+    }
+
+    #[test]
+    fn convenience_methods() {
+        let curve = curve17(); // Arc<FpCurve>, GF(17)
+        // create_point / infinity。
+        let p = curve.create_point(BigInteger::from_u32(5), BigInteger::from_u32(1));
+        assert_eq!(p.x().unwrap().as_ref(), &BigInteger::from_u32(5));
+        assert!(curve.infinity().is_infinity());
+        // field_size = bitlen(q)：17 → 5。
+        assert_eq!(curve.field_size(), 5);
+        assert_eq!(secp256k1().field_size(), 256);
+        // is_valid_field_element：0≤x<q。
+        assert!(curve.is_valid_field_element(&BigInteger::from_u32(16)));
+        assert!(!curve.is_valid_field_element(&BigInteger::from_u32(17)));
+        assert!(!curve.is_valid_field_element(&BigInteger::from_i32(-1)));
+        // affine_point_encoding_length：len=1 → 壓縮 2、未壓縮 3。
+        assert_eq!(curve.affine_point_encoding_length(true), 2);
+        assert_eq!(curve.affine_point_encoding_length(false), 3);
+    }
+
+    #[test]
+    fn curve_eq_and_hash() {
+        use std::collections::hash_map::DefaultHasher;
+        use std::hash::{Hash, Hasher};
+
+        fn h(c: &FpCurve) -> u64 {
+            let mut s = DefaultHasher::new();
+            c.hash(&mut s);
+            s.finish()
+        }
+        let a = FpCurve::new(
+            BigInteger::from_u32(17),
+            BigInteger::from_u32(2),
+            BigInteger::from_u32(2),
+            Some(BigInteger::from_u32(19)), // order 不同也應相等（不算身分）
+            None,
+        );
+        let b = FpCurve::new(
+            BigInteger::from_u32(17),
+            BigInteger::from_u32(2),
+            BigInteger::from_u32(2),
+            None,
+            None,
+        );
+        assert!(a == b); // 同 q/a/b → 相等（忽略 order）
+        assert_eq!(h(&a), h(&b));
     }
 
     #[test]
