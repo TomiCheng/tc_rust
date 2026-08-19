@@ -11,6 +11,7 @@ use alloc::sync::Arc;
 use alloc::vec::Vec;
 use core::ops::Neg;
 
+use crate::ec::CoordinateSystem;
 use crate::ec::fp_curve::FpCurve;
 use crate::ec::fp_field_element::FpFieldElement;
 
@@ -71,9 +72,43 @@ impl FpPoint {
         self.coords.as_ref().map(|(_, y)| y)
     }
 
+    /// Returns `2 * self` (point doubling).
+    ///
+    /// Corresponds to `Twice` in Bouncy Castle. Common guards live here; the
+    /// per-coordinate-system formula is delegated to a helper. Only affine
+    /// coordinates are implemented for now.
+    pub fn twice(&self) -> Self {
+        let (x1, y1) = match &self.coords {
+            None => return self.clone(), // 2·O = O
+            Some(coords) => coords,
+        };
+        if y1.is_zero() {
+            // 切線垂直（y=0，此時 P = −P）→ 2P = O
+            return FpPoint::infinity(Arc::clone(&self.curve));
+        }
+        match self.curve.coordinate_system() {
+            CoordinateSystem::Affine => self.twice_affine(x1, y1),
+            _ => todo!("twice: only affine coordinates are implemented"),
+        }
+    }
+
+    /// Affine point doubling via the tangent-slope formula
+    /// `λ = (3x² + a) / 2y`, `x₃ = λ² − 2x`, `y₃ = λ(x − x₃) − y`.
+    ///
+    /// Assumes `self` is not the point at infinity and `y1 != 0` (checked by
+    /// [`Self::twice`]). The division performs one field inversion.
+    fn twice_affine(&self, x1: &FpFieldElement, y1: &FpFieldElement) -> Self {
+        let a = self.curve.a();
+        let x1_sq = x1.square();
+        let three_x1_sq = &(&x1_sq + &x1_sq) + &x1_sq; // 3·x1²
+        let lambda = &(&three_x1_sq + a) / &(y1 + y1); // (3x²+a)/(2y)
+        let x3 = &lambda.square() - &(x1 + x1); // λ² − 2x
+        let y3 = &(&lambda * &(x1 - &x3)) - y1; // λ(x − x3) − y
+        FpPoint::new(Arc::clone(&self.curve), x3, y3)
+    }
+
     // TODO(ec-point)：其餘點運算待實作（對應 bc FpPoint / ECPointBase）：
-    //   add / twice(倍點) / subtract / scalar multiply。
-    //   affine 加法/倍點公式需要曲線係數 a（self.curve.a()）與體域運算。
+    //   add / subtract / scalar multiply。（Jacobian 等座標系再加 twice_* 子函式。）
 }
 
 /// Point negation: the additive inverse (negate `Y`, keep `X` and `Z`).
@@ -133,6 +168,44 @@ mod tests {
         assert!(!p.is_infinity());
         assert_eq!(p.x().unwrap().as_ref(), &BigInteger::from_u32(2));
         assert_eq!(p.y().unwrap().as_ref(), &BigInteger::from_u32(3));
+    }
+
+    // 教科書曲線 y² = x³ + 2x + 2 over GF(17)。
+    fn curve17() -> Arc<FpCurve> {
+        Arc::new(FpCurve::new(
+            BigInteger::from_u32(17),
+            BigInteger::from_u32(2),
+            BigInteger::from_u32(2),
+            None,
+            None,
+        ))
+    }
+
+    fn point17(curve: &Arc<FpCurve>, x: u32, y: u32) -> FpPoint {
+        FpPoint::new(
+            Arc::clone(curve),
+            curve.field_element(BigInteger::from_u32(x)),
+            curve.field_element(BigInteger::from_u32(y)),
+        )
+    }
+
+    #[test]
+    fn twice_matches_known_double() {
+        let curve = curve17();
+        // 2·(5,1) = (6,3)。
+        let g = point17(&curve, 5, 1);
+        let two_g = g.twice();
+        assert_eq!(two_g.x().unwrap().as_ref(), &BigInteger::from_u32(6));
+        assert_eq!(two_g.y().unwrap().as_ref(), &BigInteger::from_u32(3));
+    }
+
+    #[test]
+    fn twice_infinity_and_y_zero() {
+        let curve = curve17();
+        // 2·O = O。
+        assert!(FpPoint::infinity(Arc::clone(&curve)).twice().is_infinity());
+        // y = 0（P = −P）→ 2P = O。
+        assert!(point17(&curve, 5, 0).twice().is_infinity());
     }
 
     #[test]
