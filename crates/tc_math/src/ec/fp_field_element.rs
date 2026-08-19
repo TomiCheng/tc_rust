@@ -112,6 +112,92 @@ impl FpFieldElement {
         x
     }
 
+    /// Returns `2x mod q` for a value `x` already in `[0, q)`.
+    ///
+    /// Corresponds to `ModDouble` in Bouncy Castle. Used by the `q ≡ 1 (mod 8)`
+    /// square-root branch (`fourX = mod_double(mod_double(x))`).
+    fn mod_double(&self, x: &BigInteger) -> BigInteger {
+        let two_x = x << 1; // 2x
+        if two_x >= self.q {
+            &two_x - &self.q
+        } else {
+            two_x
+        }
+    }
+
+    /// Returns `x/2` when `x` is even, or `(q - x)/2` when `x` is odd.
+    ///
+    /// Corresponds to `ModHalfAbs` in Bouncy Castle. Used by the `q ≡ 1 (mod 8)`
+    /// square-root branch. `q` is an odd prime, so `q - x` is even when `x` is
+    /// odd and the shift is exact.
+    fn mod_half_abs(&self, x: &BigInteger) -> BigInteger {
+        if x.test_bit(0) {
+            let t = &self.q - x; // q − x（偶）
+            &t >> 1
+        } else {
+            x >> 1
+        }
+    }
+
+    /// Computes the Lucas-sequence pair `(U_k, V_k)` mod `q` for parameters `p`
+    /// and `lucas_q`. Ported from Bouncy Castle's `LucasSequence`; used by the
+    /// `q ≡ 1 (mod 8)` square-root branch.
+    ///
+    /// `lucas_q` is the Lucas sequence's second parameter (bc's `Q`) — not the
+    /// field modulus `self.q`. Subtractions are reduced with [`Self::mod_reduce`]
+    /// because the intermediate values may be negative or close to `q^2`.
+    fn lucas_sequence(
+        &self,
+        p: &BigInteger,
+        lucas_q: &BigInteger,
+        k: &BigInteger,
+    ) -> (BigInteger, BigInteger) {
+        let n = k.bit_length();
+        let s = k.get_lowest_set_bit().expect("lucas_sequence: k must be non-zero");
+
+        let one = BigInteger::from_u32(1);
+
+        let mut uh = one.clone(); // Uh = 1
+        let mut vl = BigInteger::from_u32(2); // Vl = 2
+        let mut vh = p.clone(); // Vh = P
+        let mut ql = one.clone(); // Ql = 1
+        let mut qh = one.clone(); // Qh = 1
+
+        // 主迴圈：j 由高位 n-1 掃到 s+1。
+        let mut j = n - 1;
+        while j >= s + 1 {
+            ql = self.mod_reduce(&ql * &qh);
+            if k.test_bit(j) {
+                qh = self.mod_reduce(&ql * lucas_q);
+                uh = self.mod_reduce(&uh * &vh);
+                vl = self.mod_reduce(&(&vh * &vl) - &(p * &ql));
+                vh = self.mod_reduce(&(&vh * &vh) - &(&qh << 1));
+            } else {
+                qh = ql.clone();
+                uh = self.mod_reduce(&(&uh * &vl) - &ql);
+                vh = self.mod_reduce(&(&vh * &vl) - &(p * &ql));
+                vl = self.mod_reduce(&(&vl * &vl) - &(&ql << 1));
+            }
+            j -= 1;
+        }
+
+        // 銜接區塊（bc 迴圈後那段）。
+        ql = self.mod_reduce(&ql * &qh);
+        qh = self.mod_reduce(&ql * lucas_q);
+        uh = self.mod_reduce(&(&uh * &vl) - &ql);
+        vl = self.mod_reduce(&(&vh * &vl) - &(p * &ql));
+        ql = self.mod_reduce(&ql * &qh);
+
+        // 收尾：k 的 s 個低位 0（j = 1..=s）。
+        for _ in 0..s {
+            uh = self.mod_reduce(&uh * &vl);
+            vl = self.mod_reduce(&(&vl * &vl) - &(&ql << 1));
+            ql = self.mod_reduce(&ql * &ql);
+        }
+
+        (uh, vl) // (U_k, V_k)
+    }
+
     /// Computes the reduction residue `r` used to speed up reduction modulo `q`,
     /// matching Bouncy Castle's `FpFieldElement.CalculateResidue`.
     ///
@@ -193,6 +279,90 @@ impl FpFieldElement {
             .mod_inverse(&self.q)
             .expect("FpFieldElement::invert: element is not invertible (zero)");
         self.with_value(inv)
+    }
+
+    /// Returns a square root of this element, or `None` if it is a quadratic
+    /// non-residue (no square root exists in the field).
+    ///
+    /// The returned `z` satisfies `z^2 == self`; the other root is `-z`.
+    /// Corresponds to `Sqrt` in Bouncy Castle.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `q` is even (unsupported), mirroring bc's
+    /// `NotImplementedException`.
+    pub fn sqrt(&self) -> Option<Self> {
+        if self.is_zero() || self.is_one() {
+            return Some(self.clone());
+        }
+
+        let q = &self.q;
+        assert!(q.test_bit(0), "sqrt: even value of q is unsupported");
+
+        let one = BigInteger::from_u32(1);
+
+        if q.test_bit(1) {
+            // q ≡ 3 (mod 4)：z = x^((q+1)/4)。
+            let e = &(q >> 2) + &one;
+            return self.check_sqrt(self.with_value(self.x.mod_pow(&e, q)));
+        }
+
+        if q.test_bit(2) {
+            // q ≡ 5 (mod 8)：Atkin。
+            let t1 = self.x.mod_pow(&(q >> 3), q); // x^((q-5)/8)
+            let t2 = self.mod_reduce(&t1 * &self.x); // x^((q+3)/8)
+            let t3 = self.mod_reduce(&t2 * &t1); // x^((q-1)/4)
+            if t3 == one {
+                return self.check_sqrt(self.with_value(t2));
+            }
+            let t4 = BigInteger::from_u32(2).mod_pow(&(q >> 2), q); // 2^((q-1)/4)
+            let y = self.mod_reduce(&t2 * &t4);
+            return self.check_sqrt(self.with_value(y));
+        }
+
+        // q ≡ 1 (mod 8)：Tonelli–Shanks（Lucas 序列）。
+        let legendre_exponent = q >> 1; // (q-1)/2
+        if self.x.mod_pow(&legendre_exponent, q) != one {
+            return None; // x 非二次剩餘 → 無平方根
+        }
+
+        let four_x = self.mod_double(&self.mod_double(&self.x)); // 4X
+        let k = &legendre_exponent + &one; // (q+1)/2
+        let q_minus_one = q - &one;
+
+        // 確定性探測 P = 1, 2, 3, …（取代 bc 的隨機 Arbitrary；P 只是探針，非安全敏感）。
+        let mut p = one.clone();
+        loop {
+            if &p >= q {
+                return None; // 理論上不會走到（剩餘必在 q 前命中）
+            }
+            // 需要 (P² − 4X) 為非剩餘：其 Legendre 次方 == q − 1。
+            let legendre = self
+                .mod_reduce(&(&p * &p) - &four_x)
+                .mod_pow(&legendre_exponent, q);
+            if legendre == q_minus_one {
+                let (u, v) = self.lucas_sequence(&p, &self.x, &k);
+                if self.mod_reduce(&v * &v) == four_x {
+                    // V/2 即為平方根（已由 V²==4X 驗證，不需再 check_sqrt）。
+                    return Some(self.with_value(self.mod_half_abs(&v)));
+                }
+                // U 退化才換 P 重試；否則放棄。
+                if u != one && u != q_minus_one {
+                    return None;
+                }
+            }
+            p = &p + &one;
+        }
+    }
+
+    /// Verifies a candidate root: `Some(z)` if `z^2 == self`, else `None`.
+    /// Corresponds to bc `CheckSqrt`.
+    fn check_sqrt(&self, z: Self) -> Option<Self> {
+        if z.square().as_ref() == self.as_ref() {
+            Some(z)
+        } else {
+            None
+        }
     }
 
     /// Returns `self + 1` in the field.
@@ -426,6 +596,46 @@ mod tests {
     }
 
     #[test]
+    fn sqrt_zero_and_one() {
+        let q = BigInteger::from_u32(17);
+        assert!(field_element(q.clone(), BigInteger::from_u32(0)).sqrt().unwrap().is_zero());
+        assert!(field_element(q, BigInteger::from_u32(1)).sqrt().unwrap().is_one());
+    }
+
+    #[test]
+    fn sqrt_q_3_mod_4() {
+        // secp256k1 p ≡ 3 (mod 4)。完全平方開根，平方回原值。
+        let q = secp256k1_prime();
+        let a = field_element(q.clone(), &q - &BigInteger::from_u32(9));
+        let sq = a.square();
+        let root = sq.sqrt().expect("完全平方必為二次剩餘");
+        assert_eq!(root.square().as_ref(), sq.as_ref());
+    }
+
+    #[test]
+    fn sqrt_q_5_mod_8() {
+        // GF(13)，13 ≡ 5 (mod 8)。QR = {1,3,4,9,10,12}。
+        let q = BigInteger::from_u32(13);
+        let four = field_element(q.clone(), BigInteger::from_u32(4));
+        assert_eq!(four.sqrt().unwrap().square().as_ref(), &BigInteger::from_u32(4));
+        // 2 非剩餘 → None。
+        assert!(field_element(q, BigInteger::from_u32(2)).sqrt().is_none());
+    }
+
+    #[test]
+    fn sqrt_q_1_mod_8() {
+        // GF(17)，17 ≡ 1 (mod 8) → Lucas 分支。QR = {1,2,4,8,9,13,15,16}。
+        let q = BigInteger::from_u32(17);
+        for v in [2u32, 4, 8, 9, 16] {
+            let fe = field_element(q.clone(), BigInteger::from_u32(v));
+            let root = fe.sqrt().unwrap_or_else(|| panic!("{v} 應為二次剩餘"));
+            assert_eq!(root.square().as_ref(), &BigInteger::from_u32(v));
+        }
+        // 3 非剩餘 → None。
+        assert!(field_element(q, BigInteger::from_u32(3)).sqrt().is_none());
+    }
+
+    #[test]
     fn invert_is_multiplicative_inverse() {
         let q = BigInteger::from_u32(7);
         // 3⁻¹ ≡ 5 (mod 7)，且 3 · 3⁻¹ = 1。
@@ -455,6 +665,28 @@ mod tests {
         // 環繞：q−1 加一 → 0。
         let top = field_element(q, BigInteger::from_u32(6));
         assert!(top.add_one().is_zero());
+    }
+
+    #[test]
+    fn mod_double_wraps_modulo_q() {
+        let q = BigInteger::from_u32(7);
+        let fe = field_element(q.clone(), BigInteger::from_u32(0));
+        // 2·5 = 10 ≡ 3 (mod 7)；2·6 = 12 ≡ 5 (mod 7)。
+        assert_eq!(fe.mod_double(&BigInteger::from_u32(5)), BigInteger::from_u32(3));
+        assert_eq!(fe.mod_double(&BigInteger::from_u32(6)), BigInteger::from_u32(5));
+        assert_eq!(fe.mod_double(&BigInteger::from_u32(3)), BigInteger::from_u32(6));
+    }
+
+    #[test]
+    fn mod_half_abs_even_and_odd() {
+        let q = BigInteger::from_u32(7);
+        let fe = field_element(q, BigInteger::from_u32(0));
+        // 偶：4/2 = 2、6/2 = 3。
+        assert_eq!(fe.mod_half_abs(&BigInteger::from_u32(4)), BigInteger::from_u32(2));
+        assert_eq!(fe.mod_half_abs(&BigInteger::from_u32(6)), BigInteger::from_u32(3));
+        // 奇：(7−3)/2 = 2、(7−5)/2 = 1。
+        assert_eq!(fe.mod_half_abs(&BigInteger::from_u32(3)), BigInteger::from_u32(2));
+        assert_eq!(fe.mod_half_abs(&BigInteger::from_u32(5)), BigInteger::from_u32(1));
     }
 
     #[test]
