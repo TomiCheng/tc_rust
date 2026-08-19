@@ -2202,6 +2202,11 @@ fn sub_in_place(x: &mut [u32], y: &[u32]) {
 /// 兩個 magnitude（big-endian、無前導零）相乘，回傳結果（無前導零）。
 ///
 /// 乘積最多 `x.len() + y.len()` 字，先配足再 trim。
+// TODO(karatsuba)：目前是 schoolbook 長乘法，複雜度 O(n²)。大數應改走 Karatsuba
+// 分治（把每個運算元切成高/低兩半，三次遞迴子乘法，複雜度約 O(n^1.585)）加速；
+// 小於某個門檻字數（bc-csharp 用 KaratsubaMultiplyLimit）仍維持此法以免遞迴開銷。
+// 作法：新增 `KARATSUBA_THRESHOLD`，依 x/y 較短者長度決定走 schoolbook 或遞迴。
+// 對應地 square_magnitude 也可加 Karatsuba squaring。
 fn multiply_magnitudes(x: &[u32], y: &[u32]) -> Vec<u32> {
     if x.is_empty() || y.is_empty() {
         return Vec::new(); // 任一為零 → 0
@@ -2230,6 +2235,7 @@ fn multiply_magnitudes(x: &[u32], y: &[u32]) -> Vec<u32> {
 ///
 /// 回傳 `x²` 的 magnitude（big-endian、無前導零）。與 `multiply_magnitudes(x, x)`
 /// 結果相同，僅乘法次數約少一半（複雜度仍為 O(n²)）。
+// TODO(karatsuba)：大數平方可改 Karatsuba squaring，見 multiply_magnitudes 的 TODO。
 fn square_magnitude(x: &[u32]) -> Vec<u32> {
     if x.is_empty() {
         return Vec::new();
