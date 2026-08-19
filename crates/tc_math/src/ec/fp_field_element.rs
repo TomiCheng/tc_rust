@@ -393,9 +393,37 @@ impl FpFieldElement {
 ///
 /// The trait form of Bouncy Castle's `ToBigInteger()`; clone at the call site if
 /// an owned copy is needed.
+impl core::fmt::Debug for FpFieldElement {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "FpFieldElement {{ x: {}, q: {} }}", self.x, self.q)
+    }
+}
+
 impl AsRef<BigInteger> for FpFieldElement {
     fn as_ref(&self) -> &BigInteger {
         &self.x
+    }
+}
+
+/// Two elements are equal iff they share the same field modulus and value.
+///
+/// Corresponds to `Equals` in Bouncy Castle. `r` is derived from `q`, so it is
+/// not compared.
+impl PartialEq for FpFieldElement {
+    fn eq(&self, other: &Self) -> bool {
+        self.q == other.q && self.x == other.x
+    }
+}
+
+impl Eq for FpFieldElement {}
+
+/// Hashes the field modulus and value (matching [`PartialEq`]).
+///
+/// Corresponds to `GetHashCode` in Bouncy Castle (`Combine(q, x)`).
+impl core::hash::Hash for FpFieldElement {
+    fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
+        self.q.hash(state);
+        self.x.hash(state);
     }
 }
 
@@ -593,6 +621,31 @@ mod tests {
         assert_eq!((&a / &b).as_ref(), &BigInteger::from_u32(2));
         // (a / b) · b = a。
         assert_eq!((&(&a / &b) * &b).as_ref(), a.as_ref());
+    }
+
+    #[test]
+    fn eq_and_hash() {
+        use std::collections::hash_map::DefaultHasher;
+        use std::hash::{Hash, Hasher};
+
+        fn h(fe: &FpFieldElement) -> u64 {
+            let mut s = DefaultHasher::new();
+            fe.hash(&mut s);
+            s.finish()
+        }
+
+        let q = BigInteger::from_u32(7);
+        let a = field_element(q.clone(), BigInteger::from_u32(3));
+        let b = field_element(q.clone(), BigInteger::from_u32(3));
+        let c = field_element(q, BigInteger::from_u32(4));
+        // 同體域同值 → 相等且 hash 相等。
+        assert_eq!(a, b);
+        assert_eq!(h(&a), h(&b));
+        // 同體域不同值 → 不相等。
+        assert_ne!(a, c);
+        // 不同體域 → 不相等。
+        let d = field_element(BigInteger::from_u32(11), BigInteger::from_u32(3));
+        assert_ne!(a, d);
     }
 
     #[test]
