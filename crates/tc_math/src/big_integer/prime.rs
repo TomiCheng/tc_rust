@@ -222,24 +222,6 @@ impl BigInteger {
         true
     }
 
-    /// A uniformly random non-negative integer in `[0, 2^bit_length)`
-    /// (`bit_length == 0` yields zero). The excess high bits of the top byte
-    /// are masked off, so the result has at most `bit_length` bits.
-    ///
-    /// The base primitive for choosing Miller-Rabin witnesses; prime generation
-    /// composes this with forcing the top/bottom bits.
-    fn random_bits(bit_length: u32, rng: &mut dyn Rng) -> BigInteger {
-        if bit_length == 0 {
-            return BigInteger::from_u32(0);
-        }
-        let n_bytes = bit_length.div_ceil(8) as usize; // ⌈bit_length / 8⌉
-        let mut bytes = vec![0u8; n_bytes];
-        rng.fill_bytes(&mut bytes);
-        // 遮掉最高位元組多出來的高位，使總位元數 ≤ bit_length
-        let excess = 8 * n_bytes as u32 - bit_length; // 0..=7
-        bytes[0] &= 0xFFu8 >> excess;
-        BigInteger::from_bytes_be_unsigned(&bytes)
-    }
 }
 
 /// Miller-Rabin 輪數：基本值 `⌈certainty/2⌉`（每輪誤判率 ≤ 1/4）。

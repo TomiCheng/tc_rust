@@ -2,6 +2,8 @@ use core::cmp::Ordering;
 use core::hash::{Hash, Hasher};
 use core::ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Neg, Not, Rem, Shl, Shr, Sub};
 use core::str::FromStr;
+
+use rand_core::Rng;
 #[cfg(feature = "std")]
 use std::sync::OnceLock;
 
@@ -1251,6 +1253,28 @@ impl BigInteger {
         let magnitude = make_magnitude_be(bytes);
         let sign = if magnitude.is_empty() { 0 } else { 1 };
         BigInteger::new(sign, magnitude)
+    }
+
+    /// Returns a uniformly random non-negative integer in `[0, 2^bit_length)`
+    /// (zero when `bit_length == 0`).
+    ///
+    /// `⌈bit_length / 8⌉` random bytes are drawn from `rng`, and the excess high
+    /// bits of the top byte are masked off, so the result has at most
+    /// `bit_length` bits. The RNG is supplied by the caller; pass a
+    /// cryptographically secure source when the value must be unpredictable.
+    ///
+    /// Corresponds to `BigIntegers.CreateRandomBigInteger` in Bouncy Castle.
+    pub fn random_bits(bit_length: u32, rng: &mut dyn Rng) -> BigInteger {
+        if bit_length == 0 {
+            return BigInteger::from_u32(0);
+        }
+        let n_bytes = bit_length.div_ceil(8) as usize; // ⌈bit_length / 8⌉
+        let mut bytes = vec![0u8; n_bytes];
+        rng.fill_bytes(&mut bytes);
+        // 遮掉最高位元組多出來的高位，使總位元數 ≤ bit_length
+        let excess = 8 * n_bytes as u32 - bit_length; // 0..=7
+        bytes[0] &= 0xFFu8 >> excess;
+        BigInteger::from_bytes_be_unsigned(&bytes)
     }
 
     /// Creates a `BigInteger` from a little-endian, two's-complement byte slice.
