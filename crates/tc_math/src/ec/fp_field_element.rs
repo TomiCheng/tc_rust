@@ -4,7 +4,7 @@
 //! (`Org.BouncyCastle.Math.EC.FpFieldElement`). Binary-field (F2m) elements and
 //! the common field-element abstraction will live in sibling modules later.
 
-use core::ops::{Add, Neg, Sub};
+use core::ops::{Add, Mul, Neg, Sub};
 
 use crate::big_integer::BigInteger;
 
@@ -166,6 +166,14 @@ impl FpFieldElement {
         self.x.bit_length() == 1
     }
 
+    /// Returns `self^2` in the field, i.e. `(x^2) mod q`.
+    ///
+    /// Corresponds to `Square` in Bouncy Castle. Uses [`BigInteger::square`],
+    /// which exploits symmetry, rather than a general multiply.
+    pub fn square(&self) -> Self {
+        self.with_value(self.mod_reduce(self.x.square()))
+    }
+
     /// Returns `self + 1` in the field.
     ///
     /// Corresponds to `AddOne` in Bouncy Castle. Fast path: since `x < q`, the
@@ -234,6 +242,19 @@ impl Sub for &FpFieldElement {
             diff = &diff + &self.q;
         }
         self.with_value(diff)
+    }
+}
+
+/// Field multiplication: `(x * b.x) mod q`.
+///
+/// Corresponds to `Multiply` in Bouncy Castle (`ModMult` = `ModReduce(x1*x2)`).
+/// Both operands must belong to the same field.
+impl Mul for &FpFieldElement {
+    type Output = FpFieldElement;
+
+    fn mul(self, rhs: &FpFieldElement) -> FpFieldElement {
+        debug_assert!(self.q == rhs.q, "mul: field elements from different fields");
+        self.with_value(self.mod_reduce(&self.x * &rhs.x))
     }
 }
 
@@ -320,6 +341,40 @@ mod tests {
         // −0 = 0。
         let zero = field_element(q, BigInteger::from_u32(0));
         assert!((-&zero).is_zero());
+    }
+
+    #[test]
+    fn mul_reduces_modulo_q() {
+        let q = BigInteger::from_u32(7);
+        let a = field_element(q.clone(), BigInteger::from_u32(5));
+        let b = field_element(q, BigInteger::from_u32(4));
+        // 5 · 4 = 20 ≡ 6 (mod 7)。
+        assert_eq!((&a * &b).as_ref(), &BigInteger::from_u32(6));
+    }
+
+    #[test]
+    fn mul_matches_generic_on_large_field() {
+        // secp256k1 上比對 x·y mod q 與通用取模。
+        let q = secp256k1_prime();
+        let xv = &q - &BigInteger::from_u32(3);
+        let yv = &q - &BigInteger::from_u32(100);
+        let x = field_element(q.clone(), xv.clone());
+        let y = field_element(q.clone(), yv.clone());
+        assert_eq!((&x * &y).as_ref(), &(&xv * &yv).rem_euclid(&q));
+    }
+
+    #[test]
+    fn square_matches_self_multiply() {
+        let q = BigInteger::from_u32(7);
+        let a = field_element(q.clone(), BigInteger::from_u32(5));
+        // 5² = 25 ≡ 4 (mod 7)。
+        assert_eq!(a.square().as_ref(), &BigInteger::from_u32(4));
+
+        // 大體域：square 應等於 self·self。
+        let q = secp256k1_prime();
+        let xv = &q - &BigInteger::from_u32(7);
+        let x = field_element(q, xv);
+        assert_eq!(x.square().as_ref(), (&x * &x).as_ref());
     }
 
     #[test]
