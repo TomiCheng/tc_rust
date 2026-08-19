@@ -9,8 +9,9 @@
 
 use alloc::sync::Arc;
 use alloc::vec::Vec;
-use core::ops::{Add, Neg, Sub};
+use core::ops::{Add, Mul, Neg, Sub};
 
+use crate::big_integer::BigInteger;
 use crate::ec::CoordinateSystem;
 use crate::ec::fp_curve::FpCurve;
 use crate::ec::fp_field_element::FpFieldElement;
@@ -131,8 +132,39 @@ impl FpPoint {
         FpPoint::new(Arc::clone(&self.curve), x3, y3)
     }
 
-    // TODO(ec-point)：其餘點運算待實作（對應 bc FpPoint / ECPointBase）：
-    //   subtract / scalar multiply。（Jacobian 等座標系再加 add_*/twice_* 子函式。）
+    /// Scalar multiplication `k * self` by left-to-right double-and-add (the
+    /// simple binary method). Negative `k` is handled as `|k| * (-self)`.
+    ///
+    /// Kept as a named method so it survives alongside future windowed methods;
+    /// [`Mul`] delegates here.
+    pub fn mul_double_and_add(&self, k: &BigInteger) -> Self {
+        // k·O = O、0·P = O
+        if self.is_infinity() || k.is_zero() {
+            return FpPoint::infinity(Arc::clone(&self.curve));
+        }
+
+        // k < 0：k·P = |k|·(−P)
+        let (k, base) = if k.sign() < 0 {
+            (-k, -self)
+        } else {
+            (k.clone(), self.clone())
+        };
+
+        // double-and-add，由最高位掃到最低位
+        let mut result = FpPoint::infinity(Arc::clone(&self.curve));
+        let mut i = k.bit_length();
+        while i > 0 {
+            i -= 1;
+            result = result.twice();
+            if k.test_bit(i) {
+                result = &result + &base;
+            }
+        }
+        result
+    }
+
+    // TODO(ec-point)：其餘待實作（對應 bc FpPoint / ECPointBase）：
+    //   Jacobian 等座標系的 add_*/twice_* 子函式、mul_wnaf、encode/decode_point。
 }
 
 /// Point negation: the additive inverse (negate `Y`, keep `X` and `Z`).
@@ -189,6 +221,22 @@ impl Sub for &FpPoint {
 
     fn sub(self, rhs: &FpPoint) -> FpPoint {
         self + &(-rhs)
+    }
+}
+
+/// Scalar multiplication `k * self`.
+///
+/// Corresponds to `Multiply` in Bouncy Castle. Currently delegates to
+/// [`FpPoint::mul_double_and_add`]; a windowed method can be selected here once
+/// added (see the TODO on that function).
+impl Mul<&BigInteger> for &FpPoint {
+    type Output = FpPoint;
+
+    fn mul(self, k: &BigInteger) -> FpPoint {
+        // TODO(wnaf)：現在直接走 double-and-add。bc 預設用視窗化 NAF
+        // （ECMultiplier → WNafL2RMultiplier，把 k 編成 non-adjacent form + 預算奇數
+        // 倍點表，加法次數約降到 1/(w+1)）。之後加 mul_wnaf 後在這裡依情況選用。
+        self.mul_double_and_add(k)
     }
 }
 
@@ -310,6 +358,35 @@ mod tests {
         let inf = FpPoint::infinity(Arc::clone(&curve));
         assert_eq!((&g + &inf).x().unwrap().as_ref(), &BigInteger::from_u32(5));
         assert_eq!((&inf + &g).x().unwrap().as_ref(), &BigInteger::from_u32(5));
+    }
+
+    #[test]
+    fn multiply_matches_known_multiples() {
+        // 曲線 y²=x³+2x+2 / GF(17)，G=(5,1)，階 19。已知倍數:
+        // 2G=(6,3), 4G=(3,1), 18G=(5,16)。
+        let curve = curve17();
+        let g = point17(&curve, 5, 1);
+        let two_g = &g * &BigInteger::from_u32(2);
+        assert_eq!(two_g.x().unwrap().as_ref(), &BigInteger::from_u32(6));
+        assert_eq!(two_g.y().unwrap().as_ref(), &BigInteger::from_u32(3));
+        let four_g = &g * &BigInteger::from_u32(4);
+        assert_eq!(four_g.x().unwrap().as_ref(), &BigInteger::from_u32(3));
+        assert_eq!(four_g.y().unwrap().as_ref(), &BigInteger::from_u32(1));
+    }
+
+    #[test]
+    fn multiply_edge_cases() {
+        let curve = curve17();
+        let g = point17(&curve, 5, 1);
+        // 0·G = O、19·G = O（曲線階為 19）。
+        assert!((&g * &BigInteger::from_u32(0)).is_infinity());
+        assert!((&g * &BigInteger::from_u32(19)).is_infinity());
+        // k·O = O。
+        assert!((&FpPoint::infinity(Arc::clone(&curve)) * &BigInteger::from_u32(5)).is_infinity());
+        // (−1)·G = −G = (5,16)。
+        let neg = &g * &BigInteger::from_i32(-1);
+        assert_eq!(neg.x().unwrap().as_ref(), &BigInteger::from_u32(5));
+        assert_eq!(neg.y().unwrap().as_ref(), &BigInteger::from_u32(16));
     }
 
     #[test]
