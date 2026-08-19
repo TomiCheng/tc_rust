@@ -58,6 +58,33 @@ impl FpPoint {
         self.coords.is_none()
     }
 
+    /// Encodes this point in SEC (X9.62 / SEC 1) format.
+    ///
+    /// `compressed` selects the `0x02`/`0x03` form (X plus a y-parity bit) over
+    /// the uncompressed `0x04` form (X then Y). The point at infinity encodes as
+    /// a single `0x00` byte. Corresponds to `GetEncoded` in Bouncy Castle.
+    pub fn encode(&self, compressed: bool) -> Vec<u8> {
+        let (x, y) = match &self.coords {
+            None => return alloc::vec![0x00], // 無窮遠點
+            Some(coords) => coords,
+        };
+        let len = self.curve.field_element_encoding_length();
+        let x_bytes = fixed_be(x.as_ref(), len);
+        if compressed {
+            let prefix = if y.as_ref().test_bit(0) { 0x03 } else { 0x02 };
+            let mut out = Vec::with_capacity(1 + len);
+            out.push(prefix);
+            out.extend_from_slice(&x_bytes);
+            out
+        } else {
+            let mut out = Vec::with_capacity(1 + 2 * len);
+            out.push(0x04);
+            out.extend_from_slice(&x_bytes);
+            out.extend_from_slice(&fixed_be(y.as_ref(), len));
+            out
+        }
+    }
+
     /// Returns the curve this point belongs to.
     pub fn curve(&self) -> &Arc<FpCurve> {
         &self.curve
@@ -165,6 +192,16 @@ impl FpPoint {
 
     // TODO(ec-point)：其餘待實作（對應 bc FpPoint / ECPointBase）：
     //   Jacobian 等座標系的 add_*/twice_* 子函式、mul_wnaf、encode/decode_point。
+}
+
+/// Encodes a field-element value as fixed-length `len` big-endian bytes
+/// (left-padded with zeros), as required by the SEC point encoding.
+fn fixed_be(v: &BigInteger, len: usize) -> Vec<u8> {
+    let mut buf = alloc::vec![0u8; len];
+    let n = v.byte_length_unsigned(); // 值的最小位元組數（≤ len）
+    // 寫進 buffer 右段 → 左邊自然留零（免中間 Vec）。
+    v.to_bytes_be_unsigned_into(&mut buf[len - n..]);
+    buf
 }
 
 /// Point negation: the additive inverse (negate `Y`, keep `X` and `Z`).
@@ -387,6 +424,30 @@ mod tests {
         let neg = &g * &BigInteger::from_i32(-1);
         assert_eq!(neg.x().unwrap().as_ref(), &BigInteger::from_u32(5));
         assert_eq!(neg.y().unwrap().as_ref(), &BigInteger::from_u32(16));
+    }
+
+    #[test]
+    fn encode_decode_roundtrip() {
+        let curve = curve17();
+        let g = point17(&curve, 5, 1);
+
+        // 未壓縮:0x04 + X + Y。
+        let enc = g.encode(false);
+        assert_eq!(enc, vec![0x04, 5, 1]);
+        let dec = curve.decode_point(&enc).unwrap();
+        assert_eq!(dec.x().unwrap().as_ref(), &BigInteger::from_u32(5));
+        assert_eq!(dec.y().unwrap().as_ref(), &BigInteger::from_u32(1));
+
+        // 壓縮:y=1 奇 → 0x03 + X。
+        let encc = g.encode(true);
+        assert_eq!(encc, vec![0x03, 5]);
+        assert_eq!(
+            curve.decode_point(&encc).unwrap().y().unwrap().as_ref(),
+            &BigInteger::from_u32(1)
+        );
+
+        // 無窮遠點 → 單一 0x00。
+        assert_eq!(FpPoint::infinity(Arc::clone(&curve)).encode(true), vec![0x00]);
     }
 
     #[test]
