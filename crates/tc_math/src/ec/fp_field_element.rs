@@ -4,7 +4,7 @@
 //! (`Org.BouncyCastle.Math.EC.FpFieldElement`). Binary-field (F2m) elements and
 //! the common field-element abstraction will live in sibling modules later.
 
-use core::ops::{Add, Mul, Neg, Sub};
+use core::ops::{Add, Div, Mul, Neg, Sub};
 
 use crate::big_integer::BigInteger;
 
@@ -279,6 +279,22 @@ impl Mul for &FpFieldElement {
     }
 }
 
+/// Field division: `self * b^{-1}` in the field.
+///
+/// Corresponds to `Divide` in Bouncy Castle (`ModMult(x, ModInverse(b))`).
+///
+/// # Panics
+///
+/// Panics if the divisor is zero (see [`FpFieldElement::invert`]).
+impl Div for &FpFieldElement {
+    type Output = FpFieldElement;
+
+    fn div(self, rhs: &FpFieldElement) -> FpFieldElement {
+        debug_assert!(self.q == rhs.q, "div: field elements from different fields");
+        self * &rhs.invert()
+    }
+}
+
 /// Field negation: the additive inverse `(-x) mod q`, i.e. `q - x` (and `0` for
 /// zero).
 ///
@@ -396,6 +412,17 @@ mod tests {
         let xv = &q - &BigInteger::from_u32(7);
         let x = field_element(q, xv);
         assert_eq!(x.square().as_ref(), (&x * &x).as_ref());
+    }
+
+    #[test]
+    fn div_is_multiply_by_inverse() {
+        let q = BigInteger::from_u32(7);
+        let a = field_element(q.clone(), BigInteger::from_u32(6));
+        let b = field_element(q.clone(), BigInteger::from_u32(3));
+        // 6 / 3 = 6 · 3⁻¹ = 6 · 5 = 30 ≡ 2 (mod 7)。
+        assert_eq!((&a / &b).as_ref(), &BigInteger::from_u32(2));
+        // (a / b) · b = a。
+        assert_eq!((&(&a / &b) * &b).as_ref(), a.as_ref());
     }
 
     #[test]
