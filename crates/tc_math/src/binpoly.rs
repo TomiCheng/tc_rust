@@ -21,6 +21,9 @@ use alloc::boxed::Box;
 use alloc::vec;
 use core::ops::{Add, AddAssign};
 
+// scalar 後端:carryless 乘法 kernel（leaf；Karatsuba 之後補）。
+mod scalar;
+
 /// Number of `u64` limbs required to hold a polynomial of bit length `n`
 /// (`⌈n / 64⌉`).
 pub fn size(n: usize) -> usize {
