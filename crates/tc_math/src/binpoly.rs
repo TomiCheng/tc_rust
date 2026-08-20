@@ -24,6 +24,9 @@ use core::ops::{Add, AddAssign};
 // scalar 後端:carryless 乘法 kernel（leaf；Karatsuba 之後補）。
 mod scalar;
 
+// 對約簡多項式 r(x) 取模（把雙倍寬積摺回體元素）。
+mod reduce;
+
 /// Number of `u64` limbs required to hold a polynomial of bit length `n`
 /// (`⌈n / 64⌉`).
 pub fn size(n: usize) -> usize {
