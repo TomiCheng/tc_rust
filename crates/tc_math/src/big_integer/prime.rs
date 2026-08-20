@@ -44,12 +44,12 @@ impl BigInteger {
         }
         let n = self.clone().abs(); // 忽略符號（abs 以值接收，先 clone）
         if !n.test_bit(0) {
-            return n == BigInteger::from_u32(2); // 偶數 → 只有 2（0 也走這，0==2 為 false）
+            return n == 2; // 偶數 → 只有 2（0 也走這，0==2 為 false）
         }
-        if n == BigInteger::from_u32(1) {
+        if n == 1 {
             return false;
         }
-        if n == BigInteger::from_u32(3) {
+        if n == 3 {
             return true; // 最小奇質數；MR 對它無合法見證，特判掉
         }
         // n：奇數且 ≥ 5
@@ -69,7 +69,7 @@ impl BigInteger {
             let rem = self.remainder_u32(PRIME_PRODUCTS[i]); // 一次大數 mod 乘積
             for &prime in PRIME_LISTS[i] {
                 if rem.is_multiple_of(prime) {
-                    return *self != BigInteger::from_u32(prime); // 整除且非自身 → 真因數
+                    return *self != prime; // 整除且非自身 → 真因數（prime: u32，零配置比較）
                 }
             }
         }

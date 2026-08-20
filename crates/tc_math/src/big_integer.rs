@@ -374,7 +374,7 @@ impl BigInteger {
         // 先約簡成 [0, modulus)（非負），避開 extended_gcd 對負 a 的邊界
         let d = self.rem_euclid(modulus);
         let (gcd, x) = extended_gcd(&d, modulus);
-        if gcd != BigInteger::from_u32(1) {
+        if gcd != 1 {
             return None; // 不互質 → 無反元素
         }
         // x 滿足 d·x ≡ 1 (mod modulus)；調進 [0, modulus)
@@ -405,7 +405,7 @@ impl BigInteger {
         if m.sign <= 0 {
             panic!("modulus must be positive");
         }
-        if *m == BigInteger::from_u32(1) {
+        if *m == 1 {
             return BigInteger::from_u32(0); // 任何數 mod 1 = 0
         }
         if e.sign == 0 {
@@ -1277,6 +1277,72 @@ impl PartialOrd for BigInteger {
         Some(self.cmp(other)) // 全序，永遠有結果
     }
 }
+
+impl BigInteger {
+    /// 與原生整數的零配置比較核心：把對方拆成 `(符號, 絕對值)` 後，直接對
+    /// `self.sign`／`self.magnitude` 比，不建立暫時 `BigInteger`。邏輯同 [`Ord::cmp`]。
+    ///
+    /// 任何原生整數的絕對值都塞得進 `u128`（含 `i128::MIN` 的 2¹²⁷、`u128::MAX`），
+    /// 故 `other_abs` 用 `u128` 即可涵蓋所有型別。
+    fn cmp_scalar(&self, other_sign: i32, other_abs: u128) -> Ordering {
+        // 符號不同：負 < 零 < 正，直接由符號決定
+        if self.sign != other_sign {
+            return self.sign.cmp(&other_sign);
+        }
+        // 同號（含兩者皆零 → Equal）：比絕對值，負號時翻轉
+        let mag = self.cmp_abs_u128(other_abs);
+        if self.sign < 0 { mag.reverse() } else { mag }
+    }
+
+    /// 比較 `|self|` 與一個 `u128` 絕對值。`magnitude` 為 big-endian、無前導零的 u32 詞。
+    fn cmp_abs_u128(&self, abs: u128) -> Ordering {
+        if self.magnitude.len() > 4 {
+            return Ordering::Greater; // > 4 字即 ≥ 2¹²⁸，大於任何 u128
+        }
+        // ≤ 4 字塞得進 u128：組出低位到高位的值後直接比（空 magnitude → 0）
+        let mut acc: u128 = 0;
+        for &w in self.magnitude.iter() {
+            acc = (acc << 32) | w as u128;
+        }
+        acc.cmp(&abs)
+    }
+}
+
+// 為所有原生整數型別實作與 BigInteger 的零配置比較（`big == 5`、`big < 0u64` 等）。
+// 只提供 `BigInteger <op> {int}` 方向；`{int} <op> BigInteger`（整數在左）需在各整數
+// 型別上另補鏡像 impl。PartialOrd<T> 的父 trait PartialEq<T> 一併展開。
+macro_rules! impl_cmp_int_signed {
+    ($($t:ty),+ $(,)?) => {$(
+        impl PartialEq<$t> for BigInteger {
+            fn eq(&self, other: &$t) -> bool {
+                self.cmp_scalar((*other).signum() as i32, (*other).unsigned_abs() as u128) == Ordering::Equal
+            }
+        }
+        impl PartialOrd<$t> for BigInteger {
+            fn partial_cmp(&self, other: &$t) -> Option<Ordering> {
+                Some(self.cmp_scalar((*other).signum() as i32, (*other).unsigned_abs() as u128))
+            }
+        }
+    )+};
+}
+
+macro_rules! impl_cmp_int_unsigned {
+    ($($t:ty),+ $(,)?) => {$(
+        impl PartialEq<$t> for BigInteger {
+            fn eq(&self, other: &$t) -> bool {
+                self.cmp_scalar(if *other == 0 { 0 } else { 1 }, *other as u128) == Ordering::Equal
+            }
+        }
+        impl PartialOrd<$t> for BigInteger {
+            fn partial_cmp(&self, other: &$t) -> Option<Ordering> {
+                Some(self.cmp_scalar(if *other == 0 { 0 } else { 1 }, *other as u128))
+            }
+        }
+    )+};
+}
+
+impl_cmp_int_signed!(i8, i16, i32, i64, i128, isize);
+impl_cmp_int_unsigned!(u8, u16, u32, u64, u128, usize);
 
 impl Neg for BigInteger {
     type Output = BigInteger;
@@ -2655,6 +2721,55 @@ mod tests {
         // 排序後應為 -5, 0, 1, 3（由小到大）
         let expected = [-5, 0, 1, 3].map(BigInteger::from_i32);
         assert_eq!(v, expected);
+    }
+
+    #[test]
+    fn eq_with_i32() {
+        assert_eq!(BigInteger::from_i32(42), 42);
+        assert_eq!(BigInteger::from_i32(-42), -42);
+        assert_eq!(BigInteger::from_i32(0), 0);
+        assert_ne!(BigInteger::from_i32(42), 43);
+        // 超出 i32 範圍的大數不等於任何 i32
+        assert_ne!(BigInteger::from_u64(1 << 40), 0);
+    }
+
+    #[test]
+    fn partial_ord_with_i32() {
+        let n = BigInteger::from_i32(100);
+        assert!(n > 5);
+        assert!(n >= 100);
+        assert!(n < 1000);
+        assert!(BigInteger::from_i32(-1) < 0);
+        assert!(BigInteger::from_i32(0) >= 0);
+        // 兩端點與大數
+        assert!(BigInteger::from_i64(1 << 40) > i32::MAX);
+        assert!(BigInteger::from_i64(-(1 << 40)) < i32::MIN);
+    }
+
+    #[test]
+    fn cmp_with_unsigned_types() {
+        // u8 / u32 / u64 / u128，含超過單字與 u128 極值
+        assert_eq!(BigInteger::from_u32(200), 200u8);
+        assert!(BigInteger::from_u64(1 << 40) > u32::MAX);
+        assert_eq!(BigInteger::from_u64(u64::MAX), u64::MAX);
+        assert!(BigInteger::from_u64(u64::MAX) < (u64::MAX as u128 + 1));
+
+        // u128::MAX = 2^128 - 1（4 字全 1）→ 相等；2^128 → 更大
+        let max_u128 = BigInteger::from_u32_be_unsigned(&[u32::MAX; 4]);
+        assert_eq!(max_u128, u128::MAX);
+        assert!((&max_u128 + &BigInteger::from_u32(1)) > u128::MAX);
+        // 負數恆小於任何無號數
+        assert!(BigInteger::from_i32(-1) < 0u128);
+    }
+
+    #[test]
+    fn cmp_with_wide_signed_types() {
+        // i64 / i128，含 MIN 端點（unsigned_abs 不溢位）
+        assert_eq!(BigInteger::from_i64(i64::MIN), i64::MIN);
+        assert_eq!(BigInteger::from_i128(i128::MIN), i128::MIN);
+        assert!(BigInteger::from_i128(i128::MIN) < i128::MIN + 1);
+        assert!(BigInteger::from_i64(-(1 << 40)) < 0i64);
+        assert!(BigInteger::from_i64(1 << 40) > 1_000_000i64);
     }
 
     #[test]
