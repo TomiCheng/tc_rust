@@ -4,8 +4,6 @@ use core::ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Neg, Not, Rem, Shl, Shr, S
 use core::str::FromStr;
 
 use rand_core::Rng;
-#[cfg(feature = "std")]
-use std::sync::OnceLock;
 
 // no_std 下沒有 std prelude，需從 alloc 顯式引入這些型別／巨集；
 // std build 由 prelude 提供，故僅在關閉 std 時引入，避免重複 import 警告。
@@ -107,26 +105,12 @@ pub struct BigInteger {
     sign: i32,
     /// 不可變、big-endian、無前導零；不可變型別故用 `Box<[u32]>` 而非 `Vec<u32>`。
     magnitude: Box<[u32]>,
-    /// 惰性快取：設定位元數 (population count)。
-    /// 僅 std：no_std 下 `OnceLock` 不可用，改為每次重算（見存取器）。
-    #[cfg(feature = "std")]
-    bits: OnceLock<u32>,
-    /// 惰性快取：位元長度。
-    #[cfg(feature = "std")]
-    bit_length: OnceLock<u32>,
 }
 
 impl BigInteger {
     // 施工端用 `Vec<u32>` 傳入，儲存時落地成 `Box<[u32]>`。
     fn new(sign: i32, magnitude: Vec<u32>) -> Self {
-        BigInteger {
-            sign,
-            magnitude: magnitude.into_boxed_slice(),
-            #[cfg(feature = "std")]
-            bits: OnceLock::new(),
-            #[cfg(feature = "std")]
-            bit_length: OnceLock::new(),
-        }
+        BigInteger { sign, magnitude: magnitude.into_boxed_slice() }
     }
 
     /// 檢查版建構式（對應 bc-csharp `new BigInteger(sign, mag, checkMag: true)`）：
@@ -179,10 +163,10 @@ impl BigInteger {
     /// ```
     pub fn abs(self) -> BigInteger {
         if self.sign >= 0 {
-            // 已非負：原封不動（連已算好的快取都保留）
+            // 已非負：原封不動
             self
         } else {
-            // 負 → 正：搬移 buffer 重用；快取須重置（|n| 的 bit_length 等與 n 不同）
+            // 負 → 正：搬移 buffer 重用，僅翻正符號
             BigInteger::new(1, Vec::from(self.magnitude))
         }
     }
@@ -828,7 +812,8 @@ impl BigInteger {
     /// Returns the number of bits in the minimal two's-complement representation
     /// of this value, excluding the sign bit. Zero has a bit length of `0`.
     ///
-    /// The result is computed once and cached.
+    /// Recomputed on each call (O(1) for non-negative values); cache at the call
+    /// site if you query the same value repeatedly on a hot path.
     ///
     /// # Examples
     ///
@@ -840,17 +825,7 @@ impl BigInteger {
     /// assert_eq!(BigInteger::from_i32(-8).bit_length(), 3); // 負的 2 次方少 1
     /// ```
     pub fn bit_length(&self) -> u32 {
-        // std：惰性快取；no_std：無 OnceLock 欄位，每次重算（O(n) 掃 magnitude）。
-        #[cfg(feature = "std")]
-        {
-            *self
-                .bit_length
-                .get_or_init(|| calc_bit_length(self.sign, &self.magnitude))
-        }
-        #[cfg(not(feature = "std"))]
-        {
-            calc_bit_length(self.sign, &self.magnitude)
-        }
+        calc_bit_length(self.sign, &self.magnitude)
     }
 
     /// Returns the number of bytes in the minimal two's-complement (signed)
@@ -893,7 +868,8 @@ impl BigInteger {
     /// value that differ from the sign bit. For non-negative values this is the
     /// ordinary population count; for negative values it is `popcount(|n| - 1)`.
     ///
-    /// The result is computed once and cached.
+    /// Recomputed on each call (O(word count)); cache at the call site if you
+    /// query the same value repeatedly on a hot path.
     ///
     /// # Examples
     ///
@@ -905,19 +881,6 @@ impl BigInteger {
     /// assert_eq!(BigInteger::from_i32(-8).bit_count(), 3);
     /// ```
     pub fn bit_count(&self) -> u32 {
-        // std：惰性快取；no_std：無 OnceLock 欄位，每次重算。
-        #[cfg(feature = "std")]
-        {
-            *self.bits.get_or_init(|| self.compute_bit_count())
-        }
-        #[cfg(not(feature = "std"))]
-        {
-            self.compute_bit_count()
-        }
-    }
-
-    /// 實際計算設定位元數；由 [`BigInteger::bit_count`] 快取或直接呼叫。
-    fn compute_bit_count(&self) -> u32 {
         if self.sign < 0 {
             // 負數：bitCount = popcount(|n| - 1)
             bit_count_negative(&self.magnitude)
@@ -1242,7 +1205,7 @@ impl BigInteger {
 }
 
 impl PartialEq for BigInteger {
-    /// 相等只看數值（`sign` + `magnitude`），刻意忽略惰性快取欄位。
+    /// 相等只看數值（`sign` + `magnitude`）。
     fn eq(&self, other: &Self) -> bool {
         self.sign == other.sign && self.magnitude == other.magnitude
     }
@@ -1251,9 +1214,9 @@ impl PartialEq for BigInteger {
 impl Eq for BigInteger {}
 
 impl Hash for BigInteger {
-    /// Hashes the numeric value only (`sign` + `magnitude`), matching [`PartialEq`]
-    /// and skipping the lazy cache fields. The no-leading-zeros invariant makes the
-    /// magnitude canonical, so equal values always hash equally.
+    /// Hashes the numeric value (`sign` + `magnitude`), matching [`PartialEq`]. The
+    /// no-leading-zeros invariant makes the magnitude canonical, so equal values
+    /// always hash equally.
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.sign.hash(state);
         self.magnitude.hash(state);
@@ -1350,7 +1313,7 @@ impl Neg for BigInteger {
     /// 取負：只翻轉符號，magnitude 長度不變，故直接搬移（重用）buffer。
     fn neg(self) -> BigInteger {
         // `Vec::from` 接手 Box 的配置（O(1)），`new` 再 `into_boxed_slice` 收回（O(1)）；
-        // 全程無新配置。快取則透過 `new` 重置（`-n` 的 bit_length/bit_count 與 `n` 不同）。
+        // 全程無新配置。
         BigInteger::new(-self.sign, Vec::from(self.magnitude))
     }
 }
@@ -2617,12 +2580,11 @@ mod tests {
     }
 
     #[test]
-    fn bit_length_is_cached_and_stable() {
-        // 多次呼叫結果一致（第一次計算後快取）
+    fn bit_length_is_stable() {
+        // 每次重算，結果一致
         let n = BigInteger::from_u32(5);
         assert_eq!(n.bit_length(), 3);
         assert_eq!(n.bit_length(), 3);
-        assert!(n.bit_length.get().is_some()); // 快取已填入
     }
 
     #[test]
@@ -2656,14 +2618,6 @@ mod tests {
     fn bit_count_negative_multi_word_borrow() {
         // -(2^32)：|n|-1 = 2^32-1 = 0xFFFF_FFFF，借位跨字，共 32 個 1
         assert_eq!(BigInteger::from_i64(-(1 << 32)).bit_count(), 32);
-    }
-
-    #[test]
-    fn bit_count_is_cached() {
-        let n = BigInteger::from_u32(0b101);
-        assert_eq!(n.bit_count(), 2);
-        assert_eq!(n.bit_count(), 2);
-        assert!(n.bits.get().is_some());
     }
 
     #[test]
@@ -2798,11 +2752,11 @@ mod tests {
     }
 
     #[test]
-    fn neg_resets_cache() {
-        // 對 8 先算好 bit_length（快取 4），取負後應重算為 3（負的 2 次方少 1）
+    fn neg_bit_length_reflects_sign() {
+        // 8 的 bit_length 為 4，取負後為 3（負的 2 次方少 1）
         let a = BigInteger::from_i32(8);
         assert_eq!(a.bit_length(), 4);
-        let b = -a; // a 的 magnitude buffer 搬進 b，快取重置
+        let b = -a; // a 的 magnitude buffer 搬進 b
         assert_eq!(b.bit_length(), 3);
     }
 
@@ -2820,8 +2774,8 @@ mod tests {
     }
 
     #[test]
-    fn abs_resets_cache_for_negative() {
-        // -8 的 bit_length 為 3；取絕對值後為 8，應重算為 4
+    fn abs_bit_length_reflects_sign() {
+        // -8 的 bit_length 為 3；取絕對值後為 8，bit_length 為 4
         let a = BigInteger::from_i32(-8);
         assert_eq!(a.bit_length(), 3);
         assert_eq!(a.abs().bit_length(), 4);
@@ -4762,18 +4716,6 @@ mod tests {
     fn eq_distinguishes_sign_and_magnitude() {
         assert_ne!(BigInteger::from_i32(5), BigInteger::from_i32(-5)); // 同 magnitude、異號
         assert_ne!(BigInteger::from_i32(5), BigInteger::from_i32(6)); // 同號、異 magnitude
-    }
-
-    #[test]
-    fn eq_ignores_cache_state() {
-        // 兩個相同的值，其中一個先觸發快取欄位，相等性不應改變
-        let a = BigInteger::from_i32(42);
-        let b = BigInteger::from_i32(42);
-        // 對 a 的快取寫入值（模擬已計算），b 保持未計算
-        a.bit_length.set(6).unwrap();
-        a.bits.set(3).unwrap();
-        assert!(b.bit_length.get().is_none());
-        assert_eq!(a, b); // 快取狀態不同，仍相等
     }
 
     #[test]
