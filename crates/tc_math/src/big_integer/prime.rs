@@ -438,7 +438,7 @@ mod tests {
 
     #[test]
     fn is_probable_prime_known() {
-        let mut rng = SeqRng(0x00DE_FACED_BAD_5EED);
+        let mut rng = SeqRng(0x00DE_FACE_DBAD_5EED);
         let cert = 40;
         // 質數 → true（含小質數、> 表上限的 1291、2¹²⁷−1）
         for p in [2u32, 3, 5, 7, 11, 13, 97, 1289, 1291, 7919, 104729] {
@@ -532,7 +532,7 @@ mod tests {
             }
             let mut d = 2u32;
             while d * d <= n {
-                if n % d == 0 {
+                if n.is_multiple_of(d) {
                     return false;
                 }
                 d += 1;
