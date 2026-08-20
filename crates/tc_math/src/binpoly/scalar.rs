@@ -61,7 +61,52 @@ fn clmul64(x: u64, y: u64) -> (u64, u64) {
 pub(crate) fn impl_mul(x: &[u64], y: &[u64], zz: &mut [u64]) {
     debug_assert_eq!(x.len(), y.len());
     debug_assert_eq!(zz.len(), 2 * x.len());
-    todo!("Karatsuba-style schoolbook leaf（bc Kernels.ImplMul）")
+    let len = x.len();
+
+    // 對角相：zz[2i], zz[2i+1] = xᵢ·yᵢ（覆寫）
+    for i in 0..len {
+        let (lo, hi) = clmul64(x[i], y[i]);
+        zz[2 * i] = lo;
+        zz[2 * i + 1] = hi;
+    }
+
+    impl_mul_postprocess(x, y, zz);
+}
+
+/// 交叉項後處理（bc `ImplMulPostprocess`）：對角摺疊 + 高半段廣播 + 上三角交叉項。
+///
+/// 逐行機械翻譯自 bc；正確性靠對照獨立 schoolbook 的 fuzz 測試把關。
+fn impl_mul_postprocess(x: &[u64], y: &[u64], zz: &mut [u64]) {
+    let len = x.len();
+
+    // 對角摺疊（v0/v1 streak）：讀 zz[2i]/zz[2i+1]，寫 zz[i]
+    let mut v0 = zz[0];
+    let mut v1 = zz[1];
+    for i in 1..len {
+        v0 ^= zz[2 * i];
+        zz[i] = v0 ^ v1;
+        v1 ^= zz[2 * i + 1];
+    }
+
+    // 高半段 = 低半段 XOR (w 廣播)：zz[len+i] = zz[i] ^ w（bc 的 Nat.Xor64 純量廣播）
+    let w = v0 ^ v1;
+    for i in 0..len {
+        zz[len + i] = zz[i] ^ w;
+    }
+
+    // 上三角交叉項：對 lo+hi=z_pos, lo<hi 累加 (xₗₒ⊕xₕᵢ)(yₗₒ⊕yₕᵢ)
+    let last = len - 1;
+    for z_pos in 1..(last * 2) {
+        let mut hi = last.min(z_pos);
+        let mut lo = z_pos - hi;
+        while lo < hi {
+            let (l, h) = clmul64(x[lo] ^ x[hi], y[lo] ^ y[hi]);
+            zz[z_pos] ^= l;
+            zz[z_pos + 1] ^= h;
+            lo += 1;
+            hi -= 1;
+        }
+    }
 }
 
 #[cfg(test)]
@@ -125,6 +170,41 @@ mod tests {
             let x = next();
             let y = next();
             assert_eq!(clmul64(x, y), clmul64(y, x), "x={x:#018x} y={y:#018x}");
+        }
+    }
+
+    /// 獨立參考：裸 schoolbook carryless 多項式乘法（len² 個 1×1，用 clmul64_ref）。
+    fn poly_mul_ref(x: &[u64], y: &[u64]) -> Vec<u64> {
+        let len = x.len();
+        let mut zz = vec![0u64; 2 * len];
+        for i in 0..len {
+            for j in 0..len {
+                let (lo, hi) = clmul64_ref(x[i], y[j]);
+                zz[i + j] ^= lo;
+                zz[i + j + 1] ^= hi;
+            }
+        }
+        zz
+    }
+
+    #[test]
+    fn impl_mul_matches_schoolbook_fuzz() {
+        // xorshift64 決定性亂數；各 len 對照獨立 schoolbook
+        let mut s = 0xC0FF_EE12_3456_789Au64;
+        let mut next = || {
+            s ^= s << 13;
+            s ^= s >> 7;
+            s ^= s << 17;
+            s
+        };
+        for len in 1..=6usize {
+            for _ in 0..2_000 {
+                let x: Vec<u64> = (0..len).map(|_| next()).collect();
+                let y: Vec<u64> = (0..len).map(|_| next()).collect();
+                let mut zz = vec![0u64; 2 * len];
+                impl_mul(&x, &y, &mut zz);
+                assert_eq!(zz, poly_mul_ref(&x, &y), "len={len}");
+            }
         }
     }
 }
