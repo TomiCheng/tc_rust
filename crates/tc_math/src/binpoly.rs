@@ -24,7 +24,8 @@ use core::ops::{Add, AddAssign};
 // scalar 後端:carryless 乘法 kernel（leaf；Karatsuba 之後補）。
 mod scalar;
 
-// 對約簡多項式 r(x) 取模（把雙倍寬積摺回體元素）。每種形狀一個檔（對齊 bc）。
+// 對約簡多項式 r(x) 取模：Reduce trait（= bc IReduce）+ 每種形狀一個檔（對齊 bc）。
+mod reduce;
 mod reduce_pentanomial;
 mod reduce_trinomial;
 

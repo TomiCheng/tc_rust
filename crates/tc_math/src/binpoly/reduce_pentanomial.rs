@@ -2,38 +2,52 @@
 //!
 //! Ported from Bouncy Castle `BinPolyMulBase.Pentanomial` — but only the general
 //! bit-by-bit fold (its `C` reducer); the word-at-a-time fast paths are deferred
-//! (see the function TODO).
+//! (see the TODO on [`create_reduce_pentanomial`]).
 
-/// Reduces the `2·size`-limb product `tt` modulo the pentanomial
-/// `xⁿ + xᵏ³ + xᵏ² + xᵏ¹ + 1`, writing the `size`-limb result into `z`. Correct
-/// for any `0 < k1 < k2 < k3 < n`.
-///
-/// `tt` is mutated in place during folding. Ported from Bouncy Castle
-/// `PentanomialReduce.C` — the trinomial fold with four taps:
-/// `x^(pos+n) ≡ x^pos + x^(pos+k1) + x^(pos+k2) + x^(pos+k3)`.
-///
-// TODO(binpoly-reduce-fastpath): bc has word-at-a-time reducers (A/B/D/E and the
-// per-size A3..A8) chosen by n%64 and k alignment; here we use only the general
-// bit-by-bit fold. Add the fast paths later if F2m becomes performance-critical.
-pub(crate) fn reduce_pentanomial(n: usize, k1: usize, k2: usize, k3: usize, tt: &mut [u64], z: &mut [u64]) {
-    debug_assert!(0 < k1 && k1 < k2 && k2 < k3 && k3 < n);
-    debug_assert_eq!(tt.len(), 2 * z.len());
+use alloc::boxed::Box;
 
-    let mut pos = n - 1;
-    while pos > 0 {
-        pos -= 1;
-        let bit_n = (tt[(pos + n) / 64] >> ((pos + n) % 64)) & 1;
-        tt[pos / 64] ^= bit_n << (pos % 64);
-        tt[(pos + k1) / 64] ^= bit_n << ((pos + k1) % 64);
-        tt[(pos + k2) / 64] ^= bit_n << ((pos + k2) % 64);
-        tt[(pos + k3) / 64] ^= bit_n << ((pos + k3) % 64);
-    }
+use super::reduce::Reduce;
 
-    let w_top = n / 64;
-    let s_top = n % 64;
-    z[..w_top].copy_from_slice(&tt[..w_top]);
-    if s_top != 0 {
-        z[w_top] = tt[w_top] & !(u64::MAX << s_top);
+/// Builds a boxed [`Reduce`]r for `GF(2ⁿ)` under the pentanomial
+/// `xⁿ + xᵏ³ + xᵏ² + xᵏ¹ + 1`. Mirrors bc's `PentanomialReduce.Create`.
+// TODO(binpoly-reduce-fastpath): bc's Create picks a size/alignment-specialised
+// reducer (A/B/D/E, per-size A3..A8) here; we always return the general fold [`C`].
+pub(crate) fn create_reduce_pentanomial(n: usize, k1: usize, k2: usize, k3: usize) -> Box<dyn Reduce> {
+    Box::new(C { n, k1, k2, k3 })
+}
+
+/// bc `PentanomialReduce.C`: the general bit-by-bit fold with four taps
+/// `x^(pos+n) ≡ x^pos + x^(pos+k1) + x^(pos+k2) + x^(pos+k3)`. Correct for any
+/// `0 < k1 < k2 < k3 < n`.
+struct C {
+    n: usize,
+    k1: usize,
+    k2: usize,
+    k3: usize,
+}
+
+impl Reduce for C {
+    fn reduce(&self, tt: &mut [u64], z: &mut [u64]) {
+        let (n, k1, k2, k3) = (self.n, self.k1, self.k2, self.k3);
+        debug_assert!(0 < k1 && k1 < k2 && k2 < k3 && k3 < n);
+        debug_assert_eq!(tt.len(), 2 * z.len());
+
+        let mut pos = n - 1;
+        while pos > 0 {
+            pos -= 1;
+            let bit_n = (tt[(pos + n) / 64] >> ((pos + n) % 64)) & 1;
+            tt[pos / 64] ^= bit_n << (pos % 64);
+            tt[(pos + k1) / 64] ^= bit_n << ((pos + k1) % 64);
+            tt[(pos + k2) / 64] ^= bit_n << ((pos + k2) % 64);
+            tt[(pos + k3) / 64] ^= bit_n << ((pos + k3) % 64);
+        }
+
+        let w_top = n / 64;
+        let s_top = n % 64;
+        z[..w_top].copy_from_slice(&tt[..w_top]);
+        if s_top != 0 {
+            z[w_top] = tt[w_top] & !(u64::MAX << s_top);
+        }
     }
 }
 
@@ -92,7 +106,7 @@ mod tests {
         // r = x⁵+x³+x²+x+1；x⁵ ≡ x³+x²+x+1
         let mut tt = [0b10_0000u64, 0]; // bit 5
         let mut z = [0u64];
-        reduce_pentanomial(5, 1, 2, 3, &mut tt, &mut z);
+        C { n: 5, k1: 1, k2: 2, k3: 3 }.reduce(&mut tt, &mut z);
         assert_eq!(z, [0b1111]);
     }
 
@@ -124,7 +138,7 @@ mod tests {
                 mask_bits(&mut tt, 2 * n - 1);
                 let tt_ref = tt.clone();
                 let mut z = vec![0u64; size];
-                reduce_pentanomial(n, k1, k2, k3, &mut tt, &mut z);
+                C { n, k1, k2, k3 }.reduce(&mut tt, &mut z);
                 assert_eq!(z, reduce_pentanomial_ref(n, k1, k2, k3, &tt_ref), "n={n} k={k1},{k2},{k3}");
             }
         }

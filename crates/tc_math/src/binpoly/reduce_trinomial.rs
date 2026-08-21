@@ -2,41 +2,55 @@
 //!
 //! Ported from Bouncy Castle `BinPolyMulBase.Trinomial` — but only the general
 //! bit-by-bit fold (its `D` reducer); the word-at-a-time fast paths are deferred
-//! (see the function TODO).
+//! (see the TODO on [`create_reduce_trinomial`]).
 
-/// Reduces the `2·size`-limb product `tt` modulo the trinomial `xⁿ + xᵏ + 1`,
-/// writing the `size`-limb result into `z`. Correct for any `0 < k < n`.
-///
-/// `tt` is mutated in place during folding (it is scratch). Ported from Bouncy
-/// Castle `TrinomialReduce.D` (bit-by-bit top-down fold).
+use alloc::boxed::Box;
+
+use super::reduce::Reduce;
+
+/// Builds a boxed [`Reduce`]r for `GF(2ⁿ)` under the trinomial `xⁿ + xᵏ + 1`.
+/// Mirrors bc's `TrinomialReduce.Create`.
+// TODO(binpoly-reduce-fastpath): bc's Create picks a size/alignment-specialised
+// reducer (A/B/C/E, per-size A3..A8 / C5..C8) here; we always return the general
+// fold [`D`]. Add fast paths as more `Reduce` impls selected in this factory.
+pub(crate) fn create_reduce_trinomial(n: usize, k: usize) -> Box<dyn Reduce> {
+    Box::new(D { n, k })
+}
+
+/// bc `TrinomialReduce.D`: the general bit-by-bit top-down fold, correct for any
+/// `0 < k < n`.
 ///
 /// The relation `x^(pos+n) ≡ x^pos + x^(pos+k)` (from `xⁿ ≡ xᵏ + 1`) is applied
 /// top-down: each fold only creates bits at positions strictly below the one read,
 /// so a single sweep suffices — later iterations re-fold anything a `+xᵏ` tap
 /// pushed back above `n`.
-///
-// TODO(binpoly-reduce-fastpath): bc has word-at-a-time reducers (A/B/C/E and the
-// per-size A3..A8 / C5..C8) chosen by n%64 and k alignment; here we use only the
-// general bit-by-bit fold. Add the fast paths later if F2m becomes performance-critical.
-pub(crate) fn reduce_trinomial(n: usize, k: usize, tt: &mut [u64], z: &mut [u64]) {
-    debug_assert!(0 < k && k < n);
-    debug_assert_eq!(tt.len(), 2 * z.len());
+struct D {
+    n: usize,
+    k: usize,
+}
 
-    let mut pos = n - 1;
-    while pos > 0 {
-        pos -= 1;
-        // 讀高位 x^(pos+n)，摺到 x^pos 與 x^(pos+k)
-        let bit_n = (tt[(pos + n) / 64] >> ((pos + n) % 64)) & 1;
-        tt[pos / 64] ^= bit_n << (pos % 64);
-        tt[(pos + k) / 64] ^= bit_n << ((pos + k) % 64);
-    }
+impl Reduce for D {
+    fn reduce(&self, tt: &mut [u64], z: &mut [u64]) {
+        let (n, k) = (self.n, self.k);
+        debug_assert!(0 < k && k < n);
+        debug_assert_eq!(tt.len(), 2 * z.len());
 
-    // 低 n 位即結果；最高 limb 依 n%64 遮罩多餘高位
-    let w_top = n / 64;
-    let s_top = n % 64;
-    z[..w_top].copy_from_slice(&tt[..w_top]);
-    if s_top != 0 {
-        z[w_top] = tt[w_top] & !(u64::MAX << s_top);
+        let mut pos = n - 1;
+        while pos > 0 {
+            pos -= 1;
+            // 讀高位 x^(pos+n)，摺到 x^pos 與 x^(pos+k)
+            let bit_n = (tt[(pos + n) / 64] >> ((pos + n) % 64)) & 1;
+            tt[pos / 64] ^= bit_n << (pos % 64);
+            tt[(pos + k) / 64] ^= bit_n << ((pos + k) % 64);
+        }
+
+        // 低 n 位即結果；最高 limb 依 n%64 遮罩多餘高位
+        let w_top = n / 64;
+        let s_top = n % 64;
+        z[..w_top].copy_from_slice(&tt[..w_top]);
+        if s_top != 0 {
+            z[w_top] = tt[w_top] & !(u64::MAX << s_top);
+        }
     }
 }
 
@@ -94,7 +108,7 @@ mod tests {
         // r = x³+x+1；x³ ≡ x+1
         let mut tt = [0b1000u64, 0]; // bit 3
         let mut z = [0u64];
-        reduce_trinomial(3, 1, &mut tt, &mut z);
+        D { n: 3, k: 1 }.reduce(&mut tt, &mut z);
         assert_eq!(z, [0b011]); // x+1
     }
 
@@ -127,7 +141,7 @@ mod tests {
                 mask_bits(&mut tt, 2 * n - 1); // 積 degree ≤ 2n-2
                 let tt_ref = tt.clone();
                 let mut z = vec![0u64; size];
-                reduce_trinomial(n, k, &mut tt, &mut z);
+                D { n, k }.reduce(&mut tt, &mut z);
                 assert_eq!(z, reduce_trinomial_ref(n, k, &tt_ref), "n={n} k={k}");
             }
         }
