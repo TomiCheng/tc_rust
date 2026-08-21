@@ -24,8 +24,9 @@ use core::ops::{Add, AddAssign};
 // scalar 後端:carryless 乘法 kernel（leaf；Karatsuba 之後補）。
 mod scalar;
 
-// 對約簡多項式 r(x) 取模（把雙倍寬積摺回體元素）。
-mod reduce;
+// 對約簡多項式 r(x) 取模（把雙倍寬積摺回體元素）。每種形狀一個檔（對齊 bc）。
+mod reduce_pentanomial;
+mod reduce_trinomial;
 
 /// Number of `u64` limbs required to hold a polynomial of bit length `n`
 /// (`⌈n / 64⌉`).
