@@ -29,6 +29,12 @@ mod reduce;
 mod reduce_pentanomial;
 mod reduce_trinomial;
 
+// GF(2ⁿ) 乘法 operator（= bc IBinPolyMul）。
+mod mul;
+
+// GF(2ⁿ) 反元素 operator（= bc IBinPolyInv；Itoh-Tsujii）。
+mod inv;
+
 /// Number of `u64` limbs required to hold a polynomial of bit length `n`
 /// (`⌈n / 64⌉`).
 pub fn size(n: usize) -> usize {
