@@ -10,6 +10,7 @@
 use alloc::sync::Arc;
 use core::ops::{Add, Div, Mul, Neg, Sub};
 
+use crate::big_integer::BigInteger;
 use crate::binpoly::BinaryPoly;
 use crate::ec::f2m_field::F2mField;
 
@@ -76,6 +77,14 @@ impl F2mFieldElement {
     /// always a limb 0.
     pub fn test_bit_zero(&self) -> bool {
         self.value.limbs()[0] & 1 == 1
+    }
+
+    /// Returns the value as a non-negative [`BigInteger`] (the polynomial's
+    /// coefficients read as a base-2 integer). Corresponds to `ToBigInteger` in bc
+    /// (`Nat.ToBigInteger64`). The limbs are little-endian `u64`, hence
+    /// [`BigInteger::from_u64_le_unsigned`].
+    pub fn to_big_integer(&self) -> BigInteger {
+        BigInteger::from_u64_le_unsigned(self.value.limbs())
     }
 
     /// Returns `self + 1` in the field, i.e. flips the constant term.
@@ -151,9 +160,8 @@ impl F2mFieldElement {
     }
 
     // TODO(ec-f2m)：以下待點層（F2mCurve/F2mPoint、SEC 點編解碼）真的用到時再補：
-    //   - to_big_integer()：對齊 bc `Nat.ToBigInteger64(x)`。需先補「u64 limbs →
-    //     BigInteger」這條路（現 BigInteger magnitude 是 u32、big-endian、去前導零）。
-    //     座標序列化與 ToBigInteger() 會用到。
+    //   - from_big_integer()：反向（BigInteger → 定長 limbs），放 F2mCurve（需 m + validate
+    //     x>=0 && bit_length<=m），對齊 bc `ECCurve.FromBigInteger` → `Nat.FromBigInteger64`。
     //   - trace() / half_trace()（AbstractF2mFieldElement）：點解壓縮解 `y²+y = x`
     //     二次方程用；為平方+加的加法鏈（bc 有 log 步版本，非樸素 O(m)）。
     //   - get_encoded()/encode_to()（ECFieldElement 基底）：SEC 壓縮點格式，
@@ -375,6 +383,20 @@ mod tests {
 
         assert!(!a.test_bit_zero()); // x^3+x：常數項 0
         assert!(fe(&f, 0b1011).test_bit_zero()); // x^3+x+1：常數項 1
+    }
+
+    #[test]
+    fn to_big_integer_reads_value() {
+        let f = field16();
+        assert_eq!(fe(&f, 0).to_big_integer(), BigInteger::from_u32(0));
+        assert_eq!(fe(&f, 0b1011).to_big_integer(), BigInteger::from_u32(0b1011)); // 11
+        assert_eq!(fe(&f, 0b1111).to_big_integer(), BigInteger::from_u32(15));
+
+        // 跨 limb（size 2）：驗 little-endian 順序 —— limb0 低位、limb1 高位。
+        let f2 = Arc::new(F2mField::trinomial(128, 7));
+        let e = F2mFieldElement::new(Arc::clone(&f2), BinaryPoly::from_limbs([0x2u64, 0x1]));
+        // 值 = 1·2^64 + 2
+        assert_eq!(e.to_big_integer(), BigInteger::from_u128((1u128 << 64) + 2));
     }
 
     #[test]
