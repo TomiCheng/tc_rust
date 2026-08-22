@@ -5,6 +5,7 @@
 //! Montgomery/Edwards curves are planned for later stages.
 
 pub mod coordinate_system;
+mod f2m_field;
 pub mod fp_curve;
 pub mod fp_field_element;
 pub mod fp_point;

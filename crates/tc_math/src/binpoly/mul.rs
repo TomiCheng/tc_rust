@@ -14,7 +14,11 @@ use super::{mul_scalar, reduce_pentanomial, reduce_trinomial};
 /// Multiplication in `GF(2ⁿ)`, operating on bit-packed `u64`-limb slices. The trait
 /// (rather than a concrete type) leaves room for multiple backends (scalar leaf /
 /// Karatsuba, and a runtime-selected hardware backend), matching bc's `IBinPolyMul`.
-pub trait BinPolyMul {
+///
+/// The `Send + Sync` bound lets an operator be shared across threads (e.g. behind an
+/// `Arc` in a field definition). Every backend is a stateless, immutable operator, so
+/// it holds honestly.
+pub trait BinPolyMul: Send + Sync {
     /// The field degree `n`.
     fn n(&self) -> usize;
 

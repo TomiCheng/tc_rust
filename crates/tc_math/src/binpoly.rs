@@ -41,7 +41,7 @@ mod inv;
 mod inv_itohtsujii;
 
 pub use inv::BinPolyInv;
-pub use inv_itohtsujii::create as create_binpoly_inv_itohtsujii;
+pub use inv_itohtsujii::create;
 
 /// Number of `u64` limbs required to hold a polynomial of bit length `n`
 /// (`⌈n / 64⌉`).

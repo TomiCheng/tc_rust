@@ -8,7 +8,10 @@
 //! never the binomial one.
 
 /// Multiplicative inversion in `GF(2ⁿ)`, operating on bit-packed `u64`-limb slices.
-pub trait BinPolyInv {
+///
+/// `Send + Sync` (like [`super::mul::BinPolyMul`]) lets the operator be shared across
+/// threads behind an `Arc`; the implementation is a stateless, immutable operator.
+pub trait BinPolyInv: Send + Sync {
     /// The field degree `n`.
     fn n(&self) -> usize;
 

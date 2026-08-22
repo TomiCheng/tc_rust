@@ -8,6 +8,9 @@
 ///
 /// `tt` is mutated arbitrarily during reduction (it is scratch) — callers must not
 /// read it afterward. Corresponds to bc `IReduce.Reduce`.
-pub trait Reduce {
+///
+/// `Send + Sync` propagates up: a [`super::mul::BinPolyMul`] boxes a `Reduce`r, so it
+/// must be shareable too. The concrete reducers are stateless, immutable operators.
+pub trait Reduce: Send + Sync {
     fn reduce(&self, tt: &mut [u64], z: &mut [u64]);
 }
