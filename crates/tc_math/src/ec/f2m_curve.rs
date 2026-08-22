@@ -15,6 +15,7 @@ use crate::binpoly::BinaryPoly;
 use crate::ec::coordinate_system::CoordinateSystem;
 use crate::ec::f2m_field::F2mField;
 use crate::ec::f2m_field_element::F2mFieldElement;
+use crate::ec::f2m_point::F2mPoint;
 
 /// A short-Weierstrass elliptic curve `y² + xy = x³ + ax² + b` over `GF(2ᵐ)`.
 ///
@@ -58,6 +59,8 @@ impl F2mCurve {
     /// # Panics
     ///
     /// Panics if `a` or `b` is negative or has bit length `> m`.
+    // 8 個參數忠實對應 bc F2mCurve 的五項式建構子（m,k1,k2,k3,a,b,order,cofactor）。
+    #[allow(clippy::too_many_arguments)]
     pub fn pentanomial(
         m: usize,
         k1: usize,
@@ -140,6 +143,59 @@ impl F2mCurve {
     pub fn coordinate_system(&self) -> CoordinateSystem {
         self.coordinate_system
     }
+
+    /// Returns the point at infinity (the group identity) on this curve.
+    ///
+    /// Takes `self` as an `Arc` so the point can hold a back-reference to the curve.
+    pub fn infinity(self: &Arc<Self>) -> F2mPoint {
+        F2mPoint::infinity(Arc::clone(self))
+    }
+
+    /// Creates the affine point `(x, y)` on this curve from integer coordinates.
+    ///
+    /// Does not verify the point lies on the curve (a separate check). Corresponds to
+    /// `CreatePoint` in bc. Takes `self` as an `Arc` so the point can back-reference
+    /// the curve.
+    ///
+    /// # Panics
+    ///
+    /// Panics if either coordinate is out of range (see [`create_field_element`]).
+    ///
+    /// [`create_field_element`]: Self::create_field_element
+    pub fn create_point(self: &Arc<Self>, x: BigInteger, y: BigInteger) -> F2mPoint {
+        F2mPoint::new(Arc::clone(self), self.create_field_element(x), self.create_field_element(y))
+    }
+}
+
+/// Two curves are equal iff they share the same field and coefficients.
+///
+/// Corresponds to bc `ECCurve.Equals` (field, `a`, `b`). Coordinate system, order,
+/// and cofactor are configuration, not mathematical identity, so they are excluded.
+impl PartialEq for F2mCurve {
+    fn eq(&self, other: &Self) -> bool {
+        self.field == other.field && self.a == other.a && self.b == other.b
+    }
+}
+
+impl Eq for F2mCurve {}
+
+impl core::fmt::Debug for F2mCurve {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("F2mCurve")
+            .field("m", &self.field.m())
+            .field("a", &self.a.to_big_integer())
+            .field("b", &self.b.to_big_integer())
+            .finish()
+    }
+}
+
+/// Hashes the field and coefficients (matching [`PartialEq`]).
+impl core::hash::Hash for F2mCurve {
+    fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
+        self.field.hash(state);
+        self.a.hash(state);
+        self.b.hash(state);
+    }
 }
 
 #[cfg(test)]
@@ -194,5 +250,45 @@ mod tests {
         let c = F2mCurve::trinomial(4, 1, BigInteger::from_u32(1), BigInteger::from_u32(1), None, None);
         // bit_length 5 > m=4 → panic
         c.create_field_element(BigInteger::from_u32(0b1_0000));
+    }
+
+    #[test]
+    fn infinity_and_create_point() {
+        let c = Arc::new(F2mCurve::trinomial(
+            4,
+            1,
+            BigInteger::from_u32(0),
+            BigInteger::from_u32(1),
+            None,
+            None,
+        ));
+        assert!(c.infinity().is_infinity());
+
+        let p = c.create_point(BigInteger::from_u32(0b0010), BigInteger::from_u32(0b0011));
+        assert!(!p.is_infinity());
+        assert_eq!(p.x().unwrap().to_big_integer(), BigInteger::from_u32(0b0010));
+        assert_eq!(p.y().unwrap().to_big_integer(), BigInteger::from_u32(0b0011));
+        assert!(Arc::ptr_eq(p.curve(), &c)); // 點回指同一曲線
+    }
+
+    #[test]
+    fn curve_equality_compares_field_and_coeffs() {
+        let mk = |b: u32| {
+            F2mCurve::trinomial(233, 74, BigInteger::from_u32(1), BigInteger::from_u32(b), None, None)
+        };
+        assert_eq!(mk(7), mk(7));
+        assert_ne!(mk(7), mk(8)); // 係數不同
+        // 不同體域 → 不等。
+        let other = F2mCurve::pentanomial(
+            163,
+            3,
+            6,
+            7,
+            BigInteger::from_u32(1),
+            BigInteger::from_u32(7),
+            None,
+            None,
+        );
+        assert_ne!(mk(7), other);
     }
 }
