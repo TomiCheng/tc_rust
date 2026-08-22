@@ -14,6 +14,7 @@ pub mod named_curves;
 pub mod fp_field_element;
 pub mod fp_point;
 pub mod point_codec;
+pub mod rfc7748;
 
 pub use coordinate_system::CoordinateSystem;
 pub use f2m_curve::F2mCurve;
