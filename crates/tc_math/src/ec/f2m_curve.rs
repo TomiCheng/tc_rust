@@ -16,6 +16,7 @@ use crate::ec::coordinate_system::CoordinateSystem;
 use crate::ec::f2m_field::F2mField;
 use crate::ec::f2m_field_element::F2mFieldElement;
 use crate::ec::f2m_point::F2mPoint;
+use crate::ec::point_codec::PointDecodeError;
 
 /// A short-Weierstrass elliptic curve `y² + xy = x³ + ax² + b` over `GF(2ᵐ)`.
 ///
@@ -181,6 +182,123 @@ impl F2mCurve {
     pub fn create_point(self: &Arc<Self>, x: BigInteger, y: BigInteger) -> F2mPoint {
         F2mPoint::new(Arc::clone(self), self.create_field_element(x), self.create_field_element(y))
     }
+
+    /// Returns `true` if the affine point `(x, y)` satisfies `y² + xy = x³ + ax² + b`.
+    pub(crate) fn contains_affine(&self, x: &F2mFieldElement, y: &F2mFieldElement) -> bool {
+        let lhs = &y.square() + &(x * y); // y² + xy
+        let x2 = x.square();
+        let rhs = &(&(&x2 * x) + &(self.a() * &x2)) + self.b(); // x³ + a·x² + b
+        lhs == rhs
+    }
+
+    /// Solves `z² + z = beta` (X9.62 D.1.6), returning a solution or `None` if none
+    /// exists (the other solution is `z + 1`). Corresponds to bc
+    /// `SolveQuadraticEquation`.
+    ///
+    /// # Panics
+    ///
+    /// Panics for even `m` (the even-`m` fallback is not ported; all sect curves have
+    /// odd `m`).
+    fn solve_quadratic(&self, beta: &F2mFieldElement) -> Option<F2mFieldElement> {
+        assert!(self.field.m() & 1 == 1, "solve_quadratic: even m not supported");
+        let r = beta.half_trace();
+        // r²+r == beta 才是解；Tr(beta)≠0 時 half_trace 不滿足 → 無解。
+        if (&(&r.square() + &r) + beta).is_zero() { Some(r) } else { None }
+    }
+
+    /// Recovers an affine point from its `x`-coordinate and the compression parity bit
+    /// `y_tilde`. Corresponds to bc `DecompressPoint` (affine branch): with `x = 0`,
+    /// `y = √b`; otherwise solve `z² + z = b/x² + a + x` and take `y = z·x`, picking
+    /// the root whose parity matches `y_tilde`.
+    ///
+    /// Takes `self` as an `Arc` so the recovered point can back-reference the curve.
+    pub fn decompress_point(self: &Arc<Self>, y_tilde: u32, x1: BigInteger) -> Option<F2mPoint> {
+        let xp = self.create_field_element(x1);
+        let yp = if xp.is_zero() {
+            self.b().sqrt() // x = 0 → y = √b（F2m 平方根必存在）
+        } else {
+            // beta = b/x² + a + x
+            let beta = &(&(&xp.square().invert() * self.b()) + self.a()) + &xp;
+            let mut z = self.solve_quadratic(&beta)?; // None → x 不在曲線上
+            // 選奇偶相符的根：z 低位 ≠ y_tilde → 換另一解 z+1
+            if z.test_bit_zero() != (y_tilde == 1) {
+                z = z.add_one();
+            }
+            &z * &xp // affine：y = z·x
+        };
+        Some(F2mPoint::new(Arc::clone(self), xp, yp))
+    }
+
+    // 從位元組解析座標並確認 bit_length ≤ m（解不可信輸入，不能讓 create_field_element panic）。
+    fn parse_coordinate(&self, bytes: &[u8]) -> Result<F2mFieldElement, PointDecodeError> {
+        let v = BigInteger::from_bytes_be_unsigned(bytes);
+        if v.bit_length() as usize > self.field.m() {
+            return Err(PointDecodeError::CoordinateOutOfRange);
+        }
+        Ok(self.create_field_element(v))
+    }
+
+    /// Decodes a point from its SEC (X9.62 / SEC 1) encoding: infinity (`0x00`),
+    /// compressed (`0x02`/`0x03`), uncompressed (`0x04`), and hybrid (`0x06`/`0x07`).
+    /// Decoded coordinates are validated to lie on the curve.
+    ///
+    /// Corresponds to `DecodePoint` in bc. Takes `self` as an `Arc` for the back-ref.
+    pub fn decode_point(self: &Arc<Self>, encoded: &[u8]) -> Result<F2mPoint, PointDecodeError> {
+        let len = self.field_element_encoding_length();
+        let (&type_byte, rest) = encoded.split_first().ok_or(PointDecodeError::Empty)?;
+
+        match type_byte {
+            0x00 => {
+                if rest.is_empty() {
+                    Ok(F2mPoint::infinity(Arc::clone(self)))
+                } else {
+                    Err(PointDecodeError::InvalidLength)
+                }
+            }
+            0x02 | 0x03 => {
+                // 壓縮：prefix + X（decompress 內含 half_trace 驗證在曲線上）。
+                if rest.len() != len {
+                    return Err(PointDecodeError::InvalidLength);
+                }
+                let x = BigInteger::from_bytes_be_unsigned(rest);
+                if x.bit_length() as usize > self.field.m() {
+                    return Err(PointDecodeError::CoordinateOutOfRange);
+                }
+                let y_tilde = (type_byte & 1) as u32;
+                self.decompress_point(y_tilde, x).ok_or(PointDecodeError::NotOnCurve)
+            }
+            0x04 => {
+                // 未壓縮：prefix + X + Y。
+                if rest.len() != 2 * len {
+                    return Err(PointDecodeError::InvalidLength);
+                }
+                let x = self.parse_coordinate(&rest[..len])?;
+                let y = self.parse_coordinate(&rest[len..])?;
+                if !self.contains_affine(&x, &y) {
+                    return Err(PointDecodeError::NotOnCurve);
+                }
+                Ok(F2mPoint::new(Arc::clone(self), x, y))
+            }
+            0x06 | 0x07 => {
+                // 混合：同未壓縮，前綴另帶 y-tilde（0x07 = 1）。
+                if rest.len() != 2 * len {
+                    return Err(PointDecodeError::InvalidLength);
+                }
+                let x = self.parse_coordinate(&rest[..len])?;
+                let y = self.parse_coordinate(&rest[len..])?;
+                // F2m y-tilde：x=0 → false，否則 (y/x) 低位。
+                let y_tilde = !x.is_zero() && (&y / &x).test_bit_zero();
+                if y_tilde != (type_byte == 0x07) {
+                    return Err(PointDecodeError::InconsistentHybridY);
+                }
+                if !self.contains_affine(&x, &y) {
+                    return Err(PointDecodeError::NotOnCurve);
+                }
+                Ok(F2mPoint::new(Arc::clone(self), x, y))
+            }
+            other => Err(PointDecodeError::UnknownEncoding(other)),
+        }
+    }
 }
 
 /// Two curves are equal iff they share the same field and coefficients.
@@ -306,5 +424,26 @@ mod tests {
             None,
         );
         assert_ne!(mk(7), other);
+    }
+
+    #[test]
+    fn decode_errors() {
+        let c = Arc::new(F2mCurve::pentanomial(
+            163,
+            3,
+            6,
+            7,
+            BigInteger::from_u32(1),
+            BigInteger::from_u32(1),
+            None,
+            None,
+        ));
+        assert_eq!(c.decode_point(&[]), Err(PointDecodeError::Empty));
+        // 壓縮長度錯（163 → len 21，這裡只給 1 byte X）。
+        assert_eq!(c.decode_point(&[0x02, 0x01]), Err(PointDecodeError::InvalidLength));
+        // 未知前綴。
+        assert_eq!(c.decode_point(&[0x09]), Err(PointDecodeError::UnknownEncoding(0x09)));
+        // 0x00 後多帶資料 → 長度錯。
+        assert_eq!(c.decode_point(&[0x00, 0x00]), Err(PointDecodeError::InvalidLength));
     }
 }

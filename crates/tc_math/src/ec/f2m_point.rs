@@ -518,4 +518,20 @@ mod tests {
         let expected = if (y / x).test_bit_zero() { 0x03 } else { 0x02 };
         assert_eq!(g.encode(true)[0], expected);
     }
+
+    #[test]
+    fn encode_decode_roundtrip() {
+        let c = sect163k1();
+        let g = base_g(&c);
+        // 壓縮/未壓縮都 round-trip（壓縮走 decompress → half_trace → 選根）。
+        for compressed in [false, true] {
+            let decoded = c.decode_point(&g.encode(compressed)).unwrap();
+            assert_eq!(decoded, g, "compressed={compressed}");
+        }
+        // 2G 壓縮 round-trip（另一個 y-tilde）。
+        let two_g = g.twice();
+        assert_eq!(c.decode_point(&two_g.encode(true)).unwrap(), two_g);
+        // 無窮遠。
+        assert!(c.decode_point(&c.infinity().encode(true)).unwrap().is_infinity());
+    }
 }
