@@ -178,6 +178,219 @@ pub fn sect283r1() -> (Arc<F2mCurve>, F2mPoint) {
     (curve, g)
 }
 
+// --- 已淘汰的弱質數曲線（< 96-bit 安全強度；僅為完整對照 bc / 舊資料互通保留）---
+
+/// **Obsolete** SEC 2 secp112r1（~56-bit 安全）。
+#[deprecated(note = "cryptographically weak (~56-bit); interop/completeness only")]
+pub fn secp112r1() -> (Arc<FpCurve>, FpPoint) {
+    let p = h("DB7C2ABF62E35E668076BEAD208B");
+    let a = h("DB7C2ABF62E35E668076BEAD2088");
+    let b = h("659EF8BA043916EEDE8911702B22");
+    let n = h("DB7C2ABF62E35E7628DFAC6561C5");
+    let curve = Arc::new(FpCurve::new(p, a, b, Some(n), Some(i(1))));
+    let g = curve.decode_point(&hb("0409487239995A5EE76B55F9C2F098A89CE5AF8724C0A23E0E0FF77500")).unwrap();
+    (curve, g)
+}
+
+/// **Obsolete** SEC 2 secp112r2（~56-bit，h=4）。
+#[deprecated(note = "cryptographically weak (~56-bit); interop/completeness only")]
+pub fn secp112r2() -> (Arc<FpCurve>, FpPoint) {
+    let p = h("DB7C2ABF62E35E668076BEAD208B");
+    let a = h("6127C24C05F38A0AAAF65C0EF02C");
+    let b = h("51DEF1815DB5ED74FCC34C85D709");
+    let n = h("36DF0AAFD8B8D7597CA10520D04B");
+    let curve = Arc::new(FpCurve::new(p, a, b, Some(n), Some(i(4))));
+    let g = curve.decode_point(&hb("044BA30AB5E892B4E1649DD0928643ADCD46F5882E3747DEF36E956E97")).unwrap();
+    (curve, g)
+}
+
+/// **Obsolete** SEC 2 secp128r1（~64-bit）。
+#[deprecated(note = "cryptographically weak (~64-bit); interop/completeness only")]
+pub fn secp128r1() -> (Arc<FpCurve>, FpPoint) {
+    let p = h("FFFFFFFDFFFFFFFFFFFFFFFFFFFFFFFF");
+    let a = h("FFFFFFFDFFFFFFFFFFFFFFFFFFFFFFFC");
+    let b = h("E87579C11079F43DD824993C2CEE5ED3");
+    let n = h("FFFFFFFE0000000075A30D1B9038A115");
+    let curve = Arc::new(FpCurve::new(p, a, b, Some(n), Some(i(1))));
+    let g = curve.decode_point(&hb("04161FF7528B899B2D0C28607CA52C5B86CF5AC8395BAFEB13C02DA292DDED7A83")).unwrap();
+    (curve, g)
+}
+
+/// **Obsolete** SEC 2 secp128r2（~64-bit，h=4）。
+#[deprecated(note = "cryptographically weak (~64-bit); interop/completeness only")]
+pub fn secp128r2() -> (Arc<FpCurve>, FpPoint) {
+    let p = h("FFFFFFFDFFFFFFFFFFFFFFFFFFFFFFFF");
+    let a = h("D6031998D1B3BBFEBF59CC9BBFF9AEE1");
+    let b = h("5EEEFCA380D02919DC2C6558BB6D8A5D");
+    let n = h("3FFFFFFF7FFFFFFFBE0024720613B5A3");
+    let curve = Arc::new(FpCurve::new(p, a, b, Some(n), Some(i(4))));
+    let g = curve.decode_point(&hb("047B6AA5D85E572983E6FB32A7CDEBC14027B6916A894D3AEE7106FE805FC34B44")).unwrap();
+    (curve, g)
+}
+
+/// **Obsolete** SEC 2 secp160k1 Koblitz（~80-bit）。
+#[deprecated(note = "cryptographically weak (~80-bit); interop/completeness only")]
+pub fn secp160k1() -> (Arc<FpCurve>, FpPoint) {
+    let p = h("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFAC73");
+    let n = h("0100000000000000000001B8FA16DFAB9ACA16B6B3");
+    let curve = Arc::new(FpCurve::new(p, i(0), i(7), Some(n), Some(i(1))));
+    let g = curve.decode_point(&hb("043B4C382CE37AA192A4019E763036F4F5DD4D7EBB938CF935318FDCED6BC28286531733C3F03C4FEE")).unwrap();
+    (curve, g)
+}
+
+/// **Obsolete** SEC 2 secp160r1（~80-bit）。
+#[deprecated(note = "cryptographically weak (~80-bit); interop/completeness only")]
+pub fn secp160r1() -> (Arc<FpCurve>, FpPoint) {
+    let p = h("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF7FFFFFFF");
+    let a = h("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF7FFFFFFC");
+    let b = h("1C97BEFC54BD7A8B65ACF89F81D4D4ADC565FA45");
+    let n = h("0100000000000000000001F4C8F927AED3CA752257");
+    let curve = Arc::new(FpCurve::new(p, a, b, Some(n), Some(i(1))));
+    let g = curve.decode_point(&hb("044A96B5688EF573284664698968C38BB913CBFC8223A628553168947D59DCC912042351377AC5FB32")).unwrap();
+    (curve, g)
+}
+
+/// **Obsolete** SEC 2 secp160r2（~80-bit）。
+#[deprecated(note = "cryptographically weak (~80-bit); interop/completeness only")]
+pub fn secp160r2() -> (Arc<FpCurve>, FpPoint) {
+    let p = h("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFAC73");
+    let a = h("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFAC70");
+    let b = h("B4E134D3FB59EB8BAB57274904664D5AF50388BA");
+    let n = h("0100000000000000000000351EE786A818F3A1A16B");
+    let curve = Arc::new(FpCurve::new(p, a, b, Some(n), Some(i(1))));
+    let g = curve.decode_point(&hb("0452DCB034293A117E1F4FF11B30F7199D3144CE6DFEAFFEF2E331F296E071FA0DF9982CFEA7D43F2E")).unwrap();
+    (curve, g)
+}
+
+// --- 已淘汰的弱二元曲線 ---
+
+/// **Obsolete** SEC 2 sect113r1（x¹¹³+x⁹+1，~56-bit）。
+#[deprecated(note = "cryptographically weak (~56-bit); interop/completeness only")]
+pub fn sect113r1() -> (Arc<F2mCurve>, F2mPoint) {
+    let a = h("003088250CA6E7C7FE649CE85820F7");
+    let b = h("00E8BEE4D3E2260744188BE0E9C723");
+    let n = h("0100000000000000D9CCEC8A39E56F");
+    let curve = Arc::new(F2mCurve::trinomial(113, 9, a, b, Some(n), Some(i(2))));
+    let g = curve.decode_point(&hb("04009D73616F35F4AB1407D73562C10F00A52830277958EE84D1315ED31886")).unwrap();
+    (curve, g)
+}
+
+/// **Obsolete** SEC 2 sect113r2（x¹¹³+x⁹+1，~56-bit）。
+#[deprecated(note = "cryptographically weak (~56-bit); interop/completeness only")]
+pub fn sect113r2() -> (Arc<F2mCurve>, F2mPoint) {
+    let a = h("00689918DBEC7E5A0DD6DFC0AA55C7");
+    let b = h("0095E9A9EC9B297BD4BF36E059184F");
+    let n = h("010000000000000108789B2496AF93");
+    let curve = Arc::new(F2mCurve::trinomial(113, 9, a, b, Some(n), Some(i(2))));
+    let g = curve.decode_point(&hb("0401A57A6A7B26CA5EF52FCDB816479700B3ADC94ED1FE674C06E695BABA1D")).unwrap();
+    (curve, g)
+}
+
+/// **Obsolete** SEC 2 sect131r1（x¹³¹+x⁸+x³+x²+1，~65-bit）。
+#[deprecated(note = "cryptographically weak (~65-bit); interop/completeness only")]
+pub fn sect131r1() -> (Arc<F2mCurve>, F2mPoint) {
+    let a = h("07A11B09A76B562144418FF3FF8C2570B8");
+    let b = h("0217C05610884B63B9C6C7291678F9D341");
+    let n = h("0400000000000000023123953A9464B54D");
+    let curve = Arc::new(F2mCurve::pentanomial(131, 2, 3, 8, a, b, Some(n), Some(i(2))));
+    let g = curve.decode_point(&hb("040081BAF91FDF9833C40F9C181343638399078C6E7EA38C001F73C8134B1B4EF9E150")).unwrap();
+    (curve, g)
+}
+
+/// **Obsolete** SEC 2 sect131r2（x¹³¹+x⁸+x³+x²+1，~65-bit）。
+#[deprecated(note = "cryptographically weak (~65-bit); interop/completeness only")]
+pub fn sect131r2() -> (Arc<F2mCurve>, F2mPoint) {
+    let a = h("03E5A88919D7CAFCBF415F07C2176573B2");
+    let b = h("04B8266A46C55657AC734CE38F018F2192");
+    let n = h("0400000000000000016954A233049BA98F");
+    let curve = Arc::new(F2mCurve::pentanomial(131, 2, 3, 8, a, b, Some(n), Some(i(2))));
+    let g = curve.decode_point(&hb("040356DCD8F2F95031AD652D23951BB366A80648F06D867940A5366D9E265DE9EB240F")).unwrap();
+    (curve, g)
+}
+
+// --- 其餘二元曲線（sect163 r 變體、193、239、409、571）---
+
+/// SEC 2 sect163r1（x¹⁶³+x⁷+x⁶+x³+1）。
+pub fn sect163r1() -> (Arc<F2mCurve>, F2mPoint) {
+    let a = h("07B6882CAAEFA84F9554FF8428BD88E246D2782AE2");
+    let b = h("0713612DCDDCB40AAB946BDA29CA91F73AF958AFD9");
+    let n = h("03FFFFFFFFFFFFFFFFFFFF48AAB689C29CA710279B");
+    let curve = Arc::new(F2mCurve::pentanomial(163, 3, 6, 7, a, b, Some(n), Some(i(2))));
+    let g = curve.decode_point(&hb("040369979697AB43897789566789567F787A7876A65400435EDB42EFAFB2989D51FEFCE3C80988F41FF883")).unwrap();
+    (curve, g)
+}
+
+/// SEC 2 sect163r2（x¹⁶³+x⁷+x⁶+x³+1，a=1）。
+pub fn sect163r2() -> (Arc<F2mCurve>, F2mPoint) {
+    let b = h("020A601907B8C953CA1481EB10512F78744A3205FD");
+    let n = h("040000000000000000000292FE77E70C12A4234C33");
+    let curve = Arc::new(F2mCurve::pentanomial(163, 3, 6, 7, i(1), b, Some(n), Some(i(2))));
+    let g = curve.decode_point(&hb("0403F0EBA16286A2D57EA0991168D4994637E8343E3600D51FBC6C71A0094FA2CDD545B11C5C0C797324F1")).unwrap();
+    (curve, g)
+}
+
+/// SEC 2 sect193r1（x¹⁹³+x¹⁵+1）。
+pub fn sect193r1() -> (Arc<F2mCurve>, F2mPoint) {
+    let a = h("0017858FEB7A98975169E171F77B4087DE098AC8A911DF7B01");
+    let b = h("00FDFB49BFE6C3A89FACADAA7A1E5BBC7CC1C2E5D831478814");
+    let n = h("01000000000000000000000000C7F34A778F443ACC920EBA49");
+    let curve = Arc::new(F2mCurve::trinomial(193, 15, a, b, Some(n), Some(i(2))));
+    let g = curve.decode_point(&hb("0401F481BC5F0FF84A74AD6CDF6FDEF4BF6179625372D8C0C5E10025E399F2903712CCF3EA9E3A1AD17FB0B3201B6AF7CE1B05")).unwrap();
+    (curve, g)
+}
+
+/// SEC 2 sect193r2（x¹⁹³+x¹⁵+1）。
+pub fn sect193r2() -> (Arc<F2mCurve>, F2mPoint) {
+    let a = h("0163F35A5137C2CE3EA6ED8667190B0BC43ECD69977702709B");
+    let b = h("00C9BB9E8927D4D64C377E2AB2856A5B16E3EFB7F61D4316AE");
+    let n = h("010000000000000000000000015AAB561B005413CCD4EE99D5");
+    let curve = Arc::new(F2mCurve::trinomial(193, 15, a, b, Some(n), Some(i(2))));
+    let g = curve.decode_point(&hb("0400D9B67D192E0367C803F39E1A7E82CA14A651350AAE617E8F01CE94335607C304AC29E7DEFBD9CA01F596F927224CDECF6C")).unwrap();
+    (curve, g)
+}
+
+/// SEC 2 sect239k1 Koblitz（x²³⁹+x¹⁵⁸+1，a=0, b=1, h=4）。
+pub fn sect239k1() -> (Arc<F2mCurve>, F2mPoint) {
+    let n = h("2000000000000000000000000000005A79FEC67CB6E91F1C1DA800E478A5");
+    let curve = Arc::new(F2mCurve::trinomial(239, 158, i(0), i(1), Some(n), Some(i(4))));
+    let g = curve.decode_point(&hb("0429A0B6A887A983E9730988A68727A8B2D126C44CC2CC7B2A6555193035DC76310804F12E549BDB011C103089E73510ACB275FC312A5DC6B76553F0CA")).unwrap();
+    (curve, g)
+}
+
+/// SEC 2 sect409k1 Koblitz（x⁴⁰⁹+x⁸⁷+1，a=0, b=1, h=4）。
+pub fn sect409k1() -> (Arc<F2mCurve>, F2mPoint) {
+    let n = h("7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFE5F83B2D4EA20400EC4557D5ED3E3E7CA5B4B5C83B8E01E5FCF");
+    let curve = Arc::new(F2mCurve::trinomial(409, 87, i(0), i(1), Some(n), Some(i(4))));
+    let g = curve.decode_point(&hb("040060F05F658F49C1AD3AB1890F7184210EFD0987E307C84C27ACCFB8F9F67CC2C460189EB5AAAA62EE222EB1B35540CFE902374601E369050B7C4E42ACBA1DACBF04299C3460782F918EA427E6325165E9EA10E3DA5F6C42E9C55215AA9CA27A5863EC48D8E0286B")).unwrap();
+    (curve, g)
+}
+
+/// SEC 2 sect409r1（x⁴⁰⁹+x⁸⁷+1，a=1, h=2）。
+pub fn sect409r1() -> (Arc<F2mCurve>, F2mPoint) {
+    let b = h("0021A5C2C8EE9FEB5C4B9A753B7B476B7FD6422EF1F3DD674761FA99D6AC27C8A9A197B272822F6CD57A55AA4F50AE317B13545F");
+    let n = h("010000000000000000000000000000000000000000000000000001E2AAD6A612F33307BE5FA47C3C9E052F838164CD37D9A21173");
+    let curve = Arc::new(F2mCurve::trinomial(409, 87, i(1), b, Some(n), Some(i(2))));
+    let g = curve.decode_point(&hb("04015D4860D088DDB3496B0C6064756260441CDE4AF1771D4DB01FFE5B34E59703DC255A868A1180515603AEAB60794E54BB7996A70061B1CFAB6BE5F32BBFA78324ED106A7636B9C5A7BD198D0158AA4F5488D08F38514F1FDF4B4F40D2181B3681C364BA0273C706")).unwrap();
+    (curve, g)
+}
+
+/// SEC 2 sect571k1 Koblitz（x⁵⁷¹+x¹⁰+x⁵+x²+1，a=0, b=1, h=4）。
+pub fn sect571k1() -> (Arc<F2mCurve>, F2mPoint) {
+    let n = h("020000000000000000000000000000000000000000000000000000000000000000000000131850E1F19A63E4B391A8DB917F4138B630D84BE5D639381E91DEB45CFE778F637C1001");
+    let curve = Arc::new(F2mCurve::pentanomial(571, 2, 5, 10, i(0), i(1), Some(n), Some(i(4))));
+    let g = curve.decode_point(&hb("04026EB7A859923FBC82189631F8103FE4AC9CA2970012D5D46024804801841CA44370958493B205E647DA304DB4CEB08CBBD1BA39494776FB988B47174DCA88C7E2945283A01C89720349DC807F4FBF374F4AEADE3BCA95314DD58CEC9F307A54FFC61EFC006D8A2C9D4979C0AC44AEA74FBEBBB9F772AEDCB620B01A7BA7AF1B320430C8591984F601CD4C143EF1C7A3")).unwrap();
+    (curve, g)
+}
+
+/// SEC 2 sect571r1（x⁵⁷¹+x¹⁰+x⁵+x²+1，a=1, h=2）。
+pub fn sect571r1() -> (Arc<F2mCurve>, F2mPoint) {
+    let b = h("02F40E7E2221F295DE297117B7F3D62F5C6A97FFCB8CEFF1CD6BA8CE4A9A18AD84FFABBD8EFA59332BE7AD6756A66E294AFD185A78FF12AA520E4DE739BACA0C7FFEFF7F2955727A");
+    let n = h("03FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFE661CE18FF55987308059B186823851EC7DD9CA1161DE93D5174D66E8382E9BB2FE84E47");
+    let curve = Arc::new(F2mCurve::pentanomial(571, 2, 5, 10, i(1), b, Some(n), Some(i(2))));
+    let g = curve.decode_point(&hb("040303001D34B856296C16C0D40D3CD7750A93D1D2955FA80AA5F40FC8DB7B2ABDBDE53950F4C0D293CDD711A35B67FB1499AE60038614F1394ABFA3B4C850D927E1E7769C8EEC2D19037BF27342DA639B6DCCFFFEB73D69D78C6C27A6009CBBCA1980F8533921E8A684423E43BAB08A576291AF8F461BB2A8B3531D2F0485C19B16E2F1516E23DD3C1A4827AF1B8AC15B")).unwrap();
+    (curve, g)
+}
+
 /// 16 進位字串 → BigInteger（模組內小工具，供各命名曲線共用）。
 fn h(s: &str) -> BigInteger {
     BigInteger::from_str_radix(s, 16).unwrap()
@@ -197,11 +410,19 @@ fn hb(s: &str) -> alloc::vec::Vec<u8> {
 mod tests {
     use super::*;
 
-    // 每條命名曲線都驗：基點非無窮遠、n·G=O（參數正確）、壓縮/未壓縮 encode→decode
-    // round-trip（含 decompress）。decode_point 建基點時已驗在曲線上（a/b/G 一致）。
+    // routine 驗證（快）：field_size + 基點壓縮/未壓縮 decode round-trip。decode 建基點
+    // 已驗在曲線上（a/b/G 一致）。昂貴的 n·G=O 移到下面 #[ignore] 的測試。
+    #[allow(deprecated)] // 涵蓋已淘汰的弱曲線
     #[test]
     fn all_fp_named_curves_verify() {
         let curves = [
+            ("secp112r1", secp112r1(), 112),
+            ("secp112r2", secp112r2(), 112),
+            ("secp128r1", secp128r1(), 128),
+            ("secp128r2", secp128r2(), 128),
+            ("secp160k1", secp160k1(), 160),
+            ("secp160r1", secp160r1(), 160),
+            ("secp160r2", secp160r2(), 160),
             ("secp192k1", secp192k1(), 192),
             ("secp192r1", secp192r1(), 192),
             ("secp224k1", secp224k1(), 224),
@@ -214,27 +435,64 @@ mod tests {
         for (name, (c, g), bits) in curves {
             assert_eq!(c.field_size(), bits, "{name} field_size");
             assert!(!g.is_infinity(), "{name} G");
-            assert!((&g * c.order().unwrap()).is_infinity(), "{name} n·G");
             assert_eq!(c.decode_point(&g.encode(true)).unwrap(), g, "{name} compressed");
             assert_eq!(c.decode_point(&g.encode(false)).unwrap(), g, "{name} uncompressed");
         }
     }
 
+    #[allow(deprecated)]
     #[test]
     fn all_f2m_named_curves_verify() {
         let curves = [
+            ("sect113r1", sect113r1(), 113),
+            ("sect113r2", sect113r2(), 113),
+            ("sect131r1", sect131r1(), 131),
+            ("sect131r2", sect131r2(), 131),
             ("sect163k1", sect163k1(), 163),
+            ("sect163r1", sect163r1(), 163),
+            ("sect163r2", sect163r2(), 163),
+            ("sect193r1", sect193r1(), 193),
+            ("sect193r2", sect193r2(), 193),
             ("sect233k1", sect233k1(), 233),
             ("sect233r1", sect233r1(), 233),
+            ("sect239k1", sect239k1(), 239),
             ("sect283k1", sect283k1(), 283),
             ("sect283r1", sect283r1(), 283),
+            ("sect409k1", sect409k1(), 409),
+            ("sect409r1", sect409r1(), 409),
+            ("sect571k1", sect571k1(), 571),
+            ("sect571r1", sect571r1(), 571),
         ];
         for (name, (c, g), bits) in curves {
             assert_eq!(c.field_size(), bits, "{name} field_size");
             assert!(!g.is_infinity(), "{name} G");
-            assert!((&g * c.order().unwrap()).is_infinity(), "{name} n·G");
             assert_eq!(c.decode_point(&g.encode(true)).unwrap(), g, "{name} compressed");
             assert_eq!(c.decode_point(&g.encode(false)).unwrap(), g, "{name} uncompressed");
         }
     }
+
+    // 完整 n·G=O（驗群階 n 與純量乘全路徑）。affine 變動時間 + 大體域反元素很慢
+    // （sect571 尤甚），故標 #[ignore]；跑：`cargo test -- --ignored`（建議 --release）。
+    #[allow(deprecated)]
+    #[test]
+    #[ignore = "slow: full n·G=O over all curves incl. sect571"]
+    fn all_named_curves_n_times_g_is_infinity() {
+        let fp = [
+            secp112r1(), secp112r2(), secp128r1(), secp128r2(), secp160k1(), secp160r1(),
+            secp160r2(), secp192k1(), secp192r1(), secp224k1(), secp224r1(), secp256k1(),
+            secp256r1(), secp384r1(), secp521r1(),
+        ];
+        for (c, g) in fp {
+            assert!((&g * c.order().unwrap()).is_infinity());
+        }
+        let f2m = [
+            sect113r1(), sect113r2(), sect131r1(), sect131r2(), sect163k1(), sect163r1(),
+            sect163r2(), sect193r1(), sect193r2(), sect233k1(), sect233r1(), sect239k1(),
+            sect283k1(), sect283r1(), sect409k1(), sect409r1(), sect571k1(), sect571r1(),
+        ];
+        for (c, g) in f2m {
+            assert!((&g * c.order().unwrap()).is_infinity());
+        }
+    }
 }
+
