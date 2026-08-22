@@ -7,7 +7,7 @@
 
 use alloc::sync::Arc;
 use alloc::vec::Vec;
-use core::ops::{Add, Neg};
+use core::ops::{Add, Neg, Sub};
 
 use crate::ec::coordinate_system::CoordinateSystem;
 use crate::ec::f2m_curve::F2mCurve;
@@ -145,6 +145,21 @@ impl Add for &F2mPoint {
             CoordinateSystem::Affine => self.add_affine(x1, y1, x2, y2),
             _ => todo!("add: only affine coordinates are implemented"),
         }
+    }
+}
+
+/// Point subtraction `self − rhs`, i.e. `self + (−rhs)`.
+///
+/// Corresponds to `Subtract` in bc (`Add(b.Negate())`, with a fast path when `rhs`
+/// is the point at infinity).
+impl Sub for &F2mPoint {
+    type Output = F2mPoint;
+
+    fn sub(self, rhs: &F2mPoint) -> F2mPoint {
+        if rhs.is_infinity() {
+            return self.clone(); // P − O = P
+        }
+        self + &(-rhs) // P + (−Q)
     }
 }
 
@@ -300,5 +315,18 @@ mod tests {
         assert!(on_curve(&three_g), "3G 應在曲線上（驗證相異點加法公式）");
         // 3G ≠ G（sanity）
         assert_ne!(three_g.x().unwrap().to_big_integer(), g.x().unwrap().to_big_integer());
+    }
+
+    #[test]
+    fn subtract_is_add_negate() {
+        let c = sect163k1();
+        let g = base_g(&c);
+        // G − G = O、G − O = G
+        assert!((&g - &g).is_infinity());
+        assert_eq!((&g - &c.infinity()).x().unwrap(), g.x().unwrap());
+        // 2G − G = G
+        let back = &g.twice() - &g;
+        assert_eq!(back.x().unwrap(), g.x().unwrap());
+        assert_eq!(back.y().unwrap(), g.y().unwrap());
     }
 }
