@@ -112,6 +112,49 @@ impl BinaryPoly {
     pub fn bit_length(&self) -> usize {
         bit_length_var(&self.limbs)
     }
+
+    /// Returns `self · rhs mod r(x)` using the supplied multiply operator, which
+    /// carries the reduction polynomial `r(x)`.
+    ///
+    /// This is the bridge from the value type to the slice-based operator layer:
+    /// it allocates the output, delegates to `op`, and wraps the result. `self` and
+    /// `rhs` must have `op.size()` limbs.
+    pub fn multiply(&self, rhs: &BinaryPoly, op: &dyn BinPolyMul) -> BinaryPoly {
+        debug_assert_eq!(self.limbs.len(), op.size());
+        debug_assert_eq!(rhs.limbs.len(), op.size());
+        let mut z = vec![0u64; op.size()];
+        op.multiply(&self.limbs, &rhs.limbs, &mut z);
+        BinaryPoly { limbs: z.into_boxed_slice() }
+    }
+
+    /// Returns `self² mod r(x)` using the supplied multiply operator.
+    pub fn square(&self, op: &dyn BinPolyMul) -> BinaryPoly {
+        debug_assert_eq!(self.limbs.len(), op.size());
+        let mut z = vec![0u64; op.size()];
+        op.square(&self.limbs, &mut z);
+        BinaryPoly { limbs: z.into_boxed_slice() }
+    }
+
+    /// Returns `self^(2^pow) mod r(x)` — `pow` repeated squarings. `pow == 0` returns
+    /// a clone of `self`.
+    pub fn square_pow(&self, pow: usize, op: &dyn BinPolyMul) -> BinaryPoly {
+        debug_assert_eq!(self.limbs.len(), op.size());
+        if pow == 0 {
+            return self.clone();
+        }
+        let mut z = vec![0u64; op.size()];
+        op.square_n(&self.limbs, pow, &mut z);
+        BinaryPoly { limbs: z.into_boxed_slice() }
+    }
+
+    /// Returns `self⁻¹ mod r(x)` using the supplied inverse operator. By convention
+    /// `0⁻¹ = 0` (the operator has no special case; the cost is value-independent).
+    pub fn invert(&self, op: &dyn BinPolyInv) -> BinaryPoly {
+        debug_assert_eq!(self.limbs.len(), op.size());
+        let mut z = vec![0u64; op.size()];
+        op.invert(&self.limbs, &mut z);
+        BinaryPoly { limbs: z.into_boxed_slice() }
+    }
 }
 
 /// Polynomial addition over `GF(2)` (limb-wise XOR). No reduction needed: a
@@ -265,5 +308,59 @@ mod tests {
         assert_eq!(equal_to_one(&[1u64, 1]), 0);
         assert_eq!(equal_to(&[1u64, 2], &[1u64, 2]), u64::MAX);
         assert_eq!(equal_to(&[1u64, 2], &[1u64, 3]), 0);
+    }
+
+    // 造一個 degree < n 的隨機多項式（xorshift 填 limb、遮掉最高 limb 的超額位元）。
+    fn masked_poly(n: usize, seed: u64) -> BinaryPoly {
+        let sz = size(n);
+        let mut s = seed | 1;
+        let mut limbs = vec![0u64; sz];
+        for l in limbs.iter_mut() {
+            s ^= s << 13;
+            s ^= s >> 7;
+            s ^= s << 17;
+            *l = s;
+        }
+        let sbits = n % 64;
+        if sbits != 0 {
+            limbs[sz - 1] &= !(u64::MAX << sbits);
+        }
+        BinaryPoly::from_limbs(limbs)
+    }
+
+    #[test]
+    fn multiply_identity_and_zero() {
+        // GF(2^233)，x^233 + x^74 + 1
+        let op = create_binpoly_mul_trinomial(233, 74);
+        let sz = size(233);
+        let a = masked_poly(233, 0xDEAD_BEEF);
+        assert_eq!(a.multiply(&BinaryPoly::one(sz), &*op), a); // a·1 = a
+        assert!(a.multiply(&BinaryPoly::zero(sz), &*op).is_zero()); // a·0 = 0
+    }
+
+    #[test]
+    fn square_matches_self_multiply() {
+        let op = create_binpoly_mul_trinomial(233, 74);
+        let a = masked_poly(233, 0x1234_5678);
+        assert_eq!(a.square(&*op), a.multiply(&a, &*op));
+    }
+
+    #[test]
+    fn square_pow_iterates() {
+        let op = create_binpoly_mul_trinomial(233, 74);
+        let a = masked_poly(233, 0x0BAD_C0DE);
+        assert_eq!(a.square_pow(0, &*op), a); // pow 0 → self
+        let twice = a.square(&*op).square(&*op);
+        assert_eq!(a.square_pow(2, &*op), twice); // pow 2 = square∘square
+    }
+
+    #[test]
+    fn invert_round_trip() {
+        let op = create_binpoly_mul_trinomial(233, 74);
+        let inv = create(create_binpoly_mul_trinomial(233, 74));
+        let a = masked_poly(233, 0xFEED_FACE);
+        assert!(!a.is_zero());
+        let ai = a.invert(&*inv);
+        assert!(a.multiply(&ai, &*op).is_one()); // a·a⁻¹ = 1
     }
 }
