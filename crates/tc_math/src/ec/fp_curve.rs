@@ -100,7 +100,7 @@ impl FpCurve {
     /// # Panics
     ///
     /// Panics if `x` is negative or `>= q`.
-    pub fn field_element(&self, x: BigInteger) -> FpFieldElement {
+    pub fn create_field_element(&self, x: BigInteger) -> FpFieldElement {
         Self::make_field_element(&self.q, x, &self.r)
     }
 
@@ -159,8 +159,8 @@ impl FpCurve {
     /// constant-time) rejection-sampling comparison. Pass a cryptographically
     /// secure RNG when the value must be unpredictable.
     pub fn random_field_element(&self, rng: &mut dyn Rng) -> FpFieldElement {
-        let a = self.field_element(self.impl_random_field_element(rng));
-        let b = self.field_element(self.impl_random_field_element(rng));
+        let a = self.create_field_element(self.impl_random_field_element(rng));
+        let b = self.create_field_element(self.impl_random_field_element(rng));
         &a * &b
     }
 
@@ -169,8 +169,8 @@ impl FpCurve {
     /// Corresponds to `RandomFieldElementMult` in Bouncy Castle. See
     /// [`Self::random_field_element`] for the two-sample rationale.
     pub fn random_field_element_mult(&self, rng: &mut dyn Rng) -> FpFieldElement {
-        let a = self.field_element(self.impl_random_field_element_mult(rng));
-        let b = self.field_element(self.impl_random_field_element_mult(rng));
+        let a = self.create_field_element(self.impl_random_field_element_mult(rng));
+        let b = self.create_field_element(self.impl_random_field_element_mult(rng));
         &a * &b
     }
 
@@ -229,7 +229,7 @@ impl FpCurve {
     ///
     /// Panics if `x` or `y` is not in `[0, q)`.
     pub fn create_point(self: &Arc<Self>, x: BigInteger, y: BigInteger) -> FpPoint {
-        FpPoint::new(Arc::clone(self), self.field_element(x), self.field_element(y))
+        FpPoint::new(Arc::clone(self), self.create_field_element(x), self.create_field_element(y))
     }
 
     /// Recovers the point with x-coordinate `x1` and the given y-parity from the
@@ -243,7 +243,7 @@ impl FpCurve {
     /// Corresponds to `DecompressPoint` in Bouncy Castle. Takes `self` as an
     /// `Arc` so the recovered point can hold a back-reference to the curve.
     pub fn decompress_point(self: &Arc<Self>, y_tilde: u32, x1: BigInteger) -> Option<FpPoint> {
-        let x = self.field_element(x1);
+        let x = self.create_field_element(x1);
         // rhs = x³ + ax + b（Horner：(x² + a)·x + b）
         let rhs = &(&(&x.square() + self.a()) * &x) + self.b();
         let y = rhs.sqrt()?; // None = x 不在曲線上（rhs 非二次剩餘）
@@ -281,13 +281,13 @@ impl FpCurve {
         y.square() == rhs
     }
 
-    // 從位元組解析一個座標並確認落在 [0, q)（解不可信輸入，不能讓 field_element panic）。
+    // 從位元組解析一個座標並確認落在 [0, q)（解不可信輸入，不能讓 create_field_element panic）。
     fn parse_coordinate(&self, bytes: &[u8]) -> Result<FpFieldElement, PointDecodeError> {
         let v = BigInteger::from_bytes_be_unsigned(bytes);
         if &v >= self.q() {
             return Err(PointDecodeError::CoordinateOutOfRange);
         }
-        Ok(self.field_element(v))
+        Ok(self.create_field_element(v))
     }
 
     /// Decodes a point from its SEC (X9.62 / SEC 1) encoding.
@@ -450,10 +450,10 @@ mod tests {
     #[test]
     fn contains_affine_checks_curve_equation() {
         let curve = curve17();
-        let x = curve.field_element(BigInteger::from_u32(5));
+        let x = curve.create_field_element(BigInteger::from_u32(5));
         // (5,1) 在曲線上、(5,2) 不在。
-        assert!(curve.contains_affine(&x, &curve.field_element(BigInteger::from_u32(1))));
-        assert!(!curve.contains_affine(&x, &curve.field_element(BigInteger::from_u32(2))));
+        assert!(curve.contains_affine(&x, &curve.create_field_element(BigInteger::from_u32(1))));
+        assert!(!curve.contains_affine(&x, &curve.create_field_element(BigInteger::from_u32(2))));
     }
 
     #[test]
@@ -566,16 +566,16 @@ mod tests {
     }
 
     #[test]
-    fn field_element_builds_element() {
+    fn create_field_element_builds_element() {
         let c = secp256k1();
-        let e = c.field_element(BigInteger::from_u32(5));
+        let e = c.create_field_element(BigInteger::from_u32(5));
         assert_eq!(e.as_ref(), &BigInteger::from_u32(5));
     }
 
     #[test]
     #[should_panic(expected = "value invalid")]
-    fn field_element_rejects_out_of_range() {
+    fn create_field_element_rejects_out_of_range() {
         let c = secp256k1();
-        c.field_element(c.q().clone()); // x == q 越界
+        c.create_field_element(c.q().clone()); // x == q 越界
     }
 }

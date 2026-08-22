@@ -356,8 +356,8 @@ mod tests {
     #[test]
     fn affine_point_exposes_coords() {
         let curve = secp256k1();
-        let x = curve.field_element(BigInteger::from_u32(2));
-        let y = curve.field_element(BigInteger::from_u32(3));
+        let x = curve.create_field_element(BigInteger::from_u32(2));
+        let y = curve.create_field_element(BigInteger::from_u32(3));
         let p = FpPoint::new(Arc::clone(&curve), x, y);
         assert!(!p.is_infinity());
         assert_eq!(p.x().unwrap().as_ref(), &BigInteger::from_u32(2));
@@ -378,8 +378,8 @@ mod tests {
     fn point17(curve: &Arc<FpCurve>, x: u32, y: u32) -> FpPoint {
         FpPoint::new(
             Arc::clone(curve),
-            curve.field_element(BigInteger::from_u32(x)),
-            curve.field_element(BigInteger::from_u32(y)),
+            curve.create_field_element(BigInteger::from_u32(x)),
+            curve.create_field_element(BigInteger::from_u32(y)),
         )
     }
 
@@ -534,8 +534,8 @@ mod tests {
     #[test]
     fn negate_flips_y() {
         let curve = secp256k1();
-        let x = curve.field_element(BigInteger::from_u32(2));
-        let y = curve.field_element(BigInteger::from_u32(3));
+        let x = curve.create_field_element(BigInteger::from_u32(2));
+        let y = curve.create_field_element(BigInteger::from_u32(3));
         let p = FpPoint::new(Arc::clone(&curve), x, y);
         let neg = -&p;
         // x 不變，y → q − 3。
