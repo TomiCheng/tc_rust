@@ -37,6 +37,24 @@ pub fn secp256k1() -> (Arc<FpCurve>, FpPoint) {
     (curve, g)
 }
 
+/// The SEC 2 **secp256r1** curve — NIST **P-256** — (`y² = x³ + ax + b` over GF(p)),
+/// with its base point `G`. `a = p − 3`; cofactor `h = 1`.
+///
+/// Its prime is byte-aligned with a non-all-ones top word, so field reduction takes
+/// the Barrett path (unlike secp256k1's pseudo-Mersenne).
+pub fn secp256r1() -> (Arc<FpCurve>, FpPoint) {
+    // p = 2^224·(2^32 − 1) + 2^192 + 2^96 − 1
+    let p = h("FFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFF");
+    let a = h("FFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFC"); // p − 3
+    let b = h("5AC635D8AA3A93E7B3EBBD55769886BC651D06B0CC53B0F63BCE3C3E27D2604B");
+    let n = h("FFFFFFFF00000000FFFFFFFFFFFFFFFFBCE6FAADA7179E84F3B9CAC2FC632551");
+    let curve = Arc::new(FpCurve::new(p, a, b, Some(n), Some(BigInteger::from_u32(1))));
+    let gx = h("6B17D1F2E12C4247F8BCE6E563A440F277037D812DEB33A0F4A13945D898C296");
+    let gy = h("4FE342E2FE1A7F9B8EE7EB4A7C0F9E162BCE33576B315ECECBB6406837BF51F5");
+    let g = curve.create_point(gx, gy);
+    (curve, g)
+}
+
 /// 16 進位字串 → BigInteger（模組內小工具，供各命名曲線共用）。
 fn h(s: &str) -> BigInteger {
     BigInteger::from_str_radix(s, 16).unwrap()
@@ -59,6 +77,22 @@ mod tests {
     fn secp256k1_base_point_roundtrips() {
         let (c, g) = secp256k1();
         // 壓縮/未壓縮 encode → decode 都回原基點。
+        for compressed in [false, true] {
+            assert_eq!(c.decode_point(&g.encode(compressed)).unwrap(), g);
+        }
+    }
+
+    #[test]
+    fn secp256r1_n_times_g_is_infinity() {
+        let (c, g) = secp256r1();
+        assert_eq!(c.field_size(), 256);
+        assert!(!g.is_infinity());
+        assert!((&g * c.order().unwrap()).is_infinity()); // n·G = O（Barrett 約簡路徑）
+    }
+
+    #[test]
+    fn secp256r1_base_point_roundtrips() {
+        let (c, g) = secp256r1();
         for compressed in [false, true] {
             assert_eq!(c.decode_point(&g.encode(compressed)).unwrap(), g);
         }
