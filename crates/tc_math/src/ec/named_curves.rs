@@ -13,6 +13,8 @@
 use alloc::sync::Arc;
 
 use crate::big_integer::BigInteger;
+use crate::ec::f2m_curve::F2mCurve;
+use crate::ec::f2m_point::F2mPoint;
 use crate::ec::fp_curve::FpCurve;
 use crate::ec::fp_point::FpPoint;
 
@@ -55,6 +57,27 @@ pub fn secp256r1() -> (Arc<FpCurve>, FpPoint) {
     (curve, g)
 }
 
+/// The SEC 2 **sect163k1** Koblitz curve (`y² + xy = x³ + x² + 1` over GF(2¹⁶³),
+/// reduced by `x¹⁶³ + x⁷ + x⁶ + x³ + 1`), with its base point `G`. `a = b = 1`;
+/// cofactor `h = 2`.
+pub fn sect163k1() -> (Arc<F2mCurve>, F2mPoint) {
+    let n = h("04000000000000000000020108A2E0CC0D99F8A5EF");
+    let curve = Arc::new(F2mCurve::pentanomial(
+        163,
+        3,
+        6,
+        7,
+        BigInteger::from_u32(1),       // a = 1
+        BigInteger::from_u32(1),       // b = 1
+        Some(n),                       // 群階 n
+        Some(BigInteger::from_u32(2)), // cofactor h = 2
+    ));
+    let gx = h("02FE13C0537BBC11ACAA07D793DE4E6D5E5C94EEE8");
+    let gy = h("0289070FB05D38FF58321F2E800536D538CCDAA3D9");
+    let g = curve.create_point(gx, gy);
+    (curve, g)
+}
+
 /// 16 進位字串 → BigInteger（模組內小工具，供各命名曲線共用）。
 fn h(s: &str) -> BigInteger {
     BigInteger::from_str_radix(s, 16).unwrap()
@@ -93,6 +116,23 @@ mod tests {
     #[test]
     fn secp256r1_base_point_roundtrips() {
         let (c, g) = secp256r1();
+        for compressed in [false, true] {
+            assert_eq!(c.decode_point(&g.encode(compressed)).unwrap(), g);
+        }
+    }
+
+    #[test]
+    fn sect163k1_n_times_g_is_infinity() {
+        let (c, g) = sect163k1();
+        assert_eq!(c.field_size(), 163);
+        assert!(!g.is_infinity());
+        assert!((&g * c.order().unwrap()).is_infinity()); // n·G = O
+    }
+
+    #[test]
+    fn sect163k1_base_point_roundtrips() {
+        let (c, g) = sect163k1();
+        // F2m 壓縮走 decompress（half_trace）。
         for compressed in [false, true] {
             assert_eq!(c.decode_point(&g.encode(compressed)).unwrap(), g);
         }
