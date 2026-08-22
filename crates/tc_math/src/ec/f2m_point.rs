@@ -7,8 +7,9 @@
 
 use alloc::sync::Arc;
 use alloc::vec::Vec;
-use core::ops::{Add, Neg, Sub};
+use core::ops::{Add, Mul, Neg, Sub};
 
+use crate::big_integer::BigInteger;
 use crate::ec::coordinate_system::CoordinateSystem;
 use crate::ec::f2m_curve::F2mCurve;
 use crate::ec::f2m_field_element::F2mFieldElement;
@@ -119,6 +120,49 @@ impl F2mPoint {
         let x3 = &(&(&lambda.square() + &lambda) + &dx) + a; // λ² + λ + dx + a
         let y3 = &(&(&lambda * &(x1 + &x3)) + &x3) + y1; // λ(x₁+x₃) + x₃ + y₁
         F2mPoint::new(Arc::clone(&self.curve), x3, y3)
+    }
+
+    /// Scalar multiplication `k * self` by left-to-right double-and-add (the simple
+    /// binary method). Negative `k` is handled as `|k| * (−self)`.
+    ///
+    /// Kept as a named method so it survives alongside future windowed methods;
+    /// [`Mul`] delegates here.
+    pub fn mul_double_and_add(&self, k: &BigInteger) -> Self {
+        // k·O = O、0·P = O
+        if self.is_infinity() || k.is_zero() {
+            return F2mPoint::infinity(Arc::clone(&self.curve));
+        }
+
+        // k < 0：k·P = |k|·(−P)
+        let (k, base) = if k.sign() < 0 { (-k, -self) } else { (k.clone(), self.clone()) };
+
+        // double-and-add，由最高位掃到最低位
+        let mut result = F2mPoint::infinity(Arc::clone(&self.curve));
+        let mut i = k.bit_length();
+        while i > 0 {
+            i -= 1;
+            result = result.twice();
+            if k.test_bit(i) {
+                result = &result + &base;
+            }
+        }
+        result
+    }
+
+    // TODO(ec-f2m-point)：其餘待實作 —— Koblitz τ-adic（WTauNaf）與一般 WNAF 純量乘、
+    // lambda/homogeneous 座標系的 add_*/twice_*、點 encode/decode。
+}
+
+/// Scalar multiplication `k * self`.
+///
+/// Corresponds to the `ECMultiplier` path in bc. For now this is plain
+/// double-and-add; windowed / τ-adic methods are a later optimization.
+impl Mul<&BigInteger> for &F2mPoint {
+    type Output = F2mPoint;
+
+    fn mul(self, k: &BigInteger) -> F2mPoint {
+        // TODO(ec-f2m-point): bc 對 Koblitz 曲線預設走 WTauNafMultiplier，其餘走 WNAF。
+        self.mul_double_and_add(k)
     }
 }
 
@@ -328,5 +372,29 @@ mod tests {
         let back = &g.twice() - &g;
         assert_eq!(back.x().unwrap(), g.x().unwrap());
         assert_eq!(back.y().unwrap(), g.y().unwrap());
+    }
+
+    #[test]
+    fn scalar_mul_basics() {
+        let c = sect163k1();
+        let g = base_g(&c);
+        // 0·G = O、k·O = O
+        assert!((&g * &BigInteger::from_u32(0)).is_infinity());
+        assert!((&c.infinity() * &BigInteger::from_u32(5)).is_infinity());
+        // 1·G = G
+        assert_eq!((&g * &BigInteger::from_u32(1)).x().unwrap(), g.x().unwrap());
+        // 2·G = twice(G)
+        assert_eq!((&g * &BigInteger::from_u32(2)).x().unwrap(), g.twice().x().unwrap());
+        // (−1)·G = −G
+        assert_eq!((&g * &BigInteger::from_i32(-1)).y().unwrap(), (-&g).y().unwrap());
+    }
+
+    #[test]
+    fn scalar_mul_order_times_g_is_infinity() {
+        // 終極測試：n·G = O（n = sect163k1 群階）。任何體域/倍點/加法錯誤都會讓它失敗。
+        let c = sect163k1();
+        let g = base_g(&c);
+        let n = BigInteger::from_str_radix("04000000000000000000020108A2E0CC0D99F8A5EF", 16).unwrap();
+        assert!((&g * &n).is_infinity(), "n·G 應為無窮遠點");
     }
 }
