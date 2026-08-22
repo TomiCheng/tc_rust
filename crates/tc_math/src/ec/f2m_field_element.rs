@@ -122,6 +122,33 @@ impl F2mFieldElement {
         }
         self.square_pow(self.field.m() - 1)
     }
+
+    /// Returns `self·b + x·y` in the field. Corresponds to `MultiplyPlusProduct` (bc's
+    /// base default). Unlike the Fp field there is no fused single-reduction — F2m
+    /// `multiply` already reduces — so this is just two products XOR-ed.
+    pub fn multiply_plus_product(&self, b: &Self, x: &Self, y: &Self) -> Self {
+        &(self * b) + &(x * y)
+    }
+
+    /// Returns `self·b − x·y`. In characteristic 2, `−v == v`, so this **equals**
+    /// [`multiply_plus_product`](Self::multiply_plus_product). Corresponds to bc's
+    /// `MultiplyMinusProduct` override (`=> MultiplyPlusProduct`).
+    pub fn multiply_minus_product(&self, b: &Self, x: &Self, y: &Self) -> Self {
+        self.multiply_plus_product(b, x, y)
+    }
+
+    /// Returns `self² + x·y` in the field. Corresponds to `SquarePlusProduct` (bc's
+    /// base default).
+    pub fn square_plus_product(&self, x: &Self, y: &Self) -> Self {
+        &self.square() + &(x * y)
+    }
+
+    /// Returns `self² − x·y`. In characteristic 2 this **equals**
+    /// [`square_plus_product`](Self::square_plus_product). Corresponds to bc's
+    /// `SquareMinusProduct` override.
+    pub fn square_minus_product(&self, x: &Self, y: &Self) -> Self {
+        self.square_plus_product(x, y)
+    }
 }
 
 /// Field multiplication `self · rhs mod r(x)`, delegated to the field's multiply
@@ -371,6 +398,21 @@ mod tests {
         let g = Arc::new(F2mField::pentanomial(163, 3, 6, 7));
         let other = F2mFieldElement::new(Arc::clone(&g), BinaryPoly::zero(g.size()));
         assert_ne!(a, other);
+    }
+
+    #[test]
+    fn fused_products_match_naive() {
+        let f = field16();
+        let a = fe(&f, 0b1011);
+        let b = fe(&f, 0b0110);
+        let x = fe(&f, 0b0101);
+        let y = fe(&f, 0b1110);
+        // fused == 樸素兩次乘再加
+        assert_eq!(a.multiply_plus_product(&b, &x, &y), &(&a * &b) + &(&x * &y));
+        assert_eq!(a.square_plus_product(&x, &y), &a.square() + &(&x * &y));
+        // char 2：minus == plus
+        assert_eq!(a.multiply_minus_product(&b, &x, &y), a.multiply_plus_product(&b, &x, &y));
+        assert_eq!(a.square_minus_product(&x, &y), a.square_plus_product(&x, &y));
     }
 }
 
