@@ -159,11 +159,68 @@ impl F2mFieldElement {
         self.square_plus_product(x, y)
     }
 
+    /// The trace `Tr(a) = a + a² + a⁴ + … + a^(2^(m-1)) ∈ GF(2)`, returned as `0` or
+    /// `1`. `Tr` is `GF(2)`-linear and satisfies `Tr(a²) = Tr(a)`.
+    ///
+    /// Corresponds to `Trace` in bc's `AbstractF2mFieldElement`; uses an O(log m)
+    /// addition chain (via [`square_pow`](Self::square_pow)) instead of the naive sum.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the running result is neither `0` nor `1` (a corrupted field/element;
+    /// mirrors bc's internal-error exception).
+    pub fn trace(&self) -> i32 {
+        let m = self.field.m();
+        let mut k = m.ilog2() as usize; // BitLength(m) − 1
+        let mut mk = 1usize;
+        let mut tr = self.clone();
+        while k > 0 {
+            tr = &tr.square_pow(mk) + &tr; // tr = tr^(2^mk) + tr
+            k -= 1;
+            mk = m >> k;
+            if mk & 1 != 0 {
+                tr = &tr.square() + self; // tr = tr² + a
+            }
+        }
+        if tr.is_zero() {
+            0
+        } else if tr.is_one() {
+            1
+        } else {
+            panic!("trace: internal error (result not 0 or 1)")
+        }
+    }
+
+    /// The half-trace `HT(a) = a + a⁴ + a¹⁶ + … + a^(2^(m-1))` (even powers of 2), for
+    /// **odd** `m`. When `Tr(a) = 0`, `HT(a)` solves `z² + z = a` (the other root is
+    /// `HT(a) + 1`) — the core step of F2m point decompression.
+    ///
+    /// Corresponds to `HalfTrace` in bc; O(log m) addition chain.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `m` is even (half-trace is only defined for odd `m`).
+    pub fn half_trace(&self) -> Self {
+        let m = self.field.m();
+        assert!(m & 1 == 1, "half_trace: only defined for odd m");
+        let n = (m + 1) >> 1;
+        let mut k = n.ilog2() as usize; // BitLength(n) − 1
+        let mut nk = 1usize;
+        let mut ht = self.clone();
+        while k > 0 {
+            ht = &ht.square_pow(nk << 1) + &ht; // ht = ht^(2^(2·nk)) + ht
+            k -= 1;
+            nk = n >> k;
+            if nk & 1 != 0 {
+                ht = &ht.square_pow(2) + self; // ht = ht^(2²) + a
+            }
+        }
+        ht
+    }
+
     // TODO(ec-f2m)：以下待點層（F2mCurve/F2mPoint、SEC 點編解碼）真的用到時再補：
     //   - from_big_integer()：反向（BigInteger → 定長 limbs），放 F2mCurve（需 m + validate
     //     x>=0 && bit_length<=m），對齊 bc `ECCurve.FromBigInteger` → `Nat.FromBigInteger64`。
-    //   - trace() / half_trace()（AbstractF2mFieldElement）：點解壓縮解 `y²+y = x`
-    //     二次方程用；為平方+加的加法鏈（bc 有 log 步版本，非樸素 O(m)）。
     //   - get_encoded()/encode_to()（ECFieldElement 基底）：SEC 壓縮點格式，
     //     BinaryPoly → 定長 big-endian bytes。
     //   - X9.62 metadata accessor：m()/k1()/k2()/k3()/representation()（Tpb/Ppb）、
@@ -267,6 +324,11 @@ mod tests {
     // GF(2^4) = GF(2)[x] / (x^4 + x + 1)：size 1 limb，加法測試不依賴約簡形狀。
     fn field16() -> Arc<F2mField> {
         Arc::new(F2mField::trinomial(4, 1))
+    }
+
+    // GF(2^5) = GF(2)[x] / (x^5 + x^2 + 1)（不可約）：奇 m，可測 half_trace。
+    fn field32() -> Arc<F2mField> {
+        Arc::new(F2mField::trinomial(5, 2))
     }
 
     fn fe(field: &Arc<F2mField>, v: u64) -> F2mFieldElement {
@@ -449,6 +511,41 @@ mod tests {
         // char 2：minus == plus
         assert_eq!(a.multiply_minus_product(&b, &x, &y), a.multiply_plus_product(&b, &x, &y));
         assert_eq!(a.square_minus_product(&x, &y), a.square_plus_product(&x, &y));
+    }
+
+    #[test]
+    fn trace_is_linear_and_frobenius_invariant() {
+        let f = field16(); // m=4
+        for v in 0u64..16 {
+            assert!(matches!(fe(&f, v).trace(), 0 | 1)); // Tr ∈ {0,1}
+        }
+        // 線性：Tr(a+b) = Tr(a) ⊕ Tr(b)
+        let a = fe(&f, 0b1011);
+        let b = fe(&f, 0b0110);
+        assert_eq!((&a + &b).trace(), a.trace() ^ b.trace());
+        // Frobenius 不變：Tr(a²) = Tr(a)
+        assert_eq!(a.square().trace(), a.trace());
+        // Tr(1) = m mod 2：m=4→0、m=5→1
+        assert_eq!(fe(&f, 1).trace(), 0);
+        assert_eq!(fe(&field32(), 1).trace(), 1);
+    }
+
+    #[test]
+    fn half_trace_solves_z_squared_plus_z() {
+        let f = field32(); // 奇 m=5
+        // β = c²+c ⇒ Tr(β)=0 ⇒ HT(β) 解 z²+z = β
+        for v in 0u64..32 {
+            let c = fe(&f, v);
+            let beta = &c.square() + &c;
+            let ht = beta.half_trace();
+            assert_eq!(&ht.square() + &ht, beta, "v={v}");
+        }
+    }
+
+    #[test]
+    #[should_panic(expected = "odd m")]
+    fn half_trace_even_m_panics() {
+        fe(&field16(), 1).half_trace(); // m=4（偶）→ panic
     }
 }
 
