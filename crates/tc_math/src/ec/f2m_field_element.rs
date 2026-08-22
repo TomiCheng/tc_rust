@@ -228,6 +228,9 @@ impl Add for &F2mFieldElement {
 /// Field subtraction. In characteristic 2, `−b == b`, so subtraction **is** addition.
 ///
 /// Corresponds to `Subtract` in bc (`=> Add(b)`).
+// clippy 的 suspicious_arithmetic_impl 會警告「Sub 裡用了 +」——此處是 char 2 的
+// 刻意等式（減即加），非筆誤。
+#[allow(clippy::suspicious_arithmetic_impl)]
 impl Sub for &F2mFieldElement {
     type Output = F2mFieldElement;
 
