@@ -21,8 +21,8 @@ use alloc::boxed::Box;
 use alloc::vec;
 use core::ops::{Add, AddAssign};
 
-// scalar 後端:carryless 乘法 kernel（leaf；Karatsuba 之後補）。
-mod scalar;
+// scalar（非 SIMD）乘法後端:kernels + Medium 後端。
+mod mul_scalar;
 
 // 對約簡多項式 r(x) 取模：Reduce trait（= bc IReduce）+ 每種形狀一個檔（對齊 bc）。
 mod reduce;
