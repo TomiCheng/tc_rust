@@ -26,3 +26,38 @@ pub struct F2mPoint {
     // 投影 Z 座標（bc m_zs）；affine 為空 []，投影為 [Z, …]。
     zs: Vec<F2mFieldElement>,
 }
+
+impl F2mPoint {
+    /// Creates the affine point `(x, y)` on `curve`.
+    ///
+    /// Does not verify that the point lies on the curve; that check is a separate
+    /// operation (bc `ValidatePoint`).
+    pub fn new(curve: Arc<F2mCurve>, x: F2mFieldElement, y: F2mFieldElement) -> Self {
+        F2mPoint { curve, coords: Some((x, y)), zs: Vec::new() }
+    }
+
+    /// Returns the point at infinity (the group identity) on `curve`.
+    pub fn infinity(curve: Arc<F2mCurve>) -> Self {
+        F2mPoint { curve, coords: None, zs: Vec::new() }
+    }
+
+    /// Returns `true` if this is the point at infinity.
+    pub fn is_infinity(&self) -> bool {
+        self.coords.is_none()
+    }
+
+    /// Returns the affine `x` coordinate, or `None` at infinity.
+    pub fn x(&self) -> Option<&F2mFieldElement> {
+        self.coords.as_ref().map(|(x, _)| x)
+    }
+
+    /// Returns the affine `y` coordinate, or `None` at infinity.
+    pub fn y(&self) -> Option<&F2mFieldElement> {
+        self.coords.as_ref().map(|(_, y)| y)
+    }
+
+    /// Returns the curve this point belongs to.
+    pub fn curve(&self) -> &Arc<F2mCurve> {
+        &self.curve
+    }
+}
