@@ -25,7 +25,10 @@ mod bytes;
 
 // u32 詞序列化：bytes 家族的 u32 版（同 be/le × signed/unsigned × from/to/into）。
 // 自帶 helper（magnitude 本就是 u32 詞，無須父模組的位元組 helper）。
-mod words;
+mod words_u32;
+
+// u64 詞序列化：words_u32 家族的 u64 版（同一組函式，單位換成 64 位元字）。
+mod words_u64;
 
 /// 一個 magnitude 字的位元數（= 32）。集中定義，避免散落的 magic number。
 const WORD_BITS: usize = u32::BITS as usize;
