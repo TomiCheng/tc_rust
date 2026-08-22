@@ -149,6 +149,17 @@ impl F2mFieldElement {
     pub fn square_minus_product(&self, x: &Self, y: &Self) -> Self {
         self.square_plus_product(x, y)
     }
+
+    // TODO(ec-f2m)：以下待點層（F2mCurve/F2mPoint、SEC 點編解碼）真的用到時再補：
+    //   - to_big_integer()：對齊 bc `Nat.ToBigInteger64(x)`。需先補「u64 limbs →
+    //     BigInteger」這條路（現 BigInteger magnitude 是 u32、big-endian、去前導零）。
+    //     座標序列化與 ToBigInteger() 會用到。
+    //   - trace() / half_trace()（AbstractF2mFieldElement）：點解壓縮解 `y²+y = x`
+    //     二次方程用；為平方+加的加法鏈（bc 有 log 步版本，非樸素 O(m)）。
+    //   - get_encoded()/encode_to()（ECFieldElement 基底）：SEC 壓縮點格式，
+    //     BinaryPoly → 定長 big-endian bytes。
+    //   - X9.62 metadata accessor：m()/k1()/k2()/k3()/representation()（Tpb/Ppb）、
+    //     field_name()="F2m"，對外委派 field；曲線/ASN.1 序列化用。
 }
 
 /// Field multiplication `self · rhs mod r(x)`, delegated to the field's multiply
