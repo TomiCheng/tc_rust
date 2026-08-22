@@ -34,6 +34,7 @@ mod mul;
 
 // GF(2ⁿ) 反元素 operator（= bc IBinPolyInv；Itoh-Tsujii）。
 mod inv;
+mod inv_itohtsujii;
 
 /// Number of `u64` limbs required to hold a polynomial of bit length `n`
 /// (`⌈n / 64⌉`).
