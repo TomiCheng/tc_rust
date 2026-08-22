@@ -33,6 +33,14 @@ mod words_u64;
 /// 一個 magnitude 字的位元數（= 32）。集中定義，避免散落的 magic number。
 const WORD_BITS: usize = u32::BITS as usize;
 
+// TODO(bigint-u64-limb)：把內部 magnitude 的 limb 型別依平台 cfg 化（64 位平台用 u64、
+// 32 位用 u32；單一實作，非兩份），對齊 raw::Nat 的 cfg limb 做法。屆時要一併處理：
+//   - WORD_BITS / magnitude 的型別與所有依賴它的算術。
+//   - 詞序列化的「原生 vs 加工」方向會反轉：現在 words_u32 原生、words_u64 打包
+//     （見兩檔）；u64-limb 後 words_u64 變原生、words_u32 變拆解。理想是引入 Limb
+//     別名讓兩家族認得 limb 型別，由 cfg 自動決定誰原生，不用手動對調。
+//   - 公開 API（from/to_u32_*、from/to_u64_*）與現有測試不變，只換內部實作方向。
+
 /// 滑動視窗指數化的視窗寬度門檻：指數位元長度超過第 i 個門檻，就多用一個
 /// extra_bit（視窗更寬）。純整數字面值 → 可 `const`（不像堆積型常數需執行期初始化）。
 const EXP_WINDOW_THRESHOLDS: [u32; 8] = [7, 25, 81, 241, 673, 1793, 4609, u32::MAX];
