@@ -139,6 +139,22 @@ impl F2mCurve {
         self.field.m()
     }
 
+    /// The byte length of a field-element encoding, `⌈m / 8⌉`.
+    ///
+    /// Corresponds to `FieldElementEncodingLength` in bc.
+    pub fn field_element_encoding_length(&self) -> usize {
+        self.field.m().div_ceil(8)
+    }
+
+    /// The byte length of an affine point's SEC encoding: `1 + len` compressed,
+    /// `1 + 2*len` uncompressed (`len` = field-element encoding length).
+    ///
+    /// Corresponds to `GetAffinePointEncodingLength` in bc.
+    pub fn affine_point_encoding_length(&self, compressed: bool) -> usize {
+        let len = self.field_element_encoding_length();
+        if compressed { 1 + len } else { 1 + 2 * len }
+    }
+
     /// Returns the point coordinate system in use.
     pub fn coordinate_system(&self) -> CoordinateSystem {
         self.coordinate_system

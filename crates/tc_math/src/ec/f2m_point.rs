@@ -64,6 +64,44 @@ impl F2mPoint {
         &self.curve
     }
 
+    /// Encodes this point in SEC (X9.62 / SEC 1) format.
+    ///
+    /// `compressed` selects the `0x02`/`0x03` form (X plus a parity bit) over the
+    /// uncompressed `0x04` form (X then Y). The point at infinity encodes as a single
+    /// `0x00` byte. Corresponds to `GetEncoded` in bc.
+    pub fn encode(&self, compressed: bool) -> Vec<u8> {
+        let (x, y) = match &self.coords {
+            None => return alloc::vec![0x00], // 無窮遠點
+            Some(coords) => coords,
+        };
+        let len = self.curve.field_element_encoding_length();
+        let x_bytes = fixed_be(&x.to_big_integer(), len);
+        if compressed {
+            let prefix = if Self::compression_y_tilde(x, y) { 0x03 } else { 0x02 };
+            let mut out = Vec::with_capacity(1 + len);
+            out.push(prefix);
+            out.extend_from_slice(&x_bytes);
+            out
+        } else {
+            let mut out = Vec::with_capacity(1 + 2 * len);
+            out.push(0x04);
+            out.extend_from_slice(&x_bytes);
+            out.extend_from_slice(&fixed_be(&y.to_big_integer(), len));
+            out
+        }
+    }
+
+    /// The SEC compression parity bit for the affine point `(x, y)`. Corresponds to bc
+    /// `CompressionYTilde` (affine branch): `false` when `x = 0`, otherwise the low bit
+    /// of `z = y / x`.
+    fn compression_y_tilde(x: &F2mFieldElement, y: &F2mFieldElement) -> bool {
+        if x.is_zero() {
+            false
+        } else {
+            (y / x).test_bit_zero() // z = y/x
+        }
+    }
+
     /// Returns `2 * self` (point doubling).
     ///
     /// Corresponds to `Twice` in bc. Guards live here; the per-coordinate-system
@@ -189,6 +227,15 @@ impl core::fmt::Debug for F2mPoint {
             }
         }
     }
+}
+
+/// Encodes a field-element value as fixed-length `len` big-endian bytes (left-padded
+/// with zeros), as required by the SEC point encoding.
+fn fixed_be(v: &BigInteger, len: usize) -> Vec<u8> {
+    let mut buf = alloc::vec![0u8; len];
+    let n = v.byte_length_unsigned(); // 值的最小位元組數（≤ len）
+    v.to_bytes_be_unsigned_into(&mut buf[len - n..]); // 寫右段 → 左邊留零
+    buf
 }
 
 /// Point addition (the group law). Corresponds to `Add` in bc. Infinity operands are
@@ -436,5 +483,39 @@ mod tests {
         assert_ne!(g, g.twice());
         // 現在點可直接 assert_eq!：G + G == 2G。
         assert_eq!(&g + &g, g.twice());
+    }
+
+    #[test]
+    fn encode_lengths_and_prefixes() {
+        let c = sect163k1();
+        let g = base_g(&c);
+        let len = c.field_element_encoding_length(); // ⌈163/8⌉ = 21
+
+        // 無窮遠 → 單 byte 0x00。
+        assert_eq!(c.infinity().encode(true), alloc::vec![0x00]);
+
+        // 未壓縮：0x04 + X + Y，長度 1+2·len。
+        let unc = g.encode(false);
+        assert_eq!(unc.len(), 1 + 2 * len);
+        assert_eq!(unc[0], 0x04);
+        assert_eq!(c.affine_point_encoding_length(false), unc.len());
+
+        // 壓縮：0x02/0x03 + X，長度 1+len；前綴 = y-tilde。
+        let comp = g.encode(true);
+        assert_eq!(comp.len(), 1 + len);
+        assert!(comp[0] == 0x02 || comp[0] == 0x03);
+        assert_eq!(c.affine_point_encoding_length(true), comp.len());
+        // X 部分：壓縮與未壓縮相同。
+        assert_eq!(&comp[1..], &unc[1..=len]);
+    }
+
+    #[test]
+    fn encode_compressed_prefix_matches_y_tilde() {
+        let c = sect163k1();
+        let g = base_g(&c);
+        // z = y/x 的低位決定 0x02/0x03。
+        let (x, y) = (g.x().unwrap(), g.y().unwrap());
+        let expected = if (y / x).test_bit_zero() { 0x03 } else { 0x02 };
+        assert_eq!(g.encode(true)[0], expected);
     }
 }
