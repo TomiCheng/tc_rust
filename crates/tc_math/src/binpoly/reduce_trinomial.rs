@@ -2,7 +2,7 @@
 //!
 //! Ported from Bouncy Castle `BinPolyMulBase.Trinomial` — but only the general
 //! bit-by-bit fold (its `D` reducer); the word-at-a-time fast paths are deferred
-//! (see the TODO on [`create_reduce_trinomial`]).
+//! (see the TODO on [`create`]).
 
 use alloc::boxed::Box;
 
@@ -13,7 +13,7 @@ use super::reduce::Reduce;
 // TODO(binpoly-reduce-fastpath): bc's Create picks a size/alignment-specialised
 // reducer (A/B/C/E, per-size A3..A8 / C5..C8) here; we always return the general
 // fold [`D`]. Add fast paths as more `Reduce` impls selected in this factory.
-pub(crate) fn create_reduce_trinomial(n: usize, k: usize) -> Box<dyn Reduce> {
+pub fn create(n: usize, k: usize) -> Box<dyn Reduce> {
     Box::new(D { n, k })
 }
 

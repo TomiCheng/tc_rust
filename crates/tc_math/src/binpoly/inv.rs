@@ -8,7 +8,7 @@
 //! never the binomial one.
 
 /// Multiplicative inversion in `GF(2ⁿ)`, operating on bit-packed `u64`-limb slices.
-pub(crate) trait BinPolyInv {
+pub trait BinPolyInv {
     /// The field degree `n`.
     fn n(&self) -> usize;
 

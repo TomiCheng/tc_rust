@@ -71,7 +71,7 @@ impl BinPolyInv for ItohTsujiiInv {
 
 /// Builds an Itoh–Tsujii inverter over the field the given multiplier operates on.
 /// Mirrors bc `BinPolys.Inv.ItohTsujii(mul)`.
-pub(crate) fn create(mul: Box<dyn BinPolyMul>) -> Box<dyn BinPolyInv> {
+pub fn create(mul: Box<dyn BinPolyMul>) -> Box<dyn BinPolyInv> {
     let (n, size) = (mul.n(), mul.size());
     debug_assert!(n >= 2);
     Box::new(ItohTsujiiInv { mul, n, size })
@@ -80,9 +80,7 @@ pub(crate) fn create(mul: Box<dyn BinPolyMul>) -> Box<dyn BinPolyInv> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::binpoly::reduce_pentanomial::create_reduce_pentanomial;
-    use crate::binpoly::reduce_trinomial::create_reduce_trinomial;
-    use crate::binpoly::{mul_scalar, size};
+    use crate::binpoly::{mul_scalar, reduce_pentanomial, reduce_trinomial, size};
 
     fn is_one(v: &[u64]) -> bool {
         v.first() == Some(&1) && v[1..].iter().all(|&w| w == 0)
@@ -93,8 +91,8 @@ mod tests {
 
     fn make_mul(n: usize, taps: &[usize]) -> Box<dyn BinPolyMul> {
         match *taps {
-            [k] => mul_scalar::create(n, create_reduce_trinomial(n, k)),
-            [k1, k2, k3] => mul_scalar::create(n, create_reduce_pentanomial(n, k1, k2, k3)),
+            [k] => mul_scalar::create(n, reduce_trinomial::create(n, k)),
+            [k1, k2, k3] => mul_scalar::create(n, reduce_pentanomial::create(n, k1, k2, k3)),
             _ => unreachable!(),
         }
     }

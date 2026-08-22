@@ -8,6 +8,6 @@
 ///
 /// `tt` is mutated arbitrarily during reduction (it is scratch) — callers must not
 /// read it afterward. Corresponds to bc `IReduce.Reduce`.
-pub(crate) trait Reduce {
+pub trait Reduce {
     fn reduce(&self, tt: &mut [u64], z: &mut [u64]);
 }

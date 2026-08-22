@@ -44,6 +44,6 @@ impl BinPolyMul for Medium {
 
 /// Builds a boxed [`Medium`] operator over `GF(2ⁿ)` with the given reducer.
 /// Called by the scalar backend chooser (bc `Scalar.Backend.CreateBinPolyMul`).
-pub(super) fn create(n: usize, reduce: Box<dyn Reduce>) -> Box<dyn BinPolyMul> {
+pub fn create(n: usize, reduce: Box<dyn Reduce>) -> Box<dyn BinPolyMul> {
     Box::new(Medium { n, reduce })
 }

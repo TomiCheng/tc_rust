@@ -29,12 +29,19 @@ mod reduce;
 mod reduce_pentanomial;
 mod reduce_trinomial;
 
+pub use reduce::Reduce;
+
 // GF(2ⁿ) 乘法 operator（= bc IBinPolyMul）。
 mod mul;
+
+pub use mul::{BinPolyMul, create_binpoly_mul_pentanomial, create_binpoly_mul_trinomial};
 
 // GF(2ⁿ) 反元素 operator（= bc IBinPolyInv；Itoh-Tsujii）。
 mod inv;
 mod inv_itohtsujii;
+
+pub use inv::BinPolyInv;
+pub use inv_itohtsujii::create as create_binpoly_inv_itohtsujii;
 
 /// Number of `u64` limbs required to hold a polynomial of bit length `n`
 /// (`⌈n / 64⌉`).

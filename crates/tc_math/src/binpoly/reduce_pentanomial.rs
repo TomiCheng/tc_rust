@@ -2,7 +2,7 @@
 //!
 //! Ported from Bouncy Castle `BinPolyMulBase.Pentanomial` — but only the general
 //! bit-by-bit fold (its `C` reducer); the word-at-a-time fast paths are deferred
-//! (see the TODO on [`create_reduce_pentanomial`]).
+//! (see the TODO on [`create`]).
 
 use alloc::boxed::Box;
 
@@ -12,7 +12,7 @@ use super::reduce::Reduce;
 /// `xⁿ + xᵏ³ + xᵏ² + xᵏ¹ + 1`. Mirrors bc's `PentanomialReduce.Create`.
 // TODO(binpoly-reduce-fastpath): bc's Create picks a size/alignment-specialised
 // reducer (A/B/D/E, per-size A3..A8) here; we always return the general fold [`C`].
-pub(crate) fn create_reduce_pentanomial(n: usize, k1: usize, k2: usize, k3: usize) -> Box<dyn Reduce> {
+pub fn create(n: usize, k1: usize, k2: usize, k3: usize) -> Box<dyn Reduce> {
     Box::new(C { n, k1, k2, k3 })
 }
 

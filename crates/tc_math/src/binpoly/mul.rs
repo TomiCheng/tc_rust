@@ -5,12 +5,16 @@
 //! selected by a factory. The reduction polynomial is injected as a
 //! [`super::reduce::Reduce`]r.
 
+use alloc::boxed::Box;
 use alloc::vec;
+
+use super::reduce::Reduce;
+use super::{mul_scalar, reduce_pentanomial, reduce_trinomial};
 
 /// Multiplication in `GF(2ⁿ)`, operating on bit-packed `u64`-limb slices. The trait
 /// (rather than a concrete type) leaves room for multiple backends (scalar leaf /
 /// Karatsuba, and a runtime-selected hardware backend), matching bc's `IBinPolyMul`.
-pub(crate) trait BinPolyMul {
+pub trait BinPolyMul {
     /// The field degree `n`.
     fn n(&self) -> usize;
 
@@ -44,4 +48,24 @@ pub(crate) trait BinPolyMul {
             self.square(&tmp, z); // z = (上一輪)²
         }
     }
+}
+
+/// Builds a multiply operator for `GF(2ⁿ) = GF(2)[x] / (xⁿ + xᵏ + 1)`.
+/// Mirrors bc `BinPolys.Mul.Trinomial`.
+pub fn create_binpoly_mul_trinomial(n: usize, k: usize) -> Box<dyn BinPolyMul> {
+    create_binpoly_mul(n, reduce_trinomial::create(n, k))
+}
+
+/// Builds a multiply operator for `GF(2ⁿ) = GF(2)[x] / (xⁿ + xᵏ³ + xᵏ² + xᵏ¹ + 1)`.
+/// Mirrors bc `BinPolys.Mul.Pentanomial`.
+pub fn create_binpoly_mul_pentanomial(n: usize, k1: usize, k2: usize, k3: usize) -> Box<dyn BinPolyMul> {
+    create_binpoly_mul(n, reduce_pentanomial::create(n, k1, k2, k3))
+}
+
+/// Backend dispatch: pick a hardware backend when available, else the scalar one.
+/// Mirrors bc `BinPolys.Mul.CreateBinPolyMul`.
+// TODO(binpoly-simd): on x86_64/aarch64, prefer a PCLMUL/PMULL backend when the CPU
+// supports it (runtime feature detection; std-only, or hand-rolled CPUID for no_std).
+fn create_binpoly_mul(n: usize, reduce: Box<dyn Reduce>) -> Box<dyn BinPolyMul> {
+    mul_scalar::create(n, reduce)
 }

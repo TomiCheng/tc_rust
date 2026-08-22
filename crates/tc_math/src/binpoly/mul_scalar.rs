@@ -18,6 +18,6 @@ mod medium;
 // TODO(binpoly-large): route `size >= Karatsuba cutoff` to a `large::create`
 // (Karatsuba recursion, bc `Scalar.Large`, only sect571 needs it) once ported; for
 // now every size uses the Medium leaf.
-pub(crate) fn create(n: usize, reduce: Box<dyn Reduce>) -> Box<dyn BinPolyMul> {
+pub fn create(n: usize, reduce: Box<dyn Reduce>) -> Box<dyn BinPolyMul> {
     medium::create(n, reduce)
 }
