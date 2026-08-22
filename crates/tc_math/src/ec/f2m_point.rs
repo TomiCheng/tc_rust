@@ -166,6 +166,31 @@ impl Mul<&BigInteger> for &F2mPoint {
     }
 }
 
+/// Two points are equal iff they lie on the same curve and have the same coordinates
+/// (both the point at infinity, or the same affine `(x, y)`).
+//
+// TODO(ec-projective)：直接比對儲存的座標，只對 affine 正確。加入投影座標系後，eq
+// 必須先 normalize 兩點再比較（(X,Y,Z) 與 (λ²X,λ³Y,λZ) 是同一點）。
+impl PartialEq for F2mPoint {
+    fn eq(&self, other: &Self) -> bool {
+        (Arc::ptr_eq(&self.curve, &other.curve) || self.curve == other.curve)
+            && self.coords == other.coords
+    }
+}
+
+impl Eq for F2mPoint {}
+
+impl core::fmt::Debug for F2mPoint {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match &self.coords {
+            None => write!(f, "F2mPoint(infinity)"),
+            Some((x, y)) => {
+                write!(f, "F2mPoint({}, {})", x.to_big_integer(), y.to_big_integer())
+            }
+        }
+    }
+}
+
 /// Point addition (the group law). Corresponds to `Add` in bc. Infinity operands are
 /// handled here; the per-coordinate-system formula is delegated. Only affine
 /// coordinates are implemented for now.
@@ -396,5 +421,20 @@ mod tests {
         let g = base_g(&c);
         let n = BigInteger::from_str_radix("04000000000000000000020108A2E0CC0D99F8A5EF", 16).unwrap();
         assert!((&g * &n).is_infinity(), "n·G 應為無窮遠點");
+    }
+
+    #[test]
+    fn point_equality() {
+        let c = sect163k1();
+        let g = base_g(&c);
+        // 同座標 → 相等（重新造一次基點）。
+        assert_eq!(g, base_g(&c));
+        // 兩個無窮遠點相等。
+        assert_eq!(c.infinity(), c.infinity());
+        // 無窮遠 ≠ 有限點；G ≠ 2G。
+        assert_ne!(g, c.infinity());
+        assert_ne!(g, g.twice());
+        // 現在點可直接 assert_eq!：G + G == 2G。
+        assert_eq!(&g + &g, g.twice());
     }
 }
