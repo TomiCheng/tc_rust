@@ -18,7 +18,7 @@ use crate::ec::f2m_field::F2mField;
 /// The value is a [`BinaryPoly`] of `field.size()` limbs (degree `< m`, zero-padded);
 /// the shared [`F2mField`] supplies the arithmetic operators. Mirrors bc
 /// `F2mFieldElement`.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct F2mFieldElement {
     // 共享的體域定義（m + 約簡多項式 + mul/inv operator）。
     field: Arc<F2mField>,
@@ -43,6 +43,39 @@ impl F2mFieldElement {
     /// bc uses throughout its arithmetic.
     fn with_value(&self, value: BinaryPoly) -> Self {
         F2mFieldElement { field: Arc::clone(&self.field), value }
+    }
+
+    /// Returns `true` if this is the additive identity (zero). Constant-time in the
+    /// value. Corresponds to `IsZero` in bc.
+    pub fn is_zero(&self) -> bool {
+        self.value.is_zero()
+    }
+
+    /// Returns `true` if this is the multiplicative identity (one). Constant-time in
+    /// the value. Corresponds to `IsOne` in bc.
+    pub fn is_one(&self) -> bool {
+        self.value.is_one()
+    }
+
+    /// **Variable-time** bit length of the value — polynomial degree + 1, or `0` for
+    /// zero. Corresponds to `BitLength` in bc.
+    pub fn bit_length(&self) -> usize {
+        self.value.bit_length()
+    }
+
+    /// The field size in bits, i.e. the degree `m`. Corresponds to `FieldSize` in bc.
+    //
+    // 回 usize（對齊 m/bit_length）；FpFieldElement::field_size 回 u32。兩者統一留到
+    // 之後抽 ECFieldElement trait 時再議。
+    pub fn field_size(&self) -> usize {
+        self.field.m()
+    }
+
+    /// Returns whether the constant term (the `x⁰` coefficient) is set. Corresponds
+    /// to `TestBitZero` in bc (`x[0] & 1`). The field degree is `>= 1`, so there is
+    /// always a limb 0.
+    pub fn test_bit_zero(&self) -> bool {
+        self.value.limbs()[0] & 1 == 1
     }
 
     /// Returns `self + 1` in the field, i.e. flips the constant term.
@@ -76,6 +109,19 @@ impl F2mFieldElement {
         }
         self.with_value(self.value.invert(self.field.inv()))
     }
+
+    /// Returns the square root of this element.
+    ///
+    /// Corresponds to `Sqrt` in bc. In `GF(2ᵐ)` the Frobenius map `y ↦ y²` is a
+    /// bijection, so every element has a **unique** square root — hence this returns
+    /// `Self`, not `Option` (unlike the Fp field). The root is `self^(2^(m-1))`,
+    /// since `(a^(2^(m-1)))² = a^(2ᵐ) = a`. bc fast-paths `0`/`1` (`BitLength <= 1`).
+    pub fn sqrt(&self) -> Self {
+        if self.value.bit_length() <= 1 {
+            return self.clone(); // √0 = 0、√1 = 1
+        }
+        self.square_pow(self.field.m() - 1)
+    }
 }
 
 /// Field multiplication `self · rhs mod r(x)`, delegated to the field's multiply
@@ -101,6 +147,30 @@ impl Div for &F2mFieldElement {
     fn div(self, rhs: &F2mFieldElement) -> F2mFieldElement {
         debug_assert!(self.field == rhs.field, "div: elements from different fields");
         self * &rhs.invert()
+    }
+}
+
+/// Two elements are equal iff they share the same field and value.
+///
+/// Corresponds to bc's `Equals`. The field is compared first (by degree + reduction
+/// polynomial); only then — when the limb counts are known to match — is the value
+/// compared with the constant-time [`BinaryPoly::ct_eq`], matching bc's use of
+/// `BinPolys.EqualTo`.
+impl PartialEq for F2mFieldElement {
+    fn eq(&self, other: &Self) -> bool {
+        self.field == other.field && self.value.ct_eq(&other.value)
+    }
+}
+
+impl Eq for F2mFieldElement {}
+
+/// Hashes the value limbs and the field (matching [`PartialEq`]).
+///
+/// Corresponds to bc `GetHashCode` (`hash(x) ^ hash(f2mFieldData)`).
+impl core::hash::Hash for F2mFieldElement {
+    fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
+        self.value.limbs().hash(state);
+        self.field.hash(state);
     }
 }
 
@@ -244,6 +314,63 @@ mod tests {
         let b = fe(&f, 0b0011);
         // (a / b) · b = a
         assert_eq!((&(&a / &b) * &b).value.limbs(), a.value.limbs());
+    }
+
+    #[test]
+    fn queries_report_value_and_field() {
+        let f = field16();
+        let zero = fe(&f, 0);
+        let one = fe(&f, 1);
+        let a = fe(&f, 0b1010); // x^3 + x
+
+        assert!(zero.is_zero() && !zero.is_one());
+        assert!(one.is_one() && !one.is_zero());
+
+        assert_eq!(zero.bit_length(), 0);
+        assert_eq!(one.bit_length(), 1);
+        assert_eq!(a.bit_length(), 4); // 最高次 x^3 → degree 3 → 長度 4
+
+        assert_eq!(a.field_size(), 4); // GF(2^4)
+
+        assert!(!a.test_bit_zero()); // x^3+x：常數項 0
+        assert!(fe(&f, 0b1011).test_bit_zero()); // x^3+x+1：常數項 1
+    }
+
+    #[test]
+    fn sqrt_is_inverse_of_square() {
+        let f = field16();
+        assert!(fe(&f, 0).sqrt().is_zero()); // √0 = 0
+        assert!(fe(&f, 1).sqrt().is_one()); // √1 = 1
+        // 每個元素平方根唯一且必存在：√a 的平方等於 a
+        for v in 0u64..16 {
+            let a = fe(&f, v);
+            assert_eq!(a.sqrt().square(), a, "v={v}");
+        }
+    }
+
+    #[test]
+    fn eq_and_hash() {
+        use std::collections::hash_map::DefaultHasher;
+        use std::hash::{Hash, Hasher};
+        fn h(e: &F2mFieldElement) -> u64 {
+            let mut s = DefaultHasher::new();
+            e.hash(&mut s);
+            s.finish()
+        }
+
+        let f = field16();
+        let a = fe(&f, 0b1011);
+        let b = fe(&f, 0b1011);
+        let c = fe(&f, 0b1100);
+        // 同體域同值 → 相等且 hash 相等。
+        assert_eq!(a, b);
+        assert_eq!(h(&a), h(&b));
+        // 同體域不同值 → 不相等。
+        assert_ne!(a, c);
+        // 不同體域 → 不相等（field 先比即短路，不會走到不同 size 的 ct_eq）。
+        let g = Arc::new(F2mField::pentanomial(163, 3, 6, 7));
+        let other = F2mFieldElement::new(Arc::clone(&g), BinaryPoly::zero(g.size()));
+        assert_ne!(a, other);
     }
 }
 
