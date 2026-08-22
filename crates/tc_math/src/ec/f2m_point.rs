@@ -7,7 +7,7 @@
 
 use alloc::sync::Arc;
 use alloc::vec::Vec;
-use core::ops::Neg;
+use core::ops::{Add, Neg};
 
 use crate::ec::coordinate_system::CoordinateSystem;
 use crate::ec::f2m_curve::F2mCurve;
@@ -93,6 +93,58 @@ impl F2mPoint {
         let x3 = &(&lambda.square() + &lambda) + a; // λ² + λ + a
         let y3 = x1.square_plus_product(&x3, &lambda.add_one()); // x₁² + x₃·(λ+1)
         F2mPoint::new(Arc::clone(&self.curve), x3, y3)
+    }
+
+    /// Affine addition on `y² + xy = x³ + ax² + b`. With `dx = x₁+x₂`, `dy = y₁+y₂`:
+    /// `λ = dy/dx`, `x₃ = λ² + λ + dx + a`, `y₃ = λ·(x₁+x₃) + x₃ + y₁`. Coincident
+    /// cases: `dx = 0` means `x₁ = x₂` → either `P == Q` (`dy = 0`, delegate to
+    /// [`twice`](Self::twice)) or `P == −Q` (return infinity).
+    fn add_affine(
+        &self,
+        x1: &F2mFieldElement,
+        y1: &F2mFieldElement,
+        x2: &F2mFieldElement,
+        y2: &F2mFieldElement,
+    ) -> Self {
+        let dx = x1 + x2; // x₁ + x₂（char 2：XOR）
+        let dy = y1 + y2; // y₁ + y₂
+        if dx.is_zero() {
+            if dy.is_zero() {
+                return self.twice(); // P == Q
+            }
+            return F2mPoint::infinity(Arc::clone(&self.curve)); // P == −Q
+        }
+        let a = self.curve.a();
+        let lambda = &dy / &dx; // λ = dy/dx
+        let x3 = &(&(&lambda.square() + &lambda) + &dx) + a; // λ² + λ + dx + a
+        let y3 = &(&(&lambda * &(x1 + &x3)) + &x3) + y1; // λ(x₁+x₃) + x₃ + y₁
+        F2mPoint::new(Arc::clone(&self.curve), x3, y3)
+    }
+}
+
+/// Point addition (the group law). Corresponds to `Add` in bc. Infinity operands are
+/// handled here; the per-coordinate-system formula is delegated. Only affine
+/// coordinates are implemented for now.
+impl Add for &F2mPoint {
+    type Output = F2mPoint;
+
+    fn add(self, rhs: &F2mPoint) -> F2mPoint {
+        debug_assert!(
+            Arc::ptr_eq(&self.curve, &rhs.curve) || self.curve == rhs.curve,
+            "add: points on different curves"
+        );
+        let (x1, y1) = match &self.coords {
+            None => return rhs.clone(), // O + Q = Q
+            Some(c) => c,
+        };
+        let (x2, y2) = match &rhs.coords {
+            None => return self.clone(), // P + O = P
+            Some(c) => c,
+        };
+        match self.curve.coordinate_system() {
+            CoordinateSystem::Affine => self.add_affine(x1, y1, x2, y2),
+            _ => todo!("add: only affine coordinates are implemented"),
+        }
     }
 }
 
@@ -214,5 +266,39 @@ mod tests {
         let two_g = g.twice();
         assert!(!two_g.is_infinity());
         assert!(on_curve(&two_g), "2G 應在曲線上（驗證倍點公式）");
+    }
+
+    #[test]
+    fn add_identity_and_inverse() {
+        let c = sect163k1();
+        let g = base_g(&c);
+        // G + O = G、O + G = G
+        assert_eq!((&g + &c.infinity()).x().unwrap(), g.x().unwrap());
+        assert_eq!((&c.infinity() + &g).y().unwrap(), g.y().unwrap());
+        // G + (−G) = O
+        assert!((&g + &(-&g)).is_infinity());
+    }
+
+    #[test]
+    fn add_equal_points_matches_twice() {
+        // P == Q 分支：G + G 應等於 twice(G)。
+        let c = sect163k1();
+        let g = base_g(&c);
+        let sum = &g + &g;
+        let dbl = g.twice();
+        assert_eq!(sum.x().unwrap(), dbl.x().unwrap());
+        assert_eq!(sum.y().unwrap(), dbl.y().unwrap());
+    }
+
+    #[test]
+    fn add_distinct_points_stays_on_curve() {
+        // distinct-add 路徑（dx≠0）：3G = 2G + G，驗在曲線上。
+        let c = sect163k1();
+        let g = base_g(&c);
+        let three_g = &g.twice() + &g;
+        assert!(!three_g.is_infinity());
+        assert!(on_curve(&three_g), "3G 應在曲線上（驗證相異點加法公式）");
+        // 3G ≠ G（sanity）
+        assert_ne!(three_g.x().unwrap().to_big_integer(), g.x().unwrap().to_big_integer());
     }
 }
