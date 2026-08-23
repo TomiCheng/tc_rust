@@ -83,6 +83,282 @@ impl Fe {
         Fe(core::array::from_fn(|i| self.0[i] - rhs.0[i]))
     }
 
+    /// Field multiplication `self · rhs mod (2²⁵⁵ − 19)`. Corresponds to bc
+    /// `X25519Field.Mul`, transcribed verbatim: a Karatsuba split of the 10 limbs into
+    /// low `a = xₗ·yₗ` and high `b = xₕ·yₕ` halves, the cross term `c = (xₗ+xₕ)(yₗ+yₕ)`,
+    /// with the `2²⁵⁵ ≡ 19` reduction (× 19/38/76) folded in. Products accumulate in
+    /// `i64`; limbs are cast to `i64` up front (equivalent to bc's per-multiply `(long)`
+    /// casts). Constant-time.
+    pub fn mul(self, rhs: Fe) -> Fe {
+        let x = self.0;
+        let y = rhs.0;
+        let (mut x0, mut x1, mut x2, mut x3, mut x4) =
+            (x[0] as i64, x[1] as i64, x[2] as i64, x[3] as i64, x[4] as i64);
+        let (mut y0, mut y1, mut y2, mut y3, mut y4) =
+            (y[0] as i64, y[1] as i64, y[2] as i64, y[3] as i64, y[4] as i64);
+        let (u0, u1, u2, u3, u4) = (x[5] as i64, x[6] as i64, x[7] as i64, x[8] as i64, x[9] as i64);
+        let (v0, v1, v2, v3, v4) = (y[5] as i64, y[6] as i64, y[7] as i64, y[8] as i64, y[9] as i64);
+
+        // a = xₗ · yₗ（低 5 limb）
+        let mut a0 = x0 * y0;
+        let mut a1 = x0 * y1 + x1 * y0;
+        let mut a2 = x0 * y2 + x1 * y1 + x2 * y0;
+        let mut a3 = x1 * y2 + x2 * y1;
+        a3 <<= 1;
+        a3 += x0 * y3 + x3 * y0;
+        let mut a4 = x2 * y2;
+        a4 <<= 1;
+        a4 += x0 * y4 + x1 * y3 + x3 * y1 + x4 * y0;
+        let mut a5 = x1 * y4 + x2 * y3 + x3 * y2 + x4 * y1;
+        a5 <<= 1;
+        let mut a6 = x2 * y4 + x4 * y2;
+        a6 <<= 1;
+        a6 += x3 * y3;
+        let mut a7 = x3 * y4 + x4 * y3;
+        let mut a8 = x4 * y4;
+        a8 <<= 1;
+
+        // b = xₕ · yₕ（高 5 limb）
+        let b0 = u0 * v0;
+        let b1 = u0 * v1 + u1 * v0;
+        let b2 = u0 * v2 + u1 * v1 + u2 * v0;
+        let mut b3 = u1 * v2 + u2 * v1;
+        b3 <<= 1;
+        b3 += u0 * v3 + u3 * v0;
+        let mut b4 = u2 * v2;
+        b4 <<= 1;
+        b4 += u0 * v4 + u1 * v3 + u3 * v1 + u4 * v0;
+        let b5 = u1 * v4 + u2 * v3 + u3 * v2 + u4 * v1;
+        let mut b6 = u2 * v4 + u4 * v2;
+        b6 <<= 1;
+        b6 += u3 * v3;
+        let b7 = u3 * v4 + u4 * v3;
+        let b8 = u4 * v4;
+
+        // 折疊 high 半部（2²⁵⁵ ≡ 19）
+        a0 -= b5 * 76;
+        a1 -= b6 * 38;
+        a2 -= b7 * 38;
+        a3 -= b8 * 76;
+        a5 -= b0;
+        a6 -= b1;
+        a7 -= b2;
+        a8 -= b3;
+
+        // c = (xₗ+xₕ) · (yₗ+yₕ)（Karatsuba cross）
+        x0 += u0; y0 += v0;
+        x1 += u1; y1 += v1;
+        x2 += u2; y2 += v2;
+        x3 += u3; y3 += v3;
+        x4 += u4; y4 += v4;
+
+        let c0 = x0 * y0;
+        let c1 = x0 * y1 + x1 * y0;
+        let c2 = x0 * y2 + x1 * y1 + x2 * y0;
+        let mut c3 = x1 * y2 + x2 * y1;
+        c3 <<= 1;
+        c3 += x0 * y3 + x3 * y0;
+        let mut c4 = x2 * y2;
+        c4 <<= 1;
+        c4 += x0 * y4 + x1 * y3 + x3 * y1 + x4 * y0;
+        let mut c5 = x1 * y4 + x2 * y3 + x3 * y2 + x4 * y1;
+        c5 <<= 1;
+        let mut c6 = x2 * y4 + x4 * y2;
+        c6 <<= 1;
+        c6 += x3 * y3;
+        let c7 = x3 * y4 + x4 * y3;
+        let mut c8 = x4 * y4;
+        c8 <<= 1;
+
+        // 收攏 + 進位（中間項 = c − a − b，折疊入結果）
+        let mut z = [0i32; SIZE];
+        let mut t = a8 + (c3 - a3);
+        let z8 = t as i32 & M26;
+        t >>= 26;
+        t += (c4 - a4) - b4;
+        let z9 = t as i32 & M25;
+        t >>= 25;
+        t = a0 + (t + c5 - a5) * 38;
+        z[0] = t as i32 & M26;
+        t >>= 26;
+        t += a1 + (c6 - a6) * 38;
+        z[1] = t as i32 & M26;
+        t >>= 26;
+        t += a2 + (c7 - a7) * 38;
+        z[2] = t as i32 & M25;
+        t >>= 25;
+        t += a3 + (c8 - a8) * 38;
+        z[3] = t as i32 & M26;
+        t >>= 26;
+        t += a4 + b4 * 38;
+        z[4] = t as i32 & M25;
+        t >>= 25;
+        t += a5 + (c0 - a0);
+        z[5] = t as i32 & M26;
+        t >>= 26;
+        t += a6 + (c1 - a1);
+        z[6] = t as i32 & M26;
+        t >>= 26;
+        t += a7 + (c2 - a2);
+        z[7] = t as i32 & M25;
+        t >>= 25;
+        t += z8 as i64;
+        z[8] = t as i32 & M26;
+        t >>= 26;
+        z[9] = z9 + t as i32;
+        Fe(z)
+    }
+
+    /// Field multiplication by a small `i32` scalar, `self · y mod (2²⁵⁵ − 19)`.
+    /// Corresponds to bc `X25519Field.Mul(x, int y, z)` — each limb `× y` with carry
+    /// propagation and the `2²⁵⁵ ≡ 19` fold (`× 38`). Used by the ladder (× A24).
+    pub fn mul_i32(self, y: i32) -> Fe {
+        let x = self.0;
+        let (x0, x1, mut x2, x3, mut x4, x5, x6, mut x7, x8, mut x9) =
+            (x[0], x[1], x[2], x[3], x[4], x[5], x[6], x[7], x[8], x[9]);
+        let y = y as i64;
+        let mut z = [0i32; SIZE];
+
+        let mut c0 = x2 as i64 * y; x2 = c0 as i32 & M25; c0 >>= 25;
+        let mut c1 = x4 as i64 * y; x4 = c1 as i32 & M25; c1 >>= 25;
+        let mut c2 = x7 as i64 * y; x7 = c2 as i32 & M25; c2 >>= 25;
+        let mut c3 = x9 as i64 * y; x9 = c3 as i32 & M25; c3 >>= 25;
+        c3 *= 38;
+
+        c3 += x0 as i64 * y; z[0] = c3 as i32 & M26; c3 >>= 26;
+        c1 += x5 as i64 * y; z[5] = c1 as i32 & M26; c1 >>= 26;
+
+        c3 += x1 as i64 * y; z[1] = c3 as i32 & M26; c3 >>= 26;
+        c0 += x3 as i64 * y; z[3] = c0 as i32 & M26; c0 >>= 26;
+        c1 += x6 as i64 * y; z[6] = c1 as i32 & M26; c1 >>= 26;
+        c2 += x8 as i64 * y; z[8] = c2 as i32 & M26; c2 >>= 26;
+
+        z[2] = x2 + c3 as i32;
+        z[4] = x4 + c0 as i32;
+        z[7] = x7 + c1 as i32;
+        z[9] = x9 + c2 as i32;
+        Fe(z)
+    }
+
+    /// Returns `self^(2ⁿ)` — `n` repeated squarings (`n >= 1`). Corresponds to bc
+    /// `X25519Field.Sqr(x, n, z)`; used by the inversion addition chain.
+    pub fn sqr_n(self, n: usize) -> Fe {
+        debug_assert!(n > 0);
+        let mut z = self.sqr();
+        for _ in 1..n {
+            z = z.sqr();
+        }
+        z
+    }
+
+    /// Field squaring `self² mod (2²⁵⁵ − 19)`. Corresponds to bc `X25519Field.Sqr`,
+    /// transcribed verbatim: same Karatsuba structure as [`mul`](Fe::mul) but with the
+    /// squaring symmetry (doubled `x_2` terms save half the products; folds use × 38,
+    /// no × 76). Constant-time.
+    pub fn sqr(self) -> Fe {
+        let x = self.0;
+        let (mut x0, mut x1, mut x2, mut x3, mut x4) =
+            (x[0] as i64, x[1] as i64, x[2] as i64, x[3] as i64, x[4] as i64);
+        let (u0, u1, u2, u3, u4) = (x[5] as i64, x[6] as i64, x[7] as i64, x[8] as i64, x[9] as i64);
+
+        let mut x1_2 = x1 * 2;
+        let mut x2_2 = x2 * 2;
+        let mut x3_2 = x3 * 2;
+        let mut x4_2 = x4 * 2;
+
+        let mut a0 = x0 * x0;
+        let mut a1 = x0 * x1_2;
+        let mut a2 = x0 * x2_2 + x1 * x1;
+        let mut a3 = x1_2 * x2_2 + x0 * x3_2;
+        let a4 = x2 * x2_2 + x0 * x4_2 + x1 * x3_2;
+        let mut a5 = x1_2 * x4_2 + x2_2 * x3_2;
+        let mut a6 = x2_2 * x4_2 + x3 * x3;
+        let mut a7 = x3 * x4_2;
+        let mut a8 = x4 * x4_2;
+
+        let u1_2 = u1 * 2;
+        let u2_2 = u2 * 2;
+        let u3_2 = u3 * 2;
+        let u4_2 = u4 * 2;
+
+        let b0 = u0 * u0;
+        let b1 = u0 * u1_2;
+        let b2 = u0 * u2_2 + u1 * u1;
+        let b3 = u1_2 * u2_2 + u0 * u3_2;
+        let b4 = u2 * u2_2 + u0 * u4_2 + u1 * u3_2;
+        let b5 = u1_2 * u4_2 + u2_2 * u3_2;
+        let b6 = u2_2 * u4_2 + u3 * u3;
+        let b7 = u3 * u4_2;
+        let b8 = u4 * u4_2;
+
+        a0 -= b5 * 38;
+        a1 -= b6 * 38;
+        a2 -= b7 * 38;
+        a3 -= b8 * 38;
+        a5 -= b0;
+        a6 -= b1;
+        a7 -= b2;
+        a8 -= b3;
+
+        x0 += u0;
+        x1 += u1;
+        x2 += u2;
+        x3 += u3;
+        x4 += u4;
+
+        x1_2 = x1 * 2;
+        x2_2 = x2 * 2;
+        x3_2 = x3 * 2;
+        x4_2 = x4 * 2;
+
+        let c0 = x0 * x0;
+        let c1 = x0 * x1_2;
+        let c2 = x0 * x2_2 + x1 * x1;
+        let c3 = x1_2 * x2_2 + x0 * x3_2;
+        let c4 = x2 * x2_2 + x0 * x4_2 + x1 * x3_2;
+        let c5 = x1_2 * x4_2 + x2_2 * x3_2;
+        let c6 = x2_2 * x4_2 + x3 * x3;
+        let c7 = x3 * x4_2;
+        let c8 = x4 * x4_2;
+
+        let mut z = [0i32; SIZE];
+        let mut t = a8 + (c3 - a3);
+        let z8 = t as i32 & M26;
+        t >>= 26;
+        t += (c4 - a4) - b4;
+        let z9 = t as i32 & M25;
+        t >>= 25;
+        t = a0 + (t + c5 - a5) * 38;
+        z[0] = t as i32 & M26;
+        t >>= 26;
+        t += a1 + (c6 - a6) * 38;
+        z[1] = t as i32 & M26;
+        t >>= 26;
+        t += a2 + (c7 - a7) * 38;
+        z[2] = t as i32 & M25;
+        t >>= 25;
+        t += a3 + (c8 - a8) * 38;
+        z[3] = t as i32 & M26;
+        t >>= 26;
+        t += a4 + b4 * 38;
+        z[4] = t as i32 & M25;
+        t >>= 25;
+        t += a5 + (c0 - a0);
+        z[5] = t as i32 & M26;
+        t >>= 26;
+        t += a6 + (c1 - a1);
+        z[6] = t as i32 & M26;
+        t >>= 26;
+        t += a7 + (c2 - a2);
+        z[7] = t as i32 & M25;
+        t >>= 25;
+        t += z8 as i64;
+        z[8] = t as i32 & M26;
+        t >>= 26;
+        z[9] = z9 + t as i32;
+        Fe(z)
+    }
+
     /// Propagates carries so the (unsaturated) limbs return to range, folding the
     /// top-limb overflow back via `2²⁵⁵ ≡ 19` (the `× 38` factor, in radix 2²⁵·⁵).
     /// The 25-bit limbs are indices 2, 4, 7, 9; the rest are 26-bit.
@@ -256,9 +532,18 @@ mod tests {
             // decode + normalize + encode 對照 (bytes mod p)
             assert_eq!(fe_val(a), av);
             assert_eq!(fe_val(b), bv);
-            // add / sub 對照真值
+            // add / sub / mul 對照真值
             assert_eq!(fe_val(a.add(b)), (&av + &bv).rem_euclid(&p));
             assert_eq!(fe_val(a.sub(b)), (&av - &bv).rem_euclid(&p));
+            assert_eq!(fe_val(a.mul(b)), (&av * &bv).rem_euclid(&p));
+            // sqr(a) == a² mod p == a·a
+            assert_eq!(fe_val(a.sqr()), (&av * &av).rem_euclid(&p));
+            assert_eq!(fe_val(a.sqr()), fe_val(a.mul(a)));
+            // mul_i32（ladder 用 A24 = 121666）
+            for &y in &[1i32, 19, 121665, 121666] {
+                let yv = BigInteger::from_u32(y as u32);
+                assert_eq!(fe_val(a.mul_i32(y)), (&av * &yv).rem_euclid(&p), "mul_i32 y={y}");
+            }
         }
     }
 
