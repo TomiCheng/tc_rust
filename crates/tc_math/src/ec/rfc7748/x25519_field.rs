@@ -36,6 +36,13 @@ const M25: i32 = 0x01FF_FFFF;
 /// Mask for a 26-bit limb (`2²⁶ − 1`). bc `X25519Field.M26`.
 const M26: i32 = 0x03FF_FFFF;
 
+/// `√(−1) mod p`, in radix-2²⁵·⁵ limbs. bc `X25519Field.RootNegOne`; used by the
+/// square-root-of-ratio path (Ed25519 point decompression).
+const ROOT_NEG_ONE: Fe = Fe([
+    -0x01F1_5F50, -0x0079_362D, 0x0047_8C4F, 0x0035_697F, 0x005E_8630, 0x01FB_D7A7, -0x00BF_D9B1,
+    -0x000F_4D4B, 0x0002_7E0F, 0x0057_0649,
+]);
+
 /// An element of `GF(2²⁵⁵ − 19)` in the ref10 radix-2²⁵·⁵ representation: [`SIZE`]
 /// signed limbs, unsaturated (each limb uses 25–26 of its 32 bits). Values are not
 /// necessarily reduced/normalized between operations; [`carry`]/`normalize` bring a
@@ -257,6 +264,57 @@ impl Fe {
         (Fe(ra), Fe(rb))
     }
 
+    /// Negation `−self` (limb-wise `−x`; unsaturated, not normalized). Corresponds to
+    /// bc `X25519Field.Negate`.
+    pub fn negate(self) -> Fe {
+        Fe(core::array::from_fn(|i| -self.0[i]))
+    }
+
+    /// Returns `self + 1` (adds 1 to the constant limb). Corresponds to bc
+    /// `X25519Field.AddOne`.
+    pub fn add_one(self) -> Fe {
+        let mut z = self.0;
+        z[0] += 1;
+        Fe(z)
+    }
+
+    /// Returns `(self + rhs, self − rhs)` in one pass ("add-plus-minus"). Corresponds to
+    /// bc `X25519Field.Apm` (scalar path); the ladder uses it to save a traversal.
+    pub fn apm(self, rhs: Fe) -> (Fe, Fe) {
+        let zp = core::array::from_fn(|i| self.0[i] + rhs.0[i]);
+        let zm = core::array::from_fn(|i| self.0[i] - rhs.0[i]);
+        (Fe(zp), Fe(zm))
+    }
+
+    /// Constant-time conditional move: returns `x` if `cond == 1`, else `z`, branchlessly.
+    /// Corresponds to bc `X25519Field.CMov`.
+    pub fn cmov(cond: i32, x: Fe, z: Fe) -> Fe {
+        debug_assert!(cond == 0 || cond == 1);
+        let mask = -cond;
+        Fe(core::array::from_fn(|i| z.0[i] ^ (mask & (z.0[i] ^ x.0[i]))))
+    }
+
+    /// Constant-time conditional negate: `−self` if `neg == 1`, else `self`, branchlessly.
+    /// Corresponds to bc `X25519Field.CNegate`.
+    pub fn cnegate(self, neg: i32) -> Fe {
+        debug_assert!(neg == 0 || neg == 1);
+        let mask = -neg;
+        Fe(core::array::from_fn(|i| (self.0[i] ^ mask) - mask))
+    }
+
+    /// Returns `true` if this element is `0`. Normalizes internally, so it is correct on
+    /// any (un-normalized) representation. Corresponds to bc `X25519Field.IsZeroVar`.
+    pub fn is_zero(self) -> bool {
+        self.normalize().0.iter().all(|&l| l == 0)
+    }
+
+    /// Returns `true` if this element is `1`. Normalizes internally. Corresponds to bc
+    /// `X25519Field.IsOneVar`.
+    pub fn is_one(self) -> bool {
+        let z = self.normalize().0;
+        z[0] == 1 && z[1..].iter().all(|&l| l == 0)
+    }
+
     /// Returns `self^(2ⁿ)` — `n` repeated squarings (`n >= 1`). Corresponds to bc
     /// `X25519Field.Sqr(x, n, z)`; used by the inversion addition chain.
     pub fn sqr_n(self, n: usize) -> Fe {
@@ -272,12 +330,42 @@ impl Fe {
     /// little theorem; `0⁻¹ = 0`. Constant-time (the exponent `p − 2` is fixed/public).
     ///
     /// Corresponds to bc's earlier `X25519Field.Inv` (its current one uses constant-time
-    /// safegcd `Mod.ModOddInverse`, which we have not ported — see `TODO(ec-ct)` for the
-    /// shared safegcd). We use the self-contained addition-chain exponentiation.
+    /// safegcd `Mod.ModOddInverse`). We use the self-contained addition-chain
+    /// exponentiation instead.
+    //
+    // TODO(ec-ct): port the shared safegcd (`Mod.ModOddInverse` / `…Var`) — it would
+    // give a faster constant-time `invert` here (and the Fp CT inverse) plus the
+    // variable-time `inv_var` bc has. Until then Fermat `invert` covers all needs.
     pub fn invert(self) -> Fe {
         // (x3, z) = (x^3, x^((p−5)/8)); then z^8 · x^3 = x^(p−5) · x^3 = x^(p−2).
         let (x3, z) = self.pow_pm5d8();
         z.sqr_n(3).mul(x3)
+    }
+
+    /// Returns a square root of `u / v` if one exists (`Some`), else `None`. **Variable
+    /// time** in whether/which root exists (bc `SqrtRatioVar`) — used for Ed25519 point
+    /// decompression, where the operands are public.
+    ///
+    /// Computes a candidate `x = u·v³·(u·v⁷)^((p−5)/8)`, then checks `x²·v == ±u`,
+    /// multiplying by `√(−1)` in the `−u` case.
+    pub fn sqrt_ratio_var(u: Fe, v: Fe) -> Option<Fe> {
+        let uv3 = u.mul(v); // u·v
+        let uv7 = v.sqr(); // v²
+        let uv3 = uv3.mul(uv7); // u·v³
+        let uv7 = uv7.sqr(); // v⁴
+        let uv7 = uv7.mul(uv3); // u·v⁷
+
+        let (_, x) = uv7.pow_pm5d8(); // (u·v⁷)^((p−5)/8)
+        let x = x.mul(uv3); // 候選平方根
+
+        let vx2 = x.sqr().mul(v); // x²·v
+        if vx2.sub(u).is_zero() {
+            return Some(x); // x²·v == u
+        }
+        if vx2.add(u).is_zero() {
+            return Some(x.mul(ROOT_NEG_ONE)); // x²·v == −u → 乘 √(−1)
+        }
+        None
     }
 
     /// Returns `(self^3, self^((p−5)/8))` via the bc `PowPm5d8` addition chain
@@ -599,7 +687,63 @@ mod tests {
                 assert_eq!(fe_val(a.invert()), av.mod_inverse(&p).unwrap());
                 assert_eq!(fe_val(a.mul(a.invert())), BigInteger::from_u32(1));
             }
+            // negate / cnegate / add_one / apm 對照真值
+            assert_eq!(fe_val(a.negate()), (-&av).rem_euclid(&p));
+            assert_eq!(fe_val(a.cnegate(0)), av);
+            assert_eq!(fe_val(a.cnegate(1)), (-&av).rem_euclid(&p));
+            assert_eq!(fe_val(a.add_one()), (&av + &BigInteger::from_u32(1)).rem_euclid(&p));
+            let (sp, sm) = a.apm(b);
+            assert_eq!(fe_val(sp), (&av + &bv).rem_euclid(&p));
+            assert_eq!(fe_val(sm), (&av - &bv).rem_euclid(&p));
         }
+    }
+
+    #[test]
+    fn sqrt_ratio_var_finds_and_rejects() {
+        let mut s = 0x5A17_2589_F3D0_C4B6u64;
+        let mut rand_fe = || {
+            let mut b = [0u8; 32];
+            for x in b.iter_mut() {
+                s ^= s << 13;
+                s ^= s >> 7;
+                s ^= s << 17;
+                *x = s as u8;
+            }
+            Fe::decode(&b)
+        };
+        for _ in 0..100 {
+            let v = rand_fe();
+            if v.is_zero() {
+                continue;
+            }
+            // u = w²·v ⇒ u/v = w²（必為 QR）；sqrt_ratio 的根 r 應滿足 r²·v == u
+            let w = rand_fe();
+            let u = w.sqr().mul(v);
+            let r = Fe::sqrt_ratio_var(u, v).expect("QR 應有平方根");
+            assert!(r.sqr().mul(v).sub(u).is_zero());
+        }
+        // 2 是 GF(2²⁵⁵−19) 的非二次剩餘（p ≡ 5 mod 8）→ sqrt(2/1) = None
+        let two = Fe::one().add(Fe::one());
+        assert!(Fe::sqrt_ratio_var(two, Fe::one()).is_none());
+    }
+
+    #[test]
+    fn cmov_selects() {
+        let a = Fe([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+        let b = Fe([10, 20, 30, 40, 50, 60, 70, 80, 90, 100]);
+        assert_eq!(Fe::cmov(0, a, b).0, b.0); // cond 0 → z（b）
+        assert_eq!(Fe::cmov(1, a, b).0, a.0); // cond 1 → x（a）
+    }
+
+    #[test]
+    fn is_zero_is_one_predicates() {
+        assert!(Fe::zero().is_zero());
+        assert!(!Fe::zero().is_one());
+        assert!(Fe::one().is_one());
+        assert!(!Fe::one().is_zero());
+        // 未 normalize 的零（a − a）也應判為零。
+        let a = Fe([5, 9, 13, 17, 21, 25, 29, 33, 37, 41]);
+        assert!(a.sub(a).is_zero());
     }
 
     #[test]
