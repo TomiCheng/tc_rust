@@ -240,6 +240,23 @@ impl Fe {
         Fe(z)
     }
 
+    /// Constant-time conditional swap: returns `(a, b)` if `swap == 0`, or `(b, a)` if
+    /// `swap == 1`, branchlessly (via a `0`/all-ones mask). Corresponds to bc
+    /// `X25519Field.CSwap`; the Montgomery ladder uses it to swap the working points on
+    /// each scalar bit without leaking the bit through timing.
+    pub fn cswap(swap: i32, a: Fe, b: Fe) -> (Fe, Fe) {
+        debug_assert!(swap == 0 || swap == 1);
+        let mask = -swap; // 0 → 0x0000_0000, 1 → 0xFFFF_FFFF
+        let mut ra = a.0;
+        let mut rb = b.0;
+        for i in 0..SIZE {
+            let dummy = mask & (ra[i] ^ rb[i]);
+            ra[i] ^= dummy;
+            rb[i] ^= dummy;
+        }
+        (Fe(ra), Fe(rb))
+    }
+
     /// Returns `self^(2ⁿ)` — `n` repeated squarings (`n >= 1`). Corresponds to bc
     /// `X25519Field.Sqr(x, n, z)`; used by the inversion addition chain.
     pub fn sqr_n(self, n: usize) -> Fe {
@@ -249,6 +266,39 @@ impl Fe {
             z = z.sqr();
         }
         z
+    }
+
+    /// The multiplicative inverse `self⁻¹ = self^(p − 2) mod (2²⁵⁵ − 19)` by Fermat's
+    /// little theorem; `0⁻¹ = 0`. Constant-time (the exponent `p − 2` is fixed/public).
+    ///
+    /// Corresponds to bc's earlier `X25519Field.Inv` (its current one uses constant-time
+    /// safegcd `Mod.ModOddInverse`, which we have not ported — see `TODO(ec-ct)` for the
+    /// shared safegcd). We use the self-contained addition-chain exponentiation.
+    pub fn invert(self) -> Fe {
+        // (x3, z) = (x^3, x^((p−5)/8)); then z^8 · x^3 = x^(p−5) · x^3 = x^(p−2).
+        let (x3, z) = self.pow_pm5d8();
+        z.sqr_n(3).mul(x3)
+    }
+
+    /// Returns `(self^3, self^((p−5)/8))` via the bc `PowPm5d8` addition chain
+    /// (`xᴺ = self^(2ᴺ − 1)`; chain 1 2 3 5 10 15 25 50 75 125 250). Used by [`invert`]
+    /// (and later the square-root path).
+    ///
+    /// [`invert`]: Fe::invert
+    fn pow_pm5d8(self) -> (Fe, Fe) {
+        let x = self;
+        let x2 = x.sqr().mul(x); // x^(2²−1) = x³
+        let x3 = x2.sqr().mul(x); // x^(2³−1)
+        let x5 = x3.sqr_n(2).mul(x2); // x^(2⁵−1)
+        let x10 = x5.sqr_n(5).mul(x5);
+        let x15 = x10.sqr_n(5).mul(x5);
+        let x25 = x15.sqr_n(10).mul(x10);
+        let x50 = x25.sqr_n(25).mul(x25);
+        let x75 = x50.sqr_n(25).mul(x25);
+        let x125 = x75.sqr_n(50).mul(x50);
+        let x250 = x125.sqr_n(125).mul(x125); // x^(2²⁵⁰−1)
+        let z = x250.sqr_n(2).mul(x); // x^(2²⁵²−3) = x^((p−5)/8)
+        (x2, z)
     }
 
     /// Field squaring `self² mod (2²⁵⁵ − 19)`. Corresponds to bc `X25519Field.Sqr`,
@@ -544,7 +594,24 @@ mod tests {
                 let yv = BigInteger::from_u32(y as u32);
                 assert_eq!(fe_val(a.mul_i32(y)), (&av * &yv).rem_euclid(&p), "mul_i32 y={y}");
             }
+            // invert：a⁻¹ = a^(p−2)，且 a·a⁻¹ = 1（a ≠ 0）
+            if !av.is_zero() {
+                assert_eq!(fe_val(a.invert()), av.mod_inverse(&p).unwrap());
+                assert_eq!(fe_val(a.mul(a.invert())), BigInteger::from_u32(1));
+            }
         }
+    }
+
+    #[test]
+    fn cswap_conditionally_swaps() {
+        let a = Fe([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+        let b = Fe([10, 20, 30, 40, 50, 60, 70, 80, 90, 100]);
+        // swap = 0：不動
+        let (a0, b0) = Fe::cswap(0, a, b);
+        assert_eq!((a0.0, b0.0), (a.0, b.0));
+        // swap = 1：交換
+        let (a1, b1) = Fe::cswap(1, a, b);
+        assert_eq!((a1.0, b1.0), (b.0, a.0));
     }
 
     #[test]
