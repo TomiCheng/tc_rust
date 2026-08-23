@@ -315,6 +315,25 @@ impl Fe {
         z[0] == 1 && z[1..].iter().all(|&l| l == 0)
     }
 
+    // TODO(x25519-ct-predicates): port bc's *constant-time mask* predicates — `AreEqual`
+    // and `IsZero` return `-1`/`0` (`((d-1) & ~d) >> 31` over the XOR/OR of NORMALIZED
+    // limbs) for branchless combination, with `…Var` bool wrappers on top. Our current
+    // `is_zero`/`is_one` normalize + return `bool` (= the `…Var` behavior). The two stubs
+    // below reserve the `AreEqual` / `IsZeroVar` surface for when constant-time equality
+    // is actually needed (e.g. Ed25519); implement then (mask form + this Var form).
+
+    /// **Not yet implemented.** Constant-time equality of two field elements (bc
+    /// `X25519Field.AreEqual` / `AreEqualVar`). See `TODO(x25519-ct-predicates)`.
+    pub fn are_equal(_a: Fe, _b: Fe) -> bool {
+        todo!("are_equal: constant-time field equality — see TODO(x25519-ct-predicates)")
+    }
+
+    /// **Not yet implemented.** Variable-time zero test (bc `X25519Field.IsZeroVar`);
+    /// functionally equal to [`is_zero`](Fe::is_zero). See `TODO(x25519-ct-predicates)`.
+    pub fn is_zero_var(self) -> bool {
+        todo!("is_zero_var: see TODO(x25519-ct-predicates); functionally = is_zero()")
+    }
+
     /// Returns `self^(2ⁿ)` — `n` repeated squarings (`n >= 1`). Corresponds to bc
     /// `X25519Field.Sqr(x, n, z)`; used by the inversion addition chain.
     pub fn sqr_n(self, n: usize) -> Fe {
