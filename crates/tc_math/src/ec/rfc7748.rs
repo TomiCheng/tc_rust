@@ -9,4 +9,5 @@
 //! Layering: [`x25519_field`] (the `GF(2²⁵⁵ − 19)` base field) is the foundation; the
 //! X25519 Montgomery ladder sits on top (added later). X448 mirrors it.
 
+pub mod x25519;
 pub mod x25519_field;
