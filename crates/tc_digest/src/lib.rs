@@ -5,8 +5,8 @@
 //! [`Digest`](tc_crypto_core::Digest) traits from `tc_crypto_core`. It depends only
 //! on `tc_crypto_core` (never on `tc_math` — hashes carry no big-integer
 //! arithmetic). The crate is `no_std`; it uses `alloc` only for the pass-through
-//! [`NullDigest`] and the runtime name of [`Sha512tDigest`], every other digest is
-//! alloc-free.
+//! [`NullDigest`] and the runtime names of [`KeccakDigest`] and
+//! [`Sha512tDigest`], every other digest is alloc-free.
 //!
 //! The real no_std build is verified by `cargo build` (not `cargo test`, which
 //! links `std` for the test harness).
@@ -18,6 +18,7 @@
 extern crate alloc;
 
 mod md_buffer;
+pub mod keccak;
 pub mod md2;
 pub mod md4;
 pub mod null;
@@ -32,10 +33,12 @@ mod sha512_core;
 pub mod sha1;
 pub mod sha224;
 pub mod sha256;
+pub mod sha3;
 pub mod sha384;
 pub mod sha512;
 pub mod sha512t;
 
+pub use keccak::KeccakDigest;
 pub use md2::Md2Digest;
 pub use md4::Md4Digest;
 pub use null::NullDigest;
@@ -47,6 +50,7 @@ pub use ripemd320::RipeMD320Digest;
 pub use sha1::Sha1Digest;
 pub use sha224::Sha224Digest;
 pub use sha256::Sha256Digest;
+pub use sha3::Sha3Digest;
 pub use sha384::Sha384Digest;
 pub use sha512::Sha512Digest;
 pub use sha512t::Sha512tDigest;

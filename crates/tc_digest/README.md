@@ -44,6 +44,7 @@ digest is alloc-free.
 | **SHA-1** | FIPS 180 | `MdBuffer<64>`, BE | ✅ known vectors verified |
 | **SHA-224** | FIPS 180-2 | `MdBuffer<64>`, BE (reuses SHA-256 core) | ✅ known vectors verified |
 | **SHA-256** | FIPS 180-2 | `MdBuffer<64>`, BE | ✅ known vectors verified |
+| **SHA-3** | FIPS 202 | Keccak-f[1600] sponge, domain `0x06` | ✅ 224/256/384/512 vectors verified |
 | **SHA-384** | FIPS 180-2 | `MdBuffer<128>`, BE (reuses SHA-512 core) | ✅ known vectors verified |
 | **SHA-512** | FIPS 180-2 | `MdBuffer<128>`, BE | ✅ known vectors verified |
 | **SHA-512/t** | FIPS 180-4 | `MdBuffer<128>`, BE, per-`t` IV + truncation | ✅ SHA-512/224 & /256 NIST vectors |
@@ -63,7 +64,7 @@ Line counts are the bc-csharp source sizes. ✅ = ported, ⬜ = pending.
 |---------|------:|---------|
 | `GeneralDigest` | 183 | ✅ `MdBuffer<64>` (composition) |
 | `LongDigest` | 412 | ✅ `MdBuffer<128>` (composition) |
-| `KeccakDigest` | 636 | ⬜ sponge base (SHA-3/SHAKE) |
+| `KeccakDigest` | 636 | ✅ sponge base (raw Keccak/SHA-3) |
 | `NullDigest` | 86 | ✅ pass-through (needs `alloc`) |
 | `NonMemoableDigest` | 76 | ⊘ intentionally skipped (see note) |
 | `ShortenedDigest` | 104 | ⬜ truncating wrapper |
@@ -100,7 +101,7 @@ Line counts are the bc-csharp source sizes. ✅ = ported, ⬜ = pending.
 
 | Algorithm | Lines | Status |
 |-----------|------:|--------|
-| SHA3 | 236 | ⬜ |
+| SHA3 | 236 | ✅ 224/256/384/512 |
 | SHAKE | 168 | ⬜ (XOF) |
 | cSHAKE | 127 | ⬜ (XOF) |
 
