@@ -24,9 +24,9 @@ not use in production or for real-world security.**
 
 ### `tc_digest` status
 
-Implemented algorithms include BLAKE2b/BLAKE2s, MD2/4/5, SHA-1/2/3, Keccak,
-RIPEMD, Tiger, Whirlpool, SM3, ISAP Hash, Xoodyak Hash, GOST 34.11-2012, and
-DSTU 7564. See the
+Implemented algorithms include Ascon-Hash256, legacy Ascon v1.2 Hash/HashA,
+BLAKE2b/BLAKE2s, MD2/4/5, SHA-1/2/3, Keccak, RIPEMD, Tiger, Whirlpool, SM3,
+ISAP Hash, Xoodyak Hash, GOST 34.11-2012, and DSTU 7564. See the
 [`tc_digest` roadmap](crates/tc_digest/README.md) for the full list and test
 coverage.
 

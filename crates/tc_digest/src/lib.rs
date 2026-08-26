@@ -19,6 +19,9 @@
 // 測試也明確從 alloc 取用 String/Vec/format!(見 no_std 測試註記)。
 extern crate alloc;
 
+mod ascon_core;
+pub mod ascon_hash256;
+pub mod ascon_legacy;
 pub mod blake2b;
 pub mod blake2s;
 pub mod dstu7564;
@@ -49,6 +52,9 @@ pub mod tiger;
 pub mod whirlpool;
 pub mod xoodyak;
 
+pub use ascon_hash256::AsconHash256;
+#[allow(deprecated)]
+pub use ascon_legacy::{AsconDigest, AsconParameters};
 pub use blake2b::Blake2bDigest;
 pub use blake2s::Blake2sDigest;
 pub use dstu7564::Dstu7564Digest;

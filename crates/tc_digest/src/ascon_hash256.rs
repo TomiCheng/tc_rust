@@ -1,8 +1,8 @@
-//! ISAP Hash, ported from Bouncy Castle's `IsapDigest`.
+//! Ascon-Hash256 from NIST SP 800-232.
 //!
-//! ISAP Hash is the fixed-output hashing component of the ISAP lightweight
-//! authenticated-encryption family. It absorbs at an 8-byte rate into a
-//! 320-bit state and applies the 12-round ISAP permutation between blocks.
+//! This is the standardized Ascon hash, not the older Ascon v1.2 hash. The
+//! NIST version uses little-endian word encoding, an 8-byte rate, the
+//! Ascon-p\[12] permutation, and a fixed 256-bit output.
 
 use core::convert::Infallible;
 
@@ -11,51 +11,51 @@ use tc_crypto_core::TryDigest;
 use crate::ascon_core::p12;
 
 const DIGEST_LENGTH: usize = 32;
-const BYTE_LENGTH: usize = 8;
+const RATE: usize = 8;
 const IV: [u64; 5] = [
-    0xee93_98aa_db67_f03d,
-    0x8bb2_1831_c60f_1002,
-    0xb48a_92db_98d5_da62,
-    0x4318_9921_b8f8_e3e8,
-    0x348f_a5c9_d525_e140,
+    0x9b1e_5494_e934_d681,
+    0x4bc3_a01e_3337_51d2,
+    0xae65_396c_6b34_b81a,
+    0x3c7f_d4a4_d56a_4db3,
+    0x1a5c_4649_06c5_976d,
 ];
 
-/// The 256-bit ISAP Hash digest.
+/// The standardized 256-bit Ascon hash from NIST SP 800-232.
 #[derive(Clone)]
-pub struct IsapDigest {
+pub struct AsconHash256 {
     state: [u64; 5],
-    buffer: [u8; BYTE_LENGTH],
+    buffer: [u8; RATE],
     buffer_position: usize,
 }
 
-impl Default for IsapDigest {
+impl Default for AsconHash256 {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl IsapDigest {
-    /// Creates a new ISAP Hash digest.
+impl AsconHash256 {
+    /// Creates a new Ascon-Hash256 digest.
     pub fn new() -> Self {
-        IsapDigest {
+        AsconHash256 {
             state: IV,
-            buffer: [0; BYTE_LENGTH],
+            buffer: [0; RATE],
             buffer_position: 0,
         }
     }
 
     #[inline]
-    fn absorb_block(&mut self, block: &[u8; BYTE_LENGTH]) {
-        self.state[0] ^= u64::from_be_bytes(*block);
+    fn absorb_block(&mut self, block: &[u8; RATE]) {
+        self.state[0] ^= u64::from_le_bytes(*block);
         p12(&mut self.state);
     }
 }
 
-impl TryDigest for IsapDigest {
+impl TryDigest for AsconHash256 {
     type Error = Infallible;
 
     fn algorithm_name(&self) -> &str {
-        "ISAP Hash"
+        "Ascon-Hash256"
     }
 
     fn digest_size(&self) -> usize {
@@ -63,7 +63,7 @@ impl TryDigest for IsapDigest {
     }
 
     fn byte_length(&self) -> usize {
-        BYTE_LENGTH
+        RATE
     }
 
     fn try_update(&mut self, mut input: &[u8]) -> Result<(), Self::Error> {
@@ -72,14 +72,14 @@ impl TryDigest for IsapDigest {
         }
 
         if self.buffer_position != 0 {
-            let remaining = BYTE_LENGTH - self.buffer_position;
+            let remaining = RATE - self.buffer_position;
             let copied = remaining.min(input.len());
             self.buffer[self.buffer_position..self.buffer_position + copied]
                 .copy_from_slice(&input[..copied]);
             self.buffer_position += copied;
             input = &input[copied..];
 
-            if self.buffer_position == BYTE_LENGTH {
+            if self.buffer_position == RATE {
                 let block = self.buffer;
                 self.absorb_block(&block);
                 self.buffer_position = 0;
@@ -88,12 +88,12 @@ impl TryDigest for IsapDigest {
             }
         }
 
-        while input.len() >= BYTE_LENGTH {
-            let block: &[u8; BYTE_LENGTH] = input[..BYTE_LENGTH]
+        while input.len() >= RATE {
+            let block: &[u8; RATE] = input[..RATE]
                 .try_into()
-                .expect("8-byte ISAP Hash block");
+                .expect("8-byte Ascon-Hash256 block");
             self.absorb_block(block);
-            input = &input[BYTE_LENGTH..];
+            input = &input[RATE..];
         }
 
         self.buffer[..input.len()].copy_from_slice(input);
@@ -102,14 +102,17 @@ impl TryDigest for IsapDigest {
     }
 
     fn try_do_final(&mut self, output: &mut [u8]) -> Result<usize, Self::Error> {
-        let mut final_block = [0u8; BYTE_LENGTH];
+        let mut final_block = [0u8; RATE];
         final_block[..self.buffer_position].copy_from_slice(&self.buffer[..self.buffer_position]);
-        final_block[self.buffer_position] = 0x80;
-        self.state[0] ^= u64::from_be_bytes(final_block);
+        final_block[self.buffer_position] = 0x01;
+        self.state[0] ^= u64::from_le_bytes(final_block);
+        p12(&mut self.state);
 
-        for chunk in output[..DIGEST_LENGTH].chunks_exact_mut(BYTE_LENGTH) {
-            p12(&mut self.state);
-            chunk.copy_from_slice(&self.state[0].to_be_bytes());
+        for (index, chunk) in output[..DIGEST_LENGTH].chunks_exact_mut(RATE).enumerate() {
+            if index != 0 {
+                p12(&mut self.state);
+            }
+            chunk.copy_from_slice(&self.state[0].to_le_bytes());
         }
 
         self.try_reset()?;
@@ -139,7 +142,7 @@ mod tests {
         encoded
     }
 
-    fn digest_hex(digest: &mut IsapDigest, input: &[u8]) -> String {
+    fn digest_hex(digest: &mut AsconHash256, input: &[u8]) -> String {
         digest.update(input);
         let mut output = [0u8; DIGEST_LENGTH];
         digest.do_final(&mut output);
@@ -147,73 +150,97 @@ mod tests {
     }
 
     #[test]
-    fn nist_lwc_kat_vectors() {
-        // Selected from the official LWC_HASH_KAT_256 set, including rate and
+    fn official_ascon_c_kat_vectors() {
+        // Selected from ascon-c's NIST SP 800-232 KAT, including rate and
         // long-message boundaries. Each message is 00, 01, ... modulo 256.
         let vectors = [
             (
                 0,
-                "7346bc14f036e87ae03d0997913088f5f68411434b3cf8b54fa796a80d251f91",
+                "0b3be5850f2f6b98caf29f8fdea89b64a1fa70aa249b8f839bd53baa304d92b2",
             ),
             (
                 1,
-                "8dd446ada58a7740ecf56eb638ef775f7d5c0fd5f0c2bbbdfdec29609d3c43a2",
+                "0728621035af3ed2bca03bf6fde900f9456f5330e4b5ee23e7f6a1e70291bc80",
             ),
             (
                 2,
-                "f77ca13bf89146d3254f1cfb7eddba8fa1bf162284bb29e7f645545cf9e08424",
+                "6115e7c9c4081c2797fc8fe1bc57a836afa1c5381e556dd583860ca2dfb48dd2",
             ),
             (
                 7,
-                "dd409ccc0c60cd7f474c0beed1e1cd48140ad45d5136dc5fda5ebe283df8d3f6",
+                "3e4d273ba69b3b9c53216107e88b75cdbeedbcbf8faf0219c3928ab62b116577",
             ),
             (
                 8,
-                "f4c6a44b29915d3d57cf928a18ec6226bb8dd6c1136acd24965f7e7780cd69cf",
+                "b88e497ae8e6fb641b87ef622eb8f2fca0ed95383f7ffebe167acf1099ba764f",
             ),
             (
                 9,
-                "1e1e710d08a78263773331782621088ca9fe2ee4f596f06c8f7884ca564acec1",
+                "94269c30e0296e1ec86655041841823efa1927f520fd58c8e9bce6197878c1a6",
+            ),
+            (
+                15,
+                "6421330df99c05eb715415ee17b455f2674f862ae3cc5badffe43a4a3ed273e1",
+            ),
+            (
+                16,
+                "3158c1940a2fbadbd68ab661777859b94a689e4efc375911467addd641835c38",
+            ),
+            (
+                17,
+                "f149e99dd0f429599bb89b8079bf3f4dca3f298efefcf9b1ea16fe84f9b8b6e2",
+            ),
+            (
+                31,
+                "b900cd3f06f1618b68c16665807206dbe273df40135361f449847d573903fabd",
+            ),
+            (
+                32,
+                "bd9d3d60a66b53868eab2a5c74539a518a1f60f01eb176c60e43dee81680b33e",
+            ),
+            (
+                33,
+                "a58665a2cb9530c502096a7957a76e428af4ad044b4da5c471f9da6f7b3e5868",
             ),
             (
                 63,
-                "8dcedc0ac6b37defc36f0b1afa281d31437658a8ffa7b4a569ea9988a9efd7f5",
+                "5072896862f6b9cfe8ef76d80559e156254782a40ac5f64cbf7934ad1f624b30",
             ),
             (
                 64,
-                "5179e733b8a84f4c8a6898043c09f6a779bd6811d21aa25d353e357048279862",
+                "a6f241bea5d16405812c06019d9f72d60132bd7c089c60549b2e56bb01c64f48",
             ),
             (
                 65,
-                "21dbd0777a9ee81bebe465570bcdb9ecaed6073b5eb69f2831864c4956aa6a15",
+                "bff4fa006fe6feabb5ce9b219492d0d230f4d05f2bac42db7189f441b1e83b53",
             ),
             (
                 126,
-                "462efa7523f645211162272fb416a5d69da3e0f934f9e8277508da6d6046cbb4",
+                "4666aff6ba886835281152b30fd26f7d8d15c260ed136677c6db21593a476a4e",
             ),
             (
                 127,
-                "0f75dc9132ff23f25b2335ed9a16e68af5ec1df385c41a4c8a471a6ae6cb1beb",
+                "d968938c7f7849403160e291ea54ad79c0caf1237c1375a0b553d5c8122f88b3",
             ),
             (
                 128,
-                "99f85ae900901d2667fe7fbc52ab6a924fd4aa902bc03019c92106f83578d459",
+                "ce8c1047063527f52dddf77dfa8cff33cad07edd981aae3fe845958209c0ec1f",
             ),
             (
                 255,
-                "d4d7b2b70bd7f57c37be24c5f9d14207b737d8c21632b1ae3093b7a740cddd3e",
+                "ada496e2c0ade829f37832a8ba34cf6059dffbb3beba88ca5ded3363914ea69a",
             ),
             (
                 511,
-                "be78f06ce088606fdd0b3a7143ad19436bf6867457e2a1559ea9a477978e121f",
+                "65eb85cf958ab45421a39052dd13e61011dedec9b89c161bd7d1ace2a48a18a9",
             ),
             (
                 1024,
-                "2eb89744de7f9a6f47d53db756bb2f67b127da96762a1c47a5d7bfc1f7273f5c",
+                "48140032bb7df2e2b5c95d403c9ab69b4bc00453980bf85f15a84cae2b09a0e9",
             ),
         ];
 
-        let mut digest = IsapDigest::new();
+        let mut digest = AsconHash256::new();
         for (length, expected) in vectors {
             let message: Vec<u8> = (0..length).map(|i| i as u8).collect();
             assert_eq!(
@@ -234,10 +261,10 @@ mod tests {
     #[test]
     fn accessors_clone_bytewise_and_reset() {
         let message: Vec<u8> = (0..129).map(|i| i as u8).collect();
-        let expected = digest_hex(&mut IsapDigest::new(), &message);
+        let expected = digest_hex(&mut AsconHash256::new(), &message);
 
-        let mut digest = IsapDigest::new();
-        assert_eq!(digest.algorithm_name(), "ISAP Hash");
+        let mut digest = AsconHash256::new();
+        assert_eq!(digest.algorithm_name(), "Ascon-Hash256");
         assert_eq!(digest.digest_size(), 32);
         assert_eq!(digest.byte_length(), 8);
 

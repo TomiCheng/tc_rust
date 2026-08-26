@@ -43,6 +43,8 @@ other digest is alloc-free.
 
 | Algorithm | Spec | Block / length | Status |
 |-----------|------|----------------|--------|
+| **Ascon-Hash256** | NIST SP 800-232 | 320-bit state, 64-bit rate, Ascon-p[12] | ✅ official ascon-c KAT + chunking vectors |
+| **Ascon-Hash / HashA** | Ascon v1.2 (legacy) | 320-bit state, 64-bit rate, p[12]/p[8] | ⚠️ deprecated; compatibility only, bc KAT verified |
 | **BLAKE2b** | RFC 7693 | 128-byte block, 64-bit words, 12 rounds | ✅ keyed/unkeyed + portable/AVX2 verified |
 | **BLAKE2s** | RFC 7693 | 64-byte block, 32-bit words, 10 rounds | ✅ keyed/unkeyed + portable/SSE2 verified |
 | **MD2** | RFC 1319 | standalone (16-byte, S-box) | ✅ RFC vectors verified |
@@ -159,7 +161,9 @@ Line counts are the bc-csharp source sizes. ✅ = ported, ⬜ = pending,
 
 | Algorithm | Lines | Status |
 |-----------|------:|--------|
-| Ascon | 273 (+ Hash256/Xof/Xof128/CXof128) | ⬜ |
+| Ascon-Hash256 | 206 | ✅ NIST SP 800-232, official ascon-c KAT vectors |
+| Ascon v1.2 Hash / HashA | 273 | ⚠️ legacy, deprecated; bc KAT verified |
+| Ascon XOF variants | Xof/XofA/Xof128/CXof128 | ⬜ |
 | ISAP | 204 | ✅ 256-bit hash, official NIST LWC KAT vectors |
 | PhotonBeetle | 369 | ⬜ |
 | Sparkle | 298 | ⬜ |
