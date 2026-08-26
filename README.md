@@ -18,7 +18,7 @@ not use in production or for real-world security.**
 
 | Crate | Description |
 | --- | --- |
-| [`tc_crypto_core`](crates/tc_crypto_core) | Shared cryptographic traits, currently including `TryDigest` / `Digest`. |
+| [`tc_crypto_core`](crates/tc_crypto_core) | Shared cryptographic traits, including `TryDigest` / `Digest` and `TryXof` / `Xof`. |
 | [`tc_digest`](crates/tc_digest) | Message-digest algorithms ported from bc-csharp. |
 | [`tc_math`](crates/tc_math) | Arbitrary-precision integers and number theory (`BigInteger`). |
 
