@@ -47,6 +47,7 @@ other digest is alloc-free.
 | Algorithm | Spec | Block / length | Status |
 |-----------|------|----------------|--------|
 | **Ascon-Hash256** | NIST SP 800-232 | 320-bit state, 64-bit rate, Ascon-p[12] | ✅ official ascon-c KAT + chunking vectors |
+| **Ascon-XOF128** | NIST SP 800-232 | XOF, 64-bit rate, Ascon-p[12] | ✅ 1025 official KAT (single-shot + streamed) |
 | **Ascon-CXOF128** | NIST SP 800-232 | XOF, 64-bit rate, Ascon-p[12], customization | ✅ 1089 official KAT (single-shot + streamed) |
 | **Ascon-Hash / HashA** | Ascon v1.2 (legacy) | 320-bit state, 64-bit rate, p[12]/p[8] | ⚠️ deprecated; compatibility only, bc KAT verified |
 | **BLAKE2b** | RFC 7693 | 128-byte block, 64-bit words, 12 rounds | ✅ keyed/unkeyed + portable/AVX2 verified |
@@ -168,7 +169,8 @@ Line counts are the bc-csharp source sizes. ✅ = ported, ⬜ = pending,
 | Ascon-Hash256 | 206 | ✅ NIST SP 800-232, official ascon-c KAT vectors |
 | Ascon v1.2 Hash / HashA | 273 | ⚠️ legacy, deprecated; bc KAT verified |
 | Ascon-CXOF128 | 320 | ✅ first XOF; 1089 official KAT |
-| Ascon XOF variants | Xof/XofA/Xof128 | ⬜ |
+| Ascon-XOF128 | 289 | ✅ 1025 official KAT |
+| Ascon v1.2 XOF / XofA | Xof/XofA | ⬜ legacy |
 | ISAP | 204 | ✅ 256-bit hash, official NIST LWC KAT vectors |
 | PhotonBeetle | 369 | ⬜ |
 | Sparkle | 298 | ⬜ |
