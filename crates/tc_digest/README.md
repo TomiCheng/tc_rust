@@ -4,9 +4,11 @@ Message-digest (hash) algorithms, ported from the Bouncy Castle C# library
 (`bc-csharp`, `crypto/digests/`) as a **learning project**.
 
 Each algorithm implements the `TryDigest` / `Digest` traits from
-[`tc_crypto_core`](../tc_crypto_core). Digests are pure fixed-size bit/byte
-computation, so this crate is `no_std` and needs no `alloc`; it depends **only** on
-`tc_crypto_core` — never on `tc_math` (hashes carry no big-integer arithmetic).
+[`tc_crypto_core`](../tc_crypto_core). The real hashes are pure fixed-size bit/byte
+computation; the crate is `no_std` and depends **only** on `tc_crypto_core` — never on
+`tc_math` (hashes carry no big-integer arithmetic). It uses `alloc` for the one
+pass-through case (`NullDigest`, which buffers arbitrary-length input); every other
+digest is alloc-free.
 
 ## Design notes
 
@@ -38,6 +40,7 @@ computation, so this crate is `no_std` and needs no `alloc`; it depends **only**
 | **SHA-256** | FIPS 180-2 | `MdBuffer<64>`, BE | ✅ known vectors verified |
 | **SHA-384** | FIPS 180-2 | `MdBuffer<128>`, BE (reuses SHA-512 core) | ✅ known vectors verified |
 | **SHA-512** | FIPS 180-2 | `MdBuffer<128>`, BE | ✅ known vectors verified |
+| **NULL** | — | pass-through (buffers input, needs `alloc`) | ✅ |
 
 ## bc digest catalog (porting roadmap)
 
@@ -50,7 +53,7 @@ Line counts are the bc-csharp source sizes. ✅ = ported, ⬜ = pending.
 | `GeneralDigest` | 183 | ✅ `MdBuffer<64>` (composition) |
 | `LongDigest` | 412 | ✅ `MdBuffer<128>` (composition) |
 | `KeccakDigest` | 636 | ⬜ sponge base (SHA-3/SHAKE) |
-| `NullDigest` | 86 | ⬜ no-op wrapper |
+| `NullDigest` | 86 | ✅ pass-through (needs `alloc`) |
 | `NonMemoableDigest` | 76 | ⬜ wrapper (blocks `Clone`) |
 | `ShortenedDigest` | 104 | ⬜ truncating wrapper |
 
