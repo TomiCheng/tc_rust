@@ -54,6 +54,7 @@ other digest is alloc-free.
 | **BLAKE2b** | RFC 7693 | 128-byte block, 64-bit words, 12 rounds | ✅ keyed/unkeyed + portable/AVX2 verified |
 | **BLAKE2s** | RFC 7693 | 64-byte block, 32-bit words, 10 rounds | ✅ keyed/unkeyed + portable/SSE2 verified |
 | **BLAKE2xs** | blake2x.pdf | XOF over BLAKE2s (tree/XOF param block) | ✅ 512 official blake2-kat vectors |
+| **BLAKE3** | BLAKE3 spec | tree hash / XOF, keyed + derive-key modes | ✅ official test_vectors.json (35 lens × hash/keyed/derived) |
 | **MD2** | RFC 1319 | standalone (16-byte, S-box) | ✅ RFC vectors verified |
 | **MD4** | RFC 1320 | `MdBuffer<64>`, LE | ✅ RFC vectors verified |
 | **MD5** | RFC 1321 | `MdBuffer<64>`, LE | ✅ RFC vectors verified |
@@ -163,7 +164,7 @@ Line counts are the bc-csharp source sizes. ✅ = ported, ⬜ = pending,
 | BLAKE2b | 663 | ✅ keyed/unkeyed, variable output, portable + AVX2 |
 | BLAKE2s | 688 | ✅ keyed/unkeyed, variable output, portable + SSE2 |
 | BLAKE2xs | 387 | ✅ XOF over BLAKE2s; 512 official KAT |
-| BLAKE3 | 1029 | ⬜ (XOF) |
+| BLAKE3 | 1029 | ✅ tree hash / XOF, keyed + derive-key; official KAT |
 
 ### Lightweight (NIST LWC) & special-purpose
 
