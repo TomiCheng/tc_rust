@@ -316,6 +316,13 @@ pub struct Blake2sDigest {
     key_length: usize,
     salt: [u8; 8],
     personalization: [u8; 8],
+    // 樹/XOF 參數;序列模式為 fanout=1, depth=1,其餘 0(見 reset_state)。
+    fanout: u8,
+    depth: u8,
+    leaf_length: u32,
+    node_offset: u64,
+    node_depth: u8,
+    inner_length: u8,
 }
 
 impl Default for Blake2sDigest {
@@ -384,6 +391,12 @@ impl Blake2sDigest {
             key_length: key.len(),
             salt: [0; 8],
             personalization: [0; 8],
+            fanout: 1,
+            depth: 1,
+            leaf_length: 0,
+            node_offset: 0,
+            node_depth: 0,
+            inner_length: 0,
         };
         digest.key[..key.len()].copy_from_slice(key);
         if let Some(salt) = salt {
@@ -396,9 +409,84 @@ impl Blake2sDigest {
         digest
     }
 
+    /// BLAKE2xs 根雜湊建構子:序列參數(fanout=1, depth=1),但 `node_offset` 的高
+    /// 32 位攜帶 XOF 輸出長度。
+    pub(crate) fn xof_root(
+        digest_length: usize,
+        key: Option<&[u8]>,
+        salt: Option<&[u8]>,
+        personalization: Option<&[u8]>,
+        node_offset: u64,
+    ) -> Self {
+        let key = key.unwrap_or_default();
+        let mut digest = Blake2sDigest {
+            chain: [0; 8],
+            buffer: [0; BLOCK_LENGTH],
+            buffer_position: 0,
+            counter_low: 0,
+            counter_high: 0,
+            final_flag: 0,
+            digest_length,
+            key: [0; 32],
+            key_length: key.len(),
+            salt: [0; 8],
+            personalization: [0; 8],
+            fanout: 1,
+            depth: 1,
+            leaf_length: 0,
+            node_offset,
+            node_depth: 0,
+            inner_length: 0,
+        };
+        digest.key[..key.len()].copy_from_slice(key);
+        if let Some(salt) = salt {
+            digest.salt.copy_from_slice(salt);
+        }
+        if let Some(personalization) = personalization {
+            digest.personalization.copy_from_slice(personalization);
+        }
+        digest.reset_state();
+        digest
+    }
+
+    /// BLAKE2xs 中間節點建構子:fanout=depth=0、leaf/inner = `inner_length`、帶
+    /// `node_offset`(高位 XOF 長度 + 低位區塊索引),無 key/salt/personalization。
+    pub(crate) fn xof_node(digest_length: usize, inner_length: u8, node_offset: u64) -> Self {
+        let mut digest = Blake2sDigest {
+            chain: [0; 8],
+            buffer: [0; BLOCK_LENGTH],
+            buffer_position: 0,
+            counter_low: 0,
+            counter_high: 0,
+            final_flag: 0,
+            digest_length,
+            key: [0; 32],
+            key_length: 0,
+            salt: [0; 8],
+            personalization: [0; 8],
+            fanout: 0,
+            depth: 0,
+            leaf_length: inner_length as u32,
+            node_offset,
+            node_depth: 0,
+            inner_length,
+        };
+        digest.reset_state();
+        digest
+    }
+
     fn reset_state(&mut self) {
         self.chain = IV;
-        self.chain[0] ^= self.digest_length as u32 | ((self.key_length as u32) << 8) | 0x0101_0000;
+        // 完整 BLAKE2s 參數區塊(序列模式:fanout=1, depth=1,其餘 0 → 與舊行為一致)。
+        self.chain[0] ^= self.digest_length as u32
+            | ((self.key_length as u32) << 8)
+            | ((self.fanout as u32) << 16)
+            | ((self.depth as u32) << 24);
+        self.chain[1] ^= self.leaf_length;
+        self.chain[2] ^= self.node_offset as u32;
+        self.chain[3] ^= ((self.node_offset >> 32) as u32)
+            | ((self.node_depth as u32) << 16)
+            | ((self.inner_length as u32) << 24);
         self.chain[4] ^= u32::from_le_bytes(self.salt[..4].try_into().expect("4-byte salt"));
         self.chain[5] ^= u32::from_le_bytes(self.salt[4..].try_into().expect("4-byte salt"));
         self.chain[6] ^= u32::from_le_bytes(
