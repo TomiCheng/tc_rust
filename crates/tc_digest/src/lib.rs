@@ -20,6 +20,7 @@
 extern crate alloc;
 
 mod ascon_core;
+pub mod ascon_cxof128;
 pub mod ascon_hash256;
 pub mod ascon_legacy;
 pub mod blake2b;
@@ -52,6 +53,7 @@ pub mod tiger;
 pub mod whirlpool;
 pub mod xoodyak;
 
+pub use ascon_cxof128::AsconCXof128;
 pub use ascon_hash256::AsconHash256;
 #[allow(deprecated)]
 pub use ascon_legacy::{AsconDigest, AsconParameters};

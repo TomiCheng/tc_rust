@@ -32,8 +32,11 @@ other digest is alloc-free.
   (like the reference) rather than bc's unrolled register-naming; for the 5-register
   variants the round-boundary register swaps land on shifted slots (16 mod 5 = 1),
   derived in `ripemd320.rs`.
-- **XOF interface (`IXof`) is deferred** until the first extendable-output algorithm
-  (SHAKE) is ported — it will be added to `tc_crypto_core` as `TryXof` / `Xof` then.
+- **XOF interface (`IXof`)** is ported to `tc_crypto_core` as `TryXof` / `Xof` (a
+  fallible base + an infallible blanket impl, mirroring `TryDigest` / `Digest`).
+  `Ascon-CXOF128` is the first user: `try_output` starts/continues squeezing,
+  `try_output_final` squeezes then resets, and the `Digest` view's `do_final` yields
+  the default fixed length. It absorbed the design with no trait changes.
 - **BLAKE2 backend dispatch** — the portable compression functions are always
   available. With `std` on x86/x86-64, BLAKE2b selects AVX2 and BLAKE2s selects
   SSE2 at runtime when supported; `no_std` and other architectures use the
@@ -44,6 +47,7 @@ other digest is alloc-free.
 | Algorithm | Spec | Block / length | Status |
 |-----------|------|----------------|--------|
 | **Ascon-Hash256** | NIST SP 800-232 | 320-bit state, 64-bit rate, Ascon-p[12] | ✅ official ascon-c KAT + chunking vectors |
+| **Ascon-CXOF128** | NIST SP 800-232 | XOF, 64-bit rate, Ascon-p[12], customization | ✅ 1089 official KAT (single-shot + streamed) |
 | **Ascon-Hash / HashA** | Ascon v1.2 (legacy) | 320-bit state, 64-bit rate, p[12]/p[8] | ⚠️ deprecated; compatibility only, bc KAT verified |
 | **BLAKE2b** | RFC 7693 | 128-byte block, 64-bit words, 12 rounds | ✅ keyed/unkeyed + portable/AVX2 verified |
 | **BLAKE2s** | RFC 7693 | 64-byte block, 32-bit words, 10 rounds | ✅ keyed/unkeyed + portable/SSE2 verified |
@@ -115,13 +119,13 @@ Line counts are the bc-csharp source sizes. ✅ = ported, ⬜ = pending,
 | SHA-512 | 120 | `MdBuffer<128>` | ✅ ⭐ Ed25519 dependency ready |
 | SHA-512/t | 245 | `MdBuffer<128>` | ✅ per-`t` IV generation + truncation |
 
-### SHA-3 / Keccak (sponge; some are XOFs → need `IXof`)
+### SHA-3 / Keccak (sponge; SHAKE/cSHAKE are XOFs — `TryXof`/`Xof` now available)
 
 | Algorithm | Lines | Status |
 |-----------|------:|--------|
 | SHA3 | 236 | ✅ 224/256/384/512 |
-| SHAKE | 168 | ⬜ (XOF) |
-| cSHAKE | 127 | ⬜ (XOF) |
+| SHAKE | 168 | ⬜ (XOF; traits ready) |
+| cSHAKE | 127 | ⬜ (XOF; traits ready) |
 
 ### RIPEMD family (little-endian)
 
@@ -163,7 +167,8 @@ Line counts are the bc-csharp source sizes. ✅ = ported, ⬜ = pending,
 |-----------|------:|--------|
 | Ascon-Hash256 | 206 | ✅ NIST SP 800-232, official ascon-c KAT vectors |
 | Ascon v1.2 Hash / HashA | 273 | ⚠️ legacy, deprecated; bc KAT verified |
-| Ascon XOF variants | Xof/XofA/Xof128/CXof128 | ⬜ |
+| Ascon-CXOF128 | 320 | ✅ first XOF; 1089 official KAT |
+| Ascon XOF variants | Xof/XofA/Xof128 | ⬜ |
 | ISAP | 204 | ✅ 256-bit hash, official NIST LWC KAT vectors |
 | PhotonBeetle | 369 | ⬜ |
 | Sparkle | 298 | ⬜ |
