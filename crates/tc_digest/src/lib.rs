@@ -2,10 +2,11 @@
 //! `Org.BouncyCastle.Crypto.Digests` namespace.
 //!
 //! Each algorithm implements the [`TryDigest`](tc_crypto_core::TryDigest) /
-//! [`Digest`](tc_crypto_core::Digest) traits from `tc_crypto_core`. Digests are
-//! pure fixed-size bit/byte computation, so this crate is `no_std` and needs no
-//! `alloc`; it depends only on `tc_crypto_core` (never on `tc_math` — hashes carry
-//! no big-integer arithmetic).
+//! [`Digest`](tc_crypto_core::Digest) traits from `tc_crypto_core`. It depends only
+//! on `tc_crypto_core` (never on `tc_math` — hashes carry no big-integer
+//! arithmetic). The crate is `no_std`; it uses `alloc` only for the pass-through
+//! [`NullDigest`] and the runtime name of [`Sha512tDigest`], every other digest is
+//! alloc-free.
 //!
 //! The real no_std build is verified by `cargo build` (not `cargo test`, which
 //! links `std` for the test harness).
@@ -28,6 +29,7 @@ pub mod sha224;
 pub mod sha256;
 pub mod sha384;
 pub mod sha512;
+pub mod sha512t;
 
 pub use md2::Md2Digest;
 pub use md4::Md4Digest;
@@ -38,3 +40,4 @@ pub use sha224::Sha224Digest;
 pub use sha256::Sha256Digest;
 pub use sha384::Sha384Digest;
 pub use sha512::Sha512Digest;
+pub use sha512t::Sha512tDigest;

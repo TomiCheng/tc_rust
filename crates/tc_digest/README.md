@@ -40,6 +40,7 @@ digest is alloc-free.
 | **SHA-256** | FIPS 180-2 | `MdBuffer<64>`, BE | ✅ known vectors verified |
 | **SHA-384** | FIPS 180-2 | `MdBuffer<128>`, BE (reuses SHA-512 core) | ✅ known vectors verified |
 | **SHA-512** | FIPS 180-2 | `MdBuffer<128>`, BE | ✅ known vectors verified |
+| **SHA-512/t** | FIPS 180-4 | `MdBuffer<128>`, BE, per-`t` IV + truncation | ✅ SHA-512/224 & /256 NIST vectors |
 | **NULL** | — | pass-through (buffers input, needs `alloc`) | ✅ |
 
 ## bc digest catalog (porting roadmap)
@@ -83,7 +84,7 @@ Line counts are the bc-csharp source sizes. ✅ = ported, ⬜ = pending.
 | SHA-256 | 342 | `MdBuffer<64>` | ✅ |
 | SHA-384 | 118 | `MdBuffer<128>` | ✅ (reuses SHA-512 core) |
 | SHA-512 | 120 | `MdBuffer<128>` | ✅ ⭐ Ed25519 dependency ready |
-| SHA-512/t | 245 | `MdBuffer<128>` | ⬜ truncated variant |
+| SHA-512/t | 245 | `MdBuffer<128>` | ✅ per-`t` IV generation + truncation |
 
 ### SHA-3 / Keccak (sponge; some are XOFs → need `IXof`)
 

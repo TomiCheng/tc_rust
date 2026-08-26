@@ -6,22 +6,10 @@ use core::convert::Infallible;
 use tc_crypto_core::TryDigest;
 
 use crate::md_buffer::MdBuffer;
-use crate::sha512_core::compress;
+use crate::sha512_core::{compress, IV};
 
 const DIGEST_LENGTH: usize = 64;
 const BYTE_LENGTH: usize = 128;
-
-// 初始鏈結值:前 8 個質數平方根小數部分的前 64 bit。
-const IV: [u64; 8] = [
-    0x6a09_e667_f3bc_c908,
-    0xbb67_ae85_84ca_a73b,
-    0x3c6e_f372_fe94_f82b,
-    0xa54f_f53a_5f1d_36f1,
-    0x510e_527f_ade6_82d1,
-    0x9b05_688c_2b3e_6c1f,
-    0x1f83_d9ab_fb41_bd6b,
-    0x5be0_cd19_137e_2179,
-];
 
 /// The SHA-512 digest (FIPS 180-2), producing a 64-byte hash.
 #[derive(Clone)]

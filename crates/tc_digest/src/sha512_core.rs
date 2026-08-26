@@ -6,6 +6,22 @@
 //! initial hash value and output length. The 64-bit analogue of
 //! [`sha256_core`](crate::sha256_core): 128-byte blocks, `u64` words, 80 rounds.
 
+/// SHA-512 的初始鏈結值:前 8 個質數平方根小數部分的前 64 bit。
+///
+/// 由 [`Sha512Digest`](crate::sha512::Sha512Digest) 直接使用,也是
+/// [`Sha512tDigest`](crate::sha512t::Sha512tDigest) IV 生成的起點。(SHA-384 有
+/// 自己的 IV,定義在該模組內。)
+pub(crate) const IV: [u64; 8] = [
+    0x6a09_e667_f3bc_c908,
+    0xbb67_ae85_84ca_a73b,
+    0x3c6e_f372_fe94_f82b,
+    0xa54f_f53a_5f1d_36f1,
+    0x510e_527f_ade6_82d1,
+    0x9b05_688c_2b3e_6c1f,
+    0x1f83_d9ab_fb41_bd6b,
+    0x5be0_cd19_137e_2179,
+];
+
 // 輪常數:前 80 個質數立方根小數部分的前 64 bit。
 #[rustfmt::skip]
 const K: [u64; 80] = [
