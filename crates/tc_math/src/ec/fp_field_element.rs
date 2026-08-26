@@ -431,13 +431,6 @@ impl FpFieldElement {
         };
         self.with_value(x2)
     }
-
-    // TODO(ec-fp)：以下運算待實作（對應 bc FpFieldElement），全部 mod q：
-    //   add / subtract / multiply / divide(= self × b⁻¹) / negate(q − x) /
-    //   square / invert(mod_inverse) / sqrt(Tonelli–Shanks，依 q mod 4/8 分支)。
-    //   乘法/平方的約簡走 mod_reduce（屆時才使用上面的 r 做 pseudo-Mersenne /
-    //   Barrett 快速路徑，None 時退回通用取模）。
-    // 約定：均為 &self、回傳新元素；兩運算元須同 q（debug_assert）。
 }
 
 /// Borrows the element's value as an integer in `[0, q)`.
