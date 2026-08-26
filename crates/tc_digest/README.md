@@ -54,8 +54,17 @@ Line counts are the bc-csharp source sizes. ✅ = ported, ⬜ = pending.
 | `LongDigest` | 412 | ✅ `MdBuffer<128>` (composition) |
 | `KeccakDigest` | 636 | ⬜ sponge base (SHA-3/SHAKE) |
 | `NullDigest` | 86 | ✅ pass-through (needs `alloc`) |
-| `NonMemoableDigest` | 76 | ⬜ wrapper (blocks `Clone`) |
+| `NonMemoableDigest` | 76 | ⊘ intentionally skipped (see note) |
 | `ShortenedDigest` | 104 | ⬜ truncating wrapper |
+
+> **`NonMemoableDigest` — intentionally not ported.** In bc it wraps a digest to hide
+> its `IMemoable` (snapshot/restore) capability, so a caller cannot clone the
+> mid-computation state. Since `IMemoable` maps to Rust's `Clone`, "removing it" is
+> just *not* implementing `Clone`. Rust achieves the same capability erasure natively:
+> hand out `&mut dyn Digest` (the `Digest` trait has no `Clone`, and `dyn` erases the
+> concrete type) or simply don't derive `Clone`. A forwarding newtype that omits
+> `Clone` would reproduce it exactly, but it is redundant here, so it is skipped until
+> an actual need appears.
 
 ### MD family (32-bit words, little-endian)
 
