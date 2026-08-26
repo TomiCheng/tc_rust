@@ -1,0 +1,9 @@
+[package]
+name = "tc_crypto_core"
+description = "Core cryptographic traits (message digests, …), ported from the Bouncy Castle C# library as a learning project."
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
