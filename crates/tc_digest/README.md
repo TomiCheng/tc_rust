@@ -28,11 +28,14 @@ computation, so this crate is `no_std` and needs no `alloc`; it depends **only**
 
 ## Ported so far
 
-| Algorithm | RFC | Block / length | Status |
-|-----------|-----|----------------|--------|
+| Algorithm | Spec | Block / length | Status |
+|-----------|------|----------------|--------|
 | **MD2** | RFC 1319 | standalone (16-byte, S-box) | ✅ RFC vectors verified |
 | **MD4** | RFC 1320 | `MdBuffer<64>`, LE | ✅ RFC vectors verified |
 | **MD5** | RFC 1321 | `MdBuffer<64>`, LE | ✅ RFC vectors verified |
+| **SHA-1** | FIPS 180 | `MdBuffer<64>`, BE | ✅ known vectors verified |
+| **SHA-224** | FIPS 180-2 | `MdBuffer<64>`, BE (reuses SHA-256 core) | ✅ known vectors verified |
+| **SHA-256** | FIPS 180-2 | `MdBuffer<64>`, BE | ✅ known vectors verified |
 
 ## bc digest catalog (porting roadmap)
 
@@ -61,9 +64,9 @@ Line counts are the bc-csharp source sizes. ✅ = ported, ⬜ = pending.
 
 | Algorithm | Lines | Block | Status |
 |-----------|------:|-------|--------|
-| SHA-1 | 310 | `MdBuffer<64>` | ⬜ |
-| SHA-224 | 315 | `MdBuffer<64>` | ⬜ |
-| SHA-256 | 342 | `MdBuffer<64>` | ⬜ |
+| SHA-1 | 310 | `MdBuffer<64>` | ✅ |
+| SHA-224 | 315 | `MdBuffer<64>` | ✅ (reuses SHA-256 core) |
+| SHA-256 | 342 | `MdBuffer<64>` | ✅ |
 | SHA-384 | 118 | `MdBuffer<128>` | ⬜ |
 | SHA-512 | 120 | `MdBuffer<128>` | ⬜ ⭐ Ed25519 dependency |
 | SHA-512/t | 245 | `MdBuffer<128>` | ⬜ truncated variant |
