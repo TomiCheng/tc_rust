@@ -3,8 +3,9 @@
 //! 跑：`cargo bench -p tc_math`
 //! 基準線 `mod_pow_simple` 只用公開 API 重寫舊演算法，好跟現行 `mod_pow` 並排比。
 
+use std::hint::black_box;
 use tc_math::big_integer::BigInteger;
-use criterion::{Criterion, black_box, criterion_group, criterion_main};
+use criterion::{Criterion, criterion_group, criterion_main};
 
 /// 舊版：逐位平方-乘，每步用全長 `% m` 約簡（Barrett 之前的做法）。
 fn mod_pow_simple(base: &BigInteger, e: &BigInteger, m: &BigInteger) -> BigInteger {

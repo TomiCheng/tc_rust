@@ -16,7 +16,7 @@ std = []
 rand_core = { workspace = true }
 
 [dev-dependencies]
-criterion = "0.5"
+criterion = "0.8.2"
 
 [[bench]]
 name = "mod_pow"
