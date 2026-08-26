@@ -56,12 +56,14 @@ digest is alloc-free.
 | **Tiger** | — | `MdBuffer<64>`, LE, `0x01` pad, 3 passes | ✅ BC vectors + 64 KiB test |
 | **Whirlpool** | ISO/IEC 10118-3 | `MdBuffer<64>`, BE, 256-bit length | ✅ ISO/BC vectors + million-`a` test |
 | **DSTU 7564** | DSTU 7564:2014 | 512/1024-bit state, P/Q permutations | ✅ 256/384/512 + padding vectors |
+| **GOST 34.11-2012** | GOST R 34.11-2012 | 512-bit state, S/P/L transformation | ✅ 256/512 BC vectors |
 | **Keccak** | — | sponge (raw Keccak, domain pad `0x01`) | ✅ Keccak-256/512 vectors |
 | **NULL** | — | pass-through (buffers input, needs `alloc`) | ✅ |
 
 ## bc digest catalog (porting roadmap)
 
-Line counts are the bc-csharp source sizes. ✅ = ported, ⬜ = pending.
+Line counts are the bc-csharp source sizes. ✅ = ported, ⬜ = pending,
+⏸ = deferred until a prerequisite is available.
 
 ### Base / infrastructure
 
@@ -126,9 +128,14 @@ Line counts are the bc-csharp source sizes. ✅ = ported, ⬜ = pending.
 | Tiger | 928 | ✅ 192-bit, BC vectors + 64 KiB test |
 | Whirlpool | 382 | ✅ ISO/BC vectors + million-`a` test |
 | SM3 (China GB) | 340 | ✅ standard + BC long vectors |
-| GOST3411 (1994) | 392 | ⬜ |
-| GOST3411-2012 (Streebog) | 1089 (+256/512: 66/43) | ⬜ |
+| GOST3411 (1994) | 392 | ⏸ requires block-cipher abstraction + `Gost28147Engine` |
+| GOST3411-2012 (Streebog) | 1089 (+256/512: 66/43) | ✅ shared core + 256/512 variants |
 | DSTU7564 (Kupyna, Ukraine) | 627 | ✅ 256/384/512 + padding vectors |
+
+> **GOST3411 (1994) is deferred.** Its bc-csharp implementation uses
+> `IBlockCipher` with `Gost28147Engine` (256-bit key, 64-bit block, D-A S-box).
+> The block-cipher layer and GOST 28147 engine will be ported first rather than
+> embedding a digest-only copy of the cipher primitive.
 
 ### BLAKE family
 

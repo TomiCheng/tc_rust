@@ -18,6 +18,7 @@
 extern crate alloc;
 
 pub mod dstu7564;
+pub mod gost3411_2012;
 mod md_buffer;
 pub mod keccak;
 pub mod md2;
@@ -43,6 +44,7 @@ pub mod tiger;
 pub mod whirlpool;
 
 pub use dstu7564::Dstu7564Digest;
+pub use gost3411_2012::{Gost3411_2012_256Digest, Gost3411_2012_512Digest};
 pub use keccak::KeccakDigest;
 pub use md2::Md2Digest;
 pub use md4::Md4Digest;
