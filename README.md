@@ -24,7 +24,7 @@ not use in production or for real-world security.**
 
 ### `tc_digest` status
 
-Implemented algorithms include BLAKE2b, MD2/4/5, SHA-1/2/3, Keccak, RIPEMD,
+Implemented algorithms include BLAKE2b/BLAKE2s, MD2/4/5, SHA-1/2/3, Keccak, RIPEMD,
 Tiger, Whirlpool, SM3, GOST 34.11-2012, and DSTU 7564. See the
 [`tc_digest` roadmap](crates/tc_digest/README.md) for the full list and test
 coverage.
@@ -65,6 +65,8 @@ cargo build -p tc_math --no-default-features
 # benchmarks
 cargo bench -p tc_digest --bench blake2b
 cargo bench -p tc_digest --bench blake2b --no-default-features
+cargo bench -p tc_digest --bench blake2s
+cargo bench -p tc_digest --bench blake2s --no-default-features
 cargo bench -p tc_math
 ```
 

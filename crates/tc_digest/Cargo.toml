@@ -19,3 +19,7 @@ criterion = "0.8.2"
 [[bench]]
 name = "blake2b"
 harness = false
+
+[[bench]]
+name = "blake2s"
+harness = false

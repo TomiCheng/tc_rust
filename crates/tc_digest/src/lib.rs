@@ -20,6 +20,7 @@
 extern crate alloc;
 
 pub mod blake2b;
+pub mod blake2s;
 pub mod dstu7564;
 pub mod gost3411_2012;
 mod md_buffer;
@@ -47,6 +48,7 @@ pub mod tiger;
 pub mod whirlpool;
 
 pub use blake2b::Blake2bDigest;
+pub use blake2s::Blake2sDigest;
 pub use dstu7564::Dstu7564Digest;
 pub use gost3411_2012::{Gost3411_2012_256Digest, Gost3411_2012_512Digest};
 pub use keccak::KeccakDigest;

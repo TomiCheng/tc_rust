@@ -34,15 +34,17 @@ other digest is alloc-free.
   derived in `ripemd320.rs`.
 - **XOF interface (`IXof`) is deferred** until the first extendable-output algorithm
   (SHAKE) is ported — it will be added to `tc_crypto_core` as `TryXof` / `Xof` then.
-- **BLAKE2b backend dispatch** — the portable compression function is always
-  available. With `std` on x86/x86-64, AVX2 is selected at runtime when the CPU and
-  OS support it; `no_std` and other architectures use the portable path.
+- **BLAKE2 backend dispatch** — the portable compression functions are always
+  available. With `std` on x86/x86-64, BLAKE2b selects AVX2 and BLAKE2s selects
+  SSE2 at runtime when supported; `no_std` and other architectures use the
+  portable paths.
 
 ## Ported so far
 
 | Algorithm | Spec | Block / length | Status |
 |-----------|------|----------------|--------|
 | **BLAKE2b** | RFC 7693 | 128-byte block, 64-bit words, 12 rounds | ✅ keyed/unkeyed + portable/AVX2 verified |
+| **BLAKE2s** | RFC 7693 | 64-byte block, 32-bit words, 10 rounds | ✅ keyed/unkeyed + portable/SSE2 verified |
 | **MD2** | RFC 1319 | standalone (16-byte, S-box) | ✅ RFC vectors verified |
 | **MD4** | RFC 1320 | `MdBuffer<64>`, LE | ✅ RFC vectors verified |
 | **MD5** | RFC 1321 | `MdBuffer<64>`, LE | ✅ RFC vectors verified |
@@ -147,7 +149,7 @@ Line counts are the bc-csharp source sizes. ✅ = ported, ⬜ = pending,
 | Algorithm | Lines | Status |
 |-----------|------:|--------|
 | BLAKE2b | 663 | ✅ keyed/unkeyed, variable output, portable + AVX2 |
-| BLAKE2s | 688 | ⬜ |
+| BLAKE2s | 688 | ✅ keyed/unkeyed, variable output, portable + SSE2 |
 | BLAKE2xs | 387 | ⬜ (XOF) |
 | BLAKE3 | 1029 | ⬜ (XOF) |
 
@@ -167,7 +169,7 @@ Line counts are the bc-csharp source sizes. ✅ = ported, ⬜ = pending,
 ## Build & test
 
 ```bash
-# default std build (runtime AVX2 dispatch on supported x86/x86-64)
+# default std build (runtime SIMD dispatch on supported x86/x86-64)
 cargo test -p tc_digest
 
 # portable tests and the real no_std build
@@ -177,11 +179,15 @@ cargo build -p tc_digest --no-default-features
 # BLAKE2b throughput: std runtime dispatch vs no_std portable
 cargo bench -p tc_digest --bench blake2b
 cargo bench -p tc_digest --bench blake2b --no-default-features
+
+# BLAKE2s throughput: std runtime dispatch vs no_std portable
+cargo bench -p tc_digest --bench blake2s
+cargo bench -p tc_digest --bench blake2s --no-default-features
 ```
 
-The BLAKE2b Criterion benchmark covers keyed and unkeyed hashing at 64 B,
-128 B, 1 KiB, 64 KiB, and 1 MiB. Benchmark names report the active backend as
-`avx2`, `std-portable`, or `no_std-portable`.
+The BLAKE2 Criterion benchmarks cover keyed and unkeyed hashing at 64 B,
+128 B, 1 KiB, 64 KiB, and 1 MiB. Benchmark names report the active backend,
+including `avx2`, `sse2`, `std-portable`, or `no_std-portable`.
 
 > no_std note: the crate uses
 > `#![cfg_attr(not(any(test, feature = "std")), no_std)]`; test modules import
