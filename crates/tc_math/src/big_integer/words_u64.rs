@@ -12,7 +12,8 @@
 //! the whole word array as a base-2⁶⁴ two's-complement integer (sign = top bit of the
 //! most-significant word).
 
-use super::{BigInteger, BufferTooSmall};
+use super::{bit_len, BigInteger, BufferTooSmall, WORD_BITS};
+use crate::big_integer::limb::mag_to_u64_be;
 
 // no_std 下沒有 std prelude，`vec!` 巨集與 `Vec` 型別需從 alloc 顯式引入。
 #[cfg(not(feature = "std"))]
@@ -121,25 +122,23 @@ impl BigInteger {
         if self.sign == 0 {
             return 1; // 零輸出 [0]
         }
-        // magnitude 為無前導零的 u32 詞；兩個 u32 打包成一個 u64，故向上取半。
-        self.magnitude.len().div_ceil(2)
+        // |self| 位元長度 → ⌈/64⌉ 個 u64 字（與 mag_to_u64_be 的輸出字數一致）
+        let bits = WORD_BITS * (self.magnitude.len() - 1) + bit_len(self.magnitude[0]) as usize;
+        bits.div_ceil(64)
     }
 
     /// 把 `n = out.len()` 個 u64 詞的 big-endian 編碼寫進 `out`（零配置核心）。
     ///
-    /// 先把 `|self|` 的 u32 magnitude 兩兩打包成 u64、右對齊寫入、高位補 0；`signed`
-    /// 且為負時再對整段取兩補數。`out.len()` 須等於對應的 `u64_length*`。
+    /// 先把 `|self|` 轉成最小 u64 字、右對齊寫入、高位補 0；`signed` 且為負時再對整段
+    /// 取兩補數。`out.len()` 須等於對應的 `u64_length*`。
     fn write_magnitude_be_u64(&self, out: &mut [u64], signed: bool) {
+        // magnitude 是 Limb 字，先轉成最小 u64 字（無前導零）
+        let words = mag_to_u64_be(&self.magnitude);
         let n = out.len();
-        let mlen = self.magnitude.len();
-        // magnitude 是 big-endian u32；第 j 個「低位 u32」= magnitude[mlen-1-j]。
-        let low_u32 = |j: usize| -> u64 {
-            if j < mlen { self.magnitude[mlen - 1 - j] as u64 } else { 0 }
-        };
+        let mlen = words.len();
         for i in 0..n {
-            let lo = low_u32(2 * i); // 該 u64 的低 32 位
-            let hi = low_u32(2 * i + 1); // 高 32 位
-            out[n - 1 - i] = (hi << 32) | lo;
+            // 第 i 個低位字：取自 words 的第 i 個低位字（不足則補 0）
+            out[n - 1 - i] = if i < mlen { words[mlen - 1 - i] } else { 0 };
         }
         if signed && self.sign < 0 {
             twos_complement_in_place_u64(out); // 負數：整段兩補數

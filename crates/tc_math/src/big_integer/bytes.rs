@@ -6,8 +6,8 @@
 //! `twos_complement_in_place` helpers), so nothing there needs widening.
 
 use super::{
-    BigInteger, BufferTooSmall, make_magnitude_be, make_magnitude_be_negative, make_magnitude_le,
-    make_magnitude_le_negative, twos_complement_in_place,
+    BigInteger, BufferTooSmall, WORD_BITS, make_magnitude_be, make_magnitude_be_negative,
+    make_magnitude_le, make_magnitude_le_negative, twos_complement_in_place,
 };
 
 // no_std 下沒有 std prelude，`vec!` 巨集與 `Vec` 型別需從 alloc 顯式引入；
@@ -111,10 +111,11 @@ impl BigInteger {
     /// `signed` 且為負時再對整段取兩補數。`out.len()` 須等於對應的 `byte_length*`。
     fn write_magnitude_be(&self, out: &mut [u8], signed: bool) {
         let n = out.len();
+        let bpw = WORD_BITS / 8; // 每個 Limb 的位元組數（u32→4、u64→8）
         for j in 0..n {
-            // 第 j 個低位位元組：取自第 j/4 個低位字的第 j%4 個位元組
-            out[n - 1 - j] = if j / 4 < self.magnitude.len() {
-                (self.magnitude[self.magnitude.len() - 1 - j / 4] >> (8 * (j % 4))) as u8
+            // 第 j 個低位位元組：取自第 j/bpw 個低位字的第 j%bpw 個位元組
+            out[n - 1 - j] = if j / bpw < self.magnitude.len() {
+                (self.magnitude[self.magnitude.len() - 1 - j / bpw] >> (8 * (j % bpw))) as u8
             } else {
                 0
             };

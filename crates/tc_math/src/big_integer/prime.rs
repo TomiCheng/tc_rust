@@ -4,12 +4,13 @@
 //! parent `big_integer.rs` remains pure arithmetic. As a descendant module this
 //! can reach the parent's private items (`sign`, `magnitude`, `BigInteger::new`).
 
-use super::BigInteger;
+use super::{BigInteger, WORD_BITS};
 use rand_core::Rng;
 
 // no_std 下 `vec!` 巨集需從 alloc 引入；std 由 prelude 提供。
 #[cfg(not(feature = "std"))]
 use alloc::vec;
+use crate::big_integer::limb::Limb;
 
 impl BigInteger {
     /// Miller-Rabin probabilistic primality test.
@@ -168,7 +169,7 @@ impl BigInteger {
                 if j >= n_words - 1 {
                     break; // 中間字組試完（n_words ≤ 2 時無中間字，立即重生）
                 }
-                words[j] ^= rng.next_u32(); // 擾動一個中間字組
+                words[j] ^= rng.next_u64() as Limb; // 擾動一個中間字組
             }
         }
     }
@@ -189,8 +190,8 @@ impl BigInteger {
         let s = n_minus_1.get_lowest_set_bit().expect("n > 1 so n-1 > 0");
         let r = &n_minus_1 >> s;
 
-        // Montgomery 域的「1」與「-1」：R mod n、n − (R mod n)（R = 2^(32·字數)）
-        let mont_one = &(&one << (32 * n.magnitude.len() as u32)) % n;
+        // Montgomery 域的「1」與「-1」：R mod n、n − (R mod n)（R = 2^(WORD_BITS·字數)）
+        let mont_one = &(&one << (WORD_BITS as u32 * n.magnitude.len() as u32)) % n;
         let mont_minus_one = n - &mont_one;
 
         for _ in 0..rounds {

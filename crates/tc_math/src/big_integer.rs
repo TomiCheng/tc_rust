@@ -30,16 +30,18 @@ mod words_u32;
 // u64 詞序列化：words_u32 家族的 u64 版（同一組函式，單位換成 64 位元字）。
 mod words_u64;
 
-/// 一個 magnitude 字的位元數（= 32）。集中定義，避免散落的 magic number。
-const WORD_BITS: usize = u32::BITS as usize;
+#[cfg_attr(target_pointer_width = "64", path = "big_integer/limb_x64.rs")]
+#[cfg_attr(not(target_pointer_width = "64"), path = "big_integer/limb_x32.rs")]
+mod limb;
 
-// TODO(bigint-u64-limb)：把內部 magnitude 的 limb 型別依平台 cfg 化（64 位平台用 u64、
-// 32 位用 u32；單一實作，非兩份），對齊 raw::Nat 的 cfg limb 做法。屆時要一併處理：
-//   - WORD_BITS / magnitude 的型別與所有依賴它的算術。
-//   - 詞序列化的「原生 vs 加工」方向會反轉：現在 words_u32 原生、words_u64 打包
-//     （見兩檔）；u64-limb 後 words_u64 變原生、words_u32 變拆解。理想是引入 Limb
-//     別名讓兩家族認得 limb 型別，由 cfg 自動決定誰原生，不用手動對調。
-//   - 公開 API（from/to_u32_*、from/to_u64_*）與現有測試不變，只換內部實作方向。
+use limb::{Limb, DoubleLimb};
+
+/// 一個 magnitude 字的位元數。集中定義，避免散落的 magic number。
+pub(crate) const WORD_BITS: usize = Limb::BITS as usize;
+
+/// 32→5、64→6，自動跟著 WORD_BITS
+const SHIFT_WORD: usize = WORD_BITS.trailing_zeros() as usize;
+
 
 /// 滑動視窗指數化的視窗寬度門檻：指數位元長度超過第 i 個門檻，就多用一個
 /// extra_bit（視窗更寬）。純整數字面值 → 可 `const`（不像堆積型常數需執行期初始化）。
@@ -114,13 +116,13 @@ impl core::error::Error for TryFromBigIntegerError {}
 #[derive(Clone, Debug)]
 pub struct BigInteger {
     sign: i32,
-    /// 不可變、big-endian、無前導零；不可變型別故用 `Box<[u32]>` 而非 `Vec<u32>`。
-    magnitude: Box<[u32]>,
+    /// 不可變、big-endian、無前導零；不可變型別故用 `Box<[Limb]>` 而非 `Vec<Limb>`。
+    magnitude: Box<[Limb]>,
 }
 
 impl BigInteger {
-    // 施工端用 `Vec<u32>` 傳入，儲存時落地成 `Box<[u32]>`。
-    fn new(sign: i32, magnitude: Vec<u32>) -> Self {
+    // 施工端用 `Vec<Limb>` 傳入，儲存時落地成 `Box<[Limb]>`。
+    fn new(sign: i32, magnitude: Vec<Limb>) -> Self {
         BigInteger { sign, magnitude: magnitude.into_boxed_slice() }
     }
 
@@ -128,7 +130,7 @@ impl BigInteger {
     /// 去前導零；若全為零則符號歸 0，維持「無前導零 / sign==0 ⟺ magnitude 空」不變量。
     ///
     /// 用於位元運算等「結果 magnitude 可能帶前導零或全零」的場合；`new` 本身不做檢查。
-    fn from_checked_magnitude(sign: i32, magnitude: Vec<u32>) -> Self {
+    fn from_checked_magnitude(sign: i32, magnitude: Vec<Limb>) -> Self {
         let magnitude = trim_leading_zeros(magnitude);
         let sign = if magnitude.is_empty() { 0 } else { sign };
         BigInteger::new(sign, magnitude)
@@ -520,8 +522,9 @@ impl BigInteger {
     /// multiply by the matching odd power.
     fn mod_pow_barrett(b: &BigInteger, e: &BigInteger, m: &BigInteger) -> BigInteger {
         let k = m.magnitude.len();
-        let mr = &BigInteger::from_u32(1) << (32 * (k as u32 + 1)); // 2^(32(k+1))
-        let yu = &(&BigInteger::from_u32(1) << (64 * k as u32)) / m; // ⌊2^(64k) / m⌋
+        let wb = WORD_BITS as u32;
+        let mr = &BigInteger::from_u32(1) << (wb * (k as u32 + 1)); // b^(k+1) = 2^(wb·(k+1))
+        let yu = &(&BigInteger::from_u32(1) << (wb * 2 * k as u32)) / m; // ⌊b^(2k)/m⌋ = ⌊2^(2·wb·k)/m⌋
 
         // 依指數長度選視窗寬度：越長越值得用更寬的視窗
         let mut extra_bits = 0;
@@ -565,7 +568,7 @@ impl BigInteger {
         {
             mul_t = window & 0xFF;
             // 補上一個視窗尾端的零平方，再加上這個視窗 mul_t 的位元數
-            let bits = last_zeros + bit_len(mul_t);
+            let bits = last_zeros + bit_len(mul_t as Limb);
             for _ in 0..bits {
                 y = BigInteger::reduce_barrett(&y.square(), m, &mr, &yu);
             }
@@ -583,12 +586,12 @@ impl BigInteger {
     /// Montgomery constant `m' = (-m mod 2^32)^{-1} mod 2^32`, derived from the
     /// low word of `m` (which must be odd). Precomputed once for Montgomery
     /// reduction so the low words cancel without dividing by `m`.
-    fn m_prime(&self) -> u32 {
+    fn m_prime(&self) -> Limb {
         debug_assert!(self.sign > 0);
         let m_low = self.magnitude[self.magnitude.len() - 1]; // big-endian → 尾端為低字
-        let d = 0u32.wrapping_sub(m_low); // -m_low mod 2^32
+        let d = m_low.wrapping_neg(); // -m_low mod 2^32
         debug_assert!(d & 1 == 1); // m 奇 → 低字奇 → d 奇（才有反元素）
-        inverse_u32(d)
+        inverse(d)
     }
 
     /// Computes `b^e` mod `m` by sliding-window exponentiation in the Montgomery
@@ -602,11 +605,11 @@ impl BigInteger {
     ///   Miller-Rabin test to compare against `R`/`-R` without converting.
     fn mod_pow_monty(b: &BigInteger, e: &BigInteger, m: &BigInteger, convert: bool) -> BigInteger {
         let n = m.magnitude.len();
-        let pow_r = 32 * n;
+        let pow_r = WORD_BITS * n;
         // m 有 ≥2 位頂端餘裕時，可省略每步的條件減（值仍安放於 n 字內）
         let small_monty_modulus = (m.bit_length() as usize) + 2 <= pow_r;
         let m_prime = m.m_prime();
-        let mut y_acc_m = vec![0u32; n + 1]; // Montgomery 乘法的暫存累加器
+        let mut y_acc_m = vec![0; n + 1]; // Montgomery 乘法的暫存累加器
 
         // convert=true：把 b 轉進 Montgomery 域（b·R mod m）；false：b 已在域內，直接用
         let mut z_val = if convert {
@@ -616,7 +619,7 @@ impl BigInteger {
         };
         debug_assert!(z_val.len() <= n);
         if z_val.len() < n {
-            let mut tmp = vec![0u32; n];
+            let mut tmp = vec![0; n];
             tmp[(n - z_val.len())..].copy_from_slice(&z_val);
             z_val = tmp;
         }
@@ -651,7 +654,7 @@ impl BigInteger {
         let mut last_zeros = window >> 8;
 
         // 同 mod_pow_barrett 的守衛：last_zeros==0 時不走 z² 捷徑，避免下溢
-        let mut y_val: Vec<u32>;
+        let mut y_val: Vec<Limb>;
         if mul_t == 1 && last_zeros >= 1 {
             y_val = z_squared;
             last_zeros -= 1;
@@ -667,7 +670,7 @@ impl BigInteger {
         } != u32::MAX
         {
             mul_t = window & 0xFF;
-            let bits = last_zeros + bit_len(mul_t);
+            let bits = last_zeros + bit_len(mul_t as Limb);
             for _ in 0..bits {
                 square_monty(&mut y_acc_m, &mut y_val, &m.magnitude, m_prime, small_monty_modulus);
             }
@@ -695,15 +698,15 @@ impl BigInteger {
     /// Miller-Rabin squaring chain.
     fn mod_square_monty(b: &BigInteger, m: &BigInteger) -> BigInteger {
         let n = m.magnitude.len();
-        let pow_r = 32 * n;
+        let pow_r = WORD_BITS * n;
         let small_monty_modulus = (m.bit_length() as usize) + 2 <= pow_r;
         let m_prime = m.m_prime();
-        let mut y_acc_m = vec![0u32; n + 1];
+        let mut y_acc_m = vec![0; n + 1];
 
         // b 已在 Montgomery 域，左補零成剛好 n 字
         let z_val = b.magnitude.to_vec();
         debug_assert!(z_val.len() <= n);
-        let mut y_val = vec![0u32; n];
+        let mut y_val = vec![0; n];
         y_val[n - z_val.len()..].copy_from_slice(&z_val);
 
         square_monty(&mut y_acc_m, &mut y_val, &m.magnitude, m_prime, small_monty_modulus);
@@ -718,9 +721,10 @@ impl BigInteger {
     /// non-zero. Fast path for small-prime trial division.
     fn remainder_u32(&self, m: u32) -> u32 {
         debug_assert!(m > 0);
-        let mut acc = 0u64;
+        let mut acc: DoubleLimb = 0;
+        let mm = m as DoubleLimb;
         for &word in self.magnitude.iter() {
-            acc = ((acc << 32) | word as u64) % m as u64; // 逐字帶餘數（big-endian）
+            acc = ((acc << WORD_BITS) | word as DoubleLimb) % mm; // 逐字帶餘數（big-endian）
         }
         acc as u32
     }
@@ -808,7 +812,7 @@ impl BigInteger {
         while n.sign != 0 {
             let (q, r) = n.div_rem(&radix_big);
             let d = if r.sign == 0 { 0 } else { r.magnitude[0] }; // 餘數 0..radix-1
-            digits.push(char::from_digit(d, radix).expect("digit < radix <= 36"));
+            digits.push(char::from_digit(d as u32, radix).expect("digit < radix <= 36"));
             n = q;
         }
 
@@ -921,13 +925,13 @@ impl BigInteger {
             // 兩補數恆等式：x 為負時，第 n 位與 ~x（非負）的第 n 位相反
             return !self.not().test_bit(n);
         }
-        let word_num = (n / u32::BITS) as usize;
+        let word_num = (n / Limb::BITS) as usize;
         if word_num >= self.magnitude.len() {
             return false; // 超出 magnitude：正數更高位皆 0
         }
         // big-endian：低位字在尾端，取第 word_num 個低位字
         let word = self.magnitude[self.magnitude.len() - 1 - word_num];
-        ((word >> (n % u32::BITS)) & 1) != 0
+        ((word >> (n % Limb::BITS)) & 1) != 0
     }
 
     /// Returns this value with bit `n` set to 1.
@@ -1034,7 +1038,7 @@ impl BigInteger {
         if value == 0 {
             BigInteger::new(0, Vec::new())
         } else {
-            BigInteger::new(1, vec![value])
+            BigInteger::new(1, vec![Limb::from(value)])
         }
     }
 
@@ -1064,43 +1068,8 @@ impl BigInteger {
         BigInteger::from_u32(u32::from(value))
     }
 
-    /// Creates a `BigInteger` from an unsigned 64-bit value.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use tc_math::big_integer::BigInteger;
-    ///
-    /// let n = BigInteger::from_u64(5);
-    /// ```
-    pub fn from_u64(value: u64) -> Self {
-        if value == 0 {
-            return BigInteger::new(0, Vec::new());
-        }
-        let high = (value >> 32) as u32;
-        let low = value as u32;
-        // Big-endian, no leading zero word: drop the high word when it is zero.
-        let magnitude = if high == 0 { vec![low] } else { vec![high, low] };
-        BigInteger::new(1, magnitude)
-    }
 
-    /// Creates a `BigInteger` from a signed 32-bit value.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use tc_math::big_integer::BigInteger;
-    ///
-    /// let n = BigInteger::from_i32(-5);
-    /// ```
-    pub fn from_i32(value: i32) -> Self {
-        if value == 0 {
-            return BigInteger::new(0, Vec::new());
-        }
-        let sign = if value < 0 { -1 } else { 1 };
-        // `unsigned_abs` yields the magnitude as `u32`, avoiding overflow on `i32::MIN`.
-        BigInteger::new(sign, vec![value.unsigned_abs()])
-    }
+
 
     /// Creates a `BigInteger` from a signed 16-bit value.
     ///
@@ -1126,6 +1095,19 @@ impl BigInteger {
     /// ```
     pub fn from_i8(value: i8) -> Self {
         BigInteger::from_i32(i32::from(value))
+    }
+
+    /// Creates a `BigInteger` from a signed 32-bit value.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tc_math::big_integer::BigInteger;
+    ///
+    /// let n = BigInteger::from_i32(-5);
+    /// ```
+    pub fn from_i32(value: i32) -> Self {
+        BigInteger::from_i64(value as i64)
     }
 
     /// Creates a `BigInteger` from a signed 64-bit value.
@@ -1164,31 +1146,6 @@ impl BigInteger {
         let magnitude = Vec::from(BigInteger::from_u128(value.unsigned_abs()).magnitude);
         let sign = if value < 0 { -1 } else { 1 };
         BigInteger::new(sign, magnitude)
-    }
-
-    /// Creates a `BigInteger` from an unsigned 128-bit value.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use tc_math::big_integer::BigInteger;
-    ///
-    /// let n = BigInteger::from_u128(5);
-    /// ```
-    pub fn from_u128(value: u128) -> Self {
-        if value == 0 {
-            return BigInteger::new(0, Vec::new());
-        }
-        // Split into 4 big-endian words (most-significant first).
-        let words = [
-            (value >> 96) as u32,
-            (value >> 64) as u32,
-            (value >> 32) as u32,
-            value as u32,
-        ];
-        // Skip leading zero words. `value != 0` guarantees at least one non-zero.
-        let start = words.iter().position(|&w| w != 0).unwrap();
-        BigInteger::new(1, words[start..].to_vec())
     }
 
     /// Returns a uniformly random non-negative integer in `[0, 2^bit_length)`
@@ -1268,15 +1225,15 @@ impl BigInteger {
         if self.sign < 0 { mag.reverse() } else { mag }
     }
 
-    /// 比較 `|self|` 與一個 `u128` 絕對值。`magnitude` 為 big-endian、無前導零的 u32 詞。
+    /// 比較 `|self|` 與一個 `u128` 絕對值。`magnitude` 為 big-endian、無前導零的 Limb 詞。
     fn cmp_abs_u128(&self, abs: u128) -> Ordering {
-        if self.magnitude.len() > 4 {
-            return Ordering::Greater; // > 4 字即 ≥ 2¹²⁸，大於任何 u128
+        if self.magnitude.len() > 128 / WORD_BITS {
+            return Ordering::Greater; // 超過 u128 容納的字數即 ≥ 2¹²⁸，大於任何 u128
         }
-        // ≤ 4 字塞得進 u128：組出低位到高位的值後直接比（空 magnitude → 0）
+        // 塞得進 u128：組出低位到高位的值後直接比（空 magnitude → 0）
         let mut acc: u128 = 0;
         for &w in self.magnitude.iter() {
-            acc = (acc << 32) | w as u128;
+            acc = (acc << WORD_BITS) | w as u128;
         }
         acc.cmp(&abs)
     }
@@ -1619,14 +1576,14 @@ impl_try_from_big_unsigned!(u8, u16, u32, u64, u128);
 impl_try_from_big_signed!(i8, i16, i32, i64, i128);
 
 /// 計算 magnitude（big-endian、無前導零）的位元長度，不含符號位。
-fn calc_bit_length(sign: i32, magnitude: &[u32]) -> u32 {
+fn calc_bit_length(sign: i32, magnitude: &[Limb]) -> u32 {
     // 無前導零，故第一個字即最高位字；空 magnitude 代表 0
     let Some((&first, rest)) = magnitude.split_first() else {
         return 0;
     };
 
     // 低位每個滿字貢獻 u32::BITS 位，加上最高位字的有效位數
-    let mut bit_length = u32::BITS * rest.len() as u32 + bit_len(first);
+    let mut bit_length = (WORD_BITS as u32) * rest.len() as u32 + bit_len(first);
 
     // 負的 2 次方（整個 magnitude 只有單一設定位元）時，少 1 位
     if sign < 0 && first.is_power_of_two() && rest.iter().all(|&w| w == 0) {
@@ -1636,8 +1593,8 @@ fn calc_bit_length(sign: i32, magnitude: &[u32]) -> u32 {
 }
 
 /// 單一字的位元長度（最高設定位元的位置 + 1）；`x` 為 0 時得 0。
-fn bit_len(x: u32) -> u32 {
-    u32::BITS - x.leading_zeros()
+fn bit_len(x: Limb) -> u32 {
+    (WORD_BITS as u32) - x.leading_zeros()
 }
 
 /// 把一個視窗編碼成 `mul_t | (zeros << 8)`：`mul_t` 正規化成奇數，拆出的尾端
@@ -1653,15 +1610,15 @@ fn create_window_entry(mut mul_t: u32, mut zeros: u32) -> u32 {
 /// 從高位到低位掃描指數 `mag`（big-endian，MSW 在前），拆成一串視窗項，最後
 /// 以 `u32::MAX` 收尾。每項含「奇數乘數 `mul_t`」與「後續零平方次數 `zeros`」，
 /// 由 [`create_window_entry`] 編碼；`extra_bits` 決定視窗最大寬度（`2^extra_bits`）。
-fn get_window_list(mag: &[u32], extra_bits: usize) -> Vec<u32> {
+fn get_window_list(mag: &[Limb], extra_bits: usize) -> Vec<u32> {
     let mut v = mag[0];
     debug_assert!(v != 0);
     let leading_bits = bit_len(v) as usize;
-    let total_bits = ((mag.len() - 1) << 5) + leading_bits;
+    let total_bits = ((mag.len() - 1) << SHIFT_WORD) + leading_bits;
     let result_size = (total_bits + extra_bits) / (1 + extra_bits) + 1;
     let mut result = vec![0u32; result_size];
     let mut result_pos = 0;
-    let mut bit_pos = 33 - leading_bits;
+    let mut bit_pos = WORD_BITS + 1 - leading_bits;
     v = v.wrapping_shl(bit_pos as u32);
 
     let mut mul_t = 1u32;
@@ -1670,11 +1627,11 @@ fn get_window_list(mag: &[u32], extra_bits: usize) -> Vec<u32> {
 
     let mut i = 0;
     loop {
-        while bit_pos < 32 {
+        while bit_pos < WORD_BITS {
             bit_pos += 1;
             if mul_t < mul_t_limit {
-                mul_t = (mul_t << 1) | (v >> 31);
-            } else if (v as i32) < 0 {
+                mul_t = (mul_t << 1) | ((v >> (WORD_BITS-1)) as u32);
+            } else if (v >> (WORD_BITS - 1)) != 0 {
                 // mul_t 已滿寬且下一位為 1 → 收掉當前視窗，另起新的
                 result[result_pos] = create_window_entry(mul_t, zeros);
                 result_pos += 1;
@@ -1698,34 +1655,31 @@ fn get_window_list(mag: &[u32], extra_bits: usize) -> Vec<u32> {
     result
 }
 
-/// 奇數 `d` 在 mod 2³² 的反元素：`d · inverse_u32(d) ≡ 1 (mod 2³²)`。
-/// Newton 迭代 `x ← x·(2 − d·x)`，每步正確低位位元數翻倍（3→6→12→24→48），
-/// 4 步蓋過 32 位。`wrapping_mul` 天然即 mod 2³²，無需另取模。
-fn inverse_u32(d: u32) -> u32 {
+fn inverse(d: Limb) -> Limb {
     debug_assert!(d & 1 == 1);
-    let mut x = d; // 種子：奇數自逆 mod 8（d·d ≡ 1 mod 8）
-    x = x.wrapping_mul(2u32.wrapping_sub(d.wrapping_mul(x)));
-    x = x.wrapping_mul(2u32.wrapping_sub(d.wrapping_mul(x)));
-    x = x.wrapping_mul(2u32.wrapping_sub(d.wrapping_mul(x)));
-    x = x.wrapping_mul(2u32.wrapping_sub(d.wrapping_mul(x)));
+    let mut x = d; // 種子 mod 8 正確（3 位）
+    // 3→6→12→24→48(→96)：ilog2(WORD_BITS)-1 步蓋過字寬
+    for _ in 0..(WORD_BITS.ilog2() - 1) {
+        x = x.wrapping_mul((2 as Limb).wrapping_sub(d.wrapping_mul(x)));
+    }
     x
 }
 
 /// 單字（n=1）Montgomery 乘法：回傳 `x·y·R⁻¹ mod m`（R = 2³²）。
 /// `m` 為奇 u32；`m_prime = -m⁻¹ mod 2³²`（見 [`BigInteger::m_prime`]）。
-fn multiply_monty_n_is_one(x: u32, y: u32, m: u32, m_prime: u32) -> u32 {
-    let mut carry = x as u64 * y as u64; // 完整乘積
-    let t = (carry as u32).wrapping_mul(m_prime); // 選 t 使加上 t·m 後低 32 位歸零
-    let um = m as u64;
-    let prod2 = um * t as u64; // t·m
-    carry += (prod2 as u32) as u64;
-    debug_assert!(carry as u32 == 0); // 低 32 位確實被消掉（Montgomery 不變量）
-    carry = (carry >> 32) + (prod2 >> 32); // = (x·y + t·m) / 2³²，落在 [0, 2m)
+fn multiply_monty_n_is_one(x: Limb, y: Limb, m: Limb, m_prime: Limb) -> Limb {
+    let mut carry = x as DoubleLimb * y as DoubleLimb; // 完整乘積
+    let t = (carry as Limb).wrapping_mul(m_prime); // 選 t 使加上 t·m 後低 32 位歸零
+    let um = m as DoubleLimb;
+    let prod2 = um * t as DoubleLimb; // t·m
+    carry += (prod2 as Limb) as DoubleLimb;
+    debug_assert!(carry as Limb == 0); // 低 32 位確實被消掉（Montgomery 不變量）
+    carry = (carry >> WORD_BITS) + (prod2 >> WORD_BITS); // = (x·y + t·m) / 2³²，落在 [0, 2m)
     if carry >= um {
         carry -= um; // 最終條件減至 [0, m)（標準 Montgomery：>=，非 >）
     }
     debug_assert!(carry < um);
-    carry as u32
+    carry as Limb
 }
 
 /// 多字 Montgomery 乘法：`x ← x·y·R⁻¹ mod m`（原地寫回 `x`），R = 2^(32·n)。
@@ -1733,7 +1687,7 @@ fn multiply_monty_n_is_one(x: u32, y: u32, m: u32, m_prime: u32) -> u32 {
 /// `a` 是長度 `n+1` 的暫存累加器；`x`/`y`/`m` 各 `n` 字（big-endian，且 `x,y < m`）；
 /// `m_prime = -m⁻¹ mod 2³²`。`small_monty_modulus` 為真時省略最終條件減（頂端有餘裕，
 /// 由呼叫端統一處理）。邊乘邊約簡（CIOS），全程只有乘法與位移，無長除法。
-fn multiply_monty(a: &mut [u32], x: &mut [u32], y: &[u32], m: &[u32], m_prime: u32, small_monty_modulus: bool) {
+fn multiply_monty(a: &mut [Limb], x: &mut [Limb], y: &[Limb], m: &[Limb], m_prime: Limb, small_monty_modulus: bool) {
     let n = m.len();
     if n == 1 {
         x[0] = multiply_monty_n_is_one(x[0], y[0], m[0], m_prime);
@@ -1741,57 +1695,57 @@ fn multiply_monty(a: &mut [u32], x: &mut [u32], y: &[u32], m: &[u32], m_prime: u
     }
 
     let y0 = y[n - 1];
-    let mut a_max: u32;
+    let mut a_max: Limb;
     {
         // 第 0 輪：用 x 的最低字掃 y，同時算約簡乘數 t 並消掉低字
-        let xi = x[n - 1] as u64;
+        let xi = x[n - 1] as DoubleLimb;
 
-        let mut carry = xi * y0 as u64;
-        let t = (carry as u32).wrapping_mul(m_prime) as u64;
+        let mut carry = xi * y0 as DoubleLimb;
+        let t = (carry as Limb).wrapping_mul(m_prime) as DoubleLimb;
 
-        let mut prod2 = t.wrapping_mul(m[n - 1] as u64);
-        carry += (prod2 as u32) as u64;
-        debug_assert!(carry as u32 == 0);
-        carry = (carry >> 32) + (prod2 >> 32);
+        let mut prod2 = t.wrapping_mul(m[n - 1] as DoubleLimb);
+        carry += (prod2 as Limb) as DoubleLimb;
+        debug_assert!(carry as Limb == 0);
+        carry = (carry >> WORD_BITS) + (prod2 >> WORD_BITS);
 
         for j in (0..=(n - 2)).rev() {
-            let prod1 = xi * y[j] as u64;
-            prod2 = t.wrapping_mul(m[j] as u64);
+            let prod1 = xi * y[j] as DoubleLimb;
+            prod2 = t.wrapping_mul(m[j] as DoubleLimb);
 
-            carry += (prod1 & 0xFFFF_FFFF) + (prod2 as u32) as u64;
-            a[j + 2] = carry as u32;
-            carry = (carry >> 32) + (prod1 >> 32) + (prod2 >> 32);
+            carry += (prod1 & Limb::MAX as DoubleLimb) + (prod2 as Limb) as DoubleLimb;
+            a[j + 2] = carry as Limb;
+            carry = (carry >> WORD_BITS) + (prod1 >> WORD_BITS) + (prod2 >> WORD_BITS);
         }
 
-        a[1] = carry as u32;
-        a_max = (carry >> 32) as u32;
+        a[1] = carry as Limb;
+        a_max = (carry >> WORD_BITS) as Limb;
     }
 
     for i in (0..=(n - 2)).rev() {
         // 第 i 輪：把 x[i]·y 累加進 a，並用 t·m 消掉新的低字
         let a0 = a[n];
-        let xi = x[i] as u64;
-        let mut prod1 = xi * y0 as u64;
-        let mut carry = (prod1 & 0xFFFF_FFFF) + a0 as u64;
-        let t = (carry as u32).wrapping_mul(m_prime) as u64;
+        let xi = x[i] as DoubleLimb;
+        let mut prod1 = xi * y0 as DoubleLimb;
+        let mut carry = (prod1 & Limb::MAX as DoubleLimb) + a0 as DoubleLimb;
+        let t = (carry as Limb).wrapping_mul(m_prime) as DoubleLimb;
 
-        let mut prod2 = t.wrapping_mul(m[n - 1] as u64);
-        carry += (prod2 as u32) as u64;
-        debug_assert!(carry as u32 == 0);
-        carry = (carry >> 32) + (prod1 >> 32) + (prod2 >> 32);
+        let mut prod2 = t.wrapping_mul(m[n - 1] as DoubleLimb);
+        carry += (prod2 as Limb) as DoubleLimb;
+        debug_assert!(carry as Limb == 0);
+        carry = (carry >> WORD_BITS) + (prod1 >> WORD_BITS) + (prod2 >> WORD_BITS);
 
         for j in (0..=(n - 2)).rev() {
-            prod1 = xi * y[j] as u64;
-            prod2 = t.wrapping_mul(m[j] as u64);
+            prod1 = xi * y[j] as DoubleLimb;
+            prod2 = t.wrapping_mul(m[j] as DoubleLimb);
 
-            carry += (prod1 & 0xFFFF_FFFF) + (prod2 as u32) as u64 + a[j + 1] as u64;
-            a[j + 2] = carry as u32;
-            carry = (carry >> 32) + (prod1 >> 32) + (prod2 >> 32);
+            carry += (prod1 & Limb::MAX as DoubleLimb) + (prod2 as Limb) as DoubleLimb + a[j + 1] as DoubleLimb;
+            a[j + 2] = carry as Limb;
+            carry = (carry >> WORD_BITS) + (prod1 >> WORD_BITS) + (prod2 >> WORD_BITS);
         }
 
-        carry += a_max as u64;
-        a[1] = carry as u32;
-        a_max = (carry >> 32) as u32;
+        carry += a_max as DoubleLimb;
+        a[1] = carry as Limb;
+        a_max = (carry >> WORD_BITS) as Limb;
     }
 
     a[0] = a_max;
@@ -1807,7 +1761,7 @@ fn multiply_monty(a: &mut [u32], x: &mut [u32], y: &[u32], m: &[u32], m_prime: u
 ///
 /// 註：bak 以 `i32` 索引來讓 `0..=(i-1)` 在 `i=0` 時為空；此處改用 usize 的 `0..i`
 /// 等價範圍，避免下溢。
-fn square_monty(a: &mut [u32], x: &mut [u32], m: &[u32], m_prime: u32, small_monty_modulus: bool) {
+fn square_monty(a: &mut [Limb], x: &mut [Limb], m: &[Limb], m_prime: Limb, small_monty_modulus: bool) {
     let n = m.len();
     if n == 1 {
         let x_val = x[0];
@@ -1815,65 +1769,65 @@ fn square_monty(a: &mut [u32], x: &mut [u32], m: &[u32], m_prime: u32, small_mon
         return;
     }
 
-    let x0 = x[n - 1] as u64;
-    let mut a_max: u32;
+    let x0 = x[n - 1] as DoubleLimb;
+    let mut a_max: Limb;
     {
         let mut carry = x0 * x0;
-        let t = (carry as u32).wrapping_mul(m_prime) as u64;
+        let t = (carry as Limb).wrapping_mul(m_prime) as DoubleLimb;
 
-        let mut prod2 = t.wrapping_mul(m[n - 1] as u64);
-        carry += (prod2 as u32) as u64;
-        debug_assert!(carry as u32 == 0);
-        carry = (carry >> 32) + (prod2 >> 32);
+        let mut prod2 = t.wrapping_mul(m[n - 1] as DoubleLimb);
+        carry += (prod2 as Limb) as DoubleLimb;
+        debug_assert!(carry as Limb == 0);
+        carry = (carry >> WORD_BITS) + (prod2 >> WORD_BITS);
 
         for j in (0..(n - 1)).rev() {
-            let prod1 = x0 * x[j] as u64;
-            prod2 = t.wrapping_mul(m[j] as u64);
+            let prod1 = x0 * x[j] as DoubleLimb;
+            prod2 = t.wrapping_mul(m[j] as DoubleLimb);
 
-            carry += (prod2 & 0xFFFF_FFFF) + ((prod1 as u32) << 1) as u64;
-            a[j + 2] = carry as u32;
-            carry = (carry >> 32) + (prod1 >> 31) + (prod2 >> 32);
+            carry += (prod2 & Limb::MAX as DoubleLimb) + ((prod1 as Limb) << 1) as DoubleLimb;
+            a[j + 2] = carry as Limb;
+            carry = (carry >> WORD_BITS) + (prod1 >> (WORD_BITS - 1)) + (prod2 >> WORD_BITS);
         }
 
-        a[1] = carry as u32;
-        a_max = (carry >> 32) as u32;
+        a[1] = carry as Limb;
+        a_max = (carry >> WORD_BITS) as Limb;
     }
 
     for i in (0..(n - 1)).rev() {
         let a0 = a[n];
-        let t = a0.wrapping_mul(m_prime) as u64;
-        let mut carry = t.wrapping_mul(m[n - 1] as u64).wrapping_add(a0 as u64);
-        debug_assert!(carry as u32 == 0);
-        carry >>= 32;
+        let t = a0.wrapping_mul(m_prime) as DoubleLimb;
+        let mut carry = t.wrapping_mul(m[n - 1] as DoubleLimb).wrapping_add(a0 as DoubleLimb);
+        debug_assert!(carry as Limb == 0);
+        carry >>= WORD_BITS;
 
         for j in ((i + 1)..(n - 1)).rev() {
-            carry += t * m[j] as u64 + a[j + 1] as u64;
-            a[j + 2] = carry as u32;
-            carry >>= 32;
+            carry += t * m[j] as DoubleLimb + a[j + 1] as DoubleLimb;
+            a[j + 2] = carry as Limb;
+            carry >>= WORD_BITS;
         }
 
-        let xi = x[i] as u64;
+        let xi = x[i] as DoubleLimb;
         {
             let prod1 = xi * xi; // 對角項 x_i²（不乘 2）
-            let prod2 = t.wrapping_mul(m[i] as u64);
+            let prod2 = t.wrapping_mul(m[i] as DoubleLimb);
 
-            carry += (prod1 & 0xFFFF_FFFF) + (prod2 as u32) as u64 + a[i + 1] as u64;
-            a[i + 2] = carry as u32;
-            carry = (carry >> 32) + (prod1 >> 32) + (prod2 >> 32);
+            carry += (prod1 & Limb::MAX as DoubleLimb) + (prod2 as Limb) as DoubleLimb + a[i + 1] as DoubleLimb;
+            a[i + 2] = carry as Limb;
+            carry = (carry >> WORD_BITS) + (prod1 >> WORD_BITS) + (prod2 >> WORD_BITS);
         }
 
         for j in (0..i).rev() {
-            let prod1 = xi * x[j] as u64; // 交叉項 x_i·x_j（乘 2）
-            let prod2 = t * m[j] as u64;
+            let prod1 = xi * x[j] as DoubleLimb; // 交叉項 x_i·x_j（乘 2）
+            let prod2 = t * m[j] as DoubleLimb;
 
-            carry += (prod2 & 0xFFFF_FFFF) + ((prod1 as u32) << 1) as u64 + a[j + 1] as u64;
-            a[j + 2] = carry as u32;
-            carry = (carry >> 32) + (prod1 >> 31) + (prod2 >> 32);
+            carry += (prod2 & Limb::MAX as DoubleLimb) + ((prod1 as Limb) << 1) as DoubleLimb + a[j + 1] as DoubleLimb;
+            a[j + 2] = carry as Limb;
+            carry = (carry >> WORD_BITS) + (prod1 >> (WORD_BITS - 1)) + (prod2 >> WORD_BITS);
         }
 
-        carry += a_max as u64;
-        a[1] = carry as u32;
-        a_max = (carry >> 32) as u32;
+        carry += a_max as DoubleLimb;
+        a[1] = carry as Limb;
+        a_max = (carry >> WORD_BITS) as Limb;
     }
 
     a[0] = a_max;
@@ -1888,28 +1842,28 @@ fn square_monty(a: &mut [u32], x: &mut [u32], m: &[u32], m_prime: u32, small_mon
 /// Montgomery reduction：`x ← x·R⁻¹ mod m`（原地），把 Montgomery 域的值轉回普通形式。
 /// 要求 `x.len() == m.len() == n` 且 `x < m`（非通用約簡，不收雙倍長度輸入）。
 /// 逐字用 `t·m` 消掉低字再右移一字，共 n 輪。
-fn montgomery_reduce(x: &mut [u32], m: &[u32], m_prime: u32) {
+fn montgomery_reduce(x: &mut [Limb], m: &[Limb], m_prime: Limb) {
     debug_assert!(x.len() == m.len());
     let n = m.len();
 
     for _ in 0..n {
         let x0 = x[n - 1];
-        let t = x0.wrapping_mul(m_prime) as u64;
+        let t = x0.wrapping_mul(m_prime) as DoubleLimb;
 
-        let mut carry = t * m[n - 1] as u64 + x0 as u64;
-        debug_assert!(carry as u32 == 0); // 低字被消掉
-        carry >>= 32;
+        let mut carry = t * m[n - 1] as DoubleLimb + x0 as DoubleLimb;
+        debug_assert!(carry as Limb == 0); // 低字被消掉
+        carry >>= WORD_BITS;
 
         if n >= 2 {
             for j in (0..(n - 1)).rev() {
-                carry += t * m[j] as u64 + x[j] as u64;
-                x[j + 1] = carry as u32;
-                carry >>= 32;
+                carry += t * m[j] as DoubleLimb + x[j] as DoubleLimb;
+                x[j + 1] = carry as Limb;
+                carry >>= WORD_BITS;
             }
         }
 
-        x[0] = carry as u32;
-        debug_assert!(carry >> 32 == 0);
+        x[0] = carry as Limb;
+        debug_assert!(carry >> WORD_BITS == 0);
     }
 
     // 結果落在 [0, m]，用 >= 修正到 [0, m)（bak 用 >，結果恰為 m 時會漏減）
@@ -1919,21 +1873,21 @@ fn montgomery_reduce(x: &mut [u32], m: &[u32], m_prime: u32) {
 }
 
 /// 比較兩個 magnitude（big-endian、無前導零）代表的絕對值大小。
-fn compare_magnitude(x: &[u32], y: &[u32]) -> Ordering {
+fn compare_magnitude(x: &[Limb], y: &[Limb]) -> Ordering {
     // 無前導零：字數多者絕對值大；字數相同再逐字（最高位在前）比字典序
     x.len().cmp(&y.len()).then_with(|| x.cmp(y))
 }
 
 /// 比較兩個可能帶前導零字的 magnitude（如 Montgomery 的定長 buffer）：
 /// 先各自跳過前導零，再交給 [`compare_magnitude`]（後者要求無前導零）。
-fn compare_to(x: &[u32], y: &[u32]) -> Ordering {
+fn compare_to(x: &[Limb], y: &[Limb]) -> Ordering {
     let x = &x[x.iter().position(|&w| w != 0).unwrap_or(x.len())..];
     let y = &y[y.iter().position(|&w| w != 0).unwrap_or(y.len())..];
     compare_magnitude(x, y)
 }
 
 /// 去除 big-endian magnitude 的前導零字。
-fn trim_leading_zeros(mut v: Vec<u32>) -> Vec<u32> {
+fn trim_leading_zeros(mut v: Vec<Limb>) -> Vec<Limb> {
     let start = v.iter().position(|&w| w != 0).unwrap_or(v.len());
     v.drain(..start);
     v
@@ -1943,36 +1897,36 @@ fn trim_leading_zeros(mut v: Vec<u32>) -> Vec<u32> {
 ///
 /// 前提：`x.len() >= y.len()`，且 `x` 已預留足夠長度容納進位（最高位不溢出）。
 /// 供除法內圈與 `add_magnitudes` 使用，避免每次相加都配置。
-fn add_in_place(x: &mut [u32], y: &[u32]) {
+fn add_in_place(x: &mut [Limb], y: &[Limb]) {
     debug_assert!(x.len() >= y.len(), "add_in_place 需要 x.len() >= y.len()");
 
-    let mut carry = 0u64;
+    let mut carry: DoubleLimb = 0;
     let mut xi = x.len();
 
     // 先把 y 逐字加進 x 的低位端（兩者尾端對齊），進位隨 u64 高位帶著走
     for &yw in y.iter().rev() {
         xi -= 1;
-        carry += x[xi] as u64 + yw as u64;
-        x[xi] = carry as u32;
-        carry >>= 32;
+        carry += x[xi] as DoubleLimb + yw as DoubleLimb;
+        x[xi] = carry as Limb;
+        carry >>= WORD_BITS;
     }
     // 剩餘進位繼續往更高位傳（xi > 0 護欄避免下溢，並讓下方 assert 給清楚訊息）
     while carry != 0 && xi > 0 {
         xi -= 1;
-        carry += x[xi] as u64;
-        x[xi] = carry as u32;
-        carry >>= 32;
+        carry += x[xi] as DoubleLimb;
+        x[xi] = carry as Limb;
+        carry >>= WORD_BITS;
     }
 
     debug_assert!(carry == 0, "add_in_place 溢位：x 未預留足夠長度");
 }
 
 /// 兩個 magnitude（big-endian、無前導零）相加，回傳結果（無前導零）。
-fn add_magnitudes(x: &[u32], y: &[u32]) -> Vec<u32> {
+fn add_magnitudes(x: &[Limb], y: &[Limb]) -> Vec<Limb> {
     let (long, short) = if x.len() >= y.len() { (x, y) } else { (y, x) };
 
     // 預留一個前導 0 字容納最高位進位；長者放進 result[1..]
-    let mut result = vec![0u32; long.len() + 1];
+    let mut result = vec![0; long.len() + 1];
     result[1..].copy_from_slice(long);
 
     add_in_place(&mut result, short); // 加法與進位傳遞交給原地核心；前導 0 字吸收進位
@@ -1982,7 +1936,7 @@ fn add_magnitudes(x: &[u32], y: &[u32]) -> Vec<u32> {
 /// 兩個 magnitude（big-endian、無前導零）相減，回傳 `x - y`（無前導零）。
 ///
 /// 前提：數值上 `x >= y`（呼叫端用 `compare_magnitude` 確保），故結果非負。
-fn sub_magnitudes(x: &[u32], y: &[u32]) -> Vec<u32> {
+fn sub_magnitudes(x: &[Limb], y: &[Limb]) -> Vec<Limb> {
     debug_assert!(
         compare_magnitude(x, y) != Ordering::Less,
         "sub_magnitudes 需要 x >= y"
@@ -1997,28 +1951,26 @@ fn sub_magnitudes(x: &[u32], y: &[u32]) -> Vec<u32> {
 ///
 /// 前提：數值上 `x >= y`（呼叫端保證），故不會借位溢出頂端。
 /// 供除法內圈與 `sub_magnitudes` 使用，避免每次相減都配置。
-fn sub_in_place(x: &mut [u32], y: &[u32]) {
+fn sub_in_place(x: &mut [Limb], y: &[Limb]) {
     debug_assert!(x.len() >= y.len(), "sub_in_place 需要 x.len() >= y.len()");
 
-    let mut borrow = 0i64;
+    let mut borrow = false;
     let mut xi = x.len();
 
-    // 先把 y 從 x 的低位端逐字減掉（兩者尾端對齊）
     for &yw in y.iter().rev() {
         xi -= 1;
-        let diff = x[xi] as i64 - yw as i64 - borrow;
-        x[xi] = diff as u32; // 負則回繞，等同借位
-        borrow = (diff < 0) as i64; // 0 或 1
+        let (d1, b1) = x[xi].overflowing_sub(yw);
+        let (d2, b2) = d1.overflowing_sub(borrow as Limb);
+        x[xi] = d2;
+        borrow = b1 || b2;
     }
-    // 剩餘借位往更高位傳（xi > 0 護欄避免下溢，並讓下方 assert 給清楚訊息）
-    while borrow != 0 && xi > 0 {
+    while borrow && xi > 0 {
         xi -= 1;
         let (v, b) = x[xi].overflowing_sub(1);
         x[xi] = v;
-        borrow = b as i64;
+        borrow = b;
     }
-
-    debug_assert!(borrow == 0, "sub_in_place：x < y（借位溢出頂端）");
+    debug_assert!(!borrow, "sub_in_place：x < y（借位溢出頂端）");
 }
 
 /// 兩個 magnitude（big-endian、無前導零）相乘，回傳結果（無前導零）。
@@ -2029,24 +1981,24 @@ fn sub_in_place(x: &mut [u32], y: &[u32]) {
 // 小於某個門檻字數（bc-csharp 用 KaratsubaMultiplyLimit）仍維持此法以免遞迴開銷。
 // 作法：新增 `KARATSUBA_THRESHOLD`，依 x/y 較短者長度決定走 schoolbook 或遞迴。
 // 對應地 square_magnitude 也可加 Karatsuba squaring。
-fn multiply_magnitudes(x: &[u32], y: &[u32]) -> Vec<u32> {
+fn multiply_magnitudes(x: &[Limb], y: &[Limb]) -> Vec<Limb> {
     if x.is_empty() || y.is_empty() {
         return Vec::new(); // 任一為零 → 0
     }
-    let mut result = vec![0u32; x.len() + y.len()];
+    let mut result = vec![0; x.len() + y.len()];
 
     // 對 y 的每個字（由低位到高位），把整個 x 乘上去、加進 result 對應視窗
     for i in (0..y.len()).rev() {
-        let a = y[i] as u64;
+        let a = y[i] as DoubleLimb;
         if a != 0 {
-            let mut carry = 0u64;
+            let mut carry: DoubleLimb = 0;
             for j in (0..x.len()).rev() {
                 let pos = i + 1 + j; // 此 y 字對齊的視窗；a·x[j]+result[pos]+carry ≤ 2^64-1
-                let v = a * x[j] as u64 + result[pos] as u64 + carry;
-                result[pos] = v as u32;
-                carry = v >> 32;
+                let v = a * x[j] as DoubleLimb + result[pos] as DoubleLimb + carry;
+                result[pos] = v as Limb;
+                carry = v >> WORD_BITS;
             }
-            result[i] = carry as u32; // 進位落在視窗上方一格
+            result[i] = carry as Limb; // 進位落在視窗上方一格
         }
     }
 
@@ -2058,60 +2010,60 @@ fn multiply_magnitudes(x: &[u32], y: &[u32]) -> Vec<u32> {
 /// 回傳 `x²` 的 magnitude（big-endian、無前導零）。與 `multiply_magnitudes(x, x)`
 /// 結果相同，僅乘法次數約少一半（複雜度仍為 O(n²)）。
 // TODO(karatsuba)：大數平方可改 Karatsuba squaring，見 multiply_magnitudes 的 TODO。
-fn square_magnitude(x: &[u32]) -> Vec<u32> {
+fn square_magnitude(x: &[Limb]) -> Vec<Limb> {
     if x.is_empty() {
         return Vec::new();
     }
     let n = x.len();
-    let mut w = vec![0u32; 2 * n];
+    let mut w = vec![0; 2 * n];
 
     // 用帶號索引，方便處理「遞減到 -1」的邊界檢查
     let mut w_base: isize = (2 * n - 1) as isize;
 
     for i in (1..n).rev() {
-        let v = x[i] as u64;
+        let v = x[i] as DoubleLimb;
 
         // 對角項 x[i]²
-        let mut c = v * v + w[w_base as usize] as u64;
-        w[w_base as usize] = c as u32;
-        c >>= 32;
+        let mut c = v * v + w[w_base as usize] as DoubleLimb;
+        w[w_base as usize] = c as Limb;
+        c >>= WORD_BITS;
 
         // 非對角項 2·x[i]·x[j]：算一次乘 2
         for j in (0..i).rev() {
-            let prod = v * x[j] as u64;
+            let prod = v * x[j] as DoubleLimb;
             w_base -= 1;
             // (prod as u32) << 1 是低 32 位乘 2；prod >> 31 補回乘 2 溢出低位的部分
-            c += w[w_base as usize] as u64 + (((prod as u32) << 1) as u64);
-            w[w_base as usize] = c as u32;
-            c = (c >> 32) + (prod >> 31);
+            c += w[w_base as usize] as DoubleLimb + (((prod as Limb) << 1) as DoubleLimb);
+            w[w_base as usize] = c as Limb;
+            c = (c >> WORD_BITS) + (prod >> (WORD_BITS - 1));
         }
 
         w_base -= 1;
-        c += w[w_base as usize] as u64;
-        w[w_base as usize] = c as u32;
+        c += w[w_base as usize] as DoubleLimb;
+        w[w_base as usize] = c as Limb;
 
         w_base -= 1;
         if w_base >= 0 {
-            w[w_base as usize] = (c >> 32) as u32;
+            w[w_base as usize] = (c >> WORD_BITS) as Limb;
         } else {
-            debug_assert_eq!(c >> 32, 0);
+            debug_assert_eq!(c >> WORD_BITS, 0);
         }
 
         w_base += i as isize;
     }
 
     // 最低字 x[0]²
-    let mut c = x[0] as u64;
-    c = c * c + w[w_base as usize] as u64;
-    w[w_base as usize] = c as u32;
+    let mut c = x[0] as DoubleLimb;
+    c = c * c + w[w_base as usize] as DoubleLimb;
+    w[w_base as usize] = c as Limb;
 
     w_base -= 1;
     if w_base >= 0 {
         // C# 此處為 int += 會 wrap；用 wrapping_add 對齊語義並避免 debug panic
         let idx = w_base as usize;
-        w[idx] = w[idx].wrapping_add((c >> 32) as u32);
+        w[idx] = w[idx].wrapping_add((c >> WORD_BITS) as Limb);
     } else {
-        debug_assert_eq!(c >> 32, 0);
+        debug_assert_eq!(c >> WORD_BITS, 0);
     }
 
     trim_leading_zeros(w)
@@ -2120,30 +2072,30 @@ fn square_magnitude(x: &[u32]) -> Vec<u32> {
 /// 將 magnitude（big-endian、無前導零）左移 `n` 位，回傳結果（無前導零）。
 ///
 /// 前提：`mag` 非空（移位零由呼叫端擋掉）。
-fn shift_left_magnitude(mag: &[u32], n: usize) -> Vec<u32> {
+fn shift_left_magnitude(mag: &[Limb], n: usize) -> Vec<Limb> {
     debug_assert!(!mag.is_empty(), "shift_left_magnitude 需要非空 magnitude");
 
-    let n_ints = n >> 5; // n / 32：要往低位補幾個整字
-    let n_bits = n & 0x1F; // n % 32：字內再移幾位
+    let n_ints = n / WORD_BITS; // n / 32：要往低位補幾個整字
+    let n_bits = n % WORD_BITS; // n % 32：字內再移幾位
     let mag_len = mag.len();
-    let mut new_mag: Vec<u32>;
+    let mut new_mag: Vec<Limb>;
 
     if n_bits == 0 {
         // 剛好整字倍數：mag 放前面，尾端補 n_ints 個零字
-        new_mag = vec![0u32; mag_len + n_ints];
+        new_mag = vec![0; mag_len + n_ints];
         new_mag[0..mag_len].copy_from_slice(mag);
     } else {
         let mut i = 0;
-        let n_bits2 = 32 - n_bits;
+        let n_bits2 = WORD_BITS - n_bits;
         let high_bits = mag[0] >> n_bits2; // 最高字移出頂端的位元
 
         if high_bits != 0 {
             // 溢出頂端 → 需要多一個前導字
-            new_mag = vec![0u32; mag_len + n_ints + 1];
+            new_mag = vec![0; mag_len + n_ints + 1];
             new_mag[i] = high_bits;
             i += 1;
         } else {
-            new_mag = vec![0u32; mag_len + n_ints];
+            new_mag = vec![0; mag_len + n_ints];
         }
 
         // 逐字左移，並把下一字的高位帶進來（跨字進位）
@@ -2165,7 +2117,7 @@ fn shift_left_magnitude(mag: &[u32], n: usize) -> Vec<u32> {
 ///
 /// 前提：`mag` 非空，且 `n` 小於總位元數 `mag.len() * WORD_BITS`。
 /// 「整個移光成零」的情形由呼叫端先攔掉（直接回零），不進本函式。
-fn shift_right_magnitude(mag: &[u32], n: usize) -> Vec<u32> {
+fn shift_right_magnitude(mag: &[Limb], n: usize) -> Vec<Limb> {
     let mut result = mag.to_vec();
     shift_right_in_place(&mut result, n); // 位移與跨字補位交給原地核心（前提檢查在其中）
     trim_leading_zeros(result) // 原地版高位補 0，去掉空出的前導零字即得緊湊結果
@@ -2174,7 +2126,7 @@ fn shift_right_magnitude(mag: &[u32], n: usize) -> Vec<u32> {
 /// 原地右移 `n` 位（big-endian，固定長度，高位空出處填 0，不 trim）。
 ///
 /// 供除法內圈使用。前提：`mag` 非空，且 `n < mag.len() * WORD_BITS`。
-fn shift_right_in_place(mag: &mut [u32], n: usize) {
+fn shift_right_in_place(mag: &mut [Limb], n: usize) {
     debug_assert!(!mag.is_empty(), "shift_right_in_place 需要非空 mag");
     debug_assert!(n < mag.len() * WORD_BITS, "shift_right_in_place: n 超出總位元數");
 
@@ -2206,7 +2158,7 @@ fn shift_right_in_place(mag: &mut [u32], n: usize) {
 }
 
 /// 原地右移 1 位（big-endian）。除法內圈的高頻特化版，比通用版省去 word 搬移判斷。
-fn shift_right_one_in_place(mag: &mut [u32]) {
+fn shift_right_one_in_place(mag: &mut [Limb]) {
     debug_assert!(!mag.is_empty(), "shift_right_one_in_place 需要非空 mag");
     // 由高位字往低位處理：每字右移 1，補入高位鄰字掉下來的最低位。
     // 讀 mag[i-1] 時它尚未被改（處理順序在後），故不需 carry 變數。
@@ -2219,7 +2171,7 @@ fn shift_right_one_in_place(mag: &mut [u32]) {
 /// 長除法（位移相減法）：回傳 `(商, 餘)` 的 magnitude（皆 big-endian、無前導零）。
 ///
 /// `dividend`、`divisor` 皆 big-endian、無前導零。呼叫端須保證 `divisor` 非零。
-fn div_magnitudes(dividend: &[u32], divisor: &[u32]) -> (Vec<u32>, Vec<u32>) {
+fn div_magnitudes(dividend: &[Limb], divisor: &[Limb]) -> (Vec<Limb>, Vec<Limb>) {
     debug_assert!(!dividend.is_empty() && dividend[0] != 0, "div_magnitudes: 被除數須無前導零");
     debug_assert!(!divisor.is_empty() && divisor[0] != 0, "div_magnitudes: 除數須非零且無前導零");
 
@@ -2228,32 +2180,32 @@ fn div_magnitudes(dividend: &[u32], divisor: &[u32]) -> (Vec<u32>, Vec<u32>) {
     let mut x_start = 0; // x 的有效起點；相減後會往前推進
 
     let mut xy_cmp = compare_magnitude(&x[x_start..], y);
-    let mut count: Vec<u32>;
+    let mut count: Vec<Limb>;
 
     if xy_cmp == Ordering::Greater {
         let y_bit_length = calc_bit_length(1, y) as usize;
         let mut x_bit_length = calc_bit_length(1, &x[x_start..]) as usize;
         let mut shift = x_bit_length as isize - y_bit_length as isize;
 
-        let mut i_count: Vec<u32>; // 目前這個 c 對應的商位（= 2^shift）
+        let mut i_count: Vec<Limb>; // 目前這個 c 對應的商位（= 2^shift）
         let mut i_count_start = 0;
 
-        let mut c: Vec<u32>; // 除數左移後的版本
+        let mut c: Vec<Limb>; // 除數左移後的版本
         let mut c_start = 0;
         let mut c_bit_length = y_bit_length;
 
         if shift > 0 {
             // c = y << shift；對應商位 i_count = 1 << shift
-            i_count = vec![0u32; (shift as usize / WORD_BITS) + 1];
-            i_count[0] = 1u32 << (shift as usize % WORD_BITS);
+            i_count = vec![0; (shift as usize / WORD_BITS) + 1];
+            i_count[0] = 1 << (shift as usize % WORD_BITS);
             c = shift_left_magnitude(y, shift as usize);
             c_bit_length += shift as usize;
         } else {
-            i_count = vec![1u32];
+            i_count = vec![1];
             c = y.to_vec();
         }
 
-        count = vec![0u32; i_count.len()];
+        count = vec![0; i_count.len()];
 
         loop {
             if c_bit_length < x_bit_length
@@ -2315,7 +2267,7 @@ fn div_magnitudes(dividend: &[u32], divisor: &[u32]) -> (Vec<u32>, Vec<u32>) {
             }
         }
     } else {
-        count = vec![0u32]; // x < y（商 0）或 x == y（下面補 1）
+        count = vec![0]; // x < y（商 0）或 x == y（下面補 1）
     }
 
     if xy_cmp == Ordering::Equal {
@@ -2361,7 +2313,7 @@ fn extended_gcd(a: &BigInteger, b: &BigInteger) -> (BigInteger, BigInteger) {
 ///
 /// 供負數右移的 floor 修正：被移出的低位若非零，代表截斷有損失，需向下多退一。
 /// 前提：`n` 小於總位元數（呼叫端已保證），故 `word_shift <= len - 1`。
-fn any_low_bits_set(mag: &[u32], n: usize) -> bool {
+fn any_low_bits_set(mag: &[Limb], n: usize) -> bool {
     let word_shift = n / WORD_BITS; // 低位端整字數
     let bit_shift = n % WORD_BITS; // 再上一字要看的低位位數
     let len = mag.len();
@@ -2371,7 +2323,7 @@ fn any_low_bits_set(mag: &[u32], n: usize) -> bool {
         return true;
     }
     // 再上一字的低 bit_shift 位（bit_shift == 0 時無此殘位）
-    if bit_shift != 0 && mag[len - word_shift - 1] & ((1u32 << bit_shift) - 1) != 0 {
+    if bit_shift != 0 && mag[len - word_shift - 1] & ((1 << bit_shift) - 1) != 0 {
         return true;
     }
     false
@@ -2384,8 +2336,8 @@ fn any_low_bits_set(mag: &[u32], n: usize) -> bool {
 ///   **整體反相**；連上方 padding 的 `0` 也翻成 `0xFFFF_FFFF`，即符號延伸（無限個 1）。
 ///
 /// 前提：`len` 至少容得下該來源 magnitude 的字數（呼叫端以兩運算元取 max 保證）。
-fn to_twos_complement_words(x: &BigInteger, len: usize) -> Vec<u32> {
-    let mut words = vec![0u32; len];
+fn to_twos_complement_words(x: &BigInteger, len: usize) -> Vec<Limb> {
+    let mut words = vec![0; len];
     if x.sign == 0 {
         return words; // 0 → 全 0
     }
@@ -2393,7 +2345,7 @@ fn to_twos_complement_words(x: &BigInteger, len: usize) -> Vec<u32> {
     let negative = x.sign < 0;
     // 負數要讓 (x + 1) 這個暫時值活到 copy 完；用「延後初始化」的 let 延長其壽命，免 clone。
     let neg_tmp;
-    let src: &[u32] = if negative {
+    let src: &[Limb] = if negative {
         neg_tmp = x + &BigInteger::from_u32(1);
         &neg_tmp.magnitude
     } else {
@@ -2415,12 +2367,12 @@ fn to_twos_complement_words(x: &BigInteger, len: usize) -> Vec<u32> {
 /// 負結果先在迴圈裡整體反相存成 `|result| - 1`，最後 `!` 一次轉回負（進位長大由 Not 吸收）。
 ///
 /// 前提：`a`、`b` 皆非零（零的捷徑由各運算子先處理）。
-fn bitwise(a: &BigInteger, b: &BigInteger, result_neg: bool, op: impl Fn(u32, u32) -> u32) -> BigInteger {
+fn bitwise(a: &BigInteger, b: &BigInteger, result_neg: bool, op: impl Fn(Limb, Limb) -> Limb) -> BigInteger {
     let len = a.magnitude.len().max(b.magnitude.len());
     let aw = to_twos_complement_words(a, len);
     let bw = to_twos_complement_words(b, len);
 
-    let mut result = vec![0u32; len];
+    let mut result = vec![0; len];
     for i in 0..len {
         let mut w = op(aw[i], bw[i]);
         if result_neg {
@@ -2436,7 +2388,7 @@ fn bitwise(a: &BigInteger, b: &BigInteger, result_neg: bool, op: impl Fn(u32, u3
 /// 計算負數的 bitCount，等於 `popcount(magnitude - 1)`。
 ///
 /// `magnitude` 為 big-endian、非空（負數必非零）。減 1 從最低位（尾端）借位。
-fn bit_count_negative(magnitude: &[u32]) -> u32 {
+fn bit_count_negative(magnitude: &[Limb]) -> u32 {
     let mut borrow = true; // 減 1：一開始就欠一個借位
     let mut count = 0;
     for &w in magnitude.iter().rev() {
@@ -2465,21 +2417,21 @@ fn twos_complement_in_place(bytes: &mut [u8]) {
     }
 }
 
-fn make_magnitude_be(buffer: &[u8]) -> Vec<u32> {
+fn make_magnitude_be(buffer: &[u8]) -> Vec<Limb> {
     // 去除前導零位元組；全零（或空）緩衝區會得到空切片
     let start = buffer.iter().position(|&b| b != 0).unwrap_or(buffer.len());
 
     buffer[start..]
-        .rchunks(size_of::<u32>()) // 從低位端每 4 位元組切一塊
+        .rchunks(size_of::<Limb>()) // 從低位端每 4 位元組切一塊
         .rev() // 反轉，讓最高位的字排在前面
-        .map(|chunk| chunk.iter().fold(0u32, |acc, &b| (acc << 8) | b as u32))
+        .map(|chunk| chunk.iter().fold(0, |acc, &b| (acc << 8) | b as Limb))
         .collect()
 }
 
 /// 將 big-endian 兩補數負數位元組還原成其絕對值的 magnitude。
 ///
 /// 前提：`buffer` 代表負數（最高位元組的最高位為 1）。
-fn make_magnitude_be_negative(buffer: &[u8]) -> Vec<u32> {
+fn make_magnitude_be_negative(buffer: &[u8]) -> Vec<Limb> {
     // 兩補數轉絕對值：全部反相，再從最低位 (尾端) 加 1
     let mut inverse: Vec<u8> = buffer.iter().map(|&b| !b).collect();
     for b in inverse.iter_mut().rev() {
@@ -2494,21 +2446,21 @@ fn make_magnitude_be_negative(buffer: &[u8]) -> Vec<u32> {
     make_magnitude_be(&inverse)
 }
 
-fn make_magnitude_le(buffer: &[u8]) -> Vec<u32> {
+fn make_magnitude_le(buffer: &[u8]) -> Vec<Limb> {
     // little-endian：最高位在尾端，所以去除「尾端」的零位元組
     let end = buffer.iter().rposition(|&b| b != 0).map_or(0, |i| i + 1);
 
     buffer[..end]
-        .chunks(size_of::<u32>()) // 從低位端每 4 位元組切一塊（低位字先出）
+        .chunks(size_of::<Limb>()) // 從低位端每 4 位元組切一塊（低位字先出）
         .rev() // 反轉，讓最高位的字排在前面
-        .map(|chunk| chunk.iter().rev().fold(0u32, |acc, &b| (acc << 8) | b as u32))
+        .map(|chunk| chunk.iter().rev().fold(0, |acc, &b| (acc << 8) | b as Limb))
         .collect()
 }
 
 /// 將 little-endian 兩補數負數位元組還原成其絕對值的 magnitude。
 ///
 /// 前提：`buffer` 代表負數（最高位元組的最高位為 1；最高位元組在尾端）。
-fn make_magnitude_le_negative(buffer: &[u8]) -> Vec<u32> {
+fn make_magnitude_le_negative(buffer: &[u8]) -> Vec<Limb> {
     // 兩補數轉絕對值：全部反相，再從最低位 (前端) 加 1
     let mut inverse: Vec<u8> = buffer.iter().map(|&b| !b).collect();
     for b in inverse.iter_mut() {
@@ -2831,17 +2783,17 @@ mod tests {
         assert_eq!(to_twos_complement_words(&BigInteger::from_u32(5), 3), vec![0, 0, 5]);
         // 零：全 0
         assert_eq!(to_twos_complement_words(&BigInteger::from_u32(0), 2), vec![0, 0]);
-        // -1：無限個 1 → 每字皆 0xFFFF_FFFF
+        // -1：無限個 1 → 每字皆全 1（Limb::MAX）
         assert_eq!(
             to_twos_complement_words(&BigInteger::from_i32(-1), 2),
-            vec![0xFFFF_FFFF, 0xFFFF_FFFF]
+            vec![Limb::MAX, Limb::MAX]
         );
-        // -2 = ...1110 → 低字 0xFFFF_FFFE
-        assert_eq!(to_twos_complement_words(&BigInteger::from_i32(-2), 1), vec![0xFFFF_FFFE]);
-        // -256 → 低字 0xFFFF_FF00，上方字符號延伸為 0xFFFF_FFFF
+        // -2 = ...1110 → 低字為全 1 減 1
+        assert_eq!(to_twos_complement_words(&BigInteger::from_i32(-2), 1), vec![Limb::MAX - 1]);
+        // -256 → 低字為全 1 減 0xFF，上方字符號延伸為全 1
         assert_eq!(
             to_twos_complement_words(&BigInteger::from_i32(-256), 2),
-            vec![0xFFFF_FFFF, 0xFFFF_FF00]
+            vec![Limb::MAX, Limb::MAX - 0xFF]
         );
     }
 
@@ -2851,8 +2803,11 @@ mod tests {
         let vals = [0i64, 1, -1, 5, -5, 255, -256, 0xFFFF_FFFF, -(0xFFFF_FFFFi64)];
         for &a in &vals {
             let words = to_twos_complement_words(&BigInteger::from_i64(a), 2);
-            let bits = a as u64; // 兩補數位元模式
-            assert_eq!(words, vec![(bits >> 32) as u32, bits as u32], "value {a}");
+            // i128 兩補數位元當參照，取高/低各一個 Limb（WORD_BITS 位）；i128 右移 32/64 皆不溢位
+            let a128 = a as i128;
+            let hi = (a128 >> WORD_BITS) as Limb; // 算術右移 → 符號延伸
+            let lo = a128 as u128 as Limb;
+            assert_eq!(words, vec![hi, lo], "value {a}");
         }
     }
 
@@ -3006,12 +2961,12 @@ mod tests {
         assert_eq!(x, vec![0, 8]);
 
         // 跨字進位由預留的前導字吸收
-        let mut x = vec![0, u32::MAX];
+        let mut x = vec![0, Limb::MAX];
         add_in_place(&mut x, &[1]);
         assert_eq!(x, vec![1, 0]);
 
         // 進位鏈：0xFFFF_FFFF_FFFF_FFFF + 1
-        let mut x = vec![0, u32::MAX, u32::MAX];
+        let mut x = vec![0, Limb::MAX, Limb::MAX];
         add_in_place(&mut x, &[1]);
         assert_eq!(x, vec![1, 0, 0]);
 
@@ -3029,13 +2984,13 @@ mod tests {
     #[test]
     fn add_magnitudes_carry_grows_word() {
         // 0xFFFFFFFF + 1 = 0x1_0000_0000
-        assert_eq!(add_magnitudes(&[u32::MAX], &[1]), vec![1, 0]);
+        assert_eq!(add_magnitudes(&[Limb::MAX], &[1]), vec![1, 0]);
     }
 
     #[test]
     fn add_magnitudes_carry_chain() {
         // (2^64 - 1) + 1 = 2^64
-        assert_eq!(add_magnitudes(&[u32::MAX, u32::MAX], &[1]), vec![1, 0, 0]);
+        assert_eq!(add_magnitudes(&[Limb::MAX, Limb::MAX], &[1]), vec![1, 0, 0]);
     }
 
     #[test]
@@ -3048,7 +3003,7 @@ mod tests {
     fn add_magnitudes_with_empty_is_identity() {
         assert_eq!(add_magnitudes(&[5], &[]), vec![5]);
         assert_eq!(add_magnitudes(&[], &[5]), vec![5]);
-        assert_eq!(add_magnitudes(&[], &[]), Vec::<u32>::new());
+        assert_eq!(add_magnitudes(&[], &[]), Vec::<Limb>::new());
     }
 
     #[test]
@@ -3068,12 +3023,12 @@ mod tests {
         // 跨字借位：2^32 - 1
         let mut x = vec![1, 0];
         sub_in_place(&mut x, &[1]);
-        assert_eq!(x, vec![0, u32::MAX]);
+        assert_eq!(x, vec![0, Limb::MAX]);
 
         // 借位鏈：2^64 - 1
         let mut x = vec![1, 0, 0];
         sub_in_place(&mut x, &[1]);
-        assert_eq!(x, vec![0, u32::MAX, u32::MAX]);
+        assert_eq!(x, vec![0, Limb::MAX, Limb::MAX]);
 
         // 相等 → 全 0（不 trim，原地保留長度）
         let mut x = vec![5];
@@ -3089,18 +3044,18 @@ mod tests {
     #[test]
     fn sub_magnitudes_borrow_across_word() {
         // 2^32 - 1 = 0xFFFF_FFFF
-        assert_eq!(sub_magnitudes(&[1, 0], &[1]), vec![u32::MAX]);
+        assert_eq!(sub_magnitudes(&[1, 0], &[1]), vec![Limb::MAX]);
     }
 
     #[test]
     fn sub_magnitudes_borrow_chain() {
         // 2^64 - 1 = 0xFFFF_FFFF_FFFF_FFFF
-        assert_eq!(sub_magnitudes(&[1, 0, 0], &[1]), vec![u32::MAX, u32::MAX]);
+        assert_eq!(sub_magnitudes(&[1, 0, 0], &[1]), vec![Limb::MAX, Limb::MAX]);
     }
 
     #[test]
     fn sub_magnitudes_equal_is_zero() {
-        assert_eq!(sub_magnitudes(&[5], &[5]), Vec::<u32>::new());
+        assert_eq!(sub_magnitudes(&[5], &[5]), Vec::<Limb>::new());
     }
 
     #[test]
@@ -3130,20 +3085,24 @@ mod tests {
 
     #[test]
     fn multiply_magnitudes_with_zero() {
-        assert_eq!(multiply_magnitudes(&[5], &[]), Vec::<u32>::new());
-        assert_eq!(multiply_magnitudes(&[], &[5]), Vec::<u32>::new());
+        assert_eq!(multiply_magnitudes(&[5], &[]), Vec::<Limb>::new());
+        assert_eq!(multiply_magnitudes(&[], &[5]), Vec::<Limb>::new());
     }
 
     #[test]
     fn multiply_magnitudes_grows_to_two_words() {
-        // 0x1_0000_0000 = 2^32：0x10000 * 0x10000
-        assert_eq!(multiply_magnitudes(&[0x1_0000], &[0x1_0000]), vec![1, 0]);
+        // 0x10000 * 0x10000 = 2^32（值比對，與 Limb 寬度無關）
+        assert_eq!(
+            &BigInteger::from_u32(0x1_0000) * &BigInteger::from_u32(0x1_0000),
+            BigInteger::from_u64(1 << 32)
+        );
     }
 
     #[test]
     fn multiply_magnitudes_max_words() {
-        // (2^32 - 1)^2 = 0xFFFFFFFE_00000001
-        assert_eq!(multiply_magnitudes(&[u32::MAX], &[u32::MAX]), vec![0xFFFF_FFFE, 0x0000_0001]);
+        // u64::MAX² 對照原生 u128
+        let m = BigInteger::from_u64(u64::MAX);
+        assert_eq!(&m * &m, BigInteger::from_u128((u64::MAX as u128) * (u64::MAX as u128)));
     }
 
     #[test]
@@ -3191,7 +3150,7 @@ mod tests {
         for x in &vals {
             for w in 0usize..=5 {
                 let got = x.divide_words(w);
-                let expected = x >> (32 * w as u32);
+                let expected = x >> ((WORD_BITS * w) as u32);
                 assert_eq!(got, expected, "x={x}, w={w}");
             }
         }
@@ -3205,8 +3164,9 @@ mod tests {
         assert_eq!(x.divide_words(9), BigInteger::from_u32(0));
         // 零本身
         assert_eq!(BigInteger::from_u32(0).divide_words(0), BigInteger::from_u32(0));
-        // 負數：截斷向零、符號保留（-(0x7EADBEEF_00000001) 砍低字 → -0x7EADBEEF）
-        let neg = BigInteger::from_i64(-0x7EAD_BEEF_0000_0001);
+        // 負數：截斷向零、符號保留（-(0x7EADBEEF·2^WORD_BITS + 1) 砍低 1 字 → -0x7EADBEEF）
+        let pos = &(&BigInteger::from_u32(0x7EAD_BEEF) << WORD_BITS as u32) + &BigInteger::from_u32(1);
+        let neg = -&pos;
         assert_eq!(neg.divide_words(1), BigInteger::from_i64(-0x7EAD_BEEF));
     }
 
@@ -3223,24 +3183,24 @@ mod tests {
     #[test]
     fn inverse_u32_is_modular_inverse() {
         // d · inverse_u32(d) ≡ 1 (mod 2³²)，對各種奇數
-        for d in [1u32, 3, 5, 7, 0x12345679, 0x8000_0001, 0xDEAD_BEEF, 0xFFFF_FFFF] {
+        for d in [1, 3, 5, 7, 0x12345679, 0x8000_0001, 0xDEAD_BEEF, 0xFFFF_FFFF] {
             assert_eq!(d & 1, 1, "測資須為奇數 d={d:#x}");
-            assert_eq!(d.wrapping_mul(inverse_u32(d)), 1, "d={d:#x}");
+            assert_eq!((d as Limb).wrapping_mul(inverse(d)), 1, "d={d:#x}");
         }
     }
 
     #[test]
     fn multiply_monty_n_is_one_matches() {
         // r = x·y·R⁻¹ mod m  ⟺  r·2³² ≡ x·y (mod m)（R = 2³²）
-        for &m in &[3u32, 5, 97, 0x8000_0001, 0xFFFF_FFFB] {
-            let m_prime = inverse_u32(0u32.wrapping_sub(m)); // -m⁻¹ mod 2³²
-            let samples = [0u32, 1, 2, m / 2, m - 1, 12345 % m, 0xFFFF % m];
+        for &m in &[3, 5, 97, 0x8000_0001, 0xFFFF_FFFB] {
+            let m_prime = inverse((0 as Limb).wrapping_sub(m)); // -m⁻¹ mod 2³²
+            let samples = [0, 1, 2, m / 2, m - 1, 12345 % m, 0xFFFF % m];
             for &x in &samples {
                 for &y in &samples {
                     let r = multiply_monty_n_is_one(x, y, m, m_prime);
                     assert!(r < m, "m={m} x={x} y={y} r={r}");
-                    let lhs = ((r as u64) << 32) % m as u64;
-                    let rhs = (x as u64 * y as u64) % m as u64;
+                    let lhs = ((r as DoubleLimb) << WORD_BITS) % m as DoubleLimb;
+                    let rhs = (x as DoubleLimb * y as DoubleLimb) % m as DoubleLimb;
                     assert_eq!(lhs, rhs, "m={m} x={x} y={y}");
                 }
             }
@@ -3250,8 +3210,8 @@ mod tests {
     #[test]
     fn multiply_monty_matches() {
         // MonPro(a·R mod m, b) = a·b mod m（普通形式），R = 2^(32n)
-        fn to_words(v: &BigInteger, n: usize) -> Vec<u32> {
-            let mut w = vec![0u32; n];
+        fn to_words(v: &BigInteger, n: usize) -> Vec<Limb> {
+            let mut w = vec![0; n];
             w[n - v.magnitude.len()..].copy_from_slice(&v.magnitude);
             w
         }
@@ -3270,11 +3230,11 @@ mod tests {
             let n = m.magnitude.len();
             let m_prime = m.m_prime();
             for a in &vals {
-                let a_mont = &(a << (32 * n as u32)) % m; // a·R mod m
+                let a_mont = &(a << ((WORD_BITS * n) as u32)) % m; // a·R mod m
                 let x = to_words(&a_mont, n);
                 for b in &vals {
                     let y = to_words(&(b % m), n); // b mod m
-                    let mut acc = vec![0u32; n + 1];
+                    let mut acc = vec![0; n + 1];
                     let mut xx = x.clone();
                     multiply_monty(&mut acc, &mut xx, &y, &m.magnitude, m_prime, false);
                     let got = BigInteger::from_checked_magnitude(1, xx);
@@ -3290,8 +3250,8 @@ mod tests {
         // convert=false 與 mod_square_monty 都在 Montgomery 域運作：
         // 餵 Montgomery 形式的 a（= a·R mod m），域內運算後 montgomery_reduce 轉回，
         // 應等於普通形式的 a^e mod m / a² mod m。
-        fn to_words(v: &BigInteger, n: usize) -> Vec<u32> {
-            let mut w = vec![0u32; n];
+        fn to_words(v: &BigInteger, n: usize) -> Vec<Limb> {
+            let mut w = vec![0; n];
             w[n - v.magnitude.len()..].copy_from_slice(&v.magnitude);
             w
         }
@@ -3316,7 +3276,7 @@ mod tests {
             let n = m.magnitude.len();
             for raw in &raws {
                 let a = raw.rem_euclid(m); // 0 <= a < m
-                let a_mont = &(&a << (32 * n as u32)) % m; // â = a·R mod m
+                let a_mont = &(&a << ((WORD_BITS * n) as u32)) % m; // â = a·R mod m
                 // 域內平方：â² → Montgomery a²；轉回 == a² mod m
                 let sq = BigInteger::mod_square_monty(&a_mont, m);
                 assert_eq!(from_monty(&sq, m), &(&a * &a) % m, "square m={m} a={a}");
@@ -3359,8 +3319,8 @@ mod tests {
     #[test]
     fn montgomery_reduce_matches() {
         // reduce(a·R mod m) = a mod m（把 Montgomery 域轉回普通形式）
-        fn to_words(v: &BigInteger, n: usize) -> Vec<u32> {
-            let mut w = vec![0u32; n];
+        fn to_words(v: &BigInteger, n: usize) -> Vec<Limb> {
+            let mut w = vec![0; n];
             w[n - v.magnitude.len()..].copy_from_slice(&v.magnitude);
             w
         }
@@ -3379,7 +3339,7 @@ mod tests {
             let n = m.magnitude.len();
             let m_prime = m.m_prime();
             for a in &vals {
-                let a_mont = &(a << (32 * n as u32)) % m; // a·R mod m（< m）
+                let a_mont = &(a << ((WORD_BITS * n) as u32)) % m; // a·R mod m（< m）
                 let mut x = to_words(&a_mont, n);
                 montgomery_reduce(&mut x, &m.magnitude, m_prime);
                 let got = BigInteger::from_checked_magnitude(1, x);
@@ -3392,8 +3352,8 @@ mod tests {
     #[test]
     fn square_monty_matches_multiply() {
         // square_monty(x) 必等於 multiply_monty(x, x)（後者已驗證，當 oracle）
-        fn to_words(v: &BigInteger, n: usize) -> Vec<u32> {
-            let mut w = vec![0u32; n];
+        fn to_words(v: &BigInteger, n: usize) -> Vec<Limb> {
+            let mut w = vec![0; n];
             w[n - v.magnitude.len()..].copy_from_slice(&v.magnitude);
             w
         }
@@ -3414,12 +3374,12 @@ mod tests {
             for v in &vals {
                 let x = to_words(&(v % m), n); // 任意 x < m 都成立
                 let mut xs = x.clone();
-                let mut acc1 = vec![0u32; n + 1];
+                let mut acc1 = vec![0; n + 1];
                 square_monty(&mut acc1, &mut xs, &m.magnitude, m_prime, false);
 
                 let mut xm = x.clone();
                 let y = x.clone();
-                let mut acc2 = vec![0u32; n + 1];
+                let mut acc2 = vec![0; n + 1];
                 multiply_monty(&mut acc2, &mut xm, &y, &m.magnitude, m_prime, false);
 
                 assert_eq!(
@@ -3443,7 +3403,7 @@ mod tests {
             let m_low = *m.magnitude.last().unwrap();
             assert_eq!(m_low & 1, 1, "模數須為奇數 m={m}");
             let mp = m.m_prime();
-            assert_eq!(m_low.wrapping_mul(mp), u32::MAX, "m={m}");
+            assert_eq!(m_low.wrapping_mul(mp), Limb::MAX, "m={m}");
         }
     }
 
@@ -3458,7 +3418,7 @@ mod tests {
                 }
                 let mul_t = w & 0xFF;
                 let zeros = w >> 8;
-                e = &(&e << bit_len(mul_t)) + &BigInteger::from_u32(mul_t);
+                e = &(&e << bit_len(mul_t as Limb)) + &BigInteger::from_u32(mul_t);
                 e = &e << zeros;
             }
             e
@@ -3484,10 +3444,11 @@ mod tests {
         // 依 m 預算 Barrett 常數 mr / yu（正式版由 mod_pow_barrett 算一次）
         fn barrett_params(m: &BigInteger) -> (BigInteger, BigInteger) {
             let k = m.magnitude.len() as u32;
+            let wb = WORD_BITS as u32;
             let one = BigInteger::from_u32(1);
-            let mr = &one << (32 * (k + 1)); // 2^(32(k+1))
-            let hi = &one << (64 * k); // 2^(64k)
-            let yu = &hi / m; // ⌊2^(64k) / m⌋
+            let mr = &one << (wb * (k + 1)); // b^(k+1) = 2^(wb·(k+1))
+            let hi = &one << (2 * wb * k); // b^(2k) = 2^(2·wb·k)
+            let yu = &hi / m; // ⌊b^(2k) / m⌋
             (mr, yu)
         }
 
@@ -3542,7 +3503,7 @@ mod tests {
         ];
         for x in &vals {
             for w in 0usize..=5 {
-                let modulus = &BigInteger::from_u32(1) << (32 * w as u32); // 2^(32w)
+                let modulus = &BigInteger::from_u32(1) << ((WORD_BITS * w) as u32); // 2^(32w)
                 let got = x.remainder_words(w);
                 let expected = x % &modulus;
                 assert_eq!(got, expected, "x={x}, w={w}");
@@ -3552,12 +3513,12 @@ mod tests {
 
     #[test]
     fn remainder_words_trims_leading_zero_words() {
-        // 留下的高位字為零 → 必須修剪：0x1_00000000_00000005 留低 2 字 [0,5] → 5
-        let x = BigInteger::from_u128(0x1_0000_0000_0000_0005);
+        // 留下的高位字為零 → 必須修剪：2^(2·WORD_BITS)+5 留低 2 字 [0,5] → 5
+        let x = &(&BigInteger::from_u32(1) << (2 * WORD_BITS as u32)) + &BigInteger::from_u32(5);
         assert_eq!(x.remainder_words(2), BigInteger::from_u32(5));
 
-        // 留下的字全為零 → 必須歸零（且 sign 正規化成 0）：2·2^64 留低 2 字 [0,0] → 0
-        let y = BigInteger::from_u128(0x2_0000_0000_0000_0000);
+        // 留下的字全為零 → 必須歸零（且 sign 正規化成 0）：2·2^(2·WORD_BITS) 留低 2 字 → 0
+        let y = &BigInteger::from_u32(2) << (2 * WORD_BITS as u32);
         assert_eq!(y.remainder_words(2), BigInteger::from_u32(0));
 
         // w == 0 → self mod 1 == 0
@@ -3654,17 +3615,17 @@ mod tests {
     #[test]
     fn square_magnitude_matches_multiply() {
         // 平方須與通用乘法 x·x 完全一致（含滿進位、跨字、含零字）
-        let cases: [&[u32]; 10] = [
+        let cases: [&[Limb]; 10] = [
             &[1],
-            &[u32::MAX],
+            &[Limb::MAX],
             &[0x1_0000],
             &[1, 0],
-            &[u32::MAX, u32::MAX],
+            &[Limb::MAX, Limb::MAX],
             &[0x1234_5678, 0x9ABC_DEF0],
             &[1, 2, 3],
-            &[u32::MAX, 0, u32::MAX],
+            &[Limb::MAX, 0, Limb::MAX],
             &[0xDEAD_BEEF, 0x0000_0001, 0xFFFF_FFFF, 0x8000_0000],
-            &[u32::MAX, u32::MAX, u32::MAX, u32::MAX, u32::MAX],
+            &[Limb::MAX, Limb::MAX, Limb::MAX, Limb::MAX, Limb::MAX],
         ];
         for x in cases {
             assert_eq!(square_magnitude(x), multiply_magnitudes(x, x), "x = {x:?}");
@@ -3699,13 +3660,20 @@ mod tests {
     fn square_magnitude_fuzz_vs_multiply() {
         // 用簡單 LCG 產生各種長度的 magnitude，對照通用乘法
         let mut state = 0x1234_5678u64;
-        let mut next = || {
-            state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
-            (state >> 32) as u32
+        let mut next = || -> Limb {
+            // 每次填滿一個 Limb（32 或 64 bit 都適用）；用 DoubleLimb 累加避免 u32 下 << 32 溢位
+            let mut w: DoubleLimb = 0;
+            let mut filled = 0;
+            while filled < WORD_BITS {
+                state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
+                w = (w << 32) | (state >> 32) as DoubleLimb; // 每輪填 32 高品質位
+                filled += 32;
+            }
+            w as Limb
         };
         for len in 1..=8usize {
             for _ in 0..20 {
-                let mut x: Vec<u32> = (0..len).map(|_| next()).collect();
+                let mut x: Vec<Limb> = (0..len).map(|_| next()).collect();
                 if x[0] == 0 {
                     x[0] = 1; // 確保無前導零
                 }
@@ -3892,28 +3860,28 @@ mod tests {
 
     #[test]
     fn shift_right_in_place_basic() {
-        // 純字內位移（n < 32）
-        let mut m = vec![0x0000_0001u32, 0x0000_0000]; // 2^32
+        // 純字內位移（n < 字寬）
+        let mut m = vec![1, 0]; // 2^WORD_BITS
         shift_right_in_place(&mut m, 1);
-        assert_eq!(m, vec![0, 0x8000_0000]); // 2^31
+        assert_eq!(m, vec![0, 1 << (WORD_BITS - 1)]); // 2^(WORD_BITS-1)
 
-        // 整字位移（n 為 32 倍數）
-        let mut m = vec![3u32, 0]; // 3 * 2^32
-        shift_right_in_place(&mut m, 32);
+        // 整字位移（n = 字寬）
+        let mut m = vec![3, 0]; // 3·2^WORD_BITS
+        shift_right_in_place(&mut m, WORD_BITS);
         assert_eq!(m, vec![0, 3]);
 
-        // 混合（word + bit）：floor((2^32 + 2^31) / 2^33) = 0
-        let mut m = vec![1u32, 0x8000_0000];
-        shift_right_in_place(&mut m, 33);
+        // 混合（word + bit）：(2^WORD_BITS + 2^(WORD_BITS-1)) >> (WORD_BITS+1) = 0
+        let mut m = vec![1, 1 << (WORD_BITS - 1)];
+        shift_right_in_place(&mut m, WORD_BITS + 1);
         assert_eq!(m, vec![0, 0]);
     }
 
     #[test]
     fn shift_right_in_place_matches_allocating() {
         // 原地版右移後去前導零，應與配置版 shift_right_magnitude 一致
-        let cases: [&[u32]; 4] = [
+        let cases: [&[Limb]; 4] = [
             &[0x1234_5678, 0x9ABC_DEF0],
-            &[u32::MAX, u32::MAX, u32::MAX],
+            &[Limb::MAX, Limb::MAX, Limb::MAX],
             &[1, 0, 0],
             &[0xFFFF_FFFF, 0x0000_0001],
         ];
@@ -3931,27 +3899,27 @@ mod tests {
 
     #[test]
     fn shift_right_one_in_place_basic() {
-        let mut m = vec![0x0000_0002u32];
+        let mut m = vec![0x0000_0002];
         shift_right_one_in_place(&mut m);
         assert_eq!(m, vec![1]);
 
-        // 跨字：2^32 >> 1 = 2^31，低位鄰字的最低位補到高位鄰字頂端
-        let mut m = vec![1u32, 0x0000_0000];
+        // 跨字：2^WORD_BITS >> 1 = 2^(WORD_BITS-1)，低位鄰字的最低位補到高位鄰字頂端
+        let mut m = vec![1, 0];
         shift_right_one_in_place(&mut m);
-        assert_eq!(m, vec![0, 0x8000_0000]);
+        assert_eq!(m, vec![0, 1 << (WORD_BITS - 1)]);
 
         // 奇數最高字：最低位落到下一字頂端
-        let mut m = vec![0x0000_0003u32, 0x0000_0000];
+        let mut m = vec![3, 0];
         shift_right_one_in_place(&mut m);
-        assert_eq!(m, vec![1, 0x8000_0000]);
+        assert_eq!(m, vec![1, 1 << (WORD_BITS - 1)]);
     }
 
     #[test]
     fn shift_right_one_matches_shift_right_in_place() {
         // 1 位特化版須與通用版 shift_right_in_place(_, 1) 結果相同
-        let cases: [&[u32]; 4] = [
+        let cases: [&[Limb]; 4] = [
             &[0x1234_5678, 0x9ABC_DEF0],
-            &[u32::MAX, u32::MAX, u32::MAX],
+            &[Limb::MAX, Limb::MAX, Limb::MAX],
             &[1, 0, 0],
             &[0xFFFF_FFFF, 0x0000_0001],
         ];
@@ -4740,7 +4708,7 @@ mod tests {
     fn from_u32_max() {
         let n = BigInteger::from_u32(u32::MAX);
         assert_eq!(n.sign, 1);
-        assert_eq!(n.magnitude.to_vec(), vec![u32::MAX]);
+        assert_eq!(n.magnitude.to_vec(), vec![Limb::from(u32::MAX)]);
     }
 
     #[test]
@@ -4751,7 +4719,7 @@ mod tests {
 
         let max = BigInteger::from_u16(u16::MAX);
         assert_eq!(max.sign, 1);
-        assert_eq!(max.magnitude.to_vec(), vec![u32::from(u16::MAX)]);
+        assert_eq!(max.magnitude.to_vec(), vec![Limb::from(u16::MAX)]);
     }
 
     #[test]
@@ -4762,7 +4730,7 @@ mod tests {
 
         let max = BigInteger::from_u8(u8::MAX);
         assert_eq!(max.sign, 1);
-        assert_eq!(max.magnitude.to_vec(), vec![u32::from(u8::MAX)]);
+        assert_eq!(max.magnitude.to_vec(), vec![Limb::from(u8::MAX)]);
     }
 
     #[test]
@@ -4785,14 +4753,14 @@ mod tests {
         // 0x0000_0001_0000_0002 -> [1, 2] big-endian.
         let n = BigInteger::from_u64((1 << 32) | 2);
         assert_eq!(n.sign, 1);
-        assert_eq!(n.magnitude.to_vec(), vec![1, 2]);
+        assert_eq!(n.to_u64_be_unsigned(), vec![(1u64 << 32) | 2]);
     }
 
     #[test]
     fn from_u64_max() {
         let n = BigInteger::from_u64(u64::MAX);
         assert_eq!(n.sign, 1);
-        assert_eq!(n.magnitude.to_vec(), vec![u32::MAX, u32::MAX]);
+        assert_eq!(n.to_u64_be_unsigned(), vec![u64::MAX]);
     }
 
     #[test]
@@ -4828,7 +4796,7 @@ mod tests {
     fn from_i32_max() {
         let n = BigInteger::from_i32(i32::MAX);
         assert_eq!(n.sign, 1);
-        assert_eq!(n.magnitude.to_vec(), vec![i32::MAX as u32]);
+        assert_eq!(n.magnitude.to_vec(), vec![i32::MAX as Limb]);
     }
 
     #[test]
@@ -4839,7 +4807,7 @@ mod tests {
 
         let min = BigInteger::from_i16(i16::MIN);
         assert_eq!(min.sign, -1);
-        assert_eq!(min.magnitude.to_vec(), vec![i16::MIN.unsigned_abs() as u32]);
+        assert_eq!(min.magnitude.to_vec(), vec![i16::MIN.unsigned_abs() as Limb]);
     }
 
     #[test]
@@ -4850,14 +4818,14 @@ mod tests {
 
         let min = BigInteger::from_i8(i8::MIN);
         assert_eq!(min.sign, -1);
-        assert_eq!(min.magnitude.to_vec(), vec![i8::MIN.unsigned_abs() as u32]);
+        assert_eq!(min.magnitude.to_vec(), vec![i8::MIN.unsigned_abs() as Limb]);
     }
 
     #[test]
     fn from_i64_negative_two_words() {
         let n = BigInteger::from_i64(-((1i64 << 32) | 2));
         assert_eq!(n.sign, -1);
-        assert_eq!(n.magnitude.to_vec(), vec![1, 2]);
+        assert_eq!(n.to_u64_be_unsigned(), vec![(1u64 << 32) | 2]);
     }
 
     #[test]
@@ -4865,7 +4833,7 @@ mod tests {
         // -i64::MIN would overflow; magnitude is 2^63 -> high word 0x8000_0000.
         let n = BigInteger::from_i64(i64::MIN);
         assert_eq!(n.sign, -1);
-        assert_eq!(n.magnitude.to_vec(), vec![1 << 31, 0]);
+        assert_eq!(n.to_u64_be_unsigned(), vec![1u64 << 63]); // |i64::MIN| = 2^63
     }
 
     #[test]
@@ -4877,7 +4845,7 @@ mod tests {
         // magnitude of i128::MIN is 2^127 -> top word 0x8000_0000, rest zero.
         let min = BigInteger::from_i128(i128::MIN);
         assert_eq!(min.sign, -1);
-        assert_eq!(min.magnitude.to_vec(), vec![1 << 31, 0, 0, 0]);
+        assert_eq!(min.to_u64_be_unsigned(), vec![1u64 << 63, 0]); // |i128::MIN| = 2^127
     }
 
     #[test]
@@ -4901,25 +4869,25 @@ mod tests {
         let value = (3u128 << 64) | 4;
         let n = BigInteger::from_u128(value);
         assert_eq!(n.sign, 1);
-        assert_eq!(n.magnitude.to_vec(), vec![3, 0, 4]);
+        assert_eq!(n.to_u64_be_unsigned(), vec![3, 4]); // 3·2^64 + 4
     }
 
     #[test]
     fn from_u128_max() {
         let n = BigInteger::from_u128(u128::MAX);
         assert_eq!(n.sign, 1);
-        assert_eq!(n.magnitude.to_vec(), vec![u32::MAX, u32::MAX, u32::MAX, u32::MAX]);
+        assert_eq!(n.to_u64_be_unsigned(), vec![u64::MAX, u64::MAX]);
     }
 
     #[test]
     fn make_magnitude_be_empty() {
-        assert_eq!(make_magnitude_be(&[]), Vec::<u32>::new());
+        assert_eq!(make_magnitude_be(&[]), Vec::<Limb>::new());
     }
 
     #[test]
     fn make_magnitude_be_all_zero() {
         // 全零位元組視同 0，得到空 magnitude
-        assert_eq!(make_magnitude_be(&[0, 0, 0]), Vec::<u32>::new());
+        assert_eq!(make_magnitude_be(&[0, 0, 0]), Vec::<Limb>::new());
     }
 
     #[test]
@@ -4935,9 +4903,12 @@ mod tests {
 
     #[test]
     fn make_magnitude_be_partial_then_full_word() {
-        // 殘塊(AABB) + 一個滿字(CCDDEEFF)
+        // 6 位元組 = 0xAABBCCDDEEFF（值比對，與 Limb 寬度無關）
         let buffer = [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF];
-        assert_eq!(make_magnitude_be(&buffer), vec![0x0000_AABB, 0xCCDD_EEFF]);
+        assert_eq!(
+            BigInteger::from_checked_magnitude(1, make_magnitude_be(&buffer)),
+            BigInteger::from_u64(0xAABB_CCDD_EEFF)
+        );
     }
 
     #[test]
@@ -4948,20 +4919,23 @@ mod tests {
 
     #[test]
     fn make_magnitude_be_keeps_interior_zero() {
-        // 中間的零位元組必須保留，只有最高位端的零才剝除
+        // 中間的零位元組必須保留：0x01_00_00_00_00 = 2^32
         let buffer = [0x01, 0x00, 0x00, 0x00, 0x00];
-        assert_eq!(make_magnitude_be(&buffer), vec![0x01, 0x0000_0000]);
+        assert_eq!(
+            BigInteger::from_checked_magnitude(1, make_magnitude_be(&buffer)),
+            BigInteger::from_u64(1 << 32)
+        );
     }
 
     #[test]
     fn make_magnitude_le_empty() {
-        assert_eq!(make_magnitude_le(&[]), Vec::<u32>::new());
+        assert_eq!(make_magnitude_le(&[]), Vec::<Limb>::new());
     }
 
     #[test]
     fn make_magnitude_le_all_zero() {
         // 全零位元組視同 0，得到空 magnitude
-        assert_eq!(make_magnitude_le(&[0, 0, 0]), Vec::<u32>::new());
+        assert_eq!(make_magnitude_le(&[0, 0, 0]), Vec::<Limb>::new());
     }
 
     #[test]
@@ -4977,16 +4951,22 @@ mod tests {
 
     #[test]
     fn make_magnitude_le_partial_high_word() {
-        // 0xAABBCCDDEEFF 的 LE 表示；最高位字 (AABB) 為殘塊
+        // 0xAABBCCDDEEFF 的 LE 表示（值比對）
         let buffer = [0xFF, 0xEE, 0xDD, 0xCC, 0xBB, 0xAA];
-        assert_eq!(make_magnitude_le(&buffer), vec![0x0000_AABB, 0xCCDD_EEFF]);
+        assert_eq!(
+            BigInteger::from_checked_magnitude(1, make_magnitude_le(&buffer)),
+            BigInteger::from_u64(0xAABB_CCDD_EEFF)
+        );
     }
 
     #[test]
     fn make_magnitude_le_two_words() {
-        // 2^32：LE 為 [00,00,00,00,01]，magnitude 為 [1, 0]
+        // 2^32：LE 為 [00,00,00,00,01]（值比對）
         let buffer = [0x00, 0x00, 0x00, 0x00, 0x01];
-        assert_eq!(make_magnitude_le(&buffer), vec![1, 0]);
+        assert_eq!(
+            BigInteger::from_checked_magnitude(1, make_magnitude_le(&buffer)),
+            BigInteger::from_u64(1 << 32)
+        );
     }
 
     #[test]

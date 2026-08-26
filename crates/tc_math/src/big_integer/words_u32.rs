@@ -11,12 +11,13 @@
 //! bytes inside a word. Signed forms read/write the whole word array as a base-2³²
 //! two's-complement integer (sign = top bit of the most-significant word).
 
-use super::{BigInteger, BufferTooSmall};
+use super::{bit_len, BigInteger, BufferTooSmall, WORD_BITS};
 
 // no_std 下沒有 std prelude，`vec!` 巨集與 `Vec` 型別需從 alloc 顯式引入；
 // std build 由 prelude 提供，故僅在關閉 std 時引入，避免重複 import 警告。
 #[cfg(not(feature = "std"))]
 use alloc::{vec, vec::Vec};
+use crate::big_integer::limb::{mag_from_u32_be, Limb, mag_to_u32_be};
 
 impl BigInteger {
     /// Creates a `BigInteger` from a big-endian, two's-complement `u32` slice.
@@ -142,8 +143,9 @@ impl BigInteger {
         if self.sign == 0 {
             return 1; // 零輸出 [0]
         }
-        // magnitude 本就是無前導零的 u32 詞，字數即為所求
-        self.magnitude.len()
+        // |self| 位元長度 → ⌈/32⌉ 個 u32 字（與 mag_to_u32_be 的輸出字數一致）
+        let bits = WORD_BITS * (self.magnitude.len() - 1) + bit_len(self.magnitude[0]) as usize;
+        bits.div_ceil(32)
     }
 
     /// 把 `n = out.len()` 個 u32 詞的 big-endian 編碼寫進 `out`（零配置核心）。
@@ -151,11 +153,13 @@ impl BigInteger {
     /// 先把 `|self|` 的字右對齊寫入、左邊補 0（超出 magnitude 的高位、以及零，自然補 0）；
     /// `signed` 且為負時再對整段取兩補數。`out.len()` 須等於對應的 `u32_length*`。
     fn write_magnitude_be_u32(&self, out: &mut [u32], signed: bool) {
+        // magnitude 是 Limb 字，先轉成最小 u32 字（無前導零）
+        let words = mag_to_u32_be(&self.magnitude);
         let n = out.len();
-        let mlen = self.magnitude.len();
+        let len = words.len();
         for i in 0..n {
-            // 第 i 個低位字：取自 magnitude 的第 i 個低位字（不足則補 0）
-            out[n - 1 - i] = if i < mlen { self.magnitude[mlen - 1 - i] } else { 0 };
+            // 第 i 個低位字：取自 words 的第 i 個低位字（不足則補 0）
+            out[n - 1 - i] = if i < len { words[len - 1 - i] } else { 0 };
         }
         if signed && self.sign < 0 {
             twos_complement_in_place_u32(out); // 負數：整段兩補數
@@ -322,15 +326,14 @@ fn twos_complement_in_place_u32(words: &mut [u32]) {
 }
 
 /// big-endian u32 詞 → magnitude：去除前導零字；全零（或空）得到空 Vec。
-fn make_magnitude_be_u32(words: &[u32]) -> Vec<u32> {
-    let start = words.iter().position(|&w| w != 0).unwrap_or(words.len());
-    words[start..].to_vec()
+fn make_magnitude_be_u32(words: &[u32]) -> Vec<Limb> {
+    mag_from_u32_be(words)
 }
 
 /// 將 big-endian 兩補數負數的 u32 詞還原成其絕對值的 magnitude。
 ///
 /// 前提：`words` 代表負數（最高字的最高位為 1）。
-fn make_magnitude_be_u32_negative(words: &[u32]) -> Vec<u32> {
+fn make_magnitude_be_u32_negative(words: &[u32]) -> Vec<Limb> {
     // 兩補數轉絕對值：全部反相，再從最低字（尾端）加 1
     let mut inverse: Vec<u32> = words.iter().map(|&w| !w).collect();
     for w in inverse.iter_mut().rev() {
@@ -345,7 +348,7 @@ fn make_magnitude_be_u32_negative(words: &[u32]) -> Vec<u32> {
 }
 
 /// little-endian u32 詞 → magnitude：反轉成 big-endian 後去前導零。
-fn make_magnitude_le_u32(words: &[u32]) -> Vec<u32> {
+fn make_magnitude_le_u32(words: &[u32]) -> Vec<Limb> {
     // little-endian：最高字在尾端，反轉讓最高字排在前面
     let be: Vec<u32> = words.iter().rev().copied().collect();
     make_magnitude_be_u32(&be)
@@ -354,7 +357,7 @@ fn make_magnitude_le_u32(words: &[u32]) -> Vec<u32> {
 /// 將 little-endian 兩補數負數的 u32 詞還原成其絕對值的 magnitude。
 ///
 /// 前提：`words` 代表負數（最高字的最高位為 1；最高字在尾端）。
-fn make_magnitude_le_u32_negative(words: &[u32]) -> Vec<u32> {
+fn make_magnitude_le_u32_negative(words: &[u32]) -> Vec<Limb> {
     // 兩補數轉絕對值：全部反相，再從最低字（前端）加 1
     let mut inverse: Vec<u32> = words.iter().map(|&w| !w).collect();
     for w in inverse.iter_mut() {
