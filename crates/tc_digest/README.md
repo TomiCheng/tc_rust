@@ -50,6 +50,7 @@ other digest is alloc-free.
 | **Ascon-XOF128** | NIST SP 800-232 | XOF, 64-bit rate, Ascon-p[12] | ✅ 1025 official KAT (single-shot + streamed) |
 | **Ascon-CXOF128** | NIST SP 800-232 | XOF, 64-bit rate, Ascon-p[12], customization | ✅ 1089 official KAT (single-shot + streamed) |
 | **Ascon-Hash / HashA** | Ascon v1.2 (legacy) | 320-bit state, 64-bit rate, p[12]/p[8] | ⚠️ deprecated; compatibility only, bc KAT verified |
+| **Ascon-Xof / XofA** | Ascon v1.2 (legacy) | XOF, BE, 0x80 pad, p[12]/p[8], first squeeze always p[12] | ⚠️ deprecated; 2×1025 official KAT (single-shot + streamed) |
 | **BLAKE2b** | RFC 7693 | 128-byte block, 64-bit words, 12 rounds | ✅ keyed/unkeyed + portable/AVX2 verified |
 | **BLAKE2s** | RFC 7693 | 64-byte block, 32-bit words, 10 rounds | ✅ keyed/unkeyed + portable/SSE2 verified |
 | **MD2** | RFC 1319 | standalone (16-byte, S-box) | ✅ RFC vectors verified |
@@ -170,7 +171,7 @@ Line counts are the bc-csharp source sizes. ✅ = ported, ⬜ = pending,
 | Ascon v1.2 Hash / HashA | 273 | ⚠️ legacy, deprecated; bc KAT verified |
 | Ascon-CXOF128 | 320 | ✅ first XOF; 1089 official KAT |
 | Ascon-XOF128 | 289 | ✅ 1025 official KAT |
-| Ascon v1.2 XOF / XofA | Xof/XofA | ⬜ legacy |
+| Ascon v1.2 XOF / XofA | 335 | ⚠️ deprecated; 2×1025 official KAT |
 | ISAP | 204 | ✅ 256-bit hash, official NIST LWC KAT vectors |
 | PhotonBeetle | 369 | ⬜ |
 | Sparkle | 298 | ⬜ |
