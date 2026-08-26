@@ -91,7 +91,7 @@ Line counts are the bc-csharp source sizes. ✅ = ported, ⬜ = pending,
 | `KeccakDigest` | 636 | ✅ sponge base (raw Keccak/SHA-3) |
 | `NullDigest` | 86 | ✅ pass-through (needs `alloc`) |
 | `NonMemoableDigest` | 76 | ⊘ intentionally skipped (see note) |
-| `ShortenedDigest` | 104 | ⬜ truncating wrapper |
+| `ShortenedDigest` | 104 | ✅ truncating wrapper (`ShortenedDigest<D>`) |
 
 > **`NonMemoableDigest` — intentionally not ported.** In bc it wraps a digest to hide
 > its `IMemoable` (snapshot/restore) capability, so a caller cannot clone the
