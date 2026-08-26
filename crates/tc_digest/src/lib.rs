@@ -20,6 +20,8 @@ extern crate alloc;
 mod md_buffer;
 pub mod md2;
 pub mod md4;
+pub mod md5;
 
 pub use md2::Md2Digest;
 pub use md4::Md4Digest;
+pub use md5::Md5Digest;
