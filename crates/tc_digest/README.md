@@ -48,11 +48,14 @@ digest is alloc-free.
 | **SHA-384** | FIPS 180-2 | `MdBuffer<128>`, BE (reuses SHA-512 core) | ✅ known vectors verified |
 | **SHA-512** | FIPS 180-2 | `MdBuffer<128>`, BE | ✅ known vectors verified |
 | **SHA-512/t** | FIPS 180-4 | `MdBuffer<128>`, BE, per-`t` IV + truncation | ✅ SHA-512/224 & /256 NIST vectors |
+| **SM3** | GB/T 32905 | `MdBuffer<64>`, BE, 64 rounds | ✅ standard + BC long vectors |
 | **RIPEMD-128** | — | `MdBuffer<64>`, LE, dual line | ✅ known vectors |
 | **RIPEMD-160** | — | `MdBuffer<64>`, LE, dual line | ✅ known vectors |
 | **RIPEMD-256** | — | `MdBuffer<64>`, LE, two lines + swaps | ✅ known vectors |
 | **RIPEMD-320** | — | `MdBuffer<64>`, LE, two lines + swaps | ✅ known vectors |
 | **Tiger** | — | `MdBuffer<64>`, LE, `0x01` pad, 3 passes | ✅ BC vectors + 64 KiB test |
+| **Whirlpool** | ISO/IEC 10118-3 | `MdBuffer<64>`, BE, 256-bit length | ✅ ISO/BC vectors + million-`a` test |
+| **Keccak** | — | sponge (raw Keccak, domain pad `0x01`) | ✅ Keccak-256/512 vectors |
 | **NULL** | — | pass-through (buffers input, needs `alloc`) | ✅ |
 
 ## bc digest catalog (porting roadmap)
@@ -120,8 +123,8 @@ Line counts are the bc-csharp source sizes. ✅ = ported, ⬜ = pending.
 | Algorithm | Lines | Status |
 |-----------|------:|--------|
 | Tiger | 928 | ✅ 192-bit, BC vectors + 64 KiB test |
-| Whirlpool | 382 | ⬜ |
-| SM3 (China GB) | 340 | ⬜ |
+| Whirlpool | 382 | ✅ ISO/BC vectors + million-`a` test |
+| SM3 (China GB) | 340 | ✅ standard + BC long vectors |
 | GOST3411 (1994) | 392 | ⬜ |
 | GOST3411-2012 (Streebog) | 1089 (+256/512: 66/43) | ⬜ |
 | DSTU7564 (Kupyna, Ukraine) | 627 | ⬜ |

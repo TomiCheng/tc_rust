@@ -165,105 +165,6 @@ impl TryDigest for TigerDigest {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use alloc::{format, string::String, vec::Vec};
-
-    use super::*;
-    use tc_crypto_core::Digest;
-
-    fn tiger_hex(input: &[u8]) -> String {
-        let mut digest = TigerDigest::new();
-        digest.update(input);
-        let mut output = [0u8; DIGEST_LENGTH];
-        digest.do_final(&mut output);
-
-        let mut encoded = String::with_capacity(DIGEST_LENGTH * 2);
-        for byte in output {
-            encoded.push_str(&format!("{byte:02x}"));
-        }
-        encoded
-    }
-
-    /// Bouncy Castle `TigerDigestTest` 的完整已知向量。
-    #[test]
-    fn known_vectors() {
-        let vectors: &[(&[u8], &str)] = &[
-            (b"", "3293ac630c13f0245f92bbb1766e16167a4e58492dde73f3"),
-            (b"abc", "2aab1484e8c158f2bfb8c5ff41b57a525129131c957b5f93"),
-            (b"Tiger", "dd00230799f5009fec6debc838bb6a27df2b9d6f110c7937"),
-            (
-                b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-",
-                "f71c8583902afb879edfe610f82c0d4786a3a534504486b5",
-            ),
-            (
-                b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvw",
-                "38f41d9d9a710a10c3727ac0deeaa270727d9f926ec10139",
-            ),
-            (
-                b"ABCDEFGHIJKLMNOPQRSTUVWXYZ=abcdefghijklmnopqrstuvwxyz+0123456789",
-                "48ceeb6308b87d46e95d656112cdf18d97915f9765658957",
-            ),
-            (
-                b"Tiger - A Fast New Hash Function, by Ross Anderson and Eli Biham, proceedings of Fast Software Encryption 3, Cambridge, 1996.",
-                "631abdd103eb9a3d245b6dfd4d77b257fc7439501d1568dd",
-            ),
-            (
-                b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-",
-                "c54034e5b43eb8005848a7e0ae6aac76e4ff590ae715fd25",
-            ),
-        ];
-
-        for &(message, expected) in vectors {
-            assert_eq!(tiger_hex(message), expected);
-        }
-    }
-
-    #[test]
-    fn bc_sixty_four_kibibyte_pattern() {
-        let message: Vec<u8> = (0..65_536).map(|i| i as u8).collect();
-        assert_eq!(
-            tiger_hex(&message),
-            "fdf4f5b35139f48e710e421be5af411de1a8aac333f26204"
-        );
-    }
-
-    #[test]
-    fn accessors_clone_chunking_and_reset() {
-        let mut whole = TigerDigest::new();
-        assert_eq!(whole.algorithm_name(), "Tiger");
-        assert_eq!(whole.digest_size(), 24);
-        assert_eq!(whole.byte_length(), 64);
-
-        let message = b"Tiger streaming input across its sixty-four-byte block boundary";
-        whole.update(message);
-        let mut cloned = whole.clone();
-
-        let mut expected = [0u8; DIGEST_LENGTH];
-        whole.do_final(&mut expected);
-        let mut cloned_output = [0u8; DIGEST_LENGTH];
-        cloned.do_final(&mut cloned_output);
-        assert_eq!(cloned_output, expected);
-
-        let mut chunked = TigerDigest::new();
-        for byte in message {
-            chunked.update_byte(*byte);
-        }
-        let mut actual = [0u8; DIGEST_LENGTH];
-        chunked.do_final(&mut actual);
-        assert_eq!(actual, expected);
-
-        chunked.do_final(&mut actual);
-        assert_eq!(
-            actual,
-            [
-                0x32, 0x93, 0xac, 0x63, 0x0c, 0x13, 0xf0, 0x24, 0x5f, 0x92, 0xbb, 0xb1, 0x76, 0x6e,
-                0x16, 0x16, 0x7a, 0x4e, 0x58, 0x49, 0x2d, 0xde, 0x73, 0xf3,
-            ]
-        );
-    }
-}
-
 // Tiger S-boxes transcribed from Bouncy Castle TigerDigest.cs.
 // Each table contains 256 fixed 64-bit constants from the Tiger specification.
 
@@ -538,3 +439,102 @@ const T4: [u64; 256] = [
     0xbf6c70e5f776cbb1, 0x411218f2ef552bed, 0xcb0c0708705a36a3, 0xe74d14754f986044,
     0xcd56d9430ea8280e, 0xc12591d7535f5065, 0xc83223f1720aef96, 0xc3a0396f7363a51f,
 ];
+
+#[cfg(test)]
+mod tests {
+    use alloc::{format, string::String, vec::Vec};
+
+    use super::*;
+    use tc_crypto_core::Digest;
+
+    fn tiger_hex(input: &[u8]) -> String {
+        let mut digest = TigerDigest::new();
+        digest.update(input);
+        let mut output = [0u8; DIGEST_LENGTH];
+        digest.do_final(&mut output);
+
+        let mut encoded = String::with_capacity(DIGEST_LENGTH * 2);
+        for byte in output {
+            encoded.push_str(&format!("{byte:02x}"));
+        }
+        encoded
+    }
+
+    /// Bouncy Castle `TigerDigestTest` 的完整已知向量。
+    #[test]
+    fn known_vectors() {
+        let vectors: &[(&[u8], &str)] = &[
+            (b"", "3293ac630c13f0245f92bbb1766e16167a4e58492dde73f3"),
+            (b"abc", "2aab1484e8c158f2bfb8c5ff41b57a525129131c957b5f93"),
+            (b"Tiger", "dd00230799f5009fec6debc838bb6a27df2b9d6f110c7937"),
+            (
+                b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-",
+                "f71c8583902afb879edfe610f82c0d4786a3a534504486b5",
+            ),
+            (
+                b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvw",
+                "38f41d9d9a710a10c3727ac0deeaa270727d9f926ec10139",
+            ),
+            (
+                b"ABCDEFGHIJKLMNOPQRSTUVWXYZ=abcdefghijklmnopqrstuvwxyz+0123456789",
+                "48ceeb6308b87d46e95d656112cdf18d97915f9765658957",
+            ),
+            (
+                b"Tiger - A Fast New Hash Function, by Ross Anderson and Eli Biham, proceedings of Fast Software Encryption 3, Cambridge, 1996.",
+                "631abdd103eb9a3d245b6dfd4d77b257fc7439501d1568dd",
+            ),
+            (
+                b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-",
+                "c54034e5b43eb8005848a7e0ae6aac76e4ff590ae715fd25",
+            ),
+        ];
+
+        for &(message, expected) in vectors {
+            assert_eq!(tiger_hex(message), expected);
+        }
+    }
+
+    #[test]
+    fn bc_sixty_four_kibibyte_pattern() {
+        let message: Vec<u8> = (0..65_536).map(|i| i as u8).collect();
+        assert_eq!(
+            tiger_hex(&message),
+            "fdf4f5b35139f48e710e421be5af411de1a8aac333f26204"
+        );
+    }
+
+    #[test]
+    fn accessors_clone_chunking_and_reset() {
+        let mut whole = TigerDigest::new();
+        assert_eq!(whole.algorithm_name(), "Tiger");
+        assert_eq!(whole.digest_size(), 24);
+        assert_eq!(whole.byte_length(), 64);
+
+        let message = b"Tiger streaming input across its sixty-four-byte block boundary";
+        whole.update(message);
+        let mut cloned = whole.clone();
+
+        let mut expected = [0u8; DIGEST_LENGTH];
+        whole.do_final(&mut expected);
+        let mut cloned_output = [0u8; DIGEST_LENGTH];
+        cloned.do_final(&mut cloned_output);
+        assert_eq!(cloned_output, expected);
+
+        let mut chunked = TigerDigest::new();
+        for byte in message {
+            chunked.update_byte(*byte);
+        }
+        let mut actual = [0u8; DIGEST_LENGTH];
+        chunked.do_final(&mut actual);
+        assert_eq!(actual, expected);
+
+        chunked.do_final(&mut actual);
+        assert_eq!(
+            actual,
+            [
+                0x32, 0x93, 0xac, 0x63, 0x0c, 0x13, 0xf0, 0x24, 0x5f, 0x92, 0xbb, 0xb1, 0x76, 0x6e,
+                0x16, 0x16, 0x7a, 0x4e, 0x58, 0x49, 0x2d, 0xde, 0x73, 0xf3,
+            ]
+        );
+    }
+}

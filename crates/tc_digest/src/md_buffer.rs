@@ -9,8 +9,8 @@
 //! touches algorithm state — only block bookkeeping and padding placement.
 //!
 //! Length-field semantics differ across families (SHA is big-endian, MD5/RIPEMD
-//! little-endian; the field is 64-bit for 64-byte blocks, 128-bit for 128-byte
-//! blocks), so [`finish`](MdBuffer::finish) does **not** encode the length
+//! little-endian; common widths are 64, 128, and Whirlpool's 256 bits), so
+//! [`finish`](MdBuffer::finish) does **not** encode the length
 //! itself — the caller passes the already-encoded trailing bytes. The buffer owns
 //! only what every family shares: accumulate into N-byte blocks, then append a
 //! caller-selected first padding byte, zeros, and the caller's length field.
@@ -18,7 +18,7 @@
 /// A block accumulator for `N`-byte Merkle–Damgård blocks.
 ///
 /// `N` is the compression block size in bytes — 64 for the MD4/MD5/SHA-1/SHA-256/
-/// RIPEMD families, 128 for SHA-384/512.
+/// RIPEMD/Tiger/Whirlpool families, 128 for SHA-384/512.
 #[derive(Clone)]
 pub(crate) struct MdBuffer<const N: usize> {
     /// 累積中的當前 N-byte 區塊。
@@ -86,8 +86,8 @@ impl<const N: usize> MdBuffer<N> {
     /// 把最後一(或兩)塊交給 `compress`。
     ///
     /// `length_field` 是已編碼好的長度位元組(寬度與 endianness 由呼叫端決定:
-    /// SHA 為 big-endian、MD5/RIPEMD 為 little-endian;64-byte 塊 8 bytes、
-    /// 128-byte 塊 16 bytes)。長度須小於 `N`。
+    /// SHA/Whirlpool 為 big-endian、MD5/RIPEMD/Tiger 為 little-endian；通常為
+    /// 8、16 或 32 bytes)。長度須小於 `N`。
     ///
     /// 此方法**不** reset —— 由呼叫端在寫出摘要後自行 reset(對齊 bc `DoFinal`)。
     pub(crate) fn finish(&mut self, length_field: &[u8], mut compress: impl FnMut(&[u8; N])) {
