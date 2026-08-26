@@ -507,6 +507,7 @@ version = "0.1.0"
 name = "tc_digest"
 version = "0.1.0"
 dependencies = [
+ "criterion",
  "tc_crypto_core",
 ]
 

@@ -6,5 +6,16 @@ edition.workspace = true
 license.workspace = true
 repository.workspace = true
 
+[features]
+default = ["std"]
+std = []
+
 [dependencies]
 tc_crypto_core = { path = "../tc_crypto_core" }
+
+[dev-dependencies]
+criterion = "0.8.2"
+
+[[bench]]
+name = "blake2b"
+harness = false

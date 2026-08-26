@@ -4,19 +4,22 @@
 //! Each algorithm implements the [`TryDigest`](tc_crypto_core::TryDigest) /
 //! [`Digest`](tc_crypto_core::Digest) traits from `tc_crypto_core`. It depends only
 //! on `tc_crypto_core` (never on `tc_math` — hashes carry no big-integer
-//! arithmetic). The crate is `no_std`; it uses `alloc` only for the pass-through
-//! [`NullDigest`] and the runtime names of [`KeccakDigest`] and
-//! [`Sha512tDigest`], every other digest is alloc-free.
+//! arithmetic). Disable the default `std` feature for `no_std`; the standard
+//! build can select architecture-specific acceleration at runtime. The crate
+//! uses `alloc` only for the pass-through [`NullDigest`] and the runtime names
+//! of [`KeccakDigest`] and [`Sha512tDigest`], every other digest is alloc-free.
 //!
-//! The real no_std build is verified by `cargo build` (not `cargo test`, which
-//! links `std` for the test harness).
+//! The real no_std build is verified by
+//! `cargo build -p tc_digest --no-default-features` (tests link `std` for their
+//! harness even when default features are disabled).
 
-#![cfg_attr(not(test), no_std)]
+#![cfg_attr(not(any(test, feature = "std")), no_std)]
 
 // `NullDigest` 需要無界累積緩衝(`Vec`),故整個 crate 為 no_std + alloc。
 // 測試也明確從 alloc 取用 String/Vec/format!(見 no_std 測試註記)。
 extern crate alloc;
 
+pub mod blake2b;
 pub mod dstu7564;
 pub mod gost3411_2012;
 mod md_buffer;
@@ -43,6 +46,7 @@ pub mod sm3;
 pub mod tiger;
 pub mod whirlpool;
 
+pub use blake2b::Blake2bDigest;
 pub use dstu7564::Dstu7564Digest;
 pub use gost3411_2012::{Gost3411_2012_256Digest, Gost3411_2012_512Digest};
 pub use keccak::KeccakDigest;

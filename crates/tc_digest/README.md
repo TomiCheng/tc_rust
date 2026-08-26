@@ -5,10 +5,11 @@ Message-digest (hash) algorithms, ported from the Bouncy Castle C# library
 
 Each algorithm implements the `TryDigest` / `Digest` traits from
 [`tc_crypto_core`](../tc_crypto_core). The real hashes are pure fixed-size bit/byte
-computation; the crate is `no_std` and depends **only** on `tc_crypto_core` — never on
-`tc_math` (hashes carry no big-integer arithmetic). It uses `alloc` for the one
-pass-through case (`NullDigest`, which buffers arbitrary-length input); every other
-digest is alloc-free.
+computation and the crate depends **only** on `tc_crypto_core` — never on `tc_math`
+(hashes carry no big-integer arithmetic). The default `std` feature enables runtime
+CPU-feature dispatch; disable default features for `no_std`. It uses `alloc` for the
+one pass-through case (`NullDigest`, which buffers arbitrary-length input); every
+other digest is alloc-free.
 
 ## Design notes
 
@@ -33,11 +34,15 @@ digest is alloc-free.
   derived in `ripemd320.rs`.
 - **XOF interface (`IXof`) is deferred** until the first extendable-output algorithm
   (SHAKE) is ported — it will be added to `tc_crypto_core` as `TryXof` / `Xof` then.
+- **BLAKE2b backend dispatch** — the portable compression function is always
+  available. With `std` on x86/x86-64, AVX2 is selected at runtime when the CPU and
+  OS support it; `no_std` and other architectures use the portable path.
 
 ## Ported so far
 
 | Algorithm | Spec | Block / length | Status |
 |-----------|------|----------------|--------|
+| **BLAKE2b** | RFC 7693 | 128-byte block, 64-bit words, 12 rounds | ✅ keyed/unkeyed + portable/AVX2 verified |
 | **MD2** | RFC 1319 | standalone (16-byte, S-box) | ✅ RFC vectors verified |
 | **MD4** | RFC 1320 | `MdBuffer<64>`, LE | ✅ RFC vectors verified |
 | **MD5** | RFC 1321 | `MdBuffer<64>`, LE | ✅ RFC vectors verified |
@@ -141,7 +146,7 @@ Line counts are the bc-csharp source sizes. ✅ = ported, ⬜ = pending,
 
 | Algorithm | Lines | Status |
 |-----------|------:|--------|
-| BLAKE2b | 663 | ⬜ |
+| BLAKE2b | 663 | ✅ keyed/unkeyed, variable output, portable + AVX2 |
 | BLAKE2s | 688 | ⬜ |
 | BLAKE2xs | 387 | ⬜ (XOF) |
 | BLAKE3 | 1029 | ⬜ (XOF) |
@@ -162,13 +167,23 @@ Line counts are the bc-csharp source sizes. ✅ = ported, ⬜ = pending,
 ## Build & test
 
 ```bash
-# tests (includes RFC test vectors)
+# default std build (runtime AVX2 dispatch on supported x86/x86-64)
 cargo test -p tc_digest
 
-# no_std build (the real no_std check — cargo test links std for the harness)
-cargo build -p tc_digest
+# portable tests and the real no_std build
+cargo test -p tc_digest --no-default-features
+cargo build -p tc_digest --no-default-features
+
+# BLAKE2b throughput: std runtime dispatch vs no_std portable
+cargo bench -p tc_digest --bench blake2b
+cargo bench -p tc_digest --bench blake2b --no-default-features
 ```
 
-> no_std note: the crate is `#![cfg_attr(not(test), no_std)]`; test modules import
-> `String` / `Vec` / `format!` explicitly from `alloc` (with `#[cfg(test)] extern
-> crate alloc`) so rust-analyzer doesn't flag them under its no_std view.
+The BLAKE2b Criterion benchmark covers keyed and unkeyed hashing at 64 B,
+128 B, 1 KiB, 64 KiB, and 1 MiB. Benchmark names report the active backend as
+`avx2`, `std-portable`, or `no_std-portable`.
+
+> no_std note: the crate uses
+> `#![cfg_attr(not(any(test, feature = "std")), no_std)]`; test modules import
+> `String` / `Vec` / `format!` explicitly from `alloc` so rust-analyzer doesn't
+> flag them under its no_std view.
