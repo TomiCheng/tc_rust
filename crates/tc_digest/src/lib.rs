@@ -22,9 +22,12 @@ pub mod md2;
 pub mod md4;
 pub mod md5;
 mod sha256_core;
+mod sha512_core;
 pub mod sha1;
 pub mod sha224;
 pub mod sha256;
+pub mod sha384;
+pub mod sha512;
 
 pub use md2::Md2Digest;
 pub use md4::Md4Digest;
@@ -32,3 +35,5 @@ pub use md5::Md5Digest;
 pub use sha1::Sha1Digest;
 pub use sha224::Sha224Digest;
 pub use sha256::Sha256Digest;
+pub use sha384::Sha384Digest;
+pub use sha512::Sha512Digest;

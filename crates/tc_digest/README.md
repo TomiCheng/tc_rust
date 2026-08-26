@@ -36,6 +36,8 @@ computation, so this crate is `no_std` and needs no `alloc`; it depends **only**
 | **SHA-1** | FIPS 180 | `MdBuffer<64>`, BE | ✅ known vectors verified |
 | **SHA-224** | FIPS 180-2 | `MdBuffer<64>`, BE (reuses SHA-256 core) | ✅ known vectors verified |
 | **SHA-256** | FIPS 180-2 | `MdBuffer<64>`, BE | ✅ known vectors verified |
+| **SHA-384** | FIPS 180-2 | `MdBuffer<128>`, BE (reuses SHA-512 core) | ✅ known vectors verified |
+| **SHA-512** | FIPS 180-2 | `MdBuffer<128>`, BE | ✅ known vectors verified |
 
 ## bc digest catalog (porting roadmap)
 
@@ -67,8 +69,8 @@ Line counts are the bc-csharp source sizes. ✅ = ported, ⬜ = pending.
 | SHA-1 | 310 | `MdBuffer<64>` | ✅ |
 | SHA-224 | 315 | `MdBuffer<64>` | ✅ (reuses SHA-256 core) |
 | SHA-256 | 342 | `MdBuffer<64>` | ✅ |
-| SHA-384 | 118 | `MdBuffer<128>` | ⬜ |
-| SHA-512 | 120 | `MdBuffer<128>` | ⬜ ⭐ Ed25519 dependency |
+| SHA-384 | 118 | `MdBuffer<128>` | ✅ (reuses SHA-512 core) |
+| SHA-512 | 120 | `MdBuffer<128>` | ✅ ⭐ Ed25519 dependency ready |
 | SHA-512/t | 245 | `MdBuffer<128>` | ⬜ truncated variant |
 
 ### SHA-3 / Keccak (sponge; some are XOFs → need `IXof`)
