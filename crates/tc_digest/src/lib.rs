@@ -12,6 +12,9 @@
 
 #![cfg_attr(not(test), no_std)]
 
+mod md_buffer;
 pub mod md2;
+pub mod md4;
 
 pub use md2::Md2Digest;
+pub use md4::Md4Digest;
