@@ -73,6 +73,7 @@ other digest is alloc-free.
 | **DSTU 7564** | DSTU 7564:2014 | 512/1024-bit state, P/Q permutations | ✅ 256/384/512 + padding vectors |
 | **GOST 34.11-2012** | GOST R 34.11-2012 | 512-bit state, S/P/L transformation | ✅ 256/512 BC vectors |
 | **ISAP Hash** | NIST LWC | 320-bit state, 64-bit rate, 12-round permutation | ✅ official KAT + chunking vectors |
+| **PHOTON-Beetle-Hash** | NIST LWC | PHOTON-256 sponge (8×8 GF(2⁴) nibbles), 32-byte tag | ✅ 1025 official KAT (full KAT `#[ignore]`d, slow) |
 | **Keccak** | — | sponge (raw Keccak, domain pad `0x01`) | ✅ Keccak-256/512 vectors |
 | **Xoodyak Hash** | NIST LWC | Cyclist over 384-bit Xoodoo, 128-bit rate | ✅ official KAT + chunking vectors |
 | **NULL** | — | pass-through (buffers input, needs `alloc`) | ✅ |
@@ -173,7 +174,7 @@ Line counts are the bc-csharp source sizes. ✅ = ported, ⬜ = pending,
 | Ascon-XOF128 | 289 | ✅ 1025 official KAT |
 | Ascon v1.2 XOF / XofA | 335 | ⚠️ deprecated; 2×1025 official KAT |
 | ISAP | 204 | ✅ 256-bit hash, official NIST LWC KAT vectors |
-| PhotonBeetle | 369 | ⬜ |
+| PhotonBeetle | 369 | ✅ PHOTON-256 sponge; 1025 official KAT |
 | Sparkle | 298 | ⬜ |
 | Xoodyak | 313 | ✅ 256-bit hash, official NIST LWC KAT vectors |
 | Haraka-256 / -512 | 213 / 289 | ⬜ short-input |
