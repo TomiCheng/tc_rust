@@ -1,3 +1,5 @@
+use alloc::{vec, vec::Vec};
+
 use super::{BigInteger, WORD_BITS};
 pub(crate) type Limb = u64;
 pub(crate) type DoubleLimb = u128;

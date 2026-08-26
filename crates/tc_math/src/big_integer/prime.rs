@@ -7,9 +7,6 @@
 use super::{BigInteger, WORD_BITS};
 use rand_core::Rng;
 
-// no_std 下 `vec!` 巨集需從 alloc 引入；std 由 prelude 提供。
-#[cfg(not(feature = "std"))]
-use alloc::vec;
 use crate::big_integer::limb::Limb;
 
 impl BigInteger {
