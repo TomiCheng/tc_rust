@@ -64,7 +64,9 @@ other digest is alloc-free.
 | **Whirlpool** | ISO/IEC 10118-3 | `MdBuffer<64>`, BE, 256-bit length | ✅ ISO/BC vectors + million-`a` test |
 | **DSTU 7564** | DSTU 7564:2014 | 512/1024-bit state, P/Q permutations | ✅ 256/384/512 + padding vectors |
 | **GOST 34.11-2012** | GOST R 34.11-2012 | 512-bit state, S/P/L transformation | ✅ 256/512 BC vectors |
+| **ISAP Hash** | NIST LWC | 320-bit state, 64-bit rate, 12-round permutation | ✅ official KAT + chunking vectors |
 | **Keccak** | — | sponge (raw Keccak, domain pad `0x01`) | ✅ Keccak-256/512 vectors |
+| **Xoodyak Hash** | NIST LWC | Cyclist over 384-bit Xoodoo, 128-bit rate | ✅ official KAT + chunking vectors |
 | **NULL** | — | pass-through (buffers input, needs `alloc`) | ✅ |
 
 ## bc digest catalog (porting roadmap)
@@ -158,10 +160,10 @@ Line counts are the bc-csharp source sizes. ✅ = ported, ⬜ = pending,
 | Algorithm | Lines | Status |
 |-----------|------:|--------|
 | Ascon | 273 (+ Hash256/Xof/Xof128/CXof128) | ⬜ |
-| ISAP | 204 | ⬜ |
+| ISAP | 204 | ✅ 256-bit hash, official NIST LWC KAT vectors |
 | PhotonBeetle | 369 | ⬜ |
 | Sparkle | 298 | ⬜ |
-| Xoodyak | 313 | ⬜ |
+| Xoodyak | 313 | ✅ 256-bit hash, official NIST LWC KAT vectors |
 | Haraka-256 / -512 | 213 / 289 | ⬜ short-input |
 | Skein | 125 (+ SkeinEngine) | ⬜ |
 | ParallelHash / TupleHash | — | ⬜ (XOF combinators) |
