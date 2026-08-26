@@ -55,6 +55,7 @@ digest is alloc-free.
 | **RIPEMD-320** | — | `MdBuffer<64>`, LE, two lines + swaps | ✅ known vectors |
 | **Tiger** | — | `MdBuffer<64>`, LE, `0x01` pad, 3 passes | ✅ BC vectors + 64 KiB test |
 | **Whirlpool** | ISO/IEC 10118-3 | `MdBuffer<64>`, BE, 256-bit length | ✅ ISO/BC vectors + million-`a` test |
+| **DSTU 7564** | DSTU 7564:2014 | 512/1024-bit state, P/Q permutations | ✅ 256/384/512 + padding vectors |
 | **Keccak** | — | sponge (raw Keccak, domain pad `0x01`) | ✅ Keccak-256/512 vectors |
 | **NULL** | — | pass-through (buffers input, needs `alloc`) | ✅ |
 
@@ -127,7 +128,7 @@ Line counts are the bc-csharp source sizes. ✅ = ported, ⬜ = pending.
 | SM3 (China GB) | 340 | ✅ standard + BC long vectors |
 | GOST3411 (1994) | 392 | ⬜ |
 | GOST3411-2012 (Streebog) | 1089 (+256/512: 66/43) | ⬜ |
-| DSTU7564 (Kupyna, Ukraine) | 627 | ⬜ |
+| DSTU7564 (Kupyna, Ukraine) | 627 | ✅ 256/384/512 + padding vectors |
 
 ### BLAKE family
 

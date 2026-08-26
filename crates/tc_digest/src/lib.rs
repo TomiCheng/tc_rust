@@ -17,6 +17,7 @@
 // 測試也明確從 alloc 取用 String/Vec/format!(見 no_std 測試註記)。
 extern crate alloc;
 
+pub mod dstu7564;
 mod md_buffer;
 pub mod keccak;
 pub mod md2;
@@ -41,6 +42,7 @@ pub mod sm3;
 pub mod tiger;
 pub mod whirlpool;
 
+pub use dstu7564::Dstu7564Digest;
 pub use keccak::KeccakDigest;
 pub use md2::Md2Digest;
 pub use md4::Md4Digest;
