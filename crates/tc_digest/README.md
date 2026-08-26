@@ -25,6 +25,12 @@ digest is alloc-free.
   → `to_le_bytes` / `from_le_bytes` (and `_BE` variants), `BitOperations.*` →
   `count_ones` / `leading_zeros` / …, `IMemoable` → `Clone` (`Copy()` → `clone`,
   `Reset(other)` → `clone_from`).
+- **RIPEMD family shares `ripemd_common`** — the message-order / rotation tables and
+  the five boolean functions live in one module; each variant supplies its own IV,
+  round constants, register count, and combine. The compression uses value-rotation
+  (like the reference) rather than bc's unrolled register-naming; for the 5-register
+  variants the round-boundary register swaps land on shifted slots (16 mod 5 = 1),
+  derived in `ripemd320.rs`.
 - **XOF interface (`IXof`) is deferred** until the first extendable-output algorithm
   (SHAKE) is ported — it will be added to `tc_crypto_core` as `TryXof` / `Xof` then.
 
@@ -41,6 +47,10 @@ digest is alloc-free.
 | **SHA-384** | FIPS 180-2 | `MdBuffer<128>`, BE (reuses SHA-512 core) | ✅ known vectors verified |
 | **SHA-512** | FIPS 180-2 | `MdBuffer<128>`, BE | ✅ known vectors verified |
 | **SHA-512/t** | FIPS 180-4 | `MdBuffer<128>`, BE, per-`t` IV + truncation | ✅ SHA-512/224 & /256 NIST vectors |
+| **RIPEMD-128** | — | `MdBuffer<64>`, LE, dual line | ✅ known vectors |
+| **RIPEMD-160** | — | `MdBuffer<64>`, LE, dual line | ✅ known vectors |
+| **RIPEMD-256** | — | `MdBuffer<64>`, LE, two lines + swaps | ✅ known vectors |
+| **RIPEMD-320** | — | `MdBuffer<64>`, LE, two lines + swaps | ✅ known vectors |
 | **NULL** | — | pass-through (buffers input, needs `alloc`) | ✅ |
 
 ## bc digest catalog (porting roadmap)
@@ -98,10 +108,10 @@ Line counts are the bc-csharp source sizes. ✅ = ported, ⬜ = pending.
 
 | Algorithm | Lines | Status |
 |-----------|------:|--------|
-| RIPEMD-128 | 495 | ⬜ |
-| RIPEMD-160 | 457 | ⬜ |
-| RIPEMD-256 | 448 | ⬜ |
-| RIPEMD-320 | 479 | ⬜ |
+| RIPEMD-128 | 495 | ✅ dual line, 4 rounds |
+| RIPEMD-160 | 457 | ✅ dual line, 5 rounds |
+| RIPEMD-256 | 448 | ✅ two lines + per-round swap |
+| RIPEMD-320 | 479 | ✅ two lines + per-round swap |
 
 ### Other classic
 
