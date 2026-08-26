@@ -12,8 +12,8 @@
 //! little-endian; the field is 64-bit for 64-byte blocks, 128-bit for 128-byte
 //! blocks), so [`finish`](MdBuffer::finish) does **not** encode the length
 //! itself — the caller passes the already-encoded trailing bytes. The buffer owns
-//! only what every family shares: accumulate into N-byte blocks, then pad with
-//! `0x80`, zeros, and the caller's length field.
+//! only what every family shares: accumulate into N-byte blocks, then append a
+//! caller-selected first padding byte, zeros, and the caller's length field.
 
 /// A block accumulator for `N`-byte Merkle–Damgård blocks.
 ///
@@ -91,11 +91,24 @@ impl<const N: usize> MdBuffer<N> {
     ///
     /// 此方法**不** reset —— 由呼叫端在寫出摘要後自行 reset(對齊 bc `DoFinal`)。
     pub(crate) fn finish(&mut self, length_field: &[u8], mut compress: impl FnMut(&[u8; N])) {
+        self.finish_with_pad(0x80, length_field, &mut compress);
+    }
+
+    /// 以指定的第一個 padding byte 收尾。
+    ///
+    /// 多數 Merkle–Damgård digest 使用 `0x80`;原始 Tiger 使用 `0x01`。
+    /// 其餘 padding 佈局與 [`finish`](Self::finish) 相同。
+    pub(crate) fn finish_with_pad(
+        &mut self,
+        pad_byte: u8,
+        length_field: &[u8],
+        mut compress: impl FnMut(&[u8; N]),
+    ) {
         debug_assert!(length_field.len() < N, "length field must fit within a block");
 
-        // 補 0x80,再補零到「剛好留下 length_field 空間」的位置;
+        // 補第一個 padding byte,再補零到「剛好留下 length_field 空間」的位置;
         // 若當前塊放不下,push 會自動 wrap 出下一塊。
-        self.push(0x80, &mut compress);
+        self.push(pad_byte, &mut compress);
         while self.offset != N - length_field.len() {
             self.push(0, &mut compress);
         }

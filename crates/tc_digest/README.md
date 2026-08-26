@@ -52,6 +52,7 @@ digest is alloc-free.
 | **RIPEMD-160** | — | `MdBuffer<64>`, LE, dual line | ✅ known vectors |
 | **RIPEMD-256** | — | `MdBuffer<64>`, LE, two lines + swaps | ✅ known vectors |
 | **RIPEMD-320** | — | `MdBuffer<64>`, LE, two lines + swaps | ✅ known vectors |
+| **Tiger** | — | `MdBuffer<64>`, LE, `0x01` pad, 3 passes | ✅ BC vectors + 64 KiB test |
 | **NULL** | — | pass-through (buffers input, needs `alloc`) | ✅ |
 
 ## bc digest catalog (porting roadmap)
@@ -118,7 +119,7 @@ Line counts are the bc-csharp source sizes. ✅ = ported, ⬜ = pending.
 
 | Algorithm | Lines | Status |
 |-----------|------:|--------|
-| Tiger | 928 | ⬜ |
+| Tiger | 928 | ✅ 192-bit, BC vectors + 64 KiB test |
 | Whirlpool | 382 | ⬜ |
 | SM3 (China GB) | 340 | ⬜ |
 | GOST3411 (1994) | 392 | ⬜ |

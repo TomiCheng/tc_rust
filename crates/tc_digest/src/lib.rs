@@ -37,6 +37,7 @@ pub mod sha3;
 pub mod sha384;
 pub mod sha512;
 pub mod sha512t;
+pub mod tiger;
 
 pub use keccak::KeccakDigest;
 pub use md2::Md2Digest;
@@ -54,3 +55,4 @@ pub use sha3::Sha3Digest;
 pub use sha384::Sha384Digest;
 pub use sha512::Sha512Digest;
 pub use sha512t::Sha512tDigest;
+pub use tiger::TigerDigest;
