@@ -12,6 +12,11 @@
 
 #![cfg_attr(not(test), no_std)]
 
+// 測試以 std 建置,但明確從 alloc 取用 String/Vec/format!,避免依賴「no_std 時消失、
+// std 時才出現」的 prelude —— 否則 rust-analyzer 把 crate 當 no_std 分析時會誤標紅字。
+#[cfg(test)]
+extern crate alloc;
+
 mod md_buffer;
 pub mod md2;
 pub mod md4;

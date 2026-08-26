@@ -164,6 +164,8 @@ impl TryDigest for Md4Digest {
 
 #[cfg(test)]
 mod tests {
+    use alloc::{format, string::String, vec::Vec};
+
     use super::*;
     use tc_crypto_core::Digest;
 

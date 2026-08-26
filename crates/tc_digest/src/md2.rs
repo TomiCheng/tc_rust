@@ -184,6 +184,8 @@ static S: [u8; 256] = [
 
 #[cfg(test)]
 mod tests {
+    use alloc::{format, string::String};
+
     use super::*;
     use tc_crypto_core::Digest;
 

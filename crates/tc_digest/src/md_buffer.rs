@@ -118,6 +118,8 @@ impl<const N: usize> MdBuffer<N> {
 
 #[cfg(test)]
 mod tests {
+    use alloc::vec::Vec;
+
     use super::*;
 
     /// 收集 compress 收到的每個 64-byte 區塊(以 SHA 風格的 big-endian 64-bit 長度收尾)。
