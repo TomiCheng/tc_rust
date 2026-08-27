@@ -18,7 +18,8 @@ not use in production or for real-world security.**
 
 | Crate | Description |
 | --- | --- |
-| [`tc_crypto_core`](crates/tc_crypto_core) | Shared cryptographic traits, including `TryDigest` / `Digest` and `TryXof` / `Xof`. |
+| [`tc_crypto_core`](crates/tc_crypto_core) | Shared cryptographic traits, including `BlockCipher`, `TryDigest` / `Digest`, and `TryXof` / `Xof`. |
+| [`tc_crypto_engines`](crates/tc_crypto_engines) | Cryptographic engines, including Threefish and GOST 28147-89. |
 | [`tc_digest`](crates/tc_digest) | Message-digest algorithms ported from bc-csharp. |
 | [`tc_math`](crates/tc_math) | Arbitrary-precision integers and number theory (`BigInteger`). |
 
@@ -30,10 +31,9 @@ ISAP Hash, Xoodyak Hash, GOST 34.11-2012, and DSTU 7564. See the
 [`tc_digest` roadmap](crates/tc_digest/README.md) for the full list and test
 coverage.
 
-GOST 34.11-94 (`Gost3411Digest`) is intentionally deferred: the bc-csharp
-implementation depends on `IBlockCipher` and `Gost28147Engine`, while this
-workspace does not yet have a block-cipher abstraction or a GOST 28147 engine.
-Those components will be introduced before porting the digest.
+GOST 34.11-94 (`Gost3411Digest`) is not implemented yet. Its prerequisites —
+the `BlockCipher` trait and `Gost28147Engine` — are now available, so the digest
+can be ported without introducing a crate dependency cycle.
 
 ### `tc_math` highlights
 
@@ -57,10 +57,12 @@ cargo test --workspace
 
 # individual crates
 cargo test -p tc_digest
+cargo test -p tc_crypto_engines
 cargo test -p tc_math
 
 # no_std + alloc
 cargo build -p tc_digest --no-default-features
+cargo build -p tc_crypto_engines --no-default-features
 cargo build -p tc_math --no-default-features
 
 # benchmarks

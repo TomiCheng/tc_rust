@@ -76,8 +76,10 @@ tests/threefish_kat.rs  known-answer tests against upstream vectors
 6. Add KAT tests in `tests/<name>_kat.rs`. Pull vectors from bc's own test data
    (`crypto/test/src/crypto/test/<Name>Test.cs`) so there is no transcription
    drift, and cover both encrypt and decrypt.
-7. Confirm `cargo test -p tc_crypto_engines`, `cargo clippy --all-targets`, and
-   the no_std build (`cargo build -p tc_crypto_engines`).
+7. Confirm `cargo test -p tc_crypto_engines --locked`, strict Clippy
+   (`cargo clippy -p tc_crypto_engines --all-targets --locked -- -D warnings`),
+   and the no_std build
+   (`cargo build -p tc_crypto_engines --no-default-features --locked`).
 
 ## Porting status
 
@@ -86,6 +88,7 @@ tests/threefish_kat.rs  known-answer tests against upstream vectors
 | Algorithm | bc engine | Notes |
 |-----------|-----------|-------|
 | Threefish (Skein 1.3) | `ThreefishEngine` | 256/512/1024-bit tweakable block cipher; KAT-verified |
+| GOST 28147-89 | `Gost28147Engine` | All bc S-boxes plus validated custom tables; unlocks `tc_digest` GOST 34.11-94 |
 
 ### Block ciphers — TODO
 
@@ -101,7 +104,6 @@ tests/threefish_kat.rs  known-answer tests against upstream vectors
 | Blowfish | `BlowfishEngine` | |
 | CAST | `Cast5Engine`, `Cast6Engine` | |
 | ARIA | `AriaEngine` | |
-| GOST 28147 | `GOST28147Engine` | **Unlocks `tc_digest` GOST 34.11-94** |
 | SEED | `SEEDEngine` | |
 | RC2 / RC5 / RC6 | `RC2Engine`, `RC532Engine`, `RC564Engine`, `RC6Engine` | |
 | IDEA | `IdeaEngine` | |
