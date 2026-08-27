@@ -1,8 +1,9 @@
 //! Validated Threefish init parameters.
 
 use alloc::vec::Vec;
+use core::fmt;
 
-use super::{ThreefishBlockSize, ThreefishError, TWEAK_BYTES};
+use super::{TWEAK_BYTES, ThreefishBlockSize, ThreefishError};
 
 /// A validated, self-contained Threefish configuration: block size, a matching
 /// key, and an optional tweak.
@@ -18,11 +19,20 @@ use super::{ThreefishBlockSize, ThreefishError, TWEAK_BYTES};
 ///
 /// The params **own** their material, so one value can be built once, stored, and
 /// handed to any number of `init` calls by reference.
-#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ThreefishParams {
     block_size: ThreefishBlockSize,
     key: Vec<u8>,
     tweak: Option<[u8; TWEAK_BYTES]>,
+}
+
+impl fmt::Debug for ThreefishParams {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ThreefishParams")
+            .field("block_size", &self.block_size)
+            .field("key_len", &self.key.len())
+            .field("has_tweak", &self.tweak.is_some())
+            .finish()
+    }
 }
 
 impl ThreefishParams {
@@ -67,12 +77,12 @@ impl ThreefishParams {
     }
 
     /// The validated key (its length equals `block_size().bytes()`).
-    pub fn key(&self) -> &[u8] {
+    pub(crate) fn key(&self) -> &[u8] {
         &self.key
     }
 
     /// The validated tweak, or `None` for the all-zero tweak.
-    pub fn tweak(&self) -> Option<&[u8]> {
+    pub(crate) fn tweak(&self) -> Option<&[u8]> {
         self.tweak.as_ref().map(|t| t.as_slice())
     }
 }
@@ -108,20 +118,20 @@ mod tests {
     fn rejects_key_not_matching_block_size() {
         // 32-byte key 對 B512(需 64)→ 錯。
         let key = [0u8; 32];
-        assert_eq!(
+        assert!(matches!(
             ThreefishParams::new(ThreefishBlockSize::B512, &key, None),
             Err(ThreefishError::InvalidKeyLength(32))
-        );
+        ));
     }
 
     #[test]
     fn rejects_bad_tweak_length() {
         let key = [0u8; 64];
         let tweak = [0u8; 8];
-        assert_eq!(
+        assert!(matches!(
             ThreefishParams::new(ThreefishBlockSize::B512, &key, Some(&tweak)),
             Err(ThreefishError::InvalidTweakLength(8))
-        );
+        ));
     }
 
     // 擁有式:建一次後可存、可多次借出(無 lifetime 綁著來源)。
@@ -134,5 +144,17 @@ mod tests {
         assert_eq!(params.key().len(), 32);
         let _again = params.key();
         let _again2 = params.key();
+    }
+
+    #[test]
+    fn debug_redacts_key_and_tweak_material() {
+        let key = [0xA5u8; 32];
+        let tweak = [0x5Au8; 16];
+        let params = ThreefishParams::new(ThreefishBlockSize::B256, &key, Some(&tweak)).unwrap();
+
+        assert_eq!(
+            alloc::format!("{params:?}"),
+            "ThreefishParams { block_size: B256, key_len: 32, has_tweak: true }"
+        );
     }
 }

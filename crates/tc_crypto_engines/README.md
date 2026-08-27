@@ -24,6 +24,11 @@ Decisions made while bringing up the first engine; apply them to the next ones.
   bool, &Self::Params<'_>)` (by reference) lets a param either borrow (`&'a [u8]`)
   or own (lifetime-free), and lets one expensive, shared parameter value drive
   many `init` calls without being consumed.
+- **Key-bearing parameters are not `Clone` and must redact `Debug`.** Passing
+  parameters to `init` by reference permits deliberate reuse without creating
+  additional copies of key material. A custom `Debug` implementation may expose
+  structural metadata such as key length or whether an optional tweak is
+  present, but never key, tweak, nonce, or other sensitive bytes.
 - **Errors are an associated type** (`type Error: core::error::Error`). No shared
   error enum in core; each engine defines its own.
 - **No fallible/infallible split** for `BlockCipher` (unlike `TryDigest` /
