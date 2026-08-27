@@ -9,7 +9,8 @@
 //!
 //! [`KeccakDigest`] here is **raw Keccak** (the NIST-competition version, domain pad
 //! `0x01`). SHA-3 and SHAKE are the same sponge with a different domain pad
-//! (`0x06` / `0x1f`) and will reuse [`keccak_f1600`] and the sponge machinery.
+//! (`0x06` / `0x1f`) and reuse [`keccak_f1600`] and the sponge machinery; SHAKE
+//! additionally drives the sponge as a XOF via [`KeccakDigest::xof_output`].
 
 use alloc::format;
 use alloc::string::String;
@@ -147,6 +148,8 @@ pub struct KeccakDigest {
     out_len: usize,
     /// domain separation pad(raw Keccak = 0x01)。
     domain: u8,
+    /// 是否已進入擠出階段(pad 之後不得再吸收)。
+    squeezing: bool,
     /// 演算法名稱。
     name: String,
 }
@@ -176,6 +179,7 @@ impl KeccakDigest {
             pos: 0,
             out_len: bit_length / 8,
             domain,
+            squeezing: false,
             name: format!("{name_prefix}-{bit_length}"),
         }
     }
@@ -191,24 +195,41 @@ impl KeccakDigest {
         }
     }
 
-    /// 補 pad10*1(domain 開頭 + 尾端最高位),切換到擠出並寫出 `output`。
-    fn finish_into(&mut self, output: &mut [u8]) {
+    /// 補 pad10*1(domain 開頭 + 尾端最高位),置換一次並切換到擠出階段。
+    fn pad_and_switch(&mut self) {
         // domain pad 位於當前位置;pad10*1 的收尾 1 位在 rate 的最後一位元。
         self.state[self.pos / 8] ^= (self.domain as u64) << ((self.pos % 8) * 8);
         let last = self.rate_bytes - 1;
         self.state[last / 8] ^= 0x80u64 << ((last % 8) * 8);
         keccak_f1600(&mut self.state);
+        self.pos = 0;
+        self.squeezing = true;
+    }
 
-        // 擠出:每讀滿 rate byte 就再置換一次(固定輸出通常一塊內即足)。
-        let mut sq = 0;
+    /// 從狀態連續讀出位元組;每讀滿一個 rate 區塊就再置換一次。
+    ///
+    /// 擠出位置沿用 `pos`(此階段語意為「當前 rate 區塊已讀位元組」),故可跨多次
+    /// 呼叫連續擠出(XOF 用)。
+    fn squeeze(&mut self, output: &mut [u8]) {
         for out in output.iter_mut() {
-            if sq == self.rate_bytes {
+            if self.pos == self.rate_bytes {
                 keccak_f1600(&mut self.state);
-                sq = 0;
+                self.pos = 0;
             }
-            *out = (self.state[sq / 8] >> ((sq % 8) * 8)) as u8;
-            sq += 1;
+            *out = (self.state[self.pos / 8] >> ((self.pos % 8) * 8)) as u8;
+            self.pos += 1;
         }
+    }
+
+    /// XOF 擠出:首次呼叫先補 pad 切換,之後每次續擠(供 SHAKE 等 XOF 使用)。
+    ///
+    /// 呼叫後不 reset,可反覆呼叫取任意長度輸出;固定輸出的收尾走
+    /// [`TryDigest::try_do_final`]。
+    pub(crate) fn xof_output(&mut self, output: &mut [u8]) {
+        if !self.squeezing {
+            self.pad_and_switch();
+        }
+        self.squeeze(output);
     }
 }
 
@@ -228,6 +249,7 @@ impl TryDigest for KeccakDigest {
     }
 
     fn try_update(&mut self, input: &[u8]) -> Result<(), Self::Error> {
+        assert!(!self.squeezing, "Keccak: attempt to absorb while squeezing");
         for &b in input {
             self.absorb_byte(b);
         }
@@ -236,7 +258,8 @@ impl TryDigest for KeccakDigest {
 
     fn try_do_final(&mut self, output: &mut [u8]) -> Result<usize, Self::Error> {
         let len = self.out_len;
-        self.finish_into(&mut output[..len]);
+        self.pad_and_switch();
+        self.squeeze(&mut output[..len]);
         self.try_reset()?;
         Ok(len)
     }
@@ -244,6 +267,7 @@ impl TryDigest for KeccakDigest {
     fn try_reset(&mut self) -> Result<(), Self::Error> {
         self.state = [0; 25];
         self.pos = 0;
+        self.squeezing = false;
         Ok(())
     }
 }

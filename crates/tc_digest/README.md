@@ -65,6 +65,7 @@ other digest is alloc-free.
 | **SHA-384** | FIPS 180-2 | `MdBuffer<128>`, BE (reuses SHA-512 core) | ✅ known vectors verified |
 | **SHA-512** | FIPS 180-2 | `MdBuffer<128>`, BE | ✅ known vectors verified |
 | **SHA-512/t** | FIPS 180-4 | `MdBuffer<128>`, BE, per-`t` IV + truncation | ✅ SHA-512/224 & /256 NIST vectors |
+| **SHAKE128 / SHAKE256** | FIPS 202 | XOF, Keccak sponge, domain `0x1f` | ✅ FIPS 202 byte-aligned KAT (single-shot + split, 512-byte output) |
 | **SM3** | GB/T 32905 | `MdBuffer<64>`, BE, 64 rounds | ✅ standard + BC long vectors |
 | **RIPEMD-128** | — | `MdBuffer<64>`, LE, dual line | ✅ known vectors |
 | **RIPEMD-160** | — | `MdBuffer<64>`, LE, dual line | ✅ known vectors |
@@ -91,7 +92,7 @@ Line counts are the bc-csharp source sizes. ✅ = ported, ⬜ = pending,
 |---------|------:|---------|
 | `GeneralDigest` | 183 | ✅ `MdBuffer<64>` (composition) |
 | `LongDigest` | 412 | ✅ `MdBuffer<128>` (composition) |
-| `KeccakDigest` | 636 | ✅ sponge base (raw Keccak/SHA-3) |
+| `KeccakDigest` | 636 | ✅ sponge base (raw Keccak/SHA-3/SHAKE); incremental squeeze via `xof_output` |
 | `NullDigest` | 86 | ✅ pass-through (needs `alloc`) |
 | `NonMemoableDigest` | 76 | ⊘ intentionally skipped (see note) |
 | `ShortenedDigest` | 104 | ✅ truncating wrapper (`ShortenedDigest<D>`) |
@@ -129,7 +130,7 @@ Line counts are the bc-csharp source sizes. ✅ = ported, ⬜ = pending,
 | Algorithm | Lines | Status |
 |-----------|------:|--------|
 | SHA3 | 236 | ✅ 224/256/384/512 |
-| SHAKE | 168 | ⬜ (XOF; traits ready) |
+| SHAKE | 168 | ✅ SHAKE128/256 XOF; FIPS 202 KAT |
 | cSHAKE | 127 | ⬜ (XOF; traits ready) |
 
 ### RIPEMD family (little-endian)
