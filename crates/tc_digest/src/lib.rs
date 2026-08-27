@@ -6,8 +6,9 @@
 //! on `tc_crypto_core` (never on `tc_math` — hashes carry no big-integer
 //! arithmetic). Disable the default `std` feature for `no_std`; the standard
 //! build can select architecture-specific acceleration at runtime. The crate
-//! uses `alloc` only for the pass-through [`NullDigest`] and the runtime names
-//! of [`KeccakDigest`] and [`Sha512tDigest`], every other digest is alloc-free.
+//! uses `alloc` only for the pass-through [`NullDigest`], the runtime names of
+//! [`KeccakDigest`] and [`Sha512tDigest`], and [`CShakeDigest`]'s `bytepad`
+//! prefix; every other digest is alloc-free.
 //!
 //! The real no_std build is verified by
 //! `cargo build -p tc_digest --no-default-features` (tests link `std` for their
@@ -29,6 +30,7 @@ pub mod blake2b;
 pub mod blake2s;
 pub mod blake2xs;
 pub mod blake3;
+pub mod cshake;
 pub mod dstu7564;
 pub mod gost3411_2012;
 pub mod isap;
@@ -71,6 +73,7 @@ pub use blake2b::Blake2bDigest;
 pub use blake2s::Blake2sDigest;
 pub use blake2xs::Blake2xsDigest;
 pub use blake3::Blake3Digest;
+pub use cshake::CShakeDigest;
 pub use dstu7564::Dstu7564Digest;
 pub use gost3411_2012::{Gost3411_2012_256Digest, Gost3411_2012_512Digest};
 pub use isap::IsapDigest;

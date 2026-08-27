@@ -66,6 +66,7 @@ other digest is alloc-free.
 | **SHA-512** | FIPS 180-2 | `MdBuffer<128>`, BE | ✅ known vectors verified |
 | **SHA-512/t** | FIPS 180-4 | `MdBuffer<128>`, BE, per-`t` IV + truncation | ✅ SHA-512/224 & /256 NIST vectors |
 | **SHAKE128 / SHAKE256** | FIPS 202 | XOF, Keccak sponge, domain `0x1f` | ✅ FIPS 202 byte-aligned KAT (single-shot + split, 512-byte output) |
+| **cSHAKE128 / cSHAKE256** | SP 800-185 | customizable SHAKE, `bytepad` prefix, domain `0x04` | ✅ NIST samples #1-4 + zero-pad edge cases + SHAKE-equivalence |
 | **SM3** | GB/T 32905 | `MdBuffer<64>`, BE, 64 rounds | ✅ standard + BC long vectors |
 | **RIPEMD-128** | — | `MdBuffer<64>`, LE, dual line | ✅ known vectors |
 | **RIPEMD-160** | — | `MdBuffer<64>`, LE, dual line | ✅ known vectors |
@@ -131,7 +132,7 @@ Line counts are the bc-csharp source sizes. ✅ = ported, ⬜ = pending,
 |-----------|------:|--------|
 | SHA3 | 236 | ✅ 224/256/384/512 |
 | SHAKE | 168 | ✅ SHAKE128/256 XOF; FIPS 202 KAT |
-| cSHAKE | 127 | ⬜ (XOF; traits ready) |
+| cSHAKE | 127 | ✅ cSHAKE128/256; NIST SP 800-185 samples |
 
 ### RIPEMD family (little-endian)
 
