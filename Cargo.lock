@@ -506,6 +506,9 @@ version = "0.1.0"
 [[package]]
 name = "tc_crypto_engines"
 version = "0.1.0"
+dependencies = [
+ "tc_crypto_core",
+]
 
 [[package]]
 name = "tc_digest"
