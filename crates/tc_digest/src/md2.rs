@@ -55,17 +55,17 @@ impl Md2Digest {
     /// 更新校驗和 C（bc `ProcessChecksum`）。`m` 傳值以避開對 `self` 的借用衝突。
     fn process_checksum(&mut self, m: [u8; 16]) {
         let mut l = self.c[15];
-        for i in 0..16 {
-            self.c[i] ^= S[(m[i] ^ l) as usize];
-            l = self.c[i];
+        for (&message, checksum) in m.iter().zip(&mut self.c) {
+            *checksum ^= S[(message ^ l) as usize];
+            l = *checksum;
         }
     }
 
     /// 壓縮一個區塊進 X（bc `ProcessBlock`）。`m` 可能是 M 或 C,故傳值。
     fn process_block(&mut self, m: [u8; 16]) {
-        for i in 0..16 {
-            self.x[i + 16] = m[i];
-            self.x[i + 32] = m[i] ^ self.x[i];
+        for (i, &message) in m.iter().enumerate() {
+            self.x[i + 16] = message;
+            self.x[i + 32] = message ^ self.x[i];
         }
         // 18 輪擴散;t 為 u8 → 遮罩到 0xff 是天然的。
         let mut t: u8 = 0;
@@ -184,6 +184,8 @@ static S: [u8; 256] = [
 
 #[cfg(test)]
 mod tests {
+    use alloc::{format, string::String};
+
     use super::*;
     use tc_crypto_core::Digest;
 
@@ -211,7 +213,10 @@ mod tests {
         assert_eq!(md2_hex(b""), "8350e5a3e24c153df2275c9f80692773");
         assert_eq!(md2_hex(b"a"), "32ec01ec4a6dac72c0ab96fb34c0b5d1");
         assert_eq!(md2_hex(b"abc"), "da853b0d3f88d99b30283a69e6ded6bb");
-        assert_eq!(md2_hex(b"message digest"), "ab4f496bfb2a530b219ff33031fe06b0");
+        assert_eq!(
+            md2_hex(b"message digest"),
+            "ab4f496bfb2a530b219ff33031fe06b0"
+        );
         assert_eq!(
             md2_hex(b"abcdefghijklmnopqrstuvwxyz"),
             "4e8ddff3650292ab5a4108c3aa47940b"
