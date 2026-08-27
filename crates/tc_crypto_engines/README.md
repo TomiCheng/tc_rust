@@ -90,11 +90,50 @@ and compare the runtime-dispatched `AesEngine` with the always-portable
 
 ```console
 # Runtime-dispatched backend (AES-NI on supported x86/x86_64 CPUs)
-cargo bench -p tc_crypto_engines --bench aes
+cargo bench -p tc_crypto_engines --bench aes --locked -- --warm-up-time 1 --measurement-time 2 --sample-size 20
 
-# Force the portable backend by compiling the library without std
-cargo bench -p tc_crypto_engines --bench aes --no-default-features
+# Force the portable T-table backend by compiling the library without std
+cargo bench -p tc_crypto_engines --bench aes --no-default-features --locked -- --warm-up-time 1 --measurement-time 2 --sample-size 20
 ```
+
+### AES backend performance
+
+The following reference results were measured on 2026-08-27 with an Intel Core
+i7-1185G7 and Rust 1.97.1 (`x86_64-pc-windows-msvc`). Each iteration processes
+one 16-byte block through the `BlockCipher` API. Engine initialization and key
+expansion happen outside the timed loop. Values are Criterion point estimates,
+rounded to 0.1 ns; lower is better.
+
+Encryption latency:
+
+| Backend | AES-128 | AES-192 | AES-256 |
+|---------|--------:|--------:|--------:|
+| AES-NI | 12.8 ns | 14.7 ns | 14.7 ns |
+| Portable T-table | 65.4 ns | 77.1 ns | 94.4 ns |
+| `AesLightEngine` | 104.5 ns | 125.6 ns | 142.9 ns |
+
+Decryption latency:
+
+| Backend | AES-128 | AES-192 | AES-256 |
+|---------|--------:|--------:|--------:|
+| AES-NI | 12.0 ns | 11.6 ns | 12.7 ns |
+| Portable T-table | 68.3 ns | 81.1 ns | 92.2 ns |
+| `AesLightEngine` | 157.9 ns | 187.4 ns | 224.2 ns |
+
+On this machine, the portable T-table backend is about 1.5-1.6x faster than
+`AesLightEngine` for encryption and 2.3-2.4x faster for decryption. AES-NI is
+about 5.1-6.4x faster than the T-table backend for encryption and 5.7-7.3x
+faster for decryption. This gives each implementation a distinct role:
+
+- use AES-NI when hardware support is available;
+- use the portable T-table backend when software performance is the priority;
+- use `AesLightEngine` when reducing the static table footprint is the priority.
+
+The AES-NI figures come from the default-feature build. The T-table and light
+figures come from the same `--no-default-features` run, which forces
+`AesEngine` onto its portable backend. Absolute values vary by processor,
+compiler, power state, and operating-system scheduling, so performance-sensitive
+targets should rerun the benchmark locally.
 
 ## Porting status
 
@@ -104,7 +143,7 @@ cargo bench -p tc_crypto_engines --bench aes --no-default-features
 |-----------|-----------|-------|
 | Threefish (Skein 1.3) | `ThreefishEngine` | 256/512/1024-bit tweakable block cipher; KAT-verified |
 | GOST 28147-89 | `Gost28147Engine` | All bc S-boxes plus validated custom tables; unlocks `tc_digest` GOST 34.11-94 |
-| AES | `AesEngine`, `AesLightEngine`, `AesEngine_X86` | AES-128/192/256; explicit light/portable engine plus runtime-dispatched x86 AES-NI with `std`; BC and FIPS KAT-verified |
+| AES | `AesEngine`, `AesLightEngine`, `AesEngine_X86` | AES-128/192/256; 2 KiB portable T-tables, explicit light engine, and runtime-dispatched x86 AES-NI with `std`; BC and FIPS KAT-verified |
 
 ### Block ciphers — TODO
 

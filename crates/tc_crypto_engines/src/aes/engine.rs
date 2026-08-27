@@ -84,10 +84,19 @@ impl BlockCipher for AesEngine {
         (self.round_keys, self.rounds) = portable::expand_key(params.key());
         self.for_encryption = for_encryption;
 
-        #[cfg(all(feature = "std", any(target_arch = "x86", target_arch = "x86_64")))]
-        if matches!(self.backend, Backend::AesNi) && !for_encryption {
-            // SAFETY: `Backend::AesNi` is created only after runtime detection.
-            unsafe { super::x86::prepare_decryption_keys(&mut self.round_keys, self.rounds) };
+        if !for_encryption {
+            match self.backend {
+                Backend::Portable => {
+                    portable::prepare_decryption_keys(&mut self.round_keys, self.rounds);
+                }
+                #[cfg(all(feature = "std", any(target_arch = "x86", target_arch = "x86_64")))]
+                Backend::AesNi => {
+                    // SAFETY: `Backend::AesNi` is created only after runtime detection.
+                    unsafe {
+                        super::x86::prepare_decryption_keys(&mut self.round_keys, self.rounds)
+                    };
+                }
+            }
         }
 
         self.initialised = true;
@@ -171,8 +180,10 @@ mod tests {
 
                 let mut portable_plaintext = [0u8; AES_BLOCK_BYTES];
                 let mut accelerated_plaintext = [0u8; AES_BLOCK_BYTES];
+                let mut portable_decryption_keys = round_keys;
+                portable::prepare_decryption_keys(&mut portable_decryption_keys, rounds);
                 portable::decrypt_block(
-                    &round_keys,
+                    &portable_decryption_keys,
                     rounds,
                     &portable_ciphertext,
                     &mut portable_plaintext,

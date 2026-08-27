@@ -1,10 +1,10 @@
 //! AES-128, AES-192, and AES-256 block cipher.
 //!
-//! The portable implementation is always available. With the default `std`
-//! feature on x86/x86_64, [`AesEngine`] detects AES-NI at runtime and uses it
-//! when available. Builds without default features always use the portable
-//! backend. Construct [`AesLightEngine`] when the caller explicitly wants the
-//! small-footprint portable implementation even when AES-NI is available.
+//! The portable T-table implementation is always available. With the default
+//! `std` feature on x86/x86_64, [`AesEngine`] detects AES-NI at runtime and uses
+//! it when available. Builds without default features always use the portable
+//! T-table backend. Construct [`AesLightEngine`] when the caller explicitly
+//! wants the small-footprint implementation even when AES-NI is available.
 //!
 //! ```
 //! use tc_crypto_core::BlockCipher;
