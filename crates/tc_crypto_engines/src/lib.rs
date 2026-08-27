@@ -11,7 +11,7 @@ pub mod aes;
 pub mod gost28147;
 pub mod threefish;
 
-pub use aes::{AES_BLOCK_BYTES, AesEngine, AesError, AesParams};
+pub use aes::{AES_BLOCK_BYTES, AesEngine, AesError, AesLightEngine, AesParams};
 pub use gost28147::{
     GOST28147_BLOCK_BYTES, GOST28147_KEY_BYTES, GOST28147_S_BOX_BYTES, Gost28147Engine,
     Gost28147Error, Gost28147Params, Gost28147SBox,

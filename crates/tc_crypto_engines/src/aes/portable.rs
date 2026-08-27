@@ -47,7 +47,7 @@ const fn build_s_box() -> [u8; 256] {
     table
 }
 
-const S_BOX: [u8; 256] = build_s_box();
+pub(super) const S_BOX: [u8; 256] = build_s_box();
 
 const fn build_inverse_s_box() -> [u8; 256] {
     let mut table = [0u8; 256];
@@ -59,7 +59,7 @@ const fn build_inverse_s_box() -> [u8; 256] {
     table
 }
 
-const INVERSE_S_BOX: [u8; 256] = build_inverse_s_box();
+pub(super) const INVERSE_S_BOX: [u8; 256] = build_inverse_s_box();
 
 pub(super) fn expand_key(key: &[u8]) -> (RoundKeys, usize) {
     let rounds = match key.len() {

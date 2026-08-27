@@ -8,9 +8,11 @@
 
 use std::hint::black_box;
 
-use criterion::{BenchmarkId, Criterion, Throughput, criterion_group, criterion_main};
+use criterion::{
+    BenchmarkId, Criterion, Throughput, criterion_group, criterion_main, measurement::WallTime,
+};
 use tc_crypto_core::BlockCipher;
-use tc_crypto_engines::{AES_BLOCK_BYTES, AesEngine, AesParams};
+use tc_crypto_engines::{AES_BLOCK_BYTES, AesEngine, AesError, AesLightEngine, AesParams};
 
 const KEY_SIZES: [usize; 3] = [16, 24, 32];
 
@@ -41,18 +43,21 @@ fn input_block() -> [u8; AES_BLOCK_BYTES] {
     core::array::from_fn(|index| (index as u8).wrapping_mul(0x0B).wrapping_add(0x29))
 }
 
-fn bench_encrypt(c: &mut Criterion) {
-    let mut group = c.benchmark_group(format!("aes/encrypt/{}", backend_name()));
-    group.throughput(Throughput::Bytes(AES_BLOCK_BYTES as u64));
-
+fn add_encrypt_benches<E>(
+    group: &mut criterion::BenchmarkGroup<'_, WallTime>,
+    implementation: &str,
+    create: impl Fn() -> E,
+) where
+    for<'a> E: BlockCipher<Params<'a> = AesParams, Error = AesError>,
+{
     for key_size in KEY_SIZES {
         let params = AesParams::new(&key(key_size)).unwrap();
-        let mut engine = AesEngine::new();
+        let mut engine = create();
         engine.init(true, &params).unwrap();
         let input = input_block();
         let mut output = [0u8; AES_BLOCK_BYTES];
 
-        group.bench_function(BenchmarkId::new("key-bits", key_size * 8), |b| {
+        group.bench_function(BenchmarkId::new(implementation, key_size * 8), |b| {
             b.iter(|| {
                 let produced = engine
                     .process_block(black_box(&input), black_box(&mut output))
@@ -61,14 +66,29 @@ fn bench_encrypt(c: &mut Criterion) {
             });
         });
     }
+}
+
+fn bench_encrypt(c: &mut Criterion) {
+    let mut group = c.benchmark_group("aes/encrypt");
+    group.throughput(Throughput::Bytes(AES_BLOCK_BYTES as u64));
+
+    add_encrypt_benches(
+        &mut group,
+        &format!("AesEngine-{}", backend_name()),
+        AesEngine::new,
+    );
+    add_encrypt_benches(&mut group, "AesLightEngine-portable", AesLightEngine::new);
 
     group.finish();
 }
 
-fn bench_decrypt(c: &mut Criterion) {
-    let mut group = c.benchmark_group(format!("aes/decrypt/{}", backend_name()));
-    group.throughput(Throughput::Bytes(AES_BLOCK_BYTES as u64));
-
+fn add_decrypt_benches<E>(
+    group: &mut criterion::BenchmarkGroup<'_, WallTime>,
+    implementation: &str,
+    create: impl Fn() -> E,
+) where
+    for<'a> E: BlockCipher<Params<'a> = AesParams, Error = AesError>,
+{
     for key_size in KEY_SIZES {
         let params = AesParams::new(&key(key_size)).unwrap();
         let mut encryptor = AesEngine::new();
@@ -78,11 +98,11 @@ fn bench_decrypt(c: &mut Criterion) {
             .process_block(&input_block(), &mut ciphertext)
             .unwrap();
 
-        let mut engine = AesEngine::new();
+        let mut engine = create();
         engine.init(false, &params).unwrap();
         let mut output = [0u8; AES_BLOCK_BYTES];
 
-        group.bench_function(BenchmarkId::new("key-bits", key_size * 8), |b| {
+        group.bench_function(BenchmarkId::new(implementation, key_size * 8), |b| {
             b.iter(|| {
                 let produced = engine
                     .process_block(black_box(&ciphertext), black_box(&mut output))
@@ -91,6 +111,18 @@ fn bench_decrypt(c: &mut Criterion) {
             });
         });
     }
+}
+
+fn bench_decrypt(c: &mut Criterion) {
+    let mut group = c.benchmark_group("aes/decrypt");
+    group.throughput(Throughput::Bytes(AES_BLOCK_BYTES as u64));
+
+    add_decrypt_benches(
+        &mut group,
+        &format!("AesEngine-{}", backend_name()),
+        AesEngine::new,
+    );
+    add_decrypt_benches(&mut group, "AesLightEngine-portable", AesLightEngine::new);
 
     group.finish();
 }

@@ -84,7 +84,9 @@ tests/threefish_kat.rs  known-answer tests against upstream vectors
 
 ## Benchmarks
 
-AES single-block encryption and decryption benchmarks cover all three key sizes:
+AES single-block encryption and decryption benchmarks cover all three key sizes
+and compare the runtime-dispatched `AesEngine` with the always-portable
+`AesLightEngine`:
 
 ```console
 # Runtime-dispatched backend (AES-NI on supported x86/x86_64 CPUs)
@@ -102,7 +104,7 @@ cargo bench -p tc_crypto_engines --bench aes --no-default-features
 |-----------|-----------|-------|
 | Threefish (Skein 1.3) | `ThreefishEngine` | 256/512/1024-bit tweakable block cipher; KAT-verified |
 | GOST 28147-89 | `Gost28147Engine` | All bc S-boxes plus validated custom tables; unlocks `tc_digest` GOST 34.11-94 |
-| AES | `AesEngine`, `AesEngine_X86` | AES-128/192/256; portable backend plus runtime-dispatched x86 AES-NI with `std`; BC and FIPS KAT-verified |
+| AES | `AesEngine`, `AesLightEngine`, `AesEngine_X86` | AES-128/192/256; explicit light/portable engine plus runtime-dispatched x86 AES-NI with `std`; BC and FIPS KAT-verified |
 
 ### Block ciphers — TODO
 

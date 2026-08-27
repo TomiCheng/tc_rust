@@ -3,7 +3,8 @@
 //! The portable implementation is always available. With the default `std`
 //! feature on x86/x86_64, [`AesEngine`] detects AES-NI at runtime and uses it
 //! when available. Builds without default features always use the portable
-//! backend.
+//! backend. Construct [`AesLightEngine`] when the caller explicitly wants the
+//! small-footprint portable implementation even when AES-NI is available.
 //!
 //! ```
 //! use tc_crypto_core::BlockCipher;
@@ -19,6 +20,7 @@
 //! ```
 
 mod engine;
+mod light_engine;
 mod params;
 mod portable;
 
@@ -26,6 +28,7 @@ mod portable;
 mod x86;
 
 pub use engine::AesEngine;
+pub use light_engine::AesLightEngine;
 pub use params::AesParams;
 
 use core::fmt;
