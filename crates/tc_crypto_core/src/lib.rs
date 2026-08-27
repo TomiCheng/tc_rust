@@ -14,8 +14,10 @@
 // 驗證走 `cargo build`(非 test),見 README。
 #![cfg_attr(not(test), no_std)]
 
+pub mod block_cipher;
 pub mod digest;
 pub mod xof;
 
+pub use block_cipher::BlockCipher;
 pub use digest::{Digest, TryDigest};
 pub use xof::{TryXof, Xof};
