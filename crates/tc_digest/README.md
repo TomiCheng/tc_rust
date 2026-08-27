@@ -67,6 +67,7 @@ other digest is alloc-free.
 | **SHA-512/t** | FIPS 180-4 | `MdBuffer<128>`, BE, per-`t` IV + truncation | ✅ SHA-512/224 & /256 NIST vectors |
 | **SHAKE128 / SHAKE256** | FIPS 202 | XOF, Keccak sponge, domain `0x1f` | ✅ FIPS 202 byte-aligned KAT (single-shot + split, 512-byte output) |
 | **cSHAKE128 / cSHAKE256** | SP 800-185 | customizable SHAKE, `bytepad` prefix, domain `0x04` | ✅ NIST samples #1-4 + zero-pad edge cases + SHAKE-equivalence |
+| **TupleHash128 / TupleHash256** | SP 800-185 | tuple hash over cSHAKE, per-element `encode_string`, `right_encode(L)` | ✅ NIST KMAC_samples (fixed + XOF modes) |
 | **SM3** | GB/T 32905 | `MdBuffer<64>`, BE, 64 rounds | ✅ standard + BC long vectors |
 | **RIPEMD-128** | — | `MdBuffer<64>`, LE, dual line | ✅ known vectors |
 | **RIPEMD-160** | — | `MdBuffer<64>`, LE, dual line | ✅ known vectors |
@@ -183,7 +184,8 @@ Line counts are the bc-csharp source sizes. ✅ = ported, ⬜ = pending,
 | Xoodyak | 313 | ✅ 256-bit hash, official NIST LWC KAT vectors |
 | Haraka-256 / -512 | 213 / 289 | ⬜ short-input |
 | Skein | 125 (+ SkeinEngine) | ⬜ |
-| ParallelHash / TupleHash | — | ⬜ (XOF combinators) |
+| TupleHash | 172 | ✅ TupleHash128/256; NIST KMAC_samples fixed + XOF |
+| ParallelHash | — | ⬜ (XOF combinator) |
 
 ## Build & test
 

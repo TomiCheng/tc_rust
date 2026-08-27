@@ -59,6 +59,8 @@ pub mod shake;
 pub mod sha512t;
 pub mod sm3;
 pub mod tiger;
+pub mod tuplehash;
+mod xof_utils;
 pub mod whirlpool;
 pub mod xoodyak;
 
@@ -98,5 +100,6 @@ pub use shake::ShakeDigest;
 pub use sha512t::Sha512tDigest;
 pub use sm3::Sm3Digest;
 pub use tiger::TigerDigest;
+pub use tuplehash::TupleHash;
 pub use whirlpool::WhirlpoolDigest;
 pub use xoodyak::XoodyakDigest;

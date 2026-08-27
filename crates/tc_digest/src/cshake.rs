@@ -16,34 +16,7 @@ use core::convert::Infallible;
 use tc_crypto_core::{TryDigest, TryXof};
 
 use crate::keccak::KeccakDigest;
-
-/// SP 800-185 `left_encode(x)` = `[n, x_big_endian…]`, `n` = byte length of `x`.
-fn left_encode(value: u64) -> Vec<u8> {
-    let mut n: u8 = 1;
-    let mut v = value;
-    while {
-        v >>= 8;
-        v != 0
-    } {
-        n += 1;
-    }
-    let mut b = Vec::with_capacity(n as usize + 1);
-    b.push(n);
-    for i in 1..=n {
-        b.push((value >> (8 * (n - i))) as u8);
-    }
-    b
-}
-
-/// SP 800-185 `encode_string(s)` = `left_encode(bitlen(s)) || s`(空串為 `left_encode(0)`)。
-fn encode_string(s: &[u8]) -> Vec<u8> {
-    if s.is_empty() {
-        return left_encode(0);
-    }
-    let mut b = left_encode(s.len() as u64 * 8);
-    b.extend_from_slice(s);
-    b
-}
+use crate::xof_utils::{encode_string, left_encode};
 
 /// A cSHAKE128 / cSHAKE256 customizable XOF (SP 800-185).
 #[derive(Clone)]
@@ -309,13 +282,5 @@ mod tests {
             o,
             unhex("4a899b5be460d85a9789215bc17f88b8f8ac049bd3b519f561e7b5d3870dafa3")
         );
-    }
-
-    #[test]
-    fn left_encode_examples() {
-        assert_eq!(left_encode(0), vec![1, 0]);
-        assert_eq!(left_encode(168), vec![1, 168]);
-        assert_eq!(left_encode(256), vec![2, 1, 0]);
-        assert_eq!(left_encode(65536), vec![3, 1, 0, 0]);
     }
 }
