@@ -108,9 +108,9 @@ fn compress(hash: &mut [u64; 8], block: &[u8; 64]) {
     let mut key = *hash;
     let mut state = core::array::from_fn(|i| message[i] ^ key[i]);
 
-    for round in 1..=ROUNDS {
+    for &round_constant in &RC[1..=ROUNDS] {
         key = transform(&key);
-        key[0] ^= RC[round];
+        key[0] ^= round_constant;
 
         let transformed = transform(&state);
         for i in 0..8 {

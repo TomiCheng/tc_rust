@@ -303,15 +303,9 @@ fn mix512(state: &mut [Block; 4]) {
     ];
     let input = *state;
     let mut output = [[0u8; 16]; 4];
-    for output_block in 0..4 {
-        for output_word in 0..4 {
-            let (input_block, input_word) = MAPPING[output_block][output_word];
-            copy_word(
-                &mut output[output_block],
-                output_word,
-                &input[input_block],
-                input_word,
-            );
+    for (output_block, mapping) in output.iter_mut().zip(MAPPING) {
+        for (output_word, (input_block, input_word)) in mapping.into_iter().enumerate() {
+            copy_word(output_block, output_word, &input[input_block], input_word);
         }
     }
     *state = output;
@@ -426,11 +420,11 @@ mod aesni {
 
             for outer in 0..5 {
                 let rc = outer * 8;
-                for lane in 0..4 {
-                    state[lane] = round(state[lane], rc + lane);
+                for (lane, value) in state.iter_mut().enumerate() {
+                    *value = round(*value, rc + lane);
                 }
-                for lane in 0..4 {
-                    state[lane] = round(state[lane], rc + 4 + lane);
+                for (lane, value) in state.iter_mut().enumerate() {
+                    *value = round(*value, rc + 4 + lane);
                 }
 
                 let u0 = _mm_unpacklo_epi32(state[0], state[1]);

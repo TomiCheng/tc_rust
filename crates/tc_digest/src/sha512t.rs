@@ -44,7 +44,7 @@ impl Sha512tDigest {
     pub fn new(bit_length: usize) -> Self {
         assert!(bit_length < 512, "SHA-512/t: bit length cannot be >= 512");
         assert!(
-            bit_length % 8 == 0,
+            bit_length.is_multiple_of(8),
             "SHA-512/t: bit length must be a multiple of 8"
         );
         assert!(

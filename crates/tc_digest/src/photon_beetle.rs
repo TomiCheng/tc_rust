@@ -75,13 +75,13 @@ fn photon_permutation(state: &mut [u8; STATE_BYTES]) {
             }
         }
         // MixColumnsSerial:每直行乘 MDS 矩陣(GF(2⁴),多項式 x⁴+x+1)。
-        for j in 0..8 {
-            let mut col = [0u8; 8];
-            for (i, out) in col.iter_mut().enumerate() {
+        let input = s;
+        for (i, row) in s.iter_mut().enumerate() {
+            for (j, out) in row.iter_mut().enumerate() {
                 let mut sum: u32 = 0;
-                for k in 0..8 {
-                    let x = MIX[i][k] as u32;
-                    let b = s[k][j] as u32;
+                for (&factor, input_row) in MIX[i].iter().zip(&input) {
+                    let x = factor as u32;
+                    let b = input_row[j] as u32;
                     sum ^= x * (b & 1);
                     sum ^= x * (b & 2);
                     sum ^= x * (b & 4);
@@ -93,9 +93,6 @@ fn photon_permutation(state: &mut [u8; STATE_BYTES]) {
                 let t1 = sum >> 4;
                 sum = (sum & 15) ^ t1 ^ (t1 << 1);
                 *out = sum as u8;
-            }
-            for i in 0..8 {
-                s[i][j] = col[i];
             }
         }
     }
@@ -283,11 +280,26 @@ mod tests {
     #[test]
     fn known_vectors() {
         let cases: [(usize, &str); 5] = [
-            (0, "44a99882fea033566856a27e7f0c94dc84fac7e411b08b890a4a574e3db75d4a"),
-            (16, "ab0d1eb0315df8af7f7ae0ac42eaf2f52fb0fdf0904e182dcc796b6cb8d7981a"),
-            (17, "5a281ad7eb81fb083d05ccd21b78c4bca938af26f20869da29c8f13b7389bc5f"),
-            (20, "e6470f7fb66345b3db97774832ab07f26dd836b6cd3b28afa74f67404368f54f"),
-            (32, "73609f6a67b96085829dfe8a3fe3ebc767f48a493640dd97461957ad995239e5"),
+            (
+                0,
+                "44a99882fea033566856a27e7f0c94dc84fac7e411b08b890a4a574e3db75d4a",
+            ),
+            (
+                16,
+                "ab0d1eb0315df8af7f7ae0ac42eaf2f52fb0fdf0904e182dcc796b6cb8d7981a",
+            ),
+            (
+                17,
+                "5a281ad7eb81fb083d05ccd21b78c4bca938af26f20869da29c8f13b7389bc5f",
+            ),
+            (
+                20,
+                "e6470f7fb66345b3db97774832ab07f26dd836b6cd3b28afa74f67404368f54f",
+            ),
+            (
+                32,
+                "73609f6a67b96085829dfe8a3fe3ebc767f48a493640dd97461957ad995239e5",
+            ),
         ];
         for (len, expected) in cases {
             let msg: Vec<u8> = (0..len).map(|i| i as u8).collect();
