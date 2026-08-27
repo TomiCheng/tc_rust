@@ -10,21 +10,21 @@ crate depends **only** on `tc_crypto_core` — never on `tc_math` (hashes carry 
 big-integer arithmetic). The default `std` feature enables runtime CPU-feature
 dispatch; disable default features for `no_std + alloc`. Most fixed-state
 algorithms are allocation-free, while dynamic wrappers/constructions such as
-  `NullDigest`, `Prehash`, `ShortenedDigest`, cSHAKE, BLAKE3, and ParallelHash
-  use `alloc`.
+`NullDigest`, `Prehash`, `ShortenedDigest`, cSHAKE, BLAKE3, and ParallelHash use
+`alloc`.
 
 ## Current progress
 
-- **40 exported algorithm/wrapper types**, covering classic hashes, SHA-1/2/3,
+- **42 exported algorithm/wrapper types**, covering classic hashes, SHA-1/2/3,
   Keccak XOFs and SP 800-185 constructions, BLAKE2/3, Ascon, and NIST LWC hashes.
-- **Default `std` suite:** 176 passed, 1 ignored. **Portable/no-default suite:**
-  174 passed, 1 ignored. The ignored test is the full 1025-vector
+- **Default `std` suite:** 182 passed, 1 ignored. **Portable/no-default suite:**
+  179 passed, 1 ignored. The ignored test is the full 1025-vector
   PHOTON-Beetle KAT, which is intentionally opt-in because it is slow in debug.
 - Official/reference KAT coverage now includes Ascon Hash/XOF/CXOF, BLAKE2xs,
   BLAKE3, SHAKE, PHOTON-Beetle, ISAP, Xoodyak, plus NIST samples for cSHAKE,
   TupleHash, and ParallelHash.
-- Remaining bc-csharp roadmap: ESCH-256/384 (`SparkleDigest`) and Haraka-256/512.
-  GOST 34.11-94 waits for GOST 28147; Skein waits for Threefish.
+- Remaining bc-csharp roadmap: ESCH-256/384 (`SparkleDigest`). GOST 34.11-94
+  waits for GOST 28147; Skein waits for Threefish.
 
 ## Design notes
 
@@ -57,6 +57,9 @@ algorithms are allocation-free, while dynamic wrappers/constructions such as
   available. With `std` on x86/x86-64, BLAKE2b selects AVX2 and BLAKE2s selects
   SSE2 at runtime when supported; `no_std` and other architectures use the
   portable paths.
+- **Haraka backend dispatch** — Haraka-256/512 share one portable AES round and
+  one 40-entry round-constant table. `std` x86/x86-64 builds select AES-NI at
+  runtime; `no_std` and other architectures remain fully portable.
 
 ## Ported so far
 
@@ -94,6 +97,7 @@ algorithms are allocation-free, while dynamic wrappers/constructions such as
 | **Whirlpool** | ISO/IEC 10118-3 | `MdBuffer<64>`, BE, 256-bit length | ✅ ISO/BC vectors + million-`a` test |
 | **DSTU 7564** | DSTU 7564:2014 | 512/1024-bit state, P/Q permutations | ✅ 256/384/512 + padding vectors |
 | **GOST 34.11-2012** | GOST R 34.11-2012 | 512-bit state, S/P/L transformation | ✅ 256/512 BC vectors |
+| **Haraka-256 / Haraka-512** | Haraka v2 | fixed 32/64-byte input, reduced-round AES, 32-byte output | ✅ Appendix B + BC Monte Carlo + portable/AES-NI parity |
 | **ISAP Hash** | NIST LWC | 320-bit state, 64-bit rate, 12-round permutation | ✅ official KAT + chunking vectors |
 | **PHOTON-Beetle-Hash** | NIST LWC | PHOTON-256 sponge (8×8 GF(2⁴) nibbles), 32-byte tag | ✅ 1025 official KAT (full KAT `#[ignore]`d, slow) |
 | **Keccak** | — | sponge (raw Keccak, domain pad `0x01`) | ✅ Keccak-256/512 vectors |
@@ -202,7 +206,7 @@ Line counts are the bc-csharp source sizes. ✅ = ported, ⬜ = pending,
 | PhotonBeetle | 369 | ✅ PHOTON-256 sponge; 1025 official KAT |
 | Sparkle | 298 | ⬜ |
 | Xoodyak | 313 | ✅ 256-bit hash, official NIST LWC KAT vectors |
-| Haraka-256 / -512 | 213 / 289 | ⬜ short-input |
+| Haraka-256 / -512 | 213 / 289 | ✅ fixed 32/64-byte input; portable + AES-NI |
 | Skein | 125 (+ `SkeinEngine`: 899) | ⏸ requires Threefish tweakable block cipher |
 | TupleHash | 172 | ✅ TupleHash128/256; NIST KMAC_samples fixed + XOF |
 | ParallelHash | 285 | ✅ ParallelHash128/256; NIST samples (B=8/12, fixed + XOF) |
