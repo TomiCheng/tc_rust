@@ -35,18 +35,16 @@ Decisions made while bringing up the first engine; apply them to the next ones.
 - **No fallible/infallible split** for `BlockCipher` (unlike `TryDigest` /
   `Digest`): a block cipher's `init` validates its key and can genuinely fail, so
   there is no useful infallible variant.
-- **Make illegal states unrepresentable.** Prefer an enum over a raw size where
-  the valid set is closed (e.g. `ThreefishBlockSize` — an unsupported block size
-  cannot be named, so the constructor is infallible). Prefer validating in the
-  constructor (`ParamType::new(...) -> Result<Self, E>`) so a constructed value
-  is a proof of validity, and validate each field at the stage that has the
-  context (a variant-independent length in the param constructor; a
-  variant-dependent one at `init`).
+- **Make illegal states unrepresentable.** Do not ask callers for a variant when
+  an authoritative input already selects it (for example, a Threefish key is
+  always the same size as its block). Prefer validating in the constructor
+  (`ParamType::new(...) -> Result<Self, E>`) so a constructed value is a proof
+  of validity, and use a private enum when it helps preserve that proof.
 - **`new(...) -> Result` is idiomatic** when construction can fail — do not split
   into `create` / `try_create` (that is a .NET pattern) and do not panic for
   recoverable input. Reserve panics for programmer errors on statically-known
   values.
-- **C# inheritance collapses to enum + match.** Where bc uses an abstract base
+- **C# inheritance collapses to validated state + match.** Where bc uses an abstract base
   with per-variant subclasses (e.g. `ThreefishCipher` → `Threefish{256,512,1024}
   Cipher`), Rust expresses the closed set as a single routine driven by
   per-variant constant tables selected with `match` — no trait objects, no alloc.
@@ -56,7 +54,7 @@ Decisions made while bringing up the first engine; apply them to the next ones.
 One module per engine, sibling-style (`foo.rs` + `foo/`):
 
 ```
-threefish.rs          module root: public enums, error type, shared consts, re-exports
+threefish.rs          module root: error type, shared consts, re-exports
 threefish/params.rs   validated, owned init parameters (ParamType::new -> Result)
 threefish/engine.rs   the engine struct + `impl BlockCipher`
 threefish/cipher.rs   private round functions / per-variant tables

@@ -8,8 +8,6 @@
 //! form (verified against the Skein 1.3 known-answer tests); the unrolling there
 //! is purely a speed optimisation.
 
-use super::ThreefishBlockSize;
-
 /// Key-schedule parity constant (Skein 1.3): `C_240`.
 pub(super) const C_240: u64 = 0x1BD1_1BDA_A9FC_1A22;
 
@@ -64,14 +62,13 @@ pub(super) struct Variant {
     pub perm: &'static [usize],
 }
 
-/// Returns the [`Variant`] tables for a block size.
-pub(super) fn variant(bs: ThreefishBlockSize) -> Variant {
-    match bs {
-        ThreefishBlockSize::B256 => Variant { nw: 4, rounds: 72, rot: &ROT_256, perm: &PERM_256 },
-        ThreefishBlockSize::B512 => Variant { nw: 8, rounds: 72, rot: &ROT_512, perm: &PERM_512 },
-        ThreefishBlockSize::B1024 => {
-            Variant { nw: 16, rounds: 80, rot: &ROT_1024, perm: &PERM_1024 }
-        }
+/// Returns the [`Variant`] tables for a validated block size in bytes.
+pub(super) fn variant(block_size: usize) -> Variant {
+    match block_size {
+        32 => Variant { nw: 4, rounds: 72, rot: &ROT_256, perm: &PERM_256 },
+        64 => Variant { nw: 8, rounds: 72, rot: &ROT_512, perm: &PERM_512 },
+        128 => Variant { nw: 16, rounds: 80, rot: &ROT_1024, perm: &PERM_1024 },
+        _ => unreachable!("ThreefishParams validates the key length"),
     }
 }
 

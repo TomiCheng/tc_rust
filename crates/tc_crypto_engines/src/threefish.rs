@@ -9,11 +9,11 @@
 //!
 //! ```
 //! use tc_crypto_core::BlockCipher;
-//! use tc_crypto_engines::{ThreefishBlockSize, ThreefishEngine, ThreefishParams};
+//! use tc_crypto_engines::{ThreefishEngine, ThreefishParams};
 //!
 //! // Threefish-256: a 32-byte key and an optional 16-byte tweak.
 //! let key = [0x42u8; 32];
-//! let params = ThreefishParams::new(ThreefishBlockSize::B256, &key, None)?;
+//! let params = ThreefishParams::new(&key, None)?;
 //!
 //! let mut cipher = ThreefishEngine::new();
 //! cipher.init(true, &params)?; // true = encrypt
@@ -41,32 +41,6 @@ use core::fmt;
 
 /// The fixed tweak length, in bytes (128 bit), shared by all block sizes.
 pub const TWEAK_BYTES: usize = 16;
-
-/// The block size of a Threefish instance (bc's 256 / 512 / 1024 bit variants).
-///
-/// An enum rather than a raw bit count so that an unsupported size simply cannot
-/// be expressed: [`ThreefishEngine::new`] takes one of these and therefore never
-/// has to reject or panic on a bad block size.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum ThreefishBlockSize {
-    /// Threefish-256 (32-byte block and key).
-    B256,
-    /// Threefish-512 (64-byte block and key).
-    B512,
-    /// Threefish-1024 (128-byte block and key).
-    B1024,
-}
-
-impl ThreefishBlockSize {
-    /// The block size in bytes (32 / 64 / 128) — also the required key length.
-    pub const fn bytes(self) -> usize {
-        match self {
-            ThreefishBlockSize::B256 => 32,
-            ThreefishBlockSize::B512 => 64,
-            ThreefishBlockSize::B1024 => 128,
-        }
-    }
-}
 
 /// An error from the Threefish cipher.
 #[derive(Debug, Clone, PartialEq, Eq)]

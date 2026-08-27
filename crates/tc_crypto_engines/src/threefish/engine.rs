@@ -1,7 +1,7 @@
 //! The Threefish engine.
 //!
 //! The engine starts at a default block size, so its size/name accessors always
-//! answer; [`BlockCipher::init`] adopts the block size carried by the params,
+//! answer; [`BlockCipher::init`] infers the block size from the validated key,
 //! rebuilding the key schedule (and resizing it only when the block size actually
 //! changes). Per-variant round functions live in [`super::cipher`].
 
@@ -10,10 +10,10 @@ use alloc::vec::Vec;
 use tc_crypto_core::BlockCipher;
 
 use super::cipher::{self, C_240};
-use super::{ThreefishBlockSize, ThreefishError, ThreefishParams};
+use super::{ThreefishError, ThreefishParams};
 
 /// The default block size of a freshly constructed engine, before any `init`.
-const DEFAULT_BLOCK_SIZE: ThreefishBlockSize = ThreefishBlockSize::B256;
+const DEFAULT_BLOCK_SIZE: usize = 32;
 
 /// The Threefish tweakable block cipher (bc `ThreefishEngine`).
 ///
@@ -21,7 +21,7 @@ const DEFAULT_BLOCK_SIZE: ThreefishBlockSize = ThreefishBlockSize::B256;
 /// and — via the params — the block size arrive at [`BlockCipher::init`].
 pub struct ThreefishEngine {
     /// 目前分組:建構時為預設值,init 時採用 params 的分組。
-    block_size: ThreefishBlockSize,
+    block_size: usize,
     /// 展開金鑰排程:nw 個金鑰字 + parity 字(共 nw+1);init 前為空 = 未初始化。
     kw: Vec<u64>,
     /// tweak 排程:t0, t1, t0 ^ t1。
@@ -44,7 +44,7 @@ impl ThreefishEngine {
 
     /// 目前分組的字數(nw = 分組位元組 / 8)。
     fn words(&self) -> usize {
-        self.block_size.bytes() / 8
+        self.block_size / 8
     }
 }
 
@@ -61,14 +61,15 @@ impl BlockCipher for ThreefishEngine {
 
     fn algorithm_name(&self) -> &str {
         match self.block_size {
-            ThreefishBlockSize::B256 => "Threefish-256",
-            ThreefishBlockSize::B512 => "Threefish-512",
-            ThreefishBlockSize::B1024 => "Threefish-1024",
+            32 => "Threefish-256",
+            64 => "Threefish-512",
+            128 => "Threefish-1024",
+            _ => unreachable!("ThreefishParams validates the key length"),
         }
     }
 
     fn block_size(&self) -> usize {
-        self.block_size.bytes()
+        self.block_size
     }
 
     fn init(
@@ -76,8 +77,8 @@ impl BlockCipher for ThreefishEngine {
         for_encryption: bool,
         params: &Self::Params<'_>,
     ) -> Result<(), Self::Error> {
-        // 採用 params 的分組;字數異動才重配 kw 緩衝。
-        self.block_size = params.block_size();
+        // Threefish 的 key 與 block 等長;由已驗證的 key 長度選擇變體。
+        self.block_size = params.key_len();
         let nw = self.words();
         if self.kw.len() != nw + 1 {
             self.kw.resize(nw + 1, 0);
@@ -114,7 +115,7 @@ impl BlockCipher for ThreefishEngine {
         if self.kw.len() != nw + 1 {
             return Err(ThreefishError::NotInitialised);
         }
-        let bytes = self.block_size.bytes();
+        let bytes = self.block_size;
         if input.len() < bytes || output.len() < bytes {
             return Err(ThreefishError::BufferTooShort);
         }
