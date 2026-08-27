@@ -7,8 +7,9 @@ port; for the consumer-facing API, read the rustdoc.
 - **Upstream:** bc-csharp, baseline commit `f027bbe1`.
 - **Depends on:** [`tc_crypto_core`](../tc_crypto_core) (traits only). Not
   `tc_math` — symmetric engines carry no big-integer arithmetic.
-- **Build:** `no_std + alloc` (parameter types own their key bytes). Tests link
-  `std` via `#![cfg_attr(not(test), no_std)]`.
+- **Build:** the default `std` feature enables runtime CPU-feature detection;
+  `--no-default-features` builds as `no_std + alloc` and uses portable backends.
+  Parameter types own their key bytes.
 
 ## Design conventions
 
@@ -81,6 +82,18 @@ tests/threefish_kat.rs  known-answer tests against upstream vectors
    and the no_std build
    (`cargo build -p tc_crypto_engines --no-default-features --locked`).
 
+## Benchmarks
+
+AES single-block encryption and decryption benchmarks cover all three key sizes:
+
+```console
+# Runtime-dispatched backend (AES-NI on supported x86/x86_64 CPUs)
+cargo bench -p tc_crypto_engines --bench aes
+
+# Force the portable backend by compiling the library without std
+cargo bench -p tc_crypto_engines --bench aes --no-default-features
+```
+
 ## Porting status
 
 ### Done
@@ -89,13 +102,14 @@ tests/threefish_kat.rs  known-answer tests against upstream vectors
 |-----------|-----------|-------|
 | Threefish (Skein 1.3) | `ThreefishEngine` | 256/512/1024-bit tweakable block cipher; KAT-verified |
 | GOST 28147-89 | `Gost28147Engine` | All bc S-boxes plus validated custom tables; unlocks `tc_digest` GOST 34.11-94 |
+| AES | `AesEngine`, `AesEngine_X86` | AES-128/192/256; portable backend plus runtime-dispatched x86 AES-NI with `std`; BC and FIPS KAT-verified |
 
 ### Block ciphers — TODO
 
 | Algorithm | bc engine(s) | Notes |
 |-----------|--------------|-------|
 | TEA / XTEA | `TEAEngine`, `XTEAEngine` | Tiny 64-bit; good next warm-up |
-| AES | `AesEngine`, `AesLightEngine`, `RijndaelEngine` | Flagship; table-based + table-free |
+| Rijndael | `RijndaelEngine` | Generalized Rijndael block sizes; AES is implemented separately above |
 | DES / DESede | `DesEngine`, `DesEdeEngine` | |
 | Camellia | `CamelliaEngine`, `CamelliaLightEngine` | |
 | Serpent | `SerpentEngine`, `TnepresEngine` (`SerpentEngineBase`) | |
@@ -137,10 +151,25 @@ optional AAD; `init` takes those four).
 
 ### Key wrap — TODO
 
-`AesWrapEngine`, `AesWrapPadEngine`, `AriaWrapEngine`, `AriaWrapPadEngine`,
-`CamelliaWrapEngine`, `DesEdeWrapEngine`, `Dstu7624WrapEngine`, `RC2WrapEngine`,
-`SEEDWrapEngine`, `RFC3211WrapEngine`, `RFC3394WrapEngine`, `Rfc5649WrapEngine`.
-Each wraps an underlying block cipher, so it follows its base engine.
+Key-wrap implementations sit above the primitive engines and should eventually
+live in a higher-level crate (for example, `tc_key_wrap`). That crate may depend
+on both `tc_crypto_engines` and `tc_digest`; putting these wrappers here would
+make it easy to create a `tc_digest` <-> `tc_crypto_engines` dependency cycle.
+
+| Wrapper(s) | Dependencies / prerequisite |
+|------------|-----------------------------|
+| `RFC3394WrapEngine`, `Rfc5649WrapEngine` | A caller-supplied block cipher; RFC 5649 also reuses RFC 3394 |
+| `AesWrapEngine`, `AesWrapPadEngine` | `AesEngine` plus RFC 3394 / RFC 5649 |
+| `AriaWrapEngine`, `AriaWrapPadEngine` | `AriaEngine` plus RFC 3394 / RFC 5649 |
+| `CamelliaWrapEngine`, `SEEDWrapEngine` | Their base engine plus RFC 3394 |
+| `Dstu7624WrapEngine` | `Dstu7624Engine` |
+| `RFC3211WrapEngine` | A caller-supplied block cipher, CBC mode, and a secure random source for wrapping |
+| `DesEdeWrapEngine` | `DesEdeEngine`, CBC mode, and **SHA-1 from `tc_digest`** for the fixed CMS checksum |
+| `RC2WrapEngine` | `RC2Engine`, CBC mode, and **SHA-1 from `tc_digest`** for the fixed RFC 3217 CMS checksum |
+
+SHA-1 is part of the `DesEdeWrapEngine` and `RC2WrapEngine` formats, not a
+replaceable digest choice. These two wrappers must therefore remain above both
+the engine and digest crates.
 
 ### Asymmetric — TODO (later)
 
