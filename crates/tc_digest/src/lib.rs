@@ -7,8 +7,9 @@
 //! arithmetic). Disable the default `std` feature for `no_std`; the standard
 //! build can select architecture-specific acceleration at runtime. The crate
 //! uses `alloc` only for the pass-through [`NullDigest`], the runtime names of
-//! [`KeccakDigest`] and [`Sha512tDigest`], and [`CShakeDigest`]'s `bytepad`
-//! prefix; every other digest is alloc-free.
+//! [`KeccakDigest`] and [`Sha512tDigest`], and the SP 800-185 derived functions
+//! ([`CShakeDigest`], [`TupleHash`], [`ParallelHash`]) which need variable-length
+//! encoding buffers; every other digest is alloc-free.
 //!
 //! The real no_std build is verified by
 //! `cargo build -p tc_digest --no-default-features` (tests link `std` for their
@@ -39,6 +40,7 @@ pub mod keccak;
 pub mod md2;
 pub mod md4;
 pub mod null;
+pub mod parallelhash;
 pub mod photon_beetle;
 pub mod md5;
 mod ripemd_common;
@@ -83,6 +85,7 @@ pub use keccak::KeccakDigest;
 pub use md2::Md2Digest;
 pub use md4::Md4Digest;
 pub use null::NullDigest;
+pub use parallelhash::ParallelHash;
 pub use photon_beetle::PhotonBeetleDigest;
 pub use md5::Md5Digest;
 pub use ripemd128::RipeMD128Digest;
