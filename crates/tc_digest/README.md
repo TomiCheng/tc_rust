@@ -1,15 +1,30 @@
 # tc_digest
 
-Message-digest (hash) algorithms, ported from the Bouncy Castle C# library
-(`bc-csharp`, `crypto/digests/`) as a **learning project**.
+Message-digest (hash) and extendable-output (XOF) algorithms, ported from the
+Bouncy Castle C# library (`bc-csharp`, `crypto/digests/`) as a **learning
+project**.
 
-Each algorithm implements the `TryDigest` / `Digest` traits from
-[`tc_crypto_core`](../tc_crypto_core). The real hashes are pure fixed-size bit/byte
-computation and the crate depends **only** on `tc_crypto_core` — never on `tc_math`
-(hashes carry no big-integer arithmetic). The default `std` feature enables runtime
-CPU-feature dispatch; disable default features for `no_std`. It uses `alloc` for the
-one pass-through case (`NullDigest`, which buffers arbitrary-length input); every
-other digest is alloc-free.
+Fixed-output algorithms implement `TryDigest` / `Digest`; XOF algorithms also
+implement `TryXof` / `Xof`, all from [`tc_crypto_core`](../tc_crypto_core). The
+crate depends **only** on `tc_crypto_core` — never on `tc_math` (hashes carry no
+big-integer arithmetic). The default `std` feature enables runtime CPU-feature
+dispatch; disable default features for `no_std + alloc`. Most fixed-state
+algorithms are allocation-free, while dynamic wrappers/constructions such as
+  `NullDigest`, `Prehash`, `ShortenedDigest`, cSHAKE, BLAKE3, and ParallelHash
+  use `alloc`.
+
+## Current progress
+
+- **40 exported algorithm/wrapper types**, covering classic hashes, SHA-1/2/3,
+  Keccak XOFs and SP 800-185 constructions, BLAKE2/3, Ascon, and NIST LWC hashes.
+- **Default `std` suite:** 176 passed, 1 ignored. **Portable/no-default suite:**
+  174 passed, 1 ignored. The ignored test is the full 1025-vector
+  PHOTON-Beetle KAT, which is intentionally opt-in because it is slow in debug.
+- Official/reference KAT coverage now includes Ascon Hash/XOF/CXOF, BLAKE2xs,
+  BLAKE3, SHAKE, PHOTON-Beetle, ISAP, Xoodyak, plus NIST samples for cSHAKE,
+  TupleHash, and ParallelHash.
+- Remaining bc-csharp roadmap: ESCH-256/384 (`SparkleDigest`) and Haraka-256/512.
+  GOST 34.11-94 waits for GOST 28147; Skein waits for Threefish.
 
 ## Design notes
 
@@ -34,9 +49,10 @@ other digest is alloc-free.
   derived in `ripemd320.rs`.
 - **XOF interface (`IXof`)** is ported to `tc_crypto_core` as `TryXof` / `Xof` (a
   fallible base + an infallible blanket impl, mirroring `TryDigest` / `Digest`).
-  `Ascon-CXOF128` is the first user: `try_output` starts/continues squeezing,
-  `try_output_final` squeezes then resets, and the `Digest` view's `do_final` yields
-  the default fixed length. It absorbed the design with no trait changes.
+  `try_output` starts/continues squeezing, `try_output_final` squeezes then resets,
+  and the `Digest` view's `do_final` yields the default fixed length. Current users
+  include Ascon XOF/CXOF, BLAKE2xs, BLAKE3, SHAKE/cSHAKE, TupleHash, and
+  ParallelHash.
 - **BLAKE2 backend dispatch** — the portable compression functions are always
   available. With `std` on x86/x86-64, BLAKE2b selects AVX2 and BLAKE2s selects
   SSE2 at runtime when supported; `no_std` and other architectures use the
@@ -82,6 +98,8 @@ other digest is alloc-free.
 | **PHOTON-Beetle-Hash** | NIST LWC | PHOTON-256 sponge (8×8 GF(2⁴) nibbles), 32-byte tag | ✅ 1025 official KAT (full KAT `#[ignore]`d, slow) |
 | **Keccak** | — | sponge (raw Keccak, domain pad `0x01`) | ✅ Keccak-256/512 vectors |
 | **Xoodyak Hash** | NIST LWC | Cyclist over 384-bit Xoodoo, 128-bit rate | ✅ official KAT + chunking vectors |
+| **Prehash** | wrapper | fixed-length pass-through for an already-computed digest | ✅ exact-length/error/reset tests |
+| **ShortenedDigest** | wrapper | truncates any fixed-output digest | ✅ truncation + reset/chunking tests |
 | **NULL** | — | pass-through (buffers input, needs `alloc`) | ✅ |
 
 ## bc digest catalog (porting roadmap)
@@ -98,6 +116,7 @@ Line counts are the bc-csharp source sizes. ✅ = ported, ⬜ = pending,
 | `KeccakDigest` | 636 | ✅ sponge base (raw Keccak/SHA-3/SHAKE); incremental squeeze via `xof_output` |
 | `NullDigest` | 86 | ✅ pass-through (needs `alloc`) |
 | `NonMemoableDigest` | 76 | ⊘ intentionally skipped (see note) |
+| `Prehash` | 71 | ✅ fallible fixed-length pass-through (`PrehashError`) |
 | `ShortenedDigest` | 104 | ✅ truncating wrapper (`ShortenedDigest<D>`) |
 
 > **`NonMemoableDigest` — intentionally not ported.** In bc it wraps a digest to hide
@@ -184,7 +203,7 @@ Line counts are the bc-csharp source sizes. ✅ = ported, ⬜ = pending,
 | Sparkle | 298 | ⬜ |
 | Xoodyak | 313 | ✅ 256-bit hash, official NIST LWC KAT vectors |
 | Haraka-256 / -512 | 213 / 289 | ⬜ short-input |
-| Skein | 125 (+ SkeinEngine) | ⬜ |
+| Skein | 125 (+ `SkeinEngine`: 899) | ⏸ requires Threefish tweakable block cipher |
 | TupleHash | 172 | ✅ TupleHash128/256; NIST KMAC_samples fixed + XOF |
 | ParallelHash | 285 | ✅ ParallelHash128/256; NIST samples (B=8/12, fixed + XOF) |
 
@@ -197,6 +216,9 @@ cargo test -p tc_digest
 # portable tests and the real no_std build
 cargo test -p tc_digest --no-default-features
 cargo build -p tc_digest --no-default-features
+
+# full PHOTON-Beetle KAT (slow; intentionally ignored in normal debug tests)
+cargo test -p tc_digest --release --test photon_beetle_kat -- --ignored
 
 # BLAKE2b throughput: std runtime dispatch vs no_std portable
 cargo bench -p tc_digest --bench blake2b
