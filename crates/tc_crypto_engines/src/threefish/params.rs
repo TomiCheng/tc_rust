@@ -2,40 +2,44 @@
 
 use alloc::vec::Vec;
 
-use super::{ThreefishError, TWEAK_BYTES};
+use super::{ThreefishBlockSize, ThreefishError, TWEAK_BYTES};
 
-/// Validated key + optional tweak for [`ThreefishEngine`](super::ThreefishEngine).
+/// A validated, self-contained Threefish configuration: block size, a matching
+/// key, and an optional tweak.
 ///
-/// Constructing one *is* the validation: [`new`](ThreefishParams::new) rejects a
-/// key that is not a legal Threefish size and a tweak that is not 16 bytes, so a
-/// `ThreefishParams` value is a proof that its lengths are individually sound.
-/// (Whether the key matches a *particular* engine's block size — 256 vs 512 vs
-/// 1024 — is the engine's cross-check at `init`, since the params do not know
-/// which variant they will drive.)
+/// Constructing one *is* the validation. Because the params carry the block
+/// size, [`new`](ThreefishParams::new) can check the key length exactly
+/// (`key.len() == block_size.bytes()`), so a `ThreefishParams` is a complete
+/// proof of a consistent configuration — there is nothing left for the engine to
+/// re-check at `init`; it simply adopts this block size and loads the key.
 ///
-/// The params **own** their material (an owned key plus an optional fixed tweak),
-/// so a single value can be built once, stored, and handed to any number of
-/// `init` calls by reference; the engine copies it into its own schedule.
+/// A tweak, if present, must be 16 bytes; `None` selects the all-zero tweak
+/// (bc's plain `KeyParameter` path).
+///
+/// The params **own** their material, so one value can be built once, stored, and
+/// handed to any number of `init` calls by reference.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ThreefishParams {
+    block_size: ThreefishBlockSize,
     key: Vec<u8>,
     tweak: Option<[u8; TWEAK_BYTES]>,
 }
 
 impl ThreefishParams {
-    /// Validates and copies a key and optional tweak into owned storage.
-    ///
-    /// `key` must be 32, 64 or 128 bytes (Threefish-256 / 512 / 1024). `tweak`,
-    /// if present, must be exactly 16 bytes; `None` selects the all-zero tweak
-    /// (bc's plain `KeyParameter` path).
+    /// Validates and copies a key and optional tweak for `block_size`.
     ///
     /// # Errors
     ///
-    /// [`ThreefishError::InvalidKeyLength`] or
-    /// [`ThreefishError::InvalidTweakLength`] for an unsupported length.
-    pub fn new(key: &[u8], tweak: Option<&[u8]>) -> Result<Self, ThreefishError> {
-        // key 長度 = 分組大小,合法者為 32 / 64 / 128 bytes。
-        if !matches!(key.len(), 32 | 64 | 128) {
+    /// [`ThreefishError::InvalidKeyLength`] if `key` is not exactly
+    /// `block_size.bytes()` long, or [`ThreefishError::InvalidTweakLength`] if a
+    /// tweak is present but not 16 bytes.
+    pub fn new(
+        block_size: ThreefishBlockSize,
+        key: &[u8],
+        tweak: Option<&[u8]>,
+    ) -> Result<Self, ThreefishError> {
+        // key 長度必須剛好等於分組大小(這是唯一、權威的 key 檢查)。
+        if key.len() != block_size.bytes() {
             return Err(ThreefishError::InvalidKeyLength(key.len()));
         }
         // tweak 若給,固定 16 bytes;不給則採全零 tweak。
@@ -51,12 +55,18 @@ impl ThreefishParams {
             None => None,
         };
         Ok(ThreefishParams {
+            block_size,
             key: key.to_vec(),
             tweak,
         })
     }
 
-    /// The validated key (its length equals the intended block size in bytes).
+    /// The block size this configuration targets.
+    pub const fn block_size(&self) -> ThreefishBlockSize {
+        self.block_size
+    }
+
+    /// The validated key (its length equals `block_size().bytes()`).
     pub fn key(&self) -> &[u8] {
         &self.key
     }
@@ -72,11 +82,16 @@ mod tests {
     use super::*;
 
     #[test]
-    fn accepts_legal_key_sizes() {
+    fn accepts_matching_key_for_each_size() {
         let zeros = [0u8; 128];
-        for len in [32usize, 64, 128] {
-            let p = ThreefishParams::new(&zeros[..len], None).unwrap();
-            assert_eq!(p.key().len(), len);
+        for size in [
+            ThreefishBlockSize::B256,
+            ThreefishBlockSize::B512,
+            ThreefishBlockSize::B1024,
+        ] {
+            let p = ThreefishParams::new(size, &zeros[..size.bytes()], None).unwrap();
+            assert_eq!(p.block_size(), size);
+            assert_eq!(p.key().len(), size.bytes());
             assert_eq!(p.tweak(), None);
         }
     }
@@ -85,16 +100,17 @@ mod tests {
     fn accepts_16_byte_tweak() {
         let key = [0u8; 32];
         let tweak = [0u8; 16];
-        let p = ThreefishParams::new(&key, Some(&tweak)).unwrap();
+        let p = ThreefishParams::new(ThreefishBlockSize::B256, &key, Some(&tweak)).unwrap();
         assert_eq!(p.tweak().unwrap().len(), 16);
     }
 
     #[test]
-    fn rejects_bad_key_length() {
-        let key = [0u8; 20];
+    fn rejects_key_not_matching_block_size() {
+        // 32-byte key 對 B512(需 64)→ 錯。
+        let key = [0u8; 32];
         assert_eq!(
-            ThreefishParams::new(&key, None),
-            Err(ThreefishError::InvalidKeyLength(20))
+            ThreefishParams::new(ThreefishBlockSize::B512, &key, None),
+            Err(ThreefishError::InvalidKeyLength(32))
         );
     }
 
@@ -103,7 +119,7 @@ mod tests {
         let key = [0u8; 64];
         let tweak = [0u8; 8];
         assert_eq!(
-            ThreefishParams::new(&key, Some(&tweak)),
+            ThreefishParams::new(ThreefishBlockSize::B512, &key, Some(&tweak)),
             Err(ThreefishError::InvalidTweakLength(8))
         );
     }
@@ -112,10 +128,10 @@ mod tests {
     #[test]
     fn owned_is_storable_and_reusable() {
         let params = {
-            let key = [0x11u8; 64];
-            ThreefishParams::new(&key, None).unwrap()
+            let key = [0x11u8; 32];
+            ThreefishParams::new(ThreefishBlockSize::B256, &key, None).unwrap()
         }; // key 原陣列已離開作用域,params 仍持有自己的拷貝
-        assert_eq!(params.key().len(), 64);
+        assert_eq!(params.key().len(), 32);
         let _again = params.key();
         let _again2 = params.key();
     }

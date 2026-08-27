@@ -8,4 +8,4 @@ extern crate alloc;
 
 pub mod threefish;
 
-pub use threefish::{ThreefishEngine, ThreefishError, ThreefishParams};
+pub use threefish::{ThreefishBlockSize, ThreefishEngine, ThreefishError, ThreefishParams};
