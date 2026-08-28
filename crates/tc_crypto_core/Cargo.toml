@@ -6,4 +6,9 @@ edition.workspace = true
 license.workspace = true
 repository.workspace = true
 
+[features]
+# 預設不需要 alloc；只有回傳擁有式緩衝的 trait（如 Wrapper）需要它。
+# 打開後才會編入 `wrapper` 模組，故預設 build 維持零 alloc 需求。
+alloc = []
+
 [dependencies]

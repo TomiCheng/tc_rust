@@ -14,12 +14,21 @@
 // 驗證走 `cargo build`(非 test),見 README。
 #![cfg_attr(not(test), no_std)]
 
+// 只有需要擁有式輸出的 trait（Wrapper）才拉進 alloc；預設 build 不需要。
+// 測試恆連結 std,故 test 時一併放行。
+#[cfg(any(feature = "alloc", test))]
+extern crate alloc;
+
 pub mod block_cipher;
 pub mod digest;
 pub mod xof;
 pub mod stream_cipher;
+#[cfg(any(feature = "alloc", test))]
+pub mod wrapper;
 
 pub use block_cipher::BlockCipher;
 pub use digest::{Digest, TryDigest};
 pub use xof::{TryXof, Xof};
 pub use stream_cipher::StreamCipher;
+#[cfg(any(feature = "alloc", test))]
+pub use wrapper::Wrapper;
