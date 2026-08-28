@@ -142,6 +142,7 @@ targets should rerun the benchmark locally.
 | Threefish (Skein 1.3) | `ThreefishEngine` | 256/512/1024-bit tweakable block cipher; KAT-verified |
 | GOST 28147-89 | `Gost28147Engine` | All bc S-boxes plus validated custom tables; unlocks `tc_digest` GOST 34.11-94 |
 | AES | `AesEngine`, `AesLightEngine`, `AesEngine_X86` | AES-128/192/256; 2 KiB portable T-tables, explicit light engine, and runtime-dispatched x86 AES-NI with `std`; BC and FIPS KAT-verified |
+| ARIA | `AriaEngine` | ARIA-128/192/256; RFC 5794 KAT-verified |
 | DES / Triple DES | `DesEngine`, `DesEdeEngine` | DES plus two-key and three-key EDE; legacy compatibility only; FIPS/BC KAT-verified |
 
 ### Block ciphers — TODO
@@ -156,7 +157,6 @@ targets should rerun the benchmark locally.
 | SM4 | `SM4Engine` | |
 | Blowfish | `BlowfishEngine` | |
 | CAST | `Cast5Engine`, `Cast6Engine` | |
-| ARIA | `AriaEngine` | |
 | SEED | `SEEDEngine` | |
 | RC2 / RC5 / RC6 | `RC2Engine`, `RC532Engine`, `RC564Engine`, `RC6Engine` | |
 | IDEA | `IdeaEngine` | |

@@ -8,12 +8,14 @@
 extern crate alloc;
 
 pub mod aes;
+pub mod aria;
 pub mod des;
 pub mod des_ede;
 pub mod gost28147;
 pub mod threefish;
 
 pub use aes::{AES_BLOCK_BYTES, AesEngine, AesError, AesLightEngine, AesParams};
+pub use aria::{ARIA_BLOCK_BYTES, AriaEngine, AriaError, AriaParams};
 pub use des::{DES_BLOCK_BYTES, DES_KEY_BYTES, DesEngine, DesError, DesParams};
 pub use des_ede::{
     DES_EDE_BLOCK_BYTES, DES_EDE_THREE_KEY_BYTES, DES_EDE_TWO_KEY_BYTES, DesEdeEngine,
