@@ -26,6 +26,7 @@ pub mod rc5;
 pub mod rc6;
 pub mod rijndael;
 pub mod seed;
+pub mod serpent;
 pub mod skipjack;
 pub mod sm4;
 pub mod tea;
@@ -75,6 +76,10 @@ pub use rijndael::{
     RIJNDAEL_BLOCK_BITS, RIJNDAEL_KEY_BYTES, RijndaelEngine, RijndaelError, RijndaelParams,
 };
 pub use seed::{SEED_BLOCK_BYTES, SEED_KEY_BYTES, SeedEngine, SeedError, SeedParams};
+pub use serpent::{
+    SERPENT_BLOCK_BYTES, SERPENT_KEY_STEP_BYTES, SERPENT_MAX_KEY_BYTES, SERPENT_MIN_KEY_BYTES,
+    SerpentEngine, SerpentError, SerpentParams, TnepresEngine,
+};
 pub use skipjack::{
     SKIPJACK_BLOCK_BYTES, SKIPJACK_KEY_BYTES, SkipjackEngine, SkipjackError, SkipjackParams,
 };
