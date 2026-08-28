@@ -157,6 +157,7 @@ targets should rerun the benchmark locally.
 | TEA / XTEA | `TeaEngine`, `XteaEngine` | Tiny 64-bit ciphers, 128-bit key, 32 rounds; XTEA precomputes its round-key schedule; BC KAT-verified |
 | SM4 | `Sm4Engine` | GM/T 0002-2012; 128-bit block/key, shared round loop with reversed decryption keys; BC KAT + 1M-iteration verified |
 | SEED | `SeedEngine` | RFC 4009; 128-bit block/key, 16-round Feistel with four S-box tables; BC KAT-verified |
+| SKIPJACK | `SkipjackEngine` | 80-bit key, legacy 64-bit block; G/H permutations over one F-table; BC KAT-verified |
 
 ### Block ciphers — TODO
 
@@ -164,7 +165,6 @@ targets should rerun the benchmark locally.
 |-----------|--------------|-------|
 | Serpent | `SerpentEngine`, `TnepresEngine` (`SerpentEngineBase`) | |
 | Twofish | `TwofishEngine` | |
-| Skipjack | `SkipjackEngine` | |
 
 ### Stream ciphers — TODO
 

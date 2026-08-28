@@ -26,6 +26,7 @@ pub mod rc5;
 pub mod rc6;
 pub mod rijndael;
 pub mod seed;
+pub mod skipjack;
 pub mod sm4;
 pub mod tea;
 pub mod threefish;
@@ -73,6 +74,9 @@ pub use rijndael::{
     RIJNDAEL_BLOCK_BITS, RIJNDAEL_KEY_BYTES, RijndaelEngine, RijndaelError, RijndaelParams,
 };
 pub use seed::{SEED_BLOCK_BYTES, SEED_KEY_BYTES, SeedEngine, SeedError, SeedParams};
+pub use skipjack::{
+    SKIPJACK_BLOCK_BYTES, SKIPJACK_KEY_BYTES, SkipjackEngine, SkipjackError, SkipjackParams,
+};
 pub use sm4::{SM4_BLOCK_BYTES, SM4_KEY_BYTES, Sm4Engine, Sm4Error, Sm4Params};
 pub use tea::{TEA_BLOCK_BYTES, TEA_KEY_BYTES, TeaEngine, TeaError, TeaParams};
 pub use threefish::{ThreefishEngine, ThreefishError, ThreefishParams};
