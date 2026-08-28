@@ -25,7 +25,9 @@ pub mod rc2;
 pub mod rc5;
 pub mod rc6;
 pub mod rijndael;
+pub mod tea;
 pub mod threefish;
+pub mod xtea;
 
 pub use aes::{AES_BLOCK_BYTES, AesEngine, AesError, AesLightEngine, AesParams};
 pub use aria::{ARIA_BLOCK_BYTES, AriaEngine, AriaError, AriaParams};
@@ -68,4 +70,6 @@ pub use rc6::{RC6_BLOCK_BYTES, RC6_MAX_KEY_BYTES, RC6_ROUNDS, Rc6Engine, Rc6Erro
 pub use rijndael::{
     RIJNDAEL_BLOCK_BITS, RIJNDAEL_KEY_BYTES, RijndaelEngine, RijndaelError, RijndaelParams,
 };
+pub use tea::{TEA_BLOCK_BYTES, TEA_KEY_BYTES, TeaEngine, TeaError, TeaParams};
 pub use threefish::{ThreefishEngine, ThreefishError, ThreefishParams};
+pub use xtea::{XTEA_BLOCK_BYTES, XTEA_KEY_BYTES, XteaEngine, XteaError, XteaParams};
