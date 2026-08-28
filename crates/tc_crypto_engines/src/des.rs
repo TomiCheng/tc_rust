@@ -25,6 +25,7 @@ mod cipher;
 mod engine;
 mod params;
 
+pub(crate) use cipher::{des_func, generate_working_key};
 pub use engine::DesEngine;
 pub use params::DesParams;
 

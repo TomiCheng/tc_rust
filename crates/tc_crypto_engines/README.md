@@ -142,7 +142,7 @@ targets should rerun the benchmark locally.
 | Threefish (Skein 1.3) | `ThreefishEngine` | 256/512/1024-bit tweakable block cipher; KAT-verified |
 | GOST 28147-89 | `Gost28147Engine` | All bc S-boxes plus validated custom tables; unlocks `tc_digest` GOST 34.11-94 |
 | AES | `AesEngine`, `AesLightEngine`, `AesEngine_X86` | AES-128/192/256; 2 KiB portable T-tables, explicit light engine, and runtime-dispatched x86 AES-NI with `std`; BC and FIPS KAT-verified |
-| DES | `DesEngine` | Legacy 56-bit cipher; FIPS/BC KAT-verified |
+| DES / Triple DES | `DesEngine`, `DesEdeEngine` | DES plus two-key and three-key EDE; legacy compatibility only; FIPS/BC KAT-verified |
 
 ### Block ciphers — TODO
 
@@ -150,7 +150,6 @@ targets should rerun the benchmark locally.
 |-----------|--------------|-------|
 | TEA / XTEA | `TEAEngine`, `XTEAEngine` | Tiny 64-bit; good next warm-up |
 | Rijndael | `RijndaelEngine` | Generalized Rijndael block sizes; AES is implemented separately above |
-| DESede | `DesEdeEngine` | Builds on the DES primitive; legacy compatibility only |
 | Camellia | `CamelliaEngine`, `CamelliaLightEngine` | |
 | Serpent | `SerpentEngine`, `TnepresEngine` (`SerpentEngineBase`) | |
 | Twofish | `TwofishEngine` | |

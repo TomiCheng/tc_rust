@@ -106,7 +106,7 @@ const SP8: [u32; 64] = [
     0x10041040, 0x00041000, 0x00041000, 0x00001040, 0x00001040, 0x00040040, 0x10000000, 0x10041000,
 ];
 
-pub(super) fn generate_working_key(encrypting: bool, key: &[u8; 8]) -> [u32; 32] {
+pub(crate) fn generate_working_key(encrypting: bool, key: &[u8; 8]) -> [u32; 32] {
     let mut new_key = [0_u32; 32];
     let mut pc1m = [false; 56];
     let mut pcr = [false; 56];
@@ -160,7 +160,7 @@ pub(super) fn generate_working_key(encrypting: bool, key: &[u8; 8]) -> [u32; 32]
     new_key
 }
 
-pub(super) fn des_func(working_key: &[u32; 32], high: &mut u32, low: &mut u32) {
+pub(crate) fn des_func(working_key: &[u32; 32], high: &mut u32, low: &mut u32) {
     let mut left = *high;
     let mut right = *low;
 
