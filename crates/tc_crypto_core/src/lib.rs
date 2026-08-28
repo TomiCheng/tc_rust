@@ -17,7 +17,9 @@
 pub mod block_cipher;
 pub mod digest;
 pub mod xof;
+pub mod stream_cipher;
 
 pub use block_cipher::BlockCipher;
 pub use digest::{Digest, TryDigest};
 pub use xof::{TryXof, Xof};
+pub use stream_cipher::StreamCipher;
