@@ -11,16 +11,21 @@
 #![cfg_attr(not(any(feature = "std", test)), no_std)]
 
 pub mod chacha;
+pub mod chacha7539;
 pub mod hc128;
 pub mod hc256;
 pub mod isaac;
 pub mod rc4;
 pub mod salsa20;
+pub mod xchacha20;
 pub mod xsalsa20;
 
 pub use chacha::{
     CHACHA_DEFAULT_ROUNDS, CHACHA_MAX_KEY_BYTES, CHACHA_MIN_KEY_BYTES, CHACHA_NONCE_BYTES,
     ChaChaEngine, ChaChaError, ChaChaParams,
+};
+pub use chacha7539::{
+    CHACHA7539_KEY_BYTES, CHACHA7539_NONCE_BYTES, ChaCha7539Engine, ChaCha7539Params,
 };
 pub use hc128::{HC128_IV_BYTES, HC128_KEY_BYTES, Hc128Engine, Hc128Error, Hc128Params};
 pub use hc256::{
@@ -33,4 +38,5 @@ pub use salsa20::{
     SALSA20_DEFAULT_ROUNDS, SALSA20_MAX_KEY_BYTES, SALSA20_MIN_KEY_BYTES, SALSA20_NONCE_BYTES,
     Salsa20Engine, Salsa20Error, Salsa20Params,
 };
+pub use xchacha20::{XCHACHA20_KEY_BYTES, XCHACHA20_NONCE_BYTES, XChaCha20Engine, XChaCha20Params};
 pub use xsalsa20::{XSALSA20_KEY_BYTES, XSALSA20_NONCE_BYTES, Xsalsa20Engine, Xsalsa20Params};

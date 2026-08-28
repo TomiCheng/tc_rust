@@ -74,7 +74,7 @@ impl core::fmt::Debug for ChaChaParams {
 pub enum ChaChaError {
     /// The round count is zero, odd, or outside BC's positive `int` range.
     InvalidRounds(usize),
-    /// The key is neither 16 nor 32 bytes.
+    /// The key size is unsupported by the selected ChaCha construction.
     InvalidKeyLength(usize),
     /// The nonce does not have the required size.
     InvalidNonceLength {
@@ -89,6 +89,8 @@ pub enum ChaChaError {
     OutputBufferTooShort,
     /// The BC per-nonce byte limit has been exceeded.
     MaxBytesExceeded,
+    /// The 32-bit IETF block counter cannot be advanced further.
+    CounterExhausted,
 }
 
 impl core::fmt::Display for ChaChaError {
@@ -101,7 +103,7 @@ impl core::fmt::Display for ChaChaError {
                 )
             }
             Self::InvalidKeyLength(actual) => {
-                write!(f, "ChaCha key length {actual} is neither 16 nor 32 bytes")
+                write!(f, "ChaCha key length {actual} is unsupported")
             }
             Self::InvalidNonceLength { expected, actual } => {
                 write!(f, "ChaCha nonce length {actual} is not {expected} bytes")
@@ -109,6 +111,7 @@ impl core::fmt::Display for ChaChaError {
             Self::NotInitialised => f.write_str("ChaCha engine not initialised"),
             Self::OutputBufferTooShort => f.write_str("output buffer shorter than input"),
             Self::MaxBytesExceeded => f.write_str("ChaCha per-nonce byte limit exceeded"),
+            Self::CounterExhausted => f.write_str("ChaCha 32-bit block counter exhausted"),
         }
     }
 }
@@ -206,6 +209,13 @@ pub(crate) struct ChaChaCore {
     limit_word1: u32,
     limit_word2: u32,
     initialised: bool,
+    counter_mode: CounterMode,
+}
+
+#[derive(Clone, Copy)]
+enum CounterMode {
+    Original,
+    Ietf,
 }
 
 impl ChaChaCore {
@@ -219,6 +229,7 @@ impl ChaChaCore {
             limit_word1: 0,
             limit_word2: 0,
             initialised: false,
+            counter_mode: CounterMode::Original,
         }
     }
 
@@ -229,7 +240,20 @@ impl ChaChaCore {
             self.state[14 + i] =
                 u32::from_le_bytes(chunk.try_into().expect("four-byte nonce chunk"));
         }
+        self.counter_mode = CounterMode::Original;
         self.reset_original();
+        self.initialised = true;
+    }
+
+    pub(crate) fn init_ietf(&mut self, key: &[u8; 32], nonce: &[u8; 12]) {
+        self.state.fill(0);
+        set_chacha_key(&mut self.state, key);
+        for (i, chunk) in nonce.chunks_exact(4).enumerate() {
+            self.state[13 + i] =
+                u32::from_le_bytes(chunk.try_into().expect("four-byte nonce chunk"));
+        }
+        self.counter_mode = CounterMode::Ietf;
+        self.reset_ietf();
         self.initialised = true;
     }
 
@@ -244,6 +268,23 @@ impl ChaChaCore {
         }
     }
 
+    fn advance_counter(&mut self) -> Result<(), ChaChaError> {
+        match self.counter_mode {
+            CounterMode::Original => {
+                self.advance_original_counter();
+                Ok(())
+            }
+            CounterMode::Ietf => {
+                self.state[12] = self.state[12].wrapping_add(1);
+                if self.state[12] == 0 {
+                    Err(ChaChaError::CounterExhausted)
+                } else {
+                    Ok(())
+                }
+            }
+        }
+    }
+
     pub(crate) fn return_byte(&mut self, input: u8) -> Result<u8, ChaChaError> {
         if !self.initialised {
             return Err(ChaChaError::NotInitialised);
@@ -253,7 +294,7 @@ impl ChaChaCore {
         }
         if self.index == 0 {
             self.generate_key_stream();
-            self.advance_original_counter();
+            self.advance_counter()?;
         }
         let output = input ^ self.key_stream[self.index];
         self.index = (self.index + 1) & (CHACHA_BLOCK_BYTES - 1);
@@ -278,7 +319,7 @@ impl ChaChaCore {
         for (source, destination) in input.iter().zip(output.iter_mut()) {
             if self.index == 0 {
                 self.generate_key_stream();
-                self.advance_original_counter();
+                self.advance_counter()?;
             }
             *destination = *source ^ self.key_stream[self.index];
             self.index = (self.index + 1) & (CHACHA_BLOCK_BYTES - 1);
@@ -293,6 +334,14 @@ impl ChaChaCore {
         self.limit_word2 = 0;
         self.state[12] = 0;
         self.state[13] = 0;
+    }
+
+    pub(crate) fn reset_ietf(&mut self) {
+        self.index = 0;
+        self.limit_word0 = 0;
+        self.limit_word1 = 0;
+        self.limit_word2 = 0;
+        self.state[12] = 0;
     }
 
     fn limit_exceeded_by(&mut self, mut length: usize) -> bool {
@@ -328,6 +377,16 @@ pub(crate) fn set_chacha_key(state: &mut [u32; STATE_WORDS], key: &[u8]) {
 }
 
 pub(crate) fn chacha_core(rounds: usize, input: &[u32; STATE_WORDS]) -> [u8; CHACHA_BLOCK_BYTES] {
+    let x = chacha_permutation(rounds, input);
+
+    let mut output = [0u8; CHACHA_BLOCK_BYTES];
+    for ((chunk, word), original) in output.chunks_exact_mut(4).zip(x).zip(input) {
+        chunk.copy_from_slice(&word.wrapping_add(*original).to_le_bytes());
+    }
+    output
+}
+
+pub(crate) fn chacha_permutation(rounds: usize, input: &[u32; STATE_WORDS]) -> [u32; STATE_WORDS] {
     let mut x = *input;
     for _ in (0..rounds).step_by(2) {
         quarter_round(&mut x, 0, 4, 8, 12);
@@ -341,11 +400,7 @@ pub(crate) fn chacha_core(rounds: usize, input: &[u32; STATE_WORDS]) -> [u8; CHA
         quarter_round(&mut x, 3, 4, 9, 14);
     }
 
-    let mut output = [0u8; CHACHA_BLOCK_BYTES];
-    for ((chunk, word), original) in output.chunks_exact_mut(4).zip(x).zip(input) {
-        chunk.copy_from_slice(&word.wrapping_add(*original).to_le_bytes());
-    }
-    output
+    x
 }
 
 #[inline]
@@ -381,5 +436,16 @@ mod tests {
         core.limit_word1 = u32::MAX;
         core.limit_word2 = 0x1f;
         assert!(core.limit_exceeded_by(1));
+    }
+
+    #[test]
+    fn ietf_counter_wrap_is_rejected() {
+        let mut core = ChaChaCore::new(CHACHA_DEFAULT_ROUNDS);
+        core.init_ietf(&[0u8; 32], &[0u8; 12]);
+        core.state[12] = u32::MAX;
+        assert_eq!(
+            core.process_bytes(&[0u8; 1], &mut [0u8; 1]),
+            Err(ChaChaError::CounterExhausted)
+        );
     }
 }

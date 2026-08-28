@@ -80,8 +80,8 @@ for this crate.
 | Salsa | `Salsa20Engine` | 16 or 32 bytes | 8 bytes | Implemented as `Salsa20Engine` |
 | Salsa | `XSalsa20Engine` | 32 bytes | 24 bytes | Implemented as `Xsalsa20Engine` |
 | ChaCha | `ChaChaEngine` | 16 or 32 bytes | 8 bytes | Implemented as `ChaChaEngine` |
-| ChaCha | `ChaCha7539Engine` | 32 bytes | 12 bytes | Not implemented |
-| ChaCha | `XChaCha20Engine` | 32 bytes | 24 bytes | Not implemented |
+| ChaCha | `ChaCha7539Engine` | 32 bytes | 12 bytes | Implemented as `ChaCha7539Engine` |
+| ChaCha | `XChaCha20Engine` | 32 bytes | 24 bytes | Implemented as `XChaCha20Engine` |
 | VMPC | `VmpcEngine` | 16-64 bytes | 16-64 bytes | Not implemented |
 | VMPC | `VmpcKsa3Engine` | 16-64 bytes | 16-64 bytes | Not implemented |
 
@@ -120,13 +120,25 @@ The inventory deliberately excludes:
 counter, an 8-byte nonce, and a 16- or 32-byte key. It uses 20 rounds by
 default; `ChaChaEngine::with_rounds` also exposes BC's positive, even custom
 round counts, including ChaCha12 and ChaCha8. This API is distinct from the
-not-yet-implemented IETF `ChaCha7539Engine`, which uses a 12-byte nonce and a
-32-bit counter.
+IETF `ChaCha7539Engine`, which uses a 12-byte nonce and a 32-bit counter.
 
 Tests cover BC vectors for ChaCha20, ChaCha12, and ChaCha8; both key sizes;
 counter behavior through byte 65,600; reset; chunking; byte-at-a-time
 processing; encryption/decryption symmetry; parameter validation; and runtime
 errors.
+
+### ChaCha7539 and XChaCha20
+
+`ChaCha7539Engine` implements the IETF ChaCha20 construction with a 32-byte
+key, 12-byte nonce, and 32-bit block counter. `XChaCha20Engine` extends the
+nonce to 24 bytes: HChaCha20 derives a subkey from the first 16 nonce bytes,
+then the remaining 8 bytes are used with ChaCha7539. Both engines use fixed
+buffers and remain available without `std` or `alloc`.
+
+Tests cover the RFC 8439 ChaCha7539 encryption vector, the BC XChaCha20 draft
+vector, the HChaCha20 derivation vector, reset, chunking, byte-at-a-time
+processing, encryption/decryption symmetry, parameter validation, runtime
+errors, and 32-bit counter exhaustion.
 
 ### Salsa20 and XSalsa20
 
