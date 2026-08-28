@@ -19,7 +19,7 @@ not use in production or for real-world security.**
 | Crate | Description |
 | --- | --- |
 | [`tc_crypto_core`](crates/tc_crypto_core) | Shared cryptographic traits, including `BlockCipher`, `TryDigest` / `Digest`, and `TryXof` / `Xof`. |
-| [`tc_crypto_engines`](crates/tc_crypto_engines) | Cryptographic engines, including Threefish and GOST 28147-89. |
+| [`tc_block_cipher`](crates/tc_block_cipher) | Block cipher implementations, including Threefish and GOST 28147-89. |
 | [`tc_digest`](crates/tc_digest) | Message-digest algorithms ported from bc-csharp. |
 | [`tc_math`](crates/tc_math) | Arbitrary-precision integers and number theory (`BigInteger`). |
 
@@ -57,12 +57,12 @@ cargo test --workspace
 
 # individual crates
 cargo test -p tc_digest
-cargo test -p tc_crypto_engines
+cargo test -p tc_block_cipher
 cargo test -p tc_math
 
 # no_std + alloc
 cargo build -p tc_digest --no-default-features
-cargo build -p tc_crypto_engines --no-default-features
+cargo build -p tc_block_cipher --no-default-features
 cargo build -p tc_math --no-default-features
 
 # benchmarks

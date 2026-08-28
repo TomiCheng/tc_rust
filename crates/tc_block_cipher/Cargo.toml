@@ -1,0 +1,21 @@
+[package]
+name = "tc_block_cipher"
+description = "Block cipher implementations ported from the Bouncy Castle C# library as a learning project."
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[features]
+default = ["std"]
+std = []
+
+[dependencies]
+tc_crypto_core = { path = "../tc_crypto_core" }
+
+[dev-dependencies]
+criterion = "0.8.2"
+
+[[bench]]
+name = "aes"
+harness = false

@@ -500,16 +500,16 @@ dependencies = [
 ]
 
 [[package]]
-name = "tc_crypto_core"
-version = "0.1.0"
-
-[[package]]
-name = "tc_crypto_engines"
+name = "tc_block_cipher"
 version = "0.1.0"
 dependencies = [
  "criterion",
  "tc_crypto_core",
 ]
+
+[[package]]
+name = "tc_crypto_core"
+version = "0.1.0"
 
 [[package]]
 name = "tc_digest"
