@@ -76,9 +76,9 @@ for this crate.
 | RC4 | `RC4Engine` | 1-256 bytes in this crate | None | Implemented as `Rc4Engine` |
 | HC | `HC128Engine` | 16 bytes | 16 bytes | Implemented as `Hc128Engine` |
 | HC | `HC256Engine` | 16 or 32 bytes | At least 16 bytes | Implemented as `Hc256Engine` |
-| ISAAC | `IsaacEngine` | Variable; BC performs no explicit length validation | None | Not implemented |
-| Salsa | `Salsa20Engine` | 16 or 32 bytes | 8 bytes | Not implemented |
-| Salsa | `XSalsa20Engine` | 32 bytes | 24 bytes | Not implemented |
+| ISAAC | `IsaacEngine` | 0-1024 bytes | None | Implemented as `IsaacEngine` |
+| Salsa | `Salsa20Engine` | 16 or 32 bytes | 8 bytes | Implemented as `Salsa20Engine` |
+| Salsa | `XSalsa20Engine` | 32 bytes | 24 bytes | Implemented as `Xsalsa20Engine` |
 | ChaCha | `ChaChaEngine` | 16 or 32 bytes | 8 bytes | Not implemented |
 | ChaCha | `ChaCha7539Engine` | 32 bytes | 12 bytes | Not implemented |
 | ChaCha | `XChaCha20Engine` | 32 bytes | 24 bytes | Not implemented |
@@ -96,9 +96,9 @@ Notes about the upstream behavior:
 - Bouncy Castle currently accepts 16- or 32-byte HC-256 keys and IVs of at
   least 16 bytes. Its source contains a note that a future API should strictly
   require 32 bytes for both.
-- ISAAC copies key material into a 256-word state without first defining an
-  explicit public key-length contract. The Rust port must choose and document
-  a validated bound before implementing it.
+- ISAAC accepts keys from zero through 1,024 bytes. BC does not validate this
+  explicitly and would fail while loading a longer key; the Rust parameter
+  constructor reports an `InvalidKeyLength` error instead.
 - Salsa20-derived engines enforce a per-IV output limit. Matching counter and
   output-limit behavior is part of each future port, not an optional API
   detail.
@@ -113,6 +113,29 @@ The inventory deliberately excludes:
   because AEAD engines require a separate authenticated-cipher API.
 
 ## 4. Implemented algorithms
+
+### Salsa20 and XSalsa20
+
+`Salsa20Engine` accepts 16- or 32-byte keys and an 8-byte nonce. It uses 20
+rounds by default, while `Salsa20Engine::with_rounds` exposes BC's positive,
+even custom-round configuration, including Salsa20/12 and Salsa20/8.
+`Xsalsa20Engine` implements the 32-byte-key, 24-byte-nonce extended construction
+using HSalsa20 subkey derivation. Both enforce BC's per-nonce output limit.
+
+Tests cover BC vectors for Salsa20/20, Salsa20/12, and Salsa20/8; both Salsa20
+key sizes; counter behavior through byte 65,600; NaCl/BC XSalsa20 vectors;
+reset; chunking; byte-at-a-time processing; encryption/decryption symmetry;
+parameter validation; and runtime errors.
+
+### ISAAC
+
+`IsaacEngine` implements Bob Jenkins' Indirection, Shift, Accumulate, Add, and
+Count generator using BC's byte ordering and stream-cipher behavior. It accepts
+keys from zero through the full 1,024-byte state capacity for compatibility
+with BC. Tests cover BC known-answer vectors for 4-byte and 1,024-byte keys,
+reset, processing across a keystream-block boundary, chunking, byte-at-a-time
+processing, encryption/decryption symmetry, parameter validation, and runtime
+errors.
 
 ### HC-128 and HC-256
 
