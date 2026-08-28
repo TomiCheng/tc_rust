@@ -151,6 +151,7 @@ targets should rerun the benchmark locally.
 | IDEA | `IdeaEngine` | 128-bit key, legacy 64-bit block; shared round function, inverse-key decryption; BC KAT-verified |
 | Noekeon | `NoekeonEngine` | 128-bit key/block, direct-key mode; shared theta/pi/gamma layers; BC KAT-verified |
 | RC2 | `Rc2Engine` | RFC 2268; variable key with separate effective-key-bits cap, legacy 64-bit block; BC KAT-verified |
+| RC5 | `Rc532Engine`, `Rc564Engine` | RFC 2040; one generic core over an `Rc5Word` trait (32-/64-bit words); BC KAT-verified |
 
 ### Block ciphers — TODO
 
@@ -162,7 +163,7 @@ targets should rerun the benchmark locally.
 | Twofish | `TwofishEngine` | |
 | SM4 | `SM4Engine` | |
 | SEED | `SEEDEngine` | |
-| RC5 / RC6 | `RC532Engine`, `RC564Engine`, `RC6Engine` | |
+| RC6 | `RC6Engine` | |
 | Skipjack | `SkipjackEngine` | |
 
 ### Stream ciphers — TODO
