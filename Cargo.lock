@@ -536,6 +536,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_stream_cipher"
+version = "0.1.0"
+dependencies = [
+ "tc_crypto_core",
+]
+
+[[package]]
 name = "tinytemplate"
 version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
