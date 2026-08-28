@@ -79,7 +79,7 @@ for this crate.
 | ISAAC | `IsaacEngine` | 0-1024 bytes | None | Implemented as `IsaacEngine` |
 | Salsa | `Salsa20Engine` | 16 or 32 bytes | 8 bytes | Implemented as `Salsa20Engine` |
 | Salsa | `XSalsa20Engine` | 32 bytes | 24 bytes | Implemented as `Xsalsa20Engine` |
-| ChaCha | `ChaChaEngine` | 16 or 32 bytes | 8 bytes | Not implemented |
+| ChaCha | `ChaChaEngine` | 16 or 32 bytes | 8 bytes | Implemented as `ChaChaEngine` |
 | ChaCha | `ChaCha7539Engine` | 32 bytes | 12 bytes | Not implemented |
 | ChaCha | `XChaCha20Engine` | 32 bytes | 24 bytes | Not implemented |
 | VMPC | `VmpcEngine` | 16-64 bytes | 16-64 bytes | Not implemented |
@@ -113,6 +113,20 @@ The inventory deliberately excludes:
   because AEAD engines require a separate authenticated-cipher API.
 
 ## 4. Implemented algorithms
+
+### Original ChaCha
+
+`ChaChaEngine` implements BC's original ChaCha construction with a 64-bit
+counter, an 8-byte nonce, and a 16- or 32-byte key. It uses 20 rounds by
+default; `ChaChaEngine::with_rounds` also exposes BC's positive, even custom
+round counts, including ChaCha12 and ChaCha8. This API is distinct from the
+not-yet-implemented IETF `ChaCha7539Engine`, which uses a 12-byte nonce and a
+32-bit counter.
+
+Tests cover BC vectors for ChaCha20, ChaCha12, and ChaCha8; both key sizes;
+counter behavior through byte 65,600; reset; chunking; byte-at-a-time
+processing; encryption/decryption symmetry; parameter validation; and runtime
+errors.
 
 ### Salsa20 and XSalsa20
 

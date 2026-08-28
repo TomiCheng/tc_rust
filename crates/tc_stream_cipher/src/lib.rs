@@ -10,6 +10,7 @@
 // 關閉預設 feature 時為 no_std；測試仍讓 `#[test]` 框架連結 std。
 #![cfg_attr(not(any(feature = "std", test)), no_std)]
 
+pub mod chacha;
 pub mod hc128;
 pub mod hc256;
 pub mod isaac;
@@ -17,6 +18,10 @@ pub mod rc4;
 pub mod salsa20;
 pub mod xsalsa20;
 
+pub use chacha::{
+    CHACHA_DEFAULT_ROUNDS, CHACHA_MAX_KEY_BYTES, CHACHA_MIN_KEY_BYTES, CHACHA_NONCE_BYTES,
+    ChaChaEngine, ChaChaError, ChaChaParams,
+};
 pub use hc128::{HC128_IV_BYTES, HC128_KEY_BYTES, Hc128Engine, Hc128Error, Hc128Params};
 pub use hc256::{
     HC256_IV_BYTES, HC256_KEY_BYTES, HC256_MIN_IV_BYTES, HC256_MIN_KEY_BYTES, Hc256Engine,
