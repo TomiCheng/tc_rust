@@ -153,13 +153,13 @@ targets should rerun the benchmark locally.
 | RC2 | `Rc2Engine` | RFC 2268; variable key with separate effective-key-bits cap, legacy 64-bit block; BC KAT-verified |
 | RC5 | `Rc532Engine`, `Rc564Engine` | RFC 2040; one generic core over an `Rc5Word` trait (32-/64-bit words); BC KAT-verified |
 | RC6 | `Rc6Engine` | RC6-32/20; RC5-style key schedule plus quadratic mixing; BC/AES-submission KAT-verified |
+| Rijndael | `RijndaelEngine` | Generalised (128/160/192/224/256-bit blocks and keys); pre-NIST row form; BC KAT + Monte Carlo verified |
 
 ### Block ciphers — TODO
 
 | Algorithm | bc engine(s) | Notes |
 |-----------|--------------|-------|
 | TEA / XTEA | `TEAEngine`, `XTEAEngine` | Tiny 64-bit; good next warm-up |
-| Rijndael | `RijndaelEngine` | Generalized Rijndael block sizes; AES is implemented separately above |
 | Serpent | `SerpentEngine`, `TnepresEngine` (`SerpentEngineBase`) | |
 | Twofish | `TwofishEngine` | |
 | SM4 | `SM4Engine` | |

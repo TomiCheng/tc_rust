@@ -24,6 +24,7 @@ pub mod noekeon;
 pub mod rc2;
 pub mod rc5;
 pub mod rc6;
+pub mod rijndael;
 pub mod threefish;
 
 pub use aes::{AES_BLOCK_BYTES, AesEngine, AesError, AesLightEngine, AesParams};
@@ -64,4 +65,7 @@ pub use rc5::{
     Rc5Error, Rc5Params, Rc5Word, Rc532Engine, Rc564Engine,
 };
 pub use rc6::{RC6_BLOCK_BYTES, RC6_MAX_KEY_BYTES, RC6_ROUNDS, Rc6Engine, Rc6Error, Rc6Params};
+pub use rijndael::{
+    RIJNDAEL_BLOCK_BITS, RIJNDAEL_KEY_BYTES, RijndaelEngine, RijndaelError, RijndaelParams,
+};
 pub use threefish::{ThreefishEngine, ThreefishError, ThreefishParams};
