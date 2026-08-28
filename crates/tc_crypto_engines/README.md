@@ -144,6 +144,7 @@ targets should rerun the benchmark locally.
 | AES | `AesEngine`, `AesLightEngine`, `AesEngine_X86` | AES-128/192/256; 2 KiB portable T-tables, explicit light engine, and runtime-dispatched x86 AES-NI with `std`; BC and FIPS KAT-verified |
 | ARIA | `AriaEngine` | ARIA-128/192/256; RFC 5794 KAT-verified |
 | Blowfish | `BlowfishEngine` | 32-448-bit keys; legacy 64-bit block cipher; BC KAT-verified |
+| Camellia | `CamelliaEngine` | Camellia-128/192/256; four T-table implementation; RFC/BC KAT-verified |
 | DES / Triple DES | `DesEngine`, `DesEdeEngine` | DES plus two-key and three-key EDE; legacy compatibility only; FIPS/BC KAT-verified |
 
 ### Block ciphers — TODO
@@ -152,7 +153,7 @@ targets should rerun the benchmark locally.
 |-----------|--------------|-------|
 | TEA / XTEA | `TEAEngine`, `XTEAEngine` | Tiny 64-bit; good next warm-up |
 | Rijndael | `RijndaelEngine` | Generalized Rijndael block sizes; AES is implemented separately above |
-| Camellia | `CamelliaEngine`, `CamelliaLightEngine` | |
+| Camellia Light | `CamelliaLightEngine` | Single byte S-box, small-table implementation |
 | Serpent | `SerpentEngine`, `TnepresEngine` (`SerpentEngineBase`) | |
 | Twofish | `TwofishEngine` | |
 | SM4 | `SM4Engine` | |
