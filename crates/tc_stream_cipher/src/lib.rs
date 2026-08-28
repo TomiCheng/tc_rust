@@ -9,3 +9,7 @@
 
 // 關閉預設 feature 時為 no_std；測試仍讓 `#[test]` 框架連結 std。
 #![cfg_attr(not(any(feature = "std", test)), no_std)]
+
+pub mod rc4;
+
+pub use rc4::{RC4_MAX_KEY_BYTES, Rc4Engine, Rc4Error, Rc4Params};
