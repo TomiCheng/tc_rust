@@ -16,9 +16,10 @@ is therefore `no_std + alloc`.
 > This crate is a learning port and has not received an independent security
 > audit. Do not use it as a replacement for an audited cryptographic library.
 
-**Status: scaffolding.** The `Wrapper` trait exists in `tc_crypto_core`; no
-concrete engine is implemented yet. This document is the porting inventory and
-roadmap.
+**Status: in progress.** The `Wrapper` trait exists in `tc_crypto_core`, and
+`Rfc3394WrapEngine` is implemented and verified against the RFC 3394 NIST
+known-answer vectors. Everything else is still a TODO — see the checklist in
+§4. This document is the porting inventory and roadmap.
 
 ## 2. Design
 
@@ -50,7 +51,7 @@ must exist in this workspace before the engine can be ported.
 
 | bc class | Rust target | Underlying cipher | Mechanism | Prereqs |
 |----------|-------------|-------------------|-----------|---------|
-| `Rfc3394WrapEngine` | `Rfc3394WrapEngine<E>` | any 128-bit-block cipher | RFC 3394, unpadded | — (base engine) |
+| `Rfc3394WrapEngine` ✅ | `Rfc3394WrapEngine<E>` | any 128-bit-block cipher | RFC 3394, unpadded | — (base engine) |
 | `Rfc5649WrapEngine` | `Rfc5649WrapEngine<E>` | any 128-bit-block cipher | RFC 5649, padded (wraps RFC 3394) | RFC 3394 engine |
 | `AesWrapEngine` | `AesWrapEngine` alias | `AesEngine` | RFC 3394 | RFC 3394 engine |
 | `AesWrapPadEngine` | `AesWrapPadEngine` alias | `AesEngine` | RFC 5649 | RFC 5649 engine |
@@ -84,12 +85,14 @@ These need a **CBC block-cipher mode**, which does not exist in the workspace ye
 `Dstu7624Engine` already exists in `tc_block_cipher`; this wrapper carries its
 own logic and does not depend on a cipher mode.
 
-## 4. Suggested porting order
+## 4. TODO (porting order)
 
-1. **`Rfc3394WrapEngine<E>`** — the foundation; validate with the NIST AES Key
-   Wrap known-answer vectors.
-2. **AES/ARIA/Camellia/SEED `WrapEngine` aliases** — trivial once the base works.
-3. **`Rfc5649WrapEngine<E>`** + `AesWrapPadEngine` / `AriaWrapPadEngine`.
-4. **`Dstu7624WrapEngine`** — independent of the AES family and of cipher modes.
-5. **CBC-based wrappers** (`Rfc3211WrapEngine`, `DesEdeWrapEngine`,
-   `Rc2WrapEngine`) — only after a CBC mode is available.
+- [x] **`Rfc3394WrapEngine<E>`** — the foundation; verified against the NIST AES
+  Key Wrap known-answer vectors (`tests/rfc3394_kat.rs`).
+- [ ] **AES/ARIA/Camellia/SEED `WrapEngine` aliases** — trivial once the base
+  works (add `pub type … = Rfc3394WrapEngine<…>` plus KATs).
+- [ ] **`Rfc5649WrapEngine<E>`** + `AesWrapPadEngine` / `AriaWrapPadEngine`.
+- [ ] **`Dstu7624WrapEngine`** — independent of the AES family and of cipher
+  modes.
+- [ ] **CBC-based wrappers** (`Rfc3211WrapEngine`, `DesEdeWrapEngine`,
+  `Rc2WrapEngine`) — only after a CBC mode exists in the workspace.
