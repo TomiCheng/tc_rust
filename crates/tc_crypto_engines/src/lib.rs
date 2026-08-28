@@ -19,6 +19,7 @@ pub mod des;
 pub mod des_ede;
 pub mod dstu7624;
 pub mod gost28147;
+pub mod idea;
 pub mod threefish;
 
 pub use aes::{AES_BLOCK_BYTES, AesEngine, AesError, AesLightEngine, AesParams};
@@ -47,4 +48,5 @@ pub use gost28147::{
     GOST28147_BLOCK_BYTES, GOST28147_KEY_BYTES, GOST28147_S_BOX_BYTES, Gost28147Engine,
     Gost28147Error, Gost28147Params, Gost28147SBox,
 };
+pub use idea::{IDEA_BLOCK_BYTES, IDEA_KEY_BYTES, IdeaEngine, IdeaError, IdeaParams};
 pub use threefish::{ThreefishEngine, ThreefishError, ThreefishParams};

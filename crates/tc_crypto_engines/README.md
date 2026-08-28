@@ -148,6 +148,7 @@ targets should rerun the benchmark locally.
 | CAST | `Cast5Engine`, `Cast6Engine` | CAST-128 (legacy 64-bit block) and CAST-256; shared round functions; RFC 2144/2612 KAT-verified |
 | DES / Triple DES | `DesEngine`, `DesEdeEngine` | DES plus two-key and three-key EDE; legacy compatibility only; FIPS/BC KAT-verified |
 | DSTU 7624 (Kalyna) | `Dstu7624Engine` | 128/256/512-bit blocks and valid same-size/double-size keys; BC ECB KAT-verified |
+| IDEA | `IdeaEngine` | 128-bit key, legacy 64-bit block; shared round function, inverse-key decryption; BC KAT-verified |
 
 ### Block ciphers — TODO
 
@@ -160,7 +161,6 @@ targets should rerun the benchmark locally.
 | SM4 | `SM4Engine` | |
 | SEED | `SEEDEngine` | |
 | RC2 / RC5 / RC6 | `RC2Engine`, `RC532Engine`, `RC564Engine`, `RC6Engine` | |
-| IDEA | `IdeaEngine` | |
 | Noekeon | `NoekeonEngine` | |
 | Skipjack | `SkipjackEngine` | |
 
