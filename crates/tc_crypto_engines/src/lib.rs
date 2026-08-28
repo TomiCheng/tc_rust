@@ -7,10 +7,14 @@
 // no_std + alloc；各 engine 仍可依需求使用固定陣列、擁有式或借用式資料。
 extern crate alloc;
 
+mod cast_common;
+
 pub mod aes;
 pub mod aria;
 pub mod blowfish;
 pub mod camellia;
+pub mod cast5;
+pub mod cast6;
 pub mod des;
 pub mod des_ede;
 pub mod gost28147;
@@ -25,6 +29,11 @@ pub use blowfish::{
 pub use camellia::{
     CAMELLIA_BLOCK_BYTES, CamelliaEngine, CamelliaError, CamelliaLightEngine, CamelliaParams,
 };
+pub use cast5::{
+    CAST5_BLOCK_BYTES, CAST5_MAX_KEY_BYTES, CAST5_MIN_KEY_BYTES, Cast5Engine, Cast5Error,
+    Cast5Params,
+};
+pub use cast6::{CAST6_BLOCK_BYTES, CAST6_KEY_BYTES, Cast6Engine, Cast6Error, Cast6Params};
 pub use des::{DES_BLOCK_BYTES, DES_KEY_BYTES, DesEngine, DesError, DesParams};
 pub use des_ede::{
     DES_EDE_BLOCK_BYTES, DES_EDE_THREE_KEY_BYTES, DES_EDE_TWO_KEY_BYTES, DesEdeEngine,

@@ -145,6 +145,7 @@ targets should rerun the benchmark locally.
 | ARIA | `AriaEngine` | ARIA-128/192/256; RFC 5794 KAT-verified |
 | Blowfish | `BlowfishEngine` | 32-448-bit keys; legacy 64-bit block cipher; BC KAT-verified |
 | Camellia | `CamelliaEngine`, `CamelliaLightEngine` | Camellia-128/192/256; four T-table and 256-byte S-box implementations; RFC/BC KAT-verified |
+| CAST | `Cast5Engine`, `Cast6Engine` | CAST-128 (legacy 64-bit block) and CAST-256; shared round functions; RFC 2144/2612 KAT-verified |
 | DES / Triple DES | `DesEngine`, `DesEdeEngine` | DES plus two-key and three-key EDE; legacy compatibility only; FIPS/BC KAT-verified |
 
 ### Block ciphers — TODO
@@ -156,7 +157,6 @@ targets should rerun the benchmark locally.
 | Serpent | `SerpentEngine`, `TnepresEngine` (`SerpentEngineBase`) | |
 | Twofish | `TwofishEngine` | |
 | SM4 | `SM4Engine` | |
-| CAST | `Cast5Engine`, `Cast6Engine` | |
 | SEED | `SEEDEngine` | |
 | RC2 / RC5 / RC6 | `RC2Engine`, `RC532Engine`, `RC564Engine`, `RC6Engine` | |
 | IDEA | `IdeaEngine` | |
