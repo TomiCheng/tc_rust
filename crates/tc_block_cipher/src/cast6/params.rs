@@ -1,0 +1,71 @@
+//! CAST6 initialization parameters.
+
+use alloc::vec::Vec;
+use core::fmt;
+
+use super::{CAST6_KEY_BYTES, BlockCipherError};
+
+/// An owned CAST6 key with a standard length from 128 through 256 bits.
+pub struct Cast6Params {
+    key: Vec<u8>,
+}
+
+impl Cast6Params {
+    /// Copies and validates a CAST6 key.
+    pub fn new(key: &[u8]) -> Result<Self, BlockCipherError> {
+        if !CAST6_KEY_BYTES.contains(&key.len()) {
+            return Err(BlockCipherError::InvalidKeyLength(key.len()));
+        }
+        Ok(Self { key: key.to_vec() })
+    }
+
+    /// Returns the key length in bytes without exposing key material.
+    pub fn key_len(&self) -> usize {
+        self.key.len()
+    }
+
+    pub(crate) fn key(&self) -> &[u8] {
+        &self.key
+    }
+}
+
+impl fmt::Debug for Cast6Params {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Cast6Params")
+            .field("key_len", &self.key_len())
+            .finish()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn accepts_only_standard_key_lengths() {
+        for length in CAST6_KEY_BYTES {
+            assert_eq!(
+                Cast6Params::new(&alloc::vec![0u8; length])
+                    .unwrap()
+                    .key_len(),
+                length
+            );
+        }
+        for length in [0, 15, 17, 19, 21, 27, 29, 31, 33] {
+            assert!(matches!(
+                Cast6Params::new(&alloc::vec![0u8; length]),
+                Err(BlockCipherError::InvalidKeyLength(n)) if n == length
+            ));
+        }
+    }
+
+    #[test]
+    fn owns_and_redacts_key_material() {
+        let params = {
+            let key = [0xA5; 24];
+            Cast6Params::new(&key).unwrap()
+        };
+        assert_eq!(params.key(), &[0xA5; 24]);
+        assert_eq!(alloc::format!("{params:?}"), "Cast6Params { key_len: 24 }");
+    }
+}
