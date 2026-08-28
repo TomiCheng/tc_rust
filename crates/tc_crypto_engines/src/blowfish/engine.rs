@@ -2,7 +2,7 @@
 
 use tc_crypto_core::BlockCipher;
 
-use super::{BLOWFISH_BLOCK_BYTES, BlowfishError, BlowfishParams, cipher};
+use super::{BLOWFISH_BLOCK_BYTES, BlockCipherError, BlowfishParams, cipher};
 
 /// Portable Blowfish block cipher.
 pub struct BlowfishEngine {
@@ -30,7 +30,7 @@ impl Default for BlowfishEngine {
 
 impl BlockCipher for BlowfishEngine {
     type Params<'a> = BlowfishParams;
-    type Error = BlowfishError;
+    type Error = BlockCipherError;
 
     fn algorithm_name(&self) -> &str {
         "Blowfish"
@@ -49,10 +49,10 @@ impl BlockCipher for BlowfishEngine {
 
     fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
         if !self.initialised {
-            return Err(BlowfishError::NotInitialised);
+            return Err(BlockCipherError::NotInitialised);
         }
         if input.len() < BLOWFISH_BLOCK_BYTES || output.len() < BLOWFISH_BLOCK_BYTES {
-            return Err(BlowfishError::BufferTooShort);
+            return Err(BlockCipherError::BufferTooShort);
         }
 
         let input: &[u8; BLOWFISH_BLOCK_BYTES] = input[..BLOWFISH_BLOCK_BYTES].try_into().unwrap();
@@ -78,7 +78,7 @@ mod tests {
         assert_eq!(engine.block_size(), BLOWFISH_BLOCK_BYTES);
         assert_eq!(
             engine.process_block(&[0u8; 8], &mut [0u8; 8]),
-            Err(BlowfishError::NotInitialised)
+            Err(BlockCipherError::NotInitialised)
         );
 
         engine
@@ -86,11 +86,11 @@ mod tests {
             .unwrap();
         assert_eq!(
             engine.process_block(&[0u8; 7], &mut [0u8; 8]),
-            Err(BlowfishError::BufferTooShort)
+            Err(BlockCipherError::BufferTooShort)
         );
         assert_eq!(
             engine.process_block(&[0u8; 8], &mut [0u8; 7]),
-            Err(BlowfishError::BufferTooShort)
+            Err(BlockCipherError::BufferTooShort)
         );
     }
 }

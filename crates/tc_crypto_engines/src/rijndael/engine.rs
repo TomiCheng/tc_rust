@@ -10,7 +10,7 @@ use alloc::vec::Vec;
 use tc_crypto_core::BlockCipher;
 
 use super::tables::{ALOG, LOG, RCON, S, SHIFTS0, SHIFTS1, SI};
-use super::{RIJNDAEL_BLOCK_BITS, RijndaelError, RijndaelParams};
+use super::{RIJNDAEL_BLOCK_BITS, BlockCipherError, RijndaelParams};
 
 /// Generalised Rijndael with a configurable block size.
 pub struct RijndaelEngine {
@@ -30,9 +30,9 @@ pub struct RijndaelEngine {
 
 impl RijndaelEngine {
     /// Creates an uninitialised engine for a 128/160/192/224/256-bit block.
-    pub fn new(block_bits: usize) -> Result<Self, RijndaelError> {
+    pub fn new(block_bits: usize) -> Result<Self, BlockCipherError> {
         if !RIJNDAEL_BLOCK_BITS.contains(&block_bits) {
-            return Err(RijndaelError::InvalidBlockSize(block_bits));
+            return Err(BlockCipherError::InvalidBlockSize(block_bits));
         }
         let bc = (block_bits / 4) as u32;
         let index = (block_bits - 128) / 32;
@@ -242,7 +242,7 @@ impl RijndaelEngine {
 
 impl BlockCipher for RijndaelEngine {
     type Params<'a> = RijndaelParams;
-    type Error = RijndaelError;
+    type Error = BlockCipherError;
 
     fn algorithm_name(&self) -> &str {
         "Rijndael"
@@ -260,11 +260,11 @@ impl BlockCipher for RijndaelEngine {
 
     fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
         if self.working_key.is_none() {
-            return Err(RijndaelError::NotInitialised);
+            return Err(BlockCipherError::NotInitialised);
         }
         let bytes = self.block_bytes();
         if input.len() < bytes || output.len() < bytes {
-            return Err(RijndaelError::BufferTooShort);
+            return Err(BlockCipherError::BufferTooShort);
         }
         let rk = self.working_key.as_deref().unwrap();
         let mut a = self.unpack(input);
@@ -347,7 +347,7 @@ mod tests {
     fn rejects_invalid_block_size() {
         assert!(matches!(
             RijndaelEngine::new(64),
-            Err(RijndaelError::InvalidBlockSize(64))
+            Err(BlockCipherError::InvalidBlockSize(64))
         ));
     }
 
@@ -358,7 +358,7 @@ mod tests {
         assert_eq!(engine.block_size(), 16);
         assert_eq!(
             engine.process_block(&[0u8; 16], &mut [0u8; 16]),
-            Err(RijndaelError::NotInitialised)
+            Err(BlockCipherError::NotInitialised)
         );
     }
 

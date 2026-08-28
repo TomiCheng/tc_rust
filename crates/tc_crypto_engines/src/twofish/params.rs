@@ -2,7 +2,7 @@
 
 use core::fmt;
 
-use super::TwofishError;
+use super::BlockCipherError;
 
 enum TwofishKey {
     Bits128([u8; 16]),
@@ -35,12 +35,12 @@ impl fmt::Debug for TwofishParams {
 
 impl TwofishParams {
     /// Validates a 128-, 192-, or 256-bit key and takes an owned copy.
-    pub fn new(key: &[u8]) -> Result<Self, TwofishError> {
+    pub fn new(key: &[u8]) -> Result<Self, BlockCipherError> {
         let key = match key.len() {
             16 => TwofishKey::Bits128(key.try_into().unwrap()),
             24 => TwofishKey::Bits192(key.try_into().unwrap()),
             32 => TwofishKey::Bits256(key.try_into().unwrap()),
-            n => return Err(TwofishError::InvalidKeyLength(n)),
+            n => return Err(BlockCipherError::InvalidKeyLength(n)),
         };
         Ok(Self { key })
     }
@@ -66,7 +66,7 @@ mod tests {
         for key_len in [0, 15, 17, 23, 25, 31, 33] {
             assert!(matches!(
                 TwofishParams::new(&alloc::vec![0u8; key_len]),
-                Err(TwofishError::InvalidKeyLength(n)) if n == key_len
+                Err(BlockCipherError::InvalidKeyLength(n)) if n == key_len
             ));
         }
     }

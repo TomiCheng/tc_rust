@@ -2,7 +2,7 @@
 
 use core::fmt;
 
-use super::{SERPENT_KEY_STEP_BYTES, SERPENT_MAX_KEY_BYTES, SERPENT_MIN_KEY_BYTES, SerpentError};
+use super::{SERPENT_KEY_STEP_BYTES, SERPENT_MAX_KEY_BYTES, SERPENT_MIN_KEY_BYTES, BlockCipherError};
 
 /// Owned, validated Serpent/Tnepres key parameter.
 pub struct SerpentParams {
@@ -23,11 +23,11 @@ impl SerpentParams {
     ///
     /// Bouncy Castle's Serpent engines accept 4–32 bytes in four-byte steps;
     /// shorter keys are padded according to the Serpent specification.
-    pub fn new(key: &[u8]) -> Result<Self, SerpentError> {
+    pub fn new(key: &[u8]) -> Result<Self, BlockCipherError> {
         if !(SERPENT_MIN_KEY_BYTES..=SERPENT_MAX_KEY_BYTES).contains(&key.len())
             || !key.len().is_multiple_of(SERPENT_KEY_STEP_BYTES)
         {
-            return Err(SerpentError::InvalidKeyLength(key.len()));
+            return Err(BlockCipherError::InvalidKeyLength(key.len()));
         }
 
         let mut owned = [0u8; SERPENT_MAX_KEY_BYTES];
@@ -59,7 +59,7 @@ mod tests {
         for key_len in [0, 1, 3, 5, 15, 31, 33, 36] {
             assert!(matches!(
                 SerpentParams::new(&alloc::vec![0u8; key_len]),
-                Err(SerpentError::InvalidKeyLength(n)) if n == key_len
+                Err(BlockCipherError::InvalidKeyLength(n)) if n == key_len
             ));
         }
     }

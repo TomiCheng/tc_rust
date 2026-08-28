@@ -2,7 +2,7 @@
 
 use tc_crypto_core::BlockCipher;
 
-use super::{CAMELLIA_BLOCK_BYTES, CamelliaError, CamelliaParams, cipher};
+use super::{CAMELLIA_BLOCK_BYTES, BlockCipherError, CamelliaParams, cipher};
 
 const SBOX1: [u8; 256] = [
     112, 130, 44, 236, 179, 39, 192, 229, 228, 133, 87, 53, 234, 12, 174, 65, 35, 239, 107, 147,
@@ -103,7 +103,7 @@ impl Default for CamelliaLightEngine {
 
 impl BlockCipher for CamelliaLightEngine {
     type Params<'a> = CamelliaParams;
-    type Error = CamelliaError;
+    type Error = BlockCipherError;
 
     fn algorithm_name(&self) -> &str {
         "Camellia"
@@ -122,10 +122,10 @@ impl BlockCipher for CamelliaLightEngine {
 
     fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
         if !self.initialised {
-            return Err(CamelliaError::NotInitialised);
+            return Err(BlockCipherError::NotInitialised);
         }
         if input.len() < CAMELLIA_BLOCK_BYTES || output.len() < CAMELLIA_BLOCK_BYTES {
-            return Err(CamelliaError::BufferTooShort);
+            return Err(BlockCipherError::BufferTooShort);
         }
 
         let input: &[u8; CAMELLIA_BLOCK_BYTES] = input[..CAMELLIA_BLOCK_BYTES].try_into().unwrap();
@@ -148,7 +148,7 @@ mod tests {
         assert_eq!(engine.block_size(), CAMELLIA_BLOCK_BYTES);
         assert_eq!(
             engine.process_block(&[0u8; 16], &mut [0u8; 16]),
-            Err(CamelliaError::NotInitialised)
+            Err(BlockCipherError::NotInitialised)
         );
 
         engine
@@ -156,11 +156,11 @@ mod tests {
             .unwrap();
         assert_eq!(
             engine.process_block(&[0u8; 15], &mut [0u8; 16]),
-            Err(CamelliaError::BufferTooShort)
+            Err(BlockCipherError::BufferTooShort)
         );
         assert_eq!(
             engine.process_block(&[0u8; 16], &mut [0u8; 15]),
-            Err(CamelliaError::BufferTooShort)
+            Err(BlockCipherError::BufferTooShort)
         );
     }
 }

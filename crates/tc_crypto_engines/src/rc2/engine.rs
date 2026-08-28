@@ -7,7 +7,7 @@
 
 use tc_crypto_core::BlockCipher;
 
-use super::{RC2_BLOCK_BYTES, Rc2Error, Rc2Params};
+use super::{RC2_BLOCK_BYTES, BlockCipherError, Rc2Params};
 
 /// Key-expansion table based on the digits of pi (RFC 2268).
 #[rustfmt::skip]
@@ -76,7 +76,7 @@ impl Default for Rc2Engine {
 
 impl BlockCipher for Rc2Engine {
     type Params<'a> = Rc2Params;
-    type Error = Rc2Error;
+    type Error = BlockCipherError;
 
     fn algorithm_name(&self) -> &str {
         "RC2"
@@ -93,9 +93,9 @@ impl BlockCipher for Rc2Engine {
     }
 
     fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
-        let wk = self.working_key.as_ref().ok_or(Rc2Error::NotInitialised)?;
+        let wk = self.working_key.as_ref().ok_or(BlockCipherError::NotInitialised)?;
         if input.len() < RC2_BLOCK_BYTES || output.len() < RC2_BLOCK_BYTES {
-            return Err(Rc2Error::BufferTooShort);
+            return Err(BlockCipherError::BufferTooShort);
         }
         if self.for_encryption {
             Rc2Engine::encrypt_block(wk, input, output);
@@ -219,7 +219,7 @@ mod tests {
         assert_eq!(engine.block_size(), 8);
         assert_eq!(
             engine.process_block(&[0u8; 8], &mut [0u8; 8]),
-            Err(Rc2Error::NotInitialised)
+            Err(BlockCipherError::NotInitialised)
         );
     }
 
@@ -230,11 +230,11 @@ mod tests {
         engine.init(true, &params).unwrap();
         assert_eq!(
             engine.process_block(&[0u8; 7], &mut [0u8; 8]),
-            Err(Rc2Error::BufferTooShort)
+            Err(BlockCipherError::BufferTooShort)
         );
         assert_eq!(
             engine.process_block(&[0u8; 8], &mut [0u8; 7]),
-            Err(Rc2Error::BufferTooShort)
+            Err(BlockCipherError::BufferTooShort)
         );
     }
 }

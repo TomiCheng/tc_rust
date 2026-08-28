@@ -3,7 +3,7 @@
 use alloc::vec::Vec;
 use core::fmt;
 
-use super::{CAST5_MAX_KEY_BYTES, CAST5_MIN_KEY_BYTES, Cast5Error};
+use super::{CAST5_MAX_KEY_BYTES, CAST5_MIN_KEY_BYTES, BlockCipherError};
 
 /// An owned CAST5 key containing 5 through 16 bytes.
 pub struct Cast5Params {
@@ -12,9 +12,9 @@ pub struct Cast5Params {
 
 impl Cast5Params {
     /// Copies and validates a CAST5 key.
-    pub fn new(key: &[u8]) -> Result<Self, Cast5Error> {
+    pub fn new(key: &[u8]) -> Result<Self, BlockCipherError> {
         if !(CAST5_MIN_KEY_BYTES..=CAST5_MAX_KEY_BYTES).contains(&key.len()) {
-            return Err(Cast5Error::InvalidKeyLength(key.len()));
+            return Err(BlockCipherError::InvalidKeyLength(key.len()));
         }
         Ok(Self { key: key.to_vec() })
     }
@@ -54,7 +54,7 @@ mod tests {
         for length in [0, 1, 4, 17, 32] {
             assert!(matches!(
                 Cast5Params::new(&alloc::vec![0u8; length]),
-                Err(Cast5Error::InvalidKeyLength(n)) if n == length
+                Err(BlockCipherError::InvalidKeyLength(n)) if n == length
             ));
         }
     }

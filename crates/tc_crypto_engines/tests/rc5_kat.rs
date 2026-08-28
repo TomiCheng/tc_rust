@@ -27,7 +27,7 @@ fn run_rc5_64(rounds: usize, key: &str, iv: &str, plaintext: &str, ciphertext: &
 
 fn run<E>(block: usize, rounds: usize, key: &str, iv: &str, plaintext: &str, ciphertext: &str)
 where
-    E: BlockCipher<Error = tc_crypto_engines::Rc5Error> + Default,
+    E: BlockCipher<Error = tc_crypto_engines::BlockCipherError> + Default,
     for<'a> E: BlockCipher<Params<'a> = Rc5Params>,
 {
     let key = unhex(key);

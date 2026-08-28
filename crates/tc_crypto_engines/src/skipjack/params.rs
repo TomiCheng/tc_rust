@@ -2,7 +2,7 @@
 
 use core::fmt;
 
-use super::{SKIPJACK_KEY_BYTES, SkipjackError};
+use super::{SKIPJACK_KEY_BYTES, BlockCipherError};
 
 /// Owned, validated SKIPJACK key parameter (80 bits).
 pub struct SkipjackParams {
@@ -19,10 +19,10 @@ impl fmt::Debug for SkipjackParams {
 
 impl SkipjackParams {
     /// Validates that `key` is exactly 10 bytes and takes an owned copy.
-    pub fn new(key: &[u8]) -> Result<Self, SkipjackError> {
+    pub fn new(key: &[u8]) -> Result<Self, BlockCipherError> {
         let key: &[u8; SKIPJACK_KEY_BYTES] = key
             .try_into()
-            .map_err(|_| SkipjackError::InvalidKeyLength(key.len()))?;
+            .map_err(|_| BlockCipherError::InvalidKeyLength(key.len()))?;
         Ok(Self { key: *key })
     }
 
@@ -39,11 +39,11 @@ mod tests {
     fn rejects_invalid_key_length() {
         assert!(matches!(
             SkipjackParams::new(&[0u8; 9]),
-            Err(SkipjackError::InvalidKeyLength(9))
+            Err(BlockCipherError::InvalidKeyLength(9))
         ));
         assert!(matches!(
             SkipjackParams::new(&[0u8; 16]),
-            Err(SkipjackError::InvalidKeyLength(16))
+            Err(BlockCipherError::InvalidKeyLength(16))
         ));
     }
 

@@ -2,7 +2,7 @@
 
 use core::fmt;
 
-use super::AriaError;
+use super::BlockCipherError;
 
 enum AriaKey {
     Aria128([u8; 16]),
@@ -17,12 +17,12 @@ pub struct AriaParams {
 
 impl AriaParams {
     /// Copies a 16-, 24-, or 32-byte ARIA key.
-    pub fn new(key: &[u8]) -> Result<Self, AriaError> {
+    pub fn new(key: &[u8]) -> Result<Self, BlockCipherError> {
         let key = match key.len() {
             16 => AriaKey::Aria128(key.try_into().unwrap()),
             24 => AriaKey::Aria192(key.try_into().unwrap()),
             32 => AriaKey::Aria256(key.try_into().unwrap()),
-            length => return Err(AriaError::InvalidKeyLength(length)),
+            length => return Err(BlockCipherError::InvalidKeyLength(length)),
         };
         Ok(Self { key })
     }
@@ -70,7 +70,7 @@ mod tests {
         for length in [0, 15, 17, 23, 25, 31, 33] {
             assert!(matches!(
                 AriaParams::new(&alloc::vec![0u8; length]),
-                Err(AriaError::InvalidKeyLength(n)) if n == length
+                Err(BlockCipherError::InvalidKeyLength(n)) if n == length
             ));
         }
     }

@@ -2,7 +2,7 @@
 
 use core::fmt;
 
-use super::CamelliaError;
+use super::BlockCipherError;
 
 enum CamelliaKey {
     Camellia128([u8; 16]),
@@ -17,12 +17,12 @@ pub struct CamelliaParams {
 
 impl CamelliaParams {
     /// Copies a 16-, 24-, or 32-byte Camellia key.
-    pub fn new(key: &[u8]) -> Result<Self, CamelliaError> {
+    pub fn new(key: &[u8]) -> Result<Self, BlockCipherError> {
         let key = match key.len() {
             16 => CamelliaKey::Camellia128(key.try_into().unwrap()),
             24 => CamelliaKey::Camellia192(key.try_into().unwrap()),
             32 => CamelliaKey::Camellia256(key.try_into().unwrap()),
-            length => return Err(CamelliaError::InvalidKeyLength(length)),
+            length => return Err(BlockCipherError::InvalidKeyLength(length)),
         };
         Ok(Self { key })
     }
@@ -70,7 +70,7 @@ mod tests {
         for length in [0, 15, 17, 23, 25, 31, 33] {
             assert!(matches!(
                 CamelliaParams::new(&alloc::vec![0u8; length]),
-                Err(CamelliaError::InvalidKeyLength(n)) if n == length
+                Err(BlockCipherError::InvalidKeyLength(n)) if n == length
             ));
         }
     }

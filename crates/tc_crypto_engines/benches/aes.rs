@@ -12,7 +12,7 @@ use criterion::{
     BenchmarkId, Criterion, Throughput, criterion_group, criterion_main, measurement::WallTime,
 };
 use tc_crypto_core::BlockCipher;
-use tc_crypto_engines::{AES_BLOCK_BYTES, AesEngine, AesError, AesLightEngine, AesParams};
+use tc_crypto_engines::{AES_BLOCK_BYTES, AesEngine, BlockCipherError, AesLightEngine, AesParams};
 
 const KEY_SIZES: [usize; 3] = [16, 24, 32];
 
@@ -48,7 +48,7 @@ fn add_encrypt_benches<E>(
     implementation: &str,
     create: impl Fn() -> E,
 ) where
-    for<'a> E: BlockCipher<Params<'a> = AesParams, Error = AesError>,
+    for<'a> E: BlockCipher<Params<'a> = AesParams, Error = BlockCipherError>,
 {
     for key_size in KEY_SIZES {
         let params = AesParams::new(&key(key_size)).unwrap();
@@ -87,7 +87,7 @@ fn add_decrypt_benches<E>(
     implementation: &str,
     create: impl Fn() -> E,
 ) where
-    for<'a> E: BlockCipher<Params<'a> = AesParams, Error = AesError>,
+    for<'a> E: BlockCipher<Params<'a> = AesParams, Error = BlockCipherError>,
 {
     for key_size in KEY_SIZES {
         let params = AesParams::new(&key(key_size)).unwrap();

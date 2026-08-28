@@ -3,7 +3,7 @@
 use alloc::vec::Vec;
 use core::fmt;
 
-use super::{RC6_MAX_KEY_BYTES, Rc6Error};
+use super::{RC6_MAX_KEY_BYTES, BlockCipherError};
 
 /// Owned, validated RC6 key parameter (variable length).
 pub struct Rc6Params {
@@ -20,9 +20,9 @@ impl fmt::Debug for Rc6Params {
 
 impl Rc6Params {
     /// Validates that `key` is 1..=255 bytes and takes an owned copy.
-    pub fn new(key: &[u8]) -> Result<Self, Rc6Error> {
+    pub fn new(key: &[u8]) -> Result<Self, BlockCipherError> {
         if key.is_empty() || key.len() > RC6_MAX_KEY_BYTES {
-            return Err(Rc6Error::InvalidKeyLength(key.len()));
+            return Err(BlockCipherError::InvalidKeyLength(key.len()));
         }
         Ok(Self { key: key.to_vec() })
     }
@@ -40,11 +40,11 @@ mod tests {
     fn rejects_invalid_key_length() {
         assert!(matches!(
             Rc6Params::new(&[]),
-            Err(Rc6Error::InvalidKeyLength(0))
+            Err(BlockCipherError::InvalidKeyLength(0))
         ));
         assert!(matches!(
             Rc6Params::new(&[0u8; 256]),
-            Err(Rc6Error::InvalidKeyLength(256))
+            Err(BlockCipherError::InvalidKeyLength(256))
         ));
     }
 

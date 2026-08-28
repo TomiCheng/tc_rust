@@ -18,8 +18,10 @@
 //! let mut output = [0u8; 8];
 //! cipher.process_block(&[0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF], &mut output)?;
 //! assert_eq!(output, [0x23, 0x8B, 0x4F, 0xE5, 0x84, 0x7E, 0x44, 0xB2]);
-//! # Ok::<(), tc_crypto_engines::Cast5Error>(())
+//! # Ok::<(), tc_crypto_engines::BlockCipherError>(())
 //! ```
+
+use crate::BlockCipherError;
 
 mod cipher;
 mod engine;
@@ -29,36 +31,9 @@ mod tables;
 pub use engine::Cast5Engine;
 pub use params::Cast5Params;
 
-use core::fmt;
-
 /// CAST5 block length in bytes (64 bits).
 pub const CAST5_BLOCK_BYTES: usize = 8;
 /// Minimum CAST5 key length in bytes (40 bits).
 pub const CAST5_MIN_KEY_BYTES: usize = 5;
 /// Maximum CAST5 key length in bytes (128 bits).
 pub const CAST5_MAX_KEY_BYTES: usize = 16;
-
-/// An error from CAST5 parameter validation or block processing.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum Cast5Error {
-    /// The key was outside the 5-to-16-byte range.
-    InvalidKeyLength(usize),
-    /// `process_block` was called before successful initialization.
-    NotInitialised,
-    /// An input or output buffer was shorter than one CAST5 block.
-    BufferTooShort,
-}
-
-impl fmt::Display for Cast5Error {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::InvalidKeyLength(n) => {
-                write!(f, "CAST5 key must contain 5 through 16 bytes, got {n}")
-            }
-            Self::NotInitialised => write!(f, "CAST5 engine not initialised"),
-            Self::BufferTooShort => write!(f, "buffer too short for one CAST5 block"),
-        }
-    }
-}
-
-impl core::error::Error for Cast5Error {}

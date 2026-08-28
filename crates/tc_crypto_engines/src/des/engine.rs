@@ -3,7 +3,7 @@
 use tc_crypto_core::BlockCipher;
 
 use super::cipher;
-use super::{DES_BLOCK_BYTES, DesError, DesParams};
+use super::{DES_BLOCK_BYTES, BlockCipherError, DesParams};
 
 /// DES with an 8-byte encoded key and 8-byte block.
 pub struct DesEngine {
@@ -29,7 +29,7 @@ impl Default for DesEngine {
 
 impl BlockCipher for DesEngine {
     type Params<'a> = DesParams;
-    type Error = DesError;
+    type Error = BlockCipherError;
 
     fn algorithm_name(&self) -> &str {
         "DES"
@@ -47,10 +47,10 @@ impl BlockCipher for DesEngine {
 
     fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
         if !self.initialised {
-            return Err(DesError::NotInitialised);
+            return Err(BlockCipherError::NotInitialised);
         }
         if input.len() < DES_BLOCK_BYTES || output.len() < DES_BLOCK_BYTES {
-            return Err(DesError::BufferTooShort);
+            return Err(BlockCipherError::BufferTooShort);
         }
 
         let mut high = u32::from_be_bytes(input[..4].try_into().unwrap());
@@ -73,18 +73,18 @@ mod tests {
         assert_eq!(engine.block_size(), DES_BLOCK_BYTES);
         assert_eq!(
             engine.process_block(&[0u8; 8], &mut [0u8; 8]),
-            Err(DesError::NotInitialised)
+            Err(BlockCipherError::NotInitialised)
         );
 
         let params = DesParams::new(&[0u8; 8]).unwrap();
         engine.init(true, &params).unwrap();
         assert_eq!(
             engine.process_block(&[0u8; 7], &mut [0u8; 8]),
-            Err(DesError::BufferTooShort)
+            Err(BlockCipherError::BufferTooShort)
         );
         assert_eq!(
             engine.process_block(&[0u8; 8], &mut [0u8; 7]),
-            Err(DesError::BufferTooShort)
+            Err(BlockCipherError::BufferTooShort)
         );
     }
 }

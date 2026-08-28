@@ -22,8 +22,10 @@
 //!     0xB1, 0x65, 0x68, 0x51, 0x69, 0x9E, 0x29, 0xFA,
 //!     0x24, 0xB7, 0x01, 0x48, 0x50, 0x3D, 0x2D, 0xFC,
 //! ]);
-//! # Ok::<(), tc_crypto_engines::NoekeonError>(())
+//! # Ok::<(), tc_crypto_engines::BlockCipherError>(())
 //! ```
+
+use crate::BlockCipherError;
 
 mod engine;
 mod params;
@@ -31,34 +33,7 @@ mod params;
 pub use engine::NoekeonEngine;
 pub use params::NoekeonParams;
 
-use core::fmt;
-
 /// Noekeon key length in bytes (128 bits).
 pub const NOEKEON_KEY_BYTES: usize = 16;
 /// Noekeon block length in bytes (128 bits).
 pub const NOEKEON_BLOCK_BYTES: usize = 16;
-
-/// An error from Noekeon parameter validation or block processing.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum NoekeonError {
-    /// The key was not exactly 16 bytes.
-    InvalidKeyLength(usize),
-    /// `process_block` was called before successful initialization.
-    NotInitialised,
-    /// An input or output buffer was shorter than one block.
-    BufferTooShort,
-}
-
-impl fmt::Display for NoekeonError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::InvalidKeyLength(n) => {
-                write!(f, "Noekeon key must be {NOEKEON_KEY_BYTES} bytes, got {n}")
-            }
-            Self::NotInitialised => write!(f, "Noekeon engine not initialised"),
-            Self::BufferTooShort => write!(f, "buffer too short for one Noekeon block"),
-        }
-    }
-}
-
-impl core::error::Error for NoekeonError {}

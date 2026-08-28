@@ -27,8 +27,10 @@
 //! let mut recovered = [0u8; 32];
 //! cipher.process_block(&ciphertext, &mut recovered)?;
 //! assert_eq!(recovered, plaintext);
-//! # Ok::<(), tc_crypto_engines::ThreefishError>(())
+//! # Ok::<(), tc_crypto_engines::BlockCipherError>(())
 //! ```
+
+use crate::BlockCipherError;
 
 mod cipher;
 mod engine;
@@ -37,38 +39,5 @@ mod params;
 pub use engine::ThreefishEngine;
 pub use params::ThreefishParams;
 
-use core::fmt;
-
 /// The fixed tweak length, in bytes (128 bit), shared by all block sizes.
 pub const TWEAK_BYTES: usize = 16;
-
-/// An error from the Threefish cipher.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ThreefishError {
-    /// The key length (bytes) is not a legal Threefish key size (32 / 64 / 128).
-    InvalidKeyLength(usize),
-    /// The tweak length (bytes) is not 16.
-    InvalidTweakLength(usize),
-    /// `process_block` was called before a successful `init`.
-    NotInitialised,
-    /// An input or output buffer was shorter than one block.
-    BufferTooShort,
-}
-
-impl fmt::Display for ThreefishError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            ThreefishError::InvalidKeyLength(n) => write!(
-                f,
-                "Threefish key must be 32, 64 or 128 bytes, got {n}"
-            ),
-            ThreefishError::InvalidTweakLength(n) => {
-                write!(f, "Threefish tweak must be {TWEAK_BYTES} bytes, got {n}")
-            }
-            ThreefishError::NotInitialised => write!(f, "Threefish engine not initialised"),
-            ThreefishError::BufferTooShort => write!(f, "buffer too short for one block"),
-        }
-    }
-}
-
-impl core::error::Error for ThreefishError {}

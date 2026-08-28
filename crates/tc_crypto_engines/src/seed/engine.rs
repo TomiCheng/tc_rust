@@ -3,7 +3,7 @@
 use tc_crypto_core::BlockCipher;
 
 use super::tables::{KC, SS0, SS1, SS2, SS3};
-use super::{SEED_BLOCK_BYTES, SeedError, SeedParams};
+use super::{SEED_BLOCK_BYTES, BlockCipherError, SeedParams};
 
 /// SEED with a 128-bit key and 128-bit block.
 pub struct SeedEngine {
@@ -30,7 +30,7 @@ impl Default for SeedEngine {
 
 impl BlockCipher for SeedEngine {
     type Params<'a> = SeedParams;
-    type Error = SeedError;
+    type Error = BlockCipherError;
 
     fn algorithm_name(&self) -> &str {
         "SEED"
@@ -47,9 +47,9 @@ impl BlockCipher for SeedEngine {
     }
 
     fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
-        let wk = self.wkey.as_ref().ok_or(SeedError::NotInitialised)?;
+        let wk = self.wkey.as_ref().ok_or(BlockCipherError::NotInitialised)?;
         if input.len() < SEED_BLOCK_BYTES || output.len() < SEED_BLOCK_BYTES {
-            return Err(SeedError::BufferTooShort);
+            return Err(BlockCipherError::BufferTooShort);
         }
 
         let mut l = u64::from_be_bytes(input[0..8].try_into().unwrap());
@@ -134,7 +134,7 @@ mod tests {
         assert_eq!(engine.block_size(), 16);
         assert_eq!(
             engine.process_block(&[0u8; 16], &mut [0u8; 16]),
-            Err(SeedError::NotInitialised)
+            Err(BlockCipherError::NotInitialised)
         );
     }
 
@@ -145,11 +145,11 @@ mod tests {
         engine.init(true, &params).unwrap();
         assert_eq!(
             engine.process_block(&[0u8; 15], &mut [0u8; 16]),
-            Err(SeedError::BufferTooShort)
+            Err(BlockCipherError::BufferTooShort)
         );
         assert_eq!(
             engine.process_block(&[0u8; 16], &mut [0u8; 15]),
-            Err(SeedError::BufferTooShort)
+            Err(BlockCipherError::BufferTooShort)
         );
     }
 }

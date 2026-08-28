@@ -2,7 +2,7 @@
 
 use core::fmt;
 
-use super::{GOST28147_KEY_BYTES, GOST28147_S_BOX_BYTES, Gost28147Error, Gost28147SBox};
+use super::{GOST28147_KEY_BYTES, GOST28147_S_BOX_BYTES, BlockCipherError, Gost28147SBox};
 
 /// Owned, validated GOST 28147 key and S-box parameters.
 pub struct Gost28147Params {
@@ -25,12 +25,12 @@ impl fmt::Debug for Gost28147Params {
 
 impl Gost28147Params {
     /// Validates `key` and selects Bouncy Castle's default S-box.
-    pub fn new(key: &[u8]) -> Result<Self, Gost28147Error> {
+    pub fn new(key: &[u8]) -> Result<Self, BlockCipherError> {
         Self::with_s_box(key, Gost28147SBox::Default)
     }
 
     /// Validates `key` and selects a standardized S-box.
-    pub fn with_s_box(key: &[u8], s_box: Gost28147SBox) -> Result<Self, Gost28147Error> {
+    pub fn with_s_box(key: &[u8], s_box: Gost28147SBox) -> Result<Self, BlockCipherError> {
         Ok(Self {
             key: validate_key(key)?,
             s_box: *s_box.table(),
@@ -39,7 +39,7 @@ impl Gost28147Params {
     }
 
     /// Validates `key` and a custom 8-by-16 nibble S-box.
-    pub fn with_custom_s_box(key: &[u8], s_box: &[u8]) -> Result<Self, Gost28147Error> {
+    pub fn with_custom_s_box(key: &[u8], s_box: &[u8]) -> Result<Self, BlockCipherError> {
         let key = validate_key(key)?;
         let s_box = validate_s_box(s_box)?;
         Ok(Self {
@@ -63,35 +63,35 @@ impl Gost28147Params {
     }
 }
 
-fn validate_key(key: &[u8]) -> Result<[u8; GOST28147_KEY_BYTES], Gost28147Error> {
+fn validate_key(key: &[u8]) -> Result<[u8; GOST28147_KEY_BYTES], BlockCipherError> {
     let key: &[u8; GOST28147_KEY_BYTES] = key
         .try_into()
-        .map_err(|_| Gost28147Error::InvalidKeyLength(key.len()))?;
+        .map_err(|_| BlockCipherError::InvalidKeyLength(key.len()))?;
     Ok(*key)
 }
 
-fn validate_s_box(s_box: &[u8]) -> Result<[u8; GOST28147_S_BOX_BYTES], Gost28147Error> {
+fn validate_s_box(s_box: &[u8]) -> Result<[u8; GOST28147_S_BOX_BYTES], BlockCipherError> {
     let s_box: &[u8; GOST28147_S_BOX_BYTES] = s_box
         .try_into()
-        .map_err(|_| Gost28147Error::InvalidSBoxLength(s_box.len()))?;
+        .map_err(|_| BlockCipherError::InvalidSBoxLength(s_box.len()))?;
 
     for (row_index, row) in s_box.chunks_exact(16).enumerate() {
         let mut seen = 0u16;
         for (column, &value) in row.iter().enumerate() {
             if value > 15 {
-                return Err(Gost28147Error::InvalidSBoxValue {
+                return Err(BlockCipherError::InvalidSBoxValue {
                     index: row_index * 16 + column,
                     value,
                 });
             }
             let bit = 1u16 << value;
             if seen & bit != 0 {
-                return Err(Gost28147Error::InvalidSBoxRow(row_index));
+                return Err(BlockCipherError::InvalidSBoxRow(row_index));
             }
             seen |= bit;
         }
         if seen != u16::MAX {
-            return Err(Gost28147Error::InvalidSBoxRow(row_index));
+            return Err(BlockCipherError::InvalidSBoxRow(row_index));
         }
     }
 
@@ -106,7 +106,7 @@ mod tests {
     fn rejects_invalid_key_length() {
         assert!(matches!(
             Gost28147Params::new(&[0u8; 31]),
-            Err(Gost28147Error::InvalidKeyLength(31))
+            Err(BlockCipherError::InvalidKeyLength(31))
         ));
     }
 
@@ -115,14 +115,14 @@ mod tests {
         let key = [0u8; GOST28147_KEY_BYTES];
         assert!(matches!(
             Gost28147Params::with_custom_s_box(&key, &[0u8; 127]),
-            Err(Gost28147Error::InvalidSBoxLength(127))
+            Err(BlockCipherError::InvalidSBoxLength(127))
         ));
 
         let mut bad_value = *Gost28147SBox::Default.table();
         bad_value[17] = 16;
         assert!(matches!(
             Gost28147Params::with_custom_s_box(&key, &bad_value),
-            Err(Gost28147Error::InvalidSBoxValue {
+            Err(BlockCipherError::InvalidSBoxValue {
                 index: 17,
                 value: 16
             })
@@ -132,7 +132,7 @@ mod tests {
         duplicate[1] = duplicate[0];
         assert!(matches!(
             Gost28147Params::with_custom_s_box(&key, &duplicate),
-            Err(Gost28147Error::InvalidSBoxRow(0))
+            Err(BlockCipherError::InvalidSBoxRow(0))
         ));
     }
 

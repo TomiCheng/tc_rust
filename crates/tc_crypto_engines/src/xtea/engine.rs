@@ -2,7 +2,7 @@
 
 use tc_crypto_core::BlockCipher;
 
-use super::{XTEA_BLOCK_BYTES, XteaError, XteaParams};
+use super::{XTEA_BLOCK_BYTES, BlockCipherError, XteaParams};
 
 /// The golden-ratio round constant.
 const DELTA: u32 = 0x9E37_79B9;
@@ -62,7 +62,7 @@ impl Default for XteaEngine {
 
 impl BlockCipher for XteaEngine {
     type Params<'a> = XteaParams;
-    type Error = XteaError;
+    type Error = BlockCipherError;
 
     fn algorithm_name(&self) -> &str {
         "XTEA"
@@ -79,9 +79,9 @@ impl BlockCipher for XteaEngine {
     }
 
     fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
-        let s = self.schedule.as_ref().ok_or(XteaError::NotInitialised)?;
+        let s = self.schedule.as_ref().ok_or(BlockCipherError::NotInitialised)?;
         if input.len() < XTEA_BLOCK_BYTES || output.len() < XTEA_BLOCK_BYTES {
-            return Err(XteaError::BufferTooShort);
+            return Err(BlockCipherError::BufferTooShort);
         }
         if self.for_encryption {
             XteaEngine::encrypt_block(s, input, output);
@@ -137,7 +137,7 @@ mod tests {
         assert_eq!(engine.block_size(), 8);
         assert_eq!(
             engine.process_block(&[0u8; 8], &mut [0u8; 8]),
-            Err(XteaError::NotInitialised)
+            Err(BlockCipherError::NotInitialised)
         );
     }
 
@@ -148,11 +148,11 @@ mod tests {
         engine.init(true, &params).unwrap();
         assert_eq!(
             engine.process_block(&[0u8; 7], &mut [0u8; 8]),
-            Err(XteaError::BufferTooShort)
+            Err(BlockCipherError::BufferTooShort)
         );
         assert_eq!(
             engine.process_block(&[0u8; 8], &mut [0u8; 7]),
-            Err(XteaError::BufferTooShort)
+            Err(BlockCipherError::BufferTooShort)
         );
     }
 }

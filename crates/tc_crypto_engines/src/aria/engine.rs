@@ -2,7 +2,7 @@
 
 use tc_crypto_core::BlockCipher;
 
-use super::{ARIA_BLOCK_BYTES, AriaError, AriaParams, AriaRoundKeys, cipher};
+use super::{ARIA_BLOCK_BYTES, BlockCipherError, AriaParams, AriaRoundKeys, cipher};
 
 /// Portable ARIA-128, ARIA-192, and ARIA-256 block cipher.
 pub struct AriaEngine {
@@ -30,7 +30,7 @@ impl Default for AriaEngine {
 
 impl BlockCipher for AriaEngine {
     type Params<'a> = AriaParams;
-    type Error = AriaError;
+    type Error = BlockCipherError;
 
     fn algorithm_name(&self) -> &str {
         "ARIA"
@@ -48,10 +48,10 @@ impl BlockCipher for AriaEngine {
 
     fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
         if !self.initialised {
-            return Err(AriaError::NotInitialised);
+            return Err(BlockCipherError::NotInitialised);
         }
         if input.len() < ARIA_BLOCK_BYTES || output.len() < ARIA_BLOCK_BYTES {
-            return Err(AriaError::BufferTooShort);
+            return Err(BlockCipherError::BufferTooShort);
         }
 
         let input: &[u8; ARIA_BLOCK_BYTES] = input[..ARIA_BLOCK_BYTES].try_into().unwrap();
@@ -73,7 +73,7 @@ mod tests {
         assert_eq!(engine.block_size(), ARIA_BLOCK_BYTES);
         assert_eq!(
             engine.process_block(&[0u8; 16], &mut [0u8; 16]),
-            Err(AriaError::NotInitialised)
+            Err(BlockCipherError::NotInitialised)
         );
 
         engine
@@ -81,11 +81,11 @@ mod tests {
             .unwrap();
         assert_eq!(
             engine.process_block(&[0u8; 15], &mut [0u8; 16]),
-            Err(AriaError::BufferTooShort)
+            Err(BlockCipherError::BufferTooShort)
         );
         assert_eq!(
             engine.process_block(&[0u8; 16], &mut [0u8; 15]),
-            Err(AriaError::BufferTooShort)
+            Err(BlockCipherError::BufferTooShort)
         );
     }
 }

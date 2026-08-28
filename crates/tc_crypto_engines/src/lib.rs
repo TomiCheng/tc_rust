@@ -7,6 +7,7 @@
 // no_std + alloc；各 engine 仍可依需求使用固定陣列、擁有式或借用式資料。
 extern crate alloc;
 
+mod block_cipher_error;
 mod cast_common;
 
 pub mod aes;
@@ -34,59 +35,60 @@ pub mod threefish;
 pub mod twofish;
 pub mod xtea;
 
-pub use aes::{AES_BLOCK_BYTES, AesEngine, AesError, AesLightEngine, AesParams};
-pub use aria::{ARIA_BLOCK_BYTES, AriaEngine, AriaError, AriaParams};
+pub use aes::{AES_BLOCK_BYTES, AesEngine, AesLightEngine, AesParams};
+pub use aria::{ARIA_BLOCK_BYTES, AriaEngine, AriaParams};
 pub use blowfish::{
     BLOWFISH_BLOCK_BYTES, BLOWFISH_MAX_KEY_BYTES, BLOWFISH_MIN_KEY_BYTES, BlowfishEngine,
-    BlowfishError, BlowfishParams,
+    BlowfishParams,
 };
+pub use block_cipher_error::BlockCipherError;
 pub use camellia::{
-    CAMELLIA_BLOCK_BYTES, CamelliaEngine, CamelliaError, CamelliaLightEngine, CamelliaParams,
+    CAMELLIA_BLOCK_BYTES, CamelliaEngine, CamelliaLightEngine, CamelliaParams,
 };
 pub use cast5::{
-    CAST5_BLOCK_BYTES, CAST5_MAX_KEY_BYTES, CAST5_MIN_KEY_BYTES, Cast5Engine, Cast5Error,
+    CAST5_BLOCK_BYTES, CAST5_MAX_KEY_BYTES, CAST5_MIN_KEY_BYTES, Cast5Engine,
     Cast5Params,
 };
-pub use cast6::{CAST6_BLOCK_BYTES, CAST6_KEY_BYTES, Cast6Engine, Cast6Error, Cast6Params};
-pub use des::{DES_BLOCK_BYTES, DES_KEY_BYTES, DesEngine, DesError, DesParams};
+pub use cast6::{CAST6_BLOCK_BYTES, CAST6_KEY_BYTES, Cast6Engine, Cast6Params};
+pub use des::{DES_BLOCK_BYTES, DES_KEY_BYTES, DesEngine, DesParams};
 pub use des_ede::{
-    DES_EDE_BLOCK_BYTES, DES_EDE_THREE_KEY_BYTES, DES_EDE_TWO_KEY_BYTES, DesEdeEngine, DesEdeError,
+    DES_EDE_BLOCK_BYTES, DES_EDE_THREE_KEY_BYTES, DES_EDE_TWO_KEY_BYTES, DesEdeEngine,
     DesEdeParams,
 };
 pub use dstu7624::{
-    DSTU7624_BLOCK_BITS, DSTU7624_KEY_BYTES, Dstu7624Engine, Dstu7624Error, Dstu7624Params,
+    DSTU7624_BLOCK_BITS, DSTU7624_KEY_BYTES, Dstu7624Engine, Dstu7624Params,
 };
 pub use gost28147::{
     GOST28147_BLOCK_BYTES, GOST28147_KEY_BYTES, GOST28147_S_BOX_BYTES, Gost28147Engine,
-    Gost28147Error, Gost28147Params, Gost28147SBox,
+    Gost28147Params, Gost28147SBox,
 };
-pub use idea::{IDEA_BLOCK_BYTES, IDEA_KEY_BYTES, IdeaEngine, IdeaError, IdeaParams};
+pub use idea::{IDEA_BLOCK_BYTES, IDEA_KEY_BYTES, IdeaEngine, IdeaParams};
 pub use noekeon::{
-    NOEKEON_BLOCK_BYTES, NOEKEON_KEY_BYTES, NoekeonEngine, NoekeonError, NoekeonParams,
+    NOEKEON_BLOCK_BYTES, NOEKEON_KEY_BYTES, NoekeonEngine, NoekeonParams,
 };
 pub use rc2::{
-    RC2_BLOCK_BYTES, RC2_MAX_EFFECTIVE_KEY_BITS, RC2_MAX_KEY_BYTES, Rc2Engine, Rc2Error, Rc2Params,
+    RC2_BLOCK_BYTES, RC2_MAX_EFFECTIVE_KEY_BITS, RC2_MAX_KEY_BYTES, Rc2Engine, Rc2Params,
 };
 pub use rc5::{
     RC5_32_BLOCK_BYTES, RC5_64_BLOCK_BYTES, RC5_DEFAULT_ROUNDS, RC5_MAX_KEY_BYTES, RC5_MAX_ROUNDS,
-    Rc5Error, Rc5Params, Rc5Word, Rc532Engine, Rc564Engine,
+    Rc5Params, Rc5Word, Rc532Engine, Rc564Engine,
 };
-pub use rc6::{RC6_BLOCK_BYTES, RC6_MAX_KEY_BYTES, RC6_ROUNDS, Rc6Engine, Rc6Error, Rc6Params};
+pub use rc6::{RC6_BLOCK_BYTES, RC6_MAX_KEY_BYTES, RC6_ROUNDS, Rc6Engine, Rc6Params};
 pub use rijndael::{
-    RIJNDAEL_BLOCK_BITS, RIJNDAEL_KEY_BYTES, RijndaelEngine, RijndaelError, RijndaelParams,
+    RIJNDAEL_BLOCK_BITS, RIJNDAEL_KEY_BYTES, RijndaelEngine, RijndaelParams,
 };
-pub use seed::{SEED_BLOCK_BYTES, SEED_KEY_BYTES, SeedEngine, SeedError, SeedParams};
+pub use seed::{SEED_BLOCK_BYTES, SEED_KEY_BYTES, SeedEngine, SeedParams};
 pub use serpent::{
     SERPENT_BLOCK_BYTES, SERPENT_KEY_STEP_BYTES, SERPENT_MAX_KEY_BYTES, SERPENT_MIN_KEY_BYTES,
-    SerpentEngine, SerpentError, SerpentParams, TnepresEngine,
+    SerpentEngine, SerpentParams, TnepresEngine,
 };
 pub use skipjack::{
-    SKIPJACK_BLOCK_BYTES, SKIPJACK_KEY_BYTES, SkipjackEngine, SkipjackError, SkipjackParams,
+    SKIPJACK_BLOCK_BYTES, SKIPJACK_KEY_BYTES, SkipjackEngine, SkipjackParams,
 };
-pub use sm4::{SM4_BLOCK_BYTES, SM4_KEY_BYTES, Sm4Engine, Sm4Error, Sm4Params};
-pub use tea::{TEA_BLOCK_BYTES, TEA_KEY_BYTES, TeaEngine, TeaError, TeaParams};
-pub use threefish::{ThreefishEngine, ThreefishError, ThreefishParams};
+pub use sm4::{SM4_BLOCK_BYTES, SM4_KEY_BYTES, Sm4Engine, Sm4Params};
+pub use tea::{TEA_BLOCK_BYTES, TEA_KEY_BYTES, TeaEngine, TeaParams};
+pub use threefish::{ThreefishEngine, ThreefishParams};
 pub use twofish::{
-    TWOFISH_BLOCK_BYTES, TWOFISH_KEY_BYTES, TwofishEngine, TwofishError, TwofishParams,
+    TWOFISH_BLOCK_BYTES, TWOFISH_KEY_BYTES, TwofishEngine, TwofishParams,
 };
-pub use xtea::{XTEA_BLOCK_BYTES, XTEA_KEY_BYTES, XteaEngine, XteaError, XteaParams};
+pub use xtea::{XTEA_BLOCK_BYTES, XTEA_KEY_BYTES, XteaEngine, XteaParams};

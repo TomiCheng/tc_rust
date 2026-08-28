@@ -28,8 +28,10 @@
 //!     0x0E, 0xDD, 0x33, 0xD3, 0xC6, 0x21, 0xE5, 0x46,
 //!     0x45, 0x5B, 0xD8, 0xBA, 0x14, 0x18, 0xBE, 0xC8,
 //! ]);
-//! # Ok::<(), tc_crypto_engines::RijndaelError>(())
+//! # Ok::<(), tc_crypto_engines::BlockCipherError>(())
 //! ```
+
+use crate::BlockCipherError;
 
 mod engine;
 mod params;
@@ -38,41 +40,7 @@ mod tables;
 pub use engine::RijndaelEngine;
 pub use params::RijndaelParams;
 
-use core::fmt;
-
 /// Supported Rijndael block lengths in bits.
 pub const RIJNDAEL_BLOCK_BITS: [usize; 5] = [128, 160, 192, 224, 256];
 /// Supported Rijndael key lengths in bytes.
 pub const RIJNDAEL_KEY_BYTES: [usize; 5] = [16, 20, 24, 28, 32];
-
-/// An error from Rijndael configuration, parameter validation, or processing.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum RijndaelError {
-    /// The configured block size was not 128/160/192/224/256 bits.
-    InvalidBlockSize(usize),
-    /// The key was not 16/20/24/28/32 bytes.
-    InvalidKeyLength(usize),
-    /// `process_block` was called before successful initialization.
-    NotInitialised,
-    /// An input or output buffer was shorter than one configured block.
-    BufferTooShort,
-}
-
-impl fmt::Display for RijndaelError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::InvalidBlockSize(bits) => write!(
-                f,
-                "Rijndael block must be 128/160/192/224/256 bits, got {bits}"
-            ),
-            Self::InvalidKeyLength(bytes) => write!(
-                f,
-                "Rijndael key must be 16/20/24/28/32 bytes, got {bytes}"
-            ),
-            Self::NotInitialised => write!(f, "Rijndael engine not initialised"),
-            Self::BufferTooShort => write!(f, "buffer too short for one Rijndael block"),
-        }
-    }
-}
-
-impl core::error::Error for RijndaelError {}

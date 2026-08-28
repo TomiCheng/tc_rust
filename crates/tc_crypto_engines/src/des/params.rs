@@ -2,7 +2,7 @@
 
 use core::fmt;
 
-use super::{DES_KEY_BYTES, DesError};
+use super::{DES_KEY_BYTES, BlockCipherError};
 
 /// An owned DES key.
 pub struct DesParams {
@@ -13,10 +13,10 @@ impl DesParams {
     /// Copies an 8-byte DES key.
     ///
     /// Parity bits and weak keys are accepted exactly as supplied.
-    pub fn new(key: &[u8]) -> Result<Self, DesError> {
+    pub fn new(key: &[u8]) -> Result<Self, BlockCipherError> {
         let key = key
             .try_into()
-            .map_err(|_| DesError::InvalidKeyLength(key.len()))?;
+            .map_err(|_| BlockCipherError::InvalidKeyLength(key.len()))?;
         Ok(Self { key })
     }
 
@@ -41,11 +41,11 @@ mod tests {
     fn validates_only_key_length() {
         assert_eq!(
             DesParams::new(&[0u8; 7]).unwrap_err(),
-            DesError::InvalidKeyLength(7)
+            BlockCipherError::InvalidKeyLength(7)
         );
         assert_eq!(
             DesParams::new(&[0u8; 9]).unwrap_err(),
-            DesError::InvalidKeyLength(9)
+            BlockCipherError::InvalidKeyLength(9)
         );
         assert!(DesParams::new(&[0x01; 8]).is_ok());
     }

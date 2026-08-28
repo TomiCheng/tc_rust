@@ -3,7 +3,7 @@
 use alloc::vec::Vec;
 use core::fmt;
 
-use super::{BLOWFISH_MAX_KEY_BYTES, BLOWFISH_MIN_KEY_BYTES, BlowfishError};
+use super::{BLOWFISH_MAX_KEY_BYTES, BLOWFISH_MIN_KEY_BYTES, BlockCipherError};
 
 /// An owned Blowfish key containing between 4 and 56 bytes.
 pub struct BlowfishParams {
@@ -12,9 +12,9 @@ pub struct BlowfishParams {
 
 impl BlowfishParams {
     /// Copies a Blowfish key containing between 4 and 56 bytes.
-    pub fn new(key: &[u8]) -> Result<Self, BlowfishError> {
+    pub fn new(key: &[u8]) -> Result<Self, BlockCipherError> {
         if !(BLOWFISH_MIN_KEY_BYTES..=BLOWFISH_MAX_KEY_BYTES).contains(&key.len()) {
-            return Err(BlowfishError::InvalidKeyLength(key.len()));
+            return Err(BlockCipherError::InvalidKeyLength(key.len()));
         }
         Ok(Self { key: key.to_vec() })
     }
@@ -54,7 +54,7 @@ mod tests {
         for length in [0, 1, 3, 57, 59] {
             assert!(matches!(
                 BlowfishParams::new(&alloc::vec![0u8; length]),
-                Err(BlowfishError::InvalidKeyLength(n)) if n == length
+                Err(BlockCipherError::InvalidKeyLength(n)) if n == length
             ));
         }
     }

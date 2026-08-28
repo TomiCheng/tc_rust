@@ -4,7 +4,7 @@ use alloc::vec;
 
 use tc_crypto_core::BlockCipher;
 
-use super::{RC6_BLOCK_BYTES, RC6_ROUNDS, Rc6Error, Rc6Params};
+use super::{RC6_BLOCK_BYTES, RC6_ROUNDS, BlockCipherError, Rc6Params};
 
 /// Magic constant `Odd((e - 2) * 2^32)`.
 const P32: u32 = 0xb7e1_5163;
@@ -94,7 +94,7 @@ impl Default for Rc6Engine {
 
 impl BlockCipher for Rc6Engine {
     type Params<'a> = Rc6Params;
-    type Error = Rc6Error;
+    type Error = BlockCipherError;
 
     fn algorithm_name(&self) -> &str {
         "RC6"
@@ -111,9 +111,9 @@ impl BlockCipher for Rc6Engine {
     }
 
     fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
-        let s = self.s.as_ref().ok_or(Rc6Error::NotInitialised)?;
+        let s = self.s.as_ref().ok_or(BlockCipherError::NotInitialised)?;
         if input.len() < RC6_BLOCK_BYTES || output.len() < RC6_BLOCK_BYTES {
-            return Err(Rc6Error::BufferTooShort);
+            return Err(BlockCipherError::BufferTooShort);
         }
         if self.for_encryption {
             Rc6Engine::encrypt_block(s, input, output);
@@ -190,7 +190,7 @@ mod tests {
         assert_eq!(engine.block_size(), 16);
         assert_eq!(
             engine.process_block(&[0u8; 16], &mut [0u8; 16]),
-            Err(Rc6Error::NotInitialised)
+            Err(BlockCipherError::NotInitialised)
         );
     }
 
@@ -201,11 +201,11 @@ mod tests {
         engine.init(true, &params).unwrap();
         assert_eq!(
             engine.process_block(&[0u8; 15], &mut [0u8; 16]),
-            Err(Rc6Error::BufferTooShort)
+            Err(BlockCipherError::BufferTooShort)
         );
         assert_eq!(
             engine.process_block(&[0u8; 16], &mut [0u8; 15]),
-            Err(Rc6Error::BufferTooShort)
+            Err(BlockCipherError::BufferTooShort)
         );
     }
 }

@@ -2,7 +2,7 @@
 
 use tc_crypto_core::BlockCipher;
 
-use super::{CAST5_BLOCK_BYTES, Cast5Error, Cast5Params, cipher};
+use super::{CAST5_BLOCK_BYTES, BlockCipherError, Cast5Params, cipher};
 
 /// Portable CAST5 (CAST-128) block cipher.
 pub struct Cast5Engine {
@@ -30,7 +30,7 @@ impl Default for Cast5Engine {
 
 impl BlockCipher for Cast5Engine {
     type Params<'a> = Cast5Params;
-    type Error = Cast5Error;
+    type Error = BlockCipherError;
 
     fn algorithm_name(&self) -> &str {
         "CAST5"
@@ -49,10 +49,10 @@ impl BlockCipher for Cast5Engine {
 
     fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
         if !self.initialised {
-            return Err(Cast5Error::NotInitialised);
+            return Err(BlockCipherError::NotInitialised);
         }
         if input.len() < CAST5_BLOCK_BYTES || output.len() < CAST5_BLOCK_BYTES {
-            return Err(Cast5Error::BufferTooShort);
+            return Err(BlockCipherError::BufferTooShort);
         }
 
         let input: &[u8; CAST5_BLOCK_BYTES] = input[..CAST5_BLOCK_BYTES].try_into().unwrap();
@@ -78,7 +78,7 @@ mod tests {
         assert_eq!(engine.block_size(), CAST5_BLOCK_BYTES);
         assert_eq!(
             engine.process_block(&[0u8; 8], &mut [0u8; 8]),
-            Err(Cast5Error::NotInitialised)
+            Err(BlockCipherError::NotInitialised)
         );
 
         engine
@@ -86,11 +86,11 @@ mod tests {
             .unwrap();
         assert_eq!(
             engine.process_block(&[0u8; 7], &mut [0u8; 8]),
-            Err(Cast5Error::BufferTooShort)
+            Err(BlockCipherError::BufferTooShort)
         );
         assert_eq!(
             engine.process_block(&[0u8; 8], &mut [0u8; 7]),
-            Err(Cast5Error::BufferTooShort)
+            Err(BlockCipherError::BufferTooShort)
         );
     }
 }

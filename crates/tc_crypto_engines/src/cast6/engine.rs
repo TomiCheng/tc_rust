@@ -2,7 +2,7 @@
 
 use tc_crypto_core::BlockCipher;
 
-use super::{CAST6_BLOCK_BYTES, Cast6Error, Cast6Params, cipher};
+use super::{CAST6_BLOCK_BYTES, BlockCipherError, Cast6Params, cipher};
 
 /// Portable CAST6 (CAST-256) block cipher.
 pub struct Cast6Engine {
@@ -30,7 +30,7 @@ impl Default for Cast6Engine {
 
 impl BlockCipher for Cast6Engine {
     type Params<'a> = Cast6Params;
-    type Error = Cast6Error;
+    type Error = BlockCipherError;
 
     fn algorithm_name(&self) -> &str {
         "CAST6"
@@ -49,10 +49,10 @@ impl BlockCipher for Cast6Engine {
 
     fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
         if !self.initialised {
-            return Err(Cast6Error::NotInitialised);
+            return Err(BlockCipherError::NotInitialised);
         }
         if input.len() < CAST6_BLOCK_BYTES || output.len() < CAST6_BLOCK_BYTES {
-            return Err(Cast6Error::BufferTooShort);
+            return Err(BlockCipherError::BufferTooShort);
         }
 
         let input: &[u8; CAST6_BLOCK_BYTES] = input[..CAST6_BLOCK_BYTES].try_into().unwrap();
@@ -78,7 +78,7 @@ mod tests {
         assert_eq!(engine.block_size(), CAST6_BLOCK_BYTES);
         assert_eq!(
             engine.process_block(&[0u8; 16], &mut [0u8; 16]),
-            Err(Cast6Error::NotInitialised)
+            Err(BlockCipherError::NotInitialised)
         );
 
         engine
@@ -86,11 +86,11 @@ mod tests {
             .unwrap();
         assert_eq!(
             engine.process_block(&[0u8; 15], &mut [0u8; 16]),
-            Err(Cast6Error::BufferTooShort)
+            Err(BlockCipherError::BufferTooShort)
         );
         assert_eq!(
             engine.process_block(&[0u8; 16], &mut [0u8; 15]),
-            Err(Cast6Error::BufferTooShort)
+            Err(BlockCipherError::BufferTooShort)
         );
     }
 }

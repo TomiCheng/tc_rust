@@ -3,7 +3,7 @@
 use alloc::vec::Vec;
 use core::fmt;
 
-use super::{CAST6_KEY_BYTES, Cast6Error};
+use super::{CAST6_KEY_BYTES, BlockCipherError};
 
 /// An owned CAST6 key with a standard length from 128 through 256 bits.
 pub struct Cast6Params {
@@ -12,9 +12,9 @@ pub struct Cast6Params {
 
 impl Cast6Params {
     /// Copies and validates a CAST6 key.
-    pub fn new(key: &[u8]) -> Result<Self, Cast6Error> {
+    pub fn new(key: &[u8]) -> Result<Self, BlockCipherError> {
         if !CAST6_KEY_BYTES.contains(&key.len()) {
-            return Err(Cast6Error::InvalidKeyLength(key.len()));
+            return Err(BlockCipherError::InvalidKeyLength(key.len()));
         }
         Ok(Self { key: key.to_vec() })
     }
@@ -54,7 +54,7 @@ mod tests {
         for length in [0, 15, 17, 19, 21, 27, 29, 31, 33] {
             assert!(matches!(
                 Cast6Params::new(&alloc::vec![0u8; length]),
-                Err(Cast6Error::InvalidKeyLength(n)) if n == length
+                Err(BlockCipherError::InvalidKeyLength(n)) if n == length
             ));
         }
     }

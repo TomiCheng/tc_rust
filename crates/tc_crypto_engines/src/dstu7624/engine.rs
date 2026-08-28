@@ -2,7 +2,7 @@
 
 use tc_crypto_core::BlockCipher;
 
-use super::{DSTU7624_BLOCK_BITS, Dstu7624Error, Dstu7624Params, cipher};
+use super::{DSTU7624_BLOCK_BITS, BlockCipherError, Dstu7624Params, cipher};
 
 /// Portable DSTU 7624 (Kalyna) block cipher.
 pub struct Dstu7624Engine {
@@ -13,9 +13,9 @@ pub struct Dstu7624Engine {
 
 impl Dstu7624Engine {
     /// Creates an uninitialised engine for a 128-, 256-, or 512-bit block.
-    pub fn new(block_size_bits: usize) -> Result<Self, Dstu7624Error> {
+    pub fn new(block_size_bits: usize) -> Result<Self, BlockCipherError> {
         if !DSTU7624_BLOCK_BITS.contains(&block_size_bits) {
-            return Err(Dstu7624Error::InvalidBlockSize(block_size_bits));
+            return Err(BlockCipherError::InvalidBlockSize(block_size_bits));
         }
         Ok(Self {
             cipher: cipher::Dstu7624Cipher::new(block_size_bits / 64),
@@ -33,7 +33,7 @@ impl Default for Dstu7624Engine {
 
 impl BlockCipher for Dstu7624Engine {
     type Params<'a> = Dstu7624Params;
-    type Error = Dstu7624Error;
+    type Error = BlockCipherError;
 
     fn algorithm_name(&self) -> &str {
         "DSTU7624"
@@ -48,7 +48,7 @@ impl BlockCipher for Dstu7624Engine {
         let block_bytes = self.block_size();
         let key_bytes = params.key_len();
         if key_bytes != block_bytes && key_bytes != block_bytes * 2 {
-            return Err(Dstu7624Error::UnsupportedKeyForBlock {
+            return Err(BlockCipherError::UnsupportedKeyForBlock {
                 block_bits: block_bytes * 8,
                 key_bits: key_bytes * 8,
             });
@@ -62,11 +62,11 @@ impl BlockCipher for Dstu7624Engine {
 
     fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
         if !self.initialised {
-            return Err(Dstu7624Error::NotInitialised);
+            return Err(BlockCipherError::NotInitialised);
         }
         let block_bytes = self.block_size();
         if input.len() < block_bytes || output.len() < block_bytes {
-            return Err(Dstu7624Error::BufferTooShort);
+            return Err(BlockCipherError::BufferTooShort);
         }
 
         if self.for_encryption {
@@ -86,7 +86,7 @@ mod tests {
     fn validates_block_size_and_key_pairing() {
         assert!(matches!(
             Dstu7624Engine::new(192),
-            Err(Dstu7624Error::InvalidBlockSize(192))
+            Err(BlockCipherError::InvalidBlockSize(192))
         ));
 
         let mut engine = Dstu7624Engine::new(256).unwrap();
@@ -94,7 +94,7 @@ mod tests {
         assert_eq!(engine.block_size(), 32);
         assert_eq!(
             engine.init(true, &Dstu7624Params::new(&[0u8; 16]).unwrap()),
-            Err(Dstu7624Error::UnsupportedKeyForBlock {
+            Err(BlockCipherError::UnsupportedKeyForBlock {
                 block_bits: 256,
                 key_bits: 128,
             })
@@ -110,7 +110,7 @@ mod tests {
         );
         assert_eq!(
             engine.process_block(&[0u8; 32], &mut [0u8; 32]),
-            Err(Dstu7624Error::NotInitialised)
+            Err(BlockCipherError::NotInitialised)
         );
     }
 
@@ -119,18 +119,18 @@ mod tests {
         let mut engine = Dstu7624Engine::new(128).unwrap();
         assert_eq!(
             engine.process_block(&[0u8; 16], &mut [0u8; 16]),
-            Err(Dstu7624Error::NotInitialised)
+            Err(BlockCipherError::NotInitialised)
         );
         engine
             .init(true, &Dstu7624Params::new(&[0u8; 16]).unwrap())
             .unwrap();
         assert_eq!(
             engine.process_block(&[0u8; 15], &mut [0u8; 16]),
-            Err(Dstu7624Error::BufferTooShort)
+            Err(BlockCipherError::BufferTooShort)
         );
         assert_eq!(
             engine.process_block(&[0u8; 16], &mut [0u8; 15]),
-            Err(Dstu7624Error::BufferTooShort)
+            Err(BlockCipherError::BufferTooShort)
         );
     }
 }

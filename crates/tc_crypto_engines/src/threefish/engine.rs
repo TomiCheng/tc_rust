@@ -10,7 +10,7 @@ use alloc::vec::Vec;
 use tc_crypto_core::BlockCipher;
 
 use super::cipher::{self, C_240};
-use super::{ThreefishError, ThreefishParams};
+use super::{BlockCipherError, ThreefishParams};
 
 /// The default block size of a freshly constructed engine, before any `init`.
 const DEFAULT_BLOCK_SIZE: usize = 32;
@@ -57,7 +57,7 @@ impl Default for ThreefishEngine {
 impl BlockCipher for ThreefishEngine {
     // 參數為擁有式、無 lifetime,GAT 的 'a 在此忽略。
     type Params<'a> = ThreefishParams;
-    type Error = ThreefishError;
+    type Error = BlockCipherError;
 
     fn algorithm_name(&self) -> &str {
         match self.block_size {
@@ -113,11 +113,11 @@ impl BlockCipher for ThreefishEngine {
         let nw = self.words();
         // kw 未達 nw+1 表示尚未 init。
         if self.kw.len() != nw + 1 {
-            return Err(ThreefishError::NotInitialised);
+            return Err(BlockCipherError::NotInitialised);
         }
         let bytes = self.block_size;
         if input.len() < bytes || output.len() < bytes {
-            return Err(ThreefishError::BufferTooShort);
+            return Err(BlockCipherError::BufferTooShort);
         }
 
         // 小端位元組 → 字。
@@ -160,7 +160,7 @@ mod tests {
         let mut out = [0u8; 32];
         assert_eq!(
             e.process_block(&[0u8; 32], &mut out),
-            Err(ThreefishError::NotInitialised)
+            Err(BlockCipherError::NotInitialised)
         );
     }
 }

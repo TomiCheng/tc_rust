@@ -2,7 +2,7 @@
 
 use tc_crypto_core::BlockCipher;
 
-use super::{IDEA_BLOCK_BYTES, IDEA_KEY_BYTES, IdeaError, IdeaParams};
+use super::{IDEA_BLOCK_BYTES, IDEA_KEY_BYTES, BlockCipherError, IdeaParams};
 
 /// Modular multiplication base, `2^16 + 1` (see [`mul`]).
 const BASE: i32 = 0x1_0001;
@@ -90,7 +90,7 @@ impl Default for IdeaEngine {
 
 impl BlockCipher for IdeaEngine {
     type Params<'a> = IdeaParams;
-    type Error = IdeaError;
+    type Error = BlockCipherError;
 
     fn algorithm_name(&self) -> &str {
         "IDEA"
@@ -108,10 +108,10 @@ impl BlockCipher for IdeaEngine {
 
     fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
         if !self.initialised {
-            return Err(IdeaError::NotInitialised);
+            return Err(BlockCipherError::NotInitialised);
         }
         if input.len() < IDEA_BLOCK_BYTES || output.len() < IDEA_BLOCK_BYTES {
-            return Err(IdeaError::BufferTooShort);
+            return Err(BlockCipherError::BufferTooShort);
         }
         self.idea_func(input, output);
         Ok(IDEA_BLOCK_BYTES)
@@ -278,7 +278,7 @@ mod tests {
         assert_eq!(engine.block_size(), 8);
         assert_eq!(
             engine.process_block(&[0u8; 8], &mut [0u8; 8]),
-            Err(IdeaError::NotInitialised)
+            Err(BlockCipherError::NotInitialised)
         );
     }
 
@@ -289,11 +289,11 @@ mod tests {
         engine.init(true, &params).unwrap();
         assert_eq!(
             engine.process_block(&[0u8; 7], &mut [0u8; 8]),
-            Err(IdeaError::BufferTooShort)
+            Err(BlockCipherError::BufferTooShort)
         );
         assert_eq!(
             engine.process_block(&[0u8; 8], &mut [0u8; 7]),
-            Err(IdeaError::BufferTooShort)
+            Err(BlockCipherError::BufferTooShort)
         );
     }
 

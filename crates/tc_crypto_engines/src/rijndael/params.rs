@@ -3,7 +3,7 @@
 use alloc::vec::Vec;
 use core::fmt;
 
-use super::{RIJNDAEL_KEY_BYTES, RijndaelError};
+use super::{RIJNDAEL_KEY_BYTES, BlockCipherError};
 
 /// Owned, validated Rijndael key parameter (16/20/24/28/32 bytes).
 pub struct RijndaelParams {
@@ -20,9 +20,9 @@ impl fmt::Debug for RijndaelParams {
 
 impl RijndaelParams {
     /// Validates that `key` is a legal Rijndael key length and takes an owned copy.
-    pub fn new(key: &[u8]) -> Result<Self, RijndaelError> {
+    pub fn new(key: &[u8]) -> Result<Self, BlockCipherError> {
         if !RIJNDAEL_KEY_BYTES.contains(&key.len()) {
-            return Err(RijndaelError::InvalidKeyLength(key.len()));
+            return Err(BlockCipherError::InvalidKeyLength(key.len()));
         }
         Ok(Self { key: key.to_vec() })
     }
@@ -40,7 +40,7 @@ mod tests {
     fn rejects_invalid_key_length() {
         assert!(matches!(
             RijndaelParams::new(&[0u8; 17]),
-            Err(RijndaelError::InvalidKeyLength(17))
+            Err(BlockCipherError::InvalidKeyLength(17))
         ));
     }
 

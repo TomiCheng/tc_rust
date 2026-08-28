@@ -2,7 +2,7 @@
 
 use tc_crypto_core::BlockCipher;
 
-use super::{SM4_BLOCK_BYTES, Sm4Error, Sm4Params};
+use super::{SM4_BLOCK_BYTES, BlockCipherError, Sm4Params};
 
 /// The SM4 S-box.
 #[rustfmt::skip]
@@ -62,7 +62,7 @@ impl Default for Sm4Engine {
 
 impl BlockCipher for Sm4Engine {
     type Params<'a> = Sm4Params;
-    type Error = Sm4Error;
+    type Error = BlockCipherError;
 
     fn algorithm_name(&self) -> &str {
         "SM4"
@@ -78,9 +78,9 @@ impl BlockCipher for Sm4Engine {
     }
 
     fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
-        let rk = self.rk.as_ref().ok_or(Sm4Error::NotInitialised)?;
+        let rk = self.rk.as_ref().ok_or(BlockCipherError::NotInitialised)?;
         if input.len() < SM4_BLOCK_BYTES || output.len() < SM4_BLOCK_BYTES {
-            return Err(Sm4Error::BufferTooShort);
+            return Err(BlockCipherError::BufferTooShort);
         }
 
         let mut x = [
@@ -185,7 +185,7 @@ mod tests {
         assert_eq!(engine.block_size(), 16);
         assert_eq!(
             engine.process_block(&[0u8; 16], &mut [0u8; 16]),
-            Err(Sm4Error::NotInitialised)
+            Err(BlockCipherError::NotInitialised)
         );
     }
 
@@ -196,11 +196,11 @@ mod tests {
         engine.init(true, &params).unwrap();
         assert_eq!(
             engine.process_block(&[0u8; 15], &mut [0u8; 16]),
-            Err(Sm4Error::BufferTooShort)
+            Err(BlockCipherError::BufferTooShort)
         );
         assert_eq!(
             engine.process_block(&[0u8; 16], &mut [0u8; 15]),
-            Err(Sm4Error::BufferTooShort)
+            Err(BlockCipherError::BufferTooShort)
         );
     }
 }

@@ -16,16 +16,16 @@
 //!
 //! let mut output = [0u8; 8];
 //! cipher.process_block(&[0u8; 8], &mut output)?;
-//! # Ok::<(), tc_crypto_engines::Gost28147Error>(())
+//! # Ok::<(), tc_crypto_engines::BlockCipherError>(())
 //! ```
+
+use crate::BlockCipherError;
 
 mod engine;
 mod params;
 
 pub use engine::Gost28147Engine;
 pub use params::Gost28147Params;
-
-use core::fmt;
 
 /// GOST 28147 key length in bytes (256 bits).
 pub const GOST28147_KEY_BYTES: usize = 32;
@@ -83,47 +83,6 @@ impl Gost28147SBox {
         }
     }
 }
-
-/// An error from GOST 28147 parameter validation or block processing.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum Gost28147Error {
-    /// The key was not exactly 32 bytes.
-    InvalidKeyLength(usize),
-    /// A custom S-box was not exactly 128 bytes.
-    InvalidSBoxLength(usize),
-    /// A custom S-box entry was outside the nibble range `0..=15`.
-    InvalidSBoxValue { index: usize, value: u8 },
-    /// A custom S-box row was not a permutation of `0..=15`.
-    InvalidSBoxRow(usize),
-    /// `process_block` was called before successful initialization.
-    NotInitialised,
-    /// An input or output buffer was shorter than one block.
-    BufferTooShort,
-}
-
-impl fmt::Display for Gost28147Error {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::InvalidKeyLength(n) => {
-                write!(f, "GOST 28147 key must be 32 bytes, got {n}")
-            }
-            Self::InvalidSBoxLength(n) => {
-                write!(f, "GOST 28147 S-box must be 128 bytes, got {n}")
-            }
-            Self::InvalidSBoxValue { index, value } => write!(
-                f,
-                "GOST 28147 S-box entry {index} must be in 0..=15, got {value}"
-            ),
-            Self::InvalidSBoxRow(row) => {
-                write!(f, "GOST 28147 S-box row {row} is not a permutation")
-            }
-            Self::NotInitialised => write!(f, "GOST 28147 engine not initialised"),
-            Self::BufferTooShort => write!(f, "buffer too short for one GOST 28147 block"),
-        }
-    }
-}
-
-impl core::error::Error for Gost28147Error {}
 
 const SBOX_DEFAULT: [u8; GOST28147_S_BOX_BYTES] = [
     0x4, 0xA, 0x9, 0x2, 0xD, 0x8, 0x0, 0xE, 0x6, 0xB, 0x1, 0xC, 0x7, 0xF, 0x5, 0x3, 0xE, 0xB, 0x4,

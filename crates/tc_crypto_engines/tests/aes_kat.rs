@@ -1,7 +1,7 @@
 //! AES vectors from Bouncy Castle's `AesTest.cs` / `AesX86Test.cs`.
 
 use tc_crypto_core::BlockCipher;
-use tc_crypto_engines::{AES_BLOCK_BYTES, AesEngine, AesError, AesLightEngine, AesParams};
+use tc_crypto_engines::{AES_BLOCK_BYTES, AesEngine, BlockCipherError, AesLightEngine, AesParams};
 
 fn unhex(value: &str) -> Vec<u8> {
     (0..value.len())
@@ -12,7 +12,7 @@ fn unhex(value: &str) -> Vec<u8> {
 
 fn run_vector_with<E>(key: &str, plaintext: &str, ciphertext: &str, mut engine: E)
 where
-    for<'a> E: BlockCipher<Params<'a> = AesParams, Error = AesError>,
+    for<'a> E: BlockCipher<Params<'a> = AesParams, Error = BlockCipherError>,
 {
     let key = unhex(key);
     let plaintext = unhex(plaintext);
@@ -40,7 +40,7 @@ fn run_vector(key: &str, plaintext: &str, ciphertext: &str) {
 
 fn run_monte_carlo_with<E>(key: &str, input: &str, expected: &str, mut engine: E)
 where
-    for<'a> E: BlockCipher<Params<'a> = AesParams, Error = AesError>,
+    for<'a> E: BlockCipher<Params<'a> = AesParams, Error = BlockCipherError>,
 {
     let key = unhex(key);
     let params = AesParams::new(&key).unwrap();

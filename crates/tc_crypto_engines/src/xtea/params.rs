@@ -2,7 +2,7 @@
 
 use core::fmt;
 
-use super::{XTEA_KEY_BYTES, XteaError};
+use super::{XTEA_KEY_BYTES, BlockCipherError};
 
 /// Owned, validated XTEA key parameter (128 bits).
 pub struct XteaParams {
@@ -19,10 +19,10 @@ impl fmt::Debug for XteaParams {
 
 impl XteaParams {
     /// Validates that `key` is exactly 16 bytes and takes an owned copy.
-    pub fn new(key: &[u8]) -> Result<Self, XteaError> {
+    pub fn new(key: &[u8]) -> Result<Self, BlockCipherError> {
         let key: &[u8; XTEA_KEY_BYTES] = key
             .try_into()
-            .map_err(|_| XteaError::InvalidKeyLength(key.len()))?;
+            .map_err(|_| BlockCipherError::InvalidKeyLength(key.len()))?;
         Ok(Self { key: *key })
     }
 
@@ -39,7 +39,7 @@ mod tests {
     fn rejects_invalid_key_length() {
         assert!(matches!(
             XteaParams::new(&[0u8; 15]),
-            Err(XteaError::InvalidKeyLength(15))
+            Err(BlockCipherError::InvalidKeyLength(15))
         ));
     }
 

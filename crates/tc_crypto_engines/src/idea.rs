@@ -31,8 +31,10 @@
 //! let mut recovered = [0u8; 8];
 //! cipher.process_block(&ciphertext, &mut recovered)?;
 //! assert_eq!(recovered, plaintext);
-//! # Ok::<(), tc_crypto_engines::IdeaError>(())
+//! # Ok::<(), tc_crypto_engines::BlockCipherError>(())
 //! ```
+
+use crate::BlockCipherError;
 
 mod engine;
 mod params;
@@ -40,34 +42,7 @@ mod params;
 pub use engine::IdeaEngine;
 pub use params::IdeaParams;
 
-use core::fmt;
-
 /// IDEA key length in bytes (128 bits).
 pub const IDEA_KEY_BYTES: usize = 16;
 /// IDEA block length in bytes (64 bits).
 pub const IDEA_BLOCK_BYTES: usize = 8;
-
-/// An error from IDEA parameter validation or block processing.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum IdeaError {
-    /// The key was not exactly 16 bytes.
-    InvalidKeyLength(usize),
-    /// `process_block` was called before successful initialization.
-    NotInitialised,
-    /// An input or output buffer was shorter than one block.
-    BufferTooShort,
-}
-
-impl fmt::Display for IdeaError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::InvalidKeyLength(n) => {
-                write!(f, "IDEA key must be {IDEA_KEY_BYTES} bytes, got {n}")
-            }
-            Self::NotInitialised => write!(f, "IDEA engine not initialised"),
-            Self::BufferTooShort => write!(f, "buffer too short for one IDEA block"),
-        }
-    }
-}
-
-impl core::error::Error for IdeaError {}

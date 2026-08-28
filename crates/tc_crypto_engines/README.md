@@ -16,9 +16,9 @@ port; for the consumer-facing API, read the rustdoc.
 Decisions made while bringing up the first engine; apply them to the next ones.
 
 - **`tc_crypto_core` is traits only.** The `BlockCipher` trait ships the contract;
-  every concrete parameter/key/error type lives here in the engine crate, not in
-  core. This is the `rand_core` model (core defines `SeedableRng`, implementors
-  supply `Seed`).
+  concrete parameter/key types and the shared `BlockCipherError` live here in
+  the engine crate, not in core. This is the `rand_core` model (core defines
+  `SeedableRng`, implementors supply `Seed`).
 - **Parameters are associated types, not a shared `KeyParameter`.** A single
   `KeyParameter` cannot express per-algorithm key-length rules, so each engine
   names its own `type Params<'a>`. A generic associated type + `init(&mut self,
@@ -30,8 +30,10 @@ Decisions made while bringing up the first engine; apply them to the next ones.
   additional copies of key material. A custom `Debug` implementation may expose
   structural metadata such as key length or whether an optional tweak is
   present, but never key, tweak, nonce, or other sensitive bytes.
-- **Errors are an associated type** (`type Error: core::error::Error`). No shared
-  error enum in core; each engine defines its own.
+- **Errors remain an associated type** (`type Error: core::error::Error`) at the
+  core trait boundary, while every engine in this crate sets it to the shared,
+  non-exhaustive `BlockCipherError` taxonomy. External implementations remain
+  free to use another error type.
 - **No fallible/infallible split** for `BlockCipher` (unlike `TryDigest` /
   `Digest`): a block cipher's `init` validates its key and can genuinely fail, so
   there is no useful infallible variant.
@@ -54,7 +56,7 @@ Decisions made while bringing up the first engine; apply them to the next ones.
 One module per engine, sibling-style (`foo.rs` + `foo/`):
 
 ```
-threefish.rs          module root: error type, shared consts, re-exports
+threefish.rs          module root: shared consts and re-exports
 threefish/params.rs   validated, owned init parameters (ParamType::new -> Result)
 threefish/engine.rs   the engine struct + `impl BlockCipher`
 threefish/cipher.rs   private round functions / per-variant tables
@@ -64,12 +66,13 @@ tests/threefish_kat.rs  known-answer tests against upstream vectors
 ## Adding an engine
 
 1. Create `<name>.rs` + `<name>/` and register it in `lib.rs`.
-2. Define the error enum (`impl core::error::Error`) and any block-size / mode
-   enum in the module root.
+2. Define block-size constants and any algorithm-specific mode enum in the
+   module root; reuse the crate's `BlockCipherError`.
 3. Define the parameter type in `<name>/params.rs` with a validating
-   `new(...) -> Result<Self, Error>`.
+   `new(...) -> Result<Self, BlockCipherError>`.
 4. Implement the engine in `<name>/engine.rs`: `impl BlockCipher` with
-   `type Params<'a>` and `type Error`. Put dense round code in `<name>/cipher.rs`.
+   `type Params<'a>` and `type Error = BlockCipherError`. Put dense round code
+   in `<name>/cipher.rs`.
 5. Prefer the spec form (constant tables + `match`) over transcribing bc's
    unrolled/SIMD loops; the output must still match bit-for-bit.
 6. Add KAT tests in `tests/<name>_kat.rs`. Pull vectors from bc's own test data

@@ -2,7 +2,7 @@
 
 use core::fmt;
 
-use super::{SEED_KEY_BYTES, SeedError};
+use super::{SEED_KEY_BYTES, BlockCipherError};
 
 /// Owned, validated SEED key parameter (128 bits).
 pub struct SeedParams {
@@ -19,10 +19,10 @@ impl fmt::Debug for SeedParams {
 
 impl SeedParams {
     /// Validates that `key` is exactly 16 bytes and takes an owned copy.
-    pub fn new(key: &[u8]) -> Result<Self, SeedError> {
+    pub fn new(key: &[u8]) -> Result<Self, BlockCipherError> {
         let key: &[u8; SEED_KEY_BYTES] = key
             .try_into()
-            .map_err(|_| SeedError::InvalidKeyLength(key.len()))?;
+            .map_err(|_| BlockCipherError::InvalidKeyLength(key.len()))?;
         Ok(Self { key: *key })
     }
 
@@ -39,7 +39,7 @@ mod tests {
     fn rejects_invalid_key_length() {
         assert!(matches!(
             SeedParams::new(&[0u8; 15]),
-            Err(SeedError::InvalidKeyLength(15))
+            Err(BlockCipherError::InvalidKeyLength(15))
         ));
     }
 

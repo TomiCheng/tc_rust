@@ -3,7 +3,7 @@
 use tc_crypto_core::BlockCipher;
 
 use super::cipher::{Representation, WORKING_KEY_WORDS, decrypt, encrypt, expand_key};
-use super::{SERPENT_BLOCK_BYTES, SerpentError, SerpentParams};
+use super::{SERPENT_BLOCK_BYTES, BlockCipherError, SerpentParams};
 
 struct EngineState {
     encrypting: bool,
@@ -28,13 +28,13 @@ impl EngineState {
         input: &[u8],
         output: &mut [u8],
         representation: Representation,
-    ) -> Result<usize, SerpentError> {
+    ) -> Result<usize, BlockCipherError> {
         let working_key = self
             .working_key
             .as_ref()
-            .ok_or(SerpentError::NotInitialised)?;
+            .ok_or(BlockCipherError::NotInitialised)?;
         if input.len() < SERPENT_BLOCK_BYTES || output.len() < SERPENT_BLOCK_BYTES {
-            return Err(SerpentError::BufferTooShort);
+            return Err(BlockCipherError::BufferTooShort);
         }
 
         let state = read_state(input, representation);
@@ -70,7 +70,7 @@ impl Default for SerpentEngine {
 
 impl BlockCipher for SerpentEngine {
     type Params<'a> = SerpentParams;
-    type Error = SerpentError;
+    type Error = BlockCipherError;
 
     fn algorithm_name(&self) -> &str {
         "Serpent"
@@ -113,7 +113,7 @@ impl Default for TnepresEngine {
 
 impl BlockCipher for TnepresEngine {
     type Params<'a> = SerpentParams;
-    type Error = SerpentError;
+    type Error = BlockCipherError;
 
     fn algorithm_name(&self) -> &str {
         "Tnepres"
@@ -198,11 +198,11 @@ mod tests {
         assert_eq!(tnepres.block_size(), SERPENT_BLOCK_BYTES);
         assert_eq!(
             serpent.process_block(&[0u8; 16], &mut [0u8; 16]),
-            Err(SerpentError::NotInitialised)
+            Err(BlockCipherError::NotInitialised)
         );
         assert_eq!(
             tnepres.process_block(&[0u8; 16], &mut [0u8; 16]),
-            Err(SerpentError::NotInitialised)
+            Err(BlockCipherError::NotInitialised)
         );
     }
 
@@ -213,11 +213,11 @@ mod tests {
         engine.init(true, &params).unwrap();
         assert_eq!(
             engine.process_block(&[0u8; 15], &mut [0u8; 16]),
-            Err(SerpentError::BufferTooShort)
+            Err(BlockCipherError::BufferTooShort)
         );
         assert_eq!(
             engine.process_block(&[0u8; 16], &mut [0u8; 15]),
-            Err(SerpentError::BufferTooShort)
+            Err(BlockCipherError::BufferTooShort)
         );
     }
 }

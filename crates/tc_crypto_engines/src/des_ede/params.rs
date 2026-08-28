@@ -2,7 +2,7 @@
 
 use core::fmt;
 
-use super::{DES_EDE_THREE_KEY_BYTES, DES_EDE_TWO_KEY_BYTES, DesEdeError};
+use super::{DES_EDE_THREE_KEY_BYTES, DES_EDE_TWO_KEY_BYTES, BlockCipherError};
 
 enum KeyMaterial {
     TwoKey([u8; DES_EDE_TWO_KEY_BYTES]),
@@ -19,11 +19,11 @@ impl DesEdeParams {
     ///
     /// The 16-byte form is processed as `K1, K2, K1`. No parity, weak-key, or
     /// component-distinctness policy is imposed.
-    pub fn new(key: &[u8]) -> Result<Self, DesEdeError> {
+    pub fn new(key: &[u8]) -> Result<Self, BlockCipherError> {
         let key = match key.len() {
             DES_EDE_TWO_KEY_BYTES => KeyMaterial::TwoKey(key.try_into().unwrap()),
             DES_EDE_THREE_KEY_BYTES => KeyMaterial::ThreeKey(key.try_into().unwrap()),
-            length => return Err(DesEdeError::InvalidKeyLength(length)),
+            length => return Err(BlockCipherError::InvalidKeyLength(length)),
         };
         Ok(Self { key })
     }
@@ -55,7 +55,7 @@ mod tests {
         for length in [0, 8, 15, 17, 23, 25] {
             assert_eq!(
                 DesEdeParams::new(&alloc::vec![0u8; length]).unwrap_err(),
-                DesEdeError::InvalidKeyLength(length)
+                BlockCipherError::InvalidKeyLength(length)
             );
         }
     }

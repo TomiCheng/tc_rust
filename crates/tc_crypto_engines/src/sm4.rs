@@ -25,8 +25,10 @@
 //!     0x68, 0x1e, 0xdf, 0x34, 0xd2, 0x06, 0x96, 0x5e,
 //!     0x86, 0xb3, 0xe9, 0x4f, 0x53, 0x6e, 0x42, 0x46,
 //! ]);
-//! # Ok::<(), tc_crypto_engines::Sm4Error>(())
+//! # Ok::<(), tc_crypto_engines::BlockCipherError>(())
 //! ```
+
+use crate::BlockCipherError;
 
 mod engine;
 mod params;
@@ -34,34 +36,7 @@ mod params;
 pub use engine::Sm4Engine;
 pub use params::Sm4Params;
 
-use core::fmt;
-
 /// SM4 key length in bytes (128 bits).
 pub const SM4_KEY_BYTES: usize = 16;
 /// SM4 block length in bytes (128 bits).
 pub const SM4_BLOCK_BYTES: usize = 16;
-
-/// An error from SM4 parameter validation or block processing.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum Sm4Error {
-    /// The key was not exactly 16 bytes.
-    InvalidKeyLength(usize),
-    /// `process_block` was called before successful initialization.
-    NotInitialised,
-    /// An input or output buffer was shorter than one block.
-    BufferTooShort,
-}
-
-impl fmt::Display for Sm4Error {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::InvalidKeyLength(n) => {
-                write!(f, "SM4 key must be {SM4_KEY_BYTES} bytes, got {n}")
-            }
-            Self::NotInitialised => write!(f, "SM4 engine not initialised"),
-            Self::BufferTooShort => write!(f, "buffer too short for one SM4 block"),
-        }
-    }
-}
-
-impl core::error::Error for Sm4Error {}

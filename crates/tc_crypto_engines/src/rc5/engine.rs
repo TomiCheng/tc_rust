@@ -10,7 +10,7 @@ use alloc::vec::Vec;
 
 use tc_crypto_core::BlockCipher;
 
-use super::{Rc5Error, Rc5Params};
+use super::{BlockCipherError, Rc5Params};
 
 /// A word size RC5 can operate over (Bouncy Castle ships `u32` and `u64`).
 ///
@@ -141,7 +141,7 @@ impl<W: Rc5Word> Default for Rc5Engine<W> {
 
 impl<W: Rc5Word> BlockCipher for Rc5Engine<W> {
     type Params<'a> = Rc5Params;
-    type Error = Rc5Error;
+    type Error = BlockCipherError;
 
     fn algorithm_name(&self) -> &str {
         W::NAME
@@ -159,10 +159,10 @@ impl<W: Rc5Word> BlockCipher for Rc5Engine<W> {
     }
 
     fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
-        let s = self.s.as_deref().ok_or(Rc5Error::NotInitialised)?;
+        let s = self.s.as_deref().ok_or(BlockCipherError::NotInitialised)?;
         let block = 2 * W::BYTES;
         if input.len() < block || output.len() < block {
-            return Err(Rc5Error::BufferTooShort);
+            return Err(BlockCipherError::BufferTooShort);
         }
         if self.for_encryption {
             encrypt_block::<W>(s, self.rounds, input, output);
@@ -247,7 +247,7 @@ mod tests {
         assert_eq!(engine.block_size(), 8);
         assert_eq!(
             engine.process_block(&[0u8; 8], &mut [0u8; 8]),
-            Err(Rc5Error::NotInitialised)
+            Err(BlockCipherError::NotInitialised)
         );
 
         let engine = Rc564Engine::new();
@@ -262,11 +262,11 @@ mod tests {
         engine.init(true, &params).unwrap();
         assert_eq!(
             engine.process_block(&[0u8; 7], &mut [0u8; 8]),
-            Err(Rc5Error::BufferTooShort)
+            Err(BlockCipherError::BufferTooShort)
         );
         assert_eq!(
             engine.process_block(&[0u8; 8], &mut [0u8; 7]),
-            Err(Rc5Error::BufferTooShort)
+            Err(BlockCipherError::BufferTooShort)
         );
     }
 }

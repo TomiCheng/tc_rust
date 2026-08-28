@@ -2,7 +2,7 @@
 
 use core::fmt;
 
-use super::{TEA_KEY_BYTES, TeaError};
+use super::{TEA_KEY_BYTES, BlockCipherError};
 
 /// Owned, validated TEA key parameter (128 bits).
 pub struct TeaParams {
@@ -19,10 +19,10 @@ impl fmt::Debug for TeaParams {
 
 impl TeaParams {
     /// Validates that `key` is exactly 16 bytes and takes an owned copy.
-    pub fn new(key: &[u8]) -> Result<Self, TeaError> {
+    pub fn new(key: &[u8]) -> Result<Self, BlockCipherError> {
         let key: &[u8; TEA_KEY_BYTES] = key
             .try_into()
-            .map_err(|_| TeaError::InvalidKeyLength(key.len()))?;
+            .map_err(|_| BlockCipherError::InvalidKeyLength(key.len()))?;
         Ok(Self { key: *key })
     }
 
@@ -39,7 +39,7 @@ mod tests {
     fn rejects_invalid_key_length() {
         assert!(matches!(
             TeaParams::new(&[0u8; 15]),
-            Err(TeaError::InvalidKeyLength(15))
+            Err(BlockCipherError::InvalidKeyLength(15))
         ));
     }
 

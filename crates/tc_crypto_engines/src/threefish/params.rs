@@ -2,7 +2,7 @@
 
 use core::fmt;
 
-use super::{TWEAK_BYTES, ThreefishError};
+use super::{TWEAK_BYTES, BlockCipherError};
 
 enum ThreefishKey {
     Threefish256([u8; 32]),
@@ -57,21 +57,21 @@ impl ThreefishParams {
     ///
     /// # Errors
     ///
-    /// [`ThreefishError::InvalidKeyLength`] if `key` is not 32, 64, or 128
-    /// bytes, or [`ThreefishError::InvalidTweakLength`] if a tweak is present
+    /// [`BlockCipherError::InvalidKeyLength`] if `key` is not 32, 64, or 128
+    /// bytes, or [`BlockCipherError::InvalidTweakLength`] if a tweak is present
     /// but not 16 bytes.
-    pub fn new(key: &[u8], tweak: Option<&[u8]>) -> Result<Self, ThreefishError> {
+    pub fn new(key: &[u8], tweak: Option<&[u8]>) -> Result<Self, BlockCipherError> {
         let key = match key.len() {
             32 => ThreefishKey::Threefish256(key.try_into().unwrap()),
             64 => ThreefishKey::Threefish512(key.try_into().unwrap()),
             128 => ThreefishKey::Threefish1024(key.try_into().unwrap()),
-            length => return Err(ThreefishError::InvalidKeyLength(length)),
+            length => return Err(BlockCipherError::InvalidKeyLength(length)),
         };
         // tweak 若給,固定 16 bytes;不給則採全零 tweak。
         let tweak = match tweak {
             Some(t) => {
                 if t.len() != TWEAK_BYTES {
-                    return Err(ThreefishError::InvalidTweakLength(t.len()));
+                    return Err(BlockCipherError::InvalidTweakLength(t.len()));
                 }
                 let mut arr = [0u8; TWEAK_BYTES];
                 arr.copy_from_slice(t);
@@ -126,7 +126,7 @@ mod tests {
         for length in [0, 31, 33, 63, 65, 127, 129] {
             assert!(matches!(
                 ThreefishParams::new(&alloc::vec![0u8; length], None),
-                Err(ThreefishError::InvalidKeyLength(n)) if n == length
+                Err(BlockCipherError::InvalidKeyLength(n)) if n == length
             ));
         }
     }
@@ -137,7 +137,7 @@ mod tests {
         let tweak = [0u8; 8];
         assert!(matches!(
             ThreefishParams::new(&key, Some(&tweak)),
-            Err(ThreefishError::InvalidTweakLength(8))
+            Err(BlockCipherError::InvalidTweakLength(8))
         ));
     }
 

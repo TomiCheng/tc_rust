@@ -3,7 +3,7 @@
 use alloc::vec::Vec;
 use core::fmt;
 
-use super::{DSTU7624_KEY_BYTES, Dstu7624Error};
+use super::{DSTU7624_KEY_BYTES, BlockCipherError};
 
 /// An owned DSTU 7624 key containing 16, 32, or 64 bytes.
 pub struct Dstu7624Params {
@@ -12,9 +12,9 @@ pub struct Dstu7624Params {
 
 impl Dstu7624Params {
     /// Copies and validates a DSTU 7624 key.
-    pub fn new(key: &[u8]) -> Result<Self, Dstu7624Error> {
+    pub fn new(key: &[u8]) -> Result<Self, BlockCipherError> {
         if !DSTU7624_KEY_BYTES.contains(&key.len()) {
-            return Err(Dstu7624Error::InvalidKeyLength(key.len()));
+            return Err(BlockCipherError::InvalidKeyLength(key.len()));
         }
         Ok(Self { key: key.to_vec() })
     }
@@ -54,7 +54,7 @@ mod tests {
         for length in [0, 15, 17, 31, 33, 63, 65] {
             assert!(matches!(
                 Dstu7624Params::new(&alloc::vec![0u8; length]),
-                Err(Dstu7624Error::InvalidKeyLength(n)) if n == length
+                Err(BlockCipherError::InvalidKeyLength(n)) if n == length
             ));
         }
     }

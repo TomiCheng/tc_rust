@@ -3,7 +3,7 @@
 use tc_crypto_core::BlockCipher;
 
 use super::{
-    GOST28147_BLOCK_BYTES, GOST28147_S_BOX_BYTES, Gost28147Error, Gost28147Params, Gost28147SBox,
+    GOST28147_BLOCK_BYTES, GOST28147_S_BOX_BYTES, BlockCipherError, Gost28147Params, Gost28147SBox,
 };
 
 /// GOST 28147-89 with a 256-bit key and 64-bit block.
@@ -82,7 +82,7 @@ impl Default for Gost28147Engine {
 
 impl BlockCipher for Gost28147Engine {
     type Params<'a> = Gost28147Params;
-    type Error = Gost28147Error;
+    type Error = BlockCipherError;
 
     fn algorithm_name(&self) -> &str {
         "Gost28147"
@@ -108,10 +108,10 @@ impl BlockCipher for Gost28147Engine {
 
     fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
         if !self.initialised {
-            return Err(Gost28147Error::NotInitialised);
+            return Err(BlockCipherError::NotInitialised);
         }
         if input.len() < GOST28147_BLOCK_BYTES || output.len() < GOST28147_BLOCK_BYTES {
-            return Err(Gost28147Error::BufferTooShort);
+            return Err(BlockCipherError::BufferTooShort);
         }
         self.transform(input, output);
         Ok(GOST28147_BLOCK_BYTES)
@@ -129,7 +129,7 @@ mod tests {
         assert_eq!(engine.block_size(), 8);
         assert_eq!(
             engine.process_block(&[0u8; 8], &mut [0u8; 8]),
-            Err(Gost28147Error::NotInitialised)
+            Err(BlockCipherError::NotInitialised)
         );
     }
 
@@ -141,11 +141,11 @@ mod tests {
         engine.init(true, &params).unwrap();
         assert_eq!(
             engine.process_block(&[0u8; 7], &mut [0u8; 8]),
-            Err(Gost28147Error::BufferTooShort)
+            Err(BlockCipherError::BufferTooShort)
         );
         assert_eq!(
             engine.process_block(&[0u8; 8], &mut [0u8; 7]),
-            Err(Gost28147Error::BufferTooShort)
+            Err(BlockCipherError::BufferTooShort)
         );
     }
 }

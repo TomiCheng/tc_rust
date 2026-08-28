@@ -20,8 +20,10 @@
 //!     0xD7, 0x18, 0xFB, 0xD6, 0xAB, 0x64, 0x4C, 0x73,
 //!     0x9D, 0xA9, 0x5F, 0x3B, 0xE6, 0x45, 0x17, 0x78,
 //! ]);
-//! # Ok::<(), tc_crypto_engines::AriaError>(())
+//! # Ok::<(), tc_crypto_engines::BlockCipherError>(())
 //! ```
+
+use crate::BlockCipherError;
 
 mod cipher;
 mod engine;
@@ -30,35 +32,8 @@ mod params;
 pub use engine::AriaEngine;
 pub use params::AriaParams;
 
-use core::fmt;
-
 /// ARIA block length in bytes (128 bits).
 pub const ARIA_BLOCK_BYTES: usize = 16;
 
 pub(crate) const ARIA_MAX_ROUND_KEYS: usize = 17;
 pub(crate) type AriaRoundKeys = [[u8; ARIA_BLOCK_BYTES]; ARIA_MAX_ROUND_KEYS];
-
-/// An error from ARIA parameter validation or block processing.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum AriaError {
-    /// The key was not 16, 24, or 32 bytes.
-    InvalidKeyLength(usize),
-    /// `process_block` was called before successful initialization.
-    NotInitialised,
-    /// An input or output buffer was shorter than one ARIA block.
-    BufferTooShort,
-}
-
-impl fmt::Display for AriaError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::InvalidKeyLength(n) => {
-                write!(f, "ARIA key must be 16, 24, or 32 bytes, got {n}")
-            }
-            Self::NotInitialised => write!(f, "ARIA engine not initialised"),
-            Self::BufferTooShort => write!(f, "buffer too short for one ARIA block"),
-        }
-    }
-}
-
-impl core::error::Error for AriaError {}

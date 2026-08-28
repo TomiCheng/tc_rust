@@ -2,7 +2,7 @@
 
 use tc_crypto_core::BlockCipher;
 use tc_crypto_engines::{
-    CAMELLIA_BLOCK_BYTES, CamelliaEngine, CamelliaError, CamelliaLightEngine, CamelliaParams,
+    CAMELLIA_BLOCK_BYTES, CamelliaEngine, BlockCipherError, CamelliaLightEngine, CamelliaParams,
 };
 
 fn unhex(value: &str) -> Vec<u8> {
@@ -14,7 +14,7 @@ fn unhex(value: &str) -> Vec<u8> {
 
 fn run_vector_for<E>(create: impl Fn() -> E, key: &[u8], plaintext: &[u8], ciphertext: &[u8])
 where
-    for<'a> E: BlockCipher<Params<'a> = CamelliaParams, Error = CamelliaError>,
+    for<'a> E: BlockCipher<Params<'a> = CamelliaParams, Error = BlockCipherError>,
 {
     let params = CamelliaParams::new(key).unwrap();
     let mut engine = create();

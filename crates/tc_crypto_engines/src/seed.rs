@@ -24,8 +24,10 @@
 //!     0x5E, 0xBA, 0xC6, 0xE0, 0x05, 0x4E, 0x16, 0x68,
 //!     0x19, 0xAF, 0xF1, 0xCC, 0x6D, 0x34, 0x6C, 0xDB,
 //! ]);
-//! # Ok::<(), tc_crypto_engines::SeedError>(())
+//! # Ok::<(), tc_crypto_engines::BlockCipherError>(())
 //! ```
+
+use crate::BlockCipherError;
 
 mod engine;
 mod params;
@@ -34,34 +36,7 @@ mod tables;
 pub use engine::SeedEngine;
 pub use params::SeedParams;
 
-use core::fmt;
-
 /// SEED key length in bytes (128 bits).
 pub const SEED_KEY_BYTES: usize = 16;
 /// SEED block length in bytes (128 bits).
 pub const SEED_BLOCK_BYTES: usize = 16;
-
-/// An error from SEED parameter validation or block processing.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum SeedError {
-    /// The key was not exactly 16 bytes.
-    InvalidKeyLength(usize),
-    /// `process_block` was called before successful initialization.
-    NotInitialised,
-    /// An input or output buffer was shorter than one block.
-    BufferTooShort,
-}
-
-impl fmt::Display for SeedError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::InvalidKeyLength(n) => {
-                write!(f, "SEED key must be {SEED_KEY_BYTES} bytes, got {n}")
-            }
-            Self::NotInitialised => write!(f, "SEED engine not initialised"),
-            Self::BufferTooShort => write!(f, "buffer too short for one SEED block"),
-        }
-    }
-}
-
-impl core::error::Error for SeedError {}

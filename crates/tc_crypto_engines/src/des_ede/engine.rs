@@ -4,7 +4,7 @@ use tc_crypto_core::BlockCipher;
 
 use crate::des::{des_func, generate_working_key};
 
-use super::{DES_EDE_BLOCK_BYTES, DesEdeError, DesEdeParams};
+use super::{DES_EDE_BLOCK_BYTES, BlockCipherError, DesEdeParams};
 
 /// EDE Triple DES with a 16-byte or 24-byte encoded key and an 8-byte block.
 pub struct DesEdeEngine {
@@ -36,7 +36,7 @@ impl Default for DesEdeEngine {
 
 impl BlockCipher for DesEdeEngine {
     type Params<'a> = DesEdeParams;
-    type Error = DesEdeError;
+    type Error = BlockCipherError;
 
     fn algorithm_name(&self) -> &str {
         "DESede"
@@ -66,10 +66,10 @@ impl BlockCipher for DesEdeEngine {
 
     fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
         if !self.initialised {
-            return Err(DesEdeError::NotInitialised);
+            return Err(BlockCipherError::NotInitialised);
         }
         if input.len() < DES_EDE_BLOCK_BYTES || output.len() < DES_EDE_BLOCK_BYTES {
-            return Err(DesEdeError::BufferTooShort);
+            return Err(BlockCipherError::BufferTooShort);
         }
 
         let mut high = u32::from_be_bytes(input[..4].try_into().unwrap());
@@ -100,18 +100,18 @@ mod tests {
         assert_eq!(engine.block_size(), DES_EDE_BLOCK_BYTES);
         assert_eq!(
             engine.process_block(&[0u8; 8], &mut [0u8; 8]),
-            Err(DesEdeError::NotInitialised)
+            Err(BlockCipherError::NotInitialised)
         );
 
         let params = DesEdeParams::new(&[0u8; 16]).unwrap();
         engine.init(true, &params).unwrap();
         assert_eq!(
             engine.process_block(&[0u8; 7], &mut [0u8; 8]),
-            Err(DesEdeError::BufferTooShort)
+            Err(BlockCipherError::BufferTooShort)
         );
         assert_eq!(
             engine.process_block(&[0u8; 8], &mut [0u8; 7]),
-            Err(DesEdeError::BufferTooShort)
+            Err(BlockCipherError::BufferTooShort)
         );
     }
 }

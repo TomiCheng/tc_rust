@@ -2,7 +2,7 @@
 
 use tc_crypto_core::BlockCipher;
 
-use super::{NOEKEON_BLOCK_BYTES, NoekeonError, NoekeonParams};
+use super::{NOEKEON_BLOCK_BYTES, BlockCipherError, NoekeonParams};
 
 /// Number of rounds (also the block and key size in bytes).
 const SIZE: usize = 16;
@@ -70,7 +70,7 @@ impl Default for NoekeonEngine {
 
 impl BlockCipher for NoekeonEngine {
     type Params<'a> = NoekeonParams;
-    type Error = NoekeonError;
+    type Error = BlockCipherError;
 
     fn algorithm_name(&self) -> &str {
         "Noekeon"
@@ -93,10 +93,10 @@ impl BlockCipher for NoekeonEngine {
 
     fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
         if !self.initialised {
-            return Err(NoekeonError::NotInitialised);
+            return Err(BlockCipherError::NotInitialised);
         }
         if input.len() < NOEKEON_BLOCK_BYTES || output.len() < NOEKEON_BLOCK_BYTES {
-            return Err(NoekeonError::BufferTooShort);
+            return Err(BlockCipherError::BufferTooShort);
         }
         if self.for_encryption {
             self.encrypt_block(input, output);
@@ -179,7 +179,7 @@ mod tests {
         assert_eq!(engine.block_size(), 16);
         assert_eq!(
             engine.process_block(&[0u8; 16], &mut [0u8; 16]),
-            Err(NoekeonError::NotInitialised)
+            Err(BlockCipherError::NotInitialised)
         );
     }
 
@@ -190,11 +190,11 @@ mod tests {
         engine.init(true, &params).unwrap();
         assert_eq!(
             engine.process_block(&[0u8; 15], &mut [0u8; 16]),
-            Err(NoekeonError::BufferTooShort)
+            Err(BlockCipherError::BufferTooShort)
         );
         assert_eq!(
             engine.process_block(&[0u8; 16], &mut [0u8; 15]),
-            Err(NoekeonError::BufferTooShort)
+            Err(BlockCipherError::BufferTooShort)
         );
     }
 

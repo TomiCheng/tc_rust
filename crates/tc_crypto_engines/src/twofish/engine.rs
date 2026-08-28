@@ -2,7 +2,7 @@
 
 use tc_crypto_core::BlockCipher;
 
-use super::{TWOFISH_BLOCK_BYTES, TwofishError, TwofishParams};
+use super::{TWOFISH_BLOCK_BYTES, BlockCipherError, TwofishParams};
 
 const ROUNDS: usize = 16;
 const INPUT_WHITEN: usize = 0;
@@ -66,7 +66,7 @@ impl Default for TwofishEngine {
 
 impl BlockCipher for TwofishEngine {
     type Params<'a> = TwofishParams;
-    type Error = TwofishError;
+    type Error = BlockCipherError;
 
     fn algorithm_name(&self) -> &str {
         "Twofish"
@@ -83,9 +83,9 @@ impl BlockCipher for TwofishEngine {
     }
 
     fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
-        let schedule = self.schedule.as_ref().ok_or(TwofishError::NotInitialised)?;
+        let schedule = self.schedule.as_ref().ok_or(BlockCipherError::NotInitialised)?;
         if input.len() < TWOFISH_BLOCK_BYTES || output.len() < TWOFISH_BLOCK_BYTES {
-            return Err(TwofishError::BufferTooShort);
+            return Err(BlockCipherError::BufferTooShort);
         }
 
         if self.encrypting {
@@ -364,7 +364,7 @@ mod tests {
         assert_eq!(engine.block_size(), TWOFISH_BLOCK_BYTES);
         assert_eq!(
             engine.process_block(&[0u8; 16], &mut [0u8; 16]),
-            Err(TwofishError::NotInitialised)
+            Err(BlockCipherError::NotInitialised)
         );
     }
 
@@ -375,11 +375,11 @@ mod tests {
         engine.init(true, &params).unwrap();
         assert_eq!(
             engine.process_block(&[0u8; 15], &mut [0u8; 16]),
-            Err(TwofishError::BufferTooShort)
+            Err(BlockCipherError::BufferTooShort)
         );
         assert_eq!(
             engine.process_block(&[0u8; 16], &mut [0u8; 15]),
-            Err(TwofishError::BufferTooShort)
+            Err(BlockCipherError::BufferTooShort)
         );
     }
 }

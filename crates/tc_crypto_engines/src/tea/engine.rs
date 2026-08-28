@@ -2,7 +2,7 @@
 
 use tc_crypto_core::BlockCipher;
 
-use super::{TEA_BLOCK_BYTES, TeaError, TeaParams};
+use super::{TEA_BLOCK_BYTES, BlockCipherError, TeaParams};
 
 /// The golden-ratio round constant.
 const DELTA: u32 = 0x9E37_79B9;
@@ -64,7 +64,7 @@ impl Default for TeaEngine {
 
 impl BlockCipher for TeaEngine {
     type Params<'a> = TeaParams;
-    type Error = TeaError;
+    type Error = BlockCipherError;
 
     fn algorithm_name(&self) -> &str {
         "TEA"
@@ -87,9 +87,9 @@ impl BlockCipher for TeaEngine {
     }
 
     fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
-        let key = self.key.as_ref().ok_or(TeaError::NotInitialised)?;
+        let key = self.key.as_ref().ok_or(BlockCipherError::NotInitialised)?;
         if input.len() < TEA_BLOCK_BYTES || output.len() < TEA_BLOCK_BYTES {
-            return Err(TeaError::BufferTooShort);
+            return Err(BlockCipherError::BufferTooShort);
         }
         if self.for_encryption {
             TeaEngine::encrypt_block(key, input, output);
@@ -126,7 +126,7 @@ mod tests {
         assert_eq!(engine.block_size(), 8);
         assert_eq!(
             engine.process_block(&[0u8; 8], &mut [0u8; 8]),
-            Err(TeaError::NotInitialised)
+            Err(BlockCipherError::NotInitialised)
         );
     }
 
@@ -137,11 +137,11 @@ mod tests {
         engine.init(true, &params).unwrap();
         assert_eq!(
             engine.process_block(&[0u8; 7], &mut [0u8; 8]),
-            Err(TeaError::BufferTooShort)
+            Err(BlockCipherError::BufferTooShort)
         );
         assert_eq!(
             engine.process_block(&[0u8; 8], &mut [0u8; 7]),
-            Err(TeaError::BufferTooShort)
+            Err(BlockCipherError::BufferTooShort)
         );
     }
 }

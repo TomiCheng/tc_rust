@@ -2,7 +2,7 @@
 
 use tc_crypto_core::BlockCipher;
 
-use super::{SKIPJACK_BLOCK_BYTES, SkipjackError, SkipjackParams};
+use super::{SKIPJACK_BLOCK_BYTES, BlockCipherError, SkipjackParams};
 
 /// The SKIPJACK F-table (byte substitution).
 #[rustfmt::skip]
@@ -122,7 +122,7 @@ impl Default for SkipjackEngine {
 
 impl BlockCipher for SkipjackEngine {
     type Params<'a> = SkipjackParams;
-    type Error = SkipjackError;
+    type Error = BlockCipherError;
 
     fn algorithm_name(&self) -> &str {
         "SKIPJACK"
@@ -139,9 +139,9 @@ impl BlockCipher for SkipjackEngine {
     }
 
     fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
-        let key = self.keys.as_ref().ok_or(SkipjackError::NotInitialised)?;
+        let key = self.keys.as_ref().ok_or(BlockCipherError::NotInitialised)?;
         if input.len() < SKIPJACK_BLOCK_BYTES || output.len() < SKIPJACK_BLOCK_BYTES {
-            return Err(SkipjackError::BufferTooShort);
+            return Err(BlockCipherError::BufferTooShort);
         }
         if self.for_encryption {
             SkipjackEngine::encrypt_block(key, input, output);
@@ -212,7 +212,7 @@ mod tests {
         assert_eq!(engine.block_size(), 8);
         assert_eq!(
             engine.process_block(&[0u8; 8], &mut [0u8; 8]),
-            Err(SkipjackError::NotInitialised)
+            Err(BlockCipherError::NotInitialised)
         );
     }
 
@@ -223,11 +223,11 @@ mod tests {
         engine.init(true, &params).unwrap();
         assert_eq!(
             engine.process_block(&[0u8; 7], &mut [0u8; 8]),
-            Err(SkipjackError::BufferTooShort)
+            Err(BlockCipherError::BufferTooShort)
         );
         assert_eq!(
             engine.process_block(&[0u8; 8], &mut [0u8; 7]),
-            Err(SkipjackError::BufferTooShort)
+            Err(BlockCipherError::BufferTooShort)
         );
     }
 }

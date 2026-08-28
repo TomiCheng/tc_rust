@@ -4,7 +4,7 @@
 use tc_crypto_core::BlockCipher;
 
 use super::{
-    AES_BLOCK_BYTES, AesError, AesParams,
+    AES_BLOCK_BYTES, BlockCipherError, AesParams,
     portable::{INVERSE_S_BOX, S_BOX},
 };
 
@@ -213,7 +213,7 @@ impl Default for AesLightEngine {
 
 impl BlockCipher for AesLightEngine {
     type Params<'a> = AesParams;
-    type Error = AesError;
+    type Error = BlockCipherError;
 
     fn algorithm_name(&self) -> &str {
         "AES"
@@ -232,10 +232,10 @@ impl BlockCipher for AesLightEngine {
 
     fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
         if !self.initialised {
-            return Err(AesError::NotInitialised);
+            return Err(BlockCipherError::NotInitialised);
         }
         if input.len() < AES_BLOCK_BYTES || output.len() < AES_BLOCK_BYTES {
-            return Err(AesError::BufferTooShort);
+            return Err(BlockCipherError::BufferTooShort);
         }
 
         let input: &[u8; AES_BLOCK_BYTES] = input[..AES_BLOCK_BYTES].try_into().unwrap();
@@ -264,7 +264,7 @@ mod tests {
         assert_eq!(engine.block_size(), AES_BLOCK_BYTES);
         assert_eq!(
             engine.process_block(&[0u8; 16], &mut [0u8; 16]),
-            Err(AesError::NotInitialised)
+            Err(BlockCipherError::NotInitialised)
         );
 
         engine
@@ -272,11 +272,11 @@ mod tests {
             .unwrap();
         assert_eq!(
             engine.process_block(&[0u8; 15], &mut [0u8; 16]),
-            Err(AesError::BufferTooShort)
+            Err(BlockCipherError::BufferTooShort)
         );
         assert_eq!(
             engine.process_block(&[0u8; 16], &mut [0u8; 15]),
-            Err(AesError::BufferTooShort)
+            Err(BlockCipherError::BufferTooShort)
         );
     }
 }

@@ -2,7 +2,7 @@
 
 use core::fmt;
 
-use super::{SM4_KEY_BYTES, Sm4Error};
+use super::{SM4_KEY_BYTES, BlockCipherError};
 
 /// Owned, validated SM4 key parameter (128 bits).
 pub struct Sm4Params {
@@ -19,10 +19,10 @@ impl fmt::Debug for Sm4Params {
 
 impl Sm4Params {
     /// Validates that `key` is exactly 16 bytes and takes an owned copy.
-    pub fn new(key: &[u8]) -> Result<Self, Sm4Error> {
+    pub fn new(key: &[u8]) -> Result<Self, BlockCipherError> {
         let key: &[u8; SM4_KEY_BYTES] = key
             .try_into()
-            .map_err(|_| Sm4Error::InvalidKeyLength(key.len()))?;
+            .map_err(|_| BlockCipherError::InvalidKeyLength(key.len()))?;
         Ok(Self { key: *key })
     }
 
@@ -39,7 +39,7 @@ mod tests {
     fn rejects_invalid_key_length() {
         assert!(matches!(
             Sm4Params::new(&[0u8; 15]),
-            Err(Sm4Error::InvalidKeyLength(15))
+            Err(BlockCipherError::InvalidKeyLength(15))
         ));
     }
 

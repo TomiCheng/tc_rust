@@ -2,7 +2,7 @@
 
 use core::fmt;
 
-use super::AesError;
+use super::BlockCipherError;
 
 enum AesKey {
     Aes128([u8; 16]),
@@ -17,12 +17,12 @@ pub struct AesParams {
 
 impl AesParams {
     /// Copies and validates a 128-, 192-, or 256-bit AES key.
-    pub fn new(key: &[u8]) -> Result<Self, AesError> {
+    pub fn new(key: &[u8]) -> Result<Self, BlockCipherError> {
         let key = match key.len() {
             16 => AesKey::Aes128(key.try_into().unwrap()),
             24 => AesKey::Aes192(key.try_into().unwrap()),
             32 => AesKey::Aes256(key.try_into().unwrap()),
-            length => return Err(AesError::InvalidKeyLength(length)),
+            length => return Err(BlockCipherError::InvalidKeyLength(length)),
         };
         Ok(Self { key })
     }
@@ -68,7 +68,7 @@ mod tests {
         for length in [0, 15, 17, 23, 25, 31, 33] {
             assert!(matches!(
                 AesParams::new(&alloc::vec![0u8; length]),
-                Err(AesError::InvalidKeyLength(n)) if n == length
+                Err(BlockCipherError::InvalidKeyLength(n)) if n == length
             ));
         }
     }
