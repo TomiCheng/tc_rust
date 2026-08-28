@@ -149,6 +149,7 @@ targets should rerun the benchmark locally.
 | DES / Triple DES | `DesEngine`, `DesEdeEngine` | DES plus two-key and three-key EDE; legacy compatibility only; FIPS/BC KAT-verified |
 | DSTU 7624 (Kalyna) | `Dstu7624Engine` | 128/256/512-bit blocks and valid same-size/double-size keys; BC ECB KAT-verified |
 | IDEA | `IdeaEngine` | 128-bit key, legacy 64-bit block; shared round function, inverse-key decryption; BC KAT-verified |
+| Noekeon | `NoekeonEngine` | 128-bit key/block, direct-key mode; shared theta/pi/gamma layers; BC KAT-verified |
 
 ### Block ciphers — TODO
 
@@ -161,7 +162,6 @@ targets should rerun the benchmark locally.
 | SM4 | `SM4Engine` | |
 | SEED | `SEEDEngine` | |
 | RC2 / RC5 / RC6 | `RC2Engine`, `RC532Engine`, `RC564Engine`, `RC6Engine` | |
-| Noekeon | `NoekeonEngine` | |
 | Skipjack | `SkipjackEngine` | |
 
 ### Stream ciphers — TODO

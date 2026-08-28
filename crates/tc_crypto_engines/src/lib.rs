@@ -20,6 +20,7 @@ pub mod des_ede;
 pub mod dstu7624;
 pub mod gost28147;
 pub mod idea;
+pub mod noekeon;
 pub mod threefish;
 
 pub use aes::{AES_BLOCK_BYTES, AesEngine, AesError, AesLightEngine, AesParams};
@@ -49,4 +50,7 @@ pub use gost28147::{
     Gost28147Error, Gost28147Params, Gost28147SBox,
 };
 pub use idea::{IDEA_BLOCK_BYTES, IDEA_KEY_BYTES, IdeaEngine, IdeaError, IdeaParams};
+pub use noekeon::{
+    NOEKEON_BLOCK_BYTES, NOEKEON_KEY_BYTES, NoekeonEngine, NoekeonError, NoekeonParams,
+};
 pub use threefish::{ThreefishEngine, ThreefishError, ThreefishParams};
