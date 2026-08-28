@@ -2,7 +2,8 @@
 //!
 //! See RFC 3394 (Schaad & Housley, 2002). This type is the shared base for
 //! concrete wrappers such as `AesWrapEngine`, mirroring Bouncy Castle's
-//! `Rfc3394WrapEngine`.
+//! `Rfc3394WrapEngine`. The register loop is factored into `wrap_core` /
+//! `unwrap_core` so that the RFC 5649 wrapper ([`crate::rfc5649`]) can reuse it.
 
 use alloc::vec;
 use alloc::vec::Vec;
@@ -85,19 +86,6 @@ impl<E: BlockCipher> Rfc3394WrapEngine<E> {
             iv: DEFAULT_IV,
             for_wrapping: None,
         }
-    }
-
-    /// Processes one 16-byte block in place using the already-keyed engine.
-    ///
-    /// Our `process_block` does not allow the input and output to be the same
-    /// slice, so route through a 16-byte scratch buffer and copy back.
-    fn crypt_block(&mut self, block: &mut [u8]) -> Result<(), Rfc3394Error<E>> {
-        let mut scratch = [0u8; 16];
-        self.engine
-            .process_block(block, &mut scratch)
-            .map_err(Rfc3394Error::BlockCipher)?;
-        block.copy_from_slice(&scratch);
-        Ok(())
     }
 }
 
@@ -199,40 +187,8 @@ impl<E: BlockCipher> Wrapper for Rfc3394WrapEngine<E> {
         if input.len() < 8 || !input.len().is_multiple_of(8) {
             return Err(Rfc3394Error::WrapDataLength);
         }
-        let n = input.len() / 8;
-
-        // block = IV(8) || input，之後所有運算就地在 block 上進行。
-        let mut block = vec![0u8; input.len() + 8];
-        block[..8].copy_from_slice(&self.iv);
-        block[8..].copy_from_slice(input);
-
-        if n == 1 {
-            // 單一資料分組：直接加密 IV||R 這 16 bytes。
-            self.crypt_block(&mut block)?;
-        } else {
-            let mut buf = [0u8; 16];
-            for j in 0..6u32 {
-                for i in 1..=n {
-                    buf[..8].copy_from_slice(&block[..8]);
-                    buf[8..].copy_from_slice(&block[8 * i..8 * i + 8]);
-                    self.crypt_block(&mut buf)?;
-
-                    // t = n*j + i，逐位元組 XOR 進 A 暫存（buf 的前半）。
-                    let mut t = n as u32 * j + i as u32;
-                    let mut k = 1;
-                    while t != 0 {
-                        buf[8 - k] ^= t as u8;
-                        t >>= 8;
-                        k += 1;
-                    }
-
-                    block[..8].copy_from_slice(&buf[..8]);
-                    block[8 * i..8 * i + 8].copy_from_slice(&buf[8..]);
-                }
-            }
-        }
-
-        Ok(block)
+        let iv = self.iv;
+        wrap_core(&mut self.engine, &iv, input).map_err(Rfc3394Error::BlockCipher)
     }
 
     fn unwrap(&mut self, input: &[u8]) -> Result<Vec<u8>, Self::Error> {
@@ -244,46 +200,9 @@ impl<E: BlockCipher> Wrapper for Rfc3394WrapEngine<E> {
         if input.len() < 16 || !input.len().is_multiple_of(8) {
             return Err(Rfc3394Error::UnwrapDataLength);
         }
-        // 資料分組數（扣掉開頭的 A 暫存那 8 bytes）。
-        let n = input.len() / 8 - 1;
-
-        let mut block = vec![0u8; input.len() - 8];
-        let mut a = [0u8; 8];
-        let mut buf = [0u8; 16];
-
-        if n == 1 {
-            // 單一資料分組：解密開頭 16 bytes，前半為 A、後半為明文。
-            self.engine
-                .process_block(&input[..16], &mut buf)
-                .map_err(Rfc3394Error::BlockCipher)?;
-            a.copy_from_slice(&buf[..8]);
-            block[..8].copy_from_slice(&buf[8..]);
-        } else {
-            a.copy_from_slice(&input[..8]);
-            block.copy_from_slice(&input[8..]);
-
-            for j in (0..6u32).rev() {
-                for i in (1..=n).rev() {
-                    buf[..8].copy_from_slice(&a);
-                    buf[8..].copy_from_slice(&block[8 * (i - 1)..8 * (i - 1) + 8]);
-
-                    // 解密前先把 t XOR 回 A 暫存（與 wrap 的順序相反）。
-                    let mut t = n as u32 * j + i as u32;
-                    let mut k = 1;
-                    while t != 0 {
-                        buf[8 - k] ^= t as u8;
-                        t >>= 8;
-                        k += 1;
-                    }
-
-                    self.crypt_block(&mut buf)?;
-                    a.copy_from_slice(&buf[..8]);
-                    block[8 * (i - 1)..8 * (i - 1) + 8].copy_from_slice(&buf[8..]);
-                }
-            }
-        }
-
-        // 以定值時間比較 A 與 IV，校驗失敗即拒絕（避免時序側通道）。
+        let (block, a) =
+            unwrap_core(&mut self.engine, input).map_err(Rfc3394Error::BlockCipher)?;
+        // 以定值時間比較取出的 A 與 IV，校驗失敗即拒絕（避免時序側通道）。
         if !fixed_time_eq(&a, &self.iv) {
             return Err(Rfc3394Error::IntegrityCheckFailed);
         }
@@ -291,10 +210,112 @@ impl<E: BlockCipher> Wrapper for Rfc3394WrapEngine<E> {
     }
 }
 
+/// RFC 3394 wrap core: runs the A/R register loop on an already-keyed
+/// (encryption-direction) engine. `iv` is the 8-byte AIV/IV and `input` must be
+/// a positive multiple of 8 bytes (the caller checks this). Shared by the RFC
+/// 3394 and RFC 5649 wrappers.
+pub(crate) fn wrap_core<E: BlockCipher>(
+    engine: &mut E,
+    iv: &[u8; 8],
+    input: &[u8],
+) -> Result<Vec<u8>, E::Error> {
+    let n = input.len() / 8;
+
+    // block = IV(8) || input，之後所有運算就地在 block 上進行。
+    let mut block = vec![0u8; input.len() + 8];
+    block[..8].copy_from_slice(iv);
+    block[8..].copy_from_slice(input);
+
+    if n == 1 {
+        // 單一資料分組：直接加密 IV||R 這 16 bytes。
+        crypt_block(engine, &mut block)?;
+    } else {
+        let mut buf = [0u8; 16];
+        for j in 0..6u32 {
+            for i in 1..=n {
+                buf[..8].copy_from_slice(&block[..8]);
+                buf[8..].copy_from_slice(&block[8 * i..8 * i + 8]);
+                crypt_block(engine, &mut buf)?;
+
+                // t = n*j + i，逐位元組 XOR 進 A 暫存（buf 的前半）。
+                let mut t = n as u32 * j + i as u32;
+                let mut k = 1;
+                while t != 0 {
+                    buf[8 - k] ^= t as u8;
+                    t >>= 8;
+                    k += 1;
+                }
+
+                block[..8].copy_from_slice(&buf[..8]);
+                block[8 * i..8 * i + 8].copy_from_slice(&buf[8..]);
+            }
+        }
+    }
+
+    Ok(block)
+}
+
+/// RFC 3394 unwrap core, **without** the IV check: returns `(data, extracted A)`.
+/// The caller validates the extracted A (RFC 3394 compares it to the IV; RFC 5649
+/// decodes the AIV and MLI from it). `input` must be at least 16 bytes and a
+/// multiple of 8 (the caller checks this).
+pub(crate) fn unwrap_core<E: BlockCipher>(
+    engine: &mut E,
+    input: &[u8],
+) -> Result<(Vec<u8>, [u8; 8]), E::Error> {
+    // 資料分組數（扣掉開頭的 A 暫存那 8 bytes）。
+    let n = input.len() / 8 - 1;
+
+    let mut block = vec![0u8; input.len() - 8];
+    let mut a = [0u8; 8];
+    let mut buf = [0u8; 16];
+
+    if n == 1 {
+        // 單一資料分組：解密開頭 16 bytes，前半為 A、後半為資料。
+        engine.process_block(&input[..16], &mut buf)?;
+        a.copy_from_slice(&buf[..8]);
+        block[..8].copy_from_slice(&buf[8..]);
+    } else {
+        a.copy_from_slice(&input[..8]);
+        block.copy_from_slice(&input[8..]);
+
+        for j in (0..6u32).rev() {
+            for i in (1..=n).rev() {
+                buf[..8].copy_from_slice(&a);
+                buf[8..].copy_from_slice(&block[8 * (i - 1)..8 * (i - 1) + 8]);
+
+                // 解密前先把 t XOR 回 A 暫存（與 wrap 的順序相反）。
+                let mut t = n as u32 * j + i as u32;
+                let mut k = 1;
+                while t != 0 {
+                    buf[8 - k] ^= t as u8;
+                    t >>= 8;
+                    k += 1;
+                }
+
+                crypt_block(engine, &mut buf)?;
+                a.copy_from_slice(&buf[..8]);
+                block[8 * (i - 1)..8 * (i - 1) + 8].copy_from_slice(&buf[8..]);
+            }
+        }
+    }
+
+    Ok((block, a))
+}
+
+/// Processes one 16-byte block in place with the already-keyed engine, routing
+/// through a scratch buffer to avoid input/output aliasing.
+fn crypt_block<E: BlockCipher>(engine: &mut E, block: &mut [u8]) -> Result<(), E::Error> {
+    let mut scratch = [0u8; 16];
+    engine.process_block(block, &mut scratch)?;
+    block.copy_from_slice(&scratch);
+    Ok(())
+}
+
 /// Constant-time equality of two equal-length slices: XOR each byte pair and
 /// accumulate, so the running time does not vary with the number of matching
 /// bytes.
-fn fixed_time_eq(a: &[u8], b: &[u8]) -> bool {
+pub(crate) fn fixed_time_eq(a: &[u8], b: &[u8]) -> bool {
     debug_assert_eq!(a.len(), b.len());
     let mut diff = 0u8;
     for (x, y) in a.iter().zip(b.iter()) {

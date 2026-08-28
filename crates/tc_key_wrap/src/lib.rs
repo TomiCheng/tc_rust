@@ -13,8 +13,10 @@
 extern crate alloc;
 
 pub mod rfc3394;
+pub mod rfc5649;
 
 pub use rfc3394::{Rfc3394Params, Rfc3394WrapEngine};
+pub use rfc5649::{Rfc5649Params, Rfc5649WrapEngine};
 
 use tc_block_cipher::{AesEngine, AriaEngine, CamelliaEngine, SeedEngine};
 
@@ -29,3 +31,9 @@ pub type CamelliaWrapEngine = Rfc3394WrapEngine<CamelliaEngine>;
 
 /// SEED Key Wrap (RFC 3394) — bc `SeedWrapEngine`.
 pub type SeedWrapEngine = Rfc3394WrapEngine<SeedEngine>;
+
+/// AES Key Wrap with Padding (RFC 5649) — bc `AesWrapPadEngine`.
+pub type AesWrapPadEngine = Rfc5649WrapEngine<AesEngine>;
+
+/// ARIA Key Wrap with Padding (RFC 5649) — bc `AriaWrapPadEngine`.
+pub type AriaWrapPadEngine = Rfc5649WrapEngine<AriaEngine>;
