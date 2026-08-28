@@ -3,7 +3,7 @@
 //!
 //! RC5 is parameterised by word size, round count, and key length. Bouncy Castle
 //! ships two fixed word sizes; this port expresses the shared algorithm over an
-//! [`Rc5Word`](engine::Rc5Word) trait and exposes them as [`Rc532Engine`]
+//! [`Rc5Word`] trait and exposes them as [`Rc532Engine`]
 //! (32-bit words, 64-bit block) and [`Rc564Engine`] (64-bit words, 128-bit
 //! block). [`Rc5Params::new`] uses the standard twelve rounds;
 //! [`Rc5Params::with_rounds`] sets a different count.

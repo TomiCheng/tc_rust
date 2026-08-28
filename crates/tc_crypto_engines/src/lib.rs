@@ -30,6 +30,7 @@ pub mod skipjack;
 pub mod sm4;
 pub mod tea;
 pub mod threefish;
+pub mod twofish;
 pub mod xtea;
 
 pub use aes::{AES_BLOCK_BYTES, AesEngine, AesError, AesLightEngine, AesParams};
@@ -48,8 +49,8 @@ pub use cast5::{
 pub use cast6::{CAST6_BLOCK_BYTES, CAST6_KEY_BYTES, Cast6Engine, Cast6Error, Cast6Params};
 pub use des::{DES_BLOCK_BYTES, DES_KEY_BYTES, DesEngine, DesError, DesParams};
 pub use des_ede::{
-    DES_EDE_BLOCK_BYTES, DES_EDE_THREE_KEY_BYTES, DES_EDE_TWO_KEY_BYTES, DesEdeEngine,
-    DesEdeError, DesEdeParams,
+    DES_EDE_BLOCK_BYTES, DES_EDE_THREE_KEY_BYTES, DES_EDE_TWO_KEY_BYTES, DesEdeEngine, DesEdeError,
+    DesEdeParams,
 };
 pub use dstu7624::{
     DSTU7624_BLOCK_BITS, DSTU7624_KEY_BYTES, Dstu7624Engine, Dstu7624Error, Dstu7624Params,
@@ -80,4 +81,7 @@ pub use skipjack::{
 pub use sm4::{SM4_BLOCK_BYTES, SM4_KEY_BYTES, Sm4Engine, Sm4Error, Sm4Params};
 pub use tea::{TEA_BLOCK_BYTES, TEA_KEY_BYTES, TeaEngine, TeaError, TeaParams};
 pub use threefish::{ThreefishEngine, ThreefishError, ThreefishParams};
+pub use twofish::{
+    TWOFISH_BLOCK_BYTES, TWOFISH_KEY_BYTES, TwofishEngine, TwofishError, TwofishParams,
+};
 pub use xtea::{XTEA_BLOCK_BYTES, XTEA_KEY_BYTES, XteaEngine, XteaError, XteaParams};

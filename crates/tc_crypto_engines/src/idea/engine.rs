@@ -17,7 +17,7 @@ const SUBKEY_WORDS: usize = 52;
 /// The working key is the direction-specific subkey schedule, so
 /// [`init`](BlockCipher::init) is what actually selects encryption or decryption;
 /// [`process_block`](BlockCipher::process_block) then runs the single shared round
-/// function ([`IdeaEngine::idea_func`]).
+/// function.
 pub struct IdeaEngine {
     working_key: [u16; SUBKEY_WORDS],
     initialised: bool,

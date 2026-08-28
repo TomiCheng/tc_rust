@@ -140,6 +140,7 @@ targets should rerun the benchmark locally.
 | Algorithm | bc engine | Notes |
 |-----------|-----------|-------|
 | Threefish (Skein 1.3) | `ThreefishEngine` | 256/512/1024-bit tweakable block cipher; KAT-verified |
+| Twofish | `TwofishEngine` | 128-bit block and 128/192/256-bit keys; expanded key-dependent S-boxes; BC KAT-verified |
 | GOST 28147-89 | `Gost28147Engine` | All bc S-boxes plus validated custom tables; unlocks `tc_digest` GOST 34.11-94 |
 | AES | `AesEngine`, `AesLightEngine`, `AesEngine_X86` | AES-128/192/256; 2 KiB portable T-tables, explicit light engine, and runtime-dispatched x86 AES-NI with `std`; BC and FIPS KAT-verified |
 | ARIA | `AriaEngine` | ARIA-128/192/256; RFC 5794 KAT-verified |
@@ -164,20 +165,20 @@ targets should rerun the benchmark locally.
 | Algorithm | bc engine(s) | Notes |
 |-----------|--------------|-------|
 | Serpent | `SerpentEngine`, `TnepresEngine` (`SerpentEngineBase`) | |
-| Twofish | `TwofishEngine` | |
 
 ### Stream ciphers — TODO
 
 | Algorithm | bc engine(s) | Notes |
 |-----------|--------------|-------|
-| RC4 | `RC4Engine` | Simplest; first `StreamCipher` |
+| RC4 | `RC4Engine` | Planned first implementation; `StreamCipher` core trait is ready |
 | Salsa20 / XSalsa20 | `Salsa20Engine`, `XSalsa20Engine` | |
 | ChaCha | `ChaChaEngine`, `ChaCha7539Engine`, `XChaCha20Engine` | RFC 7539 + legacy |
 | HC-128 / HC-256 | `HC128Engine`, `HC256Engine` | |
 | VMPC | `VMPCEngine`, `VMPCKSA3Engine` | |
 | ISAAC | `ISAACEngine` | |
 
-Needs a `StreamCipher` trait in `tc_crypto_core` first.
+The `StreamCipher` trait is now available in `tc_crypto_core`. No stream-cipher
+engine has been ported yet; RC4 is the planned first implementation.
 
 ### AEAD engines — TODO
 
