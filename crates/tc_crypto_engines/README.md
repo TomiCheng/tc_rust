@@ -156,6 +156,7 @@ targets should rerun the benchmark locally.
 | Rijndael | `RijndaelEngine` | Generalised (128/160/192/224/256-bit blocks and keys); pre-NIST row form; BC KAT + Monte Carlo verified |
 | TEA / XTEA | `TeaEngine`, `XteaEngine` | Tiny 64-bit ciphers, 128-bit key, 32 rounds; XTEA precomputes its round-key schedule; BC KAT-verified |
 | SM4 | `Sm4Engine` | GM/T 0002-2012; 128-bit block/key, shared round loop with reversed decryption keys; BC KAT + 1M-iteration verified |
+| SEED | `SeedEngine` | RFC 4009; 128-bit block/key, 16-round Feistel with four S-box tables; BC KAT-verified |
 
 ### Block ciphers — TODO
 
@@ -163,7 +164,6 @@ targets should rerun the benchmark locally.
 |-----------|--------------|-------|
 | Serpent | `SerpentEngine`, `TnepresEngine` (`SerpentEngineBase`) | |
 | Twofish | `TwofishEngine` | |
-| SEED | `SEEDEngine` | |
 | Skipjack | `SkipjackEngine` | |
 
 ### Stream ciphers — TODO
