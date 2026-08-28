@@ -1,7 +1,8 @@
 //! Camellia-128, Camellia-192, and Camellia-256 block cipher.
 //!
-//! This is the four-T-table implementation corresponding to Bouncy Castle's
-//! `CamelliaEngine`. A separate light implementation is not included here.
+//! [`CamelliaEngine`] is the four-T-table implementation corresponding to
+//! Bouncy Castle's `CamelliaEngine`. [`CamelliaLightEngine`] uses a single
+//! 256-byte S-box and computes the remaining transforms at runtime.
 //!
 //! ```
 //! use tc_crypto_core::BlockCipher;
@@ -26,9 +27,11 @@
 
 mod cipher;
 mod engine;
+mod light_engine;
 mod params;
 
 pub use engine::CamelliaEngine;
+pub use light_engine::CamelliaLightEngine;
 pub use params::CamelliaParams;
 
 use core::fmt;

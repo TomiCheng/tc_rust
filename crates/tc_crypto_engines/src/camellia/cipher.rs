@@ -165,6 +165,15 @@ impl CamelliaKeySchedule {
     }
 
     pub(super) fn set_key(&mut self, for_encryption: bool, key: &[u8]) {
+        self.set_key_with(for_encryption, key, camellia_f2);
+    }
+
+    pub(super) fn set_key_with(
+        &mut self,
+        for_encryption: bool,
+        key: &[u8],
+        f2: impl Fn(&mut [u32; 4], &[u32], usize),
+    ) {
         self.subkey = [0; 96];
         self.whitening_key = [0; 8];
         self.fl_key = [0; 12];
@@ -184,11 +193,11 @@ impl CamelliaKeySchedule {
         for index in 0..4 {
             ka[index] = k[index] ^ k[index + 4];
         }
-        camellia_f2(&mut ka, &SIGMA, 0);
+        f2(&mut ka, &SIGMA, 0);
         for index in 0..4 {
             ka[index] ^= k[index];
         }
-        camellia_f2(&mut ka, &SIGMA, 4);
+        f2(&mut ka, &SIGMA, 4);
 
         if self.key_is_128 {
             self.set_key_128(for_encryption, &mut k, &mut ka);
@@ -197,7 +206,7 @@ impl CamelliaKeySchedule {
             for index in 0..4 {
                 kb[index] = ka[index] ^ k[index + 4];
             }
-            camellia_f2(&mut kb, &SIGMA, 8);
+            f2(&mut kb, &SIGMA, 8);
             self.set_key_192_or_256(for_encryption, &mut k, &mut ka, &mut kb);
         }
     }
@@ -207,29 +216,38 @@ impl CamelliaKeySchedule {
         input: &[u8; CAMELLIA_BLOCK_BYTES],
         output: &mut [u8; CAMELLIA_BLOCK_BYTES],
     ) {
+        self.process_block_with(input, output, camellia_f2);
+    }
+
+    pub(super) fn process_block_with(
+        &self,
+        input: &[u8; CAMELLIA_BLOCK_BYTES],
+        output: &mut [u8; CAMELLIA_BLOCK_BYTES],
+        f2: impl Fn(&mut [u32; 4], &[u32], usize),
+    ) {
         let mut state = [0u32; 4];
         for (index, chunk) in input.chunks_exact(4).enumerate() {
             state[index] =
                 u32::from_be_bytes(chunk.try_into().unwrap()) ^ self.whitening_key[index];
         }
 
-        camellia_f2(&mut state, &self.subkey, 0);
-        camellia_f2(&mut state, &self.subkey, 4);
-        camellia_f2(&mut state, &self.subkey, 8);
+        f2(&mut state, &self.subkey, 0);
+        f2(&mut state, &self.subkey, 4);
+        f2(&mut state, &self.subkey, 8);
         camellia_fls(&mut state, &self.fl_key, 0);
-        camellia_f2(&mut state, &self.subkey, 12);
-        camellia_f2(&mut state, &self.subkey, 16);
-        camellia_f2(&mut state, &self.subkey, 20);
+        f2(&mut state, &self.subkey, 12);
+        f2(&mut state, &self.subkey, 16);
+        f2(&mut state, &self.subkey, 20);
         camellia_fls(&mut state, &self.fl_key, 4);
-        camellia_f2(&mut state, &self.subkey, 24);
-        camellia_f2(&mut state, &self.subkey, 28);
-        camellia_f2(&mut state, &self.subkey, 32);
+        f2(&mut state, &self.subkey, 24);
+        f2(&mut state, &self.subkey, 28);
+        f2(&mut state, &self.subkey, 32);
 
         if !self.key_is_128 {
             camellia_fls(&mut state, &self.fl_key, 8);
-            camellia_f2(&mut state, &self.subkey, 36);
-            camellia_f2(&mut state, &self.subkey, 40);
-            camellia_f2(&mut state, &self.subkey, 44);
+            f2(&mut state, &self.subkey, 36);
+            f2(&mut state, &self.subkey, 40);
+            f2(&mut state, &self.subkey, 44);
         }
 
         for (index, value) in [

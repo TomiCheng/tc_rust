@@ -1,7 +1,9 @@
 //! Camellia vectors from RFC 3713 and Bouncy Castle's `CamelliaTest.cs`.
 
 use tc_crypto_core::BlockCipher;
-use tc_crypto_engines::{CAMELLIA_BLOCK_BYTES, CamelliaEngine, CamelliaParams};
+use tc_crypto_engines::{
+    CAMELLIA_BLOCK_BYTES, CamelliaEngine, CamelliaError, CamelliaLightEngine, CamelliaParams,
+};
 
 fn unhex(value: &str) -> Vec<u8> {
     (0..value.len())
@@ -10,25 +12,34 @@ fn unhex(value: &str) -> Vec<u8> {
         .collect()
 }
 
-fn run_vector(key: &str, plaintext: &str, ciphertext: &str) {
-    let key = unhex(key);
-    let plaintext = unhex(plaintext);
-    let ciphertext = unhex(ciphertext);
-    let params = CamelliaParams::new(&key).unwrap();
-    let mut engine = CamelliaEngine::new();
+fn run_vector_for<E>(create: impl Fn() -> E, key: &[u8], plaintext: &[u8], ciphertext: &[u8])
+where
+    for<'a> E: BlockCipher<Params<'a> = CamelliaParams, Error = CamelliaError>,
+{
+    let params = CamelliaParams::new(key).unwrap();
+    let mut engine = create();
 
     engine.init(true, &params).unwrap();
     let mut encrypted = [0u8; CAMELLIA_BLOCK_BYTES];
     assert_eq!(
-        engine.process_block(&plaintext, &mut encrypted).unwrap(),
+        engine.process_block(plaintext, &mut encrypted).unwrap(),
         CAMELLIA_BLOCK_BYTES
     );
     assert_eq!(encrypted.as_slice(), ciphertext);
 
     engine.init(false, &params).unwrap();
     let mut recovered = [0u8; CAMELLIA_BLOCK_BYTES];
-    engine.process_block(&ciphertext, &mut recovered).unwrap();
+    engine.process_block(ciphertext, &mut recovered).unwrap();
     assert_eq!(recovered.as_slice(), plaintext);
+}
+
+fn run_vector(key: &str, plaintext: &str, ciphertext: &str) {
+    let key = unhex(key);
+    let plaintext = unhex(plaintext);
+    let ciphertext = unhex(ciphertext);
+
+    run_vector_for(CamelliaEngine::new, &key, &plaintext, &ciphertext);
+    run_vector_for(CamelliaLightEngine::new, &key, &plaintext, &ciphertext);
 }
 
 #[test]

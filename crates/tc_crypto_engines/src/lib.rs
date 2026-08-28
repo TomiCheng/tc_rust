@@ -22,7 +22,9 @@ pub use blowfish::{
     BLOWFISH_BLOCK_BYTES, BLOWFISH_MAX_KEY_BYTES, BLOWFISH_MIN_KEY_BYTES, BlowfishEngine,
     BlowfishError, BlowfishParams,
 };
-pub use camellia::{CAMELLIA_BLOCK_BYTES, CamelliaEngine, CamelliaError, CamelliaParams};
+pub use camellia::{
+    CAMELLIA_BLOCK_BYTES, CamelliaEngine, CamelliaError, CamelliaLightEngine, CamelliaParams,
+};
 pub use des::{DES_BLOCK_BYTES, DES_KEY_BYTES, DesEngine, DesError, DesParams};
 pub use des_ede::{
     DES_EDE_BLOCK_BYTES, DES_EDE_THREE_KEY_BYTES, DES_EDE_TWO_KEY_BYTES, DesEdeEngine,
