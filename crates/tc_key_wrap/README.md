@@ -16,10 +16,11 @@ is therefore `no_std + alloc`.
 > This crate is a learning port and has not received an independent security
 > audit. Do not use it as a replacement for an audited cryptographic library.
 
-**Status: in progress.** The `Wrapper` trait exists in `tc_crypto_core`, and
-`Rfc3394WrapEngine` is implemented and verified against the RFC 3394 NIST
-known-answer vectors. Everything else is still a TODO — see the checklist in
-§4. This document is the porting inventory and roadmap.
+**Status: in progress.** The `Wrapper` trait exists in `tc_crypto_core`, and the
+RFC 3394 AES Key Wrap family is complete: `Rfc3394WrapEngine<E>` plus the
+AES/ARIA/Camellia/SEED aliases, all KAT-verified. The RFC 5649, DSTU 7624, and
+CBC-based wrappers remain — see the checklist in §4. This document is the
+porting inventory and roadmap.
 
 ## 2. Design
 
@@ -53,12 +54,12 @@ must exist in this workspace before the engine can be ported.
 |----------|-------------|-------------------|-----------|---------|
 | `Rfc3394WrapEngine` ✅ | `Rfc3394WrapEngine<E>` | any 128-bit-block cipher | RFC 3394, unpadded | — (base engine) |
 | `Rfc5649WrapEngine` | `Rfc5649WrapEngine<E>` | any 128-bit-block cipher | RFC 5649, padded (wraps RFC 3394) | RFC 3394 engine |
-| `AesWrapEngine` | `AesWrapEngine` alias | `AesEngine` | RFC 3394 | RFC 3394 engine |
+| `AesWrapEngine` ✅ | `AesWrapEngine` alias | `AesEngine` | RFC 3394 | RFC 3394 engine |
 | `AesWrapPadEngine` | `AesWrapPadEngine` alias | `AesEngine` | RFC 5649 | RFC 5649 engine |
-| `AriaWrapEngine` | `AriaWrapEngine` alias | `AriaEngine` | RFC 3394 | RFC 3394 engine |
+| `AriaWrapEngine` ✅ | `AriaWrapEngine` alias | `AriaEngine` | RFC 3394 | RFC 3394 engine |
 | `AriaWrapPadEngine` | `AriaWrapPadEngine` alias | `AriaEngine` | RFC 5649 | RFC 5649 engine |
-| `CamelliaWrapEngine` | `CamelliaWrapEngine` alias | `CamelliaEngine` | RFC 3394 | RFC 3394 engine |
-| `SeedWrapEngine` | `SeedWrapEngine` alias | `SeedEngine` | RFC 3394 | RFC 3394 engine |
+| `CamelliaWrapEngine` ✅ | `CamelliaWrapEngine` alias | `CamelliaEngine` | RFC 3394 | RFC 3394 engine |
+| `SeedWrapEngine` ✅ | `SeedWrapEngine` alias | `SeedEngine` | RFC 3394 | RFC 3394 engine |
 
 All underlying ciphers (AES, ARIA, Camellia, SEED) already exist in
 `tc_block_cipher`, so this whole family unblocks as soon as the two base engines
@@ -89,8 +90,10 @@ own logic and does not depend on a cipher mode.
 
 - [x] **`Rfc3394WrapEngine<E>`** — the foundation; verified against the NIST AES
   Key Wrap known-answer vectors (`tests/rfc3394_kat.rs`).
-- [ ] **AES/ARIA/Camellia/SEED `WrapEngine` aliases** — trivial once the base
-  works (add `pub type … = Rfc3394WrapEngine<…>` plus KATs).
+- [x] **AES/ARIA/Camellia/SEED `WrapEngine` aliases** — type aliases plus a
+  `Default` impl for arg-less construction. AES is covered by the RFC 3394 NIST
+  vectors; ARIA/Camellia/SEED are cross-checked against an independent
+  OpenSSL-based RFC 3394 implementation (`tests/wrap_alias_kat.rs`).
 - [ ] **`Rfc5649WrapEngine<E>`** + `AesWrapPadEngine` / `AriaWrapPadEngine`.
 - [ ] **`Dstu7624WrapEngine`** — independent of the AES family and of cipher
   modes.

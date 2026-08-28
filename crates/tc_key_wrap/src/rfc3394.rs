@@ -101,6 +101,15 @@ impl<E: BlockCipher> Rfc3394WrapEngine<E> {
     }
 }
 
+/// Builds the wrapper over a freshly constructed underlying engine
+/// (`E::default()`), so the concrete aliases can be created with no arguments
+/// (e.g. `AesWrapEngine::default()`).
+impl<E: BlockCipher + Default> Default for Rfc3394WrapEngine<E> {
+    fn default() -> Self {
+        Self::new(E::default())
+    }
+}
+
 /// Error type for the RFC 3394 wrapper.
 pub enum Rfc3394Error<E: BlockCipher> {
     /// wrap / unwrap called before `init`.
