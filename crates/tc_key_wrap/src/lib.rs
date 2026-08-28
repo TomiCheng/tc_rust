@@ -12,9 +12,11 @@
 // Wrap/Unwrap 會回傳新配置的位元組緩衝區，故整個 crate 為 no_std + alloc。
 extern crate alloc;
 
+pub mod dstu7624;
 pub mod rfc3394;
 pub mod rfc5649;
 
+pub use dstu7624::{Dstu7624WrapEngine, Dstu7624WrapError};
 pub use rfc3394::{Rfc3394Params, Rfc3394WrapEngine};
 pub use rfc5649::{Rfc5649Params, Rfc5649WrapEngine};
 

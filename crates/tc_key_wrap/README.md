@@ -16,11 +16,10 @@ is therefore `no_std + alloc`.
 > This crate is a learning port and has not received an independent security
 > audit. Do not use it as a replacement for an audited cryptographic library.
 
-**Status: in progress.** The `Wrapper` trait exists in `tc_crypto_core`, and the
-RFC 3394 and RFC 5649 AES Key Wrap families are complete: `Rfc3394WrapEngine<E>`
-and `Rfc5649WrapEngine<E>` plus their aliases, all KAT-verified. The DSTU 7624
-and CBC-based wrappers remain — see the checklist in §4. This document is the
-porting inventory and roadmap.
+**Status: in progress.** The `Wrapper` trait exists in `tc_crypto_core`; the
+RFC 3394 and RFC 5649 AES Key Wrap families and the DSTU 7624 wrap are complete
+and KAT-verified. Only the CBC-based wrappers remain — see the checklist in §4.
+This document is the porting inventory and roadmap.
 
 ## 2. Design
 
@@ -77,11 +76,11 @@ These need a **CBC block-cipher mode**, which does not exist in the workspace ye
 (`tc_block_cipher` ships only the raw ECB engines). SHA-1 is available in
 `tc_digest` (`sha1.rs`). Porting these should wait until a modes crate exists.
 
-### 3.3 DSTU 7624 (Kalyna) — mostly ready
+### 3.3 DSTU 7624 (Kalyna) — done
 
 | bc class | Rust target | Underlying cipher | Mechanism | Prereqs |
 |----------|-------------|-------------------|-----------|---------|
-| `Dstu7624WrapEngine` | `Dstu7624WrapEngine` | `Dstu7624Engine` | DSTU 7624 wrap, own checksum | selects block size |
+| `Dstu7624WrapEngine` ✅ | `Dstu7624WrapEngine` | `Dstu7624Engine` | DSTU 7624 wrap, own checksum | selects block size |
 
 `Dstu7624Engine` already exists in `tc_block_cipher`; this wrapper carries its
 own logic and does not depend on a cipher mode.
@@ -98,7 +97,8 @@ own logic and does not depend on a cipher mode.
   verified against the RFC 5649 §6 official vectors, ARIA cross-checked against
   the independent OpenSSL implementation (`tests/rfc5649_kat.rs`). Shares the
   RFC 3394 register core.
-- [ ] **`Dstu7624WrapEngine`** — independent of the AES family and of cipher
-  modes.
+- [x] **`Dstu7624WrapEngine`** — its own swap-network scheme over the DSTU 7624
+  cipher (128/256/512-bit blocks), verified against the Bouncy Castle key-wrap
+  vectors (`tests/dstu7624_kat.rs`).
 - [ ] **CBC-based wrappers** (`Rfc3211WrapEngine`, `DesEdeWrapEngine`,
   `Rc2WrapEngine`) — only after a CBC mode exists in the workspace.
