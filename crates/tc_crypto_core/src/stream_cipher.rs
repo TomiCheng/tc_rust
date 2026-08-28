@@ -66,7 +66,8 @@ pub trait StreamCipher {
     ///
     /// Fails for the same runtime reasons as
     /// [`process_bytes`](StreamCipher::process_bytes) — chiefly an exhausted
-    /// keystream on ciphers that bound it, or a call before [`init`].
+    /// keystream on ciphers that bound it, or a call before
+    /// [`init`](StreamCipher::init).
     fn return_byte(&mut self, input: u8) -> Result<u8, Self::Error>;
 
     /// Processes `input` into `output`, returning the number of bytes written
