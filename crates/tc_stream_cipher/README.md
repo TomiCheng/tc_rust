@@ -82,8 +82,8 @@ for this crate.
 | ChaCha | `ChaChaEngine` | 16 or 32 bytes | 8 bytes | Implemented as `ChaChaEngine` |
 | ChaCha | `ChaCha7539Engine` | 32 bytes | 12 bytes | Implemented as `ChaCha7539Engine` |
 | ChaCha | `XChaCha20Engine` | 32 bytes | 24 bytes | Implemented as `XChaCha20Engine` |
-| VMPC | `VmpcEngine` | 16-64 bytes | 16-64 bytes | Not implemented |
-| VMPC | `VmpcKsa3Engine` | 16-64 bytes | 16-64 bytes | Not implemented |
+| VMPC | `VmpcEngine` | 16-64 bytes | 16-64 bytes | Implemented as `VmpcEngine` |
+| VMPC | `VmpcKsa3Engine` | 16-64 bytes | 16-64 bytes | Implemented as `VmpcKsa3Engine` |
 
 Notes about the upstream behavior:
 
@@ -113,6 +113,17 @@ The inventory deliberately excludes:
   because AEAD engines require a separate authenticated-cipher API.
 
 ## 4. Implemented algorithms
+
+### VMPC and VMPC-KSA3
+
+`VmpcEngine` and `VmpcKsa3Engine` accept independently sized 16-64 byte keys
+and IVs. They share the same 256-byte permutation and keystream generator.
+VMPC schedules key then IV; VMPC-KSA3 schedules key, IV, then key again. Both
+use fixed buffers and remain available without `std` or `alloc`.
+
+Tests reproduce BC's one-million-byte vectors at all published checkpoints and
+cover reset, chunking, byte-at-a-time processing, encryption/decryption
+symmetry, parameter boundaries, initialization state, and output validation.
 
 ### Original ChaCha
 

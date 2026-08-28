@@ -17,6 +17,7 @@ pub mod hc256;
 pub mod isaac;
 pub mod rc4;
 pub mod salsa20;
+pub mod vmpc;
 pub mod xchacha20;
 pub mod xsalsa20;
 
@@ -37,6 +38,10 @@ pub use rc4::{RC4_MAX_KEY_BYTES, Rc4Engine, Rc4Error, Rc4Params};
 pub use salsa20::{
     SALSA20_DEFAULT_ROUNDS, SALSA20_MAX_KEY_BYTES, SALSA20_MIN_KEY_BYTES, SALSA20_NONCE_BYTES,
     Salsa20Engine, Salsa20Error, Salsa20Params,
+};
+pub use vmpc::{
+    VMPC_MAX_IV_BYTES, VMPC_MAX_KEY_BYTES, VMPC_MIN_IV_BYTES, VMPC_MIN_KEY_BYTES, VmpcEngine,
+    VmpcError, VmpcKsa3Engine, VmpcParams,
 };
 pub use xchacha20::{XCHACHA20_KEY_BYTES, XCHACHA20_NONCE_BYTES, XChaCha20Engine, XChaCha20Params};
 pub use xsalsa20::{XSALSA20_KEY_BYTES, XSALSA20_NONCE_BYTES, Xsalsa20Engine, Xsalsa20Params};
