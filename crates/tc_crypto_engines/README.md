@@ -150,6 +150,7 @@ targets should rerun the benchmark locally.
 | DSTU 7624 (Kalyna) | `Dstu7624Engine` | 128/256/512-bit blocks and valid same-size/double-size keys; BC ECB KAT-verified |
 | IDEA | `IdeaEngine` | 128-bit key, legacy 64-bit block; shared round function, inverse-key decryption; BC KAT-verified |
 | Noekeon | `NoekeonEngine` | 128-bit key/block, direct-key mode; shared theta/pi/gamma layers; BC KAT-verified |
+| RC2 | `Rc2Engine` | RFC 2268; variable key with separate effective-key-bits cap, legacy 64-bit block; BC KAT-verified |
 
 ### Block ciphers — TODO
 
@@ -161,7 +162,7 @@ targets should rerun the benchmark locally.
 | Twofish | `TwofishEngine` | |
 | SM4 | `SM4Engine` | |
 | SEED | `SEEDEngine` | |
-| RC2 / RC5 / RC6 | `RC2Engine`, `RC532Engine`, `RC564Engine`, `RC6Engine` | |
+| RC5 / RC6 | `RC532Engine`, `RC564Engine`, `RC6Engine` | |
 | Skipjack | `SkipjackEngine` | |
 
 ### Stream ciphers — TODO

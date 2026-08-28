@@ -21,6 +21,7 @@ pub mod dstu7624;
 pub mod gost28147;
 pub mod idea;
 pub mod noekeon;
+pub mod rc2;
 pub mod threefish;
 
 pub use aes::{AES_BLOCK_BYTES, AesEngine, AesError, AesLightEngine, AesParams};
@@ -52,5 +53,8 @@ pub use gost28147::{
 pub use idea::{IDEA_BLOCK_BYTES, IDEA_KEY_BYTES, IdeaEngine, IdeaError, IdeaParams};
 pub use noekeon::{
     NOEKEON_BLOCK_BYTES, NOEKEON_KEY_BYTES, NoekeonEngine, NoekeonError, NoekeonParams,
+};
+pub use rc2::{
+    RC2_BLOCK_BYTES, RC2_MAX_EFFECTIVE_KEY_BITS, RC2_MAX_KEY_BYTES, Rc2Engine, Rc2Error, Rc2Params,
 };
 pub use threefish::{ThreefishEngine, ThreefishError, ThreefishParams};
