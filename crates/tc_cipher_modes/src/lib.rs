@@ -16,6 +16,8 @@
 
 extern crate alloc;
 
+pub mod cbc;
 pub mod ecb;
 
+pub use cbc::{CbcBlockCipher, CbcError, CbcParams};
 pub use ecb::EcbBlockCipher;
