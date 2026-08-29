@@ -1,13 +1,13 @@
 //! Blowfish initialization parameters.
 
-use alloc::vec::Vec;
 use core::fmt;
 
 use super::{BLOWFISH_MAX_KEY_BYTES, BLOWFISH_MIN_KEY_BYTES, BlockCipherError};
 
 /// An owned Blowfish key containing between 4 and 56 bytes.
 pub struct BlowfishParams {
-    key: Vec<u8>,
+    key: [u8; BLOWFISH_MAX_KEY_BYTES],
+    key_len: usize,
 }
 
 impl BlowfishParams {
@@ -16,16 +16,23 @@ impl BlowfishParams {
         if !(BLOWFISH_MIN_KEY_BYTES..=BLOWFISH_MAX_KEY_BYTES).contains(&key.len()) {
             return Err(BlockCipherError::InvalidKeyLength(key.len()));
         }
-        Ok(Self { key: key.to_vec() })
+
+        let mut key_buffer = [0_u8; BLOWFISH_MAX_KEY_BYTES];
+        key_buffer[..key.len()].copy_from_slice(key);
+
+        Ok(Self {
+            key: key_buffer,
+            key_len: key.len(),
+        })
     }
 
     /// Returns the key length in bytes without exposing key material.
     pub fn key_len(&self) -> usize {
-        self.key.len()
+        self.key_len
     }
 
     pub(crate) fn key(&self) -> &[u8] {
-        &self.key
+        &self.key[..self.key_len]
     }
 }
 

@@ -1,20 +1,20 @@
 //! Validated RC5 initialization parameters (shared by both word sizes).
 
-use alloc::vec::Vec;
 use core::fmt;
 
-use super::{RC5_DEFAULT_ROUNDS, RC5_MAX_KEY_BYTES, RC5_MAX_ROUNDS, BlockCipherError};
+use super::{BlockCipherError, RC5_DEFAULT_ROUNDS, RC5_MAX_KEY_BYTES, RC5_MAX_ROUNDS};
 
 /// Owned, validated RC5 key and round-count parameters.
 pub struct Rc5Params {
-    key: Vec<u8>,
+    key: [u8; RC5_MAX_KEY_BYTES],
+    key_len: usize,
     rounds: usize,
 }
 
 impl fmt::Debug for Rc5Params {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Rc5Params")
-            .field("key_len", &self.key.len())
+            .field("key_len", &self.key_len)
             .field("rounds", &self.rounds)
             .finish()
     }
@@ -34,8 +34,13 @@ impl Rc5Params {
         if rounds > RC5_MAX_ROUNDS {
             return Err(BlockCipherError::InvalidRounds(rounds));
         }
+
+        let mut key_buffer = [0_u8; RC5_MAX_KEY_BYTES];
+        key_buffer[..key.len()].copy_from_slice(key);
+
         Ok(Self {
-            key: key.to_vec(),
+            key: key_buffer,
+            key_len: key.len(),
             rounds,
         })
     }
@@ -46,7 +51,7 @@ impl Rc5Params {
     }
 
     pub(crate) fn key(&self) -> &[u8] {
-        &self.key
+        &self.key[..self.key_len]
     }
 }
 
@@ -77,5 +82,16 @@ mod tests {
     #[test]
     fn new_defaults_to_twelve_rounds() {
         assert_eq!(Rc5Params::new(&[0u8; 8]).unwrap().rounds(), 12);
+    }
+
+    #[test]
+    fn owns_only_the_supplied_key_as_logical_input() {
+        let params = {
+            let key = [0xA5; 24];
+            Rc5Params::new(&key).unwrap()
+        };
+
+        assert_eq!(params.key(), &[0xA5; 24]);
+        assert!(params.key[params.key_len..].iter().all(|&byte| byte == 0));
     }
 }
