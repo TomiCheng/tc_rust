@@ -13,6 +13,8 @@ use alloc::vec;
 use alloc::vec::Vec;
 use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 
+use crate::CipherModeError;
+
 /// Parameters for CBC: the underlying cipher's key parameters plus an IV.
 ///
 /// The caller builds the underlying parameters (e.g. `AesParams::new(key)`) and
@@ -88,59 +90,8 @@ impl<E: BlockCipher> CbcBlockCipher<E> {
     }
 }
 
-/// Error type for CBC mode.
-pub enum CbcError<E: BlockCipher> {
-    /// `process_block` was called before `init`.
-    NotInitialised,
-    /// The IV length does not equal the cipher's block size.
-    InvalidIvLength {
-        /// The block size the cipher requires.
-        expected: usize,
-        /// The IV length that was supplied.
-        actual: usize,
-    },
-    /// The input or output buffer is shorter than one block.
-    BufferTooShort,
-    /// Error reported by the underlying block cipher.
-    BlockCipher(E::Error),
-}
-
-// Debug 手寫，不用 derive：derive 會對型別參數加上 `E: Debug` 約束（錯的
-// 對象），而我們需要的是 `E::Error: Debug`——由 BlockCipher 的
-// `type Error: core::error::Error`（其 supertrait 含 Debug）保證。
-impl<E: BlockCipher> core::fmt::Debug for CbcError<E> {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        match self {
-            CbcError::NotInitialised => f.write_str("NotInitialised"),
-            CbcError::InvalidIvLength { expected, actual } => f
-                .debug_struct("InvalidIvLength")
-                .field("expected", expected)
-                .field("actual", actual)
-                .finish(),
-            CbcError::BufferTooShort => f.write_str("BufferTooShort"),
-            CbcError::BlockCipher(e) => f.debug_tuple("BlockCipher").field(e).finish(),
-        }
-    }
-}
-
-impl<E: BlockCipher> core::fmt::Display for CbcError<E> {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        match self {
-            CbcError::NotInitialised => f.write_str("cipher mode not initialised"),
-            CbcError::InvalidIvLength { expected, actual } => write!(
-                f,
-                "initialisation vector must be {expected} bytes to match the block size, got {actual}"
-            ),
-            CbcError::BufferTooShort => f.write_str("buffer shorter than one block"),
-            CbcError::BlockCipher(e) => write!(f, "underlying block cipher error: {e}"),
-        }
-    }
-}
-
-impl<E: BlockCipher> core::error::Error for CbcError<E> {}
-
 impl<E: BlockCipher> BlockCipher for CbcBlockCipher<E> {
-    type Error = CbcError<E>;
+    type Error = CipherModeError<E>;
 
     fn algorithm_name(&self) -> &str {
         &self.name
@@ -151,10 +102,10 @@ impl<E: BlockCipher> BlockCipher for CbcBlockCipher<E> {
     }
 
     fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
-        let direction = self.direction.ok_or(CbcError::NotInitialised)?;
+        let direction = self.direction.ok_or(CipherModeError::NotInitialised)?;
         let block_size = self.cipher.block_size();
         if input.len() < block_size || output.len() < block_size {
-            return Err(CbcError::BufferTooShort);
+            return Err(CipherModeError::BufferTooShort);
         }
 
         match direction {
@@ -166,7 +117,7 @@ impl<E: BlockCipher> BlockCipher for CbcBlockCipher<E> {
                 let written = self
                     .cipher
                     .process_block(&self.cbc_v, output)
-                    .map_err(CbcError::BlockCipher)?;
+                    .map_err(CipherModeError::BlockCipher)?;
                 // 本塊密文成為下一塊的鏈結向量。
                 self.cbc_v.copy_from_slice(&output[..block_size]);
                 Ok(written)
@@ -177,7 +128,7 @@ impl<E: BlockCipher> BlockCipher for CbcBlockCipher<E> {
                 let written = self
                     .cipher
                     .process_block(input, output)
-                    .map_err(CbcError::BlockCipher)?;
+                    .map_err(CipherModeError::BlockCipher)?;
                 for (byte, &v) in output.iter_mut().zip(self.cbc_v.iter()) {
                     *byte ^= v;
                 }
@@ -199,9 +150,9 @@ impl<E: BlockCipherInit> BlockCipherInit for CbcBlockCipher<E> {
         let block_size = self.cipher.block_size();
         self.iv = match params.iv {
             Some(iv) if iv.len() != block_size => {
-                return Err(CbcError::InvalidIvLength {
-                    expected: block_size,
+                return Err(CipherModeError::InvalidIvLength {
                     actual: iv.len(),
+                    block_size,
                 });
             }
             Some(iv) => iv.to_vec(),
@@ -213,7 +164,7 @@ impl<E: BlockCipherInit> BlockCipherInit for CbcBlockCipher<E> {
 
         self.cipher
             .init(direction, &params.key_params)
-            .map_err(CbcError::BlockCipher)?;
+            .map_err(CipherModeError::BlockCipher)?;
         self.direction = Some(direction);
         self.refresh_name();
         Ok(())

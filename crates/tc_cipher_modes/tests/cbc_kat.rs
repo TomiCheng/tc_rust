@@ -9,7 +9,7 @@ use tc_block_cipher::{
     AES_BLOCK_BYTES, AesEngine, AesParams, DES_BLOCK_BYTES, DesEngine, DesParams,
 };
 use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
-use tc_cipher_modes::{CbcBlockCipher, CbcError, CbcParams};
+use tc_cipher_modes::{CbcBlockCipher, CbcParams, CipherModeError};
 
 /// Parses a hex string into bytes.
 fn hex(s: &str) -> Vec<u8> {
@@ -140,9 +140,9 @@ fn rejects_an_iv_that_is_not_one_block() {
         .unwrap_err();
 
     match err {
-        CbcError::InvalidIvLength { expected, actual } => {
-            assert_eq!(expected, AES_BLOCK_BYTES);
+        CipherModeError::InvalidIvLength { actual, block_size } => {
             assert_eq!(actual, 4);
+            assert_eq!(block_size, AES_BLOCK_BYTES);
         }
         other => panic!("expected InvalidIvLength, got {other:?}"),
     }
@@ -157,7 +157,7 @@ fn errors_before_init_and_on_short_buffer() {
     // 尚未 init。
     assert!(matches!(
         mode.process_block(&input, &mut out),
-        Err(CbcError::NotInitialised)
+        Err(CipherModeError::NotInitialised)
     ));
 
     let key = AesParams::new(&hex(AES_KEY)).unwrap();
@@ -167,6 +167,6 @@ fn errors_before_init_and_on_short_buffer() {
     // 輸入不足一塊。
     assert!(matches!(
         mode.process_block(&input[..4], &mut out),
-        Err(CbcError::BufferTooShort)
+        Err(CipherModeError::BufferTooShort)
     ));
 }
