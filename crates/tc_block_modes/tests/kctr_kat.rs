@@ -11,7 +11,7 @@
 //! with the trait they belong to.
 
 use tc_block_cipher::{Dstu7624Engine, Dstu7624Params};
-use tc_block_modes::{CipherModeError, KCtrBlockCipher, KCtrParams};
+use tc_block_modes::{BlockCipherModeError, KCtrBlockCipher, KCtrParams};
 use tc_cipher_core::{
     BlockCipher, BlockCipherInit, CipherDirection, StreamCipher, StreamCipherInit,
 };
@@ -161,10 +161,10 @@ fn reports_its_composed_name_and_errors_before_init() {
     let mut out = [0u8; 16];
     assert!(matches!(
         mode.process_bytes(&[0u8; 16], &mut out),
-        Err(CipherModeError::NotInitialised)
+        Err(BlockCipherModeError::NotInitialised)
     ));
     assert!(matches!(
         mode.return_byte(0),
-        Err(CipherModeError::NotInitialised)
+        Err(BlockCipherModeError::NotInitialised)
     ));
 }

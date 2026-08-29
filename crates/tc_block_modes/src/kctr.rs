@@ -22,7 +22,7 @@ use tc_cipher_core::{
     BlockCipher, BlockCipherInit, CipherDirection, StreamCipher, StreamCipherInit,
 };
 
-use crate::CipherModeError;
+use crate::BlockCipherModeError;
 
 /// Parameters for KCTR: the underlying cipher's key parameters plus an IV.
 ///
@@ -105,13 +105,13 @@ impl<E: BlockCipher> KCtrBlockCipher<E> {
     }
 
     /// Produces the next keystream byte and combines it with `b`.
-    fn calculate_byte(&mut self, b: u8) -> Result<u8, CipherModeError<E>> {
+    fn calculate_byte(&mut self, b: u8) -> Result<u8, BlockCipherModeError<E>> {
         if self.byte_count == 0 {
             // 每塊開始前先遞增計數器，再加密取得新的 keystream。
             self.increment_counter();
             self.cipher
                 .process_block(&self.ofb_v, &mut self.ofb_out_v)
-                .map_err(CipherModeError::BlockCipher)?;
+                .map_err(BlockCipherModeError::BlockCipher)?;
         }
         let out = self.ofb_out_v[self.byte_count] ^ b;
         self.byte_count += 1;
@@ -122,13 +122,13 @@ impl<E: BlockCipher> KCtrBlockCipher<E> {
     }
 
     /// Shared by both `init` implementations.
-    fn init_internal(&mut self, params: &KCtrParams<'_, E>) -> Result<(), CipherModeError<E>>
+    fn init_internal(&mut self, params: &KCtrParams<'_, E>) -> Result<(), BlockCipherModeError<E>>
     where
         E: BlockCipherInit,
     {
         let block_size = self.cipher.block_size();
         if params.iv.len() > block_size {
-            return Err(CipherModeError::InvalidIvLength {
+            return Err(BlockCipherModeError::InvalidIvLength {
                 actual: params.iv.len(),
                 block_size,
             });
@@ -141,12 +141,12 @@ impl<E: BlockCipher> KCtrBlockCipher<E> {
 
         self.cipher
             .init(CipherDirection::Encrypt, &params.key_params)
-            .map_err(CipherModeError::BlockCipher)?;
+            .map_err(BlockCipherModeError::BlockCipher)?;
 
         // 計數器的初值是 IV 的密文，而非 IV 本身。
         self.cipher
             .process_block(&iv, &mut self.initial_counter)
-            .map_err(CipherModeError::BlockCipher)?;
+            .map_err(BlockCipherModeError::BlockCipher)?;
         self.ofb_v.copy_from_slice(&self.initial_counter);
         self.byte_count = 0;
         self.initialised = true;
@@ -164,7 +164,7 @@ impl<E: BlockCipher> KCtrBlockCipher<E> {
 }
 
 impl<E: BlockCipher> StreamCipher for KCtrBlockCipher<E> {
-    type Error = CipherModeError<E>;
+    type Error = BlockCipherModeError<E>;
 
     fn algorithm_name(&self) -> &str {
         &self.name
@@ -172,17 +172,17 @@ impl<E: BlockCipher> StreamCipher for KCtrBlockCipher<E> {
 
     fn return_byte(&mut self, input: u8) -> Result<u8, Self::Error> {
         if !self.initialised {
-            return Err(CipherModeError::NotInitialised);
+            return Err(BlockCipherModeError::NotInitialised);
         }
         self.calculate_byte(input)
     }
 
     fn process_bytes(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
         if !self.initialised {
-            return Err(CipherModeError::NotInitialised);
+            return Err(BlockCipherModeError::NotInitialised);
         }
         if output.len() < input.len() {
-            return Err(CipherModeError::BufferTooShort);
+            return Err(BlockCipherModeError::BufferTooShort);
         }
         for (i, &byte) in input.iter().enumerate() {
             output[i] = self.calculate_byte(byte)?;
@@ -204,7 +204,7 @@ impl<E: BlockCipherInit> StreamCipherInit for KCtrBlockCipher<E> {
 }
 
 impl<E: BlockCipher> BlockCipher for KCtrBlockCipher<E> {
-    type Error = CipherModeError<E>;
+    type Error = BlockCipherModeError<E>;
 
     fn algorithm_name(&self) -> &str {
         &self.name
@@ -216,11 +216,11 @@ impl<E: BlockCipher> BlockCipher for KCtrBlockCipher<E> {
 
     fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
         if !self.initialised {
-            return Err(CipherModeError::NotInitialised);
+            return Err(BlockCipherModeError::NotInitialised);
         }
         let block_size = self.ofb_v.len();
         if input.len() < block_size || output.len() < block_size {
-            return Err(CipherModeError::BufferTooShort);
+            return Err(BlockCipherModeError::BufferTooShort);
         }
         for i in 0..block_size {
             output[i] = self.calculate_byte(input[i])?;

@@ -10,10 +10,10 @@ use tc_block_cipher::{
     AES_BLOCK_BYTES, AesEngine, AesParams, GOST28147_BLOCK_BYTES, Gost28147Engine, Gost28147Params,
     Gost28147SBox,
 };
-use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 use tc_block_modes::{
-    CipherModeError, GofbBlockCipher, GofbParams, OpenPgpCfbBlockCipher, OpenPgpCfbParams,
+    BlockCipherModeError, GofbBlockCipher, GofbParams, OpenPgpCfbBlockCipher, OpenPgpCfbParams,
 };
+use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 
 /// Parses a hex string into bytes.
 fn hex(s: &str) -> Vec<u8> {
@@ -141,7 +141,7 @@ fn gctr_reports_its_name_and_rejects_a_wrong_block_size() {
     // GCTR 只定義於 64-bit 分組，AES 的 128-bit 應被拒絕。
     assert!(matches!(
         GofbBlockCipher::new(AesEngine::new()),
-        Err(CipherModeError::UnsupportedBlockSize {
+        Err(BlockCipherModeError::UnsupportedBlockSize {
             actual: 16,
             required: 8
         })
@@ -226,7 +226,10 @@ fn openpgp_cfb_resync_makes_the_third_block_differ_from_plain_cfb() {
 
     // 第一塊相同，第三塊因重新同步而不同。
     assert_eq!(pgp_ct[..AES_BLOCK_BYTES], plain_ct[..AES_BLOCK_BYTES]);
-    assert_ne!(pgp_ct[AES_BLOCK_BYTES * 2..], plain_ct[AES_BLOCK_BYTES * 2..]);
+    assert_ne!(
+        pgp_ct[AES_BLOCK_BYTES * 2..],
+        plain_ct[AES_BLOCK_BYTES * 2..]
+    );
 }
 
 #[test]
@@ -239,6 +242,6 @@ fn openpgp_cfb_reports_its_name_and_errors_before_init() {
     let mut out = [0u8; AES_BLOCK_BYTES];
     assert!(matches!(
         mode.process_block(&input, &mut out),
-        Err(CipherModeError::NotInitialised)
+        Err(BlockCipherModeError::NotInitialised)
     ));
 }

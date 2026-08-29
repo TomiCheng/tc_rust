@@ -15,7 +15,7 @@ use alloc::vec;
 use alloc::vec::Vec;
 use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 
-use crate::CipherModeError;
+use crate::BlockCipherModeError;
 use crate::cfb::push_usize;
 
 /// Parameters for OFB: the underlying cipher's key parameters plus an IV.
@@ -68,10 +68,11 @@ pub struct OfbBlockCipher<E> {
 impl<E: BlockCipher> OfbBlockCipher<E> {
     /// Wraps the given cipher in OFB mode with the given feedback size in bits,
     /// which must be a positive multiple of eight, up to the cipher's block size.
-    pub fn new(cipher: E, feedback_bits: usize) -> Result<Self, CipherModeError<E>> {
+    pub fn new(cipher: E, feedback_bits: usize) -> Result<Self, BlockCipherModeError<E>> {
         let block_size = cipher.block_size();
-        if feedback_bits == 0 || !feedback_bits.is_multiple_of(8) || feedback_bits / 8 > block_size {
-            return Err(CipherModeError::InvalidFeedbackSize(feedback_bits));
+        if feedback_bits == 0 || !feedback_bits.is_multiple_of(8) || feedback_bits / 8 > block_size
+        {
+            return Err(BlockCipherModeError::InvalidFeedbackSize(feedback_bits));
         }
         let mut mode = Self {
             cipher,
@@ -101,7 +102,7 @@ impl<E: BlockCipher> OfbBlockCipher<E> {
 }
 
 impl<E: BlockCipher> BlockCipher for OfbBlockCipher<E> {
-    type Error = CipherModeError<E>;
+    type Error = BlockCipherModeError<E>;
 
     fn algorithm_name(&self) -> &str {
         &self.name
@@ -114,17 +115,17 @@ impl<E: BlockCipher> BlockCipher for OfbBlockCipher<E> {
 
     fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
         if !self.initialised {
-            return Err(CipherModeError::NotInitialised);
+            return Err(BlockCipherModeError::NotInitialised);
         }
         let seg = self.segment_size;
         if input.len() < seg || output.len() < seg {
-            return Err(CipherModeError::BufferTooShort);
+            return Err(BlockCipherModeError::BufferTooShort);
         }
 
         // 以回饋暫存器產生 keystream。
         self.cipher
             .process_block(&self.ofb_v, &mut self.ofb_out_v)
-            .map_err(CipherModeError::BlockCipher)?;
+            .map_err(BlockCipherModeError::BlockCipher)?;
 
         for i in 0..seg {
             output[i] = self.ofb_out_v[i] ^ input[i];
@@ -150,7 +151,7 @@ impl<E: BlockCipherInit> BlockCipherInit for OfbBlockCipher<E> {
         let block_size = self.cipher.block_size();
         if let Some(iv) = params.iv {
             if iv.len() > block_size {
-                return Err(CipherModeError::InvalidIvLength {
+                return Err(BlockCipherModeError::InvalidIvLength {
                     actual: iv.len(),
                     block_size,
                 });
@@ -166,7 +167,7 @@ impl<E: BlockCipherInit> BlockCipherInit for OfbBlockCipher<E> {
 
         self.cipher
             .init(CipherDirection::Encrypt, &params.key_params)
-            .map_err(CipherModeError::BlockCipher)?;
+            .map_err(BlockCipherModeError::BlockCipher)?;
         self.initialised = true;
         self.refresh_name();
         Ok(())

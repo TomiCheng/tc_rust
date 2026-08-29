@@ -15,7 +15,7 @@ use alloc::vec;
 use alloc::vec::Vec;
 use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 
-use crate::CipherModeError;
+use crate::BlockCipherModeError;
 
 /// Parameters for CFB: the underlying cipher's key parameters plus an IV.
 ///
@@ -68,10 +68,11 @@ impl<E: BlockCipher> CfbBlockCipher<E> {
     /// Wraps the given cipher in CFB mode with the given feedback size in bits,
     /// which must be a positive multiple of eight, up to the cipher's block size
     /// (e.g. 8 for CFB8, 128 for CFB128 over AES).
-    pub fn new(cipher: E, feedback_bits: usize) -> Result<Self, CipherModeError<E>> {
+    pub fn new(cipher: E, feedback_bits: usize) -> Result<Self, BlockCipherModeError<E>> {
         let block_size = cipher.block_size();
-        if feedback_bits == 0 || !feedback_bits.is_multiple_of(8) || feedback_bits / 8 > block_size {
-            return Err(CipherModeError::InvalidFeedbackSize(feedback_bits));
+        if feedback_bits == 0 || !feedback_bits.is_multiple_of(8) || feedback_bits / 8 > block_size
+        {
+            return Err(BlockCipherModeError::InvalidFeedbackSize(feedback_bits));
         }
         let mut mode = Self {
             cipher,
@@ -119,7 +120,7 @@ pub(crate) fn push_usize(out: &mut String, mut value: usize) {
 }
 
 impl<E: BlockCipher> BlockCipher for CfbBlockCipher<E> {
-    type Error = CipherModeError<E>;
+    type Error = BlockCipherModeError<E>;
 
     fn algorithm_name(&self) -> &str {
         &self.name
@@ -131,16 +132,16 @@ impl<E: BlockCipher> BlockCipher for CfbBlockCipher<E> {
     }
 
     fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
-        let direction = self.direction.ok_or(CipherModeError::NotInitialised)?;
+        let direction = self.direction.ok_or(BlockCipherModeError::NotInitialised)?;
         let seg = self.segment_size;
         if input.len() < seg || output.len() < seg {
-            return Err(CipherModeError::BufferTooShort);
+            return Err(BlockCipherModeError::BufferTooShort);
         }
 
         // 以回饋暫存器產生 keystream。
         self.cipher
             .process_block(&self.cfb_v, &mut self.cfb_out_v)
-            .map_err(CipherModeError::BlockCipher)?;
+            .map_err(BlockCipherModeError::BlockCipher)?;
 
         let tail = self.cfb_v.len() - seg;
         match direction {
@@ -176,7 +177,7 @@ impl<E: BlockCipherInit> BlockCipherInit for CfbBlockCipher<E> {
         let block_size = self.cipher.block_size();
         if let Some(iv) = params.iv {
             if iv.len() > block_size {
-                return Err(CipherModeError::InvalidIvLength {
+                return Err(BlockCipherModeError::InvalidIvLength {
                     actual: iv.len(),
                     block_size,
                 });
@@ -193,7 +194,7 @@ impl<E: BlockCipherInit> BlockCipherInit for CfbBlockCipher<E> {
         // CFB 只用到 cipher 的正向，故底層一律以加密方向 keying。
         self.cipher
             .init(CipherDirection::Encrypt, &params.key_params)
-            .map_err(CipherModeError::BlockCipher)?;
+            .map_err(BlockCipherModeError::BlockCipher)?;
         self.direction = Some(direction);
         self.refresh_name();
         Ok(())

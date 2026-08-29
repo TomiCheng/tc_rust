@@ -6,11 +6,11 @@
 //! segment smaller than the cipher's block.
 
 use tc_block_cipher::{AES_BLOCK_BYTES, AesEngine, AesParams};
-use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 use tc_block_modes::{
-    CfbBlockCipher, CfbParams, CipherModeError, OfbBlockCipher, OfbParams, SicBlockCipher,
+    BlockCipherModeError, CfbBlockCipher, CfbParams, OfbBlockCipher, OfbParams, SicBlockCipher,
     SicParams,
 };
+use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 
 /// Parses a hex string into bytes.
 fn hex(s: &str) -> Vec<u8> {
@@ -100,16 +100,16 @@ fn nist_cfb8_uses_a_one_byte_segment() {
 fn cfb_rejects_a_feedback_size_that_is_not_whole_bytes() {
     assert!(matches!(
         CfbBlockCipher::new(AesEngine::new(), 12),
-        Err(CipherModeError::InvalidFeedbackSize(12))
+        Err(BlockCipherModeError::InvalidFeedbackSize(12))
     ));
     assert!(matches!(
         CfbBlockCipher::new(AesEngine::new(), 0),
-        Err(CipherModeError::InvalidFeedbackSize(0))
+        Err(BlockCipherModeError::InvalidFeedbackSize(0))
     ));
     // 超過底層分組大小。
     assert!(matches!(
         CfbBlockCipher::new(AesEngine::new(), 256),
-        Err(CipherModeError::InvalidFeedbackSize(256))
+        Err(BlockCipherModeError::InvalidFeedbackSize(256))
     ));
 }
 
@@ -149,7 +149,10 @@ fn ofb_ignores_the_direction() {
     let as_decrypt = aes_ofb(CipherDirection::Decrypt, &hex(PLAINTEXT));
     assert_eq!(as_encrypt, as_decrypt);
     // 對密文再跑一次即還原。
-    assert_eq!(aes_ofb(CipherDirection::Decrypt, &as_encrypt), hex(PLAINTEXT));
+    assert_eq!(
+        aes_ofb(CipherDirection::Decrypt, &as_encrypt),
+        hex(PLAINTEXT)
+    );
 }
 
 #[test]
@@ -210,11 +213,8 @@ fn ctr_counter_carries_across_the_whole_block() {
 
     // 第二塊的 keystream 應等於以全零計數器加密的結果。
     let mut bare = AesEngine::new();
-    bare.init(
-        CipherDirection::Encrypt,
-        &AesParams::new(&key).unwrap(),
-    )
-    .unwrap();
+    bare.init(CipherDirection::Encrypt, &AesParams::new(&key).unwrap())
+        .unwrap();
     let mut expected = [0u8; AES_BLOCK_BYTES];
     bare.process_block(&[0u8; AES_BLOCK_BYTES], &mut expected)
         .unwrap();
@@ -235,7 +235,7 @@ fn ctr_rejects_an_iv_leaving_no_room_for_the_counter() {
         .unwrap_err();
     assert!(matches!(
         err,
-        CipherModeError::InvalidIvLength {
+        BlockCipherModeError::InvalidIvLength {
             actual: 5,
             block_size: 16
         }
@@ -257,18 +257,18 @@ fn keystream_modes_error_before_init() {
     let mut cfb = CfbBlockCipher::new(AesEngine::new(), 128).unwrap();
     assert!(matches!(
         cfb.process_block(&input, &mut out),
-        Err(CipherModeError::NotInitialised)
+        Err(BlockCipherModeError::NotInitialised)
     ));
 
     let mut ofb = OfbBlockCipher::new(AesEngine::new(), 128).unwrap();
     assert!(matches!(
         ofb.process_block(&input, &mut out),
-        Err(CipherModeError::NotInitialised)
+        Err(BlockCipherModeError::NotInitialised)
     ));
 
     let mut ctr = SicBlockCipher::new(AesEngine::new());
     assert!(matches!(
         ctr.process_block(&input, &mut out),
-        Err(CipherModeError::NotInitialised)
+        Err(BlockCipherModeError::NotInitialised)
     ));
 }

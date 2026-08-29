@@ -5,7 +5,7 @@
 //! implements and builds on the [`BlockCipher`](tc_cipher_core::BlockCipher) and
 //! [`BlockCipherInit`](tc_cipher_core::BlockCipherInit) traits from
 //! `tc_cipher_core`. All modes report failures through the shared
-//! [`CipherModeError`] type.
+//! [`BlockCipherModeError`] type.
 //!
 //! Modes are generic over the underlying cipher, so this crate depends only on
 //! the trait crate; concrete engines are needed by its tests alone.
@@ -30,7 +30,7 @@ pub mod sic;
 pub use cbc::{CbcBlockCipher, CbcParams};
 pub use cfb::{CfbBlockCipher, CfbParams};
 pub use ecb::EcbBlockCipher;
-pub use error::CipherModeError;
+pub use error::BlockCipherModeError;
 pub use gofb::{GofbBlockCipher, GofbParams};
 pub use kctr::{KCtrBlockCipher, KCtrParams};
 pub use ofb::{OfbBlockCipher, OfbParams};

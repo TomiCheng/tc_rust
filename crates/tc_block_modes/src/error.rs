@@ -7,7 +7,7 @@ use tc_cipher_core::BlockCipher;
 /// One type is shared by all modes, as `tc_block_cipher` and `tc_stream_cipher`
 /// each share one across their implementations. It is generic over the
 /// underlying cipher so that cipher's own errors can be reported unchanged.
-pub enum CipherModeError<E: BlockCipher> {
+pub enum BlockCipherModeError<E: BlockCipher> {
     /// A block was processed before `init`.
     NotInitialised,
     /// The initialisation vector length is not valid for this mode.
@@ -41,49 +41,49 @@ pub enum CipherModeError<E: BlockCipher> {
 // Debug 手寫，不用 derive：derive 會對型別參數加上 `E: Debug` 約束（錯的
 // 對象），而我們需要的是 `E::Error: Debug`——由 BlockCipher 的
 // `type Error: core::error::Error`（其 supertrait 含 Debug）保證。
-impl<E: BlockCipher> core::fmt::Debug for CipherModeError<E> {
+impl<E: BlockCipher> core::fmt::Debug for BlockCipherModeError<E> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            CipherModeError::NotInitialised => f.write_str("NotInitialised"),
-            CipherModeError::InvalidIvLength { actual, block_size } => f
+            BlockCipherModeError::NotInitialised => f.write_str("NotInitialised"),
+            BlockCipherModeError::InvalidIvLength { actual, block_size } => f
                 .debug_struct("InvalidIvLength")
                 .field("actual", actual)
                 .field("block_size", block_size)
                 .finish(),
-            CipherModeError::InvalidFeedbackSize(bits) => {
+            BlockCipherModeError::InvalidFeedbackSize(bits) => {
                 f.debug_tuple("InvalidFeedbackSize").field(bits).finish()
             }
-            CipherModeError::UnsupportedBlockSize { actual, required } => f
+            BlockCipherModeError::UnsupportedBlockSize { actual, required } => f
                 .debug_struct("UnsupportedBlockSize")
                 .field("actual", actual)
                 .field("required", required)
                 .finish(),
-            CipherModeError::BufferTooShort => f.write_str("BufferTooShort"),
-            CipherModeError::BlockCipher(e) => f.debug_tuple("BlockCipher").field(e).finish(),
+            BlockCipherModeError::BufferTooShort => f.write_str("BufferTooShort"),
+            BlockCipherModeError::BlockCipher(e) => f.debug_tuple("BlockCipher").field(e).finish(),
         }
     }
 }
 
-impl<E: BlockCipher> core::fmt::Display for CipherModeError<E> {
+impl<E: BlockCipher> core::fmt::Display for BlockCipherModeError<E> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            CipherModeError::NotInitialised => f.write_str("cipher mode not initialised"),
-            CipherModeError::InvalidIvLength { actual, block_size } => write!(
+            BlockCipherModeError::NotInitialised => f.write_str("cipher mode not initialised"),
+            BlockCipherModeError::InvalidIvLength { actual, block_size } => write!(
                 f,
                 "initialisation vector length {actual} is not valid for a {block_size}-byte block"
             ),
-            CipherModeError::InvalidFeedbackSize(bits) => write!(
+            BlockCipherModeError::InvalidFeedbackSize(bits) => write!(
                 f,
                 "feedback size {bits} must be a positive multiple of 8 bits, up to the block size"
             ),
-            CipherModeError::UnsupportedBlockSize { actual, required } => write!(
+            BlockCipherModeError::UnsupportedBlockSize { actual, required } => write!(
                 f,
                 "this mode requires a {required}-byte block, but the cipher has a {actual}-byte block"
             ),
-            CipherModeError::BufferTooShort => f.write_str("buffer shorter than one block"),
-            CipherModeError::BlockCipher(e) => write!(f, "underlying block cipher error: {e}"),
+            BlockCipherModeError::BufferTooShort => f.write_str("buffer shorter than one block"),
+            BlockCipherModeError::BlockCipher(e) => write!(f, "underlying block cipher error: {e}"),
         }
     }
 }
 
-impl<E: BlockCipher> core::error::Error for CipherModeError<E> {}
+impl<E: BlockCipher> core::error::Error for BlockCipherModeError<E> {}

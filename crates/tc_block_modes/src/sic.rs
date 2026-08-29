@@ -15,7 +15,7 @@ use alloc::vec;
 use alloc::vec::Vec;
 use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 
-use crate::CipherModeError;
+use crate::BlockCipherModeError;
 
 /// Parameters for CTR: the underlying cipher's key parameters plus a nonce/IV.
 ///
@@ -87,7 +87,7 @@ impl<E: BlockCipher> SicBlockCipher<E> {
 }
 
 impl<E: BlockCipher> BlockCipher for SicBlockCipher<E> {
-    type Error = CipherModeError<E>;
+    type Error = BlockCipherModeError<E>;
 
     fn algorithm_name(&self) -> &str {
         &self.name
@@ -99,17 +99,17 @@ impl<E: BlockCipher> BlockCipher for SicBlockCipher<E> {
 
     fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
         if !self.initialised {
-            return Err(CipherModeError::NotInitialised);
+            return Err(BlockCipherModeError::NotInitialised);
         }
         let block_size = self.counter.len();
         if input.len() < block_size || output.len() < block_size {
-            return Err(CipherModeError::BufferTooShort);
+            return Err(BlockCipherModeError::BufferTooShort);
         }
 
         // 以計數器產生 keystream。
         self.cipher
             .process_block(&self.counter, &mut self.counter_out)
-            .map_err(CipherModeError::BlockCipher)?;
+            .map_err(BlockCipherModeError::BlockCipher)?;
         for i in 0..block_size {
             output[i] = self.counter_out[i] ^ input[i];
         }
@@ -140,7 +140,7 @@ impl<E: BlockCipherInit> BlockCipherInit for SicBlockCipher<E> {
         // 計數器最多佔 8 個位元組，且不超過分組的一半；IV 必須留下這些空間。
         let max_counter = 8.min(block_size / 2);
         if iv_len > block_size || block_size - iv_len > max_counter {
-            return Err(CipherModeError::InvalidIvLength {
+            return Err(BlockCipherModeError::InvalidIvLength {
                 actual: iv_len,
                 block_size,
             });
@@ -152,7 +152,7 @@ impl<E: BlockCipherInit> BlockCipherInit for SicBlockCipher<E> {
 
         self.cipher
             .init(CipherDirection::Encrypt, &params.key_params)
-            .map_err(CipherModeError::BlockCipher)?;
+            .map_err(BlockCipherModeError::BlockCipher)?;
         self.initialised = true;
         self.refresh_name();
         Ok(())

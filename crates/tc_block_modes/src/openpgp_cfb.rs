@@ -14,7 +14,7 @@ use alloc::vec;
 use alloc::vec::Vec;
 use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 
-use crate::CipherModeError;
+use crate::BlockCipherModeError;
 
 /// Parameters for OpenPGP CFB: the cipher's key parameters plus an IV.
 ///
@@ -92,14 +92,18 @@ impl<E: BlockCipher> OpenPgpCfbBlockCipher<E> {
     }
 
     /// Runs the cipher over the feedback register into `fre`.
-    fn encrypt_register(&mut self) -> Result<(), CipherModeError<E>> {
+    fn encrypt_register(&mut self) -> Result<(), BlockCipherModeError<E>> {
         self.cipher
             .process_block(&self.fr, &mut self.fre)
-            .map_err(CipherModeError::BlockCipher)?;
+            .map_err(BlockCipherModeError::BlockCipher)?;
         Ok(())
     }
 
-    fn encrypt_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<(), CipherModeError<E>> {
+    fn encrypt_block(
+        &mut self,
+        input: &[u8],
+        output: &mut [u8],
+    ) -> Result<(), BlockCipherModeError<E>> {
         let bs = self.fr.len();
         if self.count > bs {
             // 穩定狀態：回饋暫存器已偏移兩個位元組。
@@ -139,7 +143,11 @@ impl<E: BlockCipher> OpenPgpCfbBlockCipher<E> {
         Ok(())
     }
 
-    fn decrypt_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<(), CipherModeError<E>> {
+    fn decrypt_block(
+        &mut self,
+        input: &[u8],
+        output: &mut [u8],
+    ) -> Result<(), BlockCipherModeError<E>> {
         let bs = self.fr.len();
         if self.count > bs {
             // 解密時回饋的是密文，也就是輸入。
@@ -182,7 +190,7 @@ impl<E: BlockCipher> OpenPgpCfbBlockCipher<E> {
 }
 
 impl<E: BlockCipher> BlockCipher for OpenPgpCfbBlockCipher<E> {
-    type Error = CipherModeError<E>;
+    type Error = BlockCipherModeError<E>;
 
     fn algorithm_name(&self) -> &str {
         &self.name
@@ -193,10 +201,10 @@ impl<E: BlockCipher> BlockCipher for OpenPgpCfbBlockCipher<E> {
     }
 
     fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
-        let direction = self.direction.ok_or(CipherModeError::NotInitialised)?;
+        let direction = self.direction.ok_or(BlockCipherModeError::NotInitialised)?;
         let bs = self.fr.len();
         if input.len() < bs || output.len() < bs {
-            return Err(CipherModeError::BufferTooShort);
+            return Err(BlockCipherModeError::BufferTooShort);
         }
         match direction {
             CipherDirection::Encrypt => self.encrypt_block(input, output)?,
@@ -217,7 +225,7 @@ impl<E: BlockCipherInit> BlockCipherInit for OpenPgpCfbBlockCipher<E> {
         let block_size = self.cipher.block_size();
         if let Some(iv) = params.iv {
             if iv.len() > block_size {
-                return Err(CipherModeError::InvalidIvLength {
+                return Err(BlockCipherModeError::InvalidIvLength {
                     actual: iv.len(),
                     block_size,
                 });
@@ -235,7 +243,7 @@ impl<E: BlockCipherInit> BlockCipherInit for OpenPgpCfbBlockCipher<E> {
         // 只用到 cipher 的正向，故底層一律以加密方向 keying。
         self.cipher
             .init(CipherDirection::Encrypt, &params.key_params)
-            .map_err(CipherModeError::BlockCipher)?;
+            .map_err(BlockCipherModeError::BlockCipher)?;
         self.direction = Some(direction);
         self.refresh_name();
         Ok(())

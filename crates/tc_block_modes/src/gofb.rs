@@ -14,7 +14,7 @@ use alloc::vec;
 use alloc::vec::Vec;
 use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 
-use crate::CipherModeError;
+use crate::BlockCipherModeError;
 
 /// The block size GCTR is defined for, in bytes.
 const GCTR_BLOCK_BYTES: usize = 8;
@@ -76,10 +76,10 @@ pub struct GofbBlockCipher<E> {
 
 impl<E: BlockCipher> GofbBlockCipher<E> {
     /// Wraps the given cipher in GCTR mode. The cipher must have a 64-bit block.
-    pub fn new(cipher: E) -> Result<Self, CipherModeError<E>> {
+    pub fn new(cipher: E) -> Result<Self, BlockCipherModeError<E>> {
         let block_size = cipher.block_size();
         if block_size != GCTR_BLOCK_BYTES {
-            return Err(CipherModeError::UnsupportedBlockSize {
+            return Err(BlockCipherModeError::UnsupportedBlockSize {
                 actual: block_size,
                 required: GCTR_BLOCK_BYTES,
             });
@@ -112,7 +112,7 @@ impl<E: BlockCipher> GofbBlockCipher<E> {
 }
 
 impl<E: BlockCipher> BlockCipher for GofbBlockCipher<E> {
-    type Error = CipherModeError<E>;
+    type Error = BlockCipherModeError<E>;
 
     fn algorithm_name(&self) -> &str {
         &self.name
@@ -124,10 +124,10 @@ impl<E: BlockCipher> BlockCipher for GofbBlockCipher<E> {
 
     fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
         if !self.initialised {
-            return Err(CipherModeError::NotInitialised);
+            return Err(BlockCipherModeError::NotInitialised);
         }
         if input.len() < GCTR_BLOCK_BYTES || output.len() < GCTR_BLOCK_BYTES {
-            return Err(CipherModeError::BufferTooShort);
+            return Err(BlockCipherModeError::BufferTooShort);
         }
 
         if self.first_step {
@@ -135,7 +135,7 @@ impl<E: BlockCipher> BlockCipher for GofbBlockCipher<E> {
             self.first_step = false;
             self.cipher
                 .process_block(&self.ofb_v, &mut self.ofb_out_v)
-                .map_err(CipherModeError::BlockCipher)?;
+                .map_err(BlockCipherModeError::BlockCipher)?;
             self.n3 = u32::from_le_bytes(self.ofb_out_v[..4].try_into().unwrap()) as i32;
             self.n4 = u32::from_le_bytes(self.ofb_out_v[4..].try_into().unwrap()) as i32;
         }
@@ -153,7 +153,7 @@ impl<E: BlockCipher> BlockCipher for GofbBlockCipher<E> {
 
         self.cipher
             .process_block(&self.ofb_v, &mut self.ofb_out_v)
-            .map_err(CipherModeError::BlockCipher)?;
+            .map_err(BlockCipherModeError::BlockCipher)?;
         for i in 0..GCTR_BLOCK_BYTES {
             output[i] = self.ofb_out_v[i] ^ input[i];
         }
@@ -179,7 +179,7 @@ impl<E: BlockCipherInit> BlockCipherInit for GofbBlockCipher<E> {
 
         if let Some(iv) = params.iv {
             if iv.len() > GCTR_BLOCK_BYTES {
-                return Err(CipherModeError::InvalidIvLength {
+                return Err(BlockCipherModeError::InvalidIvLength {
                     actual: iv.len(),
                     block_size: GCTR_BLOCK_BYTES,
                 });
@@ -195,7 +195,7 @@ impl<E: BlockCipherInit> BlockCipherInit for GofbBlockCipher<E> {
 
         self.cipher
             .init(CipherDirection::Encrypt, &params.key_params)
-            .map_err(CipherModeError::BlockCipher)?;
+            .map_err(BlockCipherModeError::BlockCipher)?;
         self.initialised = true;
         self.refresh_name();
         Ok(())

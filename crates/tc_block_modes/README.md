@@ -36,10 +36,10 @@ parameters and add whatever the mode needs — for CBC, an IV:
 
 ```rust
 use tc_block_cipher::{AesEngine, AesParams};
-use tc_block_modes::{CbcBlockCipher, CbcParams, CipherModeError};
+use tc_block_modes::{CbcBlockCipher, CbcParams, BlockCipherModeError};
 use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 
-fn main() -> Result<(), CipherModeError<AesEngine>> {
+fn main() -> Result<(), BlockCipherModeError<AesEngine>> {
     let key = [0x11u8; 16];
     let iv = [0x22u8; 16];
     let plaintext = [0x33u8; 16];
@@ -82,7 +82,7 @@ the size is a runtime argument:
 let mut cipher = CfbBlockCipher::new(AesEngine::new(), 8)?;   // CFB8
 ```
 
-All modes report failures through the shared `CipherModeError<E>`, which carries
+All modes report failures through the shared `BlockCipherModeError<E>`, which carries
 the underlying cipher's own error in its `BlockCipher` variant.
 
 ## 3. Implemented modes
@@ -120,7 +120,7 @@ only ever runs the cipher forwards.
 **A short IV is left-padded with zeros**, per FIPS PUB 81, in the modes whose IV
 is "up to one block". CBC requires an exact match, and CTR's IV must leave room
 for its counter — at most eight bytes and no more than half the block. An
-unusable length is reported as `CipherModeError::InvalidIvLength`.
+unusable length is reported as `BlockCipherModeError::InvalidIvLength`.
 
 **Parameters are consumed when wrapped.** `CbcParams::with_iv(key_params, &iv)`
 takes ownership of the engine parameters, so rebuild them for a second `init`.
