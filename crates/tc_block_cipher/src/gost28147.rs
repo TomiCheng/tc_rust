@@ -3,16 +3,16 @@
 //!
 //! The cipher uses a fixed 256-bit key and one of several standardized S-boxes.
 //! [`Gost28147Params`] owns validated, fixed-size copies of the key and S-box;
-//! [`init`](tc_crypto_core::BlockCipher::init) expands the key into the engine.
+//! [`init`](tc_cipher_core::BlockCipherInit::init) expands the key into the engine.
 //!
 //! ```
-//! use tc_crypto_core::BlockCipher;
+//! use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 //! use tc_block_cipher::{Gost28147Engine, Gost28147Params};
 //!
 //! let key = [0u8; 32];
 //! let params = Gost28147Params::new(&key)?;
 //! let mut cipher = Gost28147Engine::new();
-//! cipher.init(true, &params)?;
+//! cipher.init(CipherDirection::Encrypt, &params)?;
 //!
 //! let mut output = [0u8; 8];
 //! cipher.process_block(&[0u8; 8], &mut output)?;

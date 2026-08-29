@@ -1,13 +1,13 @@
 //! The Threefish engine.
 //!
 //! The engine starts at a default block size, so its size/name accessors always
-//! answer; [`BlockCipher::init`] infers the block size from the validated key,
+//! answer; [`BlockCipherInit::init`] infers the block size from the validated key,
 //! rebuilding the key schedule (and resizing it only when the block size actually
 //! changes). Per-variant round functions live in [`super::cipher`].
 
 use alloc::vec::Vec;
 
-use tc_crypto_core::BlockCipher;
+use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 
 use super::cipher::{self, C_240};
 use super::{BlockCipherError, ThreefishParams};
@@ -18,7 +18,7 @@ const DEFAULT_BLOCK_SIZE: usize = 32;
 /// The Threefish tweakable block cipher (bc `ThreefishEngine`).
 ///
 /// Construct with [`new`](ThreefishEngine::new) (or [`Default`]); the key, tweak
-/// and — via the params — the block size arrive at [`BlockCipher::init`].
+/// and — via the params — the block size arrive at [`BlockCipherInit::init`].
 pub struct ThreefishEngine {
     /// 目前分組:建構時為預設值,init 時採用 params 的分組。
     block_size: usize,
@@ -32,7 +32,7 @@ pub struct ThreefishEngine {
 
 impl ThreefishEngine {
     /// Creates a Threefish engine at the default block size (overridden by the
-    /// first [`init`](BlockCipher::init)).
+    /// first [`init`](BlockCipherInit::init)).
     pub fn new() -> Self {
         ThreefishEngine {
             block_size: DEFAULT_BLOCK_SIZE,
@@ -55,8 +55,6 @@ impl Default for ThreefishEngine {
 }
 
 impl BlockCipher for ThreefishEngine {
-    // 參數為擁有式、無 lifetime,GAT 的 'a 在此忽略。
-    type Params<'a> = ThreefishParams;
     type Error = BlockCipherError;
 
     fn algorithm_name(&self) -> &str {
@@ -70,43 +68,6 @@ impl BlockCipher for ThreefishEngine {
 
     fn block_size(&self) -> usize {
         self.block_size
-    }
-
-    fn init(
-        &mut self,
-        for_encryption: bool,
-        params: &Self::Params<'_>,
-    ) -> Result<(), Self::Error> {
-        // Threefish 的 key 與 block 等長;由已驗證的 key 長度選擇變體。
-        self.block_size = params.key_len();
-        let nw = self.words();
-        if self.kw.len() != nw + 1 {
-            self.kw.resize(nw + 1, 0);
-        }
-
-        // 金鑰排程:kw[0..nw] = 金鑰字(小端),kw[nw] = C_240 ^ 所有金鑰字。
-        // params 已保證 key 長度 == 分組,無需再驗。
-        let key = params.key();
-        let mut parity = C_240;
-        for i in 0..nw {
-            let word = u64::from_le_bytes(key[i * 8..i * 8 + 8].try_into().unwrap());
-            self.kw[i] = word;
-            parity ^= word;
-        }
-        self.kw[nw] = parity;
-
-        // tweak 排程:無 tweak 時採全零。
-        let (t0, t1) = match params.tweak() {
-            Some(tw) => (
-                u64::from_le_bytes(tw[0..8].try_into().unwrap()),
-                u64::from_le_bytes(tw[8..16].try_into().unwrap()),
-            ),
-            None => (0, 0),
-        };
-        self.t = [t0, t1, t0 ^ t1];
-
-        self.for_encryption = for_encryption;
-        Ok(())
     }
 
     fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
@@ -140,6 +101,48 @@ impl BlockCipher for ThreefishEngine {
             output[i * 8..i * 8 + 8].copy_from_slice(&out_words[i].to_le_bytes());
         }
         Ok(bytes)
+    }
+}
+
+impl BlockCipherInit for ThreefishEngine {
+    // 參數為擁有式、無 lifetime,GAT 的 'a 在此忽略。
+    type Params<'a> = ThreefishParams;
+
+    fn init(
+        &mut self,
+        direction: CipherDirection,
+        params: &Self::Params<'_>,
+    ) -> Result<(), Self::Error> {
+        // Threefish 的 key 與 block 等長;由已驗證的 key 長度選擇變體。
+        self.block_size = params.key_len();
+        let nw = self.words();
+        if self.kw.len() != nw + 1 {
+            self.kw.resize(nw + 1, 0);
+        }
+
+        // 金鑰排程:kw[0..nw] = 金鑰字(小端),kw[nw] = C_240 ^ 所有金鑰字。
+        // params 已保證 key 長度 == 分組,無需再驗。
+        let key = params.key();
+        let mut parity = C_240;
+        for i in 0..nw {
+            let word = u64::from_le_bytes(key[i * 8..i * 8 + 8].try_into().unwrap());
+            self.kw[i] = word;
+            parity ^= word;
+        }
+        self.kw[nw] = parity;
+
+        // tweak 排程:無 tweak 時採全零。
+        let (t0, t1) = match params.tweak() {
+            Some(tw) => (
+                u64::from_le_bytes(tw[0..8].try_into().unwrap()),
+                u64::from_le_bytes(tw[8..16].try_into().unwrap()),
+            ),
+            None => (0, 0),
+        };
+        self.t = [t0, t1, t0 ^ t1];
+
+        self.for_encryption = direction == CipherDirection::Encrypt;
+        Ok(())
     }
 }
 

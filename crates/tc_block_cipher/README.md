@@ -3,9 +3,9 @@
 ## 1. Overview
 
 `tc_block_cipher` provides pure-Rust block cipher implementations ported from
-the Bouncy Castle C# engine package. All engines implement the
-[`BlockCipher`](../tc_crypto_core) trait from `tc_crypto_core` and use the
-crate's shared `BlockCipherError` type.
+the Bouncy Castle C# engine package. All engines implement the `BlockCipher`
+and `BlockCipherInit` traits from `tc_cipher_core` and use the crate's shared
+`BlockCipherError` type.
 
 Each algorithm has an owned parameter type, such as `AesParams` or
 `ThreefishParams`. Parameter constructors validate key lengths and other
@@ -14,8 +14,10 @@ do not implement `Clone`, and their `Debug` implementations redact key and
 tweak bytes.
 
 The default `std` feature enables runtime AES-NI detection for `AesEngine` on
-supported x86 and x86-64 processors. Disabling default features builds the
-crate as `no_std + alloc` and selects portable implementations.
+supported x86 and x86-64 processors. Disabling default features builds a
+`no_std`, allocation-free subset and selects portable implementations. Enable
+the `alloc` feature to add the five algorithm families whose key schedules use
+dynamic storage while remaining `no_std`.
 
 > This crate is a learning port and has not received an independent security
 > audit. Do not use it as a replacement for an audited cryptographic library.
@@ -26,16 +28,16 @@ Add both the implementation crate and the trait crate to the application:
 
 ```toml
 [dependencies]
-tc_crypto_core = { path = "../tc_crypto_core" }
+tc_cipher_core = { path = "../tc_cipher_core" }
 tc_block_cipher = { path = "../tc_block_cipher" }
 ```
 
-Import `BlockCipher` to call `init`, `block_size`, and `process_block`. The
-boolean passed to `init` is `true` for encryption and `false` for decryption:
+Import `BlockCipherInit` to initialize an engine and `BlockCipher` to inspect
+or process it. `CipherDirection` explicitly selects encryption or decryption:
 
 ```rust
 use tc_block_cipher::{AES_BLOCK_BYTES, AesEngine, AesParams, BlockCipherError};
-use tc_crypto_core::BlockCipher;
+use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 
 fn main() -> Result<(), BlockCipherError> {
     let key = [0x11u8; 16];
@@ -43,13 +45,13 @@ fn main() -> Result<(), BlockCipherError> {
     let plaintext = [0x22u8; AES_BLOCK_BYTES];
 
     let mut cipher = AesEngine::new();
-    cipher.init(true, &params)?;
+    cipher.init(CipherDirection::Encrypt, &params)?;
 
     let mut ciphertext = [0u8; AES_BLOCK_BYTES];
     let written = cipher.process_block(&plaintext, &mut ciphertext)?;
     assert_eq!(written, AES_BLOCK_BYTES);
 
-    cipher.init(false, &params)?;
+    cipher.init(CipherDirection::Decrypt, &params)?;
 
     let mut recovered = [0u8; AES_BLOCK_BYTES];
     cipher.process_block(&ciphertext, &mut recovered)?;
@@ -80,31 +82,36 @@ exceptions are:
 
 The crate currently exports 28 engine types. All implementations are covered
 by known-answer tests; selected algorithms also include specification or Monte
-Carlo vectors.
+Carlo vectors. Every algorithm remains available without `std` when the
+`alloc` feature is enabled.
 
-| Family | Public engine types | Key and block support |
-|--------|---------------------|-----------------------|
-| AES | `AesEngine`, `AesLightEngine` | 128-bit block; 128/192/256-bit keys |
-| ARIA | `AriaEngine` | 128-bit block; 128/192/256-bit keys |
-| Blowfish | `BlowfishEngine` | 64-bit block; 32-448-bit keys |
-| Camellia | `CamelliaEngine`, `CamelliaLightEngine` | 128-bit block; 128/192/256-bit keys |
-| CAST | `Cast5Engine`, `Cast6Engine` | CAST5: 64-bit block, 40-128-bit keys; CAST6: 128-bit block, 128-256-bit keys in 32-bit steps |
-| DES / Triple DES | `DesEngine`, `DesEdeEngine` | 64-bit block; 8-byte DES or 16/24-byte EDE keys |
-| DSTU 7624 (Kalyna) | `Dstu7624Engine` | 128/256/512-bit blocks; same-size or double-size keys where defined |
-| GOST 28147-89 | `Gost28147Engine` | 64-bit block; 256-bit key; named and custom S-boxes |
-| IDEA | `IdeaEngine` | 64-bit block; 128-bit key |
-| Noekeon | `NoekeonEngine` | 128-bit block and key |
-| RC2 | `Rc2Engine` | 64-bit block; variable key and effective key size |
-| RC5 | `Rc532Engine`, `Rc564Engine` | 32- or 64-bit words; variable key and round count |
-| RC6 | `Rc6Engine` | 128-bit block; 1-255-byte key; 20 rounds |
-| Rijndael | `RijndaelEngine` | 128/160/192/224/256-bit blocks and keys |
-| SEED | `SeedEngine` | 128-bit block and key |
-| Serpent / Tnepres | `SerpentEngine`, `TnepresEngine` | 128-bit block; 4-32-byte keys in 4-byte steps |
-| SKIPJACK | `SkipjackEngine` | 64-bit block; 80-bit key |
-| SM4 | `Sm4Engine` | 128-bit block and key |
-| TEA / XTEA | `TeaEngine`, `XteaEngine` | 64-bit block; 128-bit key |
-| Threefish | `ThreefishEngine` | 256/512/1024-bit block and matching key; optional 128-bit tweak |
-| Twofish | `TwofishEngine` | 128-bit block; 128/192/256-bit keys |
+`core-only` uses neither `alloc` nor `std`. `alloc` requires heap allocation.
+Only AES gains an additional `std` backend; the API of an enabled algorithm
+remains unchanged across build modes.
+
+| Family | Public engine types | Key and block support | Runtime |
+|--------|---------------------|-----------------------|---------|
+| AES | `AesEngine`, `AesLightEngine` | 128-bit block; 128/192/256-bit keys | core-only; `std`: AES-NI |
+| ARIA | `AriaEngine` | 128-bit block; 128/192/256-bit keys | core-only |
+| Blowfish | `BlowfishEngine` | 64-bit block; 32-448-bit keys | core-only |
+| Camellia | `CamelliaEngine`, `CamelliaLightEngine` | 128-bit block; 128/192/256-bit keys | core-only |
+| CAST | `Cast5Engine`, `Cast6Engine` | CAST5: 64-bit block, 40-128-bit keys; CAST6: 128-bit block, 128-256-bit keys in 32-bit steps | core-only |
+| DES / Triple DES | `DesEngine`, `DesEdeEngine` | 64-bit block; 8-byte DES or 16/24-byte EDE keys | core-only |
+| DSTU 7624 (Kalyna) | `Dstu7624Engine` | 128/256/512-bit blocks; same-size or double-size keys where defined | alloc |
+| GOST 28147-89 | `Gost28147Engine` | 64-bit block; 256-bit key; named and custom S-boxes | core-only |
+| IDEA | `IdeaEngine` | 64-bit block; 128-bit key | core-only |
+| Noekeon | `NoekeonEngine` | 128-bit block and key | core-only |
+| RC2 | `Rc2Engine` | 64-bit block; variable key and effective key size | core-only |
+| RC5 | `Rc532Engine`, `Rc564Engine` | 32- or 64-bit words; variable key and round count | alloc |
+| RC6 | `Rc6Engine` | 128-bit block; 1-255-byte key; 20 rounds | alloc |
+| Rijndael | `RijndaelEngine` | 128/160/192/224/256-bit blocks and keys | alloc |
+| SEED | `SeedEngine` | 128-bit block and key | core-only |
+| Serpent / Tnepres | `SerpentEngine`, `TnepresEngine` | 128-bit block; 4-32-byte keys in 4-byte steps | core-only |
+| SKIPJACK | `SkipjackEngine` | 64-bit block; 80-bit key | core-only |
+| SM4 | `Sm4Engine` | 128-bit block and key | core-only |
+| TEA / XTEA | `TeaEngine`, `XteaEngine` | 64-bit block; 128-bit key | core-only |
+| Threefish | `ThreefishEngine` | 256/512/1024-bit block and matching key; optional 128-bit tweak | alloc |
+| Twofish | `TwofishEngine` | 128-bit block; 128/192/256-bit keys | core-only |
 
 DES, Triple DES, Blowfish, IDEA, RC2, RC5, SKIPJACK, TEA, XTEA, and other
 older designs are provided for compatibility and study, not as recommendations
@@ -161,25 +168,34 @@ cargo build -p tc_block_cipher --locked
 cargo test -p tc_block_cipher --locked
 ```
 
-Disable default features for a `no_std + alloc` build. This removes runtime
-CPU-feature detection and forces portable AES code. Tests still link the Rust
-standard test harness, but exercise the no-default-features library
-configuration:
+Disable default features for the allocation-free `no_std` subset. This includes
+RC2 and every algorithm marked `core-only` in the table above. It excludes
+DSTU 7624, RC5, RC6, Rijndael, and Threefish:
 
 ```bash
 cargo build -p tc_block_cipher --no-default-features --locked
 cargo test -p tc_block_cipher --no-default-features --locked
 ```
 
-The crate requires `alloc` because several parameter types and expanded key
-schedules use owned dynamic storage. A final `no_std` application must provide
-an allocator.
+Enable `alloc` without `std` to make every algorithm available while retaining
+portable AES code:
+
+```bash
+cargo build -p tc_block_cipher --no-default-features --features alloc --locked
+cargo test -p tc_block_cipher --no-default-features --features alloc --locked
+```
+
+Tests still link the Rust standard test harness, but compile the library with
+the selected feature set. Parameter objects store key material in
+fixed-capacity buffers and do not allocate. A final `no_std` application that
+enables `alloc` must provide a global allocator.
 
 Additional validation:
 
 ```bash
 cargo clippy -p tc_block_cipher --all-targets --locked -- -D warnings
 cargo clippy -p tc_block_cipher --all-targets --no-default-features --locked -- -D warnings
+cargo clippy -p tc_block_cipher --all-targets --no-default-features --features alloc --locked -- -D warnings
 cargo rustdoc -p tc_block_cipher --locked -- -D warnings
 ```
 

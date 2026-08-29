@@ -5,14 +5,14 @@
 //! standard's 512-bit maximum key size.
 //!
 //! ```
-//! use tc_crypto_core::BlockCipher;
+//! use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 //! use tc_block_cipher::{Dstu7624Engine, Dstu7624Params};
 //!
 //! let key: [u8; 16] = core::array::from_fn(|index| index as u8);
 //! let input: [u8; 16] = core::array::from_fn(|index| index as u8 + 0x10);
 //! let params = Dstu7624Params::new(&key)?;
 //! let mut cipher = Dstu7624Engine::new(128)?;
-//! cipher.init(true, &params)?;
+//! cipher.init(CipherDirection::Encrypt, &params)?;
 //!
 //! let mut output = [0u8; 16];
 //! cipher.process_block(&input, &mut output)?;

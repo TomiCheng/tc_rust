@@ -5,7 +5,7 @@
 //! 256-byte S-box and computes the remaining transforms at runtime.
 //!
 //! ```
-//! use tc_crypto_core::BlockCipher;
+//! use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 //! use tc_block_cipher::{CamelliaEngine, CamelliaParams};
 //!
 //! let key = [
@@ -14,7 +14,7 @@
 //! ];
 //! let params = CamelliaParams::new(&key)?;
 //! let mut cipher = CamelliaEngine::new();
-//! cipher.init(true, &params)?;
+//! cipher.init(CipherDirection::Encrypt, &params)?;
 //!
 //! let mut output = [0u8; 16];
 //! cipher.process_block(&key, &mut output)?;

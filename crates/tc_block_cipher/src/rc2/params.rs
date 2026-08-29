@@ -1,20 +1,20 @@
 //! Validated RC2 initialization parameters.
 
-use alloc::vec::Vec;
 use core::fmt;
 
-use super::{RC2_MAX_EFFECTIVE_KEY_BITS, RC2_MAX_KEY_BYTES, BlockCipherError};
+use super::{BlockCipherError, RC2_MAX_EFFECTIVE_KEY_BITS, RC2_MAX_KEY_BYTES};
 
 /// Owned, validated RC2 key and effective-key-size parameters.
 pub struct Rc2Params {
-    key: Vec<u8>,
+    key: [u8; RC2_MAX_KEY_BYTES],
+    key_len: usize,
     effective_key_bits: usize,
 }
 
 impl fmt::Debug for Rc2Params {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Rc2Params")
-            .field("key_len", &self.key.len())
+            .field("key_len", &self.key_len)
             .field("effective_key_bits", &self.effective_key_bits)
             .finish()
     }
@@ -27,15 +27,25 @@ impl Rc2Params {
     }
 
     /// Validates `key` and a separate effective key size in bits (RFC 2268).
-    pub fn with_effective_key_bits(key: &[u8], effective_key_bits: usize) -> Result<Self, BlockCipherError> {
+    pub fn with_effective_key_bits(
+        key: &[u8],
+        effective_key_bits: usize,
+    ) -> Result<Self, BlockCipherError> {
         if key.is_empty() || key.len() > RC2_MAX_KEY_BYTES {
             return Err(BlockCipherError::InvalidKeyLength(key.len()));
         }
         if effective_key_bits == 0 || effective_key_bits > RC2_MAX_EFFECTIVE_KEY_BITS {
-            return Err(BlockCipherError::InvalidEffectiveKeyBits(effective_key_bits));
+            return Err(BlockCipherError::InvalidEffectiveKeyBits(
+                effective_key_bits,
+            ));
         }
+
+        let mut key_buffer = [0_u8; RC2_MAX_KEY_BYTES];
+        key_buffer[..key.len()].copy_from_slice(key);
+
         Ok(Self {
-            key: key.to_vec(),
+            key: key_buffer,
+            key_len: key.len(),
             effective_key_bits,
         })
     }
@@ -46,7 +56,7 @@ impl Rc2Params {
     }
 
     pub(crate) fn key(&self) -> &[u8] {
-        &self.key
+        &self.key[..self.key_len]
     }
 }
 
@@ -82,5 +92,14 @@ mod tests {
     fn new_defaults_effective_bits_to_key_length() {
         let params = Rc2Params::new(&[0u8; 8]).unwrap();
         assert_eq!(params.effective_key_bits(), 64);
+    }
+
+    #[test]
+    fn stores_only_the_supplied_key_as_logical_input() {
+        let params = Rc2Params::new(&[1, 2, 3]).unwrap();
+
+        assert_eq!(params.key(), &[1, 2, 3]);
+        assert_eq!(params.key_len, 3);
+        assert!(params.key[params.key_len..].iter().all(|&byte| byte == 0));
     }
 }

@@ -1,8 +1,8 @@
 //! SM4 block-cipher engine, key schedule, and round functions.
 
-use tc_crypto_core::BlockCipher;
+use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 
-use super::{SM4_BLOCK_BYTES, BlockCipherError, Sm4Params};
+use super::{BlockCipherError, SM4_BLOCK_BYTES, Sm4Params};
 
 /// The SM4 S-box.
 #[rustfmt::skip]
@@ -61,7 +61,6 @@ impl Default for Sm4Engine {
 }
 
 impl BlockCipher for Sm4Engine {
-    type Params<'a> = Sm4Params;
     type Error = BlockCipherError;
 
     fn algorithm_name(&self) -> &str {
@@ -70,11 +69,6 @@ impl BlockCipher for Sm4Engine {
 
     fn block_size(&self) -> usize {
         SM4_BLOCK_BYTES
-    }
-
-    fn init(&mut self, for_encryption: bool, params: &Self::Params<'_>) -> Result<(), Self::Error> {
-        self.rk = Some(expand_key(for_encryption, params.key()));
-        Ok(())
     }
 
     fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
@@ -102,6 +96,22 @@ impl BlockCipher for Sm4Engine {
         write_word(output, 8, x[1]);
         write_word(output, 12, x[0]);
         Ok(SM4_BLOCK_BYTES)
+    }
+}
+
+impl BlockCipherInit for Sm4Engine {
+    type Params<'a> = Sm4Params;
+
+    fn init(
+        &mut self,
+        direction: CipherDirection,
+        params: &Self::Params<'_>,
+    ) -> Result<(), Self::Error> {
+        self.rk = Some(expand_key(
+            direction == CipherDirection::Encrypt,
+            params.key(),
+        ));
+        Ok(())
     }
 }
 
@@ -193,7 +203,7 @@ mod tests {
     fn short_buffers_are_rejected() {
         let params = Sm4Params::new(&[0u8; 16]).unwrap();
         let mut engine = Sm4Engine::new();
-        engine.init(true, &params).unwrap();
+        engine.init(CipherDirection::Encrypt, &params).unwrap();
         assert_eq!(
             engine.process_block(&[0u8; 15], &mut [0u8; 16]),
             Err(BlockCipherError::BufferTooShort)

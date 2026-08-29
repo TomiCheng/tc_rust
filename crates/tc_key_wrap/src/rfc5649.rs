@@ -8,7 +8,8 @@
 
 use alloc::vec;
 use alloc::vec::Vec;
-use tc_crypto_core::{BlockCipher, Wrapper};
+use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
+use tc_crypto_core::Wrapper;
 
 use crate::rfc3394::{fixed_time_eq, unwrap_core, wrap_core};
 
@@ -18,17 +19,17 @@ const DEFAULT_PRE_IV: [u8; 4] = [0xa6, 0x59, 0x59, 0xa6];
 
 /// Parameters for an RFC 5649 wrapper: the underlying engine's key parameters
 /// plus an optional custom 4-byte AIV prefix.
-pub struct Rfc5649Params<'a, E: BlockCipher> {
+pub struct Rfc5649Params<'a, E: BlockCipherInit> {
     /// The underlying block cipher's key parameters (e.g. `AesParams`).
-    key_params: E::Params<'a>,
+    key_params: <E as BlockCipherInit>::Params<'a>,
     /// A custom AIV prefix; `None` uses [`DEFAULT_PRE_IV`].
     pre_iv: Option<[u8; 4]>,
 }
 
-impl<'a, E: BlockCipher> Rfc5649Params<'a, E> {
+impl<'a, E: BlockCipherInit> Rfc5649Params<'a, E> {
     /// Builds parameters from the engine's key parameters, using the default AIV
     /// prefix.
-    pub fn new(key_params: E::Params<'a>) -> Self {
+    pub fn new(key_params: <E as BlockCipherInit>::Params<'a>) -> Self {
         Self {
             key_params,
             pre_iv: None,
@@ -37,7 +38,7 @@ impl<'a, E: BlockCipher> Rfc5649Params<'a, E> {
 
     /// Builds parameters from the engine's key parameters and a custom 4-byte AIV
     /// prefix.
-    pub fn with_iv(key_params: E::Params<'a>, pre_iv: [u8; 4]) -> Self {
+    pub fn with_iv(key_params: <E as BlockCipherInit>::Params<'a>, pre_iv: [u8; 4]) -> Self {
         Self {
             key_params,
             pre_iv: Some(pre_iv),
@@ -137,7 +138,7 @@ impl<E: BlockCipher> core::fmt::Display for Rfc5649Error<E> {
 
 impl<E: BlockCipher> core::error::Error for Rfc5649Error<E> {}
 
-impl<E: BlockCipher> Wrapper for Rfc5649WrapEngine<E> {
+impl<E: BlockCipherInit> Wrapper for Rfc5649WrapEngine<E> {
     type Params<'a> = Rfc5649Params<'a, E>;
     type Error = Rfc5649Error<E>;
 
@@ -147,8 +148,13 @@ impl<E: BlockCipher> Wrapper for Rfc5649WrapEngine<E> {
 
     fn init(&mut self, for_wrapping: bool, params: &Self::Params<'_>) -> Result<(), Self::Error> {
         // RFC 5649 一律 wrap=加密、unwrap=解密（無 reverse 選項）。
+        let direction = if for_wrapping {
+            CipherDirection::Encrypt
+        } else {
+            CipherDirection::Decrypt
+        };
         self.engine
-            .init(for_wrapping, &params.key_params)
+            .init(direction, &params.key_params)
             .map_err(Rfc5649Error::BlockCipher)?;
         self.pre_iv = params.pre_iv.unwrap_or(DEFAULT_PRE_IV);
         self.for_wrapping = Some(for_wrapping);

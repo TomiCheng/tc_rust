@@ -4,7 +4,7 @@
 //! most 80 bits use 12 rounds; longer keys use 16 rounds.
 //!
 //! ```
-//! use tc_crypto_core::BlockCipher;
+//! use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 //! use tc_block_cipher::{Cast5Engine, Cast5Params};
 //!
 //! let key = [
@@ -13,7 +13,7 @@
 //! ];
 //! let params = Cast5Params::new(&key)?;
 //! let mut cipher = Cast5Engine::new();
-//! cipher.init(true, &params)?;
+//! cipher.init(CipherDirection::Encrypt, &params)?;
 //!
 //! let mut output = [0u8; 8];
 //! cipher.process_block(&[0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF], &mut output)?;

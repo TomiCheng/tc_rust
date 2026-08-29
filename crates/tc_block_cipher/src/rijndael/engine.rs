@@ -7,10 +7,10 @@
 use alloc::vec;
 use alloc::vec::Vec;
 
-use tc_crypto_core::BlockCipher;
+use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 
 use super::tables::{ALOG, LOG, RCON, S, SHIFTS0, SHIFTS1, SI};
-use super::{RIJNDAEL_BLOCK_BITS, BlockCipherError, RijndaelParams};
+use super::{BlockCipherError, RIJNDAEL_BLOCK_BITS, RijndaelParams};
 
 /// Generalised Rijndael with a configurable block size.
 pub struct RijndaelEngine {
@@ -241,7 +241,6 @@ impl RijndaelEngine {
 }
 
 impl BlockCipher for RijndaelEngine {
-    type Params<'a> = RijndaelParams;
     type Error = BlockCipherError;
 
     fn algorithm_name(&self) -> &str {
@@ -250,12 +249,6 @@ impl BlockCipher for RijndaelEngine {
 
     fn block_size(&self) -> usize {
         self.block_bytes()
-    }
-
-    fn init(&mut self, for_encryption: bool, params: &Self::Params<'_>) -> Result<(), Self::Error> {
-        self.working_key = Some(self.generate_working_key(params.key()));
-        self.for_encryption = for_encryption;
-        Ok(())
     }
 
     fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
@@ -275,6 +268,20 @@ impl BlockCipher for RijndaelEngine {
         }
         self.pack(&a, output);
         Ok(bytes)
+    }
+}
+
+impl BlockCipherInit for RijndaelEngine {
+    type Params<'a> = RijndaelParams;
+
+    fn init(
+        &mut self,
+        direction: CipherDirection,
+        params: &Self::Params<'_>,
+    ) -> Result<(), Self::Error> {
+        self.working_key = Some(self.generate_working_key(params.key()));
+        self.for_encryption = direction == CipherDirection::Encrypt;
+        Ok(())
     }
 }
 

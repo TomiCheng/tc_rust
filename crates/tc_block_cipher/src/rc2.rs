@@ -6,14 +6,14 @@
 //! sets it explicitly (RFC 2268's "effective key bits").
 //!
 //! ```
-//! use tc_crypto_core::BlockCipher;
+//! use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 //! use tc_block_cipher::{Rc2Engine, Rc2Params};
 //!
 //! // RFC 2268 vector: 8-byte key, 64 effective bits.
 //! let key = [0xFFu8; 8];
 //! let params = Rc2Params::new(&key)?;
 //! let mut cipher = Rc2Engine::new();
-//! cipher.init(true, &params)?;
+//! cipher.init(CipherDirection::Encrypt, &params)?;
 //!
 //! let mut ciphertext = [0u8; 8];
 //! cipher.process_block(&[0xFFu8; 8], &mut ciphertext)?;

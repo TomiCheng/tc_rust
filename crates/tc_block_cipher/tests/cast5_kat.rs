@@ -1,6 +1,6 @@
 //! CAST5 vectors from RFC 2144 and Bouncy Castle's `Cast5Test.cs`.
 
-use tc_crypto_core::BlockCipher;
+use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 use tc_block_cipher::{CAST5_BLOCK_BYTES, Cast5Engine, Cast5Params};
 
 fn unhex<const N: usize>(value: &str) -> [u8; N] {
@@ -28,12 +28,12 @@ fn rfc_2144_all_round_counts() {
         let params = Cast5Params::new(key).unwrap();
         let mut engine = Cast5Engine::new();
 
-        engine.init(true, &params).unwrap();
+        engine.init(CipherDirection::Encrypt, &params).unwrap();
         let mut encrypted = [0u8; CAST5_BLOCK_BYTES];
         engine.process_block(&plaintext, &mut encrypted).unwrap();
         assert_eq!(encrypted, ciphertext);
 
-        engine.init(false, &params).unwrap();
+        engine.init(CipherDirection::Decrypt, &params).unwrap();
         let mut recovered = [0u8; CAST5_BLOCK_BYTES];
         engine.process_block(&ciphertext, &mut recovered).unwrap();
         assert_eq!(recovered, plaintext);
@@ -48,10 +48,10 @@ fn reinitialising_switches_between_reduced_and_full_rounds() {
     let mut engine = Cast5Engine::new();
 
     engine
-        .init(true, &Cast5Params::new(&short_key).unwrap())
+        .init(CipherDirection::Encrypt, &Cast5Params::new(&short_key).unwrap())
         .unwrap();
     engine
-        .init(true, &Cast5Params::new(&long_key).unwrap())
+        .init(CipherDirection::Encrypt, &Cast5Params::new(&long_key).unwrap())
         .unwrap();
 
     let mut encrypted = [0u8; CAST5_BLOCK_BYTES];

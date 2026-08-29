@@ -1,8 +1,8 @@
 //! XTEA block-cipher engine and key schedule.
 
-use tc_crypto_core::BlockCipher;
+use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 
-use super::{XTEA_BLOCK_BYTES, BlockCipherError, XteaParams};
+use super::{BlockCipherError, XTEA_BLOCK_BYTES, XteaParams};
 
 /// The golden-ratio round constant.
 const DELTA: u32 = 0x9E37_79B9;
@@ -61,7 +61,6 @@ impl Default for XteaEngine {
 }
 
 impl BlockCipher for XteaEngine {
-    type Params<'a> = XteaParams;
     type Error = BlockCipherError;
 
     fn algorithm_name(&self) -> &str {
@@ -72,14 +71,11 @@ impl BlockCipher for XteaEngine {
         XTEA_BLOCK_BYTES
     }
 
-    fn init(&mut self, for_encryption: bool, params: &Self::Params<'_>) -> Result<(), Self::Error> {
-        self.schedule = Some(build_schedule(params.key()));
-        self.for_encryption = for_encryption;
-        Ok(())
-    }
-
     fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
-        let s = self.schedule.as_ref().ok_or(BlockCipherError::NotInitialised)?;
+        let s = self
+            .schedule
+            .as_ref()
+            .ok_or(BlockCipherError::NotInitialised)?;
         if input.len() < XTEA_BLOCK_BYTES || output.len() < XTEA_BLOCK_BYTES {
             return Err(BlockCipherError::BufferTooShort);
         }
@@ -89,6 +85,20 @@ impl BlockCipher for XteaEngine {
             XteaEngine::decrypt_block(s, input, output);
         }
         Ok(XTEA_BLOCK_BYTES)
+    }
+}
+
+impl BlockCipherInit for XteaEngine {
+    type Params<'a> = XteaParams;
+
+    fn init(
+        &mut self,
+        direction: CipherDirection,
+        params: &Self::Params<'_>,
+    ) -> Result<(), Self::Error> {
+        self.schedule = Some(build_schedule(params.key()));
+        self.for_encryption = direction == CipherDirection::Encrypt;
+        Ok(())
     }
 }
 
@@ -145,7 +155,7 @@ mod tests {
     fn short_buffers_are_rejected() {
         let params = XteaParams::new(&[0u8; 16]).unwrap();
         let mut engine = XteaEngine::new();
-        engine.init(true, &params).unwrap();
+        engine.init(CipherDirection::Encrypt, &params).unwrap();
         assert_eq!(
             engine.process_block(&[0u8; 7], &mut [0u8; 8]),
             Err(BlockCipherError::BufferTooShort)

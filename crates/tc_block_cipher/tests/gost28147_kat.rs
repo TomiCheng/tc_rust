@@ -1,6 +1,6 @@
 //! GOST 28147 vectors from Bouncy Castle's `GOST28147Test.cs`.
 
-use tc_crypto_core::BlockCipher;
+use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 use tc_block_cipher::{GOST28147_BLOCK_BYTES, Gost28147Engine, Gost28147Params, Gost28147SBox};
 
 fn unhex(value: &str) -> Vec<u8> {
@@ -12,7 +12,7 @@ fn unhex(value: &str) -> Vec<u8> {
 
 fn encrypt_block(params: &Gost28147Params, input: &[u8]) -> [u8; GOST28147_BLOCK_BYTES] {
     let mut engine = Gost28147Engine::new();
-    engine.init(true, params).unwrap();
+    engine.init(CipherDirection::Encrypt, params).unwrap();
     let mut output = [0u8; GOST28147_BLOCK_BYTES];
     assert_eq!(engine.process_block(input, &mut output).unwrap(), 8);
     output
@@ -25,7 +25,7 @@ fn assert_block_vector(params: &Gost28147Params, plaintext: &str, ciphertext: &s
     assert_eq!(encrypted.as_slice(), ciphertext);
 
     let mut engine = Gost28147Engine::new();
-    engine.init(false, params).unwrap();
+    engine.init(CipherDirection::Decrypt, params).unwrap();
     let mut recovered = [0u8; GOST28147_BLOCK_BYTES];
     engine.process_block(&ciphertext, &mut recovered).unwrap();
     assert_eq!(recovered.as_slice(), plaintext);
@@ -37,7 +37,7 @@ fn cfb8_encrypt(
     input: &[u8],
 ) -> Vec<u8> {
     let mut engine = Gost28147Engine::new();
-    engine.init(true, params).unwrap();
+    engine.init(CipherDirection::Encrypt, params).unwrap();
     let mut feedback = *iv;
     let mut output = Vec::with_capacity(input.len());
 
@@ -124,7 +124,7 @@ fn every_named_s_box_round_trips() {
         let params = Gost28147Params::with_s_box(&key, s_box).unwrap();
         let encrypted = encrypt_block(&params, &plaintext);
         let mut engine = Gost28147Engine::new();
-        engine.init(false, &params).unwrap();
+        engine.init(CipherDirection::Decrypt, &params).unwrap();
         let mut recovered = [0u8; 8];
         engine.process_block(&encrypted, &mut recovered).unwrap();
         assert_eq!(recovered, plaintext, "{}", s_box.name());

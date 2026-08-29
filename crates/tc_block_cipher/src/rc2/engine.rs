@@ -5,9 +5,9 @@
 //! two's-complement behaviour of `& 63` indexing and `as u16` truncation matches
 //! the C# original exactly.
 
-use tc_crypto_core::BlockCipher;
+use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 
-use super::{RC2_BLOCK_BYTES, BlockCipherError, Rc2Params};
+use super::{BlockCipherError, RC2_BLOCK_BYTES, Rc2Params};
 
 /// Key-expansion table based on the digits of pi (RFC 2268).
 #[rustfmt::skip]
@@ -34,7 +34,7 @@ const PI_TABLE: [u8; 256] = [
 pub struct Rc2Engine {
     /// 展開後的 64 個 16 位金鑰字;init 前為 `None` = 未初始化。
     working_key: Option<[u16; 64]>,
-    for_encryption: bool,
+    direction: CipherDirection,
 }
 
 impl Rc2Engine {
@@ -42,7 +42,7 @@ impl Rc2Engine {
     pub fn new() -> Self {
         Self {
             working_key: None,
-            for_encryption: false,
+            direction: CipherDirection::Encrypt,
         }
     }
 
@@ -75,7 +75,6 @@ impl Default for Rc2Engine {
 }
 
 impl BlockCipher for Rc2Engine {
-    type Params<'a> = Rc2Params;
     type Error = BlockCipherError;
 
     fn algorithm_name(&self) -> &str {
@@ -86,23 +85,36 @@ impl BlockCipher for Rc2Engine {
         RC2_BLOCK_BYTES
     }
 
-    fn init(&mut self, for_encryption: bool, params: &Self::Params<'_>) -> Result<(), Self::Error> {
-        self.working_key = Some(generate_working_key(params.key(), params.effective_key_bits()));
-        self.for_encryption = for_encryption;
-        Ok(())
-    }
-
     fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
-        let wk = self.working_key.as_ref().ok_or(BlockCipherError::NotInitialised)?;
+        let wk = self
+            .working_key
+            .as_ref()
+            .ok_or(BlockCipherError::NotInitialised)?;
         if input.len() < RC2_BLOCK_BYTES || output.len() < RC2_BLOCK_BYTES {
             return Err(BlockCipherError::BufferTooShort);
         }
-        if self.for_encryption {
-            Rc2Engine::encrypt_block(wk, input, output);
-        } else {
-            Rc2Engine::decrypt_block(wk, input, output);
+        match self.direction {
+            CipherDirection::Encrypt => Rc2Engine::encrypt_block(wk, input, output),
+            CipherDirection::Decrypt => Rc2Engine::decrypt_block(wk, input, output),
         }
         Ok(RC2_BLOCK_BYTES)
+    }
+}
+
+impl BlockCipherInit for Rc2Engine {
+    type Params<'a> = Rc2Params;
+
+    fn init(
+        &mut self,
+        direction: CipherDirection,
+        params: &Self::Params<'_>,
+    ) -> Result<(), Self::Error> {
+        self.working_key = Some(generate_working_key(
+            params.key(),
+            params.effective_key_bits(),
+        ));
+        self.direction = direction;
+        Ok(())
     }
 }
 
@@ -227,7 +239,7 @@ mod tests {
     fn short_buffers_are_rejected() {
         let params = Rc2Params::new(&[0u8; 8]).unwrap();
         let mut engine = Rc2Engine::new();
-        engine.init(true, &params).unwrap();
+        engine.init(CipherDirection::Encrypt, &params).unwrap();
         assert_eq!(
             engine.process_block(&[0u8; 7], &mut [0u8; 8]),
             Err(BlockCipherError::BufferTooShort)

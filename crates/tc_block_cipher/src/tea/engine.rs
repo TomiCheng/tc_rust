@@ -1,8 +1,8 @@
 //! TEA block-cipher engine.
 
-use tc_crypto_core::BlockCipher;
+use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 
-use super::{TEA_BLOCK_BYTES, BlockCipherError, TeaParams};
+use super::{BlockCipherError, TEA_BLOCK_BYTES, TeaParams};
 
 /// The golden-ratio round constant.
 const DELTA: u32 = 0x9E37_79B9;
@@ -63,7 +63,6 @@ impl Default for TeaEngine {
 }
 
 impl BlockCipher for TeaEngine {
-    type Params<'a> = TeaParams;
     type Error = BlockCipherError;
 
     fn algorithm_name(&self) -> &str {
@@ -72,18 +71,6 @@ impl BlockCipher for TeaEngine {
 
     fn block_size(&self) -> usize {
         TEA_BLOCK_BYTES
-    }
-
-    fn init(&mut self, for_encryption: bool, params: &Self::Params<'_>) -> Result<(), Self::Error> {
-        let key = params.key();
-        self.key = Some([
-            read_word(key, 0),
-            read_word(key, 4),
-            read_word(key, 8),
-            read_word(key, 12),
-        ]);
-        self.for_encryption = for_encryption;
-        Ok(())
     }
 
     fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
@@ -97,6 +84,26 @@ impl BlockCipher for TeaEngine {
             TeaEngine::decrypt_block(key, input, output);
         }
         Ok(TEA_BLOCK_BYTES)
+    }
+}
+
+impl BlockCipherInit for TeaEngine {
+    type Params<'a> = TeaParams;
+
+    fn init(
+        &mut self,
+        direction: CipherDirection,
+        params: &Self::Params<'_>,
+    ) -> Result<(), Self::Error> {
+        let key = params.key();
+        self.key = Some([
+            read_word(key, 0),
+            read_word(key, 4),
+            read_word(key, 8),
+            read_word(key, 12),
+        ]);
+        self.for_encryption = direction == CipherDirection::Encrypt;
+        Ok(())
     }
 }
 
@@ -134,7 +141,7 @@ mod tests {
     fn short_buffers_are_rejected() {
         let params = TeaParams::new(&[0u8; 16]).unwrap();
         let mut engine = TeaEngine::new();
-        engine.init(true, &params).unwrap();
+        engine.init(CipherDirection::Encrypt, &params).unwrap();
         assert_eq!(
             engine.process_block(&[0u8; 7], &mut [0u8; 8]),
             Err(BlockCipherError::BufferTooShort)

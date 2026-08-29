@@ -7,12 +7,12 @@
 //! wants the small-footprint implementation even when AES-NI is available.
 //!
 //! ```
-//! use tc_crypto_core::BlockCipher;
+//! use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 //! use tc_block_cipher::{AesEngine, AesParams};
 //!
 //! let params = AesParams::new(&[0u8; 16])?;
 //! let mut cipher = AesEngine::new();
-//! cipher.init(true, &params)?;
+//! cipher.init(CipherDirection::Encrypt, &params)?;
 //!
 //! let mut output = [0u8; 16];
 //! cipher.process_block(&[0u8; 16], &mut output)?;

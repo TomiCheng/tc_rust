@@ -1,8 +1,8 @@
 //! Twofish block-cipher engine, key schedule, and round functions.
 
-use tc_crypto_core::BlockCipher;
+use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 
-use super::{TWOFISH_BLOCK_BYTES, BlockCipherError, TwofishParams};
+use super::{BlockCipherError, TWOFISH_BLOCK_BYTES, TwofishParams};
 
 const ROUNDS: usize = 16;
 const INPUT_WHITEN: usize = 0;
@@ -65,7 +65,6 @@ impl Default for TwofishEngine {
 }
 
 impl BlockCipher for TwofishEngine {
-    type Params<'a> = TwofishParams;
     type Error = BlockCipherError;
 
     fn algorithm_name(&self) -> &str {
@@ -76,14 +75,11 @@ impl BlockCipher for TwofishEngine {
         TWOFISH_BLOCK_BYTES
     }
 
-    fn init(&mut self, for_encryption: bool, params: &Self::Params<'_>) -> Result<(), Self::Error> {
-        self.schedule = Some(expand_key(params.key()));
-        self.encrypting = for_encryption;
-        Ok(())
-    }
-
     fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
-        let schedule = self.schedule.as_ref().ok_or(BlockCipherError::NotInitialised)?;
+        let schedule = self
+            .schedule
+            .as_ref()
+            .ok_or(BlockCipherError::NotInitialised)?;
         if input.len() < TWOFISH_BLOCK_BYTES || output.len() < TWOFISH_BLOCK_BYTES {
             return Err(BlockCipherError::BufferTooShort);
         }
@@ -94,6 +90,20 @@ impl BlockCipher for TwofishEngine {
             decrypt_block(schedule, input, output);
         }
         Ok(TWOFISH_BLOCK_BYTES)
+    }
+}
+
+impl BlockCipherInit for TwofishEngine {
+    type Params<'a> = TwofishParams;
+
+    fn init(
+        &mut self,
+        direction: CipherDirection,
+        params: &Self::Params<'_>,
+    ) -> Result<(), Self::Error> {
+        self.schedule = Some(expand_key(params.key()));
+        self.encrypting = direction == CipherDirection::Encrypt;
+        Ok(())
     }
 }
 
@@ -372,7 +382,7 @@ mod tests {
     fn short_buffers_are_rejected() {
         let params = TwofishParams::new(&[0u8; 16]).unwrap();
         let mut engine = TwofishEngine::new();
-        engine.init(true, &params).unwrap();
+        engine.init(CipherDirection::Encrypt, &params).unwrap();
         assert_eq!(
             engine.process_block(&[0u8; 15], &mut [0u8; 16]),
             Err(BlockCipherError::BufferTooShort)

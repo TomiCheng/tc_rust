@@ -14,5 +14,6 @@ std = ["tc_block_cipher/std"]
 [dependencies]
 # Wrapper trait 需要 alloc,故開啟 core 的 alloc feature。
 tc_crypto_core = { path = "../tc_crypto_core", features = ["alloc"] }
-# 由本 crate 的 std feature 決定是否開啟，故關掉底層 crate 的預設 feature。
-tc_block_cipher = { path = "../tc_block_cipher", default-features = false }
+tc_cipher_core = { path = "../tc_cipher_core" }
+# DSTU7624 wrapper 需要底層 alloc engine；std 仍由本 crate 的 feature 決定。
+tc_block_cipher = { path = "../tc_block_cipher", default-features = false, features = ["alloc"] }

@@ -1,8 +1,8 @@
 //! DSTU 7624 block-cipher engine.
 
-use tc_crypto_core::BlockCipher;
+use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 
-use super::{DSTU7624_BLOCK_BITS, BlockCipherError, Dstu7624Params, cipher};
+use super::{BlockCipherError, DSTU7624_BLOCK_BITS, Dstu7624Params, cipher};
 
 /// Portable DSTU 7624 (Kalyna) block cipher.
 pub struct Dstu7624Engine {
@@ -32,7 +32,6 @@ impl Default for Dstu7624Engine {
 }
 
 impl BlockCipher for Dstu7624Engine {
-    type Params<'a> = Dstu7624Params;
     type Error = BlockCipherError;
 
     fn algorithm_name(&self) -> &str {
@@ -41,23 +40,6 @@ impl BlockCipher for Dstu7624Engine {
 
     fn block_size(&self) -> usize {
         self.cipher.block_bytes()
-    }
-
-    fn init(&mut self, for_encryption: bool, params: &Self::Params<'_>) -> Result<(), Self::Error> {
-        self.initialised = false;
-        let block_bytes = self.block_size();
-        let key_bytes = params.key_len();
-        if key_bytes != block_bytes && key_bytes != block_bytes * 2 {
-            return Err(BlockCipherError::UnsupportedKeyForBlock {
-                block_bits: block_bytes * 8,
-                key_bits: key_bytes * 8,
-            });
-        }
-
-        self.cipher.set_key(params.key());
-        self.for_encryption = for_encryption;
-        self.initialised = true;
-        Ok(())
     }
 
     fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
@@ -78,6 +60,31 @@ impl BlockCipher for Dstu7624Engine {
     }
 }
 
+impl BlockCipherInit for Dstu7624Engine {
+    type Params<'a> = Dstu7624Params;
+
+    fn init(
+        &mut self,
+        direction: CipherDirection,
+        params: &Self::Params<'_>,
+    ) -> Result<(), Self::Error> {
+        self.initialised = false;
+        let block_bytes = self.block_size();
+        let key_bytes = params.key_len();
+        if key_bytes != block_bytes && key_bytes != block_bytes * 2 {
+            return Err(BlockCipherError::UnsupportedKeyForBlock {
+                block_bits: block_bytes * 8,
+                key_bits: key_bytes * 8,
+            });
+        }
+
+        self.cipher.set_key(params.key());
+        self.for_encryption = direction == CipherDirection::Encrypt;
+        self.initialised = true;
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -93,7 +100,10 @@ mod tests {
         assert_eq!(engine.algorithm_name(), "DSTU7624");
         assert_eq!(engine.block_size(), 32);
         assert_eq!(
-            engine.init(true, &Dstu7624Params::new(&[0u8; 16]).unwrap()),
+            engine.init(
+                CipherDirection::Encrypt,
+                &Dstu7624Params::new(&[0u8; 16]).unwrap(),
+            ),
             Err(BlockCipherError::UnsupportedKeyForBlock {
                 block_bits: 256,
                 key_bits: 128,
@@ -101,11 +111,17 @@ mod tests {
         );
 
         engine
-            .init(true, &Dstu7624Params::new(&[0u8; 32]).unwrap())
+            .init(
+                CipherDirection::Encrypt,
+                &Dstu7624Params::new(&[0u8; 32]).unwrap(),
+            )
             .unwrap();
         assert!(
             engine
-                .init(true, &Dstu7624Params::new(&[0u8; 16]).unwrap())
+                .init(
+                    CipherDirection::Encrypt,
+                    &Dstu7624Params::new(&[0u8; 16]).unwrap(),
+                )
                 .is_err()
         );
         assert_eq!(
@@ -122,7 +138,10 @@ mod tests {
             Err(BlockCipherError::NotInitialised)
         );
         engine
-            .init(true, &Dstu7624Params::new(&[0u8; 16]).unwrap())
+            .init(
+                CipherDirection::Encrypt,
+                &Dstu7624Params::new(&[0u8; 16]).unwrap(),
+            )
             .unwrap();
         assert_eq!(
             engine.process_block(&[0u8; 15], &mut [0u8; 16]),

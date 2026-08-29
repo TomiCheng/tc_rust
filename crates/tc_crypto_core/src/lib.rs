@@ -1,8 +1,8 @@
 //! Core cryptographic abstractions ported from Bouncy Castle's
 //! `Org.BouncyCastle.Crypto` namespace.
 //!
-//! This crate holds the *traits* shared by the concrete algorithms (digests,
-//! ciphers, …) that live in downstream crates. It is deliberately minimal and
+//! This crate holds the *traits* shared by the concrete digest and key-wrapper
+//! algorithms that live in downstream crates. It is deliberately minimal and
 //! dependency-free: unconditionally `no_std`, with no `alloc` requirement — the
 //! traits describe fixed-size, streaming interfaces that need neither.
 //!
@@ -19,13 +19,11 @@
 #[cfg(any(feature = "alloc", test))]
 extern crate alloc;
 
-pub mod block_cipher;
 pub mod digest;
 pub mod xof;
 #[cfg(any(feature = "alloc", test))]
 pub mod wrapper;
 
-pub use block_cipher::BlockCipher;
 pub use digest::{Digest, TryDigest};
 pub use xof::{TryXof, Xof};
 #[cfg(any(feature = "alloc", test))]

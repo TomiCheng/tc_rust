@@ -4,17 +4,17 @@
 //! Noekeon has a 128-bit key and a 128-bit block, processed as four big-endian
 //! 32-bit words over sixteen rounds. Encryption and decryption share the same
 //! `theta`/`pi1`/`gamma`/`pi2` primitives; decryption simply runs the rounds in
-//! reverse over a key that [`init`](tc_crypto_core::BlockCipher::init) pre-mixes
+//! reverse over a key that [`init`](tc_cipher_core::BlockCipherInit::init) pre-mixes
 //! with a single zero-key `theta`.
 //!
 //! ```
-//! use tc_crypto_core::BlockCipher;
+//! use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 //! use tc_block_cipher::{NoekeonEngine, NoekeonParams};
 //!
 //! let key = [0u8; 16];
 //! let params = NoekeonParams::new(&key)?;
 //! let mut cipher = NoekeonEngine::new();
-//! cipher.init(true, &params)?;
+//! cipher.init(CipherDirection::Encrypt, &params)?;
 //!
 //! let mut ciphertext = [0u8; 16];
 //! cipher.process_block(&[0u8; 16], &mut ciphertext)?;

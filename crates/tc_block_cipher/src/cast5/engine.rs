@@ -1,8 +1,8 @@
 //! CAST5 block-cipher engine.
 
-use tc_crypto_core::BlockCipher;
+use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 
-use super::{CAST5_BLOCK_BYTES, BlockCipherError, Cast5Params, cipher};
+use super::{BlockCipherError, CAST5_BLOCK_BYTES, Cast5Params, cipher};
 
 /// Portable CAST5 (CAST-128) block cipher.
 pub struct Cast5Engine {
@@ -29,7 +29,6 @@ impl Default for Cast5Engine {
 }
 
 impl BlockCipher for Cast5Engine {
-    type Params<'a> = Cast5Params;
     type Error = BlockCipherError;
 
     fn algorithm_name(&self) -> &str {
@@ -38,13 +37,6 @@ impl BlockCipher for Cast5Engine {
 
     fn block_size(&self) -> usize {
         CAST5_BLOCK_BYTES
-    }
-
-    fn init(&mut self, for_encryption: bool, params: &Self::Params<'_>) -> Result<(), Self::Error> {
-        self.schedule.set_key(params.key());
-        self.for_encryption = for_encryption;
-        self.initialised = true;
-        Ok(())
     }
 
     fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
@@ -67,6 +59,21 @@ impl BlockCipher for Cast5Engine {
     }
 }
 
+impl BlockCipherInit for Cast5Engine {
+    type Params<'a> = Cast5Params;
+
+    fn init(
+        &mut self,
+        direction: CipherDirection,
+        params: &Self::Params<'_>,
+    ) -> Result<(), Self::Error> {
+        self.schedule.set_key(params.key());
+        self.for_encryption = direction == CipherDirection::Encrypt;
+        self.initialised = true;
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -82,7 +89,10 @@ mod tests {
         );
 
         engine
-            .init(true, &Cast5Params::new(&[0u8; 5]).unwrap())
+            .init(
+                CipherDirection::Encrypt,
+                &Cast5Params::new(&[0u8; 5]).unwrap(),
+            )
             .unwrap();
         assert_eq!(
             engine.process_block(&[0u8; 7], &mut [0u8; 8]),

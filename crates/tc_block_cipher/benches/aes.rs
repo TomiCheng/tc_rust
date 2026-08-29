@@ -11,7 +11,7 @@ use std::hint::black_box;
 use criterion::{
     BenchmarkId, Criterion, Throughput, criterion_group, criterion_main, measurement::WallTime,
 };
-use tc_crypto_core::BlockCipher;
+use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 use tc_block_cipher::{AES_BLOCK_BYTES, AesEngine, BlockCipherError, AesLightEngine, AesParams};
 
 const KEY_SIZES: [usize; 3] = [16, 24, 32];
@@ -48,12 +48,13 @@ fn add_encrypt_benches<E>(
     implementation: &str,
     create: impl Fn() -> E,
 ) where
-    for<'a> E: BlockCipher<Params<'a> = AesParams, Error = BlockCipherError>,
+    E: BlockCipher<Error = BlockCipherError>,
+    for<'a> E: BlockCipherInit<Params<'a> = AesParams>,
 {
     for key_size in KEY_SIZES {
         let params = AesParams::new(&key(key_size)).unwrap();
         let mut engine = create();
-        engine.init(true, &params).unwrap();
+        engine.init(CipherDirection::Encrypt, &params).unwrap();
         let input = input_block();
         let mut output = [0u8; AES_BLOCK_BYTES];
 
@@ -87,19 +88,20 @@ fn add_decrypt_benches<E>(
     implementation: &str,
     create: impl Fn() -> E,
 ) where
-    for<'a> E: BlockCipher<Params<'a> = AesParams, Error = BlockCipherError>,
+    E: BlockCipher<Error = BlockCipherError>,
+    for<'a> E: BlockCipherInit<Params<'a> = AesParams>,
 {
     for key_size in KEY_SIZES {
         let params = AesParams::new(&key(key_size)).unwrap();
         let mut encryptor = AesEngine::new();
-        encryptor.init(true, &params).unwrap();
+        encryptor.init(CipherDirection::Encrypt, &params).unwrap();
         let mut ciphertext = [0u8; AES_BLOCK_BYTES];
         encryptor
             .process_block(&input_block(), &mut ciphertext)
             .unwrap();
 
         let mut engine = create();
-        engine.init(false, &params).unwrap();
+        engine.init(CipherDirection::Decrypt, &params).unwrap();
         let mut output = [0u8; AES_BLOCK_BYTES];
 
         group.bench_function(BenchmarkId::new(implementation, key_size * 8), |b| {

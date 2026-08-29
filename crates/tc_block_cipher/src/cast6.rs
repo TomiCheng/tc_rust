@@ -3,7 +3,7 @@
 //! CAST6 uses a 128-bit block and 128-, 160-, 192-, 224-, or 256-bit keys.
 //!
 //! ```
-//! use tc_crypto_core::BlockCipher;
+//! use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 //! use tc_block_cipher::{Cast6Engine, Cast6Params};
 //!
 //! let key = [
@@ -12,7 +12,7 @@
 //! ];
 //! let params = Cast6Params::new(&key)?;
 //! let mut cipher = Cast6Engine::new();
-//! cipher.init(true, &params)?;
+//! cipher.init(CipherDirection::Encrypt, &params)?;
 //!
 //! let mut output = [0u8; 16];
 //! cipher.process_block(&[0u8; 16], &mut output)?;

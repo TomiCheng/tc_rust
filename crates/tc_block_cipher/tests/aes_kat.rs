@@ -1,6 +1,6 @@
 //! AES vectors from Bouncy Castle's `AesTest.cs` / `AesX86Test.cs`.
 
-use tc_crypto_core::BlockCipher;
+use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 use tc_block_cipher::{AES_BLOCK_BYTES, AesEngine, BlockCipherError, AesLightEngine, AesParams};
 
 fn unhex(value: &str) -> Vec<u8> {
@@ -12,14 +12,15 @@ fn unhex(value: &str) -> Vec<u8> {
 
 fn run_vector_with<E>(key: &str, plaintext: &str, ciphertext: &str, mut engine: E)
 where
-    for<'a> E: BlockCipher<Params<'a> = AesParams, Error = BlockCipherError>,
+    E: BlockCipher<Error = BlockCipherError>,
+    for<'a> E: BlockCipherInit<Params<'a> = AesParams>,
 {
     let key = unhex(key);
     let plaintext = unhex(plaintext);
     let ciphertext = unhex(ciphertext);
     let params = AesParams::new(&key).unwrap();
 
-    engine.init(true, &params).unwrap();
+    engine.init(CipherDirection::Encrypt, &params).unwrap();
     let mut encrypted = [0u8; AES_BLOCK_BYTES];
     assert_eq!(
         engine.process_block(&plaintext, &mut encrypted).unwrap(),
@@ -27,7 +28,7 @@ where
     );
     assert_eq!(encrypted.as_slice(), ciphertext);
 
-    engine.init(false, &params).unwrap();
+    engine.init(CipherDirection::Decrypt, &params).unwrap();
     let mut recovered = [0u8; AES_BLOCK_BYTES];
     engine.process_block(&ciphertext, &mut recovered).unwrap();
     assert_eq!(recovered.as_slice(), plaintext);
@@ -40,12 +41,13 @@ fn run_vector(key: &str, plaintext: &str, ciphertext: &str) {
 
 fn run_monte_carlo_with<E>(key: &str, input: &str, expected: &str, mut engine: E)
 where
-    for<'a> E: BlockCipher<Params<'a> = AesParams, Error = BlockCipherError>,
+    E: BlockCipher<Error = BlockCipherError>,
+    for<'a> E: BlockCipherInit<Params<'a> = AesParams>,
 {
     let key = unhex(key);
     let params = AesParams::new(&key).unwrap();
     let mut block: [u8; AES_BLOCK_BYTES] = unhex(input).try_into().unwrap();
-    engine.init(true, &params).unwrap();
+    engine.init(CipherDirection::Encrypt, &params).unwrap();
     for _ in 0..10_000 {
         let mut output = [0u8; AES_BLOCK_BYTES];
         engine.process_block(&block, &mut output).unwrap();

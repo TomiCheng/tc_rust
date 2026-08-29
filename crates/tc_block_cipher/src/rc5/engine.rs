@@ -8,7 +8,7 @@
 use alloc::vec;
 use alloc::vec::Vec;
 
-use tc_crypto_core::BlockCipher;
+use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 
 use super::{BlockCipherError, Rc5Params};
 
@@ -140,7 +140,6 @@ impl<W: Rc5Word> Default for Rc5Engine<W> {
 }
 
 impl<W: Rc5Word> BlockCipher for Rc5Engine<W> {
-    type Params<'a> = Rc5Params;
     type Error = BlockCipherError;
 
     fn algorithm_name(&self) -> &str {
@@ -149,13 +148,6 @@ impl<W: Rc5Word> BlockCipher for Rc5Engine<W> {
 
     fn block_size(&self) -> usize {
         2 * W::BYTES
-    }
-
-    fn init(&mut self, for_encryption: bool, params: &Self::Params<'_>) -> Result<(), Self::Error> {
-        self.rounds = params.rounds();
-        self.s = Some(setup::<W>(params.key(), params.rounds()));
-        self.for_encryption = for_encryption;
-        Ok(())
     }
 
     fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
@@ -170,6 +162,21 @@ impl<W: Rc5Word> BlockCipher for Rc5Engine<W> {
             decrypt_block::<W>(s, self.rounds, input, output);
         }
         Ok(block)
+    }
+}
+
+impl<W: Rc5Word> BlockCipherInit for Rc5Engine<W> {
+    type Params<'a> = Rc5Params;
+
+    fn init(
+        &mut self,
+        direction: CipherDirection,
+        params: &Self::Params<'_>,
+    ) -> Result<(), Self::Error> {
+        self.rounds = params.rounds();
+        self.s = Some(setup::<W>(params.key(), params.rounds()));
+        self.for_encryption = direction == CipherDirection::Encrypt;
+        Ok(())
     }
 }
 
@@ -259,7 +266,7 @@ mod tests {
     fn short_buffers_are_rejected() {
         let params = Rc5Params::new(&[0u8; 8]).unwrap();
         let mut engine = Rc532Engine::new();
-        engine.init(true, &params).unwrap();
+        engine.init(CipherDirection::Encrypt, &params).unwrap();
         assert_eq!(
             engine.process_block(&[0u8; 7], &mut [0u8; 8]),
             Err(BlockCipherError::BufferTooShort)

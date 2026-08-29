@@ -1,9 +1,9 @@
 //! GOST 28147 block-cipher engine.
 
-use tc_crypto_core::BlockCipher;
+use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 
 use super::{
-    GOST28147_BLOCK_BYTES, GOST28147_S_BOX_BYTES, BlockCipherError, Gost28147Params, Gost28147SBox,
+    BlockCipherError, GOST28147_BLOCK_BYTES, GOST28147_S_BOX_BYTES, Gost28147Params, Gost28147SBox,
 };
 
 /// GOST 28147-89 with a 256-bit key and 64-bit block.
@@ -81,7 +81,6 @@ impl Default for Gost28147Engine {
 }
 
 impl BlockCipher for Gost28147Engine {
-    type Params<'a> = Gost28147Params;
     type Error = BlockCipherError;
 
     fn algorithm_name(&self) -> &str {
@@ -90,20 +89,6 @@ impl BlockCipher for Gost28147Engine {
 
     fn block_size(&self) -> usize {
         GOST28147_BLOCK_BYTES
-    }
-
-    fn init(&mut self, for_encryption: bool, params: &Self::Params<'_>) -> Result<(), Self::Error> {
-        for (word, bytes) in self
-            .working_key
-            .iter_mut()
-            .zip(params.key().chunks_exact(4))
-        {
-            *word = u32::from_le_bytes(bytes.try_into().unwrap());
-        }
-        self.s_box.copy_from_slice(params.s_box());
-        self.for_encryption = for_encryption;
-        self.initialised = true;
-        Ok(())
     }
 
     fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
@@ -115,6 +100,28 @@ impl BlockCipher for Gost28147Engine {
         }
         self.transform(input, output);
         Ok(GOST28147_BLOCK_BYTES)
+    }
+}
+
+impl BlockCipherInit for Gost28147Engine {
+    type Params<'a> = Gost28147Params;
+
+    fn init(
+        &mut self,
+        direction: CipherDirection,
+        params: &Self::Params<'_>,
+    ) -> Result<(), Self::Error> {
+        for (word, bytes) in self
+            .working_key
+            .iter_mut()
+            .zip(params.key().chunks_exact(4))
+        {
+            *word = u32::from_le_bytes(bytes.try_into().unwrap());
+        }
+        self.s_box.copy_from_slice(params.s_box());
+        self.for_encryption = direction == CipherDirection::Encrypt;
+        self.initialised = true;
+        Ok(())
     }
 }
 
@@ -138,7 +145,7 @@ mod tests {
         let key = [0u8; 32];
         let params = Gost28147Params::new(&key).unwrap();
         let mut engine = Gost28147Engine::new();
-        engine.init(true, &params).unwrap();
+        engine.init(CipherDirection::Encrypt, &params).unwrap();
         assert_eq!(
             engine.process_block(&[0u8; 7], &mut [0u8; 8]),
             Err(BlockCipherError::BufferTooShort)

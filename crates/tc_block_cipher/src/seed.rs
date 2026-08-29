@@ -6,13 +6,13 @@
 //! driven by four 256-entry S-box tables `SS0..SS3`.
 //!
 //! ```
-//! use tc_crypto_core::BlockCipher;
+//! use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 //! use tc_block_cipher::{SeedEngine, SeedParams};
 //!
 //! let key = [0u8; 16];
 //! let params = SeedParams::new(&key)?;
 //! let mut cipher = SeedEngine::new();
-//! cipher.init(true, &params)?;
+//! cipher.init(CipherDirection::Encrypt, &params)?;
 //!
 //! let plaintext = [
 //!     0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,

@@ -1,10 +1,10 @@
 //! Triple DES block-cipher engine.
 
-use tc_crypto_core::BlockCipher;
+use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 
 use crate::des::{des_func, generate_working_key};
 
-use super::{DES_EDE_BLOCK_BYTES, BlockCipherError, DesEdeParams};
+use super::{BlockCipherError, DES_EDE_BLOCK_BYTES, DesEdeParams};
 
 /// EDE Triple DES with a 16-byte or 24-byte encoded key and an 8-byte block.
 pub struct DesEdeEngine {
@@ -35,7 +35,6 @@ impl Default for DesEdeEngine {
 }
 
 impl BlockCipher for DesEdeEngine {
-    type Params<'a> = DesEdeParams;
     type Error = BlockCipherError;
 
     fn algorithm_name(&self) -> &str {
@@ -44,24 +43,6 @@ impl BlockCipher for DesEdeEngine {
 
     fn block_size(&self) -> usize {
         DES_EDE_BLOCK_BYTES
-    }
-
-    fn init(&mut self, for_encryption: bool, params: &Self::Params<'_>) -> Result<(), Self::Error> {
-        let key = params.key();
-        let key1: &[u8; 8] = key[..8].try_into().unwrap();
-        let key2: &[u8; 8] = key[8..16].try_into().unwrap();
-        let key3: &[u8; 8] = if key.len() == 24 {
-            key[16..24].try_into().unwrap()
-        } else {
-            key1
-        };
-
-        self.working_key1 = generate_working_key(for_encryption, key1);
-        self.working_key2 = generate_working_key(!for_encryption, key2);
-        self.working_key3 = generate_working_key(for_encryption, key3);
-        self.for_encryption = for_encryption;
-        self.initialised = true;
-        Ok(())
     }
 
     fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
@@ -89,6 +70,33 @@ impl BlockCipher for DesEdeEngine {
     }
 }
 
+impl BlockCipherInit for DesEdeEngine {
+    type Params<'a> = DesEdeParams;
+
+    fn init(
+        &mut self,
+        direction: CipherDirection,
+        params: &Self::Params<'_>,
+    ) -> Result<(), Self::Error> {
+        let for_encryption = direction == CipherDirection::Encrypt;
+        let key = params.key();
+        let key1: &[u8; 8] = key[..8].try_into().unwrap();
+        let key2: &[u8; 8] = key[8..16].try_into().unwrap();
+        let key3: &[u8; 8] = if key.len() == 24 {
+            key[16..24].try_into().unwrap()
+        } else {
+            key1
+        };
+
+        self.working_key1 = generate_working_key(for_encryption, key1);
+        self.working_key2 = generate_working_key(!for_encryption, key2);
+        self.working_key3 = generate_working_key(for_encryption, key3);
+        self.for_encryption = for_encryption;
+        self.initialised = true;
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -104,7 +112,7 @@ mod tests {
         );
 
         let params = DesEdeParams::new(&[0u8; 16]).unwrap();
-        engine.init(true, &params).unwrap();
+        engine.init(CipherDirection::Encrypt, &params).unwrap();
         assert_eq!(
             engine.process_block(&[0u8; 7], &mut [0u8; 8]),
             Err(BlockCipherError::BufferTooShort)

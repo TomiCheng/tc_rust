@@ -504,7 +504,7 @@ name = "tc_block_cipher"
 version = "0.1.0"
 dependencies = [
  "criterion",
- "tc_crypto_core",
+ "tc_cipher_core",
 ]
 
 [[package]]
@@ -528,6 +528,7 @@ name = "tc_key_wrap"
 version = "0.1.0"
 dependencies = [
  "tc_block_cipher",
+ "tc_cipher_core",
  "tc_crypto_core",
 ]
 

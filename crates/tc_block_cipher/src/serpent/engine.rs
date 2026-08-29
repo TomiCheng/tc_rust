@@ -1,9 +1,9 @@
 //! Public Serpent and Tnepres engines over the shared round core.
 
-use tc_crypto_core::BlockCipher;
+use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 
 use super::cipher::{Representation, WORKING_KEY_WORDS, decrypt, encrypt, expand_key};
-use super::{SERPENT_BLOCK_BYTES, BlockCipherError, SerpentParams};
+use super::{BlockCipherError, SERPENT_BLOCK_BYTES, SerpentParams};
 
 struct EngineState {
     encrypting: bool,
@@ -69,7 +69,6 @@ impl Default for SerpentEngine {
 }
 
 impl BlockCipher for SerpentEngine {
-    type Params<'a> = SerpentParams;
     type Error = BlockCipherError;
 
     fn algorithm_name(&self) -> &str {
@@ -80,14 +79,25 @@ impl BlockCipher for SerpentEngine {
         SERPENT_BLOCK_BYTES
     }
 
-    fn init(&mut self, for_encryption: bool, params: &Self::Params<'_>) -> Result<(), Self::Error> {
-        self.state
-            .init(for_encryption, params, Representation::Serpent);
-        Ok(())
-    }
-
     fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
         self.state.process(input, output, Representation::Serpent)
+    }
+}
+
+impl BlockCipherInit for SerpentEngine {
+    type Params<'a> = SerpentParams;
+
+    fn init(
+        &mut self,
+        direction: CipherDirection,
+        params: &Self::Params<'_>,
+    ) -> Result<(), Self::Error> {
+        self.state.init(
+            direction == CipherDirection::Encrypt,
+            params,
+            Representation::Serpent,
+        );
+        Ok(())
     }
 }
 
@@ -112,7 +122,6 @@ impl Default for TnepresEngine {
 }
 
 impl BlockCipher for TnepresEngine {
-    type Params<'a> = SerpentParams;
     type Error = BlockCipherError;
 
     fn algorithm_name(&self) -> &str {
@@ -123,14 +132,25 @@ impl BlockCipher for TnepresEngine {
         SERPENT_BLOCK_BYTES
     }
 
-    fn init(&mut self, for_encryption: bool, params: &Self::Params<'_>) -> Result<(), Self::Error> {
-        self.state
-            .init(for_encryption, params, Representation::Tnepres);
-        Ok(())
-    }
-
     fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
         self.state.process(input, output, Representation::Tnepres)
+    }
+}
+
+impl BlockCipherInit for TnepresEngine {
+    type Params<'a> = SerpentParams;
+
+    fn init(
+        &mut self,
+        direction: CipherDirection,
+        params: &Self::Params<'_>,
+    ) -> Result<(), Self::Error> {
+        self.state.init(
+            direction == CipherDirection::Encrypt,
+            params,
+            Representation::Tnepres,
+        );
+        Ok(())
     }
 }
 
@@ -210,7 +230,7 @@ mod tests {
     fn short_buffers_are_rejected() {
         let params = SerpentParams::new(&[0u8; 16]).unwrap();
         let mut engine = SerpentEngine::new();
-        engine.init(true, &params).unwrap();
+        engine.init(CipherDirection::Encrypt, &params).unwrap();
         assert_eq!(
             engine.process_block(&[0u8; 15], &mut [0u8; 16]),
             Err(BlockCipherError::BufferTooShort)

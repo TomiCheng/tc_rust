@@ -1,8 +1,10 @@
+#![cfg(feature = "alloc")]
+
 //! Threefish known-answer tests from the Skein 1.3 NIST CD
 //! (`skein_golden_kat_internals.txt`), matching Bouncy Castle's
 //! Threefish{256,512,1024}Test vectors.
 
-use tc_crypto_core::BlockCipher;
+use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 use tc_block_cipher::{ThreefishEngine, ThreefishParams};
 
 fn unhex(s: &str) -> Vec<u8> {
@@ -25,14 +27,14 @@ fn run(key: &str, tweak: &str, pt: &str, ct: &str) {
 
     // 加密。
     let mut enc = ThreefishEngine::new();
-    enc.init(true, &params).unwrap();
+    enc.init(CipherDirection::Encrypt, &params).unwrap();
     let mut got = vec![0u8; bytes];
     assert_eq!(enc.process_block(&pt, &mut got).unwrap(), bytes);
     assert_eq!(got, ct, "encrypt {}", enc.algorithm_name());
 
     // 解密還原。
     let mut dec = ThreefishEngine::new();
-    dec.init(false, &params).unwrap();
+    dec.init(CipherDirection::Decrypt, &params).unwrap();
     let mut back = vec![0u8; bytes];
     assert_eq!(dec.process_block(&ct, &mut back).unwrap(), bytes);
     assert_eq!(back, pt, "decrypt {}", dec.algorithm_name());

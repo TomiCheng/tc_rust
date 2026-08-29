@@ -1,6 +1,6 @@
 //! ARIA known-answer tests from RFC 5794 and Bouncy Castle's `AriaTest.cs`.
 
-use tc_crypto_core::BlockCipher;
+use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 use tc_block_cipher::{ARIA_BLOCK_BYTES, AriaEngine, AriaParams};
 
 fn unhex(value: &str) -> Vec<u8> {
@@ -17,7 +17,7 @@ fn run_vector(key: &str, plaintext: &str, ciphertext: &str) {
     let params = AriaParams::new(&key).unwrap();
     let mut engine = AriaEngine::new();
 
-    engine.init(true, &params).unwrap();
+    engine.init(CipherDirection::Encrypt, &params).unwrap();
     let mut encrypted = [0u8; ARIA_BLOCK_BYTES];
     assert_eq!(
         engine.process_block(&plaintext, &mut encrypted).unwrap(),
@@ -25,7 +25,7 @@ fn run_vector(key: &str, plaintext: &str, ciphertext: &str) {
     );
     assert_eq!(encrypted.as_slice(), ciphertext);
 
-    engine.init(false, &params).unwrap();
+    engine.init(CipherDirection::Decrypt, &params).unwrap();
     let mut recovered = [0u8; ARIA_BLOCK_BYTES];
     engine.process_block(&ciphertext, &mut recovered).unwrap();
     assert_eq!(recovered.as_slice(), plaintext);

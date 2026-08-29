@@ -1,13 +1,15 @@
 //! DSTU 7624 initialization parameters.
 
-use alloc::vec::Vec;
 use core::fmt;
 
-use super::{DSTU7624_KEY_BYTES, BlockCipherError};
+use super::{BlockCipherError, DSTU7624_KEY_BYTES};
+
+const KEY_CAPACITY: usize = DSTU7624_KEY_BYTES[DSTU7624_KEY_BYTES.len() - 1];
 
 /// An owned DSTU 7624 key containing 16, 32, or 64 bytes.
 pub struct Dstu7624Params {
-    key: Vec<u8>,
+    key: [u8; KEY_CAPACITY],
+    key_len: usize,
 }
 
 impl Dstu7624Params {
@@ -16,16 +18,23 @@ impl Dstu7624Params {
         if !DSTU7624_KEY_BYTES.contains(&key.len()) {
             return Err(BlockCipherError::InvalidKeyLength(key.len()));
         }
-        Ok(Self { key: key.to_vec() })
+
+        let mut key_buffer = [0_u8; KEY_CAPACITY];
+        key_buffer[..key.len()].copy_from_slice(key);
+
+        Ok(Self {
+            key: key_buffer,
+            key_len: key.len(),
+        })
     }
 
     /// Returns the key length in bytes without exposing key material.
     pub fn key_len(&self) -> usize {
-        self.key.len()
+        self.key_len
     }
 
     pub(crate) fn key(&self) -> &[u8] {
-        &self.key
+        &self.key[..self.key_len]
     }
 }
 

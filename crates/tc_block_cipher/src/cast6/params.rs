@@ -1,13 +1,15 @@
 //! CAST6 initialization parameters.
 
-use alloc::vec::Vec;
 use core::fmt;
 
-use super::{CAST6_KEY_BYTES, BlockCipherError};
+use super::{BlockCipherError, CAST6_KEY_BYTES};
+
+const KEY_CAPACITY: usize = CAST6_KEY_BYTES[CAST6_KEY_BYTES.len() - 1];
 
 /// An owned CAST6 key with a standard length from 128 through 256 bits.
 pub struct Cast6Params {
-    key: Vec<u8>,
+    key: [u8; KEY_CAPACITY],
+    key_len: usize,
 }
 
 impl Cast6Params {
@@ -16,16 +18,23 @@ impl Cast6Params {
         if !CAST6_KEY_BYTES.contains(&key.len()) {
             return Err(BlockCipherError::InvalidKeyLength(key.len()));
         }
-        Ok(Self { key: key.to_vec() })
+
+        let mut key_buffer = [0_u8; KEY_CAPACITY];
+        key_buffer[..key.len()].copy_from_slice(key);
+
+        Ok(Self {
+            key: key_buffer,
+            key_len: key.len(),
+        })
     }
 
     /// Returns the key length in bytes without exposing key material.
     pub fn key_len(&self) -> usize {
-        self.key.len()
+        self.key_len
     }
 
     pub(crate) fn key(&self) -> &[u8] {
-        &self.key
+        &self.key[..self.key_len]
     }
 }
 

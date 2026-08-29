@@ -5,14 +5,14 @@
 //! followed by an output transform. Encryption and decryption share the same
 //! round function; only the working key differs (the decryption key is the
 //! multiplicative/additive inverse of the expanded encryption key), so the
-//! direction is fixed at [`init`](tc_crypto_core::BlockCipher::init) time.
+//! direction is fixed at [`init`](tc_cipher_core::BlockCipherInit::init) time.
 //!
 //! Bouncy Castle accepts any key length, left-padding a short key with zeros and
 //! silently using only the first sixteen bytes of a longer one. This port instead
 //! requires exactly sixteen bytes, matching the algorithm's 128-bit key.
 //!
 //! ```
-//! use tc_crypto_core::BlockCipher;
+//! use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 //! use tc_block_cipher::{IdeaEngine, IdeaParams};
 //!
 //! let key = [
@@ -21,13 +21,13 @@
 //! ];
 //! let params = IdeaParams::new(&key)?;
 //! let mut cipher = IdeaEngine::new();
-//! cipher.init(true, &params)?;
+//! cipher.init(CipherDirection::Encrypt, &params)?;
 //!
 //! let plaintext: [u8; 8] = [0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07];
 //! let mut ciphertext = [0u8; 8];
 //! cipher.process_block(&plaintext, &mut ciphertext)?;
 //!
-//! cipher.init(false, &params)?;
+//! cipher.init(CipherDirection::Decrypt, &params)?;
 //! let mut recovered = [0u8; 8];
 //! cipher.process_block(&ciphertext, &mut recovered)?;
 //! assert_eq!(recovered, plaintext);
