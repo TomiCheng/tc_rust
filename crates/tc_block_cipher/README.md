@@ -80,31 +80,34 @@ exceptions are:
 
 The crate currently exports 28 engine types. All implementations are covered
 by known-answer tests; selected algorithms also include specification or Monte
-Carlo vectors.
+Carlo vectors. Every algorithm remains available when `std` is disabled.
 
-| Family | Public engine types | Key and block support |
-|--------|---------------------|-----------------------|
-| AES | `AesEngine`, `AesLightEngine` | 128-bit block; 128/192/256-bit keys |
-| ARIA | `AriaEngine` | 128-bit block; 128/192/256-bit keys |
-| Blowfish | `BlowfishEngine` | 64-bit block; 32-448-bit keys |
-| Camellia | `CamelliaEngine`, `CamelliaLightEngine` | 128-bit block; 128/192/256-bit keys |
-| CAST | `Cast5Engine`, `Cast6Engine` | CAST5: 64-bit block, 40-128-bit keys; CAST6: 128-bit block, 128-256-bit keys in 32-bit steps |
-| DES / Triple DES | `DesEngine`, `DesEdeEngine` | 64-bit block; 8-byte DES or 16/24-byte EDE keys |
-| DSTU 7624 (Kalyna) | `Dstu7624Engine` | 128/256/512-bit blocks; same-size or double-size keys where defined |
-| GOST 28147-89 | `Gost28147Engine` | 64-bit block; 256-bit key; named and custom S-boxes |
-| IDEA | `IdeaEngine` | 64-bit block; 128-bit key |
-| Noekeon | `NoekeonEngine` | 128-bit block and key |
-| RC2 | `Rc2Engine` | 64-bit block; variable key and effective key size |
-| RC5 | `Rc532Engine`, `Rc564Engine` | 32- or 64-bit words; variable key and round count |
-| RC6 | `Rc6Engine` | 128-bit block; 1-255-byte key; 20 rounds |
-| Rijndael | `RijndaelEngine` | 128/160/192/224/256-bit blocks and keys |
-| SEED | `SeedEngine` | 128-bit block and key |
-| Serpent / Tnepres | `SerpentEngine`, `TnepresEngine` | 128-bit block; 4-32-byte keys in 4-byte steps |
-| SKIPJACK | `SkipjackEngine` | 64-bit block; 80-bit key |
-| SM4 | `Sm4Engine` | 128-bit block and key |
-| TEA / XTEA | `TeaEngine`, `XteaEngine` | 64-bit block; 128-bit key |
-| Threefish | `ThreefishEngine` | 256/512/1024-bit block and matching key; optional 128-bit tweak |
-| Twofish | `TwofishEngine` | 128-bit block; 128/192/256-bit keys |
+`core-only` uses neither `alloc` nor `std`. `alloc` requires heap allocation.
+Only AES gains an additional `std` backend; the API remains unchanged.
+
+| Family | Public engine types | Key and block support | Runtime |
+|--------|---------------------|-----------------------|---------|
+| AES | `AesEngine`, `AesLightEngine` | 128-bit block; 128/192/256-bit keys | core-only; `std`: AES-NI |
+| ARIA | `AriaEngine` | 128-bit block; 128/192/256-bit keys | core-only |
+| Blowfish | `BlowfishEngine` | 64-bit block; 32-448-bit keys | core-only |
+| Camellia | `CamelliaEngine`, `CamelliaLightEngine` | 128-bit block; 128/192/256-bit keys | core-only |
+| CAST | `Cast5Engine`, `Cast6Engine` | CAST5: 64-bit block, 40-128-bit keys; CAST6: 128-bit block, 128-256-bit keys in 32-bit steps | core-only |
+| DES / Triple DES | `DesEngine`, `DesEdeEngine` | 64-bit block; 8-byte DES or 16/24-byte EDE keys | core-only |
+| DSTU 7624 (Kalyna) | `Dstu7624Engine` | 128/256/512-bit blocks; same-size or double-size keys where defined | alloc |
+| GOST 28147-89 | `Gost28147Engine` | 64-bit block; 256-bit key; named and custom S-boxes | core-only |
+| IDEA | `IdeaEngine` | 64-bit block; 128-bit key | core-only |
+| Noekeon | `NoekeonEngine` | 128-bit block and key | core-only |
+| RC2 | `Rc2Engine` | 64-bit block; variable key and effective key size | core-only |
+| RC5 | `Rc532Engine`, `Rc564Engine` | 32- or 64-bit words; variable key and round count | alloc |
+| RC6 | `Rc6Engine` | 128-bit block; 1-255-byte key; 20 rounds | alloc |
+| Rijndael | `RijndaelEngine` | 128/160/192/224/256-bit blocks and keys | alloc |
+| SEED | `SeedEngine` | 128-bit block and key | core-only |
+| Serpent / Tnepres | `SerpentEngine`, `TnepresEngine` | 128-bit block; 4-32-byte keys in 4-byte steps | core-only |
+| SKIPJACK | `SkipjackEngine` | 64-bit block; 80-bit key | core-only |
+| SM4 | `Sm4Engine` | 128-bit block and key | core-only |
+| TEA / XTEA | `TeaEngine`, `XteaEngine` | 64-bit block; 128-bit key | core-only |
+| Threefish | `ThreefishEngine` | 256/512/1024-bit block and matching key; optional 128-bit tweak | alloc |
+| Twofish | `TwofishEngine` | 128-bit block; 128/192/256-bit keys | core-only |
 
 DES, Triple DES, Blowfish, IDEA, RC2, RC5, SKIPJACK, TEA, XTEA, and other
 older designs are provided for compatibility and study, not as recommendations
@@ -171,9 +174,10 @@ cargo build -p tc_block_cipher --no-default-features --locked
 cargo test -p tc_block_cipher --no-default-features --locked
 ```
 
-The crate requires `alloc` because several parameter types and expanded key
-schedules use owned dynamic storage. A final `no_std` application must provide
-an allocator.
+The crate requires `alloc` because several expanded key schedules and
+initialization workspaces use dynamic storage. Parameter objects store key
+material in fixed-capacity buffers and do not allocate. A final `no_std`
+application must provide an allocator.
 
 Additional validation:
 
