@@ -24,6 +24,14 @@ pub enum CipherModeError<E: BlockCipher> {
     /// The feedback size requested for CFB or OFB is not a positive multiple of
     /// eight bits, or exceeds the cipher's block size.
     InvalidFeedbackSize(usize),
+    /// The underlying cipher's block size is not the one this mode requires;
+    /// GOST's GCTR, for instance, is defined only for 64-bit blocks.
+    UnsupportedBlockSize {
+        /// The underlying cipher's block size.
+        actual: usize,
+        /// The block size the mode requires.
+        required: usize,
+    },
     /// The input or output buffer is shorter than the mode's block size.
     BufferTooShort,
     /// An error reported by the underlying block cipher.
@@ -45,6 +53,11 @@ impl<E: BlockCipher> core::fmt::Debug for CipherModeError<E> {
             CipherModeError::InvalidFeedbackSize(bits) => {
                 f.debug_tuple("InvalidFeedbackSize").field(bits).finish()
             }
+            CipherModeError::UnsupportedBlockSize { actual, required } => f
+                .debug_struct("UnsupportedBlockSize")
+                .field("actual", actual)
+                .field("required", required)
+                .finish(),
             CipherModeError::BufferTooShort => f.write_str("BufferTooShort"),
             CipherModeError::BlockCipher(e) => f.debug_tuple("BlockCipher").field(e).finish(),
         }
@@ -62,6 +75,10 @@ impl<E: BlockCipher> core::fmt::Display for CipherModeError<E> {
             CipherModeError::InvalidFeedbackSize(bits) => write!(
                 f,
                 "feedback size {bits} must be a positive multiple of 8 bits, up to the block size"
+            ),
+            CipherModeError::UnsupportedBlockSize { actual, required } => write!(
+                f,
+                "this mode requires a {required}-byte block, but the cipher has a {actual}-byte block"
             ),
             CipherModeError::BufferTooShort => f.write_str("buffer shorter than one block"),
             CipherModeError::BlockCipher(e) => write!(f, "underlying block cipher error: {e}"),

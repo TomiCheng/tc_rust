@@ -21,12 +21,16 @@ pub mod cbc;
 pub mod cfb;
 pub mod ecb;
 mod error;
+pub mod gofb;
 pub mod ofb;
+pub mod openpgp_cfb;
 pub mod sic;
 
 pub use cbc::{CbcBlockCipher, CbcParams};
 pub use cfb::{CfbBlockCipher, CfbParams};
 pub use ecb::EcbBlockCipher;
 pub use error::CipherModeError;
+pub use gofb::{GofbBlockCipher, GofbParams};
 pub use ofb::{OfbBlockCipher, OfbParams};
+pub use openpgp_cfb::{OpenPgpCfbBlockCipher, OpenPgpCfbParams};
 pub use sic::{CtrBlockCipher, CtrParams, SicBlockCipher, SicParams};
