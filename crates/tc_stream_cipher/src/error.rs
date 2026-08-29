@@ -60,6 +60,10 @@ impl core::error::Error for StreamCipherError {}
 
 #[cfg(test)]
 mod tests {
+    extern crate std;
+
+    use std::string::ToString;
+
     use super::StreamCipherError;
 
     fn assert_error<T: core::error::Error>() {}

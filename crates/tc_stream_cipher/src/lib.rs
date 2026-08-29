@@ -8,8 +8,7 @@
 //! Stream ciphers keep fixed-size keystream state, so this crate is `no_std`
 //! with no `alloc` requirement.
 
-// 關閉預設 feature 時為 no_std；測試仍讓 `#[test]` 框架連結 std。
-#![cfg_attr(not(any(feature = "std", test)), no_std)]
+#![no_std]
 
 pub mod chacha;
 pub mod chacha7539;

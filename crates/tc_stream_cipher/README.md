@@ -198,26 +198,21 @@ data.
 
 ## 5. Building and testing
 
-The default build enables `std`:
+The library is unconditionally `no_std` and does not require `alloc`. It can be
+used normally by both `std` and `no_std` applications; no feature switch is
+required:
 
 ```bash
 cargo build -p tc_stream_cipher --locked
 cargo test -p tc_stream_cipher --locked
 ```
 
-Disable default features to build the library as `no_std` without `alloc`.
-Tests still link the Rust standard test harness, but exercise the
-no-default-features library configuration:
-
-```bash
-cargo build -p tc_stream_cipher --no-default-features --locked
-cargo test -p tc_stream_cipher --no-default-features --locked
-```
+Tests link the Rust standard test harness, but the library itself remains
+`no_std`.
 
 Additional validation:
 
 ```bash
 cargo clippy -p tc_stream_cipher --all-targets --locked -- -D warnings
-cargo clippy -p tc_stream_cipher --all-targets --no-default-features --locked -- -D warnings
 cargo rustdoc -p tc_stream_cipher --locked -- -D warnings
 ```
