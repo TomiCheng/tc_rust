@@ -1,8 +1,8 @@
 //! Small-footprint Camellia block-cipher engine.
 
-use tc_crypto_core::BlockCipher;
+use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 
-use super::{CAMELLIA_BLOCK_BYTES, BlockCipherError, CamelliaParams, cipher};
+use super::{BlockCipherError, CAMELLIA_BLOCK_BYTES, CamelliaParams, cipher};
 
 const SBOX1: [u8; 256] = [
     112, 130, 44, 236, 179, 39, 192, 229, 228, 133, 87, 53, 234, 12, 174, 65, 35, 239, 107, 147,
@@ -102,7 +102,6 @@ impl Default for CamelliaLightEngine {
 }
 
 impl BlockCipher for CamelliaLightEngine {
-    type Params<'a> = CamelliaParams;
     type Error = BlockCipherError;
 
     fn algorithm_name(&self) -> &str {
@@ -111,13 +110,6 @@ impl BlockCipher for CamelliaLightEngine {
 
     fn block_size(&self) -> usize {
         CAMELLIA_BLOCK_BYTES
-    }
-
-    fn init(&mut self, for_encryption: bool, params: &Self::Params<'_>) -> Result<(), Self::Error> {
-        self.schedule
-            .set_key_with(for_encryption, params.key(), camellia_f2_light);
-        self.initialised = true;
-        Ok(())
     }
 
     fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
@@ -137,6 +129,24 @@ impl BlockCipher for CamelliaLightEngine {
     }
 }
 
+impl BlockCipherInit for CamelliaLightEngine {
+    type Params<'a> = CamelliaParams;
+
+    fn init(
+        &mut self,
+        direction: CipherDirection,
+        params: &Self::Params<'_>,
+    ) -> Result<(), Self::Error> {
+        self.schedule.set_key_with(
+            direction == CipherDirection::Encrypt,
+            params.key(),
+            camellia_f2_light,
+        );
+        self.initialised = true;
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -152,7 +162,10 @@ mod tests {
         );
 
         engine
-            .init(true, &CamelliaParams::new(&[0u8; 16]).unwrap())
+            .init(
+                CipherDirection::Encrypt,
+                &CamelliaParams::new(&[0u8; 16]).unwrap(),
+            )
             .unwrap();
         assert_eq!(
             engine.process_block(&[0u8; 15], &mut [0u8; 16]),

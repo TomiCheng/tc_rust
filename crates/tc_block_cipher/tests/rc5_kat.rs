@@ -3,7 +3,7 @@
 //! BC exercises RC5 through CBC; every vector is a single block, so CBC reduces
 //! to `E(pt XOR iv)` and the raw ECB engine can be checked by XOR-ing the IV.
 
-use tc_crypto_core::BlockCipher;
+use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 use tc_block_cipher::{Rc532Engine, Rc564Engine, Rc5Params};
 
 fn unhex(value: &str) -> Vec<u8> {
@@ -28,7 +28,7 @@ fn run_rc5_64(rounds: usize, key: &str, iv: &str, plaintext: &str, ciphertext: &
 fn run<E>(block: usize, rounds: usize, key: &str, iv: &str, plaintext: &str, ciphertext: &str)
 where
     E: BlockCipher<Error = tc_block_cipher::BlockCipherError> + Default,
-    for<'a> E: BlockCipher<Params<'a> = Rc5Params>,
+    for<'a> E: BlockCipherInit<Params<'a> = Rc5Params>,
 {
     let key = unhex(key);
     let iv = unhex(iv);
@@ -37,7 +37,7 @@ where
     let params = Rc5Params::with_rounds(&key, rounds).unwrap();
 
     let mut engine = E::default();
-    engine.init(true, &params).unwrap();
+    engine.init(CipherDirection::Encrypt, &params).unwrap();
     let mut output = vec![0u8; block];
     assert_eq!(
         engine.process_block(&xor(&plaintext, &iv), &mut output).unwrap(),
@@ -45,7 +45,7 @@ where
     );
     assert_eq!(output, ciphertext);
 
-    engine.init(false, &params).unwrap();
+    engine.init(CipherDirection::Decrypt, &params).unwrap();
     engine.process_block(&ciphertext, &mut output).unwrap();
     assert_eq!(xor(&output, &iv), plaintext);
 }

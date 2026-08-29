@@ -1,9 +1,9 @@
 //! SEED block-cipher engine, key schedule, and round function.
 
-use tc_crypto_core::BlockCipher;
+use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 
 use super::tables::{KC, SS0, SS1, SS2, SS3};
-use super::{SEED_BLOCK_BYTES, BlockCipherError, SeedParams};
+use super::{BlockCipherError, SEED_BLOCK_BYTES, SeedParams};
 
 /// SEED with a 128-bit key and 128-bit block.
 pub struct SeedEngine {
@@ -29,7 +29,6 @@ impl Default for SeedEngine {
 }
 
 impl BlockCipher for SeedEngine {
-    type Params<'a> = SeedParams;
     type Error = BlockCipherError;
 
     fn algorithm_name(&self) -> &str {
@@ -38,12 +37,6 @@ impl BlockCipher for SeedEngine {
 
     fn block_size(&self) -> usize {
         SEED_BLOCK_BYTES
-    }
-
-    fn init(&mut self, for_encryption: bool, params: &Self::Params<'_>) -> Result<(), Self::Error> {
-        self.wkey = Some(create_working_key(params.key()));
-        self.for_encryption = for_encryption;
-        Ok(())
     }
 
     fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
@@ -71,6 +64,20 @@ impl BlockCipher for SeedEngine {
         output[0..8].copy_from_slice(&r.to_be_bytes());
         output[8..16].copy_from_slice(&l.to_be_bytes());
         Ok(SEED_BLOCK_BYTES)
+    }
+}
+
+impl BlockCipherInit for SeedEngine {
+    type Params<'a> = SeedParams;
+
+    fn init(
+        &mut self,
+        direction: CipherDirection,
+        params: &Self::Params<'_>,
+    ) -> Result<(), Self::Error> {
+        self.wkey = Some(create_working_key(params.key()));
+        self.for_encryption = direction == CipherDirection::Encrypt;
+        Ok(())
     }
 }
 
@@ -142,7 +149,7 @@ mod tests {
     fn short_buffers_are_rejected() {
         let params = SeedParams::new(&[0u8; 16]).unwrap();
         let mut engine = SeedEngine::new();
-        engine.init(true, &params).unwrap();
+        engine.init(CipherDirection::Encrypt, &params).unwrap();
         assert_eq!(
             engine.process_block(&[0u8; 15], &mut [0u8; 16]),
             Err(BlockCipherError::BufferTooShort)

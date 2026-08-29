@@ -1,8 +1,8 @@
 //! Camellia block-cipher engine.
 
-use tc_crypto_core::BlockCipher;
+use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 
-use super::{CAMELLIA_BLOCK_BYTES, BlockCipherError, CamelliaParams, cipher};
+use super::{BlockCipherError, CAMELLIA_BLOCK_BYTES, CamelliaParams, cipher};
 
 /// Camellia using four 256-entry `u32` T-tables.
 pub struct CamelliaEngine {
@@ -27,7 +27,6 @@ impl Default for CamelliaEngine {
 }
 
 impl BlockCipher for CamelliaEngine {
-    type Params<'a> = CamelliaParams;
     type Error = BlockCipherError;
 
     fn algorithm_name(&self) -> &str {
@@ -36,12 +35,6 @@ impl BlockCipher for CamelliaEngine {
 
     fn block_size(&self) -> usize {
         CAMELLIA_BLOCK_BYTES
-    }
-
-    fn init(&mut self, for_encryption: bool, params: &Self::Params<'_>) -> Result<(), Self::Error> {
-        self.schedule.set_key(for_encryption, params.key());
-        self.initialised = true;
-        Ok(())
     }
 
     fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
@@ -60,6 +53,21 @@ impl BlockCipher for CamelliaEngine {
     }
 }
 
+impl BlockCipherInit for CamelliaEngine {
+    type Params<'a> = CamelliaParams;
+
+    fn init(
+        &mut self,
+        direction: CipherDirection,
+        params: &Self::Params<'_>,
+    ) -> Result<(), Self::Error> {
+        self.schedule
+            .set_key(direction == CipherDirection::Encrypt, params.key());
+        self.initialised = true;
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -75,7 +83,10 @@ mod tests {
         );
 
         engine
-            .init(true, &CamelliaParams::new(&[0u8; 16]).unwrap())
+            .init(
+                CipherDirection::Encrypt,
+                &CamelliaParams::new(&[0u8; 16]).unwrap(),
+            )
             .unwrap();
         assert_eq!(
             engine.process_block(&[0u8; 15], &mut [0u8; 16]),

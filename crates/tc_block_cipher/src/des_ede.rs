@@ -8,7 +8,7 @@
 //! recommended for new applications.
 //!
 //! ```
-//! use tc_crypto_core::BlockCipher;
+//! use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 //! use tc_block_cipher::{DesEdeEngine, DesEdeParams};
 //!
 //! let params = DesEdeParams::new(&[
@@ -16,7 +16,7 @@
 //!     0xFE, 0xDC, 0xBA, 0x98, 0x76, 0x54, 0x32, 0x10,
 //! ])?;
 //! let mut cipher = DesEdeEngine::new();
-//! cipher.init(true, &params)?;
+//! cipher.init(CipherDirection::Encrypt, &params)?;
 //!
 //! let mut output = [0u8; 8];
 //! cipher.process_block(b"Now is t", &mut output)?;

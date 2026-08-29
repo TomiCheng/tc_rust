@@ -6,13 +6,13 @@
 //! `H` with the step counter reversed.
 //!
 //! ```
-//! use tc_crypto_core::BlockCipher;
+//! use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 //! use tc_block_cipher::{SkipjackEngine, SkipjackParams};
 //!
 //! let key = [0x00, 0x99, 0x88, 0x77, 0x66, 0x55, 0x44, 0x33, 0x22, 0x11];
 //! let params = SkipjackParams::new(&key)?;
 //! let mut cipher = SkipjackEngine::new();
-//! cipher.init(true, &params)?;
+//! cipher.init(CipherDirection::Encrypt, &params)?;
 //!
 //! let plaintext = [0x33, 0x22, 0x11, 0x00, 0xdd, 0xcc, 0xbb, 0xaa];
 //! let mut ciphertext = [0u8; 8];

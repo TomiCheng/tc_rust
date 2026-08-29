@@ -1,6 +1,6 @@
 //! Rijndael ECB vectors (NIST / Gladman) from Bouncy Castle's `RijndaelTest.cs`.
 
-use tc_crypto_core::BlockCipher;
+use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 use tc_block_cipher::{RijndaelEngine, RijndaelParams};
 
 fn unhex(value: &str) -> Vec<u8> {
@@ -19,11 +19,11 @@ fn run_vector(block_bits: usize, key: &str, plaintext: &str, ciphertext: &str) {
     let mut engine = RijndaelEngine::new(block_bits).unwrap();
     let mut output = vec![0u8; bytes];
 
-    engine.init(true, &params).unwrap();
+    engine.init(CipherDirection::Encrypt, &params).unwrap();
     assert_eq!(engine.process_block(&plaintext, &mut output).unwrap(), bytes);
     assert_eq!(output, ciphertext, "encrypt {block_bits}-bit block");
 
-    engine.init(false, &params).unwrap();
+    engine.init(CipherDirection::Decrypt, &params).unwrap();
     engine.process_block(&ciphertext, &mut output).unwrap();
     assert_eq!(output, plaintext, "decrypt {block_bits}-bit block");
 }
@@ -40,14 +40,14 @@ fn run_monte_carlo(iterations: usize, key: &str, plaintext: &str, ciphertext: &s
     let mut buf = plaintext.clone();
     let mut tmp = vec![0u8; buf.len()];
 
-    engine.init(true, &params).unwrap();
+    engine.init(CipherDirection::Encrypt, &params).unwrap();
     for _ in 0..iterations {
         engine.process_block(&buf, &mut tmp).unwrap();
         buf.copy_from_slice(&tmp);
     }
     assert_eq!(buf, ciphertext, "monte carlo encrypt");
 
-    engine.init(false, &params).unwrap();
+    engine.init(CipherDirection::Decrypt, &params).unwrap();
     for _ in 0..iterations {
         engine.process_block(&buf, &mut tmp).unwrap();
         buf.copy_from_slice(&tmp);

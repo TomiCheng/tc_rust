@@ -5,13 +5,13 @@
 //! quadratic mixing function `f(x) = x(2x + 1)` and a four-register round.
 //!
 //! ```
-//! use tc_crypto_core::BlockCipher;
+//! use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 //! use tc_block_cipher::{Rc6Engine, Rc6Params};
 //!
 //! let key = [0u8; 16];
 //! let params = Rc6Params::new(&key)?;
 //! let mut cipher = Rc6Engine::new();
-//! cipher.init(true, &params)?;
+//! cipher.init(CipherDirection::Encrypt, &params)?;
 //!
 //! let mut ciphertext = [0u8; 16];
 //! let plaintext = [

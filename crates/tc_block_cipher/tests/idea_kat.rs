@@ -1,6 +1,6 @@
 //! IDEA ECB vectors from Bouncy Castle's `IDEATest.cs`.
 
-use tc_crypto_core::BlockCipher;
+use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 use tc_block_cipher::{IdeaEngine, IdeaParams};
 
 fn unhex(value: &str) -> Vec<u8> {
@@ -18,14 +18,14 @@ fn run_vector(key: &str, plaintext: &str, ciphertext: &str) {
     let params = IdeaParams::new(&key).unwrap();
 
     let mut engine = IdeaEngine::new();
-    engine.init(true, &params).unwrap();
+    engine.init(CipherDirection::Encrypt, &params).unwrap();
     let mut encrypted = vec![0u8; plaintext.len()];
     for (pt, ct) in plaintext.chunks_exact(8).zip(encrypted.chunks_exact_mut(8)) {
         assert_eq!(engine.process_block(pt, ct).unwrap(), 8);
     }
     assert_eq!(encrypted, ciphertext);
 
-    engine.init(false, &params).unwrap();
+    engine.init(CipherDirection::Decrypt, &params).unwrap();
     let mut decrypted = vec![0u8; ciphertext.len()];
     for (ct, pt) in ciphertext.chunks_exact(8).zip(decrypted.chunks_exact_mut(8)) {
         engine.process_block(ct, pt).unwrap();

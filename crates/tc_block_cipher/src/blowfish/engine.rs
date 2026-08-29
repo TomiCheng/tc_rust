@@ -1,6 +1,6 @@
 //! Blowfish block-cipher engine.
 
-use tc_crypto_core::BlockCipher;
+use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 
 use super::{BLOWFISH_BLOCK_BYTES, BlockCipherError, BlowfishParams, cipher};
 
@@ -29,7 +29,6 @@ impl Default for BlowfishEngine {
 }
 
 impl BlockCipher for BlowfishEngine {
-    type Params<'a> = BlowfishParams;
     type Error = BlockCipherError;
 
     fn algorithm_name(&self) -> &str {
@@ -38,13 +37,6 @@ impl BlockCipher for BlowfishEngine {
 
     fn block_size(&self) -> usize {
         BLOWFISH_BLOCK_BYTES
-    }
-
-    fn init(&mut self, for_encryption: bool, params: &Self::Params<'_>) -> Result<(), Self::Error> {
-        self.state.expand_key(params.key());
-        self.for_encryption = for_encryption;
-        self.initialised = true;
-        Ok(())
     }
 
     fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
@@ -67,6 +59,21 @@ impl BlockCipher for BlowfishEngine {
     }
 }
 
+impl BlockCipherInit for BlowfishEngine {
+    type Params<'a> = BlowfishParams;
+
+    fn init(
+        &mut self,
+        direction: CipherDirection,
+        params: &Self::Params<'_>,
+    ) -> Result<(), Self::Error> {
+        self.state.expand_key(params.key());
+        self.for_encryption = direction == CipherDirection::Encrypt;
+        self.initialised = true;
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -82,7 +89,10 @@ mod tests {
         );
 
         engine
-            .init(true, &BlowfishParams::new(&[0u8; 4]).unwrap())
+            .init(
+                CipherDirection::Encrypt,
+                &BlowfishParams::new(&[0u8; 4]).unwrap(),
+            )
             .unwrap();
         assert_eq!(
             engine.process_block(&[0u8; 7], &mut [0u8; 8]),

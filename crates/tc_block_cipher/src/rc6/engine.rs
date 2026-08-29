@@ -2,9 +2,9 @@
 
 use alloc::vec;
 
-use tc_crypto_core::BlockCipher;
+use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 
-use super::{RC6_BLOCK_BYTES, RC6_ROUNDS, BlockCipherError, Rc6Params};
+use super::{BlockCipherError, RC6_BLOCK_BYTES, RC6_ROUNDS, Rc6Params};
 
 /// Magic constant `Odd((e - 2) * 2^32)`.
 const P32: u32 = 0xb7e1_5163;
@@ -93,7 +93,6 @@ impl Default for Rc6Engine {
 }
 
 impl BlockCipher for Rc6Engine {
-    type Params<'a> = Rc6Params;
     type Error = BlockCipherError;
 
     fn algorithm_name(&self) -> &str {
@@ -102,12 +101,6 @@ impl BlockCipher for Rc6Engine {
 
     fn block_size(&self) -> usize {
         RC6_BLOCK_BYTES
-    }
-
-    fn init(&mut self, for_encryption: bool, params: &Self::Params<'_>) -> Result<(), Self::Error> {
-        self.s = Some(setup(params.key()));
-        self.for_encryption = for_encryption;
-        Ok(())
     }
 
     fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
@@ -121,6 +114,20 @@ impl BlockCipher for Rc6Engine {
             Rc6Engine::decrypt_block(s, input, output);
         }
         Ok(RC6_BLOCK_BYTES)
+    }
+}
+
+impl BlockCipherInit for Rc6Engine {
+    type Params<'a> = Rc6Params;
+
+    fn init(
+        &mut self,
+        direction: CipherDirection,
+        params: &Self::Params<'_>,
+    ) -> Result<(), Self::Error> {
+        self.s = Some(setup(params.key()));
+        self.for_encryption = direction == CipherDirection::Encrypt;
+        Ok(())
     }
 }
 
@@ -198,7 +205,7 @@ mod tests {
     fn short_buffers_are_rejected() {
         let params = Rc6Params::new(&[0u8; 16]).unwrap();
         let mut engine = Rc6Engine::new();
-        engine.init(true, &params).unwrap();
+        engine.init(CipherDirection::Encrypt, &params).unwrap();
         assert_eq!(
             engine.process_block(&[0u8; 15], &mut [0u8; 16]),
             Err(BlockCipherError::BufferTooShort)

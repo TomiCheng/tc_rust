@@ -1,8 +1,8 @@
 //! Noekeon block-cipher engine and round functions.
 
-use tc_crypto_core::BlockCipher;
+use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 
-use super::{NOEKEON_BLOCK_BYTES, BlockCipherError, NoekeonParams};
+use super::{BlockCipherError, NOEKEON_BLOCK_BYTES, NoekeonParams};
 
 /// Number of rounds (also the block and key size in bytes).
 const SIZE: usize = 16;
@@ -69,7 +69,6 @@ impl Default for NoekeonEngine {
 }
 
 impl BlockCipher for NoekeonEngine {
-    type Params<'a> = NoekeonParams;
     type Error = BlockCipherError;
 
     fn algorithm_name(&self) -> &str {
@@ -78,17 +77,6 @@ impl BlockCipher for NoekeonEngine {
 
     fn block_size(&self) -> usize {
         NOEKEON_BLOCK_BYTES
-    }
-
-    fn init(&mut self, for_encryption: bool, params: &Self::Params<'_>) -> Result<(), Self::Error> {
-        self.k = read_words(params.key());
-        // 解密工作金鑰 = 對金鑰施以零金鑰 theta(bc 的 `theta(k, {0,0,0,0})`)。
-        if !for_encryption {
-            theta(&mut self.k, &[0; 4]);
-        }
-        self.for_encryption = for_encryption;
-        self.initialised = true;
-        Ok(())
     }
 
     fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
@@ -104,6 +92,26 @@ impl BlockCipher for NoekeonEngine {
             self.decrypt_block(input, output);
         }
         Ok(NOEKEON_BLOCK_BYTES)
+    }
+}
+
+impl BlockCipherInit for NoekeonEngine {
+    type Params<'a> = NoekeonParams;
+
+    fn init(
+        &mut self,
+        direction: CipherDirection,
+        params: &Self::Params<'_>,
+    ) -> Result<(), Self::Error> {
+        let for_encryption = direction == CipherDirection::Encrypt;
+        self.k = read_words(params.key());
+        // 解密工作金鑰 = 對金鑰施以零金鑰 theta(bc 的 `theta(k, {0,0,0,0})`)。
+        if !for_encryption {
+            theta(&mut self.k, &[0; 4]);
+        }
+        self.for_encryption = for_encryption;
+        self.initialised = true;
+        Ok(())
     }
 }
 
@@ -187,7 +195,7 @@ mod tests {
     fn short_buffers_are_rejected() {
         let params = NoekeonParams::new(&[0u8; 16]).unwrap();
         let mut engine = NoekeonEngine::new();
-        engine.init(true, &params).unwrap();
+        engine.init(CipherDirection::Encrypt, &params).unwrap();
         assert_eq!(
             engine.process_block(&[0u8; 15], &mut [0u8; 16]),
             Err(BlockCipherError::BufferTooShort)

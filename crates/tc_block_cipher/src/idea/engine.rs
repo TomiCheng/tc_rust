@@ -1,8 +1,8 @@
 //! IDEA block-cipher engine and key schedule.
 
-use tc_crypto_core::BlockCipher;
+use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 
-use super::{IDEA_BLOCK_BYTES, IDEA_KEY_BYTES, BlockCipherError, IdeaParams};
+use super::{BlockCipherError, IDEA_BLOCK_BYTES, IDEA_KEY_BYTES, IdeaParams};
 
 /// Modular multiplication base, `2^16 + 1` (see [`mul`]).
 const BASE: i32 = 0x1_0001;
@@ -15,7 +15,7 @@ const SUBKEY_WORDS: usize = 52;
 /// IDEA with a 128-bit key and 64-bit block.
 ///
 /// The working key is the direction-specific subkey schedule, so
-/// [`init`](BlockCipher::init) is what actually selects encryption or decryption;
+/// [`init`](BlockCipherInit::init) is what actually selects encryption or decryption;
 /// [`process_block`](BlockCipher::process_block) then runs the single shared round
 /// function.
 pub struct IdeaEngine {
@@ -89,7 +89,6 @@ impl Default for IdeaEngine {
 }
 
 impl BlockCipher for IdeaEngine {
-    type Params<'a> = IdeaParams;
     type Error = BlockCipherError;
 
     fn algorithm_name(&self) -> &str {
@@ -98,12 +97,6 @@ impl BlockCipher for IdeaEngine {
 
     fn block_size(&self) -> usize {
         IDEA_BLOCK_BYTES
-    }
-
-    fn init(&mut self, for_encryption: bool, params: &Self::Params<'_>) -> Result<(), Self::Error> {
-        self.working_key = generate_working_key(for_encryption, params.key());
-        self.initialised = true;
-        Ok(())
     }
 
     fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
@@ -115,6 +108,21 @@ impl BlockCipher for IdeaEngine {
         }
         self.idea_func(input, output);
         Ok(IDEA_BLOCK_BYTES)
+    }
+}
+
+impl BlockCipherInit for IdeaEngine {
+    type Params<'a> = IdeaParams;
+
+    fn init(
+        &mut self,
+        direction: CipherDirection,
+        params: &Self::Params<'_>,
+    ) -> Result<(), Self::Error> {
+        self.working_key =
+            generate_working_key(direction == CipherDirection::Encrypt, params.key());
+        self.initialised = true;
+        Ok(())
     }
 }
 
@@ -255,10 +263,7 @@ fn invert_key(in_key: &[u16; SUBKEY_WORDS]) -> [u16; SUBKEY_WORDS] {
     key
 }
 
-fn generate_working_key(
-    for_encryption: bool,
-    key: &[u8; IDEA_KEY_BYTES],
-) -> [u16; SUBKEY_WORDS] {
+fn generate_working_key(for_encryption: bool, key: &[u8; IDEA_KEY_BYTES]) -> [u16; SUBKEY_WORDS] {
     let expanded = expand_key(key);
     if for_encryption {
         expanded
@@ -286,7 +291,7 @@ mod tests {
     fn short_buffers_are_rejected() {
         let params = IdeaParams::new(&[0u8; IDEA_KEY_BYTES]).unwrap();
         let mut engine = IdeaEngine::new();
-        engine.init(true, &params).unwrap();
+        engine.init(CipherDirection::Encrypt, &params).unwrap();
         assert_eq!(
             engine.process_block(&[0u8; 7], &mut [0u8; 8]),
             Err(BlockCipherError::BufferTooShort)

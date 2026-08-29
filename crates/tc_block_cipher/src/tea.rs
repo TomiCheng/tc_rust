@@ -5,13 +5,13 @@
 //! golden-ratio constant `delta`. The two 32-bit words are big-endian.
 //!
 //! ```
-//! use tc_crypto_core::BlockCipher;
+//! use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 //! use tc_block_cipher::{TeaEngine, TeaParams};
 //!
 //! let key = [0u8; 16];
 //! let params = TeaParams::new(&key)?;
 //! let mut cipher = TeaEngine::new();
-//! cipher.init(true, &params)?;
+//! cipher.init(CipherDirection::Encrypt, &params)?;
 //!
 //! let mut ciphertext = [0u8; 8];
 //! cipher.process_block(&[0u8; 8], &mut ciphertext)?;

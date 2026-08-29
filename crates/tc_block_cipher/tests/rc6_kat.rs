@@ -1,6 +1,6 @@
 //! RC6 ECB vectors (AES-submission reference) from Bouncy Castle's `RC6Test.cs`.
 
-use tc_crypto_core::BlockCipher;
+use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 use tc_block_cipher::{Rc6Engine, Rc6Params};
 
 fn unhex(value: &str) -> Vec<u8> {
@@ -18,11 +18,11 @@ fn run_vector(key: &str, plaintext: &str, ciphertext: &str) {
     let mut engine = Rc6Engine::new();
     let mut output = vec![0u8; 16];
 
-    engine.init(true, &params).unwrap();
+    engine.init(CipherDirection::Encrypt, &params).unwrap();
     assert_eq!(engine.process_block(&plaintext, &mut output).unwrap(), 16);
     assert_eq!(output, ciphertext);
 
-    engine.init(false, &params).unwrap();
+    engine.init(CipherDirection::Decrypt, &params).unwrap();
     engine.process_block(&ciphertext, &mut output).unwrap();
     assert_eq!(output, plaintext);
 }

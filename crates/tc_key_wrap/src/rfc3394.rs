@@ -7,7 +7,8 @@
 
 use alloc::vec;
 use alloc::vec::Vec;
-use tc_crypto_core::{BlockCipher, Wrapper};
+use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
+use tc_crypto_core::Wrapper;
 
 /// The RFC 3394 default IV (`0xA6` repeated eight times).
 const DEFAULT_IV: [u8; 8] = [0xa6; 8];
@@ -18,17 +19,17 @@ const DEFAULT_IV: [u8; 8] = [0xa6; 8];
 /// The caller builds the underlying engine's parameters (e.g.
 /// `AesParams::new(kek)`) and hands them in, so the generic wrapper needs no
 /// separate "key from bytes" capability trait.
-pub struct Rfc3394Params<'a, E: BlockCipher> {
+pub struct Rfc3394Params<'a, E: BlockCipherInit> {
     /// The underlying block cipher's key parameters (e.g. `AesParams`).
-    key_params: E::Params<'a>,
+    key_params: <E as BlockCipherInit>::Params<'a>,
     /// A custom IV; `None` uses the RFC 3394 default IV.
     iv: Option<[u8; 8]>,
 }
 
-impl<'a, E: BlockCipher> Rfc3394Params<'a, E> {
+impl<'a, E: BlockCipherInit> Rfc3394Params<'a, E> {
     /// Builds parameters from the engine's key parameters, using the RFC 3394
     /// default IV.
-    pub fn new(key_params: E::Params<'a>) -> Self {
+    pub fn new(key_params: <E as BlockCipherInit>::Params<'a>) -> Self {
         Self {
             key_params,
             iv: None,
@@ -36,7 +37,7 @@ impl<'a, E: BlockCipher> Rfc3394Params<'a, E> {
     }
 
     /// Builds parameters from the engine's key parameters and a custom 8-byte IV.
-    pub fn with_iv(key_params: E::Params<'a>, iv: [u8; 8]) -> Self {
+    pub fn with_iv(key_params: <E as BlockCipherInit>::Params<'a>, iv: [u8; 8]) -> Self {
         Self {
             key_params,
             iv: Some(iv),
@@ -153,7 +154,7 @@ impl<E: BlockCipher> core::fmt::Display for Rfc3394Error<E> {
 
 impl<E: BlockCipher> core::error::Error for Rfc3394Error<E> {}
 
-impl<E: BlockCipher> Wrapper for Rfc3394WrapEngine<E> {
+impl<E: BlockCipherInit> Wrapper for Rfc3394WrapEngine<E> {
     type Params<'a> = Rfc3394Params<'a, E>;
     type Error = Rfc3394Error<E>;
 
@@ -169,8 +170,13 @@ impl<E: BlockCipher> Wrapper for Rfc3394WrapEngine<E> {
         } else {
             !self.wrap_cipher_mode
         };
+        let direction = if for_encryption {
+            CipherDirection::Encrypt
+        } else {
+            CipherDirection::Decrypt
+        };
         self.engine
-            .init(for_encryption, &params.key_params)
+            .init(direction, &params.key_params)
             .map_err(Rfc3394Error::BlockCipher)?;
 
         self.iv = params.iv.unwrap_or(DEFAULT_IV);

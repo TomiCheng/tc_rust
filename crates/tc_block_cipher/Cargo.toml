@@ -12,7 +12,6 @@ std = []
 
 [dependencies]
 tc_cipher_core = { path = "../tc_cipher_core" }
-tc_crypto_core = { path = "../tc_crypto_core" }
 
 [dev-dependencies]
 criterion = "0.8.2"

@@ -1,6 +1,6 @@
 //! Triple DES vectors from Bouncy Castle's `DESedeTest.cs` and NIST examples.
 
-use tc_crypto_core::BlockCipher;
+use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 use tc_block_cipher::{DES_EDE_BLOCK_BYTES, DesEdeEngine, DesEdeParams};
 
 fn unhex(value: &str) -> Vec<u8> {
@@ -18,7 +18,7 @@ fn run_vector(key: &str, plaintext: &str, ciphertext: &str) {
     let mut engine = DesEdeEngine::new();
     let mut encrypted = vec![0u8; plaintext.len()];
 
-    engine.init(true, &params).unwrap();
+    engine.init(CipherDirection::Encrypt, &params).unwrap();
     for (input, output) in plaintext
         .chunks_exact(DES_EDE_BLOCK_BYTES)
         .zip(encrypted.chunks_exact_mut(DES_EDE_BLOCK_BYTES))
@@ -28,7 +28,7 @@ fn run_vector(key: &str, plaintext: &str, ciphertext: &str) {
     assert_eq!(encrypted, ciphertext);
 
     let mut recovered = vec![0u8; ciphertext.len()];
-    engine.init(false, &params).unwrap();
+    engine.init(CipherDirection::Decrypt, &params).unwrap();
     for (input, output) in ciphertext
         .chunks_exact(DES_EDE_BLOCK_BYTES)
         .zip(recovered.chunks_exact_mut(DES_EDE_BLOCK_BYTES))

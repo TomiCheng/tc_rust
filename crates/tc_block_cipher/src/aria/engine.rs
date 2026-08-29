@@ -1,8 +1,8 @@
 //! ARIA block-cipher engine.
 
-use tc_crypto_core::BlockCipher;
+use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 
-use super::{ARIA_BLOCK_BYTES, BlockCipherError, AriaParams, AriaRoundKeys, cipher};
+use super::{ARIA_BLOCK_BYTES, AriaParams, AriaRoundKeys, BlockCipherError, cipher};
 
 /// Portable ARIA-128, ARIA-192, and ARIA-256 block cipher.
 pub struct AriaEngine {
@@ -29,7 +29,6 @@ impl Default for AriaEngine {
 }
 
 impl BlockCipher for AriaEngine {
-    type Params<'a> = AriaParams;
     type Error = BlockCipherError;
 
     fn algorithm_name(&self) -> &str {
@@ -38,12 +37,6 @@ impl BlockCipher for AriaEngine {
 
     fn block_size(&self) -> usize {
         ARIA_BLOCK_BYTES
-    }
-
-    fn init(&mut self, for_encryption: bool, params: &Self::Params<'_>) -> Result<(), Self::Error> {
-        (self.round_keys, self.rounds) = cipher::key_schedule(for_encryption, params.key());
-        self.initialised = true;
-        Ok(())
     }
 
     fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
@@ -62,6 +55,21 @@ impl BlockCipher for AriaEngine {
     }
 }
 
+impl BlockCipherInit for AriaEngine {
+    type Params<'a> = AriaParams;
+
+    fn init(
+        &mut self,
+        direction: CipherDirection,
+        params: &Self::Params<'_>,
+    ) -> Result<(), Self::Error> {
+        let for_encryption = direction == CipherDirection::Encrypt;
+        (self.round_keys, self.rounds) = cipher::key_schedule(for_encryption, params.key());
+        self.initialised = true;
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -77,7 +85,10 @@ mod tests {
         );
 
         engine
-            .init(true, &AriaParams::new(&[0u8; 16]).unwrap())
+            .init(
+                CipherDirection::Encrypt,
+                &AriaParams::new(&[0u8; 16]).unwrap(),
+            )
             .unwrap();
         assert_eq!(
             engine.process_block(&[0u8; 15], &mut [0u8; 16]),

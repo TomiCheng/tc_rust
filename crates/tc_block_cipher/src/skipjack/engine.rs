@@ -1,8 +1,8 @@
 //! SKIPJACK block-cipher engine, key schedule, and G/H permutations.
 
-use tc_crypto_core::BlockCipher;
+use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 
-use super::{SKIPJACK_BLOCK_BYTES, BlockCipherError, SkipjackParams};
+use super::{BlockCipherError, SKIPJACK_BLOCK_BYTES, SkipjackParams};
 
 /// The SKIPJACK F-table (byte substitution).
 #[rustfmt::skip]
@@ -121,7 +121,6 @@ impl Default for SkipjackEngine {
 }
 
 impl BlockCipher for SkipjackEngine {
-    type Params<'a> = SkipjackParams;
     type Error = BlockCipherError;
 
     fn algorithm_name(&self) -> &str {
@@ -130,12 +129,6 @@ impl BlockCipher for SkipjackEngine {
 
     fn block_size(&self) -> usize {
         SKIPJACK_BLOCK_BYTES
-    }
-
-    fn init(&mut self, for_encryption: bool, params: &Self::Params<'_>) -> Result<(), Self::Error> {
-        self.keys = Some(expand_key(params.key()));
-        self.for_encryption = for_encryption;
-        Ok(())
     }
 
     fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
@@ -149,6 +142,20 @@ impl BlockCipher for SkipjackEngine {
             SkipjackEngine::decrypt_block(key, input, output);
         }
         Ok(SKIPJACK_BLOCK_BYTES)
+    }
+}
+
+impl BlockCipherInit for SkipjackEngine {
+    type Params<'a> = SkipjackParams;
+
+    fn init(
+        &mut self,
+        direction: CipherDirection,
+        params: &Self::Params<'_>,
+    ) -> Result<(), Self::Error> {
+        self.keys = Some(expand_key(params.key()));
+        self.for_encryption = direction == CipherDirection::Encrypt;
+        Ok(())
     }
 }
 
@@ -220,7 +227,7 @@ mod tests {
     fn short_buffers_are_rejected() {
         let params = SkipjackParams::new(&[0u8; 10]).unwrap();
         let mut engine = SkipjackEngine::new();
-        engine.init(true, &params).unwrap();
+        engine.init(CipherDirection::Encrypt, &params).unwrap();
         assert_eq!(
             engine.process_block(&[0u8; 7], &mut [0u8; 8]),
             Err(BlockCipherError::BufferTooShort)

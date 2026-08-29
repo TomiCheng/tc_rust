@@ -9,13 +9,13 @@
 //! [`Rc5Params::with_rounds`] sets a different count.
 //!
 //! ```
-//! use tc_crypto_core::BlockCipher;
+//! use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 //! use tc_block_cipher::{Rc532Engine, Rc5Params};
 //!
 //! // RFC 2040 exercises RC5 in CBC mode; a single block with a zero IV is ECB.
 //! let params = Rc5Params::with_rounds(&[0x00], 2)?;
 //! let mut cipher = Rc532Engine::new();
-//! cipher.init(true, &params)?;
+//! cipher.init(CipherDirection::Encrypt, &params)?;
 //!
 //! let mut ciphertext = [0u8; 8];
 //! cipher.process_block(&[0u8; 8], &mut ciphertext)?;
@@ -28,7 +28,7 @@ use crate::BlockCipherError;
 mod engine;
 mod params;
 
-pub use engine::{Rc532Engine, Rc564Engine, Rc5Word};
+pub use engine::{Rc5Word, Rc532Engine, Rc564Engine};
 pub use params::Rc5Params;
 
 /// The standard RC5 round count.

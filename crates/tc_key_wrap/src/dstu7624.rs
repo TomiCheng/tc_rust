@@ -9,7 +9,8 @@
 use alloc::vec;
 use alloc::vec::Vec;
 use tc_block_cipher::{BlockCipherError, Dstu7624Engine, Dstu7624Params};
-use tc_crypto_core::{BlockCipher, Wrapper};
+use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
+use tc_crypto_core::Wrapper;
 
 /// DSTU 7624 (Kalyna) key wrap, over a 128-, 256-, or 512-bit block.
 ///
@@ -101,8 +102,13 @@ impl Wrapper for Dstu7624WrapEngine {
 
     fn init(&mut self, for_wrapping: bool, params: &Self::Params<'_>) -> Result<(), Self::Error> {
         // wrap=加密、unwrap=解密；金鑰長度驗證交由底層 engine.init。
+        let direction = if for_wrapping {
+            CipherDirection::Encrypt
+        } else {
+            CipherDirection::Decrypt
+        };
         self.engine
-            .init(for_wrapping, params)
+            .init(direction, params)
             .map_err(Dstu7624WrapError::BlockCipher)?;
         self.for_wrapping = Some(for_wrapping);
         Ok(())

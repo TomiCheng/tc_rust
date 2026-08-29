@@ -7,12 +7,12 @@
 //! `Serpent` for identical key and block byte strings.
 //!
 //! ```
-//! use tc_crypto_core::BlockCipher;
+//! use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 //! use tc_block_cipher::{SerpentEngine, SerpentParams};
 //!
 //! let params = SerpentParams::new(&[0u8; 16])?;
 //! let mut cipher = SerpentEngine::new();
-//! cipher.init(true, &params)?;
+//! cipher.init(CipherDirection::Encrypt, &params)?;
 //!
 //! let mut ciphertext = [0u8; 16];
 //! cipher.process_block(&[0u8; 16], &mut ciphertext)?;

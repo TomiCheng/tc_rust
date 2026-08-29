@@ -1,6 +1,6 @@
 //! DES vectors from FIPS 46/81 and Bouncy Castle's `DESTest.cs`.
 
-use tc_crypto_core::BlockCipher;
+use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 use tc_block_cipher::{DES_BLOCK_BYTES, DesEngine, DesParams};
 
 fn unhex(value: &str) -> Vec<u8> {
@@ -17,7 +17,7 @@ fn run_block_vector(key: &str, plaintext: &str, ciphertext: &str) {
     let params = DesParams::new(&key).unwrap();
     let mut engine = DesEngine::new();
 
-    engine.init(true, &params).unwrap();
+    engine.init(CipherDirection::Encrypt, &params).unwrap();
     let mut encrypted = [0u8; DES_BLOCK_BYTES];
     assert_eq!(
         engine.process_block(&plaintext, &mut encrypted).unwrap(),
@@ -25,7 +25,7 @@ fn run_block_vector(key: &str, plaintext: &str, ciphertext: &str) {
     );
     assert_eq!(encrypted.as_slice(), ciphertext);
 
-    engine.init(false, &params).unwrap();
+    engine.init(CipherDirection::Decrypt, &params).unwrap();
     let mut recovered = [0u8; DES_BLOCK_BYTES];
     engine.process_block(&ciphertext, &mut recovered).unwrap();
     assert_eq!(recovered.as_slice(), plaintext);
@@ -48,7 +48,7 @@ fn bc_fips_81_ecb_vector() {
     let ciphertext = unhex("3FA40E8A984D48156A271787AB8883F9893D51EC4B563B53");
     let mut encrypted = [0u8; 24];
     let mut engine = DesEngine::new();
-    engine.init(true, &params).unwrap();
+    engine.init(CipherDirection::Encrypt, &params).unwrap();
 
     for (input, output) in plaintext
         .chunks_exact(DES_BLOCK_BYTES)
@@ -59,7 +59,7 @@ fn bc_fips_81_ecb_vector() {
     assert_eq!(encrypted.as_slice(), ciphertext);
 
     let mut recovered = [0u8; 24];
-    engine.init(false, &params).unwrap();
+    engine.init(CipherDirection::Decrypt, &params).unwrap();
     for (input, output) in ciphertext
         .chunks_exact(DES_BLOCK_BYTES)
         .zip(recovered.chunks_exact_mut(DES_BLOCK_BYTES))

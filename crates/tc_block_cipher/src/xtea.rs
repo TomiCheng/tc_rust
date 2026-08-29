@@ -3,16 +3,16 @@
 //!
 //! XTEA fixes TEA's key-schedule weaknesses by interleaving the key words
 //! differently each round. This port precomputes the two 32-word round-key
-//! schedules (`sum0`/`sum1`) at [`init`](tc_crypto_core::BlockCipher::init).
+//! schedules (`sum0`/`sum1`) at [`init`](tc_cipher_core::BlockCipherInit::init).
 //!
 //! ```
-//! use tc_crypto_core::BlockCipher;
+//! use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 //! use tc_block_cipher::{XteaEngine, XteaParams};
 //!
 //! let key = [0u8; 16];
 //! let params = XteaParams::new(&key)?;
 //! let mut cipher = XteaEngine::new();
-//! cipher.init(true, &params)?;
+//! cipher.init(CipherDirection::Encrypt, &params)?;
 //!
 //! let mut ciphertext = [0u8; 8];
 //! cipher.process_block(&[0u8; 8], &mut ciphertext)?;

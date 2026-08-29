@@ -1,10 +1,10 @@
 //! Small-footprint portable AES engine, following Bouncy Castle's
 //! `AesLightEngine` representation.
 
-use tc_crypto_core::BlockCipher;
+use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 
 use super::{
-    AES_BLOCK_BYTES, BlockCipherError, AesParams,
+    AES_BLOCK_BYTES, AesParams, BlockCipherError,
     portable::{INVERSE_S_BOX, S_BOX},
 };
 
@@ -212,7 +212,6 @@ impl Default for AesLightEngine {
 }
 
 impl BlockCipher for AesLightEngine {
-    type Params<'a> = AesParams;
     type Error = BlockCipherError;
 
     fn algorithm_name(&self) -> &str {
@@ -221,13 +220,6 @@ impl BlockCipher for AesLightEngine {
 
     fn block_size(&self) -> usize {
         AES_BLOCK_BYTES
-    }
-
-    fn init(&mut self, for_encryption: bool, params: &Self::Params<'_>) -> Result<(), Self::Error> {
-        (self.working_key, self.rounds) = generate_working_key(params.key(), for_encryption);
-        self.for_encryption = for_encryption;
-        self.initialised = true;
-        Ok(())
     }
 
     fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
@@ -243,6 +235,22 @@ impl BlockCipher for AesLightEngine {
             (&mut output[..AES_BLOCK_BYTES]).try_into().unwrap();
         self.transform(input, output);
         Ok(AES_BLOCK_BYTES)
+    }
+}
+
+impl BlockCipherInit for AesLightEngine {
+    type Params<'a> = AesParams;
+
+    fn init(
+        &mut self,
+        direction: CipherDirection,
+        params: &Self::Params<'_>,
+    ) -> Result<(), Self::Error> {
+        let for_encryption = direction == CipherDirection::Encrypt;
+        (self.working_key, self.rounds) = generate_working_key(params.key(), for_encryption);
+        self.for_encryption = for_encryption;
+        self.initialised = true;
+        Ok(())
     }
 }
 
@@ -268,7 +276,10 @@ mod tests {
         );
 
         engine
-            .init(true, &AesParams::new(&[0u8; 16]).unwrap())
+            .init(
+                CipherDirection::Encrypt,
+                &AesParams::new(&[0u8; 16]).unwrap(),
+            )
             .unwrap();
         assert_eq!(
             engine.process_block(&[0u8; 15], &mut [0u8; 16]),

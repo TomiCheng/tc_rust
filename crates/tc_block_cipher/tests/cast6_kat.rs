@@ -1,6 +1,6 @@
 //! CAST6 vectors from RFC 2612 and Bouncy Castle's `CAST6Test.cs`.
 
-use tc_crypto_core::BlockCipher;
+use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 use tc_block_cipher::{CAST6_BLOCK_BYTES, Cast6Engine, Cast6Params};
 
 fn unhex(value: &str) -> Vec<u8> {
@@ -32,12 +32,12 @@ fn rfc_2612_vectors() {
         let params = Cast6Params::new(&key).unwrap();
         let mut engine = Cast6Engine::new();
 
-        engine.init(true, &params).unwrap();
+        engine.init(CipherDirection::Encrypt, &params).unwrap();
         let mut encrypted = [0u8; CAST6_BLOCK_BYTES];
         engine.process_block(&plaintext, &mut encrypted).unwrap();
         assert_eq!(encrypted.as_slice(), ciphertext);
 
-        engine.init(false, &params).unwrap();
+        engine.init(CipherDirection::Decrypt, &params).unwrap();
         let mut recovered = [0u8; CAST6_BLOCK_BYTES];
         engine.process_block(&ciphertext, &mut recovered).unwrap();
         assert_eq!(recovered, plaintext);
@@ -57,9 +57,9 @@ fn all_standard_key_sizes_round_trip() {
         let mut ciphertext = [0u8; CAST6_BLOCK_BYTES];
         let mut recovered = [0u8; CAST6_BLOCK_BYTES];
 
-        engine.init(true, &params).unwrap();
+        engine.init(CipherDirection::Encrypt, &params).unwrap();
         engine.process_block(&plaintext, &mut ciphertext).unwrap();
-        engine.init(false, &params).unwrap();
+        engine.init(CipherDirection::Decrypt, &params).unwrap();
         engine.process_block(&ciphertext, &mut recovered).unwrap();
         assert_eq!(recovered, plaintext);
     }

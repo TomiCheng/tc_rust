@@ -1,6 +1,6 @@
 //! Serpent and Tnepres vectors from Bouncy Castle's tests.
 
-use tc_crypto_core::BlockCipher;
+use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 use tc_block_cipher::{SerpentEngine, SerpentParams, TnepresEngine};
 
 fn unhex(value: &str) -> Vec<u8> {
@@ -78,11 +78,11 @@ fn bc_serpent_vectors_encrypt_and_decrypt() {
         let mut engine = SerpentEngine::new();
         let mut output = [0u8; 16];
 
-        engine.init(true, &params).unwrap();
+        engine.init(CipherDirection::Encrypt, &params).unwrap();
         assert_eq!(engine.process_block(&plaintext, &mut output).unwrap(), 16);
         assert_eq!(output.as_slice(), ciphertext);
 
-        engine.init(false, &params).unwrap();
+        engine.init(CipherDirection::Decrypt, &params).unwrap();
         engine.process_block(&ciphertext, &mut output).unwrap();
         assert_eq!(output.as_slice(), plaintext);
     }
@@ -166,11 +166,11 @@ fn bc_tnepres_vectors_encrypt_and_decrypt() {
         let mut engine = TnepresEngine::new();
         let mut output = [0u8; 16];
 
-        engine.init(true, &params).unwrap();
+        engine.init(CipherDirection::Encrypt, &params).unwrap();
         assert_eq!(engine.process_block(&plaintext, &mut output).unwrap(), 16);
         assert_eq!(output.as_slice(), ciphertext);
 
-        engine.init(false, &params).unwrap();
+        engine.init(CipherDirection::Decrypt, &params).unwrap();
         engine.process_block(&ciphertext, &mut output).unwrap();
         assert_eq!(output.as_slice(), plaintext);
     }
@@ -216,7 +216,7 @@ fn bc_serpent_monte_carlo_vectors() {
         let mut engine = SerpentEngine::new();
         let mut block: [u8; 16] = unhex(input_hex).try_into().unwrap();
         let mut output = [0u8; 16];
-        engine.init(true, &params).unwrap();
+        engine.init(CipherDirection::Encrypt, &params).unwrap();
         for _ in 0..100 {
             engine.process_block(&block, &mut output).unwrap();
             block = output;
@@ -255,7 +255,7 @@ fn bc_tnepres_monte_carlo_vectors() {
         let mut engine = TnepresEngine::new();
         let mut block: [u8; 16] = unhex(input_hex).try_into().unwrap();
         let mut output = [0u8; 16];
-        engine.init(true, &params).unwrap();
+        engine.init(CipherDirection::Encrypt, &params).unwrap();
         for _ in 0..100 {
             engine.process_block(&block, &mut output).unwrap();
             block = output;

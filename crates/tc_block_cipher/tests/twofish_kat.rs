@@ -1,6 +1,6 @@
 //! Twofish ECB vectors from Bouncy Castle's `TwofishTest.cs`.
 
-use tc_crypto_core::BlockCipher;
+use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 use tc_block_cipher::{TwofishEngine, TwofishParams};
 
 fn unhex(value: &str) -> Vec<u8> {
@@ -35,11 +35,11 @@ fn bc_ecb_vectors_encrypt_and_decrypt() {
         let mut engine = TwofishEngine::new();
         let mut output = [0u8; 16];
 
-        engine.init(true, &params).unwrap();
+        engine.init(CipherDirection::Encrypt, &params).unwrap();
         assert_eq!(engine.process_block(&plaintext, &mut output).unwrap(), 16);
         assert_eq!(output.as_slice(), ciphertext);
 
-        engine.init(false, &params).unwrap();
+        engine.init(CipherDirection::Decrypt, &params).unwrap();
         engine.process_block(&ciphertext, &mut output).unwrap();
         assert_eq!(output.as_slice(), plaintext);
     }
@@ -51,7 +51,7 @@ fn zero_key_zero_plaintext_vector() {
     let mut engine = TwofishEngine::new();
     let mut output = [0u8; 16];
 
-    engine.init(true, &params).unwrap();
+    engine.init(CipherDirection::Encrypt, &params).unwrap();
     engine.process_block(&[0u8; 16], &mut output).unwrap();
     assert_eq!(output, unhex("9f589f5cf6122c32b6bfec2f2ae8c35a").as_slice());
 }

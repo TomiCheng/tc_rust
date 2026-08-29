@@ -4,11 +4,11 @@
 //! SM4 has a 128-bit key and 128-bit block, processed as four big-endian 32-bit
 //! words over 32 rounds. Encryption and decryption share the same round loop;
 //! the direction is baked into the round-key schedule at
-//! [`init`](tc_crypto_core::BlockCipher::init) (the decryption keys are the
+//! [`init`](tc_cipher_core::BlockCipherInit::init) (the decryption keys are the
 //! encryption keys in reverse).
 //!
 //! ```
-//! use tc_crypto_core::BlockCipher;
+//! use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 //! use tc_block_cipher::{Sm4Engine, Sm4Params};
 //!
 //! let key = [
@@ -17,7 +17,7 @@
 //! ];
 //! let params = Sm4Params::new(&key)?;
 //! let mut cipher = Sm4Engine::new();
-//! cipher.init(true, &params)?;
+//! cipher.init(CipherDirection::Encrypt, &params)?;
 //!
 //! let mut ciphertext = [0u8; 16];
 //! cipher.process_block(&key, &mut ciphertext)?; // plaintext == key here

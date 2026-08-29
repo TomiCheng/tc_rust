@@ -1,9 +1,9 @@
 //! DES block-cipher engine.
 
-use tc_crypto_core::BlockCipher;
+use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 
 use super::cipher;
-use super::{DES_BLOCK_BYTES, BlockCipherError, DesParams};
+use super::{BlockCipherError, DES_BLOCK_BYTES, DesParams};
 
 /// DES with an 8-byte encoded key and 8-byte block.
 pub struct DesEngine {
@@ -28,7 +28,6 @@ impl Default for DesEngine {
 }
 
 impl BlockCipher for DesEngine {
-    type Params<'a> = DesParams;
     type Error = BlockCipherError;
 
     fn algorithm_name(&self) -> &str {
@@ -37,12 +36,6 @@ impl BlockCipher for DesEngine {
 
     fn block_size(&self) -> usize {
         DES_BLOCK_BYTES
-    }
-
-    fn init(&mut self, for_encryption: bool, params: &Self::Params<'_>) -> Result<(), Self::Error> {
-        self.working_key = cipher::generate_working_key(for_encryption, params.key());
-        self.initialised = true;
-        Ok(())
     }
 
     fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
@@ -62,6 +55,21 @@ impl BlockCipher for DesEngine {
     }
 }
 
+impl BlockCipherInit for DesEngine {
+    type Params<'a> = DesParams;
+
+    fn init(
+        &mut self,
+        direction: CipherDirection,
+        params: &Self::Params<'_>,
+    ) -> Result<(), Self::Error> {
+        self.working_key =
+            cipher::generate_working_key(direction == CipherDirection::Encrypt, params.key());
+        self.initialised = true;
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -77,7 +85,7 @@ mod tests {
         );
 
         let params = DesParams::new(&[0u8; 8]).unwrap();
-        engine.init(true, &params).unwrap();
+        engine.init(CipherDirection::Encrypt, &params).unwrap();
         assert_eq!(
             engine.process_block(&[0u8; 7], &mut [0u8; 8]),
             Err(BlockCipherError::BufferTooShort)

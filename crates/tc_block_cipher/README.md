@@ -3,9 +3,9 @@
 ## 1. Overview
 
 `tc_block_cipher` provides pure-Rust block cipher implementations ported from
-the Bouncy Castle C# engine package. All engines implement the
-[`BlockCipher`](../tc_crypto_core) trait from `tc_crypto_core` and use the
-crate's shared `BlockCipherError` type.
+the Bouncy Castle C# engine package. All engines implement the `BlockCipher`
+and `BlockCipherInit` traits from `tc_cipher_core` and use the crate's shared
+`BlockCipherError` type.
 
 Each algorithm has an owned parameter type, such as `AesParams` or
 `ThreefishParams`. Parameter constructors validate key lengths and other
@@ -26,16 +26,16 @@ Add both the implementation crate and the trait crate to the application:
 
 ```toml
 [dependencies]
-tc_crypto_core = { path = "../tc_crypto_core" }
+tc_cipher_core = { path = "../tc_cipher_core" }
 tc_block_cipher = { path = "../tc_block_cipher" }
 ```
 
-Import `BlockCipher` to call `init`, `block_size`, and `process_block`. The
-boolean passed to `init` is `true` for encryption and `false` for decryption:
+Import `BlockCipherInit` to initialize an engine and `BlockCipher` to inspect
+or process it. `CipherDirection` explicitly selects encryption or decryption:
 
 ```rust
 use tc_block_cipher::{AES_BLOCK_BYTES, AesEngine, AesParams, BlockCipherError};
-use tc_crypto_core::BlockCipher;
+use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 
 fn main() -> Result<(), BlockCipherError> {
     let key = [0x11u8; 16];
@@ -43,13 +43,13 @@ fn main() -> Result<(), BlockCipherError> {
     let plaintext = [0x22u8; AES_BLOCK_BYTES];
 
     let mut cipher = AesEngine::new();
-    cipher.init(true, &params)?;
+    cipher.init(CipherDirection::Encrypt, &params)?;
 
     let mut ciphertext = [0u8; AES_BLOCK_BYTES];
     let written = cipher.process_block(&plaintext, &mut ciphertext)?;
     assert_eq!(written, AES_BLOCK_BYTES);
 
-    cipher.init(false, &params)?;
+    cipher.init(CipherDirection::Decrypt, &params)?;
 
     let mut recovered = [0u8; AES_BLOCK_BYTES];
     cipher.process_block(&ciphertext, &mut recovered)?;

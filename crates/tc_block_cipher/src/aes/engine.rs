@@ -1,8 +1,8 @@
 //! AES engine and runtime backend dispatch.
 
-use tc_crypto_core::BlockCipher;
+use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 
-use super::{AES_BLOCK_BYTES, BlockCipherError, AesParams, RoundKeys, portable};
+use super::{AES_BLOCK_BYTES, AesParams, BlockCipherError, RoundKeys, portable};
 
 #[derive(Clone, Copy)]
 enum Backend {
@@ -69,7 +69,6 @@ impl Default for AesEngine {
 }
 
 impl BlockCipher for AesEngine {
-    type Params<'a> = AesParams;
     type Error = BlockCipherError;
 
     fn algorithm_name(&self) -> &str {
@@ -80,7 +79,31 @@ impl BlockCipher for AesEngine {
         AES_BLOCK_BYTES
     }
 
-    fn init(&mut self, for_encryption: bool, params: &Self::Params<'_>) -> Result<(), Self::Error> {
+    fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
+        if !self.initialised {
+            return Err(BlockCipherError::NotInitialised);
+        }
+        if input.len() < AES_BLOCK_BYTES || output.len() < AES_BLOCK_BYTES {
+            return Err(BlockCipherError::BufferTooShort);
+        }
+
+        let input: &[u8; AES_BLOCK_BYTES] = input[..AES_BLOCK_BYTES].try_into().unwrap();
+        let output: &mut [u8; AES_BLOCK_BYTES] =
+            (&mut output[..AES_BLOCK_BYTES]).try_into().unwrap();
+        self.transform(input, output);
+        Ok(AES_BLOCK_BYTES)
+    }
+}
+
+impl BlockCipherInit for AesEngine {
+    type Params<'a> = AesParams;
+
+    fn init(
+        &mut self,
+        direction: CipherDirection,
+        params: &Self::Params<'_>,
+    ) -> Result<(), Self::Error> {
+        let for_encryption = direction == CipherDirection::Encrypt;
         (self.round_keys, self.rounds) = portable::expand_key(params.key());
         self.for_encryption = for_encryption;
 
@@ -102,21 +125,6 @@ impl BlockCipher for AesEngine {
         self.initialised = true;
         Ok(())
     }
-
-    fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
-        if !self.initialised {
-            return Err(BlockCipherError::NotInitialised);
-        }
-        if input.len() < AES_BLOCK_BYTES || output.len() < AES_BLOCK_BYTES {
-            return Err(BlockCipherError::BufferTooShort);
-        }
-
-        let input: &[u8; AES_BLOCK_BYTES] = input[..AES_BLOCK_BYTES].try_into().unwrap();
-        let output: &mut [u8; AES_BLOCK_BYTES] =
-            (&mut output[..AES_BLOCK_BYTES]).try_into().unwrap();
-        self.transform(input, output);
-        Ok(AES_BLOCK_BYTES)
-    }
 }
 
 #[cfg(test)]
@@ -134,7 +142,10 @@ mod tests {
         );
 
         engine
-            .init(true, &AesParams::new(&[0u8; 16]).unwrap())
+            .init(
+                CipherDirection::Encrypt,
+                &AesParams::new(&[0u8; 16]).unwrap(),
+            )
             .unwrap();
         assert_eq!(
             engine.process_block(&[0u8; 15], &mut [0u8; 16]),

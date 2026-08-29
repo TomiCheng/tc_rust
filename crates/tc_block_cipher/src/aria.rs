@@ -1,7 +1,7 @@
 //! ARIA-128, ARIA-192, and ARIA-256 block cipher as specified by RFC 5794.
 //!
 //! ```
-//! use tc_crypto_core::BlockCipher;
+//! use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 //! use tc_block_cipher::{AriaEngine, AriaParams};
 //!
 //! let params = AriaParams::new(&[
@@ -9,7 +9,7 @@
 //!     0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F,
 //! ])?;
 //! let mut cipher = AriaEngine::new();
-//! cipher.init(true, &params)?;
+//! cipher.init(CipherDirection::Encrypt, &params)?;
 //!
 //! let mut output = [0u8; 16];
 //! cipher.process_block(&[
