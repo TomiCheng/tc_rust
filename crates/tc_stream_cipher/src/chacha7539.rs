@@ -3,7 +3,7 @@
 //!
 //! This construction uses a 32-bit block counter and a 96-bit nonce.
 
-use tc_crypto_core::StreamCipher;
+use tc_cipher_core::{StreamCipher, StreamCipherInit};
 
 use crate::{
     StreamCipherError,
@@ -76,20 +76,10 @@ impl Default for ChaCha7539Engine {
 }
 
 impl StreamCipher for ChaCha7539Engine {
-    type Params<'a> = ChaCha7539Params;
     type Error = StreamCipherError;
 
     fn algorithm_name(&self) -> &str {
         "ChaCha7539"
-    }
-
-    fn init(
-        &mut self,
-        _for_encryption: bool,
-        params: &Self::Params<'_>,
-    ) -> Result<(), Self::Error> {
-        self.core.init_ietf(&params.key, &params.nonce);
-        Ok(())
     }
 
     fn return_byte(&mut self, input: u8) -> Result<u8, Self::Error> {
@@ -102,5 +92,18 @@ impl StreamCipher for ChaCha7539Engine {
 
     fn reset(&mut self) {
         self.core.reset_ietf();
+    }
+}
+
+impl StreamCipherInit for ChaCha7539Engine {
+    type Params<'a> = ChaCha7539Params;
+
+    fn init(
+        &mut self,
+        _for_encryption: bool,
+        params: &Self::Params<'_>,
+    ) -> Result<(), Self::Error> {
+        self.core.init_ietf(&params.key, &params.nonce);
+        Ok(())
     }
 }

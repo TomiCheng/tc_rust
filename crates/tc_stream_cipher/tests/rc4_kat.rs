@@ -4,7 +4,7 @@
 //! (RFC 6229 gives the keystream as the encryption of all-zero input). Also
 //! checks reset, `return_byte`/`process_bytes` consistency, and error paths.
 
-use tc_crypto_core::StreamCipher;
+use tc_cipher_core::{StreamCipher, StreamCipherInit};
 use tc_stream_cipher::{Rc4Engine, Rc4Params, StreamCipherError};
 
 /// Parses a hex string into bytes.
@@ -101,6 +101,23 @@ fn return_byte_matches_process_bytes() {
         .collect();
 
     assert_eq!(bulk_out, byte_out);
+}
+
+#[test]
+fn initialized_engine_supports_dynamic_dispatch() {
+    let params = Rc4Params::new(b"Key").unwrap();
+    let mut engine = Rc4Engine::new();
+    engine.init(true, &params).unwrap();
+
+    let mut cipher: Box<dyn StreamCipher<Error = StreamCipherError>> = Box::new(engine);
+    let mut output = [0u8; 9];
+
+    assert_eq!(cipher.algorithm_name(), "RC4");
+    assert_eq!(cipher.process_bytes(b"Plaintext", &mut output), Ok(9));
+    assert_eq!(
+        output,
+        [0xbb, 0xf3, 0x16, 0xe8, 0xd9, 0x40, 0xaf, 0x0a, 0xd3]
+    );
 }
 
 #[test]

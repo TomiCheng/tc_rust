@@ -3,7 +3,7 @@
 //! The known-answer values are copied from Bouncy Castle's `IsaacTest`, which
 //! cites Bob Jenkins' ISAAC reference material.
 
-use tc_crypto_core::StreamCipher;
+use tc_cipher_core::{StreamCipher, StreamCipherInit};
 use tc_stream_cipher::{ISAAC_MAX_KEY_BYTES, IsaacEngine, IsaacParams, StreamCipherError};
 
 fn hex(s: &str) -> Vec<u8> {

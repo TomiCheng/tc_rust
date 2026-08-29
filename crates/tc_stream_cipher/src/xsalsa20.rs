@@ -3,7 +3,7 @@
 //! XSalsa20 uses HSalsa20 to derive a subkey from a 256-bit key and the first
 //! 128 bits of a 192-bit nonce, then runs Salsa20 with the remaining 64 bits.
 
-use tc_crypto_core::StreamCipher;
+use tc_cipher_core::{StreamCipher, StreamCipherInit};
 
 use crate::{
     StreamCipherError,
@@ -114,20 +114,10 @@ impl Default for Xsalsa20Engine {
 }
 
 impl StreamCipher for Xsalsa20Engine {
-    type Params<'a> = Xsalsa20Params;
     type Error = StreamCipherError;
 
     fn algorithm_name(&self) -> &str {
         "XSalsa20"
-    }
-
-    fn init(
-        &mut self,
-        _for_encryption: bool,
-        params: &Self::Params<'_>,
-    ) -> Result<(), Self::Error> {
-        self.initialize(params);
-        Ok(())
     }
 
     fn return_byte(&mut self, input: u8) -> Result<u8, Self::Error> {
@@ -140,5 +130,18 @@ impl StreamCipher for Xsalsa20Engine {
 
     fn reset(&mut self) {
         self.core.reset();
+    }
+}
+
+impl StreamCipherInit for Xsalsa20Engine {
+    type Params<'a> = Xsalsa20Params;
+
+    fn init(
+        &mut self,
+        _for_encryption: bool,
+        params: &Self::Params<'_>,
+    ) -> Result<(), Self::Error> {
+        self.initialize(params);
+        Ok(())
     }
 }

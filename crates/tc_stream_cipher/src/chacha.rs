@@ -3,7 +3,7 @@
 //! This is the original construction with a 64-bit counter and 64-bit nonce,
 //! not the later IETF ChaCha7539 construction with a 96-bit nonce.
 
-use tc_crypto_core::StreamCipher;
+use tc_cipher_core::{StreamCipher, StreamCipherInit};
 
 use crate::StreamCipherError;
 
@@ -105,20 +105,10 @@ impl Default for ChaChaEngine {
 }
 
 impl StreamCipher for ChaChaEngine {
-    type Params<'a> = ChaChaParams;
     type Error = StreamCipherError;
 
     fn algorithm_name(&self) -> &str {
         core::str::from_utf8(&self.name[..self.name_len]).expect("ChaCha algorithm name is ASCII")
-    }
-
-    fn init(
-        &mut self,
-        _for_encryption: bool,
-        params: &Self::Params<'_>,
-    ) -> Result<(), Self::Error> {
-        self.core.init_original(params.key(), &params.nonce);
-        Ok(())
     }
 
     fn return_byte(&mut self, input: u8) -> Result<u8, Self::Error> {
@@ -131,6 +121,19 @@ impl StreamCipher for ChaChaEngine {
 
     fn reset(&mut self) {
         self.core.reset_original();
+    }
+}
+
+impl StreamCipherInit for ChaChaEngine {
+    type Params<'a> = ChaChaParams;
+
+    fn init(
+        &mut self,
+        _for_encryption: bool,
+        params: &Self::Params<'_>,
+    ) -> Result<(), Self::Error> {
+        self.core.init_original(params.key(), &params.nonce);
+        Ok(())
     }
 }
 

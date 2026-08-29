@@ -4,7 +4,7 @@
 //! first 128 bits of a 192-bit nonce. The remaining 64 nonce bits are then
 //! used with the IETF ChaCha20 construction.
 
-use tc_crypto_core::StreamCipher;
+use tc_cipher_core::{StreamCipher, StreamCipherInit};
 
 use crate::{
     StreamCipherError,
@@ -88,20 +88,10 @@ impl Default for XChaCha20Engine {
 }
 
 impl StreamCipher for XChaCha20Engine {
-    type Params<'a> = XChaCha20Params;
     type Error = StreamCipherError;
 
     fn algorithm_name(&self) -> &str {
         "XChaCha20"
-    }
-
-    fn init(
-        &mut self,
-        _for_encryption: bool,
-        params: &Self::Params<'_>,
-    ) -> Result<(), Self::Error> {
-        self.initialize(params);
-        Ok(())
     }
 
     fn return_byte(&mut self, input: u8) -> Result<u8, Self::Error> {
@@ -114,6 +104,19 @@ impl StreamCipher for XChaCha20Engine {
 
     fn reset(&mut self) {
         self.core.reset_ietf();
+    }
+}
+
+impl StreamCipherInit for XChaCha20Engine {
+    type Params<'a> = XChaCha20Params;
+
+    fn init(
+        &mut self,
+        _for_encryption: bool,
+        params: &Self::Params<'_>,
+    ) -> Result<(), Self::Error> {
+        self.initialize(params);
+        Ok(())
     }
 }
 

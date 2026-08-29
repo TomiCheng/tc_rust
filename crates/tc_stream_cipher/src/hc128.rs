@@ -3,7 +3,7 @@
 //! HC-128 uses a 128-bit key and a 128-bit initialization vector. Encryption
 //! and decryption are the same XOR-with-keystream operation.
 
-use tc_crypto_core::StreamCipher;
+use tc_cipher_core::{StreamCipher, StreamCipherInit};
 
 use crate::StreamCipherError;
 
@@ -184,23 +184,10 @@ impl Default for Hc128Engine {
 }
 
 impl StreamCipher for Hc128Engine {
-    type Params<'a> = Hc128Params;
     type Error = StreamCipherError;
 
     fn algorithm_name(&self) -> &str {
         "HC-128"
-    }
-
-    fn init(
-        &mut self,
-        _for_encryption: bool,
-        params: &Self::Params<'_>,
-    ) -> Result<(), Self::Error> {
-        self.key.copy_from_slice(&params.key);
-        self.iv.copy_from_slice(&params.iv);
-        self.initialize_state();
-        self.initialised = true;
-        Ok(())
     }
 
     fn return_byte(&mut self, input: u8) -> Result<u8, Self::Error> {
@@ -228,5 +215,21 @@ impl StreamCipher for Hc128Engine {
         if self.initialised {
             self.initialize_state();
         }
+    }
+}
+
+impl StreamCipherInit for Hc128Engine {
+    type Params<'a> = Hc128Params;
+
+    fn init(
+        &mut self,
+        _for_encryption: bool,
+        params: &Self::Params<'_>,
+    ) -> Result<(), Self::Error> {
+        self.key.copy_from_slice(&params.key);
+        self.iv.copy_from_slice(&params.iv);
+        self.initialize_state();
+        self.initialised = true;
+        Ok(())
     }
 }

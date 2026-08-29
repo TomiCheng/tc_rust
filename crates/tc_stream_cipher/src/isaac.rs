@@ -4,7 +4,7 @@
 //! keystream blocks from a 256-word state. Encryption and decryption are the
 //! same XOR-with-keystream operation.
 
-use tc_crypto_core::StreamCipher;
+use tc_cipher_core::{StreamCipher, StreamCipherInit};
 
 use crate::StreamCipherError;
 
@@ -209,23 +209,10 @@ impl Default for IsaacEngine {
 }
 
 impl StreamCipher for IsaacEngine {
-    type Params<'a> = IsaacParams;
     type Error = StreamCipherError;
 
     fn algorithm_name(&self) -> &str {
         "ISAAC"
-    }
-
-    fn init(
-        &mut self,
-        _for_encryption: bool,
-        params: &Self::Params<'_>,
-    ) -> Result<(), Self::Error> {
-        self.working_key[..params.key_len].copy_from_slice(params.key());
-        self.key_len = params.key_len;
-        self.initialize_state();
-        self.initialised = true;
-        Ok(())
     }
 
     fn return_byte(&mut self, input: u8) -> Result<u8, Self::Error> {
@@ -266,5 +253,21 @@ impl StreamCipher for IsaacEngine {
         if self.initialised {
             self.initialize_state();
         }
+    }
+}
+
+impl StreamCipherInit for IsaacEngine {
+    type Params<'a> = IsaacParams;
+
+    fn init(
+        &mut self,
+        _for_encryption: bool,
+        params: &Self::Params<'_>,
+    ) -> Result<(), Self::Error> {
+        self.working_key[..params.key_len].copy_from_slice(params.key());
+        self.key_len = params.key_len;
+        self.initialize_state();
+        self.initialised = true;
+        Ok(())
     }
 }

@@ -5,7 +5,7 @@
 //! permutation with key and IV scheduling rounds; VMPC-KSA3 adds a third key
 //! scheduling round.
 
-use tc_crypto_core::StreamCipher;
+use tc_cipher_core::{StreamCipher, StreamCipherInit};
 
 use crate::StreamCipherError;
 
@@ -209,20 +209,10 @@ impl Default for VmpcEngine {
 }
 
 impl StreamCipher for VmpcEngine {
-    type Params<'a> = VmpcParams;
     type Error = StreamCipherError;
 
     fn algorithm_name(&self) -> &str {
         "VMPC"
-    }
-
-    fn init(
-        &mut self,
-        _for_encryption: bool,
-        params: &Self::Params<'_>,
-    ) -> Result<(), Self::Error> {
-        self.core.init(params);
-        Ok(())
     }
 
     fn return_byte(&mut self, input: u8) -> Result<u8, Self::Error> {
@@ -235,6 +225,19 @@ impl StreamCipher for VmpcEngine {
 
     fn reset(&mut self) {
         self.core.reset();
+    }
+}
+
+impl StreamCipherInit for VmpcEngine {
+    type Params<'a> = VmpcParams;
+
+    fn init(
+        &mut self,
+        _for_encryption: bool,
+        params: &Self::Params<'_>,
+    ) -> Result<(), Self::Error> {
+        self.core.init(params);
+        Ok(())
     }
 }
 
@@ -259,20 +262,10 @@ impl Default for VmpcKsa3Engine {
 }
 
 impl StreamCipher for VmpcKsa3Engine {
-    type Params<'a> = VmpcParams;
     type Error = StreamCipherError;
 
     fn algorithm_name(&self) -> &str {
         "VMPC-KSA3"
-    }
-
-    fn init(
-        &mut self,
-        _for_encryption: bool,
-        params: &Self::Params<'_>,
-    ) -> Result<(), Self::Error> {
-        self.core.init(params);
-        Ok(())
     }
 
     fn return_byte(&mut self, input: u8) -> Result<u8, Self::Error> {
@@ -285,5 +278,18 @@ impl StreamCipher for VmpcKsa3Engine {
 
     fn reset(&mut self) {
         self.core.reset();
+    }
+}
+
+impl StreamCipherInit for VmpcKsa3Engine {
+    type Params<'a> = VmpcParams;
+
+    fn init(
+        &mut self,
+        _for_encryption: bool,
+        params: &Self::Params<'_>,
+    ) -> Result<(), Self::Error> {
+        self.core.init(params);
+        Ok(())
     }
 }

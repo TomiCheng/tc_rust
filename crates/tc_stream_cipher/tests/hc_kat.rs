@@ -3,7 +3,7 @@
 //! The vectors come from Bouncy Castle's `HCFamilyTest` and ECRYPT vector
 //! files, which in turn cite the official HC-128 and HC-256 reference papers.
 
-use tc_crypto_core::StreamCipher;
+use tc_cipher_core::{StreamCipher, StreamCipherInit};
 use tc_stream_cipher::{Hc128Engine, Hc128Params, Hc256Engine, Hc256Params, StreamCipherError};
 
 fn hex(s: &str) -> Vec<u8> {

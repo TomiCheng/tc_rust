@@ -3,7 +3,7 @@
 //! Salsa20 accepts 128- or 256-bit keys and a 64-bit nonce. The default uses
 //! 20 rounds; positive even custom round counts are also supported.
 
-use tc_crypto_core::StreamCipher;
+use tc_cipher_core::{StreamCipher, StreamCipherInit};
 
 use crate::StreamCipherError;
 
@@ -105,20 +105,10 @@ impl Default for Salsa20Engine {
 }
 
 impl StreamCipher for Salsa20Engine {
-    type Params<'a> = Salsa20Params;
     type Error = StreamCipherError;
 
     fn algorithm_name(&self) -> &str {
         core::str::from_utf8(&self.name[..self.name_len]).expect("Salsa20 algorithm name is ASCII")
-    }
-
-    fn init(
-        &mut self,
-        _for_encryption: bool,
-        params: &Self::Params<'_>,
-    ) -> Result<(), Self::Error> {
-        self.core.init_salsa20(params.key(), &params.nonce);
-        Ok(())
     }
 
     fn return_byte(&mut self, input: u8) -> Result<u8, Self::Error> {
@@ -131,6 +121,19 @@ impl StreamCipher for Salsa20Engine {
 
     fn reset(&mut self) {
         self.core.reset();
+    }
+}
+
+impl StreamCipherInit for Salsa20Engine {
+    type Params<'a> = Salsa20Params;
+
+    fn init(
+        &mut self,
+        _for_encryption: bool,
+        params: &Self::Params<'_>,
+    ) -> Result<(), Self::Error> {
+        self.core.init_salsa20(params.key(), &params.nonce);
+        Ok(())
     }
 }
 

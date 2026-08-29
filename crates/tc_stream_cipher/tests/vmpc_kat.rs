@@ -1,6 +1,6 @@
 //! Bouncy Castle known-answer and behavioral tests for VMPC and VMPC-KSA3.
 
-use tc_crypto_core::StreamCipher;
+use tc_cipher_core::{StreamCipher, StreamCipherInit};
 use tc_stream_cipher::{StreamCipherError, VmpcEngine, VmpcKsa3Engine, VmpcParams};
 
 fn hex(s: &str) -> Vec<u8> {

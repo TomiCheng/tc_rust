@@ -3,7 +3,7 @@
 //! ChaCha7539 vectors come from RFC 8439. XChaCha20 vectors mirror Bouncy
 //! Castle's `XChaCha20Test` and draft-irtf-cfrg-xchacha-03.
 
-use tc_crypto_core::StreamCipher;
+use tc_cipher_core::{StreamCipher, StreamCipherInit};
 use tc_stream_cipher::{
     ChaCha7539Engine, ChaCha7539Params, StreamCipherError, XChaCha20Engine, XChaCha20Params,
 };

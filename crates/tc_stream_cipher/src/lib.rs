@@ -1,9 +1,10 @@
 //! Stream cipher implementations ported from Bouncy Castle's engine package.
 //!
-//! All engines implement the [`StreamCipher`](tc_crypto_core::StreamCipher) trait
-//! from `tc_crypto_core`. Each algorithm owns its parameter type (validated key,
-//! and nonce where applicable), while all engines report failures through the
-//! shared [`StreamCipherError`] type.
+//! All engines implement the [`StreamCipher`](tc_cipher_core::StreamCipher) and
+//! [`StreamCipherInit`](tc_cipher_core::StreamCipherInit) traits from
+//! `tc_cipher_core`. Each algorithm owns its parameter type (validated key, and
+//! nonce where applicable), while all engines report failures through the shared
+//! [`StreamCipherError`] type.
 //!
 //! Stream ciphers keep fixed-size keystream state, so this crate is `no_std`
 //! with no `alloc` requirement.

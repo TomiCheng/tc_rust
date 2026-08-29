@@ -4,7 +4,8 @@
 
 `tc_stream_cipher` provides pure-Rust stream cipher implementations ported
 from the Bouncy Castle C# engine package. All engines implement the
-[`StreamCipher`](../tc_crypto_core) trait from `tc_crypto_core`.
+`StreamCipher` and `StreamCipherInit` traits from
+[`tc_cipher_core`](../tc_cipher_core).
 
 A stream cipher generates a keystream and XORs it with the input. Encryption
 and decryption are therefore normally the same operation, but the
@@ -26,15 +27,15 @@ Add both the implementation crate and the trait crate to the application:
 
 ```toml
 [dependencies]
-tc_crypto_core = { path = "../tc_crypto_core" }
+tc_cipher_core = { path = "../tc_cipher_core" }
 tc_stream_cipher = { path = "../tc_stream_cipher" }
 ```
 
-Import `StreamCipher` to call `init`, `process_bytes`, `return_byte`, and
-`reset`:
+Import `StreamCipherInit` to call `init` and `StreamCipher` to call
+`process_bytes`, `return_byte`, and `reset`:
 
 ```rust
-use tc_crypto_core::StreamCipher;
+use tc_cipher_core::{StreamCipher, StreamCipherInit};
 use tc_stream_cipher::{Rc4Engine, Rc4Params, StreamCipherError};
 
 fn main() -> Result<(), StreamCipherError> {

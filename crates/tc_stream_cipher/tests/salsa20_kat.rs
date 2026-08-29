@@ -2,7 +2,7 @@
 //!
 //! Vectors are copied from Bouncy Castle's `Salsa20Test` and `XSalsa20Test`.
 
-use tc_crypto_core::StreamCipher;
+use tc_cipher_core::{StreamCipher, StreamCipherInit};
 use tc_stream_cipher::{
     Salsa20Engine, Salsa20Params, StreamCipherError, Xsalsa20Engine, Xsalsa20Params,
 };

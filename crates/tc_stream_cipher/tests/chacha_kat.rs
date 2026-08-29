@@ -3,7 +3,7 @@
 //! Vectors are copied from Bouncy Castle's `ChaChaTest`, generated with the
 //! eSTREAM ChaCha reference implementation.
 
-use tc_crypto_core::StreamCipher;
+use tc_cipher_core::{StreamCipher, StreamCipherInit};
 use tc_stream_cipher::{ChaChaEngine, ChaChaParams, StreamCipherError};
 
 fn hex(s: &str) -> Vec<u8> {

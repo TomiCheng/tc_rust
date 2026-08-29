@@ -5,7 +5,7 @@
 //!
 //! ```
 //! use tc_stream_cipher::{Rc4Engine, Rc4Params};
-//! use tc_crypto_core::StreamCipher;
+//! use tc_cipher_core::{StreamCipher, StreamCipherInit};
 //!
 //! let params = Rc4Params::new(b"Key").unwrap();
 //! let mut cipher = Rc4Engine::new();
@@ -16,7 +16,7 @@
 //! assert_eq!(out, [0xBB, 0xF3, 0x16, 0xE8, 0xD9, 0x40, 0xAF, 0x0A, 0xD3]);
 //! ```
 
-use tc_crypto_core::StreamCipher;
+use tc_cipher_core::{StreamCipher, StreamCipherInit};
 
 use crate::StreamCipherError;
 
@@ -110,24 +110,10 @@ impl Default for Rc4Engine {
 }
 
 impl StreamCipher for Rc4Engine {
-    type Params<'a> = Rc4Params;
     type Error = StreamCipherError;
 
     fn algorithm_name(&self) -> &str {
         "RC4"
-    }
-
-    fn init(
-        &mut self,
-        _for_encryption: bool,
-        params: &Self::Params<'_>,
-    ) -> Result<(), Self::Error> {
-        // RC4 對稱，for_encryption 無關（加解密同一操作）。
-        self.working_key[..params.key_len].copy_from_slice(params.key());
-        self.key_len = params.key_len;
-        self.set_key();
-        self.initialised = true;
-        Ok(())
     }
 
     fn return_byte(&mut self, input: u8) -> Result<u8, Self::Error> {
@@ -166,5 +152,22 @@ impl StreamCipher for Rc4Engine {
         if self.initialised {
             self.set_key();
         }
+    }
+}
+
+impl StreamCipherInit for Rc4Engine {
+    type Params<'a> = Rc4Params;
+
+    fn init(
+        &mut self,
+        _for_encryption: bool,
+        params: &Self::Params<'_>,
+    ) -> Result<(), Self::Error> {
+        // RC4 對稱，for_encryption 無關（加解密同一操作）。
+        self.working_key[..params.key_len].copy_from_slice(params.key());
+        self.key_len = params.key_len;
+        self.set_key();
+        self.initialised = true;
+        Ok(())
     }
 }

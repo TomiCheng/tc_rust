@@ -4,7 +4,7 @@
 //! For compatibility with the current Bouncy Castle API, this implementation
 //! also accepts a 128-bit key and IVs of at least 128 bits.
 
-use tc_crypto_core::StreamCipher;
+use tc_cipher_core::{StreamCipher, StreamCipherInit};
 
 use crate::StreamCipherError;
 
@@ -196,23 +196,10 @@ impl Default for Hc256Engine {
 }
 
 impl StreamCipher for Hc256Engine {
-    type Params<'a> = Hc256Params;
     type Error = StreamCipherError;
 
     fn algorithm_name(&self) -> &str {
         "HC-256"
-    }
-
-    fn init(
-        &mut self,
-        _for_encryption: bool,
-        params: &Self::Params<'_>,
-    ) -> Result<(), Self::Error> {
-        self.key.copy_from_slice(&params.key);
-        self.iv.copy_from_slice(&params.iv);
-        self.initialize_state();
-        self.initialised = true;
-        Ok(())
     }
 
     fn return_byte(&mut self, input: u8) -> Result<u8, Self::Error> {
@@ -240,5 +227,21 @@ impl StreamCipher for Hc256Engine {
         if self.initialised {
             self.initialize_state();
         }
+    }
+}
+
+impl StreamCipherInit for Hc256Engine {
+    type Params<'a> = Hc256Params;
+
+    fn init(
+        &mut self,
+        _for_encryption: bool,
+        params: &Self::Params<'_>,
+    ) -> Result<(), Self::Error> {
+        self.key.copy_from_slice(&params.key);
+        self.iv.copy_from_slice(&params.iv);
+        self.initialize_state();
+        self.initialised = true;
+        Ok(())
     }
 }
