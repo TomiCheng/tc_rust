@@ -11,7 +11,7 @@ use tc_block_cipher::{
     Gost28147SBox,
 };
 use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
-use tc_cipher_modes::{
+use tc_block_modes::{
     CipherModeError, GofbBlockCipher, GofbParams, OpenPgpCfbBlockCipher, OpenPgpCfbParams,
 };
 
@@ -203,7 +203,7 @@ fn openpgp_cfb_first_block_is_plain_cfb() {
 #[test]
 fn openpgp_cfb_resync_makes_the_third_block_differ_from_plain_cfb() {
     // 重新同步後，第三塊起的暫存器已偏移，密文必定與一般 CFB 不同。
-    use tc_cipher_modes::{CfbBlockCipher, CfbParams};
+    use tc_block_modes::{CfbBlockCipher, CfbParams};
 
     let key = hex("000102030405060708090a0b0c0d0e0f");
     let iv = vec![0u8; AES_BLOCK_BYTES];

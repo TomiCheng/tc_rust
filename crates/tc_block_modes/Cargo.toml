@@ -1,5 +1,5 @@
 [package]
-name = "tc_cipher_modes"
+name = "tc_block_modes"
 description = "Block cipher modes of operation ported from the Bouncy Castle C# library as a learning project."
 version = "0.1.0"
 edition.workspace = true

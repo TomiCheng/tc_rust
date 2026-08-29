@@ -6,7 +6,7 @@
 
 use tc_block_cipher::{AES_BLOCK_BYTES, AesEngine, AesParams, BlockCipherError};
 use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
-use tc_cipher_modes::EcbBlockCipher;
+use tc_block_modes::EcbBlockCipher;
 
 /// Parses a hex string into bytes.
 fn hex(s: &str) -> Vec<u8> {

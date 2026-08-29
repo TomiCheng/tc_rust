@@ -7,7 +7,7 @@
 
 use tc_block_cipher::{AES_BLOCK_BYTES, AesEngine, AesParams};
 use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
-use tc_cipher_modes::{
+use tc_block_modes::{
     CfbBlockCipher, CfbParams, CipherModeError, OfbBlockCipher, OfbParams, SicBlockCipher,
     SicParams,
 };
