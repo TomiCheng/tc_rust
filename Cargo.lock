@@ -508,6 +508,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_cipher_core"
+version = "0.1.0"
+
+[[package]]
 name = "tc_crypto_core"
 version = "0.1.0"
 
@@ -533,6 +537,13 @@ version = "0.1.0"
 dependencies = [
  "criterion",
  "rand_core",
+]
+
+[[package]]
+name = "tc_stream_cipher"
+version = "0.1.0"
+dependencies = [
+ "tc_cipher_core",
 ]
 
 [[package]]
