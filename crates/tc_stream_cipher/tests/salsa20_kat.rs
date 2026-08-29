@@ -17,7 +17,7 @@ fn hex(s: &str) -> Vec<u8> {
 fn salsa_keystream(rounds: usize, key: &[u8], nonce: &[u8], length: usize) -> Vec<u8> {
     let params = Salsa20Params::new(key, nonce).unwrap();
     let mut engine = Salsa20Engine::with_rounds(rounds).unwrap();
-    engine.init(true, &params).unwrap();
+    engine.init(&params).unwrap();
     let mut output = vec![0u8; length];
     engine
         .process_bytes(&vec![0u8; length], &mut output)
@@ -125,7 +125,7 @@ fn xsalsa20_bc_vector() {
 
     let params = Xsalsa20Params::new(&key, &nonce).unwrap();
     let mut engine = Xsalsa20Engine::new();
-    engine.init(true, &params).unwrap();
+    engine.init(&params).unwrap();
     let mut output = vec![0u8; plaintext.len()];
     engine.process_bytes(&plaintext, &mut output).unwrap();
     assert_eq!(output, expected);
@@ -137,7 +137,7 @@ fn xsalsa20_short_bc_vector() {
     let nonce = hex("61ab951921e54ff06d9b77f313a4e49df7a057d5fd627989");
     let params = Xsalsa20Params::new(&key, &nonce).unwrap();
     let mut engine = Xsalsa20Engine::new();
-    engine.init(true, &params).unwrap();
+    engine.init(&params).unwrap();
     let mut output = [0u8; 3];
     engine.process_bytes(&hex("472766"), &mut output).unwrap();
     assert_eq!(output.as_slice(), hex("8fd7df"));
@@ -149,7 +149,7 @@ fn salsa20_reset_chunking_and_single_byte_processing_match() {
     let input = [0x5au8; 193];
     let mut engine = Salsa20Engine::new();
     assert_eq!(engine.algorithm_name(), "Salsa20");
-    engine.init(true, &params).unwrap();
+    engine.init(&params).unwrap();
     let mut bulk = [0u8; 193];
     engine.process_bytes(&input, &mut bulk).unwrap();
 
@@ -177,7 +177,7 @@ fn xsalsa20_reset_and_round_trip() {
     let plaintext = [0x5au8; 193];
     let mut engine = Xsalsa20Engine::new();
     assert_eq!(engine.algorithm_name(), "XSalsa20");
-    engine.init(true, &params).unwrap();
+    engine.init(&params).unwrap();
     let mut ciphertext = [0u8; 193];
     engine.process_bytes(&plaintext, &mut ciphertext).unwrap();
 
@@ -186,7 +186,7 @@ fn xsalsa20_reset_and_round_trip() {
     engine.process_bytes(&plaintext, &mut after_reset).unwrap();
     assert_eq!(after_reset, ciphertext);
 
-    engine.init(false, &params).unwrap();
+    engine.init(&params).unwrap();
     let mut recovered = [0u8; 193];
     engine.process_bytes(&ciphertext, &mut recovered).unwrap();
     assert_eq!(recovered, plaintext);
@@ -236,7 +236,7 @@ fn validates_rounds_parameters_and_runtime_state() {
         engine.return_byte(0),
         Err(StreamCipherError::NotInitialised)
     );
-    engine.init(true, &params).unwrap();
+    engine.init(&params).unwrap();
     assert_eq!(
         engine.process_bytes(&[0u8; 2], &mut [0u8; 1]),
         Err(StreamCipherError::OutputBufferTooShort)

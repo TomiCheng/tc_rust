@@ -16,7 +16,7 @@ fn hex(s: &str) -> Vec<u8> {
 fn keystream(rounds: usize, key: &[u8], nonce: &[u8], length: usize) -> Vec<u8> {
     let params = ChaChaParams::new(key, nonce).unwrap();
     let mut engine = ChaChaEngine::with_rounds(rounds).unwrap();
-    engine.init(true, &params).unwrap();
+    engine.init(&params).unwrap();
     let mut output = vec![0u8; length];
     engine
         .process_bytes(&vec![0u8; length], &mut output)
@@ -117,7 +117,7 @@ fn reset_chunking_and_single_byte_processing_match() {
     let input = [0x5au8; 193];
     let mut engine = ChaChaEngine::new();
     assert_eq!(engine.algorithm_name(), "ChaCha20");
-    engine.init(true, &params).unwrap();
+    engine.init(&params).unwrap();
     let mut bulk = [0u8; 193];
     engine.process_bytes(&input, &mut bulk).unwrap();
 
@@ -144,11 +144,11 @@ fn encrypt_decrypt_round_trips() {
     let params = ChaChaParams::new(&[0x33; 16], &[0x44; 8]).unwrap();
     let plaintext = b"Original ChaCha uses a 64-bit nonce and counter";
     let mut engine = ChaChaEngine::new();
-    engine.init(true, &params).unwrap();
+    engine.init(&params).unwrap();
     let mut ciphertext = vec![0u8; plaintext.len()];
     engine.process_bytes(plaintext, &mut ciphertext).unwrap();
 
-    engine.init(false, &params).unwrap();
+    engine.init(&params).unwrap();
     let mut recovered = vec![0u8; plaintext.len()];
     engine.process_bytes(&ciphertext, &mut recovered).unwrap();
     assert_eq!(recovered, plaintext);
@@ -187,7 +187,7 @@ fn validates_rounds_parameters_and_runtime_state() {
         engine.return_byte(0),
         Err(StreamCipherError::NotInitialised)
     );
-    engine.init(true, &params).unwrap();
+    engine.init(&params).unwrap();
     assert_eq!(
         engine.process_bytes(&[0u8; 2], &mut [0u8; 1]),
         Err(StreamCipherError::OutputBufferTooShort)

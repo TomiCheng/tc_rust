@@ -127,11 +127,7 @@ impl StreamCipher for Salsa20Engine {
 impl StreamCipherInit for Salsa20Engine {
     type Params<'a> = Salsa20Params;
 
-    fn init(
-        &mut self,
-        _for_encryption: bool,
-        params: &Self::Params<'_>,
-    ) -> Result<(), Self::Error> {
+    fn init(&mut self, params: &Self::Params<'_>) -> Result<(), Self::Error> {
         self.core.init_salsa20(params.key(), &params.nonce);
         Ok(())
     }

@@ -17,7 +17,7 @@ fn hex(s: &str) -> Vec<u8> {
 
 fn encrypt(key: &[u8], input: &[u8]) -> Vec<u8> {
     let mut engine = Rc4Engine::new();
-    engine.init(true, &Rc4Params::new(key).unwrap()).unwrap();
+    engine.init(&Rc4Params::new(key).unwrap()).unwrap();
     let mut out = vec![0u8; input.len()];
     let n = engine.process_bytes(input, &mut out).unwrap();
     assert_eq!(n, input.len());
@@ -71,7 +71,7 @@ fn decrypt_round_trips() {
 #[test]
 fn reset_restarts_keystream() {
     let mut engine = Rc4Engine::new();
-    engine.init(true, &Rc4Params::new(b"Key").unwrap()).unwrap();
+    engine.init(&Rc4Params::new(b"Key").unwrap()).unwrap();
 
     let mut first = [0u8; 9];
     engine.process_bytes(b"Plaintext", &mut first).unwrap();
@@ -89,12 +89,12 @@ fn return_byte_matches_process_bytes() {
     let input = b"Plaintext and more";
 
     let mut bulk = Rc4Engine::new();
-    bulk.init(true, &key).unwrap();
+    bulk.init(&key).unwrap();
     let mut bulk_out = vec![0u8; input.len()];
     bulk.process_bytes(input, &mut bulk_out).unwrap();
 
     let mut single = Rc4Engine::new();
-    single.init(true, &key).unwrap();
+    single.init(&key).unwrap();
     let byte_out: Vec<u8> = input
         .iter()
         .map(|&b| single.return_byte(b).unwrap())
@@ -107,7 +107,7 @@ fn return_byte_matches_process_bytes() {
 fn initialized_engine_supports_dynamic_dispatch() {
     let params = Rc4Params::new(b"Key").unwrap();
     let mut engine = Rc4Engine::new();
-    engine.init(true, &params).unwrap();
+    engine.init(&params).unwrap();
 
     let mut cipher: Box<dyn StreamCipher<Error = StreamCipherError>> = Box::new(engine);
     let mut output = [0u8; 9];
@@ -135,7 +135,7 @@ fn errors_before_init_and_on_short_output() {
     );
 
     // 輸出緩衝太短。
-    engine.init(true, &Rc4Params::new(b"Key").unwrap()).unwrap();
+    engine.init(&Rc4Params::new(b"Key").unwrap()).unwrap();
     let mut short = [0u8; 2];
     assert_eq!(
         engine.process_bytes(b"data", &mut short),

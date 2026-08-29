@@ -1,7 +1,7 @@
 //! RC4 stream cipher, ported from Bouncy Castle's `RC4Engine`.
 //!
 //! RC4 is a symmetric stream cipher: encryption and decryption are the same
-//! operation (XOR with the keystream), so the `for_encryption` flag is ignored.
+//! operation (XOR with the keystream).
 //!
 //! ```
 //! use tc_stream_cipher::{Rc4Engine, Rc4Params};
@@ -9,7 +9,7 @@
 //!
 //! let params = Rc4Params::new(b"Key").unwrap();
 //! let mut cipher = Rc4Engine::new();
-//! cipher.init(true, &params).unwrap();
+//! cipher.init(&params).unwrap();
 //!
 //! let mut out = [0u8; 9];
 //! cipher.process_bytes(b"Plaintext", &mut out).unwrap();
@@ -158,12 +158,7 @@ impl StreamCipher for Rc4Engine {
 impl StreamCipherInit for Rc4Engine {
     type Params<'a> = Rc4Params;
 
-    fn init(
-        &mut self,
-        _for_encryption: bool,
-        params: &Self::Params<'_>,
-    ) -> Result<(), Self::Error> {
-        // RC4 對稱，for_encryption 無關（加解密同一操作）。
+    fn init(&mut self, params: &Self::Params<'_>) -> Result<(), Self::Error> {
         self.working_key[..params.key_len].copy_from_slice(params.key());
         self.key_len = params.key_len;
         self.set_key();

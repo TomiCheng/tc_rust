@@ -98,11 +98,7 @@ impl StreamCipher for ChaCha7539Engine {
 impl StreamCipherInit for ChaCha7539Engine {
     type Params<'a> = ChaCha7539Params;
 
-    fn init(
-        &mut self,
-        _for_encryption: bool,
-        params: &Self::Params<'_>,
-    ) -> Result<(), Self::Error> {
+    fn init(&mut self, params: &Self::Params<'_>) -> Result<(), Self::Error> {
         self.core.init_ietf(&params.key, &params.nonce);
         Ok(())
     }

@@ -16,7 +16,7 @@ fn hex(s: &str) -> Vec<u8> {
 fn keystream(key: &[u8], length: usize) -> Vec<u8> {
     let params = IsaacParams::new(key).unwrap();
     let mut engine = IsaacEngine::new();
-    engine.init(true, &params).unwrap();
+    engine.init(&params).unwrap();
     let mut output = vec![0u8; length];
     assert_eq!(
         engine.process_bytes(&vec![0u8; length], &mut output),
@@ -81,7 +81,7 @@ fn reset_chunking_and_single_byte_processing_match() {
 
     let mut engine = IsaacEngine::new();
     assert_eq!(engine.algorithm_name(), "ISAAC");
-    engine.init(true, &params).unwrap();
+    engine.init(&params).unwrap();
     let mut bulk = vec![0u8; input.len()];
     engine.process_bytes(&input, &mut bulk).unwrap();
 
@@ -112,11 +112,11 @@ fn encrypt_decrypt_round_trips() {
     let plaintext = b"ISAAC encryption and decryption use the same operation";
     let mut engine = IsaacEngine::new();
 
-    engine.init(true, &params).unwrap();
+    engine.init(&params).unwrap();
     let mut ciphertext = vec![0u8; plaintext.len()];
     engine.process_bytes(plaintext, &mut ciphertext).unwrap();
 
-    engine.init(false, &params).unwrap();
+    engine.init(&params).unwrap();
     let mut recovered = vec![0u8; plaintext.len()];
     engine.process_bytes(&ciphertext, &mut recovered).unwrap();
     assert_eq!(recovered, plaintext);
@@ -144,7 +144,7 @@ fn validates_parameters_and_runtime_state() {
         Err(StreamCipherError::NotInitialised)
     );
 
-    engine.init(true, &params).unwrap();
+    engine.init(&params).unwrap();
     assert_eq!(
         engine.process_bytes(&[0u8; 2], &mut [0u8; 1]),
         Err(StreamCipherError::OutputBufferTooShort)

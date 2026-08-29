@@ -16,7 +16,7 @@ fn hex(s: &str) -> Vec<u8> {
 fn hc128_keystream(key: &[u8], iv: &[u8], length: usize) -> Vec<u8> {
     let params = Hc128Params::new(key, iv).unwrap();
     let mut engine = Hc128Engine::new();
-    engine.init(true, &params).unwrap();
+    engine.init(&params).unwrap();
     let mut output = vec![0u8; length];
     assert_eq!(
         engine.process_bytes(&vec![0u8; length], &mut output),
@@ -28,7 +28,7 @@ fn hc128_keystream(key: &[u8], iv: &[u8], length: usize) -> Vec<u8> {
 fn hc256_keystream(key: &[u8], iv: &[u8], length: usize) -> Vec<u8> {
     let params = Hc256Params::new(key, iv).unwrap();
     let mut engine = Hc256Engine::new();
-    engine.init(true, &params).unwrap();
+    engine.init(&params).unwrap();
     let mut output = vec![0u8; length];
     assert_eq!(
         engine.process_bytes(&vec![0u8; length], &mut output),
@@ -109,7 +109,7 @@ fn hc128_reset_chunking_and_single_byte_processing_match() {
 
     let mut engine = Hc128Engine::new();
     assert_eq!(engine.algorithm_name(), "HC-128");
-    engine.init(true, &params).unwrap();
+    engine.init(&params).unwrap();
     let mut bulk = [0u8; 97];
     engine.process_bytes(&input, &mut bulk).unwrap();
 
@@ -138,7 +138,7 @@ fn hc256_reset_chunking_and_single_byte_processing_match() {
 
     let mut engine = Hc256Engine::new();
     assert_eq!(engine.algorithm_name(), "HC-256");
-    engine.init(true, &params).unwrap();
+    engine.init(&params).unwrap();
     let mut bulk = [0u8; 97];
     engine.process_bytes(&input, &mut bulk).unwrap();
 
@@ -166,10 +166,10 @@ fn hc_family_encrypt_decrypt_round_trips() {
 
     let params128 = Hc128Params::new(&[0x11; 16], &[0x22; 16]).unwrap();
     let mut hc128 = Hc128Engine::new();
-    hc128.init(true, &params128).unwrap();
+    hc128.init(&params128).unwrap();
     let mut ciphertext128 = vec![0u8; plaintext.len()];
     hc128.process_bytes(plaintext, &mut ciphertext128).unwrap();
-    hc128.init(false, &params128).unwrap();
+    hc128.init(&params128).unwrap();
     let mut recovered128 = vec![0u8; plaintext.len()];
     hc128
         .process_bytes(&ciphertext128, &mut recovered128)
@@ -178,10 +178,10 @@ fn hc_family_encrypt_decrypt_round_trips() {
 
     let params256 = Hc256Params::new(&[0x33; 32], &[0x44; 32]).unwrap();
     let mut hc256 = Hc256Engine::new();
-    hc256.init(true, &params256).unwrap();
+    hc256.init(&params256).unwrap();
     let mut ciphertext256 = vec![0u8; plaintext.len()];
     hc256.process_bytes(plaintext, &mut ciphertext256).unwrap();
-    hc256.init(false, &params256).unwrap();
+    hc256.init(&params256).unwrap();
     let mut recovered256 = vec![0u8; plaintext.len()];
     hc256
         .process_bytes(&ciphertext256, &mut recovered256)
@@ -208,7 +208,7 @@ fn hc128_validates_parameters_and_runtime_state() {
         engine.return_byte(0),
         Err(StreamCipherError::NotInitialised)
     );
-    engine.init(true, &params).unwrap();
+    engine.init(&params).unwrap();
     assert_eq!(
         engine.process_bytes(&[0u8; 2], &mut [0u8; 1]),
         Err(StreamCipherError::OutputBufferTooShort)
@@ -234,7 +234,7 @@ fn hc256_validates_parameters_and_runtime_state() {
         engine.return_byte(0),
         Err(StreamCipherError::NotInitialised)
     );
-    engine.init(true, &params).unwrap();
+    engine.init(&params).unwrap();
     assert_eq!(
         engine.process_bytes(&[0u8; 2], &mut [0u8; 1]),
         Err(StreamCipherError::OutputBufferTooShort)

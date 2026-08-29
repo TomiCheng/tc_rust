@@ -221,11 +221,7 @@ impl StreamCipher for Hc128Engine {
 impl StreamCipherInit for Hc128Engine {
     type Params<'a> = Hc128Params;
 
-    fn init(
-        &mut self,
-        _for_encryption: bool,
-        params: &Self::Params<'_>,
-    ) -> Result<(), Self::Error> {
+    fn init(&mut self, params: &Self::Params<'_>) -> Result<(), Self::Error> {
         self.key.copy_from_slice(&params.key);
         self.iv.copy_from_slice(&params.iv);
         self.initialize_state();

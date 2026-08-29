@@ -259,11 +259,7 @@ impl StreamCipher for IsaacEngine {
 impl StreamCipherInit for IsaacEngine {
     type Params<'a> = IsaacParams;
 
-    fn init(
-        &mut self,
-        _for_encryption: bool,
-        params: &Self::Params<'_>,
-    ) -> Result<(), Self::Error> {
+    fn init(&mut self, params: &Self::Params<'_>) -> Result<(), Self::Error> {
         self.working_key[..params.key_len].copy_from_slice(params.key());
         self.key_len = params.key_len;
         self.initialize_state();

@@ -127,11 +127,7 @@ impl StreamCipher for ChaChaEngine {
 impl StreamCipherInit for ChaChaEngine {
     type Params<'a> = ChaChaParams;
 
-    fn init(
-        &mut self,
-        _for_encryption: bool,
-        params: &Self::Params<'_>,
-    ) -> Result<(), Self::Error> {
+    fn init(&mut self, params: &Self::Params<'_>) -> Result<(), Self::Error> {
         self.core.init_original(params.key(), &params.nonce);
         Ok(())
     }

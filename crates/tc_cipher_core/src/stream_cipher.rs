@@ -36,10 +36,7 @@ pub trait StreamCipherInit: StreamCipher {
 
     /// Initializes the cipher with the supplied parameters.
     ///
-    /// Most stream ciphers use the same operation for encryption and
-    /// decryption, but `for_encryption` is retained for algorithms that need to
-    /// distinguish the direction.
-    fn init(&mut self, for_encryption: bool, params: &Self::Params<'_>) -> Result<(), Self::Error>;
+    fn init(&mut self, params: &Self::Params<'_>) -> Result<(), Self::Error>;
 }
 
 #[cfg(test)]
@@ -85,11 +82,7 @@ mod tests {
     impl StreamCipherInit for TestCipher {
         type Params<'a> = TestParams<'a>;
 
-        fn init(
-            &mut self,
-            _for_encryption: bool,
-            params: &Self::Params<'_>,
-        ) -> Result<(), Self::Error> {
+        fn init(&mut self, params: &Self::Params<'_>) -> Result<(), Self::Error> {
             self.key_byte = params.key[0];
             Ok(())
         }
@@ -99,7 +92,7 @@ mod tests {
     fn initialized_cipher_supports_dynamic_dispatch() {
         let mut concrete = TestCipher::default();
         let params = TestParams { key: &[0xa5] };
-        concrete.init(true, &params).unwrap();
+        concrete.init(&params).unwrap();
 
         let mut cipher: Box<dyn StreamCipher<Error = Infallible>> = Box::new(concrete);
         let mut output = [0_u8; 3];

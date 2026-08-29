@@ -8,9 +8,8 @@ from the Bouncy Castle C# engine package. All engines implement the
 [`tc_cipher_core`](../tc_cipher_core).
 
 A stream cipher generates a keystream and XORs it with the input. Encryption
-and decryption are therefore normally the same operation, but the
-`for_encryption` argument is retained for parity with Bouncy Castle's
-`IStreamCipher` interface.
+and decryption are therefore the same operation, so initialization does not
+take a direction parameter.
 
 The crate supports `no_std` without requiring `alloc`. Parameter types own
 their key and nonce material in fixed-size storage, and their `Debug`
@@ -43,13 +42,13 @@ fn main() -> Result<(), StreamCipherError> {
     let plaintext = b"Plaintext";
 
     let mut cipher = Rc4Engine::new();
-    cipher.init(true, &params)?;
+    cipher.init(&params)?;
 
     let mut ciphertext = [0u8; 9];
     let written = cipher.process_bytes(plaintext, &mut ciphertext)?;
     assert_eq!(written, plaintext.len());
 
-    cipher.init(false, &params)?;
+    cipher.init(&params)?;
 
     let mut recovered = [0u8; 9];
     cipher.process_bytes(&ciphertext, &mut recovered)?;

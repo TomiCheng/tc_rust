@@ -231,11 +231,7 @@ impl StreamCipher for VmpcEngine {
 impl StreamCipherInit for VmpcEngine {
     type Params<'a> = VmpcParams;
 
-    fn init(
-        &mut self,
-        _for_encryption: bool,
-        params: &Self::Params<'_>,
-    ) -> Result<(), Self::Error> {
+    fn init(&mut self, params: &Self::Params<'_>) -> Result<(), Self::Error> {
         self.core.init(params);
         Ok(())
     }
@@ -284,11 +280,7 @@ impl StreamCipher for VmpcKsa3Engine {
 impl StreamCipherInit for VmpcKsa3Engine {
     type Params<'a> = VmpcParams;
 
-    fn init(
-        &mut self,
-        _for_encryption: bool,
-        params: &Self::Params<'_>,
-    ) -> Result<(), Self::Error> {
+    fn init(&mut self, params: &Self::Params<'_>) -> Result<(), Self::Error> {
         self.core.init(params);
         Ok(())
     }

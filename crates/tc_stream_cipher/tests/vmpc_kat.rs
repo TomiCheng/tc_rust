@@ -31,7 +31,7 @@ fn vmpc_matches_bc_million_byte_vector() {
     let mut output = vec![0u8; input.len()];
     let mut engine = VmpcEngine::new();
     assert_eq!(engine.algorithm_name(), "VMPC");
-    engine.init(true, &params).unwrap();
+    engine.init(&params).unwrap();
     engine.process_bytes(&input, &mut output).unwrap();
 
     assert_positions(
@@ -61,7 +61,7 @@ fn vmpc_matches_bc_million_byte_vector() {
     engine.process_bytes(&input, &mut after_reset).unwrap();
     assert_eq!(after_reset, output);
 
-    engine.init(false, &params).unwrap();
+    engine.init(&params).unwrap();
     let mut recovered = vec![0u8; output.len()];
     engine.process_bytes(&output, &mut recovered).unwrap();
     assert_eq!(recovered, input);
@@ -74,7 +74,7 @@ fn vmpc_ksa3_matches_bc_million_byte_vector() {
     let mut output = vec![0u8; input.len()];
     let mut engine = VmpcKsa3Engine::new();
     assert_eq!(engine.algorithm_name(), "VMPC-KSA3");
-    engine.init(true, &params).unwrap();
+    engine.init(&params).unwrap();
     engine.process_bytes(&input, &mut output).unwrap();
 
     assert_positions(
@@ -104,7 +104,7 @@ fn vmpc_ksa3_matches_bc_million_byte_vector() {
     engine.process_bytes(&input, &mut after_reset).unwrap();
     assert_eq!(after_reset, output);
 
-    engine.init(false, &params).unwrap();
+    engine.init(&params).unwrap();
     let mut recovered = vec![0u8; output.len()];
     engine.process_bytes(&output, &mut recovered).unwrap();
     assert_eq!(recovered, input);
@@ -116,12 +116,12 @@ fn vmpc_bulk_chunked_and_single_byte_processing_match() {
     let input = [0x5au8; 777];
 
     let mut bulk_engine = VmpcEngine::new();
-    bulk_engine.init(true, &params).unwrap();
+    bulk_engine.init(&params).unwrap();
     let mut bulk = [0u8; 777];
     bulk_engine.process_bytes(&input, &mut bulk).unwrap();
 
     let mut chunked_engine = VmpcEngine::new();
-    chunked_engine.init(true, &params).unwrap();
+    chunked_engine.init(&params).unwrap();
     let mut chunked = [0u8; 777];
     for (source, destination) in input.chunks(63).zip(chunked.chunks_mut(63)) {
         chunked_engine.process_bytes(source, destination).unwrap();
@@ -129,7 +129,7 @@ fn vmpc_bulk_chunked_and_single_byte_processing_match() {
     assert_eq!(chunked, bulk);
 
     let mut byte_engine = VmpcEngine::new();
-    byte_engine.init(true, &params).unwrap();
+    byte_engine.init(&params).unwrap();
     let single: Vec<u8> = input
         .iter()
         .map(|&byte| byte_engine.return_byte(byte).unwrap())
@@ -166,7 +166,7 @@ fn validates_vmpc_parameters_and_runtime_state() {
         engine.process_bytes(&[0u8; 1], &mut [0u8; 1]),
         Err(StreamCipherError::NotInitialised)
     );
-    engine.init(true, &params()).unwrap();
+    engine.init(&params()).unwrap();
     assert_eq!(
         engine.process_bytes(&[0u8; 2], &mut [0u8; 1]),
         Err(StreamCipherError::OutputBufferTooShort)

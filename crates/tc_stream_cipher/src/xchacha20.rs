@@ -110,11 +110,7 @@ impl StreamCipher for XChaCha20Engine {
 impl StreamCipherInit for XChaCha20Engine {
     type Params<'a> = XChaCha20Params;
 
-    fn init(
-        &mut self,
-        _for_encryption: bool,
-        params: &Self::Params<'_>,
-    ) -> Result<(), Self::Error> {
+    fn init(&mut self, params: &Self::Params<'_>) -> Result<(), Self::Error> {
         self.initialize(params);
         Ok(())
     }

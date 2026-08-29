@@ -32,7 +32,7 @@ fn chacha7539_matches_rfc_8439_encryption_vector() {
 
     let params = ChaCha7539Params::new(&key, &nonce).unwrap();
     let mut engine = ChaCha7539Engine::new();
-    engine.init(true, &params).unwrap();
+    engine.init(&params).unwrap();
 
     // RFC 8439 starts this vector at block counter 1. The BC stream engine
     // starts at zero, so consume block zero before encrypting the plaintext.
@@ -49,7 +49,7 @@ fn chacha7539_reset_chunking_and_round_trip_match() {
     let input = [0x5au8; 193];
     let mut engine = ChaCha7539Engine::new();
     assert_eq!(engine.algorithm_name(), "ChaCha7539");
-    engine.init(true, &params).unwrap();
+    engine.init(&params).unwrap();
 
     let mut bulk = [0u8; 193];
     engine.process_bytes(&input, &mut bulk).unwrap();
@@ -64,7 +64,7 @@ fn chacha7539_reset_chunking_and_round_trip_match() {
         .unwrap();
     assert_eq!(chunked, bulk);
 
-    engine.init(false, &params).unwrap();
+    engine.init(&params).unwrap();
     let mut recovered = [0u8; 193];
     engine.process_bytes(&bulk, &mut recovered).unwrap();
     assert_eq!(recovered, input);
@@ -94,7 +94,7 @@ fn xchacha20_matches_bc_draft_stream_vector() {
 
     let params = XChaCha20Params::new(&key, &nonce).unwrap();
     let mut engine = XChaCha20Engine::new();
-    engine.init(true, &params).unwrap();
+    engine.init(&params).unwrap();
 
     // The AEAD vector reserves block zero for the Poly1305 key.
     let mut input = vec![0u8; 64 + plaintext.len()];
@@ -103,7 +103,7 @@ fn xchacha20_matches_bc_draft_stream_vector() {
     engine.process_bytes(&input, &mut output).unwrap();
     assert_eq!(&output[64..], expected);
 
-    engine.init(false, &params).unwrap();
+    engine.init(&params).unwrap();
     let mut recovered = vec![0u8; output.len()];
     engine.process_bytes(&output, &mut recovered).unwrap();
     assert_eq!(recovered, input);
@@ -115,7 +115,7 @@ fn xchacha20_reset_chunking_and_single_byte_processing_match() {
     let input = [0xa5u8; 257];
     let mut engine = XChaCha20Engine::new();
     assert_eq!(engine.algorithm_name(), "XChaCha20");
-    engine.init(true, &params).unwrap();
+    engine.init(&params).unwrap();
 
     let mut bulk = [0u8; 257];
     engine.process_bytes(&input, &mut bulk).unwrap();
@@ -166,7 +166,7 @@ fn validates_chacha7539_and_xchacha20_parameters_and_runtime_state() {
         Err(StreamCipherError::NotInitialised)
     );
     let params = ChaCha7539Params::new(&[0u8; 32], &[0u8; 12]).unwrap();
-    engine.init(true, &params).unwrap();
+    engine.init(&params).unwrap();
     assert_eq!(
         engine.process_bytes(&[0u8; 2], &mut [0u8; 1]),
         Err(StreamCipherError::OutputBufferTooShort)
