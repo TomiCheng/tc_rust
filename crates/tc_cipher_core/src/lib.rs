@@ -6,6 +6,8 @@
 
 #![no_std]
 
+mod block_cipher;
 mod stream_cipher;
 
+pub use block_cipher::{BlockCipher, BlockCipherInit, CipherDirection};
 pub use stream_cipher::{StreamCipher, StreamCipherInit};
