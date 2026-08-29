@@ -512,6 +512,14 @@ name = "tc_cipher_core"
 version = "0.1.0"
 
 [[package]]
+name = "tc_cipher_modes"
+version = "0.1.0"
+dependencies = [
+ "tc_block_cipher",
+ "tc_cipher_core",
+]
+
+[[package]]
 name = "tc_crypto_core"
 version = "0.1.0"
 
