@@ -5,7 +5,7 @@
 //! checks reset, `return_byte`/`process_bytes` consistency, and error paths.
 
 use tc_crypto_core::StreamCipher;
-use tc_stream_cipher::{Rc4Engine, Rc4Error, Rc4Params};
+use tc_stream_cipher::{Rc4Engine, Rc4Params, StreamCipherError};
 
 /// Parses a hex string into bytes.
 fn hex(s: &str) -> Vec<u8> {
@@ -107,11 +107,14 @@ fn return_byte_matches_process_bytes() {
 fn errors_before_init_and_on_short_output() {
     let mut engine = Rc4Engine::new();
     // 尚未 init。
-    assert_eq!(engine.return_byte(0), Err(Rc4Error::NotInitialised));
+    assert_eq!(
+        engine.return_byte(0),
+        Err(StreamCipherError::NotInitialised)
+    );
     let mut out = [0u8; 4];
     assert_eq!(
         engine.process_bytes(b"data", &mut out),
-        Err(Rc4Error::NotInitialised)
+        Err(StreamCipherError::NotInitialised)
     );
 
     // 輸出緩衝太短。
@@ -119,12 +122,12 @@ fn errors_before_init_and_on_short_output() {
     let mut short = [0u8; 2];
     assert_eq!(
         engine.process_bytes(b"data", &mut short),
-        Err(Rc4Error::OutputBufferTooShort)
+        Err(StreamCipherError::OutputBufferTooShort)
     );
 
     // 無效金鑰長度。
     assert_eq!(
         Rc4Params::new(&[]).unwrap_err(),
-        Rc4Error::InvalidKeyLength(0)
+        StreamCipherError::InvalidKeyLength(0)
     );
 }

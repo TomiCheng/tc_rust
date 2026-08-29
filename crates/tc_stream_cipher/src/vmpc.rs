@@ -7,6 +7,8 @@
 
 use tc_crypto_core::StreamCipher;
 
+use crate::StreamCipherError;
+
 const STATE_BYTES: usize = 256;
 const KSA_STEPS: usize = 768;
 
@@ -32,12 +34,12 @@ pub struct VmpcParams {
 
 impl VmpcParams {
     /// Validates and copies a 16-64 byte key and 16-64 byte IV.
-    pub fn new(key: &[u8], iv: &[u8]) -> Result<Self, VmpcError> {
+    pub fn new(key: &[u8], iv: &[u8]) -> Result<Self, StreamCipherError> {
         if !(VMPC_MIN_KEY_BYTES..=VMPC_MAX_KEY_BYTES).contains(&key.len()) {
-            return Err(VmpcError::InvalidKeyLength(key.len()));
+            return Err(StreamCipherError::InvalidKeyLength(key.len()));
         }
         if !(VMPC_MIN_IV_BYTES..=VMPC_MAX_IV_BYTES).contains(&iv.len()) {
-            return Err(VmpcError::InvalidIvLength(iv.len()));
+            return Err(StreamCipherError::InvalidIvLength(iv.len()));
         }
 
         let mut owned_key = [0u8; VMPC_MAX_KEY_BYTES];
@@ -69,36 +71,6 @@ impl core::fmt::Debug for VmpcParams {
             .finish()
     }
 }
-
-/// Errors returned by VMPC configuration and processing.
-#[derive(Debug, PartialEq, Eq)]
-pub enum VmpcError {
-    /// The key length is outside 16-64 bytes.
-    InvalidKeyLength(usize),
-    /// The IV length is outside 16-64 bytes.
-    InvalidIvLength(usize),
-    /// A data method was called before initialization.
-    NotInitialised,
-    /// The output buffer is shorter than the input.
-    OutputBufferTooShort,
-}
-
-impl core::fmt::Display for VmpcError {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        match self {
-            Self::InvalidKeyLength(actual) => {
-                write!(f, "VMPC key length {actual} is not in 16..=64 bytes")
-            }
-            Self::InvalidIvLength(actual) => {
-                write!(f, "VMPC IV length {actual} is not in 16..=64 bytes")
-            }
-            Self::NotInitialised => f.write_str("VMPC engine not initialised"),
-            Self::OutputBufferTooShort => f.write_str("output buffer shorter than input"),
-        }
-    }
-}
-
-impl core::error::Error for VmpcError {}
 
 struct VmpcCore {
     state: [u8; STATE_BYTES],
@@ -162,19 +134,23 @@ impl VmpcCore {
         }
     }
 
-    fn return_byte(&mut self, input: u8) -> Result<u8, VmpcError> {
+    fn return_byte(&mut self, input: u8) -> Result<u8, StreamCipherError> {
         if !self.initialised {
-            return Err(VmpcError::NotInitialised);
+            return Err(StreamCipherError::NotInitialised);
         }
         Ok(input ^ self.next_keystream_byte())
     }
 
-    fn process_bytes(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, VmpcError> {
+    fn process_bytes(
+        &mut self,
+        input: &[u8],
+        output: &mut [u8],
+    ) -> Result<usize, StreamCipherError> {
         if !self.initialised {
-            return Err(VmpcError::NotInitialised);
+            return Err(StreamCipherError::NotInitialised);
         }
         if output.len() < input.len() {
-            return Err(VmpcError::OutputBufferTooShort);
+            return Err(StreamCipherError::OutputBufferTooShort);
         }
         for (source, destination) in input.iter().zip(output.iter_mut()) {
             *destination = *source ^ self.next_keystream_byte();
@@ -234,7 +210,7 @@ impl Default for VmpcEngine {
 
 impl StreamCipher for VmpcEngine {
     type Params<'a> = VmpcParams;
-    type Error = VmpcError;
+    type Error = StreamCipherError;
 
     fn algorithm_name(&self) -> &str {
         "VMPC"
@@ -284,7 +260,7 @@ impl Default for VmpcKsa3Engine {
 
 impl StreamCipher for VmpcKsa3Engine {
     type Params<'a> = VmpcParams;
-    type Error = VmpcError;
+    type Error = StreamCipherError;
 
     fn algorithm_name(&self) -> &str {
         "VMPC-KSA3"

@@ -4,7 +4,7 @@
 //! cites Bob Jenkins' ISAAC reference material.
 
 use tc_crypto_core::StreamCipher;
-use tc_stream_cipher::{ISAAC_MAX_KEY_BYTES, IsaacEngine, IsaacError, IsaacParams};
+use tc_stream_cipher::{ISAAC_MAX_KEY_BYTES, IsaacEngine, IsaacParams, StreamCipherError};
 
 fn hex(s: &str) -> Vec<u8> {
     (0..s.len())
@@ -126,7 +126,7 @@ fn encrypt_decrypt_round_trips() {
 fn validates_parameters_and_runtime_state() {
     assert_eq!(
         IsaacParams::new(&[0u8; ISAAC_MAX_KEY_BYTES + 1]).unwrap_err(),
-        IsaacError::InvalidKeyLength(ISAAC_MAX_KEY_BYTES + 1)
+        StreamCipherError::InvalidKeyLength(ISAAC_MAX_KEY_BYTES + 1)
     );
 
     let params = IsaacParams::new(b"secret material").unwrap();
@@ -135,15 +135,18 @@ fn validates_parameters_and_runtime_state() {
     assert!(!debug.contains("secret material"));
 
     let mut engine = IsaacEngine::new();
-    assert_eq!(engine.return_byte(0), Err(IsaacError::NotInitialised));
+    assert_eq!(
+        engine.return_byte(0),
+        Err(StreamCipherError::NotInitialised)
+    );
     assert_eq!(
         engine.process_bytes(&[0u8; 2], &mut [0u8; 2]),
-        Err(IsaacError::NotInitialised)
+        Err(StreamCipherError::NotInitialised)
     );
 
     engine.init(true, &params).unwrap();
     assert_eq!(
         engine.process_bytes(&[0u8; 2], &mut [0u8; 1]),
-        Err(IsaacError::OutputBufferTooShort)
+        Err(StreamCipherError::OutputBufferTooShort)
     );
 }

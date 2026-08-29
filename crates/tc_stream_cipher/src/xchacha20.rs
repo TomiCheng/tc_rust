@@ -6,8 +6,9 @@
 
 use tc_crypto_core::StreamCipher;
 
-use crate::chacha::{
-    CHACHA_DEFAULT_ROUNDS, ChaChaCore, ChaChaError, chacha_permutation, set_chacha_key,
+use crate::{
+    StreamCipherError,
+    chacha::{CHACHA_DEFAULT_ROUNDS, ChaChaCore, chacha_permutation, set_chacha_key},
 };
 
 /// XChaCha20 key size in bytes.
@@ -24,12 +25,12 @@ pub struct XChaCha20Params {
 
 impl XChaCha20Params {
     /// Validates and copies a 32-byte key and 24-byte nonce.
-    pub fn new(key: &[u8], nonce: &[u8]) -> Result<Self, ChaChaError> {
+    pub fn new(key: &[u8], nonce: &[u8]) -> Result<Self, StreamCipherError> {
         if key.len() != XCHACHA20_KEY_BYTES {
-            return Err(ChaChaError::InvalidKeyLength(key.len()));
+            return Err(StreamCipherError::InvalidKeyLength(key.len()));
         }
         if nonce.len() != XCHACHA20_NONCE_BYTES {
-            return Err(ChaChaError::InvalidNonceLength {
+            return Err(StreamCipherError::InvalidNonceLength {
                 expected: XCHACHA20_NONCE_BYTES,
                 actual: nonce.len(),
             });
@@ -88,7 +89,7 @@ impl Default for XChaCha20Engine {
 
 impl StreamCipher for XChaCha20Engine {
     type Params<'a> = XChaCha20Params;
-    type Error = ChaChaError;
+    type Error = StreamCipherError;
 
     fn algorithm_name(&self) -> &str {
         "XChaCha20"

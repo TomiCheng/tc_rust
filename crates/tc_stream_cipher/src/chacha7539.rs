@@ -5,7 +5,10 @@
 
 use tc_crypto_core::StreamCipher;
 
-use crate::chacha::{CHACHA_DEFAULT_ROUNDS, ChaChaCore, ChaChaError};
+use crate::{
+    StreamCipherError,
+    chacha::{CHACHA_DEFAULT_ROUNDS, ChaChaCore},
+};
 
 /// ChaCha7539 key size in bytes.
 pub const CHACHA7539_KEY_BYTES: usize = 32;
@@ -21,12 +24,12 @@ pub struct ChaCha7539Params {
 
 impl ChaCha7539Params {
     /// Validates and copies a 32-byte key and 12-byte nonce.
-    pub fn new(key: &[u8], nonce: &[u8]) -> Result<Self, ChaChaError> {
+    pub fn new(key: &[u8], nonce: &[u8]) -> Result<Self, StreamCipherError> {
         if key.len() != CHACHA7539_KEY_BYTES {
-            return Err(ChaChaError::InvalidKeyLength(key.len()));
+            return Err(StreamCipherError::InvalidKeyLength(key.len()));
         }
         if nonce.len() != CHACHA7539_NONCE_BYTES {
-            return Err(ChaChaError::InvalidNonceLength {
+            return Err(StreamCipherError::InvalidNonceLength {
                 expected: CHACHA7539_NONCE_BYTES,
                 actual: nonce.len(),
             });
@@ -74,7 +77,7 @@ impl Default for ChaCha7539Engine {
 
 impl StreamCipher for ChaCha7539Engine {
     type Params<'a> = ChaCha7539Params;
-    type Error = ChaChaError;
+    type Error = StreamCipherError;
 
     fn algorithm_name(&self) -> &str {
         "ChaCha7539"

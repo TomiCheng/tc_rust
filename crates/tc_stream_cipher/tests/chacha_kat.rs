@@ -4,7 +4,7 @@
 //! eSTREAM ChaCha reference implementation.
 
 use tc_crypto_core::StreamCipher;
-use tc_stream_cipher::{ChaChaEngine, ChaChaError, ChaChaParams};
+use tc_stream_cipher::{ChaChaEngine, ChaChaParams, StreamCipherError};
 
 fn hex(s: &str) -> Vec<u8> {
     (0..s.len())
@@ -158,11 +158,11 @@ fn encrypt_decrypt_round_trips() {
 fn validates_rounds_parameters_and_runtime_state() {
     assert_eq!(
         ChaChaEngine::with_rounds(0).err(),
-        Some(ChaChaError::InvalidRounds(0))
+        Some(StreamCipherError::InvalidRounds(0))
     );
     assert_eq!(
         ChaChaEngine::with_rounds(7).err(),
-        Some(ChaChaError::InvalidRounds(7))
+        Some(StreamCipherError::InvalidRounds(7))
     );
     assert_eq!(
         ChaChaEngine::with_rounds(12).unwrap().algorithm_name(),
@@ -170,11 +170,11 @@ fn validates_rounds_parameters_and_runtime_state() {
     );
     assert_eq!(
         ChaChaParams::new(&[0u8; 15], &[0u8; 8]).unwrap_err(),
-        ChaChaError::InvalidKeyLength(15)
+        StreamCipherError::InvalidKeyLength(15)
     );
     assert_eq!(
         ChaChaParams::new(&[0u8; 16], &[0u8; 7]).unwrap_err(),
-        ChaChaError::InvalidNonceLength {
+        StreamCipherError::InvalidNonceLength {
             expected: 8,
             actual: 7
         }
@@ -183,10 +183,13 @@ fn validates_rounds_parameters_and_runtime_state() {
     let params = ChaChaParams::new(&[0u8; 16], &[0u8; 8]).unwrap();
     assert!(!format!("{params:?}").contains("000000"));
     let mut engine = ChaChaEngine::new();
-    assert_eq!(engine.return_byte(0), Err(ChaChaError::NotInitialised));
+    assert_eq!(
+        engine.return_byte(0),
+        Err(StreamCipherError::NotInitialised)
+    );
     engine.init(true, &params).unwrap();
     assert_eq!(
         engine.process_bytes(&[0u8; 2], &mut [0u8; 1]),
-        Err(ChaChaError::OutputBufferTooShort)
+        Err(StreamCipherError::OutputBufferTooShort)
     );
 }

@@ -6,6 +6,8 @@
 
 use tc_crypto_core::StreamCipher;
 
+use crate::StreamCipherError;
+
 /// Canonical HC-256 key size in bytes.
 pub const HC256_KEY_BYTES: usize = 32;
 
@@ -33,12 +35,12 @@ pub struct Hc256Params {
 
 impl Hc256Params {
     /// Validates and copies a 16- or 32-byte key and an IV of at least 16 bytes.
-    pub fn new(key: &[u8], iv: &[u8]) -> Result<Self, Hc256Error> {
+    pub fn new(key: &[u8], iv: &[u8]) -> Result<Self, StreamCipherError> {
         if key.len() != HC256_MIN_KEY_BYTES && key.len() != HC256_KEY_BYTES {
-            return Err(Hc256Error::InvalidKeyLength(key.len()));
+            return Err(StreamCipherError::InvalidKeyLength(key.len()));
         }
         if iv.len() < HC256_MIN_IV_BYTES {
-            return Err(Hc256Error::InvalidIvLength(iv.len()));
+            return Err(StreamCipherError::InvalidIvLength(iv.len()));
         }
 
         let mut owned_key = [0u8; HC256_KEY_BYTES];
@@ -72,36 +74,6 @@ impl core::fmt::Debug for Hc256Params {
             .finish()
     }
 }
-
-/// Errors returned by HC-256 parameter validation and processing.
-#[derive(Debug, PartialEq, Eq)]
-pub enum Hc256Error {
-    /// The key is neither 16 nor 32 bytes.
-    InvalidKeyLength(usize),
-    /// The IV is shorter than 16 bytes.
-    InvalidIvLength(usize),
-    /// A data method was called before initialization.
-    NotInitialised,
-    /// The output buffer is shorter than the input.
-    OutputBufferTooShort,
-}
-
-impl core::fmt::Display for Hc256Error {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        match self {
-            Self::InvalidKeyLength(actual) => {
-                write!(f, "HC-256 key length {actual} is neither 16 nor 32 bytes")
-            }
-            Self::InvalidIvLength(actual) => {
-                write!(f, "HC-256 IV length {actual} is shorter than 16 bytes")
-            }
-            Self::NotInitialised => f.write_str("HC-256 engine not initialised"),
-            Self::OutputBufferTooShort => f.write_str("output buffer shorter than input"),
-        }
-    }
-}
-
-impl core::error::Error for Hc256Error {}
 
 /// The HC-256 stream cipher engine (BC `HC256Engine`).
 pub struct Hc256Engine {
@@ -225,7 +197,7 @@ impl Default for Hc256Engine {
 
 impl StreamCipher for Hc256Engine {
     type Params<'a> = Hc256Params;
-    type Error = Hc256Error;
+    type Error = StreamCipherError;
 
     fn algorithm_name(&self) -> &str {
         "HC-256"
@@ -245,17 +217,17 @@ impl StreamCipher for Hc256Engine {
 
     fn return_byte(&mut self, input: u8) -> Result<u8, Self::Error> {
         if !self.initialised {
-            return Err(Hc256Error::NotInitialised);
+            return Err(StreamCipherError::NotInitialised);
         }
         Ok(input ^ self.next_byte())
     }
 
     fn process_bytes(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
         if !self.initialised {
-            return Err(Hc256Error::NotInitialised);
+            return Err(StreamCipherError::NotInitialised);
         }
         if output.len() < input.len() {
-            return Err(Hc256Error::OutputBufferTooShort);
+            return Err(StreamCipherError::OutputBufferTooShort);
         }
 
         for (source, destination) in input.iter().zip(output.iter_mut()) {

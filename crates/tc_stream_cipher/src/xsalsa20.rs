@@ -5,8 +5,9 @@
 
 use tc_crypto_core::StreamCipher;
 
-use crate::salsa20::{
-    SALSA20_DEFAULT_ROUNDS, Salsa20Core, Salsa20Error, salsa_core, set_salsa_key,
+use crate::{
+    StreamCipherError,
+    salsa20::{SALSA20_DEFAULT_ROUNDS, Salsa20Core, salsa_core, set_salsa_key},
 };
 
 /// XSalsa20 key size in bytes.
@@ -23,12 +24,12 @@ pub struct Xsalsa20Params {
 
 impl Xsalsa20Params {
     /// Validates and copies a 32-byte key and 24-byte nonce.
-    pub fn new(key: &[u8], nonce: &[u8]) -> Result<Self, Salsa20Error> {
+    pub fn new(key: &[u8], nonce: &[u8]) -> Result<Self, StreamCipherError> {
         if key.len() != XSALSA20_KEY_BYTES {
-            return Err(Salsa20Error::InvalidKeyLength(key.len()));
+            return Err(StreamCipherError::InvalidKeyLength(key.len()));
         }
         if nonce.len() != XSALSA20_NONCE_BYTES {
-            return Err(Salsa20Error::InvalidNonceLength {
+            return Err(StreamCipherError::InvalidNonceLength {
                 expected: XSALSA20_NONCE_BYTES,
                 actual: nonce.len(),
             });
@@ -114,7 +115,7 @@ impl Default for Xsalsa20Engine {
 
 impl StreamCipher for Xsalsa20Engine {
     type Params<'a> = Xsalsa20Params;
-    type Error = Salsa20Error;
+    type Error = StreamCipherError;
 
     fn algorithm_name(&self) -> &str {
         "XSalsa20"

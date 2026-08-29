@@ -6,6 +6,8 @@
 
 use tc_crypto_core::StreamCipher;
 
+use crate::StreamCipherError;
+
 const MIX_WORDS: usize = 8;
 const STATE_WORDS: usize = 256;
 const KEYSTREAM_BYTES: usize = STATE_WORDS * 4;
@@ -24,9 +26,9 @@ pub struct IsaacParams {
 
 impl IsaacParams {
     /// Validates and copies a key of at most 1,024 bytes.
-    pub fn new(key: &[u8]) -> Result<Self, IsaacError> {
+    pub fn new(key: &[u8]) -> Result<Self, StreamCipherError> {
         if key.len() > ISAAC_MAX_KEY_BYTES {
-            return Err(IsaacError::InvalidKeyLength(key.len()));
+            return Err(StreamCipherError::InvalidKeyLength(key.len()));
         }
 
         let mut owned_key = [0u8; ISAAC_MAX_KEY_BYTES];
@@ -49,31 +51,6 @@ impl core::fmt::Debug for IsaacParams {
             .finish()
     }
 }
-
-/// Errors returned by ISAAC parameter validation and processing.
-#[derive(Debug, PartialEq, Eq)]
-pub enum IsaacError {
-    /// The key is longer than the 1,024-byte state capacity.
-    InvalidKeyLength(usize),
-    /// A data method was called before initialization.
-    NotInitialised,
-    /// The output buffer is shorter than the input.
-    OutputBufferTooShort,
-}
-
-impl core::fmt::Display for IsaacError {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        match self {
-            Self::InvalidKeyLength(actual) => {
-                write!(f, "ISAAC key length {actual} exceeds 1024 bytes")
-            }
-            Self::NotInitialised => f.write_str("ISAAC engine not initialised"),
-            Self::OutputBufferTooShort => f.write_str("output buffer shorter than input"),
-        }
-    }
-}
-
-impl core::error::Error for IsaacError {}
 
 /// The ISAAC stream cipher engine (BC `IsaacEngine`).
 pub struct IsaacEngine {
@@ -233,7 +210,7 @@ impl Default for IsaacEngine {
 
 impl StreamCipher for IsaacEngine {
     type Params<'a> = IsaacParams;
-    type Error = IsaacError;
+    type Error = StreamCipherError;
 
     fn algorithm_name(&self) -> &str {
         "ISAAC"
@@ -253,17 +230,17 @@ impl StreamCipher for IsaacEngine {
 
     fn return_byte(&mut self, input: u8) -> Result<u8, Self::Error> {
         if !self.initialised {
-            return Err(IsaacError::NotInitialised);
+            return Err(StreamCipherError::NotInitialised);
         }
         Ok(input ^ self.next_byte())
     }
 
     fn process_bytes(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
         if !self.initialised {
-            return Err(IsaacError::NotInitialised);
+            return Err(StreamCipherError::NotInitialised);
         }
         if output.len() < input.len() {
-            return Err(IsaacError::OutputBufferTooShort);
+            return Err(StreamCipherError::OutputBufferTooShort);
         }
 
         let mut position = 0;

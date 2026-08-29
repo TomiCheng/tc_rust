@@ -5,6 +5,8 @@
 
 use tc_crypto_core::StreamCipher;
 
+use crate::StreamCipherError;
+
 /// Default ChaCha round count.
 pub const CHACHA_DEFAULT_ROUNDS: usize = 20;
 
@@ -33,12 +35,12 @@ pub struct ChaChaParams {
 
 impl ChaChaParams {
     /// Validates and copies a 16- or 32-byte key and an 8-byte nonce.
-    pub fn new(key: &[u8], nonce: &[u8]) -> Result<Self, ChaChaError> {
+    pub fn new(key: &[u8], nonce: &[u8]) -> Result<Self, StreamCipherError> {
         if key.len() != CHACHA_MIN_KEY_BYTES && key.len() != CHACHA_MAX_KEY_BYTES {
-            return Err(ChaChaError::InvalidKeyLength(key.len()));
+            return Err(StreamCipherError::InvalidKeyLength(key.len()));
         }
         if nonce.len() != CHACHA_NONCE_BYTES {
-            return Err(ChaChaError::InvalidNonceLength {
+            return Err(StreamCipherError::InvalidNonceLength {
                 expected: CHACHA_NONCE_BYTES,
                 actual: nonce.len(),
             });
@@ -69,55 +71,6 @@ impl core::fmt::Debug for ChaChaParams {
     }
 }
 
-/// Errors returned by original-ChaCha configuration and processing.
-#[derive(Debug, PartialEq, Eq)]
-pub enum ChaChaError {
-    /// The round count is zero, odd, or outside BC's positive `int` range.
-    InvalidRounds(usize),
-    /// The key size is unsupported by the selected ChaCha construction.
-    InvalidKeyLength(usize),
-    /// The nonce does not have the required size.
-    InvalidNonceLength {
-        /// Required nonce length in bytes.
-        expected: usize,
-        /// Supplied nonce length in bytes.
-        actual: usize,
-    },
-    /// A data method was called before initialization.
-    NotInitialised,
-    /// The output buffer is shorter than the input.
-    OutputBufferTooShort,
-    /// The BC per-nonce byte limit has been exceeded.
-    MaxBytesExceeded,
-    /// The 32-bit IETF block counter cannot be advanced further.
-    CounterExhausted,
-}
-
-impl core::fmt::Display for ChaChaError {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        match self {
-            Self::InvalidRounds(rounds) => {
-                write!(
-                    f,
-                    "ChaCha round count {rounds} is not a supported positive even value"
-                )
-            }
-            Self::InvalidKeyLength(actual) => {
-                write!(f, "ChaCha key length {actual} is unsupported")
-            }
-            Self::InvalidNonceLength { expected, actual } => {
-                write!(f, "ChaCha nonce length {actual} is not {expected} bytes")
-            }
-            Self::NotInitialised => f.write_str("ChaCha engine not initialised"),
-            Self::OutputBufferTooShort => f.write_str("output buffer shorter than input"),
-            Self::MaxBytesExceeded => f.write_str("ChaCha per-nonce byte limit exceeded"),
-            Self::CounterExhausted => f.write_str("ChaCha 32-bit block counter exhausted"),
-        }
-    }
-}
-
-impl core::error::Error for ChaChaError {}
-
 /// The original ChaCha stream cipher engine (BC `ChaChaEngine`).
 pub struct ChaChaEngine {
     core: ChaChaCore,
@@ -132,9 +85,9 @@ impl ChaChaEngine {
     }
 
     /// Creates an original-ChaCha engine with a positive, even round count.
-    pub fn with_rounds(rounds: usize) -> Result<Self, ChaChaError> {
+    pub fn with_rounds(rounds: usize) -> Result<Self, StreamCipherError> {
         if rounds == 0 || rounds & 1 != 0 || rounds > CHACHA_MAX_ROUNDS {
-            return Err(ChaChaError::InvalidRounds(rounds));
+            return Err(StreamCipherError::InvalidRounds(rounds));
         }
         let (name, name_len) = algorithm_name(rounds);
         Ok(Self {
@@ -153,7 +106,7 @@ impl Default for ChaChaEngine {
 
 impl StreamCipher for ChaChaEngine {
     type Params<'a> = ChaChaParams;
-    type Error = ChaChaError;
+    type Error = StreamCipherError;
 
     fn algorithm_name(&self) -> &str {
         core::str::from_utf8(&self.name[..self.name_len]).expect("ChaCha algorithm name is ASCII")
@@ -268,7 +221,7 @@ impl ChaChaCore {
         }
     }
 
-    fn advance_counter(&mut self) -> Result<(), ChaChaError> {
+    fn advance_counter(&mut self) -> Result<(), StreamCipherError> {
         match self.counter_mode {
             CounterMode::Original => {
                 self.advance_original_counter();
@@ -277,7 +230,7 @@ impl ChaChaCore {
             CounterMode::Ietf => {
                 self.state[12] = self.state[12].wrapping_add(1);
                 if self.state[12] == 0 {
-                    Err(ChaChaError::CounterExhausted)
+                    Err(StreamCipherError::CounterExhausted)
                 } else {
                     Ok(())
                 }
@@ -285,12 +238,12 @@ impl ChaChaCore {
         }
     }
 
-    pub(crate) fn return_byte(&mut self, input: u8) -> Result<u8, ChaChaError> {
+    pub(crate) fn return_byte(&mut self, input: u8) -> Result<u8, StreamCipherError> {
         if !self.initialised {
-            return Err(ChaChaError::NotInitialised);
+            return Err(StreamCipherError::NotInitialised);
         }
         if self.limit_exceeded_by(1) {
-            return Err(ChaChaError::MaxBytesExceeded);
+            return Err(StreamCipherError::MaxBytesExceeded);
         }
         if self.index == 0 {
             self.generate_key_stream();
@@ -305,15 +258,15 @@ impl ChaChaCore {
         &mut self,
         input: &[u8],
         output: &mut [u8],
-    ) -> Result<usize, ChaChaError> {
+    ) -> Result<usize, StreamCipherError> {
         if !self.initialised {
-            return Err(ChaChaError::NotInitialised);
+            return Err(StreamCipherError::NotInitialised);
         }
         if output.len() < input.len() {
-            return Err(ChaChaError::OutputBufferTooShort);
+            return Err(StreamCipherError::OutputBufferTooShort);
         }
         if self.limit_exceeded_by(input.len()) {
-            return Err(ChaChaError::MaxBytesExceeded);
+            return Err(StreamCipherError::MaxBytesExceeded);
         }
 
         for (source, destination) in input.iter().zip(output.iter_mut()) {
@@ -445,7 +398,7 @@ mod tests {
         core.state[12] = u32::MAX;
         assert_eq!(
             core.process_bytes(&[0u8; 1], &mut [0u8; 1]),
-            Err(ChaChaError::CounterExhausted)
+            Err(StreamCipherError::CounterExhausted)
         );
     }
 }

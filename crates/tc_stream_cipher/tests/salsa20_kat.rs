@@ -4,7 +4,7 @@
 
 use tc_crypto_core::StreamCipher;
 use tc_stream_cipher::{
-    Salsa20Engine, Salsa20Error, Salsa20Params, Xsalsa20Engine, Xsalsa20Params,
+    Salsa20Engine, Salsa20Params, StreamCipherError, Xsalsa20Engine, Xsalsa20Params,
 };
 
 fn hex(s: &str) -> Vec<u8> {
@@ -196,11 +196,11 @@ fn xsalsa20_reset_and_round_trip() {
 fn validates_rounds_parameters_and_runtime_state() {
     assert_eq!(
         Salsa20Engine::with_rounds(0).err(),
-        Some(Salsa20Error::InvalidRounds(0))
+        Some(StreamCipherError::InvalidRounds(0))
     );
     assert_eq!(
         Salsa20Engine::with_rounds(7).err(),
-        Some(Salsa20Error::InvalidRounds(7))
+        Some(StreamCipherError::InvalidRounds(7))
     );
     assert_eq!(
         Salsa20Engine::with_rounds(12).unwrap().algorithm_name(),
@@ -208,22 +208,22 @@ fn validates_rounds_parameters_and_runtime_state() {
     );
     assert_eq!(
         Salsa20Params::new(&[0u8; 15], &[0u8; 8]).unwrap_err(),
-        Salsa20Error::InvalidKeyLength(15)
+        StreamCipherError::InvalidKeyLength(15)
     );
     assert_eq!(
         Salsa20Params::new(&[0u8; 16], &[0u8; 7]).unwrap_err(),
-        Salsa20Error::InvalidNonceLength {
+        StreamCipherError::InvalidNonceLength {
             expected: 8,
             actual: 7
         }
     );
     assert_eq!(
         Xsalsa20Params::new(&[0u8; 16], &[0u8; 24]).unwrap_err(),
-        Salsa20Error::InvalidKeyLength(16)
+        StreamCipherError::InvalidKeyLength(16)
     );
     assert_eq!(
         Xsalsa20Params::new(&[0u8; 32], &[0u8; 23]).unwrap_err(),
-        Salsa20Error::InvalidNonceLength {
+        StreamCipherError::InvalidNonceLength {
             expected: 24,
             actual: 23
         }
@@ -232,10 +232,13 @@ fn validates_rounds_parameters_and_runtime_state() {
     let params = Salsa20Params::new(&[0u8; 16], &[0u8; 8]).unwrap();
     assert!(!format!("{params:?}").contains("000000"));
     let mut engine = Salsa20Engine::new();
-    assert_eq!(engine.return_byte(0), Err(Salsa20Error::NotInitialised));
+    assert_eq!(
+        engine.return_byte(0),
+        Err(StreamCipherError::NotInitialised)
+    );
     engine.init(true, &params).unwrap();
     assert_eq!(
         engine.process_bytes(&[0u8; 2], &mut [0u8; 1]),
-        Err(Salsa20Error::OutputBufferTooShort)
+        Err(StreamCipherError::OutputBufferTooShort)
     );
 }

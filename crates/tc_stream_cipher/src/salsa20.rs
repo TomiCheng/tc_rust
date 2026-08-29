@@ -5,6 +5,8 @@
 
 use tc_crypto_core::StreamCipher;
 
+use crate::StreamCipherError;
+
 /// Default Salsa20 round count.
 pub const SALSA20_DEFAULT_ROUNDS: usize = 20;
 
@@ -33,12 +35,12 @@ pub struct Salsa20Params {
 
 impl Salsa20Params {
     /// Validates and copies a 16- or 32-byte key and an 8-byte nonce.
-    pub fn new(key: &[u8], nonce: &[u8]) -> Result<Self, Salsa20Error> {
+    pub fn new(key: &[u8], nonce: &[u8]) -> Result<Self, StreamCipherError> {
         if key.len() != SALSA20_MIN_KEY_BYTES && key.len() != SALSA20_MAX_KEY_BYTES {
-            return Err(Salsa20Error::InvalidKeyLength(key.len()));
+            return Err(StreamCipherError::InvalidKeyLength(key.len()));
         }
         if nonce.len() != SALSA20_NONCE_BYTES {
-            return Err(Salsa20Error::InvalidNonceLength {
+            return Err(StreamCipherError::InvalidNonceLength {
                 expected: SALSA20_NONCE_BYTES,
                 actual: nonce.len(),
             });
@@ -69,55 +71,6 @@ impl core::fmt::Debug for Salsa20Params {
     }
 }
 
-/// Errors returned by Salsa20-family configuration and processing.
-#[derive(Debug, PartialEq, Eq)]
-pub enum Salsa20Error {
-    /// The round count is zero, odd, or outside BC's positive `int` range.
-    InvalidRounds(usize),
-    /// The key is neither 16 nor 32 bytes.
-    InvalidKeyLength(usize),
-    /// The nonce does not have the engine's required size.
-    InvalidNonceLength {
-        /// Required nonce length in bytes.
-        expected: usize,
-        /// Supplied nonce length in bytes.
-        actual: usize,
-    },
-    /// A data method was called before initialization.
-    NotInitialised,
-    /// The output buffer is shorter than the input.
-    OutputBufferTooShort,
-    /// The BC per-nonce byte limit has been exceeded.
-    MaxBytesExceeded,
-}
-
-impl core::fmt::Display for Salsa20Error {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        match self {
-            Self::InvalidRounds(rounds) => {
-                write!(
-                    f,
-                    "Salsa20 round count {rounds} is not a supported positive even value"
-                )
-            }
-            Self::InvalidKeyLength(actual) => {
-                write!(
-                    f,
-                    "Salsa20-family key length {actual} is neither 16 nor 32 bytes"
-                )
-            }
-            Self::InvalidNonceLength { expected, actual } => {
-                write!(f, "nonce length {actual} is not {expected} bytes")
-            }
-            Self::NotInitialised => f.write_str("Salsa20 engine not initialised"),
-            Self::OutputBufferTooShort => f.write_str("output buffer shorter than input"),
-            Self::MaxBytesExceeded => f.write_str("Salsa20 per-nonce byte limit exceeded"),
-        }
-    }
-}
-
-impl core::error::Error for Salsa20Error {}
-
 /// The Salsa20 stream cipher engine (BC `Salsa20Engine`).
 pub struct Salsa20Engine {
     core: Salsa20Core,
@@ -132,9 +85,9 @@ impl Salsa20Engine {
     }
 
     /// Creates a Salsa20 engine with a positive, even round count.
-    pub fn with_rounds(rounds: usize) -> Result<Self, Salsa20Error> {
+    pub fn with_rounds(rounds: usize) -> Result<Self, StreamCipherError> {
         if rounds == 0 || rounds & 1 != 0 || rounds > SALSA20_MAX_ROUNDS {
-            return Err(Salsa20Error::InvalidRounds(rounds));
+            return Err(StreamCipherError::InvalidRounds(rounds));
         }
         let (name, name_len) = algorithm_name(rounds);
         Ok(Self {
@@ -153,7 +106,7 @@ impl Default for Salsa20Engine {
 
 impl StreamCipher for Salsa20Engine {
     type Params<'a> = Salsa20Params;
-    type Error = Salsa20Error;
+    type Error = StreamCipherError;
 
     fn algorithm_name(&self) -> &str {
         core::str::from_utf8(&self.name[..self.name_len]).expect("Salsa20 algorithm name is ASCII")
@@ -258,12 +211,12 @@ impl Salsa20Core {
         }
     }
 
-    pub(crate) fn return_byte(&mut self, input: u8) -> Result<u8, Salsa20Error> {
+    pub(crate) fn return_byte(&mut self, input: u8) -> Result<u8, StreamCipherError> {
         if !self.initialised {
-            return Err(Salsa20Error::NotInitialised);
+            return Err(StreamCipherError::NotInitialised);
         }
         if self.limit_exceeded_by(1) {
-            return Err(Salsa20Error::MaxBytesExceeded);
+            return Err(StreamCipherError::MaxBytesExceeded);
         }
         if self.index == 0 {
             self.generate_key_stream();
@@ -278,15 +231,15 @@ impl Salsa20Core {
         &mut self,
         input: &[u8],
         output: &mut [u8],
-    ) -> Result<usize, Salsa20Error> {
+    ) -> Result<usize, StreamCipherError> {
         if !self.initialised {
-            return Err(Salsa20Error::NotInitialised);
+            return Err(StreamCipherError::NotInitialised);
         }
         if output.len() < input.len() {
-            return Err(Salsa20Error::OutputBufferTooShort);
+            return Err(StreamCipherError::OutputBufferTooShort);
         }
         if self.limit_exceeded_by(input.len()) {
-            return Err(Salsa20Error::MaxBytesExceeded);
+            return Err(StreamCipherError::MaxBytesExceeded);
         }
 
         for (source, destination) in input.iter().zip(output.iter_mut()) {

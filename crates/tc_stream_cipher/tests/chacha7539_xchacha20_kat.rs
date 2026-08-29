@@ -5,7 +5,7 @@
 
 use tc_crypto_core::StreamCipher;
 use tc_stream_cipher::{
-    ChaCha7539Engine, ChaCha7539Params, ChaChaError, XChaCha20Engine, XChaCha20Params,
+    ChaCha7539Engine, ChaCha7539Params, StreamCipherError, XChaCha20Engine, XChaCha20Params,
 };
 
 fn hex(s: &str) -> Vec<u8> {
@@ -139,22 +139,22 @@ fn xchacha20_reset_chunking_and_single_byte_processing_match() {
 fn validates_chacha7539_and_xchacha20_parameters_and_runtime_state() {
     assert_eq!(
         ChaCha7539Params::new(&[0u8; 16], &[0u8; 12]).unwrap_err(),
-        ChaChaError::InvalidKeyLength(16)
+        StreamCipherError::InvalidKeyLength(16)
     );
     assert_eq!(
         ChaCha7539Params::new(&[0u8; 32], &[0u8; 8]).unwrap_err(),
-        ChaChaError::InvalidNonceLength {
+        StreamCipherError::InvalidNonceLength {
             expected: 12,
             actual: 8,
         }
     );
     assert_eq!(
         XChaCha20Params::new(&[0u8; 16], &[0u8; 24]).unwrap_err(),
-        ChaChaError::InvalidKeyLength(16)
+        StreamCipherError::InvalidKeyLength(16)
     );
     assert_eq!(
         XChaCha20Params::new(&[0u8; 32], &[0u8; 23]).unwrap_err(),
-        ChaChaError::InvalidNonceLength {
+        StreamCipherError::InvalidNonceLength {
             expected: 24,
             actual: 23,
         }
@@ -163,12 +163,12 @@ fn validates_chacha7539_and_xchacha20_parameters_and_runtime_state() {
     let mut engine = ChaCha7539Engine::new();
     assert_eq!(
         engine.process_bytes(&[0u8; 1], &mut [0u8; 1]),
-        Err(ChaChaError::NotInitialised)
+        Err(StreamCipherError::NotInitialised)
     );
     let params = ChaCha7539Params::new(&[0u8; 32], &[0u8; 12]).unwrap();
     engine.init(true, &params).unwrap();
     assert_eq!(
         engine.process_bytes(&[0u8; 2], &mut [0u8; 1]),
-        Err(ChaChaError::OutputBufferTooShort)
+        Err(StreamCipherError::OutputBufferTooShort)
     );
 }

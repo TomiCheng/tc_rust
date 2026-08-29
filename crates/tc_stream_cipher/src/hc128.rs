@@ -5,6 +5,8 @@
 
 use tc_crypto_core::StreamCipher;
 
+use crate::StreamCipherError;
+
 /// HC-128 key size in bytes.
 pub const HC128_KEY_BYTES: usize = 16;
 
@@ -22,12 +24,12 @@ pub struct Hc128Params {
 
 impl Hc128Params {
     /// Validates and copies a 16-byte key and 16-byte IV.
-    pub fn new(key: &[u8], iv: &[u8]) -> Result<Self, Hc128Error> {
+    pub fn new(key: &[u8], iv: &[u8]) -> Result<Self, StreamCipherError> {
         if key.len() != HC128_KEY_BYTES {
-            return Err(Hc128Error::InvalidKeyLength(key.len()));
+            return Err(StreamCipherError::InvalidKeyLength(key.len()));
         }
         if iv.len() != HC128_IV_BYTES {
-            return Err(Hc128Error::InvalidIvLength(iv.len()));
+            return Err(StreamCipherError::InvalidIvLength(iv.len()));
         }
 
         let mut owned_key = [0u8; HC128_KEY_BYTES];
@@ -50,36 +52,6 @@ impl core::fmt::Debug for Hc128Params {
             .finish()
     }
 }
-
-/// Errors returned by HC-128 parameter validation and processing.
-#[derive(Debug, PartialEq, Eq)]
-pub enum Hc128Error {
-    /// The key is not exactly 16 bytes.
-    InvalidKeyLength(usize),
-    /// The IV is not exactly 16 bytes.
-    InvalidIvLength(usize),
-    /// A data method was called before initialization.
-    NotInitialised,
-    /// The output buffer is shorter than the input.
-    OutputBufferTooShort,
-}
-
-impl core::fmt::Display for Hc128Error {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        match self {
-            Self::InvalidKeyLength(actual) => {
-                write!(f, "HC-128 key length {actual} is not 16 bytes")
-            }
-            Self::InvalidIvLength(actual) => {
-                write!(f, "HC-128 IV length {actual} is not 16 bytes")
-            }
-            Self::NotInitialised => f.write_str("HC-128 engine not initialised"),
-            Self::OutputBufferTooShort => f.write_str("output buffer shorter than input"),
-        }
-    }
-}
-
-impl core::error::Error for Hc128Error {}
 
 /// The HC-128 stream cipher engine (BC `HC128Engine`).
 pub struct Hc128Engine {
@@ -213,7 +185,7 @@ impl Default for Hc128Engine {
 
 impl StreamCipher for Hc128Engine {
     type Params<'a> = Hc128Params;
-    type Error = Hc128Error;
+    type Error = StreamCipherError;
 
     fn algorithm_name(&self) -> &str {
         "HC-128"
@@ -233,17 +205,17 @@ impl StreamCipher for Hc128Engine {
 
     fn return_byte(&mut self, input: u8) -> Result<u8, Self::Error> {
         if !self.initialised {
-            return Err(Hc128Error::NotInitialised);
+            return Err(StreamCipherError::NotInitialised);
         }
         Ok(input ^ self.next_byte())
     }
 
     fn process_bytes(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
         if !self.initialised {
-            return Err(Hc128Error::NotInitialised);
+            return Err(StreamCipherError::NotInitialised);
         }
         if output.len() < input.len() {
-            return Err(Hc128Error::OutputBufferTooShort);
+            return Err(StreamCipherError::OutputBufferTooShort);
         }
 
         for (source, destination) in input.iter().zip(output.iter_mut()) {

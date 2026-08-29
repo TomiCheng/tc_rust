@@ -35,9 +35,9 @@ Import `StreamCipher` to call `init`, `process_bytes`, `return_byte`, and
 
 ```rust
 use tc_crypto_core::StreamCipher;
-use tc_stream_cipher::{Rc4Engine, Rc4Error, Rc4Params};
+use tc_stream_cipher::{Rc4Engine, Rc4Params, StreamCipherError};
 
-fn main() -> Result<(), Rc4Error> {
+fn main() -> Result<(), StreamCipherError> {
     let params = Rc4Params::new(b"Key")?;
     let plaintext = b"Plaintext";
 

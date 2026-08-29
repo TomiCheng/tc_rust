@@ -4,9 +4,7 @@
 //! files, which in turn cite the official HC-128 and HC-256 reference papers.
 
 use tc_crypto_core::StreamCipher;
-use tc_stream_cipher::{
-    Hc128Engine, Hc128Error, Hc128Params, Hc256Engine, Hc256Error, Hc256Params,
-};
+use tc_stream_cipher::{Hc128Engine, Hc128Params, Hc256Engine, Hc256Params, StreamCipherError};
 
 fn hex(s: &str) -> Vec<u8> {
     (0..s.len())
@@ -195,22 +193,25 @@ fn hc_family_encrypt_decrypt_round_trips() {
 fn hc128_validates_parameters_and_runtime_state() {
     assert_eq!(
         Hc128Params::new(&[0u8; 15], &[0u8; 16]).unwrap_err(),
-        Hc128Error::InvalidKeyLength(15)
+        StreamCipherError::InvalidKeyLength(15)
     );
     assert_eq!(
         Hc128Params::new(&[0u8; 16], &[0u8; 15]).unwrap_err(),
-        Hc128Error::InvalidIvLength(15)
+        StreamCipherError::InvalidIvLength(15)
     );
 
     let params = Hc128Params::new(&[0u8; 16], &[0u8; 16]).unwrap();
     assert!(!format!("{params:?}").contains("000000"));
 
     let mut engine = Hc128Engine::new();
-    assert_eq!(engine.return_byte(0), Err(Hc128Error::NotInitialised));
+    assert_eq!(
+        engine.return_byte(0),
+        Err(StreamCipherError::NotInitialised)
+    );
     engine.init(true, &params).unwrap();
     assert_eq!(
         engine.process_bytes(&[0u8; 2], &mut [0u8; 1]),
-        Err(Hc128Error::OutputBufferTooShort)
+        Err(StreamCipherError::OutputBufferTooShort)
     );
 }
 
@@ -218,22 +219,25 @@ fn hc128_validates_parameters_and_runtime_state() {
 fn hc256_validates_parameters_and_runtime_state() {
     assert_eq!(
         Hc256Params::new(&[0u8; 15], &[0u8; 16]).unwrap_err(),
-        Hc256Error::InvalidKeyLength(15)
+        StreamCipherError::InvalidKeyLength(15)
     );
     assert_eq!(
         Hc256Params::new(&[0u8; 16], &[0u8; 15]).unwrap_err(),
-        Hc256Error::InvalidIvLength(15)
+        StreamCipherError::InvalidIvLength(15)
     );
 
     let params = Hc256Params::new(&[0u8; 16], &[0u8; 17]).unwrap();
     assert!(!format!("{params:?}").contains("000000"));
 
     let mut engine = Hc256Engine::new();
-    assert_eq!(engine.return_byte(0), Err(Hc256Error::NotInitialised));
+    assert_eq!(
+        engine.return_byte(0),
+        Err(StreamCipherError::NotInitialised)
+    );
     engine.init(true, &params).unwrap();
     assert_eq!(
         engine.process_bytes(&[0u8; 2], &mut [0u8; 1]),
-        Err(Hc256Error::OutputBufferTooShort)
+        Err(StreamCipherError::OutputBufferTooShort)
     );
 }
 

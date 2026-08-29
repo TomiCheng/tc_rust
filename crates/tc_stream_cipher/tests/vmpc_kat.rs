@@ -1,7 +1,7 @@
 //! Bouncy Castle known-answer and behavioral tests for VMPC and VMPC-KSA3.
 
 use tc_crypto_core::StreamCipher;
-use tc_stream_cipher::{VmpcEngine, VmpcError, VmpcKsa3Engine, VmpcParams};
+use tc_stream_cipher::{StreamCipherError, VmpcEngine, VmpcKsa3Engine, VmpcParams};
 
 fn hex(s: &str) -> Vec<u8> {
     (0..s.len())
@@ -142,30 +142,33 @@ fn validates_vmpc_parameters_and_runtime_state() {
     assert!(VmpcParams::new(&[0u8; 64], &[0u8; 64]).is_ok());
     assert_eq!(
         VmpcParams::new(&[0u8; 15], &[0u8; 16]).unwrap_err(),
-        VmpcError::InvalidKeyLength(15)
+        StreamCipherError::InvalidKeyLength(15)
     );
     assert_eq!(
         VmpcParams::new(&[0u8; 65], &[0u8; 16]).unwrap_err(),
-        VmpcError::InvalidKeyLength(65)
+        StreamCipherError::InvalidKeyLength(65)
     );
     assert_eq!(
         VmpcParams::new(&[0u8; 16], &[0u8; 15]).unwrap_err(),
-        VmpcError::InvalidIvLength(15)
+        StreamCipherError::InvalidIvLength(15)
     );
     assert_eq!(
         VmpcParams::new(&[0u8; 16], &[0u8; 65]).unwrap_err(),
-        VmpcError::InvalidIvLength(65)
+        StreamCipherError::InvalidIvLength(65)
     );
 
     let mut engine = VmpcKsa3Engine::new();
-    assert_eq!(engine.return_byte(0), Err(VmpcError::NotInitialised));
+    assert_eq!(
+        engine.return_byte(0),
+        Err(StreamCipherError::NotInitialised)
+    );
     assert_eq!(
         engine.process_bytes(&[0u8; 1], &mut [0u8; 1]),
-        Err(VmpcError::NotInitialised)
+        Err(StreamCipherError::NotInitialised)
     );
     engine.init(true, &params()).unwrap();
     assert_eq!(
         engine.process_bytes(&[0u8; 2], &mut [0u8; 1]),
-        Err(VmpcError::OutputBufferTooShort)
+        Err(StreamCipherError::OutputBufferTooShort)
     );
 }

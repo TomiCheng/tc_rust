@@ -18,6 +18,8 @@
 
 use tc_crypto_core::StreamCipher;
 
+use crate::StreamCipherError;
+
 const STATE_LENGTH: usize = 256;
 
 /// Maximum RC4 key length in bytes (the state size; longer keys are redundant).
@@ -31,9 +33,9 @@ pub struct Rc4Params {
 
 impl Rc4Params {
     /// Validates the key (1–256 bytes) and copies it in.
-    pub fn new(key: &[u8]) -> Result<Self, Rc4Error> {
+    pub fn new(key: &[u8]) -> Result<Self, StreamCipherError> {
         if key.is_empty() || key.len() > RC4_MAX_KEY_BYTES {
-            return Err(Rc4Error::InvalidKeyLength(key.len()));
+            return Err(StreamCipherError::InvalidKeyLength(key.len()));
         }
         let mut buf = [0u8; STATE_LENGTH];
         buf[..key.len()].copy_from_slice(key);
@@ -107,34 +109,9 @@ impl Default for Rc4Engine {
     }
 }
 
-/// Error type for the RC4 engine.
-#[derive(Debug, PartialEq, Eq)]
-pub enum Rc4Error {
-    /// The key length is not in 1–256 bytes.
-    InvalidKeyLength(usize),
-    /// A data method was called before `init`.
-    NotInitialised,
-    /// The output buffer is shorter than the input.
-    OutputBufferTooShort,
-}
-
-impl core::fmt::Display for Rc4Error {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        match self {
-            Rc4Error::InvalidKeyLength(n) => {
-                write!(f, "RC4 key length {n} is not in 1..=256 bytes")
-            }
-            Rc4Error::NotInitialised => f.write_str("RC4 engine not initialised"),
-            Rc4Error::OutputBufferTooShort => f.write_str("output buffer shorter than input"),
-        }
-    }
-}
-
-impl core::error::Error for Rc4Error {}
-
 impl StreamCipher for Rc4Engine {
     type Params<'a> = Rc4Params;
-    type Error = Rc4Error;
+    type Error = StreamCipherError;
 
     fn algorithm_name(&self) -> &str {
         "RC4"
@@ -155,7 +132,7 @@ impl StreamCipher for Rc4Engine {
 
     fn return_byte(&mut self, input: u8) -> Result<u8, Self::Error> {
         if !self.initialised {
-            return Err(Rc4Error::NotInitialised);
+            return Err(StreamCipherError::NotInitialised);
         }
         self.x = (self.x + 1) & 0xff;
         self.y = (self.state[self.x] as usize + self.y) & 0xff;
@@ -166,10 +143,10 @@ impl StreamCipher for Rc4Engine {
 
     fn process_bytes(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
         if !self.initialised {
-            return Err(Rc4Error::NotInitialised);
+            return Err(StreamCipherError::NotInitialised);
         }
         if output.len() < input.len() {
-            return Err(Rc4Error::OutputBufferTooShort);
+            return Err(StreamCipherError::OutputBufferTooShort);
         }
         for (i, &byte) in input.iter().enumerate() {
             self.x = (self.x + 1) & 0xff;
