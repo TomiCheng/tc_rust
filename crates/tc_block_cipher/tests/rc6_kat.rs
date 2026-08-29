@@ -1,3 +1,5 @@
+#![cfg(feature = "alloc")]
+
 //! RC6 ECB vectors (AES-submission reference) from Bouncy Castle's `RC6Test.cs`.
 
 use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};

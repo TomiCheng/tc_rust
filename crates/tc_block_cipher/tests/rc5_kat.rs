@@ -1,3 +1,5 @@
+#![cfg(feature = "alloc")]
+
 //! RC5 vectors (RFC 2040) from Bouncy Castle's `RC5Test.cs`.
 //!
 //! BC exercises RC5 through CBC; every vector is a single block, so CBC reduces

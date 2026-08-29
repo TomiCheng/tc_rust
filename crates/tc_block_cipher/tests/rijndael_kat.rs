@@ -1,3 +1,5 @@
+#![cfg(feature = "alloc")]
+
 //! Rijndael ECB vectors (NIST / Gladman) from Bouncy Castle's `RijndaelTest.cs`.
 
 use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};

@@ -1,3 +1,5 @@
+#![cfg(feature = "alloc")]
+
 //! DSTU 7624 ECB vectors from Bouncy Castle's `DSTU7624Test.cs`.
 
 use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};

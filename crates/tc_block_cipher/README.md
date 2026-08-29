@@ -14,8 +14,10 @@ do not implement `Clone`, and their `Debug` implementations redact key and
 tweak bytes.
 
 The default `std` feature enables runtime AES-NI detection for `AesEngine` on
-supported x86 and x86-64 processors. Disabling default features builds the
-crate as `no_std + alloc` and selects portable implementations.
+supported x86 and x86-64 processors. Disabling default features builds a
+`no_std`, allocation-free subset and selects portable implementations. Enable
+the `alloc` feature to add the five algorithm families whose key schedules use
+dynamic storage while remaining `no_std`.
 
 > This crate is a learning port and has not received an independent security
 > audit. Do not use it as a replacement for an audited cryptographic library.
@@ -80,10 +82,12 @@ exceptions are:
 
 The crate currently exports 28 engine types. All implementations are covered
 by known-answer tests; selected algorithms also include specification or Monte
-Carlo vectors. Every algorithm remains available when `std` is disabled.
+Carlo vectors. Every algorithm remains available without `std` when the
+`alloc` feature is enabled.
 
 `core-only` uses neither `alloc` nor `std`. `alloc` requires heap allocation.
-Only AES gains an additional `std` backend; the API remains unchanged.
+Only AES gains an additional `std` backend; the API of an enabled algorithm
+remains unchanged across build modes.
 
 | Family | Public engine types | Key and block support | Runtime |
 |--------|---------------------|-----------------------|---------|
@@ -164,26 +168,34 @@ cargo build -p tc_block_cipher --locked
 cargo test -p tc_block_cipher --locked
 ```
 
-Disable default features for a `no_std + alloc` build. This removes runtime
-CPU-feature detection and forces portable AES code. Tests still link the Rust
-standard test harness, but exercise the no-default-features library
-configuration:
+Disable default features for the allocation-free `no_std` subset. This includes
+RC2 and every algorithm marked `core-only` in the table above. It excludes
+DSTU 7624, RC5, RC6, Rijndael, and Threefish:
 
 ```bash
 cargo build -p tc_block_cipher --no-default-features --locked
 cargo test -p tc_block_cipher --no-default-features --locked
 ```
 
-The crate requires `alloc` because several expanded key schedules and
-initialization workspaces use dynamic storage. Parameter objects store key
-material in fixed-capacity buffers and do not allocate. A final `no_std`
-application must provide an allocator.
+Enable `alloc` without `std` to make every algorithm available while retaining
+portable AES code:
+
+```bash
+cargo build -p tc_block_cipher --no-default-features --features alloc --locked
+cargo test -p tc_block_cipher --no-default-features --features alloc --locked
+```
+
+Tests still link the Rust standard test harness, but compile the library with
+the selected feature set. Parameter objects store key material in
+fixed-capacity buffers and do not allocate. A final `no_std` application that
+enables `alloc` must provide a global allocator.
 
 Additional validation:
 
 ```bash
 cargo clippy -p tc_block_cipher --all-targets --locked -- -D warnings
 cargo clippy -p tc_block_cipher --all-targets --no-default-features --locked -- -D warnings
+cargo clippy -p tc_block_cipher --all-targets --no-default-features --features alloc --locked -- -D warnings
 cargo rustdoc -p tc_block_cipher --locked -- -D warnings
 ```
 

@@ -150,14 +150,19 @@ mod tests {
         assert_shared_error::<crate::Cast6Engine>();
         assert_shared_error::<crate::DesEngine>();
         assert_shared_error::<crate::DesEdeEngine>();
+        #[cfg(feature = "alloc")]
         assert_shared_error::<crate::Dstu7624Engine>();
         assert_shared_error::<crate::Gost28147Engine>();
         assert_shared_error::<crate::IdeaEngine>();
         assert_shared_error::<crate::NoekeonEngine>();
         assert_shared_error::<crate::Rc2Engine>();
+        #[cfg(feature = "alloc")]
         assert_shared_error::<crate::Rc532Engine>();
+        #[cfg(feature = "alloc")]
         assert_shared_error::<crate::Rc564Engine>();
+        #[cfg(feature = "alloc")]
         assert_shared_error::<crate::Rc6Engine>();
+        #[cfg(feature = "alloc")]
         assert_shared_error::<crate::RijndaelEngine>();
         assert_shared_error::<crate::SeedEngine>();
         assert_shared_error::<crate::SerpentEngine>();
@@ -165,6 +170,7 @@ mod tests {
         assert_shared_error::<crate::SkipjackEngine>();
         assert_shared_error::<crate::Sm4Engine>();
         assert_shared_error::<crate::TeaEngine>();
+        #[cfg(feature = "alloc")]
         assert_shared_error::<crate::ThreefishEngine>();
         assert_shared_error::<crate::TwofishEngine>();
         assert_shared_error::<crate::XteaEngine>();

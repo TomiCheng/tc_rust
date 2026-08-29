@@ -11,7 +11,6 @@ it for production cryptography.
 
 | Trait | Purpose |
 | --- | --- |
-| `BlockCipher` | Fallible, parameterized single-block cipher API. |
 | `TryDigest` | Fallible streaming fixed-output digest API. |
 | `Digest` | Infallible convenience API for `TryDigest<Error = Infallible>`. |
 | `TryXof` | Fallible extendable-output API; extends `TryDigest`. |
@@ -116,39 +115,8 @@ fn read_xof(xof: &mut impl Xof, message: &[u8]) -> [u8; 48] {
 }
 ```
 
-## Block-cipher trait
-
-`BlockCipher` models a keyed raw block primitive. Each implementation supplies
-its own parameter and error types; a generic associated parameter type permits
-either borrowed or owned algorithm-specific parameters.
-
-```rust
-pub trait BlockCipher {
-    type Params<'a>;
-    type Error: core::error::Error;
-
-    fn algorithm_name(&self) -> &str;
-    fn block_size(&self) -> usize;
-    fn init(
-        &mut self,
-        for_encryption: bool,
-        params: &Self::Params<'_>,
-    ) -> Result<(), Self::Error>;
-    fn process_block(
-        &mut self,
-        input: &[u8],
-        output: &mut [u8],
-    ) -> Result<usize, Self::Error>;
-}
-```
-
-Cipher modes compose around this primitive; `process_block` itself represents
-one independent raw block transformation.
-
 ## Implementing an algorithm
 
-- A block cipher implements `BlockCipher` with its own validated parameter and
-  error types.
 - A fixed-output software digest implements `TryDigest<Error = Infallible>`.
 - A fallible fixed-output backend implements `TryDigest` with its own error.
 - A software XOF implements both `TryDigest<Error = Infallible>` and `TryXof`.

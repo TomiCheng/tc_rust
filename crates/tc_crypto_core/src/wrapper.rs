@@ -1,8 +1,8 @@
 //! Key-wrapping trait, ported from Bouncy Castle's `IWrapper` family.
 //!
-//! Like [`BlockCipher`](crate::BlockCipher), `tc_crypto_core` ships only the
-//! *contract*: the parameter and error types are **associated types** supplied by
-//! the implementor, so core names no concrete key-encryption-key or error type.
+//! `tc_crypto_core` ships only the *contract*: the parameter and error types are
+//! **associated types** supplied by the implementor, so core names no concrete
+//! key-encryption-key or error type.
 //!
 //! A key wrapper encrypts *key material* (rather than arbitrary plaintext) under a
 //! key-encryption key, producing a slightly longer blob that carries its own
@@ -15,14 +15,14 @@
 //!   not even known until the integrity check runs. So [`wrap`](Wrapper::wrap) and
 //!   [`unwrap`](Wrapper::unwrap) return a freshly allocated `Vec<u8>`, mirroring
 //!   bc's `byte[] Wrap(...)`, rather than the `&mut [u8]`-plus-`usize` shape used
-//!   by [`process_block`](crate::BlockCipher::process_block). This is why the
-//!   trait lives behind the crate's `alloc` feature.
+//!   by a block cipher's `process_block` operation. This is why the trait lives
+//!   behind the crate's `alloc` feature.
 //! * **Both directions are fallible.** Unlike a stream cipher's infallible
 //!   `reset`, there is no "infallible wrapper" to hand a `Result`-free API:
 //!   `wrap` rejects ill-sized input, and `unwrap`'s integrity check *is* the
 //!   operation's meaning — a tampered blob or the wrong key must fail. As with
-//!   [`BlockCipher`](crate::BlockCipher), the single trait therefore returns
-//!   `Result` from all of its data methods; there is no fallible/infallible split.
+//!   block-cipher contracts, the single trait therefore returns `Result` from all
+//!   of its data methods; there is no fallible/infallible split.
 
 use alloc::vec::Vec;
 

@@ -1,3 +1,5 @@
+#![cfg(feature = "alloc")]
+
 //! Threefish known-answer tests from the Skein 1.3 NIST CD
 //! (`skein_golden_kat_internals.txt`), matching Bouncy Castle's
 //! Threefish{256,512,1024}Test vectors.
