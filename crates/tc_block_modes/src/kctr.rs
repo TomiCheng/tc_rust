@@ -28,17 +28,20 @@ use crate::BlockCipherModeError;
 ///
 /// The IV is required, as it is in bc, and may be up to one block long; a
 /// shorter one is right-aligned and left-padded with zeros.
-pub struct KCtrParams<'a, E: BlockCipherInit> {
+pub struct KCtrParams<P> {
     /// The underlying block cipher's key parameters.
-    key_params: E::Params<'a>,
+    key_params: P,
     /// The initialisation vector, which seeds the counter as `E(iv)`.
-    iv: &'a [u8],
+    iv: Vec<u8>,
 }
 
-impl<'a, E: BlockCipherInit> KCtrParams<'a, E> {
-    /// Builds parameters from the cipher's key parameters and the IV.
-    pub fn new(key_params: E::Params<'a>, iv: &'a [u8]) -> Self {
-        Self { key_params, iv }
+impl<P> KCtrParams<P> {
+    /// Builds parameters from the cipher's key parameters and a copy of the IV.
+    pub fn new(key_params: P, iv: &[u8]) -> Self {
+        Self {
+            key_params,
+            iv: iv.to_vec(),
+        }
     }
 }
 
@@ -122,7 +125,10 @@ impl<E: BlockCipher> KCtrBlockCipher<E> {
     }
 
     /// Shared by both `init` implementations.
-    fn init_internal(&mut self, params: &KCtrParams<'_, E>) -> Result<(), BlockCipherModeError<E>>
+    fn init_internal<'a>(
+        &mut self,
+        params: &KCtrParams<E::Params<'a>>,
+    ) -> Result<(), BlockCipherModeError<E>>
     where
         E: BlockCipherInit,
     {
@@ -137,7 +143,7 @@ impl<E: BlockCipher> KCtrBlockCipher<E> {
         // IV 靠右對齊、前面補零（照 bc）。
         let mut iv = vec![0u8; block_size];
         let offset = block_size - params.iv.len();
-        iv[offset..].copy_from_slice(params.iv);
+        iv[offset..].copy_from_slice(&params.iv);
 
         self.cipher
             .init(CipherDirection::Encrypt, &params.key_params)
@@ -196,7 +202,7 @@ impl<E: BlockCipher> StreamCipher for KCtrBlockCipher<E> {
 }
 
 impl<E: BlockCipherInit> StreamCipherInit for KCtrBlockCipher<E> {
-    type Params<'a> = KCtrParams<'a, E>;
+    type Params<'a> = KCtrParams<E::Params<'a>>;
 
     fn init(&mut self, params: &Self::Params<'_>) -> Result<(), Self::Error> {
         self.init_internal(params)
@@ -230,7 +236,7 @@ impl<E: BlockCipher> BlockCipher for KCtrBlockCipher<E> {
 }
 
 impl<E: BlockCipherInit> BlockCipherInit for KCtrBlockCipher<E> {
-    type Params<'a> = KCtrParams<'a, E>;
+    type Params<'a> = KCtrParams<E::Params<'a>>;
 
     fn init(
         &mut self,

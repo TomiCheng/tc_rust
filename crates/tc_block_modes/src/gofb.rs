@@ -28,27 +28,27 @@ const C2: i32 = 16843009;
 ///
 /// The IV may be shorter than one block, in which case it is left-padded with
 /// zeros (per FIPS PUB 81, as bc does); `None` means an all-zero IV.
-pub struct GofbParams<'a, E: BlockCipherInit> {
+pub struct GofbParams<P> {
     /// The underlying block cipher's key parameters.
-    key_params: E::Params<'a>,
+    key_params: P,
     /// The initialisation vector; `None` means all zeros.
-    iv: Option<&'a [u8]>,
+    iv: Option<Vec<u8>>,
 }
 
-impl<'a, E: BlockCipherInit> GofbParams<'a, E> {
+impl<P> GofbParams<P> {
     /// Builds parameters with an all-zero IV.
-    pub fn new(key_params: E::Params<'a>) -> Self {
+    pub fn new(key_params: P) -> Self {
         Self {
             key_params,
             iv: None,
         }
     }
 
-    /// Builds parameters with the given IV, which may be up to one block long.
-    pub fn with_iv(key_params: E::Params<'a>, iv: &'a [u8]) -> Self {
+    /// Copies the given IV, which may be up to one block long, into the parameters.
+    pub fn with_iv(key_params: P, iv: &[u8]) -> Self {
         Self {
             key_params,
-            iv: Some(iv),
+            iv: Some(iv.to_vec()),
         }
     }
 }
@@ -165,7 +165,7 @@ impl<E: BlockCipher> BlockCipher for GofbBlockCipher<E> {
 }
 
 impl<E: BlockCipherInit> BlockCipherInit for GofbBlockCipher<E> {
-    type Params<'a> = GofbParams<'a, E>;
+    type Params<'a> = GofbParams<E::Params<'a>>;
 
     fn init(
         &mut self,
@@ -177,7 +177,7 @@ impl<E: BlockCipherInit> BlockCipherInit for GofbBlockCipher<E> {
         self.n3 = 0;
         self.n4 = 0;
 
-        if let Some(iv) = params.iv {
+        if let Some(iv) = params.iv.as_deref() {
             if iv.len() > GCTR_BLOCK_BYTES {
                 return Err(BlockCipherModeError::InvalidIvLength {
                     actual: iv.len(),

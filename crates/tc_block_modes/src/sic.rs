@@ -21,17 +21,20 @@ use crate::BlockCipherModeError;
 ///
 /// Unlike CBC, CFB, and OFB the IV is required — a counter mode with a fixed
 /// all-zero nonce would repeat its keystream across messages.
-pub struct SicParams<'a, E: BlockCipherInit> {
+pub struct SicParams<P> {
     /// The underlying block cipher's key parameters.
-    key_params: E::Params<'a>,
+    key_params: P,
     /// The initial counter block prefix.
-    iv: &'a [u8],
+    iv: Vec<u8>,
 }
 
-impl<'a, E: BlockCipherInit> SicParams<'a, E> {
-    /// Builds parameters from the cipher's key parameters and the IV.
-    pub fn new(key_params: E::Params<'a>, iv: &'a [u8]) -> Self {
-        Self { key_params, iv }
+impl<P> SicParams<P> {
+    /// Builds parameters from the cipher's key parameters and a copy of the IV.
+    pub fn new(key_params: P, iv: &[u8]) -> Self {
+        Self {
+            key_params,
+            iv: iv.to_vec(),
+        }
     }
 }
 
@@ -55,7 +58,7 @@ pub struct SicBlockCipher<E> {
 pub type CtrBlockCipher<E> = SicBlockCipher<E>;
 
 /// CTR mode parameters, the common name for [`SicParams`].
-pub type CtrParams<'a, E> = SicParams<'a, E>;
+pub type CtrParams<P> = SicParams<P>;
 
 impl<E: BlockCipher> SicBlockCipher<E> {
     /// Wraps the given block cipher in CTR mode.
@@ -126,7 +129,7 @@ impl<E: BlockCipher> BlockCipher for SicBlockCipher<E> {
 }
 
 impl<E: BlockCipherInit> BlockCipherInit for SicBlockCipher<E> {
-    type Params<'a> = SicParams<'a, E>;
+    type Params<'a> = SicParams<E::Params<'a>>;
 
     fn init(
         &mut self,
@@ -146,7 +149,7 @@ impl<E: BlockCipherInit> BlockCipherInit for SicBlockCipher<E> {
             });
         }
 
-        self.iv[..iv_len].copy_from_slice(params.iv);
+        self.iv[..iv_len].copy_from_slice(&params.iv);
         self.iv[iv_len..].fill(0);
         self.counter.copy_from_slice(&self.iv);
 

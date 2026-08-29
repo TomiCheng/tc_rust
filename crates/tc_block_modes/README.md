@@ -125,6 +125,10 @@ unusable length is reported as `BlockCipherModeError::InvalidIvLength`.
 **Parameters are consumed when wrapped.** `CbcParams::with_iv(key_params, &iv)`
 takes ownership of the engine parameters, so rebuild them for a second `init`.
 
+**IVs are copied into parameter objects.** Mode parameter types such as
+`CbcParams<P>` do not carry a lifetime for the IV. The source IV can be changed
+or dropped immediately after `with_iv` or `new` returns.
+
 **KCTR implements the stream interface too.** It produces keystream a byte at a
 time, so it implements `StreamCipher` and `StreamCipherInit` as well as the
 block traits, matching bc. Both pairs declare `algorithm_name` and `init`, so

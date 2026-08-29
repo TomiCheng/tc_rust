@@ -67,6 +67,25 @@ fn nist_sp800_38a_aes128_encrypt() {
 }
 
 #[test]
+fn params_own_a_copy_of_the_iv() {
+    let key = AesParams::new(&hex(AES_KEY)).unwrap();
+    let params = {
+        let mut iv = hex(AES_IV);
+        let params = CbcParams::with_iv(key, &iv);
+        iv.fill(0xff);
+        params
+    };
+
+    let mut mode = CbcBlockCipher::new(AesEngine::new());
+    mode.init(CipherDirection::Encrypt, &params).unwrap();
+
+    let mut ciphertext = [0u8; AES_BLOCK_BYTES];
+    mode.process_block(&hex(AES_PLAINTEXT)[..AES_BLOCK_BYTES], &mut ciphertext)
+        .unwrap();
+    assert_eq!(ciphertext, hex(&AES_CIPHERTEXT[..AES_BLOCK_BYTES * 2])[..]);
+}
+
+#[test]
 fn nist_sp800_38a_aes128_decrypt() {
     let iv = hex(AES_IV);
     assert_eq!(

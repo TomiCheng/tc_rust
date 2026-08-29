@@ -21,27 +21,27 @@ use crate::BlockCipherModeError;
 /// hands them in, so the generic mode needs no separate keying capability. The
 /// IV must be exactly one block long, which is checked at `init` because the
 /// block size is only known from the cipher.
-pub struct CbcParams<'a, E: BlockCipherInit> {
+pub struct CbcParams<P> {
     /// The underlying block cipher's key parameters.
-    key_params: E::Params<'a>,
+    key_params: P,
     /// The initialisation vector; `None` means an all-zero IV.
-    iv: Option<&'a [u8]>,
+    iv: Option<Vec<u8>>,
 }
 
-impl<'a, E: BlockCipherInit> CbcParams<'a, E> {
+impl<P> CbcParams<P> {
     /// Builds parameters with an all-zero IV (bc's behaviour when no IV is given).
-    pub fn new(key_params: E::Params<'a>) -> Self {
+    pub fn new(key_params: P) -> Self {
         Self {
             key_params,
             iv: None,
         }
     }
 
-    /// Builds parameters with the given IV, which must be one block long.
-    pub fn with_iv(key_params: E::Params<'a>, iv: &'a [u8]) -> Self {
+    /// Copies the given IV, which must be one block long, into the parameters.
+    pub fn with_iv(key_params: P, iv: &[u8]) -> Self {
         Self {
             key_params,
-            iv: Some(iv),
+            iv: Some(iv.to_vec()),
         }
     }
 }
@@ -140,7 +140,7 @@ impl<E: BlockCipher> BlockCipher for CbcBlockCipher<E> {
 }
 
 impl<E: BlockCipherInit> BlockCipherInit for CbcBlockCipher<E> {
-    type Params<'a> = CbcParams<'a, E>;
+    type Params<'a> = CbcParams<E::Params<'a>>;
 
     fn init(
         &mut self,
@@ -148,7 +148,7 @@ impl<E: BlockCipherInit> BlockCipherInit for CbcBlockCipher<E> {
         params: &Self::Params<'_>,
     ) -> Result<(), Self::Error> {
         let block_size = self.cipher.block_size();
-        self.iv = match params.iv {
+        self.iv = match params.iv.as_deref() {
             Some(iv) if iv.len() != block_size => {
                 return Err(BlockCipherModeError::InvalidIvLength {
                     actual: iv.len(),
