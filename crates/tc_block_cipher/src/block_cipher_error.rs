@@ -5,7 +5,7 @@ use core::fmt;
 /// Common failures produced while configuring or processing a block cipher.
 ///
 /// Concrete engines may use this type directly when these variants cover their
-/// complete failure surface. [`BlockCipher`](tc_crypto_core::BlockCipher) keeps
+/// complete failure surface. [`BlockCipher`](tc_cipher_core::BlockCipher) keeps
 /// its error as an associated type, so engines with different failure modes can
 /// still expose a more specific error type. More common variants may be added as
 /// additional engines are implemented; downstream matches must include a
@@ -97,7 +97,8 @@ impl core::error::Error for BlockCipherError {}
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tc_crypto_core::BlockCipher;
+    use tc_cipher_core::BlockCipher as NewBlockCipher;
+    use tc_crypto_core::BlockCipher as LegacyBlockCipher;
 
     #[test]
     fn configuration_and_buffer_failures_remain_distinct() {
@@ -136,37 +137,39 @@ mod tests {
         );
     }
 
-    fn assert_shared_error<C: BlockCipher<Error = BlockCipherError>>() {}
+    fn assert_legacy_shared_error<C: LegacyBlockCipher<Error = BlockCipherError>>() {}
+
+    fn assert_new_shared_error<C: NewBlockCipher<Error = BlockCipherError>>() {}
 
     #[test]
     fn every_public_block_cipher_uses_the_shared_error() {
-        assert_shared_error::<crate::AesEngine>();
-        assert_shared_error::<crate::AesLightEngine>();
-        assert_shared_error::<crate::AriaEngine>();
-        assert_shared_error::<crate::BlowfishEngine>();
-        assert_shared_error::<crate::CamelliaEngine>();
-        assert_shared_error::<crate::CamelliaLightEngine>();
-        assert_shared_error::<crate::Cast5Engine>();
-        assert_shared_error::<crate::Cast6Engine>();
-        assert_shared_error::<crate::DesEngine>();
-        assert_shared_error::<crate::DesEdeEngine>();
-        assert_shared_error::<crate::Dstu7624Engine>();
-        assert_shared_error::<crate::Gost28147Engine>();
-        assert_shared_error::<crate::IdeaEngine>();
-        assert_shared_error::<crate::NoekeonEngine>();
-        assert_shared_error::<crate::Rc2Engine>();
-        assert_shared_error::<crate::Rc532Engine>();
-        assert_shared_error::<crate::Rc564Engine>();
-        assert_shared_error::<crate::Rc6Engine>();
-        assert_shared_error::<crate::RijndaelEngine>();
-        assert_shared_error::<crate::SeedEngine>();
-        assert_shared_error::<crate::SerpentEngine>();
-        assert_shared_error::<crate::TnepresEngine>();
-        assert_shared_error::<crate::SkipjackEngine>();
-        assert_shared_error::<crate::Sm4Engine>();
-        assert_shared_error::<crate::TeaEngine>();
-        assert_shared_error::<crate::ThreefishEngine>();
-        assert_shared_error::<crate::TwofishEngine>();
-        assert_shared_error::<crate::XteaEngine>();
+        assert_legacy_shared_error::<crate::AesEngine>();
+        assert_legacy_shared_error::<crate::AesLightEngine>();
+        assert_legacy_shared_error::<crate::AriaEngine>();
+        assert_legacy_shared_error::<crate::BlowfishEngine>();
+        assert_legacy_shared_error::<crate::CamelliaEngine>();
+        assert_legacy_shared_error::<crate::CamelliaLightEngine>();
+        assert_legacy_shared_error::<crate::Cast5Engine>();
+        assert_legacy_shared_error::<crate::Cast6Engine>();
+        assert_legacy_shared_error::<crate::DesEngine>();
+        assert_legacy_shared_error::<crate::DesEdeEngine>();
+        assert_legacy_shared_error::<crate::Dstu7624Engine>();
+        assert_legacy_shared_error::<crate::Gost28147Engine>();
+        assert_legacy_shared_error::<crate::IdeaEngine>();
+        assert_legacy_shared_error::<crate::NoekeonEngine>();
+        assert_new_shared_error::<crate::Rc2Engine>();
+        assert_legacy_shared_error::<crate::Rc532Engine>();
+        assert_legacy_shared_error::<crate::Rc564Engine>();
+        assert_legacy_shared_error::<crate::Rc6Engine>();
+        assert_legacy_shared_error::<crate::RijndaelEngine>();
+        assert_legacy_shared_error::<crate::SeedEngine>();
+        assert_legacy_shared_error::<crate::SerpentEngine>();
+        assert_legacy_shared_error::<crate::TnepresEngine>();
+        assert_legacy_shared_error::<crate::SkipjackEngine>();
+        assert_legacy_shared_error::<crate::Sm4Engine>();
+        assert_legacy_shared_error::<crate::TeaEngine>();
+        assert_legacy_shared_error::<crate::ThreefishEngine>();
+        assert_legacy_shared_error::<crate::TwofishEngine>();
+        assert_legacy_shared_error::<crate::XteaEngine>();
     }
 }

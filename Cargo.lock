@@ -504,6 +504,7 @@ name = "tc_block_cipher"
 version = "0.1.0"
 dependencies = [
  "criterion",
+ "tc_cipher_core",
  "tc_crypto_core",
 ]
 
