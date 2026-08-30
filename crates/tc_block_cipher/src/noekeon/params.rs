@@ -51,7 +51,7 @@ mod tests {
     fn debug_redacts_owned_key() {
         let params = NoekeonParams::new(&[0xA5u8; NOEKEON_KEY_BYTES]).unwrap();
         assert_eq!(
-            alloc::format!("{params:?}"),
+            format!("{params:?}"),
             "NoekeonParams { key_len: 16 }"
         );
     }

@@ -46,6 +46,6 @@ mod tests {
     #[test]
     fn debug_redacts_owned_key() {
         let params = TeaParams::new(&[0xA5u8; TEA_KEY_BYTES]).unwrap();
-        assert_eq!(alloc::format!("{params:?}"), "TeaParams { key_len: 16 }");
+        assert_eq!(format!("{params:?}"), "TeaParams { key_len: 16 }");
     }
 }

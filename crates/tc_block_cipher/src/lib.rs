@@ -1,11 +1,7 @@
 //! Cryptographic engine implementations ported from Bouncy Castle.
 
-// 關閉預設 feature 時為 no_std；測試仍讓 `#[test]` 框架連結 std。
-#![cfg_attr(not(any(feature = "std", test)), no_std)]
-
-// 只有需要動態配置的 engine 才依賴 alloc；測試本身可使用 Vec 等輔助工具。
-#[cfg(any(feature = "alloc", test))]
-extern crate alloc;
+// 恆為 no_std；測試仍讓 `#[test]` 框架連結 std。
+#![cfg_attr(not(test), no_std)]
 
 mod block_cipher_error;
 mod cast_common;
@@ -18,24 +14,19 @@ pub mod cast5;
 pub mod cast6;
 pub mod des;
 pub mod des_ede;
-#[cfg(feature = "alloc")]
 pub mod dstu7624;
 pub mod gost28147;
 pub mod idea;
 pub mod noekeon;
 pub mod rc2;
-#[cfg(feature = "alloc")]
 pub mod rc5;
-#[cfg(feature = "alloc")]
 pub mod rc6;
-#[cfg(feature = "alloc")]
 pub mod rijndael;
 pub mod seed;
 pub mod serpent;
 pub mod skipjack;
 pub mod sm4;
 pub mod tea;
-#[cfg(feature = "alloc")]
 pub mod threefish;
 pub mod twofish;
 pub mod xtea;
@@ -60,7 +51,6 @@ pub use des_ede::{
     DES_EDE_BLOCK_BYTES, DES_EDE_THREE_KEY_BYTES, DES_EDE_TWO_KEY_BYTES, DesEdeEngine,
     DesEdeParams,
 };
-#[cfg(feature = "alloc")]
 pub use dstu7624::{
     DSTU7624_BLOCK_BITS, DSTU7624_KEY_BYTES, Dstu7624Engine, Dstu7624Params,
 };
@@ -75,14 +65,11 @@ pub use noekeon::{
 pub use rc2::{
     RC2_BLOCK_BYTES, RC2_MAX_EFFECTIVE_KEY_BITS, RC2_MAX_KEY_BYTES, Rc2Engine, Rc2Params,
 };
-#[cfg(feature = "alloc")]
 pub use rc5::{
     RC5_32_BLOCK_BYTES, RC5_64_BLOCK_BYTES, RC5_DEFAULT_ROUNDS, RC5_MAX_KEY_BYTES, RC5_MAX_ROUNDS,
     Rc5Params, Rc5Word, Rc532Engine, Rc564Engine,
 };
-#[cfg(feature = "alloc")]
 pub use rc6::{RC6_BLOCK_BYTES, RC6_MAX_KEY_BYTES, RC6_ROUNDS, Rc6Engine, Rc6Params};
-#[cfg(feature = "alloc")]
 pub use rijndael::{
     RIJNDAEL_BLOCK_BITS, RIJNDAEL_KEY_BYTES, RijndaelEngine, RijndaelParams,
 };
@@ -96,8 +83,10 @@ pub use skipjack::{
 };
 pub use sm4::{SM4_BLOCK_BYTES, SM4_KEY_BYTES, Sm4Engine, Sm4Params};
 pub use tea::{TEA_BLOCK_BYTES, TEA_KEY_BYTES, TeaEngine, TeaParams};
-#[cfg(feature = "alloc")]
-pub use threefish::{ThreefishEngine, ThreefishParams};
+pub use threefish::{
+    Threefish1024Engine, Threefish1024Params, Threefish256Engine, Threefish256Params,
+    Threefish512Engine, Threefish512Params, ThreefishEngine, ThreefishParams,
+};
 pub use twofish::{
     TWOFISH_BLOCK_BYTES, TWOFISH_KEY_BYTES, TwofishEngine, TwofishParams,
 };

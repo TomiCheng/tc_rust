@@ -50,7 +50,7 @@ mod tests {
     #[test]
     fn accepts_every_bc_key_length() {
         for key_len in (4..=32).step_by(4) {
-            assert!(SerpentParams::new(&alloc::vec![0u8; key_len]).is_ok());
+            assert!(SerpentParams::new(&vec![0u8; key_len]).is_ok());
         }
     }
 
@@ -58,7 +58,7 @@ mod tests {
     fn rejects_out_of_range_and_unaligned_lengths() {
         for key_len in [0, 1, 3, 5, 15, 31, 33, 36] {
             assert!(matches!(
-                SerpentParams::new(&alloc::vec![0u8; key_len]),
+                SerpentParams::new(&vec![0u8; key_len]),
                 Err(BlockCipherError::InvalidKeyLength(n)) if n == key_len
             ));
         }
@@ -68,7 +68,7 @@ mod tests {
     fn debug_redacts_owned_key() {
         let params = SerpentParams::new(&[0xa5; 20]).unwrap();
         assert_eq!(
-            alloc::format!("{params:?}"),
+            format!("{params:?}"),
             "SerpentParams { key_len: 20 }"
         );
     }

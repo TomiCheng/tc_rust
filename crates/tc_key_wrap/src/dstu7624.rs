@@ -3,52 +3,55 @@
 //! Mirrors Bouncy Castle's `Dstu7624WrapEngine`. Unlike the RFC 3394 / 5649
 //! wrappers this is a scheme of its own: it appends an all-zero checking block,
 //! then runs a swap network over half-blocks with a per-round counter XOR, using
-//! the DSTU 7624 cipher at a chosen 128-, 256-, or 512-bit block size. It is not
-//! generic over the cipher — the block size is the only parameter.
+//! the DSTU 7624 cipher. The block and key widths are the cipher's compile-time
+//! word counts, so only the five combinations the standard defines can be named.
 
 use alloc::vec;
 use alloc::vec::Vec;
+use tc_block_cipher::dstu7624::{Dstu7624Config, ValidDstu7624Config};
 use tc_block_cipher::{BlockCipherError, Dstu7624Engine, Dstu7624Params};
 use tc_cipher_core::{
     BlockCipher, BlockCipherInit, CipherDirection, KeyWrap, KeyWrapInit, WrapDirection,
 };
 use tc_crypto_core::Wrapper;
 
-/// DSTU 7624 (Kalyna) key wrap, over a 128-, 256-, or 512-bit block.
+/// DSTU 7624 (Kalyna) key wrap over a block and key of the selected widths.
 ///
-/// Build with [`new`](Self::new), giving the block size in bits, then use the
-/// allocation-free [`KeyWrap`] interface. The key (supplied to `init` via
-/// [`Dstu7624Params`]) must be the block size or twice the block size. The
-/// legacy allocation-backed [`Wrapper`] interface remains available during
-/// migration.
-pub struct Dstu7624WrapEngine {
+/// Both const parameters count 64-bit words and match the underlying cipher, so
+/// the key is necessarily the block size or twice it. Build with [`new`](Self::new),
+/// then use the allocation-free [`KeyWrap`] interface. The legacy
+/// allocation-backed [`Wrapper`] interface remains available during migration.
+pub struct Dstu7624WrapEngine<const BLOCK_WORDS: usize, const KEY_WORDS: usize>
+where
+    Dstu7624Config<BLOCK_WORDS, KEY_WORDS>: ValidDstu7624Config<BLOCK_WORDS>,
+{
     /// The underlying DSTU 7624 cipher.
-    engine: Dstu7624Engine,
-    /// Block size in bytes.
-    block_size: usize,
+    engine: Dstu7624Engine<BLOCK_WORDS, KEY_WORDS>,
     /// The key-level operation selected during initialization.
     direction: Option<WrapDirection>,
 }
 
-impl Dstu7624WrapEngine {
-    /// Builds a wrapper over a DSTU 7624 cipher with the given block size in bits
-    /// (128, 256, or 512). Fails if the block size is unsupported.
-    pub fn new(block_size_bits: usize) -> Result<Self, Dstu7624WrapError> {
-        let engine =
-            Dstu7624Engine::new(block_size_bits).map_err(Dstu7624WrapError::BlockCipher)?;
-        let block_size = engine.block_size();
-        Ok(Self {
-            engine,
-            block_size,
+impl<const BLOCK_WORDS: usize, const KEY_WORDS: usize> Dstu7624WrapEngine<BLOCK_WORDS, KEY_WORDS>
+where
+    Dstu7624Config<BLOCK_WORDS, KEY_WORDS>: ValidDstu7624Config<BLOCK_WORDS>,
+{
+    /// Block size in bytes.
+    const BLOCK_SIZE: usize = BLOCK_WORDS * 8;
+
+    /// Builds a wrapper over a DSTU 7624 cipher of the selected widths.
+    pub fn new() -> Self {
+        Self {
+            engine: Dstu7624Engine::new(),
             direction: None,
-        })
+        }
     }
 
     /// Processes one full block in place using the already-keyed engine, routing
     /// through a scratch buffer (max 512-bit block = 64 bytes) to avoid aliasing.
     fn crypt_block(&mut self, block: &mut [u8]) -> Result<(), Dstu7624WrapError> {
+        // 暫存取最大分組（512 bit = 64 bytes），只在轉換期間存在。
         let mut scratch = [0u8; 64];
-        let bs = self.block_size;
+        let bs = Self::BLOCK_SIZE;
         self.engine
             .process_block(block, &mut scratch[..bs])
             .map_err(Dstu7624WrapError::BlockCipher)?;
@@ -110,17 +113,20 @@ impl core::fmt::Display for Dstu7624WrapError {
 
 impl core::error::Error for Dstu7624WrapError {}
 
-impl Dstu7624WrapEngine {
+impl<const BLOCK_WORDS: usize, const KEY_WORDS: usize> Dstu7624WrapEngine<BLOCK_WORDS, KEY_WORDS>
+where
+    Dstu7624Config<BLOCK_WORDS, KEY_WORDS>: ValidDstu7624Config<BLOCK_WORDS>,
+{
     /// Validates a wrap length and returns `(output length, half-block count)`.
     fn wrap_layout(&self, input_len: usize) -> Result<(usize, usize), Dstu7624WrapError> {
-        if !input_len.is_multiple_of(self.block_size) {
+        if !input_len.is_multiple_of(Self::BLOCK_SIZE) {
             return Err(Dstu7624WrapError::WrapDataLength);
         }
 
         let output_len = input_len
-            .checked_add(self.block_size)
+            .checked_add(Self::BLOCK_SIZE)
             .ok_or(Dstu7624WrapError::WrapDataLength)?;
-        let half_blocks = output_len / (self.block_size / 2);
+        let half_blocks = output_len / (Self::BLOCK_SIZE / 2);
         let rounds = half_blocks
             .checked_sub(1)
             .and_then(|count| count.checked_mul(6))
@@ -134,12 +140,12 @@ impl Dstu7624WrapEngine {
 
     /// Validates an unwrap length and returns `(output length, half-block count)`.
     fn unwrap_layout(&self, input_len: usize) -> Result<(usize, usize), Dstu7624WrapError> {
-        if input_len < self.block_size || !input_len.is_multiple_of(self.block_size) {
+        if input_len < Self::BLOCK_SIZE || !input_len.is_multiple_of(Self::BLOCK_SIZE) {
             return Err(Dstu7624WrapError::UnwrapDataLength);
         }
 
-        let output_len = input_len - self.block_size;
-        let half_blocks = input_len / (self.block_size / 2);
+        let output_len = input_len - Self::BLOCK_SIZE;
+        let half_blocks = input_len / (Self::BLOCK_SIZE / 2);
         let rounds = half_blocks
             .checked_sub(1)
             .and_then(|count| count.checked_mul(6))
@@ -155,7 +161,7 @@ impl Dstu7624WrapEngine {
     fn initialize(
         &mut self,
         direction: WrapDirection,
-        params: &Dstu7624Params,
+        params: &Dstu7624Params<KEY_WORDS>,
     ) -> Result<(), Dstu7624WrapError> {
         let cipher_direction = match direction {
             WrapDirection::Wrap => CipherDirection::Encrypt,
@@ -169,7 +175,21 @@ impl Dstu7624WrapEngine {
     }
 }
 
-impl KeyWrap for Dstu7624WrapEngine {
+impl<const BLOCK_WORDS: usize, const KEY_WORDS: usize> Default
+    for Dstu7624WrapEngine<BLOCK_WORDS, KEY_WORDS>
+where
+    Dstu7624Config<BLOCK_WORDS, KEY_WORDS>: ValidDstu7624Config<BLOCK_WORDS>,
+{
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<const BLOCK_WORDS: usize, const KEY_WORDS: usize> KeyWrap
+    for Dstu7624WrapEngine<BLOCK_WORDS, KEY_WORDS>
+where
+    Dstu7624Config<BLOCK_WORDS, KEY_WORDS>: ValidDstu7624Config<BLOCK_WORDS>,
+{
     type Error = Dstu7624WrapError;
 
     fn algorithm_name(&self) -> &str {
@@ -190,7 +210,6 @@ impl KeyWrap for Dstu7624WrapEngine {
             Some(WrapDirection::Unwrap) => return Err(Dstu7624WrapError::NotForWrapping),
             None => return Err(Dstu7624WrapError::Uninitialised),
         }
-
         let (required, half_blocks) = self.wrap_layout(input.len())?;
         if output.len() < required {
             return Err(Dstu7624WrapError::OutputBufferTooShort {
@@ -199,7 +218,7 @@ impl KeyWrap for Dstu7624WrapEngine {
             });
         }
 
-        let bs = self.block_size;
+        let bs = Self::BLOCK_SIZE;
         let half = bs / 2;
         let rounds = (half_blocks - 1) * 6;
         let buffer = &mut output[..required];
@@ -235,7 +254,6 @@ impl KeyWrap for Dstu7624WrapEngine {
             Some(WrapDirection::Wrap) => return Err(Dstu7624WrapError::NotForUnwrapping),
             None => return Err(Dstu7624WrapError::Uninitialised),
         }
-
         let (required, half_blocks) = self.unwrap_layout(input.len())?;
         if output.len() < required {
             return Err(Dstu7624WrapError::OutputBufferTooShort {
@@ -243,8 +261,7 @@ impl KeyWrap for Dstu7624WrapEngine {
                 available: output.len(),
             });
         }
-
-        let bs = self.block_size;
+        let bs = Self::BLOCK_SIZE;
         let half = bs / 2;
         let rounds = (half_blocks - 1) * 6;
         let buffer = &mut output[..required];
@@ -313,8 +330,12 @@ impl KeyWrap for Dstu7624WrapEngine {
     }
 }
 
-impl KeyWrapInit for Dstu7624WrapEngine {
-    type Params<'a> = Dstu7624Params;
+impl<const BLOCK_WORDS: usize, const KEY_WORDS: usize> KeyWrapInit
+    for Dstu7624WrapEngine<BLOCK_WORDS, KEY_WORDS>
+where
+    Dstu7624Config<BLOCK_WORDS, KEY_WORDS>: ValidDstu7624Config<BLOCK_WORDS>,
+{
+    type Params<'a> = Dstu7624Params<KEY_WORDS>;
 
     fn init(
         &mut self,
@@ -325,8 +346,12 @@ impl KeyWrapInit for Dstu7624WrapEngine {
     }
 }
 
-impl Wrapper for Dstu7624WrapEngine {
-    type Params<'a> = Dstu7624Params;
+impl<const BLOCK_WORDS: usize, const KEY_WORDS: usize> Wrapper
+    for Dstu7624WrapEngine<BLOCK_WORDS, KEY_WORDS>
+where
+    Dstu7624Config<BLOCK_WORDS, KEY_WORDS>: ValidDstu7624Config<BLOCK_WORDS>,
+{
+    type Params<'a> = Dstu7624Params<KEY_WORDS>;
     type Error = Dstu7624WrapError;
 
     fn algorithm_name(&self) -> &str {

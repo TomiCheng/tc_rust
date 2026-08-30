@@ -1,146 +1,130 @@
 //! The Threefish engine.
 //!
-//! The engine starts at a default block size, so its size/name accessors always
-//! answer; [`BlockCipherInit::init`] infers the block size from the validated key,
-//! rebuilding the key schedule (and resizing it only when the block size actually
-//! changes). Per-variant round functions live in [`super::cipher`].
-
-use alloc::vec::Vec;
+//! The word count is a const generic so each variant stores and processes only
+//! its own key and block width. Per-variant round functions live in
+//! [`super::cipher`].
 
 use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 
 use super::cipher::{self, C_240};
-use super::{BlockCipherError, ThreefishParams};
+use super::{BlockCipherError, ThreefishParams, valid_word_count};
 
-/// The default block size of a freshly constructed engine, before any `init`.
-const DEFAULT_BLOCK_SIZE: usize = 32;
-
-/// The Threefish tweakable block cipher (bc `ThreefishEngine`).
+/// Threefish with a compile-time block/key width.
 ///
-/// Construct with [`new`](ThreefishEngine::new) (or [`Default`]); the key, tweak
-/// and — via the params — the block size arrive at [`BlockCipherInit::init`].
-pub struct ThreefishEngine {
-    /// 目前分組:建構時為預設值,init 時採用 params 的分組。
-    block_size: usize,
-    /// 展開金鑰排程:nw 個金鑰字 + parity 字(共 nw+1);init 前為空 = 未初始化。
-    kw: Vec<u64>,
-    /// tweak 排程:t0, t1, t0 ^ t1。
-    t: [u64; 3],
-    /// true = 加密,false = 解密。
+/// `WORDS` must be 4, 8, or 16, selecting Threefish-256, Threefish-512, or
+/// Threefish-1024. Prefer the named aliases exported by the crate.
+pub struct ThreefishEngine<const WORDS: usize> {
+    /// Key words excluding the separately stored parity word.
+    key_words: [u64; WORDS],
+    /// `C_240 ^ key_words[0] ^ ...`, the final extended-key word.
+    parity: u64,
+    /// Tweak schedule: `t0`, `t1`, `t0 ^ t1`.
+    tweak: [u64; 3],
+    initialised: bool,
     for_encryption: bool,
 }
 
-impl ThreefishEngine {
-    /// Creates a Threefish engine at the default block size (overridden by the
-    /// first [`init`](BlockCipherInit::init)).
+impl<const WORDS: usize> ThreefishEngine<WORDS> {
+    const VALID_WORD_COUNT: () = assert!(
+        valid_word_count(WORDS),
+        "Threefish WORDS must be 4, 8, or 16"
+    );
+
+    /// Creates an uninitialised engine for the selected Threefish variant.
     pub fn new() -> Self {
-        ThreefishEngine {
-            block_size: DEFAULT_BLOCK_SIZE,
-            kw: Vec::new(),
-            t: [0; 3],
+        let () = Self::VALID_WORD_COUNT;
+        Self {
+            key_words: [0; WORDS],
+            parity: 0,
+            tweak: [0; 3],
+            initialised: false,
             for_encryption: false,
         }
     }
-
-    /// 目前分組的字數(nw = 分組位元組 / 8)。
-    fn words(&self) -> usize {
-        self.block_size / 8
-    }
 }
 
-impl Default for ThreefishEngine {
+impl<const WORDS: usize> Default for ThreefishEngine<WORDS> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl BlockCipher for ThreefishEngine {
+impl<const WORDS: usize> BlockCipher for ThreefishEngine<WORDS> {
     type Error = BlockCipherError;
 
     fn algorithm_name(&self) -> &str {
-        match self.block_size {
-            32 => "Threefish-256",
-            64 => "Threefish-512",
-            128 => "Threefish-1024",
-            _ => unreachable!("ThreefishParams validates the key length"),
+        match WORDS {
+            4 => "Threefish-256",
+            8 => "Threefish-512",
+            16 => "Threefish-1024",
+            _ => unreachable!("ThreefishEngine validates WORDS"),
         }
     }
 
     fn block_size(&self) -> usize {
-        self.block_size
+        WORDS * 8
     }
 
     fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
-        let nw = self.words();
-        // kw 未達 nw+1 表示尚未 init。
-        if self.kw.len() != nw + 1 {
+        if !self.initialised {
             return Err(BlockCipherError::NotInitialised);
         }
-        let bytes = self.block_size;
+        let bytes = self.block_size();
         if input.len() < bytes || output.len() < bytes {
             return Err(BlockCipherError::BufferTooShort);
         }
 
-        // 小端位元組 → 字。
-        let mut in_words = [0u64; 16];
-        for i in 0..nw {
-            in_words[i] = u64::from_le_bytes(input[i * 8..i * 8 + 8].try_into().unwrap());
+        let mut input_words = [0_u64; WORDS];
+        for (word, bytes) in input_words.iter_mut().zip(input[..bytes].chunks_exact(8)) {
+            *word = u64::from_le_bytes(bytes.try_into().unwrap());
         }
 
-        let mut out_words = [0u64; 16];
-        let variant = cipher::variant(self.block_size);
-        let (in_w, out_w) = (&in_words[..nw], &mut out_words[..nw]);
+        let mut output_words = [0_u64; WORDS];
+        let variant = cipher::variant(WORDS);
         if self.for_encryption {
-            cipher::encrypt(&variant, &self.kw, &self.t, in_w, out_w);
+            cipher::encrypt(
+                &variant,
+                &self.key_words,
+                self.parity,
+                &self.tweak,
+                &input_words,
+                &mut output_words,
+            );
         } else {
-            cipher::decrypt(&variant, &self.kw, &self.t, in_w, out_w);
+            cipher::decrypt(
+                &variant,
+                &self.key_words,
+                self.parity,
+                &self.tweak,
+                &input_words,
+                &mut output_words,
+            );
         }
 
-        // 字 → 小端位元組。
-        for i in 0..nw {
-            output[i * 8..i * 8 + 8].copy_from_slice(&out_words[i].to_le_bytes());
+        for (word, bytes) in output_words.iter().zip(output[..bytes].chunks_exact_mut(8)) {
+            bytes.copy_from_slice(&word.to_le_bytes());
         }
         Ok(bytes)
     }
 }
 
-impl BlockCipherInit for ThreefishEngine {
-    // 參數為擁有式、無 lifetime,GAT 的 'a 在此忽略。
-    type Params<'a> = ThreefishParams;
+impl<const WORDS: usize> BlockCipherInit for ThreefishEngine<WORDS> {
+    type Params<'a> = ThreefishParams<WORDS>;
 
     fn init(
         &mut self,
         direction: CipherDirection,
         params: &Self::Params<'_>,
     ) -> Result<(), Self::Error> {
-        // Threefish 的 key 與 block 等長;由已驗證的 key 長度選擇變體。
-        self.block_size = params.key_len();
-        let nw = self.words();
-        if self.kw.len() != nw + 1 {
-            self.kw.resize(nw + 1, 0);
-        }
+        self.key_words.copy_from_slice(params.key_words());
+        self.parity = self
+            .key_words
+            .iter()
+            .fold(C_240, |parity, word| parity ^ word);
 
-        // 金鑰排程:kw[0..nw] = 金鑰字(小端),kw[nw] = C_240 ^ 所有金鑰字。
-        // params 已保證 key 長度 == 分組,無需再驗。
-        let key = params.key();
-        let mut parity = C_240;
-        for i in 0..nw {
-            let word = u64::from_le_bytes(key[i * 8..i * 8 + 8].try_into().unwrap());
-            self.kw[i] = word;
-            parity ^= word;
-        }
-        self.kw[nw] = parity;
-
-        // tweak 排程:無 tweak 時採全零。
-        let (t0, t1) = match params.tweak() {
-            Some(tw) => (
-                u64::from_le_bytes(tw[0..8].try_into().unwrap()),
-                u64::from_le_bytes(tw[8..16].try_into().unwrap()),
-            ),
-            None => (0, 0),
-        };
-        self.t = [t0, t1, t0 ^ t1];
-
+        let [t0, t1] = *params.tweak_words();
+        self.tweak = [t0, t1, t0 ^ t1];
+        self.initialised = true;
         self.for_encryption = direction == CipherDirection::Encrypt;
         Ok(())
     }
@@ -151,19 +135,36 @@ mod tests {
     use super::*;
 
     #[test]
-    fn default_block_size_before_init() {
-        let e = ThreefishEngine::new();
-        assert_eq!(e.block_size(), 32);
-        assert_eq!(e.algorithm_name(), "Threefish-256");
+    fn variant_accessors_are_known_before_init() {
+        let engine = ThreefishEngine::<4>::new();
+        assert_eq!(engine.block_size(), 32);
+        assert_eq!(engine.algorithm_name(), "Threefish-256");
+
+        let engine = ThreefishEngine::<8>::new();
+        assert_eq!(engine.block_size(), 64);
+        assert_eq!(engine.algorithm_name(), "Threefish-512");
+
+        let engine = ThreefishEngine::<16>::new();
+        assert_eq!(engine.block_size(), 128);
+        assert_eq!(engine.algorithm_name(), "Threefish-1024");
     }
 
     #[test]
     fn process_block_before_init_errors() {
-        let mut e = ThreefishEngine::new();
-        let mut out = [0u8; 32];
+        let mut engine = ThreefishEngine::<4>::new();
         assert_eq!(
-            e.process_block(&[0u8; 32], &mut out),
+            engine.process_block(&[0_u8; 32], &mut [0_u8; 32]),
             Err(BlockCipherError::NotInitialised)
         );
+    }
+
+    #[test]
+    fn storage_increases_only_by_the_selected_key_width() {
+        let size_256 = core::mem::size_of::<ThreefishEngine<4>>();
+        let size_512 = core::mem::size_of::<ThreefishEngine<8>>();
+        let size_1024 = core::mem::size_of::<ThreefishEngine<16>>();
+
+        assert_eq!(size_512 - size_256, 4 * 8);
+        assert_eq!(size_1024 - size_512, 8 * 8);
     }
 }

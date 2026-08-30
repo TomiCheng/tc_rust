@@ -58,7 +58,7 @@ mod tests {
     #[test]
     fn debug_redacts_owned_key() {
         let params = Rc6Params::new(&[0xA5u8; 24]).unwrap();
-        assert_eq!(alloc::format!("{params:?}"), "Rc6Params { key_len: 24 }");
+        assert_eq!(format!("{params:?}"), "Rc6Params { key_len: 24 }");
     }
 
     #[test]

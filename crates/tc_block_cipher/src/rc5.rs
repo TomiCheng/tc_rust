@@ -5,16 +5,20 @@
 //! ships two fixed word sizes; this port expresses the shared algorithm over an
 //! [`Rc5Word`] trait and exposes them as [`Rc532Engine`]
 //! (32-bit words, 64-bit block) and [`Rc564Engine`] (64-bit words, 128-bit
-//! block). [`Rc5Params::new`] uses the standard twelve rounds;
-//! [`Rc5Params::with_rounds`] sets a different count.
+//! block).
+//!
+//! The round count is a const parameter defaulting to the standard twelve, so
+//! the schedule is sized at compile time: `Rc532Engine::<16>` runs sixteen
+//! rounds. A type alias does not apply its default to a bare `new()`, so name
+//! the count or annotate the binding, as below.
 //!
 //! ```
 //! use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 //! use tc_block_cipher::{Rc532Engine, Rc5Params};
 //!
 //! // RFC 2040 exercises RC5 in CBC mode; a single block with a zero IV is ECB.
-//! let params = Rc5Params::with_rounds(&[0x00], 2)?;
-//! let mut cipher = Rc532Engine::new();
+//! let params = Rc5Params::new(&[0x00])?;
+//! let mut cipher = Rc532Engine::<2>::new();
 //! cipher.init(CipherDirection::Encrypt, &params)?;
 //!
 //! let mut ciphertext = [0u8; 8];
