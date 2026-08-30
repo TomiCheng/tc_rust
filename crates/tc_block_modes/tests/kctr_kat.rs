@@ -39,13 +39,13 @@ const ALIGNED_OUT: &str = "B91A7B8790BBCFCFE65D04E5538E98E216AC209DA33122FDA596E
 
 /// Builds a KCTR mode over DSTU 7624 with a 128-bit block, initialised through
 /// the stream-cipher interface.
-fn new_stream_mode() -> KCtrBlockCipher<Dstu7624Engine> {
-    let mut mode = KCtrBlockCipher::new(Dstu7624Engine::new(128).unwrap());
+fn new_stream_mode() -> KCtrBlockCipher<Dstu7624Engine<2, 2>> {
+    let mut mode = KCtrBlockCipher::new(Dstu7624Engine::<2, 2>::new());
     let key = hex(KEY);
     let iv = hex(IV);
     StreamCipherInit::init(
         &mut mode,
-        &KCtrParams::new(Dstu7624Params::new(&key).unwrap(), &iv),
+        &KCtrParams::new(Dstu7624Params::<2>::new(&key).unwrap(), &iv),
     )
     .unwrap();
     mode
@@ -75,13 +75,13 @@ fn bc_vector_aligned_through_stream_interface() {
 #[test]
 fn bc_vector_aligned_through_block_interface() {
     // 同一組向量走 BlockCipher 介面必須得到相同結果（bc 也是這樣兩邊各測一次）。
-    let mut mode = KCtrBlockCipher::new(Dstu7624Engine::new(128).unwrap());
+    let mut mode = KCtrBlockCipher::new(Dstu7624Engine::<2, 2>::new());
     let key = hex(KEY);
     let iv = hex(IV);
     BlockCipherInit::init(
         &mut mode,
         CipherDirection::Encrypt,
-        &KCtrParams::new(Dstu7624Params::new(&key).unwrap(), &iv),
+        &KCtrParams::new(Dstu7624Params::<2>::new(&key).unwrap(), &iv),
     )
     .unwrap();
 
@@ -137,13 +137,13 @@ fn round_trips_and_ignores_the_direction() {
     enc.process_bytes(&plaintext, &mut ct).unwrap();
 
     // keystream 只由 key 與 IV 決定，故對密文再跑一次即還原。
-    let mut dec = KCtrBlockCipher::new(Dstu7624Engine::new(128).unwrap());
+    let mut dec = KCtrBlockCipher::new(Dstu7624Engine::<2, 2>::new());
     let key = hex(KEY);
     let iv = hex(IV);
     BlockCipherInit::init(
         &mut dec,
         CipherDirection::Decrypt,
-        &KCtrParams::new(Dstu7624Params::new(&key).unwrap(), &iv),
+        &KCtrParams::new(Dstu7624Params::<2>::new(&key).unwrap(), &iv),
     )
     .unwrap();
     let mut back = vec![0u8; ct.len()];
@@ -154,7 +154,7 @@ fn round_trips_and_ignores_the_direction() {
 
 #[test]
 fn reports_its_composed_name_and_errors_before_init() {
-    let mut mode = KCtrBlockCipher::new(Dstu7624Engine::new(128).unwrap());
+    let mut mode = KCtrBlockCipher::new(Dstu7624Engine::<2, 2>::new());
     assert_eq!(StreamCipher::algorithm_name(&mode), "DSTU7624/KCTR");
     assert_eq!(BlockCipher::block_size(&mode), 16);
 

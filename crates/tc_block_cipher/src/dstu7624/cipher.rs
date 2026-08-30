@@ -1,103 +1,99 @@
 //! Kalyna key schedule and round transformations.
 
-use alloc::vec::Vec;
-
 use super::tables::{S0, S1, S2, S3, T0, T1, T2, T3};
+use super::{Dstu7624Config, ValidDstu7624Config};
 
 const MAX_WORDS: usize = 8;
 
-pub(super) struct Dstu7624Cipher {
-    block_words: usize,
-    key_words: usize,
-    rounds: usize,
-    round_keys: Vec<u64>,
+pub(super) struct Dstu7624Cipher<const BLOCK_WORDS: usize, const KEY_WORDS: usize>
+where
+    Dstu7624Config<BLOCK_WORDS, KEY_WORDS>: ValidDstu7624Config<BLOCK_WORDS>,
+{
+    round_keys: <Dstu7624Config<BLOCK_WORDS, KEY_WORDS> as ValidDstu7624Config<
+        BLOCK_WORDS,
+    >>::Schedule,
 }
 
-impl Dstu7624Cipher {
-    pub(super) fn new(block_words: usize) -> Self {
+impl<const BLOCK_WORDS: usize, const KEY_WORDS: usize> Dstu7624Cipher<BLOCK_WORDS, KEY_WORDS>
+where
+    Dstu7624Config<BLOCK_WORDS, KEY_WORDS>: ValidDstu7624Config<BLOCK_WORDS>,
+{
+    /// Rounds run by this block/key combination.
+    const ROUNDS: usize =
+        <Dstu7624Config<BLOCK_WORDS, KEY_WORDS> as ValidDstu7624Config<BLOCK_WORDS>>::ROUNDS;
+
+    pub(super) fn new() -> Self {
         Self {
-            block_words,
-            key_words: 0,
-            rounds: 0,
-            round_keys: Vec::new(),
+            round_keys: <Dstu7624Config<BLOCK_WORDS, KEY_WORDS> as ValidDstu7624Config<
+                BLOCK_WORDS,
+            >>::new_schedule(),
         }
     }
 
-    pub(super) const fn block_bytes(&self) -> usize {
-        self.block_words * 8
+    pub(super) const fn block_bytes() -> usize {
+        BLOCK_WORDS * 8
     }
 
-    pub(super) fn set_key(&mut self, key: &[u8]) {
-        self.key_words = key.len() / 8;
-        self.rounds = match key.len() {
-            16 => 10,
-            32 => 14,
-            64 => 18,
-            _ => unreachable!("Dstu7624Params validates key length"),
-        };
-        self.round_keys.clear();
-        self.round_keys
-            .resize((self.rounds + 1) * self.block_words, 0);
-
+    pub(super) fn set_key(&mut self, key: &[[u8; 8]; KEY_WORDS]) {
         let mut working_key = [0u64; MAX_WORDS];
-        for (index, chunk) in key.chunks_exact(8).enumerate() {
-            working_key[index] = u64::from_le_bytes(chunk.try_into().unwrap());
+        for (slot, bytes) in working_key.iter_mut().zip(key.iter()) {
+            *slot = u64::from_le_bytes(*bytes);
         }
 
-        let temp_key = self.expand_kt(&working_key);
+        let temp_key = Self::expand_kt(&working_key);
         self.expand_even(&working_key, &temp_key);
         self.expand_odd();
     }
 
     pub(super) fn encrypt_block(&self, input: &[u8], output: &mut [u8]) {
-        let mut state = read_words(input, self.block_words);
-        add_key(&mut state, self.round_key(0), self.block_words);
+        let mut state = read_words(input, BLOCK_WORDS);
+        add_key(&mut state, self.round_key(0), BLOCK_WORDS);
 
-        for round in 1..=self.rounds {
-            encryption_round(&mut state, self.block_words);
-            if round == self.rounds {
-                add_key(&mut state, self.round_key(round), self.block_words);
+        for round in 1..=Self::ROUNDS {
+            encryption_round(&mut state, BLOCK_WORDS);
+            if round == Self::ROUNDS {
+                add_key(&mut state, self.round_key(round), BLOCK_WORDS);
             } else {
-                xor_key(&mut state, self.round_key(round), self.block_words);
+                xor_key(&mut state, self.round_key(round), BLOCK_WORDS);
             }
         }
-        write_words(&state, output, self.block_words);
+        write_words(&state, output, BLOCK_WORDS);
     }
 
     pub(super) fn decrypt_block(&self, input: &[u8], output: &mut [u8]) {
-        let mut state = read_words(input, self.block_words);
-        sub_key(&mut state, self.round_key(self.rounds), self.block_words);
+        let mut state = read_words(input, BLOCK_WORDS);
+        sub_key(&mut state, self.round_key(Self::ROUNDS), BLOCK_WORDS);
 
-        for round in (0..self.rounds).rev() {
-            decryption_round(&mut state, self.block_words);
+        for round in (0..Self::ROUNDS).rev() {
+            decryption_round(&mut state, BLOCK_WORDS);
             if round == 0 {
-                sub_key(&mut state, self.round_key(0), self.block_words);
+                sub_key(&mut state, self.round_key(0), BLOCK_WORDS);
             } else {
-                xor_key(&mut state, self.round_key(round), self.block_words);
+                xor_key(&mut state, self.round_key(round), BLOCK_WORDS);
             }
         }
-        write_words(&state, output, self.block_words);
+        write_words(&state, output, BLOCK_WORDS);
     }
 
-    fn expand_kt(&self, working_key: &[u64; MAX_WORDS]) -> [u64; MAX_WORDS] {
+    fn expand_kt(working_key: &[u64; MAX_WORDS]) -> [u64; MAX_WORDS] {
         let mut state = [0u64; MAX_WORDS];
         let mut k0 = [0u64; MAX_WORDS];
         let mut k1 = [0u64; MAX_WORDS];
-        state[0] = (self.block_words + self.key_words + 1) as u64;
+        state[0] = (BLOCK_WORDS + KEY_WORDS + 1) as u64;
 
-        k0[..self.block_words].copy_from_slice(&working_key[..self.block_words]);
-        if self.block_words == self.key_words {
-            k1[..self.block_words].copy_from_slice(&working_key[..self.block_words]);
+        k0[..BLOCK_WORDS].copy_from_slice(&working_key[..BLOCK_WORDS]);
+        if BLOCK_WORDS == KEY_WORDS {
+            k1[..BLOCK_WORDS].copy_from_slice(&working_key[..BLOCK_WORDS]);
         } else {
-            k1[..self.block_words].copy_from_slice(&working_key[self.block_words..self.key_words]);
+            k1[..BLOCK_WORDS].copy_from_slice(&working_key[BLOCK_WORDS..KEY_WORDS]);
         }
 
-        add_key(&mut state, &k0, self.block_words);
-        encryption_round(&mut state, self.block_words);
-        xor_key(&mut state, &k1, self.block_words);
-        encryption_round(&mut state, self.block_words);
-        add_key(&mut state, &k0, self.block_words);
-        encryption_round(&mut state, self.block_words);
+        add_key(&mut state, &k0, BLOCK_WORDS);
+        encryption_round(&mut state, BLOCK_WORDS);
+        xor_key(&mut state, &k1, BLOCK_WORDS);
+        encryption_round(&mut state, BLOCK_WORDS);
+        add_key(&mut state, &k0, BLOCK_WORDS);
+        encryption_round(&mut state, BLOCK_WORDS);
         state
     }
 
@@ -107,28 +103,28 @@ impl Dstu7624Cipher {
         let mut tmv = 0x0001_0001_0001_0001u64;
 
         loop {
-            self.generate_even_round(&initial_data[..self.block_words], temp_key, tmv, round);
-            if round == self.rounds {
+            self.generate_even_round(&initial_data[..BLOCK_WORDS], temp_key, tmv, round);
+            if round == Self::ROUNDS {
                 break;
             }
 
-            if self.key_words != self.block_words {
+            if KEY_WORDS != BLOCK_WORDS {
                 round += 2;
                 tmv <<= 1;
                 self.generate_even_round(
-                    &initial_data[self.block_words..self.key_words],
+                    &initial_data[BLOCK_WORDS..KEY_WORDS],
                     temp_key,
                     tmv,
                     round,
                 );
-                if round == self.rounds {
+                if round == Self::ROUNDS {
                     break;
                 }
             }
 
             round += 2;
             tmv <<= 1;
-            initial_data[..self.key_words].rotate_left(1);
+            initial_data[..KEY_WORDS].rotate_left(1);
         }
     }
 
@@ -141,39 +137,39 @@ impl Dstu7624Cipher {
     ) {
         let mut state = [0u64; MAX_WORDS];
         let mut temp_round_key = [0u64; MAX_WORDS];
-        for word in 0..self.block_words {
+        for word in 0..BLOCK_WORDS {
             temp_round_key[word] = temp_key[word].wrapping_add(tmv);
             state[word] = data[word].wrapping_add(temp_round_key[word]);
         }
-        encryption_round(&mut state, self.block_words);
-        xor_key(&mut state, &temp_round_key, self.block_words);
-        encryption_round(&mut state, self.block_words);
-        add_key(&mut state, &temp_round_key, self.block_words);
-        let words = self.block_words;
+        encryption_round(&mut state, BLOCK_WORDS);
+        xor_key(&mut state, &temp_round_key, BLOCK_WORDS);
+        encryption_round(&mut state, BLOCK_WORDS);
+        add_key(&mut state, &temp_round_key, BLOCK_WORDS);
         self.round_key_mut(round)
-            .copy_from_slice(&state[..words]);
+            .copy_from_slice(&state[..BLOCK_WORDS]);
     }
 
     fn expand_odd(&mut self) {
-        for round in (1..self.rounds).step_by(2) {
+        for round in (1..Self::ROUNDS).step_by(2) {
             let mut previous = [0u64; MAX_WORDS];
-            previous[..self.block_words].copy_from_slice(self.round_key(round - 1));
+            previous[..BLOCK_WORDS].copy_from_slice(self.round_key(round - 1));
             let mut rotated = [0u64; MAX_WORDS];
-            rotate_round_key(&previous, &mut rotated, self.block_words);
-            let words = self.block_words;
+            rotate_round_key(&previous, &mut rotated, BLOCK_WORDS);
             self.round_key_mut(round)
-                .copy_from_slice(&rotated[..words]);
+                .copy_from_slice(&rotated[..BLOCK_WORDS]);
         }
     }
 
     fn round_key(&self, round: usize) -> &[u64] {
-        let offset = round * self.block_words;
-        &self.round_keys[offset..offset + self.block_words]
+        &<Dstu7624Config<BLOCK_WORDS, KEY_WORDS> as ValidDstu7624Config<BLOCK_WORDS>>::schedule(
+            &self.round_keys,
+        )[round]
     }
 
     fn round_key_mut(&mut self, round: usize) -> &mut [u64] {
-        let offset = round * self.block_words;
-        &mut self.round_keys[offset..offset + self.block_words]
+        &mut <Dstu7624Config<BLOCK_WORDS, KEY_WORDS> as ValidDstu7624Config<BLOCK_WORDS>>::schedule_mut(
+            &mut self.round_keys,
+        )[round]
     }
 }
 

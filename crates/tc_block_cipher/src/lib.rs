@@ -18,7 +18,6 @@ pub mod cast5;
 pub mod cast6;
 pub mod des;
 pub mod des_ede;
-#[cfg(feature = "alloc")]
 pub mod dstu7624;
 pub mod gost28147;
 pub mod idea;
@@ -57,7 +56,6 @@ pub use des_ede::{
     DES_EDE_BLOCK_BYTES, DES_EDE_THREE_KEY_BYTES, DES_EDE_TWO_KEY_BYTES, DesEdeEngine,
     DesEdeParams,
 };
-#[cfg(feature = "alloc")]
 pub use dstu7624::{
     DSTU7624_BLOCK_BITS, DSTU7624_KEY_BYTES, Dstu7624Engine, Dstu7624Params,
 };

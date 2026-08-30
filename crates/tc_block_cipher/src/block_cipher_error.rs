@@ -150,8 +150,7 @@ mod tests {
         assert_shared_error::<crate::Cast6Engine>();
         assert_shared_error::<crate::DesEngine>();
         assert_shared_error::<crate::DesEdeEngine>();
-        #[cfg(feature = "alloc")]
-        assert_shared_error::<crate::Dstu7624Engine>();
+        assert_shared_error::<crate::Dstu7624Engine<4, 4>>();
         assert_shared_error::<crate::Gost28147Engine>();
         assert_shared_error::<crate::IdeaEngine>();
         assert_shared_error::<crate::NoekeonEngine>();

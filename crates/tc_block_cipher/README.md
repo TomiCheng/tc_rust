@@ -16,8 +16,8 @@ tweak bytes.
 The default `std` feature enables runtime AES-NI detection for `AesEngine` on
 supported x86 and x86-64 processors. Disabling default features builds a
 `no_std`, allocation-free subset and selects portable implementations. Enable
-the `alloc` feature to add the two algorithm families whose key schedules use
-dynamic storage while remaining `no_std`.
+the `alloc` feature to add RC5, whose key schedule is sized by a round count
+chosen at run time, while remaining `no_std`.
 
 > This crate is a learning port and has not received an independent security
 > audit. Do not use it as a replacement for an audited cryptographic library.
@@ -69,7 +69,10 @@ using an invalid parameter value, or supplying a short buffer returns a
 Most engines use `Engine::new()` plus `Params::new(key)`. The principal
 exceptions are:
 
-- `Dstu7624Engine::new(block_bits)` selects a 128-, 256-, or 512-bit block.
+- `Dstu7624Engine::<BLOCK_WORDS, KEY_WORDS>::new()` takes both sizes as
+  compile-time counts of 64-bit words, with the key equal to the block or twice
+  it. Only the standard's five combinations are implemented, so an unsupported
+  pairing will not compile. `Dstu7624Params::<KEY_WORDS>::new(key)` matches.
 - `RijndaelEngine::<BLOCK_COLUMNS, KEY_COLUMNS>::new()` takes both sizes as
   compile-time counts of 32-bit columns, each in `4..=8`, so 128 through 256
   bits in 32-bit steps. `RijndaelParams::<KEY_COLUMNS>::new(key)` matches. As
@@ -102,7 +105,7 @@ remains unchanged across build modes.
 | Camellia | `CamelliaEngine`, `CamelliaLightEngine` | 128-bit block; 128/192/256-bit keys | core-only |
 | CAST | `Cast5Engine`, `Cast6Engine` | CAST5: 64-bit block, 40-128-bit keys; CAST6: 128-bit block, 128-256-bit keys in 32-bit steps | core-only |
 | DES / Triple DES | `DesEngine`, `DesEdeEngine` | 64-bit block; 8-byte DES or 16/24-byte EDE keys | core-only |
-| DSTU 7624 (Kalyna) | `Dstu7624Engine` | 128/256/512-bit blocks; same-size or double-size keys where defined | alloc |
+| DSTU 7624 (Kalyna) | `Dstu7624Engine<BLOCK_WORDS, KEY_WORDS>` | 128/256/512-bit blocks; same-size or double-size keys where defined | core-only |
 | GOST 28147-89 | `Gost28147Engine` | 64-bit block; 256-bit key; named and custom S-boxes | core-only |
 | IDEA | `IdeaEngine` | 64-bit block; 128-bit key | core-only |
 | Noekeon | `NoekeonEngine` | 128-bit block and key | core-only |
@@ -175,7 +178,7 @@ cargo test -p tc_block_cipher --locked
 
 Disable default features for the allocation-free `no_std` subset. This includes
 RC2 and every algorithm marked `core-only` in the table above. It excludes
-DSTU 7624 and RC5:
+only RC5:
 
 ```bash
 cargo build -p tc_block_cipher --no-default-features --locked
