@@ -5,8 +5,8 @@
 //! block size. Each vector checks the wrap output and the unwrap round-trip.
 
 use tc_block_cipher::Dstu7624Params;
-use tc_crypto_core::Wrapper;
-use tc_key_wrap::Dstu7624WrapEngine;
+use tc_cipher_core::{KeyWrap, KeyWrapInit, WrapDirection};
+use tc_key_wrap::{Dstu7624WrapEngine, Dstu7624WrapError};
 
 /// Parses a hex string (ignoring whitespace) into bytes.
 fn hex(s: &str) -> Vec<u8> {
@@ -29,11 +29,19 @@ fn check(block_bits: usize, key_hex: &str, input_hex: &str, wrapped_hex: &str) {
 
     let mut w = Dstu7624WrapEngine::new(block_bits).unwrap();
 
-    w.init(true, &Dstu7624Params::new(&key).unwrap()).unwrap();
-    assert_eq!(w.wrap(&input).unwrap(), wrapped, "wrap 輸出與向量不符");
+    w.init(WrapDirection::Wrap, &Dstu7624Params::new(&key).unwrap())
+        .unwrap();
+    let mut output = vec![0_u8; w.wrapped_len(input.len()).unwrap()];
+    let written = w.wrap_into(&input, &mut output).unwrap();
+    assert_eq!(written, output.len());
+    assert_eq!(output, wrapped, "wrap 輸出與向量不符");
 
-    w.init(false, &Dstu7624Params::new(&key).unwrap()).unwrap();
-    assert_eq!(w.unwrap(&wrapped).unwrap(), input, "unwrap 未還原原始資料");
+    w.init(WrapDirection::Unwrap, &Dstu7624Params::new(&key).unwrap())
+        .unwrap();
+    let mut recovered = vec![0_u8; w.max_unwrapped_len(wrapped.len()).unwrap()];
+    let written = w.unwrap_into(&wrapped, &mut recovered).unwrap();
+    assert_eq!(written, recovered.len());
+    assert_eq!(recovered, input, "unwrap 未還原原始資料");
 }
 
 #[test]
@@ -89,10 +97,85 @@ fn kw_512_double_key() {
 #[test]
 fn tampered_blob_fails_integrity_check() {
     let key = hex("000102030405060708090A0B0C0D0E0F");
-    let mut wrapped = hex("0EA983D6CE48484D51462C32CC61672210FCC44196ABE635BAF878FDB83E1A63114128585D49DB355C5819FD38039169");
+    let mut wrapped = hex(
+        "0EA983D6CE48484D51462C32CC61672210FCC44196ABE635BAF878FDB83E1A63114128585D49DB355C5819FD38039169",
+    );
     wrapped[0] ^= 0x01; // 竄改一個 byte
 
     let mut w = Dstu7624WrapEngine::new(128).unwrap();
-    w.init(false, &Dstu7624Params::new(&key).unwrap()).unwrap();
-    assert!(w.unwrap(&wrapped).is_err(), "竄改的資料不該通過校驗");
+    w.init(WrapDirection::Unwrap, &Dstu7624Params::new(&key).unwrap())
+        .unwrap();
+    let mut output = vec![0xa5_u8; w.max_unwrapped_len(wrapped.len()).unwrap()];
+    assert!(matches!(
+        w.unwrap_into(&wrapped, &mut output),
+        Err(Dstu7624WrapError::IntegrityCheckFailed)
+    ));
+    assert!(
+        output.iter().all(|byte| *byte == 0),
+        "完整性失敗不得留下未驗證的 key material"
+    );
+}
+
+#[test]
+fn sizing_and_short_output_errors_are_reported_before_processing() {
+    let key = hex("000102030405060708090A0B0C0D0E0F");
+    let input = [0_u8; 16];
+    let mut w = Dstu7624WrapEngine::new(128).unwrap();
+
+    assert_eq!(w.wrapped_len(0).unwrap(), 16);
+    assert_eq!(w.wrapped_len(16).unwrap(), 32);
+    assert!(matches!(
+        w.wrapped_len(15),
+        Err(Dstu7624WrapError::WrapDataLength)
+    ));
+    assert_eq!(w.max_unwrapped_len(16).unwrap(), 0);
+    assert_eq!(w.max_unwrapped_len(32).unwrap(), 16);
+    assert!(matches!(
+        w.max_unwrapped_len(15),
+        Err(Dstu7624WrapError::UnwrapDataLength)
+    ));
+
+    w.init(WrapDirection::Wrap, &Dstu7624Params::new(&key).unwrap())
+        .unwrap();
+    let mut short = [0_u8; 31];
+    assert!(matches!(
+        w.wrap_into(&input, &mut short),
+        Err(Dstu7624WrapError::OutputBufferTooShort {
+            required: 32,
+            available: 31,
+        })
+    ));
+}
+
+#[test]
+fn empty_input_round_trips() {
+    let key = hex("000102030405060708090A0B0C0D0E0F");
+    let params = Dstu7624Params::new(&key).unwrap();
+    let mut w = Dstu7624WrapEngine::new(128).unwrap();
+
+    w.init(WrapDirection::Wrap, &params).unwrap();
+    let mut wrapped = [0_u8; 16];
+    assert_eq!(w.wrap_into(&[], &mut wrapped).unwrap(), wrapped.len());
+
+    w.init(WrapDirection::Unwrap, &params).unwrap();
+    assert_eq!(w.unwrap_into(&wrapped, &mut []).unwrap(), 0);
+}
+
+#[test]
+fn initialized_engine_supports_dynamic_dispatch() {
+    let key = hex("000102030405060708090A0B0C0D0E0F");
+    let input = [0_u8; 16];
+    let mut engine = Dstu7624WrapEngine::new(128).unwrap();
+    engine
+        .init(WrapDirection::Wrap, &Dstu7624Params::new(&key).unwrap())
+        .unwrap();
+
+    let wrapper: &mut dyn KeyWrap<Error = Dstu7624WrapError> = &mut engine;
+    let mut output = [0_u8; 32];
+
+    assert_eq!(wrapper.wrapped_len(input.len()).unwrap(), output.len());
+    assert_eq!(
+        wrapper.wrap_into(&input, &mut output).unwrap(),
+        output.len()
+    );
 }
