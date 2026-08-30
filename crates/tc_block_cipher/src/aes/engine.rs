@@ -7,7 +7,10 @@ use super::{AES_BLOCK_BYTES, AesParams, BlockCipherError, RoundKeys, portable};
 #[derive(Clone, Copy)]
 enum Backend {
     Portable,
-    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+    #[cfg(all(
+        not(feature = "force-portable-aes"),
+        any(target_arch = "x86", target_arch = "x86_64")
+    ))]
     AesNi,
 }
 
@@ -16,7 +19,10 @@ enum Backend {
 /// 偵測直接讀 CPUID，而非 `std::is_x86_feature_detected!` —— 後者只在 std 才有，
 /// 而 CPUID 的取用函式本來就在 `core::arch`，故 no_std 目標一樣能走 AES-NI。
 /// 只在建構 engine 時呼叫一次，成本遠低於隨後的金鑰展開，不必快取。
-#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+#[cfg(all(
+    not(feature = "force-portable-aes"),
+    any(target_arch = "x86", target_arch = "x86_64")
+))]
 fn has_aes_ni() -> bool {
     #[cfg(target_arch = "x86")]
     use core::arch::x86::{__cpuid, __get_cpuid_max};
@@ -32,11 +38,19 @@ fn has_aes_ni() -> bool {
 }
 
 fn detect_backend() -> Backend {
-    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-    if has_aes_ni() {
-        return Backend::AesNi;
+    #[cfg(feature = "force-portable-aes")]
+    {
+        Backend::Portable
     }
-    Backend::Portable
+
+    #[cfg(not(feature = "force-portable-aes"))]
+    {
+        #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+        if has_aes_ni() {
+            return Backend::AesNi;
+        }
+        Backend::Portable
+    }
 }
 
 /// AES block cipher with portable and x86 AES-NI backends.
@@ -68,12 +82,18 @@ impl AesEngine {
             (Backend::Portable, false) => {
                 portable::decrypt_block(&self.round_keys, self.rounds, input, output)
             }
-            #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+            #[cfg(all(
+                not(feature = "force-portable-aes"),
+                any(target_arch = "x86", target_arch = "x86_64")
+            ))]
             (Backend::AesNi, true) => {
                 // SAFETY: `Backend::AesNi` is created only after runtime detection.
                 unsafe { super::x86::encrypt_block(&self.round_keys, self.rounds, input, output) }
             }
-            #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+            #[cfg(all(
+                not(feature = "force-portable-aes"),
+                any(target_arch = "x86", target_arch = "x86_64")
+            ))]
             (Backend::AesNi, false) => {
                 // SAFETY: `Backend::AesNi` is created only after runtime detection.
                 unsafe { super::x86::decrypt_block(&self.round_keys, self.rounds, input, output) }
@@ -132,7 +152,10 @@ impl BlockCipherInit for AesEngine {
                 Backend::Portable => {
                     portable::prepare_decryption_keys(&mut self.round_keys, self.rounds);
                 }
-                #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+                #[cfg(all(
+                    not(feature = "force-portable-aes"),
+                    any(target_arch = "x86", target_arch = "x86_64")
+                ))]
                 Backend::AesNi => {
                     // SAFETY: `Backend::AesNi` is created only after runtime detection.
                     unsafe {
@@ -177,7 +200,10 @@ mod tests {
         );
     }
 
-    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+    #[cfg(all(
+        not(feature = "force-portable-aes"),
+        any(target_arch = "x86", target_arch = "x86_64")
+    ))]
     #[test]
     fn aes_ni_matches_portable() {
         if !has_aes_ni() {

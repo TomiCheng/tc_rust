@@ -3,25 +3,34 @@
 //! `cargo bench -p tc_block_cipher --bench aes`
 //!
 //! `AesEngine` picks its backend from the processor, so which one is measured
-//! is reported in the benchmark's name. `AesLightEngine` is always portable.
+//! is reported in the benchmark's name. Build with `force-portable-aes` to
+//! measure its portable T-table backend. `AesLightEngine` is always portable.
 
 use std::hint::black_box;
 
 use criterion::{
     BenchmarkId, Criterion, Throughput, criterion_group, criterion_main, measurement::WallTime,
 };
+use tc_block_cipher::{AES_BLOCK_BYTES, AesEngine, AesLightEngine, AesParams, BlockCipherError};
 use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
-use tc_block_cipher::{AES_BLOCK_BYTES, AesEngine, BlockCipherError, AesLightEngine, AesParams};
 
 const KEY_SIZES: [usize; 3] = [16, 24, 32];
 
 fn backend_name() -> &'static str {
-    // 這是測試程式，可直接用 std 的偵測；函式庫本身走 core 的 CPUID。
-    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-    if std::is_x86_feature_detected!("aes") && std::is_x86_feature_detected!("sse2") {
-        return "aes-ni";
+    #[cfg(feature = "force-portable-aes")]
+    {
+        "portable"
     }
-    "portable"
+
+    #[cfg(not(feature = "force-portable-aes"))]
+    {
+        // 這是測試程式，可直接用 std 的偵測；函式庫本身走 core 的 CPUID。
+        #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+        if std::is_x86_feature_detected!("aes") && std::is_x86_feature_detected!("sse2") {
+            return "aes-ni";
+        }
+        "portable"
+    }
 }
 
 fn key(size: usize) -> Vec<u8> {

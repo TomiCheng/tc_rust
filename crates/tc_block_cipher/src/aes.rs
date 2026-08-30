@@ -26,7 +26,10 @@ mod light_engine;
 mod params;
 mod portable;
 
-#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+#[cfg(all(
+    not(feature = "force-portable-aes"),
+    any(target_arch = "x86", target_arch = "x86_64")
+))]
 mod x86;
 
 pub use engine::AesEngine;

@@ -13,11 +13,12 @@ algorithm-specific settings before an engine is initialized. Parameter types
 do not implement `Clone`, and their `Debug` implementations redact key and
 tweak bytes.
 
-The crate is `no_std` and has no features: nothing in it allocates, and nothing
-needs the standard library. `AesEngine` still selects an AES-NI backend on x86
-and x86-64 processors that offer it, reading CPUID through `core::arch` rather
-than a std-only detection macro, so the choice is available on bare-metal
-targets too.
+The crate is `no_std`: nothing in it allocates, and nothing needs the standard
+library. `AesEngine` still selects an AES-NI backend on x86 and x86-64
+processors that offer it, reading CPUID through `core::arch` rather than a
+std-only detection macro. The non-default `force-portable-aes` feature disables
+that dispatch when a portable-only build is required. The same algorithms and
+public API remain available in every build.
 
 > This crate is a learning port and has not received an independent security
 > audit. Do not use it as a replacement for an audited cryptographic library.
@@ -167,11 +168,19 @@ target system before making a performance decision.
 
 ## 5. Building and testing
 
-There is one build; the crate has no features to select.
+The default build automatically selects AES-NI where available. All algorithms
+remain available without `std`:
 
 ```bash
 cargo build -p tc_block_cipher --locked
 cargo test -p tc_block_cipher --locked
+```
+
+Force `AesEngine` to use its portable T-table backend without changing its API:
+
+```bash
+cargo build -p tc_block_cipher --features force-portable-aes --locked
+cargo test -p tc_block_cipher --features force-portable-aes --locked
 ```
 
 Tests link the Rust standard test harness, but the library itself is `no_std`.
@@ -189,7 +198,10 @@ Run the AES benchmarks with:
 
 ```bash
 cargo bench -p tc_block_cipher --bench aes --locked
+cargo bench -p tc_block_cipher --bench aes --features force-portable-aes --locked
 ```
 
-`AesEngine` reports which backend it measured in the benchmark name, and
-`AesLightEngine` is always portable, so one run covers both.
+The first run measures the automatically selected `AesEngine` backend; the
+second measures its portable T-table backend. Both runs also measure the
+always-portable `AesLightEngine`, allowing all three strategies to be compared
+on an AES-NI-capable processor.
