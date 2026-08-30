@@ -18,7 +18,7 @@ pub mod rfc5649;
 
 pub use dstu7624::{Dstu7624WrapEngine, Dstu7624WrapError};
 pub use rfc3394::{Rfc3394Error, Rfc3394Params, Rfc3394WrapEngine};
-pub use rfc5649::{Rfc5649Params, Rfc5649WrapEngine};
+pub use rfc5649::{Rfc5649Error, Rfc5649Params, Rfc5649WrapEngine};
 
 use tc_block_cipher::{AesEngine, AriaEngine, CamelliaEngine, SeedEngine};
 

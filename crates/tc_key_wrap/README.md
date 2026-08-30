@@ -8,13 +8,14 @@ key-encryption key (KEK), producing a slightly longer blob that carries its own
 integrity check, so a tampered blob or the wrong KEK is rejected on unwrap.
 
 Wrappers build on a block cipher from
-[`tc_block_cipher`](../tc_block_cipher). `Rfc3394WrapEngine` implements the new
+[`tc_block_cipher`](../tc_block_cipher). `Rfc3394WrapEngine` and
+`Rfc5649WrapEngine` implement the new
 [`KeyWrap`](../tc_cipher_core/src/key_wrap.rs) and `KeyWrapInit` traits from
 `tc_cipher_core`: callers calculate the required length and provide the output
-buffer, so the wrapping operation itself does not allocate. It also retains the
-legacy [`Wrapper`](../tc_crypto_core/src/wrapper.rs) implementation while the
-remaining wrappers are migrated. The crate as a whole is currently
-`no_std + alloc` because those legacy wrappers return owned `Vec<u8>` values.
+buffer, so the wrapping operation itself does not allocate. They also retain
+the legacy [`Wrapper`](../tc_crypto_core/src/wrapper.rs) implementation while
+the remaining wrappers are migrated. The crate as a whole is currently
+`no_std + alloc` because those legacy interfaces return owned `Vec<u8>` values.
 
 > This crate is a learning port and has not received an independent security
 > audit. Do not use it as a replacement for an audited cryptographic library.
@@ -37,10 +38,9 @@ pub type CamelliaWrapEngine = Rfc3394WrapEngine<CamelliaEngine>;
 ```
 
 The new interface separates initialization from the object-safe operation
-trait. After initialization, an RFC 3394 engine can therefore also be used as
-`dyn KeyWrap<Error = Rfc3394Error<E>>`. `wrapped_len` and
-`max_unwrapped_len` let callers size a reusable output buffer before calling
-`wrap_into` or `unwrap_into`.
+trait. After initialization, either RFC engine can therefore also be used as
+`dyn KeyWrap<Error = ...>`. `wrapped_len` and `max_unwrapped_len` let callers
+size a reusable output buffer before calling `wrap_into` or `unwrap_into`.
 
 The wrappers fall into three mechanism families:
 
@@ -103,10 +103,11 @@ own logic and does not depend on a cipher mode.
   `Default` impl for arg-less construction. AES is covered by the RFC 3394 NIST
   vectors; ARIA/Camellia/SEED are cross-checked against an independent
   OpenSSL-based RFC 3394 implementation (`tests/wrap_alias_kat.rs`).
-- [x] **`Rfc5649WrapEngine<E>`** + `AesWrapPadEngine` / `AriaWrapPadEngine` — AES
-  verified against the RFC 5649 §6 official vectors, ARIA cross-checked against
-  the independent OpenSSL implementation (`tests/rfc5649_kat.rs`). Shares the
-  RFC 3394 register core.
+- [x] **`Rfc5649WrapEngine<E>`** + `AesWrapPadEngine` / `AriaWrapPadEngine` —
+  migrated to `KeyWrap` / `KeyWrapInit`; AES verified against the RFC 5649 §6
+  official vectors, ARIA cross-checked against the independent OpenSSL
+  implementation (`tests/rfc5649_kat.rs`). Shares the allocation-free RFC 3394
+  register core.
 - [x] **`Dstu7624WrapEngine`** — its own swap-network scheme over the DSTU 7624
   cipher (128/256/512-bit blocks), verified against the Bouncy Castle key-wrap
   vectors (`tests/dstu7624_kat.rs`).

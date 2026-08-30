@@ -2,9 +2,9 @@
 //!
 //! See RFC 3394 (Schaad & Housley, 2002). This type is the shared base for
 //! concrete wrappers such as `AesWrapEngine`, mirroring Bouncy Castle's
-//! `Rfc3394WrapEngine`. The register loop is factored into caller-buffer cores;
-//! allocation-backed adapters remain available so that the RFC 5649 wrapper
-//! ([`crate::rfc5649`]) can reuse the same implementation.
+//! `Rfc3394WrapEngine`. The register loop is factored into caller-buffer cores
+//! so that the RFC 5649 wrapper ([`crate::rfc5649`]) can reuse the same
+//! allocation-free implementation.
 
 use alloc::vec;
 use alloc::vec::Vec;
@@ -329,20 +329,6 @@ impl<E: BlockCipherInit> Wrapper for Rfc3394WrapEngine<E> {
     }
 }
 
-/// RFC 3394 wrap core: runs the A/R register loop on an already-keyed
-/// (encryption-direction) engine. `iv` is the 8-byte AIV/IV and `input` must be
-/// a positive multiple of 8 bytes (the caller checks this). Shared by the RFC
-/// 3394 and RFC 5649 wrappers.
-pub(crate) fn wrap_core<E: BlockCipher>(
-    engine: &mut E,
-    iv: &[u8; 8],
-    input: &[u8],
-) -> Result<Vec<u8>, E::Error> {
-    let mut output = vec![0_u8; input.len() + 8];
-    wrap_core_into(engine, iv, input, &mut output)?;
-    Ok(output)
-}
-
 /// Caller-buffer RFC 3394 wrap core shared by the allocation-free interface
 /// and the allocation-backed compatibility adapter.
 fn wrap_core_into<E: BlockCipher>(
@@ -351,12 +337,24 @@ fn wrap_core_into<E: BlockCipher>(
     input: &[u8],
     output: &mut [u8],
 ) -> Result<(), E::Error> {
-    let n = input.len() / 8;
     let block = &mut output[..input.len() + 8];
 
     // block = IV(8) || input，之後所有運算就地在 block 上進行。
     block[..8].copy_from_slice(iv);
     block[8..].copy_from_slice(input);
+
+    wrap_core_in_place(engine, block)
+}
+
+/// Runs the RFC 3394 register loop over an `A || R` block in place.
+///
+/// This is also the allocation-free primitive used by RFC 5649 after it has
+/// written its AIV and padded input directly into the caller's output buffer.
+pub(crate) fn wrap_core_in_place<E: BlockCipher>(
+    engine: &mut E,
+    block: &mut [u8],
+) -> Result<(), E::Error> {
+    let n = block.len() / 8 - 1;
 
     if n == 1 {
         // 單一資料分組：直接加密 IV||R 這 16 bytes。
@@ -387,21 +385,8 @@ fn wrap_core_into<E: BlockCipher>(
     Ok(())
 }
 
-/// RFC 3394 unwrap core, **without** the IV check: returns `(data, extracted A)`.
-/// The caller validates the extracted A (RFC 3394 compares it to the IV; RFC 5649
-/// decodes the AIV and MLI from it). `input` must be at least 16 bytes and a
-/// multiple of 8 (the caller checks this).
-pub(crate) fn unwrap_core<E: BlockCipher>(
-    engine: &mut E,
-    input: &[u8],
-) -> Result<(Vec<u8>, [u8; 8]), E::Error> {
-    let mut output = vec![0_u8; input.len() - 8];
-    let a = unwrap_core_into(engine, input, &mut output)?;
-    Ok((output, a))
-}
-
 /// Caller-buffer RFC 3394 unwrap core without the IV integrity check.
-fn unwrap_core_into<E: BlockCipher>(
+pub(crate) fn unwrap_core_into<E: BlockCipher>(
     engine: &mut E,
     input: &[u8],
     output: &mut [u8],
