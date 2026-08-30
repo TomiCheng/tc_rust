@@ -10,7 +10,7 @@ integrity check, so a tampered blob or the wrong KEK is rejected on unwrap.
 Wrappers build on a block cipher from
 [`tc_block_cipher`](../tc_block_cipher). All currently implemented engines
 (`Rfc3394WrapEngine`, `Rfc5649WrapEngine`, `Dstu7624WrapEngine`,
-`Rfc3211WrapEngine`, and `DesEdeWrapEngine`) implement
+`Rfc3211WrapEngine`, `DesEdeWrapEngine`, and `Rc2WrapEngine`) implement
 the new
 [`KeyWrap`](../tc_cipher_core/src/key_wrap.rs) and `KeyWrapInit` traits from
 `tc_cipher_core`: callers calculate the required length and provide the output
@@ -24,10 +24,9 @@ implementations use `Vec` scratch buffers.
 > This crate is a learning port and has not received an independent security
 > audit. Do not use it as a replacement for an audited cryptographic library.
 
-**Status: in progress.** The `Wrapper` trait exists in `tc_crypto_core`; the
-RFC 3394 and RFC 5649 AES Key Wrap families and the DSTU 7624 wrap are complete
-and KAT-verified. RFC 3211 and the RFC 3217 Triple-DES wrapper are also
-complete; the RFC 3217 RC2 wrapper is still pending — see §4.
+**Status: porting inventory complete.** All twelve inventoried Bouncy Castle
+key-wrap classes are implemented and KAT-verified. The legacy `Wrapper` trait
+remains in `tc_crypto_core` during the API migration — see §4.
 This document is the porting inventory and roadmap.
 
 ## 2. Design
@@ -78,17 +77,16 @@ All underlying ciphers (AES, ARIA, Camellia, SEED) already exist in
 `tc_block_cipher`, so this whole family unblocks as soon as the two base engines
 (`Rfc3394WrapEngine`, then `Rfc5649WrapEngine`) are written.
 
-### 3.2 CMS / RFC 3217 & RFC 3211 — in progress
+### 3.2 CMS / RFC 3217 & RFC 3211 — done
 
 | bc class | Rust target | Underlying cipher | Mechanism | Prereqs |
 |----------|-------------|-------------------|-----------|---------|
 | `Rfc3211WrapEngine` ✅ | `Rfc3211WrapEngine<E, R>` | any block cipher | RFC 3211, CBC + IV, random padding | CBC mode, `CryptoRng` |
 | `DesEdeWrapEngine` ✅ | `DesEdeWrapEngine<R>` | `DesEdeEngine` | RFC 3217, CBC + fixed IV + SHA-1 checksum | CBC mode, SHA-1, `CryptoRng` |
-| `Rc2WrapEngine` | `Rc2WrapEngine` | `Rc2Engine` | RFC 3217, CBC + IV + SHA-1 checksum | **CBC mode**, SHA-1 |
+| `RC2WrapEngine` ✅ | `Rc2WrapEngine<R>` | `Rc2Engine` | RFC 3217, length + random padding + CBC + SHA-1 checksum | CBC mode, SHA-1, `CryptoRng` |
 
-The workspace now provides CBC through `tc_block_modes`. RFC 3211 and CMS
-Triple-DES wrapping and unwrapping are implemented. SHA-1 is available in
-`tc_digest` (`sha1.rs`) for the RFC 3217 wrappers.
+The workspace provides CBC through `tc_block_modes` and SHA-1 through
+`tc_digest`. RFC 3211 and both RFC 3217 wrappers are implemented.
 
 ### 3.3 DSTU 7624 (Kalyna) — done
 
@@ -124,4 +122,7 @@ own logic and does not depend on a cipher mode.
   against Bouncy Castle's published test vector with both an explicit IV and a
   deterministic `CryptoRng`; tampered input is rejected before key material is
   released.
-- [ ] **`Rc2WrapEngine`** — remaining RFC 3217 wrapper.
+- [x] **`Rc2WrapEngine<R>`** — RFC 3217 RC2 key wrap, including the encoded key
+  length and random padding. Verified against RFC 3217 §4.4 / Bouncy Castle's
+  40-effective-bit test vector and representative variable-length round trips,
+  including the 0- and 255-byte boundaries.

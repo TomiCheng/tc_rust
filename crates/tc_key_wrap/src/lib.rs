@@ -17,10 +17,12 @@ pub mod des_ede;
 pub mod rfc3211;
 pub mod rfc3394;
 pub mod rfc5649;
+pub mod rc2;
 mod wrap_error;
 
 pub use dstu7624::{Dstu7624WrapEngine, Dstu7624WrapError};
 pub use des_ede::{DesEdeWrapEngine, DesEdeWrapError, DesEdeWrapParams};
+pub use rc2::{Rc2WrapEngine, Rc2WrapError, Rc2WrapParams};
 pub use rfc3211::{Rfc3211Params, Rfc3211WrapEngine};
 pub use rfc3394::{Rfc3394Error, Rfc3394Params, Rfc3394WrapEngine};
 pub use rfc5649::{Rfc5649Error, Rfc5649Params, Rfc5649WrapEngine};
