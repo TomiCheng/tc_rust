@@ -2,13 +2,13 @@
 //!
 //! See RFC 3394 (Schaad & Housley, 2002). This type is the shared base for
 //! concrete wrappers such as `AesWrapEngine`, mirroring Bouncy Castle's
-//! `Rfc3394WrapEngine`. The register loop is factored into `wrap_core` /
-//! `unwrap_core` so that the RFC 5649 wrapper ([`crate::rfc5649`]) can reuse it.
+//! `Rfc3394WrapEngine`. The register loop is factored into caller-buffer cores
+//! so that the RFC 5649 wrapper ([`crate::rfc5649`]) can reuse the same
+//! allocation-free implementation.
 
-use alloc::vec;
-use alloc::vec::Vec;
-use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
-use tc_crypto_core::Wrapper;
+use tc_cipher_core::{
+    BlockCipher, BlockCipherInit, CipherDirection, KeyWrap, KeyWrapInit, WrapDirection,
+};
 
 /// The RFC 3394 default IV (`0xA6` repeated eight times).
 const DEFAULT_IV: [u8; 8] = [0xa6; 8];
@@ -49,7 +49,7 @@ impl<'a, E: BlockCipherInit> Rfc3394Params<'a, E> {
 ///
 /// Mirrors bc's `Rfc3394WrapEngine`. Inject the underlying engine (which must
 /// have a 128-bit block) with [`new`](Self::new), then wrap / unwrap through the
-/// [`Wrapper`] trait.
+/// allocation-free [`KeyWrap`] interface.
 pub struct Rfc3394WrapEngine<E: BlockCipher> {
     /// The underlying block cipher engine.
     engine: E,
@@ -58,9 +58,8 @@ pub struct Rfc3394WrapEngine<E: BlockCipher> {
     wrap_cipher_mode: bool,
     /// The IV in use (chosen at `init`, defaulting to [`DEFAULT_IV`]).
     iv: [u8; 8],
-    /// `None` means not yet initialised; `Some(true)` / `Some(false)` selects
-    /// wrap / unwrap mode.
-    for_wrapping: Option<bool>,
+    /// The key-level operation selected during initialization.
+    direction: Option<WrapDirection>,
 }
 
 impl<E: BlockCipher> Rfc3394WrapEngine<E> {
@@ -85,7 +84,7 @@ impl<E: BlockCipher> Rfc3394WrapEngine<E> {
             engine,
             wrap_cipher_mode: !use_reverse_direction,
             iv: DEFAULT_IV,
-            for_wrapping: None,
+            direction: None,
         }
     }
 }
@@ -111,6 +110,13 @@ pub enum Rfc3394Error<E: BlockCipher> {
     WrapDataLength,
     /// Invalid unwrap input length (must be at least 16 and a multiple of 8).
     UnwrapDataLength,
+    /// The caller-provided output buffer is shorter than the required length.
+    OutputBufferTooShort {
+        /// Required output capacity in bytes.
+        required: usize,
+        /// Available output capacity in bytes.
+        available: usize,
+    },
     /// Integrity check failed on unwrap (tampered data or wrong key).
     IntegrityCheckFailed,
     /// Error reported by the underlying block cipher engine.
@@ -128,6 +134,14 @@ impl<E: BlockCipher> core::fmt::Debug for Rfc3394Error<E> {
             Rfc3394Error::NotForUnwrapping => f.write_str("NotForUnwrapping"),
             Rfc3394Error::WrapDataLength => f.write_str("WrapDataLength"),
             Rfc3394Error::UnwrapDataLength => f.write_str("UnwrapDataLength"),
+            Rfc3394Error::OutputBufferTooShort {
+                required,
+                available,
+            } => f
+                .debug_struct("OutputBufferTooShort")
+                .field("required", required)
+                .field("available", available)
+                .finish(),
             Rfc3394Error::IntegrityCheckFailed => f.write_str("IntegrityCheckFailed"),
             Rfc3394Error::BlockCipher(e) => f.debug_tuple("BlockCipher").field(e).finish(),
         }
@@ -146,6 +160,13 @@ impl<E: BlockCipher> core::fmt::Display for Rfc3394Error<E> {
             Rfc3394Error::UnwrapDataLength => {
                 f.write_str("unwrap data must be at least 16 bytes and a multiple of 8")
             }
+            Rfc3394Error::OutputBufferTooShort {
+                required,
+                available,
+            } => write!(
+                f,
+                "output buffer is too short: requires {required} bytes, has {available}"
+            ),
             Rfc3394Error::IntegrityCheckFailed => f.write_str("integrity check failed"),
             Rfc3394Error::BlockCipher(e) => write!(f, "underlying block cipher error: {e}"),
         }
@@ -154,87 +175,152 @@ impl<E: BlockCipher> core::fmt::Display for Rfc3394Error<E> {
 
 impl<E: BlockCipher> core::error::Error for Rfc3394Error<E> {}
 
-impl<E: BlockCipherInit> Wrapper for Rfc3394WrapEngine<E> {
-    type Params<'a> = Rfc3394Params<'a, E>;
+impl<E: BlockCipherInit> Rfc3394WrapEngine<E> {
+    /// Keys the underlying block cipher and records the key-level direction.
+    fn initialize(
+        &mut self,
+        direction: WrapDirection,
+        params: &Rfc3394Params<'_, E>,
+    ) -> Result<(), Rfc3394Error<E>> {
+        // Wrap normally uses encryption and unwrap uses decryption. The optional
+        // reverse-direction construction swaps those underlying cipher modes.
+        let for_encryption = match direction {
+            WrapDirection::Wrap => self.wrap_cipher_mode,
+            WrapDirection::Unwrap => !self.wrap_cipher_mode,
+        };
+        let cipher_direction = if for_encryption {
+            CipherDirection::Encrypt
+        } else {
+            CipherDirection::Decrypt
+        };
+
+        self.engine
+            .init(cipher_direction, &params.key_params)
+            .map_err(Rfc3394Error::BlockCipher)?;
+
+        self.iv = params.iv.unwrap_or(DEFAULT_IV);
+        self.direction = Some(direction);
+        Ok(())
+    }
+}
+
+impl<E: BlockCipher> KeyWrap for Rfc3394WrapEngine<E> {
     type Error = Rfc3394Error<E>;
 
     fn algorithm_name(&self) -> &str {
         self.engine.algorithm_name()
     }
 
-    fn init(&mut self, for_wrapping: bool, params: &Self::Params<'_>) -> Result<(), Self::Error> {
-        // 依方向 key 底層 engine：wrap 用 wrap_cipher_mode，unwrap 取其反。
-        // 一次 keying 好，之後 wrap/unwrap 只需 process_block，不必再保存金鑰。
-        let for_encryption = if for_wrapping {
-            self.wrap_cipher_mode
-        } else {
-            !self.wrap_cipher_mode
-        };
-        let direction = if for_encryption {
-            CipherDirection::Encrypt
-        } else {
-            CipherDirection::Decrypt
-        };
-        self.engine
-            .init(direction, &params.key_params)
-            .map_err(Rfc3394Error::BlockCipher)?;
-
-        self.iv = params.iv.unwrap_or(DEFAULT_IV);
-        self.for_wrapping = Some(for_wrapping);
-        Ok(())
-    }
-
-    fn wrap(&mut self, input: &[u8]) -> Result<Vec<u8>, Self::Error> {
-        match self.for_wrapping {
-            Some(true) => {}
-            Some(false) => return Err(Rfc3394Error::NotForWrapping),
-            None => return Err(Rfc3394Error::Uninitialised),
-        }
-        if input.len() < 8 || !input.len().is_multiple_of(8) {
+    fn wrapped_len(&self, input_len: usize) -> Result<usize, Self::Error> {
+        if input_len < 8 || !input_len.is_multiple_of(8) {
             return Err(Rfc3394Error::WrapDataLength);
         }
-        let iv = self.iv;
-        wrap_core(&mut self.engine, &iv, input).map_err(Rfc3394Error::BlockCipher)
+        input_len.checked_add(8).ok_or(Rfc3394Error::WrapDataLength)
     }
 
-    fn unwrap(&mut self, input: &[u8]) -> Result<Vec<u8>, Self::Error> {
-        match self.for_wrapping {
-            Some(false) => {}
-            Some(true) => return Err(Rfc3394Error::NotForUnwrapping),
-            None => return Err(Rfc3394Error::Uninitialised),
-        }
-        if input.len() < 16 || !input.len().is_multiple_of(8) {
+    fn max_unwrapped_len(&self, input_len: usize) -> Result<usize, Self::Error> {
+        if input_len < 16 || !input_len.is_multiple_of(8) {
             return Err(Rfc3394Error::UnwrapDataLength);
         }
-        let (block, a) =
-            unwrap_core(&mut self.engine, input).map_err(Rfc3394Error::BlockCipher)?;
-        // 以定值時間比較取出的 A 與 IV，校驗失敗即拒絕（避免時序側通道）。
+        Ok(input_len - 8)
+    }
+
+    fn wrap_into(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
+        match self.direction {
+            Some(WrapDirection::Wrap) => {}
+            Some(WrapDirection::Unwrap) => return Err(Rfc3394Error::NotForWrapping),
+            None => return Err(Rfc3394Error::Uninitialised),
+        }
+
+        let required = self.wrapped_len(input.len())?;
+        if output.len() < required {
+            return Err(Rfc3394Error::OutputBufferTooShort {
+                required,
+                available: output.len(),
+            });
+        }
+
+        let iv = self.iv;
+        wrap_core_into(&mut self.engine, &iv, input, &mut output[..required])
+            .map_err(Rfc3394Error::BlockCipher)?;
+        Ok(required)
+    }
+
+    fn unwrap_into(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
+        match self.direction {
+            Some(WrapDirection::Unwrap) => {}
+            Some(WrapDirection::Wrap) => return Err(Rfc3394Error::NotForUnwrapping),
+            None => return Err(Rfc3394Error::Uninitialised),
+        }
+
+        let required = self.max_unwrapped_len(input.len())?;
+        if output.len() < required {
+            return Err(Rfc3394Error::OutputBufferTooShort {
+                required,
+                available: output.len(),
+            });
+        }
+
+        let a = match unwrap_core_into(&mut self.engine, input, &mut output[..required]) {
+            Ok(a) => a,
+            Err(error) => {
+                output[..required].fill(0);
+                return Err(Rfc3394Error::BlockCipher(error));
+            }
+        };
+
+        // Reject a wrong key or tampered blob without leaving recovered,
+        // unauthenticated key material in the caller's output buffer.
         if !fixed_time_eq(&a, &self.iv) {
+            output[..required].fill(0);
             return Err(Rfc3394Error::IntegrityCheckFailed);
         }
-        Ok(block)
+        Ok(required)
     }
 }
 
-/// RFC 3394 wrap core: runs the A/R register loop on an already-keyed
-/// (encryption-direction) engine. `iv` is the 8-byte AIV/IV and `input` must be
-/// a positive multiple of 8 bytes (the caller checks this). Shared by the RFC
-/// 3394 and RFC 5649 wrappers.
-pub(crate) fn wrap_core<E: BlockCipher>(
+impl<E: BlockCipherInit> KeyWrapInit for Rfc3394WrapEngine<E> {
+    type Params<'a> = Rfc3394Params<'a, E>;
+
+    fn init(
+        &mut self,
+        direction: WrapDirection,
+        params: &Self::Params<'_>,
+    ) -> Result<(), Self::Error> {
+        self.initialize(direction, params)
+    }
+}
+
+/// Caller-buffer RFC 3394 wrap core shared by the RFC 3394 and RFC 5649
+/// implementations.
+fn wrap_core_into<E: BlockCipher>(
     engine: &mut E,
     iv: &[u8; 8],
     input: &[u8],
-) -> Result<Vec<u8>, E::Error> {
-    let n = input.len() / 8;
+    output: &mut [u8],
+) -> Result<(), E::Error> {
+    let block = &mut output[..input.len() + 8];
 
     // block = IV(8) || input，之後所有運算就地在 block 上進行。
-    let mut block = vec![0u8; input.len() + 8];
     block[..8].copy_from_slice(iv);
     block[8..].copy_from_slice(input);
 
+    wrap_core_in_place(engine, block)
+}
+
+/// Runs the RFC 3394 register loop over an `A || R` block in place.
+///
+/// This is also the allocation-free primitive used by RFC 5649 after it has
+/// written its AIV and padded input directly into the caller's output buffer.
+pub(crate) fn wrap_core_in_place<E: BlockCipher>(
+    engine: &mut E,
+    block: &mut [u8],
+) -> Result<(), E::Error> {
+    let n = block.len() / 8 - 1;
+
     if n == 1 {
         // 單一資料分組：直接加密 IV||R 這 16 bytes。
-        crypt_block(engine, &mut block)?;
+        crypt_block(engine, block)?;
     } else {
         let mut buf = [0u8; 16];
         for j in 0..6u32 {
@@ -258,21 +344,19 @@ pub(crate) fn wrap_core<E: BlockCipher>(
         }
     }
 
-    Ok(block)
+    Ok(())
 }
 
-/// RFC 3394 unwrap core, **without** the IV check: returns `(data, extracted A)`.
-/// The caller validates the extracted A (RFC 3394 compares it to the IV; RFC 5649
-/// decodes the AIV and MLI from it). `input` must be at least 16 bytes and a
-/// multiple of 8 (the caller checks this).
-pub(crate) fn unwrap_core<E: BlockCipher>(
+/// Caller-buffer RFC 3394 unwrap core without the IV integrity check.
+pub(crate) fn unwrap_core_into<E: BlockCipher>(
     engine: &mut E,
     input: &[u8],
-) -> Result<(Vec<u8>, [u8; 8]), E::Error> {
+    output: &mut [u8],
+) -> Result<[u8; 8], E::Error> {
     // 資料分組數（扣掉開頭的 A 暫存那 8 bytes）。
     let n = input.len() / 8 - 1;
 
-    let mut block = vec![0u8; input.len() - 8];
+    let block = &mut output[..input.len() - 8];
     let mut a = [0u8; 8];
     let mut buf = [0u8; 16];
 
@@ -306,7 +390,7 @@ pub(crate) fn unwrap_core<E: BlockCipher>(
         }
     }
 
-    Ok((block, a))
+    Ok(a)
 }
 
 /// Processes one 16-byte block in place with the already-keyed engine, routing

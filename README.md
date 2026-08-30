@@ -32,7 +32,7 @@ Sparkle digest support still requires a shared Sparkle permutation/engine.
 
 | Crate | Purpose | Runtime support |
 | --- | --- | --- |
-| [`tc_cipher_core`](crates/tc_cipher_core) | Shared `BlockCipher`, `BlockCipherInit`, `StreamCipher`, and `StreamCipherInit` traits | Core-only `no_std` |
+| [`tc_cipher_core`](crates/tc_cipher_core) | Shared block-cipher, stream-cipher, and key-wrapping operation/initialization traits | Core-only `no_std` |
 | [`tc_crypto_core`](crates/tc_crypto_core) | Shared `TryDigest` / `Digest`, `TryXof` / `Xof`, and key-wrapper traits | Core-only `no_std`; `alloc` is optional for `Wrapper` |
 | [`tc_block_cipher`](crates/tc_block_cipher) | Block cipher engines and their validated parameter types | Core-only subset, full `no_std + alloc`, or `std` with AES-NI detection |
 | [`tc_stream_cipher`](crates/tc_stream_cipher) | Stream cipher engines and shared error handling | Core-only `no_std` |

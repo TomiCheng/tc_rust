@@ -121,6 +121,53 @@ fn chaining_hides_repeated_blocks() {
 }
 
 #[test]
+fn reset_restores_the_initial_iv_without_rekeying() {
+    let key = AesParams::new(&hex(AES_KEY)).unwrap();
+    let iv = hex(AES_IV);
+    let plaintext = &hex(AES_PLAINTEXT)[..AES_BLOCK_BYTES];
+    let mut mode = CbcBlockCipher::new(AesEngine::new());
+    mode.init(CipherDirection::Encrypt, &CbcParams::with_iv(key, &iv))
+        .unwrap();
+
+    let mut first = [0_u8; AES_BLOCK_BYTES];
+    let mut chained = [0_u8; AES_BLOCK_BYTES];
+    let mut after_reset = [0_u8; AES_BLOCK_BYTES];
+    mode.process_block(plaintext, &mut first).unwrap();
+    mode.process_block(plaintext, &mut chained).unwrap();
+
+    mode.reset();
+    mode.process_block(plaintext, &mut after_reset).unwrap();
+
+    assert_ne!(chained, first);
+    assert_eq!(after_reset, first);
+}
+
+#[test]
+fn reset_with_iv_uses_a_temporary_iv_and_preserves_the_initial_iv() {
+    let key = AesParams::new(&hex(AES_KEY)).unwrap();
+    let iv = hex(AES_IV);
+    let temporary_iv = [0x5a_u8; AES_BLOCK_BYTES];
+    let plaintext = &hex(AES_PLAINTEXT)[..AES_BLOCK_BYTES];
+    let mut mode = CbcBlockCipher::new(AesEngine::new());
+    mode.init(CipherDirection::Encrypt, &CbcParams::with_iv(key, &iv))
+        .unwrap();
+
+    let mut initial = [0_u8; AES_BLOCK_BYTES];
+    let mut temporary = [0_u8; AES_BLOCK_BYTES];
+    let mut restored = [0_u8; AES_BLOCK_BYTES];
+    mode.process_block(plaintext, &mut initial).unwrap();
+
+    mode.reset_with_iv(&temporary_iv).unwrap();
+    mode.process_block(plaintext, &mut temporary).unwrap();
+
+    mode.reset();
+    mode.process_block(plaintext, &mut restored).unwrap();
+
+    assert_ne!(temporary, initial);
+    assert_eq!(restored, initial);
+}
+
+#[test]
 fn des_cbc_handles_an_eight_byte_block() {
     let key = DesParams::new(&hex("0123456789abcdef")).unwrap();
     let iv = hex("1234567890abcdef");
@@ -181,10 +228,22 @@ fn errors_before_init_and_on_short_buffer() {
         mode.process_block(&input, &mut out),
         Err(BlockCipherModeError::NotInitialised)
     ));
+    assert!(matches!(
+        mode.reset_with_iv(&[0_u8; AES_BLOCK_BYTES]),
+        Err(BlockCipherModeError::NotInitialised)
+    ));
 
     let key = AesParams::new(&hex(AES_KEY)).unwrap();
     mode.init(CipherDirection::Encrypt, &CbcParams::new(key))
         .unwrap();
+
+    assert!(matches!(
+        mode.reset_with_iv(&[0_u8; 4]),
+        Err(BlockCipherModeError::InvalidIvLength {
+            actual: 4,
+            block_size: AES_BLOCK_BYTES,
+        })
+    ));
 
     // 輸入不足一塊。
     assert!(matches!(
