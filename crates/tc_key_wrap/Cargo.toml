@@ -6,14 +6,8 @@ edition.workspace = true
 license.workspace = true
 repository.workspace = true
 
-[features]
-default = ["std"]
-# std 會一路傳遞給 tc_block_cipher，讓底層 AES 在支援的平台上啟用 AES-NI。
-std = ["tc_block_cipher/std"]
-
 [dependencies]
 # Wrapper trait 需要 alloc,故開啟 core 的 alloc feature。
 tc_crypto_core = { path = "../tc_crypto_core", features = ["alloc"] }
 tc_cipher_core = { path = "../tc_cipher_core" }
-# DSTU7624 wrapper 需要底層 alloc engine；std 仍由本 crate 的 feature 決定。
-tc_block_cipher = { path = "../tc_block_cipher", default-features = false }
+tc_block_cipher = { path = "../tc_block_cipher" }

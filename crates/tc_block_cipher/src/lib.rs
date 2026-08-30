@@ -1,7 +1,7 @@
 //! Cryptographic engine implementations ported from Bouncy Castle.
 
-// 關閉預設 feature 時為 no_std；測試仍讓 `#[test]` 框架連結 std。
-#![cfg_attr(not(any(feature = "std", test)), no_std)]
+// 恆為 no_std；測試仍讓 `#[test]` 框架連結 std。
+#![cfg_attr(not(test), no_std)]
 
 mod block_cipher_error;
 mod cast_common;

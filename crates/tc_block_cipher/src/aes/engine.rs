@@ -7,13 +7,33 @@ use super::{AES_BLOCK_BYTES, AesParams, BlockCipherError, RoundKeys, portable};
 #[derive(Clone, Copy)]
 enum Backend {
     Portable,
-    #[cfg(all(feature = "std", any(target_arch = "x86", target_arch = "x86_64")))]
+    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
     AesNi,
 }
 
+/// Reports whether this processor offers AES-NI and SSE2.
+///
+/// 偵測直接讀 CPUID，而非 `std::is_x86_feature_detected!` —— 後者只在 std 才有，
+/// 而 CPUID 的取用函式本來就在 `core::arch`，故 no_std 目標一樣能走 AES-NI。
+/// 只在建構 engine 時呼叫一次，成本遠低於隨後的金鑰展開，不必快取。
+#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+fn has_aes_ni() -> bool {
+    #[cfg(target_arch = "x86")]
+    use core::arch::x86::{__cpuid, __get_cpuid_max};
+    #[cfg(target_arch = "x86_64")]
+    use core::arch::x86_64::{__cpuid, __get_cpuid_max};
+
+    if __get_cpuid_max(0).0 < 1 {
+        return false;
+    }
+    let leaf1 = __cpuid(1);
+    // 基本功能葉：ECX 位元 25 為 AES-NI，EDX 位元 26 為 SSE2。
+    (leaf1.ecx & (1 << 25)) != 0 && (leaf1.edx & (1 << 26)) != 0
+}
+
 fn detect_backend() -> Backend {
-    #[cfg(all(feature = "std", any(target_arch = "x86", target_arch = "x86_64")))]
-    if std::is_x86_feature_detected!("aes") && std::is_x86_feature_detected!("sse2") {
+    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+    if has_aes_ni() {
         return Backend::AesNi;
     }
     Backend::Portable
@@ -48,12 +68,12 @@ impl AesEngine {
             (Backend::Portable, false) => {
                 portable::decrypt_block(&self.round_keys, self.rounds, input, output)
             }
-            #[cfg(all(feature = "std", any(target_arch = "x86", target_arch = "x86_64")))]
+            #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
             (Backend::AesNi, true) => {
                 // SAFETY: `Backend::AesNi` is created only after runtime detection.
                 unsafe { super::x86::encrypt_block(&self.round_keys, self.rounds, input, output) }
             }
-            #[cfg(all(feature = "std", any(target_arch = "x86", target_arch = "x86_64")))]
+            #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
             (Backend::AesNi, false) => {
                 // SAFETY: `Backend::AesNi` is created only after runtime detection.
                 unsafe { super::x86::decrypt_block(&self.round_keys, self.rounds, input, output) }
@@ -112,7 +132,7 @@ impl BlockCipherInit for AesEngine {
                 Backend::Portable => {
                     portable::prepare_decryption_keys(&mut self.round_keys, self.rounds);
                 }
-                #[cfg(all(feature = "std", any(target_arch = "x86", target_arch = "x86_64")))]
+                #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
                 Backend::AesNi => {
                     // SAFETY: `Backend::AesNi` is created only after runtime detection.
                     unsafe {
@@ -157,10 +177,10 @@ mod tests {
         );
     }
 
-    #[cfg(all(feature = "std", any(target_arch = "x86", target_arch = "x86_64")))]
+    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
     #[test]
     fn aes_ni_matches_portable() {
-        if !std::is_x86_feature_detected!("aes") || !std::is_x86_feature_detected!("sse2") {
+        if !has_aes_ni() {
             return;
         }
 
