@@ -160,7 +160,6 @@ mod tests {
         assert_shared_error::<crate::Rc532Engine>();
         #[cfg(feature = "alloc")]
         assert_shared_error::<crate::Rc564Engine>();
-        #[cfg(feature = "alloc")]
         assert_shared_error::<crate::Rc6Engine>();
         assert_shared_error::<crate::RijndaelEngine<4, 4>>();
         assert_shared_error::<crate::SeedEngine>();

@@ -1,10 +1,11 @@
 //! RC6 block-cipher engine, key schedule, and round functions.
 
-use alloc::vec;
-
 use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 
-use super::{BlockCipherError, RC6_BLOCK_BYTES, RC6_ROUNDS, Rc6Params};
+use super::{BlockCipherError, RC6_BLOCK_BYTES, RC6_MAX_KEY_BYTES, RC6_ROUNDS, Rc6Params};
+
+/// Words needed to hold the longest permitted key, so L can live inline.
+const MAX_KEY_WORDS: usize = RC6_MAX_KEY_BYTES.div_ceil(4);
 
 /// Magic constant `Odd((e - 2) * 2^32)`.
 const P32: u32 = 0xb7e1_5163;
@@ -152,7 +153,8 @@ fn write_word(output: &mut [u8], index: usize, value: u32) {
 fn setup(key: &[u8]) -> [u32; SUBKEY_WORDS] {
     // Phase 1:以小端序將金鑰填入 c 個字(零填補),至少一個字。
     let c = key.len().div_ceil(4).max(1);
-    let mut l = vec![0u32; c];
+    let mut l_buffer = [0u32; MAX_KEY_WORDS];
+    let l = &mut l_buffer[..c];
     for (j, word) in l.iter_mut().enumerate() {
         let start = j * 4;
         let end = (start + 4).min(key.len());

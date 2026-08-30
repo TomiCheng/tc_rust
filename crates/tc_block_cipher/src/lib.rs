@@ -26,7 +26,6 @@ pub mod noekeon;
 pub mod rc2;
 #[cfg(feature = "alloc")]
 pub mod rc5;
-#[cfg(feature = "alloc")]
 pub mod rc6;
 pub mod rijndael;
 pub mod seed;
@@ -78,7 +77,6 @@ pub use rc5::{
     RC5_32_BLOCK_BYTES, RC5_64_BLOCK_BYTES, RC5_DEFAULT_ROUNDS, RC5_MAX_KEY_BYTES, RC5_MAX_ROUNDS,
     Rc5Params, Rc5Word, Rc532Engine, Rc564Engine,
 };
-#[cfg(feature = "alloc")]
 pub use rc6::{RC6_BLOCK_BYTES, RC6_MAX_KEY_BYTES, RC6_ROUNDS, Rc6Engine, Rc6Params};
 pub use rijndael::{
     RIJNDAEL_BLOCK_BITS, RIJNDAEL_KEY_BYTES, RijndaelEngine, RijndaelParams,
