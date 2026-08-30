@@ -7,12 +7,9 @@
 //! itself reuses the allocation-free RFC 3394 register core
 //! ([`crate::rfc3394`]).
 
-use alloc::vec;
-use alloc::vec::Vec;
 use tc_cipher_core::{
     BlockCipher, BlockCipherInit, CipherDirection, KeyWrap, KeyWrapInit, WrapDirection,
 };
-use tc_crypto_core::Wrapper;
 
 use crate::rfc3394::{fixed_time_eq, unwrap_core_into, wrap_core_in_place};
 
@@ -53,8 +50,6 @@ impl<'a, E: BlockCipherInit> Rfc5649Params<'a, E> {
 ///
 /// Mirrors bc's `Rfc5649WrapEngine`. Inject the underlying engine (128-bit block)
 /// with [`new`](Self::new), then use the allocation-free [`KeyWrap`] interface.
-/// The legacy allocation-backed [`Wrapper`] interface remains available during
-/// migration.
 pub struct Rfc5649WrapEngine<E: BlockCipher> {
     /// The underlying block cipher engine.
     engine: E,
@@ -309,39 +304,5 @@ impl<E: BlockCipherInit> KeyWrapInit for Rfc5649WrapEngine<E> {
         params: &Self::Params<'_>,
     ) -> Result<(), Self::Error> {
         self.initialize(direction, params)
-    }
-}
-
-impl<E: BlockCipherInit> Wrapper for Rfc5649WrapEngine<E> {
-    type Params<'a> = Rfc5649Params<'a, E>;
-    type Error = Rfc5649Error<E>;
-
-    fn algorithm_name(&self) -> &str {
-        KeyWrap::algorithm_name(self)
-    }
-
-    fn init(&mut self, for_wrapping: bool, params: &Self::Params<'_>) -> Result<(), Self::Error> {
-        let direction = if for_wrapping {
-            WrapDirection::Wrap
-        } else {
-            WrapDirection::Unwrap
-        };
-        self.initialize(direction, params)
-    }
-
-    fn wrap(&mut self, input: &[u8]) -> Result<Vec<u8>, Self::Error> {
-        let required = KeyWrap::wrapped_len(self, input.len())?;
-        let mut output = vec![0_u8; required];
-        let written = KeyWrap::wrap_into(self, input, &mut output)?;
-        debug_assert_eq!(written, required);
-        Ok(output)
-    }
-
-    fn unwrap(&mut self, input: &[u8]) -> Result<Vec<u8>, Self::Error> {
-        let capacity = KeyWrap::max_unwrapped_len(self, input.len())?;
-        let mut output = vec![0_u8; capacity];
-        let written = KeyWrap::unwrap_into(self, input, &mut output)?;
-        output.truncate(written);
-        Ok(output)
     }
 }

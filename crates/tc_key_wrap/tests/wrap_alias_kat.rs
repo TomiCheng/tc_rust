@@ -10,7 +10,7 @@
 //! `Default` impl.
 
 use tc_block_cipher::{AriaParams, CamelliaParams, SeedParams};
-use tc_crypto_core::Wrapper;
+use tc_cipher_core::{KeyWrap, KeyWrapInit, WrapDirection};
 use tc_key_wrap::{AriaWrapEngine, CamelliaWrapEngine, Rfc3394Params, SeedWrapEngine};
 
 /// Parses a hex string (ignoring whitespace) into bytes.
@@ -43,13 +43,17 @@ macro_rules! kat {
             let wrapped = hex($wrapped);
 
             let mut w = <$engine>::default();
-            w.init(true, &Rfc3394Params::new(<$params>::new(&kek).unwrap()))
-                .unwrap();
-            assert_eq!(w.wrap(&key).unwrap(), wrapped, "wrap 輸出與參考向量不符");
+            let params = Rfc3394Params::new(<$params>::new(&kek).unwrap());
+            KeyWrapInit::init(&mut w, WrapDirection::Wrap, &params).unwrap();
+            let mut actual = vec![0_u8; w.wrapped_len(key.len()).unwrap()];
+            let written = w.wrap_into(&key, &mut actual).unwrap();
+            assert_eq!(written, actual.len());
+            assert_eq!(actual, wrapped, "wrap 輸出與參考向量不符");
 
-            w.init(false, &Rfc3394Params::new(<$params>::new(&kek).unwrap()))
-                .unwrap();
-            assert_eq!(w.unwrap(&wrapped).unwrap(), key, "unwrap 未還原原始金鑰");
+            KeyWrapInit::init(&mut w, WrapDirection::Unwrap, &params).unwrap();
+            let mut recovered = vec![0_u8; w.max_unwrapped_len(wrapped.len()).unwrap()];
+            let recovered_len = w.unwrap_into(&wrapped, &mut recovered).unwrap();
+            assert_eq!(&recovered[..recovered_len], key, "unwrap 未還原原始金鑰");
         }
     };
 }

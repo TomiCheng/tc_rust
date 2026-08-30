@@ -1,15 +1,13 @@
 //! CMS Triple-DES key wrap (RFC 3217), ported from Bouncy Castle's
 //! `DesEdeWrapEngine`.
 
-use alloc::vec;
-use alloc::vec::Vec;
 use rand_core::CryptoRng;
 use tc_block_cipher::{DesEdeEngine, DesEdeParams};
 use tc_block_modes::{CbcBlockCipher, CbcParams};
 use tc_cipher_core::{
     BlockCipher, BlockCipherInit, CipherDirection, KeyWrap, KeyWrapInit, WrapDirection,
 };
-use tc_crypto_core::{Digest, Wrapper};
+use tc_crypto_core::Digest;
 use tc_digest::Sha1Digest;
 
 use crate::WrapError;
@@ -271,39 +269,5 @@ impl<R: CryptoRng> KeyWrapInit for DesEdeWrapEngine<R> {
             .map_err(WrapError::BlockCipherMode)?;
         self.direction = Some(direction);
         Ok(())
-    }
-}
-
-impl<R: CryptoRng> Wrapper for DesEdeWrapEngine<R> {
-    type Params<'a> = DesEdeWrapParams;
-    type Error = DesEdeWrapError;
-
-    fn algorithm_name(&self) -> &str {
-        KeyWrap::algorithm_name(self)
-    }
-
-    fn init(&mut self, for_wrapping: bool, params: &Self::Params<'_>) -> Result<(), Self::Error> {
-        let direction = if for_wrapping {
-            WrapDirection::Wrap
-        } else {
-            WrapDirection::Unwrap
-        };
-        KeyWrapInit::init(self, direction, params)
-    }
-
-    fn wrap(&mut self, input: &[u8]) -> Result<Vec<u8>, Self::Error> {
-        let required = KeyWrap::wrapped_len(self, input.len())?;
-        let mut output = vec![0_u8; required];
-        let written = KeyWrap::wrap_into(self, input, &mut output)?;
-        debug_assert_eq!(written, required);
-        Ok(output)
-    }
-
-    fn unwrap(&mut self, input: &[u8]) -> Result<Vec<u8>, Self::Error> {
-        let capacity = KeyWrap::max_unwrapped_len(self, input.len())?;
-        let mut output = vec![0_u8; capacity];
-        let written = KeyWrap::unwrap_into(self, input, &mut output)?;
-        output.truncate(written);
-        Ok(output)
     }
 }

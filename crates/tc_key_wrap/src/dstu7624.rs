@@ -6,21 +6,17 @@
 //! the DSTU 7624 cipher. The block and key widths are the cipher's compile-time
 //! word counts, so only the five combinations the standard defines can be named.
 
-use alloc::vec;
-use alloc::vec::Vec;
 use tc_block_cipher::dstu7624::{Dstu7624Config, ValidDstu7624Config};
 use tc_block_cipher::{BlockCipherError, Dstu7624Engine, Dstu7624Params};
 use tc_cipher_core::{
     BlockCipher, BlockCipherInit, CipherDirection, KeyWrap, KeyWrapInit, WrapDirection,
 };
-use tc_crypto_core::Wrapper;
 
 /// DSTU 7624 (Kalyna) key wrap over a block and key of the selected widths.
 ///
 /// Both const parameters count 64-bit words and match the underlying cipher, so
 /// the key is necessarily the block size or twice it. Build with [`new`](Self::new),
-/// then use the allocation-free [`KeyWrap`] interface. The legacy
-/// allocation-backed [`Wrapper`] interface remains available during migration.
+/// then use the allocation-free [`KeyWrap`] interface.
 pub struct Dstu7624WrapEngine<const BLOCK_WORDS: usize, const KEY_WORDS: usize>
 where
     Dstu7624Config<BLOCK_WORDS, KEY_WORDS>: ValidDstu7624Config<BLOCK_WORDS>,
@@ -343,43 +339,5 @@ where
         params: &Self::Params<'_>,
     ) -> Result<(), Self::Error> {
         self.initialize(direction, params)
-    }
-}
-
-impl<const BLOCK_WORDS: usize, const KEY_WORDS: usize> Wrapper
-    for Dstu7624WrapEngine<BLOCK_WORDS, KEY_WORDS>
-where
-    Dstu7624Config<BLOCK_WORDS, KEY_WORDS>: ValidDstu7624Config<BLOCK_WORDS>,
-{
-    type Params<'a> = Dstu7624Params<KEY_WORDS>;
-    type Error = Dstu7624WrapError;
-
-    fn algorithm_name(&self) -> &str {
-        KeyWrap::algorithm_name(self)
-    }
-
-    fn init(&mut self, for_wrapping: bool, params: &Self::Params<'_>) -> Result<(), Self::Error> {
-        let direction = if for_wrapping {
-            WrapDirection::Wrap
-        } else {
-            WrapDirection::Unwrap
-        };
-        self.initialize(direction, params)
-    }
-
-    fn wrap(&mut self, input: &[u8]) -> Result<Vec<u8>, Self::Error> {
-        let required = KeyWrap::wrapped_len(self, input.len())?;
-        let mut output = vec![0_u8; required];
-        let written = KeyWrap::wrap_into(self, input, &mut output)?;
-        debug_assert_eq!(written, required);
-        Ok(output)
-    }
-
-    fn unwrap(&mut self, input: &[u8]) -> Result<Vec<u8>, Self::Error> {
-        let required = KeyWrap::max_unwrapped_len(self, input.len())?;
-        let mut output = vec![0_u8; required];
-        let written = KeyWrap::unwrap_into(self, input, &mut output)?;
-        debug_assert_eq!(written, required);
-        Ok(output)
     }
 }

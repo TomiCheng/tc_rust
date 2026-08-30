@@ -9,7 +9,7 @@
 // 恆為 no_std；測試仍讓 `#[test]` 框架連結 std。
 #![cfg_attr(not(test), no_std)]
 
-// Wrap/Unwrap 會回傳新配置的位元組緩衝區，故整個 crate 為 no_std + alloc。
+// 部分 wrapper 與底層 mode 使用 Vec 作 scratch/state，故為 no_std + alloc。
 extern crate alloc;
 
 pub mod dstu7624;

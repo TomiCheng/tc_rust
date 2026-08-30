@@ -6,12 +6,9 @@
 //! so that the RFC 5649 wrapper ([`crate::rfc5649`]) can reuse the same
 //! allocation-free implementation.
 
-use alloc::vec;
-use alloc::vec::Vec;
 use tc_cipher_core::{
     BlockCipher, BlockCipherInit, CipherDirection, KeyWrap, KeyWrapInit, WrapDirection,
 };
-use tc_crypto_core::Wrapper;
 
 /// The RFC 3394 default IV (`0xA6` repeated eight times).
 const DEFAULT_IV: [u8; 8] = [0xa6; 8];
@@ -52,8 +49,7 @@ impl<'a, E: BlockCipherInit> Rfc3394Params<'a, E> {
 ///
 /// Mirrors bc's `Rfc3394WrapEngine`. Inject the underlying engine (which must
 /// have a 128-bit block) with [`new`](Self::new), then wrap / unwrap through the
-/// allocation-free [`KeyWrap`] interface. The legacy allocation-backed
-/// [`Wrapper`] interface remains available during migration.
+/// allocation-free [`KeyWrap`] interface.
 pub struct Rfc3394WrapEngine<E: BlockCipher> {
     /// The underlying block cipher engine.
     engine: E,
@@ -295,42 +291,8 @@ impl<E: BlockCipherInit> KeyWrapInit for Rfc3394WrapEngine<E> {
     }
 }
 
-impl<E: BlockCipherInit> Wrapper for Rfc3394WrapEngine<E> {
-    type Params<'a> = Rfc3394Params<'a, E>;
-    type Error = Rfc3394Error<E>;
-
-    fn algorithm_name(&self) -> &str {
-        KeyWrap::algorithm_name(self)
-    }
-
-    fn init(&mut self, for_wrapping: bool, params: &Self::Params<'_>) -> Result<(), Self::Error> {
-        let direction = if for_wrapping {
-            WrapDirection::Wrap
-        } else {
-            WrapDirection::Unwrap
-        };
-        self.initialize(direction, params)
-    }
-
-    fn wrap(&mut self, input: &[u8]) -> Result<Vec<u8>, Self::Error> {
-        let required = KeyWrap::wrapped_len(self, input.len())?;
-        let mut output = vec![0_u8; required];
-        let written = KeyWrap::wrap_into(self, input, &mut output)?;
-        debug_assert_eq!(written, required);
-        Ok(output)
-    }
-
-    fn unwrap(&mut self, input: &[u8]) -> Result<Vec<u8>, Self::Error> {
-        let capacity = KeyWrap::max_unwrapped_len(self, input.len())?;
-        let mut output = vec![0_u8; capacity];
-        let written = KeyWrap::unwrap_into(self, input, &mut output)?;
-        output.truncate(written);
-        Ok(output)
-    }
-}
-
-/// Caller-buffer RFC 3394 wrap core shared by the allocation-free interface
-/// and the allocation-backed compatibility adapter.
+/// Caller-buffer RFC 3394 wrap core shared by the RFC 3394 and RFC 5649
+/// implementations.
 fn wrap_core_into<E: BlockCipher>(
     engine: &mut E,
     iv: &[u8; 8],

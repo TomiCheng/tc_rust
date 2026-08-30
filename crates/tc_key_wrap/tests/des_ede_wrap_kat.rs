@@ -5,7 +5,6 @@ use core::convert::Infallible;
 use rand_core::{TryCryptoRng, TryRng};
 use tc_block_cipher::DesEdeParams;
 use tc_cipher_core::{KeyWrap, KeyWrapInit, WrapDirection};
-use tc_crypto_core::Wrapper;
 use tc_key_wrap::{DesEdeWrapEngine, DesEdeWrapError, DesEdeWrapParams, WrapError};
 
 fn hex(input: &str) -> Vec<u8> {
@@ -89,13 +88,17 @@ fn generated_iv_matches_bouncy_castle_vector_and_unwraps() {
     let mut wrapper = DesEdeWrapEngine::new(FixedCryptoRng::new(iv));
 
     KeyWrapInit::init(&mut wrapper, WrapDirection::Wrap, &wrap_params).unwrap();
-    let wrapped = Wrapper::wrap(&mut wrapper, &input).unwrap();
+    let mut wrapped = vec![0_u8; wrapper.wrapped_len(input.len()).unwrap()];
+    let wrapped_len = wrapper.wrap_into(&input, &mut wrapped).unwrap();
+    wrapped.truncate(wrapped_len);
     assert_eq!(wrapped, expected);
 
     let unwrap_params = DesEdeWrapParams::new(DesEdeParams::new(&kek).unwrap());
     let mut unwrapper = DesEdeWrapEngine::new(FixedCryptoRng::new(Vec::new()));
     KeyWrapInit::init(&mut unwrapper, WrapDirection::Unwrap, &unwrap_params).unwrap();
-    let recovered = Wrapper::unwrap(&mut unwrapper, &expected).unwrap();
+    let mut recovered = vec![0_u8; unwrapper.max_unwrapped_len(expected.len()).unwrap()];
+    let recovered_len = unwrapper.unwrap_into(&expected, &mut recovered).unwrap();
+    recovered.truncate(recovered_len);
 
     assert_eq!(recovered, input);
 }
