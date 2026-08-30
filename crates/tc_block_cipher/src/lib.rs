@@ -28,7 +28,6 @@ pub mod rc2;
 pub mod rc5;
 #[cfg(feature = "alloc")]
 pub mod rc6;
-#[cfg(feature = "alloc")]
 pub mod rijndael;
 pub mod seed;
 pub mod serpent;
@@ -81,7 +80,6 @@ pub use rc5::{
 };
 #[cfg(feature = "alloc")]
 pub use rc6::{RC6_BLOCK_BYTES, RC6_MAX_KEY_BYTES, RC6_ROUNDS, Rc6Engine, Rc6Params};
-#[cfg(feature = "alloc")]
 pub use rijndael::{
     RIJNDAEL_BLOCK_BITS, RIJNDAEL_KEY_BYTES, RijndaelEngine, RijndaelParams,
 };
