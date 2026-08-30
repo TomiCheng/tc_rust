@@ -540,6 +540,7 @@ dependencies = [
  "tc_block_modes",
  "tc_cipher_core",
  "tc_crypto_core",
+ "tc_digest",
 ]
 
 [[package]]

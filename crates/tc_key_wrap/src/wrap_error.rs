@@ -31,6 +31,9 @@ pub enum WrapError<E: BlockCipher> {
     },
     /// The wrapped data failed its integrity check.
     IntegrityCheckFailed,
+    /// An external IV was supplied for unwrapping even though the format
+    /// carries its IV inside the wrapped data.
+    IvNotAllowedForUnwrap,
     /// An error reported by the underlying block-cipher mode.
     BlockCipherMode(BlockCipherModeError<E>),
 }
@@ -57,6 +60,7 @@ impl<E: BlockCipher> core::fmt::Debug for WrapError<E> {
                 .field("available", available)
                 .finish(),
             Self::IntegrityCheckFailed => f.write_str("IntegrityCheckFailed"),
+            Self::IvNotAllowedForUnwrap => f.write_str("IvNotAllowedForUnwrap"),
             Self::BlockCipherMode(error) => f.debug_tuple("BlockCipherMode").field(error).finish(),
         }
     }
@@ -82,6 +86,9 @@ impl<E: BlockCipher> core::fmt::Display for WrapError<E> {
                 "output buffer is too short: requires {required} bytes, has {available}"
             ),
             Self::IntegrityCheckFailed => f.write_str("integrity check failed"),
+            Self::IvNotAllowedForUnwrap => {
+                f.write_str("an external IV is not allowed when unwrapping")
+            }
             Self::BlockCipherMode(error) => write!(f, "block cipher mode error: {error}"),
         }
     }

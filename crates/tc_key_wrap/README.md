@@ -9,24 +9,25 @@ integrity check, so a tampered blob or the wrong KEK is rejected on unwrap.
 
 Wrappers build on a block cipher from
 [`tc_block_cipher`](../tc_block_cipher). All currently implemented engines
-(`Rfc3394WrapEngine`, `Rfc5649WrapEngine`, `Dstu7624WrapEngine`, and
-`Rfc3211WrapEngine`) implement
+(`Rfc3394WrapEngine`, `Rfc5649WrapEngine`, `Dstu7624WrapEngine`,
+`Rfc3211WrapEngine`, and `DesEdeWrapEngine`) implement
 the new
 [`KeyWrap`](../tc_cipher_core/src/key_wrap.rs) and `KeyWrapInit` traits from
 `tc_cipher_core`: callers calculate the required length and provide the output
-buffer, so the new `wrap_into` / `unwrap_into` paths do not allocate. They also
+buffer, so result ownership and allocation remain under caller control. Some
+formats still require internal scratch storage during unwrap. The engines also
 retain the legacy [`Wrapper`](../tc_crypto_core/src/wrapper.rs) implementation
 during the API migration. The crate as a whole is currently `no_std + alloc`
-because those legacy interfaces return owned `Vec<u8>` values and the
-underlying DSTU 7624 cipher stores its expanded round keys in a `Vec`.
+because those legacy interfaces return owned `Vec<u8>` values and some wrapper
+implementations use `Vec` scratch buffers.
 
 > This crate is a learning port and has not received an independent security
 > audit. Do not use it as a replacement for an audited cryptographic library.
 
 **Status: in progress.** The `Wrapper` trait exists in `tc_crypto_core`; the
 RFC 3394 and RFC 5649 AES Key Wrap families and the DSTU 7624 wrap are complete
-and KAT-verified. RFC 3211 wrapping and unwrapping are also complete; the two
-RFC 3217 wrappers are still pending — see §4.
+and KAT-verified. RFC 3211 and the RFC 3217 Triple-DES wrapper are also
+complete; the RFC 3217 RC2 wrapper is still pending — see §4.
 This document is the porting inventory and roadmap.
 
 ## 2. Design
@@ -82,12 +83,12 @@ All underlying ciphers (AES, ARIA, Camellia, SEED) already exist in
 | bc class | Rust target | Underlying cipher | Mechanism | Prereqs |
 |----------|-------------|-------------------|-----------|---------|
 | `Rfc3211WrapEngine` ✅ | `Rfc3211WrapEngine<E, R>` | any block cipher | RFC 3211, CBC + IV, random padding | CBC mode, `CryptoRng` |
-| `DesEdeWrapEngine` | `DesEdeWrapEngine` | `DesEdeEngine` | RFC 3217, CBC + fixed IV + SHA-1 checksum | **CBC mode**, SHA-1 |
+| `DesEdeWrapEngine` ✅ | `DesEdeWrapEngine<R>` | `DesEdeEngine` | RFC 3217, CBC + fixed IV + SHA-1 checksum | CBC mode, SHA-1, `CryptoRng` |
 | `Rc2WrapEngine` | `Rc2WrapEngine` | `Rc2Engine` | RFC 3217, CBC + IV + SHA-1 checksum | **CBC mode**, SHA-1 |
 
-The workspace now provides CBC through `tc_block_modes`. RFC 3211 wrapping and
-unwrapping are implemented. SHA-1 is available in `tc_digest` (`sha1.rs`) for
-the two RFC 3217 wrappers.
+The workspace now provides CBC through `tc_block_modes`. RFC 3211 and CMS
+Triple-DES wrapping and unwrapping are implemented. SHA-1 is available in
+`tc_digest` (`sha1.rs`) for the RFC 3217 wrappers.
 
 ### 3.3 DSTU 7624 (Kalyna) — done
 
@@ -119,4 +120,8 @@ own logic and does not depend on a cipher mode.
 - [x] **`Rfc3211WrapEngine<E, R>`** — wrapping and unwrapping are verified with
   Bouncy Castle DES, 3DES, AES, and ARIA vectors; tampered input is rejected
   without exposing unauthenticated key material.
-- [ ] **RFC 3217 wrappers** (`DesEdeWrapEngine`, `Rc2WrapEngine`).
+- [x] **`DesEdeWrapEngine<R>`** — CMS Triple-DES key wrap (RFC 3217), verified
+  against Bouncy Castle's published test vector with both an explicit IV and a
+  deterministic `CryptoRng`; tampered input is rejected before key material is
+  released.
+- [ ] **`Rc2WrapEngine`** — remaining RFC 3217 wrapper.
