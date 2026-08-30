@@ -54,7 +54,7 @@ mod tests {
         assert!(DesEdeParams::new(&[0u8; 24]).is_ok());
         for length in [0, 8, 15, 17, 23, 25] {
             assert_eq!(
-                DesEdeParams::new(&alloc::vec![0u8; length]).unwrap_err(),
+                DesEdeParams::new(&vec![0u8; length]).unwrap_err(),
                 BlockCipherError::InvalidKeyLength(length)
             );
         }
@@ -67,6 +67,6 @@ mod tests {
             DesEdeParams::new(&key).unwrap()
         };
         assert_eq!(params.key(), &[0xA5; 24]);
-        assert_eq!(alloc::format!("{params:?}"), "DesEdeParams { key_len: 24 }");
+        assert_eq!(format!("{params:?}"), "DesEdeParams { key_len: 24 }");
     }
 }

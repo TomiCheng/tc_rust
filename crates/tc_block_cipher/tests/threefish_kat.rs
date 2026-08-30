@@ -1,11 +1,9 @@
-#![cfg(feature = "alloc")]
-
 //! Threefish known-answer tests from the Skein 1.3 NIST CD
 //! (`skein_golden_kat_internals.txt`), matching Bouncy Castle's
 //! Threefish{256,512,1024}Test vectors.
 
-use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 use tc_block_cipher::{ThreefishEngine, ThreefishParams};
+use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 
 fn unhex(s: &str) -> Vec<u8> {
     (0..s.len())
@@ -16,24 +14,36 @@ fn unhex(s: &str) -> Vec<u8> {
 
 /// `key`/`pt`/`ct` empty hex means "all zero of the block length"; `tweak` empty
 /// means the 16-byte zero tweak.
-fn run(key: &str, tweak: &str, pt: &str, ct: &str) {
+fn run<const WORDS: usize>(key: &str, tweak: &str, pt: &str, ct: &str) {
     let ct = unhex(ct);
     let bytes = ct.len();
-    let key = if key.is_empty() { vec![0u8; bytes] } else { unhex(key) };
-    let tweak = if tweak.is_empty() { vec![0u8; 16] } else { unhex(tweak) };
-    let pt = if pt.is_empty() { vec![0u8; bytes] } else { unhex(pt) };
+    let key = if key.is_empty() {
+        vec![0u8; bytes]
+    } else {
+        unhex(key)
+    };
+    let tweak = if tweak.is_empty() {
+        vec![0u8; 16]
+    } else {
+        unhex(tweak)
+    };
+    let pt = if pt.is_empty() {
+        vec![0u8; bytes]
+    } else {
+        unhex(pt)
+    };
 
-    let params = ThreefishParams::new(&key, Some(&tweak)).unwrap();
+    let params = ThreefishParams::<WORDS>::new(&key, Some(&tweak)).unwrap();
 
     // 加密。
-    let mut enc = ThreefishEngine::new();
+    let mut enc = ThreefishEngine::<WORDS>::new();
     enc.init(CipherDirection::Encrypt, &params).unwrap();
     let mut got = vec![0u8; bytes];
     assert_eq!(enc.process_block(&pt, &mut got).unwrap(), bytes);
     assert_eq!(got, ct, "encrypt {}", enc.algorithm_name());
 
     // 解密還原。
-    let mut dec = ThreefishEngine::new();
+    let mut dec = ThreefishEngine::<WORDS>::new();
     dec.init(CipherDirection::Decrypt, &params).unwrap();
     let mut back = vec![0u8; bytes];
     assert_eq!(dec.process_block(&ct, &mut back).unwrap(), bytes);
@@ -42,13 +52,13 @@ fn run(key: &str, tweak: &str, pt: &str, ct: &str) {
 
 #[test]
 fn threefish_256() {
-    run(
+    run::<4>(
         "",
         "",
         "",
         "84da2a1f8beaee947066ae3e3103f1ad536db1f4a1192495116b9f3ce6133fd8",
     );
-    run(
+    run::<4>(
         "101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f",
         "000102030405060708090a0b0c0d0e0f",
         "fffefdfcfbfaf9f8f7f6f5f4f3f2f1f0efeeedecebeae9e8e7e6e5e4e3e2e1e0",
@@ -58,14 +68,14 @@ fn threefish_256() {
 
 #[test]
 fn threefish_512() {
-    run(
+    run::<8>(
         "",
         "",
         "",
         "b1a2bbc6ef6025bc40eb3822161f36e375d1bb0aee3186fbd19e47c5d479947b\
          7bc2f8586e35f0cff7e7f03084b0b7b1f1ab3961a580a3e97eb41ea14a6d7bbe",
     );
-    run(
+    run::<8>(
         "101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f\
          303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f",
         "000102030405060708090a0b0c0d0e0f",
@@ -78,7 +88,7 @@ fn threefish_512() {
 
 #[test]
 fn threefish_1024() {
-    run(
+    run::<16>(
         "",
         "",
         "",
@@ -87,7 +97,7 @@ fn threefish_1024() {
          0b2e4760b40603540d82eabc5482c171c832afbe68406bc39500367a592943fa\
          9a5b4a43286ca3c4cf46104b443143d560a4b230488311df4feef7e1dfe8391e",
     );
-    run(
+    run::<16>(
         "101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f\
          303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f\
          505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f\

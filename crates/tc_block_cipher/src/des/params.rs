@@ -60,6 +60,6 @@ mod tests {
             params.key(),
             &[0x13, 0x34, 0x57, 0x79, 0x9B, 0xBC, 0xDF, 0xF1]
         );
-        assert_eq!(alloc::format!("{params:?}"), "DesParams { key_len: 8 }");
+        assert_eq!(format!("{params:?}"), "DesParams { key_len: 8 }");
     }
 }

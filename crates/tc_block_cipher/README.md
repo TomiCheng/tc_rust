@@ -13,11 +13,20 @@ algorithm-specific settings before an engine is initialized. Parameter types
 do not implement `Clone`, and their `Debug` implementations redact key and
 tweak bytes.
 
-The default `std` feature enables runtime AES-NI detection for `AesEngine` on
-supported x86 and x86-64 processors. Disabling default features builds a
-`no_std`, allocation-free subset and selects portable implementations. Enable
-the `alloc` feature to add the five algorithm families whose key schedules use
-dynamic storage while remaining `no_std`.
+The crate is `no_std`: nothing in it allocates, and nothing needs the standard
+library. `AesEngine` still selects an AES-NI backend on x86 and x86-64
+processors that offer it, reading CPUID through `core::arch` rather than a
+std-only detection macro. The non-default `force-portable-aes` feature disables
+that dispatch when a portable-only build is required. The same algorithms and
+public API remain available in every build.
+
+On hosted targets such as Windows and Linux, the operating system has already
+enabled and manages the XMM state required by AES-NI. On a bare-metal x86
+target, CPUID only reports that the processor implements AES-NI and SSE2; it
+cannot confirm that the platform has enabled XMM/SSE execution or preserves
+that state during context switches. The platform must provide that support
+before using the automatically selected AES-NI backend. When this cannot be
+guaranteed, enable `force-portable-aes`.
 
 > This crate is a learning port and has not received an independent security
 > audit. Do not use it as a replacement for an audited cryptographic library.
@@ -69,49 +78,56 @@ using an invalid parameter value, or supplying a short buffer returns a
 Most engines use `Engine::new()` plus `Params::new(key)`. The principal
 exceptions are:
 
-- `Dstu7624Engine::new(block_bits)` selects a 128-, 256-, or 512-bit block.
-- `RijndaelEngine::new(block_bits)` selects a block from 128 through 256 bits
-  in 32-bit steps.
-- `ThreefishParams::new(key, tweak)` accepts a 32-, 64-, or 128-byte key and an
-  optional 16-byte tweak; the key length selects the Threefish block size.
+- `Dstu7624Engine::<BLOCK_WORDS, KEY_WORDS>::new()` takes both sizes as
+  compile-time counts of 64-bit words, with the key equal to the block or twice
+  it. Only the standard's five combinations are implemented, so an unsupported
+  pairing will not compile. `Dstu7624Params::<KEY_WORDS>::new(key)` matches.
+- `RijndaelEngine::<BLOCK_COLUMNS, KEY_COLUMNS>::new()` takes both sizes as
+  compile-time counts of 32-bit columns, each in `4..=8`, so 128 through 256
+  bits in 32-bit steps. `RijndaelParams::<KEY_COLUMNS>::new(key)` matches. As
+  with Threefish, fixing the sizes at compile time avoids maximum-size storage
+  on small `no_std` targets.
+- `Threefish256Params`, `Threefish512Params`, and `Threefish1024Params` accept
+  the matching key size plus an optional 16-byte tweak. Their corresponding
+  engine types fix the block size at compile time, avoiding maximum-size
+  storage on small `no_std` targets.
 - `Rc2Params::with_effective_key_bits` sets the RC2 effective key size.
-- `Rc5Params::with_rounds` overrides the default 12 rounds.
+- `Rc532Engine::<ROUNDS>` and `Rc564Engine::<ROUNDS>` take the round count as a
+  const parameter defaulting to the standard twelve, so the key schedule is
+  sized at compile time. A type alias does not apply its default to a bare
+  `new()`, so either name the count (`Rc532Engine::<16>::new()`) or annotate the
+  binding (`let cipher: Rc532Engine = Rc532Engine::new();`).
 - `Gost28147Params` can select a named or validated custom S-box.
 
 ## 3. Implemented algorithms
 
-The crate currently exports 28 engine types. All implementations are covered
+The crate currently exports 30 engine types. All implementations are covered
 by known-answer tests; selected algorithms also include specification or Monte
-Carlo vectors. Every algorithm remains available without `std` when the
-`alloc` feature is enabled.
+Carlo vectors.
 
-`core-only` uses neither `alloc` nor `std`. `alloc` requires heap allocation.
-Only AES gains an additional `std` backend; the API of an enabled algorithm
-remains unchanged across build modes.
-
-| Family | Public engine types | Key and block support | Runtime |
-|--------|---------------------|-----------------------|---------|
-| AES | `AesEngine`, `AesLightEngine` | 128-bit block; 128/192/256-bit keys | core-only; `std`: AES-NI |
-| ARIA | `AriaEngine` | 128-bit block; 128/192/256-bit keys | core-only |
-| Blowfish | `BlowfishEngine` | 64-bit block; 32-448-bit keys | core-only |
-| Camellia | `CamelliaEngine`, `CamelliaLightEngine` | 128-bit block; 128/192/256-bit keys | core-only |
-| CAST | `Cast5Engine`, `Cast6Engine` | CAST5: 64-bit block, 40-128-bit keys; CAST6: 128-bit block, 128-256-bit keys in 32-bit steps | core-only |
-| DES / Triple DES | `DesEngine`, `DesEdeEngine` | 64-bit block; 8-byte DES or 16/24-byte EDE keys | core-only |
-| DSTU 7624 (Kalyna) | `Dstu7624Engine` | 128/256/512-bit blocks; same-size or double-size keys where defined | alloc |
-| GOST 28147-89 | `Gost28147Engine` | 64-bit block; 256-bit key; named and custom S-boxes | core-only |
-| IDEA | `IdeaEngine` | 64-bit block; 128-bit key | core-only |
-| Noekeon | `NoekeonEngine` | 128-bit block and key | core-only |
-| RC2 | `Rc2Engine` | 64-bit block; variable key and effective key size | core-only |
-| RC5 | `Rc532Engine`, `Rc564Engine` | 32- or 64-bit words; variable key and round count | alloc |
-| RC6 | `Rc6Engine` | 128-bit block; 1-255-byte key; 20 rounds | alloc |
-| Rijndael | `RijndaelEngine` | 128/160/192/224/256-bit blocks and keys | alloc |
-| SEED | `SeedEngine` | 128-bit block and key | core-only |
-| Serpent / Tnepres | `SerpentEngine`, `TnepresEngine` | 128-bit block; 4-32-byte keys in 4-byte steps | core-only |
-| SKIPJACK | `SkipjackEngine` | 64-bit block; 80-bit key | core-only |
-| SM4 | `Sm4Engine` | 128-bit block and key | core-only |
-| TEA / XTEA | `TeaEngine`, `XteaEngine` | 64-bit block; 128-bit key | core-only |
-| Threefish | `ThreefishEngine` | 256/512/1024-bit block and matching key; optional 128-bit tweak | alloc |
-| Twofish | `TwofishEngine` | 128-bit block; 128/192/256-bit keys | core-only |
+| Family | Public engine types | Key and block support |
+|--------|---------------------|-----------------------|
+| AES | `AesEngine`, `AesLightEngine` | 128-bit block; 128/192/256-bit keys, with an AES-NI backend where available |
+| ARIA | `AriaEngine` | 128-bit block; 128/192/256-bit keys |
+| Blowfish | `BlowfishEngine` | 64-bit block; 32-448-bit keys |
+| Camellia | `CamelliaEngine`, `CamelliaLightEngine` | 128-bit block; 128/192/256-bit keys |
+| CAST | `Cast5Engine`, `Cast6Engine` | CAST5: 64-bit block, 40-128-bit keys; CAST6: 128-bit block, 128-256-bit keys in 32-bit steps |
+| DES / Triple DES | `DesEngine`, `DesEdeEngine` | 64-bit block; 8-byte DES or 16/24-byte EDE keys |
+| DSTU 7624 (Kalyna) | `Dstu7624Engine<BLOCK_WORDS, KEY_WORDS>` | 128/256/512-bit blocks; same-size or double-size keys where defined |
+| GOST 28147-89 | `Gost28147Engine` | 64-bit block; 256-bit key; named and custom S-boxes |
+| IDEA | `IdeaEngine` | 64-bit block; 128-bit key |
+| Noekeon | `NoekeonEngine` | 128-bit block and key |
+| RC2 | `Rc2Engine` | 64-bit block; variable key and effective key size |
+| RC5 | `Rc532Engine<ROUNDS>`, `Rc564Engine<ROUNDS>` | 32- or 64-bit words; variable key, round count in the type |
+| RC6 | `Rc6Engine` | 128-bit block; 1-255-byte key; 20 rounds |
+| Rijndael | `RijndaelEngine<BLOCK_COLUMNS, KEY_COLUMNS>` | 128/160/192/224/256-bit blocks and keys, in any combination |
+| SEED | `SeedEngine` | 128-bit block and key |
+| Serpent / Tnepres | `SerpentEngine`, `TnepresEngine` | 128-bit block; 4-32-byte keys in 4-byte steps |
+| SKIPJACK | `SkipjackEngine` | 64-bit block; 80-bit key |
+| SM4 | `Sm4Engine` | 128-bit block and key |
+| TEA / XTEA | `TeaEngine`, `XteaEngine` | 64-bit block; 128-bit key |
+| Threefish | `Threefish256Engine`, `Threefish512Engine`, `Threefish1024Engine` | 256/512/1024-bit block and matching key; optional 128-bit tweak |
+| Twofish | `TwofishEngine` | 128-bit block; 128/192/256-bit keys |
 
 DES, Triple DES, Blowfish, IDEA, RC2, RC5, SKIPJACK, TEA, XTEA, and other
 older designs are provided for compatibility and study, not as recommendations
@@ -121,19 +137,19 @@ for new protocols.
 
 AES has three execution strategies:
 
-- `AesEngine` uses AES-NI when the default `std` feature is enabled and the
-  x86/x86-64 processor reports AES and SSE2 support.
-- The same `AesEngine` uses a portable T-table implementation on unsupported
-  processors and in `no_std` builds.
+- `AesEngine` uses AES-NI when the x86/x86-64 processor reports AES and SSE2
+  support through CPUID.
+- The same `AesEngine` uses a portable T-table implementation on any other
+  processor.
 - `AesLightEngine` uses a smaller table-based portable implementation when
   static table footprint matters more than throughput.
 
 The following Criterion point estimates were measured on 2026-08-27 using an
 Intel Core i7-1185G7, Rust 1.97.1, and `x86_64-pc-windows-msvc`. Each iteration
 processes one 16-byte block through the `BlockCipher` API; initialization and
-key expansion are outside the timed loop. The AES-NI figures come from the
-default-feature build; the portable T-table and light figures come from the
-same `--no-default-features` run. Lower latency is better.
+key expansion are outside the timed loop, so the CPUID check that picks the
+backend is not measured. The AES-NI and portable T-table figures were taken
+when each backend was the one selected. Lower latency is better.
 
 Encryption latency:
 
@@ -160,51 +176,40 @@ target system before making a performance decision.
 
 ## 5. Building and testing
 
-The default build enables `std`. `AesEngine` performs runtime CPU-feature
-detection and uses AES-NI when available:
+The default build automatically selects AES-NI where available. All algorithms
+remain available without `std`:
 
 ```bash
 cargo build -p tc_block_cipher --locked
 cargo test -p tc_block_cipher --locked
 ```
 
-Disable default features for the allocation-free `no_std` subset. This includes
-RC2 and every algorithm marked `core-only` in the table above. It excludes
-DSTU 7624, RC5, RC6, Rijndael, and Threefish:
+Force `AesEngine` to use its portable T-table backend without changing its API:
 
 ```bash
-cargo build -p tc_block_cipher --no-default-features --locked
-cargo test -p tc_block_cipher --no-default-features --locked
+cargo build -p tc_block_cipher --features force-portable-aes --locked
+cargo test -p tc_block_cipher --features force-portable-aes --locked
 ```
 
-Enable `alloc` without `std` to make every algorithm available while retaining
-portable AES code:
-
-```bash
-cargo build -p tc_block_cipher --no-default-features --features alloc --locked
-cargo test -p tc_block_cipher --no-default-features --features alloc --locked
-```
-
-Tests still link the Rust standard test harness, but compile the library with
-the selected feature set. Parameter objects store key material in
-fixed-capacity buffers and do not allocate. A final `no_std` application that
-enables `alloc` must provide a global allocator.
+Tests link the Rust standard test harness, but the library itself is `no_std`.
+Every engine and parameter object stores its material in fixed-size storage, so
+a `no_std` application needs no global allocator for this crate.
 
 Additional validation:
 
 ```bash
 cargo clippy -p tc_block_cipher --all-targets --locked -- -D warnings
-cargo clippy -p tc_block_cipher --all-targets --no-default-features --locked -- -D warnings
-cargo clippy -p tc_block_cipher --all-targets --no-default-features --features alloc --locked -- -D warnings
 cargo rustdoc -p tc_block_cipher --locked -- -D warnings
 ```
 
 Run the AES benchmarks with:
 
 ```bash
-# Runtime-dispatched backend; AES-NI is used when available.
 cargo bench -p tc_block_cipher --bench aes --locked
-
-# Force the portable AesEngine backend and compare it with AesLightEngine.
-cargo bench -p tc_block_cipher --bench aes --no-default-features --locked
+cargo bench -p tc_block_cipher --bench aes --features force-portable-aes --locked
 ```
+
+The first run measures the automatically selected `AesEngine` backend; the
+second measures its portable T-table backend. Both runs also measure the
+always-portable `AesLightEngine`, allowing all three strategies to be compared
+on an AES-NI-capable processor.

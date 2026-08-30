@@ -57,7 +57,7 @@ mod tests {
     #[test]
     fn accepts_all_standard_key_lengths() {
         for key_len in [16, 24, 32] {
-            assert!(TwofishParams::new(&alloc::vec![0u8; key_len]).is_ok());
+            assert!(TwofishParams::new(&vec![0u8; key_len]).is_ok());
         }
     }
 
@@ -65,7 +65,7 @@ mod tests {
     fn rejects_invalid_key_lengths() {
         for key_len in [0, 15, 17, 23, 25, 31, 33] {
             assert!(matches!(
-                TwofishParams::new(&alloc::vec![0u8; key_len]),
+                TwofishParams::new(&vec![0u8; key_len]),
                 Err(BlockCipherError::InvalidKeyLength(n)) if n == key_len
             ));
         }
@@ -75,7 +75,7 @@ mod tests {
     fn debug_redacts_owned_key() {
         let params = TwofishParams::new(&[0xa5; 24]).unwrap();
         assert_eq!(
-            alloc::format!("{params:?}"),
+            format!("{params:?}"),
             "TwofishParams { key_len: 24 }"
         );
     }

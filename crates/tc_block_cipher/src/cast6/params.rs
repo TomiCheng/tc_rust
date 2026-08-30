@@ -54,7 +54,7 @@ mod tests {
     fn accepts_only_standard_key_lengths() {
         for length in CAST6_KEY_BYTES {
             assert_eq!(
-                Cast6Params::new(&alloc::vec![0u8; length])
+                Cast6Params::new(&vec![0u8; length])
                     .unwrap()
                     .key_len(),
                 length
@@ -62,7 +62,7 @@ mod tests {
         }
         for length in [0, 15, 17, 19, 21, 27, 29, 31, 33] {
             assert!(matches!(
-                Cast6Params::new(&alloc::vec![0u8; length]),
+                Cast6Params::new(&vec![0u8; length]),
                 Err(BlockCipherError::InvalidKeyLength(n)) if n == length
             ));
         }
@@ -75,6 +75,6 @@ mod tests {
             Cast6Params::new(&key).unwrap()
         };
         assert_eq!(params.key(), &[0xA5; 24]);
-        assert_eq!(alloc::format!("{params:?}"), "Cast6Params { key_len: 24 }");
+        assert_eq!(format!("{params:?}"), "Cast6Params { key_len: 24 }");
     }
 }

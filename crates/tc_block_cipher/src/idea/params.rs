@@ -50,7 +50,7 @@ mod tests {
     #[test]
     fn debug_redacts_owned_key() {
         let params = IdeaParams::new(&[0xA5u8; IDEA_KEY_BYTES]).unwrap();
-        assert_eq!(alloc::format!("{params:?}"), "IdeaParams { key_len: 16 }");
+        assert_eq!(format!("{params:?}"), "IdeaParams { key_len: 16 }");
     }
 
     #[test]

@@ -52,7 +52,7 @@ mod tests {
     fn accepts_only_standard_key_length_range() {
         for length in [4, 5, 8, 16, 32, 55, 56] {
             assert_eq!(
-                BlowfishParams::new(&alloc::vec![0u8; length])
+                BlowfishParams::new(&vec![0u8; length])
                     .unwrap()
                     .key_len(),
                 length
@@ -60,7 +60,7 @@ mod tests {
         }
         for length in [0, 1, 3, 57, 59] {
             assert!(matches!(
-                BlowfishParams::new(&alloc::vec![0u8; length]),
+                BlowfishParams::new(&vec![0u8; length]),
                 Err(BlockCipherError::InvalidKeyLength(n)) if n == length
             ));
         }
@@ -74,7 +74,7 @@ mod tests {
         };
         assert_eq!(params.key(), &[0xA5; 24]);
         assert_eq!(
-            alloc::format!("{params:?}"),
+            format!("{params:?}"),
             "BlowfishParams { key_len: 24 }"
         );
     }

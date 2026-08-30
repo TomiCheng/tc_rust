@@ -52,7 +52,7 @@ mod tests {
     fn accepts_standard_key_length_range() {
         for length in 5..=16 {
             assert_eq!(
-                Cast5Params::new(&alloc::vec![0u8; length])
+                Cast5Params::new(&vec![0u8; length])
                     .unwrap()
                     .key_len(),
                 length
@@ -60,7 +60,7 @@ mod tests {
         }
         for length in [0, 1, 4, 17, 32] {
             assert!(matches!(
-                Cast5Params::new(&alloc::vec![0u8; length]),
+                Cast5Params::new(&vec![0u8; length]),
                 Err(BlockCipherError::InvalidKeyLength(n)) if n == length
             ));
         }
@@ -73,6 +73,6 @@ mod tests {
             Cast5Params::new(&key).unwrap()
         };
         assert_eq!(params.key(), &[0xA5; 12]);
-        assert_eq!(alloc::format!("{params:?}"), "Cast5Params { key_len: 12 }");
+        assert_eq!(format!("{params:?}"), "Cast5Params { key_len: 12 }");
     }
 }

@@ -61,7 +61,7 @@ mod tests {
     fn accepts_only_standard_key_lengths() {
         for length in [16, 24, 32] {
             assert_eq!(
-                AriaParams::new(&alloc::vec![0u8; length])
+                AriaParams::new(&vec![0u8; length])
                     .unwrap()
                     .key_len(),
                 length
@@ -69,7 +69,7 @@ mod tests {
         }
         for length in [0, 15, 17, 23, 25, 31, 33] {
             assert!(matches!(
-                AriaParams::new(&alloc::vec![0u8; length]),
+                AriaParams::new(&vec![0u8; length]),
                 Err(BlockCipherError::InvalidKeyLength(n)) if n == length
             ));
         }
@@ -82,6 +82,6 @@ mod tests {
             AriaParams::new(&key).unwrap()
         };
         assert_eq!(params.key(), &[0xA5; 24]);
-        assert_eq!(alloc::format!("{params:?}"), "AriaParams { key_len: 24 }");
+        assert_eq!(format!("{params:?}"), "AriaParams { key_len: 24 }");
     }
 }

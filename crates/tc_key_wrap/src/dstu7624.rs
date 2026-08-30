@@ -3,48 +3,54 @@
 //! Mirrors Bouncy Castle's `Dstu7624WrapEngine`. Unlike the RFC 3394 / 5649
 //! wrappers this is a scheme of its own: it appends an all-zero checking block,
 //! then runs a swap network over half-blocks with a per-round counter XOR, using
-//! the DSTU 7624 cipher at a chosen 128-, 256-, or 512-bit block size. It is not
-//! generic over the cipher — the block size is the only parameter.
+//! the DSTU 7624 cipher. The block and key widths are the cipher's compile-time
+//! word counts, so only the five combinations the standard defines can be named.
 
 use alloc::vec;
 use alloc::vec::Vec;
+use tc_block_cipher::dstu7624::{Dstu7624Config, ValidDstu7624Config};
 use tc_block_cipher::{BlockCipherError, Dstu7624Engine, Dstu7624Params};
 use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 use tc_crypto_core::Wrapper;
 
-/// DSTU 7624 (Kalyna) key wrap, over a 128-, 256-, or 512-bit block.
+/// DSTU 7624 (Kalyna) key wrap over a block and key of the selected widths.
 ///
-/// Build with [`new`](Self::new), giving the block size in bits, then wrap /
-/// unwrap through the [`Wrapper`] trait. The key (supplied to `init` via
-/// [`Dstu7624Params`]) must be the block size or twice the block size.
-pub struct Dstu7624WrapEngine {
+/// Both const parameters count 64-bit words and match the underlying cipher, so
+/// the key is necessarily the block size or twice it. Build with
+/// [`new`](Self::new), then wrap / unwrap through the [`Wrapper`] trait.
+pub struct Dstu7624WrapEngine<const BLOCK_WORDS: usize, const KEY_WORDS: usize>
+where
+    Dstu7624Config<BLOCK_WORDS, KEY_WORDS>: ValidDstu7624Config<BLOCK_WORDS>,
+{
     /// The underlying DSTU 7624 cipher.
-    engine: Dstu7624Engine,
-    /// Block size in bytes.
-    block_size: usize,
+    engine: Dstu7624Engine<BLOCK_WORDS, KEY_WORDS>,
     /// `None` means not yet initialised; `Some(true)` / `Some(false)` selects
     /// wrap / unwrap mode.
     for_wrapping: Option<bool>,
 }
 
-impl Dstu7624WrapEngine {
-    /// Builds a wrapper over a DSTU 7624 cipher with the given block size in bits
-    /// (128, 256, or 512). Fails if the block size is unsupported.
-    pub fn new(block_size_bits: usize) -> Result<Self, Dstu7624WrapError> {
-        let engine = Dstu7624Engine::new(block_size_bits).map_err(Dstu7624WrapError::BlockCipher)?;
-        let block_size = engine.block_size();
-        Ok(Self {
-            engine,
-            block_size,
+impl<const BLOCK_WORDS: usize, const KEY_WORDS: usize>
+    Dstu7624WrapEngine<BLOCK_WORDS, KEY_WORDS>
+where
+    Dstu7624Config<BLOCK_WORDS, KEY_WORDS>: ValidDstu7624Config<BLOCK_WORDS>,
+{
+    /// Block size in bytes.
+    const BLOCK_SIZE: usize = BLOCK_WORDS * 8;
+
+    /// Builds a wrapper over a DSTU 7624 cipher of the selected widths.
+    pub fn new() -> Self {
+        Self {
+            engine: Dstu7624Engine::new(),
             for_wrapping: None,
-        })
+        }
     }
 
     /// Processes one full block in place using the already-keyed engine, routing
     /// through a scratch buffer (max 512-bit block = 64 bytes) to avoid aliasing.
     fn crypt_block(&mut self, block: &mut [u8]) -> Result<(), Dstu7624WrapError> {
+        // 暫存取最大分組（512 bit = 64 bytes），只在轉換期間存在。
         let mut scratch = [0u8; 64];
-        let bs = self.block_size;
+        let bs = Self::BLOCK_SIZE;
         self.engine
             .process_block(block, &mut scratch[..bs])
             .map_err(Dstu7624WrapError::BlockCipher)?;
@@ -92,8 +98,22 @@ impl core::fmt::Display for Dstu7624WrapError {
 
 impl core::error::Error for Dstu7624WrapError {}
 
-impl Wrapper for Dstu7624WrapEngine {
-    type Params<'a> = Dstu7624Params;
+impl<const BLOCK_WORDS: usize, const KEY_WORDS: usize> Default
+    for Dstu7624WrapEngine<BLOCK_WORDS, KEY_WORDS>
+where
+    Dstu7624Config<BLOCK_WORDS, KEY_WORDS>: ValidDstu7624Config<BLOCK_WORDS>,
+{
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<const BLOCK_WORDS: usize, const KEY_WORDS: usize> Wrapper
+    for Dstu7624WrapEngine<BLOCK_WORDS, KEY_WORDS>
+where
+    Dstu7624Config<BLOCK_WORDS, KEY_WORDS>: ValidDstu7624Config<BLOCK_WORDS>,
+{
+    type Params<'a> = Dstu7624Params<KEY_WORDS>;
     type Error = Dstu7624WrapError;
 
     fn algorithm_name(&self) -> &str {
@@ -120,7 +140,7 @@ impl Wrapper for Dstu7624WrapEngine {
             Some(false) => return Err(Dstu7624WrapError::NotForWrapping),
             None => return Err(Dstu7624WrapError::Uninitialised),
         }
-        let bs = self.block_size;
+        let bs = Self::BLOCK_SIZE;
         let half = bs / 2;
         if !input.len().is_multiple_of(bs) {
             return Err(Dstu7624WrapError::WrapDataLength);
@@ -168,7 +188,7 @@ impl Wrapper for Dstu7624WrapEngine {
             Some(true) => return Err(Dstu7624WrapError::NotForUnwrapping),
             None => return Err(Dstu7624WrapError::Uninitialised),
         }
-        let bs = self.block_size;
+        let bs = Self::BLOCK_SIZE;
         let half = bs / 2;
         if input.len() < bs || !input.len().is_multiple_of(bs) {
             return Err(Dstu7624WrapError::UnwrapDataLength);
