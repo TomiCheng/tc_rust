@@ -20,6 +20,14 @@ std-only detection macro. The non-default `force-portable-aes` feature disables
 that dispatch when a portable-only build is required. The same algorithms and
 public API remain available in every build.
 
+On hosted targets such as Windows and Linux, the operating system has already
+enabled and manages the XMM state required by AES-NI. On a bare-metal x86
+target, CPUID only reports that the processor implements AES-NI and SSE2; it
+cannot confirm that the platform has enabled XMM/SSE execution or preserves
+that state during context switches. The platform must provide that support
+before using the automatically selected AES-NI backend. When this cannot be
+guaranteed, enable `force-portable-aes`.
+
 > This crate is a learning port and has not received an independent security
 > audit. Do not use it as a replacement for an audited cryptographic library.
 
