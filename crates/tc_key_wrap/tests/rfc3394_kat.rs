@@ -5,8 +5,8 @@
 //! checks the wrap output and the unwrap round-trip.
 
 use tc_block_cipher::{AesEngine, AesParams};
-use tc_crypto_core::Wrapper;
-use tc_key_wrap::{Rfc3394Params, Rfc3394WrapEngine};
+use tc_cipher_core::{KeyWrap, KeyWrapInit, WrapDirection};
+use tc_key_wrap::{Rfc3394Error, Rfc3394Params, Rfc3394WrapEngine};
 
 /// Parses a hex string (ignoring whitespace) into bytes.
 fn hex(s: &str) -> Vec<u8> {
@@ -35,15 +35,25 @@ fn check(kek_hex: &str, key_hex: &str, wrapped_hex: &str) {
     let mut engine = new_engine();
 
     engine
-        .init(true, &Rfc3394Params::new(AesParams::new(&kek).unwrap()))
+        .init(
+            WrapDirection::Wrap,
+            &Rfc3394Params::new(AesParams::new(&kek).unwrap()),
+        )
         .unwrap();
-    let out = engine.wrap(&key).unwrap();
+    let mut out = vec![0_u8; engine.wrapped_len(key.len()).unwrap()];
+    let written = engine.wrap_into(&key, &mut out).unwrap();
+    assert_eq!(written, out.len());
     assert_eq!(out, wrapped, "wrap 輸出與向量不符");
 
     engine
-        .init(false, &Rfc3394Params::new(AesParams::new(&kek).unwrap()))
+        .init(
+            WrapDirection::Unwrap,
+            &Rfc3394Params::new(AesParams::new(&kek).unwrap()),
+        )
         .unwrap();
-    let back = engine.unwrap(&wrapped).unwrap();
+    let mut back = vec![0_u8; engine.max_unwrapped_len(wrapped.len()).unwrap()];
+    let written = engine.unwrap_into(&wrapped, &mut back).unwrap();
+    back.truncate(written);
     assert_eq!(back, key, "unwrap 未還原原始金鑰");
 }
 
@@ -109,9 +119,20 @@ fn tampered_blob_fails_integrity_check() {
 
     let mut engine = new_engine();
     engine
-        .init(false, &Rfc3394Params::new(AesParams::new(&kek).unwrap()))
+        .init(
+            WrapDirection::Unwrap,
+            &Rfc3394Params::new(AesParams::new(&kek).unwrap()),
+        )
         .unwrap();
-    assert!(engine.unwrap(&wrapped).is_err(), "竄改的資料不該通過校驗");
+    let mut output = vec![0xa5_u8; engine.max_unwrapped_len(wrapped.len()).unwrap()];
+    assert!(matches!(
+        engine.unwrap_into(&wrapped, &mut output),
+        Err(Rfc3394Error::IntegrityCheckFailed)
+    ));
+    assert!(
+        output.iter().all(|byte| *byte == 0),
+        "完整性失敗不得留下未驗證的 key material"
+    );
 }
 
 #[test]
@@ -122,12 +143,73 @@ fn custom_iv_round_trips() {
 
     let mut engine = new_engine();
     engine
-        .init(true, &Rfc3394Params::with_iv(AesParams::new(&kek).unwrap(), iv))
+        .init(
+            WrapDirection::Wrap,
+            &Rfc3394Params::with_iv(AesParams::new(&kek).unwrap(), iv),
+        )
         .unwrap();
-    let wrapped = engine.wrap(&key).unwrap();
+    let mut wrapped = vec![0_u8; engine.wrapped_len(key.len()).unwrap()];
+    engine.wrap_into(&key, &mut wrapped).unwrap();
 
     engine
-        .init(false, &Rfc3394Params::with_iv(AesParams::new(&kek).unwrap(), iv))
+        .init(
+            WrapDirection::Unwrap,
+            &Rfc3394Params::with_iv(AesParams::new(&kek).unwrap(), iv),
+        )
         .unwrap();
-    assert_eq!(engine.unwrap(&wrapped).unwrap(), key);
+    let mut recovered = vec![0_u8; engine.max_unwrapped_len(wrapped.len()).unwrap()];
+    let written = engine.unwrap_into(&wrapped, &mut recovered).unwrap();
+    assert_eq!(&recovered[..written], key);
+}
+
+#[test]
+fn sizing_and_short_output_errors_are_reported_before_processing() {
+    let kek = hex("000102030405060708090A0B0C0D0E0F");
+    let key = hex("00112233445566778899AABBCCDDEEFF");
+    let mut engine = new_engine();
+
+    assert!(matches!(
+        engine.wrapped_len(7),
+        Err(Rfc3394Error::WrapDataLength)
+    ));
+    assert!(matches!(
+        engine.max_unwrapped_len(8),
+        Err(Rfc3394Error::UnwrapDataLength)
+    ));
+    assert_eq!(engine.wrapped_len(key.len()).unwrap(), 24);
+    assert_eq!(engine.max_unwrapped_len(24).unwrap(), 16);
+
+    engine
+        .init(
+            WrapDirection::Wrap,
+            &Rfc3394Params::new(AesParams::new(&kek).unwrap()),
+        )
+        .unwrap();
+    let mut short = [0_u8; 23];
+    assert!(matches!(
+        engine.wrap_into(&key, &mut short),
+        Err(Rfc3394Error::OutputBufferTooShort {
+            required: 24,
+            available: 23,
+        })
+    ));
+}
+
+#[test]
+fn initialized_engine_supports_dynamic_dispatch() {
+    let kek = hex("000102030405060708090A0B0C0D0E0F");
+    let key = hex("00112233445566778899AABBCCDDEEFF");
+    let mut engine = new_engine();
+    engine
+        .init(
+            WrapDirection::Wrap,
+            &Rfc3394Params::new(AesParams::new(&kek).unwrap()),
+        )
+        .unwrap();
+
+    let wrapper: &mut dyn KeyWrap<Error = Rfc3394Error<AesEngine>> = &mut engine;
+    let mut output = [0_u8; 24];
+
+    assert_eq!(wrapper.wrapped_len(key.len()).unwrap(), output.len());
+    assert_eq!(wrapper.wrap_into(&key, &mut output).unwrap(), output.len());
 }

@@ -7,11 +7,14 @@ Bouncy Castle C# engine package. A key wrapper encrypts key material under a
 key-encryption key (KEK), producing a slightly longer blob that carries its own
 integrity check, so a tampered blob or the wrong KEK is rejected on unwrap.
 
-All wrappers implement the [`Wrapper`](../tc_crypto_core/src/wrapper.rs) trait
-from `tc_crypto_core` and build on a block cipher from
-[`tc_block_cipher`](../tc_block_cipher). Because a wrapped blob has an
-input-dependent length, `wrap` and `unwrap` return an owned `Vec<u8>`; the crate
-is therefore `no_std + alloc`.
+Wrappers build on a block cipher from
+[`tc_block_cipher`](../tc_block_cipher). `Rfc3394WrapEngine` implements the new
+[`KeyWrap`](../tc_cipher_core/src/key_wrap.rs) and `KeyWrapInit` traits from
+`tc_cipher_core`: callers calculate the required length and provide the output
+buffer, so the wrapping operation itself does not allocate. It also retains the
+legacy [`Wrapper`](../tc_crypto_core/src/wrapper.rs) implementation while the
+remaining wrappers are migrated. The crate as a whole is currently
+`no_std + alloc` because those legacy wrappers return owned `Vec<u8>` values.
 
 > This crate is a learning port and has not received an independent security
 > audit. Do not use it as a replacement for an audited cryptographic library.
@@ -32,6 +35,12 @@ pub struct Rfc3394WrapEngine<E: BlockCipher> { /* engine, key, iv, direction */ 
 pub type AesWrapEngine      = Rfc3394WrapEngine<AesEngine>;
 pub type CamelliaWrapEngine = Rfc3394WrapEngine<CamelliaEngine>;
 ```
+
+The new interface separates initialization from the object-safe operation
+trait. After initialization, an RFC 3394 engine can therefore also be used as
+`dyn KeyWrap<Error = Rfc3394Error<E>>`. `wrapped_len` and
+`max_unwrapped_len` let callers size a reusable output buffer before calling
+`wrap_into` or `unwrap_into`.
 
 The wrappers fall into three mechanism families:
 
@@ -87,8 +96,9 @@ own logic and does not depend on a cipher mode.
 
 ## 4. TODO (porting order)
 
-- [x] **`Rfc3394WrapEngine<E>`** — the foundation; verified against the NIST AES
-  Key Wrap known-answer vectors (`tests/rfc3394_kat.rs`).
+- [x] **`Rfc3394WrapEngine<E>`** — the foundation and the first engine migrated
+  to `KeyWrap` / `KeyWrapInit`; verified against the NIST AES Key Wrap
+  known-answer vectors (`tests/rfc3394_kat.rs`).
 - [x] **AES/ARIA/Camellia/SEED `WrapEngine` aliases** — type aliases plus a
   `Default` impl for arg-less construction. AES is covered by the RFC 3394 NIST
   vectors; ARIA/Camellia/SEED are cross-checked against an independent
