@@ -14,10 +14,9 @@ do not implement `Clone`, and their `Debug` implementations redact key and
 tweak bytes.
 
 The default `std` feature enables runtime AES-NI detection for `AesEngine` on
-supported x86 and x86-64 processors. Disabling default features builds a
-`no_std`, allocation-free subset and selects portable implementations. Enable
-the `alloc` feature to add RC5, whose key schedule is sized by a round count
-chosen at run time, while remaining `no_std`.
+supported x86 and x86-64 processors. Disabling default features builds every
+algorithm as `no_std` without allocating, and selects portable implementations;
+no algorithm needs `alloc` any more.
 
 > This crate is a learning port and has not received an independent security
 > audit. Do not use it as a replacement for an audited cryptographic library.
@@ -83,19 +82,21 @@ exceptions are:
   engine types fix the block size at compile time, avoiding maximum-size
   storage on small `no_std` targets.
 - `Rc2Params::with_effective_key_bits` sets the RC2 effective key size.
-- `Rc5Params::with_rounds` overrides the default 12 rounds.
+- `Rc532Engine::<ROUNDS>` and `Rc564Engine::<ROUNDS>` take the round count as a
+  const parameter defaulting to the standard twelve, so the key schedule is
+  sized at compile time. A type alias does not apply its default to a bare
+  `new()`, so either name the count (`Rc532Engine::<16>::new()`) or annotate the
+  binding (`let cipher: Rc532Engine = Rc532Engine::new();`).
 - `Gost28147Params` can select a named or validated custom S-box.
 
 ## 3. Implemented algorithms
 
 The crate currently exports 30 engine types. All implementations are covered
 by known-answer tests; selected algorithms also include specification or Monte
-Carlo vectors. Every algorithm remains available without `std` when the
-`alloc` feature is enabled.
+Carlo vectors. Every algorithm is available in every build mode.
 
-`core-only` uses neither `alloc` nor `std`. `alloc` requires heap allocation.
-Only AES gains an additional `std` backend; the API of an enabled algorithm
-remains unchanged across build modes.
+`core-only` uses neither `alloc` nor `std`. Only AES gains an additional `std`
+backend; an algorithm's API is the same across build modes.
 
 | Family | Public engine types | Key and block support | Runtime |
 |--------|---------------------|-----------------------|---------|
@@ -110,7 +111,7 @@ remains unchanged across build modes.
 | IDEA | `IdeaEngine` | 64-bit block; 128-bit key | core-only |
 | Noekeon | `NoekeonEngine` | 128-bit block and key | core-only |
 | RC2 | `Rc2Engine` | 64-bit block; variable key and effective key size | core-only |
-| RC5 | `Rc532Engine`, `Rc564Engine` | 32- or 64-bit words; variable key and round count | alloc |
+| RC5 | `Rc532Engine<ROUNDS>`, `Rc564Engine<ROUNDS>` | 32- or 64-bit words; variable key, round count in the type | core-only |
 | RC6 | `Rc6Engine` | 128-bit block; 1-255-byte key; 20 rounds | core-only |
 | Rijndael | `RijndaelEngine<BLOCK_COLUMNS, KEY_COLUMNS>` | 128/160/192/224/256-bit blocks and keys, in any combination | core-only |
 | SEED | `SeedEngine` | 128-bit block and key | core-only |
@@ -176,34 +177,25 @@ cargo build -p tc_block_cipher --locked
 cargo test -p tc_block_cipher --locked
 ```
 
-Disable default features for the allocation-free `no_std` subset. This includes
-RC2 and every algorithm marked `core-only` in the table above. It excludes
-only RC5:
+Disable default features for an allocation-free `no_std` build. Every algorithm
+is still available; only the AES-NI backend is dropped in favour of the portable
+one:
 
 ```bash
 cargo build -p tc_block_cipher --no-default-features --locked
 cargo test -p tc_block_cipher --no-default-features --locked
 ```
 
-Enable `alloc` without `std` to make every algorithm available while retaining
-portable AES code:
-
-```bash
-cargo build -p tc_block_cipher --no-default-features --features alloc --locked
-cargo test -p tc_block_cipher --no-default-features --features alloc --locked
-```
-
 Tests still link the Rust standard test harness, but compile the library with
-the selected feature set. Parameter objects store key material in
-fixed-capacity buffers and do not allocate. A final `no_std` application that
-enables `alloc` must provide a global allocator.
+the selected feature set. Every engine and parameter object stores its material
+in fixed-size storage, so a `no_std` application needs no global allocator for
+this crate.
 
 Additional validation:
 
 ```bash
 cargo clippy -p tc_block_cipher --all-targets --locked -- -D warnings
 cargo clippy -p tc_block_cipher --all-targets --no-default-features --locked -- -D warnings
-cargo clippy -p tc_block_cipher --all-targets --no-default-features --features alloc --locked -- -D warnings
 cargo rustdoc -p tc_block_cipher --locked -- -D warnings
 ```
 

@@ -23,7 +23,6 @@ pub mod gost28147;
 pub mod idea;
 pub mod noekeon;
 pub mod rc2;
-#[cfg(feature = "alloc")]
 pub mod rc5;
 pub mod rc6;
 pub mod rijndael;
@@ -70,7 +69,6 @@ pub use noekeon::{
 pub use rc2::{
     RC2_BLOCK_BYTES, RC2_MAX_EFFECTIVE_KEY_BITS, RC2_MAX_KEY_BYTES, Rc2Engine, Rc2Params,
 };
-#[cfg(feature = "alloc")]
 pub use rc5::{
     RC5_32_BLOCK_BYTES, RC5_64_BLOCK_BYTES, RC5_DEFAULT_ROUNDS, RC5_MAX_KEY_BYTES, RC5_MAX_ROUNDS,
     Rc5Params, Rc5Word, Rc532Engine, Rc564Engine,
