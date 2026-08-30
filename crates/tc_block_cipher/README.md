@@ -16,7 +16,7 @@ tweak bytes.
 The default `std` feature enables runtime AES-NI detection for `AesEngine` on
 supported x86 and x86-64 processors. Disabling default features builds a
 `no_std`, allocation-free subset and selects portable implementations. Enable
-the `alloc` feature to add the four algorithm families whose key schedules use
+the `alloc` feature to add the three algorithm families whose key schedules use
 dynamic storage while remaining `no_std`.
 
 > This crate is a learning port and has not received an independent security
@@ -70,8 +70,11 @@ Most engines use `Engine::new()` plus `Params::new(key)`. The principal
 exceptions are:
 
 - `Dstu7624Engine::new(block_bits)` selects a 128-, 256-, or 512-bit block.
-- `RijndaelEngine::new(block_bits)` selects a block from 128 through 256 bits
-  in 32-bit steps.
+- `RijndaelEngine::<BLOCK_COLUMNS, KEY_COLUMNS>::new()` takes both sizes as
+  compile-time counts of 32-bit columns, each in `4..=8`, so 128 through 256
+  bits in 32-bit steps. `RijndaelParams::<KEY_COLUMNS>::new(key)` matches. As
+  with Threefish, fixing the sizes at compile time avoids maximum-size storage
+  on small `no_std` targets.
 - `Threefish256Params`, `Threefish512Params`, and `Threefish1024Params` accept
   the matching key size plus an optional 16-byte tweak. Their corresponding
   engine types fix the block size at compile time, avoiding maximum-size
@@ -106,7 +109,7 @@ remains unchanged across build modes.
 | RC2 | `Rc2Engine` | 64-bit block; variable key and effective key size | core-only |
 | RC5 | `Rc532Engine`, `Rc564Engine` | 32- or 64-bit words; variable key and round count | alloc |
 | RC6 | `Rc6Engine` | 128-bit block; 1-255-byte key; 20 rounds | alloc |
-| Rijndael | `RijndaelEngine` | 128/160/192/224/256-bit blocks and keys | alloc |
+| Rijndael | `RijndaelEngine<BLOCK_COLUMNS, KEY_COLUMNS>` | 128/160/192/224/256-bit blocks and keys, in any combination | core-only |
 | SEED | `SeedEngine` | 128-bit block and key | core-only |
 | Serpent / Tnepres | `SerpentEngine`, `TnepresEngine` | 128-bit block; 4-32-byte keys in 4-byte steps | core-only |
 | SKIPJACK | `SkipjackEngine` | 64-bit block; 80-bit key | core-only |
@@ -172,7 +175,7 @@ cargo test -p tc_block_cipher --locked
 
 Disable default features for the allocation-free `no_std` subset. This includes
 RC2 and every algorithm marked `core-only` in the table above. It excludes
-DSTU 7624, RC5, RC6, and Rijndael:
+DSTU 7624, RC5, and RC6:
 
 ```bash
 cargo build -p tc_block_cipher --no-default-features --locked
