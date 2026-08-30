@@ -35,7 +35,6 @@ pub mod serpent;
 pub mod skipjack;
 pub mod sm4;
 pub mod tea;
-#[cfg(feature = "alloc")]
 pub mod threefish;
 pub mod twofish;
 pub mod xtea;
@@ -96,8 +95,10 @@ pub use skipjack::{
 };
 pub use sm4::{SM4_BLOCK_BYTES, SM4_KEY_BYTES, Sm4Engine, Sm4Params};
 pub use tea::{TEA_BLOCK_BYTES, TEA_KEY_BYTES, TeaEngine, TeaParams};
-#[cfg(feature = "alloc")]
-pub use threefish::{ThreefishEngine, ThreefishParams};
+pub use threefish::{
+    Threefish1024Engine, Threefish1024Params, Threefish256Engine, Threefish256Params,
+    Threefish512Engine, Threefish512Params, ThreefishEngine, ThreefishParams,
+};
 pub use twofish::{
     TWOFISH_BLOCK_BYTES, TWOFISH_KEY_BYTES, TwofishEngine, TwofishParams,
 };

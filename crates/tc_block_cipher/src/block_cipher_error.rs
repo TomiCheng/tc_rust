@@ -170,8 +170,9 @@ mod tests {
         assert_shared_error::<crate::SkipjackEngine>();
         assert_shared_error::<crate::Sm4Engine>();
         assert_shared_error::<crate::TeaEngine>();
-        #[cfg(feature = "alloc")]
-        assert_shared_error::<crate::ThreefishEngine>();
+        assert_shared_error::<crate::Threefish256Engine>();
+        assert_shared_error::<crate::Threefish512Engine>();
+        assert_shared_error::<crate::Threefish1024Engine>();
         assert_shared_error::<crate::TwofishEngine>();
         assert_shared_error::<crate::XteaEngine>();
     }

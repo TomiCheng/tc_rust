@@ -16,7 +16,7 @@ tweak bytes.
 The default `std` feature enables runtime AES-NI detection for `AesEngine` on
 supported x86 and x86-64 processors. Disabling default features builds a
 `no_std`, allocation-free subset and selects portable implementations. Enable
-the `alloc` feature to add the five algorithm families whose key schedules use
+the `alloc` feature to add the four algorithm families whose key schedules use
 dynamic storage while remaining `no_std`.
 
 > This crate is a learning port and has not received an independent security
@@ -72,15 +72,17 @@ exceptions are:
 - `Dstu7624Engine::new(block_bits)` selects a 128-, 256-, or 512-bit block.
 - `RijndaelEngine::new(block_bits)` selects a block from 128 through 256 bits
   in 32-bit steps.
-- `ThreefishParams::new(key, tweak)` accepts a 32-, 64-, or 128-byte key and an
-  optional 16-byte tweak; the key length selects the Threefish block size.
+- `Threefish256Params`, `Threefish512Params`, and `Threefish1024Params` accept
+  the matching key size plus an optional 16-byte tweak. Their corresponding
+  engine types fix the block size at compile time, avoiding maximum-size
+  storage on small `no_std` targets.
 - `Rc2Params::with_effective_key_bits` sets the RC2 effective key size.
 - `Rc5Params::with_rounds` overrides the default 12 rounds.
 - `Gost28147Params` can select a named or validated custom S-box.
 
 ## 3. Implemented algorithms
 
-The crate currently exports 28 engine types. All implementations are covered
+The crate currently exports 30 engine types. All implementations are covered
 by known-answer tests; selected algorithms also include specification or Monte
 Carlo vectors. Every algorithm remains available without `std` when the
 `alloc` feature is enabled.
@@ -110,7 +112,7 @@ remains unchanged across build modes.
 | SKIPJACK | `SkipjackEngine` | 64-bit block; 80-bit key | core-only |
 | SM4 | `Sm4Engine` | 128-bit block and key | core-only |
 | TEA / XTEA | `TeaEngine`, `XteaEngine` | 64-bit block; 128-bit key | core-only |
-| Threefish | `ThreefishEngine` | 256/512/1024-bit block and matching key; optional 128-bit tweak | alloc |
+| Threefish | `Threefish256Engine`, `Threefish512Engine`, `Threefish1024Engine` | 256/512/1024-bit block and matching key; optional 128-bit tweak | core-only |
 | Twofish | `TwofishEngine` | 128-bit block; 128/192/256-bit keys | core-only |
 
 DES, Triple DES, Blowfish, IDEA, RC2, RC5, SKIPJACK, TEA, XTEA, and other
@@ -170,7 +172,7 @@ cargo test -p tc_block_cipher --locked
 
 Disable default features for the allocation-free `no_std` subset. This includes
 RC2 and every algorithm marked `core-only` in the table above. It excludes
-DSTU 7624, RC5, RC6, Rijndael, and Threefish:
+DSTU 7624, RC5, RC6, and Rijndael:
 
 ```bash
 cargo build -p tc_block_cipher --no-default-features --locked
