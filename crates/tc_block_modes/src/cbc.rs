@@ -77,6 +77,37 @@ impl<E: BlockCipher> CbcBlockCipher<E> {
         mode
     }
 
+    /// Restores the CBC chaining state to the IV selected during the most
+    /// recent initialization without re-keying the underlying cipher or
+    /// changing its direction.
+    pub fn reset(&mut self) {
+        self.cbc_v.copy_from_slice(&self.iv);
+        self.cbc_next_v.fill(0);
+    }
+
+    /// Restarts the CBC chaining state from a caller-provided IV without
+    /// re-keying the underlying cipher or replacing the IV saved by `init`.
+    ///
+    /// A later call to [`Self::reset`] therefore returns to the IV selected
+    /// during initialization, not the temporary IV supplied here.
+    pub fn reset_with_iv(&mut self, iv: &[u8]) -> Result<(), BlockCipherModeError<E>> {
+        if self.direction.is_none() {
+            return Err(BlockCipherModeError::NotInitialised);
+        }
+
+        let block_size = self.cipher.block_size();
+        if iv.len() != block_size {
+            return Err(BlockCipherModeError::InvalidIvLength {
+                actual: iv.len(),
+                block_size,
+            });
+        }
+
+        self.cbc_v.copy_from_slice(iv);
+        self.cbc_next_v.fill(0);
+        Ok(())
+    }
+
     /// Rebuilds the composed algorithm name.
     ///
     /// 名稱在建構與 init 後各組一次：部分 engine（如 Threefish）要等 keying
@@ -159,8 +190,9 @@ impl<E: BlockCipherInit> BlockCipherInit for CbcBlockCipher<E> {
             // 未給 IV 時視為全零（照 bc）。
             None => vec![0u8; block_size],
         };
-        self.cbc_v = self.iv.clone();
-        self.cbc_next_v = vec![0u8; block_size];
+        self.cbc_v.resize(block_size, 0);
+        self.cbc_next_v.resize(block_size, 0);
+        self.reset();
 
         self.cipher
             .init(direction, &params.key_params)

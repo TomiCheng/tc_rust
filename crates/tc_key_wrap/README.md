@@ -9,7 +9,8 @@ integrity check, so a tampered blob or the wrong KEK is rejected on unwrap.
 
 Wrappers build on a block cipher from
 [`tc_block_cipher`](../tc_block_cipher). All currently implemented engines
-(`Rfc3394WrapEngine`, `Rfc5649WrapEngine`, and `Dstu7624WrapEngine`) implement
+(`Rfc3394WrapEngine`, `Rfc5649WrapEngine`, `Dstu7624WrapEngine`, and
+`Rfc3211WrapEngine`) implement
 the new
 [`KeyWrap`](../tc_cipher_core/src/key_wrap.rs) and `KeyWrapInit` traits from
 `tc_cipher_core`: callers calculate the required length and provide the output
@@ -24,7 +25,8 @@ underlying DSTU 7624 cipher stores its expanded round keys in a `Vec`.
 
 **Status: in progress.** The `Wrapper` trait exists in `tc_crypto_core`; the
 RFC 3394 and RFC 5649 AES Key Wrap families and the DSTU 7624 wrap are complete
-and KAT-verified. Only the CBC-based wrappers remain — see the checklist in §4.
+and KAT-verified. RFC 3211 wrapping and unwrapping are also complete; the two
+RFC 3217 wrappers are still pending — see §4.
 This document is the porting inventory and roadmap.
 
 ## 2. Design
@@ -75,17 +77,17 @@ All underlying ciphers (AES, ARIA, Camellia, SEED) already exist in
 `tc_block_cipher`, so this whole family unblocks as soon as the two base engines
 (`Rfc3394WrapEngine`, then `Rfc5649WrapEngine`) are written.
 
-### 3.2 CMS / RFC 3217 & RFC 3211 — blocked on CBC mode
+### 3.2 CMS / RFC 3217 & RFC 3211 — in progress
 
 | bc class | Rust target | Underlying cipher | Mechanism | Prereqs |
 |----------|-------------|-------------------|-----------|---------|
-| `Rfc3211WrapEngine` | `Rfc3211WrapEngine<E>` | any block cipher | RFC 3211, CBC + IV, constant-time compare | **CBC mode** |
+| `Rfc3211WrapEngine` ✅ | `Rfc3211WrapEngine<E, R>` | any block cipher | RFC 3211, CBC + IV, random padding | CBC mode, `CryptoRng` |
 | `DesEdeWrapEngine` | `DesEdeWrapEngine` | `DesEdeEngine` | RFC 3217, CBC + fixed IV + SHA-1 checksum | **CBC mode**, SHA-1 |
 | `Rc2WrapEngine` | `Rc2WrapEngine` | `Rc2Engine` | RFC 3217, CBC + IV + SHA-1 checksum | **CBC mode**, SHA-1 |
 
-These need a **CBC block-cipher mode**, which does not exist in the workspace yet
-(`tc_block_cipher` ships only the raw ECB engines). SHA-1 is available in
-`tc_digest` (`sha1.rs`). Porting these should wait until a modes crate exists.
+The workspace now provides CBC through `tc_block_modes`. RFC 3211 wrapping and
+unwrapping are implemented. SHA-1 is available in `tc_digest` (`sha1.rs`) for
+the two RFC 3217 wrappers.
 
 ### 3.3 DSTU 7624 (Kalyna) — done
 
@@ -114,5 +116,7 @@ own logic and does not depend on a cipher mode.
   caller-buffer swap network does not allocate and supports 128/256/512-bit
   blocks. Verified against the Bouncy Castle key-wrap vectors
   (`tests/dstu7624_kat.rs`).
-- [ ] **CBC-based wrappers** (`Rfc3211WrapEngine`, `DesEdeWrapEngine`,
-  `Rc2WrapEngine`) — only after a CBC mode exists in the workspace.
+- [x] **`Rfc3211WrapEngine<E, R>`** — wrapping and unwrapping are verified with
+  Bouncy Castle DES, 3DES, AES, and ARIA vectors; tampered input is rejected
+  without exposing unauthenticated key material.
+- [ ] **RFC 3217 wrappers** (`DesEdeWrapEngine`, `Rc2WrapEngine`).
