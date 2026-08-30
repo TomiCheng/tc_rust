@@ -37,8 +37,6 @@ pub enum BlockCipherError {
     InvalidSBoxRow(usize),
     /// The requested effective key size was invalid, in bits.
     InvalidEffectiveKeyBits(usize),
-    /// The requested round count was invalid.
-    InvalidRounds(usize),
     /// The supplied tweak length was invalid, in bytes.
     InvalidTweakLength(usize),
     /// Block processing was requested before successful initialization.
@@ -77,9 +75,6 @@ impl fmt::Display for BlockCipherError {
             }
             Self::InvalidEffectiveKeyBits(bits) => {
                 write!(f, "invalid effective block-cipher key size: {bits} bits")
-            }
-            Self::InvalidRounds(rounds) => {
-                write!(f, "invalid block-cipher round count: {rounds}")
             }
             Self::InvalidTweakLength(bytes) => {
                 write!(f, "invalid block-cipher tweak length: {bytes} bytes")
@@ -155,9 +150,7 @@ mod tests {
         assert_shared_error::<crate::IdeaEngine>();
         assert_shared_error::<crate::NoekeonEngine>();
         assert_shared_error::<crate::Rc2Engine>();
-        #[cfg(feature = "alloc")]
         assert_shared_error::<crate::Rc532Engine>();
-        #[cfg(feature = "alloc")]
         assert_shared_error::<crate::Rc564Engine>();
         assert_shared_error::<crate::Rc6Engine>();
         assert_shared_error::<crate::RijndaelEngine<4, 4>>();

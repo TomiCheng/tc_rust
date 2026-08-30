@@ -3,10 +3,6 @@
 // 關閉預設 feature 時為 no_std；測試仍讓 `#[test]` 框架連結 std。
 #![cfg_attr(not(any(feature = "std", test)), no_std)]
 
-// 只有需要動態配置的 engine 才依賴 alloc；測試本身可使用 Vec 等輔助工具。
-#[cfg(any(feature = "alloc", test))]
-extern crate alloc;
-
 mod block_cipher_error;
 mod cast_common;
 

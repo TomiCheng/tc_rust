@@ -15,8 +15,8 @@ tweak bytes.
 
 The default `std` feature enables runtime AES-NI detection for `AesEngine` on
 supported x86 and x86-64 processors. Disabling default features builds every
-algorithm as `no_std` without allocating, and selects portable implementations;
-no algorithm needs `alloc` any more.
+algorithm as `no_std` without allocating, and selects portable implementations.
+The crate has no `alloc` feature: nothing in it allocates.
 
 > This crate is a learning port and has not received an independent security
 > audit. Do not use it as a replacement for an audited cryptographic library.
@@ -95,8 +95,8 @@ The crate currently exports 30 engine types. All implementations are covered
 by known-answer tests; selected algorithms also include specification or Monte
 Carlo vectors. Every algorithm is available in every build mode.
 
-`core-only` uses neither `alloc` nor `std`. Only AES gains an additional `std`
-backend; an algorithm's API is the same across build modes.
+`core-only` needs neither an allocator nor `std`. Only AES gains an additional
+`std` backend; an algorithm's API is the same across build modes.
 
 | Family | Public engine types | Key and block support | Runtime |
 |--------|---------------------|-----------------------|---------|

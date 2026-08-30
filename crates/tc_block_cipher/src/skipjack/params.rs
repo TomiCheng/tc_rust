@@ -51,7 +51,7 @@ mod tests {
     fn debug_redacts_owned_key() {
         let params = SkipjackParams::new(&[0xA5u8; SKIPJACK_KEY_BYTES]).unwrap();
         assert_eq!(
-            alloc::format!("{params:?}"),
+            format!("{params:?}"),
             "SkipjackParams { key_len: 10 }"
         );
     }

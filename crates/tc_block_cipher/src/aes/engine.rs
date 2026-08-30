@@ -165,7 +165,7 @@ mod tests {
         }
 
         for key_len in [16, 24, 32] {
-            let key: alloc::vec::Vec<u8> = (0..key_len)
+            let key: Vec<u8> = (0..key_len)
                 .map(|index| (index as u8).wrapping_mul(0x3D).wrapping_add(0x17))
                 .collect();
             let (round_keys, rounds) = portable::expand_key(&key);

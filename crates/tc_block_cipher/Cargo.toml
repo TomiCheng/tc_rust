@@ -8,8 +8,7 @@ repository.workspace = true
 
 [features]
 default = ["std"]
-alloc = []
-std = ["alloc"]
+std = []
 
 [dependencies]
 tc_cipher_core = { path = "../tc_cipher_core" }

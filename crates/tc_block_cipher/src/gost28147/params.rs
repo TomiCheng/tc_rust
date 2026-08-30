@@ -141,7 +141,7 @@ mod tests {
         let key = [0xA5u8; GOST28147_KEY_BYTES];
         let params = Gost28147Params::with_s_box(&key, Gost28147SBox::DigestA).unwrap();
         assert_eq!(
-            alloc::format!("{params:?}"),
+            format!("{params:?}"),
             "Gost28147Params { key_len: 32, s_box: \"D-A\" }"
         );
     }

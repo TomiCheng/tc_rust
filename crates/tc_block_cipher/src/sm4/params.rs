@@ -46,6 +46,6 @@ mod tests {
     #[test]
     fn debug_redacts_owned_key() {
         let params = Sm4Params::new(&[0xA5u8; SM4_KEY_BYTES]).unwrap();
-        assert_eq!(alloc::format!("{params:?}"), "Sm4Params { key_len: 16 }");
+        assert_eq!(format!("{params:?}"), "Sm4Params { key_len: 16 }");
     }
 }
