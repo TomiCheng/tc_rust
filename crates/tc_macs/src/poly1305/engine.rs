@@ -3,9 +3,9 @@
 use core::fmt;
 
 use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
-use tc_crypto_core::{Mac, MacInit};
+use tc_crypto_core::{Key, Mac, MacInit};
 
-use super::{BLOCK_BYTES, CipherParams, KEY_BYTES, Params, TAG_BYTES};
+use super::{BLOCK_BYTES, CipherParams, KEY_BYTES, TAG_BYTES};
 
 const LIMB_MASK: u32 = 0x03ff_ffff;
 const FULL_BLOCK_HIGH_BIT: u32 = 1 << 24;
@@ -15,6 +15,9 @@ const FULL_BLOCK_HIGH_BIT: u32 = 1 << 24;
 pub enum Error {
     /// The engine has not been initialized with a one-time key.
     NotInitialized,
+
+    /// The supplied key is not 32 bytes long.
+    InvalidKeyLength(usize),
 
     /// The output buffer cannot hold the 16-byte authentication tag.
     OutputTooShort {
@@ -29,6 +32,9 @@ impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::NotInitialized => f.write_str("Poly1305 is not initialized"),
+            Self::InvalidKeyLength(actual) => {
+                write!(f, "Poly1305 requires a 32-byte key, got {actual}")
+            }
             Self::OutputTooShort { required, actual } => write!(
                 f,
                 "output buffer is too short: required {required} bytes, got {actual}"
@@ -332,10 +338,18 @@ impl Mac for Engine {
 }
 
 impl MacInit for Engine {
-    type Params<'a> = dyn Params + 'a;
+    type Params<'a> = dyn Key + 'a;
 
     fn init(&mut self, params: &Self::Params<'_>) -> Result<(), Self::Error> {
-        self.set_key(params.key());
+        self.initialized = false;
+        self.reset();
+
+        let key = params.key();
+        let key: &[u8; KEY_BYTES] = key
+            .try_into()
+            .map_err(|_| Error::InvalidKeyLength(key.len()))?;
+
+        self.set_key(key);
         self.initialized = true;
         self.reset();
         Ok(())
@@ -408,10 +422,7 @@ impl<C: BlockCipherInit> MacInit for CipherEngine<C> {
             .map_err(CipherError::Cipher)?;
 
         let mut encrypted_nonce = [0_u8; BLOCK_BYTES];
-        let written = match self
-            .cipher
-            .process_block(params.nonce(), &mut encrypted_nonce)
-        {
+        let written = match self.cipher.process_block(params.iv(), &mut encrypted_nonce) {
             Ok(written) => written,
             Err(error) => {
                 encrypted_nonce.fill(0);
@@ -548,6 +559,30 @@ mod tests {
         let mut tag = [0_u8; TAG_BYTES];
         engine.do_final(&mut tag).unwrap();
         assert_eq!(tag, RFC_TAG);
+    }
+
+    #[test]
+    fn accepts_any_key_implementation_and_rejects_wrong_length() {
+        struct TestKey<'a>(&'a [u8]);
+
+        impl Key for TestKey<'_> {
+            fn key(&self) -> &[u8] {
+                self.0
+            }
+        }
+
+        let mut engine = Engine::new();
+        engine.init(&TestKey(&RFC_KEY)).unwrap();
+        engine.update(RFC_MESSAGE).unwrap();
+        let mut tag = [0_u8; TAG_BYTES];
+        engine.do_final(&mut tag).unwrap();
+        assert_eq!(tag, RFC_TAG);
+
+        assert_eq!(
+            engine.init(&TestKey(&RFC_KEY[..KEY_BYTES - 1])),
+            Err(Error::InvalidKeyLength(KEY_BYTES - 1))
+        );
+        assert_eq!(engine.update(RFC_MESSAGE), Err(Error::NotInitialized));
     }
 
     #[test]

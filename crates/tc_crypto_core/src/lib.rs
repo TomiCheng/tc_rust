@@ -14,9 +14,13 @@
 #![cfg_attr(not(test), no_std)]
 
 pub mod digest;
+pub mod iv;
+pub mod key;
 pub mod mac;
 pub mod xof;
 
 pub use digest::{Digest, TryDigest};
+pub use iv::Iv;
+pub use key::Key;
 pub use mac::{Mac, MacInit};
 pub use xof::{TryXof, Xof};

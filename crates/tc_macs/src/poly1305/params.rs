@@ -2,7 +2,9 @@
 
 use core::fmt;
 
-use super::{CIPHER_KEY_BYTES, KEY_BYTES, NONCE_BYTES, Params};
+use tc_crypto_core::{Iv, Key};
+
+use super::{CIPHER_KEY_BYTES, KEY_BYTES, NONCE_BYTES};
 
 /// Borrowed 32-byte one-time key for raw Poly1305.
 ///
@@ -19,8 +21,8 @@ impl<'a> BorrowedParams<'a> {
     }
 }
 
-impl Params for BorrowedParams<'_> {
-    fn key(&self) -> &[u8; KEY_BYTES] {
+impl Key for BorrowedParams<'_> {
+    fn key(&self) -> &[u8] {
         self.key
     }
 }
@@ -41,7 +43,7 @@ impl fmt::Debug for BorrowedParams<'_> {
 /// the underlying cipher's own strongly typed parameter object.
 pub struct CipherParams<'a, P> {
     key: &'a [u8; KEY_BYTES],
-    nonce: &'a [u8; NONCE_BYTES],
+    iv: &'a [u8; NONCE_BYTES],
     cipher_params: P,
 }
 
@@ -49,7 +51,7 @@ impl<'a, P> CipherParams<'a, P> {
     /// Builds the underlying cipher parameters from the last 16 key bytes.
     pub fn try_new<E>(
         key: &'a [u8; KEY_BYTES],
-        nonce: &'a [u8; NONCE_BYTES],
+        iv: &'a [u8; NONCE_BYTES],
         build_cipher_params: impl FnOnce(&'a [u8; CIPHER_KEY_BYTES]) -> Result<P, E>,
     ) -> Result<Self, E> {
         let cipher_key: &'a [u8; CIPHER_KEY_BYTES] = key[KEY_BYTES - CIPHER_KEY_BYTES..]
@@ -59,7 +61,7 @@ impl<'a, P> CipherParams<'a, P> {
 
         Ok(Self {
             key,
-            nonce,
+            iv,
             cipher_params,
         })
     }
@@ -68,8 +70,8 @@ impl<'a, P> CipherParams<'a, P> {
         self.key
     }
 
-    pub(super) const fn nonce(&self) -> &[u8; NONCE_BYTES] {
-        self.nonce
+    pub(super) const fn iv(&self) -> &[u8; NONCE_BYTES] {
+        self.iv
     }
 
     pub(super) const fn cipher_params(&self) -> &P {
@@ -77,11 +79,23 @@ impl<'a, P> CipherParams<'a, P> {
     }
 }
 
+impl<P> Key for CipherParams<'_, P> {
+    fn key(&self) -> &[u8] {
+        self.key
+    }
+}
+
+impl<P> Iv for CipherParams<'_, P> {
+    fn iv(&self) -> &[u8] {
+        self.iv
+    }
+}
+
 impl<P> fmt::Debug for CipherParams<'_, P> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("CipherParams")
             .field("key_len", &self.key.len())
-            .field("nonce_len", &self.nonce.len())
+            .field("iv_len", &self.iv.len())
             .finish_non_exhaustive()
     }
 }
@@ -112,18 +126,18 @@ mod tests {
     #[test]
     fn cipher_params_receive_second_key_half_and_redact_material() {
         let key = core::array::from_fn(|index| index as u8);
-        let nonce = [0xa5; NONCE_BYTES];
-        let params = CipherParams::try_new(&key, &nonce, |cipher_key| {
+        let iv = [0xa5; NONCE_BYTES];
+        let params = CipherParams::try_new(&key, &iv, |cipher_key| {
             Ok::<_, core::convert::Infallible>(cipher_key)
         })
         .unwrap();
 
-        assert_eq!(params.key(), &key);
-        assert_eq!(params.nonce(), &nonce);
+        assert_eq!(Key::key(&params), &key);
+        assert_eq!(Iv::iv(&params), &iv);
         assert_eq!(*params.cipher_params(), &key[16..]);
         assert_eq!(
             format!("{params:?}"),
-            "CipherParams { key_len: 32, nonce_len: 16, .. }"
+            "CipherParams { key_len: 32, iv_len: 16, .. }"
         );
     }
 }
