@@ -7,5 +7,4 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
-# 尚未移植任何演算法,故目前無相依。
-# 隨著各 engine 落地再逐一加入(trait crate、底層 block/stream cipher、MAC)。
+tc_cipher_core = { path = "../tc_cipher_core" }

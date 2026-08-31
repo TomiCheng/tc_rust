@@ -11,9 +11,50 @@ unauthenticated plaintext.
 > received an independent security audit. Do not use it as a replacement for
 > an audited cryptographic library.
 
-**Status: inventory only — no algorithm is implemented yet.** This document is
-the porting inventory and roadmap. The reference baseline is bc-csharp
-`20cb1616247e5f79d3dcf662b17ed5beb6922151` (master, 2026-08-27).
+**Status: Ascon-AEAD128 is implemented.** `AsconAead128Params` validates and
+borrows the fixed-size key and nonce plus optional initial associated data.
+`AsconAead128Engine` provides allocation-free incremental encryption,
+decryption, AAD processing, tag generation and verification, and output-size
+queries through the `tc_cipher_core` AEAD traits.
+
+The implementation follows bc-csharp `AsconAead128` at
+`20cb1616247e5f79d3dcf662b17ed5beb6922151` and is checked against the official
+finalized Ascon-AEAD128 KATs from `ascon/ascon-c`.
+
+## Ascon-AEAD128 usage
+
+```rust
+use tc_aead_cipher::{AsconAead128Engine, AsconAead128Params};
+use tc_cipher_core::{AeadCipher, AeadCipherInit, CipherDirection};
+
+# fn example() -> Result<(), tc_aead_cipher::AeadCipherError> {
+let key = [0x11; 16];
+let nonce = [0x22; 16];
+let params = AsconAead128Params::new(&key, &nonce)?;
+let mut cipher = AsconAead128Engine::new();
+cipher.init(CipherDirection::Encrypt, &params)?;
+cipher.process_aad_bytes(b"header")?;
+
+let plaintext = b"message";
+let mut ciphertext = [0_u8; 7 + 16];
+let mut written = cipher.process_bytes(plaintext, &mut ciphertext)?;
+written += cipher.do_final(&mut ciphertext[written..])?;
+assert_eq!(written, ciphertext.len());
+assert_eq!(cipher.mac(), Some(&ciphertext[written - 16..]));
+# Ok(())
+# }
+```
+
+Encryption appends a fixed 16-byte authentication tag. Decryption therefore
+accepts `[ciphertext || tag]` and verifies the retained tag in `do_final()`.
+`mac()` is `None` until finalization succeeds and then borrows the generated or
+verified tag.
+
+The engine streams full blocks during decryption, so `process_bytes()` may
+write unauthenticated plaintext before `do_final()` verifies the tag. Do not
+release or act on any plaintext until finalization succeeds. A completed engine
+cannot be reused: initialize it again with a fresh nonce before the next
+encryption operation. Reusing a key/nonce pair breaks AEAD security.
 
 ## The Bouncy Castle interfaces
 
@@ -72,22 +113,15 @@ consumers rather than implementations, so they are outside this inventory. The
 lightweight AEAD engines carried by older Bouncy Castle releases (Elephant,
 ISAP, PhotonBeetle, Xoodyak, Romulus) are not present in this baseline.
 
-## Prerequisites
+## Remaining prerequisites
 
-Three pieces are missing before the inventory can be completed.
+Two pieces are still needed before the remaining inventory can be completed.
 
-1. **The traits themselves.** `tc_cipher_core` currently exposes `BlockCipher`,
-   `StreamCipher`, and `KeyWrap` with their initialization traits. AEAD needs
-   its own pair, following the same split: an object-safe operational trait plus
-   a strongly typed initialization trait. Two points need a decision — how
-   `GetMac` maps onto a caller-buffer API, and how Bouncy Castle's
-   `AeadParameters` (key, nonce, MAC size, associated text) is expressed as a
-   parameter type.
-2. **A MAC crate.** The workspace has no MAC implementation. `Poly1305` blocks
+1. **A MAC crate.** The workspace has no MAC implementation. `Poly1305` blocks
    `ChaCha20Poly1305` and `XChaCha20Poly1305`, `CMac` blocks `EaxBlockCipher`,
    and `CcmBlockCipher` needs CBC-MAC — either as a port of
    `CbcBlockCipherMac` or built on `tc_block_modes::CbcBlockCipher`.
-3. **The `crypto/modes/gcm/` subpackage**, shared by `GcmBlockCipher` and
+2. **The `crypto/modes/gcm/` subpackage**, shared by `GcmBlockCipher` and
    `GcmSivBlockCipher`: `GcmUtilities` (406 lines), the basic and 4k/8k/64k
    table multipliers, and the exponentiators.
 
@@ -97,8 +131,9 @@ ciphers and DSTU 7624 in [`tc_block_cipher`](../tc_block_cipher), and
 
 ## Porting order
 
-1. **Traits first.** Add the AEAD traits to `tc_cipher_core`.
-2. **Self-contained engines.** `AsconAead128`, `AsconEngine`,
+1. **Traits first.** `AeadCipher` and `AeadCipherInit` are now available in
+   `tc_cipher_core`.
+2. **Self-contained engines.** `AsconAead128` is complete; next are `AsconEngine`,
    `Grain128AeadEngine`, `SparkleEngine`. These need no other primitive, so
    they exercise the trait shape without pulling in new dependencies, and
    `SparkleEngine` unblocks the ESCH digest.

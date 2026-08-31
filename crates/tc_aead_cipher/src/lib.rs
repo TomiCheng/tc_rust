@@ -6,8 +6,17 @@
 //! modified header, or the wrong key instead of returning unauthenticated
 //! plaintext.
 //!
-//! **This crate is currently empty.** It holds the porting inventory only; see
-//! the crate README for the catalogue of Bouncy Castle classes to be ported,
-//! their underlying dependencies, and the planned order.
+//! The crate currently provides an allocation-free, incremental
+//! [`AsconAead128Engine`] implementing the finalized NIST SP 800-232
+//! Ascon-AEAD128 algorithm.
 
 #![no_std]
+
+pub mod ascon_aead128;
+mod error;
+
+pub use ascon_aead128::{
+    ASCON_AEAD128_KEY_BYTES, ASCON_AEAD128_NONCE_BYTES, ASCON_AEAD128_TAG_BYTES,
+    AsconAead128Engine, AsconAead128Params,
+};
+pub use error::AeadCipherError;
