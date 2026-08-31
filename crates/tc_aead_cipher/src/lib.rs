@@ -12,6 +12,9 @@
 
 #![no_std]
 
+#[cfg(feature = "alloc")]
+extern crate alloc;
+
 pub mod ascon_aead128;
 mod error;
 

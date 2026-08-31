@@ -1,6 +1,8 @@
+#[cfg(feature = "alloc")]
+use tc_aead_cipher::ascon_aead128::OwnedParams;
 use tc_aead_cipher::{
     AeadCipherError,
-    ascon_aead128::{BorrowedParams, Engine, Params},
+    ascon_aead128::{BorrowedParams, Engine},
 };
 use tc_cipher_core::{AeadCipher, AeadCipherInit, CipherDirection};
 
@@ -8,26 +10,6 @@ struct Kat {
     plaintext: &'static str,
     aad: &'static str,
     ciphertext_and_tag: &'static str,
-}
-
-struct OwnedParams {
-    key: [u8; 16],
-    nonce: [u8; 16],
-    initial_aad: Vec<u8>,
-}
-
-impl Params for OwnedParams {
-    fn key(&self) -> &[u8; 16] {
-        &self.key
-    }
-
-    fn nonce(&self) -> &[u8; 16] {
-        &self.nonce
-    }
-
-    fn initial_aad(&self) -> &[u8] {
-        &self.initial_aad
-    }
 }
 
 const KEY: &str = "000102030405060708090A0B0C0D0E0F";
@@ -219,15 +201,13 @@ fn initial_aad_matches_incremental_aad() {
 }
 
 #[test]
+#[cfg(feature = "alloc")]
 fn accepts_an_owned_parameter_implementation() {
     let kat = KATS.last().unwrap();
     let plaintext = decode_hex(kat.plaintext);
     let expected = decode_hex(kat.ciphertext_and_tag);
-    let params = OwnedParams {
-        key: decode_hex(KEY).try_into().unwrap(),
-        nonce: decode_hex(NONCE).try_into().unwrap(),
-        initial_aad: decode_hex(kat.aad),
-    };
+    let (key, nonce) = key_and_nonce();
+    let params = OwnedParams::new_with_aad(&key, &nonce, decode_hex(kat.aad)).unwrap();
     let mut engine = Engine::new();
     engine.init(CipherDirection::Encrypt, &params).unwrap();
 

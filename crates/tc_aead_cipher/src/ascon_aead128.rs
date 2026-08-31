@@ -2,11 +2,13 @@
 
 mod engine;
 mod params;
-mod r#trait;
+mod traits;
 
 pub use engine::Engine;
 pub use params::BorrowedParams;
-pub use r#trait::Params;
+#[cfg(feature = "alloc")]
+pub use params::OwnedParams;
+pub use traits::Params;
 
 /// Ascon-AEAD128 key length in bytes.
 pub const KEY_BYTES: usize = 16;

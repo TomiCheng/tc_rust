@@ -153,5 +153,10 @@ cargo clippy -p tc_aead_cipher --all-targets --locked -- -D warnings
 cargo rustdoc -p tc_aead_cipher --locked -- -D warnings
 ```
 
-The crate is `no_std`. Whether it will also require `alloc` depends on the
-engines as they land, and this document will be updated when it does.
+The crate is `no_std` and allocation-free by default. Enable the `alloc`
+feature to add `ascon_aead128::OwnedParams`, which stores arbitrary-length
+initial AAD in a `Vec<u8>`:
+
+```text
+cargo build -p tc_aead_cipher --features alloc --locked
+```
