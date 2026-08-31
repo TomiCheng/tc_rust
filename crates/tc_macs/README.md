@@ -27,7 +27,7 @@ under bc-csharp's `crypto/src/crypto/macs` directory at commit
 | HMAC | `HMac` | `hmac` | Generic construction over a digest. | TODO |
 | ISO/IEC 9797-1 Algorithm 3 MAC | `ISO9797Alg3Mac` | `iso9797_alg3` | DES retail MAC with optional padding. | TODO |
 | KMAC | `KMac` | `kmac` | KMAC128/KMAC256 over cSHAKE; also implements bc-csharp `IXof`. | TODO |
-| Poly1305 | `Poly1305` | `poly1305` | Direct one-time key or optional 128-bit block-cipher form. | TODO |
+| Poly1305 | `Poly1305` | `poly1305` | Raw one-time-key form implemented; optional 128-bit block-cipher form remains TODO. | Raw complete / cipher TODO |
 | SipHash | `SipHash` | `siphash` | Configurable SipHash-c-d; defaults to SipHash-2-4. | TODO |
 | Skein-MAC | `SkeinMac` | `skein` | Configurable Skein state and output sizes. | TODO |
 | VMPC-MAC | `VmpcMac` | `vmpc` | VMPC-based MAC. | TODO |

@@ -5,3 +5,5 @@
 //! [`MacInit`](tc_crypto_core::MacInit) traits from `tc_crypto_core`.
 
 #![no_std]
+
+pub mod poly1305;
