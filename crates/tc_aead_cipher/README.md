@@ -11,11 +11,11 @@ unauthenticated plaintext.
 > received an independent security audit. Do not use it as a replacement for
 > an audited cryptographic library.
 
-**Status: Ascon-AEAD128 is implemented.** `AsconAead128Params` validates and
-borrows the fixed-size key and nonce plus optional initial associated data.
-`AsconAead128Engine` provides allocation-free incremental encryption,
-decryption, AAD processing, tag generation and verification, and output-size
-queries through the `tc_cipher_core` AEAD traits.
+**Status: Ascon-AEAD128 is implemented.** `ascon_aead128::BorrowedParams`
+validates and borrows the fixed-size key and nonce plus optional initial
+associated data. `ascon_aead128::Engine` provides allocation-free incremental
+encryption, decryption, AAD processing, tag generation and verification, and
+output-size queries through the `tc_cipher_core` AEAD traits.
 
 The implementation follows bc-csharp `AsconAead128` at
 `20cb1616247e5f79d3dcf662b17ed5beb6922151` and is checked against the official
@@ -24,14 +24,14 @@ finalized Ascon-AEAD128 KATs from `ascon/ascon-c`.
 ## Ascon-AEAD128 usage
 
 ```rust
-use tc_aead_cipher::{AsconAead128Engine, AsconAead128Params};
+use tc_aead_cipher::ascon_aead128::{BorrowedParams, Engine};
 use tc_cipher_core::{AeadCipher, AeadCipherInit, CipherDirection};
 
 # fn example() -> Result<(), tc_aead_cipher::AeadCipherError> {
 let key = [0x11; 16];
 let nonce = [0x22; 16];
-let params = AsconAead128Params::new(&key, &nonce)?;
-let mut cipher = AsconAead128Engine::new();
+let params = BorrowedParams::new(&key, &nonce)?;
+let mut cipher = Engine::new();
 cipher.init(CipherDirection::Encrypt, &params)?;
 cipher.process_aad_bytes(b"header")?;
 
@@ -78,27 +78,27 @@ cipher, adding `GetBlockSize` and `UnderlyingCipher`.
 
 Six classes, all in `crypto/modes/`.
 
-| Bouncy Castle class | C# LOC | Underlying dependencies | Workspace status |
-| --- | --- | --- | --- |
-| `GcmBlockCipher` | 1932 | 128-bit block cipher, `IGcmMultiplier` | Needs the `crypto/modes/gcm/` subpackage as well |
-| `GcmSivBlockCipher` | 1085 | 128-bit block cipher, `IGcmMultiplier` | Shares the `gcm/` subpackage with GCM |
-| `OcbBlockCipher` | 798 | 128-bit block cipher (two instances) | Dependencies available |
-| `CcmBlockCipher` | 761 | Block cipher, `CbcBlockCipherMac` | No MAC available yet |
-| `KCcmBlockCipher` | 645 | DSTU 7624 block/key widths | Dependencies available |
-| `EaxBlockCipher` | 557 | Block cipher, `CMac` | No MAC available yet |
+| Done | Bouncy Castle class | C# LOC | Underlying dependencies | Workspace status |
+| --- | --- | --- | --- | --- |
+| [ ] | `GcmBlockCipher` | 1932 | 128-bit block cipher, `IGcmMultiplier` | Needs the `crypto/modes/gcm/` subpackage as well |
+| [ ] | `GcmSivBlockCipher` | 1085 | 128-bit block cipher, `IGcmMultiplier` | Shares the `gcm/` subpackage with GCM |
+| [ ] | `OcbBlockCipher` | 798 | 128-bit block cipher (two instances) | Dependencies available |
+| [ ] | `CcmBlockCipher` | 761 | Block cipher, `CbcBlockCipherMac` | No MAC available yet |
+| [ ] | `KCcmBlockCipher` | 645 | DSTU 7624 block/key widths | Dependencies available |
+| [ ] | `EaxBlockCipher` | 557 | Block cipher, `CMac` | No MAC available yet |
 
 ## Inventory: `IAeadCipher`
 
 Six classes: three stream-oriented modes and three lightweight engines.
 
-| Bouncy Castle class | Location | C# LOC | Underlying dependencies | Workspace status |
-| --- | --- | --- | --- | --- |
-| `AsconAead128` | `modes/` | 1005 | None (self-contained permutation) | Dependencies available |
-| `AsconEngine` | `engines/` | 1070 | None; `ascon128`, `ascon128a`, `ascon80pq` variants | Dependencies available |
-| `SparkleEngine` | `engines/` | 1377 | None; `SCHWAEMM128_128`, `SCHWAEMM256_128`, `SCHWAEMM192_192`, `SCHWAEMM256_256` variants | Dependencies available |
-| `Grain128AeadEngine` | `engines/` | 783 | None (self-contained Grain-128 stream) | Dependencies available |
-| `ChaCha20Poly1305` | `modes/` | 1004 | `ChaCha7539Engine`, `Poly1305` | Engine available; no MAC available yet |
-| `XChaCha20Poly1305` | `modes/` | 35 | Subclasses `ChaCha20Poly1305`; HChaCha20 subkey derivation | Follows `ChaCha20Poly1305` |
+| Done | Bouncy Castle class | Location | C# LOC | Underlying dependencies | Workspace status |
+| --- | --- | --- | --- | --- | --- |
+| [x] | `AsconAead128` | `modes/` | 1005 | None (self-contained permutation) | Implemented and tested |
+| [ ] | `AsconEngine` | `engines/` | 1070 | None; `ascon128`, `ascon128a`, `ascon80pq` variants | Dependencies available |
+| [ ] | `SparkleEngine` | `engines/` | 1377 | None; `SCHWAEMM128_128`, `SCHWAEMM256_128`, `SCHWAEMM192_192`, `SCHWAEMM256_256` variants | Dependencies available |
+| [ ] | `Grain128AeadEngine` | `engines/` | 783 | None (self-contained Grain-128 stream) | Dependencies available |
+| [ ] | `ChaCha20Poly1305` | `modes/` | 1004 | `ChaCha7539Engine`, `Poly1305` | Engine available; no MAC available yet |
+| [ ] | `XChaCha20Poly1305` | `modes/` | 35 | Subclasses `ChaCha20Poly1305`; HChaCha20 subkey derivation | Follows `ChaCha20Poly1305` |
 
 `AsconAead128` is the finalised NIST version and is separate from the earlier
 variants carried by `AsconEngine`. `SparkleEngine` also supplies the
@@ -129,20 +129,18 @@ Everything else the inventory needs is already in the workspace: 128-bit block
 ciphers and DSTU 7624 in [`tc_block_cipher`](../tc_block_cipher), and
 `ChaCha7539Engine` with XChaCha20 in [`tc_stream_cipher`](../tc_stream_cipher).
 
-## Porting order
+## TODO
 
-1. **Traits first.** `AeadCipher` and `AeadCipherInit` are now available in
-   `tc_cipher_core`.
-2. **Self-contained engines.** `AsconAead128` is complete; next are `AsconEngine`,
-   `Grain128AeadEngine`, `SparkleEngine`. These need no other primitive, so
-   they exercise the trait shape without pulling in new dependencies, and
-   `SparkleEngine` unblocks the ESCH digest.
-3. **Block-cipher constructions.** `OcbBlockCipher` and `KCcmBlockCipher`
-   first, then the `gcm/` subpackage with `GcmBlockCipher` and
-   `GcmSivBlockCipher`, then `CcmBlockCipher` once the CBC-MAC question is
-   settled.
-4. **MAC-dependent constructions.** `EaxBlockCipher`, `ChaCha20Poly1305`, and
-   `XChaCha20Poly1305`, after a MAC crate exists.
+- [x] Add `AeadCipher` and `AeadCipherInit` to `tc_cipher_core`.
+- [x] Implement and test the finalized `ascon_aead128::Engine`.
+- [ ] Implement the remaining self-contained engines: legacy `AsconEngine`,
+  `Grain128AeadEngine`, and `SparkleEngine`. `SparkleEngine` also unblocks the
+  ESCH digest.
+- [ ] Implement block-cipher constructions: `OcbBlockCipher` and
+  `KCcmBlockCipher` first, then the `gcm/` subpackage with `GcmBlockCipher` and
+  `GcmSivBlockCipher`, followed by `CcmBlockCipher` once CBC-MAC is available.
+- [ ] Implement the MAC-dependent constructions: `EaxBlockCipher`,
+  `ChaCha20Poly1305`, and `XChaCha20Poly1305`, after a MAC crate exists.
 
 ## Build and test
 

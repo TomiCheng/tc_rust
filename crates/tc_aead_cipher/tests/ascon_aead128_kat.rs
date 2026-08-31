@@ -1,10 +1,33 @@
-use tc_aead_cipher::{AeadCipherError, AsconAead128Engine, AsconAead128Params};
+use tc_aead_cipher::{
+    AeadCipherError,
+    ascon_aead128::{BorrowedParams, Engine, Params},
+};
 use tc_cipher_core::{AeadCipher, AeadCipherInit, CipherDirection};
 
 struct Kat {
     plaintext: &'static str,
     aad: &'static str,
     ciphertext_and_tag: &'static str,
+}
+
+struct OwnedParams {
+    key: [u8; 16],
+    nonce: [u8; 16],
+    initial_aad: Vec<u8>,
+}
+
+impl Params for OwnedParams {
+    fn key(&self) -> &[u8; 16] {
+        &self.key
+    }
+
+    fn nonce(&self) -> &[u8; 16] {
+        &self.nonce
+    }
+
+    fn initial_aad(&self) -> &[u8] {
+        &self.initial_aad
+    }
 }
 
 const KEY: &str = "000102030405060708090A0B0C0D0E0F";
@@ -88,8 +111,8 @@ fn key_and_nonce() -> (Vec<u8>, Vec<u8>) {
 
 fn encrypt(plaintext: &[u8], aad: &[u8]) -> (Vec<u8>, Vec<u8>) {
     let (key, nonce) = key_and_nonce();
-    let params = AsconAead128Params::new(&key, &nonce).unwrap();
-    let mut engine = AsconAead128Engine::new();
+    let params = BorrowedParams::new(&key, &nonce).unwrap();
+    let mut engine = Engine::new();
     engine.init(CipherDirection::Encrypt, &params).unwrap();
     engine.process_aad_bytes(aad).unwrap();
 
@@ -103,8 +126,8 @@ fn encrypt(plaintext: &[u8], aad: &[u8]) -> (Vec<u8>, Vec<u8>) {
 
 fn decrypt(ciphertext: &[u8], aad: &[u8]) -> (Vec<u8>, Vec<u8>) {
     let (key, nonce) = key_and_nonce();
-    let params = AsconAead128Params::new(&key, &nonce).unwrap();
-    let mut engine = AsconAead128Engine::new();
+    let params = BorrowedParams::new(&key, &nonce).unwrap();
+    let mut engine = Engine::new();
     engine.init(CipherDirection::Decrypt, &params).unwrap();
     engine.process_aad_bytes(aad).unwrap();
 
@@ -142,8 +165,8 @@ fn chunked_processing_matches_the_official_vector() {
     let (key, nonce) = key_and_nonce();
 
     for split in 0..=plaintext.len() {
-        let params = AsconAead128Params::new(&key, &nonce).unwrap();
-        let mut engine = AsconAead128Engine::new();
+        let params = BorrowedParams::new(&key, &nonce).unwrap();
+        let mut engine = Engine::new();
         engine.init(CipherDirection::Encrypt, &params).unwrap();
         engine.process_aad_bytes(&aad[..7]).unwrap();
         engine.process_aad_bytes(&aad[7..]).unwrap();
@@ -160,8 +183,8 @@ fn chunked_processing_matches_the_official_vector() {
     }
 
     for split in 0..=expected.len() {
-        let params = AsconAead128Params::new(&key, &nonce).unwrap();
-        let mut engine = AsconAead128Engine::new();
+        let params = BorrowedParams::new(&key, &nonce).unwrap();
+        let mut engine = Engine::new();
         engine.init(CipherDirection::Decrypt, &params).unwrap();
         engine.process_aad_bytes(&aad[..15]).unwrap();
         engine.process_aad_bytes(&aad[15..]).unwrap();
@@ -185,13 +208,33 @@ fn initial_aad_matches_incremental_aad() {
     let aad = decode_hex(kat.aad);
     let expected = decode_hex(kat.ciphertext_and_tag);
     let (key, nonce) = key_and_nonce();
-    let params = AsconAead128Params::new_with_aad(&key, &nonce, &aad).unwrap();
-    let mut engine = AsconAead128Engine::new();
+    let params = BorrowedParams::new_with_aad(&key, &nonce, &aad).unwrap();
+    let mut engine = Engine::new();
     engine.init(CipherDirection::Encrypt, &params).unwrap();
 
     let mut output = vec![0_u8; engine.get_output_size(plaintext.len())];
     let mut written = engine.process_bytes(&plaintext, &mut output).unwrap();
     written += engine.do_final(&mut output[written..]).unwrap();
+    assert_eq!(&output[..written], expected);
+}
+
+#[test]
+fn accepts_an_owned_parameter_implementation() {
+    let kat = KATS.last().unwrap();
+    let plaintext = decode_hex(kat.plaintext);
+    let expected = decode_hex(kat.ciphertext_and_tag);
+    let params = OwnedParams {
+        key: decode_hex(KEY).try_into().unwrap(),
+        nonce: decode_hex(NONCE).try_into().unwrap(),
+        initial_aad: decode_hex(kat.aad),
+    };
+    let mut engine = Engine::new();
+    engine.init(CipherDirection::Encrypt, &params).unwrap();
+
+    let mut output = vec![0_u8; engine.get_output_size(plaintext.len())];
+    let mut written = engine.process_bytes(&plaintext, &mut output).unwrap();
+    written += engine.do_final(&mut output[written..]).unwrap();
+
     assert_eq!(&output[..written], expected);
 }
 
@@ -203,8 +246,8 @@ fn rejects_modified_tags_and_short_ciphertexts() {
     *ciphertext.last_mut().unwrap() ^= 1;
 
     let (key, nonce) = key_and_nonce();
-    let params = AsconAead128Params::new(&key, &nonce).unwrap();
-    let mut engine = AsconAead128Engine::new();
+    let params = BorrowedParams::new(&key, &nonce).unwrap();
+    let mut engine = Engine::new();
     engine.init(CipherDirection::Decrypt, &params).unwrap();
     let mut output = vec![0xA5; plaintext.len()];
     let written = engine.process_bytes(&ciphertext, &mut output).unwrap();
@@ -232,8 +275,8 @@ fn rejects_modified_tags_and_short_ciphertexts() {
 #[test]
 fn enforces_state_and_output_buffer_rules_without_consuming_input_on_size_error() {
     let (key, nonce) = key_and_nonce();
-    let params = AsconAead128Params::new(&key, &nonce).unwrap();
-    let mut engine = AsconAead128Engine::new();
+    let params = BorrowedParams::new(&key, &nonce).unwrap();
+    let mut engine = Engine::new();
 
     assert_eq!(
         engine.process_bytes(&[], &mut []),

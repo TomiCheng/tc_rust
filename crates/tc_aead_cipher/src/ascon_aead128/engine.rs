@@ -2,12 +2,12 @@
 
 use tc_cipher_core::{AeadCipher, AeadCipherInit, CipherDirection};
 
-use super::{ASCON_AEAD128_TAG_BYTES, AsconAead128Params};
+use super::{Params, TAG_BYTES};
 use crate::AeadCipherError;
 
 const ASCON_IV: u64 = 0x0000_1000_808c_0001;
 const RATE: usize = 16;
-const DECRYPT_BUFFER_BYTES: usize = RATE + ASCON_AEAD128_TAG_BYTES;
+const DECRYPT_BUFFER_BYTES: usize = RATE + TAG_BYTES;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 enum State {
@@ -32,17 +32,17 @@ enum State {
 /// A key/nonce pair must never be reused for encryption. After either
 /// direction is finalized, call [`AeadCipherInit::init`] with fresh parameters
 /// before processing another message.
-pub struct AsconAead128Engine {
+pub struct Engine {
     buffer: [u8; DECRYPT_BUFFER_BYTES],
     buffer_pos: usize,
     key: [u64; 2],
     nonce: [u64; 2],
     state_words: [u64; 5],
     state: State,
-    mac: Option<[u8; ASCON_AEAD128_TAG_BYTES]>,
+    mac: Option<[u8; TAG_BYTES]>,
 }
 
-impl AsconAead128Engine {
+impl Engine {
     /// Creates an uninitialised engine.
     pub const fn new() -> Self {
         Self {
@@ -297,13 +297,13 @@ impl AsconAead128Engine {
     }
 }
 
-impl Default for AsconAead128Engine {
+impl Default for Engine {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl AeadCipher for AsconAead128Engine {
+impl AeadCipher for Engine {
     type Error = AeadCipherError;
 
     fn algorithm_name(&self) -> &str {
@@ -371,10 +371,10 @@ impl AeadCipher for AsconAead128Engine {
             });
         }
 
-        if direction == CipherDirection::Decrypt && self.buffer_pos < ASCON_AEAD128_TAG_BYTES {
+        if direction == CipherDirection::Decrypt && self.buffer_pos < TAG_BYTES {
             self.mac = None;
             return Err(AeadCipherError::CiphertextTooShort {
-                minimum: ASCON_AEAD128_TAG_BYTES,
+                minimum: TAG_BYTES,
                 actual: self.buffer_pos,
             });
         }
@@ -387,25 +387,23 @@ impl AeadCipher for AsconAead128Engine {
                 let final_input: [u8; RATE] = self.buffer[..RATE].try_into().unwrap();
                 self.process_final_encrypt(&final_input[..message_len], &mut output[..message_len]);
 
-                let mut tag = [0_u8; ASCON_AEAD128_TAG_BYTES];
+                let mut tag = [0_u8; TAG_BYTES];
                 tag[..8].copy_from_slice(&self.state_words[3].to_le_bytes());
                 tag[8..].copy_from_slice(&self.state_words[4].to_le_bytes());
-                output[message_len..message_len + ASCON_AEAD128_TAG_BYTES].copy_from_slice(&tag);
+                output[message_len..message_len + TAG_BYTES].copy_from_slice(&tag);
                 self.mac = Some(tag);
                 self.buffer.fill(0);
                 self.buffer_pos = 0;
-                Ok(message_len + ASCON_AEAD128_TAG_BYTES)
+                Ok(message_len + TAG_BYTES)
             }
             CipherDirection::Decrypt => {
-                let message_len = self.buffer_pos - ASCON_AEAD128_TAG_BYTES;
-                let mut received_tag = [0_u8; ASCON_AEAD128_TAG_BYTES];
-                received_tag.copy_from_slice(
-                    &self.buffer[message_len..message_len + ASCON_AEAD128_TAG_BYTES],
-                );
+                let message_len = self.buffer_pos - TAG_BYTES;
+                let mut received_tag = [0_u8; TAG_BYTES];
+                received_tag.copy_from_slice(&self.buffer[message_len..message_len + TAG_BYTES]);
                 let final_input: [u8; RATE] = self.buffer[..RATE].try_into().unwrap();
                 self.process_final_decrypt(&final_input[..message_len], &mut output[..message_len]);
 
-                let mut expected_tag = [0_u8; ASCON_AEAD128_TAG_BYTES];
+                let mut expected_tag = [0_u8; TAG_BYTES];
                 expected_tag[..8].copy_from_slice(&self.state_words[3].to_le_bytes());
                 expected_tag[8..].copy_from_slice(&self.state_words[4].to_le_bytes());
                 self.buffer.fill(0);
@@ -428,13 +426,11 @@ impl AeadCipher for AsconAead128Engine {
 
     fn get_update_output_size(&self, input_len: usize) -> usize {
         let total = match self.state {
-            State::DecryptInit | State::DecryptAad => {
-                input_len.saturating_sub(ASCON_AEAD128_TAG_BYTES)
-            }
+            State::DecryptInit | State::DecryptAad => input_len.saturating_sub(TAG_BYTES),
             State::DecryptData | State::DecryptFinal => self
                 .buffer_pos
                 .saturating_add(input_len)
-                .saturating_sub(ASCON_AEAD128_TAG_BYTES),
+                .saturating_sub(TAG_BYTES),
             State::EncryptData | State::EncryptFinal => self.buffer_pos.saturating_add(input_len),
             State::Uninitialised | State::EncryptInit | State::EncryptAad => input_len,
         };
@@ -443,36 +439,36 @@ impl AeadCipher for AsconAead128Engine {
 
     fn get_output_size(&self, input_len: usize) -> usize {
         match self.state {
-            State::DecryptInit | State::DecryptAad => {
-                input_len.saturating_sub(ASCON_AEAD128_TAG_BYTES)
-            }
+            State::DecryptInit | State::DecryptAad => input_len.saturating_sub(TAG_BYTES),
             State::DecryptData | State::DecryptFinal => self
                 .buffer_pos
                 .saturating_add(input_len)
-                .saturating_sub(ASCON_AEAD128_TAG_BYTES),
+                .saturating_sub(TAG_BYTES),
             State::EncryptData | State::EncryptFinal => self
                 .buffer_pos
                 .saturating_add(input_len)
-                .saturating_add(ASCON_AEAD128_TAG_BYTES),
+                .saturating_add(TAG_BYTES),
             State::Uninitialised | State::EncryptInit | State::EncryptAad => {
-                input_len.saturating_add(ASCON_AEAD128_TAG_BYTES)
+                input_len.saturating_add(TAG_BYTES)
             }
         }
     }
 }
 
-impl AeadCipherInit for AsconAead128Engine {
-    type Params<'a> = AsconAead128Params<'a>;
+impl AeadCipherInit for Engine {
+    type Params<'a> = dyn Params + 'a;
 
     fn init(
         &mut self,
         direction: CipherDirection,
         params: &Self::Params<'_>,
     ) -> Result<(), Self::Error> {
-        self.key[0] = load_u64(&params.key[..8]);
-        self.key[1] = load_u64(&params.key[8..]);
-        self.nonce[0] = load_u64(&params.nonce[..8]);
-        self.nonce[1] = load_u64(&params.nonce[8..]);
+        let key = params.key();
+        let nonce = params.nonce();
+        self.key[0] = load_u64(&key[..8]);
+        self.key[1] = load_u64(&key[8..]);
+        self.nonce[0] = load_u64(&nonce[..8]);
+        self.nonce[1] = load_u64(&nonce[8..]);
         self.buffer.fill(0);
         self.buffer_pos = 0;
         self.mac = None;
@@ -481,7 +477,7 @@ impl AeadCipherInit for AsconAead128Engine {
             CipherDirection::Decrypt => State::DecryptInit,
         };
         self.initialise_state();
-        self.process_aad_bytes(params.initial_aad)
+        self.process_aad_bytes(params.initial_aad())
     }
 }
 
@@ -489,7 +485,7 @@ fn load_u64(input: &[u8]) -> u64 {
     u64::from_le_bytes(input[..8].try_into().unwrap())
 }
 
-fn fixed_time_eq(a: &[u8; ASCON_AEAD128_TAG_BYTES], b: &[u8; ASCON_AEAD128_TAG_BYTES]) -> bool {
+fn fixed_time_eq(a: &[u8; TAG_BYTES], b: &[u8; TAG_BYTES]) -> bool {
     let mut difference = 0_u8;
     for (&left, &right) in a.iter().zip(b) {
         difference |= left ^ right;
