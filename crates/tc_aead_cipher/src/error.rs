@@ -18,6 +18,13 @@ pub enum AeadCipherError {
         /// Supplied nonce length in bytes.
         actual: usize,
     },
+    /// The supplied AAD length does not match the length declared at init.
+    AadLengthMismatch {
+        /// Declared total AAD length in bytes.
+        expected: usize,
+        /// Supplied or attempted total AAD length in bytes.
+        actual: usize,
+    },
     /// The cipher has not been initialized with a key and nonce.
     NotInitialised,
     /// Associated data was supplied after message processing had started.
@@ -51,6 +58,10 @@ impl fmt::Display for AeadCipherError {
             Self::InvalidNonceLength { expected, actual } => write!(
                 f,
                 "nonce length {actual} bytes does not match the required {expected} bytes"
+            ),
+            Self::AadLengthMismatch { expected, actual } => write!(
+                f,
+                "AAD length {actual} bytes does not match the declared {expected} bytes"
             ),
             Self::NotInitialised => f.write_str("AEAD cipher is not initialised"),
             Self::AadAfterData => {
@@ -108,6 +119,14 @@ mod tests {
             }
             .to_string(),
             "output buffer is too short: need 16 bytes, got 15"
+        );
+        assert_eq!(
+            AeadCipherError::AadLengthMismatch {
+                expected: 7,
+                actual: 6,
+            }
+            .to_string(),
+            "AAD length 6 bytes does not match the declared 7 bytes"
         );
         assert_eq!(
             AeadCipherError::AuthenticationFailed.to_string(),

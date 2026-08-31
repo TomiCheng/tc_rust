@@ -18,6 +18,7 @@ extern crate alloc;
 pub mod ascon;
 pub mod ascon_aead128;
 mod error;
+pub mod grain128_aead;
 pub mod sparkle;
 
 pub use error::AeadCipherError;

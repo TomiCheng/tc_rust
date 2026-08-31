@@ -11,10 +11,11 @@ unauthenticated plaintext.
 > received an independent security audit. Do not use it as a replacement for
 > an audited cryptographic library.
 
-**Status: Ascon-AEAD128, legacy Ascon v1.2, and SCHWAEMM are implemented.** The
-finalized Ascon algorithm is exposed through `ascon_aead128`; the distinct
-legacy Ascon algorithms are exposed through `ascon`; and all four SCHWAEMM
-parameter sets are exposed through `sparkle`. These APIs provide
+**Status: Ascon-AEAD128, legacy Ascon v1.2, SCHWAEMM, and Grain-128AEAD are
+implemented.** The finalized Ascon algorithm is exposed through
+`ascon_aead128`; the distinct legacy Ascon algorithms are exposed through
+`ascon`; all four SCHWAEMM parameter sets are exposed through `sparkle`; and
+Grain-128AEAD is exposed through `grain128_aead`. These APIs provide
 allocation-free incremental encryption, decryption, AAD processing, tag
 generation and verification, and output-size queries through the
 `tc_cipher_core` AEAD traits.
@@ -29,6 +30,9 @@ should use the finalized `ascon_aead128` algorithm instead.
 
 The SCHWAEMM implementation follows bc-csharp `SparkleEngine` and is checked
 against the official SPARKLE v1.2 KAT files for all four parameter sets.
+
+The Grain implementation follows bc-csharp `Grain128AeadEngine` and is checked
+against all 1,089 KATs from the Grain-128AEADv2 NIST finalist submission.
 
 ## Ascon-AEAD128 usage
 
@@ -106,6 +110,33 @@ cipher.init(CipherDirection::Encrypt, &params)?;
 # }
 ```
 
+## Grain-128AEAD usage
+
+Grain-128AEAD encodes the total AAD length before authenticating the AAD.
+Declare that length in the parameters so the allocation-free engine can accept
+AAD incrementally without buffering it. `new_with_aad()` handles the common
+case where all AAD is already available; use `new_with_aad_len()` before
+supplying it through `process_aad_bytes()` in chunks.
+
+```rust
+use tc_aead_cipher::grain128_aead::{BorrowedParams, Engine};
+use tc_cipher_core::{AeadCipher, AeadCipherInit, CipherDirection};
+
+# fn example() -> Result<(), tc_aead_cipher::AeadCipherError> {
+let key = [0x11; 16];
+let nonce = [0x22; 12];
+let aad = b"header";
+let params = BorrowedParams::new_with_aad_len(&key, &nonce, aad.len())?;
+let mut cipher = Engine::new();
+cipher.init(CipherDirection::Encrypt, &params)?;
+cipher.process_aad_bytes(aad)?;
+# Ok(())
+# }
+```
+
+Starting message processing before the declared AAD length has been supplied,
+or supplying more AAD than declared, returns `AadLengthMismatch`.
+
 ## The Bouncy Castle interfaces
 
 `IAeadCipher` (`crypto/modes/IAeadCipher.cs`) describes an incremental
@@ -146,7 +177,7 @@ Six classes: three stream-oriented modes and three lightweight engines.
 | [x] | `AsconAead128` | `modes/` | 1005 | None (self-contained permutation) | Implemented and tested |
 | [x] | `AsconEngine` | `engines/` | 1070 | None; `ascon128`, `ascon128a`, `ascon80pq` variants | Implemented and tested |
 | [x] | `SparkleEngine` | `engines/` | 1377 | None; `SCHWAEMM128_128`, `SCHWAEMM256_128`, `SCHWAEMM192_192`, `SCHWAEMM256_256` variants | Implemented and tested |
-| [ ] | `Grain128AeadEngine` | `engines/` | 783 | None (self-contained Grain-128 stream) | Dependencies available |
+| [x] | `Grain128AeadEngine` | `engines/` | 783 | None (self-contained Grain-128 stream) | Implemented and tested |
 | [ ] | `ChaCha20Poly1305` | `modes/` | 1004 | `ChaCha7539Engine`, `Poly1305` | Engine available; no MAC available yet |
 | [ ] | `XChaCha20Poly1305` | `modes/` | 35 | Subclasses `ChaCha20Poly1305`; HChaCha20 subkey derivation | Follows `ChaCha20Poly1305` |
 
@@ -189,7 +220,7 @@ ciphers and DSTU 7624 in [`tc_block_cipher`](../tc_block_cipher), and
 - [ ] Add an SSE2 fast path for `Schwaemm256_256`, matching bc-csharp's
   `SparkleOpt16` optimization while retaining the scalar `no_std` fallback.
   This is a performance TODO; it does not affect algorithm compatibility.
-- [ ] Implement the remaining self-contained `Grain128AeadEngine`.
+- [x] Implement and test `grain128_aead::Engine`.
 - [ ] Reuse the SPARKLE permutation to implement the ESCH digest in
   `tc_digest`.
 - [ ] Implement block-cipher constructions: `OcbBlockCipher` and
@@ -210,9 +241,9 @@ cargo rustdoc -p tc_aead_cipher --locked -- -D warnings
 ```
 
 The crate is `no_std` and allocation-free by default. Enable the `alloc`
-feature to add `OwnedParams` to the `ascon_aead128`, `ascon`, and `sparkle`
-modules. The owned forms copy key and nonce material and store arbitrary-length
-initial AAD in a `Vec<u8>`:
+feature to add `OwnedParams` to the `ascon_aead128`, `ascon`, `sparkle`, and
+`grain128_aead` modules. The owned forms copy key and nonce material and store
+arbitrary-length initial AAD in a `Vec<u8>`:
 
 ```text
 cargo build -p tc_aead_cipher --features alloc --locked
