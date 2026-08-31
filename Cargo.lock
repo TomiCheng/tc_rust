@@ -551,6 +551,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_macs"
+version = "0.1.0"
+dependencies = [
+ "tc_crypto_core",
+]
+
+[[package]]
 name = "tc_math"
 version = "0.1.0"
 dependencies = [
