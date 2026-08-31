@@ -15,6 +15,8 @@ it for production cryptography.
 | `Digest` | Infallible convenience API for `TryDigest<Error = Infallible>`. |
 | `TryXof` | Fallible extendable-output API; extends `TryDigest`. |
 | `Xof` | Infallible convenience API for `TryXof<Error = Infallible>`; also a `Digest`. |
+| `Mac` | Object-safe streaming message-authentication-code API. |
+| `MacInit` | Strongly typed initialization for `Mac`. |
 
 The trait relationships are:
 
@@ -114,6 +116,36 @@ fn read_xof(xof: &mut impl Xof, message: &[u8]) -> [u8; 48] {
     output
 }
 ```
+
+## MAC traits
+
+`Mac` contains the operations used after initialization and supports dynamic
+dispatch. `MacInit` is separate so implementations can use strongly typed,
+possibly borrowed initialization parameters without making `Mac` depend on a
+generic associated type.
+
+```rust
+pub trait Mac {
+    type Error: core::error::Error;
+
+    fn algorithm_name(&self) -> &str;
+    fn mac_size(&self) -> usize;
+    fn update(&mut self, input: &[u8]) -> Result<(), Self::Error>;
+    fn do_final(&mut self, output: &mut [u8])
+        -> Result<usize, Self::Error>;
+    fn reset(&mut self);
+}
+
+pub trait MacInit: Mac {
+    type Params<'a>: ?Sized;
+
+    fn init(&mut self, params: &Self::Params<'_>)
+        -> Result<(), Self::Error>;
+}
+```
+
+A successful `do_final` resets the accumulated message while retaining the
+state established by the most recent `init` call.
 
 ## Implementing an algorithm
 

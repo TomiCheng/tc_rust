@@ -39,6 +39,7 @@ before optional conversion to a trait object.
 
 | Family | Operation trait | Initialization trait | Direction |
 | --- | --- | --- | --- |
+| AEAD cipher | `AeadCipher` | `AeadCipherInit` | `CipherDirection::{Encrypt, Decrypt}` |
 | Block cipher | `BlockCipher` | `BlockCipherInit` | `CipherDirection::{Encrypt, Decrypt}` |
 | Stream cipher | `StreamCipher` | `StreamCipherInit` | None; the same keystream operation encrypts and decrypts |
 | Key wrapping | `KeyWrap` | `KeyWrapInit` | `WrapDirection::{Wrap, Unwrap}` |
@@ -66,6 +67,34 @@ algorithm's key, tweak, or other initialization parameters.
 `StreamCipherInit` accepts the concrete key, nonce, round count, or other
 algorithm parameters. It has no encryption boolean because applying the same
 keystream operation a second time reverses the transformation.
+
+### AEAD cipher trait
+
+The AEAD family currently provides incremental, caller-buffer operations:
+
+- `AeadCipher::algorithm_name()` returns the public algorithm name.
+- `process_aad_bytes()` absorbs associated data without encrypting it.
+- `process_bytes()` incrementally processes message data.
+- `do_final()` emits or verifies the authentication tag and writes any
+  remaining output.
+- `mac()` borrows the authentication tag from the last successfully finalized
+  operation, or returns `None` when no valid final tag is available.
+- `get_update_output_size()` returns the capacity required by one incremental
+  update.
+- `get_output_size()` returns the capacity required by an update followed by
+  finalization.
+- `AeadCipherInit::init()` selects encryption or decryption and accepts the
+  concrete engine's parameter type.
+
+Decryption may emit unauthenticated plaintext from `process_bytes()` before
+`do_final()` verifies the tag. Callers must hold that output until finalization
+succeeds.
+
+`AeadCipherInit::Params<'a>` permits borrowed initialization data. The
+associated type may also be an unsized parameter trait, allowing one engine to
+accept borrowed and owned parameter implementations through the same `init()`
+signature. Keeping that GAT out of `AeadCipher` allows initialized engines to
+use `dyn AeadCipher<Error = E>`.
 
 ### Key-wrapping traits
 

@@ -1,13 +1,6 @@
 //! Block-cipher contracts.
 
-/// The transformation direction selected during block-cipher initialization.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum CipherDirection {
-    /// Transform plaintext blocks into ciphertext blocks.
-    Encrypt,
-    /// Transform ciphertext blocks into plaintext blocks.
-    Decrypt,
-}
+use crate::CipherDirection;
 
 /// An initialized symmetric-key block cipher.
 ///
@@ -55,7 +48,8 @@ mod tests {
     use core::fmt;
     use std::boxed::Box;
 
-    use super::{BlockCipher, BlockCipherInit, CipherDirection};
+    use super::{BlockCipher, BlockCipherInit};
+    use crate::CipherDirection;
 
     const BLOCK_SIZE: usize = 4;
 
