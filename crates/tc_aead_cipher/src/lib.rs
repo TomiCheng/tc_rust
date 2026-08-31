@@ -15,6 +15,7 @@
 #[cfg(feature = "alloc")]
 extern crate alloc;
 
+pub mod ascon;
 pub mod ascon_aead128;
 mod error;
 

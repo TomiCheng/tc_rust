@@ -11,15 +11,20 @@ unauthenticated plaintext.
 > received an independent security audit. Do not use it as a replacement for
 > an audited cryptographic library.
 
-**Status: Ascon-AEAD128 is implemented.** `ascon_aead128::BorrowedParams`
-validates and borrows the fixed-size key and nonce plus optional initial
-associated data. `ascon_aead128::Engine` provides allocation-free incremental
-encryption, decryption, AAD processing, tag generation and verification, and
-output-size queries through the `tc_cipher_core` AEAD traits.
+**Status: Ascon-AEAD128 and the legacy Ascon v1.2 variants are implemented.**
+The finalized algorithm is exposed through `ascon_aead128`; the distinct
+legacy `ascon128`, `ascon128a`, and `ascon80pq` algorithms are exposed through
+`ascon`. Both APIs provide allocation-free incremental encryption, decryption,
+AAD processing, tag generation and verification, and output-size queries
+through the `tc_cipher_core` AEAD traits.
 
 The implementation follows bc-csharp `AsconAead128` at
 `20cb1616247e5f79d3dcf662b17ed5beb6922151` and is checked against the official
 finalized Ascon-AEAD128 KATs from `ascon/ascon-c`.
+
+The legacy implementation follows bc-csharp `AsconEngine` and is checked
+against its official Ascon v1.2 KAT files for all three variants. New protocols
+should use the finalized `ascon_aead128` algorithm instead.
 
 ## Ascon-AEAD128 usage
 
@@ -55,6 +60,27 @@ write unauthenticated plaintext before `do_final()` verifies the tag. Do not
 release or act on any plaintext until finalization succeeds. A completed engine
 cannot be reused: initialize it again with a fresh nonce before the next
 encryption operation. Reusing a key/nonce pair breaks AEAD security.
+
+## Legacy Ascon v1.2 usage
+
+Choose the legacy algorithm explicitly when constructing the engine. The
+selected variant determines the required key length: 16 bytes for `Ascon128`
+and `Ascon128a`, or 20 bytes for `Ascon80pq`. All variants use a 16-byte nonce
+and a 16-byte tag.
+
+```rust
+use tc_aead_cipher::ascon::{BorrowedParams, Engine, Variant};
+use tc_cipher_core::{AeadCipherInit, CipherDirection};
+
+# fn example() -> Result<(), tc_aead_cipher::AeadCipherError> {
+let key = [0x11; 16];
+let nonce = [0x22; 16];
+let params = BorrowedParams::new(&key, &nonce)?;
+let mut cipher = Engine::new(Variant::Ascon128);
+cipher.init(CipherDirection::Encrypt, &params)?;
+# Ok(())
+# }
+```
 
 ## The Bouncy Castle interfaces
 
@@ -94,7 +120,7 @@ Six classes: three stream-oriented modes and three lightweight engines.
 | Done | Bouncy Castle class | Location | C# LOC | Underlying dependencies | Workspace status |
 | --- | --- | --- | --- | --- | --- |
 | [x] | `AsconAead128` | `modes/` | 1005 | None (self-contained permutation) | Implemented and tested |
-| [ ] | `AsconEngine` | `engines/` | 1070 | None; `ascon128`, `ascon128a`, `ascon80pq` variants | Dependencies available |
+| [x] | `AsconEngine` | `engines/` | 1070 | None; `ascon128`, `ascon128a`, `ascon80pq` variants | Implemented and tested |
 | [ ] | `SparkleEngine` | `engines/` | 1377 | None; `SCHWAEMM128_128`, `SCHWAEMM256_128`, `SCHWAEMM192_192`, `SCHWAEMM256_256` variants | Dependencies available |
 | [ ] | `Grain128AeadEngine` | `engines/` | 783 | None (self-contained Grain-128 stream) | Dependencies available |
 | [ ] | `ChaCha20Poly1305` | `modes/` | 1004 | `ChaCha7539Engine`, `Poly1305` | Engine available; no MAC available yet |
@@ -133,9 +159,10 @@ ciphers and DSTU 7624 in [`tc_block_cipher`](../tc_block_cipher), and
 
 - [x] Add `AeadCipher` and `AeadCipherInit` to `tc_cipher_core`.
 - [x] Implement and test the finalized `ascon_aead128::Engine`.
-- [ ] Implement the remaining self-contained engines: legacy `AsconEngine`,
-  `Grain128AeadEngine`, and `SparkleEngine`. `SparkleEngine` also unblocks the
-  ESCH digest.
+- [x] Implement and test the legacy `ascon::Engine` variants: `Ascon128`,
+  `Ascon128a`, and `Ascon80pq`.
+- [ ] Implement the remaining self-contained engines: `Grain128AeadEngine` and
+  `SparkleEngine`. `SparkleEngine` also unblocks the ESCH digest.
 - [ ] Implement block-cipher constructions: `OcbBlockCipher` and
   `KCcmBlockCipher` first, then the `gcm/` subpackage with `GcmBlockCipher` and
   `GcmSivBlockCipher`, followed by `CcmBlockCipher` once CBC-MAC is available.
@@ -154,8 +181,8 @@ cargo rustdoc -p tc_aead_cipher --locked -- -D warnings
 ```
 
 The crate is `no_std` and allocation-free by default. Enable the `alloc`
-feature to add `ascon_aead128::OwnedParams`, which stores arbitrary-length
-initial AAD in a `Vec<u8>`:
+feature to add `ascon_aead128::OwnedParams` and `ascon::OwnedParams`, which
+store arbitrary-length initial AAD in a `Vec<u8>`:
 
 ```text
 cargo build -p tc_aead_cipher --features alloc --locked
