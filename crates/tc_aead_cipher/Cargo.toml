@@ -1,0 +1,11 @@
+[package]
+name = "tc_aead_cipher"
+description = "Authenticated encryption with associated data (AEAD) ciphers ported from the Bouncy Castle C# library as a learning project."
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+# 尚未移植任何演算法,故目前無相依。
+# 隨著各 engine 落地再逐一加入(trait crate、底層 block/stream cipher、MAC)。
