@@ -2,7 +2,7 @@
 
 use core::fmt;
 
-use super::{KEY_BYTES, Params};
+use super::{CIPHER_KEY_BYTES, KEY_BYTES, NONCE_BYTES, Params};
 
 /// Borrowed 32-byte one-time key for raw Poly1305.
 ///
@@ -33,6 +33,59 @@ impl fmt::Debug for BorrowedParams<'_> {
     }
 }
 
+/// Parameters for Poly1305 with an underlying 128-bit block cipher.
+///
+/// The 32-byte Poly1305 key is split conceptually into a 16-byte polynomial
+/// key and a 16-byte block-cipher key. [`try_new`](Self::try_new) passes the
+/// latter half to `build_cipher_params`, ensuring that callers can construct
+/// the underlying cipher's own strongly typed parameter object.
+pub struct CipherParams<'a, P> {
+    key: &'a [u8; KEY_BYTES],
+    nonce: &'a [u8; NONCE_BYTES],
+    cipher_params: P,
+}
+
+impl<'a, P> CipherParams<'a, P> {
+    /// Builds the underlying cipher parameters from the last 16 key bytes.
+    pub fn try_new<E>(
+        key: &'a [u8; KEY_BYTES],
+        nonce: &'a [u8; NONCE_BYTES],
+        build_cipher_params: impl FnOnce(&'a [u8; CIPHER_KEY_BYTES]) -> Result<P, E>,
+    ) -> Result<Self, E> {
+        let cipher_key: &'a [u8; CIPHER_KEY_BYTES] = key[KEY_BYTES - CIPHER_KEY_BYTES..]
+            .try_into()
+            .expect("the Poly1305 cipher-key range is always 16 bytes");
+        let cipher_params = build_cipher_params(cipher_key)?;
+
+        Ok(Self {
+            key,
+            nonce,
+            cipher_params,
+        })
+    }
+
+    pub(super) const fn key(&self) -> &[u8; KEY_BYTES] {
+        self.key
+    }
+
+    pub(super) const fn nonce(&self) -> &[u8; NONCE_BYTES] {
+        self.nonce
+    }
+
+    pub(super) const fn cipher_params(&self) -> &P {
+        &self.cipher_params
+    }
+}
+
+impl<P> fmt::Debug for CipherParams<'_, P> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("CipherParams")
+            .field("key_len", &self.key.len())
+            .field("nonce_len", &self.nonce.len())
+            .finish_non_exhaustive()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     extern crate std;
@@ -54,5 +107,23 @@ mod tests {
         let params = BorrowedParams::new(&[0xa5; KEY_BYTES]);
 
         assert_eq!(format!("{params:?}"), "BorrowedParams { key_len: 32 }");
+    }
+
+    #[test]
+    fn cipher_params_receive_second_key_half_and_redact_material() {
+        let key = core::array::from_fn(|index| index as u8);
+        let nonce = [0xa5; NONCE_BYTES];
+        let params = CipherParams::try_new(&key, &nonce, |cipher_key| {
+            Ok::<_, core::convert::Infallible>(cipher_key)
+        })
+        .unwrap();
+
+        assert_eq!(params.key(), &key);
+        assert_eq!(params.nonce(), &nonce);
+        assert_eq!(*params.cipher_params(), &key[16..]);
+        assert_eq!(
+            format!("{params:?}"),
+            "CipherParams { key_len: 32, nonce_len: 16, .. }"
+        );
     }
 }

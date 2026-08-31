@@ -27,7 +27,7 @@ under bc-csharp's `crypto/src/crypto/macs` directory at commit
 | HMAC | `HMac` | `hmac` | Generic construction over a digest. | TODO |
 | ISO/IEC 9797-1 Algorithm 3 MAC | `ISO9797Alg3Mac` | `iso9797_alg3` | DES retail MAC with optional padding. | TODO |
 | KMAC | `KMac` | `kmac` | KMAC128/KMAC256 over cSHAKE; also implements bc-csharp `IXof`. | TODO |
-| Poly1305 | `Poly1305` | `poly1305` | Raw one-time-key form implemented; optional 128-bit block-cipher form remains TODO. | Raw complete / cipher TODO |
+| Poly1305 | `Poly1305` | `poly1305` | Raw one-time-key and generic 128-bit block-cipher forms. | Complete |
 | SipHash | `SipHash` | `siphash` | Configurable SipHash-c-d; defaults to SipHash-2-4. | TODO |
 | Skein-MAC | `SkeinMac` | `skein` | Configurable Skein state and output sizes. | TODO |
 | VMPC-MAC | `VmpcMac` | `vmpc` | VMPC-based MAC. | TODO |
@@ -40,3 +40,49 @@ and Skipjack-MAC names select one of the generic block-cipher MAC classes.
 The internal `MacCfbBlockCipher` helper is not listed separately because it
 does not implement `IMac`; it is an implementation detail of
 `CfbBlockCipherMac`.
+
+## Poly1305
+
+Raw Poly1305 accepts a borrowed 32-byte one-time key:
+
+```rust
+use tc_crypto_core::{Mac, MacInit};
+use tc_macs::poly1305::{BorrowedParams, Engine, KEY_BYTES, TAG_BYTES};
+
+let key = [0x11; KEY_BYTES];
+let mut mac = Engine::new();
+mac.init(&BorrowedParams::new(&key)).unwrap();
+mac.update(b"message").unwrap();
+
+let mut tag = [0_u8; TAG_BYTES];
+mac.do_final(&mut tag).unwrap();
+```
+
+The optional block-cipher form is generic over `BlockCipherInit`. The cipher
+must have a 16-byte block size and accept a 16-byte key. `CipherParams::try_new`
+passes the last 16 bytes of the Poly1305 key to a caller-supplied builder for
+the cipher's own strongly typed parameters:
+
+```rust
+use tc_block_cipher::{AesEngine, AesParams};
+use tc_crypto_core::{Mac, MacInit};
+use tc_macs::poly1305::{CipherEngine, CipherParams, KEY_BYTES, NONCE_BYTES, TAG_BYTES};
+
+let key = [0x11; KEY_BYTES];
+let nonce = [0x22; NONCE_BYTES];
+let params = CipherParams::try_new(&key, &nonce, |cipher_key| {
+    AesParams::new(cipher_key)
+})
+.unwrap();
+
+let mut mac = CipherEngine::new(AesEngine::new()).unwrap();
+mac.init(&params).unwrap();
+mac.update(b"message").unwrap();
+
+let mut tag = [0_u8; TAG_BYTES];
+mac.do_final(&mut tag).unwrap();
+```
+
+Poly1305 keys are one-time keys. Although `do_final` and `reset` preserve the
+initialized key to satisfy the common `Mac` contract and match bc-csharp,
+callers must not authenticate two different messages with the same key.

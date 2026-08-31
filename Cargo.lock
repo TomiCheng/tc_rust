@@ -554,6 +554,8 @@ dependencies = [
 name = "tc_macs"
 version = "0.1.0"
 dependencies = [
+ "tc_block_cipher",
+ "tc_cipher_core",
  "tc_crypto_core",
 ]
 

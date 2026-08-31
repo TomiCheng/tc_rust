@@ -7,4 +7,8 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
+tc_cipher_core = { path = "../tc_cipher_core" }
 tc_crypto_core = { path = "../tc_crypto_core" }
+
+[dev-dependencies]
+tc_block_cipher = { path = "../tc_block_cipher" }

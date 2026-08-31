@@ -2,9 +2,10 @@
 
 use core::fmt;
 
+use tc_cipher_core::{BlockCipher, BlockCipherInit, CipherDirection};
 use tc_crypto_core::{Mac, MacInit};
 
-use super::{BLOCK_BYTES, KEY_BYTES, Params, TAG_BYTES};
+use super::{BLOCK_BYTES, CipherParams, KEY_BYTES, Params, TAG_BYTES};
 
 const LIMB_MASK: u32 = 0x03ff_ffff;
 const FULL_BLOCK_HIGH_BIT: u32 = 1 << 24;
@@ -37,6 +38,39 @@ impl fmt::Display for Error {
 }
 
 impl core::error::Error for Error {}
+
+/// Failures reported by Poly1305 with an underlying block cipher.
+#[derive(Debug, Eq, PartialEq)]
+pub enum CipherError<E> {
+    /// The selected cipher does not have a 16-byte block size.
+    InvalidBlockSize(usize),
+
+    /// The cipher returned a block length other than 16 bytes.
+    InvalidOutputSize(usize),
+
+    /// The underlying block cipher failed.
+    Cipher(E),
+
+    /// The Poly1305 calculation failed.
+    Poly1305(Error),
+}
+
+impl<E: fmt::Display> fmt::Display for CipherError<E> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::InvalidBlockSize(actual) => {
+                write!(f, "Poly1305 requires a 16-byte block cipher, got {actual}")
+            }
+            Self::InvalidOutputSize(actual) => {
+                write!(f, "block cipher wrote {actual} bytes instead of 16")
+            }
+            Self::Cipher(error) => write!(f, "block cipher failed: {error}"),
+            Self::Poly1305(error) => error.fmt(f),
+        }
+    }
+}
+
+impl<E: core::error::Error> core::error::Error for CipherError<E> {}
 
 /// Raw Poly1305 message authentication code.
 ///
@@ -308,10 +342,103 @@ impl MacInit for Engine {
     }
 }
 
+/// Poly1305 using a 128-bit block cipher to derive the final 16 key bytes.
+///
+/// During initialization, the cipher is keyed with the last 16 bytes of the
+/// Poly1305 key and encrypts the 16-byte nonce. The encrypted nonce becomes the
+/// additive half of the effective raw Poly1305 one-time key.
+pub struct CipherEngine<C> {
+    inner: Engine,
+    cipher: C,
+}
+
+impl<C: BlockCipher> CipherEngine<C> {
+    /// Creates an uninitialized Poly1305 engine around `cipher`.
+    pub fn new(cipher: C) -> Result<Self, CipherError<C::Error>> {
+        let block_size = cipher.block_size();
+        if block_size != BLOCK_BYTES {
+            return Err(CipherError::InvalidBlockSize(block_size));
+        }
+
+        Ok(Self {
+            inner: Engine::new(),
+            cipher,
+        })
+    }
+
+    /// Returns the wrapped block cipher.
+    pub fn into_cipher(self) -> C {
+        self.cipher
+    }
+}
+
+impl<C: BlockCipher> Mac for CipherEngine<C> {
+    type Error = CipherError<C::Error>;
+
+    fn algorithm_name(&self) -> &str {
+        "Poly1305-Cipher"
+    }
+
+    fn mac_size(&self) -> usize {
+        TAG_BYTES
+    }
+
+    fn update(&mut self, input: &[u8]) -> Result<(), Self::Error> {
+        self.inner.update(input).map_err(CipherError::Poly1305)
+    }
+
+    fn do_final(&mut self, output: &mut [u8]) -> Result<usize, Self::Error> {
+        self.inner.do_final(output).map_err(CipherError::Poly1305)
+    }
+
+    fn reset(&mut self) {
+        self.inner.reset();
+    }
+}
+
+impl<C: BlockCipherInit> MacInit for CipherEngine<C> {
+    type Params<'a> = CipherParams<'a, C::Params<'a>>;
+
+    fn init(&mut self, params: &Self::Params<'_>) -> Result<(), Self::Error> {
+        self.inner.initialized = false;
+        self.inner.reset();
+
+        self.cipher
+            .init(CipherDirection::Encrypt, params.cipher_params())
+            .map_err(CipherError::Cipher)?;
+
+        let mut encrypted_nonce = [0_u8; BLOCK_BYTES];
+        let written = match self
+            .cipher
+            .process_block(params.nonce(), &mut encrypted_nonce)
+        {
+            Ok(written) => written,
+            Err(error) => {
+                encrypted_nonce.fill(0);
+                return Err(CipherError::Cipher(error));
+            }
+        };
+        if written != BLOCK_BYTES {
+            encrypted_nonce.fill(0);
+            return Err(CipherError::InvalidOutputSize(written));
+        }
+
+        let mut effective_key = *params.key();
+        effective_key[KEY_BYTES - BLOCK_BYTES..].copy_from_slice(&encrypted_nonce);
+        self.inner.set_key(&effective_key);
+        self.inner.initialized = true;
+        self.inner.reset();
+        encrypted_nonce.fill(0);
+        effective_key.fill(0);
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::poly1305::BorrowedParams;
+    use crate::poly1305::{BorrowedParams, CipherParams, NONCE_BYTES};
+    use tc_block_cipher::{AesEngine, AesParams, DesEngine};
 
     const RFC_KEY: [u8; KEY_BYTES] = [
         0x85, 0xd6, 0xbe, 0x78, 0x57, 0x55, 0x6d, 0x33, 0x7f, 0x44, 0x52, 0xfe, 0x42, 0xd5, 0x06,
@@ -451,5 +578,53 @@ mod tests {
         mac.update(RFC_MESSAGE).unwrap();
         mac.do_final(&mut tag).unwrap();
         assert_eq!(tag, RFC_TAG);
+    }
+
+    #[test]
+    fn cipher_engine_matches_poly1305_aes_vectors() {
+        const EMPTY_TAG: [u8; TAG_BYTES] = [
+            0x66, 0xe9, 0x4b, 0xd4, 0xef, 0x8a, 0x2c, 0x3b, 0x88, 0x4c, 0xfa, 0x59, 0xca, 0x34,
+            0x2b, 0x2e,
+        ];
+
+        let key = [0_u8; KEY_BYTES];
+        let nonce = [0_u8; NONCE_BYTES];
+        let params = CipherParams::try_new(&key, &nonce, |key| AesParams::new(key)).unwrap();
+        let mut engine = CipherEngine::new(AesEngine::new()).unwrap();
+        engine.init(&params).unwrap();
+        let mut tag = [0_u8; TAG_BYTES];
+
+        assert_eq!(engine.algorithm_name(), "Poly1305-Cipher");
+        assert_eq!(engine.do_final(&mut tag), Ok(TAG_BYTES));
+        assert_eq!(tag, EMPTY_TAG);
+
+        let key = [
+            0xf7, 0x95, 0xbd, 0x0a, 0x50, 0xe2, 0x9e, 0x07, 0x10, 0xd3, 0x13, 0x0a, 0x20, 0xe9,
+            0x8d, 0x0c, 0xf7, 0x95, 0xbd, 0x4a, 0x52, 0xe2, 0x9e, 0xd7, 0x13, 0xd3, 0x13, 0xfa,
+            0x20, 0xe9, 0x8d, 0xbc,
+        ];
+        let nonce = [
+            0x91, 0x7c, 0xf6, 0x9e, 0xbd, 0x68, 0xb2, 0xec, 0x9b, 0x9f, 0xe9, 0xa3, 0xea, 0xdd,
+            0xa6, 0x92,
+        ];
+        let params = CipherParams::try_new(&key, &nonce, |key| AesParams::new(key)).unwrap();
+        engine.init(&params).unwrap();
+        engine.update(&[0x66, 0xf7]).unwrap();
+        engine.do_final(&mut tag).unwrap();
+        assert_eq!(
+            tag,
+            [
+                0x5c, 0xa5, 0x85, 0xc7, 0x5e, 0x8f, 0x8f, 0x02, 0x5e, 0x71, 0x0c, 0xab, 0xc9, 0xa1,
+                0x50, 0x8b,
+            ]
+        );
+    }
+
+    #[test]
+    fn cipher_engine_rejects_non_128_bit_block_cipher() {
+        assert!(matches!(
+            CipherEngine::new(DesEngine::new()),
+            Err(CipherError::InvalidBlockSize(8))
+        ));
     }
 }
