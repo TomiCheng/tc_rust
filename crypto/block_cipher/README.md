@@ -9,7 +9,7 @@ to independent crates under `crypto/block_cipher`.
 | ✅ | `tc_aria` | ARIA-128, ARIA-192, ARIA-256 |
 | ✅ | `tc_blowfish` | Blowfish |
 | ✅ | `tc_camellia` | Camellia, Camellia light |
-| ⬜ | `tc_cast` | CAST5, CAST6 |
+| ✅ | `tc_cast` | CAST5, CAST6 |
 | ✅ | `tc_des` | DES, two-key and three-key Triple DES |
 | ⬜ | `tc_dstu7624` | DSTU 7624 (Kalyna) |
 | ⬜ | `tc_gost28147` | GOST 28147-89 |
