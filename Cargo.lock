@@ -647,6 +647,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_des_wrap"
+version = "0.1.0"
+dependencies = [
+ "rand_core",
+ "tc_cipher",
+ "tc_crypto",
+ "tc_des",
+ "tc_digest",
+ "tc_params",
+ "tc_sha",
+]
+
+[[package]]
 name = "tc_digest"
 version = "0.1.0"
 
@@ -679,6 +692,16 @@ version = "0.1.0"
 dependencies = [
  "tc_cipher",
  "tc_crypto",
+ "tc_params",
+]
+
+[[package]]
+name = "tc_dstu7624_wrap"
+version = "0.1.0"
+dependencies = [
+ "tc_cipher",
+ "tc_crypto",
+ "tc_dstu7624",
  "tc_params",
 ]
 
@@ -822,6 +845,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_rc2_wrap"
+version = "0.1.0"
+dependencies = [
+ "rand_core",
+ "tc_cipher",
+ "tc_crypto",
+ "tc_digest",
+ "tc_params",
+ "tc_rc2",
+ "tc_sha",
+]
+
+[[package]]
 name = "tc_rc4"
 version = "0.1.0"
 dependencies = [
@@ -859,6 +895,28 @@ dependencies = [
  "tc_crypto",
  "tc_des",
  "tc_params",
+]
+
+[[package]]
+name = "tc_rfc3394"
+version = "0.1.0"
+dependencies = [
+ "tc_aes",
+ "tc_cipher",
+ "tc_crypto",
+ "tc_params",
+]
+
+[[package]]
+name = "tc_rfc5649"
+version = "0.1.0"
+dependencies = [
+ "tc_aes",
+ "tc_aria",
+ "tc_cipher",
+ "tc_crypto",
+ "tc_params",
+ "tc_rfc3394",
 ]
 
 [[package]]

@@ -1,0 +1,16 @@
+[package]
+name = "tc_des_wrap"
+description = "CMS Triple-DES key wrapping from RFC 3217 for the tc_rust workspace."
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+rand_core = { workspace = true }
+tc_cipher = { version = "0.1", path = "../../tc_cipher" }
+tc_crypto = { version = "0.1", path = "../../tc_crypto" }
+tc_des = { version = "0.1", path = "../../block_cipher/tc_des" }
+tc_digest = { version = "0.1", path = "../../tc_digest" }
+tc_params = { version = "0.1", path = "../../tc_params" }
+tc_sha = { version = "0.1", path = "../../digest/tc_sha" }

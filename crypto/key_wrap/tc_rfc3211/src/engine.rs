@@ -57,7 +57,7 @@ where
     fn validate_block_size(&self) -> Result<usize, Rfc3211Error<C::Error>> {
         let block_size = self.cipher.block_size();
         if block_size < MINIMUM_BLOCK_BYTES {
-            return Err(Rfc3211Error::UnsupportedBlockSize {
+            return Err(Rfc3211Error::BlockSizeTooShort {
                 actual: block_size,
                 minimum: MINIMUM_BLOCK_BYTES,
             });
@@ -268,7 +268,7 @@ where
     fn init(&mut self, direction: WrapDirection, params: &P) -> Result<(), Self::Error> {
         let block_size = self.cipher.block_size();
         if block_size < MINIMUM_BLOCK_BYTES {
-            return Err(Rfc3211InitError::UnsupportedBlockSize {
+            return Err(Rfc3211InitError::BlockSizeTooShort {
                 actual: block_size,
                 minimum: MINIMUM_BLOCK_BYTES,
             });

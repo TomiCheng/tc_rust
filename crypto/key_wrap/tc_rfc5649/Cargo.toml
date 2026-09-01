@@ -1,0 +1,17 @@
+[package]
+name = "tc_rfc5649"
+description = "RFC 5649 key wrapping with padding for the tc_rust workspace."
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+tc_cipher = { version = "0.1", path = "../../tc_cipher" }
+tc_crypto = { version = "0.1", path = "../../tc_crypto" }
+tc_params = { version = "0.1", path = "../../tc_params" }
+tc_rfc3394 = { version = "0.1", path = "../tc_rfc3394" }
+
+[dev-dependencies]
+tc_aes = { version = "0.1", path = "../../block_cipher/tc_aes" }
+tc_aria = { version = "0.1", path = "../../block_cipher/tc_aria" }

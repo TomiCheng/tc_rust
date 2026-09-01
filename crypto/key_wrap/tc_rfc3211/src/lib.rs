@@ -5,7 +5,10 @@
 extern crate alloc;
 
 mod engine;
-mod error;
 
 pub use engine::Rfc3211WrapEngine;
-pub use error::{Rfc3211Error, Rfc3211InitError};
+
+/// RFC 3211 key-wrap operation error.
+pub type Rfc3211Error<E> = tc_cipher::KeyWrapError<E>;
+/// RFC 3211 key-wrapper initialization error.
+pub type Rfc3211InitError<E> = tc_cipher::KeyWrapInitError<E>;
