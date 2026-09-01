@@ -11,3 +11,4 @@ repository = "https://github.com/TomiCheng/tc_rust"
 [workspace.dependencies]
 # 只取 RngCore 等 trait；預設 no_std（default-features = false），熵來源由呼叫端提供。
 rand_core = { version = "0.10.1", default-features = false }
+criterion = "0.8.2"

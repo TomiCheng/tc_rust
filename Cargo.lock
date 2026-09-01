@@ -510,6 +510,7 @@ dependencies = [
 name = "tc_aes"
 version = "0.1.0"
 dependencies = [
+ "criterion",
  "tc_cipher",
  "tc_crypto",
  "tc_params",

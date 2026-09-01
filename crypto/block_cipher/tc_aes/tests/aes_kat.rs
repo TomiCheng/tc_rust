@@ -8,59 +8,74 @@ mod common;
 use common::unhex;
 use tc_aes::{AesEngine, AesLightEngine, BLOCK_BYTES};
 use tc_cipher::{BlockCipher, BlockCipherInit, CipherDirection};
-use tc_params::KeyRef;
+use tc_params::{KeyParams, KeyRef};
 
-/// Runs one vector through the named engine in both directions.
-macro_rules! run_vector_with {
-    ($engine:ty, $key:expr, $plaintext:expr, $ciphertext:expr) => {{
-        let key = unhex($key);
-        let plaintext = unhex($plaintext);
-        let ciphertext = unhex($ciphertext);
-        let params = KeyRef::new(&key);
-        let mut engine = <$engine>::new();
+/// Any engine in this crate: initialised from borrowed key bytes, then run one
+/// block at a time.
+trait AesImplementation:
+    BlockCipher + for<'a> BlockCipherInit<Params<'a> = dyn KeyParams + 'a>
+{
+}
 
-        engine.init(CipherDirection::Encrypt, &params).unwrap();
-        let mut encrypted = [0u8; BLOCK_BYTES];
-        assert_eq!(
-            engine.process_block(&plaintext, &mut encrypted).unwrap(),
-            BLOCK_BYTES
-        );
-        assert_eq!(encrypted.as_slice(), ciphertext, "key {}", $key);
+impl<E> AesImplementation for E where
+    E: BlockCipher + for<'a> BlockCipherInit<Params<'a> = dyn KeyParams + 'a>
+{
+}
 
-        engine.init(CipherDirection::Decrypt, &params).unwrap();
-        let mut recovered = [0u8; BLOCK_BYTES];
-        engine.process_block(&ciphertext, &mut recovered).unwrap();
-        assert_eq!(recovered.as_slice(), plaintext, "key {}", $key);
-    }};
+fn run_vector_with<E: AesImplementation>(
+    mut engine: E,
+    key: &str,
+    plaintext: &str,
+    ciphertext: &str,
+) {
+    let key_bytes = unhex(key);
+    let plaintext = unhex(plaintext);
+    let ciphertext = unhex(ciphertext);
+    let params = KeyRef::new(&key_bytes);
+
+    engine.init(CipherDirection::Encrypt, &params).unwrap();
+    let mut encrypted = [0u8; BLOCK_BYTES];
+    assert_eq!(
+        engine.process_block(&plaintext, &mut encrypted).unwrap(),
+        BLOCK_BYTES
+    );
+    assert_eq!(encrypted.as_slice(), ciphertext, "key {key}");
+
+    engine.init(CipherDirection::Decrypt, &params).unwrap();
+    let mut recovered = [0u8; BLOCK_BYTES];
+    engine.process_block(&ciphertext, &mut recovered).unwrap();
+    assert_eq!(recovered.as_slice(), plaintext, "key {key}");
 }
 
 fn run_vector(key: &str, plaintext: &str, ciphertext: &str) {
-    run_vector_with!(AesEngine, key, plaintext, ciphertext);
-    run_vector_with!(AesLightEngine, key, plaintext, ciphertext);
+    run_vector_with(AesEngine::new(), key, plaintext, ciphertext);
+    run_vector_with(AesLightEngine::new(), key, plaintext, ciphertext);
 }
 
 /// Feeds each block back in ten thousand times, as Bouncy Castle does.
-macro_rules! run_monte_carlo_with {
-    ($engine:ty, $key:expr, $input:expr, $expected:expr) => {{
-        let key = unhex($key);
-        let mut engine = <$engine>::new();
-        engine
-            .init(CipherDirection::Encrypt, &KeyRef::new(&key))
-            .unwrap();
+fn run_monte_carlo_with<E: AesImplementation>(
+    mut engine: E,
+    key: &str,
+    input: &str,
+    expected: &str,
+) {
+    let key_bytes = unhex(key);
+    engine
+        .init(CipherDirection::Encrypt, &KeyRef::new(&key_bytes))
+        .unwrap();
 
-        let mut block: [u8; BLOCK_BYTES] = unhex($input).try_into().unwrap();
-        let mut output = [0u8; BLOCK_BYTES];
-        for _ in 0..10_000 {
-            engine.process_block(&block, &mut output).unwrap();
-            block = output;
-        }
-        assert_eq!(block.as_slice(), unhex($expected), "key {}", $key);
-    }};
+    let mut block: [u8; BLOCK_BYTES] = unhex(input).try_into().unwrap();
+    let mut output = [0u8; BLOCK_BYTES];
+    for _ in 0..10_000 {
+        engine.process_block(&block, &mut output).unwrap();
+        block = output;
+    }
+    assert_eq!(block.as_slice(), unhex(expected), "key {key}");
 }
 
 fn run_monte_carlo(key: &str, input: &str, expected: &str) {
-    run_monte_carlo_with!(AesEngine, key, input, expected);
-    run_monte_carlo_with!(AesLightEngine, key, input, expected);
+    run_monte_carlo_with(AesEngine::new(), key, input, expected);
+    run_monte_carlo_with(AesLightEngine::new(), key, input, expected);
 }
 
 #[test]
