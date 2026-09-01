@@ -803,6 +803,10 @@ dependencies = [
 [[package]]
 name = "tc_macs"
 version = "0.1.0"
+
+[[package]]
+name = "tc_macs_legacy"
+version = "0.1.0"
 dependencies = [
  "tc_block_cipher",
  "tc_cipher_core",
