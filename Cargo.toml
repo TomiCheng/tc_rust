@@ -3,6 +3,7 @@ resolver = "3"
 members = [
     "crates/*",
     "crypto/tc_*",
+    "crypto/aead_cipher/*",
     "crypto/block_cipher/*",
     "crypto/block_modes/*",
     "crypto/digest/*",

@@ -4,6 +4,7 @@
 #![no_std]
 
 mod aead_cipher;
+mod aead_error;
 mod block_cipher;
 mod block_cipher_mode;
 mod block_error;
@@ -17,6 +18,7 @@ mod stream_cipher;
 mod stream_error;
 
 pub use aead_cipher::{AeadCipher, AeadCipherInit};
+pub use aead_error::AeadError;
 pub use block_cipher::{BlockCipher, BlockCipherInit};
 pub use block_cipher_mode::BlockCipherMode;
 pub use block_error::BlockError;
