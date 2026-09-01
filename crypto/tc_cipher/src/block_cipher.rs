@@ -1,6 +1,6 @@
 //! Block-cipher contracts.
 
-use crate::CipherDirection;
+use crate::{BlockError, CipherDirection, InitError};
 
 /// An initialized symmetric-key block cipher.
 ///
@@ -8,17 +8,14 @@ use crate::CipherDirection;
 /// object. Initialization is provided separately by [`BlockCipherInit`], whose
 /// generic associated parameter type is intentionally kept out of this trait.
 ///
-/// Implementations with the same [`Error`](BlockCipher::Error) type can be
-/// stored behind `dyn BlockCipher<Error = E>` after they have been initialized.
+/// Different implementations can be stored together behind `dyn BlockCipher`
+/// after they have been initialized.
 pub trait BlockCipher {
-    /// The failure type returned by block-processing operations.
-    type Error: core::error::Error;
-
     /// Returns the block size in bytes.
     fn block_size(&self) -> usize;
 
     /// Processes one block and returns the number of bytes written.
-    fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error>;
+    fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, BlockError>;
 }
 
 /// Strongly typed initialization for a [`BlockCipher`].
@@ -28,42 +25,26 @@ pub trait BlockCipher {
 /// implementations can still be used through `dyn BlockCipher`.
 pub trait BlockCipherInit: BlockCipher {
     /// The parameter type accepted by [`init`](BlockCipherInit::init).
-    type Params<'a>;
+    type Params<'a>: ?Sized;
 
     /// Initializes the cipher for the selected transformation direction.
     fn init(
         &mut self,
         direction: CipherDirection,
         params: &Self::Params<'_>,
-    ) -> Result<(), Self::Error>;
+    ) -> Result<(), InitError>;
 }
 
 #[cfg(test)]
 mod tests {
     extern crate std;
 
-    use core::fmt;
     use std::boxed::Box;
 
     use super::{BlockCipher, BlockCipherInit};
     use crate::CipherDirection;
 
     const BLOCK_SIZE: usize = 4;
-
-    #[derive(Debug, PartialEq, Eq)]
-    enum TestError {
-        BufferTooShort,
-    }
-
-    impl fmt::Display for TestError {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            match self {
-                Self::BufferTooShort => f.write_str("buffer is shorter than one block"),
-            }
-        }
-    }
-
-    impl core::error::Error for TestError {}
 
     struct TestParams<'a> {
         key: &'a [u8],
@@ -84,15 +65,17 @@ mod tests {
     }
 
     impl BlockCipher for TestCipher {
-        type Error = TestError;
-
         fn block_size(&self) -> usize {
             BLOCK_SIZE
         }
 
-        fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
+        fn process_block(
+            &mut self,
+            input: &[u8],
+            output: &mut [u8],
+        ) -> Result<usize, crate::BlockError> {
             if input.len() < BLOCK_SIZE || output.len() < BLOCK_SIZE {
-                return Err(TestError::BufferTooShort);
+                return Err(crate::BlockError::BufferTooShort);
             }
 
             for (input, output) in input[..BLOCK_SIZE].iter().zip(&mut output[..BLOCK_SIZE]) {
@@ -113,9 +96,14 @@ mod tests {
             &mut self,
             direction: CipherDirection,
             params: &Self::Params<'_>,
-        ) -> Result<(), Self::Error> {
+        ) -> Result<(), crate::InitError> {
+            let key_byte = params
+                .key
+                .first()
+                .copied()
+                .ok_or(crate::InitError::InvalidKeyLength(0))?;
             self.direction = direction;
-            self.key_byte = params.key[0];
+            self.key_byte = key_byte;
             Ok(())
         }
     }
@@ -127,7 +115,7 @@ mod tests {
 
         let mut encryptor = TestCipher::new();
         encryptor.init(CipherDirection::Encrypt, &params).unwrap();
-        let mut encryptor: Box<dyn BlockCipher<Error = TestError>> = Box::new(encryptor);
+        let mut encryptor: Box<dyn BlockCipher> = Box::new(encryptor);
         let mut ciphertext = [0_u8; BLOCK_SIZE];
 
         assert_eq!(encryptor.block_size(), BLOCK_SIZE);
@@ -138,7 +126,7 @@ mod tests {
 
         let mut decryptor = TestCipher::new();
         decryptor.init(CipherDirection::Decrypt, &params).unwrap();
-        let mut decryptor: Box<dyn BlockCipher<Error = TestError>> = Box::new(decryptor);
+        let mut decryptor: Box<dyn BlockCipher> = Box::new(decryptor);
         let mut recovered = [0_u8; BLOCK_SIZE];
 
         assert_eq!(
@@ -157,11 +145,20 @@ mod tests {
 
         assert_eq!(
             cipher.process_block(&[0_u8; BLOCK_SIZE - 1], &mut [0_u8; BLOCK_SIZE]),
-            Err(TestError::BufferTooShort)
+            Err(crate::BlockError::BufferTooShort)
         );
         assert_eq!(
             cipher.process_block(&[0_u8; BLOCK_SIZE], &mut [0_u8; BLOCK_SIZE - 1]),
-            Err(TestError::BufferTooShort)
+            Err(crate::BlockError::BufferTooShort)
+        );
+    }
+
+    #[test]
+    fn initialization_uses_the_shared_error_type() {
+        let mut cipher = TestCipher::new();
+        assert_eq!(
+            cipher.init(CipherDirection::Encrypt, &TestParams { key: &[] }),
+            Err(crate::InitError::InvalidKeyLength(0))
         );
     }
 }
