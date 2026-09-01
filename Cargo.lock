@@ -629,7 +629,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_hc"
+version = "0.1.0"
+dependencies = [
+ "tc_cipher",
+ "tc_crypto",
+ "tc_params",
+]
+
+[[package]]
 name = "tc_idea"
+version = "0.1.0"
+dependencies = [
+ "tc_cipher",
+ "tc_crypto",
+ "tc_params",
+]
+
+[[package]]
+name = "tc_isaac"
 version = "0.1.0"
 dependencies = [
  "tc_cipher",
@@ -725,6 +743,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_salsa20"
+version = "0.1.0"
+dependencies = [
+ "tc_cipher",
+ "tc_crypto",
+ "tc_params",
+]
+
+[[package]]
 name = "tc_seed"
 version = "0.1.0"
 dependencies = [
@@ -787,6 +814,15 @@ dependencies = [
 
 [[package]]
 name = "tc_twofish"
+version = "0.1.0"
+dependencies = [
+ "tc_cipher",
+ "tc_crypto",
+ "tc_params",
+]
+
+[[package]]
+name = "tc_vmpc"
 version = "0.1.0"
 dependencies = [
  "tc_cipher",
