@@ -569,6 +569,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_chacha"
+version = "0.1.0"
+dependencies = [
+ "tc_cipher",
+ "tc_crypto",
+ "tc_params",
+]
+
+[[package]]
 name = "tc_cipher"
 version = "0.1.0"
 

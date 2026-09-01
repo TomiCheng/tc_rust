@@ -1,4 +1,5 @@
-//! Shared object-safe cipher contracts, operation directions, and error types.
+//! Shared object-safe cipher contracts, operation directions, and processing
+//! and initialization error types.
 
 #![no_std]
 

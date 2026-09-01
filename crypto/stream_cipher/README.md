@@ -5,7 +5,7 @@ crate to independent crates under `crypto/stream_cipher`.
 
 | Status | Target crate | Algorithms / engines |
 |:------:|--------------|----------------------|
-| ⬜ | `tc_chacha` | ChaCha, ChaCha7539, XChaCha20 |
+| ✅ | `tc_chacha` | ChaCha, ChaCha7539, XChaCha20 |
 | ⬜ | `tc_hc` | HC-128, HC-256 |
 | ⬜ | `tc_isaac` | ISAAC |
 | ✅ | `tc_rc4` | RC4 |
