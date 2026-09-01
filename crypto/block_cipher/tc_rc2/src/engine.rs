@@ -38,6 +38,8 @@ impl AlgorithmName for Rc2Engine {
 }
 
 impl BlockCipher for Rc2Engine {
+    type Error = BlockError;
+
     fn block_size(&self) -> usize {
         BLOCK_BYTES
     }
@@ -62,6 +64,7 @@ impl BlockCipher for Rc2Engine {
 
 impl BlockCipherInit for Rc2Engine {
     type Params<'a> = dyn Rc2Params + 'a;
+    type Error = InitError;
 
     fn init(
         &mut self,

@@ -75,7 +75,8 @@ fn initialized_engines_support_dynamic_dispatch() {
         .init(CipherDirection::Encrypt, &KeyRef::new(&[0u8; 32]))
         .unwrap();
 
-    let ciphers: [Box<dyn BlockCipher>; 2] = [Box::new(engine), Box::new(light)];
+    let ciphers: [Box<dyn BlockCipher<Error = BlockError>>; 2] =
+        [Box::new(engine), Box::new(light)];
     for cipher in &ciphers {
         assert_eq!(cipher.block_size(), BLOCK_BYTES);
     }

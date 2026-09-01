@@ -93,7 +93,7 @@ fn initialized_engines_support_dynamic_dispatch() {
         .init(CipherDirection::Encrypt, &KeyRef::new(&[0u8; 64]))
         .unwrap();
 
-    let ciphers: [Box<dyn BlockCipher>; 3] = [
+    let ciphers: [Box<dyn BlockCipher<Error = BlockError>>; 3] = [
         Box::new(engine128),
         Box::new(engine256),
         Box::new(engine512),

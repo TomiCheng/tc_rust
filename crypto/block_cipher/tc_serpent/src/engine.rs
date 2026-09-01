@@ -93,6 +93,8 @@ impl AlgorithmName for SerpentEngine {
 }
 
 impl BlockCipher for SerpentEngine {
+    type Error = BlockError;
+
     fn block_size(&self) -> usize {
         BLOCK_BYTES
     }
@@ -105,6 +107,7 @@ impl BlockCipher for SerpentEngine {
 
 impl BlockCipherInit for SerpentEngine {
     type Params<'a> = dyn KeyParams + 'a;
+    type Error = InitError;
 
     fn init(
         &mut self,
@@ -145,6 +148,8 @@ impl AlgorithmName for TnepresEngine {
 }
 
 impl BlockCipher for TnepresEngine {
+    type Error = BlockError;
+
     fn block_size(&self) -> usize {
         BLOCK_BYTES
     }
@@ -157,6 +162,7 @@ impl BlockCipher for TnepresEngine {
 
 impl BlockCipherInit for TnepresEngine {
     type Params<'a> = dyn KeyParams + 'a;
+    type Error = InitError;
 
     fn init(
         &mut self,

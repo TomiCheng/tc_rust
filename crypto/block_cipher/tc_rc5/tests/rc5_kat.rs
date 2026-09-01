@@ -5,7 +5,7 @@
 
 mod common;
 
-use tc_cipher::{BlockCipher, BlockCipherInit, CipherDirection};
+use tc_cipher::{BlockCipher, BlockCipherInit, BlockError, CipherDirection, InitError};
 use tc_rc5::{Params, Rc532Engine, Rc564Engine};
 
 use common::{unhex, xor};
@@ -19,8 +19,8 @@ fn run<E>(
     plaintext: &str,
     ciphertext: &str,
 ) where
-    E: BlockCipher + BlockCipherInit,
-    for<'a> E: BlockCipherInit<Params<'a> = dyn tc_rc5::Rc5Params + 'a>,
+    E: BlockCipher<Error = BlockError> + BlockCipherInit<Error = InitError>,
+    for<'a> E: BlockCipherInit<Params<'a> = dyn tc_rc5::Rc5Params + 'a, Error = InitError>,
 {
     let key = unhex(key);
     let iv = unhex(iv);

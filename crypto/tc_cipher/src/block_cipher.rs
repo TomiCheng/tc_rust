@@ -1,6 +1,6 @@
 //! Block-cipher contracts.
 
-use crate::{BlockError, CipherDirection, InitError};
+use crate::CipherDirection;
 
 /// An initialized symmetric-key block cipher.
 ///
@@ -8,31 +8,36 @@ use crate::{BlockError, CipherDirection, InitError};
 /// object. Initialization is provided separately by [`BlockCipherInit`], whose
 /// generic associated parameter type is intentionally kept out of this trait.
 ///
-/// Different implementations can be stored together behind `dyn BlockCipher`
-/// after they have been initialized.
+/// Implementations with the same [`Error`](BlockCipher::Error) type can be
+/// stored together behind `dyn BlockCipher<Error = E>` after initialization.
 pub trait BlockCipher {
+    /// The failure type returned by block processing.
+    type Error: core::error::Error;
+
     /// Returns the block size in bytes.
     fn block_size(&self) -> usize;
 
     /// Processes one block and returns the number of bytes written.
-    fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, BlockError>;
+    fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error>;
 }
 
 /// Strongly typed initialization for a [`BlockCipher`].
 ///
 /// The generic associated type permits parameter objects that borrow key or
 /// tweak material. Because that GAT is not part of [`BlockCipher`], initialized
-/// implementations can still be used through `dyn BlockCipher`.
+/// implementations can still be used through `dyn BlockCipher<Error = E>`.
 pub trait BlockCipherInit: BlockCipher {
     /// The parameter type accepted by [`init`](BlockCipherInit::init).
     type Params<'a>: ?Sized;
+    /// The failure type returned by initialization.
+    type Error: core::error::Error;
 
     /// Initializes the cipher for the selected transformation direction.
     fn init(
         &mut self,
         direction: CipherDirection,
         params: &Self::Params<'_>,
-    ) -> Result<(), InitError>;
+    ) -> Result<(), <Self as BlockCipherInit>::Error>;
 }
 
 #[cfg(test)]
@@ -65,6 +70,8 @@ mod tests {
     }
 
     impl BlockCipher for TestCipher {
+        type Error = crate::BlockError;
+
         fn block_size(&self) -> usize {
             BLOCK_SIZE
         }
@@ -91,6 +98,7 @@ mod tests {
 
     impl BlockCipherInit for TestCipher {
         type Params<'a> = TestParams<'a>;
+        type Error = crate::InitError;
 
         fn init(
             &mut self,
@@ -115,7 +123,7 @@ mod tests {
 
         let mut encryptor = TestCipher::new();
         encryptor.init(CipherDirection::Encrypt, &params).unwrap();
-        let mut encryptor: Box<dyn BlockCipher> = Box::new(encryptor);
+        let mut encryptor: Box<dyn BlockCipher<Error = crate::BlockError>> = Box::new(encryptor);
         let mut ciphertext = [0_u8; BLOCK_SIZE];
 
         assert_eq!(encryptor.block_size(), BLOCK_SIZE);
@@ -126,7 +134,7 @@ mod tests {
 
         let mut decryptor = TestCipher::new();
         decryptor.init(CipherDirection::Decrypt, &params).unwrap();
-        let mut decryptor: Box<dyn BlockCipher> = Box::new(decryptor);
+        let mut decryptor: Box<dyn BlockCipher<Error = crate::BlockError>> = Box::new(decryptor);
         let mut recovered = [0_u8; BLOCK_SIZE];
 
         assert_eq!(
@@ -154,7 +162,7 @@ mod tests {
     }
 
     #[test]
-    fn initialization_uses_the_shared_error_type() {
+    fn initialization_can_use_the_shared_error_type() {
         let mut cipher = TestCipher::new();
         assert_eq!(
             cipher.init(CipherDirection::Encrypt, &TestParams { key: &[] }),

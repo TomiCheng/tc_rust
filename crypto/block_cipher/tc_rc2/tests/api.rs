@@ -83,7 +83,7 @@ fn accepts_third_party_params_and_supports_dynamic_dispatch() {
     let mut engine = Rc2Engine::new();
     engine.init(CipherDirection::Encrypt, &params).unwrap();
 
-    let mut cipher: Box<dyn BlockCipher> = Box::new(engine);
+    let mut cipher: Box<dyn BlockCipher<Error = BlockError>> = Box::new(engine);
     let mut output = [0u8; BLOCK_BYTES];
     assert_eq!(
         cipher.process_block(&[0u8; BLOCK_BYTES], &mut output),

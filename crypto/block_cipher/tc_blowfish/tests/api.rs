@@ -54,6 +54,6 @@ fn initialized_engine_supports_dynamic_dispatch() {
         )
         .unwrap();
 
-    let cipher: Box<dyn BlockCipher> = Box::new(engine);
+    let cipher: Box<dyn BlockCipher<Error = BlockError>> = Box::new(engine);
     assert_eq!(cipher.block_size(), BLOCK_BYTES);
 }

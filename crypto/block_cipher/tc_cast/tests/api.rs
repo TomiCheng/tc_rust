@@ -81,7 +81,7 @@ fn initialized_engines_support_dynamic_dispatch() {
         .init(CipherDirection::Encrypt, &KeyRef::new(&[0u8; 16]))
         .unwrap();
 
-    let ciphers: [Box<dyn BlockCipher>; 2] = [Box::new(cast5), Box::new(cast6)];
+    let ciphers: [Box<dyn BlockCipher<Error = BlockError>>; 2] = [Box::new(cast5), Box::new(cast6)];
     assert_eq!(ciphers[0].block_size(), 8);
     assert_eq!(ciphers[1].block_size(), 16);
 }

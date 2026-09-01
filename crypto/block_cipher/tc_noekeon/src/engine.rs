@@ -38,6 +38,8 @@ impl AlgorithmName for NoekeonEngine {
 }
 
 impl BlockCipher for NoekeonEngine {
+    type Error = BlockError;
+
     fn block_size(&self) -> usize {
         BLOCK_BYTES
     }
@@ -63,6 +65,7 @@ impl BlockCipher for NoekeonEngine {
 
 impl BlockCipherInit for NoekeonEngine {
     type Params<'a> = dyn KeyParams + 'a;
+    type Error = InitError;
 
     fn init(
         &mut self,

@@ -62,7 +62,8 @@ fn initialized_engines_support_dynamic_dispatch() {
     let mut light = CamelliaLightEngine::new();
     light.init(CipherDirection::Encrypt, &params).unwrap();
 
-    let ciphers: [Box<dyn BlockCipher>; 2] = [Box::new(standard), Box::new(light)];
+    let ciphers: [Box<dyn BlockCipher<Error = BlockError>>; 2] =
+        [Box::new(standard), Box::new(light)];
     assert!(
         ciphers
             .iter()

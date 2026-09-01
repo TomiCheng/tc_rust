@@ -7,18 +7,20 @@ mod common;
 
 use common::unhex;
 use tc_aes::{AesEngine, AesLightEngine, BLOCK_BYTES};
-use tc_cipher::{BlockCipher, BlockCipherInit, CipherDirection};
+use tc_cipher::{BlockCipher, BlockCipherInit, BlockError, CipherDirection, InitError};
 use tc_params::{KeyParams, KeyRef};
 
 /// Any engine in this crate: initialised from borrowed key bytes, then run one
 /// block at a time.
 trait AesImplementation:
-    BlockCipher + for<'a> BlockCipherInit<Params<'a> = dyn KeyParams + 'a>
+    BlockCipher<Error = BlockError>
+    + for<'a> BlockCipherInit<Params<'a> = dyn KeyParams + 'a, Error = InitError>
 {
 }
 
 impl<E> AesImplementation for E where
-    E: BlockCipher + for<'a> BlockCipherInit<Params<'a> = dyn KeyParams + 'a>
+    E: BlockCipher<Error = BlockError>
+        + for<'a> BlockCipherInit<Params<'a> = dyn KeyParams + 'a, Error = InitError>
 {
 }
 

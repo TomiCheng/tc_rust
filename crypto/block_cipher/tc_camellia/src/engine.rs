@@ -35,6 +35,8 @@ impl AlgorithmName for CamelliaEngine {
 }
 
 impl BlockCipher for CamelliaEngine {
+    type Error = BlockError;
+
     fn block_size(&self) -> usize {
         BLOCK_BYTES
     }
@@ -56,6 +58,7 @@ impl BlockCipher for CamelliaEngine {
 
 impl BlockCipherInit for CamelliaEngine {
     type Params<'a> = dyn KeyParams + 'a;
+    type Error = InitError;
 
     fn init(
         &mut self,

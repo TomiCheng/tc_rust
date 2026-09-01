@@ -14,7 +14,7 @@ use criterion::{
     BenchmarkGroup, BenchmarkId, Criterion, Throughput, criterion_group, criterion_main,
 };
 use tc_aes::{AesEngine, AesLightEngine, BLOCK_BYTES, KEY_BYTES};
-use tc_cipher::{BlockCipher, BlockCipherInit, CipherDirection};
+use tc_cipher::{BlockCipher, BlockCipherInit, BlockError, CipherDirection, InitError};
 use tc_params::{KeyParams, KeyRef};
 
 /// Names the backend `AesEngine` will actually select on this processor.
@@ -45,7 +45,8 @@ fn add_benches<E>(
     direction: CipherDirection,
     create: impl Fn() -> E,
 ) where
-    E: BlockCipher + for<'a> BlockCipherInit<Params<'a> = dyn KeyParams + 'a>,
+    E: BlockCipher<Error = BlockError>
+        + for<'a> BlockCipherInit<Params<'a> = dyn KeyParams + 'a, Error = InitError>,
 {
     for key_size in KEY_BYTES {
         let key = key(key_size);

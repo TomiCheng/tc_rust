@@ -40,6 +40,8 @@ macro_rules! define_engine {
         }
 
         impl BlockCipher for $name {
+            type Error = BlockError;
+
             fn block_size(&self) -> usize {
                 $block_bytes
             }
@@ -66,6 +68,7 @@ macro_rules! define_engine {
 
         impl BlockCipherInit for $name {
             type Params<'a> = dyn Rc5Params + 'a;
+            type Error = InitError;
 
             fn init(
                 &mut self,

@@ -124,7 +124,7 @@ fn initialized_engines_support_dynamic_dispatch() {
     let mut engine = Rc532Engine::new();
     engine.init(CipherDirection::Encrypt, &params).unwrap();
 
-    let mut cipher: Box<dyn BlockCipher> = Box::new(engine);
+    let mut cipher: Box<dyn BlockCipher<Error = BlockError>> = Box::new(engine);
     let mut output = [0u8; RC5_32_BLOCK_BYTES];
     assert_eq!(
         cipher.process_block(&[0u8; RC5_32_BLOCK_BYTES], &mut output),

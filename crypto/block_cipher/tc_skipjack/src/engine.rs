@@ -38,6 +38,8 @@ impl AlgorithmName for SkipjackEngine {
 }
 
 impl BlockCipher for SkipjackEngine {
+    type Error = BlockError;
+
     fn block_size(&self) -> usize {
         BLOCK_BYTES
     }
@@ -63,6 +65,7 @@ impl BlockCipher for SkipjackEngine {
 
 impl BlockCipherInit for SkipjackEngine {
     type Params<'a> = dyn KeyParams + 'a;
+    type Error = InitError;
 
     fn init(
         &mut self,

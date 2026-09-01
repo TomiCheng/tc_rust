@@ -41,6 +41,8 @@ impl AlgorithmName for Gost28147Engine {
 }
 
 impl BlockCipher for Gost28147Engine {
+    type Error = BlockError;
+
     fn block_size(&self) -> usize {
         BLOCK_BYTES
     }
@@ -68,6 +70,7 @@ impl BlockCipher for Gost28147Engine {
 
 impl BlockCipherInit for Gost28147Engine {
     type Params<'a> = dyn KeyWithSBoxParams + 'a;
+    type Error = InitError;
 
     fn init(
         &mut self,

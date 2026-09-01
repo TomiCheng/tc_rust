@@ -64,7 +64,7 @@ fn initialized_engines_support_dynamic_dispatch() {
     xtea.init(CipherDirection::Encrypt, &KeyRef::new(&[0u8; KEY_BYTES]))
         .unwrap();
 
-    let ciphers: [Box<dyn BlockCipher>; 2] = [Box::new(tea), Box::new(xtea)];
+    let ciphers: [Box<dyn BlockCipher<Error = BlockError>>; 2] = [Box::new(tea), Box::new(xtea)];
     for cipher in &ciphers {
         assert_eq!(cipher.block_size(), BLOCK_BYTES);
     }

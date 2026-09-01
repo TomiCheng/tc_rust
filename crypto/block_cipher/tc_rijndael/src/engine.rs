@@ -176,6 +176,8 @@ impl<const BLOCK_COLUMNS: usize> AlgorithmName for RijndaelEngine<BLOCK_COLUMNS>
 }
 
 impl<const BLOCK_COLUMNS: usize> BlockCipher for RijndaelEngine<BLOCK_COLUMNS> {
+    type Error = BlockError;
+
     fn block_size(&self) -> usize {
         Self::block_bytes()
     }
@@ -203,6 +205,7 @@ impl<const BLOCK_COLUMNS: usize> BlockCipher for RijndaelEngine<BLOCK_COLUMNS> {
 
 impl<const BLOCK_COLUMNS: usize> BlockCipherInit for RijndaelEngine<BLOCK_COLUMNS> {
     type Params<'a> = dyn KeyParams + 'a;
+    type Error = InitError;
 
     fn init(
         &mut self,

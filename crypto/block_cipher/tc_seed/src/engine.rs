@@ -38,6 +38,8 @@ impl AlgorithmName for SeedEngine {
 }
 
 impl BlockCipher for SeedEngine {
+    type Error = BlockError;
+
     fn block_size(&self) -> usize {
         BLOCK_BYTES
     }
@@ -63,6 +65,7 @@ impl BlockCipher for SeedEngine {
 
 impl BlockCipherInit for SeedEngine {
     type Params<'a> = dyn KeyParams + 'a;
+    type Error = InitError;
 
     fn init(
         &mut self,

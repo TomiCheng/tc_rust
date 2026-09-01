@@ -221,6 +221,8 @@ impl AlgorithmName for AesLightEngine {
 }
 
 impl BlockCipher for AesLightEngine {
+    type Error = BlockError;
+
     fn block_size(&self) -> usize {
         BLOCK_BYTES
     }
@@ -246,6 +248,7 @@ impl BlockCipher for AesLightEngine {
 
 impl BlockCipherInit for AesLightEngine {
     type Params<'a> = dyn KeyParams + 'a;
+    type Error = InitError;
 
     fn init(
         &mut self,

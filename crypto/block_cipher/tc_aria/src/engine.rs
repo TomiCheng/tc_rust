@@ -37,6 +37,8 @@ impl AlgorithmName for AriaEngine {
 }
 
 impl BlockCipher for AriaEngine {
+    type Error = BlockError;
+
     fn block_size(&self) -> usize {
         BLOCK_BYTES
     }
@@ -58,6 +60,7 @@ impl BlockCipher for AriaEngine {
 
 impl BlockCipherInit for AriaEngine {
     type Params<'a> = dyn KeyParams + 'a;
+    type Error = InitError;
 
     fn init(
         &mut self,

@@ -37,6 +37,8 @@ impl AlgorithmName for BlowfishEngine {
 }
 
 impl BlockCipher for BlowfishEngine {
+    type Error = BlockError;
+
     fn block_size(&self) -> usize {
         BLOCK_BYTES
     }
@@ -62,6 +64,7 @@ impl BlockCipher for BlowfishEngine {
 
 impl BlockCipherInit for BlowfishEngine {
     type Params<'a> = dyn KeyParams + 'a;
+    type Error = InitError;
 
     fn init(
         &mut self,

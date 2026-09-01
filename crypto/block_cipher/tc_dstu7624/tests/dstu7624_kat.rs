@@ -3,15 +3,15 @@
 mod common;
 
 use common::unhex;
-use tc_cipher::{BlockCipher, BlockCipherInit, CipherDirection};
+use tc_cipher::{BlockCipher, BlockCipherInit, BlockError, CipherDirection, InitError};
 use tc_dstu7624::{Engine128, Engine256, Engine512};
 use tc_params::KeyParams;
 use tc_params::KeyRef;
 
 fn run_vector<E>(mut engine: E, key: &str, plaintext: &str, ciphertext: &str)
 where
-    E: BlockCipher,
-    for<'a> E: BlockCipherInit<Params<'a> = dyn KeyParams + 'a>,
+    E: BlockCipher<Error = BlockError>,
+    for<'a> E: BlockCipherInit<Params<'a> = dyn KeyParams + 'a, Error = InitError>,
 {
     let key = unhex(key);
     let plaintext = unhex(plaintext);

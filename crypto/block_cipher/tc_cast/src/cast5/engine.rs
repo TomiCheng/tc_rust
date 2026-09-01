@@ -37,6 +37,8 @@ impl AlgorithmName for Cast5Engine {
 }
 
 impl BlockCipher for Cast5Engine {
+    type Error = BlockError;
+
     fn block_size(&self) -> usize {
         BLOCK_BYTES
     }
@@ -62,6 +64,7 @@ impl BlockCipher for Cast5Engine {
 
 impl BlockCipherInit for Cast5Engine {
     type Params<'a> = dyn KeyParams + 'a;
+    type Error = InitError;
 
     fn init(
         &mut self,

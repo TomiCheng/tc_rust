@@ -40,6 +40,8 @@ impl AlgorithmName for Sm4Engine {
 }
 
 impl BlockCipher for Sm4Engine {
+    type Error = BlockError;
+
     fn block_size(&self) -> usize {
         BLOCK_BYTES
     }
@@ -61,6 +63,7 @@ impl BlockCipher for Sm4Engine {
 
 impl BlockCipherInit for Sm4Engine {
     type Params<'a> = dyn KeyParams + 'a;
+    type Error = InitError;
 
     fn init(
         &mut self,

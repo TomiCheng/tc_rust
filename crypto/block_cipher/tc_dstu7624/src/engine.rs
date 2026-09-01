@@ -51,6 +51,8 @@ macro_rules! impl_engine {
         }
 
         impl BlockCipher for Engine<$block_words> {
+            type Error = BlockError;
+
             fn block_size(&self) -> usize {
                 $block_words * 8
             }
@@ -79,6 +81,7 @@ macro_rules! impl_engine {
 
         impl BlockCipherInit for Engine<$block_words> {
             type Params<'a> = dyn KeyParams + 'a;
+            type Error = InitError;
 
             fn init(
                 &mut self,

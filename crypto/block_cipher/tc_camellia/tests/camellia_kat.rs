@@ -4,14 +4,14 @@ mod common;
 
 use common::unhex;
 use tc_camellia::{BLOCK_BYTES, CamelliaEngine, CamelliaLightEngine};
-use tc_cipher::{BlockCipher, BlockCipherInit, CipherDirection};
+use tc_cipher::{BlockCipher, BlockCipherInit, BlockError, CipherDirection, InitError};
 use tc_params::KeyParams;
 use tc_params::KeyRef;
 
 fn run_vector_for<E>(mut engine: E, key: &[u8], plaintext: &[u8], ciphertext: &[u8])
 where
-    E: BlockCipher,
-    for<'a> E: BlockCipherInit<Params<'a> = dyn KeyParams + 'a>,
+    E: BlockCipher<Error = BlockError>,
+    for<'a> E: BlockCipherInit<Params<'a> = dyn KeyParams + 'a, Error = InitError>,
 {
     let params = KeyRef::new(key);
 

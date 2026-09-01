@@ -61,7 +61,7 @@ fn initialized_engine_supports_dynamic_dispatch() {
         .init(CipherDirection::Encrypt, &KeyRef::new(&[0u8; 16]))
         .unwrap();
 
-    let mut cipher: Box<dyn BlockCipher> = Box::new(engine);
+    let mut cipher: Box<dyn BlockCipher<Error = BlockError>> = Box::new(engine);
     let mut output = [0u8; BLOCK_BYTES];
     assert_eq!(
         cipher.process_block(&[0u8; BLOCK_BYTES], &mut output),

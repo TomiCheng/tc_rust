@@ -56,6 +56,8 @@ impl<const WORDS: usize> AlgorithmName for ThreefishEngine<WORDS> {
 }
 
 impl<const WORDS: usize> BlockCipher for ThreefishEngine<WORDS> {
+    type Error = BlockError;
+
     fn block_size(&self) -> usize {
         WORDS * 8
     }
@@ -112,6 +114,7 @@ impl<const WORDS: usize> BlockCipher for ThreefishEngine<WORDS> {
 
 impl<const WORDS: usize> BlockCipherInit for ThreefishEngine<WORDS> {
     type Params<'a> = dyn KeyWithTweakParams + 'a;
+    type Error = InitError;
 
     fn init(
         &mut self,

@@ -38,6 +38,8 @@ impl AlgorithmName for TwofishEngine {
 }
 
 impl BlockCipher for TwofishEngine {
+    type Error = BlockError;
+
     fn block_size(&self) -> usize {
         BLOCK_BYTES
     }
@@ -63,6 +65,7 @@ impl BlockCipher for TwofishEngine {
 
 impl BlockCipherInit for TwofishEngine {
     type Params<'a> = dyn KeyParams + 'a;
+    type Error = InitError;
 
     fn init(
         &mut self,

@@ -42,6 +42,8 @@ impl AlgorithmName for DesEdeEngine {
 }
 
 impl BlockCipher for DesEdeEngine {
+    type Error = BlockError;
+
     fn block_size(&self) -> usize {
         BLOCK_BYTES
     }
@@ -73,6 +75,7 @@ impl BlockCipher for DesEdeEngine {
 
 impl BlockCipherInit for DesEdeEngine {
     type Params<'a> = dyn KeyParams + 'a;
+    type Error = InitError;
 
     fn init(
         &mut self,

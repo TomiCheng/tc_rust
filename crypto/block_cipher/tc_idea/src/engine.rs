@@ -41,6 +41,8 @@ impl AlgorithmName for IdeaEngine {
 }
 
 impl BlockCipher for IdeaEngine {
+    type Error = BlockError;
+
     fn block_size(&self) -> usize {
         BLOCK_BYTES
     }
@@ -62,6 +64,7 @@ impl BlockCipher for IdeaEngine {
 
 impl BlockCipherInit for IdeaEngine {
     type Params<'a> = dyn KeyParams + 'a;
+    type Error = InitError;
 
     fn init(
         &mut self,

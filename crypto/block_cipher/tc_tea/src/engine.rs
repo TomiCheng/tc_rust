@@ -63,6 +63,8 @@ impl AlgorithmName for TeaEngine {
 }
 
 impl BlockCipher for TeaEngine {
+    type Error = BlockError;
+
     fn block_size(&self) -> usize {
         BLOCK_BYTES
     }
@@ -80,6 +82,7 @@ impl BlockCipher for TeaEngine {
 
 impl BlockCipherInit for TeaEngine {
     type Params<'a> = dyn KeyParams + 'a;
+    type Error = InitError;
 
     fn init(
         &mut self,
@@ -127,6 +130,8 @@ impl AlgorithmName for XteaEngine {
 }
 
 impl BlockCipher for XteaEngine {
+    type Error = BlockError;
+
     fn block_size(&self) -> usize {
         BLOCK_BYTES
     }
@@ -144,6 +149,7 @@ impl BlockCipher for XteaEngine {
 
 impl BlockCipherInit for XteaEngine {
     type Params<'a> = dyn KeyParams + 'a;
+    type Error = InitError;
 
     fn init(
         &mut self,
