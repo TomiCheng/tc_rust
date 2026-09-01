@@ -1,0 +1,10 @@
+[package]
+name = "tc_sha"
+description = "SHA-1 and SHA-2 digest implementations for the tc_rust workspace."
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+tc_digest = { version = "0.1", path = "../../tc_digest" }

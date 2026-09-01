@@ -526,6 +526,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_ascon"
+version = "0.1.0"
+dependencies = [
+ "tc_digest",
+]
+
+[[package]]
+name = "tc_blake2"
+version = "0.1.0"
+dependencies = [
+ "criterion",
+ "tc_digest",
+]
+
+[[package]]
+name = "tc_blake3"
+version = "0.1.0"
+dependencies = [
+ "tc_digest",
+]
+
+[[package]]
 name = "tc_block_cipher"
 version = "0.1.0"
 dependencies = [
@@ -627,9 +649,28 @@ dependencies = [
 [[package]]
 name = "tc_digest"
 version = "0.1.0"
+
+[[package]]
+name = "tc_digest_legacy"
+version = "0.1.0"
 dependencies = [
  "criterion",
  "tc_crypto_core",
+]
+
+[[package]]
+name = "tc_digest_utils"
+version = "0.1.0"
+dependencies = [
+ "tc_digest",
+ "tc_sha",
+]
+
+[[package]]
+name = "tc_dstu7564"
+version = "0.1.0"
+dependencies = [
+ "tc_digest",
 ]
 
 [[package]]
@@ -661,6 +702,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_gost3411"
+version = "0.1.0"
+dependencies = [
+ "tc_digest",
+]
+
+[[package]]
+name = "tc_haraka"
+version = "0.1.0"
+dependencies = [
+ "tc_digest",
+]
+
+[[package]]
 name = "tc_hc"
 version = "0.1.0"
 dependencies = [
@@ -688,6 +743,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_isap"
+version = "0.1.0"
+dependencies = [
+ "tc_digest",
+]
+
+[[package]]
+name = "tc_keccak"
+version = "0.1.0"
+dependencies = [
+ "tc_digest",
+]
+
+[[package]]
 name = "tc_key_wrap"
 version = "0.1.0"
 dependencies = [
@@ -696,7 +765,7 @@ dependencies = [
  "tc_block_modes",
  "tc_cipher_core",
  "tc_crypto_core",
- "tc_digest",
+ "tc_digest_legacy",
 ]
 
 [[package]]
@@ -717,6 +786,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_md"
+version = "0.1.0"
+dependencies = [
+ "tc_digest",
+]
+
+[[package]]
 name = "tc_noekeon"
 version = "0.1.0"
 dependencies = [
@@ -728,6 +804,13 @@ dependencies = [
 [[package]]
 name = "tc_params"
 version = "0.1.0"
+
+[[package]]
+name = "tc_photon_beetle"
+version = "0.1.0"
+dependencies = [
+ "tc_digest",
+]
 
 [[package]]
 name = "tc_rc2"
@@ -775,6 +858,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_ripemd"
+version = "0.1.0"
+dependencies = [
+ "tc_digest",
+]
+
+[[package]]
 name = "tc_salsa20"
 version = "0.1.0"
 dependencies = [
@@ -802,12 +892,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_sha"
+version = "0.1.0"
+dependencies = [
+ "tc_digest",
+]
+
+[[package]]
 name = "tc_skipjack"
 version = "0.1.0"
 dependencies = [
  "tc_cipher",
  "tc_crypto",
  "tc_params",
+]
+
+[[package]]
+name = "tc_sm3"
+version = "0.1.0"
+dependencies = [
+ "tc_digest",
 ]
 
 [[package]]
@@ -845,6 +949,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_tiger"
+version = "0.1.0"
+dependencies = [
+ "tc_digest",
+]
+
+[[package]]
 name = "tc_twofish"
 version = "0.1.0"
 dependencies = [
@@ -860,6 +971,20 @@ dependencies = [
  "tc_cipher",
  "tc_crypto",
  "tc_params",
+]
+
+[[package]]
+name = "tc_whirlpool"
+version = "0.1.0"
+dependencies = [
+ "tc_digest",
+]
+
+[[package]]
+name = "tc_xoodyak"
+version = "0.1.0"
+dependencies = [
+ "tc_digest",
 ]
 
 [[package]]

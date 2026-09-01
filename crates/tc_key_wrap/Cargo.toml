@@ -12,4 +12,4 @@ tc_cipher_core = { path = "../tc_cipher_core" }
 tc_block_modes = { path = "../tc_block_modes" }
 rand_core = { workspace = true }
 tc_block_cipher = { path = "../tc_block_cipher" }
-tc_digest = { path = "../tc_digest", default-features = false }
+tc_digest = { package = "tc_digest_legacy", path = "../tc_digest", default-features = false }

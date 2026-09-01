@@ -1,0 +1,10 @@
+[package]
+name = "tc_gost3411"
+description = "GOST R 34.11-2012 digest implementations for the tc_rust workspace."
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+tc_digest = { version = "0.1", path = "../../tc_digest" }
