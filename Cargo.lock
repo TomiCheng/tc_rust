@@ -532,6 +532,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_blowfish"
+version = "0.1.0"
+dependencies = [
+ "tc_cipher",
+ "tc_crypto",
+ "tc_params",
+]
+
+[[package]]
+name = "tc_camellia"
+version = "0.1.0"
+dependencies = [
+ "tc_cipher",
+ "tc_crypto",
+ "tc_params",
+]
+
+[[package]]
 name = "tc_cipher"
 version = "0.1.0"
 
