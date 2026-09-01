@@ -12,6 +12,8 @@ pub enum InitError {
     InvalidEffectiveKeyBits(usize),
     /// The supplied S-box length was invalid, in bytes.
     InvalidSBoxLength(usize),
+    /// The supplied tweak length was invalid, in bytes.
+    InvalidTweakLength(usize),
 }
 
 impl fmt::Display for InitError {
@@ -25,6 +27,9 @@ impl fmt::Display for InitError {
             }
             Self::InvalidSBoxLength(bytes) => {
                 write!(f, "invalid cipher s-box length: {bytes} bytes")
+            }
+            Self::InvalidTweakLength(bytes) => {
+                write!(f, "invalid cipher tweak length: {bytes} bytes")
             }
         }
     }
@@ -53,6 +58,10 @@ mod tests {
         assert_eq!(
             format!("{}", InitError::InvalidSBoxLength(127)),
             "invalid cipher s-box length: 127 bytes"
+        );
+        assert_eq!(
+            format!("{}", InitError::InvalidTweakLength(8)),
+            "invalid cipher tweak length: 8 bytes"
         );
     }
 }

@@ -741,6 +741,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_threefish"
+version = "0.1.0"
+dependencies = [
+ "tc_cipher",
+ "tc_crypto",
+ "tc_params",
+]
+
+[[package]]
 name = "tc_twofish"
 version = "0.1.0"
 dependencies = [
