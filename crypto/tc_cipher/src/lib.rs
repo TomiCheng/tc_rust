@@ -1,4 +1,4 @@
-//! Shared cipher abstractions.
+//! Shared cipher traits, directions, and error types.
 
 #![no_std]
 
