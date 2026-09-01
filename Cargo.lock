@@ -507,6 +507,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_aes"
+version = "0.1.0"
+dependencies = [
+ "tc_cipher",
+ "tc_crypto",
+ "tc_params",
+]
+
+[[package]]
 name = "tc_aria"
 version = "0.1.0"
 dependencies = [

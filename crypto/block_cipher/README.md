@@ -5,7 +5,7 @@ to independent crates under `crypto/block_cipher`.
 
 | Status | Target crate | Algorithms / engines |
 |:------:|--------------|----------------------|
-| ⬜ | `tc_aes` | AES, AES light, AES-NI |
+| ✅ | `tc_aes` | AES, AES light, AES-NI |
 | ✅ | `tc_aria` | ARIA-128, ARIA-192, ARIA-256 |
 | ✅ | `tc_blowfish` | Blowfish |
 | ✅ | `tc_camellia` | Camellia, Camellia light |
