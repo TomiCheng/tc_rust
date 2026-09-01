@@ -1,0 +1,12 @@
+[package]
+name = "tc_serpent"
+description = "Serpent and Tnepres block ciphers implementation for the tc_rust workspace."
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+tc_cipher = { version = "0.1", path = "../../tc_cipher" }
+tc_crypto = { version = "0.1", path = "../../tc_crypto" }
+tc_params = { version = "0.1", path = "../../tc_params" }

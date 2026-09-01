@@ -661,6 +661,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_serpent"
+version = "0.1.0"
+dependencies = [
+ "tc_cipher",
+ "tc_crypto",
+ "tc_params",
+]
+
+[[package]]
 name = "tc_stream_cipher"
 version = "0.1.0"
 dependencies = [
