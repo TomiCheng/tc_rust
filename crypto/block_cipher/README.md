@@ -12,7 +12,7 @@ to independent crates under `crypto/block_cipher`.
 | ✅ | `tc_cast` | CAST5, CAST6 |
 | ✅ | `tc_des` | DES, two-key and three-key Triple DES |
 | ✅ | `tc_dstu7624` | DSTU 7624 (Kalyna) |
-| ⬜ | `tc_gost28147` | GOST 28147-89 |
+| ✅ | `tc_gost28147` | GOST 28147-89 |
 | ✅ | `tc_idea` | IDEA |
 | ✅ | `tc_noekeon` | Noekeon |
 | ⬜ | `tc_rc2` | RC2 |
