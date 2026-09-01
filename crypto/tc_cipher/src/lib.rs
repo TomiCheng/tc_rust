@@ -4,6 +4,7 @@
 #![no_std]
 
 mod block_cipher;
+mod block_cipher_mode;
 mod block_error;
 mod cipher_direction;
 mod init_error;
@@ -11,6 +12,7 @@ mod stream_cipher;
 mod stream_error;
 
 pub use block_cipher::{BlockCipher, BlockCipherInit};
+pub use block_cipher_mode::BlockCipherMode;
 pub use block_error::BlockError;
 pub use cipher_direction::CipherDirection;
 pub use init_error::InitError;
