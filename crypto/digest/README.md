@@ -121,7 +121,17 @@ The implementations are validated with specification vectors, Bouncy Castle
 vectors, official KAT files, streaming/chunking checks, reset/clone tests, and
 portable-versus-accelerated backend comparisons where applicable.
 
-## 4. Features and allocation
+## 4. Not yet implemented
+
+Relative to the current Bouncy Castle C# digest directory, these algorithm
+families remain deferred:
+
+| Algorithm | Reason |
+|-----------|--------|
+| `GOST3411Digest` (GOST 34.11-94) | Requires the future block-cipher abstraction and `Gost28147Engine`. |
+| `SkeinDigest` / `SkeinEngine` | Requires the Threefish tweakable block cipher. |
+
+## 5. Features and allocation
 
 On x86 and x86-64, the default `std` features select accelerated backends when
 the CPU reports support:
@@ -137,7 +147,7 @@ BLAKE3, TupleHash, ParallelHash, or runtime-generated SHA-512/t names use
 `alloc`. Fixed-state algorithms that do not retain dynamic data remain
 allocation-free.
 
-## 5. Dependencies
+## 6. Dependencies
 
 Applications depend on the shared traits and only the algorithm families they
 use. Local development can specify both `version` and `path`:
@@ -149,7 +159,7 @@ tc_sha = { version = "0.1", path = "crypto/digest/tc_sha" }
 tc_keccak = { version = "0.1", path = "crypto/digest/tc_keccak" }
 ```
 
-## 6. Building and testing
+## 7. Building and testing
 
 Build or test one family independently:
 
