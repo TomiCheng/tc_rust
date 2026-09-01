@@ -22,9 +22,9 @@ to independent crates under `crypto/block_cipher`.
 | ✅ | `tc_seed` | SEED |
 | ✅ | `tc_serpent` | Serpent, Tnepres |
 | ✅ | `tc_skipjack` | SKIPJACK |
-| ⬜ | `tc_sm4` | SM4 |
-| ⬜ | `tc_tea` | TEA, XTEA |
+| ✅ | `tc_sm4` | SM4 |
+| ✅ | `tc_tea` | TEA, XTEA |
 | ⬜ | `tc_threefish` | Threefish-256, Threefish-512, Threefish-1024 |
-| ⬜ | `tc_twofish` | Twofish |
+| ✅ | `tc_twofish` | Twofish |
 
 Legend: ✅ completed, ⬜ TODO.
