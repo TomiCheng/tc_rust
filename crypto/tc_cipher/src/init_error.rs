@@ -8,6 +8,8 @@ use core::fmt;
 pub enum InitError {
     /// The supplied key length was invalid, in bytes.
     InvalidKeyLength(usize),
+    /// The supplied S-box length was invalid, in bytes.
+    InvalidSBoxLength(usize),
 }
 
 impl fmt::Display for InitError {
@@ -16,8 +18,32 @@ impl fmt::Display for InitError {
             Self::InvalidKeyLength(bytes) => {
                 write!(f, "invalid cipher key length: {bytes} bytes")
             }
+            Self::InvalidSBoxLength(bytes) => {
+                write!(f, "invalid cipher s-box length: {bytes} bytes")
+            }
         }
     }
 }
 
 impl core::error::Error for InitError {}
+
+#[cfg(test)]
+mod tests {
+    extern crate std;
+
+    use std::format;
+
+    use super::InitError;
+
+    #[test]
+    fn each_variant_reports_the_offending_length() {
+        assert_eq!(
+            format!("{}", InitError::InvalidKeyLength(7)),
+            "invalid cipher key length: 7 bytes"
+        );
+        assert_eq!(
+            format!("{}", InitError::InvalidSBoxLength(127)),
+            "invalid cipher s-box length: 127 bytes"
+        );
+    }
+}
