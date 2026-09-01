@@ -1,9 +1,7 @@
-mod common;
-
-use common::Key;
 use tc_camellia::{BLOCK_BYTES, CamelliaEngine, CamelliaLightEngine};
 use tc_cipher::{BlockCipher, BlockCipherInit, BlockError, CipherDirection, InitError};
 use tc_crypto::AlgorithmName;
+use tc_params::KeyRef;
 
 #[test]
 fn writes_algorithm_names() {
@@ -29,13 +27,13 @@ fn validates_state_key_lengths_and_buffers() {
     for length in [0, 15, 17, 23, 25, 31, 33] {
         let key = vec![0u8; length];
         assert_eq!(
-            engine.init(CipherDirection::Encrypt, &Key(&key)),
+            engine.init(CipherDirection::Encrypt, &KeyRef::new(&key)),
             Err(InitError::InvalidKeyLength(length))
         );
     }
 
     engine
-        .init(CipherDirection::Encrypt, &Key(&[0u8; 16]))
+        .init(CipherDirection::Encrypt, &KeyRef::new(&[0u8; 16]))
         .unwrap();
     assert_eq!(
         engine.process_block(&[0u8; BLOCK_BYTES - 1], &mut [0u8; BLOCK_BYTES]),
@@ -51,14 +49,14 @@ fn validates_state_key_lengths_and_buffers() {
 fn light_engine_validates_key_lengths() {
     let mut engine = CamelliaLightEngine::new();
     assert_eq!(
-        engine.init(CipherDirection::Encrypt, &Key(&[0u8; 15])),
+        engine.init(CipherDirection::Encrypt, &KeyRef::new(&[0u8; 15])),
         Err(InitError::InvalidKeyLength(15))
     );
 }
 
 #[test]
 fn initialized_engines_support_dynamic_dispatch() {
-    let params = Key(&[0u8; 16]);
+    let params = KeyRef::new(&[0u8; 16]);
     let mut standard = CamelliaEngine::new();
     standard.init(CipherDirection::Encrypt, &params).unwrap();
     let mut light = CamelliaLightEngine::new();

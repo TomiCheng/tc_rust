@@ -2,15 +2,16 @@
 
 mod common;
 
-use common::{Key, unhex};
+use common::unhex;
 use tc_cipher::{BlockCipher, BlockCipherInit, CipherDirection};
 use tc_noekeon::{BLOCK_BYTES, NoekeonEngine};
+use tc_params::KeyRef;
 
 fn run_vector(key: &str, plaintext: &str, ciphertext: &str) {
     let key = unhex(key);
     let plaintext = unhex(plaintext);
     let ciphertext = unhex(ciphertext);
-    let params = Key(&key);
+    let params = KeyRef::new(&key);
     let mut engine = NoekeonEngine::new();
 
     engine.init(CipherDirection::Encrypt, &params).unwrap();

@@ -2,15 +2,16 @@
 
 mod common;
 
-use common::{Key, unhex};
+use common::unhex;
 use tc_cipher::{BlockCipher, BlockCipherInit, CipherDirection};
 use tc_des::{BLOCK_BYTES, DesEngine};
+use tc_params::KeyRef;
 
 fn run_block_vector(key: &str, plaintext: &str, ciphertext: &str) {
     let key = unhex(key);
     let plaintext = unhex(plaintext);
     let ciphertext = unhex(ciphertext);
-    let params = Key(&key);
+    let params = KeyRef::new(&key);
     let mut engine = DesEngine::new();
 
     engine.init(CipherDirection::Encrypt, &params).unwrap();
@@ -40,7 +41,7 @@ fn weak_key_remains_usable() {
 #[test]
 fn bc_fips_81_ecb_vector() {
     let key = unhex("0123456789ABCDEF");
-    let params = Key(&key);
+    let params = KeyRef::new(&key);
     let plaintext = b"Now is the time for all ";
     let ciphertext = unhex("3FA40E8A984D48156A271787AB8883F9893D51EC4B563B53");
     let mut encrypted = [0u8; 24];

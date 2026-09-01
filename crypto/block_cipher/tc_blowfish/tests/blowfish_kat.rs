@@ -2,15 +2,16 @@
 
 mod common;
 
-use common::{Key, unhex};
+use common::unhex;
 use tc_blowfish::{BLOCK_BYTES, BlowfishEngine, MAX_KEY_BYTES};
 use tc_cipher::{BlockCipher, BlockCipherInit, CipherDirection};
+use tc_params::KeyRef;
 
 fn run_vector(key: &str, plaintext: &str, ciphertext: &str) {
     let key = unhex(key);
     let plaintext = unhex(plaintext);
     let ciphertext = unhex(ciphertext);
-    let params = Key(&key);
+    let params = KeyRef::new(&key);
     let mut engine = BlowfishEngine::new();
 
     engine.init(CipherDirection::Encrypt, &params).unwrap();
@@ -46,7 +47,7 @@ fn bc_vectors() {
 #[test]
 fn maximum_length_key_round_trips() {
     let key: Vec<u8> = (0..MAX_KEY_BYTES).map(|value| value as u8).collect();
-    let params = Key(&key);
+    let params = KeyRef::new(&key);
     let plaintext = [0xA5; BLOCK_BYTES];
     let mut ciphertext = [0u8; BLOCK_BYTES];
     let mut recovered = [0u8; BLOCK_BYTES];

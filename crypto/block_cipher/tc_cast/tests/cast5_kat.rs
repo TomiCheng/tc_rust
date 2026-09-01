@@ -2,9 +2,10 @@
 
 mod common;
 
-use common::{Key, unhex};
+use common::unhex;
 use tc_cast::{Cast5Engine, cast5};
 use tc_cipher::{BlockCipher, BlockCipherInit, CipherDirection};
+use tc_params::KeyRef;
 
 #[test]
 fn rfc_2144_all_round_counts() {
@@ -16,7 +17,7 @@ fn rfc_2144_all_round_counts() {
     ] {
         let key = unhex(key);
         let ciphertext = unhex(ciphertext);
-        let params = Key(&key);
+        let params = KeyRef::new(&key);
         let mut engine = Cast5Engine::new();
 
         engine.init(CipherDirection::Encrypt, &params).unwrap();
@@ -39,10 +40,10 @@ fn reinitialising_switches_between_reduced_and_full_rounds() {
     let mut engine = Cast5Engine::new();
 
     engine
-        .init(CipherDirection::Encrypt, &Key(&short_key))
+        .init(CipherDirection::Encrypt, &KeyRef::new(&short_key))
         .unwrap();
     engine
-        .init(CipherDirection::Encrypt, &Key(&long_key))
+        .init(CipherDirection::Encrypt, &KeyRef::new(&long_key))
         .unwrap();
 
     let mut encrypted = [0u8; cast5::BLOCK_BYTES];

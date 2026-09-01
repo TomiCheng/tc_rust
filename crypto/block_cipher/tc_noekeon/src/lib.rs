@@ -10,23 +10,14 @@
 //! ```
 //! use tc_cipher::{BlockCipher, BlockCipherInit, CipherDirection};
 //! use tc_noekeon::{BLOCK_BYTES, KEY_BYTES, NoekeonEngine};
-//! use tc_params::KeyParams;
-//!
-//! // `tc_params` 只提供 trait,呼叫端自行決定金鑰怎麼存;這是最小的借用式包裝。
-//! struct Key<'a>(&'a [u8]);
-//!
-//! impl KeyParams for Key<'_> {
-//!     fn key(&self) -> &[u8] {
-//!         self.0
-//!     }
-//! }
+//! use tc_params::KeyRef;
 //!
 //! let key = [0u8; KEY_BYTES];
 //! let plaintext = [0u8; BLOCK_BYTES];
 //!
 //! // 方向在 init 時決定,解密時工作金鑰會先過一次零金鑰 theta。
 //! let mut engine = NoekeonEngine::new();
-//! engine.init(CipherDirection::Encrypt, &Key(&key))?;
+//! engine.init(CipherDirection::Encrypt, &KeyRef::new(&key))?;
 //!
 //! let mut ciphertext = [0u8; BLOCK_BYTES];
 //! engine.process_block(&plaintext, &mut ciphertext)?;
@@ -35,7 +26,7 @@
 //!     0x24, 0xB7, 0x01, 0x48, 0x50, 0x3D, 0x2D, 0xFC,
 //! ]);
 //!
-//! engine.init(CipherDirection::Decrypt, &Key(&key))?;
+//! engine.init(CipherDirection::Decrypt, &KeyRef::new(&key))?;
 //!
 //! let mut recovered = [0u8; BLOCK_BYTES];
 //! engine.process_block(&ciphertext, &mut recovered)?;

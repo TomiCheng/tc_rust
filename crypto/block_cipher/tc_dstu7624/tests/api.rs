@@ -1,9 +1,7 @@
-mod common;
-
-use common::Key;
 use tc_cipher::{BlockCipher, BlockCipherInit, BlockError, CipherDirection, InitError};
 use tc_crypto::AlgorithmName;
 use tc_dstu7624::{Engine128, Engine256, Engine512};
+use tc_params::KeyRef;
 
 #[test]
 fn writes_algorithm_names() {
@@ -35,31 +33,31 @@ fn validates_keys_for_each_block_size() {
     let mut engine128 = Engine128::new();
     for length in [16, 32] {
         engine128
-            .init(CipherDirection::Encrypt, &Key(&vec![0u8; length]))
+            .init(CipherDirection::Encrypt, &KeyRef::new(&vec![0u8; length]))
             .unwrap();
     }
     assert_eq!(
-        engine128.init(CipherDirection::Encrypt, &Key(&[0u8; 64])),
+        engine128.init(CipherDirection::Encrypt, &KeyRef::new(&[0u8; 64])),
         Err(InitError::InvalidKeyLength(64))
     );
 
     let mut engine256 = Engine256::new();
     for length in [32, 64] {
         engine256
-            .init(CipherDirection::Encrypt, &Key(&vec![0u8; length]))
+            .init(CipherDirection::Encrypt, &KeyRef::new(&vec![0u8; length]))
             .unwrap();
     }
     assert_eq!(
-        engine256.init(CipherDirection::Encrypt, &Key(&[0u8; 16])),
+        engine256.init(CipherDirection::Encrypt, &KeyRef::new(&[0u8; 16])),
         Err(InitError::InvalidKeyLength(16))
     );
 
     let mut engine512 = Engine512::new();
     engine512
-        .init(CipherDirection::Encrypt, &Key(&[0u8; 64]))
+        .init(CipherDirection::Encrypt, &KeyRef::new(&[0u8; 64]))
         .unwrap();
     assert_eq!(
-        engine512.init(CipherDirection::Encrypt, &Key(&[0u8; 32])),
+        engine512.init(CipherDirection::Encrypt, &KeyRef::new(&[0u8; 32])),
         Err(InitError::InvalidKeyLength(32))
     );
 }
@@ -68,7 +66,7 @@ fn validates_keys_for_each_block_size() {
 fn rejects_short_buffers() {
     let mut engine = Engine128::new();
     engine
-        .init(CipherDirection::Encrypt, &Key(&[0u8; 16]))
+        .init(CipherDirection::Encrypt, &KeyRef::new(&[0u8; 16]))
         .unwrap();
     assert_eq!(
         engine.process_block(&[0u8; 15], &mut [0u8; 16]),
@@ -84,15 +82,15 @@ fn rejects_short_buffers() {
 fn initialized_engines_support_dynamic_dispatch() {
     let mut engine128 = Engine128::new();
     engine128
-        .init(CipherDirection::Encrypt, &Key(&[0u8; 16]))
+        .init(CipherDirection::Encrypt, &KeyRef::new(&[0u8; 16]))
         .unwrap();
     let mut engine256 = Engine256::new();
     engine256
-        .init(CipherDirection::Encrypt, &Key(&[0u8; 32]))
+        .init(CipherDirection::Encrypt, &KeyRef::new(&[0u8; 32]))
         .unwrap();
     let mut engine512 = Engine512::new();
     engine512
-        .init(CipherDirection::Encrypt, &Key(&[0u8; 64]))
+        .init(CipherDirection::Encrypt, &KeyRef::new(&[0u8; 64]))
         .unwrap();
 
     let ciphers: [Box<dyn BlockCipher>; 3] = [

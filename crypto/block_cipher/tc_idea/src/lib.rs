@@ -9,16 +9,7 @@
 //! ```
 //! use tc_cipher::{BlockCipher, BlockCipherInit, CipherDirection};
 //! use tc_idea::{BLOCK_BYTES, IdeaEngine, KEY_BYTES};
-//! use tc_params::KeyParams;
-//!
-//! // `tc_params` 只提供 trait,呼叫端自行決定金鑰怎麼存;這是最小的借用式包裝。
-//! struct Key<'a>(&'a [u8]);
-//!
-//! impl KeyParams for Key<'_> {
-//!     fn key(&self) -> &[u8] {
-//!         self.0
-//!     }
-//! }
+//! use tc_params::KeyRef;
 //!
 //! let key: [u8; KEY_BYTES] = [
 //!     0x00, 0x01, 0x00, 0x02, 0x00, 0x03, 0x00, 0x04,
@@ -28,14 +19,14 @@
 //!
 //! // 方向在 init 時決定,之後每個區塊都用同一份 subkey schedule。
 //! let mut engine = IdeaEngine::new();
-//! engine.init(CipherDirection::Encrypt, &Key(&key))?;
+//! engine.init(CipherDirection::Encrypt, &KeyRef::new(&key))?;
 //!
 //! let mut ciphertext = [0u8; BLOCK_BYTES];
 //! engine.process_block(&plaintext, &mut ciphertext)?;
 //! assert_eq!(ciphertext, [0x11, 0xFB, 0xED, 0x2B, 0x01, 0x98, 0x6D, 0xE5]);
 //!
 //! // 換方向要重新 init;工作金鑰會換成反元素排程。
-//! engine.init(CipherDirection::Decrypt, &Key(&key))?;
+//! engine.init(CipherDirection::Decrypt, &KeyRef::new(&key))?;
 //!
 //! let mut recovered = [0u8; BLOCK_BYTES];
 //! engine.process_block(&ciphertext, &mut recovered)?;

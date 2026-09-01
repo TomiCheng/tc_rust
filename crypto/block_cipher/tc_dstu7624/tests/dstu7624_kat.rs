@@ -2,10 +2,11 @@
 
 mod common;
 
-use common::{Key, unhex};
+use common::unhex;
 use tc_cipher::{BlockCipher, BlockCipherInit, CipherDirection};
 use tc_dstu7624::{Engine128, Engine256, Engine512};
 use tc_params::KeyParams;
+use tc_params::KeyRef;
 
 fn run_vector<E>(mut engine: E, key: &str, plaintext: &str, ciphertext: &str)
 where
@@ -15,7 +16,7 @@ where
     let key = unhex(key);
     let plaintext = unhex(plaintext);
     let ciphertext = unhex(ciphertext);
-    let params = Key(&key);
+    let params = KeyRef::new(&key);
     let mut output = vec![0u8; engine.block_size()];
 
     engine.init(CipherDirection::Encrypt, &params).unwrap();

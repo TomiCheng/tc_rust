@@ -1,9 +1,7 @@
-mod common;
-
-use common::Key;
 use tc_cipher::{BlockCipher, BlockCipherInit, BlockError, CipherDirection, InitError};
 use tc_crypto::AlgorithmName;
 use tc_noekeon::{BLOCK_BYTES, KEY_BYTES, NoekeonEngine};
+use tc_params::KeyRef;
 
 #[test]
 fn writes_algorithm_name() {
@@ -25,13 +23,13 @@ fn validates_state_key_length_and_buffers() {
     for length in [0, KEY_BYTES - 1, KEY_BYTES + 1, 24, 32] {
         let key = vec![0u8; length];
         assert_eq!(
-            engine.init(CipherDirection::Encrypt, &Key(&key)),
+            engine.init(CipherDirection::Encrypt, &KeyRef::new(&key)),
             Err(InitError::InvalidKeyLength(length))
         );
     }
 
     engine
-        .init(CipherDirection::Encrypt, &Key(&[0u8; KEY_BYTES]))
+        .init(CipherDirection::Encrypt, &KeyRef::new(&[0u8; KEY_BYTES]))
         .unwrap();
     assert_eq!(
         engine.process_block(&[0u8; BLOCK_BYTES - 1], &mut [0u8; BLOCK_BYTES]),
@@ -47,7 +45,7 @@ fn validates_state_key_length_and_buffers() {
 fn initialized_engine_supports_dynamic_dispatch() {
     let mut engine = NoekeonEngine::new();
     engine
-        .init(CipherDirection::Encrypt, &Key(&[0u8; KEY_BYTES]))
+        .init(CipherDirection::Encrypt, &KeyRef::new(&[0u8; KEY_BYTES]))
         .unwrap();
 
     let cipher: Box<dyn BlockCipher> = Box::new(engine);

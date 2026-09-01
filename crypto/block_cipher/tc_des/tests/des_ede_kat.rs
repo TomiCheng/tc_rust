@@ -2,15 +2,16 @@
 
 mod common;
 
-use common::{Key, unhex};
+use common::unhex;
 use tc_cipher::{BlockCipher, BlockCipherInit, CipherDirection};
 use tc_des::{BLOCK_BYTES, DesEdeEngine};
+use tc_params::KeyRef;
 
 fn run_vector(key: &str, plaintext: &str, ciphertext: &str) {
     let key = unhex(key);
     let plaintext = unhex(plaintext);
     let ciphertext = unhex(ciphertext);
-    let params = Key(&key);
+    let params = KeyRef::new(&key);
     let mut engine = DesEdeEngine::new();
     let mut encrypted = vec![0u8; plaintext.len()];
 

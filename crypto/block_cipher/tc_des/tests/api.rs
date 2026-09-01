@@ -1,9 +1,7 @@
-mod common;
-
-use common::Key;
 use tc_cipher::{BlockCipher, BlockCipherInit, BlockError, CipherDirection, InitError};
 use tc_crypto::AlgorithmName;
 use tc_des::{BLOCK_BYTES, DesEdeEngine, DesEngine};
+use tc_params::KeyRef;
 
 #[test]
 fn algorithm_names_are_written_without_allocation_by_the_engines() {
@@ -29,13 +27,13 @@ fn des_validates_state_key_and_buffers() {
 
     for key in [&[0u8; 7][..], &[0u8; 9][..]] {
         assert_eq!(
-            engine.init(CipherDirection::Encrypt, &Key(key)),
+            engine.init(CipherDirection::Encrypt, &KeyRef::new(key)),
             Err(InitError::InvalidKeyLength(key.len()))
         );
     }
 
     engine
-        .init(CipherDirection::Encrypt, &Key(&[0u8; 8]))
+        .init(CipherDirection::Encrypt, &KeyRef::new(&[0u8; 8]))
         .unwrap();
     assert_eq!(
         engine.process_block(&[0u8; 7], &mut [0u8; BLOCK_BYTES]),
@@ -53,19 +51,19 @@ fn triple_des_accepts_only_two_or_three_component_keys() {
     for length in [0, 8, 15, 17, 23, 25] {
         let key = vec![0u8; length];
         assert_eq!(
-            engine.init(CipherDirection::Encrypt, &Key(&key)),
+            engine.init(CipherDirection::Encrypt, &KeyRef::new(&key)),
             Err(InitError::InvalidKeyLength(length))
         );
     }
 
     assert!(
         engine
-            .init(CipherDirection::Encrypt, &Key(&[0u8; 16]))
+            .init(CipherDirection::Encrypt, &KeyRef::new(&[0u8; 16]))
             .is_ok()
     );
     assert!(
         engine
-            .init(CipherDirection::Encrypt, &Key(&[0u8; 24]))
+            .init(CipherDirection::Encrypt, &KeyRef::new(&[0u8; 24]))
             .is_ok()
     );
 }

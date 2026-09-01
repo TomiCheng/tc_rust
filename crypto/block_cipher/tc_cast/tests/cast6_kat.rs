@@ -2,9 +2,10 @@
 
 mod common;
 
-use common::{Key, unhex};
+use common::unhex;
 use tc_cast::{Cast6Engine, cast6};
 use tc_cipher::{BlockCipher, BlockCipherInit, CipherDirection};
+use tc_params::KeyRef;
 
 #[test]
 fn rfc_2612_vectors() {
@@ -25,7 +26,7 @@ fn rfc_2612_vectors() {
     ] {
         let key = unhex(key);
         let ciphertext = unhex(ciphertext);
-        let params = Key(&key);
+        let params = KeyRef::new(&key);
         let mut engine = Cast6Engine::new();
 
         engine.init(CipherDirection::Encrypt, &params).unwrap();
@@ -48,7 +49,7 @@ fn all_standard_key_sizes_round_trip() {
         let key: Vec<u8> = (0..key_len)
             .map(|index| (index as u8).wrapping_mul(0x3d).wrapping_add(0x29))
             .collect();
-        let params = Key(&key);
+        let params = KeyRef::new(&key);
         let mut engine = Cast6Engine::new();
         let mut ciphertext = [0u8; cast6::BLOCK_BYTES];
         let mut recovered = [0u8; cast6::BLOCK_BYTES];

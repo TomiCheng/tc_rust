@@ -4,4 +4,4 @@
 
 mod key;
 
-pub use key::KeyParams;
+pub use key::{KeyOwned, KeyParams, KeyRef};
