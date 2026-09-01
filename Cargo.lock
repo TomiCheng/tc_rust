@@ -601,6 +601,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_idea"
+version = "0.1.0"
+dependencies = [
+ "tc_cipher",
+ "tc_crypto",
+ "tc_params",
+]
+
+[[package]]
 name = "tc_key_wrap"
 version = "0.1.0"
 dependencies = [
