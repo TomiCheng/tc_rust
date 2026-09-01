@@ -924,6 +924,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_sparkle"
+version = "0.1.0"
+dependencies = [
+ "tc_digest",
+]
+
+[[package]]
 name = "tc_stream_cipher"
 version = "0.1.0"
 dependencies = [

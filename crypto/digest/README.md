@@ -102,7 +102,7 @@ crates.
 | Ascon legacy | `AsconDigest`, `AsconParameters` | Deprecated Ascon v1.2 Hash / HashA compatibility API |
 | GOST / DSTU | `Gost3411_2012_256Digest`, `Gost3411_2012_512Digest`, `Dstu7564Digest` | Streebog-256/512 and DSTU 7564-256/384/512 |
 | Other classic hashes | `Sm3Digest`, `TigerDigest`, `WhirlpoolDigest` | Standard and Bouncy Castle vectors |
-| Lightweight hashes | `IsapDigest`, `PhotonBeetleDigest`, `XoodyakDigest` | NIST LWC known-answer vectors |
+| Lightweight hashes | `IsapDigest`, `PhotonBeetleDigest`, `SparkleDigest`, `XoodyakDigest` | NIST LWC known-answer vectors; `SparkleDigest` provides ESCH-256 and ESCH-384 |
 | Haraka | `Haraka256Digest`, `Haraka512Digest` | Fixed 32/64-byte input, 32-byte output; fallible input contract |
 | Adapters | `ShortenedDigest<D>`, `Prehash`, `NullDigest` | Truncation, fixed-length prehash pass-through, and arbitrary pass-through |
 
