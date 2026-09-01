@@ -5,7 +5,7 @@ use tc_cipher::{
     CipherDirection,
 };
 use tc_crypto::AlgorithmName;
-use tc_params::IvParams;
+use tc_params::OptionalIvParams;
 
 /// Allocation-free OpenPGP CFB with an `N`-byte cipher block.
 pub struct FixedOpenPgpCfbBlockCipher<C, const N: usize> {
@@ -159,7 +159,7 @@ impl<C: BlockCipher, const N: usize> BlockCipher for FixedOpenPgpCfbBlockCipher<
 impl<C, P, const N: usize> BlockCipherInit<P> for FixedOpenPgpCfbBlockCipher<C, N>
 where
     C: BlockCipher + BlockCipherInit<P>,
-    P: IvParams + ?Sized,
+    P: OptionalIvParams + ?Sized,
 {
     type Error = BlockModeInitError<<C as BlockCipherInit<P>>::Error>;
 
@@ -182,13 +182,17 @@ where
             });
         }
 
-        let iv = params.iv();
-        if iv.len() > N {
-            return Err(BlockModeInitError::InvalidIvLength(iv.len()));
+        match params.optional_iv() {
+            Some(iv) if iv.len() > N => {
+                return Err(BlockModeInitError::InvalidIvLength(iv.len()));
+            }
+            Some(iv) => {
+                let offset = N - iv.len();
+                self.iv[..offset].fill(0);
+                self.iv[offset..].copy_from_slice(iv);
+            }
+            None => self.iv.fill(0),
         }
-        let offset = N - iv.len();
-        self.iv[..offset].fill(0);
-        self.iv[offset..].copy_from_slice(iv);
 
         self.cipher
             .init(CipherDirection::Encrypt, params)

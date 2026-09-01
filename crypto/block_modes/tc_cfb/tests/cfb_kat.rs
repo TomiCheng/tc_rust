@@ -9,6 +9,7 @@ use tc_cipher::{
     CipherDirection,
 };
 use tc_crypto::AlgorithmName;
+use tc_params::{KeyParams, OptionalIvParams};
 
 use common::{KeyIv, unhex};
 
@@ -114,6 +115,47 @@ fn short_iv_is_left_padded_with_zeros() {
     .unwrap();
 
     assert_eq!(run(&mut short, &plaintext), run(&mut full, &plaintext));
+}
+
+#[test]
+fn omitted_iv_selects_the_zero_iv() {
+    struct KeyOnly<'a>(&'a [u8]);
+
+    impl KeyParams for KeyOnly<'_> {
+        fn key(&self) -> &[u8] {
+            self.0
+        }
+    }
+
+    impl OptionalIvParams for KeyOnly<'_> {
+        fn optional_iv(&self) -> Option<&[u8]> {
+            None
+        }
+    }
+
+    let key = unhex(KEY);
+    let plaintext = unhex("6bc1bee22e409f96e93d7e117393172a");
+    let mut omitted = CfbBlockCipher::new(AesEngine::new(), 128).unwrap();
+    omitted
+        .init(CipherDirection::Encrypt, &KeyOnly(&key))
+        .unwrap();
+
+    let zero_iv = [0; BLOCK_BYTES];
+    let mut explicit = CfbBlockCipher::new(AesEngine::new(), 128).unwrap();
+    explicit
+        .init(
+            CipherDirection::Encrypt,
+            &KeyIv {
+                key: &key,
+                iv: &zero_iv,
+            },
+        )
+        .unwrap();
+
+    assert_eq!(
+        run(&mut omitted, &plaintext),
+        run(&mut explicit, &plaintext)
+    );
 }
 
 #[test]

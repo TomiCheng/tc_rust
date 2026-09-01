@@ -8,7 +8,7 @@ use tc_cipher::{
     CipherDirection,
 };
 use tc_crypto::AlgorithmName;
-use tc_params::IvParams;
+use tc_params::OptionalIvParams;
 
 /// Cipher Block Chaining mode over the block cipher `C`.
 pub struct CbcBlockCipher<C> {
@@ -96,7 +96,7 @@ where
 impl<C, P> BlockCipherInit<P> for CbcBlockCipher<C>
 where
     C: BlockCipher + BlockCipherInit<P>,
-    P: IvParams + ?Sized,
+    P: OptionalIvParams + ?Sized,
 {
     type Error = BlockModeInitError<<C as BlockCipherInit<P>>::Error>;
 
@@ -106,11 +106,13 @@ where
         params: &P,
     ) -> Result<(), <Self as BlockCipherInit<P>>::Error> {
         let block_size = self.cipher.block_size();
-        let iv = params.iv();
-        if iv.len() != block_size {
-            return Err(BlockModeInitError::InvalidIvLength(iv.len()));
+        match params.optional_iv() {
+            Some(iv) if iv.len() != block_size => {
+                return Err(BlockModeInitError::InvalidIvLength(iv.len()));
+            }
+            Some(iv) => self.iv.copy_from_slice(iv),
+            None => self.iv.fill(0),
         }
-        self.iv.copy_from_slice(iv);
 
         self.cipher
             .init(direction, params)

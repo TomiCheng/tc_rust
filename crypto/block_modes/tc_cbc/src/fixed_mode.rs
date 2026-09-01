@@ -5,7 +5,7 @@ use tc_cipher::{
     CipherDirection,
 };
 use tc_crypto::AlgorithmName;
-use tc_params::IvParams;
+use tc_params::OptionalIvParams;
 
 /// Allocation-free Cipher Block Chaining mode with an `N`-byte block.
 ///
@@ -88,7 +88,7 @@ impl<C: BlockCipher, const N: usize> BlockCipher for FixedCbcBlockCipher<C, N> {
 impl<C, P, const N: usize> BlockCipherInit<P> for FixedCbcBlockCipher<C, N>
 where
     C: BlockCipher + BlockCipherInit<P>,
-    P: IvParams + ?Sized,
+    P: OptionalIvParams + ?Sized,
 {
     type Error = BlockModeInitError<<C as BlockCipherInit<P>>::Error>;
 
@@ -105,11 +105,13 @@ where
             });
         }
 
-        let iv = params.iv();
-        if iv.len() != N {
-            return Err(BlockModeInitError::InvalidIvLength(iv.len()));
+        match params.optional_iv() {
+            Some(iv) if iv.len() != N => {
+                return Err(BlockModeInitError::InvalidIvLength(iv.len()));
+            }
+            Some(iv) => self.iv.copy_from_slice(iv),
+            None => self.iv.fill(0),
         }
-        self.iv.copy_from_slice(iv);
 
         self.cipher
             .init(direction, params)

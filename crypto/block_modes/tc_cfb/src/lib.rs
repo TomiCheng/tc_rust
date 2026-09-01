@@ -3,6 +3,7 @@
 //! Standard CFB processes configurable-size segments and feeds ciphertext back
 //! into a block-sized register. OpenPGP CFB uses full blocks and performs the
 //! protocol's two-byte resynchronization after the first block.
+//! An omitted IV selects an all-zero IV.
 //!
 //! [`FixedCfbBlockCipher`] and [`FixedOpenPgpCfbBlockCipher`] keep all state in
 //! fixed-size arrays and require no allocation. The default `alloc` feature

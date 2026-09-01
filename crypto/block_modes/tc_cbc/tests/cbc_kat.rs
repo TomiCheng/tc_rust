@@ -9,6 +9,7 @@ use tc_cipher::{
 use tc_crypto::AlgorithmName;
 use tc_des::{BLOCK_BYTES as DES_BLOCK_BYTES, DesEngine};
 use tc_ecb::EcbBlockCipher;
+use tc_params::{KeyParams, OptionalIvParams};
 
 use common::{KeyIv, unhex};
 
@@ -118,6 +119,32 @@ fn zero_iv_and_reset_restore_the_initial_state() {
     mode.process_block(plaintext, &mut reset).unwrap();
     assert_ne!(chained, first);
     assert_eq!(reset, first);
+}
+
+#[test]
+fn omitted_iv_selects_the_zero_iv() {
+    struct KeyOnly<'a>(&'a [u8]);
+
+    impl KeyParams for KeyOnly<'_> {
+        fn key(&self) -> &[u8] {
+            self.0
+        }
+    }
+
+    impl OptionalIvParams for KeyOnly<'_> {
+        fn optional_iv(&self) -> Option<&[u8]> {
+            None
+        }
+    }
+
+    let key = unhex(AES_KEY);
+    let plaintext = &unhex(AES_PLAINTEXT)[..AES_BLOCK_BYTES];
+    let mut mode = CbcBlockCipher::new(AesEngine::new());
+    mode.init(CipherDirection::Encrypt, &KeyOnly(&key)).unwrap();
+    let mut output = [0; AES_BLOCK_BYTES];
+    mode.process_block(plaintext, &mut output).unwrap();
+
+    assert_eq!(output.as_slice(), unhex("3ad77bb40d7a3660a89ecaf32466ef97"));
 }
 
 #[test]

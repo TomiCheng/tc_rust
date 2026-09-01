@@ -5,7 +5,7 @@ use tc_cipher::{
     CipherDirection,
 };
 use tc_crypto::AlgorithmName;
-use tc_params::IvParams;
+use tc_params::OptionalIvParams;
 
 /// Allocation-free CFB with an `N`-byte cipher block and `S`-byte segment.
 pub struct FixedCfbBlockCipher<C, const N: usize, const S: usize> {
@@ -84,7 +84,7 @@ impl<C: BlockCipher, const N: usize, const S: usize> BlockCipher for FixedCfbBlo
 impl<C, P, const N: usize, const S: usize> BlockCipherInit<P> for FixedCfbBlockCipher<C, N, S>
 where
     C: BlockCipher + BlockCipherInit<P>,
-    P: IvParams + ?Sized,
+    P: OptionalIvParams + ?Sized,
 {
     type Error = BlockModeInitError<<C as BlockCipherInit<P>>::Error>;
 
@@ -104,13 +104,17 @@ where
             return Err(BlockModeInitError::InvalidFeedbackSize(S * 8));
         }
 
-        let iv = params.iv();
-        if iv.len() > N {
-            return Err(BlockModeInitError::InvalidIvLength(iv.len()));
+        match params.optional_iv() {
+            Some(iv) if iv.len() > N => {
+                return Err(BlockModeInitError::InvalidIvLength(iv.len()));
+            }
+            Some(iv) => {
+                let offset = N - iv.len();
+                self.iv[..offset].fill(0);
+                self.iv[offset..].copy_from_slice(iv);
+            }
+            None => self.iv.fill(0),
         }
-        let offset = N - iv.len();
-        self.iv[..offset].fill(0);
-        self.iv[offset..].copy_from_slice(iv);
 
         self.cipher
             .init(CipherDirection::Encrypt, params)

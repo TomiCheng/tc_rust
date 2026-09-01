@@ -3,6 +3,7 @@
 //! CBC XORs each plaintext block with the preceding ciphertext block before
 //! encryption. The first block uses an initialization vector (IV). This crate
 //! processes complete blocks only; padding belongs to a separate layer.
+//! An omitted IV selects an all-zero IV.
 //!
 //! [`FixedCbcBlockCipher`] stores its chaining state in `[u8; N]` and works
 //! without allocation. The default `alloc` feature additionally provides

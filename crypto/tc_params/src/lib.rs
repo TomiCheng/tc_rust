@@ -11,7 +11,7 @@ mod key_with_tweak;
 mod rc2;
 mod rc5;
 
-pub use iv::IvParams;
+pub use iv::{IvParams, OptionalIvParams};
 pub use key::{KeyOwned, KeyParams, KeyRef};
 pub use key_with_iv::{KeyWithIvOwned, KeyWithIvParams, KeyWithIvRef};
 pub use key_with_s_box::KeyWithSBoxParams;
