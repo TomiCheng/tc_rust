@@ -112,15 +112,12 @@ impl<const WORDS: usize> BlockCipher for ThreefishEngine<WORDS> {
     }
 }
 
-impl<const WORDS: usize> BlockCipherInit for ThreefishEngine<WORDS> {
-    type Params<'a> = dyn KeyWithTweakParams + 'a;
+impl<P: KeyWithTweakParams + ?Sized, const WORDS: usize> BlockCipherInit<P>
+    for ThreefishEngine<WORDS>
+{
     type Error = InitError;
 
-    fn init(
-        &mut self,
-        direction: CipherDirection,
-        params: &Self::Params<'_>,
-    ) -> Result<(), InitError> {
+    fn init(&mut self, direction: CipherDirection, params: &P) -> Result<(), InitError> {
         let key = params.key();
         let key_bytes = WORDS * 8;
         if key.len() != key_bytes {

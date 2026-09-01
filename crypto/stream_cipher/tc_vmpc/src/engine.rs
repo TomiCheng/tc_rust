@@ -126,7 +126,7 @@ fn ksa_round(state: &mut [u8; STATE_BYTES], s: &mut u8, input: &[u8]) {
     }
 }
 
-fn validate(params: &dyn KeyWithIvParams) -> Result<(&[u8], &[u8]), InitError> {
+fn validate<P: KeyWithIvParams + ?Sized>(params: &P) -> Result<(&[u8], &[u8]), InitError> {
     let key = params.key();
     if !(MIN_KEY_BYTES..=MAX_KEY_BYTES).contains(&key.len()) {
         return Err(InitError::InvalidKeyLength(key.len()));
@@ -180,15 +180,10 @@ impl StreamCipher for VmpcEngine {
     }
 }
 
-impl StreamCipherInit for VmpcEngine {
-    type Params<'a> = dyn KeyWithIvParams + 'a;
+impl<P: KeyWithIvParams + ?Sized> StreamCipherInit<P> for VmpcEngine {
     type Error = InitError;
 
-    fn init(
-        &mut self,
-        _direction: CipherDirection,
-        params: &Self::Params<'_>,
-    ) -> Result<(), <Self as StreamCipherInit>::Error> {
+    fn init(&mut self, _direction: CipherDirection, params: &P) -> Result<(), Self::Error> {
         let (key, iv) = validate(params)?;
         self.state.init(key, iv);
         Ok(())
@@ -237,15 +232,10 @@ impl StreamCipher for VmpcKsa3Engine {
     }
 }
 
-impl StreamCipherInit for VmpcKsa3Engine {
-    type Params<'a> = dyn KeyWithIvParams + 'a;
+impl<P: KeyWithIvParams + ?Sized> StreamCipherInit<P> for VmpcKsa3Engine {
     type Error = InitError;
 
-    fn init(
-        &mut self,
-        _direction: CipherDirection,
-        params: &Self::Params<'_>,
-    ) -> Result<(), <Self as StreamCipherInit>::Error> {
+    fn init(&mut self, _direction: CipherDirection, params: &P) -> Result<(), Self::Error> {
         let (key, iv) = validate(params)?;
         self.state.init(key, iv);
         Ok(())

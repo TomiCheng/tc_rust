@@ -73,15 +73,10 @@ impl BlockCipher for DesEdeEngine {
     }
 }
 
-impl BlockCipherInit for DesEdeEngine {
-    type Params<'a> = dyn KeyParams + 'a;
+impl<P: KeyParams + ?Sized> BlockCipherInit<P> for DesEdeEngine {
     type Error = InitError;
 
-    fn init(
-        &mut self,
-        direction: CipherDirection,
-        params: &Self::Params<'_>,
-    ) -> Result<(), InitError> {
+    fn init(&mut self, direction: CipherDirection, params: &P) -> Result<(), InitError> {
         let for_encryption = direction == CipherDirection::Encrypt;
         let key = params.key();
         if key.len() != EDE2_KEY_BYTES && key.len() != EDE3_KEY_BYTES {

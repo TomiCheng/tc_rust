@@ -1,12 +1,11 @@
 mod common;
 
 use tc_aes::{AesEngine, BLOCK_BYTES};
-use tc_cfb::{CfbBlockCipher, FixedOpenPgpCfbBlockCipher, OpenPgpCfbBlockCipher, Params};
+use tc_cfb::{CfbBlockCipher, FixedOpenPgpCfbBlockCipher, OpenPgpCfbBlockCipher};
 use tc_cipher::{BlockCipher, BlockCipherInit, CipherDirection};
 use tc_crypto::AlgorithmName;
-use tc_params::{KeyParams, KeyRef};
 
-use common::unhex;
+use common::{KeyIv, unhex};
 
 const KEY: &str = "000102030405060708090a0b0c0d0e0f";
 const PLAINTEXT: &str = concat!(
@@ -27,8 +26,7 @@ fn run<M: BlockCipher>(mode: &mut M, input: &[u8]) -> Vec<u8> {
 
 fn dynamic(direction: CipherDirection, iv: &[u8], input: &[u8]) -> Vec<u8> {
     let key = unhex(KEY);
-    let key_params = KeyRef::new(&key);
-    let params = Params::<dyn KeyParams>::with_iv(&key_params, iv);
+    let params = KeyIv { key: &key, iv };
     let mut mode = OpenPgpCfbBlockCipher::new(AesEngine::new());
     mode.init(direction, &params).unwrap();
     run(&mut mode, input)
@@ -36,8 +34,7 @@ fn dynamic(direction: CipherDirection, iv: &[u8], input: &[u8]) -> Vec<u8> {
 
 fn fixed(direction: CipherDirection, iv: &[u8], input: &[u8]) -> Vec<u8> {
     let key = unhex(KEY);
-    let key_params = KeyRef::new(&key);
-    let params = Params::<dyn KeyParams>::with_iv(&key_params, iv);
+    let params = KeyIv { key: &key, iv };
     let mut mode = FixedOpenPgpCfbBlockCipher::<AesEngine, BLOCK_BYTES>::new(AesEngine::new());
     mode.init(direction, &params).unwrap();
     run(&mut mode, input)
@@ -65,8 +62,7 @@ fn first_block_matches_standard_full_block_cfb() {
     let openpgp = dynamic(CipherDirection::Encrypt, &iv, &plaintext);
 
     let key = unhex(KEY);
-    let key_params = KeyRef::new(&key);
-    let params = Params::<dyn KeyParams>::with_iv(&key_params, &iv);
+    let params = KeyIv { key: &key, iv: &iv };
     let mut standard = CfbBlockCipher::new(AesEngine::new(), 128).unwrap();
     standard.init(CipherDirection::Encrypt, &params).unwrap();
 

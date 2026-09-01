@@ -62,15 +62,10 @@ impl BlockCipher for Rc2Engine {
     }
 }
 
-impl BlockCipherInit for Rc2Engine {
-    type Params<'a> = dyn Rc2Params + 'a;
+impl<P: Rc2Params + ?Sized> BlockCipherInit<P> for Rc2Engine {
     type Error = InitError;
 
-    fn init(
-        &mut self,
-        direction: CipherDirection,
-        params: &Self::Params<'_>,
-    ) -> Result<(), InitError> {
+    fn init(&mut self, direction: CipherDirection, params: &P) -> Result<(), InitError> {
         let key = params.key();
         if key.is_empty() || key.len() > MAX_KEY_BYTES {
             return Err(InitError::InvalidKeyLength(key.len()));

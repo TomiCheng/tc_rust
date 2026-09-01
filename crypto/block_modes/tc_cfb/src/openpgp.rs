@@ -8,8 +8,7 @@ use tc_cipher::{
     CipherDirection,
 };
 use tc_crypto::AlgorithmName;
-
-use crate::Params;
+use tc_params::IvParams;
 
 /// Runtime-sized OpenPGP CFB mode over `C`.
 pub struct OpenPgpCfbBlockCipher<C> {
@@ -162,15 +161,18 @@ impl<C: BlockCipher> BlockCipher for OpenPgpCfbBlockCipher<C> {
     }
 }
 
-impl<C: BlockCipherInit> BlockCipherInit for OpenPgpCfbBlockCipher<C> {
-    type Params<'a> = Params<'a, C::Params<'a>>;
-    type Error = BlockModeInitError<<C as BlockCipherInit>::Error>;
+impl<C, P> BlockCipherInit<P> for OpenPgpCfbBlockCipher<C>
+where
+    C: BlockCipher + BlockCipherInit<P>,
+    P: IvParams + ?Sized,
+{
+    type Error = BlockModeInitError<<C as BlockCipherInit<P>>::Error>;
 
     fn init(
         &mut self,
         direction: CipherDirection,
-        params: &Self::Params<'_>,
-    ) -> Result<(), <Self as BlockCipherInit>::Error> {
+        params: &P,
+    ) -> Result<(), <Self as BlockCipherInit<P>>::Error> {
         let block_size = self.cipher.block_size();
         if block_size < 2 {
             return Err(BlockModeInitError::UnsupportedBlockSize {
@@ -179,20 +181,16 @@ impl<C: BlockCipherInit> BlockCipherInit for OpenPgpCfbBlockCipher<C> {
             });
         }
 
-        match params.iv() {
-            Some(iv) if iv.len() > block_size => {
-                return Err(BlockModeInitError::InvalidIvLength(iv.len()));
-            }
-            Some(iv) => {
-                let offset = block_size - iv.len();
-                self.iv[..offset].fill(0);
-                self.iv[offset..].copy_from_slice(iv);
-            }
-            None => self.iv.fill(0),
+        let iv = params.iv();
+        if iv.len() > block_size {
+            return Err(BlockModeInitError::InvalidIvLength(iv.len()));
         }
+        let offset = block_size - iv.len();
+        self.iv[..offset].fill(0);
+        self.iv[offset..].copy_from_slice(iv);
 
         self.cipher
-            .init(CipherDirection::Encrypt, params.cipher())
+            .init(CipherDirection::Encrypt, params)
             .map_err(BlockModeInitError::Cipher)?;
         self.direction = Some(direction);
         self.reset();

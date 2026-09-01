@@ -8,6 +8,7 @@ use tc_cipher::{
 };
 use tc_crypto::AlgorithmName;
 use tc_des::{BLOCK_BYTES as DES_BLOCK_BYTES, DesEngine};
+use tc_ecb::EcbBlockCipher;
 
 use common::{KeyIv, unhex};
 
@@ -56,6 +57,23 @@ fn matches_nist_sp800_38a_aes128_vectors() {
         aes_cbc(CipherDirection::Decrypt, &iv, &ciphertext),
         plaintext
     );
+}
+
+#[test]
+fn forwards_one_parameter_type_through_three_cipher_layers() {
+    let key = unhex(AES_KEY);
+    let iv = unhex(AES_IV);
+    let plaintext = unhex(&AES_PLAINTEXT[..AES_BLOCK_BYTES * 2]);
+    let expected = unhex(&AES_CIPHERTEXT[..AES_BLOCK_BYTES * 2]);
+    let params = KeyIv { key: &key, iv: &iv };
+    let cbc = CbcBlockCipher::new(AesEngine::new());
+    let mut ecb = EcbBlockCipher::new(cbc);
+
+    ecb.init(CipherDirection::Encrypt, &params).unwrap();
+    let mut output = [0; AES_BLOCK_BYTES];
+    ecb.process_block(&plaintext, &mut output).unwrap();
+
+    assert_eq!(output.as_slice(), expected);
 }
 
 #[test]

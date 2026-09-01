@@ -56,15 +56,10 @@ impl StreamCipher for XChaCha20Engine {
     }
 }
 
-impl StreamCipherInit for XChaCha20Engine {
-    type Params<'a> = dyn KeyWithIvParams + 'a;
+impl<P: KeyWithIvParams + ?Sized> StreamCipherInit<P> for XChaCha20Engine {
     type Error = InitError;
 
-    fn init(
-        &mut self,
-        _direction: CipherDirection,
-        params: &Self::Params<'_>,
-    ) -> Result<(), <Self as StreamCipherInit>::Error> {
+    fn init(&mut self, _direction: CipherDirection, params: &P) -> Result<(), Self::Error> {
         let key = params.key();
         if key.len() != KEY_BYTES {
             return Err(InitError::InvalidKeyLength(key.len()));

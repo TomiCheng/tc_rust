@@ -59,15 +59,10 @@ impl BlockCipher for DesEngine {
     }
 }
 
-impl BlockCipherInit for DesEngine {
-    type Params<'a> = dyn KeyParams + 'a;
+impl<P: KeyParams + ?Sized> BlockCipherInit<P> for DesEngine {
     type Error = InitError;
 
-    fn init(
-        &mut self,
-        direction: CipherDirection,
-        params: &Self::Params<'_>,
-    ) -> Result<(), InitError> {
+    fn init(&mut self, direction: CipherDirection, params: &P) -> Result<(), InitError> {
         let key = params.key();
         let key: &[u8; KEY_BYTES] = key
             .try_into()

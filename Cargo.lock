@@ -576,6 +576,7 @@ dependencies = [
  "tc_cipher",
  "tc_crypto",
  "tc_des",
+ "tc_ecb",
  "tc_params",
 ]
 

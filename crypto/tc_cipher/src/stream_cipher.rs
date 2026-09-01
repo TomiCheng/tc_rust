@@ -5,8 +5,7 @@ use crate::CipherDirection;
 /// An initialized symmetric-key stream cipher.
 ///
 /// This trait contains only operations that can be dispatched through a trait
-/// object. Initialization is provided separately by [`StreamCipherInit`], whose
-/// generic associated parameter type is intentionally kept out of this trait.
+/// object. Initialization is provided independently by [`StreamCipherInit`].
 ///
 /// Implementations with the same [`Error`](StreamCipher::Error) type can be
 /// stored together behind `dyn StreamCipher<Error = E>` after initialization.
@@ -24,23 +23,18 @@ pub trait StreamCipher {
     fn reset(&mut self);
 }
 
-/// Strongly typed initialization for a [`StreamCipher`].
+/// Initializes an object from parameters of type `P`.
 ///
-/// The generic associated type permits parameter objects that borrow key,
-/// nonce, or IV material. Because that GAT is not part of [`StreamCipher`], an
-/// initialized implementation can still be used through `dyn StreamCipher`.
-pub trait StreamCipherInit: StreamCipher {
-    /// The parameter type accepted by [`init`](StreamCipherInit::init).
-    type Params<'a>: ?Sized;
+/// This trait is independent from [`StreamCipher`]. Consumers that need both
+/// capabilities use `C: StreamCipher + StreamCipherInit<P>`. Keeping `P` as a
+/// trait parameter lets one caller-owned parameter object flow through any
+/// number of composing cipher layers.
+pub trait StreamCipherInit<P: ?Sized> {
     /// The failure type returned by initialization.
     type Error: core::error::Error;
 
     /// Initializes the cipher with the supplied parameters.
-    fn init(
-        &mut self,
-        direction: CipherDirection,
-        params: &Self::Params<'_>,
-    ) -> Result<(), <Self as StreamCipherInit>::Error>;
+    fn init(&mut self, direction: CipherDirection, params: &P) -> Result<(), Self::Error>;
 }
 
 #[cfg(test)]
@@ -133,15 +127,14 @@ mod tests {
         }
     }
 
-    impl StreamCipherInit for TestCipher {
-        type Params<'a> = TestParams<'a>;
+    impl StreamCipherInit<TestParams<'_>> for TestCipher {
         type Error = TestInitError;
 
         fn init(
             &mut self,
             direction: CipherDirection,
-            params: &Self::Params<'_>,
-        ) -> Result<(), <Self as StreamCipherInit>::Error> {
+            params: &TestParams<'_>,
+        ) -> Result<(), Self::Error> {
             let key_byte = params.key.first().copied().ok_or(TestInitError(0))?;
             self.direction = direction;
             self.initial_key_byte = key_byte;
@@ -154,7 +147,9 @@ mod tests {
     #[test]
     fn initialized_cipher_supports_dynamic_dispatch_and_reset() {
         let mut concrete = TestCipher::new();
-        concrete
+        let initializer: &mut dyn StreamCipherInit<TestParams<'_>, Error = TestInitError> =
+            &mut concrete;
+        initializer
             .init(CipherDirection::Encrypt, &TestParams { key: &[0xa5] })
             .expect("valid key");
         assert_eq!(concrete.direction, CipherDirection::Encrypt);

@@ -246,15 +246,10 @@ impl BlockCipher for AesLightEngine {
     }
 }
 
-impl BlockCipherInit for AesLightEngine {
-    type Params<'a> = dyn KeyParams + 'a;
+impl<P: KeyParams + ?Sized> BlockCipherInit<P> for AesLightEngine {
     type Error = InitError;
 
-    fn init(
-        &mut self,
-        direction: CipherDirection,
-        params: &Self::Params<'_>,
-    ) -> Result<(), InitError> {
+    fn init(&mut self, direction: CipherDirection, params: &P) -> Result<(), InitError> {
         let key = params.key();
         let rounds = cipher::rounds_for(key.len()).ok_or(InitError::InvalidKeyLength(key.len()))?;
 

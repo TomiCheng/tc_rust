@@ -107,8 +107,9 @@ processes one byte, while `reset` restarts the keystream using the parameters
 from the most recent successful `init` call.
 
 After initialization, engines with the same processing error type can be used
-through `dyn StreamCipher<Error = StreamError>`. `StreamCipherInit` remains on
-the concrete type because its parameter type is a generic associated type.
+through `dyn StreamCipher<Error = StreamError>`. Initialization is independent:
+`StreamCipherInit<P>` can accept caller-owned parameter types and can itself be
+used through a trait object when `P` and the initialization error are fixed.
 
 Never reuse a key and IV pair. Keystream reuse can reveal relationships
 between plaintexts even when the cipher itself is implemented correctly.

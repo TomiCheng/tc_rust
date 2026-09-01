@@ -66,15 +66,10 @@ macro_rules! define_engine {
             }
         }
 
-        impl BlockCipherInit for $name {
-            type Params<'a> = dyn Rc5Params + 'a;
+        impl<P: Rc5Params + ?Sized> BlockCipherInit<P> for $name {
             type Error = InitError;
 
-            fn init(
-                &mut self,
-                direction: CipherDirection,
-                params: &Self::Params<'_>,
-            ) -> Result<(), InitError> {
+            fn init(&mut self, direction: CipherDirection, params: &P) -> Result<(), InitError> {
                 let key = params.key();
                 if key.is_empty() || key.len() > MAX_KEY_BYTES {
                     return Err(InitError::InvalidKeyLength(key.len()));

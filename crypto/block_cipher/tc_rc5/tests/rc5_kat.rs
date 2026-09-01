@@ -19,8 +19,8 @@ fn run<E>(
     plaintext: &str,
     ciphertext: &str,
 ) where
-    E: BlockCipher<Error = BlockError> + BlockCipherInit<Error = InitError>,
-    for<'a> E: BlockCipherInit<Params<'a> = dyn tc_rc5::Rc5Params + 'a, Error = InitError>,
+    E: BlockCipher<Error = BlockError>,
+    for<'a> E: BlockCipherInit<dyn tc_rc5::Rc5Params + 'a, Error = InitError>,
 {
     let key = unhex(key);
     let iv = unhex(iv);

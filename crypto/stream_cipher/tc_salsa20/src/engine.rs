@@ -69,15 +69,10 @@ impl StreamCipher for Salsa20Engine {
     }
 }
 
-impl StreamCipherInit for Salsa20Engine {
-    type Params<'a> = dyn KeyWithIvParams + 'a;
+impl<P: KeyWithIvParams + ?Sized> StreamCipherInit<P> for Salsa20Engine {
     type Error = InitError;
 
-    fn init(
-        &mut self,
-        _direction: CipherDirection,
-        params: &Self::Params<'_>,
-    ) -> Result<(), <Self as StreamCipherInit>::Error> {
+    fn init(&mut self, _direction: CipherDirection, params: &P) -> Result<(), Self::Error> {
         let key = params.key();
         if !KEY_BYTES.contains(&key.len()) {
             return Err(InitError::InvalidKeyLength(key.len()));

@@ -1,6 +1,3 @@
-use tc_aes::AesEngine;
-use tc_cbc::CbcParams;
-use tc_des::DesEngine;
 use tc_params::{IvParams, KeyParams};
 
 pub fn unhex(value: &str) -> Vec<u8> {
@@ -28,17 +25,5 @@ impl KeyParams for KeyIv<'_> {
 impl IvParams for KeyIv<'_> {
     fn iv(&self) -> &[u8] {
         self.iv
-    }
-}
-
-impl CbcParams<AesEngine> for KeyIv<'_> {
-    fn cipher_params(&self) -> &(dyn KeyParams + '_) {
-        self
-    }
-}
-
-impl CbcParams<DesEngine> for KeyIv<'_> {
-    fn cipher_params(&self) -> &(dyn KeyParams + '_) {
-        self
     }
 }

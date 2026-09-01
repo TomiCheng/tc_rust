@@ -3,15 +3,14 @@ mod common;
 use core::convert::Infallible;
 
 use tc_aes::{AesEngine, BLOCK_BYTES};
-use tc_cfb::{CfbBlockCipher, FixedCfbBlockCipher, Params};
+use tc_cfb::{CfbBlockCipher, FixedCfbBlockCipher};
 use tc_cipher::{
     BlockCipher, BlockCipherInit, BlockCipherMode, BlockError, BlockModeError, BlockModeInitError,
     CipherDirection,
 };
 use tc_crypto::AlgorithmName;
-use tc_params::{KeyParams, KeyRef};
 
-use common::unhex;
+use common::{KeyIv, unhex};
 
 const KEY: &str = "2b7e151628aed2a6abf7158809cf4f3c";
 const IV: &str = "000102030405060708090a0b0c0d0e0f";
@@ -40,8 +39,7 @@ fn run<M: BlockCipher>(mode: &mut M, input: &[u8]) -> Vec<u8> {
 fn dynamic(bits: usize, direction: CipherDirection, input: &[u8]) -> Vec<u8> {
     let key = unhex(KEY);
     let iv = unhex(IV);
-    let key_params = KeyRef::new(&key);
-    let params = Params::<dyn KeyParams>::with_iv(&key_params, &iv);
+    let params = KeyIv { key: &key, iv: &iv };
     let mut mode = CfbBlockCipher::new(AesEngine::new(), bits).unwrap();
     mode.init(direction, &params).unwrap();
     run(&mut mode, input)
@@ -50,8 +48,7 @@ fn dynamic(bits: usize, direction: CipherDirection, input: &[u8]) -> Vec<u8> {
 fn fixed<const S: usize>(direction: CipherDirection, input: &[u8]) -> Vec<u8> {
     let key = unhex(KEY);
     let iv = unhex(IV);
-    let key_params = KeyRef::new(&key);
-    let params = Params::<dyn KeyParams>::with_iv(&key_params, &iv);
+    let params = KeyIv { key: &key, iv: &iv };
     let mut mode = FixedCfbBlockCipher::<AesEngine, BLOCK_BYTES, S>::new(AesEngine::new());
     mode.init(direction, &params).unwrap();
     run(&mut mode, input)
@@ -94,20 +91,25 @@ fn short_iv_is_left_padded_with_zeros() {
     let key = unhex(KEY);
     let short_iv = unhex("01020304");
     let full_iv = unhex("00000000000000000000000001020304");
-    let key_params = KeyRef::new(&key);
     let plaintext = unhex("6bc1bee22e409f96e93d7e117393172a");
 
     let mut short = CfbBlockCipher::new(AesEngine::new(), 128).unwrap();
     short
         .init(
             CipherDirection::Encrypt,
-            &Params::<dyn KeyParams>::with_iv(&key_params, &short_iv),
+            &KeyIv {
+                key: &key,
+                iv: &short_iv,
+            },
         )
         .unwrap();
     let mut full = CfbBlockCipher::new(AesEngine::new(), 128).unwrap();
     full.init(
         CipherDirection::Encrypt,
-        &Params::<dyn KeyParams>::with_iv(&key_params, &full_iv),
+        &KeyIv {
+            key: &key,
+            iv: &full_iv,
+        },
     )
     .unwrap();
 

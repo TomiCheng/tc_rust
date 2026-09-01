@@ -5,8 +5,7 @@ use tc_cipher::{
     CipherDirection,
 };
 use tc_crypto::AlgorithmName;
-
-use crate::Params;
+use tc_params::IvParams;
 
 /// Allocation-free CFB with an `N`-byte cipher block and `S`-byte segment.
 pub struct FixedCfbBlockCipher<C, const N: usize, const S: usize> {
@@ -82,17 +81,18 @@ impl<C: BlockCipher, const N: usize, const S: usize> BlockCipher for FixedCfbBlo
     }
 }
 
-impl<C: BlockCipherInit, const N: usize, const S: usize> BlockCipherInit
-    for FixedCfbBlockCipher<C, N, S>
+impl<C, P, const N: usize, const S: usize> BlockCipherInit<P> for FixedCfbBlockCipher<C, N, S>
+where
+    C: BlockCipher + BlockCipherInit<P>,
+    P: IvParams + ?Sized,
 {
-    type Params<'a> = Params<'a, C::Params<'a>>;
-    type Error = BlockModeInitError<<C as BlockCipherInit>::Error>;
+    type Error = BlockModeInitError<<C as BlockCipherInit<P>>::Error>;
 
     fn init(
         &mut self,
         direction: CipherDirection,
-        params: &Self::Params<'_>,
-    ) -> Result<(), <Self as BlockCipherInit>::Error> {
+        params: &P,
+    ) -> Result<(), <Self as BlockCipherInit<P>>::Error> {
         let actual = self.cipher.block_size();
         if actual != N {
             return Err(BlockModeInitError::UnsupportedBlockSize {
@@ -104,20 +104,16 @@ impl<C: BlockCipherInit, const N: usize, const S: usize> BlockCipherInit
             return Err(BlockModeInitError::InvalidFeedbackSize(S * 8));
         }
 
-        match params.iv() {
-            Some(iv) if iv.len() > N => {
-                return Err(BlockModeInitError::InvalidIvLength(iv.len()));
-            }
-            Some(iv) => {
-                let offset = N - iv.len();
-                self.iv[..offset].fill(0);
-                self.iv[offset..].copy_from_slice(iv);
-            }
-            None => self.iv.fill(0),
+        let iv = params.iv();
+        if iv.len() > N {
+            return Err(BlockModeInitError::InvalidIvLength(iv.len()));
         }
+        let offset = N - iv.len();
+        self.iv[..offset].fill(0);
+        self.iv[offset..].copy_from_slice(iv);
 
         self.cipher
-            .init(CipherDirection::Encrypt, params.cipher())
+            .init(CipherDirection::Encrypt, params)
             .map_err(BlockModeInitError::Cipher)?;
         self.direction = Some(direction);
         self.reset();

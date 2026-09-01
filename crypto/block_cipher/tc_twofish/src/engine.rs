@@ -63,15 +63,10 @@ impl BlockCipher for TwofishEngine {
     }
 }
 
-impl BlockCipherInit for TwofishEngine {
-    type Params<'a> = dyn KeyParams + 'a;
+impl<P: KeyParams + ?Sized> BlockCipherInit<P> for TwofishEngine {
     type Error = InitError;
 
-    fn init(
-        &mut self,
-        direction: CipherDirection,
-        params: &Self::Params<'_>,
-    ) -> Result<(), InitError> {
+    fn init(&mut self, direction: CipherDirection, params: &P) -> Result<(), InitError> {
         let key = params.key();
         if !KEY_BYTES.contains(&key.len()) {
             return Err(InitError::InvalidKeyLength(key.len()));

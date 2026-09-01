@@ -23,10 +23,10 @@ impl EngineState {
         }
     }
 
-    fn init(
+    fn init<P: KeyParams + ?Sized>(
         &mut self,
         direction: CipherDirection,
-        params: &(dyn KeyParams + '_),
+        params: &P,
         representation: Representation,
     ) -> Result<(), InitError> {
         let key = params.key();
@@ -105,15 +105,10 @@ impl BlockCipher for SerpentEngine {
     }
 }
 
-impl BlockCipherInit for SerpentEngine {
-    type Params<'a> = dyn KeyParams + 'a;
+impl<P: KeyParams + ?Sized> BlockCipherInit<P> for SerpentEngine {
     type Error = InitError;
 
-    fn init(
-        &mut self,
-        direction: CipherDirection,
-        params: &Self::Params<'_>,
-    ) -> Result<(), InitError> {
+    fn init(&mut self, direction: CipherDirection, params: &P) -> Result<(), InitError> {
         self.state.init(direction, params, Representation::Serpent)
     }
 }
@@ -160,15 +155,10 @@ impl BlockCipher for TnepresEngine {
     }
 }
 
-impl BlockCipherInit for TnepresEngine {
-    type Params<'a> = dyn KeyParams + 'a;
+impl<P: KeyParams + ?Sized> BlockCipherInit<P> for TnepresEngine {
     type Error = InitError;
 
-    fn init(
-        &mut self,
-        direction: CipherDirection,
-        params: &Self::Params<'_>,
-    ) -> Result<(), InitError> {
+    fn init(&mut self, direction: CipherDirection, params: &P) -> Result<(), InitError> {
         self.state.init(direction, params, Representation::Tnepres)
     }
 }

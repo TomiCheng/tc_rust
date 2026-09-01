@@ -5,8 +5,7 @@ use crate::CipherDirection;
 /// An initialized symmetric-key block cipher.
 ///
 /// This trait contains only operations that can be dispatched through a trait
-/// object. Initialization is provided separately by [`BlockCipherInit`], whose
-/// generic associated parameter type is intentionally kept out of this trait.
+/// object. Initialization is provided independently by [`BlockCipherInit`].
 ///
 /// Implementations with the same [`Error`](BlockCipher::Error) type can be
 /// stored together behind `dyn BlockCipher<Error = E>` after initialization.
@@ -21,23 +20,18 @@ pub trait BlockCipher {
     fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error>;
 }
 
-/// Strongly typed initialization for a [`BlockCipher`].
+/// Initializes an object from parameters of type `P`.
 ///
-/// The generic associated type permits parameter objects that borrow key or
-/// tweak material. Because that GAT is not part of [`BlockCipher`], initialized
-/// implementations can still be used through `dyn BlockCipher<Error = E>`.
-pub trait BlockCipherInit: BlockCipher {
-    /// The parameter type accepted by [`init`](BlockCipherInit::init).
-    type Params<'a>: ?Sized + 'a;
+/// This trait is independent from [`BlockCipher`]. Consumers that need both
+/// capabilities use `C: BlockCipher + BlockCipherInit<P>`. Keeping `P` as a
+/// trait parameter lets one caller-owned parameter object flow through any
+/// number of composing cipher layers.
+pub trait BlockCipherInit<P: ?Sized> {
     /// The failure type returned by initialization.
     type Error: core::error::Error;
 
     /// Initializes the cipher for the selected transformation direction.
-    fn init(
-        &mut self,
-        direction: CipherDirection,
-        params: &Self::Params<'_>,
-    ) -> Result<(), <Self as BlockCipherInit>::Error>;
+    fn init(&mut self, direction: CipherDirection, params: &P) -> Result<(), Self::Error>;
 }
 
 #[cfg(test)]
@@ -96,14 +90,13 @@ mod tests {
         }
     }
 
-    impl BlockCipherInit for TestCipher {
-        type Params<'a> = TestParams<'a>;
+    impl BlockCipherInit<TestParams<'_>> for TestCipher {
         type Error = crate::InitError;
 
         fn init(
             &mut self,
             direction: CipherDirection,
-            params: &Self::Params<'_>,
+            params: &TestParams<'_>,
         ) -> Result<(), crate::InitError> {
             let key_byte = params
                 .key
@@ -122,7 +115,9 @@ mod tests {
         let plaintext = [0x00, 0x7f, 0xf0, 0xff];
 
         let mut encryptor = TestCipher::new();
-        encryptor.init(CipherDirection::Encrypt, &params).unwrap();
+        let initializer: &mut dyn BlockCipherInit<TestParams<'_>, Error = crate::InitError> =
+            &mut encryptor;
+        initializer.init(CipherDirection::Encrypt, &params).unwrap();
         let mut encryptor: Box<dyn BlockCipher<Error = crate::BlockError>> = Box::new(encryptor);
         let mut ciphertext = [0_u8; BLOCK_SIZE];
 

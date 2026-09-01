@@ -62,15 +62,10 @@ impl BlockCipher for BlowfishEngine {
     }
 }
 
-impl BlockCipherInit for BlowfishEngine {
-    type Params<'a> = dyn KeyParams + 'a;
+impl<P: KeyParams + ?Sized> BlockCipherInit<P> for BlowfishEngine {
     type Error = InitError;
 
-    fn init(
-        &mut self,
-        direction: CipherDirection,
-        params: &Self::Params<'_>,
-    ) -> Result<(), InitError> {
+    fn init(&mut self, direction: CipherDirection, params: &P) -> Result<(), InitError> {
         let key = params.key();
         if !(MIN_KEY_BYTES..=MAX_KEY_BYTES).contains(&key.len()) {
             return Err(InitError::InvalidKeyLength(key.len()));

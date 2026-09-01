@@ -63,15 +63,10 @@ impl BlockCipher for NoekeonEngine {
     }
 }
 
-impl BlockCipherInit for NoekeonEngine {
-    type Params<'a> = dyn KeyParams + 'a;
+impl<P: KeyParams + ?Sized> BlockCipherInit<P> for NoekeonEngine {
     type Error = InitError;
 
-    fn init(
-        &mut self,
-        direction: CipherDirection,
-        params: &Self::Params<'_>,
-    ) -> Result<(), InitError> {
+    fn init(&mut self, direction: CipherDirection, params: &P) -> Result<(), InitError> {
         let for_encryption = direction == CipherDirection::Encrypt;
         let key = params.key();
         let key: &[u8; KEY_BYTES] = key

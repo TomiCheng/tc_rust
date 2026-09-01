@@ -56,15 +56,10 @@ impl BlockCipher for CamelliaEngine {
     }
 }
 
-impl BlockCipherInit for CamelliaEngine {
-    type Params<'a> = dyn KeyParams + 'a;
+impl<P: KeyParams + ?Sized> BlockCipherInit<P> for CamelliaEngine {
     type Error = InitError;
 
-    fn init(
-        &mut self,
-        direction: CipherDirection,
-        params: &Self::Params<'_>,
-    ) -> Result<(), InitError> {
+    fn init(&mut self, direction: CipherDirection, params: &P) -> Result<(), InitError> {
         let key = params.key();
         if !matches!(key.len(), 16 | 24 | 32) {
             return Err(InitError::InvalidKeyLength(key.len()));

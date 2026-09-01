@@ -46,7 +46,7 @@ fn add_benches<E>(
     create: impl Fn() -> E,
 ) where
     E: BlockCipher<Error = BlockError>
-        + for<'a> BlockCipherInit<Params<'a> = dyn KeyParams + 'a, Error = InitError>,
+        + for<'a> BlockCipherInit<dyn KeyParams + 'a, Error = InitError>,
 {
     for key_size in KEY_BYTES {
         let key = key(key_size);

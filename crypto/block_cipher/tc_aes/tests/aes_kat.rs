@@ -13,14 +13,13 @@ use tc_params::{KeyParams, KeyRef};
 /// Any engine in this crate: initialised from borrowed key bytes, then run one
 /// block at a time.
 trait AesImplementation:
-    BlockCipher<Error = BlockError>
-    + for<'a> BlockCipherInit<Params<'a> = dyn KeyParams + 'a, Error = InitError>
+    BlockCipher<Error = BlockError> + for<'a> BlockCipherInit<dyn KeyParams + 'a, Error = InitError>
 {
 }
 
 impl<E> AesImplementation for E where
     E: BlockCipher<Error = BlockError>
-        + for<'a> BlockCipherInit<Params<'a> = dyn KeyParams + 'a, Error = InitError>
+        + for<'a> BlockCipherInit<dyn KeyParams + 'a, Error = InitError>
 {
 }
 

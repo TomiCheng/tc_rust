@@ -16,7 +16,6 @@ extern crate alloc;
 
 mod fixed_cfb;
 mod fixed_openpgp;
-mod params;
 
 #[cfg(feature = "alloc")]
 mod cfb;
@@ -29,4 +28,3 @@ pub use fixed_cfb::FixedCfbBlockCipher;
 pub use fixed_openpgp::FixedOpenPgpCfbBlockCipher;
 #[cfg(feature = "alloc")]
 pub use openpgp::OpenPgpCfbBlockCipher;
-pub use params::Params;

@@ -18,3 +18,4 @@ tc_params = { version = "0.1", path = "../../tc_params" }
 [dev-dependencies]
 tc_aes = { version = "0.1", path = "../../block_cipher/tc_aes" }
 tc_des = { version = "0.1", path = "../../block_cipher/tc_des" }
+tc_ecb = { version = "0.1", path = "../tc_ecb" }

@@ -203,15 +203,12 @@ impl<const BLOCK_COLUMNS: usize> BlockCipher for RijndaelEngine<BLOCK_COLUMNS> {
     }
 }
 
-impl<const BLOCK_COLUMNS: usize> BlockCipherInit for RijndaelEngine<BLOCK_COLUMNS> {
-    type Params<'a> = dyn KeyParams + 'a;
+impl<P: KeyParams + ?Sized, const BLOCK_COLUMNS: usize> BlockCipherInit<P>
+    for RijndaelEngine<BLOCK_COLUMNS>
+{
     type Error = InitError;
 
-    fn init(
-        &mut self,
-        direction: CipherDirection,
-        params: &Self::Params<'_>,
-    ) -> Result<(), InitError> {
+    fn init(&mut self, direction: CipherDirection, params: &P) -> Result<(), InitError> {
         let key = params.key();
         if !KEY_BYTES.contains(&key.len()) {
             return Err(InitError::InvalidKeyLength(key.len()));

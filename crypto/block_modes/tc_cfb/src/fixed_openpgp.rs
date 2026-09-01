@@ -5,8 +5,7 @@ use tc_cipher::{
     CipherDirection,
 };
 use tc_crypto::AlgorithmName;
-
-use crate::Params;
+use tc_params::IvParams;
 
 /// Allocation-free OpenPGP CFB with an `N`-byte cipher block.
 pub struct FixedOpenPgpCfbBlockCipher<C, const N: usize> {
@@ -157,15 +156,18 @@ impl<C: BlockCipher, const N: usize> BlockCipher for FixedOpenPgpCfbBlockCipher<
     }
 }
 
-impl<C: BlockCipherInit, const N: usize> BlockCipherInit for FixedOpenPgpCfbBlockCipher<C, N> {
-    type Params<'a> = Params<'a, C::Params<'a>>;
-    type Error = BlockModeInitError<<C as BlockCipherInit>::Error>;
+impl<C, P, const N: usize> BlockCipherInit<P> for FixedOpenPgpCfbBlockCipher<C, N>
+where
+    C: BlockCipher + BlockCipherInit<P>,
+    P: IvParams + ?Sized,
+{
+    type Error = BlockModeInitError<<C as BlockCipherInit<P>>::Error>;
 
     fn init(
         &mut self,
         direction: CipherDirection,
-        params: &Self::Params<'_>,
-    ) -> Result<(), <Self as BlockCipherInit>::Error> {
+        params: &P,
+    ) -> Result<(), <Self as BlockCipherInit<P>>::Error> {
         let actual = self.cipher.block_size();
         if actual != N {
             return Err(BlockModeInitError::UnsupportedBlockSize {
@@ -180,20 +182,16 @@ impl<C: BlockCipherInit, const N: usize> BlockCipherInit for FixedOpenPgpCfbBloc
             });
         }
 
-        match params.iv() {
-            Some(iv) if iv.len() > N => {
-                return Err(BlockModeInitError::InvalidIvLength(iv.len()));
-            }
-            Some(iv) => {
-                let offset = N - iv.len();
-                self.iv[..offset].fill(0);
-                self.iv[offset..].copy_from_slice(iv);
-            }
-            None => self.iv.fill(0),
+        let iv = params.iv();
+        if iv.len() > N {
+            return Err(BlockModeInitError::InvalidIvLength(iv.len()));
         }
+        let offset = N - iv.len();
+        self.iv[..offset].fill(0);
+        self.iv[offset..].copy_from_slice(iv);
 
         self.cipher
-            .init(CipherDirection::Encrypt, params.cipher())
+            .init(CipherDirection::Encrypt, params)
             .map_err(BlockModeInitError::Cipher)?;
         self.direction = Some(direction);
         self.reset();

@@ -8,7 +8,7 @@ use crate::cipher::{tea, xtea};
 use crate::{BLOCK_BYTES, KEY_BYTES};
 
 /// Narrows an initialization key to the fixed length both ciphers require.
-fn checked_key<'a>(params: &'a (dyn KeyParams + 'a)) -> Result<&'a [u8; KEY_BYTES], InitError> {
+fn checked_key<P: KeyParams + ?Sized>(params: &P) -> Result<&[u8; KEY_BYTES], InitError> {
     let key = params.key();
     key.try_into()
         .map_err(|_| InitError::InvalidKeyLength(key.len()))
@@ -80,15 +80,10 @@ impl BlockCipher for TeaEngine {
     }
 }
 
-impl BlockCipherInit for TeaEngine {
-    type Params<'a> = dyn KeyParams + 'a;
+impl<P: KeyParams + ?Sized> BlockCipherInit<P> for TeaEngine {
     type Error = InitError;
 
-    fn init(
-        &mut self,
-        direction: CipherDirection,
-        params: &Self::Params<'_>,
-    ) -> Result<(), InitError> {
+    fn init(&mut self, direction: CipherDirection, params: &P) -> Result<(), InitError> {
         self.key = tea::expand_key(checked_key(params)?);
         self.for_encryption = direction == CipherDirection::Encrypt;
         self.initialised = true;
@@ -147,15 +142,10 @@ impl BlockCipher for XteaEngine {
     }
 }
 
-impl BlockCipherInit for XteaEngine {
-    type Params<'a> = dyn KeyParams + 'a;
+impl<P: KeyParams + ?Sized> BlockCipherInit<P> for XteaEngine {
     type Error = InitError;
 
-    fn init(
-        &mut self,
-        direction: CipherDirection,
-        params: &Self::Params<'_>,
-    ) -> Result<(), InitError> {
+    fn init(&mut self, direction: CipherDirection, params: &P) -> Result<(), InitError> {
         self.schedule = xtea::expand_key(checked_key(params)?);
         self.for_encryption = direction == CipherDirection::Encrypt;
         self.initialised = true;

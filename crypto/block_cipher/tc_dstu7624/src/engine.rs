@@ -79,14 +79,13 @@ macro_rules! impl_engine {
             }
         }
 
-        impl BlockCipherInit for Engine<$block_words> {
-            type Params<'a> = dyn KeyParams + 'a;
+        impl<P: KeyParams + ?Sized> BlockCipherInit<P> for Engine<$block_words> {
             type Error = InitError;
 
             fn init(
                 &mut self,
                 direction: CipherDirection,
-                params: &Self::Params<'_>,
+                params: &P,
             ) -> Result<(), InitError> {
                 let key = params.key();
                 if ![$($key_bytes),+].contains(&key.len()) {

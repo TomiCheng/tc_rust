@@ -10,7 +10,7 @@
 //!
 //! ```
 //! use tc_aes::{AesEngine, BLOCK_BYTES};
-//! use tc_cbc::{CbcBlockCipher, CbcParams};
+//! use tc_cbc::CbcBlockCipher;
 //! use tc_cipher::{BlockCipher, BlockCipherInit, CipherDirection};
 //! use tc_params::{IvParams, KeyParams};
 //!
@@ -28,12 +28,6 @@
 //! impl IvParams for AesCbcParams<'_> {
 //!     fn iv(&self) -> &[u8] {
 //!         self.iv
-//!     }
-//! }
-//!
-//! impl CbcParams<AesEngine> for AesCbcParams<'_> {
-//!     fn cipher_params(&self) -> &(dyn KeyParams + '_) {
-//!         self
 //!     }
 //! }
 //!
@@ -56,9 +50,7 @@ extern crate alloc;
 mod fixed_mode;
 #[cfg(feature = "alloc")]
 mod mode;
-mod params;
 
 pub use fixed_mode::FixedCbcBlockCipher;
 #[cfg(feature = "alloc")]
 pub use mode::CbcBlockCipher;
-pub use params::CbcParams;

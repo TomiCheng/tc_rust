@@ -68,15 +68,10 @@ impl BlockCipher for Gost28147Engine {
     }
 }
 
-impl BlockCipherInit for Gost28147Engine {
-    type Params<'a> = dyn KeyWithSBoxParams + 'a;
+impl<P: KeyWithSBoxParams + ?Sized> BlockCipherInit<P> for Gost28147Engine {
     type Error = InitError;
 
-    fn init(
-        &mut self,
-        direction: CipherDirection,
-        params: &Self::Params<'_>,
-    ) -> Result<(), InitError> {
+    fn init(&mut self, direction: CipherDirection, params: &P) -> Result<(), InitError> {
         let key = params.key();
         let key: &[u8; KEY_BYTES] = key
             .try_into()

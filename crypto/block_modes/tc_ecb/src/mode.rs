@@ -39,15 +39,17 @@ impl<C: BlockCipher> BlockCipher for EcbBlockCipher<C> {
     }
 }
 
-impl<C: BlockCipherInit> BlockCipherInit for EcbBlockCipher<C> {
-    type Params<'a> = C::Params<'a>;
-    type Error = <C as BlockCipherInit>::Error;
+impl<C, P: ?Sized> BlockCipherInit<P> for EcbBlockCipher<C>
+where
+    C: BlockCipherInit<P>,
+{
+    type Error = <C as BlockCipherInit<P>>::Error;
 
     fn init(
         &mut self,
         direction: CipherDirection,
-        params: &Self::Params<'_>,
-    ) -> Result<(), <Self as BlockCipherInit>::Error> {
+        params: &P,
+    ) -> Result<(), <Self as BlockCipherInit<P>>::Error> {
         self.cipher.init(direction, params)
     }
 }

@@ -101,15 +101,10 @@ impl StreamCipher for Rc4Engine {
     }
 }
 
-impl StreamCipherInit for Rc4Engine {
-    type Params<'a> = dyn KeyParams + 'a;
+impl<P: KeyParams + ?Sized> StreamCipherInit<P> for Rc4Engine {
     type Error = InitError;
 
-    fn init(
-        &mut self,
-        _direction: CipherDirection,
-        params: &Self::Params<'_>,
-    ) -> Result<(), <Self as StreamCipherInit>::Error> {
+    fn init(&mut self, _direction: CipherDirection, params: &P) -> Result<(), Self::Error> {
         let key = params.key();
         if key.is_empty() || key.len() > MAX_KEY_BYTES {
             return Err(InitError::InvalidKeyLength(key.len()));

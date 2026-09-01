@@ -62,15 +62,10 @@ impl BlockCipher for IdeaEngine {
     }
 }
 
-impl BlockCipherInit for IdeaEngine {
-    type Params<'a> = dyn KeyParams + 'a;
+impl<P: KeyParams + ?Sized> BlockCipherInit<P> for IdeaEngine {
     type Error = InitError;
 
-    fn init(
-        &mut self,
-        direction: CipherDirection,
-        params: &Self::Params<'_>,
-    ) -> Result<(), InitError> {
+    fn init(&mut self, direction: CipherDirection, params: &P) -> Result<(), InitError> {
         let key = params.key();
         // bc 會把過短的金鑰左補零、過長的只取前十六位元組;此處要求剛好 128 位元。
         let key: &[u8; KEY_BYTES] = key
