@@ -639,6 +639,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_noekeon"
+version = "0.1.0"
+dependencies = [
+ "tc_cipher",
+ "tc_crypto",
+ "tc_params",
+]
+
+[[package]]
 name = "tc_params"
 version = "0.1.0"
 
