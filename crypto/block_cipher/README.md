@@ -19,7 +19,7 @@ to independent crates under `crypto/block_cipher`.
 | ⬜ | `tc_rc5` | RC5-32, RC5-64 |
 | ⬜ | `tc_rc6` | RC6 |
 | ⬜ | `tc_rijndael` | Rijndael |
-| ⬜ | `tc_seed` | SEED |
+| ✅ | `tc_seed` | SEED |
 | ⬜ | `tc_serpent` | Serpent, Tnepres |
 | ⬜ | `tc_skipjack` | SKIPJACK |
 | ⬜ | `tc_sm4` | SM4 |

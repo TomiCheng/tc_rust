@@ -652,6 +652,15 @@ name = "tc_params"
 version = "0.1.0"
 
 [[package]]
+name = "tc_seed"
+version = "0.1.0"
+dependencies = [
+ "tc_cipher",
+ "tc_crypto",
+ "tc_params",
+]
+
+[[package]]
 name = "tc_stream_cipher"
 version = "0.1.0"
 dependencies = [
