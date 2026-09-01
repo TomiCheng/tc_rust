@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crates/*", "crypto/*"]
+members = ["crates/*", "crypto/tc_*", "crypto/block_cipher/*"]
 
 [workspace.package]
 version = "0.1.0"

@@ -1,0 +1,9 @@
+[package]
+name = "tc_des"
+description = "Data Encryption Standard implementations for the tc_rust workspace."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]

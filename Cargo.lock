@@ -531,7 +531,15 @@ name = "tc_cipher_core"
 version = "0.1.0"
 
 [[package]]
+name = "tc_crypto"
+version = "0.1.0"
+
+[[package]]
 name = "tc_crypto_core"
+version = "0.1.0"
+
+[[package]]
+name = "tc_des"
 version = "0.1.0"
 
 [[package]]

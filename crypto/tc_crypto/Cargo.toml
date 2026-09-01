@@ -1,0 +1,9 @@
+[package]
+name = "tc_crypto"
+description = "Core cryptographic abstractions for the tc_rust workspace."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]

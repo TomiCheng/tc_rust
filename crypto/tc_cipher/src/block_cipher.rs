@@ -14,9 +14,6 @@ pub trait BlockCipher {
     /// The failure type returned by block-processing operations.
     type Error: core::error::Error;
 
-    /// Returns the algorithm name.
-    fn algorithm_name(&self) -> &str;
-
     /// Returns the block size in bytes.
     fn block_size(&self) -> usize;
 
@@ -89,10 +86,6 @@ mod tests {
     impl BlockCipher for TestCipher {
         type Error = TestError;
 
-        fn algorithm_name(&self) -> &str {
-            "Test"
-        }
-
         fn block_size(&self) -> usize {
             BLOCK_SIZE
         }
@@ -137,7 +130,6 @@ mod tests {
         let mut encryptor: Box<dyn BlockCipher<Error = TestError>> = Box::new(encryptor);
         let mut ciphertext = [0_u8; BLOCK_SIZE];
 
-        assert_eq!(encryptor.algorithm_name(), "Test");
         assert_eq!(encryptor.block_size(), BLOCK_SIZE);
         assert_eq!(
             encryptor.process_block(&plaintext, &mut ciphertext),
