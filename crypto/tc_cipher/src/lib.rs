@@ -10,6 +10,7 @@ mod block_mode_error;
 mod block_mode_init_error;
 mod cipher_direction;
 mod init_error;
+mod key_wrap;
 mod stream_cipher;
 mod stream_error;
 
@@ -20,5 +21,6 @@ pub use block_mode_error::BlockModeError;
 pub use block_mode_init_error::BlockModeInitError;
 pub use cipher_direction::CipherDirection;
 pub use init_error::InitError;
+pub use key_wrap::{KeyWrap, KeyWrapInit, WrapDirection};
 pub use stream_cipher::{StreamCipher, StreamCipherInit};
 pub use stream_error::StreamError;
