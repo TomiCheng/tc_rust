@@ -849,6 +849,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_rfc3211"
+version = "0.1.0"
+dependencies = [
+ "rand_core",
+ "tc_aes",
+ "tc_aria",
+ "tc_cipher",
+ "tc_crypto",
+ "tc_des",
+ "tc_params",
+]
+
+[[package]]
 name = "tc_rijndael"
 version = "0.1.0"
 dependencies = [

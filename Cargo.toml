@@ -6,6 +6,7 @@ members = [
     "crypto/block_cipher/*",
     "crypto/block_modes/*",
     "crypto/digest/*",
+    "crypto/key_wrap/*",
     "crypto/stream_cipher/*",
 ]
 
