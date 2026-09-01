@@ -14,6 +14,8 @@ pub enum InitError {
     InvalidSBoxLength(usize),
     /// The supplied tweak length was invalid, in bytes.
     InvalidTweakLength(usize),
+    /// The supplied round count was invalid.
+    InvalidRounds(usize),
 }
 
 impl fmt::Display for InitError {
@@ -30,6 +32,9 @@ impl fmt::Display for InitError {
             }
             Self::InvalidTweakLength(bytes) => {
                 write!(f, "invalid cipher tweak length: {bytes} bytes")
+            }
+            Self::InvalidRounds(rounds) => {
+                write!(f, "invalid cipher round count: {rounds}")
             }
         }
     }
@@ -62,6 +67,10 @@ mod tests {
         assert_eq!(
             format!("{}", InitError::InvalidTweakLength(8)),
             "invalid cipher tweak length: 8 bytes"
+        );
+        assert_eq!(
+            format!("{}", InitError::InvalidRounds(256)),
+            "invalid cipher round count: 256"
         );
     }
 }
