@@ -1,5 +1,7 @@
 //! Stream-cipher contracts.
 
+use crate::CipherDirection;
+
 /// An initialized symmetric-key stream cipher.
 ///
 /// This trait contains only operations that can be dispatched through a trait
@@ -34,7 +36,11 @@ pub trait StreamCipherInit: StreamCipher {
     type Error: core::error::Error;
 
     /// Initializes the cipher with the supplied parameters.
-    fn init(&mut self, params: &Self::Params<'_>) -> Result<(), <Self as StreamCipherInit>::Error>;
+    fn init(
+        &mut self,
+        direction: CipherDirection,
+        params: &Self::Params<'_>,
+    ) -> Result<(), <Self as StreamCipherInit>::Error>;
 }
 
 #[cfg(test)]
@@ -45,6 +51,7 @@ mod tests {
     use std::boxed::Box;
 
     use super::{StreamCipher, StreamCipherInit};
+    use crate::CipherDirection;
 
     #[derive(Clone, Copy, Debug, PartialEq, Eq)]
     enum TestError {
@@ -77,6 +84,7 @@ mod tests {
 
     struct TestCipher {
         initialised: bool,
+        direction: CipherDirection,
         initial_key_byte: u8,
         key_byte: u8,
     }
@@ -85,6 +93,7 @@ mod tests {
         const fn new() -> Self {
             Self {
                 initialised: false,
+                direction: CipherDirection::Encrypt,
                 initial_key_byte: 0,
                 key_byte: 0,
             }
@@ -130,9 +139,11 @@ mod tests {
 
         fn init(
             &mut self,
+            direction: CipherDirection,
             params: &Self::Params<'_>,
         ) -> Result<(), <Self as StreamCipherInit>::Error> {
             let key_byte = params.key.first().copied().ok_or(TestInitError(0))?;
+            self.direction = direction;
             self.initial_key_byte = key_byte;
             self.key_byte = key_byte;
             self.initialised = true;
@@ -144,8 +155,9 @@ mod tests {
     fn initialized_cipher_supports_dynamic_dispatch_and_reset() {
         let mut concrete = TestCipher::new();
         concrete
-            .init(&TestParams { key: &[0xa5] })
+            .init(CipherDirection::Encrypt, &TestParams { key: &[0xa5] })
             .expect("valid key");
+        assert_eq!(concrete.direction, CipherDirection::Encrypt);
 
         let mut cipher: Box<dyn StreamCipher<Error = TestError>> = Box::new(concrete);
         let mut output = [0_u8; 3];
@@ -164,9 +176,15 @@ mod tests {
     fn reports_initialization_and_processing_errors() {
         let mut cipher = TestCipher::new();
         assert_eq!(cipher.return_byte(0), Err(TestError::NotInitialised));
-        assert_eq!(cipher.init(&TestParams { key: &[] }), Err(TestInitError(0)));
+        assert_eq!(
+            cipher.init(CipherDirection::Encrypt, &TestParams { key: &[] }),
+            Err(TestInitError(0))
+        );
 
-        cipher.init(&TestParams { key: &[1] }).unwrap();
+        cipher
+            .init(CipherDirection::Decrypt, &TestParams { key: &[1] })
+            .unwrap();
+        assert_eq!(cipher.direction, CipherDirection::Decrypt);
         assert_eq!(
             cipher.process_bytes(&[0; 2], &mut [0; 1]),
             Err(TestError::BufferTooShort)
