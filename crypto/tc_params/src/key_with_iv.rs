@@ -2,16 +2,7 @@
 
 use core::fmt;
 
-use crate::KeyParams;
-
-/// Parameters that provide an initialization vector alongside key material.
-///
-/// Implementations only expose the caller's values. The consuming algorithm
-/// defines and validates the supported key and IV lengths.
-pub trait KeyWithIvParams: KeyParams {
-    /// Returns the initialization-vector bytes.
-    fn iv(&self) -> &[u8];
-}
+use crate::{IvParams, KeyParams};
 
 /// Borrowed key and initialization-vector parameters.
 ///
@@ -35,7 +26,7 @@ impl KeyParams for KeyWithIvRef<'_> {
     }
 }
 
-impl KeyWithIvParams for KeyWithIvRef<'_> {
+impl IvParams for KeyWithIvRef<'_> {
     fn iv(&self) -> &[u8] {
         self.iv
     }
@@ -72,7 +63,7 @@ impl<const K: usize, const I: usize> KeyParams for KeyWithIvOwned<K, I> {
     }
 }
 
-impl<const K: usize, const I: usize> KeyWithIvParams for KeyWithIvOwned<K, I> {
+impl<const K: usize, const I: usize> IvParams for KeyWithIvOwned<K, I> {
     fn iv(&self) -> &[u8] {
         &self.iv
     }
@@ -93,7 +84,7 @@ mod tests {
 
     use std::format;
 
-    use super::{KeyParams, KeyWithIvOwned, KeyWithIvParams, KeyWithIvRef};
+    use super::{IvParams, KeyParams, KeyWithIvOwned, KeyWithIvRef};
 
     struct KeyAndIv<'a> {
         key: &'a [u8],
@@ -106,21 +97,20 @@ mod tests {
         }
     }
 
-    impl KeyWithIvParams for KeyAndIv<'_> {
+    impl IvParams for KeyAndIv<'_> {
         fn iv(&self) -> &[u8] {
             self.iv
         }
     }
 
     #[test]
-    fn values_are_reachable_through_a_trait_object() {
+    fn values_are_reachable_through_the_individual_traits() {
         let key = [0x01_u8, 0x02, 0x03];
         let iv = [0x04_u8, 0x05];
         let params = KeyAndIv { key: &key, iv: &iv };
 
-        let params: &dyn KeyWithIvParams = &params;
-        assert_eq!(params.key(), &key);
-        assert_eq!(params.iv(), &iv);
+        assert_eq!((&params as &dyn KeyParams).key(), &key);
+        assert_eq!((&params as &dyn IvParams).iv(), &iv);
     }
 
     #[test]
@@ -129,9 +119,8 @@ mod tests {
         let iv = [0x04_u8, 0x05];
         let params = KeyWithIvRef::new(&key, &iv);
 
-        let params: &dyn KeyWithIvParams = &params;
-        assert_eq!(params.key(), &key);
-        assert_eq!(params.iv(), &iv);
+        assert_eq!((&params as &dyn KeyParams).key(), &key);
+        assert_eq!((&params as &dyn IvParams).iv(), &iv);
     }
 
     #[test]
@@ -142,9 +131,8 @@ mod tests {
             KeyWithIvOwned::new(key, iv)
         };
 
-        let params: &dyn KeyWithIvParams = &params;
-        assert_eq!(params.key(), &[0x11; 4]);
-        assert_eq!(params.iv(), &[0x22; 2]);
+        assert_eq!((&params as &dyn KeyParams).key(), &[0x11; 4]);
+        assert_eq!((&params as &dyn IvParams).iv(), &[0x22; 2]);
     }
 
     #[test]

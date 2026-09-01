@@ -5,12 +5,15 @@ mod common;
 use common::unhex;
 use tc_cipher::{BlockCipher, BlockCipherInit, CipherDirection};
 use tc_gost28147::{BLOCK_BYTES, Gost28147Engine, KeyWithSBox, s_box};
-use tc_params::KeyWithSBoxParams;
+use tc_params::{KeyParams, SBoxParams};
 
 /// The key every Bouncy Castle vector below uses.
 const KEY: &str = "546d203368656c326973652073736e62206167796967747473656865202c3d73";
 
-fn encrypt_block(params: &dyn KeyWithSBoxParams, input: &[u8]) -> [u8; BLOCK_BYTES] {
+fn encrypt_block<P: KeyParams + SBoxParams + ?Sized>(
+    params: &P,
+    input: &[u8],
+) -> [u8; BLOCK_BYTES] {
     let mut engine = Gost28147Engine::new();
     engine.init(CipherDirection::Encrypt, params).unwrap();
     let mut output = [0u8; BLOCK_BYTES];
@@ -21,7 +24,11 @@ fn encrypt_block(params: &dyn KeyWithSBoxParams, input: &[u8]) -> [u8; BLOCK_BYT
     output
 }
 
-fn assert_block_vector(params: &dyn KeyWithSBoxParams, plaintext: &str, ciphertext: &str) {
+fn assert_block_vector<P: KeyParams + SBoxParams + ?Sized>(
+    params: &P,
+    plaintext: &str,
+    ciphertext: &str,
+) {
     let plaintext = unhex(plaintext);
     let ciphertext = unhex(ciphertext);
     assert_eq!(encrypt_block(params, &plaintext).as_slice(), ciphertext);
@@ -35,7 +42,11 @@ fn assert_block_vector(params: &dyn KeyWithSBoxParams, plaintext: &str, cipherte
 
 /// Bouncy Castle publishes some vectors through CFB-8 rather than as raw
 /// blocks, so the mode is inlined here until a modes crate exists.
-fn cfb8_encrypt(params: &dyn KeyWithSBoxParams, iv: &[u8; BLOCK_BYTES], input: &[u8]) -> Vec<u8> {
+fn cfb8_encrypt<P: KeyParams + SBoxParams + ?Sized>(
+    params: &P,
+    iv: &[u8; BLOCK_BYTES],
+    input: &[u8],
+) -> Vec<u8> {
     let mut engine = Gost28147Engine::new();
     engine.init(CipherDirection::Encrypt, params).unwrap();
 

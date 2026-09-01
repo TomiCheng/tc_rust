@@ -4,7 +4,7 @@ use tc_chacha::{
 };
 use tc_cipher::{CipherDirection, InitError, StreamCipher, StreamCipherInit, StreamError};
 use tc_crypto::AlgorithmName;
-use tc_params::{KeyParams, KeyWithIvParams, KeyWithIvRef};
+use tc_params::{IvParams, KeyParams, KeyWithIvRef};
 
 #[test]
 fn writes_algorithm_names() {
@@ -95,7 +95,7 @@ fn accepts_custom_parameter_implementations() {
         }
     }
 
-    impl KeyWithIvParams for Custom<'_> {
+    impl IvParams for Custom<'_> {
         fn iv(&self) -> &[u8] {
             self.iv
         }

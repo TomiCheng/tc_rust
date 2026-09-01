@@ -7,10 +7,9 @@
 //! schedule, and only the order they are used in tells the two directions
 //! apart.
 //!
-//! Engines are initialised through
-//! [`KeyWithSBoxParams`](tc_params::KeyWithSBoxParams). [`KeyWithSBox`] is the
-//! ready-made implementation, defaulting to [`s_box::DEFAULT`] as Bouncy
-//! Castle does.
+//! Initialization parameters implement both [`KeyParams`](tc_params::KeyParams)
+//! and [`SBoxParams`](tc_params::SBoxParams). [`KeyWithSBox`] is the ready-made
+//! implementation, defaulting to [`s_box::DEFAULT`] as Bouncy Castle does.
 //!
 //! ```
 //! use tc_cipher::{BlockCipher, BlockCipherInit, CipherDirection};

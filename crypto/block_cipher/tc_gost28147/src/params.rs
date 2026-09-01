@@ -1,19 +1,19 @@
-//! A convenience [`KeyWithSBoxParams`] implementation.
+//! A convenience key-and-S-box parameter implementation.
 
-use tc_params::{KeyParams, KeyWithSBoxParams};
+use tc_params::{KeyParams, SBoxParams};
 
 use crate::s_box;
 
 /// A borrowed key paired with the S-box to run it under.
 ///
-/// [`KeyWithSBoxParams`] leaves the choice of table entirely to the caller, so
+/// [`SBoxParams`] leaves the choice of table entirely to the caller, so
 /// this type is where the Bouncy Castle convention lives: [`new`](Self::new)
 /// selects [`s_box::DEFAULT`]. Callers with their own parameter type can
 /// implement the trait directly instead.
 ///
 /// ```
 /// use tc_gost28147::{KeyWithSBox, s_box};
-/// use tc_params::{KeyParams, KeyWithSBoxParams};
+/// use tc_params::{KeyParams, SBoxParams};
 ///
 /// let key = [0u8; 32];
 /// assert_eq!(KeyWithSBox::new(&key).s_box(), s_box::DEFAULT);
@@ -46,7 +46,7 @@ impl KeyParams for KeyWithSBox<'_> {
     }
 }
 
-impl KeyWithSBoxParams for KeyWithSBox<'_> {
+impl SBoxParams for KeyWithSBox<'_> {
     fn s_box(&self) -> &[u8] {
         self.s_box
     }
@@ -55,8 +55,6 @@ impl KeyWithSBoxParams for KeyWithSBox<'_> {
 #[cfg(test)]
 mod tests {
     extern crate std;
-
-    use std::boxed::Box;
 
     use super::*;
 
@@ -84,12 +82,11 @@ mod tests {
     }
 
     #[test]
-    fn is_usable_through_a_trait_object() {
+    fn values_are_usable_through_the_individual_traits() {
         let key = [0x11_u8; 32];
-        let params: &dyn KeyWithSBoxParams = &KeyWithSBox::new(&key);
-        assert_eq!(params.s_box().len(), s_box::BYTES);
+        let params = KeyWithSBox::new(&key);
 
-        let boxed: Box<dyn KeyWithSBoxParams> = Box::new(KeyWithSBox::new(&key));
-        assert_eq!(boxed.key(), &key);
+        assert_eq!((&params as &dyn SBoxParams).s_box().len(), s_box::BYTES);
+        assert_eq!((&params as &dyn KeyParams).key(), &key);
     }
 }

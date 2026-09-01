@@ -1,14 +1,14 @@
-//! Convenience implementation of [`KeyWithTweakParams`].
+//! Convenience key-and-tweak parameter implementation.
 
 use core::fmt;
 
-use tc_params::{KeyParams, KeyWithTweakParams};
+use tc_params::{KeyParams, TweakParams};
 
 /// A borrowed key with an optional borrowed tweak.
 ///
 /// This type does not validate either value; the selected Threefish engine
 /// performs validation when it is initialized. Callers with their own parameter
-/// type can implement [`KeyWithTweakParams`] directly.
+/// type can implement [`KeyParams`] and [`TweakParams`] directly.
 #[derive(Clone, Copy)]
 pub struct Params<'a> {
     key: &'a [u8],
@@ -36,7 +36,7 @@ impl KeyParams for Params<'_> {
     }
 }
 
-impl KeyWithTweakParams for Params<'_> {
+impl TweakParams for Params<'_> {
     fn tweak(&self) -> Option<&[u8]> {
         self.tweak
     }

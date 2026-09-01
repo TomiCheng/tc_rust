@@ -4,7 +4,7 @@ use ::core::fmt;
 
 use tc_cipher::{CipherDirection, InitError, StreamCipher, StreamCipherInit, StreamError};
 use tc_crypto::AlgorithmName;
-use tc_params::KeyWithIvParams;
+use tc_params::{IvParams, KeyParams};
 
 /// HC-128 key length in bytes.
 pub const KEY_BYTES: usize = 16;
@@ -184,7 +184,7 @@ impl StreamCipher for Hc128Engine {
     }
 }
 
-impl<P: KeyWithIvParams + ?Sized> StreamCipherInit<P> for Hc128Engine {
+impl<P: KeyParams + IvParams + ?Sized> StreamCipherInit<P> for Hc128Engine {
     type Error = InitError;
 
     fn init(&mut self, _direction: CipherDirection, params: &P) -> Result<(), Self::Error> {

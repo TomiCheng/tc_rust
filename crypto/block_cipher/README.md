@@ -81,10 +81,10 @@ principal exceptions are:
   effective key size.
 - `Rc532Engine` and `Rc564Engine` accept `dyn Rc5Params`; `tc_rc5::Params`
   supplies the key and runtime round count.
-- `Gost28147Engine` accepts `dyn KeyWithSBoxParams`; `tc_gost28147::KeyWithSBox`
-  selects the default, named, or custom S-box.
-- `ThreefishEngine` accepts `dyn KeyWithTweakParams`; `tc_threefish::Params`
-  supplies the key and optional 16-byte tweak.
+- `Gost28147Engine` requires both `KeyParams` and `SBoxParams`;
+  `tc_gost28147::KeyWithSBox` selects the default, named, or custom S-box.
+- `ThreefishEngine` requires both `KeyParams` and `TweakParams`;
+  `tc_threefish::Params` supplies the key and optional 16-byte tweak.
 - DSTU 7624, Rijndael, and Threefish use engine types or const parameters to
   select the block size. Key size remains an initialization parameter wherever
   the algorithm permits more than one key size for that block.

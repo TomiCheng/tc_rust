@@ -4,7 +4,7 @@ use ::core::fmt;
 
 use tc_cipher::{CipherDirection, InitError, StreamCipher, StreamCipherInit, StreamError};
 use tc_crypto::AlgorithmName;
-use tc_params::KeyWithIvParams;
+use tc_params::{IvParams, KeyParams};
 
 use crate::salsa::State;
 use crate::{DEFAULT_ROUNDS, IV_BYTES, KEY_BYTES, MAX_ROUNDS};
@@ -69,7 +69,7 @@ impl StreamCipher for Salsa20Engine {
     }
 }
 
-impl<P: KeyWithIvParams + ?Sized> StreamCipherInit<P> for Salsa20Engine {
+impl<P: KeyParams + IvParams + ?Sized> StreamCipherInit<P> for Salsa20Engine {
     type Error = InitError;
 
     fn init(&mut self, _direction: CipherDirection, params: &P) -> Result<(), Self::Error> {

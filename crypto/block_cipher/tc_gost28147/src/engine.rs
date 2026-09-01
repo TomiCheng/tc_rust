@@ -2,7 +2,7 @@
 
 use tc_cipher::{BlockCipher, BlockCipherInit, BlockError, CipherDirection, InitError};
 use tc_crypto::AlgorithmName;
-use tc_params::KeyWithSBoxParams;
+use tc_params::{KeyParams, SBoxParams};
 
 use crate::cipher::{self, SUBKEYS};
 use crate::s_box::BYTES as S_BOX_BYTES;
@@ -68,7 +68,7 @@ impl BlockCipher for Gost28147Engine {
     }
 }
 
-impl<P: KeyWithSBoxParams + ?Sized> BlockCipherInit<P> for Gost28147Engine {
+impl<P: KeyParams + SBoxParams + ?Sized> BlockCipherInit<P> for Gost28147Engine {
     type Error = InitError;
 
     fn init(&mut self, direction: CipherDirection, params: &P) -> Result<(), InitError> {

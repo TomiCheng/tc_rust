@@ -4,7 +4,7 @@ use ::core::fmt;
 
 use tc_cipher::{CipherDirection, InitError, StreamCipher, StreamCipherInit, StreamError};
 use tc_crypto::AlgorithmName;
-use tc_params::KeyWithIvParams;
+use tc_params::{IvParams, KeyParams};
 
 use crate::{MAX_IV_BYTES, MAX_KEY_BYTES, MIN_IV_BYTES, MIN_KEY_BYTES};
 
@@ -126,7 +126,7 @@ fn ksa_round(state: &mut [u8; STATE_BYTES], s: &mut u8, input: &[u8]) {
     }
 }
 
-fn validate<P: KeyWithIvParams + ?Sized>(params: &P) -> Result<(&[u8], &[u8]), InitError> {
+fn validate<P: KeyParams + IvParams + ?Sized>(params: &P) -> Result<(&[u8], &[u8]), InitError> {
     let key = params.key();
     if !(MIN_KEY_BYTES..=MAX_KEY_BYTES).contains(&key.len()) {
         return Err(InitError::InvalidKeyLength(key.len()));
@@ -180,7 +180,7 @@ impl StreamCipher for VmpcEngine {
     }
 }
 
-impl<P: KeyWithIvParams + ?Sized> StreamCipherInit<P> for VmpcEngine {
+impl<P: KeyParams + IvParams + ?Sized> StreamCipherInit<P> for VmpcEngine {
     type Error = InitError;
 
     fn init(&mut self, _direction: CipherDirection, params: &P) -> Result<(), Self::Error> {
@@ -232,7 +232,7 @@ impl StreamCipher for VmpcKsa3Engine {
     }
 }
 
-impl<P: KeyWithIvParams + ?Sized> StreamCipherInit<P> for VmpcKsa3Engine {
+impl<P: KeyParams + IvParams + ?Sized> StreamCipherInit<P> for VmpcKsa3Engine {
     type Error = InitError;
 
     fn init(&mut self, _direction: CipherDirection, params: &P) -> Result<(), Self::Error> {

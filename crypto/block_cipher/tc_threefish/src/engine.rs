@@ -2,7 +2,7 @@
 
 use tc_cipher::{BlockCipher, BlockCipherInit, BlockError, CipherDirection, InitError};
 use tc_crypto::AlgorithmName;
-use tc_params::KeyWithTweakParams;
+use tc_params::{KeyParams, TweakParams};
 
 use crate::cipher::{self, C_240};
 use crate::{TWEAK_BYTES, valid_word_count};
@@ -112,7 +112,7 @@ impl<const WORDS: usize> BlockCipher for ThreefishEngine<WORDS> {
     }
 }
 
-impl<P: KeyWithTweakParams + ?Sized, const WORDS: usize> BlockCipherInit<P>
+impl<P: KeyParams + TweakParams + ?Sized, const WORDS: usize> BlockCipherInit<P>
     for ThreefishEngine<WORDS>
 {
     type Error = InitError;

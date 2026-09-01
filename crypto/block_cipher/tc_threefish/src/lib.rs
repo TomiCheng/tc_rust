@@ -35,7 +35,7 @@ mod params;
 
 pub use engine::ThreefishEngine;
 pub use params::Params;
-pub use tc_params::KeyWithTweakParams;
+pub use tc_params::TweakParams;
 
 /// Threefish-256 engine with a 32-byte block and key.
 pub type Threefish256Engine = ThreefishEngine<4>;

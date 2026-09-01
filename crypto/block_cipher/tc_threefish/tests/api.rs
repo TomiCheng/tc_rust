@@ -1,6 +1,6 @@
 use tc_cipher::{BlockCipher, BlockCipherInit, BlockError, CipherDirection, InitError};
 use tc_crypto::AlgorithmName;
-use tc_params::{KeyParams, KeyWithTweakParams};
+use tc_params::{KeyParams, TweakParams};
 use tc_threefish::{
     Params, TWEAK_BYTES, Threefish256Engine, Threefish512Engine, Threefish1024Engine,
 };
@@ -76,7 +76,7 @@ impl KeyParams for ThirdPartyParams<'_> {
     }
 }
 
-impl KeyWithTweakParams for ThirdPartyParams<'_> {
+impl TweakParams for ThirdPartyParams<'_> {
     fn tweak(&self) -> Option<&[u8]> {
         self.tweak
     }

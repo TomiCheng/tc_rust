@@ -52,7 +52,7 @@ Initialization parameters are shared through object-safe traits from
 `tc_params`:
 
 - Algorithms that need only a key accept `dyn KeyParams`.
-- Algorithms that need a key and IV accept `dyn KeyWithIvParams`.
+- Algorithms that need a key and IV require both `KeyParams` and `IvParams`.
 - `KeyRef` and `KeyWithIvRef` borrow caller-owned bytes without allocation.
 - `KeyOwned<N>` and `KeyWithIvOwned<K, I>` own fixed-size arrays.
 - Applications may implement either parameter trait on their own types.

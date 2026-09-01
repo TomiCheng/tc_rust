@@ -4,7 +4,7 @@ use ::core::fmt;
 
 use tc_cipher::{CipherDirection, InitError, StreamCipher, StreamCipherInit, StreamError};
 use tc_crypto::AlgorithmName;
-use tc_params::KeyWithIvParams;
+use tc_params::{IvParams, KeyParams};
 
 use crate::chacha::{Counter, State};
 use crate::{DEFAULT_ROUNDS, IV_BYTES, KEY_BYTES, MAX_ROUNDS};
@@ -65,7 +65,7 @@ impl StreamCipher for ChaChaEngine {
     }
 }
 
-impl<P: KeyWithIvParams + ?Sized> StreamCipherInit<P> for ChaChaEngine {
+impl<P: KeyParams + IvParams + ?Sized> StreamCipherInit<P> for ChaChaEngine {
     type Error = InitError;
 
     fn init(&mut self, _direction: CipherDirection, params: &P) -> Result<(), Self::Error> {

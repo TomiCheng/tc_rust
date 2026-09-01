@@ -4,7 +4,7 @@ use ::core::fmt;
 
 use tc_cipher::{CipherDirection, InitError, StreamCipher, StreamCipherInit, StreamError};
 use tc_crypto::AlgorithmName;
-use tc_params::KeyWithIvParams;
+use tc_params::{IvParams, KeyParams};
 
 /// Canonical HC-256 key length in bytes.
 pub const KEY_BYTES: usize = 32;
@@ -168,7 +168,7 @@ impl StreamCipher for Hc256Engine {
     }
 }
 
-impl<P: KeyWithIvParams + ?Sized> StreamCipherInit<P> for Hc256Engine {
+impl<P: KeyParams + IvParams + ?Sized> StreamCipherInit<P> for Hc256Engine {
     type Error = InitError;
 
     fn init(&mut self, _direction: CipherDirection, params: &P) -> Result<(), Self::Error> {
