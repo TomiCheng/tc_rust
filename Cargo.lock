@@ -569,6 +569,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_cbc"
+version = "0.1.0"
+dependencies = [
+ "tc_aes",
+ "tc_cipher",
+ "tc_crypto",
+ "tc_des",
+ "tc_params",
+]
+
+[[package]]
 name = "tc_chacha"
 version = "0.1.0"
 dependencies = [

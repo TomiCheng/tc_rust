@@ -28,7 +28,7 @@ pub trait BlockCipher {
 /// implementations can still be used through `dyn BlockCipher<Error = E>`.
 pub trait BlockCipherInit: BlockCipher {
     /// The parameter type accepted by [`init`](BlockCipherInit::init).
-    type Params<'a>: ?Sized;
+    type Params<'a>: ?Sized + 'a;
     /// The failure type returned by initialization.
     type Error: core::error::Error;
 

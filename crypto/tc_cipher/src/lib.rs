@@ -6,6 +6,8 @@
 mod block_cipher;
 mod block_cipher_mode;
 mod block_error;
+mod block_mode_error;
+mod block_mode_init_error;
 mod cipher_direction;
 mod init_error;
 mod stream_cipher;
@@ -14,6 +16,8 @@ mod stream_error;
 pub use block_cipher::{BlockCipher, BlockCipherInit};
 pub use block_cipher_mode::BlockCipherMode;
 pub use block_error::BlockError;
+pub use block_mode_error::BlockModeError;
+pub use block_mode_init_error::BlockModeInitError;
 pub use cipher_direction::CipherDirection;
 pub use init_error::InitError;
 pub use stream_cipher::{StreamCipher, StreamCipherInit};
