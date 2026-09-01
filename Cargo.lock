@@ -680,6 +680,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_rc6"
+version = "0.1.0"
+dependencies = [
+ "tc_cipher",
+ "tc_crypto",
+ "tc_params",
+]
+
+[[package]]
 name = "tc_seed"
 version = "0.1.0"
 dependencies = [
