@@ -1,35 +1,17 @@
-//! CBC initialization parameters.
+//! CBC initialization parameter contract.
 
-/// Borrowed parameters for CBC initialization.
+use tc_cipher::BlockCipherInit;
+use tc_params::IvParams;
+
+/// Parameters accepted by CBC over the underlying block cipher `C`.
 ///
-/// `P` is the parameter type accepted by the underlying block cipher. Omitting
-/// the IV selects an all-zero IV, matching Bouncy Castle's CBC behavior.
-pub struct Params<'a, P: ?Sized> {
-    cipher: &'a P,
-    iv: Option<&'a [u8]>,
-}
-
-impl<'a, P: ?Sized> Params<'a, P> {
-    /// Borrows the underlying cipher parameters and selects an all-zero IV.
-    pub const fn new(cipher: &'a P) -> Self {
-        Self { cipher, iv: None }
-    }
-
-    /// Borrows the underlying cipher parameters and IV.
-    pub const fn with_iv(cipher: &'a P, iv: &'a [u8]) -> Self {
-        Self {
-            cipher,
-            iv: Some(iv),
-        }
-    }
-
-    /// Returns the underlying cipher parameters.
-    pub const fn cipher(&self) -> &P {
-        self.cipher
-    }
-
-    /// Returns the IV, or `None` when an all-zero IV was requested.
-    pub const fn iv(&self) -> Option<&[u8]> {
-        self.iv
-    }
+/// Callers can implement this trait on their own parameter type. CBC consumes
+/// the [`IvParams`] portion and forwards [`cipher_params`](Self::cipher_params)
+/// to the underlying cipher.
+pub trait CbcParams<C>: IvParams
+where
+    C: BlockCipherInit,
+{
+    /// Returns the parameters accepted by the underlying block cipher.
+    fn cipher_params(&self) -> &C::Params<'_>;
 }

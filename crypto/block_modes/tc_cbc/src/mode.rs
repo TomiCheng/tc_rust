@@ -9,7 +9,7 @@ use tc_cipher::{
 };
 use tc_crypto::AlgorithmName;
 
-use crate::Params;
+use crate::CbcParams;
 
 /// Cipher Block Chaining mode over the block cipher `C`.
 pub struct CbcBlockCipher<C> {
@@ -96,9 +96,9 @@ where
 
 impl<C> BlockCipherInit for CbcBlockCipher<C>
 where
-    C: BlockCipherInit,
+    C: BlockCipherInit + 'static,
 {
-    type Params<'a> = Params<'a, C::Params<'a>>;
+    type Params<'a> = dyn CbcParams<C> + 'a;
     type Error = BlockModeInitError<<C as BlockCipherInit>::Error>;
 
     fn init(
@@ -107,16 +107,14 @@ where
         params: &Self::Params<'_>,
     ) -> Result<(), <Self as BlockCipherInit>::Error> {
         let block_size = self.cipher.block_size();
-        match params.iv() {
-            Some(iv) if iv.len() != block_size => {
-                return Err(BlockModeInitError::InvalidIvLength(iv.len()));
-            }
-            Some(iv) => self.iv.copy_from_slice(iv),
-            None => self.iv.fill(0),
+        let iv = params.iv();
+        if iv.len() != block_size {
+            return Err(BlockModeInitError::InvalidIvLength(iv.len()));
         }
+        self.iv.copy_from_slice(iv);
 
         self.cipher
-            .init(direction, params.cipher())
+            .init(direction, params.cipher_params())
             .map_err(BlockModeInitError::Cipher)?;
         self.direction = Some(direction);
         self.reset();

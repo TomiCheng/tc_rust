@@ -1,15 +1,14 @@
 mod common;
 
 use tc_aes::{AesEngine, BLOCK_BYTES};
-use tc_cbc::{FixedCbcBlockCipher, Params};
+use tc_cbc::FixedCbcBlockCipher;
 use tc_cipher::{
     BlockCipher, BlockCipherInit, BlockCipherMode, BlockError, BlockModeError, BlockModeInitError,
     CipherDirection, InitError,
 };
 use tc_crypto::AlgorithmName;
-use tc_params::{KeyParams, KeyRef};
 
-use common::unhex;
+use common::{KeyIv, unhex};
 
 const KEY: &str = "2b7e151628aed2a6abf7158809cf4f3c";
 const IV: &str = "000102030405060708090a0b0c0d0e0f";
@@ -29,8 +28,7 @@ const CIPHERTEXT: &str = concat!(
 fn aes_cbc(direction: CipherDirection, input: &[u8]) -> Vec<u8> {
     let key = unhex(KEY);
     let iv = unhex(IV);
-    let key_params = KeyRef::new(&key);
-    let params = Params::<dyn KeyParams>::with_iv(&key_params, &iv);
+    let params = KeyIv { key: &key, iv: &iv };
     let mut mode = FixedCbcBlockCipher::<AesEngine, BLOCK_BYTES>::new(AesEngine::new());
     mode.init(direction, &params).unwrap();
 
@@ -56,8 +54,8 @@ fn matches_nist_sp800_38a_aes128_vectors() {
 #[test]
 fn rejects_a_mismatched_compile_time_block_size() {
     let key = unhex(KEY);
-    let key_params = KeyRef::new(&key);
-    let params = Params::<dyn KeyParams>::new(&key_params);
+    let iv = [0; 8];
+    let params = KeyIv { key: &key, iv: &iv };
     let mut mode = FixedCbcBlockCipher::<AesEngine, 8>::new(AesEngine::new());
 
     assert_eq!(

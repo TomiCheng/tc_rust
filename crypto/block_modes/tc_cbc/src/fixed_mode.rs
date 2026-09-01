@@ -6,7 +6,7 @@ use tc_cipher::{
 };
 use tc_crypto::AlgorithmName;
 
-use crate::Params;
+use crate::CbcParams;
 
 /// Allocation-free Cipher Block Chaining mode with an `N`-byte block.
 ///
@@ -86,8 +86,8 @@ impl<C: BlockCipher, const N: usize> BlockCipher for FixedCbcBlockCipher<C, N> {
     }
 }
 
-impl<C: BlockCipherInit, const N: usize> BlockCipherInit for FixedCbcBlockCipher<C, N> {
-    type Params<'a> = Params<'a, C::Params<'a>>;
+impl<C: BlockCipherInit + 'static, const N: usize> BlockCipherInit for FixedCbcBlockCipher<C, N> {
+    type Params<'a> = dyn CbcParams<C> + 'a;
     type Error = BlockModeInitError<<C as BlockCipherInit>::Error>;
 
     fn init(
@@ -103,16 +103,14 @@ impl<C: BlockCipherInit, const N: usize> BlockCipherInit for FixedCbcBlockCipher
             });
         }
 
-        match params.iv() {
-            Some(iv) if iv.len() != N => {
-                return Err(BlockModeInitError::InvalidIvLength(iv.len()));
-            }
-            Some(iv) => self.iv.copy_from_slice(iv),
-            None => self.iv.fill(0),
+        let iv = params.iv();
+        if iv.len() != N {
+            return Err(BlockModeInitError::InvalidIvLength(iv.len()));
         }
+        self.iv.copy_from_slice(iv);
 
         self.cipher
-            .init(direction, params.cipher())
+            .init(direction, params.cipher_params())
             .map_err(BlockModeInitError::Cipher)?;
         self.direction = Some(direction);
         self.reset();

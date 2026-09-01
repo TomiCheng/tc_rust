@@ -10,14 +10,36 @@
 //!
 //! ```
 //! use tc_aes::{AesEngine, BLOCK_BYTES};
-//! use tc_cbc::{CbcBlockCipher, Params};
+//! use tc_cbc::{CbcBlockCipher, CbcParams};
 //! use tc_cipher::{BlockCipher, BlockCipherInit, CipherDirection};
-//! use tc_params::{KeyParams, KeyRef};
+//! use tc_params::{IvParams, KeyParams};
+//!
+//! struct AesCbcParams<'a> {
+//!     key: &'a [u8],
+//!     iv: &'a [u8],
+//! }
+//!
+//! impl KeyParams for AesCbcParams<'_> {
+//!     fn key(&self) -> &[u8] {
+//!         self.key
+//!     }
+//! }
+//!
+//! impl IvParams for AesCbcParams<'_> {
+//!     fn iv(&self) -> &[u8] {
+//!         self.iv
+//!     }
+//! }
+//!
+//! impl CbcParams<AesEngine> for AesCbcParams<'_> {
+//!     fn cipher_params(&self) -> &(dyn KeyParams + '_) {
+//!         self
+//!     }
+//! }
 //!
 //! let key = [0u8; 16];
 //! let iv = [0u8; BLOCK_BYTES];
-//! let key_params = KeyRef::new(&key);
-//! let params = Params::<dyn KeyParams>::with_iv(&key_params, &iv);
+//! let params = AesCbcParams { key: &key, iv: &iv };
 //! let mut mode = CbcBlockCipher::new(AesEngine::new());
 //! mode.init(CipherDirection::Encrypt, &params)?;
 //!
@@ -39,4 +61,4 @@ mod params;
 pub use fixed_mode::FixedCbcBlockCipher;
 #[cfg(feature = "alloc")]
 pub use mode::CbcBlockCipher;
-pub use params::Params;
+pub use params::CbcParams;
