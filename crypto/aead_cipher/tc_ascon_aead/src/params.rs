@@ -1,14 +1,14 @@
-//! Convenience Ascon-AEAD128 parameters.
+//! Convenience Ascon AEAD parameters.
 
 use core::fmt;
 
 use tc_params::{InitialAadParams, IvParams, KeyParams};
 
-/// Borrowed Ascon-AEAD128 initialization parameters.
+/// Borrowed Ascon initialization parameters.
 ///
-/// This type does not copy or validate its inputs. [`Engine`](super::Engine)
-/// validates the key and nonce lengths during initialization. Callers may
-/// instead implement the parameter traits directly on their own types.
+/// This type does not copy or validate its inputs. The selected finalized or
+/// legacy engine validates key and nonce lengths during initialization.
+/// Callers may instead implement the parameter traits on their own types.
 #[derive(Clone, Copy)]
 pub struct Params<'a> {
     key: &'a [u8],

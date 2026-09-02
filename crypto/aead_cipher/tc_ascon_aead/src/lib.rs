@@ -1,8 +1,8 @@
 //! Ascon authenticated-encryption algorithms.
 //!
 //! [`aead128`] implements the finalized NIST SP 800-232 Ascon-AEAD128
-//! algorithm. Legacy Ascon v1.2 variants will be exposed separately so they
-//! cannot be confused with the finalized construction.
+//! algorithm. [`legacy`] separately exposes the incompatible Ascon v1.2
+//! Ascon-128, Ascon-128a, and Ascon-80pq algorithms.
 //!
 //! # Example
 //!
@@ -47,3 +47,8 @@
 #![no_std]
 
 pub mod aead128;
+pub mod legacy;
+
+mod params;
+
+pub use params::Params;

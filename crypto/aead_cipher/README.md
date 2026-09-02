@@ -21,6 +21,7 @@ or implement the required traits on their own parameter type.
 | ✅ Done | SCHWAEMM256-128 | `tc_sparkle_aead::Engine` with `Variant::Schwaemm256_128` | Official SCHWAEMM vectors |
 | ✅ Done | SCHWAEMM192-192 | `tc_sparkle_aead::Engine` with `Variant::Schwaemm192_192` | Official SCHWAEMM vectors |
 | ✅ Done | SCHWAEMM256-256 | `tc_sparkle_aead::Engine` with `Variant::Schwaemm256_256` | Official SCHWAEMM vectors |
+| ✅ Compatibility | Legacy Ascon v1.2: Ascon-128, Ascon-128a, Ascon-80pq | `tc_ascon_aead::legacy::{Engine, Variant}` | Legacy Ascon v1.2 vectors |
 
 SCHWAEMM256-256 uses an SSE2 `SparkleOpt16` backend on supported x86 and
 x86_64 processors, with runtime detection through `tc_runtime`. All other
@@ -39,7 +40,6 @@ when SSE2 is unavailable or disabled.
 | ⬜ TODO | GCM-SIV | `GcmSivBlockCipher` | Add POLYVAL and the misuse-resistant AEAD construction |
 | ⬜ TODO | OCB | `OcbBlockCipher` | Add the generic OCB block-cipher construction |
 | ⬜ TODO | KCCM | `KCcmBlockCipher` | Add the DSTU 7624-oriented CCM construction |
-| ⬜ Deferred | Legacy Ascon v1.2: Ascon-128, Ascon-128a, Ascon-80pq | Deprecated `AsconEngine` | Keep separate from finalized Ascon-AEAD128 to prevent accidental interchange |
 
 The list intentionally excludes ordinary confidentiality-only block modes and
 interfaces such as `IAeadCipher` itself.
@@ -48,7 +48,7 @@ interfaces such as `IAeadCipher` itself.
 
 | Crate | Contents |
 |-------|----------|
-| `tc_ascon_aead` | Finalized Ascon-AEAD128 |
+| `tc_ascon_aead` | Finalized Ascon-AEAD128 and separately named legacy Ascon v1.2 variants |
 | `tc_grain128_aead` | Growable and allocation-free fixed-capacity Grain-128AEAD engines |
 | `tc_sparkle_aead` | All four SCHWAEMM parameter sets |
 
