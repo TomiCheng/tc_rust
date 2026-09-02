@@ -35,7 +35,7 @@ Sparkle digest support still requires a shared Sparkle permutation/engine.
 | [`tc_cipher_core`](crates/tc_cipher_core) | Shared block-cipher, stream-cipher, and key-wrapping operation/initialization traits | Core-only `no_std` |
 | [`tc_crypto_core`](crates/tc_crypto_core) | Shared `TryDigest` / `Digest`, `TryXof` / `Xof`, and key-wrapper traits | Core-only `no_std`; `alloc` is optional for `Wrapper` |
 | [`tc_block_cipher`](crates/tc_block_cipher) | Block cipher engines and their validated parameter types | Core-only subset, full `no_std + alloc`, or `std` with AES-NI detection |
-| [`tc_stream_cipher`](crates/tc_stream_cipher) | Stream cipher engines and shared error handling | Core-only `no_std` |
+| [`tc_chacha`](crypto/stream_cipher/tc_chacha), [`tc_hc`](crypto/stream_cipher/tc_hc), [`tc_isaac`](crypto/stream_cipher/tc_isaac), [`tc_rc4`](crypto/stream_cipher/tc_rc4), [`tc_salsa20`](crypto/stream_cipher/tc_salsa20), [`tc_vmpc`](crypto/stream_cipher/tc_vmpc) | Independent stream-cipher implementation crates built on `tc_cipher` | Core-only `no_std` |
 | [`tc_ecb`](crypto/block_modes/tc_ecb), [`tc_cbc`](crypto/block_modes/tc_cbc), [`tc_cfb`](crypto/block_modes/tc_cfb), [`tc_ofb`](crypto/block_modes/tc_ofb), [`tc_ctr`](crypto/block_modes/tc_ctr) | Independent ECB, CBC, CFB/OpenPGP CFB, OFB/GCTR, and CTR/KCTR crates built on `tc_cipher` | Core-only `no_std`; `alloc` enables runtime-sized variants where needed |
 | [`tc_digest`](crates/tc_digest) | Message digests, XOFs, and digest wrappers | `no_std + alloc`; `std` enables runtime CPU-feature detection |
 | [`tc_math`](math/tc_math) | Arbitrary-precision integers, finite-field arithmetic, and elliptic-curve foundations | `no_std + alloc`; `std` adds lazy caching |
@@ -143,7 +143,7 @@ Representative `no_std` builds:
 # Core-only crates
 cargo build -p tc_cipher_core --locked
 cargo build -p tc_crypto_core --no-default-features --locked
-cargo build -p tc_stream_cipher --locked
+cargo build -p tc_chacha -p tc_hc -p tc_isaac -p tc_rc4 -p tc_salsa20 -p tc_vmpc --locked
 
 # Core-only block-cipher subset
 cargo build -p tc_block_cipher --no-default-features --locked

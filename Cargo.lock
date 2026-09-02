@@ -1028,13 +1028,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tc_stream_cipher"
-version = "0.1.0"
-dependencies = [
- "tc_cipher_core",
-]
-
-[[package]]
 name = "tc_tea"
 version = "0.1.0"
 dependencies = [
