@@ -1,0 +1,9 @@
+[package]
+name = "tc_pad"
+description = "Shared block-cipher padding contracts for the tc_rust workspace."
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
