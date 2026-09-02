@@ -550,14 +550,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tc_block_cipher"
-version = "0.1.0"
-dependencies = [
- "criterion",
- "tc_cipher_core",
-]
-
-[[package]]
 name = "tc_blowfish"
 version = "0.1.0"
 dependencies = [

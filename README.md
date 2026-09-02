@@ -34,7 +34,7 @@ their dedicated digest implementations remain deferred.
 | --- | --- | --- |
 | [`tc_cipher_core`](crates/tc_cipher_core) | Shared block-cipher, stream-cipher, and key-wrapping operation/initialization traits | Core-only `no_std` |
 | [`tc_crypto_core`](crates/tc_crypto_core) | Shared `TryDigest` / `Digest`, `TryXof` / `Xof`, and key-wrapper traits | Core-only `no_std`; `alloc` is optional for `Wrapper` |
-| [`tc_block_cipher`](crates/tc_block_cipher) | Block cipher engines and their validated parameter types | Core-only subset, full `no_std + alloc`, or `std` with AES-NI detection |
+| [Block-cipher family crates](crypto/block_cipher) | Independent block-cipher implementations built on `tc_cipher` and `tc_params` | Core-only `no_std`; AES can select AES-NI at runtime |
 | [`tc_chacha`](crypto/stream_cipher/tc_chacha), [`tc_hc`](crypto/stream_cipher/tc_hc), [`tc_isaac`](crypto/stream_cipher/tc_isaac), [`tc_rc4`](crypto/stream_cipher/tc_rc4), [`tc_salsa20`](crypto/stream_cipher/tc_salsa20), [`tc_vmpc`](crypto/stream_cipher/tc_vmpc) | Independent stream-cipher implementation crates built on `tc_cipher` | Core-only `no_std` |
 | [`tc_ecb`](crypto/block_modes/tc_ecb), [`tc_cbc`](crypto/block_modes/tc_cbc), [`tc_cfb`](crypto/block_modes/tc_cfb), [`tc_ofb`](crypto/block_modes/tc_ofb), [`tc_ctr`](crypto/block_modes/tc_ctr) | Independent ECB, CBC, CFB/OpenPGP CFB, OFB/GCTR, and CTR/KCTR crates built on `tc_cipher` | Core-only `no_std`; `alloc` enables runtime-sized variants where needed |
 | [`tc_digest`](crypto/tc_digest) | Shared message-digest and XOF traits | Core-only `no_std` |
@@ -147,11 +147,8 @@ cargo build -p tc_crypto_core --no-default-features --locked
 cargo build -p tc_digest --locked
 cargo build -p tc_chacha -p tc_hc -p tc_isaac -p tc_rc4 -p tc_salsa20 -p tc_vmpc --locked
 
-# Core-only block-cipher subset
-cargo build -p tc_block_cipher --no-default-features --locked
-
-# Full block-cipher inventory without std
-cargo build -p tc_block_cipher --no-default-features --features alloc --locked
+# Representative block-cipher crate (all family crates are no_std)
+cargo build -p tc_aes --locked
 
 # Block modes without alloc (fixed-size variants)
 cargo build -p tc_ecb --locked
@@ -174,7 +171,7 @@ configuration.
 Benchmarks are available in the algorithm crates:
 
 ```bash
-cargo bench -p tc_block_cipher
+cargo bench -p tc_aes --bench aes
 cargo bench -p tc_blake2
 cargo bench -p tc_math
 ```
