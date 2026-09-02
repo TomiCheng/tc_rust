@@ -10,6 +10,8 @@ pub enum AeadError {
     NotInitialised,
     /// Associated data was supplied after message processing started.
     AadAfterData,
+    /// The supplied associated data does not match its declared total length.
+    AadLengthMismatch { expected: usize, actual: usize },
     /// The current operation has already been finalized.
     AlreadyFinalised,
     /// The output buffer is shorter than required.
@@ -27,6 +29,10 @@ impl fmt::Display for AeadError {
             Self::AadAfterData => {
                 f.write_str("associated data cannot be added after message processing starts")
             }
+            Self::AadLengthMismatch { expected, actual } => write!(
+                f,
+                "associated data length mismatch: expected {expected} bytes, got {actual}"
+            ),
             Self::AlreadyFinalised => f.write_str("AEAD operation already finalised"),
             Self::OutputTooShort {
                 required,
@@ -45,3 +51,26 @@ impl fmt::Display for AeadError {
 }
 
 impl core::error::Error for AeadError {}
+
+#[cfg(test)]
+mod tests {
+    extern crate std;
+
+    use std::format;
+
+    use super::AeadError;
+
+    #[test]
+    fn aad_length_mismatch_reports_both_lengths() {
+        assert_eq!(
+            format!(
+                "{}",
+                AeadError::AadLengthMismatch {
+                    expected: 5,
+                    actual: 3,
+                }
+            ),
+            "associated data length mismatch: expected 5 bytes, got 3"
+        );
+    }
+}

@@ -741,6 +741,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_grain128_aead"
+version = "0.1.0"
+dependencies = [
+ "tc_cipher",
+ "tc_crypto",
+ "tc_params",
+]
+
+[[package]]
 name = "tc_haraka"
 version = "0.1.0"
 dependencies = [
@@ -1000,6 +1009,15 @@ name = "tc_sparkle"
 version = "0.1.0"
 dependencies = [
  "tc_digest",
+]
+
+[[package]]
+name = "tc_sparkle_aead"
+version = "0.1.0"
+dependencies = [
+ "tc_cipher",
+ "tc_crypto",
+ "tc_params",
 ]
 
 [[package]]

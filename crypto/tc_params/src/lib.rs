@@ -3,6 +3,7 @@
 
 #![no_std]
 
+mod aad_length;
 mod initial_aad;
 mod iv;
 mod key;
@@ -12,6 +13,7 @@ mod rc5;
 mod s_box;
 mod tweak;
 
+pub use aad_length::AadLengthParams;
 pub use initial_aad::InitialAadParams;
 pub use iv::{IvParams, OptionalIvParams};
 pub use key::{KeyOwned, KeyParams, KeyRef};

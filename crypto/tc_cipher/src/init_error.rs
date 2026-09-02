@@ -18,6 +18,8 @@ pub enum InitError {
     InvalidIvLength(usize),
     /// The supplied round count was invalid.
     InvalidRounds(usize),
+    /// Initial associated data exceeds its declared total length.
+    InvalidAadLength { expected: usize, actual: usize },
 }
 
 impl fmt::Display for InitError {
@@ -41,6 +43,10 @@ impl fmt::Display for InitError {
             Self::InvalidRounds(rounds) => {
                 write!(f, "invalid cipher round count: {rounds}")
             }
+            Self::InvalidAadLength { expected, actual } => write!(
+                f,
+                "invalid initial AAD length: declared {expected} bytes, got {actual}"
+            ),
         }
     }
 }
@@ -80,6 +86,16 @@ mod tests {
         assert_eq!(
             format!("{}", InitError::InvalidRounds(256)),
             "invalid cipher round count: 256"
+        );
+        assert_eq!(
+            format!(
+                "{}",
+                InitError::InvalidAadLength {
+                    expected: 3,
+                    actual: 4
+                }
+            ),
+            "invalid initial AAD length: declared 3 bytes, got 4"
         );
     }
 }
