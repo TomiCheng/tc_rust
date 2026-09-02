@@ -500,13 +500,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tc_aead_cipher"
-version = "0.1.0"
-dependencies = [
- "tc_cipher_core",
-]
-
-[[package]]
 name = "tc_aes"
 version = "0.1.0"
 dependencies = [
