@@ -34,7 +34,7 @@ when SSE2 is unavailable or disabled.
 |--------|---------------------|-----------------------|----------------------------------|
 | ✅ Done | ChaCha20-Poly1305 | `tc_chacha_aead::ChaCha20Poly1305` | RFC 8439 vectors |
 | ✅ Done | XChaCha20-Poly1305 | `tc_chacha_aead::XChaCha20Poly1305` | XChaCha draft and BC vectors |
-| ⬜ TODO | CCM | `CcmBlockCipher` | Add a generic AEAD block-cipher composition |
+| ✅ Done | CCM | `tc_ccm::CcmBlockCipher<C>` | Allocation-backed packet mode over a 16-byte block cipher |
 | ⬜ TODO | EAX | `EaxBlockCipher` | Add CMAC/CTR composition over `BlockCipher` traits |
 | ⬜ TODO | GCM | `GcmBlockCipher` | Add GHASH and a generic block-cipher composition |
 | ⬜ TODO | GCM-SIV | `GcmSivBlockCipher` | Add POLYVAL and the misuse-resistant AEAD construction |
@@ -50,6 +50,7 @@ interfaces such as `IAeadCipher` itself.
 |-------|----------|
 | `tc_ascon_aead` | Finalized Ascon-AEAD128 and separately named legacy Ascon v1.2 variants |
 | `tc_chacha_aead` | ChaCha20-Poly1305 and XChaCha20-Poly1305 |
+| `tc_ccm` | Generic allocation-backed CCM packet mode |
 | `tc_grain128_aead` | Growable and allocation-free fixed-capacity Grain-128AEAD engines |
 | `tc_sparkle_aead` | All four SCHWAEMM parameter sets |
 
