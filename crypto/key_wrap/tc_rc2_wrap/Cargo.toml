@@ -1,0 +1,16 @@
+[package]
+name = "tc_rc2_wrap"
+description = "CMS RC2 key wrapping from RFC 3217 for the tc_rust workspace."
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+rand_core = { workspace = true }
+tc_cipher = { version = "0.1", path = "../../tc_cipher" }
+tc_crypto = { version = "0.1", path = "../../tc_crypto" }
+tc_digest = { version = "0.1", path = "../../tc_digest" }
+tc_params = { version = "0.1", path = "../../tc_params" }
+tc_rc2 = { version = "0.1", path = "../../block_cipher/tc_rc2" }
+tc_sha = { version = "0.1", path = "../../digest/tc_sha" }

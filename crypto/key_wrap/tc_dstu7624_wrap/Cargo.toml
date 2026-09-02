@@ -1,0 +1,13 @@
+[package]
+name = "tc_dstu7624_wrap"
+description = "DSTU 7624 (Kalyna) key wrapping for the tc_rust workspace."
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+tc_cipher = { version = "0.1", path = "../../tc_cipher" }
+tc_crypto = { version = "0.1", path = "../../tc_crypto" }
+tc_dstu7624 = { version = "0.1", path = "../../block_cipher/tc_dstu7624" }
+tc_params = { version = "0.1", path = "../../tc_params" }

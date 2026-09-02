@@ -1,0 +1,39 @@
+name: Develop PR CI
+
+on:
+  pull_request:
+    branches:
+      - develop
+
+permissions:
+  contents: read
+
+concurrency:
+  group: develop-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  rust:
+    name: Rust workspace
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Install stable Rust
+        run: rustup toolchain install stable --profile minimal --component clippy
+
+      - name: Check workspace
+        run: cargo +stable check --workspace --all-targets --all-features --locked
+
+      - name: Run Clippy
+        run: cargo +stable clippy --workspace --all-targets --all-features --locked
+
+      - name: Run tests
+        run: cargo +stable test --workspace --all-features --locked
+
+      - name: Build without default features
+        run: cargo +stable build --workspace --no-default-features --locked
