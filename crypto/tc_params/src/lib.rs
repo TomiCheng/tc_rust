@@ -1,5 +1,5 @@
-//! Shared object-safe cryptographic parameter traits, including
-//! algorithm-specific initialization parameters and convenience types.
+//! Shared object-safe cryptographic parameter traits, including reusable AEAD
+//! parameters, algorithm-specific initialization values, and convenience types.
 
 #![no_std]
 

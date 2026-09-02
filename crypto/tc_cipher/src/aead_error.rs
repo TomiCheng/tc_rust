@@ -22,6 +22,8 @@ pub enum AeadError {
     AuthenticationFailed,
     /// The algorithm's input-length limit would be exceeded.
     InputTooLong,
+    /// The complete packet length is not a multiple of the required block size.
+    InputNotBlockAligned { block_size: usize, actual: usize },
     /// A composed primitive failed despite validated internal invariants.
     InternalFailure,
 }
@@ -51,6 +53,10 @@ impl fmt::Display for AeadError {
             ),
             Self::AuthenticationFailed => f.write_str("authentication tag verification failed"),
             Self::InputTooLong => f.write_str("AEAD input length limit exceeded"),
+            Self::InputNotBlockAligned { block_size, actual } => write!(
+                f,
+                "AEAD input length must be a multiple of {block_size} bytes, got {actual}"
+            ),
             Self::InternalFailure => f.write_str("internal AEAD primitive failure"),
         }
     }
@@ -81,6 +87,16 @@ mod tests {
         assert_eq!(
             format!("{}", AeadError::InputTooLong),
             "AEAD input length limit exceeded"
+        );
+        assert_eq!(
+            format!(
+                "{}",
+                AeadError::InputNotBlockAligned {
+                    block_size: 16,
+                    actual: 17,
+                }
+            ),
+            "AEAD input length must be a multiple of 16 bytes, got 17"
         );
         assert_eq!(
             format!("{}", AeadError::InternalFailure),

@@ -28,18 +28,18 @@ x86_64 processors, with runtime detection through `tc_runtime`. All other
 variants use the portable permutation, and SCHWAEMM256-256 falls back to it
 when SSE2 is unavailable or disabled.
 
-## Not yet implemented
+## Block-cipher AEAD status
 
 | Status | Algorithm or family | Bouncy Castle C# type | Current prerequisite or decision |
 |--------|---------------------|-----------------------|----------------------------------|
 | ✅ Done | ChaCha20-Poly1305 | `tc_chacha_aead::ChaCha20Poly1305` | RFC 8439 vectors |
 | ✅ Done | XChaCha20-Poly1305 | `tc_chacha_aead::XChaCha20Poly1305` | XChaCha draft and BC vectors |
 | ✅ Done | CCM | `tc_ccm::CcmBlockCipher<C>` | Allocation-backed packet mode over a 16-byte block cipher |
-| ⬜ TODO | EAX | `EaxBlockCipher` | Add CMAC/CTR composition over `BlockCipher` traits |
-| ⬜ TODO | GCM | `GcmBlockCipher` | Add GHASH and a generic block-cipher composition |
-| ⬜ TODO | GCM-SIV | `GcmSivBlockCipher` | Add POLYVAL and the misuse-resistant AEAD construction |
-| ⬜ TODO | OCB | `OcbBlockCipher` | Add the generic OCB block-cipher construction |
-| ⬜ TODO | KCCM | `KCcmBlockCipher` | Add the DSTU 7624-oriented CCM construction |
+| ⏸ Blocked | EAX | `EaxBlockCipher` | First add a generic `tc_cmac` implementing `Mac + MacInit<P>`; CTR/SIC is already available in `tc_ctr` |
+| ⏸ Blocked | GCM | `GcmBlockCipher` | First add a reusable `tc_ghash` primitive and multiplier abstraction |
+| ⏸ Blocked | GCM-SIV | `GcmSivBlockCipher` | First add a reusable `tc_polyval` primitive; AES and allocation support already exist |
+| ✅ Done | OCB3 | `tc_ocb::OcbBlockCipher<C>` | Allocation-backed packet mode; RFC 7253 vectors |
+| ✅ Done | KCCM | `tc_kccm::KccmBlockCipher<C, NB>` | DSTU 7624 vectors for 128-, 256-, and 512-bit blocks |
 
 The list intentionally excludes ordinary confidentiality-only block modes and
 interfaces such as `IAeadCipher` itself.
@@ -51,6 +51,8 @@ interfaces such as `IAeadCipher` itself.
 | `tc_ascon_aead` | Finalized Ascon-AEAD128 and separately named legacy Ascon v1.2 variants |
 | `tc_chacha_aead` | ChaCha20-Poly1305 and XChaCha20-Poly1305 |
 | `tc_ccm` | Generic allocation-backed CCM packet mode |
+| `tc_kccm` | Allocation-backed DSTU 7624 KCCM with `Nb = 4`, `6`, or `8` |
+| `tc_ocb` | Generic allocation-backed OCB3 packet mode |
 | `tc_grain128_aead` | Growable and allocation-free fixed-capacity Grain-128AEAD engines |
 | `tc_sparkle_aead` | All four SCHWAEMM parameter sets |
 
@@ -59,7 +61,7 @@ interfaces such as `IAeadCipher` itself.
 Run all currently implemented AEAD tests from the workspace root:
 
 ```bash
-cargo test -p tc_ascon_aead -p tc_grain128_aead -p tc_sparkle_aead --locked
+cargo test -p tc_ascon_aead -p tc_ccm -p tc_chacha_aead -p tc_grain128_aead -p tc_kccm -p tc_ocb -p tc_sparkle_aead --locked
 ```
 
 Verify the allocation-free Grain implementation separately:

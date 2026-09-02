@@ -29,12 +29,14 @@ impl<E: core::error::Error> core::error::Error for AeadBlockError<E> {}
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum AeadBlockInitError<E> {
-    /// The underlying block cipher does not use 16-byte blocks as required.
+    /// The underlying block cipher's block size is unsupported by the construction.
     InvalidBlockSize(usize),
     /// The nonce length is outside the range supported by the construction.
     InvalidNonceLength(usize),
     /// The requested authentication-tag size is unsupported.
     InvalidMacSize(usize),
+    /// The requested counter-length parameter is unsupported.
+    InvalidCounterSize(usize),
     /// The same key and nonce would be reused for encryption.
     NonceReuse,
     /// Initialization of the underlying block cipher failed.
@@ -52,6 +54,9 @@ impl<E: fmt::Display> fmt::Display for AeadBlockInitError<E> {
             }
             Self::InvalidMacSize(bytes) => {
                 write!(f, "invalid AEAD authentication-tag size: {bytes} bytes")
+            }
+            Self::InvalidCounterSize(bytes) => {
+                write!(f, "invalid AEAD counter size: {bytes} bytes")
             }
             Self::NonceReuse => f.write_str("key and nonce cannot be reused for AEAD encryption"),
             Self::Cipher(error) => {
@@ -88,6 +93,10 @@ mod tests {
         assert_eq!(
             format!("{}", AeadBlockInitError::<InitError>::InvalidMacSize(5)),
             "invalid AEAD authentication-tag size: 5 bytes"
+        );
+        assert_eq!(
+            format!("{}", AeadBlockInitError::<InitError>::InvalidCounterSize(5)),
+            "invalid AEAD counter size: 5 bytes"
         );
         assert_eq!(
             format!(

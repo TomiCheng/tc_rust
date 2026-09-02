@@ -1,0 +1,19 @@
+[package]
+name = "tc_kccm"
+description = "DSTU 7624 KCCM authenticated encryption for the tc_rust workspace."
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[features]
+default = ["alloc"]
+alloc = []
+
+[dependencies]
+tc_cipher = { version = "0.1", path = "../../tc_cipher" }
+tc_crypto = { version = "0.1", path = "../../tc_crypto" }
+tc_params = { version = "0.1", path = "../../tc_params" }
+
+[dev-dependencies]
+tc_dstu7624 = { version = "0.1", path = "../../block_cipher/tc_dstu7624" }
