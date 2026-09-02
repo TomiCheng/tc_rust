@@ -21,12 +21,12 @@ higher-level elliptic-curve work still have known gaps.
 | Block ciphers | 28 public engines with known-answer tests | The current raw-engine inventory is complete |
 | Stream ciphers | 11 engines; the current inventory is complete | Higher-level protocols and authenticated encryption are outside this crate |
 | Block modes | 8 mode families | Padding, buffering, and ciphertext stealing are not provided |
-| Digests and XOFs | 42 exported digest, XOF, and wrapper types | GOST 34.11-94, Skein, and Sparkle |
+| Digests and XOFs | 43 exported digest, XOF, and wrapper types | GOST 34.11-94 and Skein |
 | Key wrapping | RFC 3394, RFC 5649, and DSTU 7624 | RFC 3211, DESede, and RC2 wrappers |
 | Mathematics | Big integers, binary-polynomial and raw arithmetic, prime-field support, X25519, and 33 named SEC curves | General constant-time EC scalar multiplication, projective/WNAF paths, and the remaining X25519 helpers |
 
-The prerequisites for GOST 34.11-94 and Skein are now present in the workspace.
-Sparkle digest support still requires a shared Sparkle permutation/engine.
+The prerequisites for GOST 34.11-94 and Skein are present in the workspace;
+their dedicated digest implementations remain deferred.
 
 ## Workspace crates
 
@@ -37,7 +37,8 @@ Sparkle digest support still requires a shared Sparkle permutation/engine.
 | [`tc_block_cipher`](crates/tc_block_cipher) | Block cipher engines and their validated parameter types | Core-only subset, full `no_std + alloc`, or `std` with AES-NI detection |
 | [`tc_chacha`](crypto/stream_cipher/tc_chacha), [`tc_hc`](crypto/stream_cipher/tc_hc), [`tc_isaac`](crypto/stream_cipher/tc_isaac), [`tc_rc4`](crypto/stream_cipher/tc_rc4), [`tc_salsa20`](crypto/stream_cipher/tc_salsa20), [`tc_vmpc`](crypto/stream_cipher/tc_vmpc) | Independent stream-cipher implementation crates built on `tc_cipher` | Core-only `no_std` |
 | [`tc_ecb`](crypto/block_modes/tc_ecb), [`tc_cbc`](crypto/block_modes/tc_cbc), [`tc_cfb`](crypto/block_modes/tc_cfb), [`tc_ofb`](crypto/block_modes/tc_ofb), [`tc_ctr`](crypto/block_modes/tc_ctr) | Independent ECB, CBC, CFB/OpenPGP CFB, OFB/GCTR, and CTR/KCTR crates built on `tc_cipher` | Core-only `no_std`; `alloc` enables runtime-sized variants where needed |
-| [`tc_digest`](crates/tc_digest) | Message digests, XOFs, and digest wrappers | `no_std + alloc`; `std` enables runtime CPU-feature detection |
+| [`tc_digest`](crypto/tc_digest) | Shared message-digest and XOF traits | Core-only `no_std` |
+| [Digest family crates](crypto/digest) | Independent message-digest, XOF, and digest-adapter implementations | `no_std`; allocation and optional CPU acceleration vary by family |
 | [`tc_math`](math/tc_math) | Arbitrary-precision integers, finite-field arithmetic, and elliptic-curve foundations | `no_std + alloc`; `std` adds lazy caching |
 
 The core trait crates do not depend on algorithm implementations. Concrete
@@ -89,7 +90,7 @@ add padding, authentication, or message framing.
 - ISAP Hash, Photon-Beetle Hash, Xoodyak Hash, and Haraka-256/512
 - TupleHash, ParallelHash, `ShortenedDigest`, `Prehash`, and `NullDigest`
 
-See the [`tc_digest` roadmap](crates/tc_digest/README.md) for variant-level
+See the [digest crate guide](crypto/digest/README.md) for variant-level
 details and usage examples.
 
 ### Key wrapping
@@ -143,6 +144,7 @@ Representative `no_std` builds:
 # Core-only crates
 cargo build -p tc_cipher_core --locked
 cargo build -p tc_crypto_core --no-default-features --locked
+cargo build -p tc_digest --locked
 cargo build -p tc_chacha -p tc_hc -p tc_isaac -p tc_rc4 -p tc_salsa20 -p tc_vmpc --locked
 
 # Core-only block-cipher subset
@@ -158,8 +160,10 @@ cargo build -p tc_cbc -p tc_cfb -p tc_ofb -p tc_ctr --no-default-features --lock
 # Runtime-sized block-mode variants (alloc, but not std)
 cargo build -p tc_cbc -p tc_cfb -p tc_ofb -p tc_ctr --locked
 
+# Portable digest backends without std
+cargo build -p tc_blake2 -p tc_haraka --no-default-features --locked
+
 # Other crates that require alloc but not std
-cargo build -p tc_digest --no-default-features --locked
 cargo build -p tc_math --no-default-features --locked
 ```
 
@@ -171,7 +175,7 @@ Benchmarks are available in the algorithm crates:
 
 ```bash
 cargo bench -p tc_block_cipher
-cargo bench -p tc_digest
+cargo bench -p tc_blake2
 cargo bench -p tc_math
 ```
 

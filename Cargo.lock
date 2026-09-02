@@ -669,14 +669,6 @@ name = "tc_digest"
 version = "0.1.0"
 
 [[package]]
-name = "tc_digest_legacy"
-version = "0.1.0"
-dependencies = [
- "criterion",
- "tc_crypto_core",
-]
-
-[[package]]
 name = "tc_digest_utils"
 version = "0.1.0"
 dependencies = [

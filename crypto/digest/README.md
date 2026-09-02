@@ -4,9 +4,8 @@
 
 The crates in this directory provide message-digest and extendable-output
 function (XOF) implementations ported from the Bouncy Castle C# digest package.
-The v1 implementation placed every algorithm in `crates/tc_digest`; v2 groups
-related algorithms into focused crates and keeps the shared contracts in
-[`tc_digest`](../tc_digest):
+Related algorithms are grouped into focused crates, while the shared contracts
+remain in [`tc_digest`](../tc_digest):
 
 - `TryDigest` is the fallible streaming digest interface.
 - `Digest` is the infallible convenience interface.
@@ -23,8 +22,8 @@ runtime-generated names use `alloc`. The `std` features in `tc_blake2` and
 `tc_haraka` enable runtime CPU-feature detection; disabling their default
 features selects the portable backends.
 
-The legacy sources remain under `crates/tc_digest` as migration references.
-New code should depend on the focused v2 crates below.
+All algorithms from the former monolithic digest crate are available in the
+focused crates below.
 
 > These crates are learning ports and have not received an independent
 > security audit. Do not use them as replacements for audited cryptographic
@@ -86,8 +85,8 @@ algorithm's default fixed output length.
 
 ## 3. Implemented algorithms
 
-The v1 public algorithm and adapter types are available in the v2 family
-crates.
+The former monolithic crate's public algorithm and adapter types are available
+in the family crates.
 
 ### Fixed-output digests and adapters
 
@@ -123,13 +122,13 @@ portable-versus-accelerated backend comparisons where applicable.
 
 ## 4. Not yet implemented
 
-Relative to the current Bouncy Castle C# digest directory, these algorithm
-families remain deferred:
+These families were not present in the former monolithic crate and remain
+deferred relative to the current Bouncy Castle C# digest directory:
 
 | Algorithm | Reason |
 |-----------|--------|
-| `GOST3411Digest` (GOST 34.11-94) | Requires the future block-cipher abstraction and `Gost28147Engine`. |
-| `SkeinDigest` / `SkeinEngine` | Requires the Threefish tweakable block cipher. |
+| `GOST3411Digest` (GOST 34.11-94) | Requires a dedicated v2 implementation using `tc_gost28147`. |
+| `SkeinDigest` / `SkeinEngine` | Requires a dedicated v2 implementation using `tc_threefish`. |
 
 ## 5. Features and allocation
 
