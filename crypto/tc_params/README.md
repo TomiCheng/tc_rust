@@ -61,7 +61,6 @@ type such as `KeyWithIvRef`.
 | `IvParams` | Required initialization-vector bytes |
 | `OptionalIvParams` | An optional initialization vector |
 | `InitialAadParams` | Associated data supplied during AEAD initialization |
-| `AadLengthParams` | Declared total associated-data length |
 | `SBoxParams` | An algorithm-specific substitution box |
 | `TweakParams` | Optional tweak bytes |
 | `Rc2Params` | RC2 key and effective key size |

@@ -1,8 +1,10 @@
 //! Incremental Grain-128AEAD engine.
 
+#[cfg(feature = "alloc")]
+use alloc::vec::Vec;
 use tc_cipher::{AeadCipher, AeadCipherInit, AeadError, CipherDirection, InitError};
 use tc_crypto::AlgorithmName;
-use tc_params::{AadLengthParams, InitialAadParams, IvParams, KeyParams};
+use tc_params::{InitialAadParams, IvParams, KeyParams};
 
 use crate::{KEY_BYTES, NONCE_BYTES, TAG_BYTES};
 
@@ -20,16 +22,83 @@ enum State {
     DecryptFinal,
 }
 
-/// Allocation-free incremental Grain-128AEAD engine.
-///
-/// Grain-128AEAD uses a 16-byte key, a 12-byte nonce, and an 8-byte tag. Its
-/// AAD length must be declared through [`AadLengthParams::aad_len`] during
-/// initialization so the engine can encode that length before streaming AAD.
-///
-/// Decryption may emit unauthenticated plaintext before
-/// [`AeadCipher::do_final`] verifies the tag. Callers must not release that
-/// plaintext before finalization succeeds.
-pub struct Engine {
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct AadBufferFull {
+    maximum: usize,
+    actual: usize,
+}
+
+trait AadBuffer {
+    fn len(&self) -> usize;
+    fn byte(&self, index: usize) -> u8;
+    fn clear(&mut self);
+    fn extend_from_slice(&mut self, input: &[u8]) -> Result<(), AadBufferFull>;
+}
+
+#[cfg(feature = "alloc")]
+impl AadBuffer for Vec<u8> {
+    fn len(&self) -> usize {
+        Vec::len(self)
+    }
+
+    fn byte(&self, index: usize) -> u8 {
+        self[index]
+    }
+
+    fn clear(&mut self) {
+        Vec::clear(self);
+    }
+
+    fn extend_from_slice(&mut self, input: &[u8]) -> Result<(), AadBufferFull> {
+        Vec::extend_from_slice(self, input);
+        Ok(())
+    }
+}
+
+struct FixedAadBuffer<const MAX_AAD_LEN: usize> {
+    bytes: [u8; MAX_AAD_LEN],
+    len: usize,
+}
+
+impl<const MAX_AAD_LEN: usize> FixedAadBuffer<MAX_AAD_LEN> {
+    const fn new() -> Self {
+        Self {
+            bytes: [0; MAX_AAD_LEN],
+            len: 0,
+        }
+    }
+}
+
+impl<const MAX_AAD_LEN: usize> AadBuffer for FixedAadBuffer<MAX_AAD_LEN> {
+    fn len(&self) -> usize {
+        self.len
+    }
+
+    fn byte(&self, index: usize) -> u8 {
+        self.bytes[index]
+    }
+
+    fn clear(&mut self) {
+        self.bytes[..self.len].fill(0);
+        self.len = 0;
+    }
+
+    fn extend_from_slice(&mut self, input: &[u8]) -> Result<(), AadBufferFull> {
+        let actual = self.len.saturating_add(input.len());
+        if actual > MAX_AAD_LEN {
+            return Err(AadBufferFull {
+                maximum: MAX_AAD_LEN,
+                actual,
+            });
+        }
+
+        self.bytes[self.len..actual].copy_from_slice(input);
+        self.len = actual;
+        Ok(())
+    }
+}
+
+struct Inner<B> {
     key: [u8; KEY_BYTES],
     nonce: [u8; NONCE_BYTES],
     lfsr: [u32; 4],
@@ -37,15 +106,13 @@ pub struct Engine {
     auth: [u32; 4],
     tag_buffer: [u8; TAG_BYTES],
     tag_buffer_pos: usize,
-    aad_expected: usize,
-    aad_processed: usize,
+    aad_buffer: B,
     state: State,
     mac: Option<[u8; TAG_BYTES]>,
 }
 
-impl Engine {
-    /// Creates an uninitialised Grain-128AEAD engine.
-    pub const fn new() -> Self {
+impl<B: AadBuffer> Inner<B> {
+    const fn new(aad_buffer: B) -> Self {
         Self {
             key: [0; KEY_BYTES],
             nonce: [0; NONCE_BYTES],
@@ -54,25 +121,21 @@ impl Engine {
             auth: [0; 4],
             tag_buffer: [0; TAG_BYTES],
             tag_buffer_pos: 0,
-            aad_expected: 0,
-            aad_processed: 0,
+            aad_buffer,
             state: State::Uninitialised,
             mac: None,
         }
     }
 
-    /// Returns the required key length in bytes.
-    pub const fn key_bytes(&self) -> usize {
+    const fn key_bytes(&self) -> usize {
         KEY_BYTES
     }
 
-    /// Returns the required nonce length in bytes.
-    pub const fn nonce_bytes(&self) -> usize {
+    const fn nonce_bytes(&self) -> usize {
         NONCE_BYTES
     }
 
-    /// Returns the authentication-tag length in bytes.
-    pub const fn tag_bytes(&self) -> usize {
+    const fn tag_bytes(&self) -> usize {
         TAG_BYTES
     }
 
@@ -106,11 +169,17 @@ impl Engine {
     }
 
     fn start_data(&mut self) -> Result<CipherDirection, AeadError> {
-        if self.aad_processed != self.aad_expected {
-            return Err(AeadError::AadLengthMismatch {
-                expected: self.aad_expected,
-                actual: self.aad_processed,
-            });
+        if matches!(
+            self.state,
+            State::EncryptInit | State::EncryptAad | State::DecryptInit | State::DecryptAad
+        ) {
+            let aad_len = self.aad_buffer.len();
+            self.process_aad_length(aad_len);
+            for index in 0..aad_len {
+                let byte = self.aad_buffer.byte(index);
+                self.process_aad_byte(byte);
+            }
+            self.aad_buffer.clear();
         }
 
         self.state = match self.state {
@@ -126,11 +195,11 @@ impl Engine {
     }
 
     fn initialise_grain(&mut self) {
-        for (word, bytes) in self.nfsr.iter_mut().zip(self.key.chunks_exact(4)) {
-            *word = u32::from_le_bytes(bytes.try_into().unwrap());
+        for (word, bytes) in self.nfsr.iter_mut().zip(self.key.as_chunks::<4>().0) {
+            *word = u32::from_le_bytes(*bytes);
         }
-        for (word, bytes) in self.lfsr[..3].iter_mut().zip(self.nonce.chunks_exact(4)) {
-            *word = u32::from_le_bytes(bytes.try_into().unwrap());
+        for (word, bytes) in self.lfsr[..3].iter_mut().zip(self.nonce.as_chunks::<4>().0) {
+            *word = u32::from_le_bytes(*bytes);
         }
         self.lfsr[3] = 0x7fff_ffff;
 
@@ -332,19 +401,13 @@ impl Engine {
     }
 }
 
-impl Default for Engine {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl AlgorithmName for Engine {
+impl<B: AadBuffer> AlgorithmName for Inner<B> {
     fn write_algo_name(&self, output: &mut dyn core::fmt::Write) -> core::fmt::Result {
         output.write_str("Grain-128AEAD")
     }
 }
 
-impl AeadCipher for Engine {
+impl<B: AadBuffer> AeadCipher for Inner<B> {
     type Error = AeadError;
 
     fn process_aad_bytes(&mut self, input: &[u8]) -> Result<(), Self::Error> {
@@ -352,20 +415,13 @@ impl AeadCipher for Engine {
             return Ok(());
         }
         self.check_aad()?;
-        let new_total = self.aad_processed.saturating_add(input.len());
-        if new_total > self.aad_expected {
-            return Err(AeadError::AadLengthMismatch {
-                expected: self.aad_expected,
-                actual: new_total,
-            });
-        }
-
         self.mac = None;
-        for &byte in input {
-            self.process_aad_byte(byte);
-        }
-        self.aad_processed = new_total;
-        Ok(())
+        self.aad_buffer
+            .extend_from_slice(input)
+            .map_err(|error| AeadError::AadTooLong {
+                maximum: error.maximum,
+                actual: error.actual,
+            })
     }
 
     fn process_bytes(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
@@ -473,9 +529,10 @@ impl AeadCipher for Engine {
     }
 }
 
-impl<P> AeadCipherInit<P> for Engine
+impl<B, P> AeadCipherInit<P> for Inner<B>
 where
-    P: KeyParams + IvParams + InitialAadParams + AadLengthParams + ?Sized,
+    B: AadBuffer,
+    P: KeyParams + IvParams + InitialAadParams + ?Sized,
 {
     type Error = InitError;
 
@@ -489,8 +546,7 @@ where
         self.auth.fill(0);
         self.tag_buffer.fill(0);
         self.tag_buffer_pos = 0;
-        self.aad_expected = 0;
-        self.aad_processed = 0;
+        self.aad_buffer.clear();
 
         let key = params.key();
         if key.len() != KEY_BYTES {
@@ -501,13 +557,12 @@ where
             return Err(InitError::InvalidIvLength(nonce.len()));
         }
         let initial_aad = params.initial_aad();
-        let aad_len = params.aad_len();
-        if initial_aad.len() > aad_len {
-            return Err(InitError::InvalidAadLength {
-                expected: aad_len,
-                actual: initial_aad.len(),
-            });
-        }
+        self.aad_buffer
+            .extend_from_slice(initial_aad)
+            .map_err(|error| InitError::InitialAadTooLong {
+                maximum: error.maximum,
+                actual: error.actual,
+            })?;
 
         self.key.copy_from_slice(key);
         self.nonce.copy_from_slice(nonce);
@@ -516,26 +571,196 @@ where
         self.auth.fill(0);
         self.tag_buffer.fill(0);
         self.tag_buffer_pos = 0;
-        self.aad_expected = aad_len;
-        self.aad_processed = 0;
         self.mac = None;
         self.state = match direction {
             CipherDirection::Encrypt => State::EncryptInit,
             CipherDirection::Decrypt => State::DecryptInit,
         };
         self.initialise_grain();
-        self.process_aad_length(aad_len);
         if !initial_aad.is_empty() {
             self.state = match direction {
                 CipherDirection::Encrypt => State::EncryptAad,
                 CipherDirection::Decrypt => State::DecryptAad,
             };
-            for &byte in initial_aad {
-                self.process_aad_byte(byte);
-            }
-            self.aad_processed = initial_aad.len();
         }
         Ok(())
+    }
+}
+
+/// Incremental Grain-128AEAD engine with a growable AAD buffer.
+///
+/// This type is available with the default `alloc` feature and accepts AAD of
+/// any length supported by the allocator.
+#[cfg(feature = "alloc")]
+pub struct Engine {
+    inner: Inner<Vec<u8>>,
+}
+
+#[cfg(feature = "alloc")]
+impl Engine {
+    /// Creates an uninitialised Grain-128AEAD engine.
+    pub const fn new() -> Self {
+        Self {
+            inner: Inner::new(Vec::new()),
+        }
+    }
+
+    /// Returns the required key length in bytes.
+    pub const fn key_bytes(&self) -> usize {
+        self.inner.key_bytes()
+    }
+
+    /// Returns the required nonce length in bytes.
+    pub const fn nonce_bytes(&self) -> usize {
+        self.inner.nonce_bytes()
+    }
+
+    /// Returns the authentication-tag length in bytes.
+    pub const fn tag_bytes(&self) -> usize {
+        self.inner.tag_bytes()
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl Default for Engine {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl AlgorithmName for Engine {
+    fn write_algo_name(&self, output: &mut dyn core::fmt::Write) -> core::fmt::Result {
+        self.inner.write_algo_name(output)
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl AeadCipher for Engine {
+    type Error = AeadError;
+
+    fn process_aad_bytes(&mut self, input: &[u8]) -> Result<(), Self::Error> {
+        self.inner.process_aad_bytes(input)
+    }
+
+    fn process_bytes(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
+        self.inner.process_bytes(input, output)
+    }
+
+    fn do_final(&mut self, output: &mut [u8]) -> Result<usize, Self::Error> {
+        self.inner.do_final(output)
+    }
+
+    fn mac(&self) -> Option<&[u8]> {
+        self.inner.mac()
+    }
+
+    fn get_update_output_size(&self, input_len: usize) -> usize {
+        self.inner.get_update_output_size(input_len)
+    }
+
+    fn get_output_size(&self, input_len: usize) -> usize {
+        self.inner.get_output_size(input_len)
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl<P> AeadCipherInit<P> for Engine
+where
+    P: KeyParams + IvParams + InitialAadParams + ?Sized,
+{
+    type Error = InitError;
+
+    fn init(&mut self, direction: CipherDirection, params: &P) -> Result<(), Self::Error> {
+        self.inner.init(direction, params)
+    }
+}
+
+/// Allocation-free incremental Grain-128AEAD engine.
+///
+/// `MAX_AAD_LEN` is the maximum amount of AAD that can be buffered for one
+/// operation. It is a capacity, not the exact AAD length.
+pub struct FixedEngine<const MAX_AAD_LEN: usize> {
+    inner: Inner<FixedAadBuffer<MAX_AAD_LEN>>,
+}
+
+impl<const MAX_AAD_LEN: usize> FixedEngine<MAX_AAD_LEN> {
+    /// Creates an uninitialised Grain-128AEAD engine.
+    pub const fn new() -> Self {
+        Self {
+            inner: Inner::new(FixedAadBuffer::new()),
+        }
+    }
+
+    /// Returns the AAD buffer capacity in bytes.
+    pub const fn max_aad_len(&self) -> usize {
+        MAX_AAD_LEN
+    }
+
+    /// Returns the required key length in bytes.
+    pub const fn key_bytes(&self) -> usize {
+        self.inner.key_bytes()
+    }
+
+    /// Returns the required nonce length in bytes.
+    pub const fn nonce_bytes(&self) -> usize {
+        self.inner.nonce_bytes()
+    }
+
+    /// Returns the authentication-tag length in bytes.
+    pub const fn tag_bytes(&self) -> usize {
+        self.inner.tag_bytes()
+    }
+}
+
+impl<const MAX_AAD_LEN: usize> Default for FixedEngine<MAX_AAD_LEN> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<const MAX_AAD_LEN: usize> AlgorithmName for FixedEngine<MAX_AAD_LEN> {
+    fn write_algo_name(&self, output: &mut dyn core::fmt::Write) -> core::fmt::Result {
+        self.inner.write_algo_name(output)
+    }
+}
+
+impl<const MAX_AAD_LEN: usize> AeadCipher for FixedEngine<MAX_AAD_LEN> {
+    type Error = AeadError;
+
+    fn process_aad_bytes(&mut self, input: &[u8]) -> Result<(), Self::Error> {
+        self.inner.process_aad_bytes(input)
+    }
+
+    fn process_bytes(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
+        self.inner.process_bytes(input, output)
+    }
+
+    fn do_final(&mut self, output: &mut [u8]) -> Result<usize, Self::Error> {
+        self.inner.do_final(output)
+    }
+
+    fn mac(&self) -> Option<&[u8]> {
+        self.inner.mac()
+    }
+
+    fn get_update_output_size(&self, input_len: usize) -> usize {
+        self.inner.get_update_output_size(input_len)
+    }
+
+    fn get_output_size(&self, input_len: usize) -> usize {
+        self.inner.get_output_size(input_len)
+    }
+}
+
+impl<P, const MAX_AAD_LEN: usize> AeadCipherInit<P> for FixedEngine<MAX_AAD_LEN>
+where
+    P: KeyParams + IvParams + InitialAadParams + ?Sized,
+{
+    type Error = InitError;
+
+    fn init(&mut self, direction: CipherDirection, params: &P) -> Result<(), Self::Error> {
+        self.inner.init(direction, params)
     }
 }
 
