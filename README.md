@@ -32,8 +32,10 @@ their dedicated digest implementations remain deferred.
 
 | Crate | Purpose | Runtime support |
 | --- | --- | --- |
-| [`tc_cipher_core`](crates/tc_cipher_core) | Shared block-cipher, stream-cipher, and key-wrapping operation/initialization traits | Core-only `no_std` |
-| [`tc_crypto_core`](crates/tc_crypto_core) | Shared `TryDigest` / `Digest`, `TryXof` / `Xof`, and key-wrapper traits | Core-only `no_std`; `alloc` is optional for `Wrapper` |
+| [`tc_crypto`](crypto/tc_crypto) | Shared algorithm metadata contracts | Core-only `no_std` |
+| [`tc_cipher`](crypto/tc_cipher) | Shared cipher, mode, and key-wrapping traits and errors | Core-only `no_std` |
+| [`tc_params`](crypto/tc_params) | Shared object-safe cryptographic parameter traits and convenience types | Core-only `no_std` |
+| [`tc_macs`](crypto/tc_macs) | Shared message-authentication-code traits and errors | Core-only `no_std` |
 | [Block-cipher family crates](crypto/block_cipher) | Independent block-cipher implementations built on `tc_cipher` and `tc_params` | Core-only `no_std`; AES can select AES-NI at runtime |
 | [`tc_chacha`](crypto/stream_cipher/tc_chacha), [`tc_hc`](crypto/stream_cipher/tc_hc), [`tc_isaac`](crypto/stream_cipher/tc_isaac), [`tc_rc4`](crypto/stream_cipher/tc_rc4), [`tc_salsa20`](crypto/stream_cipher/tc_salsa20), [`tc_vmpc`](crypto/stream_cipher/tc_vmpc) | Independent stream-cipher implementation crates built on `tc_cipher` | Core-only `no_std` |
 | [`tc_ecb`](crypto/block_modes/tc_ecb), [`tc_cbc`](crypto/block_modes/tc_cbc), [`tc_cfb`](crypto/block_modes/tc_cfb), [`tc_ofb`](crypto/block_modes/tc_ofb), [`tc_ctr`](crypto/block_modes/tc_ctr) | Independent ECB, CBC, CFB/OpenPGP CFB, OFB/GCTR, and CTR/KCTR crates built on `tc_cipher` | Core-only `no_std`; `alloc` enables runtime-sized variants where needed |
@@ -142,9 +144,7 @@ Representative `no_std` builds:
 
 ```bash
 # Core-only crates
-cargo build -p tc_cipher_core --locked
-cargo build -p tc_crypto_core --no-default-features --locked
-cargo build -p tc_digest --locked
+cargo build -p tc_crypto -p tc_cipher -p tc_params -p tc_digest -p tc_macs --locked
 cargo build -p tc_chacha -p tc_hc -p tc_isaac -p tc_rc4 -p tc_salsa20 -p tc_vmpc --locked
 
 # Representative block-cipher crate (all family crates are no_std)

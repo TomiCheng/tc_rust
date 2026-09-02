@@ -1,7 +1,6 @@
 [workspace]
 resolver = "3"
 members = [
-    "crates/*",
     "crypto/tc_*",
     "crypto/aead_cipher/*",
     "crypto/block_cipher/*",
