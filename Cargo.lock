@@ -1125,6 +1125,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_x923_pad"
+version = "0.1.0"
+dependencies = [
+ "tc_crypto",
+ "tc_pad",
+]
+
+[[package]]
 name = "tc_xoodyak"
 version = "0.1.0"
 dependencies = [
