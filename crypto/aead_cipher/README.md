@@ -35,7 +35,7 @@ when SSE2 is unavailable or disabled.
 | ✅ Done | ChaCha20-Poly1305 | `tc_chacha_aead::ChaCha20Poly1305` | RFC 8439 vectors |
 | ✅ Done | XChaCha20-Poly1305 | `tc_chacha_aead::XChaCha20Poly1305` | XChaCha draft and BC vectors |
 | ✅ Done | CCM | `tc_ccm::CcmBlockCipher<C>` | Allocation-backed packet mode over a 16-byte block cipher |
-| ⏸ Blocked | EAX | `EaxBlockCipher` | First add a generic `tc_cmac` implementing `Mac + MacInit<P>`; CTR/SIC is already available in `tc_ctr` |
+| 🟢 Ready | EAX | `EaxBlockCipher` | Generic `tc_cmac::CMac` and CTR/SIC in `tc_ctr` are available. |
 | ⏸ Blocked | GCM | `GcmBlockCipher` | First add a reusable `tc_ghash` primitive and multiplier abstraction |
 | ⏸ Blocked | GCM-SIV | `GcmSivBlockCipher` | First add a reusable `tc_polyval` primitive; AES and allocation support already exist |
 | ✅ Done | OCB3 | `tc_ocb::OcbBlockCipher<C>` | Allocation-backed packet mode; RFC 7253 vectors |

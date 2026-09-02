@@ -25,7 +25,7 @@ type.
 |:------:|-----------------------|--------------|-------------------------|
 | 🟢 Ready | `CbcBlockCipherMac` | `tc_cbc_mac` | `BlockCipher`, `BlockCipherInit<P>`, CBC, and the shared block-padding contract are available. |
 | 🟢 Ready | `CfbBlockCipherMac` | `tc_cfb_mac` | `BlockCipher`, `BlockCipherInit<P>`, CFB, and the shared block-padding contract are available. |
-| 🟢 Ready | `CMac` | `tc_cmac` | The generic block-cipher contracts, 64-/128-bit block ciphers, and `tc_iso7816_pad::Iso7816d4Padding` are available. |
+| ✅ Done | `CMac` | [`tc_cmac::CMac`](tc_cmac) | Allocation-free generic CMAC, with NIST/BC AES vectors and the BC 64-bit DESede vector. |
 | ✅ Done | `Dstu7564Mac` | `tc_dstu_macs::Dstu7564Mac` | Bouncy Castle vectors for 256-, 384-, and 512-bit tags, including the 1023-/1024-byte boundary cases. |
 | 🟢 Ready | `Dstu7624Mac` | `tc_dstu_macs` | The 128-, 256-, and 512-bit `tc_dstu7624` engines are available. |
 | ⏸ Blocked | `GMac` | `tc_gmac` | GMAC is GCM with all input treated as AAD. A reusable GCM authentication core, including GHASH, is not implemented yet. |
@@ -50,22 +50,21 @@ The shared `Mac` and `MacInit<P>` interfaces are complete. Of the 14 Bouncy
 Castle C# MAC types:
 
 - twelve have all required primitives available, including the already
-  implemented DSTU 7564 MAC, HMAC, and raw Poly1305;
+  implemented CMAC, DSTU 7564 MAC, HMAC, and raw Poly1305;
 - GMAC is blocked by the missing GCM/GHASH authentication core;
 - SkeinMac can reuse the unkeyed Skein engine, but still needs keyed and
   parameterized initialization.
 
-The shared padding contract and ISO/IEC 7816-4 padding now make CMAC ready to
-implement. Completing CMAC removes the remaining MAC prerequisite recorded for
-EAX in the [`aead_cipher` inventory](../aead_cipher/README.md). The ready,
-self-contained algorithms can otherwise be ported independently. GMAC and
-SkeinMac should remain deferred until its parameter model and keyed engine
-initialization exist.
+CMAC is now available to the future EAX implementation recorded in the
+[`aead_cipher` inventory](../aead_cipher/README.md). The remaining ready,
+self-contained algorithms can be ported independently. GMAC and SkeinMac
+should remain deferred until their missing authentication core and parameter
+model are available.
 
 ## Verification
 
 Run the tests for all currently implemented MAC crates from the workspace root:
 
 ```bash
-cargo test -p tc_macs -p tc_dstu_macs -p tc_hmac -p tc_poly1305 --locked
+cargo test -p tc_macs -p tc_cmac -p tc_dstu_macs -p tc_hmac -p tc_poly1305 --locked
 ```

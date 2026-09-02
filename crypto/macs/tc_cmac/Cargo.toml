@@ -1,0 +1,19 @@
+[package]
+name = "tc_cmac"
+description = "CMAC over 64- and 128-bit block ciphers for the tc_rust workspace."
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+tc_cipher = { version = "0.1", path = "../../tc_cipher" }
+tc_crypto = { version = "0.1", path = "../../tc_crypto" }
+tc_iso7816_pad = { version = "0.1", path = "../../paddings/tc_iso7816_pad" }
+tc_macs = { version = "0.1", path = "../../tc_macs" }
+tc_pad = { version = "0.1", path = "../../tc_pad" }
+tc_params = { version = "0.1", path = "../../tc_params" }
+
+[dev-dependencies]
+tc_aes = { version = "0.1", path = "../../block_cipher/tc_aes" }
+tc_des = { version = "0.1", path = "../../block_cipher/tc_des" }
