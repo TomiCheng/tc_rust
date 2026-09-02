@@ -6,12 +6,12 @@ use tc_params::{InitialAadParams, IvParams, KeyParams};
 
 use crate::{BYTES_256, Variant};
 
-const MAX_STATE_WORDS: usize = 16;
+pub(crate) const MAX_STATE_WORDS: usize = 16;
 const MAX_KEY_WORDS: usize = BYTES_256 / 4;
 const MAX_RATE_BYTES: usize = BYTES_256;
 const MAX_BUFFER_BYTES: usize = BYTES_256 * 2;
 
-const RCON: [u32; 8] = [
+pub(crate) const RCON: [u32; 8] = [
     0xb7e1_5162,
     0xbf71_5880,
     0x38b4_da56,
@@ -318,9 +318,11 @@ impl Engine {
         block[..message_len].copy_from_slice(&self.buffer[..message_len]);
         if message_len < rate {
             if !encrypt {
+                let (block_words, remainder) = block.as_chunks_mut::<4>();
+                debug_assert!(remainder.is_empty());
                 for (word, chunk) in self.state_words[..self.rate_words()]
                     .iter()
-                    .zip(block.chunks_exact_mut(4))
+                    .zip(block_words)
                 {
                     chunk.copy_from_slice(&word.to_le_bytes());
                 }
@@ -365,9 +367,11 @@ impl Engine {
         }
 
         let mut tag = [0_u8; BYTES_256];
+        let (tag_words, remainder) = tag.as_chunks_mut::<4>();
+        debug_assert!(remainder.is_empty());
         for (word, chunk) in self.state_words[rate_words..rate_words + key_words]
             .iter()
-            .zip(tag.chunks_exact_mut(4))
+            .zip(tag_words)
         {
             chunk.copy_from_slice(&word.to_le_bytes());
         }
@@ -375,41 +379,50 @@ impl Engine {
     }
 
     fn permute(&mut self, steps: usize) {
-        // TODO: Port bc-csharp's SSE2 SparkleOpt16 fast path for
-        // Schwaemm256_256. Keep this scalar implementation as the portable
-        // no_std fallback; the optimization must produce identical output.
         let state_words = self.variant.state_words();
-        let branches = state_words / 2;
-        let half = branches / 2;
 
-        for step in 0..steps {
-            self.state_words[1] ^= RCON[step & 7];
-            self.state_words[3] ^= step as u32;
+        #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+        if state_words == MAX_STATE_WORDS
+            && let Some(sse2) = tc_runtime::intrinsics::x86::Sse2::detect()
+        {
+            crate::sse2::sparkle_opt16(&mut self.state_words, steps, sse2);
+            return;
+        }
 
-            for (branch, round_constant) in RCON.iter().copied().enumerate().take(branches) {
-                let index = branch * 2;
-                let (left, right) = self.state_words.split_at_mut(index + 1);
-                arx_box(round_constant, &mut left[index], &mut right[0]);
-            }
+        sparkle_scalar(&mut self.state_words, state_words, steps);
+    }
+}
 
-            let mut x = 0_u32;
-            let mut y = 0_u32;
-            for branch in 0..half {
-                x ^= self.state_words[branch * 2];
-                y ^= self.state_words[branch * 2 + 1];
-            }
-            let x = ell(x);
-            let y = ell(y);
+fn sparkle_scalar(state: &mut [u32; MAX_STATE_WORDS], state_words: usize, steps: usize) {
+    let branches = state_words / 2;
+    let half = branches / 2;
 
-            let previous = self.state_words;
-            for branch in 0..half {
-                let next = (branch + 1) % half;
-                self.state_words[branch * 2] = previous[next * 2] ^ previous[(next + half) * 2] ^ y;
-                self.state_words[branch * 2 + 1] =
-                    previous[next * 2 + 1] ^ previous[(next + half) * 2 + 1] ^ x;
-                self.state_words[(branch + half) * 2] = previous[branch * 2];
-                self.state_words[(branch + half) * 2 + 1] = previous[branch * 2 + 1];
-            }
+    for step in 0..steps {
+        state[1] ^= RCON[step & 7];
+        state[3] ^= step as u32;
+
+        for (branch, round_constant) in RCON.iter().copied().enumerate().take(branches) {
+            let index = branch * 2;
+            let (left, right) = state.split_at_mut(index + 1);
+            arx_box(round_constant, &mut left[index], &mut right[0]);
+        }
+
+        let mut x = 0_u32;
+        let mut y = 0_u32;
+        for branch in 0..half {
+            x ^= state[branch * 2];
+            y ^= state[branch * 2 + 1];
+        }
+        let x = ell(x);
+        let y = ell(y);
+
+        let previous = *state;
+        for branch in 0..half {
+            let next = (branch + 1) % half;
+            state[branch * 2] = previous[next * 2] ^ previous[(next + half) * 2] ^ y;
+            state[branch * 2 + 1] = previous[next * 2 + 1] ^ previous[(next + half) * 2 + 1] ^ x;
+            state[(branch + half) * 2] = previous[branch * 2];
+            state[(branch + half) * 2 + 1] = previous[branch * 2 + 1];
         }
     }
 }
@@ -444,7 +457,8 @@ impl AeadCipher for Engine {
         }
 
         self.mac = None;
-        debug_assert_eq!(self.start_data()?, direction);
+        let started_direction = self.start_data()?;
+        debug_assert_eq!(started_direction, direction);
         Ok(match direction {
             CipherDirection::Encrypt => self.process_encrypt_bytes(input, output),
             CipherDirection::Decrypt => self.process_decrypt_bytes(input, output),
@@ -471,7 +485,8 @@ impl AeadCipher for Engine {
         }
 
         self.mac = None;
-        debug_assert_eq!(self.start_data()?, direction);
+        let started_direction = self.start_data()?;
+        debug_assert_eq!(started_direction, direction);
         match direction {
             CipherDirection::Encrypt => {
                 let message_len = self.buffer_pos;
@@ -574,11 +589,15 @@ where
         }
 
         self.key.fill(0);
-        for (word, bytes) in self.key.iter_mut().zip(key.chunks_exact(4)) {
+        let (key_chunks, remainder) = key.as_chunks::<4>();
+        debug_assert!(remainder.is_empty());
+        for (word, bytes) in self.key.iter_mut().zip(key_chunks) {
             *word = load_u32(bytes);
         }
         self.nonce.fill(0);
-        for (word, bytes) in self.nonce.iter_mut().zip(nonce.chunks_exact(4)) {
+        let (nonce_chunks, remainder) = nonce.as_chunks::<4>();
+        debug_assert!(remainder.is_empty());
+        for (word, bytes) in self.nonce.iter_mut().zip(nonce_chunks) {
             *word = load_u32(bytes);
         }
         self.buffer.fill(0);
@@ -635,4 +654,40 @@ fn fixed_time_eq(left: &[u8], right: &[u8]) -> bool {
         difference |= left ^ right;
     }
     difference == 0
+}
+
+#[cfg(all(
+    test,
+    any(target_arch = "x86", target_arch = "x86_64"),
+    not(feature = "disable-x86-sse2")
+))]
+mod tests {
+    use super::{MAX_STATE_WORDS, sparkle_scalar};
+    use tc_runtime::intrinsics::x86::Sse2;
+
+    #[test]
+    fn sparkle_opt16_matches_scalar_permutation() {
+        let Some(sse2) = Sse2::detect() else {
+            return;
+        };
+
+        let mut seed = 0x243f_6a88_u32;
+        for steps in [8, 12] {
+            for _ in 0..64 {
+                let input = core::array::from_fn::<_, MAX_STATE_WORDS, _>(|_| {
+                    seed ^= seed << 13;
+                    seed ^= seed >> 17;
+                    seed ^= seed << 5;
+                    seed
+                });
+                let mut scalar = input;
+                let mut vector = input;
+
+                sparkle_scalar(&mut scalar, MAX_STATE_WORDS, steps);
+                crate::sse2::sparkle_opt16(&mut vector, steps, sse2);
+
+                assert_eq!(vector, scalar);
+            }
+        }
+    }
 }

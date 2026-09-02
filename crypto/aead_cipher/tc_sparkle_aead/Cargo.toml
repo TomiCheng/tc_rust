@@ -6,7 +6,20 @@ edition.workspace = true
 license.workspace = true
 repository.workspace = true
 
+[features]
+default = []
+std = ["tc_runtime/std"]
+disable-x86-sse2 = ["tc_runtime/disable-x86-sse2"]
+
 [dependencies]
 tc_cipher = { version = "0.1", path = "../../tc_cipher" }
 tc_crypto = { version = "0.1", path = "../../tc_crypto" }
 tc_params = { version = "0.1", path = "../../tc_params" }
+tc_runtime = { version = "0.1", path = "../../../core/tc_runtime" }
+
+[dev-dependencies]
+criterion.workspace = true
+
+[[bench]]
+name = "sparkle"
+harness = false

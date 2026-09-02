@@ -48,6 +48,8 @@
 
 mod engine;
 mod params;
+#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+mod sse2;
 
 pub use engine::Engine;
 pub use params::Params;

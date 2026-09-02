@@ -1002,9 +1002,11 @@ dependencies = [
 name = "tc_sparkle_aead"
 version = "0.1.0"
 dependencies = [
+ "criterion",
  "tc_cipher",
  "tc_crypto",
  "tc_params",
+ "tc_runtime",
 ]
 
 [[package]]

@@ -164,9 +164,10 @@ const SCHWAEMM256_256_KATS: &[Kat] = &[
 ];
 
 fn decode_hex(input: &str) -> Vec<u8> {
-    input
-        .as_bytes()
-        .chunks_exact(2)
+    let (pairs, remainder) = input.as_bytes().as_chunks::<2>();
+    assert!(remainder.is_empty(), "hex input must have an even length");
+    pairs
+        .iter()
         .map(|pair| u8::from_str_radix(core::str::from_utf8(pair).unwrap(), 16).unwrap())
         .collect()
 }

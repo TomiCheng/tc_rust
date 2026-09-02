@@ -22,9 +22,10 @@ or implement the required traits on their own parameter type.
 | ✅ Done | SCHWAEMM192-192 | `tc_sparkle_aead::Engine` with `Variant::Schwaemm192_192` | Official SCHWAEMM vectors |
 | ✅ Done | SCHWAEMM256-256 | `tc_sparkle_aead::Engine` with `Variant::Schwaemm256_256` | Official SCHWAEMM vectors |
 
-The SCHWAEMM implementation currently uses its portable SPARKLE permutation.
-The Bouncy Castle C# SSE2 fast path remains an optimization TODO; it does not
-affect algorithm availability or test-vector compatibility.
+SCHWAEMM256-256 uses an SSE2 `SparkleOpt16` backend on supported x86 and
+x86_64 processors, with runtime detection through `tc_runtime`. All other
+variants use the portable permutation, and SCHWAEMM256-256 falls back to it
+when SSE2 is unavailable or disabled.
 
 ## Not yet implemented
 
