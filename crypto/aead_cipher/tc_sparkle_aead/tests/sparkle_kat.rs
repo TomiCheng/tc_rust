@@ -1,41 +1,6 @@
 use tc_cipher::{AeadCipher, AeadCipherInit, AeadError, CipherDirection, InitError};
 use tc_crypto::AlgorithmName;
-use tc_params::{InitialAadParams, IvParams, KeyParams};
-use tc_sparkle_aead::{Engine, Variant};
-
-struct Params<'a> {
-    key: &'a [u8],
-    iv: &'a [u8],
-    initial_aad: &'a [u8],
-}
-
-impl<'a> Params<'a> {
-    const fn new(key: &'a [u8], iv: &'a [u8], initial_aad: &'a [u8]) -> Self {
-        Self {
-            key,
-            iv,
-            initial_aad,
-        }
-    }
-}
-
-impl KeyParams for Params<'_> {
-    fn key(&self) -> &[u8] {
-        self.key
-    }
-}
-
-impl IvParams for Params<'_> {
-    fn iv(&self) -> &[u8] {
-        self.iv
-    }
-}
-
-impl InitialAadParams for Params<'_> {
-    fn initial_aad(&self) -> &[u8] {
-        self.initial_aad
-    }
-}
+use tc_sparkle_aead::{Engine, Params, Variant};
 
 fn algo_name(engine: &Engine) -> String {
     let mut name = String::new();
