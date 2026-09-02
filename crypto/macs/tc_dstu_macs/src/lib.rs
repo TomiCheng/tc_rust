@@ -1,7 +1,8 @@
 //! DSTU message authentication codes.
 //!
-//! This crate currently provides [`Dstu7564Mac`], the keyed construction built
-//! from the DSTU 7564 (Kupyna) digest.
+//! This crate provides [`Dstu7564Mac`], the keyed construction built from the
+//! DSTU 7564 (Kupyna) digest, and [`Dstu7624Mac`], built from the DSTU 7624
+//! (Kalyna) block cipher.
 //!
 //! ```
 //! use tc_dstu_macs::Dstu7564Mac;
@@ -27,8 +28,12 @@
 extern crate alloc;
 
 mod dstu7564;
+mod dstu7624;
 
 pub use dstu7564::Dstu7564Mac;
+pub use dstu7624::{
+    Dstu7624Mac, Dstu7624Mac128, Dstu7624Mac256, Dstu7624Mac512, Dstu7624MacCreateError,
+};
 
 /// Supported DSTU 7564 MAC lengths in bits.
 pub const MAC_BITS: [usize; 3] = [256, 384, 512];

@@ -23,20 +23,20 @@ type.
 
 | Status | Bouncy Castle C# type | Target crate | Prerequisite assessment |
 |:------:|-----------------------|--------------|-------------------------|
-| 🟢 Ready | `CbcBlockCipherMac` | `tc_cbc_mac` | `BlockCipher`, `BlockCipherInit<P>`, CBC, and the shared block-padding contract are available. |
-| 🟢 Ready | `CfbBlockCipherMac` | `tc_cfb_mac` | `BlockCipher`, `BlockCipherInit<P>`, CFB, and the shared block-padding contract are available. |
+| ✅ Done | `CbcBlockCipherMac` | [`tc_cbc_mac::CbcMac`](tc_cbc_mac) | Allocation-free generic CBC-MAC with optional IV, configurable tag size, zero padding, or caller-selected padding. |
+| ✅ Done | `CfbBlockCipherMac` | [`tc_cfb_mac::CfbMac`](tc_cfb_mac) | Allocation-free generic CFB-MAC with optional IV and configurable feedback, tag, and padding. |
 | ✅ Done | `CMac` | [`tc_cmac::CMac`](tc_cmac) | Allocation-free generic CMAC, with NIST/BC AES vectors and the BC 64-bit DESede vector. |
 | ✅ Done | `Dstu7564Mac` | `tc_dstu_macs::Dstu7564Mac` | Bouncy Castle vectors for 256-, 384-, and 512-bit tags, including the 1023-/1024-byte boundary cases. |
-| 🟢 Ready | `Dstu7624Mac` | `tc_dstu_macs` | The 128-, 256-, and 512-bit `tc_dstu7624` engines are available. |
+| ✅ Done | `Dstu7624Mac` | [`tc_dstu_macs::Dstu7624Mac`](tc_dstu_macs) | Allocation-free 128-, 256-, and 512-bit-block variants; BC vectors cover 128- and 512-bit blocks. |
 | ⏸ Blocked | `GMac` | `tc_gmac` | GMAC is GCM with all input treated as AAD. A reusable GCM authentication core, including GHASH, is not implemented yet. |
-| 🟢 Ready | `GOST28147Mac` | `tc_gost28147_mac` | `tc_gost28147`, its S-box tables, and `SBoxParams` are available. |
+| ✅ Done | `GOST28147Mac` | [`tc_gost28147_mac::Gost28147Mac`](tc_gost28147_mac) | Allocation-free 16-round GOST MAC core with caller-selected S-box and optional IV. |
 | ✅ Done | `HMac` | [`tc_hmac::HMac`](tc_hmac) | Generic HMAC over the infallible `Digest` API, with BC/RFC vectors, long-key handling, retained keyed state, and non-`Clone` digest support. |
-| 🟢 Ready | `ISO9797Alg3Mac` | `tc_iso9797_mac` | DES/3DES, CBC, and the shared block-padding contract are available. |
-| 🟢 Ready | `KMac` | `tc_kmac` | `tc_keccak::CShakeDigest` and the `Xof` API are available. This implementation will require `alloc`, as the current cSHAKE implementation does. |
+| ✅ Done | `ISO9797Alg3Mac` | [`tc_iso9797_mac::Iso9797Alg3Mac`](tc_iso9797_mac) | Allocation-free two-/three-key DES Retail MAC, with optional IV, tag truncation, and padding. |
+| ✅ Done | `KMac` | [`tc_kmac::KMac`](tc_kmac) | KMAC128/KMAC256 fixed tags and XOF output over cSHAKE; requires `alloc`. |
 | ✅ Raw mode | `Poly1305` | [`tc_poly1305`](tc_poly1305) | Raw Poly1305 with a caller-supplied 32-byte one-time key is implemented and tested. The optional 128-bit block-cipher construction is not implemented, but its block-cipher and IV prerequisites are available. |
-| 🟢 Ready | `SipHash` | `tc_siphash` | The algorithm is self-contained and only needs `KeyParams`. |
+| ✅ Done | `SipHash` | [`tc_siphash::SipHash`](tc_siphash) | Allocation-free SipHash-c-d; all 64 official SipHash-2-4 vectors pass. |
 | 🟡 Partial | `SkeinMac` | `tc_skein_mac` | `tc_skein::SkeinEngine` provides unkeyed UBI, but keyed/parameterized initialization and a shared Skein parameter model are still required. |
-| 🟢 Ready | `VMPCMac` | `tc_vmpc_mac` | The algorithm is self-contained, and the key/IV parameter traits are available. `tc_vmpc` has equivalent KSA logic, but that private helper would need to be extracted before the two crates could share it. |
+| ✅ Done | `VMPCMac` | [`tc_vmpc_mac::VmpcMac`](tc_vmpc_mac) | Allocation-free VMPC-MAC with 16–64-byte key and IV validation. |
 
 Legend:
 
@@ -47,24 +47,21 @@ Legend:
 ## Prerequisite summary
 
 The shared `Mac` and `MacInit<P>` interfaces are complete. Of the 14 Bouncy
-Castle C# MAC types:
+Castle C# MAC types, eleven are fully implemented. Raw Poly1305 is implemented,
+while its optional block-cipher construction remains deferred. GMAC is blocked
+by the missing GCM/GHASH authentication core. SkeinMac can reuse the unkeyed
+Skein engine, but still needs keyed and parameterized Skein initialization.
 
-- twelve have all required primitives available, including the already
-  implemented CMAC, DSTU 7564 MAC, HMAC, and raw Poly1305;
-- GMAC is blocked by the missing GCM/GHASH authentication core;
-- SkeinMac can reuse the unkeyed Skein engine, but still needs keyed and
-  parameterized initialization.
-
-CMAC is now available to the future EAX implementation recorded in the
-[`aead_cipher` inventory](../aead_cipher/README.md). The remaining ready,
-self-contained algorithms can be ported independently. GMAC and SkeinMac
-should remain deferred until their missing authentication core and parameter
-model are available.
+CMAC is available to the future EAX implementation recorded in the
+[`aead_cipher` inventory](../aead_cipher/README.md). No other fully unimplemented
+MAC in this inventory is ready without first completing a missing prerequisite.
 
 ## Verification
 
 Run the tests for all currently implemented MAC crates from the workspace root:
 
 ```bash
-cargo test -p tc_macs -p tc_cmac -p tc_dstu_macs -p tc_hmac -p tc_poly1305 --locked
+cargo test -p tc_macs -p tc_cbc_mac -p tc_cfb_mac -p tc_cmac \
+  -p tc_dstu_macs -p tc_gost28147_mac -p tc_hmac -p tc_iso9797_mac \
+  -p tc_kmac -p tc_poly1305 -p tc_siphash -p tc_vmpc_mac --locked
 ```

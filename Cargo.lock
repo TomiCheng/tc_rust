@@ -589,6 +589,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_cbc_mac"
+version = "0.1.0"
+dependencies = [
+ "tc_cipher",
+ "tc_crypto",
+ "tc_des",
+ "tc_macs",
+ "tc_pad",
+ "tc_params",
+ "tc_pkcs7_pad",
+]
+
+[[package]]
 name = "tc_ccm"
 version = "0.1.0"
 dependencies = [
@@ -605,6 +618,18 @@ dependencies = [
  "tc_aes",
  "tc_cipher",
  "tc_crypto",
+ "tc_params",
+]
+
+[[package]]
+name = "tc_cfb_mac"
+version = "0.1.0"
+dependencies = [
+ "tc_cipher",
+ "tc_crypto",
+ "tc_des",
+ "tc_macs",
+ "tc_pad",
  "tc_params",
 ]
 
@@ -726,9 +751,11 @@ dependencies = [
 name = "tc_dstu_macs"
 version = "0.1.0"
 dependencies = [
+ "tc_cipher",
  "tc_crypto",
  "tc_digest",
  "tc_dstu7564",
+ "tc_dstu7624",
  "tc_macs",
  "tc_params",
 ]
@@ -749,6 +776,16 @@ version = "0.1.0"
 dependencies = [
  "tc_cipher",
  "tc_crypto",
+ "tc_params",
+]
+
+[[package]]
+name = "tc_gost28147_mac"
+version = "0.1.0"
+dependencies = [
+ "tc_crypto",
+ "tc_gost28147",
+ "tc_macs",
  "tc_params",
 ]
 
@@ -840,6 +877,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_iso9797_mac"
+version = "0.1.0"
+dependencies = [
+ "tc_cipher",
+ "tc_crypto",
+ "tc_des",
+ "tc_macs",
+ "tc_pad",
+ "tc_params",
+]
+
+[[package]]
 name = "tc_kccm"
 version = "0.1.0"
 dependencies = [
@@ -854,6 +903,17 @@ name = "tc_keccak"
 version = "0.1.0"
 dependencies = [
  "tc_digest",
+]
+
+[[package]]
+name = "tc_kmac"
+version = "0.1.0"
+dependencies = [
+ "tc_crypto",
+ "tc_digest",
+ "tc_keccak",
+ "tc_macs",
+ "tc_params",
 ]
 
 [[package]]
@@ -1076,6 +1136,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_siphash"
+version = "0.1.0"
+dependencies = [
+ "tc_crypto",
+ "tc_macs",
+ "tc_params",
+]
+
+[[package]]
 name = "tc_skein"
 version = "0.1.0"
 dependencies = [
@@ -1175,6 +1244,15 @@ version = "0.1.0"
 dependencies = [
  "tc_cipher",
  "tc_crypto",
+ "tc_params",
+]
+
+[[package]]
+name = "tc_vmpc_mac"
+version = "0.1.0"
+dependencies = [
+ "tc_crypto",
+ "tc_macs",
  "tc_params",
 ]
 

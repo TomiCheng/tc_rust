@@ -1,0 +1,15 @@
+[package]
+name = "tc_iso9797_mac"
+description = "ISO 9797-1 algorithm 3 retail MAC for the tc_rust workspace."
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+tc_cipher = { version = "0.1", path = "../../tc_cipher" }
+tc_crypto = { version = "0.1", path = "../../tc_crypto" }
+tc_des = { version = "0.1", path = "../../block_cipher/tc_des" }
+tc_macs = { version = "0.1", path = "../../tc_macs" }
+tc_pad = { version = "0.1", path = "../../tc_pad" }
+tc_params = { version = "0.1", path = "../../tc_params" }
