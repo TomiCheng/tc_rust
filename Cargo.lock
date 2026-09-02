@@ -789,18 +789,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tc_key_wrap"
-version = "0.1.0"
-dependencies = [
- "rand_core",
- "tc_block_cipher",
- "tc_block_modes",
- "tc_cipher_core",
- "tc_crypto_core",
- "tc_digest_legacy",
-]
-
-[[package]]
 name = "tc_macs"
 version = "0.1.0"
 

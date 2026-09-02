@@ -10,6 +10,7 @@ members = [
     "crypto/key_wrap/*",
     "crypto/macs/*",
     "crypto/stream_cipher/*",
+    "math/*",
 ]
 
 [workspace.package]

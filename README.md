@@ -38,8 +38,7 @@ Sparkle digest support still requires a shared Sparkle permutation/engine.
 | [`tc_stream_cipher`](crates/tc_stream_cipher) | Stream cipher engines and shared error handling | Core-only `no_std` |
 | [`tc_block_modes`](crates/tc_block_modes) | Generic block cipher modes built on `tc_cipher_core` | `no_std + alloc` |
 | [`tc_digest`](crates/tc_digest) | Message digests, XOFs, and digest wrappers | `no_std + alloc`; `std` enables runtime CPU-feature detection |
-| [`tc_key_wrap`](crates/tc_key_wrap) | Key-wrapping algorithms built on block ciphers | `no_std + alloc`; `std` propagates block-cipher acceleration |
-| [`tc_math`](crates/tc_math) | Arbitrary-precision integers, finite-field arithmetic, and elliptic-curve foundations | `no_std + alloc`; `std` adds lazy caching |
+| [`tc_math`](math/tc_math) | Arbitrary-precision integers, finite-field arithmetic, and elliptic-curve foundations | `no_std + alloc`; `std` adds lazy caching |
 
 The core trait crates do not depend on algorithm implementations. Concrete
 algorithm crates depend on the appropriate core crate, which keeps the
@@ -155,7 +154,6 @@ cargo build -p tc_block_cipher --no-default-features --features alloc --locked
 # Crates that require alloc but not std
 cargo build -p tc_block_modes --locked
 cargo build -p tc_digest --no-default-features --locked
-cargo build -p tc_key_wrap --no-default-features --locked
 cargo build -p tc_math --no-default-features --locked
 ```
 
