@@ -877,6 +877,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_pkcs7_pad"
+version = "0.1.0"
+dependencies = [
+ "tc_crypto",
+ "tc_pad",
+]
+
+[[package]]
 name = "tc_poly1305"
 version = "0.1.0"
 dependencies = [
