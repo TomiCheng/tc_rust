@@ -640,6 +640,17 @@ name = "tc_crypto_core"
 version = "0.1.0"
 
 [[package]]
+name = "tc_ctr"
+version = "0.1.0"
+dependencies = [
+ "tc_aes",
+ "tc_cipher",
+ "tc_crypto",
+ "tc_dstu7624",
+ "tc_params",
+]
+
+[[package]]
 name = "tc_des"
 version = "0.1.0"
 dependencies = [
@@ -815,6 +826,17 @@ version = "0.1.0"
 dependencies = [
  "tc_cipher",
  "tc_crypto",
+ "tc_params",
+]
+
+[[package]]
+name = "tc_ofb"
+version = "0.1.0"
+dependencies = [
+ "tc_aes",
+ "tc_cipher",
+ "tc_crypto",
+ "tc_gost28147",
  "tc_params",
 ]
 

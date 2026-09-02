@@ -8,7 +8,7 @@ to independent crates under `crypto/block_modes`.
 | ✅ | `tc_ecb` | ECB |
 | ✅ | `tc_cbc` | CBC |
 | ✅ | `tc_cfb` | CFB, OpenPGP CFB |
-| ⬜ | `tc_ofb` | OFB, GCTR |
-| ⬜ | `tc_ctr` | CTR, KCTR |
+| ✅ | `tc_ofb` | OFB, GCTR |
+| ✅ | `tc_ctr` | CTR, KCTR |
 
 Legend: ✅ completed, ⬜ TODO.
