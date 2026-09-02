@@ -36,7 +36,7 @@ Sparkle digest support still requires a shared Sparkle permutation/engine.
 | [`tc_crypto_core`](crates/tc_crypto_core) | Shared `TryDigest` / `Digest`, `TryXof` / `Xof`, and key-wrapper traits | Core-only `no_std`; `alloc` is optional for `Wrapper` |
 | [`tc_block_cipher`](crates/tc_block_cipher) | Block cipher engines and their validated parameter types | Core-only subset, full `no_std + alloc`, or `std` with AES-NI detection |
 | [`tc_stream_cipher`](crates/tc_stream_cipher) | Stream cipher engines and shared error handling | Core-only `no_std` |
-| [`tc_block_modes`](crates/tc_block_modes) | Generic block cipher modes built on `tc_cipher_core` | `no_std + alloc` |
+| [`tc_ecb`](crypto/block_modes/tc_ecb), [`tc_cbc`](crypto/block_modes/tc_cbc), [`tc_cfb`](crypto/block_modes/tc_cfb), [`tc_ofb`](crypto/block_modes/tc_ofb), [`tc_ctr`](crypto/block_modes/tc_ctr) | Independent ECB, CBC, CFB/OpenPGP CFB, OFB/GCTR, and CTR/KCTR crates built on `tc_cipher` | Core-only `no_std`; `alloc` enables runtime-sized variants where needed |
 | [`tc_digest`](crates/tc_digest) | Message digests, XOFs, and digest wrappers | `no_std + alloc`; `std` enables runtime CPU-feature detection |
 | [`tc_math`](math/tc_math) | Arbitrary-precision integers, finite-field arithmetic, and elliptic-curve foundations | `no_std + alloc`; `std` adds lazy caching |
 
@@ -151,8 +151,14 @@ cargo build -p tc_block_cipher --no-default-features --locked
 # Full block-cipher inventory without std
 cargo build -p tc_block_cipher --no-default-features --features alloc --locked
 
-# Crates that require alloc but not std
-cargo build -p tc_block_modes --locked
+# Block modes without alloc (fixed-size variants)
+cargo build -p tc_ecb --locked
+cargo build -p tc_cbc -p tc_cfb -p tc_ofb -p tc_ctr --no-default-features --locked
+
+# Runtime-sized block-mode variants (alloc, but not std)
+cargo build -p tc_cbc -p tc_cfb -p tc_ofb -p tc_ctr --locked
+
+# Other crates that require alloc but not std
 cargo build -p tc_digest --no-default-features --locked
 cargo build -p tc_math --no-default-features --locked
 ```

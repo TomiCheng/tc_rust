@@ -1,7 +1,7 @@
 # Block cipher mode migration
 
-This table tracks the migration from the legacy `crates/tc_block_modes` crate
-to independent crates under `crypto/block_modes`.
+This table records the completed migration of the legacy block-mode crate to
+independent crates under `crypto/block_modes`.
 
 | Status | Target crate | Mode |
 |:------:|--------------|------|

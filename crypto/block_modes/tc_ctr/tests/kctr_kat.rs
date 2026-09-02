@@ -1,7 +1,8 @@
 mod common;
 
 use tc_cipher::{
-    BlockCipher, BlockCipherInit, BlockCipherMode, CipherDirection, StreamCipher, StreamCipherInit,
+    BlockCipher, BlockCipherInit, BlockCipherMode, BlockModeError, CipherDirection, StreamCipher,
+    StreamCipherInit,
 };
 use tc_crypto::AlgorithmName;
 use tc_ctr::{FixedKctrBlockCipher, KctrBlockCipher};
@@ -77,4 +78,60 @@ fn reset_restarts_the_keystream_and_reports_name() {
     mode.write_algo_name(&mut name).unwrap();
     assert_eq!(name, "DSTU7624/KCTR");
     assert!(mode.is_partial_block_okay());
+}
+
+#[test]
+fn return_byte_matches_process_bytes() {
+    let key = unhex(KEY);
+    let iv = unhex(IV);
+    let params = KeyIv { key: &key, iv: &iv };
+    let input = unhex(ALIGNED_IN);
+
+    let mut bulk = KctrBlockCipher::new(Engine128::new());
+    StreamCipherInit::init(&mut bulk, CipherDirection::Encrypt, &params).unwrap();
+    let mut bulk_output = vec![0; input.len()];
+    bulk.process_bytes(&input, &mut bulk_output).unwrap();
+
+    let mut bytewise = KctrBlockCipher::new(Engine128::new());
+    StreamCipherInit::init(&mut bytewise, CipherDirection::Encrypt, &params).unwrap();
+    let bytewise_output: Vec<u8> = input
+        .iter()
+        .map(|&byte| bytewise.return_byte(byte).unwrap())
+        .collect();
+
+    assert_eq!(bytewise_output, bulk_output);
+}
+
+#[test]
+fn round_trips_and_rejects_use_before_init() {
+    let key = unhex(KEY);
+    let iv = unhex(IV);
+    let params = KeyIv { key: &key, iv: &iv };
+    let plaintext = unhex(ALIGNED_IN);
+
+    let mut encrypt = KctrBlockCipher::new(Engine128::new());
+    StreamCipherInit::init(&mut encrypt, CipherDirection::Encrypt, &params).unwrap();
+    let mut ciphertext = vec![0; plaintext.len()];
+    encrypt
+        .process_bytes(&plaintext, &mut ciphertext)
+        .unwrap();
+
+    let mut decrypt = KctrBlockCipher::new(Engine128::new());
+    StreamCipherInit::init(&mut decrypt, CipherDirection::Decrypt, &params).unwrap();
+    let mut recovered = vec![0; ciphertext.len()];
+    decrypt
+        .process_bytes(&ciphertext, &mut recovered)
+        .unwrap();
+    assert_eq!(recovered, plaintext);
+
+    let mut uninitialised = KctrBlockCipher::new(Engine128::new());
+    let mut output = [0; 1];
+    assert!(matches!(
+        uninitialised.process_bytes(&[0], &mut output),
+        Err(BlockModeError::NotInitialised)
+    ));
+    assert!(matches!(
+        uninitialised.return_byte(0),
+        Err(BlockModeError::NotInitialised)
+    ));
 }

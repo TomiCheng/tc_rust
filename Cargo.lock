@@ -558,14 +558,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tc_block_modes"
-version = "0.1.0"
-dependencies = [
- "tc_block_cipher",
- "tc_cipher_core",
-]
-
-[[package]]
 name = "tc_blowfish"
 version = "0.1.0"
 dependencies = [
