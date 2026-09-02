@@ -35,7 +35,7 @@ type.
 | 🟢 Ready | `KMac` | `tc_kmac` | `tc_keccak::CShakeDigest` and the `Xof` API are available. This implementation will require `alloc`, as the current cSHAKE implementation does. |
 | ✅ Raw mode | `Poly1305` | [`tc_poly1305`](tc_poly1305) | Raw Poly1305 with a caller-supplied 32-byte one-time key is implemented and tested. The optional 128-bit block-cipher construction is not implemented, but its block-cipher and IV prerequisites are available. |
 | 🟢 Ready | `SipHash` | `tc_siphash` | The algorithm is self-contained and only needs `KeyParams`. |
-| ⏸ Blocked | `SkeinMac` | `tc_skein_mac` | `tc_threefish` exists, but the Skein UBI engine and Skein parameter model are not implemented. |
+| 🟡 Partial | `SkeinMac` | `tc_skein_mac` | `tc_skein::SkeinEngine` provides unkeyed UBI, but keyed/parameterized initialization and a shared Skein parameter model are still required. |
 | 🟢 Ready | `VMPCMac` | `tc_vmpc_mac` | The algorithm is self-contained, and the key/IV parameter traits are available. `tc_vmpc` has equivalent KSA logic, but that private helper would need to be extracted before the two crates could share it. |
 
 Legend:
@@ -57,13 +57,15 @@ Castle C# MAC types:
   but need a shared block-padding abstraction for full constructor parity;
 - CMAC is blocked by the missing padding contract and ISO/IEC 7816-4 padding;
 - GMAC is blocked by the missing GCM/GHASH authentication core;
-- SkeinMac is blocked by the missing Skein engine.
+- SkeinMac can reuse the unkeyed Skein engine, but still needs keyed and
+  parameterized initialization.
 
 The padding contract and ISO/IEC 7816-4 padding should be implemented before
 `tc_cmac`. Completing CMAC then removes the remaining MAC prerequisite recorded
 for EAX in the [`aead_cipher` inventory](../aead_cipher/README.md). The ready,
 self-contained algorithms can otherwise be ported independently. GMAC and
-SkeinMac should remain deferred until their required primitives exist.
+SkeinMac should remain deferred until its parameter model and keyed engine
+initialization exist.
 
 ## Verification
 

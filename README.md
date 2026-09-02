@@ -13,7 +13,7 @@ learning project for studying Rust, cryptographic algorithms, and API design.
 ## Current status
 
 The low-level block-cipher and stream-cipher engine inventories are implemented.
-Digest support is close to the current target, while key wrapping and the
+Digest support has reached the current target, while key wrapping and the
 higher-level elliptic-curve work still have known gaps.
 
 | Area | Current progress | Remaining work |
@@ -21,12 +21,12 @@ higher-level elliptic-curve work still have known gaps.
 | Block ciphers | 28 public engines with known-answer tests | The current raw-engine inventory is complete |
 | Stream ciphers | 11 engines; the current inventory is complete | Higher-level protocols and authenticated encryption are outside this crate |
 | Block modes | 8 mode families | Padding, buffering, and ciphertext stealing are not provided |
-| Digests and XOFs | 43 exported digest, XOF, and wrapper types | GOST 34.11-94 and Skein |
+| Digests and XOFs | 45 exported digest, XOF, and wrapper types | The current Bouncy Castle digest inventory is complete |
 | Key wrapping | RFC 3394, RFC 5649, and DSTU 7624 | RFC 3211, DESede, and RC2 wrappers |
 | Mathematics | Big integers, binary-polynomial and raw arithmetic, prime-field support, X25519, and 33 named SEC curves | General constant-time EC scalar multiplication, projective/WNAF paths, and the remaining X25519 helpers |
 
-The prerequisites for GOST 34.11-94 and Skein are present in the workspace;
-their dedicated digest implementations remain deferred.
+GOST 34.11-94 and Skein 1.3 reuse the workspace's GOST 28147 and Threefish
+engines respectively; both provide streaming, clone, and reset behavior.
 
 ## Workspace crates
 

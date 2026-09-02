@@ -742,7 +742,9 @@ dependencies = [
 name = "tc_gost3411"
 version = "0.1.0"
 dependencies = [
+ "tc_cipher",
  "tc_digest",
+ "tc_gost28147",
 ]
 
 [[package]]
@@ -1046,6 +1048,15 @@ name = "tc_sha"
 version = "0.1.0"
 dependencies = [
  "tc_digest",
+]
+
+[[package]]
+name = "tc_skein"
+version = "0.1.0"
+dependencies = [
+ "tc_cipher",
+ "tc_digest",
+ "tc_threefish",
 ]
 
 [[package]]

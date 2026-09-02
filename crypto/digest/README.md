@@ -99,7 +99,8 @@ in the family crates.
 | BLAKE | `Blake2bDigest`, `Blake2sDigest`, `Blake3Digest` | Keyed and variable-output BLAKE2 modes; BLAKE3 also implements `Xof` |
 | Ascon | `AsconHash256` | Current NIST SP 800-232 hash |
 | Ascon legacy | `AsconDigest`, `AsconParameters` | Deprecated Ascon v1.2 Hash / HashA compatibility API |
-| GOST / DSTU | `Gost3411_2012_256Digest`, `Gost3411_2012_512Digest`, `Dstu7564Digest` | Streebog-256/512 and DSTU 7564-256/384/512 |
+| GOST / DSTU | `Gost3411Digest`, `Gost3411_2012_256Digest`, `Gost3411_2012_512Digest`, `Dstu7564Digest` | GOST 34.11-94, Streebog-256/512, and DSTU 7564-256/384/512 |
+| Skein | `SkeinDigest`, `SkeinEngine` | Skein-256/512/1024 with any positive byte-aligned output size |
 | Other classic hashes | `Sm3Digest`, `TigerDigest`, `WhirlpoolDigest` | Standard and Bouncy Castle vectors |
 | Lightweight hashes | `IsapDigest`, `PhotonBeetleDigest`, `SparkleDigest`, `XoodyakDigest` | NIST LWC known-answer vectors; `SparkleDigest` provides ESCH-256 and ESCH-384 |
 | Haraka | `Haraka256Digest`, `Haraka512Digest` | Fixed 32/64-byte input, 32-byte output; fallible input contract |
@@ -120,15 +121,13 @@ The implementations are validated with specification vectors, Bouncy Castle
 vectors, official KAT files, streaming/chunking checks, reset/clone tests, and
 portable-versus-accelerated backend comparisons where applicable.
 
-## 4. Not yet implemented
+## 4. Coverage status
 
-These families were not present in the former monolithic crate and remain
-deferred relative to the current Bouncy Castle C# digest directory:
-
-| Algorithm | Reason |
-|-----------|--------|
-| `GOST3411Digest` (GOST 34.11-94) | Requires a dedicated v2 implementation using `tc_gost28147`. |
-| `SkeinDigest` / `SkeinEngine` | Requires a dedicated v2 implementation using `tc_threefish`. |
+The current Bouncy Castle C# digest inventory is implemented. GOST 34.11-94
+uses `tc_gost28147` with the CryptoPro D-A S-box by default. Skein's public
+unkeyed `SkeinEngine` contains UBI and the output transform while delegating
+block encryption to `tc_threefish`; parameterized/keyed Skein initialization
+is outside the current digest API.
 
 ## 5. Features and allocation
 
@@ -142,7 +141,7 @@ Disabling default features selects the portable implementations. Digest results
 are identical in both configurations.
 
 The crates containing `NullDigest`, `Prehash`, `ShortenedDigest`, cSHAKE,
-BLAKE3, TupleHash, ParallelHash, or runtime-generated SHA-512/t names use
+BLAKE3, TupleHash, ParallelHash, Skein, or runtime-generated SHA-512/t names use
 `alloc`. Fixed-state algorithms that do not retain dynamic data remain
 allocation-free.
 
@@ -156,6 +155,8 @@ use. Local development can specify both `version` and `path`:
 tc_digest = { version = "0.1", path = "crypto/tc_digest" }
 tc_sha = { version = "0.1", path = "crypto/digest/tc_sha" }
 tc_keccak = { version = "0.1", path = "crypto/digest/tc_keccak" }
+tc_gost3411 = { version = "0.1", path = "crypto/digest/tc_gost3411" }
+tc_skein = { version = "0.1", path = "crypto/digest/tc_skein" }
 ```
 
 ## 7. Building and testing
