@@ -11,6 +11,18 @@ pub enum PaddingError {
     NotInitialised,
     /// The requested padding position lies past the end of the block.
     PositionOutOfRange,
+    /// The block is longer than the scheme's length encoding can describe.
+    ///
+    /// PKCS#7, ANSI X9.23, and ISO 10126-2 record the padding count in a single
+    /// byte and therefore cannot serve blocks of 256 bytes or more.
+    UnsupportedBlockSize,
+    /// The block is already full, leaving no room for padding.
+    ///
+    /// Schemes that must write at least one byte, such as PKCS#7 and
+    /// ISO 7816-4, report this when the padding position equals the block
+    /// length. Schemes that can add nothing at all, such as zero-byte padding,
+    /// return a count of zero instead.
+    BlockFull,
     /// The trailing bytes of the block are not a valid encoding for the scheme.
     ///
     /// Self-describing schemes such as PKCS#7 report this; schemes that encode
@@ -25,6 +37,10 @@ impl fmt::Display for PaddingError {
             Self::PositionOutOfRange => {
                 f.write_str("padding position is past the end of the block")
             }
+            Self::UnsupportedBlockSize => {
+                f.write_str("block is too long for a single-byte padding count")
+            }
+            Self::BlockFull => f.write_str("block leaves no room for padding"),
             Self::CorruptPadding => f.write_str("pad block corrupted"),
         }
     }
@@ -49,6 +65,14 @@ mod tests {
         assert_eq!(
             format!("{}", PaddingError::PositionOutOfRange),
             "padding position is past the end of the block"
+        );
+        assert_eq!(
+            format!("{}", PaddingError::UnsupportedBlockSize),
+            "block is too long for a single-byte padding count"
+        );
+        assert_eq!(
+            format!("{}", PaddingError::BlockFull),
+            "block leaves no room for padding"
         );
         assert_eq!(
             format!("{}", PaddingError::CorruptPadding),
