@@ -773,6 +773,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_hmac"
+version = "0.1.0"
+dependencies = [
+ "tc_crypto",
+ "tc_digest",
+ "tc_macs",
+ "tc_params",
+ "tc_sha",
+]
+
+[[package]]
 name = "tc_idea"
 version = "0.1.0"
 dependencies = [
