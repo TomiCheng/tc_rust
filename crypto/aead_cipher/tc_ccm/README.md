@@ -19,30 +19,31 @@ CCM accepts:
 - an even authentication-tag size from 4 through 16 bytes;
 - optional initial associated data.
 
-The included `Params<'a>` type borrows all byte slices. Applications may
+`tc_params::AeadBlockParams<'a>` borrows all byte slices. Applications may
 instead supply their own type implementing `KeyParams`, `IvParams`,
 `InitialAadParams`, and `MacSizeParams` from `tc_params`.
 
-The MAC size passed to `Params::new()` is measured in bytes:
+The MAC size passed to `AeadBlockParams::new()` is measured in bytes:
 
 ```rust
-use tc_ccm::Params;
+use tc_params::AeadBlockParams;
 
 let key = [0x11_u8; 16];
 let nonce = [0x22_u8; 12];
-let params = Params::new(&key, &nonce, 16, b"header");
+let params = AeadBlockParams::new(&key, &nonce, 16, b"header");
 ```
 
 ## Encryption and decryption
 
 ```rust
 use tc_aes::AesEngine;
-use tc_ccm::{CcmBlockCipher, Params};
+use tc_ccm::CcmBlockCipher;
 use tc_cipher::{AeadCipher, AeadCipherInit, CipherDirection};
+use tc_params::AeadBlockParams;
 
 let key = [0x11_u8; 16];
 let nonce = [0x22_u8; 12];
-let params = Params::new(&key, &nonce, 16, b"header");
+let params = AeadBlockParams::new(&key, &nonce, 16, b"header");
 
 let mut encryptor = CcmBlockCipher::new(AesEngine::new());
 encryptor

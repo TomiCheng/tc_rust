@@ -3,6 +3,7 @@
 
 #![no_std]
 
+mod aead_block;
 mod initial_aad;
 mod iv;
 mod key;
@@ -13,6 +14,7 @@ mod rc5;
 mod s_box;
 mod tweak;
 
+pub use aead_block::AeadBlockParams;
 pub use initial_aad::InitialAadParams;
 pub use iv::{IvParams, OptionalIvParams};
 pub use key::{KeyOwned, KeyParams, KeyRef};

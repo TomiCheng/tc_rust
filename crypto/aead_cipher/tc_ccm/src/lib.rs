@@ -8,12 +8,13 @@
 //! # #[cfg(feature = "alloc")]
 //! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! use tc_aes::AesEngine;
-//! use tc_ccm::{CcmBlockCipher, Params};
+//! use tc_ccm::CcmBlockCipher;
 //! use tc_cipher::{AeadCipher, AeadCipherInit, CipherDirection};
+//! use tc_params::AeadBlockParams;
 //!
 //! let key = [0x11_u8; 16];
 //! let nonce = [0x22_u8; 12];
-//! let params = Params::new(&key, &nonce, 16, b"header");
+//! let params = AeadBlockParams::new(&key, &nonce, 16, b"header");
 //! let mut encryptor = CcmBlockCipher::new(AesEngine::new());
 //! encryptor.init(CipherDirection::Encrypt, &params)?;
 //!
@@ -43,11 +44,9 @@ extern crate alloc;
 
 #[cfg(feature = "alloc")]
 mod engine;
-mod params;
 
 #[cfg(feature = "alloc")]
 pub use engine::CcmBlockCipher;
-pub use params::Params;
 
 /// Block size required by CCM in bytes.
 pub const BLOCK_BYTES: usize = 16;

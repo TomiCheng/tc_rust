@@ -61,6 +61,7 @@ type such as `KeyWithIvRef`.
 | `IvParams` | Required initialization-vector bytes |
 | `OptionalIvParams` | An optional initialization vector |
 | `InitialAadParams` | Associated data supplied during AEAD initialization |
+| `MacSizeParams` | Requested authentication-tag size in bytes |
 | `SBoxParams` | An algorithm-specific substitution box |
 | `TweakParams` | Optional tweak bytes |
 | `Rc2Params` | RC2 key and effective key size |
@@ -81,6 +82,7 @@ documentation examples, tests, and simple callers:
 | `KeyOwned<N>` | Owns a fixed-size key array |
 | `KeyWithIvRef<'a>` | Borrows key and IV bytes |
 | `KeyWithIvOwned<K, I>` | Owns fixed-size key and IV arrays |
+| `AeadBlockParams<'a>` | Borrows key, nonce, initial AAD, and stores a MAC size |
 
 For example:
 

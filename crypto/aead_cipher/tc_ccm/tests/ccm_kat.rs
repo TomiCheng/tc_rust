@@ -1,12 +1,13 @@
 #![cfg(feature = "alloc")]
 
 use tc_aes::AesEngine;
-use tc_ccm::{CcmBlockCipher, Params};
+use tc_ccm::CcmBlockCipher;
 use tc_cipher::{
     AeadBlockCipher, AeadBlockError, AeadBlockInitError, AeadCipher, AeadCipherInit, AeadError,
     BlockCipher, CipherDirection,
 };
 use tc_crypto::AlgorithmName;
+use tc_params::AeadBlockParams;
 
 fn decode(hex: &str) -> Vec<u8> {
     assert_eq!(hex.len() % 2, 0);
@@ -41,7 +42,7 @@ fn check_vector(
     let plaintext = decode(plaintext_hex);
     let expected_mac = decode(mac_hex);
     let expected_ciphertext = decode(ciphertext_hex);
-    let params = Params::new(&key, &nonce, expected_mac.len(), &aad);
+    let params = AeadBlockParams::new(&key, &nonce, expected_mac.len(), &aad);
 
     let mut encryptor = CcmBlockCipher::new(AesEngine::new());
     encryptor.init(CipherDirection::Encrypt, &params).unwrap();
@@ -144,7 +145,7 @@ fn split_aad_and_data_match_initial_aad() {
     expected_engine
         .init(
             CipherDirection::Encrypt,
-            &Params::new(&key, &nonce, 12, &aad),
+            &AeadBlockParams::new(&key, &nonce, 12, &aad),
         )
         .unwrap();
     expected_engine.process_bytes(&plaintext, &mut []).unwrap();
@@ -155,7 +156,7 @@ fn split_aad_and_data_match_initial_aad() {
     actual_engine
         .init(
             CipherDirection::Encrypt,
-            &Params::new(&key, &nonce, 12, &[]),
+            &AeadBlockParams::new(&key, &nonce, 12, &[]),
         )
         .unwrap();
     for chunk in aad.chunks(5) {
@@ -174,18 +175,21 @@ fn split_aad_and_data_match_initial_aad() {
 fn rejects_bad_parameters_nonce_reuse_and_tampering_without_plaintext() {
     let key = [0x11u8; 16];
     let nonce = [0x22u8; 12];
-    let params = Params::new(&key, &nonce, 8, &[]);
+    let params = AeadBlockParams::new(&key, &nonce, 8, &[]);
     let mut cipher = CcmBlockCipher::new(AesEngine::new());
 
     assert!(matches!(
         cipher.init(
             CipherDirection::Encrypt,
-            &Params::new(&key, &[0u8; 6], 8, &[]),
+            &AeadBlockParams::new(&key, &[0u8; 6], 8, &[]),
         ),
         Err(AeadBlockInitError::InvalidNonceLength(6))
     ));
     assert!(matches!(
-        cipher.init(CipherDirection::Encrypt, &Params::new(&key, &nonce, 5, &[]),),
+        cipher.init(
+            CipherDirection::Encrypt,
+            &AeadBlockParams::new(&key, &nonce, 5, &[]),
+        ),
         Err(AeadBlockInitError::InvalidMacSize(5))
     ));
 
@@ -215,7 +219,7 @@ fn rejects_bad_parameters_nonce_reuse_and_tampering_without_plaintext() {
 fn exposes_block_cipher_metadata_and_packet_sizes() {
     let key = [0u8; 16];
     let nonce = [0u8; 12];
-    let params = Params::new(&key, &nonce, 10, &[]);
+    let params = AeadBlockParams::new(&key, &nonce, 10, &[]);
     let mut cipher = CcmBlockCipher::new(AesEngine::new());
     let mut name = String::new();
     cipher.write_algo_name(&mut name).unwrap();
@@ -236,13 +240,19 @@ fn enforces_message_limit_encoded_by_nonce_length() {
     let nonce = [0u8; 13];
     let mut accepted = CcmBlockCipher::new(AesEngine::new());
     accepted
-        .init(CipherDirection::Encrypt, &Params::new(&key, &nonce, 4, &[]))
+        .init(
+            CipherDirection::Encrypt,
+            &AeadBlockParams::new(&key, &nonce, 4, &[]),
+        )
         .unwrap();
     assert_eq!(accepted.process_bytes(&vec![0u8; 65_535], &mut []), Ok(0));
 
     let mut rejected = CcmBlockCipher::new(AesEngine::new());
     rejected
-        .init(CipherDirection::Encrypt, &Params::new(&key, &nonce, 4, &[]))
+        .init(
+            CipherDirection::Encrypt,
+            &AeadBlockParams::new(&key, &nonce, 4, &[]),
+        )
         .unwrap();
     assert_eq!(
         rejected.process_bytes(&vec![0u8; 65_536], &mut []),
