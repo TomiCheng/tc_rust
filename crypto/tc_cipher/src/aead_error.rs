@@ -20,6 +20,10 @@ pub enum AeadError {
     CiphertextTooShort { minimum: usize, actual: usize },
     /// Authentication-tag verification failed.
     AuthenticationFailed,
+    /// The algorithm's input-length limit would be exceeded.
+    InputTooLong,
+    /// A composed primitive failed despite validated internal invariants.
+    InternalFailure,
 }
 
 impl fmt::Display for AeadError {
@@ -46,6 +50,8 @@ impl fmt::Display for AeadError {
                 "ciphertext is too short: requires at least {minimum} bytes, has {actual}"
             ),
             Self::AuthenticationFailed => f.write_str("authentication tag verification failed"),
+            Self::InputTooLong => f.write_str("AEAD input length limit exceeded"),
+            Self::InternalFailure => f.write_str("internal AEAD primitive failure"),
         }
     }
 }
@@ -71,6 +77,14 @@ mod tests {
                 }
             ),
             "associated data is too long: maximum 5 bytes, got 6"
+        );
+        assert_eq!(
+            format!("{}", AeadError::InputTooLong),
+            "AEAD input length limit exceeded"
+        );
+        assert_eq!(
+            format!("{}", AeadError::InternalFailure),
+            "internal AEAD primitive failure"
         );
     }
 }

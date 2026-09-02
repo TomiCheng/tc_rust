@@ -32,8 +32,8 @@ when SSE2 is unavailable or disabled.
 
 | Status | Algorithm or family | Bouncy Castle C# type | Current prerequisite or decision |
 |--------|---------------------|-----------------------|----------------------------------|
-| ⬜ TODO | ChaCha20-Poly1305 | `ChaCha20Poly1305` | Compose `tc_chacha::ChaCha7539Engine` with `tc_poly1305::Engine` |
-| ⬜ TODO | XChaCha20-Poly1305 | `XChaCha20Poly1305` | Compose `tc_chacha::XChaCha20Engine` with `tc_poly1305::Engine` |
+| ✅ Done | ChaCha20-Poly1305 | `tc_chacha_aead::ChaCha20Poly1305` | RFC 8439 vectors |
+| ✅ Done | XChaCha20-Poly1305 | `tc_chacha_aead::XChaCha20Poly1305` | XChaCha draft and BC vectors |
 | ⬜ TODO | CCM | `CcmBlockCipher` | Add a generic AEAD block-cipher composition |
 | ⬜ TODO | EAX | `EaxBlockCipher` | Add CMAC/CTR composition over `BlockCipher` traits |
 | ⬜ TODO | GCM | `GcmBlockCipher` | Add GHASH and a generic block-cipher composition |
@@ -49,6 +49,7 @@ interfaces such as `IAeadCipher` itself.
 | Crate | Contents |
 |-------|----------|
 | `tc_ascon_aead` | Finalized Ascon-AEAD128 and separately named legacy Ascon v1.2 variants |
+| `tc_chacha_aead` | ChaCha20-Poly1305 and XChaCha20-Poly1305 |
 | `tc_grain128_aead` | Growable and allocation-free fixed-capacity Grain-128AEAD engines |
 | `tc_sparkle_aead` | All four SCHWAEMM parameter sets |
 

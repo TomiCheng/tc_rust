@@ -46,8 +46,8 @@ impl State {
     pub(crate) fn init_original(&mut self, key: &[u8], iv: &[u8]) {
         self.words.fill(0);
         set_key(&mut self.words, key);
-        for (index, bytes) in iv.chunks_exact(4).enumerate() {
-            self.words[14 + index] = u32::from_le_bytes(bytes.try_into().unwrap());
+        for (index, bytes) in iv.as_chunks::<4>().0.iter().enumerate() {
+            self.words[14 + index] = u32::from_le_bytes(*bytes);
         }
         self.counter = Counter::Original;
         self.reset();
@@ -57,8 +57,8 @@ impl State {
     pub(crate) fn init_ietf(&mut self, key: &[u8], iv: &[u8]) {
         self.words.fill(0);
         set_key(&mut self.words, key);
-        for (index, bytes) in iv.chunks_exact(4).enumerate() {
-            self.words[13 + index] = u32::from_le_bytes(bytes.try_into().unwrap());
+        for (index, bytes) in iv.as_chunks::<4>().0.iter().enumerate() {
+            self.words[13 + index] = u32::from_le_bytes(*bytes);
         }
         self.counter = Counter::Ietf;
         self.reset();
@@ -133,11 +133,10 @@ impl State {
             Counter::Ietf => {
                 if self.words[12] == u32::MAX {
                     self.counter_exhausted = true;
-                    Err(StreamError::CounterExhausted)
                 } else {
                     self.words[12] += 1;
-                    Ok(())
                 }
+                Ok(())
             }
         }
     }
@@ -162,11 +161,11 @@ impl State {
 pub(crate) fn set_key(state: &mut [u32; STATE_WORDS], key: &[u8]) {
     state[..4].copy_from_slice(if key.len() == 16 { &TAU } else { &SIGMA });
 
-    for (index, bytes) in key[..16].chunks_exact(4).enumerate() {
-        state[4 + index] = u32::from_le_bytes(bytes.try_into().unwrap());
+    for (index, bytes) in key[..16].as_chunks::<4>().0.iter().enumerate() {
+        state[4 + index] = u32::from_le_bytes(*bytes);
     }
-    for (index, bytes) in key[key.len() - 16..].chunks_exact(4).enumerate() {
-        state[8 + index] = u32::from_le_bytes(bytes.try_into().unwrap());
+    for (index, bytes) in key[key.len() - 16..].as_chunks::<4>().0.iter().enumerate() {
+        state[8 + index] = u32::from_le_bytes(*bytes);
     }
 }
 
@@ -177,8 +176,8 @@ pub(crate) fn block(rounds: usize, input: &[u32; STATE_WORDS]) -> [u8; BLOCK_BYT
     }
 
     let mut output = [0u8; BLOCK_BYTES];
-    for (bytes, word) in output.chunks_exact_mut(4).zip(words) {
-        bytes.copy_from_slice(&word.to_le_bytes());
+    for (bytes, word) in output.as_chunks_mut::<4>().0.iter_mut().zip(words) {
+        *bytes = word.to_le_bytes();
     }
     output
 }
@@ -247,6 +246,10 @@ mod tests {
         let mut state = State::new(20, Counter::Ietf);
         state.init_ietf(&[0; 32], &[0; 12]);
         state.words[12] = u32::MAX;
+        assert_eq!(
+            state.process_bytes(&[0; BLOCK_BYTES], &mut [0; BLOCK_BYTES]),
+            Ok(BLOCK_BYTES)
+        );
         assert_eq!(
             state.process_bytes(&[0], &mut [0]),
             Err(StreamError::CounterExhausted)

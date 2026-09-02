@@ -20,6 +20,10 @@ pub enum InitError {
     InvalidRounds(usize),
     /// Initial associated data exceeds the engine's fixed buffer capacity.
     InitialAadTooLong { maximum: usize, actual: usize },
+    /// The same key and nonce would be reused for encryption.
+    NonceReuse,
+    /// A composed primitive failed despite validated internal invariants.
+    InternalFailure,
 }
 
 impl fmt::Display for InitError {
@@ -47,6 +51,8 @@ impl fmt::Display for InitError {
                 f,
                 "initial AAD is too long: maximum {maximum} bytes, got {actual}"
             ),
+            Self::NonceReuse => f.write_str("key and nonce cannot be reused for AEAD encryption"),
+            Self::InternalFailure => f.write_str("internal cipher primitive failure"),
         }
     }
 }
@@ -96,6 +102,14 @@ mod tests {
                 }
             ),
             "initial AAD is too long: maximum 3 bytes, got 4"
+        );
+        assert_eq!(
+            format!("{}", InitError::NonceReuse),
+            "key and nonce cannot be reused for AEAD encryption"
+        );
+        assert_eq!(
+            format!("{}", InitError::InternalFailure),
+            "internal cipher primitive failure"
         );
     }
 }

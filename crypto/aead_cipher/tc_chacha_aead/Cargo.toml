@@ -1,0 +1,15 @@
+[package]
+name = "tc_chacha_aead"
+description = "ChaCha20-Poly1305 and XChaCha20-Poly1305 authenticated encryption."
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+tc_chacha = { version = "0.1", path = "../../stream_cipher/tc_chacha" }
+tc_cipher = { version = "0.1", path = "../../tc_cipher" }
+tc_crypto = { version = "0.1", path = "../../tc_crypto" }
+tc_macs = { version = "0.1", path = "../../tc_macs" }
+tc_params = { version = "0.1", path = "../../tc_params" }
+tc_poly1305 = { version = "0.1", path = "../../macs/tc_poly1305" }

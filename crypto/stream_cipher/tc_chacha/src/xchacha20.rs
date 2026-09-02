@@ -82,17 +82,27 @@ impl<P: KeyParams + IvParams + ?Sized> StreamCipherInit<P> for XChaCha20Engine {
 fn hchacha20(key: &[u8], iv: &[u8]) -> [u8; KEY_BYTES] {
     let mut input = [0u32; STATE_WORDS];
     chacha::set_key(&mut input, key);
-    for (index, bytes) in iv.chunks_exact(4).enumerate() {
-        input[12 + index] = u32::from_le_bytes(bytes.try_into().unwrap());
+    for (index, bytes) in iv.as_chunks::<4>().0.iter().enumerate() {
+        input[12 + index] = u32::from_le_bytes(*bytes);
     }
 
     let mut words = chacha::permutation(DEFAULT_ROUNDS, &input);
     let mut subkey = [0u8; KEY_BYTES];
-    for (bytes, word) in subkey[..16].chunks_exact_mut(4).zip(&words[..4]) {
-        bytes.copy_from_slice(&word.to_le_bytes());
+    for (bytes, word) in subkey[..16]
+        .as_chunks_mut::<4>()
+        .0
+        .iter_mut()
+        .zip(&words[..4])
+    {
+        *bytes = word.to_le_bytes();
     }
-    for (bytes, word) in subkey[16..].chunks_exact_mut(4).zip(&words[12..]) {
-        bytes.copy_from_slice(&word.to_le_bytes());
+    for (bytes, word) in subkey[16..]
+        .as_chunks_mut::<4>()
+        .0
+        .iter_mut()
+        .zip(&words[12..])
+    {
+        *bytes = word.to_le_bytes();
     }
     input.fill(0);
     words.fill(0);
