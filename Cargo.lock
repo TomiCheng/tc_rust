@@ -796,6 +796,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_iso10126_pad"
+version = "0.1.0"
+dependencies = [
+ "rand_core",
+ "tc_crypto",
+ "tc_pad",
+]
+
+[[package]]
 name = "tc_kccm"
 version = "0.1.0"
 dependencies = [
