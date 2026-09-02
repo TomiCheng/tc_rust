@@ -1,7 +1,6 @@
-use tc_ascon_aead::aead128::Engine;
+use tc_ascon_aead::aead128::{Engine, Params};
 use tc_cipher::{AeadCipher, AeadCipherInit, AeadError, CipherDirection, InitError};
 use tc_crypto::AlgorithmName;
-use tc_params::{InitialAadParams, IvParams, KeyParams};
 
 struct Kat {
     plaintext: &'static str,
@@ -73,9 +72,10 @@ const KATS: &[Kat] = &[
 ];
 
 fn hex(input: &str) -> Vec<u8> {
-    input
-        .as_bytes()
-        .chunks_exact(2)
+    let (pairs, remainder) = input.as_bytes().as_chunks::<2>();
+    assert!(remainder.is_empty(), "hex input must have an even length");
+    pairs
+        .iter()
         .map(|pair| {
             let text = core::str::from_utf8(pair).unwrap();
             u8::from_str_radix(text, 16).unwrap()
@@ -89,7 +89,7 @@ fn key_and_nonce() -> (Vec<u8>, Vec<u8>) {
 
 fn encrypt(plaintext: &[u8], aad: &[u8]) -> (Vec<u8>, Vec<u8>) {
     let (key, nonce) = key_and_nonce();
-    let params = CustomParams::new(&key, &nonce);
+    let params = Params::new(&key, &nonce, &[]);
     let mut engine = Engine::new();
     engine.init(CipherDirection::Encrypt, &params).unwrap();
     engine.process_aad_bytes(aad).unwrap();
@@ -103,7 +103,7 @@ fn encrypt(plaintext: &[u8], aad: &[u8]) -> (Vec<u8>, Vec<u8>) {
 
 fn decrypt(ciphertext: &[u8], aad: &[u8]) -> (Vec<u8>, Vec<u8>) {
     let (key, nonce) = key_and_nonce();
-    let params = CustomParams::new(&key, &nonce);
+    let params = Params::new(&key, &nonce, &[]);
     let mut engine = Engine::new();
     engine.init(CipherDirection::Decrypt, &params).unwrap();
     engine.process_aad_bytes(aad).unwrap();
@@ -141,7 +141,7 @@ fn chunked_and_initial_aad_processing_match() {
     let (key, nonce) = key_and_nonce();
 
     for split in 0..=plaintext.len() {
-        let params = CustomParams::with_aad(&key, &nonce, &aad);
+        let params = Params::new(&key, &nonce, &aad);
         let mut engine = Engine::new();
         engine.init(CipherDirection::Encrypt, &params).unwrap();
         let mut output = vec![0; expected.len()];
@@ -156,7 +156,7 @@ fn chunked_and_initial_aad_processing_match() {
     }
 
     for split in 0..=expected.len() {
-        let params = CustomParams::new(&key, &nonce);
+        let params = Params::new(&key, &nonce, &[]);
         let mut engine = Engine::new();
         engine.init(CipherDirection::Decrypt, &params).unwrap();
         engine.process_aad_bytes(&aad[..15]).unwrap();
@@ -180,7 +180,7 @@ fn rejects_modified_tags_short_ciphertexts_and_bad_state() {
     let (mut ciphertext, _) = encrypt(&plaintext, &aad);
     *ciphertext.last_mut().unwrap() ^= 1;
     let (key, nonce) = key_and_nonce();
-    let params = CustomParams::new(&key, &nonce);
+    let params = Params::new(&key, &nonce, &[]);
     let mut engine = Engine::new();
     engine.init(CipherDirection::Decrypt, &params).unwrap();
     let mut output = vec![0xa5; plaintext.len()];
@@ -206,49 +206,11 @@ fn rejects_modified_tags_short_ciphertexts_and_bad_state() {
     );
 }
 
-struct CustomParams<'a> {
-    key: &'a [u8],
-    nonce: &'a [u8],
-    initial_aad: &'a [u8],
-}
-
-impl<'a> CustomParams<'a> {
-    fn new(key: &'a [u8], nonce: &'a [u8]) -> Self {
-        Self::with_aad(key, nonce, &[])
-    }
-
-    fn with_aad(key: &'a [u8], nonce: &'a [u8], initial_aad: &'a [u8]) -> Self {
-        Self {
-            key,
-            nonce,
-            initial_aad,
-        }
-    }
-}
-
-impl KeyParams for CustomParams<'_> {
-    fn key(&self) -> &[u8] {
-        self.key
-    }
-}
-
-impl IvParams for CustomParams<'_> {
-    fn iv(&self) -> &[u8] {
-        self.nonce
-    }
-}
-
-impl InitialAadParams for CustomParams<'_> {
-    fn initial_aad(&self) -> &[u8] {
-        self.initial_aad
-    }
-}
-
 #[test]
-fn caller_defined_params_names_and_errors_work() {
+fn params_names_and_errors_work() {
     let key = [0x11; 16];
     let nonce = [0x22; 16];
-    let params = CustomParams::new(&key, &nonce);
+    let params = Params::new(&key, &nonce, &[]);
     let mut concrete = Engine::new();
     concrete.init(CipherDirection::Encrypt, &params).unwrap();
 
@@ -259,13 +221,13 @@ fn caller_defined_params_names_and_errors_work() {
     assert_eq!(cipher.get_output_size(0), 16);
 
     let bad_key = [0u8; 15];
-    let bad = CustomParams::new(&bad_key, &nonce);
+    let bad = Params::new(&bad_key, &nonce, &[]);
     assert_eq!(
         concrete.init(CipherDirection::Encrypt, &bad),
         Err(InitError::InvalidKeyLength(15))
     );
     let bad_nonce = [0u8; 15];
-    let bad = CustomParams::new(&key, &bad_nonce);
+    let bad = Params::new(&key, &bad_nonce, &[]);
     assert!(matches!(
         concrete.init(CipherDirection::Encrypt, &bad),
         Err(InitError::InvalidIvLength(15))

@@ -352,7 +352,8 @@ impl AeadCipher for Engine {
         }
 
         self.mac = None;
-        debug_assert_eq!(self.start_data()?, direction);
+        let started_direction = self.start_data()?;
+        debug_assert_eq!(started_direction, direction);
         Ok(match direction {
             CipherDirection::Encrypt => self.process_encrypt_bytes(input, output),
             CipherDirection::Decrypt => self.process_decrypt_bytes(input, output),
@@ -378,7 +379,8 @@ impl AeadCipher for Engine {
         }
 
         self.mac = None;
-        debug_assert_eq!(self.start_data()?, direction);
+        let started_direction = self.start_data()?;
+        debug_assert_eq!(started_direction, direction);
         match direction {
             CipherDirection::Encrypt => {
                 let message_len = self.buffer_pos;
