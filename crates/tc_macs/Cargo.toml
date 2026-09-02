@@ -7,7 +7,7 @@ license.workspace = true
 repository.workspace = true
 
 [lib]
-name = "tc_macs"
+name = "tc_macs_legacy"
 
 [dependencies]
 tc_cipher_core = { path = "../tc_cipher_core" }

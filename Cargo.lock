@@ -849,6 +849,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_poly1305"
+version = "0.1.0"
+dependencies = [
+ "tc_crypto",
+ "tc_macs",
+ "tc_params",
+]
+
+[[package]]
 name = "tc_rc2"
 version = "0.1.0"
 dependencies = [
