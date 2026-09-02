@@ -815,6 +815,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_iso7816_pad"
+version = "0.1.0"
+dependencies = [
+ "tc_crypto",
+ "tc_pad",
+]
+
+[[package]]
 name = "tc_keccak"
 version = "0.1.0"
 dependencies = [
