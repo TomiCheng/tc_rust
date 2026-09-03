@@ -22,6 +22,7 @@ const FULL_BLOCK_HIGH_BIT: u32 = 1 << 24;
 /// finalization and [`reset`](Mac::reset) preserve the initialized key;
 /// callers must initialize a fresh one-time key before authenticating another
 /// message.
+#[derive(Clone)]
 pub struct Engine {
     r0: u32,
     r1: u32,

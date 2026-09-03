@@ -35,6 +35,14 @@ pub trait AeadCipher {
     /// finalization, or after the cipher starts a new operation.
     fn mac(&self) -> Option<&[u8]>;
 
+    /// Discards data from the current operation and restores the state
+    /// established by the most recent successful initialization.
+    ///
+    /// Implementations may keep an encryption cipher finalized when restoring
+    /// it would reuse a key and nonce. Such a cipher must be initialized with a
+    /// fresh nonce before it can encrypt another message.
+    fn reset(&mut self);
+
     /// Returns the output capacity required by one [`process_bytes`](Self::process_bytes)
     /// call for `input_len` additional bytes in the current state.
     fn get_update_output_size(&self, input_len: usize) -> usize;
@@ -167,6 +175,11 @@ mod tests {
             self.mac.as_ref().map(|mac| mac.as_slice())
         }
 
+        fn reset(&mut self) {
+            self.aad_len = 0;
+            self.mac = None;
+        }
+
         fn get_update_output_size(&self, input_len: usize) -> usize {
             input_len
         }
@@ -217,6 +230,12 @@ mod tests {
         assert_eq!(cipher.do_final(&mut final_output), Ok(1));
         assert_eq!(final_output, [0xa7]);
         assert_eq!(cipher.mac(), Some(&[0xa7][..]));
+
+        cipher.reset();
+        assert_eq!(cipher.mac(), None);
+        let mut reset_output = [0u8; 1];
+        assert_eq!(cipher.do_final(&mut reset_output), Ok(1));
+        assert_eq!(reset_output, [0xa5]);
     }
 
     #[test]

@@ -19,7 +19,7 @@ enum State {
     Uninitialised,
     Encrypt,
     Decrypt,
-    Finalised,
+    Finalised(CipherDirection),
 }
 
 struct CbcMac<'a, C>
@@ -113,6 +113,7 @@ pub struct CcmBlockCipher<C> {
     nonce_len: usize,
     mac_size: usize,
     aad: Vec<u8>,
+    initial_aad_len: usize,
     data: Vec<u8>,
     last_key: Vec<u8>,
     has_key_nonce: bool,
@@ -130,6 +131,7 @@ impl<C> CcmBlockCipher<C> {
             nonce_len: 0,
             mac_size: 0,
             aad: Vec::new(),
+            initial_aad_len: 0,
             data: Vec::new(),
             last_key: Vec::new(),
             has_key_nonce: false,
@@ -141,7 +143,7 @@ impl<C> CcmBlockCipher<C> {
         match self.state {
             State::Encrypt => Ok(CipherDirection::Encrypt),
             State::Decrypt => Ok(CipherDirection::Decrypt),
-            State::Finalised => Err(AeadBlockError::Aead(AeadError::AlreadyFinalised)),
+            State::Finalised(_) => Err(AeadBlockError::Aead(AeadError::AlreadyFinalised)),
             State::Uninitialised => Err(AeadBlockError::Aead(AeadError::NotInitialised)),
         }
     }
@@ -155,8 +157,8 @@ impl<C> CcmBlockCipher<C> {
     }
 
     fn clear_packet(&mut self) {
-        self.aad.fill(0);
-        self.aad.clear();
+        self.aad[self.initial_aad_len..].fill(0);
+        self.aad.truncate(self.initial_aad_len);
         self.data.fill(0);
         self.data.clear();
         self.data_started = false;
@@ -363,13 +365,30 @@ where
             CipherDirection::Encrypt => self.encrypt_packet(output),
             CipherDirection::Decrypt => self.decrypt_packet(output),
         };
-        self.state = State::Finalised;
+        self.state = State::Finalised(direction);
         self.clear_packet();
         result
     }
 
     fn mac(&self) -> Option<&[u8]> {
         self.mac.as_ref().map(|mac| &mac[..self.mac_size])
+    }
+
+    fn reset(&mut self) {
+        self.mac = None;
+        self.state = match self.state {
+            State::Encrypt => State::Encrypt,
+            State::Decrypt | State::Finalised(CipherDirection::Decrypt) => State::Decrypt,
+            State::Finalised(CipherDirection::Encrypt) => {
+                State::Finalised(CipherDirection::Encrypt)
+            }
+            State::Uninitialised => {
+                self.initial_aad_len = 0;
+                self.clear_packet();
+                return;
+            }
+        };
+        self.clear_packet();
     }
 
     fn get_update_output_size(&self, _input_len: usize) -> usize {
@@ -428,6 +447,7 @@ where
             .init(CipherDirection::Encrypt, params)
             .map_err(AeadBlockInitError::Cipher)?;
 
+        self.initial_aad_len = 0;
         self.clear_packet();
         self.mac = None;
         self.mac_size = mac_size;
@@ -439,6 +459,7 @@ where
         self.last_key.extend_from_slice(key);
         self.has_key_nonce = true;
         self.aad.extend_from_slice(params.initial_aad());
+        self.initial_aad_len = self.aad.len();
         self.state = match direction {
             CipherDirection::Encrypt => State::Encrypt,
             CipherDirection::Decrypt => State::Decrypt,

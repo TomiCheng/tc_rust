@@ -37,6 +37,10 @@ pub struct Engine {
     state_words: [u64; 5],
     state: State,
     mac: Option<[u8; TAG_BYTES]>,
+    initial_buffer: [u8; DECRYPT_BUFFER_BYTES],
+    initial_buffer_pos: usize,
+    initial_state_words: [u64; 5],
+    initial_state: State,
 }
 
 impl Engine {
@@ -50,7 +54,18 @@ impl Engine {
             state_words: [0; 5],
             state: State::Uninitialised,
             mac: None,
+            initial_buffer: [0; DECRYPT_BUFFER_BYTES],
+            initial_buffer_pos: 0,
+            initial_state_words: [0; 5],
+            initial_state: State::Uninitialised,
         }
+    }
+
+    fn restore_initial_state(&mut self) {
+        self.buffer = self.initial_buffer;
+        self.buffer_pos = self.initial_buffer_pos;
+        self.state_words = self.initial_state_words;
+        self.state = self.initial_state;
     }
 
     fn initialise_state(&mut self) {
@@ -427,6 +442,22 @@ impl AeadCipher for Engine {
         self.mac.as_ref().map(|mac| mac.as_slice())
     }
 
+    fn reset(&mut self) {
+        self.mac = None;
+        self.buffer.fill(0);
+        self.buffer_pos = 0;
+        match self.state {
+            State::EncryptInit => self.restore_initial_state(),
+            State::EncryptAad | State::EncryptData | State::EncryptFinal => {
+                self.state = State::EncryptFinal;
+            }
+            State::DecryptInit | State::DecryptAad | State::DecryptData | State::DecryptFinal => {
+                self.restore_initial_state()
+            }
+            State::Uninitialised => {}
+        }
+    }
+
     fn get_update_output_size(&self, input_len: usize) -> usize {
         let total = match self.state {
             State::DecryptInit | State::DecryptAad => input_len.saturating_sub(TAG_BYTES),
@@ -472,6 +503,10 @@ where
         self.key.fill(0);
         self.nonce.fill(0);
         self.state_words.fill(0);
+        self.initial_buffer.fill(0);
+        self.initial_buffer_pos = 0;
+        self.initial_state_words.fill(0);
+        self.initial_state = State::Uninitialised;
 
         let key = params.key();
         if key.len() != KEY_BYTES {
@@ -500,6 +535,10 @@ where
             };
             self.absorb_aad_bytes(initial_aad);
         }
+        self.initial_buffer = self.buffer;
+        self.initial_buffer_pos = self.buffer_pos;
+        self.initial_state_words = self.state_words;
+        self.initial_state = self.state;
         Ok(())
     }
 }

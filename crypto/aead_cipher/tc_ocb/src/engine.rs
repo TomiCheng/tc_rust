@@ -19,7 +19,7 @@ enum State {
     Uninitialised,
     Encrypt,
     Decrypt,
-    Finalised,
+    Finalised(CipherDirection),
 }
 
 /// OCB3 authenticated encryption over two instances of the same block cipher.
@@ -40,6 +40,7 @@ pub struct OcbBlockCipher<C> {
     l_dollar: [u8; BLOCK_BYTES],
     l_zero: [u8; BLOCK_BYTES],
     aad: Vec<u8>,
+    initial_aad_len: usize,
     data: Vec<u8>,
     last_key: Vec<u8>,
     last_nonce: [u8; MAX_NONCE_BYTES],
@@ -68,6 +69,7 @@ impl<C> OcbBlockCipher<C> {
             l_dollar: [0; BLOCK_BYTES],
             l_zero: [0; BLOCK_BYTES],
             aad: Vec::new(),
+            initial_aad_len: 0,
             data: Vec::new(),
             last_key: Vec::new(),
             last_nonce: [0; MAX_NONCE_BYTES],
@@ -81,7 +83,7 @@ impl<C> OcbBlockCipher<C> {
         match self.state {
             State::Encrypt => Ok(CipherDirection::Encrypt),
             State::Decrypt => Ok(CipherDirection::Decrypt),
-            State::Finalised => Err(AeadBlockError::Aead(AeadError::AlreadyFinalised)),
+            State::Finalised(_) => Err(AeadBlockError::Aead(AeadError::AlreadyFinalised)),
             State::Uninitialised => Err(AeadBlockError::Aead(AeadError::NotInitialised)),
         }
     }
@@ -95,8 +97,8 @@ impl<C> OcbBlockCipher<C> {
     }
 
     fn clear_packet(&mut self) {
-        self.aad.fill(0);
-        self.aad.clear();
+        self.aad[self.initial_aad_len..].fill(0);
+        self.aad.truncate(self.initial_aad_len);
         self.data.fill(0);
         self.data.clear();
         self.data_started = false;
@@ -316,13 +318,30 @@ impl<C: BlockCipher> AeadCipher for OcbBlockCipher<C> {
             CipherDirection::Encrypt => self.encrypt_packet(output),
             CipherDirection::Decrypt => self.decrypt_packet(output),
         };
-        self.state = State::Finalised;
+        self.state = State::Finalised(direction);
         self.clear_packet();
         result
     }
 
     fn mac(&self) -> Option<&[u8]> {
         self.mac.as_ref().map(|mac| &mac[..self.mac_size])
+    }
+
+    fn reset(&mut self) {
+        self.mac = None;
+        self.state = match self.state {
+            State::Encrypt => State::Encrypt,
+            State::Decrypt | State::Finalised(CipherDirection::Decrypt) => State::Decrypt,
+            State::Finalised(CipherDirection::Encrypt) => {
+                State::Finalised(CipherDirection::Encrypt)
+            }
+            State::Uninitialised => {
+                self.initial_aad_len = 0;
+                self.clear_packet();
+                return;
+            }
+        };
+        self.clear_packet();
     }
 
     fn get_update_output_size(&self, _input_len: usize) -> usize {
@@ -387,8 +406,10 @@ where
         self.nonce[..nonce.len()].copy_from_slice(nonce);
         self.nonce_len = nonce.len();
 
+        self.initial_aad_len = 0;
         self.clear_packet();
         self.aad.extend_from_slice(params.initial_aad());
+        self.initial_aad_len = self.aad.len();
         self.mac = None;
         self.last_key.fill(0);
         self.last_key.clear();

@@ -51,6 +51,10 @@ pub struct Engine {
     state: State,
     encrypted: bool,
     mac: Option<[u8; BYTES_256]>,
+    initial_buffer: [u8; MAX_BUFFER_BYTES],
+    initial_buffer_pos: usize,
+    initial_state_words: [u32; MAX_STATE_WORDS],
+    initial_state: State,
 }
 
 impl Engine {
@@ -66,7 +70,19 @@ impl Engine {
             state: State::Uninitialised,
             encrypted: false,
             mac: None,
+            initial_buffer: [0; MAX_BUFFER_BYTES],
+            initial_buffer_pos: 0,
+            initial_state_words: [0; MAX_STATE_WORDS],
+            initial_state: State::Uninitialised,
         }
+    }
+
+    fn restore_initial_state(&mut self) {
+        self.buffer = self.initial_buffer;
+        self.buffer_pos = self.initial_buffer_pos;
+        self.state_words = self.initial_state_words;
+        self.state = self.initial_state;
+        self.encrypted = false;
     }
 
     /// Returns the selected SCHWAEMM parameter set.
@@ -525,6 +541,23 @@ impl AeadCipher for Engine {
         self.mac.as_ref().map(|mac| &mac[..self.tag_bytes()])
     }
 
+    fn reset(&mut self) {
+        self.mac = None;
+        self.buffer.fill(0);
+        self.buffer_pos = 0;
+        self.encrypted = false;
+        match self.state {
+            State::EncryptInit => self.restore_initial_state(),
+            State::EncryptAad | State::EncryptData | State::EncryptFinal => {
+                self.state = State::EncryptFinal;
+            }
+            State::DecryptInit | State::DecryptAad | State::DecryptData | State::DecryptFinal => {
+                self.restore_initial_state()
+            }
+            State::Uninitialised => {}
+        }
+    }
+
     fn get_update_output_size(&self, input_len: usize) -> usize {
         let total = match self.state {
             State::DecryptInit | State::DecryptAad => {
@@ -577,6 +610,10 @@ where
         self.key.fill(0);
         self.nonce.fill(0);
         self.state_words.fill(0);
+        self.initial_buffer.fill(0);
+        self.initial_buffer_pos = 0;
+        self.initial_state_words.fill(0);
+        self.initial_state = State::Uninitialised;
         self.encrypted = false;
 
         let key = params.key();
@@ -617,6 +654,10 @@ where
             };
             self.absorb_aad_bytes(initial_aad);
         }
+        self.initial_buffer = self.buffer;
+        self.initial_buffer_pos = self.buffer_pos;
+        self.initial_state_words = self.state_words;
+        self.initial_state = self.state;
         Ok(())
     }
 }

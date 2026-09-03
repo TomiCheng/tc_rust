@@ -74,6 +74,8 @@ mod tests {
             None
         }
 
+        fn reset(&mut self) {}
+
         fn get_update_output_size(&self, input_len: usize) -> usize {
             input_len
         }

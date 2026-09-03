@@ -75,6 +75,7 @@ impl KeyParams for MacKey<'_> {
 struct Core<C> {
     chacha: C,
     poly1305: Poly1305,
+    initial_poly1305: Poly1305,
     buffer: [u8; DECRYPT_BUFFER_BYTES],
     buffer_pos: usize,
     key: [u8; KEY_BYTES],
@@ -82,6 +83,7 @@ struct Core<C> {
     nonce_len: usize,
     has_key_nonce: bool,
     aad_count: u64,
+    initial_aad_count: u64,
     data_count: u64,
     state: State,
     mac: Option<[u8; TAG_BYTES]>,
@@ -95,6 +97,7 @@ where
         Self {
             chacha,
             poly1305: Poly1305::new(),
+            initial_poly1305: Poly1305::new(),
             buffer: [0; DECRYPT_BUFFER_BYTES],
             buffer_pos: 0,
             key: [0; KEY_BYTES],
@@ -102,6 +105,7 @@ where
             nonce_len: 0,
             has_key_nonce: false,
             aad_count: 0,
+            initial_aad_count: 0,
             data_count: 0,
             state: State::Uninitialised,
             mac: None,
@@ -457,12 +461,56 @@ where
                 .update(initial_aad)
                 .map_err(|_| InitError::InternalFailure)?;
         }
+        self.initial_aad_count = self.aad_count;
+        self.initial_poly1305 = self.poly1305.clone();
         Ok(())
     }
 
     fn clear_buffer(&mut self) {
         self.buffer.fill(0);
         self.buffer_pos = 0;
+    }
+
+    fn restore_initial_state(&mut self, direction: CipherDirection) {
+        self.clear_buffer();
+        self.aad_count = self.initial_aad_count;
+        self.data_count = 0;
+        self.chacha.reset();
+
+        let zeros = [0u8; BLOCK_BYTES];
+        let mut first_block = [0u8; BLOCK_BYTES];
+        if self.chacha.process_bytes(&zeros, &mut first_block).is_err() {
+            self.state = State::Uninitialised;
+            return;
+        }
+        first_block.fill(0);
+        self.poly1305 = self.initial_poly1305.clone();
+        self.state = match (direction, self.initial_aad_count) {
+            (CipherDirection::Encrypt, 0) => State::EncryptInit,
+            (CipherDirection::Encrypt, _) => State::EncryptAad,
+            (CipherDirection::Decrypt, 0) => State::DecryptInit,
+            (CipherDirection::Decrypt, _) => State::DecryptAad,
+        };
+    }
+
+    fn reset(&mut self) {
+        self.mac = None;
+        self.clear_buffer();
+        match self.state {
+            State::EncryptInit => self.restore_initial_state(CipherDirection::Encrypt),
+            State::EncryptAad | State::EncryptData | State::EncryptFinal => {
+                self.aad_count = 0;
+                self.data_count = 0;
+                self.state = State::EncryptFinal;
+            }
+            State::DecryptInit | State::DecryptAad | State::DecryptData | State::DecryptFinal => {
+                self.restore_initial_state(CipherDirection::Decrypt)
+            }
+            State::Uninitialised => {
+                self.aad_count = 0;
+                self.data_count = 0;
+            }
+        }
     }
 }
 
@@ -514,6 +562,10 @@ impl AeadCipher for ChaCha20Poly1305 {
 
     fn mac(&self) -> Option<&[u8]> {
         self.core.mac()
+    }
+
+    fn reset(&mut self) {
+        self.core.reset();
     }
 
     fn get_update_output_size(&self, input_len: usize) -> usize {
@@ -583,6 +635,10 @@ impl AeadCipher for XChaCha20Poly1305 {
 
     fn mac(&self) -> Option<&[u8]> {
         self.core.mac()
+    }
+
+    fn reset(&mut self) {
+        self.core.reset();
     }
 
     fn get_update_output_size(&self, input_len: usize) -> usize {

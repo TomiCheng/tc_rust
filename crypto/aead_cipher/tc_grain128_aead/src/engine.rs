@@ -32,6 +32,7 @@ trait AadBuffer {
     fn len(&self) -> usize;
     fn byte(&self, index: usize) -> u8;
     fn clear(&mut self);
+    fn reset_from(&mut self, source: &Self);
     fn extend_from_slice(&mut self, input: &[u8]) -> Result<(), AadBufferFull>;
 }
 
@@ -47,6 +48,11 @@ impl AadBuffer for Vec<u8> {
 
     fn clear(&mut self) {
         Vec::clear(self);
+    }
+
+    fn reset_from(&mut self, source: &Self) {
+        self.clear();
+        Vec::extend_from_slice(self, source);
     }
 
     fn extend_from_slice(&mut self, input: &[u8]) -> Result<(), AadBufferFull> {
@@ -83,6 +89,12 @@ impl<const MAX_AAD_LEN: usize> AadBuffer for FixedAadBuffer<MAX_AAD_LEN> {
         self.len = 0;
     }
 
+    fn reset_from(&mut self, source: &Self) {
+        self.clear();
+        self.bytes[..source.len].copy_from_slice(&source.bytes[..source.len]);
+        self.len = source.len;
+    }
+
     fn extend_from_slice(&mut self, input: &[u8]) -> Result<(), AadBufferFull> {
         let actual = self.len.saturating_add(input.len());
         if actual > MAX_AAD_LEN {
@@ -107,12 +119,13 @@ struct Inner<B> {
     tag_buffer: [u8; TAG_BYTES],
     tag_buffer_pos: usize,
     aad_buffer: B,
+    initial_aad_buffer: B,
     state: State,
     mac: Option<[u8; TAG_BYTES]>,
 }
 
 impl<B: AadBuffer> Inner<B> {
-    const fn new(aad_buffer: B) -> Self {
+    const fn new(aad_buffer: B, initial_aad_buffer: B) -> Self {
         Self {
             key: [0; KEY_BYTES],
             nonce: [0; NONCE_BYTES],
@@ -122,6 +135,7 @@ impl<B: AadBuffer> Inner<B> {
             tag_buffer: [0; TAG_BYTES],
             tag_buffer_pos: 0,
             aad_buffer,
+            initial_aad_buffer,
             state: State::Uninitialised,
             mac: None,
         }
@@ -137,6 +151,22 @@ impl<B: AadBuffer> Inner<B> {
 
     const fn tag_bytes(&self) -> usize {
         TAG_BYTES
+    }
+
+    fn restore_initial_state(&mut self, direction: CipherDirection) {
+        self.lfsr.fill(0);
+        self.nfsr.fill(0);
+        self.auth.fill(0);
+        self.tag_buffer.fill(0);
+        self.tag_buffer_pos = 0;
+        self.aad_buffer.reset_from(&self.initial_aad_buffer);
+        self.state = match (direction, self.aad_buffer.len()) {
+            (CipherDirection::Encrypt, 0) => State::EncryptInit,
+            (CipherDirection::Encrypt, _) => State::EncryptAad,
+            (CipherDirection::Decrypt, 0) => State::DecryptInit,
+            (CipherDirection::Decrypt, _) => State::DecryptAad,
+        };
+        self.initialise_grain();
     }
 
     fn check_aad(&mut self) -> Result<(), AeadError> {
@@ -506,6 +536,23 @@ impl<B: AadBuffer> AeadCipher for Inner<B> {
         self.mac.as_ref().map(|mac| mac.as_slice())
     }
 
+    fn reset(&mut self) {
+        self.mac = None;
+        self.tag_buffer.fill(0);
+        self.tag_buffer_pos = 0;
+        match self.state {
+            State::EncryptInit => self.restore_initial_state(CipherDirection::Encrypt),
+            State::EncryptAad | State::EncryptData | State::EncryptFinal => {
+                self.aad_buffer.clear();
+                self.state = State::EncryptFinal;
+            }
+            State::DecryptInit | State::DecryptAad | State::DecryptData | State::DecryptFinal => {
+                self.restore_initial_state(CipherDirection::Decrypt)
+            }
+            State::Uninitialised => self.aad_buffer.clear(),
+        }
+    }
+
     fn get_update_output_size(&self, input_len: usize) -> usize {
         match self.state {
             State::DecryptInit | State::DecryptAad => input_len.saturating_sub(TAG_BYTES),
@@ -547,6 +594,7 @@ where
         self.tag_buffer.fill(0);
         self.tag_buffer_pos = 0;
         self.aad_buffer.clear();
+        self.initial_aad_buffer.clear();
 
         let key = params.key();
         if key.len() != KEY_BYTES {
@@ -557,12 +605,13 @@ where
             return Err(InitError::InvalidIvLength(nonce.len()));
         }
         let initial_aad = params.initial_aad();
-        self.aad_buffer
+        self.initial_aad_buffer
             .extend_from_slice(initial_aad)
             .map_err(|error| InitError::InitialAadTooLong {
                 maximum: error.maximum,
                 actual: error.actual,
             })?;
+        self.aad_buffer.reset_from(&self.initial_aad_buffer);
 
         self.key.copy_from_slice(key);
         self.nonce.copy_from_slice(nonce);
@@ -601,7 +650,7 @@ impl Engine {
     /// Creates an uninitialised Grain-128AEAD engine.
     pub const fn new() -> Self {
         Self {
-            inner: Inner::new(Vec::new()),
+            inner: Inner::new(Vec::new(), Vec::new()),
         }
     }
 
@@ -655,6 +704,10 @@ impl AeadCipher for Engine {
         self.inner.mac()
     }
 
+    fn reset(&mut self) {
+        self.inner.reset();
+    }
+
     fn get_update_output_size(&self, input_len: usize) -> usize {
         self.inner.get_update_output_size(input_len)
     }
@@ -688,7 +741,7 @@ impl<const MAX_AAD_LEN: usize> FixedEngine<MAX_AAD_LEN> {
     /// Creates an uninitialised Grain-128AEAD engine.
     pub const fn new() -> Self {
         Self {
-            inner: Inner::new(FixedAadBuffer::new()),
+            inner: Inner::new(FixedAadBuffer::new(), FixedAadBuffer::new()),
         }
     }
 
@@ -742,6 +795,10 @@ impl<const MAX_AAD_LEN: usize> AeadCipher for FixedEngine<MAX_AAD_LEN> {
 
     fn mac(&self) -> Option<&[u8]> {
         self.inner.mac()
+    }
+
+    fn reset(&mut self) {
+        self.inner.reset();
     }
 
     fn get_update_output_size(&self, input_len: usize) -> usize {
