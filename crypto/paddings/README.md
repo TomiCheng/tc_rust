@@ -23,17 +23,17 @@ scheme does not have to depend on `tc_pad` directly.
 
 The Bouncy Castle `paddings` namespace holds eight files: these six schemes,
 the `IBlockCipherPadding` interface (ported as `tc_pad`), and
-`PaddedBufferedBlockCipher`, which is blocked below.
+`PaddedBufferedBlockCipher`, which remains to be implemented.
 
-## Blocked on missing prerequisites
+## Ready to implement
 
-| Status | Bouncy Castle C# type | Prerequisite that does not exist yet |
-|--------|-----------------------|--------------------------------------|
-| ⛔ Blocked | `PaddedBufferedBlockCipher` | A buffered block-cipher layer. Bouncy Castle builds it on `BufferedBlockCipher` / `BufferedCipherBase`, which accumulate arbitrary-length input, emit whole blocks through an `IBlockCipherMode`, and hold back a final block for padding. This workspace has the modes (`crypto/block_modes`) but no buffering layer above them, so there is nothing for the padding to plug into. |
+| Status | Bouncy Castle C# type | Available prerequisites |
+|--------|-----------------------|-------------------------|
+| 🟡 Ready | `PaddedBufferedBlockCipher` | `tc_buff::BufferedBlockCipher`, the block modes under `crypto/block_modes`, and all six padding schemes are now available. |
 
 `PaddedBufferedBlockCipher` is the only consumer of these schemes in Bouncy
-Castle, so until that layer exists the crates here are usable only by driving
-`add_padding` and `pad_count` on a caller-owned block.
+Castle. Until the padded buffering layer itself is implemented, callers can use
+the schemes by driving `add_padding` and `pad_count` on a caller-owned block.
 
 One design note for whoever writes that layer: Bouncy Castle's
 `PaddedBufferedBlockCipher.Init` calls `padding.Init(random)` unconditionally,

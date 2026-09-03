@@ -559,6 +559,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_buff"
+version = "0.1.0"
+dependencies = [
+ "tc_aes",
+ "tc_cfb",
+ "tc_cipher",
+ "tc_crypto",
+ "tc_ecb",
+ "tc_params",
+ "tc_rc4",
+]
+
+[[package]]
 name = "tc_camellia"
 version = "0.1.0"
 dependencies = [

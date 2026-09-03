@@ -1,11 +1,12 @@
 //! Buffered-cipher processing error type.
 
+use core::convert::Infallible;
 use core::fmt;
 
 /// Failures common to initialized buffered ciphers.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[non_exhaustive]
-pub enum BufferedError {
+pub enum BufferedError<E = Infallible> {
     /// Processing was requested before successful initialization.
     NotInitialised,
     /// The output buffer is shorter than required.
@@ -20,9 +21,11 @@ pub enum BufferedError {
     /// Callers must not report this separately from an authentication failure:
     /// distinguishing the two is what a padding oracle needs.
     CorruptPadding,
+    /// The wrapped block cipher failed while processing a block.
+    Cipher(E),
 }
 
-impl fmt::Display for BufferedError {
+impl<E: fmt::Display> fmt::Display for BufferedError<E> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::NotInitialised => f.write_str("buffered cipher not initialised"),
@@ -35,30 +38,43 @@ impl fmt::Display for BufferedError {
             ),
             Self::IncompleteLastBlock => f.write_str("last block incomplete"),
             Self::CorruptPadding => f.write_str("pad block corrupted"),
+            Self::Cipher(error) => write!(f, "underlying cipher failed: {error}"),
         }
     }
 }
 
-impl core::error::Error for BufferedError {}
+impl<E: core::error::Error + 'static> core::error::Error for BufferedError<E> {
+    fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
+        match self {
+            Self::Cipher(error) => Some(error),
+            _ => None,
+        }
+    }
+}
 
 #[cfg(test)]
 mod tests {
+    use core::convert::Infallible;
+
     extern crate std;
 
     use std::format;
 
     use super::BufferedError;
+    use crate::BlockError;
+
+    type CommonError = BufferedError<Infallible>;
 
     #[test]
     fn displays_each_variant() {
         assert_eq!(
-            format!("{}", BufferedError::NotInitialised),
+            format!("{}", CommonError::NotInitialised),
             "buffered cipher not initialised"
         );
         assert_eq!(
             format!(
                 "{}",
-                BufferedError::OutputTooShort {
+                CommonError::OutputTooShort {
                     required: 16,
                     available: 8,
                 }
@@ -66,12 +82,16 @@ mod tests {
             "output buffer is too short: requires 16 bytes, has 8"
         );
         assert_eq!(
-            format!("{}", BufferedError::IncompleteLastBlock),
+            format!("{}", CommonError::IncompleteLastBlock),
             "last block incomplete"
         );
         assert_eq!(
-            format!("{}", BufferedError::CorruptPadding),
+            format!("{}", CommonError::CorruptPadding),
             "pad block corrupted"
+        );
+        assert_eq!(
+            format!("{}", BufferedError::Cipher(BlockError::NotInitialised)),
+            "underlying cipher failed: block cipher not initialised"
         );
     }
 }
