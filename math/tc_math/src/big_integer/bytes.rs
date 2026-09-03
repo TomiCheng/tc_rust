@@ -182,7 +182,10 @@ impl BigInteger {
     pub fn try_to_bytes_be_into(&self, dst: &mut [u8]) -> Result<usize, BufferTooSmall> {
         let n = self.byte_length();
         if dst.len() < n {
-            return Err(BufferTooSmall { needed: n, available: dst.len() });
+            return Err(BufferTooSmall {
+                needed: n,
+                available: dst.len(),
+            });
         }
         self.write_magnitude_be(&mut dst[..n], true);
         Ok(n)
@@ -192,7 +195,10 @@ impl BigInteger {
     pub fn try_to_bytes_le_into(&self, dst: &mut [u8]) -> Result<usize, BufferTooSmall> {
         let n = self.byte_length();
         if dst.len() < n {
-            return Err(BufferTooSmall { needed: n, available: dst.len() });
+            return Err(BufferTooSmall {
+                needed: n,
+                available: dst.len(),
+            });
         }
         self.write_magnitude_be(&mut dst[..n], true);
         dst[..n].reverse();
@@ -203,7 +209,10 @@ impl BigInteger {
     pub fn try_to_bytes_be_unsigned_into(&self, dst: &mut [u8]) -> Result<usize, BufferTooSmall> {
         let n = self.byte_length_unsigned();
         if dst.len() < n {
-            return Err(BufferTooSmall { needed: n, available: dst.len() });
+            return Err(BufferTooSmall {
+                needed: n,
+                available: dst.len(),
+            });
         }
         self.write_magnitude_be(&mut dst[..n], false);
         Ok(n)
@@ -213,7 +222,10 @@ impl BigInteger {
     pub fn try_to_bytes_le_unsigned_into(&self, dst: &mut [u8]) -> Result<usize, BufferTooSmall> {
         let n = self.byte_length_unsigned();
         if dst.len() < n {
-            return Err(BufferTooSmall { needed: n, available: dst.len() });
+            return Err(BufferTooSmall {
+                needed: n,
+                available: dst.len(),
+            });
         }
         self.write_magnitude_be(&mut dst[..n], false);
         dst[..n].reverse();
@@ -238,7 +250,8 @@ impl BigInteger {
     /// assert_eq!(&buf[..len], &[0xFF, 0x7F]);
     /// ```
     pub fn to_bytes_be_into(&self, dst: &mut [u8]) -> usize {
-        self.try_to_bytes_be_into(dst).unwrap_or_else(|e| panic!("to_bytes_be_into: {e}"))
+        self.try_to_bytes_be_into(dst)
+            .unwrap_or_else(|e| panic!("to_bytes_be_into: {e}"))
     }
 
     /// Little-endian counterpart of [`BigInteger::to_bytes_be_into`].
@@ -247,7 +260,8 @@ impl BigInteger {
     ///
     /// Panics if `dst.len() < self.byte_length()`.
     pub fn to_bytes_le_into(&self, dst: &mut [u8]) -> usize {
-        self.try_to_bytes_le_into(dst).unwrap_or_else(|e| panic!("to_bytes_le_into: {e}"))
+        self.try_to_bytes_le_into(dst)
+            .unwrap_or_else(|e| panic!("to_bytes_le_into: {e}"))
     }
 
     /// Panicking version of [`BigInteger::try_to_bytes_be_unsigned_into`].
@@ -256,7 +270,8 @@ impl BigInteger {
     ///
     /// Panics if `dst.len() < self.byte_length_unsigned()`.
     pub fn to_bytes_be_unsigned_into(&self, dst: &mut [u8]) -> usize {
-        self.try_to_bytes_be_unsigned_into(dst).unwrap_or_else(|e| panic!("to_bytes_be_unsigned_into: {e}"))
+        self.try_to_bytes_be_unsigned_into(dst)
+            .unwrap_or_else(|e| panic!("to_bytes_be_unsigned_into: {e}"))
     }
 
     /// Little-endian counterpart of [`BigInteger::to_bytes_be_unsigned_into`].
@@ -265,6 +280,7 @@ impl BigInteger {
     ///
     /// Panics if `dst.len() < self.byte_length_unsigned()`.
     pub fn to_bytes_le_unsigned_into(&self, dst: &mut [u8]) -> usize {
-        self.try_to_bytes_le_unsigned_into(dst).unwrap_or_else(|e| panic!("to_bytes_le_unsigned_into: {e}"))
+        self.try_to_bytes_le_unsigned_into(dst)
+            .unwrap_or_else(|e| panic!("to_bytes_le_unsigned_into: {e}"))
     }
 }

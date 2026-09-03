@@ -10,9 +10,9 @@ mod f2m_field;
 pub mod f2m_field_element;
 pub mod f2m_point;
 pub mod fp_curve;
-pub mod named_curves;
 pub mod fp_field_element;
 pub mod fp_point;
+pub mod named_curves;
 pub mod point_codec;
 pub mod rfc7748;
 

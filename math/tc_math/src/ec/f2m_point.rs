@@ -36,12 +36,20 @@ impl F2mPoint {
     /// Does not verify that the point lies on the curve; that check is a separate
     /// operation (bc `ValidatePoint`).
     pub fn new(curve: Arc<F2mCurve>, x: F2mFieldElement, y: F2mFieldElement) -> Self {
-        F2mPoint { curve, coords: Some((x, y)), zs: Vec::new() }
+        F2mPoint {
+            curve,
+            coords: Some((x, y)),
+            zs: Vec::new(),
+        }
     }
 
     /// Returns the point at infinity (the group identity) on `curve`.
     pub fn infinity(curve: Arc<F2mCurve>) -> Self {
-        F2mPoint { curve, coords: None, zs: Vec::new() }
+        F2mPoint {
+            curve,
+            coords: None,
+            zs: Vec::new(),
+        }
     }
 
     /// Returns `true` if this is the point at infinity.
@@ -77,7 +85,11 @@ impl F2mPoint {
         let len = self.curve.field_element_encoding_length();
         let x_bytes = fixed_be(&x.to_big_integer(), len);
         if compressed {
-            let prefix = if Self::compression_y_tilde(x, y) { 0x03 } else { 0x02 };
+            let prefix = if Self::compression_y_tilde(x, y) {
+                0x03
+            } else {
+                0x02
+            };
             let mut out = Vec::with_capacity(1 + len);
             out.push(prefix);
             out.extend_from_slice(&x_bytes);
@@ -172,7 +184,11 @@ impl F2mPoint {
         }
 
         // k < 0：k·P = |k|·(−P)
-        let (k, base) = if k.sign() < 0 { (-k, -self) } else { (k.clone(), self.clone()) };
+        let (k, base) = if k.sign() < 0 {
+            (-k, -self)
+        } else {
+            (k.clone(), self.clone())
+        };
 
         // double-and-add，由最高位掃到最低位
         let mut result = F2mPoint::infinity(Arc::clone(&self.curve));
@@ -223,7 +239,12 @@ impl core::fmt::Debug for F2mPoint {
         match &self.coords {
             None => write!(f, "F2mPoint(infinity)"),
             Some((x, y)) => {
-                write!(f, "F2mPoint({}, {})", x.to_big_integer(), y.to_big_integer())
+                write!(
+                    f,
+                    "F2mPoint({}, {})",
+                    x.to_big_integer(),
+                    y.to_big_integer()
+                )
             }
         }
     }
@@ -338,7 +359,10 @@ mod tests {
         let p = c.create_point(BigInteger::from_u32(0), BigInteger::from_u32(0b0011));
         let np = -&p;
         assert_eq!(np.x().unwrap().to_big_integer(), BigInteger::from_u32(0));
-        assert_eq!(np.y().unwrap().to_big_integer(), BigInteger::from_u32(0b0011)); // y 不變
+        assert_eq!(
+            np.y().unwrap().to_big_integer(),
+            BigInteger::from_u32(0b0011)
+        ); // y 不變
     }
 
     #[test]
@@ -347,13 +371,25 @@ mod tests {
         // P = (x, y)，x≠0 → −P = (x, y+x)。
         let p = c.create_point(BigInteger::from_u32(0b0010), BigInteger::from_u32(0b0111));
         let np = -&p;
-        assert_eq!(np.x().unwrap().to_big_integer(), BigInteger::from_u32(0b0010)); // x 不變
+        assert_eq!(
+            np.x().unwrap().to_big_integer(),
+            BigInteger::from_u32(0b0010)
+        ); // x 不變
         // y + x = 0b0111 ^ 0b0010 = 0b0101
-        assert_eq!(np.y().unwrap().to_big_integer(), BigInteger::from_u32(0b0101));
+        assert_eq!(
+            np.y().unwrap().to_big_integer(),
+            BigInteger::from_u32(0b0101)
+        );
         // 對合：−(−P) = P
         let nnp = -&np;
-        assert_eq!(nnp.x().unwrap().to_big_integer(), p.x().unwrap().to_big_integer());
-        assert_eq!(nnp.y().unwrap().to_big_integer(), p.y().unwrap().to_big_integer());
+        assert_eq!(
+            nnp.x().unwrap().to_big_integer(),
+            p.x().unwrap().to_big_integer()
+        );
+        assert_eq!(
+            nnp.y().unwrap().to_big_integer(),
+            p.y().unwrap().to_big_integer()
+        );
     }
 
     // SEC 2 sect163k1（Koblitz）：x^163+x^7+x^6+x^3+1，a=1，b=1。
@@ -430,7 +466,10 @@ mod tests {
         assert!(!three_g.is_infinity());
         assert!(on_curve(&three_g), "3G 應在曲線上（驗證相異點加法公式）");
         // 3G ≠ G（sanity）
-        assert_ne!(three_g.x().unwrap().to_big_integer(), g.x().unwrap().to_big_integer());
+        assert_ne!(
+            three_g.x().unwrap().to_big_integer(),
+            g.x().unwrap().to_big_integer()
+        );
     }
 
     #[test]
@@ -456,9 +495,15 @@ mod tests {
         // 1·G = G
         assert_eq!((&g * &BigInteger::from_u32(1)).x().unwrap(), g.x().unwrap());
         // 2·G = twice(G)
-        assert_eq!((&g * &BigInteger::from_u32(2)).x().unwrap(), g.twice().x().unwrap());
+        assert_eq!(
+            (&g * &BigInteger::from_u32(2)).x().unwrap(),
+            g.twice().x().unwrap()
+        );
         // (−1)·G = −G
-        assert_eq!((&g * &BigInteger::from_i32(-1)).y().unwrap(), (-&g).y().unwrap());
+        assert_eq!(
+            (&g * &BigInteger::from_i32(-1)).y().unwrap(),
+            (-&g).y().unwrap()
+        );
     }
 
     #[test]
@@ -466,7 +511,8 @@ mod tests {
         // 終極測試：n·G = O（n = sect163k1 群階）。任何體域/倍點/加法錯誤都會讓它失敗。
         let c = sect163k1();
         let g = base_g(&c);
-        let n = BigInteger::from_str_radix("04000000000000000000020108A2E0CC0D99F8A5EF", 16).unwrap();
+        let n =
+            BigInteger::from_str_radix("04000000000000000000020108A2E0CC0D99F8A5EF", 16).unwrap();
         assert!((&g * &n).is_infinity(), "n·G 應為無窮遠點");
     }
 
@@ -532,6 +578,10 @@ mod tests {
         let two_g = g.twice();
         assert_eq!(c.decode_point(&two_g.encode(true)).unwrap(), two_g);
         // 無窮遠。
-        assert!(c.decode_point(&c.infinity().encode(true)).unwrap().is_infinity());
+        assert!(
+            c.decode_point(&c.infinity().encode(true))
+                .unwrap()
+                .is_infinity()
+        );
     }
 }

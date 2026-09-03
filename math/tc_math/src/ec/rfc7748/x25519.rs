@@ -173,7 +173,10 @@ mod tests {
         assert_eq!(n[7], 0x4000_0000);
         // little-endian 讀取:bytes 1,2,3,4 → 0x04030201，再 &0xFFFFFFF8
         let mut k = [0u8; 32];
-        k[0] = 1; k[1] = 2; k[2] = 3; k[3] = 4;
+        k[0] = 1;
+        k[1] = 2;
+        k[2] = 3;
+        k[3] = 4;
         assert_eq!(decode_scalar(&k)[0], 0x0403_0201 & 0xFFFF_FFF8);
     }
 

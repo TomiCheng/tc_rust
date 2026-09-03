@@ -62,7 +62,12 @@ pub fn create_binpoly_mul_trinomial(n: usize, k: usize) -> Box<dyn BinPolyMul> {
 
 /// Builds a multiply operator for `GF(2ⁿ) = GF(2)[x] / (xⁿ + xᵏ³ + xᵏ² + xᵏ¹ + 1)`.
 /// Mirrors bc `BinPolys.Mul.Pentanomial`.
-pub fn create_binpoly_mul_pentanomial(n: usize, k1: usize, k2: usize, k3: usize) -> Box<dyn BinPolyMul> {
+pub fn create_binpoly_mul_pentanomial(
+    n: usize,
+    k1: usize,
+    k2: usize,
+    k3: usize,
+) -> Box<dyn BinPolyMul> {
     create_binpoly_mul(n, reduce_pentanomial::create(n, k1, k2, k3))
 }
 

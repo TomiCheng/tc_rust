@@ -22,7 +22,11 @@ impl BigInteger {
         let high = (value >> 32) as u32;
         let low = value as u32;
         // Big-endian, no leading zero word: drop the high word when it is zero.
-        let magnitude = if high == 0 { vec![low] } else { vec![high, low] };
+        let magnitude = if high == 0 {
+            vec![low]
+        } else {
+            vec![high, low]
+        };
         BigInteger::new(1, magnitude)
     }
 

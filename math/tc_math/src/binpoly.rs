@@ -59,7 +59,9 @@ pub struct BinaryPoly {
 impl BinaryPoly {
     /// The zero polynomial in `size` limbs.
     pub fn zero(size: usize) -> Self {
-        BinaryPoly { limbs: vec![0u64; size].into_boxed_slice() }
+        BinaryPoly {
+            limbs: vec![0u64; size].into_boxed_slice(),
+        }
     }
 
     /// The polynomial `1` (low bit set, all other bits clear) in `size` limbs.
@@ -70,12 +72,16 @@ impl BinaryPoly {
     pub fn one(size: usize) -> Self {
         let mut limbs = vec![0u64; size];
         limbs[0] = 1; // size==0 → panic（1 至少要一個 limb）
-        BinaryPoly { limbs: limbs.into_boxed_slice() }
+        BinaryPoly {
+            limbs: limbs.into_boxed_slice(),
+        }
     }
 
     /// Wraps an existing limb array as a polynomial (little-endian word order).
     pub fn from_limbs(limbs: impl Into<Box<[u64]>>) -> Self {
-        BinaryPoly { limbs: limbs.into() }
+        BinaryPoly {
+            limbs: limbs.into(),
+        }
     }
 
     /// Number of `u64` limbs backing this polynomial.
@@ -124,7 +130,9 @@ impl BinaryPoly {
         debug_assert_eq!(rhs.limbs.len(), op.size());
         let mut z = vec![0u64; op.size()];
         op.multiply(&self.limbs, &rhs.limbs, &mut z);
-        BinaryPoly { limbs: z.into_boxed_slice() }
+        BinaryPoly {
+            limbs: z.into_boxed_slice(),
+        }
     }
 
     /// Returns `self² mod r(x)` using the supplied multiply operator.
@@ -132,7 +140,9 @@ impl BinaryPoly {
         debug_assert_eq!(self.limbs.len(), op.size());
         let mut z = vec![0u64; op.size()];
         op.square(&self.limbs, &mut z);
-        BinaryPoly { limbs: z.into_boxed_slice() }
+        BinaryPoly {
+            limbs: z.into_boxed_slice(),
+        }
     }
 
     /// Returns `self^(2^pow) mod r(x)` — `pow` repeated squarings. `pow == 0` returns
@@ -144,7 +154,9 @@ impl BinaryPoly {
         }
         let mut z = vec![0u64; op.size()];
         op.square_n(&self.limbs, pow, &mut z);
-        BinaryPoly { limbs: z.into_boxed_slice() }
+        BinaryPoly {
+            limbs: z.into_boxed_slice(),
+        }
     }
 
     /// Returns `self⁻¹ mod r(x)` using the supplied inverse operator. By convention
@@ -153,7 +165,9 @@ impl BinaryPoly {
         debug_assert_eq!(self.limbs.len(), op.size());
         let mut z = vec![0u64; op.size()];
         op.invert(&self.limbs, &mut z);
-        BinaryPoly { limbs: z.into_boxed_slice() }
+        BinaryPoly {
+            limbs: z.into_boxed_slice(),
+        }
     }
 }
 
@@ -167,7 +181,9 @@ impl Add for &BinaryPoly {
         debug_assert_eq!(self.limbs.len(), rhs.limbs.len());
         let mut out = vec![0u64; self.limbs.len()];
         add(&self.limbs, &rhs.limbs, &mut out);
-        BinaryPoly { limbs: out.into_boxed_slice() }
+        BinaryPoly {
+            limbs: out.into_boxed_slice(),
+        }
     }
 }
 
@@ -297,7 +313,10 @@ mod tests {
         assert_eq!(BinaryPoly::from_limbs([1u64, 0]).bit_length(), 1);
         assert_eq!(BinaryPoly::from_limbs([0b1000u64, 0]).bit_length(), 4);
         assert_eq!(BinaryPoly::from_limbs([0u64, 1]).bit_length(), 65);
-        assert_eq!(BinaryPoly::from_limbs([5u64, 0x8000_0000_0000_0000]).bit_length(), 128);
+        assert_eq!(
+            BinaryPoly::from_limbs([5u64, 0x8000_0000_0000_0000]).bit_length(),
+            128
+        );
     }
 
     #[test]

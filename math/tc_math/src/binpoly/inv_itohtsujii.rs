@@ -118,10 +118,10 @@ mod tests {
     fn invert_times_self_is_one_fuzz() {
         // 真實 SECT 體；隨機非零 a，驗 a · a⁻¹ == 1
         let cases: &[(usize, &[usize])] = &[
-            (233, &[74]),        // sect233 trinomial
-            (409, &[87]),        // sect409 trinomial
-            (163, &[3, 6, 7]),   // sect163k1 pentanomial
-            (283, &[5, 7, 12]),  // sect283 pentanomial
+            (233, &[74]),       // sect233 trinomial
+            (409, &[87]),       // sect409 trinomial
+            (163, &[3, 6, 7]),  // sect163k1 pentanomial
+            (283, &[5, 7, 12]), // sect283 pentanomial
         ];
         let mut s = 0xBEEF_1234_5678_9ABCu64;
         let mut next = || {

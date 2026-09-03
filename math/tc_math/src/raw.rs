@@ -7,7 +7,7 @@
 
 mod nat;
 
-pub use nat::{Limb, Nat, LIMB_BITS, nat_limbs};
+pub use nat::{LIMB_BITS, Limb, Nat, nat_limbs};
 
 // 常用尺寸別名（對齊 bc 的 Nat128…Nat576，以位元數命名）。limb 數由 nat_limbs
 // 隨平台自動換算，故同一別名在 64/32/16-bit 上是不同的 Nat<N>。const-generic +

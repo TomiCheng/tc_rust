@@ -12,7 +12,7 @@
 //! the whole word array as a base-2⁶⁴ two's-complement integer (sign = top bit of the
 //! most-significant word).
 
-use super::{bit_len, BigInteger, BufferTooSmall, WORD_BITS};
+use super::{BigInteger, BufferTooSmall, WORD_BITS, bit_len};
 use crate::big_integer::limb::mag_to_u64_be;
 
 // no_std 下沒有 std prelude，`vec!` 巨集與 `Vec` 型別需從 alloc 顯式引入。
@@ -203,7 +203,10 @@ impl BigInteger {
     pub fn try_to_u64_be_into(&self, dst: &mut [u64]) -> Result<usize, BufferTooSmall> {
         let n = self.u64_length();
         if dst.len() < n {
-            return Err(BufferTooSmall { needed: n, available: dst.len() });
+            return Err(BufferTooSmall {
+                needed: n,
+                available: dst.len(),
+            });
         }
         self.write_magnitude_be_u64(&mut dst[..n], true);
         Ok(n)
@@ -213,7 +216,10 @@ impl BigInteger {
     pub fn try_to_u64_le_into(&self, dst: &mut [u64]) -> Result<usize, BufferTooSmall> {
         let n = self.u64_length();
         if dst.len() < n {
-            return Err(BufferTooSmall { needed: n, available: dst.len() });
+            return Err(BufferTooSmall {
+                needed: n,
+                available: dst.len(),
+            });
         }
         self.write_magnitude_be_u64(&mut dst[..n], true);
         dst[..n].reverse();
@@ -224,7 +230,10 @@ impl BigInteger {
     pub fn try_to_u64_be_unsigned_into(&self, dst: &mut [u64]) -> Result<usize, BufferTooSmall> {
         let n = self.u64_length_unsigned();
         if dst.len() < n {
-            return Err(BufferTooSmall { needed: n, available: dst.len() });
+            return Err(BufferTooSmall {
+                needed: n,
+                available: dst.len(),
+            });
         }
         self.write_magnitude_be_u64(&mut dst[..n], false);
         Ok(n)
@@ -234,7 +243,10 @@ impl BigInteger {
     pub fn try_to_u64_le_unsigned_into(&self, dst: &mut [u64]) -> Result<usize, BufferTooSmall> {
         let n = self.u64_length_unsigned();
         if dst.len() < n {
-            return Err(BufferTooSmall { needed: n, available: dst.len() });
+            return Err(BufferTooSmall {
+                needed: n,
+                available: dst.len(),
+            });
         }
         self.write_magnitude_be_u64(&mut dst[..n], false);
         dst[..n].reverse();
@@ -248,7 +260,8 @@ impl BigInteger {
     ///
     /// Panics if `dst.len() < self.u64_length()`.
     pub fn to_u64_be_into(&self, dst: &mut [u64]) -> usize {
-        self.try_to_u64_be_into(dst).unwrap_or_else(|e| panic!("to_u64_be_into: {e}"))
+        self.try_to_u64_be_into(dst)
+            .unwrap_or_else(|e| panic!("to_u64_be_into: {e}"))
     }
 
     /// Little-endian counterpart of [`BigInteger::to_u64_be_into`].
@@ -257,7 +270,8 @@ impl BigInteger {
     ///
     /// Panics if `dst.len() < self.u64_length()`.
     pub fn to_u64_le_into(&self, dst: &mut [u64]) -> usize {
-        self.try_to_u64_le_into(dst).unwrap_or_else(|e| panic!("to_u64_le_into: {e}"))
+        self.try_to_u64_le_into(dst)
+            .unwrap_or_else(|e| panic!("to_u64_le_into: {e}"))
     }
 
     /// Panicking version of [`BigInteger::try_to_u64_be_unsigned_into`].
@@ -266,7 +280,8 @@ impl BigInteger {
     ///
     /// Panics if `dst.len() < self.u64_length_unsigned()`.
     pub fn to_u64_be_unsigned_into(&self, dst: &mut [u64]) -> usize {
-        self.try_to_u64_be_unsigned_into(dst).unwrap_or_else(|e| panic!("to_u64_be_unsigned_into: {e}"))
+        self.try_to_u64_be_unsigned_into(dst)
+            .unwrap_or_else(|e| panic!("to_u64_be_unsigned_into: {e}"))
     }
 
     /// Little-endian counterpart of [`BigInteger::to_u64_be_unsigned_into`].
@@ -275,7 +290,8 @@ impl BigInteger {
     ///
     /// Panics if `dst.len() < self.u64_length_unsigned()`.
     pub fn to_u64_le_unsigned_into(&self, dst: &mut [u64]) -> usize {
-        self.try_to_u64_le_unsigned_into(dst).unwrap_or_else(|e| panic!("to_u64_le_unsigned_into: {e}"))
+        self.try_to_u64_le_unsigned_into(dst)
+            .unwrap_or_else(|e| panic!("to_u64_le_unsigned_into: {e}"))
     }
 }
 
@@ -330,7 +346,10 @@ mod tests {
 
     #[test]
     fn from_u64_be_positive_multiword() {
-        assert_eq!(BigInteger::from_u64_be(&[1, 0]), BigInteger::from_u128(1u128 << 64));
+        assert_eq!(
+            BigInteger::from_u64_be(&[1, 0]),
+            BigInteger::from_u128(1u128 << 64)
+        );
     }
 
     #[test]
@@ -349,13 +368,19 @@ mod tests {
 
     #[test]
     fn from_u64_be_minus_one() {
-        assert_eq!(BigInteger::from_u64_be(&[0xFFFF_FFFF_FFFF_FFFF]), BigInteger::from_i32(-1));
+        assert_eq!(
+            BigInteger::from_u64_be(&[0xFFFF_FFFF_FFFF_FFFF]),
+            BigInteger::from_i32(-1)
+        );
     }
 
     #[test]
     fn from_u64_be_min_i64_word() {
         // 0x8000… 最高位為 1 → 負數 = -2^63
-        assert_eq!(BigInteger::from_u64_be(&[0x8000_0000_0000_0000]), BigInteger::from_i64(i64::MIN));
+        assert_eq!(
+            BigInteger::from_u64_be(&[0x8000_0000_0000_0000]),
+            BigInteger::from_i64(i64::MIN)
+        );
     }
 
     #[test]
@@ -370,7 +395,11 @@ mod tests {
 
     #[test]
     fn from_u64_le_matches_be_reversed() {
-        let be = [0x0000_0000_0000_0001u64, 0x2345_6789_ABCD_EF01, 0xFEDC_BA98_7654_3210];
+        let be = [
+            0x0000_0000_0000_0001u64,
+            0x2345_6789_ABCD_EF01,
+            0xFEDC_BA98_7654_3210,
+        ];
         let mut le = be;
         le.reverse();
         assert_eq!(BigInteger::from_u64_le(&le), BigInteger::from_u64_be(&be));
@@ -378,7 +407,10 @@ mod tests {
 
     #[test]
     fn from_u64_le_minus_one() {
-        assert_eq!(BigInteger::from_u64_le(&[0xFFFF_FFFF_FFFF_FFFF]), BigInteger::from_i32(-1));
+        assert_eq!(
+            BigInteger::from_u64_le(&[0xFFFF_FFFF_FFFF_FFFF]),
+            BigInteger::from_i32(-1)
+        );
     }
 
     // --- to_u64_be / _unsigned ---
@@ -402,7 +434,10 @@ mod tests {
 
     #[test]
     fn to_u64_be_minus_one() {
-        assert_eq!(BigInteger::from_i32(-1).to_u64_be(), vec![0xFFFF_FFFF_FFFF_FFFF]);
+        assert_eq!(
+            BigInteger::from_i32(-1).to_u64_be(),
+            vec![0xFFFF_FFFF_FFFF_FFFF]
+        );
     }
 
     #[test]
@@ -434,8 +469,16 @@ mod tests {
     fn to_from_u64_be_roundtrip_unsigned() {
         for v in [0u128, 1, 5, 1 << 63, 1 << 64, 1 << 100, u128::MAX] {
             let n = BigInteger::from_u128(v);
-            assert_eq!(BigInteger::from_u64_be_unsigned(&n.to_u64_be_unsigned()), n, "v = {v}");
-            assert_eq!(BigInteger::from_u64_le_unsigned(&n.to_u64_le_unsigned()), n, "v = {v}");
+            assert_eq!(
+                BigInteger::from_u64_be_unsigned(&n.to_u64_be_unsigned()),
+                n,
+                "v = {v}"
+            );
+            assert_eq!(
+                BigInteger::from_u64_le_unsigned(&n.to_u64_le_unsigned()),
+                n,
+                "v = {v}"
+            );
         }
     }
 
@@ -477,12 +520,20 @@ mod tests {
         for v in [0i64, 1, -1, i64::MIN, 1 << 40, -(1 << 40)] {
             let n = BigInteger::from_i64(v);
             assert_eq!(n.u64_length(), n.to_u64_be().len(), "signed v = {v}");
-            assert_eq!(n.u64_length_unsigned(), n.to_u64_be_unsigned().len(), "unsigned v = {v}");
+            assert_eq!(
+                n.u64_length_unsigned(),
+                n.to_u64_be_unsigned().len(),
+                "unsigned v = {v}"
+            );
         }
         for v in [1u128 << 63, 1 << 64, u128::MAX] {
             let n = BigInteger::from_u128(v);
             assert_eq!(n.u64_length(), n.to_u64_be().len(), "signed v = {v}");
-            assert_eq!(n.u64_length_unsigned(), n.to_u64_be_unsigned().len(), "unsigned v = {v}");
+            assert_eq!(
+                n.u64_length_unsigned(),
+                n.to_u64_be_unsigned().len(),
+                "unsigned v = {v}"
+            );
         }
     }
 }

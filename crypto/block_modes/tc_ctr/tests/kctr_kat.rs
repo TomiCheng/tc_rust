@@ -112,16 +112,12 @@ fn round_trips_and_rejects_use_before_init() {
     let mut encrypt = KctrBlockCipher::new(Engine128::new());
     StreamCipherInit::init(&mut encrypt, CipherDirection::Encrypt, &params).unwrap();
     let mut ciphertext = vec![0; plaintext.len()];
-    encrypt
-        .process_bytes(&plaintext, &mut ciphertext)
-        .unwrap();
+    encrypt.process_bytes(&plaintext, &mut ciphertext).unwrap();
 
     let mut decrypt = KctrBlockCipher::new(Engine128::new());
     StreamCipherInit::init(&mut decrypt, CipherDirection::Decrypt, &params).unwrap();
     let mut recovered = vec![0; ciphertext.len()];
-    decrypt
-        .process_bytes(&ciphertext, &mut recovered)
-        .unwrap();
+    decrypt.process_bytes(&ciphertext, &mut recovered).unwrap();
     assert_eq!(recovered, plaintext);
 
     let mut uninitialised = KctrBlockCipher::new(Engine128::new());

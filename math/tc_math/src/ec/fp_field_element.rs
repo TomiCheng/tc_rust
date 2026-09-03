@@ -153,7 +153,9 @@ impl FpFieldElement {
         k: &BigInteger,
     ) -> (BigInteger, BigInteger) {
         let n = k.bit_length();
-        let s = k.get_lowest_set_bit().expect("lucas_sequence: k must be non-zero");
+        let s = k
+            .get_lowest_set_bit()
+            .expect("lucas_sequence: k must be non-zero");
 
         let one = BigInteger::from_u32(1);
 
@@ -695,8 +697,18 @@ mod tests {
     #[test]
     fn sqrt_zero_and_one() {
         let q = BigInteger::from_u32(17);
-        assert!(field_element(q.clone(), BigInteger::from_u32(0)).sqrt().unwrap().is_zero());
-        assert!(field_element(q, BigInteger::from_u32(1)).sqrt().unwrap().is_one());
+        assert!(
+            field_element(q.clone(), BigInteger::from_u32(0))
+                .sqrt()
+                .unwrap()
+                .is_zero()
+        );
+        assert!(
+            field_element(q, BigInteger::from_u32(1))
+                .sqrt()
+                .unwrap()
+                .is_one()
+        );
     }
 
     #[test]
@@ -714,7 +726,10 @@ mod tests {
         // GF(13)，13 ≡ 5 (mod 8)。QR = {1,3,4,9,10,12}。
         let q = BigInteger::from_u32(13);
         let four = field_element(q.clone(), BigInteger::from_u32(4));
-        assert_eq!(four.sqrt().unwrap().square().as_ref(), &BigInteger::from_u32(4));
+        assert_eq!(
+            four.sqrt().unwrap().square().as_ref(),
+            &BigInteger::from_u32(4)
+        );
         // 2 非剩餘 → None。
         assert!(field_element(q, BigInteger::from_u32(2)).sqrt().is_none());
     }
@@ -769,9 +784,18 @@ mod tests {
         let q = BigInteger::from_u32(7);
         let fe = field_element(q.clone(), BigInteger::from_u32(0));
         // 2·5 = 10 ≡ 3 (mod 7)；2·6 = 12 ≡ 5 (mod 7)。
-        assert_eq!(fe.mod_double(&BigInteger::from_u32(5)), BigInteger::from_u32(3));
-        assert_eq!(fe.mod_double(&BigInteger::from_u32(6)), BigInteger::from_u32(5));
-        assert_eq!(fe.mod_double(&BigInteger::from_u32(3)), BigInteger::from_u32(6));
+        assert_eq!(
+            fe.mod_double(&BigInteger::from_u32(5)),
+            BigInteger::from_u32(3)
+        );
+        assert_eq!(
+            fe.mod_double(&BigInteger::from_u32(6)),
+            BigInteger::from_u32(5)
+        );
+        assert_eq!(
+            fe.mod_double(&BigInteger::from_u32(3)),
+            BigInteger::from_u32(6)
+        );
     }
 
     #[test]
@@ -779,11 +803,23 @@ mod tests {
         let q = BigInteger::from_u32(7);
         let fe = field_element(q, BigInteger::from_u32(0));
         // 偶：4/2 = 2、6/2 = 3。
-        assert_eq!(fe.mod_half_abs(&BigInteger::from_u32(4)), BigInteger::from_u32(2));
-        assert_eq!(fe.mod_half_abs(&BigInteger::from_u32(6)), BigInteger::from_u32(3));
+        assert_eq!(
+            fe.mod_half_abs(&BigInteger::from_u32(4)),
+            BigInteger::from_u32(2)
+        );
+        assert_eq!(
+            fe.mod_half_abs(&BigInteger::from_u32(6)),
+            BigInteger::from_u32(3)
+        );
         // 奇：(7−3)/2 = 2、(7−5)/2 = 1。
-        assert_eq!(fe.mod_half_abs(&BigInteger::from_u32(3)), BigInteger::from_u32(2));
-        assert_eq!(fe.mod_half_abs(&BigInteger::from_u32(5)), BigInteger::from_u32(1));
+        assert_eq!(
+            fe.mod_half_abs(&BigInteger::from_u32(3)),
+            BigInteger::from_u32(2)
+        );
+        assert_eq!(
+            fe.mod_half_abs(&BigInteger::from_u32(5)),
+            BigInteger::from_u32(1)
+        );
     }
 
     #[test]
@@ -842,7 +878,10 @@ mod tests {
             let x = fe(&q - &BigInteger::from_u32(7));
             let y = fe(&q - &BigInteger::from_u32(11));
 
-            assert_eq!(a.multiply_minus_product(&b, &x, &y), &(&a * &b) - &(&x * &y));
+            assert_eq!(
+                a.multiply_minus_product(&b, &x, &y),
+                &(&a * &b) - &(&x * &y)
+            );
             assert_eq!(a.multiply_plus_product(&b, &x, &y), &(&a * &b) + &(&x * &y));
             assert_eq!(a.square_minus_product(&x, &y), &a.square() - &(&x * &y));
             assert_eq!(a.square_plus_product(&x, &y), &a.square() + &(&x * &y));

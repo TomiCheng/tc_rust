@@ -62,7 +62,9 @@ impl BigInteger {
     /// *proper* small factor is found (`self` is then composite); `false`
     /// otherwise (`self` is itself a small prime, or has no small factor).
     fn has_small_factor(&self) -> bool {
-        let num_lists = (self.bit_length() as usize).saturating_sub(1).min(PRIME_LISTS.len());
+        let num_lists = (self.bit_length() as usize)
+            .saturating_sub(1)
+            .min(PRIME_LISTS.len());
         for i in 0..num_lists {
             let rem = self.remainder_u32(PRIME_PRODUCTS[i]); // 一次大數 mod 乘積
             for &prime in PRIME_LISTS[i] {
@@ -219,7 +221,6 @@ impl BigInteger {
         }
         true
     }
-
 }
 
 /// Miller-Rabin 輪數：基本值 `⌈certainty/2⌉`（每輪誤判率 ≤ 1/4）。
@@ -350,7 +351,10 @@ mod tests {
             Ok(self.try_next_u64()? as u32)
         }
         fn try_next_u64(&mut self) -> Result<u64, Infallible> {
-            self.0 = self.0.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+            self.0 = self
+                .0
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
             Ok(self.0)
         }
         fn try_fill_bytes(&mut self, dst: &mut [u8]) -> Result<(), Infallible> {
@@ -386,9 +390,22 @@ mod tests {
     fn next_probable_prime_known() {
         let mut rng = SeqRng(0x1357_9BDF_2468_ACE0);
         let cases = [
-            (0u32, 2), (1, 2), (2, 3), (3, 5), (4, 5), (5, 7), (6, 7),
-            (7, 11), (8, 11), (10, 11), (13, 17), (14, 17), (89, 97),
-            (97, 101), (7918, 7919), (7919, 7927),
+            (0u32, 2),
+            (1, 2),
+            (2, 3),
+            (3, 5),
+            (4, 5),
+            (5, 7),
+            (6, 7),
+            (7, 11),
+            (8, 11),
+            (10, 11),
+            (13, 17),
+            (14, 17),
+            (89, 97),
+            (97, 101),
+            (7918, 7919),
+            (7919, 7927),
         ];
         for (n, expected) in cases {
             assert_eq!(
@@ -398,7 +415,10 @@ mod tests {
             );
         }
         // 負數 → 2
-        assert_eq!(BigInteger::from_i32(-5).next_probable_prime(&mut rng), BigInteger::from_u32(2));
+        assert_eq!(
+            BigInteger::from_i32(-5).next_probable_prime(&mut rng),
+            BigInteger::from_u32(2)
+        );
         // 連續呼叫得遞增質數序列：2 → 3, 5, 7, 11, 13, 17
         let mut p = BigInteger::from_u32(2);
         let mut seq = Vec::new();
@@ -406,7 +426,10 @@ mod tests {
             p = p.next_probable_prime(&mut rng);
             seq.push(p.clone());
         }
-        let expected: Vec<_> = [3u32, 5, 7, 11, 13, 17].iter().map(|&x| BigInteger::from_u32(x)).collect();
+        let expected: Vec<_> = [3u32, 5, 7, 11, 13, 17]
+            .iter()
+            .map(|&x| BigInteger::from_u32(x))
+            .collect();
         assert_eq!(seq, expected);
     }
 
@@ -440,7 +463,10 @@ mod tests {
         let cert = 40;
         // 質數 → true（含小質數、> 表上限的 1291、2¹²⁷−1）
         for p in [2u32, 3, 5, 7, 11, 13, 97, 1289, 1291, 7919, 104729] {
-            assert!(BigInteger::from_u32(p).is_probable_prime(cert, &mut rng), "prime {p}");
+            assert!(
+                BigInteger::from_u32(p).is_probable_prime(cert, &mut rng),
+                "prime {p}"
+            );
         }
         assert!(
             BigInteger::from_str_radix("7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", 16)
@@ -450,7 +476,10 @@ mod tests {
         );
         // 合數 → false（含偶數、小合數、Carmichael、平方、2¹²⁸−1）
         for c in [0u32, 1, 4, 6, 9, 15, 25, 91, 561, 1105, 1729, 2821, 100000] {
-            assert!(!BigInteger::from_u32(c).is_probable_prime(cert, &mut rng), "composite {c}");
+            assert!(
+                !BigInteger::from_u32(c).is_probable_prime(cert, &mut rng),
+                "composite {c}"
+            );
         }
         assert!(
             !BigInteger::from_str_radix("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", 16)
@@ -491,7 +520,10 @@ mod tests {
             BigInteger::from_str_radix("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", 16).unwrap(),
         ];
         for c in &composites {
-            assert!(!c.miller_rabin_test(20, &mut rng), "composite {c} 應判為合數");
+            assert!(
+                !c.miller_rabin_test(20, &mut rng),
+                "composite {c} 應判為合數"
+            );
         }
     }
 
@@ -502,11 +534,18 @@ mod tests {
             for _ in 0..50 {
                 let x = BigInteger::random_bits(bits, &mut rng);
                 assert!(x.sign() >= 0, "非負 bits={bits}");
-                assert!(x.bit_length() <= bits, "應 < 2^{bits}，但 bit_length={}", x.bit_length());
+                assert!(
+                    x.bit_length() <= bits,
+                    "應 < 2^{bits}，但 bit_length={}",
+                    x.bit_length()
+                );
             }
         }
         // bit_length == 0 → 0
-        assert_eq!(BigInteger::random_bits(0, &mut rng), BigInteger::from_u32(0));
+        assert_eq!(
+            BigInteger::random_bits(0, &mut rng),
+            BigInteger::from_u32(0)
+        );
         // 有隨機性：兩次 128 位不應相同（極大機率）
         let a = BigInteger::random_bits(128, &mut rng);
         let b = BigInteger::random_bits(128, &mut rng);

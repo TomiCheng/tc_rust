@@ -50,7 +50,13 @@ pub fn secp256r1() -> (Arc<FpCurve>, FpPoint) {
     let a = h("FFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFC"); // p − 3
     let b = h("5AC635D8AA3A93E7B3EBBD55769886BC651D06B0CC53B0F63BCE3C3E27D2604B");
     let n = h("FFFFFFFF00000000FFFFFFFFFFFFFFFFBCE6FAADA7179E84F3B9CAC2FC632551");
-    let curve = Arc::new(FpCurve::new(p, a, b, Some(n), Some(BigInteger::from_u32(1))));
+    let curve = Arc::new(FpCurve::new(
+        p,
+        a,
+        b,
+        Some(n),
+        Some(BigInteger::from_u32(1)),
+    ));
     let gx = h("6B17D1F2E12C4247F8BCE6E563A440F277037D812DEB33A0F4A13945D898C296");
     let gy = h("4FE342E2FE1A7F9B8EE7EB4A7C0F9E162BCE33576B315ECECBB6406837BF51F5");
     let g = curve.create_point(gx, gy);
@@ -122,10 +128,18 @@ pub fn secp224r1() -> (Arc<FpCurve>, FpPoint) {
 
 /// SEC 2 **secp384r1** / NIST **P-384**（a=p−3, h=1）。
 pub fn secp384r1() -> (Arc<FpCurve>, FpPoint) {
-    let p = h("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFF0000000000000000FFFFFFFF");
-    let a = h("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFF0000000000000000FFFFFFFC");
-    let b = h("B3312FA7E23EE7E4988E056BE3F82D19181D9C6EFE8141120314088F5013875AC656398D8A2ED19D2A85C8EDD3EC2AEF");
-    let n = h("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFC7634D81F4372DDF581A0DB248B0A77AECEC196ACCC52973");
+    let p = h(
+        "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFF0000000000000000FFFFFFFF",
+    );
+    let a = h(
+        "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFF0000000000000000FFFFFFFC",
+    );
+    let b = h(
+        "B3312FA7E23EE7E4988E056BE3F82D19181D9C6EFE8141120314088F5013875AC656398D8A2ED19D2A85C8EDD3EC2AEF",
+    );
+    let n = h(
+        "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFC7634D81F4372DDF581A0DB248B0A77AECEC196ACCC52973",
+    );
     let curve = Arc::new(FpCurve::new(p, a, b, Some(n), Some(i(1))));
     let g = curve.decode_point(&hb("04AA87CA22BE8B05378EB1C71EF320AD746E1D3B628BA79B9859F741E082542A385502F25DBF55296C3A545E3872760AB73617DE4A96262C6F5D9E98BF9292DC29F8F41DBD289A147CE9DA3113B5F0B8C00A60B1CE1D7E819D7A431D7C90EA0E5F")).unwrap();
     (curve, g)
@@ -133,10 +147,18 @@ pub fn secp384r1() -> (Arc<FpCurve>, FpPoint) {
 
 /// SEC 2 **secp521r1** / NIST **P-521**（a=p−3, h=1；p = 2^521 − 1）。
 pub fn secp521r1() -> (Arc<FpCurve>, FpPoint) {
-    let p = h("01FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF");
-    let a = h("01FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFC");
-    let b = h("0051953EB9618E1C9A1F929A21A0B68540EEA2DA725B99B315F3B8B489918EF109E156193951EC7E937B1652C0BD3BB1BF073573DF883D2C34F1EF451FD46B503F00");
-    let n = h("01FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFA51868783BF2F966B7FCC0148F709A5D03BB5C9B8899C47AEBB6FB71E91386409");
+    let p = h(
+        "01FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+    );
+    let a = h(
+        "01FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFC",
+    );
+    let b = h(
+        "0051953EB9618E1C9A1F929A21A0B68540EEA2DA725B99B315F3B8B489918EF109E156193951EC7E937B1652C0BD3BB1BF073573DF883D2C34F1EF451FD46B503F00",
+    );
+    let n = h(
+        "01FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFA51868783BF2F966B7FCC0148F709A5D03BB5C9B8899C47AEBB6FB71E91386409",
+    );
     let curve = Arc::new(FpCurve::new(p, a, b, Some(n), Some(i(1))));
     let g = curve.decode_point(&hb("0400C6858E06B70404E9CD9E3ECB662395B4429C648139053FB521F828AF606B4D3DBAA14B5E77EFE75928FE1DC127A2FFA8DE3348B3C1856A429BF97E7E31C2E5BD66011839296A789A3BC0045C8A5FB42C7D1BD998F54449579B446817AFBD17273E662C97EE72995EF42640C550B9013FAD0761353C7086A272C24088BE94769FD16650")).unwrap();
     (curve, g)
@@ -147,7 +169,14 @@ pub fn secp521r1() -> (Arc<FpCurve>, FpPoint) {
 /// SEC 2 **sect233k1** Koblitz（x²³³+x⁷⁴+1，a=0, b=1, h=4）。
 pub fn sect233k1() -> (Arc<F2mCurve>, F2mPoint) {
     let n = h("8000000000000000000000000000069D5BB915BCD46EFB1AD5F173ABDF");
-    let curve = Arc::new(F2mCurve::trinomial(233, 74, i(0), i(1), Some(n), Some(i(4))));
+    let curve = Arc::new(F2mCurve::trinomial(
+        233,
+        74,
+        i(0),
+        i(1),
+        Some(n),
+        Some(i(4)),
+    ));
     let g = curve.decode_point(&hb("04017232BA853A7E731AF129F22FF4149563A419C26BF50A4C9D6EEFAD612601DB537DECE819B7F70F555A67C427A8CD9BF18AEB9B56E0C11056FAE6A3")).unwrap();
     (curve, g)
 }
@@ -164,7 +193,16 @@ pub fn sect233r1() -> (Arc<F2mCurve>, F2mPoint) {
 /// SEC 2 **sect283k1** Koblitz（x²⁸³+x¹²+x⁷+x⁵+1，a=0, b=1, h=4）。
 pub fn sect283k1() -> (Arc<F2mCurve>, F2mPoint) {
     let n = h("01FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFE9AE2ED07577265DFF7F94451E061E163C61");
-    let curve = Arc::new(F2mCurve::pentanomial(283, 5, 7, 12, i(0), i(1), Some(n), Some(i(4))));
+    let curve = Arc::new(F2mCurve::pentanomial(
+        283,
+        5,
+        7,
+        12,
+        i(0),
+        i(1),
+        Some(n),
+        Some(i(4)),
+    ));
     let g = curve.decode_point(&hb("040503213F78CA44883F1A3B8162F188E553CD265F23C1567A16876913B0C2AC245849283601CCDA380F1C9E318D90F95D07E5426FE87E45C0E8184698E45962364E34116177DD2259")).unwrap();
     (curve, g)
 }
@@ -173,7 +211,16 @@ pub fn sect283k1() -> (Arc<F2mCurve>, F2mPoint) {
 pub fn sect283r1() -> (Arc<F2mCurve>, F2mPoint) {
     let b = h("027B680AC8B8596DA5A4AF8A19A0303FCA97FD7645309FA2A581485AF6263E313B79A2F5");
     let n = h("03FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEF90399660FC938A90165B042A7CEFADB307");
-    let curve = Arc::new(F2mCurve::pentanomial(283, 5, 7, 12, i(1), b, Some(n), Some(i(2))));
+    let curve = Arc::new(F2mCurve::pentanomial(
+        283,
+        5,
+        7,
+        12,
+        i(1),
+        b,
+        Some(n),
+        Some(i(2)),
+    ));
     let g = curve.decode_point(&hb("0405F939258DB7DD90E1934F8C70B0DFEC2EED25B8557EAC9C80E2E198F8CDBECD86B1205303676854FE24141CB98FE6D4B20D02B4516FF702350EDDB0826779C813F0DF45BE8112F4")).unwrap();
     (curve, g)
 }
@@ -188,7 +235,11 @@ pub fn secp112r1() -> (Arc<FpCurve>, FpPoint) {
     let b = h("659EF8BA043916EEDE8911702B22");
     let n = h("DB7C2ABF62E35E7628DFAC6561C5");
     let curve = Arc::new(FpCurve::new(p, a, b, Some(n), Some(i(1))));
-    let g = curve.decode_point(&hb("0409487239995A5EE76B55F9C2F098A89CE5AF8724C0A23E0E0FF77500")).unwrap();
+    let g = curve
+        .decode_point(&hb(
+            "0409487239995A5EE76B55F9C2F098A89CE5AF8724C0A23E0E0FF77500",
+        ))
+        .unwrap();
     (curve, g)
 }
 
@@ -200,7 +251,11 @@ pub fn secp112r2() -> (Arc<FpCurve>, FpPoint) {
     let b = h("51DEF1815DB5ED74FCC34C85D709");
     let n = h("36DF0AAFD8B8D7597CA10520D04B");
     let curve = Arc::new(FpCurve::new(p, a, b, Some(n), Some(i(4))));
-    let g = curve.decode_point(&hb("044BA30AB5E892B4E1649DD0928643ADCD46F5882E3747DEF36E956E97")).unwrap();
+    let g = curve
+        .decode_point(&hb(
+            "044BA30AB5E892B4E1649DD0928643ADCD46F5882E3747DEF36E956E97",
+        ))
+        .unwrap();
     (curve, g)
 }
 
@@ -212,7 +267,11 @@ pub fn secp128r1() -> (Arc<FpCurve>, FpPoint) {
     let b = h("E87579C11079F43DD824993C2CEE5ED3");
     let n = h("FFFFFFFE0000000075A30D1B9038A115");
     let curve = Arc::new(FpCurve::new(p, a, b, Some(n), Some(i(1))));
-    let g = curve.decode_point(&hb("04161FF7528B899B2D0C28607CA52C5B86CF5AC8395BAFEB13C02DA292DDED7A83")).unwrap();
+    let g = curve
+        .decode_point(&hb(
+            "04161FF7528B899B2D0C28607CA52C5B86CF5AC8395BAFEB13C02DA292DDED7A83",
+        ))
+        .unwrap();
     (curve, g)
 }
 
@@ -224,7 +283,11 @@ pub fn secp128r2() -> (Arc<FpCurve>, FpPoint) {
     let b = h("5EEEFCA380D02919DC2C6558BB6D8A5D");
     let n = h("3FFFFFFF7FFFFFFFBE0024720613B5A3");
     let curve = Arc::new(FpCurve::new(p, a, b, Some(n), Some(i(4))));
-    let g = curve.decode_point(&hb("047B6AA5D85E572983E6FB32A7CDEBC14027B6916A894D3AEE7106FE805FC34B44")).unwrap();
+    let g = curve
+        .decode_point(&hb(
+            "047B6AA5D85E572983E6FB32A7CDEBC14027B6916A894D3AEE7106FE805FC34B44",
+        ))
+        .unwrap();
     (curve, g)
 }
 
@@ -234,7 +297,11 @@ pub fn secp160k1() -> (Arc<FpCurve>, FpPoint) {
     let p = h("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFAC73");
     let n = h("0100000000000000000001B8FA16DFAB9ACA16B6B3");
     let curve = Arc::new(FpCurve::new(p, i(0), i(7), Some(n), Some(i(1))));
-    let g = curve.decode_point(&hb("043B4C382CE37AA192A4019E763036F4F5DD4D7EBB938CF935318FDCED6BC28286531733C3F03C4FEE")).unwrap();
+    let g = curve
+        .decode_point(&hb(
+            "043B4C382CE37AA192A4019E763036F4F5DD4D7EBB938CF935318FDCED6BC28286531733C3F03C4FEE",
+        ))
+        .unwrap();
     (curve, g)
 }
 
@@ -246,7 +313,11 @@ pub fn secp160r1() -> (Arc<FpCurve>, FpPoint) {
     let b = h("1C97BEFC54BD7A8B65ACF89F81D4D4ADC565FA45");
     let n = h("0100000000000000000001F4C8F927AED3CA752257");
     let curve = Arc::new(FpCurve::new(p, a, b, Some(n), Some(i(1))));
-    let g = curve.decode_point(&hb("044A96B5688EF573284664698968C38BB913CBFC8223A628553168947D59DCC912042351377AC5FB32")).unwrap();
+    let g = curve
+        .decode_point(&hb(
+            "044A96B5688EF573284664698968C38BB913CBFC8223A628553168947D59DCC912042351377AC5FB32",
+        ))
+        .unwrap();
     (curve, g)
 }
 
@@ -258,7 +329,11 @@ pub fn secp160r2() -> (Arc<FpCurve>, FpPoint) {
     let b = h("B4E134D3FB59EB8BAB57274904664D5AF50388BA");
     let n = h("0100000000000000000000351EE786A818F3A1A16B");
     let curve = Arc::new(FpCurve::new(p, a, b, Some(n), Some(i(1))));
-    let g = curve.decode_point(&hb("0452DCB034293A117E1F4FF11B30F7199D3144CE6DFEAFFEF2E331F296E071FA0DF9982CFEA7D43F2E")).unwrap();
+    let g = curve
+        .decode_point(&hb(
+            "0452DCB034293A117E1F4FF11B30F7199D3144CE6DFEAFFEF2E331F296E071FA0DF9982CFEA7D43F2E",
+        ))
+        .unwrap();
     (curve, g)
 }
 
@@ -271,7 +346,11 @@ pub fn sect113r1() -> (Arc<F2mCurve>, F2mPoint) {
     let b = h("00E8BEE4D3E2260744188BE0E9C723");
     let n = h("0100000000000000D9CCEC8A39E56F");
     let curve = Arc::new(F2mCurve::trinomial(113, 9, a, b, Some(n), Some(i(2))));
-    let g = curve.decode_point(&hb("04009D73616F35F4AB1407D73562C10F00A52830277958EE84D1315ED31886")).unwrap();
+    let g = curve
+        .decode_point(&hb(
+            "04009D73616F35F4AB1407D73562C10F00A52830277958EE84D1315ED31886",
+        ))
+        .unwrap();
     (curve, g)
 }
 
@@ -282,7 +361,11 @@ pub fn sect113r2() -> (Arc<F2mCurve>, F2mPoint) {
     let b = h("0095E9A9EC9B297BD4BF36E059184F");
     let n = h("010000000000000108789B2496AF93");
     let curve = Arc::new(F2mCurve::trinomial(113, 9, a, b, Some(n), Some(i(2))));
-    let g = curve.decode_point(&hb("0401A57A6A7B26CA5EF52FCDB816479700B3ADC94ED1FE674C06E695BABA1D")).unwrap();
+    let g = curve
+        .decode_point(&hb(
+            "0401A57A6A7B26CA5EF52FCDB816479700B3ADC94ED1FE674C06E695BABA1D",
+        ))
+        .unwrap();
     (curve, g)
 }
 
@@ -292,8 +375,21 @@ pub fn sect131r1() -> (Arc<F2mCurve>, F2mPoint) {
     let a = h("07A11B09A76B562144418FF3FF8C2570B8");
     let b = h("0217C05610884B63B9C6C7291678F9D341");
     let n = h("0400000000000000023123953A9464B54D");
-    let curve = Arc::new(F2mCurve::pentanomial(131, 2, 3, 8, a, b, Some(n), Some(i(2))));
-    let g = curve.decode_point(&hb("040081BAF91FDF9833C40F9C181343638399078C6E7EA38C001F73C8134B1B4EF9E150")).unwrap();
+    let curve = Arc::new(F2mCurve::pentanomial(
+        131,
+        2,
+        3,
+        8,
+        a,
+        b,
+        Some(n),
+        Some(i(2)),
+    ));
+    let g = curve
+        .decode_point(&hb(
+            "040081BAF91FDF9833C40F9C181343638399078C6E7EA38C001F73C8134B1B4EF9E150",
+        ))
+        .unwrap();
     (curve, g)
 }
 
@@ -303,8 +399,21 @@ pub fn sect131r2() -> (Arc<F2mCurve>, F2mPoint) {
     let a = h("03E5A88919D7CAFCBF415F07C2176573B2");
     let b = h("04B8266A46C55657AC734CE38F018F2192");
     let n = h("0400000000000000016954A233049BA98F");
-    let curve = Arc::new(F2mCurve::pentanomial(131, 2, 3, 8, a, b, Some(n), Some(i(2))));
-    let g = curve.decode_point(&hb("040356DCD8F2F95031AD652D23951BB366A80648F06D867940A5366D9E265DE9EB240F")).unwrap();
+    let curve = Arc::new(F2mCurve::pentanomial(
+        131,
+        2,
+        3,
+        8,
+        a,
+        b,
+        Some(n),
+        Some(i(2)),
+    ));
+    let g = curve
+        .decode_point(&hb(
+            "040356DCD8F2F95031AD652D23951BB366A80648F06D867940A5366D9E265DE9EB240F",
+        ))
+        .unwrap();
     (curve, g)
 }
 
@@ -315,7 +424,16 @@ pub fn sect163r1() -> (Arc<F2mCurve>, F2mPoint) {
     let a = h("07B6882CAAEFA84F9554FF8428BD88E246D2782AE2");
     let b = h("0713612DCDDCB40AAB946BDA29CA91F73AF958AFD9");
     let n = h("03FFFFFFFFFFFFFFFFFFFF48AAB689C29CA710279B");
-    let curve = Arc::new(F2mCurve::pentanomial(163, 3, 6, 7, a, b, Some(n), Some(i(2))));
+    let curve = Arc::new(F2mCurve::pentanomial(
+        163,
+        3,
+        6,
+        7,
+        a,
+        b,
+        Some(n),
+        Some(i(2)),
+    ));
     let g = curve.decode_point(&hb("040369979697AB43897789566789567F787A7876A65400435EDB42EFAFB2989D51FEFCE3C80988F41FF883")).unwrap();
     (curve, g)
 }
@@ -324,7 +442,16 @@ pub fn sect163r1() -> (Arc<F2mCurve>, F2mPoint) {
 pub fn sect163r2() -> (Arc<F2mCurve>, F2mPoint) {
     let b = h("020A601907B8C953CA1481EB10512F78744A3205FD");
     let n = h("040000000000000000000292FE77E70C12A4234C33");
-    let curve = Arc::new(F2mCurve::pentanomial(163, 3, 6, 7, i(1), b, Some(n), Some(i(2))));
+    let curve = Arc::new(F2mCurve::pentanomial(
+        163,
+        3,
+        6,
+        7,
+        i(1),
+        b,
+        Some(n),
+        Some(i(2)),
+    ));
     let g = curve.decode_point(&hb("0403F0EBA16286A2D57EA0991168D4994637E8343E3600D51FBC6C71A0094FA2CDD545B11C5C0C797324F1")).unwrap();
     (curve, g)
 }
@@ -352,23 +479,43 @@ pub fn sect193r2() -> (Arc<F2mCurve>, F2mPoint) {
 /// SEC 2 sect239k1 Koblitz（x²³⁹+x¹⁵⁸+1，a=0, b=1, h=4）。
 pub fn sect239k1() -> (Arc<F2mCurve>, F2mPoint) {
     let n = h("2000000000000000000000000000005A79FEC67CB6E91F1C1DA800E478A5");
-    let curve = Arc::new(F2mCurve::trinomial(239, 158, i(0), i(1), Some(n), Some(i(4))));
+    let curve = Arc::new(F2mCurve::trinomial(
+        239,
+        158,
+        i(0),
+        i(1),
+        Some(n),
+        Some(i(4)),
+    ));
     let g = curve.decode_point(&hb("0429A0B6A887A983E9730988A68727A8B2D126C44CC2CC7B2A6555193035DC76310804F12E549BDB011C103089E73510ACB275FC312A5DC6B76553F0CA")).unwrap();
     (curve, g)
 }
 
 /// SEC 2 sect409k1 Koblitz（x⁴⁰⁹+x⁸⁷+1，a=0, b=1, h=4）。
 pub fn sect409k1() -> (Arc<F2mCurve>, F2mPoint) {
-    let n = h("7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFE5F83B2D4EA20400EC4557D5ED3E3E7CA5B4B5C83B8E01E5FCF");
-    let curve = Arc::new(F2mCurve::trinomial(409, 87, i(0), i(1), Some(n), Some(i(4))));
+    let n = h(
+        "7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFE5F83B2D4EA20400EC4557D5ED3E3E7CA5B4B5C83B8E01E5FCF",
+    );
+    let curve = Arc::new(F2mCurve::trinomial(
+        409,
+        87,
+        i(0),
+        i(1),
+        Some(n),
+        Some(i(4)),
+    ));
     let g = curve.decode_point(&hb("040060F05F658F49C1AD3AB1890F7184210EFD0987E307C84C27ACCFB8F9F67CC2C460189EB5AAAA62EE222EB1B35540CFE902374601E369050B7C4E42ACBA1DACBF04299C3460782F918EA427E6325165E9EA10E3DA5F6C42E9C55215AA9CA27A5863EC48D8E0286B")).unwrap();
     (curve, g)
 }
 
 /// SEC 2 sect409r1（x⁴⁰⁹+x⁸⁷+1，a=1, h=2）。
 pub fn sect409r1() -> (Arc<F2mCurve>, F2mPoint) {
-    let b = h("0021A5C2C8EE9FEB5C4B9A753B7B476B7FD6422EF1F3DD674761FA99D6AC27C8A9A197B272822F6CD57A55AA4F50AE317B13545F");
-    let n = h("010000000000000000000000000000000000000000000000000001E2AAD6A612F33307BE5FA47C3C9E052F838164CD37D9A21173");
+    let b = h(
+        "0021A5C2C8EE9FEB5C4B9A753B7B476B7FD6422EF1F3DD674761FA99D6AC27C8A9A197B272822F6CD57A55AA4F50AE317B13545F",
+    );
+    let n = h(
+        "010000000000000000000000000000000000000000000000000001E2AAD6A612F33307BE5FA47C3C9E052F838164CD37D9A21173",
+    );
     let curve = Arc::new(F2mCurve::trinomial(409, 87, i(1), b, Some(n), Some(i(2))));
     let g = curve.decode_point(&hb("04015D4860D088DDB3496B0C6064756260441CDE4AF1771D4DB01FFE5B34E59703DC255A868A1180515603AEAB60794E54BB7996A70061B1CFAB6BE5F32BBFA78324ED106A7636B9C5A7BD198D0158AA4F5488D08F38514F1FDF4B4F40D2181B3681C364BA0273C706")).unwrap();
     (curve, g)
@@ -376,17 +523,41 @@ pub fn sect409r1() -> (Arc<F2mCurve>, F2mPoint) {
 
 /// SEC 2 sect571k1 Koblitz（x⁵⁷¹+x¹⁰+x⁵+x²+1，a=0, b=1, h=4）。
 pub fn sect571k1() -> (Arc<F2mCurve>, F2mPoint) {
-    let n = h("020000000000000000000000000000000000000000000000000000000000000000000000131850E1F19A63E4B391A8DB917F4138B630D84BE5D639381E91DEB45CFE778F637C1001");
-    let curve = Arc::new(F2mCurve::pentanomial(571, 2, 5, 10, i(0), i(1), Some(n), Some(i(4))));
+    let n = h(
+        "020000000000000000000000000000000000000000000000000000000000000000000000131850E1F19A63E4B391A8DB917F4138B630D84BE5D639381E91DEB45CFE778F637C1001",
+    );
+    let curve = Arc::new(F2mCurve::pentanomial(
+        571,
+        2,
+        5,
+        10,
+        i(0),
+        i(1),
+        Some(n),
+        Some(i(4)),
+    ));
     let g = curve.decode_point(&hb("04026EB7A859923FBC82189631F8103FE4AC9CA2970012D5D46024804801841CA44370958493B205E647DA304DB4CEB08CBBD1BA39494776FB988B47174DCA88C7E2945283A01C89720349DC807F4FBF374F4AEADE3BCA95314DD58CEC9F307A54FFC61EFC006D8A2C9D4979C0AC44AEA74FBEBBB9F772AEDCB620B01A7BA7AF1B320430C8591984F601CD4C143EF1C7A3")).unwrap();
     (curve, g)
 }
 
 /// SEC 2 sect571r1（x⁵⁷¹+x¹⁰+x⁵+x²+1，a=1, h=2）。
 pub fn sect571r1() -> (Arc<F2mCurve>, F2mPoint) {
-    let b = h("02F40E7E2221F295DE297117B7F3D62F5C6A97FFCB8CEFF1CD6BA8CE4A9A18AD84FFABBD8EFA59332BE7AD6756A66E294AFD185A78FF12AA520E4DE739BACA0C7FFEFF7F2955727A");
-    let n = h("03FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFE661CE18FF55987308059B186823851EC7DD9CA1161DE93D5174D66E8382E9BB2FE84E47");
-    let curve = Arc::new(F2mCurve::pentanomial(571, 2, 5, 10, i(1), b, Some(n), Some(i(2))));
+    let b = h(
+        "02F40E7E2221F295DE297117B7F3D62F5C6A97FFCB8CEFF1CD6BA8CE4A9A18AD84FFABBD8EFA59332BE7AD6756A66E294AFD185A78FF12AA520E4DE739BACA0C7FFEFF7F2955727A",
+    );
+    let n = h(
+        "03FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFE661CE18FF55987308059B186823851EC7DD9CA1161DE93D5174D66E8382E9BB2FE84E47",
+    );
+    let curve = Arc::new(F2mCurve::pentanomial(
+        571,
+        2,
+        5,
+        10,
+        i(1),
+        b,
+        Some(n),
+        Some(i(2)),
+    ));
     let g = curve.decode_point(&hb("040303001D34B856296C16C0D40D3CD7750A93D1D2955FA80AA5F40FC8DB7B2ABDBDE53950F4C0D293CDD711A35B67FB1499AE60038614F1394ABFA3B4C850D927E1E7769C8EEC2D19037BF27342DA639B6DCCFFFEB73D69D78C6C27A6009CBBCA1980F8533921E8A684423E43BAB08A576291AF8F461BB2A8B3531D2F0485C19B16E2F1516E23DD3C1A4827AF1B8AC15B")).unwrap();
     (curve, g)
 }
@@ -403,7 +574,10 @@ fn i(v: u32) -> BigInteger {
 
 /// 16 進位字串 → 位元組（基點的 04||X||Y 編碼；長度須為偶數）。
 fn hb(s: &str) -> alloc::vec::Vec<u8> {
-    (0..s.len()).step_by(2).map(|k| u8::from_str_radix(&s[k..k + 2], 16).unwrap()).collect()
+    (0..s.len())
+        .step_by(2)
+        .map(|k| u8::from_str_radix(&s[k..k + 2], 16).unwrap())
+        .collect()
 }
 
 #[cfg(test)]
@@ -435,8 +609,16 @@ mod tests {
         for (name, (c, g), bits) in curves {
             assert_eq!(c.field_size(), bits, "{name} field_size");
             assert!(!g.is_infinity(), "{name} G");
-            assert_eq!(c.decode_point(&g.encode(true)).unwrap(), g, "{name} compressed");
-            assert_eq!(c.decode_point(&g.encode(false)).unwrap(), g, "{name} uncompressed");
+            assert_eq!(
+                c.decode_point(&g.encode(true)).unwrap(),
+                g,
+                "{name} compressed"
+            );
+            assert_eq!(
+                c.decode_point(&g.encode(false)).unwrap(),
+                g,
+                "{name} uncompressed"
+            );
         }
     }
 
@@ -466,8 +648,16 @@ mod tests {
         for (name, (c, g), bits) in curves {
             assert_eq!(c.field_size(), bits, "{name} field_size");
             assert!(!g.is_infinity(), "{name} G");
-            assert_eq!(c.decode_point(&g.encode(true)).unwrap(), g, "{name} compressed");
-            assert_eq!(c.decode_point(&g.encode(false)).unwrap(), g, "{name} uncompressed");
+            assert_eq!(
+                c.decode_point(&g.encode(true)).unwrap(),
+                g,
+                "{name} compressed"
+            );
+            assert_eq!(
+                c.decode_point(&g.encode(false)).unwrap(),
+                g,
+                "{name} uncompressed"
+            );
         }
     }
 
@@ -478,21 +668,47 @@ mod tests {
     #[ignore = "slow: full n·G=O over all curves incl. sect571"]
     fn all_named_curves_n_times_g_is_infinity() {
         let fp = [
-            secp112r1(), secp112r2(), secp128r1(), secp128r2(), secp160k1(), secp160r1(),
-            secp160r2(), secp192k1(), secp192r1(), secp224k1(), secp224r1(), secp256k1(),
-            secp256r1(), secp384r1(), secp521r1(),
+            secp112r1(),
+            secp112r2(),
+            secp128r1(),
+            secp128r2(),
+            secp160k1(),
+            secp160r1(),
+            secp160r2(),
+            secp192k1(),
+            secp192r1(),
+            secp224k1(),
+            secp224r1(),
+            secp256k1(),
+            secp256r1(),
+            secp384r1(),
+            secp521r1(),
         ];
         for (c, g) in fp {
             assert!((&g * c.order().unwrap()).is_infinity());
         }
         let f2m = [
-            sect113r1(), sect113r2(), sect131r1(), sect131r2(), sect163k1(), sect163r1(),
-            sect163r2(), sect193r1(), sect193r2(), sect233k1(), sect233r1(), sect239k1(),
-            sect283k1(), sect283r1(), sect409k1(), sect409r1(), sect571k1(), sect571r1(),
+            sect113r1(),
+            sect113r2(),
+            sect131r1(),
+            sect131r2(),
+            sect163k1(),
+            sect163r1(),
+            sect163r2(),
+            sect193r1(),
+            sect193r2(),
+            sect233k1(),
+            sect233r1(),
+            sect239k1(),
+            sect283k1(),
+            sect283r1(),
+            sect409k1(),
+            sect409r1(),
+            sect571k1(),
+            sect571r1(),
         ];
         for (c, g) in f2m {
             assert!((&g * c.order().unwrap()).is_infinity());
         }
     }
 }
-

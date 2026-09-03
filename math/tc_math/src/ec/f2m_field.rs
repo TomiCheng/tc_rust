@@ -61,7 +61,12 @@ impl F2mField {
     fn new(m: usize, reduction: ReductionPolynomial) -> Self {
         let mul = build_mul(m, &reduction);
         let inv = binpoly::create(build_mul(m, &reduction));
-        F2mField { m, reduction, mul, inv }
+        F2mField {
+            m,
+            reduction,
+            mul,
+            inv,
+        }
     }
 
     /// The field degree `m`.
@@ -77,8 +82,9 @@ impl F2mField {
     /// First reduction tap `k1`.
     pub fn k1(&self) -> usize {
         match self.reduction {
-            ReductionPolynomial::Trinomial { k1 }
-            | ReductionPolynomial::Pentanomial { k1, .. } => k1,
+            ReductionPolynomial::Trinomial { k1 } | ReductionPolynomial::Pentanomial { k1, .. } => {
+                k1
+            }
         }
     }
 
@@ -188,6 +194,9 @@ mod tests {
         assert_eq!(a, b);
         assert_ne!(a, c);
         // 三項式 vs 五項式 → 不相等。
-        assert_ne!(F2mField::trinomial(163, 7), F2mField::pentanomial(163, 3, 6, 7));
+        assert_ne!(
+            F2mField::trinomial(163, 7),
+            F2mField::pentanomial(163, 3, 6, 7)
+        );
     }
 }

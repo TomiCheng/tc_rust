@@ -106,7 +106,11 @@ impl FpPoint {
     /// (`bc SatisfiesOrder`). Assumes the point is not the point at infinity.
     fn satisfies_order(&self) -> bool {
         // cofactor == 1：群為質數階，曲線上任何點都在(唯一)子群。
-        if self.curve.cofactor().is_some_and(|h| h == &BigInteger::from_u32(1)) {
+        if self
+            .curve
+            .cofactor()
+            .is_some_and(|h| h == &BigInteger::from_u32(1))
+        {
             return true;
         }
         match self.curve.order() {
@@ -495,7 +499,10 @@ mod tests {
         );
 
         // 無窮遠點 → 單一 0x00。
-        assert_eq!(FpPoint::infinity(Arc::clone(&curve)).encode(true), vec![0x00]);
+        assert_eq!(
+            FpPoint::infinity(Arc::clone(&curve)).encode(true),
+            vec![0x00]
+        );
     }
 
     #[test]

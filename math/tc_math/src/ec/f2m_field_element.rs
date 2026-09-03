@@ -35,7 +35,11 @@ impl F2mFieldElement {
     /// Crate-internal (bc marks it `internal`); external callers build field elements
     /// through the curve.
     pub(crate) fn new(field: Arc<F2mField>, value: BinaryPoly) -> Self {
-        debug_assert_eq!(value.size(), field.size(), "value limb count must match the field");
+        debug_assert_eq!(
+            value.size(),
+            field.size(),
+            "value limb count must match the field"
+        );
         F2mFieldElement { field, value }
     }
 
@@ -43,7 +47,10 @@ impl F2mFieldElement {
     /// `value`. Corresponds to the `new F2mFieldElement(f2mFieldData, z)` pattern
     /// bc uses throughout its arithmetic.
     fn with_value(&self, value: BinaryPoly) -> Self {
-        F2mFieldElement { field: Arc::clone(&self.field), value }
+        F2mFieldElement {
+            field: Arc::clone(&self.field),
+            value,
+        }
     }
 
     /// Returns `true` if this is the additive identity (zero). Constant-time in the
@@ -233,7 +240,10 @@ impl Mul for &F2mFieldElement {
     type Output = F2mFieldElement;
 
     fn mul(self, rhs: &F2mFieldElement) -> F2mFieldElement {
-        debug_assert!(self.field == rhs.field, "mul: elements from different fields");
+        debug_assert!(
+            self.field == rhs.field,
+            "mul: elements from different fields"
+        );
         self.with_value(self.value.multiply(&rhs.value, self.field.mul()))
     }
 }
@@ -248,7 +258,10 @@ impl Div for &F2mFieldElement {
     type Output = F2mFieldElement;
 
     fn div(self, rhs: &F2mFieldElement) -> F2mFieldElement {
-        debug_assert!(self.field == rhs.field, "div: elements from different fields");
+        debug_assert!(
+            self.field == rhs.field,
+            "div: elements from different fields"
+        );
         self * &rhs.invert()
     }
 }
@@ -285,7 +298,10 @@ impl Add for &F2mFieldElement {
     type Output = F2mFieldElement;
 
     fn add(self, rhs: &F2mFieldElement) -> F2mFieldElement {
-        debug_assert!(self.field == rhs.field, "add: elements from different fields");
+        debug_assert!(
+            self.field == rhs.field,
+            "add: elements from different fields"
+        );
         self.with_value(&self.value + &rhs.value)
     }
 }
@@ -402,7 +418,10 @@ mod tests {
         let f = field16();
         let a = fe(&f, 0b1101);
         assert_eq!(a.square_pow(0).value.limbs(), a.value.limbs()); // pow 0 → self
-        assert_eq!(a.square_pow(2).value.limbs(), a.square().square().value.limbs());
+        assert_eq!(
+            a.square_pow(2).value.limbs(),
+            a.square().square().value.limbs()
+        );
     }
 
     #[test]
@@ -451,7 +470,10 @@ mod tests {
     fn to_big_integer_reads_value() {
         let f = field16();
         assert_eq!(fe(&f, 0).to_big_integer(), BigInteger::from_u32(0));
-        assert_eq!(fe(&f, 0b1011).to_big_integer(), BigInteger::from_u32(0b1011)); // 11
+        assert_eq!(
+            fe(&f, 0b1011).to_big_integer(),
+            BigInteger::from_u32(0b1011)
+        ); // 11
         assert_eq!(fe(&f, 0b1111).to_big_integer(), BigInteger::from_u32(15));
 
         // 跨 limb（size 2）：驗 little-endian 順序 —— limb0 低位、limb1 高位。
@@ -509,8 +531,14 @@ mod tests {
         assert_eq!(a.multiply_plus_product(&b, &x, &y), &(&a * &b) + &(&x * &y));
         assert_eq!(a.square_plus_product(&x, &y), &a.square() + &(&x * &y));
         // char 2：minus == plus
-        assert_eq!(a.multiply_minus_product(&b, &x, &y), a.multiply_plus_product(&b, &x, &y));
-        assert_eq!(a.square_minus_product(&x, &y), a.square_plus_product(&x, &y));
+        assert_eq!(
+            a.multiply_minus_product(&b, &x, &y),
+            a.multiply_plus_product(&b, &x, &y)
+        );
+        assert_eq!(
+            a.square_minus_product(&x, &y),
+            a.square_plus_product(&x, &y)
+        );
     }
 
     #[test]
@@ -548,4 +576,3 @@ mod tests {
         fe(&field16(), 1).half_trace(); // m=4（偶）→ panic
     }
 }
-

@@ -106,7 +106,13 @@ mod tests {
         // r = x⁵+x³+x²+x+1；x⁵ ≡ x³+x²+x+1
         let mut tt = [0b10_0000u64, 0]; // bit 5
         let mut z = [0u64];
-        C { n: 5, k1: 1, k2: 2, k3: 3 }.reduce(&mut tt, &mut z);
+        C {
+            n: 5,
+            k1: 1,
+            k2: 2,
+            k3: 3,
+        }
+        .reduce(&mut tt, &mut z);
         assert_eq!(z, [0b1111]);
     }
 
@@ -139,7 +145,11 @@ mod tests {
                 let tt_ref = tt.clone();
                 let mut z = vec![0u64; size];
                 C { n, k1, k2, k3 }.reduce(&mut tt, &mut z);
-                assert_eq!(z, reduce_pentanomial_ref(n, k1, k2, k3, &tt_ref), "n={n} k={k1},{k2},{k3}");
+                assert_eq!(
+                    z,
+                    reduce_pentanomial_ref(n, k1, k2, k3, &tt_ref),
+                    "n={n} k={k1},{k2},{k3}"
+                );
             }
         }
     }

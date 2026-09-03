@@ -229,7 +229,11 @@ impl FpCurve {
     ///
     /// Panics if `x` or `y` is not in `[0, q)`.
     pub fn create_point(self: &Arc<Self>, x: BigInteger, y: BigInteger) -> FpPoint {
-        FpPoint::new(Arc::clone(self), self.create_field_element(x), self.create_field_element(y))
+        FpPoint::new(
+            Arc::clone(self),
+            self.create_field_element(x),
+            self.create_field_element(y),
+        )
     }
 
     /// Recovers the point with x-coordinate `x1` and the given y-parity from the
@@ -370,7 +374,10 @@ mod tests {
             Ok(self.try_next_u64()? as u32)
         }
         fn try_next_u64(&mut self) -> Result<u64, Infallible> {
-            self.0 = self.0.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+            self.0 = self
+                .0
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
             Ok(self.0)
         }
         fn try_fill_bytes(&mut self, dst: &mut [u8]) -> Result<(), Infallible> {
@@ -460,10 +467,22 @@ mod tests {
     fn decode_infinity_and_errors() {
         let curve = curve17();
         assert!(curve.decode_point(&[0x00]).unwrap().is_infinity());
-        assert!(matches!(curve.decode_point(&[0x00, 0x00]), Err(PointDecodeError::InvalidLength)));
-        assert!(matches!(curve.decode_point(&[]), Err(PointDecodeError::Empty)));
-        assert!(matches!(curve.decode_point(&[0x04, 5]), Err(PointDecodeError::InvalidLength)));
-        assert!(matches!(curve.decode_point(&[0x09, 5]), Err(PointDecodeError::UnknownEncoding(9))));
+        assert!(matches!(
+            curve.decode_point(&[0x00, 0x00]),
+            Err(PointDecodeError::InvalidLength)
+        ));
+        assert!(matches!(
+            curve.decode_point(&[]),
+            Err(PointDecodeError::Empty)
+        ));
+        assert!(matches!(
+            curve.decode_point(&[0x04, 5]),
+            Err(PointDecodeError::InvalidLength)
+        ));
+        assert!(matches!(
+            curve.decode_point(&[0x09, 5]),
+            Err(PointDecodeError::UnknownEncoding(9))
+        ));
     }
 
     #[test]
@@ -475,11 +494,19 @@ mod tests {
         assert_eq!(p.y().unwrap().as_ref(), &BigInteger::from_u32(1));
         // 0x02（y 偶）→ 另一根 (5,16)。
         assert_eq!(
-            curve.decode_point(&[0x02, 5]).unwrap().y().unwrap().as_ref(),
+            curve
+                .decode_point(&[0x02, 5])
+                .unwrap()
+                .y()
+                .unwrap()
+                .as_ref(),
             &BigInteger::from_u32(16)
         );
         // x=1：rhs=5 非二次剩餘 → NotOnCurve。
-        assert!(matches!(curve.decode_point(&[0x02, 1]), Err(PointDecodeError::NotOnCurve)));
+        assert!(matches!(
+            curve.decode_point(&[0x02, 1]),
+            Err(PointDecodeError::NotOnCurve)
+        ));
     }
 
     #[test]
@@ -497,7 +524,10 @@ mod tests {
             Err(PointDecodeError::InconsistentHybridY)
         ));
         // 不在曲線 (5,2) → NotOnCurve。
-        assert!(matches!(curve.decode_point(&[0x04, 5, 2]), Err(PointDecodeError::NotOnCurve)));
+        assert!(matches!(
+            curve.decode_point(&[0x04, 5, 2]),
+            Err(PointDecodeError::NotOnCurve)
+        ));
         // 座標越界 x=17(=q) → CoordinateOutOfRange。
         assert!(matches!(
             curve.decode_point(&[0x04, 17, 1]),

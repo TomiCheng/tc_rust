@@ -35,10 +35,7 @@ impl BigInteger {
             return BigInteger::new(0, Vec::new());
         }
         // Split into 2 big-endian words (most-significant first).
-        let words = [
-            (value >> WORD_BITS) as Limb,
-            value as Limb,
-        ];
+        let words = [(value >> WORD_BITS) as Limb, value as Limb];
         // Skip leading zero words. `value != 0` guarantees at least one non-zero.
         let start = words.iter().position(|&w| w != 0).unwrap();
         BigInteger::new(1, words[start..].to_vec())

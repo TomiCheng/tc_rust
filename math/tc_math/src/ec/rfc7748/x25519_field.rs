@@ -39,8 +39,16 @@ const M26: i32 = 0x03FF_FFFF;
 /// `√(−1) mod p`, in radix-2²⁵·⁵ limbs. bc `X25519Field.RootNegOne`; used by the
 /// square-root-of-ratio path (Ed25519 point decompression).
 const ROOT_NEG_ONE: Fe = Fe([
-    -0x01F1_5F50, -0x0079_362D, 0x0047_8C4F, 0x0035_697F, 0x005E_8630, 0x01FB_D7A7, -0x00BF_D9B1,
-    -0x000F_4D4B, 0x0002_7E0F, 0x0057_0649,
+    -0x01F1_5F50,
+    -0x0079_362D,
+    0x0047_8C4F,
+    0x0035_697F,
+    0x005E_8630,
+    0x01FB_D7A7,
+    -0x00BF_D9B1,
+    -0x000F_4D4B,
+    0x0002_7E0F,
+    0x0057_0649,
 ]);
 
 /// An element of `GF(2²⁵⁵ − 19)` in the ref10 radix-2²⁵·⁵ representation: [`SIZE`]
@@ -99,12 +107,34 @@ impl Fe {
     pub fn mul(self, rhs: Fe) -> Fe {
         let x = self.0;
         let y = rhs.0;
-        let (mut x0, mut x1, mut x2, mut x3, mut x4) =
-            (x[0] as i64, x[1] as i64, x[2] as i64, x[3] as i64, x[4] as i64);
-        let (mut y0, mut y1, mut y2, mut y3, mut y4) =
-            (y[0] as i64, y[1] as i64, y[2] as i64, y[3] as i64, y[4] as i64);
-        let (u0, u1, u2, u3, u4) = (x[5] as i64, x[6] as i64, x[7] as i64, x[8] as i64, x[9] as i64);
-        let (v0, v1, v2, v3, v4) = (y[5] as i64, y[6] as i64, y[7] as i64, y[8] as i64, y[9] as i64);
+        let (mut x0, mut x1, mut x2, mut x3, mut x4) = (
+            x[0] as i64,
+            x[1] as i64,
+            x[2] as i64,
+            x[3] as i64,
+            x[4] as i64,
+        );
+        let (mut y0, mut y1, mut y2, mut y3, mut y4) = (
+            y[0] as i64,
+            y[1] as i64,
+            y[2] as i64,
+            y[3] as i64,
+            y[4] as i64,
+        );
+        let (u0, u1, u2, u3, u4) = (
+            x[5] as i64,
+            x[6] as i64,
+            x[7] as i64,
+            x[8] as i64,
+            x[9] as i64,
+        );
+        let (v0, v1, v2, v3, v4) = (
+            y[5] as i64,
+            y[6] as i64,
+            y[7] as i64,
+            y[8] as i64,
+            y[9] as i64,
+        );
 
         // a = xₗ · yₗ（低 5 limb）
         let mut a0 = x0 * y0;
@@ -153,11 +183,16 @@ impl Fe {
         a8 -= b3;
 
         // c = (xₗ+xₕ) · (yₗ+yₕ)（Karatsuba cross）
-        x0 += u0; y0 += v0;
-        x1 += u1; y1 += v1;
-        x2 += u2; y2 += v2;
-        x3 += u3; y3 += v3;
-        x4 += u4; y4 += v4;
+        x0 += u0;
+        y0 += v0;
+        x1 += u1;
+        y1 += v1;
+        x2 += u2;
+        y2 += v2;
+        x3 += u3;
+        y3 += v3;
+        x4 += u4;
+        y4 += v4;
 
         let c0 = x0 * y0;
         let c1 = x0 * y1 + x1 * y0;
@@ -226,19 +261,39 @@ impl Fe {
         let y = y as i64;
         let mut z = [0i32; SIZE];
 
-        let mut c0 = x2 as i64 * y; x2 = c0 as i32 & M25; c0 >>= 25;
-        let mut c1 = x4 as i64 * y; x4 = c1 as i32 & M25; c1 >>= 25;
-        let mut c2 = x7 as i64 * y; x7 = c2 as i32 & M25; c2 >>= 25;
-        let mut c3 = x9 as i64 * y; x9 = c3 as i32 & M25; c3 >>= 25;
+        let mut c0 = x2 as i64 * y;
+        x2 = c0 as i32 & M25;
+        c0 >>= 25;
+        let mut c1 = x4 as i64 * y;
+        x4 = c1 as i32 & M25;
+        c1 >>= 25;
+        let mut c2 = x7 as i64 * y;
+        x7 = c2 as i32 & M25;
+        c2 >>= 25;
+        let mut c3 = x9 as i64 * y;
+        x9 = c3 as i32 & M25;
+        c3 >>= 25;
         c3 *= 38;
 
-        c3 += x0 as i64 * y; z[0] = c3 as i32 & M26; c3 >>= 26;
-        c1 += x5 as i64 * y; z[5] = c1 as i32 & M26; c1 >>= 26;
+        c3 += x0 as i64 * y;
+        z[0] = c3 as i32 & M26;
+        c3 >>= 26;
+        c1 += x5 as i64 * y;
+        z[5] = c1 as i32 & M26;
+        c1 >>= 26;
 
-        c3 += x1 as i64 * y; z[1] = c3 as i32 & M26; c3 >>= 26;
-        c0 += x3 as i64 * y; z[3] = c0 as i32 & M26; c0 >>= 26;
-        c1 += x6 as i64 * y; z[6] = c1 as i32 & M26; c1 >>= 26;
-        c2 += x8 as i64 * y; z[8] = c2 as i32 & M26; c2 >>= 26;
+        c3 += x1 as i64 * y;
+        z[1] = c3 as i32 & M26;
+        c3 >>= 26;
+        c0 += x3 as i64 * y;
+        z[3] = c0 as i32 & M26;
+        c0 >>= 26;
+        c1 += x6 as i64 * y;
+        z[6] = c1 as i32 & M26;
+        c1 >>= 26;
+        c2 += x8 as i64 * y;
+        z[8] = c2 as i32 & M26;
+        c2 >>= 26;
 
         z[2] = x2 + c3 as i32;
         z[4] = x4 + c0 as i32;
@@ -291,7 +346,9 @@ impl Fe {
     pub fn cmov(cond: i32, x: Fe, z: Fe) -> Fe {
         debug_assert!(cond == 0 || cond == 1);
         let mask = -cond;
-        Fe(core::array::from_fn(|i| z.0[i] ^ (mask & (z.0[i] ^ x.0[i]))))
+        Fe(core::array::from_fn(|i| {
+            z.0[i] ^ (mask & (z.0[i] ^ x.0[i]))
+        }))
     }
 
     /// Constant-time conditional negate: `−self` if `neg == 1`, else `self`, branchlessly.
@@ -414,9 +471,20 @@ impl Fe {
     /// no × 76). Constant-time.
     pub fn sqr(self) -> Fe {
         let x = self.0;
-        let (mut x0, mut x1, mut x2, mut x3, mut x4) =
-            (x[0] as i64, x[1] as i64, x[2] as i64, x[3] as i64, x[4] as i64);
-        let (u0, u1, u2, u3, u4) = (x[5] as i64, x[6] as i64, x[7] as i64, x[8] as i64, x[9] as i64);
+        let (mut x0, mut x1, mut x2, mut x3, mut x4) = (
+            x[0] as i64,
+            x[1] as i64,
+            x[2] as i64,
+            x[3] as i64,
+            x[4] as i64,
+        );
+        let (u0, u1, u2, u3, u4) = (
+            x[5] as i64,
+            x[6] as i64,
+            x[7] as i64,
+            x[8] as i64,
+            x[9] as i64,
+        );
 
         let mut x1_2 = x1 * 2;
         let mut x2_2 = x2 * 2;
@@ -523,26 +591,50 @@ impl Fe {
     /// Corresponds to bc `X25519Field.Carry`, transcribed verbatim. Rust `i32 >> n` is
     /// an arithmetic shift (like C# `int >>`), so signed limbs carry correctly.
     pub fn carry(self) -> Fe {
-        let [mut z0, mut z1, mut z2, mut z3, mut z4, mut z5, mut z6, mut z7, mut z8, mut z9] =
-            self.0;
+        let [
+            mut z0,
+            mut z1,
+            mut z2,
+            mut z3,
+            mut z4,
+            mut z5,
+            mut z6,
+            mut z7,
+            mut z8,
+            mut z9,
+        ] = self.0;
 
-        z2 += z1 >> 26; z1 &= M26;
-        z4 += z3 >> 26; z3 &= M26;
-        z7 += z6 >> 26; z6 &= M26;
-        z9 += z8 >> 26; z8 &= M26;
+        z2 += z1 >> 26;
+        z1 &= M26;
+        z4 += z3 >> 26;
+        z3 &= M26;
+        z7 += z6 >> 26;
+        z6 &= M26;
+        z9 += z8 >> 26;
+        z8 &= M26;
 
-        z3 += z2 >> 25; z2 &= M25;
-        z5 += z4 >> 25; z4 &= M25;
-        z8 += z7 >> 25; z7 &= M25;
-        z0 += (z9 >> 25) * 38; z9 &= M25; // 2²⁵⁵ ≡ 19 折疊(×38）
+        z3 += z2 >> 25;
+        z2 &= M25;
+        z5 += z4 >> 25;
+        z4 &= M25;
+        z8 += z7 >> 25;
+        z7 &= M25;
+        z0 += (z9 >> 25) * 38;
+        z9 &= M25; // 2²⁵⁵ ≡ 19 折疊(×38）
 
-        z1 += z0 >> 26; z0 &= M26;
-        z6 += z5 >> 26; z5 &= M26;
+        z1 += z0 >> 26;
+        z0 &= M26;
+        z6 += z5 >> 26;
+        z5 &= M26;
 
-        z2 += z1 >> 26; z1 &= M26;
-        z4 += z3 >> 26; z3 &= M26;
-        z7 += z6 >> 26; z6 &= M26;
-        z9 += z8 >> 26; z8 &= M26;
+        z2 += z1 >> 26;
+        z1 &= M26;
+        z4 += z3 >> 26;
+        z3 &= M26;
+        z7 += z6 >> 26;
+        z6 &= M26;
+        z9 += z8 >> 26;
+        z8 &= M26;
 
         Fe([z0, z1, z2, z3, z4, z5, z6, z7, z8, z9])
     }
@@ -570,15 +662,33 @@ impl Fe {
         let t = (z[9] >> 24) + x;
 
         let mut cc: i64 = t as i64 * 19;
-        cc += z[0] as i64; z[0] = cc as i32 & M26; cc >>= 26;
-        cc += z[1] as i64; z[1] = cc as i32 & M26; cc >>= 26;
-        cc += z[2] as i64; z[2] = cc as i32 & M25; cc >>= 25;
-        cc += z[3] as i64; z[3] = cc as i32 & M26; cc >>= 26;
-        cc += z[4] as i64; z[4] = cc as i32 & M25; cc >>= 25;
-        cc += z[5] as i64; z[5] = cc as i32 & M26; cc >>= 26;
-        cc += z[6] as i64; z[6] = cc as i32 & M26; cc >>= 26;
-        cc += z[7] as i64; z[7] = cc as i32 & M25; cc >>= 25;
-        cc += z[8] as i64; z[8] = cc as i32 & M26; cc >>= 26;
+        cc += z[0] as i64;
+        z[0] = cc as i32 & M26;
+        cc >>= 26;
+        cc += z[1] as i64;
+        z[1] = cc as i32 & M26;
+        cc >>= 26;
+        cc += z[2] as i64;
+        z[2] = cc as i32 & M25;
+        cc >>= 25;
+        cc += z[3] as i64;
+        z[3] = cc as i32 & M26;
+        cc >>= 26;
+        cc += z[4] as i64;
+        z[4] = cc as i32 & M25;
+        cc >>= 25;
+        cc += z[5] as i64;
+        z[5] = cc as i32 & M26;
+        cc >>= 26;
+        cc += z[6] as i64;
+        z[6] = cc as i32 & M26;
+        cc >>= 26;
+        cc += z[7] as i64;
+        z[7] = cc as i32 & M25;
+        cc >>= 25;
+        cc += z[8] as i64;
+        z[8] = cc as i32 & M26;
+        cc >>= 26;
         z[9] = z9 + cc as i32;
         Fe(z)
     }
@@ -612,7 +722,13 @@ impl Fe {
 /// Packs 5 limbs (widths 26, 26, 25, 26, 25 = 128 bits) into 16 little-endian bytes.
 /// bc `X25519Field.Encode128` (+ `Encode32`, folded in via `to_le_bytes`).
 fn encode_128(x: &[i32], bs: &mut [u8]) {
-    let (x0, x1, x2, x3, x4) = (x[0] as u32, x[1] as u32, x[2] as u32, x[3] as u32, x[4] as u32);
+    let (x0, x1, x2, x3, x4) = (
+        x[0] as u32,
+        x[1] as u32,
+        x[2] as u32,
+        x[3] as u32,
+        x[4] as u32,
+    );
     let t0 = x0 | (x1 << 26);
     let t1 = (x1 >> 6) | (x2 << 20);
     let t2 = (x2 >> 12) | (x3 << 13);
@@ -699,7 +815,11 @@ mod tests {
             // mul_i32（ladder 用 A24 = 121666）
             for &y in &[1i32, 19, 121665, 121666] {
                 let yv = BigInteger::from_u32(y as u32);
-                assert_eq!(fe_val(a.mul_i32(y)), (&av * &yv).rem_euclid(&p), "mul_i32 y={y}");
+                assert_eq!(
+                    fe_val(a.mul_i32(y)),
+                    (&av * &yv).rem_euclid(&p),
+                    "mul_i32 y={y}"
+                );
             }
             // invert：a⁻¹ = a^(p−2)，且 a·a⁻¹ = 1（a ≠ 0）
             if !av.is_zero() {
@@ -710,7 +830,10 @@ mod tests {
             assert_eq!(fe_val(a.negate()), (-&av).rem_euclid(&p));
             assert_eq!(fe_val(a.cnegate(0)), av);
             assert_eq!(fe_val(a.cnegate(1)), (-&av).rem_euclid(&p));
-            assert_eq!(fe_val(a.add_one()), (&av + &BigInteger::from_u32(1)).rem_euclid(&p));
+            assert_eq!(
+                fe_val(a.add_one()),
+                (&av + &BigInteger::from_u32(1)).rem_euclid(&p)
+            );
             let (sp, sm) = a.apm(b);
             assert_eq!(fe_val(sp), (&av + &bv).rem_euclid(&p));
             assert_eq!(fe_val(sm), (&av - &bv).rem_euclid(&p));
@@ -803,7 +926,10 @@ mod tests {
         assert_eq!(a.sub(b).0, [9, 18, 27, 36, 45, 54, 63, 72, 81, 90]);
         // a − a = 0；有號 limb 可為負：b − a
         assert_eq!(a.sub(a).0, [0i32; SIZE]);
-        assert_eq!(b.sub(a).0, [-9, -18, -27, -36, -45, -54, -63, -72, -81, -90]);
+        assert_eq!(
+            b.sub(a).0,
+            [-9, -18, -27, -36, -45, -54, -63, -72, -81, -90]
+        );
     }
 
     #[test]
@@ -828,7 +954,10 @@ mod tests {
         let full = Fe([M26, M25, M26, M25, M26, M26, M25, M26, M25, M26]);
         let big = full.add(full).add(full); // 3× 滿載
         for (i, &limb) in big.carry().0.iter().enumerate() {
-            assert!(limb.unsigned_abs() < (1u32 << 27), "limb {i} = {limb} 未收攏");
+            assert!(
+                limb.unsigned_abs() < (1u32 << 27),
+                "limb {i} = {limb} 未收攏"
+            );
         }
     }
 

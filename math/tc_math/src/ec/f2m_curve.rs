@@ -72,7 +72,13 @@ impl F2mCurve {
         order: Option<BigInteger>,
         cofactor: Option<BigInteger>,
     ) -> Self {
-        Self::from_field(Arc::new(F2mField::pentanomial(m, k1, k2, k3)), a, b, order, cofactor)
+        Self::from_field(
+            Arc::new(F2mField::pentanomial(m, k1, k2, k3)),
+            a,
+            b,
+            order,
+            cofactor,
+        )
     }
 
     /// Shared construction over an already-built field: builds the coefficient
@@ -86,7 +92,14 @@ impl F2mCurve {
     ) -> Self {
         let a = Self::make_field_element(&field, a);
         let b = Self::make_field_element(&field, b);
-        F2mCurve { field, a, b, order, cofactor, coordinate_system: CoordinateSystem::Affine }
+        F2mCurve {
+            field,
+            a,
+            b,
+            order,
+            cofactor,
+            coordinate_system: CoordinateSystem::Affine,
+        }
     }
 
     /// Builds a field element of this curve's field from an integer, validating
@@ -180,7 +193,11 @@ impl F2mCurve {
     ///
     /// [`create_field_element`]: Self::create_field_element
     pub fn create_point(self: &Arc<Self>, x: BigInteger, y: BigInteger) -> F2mPoint {
-        F2mPoint::new(Arc::clone(self), self.create_field_element(x), self.create_field_element(y))
+        F2mPoint::new(
+            Arc::clone(self),
+            self.create_field_element(x),
+            self.create_field_element(y),
+        )
     }
 
     /// Returns `true` if the affine point `(x, y)` satisfies `y² + xy = x³ + ax² + b`.
@@ -200,10 +217,17 @@ impl F2mCurve {
     /// Panics for even `m` (the even-`m` fallback is not ported; all sect curves have
     /// odd `m`).
     fn solve_quadratic(&self, beta: &F2mFieldElement) -> Option<F2mFieldElement> {
-        assert!(self.field.m() & 1 == 1, "solve_quadratic: even m not supported");
+        assert!(
+            self.field.m() & 1 == 1,
+            "solve_quadratic: even m not supported"
+        );
         let r = beta.half_trace();
         // r²+r == beta 才是解；Tr(beta)≠0 時 half_trace 不滿足 → 無解。
-        if (&(&r.square() + &r) + beta).is_zero() { Some(r) } else { None }
+        if (&(&r.square() + &r) + beta).is_zero() {
+            Some(r)
+        } else {
+            None
+        }
     }
 
     /// Recovers an affine point from its `x`-coordinate and the compression parity bit
@@ -265,7 +289,8 @@ impl F2mCurve {
                     return Err(PointDecodeError::CoordinateOutOfRange);
                 }
                 let y_tilde = (type_byte & 1) as u32;
-                self.decompress_point(y_tilde, x).ok_or(PointDecodeError::NotOnCurve)
+                self.decompress_point(y_tilde, x)
+                    .ok_or(PointDecodeError::NotOnCurve)
             }
             0x04 => {
                 // 未壓縮：prefix + X + Y。
@@ -373,15 +398,32 @@ mod tests {
 
     #[test]
     fn create_field_element_roundtrips() {
-        let c = F2mCurve::trinomial(233, 74, BigInteger::from_u32(1), BigInteger::from_u32(1), None, None);
+        let c = F2mCurve::trinomial(
+            233,
+            74,
+            BigInteger::from_u32(1),
+            BigInteger::from_u32(1),
+            None,
+            None,
+        );
         let e = c.create_field_element(BigInteger::from_u64(0x0102_0304_0506_0708));
-        assert_eq!(e.to_big_integer(), BigInteger::from_u64(0x0102_0304_0506_0708));
+        assert_eq!(
+            e.to_big_integer(),
+            BigInteger::from_u64(0x0102_0304_0506_0708)
+        );
     }
 
     #[test]
     #[should_panic(expected = "value invalid")]
     fn create_field_element_rejects_too_large() {
-        let c = F2mCurve::trinomial(4, 1, BigInteger::from_u32(1), BigInteger::from_u32(1), None, None);
+        let c = F2mCurve::trinomial(
+            4,
+            1,
+            BigInteger::from_u32(1),
+            BigInteger::from_u32(1),
+            None,
+            None,
+        );
         // bit_length 5 > m=4 → panic
         c.create_field_element(BigInteger::from_u32(0b1_0000));
     }
@@ -400,15 +442,28 @@ mod tests {
 
         let p = c.create_point(BigInteger::from_u32(0b0010), BigInteger::from_u32(0b0011));
         assert!(!p.is_infinity());
-        assert_eq!(p.x().unwrap().to_big_integer(), BigInteger::from_u32(0b0010));
-        assert_eq!(p.y().unwrap().to_big_integer(), BigInteger::from_u32(0b0011));
+        assert_eq!(
+            p.x().unwrap().to_big_integer(),
+            BigInteger::from_u32(0b0010)
+        );
+        assert_eq!(
+            p.y().unwrap().to_big_integer(),
+            BigInteger::from_u32(0b0011)
+        );
         assert!(Arc::ptr_eq(p.curve(), &c)); // 點回指同一曲線
     }
 
     #[test]
     fn curve_equality_compares_field_and_coeffs() {
         let mk = |b: u32| {
-            F2mCurve::trinomial(233, 74, BigInteger::from_u32(1), BigInteger::from_u32(b), None, None)
+            F2mCurve::trinomial(
+                233,
+                74,
+                BigInteger::from_u32(1),
+                BigInteger::from_u32(b),
+                None,
+                None,
+            )
         };
         assert_eq!(mk(7), mk(7));
         assert_ne!(mk(7), mk(8)); // 係數不同
@@ -440,10 +495,19 @@ mod tests {
         ));
         assert_eq!(c.decode_point(&[]), Err(PointDecodeError::Empty));
         // 壓縮長度錯（163 → len 21，這裡只給 1 byte X）。
-        assert_eq!(c.decode_point(&[0x02, 0x01]), Err(PointDecodeError::InvalidLength));
+        assert_eq!(
+            c.decode_point(&[0x02, 0x01]),
+            Err(PointDecodeError::InvalidLength)
+        );
         // 未知前綴。
-        assert_eq!(c.decode_point(&[0x09]), Err(PointDecodeError::UnknownEncoding(0x09)));
+        assert_eq!(
+            c.decode_point(&[0x09]),
+            Err(PointDecodeError::UnknownEncoding(0x09))
+        );
         // 0x00 後多帶資料 → 長度錯。
-        assert_eq!(c.decode_point(&[0x00, 0x00]), Err(PointDecodeError::InvalidLength));
+        assert_eq!(
+            c.decode_point(&[0x00, 0x00]),
+            Err(PointDecodeError::InvalidLength)
+        );
     }
 }
