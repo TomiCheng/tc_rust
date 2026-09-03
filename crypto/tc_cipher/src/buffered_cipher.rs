@@ -55,13 +55,19 @@ pub trait BufferedCipher {
     /// Finishes the operation and returns the number of bytes written.
     ///
     /// This is where padding is added or removed and where a trailing partial
-    /// block is resolved. A successful call restores the state established by
-    /// the most recent initialization, so the cipher is ready for another
-    /// message. A failed call must not leave unverified plaintext in `output`.
+    /// block is resolved. A failed call must not leave unverified plaintext in
+    /// `output`.
+    ///
+    /// Whether a successful call can start another message without a fresh
+    /// initialization follows the wrapped cipher. In particular, an AEAD
+    /// encryptor may remain finalized to prevent key-and-nonce reuse.
     fn do_final(&mut self, output: &mut [u8]) -> Result<usize, Self::Error>;
 
     /// Discards buffered input and restores the state established by the most
-    /// recent initialization.
+    /// recent initialization when the wrapped cipher permits it.
+    ///
+    /// An AEAD encryptor may remain finalized when restoring it would permit
+    /// reuse of a key and nonce.
     fn reset(&mut self);
 }
 

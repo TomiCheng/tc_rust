@@ -1,4 +1,4 @@
-//! Buffered adapters for block and stream ciphers.
+//! Buffered adapters for block, stream, AEAD, and IES ciphers.
 //!
 //! [`BufferedBlockCipher`] accepts input in arbitrary-size pieces, emits every
 //! complete block, and retains a final partial block until
@@ -8,6 +8,10 @@
 //! The block-cipher adapter sizes its buffer from the wrapped mode at runtime
 //! and therefore uses `alloc`. [`BufferedStreamCipher`] does not allocate. The
 //! crate remains `no_std`.
+//!
+//! [`BufferedAeadCipher`] and [`BufferedAeadBlockCipher`] adapt AEAD engines
+//! without adding another input buffer. AEAD engines already retain any data
+//! required by their construction.
 //!
 //! [`BufferedIesCipher`] collects an entire IES message and emits output only
 //! from `do_final`. Its engine reports the configured output size, rather than
@@ -53,10 +57,14 @@
 
 extern crate alloc;
 
+mod buffered_aead_block_cipher;
+mod buffered_aead_cipher;
 mod buffered_block_cipher;
 mod buffered_ies_cipher;
 mod buffered_stream_cipher;
 
+pub use buffered_aead_block_cipher::BufferedAeadBlockCipher;
+pub use buffered_aead_cipher::BufferedAeadCipher;
 pub use buffered_block_cipher::BufferedBlockCipher;
 pub use buffered_ies_cipher::BufferedIesCipher;
 pub use buffered_stream_cipher::BufferedStreamCipher;

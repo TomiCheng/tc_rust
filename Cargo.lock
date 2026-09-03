@@ -563,6 +563,8 @@ name = "tc_buff"
 version = "0.1.0"
 dependencies = [
  "tc_aes",
+ "tc_ascon_aead",
+ "tc_ccm",
  "tc_cfb",
  "tc_cipher",
  "tc_crypto",
