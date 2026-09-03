@@ -794,6 +794,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_ec"
+version = "0.1.0"
+dependencies = [
+ "rand_core",
+ "tc_bigint",
+]
+
+[[package]]
 name = "tc_ecb"
 version = "0.1.0"
 dependencies = [
@@ -986,14 +994,6 @@ name = "tc_macs"
 version = "0.1.0"
 
 [[package]]
-name = "tc_math"
-version = "0.1.0"
-dependencies = [
- "rand_core",
- "tc_bigint",
-]
-
-[[package]]
 name = "tc_md"
 version = "0.1.0"
 dependencies = [
@@ -1160,6 +1160,14 @@ name = "tc_ripemd"
 version = "0.1.0"
 dependencies = [
  "tc_digest",
+]
+
+[[package]]
+name = "tc_rsa"
+version = "0.1.0"
+dependencies = [
+ "tc_bigint",
+ "tc_cipher",
 ]
 
 [[package]]

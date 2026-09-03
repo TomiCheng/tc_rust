@@ -1,6 +1,6 @@
 [package]
-name = "tc_math"
-description = "Pure-Rust finite-field and elliptic-curve foundations ported from Bouncy Castle C#."
+name = "tc_ec"
+description = "Pure-Rust elliptic-curve and supporting finite-field foundations ported from Bouncy Castle C#."
 version = "0.1.0"
 edition.workspace = true
 license.workspace = true

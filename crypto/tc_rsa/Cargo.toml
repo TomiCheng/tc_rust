@@ -1,0 +1,11 @@
+[package]
+name = "tc_rsa"
+description = "Shared RSA core contracts for the tc_rust workspace."
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+tc_bigint = { version = "0.1.0", path = "../../math/tc_bigint", default-features = false }
+tc_cipher = { version = "0.1.0", path = "../tc_cipher" }

@@ -1,4 +1,4 @@
-# tc_math
+# tc_ec
 
 A pure-Rust finite-field and elliptic-curve foundation ported from the Bouncy
 Castle C# library (`bc-csharp`, baseline commit `f027bbe1`) as a learning
@@ -6,7 +6,7 @@ project. Arbitrary-precision integers now live in the separate
 [`tc_bigint`](../tc_bigint) crate.
 
 - **`no_std` + `alloc`**: the `std` feature is on by default;
-  `--no-default-features` switches both `tc_math` and its `tc_bigint` dependency
+  `--no-default-features` switches both `tc_ec` and its `tc_bigint` dependency
   to `no_std`.
 - **Caller-provided randomness**: depends on `rand_core`; the library never calls
   `rand::rng()` internally.
@@ -21,8 +21,8 @@ project. Arbitrary-precision integers now live in the separate
 | `raw::Nat` | Const-generic fixed-size limb integers (foundation for custom Fp) | `Math.Raw.Nat*` |
 | `ec` | Elliptic curves: affine Fp/F2m curves and points, SEC named curves, rfc7748 (X25519) | `Math.EC` |
 
-`tc_math::big_integer` remains as a compatibility re-export of `tc_bigint`; new
-code should import `tc_bigint::BigInteger` directly.
+Arbitrary-precision integer operations are provided by `tc_bigint`; import
+`tc_bigint::BigInteger` directly when an application needs them.
 
 ---
 
@@ -108,12 +108,12 @@ The current code is a **faithful baseline**; almost no optimization has been app
 
 ```bash
 # standard tests (64-bit)
-cargo test -p tc_math
+cargo test -p tc_ec
 
 # no_std build
-cargo build -p tc_math --no-default-features
+cargo build -p tc_ec --no-default-features
 
 # 32-bit branch check (WOW64, exercises the limb_x32 path)
-cargo test -p tc_math --target i686-pc-windows-msvc
+cargo test -p tc_ec --target i686-pc-windows-msvc
 
 ```

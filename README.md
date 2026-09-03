@@ -34,6 +34,7 @@ engines respectively; both provide streaming, clone, and reset behavior.
 | --- | --- | --- |
 | [`tc_crypto`](crypto/tc_crypto) | Shared algorithm metadata contracts | Core-only `no_std` |
 | [`tc_cipher`](crypto/tc_cipher) | Shared cipher, mode, and key-wrapping traits and errors | Core-only `no_std` |
+| [`tc_rsa`](crypto/tc_rsa) | RSA-specific integer-level core contract | `no_std + alloc` |
 | [`tc_params`](crypto/tc_params) | Shared object-safe cryptographic parameter traits and convenience types | Core-only `no_std` |
 | [`tc_macs`](crypto/tc_macs) | Shared message-authentication-code traits and errors | Core-only `no_std` |
 | [Block-cipher family crates](crypto/block_cipher) | Independent block-cipher implementations built on `tc_cipher` and `tc_params` | Core-only `no_std`; AES can select AES-NI at runtime |
@@ -42,7 +43,7 @@ engines respectively; both provide streaming, clone, and reset behavior.
 | [`tc_digest`](crypto/tc_digest) | Shared message-digest and XOF traits | Core-only `no_std` |
 | [Digest family crates](crypto/digest) | Independent message-digest, XOF, and digest-adapter implementations | `no_std`; allocation and optional CPU acceleration vary by family |
 | [`tc_bigint`](math/tc_bigint) | Signed arbitrary-precision integer and number-theory operations | `no_std + alloc` |
-| [`tc_math`](math/tc_math) | Binary-polynomial, raw-integer, finite-field, and elliptic-curve foundations | `no_std + alloc` |
+| [`tc_ec`](math/tc_ec) | Binary-polynomial, raw-integer, finite-field, and elliptic-curve foundations | `no_std + alloc` |
 
 The core trait crates do not depend on algorithm implementations. Concrete
 algorithm crates depend on the appropriate core crate, which keeps the
@@ -110,7 +111,7 @@ details and usage examples.
 - Binary-polynomial, raw natural-number, and elliptic-curve field arithmetic
 - X25519 scalar multiplication and 33 named SEC curves
 
-Except for the X25519 ladder, the general `tc_math` arithmetic is not promised
+Except for the X25519 ladder, the general `tc_ec` arithmetic is not promised
 to be constant-time.
 
 ## Feature model
@@ -162,7 +163,7 @@ cargo build -p tc_cbc -p tc_cfb -p tc_ofb -p tc_ctr --locked
 cargo build -p tc_blake2 -p tc_haraka --no-default-features --locked
 
 # Other crates that require alloc but not std
-cargo build -p tc_bigint -p tc_math --no-default-features --locked
+cargo build -p tc_bigint -p tc_ec --no-default-features --locked
 ```
 
 `cargo test` always uses Rust's standard-library test harness. Use `cargo build`
