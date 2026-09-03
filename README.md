@@ -34,7 +34,7 @@ engines respectively; both provide streaming, clone, and reset behavior.
 | --- | --- | --- |
 | [`tc_crypto`](crypto/tc_crypto) | Shared algorithm metadata contracts | Core-only `no_std` |
 | [`tc_cipher`](crypto/tc_cipher) | Shared cipher, mode, and key-wrapping traits and errors | Core-only `no_std` |
-| [`tc_rsa`](crypto/tc_rsa) | RSA-specific integer-level core contract | `no_std + alloc` |
+| [`tc_rsa`](crypto/tc_rsa) | RSA-specific integer-level core contract | Core-only `no_std` |
 | [`tc_params`](crypto/tc_params) | Shared object-safe cryptographic parameter traits and convenience types | Core-only `no_std` |
 | [`tc_macs`](crypto/tc_macs) | Shared message-authentication-code traits and errors | Core-only `no_std` |
 | [Block-cipher family crates](crypto/block_cipher) | Independent block-cipher implementations built on `tc_cipher` and `tc_params` | Core-only `no_std`; AES can select AES-NI at runtime |
