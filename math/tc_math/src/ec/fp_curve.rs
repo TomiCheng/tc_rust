@@ -10,11 +10,11 @@ use alloc::sync::Arc;
 
 use rand_core::Rng;
 
-use crate::big_integer::BigInteger;
 use crate::ec::CoordinateSystem;
 use crate::ec::fp_field_element::FpFieldElement;
 use crate::ec::fp_point::FpPoint;
 use crate::ec::point_codec::PointDecodeError;
+use tc_bigint::BigInteger;
 
 /// A short-Weierstrass elliptic curve `y^2 = x^3 + ax + b` over GF(q).
 ///

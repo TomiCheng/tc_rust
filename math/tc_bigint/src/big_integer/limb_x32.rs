@@ -11,7 +11,7 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_math::big_integer::BigInteger;
+    /// use tc_bigint::BigInteger;
     ///
     /// let n = BigInteger::from_u64(5);
     /// ```
@@ -35,7 +35,7 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_math::big_integer::BigInteger;
+    /// use tc_bigint::BigInteger;
     ///
     /// let n = BigInteger::from_u128(5);
     /// ```

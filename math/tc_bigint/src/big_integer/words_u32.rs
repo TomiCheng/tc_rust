@@ -15,7 +15,7 @@ use super::{BigInteger, BufferTooSmall, WORD_BITS, bit_len};
 
 // no_std 下沒有 std prelude，`vec!` 巨集與 `Vec` 型別需從 alloc 顯式引入；
 // std build 由 prelude 提供，故僅在關閉 std 時引入，避免重複 import 警告。
-use crate::big_integer::limb::{Limb, mag_from_u32_be, mag_to_u32_be};
+use super::limb::{Limb, mag_from_u32_be, mag_to_u32_be};
 #[cfg(not(feature = "std"))]
 use alloc::{vec, vec::Vec};
 
@@ -28,7 +28,7 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_math::big_integer::BigInteger;
+    /// use tc_bigint::BigInteger;
     ///
     /// assert_eq!(BigInteger::from_u32_be(&[0xFFFF_FFFF]), BigInteger::from_i32(-1));
     /// assert_eq!(BigInteger::from_u32_be(&[1, 0]), BigInteger::from_u64(1 << 32));
@@ -55,7 +55,7 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_math::big_integer::BigInteger;
+    /// use tc_bigint::BigInteger;
     ///
     /// // 有別於 from_u32_be：0x8000_0000 是 2^31，不是 -2^31
     /// assert_eq!(BigInteger::from_u32_be_unsigned(&[0x8000_0000]), BigInteger::from_u64(1 << 31));
@@ -75,7 +75,7 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_math::big_integer::BigInteger;
+    /// use tc_bigint::BigInteger;
     ///
     /// assert_eq!(BigInteger::from_u32_le(&[0xFFFF_FFFF]), BigInteger::from_i32(-1));
     /// assert_eq!(BigInteger::from_u32_le(&[0, 1]), BigInteger::from_u64(1 << 32));
@@ -101,7 +101,7 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_math::big_integer::BigInteger;
+    /// use tc_bigint::BigInteger;
     ///
     /// assert_eq!(BigInteger::from_u32_le_unsigned(&[0, 0x8000_0000]), BigInteger::from_u64(1 << 63));
     /// ```
@@ -117,7 +117,7 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_math::big_integer::BigInteger;
+    /// use tc_bigint::BigInteger;
     ///
     /// assert_eq!(BigInteger::from_i32(0).u32_length(), 1);
     /// assert_eq!(BigInteger::from_u64(1 << 31).u32_length(), 2); // 需符號字 → [0000_0000, 8000_0000]
@@ -134,7 +134,7 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_math::big_integer::BigInteger;
+    /// use tc_bigint::BigInteger;
     ///
     /// assert_eq!(BigInteger::from_u64(1 << 31).u32_length_unsigned(), 1); // [8000_0000]
     /// assert_eq!(BigInteger::from_u64(1 << 32).u32_length_unsigned(), 2); // [0000_0001, 0000_0000]
@@ -172,7 +172,7 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_math::big_integer::BigInteger;
+    /// use tc_bigint::BigInteger;
     ///
     /// assert_eq!(BigInteger::from_u64(1 << 31).to_u32_be_unsigned(), vec![0x8000_0000]);
     /// assert_eq!(BigInteger::from_i32(i32::MIN).to_u32_be_unsigned(), vec![0x8000_0000]); // 只看絕對值
@@ -199,7 +199,7 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_math::big_integer::BigInteger;
+    /// use tc_bigint::BigInteger;
     ///
     /// assert_eq!(BigInteger::from_u64(1 << 31).to_u32_be(), vec![0x0000_0000, 0x8000_0000]);
     /// assert_eq!(BigInteger::from_i32(-1).to_u32_be(), vec![0xFFFF_FFFF]);
@@ -285,7 +285,7 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_math::big_integer::BigInteger;
+    /// use tc_bigint::BigInteger;
     ///
     /// let n = BigInteger::from_u64(1 << 31);
     /// let mut buf = [0u32; 4];

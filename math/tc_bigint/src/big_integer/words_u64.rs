@@ -12,8 +12,8 @@
 //! the whole word array as a base-2⁶⁴ two's-complement integer (sign = top bit of the
 //! most-significant word).
 
+use super::limb::mag_to_u64_be;
 use super::{BigInteger, BufferTooSmall, WORD_BITS, bit_len};
-use crate::big_integer::limb::mag_to_u64_be;
 
 // no_std 下沒有 std prelude，`vec!` 巨集與 `Vec` 型別需從 alloc 顯式引入。
 #[cfg(not(feature = "std"))]
@@ -28,7 +28,7 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_math::big_integer::BigInteger;
+    /// use tc_bigint::BigInteger;
     ///
     /// assert_eq!(BigInteger::from_u64_be(&[0xFFFF_FFFF_FFFF_FFFF]), BigInteger::from_i32(-1));
     /// assert_eq!(BigInteger::from_u64_be(&[1, 0]), BigInteger::from_u128(1u128 << 64));
@@ -43,7 +43,7 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_math::big_integer::BigInteger;
+    /// use tc_bigint::BigInteger;
     ///
     /// // 有別於 from_u64_be：0x8000… 是 2^63，不是 -2^63
     /// assert_eq!(
@@ -63,7 +63,7 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_math::big_integer::BigInteger;
+    /// use tc_bigint::BigInteger;
     ///
     /// assert_eq!(BigInteger::from_u64_le(&[0xFFFF_FFFF_FFFF_FFFF]), BigInteger::from_i32(-1));
     /// assert_eq!(BigInteger::from_u64_le(&[0, 1]), BigInteger::from_u128(1u128 << 64));
@@ -79,7 +79,7 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_math::big_integer::BigInteger;
+    /// use tc_bigint::BigInteger;
     ///
     /// assert_eq!(
     ///     BigInteger::from_u64_le_unsigned(&[0, 0x8000_0000_0000_0000]),
@@ -96,7 +96,7 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_math::big_integer::BigInteger;
+    /// use tc_bigint::BigInteger;
     ///
     /// assert_eq!(BigInteger::from_i32(0).u64_length(), 1);
     /// assert_eq!(BigInteger::from_u128(1u128 << 63).u64_length(), 2); // 需符號字
@@ -113,7 +113,7 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_math::big_integer::BigInteger;
+    /// use tc_bigint::BigInteger;
     ///
     /// assert_eq!(BigInteger::from_u128(1u128 << 63).u64_length_unsigned(), 1);
     /// assert_eq!(BigInteger::from_u128(1u128 << 64).u64_length_unsigned(), 2);
@@ -151,7 +151,7 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_math::big_integer::BigInteger;
+    /// use tc_bigint::BigInteger;
     ///
     /// assert_eq!(BigInteger::from_u128(1u128 << 63).to_u64_be_unsigned(), vec![0x8000_0000_0000_0000]);
     /// ```
@@ -177,7 +177,7 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_math::big_integer::BigInteger;
+    /// use tc_bigint::BigInteger;
     ///
     /// assert_eq!(BigInteger::from_u128(1u128 << 63).to_u64_be(), vec![0x0000_0000_0000_0000, 0x8000_0000_0000_0000]);
     /// assert_eq!(BigInteger::from_i32(-1).to_u64_be(), vec![0xFFFF_FFFF_FFFF_FFFF]);

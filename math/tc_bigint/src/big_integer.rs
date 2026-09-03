@@ -1,3 +1,5 @@
+//! `BigInteger` implementation and its arithmetic helpers.
+
 use core::cmp::Ordering;
 use core::hash::{Hash, Hasher};
 use core::ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Neg, Not, Rem, Shl, Shr, Sub};
@@ -143,7 +145,7 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_math::big_integer::BigInteger;
+    /// use tc_bigint::BigInteger;
     ///
     /// assert_eq!(BigInteger::from_i32(-5).sign(), -1);
     /// assert_eq!(BigInteger::from_i32(0).sign(), 0);
@@ -158,7 +160,7 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_math::big_integer::BigInteger;
+    /// use tc_bigint::BigInteger;
     ///
     /// assert!(BigInteger::from_u32(0).is_zero());
     /// assert!(!BigInteger::from_u32(5).is_zero());
@@ -172,7 +174,7 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_math::big_integer::BigInteger;
+    /// use tc_bigint::BigInteger;
     ///
     /// assert_eq!(BigInteger::from_i32(-5).abs(), BigInteger::from_i32(5));
     /// ```
@@ -191,7 +193,7 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_math::big_integer::BigInteger;
+    /// use tc_bigint::BigInteger;
     ///
     /// assert_eq!(BigInteger::from_i32(-7).square(), BigInteger::from_i32(49));
     /// ```
@@ -221,7 +223,7 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_math::big_integer::BigInteger;
+    /// use tc_bigint::BigInteger;
     ///
     /// assert_eq!(BigInteger::from_i32(3).pow(4), BigInteger::from_i32(81));
     /// assert_eq!(BigInteger::from_i32(-2).pow(3), BigInteger::from_i32(-8));
@@ -270,7 +272,7 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_math::big_integer::BigInteger;
+    /// use tc_bigint::BigInteger;
     ///
     /// let (q, r) = BigInteger::from_i32(-7).div_rem(&BigInteger::from_i32(2));
     /// assert_eq!(q, BigInteger::from_i32(-3)); // 截斷向零
@@ -303,7 +305,7 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_math::big_integer::BigInteger;
+    /// use tc_bigint::BigInteger;
     ///
     /// assert_eq!(BigInteger::from_i32(-7).rem_euclid(&BigInteger::from_i32(3)), BigInteger::from_i32(2));
     /// assert_eq!(BigInteger::from_i32(-7).rem_euclid(&BigInteger::from_i32(-3)), BigInteger::from_i32(2));
@@ -333,7 +335,7 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_math::big_integer::BigInteger;
+    /// use tc_bigint::BigInteger;
     ///
     /// assert_eq!(BigInteger::from_i32(-12).gcd(&BigInteger::from_i32(18)), BigInteger::from_i32(6));
     /// ```
@@ -360,7 +362,7 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_math::big_integer::BigInteger;
+    /// use tc_bigint::BigInteger;
     ///
     /// // 3⁻¹ ≡ 5 (mod 7)，因為 3·5 = 15 ≡ 1
     /// assert_eq!(
@@ -396,7 +398,7 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_math::big_integer::BigInteger;
+    /// use tc_bigint::BigInteger;
     ///
     /// // 3^4 = 81 ≡ 4 (mod 7)
     /// assert_eq!(
@@ -790,7 +792,7 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_math::big_integer::BigInteger;
+    /// use tc_bigint::BigInteger;
     ///
     /// assert_eq!(BigInteger::from_str_radix("ff", 16).unwrap(), BigInteger::from_u32(255));
     /// assert_eq!(BigInteger::from_str_radix("-101", 2).unwrap(), BigInteger::from_i32(-5));
@@ -846,7 +848,7 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_math::big_integer::BigInteger;
+    /// use tc_bigint::BigInteger;
     ///
     /// assert_eq!(BigInteger::from_u32(255).to_str_radix(16), "ff");
     /// assert_eq!(BigInteger::from_i32(-5).to_str_radix(2), "-101");
@@ -890,7 +892,7 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_math::big_integer::BigInteger;
+    /// use tc_bigint::BigInteger;
     ///
     /// assert_eq!(BigInteger::from_u32(0).bit_length(), 0);
     /// assert_eq!(BigInteger::from_u32(5).bit_length(), 3); // 0b101
@@ -906,7 +908,7 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_math::big_integer::BigInteger;
+    /// use tc_bigint::BigInteger;
     ///
     /// assert_eq!(BigInteger::from_i32(0).byte_length(), 1);
     /// assert_eq!(BigInteger::from_i32(128).byte_length(), 2); // 需符號位元組 → [00 80]
@@ -923,7 +925,7 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_math::big_integer::BigInteger;
+    /// use tc_bigint::BigInteger;
     ///
     /// assert_eq!(BigInteger::from_u32(128).byte_length_unsigned(), 1); // [80]
     /// assert_eq!(BigInteger::from_u32(256).byte_length_unsigned(), 2); // [01 00]
@@ -946,7 +948,7 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_math::big_integer::BigInteger;
+    /// use tc_bigint::BigInteger;
     ///
     /// assert_eq!(BigInteger::from_u32(0b101).bit_count(), 2);
     /// assert_eq!(BigInteger::from_i32(-1).bit_count(), 0);
@@ -971,7 +973,7 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_math::big_integer::BigInteger;
+    /// use tc_bigint::BigInteger;
     ///
     /// assert!(BigInteger::from_u32(0b101).test_bit(0));
     /// assert!(!BigInteger::from_u32(0b101).test_bit(1));
@@ -996,7 +998,7 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_math::big_integer::BigInteger;
+    /// use tc_bigint::BigInteger;
     ///
     /// assert_eq!(BigInteger::from_u32(0b101).set_bit(1), BigInteger::from_u32(0b111));
     /// ```
@@ -1010,7 +1012,7 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_math::big_integer::BigInteger;
+    /// use tc_bigint::BigInteger;
     ///
     /// assert_eq!(BigInteger::from_u32(0b101).clear_bit(0), BigInteger::from_u32(0b100));
     /// ```
@@ -1026,7 +1028,7 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_math::big_integer::BigInteger;
+    /// use tc_bigint::BigInteger;
     ///
     /// assert_eq!(BigInteger::from_u32(0b101).flip_bit(2), BigInteger::from_u32(0b001));
     /// ```
@@ -1044,7 +1046,7 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_math::big_integer::BigInteger;
+    /// use tc_bigint::BigInteger;
     ///
     /// assert_eq!(BigInteger::from_u32(0b1100).get_lowest_set_bit(), Some(2));
     /// assert_eq!(BigInteger::from_u32(1).get_lowest_set_bit(), Some(0));
@@ -1071,7 +1073,7 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_math::big_integer::BigInteger;
+    /// use tc_bigint::BigInteger;
     ///
     /// let a = BigInteger::from_u32(0b1110);
     /// let b = BigInteger::from_u32(0b0110);
@@ -1087,7 +1089,7 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_math::big_integer::BigInteger;
+    /// use tc_bigint::BigInteger;
     ///
     /// let n = BigInteger::from_u32(5);
     /// ```
@@ -1104,7 +1106,7 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_math::big_integer::BigInteger;
+    /// use tc_bigint::BigInteger;
     ///
     /// let n = BigInteger::from_u16(5);
     /// ```
@@ -1117,7 +1119,7 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_math::big_integer::BigInteger;
+    /// use tc_bigint::BigInteger;
     ///
     /// let n = BigInteger::from_u8(5);
     /// ```
@@ -1130,7 +1132,7 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_math::big_integer::BigInteger;
+    /// use tc_bigint::BigInteger;
     ///
     /// let n = BigInteger::from_i16(-5);
     /// ```
@@ -1143,7 +1145,7 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_math::big_integer::BigInteger;
+    /// use tc_bigint::BigInteger;
     ///
     /// let n = BigInteger::from_i8(-5);
     /// ```
@@ -1156,7 +1158,7 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_math::big_integer::BigInteger;
+    /// use tc_bigint::BigInteger;
     ///
     /// let n = BigInteger::from_i32(-5);
     /// ```
@@ -1169,7 +1171,7 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_math::big_integer::BigInteger;
+    /// use tc_bigint::BigInteger;
     ///
     /// let n = BigInteger::from_i64(-5);
     /// ```
@@ -1188,7 +1190,7 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_math::big_integer::BigInteger;
+    /// use tc_bigint::BigInteger;
     ///
     /// let n = BigInteger::from_i128(-5);
     /// ```

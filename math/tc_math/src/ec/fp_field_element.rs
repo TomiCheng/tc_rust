@@ -6,7 +6,7 @@
 
 use core::ops::{Add, Div, Mul, Neg, Sub};
 
-use crate::big_integer::BigInteger;
+use tc_bigint::BigInteger;
 
 /// An element of the prime field GF(p).
 ///

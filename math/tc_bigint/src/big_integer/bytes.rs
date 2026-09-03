@@ -24,7 +24,7 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_math::big_integer::BigInteger;
+    /// use tc_bigint::BigInteger;
     ///
     /// let n = BigInteger::from_bytes_be(&[0xFF]); // -1
     /// ```
@@ -50,7 +50,7 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_math::big_integer::BigInteger;
+    /// use tc_bigint::BigInteger;
     ///
     /// // 有別於 from_bytes_be：0x80 是 128，不是 -128
     /// assert_eq!(BigInteger::from_bytes_be_unsigned(&[0x80]), BigInteger::from_u32(128));
@@ -70,7 +70,7 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_math::big_integer::BigInteger;
+    /// use tc_bigint::BigInteger;
     ///
     /// let n = BigInteger::from_bytes_le(&[0xFF]); // -1
     /// ```
@@ -95,7 +95,7 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_math::big_integer::BigInteger;
+    /// use tc_bigint::BigInteger;
     ///
     /// assert_eq!(BigInteger::from_bytes_le_unsigned(&[0x00, 0x80]), BigInteger::from_u32(0x8000));
     /// ```
@@ -131,7 +131,7 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_math::big_integer::BigInteger;
+    /// use tc_bigint::BigInteger;
     ///
     /// assert_eq!(BigInteger::from_u32(128).to_bytes_be_unsigned(), vec![0x80]);
     /// assert_eq!(BigInteger::from_i32(-128).to_bytes_be_unsigned(), vec![0x80]); // 只看絕對值
@@ -158,7 +158,7 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_math::big_integer::BigInteger;
+    /// use tc_bigint::BigInteger;
     ///
     /// assert_eq!(BigInteger::from_i32(128).to_bytes_be(), vec![0x00, 0x80]);
     /// assert_eq!(BigInteger::from_i32(-129).to_bytes_be(), vec![0xFF, 0x7F]);
@@ -242,7 +242,7 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_math::big_integer::BigInteger;
+    /// use tc_bigint::BigInteger;
     ///
     /// let n = BigInteger::from_i32(-129);
     /// let mut buf = [0u8; 8];

@@ -762,7 +762,7 @@ fn decode_128(bs: &[u8], z: &mut [i32]) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::big_integer::BigInteger;
+    use tc_bigint::BigInteger;
 
     fn p() -> BigInteger {
         // p = 2²⁵⁵ − 19

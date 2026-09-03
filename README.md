@@ -41,7 +41,8 @@ engines respectively; both provide streaming, clone, and reset behavior.
 | [`tc_ecb`](crypto/block_modes/tc_ecb), [`tc_cbc`](crypto/block_modes/tc_cbc), [`tc_cfb`](crypto/block_modes/tc_cfb), [`tc_ofb`](crypto/block_modes/tc_ofb), [`tc_ctr`](crypto/block_modes/tc_ctr) | Independent ECB, CBC, CFB/OpenPGP CFB, OFB/GCTR, and CTR/KCTR crates built on `tc_cipher` | Core-only `no_std`; `alloc` enables runtime-sized variants where needed |
 | [`tc_digest`](crypto/tc_digest) | Shared message-digest and XOF traits | Core-only `no_std` |
 | [Digest family crates](crypto/digest) | Independent message-digest, XOF, and digest-adapter implementations | `no_std`; allocation and optional CPU acceleration vary by family |
-| [`tc_math`](math/tc_math) | Arbitrary-precision integers, finite-field arithmetic, and elliptic-curve foundations | `no_std + alloc`; `std` adds lazy caching |
+| [`tc_bigint`](math/tc_bigint) | Signed arbitrary-precision integer and number-theory operations | `no_std + alloc` |
+| [`tc_math`](math/tc_math) | Binary-polynomial, raw-integer, finite-field, and elliptic-curve foundations | `no_std + alloc` |
 
 The core trait crates do not depend on algorithm implementations. Concrete
 algorithm crates depend on the appropriate core crate, which keeps the
@@ -161,7 +162,7 @@ cargo build -p tc_cbc -p tc_cfb -p tc_ofb -p tc_ctr --locked
 cargo build -p tc_blake2 -p tc_haraka --no-default-features --locked
 
 # Other crates that require alloc but not std
-cargo build -p tc_math --no-default-features --locked
+cargo build -p tc_bigint -p tc_math --no-default-features --locked
 ```
 
 `cargo test` always uses Rust's standard-library test harness. Use `cargo build`
@@ -173,7 +174,7 @@ Benchmarks are available in the algorithm crates:
 ```bash
 cargo bench -p tc_aes --bench aes
 cargo bench -p tc_blake2
-cargo bench -p tc_math
+cargo bench -p tc_bigint --bench mod_pow
 ```
 
 ## Reference and license

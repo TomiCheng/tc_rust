@@ -1,16 +1,15 @@
 # tc_math
 
-A pure-Rust big-integer and number-theory library, ported from the Bouncy Castle
-C# library (`bc-csharp`, baseline commit `f027bbe1`) as a **learning project**.
+A pure-Rust finite-field and elliptic-curve foundation ported from the Bouncy
+Castle C# library (`bc-csharp`, baseline commit `f027bbe1`) as a learning
+project. Arbitrary-precision integers now live in the separate
+[`tc_bigint`](../tc_bigint) crate.
 
-- **`no_std` + `alloc`**: the `std` feature is on by default (lazy `OnceLock` caches
-  for `bit_length` / `bit_count`); `--no-default-features` switches to `no_std`, where
-  those values are recomputed each time instead of cached.
-- **No cryptographic dependencies exposed**: depends only on `rand_core` (the caller
-  passes an RNG in; the library never calls `rand::rng()` internally).
-- **Limb-generic**: `BigInteger`'s internal magnitude limb type is selected by
-  `cfg(target_pointer_width)` — `u64` on 64-bit, `u32` on 32-bit — from a single
-  implementation. Verified on both the x86_64 and i686 targets.
+- **`no_std` + `alloc`**: the `std` feature is on by default;
+  `--no-default-features` switches both `tc_math` and its `tc_bigint` dependency
+  to `no_std`.
+- **Caller-provided randomness**: depends on `rand_core`; the library never calls
+  `rand::rng()` internally.
 
 ---
 
@@ -18,10 +17,12 @@ C# library (`bc-csharp`, baseline commit `f027bbe1`) as a **learning project**.
 
 | Module | Contents | bc counterpart |
 |--------|----------|----------------|
-| `big_integer` | Arbitrary-precision integers: add/sub/mul/div, mod, Montgomery/Barrett exponentiation, GCD/inverse, primality testing, string & byte (de)serialization | `Math.BigInteger` |
 | `binpoly` | Binary polynomials over GF(2) (the layer underneath F2m) | binary part of `Math.Raw` |
 | `raw::Nat` | Const-generic fixed-size limb integers (foundation for custom Fp) | `Math.Raw.Nat*` |
 | `ec` | Elliptic curves: affine Fp/F2m curves and points, SEC named curves, rfc7748 (X25519) | `Math.EC` |
+
+`tc_math::big_integer` remains as a compatibility re-export of `tc_bigint`; new
+code should import `tc_bigint::BigInteger` directly.
 
 ---
 
@@ -34,7 +35,6 @@ C# library (`bc-csharp`, baseline commit `f027bbe1`) as a **learning project**.
 
 | Module | Public API | Status |
 |--------|:---:|--------|
-| `big_integer` | ✅ complete | no `todo!`; fully tested |
 | `binpoly` | ✅ complete | no `todo!` |
 | `raw::Nat` | ✅ complete | — |
 | `ec` Fp/F2m **field arithmetic** | ✅ complete | `fp_field_element` / `f2m_field_element`: add/sub/mul/div/neg/square/invert/sqrt (+ fused, trace/half-trace) all implemented and tested |
@@ -79,7 +79,7 @@ C# library (`bc-csharp`, baseline commit `f027bbe1`) as a **learning project**.
 variable-time** and **leak timing**. This is a matter of security correctness, not
 just speed:
 
-- `FpFieldElement` inversion goes through `BigInteger::mod_inverse` (extended Euclid,
+- `FpFieldElement` inversion goes through `tc_bigint::BigInteger::mod_inverse` (extended Euclid,
   variable-time); bc's counterpart is constant-time safegcd (`Mod.ModOddInverse`).
 - Scalar multiplication uses double-and-add, whose branches and access patterns depend
   on the scalar bits.
@@ -93,8 +93,6 @@ can sign anything real. X25519 is the only path that is already constant-time.
 
 The current code is a **faithful baseline**; almost no optimization has been applied:
 
-- **BigInteger**: multiply/square use schoolbook long multiplication (O(n²)), no
-  **Karatsuba**; string radix conversion is O(digits²).
 - **binpoly**: no **PCLMUL/PMULL SIMD** backend, no fast squaring, no large-operand
   Karatsuba, no reduction fast-path.
 - **X25519 field**: a 10×i32 all-platform baseline — no 64-bit **radix-2⁵¹** (5×u64)
@@ -118,8 +116,4 @@ cargo build -p tc_math --no-default-features
 # 32-bit branch check (WOW64, exercises the limb_x32 path)
 cargo test -p tc_math --target i686-pc-windows-msvc
 
-# mod_pow benchmark
-cargo bench -p tc_math
 ```
-
-Currently 419 `#[test]` cases, green on both the x86_64 and i686 targets.

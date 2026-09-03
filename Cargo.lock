@@ -535,6 +535,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_bigint"
+version = "0.1.0"
+dependencies = [
+ "criterion",
+ "rand_core",
+]
+
+[[package]]
 name = "tc_blake2"
 version = "0.1.0"
 dependencies = [
@@ -981,8 +989,8 @@ version = "0.1.0"
 name = "tc_math"
 version = "0.1.0"
 dependencies = [
- "criterion",
  "rand_core",
+ "tc_bigint",
 ]
 
 [[package]]

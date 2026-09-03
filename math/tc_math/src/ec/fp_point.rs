@@ -11,10 +11,10 @@ use alloc::sync::Arc;
 use alloc::vec::Vec;
 use core::ops::{Add, Mul, Neg, Sub};
 
-use crate::big_integer::BigInteger;
 use crate::ec::CoordinateSystem;
 use crate::ec::fp_curve::FpCurve;
 use crate::ec::fp_field_element::FpFieldElement;
+use tc_bigint::BigInteger;
 
 /// A point on an [`FpCurve`].
 ///
@@ -332,7 +332,7 @@ impl Mul<&BigInteger> for &FpPoint {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::big_integer::BigInteger;
+    use tc_bigint::BigInteger;
 
     fn secp256k1() -> Arc<FpCurve> {
         let p = BigInteger::from_str_radix(

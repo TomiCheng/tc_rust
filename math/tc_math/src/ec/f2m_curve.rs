@@ -10,13 +10,13 @@
 use alloc::sync::Arc;
 use alloc::vec;
 
-use crate::big_integer::BigInteger;
 use crate::binpoly::BinaryPoly;
 use crate::ec::coordinate_system::CoordinateSystem;
 use crate::ec::f2m_field::F2mField;
 use crate::ec::f2m_field_element::F2mFieldElement;
 use crate::ec::f2m_point::F2mPoint;
 use crate::ec::point_codec::PointDecodeError;
+use tc_bigint::BigInteger;
 
 /// A short-Weierstrass elliptic curve `y² + xy = x³ + ax² + b` over `GF(2ᵐ)`.
 ///

@@ -7,7 +7,7 @@
 use super::{BigInteger, WORD_BITS};
 use rand_core::Rng;
 
-use crate::big_integer::limb::Limb;
+use super::limb::Limb;
 
 impl BigInteger {
     /// Miller-Rabin probabilistic primality test.
@@ -22,7 +22,7 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_math::big_integer::BigInteger;
+    /// use tc_bigint::BigInteger;
     /// # use rand_core::TryRng;
     /// # struct DemoRng(u64);
     /// # impl TryRng for DemoRng {
@@ -82,7 +82,7 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_math::big_integer::BigInteger;
+    /// use tc_bigint::BigInteger;
     /// # use rand_core::TryRng;
     /// # struct DemoRng(u64);
     /// # impl TryRng for DemoRng {
@@ -119,7 +119,7 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_math::big_integer::BigInteger;
+    /// use tc_bigint::BigInteger;
     /// # use rand_core::TryRng;
     /// # struct DemoRng(u64);
     /// # impl TryRng for DemoRng {
