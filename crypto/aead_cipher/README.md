@@ -36,8 +36,8 @@ when SSE2 is unavailable or disabled.
 | ✅ Done | XChaCha20-Poly1305 | `tc_chacha_aead::XChaCha20Poly1305` | XChaCha draft and BC vectors |
 | ✅ Done | CCM | `tc_ccm::CcmBlockCipher<C>` | Allocation-backed packet mode over a 16-byte block cipher |
 | 🟢 Ready | EAX | `EaxBlockCipher` | Generic `tc_cmac::CMac` and CTR/SIC in `tc_ctr` are available. |
-| ⏸ Blocked | GCM | `GcmBlockCipher` | First add a reusable `tc_ghash` primitive and multiplier abstraction |
-| ⏸ Blocked | GCM-SIV | `GcmSivBlockCipher` | First add a reusable `tc_polyval` primitive; AES and allocation support already exist |
+| ✅ Done | GCM | `tc_gcm::GcmBlockCipher<C>` | Portable internal GHASH; NIST and Bouncy Castle vectors |
+| ✅ Done | GCM-SIV | `tc_gcm_siv::GcmSivBlockCipher<C>` | RFC 8452 vectors; private portable POLYVAL |
 | ✅ Done | OCB3 | `tc_ocb::OcbBlockCipher<C>` | Allocation-backed packet mode; RFC 7253 vectors |
 | ✅ Done | KCCM | `tc_kccm::KccmBlockCipher<C, NB>` | DSTU 7624 vectors for 128-, 256-, and 512-bit blocks |
 
@@ -51,6 +51,8 @@ interfaces such as `IAeadCipher` itself.
 | `tc_ascon_aead` | Finalized Ascon-AEAD128 and separately named legacy Ascon v1.2 variants |
 | `tc_chacha_aead` | ChaCha20-Poly1305 and XChaCha20-Poly1305 |
 | `tc_ccm` | Generic allocation-backed CCM packet mode |
+| `tc_gcm` | Generic allocation-backed GCM with an internal portable GHASH multiplier |
+| `tc_gcm_siv` | Generic allocation-backed GCM-SIV with an internal portable POLYVAL implementation |
 | `tc_kccm` | Allocation-backed DSTU 7624 KCCM with `Nb = 4`, `6`, or `8` |
 | `tc_ocb` | Generic allocation-backed OCB3 packet mode |
 | `tc_grain128_aead` | Growable and allocation-free fixed-capacity Grain-128AEAD engines |
@@ -61,7 +63,8 @@ interfaces such as `IAeadCipher` itself.
 Run all currently implemented AEAD tests from the workspace root:
 
 ```bash
-cargo test -p tc_ascon_aead -p tc_ccm -p tc_chacha_aead -p tc_grain128_aead -p tc_kccm -p tc_ocb -p tc_sparkle_aead --locked
+cargo test -p tc_ascon_aead -p tc_ccm -p tc_chacha_aead -p tc_gcm -p tc_gcm_siv \
+  -p tc_grain128_aead -p tc_kccm -p tc_ocb -p tc_sparkle_aead --locked
 ```
 
 Verify the allocation-free Grain implementation separately:

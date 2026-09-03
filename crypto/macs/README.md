@@ -28,7 +28,7 @@ type.
 | ✅ Done | `CMac` | [`tc_cmac::CMac`](tc_cmac) | Allocation-free generic CMAC, with NIST/BC AES vectors and the BC 64-bit DESede vector. |
 | ✅ Done | `Dstu7564Mac` | `tc_dstu_macs::Dstu7564Mac` | Bouncy Castle vectors for 256-, 384-, and 512-bit tags, including the 1023-/1024-byte boundary cases. |
 | ✅ Done | `Dstu7624Mac` | [`tc_dstu_macs::Dstu7624Mac`](tc_dstu_macs) | Allocation-free 128-, 256-, and 512-bit-block variants; BC vectors cover 128- and 512-bit blocks. |
-| ⏸ Blocked | `GMac` | `tc_gmac` | GMAC is GCM with all input treated as AAD. A reusable GCM authentication core, including GHASH, is not implemented yet. |
+| 🟢 Ready | `GMac` | `tc_gmac` | `tc_gcm::GcmBlockCipher<C>` now provides the required GCM authentication core. |
 | ✅ Done | `GOST28147Mac` | [`tc_gost28147_mac::Gost28147Mac`](tc_gost28147_mac) | Allocation-free 16-round GOST MAC core with caller-selected S-box and optional IV. |
 | ✅ Done | `HMac` | [`tc_hmac::HMac`](tc_hmac) | Generic HMAC over the infallible `Digest` API, with BC/RFC vectors, long-key handling, retained keyed state, and non-`Clone` digest support. |
 | ✅ Done | `ISO9797Alg3Mac` | [`tc_iso9797_mac::Iso9797Alg3Mac`](tc_iso9797_mac) | Allocation-free two-/three-key DES Retail MAC, with optional IV, tag truncation, and padding. |
@@ -48,8 +48,8 @@ Legend:
 
 The shared `Mac` and `MacInit<P>` interfaces are complete. Of the 14 Bouncy
 Castle C# MAC types, eleven are fully implemented. Raw Poly1305 is implemented,
-while its optional block-cipher construction remains deferred. GMAC is blocked
-by the missing GCM/GHASH authentication core. SkeinMac can reuse the unkeyed
+while its optional block-cipher construction remains deferred. GMAC can now
+wrap `tc_gcm::GcmBlockCipher<C>`. SkeinMac can reuse the unkeyed
 Skein engine, but still needs keyed and parameterized Skein initialization.
 
 CMAC is available to the future EAX implementation recorded in the
