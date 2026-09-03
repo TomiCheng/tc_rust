@@ -7,4 +7,5 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
+tc_bigint = { version = "0.1.0", path = "../../math/tc_bigint", default-features = false }
 tc_cipher = { version = "0.1.0", path = "../tc_cipher" }

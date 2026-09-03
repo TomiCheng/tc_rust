@@ -1,100 +1,237 @@
-//! Generic RSA core engine.
-
-use core::convert::Infallible;
-use core::marker::PhantomData;
-
+use tc_bigint::BigInteger;
 use tc_cipher::CipherDirection;
 
-use crate::{BigInt, RsaCore, RsaKeyParams};
-
-/// RSA core backed by the big-integer type `I`.
-///
-/// The engine shape and trait wiring are established, but its operations are
-/// intentionally deferred until the [`BigInt`] contract is complete.
-pub struct RsaCoreEngine<I> {
-    integer: PhantomData<fn() -> I>,
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum RsaError {
+    InvalidModulus,
+    InvalidExponent,
+    InvalidPrivateExponent,
+    InvalidP,
+    InvalidQ,
+    InvalidDp,
+    InvalidDq,
+    InvalidQInv,
+    EvenModulus,
+    EvenPublicExponent,
+    InputTooSmall,
+    InputTooLarge,
+    OutputTooShort,
+    FaultyDecryptionOrSigning,
 }
 
-impl<I> RsaCoreEngine<I> {
-    /// Creates an uninitialized RSA core.
-    pub const fn new() -> Self {
+impl core::fmt::Display for RsaError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.write_str(match self {
+            Self::InvalidModulus => "not a valid RSA modulus",
+            Self::InvalidExponent => "not a valid RSA exponent",
+            Self::InvalidPrivateExponent => "not a valid RSA private exponent",
+            Self::InvalidP => "not a valid RSA P value",
+            Self::InvalidQ => "not a valid RSA Q value",
+            Self::InvalidDp => "not a valid RSA DP value",
+            Self::InvalidDq => "not a valid RSA DQ value",
+            Self::InvalidQInv => "not a valid RSA inverse Q value",
+            Self::EvenModulus => "RSA modulus is even",
+            Self::EvenPublicExponent => "RSA public exponent is even",
+            Self::InputTooSmall => "input too small for RSA cipher",
+            Self::InputTooLarge => "input too large for RSA cipher",
+            Self::OutputTooShort => "output buffer too short for RSA cipher",
+            Self::FaultyDecryptionOrSigning => "RSA engine faulty decryption/signing detected",
+        })
+    }
+}
+
+impl core::error::Error for RsaError {}
+
+#[derive(Clone, Copy)]
+pub struct RsaPublicParams<'a> {
+    modulus: &'a BigInteger,
+    exponent: &'a BigInteger,
+}
+
+impl<'a> RsaPublicParams<'a> {
+    pub fn new(modulus: &'a BigInteger, exponent: &'a BigInteger) -> Result<Self, RsaError> {
+        if modulus.sign() <= 0 {
+            return Err(RsaError::InvalidModulus);
+        }
+        if exponent.sign() <= 0 {
+            return Err(RsaError::InvalidExponent);
+        }
+        if !exponent.test_bit(0) {
+            return Err(RsaError::EvenPublicExponent);
+        }
+        if !modulus.test_bit(0) {
+            return Err(RsaError::EvenModulus);
+        }
+
+        Ok(Self { modulus, exponent })
+    }
+}
+
+#[derive(Clone, Copy)]
+pub struct RsaPrivateParams<'a> {
+    modulus: &'a BigInteger,
+    private_exponent: &'a BigInteger,
+    public_exponent: &'a BigInteger,
+    p: &'a BigInteger,
+    q: &'a BigInteger,
+    dp: &'a BigInteger,
+    dq: &'a BigInteger,
+    q_inv: &'a BigInteger,
+}
+
+impl<'a> RsaPrivateParams<'a> {
+    pub fn new(
+        modulus: &'a BigInteger,
+        private_exponent: &'a BigInteger,
+        public_exponent: &'a BigInteger,
+        p: &'a BigInteger,
+        q: &'a BigInteger,
+        dp: &'a BigInteger,
+        dq: &'a BigInteger,
+        q_inv: &'a BigInteger,
+    ) -> Result<Self, RsaError> {
+        if modulus.sign() <= 0 {
+            return Err(RsaError::InvalidModulus);
+        }
+        if private_exponent.sign() <= 0 {
+            return Err(RsaError::InvalidPrivateExponent);
+        }
+        if !modulus.test_bit(0) {
+            return Err(RsaError::EvenModulus);
+        }
+        if public_exponent.sign() <= 0 {
+            return Err(RsaError::InvalidExponent);
+        }
+        if p.sign() <= 0 {
+            return Err(RsaError::InvalidP);
+        }
+        if q.sign() <= 0 {
+            return Err(RsaError::InvalidQ);
+        }
+        if dp.sign() <= 0 {
+            return Err(RsaError::InvalidDp);
+        }
+        if dq.sign() <= 0 {
+            return Err(RsaError::InvalidDq);
+        }
+        if q_inv.sign() <= 0 {
+            return Err(RsaError::InvalidQInv);
+        }
+
+        Ok(Self {
+            modulus,
+            private_exponent,
+            public_exponent,
+            p,
+            q,
+            dp,
+            dq,
+            q_inv,
+        })
+    }
+}
+
+#[derive(Clone, Copy)]
+pub enum RsaKey<'a> {
+    Standard(RsaPublicParams<'a>),
+    PrivateCrt(RsaPrivateParams<'a>),
+}
+
+struct RsaCoreEngine<'a> {
+    params: RsaKey<'a>,
+    direction: CipherDirection,
+    bit_size: u32,
+}
+
+impl<'a> RsaCoreEngine<'a> {
+    pub fn init(direction: CipherDirection, params: RsaKey<'a>) -> Self {
+        let modulus = match params {
+            RsaKey::Standard(params) => params.modulus,
+            RsaKey::PrivateCrt(params) => params.modulus,
+        };
+
         Self {
-            integer: PhantomData,
-        }
-    }
-}
-
-impl<I> Default for RsaCoreEngine<I> {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl<K: ?Sized, I> RsaCore<K, I> for RsaCoreEngine<I>
-where
-    K: RsaKeyParams<I>,
-    I: BigInt,
-{
-    type InitError = Infallible;
-    type Error = Infallible;
-
-    fn init(&mut self, _direction: CipherDirection, _params: &K) -> Result<(), Self::InitError> {
-        todo!("initialize the RSA core after the BigInt contract is complete")
-    }
-
-    fn input_block_size(&self) -> usize {
-        todo!("derive the RSA input block size from the modulus")
-    }
-
-    fn output_block_size(&self) -> usize {
-        todo!("derive the RSA output block size from the modulus")
-    }
-
-    fn convert_input(&self, _input: &[u8]) -> Result<I, Self::Error> {
-        todo!("convert unsigned big-endian input through the BigInt backend")
-    }
-
-    fn process_block(&mut self, _input: I) -> Result<I, Self::Error> {
-        todo!("apply the standard or CRT RSA operation through the BigInt backend")
-    }
-
-    fn convert_output(&self, _result: &I, _output: &mut [u8]) -> Result<usize, Self::Error> {
-        todo!("encode the RSA result through the BigInt backend")
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use core::convert::Infallible;
-
-    use super::RsaCoreEngine;
-    use crate::{BigInt, RsaCore, RsaKeyParams};
-
-    struct TestBigInt;
-
-    impl BigInt for TestBigInt {}
-
-    struct TestKey;
-
-    impl RsaKeyParams<TestBigInt> for TestKey {
-        fn modulus(&self) -> &TestBigInt {
-            &TestBigInt
-        }
-
-        fn exponent(&self) -> &TestBigInt {
-            &TestBigInt
+            bit_size: modulus.bit_length(),
+            direction,
+            params,
         }
     }
 
-    fn assert_core<T>()
-    where
-        T: RsaCore<TestKey, TestBigInt, InitError = Infallible, Error = Infallible>,
-    {
+    pub fn input_block_size(&self) -> usize {
+        match self.direction {
+            CipherDirection::Encrypt => (self.bit_size.saturating_sub(1) / 8) as usize,
+            CipherDirection::Decrypt => ((self.bit_size + 7) / 8) as usize,
+        }
     }
 
-    #[test]
-    fn implements_rsa_core_for_caller_selected_types() {
-        assert_core::<RsaCoreEngine<TestBigInt>>();
-        let _ = RsaCoreEngine::<TestBigInt>::new();
+    pub fn output_block_size(&self) -> usize {
+        match self.direction {
+            CipherDirection::Encrypt => ((self.bit_size + 7) / 8) as usize,
+            CipherDirection::Decrypt => (self.bit_size.saturating_sub(1) / 8) as usize,
+        }
+    }
+
+    pub fn convert_input(&self, input: &[u8]) -> Result<BigInteger, RsaError> {
+        let max_input_len = ((self.bit_size + 7) / 8) as usize;
+        if input.len() > max_input_len {
+            return Err(RsaError::InputTooLarge);
+        }
+
+        let input = BigInteger::from_bytes_be_unsigned(input);
+        if input <= 1 {
+            return Err(RsaError::InputTooSmall);
+        }
+
+        let modulus = match self.params {
+            RsaKey::Standard(params) => params.modulus,
+            RsaKey::PrivateCrt(params) => params.modulus,
+        };
+        if input >= modulus - &BigInteger::from_u32(1) {
+            return Err(RsaError::InputTooLarge);
+        }
+
+        Ok(input)
+    }
+
+    pub fn process_block(&self, input: &BigInteger) -> Result<BigInteger, RsaError> {
+        match self.params {
+            RsaKey::Standard(params) => Ok(input.mod_pow(params.exponent, params.modulus)),
+            RsaKey::PrivateCrt(params) => {
+                let m_p = (input % params.p).mod_pow(params.dp, params.p);
+                let m_q = (input % params.q).mod_pow(params.dq, params.q);
+                let difference = &m_p - &m_q;
+                let h = (&difference * params.q_inv).rem_euclid(params.p);
+                let result = &(&h * params.q) + &m_q;
+
+                if result.mod_pow(params.public_exponent, params.modulus) != *input {
+                    return Err(RsaError::FaultyDecryptionOrSigning);
+                }
+
+                Ok(result)
+            }
+        }
+    }
+
+    pub fn convert_output(
+        &self,
+        result: &BigInteger,
+        output: &mut [u8],
+    ) -> Result<usize, RsaError> {
+        let result_len = result.byte_length_unsigned();
+        let output_len = match self.direction {
+            CipherDirection::Encrypt => ((self.bit_size + 7) / 8) as usize,
+            CipherDirection::Decrypt => result_len,
+        };
+
+        if output.len() < output_len || result_len > output_len {
+            return Err(RsaError::OutputTooShort);
+        }
+
+        output[..output_len].fill(0);
+        result
+            .try_to_bytes_be_unsigned_into(&mut output[output_len - result_len..output_len])
+            .map_err(|_| RsaError::OutputTooShort)?;
+
+        Ok(output_len)
     }
 }
