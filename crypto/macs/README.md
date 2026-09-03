@@ -28,7 +28,7 @@ type.
 | ✅ Done | `CMac` | [`tc_cmac::CMac`](tc_cmac) | Allocation-free generic CMAC, with NIST/BC AES vectors and the BC 64-bit DESede vector. |
 | ✅ Done | `Dstu7564Mac` | `tc_dstu_macs::Dstu7564Mac` | Bouncy Castle vectors for 256-, 384-, and 512-bit tags, including the 1023-/1024-byte boundary cases. |
 | ✅ Done | `Dstu7624Mac` | [`tc_dstu_macs::Dstu7624Mac`](tc_dstu_macs) | Allocation-free 128-, 256-, and 512-bit-block variants; BC vectors cover 128- and 512-bit blocks. |
-| 🟢 Ready | `GMac` | `tc_gmac` | `tc_gcm::GcmBlockCipher<C>` now provides the required GCM authentication core. |
+| ✅ Done | `GMac` | [`tc_gmac::GMac`](tc_gmac) | Generic GMAC adapter over `tc_gcm`, with NIST CAVP vectors and nonce-reuse protection. |
 | ✅ Done | `GOST28147Mac` | [`tc_gost28147_mac::Gost28147Mac`](tc_gost28147_mac) | Allocation-free 16-round GOST MAC core with caller-selected S-box and optional IV. |
 | ✅ Done | `HMac` | [`tc_hmac::HMac`](tc_hmac) | Generic HMAC over the infallible `Digest` API, with BC/RFC vectors, long-key handling, retained keyed state, and non-`Clone` digest support. |
 | ✅ Done | `ISO9797Alg3Mac` | [`tc_iso9797_mac::Iso9797Alg3Mac`](tc_iso9797_mac) | Allocation-free two-/three-key DES Retail MAC, with optional IV, tag truncation, and padding. |
@@ -47,21 +47,20 @@ Legend:
 ## Prerequisite summary
 
 The shared `Mac` and `MacInit<P>` interfaces are complete. Of the 14 Bouncy
-Castle C# MAC types, eleven are fully implemented. Raw Poly1305 is implemented,
-while its optional block-cipher construction remains deferred. GMAC can now
-wrap `tc_gcm::GcmBlockCipher<C>`. SkeinMac can reuse the unkeyed
+Castle C# MAC types, twelve are fully implemented. Raw Poly1305 is implemented,
+while its optional block-cipher construction remains deferred. SkeinMac can reuse the unkeyed
 Skein engine, but still needs keyed and parameterized Skein initialization.
 
-CMAC is available to the future EAX implementation recorded in the
-[`aead_cipher` inventory](../aead_cipher/README.md). No other fully unimplemented
-MAC in this inventory is ready without first completing a missing prerequisite.
+EAX now uses internal shared-cipher CMAC state, as recorded in the
+[`aead_cipher` inventory](../aead_cipher/README.md). The remaining SkeinMac
+still requires a shared keyed Skein parameter model.
 
 ## Verification
 
 Run the tests for all currently implemented MAC crates from the workspace root:
 
 ```bash
-cargo test -p tc_macs -p tc_cbc_mac -p tc_cfb_mac -p tc_cmac \
+cargo test -p tc_macs -p tc_cbc_mac -p tc_cfb_mac -p tc_cmac -p tc_gmac \
   -p tc_dstu_macs -p tc_gost28147_mac -p tc_hmac -p tc_iso9797_mac \
   -p tc_kmac -p tc_poly1305 -p tc_siphash -p tc_vmpc_mac --locked
 ```

@@ -1,0 +1,21 @@
+[package]
+name = "tc_gmac"
+description = "Generic GMAC authentication for the tc_rust workspace."
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[features]
+default = ["alloc"]
+alloc = ["tc_gcm/alloc"]
+
+[dependencies]
+tc_cipher = { version = "0.1", path = "../../tc_cipher" }
+tc_crypto = { version = "0.1", path = "../../tc_crypto" }
+tc_gcm = { version = "0.1", path = "../../aead_cipher/tc_gcm", default-features = false }
+tc_macs = { version = "0.1", path = "../../tc_macs" }
+tc_params = { version = "0.1", path = "../../tc_params" }
+
+[dev-dependencies]
+tc_aes = { version = "0.1", path = "../../block_cipher/tc_aes" }

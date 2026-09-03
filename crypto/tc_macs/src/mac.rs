@@ -20,9 +20,10 @@ pub trait Mac {
     /// Finalizes the authentication calculation into `output`.
     ///
     /// Returns the number of bytes written, which is normally
-    /// [`mac_size`](Mac::mac_size). A successful call resets the accumulated
-    /// message state while retaining the state established by the most recent
-    /// initialization.
+    /// [`mac_size`](Mac::mac_size). Most implementations reset the accumulated
+    /// message while retaining their initialized key. A nonce-based MAC may
+    /// instead remain finalized so that a fresh nonce is required before the
+    /// next message.
     fn do_final(&mut self, output: &mut [u8]) -> Result<usize, Self::Error>;
 
     /// Clears the accumulated message and restores the state established by

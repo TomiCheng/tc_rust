@@ -544,14 +544,28 @@ where
     }
 }
 
-impl<C, P> AeadCipherInit<P> for GcmBlockCipher<C>
+impl<C> GcmBlockCipher<C>
 where
-    C: BlockCipher + BlockCipherInit<P>,
-    P: KeyParams + IvParams + InitialAadParams + MacSizeParams + ?Sized,
+    C: BlockCipher,
 {
-    type Error = AeadBlockInitError<<C as BlockCipherInit<P>>::Error>;
-
-    fn init(&mut self, direction: CipherDirection, params: &P) -> Result<(), Self::Error> {
+    /// Initializes GCM from separate cipher parameters, nonce, initial AAD,
+    /// and tag size.
+    ///
+    /// This entry point lets constructions such as GMAC reuse the caller's
+    /// original block-cipher parameter type without introducing a wrapper type
+    /// that the underlying cipher would also have to support.
+    pub fn init_with_parts<P>(
+        &mut self,
+        direction: CipherDirection,
+        cipher_params: &P,
+        nonce: &[u8],
+        initial_aad: &[u8],
+        mac_size: usize,
+    ) -> Result<(), AeadBlockInitError<<C as BlockCipherInit<P>>::Error>>
+    where
+        C: BlockCipherInit<P>,
+        P: KeyParams + ?Sized,
+    {
         self.state = State::Uninitialised;
         self.mac = None;
         self.prepared = false;
@@ -561,7 +575,6 @@ where
             ));
         }
 
-        let nonce = params.iv();
         if nonce.is_empty()
             || u64::try_from(nonce.len())
                 .ok()
@@ -570,11 +583,10 @@ where
         {
             return Err(AeadBlockInitError::InvalidNonceLength(nonce.len()));
         }
-        let mac_size = params.mac_size();
         if !(MIN_MAC_BYTES..=MAX_MAC_BYTES).contains(&mac_size) {
             return Err(AeadBlockInitError::InvalidMacSize(mac_size));
         }
-        let key = params.key();
+        let key = cipher_params.key();
         if direction == CipherDirection::Encrypt
             && self.has_key_nonce
             && self.last_key == key
@@ -584,7 +596,7 @@ where
         }
 
         self.cipher
-            .init(CipherDirection::Encrypt, params)
+            .init(CipherDirection::Encrypt, cipher_params)
             .map_err(AeadBlockInitError::Cipher)?;
         self.mac_size = mac_size;
         self.last_key.fill(0);
@@ -596,7 +608,7 @@ where
         self.has_key_nonce = true;
         self.initial_aad.fill(0);
         self.initial_aad.clear();
-        self.initial_aad.extend_from_slice(params.initial_aad());
+        self.initial_aad.extend_from_slice(initial_aad);
 
         self.initial_aad_hash.fill(0);
         self.initial_aad_block.fill(0);
@@ -613,6 +625,24 @@ where
             CipherDirection::Decrypt => State::Decrypt,
         };
         Ok(())
+    }
+}
+
+impl<C, P> AeadCipherInit<P> for GcmBlockCipher<C>
+where
+    C: BlockCipher + BlockCipherInit<P>,
+    P: KeyParams + IvParams + InitialAadParams + MacSizeParams + ?Sized,
+{
+    type Error = AeadBlockInitError<<C as BlockCipherInit<P>>::Error>;
+
+    fn init(&mut self, direction: CipherDirection, params: &P) -> Result<(), Self::Error> {
+        self.init_with_parts(
+            direction,
+            params,
+            params.iv(),
+            params.initial_aad(),
+            params.mac_size(),
+        )
     }
 }
 
