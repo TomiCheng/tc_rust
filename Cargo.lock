@@ -543,6 +543,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_bigint2"
+version = "0.1.0"
+
+[[package]]
 name = "tc_blake2"
 version = "0.1.0"
 dependencies = [
