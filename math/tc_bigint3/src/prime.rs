@@ -70,8 +70,25 @@ fn has_small_factor(words: &[Limb]) -> Option<bool> {
     None
 }
 
-fn miller_rabin_rounds(certainty: u32) -> u32 {
-    certainty.div_ceil(2).max(1)
+fn miller_rabin_rounds(certainty: u32, bit_length: usize, randomly_selected: bool) -> u32 {
+    let mut rounds = certainty.div_ceil(2).max(1);
+    if randomly_selected {
+        // Bouncy Castle reduces the 100-bit-certainty baseline for candidates
+        // drawn uniformly at random. Its bound is stronger for this specific
+        // prime-generation case than for testing an arbitrary caller value.
+        let rounds_for_100 = match bit_length {
+            1024.. => 4,
+            512.. => 8,
+            256.. => 16,
+            _ => 50,
+        };
+        rounds = if certainty < 100 {
+            rounds.min(rounds_for_100)
+        } else {
+            rounds - 50 + rounds_for_100
+        };
+    }
+    rounds
 }
 
 fn fixed_small<const N: usize>(value: Word) -> FixedBigUint<N> {
@@ -130,6 +147,7 @@ fn random_fixed_below<const N: usize, R: Rng + ?Sized>(
 fn fixed_is_probable_prime<const N: usize, R: Rng + ?Sized>(
     value: &FixedBigUint<N>,
     certainty: u32,
+    randomly_selected: bool,
     rng: &mut R,
 ) -> bool {
     if certainty == 0 {
@@ -159,7 +177,7 @@ fn fixed_is_probable_prime<const N: usize, R: Rng + ?Sized>(
     let d = n_minus_one >> s;
     let witness_range = *value - fixed_small(3);
 
-    'witness: for _ in 0..miller_rabin_rounds(certainty) {
+    'witness: for _ in 0..miller_rabin_rounds(certainty, value.bit_length(), randomly_selected) {
         let witness = random_fixed_below(&witness_range, rng) + two;
         let mut result = witness.mod_pow(&d, value);
         if result == one || result == n_minus_one {
@@ -183,7 +201,7 @@ fn fixed_is_probable_prime<const N: usize, R: Rng + ?Sized>(
 impl<const N: usize> FixedBigUint<N> {
     /// Tests this value using trial division followed by Miller-Rabin rounds.
     pub fn is_probable_prime<R: Rng + ?Sized>(&self, certainty: u32, rng: &mut R) -> bool {
-        fixed_is_probable_prime(self, certainty, rng)
+        fixed_is_probable_prime(self, certainty, false, rng)
     }
 
     /// Generates a random probable prime with exactly `bit_length` bits.
@@ -209,7 +227,7 @@ impl<const N: usize> FixedBigUint<N> {
             let candidate = <Self as RandomBits>::random_bits(rng, bit_length as u32)
                 .set_bit(bit_length - 1)
                 .set_bit(0);
-            if candidate.is_probable_prime(DEFAULT_CERTAINTY, rng) {
+            if fixed_is_probable_prime(&candidate, DEFAULT_CERTAINTY, true, rng) {
                 return candidate;
             }
         }
@@ -466,6 +484,7 @@ fn random_big_uint_below<R: Rng + ?Sized>(upper: &BigUint, rng: &mut R) -> BigUi
 fn big_uint_is_probable_prime<R: Rng + ?Sized>(
     value: &BigUint,
     certainty: u32,
+    randomly_selected: bool,
     rng: &mut R,
 ) -> bool {
     if certainty == 0 {
@@ -495,7 +514,7 @@ fn big_uint_is_probable_prime<R: Rng + ?Sized>(
     let d = &n_minus_one >> s;
     let witness_range = value - &BigUint::from(3_u8);
 
-    'witness: for _ in 0..miller_rabin_rounds(certainty) {
+    'witness: for _ in 0..miller_rabin_rounds(certainty, value.bits(), randomly_selected) {
         let witness = random_big_uint_below(&witness_range, rng) + &two;
         let mut result = witness.mod_pow(&d, value);
         if result == one || result == n_minus_one {
@@ -519,7 +538,7 @@ fn big_uint_is_probable_prime<R: Rng + ?Sized>(
 impl BigUint {
     /// Tests this value using trial division followed by Miller-Rabin rounds.
     pub fn is_probable_prime<R: Rng + ?Sized>(&self, certainty: u32, rng: &mut R) -> bool {
-        big_uint_is_probable_prime(self, certainty, rng)
+        big_uint_is_probable_prime(self, certainty, false, rng)
     }
 
     /// Generates a random probable prime with exactly `bit_length` bits.
@@ -538,7 +557,7 @@ impl BigUint {
             let candidate = <Self as RandomBits>::random_bits(rng, bit_length as u32)
                 .set_bit(bit_length - 1)
                 .set_bit(0);
-            if candidate.is_probable_prime(DEFAULT_CERTAINTY, rng) {
+            if big_uint_is_probable_prime(&candidate, DEFAULT_CERTAINTY, true, rng) {
                 return candidate;
             }
         }
@@ -766,6 +785,16 @@ mod tests {
     type I128 = FixedBigInt<{ 128 / Word::BITS as usize }>;
 
     #[test]
+    fn miller_rabin_round_policy_distinguishes_random_prime_candidates() {
+        assert_eq!(miller_rabin_rounds(100, 128, false), 50);
+        assert_eq!(miller_rabin_rounds(100, 256, true), 16);
+        assert_eq!(miller_rabin_rounds(100, 512, true), 8);
+        assert_eq!(miller_rabin_rounds(100, 1024, true), 4);
+        assert_eq!(miller_rabin_rounds(128, 1024, true), 18);
+        assert_eq!(miller_rabin_rounds(20, 1024, true), 4);
+    }
+
+    #[test]
     fn fixed_random_and_prime_operations_do_not_need_alloc() {
         let mut rng = SeqRng(1);
         for bits in [0_u32, 1, 7, 63, 127] {
@@ -915,8 +944,8 @@ mod tests {
         assert_eq!(has_small_factor(&[Limb(7)]), Some(false));
         assert_eq!(has_small_factor(&[Limb(49)]), Some(true));
         assert_eq!(has_small_factor(&[Limb(257)]), None);
-        assert_eq!(miller_rabin_rounds(0), 1);
-        assert_eq!(miller_rabin_rounds(5), 3);
+        assert_eq!(miller_rabin_rounds(0, 128, false), 1);
+        assert_eq!(miller_rabin_rounds(5, 128, false), 3);
         assert_eq!(fixed_bits_precision::<2>(), 2 * Word::BITS);
 
         assert_eq!(
