@@ -4,6 +4,7 @@ use alloc::vec::Vec;
 
 use crate::{Limb, Word};
 
+mod boxed;
 mod from;
 
 /// A little-endian two's-complement integer whose precision grows as needed.
@@ -16,6 +17,10 @@ pub struct BigInt {
 }
 
 impl BigInt {
+    pub(crate) fn as_limbs(&self) -> &[Limb] {
+        &self.limbs
+    }
+
     pub(crate) fn from_limbs(mut limbs: Vec<Limb>) -> Self {
         while limbs.len() > 1 {
             let high = limbs[limbs.len() - 1].0;

@@ -2,6 +2,7 @@
 
 use crate::Limb;
 
+mod boxed;
 mod from;
 
 /// A two's-complement signed integer containing exactly `N` little-endian limbs.
@@ -11,6 +12,10 @@ pub struct FixedBigInt<const N: usize> {
 }
 
 impl<const N: usize> FixedBigInt<N> {
+    pub(crate) const fn as_limbs(&self) -> &[Limb; N] {
+        &self.limbs
+    }
+
     pub(crate) const fn into_limbs(self) -> [Limb; N] {
         self.limbs
     }
