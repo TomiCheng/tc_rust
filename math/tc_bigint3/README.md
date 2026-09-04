@@ -79,6 +79,14 @@ operators panic on overflow in every build profile. The `Checked*`,
 explicit. Division and remainder return `None` for a zero divisor; signed
 fixed-width division also rejects `MIN / -1`.
 
+Only fixed-width integers implement `Bounded`; dynamically growing integers
+have no finite minimum or maximum. Dynamic `CheckedDiv` and `CheckedRem` still
+return `None` for division by zero. Their other checked, overflowing, wrapping,
+and saturating operations return the exact unbounded result and never report
+overflow. Unsigned integers intentionally do not implement the negation
+families, and `BigUint` does not expose wrapping or overflowing subtraction
+because either operation would require an implicit fixed width.
+
 `FixedBigUint::mul_wide` and `square_wide` return the full double-width result
 as `(low, high)` halves. A tuple is used because stable Rust cannot yet express
 `[Limb; N * 2]` for arbitrary const-generic `N`. The two halves are fixed-size
@@ -117,6 +125,17 @@ assert_eq!(
 let wider = FixedBigUint::<4>::try_from(&value).unwrap();
 assert_eq!(wider, FixedBigUint::from(255_u16));
 ```
+
+Conversions between const-generic fixed widths use `TryFrom` for both widening
+and narrowing. Rust cannot provide a blanket widening-only `From` implementation
+on stable Rust: the compiler cannot express `DESTINATION >= SOURCE`, and a
+generic `From<FixedBigUint<SOURCE>> for FixedBigUint<DESTINATION>` would overlap
+with the standard library's `From<T> for T`. Widening therefore succeeds through
+the same checked API that reports truncation when narrowing.
+
+`leading_zeros` is defined only for fixed-width integers. A canonical dynamic
+integer has no stored leading zero limbs, so its number of leading zeros is not
+defined without supplying an external width.
 
 ## Random values and probable primes
 

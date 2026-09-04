@@ -13,9 +13,6 @@ impl BigInt {
     }
 
     fn mul_ref(lhs: &Self, rhs: &Self) -> Self {
-        if core::ptr::eq(lhs, rhs) {
-            return lhs.square();
-        }
         let (lhs_negative, lhs_magnitude) = lhs.sign_magnitude();
         let (rhs_negative, rhs_magnitude) = rhs.sign_magnitude();
         Self::from_sign_magnitude(
@@ -177,5 +174,14 @@ mod tests {
         value = BigInt::from(-20_i8);
         value *= right;
         assert_eq!(value, expected);
+    }
+
+    #[test]
+    fn explicit_square_matches_general_multiplication() {
+        let value = (BigInt::from(1_u8) << 130) + BigInt::from(17_u8);
+        let distinct_copy = value.clone();
+
+        assert!(!core::ptr::eq(&value, &distinct_copy));
+        assert_eq!(&value * &distinct_copy, value.square());
     }
 }
