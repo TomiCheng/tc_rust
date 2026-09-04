@@ -11,9 +11,12 @@ extern crate alloc;
 
 mod big_int;
 mod big_uint;
+mod error;
 mod limb;
 mod traits;
 
-pub use big_int::{BigInt, BufferTooSmall, ParseBigIntError, TryFromBigIntError};
+pub use big_int::BigInt;
 pub use big_uint::BigUint;
+pub use error::{BufferTooSmall, ParseBigIntError, TryFromBigIntError};
+pub use limb::{WideWord, Word};
 pub use traits::{Add, Pow};

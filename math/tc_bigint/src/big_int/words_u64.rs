@@ -132,7 +132,7 @@ impl BigInt {
     /// 先把 `|self|` 轉成最小 u64 字、右對齊寫入、高位補 0；`signed` 且為負時再對整段
     /// 取兩補數。`out.len()` 須等於對應的 `u64_length*`。
     fn write_magnitude_be_u64(&self, out: &mut [u64], signed: bool) {
-        // magnitude 是 Limb 字，先轉成最小 u64 字（無前導零）
+        // magnitude 是 Word 字，先轉成最小 u64 字（無前導零）
         let words = mag_to_u64_be(&self.magnitude);
         let n = out.len();
         let mlen = words.len();

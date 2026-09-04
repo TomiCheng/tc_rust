@@ -16,7 +16,7 @@ use super::{BigInt, BufferTooSmall, WORD_BITS, bit_len};
 // no_std 下沒有 std prelude，`vec!` 巨集與 `Vec` 型別需從 alloc 顯式引入；
 // std build 由 prelude 提供，故僅在關閉 std 時引入，避免重複 import 警告。
 use super::platform::{mag_from_u32_be, mag_to_u32_be};
-use crate::limb::Limb;
+use crate::limb::Word;
 #[cfg(not(feature = "std"))]
 use alloc::{vec, vec::Vec};
 
@@ -154,7 +154,7 @@ impl BigInt {
     /// 先把 `|self|` 的字右對齊寫入、左邊補 0（超出 magnitude 的高位、以及零，自然補 0）；
     /// `signed` 且為負時再對整段取兩補數。`out.len()` 須等於對應的 `u32_length*`。
     fn write_magnitude_be_u32(&self, out: &mut [u32], signed: bool) {
-        // magnitude 是 Limb 字，先轉成最小 u32 字（無前導零）
+        // magnitude 是 Word 字，先轉成最小 u32 字（無前導零）
         let words = mag_to_u32_be(&self.magnitude);
         let n = out.len();
         let len = words.len();
@@ -343,14 +343,14 @@ fn twos_complement_in_place_u32(words: &mut [u32]) {
 }
 
 /// big-endian u32 詞 → magnitude：去除前導零字；全零（或空）得到空 Vec。
-fn make_magnitude_be_u32(words: &[u32]) -> Vec<Limb> {
+fn make_magnitude_be_u32(words: &[u32]) -> Vec<Word> {
     mag_from_u32_be(words)
 }
 
 /// 將 big-endian 兩補數負數的 u32 詞還原成其絕對值的 magnitude。
 ///
 /// 前提：`words` 代表負數（最高字的最高位為 1）。
-fn make_magnitude_be_u32_negative(words: &[u32]) -> Vec<Limb> {
+fn make_magnitude_be_u32_negative(words: &[u32]) -> Vec<Word> {
     // 兩補數轉絕對值：全部反相，再從最低字（尾端）加 1
     let mut inverse: Vec<u32> = words.iter().map(|&w| !w).collect();
     for w in inverse.iter_mut().rev() {
@@ -365,7 +365,7 @@ fn make_magnitude_be_u32_negative(words: &[u32]) -> Vec<Limb> {
 }
 
 /// little-endian u32 詞 → magnitude：反轉成 big-endian 後去前導零。
-fn make_magnitude_le_u32(words: &[u32]) -> Vec<Limb> {
+fn make_magnitude_le_u32(words: &[u32]) -> Vec<Word> {
     // little-endian：最高字在尾端，反轉讓最高字排在前面
     let be: Vec<u32> = words.iter().rev().copied().collect();
     make_magnitude_be_u32(&be)
@@ -374,7 +374,7 @@ fn make_magnitude_le_u32(words: &[u32]) -> Vec<Limb> {
 /// 將 little-endian 兩補數負數的 u32 詞還原成其絕對值的 magnitude。
 ///
 /// 前提：`words` 代表負數（最高字的最高位為 1；最高字在尾端）。
-fn make_magnitude_le_u32_negative(words: &[u32]) -> Vec<Limb> {
+fn make_magnitude_le_u32_negative(words: &[u32]) -> Vec<Word> {
     // 兩補數轉絕對值：全部反相，再從最低字（前端）加 1
     let mut inverse: Vec<u32> = words.iter().map(|&w| !w).collect();
     for w in inverse.iter_mut() {

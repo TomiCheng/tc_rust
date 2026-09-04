@@ -7,7 +7,7 @@
 use super::{BigInt, WORD_BITS};
 use rand_core::Rng;
 
-use crate::limb::Limb;
+use crate::limb::Word;
 
 impl BigInt {
     /// Miller-Rabin probabilistic primality test.
@@ -168,7 +168,7 @@ impl BigInt {
                 if j >= n_words - 1 {
                     break; // 中間字組試完（n_words ≤ 2 時無中間字，立即重生）
                 }
-                words[j] ^= rng.next_u64() as Limb; // 擾動一個中間字組
+                words[j] ^= rng.next_u64() as Word; // 擾動一個中間字組
             }
         }
     }

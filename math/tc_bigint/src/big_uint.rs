@@ -1,8 +1,8 @@
 use alloc::vec::Vec;
 
-use crate::limb::Limb;
+use crate::limb::Word;
 
 #[derive(Clone, Debug)]
 pub struct BigUint {
-    magnitude: Vec<Limb>,
+    magnitude: Vec<Word>,
 }

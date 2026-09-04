@@ -1,7 +1,7 @@
 use alloc::{vec, vec::Vec};
 
 use super::{BigInt, WORD_BITS};
-use crate::limb::Limb;
+use crate::limb::Word;
 
 impl BigInt {
     /// Creates a `BigInt` from an unsigned 64-bit value.
@@ -43,10 +43,10 @@ impl BigInt {
         }
         // Split into 4 big-endian words (most-significant first).
         let words = [
-            (value >> (WORD_BITS * 3)) as Limb,
-            (value >> (WORD_BITS * 2)) as Limb,
-            (value >> (WORD_BITS * 1)) as Limb,
-            value as Limb,
+            (value >> (WORD_BITS * 3)) as Word,
+            (value >> (WORD_BITS * 2)) as Word,
+            (value >> (WORD_BITS * 1)) as Word,
+            value as Word,
         ];
         // Skip leading zero words. `value != 0` guarantees at least one non-zero.
         let start = words.iter().position(|&w| w != 0).unwrap();
@@ -55,18 +55,18 @@ impl BigInt {
 }
 
 /// magnitude(u32 limb)→ u32 字：原生,直接複製。
-pub(crate) fn mag_to_u32_be(mag: &[Limb]) -> Vec<u32> {
+pub(crate) fn mag_to_u32_be(mag: &[Word]) -> Vec<u32> {
     mag.to_vec()
 }
 
 /// u32 字 → magnitude(u32 limb):原生,去前導零字成 canonical。
-pub(crate) fn mag_from_u32_be(words: &[u32]) -> Vec<Limb> {
+pub(crate) fn mag_from_u32_be(words: &[u32]) -> Vec<Word> {
     let start = words.iter().position(|&w| w != 0).unwrap_or(words.len());
     words[start..].to_vec()
 }
 
 /// magnitude(u32 limb)→ u64 字:交叉,從低位端每兩個 u32(高、低)併成一個 u64。
-pub(crate) fn mag_to_u64_be(mag: &[Limb]) -> Vec<u64> {
+pub(crate) fn mag_to_u64_be(mag: &[Word]) -> Vec<u64> {
     let n64 = mag.len().div_ceil(2);
     let mut out = vec![0u64; n64];
     let mut i = mag.len(); // 指向已處理低位的上界
@@ -83,7 +83,7 @@ pub(crate) fn mag_to_u64_be(mag: &[Limb]) -> Vec<u64> {
 /// u64 字 → magnitude(u32 limb):交叉,每個 u64 拆成(高 u32,低 u32),再去前導零。
 // 目前未用：from_u64_* 經 split→words_u32；保留與 mag_from_u32_be 對稱、供日後原生路徑。
 #[allow(dead_code)]
-pub(crate) fn mag_from_u64_be(words: &[u64]) -> Vec<Limb> {
+pub(crate) fn mag_from_u64_be(words: &[u64]) -> Vec<Word> {
     let mut out = Vec::with_capacity(words.len() * 2);
     for &w in words {
         out.push((w >> 32) as u32);

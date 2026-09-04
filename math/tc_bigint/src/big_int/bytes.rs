@@ -111,7 +111,7 @@ impl BigInt {
     /// `signed` 且為負時再對整段取兩補數。`out.len()` 須等於對應的 `byte_length*`。
     fn write_magnitude_be(&self, out: &mut [u8], signed: bool) {
         let n = out.len();
-        let bpw = WORD_BITS / 8; // 每個 Limb 的位元組數（u32→4、u64→8）
+        let bpw = WORD_BITS / 8; // 每個 Word 的位元組數（u32→4、u64→8）
         for j in 0..n {
             // 第 j 個低位位元組：取自第 j/bpw 個低位字的第 j%bpw 個位元組
             out[n - 1 - j] = if j / bpw < self.magnitude.len() {
