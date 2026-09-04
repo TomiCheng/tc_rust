@@ -2,7 +2,7 @@
 
 use core::ops::{Mul, MulAssign};
 
-use crate::traits::Square;
+use crate::traits::{CheckedMul, OverflowingMul, SaturatingMul, Square, WrappingMul};
 use crate::{FixedBigUint, Limb, WideWord, Word, arithmetic};
 
 impl<const N: usize> FixedBigUint<N> {
@@ -22,7 +22,8 @@ impl<const N: usize> FixedBigUint<N> {
         (carry == 0).then_some(Self { limbs: result })
     }
 
-    fn checked_mul(&self, rhs: &Self) -> Option<Self> {
+    /// Returns `self * rhs`, or `None` when the product does not fit.
+    pub fn checked_mul(&self, rhs: &Self) -> Option<Self> {
         let (limbs, overflow) = arithmetic::fixed_mul(&self.limbs, &rhs.limbs);
         (!overflow).then_some(Self { limbs })
     }
@@ -109,6 +110,31 @@ impl<const N: usize> Square for FixedBigUint<N> {
 
     fn square(&self) -> Self::Output {
         FixedBigUint::square(self)
+    }
+}
+
+impl<const N: usize> CheckedMul for FixedBigUint<N> {
+    fn checked_mul(&self, rhs: &Self) -> Option<Self> {
+        FixedBigUint::checked_mul(self, rhs)
+    }
+}
+
+impl<const N: usize> OverflowingMul for FixedBigUint<N> {
+    fn overflowing_mul(&self, rhs: &Self) -> (Self, bool) {
+        let (limbs, overflow) = arithmetic::fixed_mul(&self.limbs, &rhs.limbs);
+        (Self { limbs }, overflow)
+    }
+}
+
+impl<const N: usize> WrappingMul for FixedBigUint<N> {
+    fn wrapping_mul(&self, rhs: &Self) -> Self {
+        self.overflowing_mul(rhs).0
+    }
+}
+
+impl<const N: usize> SaturatingMul for FixedBigUint<N> {
+    fn saturating_mul(&self, rhs: &Self) -> Self {
+        self.checked_mul(rhs).unwrap_or_else(Self::max_value)
     }
 }
 

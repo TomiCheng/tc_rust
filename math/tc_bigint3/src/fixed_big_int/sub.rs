@@ -2,7 +2,7 @@
 
 use core::ops::{Sub, SubAssign};
 
-use crate::traits::CheckedSub;
+use crate::traits::{CheckedSub, OverflowingSub, SaturatingSub, WrappingSub};
 use crate::{FixedBigInt, Limb, Word, arithmetic};
 
 impl<const N: usize> Sub for FixedBigInt<N> {
@@ -90,6 +90,33 @@ impl<const N: usize> CheckedSub for FixedBigInt<N> {
         let overflow = self.is_negative() != rhs.is_negative()
             && arithmetic::fixed_is_negative(&limbs) != self.is_negative();
         (!overflow).then_some(Self { limbs })
+    }
+}
+
+impl<const N: usize> OverflowingSub for FixedBigInt<N> {
+    fn overflowing_sub(&self, rhs: &Self) -> (Self, bool) {
+        let (limbs, _) = arithmetic::fixed_sub(&self.limbs, &rhs.limbs);
+        let overflow = self.is_negative() != rhs.is_negative()
+            && arithmetic::fixed_is_negative(&limbs) != self.is_negative();
+        (Self { limbs }, overflow)
+    }
+}
+
+impl<const N: usize> WrappingSub for FixedBigInt<N> {
+    fn wrapping_sub(&self, rhs: &Self) -> Self {
+        self.overflowing_sub(rhs).0
+    }
+}
+
+impl<const N: usize> SaturatingSub for FixedBigInt<N> {
+    fn saturating_sub(&self, rhs: &Self) -> Self {
+        self.checked_sub(rhs).unwrap_or_else(|| {
+            if self.is_negative() {
+                Self::min_value()
+            } else {
+                Self::max_value()
+            }
+        })
     }
 }
 
@@ -197,6 +224,18 @@ mod tests {
             FixedBigInt::<2>::min_value().checked_sub(&FixedBigInt::from(1_u8)),
             None
         );
+    }
+
+    #[test]
+    fn subtraction_families_report_wrap_and_saturate() {
+        type I = FixedBigInt<1>;
+        let min = I::min_value();
+        let one = I::from(1_i8);
+        let (wrapped, overflow) = min.overflowing_sub(&one);
+        assert!(overflow);
+        assert_eq!(wrapped, I::max_value());
+        assert_eq!(min.wrapping_sub(&one), I::max_value());
+        assert_eq!(min.saturating_sub(&one), min);
     }
 
     #[test]

@@ -2,7 +2,7 @@
 
 use core::ops::{Div, DivAssign, Rem, RemAssign};
 
-use crate::traits::{DivRem, RemEuclid};
+use crate::traits::{CheckedDiv, CheckedRem, DivRem, RemEuclid};
 use crate::{FixedBigUint, Limb, Word, arithmetic};
 
 impl<const N: usize> FixedBigUint<N> {
@@ -158,6 +158,18 @@ impl<const N: usize> RemEuclid for FixedBigUint<N> {
     }
 }
 
+impl<const N: usize> CheckedDiv for FixedBigUint<N> {
+    fn checked_div(&self, rhs: &Self) -> Option<Self> {
+        (!rhs.is_zero()).then(|| self.div_rem(rhs).0)
+    }
+}
+
+impl<const N: usize> CheckedRem for FixedBigUint<N> {
+    fn checked_rem(&self, rhs: &Self) -> Option<Self> {
+        (!rhs.is_zero()).then(|| self.div_rem(rhs).1)
+    }
+}
+
 fn div_rem_u128<const N: usize>(
     value: &FixedBigUint<N>,
     mut divisor: u128,
@@ -259,6 +271,16 @@ mod tests {
         assert_eq!((lhs % rhs).to_u128(), Some(1_000_000 % 37));
         assert_eq!(lhs.div_rem(&rhs), (lhs / rhs, lhs % rhs));
         assert_eq!(lhs.rem_euclid(&rhs), lhs % rhs);
+    }
+
+    #[test]
+    fn checked_division_rejects_zero() {
+        type U = FixedBigUint<2>;
+        let value = U::from(17_u8);
+        assert_eq!(value.checked_div(&U::from(5_u8)), Some(U::from(3_u8)));
+        assert_eq!(value.checked_rem(&U::from(5_u8)), Some(U::from(2_u8)));
+        assert_eq!(value.checked_div(&U::zero()), None);
+        assert_eq!(value.checked_rem(&U::zero()), None);
     }
 
     #[test]

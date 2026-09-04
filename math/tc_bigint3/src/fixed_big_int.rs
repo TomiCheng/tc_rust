@@ -7,7 +7,8 @@ use core::ops::{BitAnd, BitOr, BitXor, Neg, Not, Shl, Shr};
 use crate::ConversionError;
 use crate::arithmetic;
 use crate::traits::{
-    AndNot, BitOps, Gcd, ModInverse, ModPow, Num, One, Pow, Signed, ToPrimitive, Zero,
+    AndNot, BitOps, CheckedNeg, CheckedShl, CheckedShr, Gcd, ModInverse, ModPow, Num, One, Pow,
+    Signed, ToPrimitive, WrappingNeg, Zero,
 };
 use crate::{FixedBigUint, Limb, ParseBigIntError, Word};
 
@@ -274,6 +275,22 @@ impl<const N: usize> Neg for &FixedBigInt<N> {
     }
 }
 
+impl<const N: usize> CheckedNeg for FixedBigInt<N> {
+    fn checked_neg(&self) -> Option<Self> {
+        (*self != Self::min_value()).then(|| Self {
+            limbs: arithmetic::fixed_wrapping_neg(&self.limbs),
+        })
+    }
+}
+
+impl<const N: usize> WrappingNeg for FixedBigInt<N> {
+    fn wrapping_neg(&self) -> Self {
+        Self {
+            limbs: arithmetic::fixed_wrapping_neg(&self.limbs),
+        }
+    }
+}
+
 impl<const N: usize> BitAnd for FixedBigInt<N> {
     type Output = Self;
 
@@ -407,6 +424,25 @@ impl<const N: usize> Shr<usize> for &FixedBigInt<N> {
 
     fn shr(self, shift: usize) -> Self::Output {
         *self >> shift
+    }
+}
+
+impl<const N: usize> CheckedShl for FixedBigInt<N> {
+    fn checked_shl(&self, rhs: u32) -> Option<Self> {
+        let shift = rhs as usize;
+        let width = N * Word::BITS as usize;
+        if shift >= width {
+            return None;
+        }
+        let shifted = *self << shift;
+        ((shifted >> shift) == *self).then_some(shifted)
+    }
+}
+
+impl<const N: usize> CheckedShr for FixedBigInt<N> {
+    fn checked_shr(&self, rhs: u32) -> Option<Self> {
+        let shift = rhs as usize;
+        (shift < N * Word::BITS as usize).then(|| *self >> shift)
     }
 }
 

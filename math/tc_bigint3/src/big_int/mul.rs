@@ -2,7 +2,7 @@
 
 use core::ops::{Mul, MulAssign};
 
-use crate::traits::Square;
+use crate::traits::{CheckedMul, OverflowingMul, SaturatingMul, Square, WrappingMul};
 use crate::{BigInt, Limb, Word, arithmetic};
 
 impl BigInt {
@@ -89,6 +89,30 @@ impl Square for BigInt {
 
     fn square(&self) -> Self::Output {
         BigInt::square(self)
+    }
+}
+
+impl CheckedMul for BigInt {
+    fn checked_mul(&self, rhs: &Self) -> Option<Self> {
+        Some(self * rhs)
+    }
+}
+
+impl OverflowingMul for BigInt {
+    fn overflowing_mul(&self, rhs: &Self) -> (Self, bool) {
+        (self * rhs, false)
+    }
+}
+
+impl WrappingMul for BigInt {
+    fn wrapping_mul(&self, rhs: &Self) -> Self {
+        self * rhs
+    }
+}
+
+impl SaturatingMul for BigInt {
+    fn saturating_mul(&self, rhs: &Self) -> Self {
+        self * rhs
     }
 }
 

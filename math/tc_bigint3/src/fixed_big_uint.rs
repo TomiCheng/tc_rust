@@ -5,7 +5,9 @@ use core::ops::{BitAnd, BitOr, BitXor, Not, Shl, Shr};
 #[cfg(test)]
 use crate::ConversionError;
 use crate::arithmetic;
-use crate::traits::{AndNot, BitOps, Gcd, ModInverse, ModPow, Num, One, Pow, Unsigned, Zero};
+use crate::traits::{
+    AndNot, BitOps, CheckedShl, CheckedShr, Gcd, ModInverse, ModPow, Num, One, Pow, Unsigned, Zero,
+};
 use crate::{Limb, ParseBigIntError, Word};
 
 mod add;
@@ -351,6 +353,24 @@ impl<const N: usize> Shr<usize> for &FixedBigUint<N> {
 
     fn shr(self, shift: usize) -> Self::Output {
         *self >> shift
+    }
+}
+
+impl<const N: usize> CheckedShl for FixedBigUint<N> {
+    fn checked_shl(&self, rhs: u32) -> Option<Self> {
+        let shift = rhs as usize;
+        let width = N * Word::BITS as usize;
+        if shift >= width || self.bit_length().saturating_add(shift) > width {
+            return None;
+        }
+        Some(*self << shift)
+    }
+}
+
+impl<const N: usize> CheckedShr for FixedBigUint<N> {
+    fn checked_shr(&self, rhs: u32) -> Option<Self> {
+        let shift = rhs as usize;
+        (shift < N * Word::BITS as usize).then(|| *self >> shift)
     }
 }
 

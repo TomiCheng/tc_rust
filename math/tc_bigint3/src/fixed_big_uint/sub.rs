@@ -2,7 +2,7 @@
 
 use core::ops::{Sub, SubAssign};
 
-use crate::traits::CheckedSub;
+use crate::traits::{CheckedSub, OverflowingSub, SaturatingSub, WrappingSub};
 use crate::{FixedBigUint, Limb, Word, arithmetic};
 
 impl<const N: usize> Sub for FixedBigUint<N> {
@@ -89,6 +89,25 @@ impl<const N: usize> CheckedSub for FixedBigUint<N> {
     }
 }
 
+impl<const N: usize> OverflowingSub for FixedBigUint<N> {
+    fn overflowing_sub(&self, rhs: &Self) -> (Self, bool) {
+        let (limbs, underflow) = arithmetic::fixed_sub(&self.limbs, &rhs.limbs);
+        (Self { limbs }, underflow)
+    }
+}
+
+impl<const N: usize> WrappingSub for FixedBigUint<N> {
+    fn wrapping_sub(&self, rhs: &Self) -> Self {
+        self.overflowing_sub(rhs).0
+    }
+}
+
+impl<const N: usize> SaturatingSub for FixedBigUint<N> {
+    fn saturating_sub(&self, rhs: &Self) -> Self {
+        self.checked_sub(rhs).unwrap_or_else(Self::zero)
+    }
+}
+
 fn checked_sub_u128<const N: usize>(
     lhs: &FixedBigUint<N>,
     mut rhs: u128,
@@ -171,6 +190,16 @@ mod tests {
             FixedBigUint::<2>::from(1_u8).checked_sub(&FixedBigUint::from(2_u8)),
             None
         );
+    }
+
+    #[test]
+    fn subtraction_families_report_wrap_and_saturate() {
+        type U = FixedBigUint<1>;
+        let zero = U::zero();
+        let one = U::from(1_u8);
+        assert_eq!(zero.overflowing_sub(&one), (U::max_value(), true));
+        assert_eq!(zero.wrapping_sub(&one), U::max_value());
+        assert_eq!(zero.saturating_sub(&one), U::zero());
     }
 
     #[test]

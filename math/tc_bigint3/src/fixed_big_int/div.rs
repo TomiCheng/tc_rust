@@ -2,7 +2,7 @@
 
 use core::ops::{Div, DivAssign, Rem, RemAssign};
 
-use crate::traits::{DivRem, RemEuclid};
+use crate::traits::{CheckedDiv, CheckedRem, DivRem, RemEuclid};
 use crate::{FixedBigInt, Limb, Word, arithmetic};
 
 impl<const N: usize> FixedBigInt<N> {
@@ -175,6 +175,24 @@ impl<const N: usize> RemEuclid for FixedBigInt<N> {
     }
 }
 
+impl<const N: usize> CheckedDiv for FixedBigInt<N> {
+    fn checked_div(&self, rhs: &Self) -> Option<Self> {
+        if rhs.is_zero() || (*self == Self::min_value() && *rhs == Self::from(-1_i8)) {
+            return None;
+        }
+        Some(self.div_rem(rhs).0)
+    }
+}
+
+impl<const N: usize> CheckedRem for FixedBigInt<N> {
+    fn checked_rem(&self, rhs: &Self) -> Option<Self> {
+        if rhs.is_zero() || (*self == Self::min_value() && *rhs == Self::from(-1_i8)) {
+            return None;
+        }
+        Some(self.div_rem(rhs).1)
+    }
+}
+
 fn div_rem_u128<const N: usize>(
     value: &FixedBigInt<N>,
     mut divisor: u128,
@@ -238,6 +256,18 @@ mod tests {
         remainder %= 3_u64;
         remainder %= 2_u128;
         assert_eq!(remainder, FixedBigInt::from(-1_i8));
+    }
+
+    #[test]
+    fn checked_division_rejects_zero_and_signed_overflow() {
+        type I = FixedBigInt<2>;
+        let value = I::from(-17_i8);
+        assert_eq!(value.checked_div(&I::from(5_i8)), Some(I::from(-3_i8)));
+        assert_eq!(value.checked_rem(&I::from(5_i8)), Some(I::from(-2_i8)));
+        assert_eq!(value.checked_div(&I::zero()), None);
+        assert_eq!(value.checked_rem(&I::zero()), None);
+        assert_eq!(I::min_value().checked_div(&I::from(-1_i8)), None);
+        assert_eq!(I::min_value().checked_rem(&I::from(-1_i8)), None);
     }
 
     #[test]

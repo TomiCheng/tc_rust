@@ -4,7 +4,7 @@ use alloc::vec::Vec;
 use core::cmp::Ordering;
 use core::ops::{Sub, SubAssign};
 
-use crate::traits::CheckedSub;
+use crate::traits::{CheckedSub, SaturatingSub};
 use crate::{BigUint, Limb, Word, arithmetic};
 
 impl Sub<&BigUint> for &BigUint {
@@ -113,6 +113,12 @@ impl CheckedSub for BigUint {
         let success = sub_assign_limbs(&mut limbs, &rhs.limbs);
         debug_assert!(success);
         Some(Self::from_limbs(limbs))
+    }
+}
+
+impl SaturatingSub for BigUint {
+    fn saturating_sub(&self, rhs: &Self) -> Self {
+        self.checked_sub(rhs).unwrap_or_default()
     }
 }
 

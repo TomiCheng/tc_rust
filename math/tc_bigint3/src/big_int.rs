@@ -10,7 +10,10 @@ use core::ops::{Neg, Shl, Shr};
 use crate::ConversionError;
 use crate::arithmetic;
 use crate::encoding;
-use crate::traits::{BitOps, Gcd, ModInverse, ModPow, Num, One, Pow, Signed, Zero};
+use crate::traits::{
+    BitOps, CheckedNeg, CheckedShl, CheckedShr, Gcd, ModInverse, ModPow, Num, One, Pow, Signed,
+    WrappingNeg, Zero,
+};
 use crate::{BigUint, Limb, ParseBigIntError, Word};
 
 mod add;
@@ -248,6 +251,18 @@ impl Neg for BigInt {
     }
 }
 
+impl CheckedNeg for BigInt {
+    fn checked_neg(&self) -> Option<Self> {
+        Some(-self)
+    }
+}
+
+impl WrappingNeg for BigInt {
+    fn wrapping_neg(&self) -> Self {
+        -self
+    }
+}
+
 impl Shl<usize> for &BigInt {
     type Output = BigInt;
 
@@ -284,6 +299,18 @@ impl Shr<usize> for BigInt {
 
     fn shr(self, rhs: usize) -> Self::Output {
         &self >> rhs
+    }
+}
+
+impl CheckedShl for BigInt {
+    fn checked_shl(&self, rhs: u32) -> Option<Self> {
+        Some(self << rhs as usize)
+    }
+}
+
+impl CheckedShr for BigInt {
+    fn checked_shr(&self, rhs: u32) -> Option<Self> {
+        Some(self >> rhs as usize)
     }
 }
 

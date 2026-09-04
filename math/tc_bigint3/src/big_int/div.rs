@@ -2,7 +2,7 @@
 
 use core::ops::{Div, DivAssign, Rem, RemAssign};
 
-use crate::traits::{DivRem, RemEuclid};
+use crate::traits::{CheckedDiv, CheckedRem, DivRem, RemEuclid};
 use crate::{BigInt, Limb, Word, arithmetic};
 
 impl BigInt {
@@ -159,6 +159,18 @@ impl RemEuclid for BigInt {
 
     fn rem_euclid(&self, rhs: &Self) -> Self::Output {
         BigInt::rem_euclid(self, rhs)
+    }
+}
+
+impl CheckedDiv for BigInt {
+    fn checked_div(&self, rhs: &Self) -> Option<Self> {
+        (!rhs.is_zero()).then(|| self.div_rem(rhs).0)
+    }
+}
+
+impl CheckedRem for BigInt {
+    fn checked_rem(&self, rhs: &Self) -> Option<Self> {
+        (!rhs.is_zero()).then(|| self.div_rem(rhs).1)
     }
 }
 

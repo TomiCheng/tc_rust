@@ -8,7 +8,9 @@ use core::ops::{Shl, Shr};
 #[cfg(test)]
 use crate::ConversionError;
 use crate::arithmetic;
-use crate::traits::{BitOps, Gcd, ModInverse, ModPow, Num, One, Pow, Unsigned, Zero};
+use crate::traits::{
+    BitOps, CheckedShl, CheckedShr, Gcd, ModInverse, ModPow, Num, One, Pow, Unsigned, Zero,
+};
 use crate::{BigInt, Limb, ParseBigIntError, Word};
 
 mod add;
@@ -200,6 +202,18 @@ impl Shr<usize> for BigUint {
 
     fn shr(self, rhs: usize) -> Self::Output {
         &self >> rhs
+    }
+}
+
+impl CheckedShl for BigUint {
+    fn checked_shl(&self, rhs: u32) -> Option<Self> {
+        Some(self << rhs as usize)
+    }
+}
+
+impl CheckedShr for BigUint {
+    fn checked_shr(&self, rhs: u32) -> Option<Self> {
+        Some(self >> rhs as usize)
     }
 }
 

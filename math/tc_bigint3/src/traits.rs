@@ -348,10 +348,60 @@ pub trait CheckedSub: Sized + Sub<Self, Output = Self> {
     fn checked_sub(&self, rhs: &Self) -> Option<Self>;
 }
 
+/// Checked multiplication.
+pub trait CheckedMul: Sized + Mul<Self, Output = Self> {
+    /// Returns the product, or `None` if it is outside the numeric range.
+    fn checked_mul(&self, rhs: &Self) -> Option<Self>;
+}
+
+/// Checked division.
+pub trait CheckedDiv: Sized + Div<Self, Output = Self> {
+    /// Returns the quotient, or `None` for division by zero or overflow.
+    fn checked_div(&self, rhs: &Self) -> Option<Self>;
+}
+
+/// Checked remainder.
+pub trait CheckedRem: Sized + Rem<Self, Output = Self> {
+    /// Returns the remainder, or `None` when `rhs` is zero.
+    fn checked_rem(&self, rhs: &Self) -> Option<Self>;
+}
+
+/// Checked negation.
+pub trait CheckedNeg: Sized + Neg<Output = Self> {
+    /// Returns the negated value, or `None` when it is not representable.
+    fn checked_neg(&self) -> Option<Self>;
+}
+
+/// Checked left shift.
+pub trait CheckedShl: Sized {
+    /// Returns the shifted value, or `None` when the shift or result is outside
+    /// the numeric range.
+    fn checked_shl(&self, rhs: u32) -> Option<Self>;
+}
+
+/// Checked right shift.
+pub trait CheckedShr: Sized {
+    /// Returns the shifted value, or `None` when the shift is outside the
+    /// numeric range.
+    fn checked_shr(&self, rhs: u32) -> Option<Self>;
+}
+
 /// Addition with an overflow flag.
 pub trait OverflowingAdd: Sized + Add<Self, Output = Self> {
     /// Returns the wrapped sum and whether overflow occurred.
     fn overflowing_add(&self, rhs: &Self) -> (Self, bool);
+}
+
+/// Subtraction with an overflow flag.
+pub trait OverflowingSub: Sized + Sub<Self, Output = Self> {
+    /// Returns the wrapped difference and whether overflow or underflow occurred.
+    fn overflowing_sub(&self, rhs: &Self) -> (Self, bool);
+}
+
+/// Multiplication with an overflow flag.
+pub trait OverflowingMul: Sized + Mul<Self, Output = Self> {
+    /// Returns the wrapped product and whether overflow occurred.
+    fn overflowing_mul(&self, rhs: &Self) -> (Self, bool);
 }
 
 /// Wrapping addition.
@@ -360,10 +410,58 @@ pub trait WrappingAdd: Sized + Add<Self, Output = Self> {
     fn wrapping_add(&self, rhs: &Self) -> Self;
 }
 
+/// Wrapping subtraction.
+pub trait WrappingSub: Sized + Sub<Self, Output = Self> {
+    /// Returns the difference modulo the type width.
+    fn wrapping_sub(&self, rhs: &Self) -> Self;
+}
+
+/// Wrapping multiplication.
+pub trait WrappingMul: Sized + Mul<Self, Output = Self> {
+    /// Returns the product modulo the type width.
+    fn wrapping_mul(&self, rhs: &Self) -> Self;
+}
+
+/// Wrapping negation.
+pub trait WrappingNeg: Sized + Neg<Output = Self> {
+    /// Returns the two's-complement negation modulo the type width.
+    fn wrapping_neg(&self) -> Self;
+}
+
 /// Saturating addition.
 pub trait SaturatingAdd: Sized + Add<Self, Output = Self> {
     /// Returns the sum clamped to the numeric range.
     fn saturating_add(&self, rhs: &Self) -> Self;
+}
+
+/// Saturating subtraction.
+pub trait SaturatingSub: Sized + Sub<Self, Output = Self> {
+    /// Returns the difference clamped to the numeric range.
+    fn saturating_sub(&self, rhs: &Self) -> Self;
+}
+
+/// Saturating multiplication.
+pub trait SaturatingMul: Sized + Mul<Self, Output = Self> {
+    /// Returns the product clamped to the numeric range.
+    fn saturating_mul(&self, rhs: &Self) -> Self;
+}
+
+/// Values with finite lower and upper bounds.
+pub trait Bounded: Sized {
+    /// Lowest representable value.
+    const MIN: Self;
+    /// Highest representable value.
+    const MAX: Self;
+
+    /// Returns [`Self::MIN`].
+    fn min_value() -> Self {
+        Self::MIN
+    }
+
+    /// Returns [`Self::MAX`].
+    fn max_value() -> Self {
+        Self::MAX
+    }
 }
 
 /// Conversion from primitive numeric types.

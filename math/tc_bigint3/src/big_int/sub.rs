@@ -3,7 +3,7 @@
 use alloc::vec::Vec;
 use core::ops::{Sub, SubAssign};
 
-use crate::traits::CheckedSub;
+use crate::traits::{CheckedSub, OverflowingSub, SaturatingSub, WrappingSub};
 use crate::{BigInt, Limb, Word};
 
 impl BigInt {
@@ -76,6 +76,24 @@ impl_sub_unsigned_primitive!(u8, u16, u32, u64, u128);
 impl CheckedSub for BigInt {
     fn checked_sub(&self, rhs: &Self) -> Option<Self> {
         Some(self - rhs)
+    }
+}
+
+impl OverflowingSub for BigInt {
+    fn overflowing_sub(&self, rhs: &Self) -> (Self, bool) {
+        (self - rhs, false)
+    }
+}
+
+impl WrappingSub for BigInt {
+    fn wrapping_sub(&self, rhs: &Self) -> Self {
+        self - rhs
+    }
+}
+
+impl SaturatingSub for BigInt {
+    fn saturating_sub(&self, rhs: &Self) -> Self {
+        self - rhs
     }
 }
 
