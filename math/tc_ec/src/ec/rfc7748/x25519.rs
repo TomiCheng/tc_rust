@@ -124,20 +124,20 @@ pub fn scalar_mult(k: &[u8; SCALAR_SIZE], u: &[u8; POINT_SIZE]) -> [u8; POINT_SI
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tc_bigint::BigInteger;
+    use tc_bigint::BigInt;
 
-    fn p() -> BigInteger {
-        &(&BigInteger::from_u32(1) << 255) - &BigInteger::from_u32(19)
+    fn p() -> BigInt {
+        &(&BigInt::from_u32(1) << 255) - &BigInt::from_u32(19)
     }
-    fn val(f: Fe) -> BigInteger {
-        BigInteger::from_bytes_le_unsigned(&f.normalize().encode())
+    fn val(f: Fe) -> BigInt {
+        BigInt::from_bytes_le_unsigned(&f.normalize().encode())
     }
 
     #[test]
     fn point_double_matches_montgomery_formula() {
         let p = p();
-        let one = BigInteger::from_u32(1);
-        let a = BigInteger::from_u32(C_A as u32); // 486662
+        let one = BigInt::from_u32(1);
+        let a = BigInt::from_u32(C_A as u32); // 486662
         let u = Fe::decode(&[
             0x09, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD,
             0xEE, 0xFF, 0x10, 0x20, 0x30, 0x40, 0x50, 0x60, 0x70, 0x80, 0x90, 0xA0, 0xB0, 0xC0,
@@ -154,7 +154,7 @@ mod tests {
         let num0 = (&u2 - &one).rem_euclid(&p);
         let num = (&num0 * &num0).rem_euclid(&p); // (u²−1)²
         let inner = (&(&u2 + &(&a * &uv)) + &one).rem_euclid(&p); // u²+Au+1
-        let den = (&(&BigInteger::from_u32(4) * &uv) * &inner).rem_euclid(&p); // 4u(...)
+        let den = (&(&BigInt::from_u32(4) * &uv) * &inner).rem_euclid(&p); // 4u(...)
         let expected = (&num * &den.mod_inverse(&p).unwrap()).rem_euclid(&p);
 
         assert_eq!(got, expected);

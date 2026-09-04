@@ -5,12 +5,12 @@
 
 use criterion::{Criterion, criterion_group, criterion_main};
 use std::hint::black_box;
-use tc_bigint::BigInteger;
+use tc_bigint::BigInt;
 
 /// 舊版：逐位平方-乘，每步用全長 `% m` 約簡（Barrett 之前的做法）。
-fn mod_pow_simple(base: &BigInteger, e: &BigInteger, m: &BigInteger) -> BigInteger {
+fn mod_pow_simple(base: &BigInt, e: &BigInt, m: &BigInt) -> BigInt {
     let b = base.rem_euclid(m);
-    let mut result = BigInteger::from_u32(1);
+    let mut result = BigInt::from_u32(1);
     for i in (0..e.bit_length()).rev() {
         result = &result.square() % m;
         if e.test_bit(i) {
@@ -26,9 +26,9 @@ const BASE_HEX: &str = "74222cb1acdc0054b29e00b186c9086bb83298bdd7742ed40da3a44a
 const E_HEX: &str = "395f8b61502138bc19a82cb3d3b16bcded651b9587c1ac25e545fe11e7bf073df5f26509b6da9c904c8b9da69f8e70ae9decaf87833cd23d4e7e7b8c457276b2";
 
 fn bench_mod_pow(c: &mut Criterion) {
-    let m = BigInteger::from_str_radix(M_HEX, 16).unwrap();
-    let base = BigInteger::from_str_radix(BASE_HEX, 16).unwrap();
-    let e = BigInteger::from_str_radix(E_HEX, 16).unwrap();
+    let m = BigInt::from_str_radix(M_HEX, 16).unwrap();
+    let base = BigInt::from_str_radix(BASE_HEX, 16).unwrap();
+    let e = BigInt::from_str_radix(E_HEX, 16).unwrap();
 
     let mut g = c.benchmark_group("mod_pow_512bit");
     g.bench_function("barrett", |bch| {

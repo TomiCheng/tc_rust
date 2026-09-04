@@ -1,4 +1,4 @@
-//! `BigInteger` implementation and its arithmetic helpers.
+//! `BigInt` implementation and its arithmetic helpers.
 
 use core::cmp::Ordering;
 use core::hash::{Hash, Hasher};
@@ -38,8 +38,8 @@ mod words_u32;
 // u64 詞序列化：words_u32 家族的 u64 版（同一組函式，單位換成 64 位元字）。
 mod words_u64;
 
-#[cfg_attr(target_pointer_width = "64", path = "big_integer/limb_x64.rs")]
-#[cfg_attr(not(target_pointer_width = "64"), path = "big_integer/limb_x32.rs")]
+#[cfg_attr(target_pointer_width = "64", path = "big_int/limb_x64.rs")]
+#[cfg_attr(not(target_pointer_width = "64"), path = "big_int/limb_x32.rs")]
 mod limb;
 
 use limb::{DoubleLimb, Limb};
@@ -54,12 +54,12 @@ const SHIFT_WORD: usize = WORD_BITS.trailing_zeros() as usize;
 /// extra_bit（視窗更寬）。純整數字面值 → 可 `const`（不像堆積型常數需執行期初始化）。
 const EXP_WINDOW_THRESHOLDS: [u32; 8] = [7, 25, 81, 241, 673, 1793, 4609, u32::MAX];
 
-/// Error returned when parsing a [`BigInteger`] from a string fails.
+/// Error returned when parsing a [`BigInt`] from a string fails.
 ///
 /// Describes problems with the input string only; an out-of-range radix is a
 /// caller error and panics instead.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ParseBigIntegerError {
+pub enum ParseBigIntError {
     /// The input had no digits (empty string, or only a sign).
     Empty,
     /// A character was not a valid digit for the radix (invalid character, or
@@ -72,18 +72,18 @@ pub enum ParseBigIntegerError {
     },
 }
 
-impl core::fmt::Display for ParseBigIntegerError {
+impl core::fmt::Display for ParseBigIntError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            ParseBigIntegerError::Empty => f.write_str("cannot parse integer from empty string"),
-            ParseBigIntegerError::InvalidDigit { index, ch } => {
+            ParseBigIntError::Empty => f.write_str("cannot parse integer from empty string"),
+            ParseBigIntError::InvalidDigit { index, ch } => {
                 write!(f, "invalid digit '{ch}' at position {index}")
             }
         }
     }
 }
 
-impl core::error::Error for ParseBigIntegerError {}
+impl core::error::Error for ParseBigIntError {}
 
 /// Error returned by the `try_to_bytes_*_into` methods when the destination
 /// buffer is smaller than the encoding requires.
@@ -107,30 +107,30 @@ impl core::fmt::Display for BufferTooSmall {
 
 impl core::error::Error for BufferTooSmall {}
 
-/// Error returned when a [`BigInteger`] is out of range for the target integer
+/// Error returned when a [`BigInt`] is out of range for the target integer
 /// type in a `TryFrom`/`TryInto` conversion.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct TryFromBigIntegerError(());
+pub struct TryFromBigIntError(());
 
-impl core::fmt::Display for TryFromBigIntegerError {
+impl core::fmt::Display for TryFromBigIntError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.write_str("number out of range for the target integer type")
     }
 }
 
-impl core::error::Error for TryFromBigIntegerError {}
+impl core::error::Error for TryFromBigIntError {}
 
 #[derive(Clone, Debug)]
-pub struct BigInteger {
+pub struct BigInt {
     sign: i32,
     /// 不可變、big-endian、無前導零；不可變型別故用 `Box<[Limb]>` 而非 `Vec<Limb>`。
     magnitude: Box<[Limb]>,
 }
 
-impl BigInteger {
+impl BigInt {
     // 施工端用 `Vec<Limb>` 傳入，儲存時落地成 `Box<[Limb]>`。
     fn new(sign: i32, magnitude: Vec<Limb>) -> Self {
-        BigInteger {
+        BigInt {
             sign,
             magnitude: magnitude.into_boxed_slice(),
         }
@@ -143,7 +143,7 @@ impl BigInteger {
     fn from_checked_magnitude(sign: i32, magnitude: Vec<Limb>) -> Self {
         let magnitude = trim_leading_zeros(magnitude);
         let sign = if magnitude.is_empty() { 0 } else { sign };
-        BigInteger::new(sign, magnitude)
+        BigInt::new(sign, magnitude)
     }
 
     /// Returns the sign of this value: `-1` (negative), `0` (zero), or `1` (positive).
@@ -151,11 +151,11 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_bigint::BigInteger;
+    /// use tc_bigint::BigInt;
     ///
-    /// assert_eq!(BigInteger::from_i32(-5).sign(), -1);
-    /// assert_eq!(BigInteger::from_i32(0).sign(), 0);
-    /// assert_eq!(BigInteger::from_i32(5).sign(), 1);
+    /// assert_eq!(BigInt::from_i32(-5).sign(), -1);
+    /// assert_eq!(BigInt::from_i32(0).sign(), 0);
+    /// assert_eq!(BigInt::from_i32(5).sign(), 1);
     /// ```
     pub fn sign(&self) -> i32 {
         self.sign
@@ -166,10 +166,10 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_bigint::BigInteger;
+    /// use tc_bigint::BigInt;
     ///
-    /// assert!(BigInteger::from_u32(0).is_zero());
-    /// assert!(!BigInteger::from_u32(5).is_zero());
+    /// assert!(BigInt::from_u32(0).is_zero());
+    /// assert!(!BigInt::from_u32(5).is_zero());
     /// ```
     pub fn is_zero(&self) -> bool {
         self.sign == 0
@@ -180,17 +180,17 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_bigint::BigInteger;
+    /// use tc_bigint::BigInt;
     ///
-    /// assert_eq!(BigInteger::from_i32(-5).abs(), BigInteger::from_i32(5));
+    /// assert_eq!(BigInt::from_i32(-5).abs(), BigInt::from_i32(5));
     /// ```
-    pub fn abs(self) -> BigInteger {
+    pub fn abs(self) -> BigInt {
         if self.sign >= 0 {
             // 已非負：原封不動
             self
         } else {
             // 負 → 正：搬移 buffer 重用，僅翻正符號
-            BigInteger::new(1, Vec::from(self.magnitude))
+            BigInt::new(1, Vec::from(self.magnitude))
         }
     }
 
@@ -199,27 +199,27 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_bigint::BigInteger;
+    /// use tc_bigint::BigInt;
     ///
-    /// assert_eq!(BigInteger::from_i32(-7).square(), BigInteger::from_i32(49));
+    /// assert_eq!(BigInt::from_i32(-7).square(), BigInt::from_i32(49));
     /// ```
-    pub fn square(&self) -> BigInteger {
+    pub fn square(&self) -> BigInt {
         if self.sign == 0 {
-            return BigInteger::from_u32(0);
+            return BigInt::from_u32(0);
         }
         // 2^k 的平方 = 2^(2k) = self << k（k = bit_length-1）；is_power_of_two 保證為正
         if self.is_power_of_two() {
             return self << (self.bit_length() - 1);
         }
         // 平方恆正；square_magnitude 已 trim，直接生建構
-        BigInteger::new(1, square_magnitude(&self.magnitude))
+        BigInt::new(1, square_magnitude(&self.magnitude))
     }
 
     /// Returns `self` raised to the non-negative power `exp` (`self^exp`).
     ///
     /// `x.pow(0)` is `1` for every `x`, including `0`. This is ordinary,
     /// non-modular exponentiation via square-and-multiply; for the modular
-    /// form see [`BigInteger::mod_pow`].
+    /// form see [`BigInt::mod_pow`].
     ///
     /// # Panics
     ///
@@ -229,29 +229,29 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_bigint::BigInteger;
+    /// use tc_bigint::BigInt;
     ///
-    /// assert_eq!(BigInteger::from_i32(3).pow(4), BigInteger::from_i32(81));
-    /// assert_eq!(BigInteger::from_i32(-2).pow(3), BigInteger::from_i32(-8));
-    /// assert_eq!(BigInteger::from_i32(7).pow(0), BigInteger::from_i32(1));
+    /// assert_eq!(BigInt::from_i32(3).pow(4), BigInt::from_i32(81));
+    /// assert_eq!(BigInt::from_i32(-2).pow(3), BigInt::from_i32(-8));
+    /// assert_eq!(BigInt::from_i32(7).pow(0), BigInt::from_i32(1));
     /// ```
-    pub fn pow(&self, exp: u32) -> BigInteger {
+    pub fn pow(&self, exp: u32) -> BigInt {
         if exp == 0 {
-            return BigInteger::from_u32(1); // x^0 = 1（含 0^0 = 1，依慣例）
+            return BigInt::from_u32(1); // x^0 = 1（含 0^0 = 1，依慣例）
         }
         if self.sign == 0 {
-            return BigInteger::from_u32(0); // 0^exp = 0（此時 exp > 0）
+            return BigInt::from_u32(0); // 0^exp = 0（此時 exp > 0）
         }
         // 正的 2^k：(2^k)^exp = 2^(k·exp)，一次位移取代整串乘法
         // （is_power_of_two 要求 sign > 0，故不會把負底的符號算錯）
         if self.is_power_of_two() {
             let bits = (self.bit_length() - 1) as u64 * exp as u64;
             let shift = u32::try_from(bits).expect("pow: result exceeds u32::MAX bits");
-            return &BigInteger::from_u32(1) << shift;
+            return &BigInt::from_u32(1) << shift;
         }
         // 逐位平方相乘：從最低位掃 exp，遇 1 就把當前的 z（= self^(2^i)）乘進 y
         let mut exp = exp;
-        let mut y = BigInteger::from_u32(1);
+        let mut y = BigInt::from_u32(1);
         let mut z = self.clone();
         loop {
             if exp & 1 == 1 {
@@ -278,23 +278,23 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_bigint::BigInteger;
+    /// use tc_bigint::BigInt;
     ///
-    /// let (q, r) = BigInteger::from_i32(-7).div_rem(&BigInteger::from_i32(2));
-    /// assert_eq!(q, BigInteger::from_i32(-3)); // 截斷向零
-    /// assert_eq!(r, BigInteger::from_i32(-1)); // 餘數跟被除數同號
+    /// let (q, r) = BigInt::from_i32(-7).div_rem(&BigInt::from_i32(2));
+    /// assert_eq!(q, BigInt::from_i32(-3)); // 截斷向零
+    /// assert_eq!(r, BigInt::from_i32(-1)); // 餘數跟被除數同號
     /// ```
-    pub fn div_rem(&self, divisor: &BigInteger) -> (BigInteger, BigInteger) {
+    pub fn div_rem(&self, divisor: &BigInt) -> (BigInt, BigInt) {
         if divisor.sign == 0 {
             panic!("attempt to divide by zero");
         }
         if self.sign == 0 {
-            return (BigInteger::from_u32(0), BigInteger::from_u32(0)); // 0 / y = (0, 0)
+            return (BigInt::from_u32(0), BigInt::from_u32(0)); // 0 / y = (0, 0)
         }
         let (q_mag, r_mag) = div_magnitudes(&self.magnitude, &divisor.magnitude);
         // 截斷向零：商號 = 兩號相乘；餘號 = 被除數號。空 magnitude 由 from_checked 歸 0
-        let quotient = BigInteger::from_checked_magnitude(self.sign * divisor.sign, q_mag);
-        let remainder = BigInteger::from_checked_magnitude(self.sign, r_mag);
+        let quotient = BigInt::from_checked_magnitude(self.sign * divisor.sign, q_mag);
+        let remainder = BigInt::from_checked_magnitude(self.sign, r_mag);
         (quotient, remainder)
     }
 
@@ -311,12 +311,12 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_bigint::BigInteger;
+    /// use tc_bigint::BigInt;
     ///
-    /// assert_eq!(BigInteger::from_i32(-7).rem_euclid(&BigInteger::from_i32(3)), BigInteger::from_i32(2));
-    /// assert_eq!(BigInteger::from_i32(-7).rem_euclid(&BigInteger::from_i32(-3)), BigInteger::from_i32(2));
+    /// assert_eq!(BigInt::from_i32(-7).rem_euclid(&BigInt::from_i32(3)), BigInt::from_i32(2));
+    /// assert_eq!(BigInt::from_i32(-7).rem_euclid(&BigInt::from_i32(-3)), BigInt::from_i32(2));
     /// ```
-    pub fn rem_euclid(&self, other: &BigInteger) -> BigInteger {
+    pub fn rem_euclid(&self, other: &BigInt) -> BigInt {
         if other.sign == 0 {
             panic!("attempt to calculate the remainder with a divisor of zero");
         }
@@ -341,11 +341,11 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_bigint::BigInteger;
+    /// use tc_bigint::BigInt;
     ///
-    /// assert_eq!(BigInteger::from_i32(-12).gcd(&BigInteger::from_i32(18)), BigInteger::from_i32(6));
+    /// assert_eq!(BigInt::from_i32(-12).gcd(&BigInt::from_i32(18)), BigInt::from_i32(6));
     /// ```
-    pub fn gcd(&self, other: &BigInteger) -> BigInteger {
+    pub fn gcd(&self, other: &BigInt) -> BigInt {
         // 取絕對值輾轉相除：a, b 非負，餘數也非負；b 歸零時 a 即 gcd
         let mut a = self.clone().abs();
         let mut b = other.clone().abs();
@@ -368,17 +368,17 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_bigint::BigInteger;
+    /// use tc_bigint::BigInt;
     ///
     /// // 3⁻¹ ≡ 5 (mod 7)，因為 3·5 = 15 ≡ 1
     /// assert_eq!(
-    ///     BigInteger::from_i32(3).mod_inverse(&BigInteger::from_i32(7)),
-    ///     Some(BigInteger::from_i32(5))
+    ///     BigInt::from_i32(3).mod_inverse(&BigInt::from_i32(7)),
+    ///     Some(BigInt::from_i32(5))
     /// );
     /// // 4 與 6 不互質 → 無反元素
-    /// assert_eq!(BigInteger::from_i32(4).mod_inverse(&BigInteger::from_i32(6)), None);
+    /// assert_eq!(BigInt::from_i32(4).mod_inverse(&BigInt::from_i32(6)), None);
     /// ```
-    pub fn mod_inverse(&self, modulus: &BigInteger) -> Option<BigInteger> {
+    pub fn mod_inverse(&self, modulus: &BigInt) -> Option<BigInt> {
         if modulus.sign <= 0 {
             panic!("modulus must be positive");
         }
@@ -404,26 +404,26 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_bigint::BigInteger;
+    /// use tc_bigint::BigInt;
     ///
     /// // 3^4 = 81 ≡ 4 (mod 7)
     /// assert_eq!(
-    ///     BigInteger::from_i32(3).mod_pow(&BigInteger::from_i32(4), &BigInteger::from_i32(7)),
-    ///     BigInteger::from_i32(4)
+    ///     BigInt::from_i32(3).mod_pow(&BigInt::from_i32(4), &BigInt::from_i32(7)),
+    ///     BigInt::from_i32(4)
     /// );
     /// ```
-    pub fn mod_pow(&self, e: &BigInteger, m: &BigInteger) -> BigInteger {
+    pub fn mod_pow(&self, e: &BigInt, m: &BigInt) -> BigInt {
         if m.sign <= 0 {
             panic!("modulus must be positive");
         }
         if *m == 1 {
-            return BigInteger::from_u32(0); // 任何數 mod 1 = 0
+            return BigInt::from_u32(0); // 任何數 mod 1 = 0
         }
         if e.sign == 0 {
-            return BigInteger::from_u32(1); // a^0 = 1
+            return BigInt::from_u32(1); // a^0 = 1
         }
         if self.sign == 0 {
-            return BigInteger::from_u32(0); // 0^e = 0（此時 e > 0）
+            return BigInt::from_u32(0); // 0^e = 0（此時 e > 0）
         }
 
         // 滑動視窗指數化；奇模數走 Montgomery、偶模數走 Barrett。
@@ -433,9 +433,9 @@ impl BigInteger {
 
         // 奇模數用 Montgomery（RSA 主力，最快）；偶模數 R = 2^k 不可逆，退回 Barrett
         let result = if m.magnitude[m.magnitude.len() - 1] & 1 == 1 {
-            BigInteger::mod_pow_monty(&base, &exp, m, true)
+            BigInt::mod_pow_monty(&base, &exp, m, true)
         } else {
-            BigInteger::mod_pow_barrett(&base, &exp, m)
+            BigInt::mod_pow_barrett(&base, &exp, m)
         };
 
         if neg_exp {
@@ -453,30 +453,30 @@ impl BigInteger {
     ///
     /// Keeps the high words, whose leading word is non-zero by the
     /// no-leading-zeros invariant, so no trimming is actually needed here.
-    fn divide_words(&self, w: usize) -> BigInteger {
+    fn divide_words(&self, w: usize) -> BigInt {
         let n = self.magnitude.len();
         if w >= n {
-            return BigInteger::from_u32(0); // 砍光（含超量）→ 0
+            return BigInt::from_u32(0); // 砍光（含超量）→ 0
         }
         // 砍掉低位 w 個字，留高位；最高位字非零，故無前導零可修
         let mag = self.magnitude[..n - w].to_vec();
-        BigInteger::from_checked_magnitude(self.sign, mag)
+        BigInt::from_checked_magnitude(self.sign, mag)
     }
 
     /// Keeps the lowest `w` magnitude words: `self mod (2^32)^w` (sign
     /// preserved). A Barrett-reduction building block.
     ///
-    /// Unlike [`BigInteger::divide_words`], the kept high word can be zero (or
+    /// Unlike [`BigInt::divide_words`], the kept high word can be zero (or
     /// the whole window all-zero), so `from_checked_magnitude` trims / zeroes
     /// it to keep the no-leading-zeros invariant.
-    fn remainder_words(&self, w: usize) -> BigInteger {
+    fn remainder_words(&self, w: usize) -> BigInt {
         let n = self.magnitude.len();
         if w >= n {
             return self.clone(); // 要的比現有多 → 整個 self（已正規化）
         }
         // 留低位 w 個字；高端可能有零字或全零 → 修剪 / 歸零
         let mag = self.magnitude[n - w..].to_vec();
-        BigInteger::from_checked_magnitude(self.sign, mag)
+        BigInt::from_checked_magnitude(self.sign, mag)
     }
 
     /// Barrett reduction: computes `x mod m` using precomputed constants,
@@ -488,12 +488,7 @@ impl BigInteger {
     ///
     /// Intended for `0 <= x < m²` (the `mod_pow` case), but also handles a
     /// negative `x` via the `mr` correction.
-    fn reduce_barrett(
-        x: &BigInteger,
-        m: &BigInteger,
-        mr: &BigInteger,
-        yu: &BigInteger,
-    ) -> BigInteger {
+    fn reduce_barrett(x: &BigInt, m: &BigInt, mr: &BigInt, yu: &BigInt) -> BigInt {
         let x_len = x.bit_length();
         let m_len = m.bit_length();
         if x_len < m_len {
@@ -539,11 +534,11 @@ impl BigInteger {
     /// `b^1, b^3, …`, then walks the exponent window-by-window (from
     /// [`get_window_list`]): each window does `bits` squarings plus one
     /// multiply by the matching odd power.
-    fn mod_pow_barrett(b: &BigInteger, e: &BigInteger, m: &BigInteger) -> BigInteger {
+    fn mod_pow_barrett(b: &BigInt, e: &BigInt, m: &BigInt) -> BigInt {
         let k = m.magnitude.len();
         let wb = WORD_BITS as u32;
-        let mr = &BigInteger::from_u32(1) << (wb * (k as u32 + 1)); // b^(k+1) = 2^(wb·(k+1))
-        let yu = &(&BigInteger::from_u32(1) << (wb * 2 * k as u32)) / m; // ⌊b^(2k)/m⌋ = ⌊2^(2·wb·k)/m⌋
+        let mr = &BigInt::from_u32(1) << (wb * (k as u32 + 1)); // b^(k+1) = 2^(wb·(k+1))
+        let yu = &(&BigInt::from_u32(1) << (wb * 2 * k as u32)) / m; // ⌊b^(2k)/m⌋ = ⌊2^(2·wb·k)/m⌋
 
         // 依指數長度選視窗寬度：越長越值得用更寬的視窗
         let mut extra_bits = 0;
@@ -554,11 +549,11 @@ impl BigInteger {
 
         // 奇次方預算表：odd_powers[i] = b^(2i+1)（b¹, b³, b⁵, …）
         let num_powers = 1usize << extra_bits;
-        let mut odd_powers = vec![BigInteger::from_u32(0); num_powers];
+        let mut odd_powers = vec![BigInt::from_u32(0); num_powers];
         odd_powers[0] = b.clone();
-        let b2 = BigInteger::reduce_barrett(&b.square(), m, &mr, &yu);
+        let b2 = BigInt::reduce_barrett(&b.square(), m, &mr, &yu);
         for i in 1..num_powers {
-            odd_powers[i] = BigInteger::reduce_barrett(&(&odd_powers[i - 1] * &b2), m, &mr, &yu);
+            odd_powers[i] = BigInt::reduce_barrett(&(&odd_powers[i - 1] * &b2), m, &mr, &yu);
         }
 
         let window_list = get_window_list(&e.magnitude, extra_bits);
@@ -570,7 +565,7 @@ impl BigInteger {
 
         // 第一個視窗：mul_t==1 時可用 b² 起頭省一步，但僅在 last_zeros>=1 才成立
         // （last_zeros==0 時 -=1 會下溢，改走 odd_powers[0] = b）
-        let mut y: BigInteger;
+        let mut y: BigInt;
         if mul_t == 1 && last_zeros >= 1 {
             y = b2.clone();
             last_zeros -= 1;
@@ -589,15 +584,15 @@ impl BigInteger {
             // 補上一個視窗尾端的零平方，再加上這個視窗 mul_t 的位元數
             let bits = last_zeros + bit_len(mul_t as Limb);
             for _ in 0..bits {
-                y = BigInteger::reduce_barrett(&y.square(), m, &mr, &yu);
+                y = BigInt::reduce_barrett(&y.square(), m, &mr, &yu);
             }
-            y = BigInteger::reduce_barrett(&(&y * &odd_powers[(mul_t >> 1) as usize]), m, &mr, &yu);
+            y = BigInt::reduce_barrett(&(&y * &odd_powers[(mul_t >> 1) as usize]), m, &mr, &yu);
             last_zeros = window >> 8;
         }
 
         // 最後一個視窗尾端剩餘的零平方
         for _ in 0..last_zeros {
-            y = BigInteger::reduce_barrett(&y.square(), m, &mr, &yu);
+            y = BigInt::reduce_barrett(&y.square(), m, &mr, &yu);
         }
         y
     }
@@ -622,7 +617,7 @@ impl BigInteger {
     /// - `false`: `b` is already in Montgomery form; no conversion is done —
     ///   returns `b^e · R mod m` (still in the Montgomery domain). Used by the
     ///   Miller-Rabin test to compare against `R`/`-R` without converting.
-    fn mod_pow_monty(b: &BigInteger, e: &BigInteger, m: &BigInteger, convert: bool) -> BigInteger {
+    fn mod_pow_monty(b: &BigInt, e: &BigInt, m: &BigInt, convert: bool) -> BigInt {
         let n = m.magnitude.len();
         let pow_r = WORD_BITS * n;
         // m 有 ≥2 位頂端餘裕時，可省略每步的條件減（值仍安放於 n 字內）
@@ -740,14 +735,14 @@ impl BigInteger {
             // 留在域內，但 small 模式下省略了條件減 → 這裡補一次拉回 [0, m)
             sub_in_place(&mut y_val, &m.magnitude);
         }
-        BigInteger::from_checked_magnitude(1, y_val)
+        BigInt::from_checked_magnitude(1, y_val)
     }
 
     /// Squares a Montgomery-form value once: `b² · R⁻¹ mod m` (stays in the
     /// Montgomery domain). Requires `m` odd and `> 1`. Companion to
-    /// [`BigInteger::mod_pow_monty`] with `convert = false`, for the
+    /// [`BigInt::mod_pow_monty`] with `convert = false`, for the
     /// Miller-Rabin squaring chain.
-    fn mod_square_monty(b: &BigInteger, m: &BigInteger) -> BigInteger {
+    fn mod_square_monty(b: &BigInt, m: &BigInt) -> BigInt {
         let n = m.magnitude.len();
         let pow_r = WORD_BITS * n;
         let small_monty_modulus = (m.bit_length() as usize) + 2 <= pow_r;
@@ -771,7 +766,7 @@ impl BigInteger {
         if small_monty_modulus && compare_to(&y_val, &m.magnitude).is_ge() {
             sub_in_place(&mut y_val, &m.magnitude);
         }
-        BigInteger::from_checked_magnitude(1, y_val)
+        BigInt::from_checked_magnitude(1, y_val)
     }
 
     /// Returns `|self| mod m` as a single word (sign ignored). `m` must be
@@ -786,7 +781,7 @@ impl BigInteger {
         acc as u32
     }
 
-    /// Parses a `BigInteger` from a string in the given radix (`2..=36`).
+    /// Parses a `BigInt` from a string in the given radix (`2..=36`).
     ///
     /// An optional leading `+`/`-` sign is allowed. Digits use `0-9` then
     /// `a-z`/`A-Z` (case-insensitive) up to the radix.
@@ -798,12 +793,12 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_bigint::BigInteger;
+    /// use tc_bigint::BigInt;
     ///
-    /// assert_eq!(BigInteger::from_str_radix("ff", 16).unwrap(), BigInteger::from_u32(255));
-    /// assert_eq!(BigInteger::from_str_radix("-101", 2).unwrap(), BigInteger::from_i32(-5));
+    /// assert_eq!(BigInt::from_str_radix("ff", 16).unwrap(), BigInt::from_u32(255));
+    /// assert_eq!(BigInt::from_str_radix("-101", 2).unwrap(), BigInt::from_i32(-5));
     /// ```
-    pub fn from_str_radix(s: &str, radix: u32) -> Result<BigInteger, ParseBigIntegerError> {
+    pub fn from_str_radix(s: &str, radix: u32) -> Result<BigInt, ParseBigIntError> {
         assert!(
             (2..=36).contains(&radix),
             "radix must be in 2..=36, got {radix}"
@@ -819,23 +814,21 @@ impl BigInteger {
         };
 
         if digits.is_empty() {
-            return Err(ParseBigIntegerError::Empty); // "" / "-" / "+"
+            return Err(ParseBigIntError::Empty); // "" / "-" / "+"
         }
 
         // TODO(效能): 目前逐字元，每位做一次大數乘法 → O(位數²) 且每位 3 次配置。
         //   可改分塊：一次吃 chunk 位（如十進制 19 位）用原生 u64 解析，再乘 radix^chunk，
         //   大乘次數少約 18 倍（仍 O(D²)，僅常數變小）。對密碼學尺寸目前夠用，暫不改。
-        let radix_big = BigInteger::from_u32(radix);
-        let mut result = BigInteger::from_u32(0);
+        let radix_big = BigInt::from_u32(radix);
+        let mut result = BigInt::from_u32(0);
         for (i, ch) in digits.chars().enumerate() {
-            let d = ch
-                .to_digit(radix)
-                .ok_or(ParseBigIntegerError::InvalidDigit {
-                    index: i + offset, // 換算回原始字串的位置
-                    ch,
-                })?;
+            let d = ch.to_digit(radix).ok_or(ParseBigIntError::InvalidDigit {
+                index: i + offset, // 換算回原始字串的位置
+                ch,
+            })?;
             // result = result * radix + d（radix 為 2 的次方時 Mul 自動走位移）
-            result = &(&result * &radix_big) + &BigInteger::from_u32(d);
+            result = &(&result * &radix_big) + &BigInt::from_u32(d);
         }
 
         // 套符號；result 為 0 時 Neg 仍是 0（不會有負零）
@@ -845,7 +838,7 @@ impl BigInteger {
     /// Formats this value as a string in the given radix (`2..=36`).
     ///
     /// Negative values get a leading `-`. Digits use `0-9` then lowercase
-    /// `a-z`. Inverse of [`BigInteger::from_str_radix`].
+    /// `a-z`. Inverse of [`BigInt::from_str_radix`].
     ///
     /// # Panics
     ///
@@ -854,10 +847,10 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_bigint::BigInteger;
+    /// use tc_bigint::BigInt;
     ///
-    /// assert_eq!(BigInteger::from_u32(255).to_str_radix(16), "ff");
-    /// assert_eq!(BigInteger::from_i32(-5).to_str_radix(2), "-101");
+    /// assert_eq!(BigInt::from_u32(255).to_str_radix(16), "ff");
+    /// assert_eq!(BigInt::from_i32(-5).to_str_radix(2), "-101");
     /// ```
     pub fn to_str_radix(&self, radix: u32) -> String {
         assert!(
@@ -871,8 +864,8 @@ impl BigInteger {
 
         // TODO(效能): 對稱於 from_str_radix，逐位一次大數 div_rem → O(位數²)。
         //   可分塊：除以 radix^chunk，一次把 u64 餘數格式化 chunk 位。暫不改。
-        let radix_big = BigInteger::from_u32(radix);
-        let mut n = BigInteger::new(1, self.magnitude.to_vec()); // |self|（正的複本）
+        let radix_big = BigInt::from_u32(radix);
+        let mut n = BigInt::new(1, self.magnitude.to_vec()); // |self|（正的複本）
         let mut digits = Vec::new(); // 低位在前
         while n.sign != 0 {
             let (q, r) = n.div_rem(&radix_big);
@@ -898,27 +891,27 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_bigint::BigInteger;
+    /// use tc_bigint::BigInt;
     ///
-    /// assert_eq!(BigInteger::from_u32(0).bit_length(), 0);
-    /// assert_eq!(BigInteger::from_u32(5).bit_length(), 3); // 0b101
-    /// assert_eq!(BigInteger::from_i32(-8).bit_length(), 3); // 負的 2 次方少 1
+    /// assert_eq!(BigInt::from_u32(0).bit_length(), 0);
+    /// assert_eq!(BigInt::from_u32(5).bit_length(), 3); // 0b101
+    /// assert_eq!(BigInt::from_i32(-8).bit_length(), 3); // 負的 2 次方少 1
     /// ```
     pub fn bit_length(&self) -> u32 {
         calc_bit_length(self.sign, &self.magnitude)
     }
 
     /// Returns the number of bytes in the minimal two's-complement (signed)
-    /// representation — the length [`BigInteger::to_bytes_be`] produces.
+    /// representation — the length [`BigInt::to_bytes_be`] produces.
     ///
     /// # Examples
     ///
     /// ```
-    /// use tc_bigint::BigInteger;
+    /// use tc_bigint::BigInt;
     ///
-    /// assert_eq!(BigInteger::from_i32(0).byte_length(), 1);
-    /// assert_eq!(BigInteger::from_i32(128).byte_length(), 2); // 需符號位元組 → [00 80]
-    /// assert_eq!(BigInteger::from_i32(-128).byte_length(), 1); // [80]
+    /// assert_eq!(BigInt::from_i32(0).byte_length(), 1);
+    /// assert_eq!(BigInt::from_i32(128).byte_length(), 2); // 需符號位元組 → [00 80]
+    /// assert_eq!(BigInt::from_i32(-128).byte_length(), 1); // [80]
     /// ```
     pub fn byte_length(&self) -> usize {
         // bit_length() 已含符號與負 2 次方的處理；+1 容納符號位元。零 → 0/8+1 = 1
@@ -926,15 +919,15 @@ impl BigInteger {
     }
 
     /// Returns the number of bytes in the minimal unsigned (magnitude)
-    /// representation — the length [`BigInteger::to_bytes_be_unsigned`] produces.
+    /// representation — the length [`BigInt::to_bytes_be_unsigned`] produces.
     ///
     /// # Examples
     ///
     /// ```
-    /// use tc_bigint::BigInteger;
+    /// use tc_bigint::BigInt;
     ///
-    /// assert_eq!(BigInteger::from_u32(128).byte_length_unsigned(), 1); // [80]
-    /// assert_eq!(BigInteger::from_u32(256).byte_length_unsigned(), 2); // [01 00]
+    /// assert_eq!(BigInt::from_u32(128).byte_length_unsigned(), 1); // [80]
+    /// assert_eq!(BigInt::from_u32(256).byte_length_unsigned(), 2); // [01 00]
     /// ```
     pub fn byte_length_unsigned(&self) -> usize {
         if self.sign == 0 {
@@ -954,11 +947,11 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_bigint::BigInteger;
+    /// use tc_bigint::BigInt;
     ///
-    /// assert_eq!(BigInteger::from_u32(0b101).bit_count(), 2);
-    /// assert_eq!(BigInteger::from_i32(-1).bit_count(), 0);
-    /// assert_eq!(BigInteger::from_i32(-8).bit_count(), 3);
+    /// assert_eq!(BigInt::from_u32(0b101).bit_count(), 2);
+    /// assert_eq!(BigInt::from_i32(-1).bit_count(), 0);
+    /// assert_eq!(BigInt::from_i32(-8).bit_count(), 3);
     /// ```
     pub fn bit_count(&self) -> u32 {
         if self.sign < 0 {
@@ -979,11 +972,11 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_bigint::BigInteger;
+    /// use tc_bigint::BigInt;
     ///
-    /// assert!(BigInteger::from_u32(0b101).test_bit(0));
-    /// assert!(!BigInteger::from_u32(0b101).test_bit(1));
-    /// assert!(BigInteger::from_i32(-1).test_bit(99)); // -1 = ...1111，每位皆 1
+    /// assert!(BigInt::from_u32(0b101).test_bit(0));
+    /// assert!(!BigInt::from_u32(0b101).test_bit(1));
+    /// assert!(BigInt::from_i32(-1).test_bit(99)); // -1 = ...1111，每位皆 1
     /// ```
     pub fn test_bit(&self, n: u32) -> bool {
         if self.sign < 0 {
@@ -1004,13 +997,13 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_bigint::BigInteger;
+    /// use tc_bigint::BigInt;
     ///
-    /// assert_eq!(BigInteger::from_u32(0b101).set_bit(1), BigInteger::from_u32(0b111));
+    /// assert_eq!(BigInt::from_u32(0b101).set_bit(1), BigInt::from_u32(0b111));
     /// ```
-    pub fn set_bit(&self, n: u32) -> BigInteger {
+    pub fn set_bit(&self, n: u32) -> BigInt {
         // 第 n 位設 1：self | (1 << n)
-        self | &(&BigInteger::from_u32(1) << n)
+        self | &(&BigInt::from_u32(1) << n)
     }
 
     /// Returns this value with bit `n` cleared to 0.
@@ -1018,13 +1011,13 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_bigint::BigInteger;
+    /// use tc_bigint::BigInt;
     ///
-    /// assert_eq!(BigInteger::from_u32(0b101).clear_bit(0), BigInteger::from_u32(0b100));
+    /// assert_eq!(BigInt::from_u32(0b101).clear_bit(0), BigInt::from_u32(0b100));
     /// ```
-    pub fn clear_bit(&self, n: u32) -> BigInteger {
+    pub fn clear_bit(&self, n: u32) -> BigInt {
         // 第 n 位設 0：self & ~(1 << n)
-        let mask = &BigInteger::from_u32(1) << n; // 1 << n
+        let mask = &BigInt::from_u32(1) << n; // 1 << n
         let inv = !&mask; // ~(1 << n)
         self & &inv
     }
@@ -1034,13 +1027,13 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_bigint::BigInteger;
+    /// use tc_bigint::BigInt;
     ///
-    /// assert_eq!(BigInteger::from_u32(0b101).flip_bit(2), BigInteger::from_u32(0b001));
+    /// assert_eq!(BigInt::from_u32(0b101).flip_bit(2), BigInt::from_u32(0b001));
     /// ```
-    pub fn flip_bit(&self, n: u32) -> BigInteger {
+    pub fn flip_bit(&self, n: u32) -> BigInt {
         // 翻轉第 n 位：self ^ (1 << n)
-        self ^ &(&BigInteger::from_u32(1) << n)
+        self ^ &(&BigInt::from_u32(1) << n)
     }
 
     /// Returns the index of the lowest set bit (the number of trailing zero
@@ -1052,12 +1045,12 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_bigint::BigInteger;
+    /// use tc_bigint::BigInt;
     ///
-    /// assert_eq!(BigInteger::from_u32(0b1100).get_lowest_set_bit(), Some(2));
-    /// assert_eq!(BigInteger::from_u32(1).get_lowest_set_bit(), Some(0));
-    /// assert_eq!(BigInteger::from_u32(0).get_lowest_set_bit(), None);
-    /// assert_eq!(BigInteger::from_i32(-12).get_lowest_set_bit(), Some(2));
+    /// assert_eq!(BigInt::from_u32(0b1100).get_lowest_set_bit(), Some(2));
+    /// assert_eq!(BigInt::from_u32(1).get_lowest_set_bit(), Some(0));
+    /// assert_eq!(BigInt::from_u32(0).get_lowest_set_bit(), None);
+    /// assert_eq!(BigInt::from_i32(-12).get_lowest_set_bit(), Some(2));
     /// ```
     pub fn get_lowest_set_bit(&self) -> Option<u32> {
         // 從低位端（尾端）掃第一個非零字，回「跳過的零字 × 32 + 字內 trailing_zeros」。
@@ -1079,135 +1072,135 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_bigint::BigInteger;
+    /// use tc_bigint::BigInt;
     ///
-    /// let a = BigInteger::from_u32(0b1110);
-    /// let b = BigInteger::from_u32(0b0110);
-    /// assert_eq!(a.and_not(&b), BigInteger::from_u32(0b1000)); // 清掉 b 有的位元
+    /// let a = BigInt::from_u32(0b1110);
+    /// let b = BigInt::from_u32(0b0110);
+    /// assert_eq!(a.and_not(&b), BigInt::from_u32(0b1000)); // 清掉 b 有的位元
     /// ```
-    pub fn and_not(&self, other: &BigInteger) -> BigInteger {
+    pub fn and_not(&self, other: &BigInt) -> BigInt {
         // 直接複用既有 operator：!other 走 Not，再與 self 做 BitAnd
         self & &!other
     }
 
-    /// Creates a `BigInteger` from an unsigned 32-bit value.
+    /// Creates a `BigInt` from an unsigned 32-bit value.
     ///
     /// # Examples
     ///
     /// ```
-    /// use tc_bigint::BigInteger;
+    /// use tc_bigint::BigInt;
     ///
-    /// let n = BigInteger::from_u32(5);
+    /// let n = BigInt::from_u32(5);
     /// ```
     pub fn from_u32(value: u32) -> Self {
         if value == 0 {
-            BigInteger::new(0, Vec::new())
+            BigInt::new(0, Vec::new())
         } else {
-            BigInteger::new(1, vec![Limb::from(value)])
+            BigInt::new(1, vec![Limb::from(value)])
         }
     }
 
-    /// Creates a `BigInteger` from an unsigned 16-bit value.
+    /// Creates a `BigInt` from an unsigned 16-bit value.
     ///
     /// # Examples
     ///
     /// ```
-    /// use tc_bigint::BigInteger;
+    /// use tc_bigint::BigInt;
     ///
-    /// let n = BigInteger::from_u16(5);
+    /// let n = BigInt::from_u16(5);
     /// ```
     pub fn from_u16(value: u16) -> Self {
-        BigInteger::from_u32(u32::from(value))
+        BigInt::from_u32(u32::from(value))
     }
 
-    /// Creates a `BigInteger` from an unsigned 8-bit value.
+    /// Creates a `BigInt` from an unsigned 8-bit value.
     ///
     /// # Examples
     ///
     /// ```
-    /// use tc_bigint::BigInteger;
+    /// use tc_bigint::BigInt;
     ///
-    /// let n = BigInteger::from_u8(5);
+    /// let n = BigInt::from_u8(5);
     /// ```
     pub fn from_u8(value: u8) -> Self {
-        BigInteger::from_u32(u32::from(value))
+        BigInt::from_u32(u32::from(value))
     }
 
-    /// Creates a `BigInteger` from a signed 16-bit value.
+    /// Creates a `BigInt` from a signed 16-bit value.
     ///
     /// # Examples
     ///
     /// ```
-    /// use tc_bigint::BigInteger;
+    /// use tc_bigint::BigInt;
     ///
-    /// let n = BigInteger::from_i16(-5);
+    /// let n = BigInt::from_i16(-5);
     /// ```
     pub fn from_i16(value: i16) -> Self {
-        BigInteger::from_i32(i32::from(value))
+        BigInt::from_i32(i32::from(value))
     }
 
-    /// Creates a `BigInteger` from a signed 8-bit value.
+    /// Creates a `BigInt` from a signed 8-bit value.
     ///
     /// # Examples
     ///
     /// ```
-    /// use tc_bigint::BigInteger;
+    /// use tc_bigint::BigInt;
     ///
-    /// let n = BigInteger::from_i8(-5);
+    /// let n = BigInt::from_i8(-5);
     /// ```
     pub fn from_i8(value: i8) -> Self {
-        BigInteger::from_i32(i32::from(value))
+        BigInt::from_i32(i32::from(value))
     }
 
-    /// Creates a `BigInteger` from a signed 32-bit value.
+    /// Creates a `BigInt` from a signed 32-bit value.
     ///
     /// # Examples
     ///
     /// ```
-    /// use tc_bigint::BigInteger;
+    /// use tc_bigint::BigInt;
     ///
-    /// let n = BigInteger::from_i32(-5);
+    /// let n = BigInt::from_i32(-5);
     /// ```
     pub fn from_i32(value: i32) -> Self {
-        BigInteger::from_i64(value as i64)
+        BigInt::from_i64(value as i64)
     }
 
-    /// Creates a `BigInteger` from a signed 64-bit value.
+    /// Creates a `BigInt` from a signed 64-bit value.
     ///
     /// # Examples
     ///
     /// ```
-    /// use tc_bigint::BigInteger;
+    /// use tc_bigint::BigInt;
     ///
-    /// let n = BigInteger::from_i64(-5);
+    /// let n = BigInt::from_i64(-5);
     /// ```
     pub fn from_i64(value: i64) -> Self {
         if value == 0 {
-            return BigInteger::new(0, Vec::new());
+            return BigInt::new(0, Vec::new());
         }
         // `unsigned_abs` avoids overflow on `i64::MIN`; reuse `from_u64`'s word split.
-        let magnitude = Vec::from(BigInteger::from_u64(value.unsigned_abs()).magnitude);
+        let magnitude = Vec::from(BigInt::from_u64(value.unsigned_abs()).magnitude);
         let sign = if value < 0 { -1 } else { 1 };
-        BigInteger::new(sign, magnitude)
+        BigInt::new(sign, magnitude)
     }
 
-    /// Creates a `BigInteger` from a signed 128-bit value.
+    /// Creates a `BigInt` from a signed 128-bit value.
     ///
     /// # Examples
     ///
     /// ```
-    /// use tc_bigint::BigInteger;
+    /// use tc_bigint::BigInt;
     ///
-    /// let n = BigInteger::from_i128(-5);
+    /// let n = BigInt::from_i128(-5);
     /// ```
     pub fn from_i128(value: i128) -> Self {
         if value == 0 {
-            return BigInteger::new(0, Vec::new());
+            return BigInt::new(0, Vec::new());
         }
         // `unsigned_abs` avoids overflow on `i128::MIN`; reuse `from_u128`'s word split.
-        let magnitude = Vec::from(BigInteger::from_u128(value.unsigned_abs()).magnitude);
+        let magnitude = Vec::from(BigInt::from_u128(value.unsigned_abs()).magnitude);
         let sign = if value < 0 { -1 } else { 1 };
-        BigInteger::new(sign, magnitude)
+        BigInt::new(sign, magnitude)
     }
 
     /// Returns a uniformly random non-negative integer in `[0, 2^bit_length)`
@@ -1219,9 +1212,9 @@ impl BigInteger {
     /// cryptographically secure source when the value must be unpredictable.
     ///
     /// Corresponds to `BigIntegers.CreateRandomBigInteger` in Bouncy Castle.
-    pub fn random_bits(bit_length: u32, rng: &mut dyn Rng) -> BigInteger {
+    pub fn random_bits(bit_length: u32, rng: &mut dyn Rng) -> BigInt {
         if bit_length == 0 {
-            return BigInteger::from_u32(0);
+            return BigInt::from_u32(0);
         }
         let n_bytes = bit_length.div_ceil(8) as usize; // ⌈bit_length / 8⌉
         let mut bytes = vec![0u8; n_bytes];
@@ -1229,20 +1222,20 @@ impl BigInteger {
         // 遮掉最高位元組多出來的高位，使總位元數 ≤ bit_length
         let excess = 8 * n_bytes as u32 - bit_length; // 0..=7
         bytes[0] &= 0xFFu8 >> excess;
-        BigInteger::from_bytes_be_unsigned(&bytes)
+        BigInt::from_bytes_be_unsigned(&bytes)
     }
 }
 
-impl PartialEq for BigInteger {
+impl PartialEq for BigInt {
     /// 相等只看數值（`sign` + `magnitude`）。
     fn eq(&self, other: &Self) -> bool {
         self.sign == other.sign && self.magnitude == other.magnitude
     }
 }
 
-impl Eq for BigInteger {}
+impl Eq for BigInt {}
 
-impl Hash for BigInteger {
+impl Hash for BigInt {
     /// Hashes the numeric value (`sign` + `magnitude`), matching [`PartialEq`]. The
     /// no-leading-zeros invariant makes the magnitude canonical, so equal values
     /// always hash equally.
@@ -1252,7 +1245,7 @@ impl Hash for BigInteger {
     }
 }
 
-impl Ord for BigInteger {
+impl Ord for BigInt {
     fn cmp(&self, other: &Self) -> Ordering {
         // 符號不同：負 < 零 < 正，直接由符號決定
         if self.sign != other.sign {
@@ -1264,15 +1257,15 @@ impl Ord for BigInteger {
     }
 }
 
-impl PartialOrd for BigInteger {
+impl PartialOrd for BigInt {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other)) // 全序，永遠有結果
     }
 }
 
-impl BigInteger {
+impl BigInt {
     /// 與原生整數的零配置比較核心：把對方拆成 `(符號, 絕對值)` 後，直接對
-    /// `self.sign`／`self.magnitude` 比，不建立暫時 `BigInteger`。邏輯同 [`Ord::cmp`]。
+    /// `self.sign`／`self.magnitude` 比，不建立暫時 `BigInt`。邏輯同 [`Ord::cmp`]。
     ///
     /// 任何原生整數的絕對值都塞得進 `u128`（含 `i128::MIN` 的 2¹²⁷、`u128::MAX`），
     /// 故 `other_abs` 用 `u128` 即可涵蓋所有型別。
@@ -1300,17 +1293,17 @@ impl BigInteger {
     }
 }
 
-// 為所有原生整數型別實作與 BigInteger 的零配置比較（`big == 5`、`big < 0u64` 等）。
-// 只提供 `BigInteger <op> {int}` 方向；`{int} <op> BigInteger`（整數在左）需在各整數
+// 為所有原生整數型別實作與 BigInt 的零配置比較（`big == 5`、`big < 0u64` 等）。
+// 只提供 `BigInt <op> {int}` 方向；`{int} <op> BigInt`（整數在左）需在各整數
 // 型別上另補鏡像 impl。PartialOrd<T> 的父 trait PartialEq<T> 一併展開。
 macro_rules! impl_cmp_int_signed {
     ($($t:ty),+ $(,)?) => {$(
-        impl PartialEq<$t> for BigInteger {
+        impl PartialEq<$t> for BigInt {
             fn eq(&self, other: &$t) -> bool {
                 self.cmp_scalar((*other).signum() as i32, (*other).unsigned_abs() as u128) == Ordering::Equal
             }
         }
-        impl PartialOrd<$t> for BigInteger {
+        impl PartialOrd<$t> for BigInt {
             fn partial_cmp(&self, other: &$t) -> Option<Ordering> {
                 Some(self.cmp_scalar((*other).signum() as i32, (*other).unsigned_abs() as u128))
             }
@@ -1320,12 +1313,12 @@ macro_rules! impl_cmp_int_signed {
 
 macro_rules! impl_cmp_int_unsigned {
     ($($t:ty),+ $(,)?) => {$(
-        impl PartialEq<$t> for BigInteger {
+        impl PartialEq<$t> for BigInt {
             fn eq(&self, other: &$t) -> bool {
                 self.cmp_scalar(if *other == 0 { 0 } else { 1 }, *other as u128) == Ordering::Equal
             }
         }
-        impl PartialOrd<$t> for BigInteger {
+        impl PartialOrd<$t> for BigInt {
             fn partial_cmp(&self, other: &$t) -> Option<Ordering> {
                 Some(self.cmp_scalar(if *other == 0 { 0 } else { 1 }, *other as u128))
             }
@@ -1336,53 +1329,53 @@ macro_rules! impl_cmp_int_unsigned {
 impl_cmp_int_signed!(i8, i16, i32, i64, i128, isize);
 impl_cmp_int_unsigned!(u8, u16, u32, u64, u128, usize);
 
-impl Neg for BigInteger {
-    type Output = BigInteger;
+impl Neg for BigInt {
+    type Output = BigInt;
 
     /// 取負：只翻轉符號，magnitude 長度不變，故直接搬移（重用）buffer。
-    fn neg(self) -> BigInteger {
+    fn neg(self) -> BigInt {
         // `Vec::from` 接手 Box 的配置（O(1)），`new` 再 `into_boxed_slice` 收回（O(1)）；
         // 全程無新配置。
-        BigInteger::new(-self.sign, Vec::from(self.magnitude))
+        BigInt::new(-self.sign, Vec::from(self.magnitude))
     }
 }
 
-impl Neg for &BigInteger {
-    type Output = BigInteger;
+impl Neg for &BigInt {
+    type Output = BigInt;
 
-    fn neg(self) -> BigInteger {
-        BigInteger::new(-self.sign, Vec::from(&*self.magnitude))
+    fn neg(self) -> BigInt {
+        BigInt::new(-self.sign, Vec::from(&*self.magnitude))
     }
 }
 
-impl Not for &BigInteger {
-    type Output = BigInteger;
+impl Not for &BigInt {
+    type Output = BigInt;
 
     /// 位元 NOT（兩補數）：`!x = -(x + 1)`。
-    fn not(self) -> BigInteger {
+    fn not(self) -> BigInt {
         // self + 1 產生 owned 暫時值，接著的一元 `-` 命中 owned Neg，
         // 直接重用該暫時值的 buffer；整條 `!x` 只有 `+` 那次配置。
-        -(self + &BigInteger::from_u32(1))
+        -(self + &BigInt::from_u32(1))
     }
 }
 
-impl BitAnd for &BigInteger {
-    type Output = BigInteger;
+impl BitAnd for &BigInt {
+    type Output = BigInt;
 
     /// 位元 AND（兩補數語義）。負 AND 負 → 負。
-    fn bitand(self, rhs: &BigInteger) -> BigInteger {
+    fn bitand(self, rhs: &BigInt) -> BigInt {
         if self.sign == 0 || rhs.sign == 0 {
-            return BigInteger::from_u32(0); // x & 0 = 0
+            return BigInt::from_u32(0); // x & 0 = 0
         }
         bitwise(self, rhs, self.sign < 0 && rhs.sign < 0, |a, b| a & b)
     }
 }
 
-impl BitOr for &BigInteger {
-    type Output = BigInteger;
+impl BitOr for &BigInt {
+    type Output = BigInt;
 
     /// 位元 OR（兩補數語義）。負 OR 任意 → 負。
-    fn bitor(self, rhs: &BigInteger) -> BigInteger {
+    fn bitor(self, rhs: &BigInt) -> BigInt {
         if self.sign == 0 {
             return rhs.clone(); // 0 | x = x
         }
@@ -1393,11 +1386,11 @@ impl BitOr for &BigInteger {
     }
 }
 
-impl BitXor for &BigInteger {
-    type Output = BigInteger;
+impl BitXor for &BigInt {
+    type Output = BigInt;
 
     /// 位元 XOR（兩補數語義）。符號相異 → 負。
-    fn bitxor(self, rhs: &BigInteger) -> BigInteger {
+    fn bitxor(self, rhs: &BigInt) -> BigInt {
         if self.sign == 0 {
             return rhs.clone(); // 0 ^ x = x
         }
@@ -1408,10 +1401,10 @@ impl BitXor for &BigInteger {
     }
 }
 
-impl Sub for &BigInteger {
-    type Output = BigInteger;
+impl Sub for &BigInt {
+    type Output = BigInt;
 
-    fn sub(self, rhs: &BigInteger) -> BigInteger {
+    fn sub(self, rhs: &BigInt) -> BigInt {
         if rhs.sign == 0 {
             self.clone()
         } else if self.sign == 0 {
@@ -1421,35 +1414,35 @@ impl Sub for &BigInteger {
         } else {
             // 同號：比 magnitude，大減小，結果符號 = 較大者的符號
             match compare_magnitude(&self.magnitude, &rhs.magnitude) {
-                Ordering::Equal => BigInteger::from_u32(0),
+                Ordering::Equal => BigInt::from_u32(0),
                 Ordering::Greater => {
-                    BigInteger::new(self.sign, sub_magnitudes(&self.magnitude, &rhs.magnitude))
+                    BigInt::new(self.sign, sub_magnitudes(&self.magnitude, &rhs.magnitude))
                 }
                 Ordering::Less => {
-                    BigInteger::new(-self.sign, sub_magnitudes(&rhs.magnitude, &self.magnitude))
+                    BigInt::new(-self.sign, sub_magnitudes(&rhs.magnitude, &self.magnitude))
                 }
             }
         }
     }
 }
 
-impl Mul for &BigInteger {
-    type Output = BigInteger;
+impl Mul for &BigInt {
+    type Output = BigInt;
 
-    fn mul(self, rhs: &BigInteger) -> BigInteger {
+    fn mul(self, rhs: &BigInt) -> BigInt {
         if self.sign == 0 || rhs.sign == 0 {
-            return BigInteger::from_u32(0);
+            return BigInt::from_u32(0);
         }
         let sign = self.sign * rhs.sign;
 
         // 捷徑 1：某運算元為 2^k → 乘法退化成 << k（k = bit_length - 1）
         if self.is_power_of_two() {
             let magnitude = shift_left_magnitude(&rhs.magnitude, (self.bit_length() - 1) as usize);
-            return BigInteger::new(sign, magnitude);
+            return BigInt::new(sign, magnitude);
         }
         if rhs.is_power_of_two() {
             let magnitude = shift_left_magnitude(&self.magnitude, (rhs.bit_length() - 1) as usize);
-            return BigInteger::new(sign, magnitude);
+            return BigInt::new(sign, magnitude);
         }
 
         // 捷徑 2：同一份運算元（`&x * &x`）→ 平方（~2 倍快）。
@@ -1459,65 +1452,65 @@ impl Mul for &BigInteger {
         } else {
             multiply_magnitudes(&self.magnitude, &rhs.magnitude)
         };
-        BigInteger::new(sign, magnitude)
+        BigInt::new(sign, magnitude)
     }
 }
 
-impl Div for &BigInteger {
-    type Output = BigInteger;
+impl Div for &BigInt {
+    type Output = BigInt;
 
-    /// 截斷除法的商（見 [`BigInteger::div_rem`]）。除數為 0 時 panic。
-    fn div(self, rhs: &BigInteger) -> BigInteger {
+    /// 截斷除法的商（見 [`BigInt::div_rem`]）。除數為 0 時 panic。
+    fn div(self, rhs: &BigInt) -> BigInt {
         self.div_rem(rhs).0
     }
 }
 
-impl Rem for &BigInteger {
-    type Output = BigInteger;
+impl Rem for &BigInt {
+    type Output = BigInt;
 
-    /// 截斷除法的餘數（見 [`BigInteger::div_rem`]）。除數為 0 時 panic。
-    fn rem(self, rhs: &BigInteger) -> BigInteger {
+    /// 截斷除法的餘數（見 [`BigInt::div_rem`]）。除數為 0 時 panic。
+    fn rem(self, rhs: &BigInt) -> BigInt {
         self.div_rem(rhs).1
     }
 }
 
-impl FromStr for BigInteger {
-    type Err = ParseBigIntegerError;
+impl FromStr for BigInt {
+    type Err = ParseBigIntError;
 
-    /// Parses in radix 10（讓 `"123".parse::<BigInteger>()` 可用）。
-    fn from_str(s: &str) -> Result<BigInteger, ParseBigIntegerError> {
-        BigInteger::from_str_radix(s, 10)
+    /// Parses in radix 10（讓 `"123".parse::<BigInt>()` 可用）。
+    fn from_str(s: &str) -> Result<BigInt, ParseBigIntError> {
+        BigInt::from_str_radix(s, 10)
     }
 }
 
-impl core::fmt::Display for BigInteger {
+impl core::fmt::Display for BigInt {
     /// 十進制輸出（委派 `to_str_radix(10)`）；`{}`、`to_string()` 皆走此。
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.write_str(&self.to_str_radix(10))
     }
 }
 
-impl Shl<u32> for &BigInteger {
-    type Output = BigInteger;
+impl Shl<u32> for &BigInt {
+    type Output = BigInt;
 
     /// 左移 `n` 位（相當於乘以 `2^n`）。
-    fn shl(self, n: u32) -> BigInteger {
+    fn shl(self, n: u32) -> BigInt {
         if self.sign == 0 || n == 0 {
             return self.clone(); // 0 << n = 0；x << 0 = x
         }
         // 左移不改符號；magnitude 交給 helper（u32 位元量 → usize 供索引）
         let magnitude = shift_left_magnitude(&self.magnitude, n as usize);
-        BigInteger::new(self.sign, magnitude)
+        BigInt::new(self.sign, magnitude)
     }
 }
 
-impl Shr<u32> for &BigInteger {
-    type Output = BigInteger;
+impl Shr<u32> for &BigInt {
+    type Output = BigInt;
 
     /// 右移 `n` 位（算術右移：等同 `floor(self / 2^n)`，向負無窮取整）。
     ///
     /// 非負數等同截斷；負數若移出的低位有非零，會再向下多退一（floor 修正）。
-    fn shr(self, n: u32) -> BigInteger {
+    fn shr(self, n: u32) -> BigInt {
         if self.sign == 0 || n == 0 {
             return self.clone(); // 0 >> n = 0；x >> 0 = x
         }
@@ -1527,9 +1520,9 @@ impl Shr<u32> for &BigInteger {
         let total_bits = self.magnitude.len() * WORD_BITS;
         if n >= total_bits {
             return if self.sign < 0 {
-                BigInteger::from_i32(-1)
+                BigInt::from_i32(-1)
             } else {
-                BigInteger::from_u32(0)
+                BigInt::from_u32(0)
             };
         }
 
@@ -1542,18 +1535,18 @@ impl Shr<u32> for &BigInteger {
 
         // 正數可能移空 → 0；負數經上面修正後必非空
         let sign = if magnitude.is_empty() { 0 } else { self.sign };
-        BigInteger::new(sign, magnitude)
+        BigInt::new(sign, magnitude)
     }
 }
 
-/// 為每個固定寬度整數型別生成無損的 `From<$t> for BigInteger`，委派給對應建構函式。
+/// 為每個固定寬度整數型別生成無損的 `From<$t> for BigInt`，委派給對應建構函式。
 macro_rules! impl_from_primitive {
     ($($t:ty => $ctor:ident),* $(,)?) => {
         $(
-            impl From<$t> for BigInteger {
+            impl From<$t> for BigInt {
                 /// 無損轉換（固定寬度整數必可表示）。
                 fn from(value: $t) -> Self {
-                    BigInteger::$ctor(value)
+                    BigInt::$ctor(value)
                 }
             }
         )*
@@ -1565,21 +1558,21 @@ impl_from_primitive! {
     i8 => from_i8, i16 => from_i16, i32 => from_i32, i64 => from_i64, i128 => from_i128,
 }
 
-/// 為每個無號整數型別生成 `TryFrom<&BigInteger>`：負數或超出範圍回 `Err`。
+/// 為每個無號整數型別生成 `TryFrom<&BigInt>`：負數或超出範圍回 `Err`。
 macro_rules! impl_try_from_big_unsigned {
     ($($t:ty),* $(,)?) => {
         $(
-            impl TryFrom<&BigInteger> for $t {
-                type Error = TryFromBigIntegerError;
+            impl TryFrom<&BigInt> for $t {
+                type Error = TryFromBigIntError;
 
-                fn try_from(value: &BigInteger) -> Result<$t, TryFromBigIntegerError> {
+                fn try_from(value: &BigInt) -> Result<$t, TryFromBigIntError> {
                     if value.sign() < 0 {
-                        return Err(TryFromBigIntegerError(())); // 負數無法轉無號
+                        return Err(TryFromBigIntError(())); // 負數無法轉無號
                     }
                     const BYTES: usize = size_of::<$t>();
                     let n = value.byte_length_unsigned();
                     if n > BYTES {
-                        return Err(TryFromBigIntegerError(())); // 位元組數超出目標
+                        return Err(TryFromBigIntError(())); // 位元組數超出目標
                     }
                     // magnitude 位元組右對齊寫進固定寬度 buffer，上方補 0
                     let mut buf = [0u8; BYTES];
@@ -1591,18 +1584,18 @@ macro_rules! impl_try_from_big_unsigned {
     };
 }
 
-/// 為每個有號整數型別生成 `TryFrom<&BigInteger>`：超出範圍回 `Err`。
+/// 為每個有號整數型別生成 `TryFrom<&BigInt>`：超出範圍回 `Err`。
 macro_rules! impl_try_from_big_signed {
     ($($t:ty),* $(,)?) => {
         $(
-            impl TryFrom<&BigInteger> for $t {
-                type Error = TryFromBigIntegerError;
+            impl TryFrom<&BigInt> for $t {
+                type Error = TryFromBigIntError;
 
-                fn try_from(value: &BigInteger) -> Result<$t, TryFromBigIntegerError> {
+                fn try_from(value: &BigInt) -> Result<$t, TryFromBigIntError> {
                     const BYTES: usize = size_of::<$t>();
                     let n = value.byte_length();
                     if n > BYTES {
-                        return Err(TryFromBigIntegerError(()));
+                        return Err(TryFromBigIntError(()));
                     }
                     // 兩補數位元組右對齊寫入；上方以符號延伸填滿（負 0xFF、非負 0x00）
                     let mut buf = if value.sign() < 0 { [0xFFu8; BYTES] } else { [0u8; BYTES] };
@@ -1708,7 +1701,7 @@ fn inverse(d: Limb) -> Limb {
 }
 
 /// 單字（n=1）Montgomery 乘法：回傳 `x·y·R⁻¹ mod m`（R = 2³²）。
-/// `m` 為奇 u32；`m_prime = -m⁻¹ mod 2³²`（見 [`BigInteger::m_prime`]）。
+/// `m` 為奇 u32；`m_prime = -m⁻¹ mod 2³²`（見 [`BigInt::m_prime`]）。
 fn multiply_monty_n_is_one(x: Limb, y: Limb, m: Limb, m_prime: Limb) -> Limb {
     let mut carry = x as DoubleLimb * y as DoubleLimb; // 完整乘積
     let t = (carry as Limb).wrapping_mul(m_prime); // 選 t 使加上 t·m 後低 32 位歸零
@@ -2358,9 +2351,9 @@ fn div_magnitudes(dividend: &[Limb], divisor: &[Limb]) -> (Vec<Limb>, Vec<Limb>)
 /// 前提：`b` 為正、`a` 非負（呼叫端若有負值，先用 `rem_euclid` 約簡）。
 /// 一路輾轉相除（`div_rem`）約簡 `(u3, v3)`，同時把 `a` 的係數 `(u1, v1)` 帶著走；
 /// 維持不變量 `u3 ≡ a·u1 (mod b)`，收斂時 `u3 = gcd`、`u1 = x`。
-fn extended_gcd(a: &BigInteger, b: &BigInteger) -> (BigInteger, BigInteger) {
-    let mut u1 = BigInteger::from_u32(1);
-    let mut v1 = BigInteger::from_u32(0);
+fn extended_gcd(a: &BigInt, b: &BigInt) -> (BigInt, BigInt) {
+    let mut u1 = BigInt::from_u32(1);
+    let mut v1 = BigInt::from_u32(0);
     let mut u3 = a.clone();
     let mut v3 = b.clone();
 
@@ -2408,7 +2401,7 @@ fn any_low_bits_set(mag: &[Limb], n: usize) -> bool {
 ///   **整體反相**；連上方 padding 的 `0` 也翻成 `0xFFFF_FFFF`，即符號延伸（無限個 1）。
 ///
 /// 前提：`len` 至少容得下該來源 magnitude 的字數（呼叫端以兩運算元取 max 保證）。
-fn to_twos_complement_words(x: &BigInteger, len: usize) -> Vec<Limb> {
+fn to_twos_complement_words(x: &BigInt, len: usize) -> Vec<Limb> {
     let mut words = vec![0; len];
     if x.sign == 0 {
         return words; // 0 → 全 0
@@ -2418,7 +2411,7 @@ fn to_twos_complement_words(x: &BigInteger, len: usize) -> Vec<Limb> {
     // 負數要讓 (x + 1) 這個暫時值活到 copy 完；用「延後初始化」的 let 延長其壽命，免 clone。
     let neg_tmp;
     let src: &[Limb] = if negative {
-        neg_tmp = x + &BigInteger::from_u32(1);
+        neg_tmp = x + &BigInt::from_u32(1);
         &neg_tmp.magnitude
     } else {
         &x.magnitude
@@ -2439,12 +2432,7 @@ fn to_twos_complement_words(x: &BigInteger, len: usize) -> Vec<Limb> {
 /// 負結果先在迴圈裡整體反相存成 `|result| - 1`，最後 `!` 一次轉回負（進位長大由 Not 吸收）。
 ///
 /// 前提：`a`、`b` 皆非零（零的捷徑由各運算子先處理）。
-fn bitwise(
-    a: &BigInteger,
-    b: &BigInteger,
-    result_neg: bool,
-    op: impl Fn(Limb, Limb) -> Limb,
-) -> BigInteger {
+fn bitwise(a: &BigInt, b: &BigInt, result_neg: bool, op: impl Fn(Limb, Limb) -> Limb) -> BigInt {
     let len = a.magnitude.len().max(b.magnitude.len());
     let aw = to_twos_complement_words(a, len);
     let bw = to_twos_complement_words(b, len);
@@ -2458,7 +2446,7 @@ fn bitwise(
         result[i] = w;
     }
 
-    let result = BigInteger::from_checked_magnitude(1, result); // 去前導零 + 全零歸零
+    let result = BigInt::from_checked_magnitude(1, result); // 去前導零 + 全零歸零
     if result_neg { !&result } else { result }
 }
 
@@ -2558,119 +2546,119 @@ mod tests {
 
     #[test]
     fn from_u32_zero() {
-        let n = BigInteger::from_u32(0);
+        let n = BigInt::from_u32(0);
         assert_eq!(n.sign, 0);
         assert!(n.magnitude.is_empty());
     }
 
     #[test]
     fn sign_reports_all_three_states() {
-        assert_eq!(BigInteger::from_i32(-42).sign(), -1);
-        assert_eq!(BigInteger::from_i32(0).sign(), 0);
-        assert_eq!(BigInteger::from_i32(42).sign(), 1);
+        assert_eq!(BigInt::from_i32(-42).sign(), -1);
+        assert_eq!(BigInt::from_i32(0).sign(), 0);
+        assert_eq!(BigInt::from_i32(42).sign(), 1);
     }
 
     #[test]
     fn is_zero_matches_sign() {
-        assert!(BigInteger::from_i32(0).is_zero());
-        assert!(!BigInteger::from_i32(1).is_zero());
-        assert!(!BigInteger::from_i32(-1).is_zero());
+        assert!(BigInt::from_i32(0).is_zero());
+        assert!(!BigInt::from_i32(1).is_zero());
+        assert!(!BigInt::from_i32(-1).is_zero());
         // 空位元組與全零位元組都應是零
-        assert!(BigInteger::from_bytes_be(&[]).is_zero());
-        assert!(BigInteger::from_bytes_be(&[0, 0, 0]).is_zero());
+        assert!(BigInt::from_bytes_be(&[]).is_zero());
+        assert!(BigInt::from_bytes_be(&[0, 0, 0]).is_zero());
     }
 
     #[test]
     fn bit_length_zero() {
-        assert_eq!(BigInteger::from_u32(0).bit_length(), 0);
+        assert_eq!(BigInt::from_u32(0).bit_length(), 0);
     }
 
     #[test]
     fn bit_length_positive() {
-        assert_eq!(BigInteger::from_u32(1).bit_length(), 1); // 0b1
-        assert_eq!(BigInteger::from_u32(5).bit_length(), 3); // 0b101
-        assert_eq!(BigInteger::from_u32(8).bit_length(), 4); // 0b1000
-        assert_eq!(BigInteger::from_u32(255).bit_length(), 8);
-        assert_eq!(BigInteger::from_u32(256).bit_length(), 9);
+        assert_eq!(BigInt::from_u32(1).bit_length(), 1); // 0b1
+        assert_eq!(BigInt::from_u32(5).bit_length(), 3); // 0b101
+        assert_eq!(BigInt::from_u32(8).bit_length(), 4); // 0b1000
+        assert_eq!(BigInt::from_u32(255).bit_length(), 8);
+        assert_eq!(BigInt::from_u32(256).bit_length(), 9);
     }
 
     #[test]
     fn bit_length_negative_non_power_of_two() {
         // 非 2 次方的負數，位元長度與正數相同
-        assert_eq!(BigInteger::from_i32(-5).bit_length(), 3);
-        assert_eq!(BigInteger::from_i32(-7).bit_length(), 3);
+        assert_eq!(BigInt::from_i32(-5).bit_length(), 3);
+        assert_eq!(BigInt::from_i32(-7).bit_length(), 3);
     }
 
     #[test]
     fn bit_length_negative_power_of_two_is_one_less() {
         // 負的 2 次方少 1 位：-8 為 3（+8 為 4）
-        assert_eq!(BigInteger::from_i32(-8).bit_length(), 3);
-        assert_eq!(BigInteger::from_i32(-1).bit_length(), 0); // -1 = -2^0
-        assert_eq!(BigInteger::from_i32(-256).bit_length(), 8);
+        assert_eq!(BigInt::from_i32(-8).bit_length(), 3);
+        assert_eq!(BigInt::from_i32(-1).bit_length(), 0); // -1 = -2^0
+        assert_eq!(BigInt::from_i32(-256).bit_length(), 8);
     }
 
     #[test]
     fn bit_length_multi_word() {
         // 2^32：magnitude [1, 0]，位元長度 33；負的則為 32
-        assert_eq!(BigInteger::from_u64(1 << 32).bit_length(), 33);
-        assert_eq!(BigInteger::from_i64(-(1 << 32)).bit_length(), 32);
+        assert_eq!(BigInt::from_u64(1 << 32).bit_length(), 33);
+        assert_eq!(BigInt::from_i64(-(1 << 32)).bit_length(), 32);
         // u64::MAX 佔滿 64 位
-        assert_eq!(BigInteger::from_u64(u64::MAX).bit_length(), 64);
+        assert_eq!(BigInt::from_u64(u64::MAX).bit_length(), 64);
     }
 
     #[test]
     fn bit_length_is_stable() {
         // 每次重算，結果一致
-        let n = BigInteger::from_u32(5);
+        let n = BigInt::from_u32(5);
         assert_eq!(n.bit_length(), 3);
         assert_eq!(n.bit_length(), 3);
     }
 
     #[test]
     fn bit_count_zero() {
-        assert_eq!(BigInteger::from_u32(0).bit_count(), 0);
+        assert_eq!(BigInt::from_u32(0).bit_count(), 0);
     }
 
     #[test]
     fn bit_count_positive() {
-        assert_eq!(BigInteger::from_u32(0b101).bit_count(), 2);
-        assert_eq!(BigInteger::from_u32(0b111).bit_count(), 3);
-        assert_eq!(BigInteger::from_u32(0xFF).bit_count(), 8);
-        assert_eq!(BigInteger::from_u32(u32::MAX).bit_count(), 32);
+        assert_eq!(BigInt::from_u32(0b101).bit_count(), 2);
+        assert_eq!(BigInt::from_u32(0b111).bit_count(), 3);
+        assert_eq!(BigInt::from_u32(0xFF).bit_count(), 8);
+        assert_eq!(BigInt::from_u32(u32::MAX).bit_count(), 32);
     }
 
     #[test]
     fn bit_count_positive_multi_word() {
         // u64::MAX 全為 1，共 64 個
-        assert_eq!(BigInteger::from_u64(u64::MAX).bit_count(), 64);
+        assert_eq!(BigInt::from_u64(u64::MAX).bit_count(), 64);
     }
 
     #[test]
     fn bit_count_negative() {
         // 負數：popcount(|n| - 1)
-        assert_eq!(BigInteger::from_i32(-1).bit_count(), 0); // |−1|−1 = 0
-        assert_eq!(BigInteger::from_i32(-2).bit_count(), 1); // 1 = 0b1
-        assert_eq!(BigInteger::from_i32(-8).bit_count(), 3); // 7 = 0b111
+        assert_eq!(BigInt::from_i32(-1).bit_count(), 0); // |−1|−1 = 0
+        assert_eq!(BigInt::from_i32(-2).bit_count(), 1); // 1 = 0b1
+        assert_eq!(BigInt::from_i32(-8).bit_count(), 3); // 7 = 0b111
     }
 
     #[test]
     fn bit_count_negative_multi_word_borrow() {
         // -(2^32)：|n|-1 = 2^32-1 = 0xFFFF_FFFF，借位跨字，共 32 個 1
-        assert_eq!(BigInteger::from_i64(-(1 << 32)).bit_count(), 32);
+        assert_eq!(BigInt::from_i64(-(1 << 32)).bit_count(), 32);
     }
 
     #[test]
     fn cmp_same_sign_positive() {
         assert_eq!(
-            BigInteger::from_i32(5).cmp(&BigInteger::from_i32(3)),
+            BigInt::from_i32(5).cmp(&BigInt::from_i32(3)),
             Ordering::Greater
         );
         assert_eq!(
-            BigInteger::from_i32(3).cmp(&BigInteger::from_i32(5)),
+            BigInt::from_i32(3).cmp(&BigInt::from_i32(5)),
             Ordering::Less
         );
         assert_eq!(
-            BigInteger::from_i32(5).cmp(&BigInteger::from_i32(5)),
+            BigInt::from_i32(5).cmp(&BigInt::from_i32(5)),
             Ordering::Equal
         );
     }
@@ -2679,11 +2667,11 @@ mod tests {
     fn cmp_same_sign_negative_is_flipped() {
         // 同負號：絕對值大者反而小
         assert_eq!(
-            BigInteger::from_i32(-5).cmp(&BigInteger::from_i32(-3)),
+            BigInt::from_i32(-5).cmp(&BigInt::from_i32(-3)),
             Ordering::Less
         );
         assert_eq!(
-            BigInteger::from_i32(-3).cmp(&BigInteger::from_i32(-5)),
+            BigInt::from_i32(-3).cmp(&BigInt::from_i32(-5)),
             Ordering::Greater
         );
     }
@@ -2691,11 +2679,11 @@ mod tests {
     #[test]
     fn cmp_different_signs() {
         assert_eq!(
-            BigInteger::from_i32(5).cmp(&BigInteger::from_i32(-8)),
+            BigInt::from_i32(5).cmp(&BigInt::from_i32(-8)),
             Ordering::Greater
         );
         assert_eq!(
-            BigInteger::from_i32(-8).cmp(&BigInteger::from_i32(5)),
+            BigInt::from_i32(-8).cmp(&BigInt::from_i32(5)),
             Ordering::Less
         );
     }
@@ -2703,15 +2691,15 @@ mod tests {
     #[test]
     fn cmp_with_zero() {
         assert_eq!(
-            BigInteger::from_i32(0).cmp(&BigInteger::from_i32(-3)),
+            BigInt::from_i32(0).cmp(&BigInt::from_i32(-3)),
             Ordering::Greater
         );
         assert_eq!(
-            BigInteger::from_i32(0).cmp(&BigInteger::from_i32(5)),
+            BigInt::from_i32(0).cmp(&BigInt::from_i32(5)),
             Ordering::Less
         );
         assert_eq!(
-            BigInteger::from_i32(0).cmp(&BigInteger::from_i32(0)),
+            BigInt::from_i32(0).cmp(&BigInt::from_i32(0)),
             Ordering::Equal
         );
     }
@@ -2719,96 +2707,96 @@ mod tests {
     #[test]
     fn cmp_by_word_count() {
         // 字數多者絕對值大（依賴無前導零不變量）
-        let big = BigInteger::from_u64(1 << 32); // magnitude [1, 0]，2 字
-        let small = BigInteger::from_u32(u32::MAX); // magnitude [0xFFFFFFFF]，1 字
+        let big = BigInt::from_u64(1 << 32); // magnitude [1, 0]，2 字
+        let small = BigInt::from_u32(u32::MAX); // magnitude [0xFFFFFFFF]，1 字
         assert_eq!(big.cmp(&small), Ordering::Greater);
     }
 
     #[test]
     fn cmp_operators_and_min_max() {
         // 實作 Ord 後，運算子與 min/max/sort 自動可用
-        let a = BigInteger::from_i32(-10);
-        let b = BigInteger::from_i32(7);
+        let a = BigInt::from_i32(-10);
+        let b = BigInt::from_i32(7);
         assert!(a < b);
         assert!(b >= a);
         assert_eq!(a.clone().min(b.clone()), a);
         assert_eq!(a.clone().max(b.clone()), b);
 
         let mut v = vec![
-            BigInteger::from_i32(3),
-            BigInteger::from_i32(-5),
-            BigInteger::from_i32(0),
-            BigInteger::from_i32(1),
+            BigInt::from_i32(3),
+            BigInt::from_i32(-5),
+            BigInt::from_i32(0),
+            BigInt::from_i32(1),
         ];
         v.sort();
         // 排序後應為 -5, 0, 1, 3（由小到大）
-        let expected = [-5, 0, 1, 3].map(BigInteger::from_i32);
+        let expected = [-5, 0, 1, 3].map(BigInt::from_i32);
         assert_eq!(v, expected);
     }
 
     #[test]
     fn eq_with_i32() {
-        assert_eq!(BigInteger::from_i32(42), 42);
-        assert_eq!(BigInteger::from_i32(-42), -42);
-        assert_eq!(BigInteger::from_i32(0), 0);
-        assert_ne!(BigInteger::from_i32(42), 43);
+        assert_eq!(BigInt::from_i32(42), 42);
+        assert_eq!(BigInt::from_i32(-42), -42);
+        assert_eq!(BigInt::from_i32(0), 0);
+        assert_ne!(BigInt::from_i32(42), 43);
         // 超出 i32 範圍的大數不等於任何 i32
-        assert_ne!(BigInteger::from_u64(1 << 40), 0);
+        assert_ne!(BigInt::from_u64(1 << 40), 0);
     }
 
     #[test]
     fn partial_ord_with_i32() {
-        let n = BigInteger::from_i32(100);
+        let n = BigInt::from_i32(100);
         assert!(n > 5);
         assert!(n >= 100);
         assert!(n < 1000);
-        assert!(BigInteger::from_i32(-1) < 0);
-        assert!(BigInteger::from_i32(0) >= 0);
+        assert!(BigInt::from_i32(-1) < 0);
+        assert!(BigInt::from_i32(0) >= 0);
         // 兩端點與大數
-        assert!(BigInteger::from_i64(1 << 40) > i32::MAX);
-        assert!(BigInteger::from_i64(-(1 << 40)) < i32::MIN);
+        assert!(BigInt::from_i64(1 << 40) > i32::MAX);
+        assert!(BigInt::from_i64(-(1 << 40)) < i32::MIN);
     }
 
     #[test]
     fn cmp_with_unsigned_types() {
         // u8 / u32 / u64 / u128，含超過單字與 u128 極值
-        assert_eq!(BigInteger::from_u32(200), 200u8);
-        assert!(BigInteger::from_u64(1 << 40) > u32::MAX);
-        assert_eq!(BigInteger::from_u64(u64::MAX), u64::MAX);
-        assert!(BigInteger::from_u64(u64::MAX) < (u64::MAX as u128 + 1));
+        assert_eq!(BigInt::from_u32(200), 200u8);
+        assert!(BigInt::from_u64(1 << 40) > u32::MAX);
+        assert_eq!(BigInt::from_u64(u64::MAX), u64::MAX);
+        assert!(BigInt::from_u64(u64::MAX) < (u64::MAX as u128 + 1));
 
         // u128::MAX = 2^128 - 1（4 字全 1）→ 相等；2^128 → 更大
-        let max_u128 = BigInteger::from_u32_be_unsigned(&[u32::MAX; 4]);
+        let max_u128 = BigInt::from_u32_be_unsigned(&[u32::MAX; 4]);
         assert_eq!(max_u128, u128::MAX);
-        assert!((&max_u128 + &BigInteger::from_u32(1)) > u128::MAX);
+        assert!((&max_u128 + &BigInt::from_u32(1)) > u128::MAX);
         // 負數恆小於任何無號數
-        assert!(BigInteger::from_i32(-1) < 0u128);
+        assert!(BigInt::from_i32(-1) < 0u128);
     }
 
     #[test]
     fn cmp_with_wide_signed_types() {
         // i64 / i128，含 MIN 端點（unsigned_abs 不溢位）
-        assert_eq!(BigInteger::from_i64(i64::MIN), i64::MIN);
-        assert_eq!(BigInteger::from_i128(i128::MIN), i128::MIN);
-        assert!(BigInteger::from_i128(i128::MIN) < i128::MIN + 1);
-        assert!(BigInteger::from_i64(-(1 << 40)) < 0i64);
-        assert!(BigInteger::from_i64(1 << 40) > 1_000_000i64);
+        assert_eq!(BigInt::from_i64(i64::MIN), i64::MIN);
+        assert_eq!(BigInt::from_i128(i128::MIN), i128::MIN);
+        assert!(BigInt::from_i128(i128::MIN) < i128::MIN + 1);
+        assert!(BigInt::from_i64(-(1 << 40)) < 0i64);
+        assert!(BigInt::from_i64(1 << 40) > 1_000_000i64);
     }
 
     #[test]
     fn neg_flips_sign_keeps_magnitude() {
-        let n = -BigInteger::from_i32(5);
+        let n = -BigInt::from_i32(5);
         assert_eq!(n.sign, -1);
         assert_eq!(n.magnitude.to_vec(), vec![5]);
 
-        let p = -BigInteger::from_i32(-5);
+        let p = -BigInt::from_i32(-5);
         assert_eq!(p.sign, 1);
         assert_eq!(p.magnitude.to_vec(), vec![5]);
     }
 
     #[test]
     fn neg_zero_is_zero() {
-        let z = -BigInteger::from_i32(0);
+        let z = -BigInt::from_i32(0);
         assert_eq!(z.sign, 0);
         assert!(z.magnitude.is_empty());
     }
@@ -2816,14 +2804,14 @@ mod tests {
     #[test]
     fn neg_is_involution() {
         // -(-a) == a
-        let a = BigInteger::from_i64(-123456789);
+        let a = BigInt::from_i64(-123456789);
         assert_eq!(-(-a.clone()), a);
     }
 
     #[test]
     fn neg_bit_length_reflects_sign() {
         // 8 的 bit_length 為 4，取負後為 3（負的 2 次方少 1）
-        let a = BigInteger::from_i32(8);
+        let a = BigInt::from_i32(8);
         assert_eq!(a.bit_length(), 4);
         let b = -a; // a 的 magnitude buffer 搬進 b
         assert_eq!(b.bit_length(), 3);
@@ -2831,13 +2819,13 @@ mod tests {
 
     #[test]
     fn abs_of_negative_and_positive() {
-        assert_eq!(BigInteger::from_i32(-5).abs(), BigInteger::from_i32(5));
-        assert_eq!(BigInteger::from_i32(5).abs(), BigInteger::from_i32(5));
+        assert_eq!(BigInt::from_i32(-5).abs(), BigInt::from_i32(5));
+        assert_eq!(BigInt::from_i32(5).abs(), BigInt::from_i32(5));
     }
 
     #[test]
     fn abs_zero_is_zero() {
-        let z = BigInteger::from_i32(0).abs();
+        let z = BigInt::from_i32(0).abs();
         assert_eq!(z.sign, 0);
         assert!(z.magnitude.is_empty());
     }
@@ -2845,30 +2833,30 @@ mod tests {
     #[test]
     fn abs_bit_length_reflects_sign() {
         // -8 的 bit_length 為 3；取絕對值後為 8，bit_length 為 4
-        let a = BigInteger::from_i32(-8);
+        let a = BigInt::from_i32(-8);
         assert_eq!(a.bit_length(), 3);
         assert_eq!(a.abs().bit_length(), 4);
     }
 
     #[test]
     fn abs_is_idempotent() {
-        let a = BigInteger::from_i64(-123456789);
+        let a = BigInt::from_i64(-123456789);
         assert_eq!(a.clone().abs().abs(), a.abs());
     }
 
     #[test]
     fn not_basic_identity() {
         // !x = -(x + 1)
-        assert_eq!(!&BigInteger::from_i32(0), BigInteger::from_i32(-1)); // ~0 = -1
-        assert_eq!(!&BigInteger::from_i32(5), BigInteger::from_i32(-6)); // ~5 = -6
-        assert_eq!(!&BigInteger::from_i32(-1), BigInteger::from_i32(0)); // ~-1 = 0
-        assert_eq!(!&BigInteger::from_i32(-8), BigInteger::from_i32(7)); // ~-8 = 7
+        assert_eq!(!&BigInt::from_i32(0), BigInt::from_i32(-1)); // ~0 = -1
+        assert_eq!(!&BigInt::from_i32(5), BigInt::from_i32(-6)); // ~5 = -6
+        assert_eq!(!&BigInt::from_i32(-1), BigInt::from_i32(0)); // ~-1 = 0
+        assert_eq!(!&BigInt::from_i32(-8), BigInt::from_i32(7)); // ~-8 = 7
     }
 
     #[test]
     fn not_is_involution() {
         // !!x == x
-        let a = BigInteger::from_i64(-123456789);
+        let a = BigInt::from_i64(-123456789);
         assert_eq!(!&!&a, a);
     }
 
@@ -2889,8 +2877,8 @@ mod tests {
             -(1 << 40),
         ];
         for &a in &vals {
-            let got = !&BigInteger::from_i64(a);
-            let want = BigInteger::from_i128(!(a as i128));
+            let got = !&BigInt::from_i64(a);
+            let want = BigInt::from_i128(!(a as i128));
             assert_eq!(got, want, "!{a}");
         }
     }
@@ -2899,27 +2887,27 @@ mod tests {
     fn twos_complement_words_layout() {
         // 正數：magnitude 右對齊、上方補 0
         assert_eq!(
-            to_twos_complement_words(&BigInteger::from_u32(5), 3),
+            to_twos_complement_words(&BigInt::from_u32(5), 3),
             vec![0, 0, 5]
         );
         // 零：全 0
         assert_eq!(
-            to_twos_complement_words(&BigInteger::from_u32(0), 2),
+            to_twos_complement_words(&BigInt::from_u32(0), 2),
             vec![0, 0]
         );
         // -1：無限個 1 → 每字皆全 1（Limb::MAX）
         assert_eq!(
-            to_twos_complement_words(&BigInteger::from_i32(-1), 2),
+            to_twos_complement_words(&BigInt::from_i32(-1), 2),
             vec![Limb::MAX, Limb::MAX]
         );
         // -2 = ...1110 → 低字為全 1 減 1
         assert_eq!(
-            to_twos_complement_words(&BigInteger::from_i32(-2), 1),
+            to_twos_complement_words(&BigInt::from_i32(-2), 1),
             vec![Limb::MAX - 1]
         );
         // -256 → 低字為全 1 減 0xFF，上方字符號延伸為全 1
         assert_eq!(
-            to_twos_complement_words(&BigInteger::from_i32(-256), 2),
+            to_twos_complement_words(&BigInt::from_i32(-256), 2),
             vec![Limb::MAX, Limb::MAX - 0xFF]
         );
     }
@@ -2939,7 +2927,7 @@ mod tests {
             -(0xFFFF_FFFFi64),
         ];
         for &a in &vals {
-            let words = to_twos_complement_words(&BigInteger::from_i64(a), 2);
+            let words = to_twos_complement_words(&BigInt::from_i64(a), 2);
             // i128 兩補數位元當參照，取高/低各一個 Limb（WORD_BITS 位）；i128 右移 32/64 皆不溢位
             let a128 = a as i128;
             let hi = (a128 >> WORD_BITS) as Limb; // 算術右移 → 符號延伸
@@ -2952,81 +2940,81 @@ mod tests {
     fn bitand_basic() {
         // 正 & 正
         assert_eq!(
-            &BigInteger::from_u32(12) & &BigInteger::from_u32(10),
-            BigInteger::from_u32(8)
+            &BigInt::from_u32(12) & &BigInt::from_u32(10),
+            BigInt::from_u32(8)
         );
         // 負 & 正（-8 = ...11111000）
         assert_eq!(
-            &BigInteger::from_i32(-8) & &BigInteger::from_i32(6),
-            BigInteger::from_i32(0)
+            &BigInt::from_i32(-8) & &BigInt::from_i32(6),
+            BigInt::from_i32(0)
         );
         assert_eq!(
-            &BigInteger::from_i32(-8) & &BigInteger::from_i32(12),
-            BigInteger::from_i32(8)
+            &BigInt::from_i32(-8) & &BigInt::from_i32(12),
+            BigInt::from_i32(8)
         );
         // 負 & 負 → 負
         assert_eq!(
-            &BigInteger::from_i32(-1) & &BigInteger::from_i32(-1),
-            BigInteger::from_i32(-1)
+            &BigInt::from_i32(-1) & &BigInt::from_i32(-1),
+            BigInt::from_i32(-1)
         );
         assert_eq!(
-            &BigInteger::from_i32(-2) & &BigInteger::from_i32(-3),
-            BigInteger::from_i32(-4)
+            &BigInt::from_i32(-2) & &BigInt::from_i32(-3),
+            BigInt::from_i32(-4)
         );
         // 任一為 0
         assert_eq!(
-            &BigInteger::from_u32(0) & &BigInteger::from_i32(-5),
-            BigInteger::from_u32(0)
+            &BigInt::from_u32(0) & &BigInt::from_i32(-5),
+            BigInt::from_u32(0)
         );
     }
 
     #[test]
     fn bitor_basic() {
         assert_eq!(
-            &BigInteger::from_u32(12) | &BigInteger::from_u32(10),
-            BigInteger::from_u32(14)
+            &BigInt::from_u32(12) | &BigInt::from_u32(10),
+            BigInt::from_u32(14)
         );
         assert_eq!(
-            &BigInteger::from_i32(-8) | &BigInteger::from_i32(6),
-            BigInteger::from_i32(-2)
+            &BigInt::from_i32(-8) | &BigInt::from_i32(6),
+            BigInt::from_i32(-2)
         );
         assert_eq!(
-            &BigInteger::from_i32(-1) | &BigInteger::from_i32(-1),
-            BigInteger::from_i32(-1)
+            &BigInt::from_i32(-1) | &BigInt::from_i32(-1),
+            BigInt::from_i32(-1)
         );
         // 一方為 0 → 另一方
         assert_eq!(
-            &BigInteger::from_u32(0) | &BigInteger::from_i32(-5),
-            BigInteger::from_i32(-5)
+            &BigInt::from_u32(0) | &BigInt::from_i32(-5),
+            BigInt::from_i32(-5)
         );
         assert_eq!(
-            &BigInteger::from_i32(7) | &BigInteger::from_u32(0),
-            BigInteger::from_i32(7)
+            &BigInt::from_i32(7) | &BigInt::from_u32(0),
+            BigInt::from_i32(7)
         );
     }
 
     #[test]
     fn bitxor_basic() {
         assert_eq!(
-            &BigInteger::from_u32(5) ^ &BigInteger::from_u32(3),
-            BigInteger::from_u32(6)
+            &BigInt::from_u32(5) ^ &BigInt::from_u32(3),
+            BigInt::from_u32(6)
         );
         assert_eq!(
-            &BigInteger::from_i32(-1) ^ &BigInteger::from_i32(5),
-            BigInteger::from_i32(-6)
+            &BigInt::from_i32(-1) ^ &BigInt::from_i32(5),
+            BigInt::from_i32(-6)
         );
         assert_eq!(
-            &BigInteger::from_i32(-1) ^ &BigInteger::from_i32(-1),
-            BigInteger::from_i32(0)
+            &BigInt::from_i32(-1) ^ &BigInt::from_i32(-1),
+            BigInt::from_i32(0)
         );
         // 一方為 0 → 另一方
         assert_eq!(
-            &BigInteger::from_u32(0) ^ &BigInteger::from_i32(-5),
-            BigInteger::from_i32(-5)
+            &BigInt::from_u32(0) ^ &BigInt::from_i32(-5),
+            BigInt::from_i32(-5)
         );
         assert_eq!(
-            &BigInteger::from_i32(7) ^ &BigInteger::from_u32(0),
-            BigInteger::from_i32(7)
+            &BigInt::from_i32(7) ^ &BigInt::from_u32(0),
+            BigInt::from_i32(7)
         );
     }
 
@@ -3050,20 +3038,20 @@ mod tests {
         ];
         for &a in &vals {
             for &b in &vals {
-                let (x, y) = (BigInteger::from_i64(a), BigInteger::from_i64(b));
+                let (x, y) = (BigInt::from_i64(a), BigInt::from_i64(b));
                 assert_eq!(
                     &x & &y,
-                    BigInteger::from_i128((a as i128) & (b as i128)),
+                    BigInt::from_i128((a as i128) & (b as i128)),
                     "{a} & {b}"
                 );
                 assert_eq!(
                     &x | &y,
-                    BigInteger::from_i128((a as i128) | (b as i128)),
+                    BigInt::from_i128((a as i128) | (b as i128)),
                     "{a} | {b}"
                 );
                 assert_eq!(
                     &x ^ &y,
-                    BigInteger::from_i128((a as i128) ^ (b as i128)),
+                    BigInt::from_i128((a as i128) ^ (b as i128)),
                     "{a} ^ {b}"
                 );
             }
@@ -3072,7 +3060,7 @@ mod tests {
 
     #[test]
     fn test_bit_positive() {
-        let n = BigInteger::from_u32(0b1010);
+        let n = BigInt::from_u32(0b1010);
         assert!(!n.test_bit(0));
         assert!(n.test_bit(1));
         assert!(!n.test_bit(2));
@@ -3084,12 +3072,12 @@ mod tests {
     #[test]
     fn test_bit_negative() {
         // -1 = ...1111，任意位皆 1
-        let neg1 = BigInteger::from_i32(-1);
+        let neg1 = BigInt::from_i32(-1);
         assert!(neg1.test_bit(0));
         assert!(neg1.test_bit(31));
         assert!(neg1.test_bit(1000));
         // -2 = ...1110
-        let neg2 = BigInteger::from_i32(-2);
+        let neg2 = BigInt::from_i32(-2);
         assert!(!neg2.test_bit(0));
         assert!(neg2.test_bit(1));
         assert!(neg2.test_bit(1000));
@@ -3113,7 +3101,7 @@ mod tests {
         ];
         for &a in &vals {
             for n in 0..96u32 {
-                let got = BigInteger::from_i64(a).test_bit(n);
+                let got = BigInt::from_i64(a).test_bit(n);
                 let want = (((a as i128) >> n) & 1) == 1;
                 assert_eq!(got, want, "test_bit({a}, {n})");
             }
@@ -3122,18 +3110,15 @@ mod tests {
 
     #[test]
     fn set_clear_flip_bit_basic() {
-        let five = BigInteger::from_u32(0b101);
-        assert_eq!(five.set_bit(1), BigInteger::from_u32(0b111)); // 5 | 2 = 7
-        assert_eq!(five.set_bit(0), BigInteger::from_u32(0b101)); // 已是 1，不變
-        assert_eq!(five.clear_bit(0), BigInteger::from_u32(0b100)); // 5 & ~1 = 4
-        assert_eq!(five.clear_bit(1), BigInteger::from_u32(0b101)); // 已是 0，不變
-        assert_eq!(five.flip_bit(2), BigInteger::from_u32(0b001)); // 5 ^ 4 = 1
-        assert_eq!(five.set_bit(10), BigInteger::from_u32(0b100_0000_0101)); // 跨到高位
+        let five = BigInt::from_u32(0b101);
+        assert_eq!(five.set_bit(1), BigInt::from_u32(0b111)); // 5 | 2 = 7
+        assert_eq!(five.set_bit(0), BigInt::from_u32(0b101)); // 已是 1，不變
+        assert_eq!(five.clear_bit(0), BigInt::from_u32(0b100)); // 5 & ~1 = 4
+        assert_eq!(five.clear_bit(1), BigInt::from_u32(0b101)); // 已是 0，不變
+        assert_eq!(five.flip_bit(2), BigInt::from_u32(0b001)); // 5 ^ 4 = 1
+        assert_eq!(five.set_bit(10), BigInt::from_u32(0b100_0000_0101)); // 跨到高位
         // 負數：-1 = ...1111，清第 0 位 → -2
-        assert_eq!(
-            BigInteger::from_i32(-1).clear_bit(0),
-            BigInteger::from_i32(-2)
-        );
+        assert_eq!(BigInt::from_i32(-1).clear_bit(0), BigInt::from_i32(-2));
     }
 
     #[test]
@@ -3152,21 +3137,21 @@ mod tests {
         ];
         for &a in &vals {
             for n in 0..70u32 {
-                let x = BigInteger::from_i64(a);
+                let x = BigInt::from_i64(a);
                 let bit = 1i128 << n;
                 assert_eq!(
                     x.set_bit(n),
-                    BigInteger::from_i128((a as i128) | bit),
+                    BigInt::from_i128((a as i128) | bit),
                     "set_bit({a},{n})"
                 );
                 assert_eq!(
                     x.clear_bit(n),
-                    BigInteger::from_i128((a as i128) & !bit),
+                    BigInt::from_i128((a as i128) & !bit),
                     "clear_bit({a},{n})"
                 );
                 assert_eq!(
                     x.flip_bit(n),
-                    BigInteger::from_i128((a as i128) ^ bit),
+                    BigInt::from_i128((a as i128) ^ bit),
                     "flip_bit({a},{n})"
                 );
             }
@@ -3175,17 +3160,17 @@ mod tests {
 
     #[test]
     fn get_lowest_set_bit_basic() {
-        assert_eq!(BigInteger::from_u32(0).get_lowest_set_bit(), None);
-        assert_eq!(BigInteger::from_u32(1).get_lowest_set_bit(), Some(0));
-        assert_eq!(BigInteger::from_u32(0b1100).get_lowest_set_bit(), Some(2));
-        assert_eq!(BigInteger::from_u32(8).get_lowest_set_bit(), Some(3));
+        assert_eq!(BigInt::from_u32(0).get_lowest_set_bit(), None);
+        assert_eq!(BigInt::from_u32(1).get_lowest_set_bit(), Some(0));
+        assert_eq!(BigInt::from_u32(0b1100).get_lowest_set_bit(), Some(2));
+        assert_eq!(BigInt::from_u32(8).get_lowest_set_bit(), Some(3));
         // 跨零字：2^40 magnitude = [256, 0]，最低設定位在 40
-        assert_eq!(BigInteger::from_u64(1 << 40).get_lowest_set_bit(), Some(40));
+        assert_eq!(BigInt::from_u64(1 << 40).get_lowest_set_bit(), Some(40));
         // 整字邊界：2^32
-        assert_eq!(BigInteger::from_u64(1 << 32).get_lowest_set_bit(), Some(32));
+        assert_eq!(BigInt::from_u64(1 << 32).get_lowest_set_bit(), Some(32));
         // 負數與絕對值相同
-        assert_eq!(BigInteger::from_i32(-12).get_lowest_set_bit(), Some(2));
-        assert_eq!(BigInteger::from_i32(-1).get_lowest_set_bit(), Some(0));
+        assert_eq!(BigInt::from_i32(-12).get_lowest_set_bit(), Some(2));
+        assert_eq!(BigInt::from_i32(-1).get_lowest_set_bit(), Some(0));
     }
 
     #[test]
@@ -3193,7 +3178,7 @@ mod tests {
         // 對照原生 u64::trailing_zeros（非零值）
         let vals: [u64; 7] = [1, 2, 0b1100, 255, 256, 1 << 40, u64::MAX];
         for &a in &vals {
-            let got = BigInteger::from_u64(a).get_lowest_set_bit();
+            let got = BigInt::from_u64(a).get_lowest_set_bit();
             assert_eq!(got, Some(a.trailing_zeros()), "value {a}");
         }
     }
@@ -3338,18 +3323,18 @@ mod tests {
     fn multiply_magnitudes_grows_to_two_words() {
         // 0x10000 * 0x10000 = 2^32（值比對，與 Limb 寬度無關）
         assert_eq!(
-            &BigInteger::from_u32(0x1_0000) * &BigInteger::from_u32(0x1_0000),
-            BigInteger::from_u64(1 << 32)
+            &BigInt::from_u32(0x1_0000) * &BigInt::from_u32(0x1_0000),
+            BigInt::from_u64(1 << 32)
         );
     }
 
     #[test]
     fn multiply_magnitudes_max_words() {
         // u64::MAX² 對照原生 u128
-        let m = BigInteger::from_u64(u64::MAX);
+        let m = BigInt::from_u64(u64::MAX);
         assert_eq!(
             &m * &m,
-            BigInteger::from_u128((u64::MAX as u128) * (u64::MAX as u128))
+            BigInt::from_u128((u64::MAX as u128) * (u64::MAX as u128))
         );
     }
 
@@ -3359,10 +3344,10 @@ mod tests {
         let vals: [u64; 6] = [1, 2, 0xFFFF_FFFF, 0x1_0000_0000, 0x1234_5678_9ABC, u64::MAX];
         for &a in &vals {
             for &b in &vals {
-                let x = BigInteger::from_u64(a);
-                let y = BigInteger::from_u64(b);
+                let x = BigInt::from_u64(a);
+                let y = BigInt::from_u64(b);
                 let got = multiply_magnitudes(&x.magnitude, &y.magnitude);
-                let want = Vec::from(BigInteger::from_u128(a as u128 * b as u128).magnitude);
+                let want = Vec::from(BigInt::from_u128(a as u128 * b as u128).magnitude);
                 assert_eq!(got, want, "{a} * {b}");
             }
         }
@@ -3377,23 +3362,23 @@ mod tests {
 
     #[test]
     fn is_power_of_two_predicate() {
-        assert!(BigInteger::from_u32(1).is_power_of_two()); // 2^0
-        assert!(BigInteger::from_u32(2).is_power_of_two());
-        assert!(BigInteger::from_u32(8).is_power_of_two());
-        assert!(BigInteger::from_u64(1 << 40).is_power_of_two());
-        assert!(!BigInteger::from_u32(3).is_power_of_two()); // 0b11
-        assert!(!BigInteger::from_u32(0).is_power_of_two()); // 零
-        assert!(!BigInteger::from_i32(-8).is_power_of_two()); // 負數
+        assert!(BigInt::from_u32(1).is_power_of_two()); // 2^0
+        assert!(BigInt::from_u32(2).is_power_of_two());
+        assert!(BigInt::from_u32(8).is_power_of_two());
+        assert!(BigInt::from_u64(1 << 40).is_power_of_two());
+        assert!(!BigInt::from_u32(3).is_power_of_two()); // 0b11
+        assert!(!BigInt::from_u32(0).is_power_of_two()); // 零
+        assert!(!BigInt::from_i32(-8).is_power_of_two()); // 負數
     }
 
     #[test]
     fn divide_words_matches_shift() {
         // 非負數砍掉低 w 個字 == 右移 32·w 位（Shr 為 floor，正數下與截斷一致）
         let vals = [
-            BigInteger::from_u128(0x1122_3344_5566_7788_99AA_BBCC_DDEE_FF00),
-            BigInteger::from_u128(u128::MAX),
-            BigInteger::from_u64(0xDEAD_BEEF_0000_0001),
-            BigInteger::from_u32(0x8000_0001),
+            BigInt::from_u128(0x1122_3344_5566_7788_99AA_BBCC_DDEE_FF00),
+            BigInt::from_u128(u128::MAX),
+            BigInt::from_u64(0xDEAD_BEEF_0000_0001),
+            BigInt::from_u32(0x8000_0001),
         ];
         for x in &vals {
             for w in 0usize..=5 {
@@ -3407,19 +3392,15 @@ mod tests {
     #[test]
     fn divide_words_edge_cases() {
         // w >= 字數 → 0
-        let x = BigInteger::from_u64(0xDEAD_BEEF_0000_0001); // 2 個字
-        assert_eq!(x.divide_words(2), BigInteger::from_u32(0));
-        assert_eq!(x.divide_words(9), BigInteger::from_u32(0));
+        let x = BigInt::from_u64(0xDEAD_BEEF_0000_0001); // 2 個字
+        assert_eq!(x.divide_words(2), BigInt::from_u32(0));
+        assert_eq!(x.divide_words(9), BigInt::from_u32(0));
         // 零本身
-        assert_eq!(
-            BigInteger::from_u32(0).divide_words(0),
-            BigInteger::from_u32(0)
-        );
+        assert_eq!(BigInt::from_u32(0).divide_words(0), BigInt::from_u32(0));
         // 負數：截斷向零、符號保留（-(0x7EADBEEF·2^WORD_BITS + 1) 砍低 1 字 → -0x7EADBEEF）
-        let pos =
-            &(&BigInteger::from_u32(0x7EAD_BEEF) << WORD_BITS as u32) + &BigInteger::from_u32(1);
+        let pos = &(&BigInt::from_u32(0x7EAD_BEEF) << WORD_BITS as u32) + &BigInt::from_u32(1);
         let neg = -&pos;
-        assert_eq!(neg.divide_words(1), BigInteger::from_i64(-0x7EAD_BEEF));
+        assert_eq!(neg.divide_words(1), BigInt::from_i64(-0x7EAD_BEEF));
     }
 
     #[test]
@@ -3471,21 +3452,21 @@ mod tests {
     #[test]
     fn multiply_monty_matches() {
         // MonPro(a·R mod m, b) = a·b mod m（普通形式），R = 2^(32n)
-        fn to_words(v: &BigInteger, n: usize) -> Vec<Limb> {
+        fn to_words(v: &BigInt, n: usize) -> Vec<Limb> {
             let mut w = vec![0; n];
             w[n - v.magnitude.len()..].copy_from_slice(&v.magnitude);
             w
         }
         let moduli = [
-            BigInteger::from_u32(97),            // n=1（走單字特例）
-            BigInteger::from_u64(0x1_0000_0001), // n=2
-            BigInteger::from_str_radix("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFF61", 16).unwrap(), // n=4
+            BigInt::from_u32(97),            // n=1（走單字特例）
+            BigInt::from_u64(0x1_0000_0001), // n=2
+            BigInt::from_str_radix("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFF61", 16).unwrap(), // n=4
         ];
         let vals = [
-            BigInteger::from_u32(0),
-            BigInteger::from_u32(1),
-            BigInteger::from_u64(0x1234_5678_9ABC),
-            BigInteger::from_str_radix("A1B2C3D4E5F60718", 16).unwrap(),
+            BigInt::from_u32(0),
+            BigInt::from_u32(1),
+            BigInt::from_u64(0x1234_5678_9ABC),
+            BigInt::from_str_radix("A1B2C3D4E5F60718", 16).unwrap(),
         ];
         for m in &moduli {
             let n = m.magnitude.len();
@@ -3498,7 +3479,7 @@ mod tests {
                     let mut acc = vec![0; n + 1];
                     let mut xx = x.clone();
                     multiply_monty(&mut acc, &mut xx, &y, &m.magnitude, m_prime, false);
-                    let got = BigInteger::from_checked_magnitude(1, xx);
+                    let got = BigInt::from_checked_magnitude(1, xx);
                     let expected = &(a * b) % m;
                     assert_eq!(got, expected, "m={m} a={a} b={b}");
                 }
@@ -3511,26 +3492,26 @@ mod tests {
         // convert=false 與 mod_square_monty 都在 Montgomery 域運作：
         // 餵 Montgomery 形式的 a（= a·R mod m），域內運算後 montgomery_reduce 轉回，
         // 應等於普通形式的 a^e mod m / a² mod m。
-        fn to_words(v: &BigInteger, n: usize) -> Vec<Limb> {
+        fn to_words(v: &BigInt, n: usize) -> Vec<Limb> {
             let mut w = vec![0; n];
             w[n - v.magnitude.len()..].copy_from_slice(&v.magnitude);
             w
         }
-        fn from_monty(y_mont: &BigInteger, m: &BigInteger) -> BigInteger {
+        fn from_monty(y_mont: &BigInt, m: &BigInt) -> BigInt {
             let n = m.magnitude.len();
             let mut buf = to_words(y_mont, n);
             montgomery_reduce(&mut buf, &m.magnitude, m.m_prime());
-            BigInteger::from_checked_magnitude(1, buf)
+            BigInt::from_checked_magnitude(1, buf)
         }
         let moduli = [
-            BigInteger::from_u32(97), // small_monty_modulus = true
-            BigInteger::from_u64(0x1_0000_0001),
-            BigInteger::from_str_radix("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFF61", 16).unwrap(), // = false
+            BigInt::from_u32(97), // small_monty_modulus = true
+            BigInt::from_u64(0x1_0000_0001),
+            BigInt::from_str_radix("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFF61", 16).unwrap(), // = false
         ];
         let raws = [
-            BigInteger::from_u32(2),
-            BigInteger::from_u64(0x1234_5678_9ABC),
-            BigInteger::from_str_radix("A1B2C3D4E5F60718", 16).unwrap(),
+            BigInt::from_u32(2),
+            BigInt::from_u64(0x1234_5678_9ABC),
+            BigInt::from_str_radix("A1B2C3D4E5F60718", 16).unwrap(),
         ];
         let exps = [1u32, 2, 3, 17, 100];
         for m in &moduli {
@@ -3539,13 +3520,13 @@ mod tests {
                 let a = raw.rem_euclid(m); // 0 <= a < m
                 let a_mont = &(&a << ((WORD_BITS * n) as u32)) % m; // â = a·R mod m
                 // 域內平方：â² → Montgomery a²；轉回 == a² mod m
-                let sq = BigInteger::mod_square_monty(&a_mont, m);
+                let sq = BigInt::mod_square_monty(&a_mont, m);
                 assert_eq!(from_monty(&sq, m), &(&a * &a) % m, "square m={m} a={a}");
                 // 域內冪次(convert=false)：â^e → Montgomery a^e；轉回 == convert=true
                 for &ev in &exps {
-                    let e = BigInteger::from_u32(ev);
-                    let y_false = BigInteger::mod_pow_monty(&a_mont, &e, m, false);
-                    let expected = BigInteger::mod_pow_monty(&a, &e, m, true);
+                    let e = BigInt::from_u32(ev);
+                    let y_false = BigInt::mod_pow_monty(&a_mont, &e, m, false);
+                    let expected = BigInt::mod_pow_monty(&a, &e, m, true);
                     assert_eq!(from_monty(&y_false, m), expected, "pow m={m} a={a} e={ev}");
                 }
             }
@@ -3556,20 +3537,20 @@ mod tests {
     fn mod_pow_monty_matches_barrett() {
         // 奇模數：Montgomery 路徑必與已驗證的 Barrett 路徑一致
         let odds = [
-            BigInteger::from_u32(97),
-            BigInteger::from_u64(0xFFFF_FFFF_FFFF_FFFB),
-            BigInteger::from_str_radix("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFF61", 16).unwrap(),
+            BigInt::from_u32(97),
+            BigInt::from_u64(0xFFFF_FFFF_FFFF_FFFB),
+            BigInt::from_str_radix("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFF61", 16).unwrap(),
         ];
         let bases = [2i64, 3, 7, 1234567, -55];
         let exps = [1u32, 2, 3, 17, 65537, 123456];
         for m in &odds {
             for &bv in &bases {
-                let base = BigInteger::from_i64(bv).rem_euclid(m); // 0 <= base < m
+                let base = BigInt::from_i64(bv).rem_euclid(m); // 0 <= base < m
                 for &ev in &exps {
-                    let exp = BigInteger::from_u32(ev);
+                    let exp = BigInt::from_u32(ev);
                     assert_eq!(
-                        BigInteger::mod_pow_monty(&base, &exp, m, true),
-                        BigInteger::mod_pow_barrett(&base, &exp, m),
+                        BigInt::mod_pow_monty(&base, &exp, m, true),
+                        BigInt::mod_pow_barrett(&base, &exp, m),
                         "m={m} base={base} exp={exp}"
                     );
                 }
@@ -3580,21 +3561,21 @@ mod tests {
     #[test]
     fn montgomery_reduce_matches() {
         // reduce(a·R mod m) = a mod m（把 Montgomery 域轉回普通形式）
-        fn to_words(v: &BigInteger, n: usize) -> Vec<Limb> {
+        fn to_words(v: &BigInt, n: usize) -> Vec<Limb> {
             let mut w = vec![0; n];
             w[n - v.magnitude.len()..].copy_from_slice(&v.magnitude);
             w
         }
         let moduli = [
-            BigInteger::from_u32(97),
-            BigInteger::from_u64(0x1_0000_0001),
-            BigInteger::from_str_radix("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFF61", 16).unwrap(),
+            BigInt::from_u32(97),
+            BigInt::from_u64(0x1_0000_0001),
+            BigInt::from_str_radix("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFF61", 16).unwrap(),
         ];
         let vals = [
-            BigInteger::from_u32(0),
-            BigInteger::from_u32(1),
-            BigInteger::from_u64(0x1234_5678_9ABC),
-            BigInteger::from_str_radix("A1B2C3D4E5F60718", 16).unwrap(),
+            BigInt::from_u32(0),
+            BigInt::from_u32(1),
+            BigInt::from_u64(0x1234_5678_9ABC),
+            BigInt::from_str_radix("A1B2C3D4E5F60718", 16).unwrap(),
         ];
         for m in &moduli {
             let n = m.magnitude.len();
@@ -3603,7 +3584,7 @@ mod tests {
                 let a_mont = &(a << ((WORD_BITS * n) as u32)) % m; // a·R mod m（< m）
                 let mut x = to_words(&a_mont, n);
                 montgomery_reduce(&mut x, &m.magnitude, m_prime);
-                let got = BigInteger::from_checked_magnitude(1, x);
+                let got = BigInt::from_checked_magnitude(1, x);
                 let expected = a % m;
                 assert_eq!(got, expected, "m={m} a={a}");
             }
@@ -3613,21 +3594,21 @@ mod tests {
     #[test]
     fn square_monty_matches_multiply() {
         // square_monty(x) 必等於 multiply_monty(x, x)（後者已驗證，當 oracle）
-        fn to_words(v: &BigInteger, n: usize) -> Vec<Limb> {
+        fn to_words(v: &BigInt, n: usize) -> Vec<Limb> {
             let mut w = vec![0; n];
             w[n - v.magnitude.len()..].copy_from_slice(&v.magnitude);
             w
         }
         let moduli = [
-            BigInteger::from_u32(97),
-            BigInteger::from_u64(0x1_0000_0001),
-            BigInteger::from_str_radix("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFF61", 16).unwrap(),
+            BigInt::from_u32(97),
+            BigInt::from_u64(0x1_0000_0001),
+            BigInt::from_str_radix("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFF61", 16).unwrap(),
         ];
         let vals = [
-            BigInteger::from_u32(0),
-            BigInteger::from_u32(1),
-            BigInteger::from_u64(0x1234_5678_9ABC),
-            BigInteger::from_str_radix("A1B2C3D4E5F60718", 16).unwrap(),
+            BigInt::from_u32(0),
+            BigInt::from_u32(1),
+            BigInt::from_u64(0x1234_5678_9ABC),
+            BigInt::from_str_radix("A1B2C3D4E5F60718", 16).unwrap(),
         ];
         for m in &moduli {
             let n = m.magnitude.len();
@@ -3644,8 +3625,8 @@ mod tests {
                 multiply_monty(&mut acc2, &mut xm, &y, &m.magnitude, m_prime, false);
 
                 assert_eq!(
-                    BigInteger::from_checked_magnitude(1, xs),
-                    BigInteger::from_checked_magnitude(1, xm),
+                    BigInt::from_checked_magnitude(1, xs),
+                    BigInt::from_checked_magnitude(1, xm),
                     "m={m} v={v}"
                 );
             }
@@ -3656,9 +3637,9 @@ mod tests {
     fn m_prime_property() {
         // m' 滿足 m_low · m' ≡ -1 (mod 2³²)，即 wrapping_mul == u32::MAX
         let odds = [
-            BigInteger::from_u32(97),
-            BigInteger::from_u64(0xFFFF_FFFF_FFFF_FFFB),
-            BigInteger::from_str_radix("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFF61", 16).unwrap(),
+            BigInt::from_u32(97),
+            BigInt::from_u64(0xFFFF_FFFF_FFFF_FFFB),
+            BigInt::from_str_radix("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFF61", 16).unwrap(),
         ];
         for m in &odds {
             let m_low = *m.magnitude.last().unwrap();
@@ -3671,26 +3652,26 @@ mod tests {
     #[test]
     fn get_window_list_reconstructs_exponent() {
         // 把視窗項串回整數：每項先接上 mul_t 的位元，再補 zeros 個 0 位元
-        fn reconstruct(list: &[u32]) -> BigInteger {
-            let mut e = BigInteger::from_u32(0);
+        fn reconstruct(list: &[u32]) -> BigInt {
+            let mut e = BigInt::from_u32(0);
             for &w in list {
                 if w == u32::MAX {
                     break;
                 }
                 let mul_t = w & 0xFF;
                 let zeros = w >> 8;
-                e = &(&e << bit_len(mul_t as Limb)) + &BigInteger::from_u32(mul_t);
+                e = &(&e << bit_len(mul_t as Limb)) + &BigInt::from_u32(mul_t);
                 e = &e << zeros;
             }
             e
         }
 
         let exps = [
-            BigInteger::from_u32(1),
-            BigInteger::from_u32(13),
-            BigInteger::from_u32(0xFFFF_FFFF),
-            BigInteger::from_u64(0x1234_5678_9ABC_DEF0), // 尾端有 0，測 zeros 收尾
-            BigInteger::from_str_radix("FFEEDDCCBBAA99887766554433221100F0F0", 16).unwrap(),
+            BigInt::from_u32(1),
+            BigInt::from_u32(13),
+            BigInt::from_u32(0xFFFF_FFFF),
+            BigInt::from_u64(0x1234_5678_9ABC_DEF0), // 尾端有 0，測 zeros 收尾
+            BigInt::from_str_radix("FFEEDDCCBBAA99887766554433221100F0F0", 16).unwrap(),
         ];
         for e in &exps {
             for extra_bits in 0usize..=4 {
@@ -3703,10 +3684,10 @@ mod tests {
     #[test]
     fn reduce_barrett_matches_mod() {
         // 依 m 預算 Barrett 常數 mr / yu（正式版由 mod_pow_barrett 算一次）
-        fn barrett_params(m: &BigInteger) -> (BigInteger, BigInteger) {
+        fn barrett_params(m: &BigInt) -> (BigInt, BigInt) {
             let k = m.magnitude.len() as u32;
             let wb = WORD_BITS as u32;
-            let one = BigInteger::from_u32(1);
+            let one = BigInt::from_u32(1);
             let mr = &one << (wb * (k + 1)); // b^(k+1) = 2^(wb·(k+1))
             let hi = &one << (2 * wb * k); // b^(2k) = 2^(2·wb·k)
             let yu = &hi / m; // ⌊b^(2k) / m⌋
@@ -3714,42 +3695,42 @@ mod tests {
         }
 
         let moduli = [
-            BigInteger::from_u32(97),
-            BigInteger::from_u64(0xFFFF_FFFB),   // 接近 1 個字上限
-            BigInteger::from_u64(0x1_0000_000F), // 2 個字
-            BigInteger::from_str_radix("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFF61", 16).unwrap(), // 多字大模數
+            BigInt::from_u32(97),
+            BigInt::from_u64(0xFFFF_FFFB),   // 接近 1 個字上限
+            BigInt::from_u64(0x1_0000_000F), // 2 個字
+            BigInt::from_str_radix("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFF61", 16).unwrap(), // 多字大模數
         ];
 
         for m in &moduli {
             let (mr, yu) = barrett_params(m);
-            let one = BigInteger::from_u32(1);
+            let one = BigInt::from_u32(1);
             let m_minus_1 = m - &one;
             // 涵蓋 x < m、= m、剛過 m、以及接近 m² 的大值（觸發估計路徑）
             let xs = [
-                BigInteger::from_u32(0),
+                BigInt::from_u32(0),
                 one.clone(),
                 m_minus_1.clone(),
                 m.clone(),
                 m + &one,
-                &(m * &BigInteger::from_u32(2)) + &BigInteger::from_u32(3),
+                &(m * &BigInt::from_u32(2)) + &BigInt::from_u32(3),
                 &m_minus_1 * &m_minus_1, // (m-1)² ~ m²
                 &(m * m) - &one,         // m² - 1
             ];
             for x in &xs {
                 assert_eq!(
-                    BigInteger::reduce_barrett(x, m, &mr, &yu),
+                    BigInt::reduce_barrett(x, m, &mr, &yu),
                     x % m,
                     "m={m}, x={x}"
                 );
             }
             // 乘積 sweep：x = a·b（a,b < m ⇒ x < m²），涵蓋 r1<r3 需要 mr 修正的情形
             for ai in 0u32..12 {
-                let a = &(&m_minus_1 * &BigInteger::from_u32(0x2545_F491 ^ ai)) % m; // a ∈ [0, m)
+                let a = &(&m_minus_1 * &BigInt::from_u32(0x2545_F491 ^ ai)) % m; // a ∈ [0, m)
                 for bi in 0u32..12 {
-                    let b = &(&m_minus_1 * &BigInteger::from_u32(0x9E37_79B9 ^ bi)) % m; // b ∈ [0, m)
+                    let b = &(&m_minus_1 * &BigInt::from_u32(0x9E37_79B9 ^ bi)) % m; // b ∈ [0, m)
                     let x = &a * &b; // x < m²
                     assert_eq!(
-                        BigInteger::reduce_barrett(&x, m, &mr, &yu),
+                        BigInt::reduce_barrett(&x, m, &mr, &yu),
                         &x % m,
                         "m={m}, x={x}"
                     );
@@ -3762,13 +3743,13 @@ mod tests {
     fn remainder_words_matches_mod() {
         // 留低 w 個字 == self mod 2^(32·w)；截斷向零，故對任意符號都與 `%` 一致
         let vals = [
-            BigInteger::from_u128(0x1122_3344_5566_7788_99AA_BBCC_DDEE_FF00),
-            BigInteger::from_i128(-0x1122_3344_5566_7788_99AA_BBCC_DDEE_FF00),
-            BigInteger::from_u64(0xDEAD_BEEF_0000_0001),
+            BigInt::from_u128(0x1122_3344_5566_7788_99AA_BBCC_DDEE_FF00),
+            BigInt::from_i128(-0x1122_3344_5566_7788_99AA_BBCC_DDEE_FF00),
+            BigInt::from_u64(0xDEAD_BEEF_0000_0001),
         ];
         for x in &vals {
             for w in 0usize..=5 {
-                let modulus = &BigInteger::from_u32(1) << ((WORD_BITS * w) as u32); // 2^(32w)
+                let modulus = &BigInt::from_u32(1) << ((WORD_BITS * w) as u32); // 2^(32w)
                 let got = x.remainder_words(w);
                 let expected = x % &modulus;
                 assert_eq!(got, expected, "x={x}, w={w}");
@@ -3779,15 +3760,15 @@ mod tests {
     #[test]
     fn remainder_words_trims_leading_zero_words() {
         // 留下的高位字為零 → 必須修剪：2^(2·WORD_BITS)+5 留低 2 字 [0,5] → 5
-        let x = &(&BigInteger::from_u32(1) << (2 * WORD_BITS as u32)) + &BigInteger::from_u32(5);
-        assert_eq!(x.remainder_words(2), BigInteger::from_u32(5));
+        let x = &(&BigInt::from_u32(1) << (2 * WORD_BITS as u32)) + &BigInt::from_u32(5);
+        assert_eq!(x.remainder_words(2), BigInt::from_u32(5));
 
         // 留下的字全為零 → 必須歸零（且 sign 正規化成 0）：2·2^(2·WORD_BITS) 留低 2 字 → 0
-        let y = &BigInteger::from_u32(2) << (2 * WORD_BITS as u32);
-        assert_eq!(y.remainder_words(2), BigInteger::from_u32(0));
+        let y = &BigInt::from_u32(2) << (2 * WORD_BITS as u32);
+        assert_eq!(y.remainder_words(2), BigInt::from_u32(0));
 
         // w == 0 → self mod 1 == 0
-        assert_eq!(x.remainder_words(0), BigInteger::from_u32(0));
+        assert_eq!(x.remainder_words(0), BigInt::from_u32(0));
         // w >= 字數 → 整個 self
         assert_eq!(x.remainder_words(9), x);
     }
@@ -3796,21 +3777,21 @@ mod tests {
     fn and_not_basic() {
         // 基本遮罩：清掉 other 中為 1 的位元
         assert_eq!(
-            BigInteger::from_u32(0b1110).and_not(&BigInteger::from_u32(0b0110)),
-            BigInteger::from_u32(0b1000)
+            BigInt::from_u32(0b1110).and_not(&BigInt::from_u32(0b0110)),
+            BigInt::from_u32(0b1000)
         );
         // a & !a = 0
-        let a = BigInteger::from_u32(0xDEAD_BEEF);
-        assert_eq!(a.and_not(&a), BigInteger::from_u32(0));
+        let a = BigInt::from_u32(0xDEAD_BEEF);
+        assert_eq!(a.and_not(&a), BigInt::from_u32(0));
         // a & !0 = a
-        assert_eq!(a.and_not(&BigInteger::from_u32(0)), a);
+        assert_eq!(a.and_not(&BigInt::from_u32(0)), a);
 
         // 對拍 native i64（含負數的二補數語義）：a & !b
         for a in [-13i64, -1, 0, 5, 42, 255] {
             for b in [-8i64, -1, 0, 3, 42, 128] {
                 let expected = a & !b;
-                let got = BigInteger::from_i64(a).and_not(&BigInteger::from_i64(b));
-                assert_eq!(got, BigInteger::from_i64(expected), "a={a}, b={b}");
+                let got = BigInt::from_i64(a).and_not(&BigInt::from_i64(b));
+                assert_eq!(got, BigInt::from_i64(expected), "a={a}, b={b}");
             }
         }
     }
@@ -3820,45 +3801,45 @@ mod tests {
         use std::collections::hash_map::DefaultHasher;
         use std::hash::{Hash, Hasher};
 
-        fn hash_of(x: &BigInteger) -> u64 {
+        fn hash_of(x: &BigInt) -> u64 {
             let mut h = DefaultHasher::new();
             x.hash(&mut h);
             h.finish()
         }
 
         // 相等的值（不同建構路徑）必須雜湊相同
-        let a = BigInteger::from_i64(1_000_000_007);
-        let prod = &BigInteger::from_i32(1_000_000) * &BigInteger::from_i32(1000);
-        let b = &prod + &BigInteger::from_i32(7);
+        let a = BigInt::from_i64(1_000_000_007);
+        let prod = &BigInt::from_i32(1_000_000) * &BigInt::from_i32(1000);
+        let b = &prod + &BigInt::from_i32(7);
         assert_eq!(a, b);
         assert_eq!(hash_of(&a), hash_of(&b));
 
         // 正負同絕對值不得相等，雜湊也應不同（極大機率）
         assert_ne!(
-            hash_of(&BigInteger::from_i32(42)),
-            hash_of(&BigInteger::from_i32(-42))
+            hash_of(&BigInt::from_i32(42)),
+            hash_of(&BigInt::from_i32(-42))
         );
 
         // 能當 HashSet 的 key
         use std::collections::HashSet;
         let mut set = HashSet::new();
-        set.insert(BigInteger::from_i32(-42));
-        set.insert(BigInteger::from_i32(42));
-        set.insert(BigInteger::from_i64(1_000_000_007));
+        set.insert(BigInt::from_i32(-42));
+        set.insert(BigInt::from_i32(42));
+        set.insert(BigInt::from_i64(1_000_000_007));
         assert!(set.contains(&b)); // 用等值的不同實例查得到
         assert_eq!(set.len(), 3);
     }
 
     #[test]
     fn pow_basic() {
-        assert_eq!(BigInteger::from_i32(2).pow(10), BigInteger::from_i32(1024));
-        assert_eq!(BigInteger::from_i32(3).pow(4), BigInteger::from_i32(81));
-        assert_eq!(BigInteger::from_i32(-2).pow(3), BigInteger::from_i32(-8)); // 奇次負底 → 負
-        assert_eq!(BigInteger::from_i32(-2).pow(4), BigInteger::from_i32(16)); // 偶次負底 → 正
-        assert_eq!(BigInteger::from_i32(5).pow(0), BigInteger::from_i32(1)); // x^0 = 1
-        assert_eq!(BigInteger::from_i32(0).pow(0), BigInteger::from_i32(1)); // 0^0 = 1（慣例）
-        assert_eq!(BigInteger::from_i32(0).pow(5), BigInteger::from_i32(0)); // 0^n = 0
-        assert_eq!(BigInteger::from_i32(7).pow(1), BigInteger::from_i32(7)); // x^1 = x
+        assert_eq!(BigInt::from_i32(2).pow(10), BigInt::from_i32(1024));
+        assert_eq!(BigInt::from_i32(3).pow(4), BigInt::from_i32(81));
+        assert_eq!(BigInt::from_i32(-2).pow(3), BigInt::from_i32(-8)); // 奇次負底 → 負
+        assert_eq!(BigInt::from_i32(-2).pow(4), BigInt::from_i32(16)); // 偶次負底 → 正
+        assert_eq!(BigInt::from_i32(5).pow(0), BigInt::from_i32(1)); // x^0 = 1
+        assert_eq!(BigInt::from_i32(0).pow(0), BigInt::from_i32(1)); // 0^0 = 1（慣例）
+        assert_eq!(BigInt::from_i32(0).pow(5), BigInt::from_i32(0)); // 0^n = 0
+        assert_eq!(BigInt::from_i32(7).pow(1), BigInt::from_i32(7)); // x^1 = x
     }
 
     #[test]
@@ -3867,8 +3848,8 @@ mod tests {
         for base in -6i128..=6 {
             for e in 0u32..=12 {
                 let expected = base.pow(e);
-                let got = BigInteger::from_i128(base).pow(e);
-                assert_eq!(got, BigInteger::from_i128(expected), "base={base}, e={e}");
+                let got = BigInt::from_i128(base).pow(e);
+                assert_eq!(got, BigInt::from_i128(expected), "base={base}, e={e}");
             }
         }
     }
@@ -3876,14 +3857,8 @@ mod tests {
     #[test]
     fn pow_power_of_two_shortcut() {
         // 2 的冪底走位移捷徑，須與逐位乘法版一致
-        assert_eq!(
-            BigInteger::from_i32(2).pow(64),
-            BigInteger::from_u128(1u128 << 64)
-        );
-        assert_eq!(
-            BigInteger::from_i32(8).pow(20),
-            BigInteger::from_i32(2).pow(60)
-        ); // 8^20 = 2^60
+        assert_eq!(BigInt::from_i32(2).pow(64), BigInt::from_u128(1u128 << 64));
+        assert_eq!(BigInt::from_i32(8).pow(20), BigInt::from_i32(2).pow(60)); // 8^20 = 2^60
     }
 
     #[test]
@@ -3911,9 +3886,9 @@ mod tests {
         // 小值：拿原生 u128 平方當獨立參照
         let vals: [u64; 6] = [1, 2, 0xFFFF_FFFF, 0x1_0000_0000, 0x1234_5678_9ABC, u64::MAX];
         for &a in &vals {
-            let x = BigInteger::from_u64(a);
+            let x = BigInt::from_u64(a);
             let got = square_magnitude(&x.magnitude);
-            let want = Vec::from(BigInteger::from_u128(a as u128 * a as u128).magnitude);
+            let want = Vec::from(BigInt::from_u128(a as u128 * a as u128).magnitude);
             assert_eq!(got, want, "{a}²");
         }
     }
@@ -3936,13 +3911,9 @@ mod tests {
             1 << 40,
         ];
         for &a in &vals {
-            let x = BigInteger::from_i64(a);
+            let x = BigInt::from_i64(a);
             // 對照原生 i128 平方（負數平方為正）
-            assert_eq!(
-                x.square(),
-                BigInteger::from_i128(a as i128 * a as i128),
-                "{a}²"
-            );
+            assert_eq!(x.square(), BigInt::from_i128(a as i128 * a as i128), "{a}²");
             // 與 &x * &x 一致
             assert_eq!(x.square(), &x * &x, "{a}² method vs *");
         }
@@ -3981,32 +3952,32 @@ mod tests {
     #[test]
     fn mul_operator_signs() {
         assert_eq!(
-            &BigInteger::from_i32(5) * &BigInteger::from_i32(3),
-            BigInteger::from_i32(15)
+            &BigInt::from_i32(5) * &BigInt::from_i32(3),
+            BigInt::from_i32(15)
         );
         assert_eq!(
-            &BigInteger::from_i32(-5) * &BigInteger::from_i32(3),
-            BigInteger::from_i32(-15)
+            &BigInt::from_i32(-5) * &BigInt::from_i32(3),
+            BigInt::from_i32(-15)
         );
         assert_eq!(
-            &BigInteger::from_i32(5) * &BigInteger::from_i32(-3),
-            BigInteger::from_i32(-15)
+            &BigInt::from_i32(5) * &BigInt::from_i32(-3),
+            BigInt::from_i32(-15)
         );
         assert_eq!(
-            &BigInteger::from_i32(-5) * &BigInteger::from_i32(-3),
-            BigInteger::from_i32(15)
+            &BigInt::from_i32(-5) * &BigInt::from_i32(-3),
+            BigInt::from_i32(15)
         );
     }
 
     #[test]
     fn mul_with_zero() {
         assert_eq!(
-            &BigInteger::from_i32(0) * &BigInteger::from_i32(7),
-            BigInteger::from_i32(0)
+            &BigInt::from_i32(0) * &BigInt::from_i32(7),
+            BigInt::from_i32(0)
         );
         assert_eq!(
-            &BigInteger::from_i32(7) * &BigInteger::from_i32(0),
-            BigInteger::from_i32(0)
+            &BigInt::from_i32(7) * &BigInt::from_i32(0),
+            BigInt::from_i32(0)
         );
     }
 
@@ -4026,8 +3997,8 @@ mod tests {
         ];
         for &a in &vals {
             for &b in &vals {
-                let got = &BigInteger::from_i64(a) * &BigInteger::from_i64(b);
-                let want = BigInteger::from_i128(a as i128 * b as i128);
+                let got = &BigInt::from_i64(a) * &BigInt::from_i64(b);
+                let want = BigInt::from_i128(a as i128 * b as i128);
                 assert_eq!(got, want, "{a} * {b}");
             }
         }
@@ -4035,8 +4006,8 @@ mod tests {
 
     #[test]
     fn mul_is_commutative() {
-        let a = BigInteger::from_i64(-123456789012);
-        let b = BigInteger::from_i64(987654321);
+        let a = BigInt::from_i64(-123456789012);
+        let b = BigInt::from_i64(987654321);
         assert_eq!(&a * &b, &b * &a);
     }
 
@@ -4061,59 +4032,49 @@ mod tests {
         ];
         for &a in &vals {
             for &b in &vals {
-                let got = &BigInteger::from_i64(a) * &BigInteger::from_i64(b);
-                let want = BigInteger::from_i128(a as i128 * b as i128);
+                let got = &BigInt::from_i64(a) * &BigInt::from_i64(b);
+                let want = BigInt::from_i128(a as i128 * b as i128);
                 assert_eq!(got, want, "{a} * {b}");
             }
         }
         // 平方捷徑：&x * &x 同址 → 走 square_magnitude（非 2^k 者）
         for &a in &vals {
-            let x = BigInteger::from_i64(a);
-            assert_eq!(
-                &x * &x,
-                BigInteger::from_i128(a as i128 * a as i128),
-                "{a}²"
-            );
+            let x = BigInt::from_i64(a);
+            assert_eq!(&x * &x, BigInt::from_i128(a as i128 * a as i128), "{a}²");
         }
     }
 
     #[test]
     fn shl_within_word() {
-        assert_eq!(&BigInteger::from_u32(1) << 1, BigInteger::from_u32(2));
-        assert_eq!(&BigInteger::from_u32(5) << 3, BigInteger::from_u32(40));
+        assert_eq!(&BigInt::from_u32(1) << 1, BigInt::from_u32(2));
+        assert_eq!(&BigInt::from_u32(5) << 3, BigInt::from_u32(40));
     }
 
     #[test]
     fn shl_whole_words() {
         // 剛好整字倍數（n_bits == 0）
-        assert_eq!(
-            &BigInteger::from_u32(1) << 32,
-            BigInteger::from_u64(1 << 32)
-        );
-        assert_eq!(
-            &BigInteger::from_u32(1) << 64,
-            BigInteger::from_u128(1 << 64)
-        );
+        assert_eq!(&BigInt::from_u32(1) << 32, BigInt::from_u64(1 << 32));
+        assert_eq!(&BigInt::from_u32(1) << 64, BigInt::from_u128(1 << 64));
     }
 
     #[test]
     fn shl_cross_word_carry() {
         // 移出頂端需要新前導字：0x8000_0000 << 1 = 0x1_0000_0000
         assert_eq!(
-            &BigInteger::from_u32(0x8000_0000) << 1,
-            BigInteger::from_u64(1 << 32)
+            &BigInt::from_u32(0x8000_0000) << 1,
+            BigInt::from_u64(1 << 32)
         );
     }
 
     #[test]
     fn shl_preserves_sign() {
-        assert_eq!(&BigInteger::from_i32(-1) << 4, BigInteger::from_i32(-16));
+        assert_eq!(&BigInt::from_i32(-1) << 4, BigInt::from_i32(-16));
     }
 
     #[test]
     fn shl_zero_and_by_zero() {
-        assert_eq!(&BigInteger::from_i32(0) << 10, BigInteger::from_i32(0));
-        assert_eq!(&BigInteger::from_i32(7) << 0, BigInteger::from_i32(7));
+        assert_eq!(&BigInt::from_i32(0) << 10, BigInt::from_i32(0));
+        assert_eq!(&BigInt::from_i32(7) << 0, BigInt::from_i32(7));
     }
 
     #[test]
@@ -4122,8 +4083,8 @@ mod tests {
         let vals = [0i64, 1, -1, 7, -7, 0xFFFF_FFFF, -(0xFFFF_FFFFi64)];
         for &a in &vals {
             for n in [0u32, 1, 5, 31, 32, 33, 64] {
-                let got = &BigInteger::from_i64(a) << n;
-                let want = BigInteger::from_i128((a as i128) << n);
+                let got = &BigInt::from_i64(a) << n;
+                let want = BigInt::from_i128((a as i128) << n);
                 assert_eq!(got, want, "{a} << {n}");
             }
         }
@@ -4131,69 +4092,57 @@ mod tests {
 
     #[test]
     fn shr_within_word() {
-        assert_eq!(&BigInteger::from_u32(40) >> 3, BigInteger::from_u32(5));
-        assert_eq!(&BigInteger::from_u32(2) >> 1, BigInteger::from_u32(1));
+        assert_eq!(&BigInt::from_u32(40) >> 3, BigInt::from_u32(5));
+        assert_eq!(&BigInt::from_u32(2) >> 1, BigInt::from_u32(1));
     }
 
     #[test]
     fn shr_whole_words() {
         // 剛好整字倍數（bit_shift == 0）
-        assert_eq!(
-            &BigInteger::from_u64(1 << 32) >> 32,
-            BigInteger::from_u32(1)
-        );
-        assert_eq!(
-            &BigInteger::from_u128(1 << 64) >> 64,
-            BigInteger::from_u32(1)
-        );
+        assert_eq!(&BigInt::from_u64(1 << 32) >> 32, BigInt::from_u32(1));
+        assert_eq!(&BigInt::from_u128(1 << 64) >> 64, BigInt::from_u32(1));
     }
 
     #[test]
     fn shr_positive_truncates_toward_zero() {
         // 正數：等同截斷，低位直接丟棄
-        assert_eq!(&BigInteger::from_u32(9) >> 3, BigInteger::from_u32(1)); // 9/8 = 1
-        assert_eq!(&BigInteger::from_u32(7) >> 3, BigInteger::from_u32(0)); // 7/8 = 0
+        assert_eq!(&BigInt::from_u32(9) >> 3, BigInt::from_u32(1)); // 9/8 = 1
+        assert_eq!(&BigInt::from_u32(7) >> 3, BigInt::from_u32(0)); // 7/8 = 0
     }
 
     #[test]
     fn shr_negative_floors_toward_neg_inf() {
         // 負數：向負無窮取整（非整除時比截斷多退一）
-        assert_eq!(&BigInteger::from_i32(-8) >> 3, BigInteger::from_i32(-1)); // 整除，-1
-        assert_eq!(&BigInteger::from_i32(-9) >> 3, BigInteger::from_i32(-2)); // floor(-1.125) = -2
-        assert_eq!(&BigInteger::from_i32(-1) >> 1, BigInteger::from_i32(-1)); // floor(-0.5) = -1
+        assert_eq!(&BigInt::from_i32(-8) >> 3, BigInt::from_i32(-1)); // 整除，-1
+        assert_eq!(&BigInt::from_i32(-9) >> 3, BigInt::from_i32(-2)); // floor(-1.125) = -2
+        assert_eq!(&BigInt::from_i32(-1) >> 1, BigInt::from_i32(-1)); // floor(-0.5) = -1
     }
 
     #[test]
     fn shr_shifts_everything_out() {
         // 移出位元超過整個 magnitude：非負 → 0；負 → -1
-        assert_eq!(&BigInteger::from_u32(5) >> 100, BigInteger::from_u32(0));
-        assert_eq!(&BigInteger::from_i32(-5) >> 100, BigInteger::from_i32(-1));
+        assert_eq!(&BigInt::from_u32(5) >> 100, BigInt::from_u32(0));
+        assert_eq!(&BigInt::from_i32(-5) >> 100, BigInt::from_i32(-1));
         // 邊界：剛好等於容量（單字 → 32 位）
-        assert_eq!(
-            &BigInteger::from_u32(0xFFFF_FFFF) >> 32,
-            BigInteger::from_u32(0)
-        );
-        assert_eq!(&BigInteger::from_i32(-1) >> 32, BigInteger::from_i32(-1));
+        assert_eq!(&BigInt::from_u32(0xFFFF_FFFF) >> 32, BigInt::from_u32(0));
+        assert_eq!(&BigInt::from_i32(-1) >> 32, BigInt::from_i32(-1));
     }
 
     #[test]
     fn shr_zero_and_by_zero() {
-        assert_eq!(&BigInteger::from_i32(0) >> 10, BigInteger::from_i32(0));
-        assert_eq!(&BigInteger::from_i32(7) >> 0, BigInteger::from_i32(7));
-        assert_eq!(&BigInteger::from_i32(-7) >> 0, BigInteger::from_i32(-7));
+        assert_eq!(&BigInt::from_i32(0) >> 10, BigInt::from_i32(0));
+        assert_eq!(&BigInt::from_i32(7) >> 0, BigInt::from_i32(7));
+        assert_eq!(&BigInt::from_i32(-7) >> 0, BigInt::from_i32(-7));
     }
 
     #[test]
     fn shr_cross_word() {
         // 跨字補位：2^32 >> 1 = 2^31
-        assert_eq!(
-            &BigInteger::from_u64(1 << 32) >> 1,
-            BigInteger::from_u64(1 << 31)
-        );
+        assert_eq!(&BigInt::from_u64(1 << 32) >> 1, BigInt::from_u64(1 << 31));
         // 高位相消縮短：(2^32 + 1) >> 1 = 2^31
         assert_eq!(
-            &BigInteger::from_u64((1 << 32) + 1) >> 1,
-            BigInteger::from_u64(1 << 31)
+            &BigInt::from_u64((1 << 32) + 1) >> 1,
+            BigInt::from_u64(1 << 31)
         );
     }
 
@@ -4215,8 +4164,8 @@ mod tests {
         ];
         for &a in &vals {
             for n in [0u32, 1, 5, 31, 32, 33, 40, 41, 64] {
-                let got = &BigInteger::from_i64(a) >> n;
-                let want = BigInteger::from_i128((a as i128) >> n);
+                let got = &BigInt::from_i64(a) >> n;
+                let want = BigInt::from_i128((a as i128) >> n);
                 assert_eq!(got, want, "{a} >> {n}");
             }
         }
@@ -4228,7 +4177,7 @@ mod tests {
         let vals = [0i64, 1, -1, 12345, -12345, 0xFFFF_FFFF, -(0xFFFF_FFFFi64)];
         for &a in &vals {
             for n in [0u32, 1, 7, 31, 32, 40] {
-                let a = BigInteger::from_i64(a);
+                let a = BigInt::from_i64(a);
                 assert_eq!(&(&a << n) >> n, a);
             }
         }
@@ -4314,17 +4263,17 @@ mod tests {
 
     // 拿原生 u128 的 / 與 % 對照：div_magnitudes 回傳 (商, 餘)，皆已 trim
     fn check_divide(dividend: u128, divisor: u128) {
-        let x = Vec::from(BigInteger::from_u128(dividend).magnitude);
-        let y = Vec::from(BigInteger::from_u128(divisor).magnitude);
+        let x = Vec::from(BigInt::from_u128(dividend).magnitude);
+        let y = Vec::from(BigInt::from_u128(divisor).magnitude);
         let (q, r) = div_magnitudes(&x, &y);
         assert_eq!(
             q,
-            Vec::from(BigInteger::from_u128(dividend / divisor).magnitude),
+            Vec::from(BigInt::from_u128(dividend / divisor).magnitude),
             "{dividend} / {divisor}"
         );
         assert_eq!(
             r,
-            Vec::from(BigInteger::from_u128(dividend % divisor).magnitude),
+            Vec::from(BigInt::from_u128(dividend % divisor).magnitude),
             "{dividend} % {divisor}"
         );
     }
@@ -4395,10 +4344,10 @@ mod tests {
                 if b == 0 {
                     continue; // 零除另外測
                 }
-                let (x, y) = (BigInteger::from_i64(a), BigInteger::from_i64(b));
+                let (x, y) = (BigInt::from_i64(a), BigInt::from_i64(b));
                 let (q, r) = x.div_rem(&y);
-                assert_eq!(q, BigInteger::from_i128(a as i128 / b as i128), "{a} / {b}");
-                assert_eq!(r, BigInteger::from_i128(a as i128 % b as i128), "{a} % {b}");
+                assert_eq!(q, BigInt::from_i128(a as i128 / b as i128), "{a} / {b}");
+                assert_eq!(r, BigInt::from_i128(a as i128 % b as i128), "{a} % {b}");
                 // 運算子須與 div_rem 一致
                 assert_eq!(&x / &y, q, "{a} / {b} 運算子");
                 assert_eq!(&x % &y, r, "{a} % {b} 運算子");
@@ -4423,11 +4372,11 @@ mod tests {
     #[test]
     fn parse_error_display() {
         assert_eq!(
-            ParseBigIntegerError::Empty.to_string(),
+            ParseBigIntError::Empty.to_string(),
             "cannot parse integer from empty string"
         );
         assert_eq!(
-            ParseBigIntegerError::InvalidDigit { index: 3, ch: 'x' }.to_string(),
+            ParseBigIntError::InvalidDigit { index: 3, ch: 'x' }.to_string(),
             "invalid digit 'x' at position 3"
         );
     }
@@ -4435,90 +4384,84 @@ mod tests {
     #[test]
     fn from_str_radix_basic() {
         assert_eq!(
-            BigInteger::from_str_radix("0", 10).unwrap(),
-            BigInteger::from_i32(0)
+            BigInt::from_str_radix("0", 10).unwrap(),
+            BigInt::from_i32(0)
         );
         assert_eq!(
-            BigInteger::from_str_radix("255", 10).unwrap(),
-            BigInteger::from_u32(255)
+            BigInt::from_str_radix("255", 10).unwrap(),
+            BigInt::from_u32(255)
         );
         assert_eq!(
-            BigInteger::from_str_radix("ff", 16).unwrap(),
-            BigInteger::from_u32(255)
+            BigInt::from_str_radix("ff", 16).unwrap(),
+            BigInt::from_u32(255)
         );
         assert_eq!(
-            BigInteger::from_str_radix("FF", 16).unwrap(),
-            BigInteger::from_u32(255)
+            BigInt::from_str_radix("FF", 16).unwrap(),
+            BigInt::from_u32(255)
         ); // 大寫
         assert_eq!(
-            BigInteger::from_str_radix("1010", 2).unwrap(),
-            BigInteger::from_u32(10)
+            BigInt::from_str_radix("1010", 2).unwrap(),
+            BigInt::from_u32(10)
         );
         assert_eq!(
-            BigInteger::from_str_radix("z", 36).unwrap(),
-            BigInteger::from_u32(35)
+            BigInt::from_str_radix("z", 36).unwrap(),
+            BigInt::from_u32(35)
         );
         assert_eq!(
-            BigInteger::from_str_radix("-100", 10).unwrap(),
-            BigInteger::from_i32(-100)
+            BigInt::from_str_radix("-100", 10).unwrap(),
+            BigInt::from_i32(-100)
         );
         assert_eq!(
-            BigInteger::from_str_radix("+42", 10).unwrap(),
-            BigInteger::from_i32(42)
+            BigInt::from_str_radix("+42", 10).unwrap(),
+            BigInt::from_i32(42)
         );
         assert_eq!(
-            BigInteger::from_str_radix("-0", 10).unwrap(),
-            BigInteger::from_i32(0)
+            BigInt::from_str_radix("-0", 10).unwrap(),
+            BigInt::from_i32(0)
         ); // 無負零
         assert_eq!(
-            BigInteger::from_str_radix("007", 10).unwrap(),
-            BigInteger::from_u32(7)
+            BigInt::from_str_radix("007", 10).unwrap(),
+            BigInt::from_u32(7)
         ); // 前導零
     }
 
     #[test]
     fn from_str_radix_errors() {
+        assert_eq!(BigInt::from_str_radix("", 10), Err(ParseBigIntError::Empty));
         assert_eq!(
-            BigInteger::from_str_radix("", 10),
-            Err(ParseBigIntegerError::Empty)
+            BigInt::from_str_radix("-", 10),
+            Err(ParseBigIntError::Empty)
         );
         assert_eq!(
-            BigInteger::from_str_radix("-", 10),
-            Err(ParseBigIntegerError::Empty)
-        );
-        assert_eq!(
-            BigInteger::from_str_radix("+", 10),
-            Err(ParseBigIntegerError::Empty)
+            BigInt::from_str_radix("+", 10),
+            Err(ParseBigIntError::Empty)
         );
         // 非法字元
         assert_eq!(
-            BigInteger::from_str_radix("12x", 10),
-            Err(ParseBigIntegerError::InvalidDigit { index: 2, ch: 'x' })
+            BigInt::from_str_radix("12x", 10),
+            Err(ParseBigIntError::InvalidDigit { index: 2, ch: 'x' })
         );
         // 位數超出 radix：'8' 在八進制
         assert_eq!(
-            BigInteger::from_str_radix("18", 8),
-            Err(ParseBigIntegerError::InvalidDigit { index: 1, ch: '8' })
+            BigInt::from_str_radix("18", 8),
+            Err(ParseBigIntError::InvalidDigit { index: 1, ch: '8' })
         );
         // 錯誤位置換算回原始 s（符號 offset）
         assert_eq!(
-            BigInteger::from_str_radix("-12x", 10),
-            Err(ParseBigIntegerError::InvalidDigit { index: 3, ch: 'x' })
+            BigInt::from_str_radix("-12x", 10),
+            Err(ParseBigIntError::InvalidDigit { index: 3, ch: 'x' })
         );
     }
 
     #[test]
     fn from_str_trait_and_parse() {
         // .parse() 走 radix 10
-        let a: BigInteger = "123456789012345678901234567890".parse().unwrap();
-        let b = BigInteger::from_str_radix("123456789012345678901234567890", 10).unwrap();
+        let a: BigInt = "123456789012345678901234567890".parse().unwrap();
+        let b = BigInt::from_str_radix("123456789012345678901234567890", 10).unwrap();
         assert_eq!(a, b);
         // 超出原生 u128 也能解析：2^128
-        let big: BigInteger = "340282366920938463463374607431768211456".parse().unwrap();
-        assert_eq!(
-            big,
-            &BigInteger::from_u128(u128::MAX) + &BigInteger::from_u32(1)
-        );
+        let big: BigInt = "340282366920938463463374607431768211456".parse().unwrap();
+        assert_eq!(big, &BigInt::from_u128(u128::MAX) + &BigInt::from_u32(1));
     }
 
     #[test]
@@ -4536,8 +4479,8 @@ mod tests {
             i128::MIN,
         ];
         for &v in &vals {
-            let parsed = BigInteger::from_str_radix(&v.to_string(), 10).unwrap();
-            assert_eq!(parsed, BigInteger::from_i128(v), "{v}");
+            let parsed = BigInt::from_str_radix(&v.to_string(), 10).unwrap();
+            assert_eq!(parsed, BigInt::from_i128(v), "{v}");
         }
     }
 
@@ -4546,8 +4489,8 @@ mod tests {
         // 十六進制（正數，用原生 {:x} 產生字串）
         let vals = [0u128, 1, 255, 0xDEAD_BEEF, u128::MAX];
         for &v in &vals {
-            let parsed = BigInteger::from_str_radix(&format!("{v:x}"), 16).unwrap();
-            assert_eq!(parsed, BigInteger::from_u128(v), "{v:x}");
+            let parsed = BigInt::from_str_radix(&format!("{v:x}"), 16).unwrap();
+            assert_eq!(parsed, BigInt::from_u128(v), "{v:x}");
         }
     }
 
@@ -4555,39 +4498,33 @@ mod tests {
     fn from_bytes_unsigned_top_bit_is_data() {
         // 關鍵差異：unsigned 版不把最高位當符號
         assert_eq!(
-            BigInteger::from_bytes_be_unsigned(&[0x80]),
-            BigInteger::from_u32(128)
+            BigInt::from_bytes_be_unsigned(&[0x80]),
+            BigInt::from_u32(128)
         );
+        assert_eq!(BigInt::from_bytes_be(&[0x80]), BigInt::from_i32(-128)); // 對照 signed
         assert_eq!(
-            BigInteger::from_bytes_be(&[0x80]),
-            BigInteger::from_i32(-128)
-        ); // 對照 signed
-        assert_eq!(
-            BigInteger::from_bytes_be_unsigned(&[0xFF]),
-            BigInteger::from_u32(255)
+            BigInt::from_bytes_be_unsigned(&[0xFF]),
+            BigInt::from_u32(255)
         );
         // 多位元組
         assert_eq!(
-            BigInteger::from_bytes_be_unsigned(&[0xFF, 0xFF]),
-            BigInteger::from_u32(0xFFFF)
+            BigInt::from_bytes_be_unsigned(&[0xFF, 0xFF]),
+            BigInt::from_u32(0xFFFF)
         );
         // LE：最高位元組在尾端
         assert_eq!(
-            BigInteger::from_bytes_le_unsigned(&[0x00, 0x80]),
-            BigInteger::from_u32(0x8000)
+            BigInt::from_bytes_le_unsigned(&[0x00, 0x80]),
+            BigInt::from_u32(0x8000)
         );
         assert_eq!(
-            BigInteger::from_bytes_le_unsigned(&[0x34, 0x12]),
-            BigInteger::from_u32(0x1234)
+            BigInt::from_bytes_le_unsigned(&[0x34, 0x12]),
+            BigInt::from_u32(0x1234)
         );
         // 空 / 全零 → 0
+        assert_eq!(BigInt::from_bytes_be_unsigned(&[]), BigInt::from_u32(0));
         assert_eq!(
-            BigInteger::from_bytes_be_unsigned(&[]),
-            BigInteger::from_u32(0)
-        );
-        assert_eq!(
-            BigInteger::from_bytes_le_unsigned(&[0, 0, 0]),
-            BigInteger::from_u32(0)
+            BigInt::from_bytes_le_unsigned(&[0, 0, 0]),
+            BigInt::from_u32(0)
         );
     }
 
@@ -4613,13 +4550,13 @@ mod tests {
             i128::MIN,
         ];
         for &v in &vals {
-            let n = BigInteger::from_i128(v);
+            let n = BigInt::from_i128(v);
             assert_eq!(n.byte_length(), n.to_bytes_be().len(), "signed {v}");
         }
         // unsigned：byte_length_unsigned() 須等於 to_bytes_be_unsigned() 實際長度
         let uvals = [0u128, 1, 128, 255, 256, 0x8000, 0xDEAD_BEEF, u128::MAX];
         for &v in &uvals {
-            let n = BigInteger::from_u128(v);
+            let n = BigInt::from_u128(v);
             assert_eq!(
                 n.byte_length_unsigned(),
                 n.to_bytes_be_unsigned().len(),
@@ -4627,28 +4564,28 @@ mod tests {
             );
         }
         // 負數 unsigned 長度只看絕對值
-        assert_eq!(BigInteger::from_i32(-128).byte_length_unsigned(), 1);
-        assert_eq!(BigInteger::from_i32(-256).byte_length_unsigned(), 2);
+        assert_eq!(BigInt::from_i32(-128).byte_length_unsigned(), 1);
+        assert_eq!(BigInt::from_i32(-256).byte_length_unsigned(), 2);
     }
 
     #[test]
     fn to_bytes_be_specific() {
         // 非負：最高位為 1 → 前補 0x00
-        assert_eq!(BigInteger::from_i32(0).to_bytes_be(), vec![0]);
-        assert_eq!(BigInteger::from_i32(127).to_bytes_be(), vec![0x7F]);
-        assert_eq!(BigInteger::from_i32(128).to_bytes_be(), vec![0x00, 0x80]);
-        assert_eq!(BigInteger::from_i32(255).to_bytes_be(), vec![0x00, 0xFF]);
-        assert_eq!(BigInteger::from_i32(256).to_bytes_be(), vec![0x01, 0x00]);
+        assert_eq!(BigInt::from_i32(0).to_bytes_be(), vec![0]);
+        assert_eq!(BigInt::from_i32(127).to_bytes_be(), vec![0x7F]);
+        assert_eq!(BigInt::from_i32(128).to_bytes_be(), vec![0x00, 0x80]);
+        assert_eq!(BigInt::from_i32(255).to_bytes_be(), vec![0x00, 0xFF]);
+        assert_eq!(BigInt::from_i32(256).to_bytes_be(), vec![0x01, 0x00]);
         // 負：兩補數，必要時前補 0xFF
-        assert_eq!(BigInteger::from_i32(-1).to_bytes_be(), vec![0xFF]);
-        assert_eq!(BigInteger::from_i32(-128).to_bytes_be(), vec![0x80]);
-        assert_eq!(BigInteger::from_i32(-129).to_bytes_be(), vec![0xFF, 0x7F]);
-        assert_eq!(BigInteger::from_i32(-256).to_bytes_be(), vec![0xFF, 0x00]);
+        assert_eq!(BigInt::from_i32(-1).to_bytes_be(), vec![0xFF]);
+        assert_eq!(BigInt::from_i32(-128).to_bytes_be(), vec![0x80]);
+        assert_eq!(BigInt::from_i32(-129).to_bytes_be(), vec![0xFF, 0x7F]);
+        assert_eq!(BigInt::from_i32(-256).to_bytes_be(), vec![0xFF, 0x00]);
         // unsigned：128 不補 0（最高位是資料）
-        assert_eq!(BigInteger::from_u32(128).to_bytes_be_unsigned(), vec![0x80]);
-        assert_eq!(BigInteger::from_u32(0).to_bytes_be_unsigned(), vec![0]);
+        assert_eq!(BigInt::from_u32(128).to_bytes_be_unsigned(), vec![0x80]);
+        assert_eq!(BigInt::from_u32(0).to_bytes_be_unsigned(), vec![0]);
         // LE 是 BE 反轉
-        assert_eq!(BigInteger::from_i32(-129).to_bytes_le(), vec![0x7F, 0xFF]);
+        assert_eq!(BigInt::from_i32(-129).to_bytes_le(), vec![0x7F, 0xFF]);
     }
 
     #[test]
@@ -4673,7 +4610,7 @@ mod tests {
             i128::MIN,
         ];
         for &v in &vals {
-            let n = BigInteger::from_i128(v);
+            let n = BigInt::from_i128(v);
             let mut buf = [0u8; 32]; // 刻意比需要大
             // signed BE / LE
             let len = n.to_bytes_be_into(&mut buf);
@@ -4693,7 +4630,7 @@ mod tests {
     #[test]
     fn to_bytes_into_exact_buffer() {
         // 剛好 byte_length() 大小的 buffer 也能用
-        let n = BigInteger::from_i32(128);
+        let n = BigInt::from_i32(128);
         let mut buf = vec![0u8; n.byte_length()];
         let len = n.to_bytes_be_into(&mut buf);
         assert_eq!(len, 2);
@@ -4703,14 +4640,14 @@ mod tests {
     #[test]
     #[should_panic(expected = "buffer too small")]
     fn to_bytes_be_into_panics_when_too_small() {
-        let n = BigInteger::from_i32(128); // 需要 2 bytes
+        let n = BigInt::from_i32(128); // 需要 2 bytes
         let mut buf = [0u8; 1];
         n.to_bytes_be_into(&mut buf);
     }
 
     #[test]
     fn try_to_bytes_into_ok_and_err() {
-        let n = BigInteger::from_i32(128); // 需要 2 bytes
+        let n = BigInt::from_i32(128); // 需要 2 bytes
 
         // 夠大 → Ok(寫入長度)，內容正確
         let mut buf = [0u8; 4];
@@ -4753,9 +4690,9 @@ mod tests {
             i128::MIN,
         ];
         for &v in &vals {
-            let n = BigInteger::from_i128(v);
-            assert_eq!(BigInteger::from_bytes_be(&n.to_bytes_be()), n, "{v} be");
-            assert_eq!(BigInteger::from_bytes_le(&n.to_bytes_le()), n, "{v} le");
+            let n = BigInt::from_i128(v);
+            assert_eq!(BigInt::from_bytes_be(&n.to_bytes_be()), n, "{v} be");
+            assert_eq!(BigInt::from_bytes_le(&n.to_bytes_le()), n, "{v} le");
         }
     }
 
@@ -4763,14 +4700,14 @@ mod tests {
     fn to_from_bytes_roundtrip_unsigned() {
         let vals = [0u128, 1, 128, 255, 256, 0x8000, 0xDEAD_BEEF, u128::MAX];
         for &v in &vals {
-            let n = BigInteger::from_u128(v);
+            let n = BigInt::from_u128(v);
             assert_eq!(
-                BigInteger::from_bytes_be_unsigned(&n.to_bytes_be_unsigned()),
+                BigInt::from_bytes_be_unsigned(&n.to_bytes_be_unsigned()),
                 n,
                 "{v} be"
             );
             assert_eq!(
-                BigInteger::from_bytes_le_unsigned(&n.to_bytes_le_unsigned()),
+                BigInt::from_bytes_le_unsigned(&n.to_bytes_le_unsigned()),
                 n,
                 "{v} le"
             );
@@ -4785,7 +4722,7 @@ mod tests {
             let native = v.to_be_bytes();
             let start = native.iter().position(|&b| b != 0).unwrap();
             assert_eq!(
-                BigInteger::from_u128(v).to_bytes_be_unsigned(),
+                BigInt::from_u128(v).to_bytes_be_unsigned(),
                 native[start..].to_vec(),
                 "{v}"
             );
@@ -4800,13 +4737,13 @@ mod tests {
             let be = v.to_be_bytes();
             let le = v.to_le_bytes();
             assert_eq!(
-                BigInteger::from_bytes_be_unsigned(&be),
-                BigInteger::from_u128(v),
+                BigInt::from_bytes_be_unsigned(&be),
+                BigInt::from_u128(v),
                 "{v} be"
             );
             assert_eq!(
-                BigInteger::from_bytes_le_unsigned(&le),
-                BigInteger::from_u128(v),
+                BigInt::from_bytes_le_unsigned(&le),
+                BigInt::from_u128(v),
                 "{v} le"
             );
         }
@@ -4814,19 +4751,19 @@ mod tests {
 
     #[test]
     fn to_str_radix_basic() {
-        assert_eq!(BigInteger::from_i32(0).to_str_radix(10), "0");
-        assert_eq!(BigInteger::from_u32(255).to_str_radix(10), "255");
-        assert_eq!(BigInteger::from_u32(255).to_str_radix(16), "ff");
-        assert_eq!(BigInteger::from_u32(10).to_str_radix(2), "1010");
-        assert_eq!(BigInteger::from_u32(35).to_str_radix(36), "z");
-        assert_eq!(BigInteger::from_i32(-100).to_str_radix(10), "-100");
-        assert_eq!(BigInteger::from_i32(-5).to_str_radix(2), "-101");
+        assert_eq!(BigInt::from_i32(0).to_str_radix(10), "0");
+        assert_eq!(BigInt::from_u32(255).to_str_radix(10), "255");
+        assert_eq!(BigInt::from_u32(255).to_str_radix(16), "ff");
+        assert_eq!(BigInt::from_u32(10).to_str_radix(2), "1010");
+        assert_eq!(BigInt::from_u32(35).to_str_radix(36), "z");
+        assert_eq!(BigInt::from_i32(-100).to_str_radix(10), "-100");
+        assert_eq!(BigInt::from_i32(-5).to_str_radix(2), "-101");
     }
 
     #[test]
     fn display_is_decimal() {
-        assert_eq!(BigInteger::from_i32(-12345).to_string(), "-12345");
-        assert_eq!(format!("{}", BigInteger::from_u32(42)), "42");
+        assert_eq!(BigInt::from_i32(-12345).to_string(), "-12345");
+        assert_eq!(format!("{}", BigInt::from_u32(42)), "42");
     }
 
     #[test]
@@ -4834,7 +4771,7 @@ mod tests {
         // 對照原生格式化（正數，各原生支援的 radix）
         let vals = [0u128, 1, 255, 0xDEAD_BEEF, u128::MAX];
         for &v in &vals {
-            let n = BigInteger::from_u128(v);
+            let n = BigInt::from_u128(v);
             assert_eq!(n.to_str_radix(10), v.to_string(), "{v} dec");
             assert_eq!(n.to_str_radix(16), format!("{v:x}"), "{v} hex");
             assert_eq!(n.to_str_radix(2), format!("{v:b}"), "{v} bin");
@@ -4857,10 +4794,10 @@ mod tests {
             i128::MIN,
         ];
         for &v in &vals {
-            let n = BigInteger::from_i128(v);
+            let n = BigInt::from_i128(v);
             for radix in [2u32, 8, 10, 16, 36] {
                 let s = n.to_str_radix(radix);
-                let back = BigInteger::from_str_radix(&s, radix).unwrap();
+                let back = BigInt::from_str_radix(&s, radix).unwrap();
                 assert_eq!(back, n, "v={v} radix={radix}");
             }
         }
@@ -4875,10 +4812,10 @@ mod tests {
                 if b == 0 {
                     continue;
                 }
-                let got = BigInteger::from_i128(a).rem_euclid(&BigInteger::from_i128(b));
+                let got = BigInt::from_i128(a).rem_euclid(&BigInt::from_i128(b));
                 assert_eq!(
                     got,
-                    BigInteger::from_i128(a.rem_euclid(b)),
+                    BigInt::from_i128(a.rem_euclid(b)),
                     "{a} rem_euclid {b}"
                 );
             }
@@ -4889,20 +4826,20 @@ mod tests {
     fn rem_euclid_is_non_negative() {
         // 結果永遠非負（落在 [0, |other|)），且負除數也適用
         assert_eq!(
-            BigInteger::from_i32(-7).rem_euclid(&BigInteger::from_i32(3)),
-            BigInteger::from_i32(2)
+            BigInt::from_i32(-7).rem_euclid(&BigInt::from_i32(3)),
+            BigInt::from_i32(2)
         );
         assert_eq!(
-            BigInteger::from_i32(-7).rem_euclid(&BigInteger::from_i32(-3)),
-            BigInteger::from_i32(2)
+            BigInt::from_i32(-7).rem_euclid(&BigInt::from_i32(-3)),
+            BigInt::from_i32(2)
         );
         assert_eq!(
-            BigInteger::from_i32(7).rem_euclid(&BigInteger::from_i32(-3)),
-            BigInteger::from_i32(1)
+            BigInt::from_i32(7).rem_euclid(&BigInt::from_i32(-3)),
+            BigInt::from_i32(1)
         );
         assert!(
-            BigInteger::from_i32(-100)
-                .rem_euclid(&BigInteger::from_i32(7))
+            BigInt::from_i32(-100)
+                .rem_euclid(&BigInt::from_i32(7))
                 .sign()
                 >= 0
         );
@@ -4911,34 +4848,34 @@ mod tests {
     #[test]
     #[should_panic(expected = "divisor of zero")]
     fn rem_euclid_by_zero_panics() {
-        let _ = BigInteger::from_i32(5).rem_euclid(&BigInteger::from_i32(0));
+        let _ = BigInt::from_i32(5).rem_euclid(&BigInt::from_i32(0));
     }
 
     #[test]
     fn gcd_basic() {
         assert_eq!(
-            BigInteger::from_i32(30).gcd(&BigInteger::from_i32(18)),
-            BigInteger::from_i32(6)
+            BigInt::from_i32(30).gcd(&BigInt::from_i32(18)),
+            BigInt::from_i32(6)
         );
         assert_eq!(
-            BigInteger::from_i32(-12).gcd(&BigInteger::from_i32(18)),
-            BigInteger::from_i32(6)
+            BigInt::from_i32(-12).gcd(&BigInt::from_i32(18)),
+            BigInt::from_i32(6)
         ); // 負看絕對值
         assert_eq!(
-            BigInteger::from_i32(17).gcd(&BigInteger::from_i32(5)),
-            BigInteger::from_i32(1)
+            BigInt::from_i32(17).gcd(&BigInt::from_i32(5)),
+            BigInt::from_i32(1)
         ); // 互質
         assert_eq!(
-            BigInteger::from_i32(0).gcd(&BigInteger::from_i32(5)),
-            BigInteger::from_i32(5)
+            BigInt::from_i32(0).gcd(&BigInt::from_i32(5)),
+            BigInt::from_i32(5)
         );
         assert_eq!(
-            BigInteger::from_i32(5).gcd(&BigInteger::from_i32(0)),
-            BigInteger::from_i32(5)
+            BigInt::from_i32(5).gcd(&BigInt::from_i32(0)),
+            BigInt::from_i32(5)
         );
         assert_eq!(
-            BigInteger::from_i32(0).gcd(&BigInteger::from_i32(0)),
-            BigInteger::from_i32(0)
+            BigInt::from_i32(0).gcd(&BigInt::from_i32(0)),
+            BigInt::from_i32(0)
         );
     }
 
@@ -4955,8 +4892,8 @@ mod tests {
         for &a in &vals {
             for &b in &vals {
                 assert_eq!(
-                    BigInteger::from_i128(a).gcd(&BigInteger::from_i128(b)),
-                    BigInteger::from_i128(gcd_i128(a, b)),
+                    BigInt::from_i128(a).gcd(&BigInt::from_i128(b)),
+                    BigInt::from_i128(gcd_i128(a, b)),
                     "gcd({a},{b})"
                 );
             }
@@ -4966,20 +4903,20 @@ mod tests {
     #[test]
     fn extended_gcd_basic() {
         // gcd(30, 18) = 6，且 30·x ≡ 6 (mod 18)
-        let (g, x) = extended_gcd(&BigInteger::from_i32(30), &BigInteger::from_i32(18));
-        assert_eq!(g, BigInteger::from_i32(6));
-        let m = BigInteger::from_i32(18);
+        let (g, x) = extended_gcd(&BigInt::from_i32(30), &BigInt::from_i32(18));
+        assert_eq!(g, BigInt::from_i32(6));
+        let m = BigInt::from_i32(18);
         assert_eq!(
-            (&BigInteger::from_i32(30) * &x).rem_euclid(&m),
+            (&BigInt::from_i32(30) * &x).rem_euclid(&m),
             g.rem_euclid(&m)
         );
 
         // 互質：gcd = 1，x 為反元素（3·x ≡ 1 mod 7 → x = 5）
-        let (g, x) = extended_gcd(&BigInteger::from_i32(3), &BigInteger::from_i32(7));
-        assert_eq!(g, BigInteger::from_i32(1));
+        let (g, x) = extended_gcd(&BigInt::from_i32(3), &BigInt::from_i32(7));
+        assert_eq!(g, BigInt::from_i32(1));
         assert_eq!(
-            (&BigInteger::from_i32(3) * &x).rem_euclid(&BigInteger::from_i32(7)),
-            BigInteger::from_i32(1)
+            (&BigInt::from_i32(3) * &x).rem_euclid(&BigInt::from_i32(7)),
+            BigInt::from_i32(1)
         );
     }
 
@@ -4998,11 +4935,11 @@ mod tests {
         let vals = [1i128, 2, 3, 6, 12, 30, 18, 100, 17, 35, 49, 128];
         for &a in &vals {
             for &b in &vals {
-                let (g, x) = extended_gcd(&BigInteger::from_i128(a), &BigInteger::from_i128(b));
-                assert_eq!(g, BigInteger::from_i128(gcd_i128(a, b)), "gcd({a},{b})");
+                let (g, x) = extended_gcd(&BigInt::from_i128(a), &BigInt::from_i128(b));
+                assert_eq!(g, BigInt::from_i128(gcd_i128(a, b)), "gcd({a},{b})");
                 // Bézout 同餘：a·x ≡ gcd (mod b)
-                let m = BigInteger::from_i128(b);
-                let ax = &BigInteger::from_i128(a) * &x;
+                let m = BigInt::from_i128(b);
+                let ax = &BigInt::from_i128(a) * &x;
                 assert_eq!(ax.rem_euclid(&m), g.rem_euclid(&m), "bezout({a},{b})");
             }
         }
@@ -5012,20 +4949,17 @@ mod tests {
     fn mod_inverse_basic() {
         // 3⁻¹ ≡ 5 (mod 7)
         assert_eq!(
-            BigInteger::from_i32(3).mod_inverse(&BigInteger::from_i32(7)),
-            Some(BigInteger::from_i32(5))
+            BigInt::from_i32(3).mod_inverse(&BigInt::from_i32(7)),
+            Some(BigInt::from_i32(5))
         );
         // 不互質 → None
-        assert_eq!(
-            BigInteger::from_i32(4).mod_inverse(&BigInteger::from_i32(6)),
-            None
-        );
+        assert_eq!(BigInt::from_i32(4).mod_inverse(&BigInt::from_i32(6)), None);
         // 負 self 先約簡：-3 ≡ 4 (mod 7)，其反元素驗 (-3)·inv ≡ 1
-        let m = BigInteger::from_i32(7);
-        let inv = BigInteger::from_i32(-3).mod_inverse(&m).unwrap();
+        let m = BigInt::from_i32(7);
+        let inv = BigInt::from_i32(-3).mod_inverse(&m).unwrap();
         assert_eq!(
-            (&BigInteger::from_i32(-3) * &inv).rem_euclid(&m),
-            BigInteger::from_i32(1)
+            (&BigInt::from_i32(-3) * &inv).rem_euclid(&m),
+            BigInt::from_i32(1)
         );
     }
 
@@ -5039,15 +4973,15 @@ mod tests {
         }
         let moduli = [2i128, 3, 7, 13, 26, 97, 100];
         for &m in &moduli {
-            let big_m = BigInteger::from_i128(m);
+            let big_m = BigInt::from_i128(m);
             for a in 1..m {
-                let big_a = BigInteger::from_i128(a);
+                let big_a = BigInt::from_i128(a);
                 match big_a.mod_inverse(&big_m) {
                     Some(inv) => {
                         // 互質：a·inv ≡ 1 (mod m)，且 inv ∈ [0, m)
                         assert_eq!(
                             (&big_a * &inv).rem_euclid(&big_m),
-                            BigInteger::from_i32(1),
+                            BigInt::from_i32(1),
                             "{a}⁻¹ mod {m}"
                         );
                         assert!(inv.sign() >= 0 && inv < big_m, "{a}⁻¹ mod {m} 超出 [0,m)");
@@ -5064,36 +4998,36 @@ mod tests {
     #[test]
     #[should_panic(expected = "modulus must be positive")]
     fn mod_inverse_non_positive_modulus_panics() {
-        let _ = BigInteger::from_i32(3).mod_inverse(&BigInteger::from_i32(0));
+        let _ = BigInt::from_i32(3).mod_inverse(&BigInt::from_i32(0));
     }
 
     #[test]
     fn mod_pow_basic() {
-        let seven = BigInteger::from_i32(7);
+        let seven = BigInt::from_i32(7);
         // 3^4 = 81 ≡ 4 (mod 7)
         assert_eq!(
-            BigInteger::from_i32(3).mod_pow(&BigInteger::from_i32(4), &seven),
-            BigInteger::from_i32(4)
+            BigInt::from_i32(3).mod_pow(&BigInt::from_i32(4), &seven),
+            BigInt::from_i32(4)
         );
         // a^0 = 1
         assert_eq!(
-            BigInteger::from_i32(5).mod_pow(&BigInteger::from_i32(0), &seven),
-            BigInteger::from_i32(1)
+            BigInt::from_i32(5).mod_pow(&BigInt::from_i32(0), &seven),
+            BigInt::from_i32(1)
         );
         // mod 1 = 0
         assert_eq!(
-            BigInteger::from_i32(5).mod_pow(&BigInteger::from_i32(3), &BigInteger::from_i32(1)),
-            BigInteger::from_i32(0)
+            BigInt::from_i32(5).mod_pow(&BigInt::from_i32(3), &BigInt::from_i32(1)),
+            BigInt::from_i32(0)
         );
         // 0^e = 0（e > 0）
         assert_eq!(
-            BigInteger::from_i32(0).mod_pow(&BigInteger::from_i32(5), &seven),
-            BigInteger::from_i32(0)
+            BigInt::from_i32(0).mod_pow(&BigInt::from_i32(5), &seven),
+            BigInt::from_i32(0)
         );
         // 負指數：3^(-1) ≡ 5 (mod 7)
         assert_eq!(
-            BigInteger::from_i32(3).mod_pow(&BigInteger::from_i32(-1), &seven),
-            BigInteger::from_i32(5)
+            BigInt::from_i32(3).mod_pow(&BigInt::from_i32(-1), &seven),
+            BigInt::from_i32(5)
         );
     }
 
@@ -5117,11 +5051,11 @@ mod tests {
         for &b in &bases {
             for &ex in &exps {
                 for &m in &mods {
-                    let got = BigInteger::from_u128(b)
-                        .mod_pow(&BigInteger::from_u128(ex), &BigInteger::from_u128(m));
+                    let got =
+                        BigInt::from_u128(b).mod_pow(&BigInt::from_u128(ex), &BigInt::from_u128(m));
                     assert_eq!(
                         got,
-                        BigInteger::from_u128(modpow_u128(b, ex, m)),
+                        BigInt::from_u128(modpow_u128(b, ex, m)),
                         "{b}^{ex} mod {m}"
                     );
                 }
@@ -5132,102 +5066,102 @@ mod tests {
     #[test]
     fn mod_pow_fermat_little_theorem() {
         // 費馬小定理：p 質數、a 不被 p 整除 → a^(p-1) ≡ 1 (mod p)
-        let p = BigInteger::from_i32(65537); // Fermat 質數 2^16+1，指數 65536 = 16 次平方
-        let a = BigInteger::from_i32(12345);
-        let e = &p - &BigInteger::from_u32(1);
-        assert_eq!(a.mod_pow(&e, &p), BigInteger::from_u32(1));
+        let p = BigInt::from_i32(65537); // Fermat 質數 2^16+1，指數 65536 = 16 次平方
+        let a = BigInt::from_i32(12345);
+        let e = &p - &BigInt::from_u32(1);
+        assert_eq!(a.mod_pow(&e, &p), BigInt::from_u32(1));
     }
 
     #[test]
     #[should_panic(expected = "modulus must be positive")]
     fn mod_pow_non_positive_modulus_panics() {
-        let _ = BigInteger::from_i32(3).mod_pow(&BigInteger::from_i32(2), &BigInteger::from_i32(0));
+        let _ = BigInt::from_i32(3).mod_pow(&BigInt::from_i32(2), &BigInt::from_i32(0));
     }
 
     #[test]
     fn div_rem_zero_dividend() {
-        let (q, r) = BigInteger::from_i32(0).div_rem(&BigInteger::from_i32(7));
-        assert_eq!(q, BigInteger::from_i32(0));
-        assert_eq!(r, BigInteger::from_i32(0));
+        let (q, r) = BigInt::from_i32(0).div_rem(&BigInt::from_i32(7));
+        assert_eq!(q, BigInt::from_i32(0));
+        assert_eq!(r, BigInt::from_i32(0));
     }
 
     #[test]
     #[should_panic(expected = "divide by zero")]
     fn div_by_zero_panics() {
-        let _ = &BigInteger::from_i32(5) / &BigInteger::from_i32(0);
+        let _ = &BigInt::from_i32(5) / &BigInt::from_i32(0);
     }
 
     #[test]
     #[should_panic(expected = "divide by zero")]
     fn rem_by_zero_panics() {
-        let _ = &BigInteger::from_i32(5) % &BigInteger::from_i32(0);
+        let _ = &BigInt::from_i32(5) % &BigInt::from_i32(0);
     }
 
     #[test]
     fn add_operator_same_sign() {
         assert_eq!(
-            &BigInteger::from_i32(5) + &BigInteger::from_i32(3),
-            BigInteger::from_i32(8)
+            &BigInt::from_i32(5) + &BigInt::from_i32(3),
+            BigInt::from_i32(8)
         );
         assert_eq!(
-            &BigInteger::from_i32(-5) + &BigInteger::from_i32(-3),
-            BigInteger::from_i32(-8)
+            &BigInt::from_i32(-5) + &BigInt::from_i32(-3),
+            BigInt::from_i32(-8)
         );
     }
 
     #[test]
     fn add_operator_different_signs() {
         assert_eq!(
-            &BigInteger::from_i32(5) + &BigInteger::from_i32(-3),
-            BigInteger::from_i32(2)
+            &BigInt::from_i32(5) + &BigInt::from_i32(-3),
+            BigInt::from_i32(2)
         );
         assert_eq!(
-            &BigInteger::from_i32(-5) + &BigInteger::from_i32(3),
-            BigInteger::from_i32(-2)
+            &BigInt::from_i32(-5) + &BigInt::from_i32(3),
+            BigInt::from_i32(-2)
         );
         assert_eq!(
-            &BigInteger::from_i32(3) + &BigInteger::from_i32(-5),
-            BigInteger::from_i32(-2)
+            &BigInt::from_i32(3) + &BigInt::from_i32(-5),
+            BigInt::from_i32(-2)
         );
         assert_eq!(
-            &BigInteger::from_i32(5) + &BigInteger::from_i32(-5),
-            BigInteger::from_i32(0)
+            &BigInt::from_i32(5) + &BigInt::from_i32(-5),
+            BigInt::from_i32(0)
         );
     }
 
     #[test]
     fn add_operator_with_zero() {
         assert_eq!(
-            &BigInteger::from_i32(0) + &BigInteger::from_i32(7),
-            BigInteger::from_i32(7)
+            &BigInt::from_i32(0) + &BigInt::from_i32(7),
+            BigInt::from_i32(7)
         );
         assert_eq!(
-            &BigInteger::from_i32(7) + &BigInteger::from_i32(0),
-            BigInteger::from_i32(7)
+            &BigInt::from_i32(7) + &BigInt::from_i32(0),
+            BigInt::from_i32(7)
         );
     }
 
     #[test]
     fn sub_operator_basic() {
         assert_eq!(
-            &BigInteger::from_i32(8) - &BigInteger::from_i32(3),
-            BigInteger::from_i32(5)
+            &BigInt::from_i32(8) - &BigInt::from_i32(3),
+            BigInt::from_i32(5)
         );
         assert_eq!(
-            &BigInteger::from_i32(3) - &BigInteger::from_i32(8),
-            BigInteger::from_i32(-5)
+            &BigInt::from_i32(3) - &BigInt::from_i32(8),
+            BigInt::from_i32(-5)
         );
         assert_eq!(
-            &BigInteger::from_i32(5) - &BigInteger::from_i32(-3),
-            BigInteger::from_i32(8)
+            &BigInt::from_i32(5) - &BigInt::from_i32(-3),
+            BigInt::from_i32(8)
         );
         assert_eq!(
-            &BigInteger::from_i32(-5) - &BigInteger::from_i32(3),
-            BigInteger::from_i32(-8)
+            &BigInt::from_i32(-5) - &BigInt::from_i32(3),
+            BigInt::from_i32(-8)
         );
         assert_eq!(
-            &BigInteger::from_i32(5) - &BigInteger::from_i32(5),
-            BigInteger::from_i32(0)
+            &BigInt::from_i32(5) - &BigInt::from_i32(5),
+            BigInt::from_i32(0)
         );
     }
 
@@ -5249,8 +5183,8 @@ mod tests {
         ];
         for &a in &vals {
             for &b in &vals {
-                let got = &BigInteger::from_i64(a) + &BigInteger::from_i64(b);
-                let want = BigInteger::from_i128(a as i128 + b as i128);
+                let got = &BigInt::from_i64(a) + &BigInt::from_i64(b);
+                let want = BigInt::from_i128(a as i128 + b as i128);
                 assert_eq!(got, want, "{a} + {b}");
             }
         }
@@ -5273,8 +5207,8 @@ mod tests {
         ];
         for &a in &vals {
             for &b in &vals {
-                let got = &BigInteger::from_i64(a) - &BigInteger::from_i64(b);
-                let want = BigInteger::from_i128(a as i128 - b as i128);
+                let got = &BigInt::from_i64(a) - &BigInt::from_i64(b);
+                let want = BigInt::from_i128(a as i128 - b as i128);
                 assert_eq!(got, want, "{a} - {b}");
             }
         }
@@ -5282,48 +5216,39 @@ mod tests {
 
     #[test]
     fn add_commutative_and_sub_relation() {
-        let a = BigInteger::from_i64(123456789012);
-        let b = BigInteger::from_i64(-98765432109);
+        let a = BigInt::from_i64(123456789012);
+        let b = BigInt::from_i64(-98765432109);
         assert_eq!(&a + &b, &b + &a); // a + b == b + a
         assert_eq!(&a - &b, -(&b - &a)); // a - b == -(b - a)
     }
 
     #[test]
     fn try_into_primitive_ok() {
-        assert_eq!(u32::try_from(&BigInteger::from_u32(255)), Ok(255u32));
-        assert_eq!(i32::try_from(&BigInteger::from_i32(-5)), Ok(-5i32));
-        assert_eq!(u8::try_from(&BigInteger::from_u32(200)), Ok(200u8));
-        assert_eq!(i8::try_from(&BigInteger::from_i32(-128)), Ok(-128i8)); // i8::MIN
-        assert_eq!(i8::try_from(&BigInteger::from_i32(127)), Ok(127i8)); // i8::MAX
-        assert_eq!(
-            u128::try_from(&BigInteger::from_u128(u128::MAX)),
-            Ok(u128::MAX)
-        );
-        assert_eq!(
-            i128::try_from(&BigInteger::from_i128(i128::MIN)),
-            Ok(i128::MIN)
-        );
-        assert_eq!(
-            i128::try_from(&BigInteger::from_i128(i128::MAX)),
-            Ok(i128::MAX)
-        );
+        assert_eq!(u32::try_from(&BigInt::from_u32(255)), Ok(255u32));
+        assert_eq!(i32::try_from(&BigInt::from_i32(-5)), Ok(-5i32));
+        assert_eq!(u8::try_from(&BigInt::from_u32(200)), Ok(200u8));
+        assert_eq!(i8::try_from(&BigInt::from_i32(-128)), Ok(-128i8)); // i8::MIN
+        assert_eq!(i8::try_from(&BigInt::from_i32(127)), Ok(127i8)); // i8::MAX
+        assert_eq!(u128::try_from(&BigInt::from_u128(u128::MAX)), Ok(u128::MAX));
+        assert_eq!(i128::try_from(&BigInt::from_i128(i128::MIN)), Ok(i128::MIN));
+        assert_eq!(i128::try_from(&BigInt::from_i128(i128::MAX)), Ok(i128::MAX));
         // TryInto 也可用（TryFrom 的對偶）
-        let x: u64 = (&BigInteger::from_u64(12345)).try_into().unwrap();
+        let x: u64 = (&BigInt::from_u64(12345)).try_into().unwrap();
         assert_eq!(x, 12345);
     }
 
     #[test]
     fn try_into_primitive_out_of_range() {
-        assert!(u8::try_from(&BigInteger::from_u32(256)).is_err()); // 太大
-        assert!(i8::try_from(&BigInteger::from_i32(200)).is_err()); // > i8::MAX
-        assert!(i8::try_from(&BigInteger::from_i32(-129)).is_err()); // < i8::MIN
-        assert!(u32::try_from(&BigInteger::from_i32(-1)).is_err()); // 負數轉無號
+        assert!(u8::try_from(&BigInt::from_u32(256)).is_err()); // 太大
+        assert!(i8::try_from(&BigInt::from_i32(200)).is_err()); // > i8::MAX
+        assert!(i8::try_from(&BigInt::from_i32(-129)).is_err()); // < i8::MIN
+        assert!(u32::try_from(&BigInt::from_i32(-1)).is_err()); // 負數轉無號
         // 超出 u128 / i128
-        let two_128 = &BigInteger::from_u128(u128::MAX) + &BigInteger::from_u32(1); // 2^128
+        let two_128 = &BigInt::from_u128(u128::MAX) + &BigInt::from_u32(1); // 2^128
         assert!(u128::try_from(&two_128).is_err());
         assert!(i128::try_from(&two_128).is_err());
         // 2^127：放不進 i128，但放得進 u128
-        let two_127 = &BigInteger::from_i128(i128::MAX) + &BigInteger::from_u32(1);
+        let two_127 = &BigInt::from_i128(i128::MAX) + &BigInt::from_u32(1);
         assert!(i128::try_from(&two_127).is_err());
         assert_eq!(u128::try_from(&two_127), Ok(1u128 << 127));
     }
@@ -5341,12 +5266,12 @@ mod tests {
             i64::MIN as i128 - 1,
         ];
         for &v in &vals {
-            let big = BigInteger::from_i128(v);
+            let big = BigInt::from_i128(v);
             assert_eq!(i64::try_from(&big).ok(), i64::try_from(v).ok(), "i64 {v}");
         }
         let uvals = [0u128, 1, u64::MAX as u128, u64::MAX as u128 + 1];
         for &v in &uvals {
-            let big = BigInteger::from_u128(v);
+            let big = BigInt::from_u128(v);
             assert_eq!(u64::try_from(&big).ok(), u64::try_from(v).ok(), "u64 {v}");
         }
     }
@@ -5354,90 +5279,81 @@ mod tests {
     #[test]
     fn from_trait_matches_constructors() {
         // From / into 與既有建構函式結果一致，涵蓋全部寬度
-        assert_eq!(BigInteger::from(5u8), BigInteger::from_u8(5));
-        assert_eq!(BigInteger::from(5u16), BigInteger::from_u16(5));
-        assert_eq!(BigInteger::from(5u32), BigInteger::from_u32(5));
-        assert_eq!(BigInteger::from(u64::MAX), BigInteger::from_u64(u64::MAX));
-        assert_eq!(
-            BigInteger::from(u128::MAX),
-            BigInteger::from_u128(u128::MAX)
-        );
-        assert_eq!(BigInteger::from(-5i8), BigInteger::from_i8(-5));
-        assert_eq!(BigInteger::from(-5i16), BigInteger::from_i16(-5));
-        assert_eq!(BigInteger::from(i32::MIN), BigInteger::from_i32(i32::MIN));
-        assert_eq!(BigInteger::from(i64::MIN), BigInteger::from_i64(i64::MIN));
-        assert_eq!(
-            BigInteger::from(i128::MIN),
-            BigInteger::from_i128(i128::MIN)
-        );
+        assert_eq!(BigInt::from(5u8), BigInt::from_u8(5));
+        assert_eq!(BigInt::from(5u16), BigInt::from_u16(5));
+        assert_eq!(BigInt::from(5u32), BigInt::from_u32(5));
+        assert_eq!(BigInt::from(u64::MAX), BigInt::from_u64(u64::MAX));
+        assert_eq!(BigInt::from(u128::MAX), BigInt::from_u128(u128::MAX));
+        assert_eq!(BigInt::from(-5i8), BigInt::from_i8(-5));
+        assert_eq!(BigInt::from(-5i16), BigInt::from_i16(-5));
+        assert_eq!(BigInt::from(i32::MIN), BigInt::from_i32(i32::MIN));
+        assert_eq!(BigInt::from(i64::MIN), BigInt::from_i64(i64::MIN));
+        assert_eq!(BigInt::from(i128::MIN), BigInt::from_i128(i128::MIN));
         // Into 亦可用（型別標註觸發）
-        let a: BigInteger = 42u32.into();
-        assert_eq!(a, BigInteger::from_u32(42));
+        let a: BigInt = 42u32.into();
+        assert_eq!(a, BigInt::from_u32(42));
     }
 
     #[test]
     fn add_multi_word_carry() {
         // (2^64 - 1) + 1 = 2^64
-        let a = BigInteger::from_u64(u64::MAX);
-        let one = BigInteger::from_u32(1);
-        assert_eq!(&a + &one, BigInteger::from_i128(u64::MAX as i128 + 1));
+        let a = BigInt::from_u64(u64::MAX);
+        let one = BigInt::from_u32(1);
+        assert_eq!(&a + &one, BigInt::from_i128(u64::MAX as i128 + 1));
     }
 
     #[test]
     fn eq_same_value_from_different_sources() {
         // 同一個數、不同建構路徑，應相等
-        assert_eq!(
-            BigInteger::from_i32(128),
-            BigInteger::from_bytes_be(&[0x00, 0x80])
-        );
-        assert_eq!(BigInteger::from_u64(0), BigInteger::from_i32(0));
+        assert_eq!(BigInt::from_i32(128), BigInt::from_bytes_be(&[0x00, 0x80]));
+        assert_eq!(BigInt::from_u64(0), BigInt::from_i32(0));
     }
 
     #[test]
     fn eq_distinguishes_sign_and_magnitude() {
-        assert_ne!(BigInteger::from_i32(5), BigInteger::from_i32(-5)); // 同 magnitude、異號
-        assert_ne!(BigInteger::from_i32(5), BigInteger::from_i32(6)); // 同號、異 magnitude
+        assert_ne!(BigInt::from_i32(5), BigInt::from_i32(-5)); // 同 magnitude、異號
+        assert_ne!(BigInt::from_i32(5), BigInt::from_i32(6)); // 同號、異 magnitude
     }
 
     #[test]
     fn from_u32_positive() {
-        let n = BigInteger::from_u32(5);
+        let n = BigInt::from_u32(5);
         assert_eq!(n.sign, 1);
         assert_eq!(n.magnitude.to_vec(), vec![5]);
     }
 
     #[test]
     fn from_u32_max() {
-        let n = BigInteger::from_u32(u32::MAX);
+        let n = BigInt::from_u32(u32::MAX);
         assert_eq!(n.sign, 1);
         assert_eq!(n.magnitude.to_vec(), vec![Limb::from(u32::MAX)]);
     }
 
     #[test]
     fn from_u16_zero_and_max() {
-        let zero = BigInteger::from_u16(0);
+        let zero = BigInt::from_u16(0);
         assert_eq!(zero.sign, 0);
         assert!(zero.magnitude.is_empty());
 
-        let max = BigInteger::from_u16(u16::MAX);
+        let max = BigInt::from_u16(u16::MAX);
         assert_eq!(max.sign, 1);
         assert_eq!(max.magnitude.to_vec(), vec![Limb::from(u16::MAX)]);
     }
 
     #[test]
     fn from_u8_zero_and_max() {
-        let zero = BigInteger::from_u8(0);
+        let zero = BigInt::from_u8(0);
         assert_eq!(zero.sign, 0);
         assert!(zero.magnitude.is_empty());
 
-        let max = BigInteger::from_u8(u8::MAX);
+        let max = BigInt::from_u8(u8::MAX);
         assert_eq!(max.sign, 1);
         assert_eq!(max.magnitude.to_vec(), vec![Limb::from(u8::MAX)]);
     }
 
     #[test]
     fn from_u64_zero() {
-        let n = BigInteger::from_u64(0);
+        let n = BigInt::from_u64(0);
         assert_eq!(n.sign, 0);
         assert!(n.magnitude.is_empty());
     }
@@ -5445,7 +5361,7 @@ mod tests {
     #[test]
     fn from_u64_single_word() {
         // Fits in one word -> no leading zero word.
-        let n = BigInteger::from_u64(5);
+        let n = BigInt::from_u64(5);
         assert_eq!(n.sign, 1);
         assert_eq!(n.magnitude.to_vec(), vec![5]);
     }
@@ -5453,35 +5369,35 @@ mod tests {
     #[test]
     fn from_u64_two_words() {
         // 0x0000_0001_0000_0002 -> [1, 2] big-endian.
-        let n = BigInteger::from_u64((1 << 32) | 2);
+        let n = BigInt::from_u64((1 << 32) | 2);
         assert_eq!(n.sign, 1);
         assert_eq!(n.to_u64_be_unsigned(), vec![(1u64 << 32) | 2]);
     }
 
     #[test]
     fn from_u64_max() {
-        let n = BigInteger::from_u64(u64::MAX);
+        let n = BigInt::from_u64(u64::MAX);
         assert_eq!(n.sign, 1);
         assert_eq!(n.to_u64_be_unsigned(), vec![u64::MAX]);
     }
 
     #[test]
     fn from_i32_zero() {
-        let n = BigInteger::from_i32(0);
+        let n = BigInt::from_i32(0);
         assert_eq!(n.sign, 0);
         assert!(n.magnitude.is_empty());
     }
 
     #[test]
     fn from_i32_positive() {
-        let n = BigInteger::from_i32(5);
+        let n = BigInt::from_i32(5);
         assert_eq!(n.sign, 1);
         assert_eq!(n.magnitude.to_vec(), vec![5]);
     }
 
     #[test]
     fn from_i32_negative() {
-        let n = BigInteger::from_i32(-5);
+        let n = BigInt::from_i32(-5);
         assert_eq!(n.sign, -1);
         assert_eq!(n.magnitude.to_vec(), vec![5]);
     }
@@ -5489,25 +5405,25 @@ mod tests {
     #[test]
     fn from_i32_min() {
         // -i32::MIN would overflow; magnitude is 2^31.
-        let n = BigInteger::from_i32(i32::MIN);
+        let n = BigInt::from_i32(i32::MIN);
         assert_eq!(n.sign, -1);
         assert_eq!(n.magnitude.to_vec(), vec![1 << 31]);
     }
 
     #[test]
     fn from_i32_max() {
-        let n = BigInteger::from_i32(i32::MAX);
+        let n = BigInt::from_i32(i32::MAX);
         assert_eq!(n.sign, 1);
         assert_eq!(n.magnitude.to_vec(), vec![i32::MAX as Limb]);
     }
 
     #[test]
     fn from_i16_negative_and_min() {
-        let neg = BigInteger::from_i16(-5);
+        let neg = BigInt::from_i16(-5);
         assert_eq!(neg.sign, -1);
         assert_eq!(neg.magnitude.to_vec(), vec![5]);
 
-        let min = BigInteger::from_i16(i16::MIN);
+        let min = BigInt::from_i16(i16::MIN);
         assert_eq!(min.sign, -1);
         assert_eq!(
             min.magnitude.to_vec(),
@@ -5517,18 +5433,18 @@ mod tests {
 
     #[test]
     fn from_i8_negative_and_min() {
-        let neg = BigInteger::from_i8(-5);
+        let neg = BigInt::from_i8(-5);
         assert_eq!(neg.sign, -1);
         assert_eq!(neg.magnitude.to_vec(), vec![5]);
 
-        let min = BigInteger::from_i8(i8::MIN);
+        let min = BigInt::from_i8(i8::MIN);
         assert_eq!(min.sign, -1);
         assert_eq!(min.magnitude.to_vec(), vec![i8::MIN.unsigned_abs() as Limb]);
     }
 
     #[test]
     fn from_i64_negative_two_words() {
-        let n = BigInteger::from_i64(-((1i64 << 32) | 2));
+        let n = BigInt::from_i64(-((1i64 << 32) | 2));
         assert_eq!(n.sign, -1);
         assert_eq!(n.to_u64_be_unsigned(), vec![(1u64 << 32) | 2]);
     }
@@ -5536,33 +5452,33 @@ mod tests {
     #[test]
     fn from_i64_min() {
         // -i64::MIN would overflow; magnitude is 2^63 -> high word 0x8000_0000.
-        let n = BigInteger::from_i64(i64::MIN);
+        let n = BigInt::from_i64(i64::MIN);
         assert_eq!(n.sign, -1);
         assert_eq!(n.to_u64_be_unsigned(), vec![1u64 << 63]); // |i64::MIN| = 2^63
     }
 
     #[test]
     fn from_i128_negative_and_min() {
-        let neg = BigInteger::from_i128(-5);
+        let neg = BigInt::from_i128(-5);
         assert_eq!(neg.sign, -1);
         assert_eq!(neg.magnitude.to_vec(), vec![5]);
 
         // magnitude of i128::MIN is 2^127 -> top word 0x8000_0000, rest zero.
-        let min = BigInteger::from_i128(i128::MIN);
+        let min = BigInt::from_i128(i128::MIN);
         assert_eq!(min.sign, -1);
         assert_eq!(min.to_u64_be_unsigned(), vec![1u64 << 63, 0]); // |i128::MIN| = 2^127
     }
 
     #[test]
     fn from_u128_zero() {
-        let n = BigInteger::from_u128(0);
+        let n = BigInt::from_u128(0);
         assert_eq!(n.sign, 0);
         assert!(n.magnitude.is_empty());
     }
 
     #[test]
     fn from_u128_single_word() {
-        let n = BigInteger::from_u128(5);
+        let n = BigInt::from_u128(5);
         assert_eq!(n.sign, 1);
         assert_eq!(n.magnitude.to_vec(), vec![5]);
     }
@@ -5572,14 +5488,14 @@ mod tests {
         // 0x0000_0000_0000_0003_0000_0000_0000_0004
         // = word3<<96 | ... ; top two words are zero and must be dropped.
         let value = (3u128 << 64) | 4;
-        let n = BigInteger::from_u128(value);
+        let n = BigInt::from_u128(value);
         assert_eq!(n.sign, 1);
         assert_eq!(n.to_u64_be_unsigned(), vec![3, 4]); // 3·2^64 + 4
     }
 
     #[test]
     fn from_u128_max() {
-        let n = BigInteger::from_u128(u128::MAX);
+        let n = BigInt::from_u128(u128::MAX);
         assert_eq!(n.sign, 1);
         assert_eq!(n.to_u64_be_unsigned(), vec![u64::MAX, u64::MAX]);
     }
@@ -5611,8 +5527,8 @@ mod tests {
         // 6 位元組 = 0xAABBCCDDEEFF（值比對，與 Limb 寬度無關）
         let buffer = [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF];
         assert_eq!(
-            BigInteger::from_checked_magnitude(1, make_magnitude_be(&buffer)),
-            BigInteger::from_u64(0xAABB_CCDD_EEFF)
+            BigInt::from_checked_magnitude(1, make_magnitude_be(&buffer)),
+            BigInt::from_u64(0xAABB_CCDD_EEFF)
         );
     }
 
@@ -5627,8 +5543,8 @@ mod tests {
         // 中間的零位元組必須保留：0x01_00_00_00_00 = 2^32
         let buffer = [0x01, 0x00, 0x00, 0x00, 0x00];
         assert_eq!(
-            BigInteger::from_checked_magnitude(1, make_magnitude_be(&buffer)),
-            BigInteger::from_u64(1 << 32)
+            BigInt::from_checked_magnitude(1, make_magnitude_be(&buffer)),
+            BigInt::from_u64(1 << 32)
         );
     }
 
@@ -5659,8 +5575,8 @@ mod tests {
         // 0xAABBCCDDEEFF 的 LE 表示（值比對）
         let buffer = [0xFF, 0xEE, 0xDD, 0xCC, 0xBB, 0xAA];
         assert_eq!(
-            BigInteger::from_checked_magnitude(1, make_magnitude_le(&buffer)),
-            BigInteger::from_u64(0xAABB_CCDD_EEFF)
+            BigInt::from_checked_magnitude(1, make_magnitude_le(&buffer)),
+            BigInt::from_u64(0xAABB_CCDD_EEFF)
         );
     }
 
@@ -5669,8 +5585,8 @@ mod tests {
         // 2^32：LE 為 [00,00,00,00,01]（值比對）
         let buffer = [0x00, 0x00, 0x00, 0x00, 0x01];
         assert_eq!(
-            BigInteger::from_checked_magnitude(1, make_magnitude_le(&buffer)),
-            BigInteger::from_u64(1 << 32)
+            BigInt::from_checked_magnitude(1, make_magnitude_le(&buffer)),
+            BigInt::from_u64(1 << 32)
         );
     }
 
@@ -5733,21 +5649,21 @@ mod tests {
 
     #[test]
     fn from_bytes_be_empty_is_zero() {
-        let n = BigInteger::from_bytes_be(&[]);
+        let n = BigInt::from_bytes_be(&[]);
         assert_eq!(n.sign, 0);
         assert!(n.magnitude.is_empty());
     }
 
     #[test]
     fn from_bytes_be_zero() {
-        let n = BigInteger::from_bytes_be(&[0x00, 0x00]);
+        let n = BigInt::from_bytes_be(&[0x00, 0x00]);
         assert_eq!(n.sign, 0);
         assert!(n.magnitude.is_empty());
     }
 
     #[test]
     fn from_bytes_be_positive() {
-        let n = BigInteger::from_bytes_be(&[0x05]);
+        let n = BigInt::from_bytes_be(&[0x05]);
         assert_eq!(n.sign, 1);
         assert_eq!(n.magnitude.to_vec(), vec![5]);
     }
@@ -5755,21 +5671,21 @@ mod tests {
     #[test]
     fn from_bytes_be_leading_zero_forces_positive() {
         // 0x80 單獨會被當負數；前綴一個 0x00 才是正的 128
-        let n = BigInteger::from_bytes_be(&[0x00, 0x80]);
+        let n = BigInt::from_bytes_be(&[0x00, 0x80]);
         assert_eq!(n.sign, 1);
         assert_eq!(n.magnitude.to_vec(), vec![128]);
     }
 
     #[test]
     fn from_bytes_be_minus_one() {
-        let n = BigInteger::from_bytes_be(&[0xFF]);
+        let n = BigInt::from_bytes_be(&[0xFF]);
         assert_eq!(n.sign, -1);
         assert_eq!(n.magnitude.to_vec(), vec![1]);
     }
 
     #[test]
     fn from_bytes_be_minus_128() {
-        let n = BigInteger::from_bytes_be(&[0x80]);
+        let n = BigInt::from_bytes_be(&[0x80]);
         assert_eq!(n.sign, -1);
         assert_eq!(n.magnitude.to_vec(), vec![128]);
     }
@@ -5790,8 +5706,8 @@ mod tests {
             i32::MAX,
             i32::MIN,
         ] {
-            let n = BigInteger::from_bytes_be(&value.to_be_bytes());
-            let expected = BigInteger::from_i32(value);
+            let n = BigInt::from_bytes_be(&value.to_be_bytes());
+            let expected = BigInt::from_i32(value);
             assert_eq!(n.sign, expected.sign, "sign mismatch for {value}");
             assert_eq!(
                 n.magnitude, expected.magnitude,
@@ -5802,7 +5718,7 @@ mod tests {
 
     #[test]
     fn from_bytes_le_empty_is_zero() {
-        let n = BigInteger::from_bytes_le(&[]);
+        let n = BigInt::from_bytes_le(&[]);
         assert_eq!(n.sign, 0);
         assert!(n.magnitude.is_empty());
     }
@@ -5810,14 +5726,14 @@ mod tests {
     #[test]
     fn from_bytes_le_leading_zero_forces_positive() {
         // LE：符號在尾端。[0x80, 0x00] 尾端最高位為 0 → 正的 128
-        let n = BigInteger::from_bytes_le(&[0x80, 0x00]);
+        let n = BigInt::from_bytes_le(&[0x80, 0x00]);
         assert_eq!(n.sign, 1);
         assert_eq!(n.magnitude.to_vec(), vec![128]);
     }
 
     #[test]
     fn from_bytes_le_minus_one() {
-        let n = BigInteger::from_bytes_le(&[0xFF]);
+        let n = BigInt::from_bytes_le(&[0xFF]);
         assert_eq!(n.sign, -1);
         assert_eq!(n.magnitude.to_vec(), vec![1]);
     }
@@ -5838,8 +5754,8 @@ mod tests {
             i32::MAX,
             i32::MIN,
         ] {
-            let n = BigInteger::from_bytes_le(&value.to_le_bytes());
-            let expected = BigInteger::from_i32(value);
+            let n = BigInt::from_bytes_le(&value.to_le_bytes());
+            let expected = BigInt::from_i32(value);
             assert_eq!(n.sign, expected.sign, "sign mismatch for {value}");
             assert_eq!(
                 n.magnitude, expected.magnitude,
@@ -5853,8 +5769,8 @@ mod tests {
         // 同一個數：BE 位元組反轉即為 LE 位元組，兩者結果必須相同
         let be = [0xFF, 0x00, 0x00]; // -65536
         let le: Vec<u8> = be.iter().rev().copied().collect();
-        let a = BigInteger::from_bytes_be(&be);
-        let b = BigInteger::from_bytes_le(&le);
+        let a = BigInt::from_bytes_be(&be);
+        let b = BigInt::from_bytes_le(&le);
         assert_eq!(a.sign, b.sign);
         assert_eq!(a.magnitude, b.magnitude);
     }

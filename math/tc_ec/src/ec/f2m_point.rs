@@ -12,7 +12,7 @@ use core::ops::{Add, Mul, Neg, Sub};
 use crate::ec::coordinate_system::CoordinateSystem;
 use crate::ec::f2m_curve::F2mCurve;
 use crate::ec::f2m_field_element::F2mFieldElement;
-use tc_bigint::BigInteger;
+use tc_bigint::BigInt;
 
 /// A point on an [`F2mCurve`].
 ///
@@ -177,7 +177,7 @@ impl F2mPoint {
     ///
     /// Kept as a named method so it survives alongside future windowed methods;
     /// [`Mul`] delegates here.
-    pub fn mul_double_and_add(&self, k: &BigInteger) -> Self {
+    pub fn mul_double_and_add(&self, k: &BigInt) -> Self {
         // k·O = O、0·P = O
         if self.is_infinity() || k.is_zero() {
             return F2mPoint::infinity(Arc::clone(&self.curve));
@@ -211,10 +211,10 @@ impl F2mPoint {
 ///
 /// Corresponds to the `ECMultiplier` path in bc. For now this is plain
 /// double-and-add; windowed / τ-adic methods are a later optimization.
-impl Mul<&BigInteger> for &F2mPoint {
+impl Mul<&BigInt> for &F2mPoint {
     type Output = F2mPoint;
 
-    fn mul(self, k: &BigInteger) -> F2mPoint {
+    fn mul(self, k: &BigInt) -> F2mPoint {
         // TODO(ec-f2m-point): bc 對 Koblitz 曲線預設走 WTauNafMultiplier，其餘走 WNAF。
         self.mul_double_and_add(k)
     }
@@ -252,7 +252,7 @@ impl core::fmt::Debug for F2mPoint {
 
 /// Encodes a field-element value as fixed-length `len` big-endian bytes (left-padded
 /// with zeros), as required by the SEC point encoding.
-fn fixed_be(v: &BigInteger, len: usize) -> Vec<u8> {
+fn fixed_be(v: &BigInt, len: usize) -> Vec<u8> {
     let mut buf = alloc::vec![0u8; len];
     let n = v.byte_length_unsigned(); // 值的最小位元組數（≤ len）
     v.to_bytes_be_unsigned_into(&mut buf[len - n..]); // 寫右段 → 左邊留零
@@ -331,7 +331,7 @@ impl Neg for &F2mPoint {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tc_bigint::BigInteger;
+    use tc_bigint::BigInt;
 
     // 取一條可建點的 F2m 曲線（GF(2^4)，x^4+x+1）。本組只驗負點的代數結構，
     // 不要求點真的在曲線上。
@@ -339,8 +339,8 @@ mod tests {
         Arc::new(F2mCurve::trinomial(
             4,
             1,
-            BigInteger::from_u32(0),
-            BigInteger::from_u32(1),
+            BigInt::from_u32(0),
+            BigInt::from_u32(1),
             None,
             None,
         ))
@@ -356,30 +356,21 @@ mod tests {
     fn neg_x_zero_is_self() {
         // x = 0 的 2-撓點：−P = P。
         let c = curve16();
-        let p = c.create_point(BigInteger::from_u32(0), BigInteger::from_u32(0b0011));
+        let p = c.create_point(BigInt::from_u32(0), BigInt::from_u32(0b0011));
         let np = -&p;
-        assert_eq!(np.x().unwrap().to_big_integer(), BigInteger::from_u32(0));
-        assert_eq!(
-            np.y().unwrap().to_big_integer(),
-            BigInteger::from_u32(0b0011)
-        ); // y 不變
+        assert_eq!(np.x().unwrap().to_big_integer(), BigInt::from_u32(0));
+        assert_eq!(np.y().unwrap().to_big_integer(), BigInt::from_u32(0b0011)); // y 不變
     }
 
     #[test]
     fn neg_general_point_and_involution() {
         let c = curve16();
         // P = (x, y)，x≠0 → −P = (x, y+x)。
-        let p = c.create_point(BigInteger::from_u32(0b0010), BigInteger::from_u32(0b0111));
+        let p = c.create_point(BigInt::from_u32(0b0010), BigInt::from_u32(0b0111));
         let np = -&p;
-        assert_eq!(
-            np.x().unwrap().to_big_integer(),
-            BigInteger::from_u32(0b0010)
-        ); // x 不變
+        assert_eq!(np.x().unwrap().to_big_integer(), BigInt::from_u32(0b0010)); // x 不變
         // y + x = 0b0111 ^ 0b0010 = 0b0101
-        assert_eq!(
-            np.y().unwrap().to_big_integer(),
-            BigInteger::from_u32(0b0101)
-        );
+        assert_eq!(np.y().unwrap().to_big_integer(), BigInt::from_u32(0b0101));
         // 對合：−(−P) = P
         let nnp = -&np;
         assert_eq!(
@@ -399,18 +390,16 @@ mod tests {
             3,
             6,
             7,
-            BigInteger::from_u32(1),
-            BigInteger::from_u32(1),
+            BigInt::from_u32(1),
+            BigInt::from_u32(1),
             None,
             None,
         ))
     }
 
     fn base_g(c: &Arc<F2mCurve>) -> F2mPoint {
-        let gx =
-            BigInteger::from_str_radix("02FE13C0537BBC11ACAA07D793DE4E6D5E5C94EEE8", 16).unwrap();
-        let gy =
-            BigInteger::from_str_radix("0289070FB05D38FF58321F2E800536D538CCDAA3D9", 16).unwrap();
+        let gx = BigInt::from_str_radix("02FE13C0537BBC11ACAA07D793DE4E6D5E5C94EEE8", 16).unwrap();
+        let gy = BigInt::from_str_radix("0289070FB05D38FF58321F2E800536D538CCDAA3D9", 16).unwrap();
         c.create_point(gx, gy)
     }
 
@@ -490,18 +479,18 @@ mod tests {
         let c = sect163k1();
         let g = base_g(&c);
         // 0·G = O、k·O = O
-        assert!((&g * &BigInteger::from_u32(0)).is_infinity());
-        assert!((&c.infinity() * &BigInteger::from_u32(5)).is_infinity());
+        assert!((&g * &BigInt::from_u32(0)).is_infinity());
+        assert!((&c.infinity() * &BigInt::from_u32(5)).is_infinity());
         // 1·G = G
-        assert_eq!((&g * &BigInteger::from_u32(1)).x().unwrap(), g.x().unwrap());
+        assert_eq!((&g * &BigInt::from_u32(1)).x().unwrap(), g.x().unwrap());
         // 2·G = twice(G)
         assert_eq!(
-            (&g * &BigInteger::from_u32(2)).x().unwrap(),
+            (&g * &BigInt::from_u32(2)).x().unwrap(),
             g.twice().x().unwrap()
         );
         // (−1)·G = −G
         assert_eq!(
-            (&g * &BigInteger::from_i32(-1)).y().unwrap(),
+            (&g * &BigInt::from_i32(-1)).y().unwrap(),
             (-&g).y().unwrap()
         );
     }
@@ -511,8 +500,7 @@ mod tests {
         // 終極測試：n·G = O（n = sect163k1 群階）。任何體域/倍點/加法錯誤都會讓它失敗。
         let c = sect163k1();
         let g = base_g(&c);
-        let n =
-            BigInteger::from_str_radix("04000000000000000000020108A2E0CC0D99F8A5EF", 16).unwrap();
+        let n = BigInt::from_str_radix("04000000000000000000020108A2E0CC0D99F8A5EF", 16).unwrap();
         assert!((&g * &n).is_infinity(), "n·G 應為無窮遠點");
     }
 

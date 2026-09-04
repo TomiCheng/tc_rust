@@ -14,7 +14,7 @@ use crate::ec::CoordinateSystem;
 use crate::ec::fp_field_element::FpFieldElement;
 use crate::ec::fp_point::FpPoint;
 use crate::ec::point_codec::PointDecodeError;
-use tc_bigint::BigInteger;
+use tc_bigint::BigInt;
 
 /// A short-Weierstrass elliptic curve `y^2 = x^3 + ax + b` over GF(q).
 ///
@@ -23,15 +23,15 @@ use tc_bigint::BigInteger;
 /// the coefficients `a`, `b`, and the optional group `order` and `cofactor`.
 pub struct FpCurve {
     // 體域質數（模數）。
-    q: BigInteger,
+    q: BigInt,
     // 快速模約簡殘值，算一次、分給每個由本曲線建立的體域元素。
-    r: Option<BigInteger>,
+    r: Option<BigInt>,
     // 曲線係數 a、b（體域元素）。
     a: FpFieldElement,
     b: FpFieldElement,
     // 群階與 cofactor（未必已知）。
-    order: Option<BigInteger>,
-    cofactor: Option<BigInteger>,
+    order: Option<BigInt>,
+    cofactor: Option<BigInt>,
     // 點的座標系。MVP 只支援 Affine（bc 預設是 JacobianModified，等實作 Jacobian
     // 再改預設）。
     coordinate_system: CoordinateSystem,
@@ -70,11 +70,11 @@ impl FpCurve {
     ///
     /// Panics if `q` is not positive, or if `a`/`b` are out of range.
     pub fn new(
-        q: BigInteger,
-        a: BigInteger,
-        b: BigInteger,
-        order: Option<BigInteger>,
-        cofactor: Option<BigInteger>,
+        q: BigInt,
+        a: BigInt,
+        b: BigInt,
+        order: Option<BigInt>,
+        cofactor: Option<BigInt>,
     ) -> Self {
         assert!(q.sign() > 0, "field modulus q must be positive");
         // 殘值算一次，之後所有體域元素共用（對應 bc AbstractFpCurve 的 m_r）。
@@ -100,12 +100,12 @@ impl FpCurve {
     /// # Panics
     ///
     /// Panics if `x` is negative or `>= q`.
-    pub fn create_field_element(&self, x: BigInteger) -> FpFieldElement {
+    pub fn create_field_element(&self, x: BigInt) -> FpFieldElement {
         Self::make_field_element(&self.q, x, &self.r)
     }
 
     // 共用的建元素邏輯：範圍檢查 + 以共用的 r 建立（bc FromBigInteger 的檢查）。
-    fn make_field_element(q: &BigInteger, x: BigInteger, r: &Option<BigInteger>) -> FpFieldElement {
+    fn make_field_element(q: &BigInt, x: BigInt, r: &Option<BigInt>) -> FpFieldElement {
         assert!(
             x.sign() >= 0 && &x < q,
             "value invalid for Fp field element"
@@ -114,7 +114,7 @@ impl FpCurve {
     }
 
     /// Returns the field modulus `q`.
-    pub fn q(&self) -> &BigInteger {
+    pub fn q(&self) -> &BigInt {
         &self.q
     }
 
@@ -129,12 +129,12 @@ impl FpCurve {
     }
 
     /// Returns the group order `n`, if known.
-    pub fn order(&self) -> Option<&BigInteger> {
+    pub fn order(&self) -> Option<&BigInt> {
         self.order.as_ref()
     }
 
     /// Returns the cofactor `h`, if known.
-    pub fn cofactor(&self) -> Option<&BigInteger> {
+    pub fn cofactor(&self) -> Option<&BigInt> {
         self.cofactor.as_ref()
     }
 
@@ -148,7 +148,7 @@ impl FpCurve {
     /// Returns `true` if `x` is a valid field element, i.e. `0 <= x < q`.
     ///
     /// Corresponds to `IsValidFieldElement` in Bouncy Castle.
-    pub fn is_valid_field_element(&self, x: &BigInteger) -> bool {
+    pub fn is_valid_field_element(&self, x: &BigInt) -> bool {
         x.sign() >= 0 && x < &self.q
     }
 
@@ -175,10 +175,10 @@ impl FpCurve {
     }
 
     // rejection sampling：均勻取 [0, q)。
-    fn impl_random_field_element(&self, rng: &mut dyn Rng) -> BigInteger {
+    fn impl_random_field_element(&self, rng: &mut dyn Rng) -> BigInt {
         let bits = self.q.bit_length();
         loop {
-            let x = BigInteger::random_bits(bits, rng);
+            let x = BigInt::random_bits(bits, rng);
             if x < self.q {
                 return x;
             }
@@ -186,10 +186,10 @@ impl FpCurve {
     }
 
     // rejection sampling：均勻取 [1, q)（非零）。
-    fn impl_random_field_element_mult(&self, rng: &mut dyn Rng) -> BigInteger {
+    fn impl_random_field_element_mult(&self, rng: &mut dyn Rng) -> BigInt {
         let bits = self.q.bit_length();
         loop {
-            let x = BigInteger::random_bits(bits, rng);
+            let x = BigInt::random_bits(bits, rng);
             if x.sign() > 0 && x < self.q {
                 return x;
             }
@@ -228,7 +228,7 @@ impl FpCurve {
     /// # Panics
     ///
     /// Panics if `x` or `y` is not in `[0, q)`.
-    pub fn create_point(self: &Arc<Self>, x: BigInteger, y: BigInteger) -> FpPoint {
+    pub fn create_point(self: &Arc<Self>, x: BigInt, y: BigInt) -> FpPoint {
         FpPoint::new(
             Arc::clone(self),
             self.create_field_element(x),
@@ -246,7 +246,7 @@ impl FpCurve {
     ///
     /// Corresponds to `DecompressPoint` in Bouncy Castle. Takes `self` as an
     /// `Arc` so the recovered point can hold a back-reference to the curve.
-    pub fn decompress_point(self: &Arc<Self>, y_tilde: u32, x1: BigInteger) -> Option<FpPoint> {
+    pub fn decompress_point(self: &Arc<Self>, y_tilde: u32, x1: BigInt) -> Option<FpPoint> {
         let x = self.create_field_element(x1);
         // rhs = x³ + ax + b（Horner：(x² + a)·x + b）
         let rhs = &(&(&x.square() + self.a()) * &x) + self.b();
@@ -287,7 +287,7 @@ impl FpCurve {
 
     // 從位元組解析一個座標並確認落在 [0, q)（解不可信輸入，不能讓 create_field_element panic）。
     fn parse_coordinate(&self, bytes: &[u8]) -> Result<FpFieldElement, PointDecodeError> {
-        let v = BigInteger::from_bytes_be_unsigned(bytes);
+        let v = BigInt::from_bytes_be_unsigned(bytes);
         if &v >= self.q() {
             return Err(PointDecodeError::CoordinateOutOfRange);
         }
@@ -320,7 +320,7 @@ impl FpCurve {
                 if rest.len() != len {
                     return Err(PointDecodeError::InvalidLength);
                 }
-                let x = BigInteger::from_bytes_be_unsigned(rest);
+                let x = BigInt::from_bytes_be_unsigned(rest);
                 if &x >= self.q() {
                     return Err(PointDecodeError::CoordinateOutOfRange);
                 }
@@ -403,34 +403,28 @@ mod tests {
 
     // secp256k1: y^2 = x^3 + 7 over GF(p).
     fn secp256k1() -> FpCurve {
-        let p = BigInteger::from_str_radix(
+        let p = BigInt::from_str_radix(
             "fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f",
             16,
         )
         .unwrap();
-        FpCurve::new(
-            p,
-            BigInteger::from_u32(0),
-            BigInteger::from_u32(7),
-            None,
-            None,
-        )
+        FpCurve::new(p, BigInt::from_u32(0), BigInt::from_u32(7), None, None)
     }
 
     #[test]
     fn new_sets_coefficients() {
         let c = secp256k1();
         assert!(c.a().is_zero());
-        assert_eq!(c.b().as_ref(), &BigInteger::from_u32(7));
+        assert_eq!(c.b().as_ref(), &BigInt::from_u32(7));
         assert_eq!(c.coordinate_system(), CoordinateSystem::Affine);
     }
 
     // 教科書曲線 y² = x³ + 2x + 2 over GF(17)。
     fn curve17() -> Arc<FpCurve> {
         Arc::new(FpCurve::new(
-            BigInteger::from_u32(17),
-            BigInteger::from_u32(2),
-            BigInteger::from_u32(2),
+            BigInt::from_u32(17),
+            BigInt::from_u32(2),
+            BigInt::from_u32(2),
             None,
             None,
         ))
@@ -440,12 +434,12 @@ mod tests {
     fn decompress_recovers_point() {
         let curve = curve17();
         // x=5 → G=(5,1)。y_tilde=1（y 奇）→ (5,1)。
-        let p = curve.decompress_point(1, BigInteger::from_u32(5)).unwrap();
-        assert_eq!(p.x().unwrap().as_ref(), &BigInteger::from_u32(5));
-        assert_eq!(p.y().unwrap().as_ref(), &BigInteger::from_u32(1));
+        let p = curve.decompress_point(1, BigInt::from_u32(5)).unwrap();
+        assert_eq!(p.x().unwrap().as_ref(), &BigInt::from_u32(5));
+        assert_eq!(p.y().unwrap().as_ref(), &BigInt::from_u32(1));
         // y_tilde=0（y 偶）→ 另一根 (5,16)。
-        let q = curve.decompress_point(0, BigInteger::from_u32(5)).unwrap();
-        assert_eq!(q.y().unwrap().as_ref(), &BigInteger::from_u32(16));
+        let q = curve.decompress_point(0, BigInt::from_u32(5)).unwrap();
+        assert_eq!(q.y().unwrap().as_ref(), &BigInt::from_u32(16));
     }
 
     #[test]
@@ -457,10 +451,10 @@ mod tests {
     #[test]
     fn contains_affine_checks_curve_equation() {
         let curve = curve17();
-        let x = curve.create_field_element(BigInteger::from_u32(5));
+        let x = curve.create_field_element(BigInt::from_u32(5));
         // (5,1) 在曲線上、(5,2) 不在。
-        assert!(curve.contains_affine(&x, &curve.create_field_element(BigInteger::from_u32(1))));
-        assert!(!curve.contains_affine(&x, &curve.create_field_element(BigInteger::from_u32(2))));
+        assert!(curve.contains_affine(&x, &curve.create_field_element(BigInt::from_u32(1))));
+        assert!(!curve.contains_affine(&x, &curve.create_field_element(BigInt::from_u32(2))));
     }
 
     #[test]
@@ -490,8 +484,8 @@ mod tests {
         let curve = curve17();
         // 0x03（y 奇）+ X=5 → (5,1)。
         let p = curve.decode_point(&[0x03, 5]).unwrap();
-        assert_eq!(p.x().unwrap().as_ref(), &BigInteger::from_u32(5));
-        assert_eq!(p.y().unwrap().as_ref(), &BigInteger::from_u32(1));
+        assert_eq!(p.x().unwrap().as_ref(), &BigInt::from_u32(5));
+        assert_eq!(p.y().unwrap().as_ref(), &BigInt::from_u32(1));
         // 0x02（y 偶）→ 另一根 (5,16)。
         assert_eq!(
             curve
@@ -500,7 +494,7 @@ mod tests {
                 .y()
                 .unwrap()
                 .as_ref(),
-            &BigInteger::from_u32(16)
+            &BigInt::from_u32(16)
         );
         // x=1：rhs=5 非二次剩餘 → NotOnCurve。
         assert!(matches!(
@@ -514,8 +508,8 @@ mod tests {
         let curve = curve17();
         // 0x04 + X + Y = (5,1)。
         let p = curve.decode_point(&[0x04, 5, 1]).unwrap();
-        assert_eq!(p.x().unwrap().as_ref(), &BigInteger::from_u32(5));
-        assert_eq!(p.y().unwrap().as_ref(), &BigInteger::from_u32(1));
+        assert_eq!(p.x().unwrap().as_ref(), &BigInt::from_u32(5));
+        assert_eq!(p.y().unwrap().as_ref(), &BigInt::from_u32(1));
         // 混合 0x07（y 奇）與 (5,1) 一致 → ok。
         assert!(curve.decode_point(&[0x07, 5, 1]).is_ok());
         // 混合 0x06（宣稱 y 偶）但 y=1 奇 → InconsistentHybridY。
@@ -539,23 +533,23 @@ mod tests {
     fn decompress_rejects_non_curve_x() {
         let curve = curve17();
         // x=1：rhs = 1+2+2 = 5，非二次剩餘 → None。
-        assert!(curve.decompress_point(0, BigInteger::from_u32(1)).is_none());
+        assert!(curve.decompress_point(0, BigInt::from_u32(1)).is_none());
     }
 
     #[test]
     fn convenience_methods() {
         let curve = curve17(); // Arc<FpCurve>, GF(17)
         // create_point / infinity。
-        let p = curve.create_point(BigInteger::from_u32(5), BigInteger::from_u32(1));
-        assert_eq!(p.x().unwrap().as_ref(), &BigInteger::from_u32(5));
+        let p = curve.create_point(BigInt::from_u32(5), BigInt::from_u32(1));
+        assert_eq!(p.x().unwrap().as_ref(), &BigInt::from_u32(5));
         assert!(curve.infinity().is_infinity());
         // field_size = bitlen(q)：17 → 5。
         assert_eq!(curve.field_size(), 5);
         assert_eq!(secp256k1().field_size(), 256);
         // is_valid_field_element：0≤x<q。
-        assert!(curve.is_valid_field_element(&BigInteger::from_u32(16)));
-        assert!(!curve.is_valid_field_element(&BigInteger::from_u32(17)));
-        assert!(!curve.is_valid_field_element(&BigInteger::from_i32(-1)));
+        assert!(curve.is_valid_field_element(&BigInt::from_u32(16)));
+        assert!(!curve.is_valid_field_element(&BigInt::from_u32(17)));
+        assert!(!curve.is_valid_field_element(&BigInt::from_i32(-1)));
         // affine_point_encoding_length：len=1 → 壓縮 2、未壓縮 3。
         assert_eq!(curve.affine_point_encoding_length(true), 2);
         assert_eq!(curve.affine_point_encoding_length(false), 3);
@@ -572,16 +566,16 @@ mod tests {
             s.finish()
         }
         let a = FpCurve::new(
-            BigInteger::from_u32(17),
-            BigInteger::from_u32(2),
-            BigInteger::from_u32(2),
-            Some(BigInteger::from_u32(19)), // order 不同也應相等（不算身分）
+            BigInt::from_u32(17),
+            BigInt::from_u32(2),
+            BigInt::from_u32(2),
+            Some(BigInt::from_u32(19)), // order 不同也應相等（不算身分）
             None,
         );
         let b = FpCurve::new(
-            BigInteger::from_u32(17),
-            BigInteger::from_u32(2),
-            BigInteger::from_u32(2),
+            BigInt::from_u32(17),
+            BigInt::from_u32(2),
+            BigInt::from_u32(2),
             None,
             None,
         );
@@ -598,8 +592,8 @@ mod tests {
     #[test]
     fn create_field_element_builds_element() {
         let c = secp256k1();
-        let e = c.create_field_element(BigInteger::from_u32(5));
-        assert_eq!(e.as_ref(), &BigInteger::from_u32(5));
+        let e = c.create_field_element(BigInt::from_u32(5));
+        assert_eq!(e.as_ref(), &BigInt::from_u32(5));
     }
 
     #[test]

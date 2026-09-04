@@ -16,7 +16,7 @@ use crate::ec::f2m_field::F2mField;
 use crate::ec::f2m_field_element::F2mFieldElement;
 use crate::ec::f2m_point::F2mPoint;
 use crate::ec::point_codec::PointDecodeError;
-use tc_bigint::BigInteger;
+use tc_bigint::BigInt;
 
 /// A short-Weierstrass elliptic curve `y² + xy = x³ + ax² + b` over `GF(2ᵐ)`.
 ///
@@ -29,8 +29,8 @@ pub struct F2mCurve {
     a: F2mFieldElement,
     b: F2mFieldElement,
     // 群階與 cofactor（未必已知）。
-    order: Option<BigInteger>,
-    cofactor: Option<BigInteger>,
+    order: Option<BigInt>,
+    cofactor: Option<BigInt>,
     // 點座標系。bc F2m 預設 COORD_LAMBDA_PROJECTIVE；MVP 比照 FpCurve 先走 Affine。
     coordinate_system: CoordinateSystem,
 }
@@ -46,10 +46,10 @@ impl F2mCurve {
     pub fn trinomial(
         m: usize,
         k: usize,
-        a: BigInteger,
-        b: BigInteger,
-        order: Option<BigInteger>,
-        cofactor: Option<BigInteger>,
+        a: BigInt,
+        b: BigInt,
+        order: Option<BigInt>,
+        cofactor: Option<BigInt>,
     ) -> Self {
         Self::from_field(Arc::new(F2mField::trinomial(m, k)), a, b, order, cofactor)
     }
@@ -67,10 +67,10 @@ impl F2mCurve {
         k1: usize,
         k2: usize,
         k3: usize,
-        a: BigInteger,
-        b: BigInteger,
-        order: Option<BigInteger>,
-        cofactor: Option<BigInteger>,
+        a: BigInt,
+        b: BigInt,
+        order: Option<BigInt>,
+        cofactor: Option<BigInt>,
     ) -> Self {
         Self::from_field(
             Arc::new(F2mField::pentanomial(m, k1, k2, k3)),
@@ -85,10 +85,10 @@ impl F2mCurve {
     /// elements and fixes the (affine, for now) coordinate system.
     fn from_field(
         field: Arc<F2mField>,
-        a: BigInteger,
-        b: BigInteger,
-        order: Option<BigInteger>,
-        cofactor: Option<BigInteger>,
+        a: BigInt,
+        b: BigInt,
+        order: Option<BigInt>,
+        cofactor: Option<BigInt>,
     ) -> Self {
         let a = Self::make_field_element(&field, a);
         let b = Self::make_field_element(&field, b);
@@ -110,13 +110,13 @@ impl F2mCurve {
     /// # Panics
     ///
     /// Panics if `x` is negative or has bit length `> m`.
-    pub fn create_field_element(&self, x: BigInteger) -> F2mFieldElement {
+    pub fn create_field_element(&self, x: BigInt) -> F2mFieldElement {
         Self::make_field_element(&self.field, x)
     }
 
-    // 共用建元素邏輯：範圍檢查 + BigInteger → 定長 LE u64 limbs（bc FromBigInteger →
+    // 共用建元素邏輯：範圍檢查 + BigInt → 定長 LE u64 limbs（bc FromBigInteger →
     // Nat.FromBigInteger64）。
-    fn make_field_element(field: &Arc<F2mField>, x: BigInteger) -> F2mFieldElement {
+    fn make_field_element(field: &Arc<F2mField>, x: BigInt) -> F2mFieldElement {
         assert!(
             x.sign() >= 0 && (x.bit_length() as usize) <= field.m(),
             "value invalid for F2m field element"
@@ -138,12 +138,12 @@ impl F2mCurve {
     }
 
     /// Returns the group order `n`, if known.
-    pub fn order(&self) -> Option<&BigInteger> {
+    pub fn order(&self) -> Option<&BigInt> {
         self.order.as_ref()
     }
 
     /// Returns the cofactor `h`, if known.
-    pub fn cofactor(&self) -> Option<&BigInteger> {
+    pub fn cofactor(&self) -> Option<&BigInt> {
         self.cofactor.as_ref()
     }
 
@@ -192,7 +192,7 @@ impl F2mCurve {
     /// Panics if either coordinate is out of range (see [`create_field_element`]).
     ///
     /// [`create_field_element`]: Self::create_field_element
-    pub fn create_point(self: &Arc<Self>, x: BigInteger, y: BigInteger) -> F2mPoint {
+    pub fn create_point(self: &Arc<Self>, x: BigInt, y: BigInt) -> F2mPoint {
         F2mPoint::new(
             Arc::clone(self),
             self.create_field_element(x),
@@ -236,7 +236,7 @@ impl F2mCurve {
     /// the root whose parity matches `y_tilde`.
     ///
     /// Takes `self` as an `Arc` so the recovered point can back-reference the curve.
-    pub fn decompress_point(self: &Arc<Self>, y_tilde: u32, x1: BigInteger) -> Option<F2mPoint> {
+    pub fn decompress_point(self: &Arc<Self>, y_tilde: u32, x1: BigInt) -> Option<F2mPoint> {
         let xp = self.create_field_element(x1);
         let yp = if xp.is_zero() {
             self.b().sqrt() // x = 0 → y = √b（F2m 平方根必存在）
@@ -255,7 +255,7 @@ impl F2mCurve {
 
     // 從位元組解析座標並確認 bit_length ≤ m（解不可信輸入，不能讓 create_field_element panic）。
     fn parse_coordinate(&self, bytes: &[u8]) -> Result<F2mFieldElement, PointDecodeError> {
-        let v = BigInteger::from_bytes_be_unsigned(bytes);
+        let v = BigInt::from_bytes_be_unsigned(bytes);
         if v.bit_length() as usize > self.field.m() {
             return Err(PointDecodeError::CoordinateOutOfRange);
         }
@@ -284,7 +284,7 @@ impl F2mCurve {
                 if rest.len() != len {
                     return Err(PointDecodeError::InvalidLength);
                 }
-                let x = BigInteger::from_bytes_be_unsigned(rest);
+                let x = BigInt::from_bytes_be_unsigned(rest);
                 if x.bit_length() as usize > self.field.m() {
                     return Err(PointDecodeError::CoordinateOutOfRange);
                 }
@@ -367,14 +367,14 @@ mod tests {
         let c = F2mCurve::trinomial(
             233,
             74,
-            BigInteger::from_u32(1),
-            BigInteger::from_u32(0x1234_5678),
+            BigInt::from_u32(1),
+            BigInt::from_u32(0x1234_5678),
             None,
             None,
         );
         assert_eq!(c.field_size(), 233);
-        assert_eq!(c.a().to_big_integer(), BigInteger::from_u32(1));
-        assert_eq!(c.b().to_big_integer(), BigInteger::from_u32(0x1234_5678));
+        assert_eq!(c.a().to_big_integer(), BigInt::from_u32(1));
+        assert_eq!(c.b().to_big_integer(), BigInt::from_u32(0x1234_5678));
         assert!(c.order().is_none() && c.cofactor().is_none());
         assert_eq!(c.coordinate_system(), CoordinateSystem::Affine);
     }
@@ -387,13 +387,13 @@ mod tests {
             3,
             6,
             7,
-            BigInteger::from_u32(1),
-            BigInteger::from_u32(1),
+            BigInt::from_u32(1),
+            BigInt::from_u32(1),
             None,
             None,
         );
-        assert_eq!(c.a().to_big_integer(), BigInteger::from_u32(1));
-        assert_eq!(c.b().to_big_integer(), BigInteger::from_u32(1));
+        assert_eq!(c.a().to_big_integer(), BigInt::from_u32(1));
+        assert_eq!(c.b().to_big_integer(), BigInt::from_u32(1));
     }
 
     #[test]
@@ -401,31 +401,21 @@ mod tests {
         let c = F2mCurve::trinomial(
             233,
             74,
-            BigInteger::from_u32(1),
-            BigInteger::from_u32(1),
+            BigInt::from_u32(1),
+            BigInt::from_u32(1),
             None,
             None,
         );
-        let e = c.create_field_element(BigInteger::from_u64(0x0102_0304_0506_0708));
-        assert_eq!(
-            e.to_big_integer(),
-            BigInteger::from_u64(0x0102_0304_0506_0708)
-        );
+        let e = c.create_field_element(BigInt::from_u64(0x0102_0304_0506_0708));
+        assert_eq!(e.to_big_integer(), BigInt::from_u64(0x0102_0304_0506_0708));
     }
 
     #[test]
     #[should_panic(expected = "value invalid")]
     fn create_field_element_rejects_too_large() {
-        let c = F2mCurve::trinomial(
-            4,
-            1,
-            BigInteger::from_u32(1),
-            BigInteger::from_u32(1),
-            None,
-            None,
-        );
+        let c = F2mCurve::trinomial(4, 1, BigInt::from_u32(1), BigInt::from_u32(1), None, None);
         // bit_length 5 > m=4 → panic
-        c.create_field_element(BigInteger::from_u32(0b1_0000));
+        c.create_field_element(BigInt::from_u32(0b1_0000));
     }
 
     #[test]
@@ -433,23 +423,17 @@ mod tests {
         let c = Arc::new(F2mCurve::trinomial(
             4,
             1,
-            BigInteger::from_u32(0),
-            BigInteger::from_u32(1),
+            BigInt::from_u32(0),
+            BigInt::from_u32(1),
             None,
             None,
         ));
         assert!(c.infinity().is_infinity());
 
-        let p = c.create_point(BigInteger::from_u32(0b0010), BigInteger::from_u32(0b0011));
+        let p = c.create_point(BigInt::from_u32(0b0010), BigInt::from_u32(0b0011));
         assert!(!p.is_infinity());
-        assert_eq!(
-            p.x().unwrap().to_big_integer(),
-            BigInteger::from_u32(0b0010)
-        );
-        assert_eq!(
-            p.y().unwrap().to_big_integer(),
-            BigInteger::from_u32(0b0011)
-        );
+        assert_eq!(p.x().unwrap().to_big_integer(), BigInt::from_u32(0b0010));
+        assert_eq!(p.y().unwrap().to_big_integer(), BigInt::from_u32(0b0011));
         assert!(Arc::ptr_eq(p.curve(), &c)); // 點回指同一曲線
     }
 
@@ -459,8 +443,8 @@ mod tests {
             F2mCurve::trinomial(
                 233,
                 74,
-                BigInteger::from_u32(1),
-                BigInteger::from_u32(b),
+                BigInt::from_u32(1),
+                BigInt::from_u32(b),
                 None,
                 None,
             )
@@ -473,8 +457,8 @@ mod tests {
             3,
             6,
             7,
-            BigInteger::from_u32(1),
-            BigInteger::from_u32(7),
+            BigInt::from_u32(1),
+            BigInt::from_u32(7),
             None,
             None,
         );
@@ -488,8 +472,8 @@ mod tests {
             3,
             6,
             7,
-            BigInteger::from_u32(1),
-            BigInteger::from_u32(1),
+            BigInt::from_u32(1),
+            BigInt::from_u32(1),
             None,
             None,
         ));

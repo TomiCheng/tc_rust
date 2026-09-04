@@ -1,23 +1,23 @@
 use alloc::{vec, vec::Vec};
 
-use super::{BigInteger, WORD_BITS};
+use super::{BigInt, WORD_BITS};
 
 pub(crate) type Limb = u32;
 pub(crate) type DoubleLimb = u64;
 
-impl BigInteger {
-    /// Creates a `BigInteger` from an unsigned 64-bit value.
+impl BigInt {
+    /// Creates a `BigInt` from an unsigned 64-bit value.
     ///
     /// # Examples
     ///
     /// ```
-    /// use tc_bigint::BigInteger;
+    /// use tc_bigint::BigInt;
     ///
-    /// let n = BigInteger::from_u64(5);
+    /// let n = BigInt::from_u64(5);
     /// ```
     pub fn from_u64(value: u64) -> Self {
         if value == 0 {
-            return BigInteger::new(0, Vec::new());
+            return BigInt::new(0, Vec::new());
         }
         let high = (value >> 32) as u32;
         let low = value as u32;
@@ -27,21 +27,21 @@ impl BigInteger {
         } else {
             vec![high, low]
         };
-        BigInteger::new(1, magnitude)
+        BigInt::new(1, magnitude)
     }
 
-    /// Creates a `BigInteger` from an unsigned 128-bit value.
+    /// Creates a `BigInt` from an unsigned 128-bit value.
     ///
     /// # Examples
     ///
     /// ```
-    /// use tc_bigint::BigInteger;
+    /// use tc_bigint::BigInt;
     ///
-    /// let n = BigInteger::from_u128(5);
+    /// let n = BigInt::from_u128(5);
     /// ```
     pub fn from_u128(value: u128) -> Self {
         if value == 0 {
-            return BigInteger::new(0, Vec::new());
+            return BigInt::new(0, Vec::new());
         }
         // Split into 4 big-endian words (most-significant first).
         let words = [
@@ -52,7 +52,7 @@ impl BigInteger {
         ];
         // Skip leading zero words. `value != 0` guarantees at least one non-zero.
         let start = words.iter().position(|&w| w != 0).unwrap();
-        BigInteger::new(1, words[start..].to_vec())
+        BigInt::new(1, words[start..].to_vec())
     }
 }
 

@@ -762,23 +762,23 @@ fn decode_128(bs: &[u8], z: &mut [i32]) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tc_bigint::BigInteger;
+    use tc_bigint::BigInt;
 
-    fn p() -> BigInteger {
+    fn p() -> BigInt {
         // p = 2²⁵⁵ − 19
-        &(&BigInteger::from_u32(1) << 255) - &BigInteger::from_u32(19)
+        &(&BigInt::from_u32(1) << 255) - &BigInt::from_u32(19)
     }
 
-    // 一個 Fe 的真值:normalize → encode → 讀成 BigInteger。
-    fn fe_val(fe: Fe) -> BigInteger {
-        BigInteger::from_bytes_le_unsigned(&fe.normalize().encode())
+    // 一個 Fe 的真值:normalize → encode → 讀成 BigInt。
+    fn fe_val(fe: Fe) -> BigInt {
+        BigInt::from_bytes_le_unsigned(&fe.normalize().encode())
     }
 
     // 一組 bytes 代表的值(decode 會丟 bit 255,故先清)。
-    fn bytes_val(bytes: &[u8; 32]) -> BigInteger {
+    fn bytes_val(bytes: &[u8; 32]) -> BigInt {
         let mut b = *bytes;
         b[31] &= 0x7F;
-        BigInteger::from_bytes_le_unsigned(&b)
+        BigInt::from_bytes_le_unsigned(&b)
     }
 
     #[test]
@@ -814,7 +814,7 @@ mod tests {
             assert_eq!(fe_val(a.sqr()), fe_val(a.mul(a)));
             // mul_i32（ladder 用 A24 = 121666）
             for &y in &[1i32, 19, 121665, 121666] {
-                let yv = BigInteger::from_u32(y as u32);
+                let yv = BigInt::from_u32(y as u32);
                 assert_eq!(
                     fe_val(a.mul_i32(y)),
                     (&av * &yv).rem_euclid(&p),
@@ -824,7 +824,7 @@ mod tests {
             // invert：a⁻¹ = a^(p−2)，且 a·a⁻¹ = 1（a ≠ 0）
             if !av.is_zero() {
                 assert_eq!(fe_val(a.invert()), av.mod_inverse(&p).unwrap());
-                assert_eq!(fe_val(a.mul(a.invert())), BigInteger::from_u32(1));
+                assert_eq!(fe_val(a.mul(a.invert())), BigInt::from_u32(1));
             }
             // negate / cnegate / add_one / apm 對照真值
             assert_eq!(fe_val(a.negate()), (-&av).rem_euclid(&p));
@@ -832,7 +832,7 @@ mod tests {
             assert_eq!(fe_val(a.cnegate(1)), (-&av).rem_euclid(&p));
             assert_eq!(
                 fe_val(a.add_one()),
-                (&av + &BigInteger::from_u32(1)).rem_euclid(&p)
+                (&av + &BigInt::from_u32(1)).rem_euclid(&p)
             );
             let (sp, sm) = a.apm(b);
             assert_eq!(fe_val(sp), (&av + &bv).rem_euclid(&p));

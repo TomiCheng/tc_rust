@@ -12,7 +12,7 @@ use core::ops::{Add, Div, Mul, Neg, Sub};
 
 use crate::binpoly::BinaryPoly;
 use crate::ec::f2m_field::F2mField;
-use tc_bigint::BigInteger;
+use tc_bigint::BigInt;
 
 /// An element of the binary field `GF(2ᵐ)` in polynomial basis.
 ///
@@ -86,12 +86,12 @@ impl F2mFieldElement {
         self.value.limbs()[0] & 1 == 1
     }
 
-    /// Returns the value as a non-negative [`BigInteger`] (the polynomial's
+    /// Returns the value as a non-negative [`BigInt`] (the polynomial's
     /// coefficients read as a base-2 integer). Corresponds to `ToBigInteger` in bc
     /// (`Nat.ToBigInteger64`). The limbs are little-endian `u64`, hence
-    /// [`BigInteger::from_u64_le_unsigned`].
-    pub fn to_big_integer(&self) -> BigInteger {
-        BigInteger::from_u64_le_unsigned(self.value.limbs())
+    /// [`BigInt::from_u64_le_unsigned`].
+    pub fn to_big_integer(&self) -> BigInt {
+        BigInt::from_u64_le_unsigned(self.value.limbs())
     }
 
     /// Returns `self + 1` in the field, i.e. flips the constant term.
@@ -226,7 +226,7 @@ impl F2mFieldElement {
     }
 
     // TODO(ec-f2m)：以下待點層（F2mCurve/F2mPoint、SEC 點編解碼）真的用到時再補：
-    //   - from_big_integer()：反向（BigInteger → 定長 limbs），放 F2mCurve（需 m + validate
+    //   - from_big_integer()：反向（BigInt → 定長 limbs），放 F2mCurve（需 m + validate
     //     x>=0 && bit_length<=m），對齊 bc `ECCurve.FromBigInteger` → `Nat.FromBigInteger64`。
     //   - get_encoded()/encode_to()（ECFieldElement 基底）：SEC 壓縮點格式，
     //     BinaryPoly → 定長 big-endian bytes。
@@ -469,18 +469,15 @@ mod tests {
     #[test]
     fn to_big_integer_reads_value() {
         let f = field16();
-        assert_eq!(fe(&f, 0).to_big_integer(), BigInteger::from_u32(0));
-        assert_eq!(
-            fe(&f, 0b1011).to_big_integer(),
-            BigInteger::from_u32(0b1011)
-        ); // 11
-        assert_eq!(fe(&f, 0b1111).to_big_integer(), BigInteger::from_u32(15));
+        assert_eq!(fe(&f, 0).to_big_integer(), BigInt::from_u32(0));
+        assert_eq!(fe(&f, 0b1011).to_big_integer(), BigInt::from_u32(0b1011)); // 11
+        assert_eq!(fe(&f, 0b1111).to_big_integer(), BigInt::from_u32(15));
 
         // 跨 limb（size 2）：驗 little-endian 順序 —— limb0 低位、limb1 高位。
         let f2 = Arc::new(F2mField::trinomial(128, 7));
         let e = F2mFieldElement::new(Arc::clone(&f2), BinaryPoly::from_limbs([0x2u64, 0x1]));
         // 值 = 1·2^64 + 2
-        assert_eq!(e.to_big_integer(), BigInteger::from_u128((1u128 << 64) + 2));
+        assert_eq!(e.to_big_integer(), BigInt::from_u128((1u128 << 64) + 2));
     }
 
     #[test]

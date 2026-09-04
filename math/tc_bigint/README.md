@@ -1,6 +1,6 @@
 # tc_bigint
 
-`tc_bigint` provides the workspace's signed arbitrary-precision [`BigInteger`]
+`tc_bigint` provides the workspace's signed arbitrary-precision [`BigInt`]
 implementation. It was ported from Bouncy Castle C# as a learning project.
 
 The crate supports arithmetic, bitwise operations, shifts, arbitrary-radix text,
@@ -10,25 +10,25 @@ probable-prime operations.
 ## Example
 
 ```rust
-use tc_bigint::BigInteger;
+use tc_bigint::BigInt;
 
-let base = BigInteger::from_u32(4);
-let exponent = BigInteger::from_u32(13);
-let modulus = BigInteger::from_u32(497);
+let base = BigInt::from_u32(4);
+let exponent = BigInt::from_u32(13);
+let modulus = BigInt::from_u32(497);
 
 assert_eq!(
     base.mod_pow(&exponent, &modulus),
-    BigInteger::from_u32(445),
+    BigInt::from_u32(445),
 );
 
-let value = BigInteger::from_bytes_be_unsigned(&[0x01, 0x00]);
-assert_eq!(value, BigInteger::from_u32(256));
+let value = BigInt::from_bytes_be_unsigned(&[0x01, 0x00]);
+assert_eq!(value, BigInt::from_u32(256));
 assert_eq!(value.to_bytes_le_unsigned(), [0x00, 0x01]);
 ```
 
 ## Runtime requirements
 
-`BigInteger` requires `alloc` for dynamically sized storage but does not require
+`BigInt` requires `alloc` for dynamically sized storage but does not require
 the standard library. Disable the default `std` feature for a `no_std + alloc`
 build:
 

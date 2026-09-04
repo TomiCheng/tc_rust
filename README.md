@@ -105,7 +105,7 @@ details and usage examples.
 
 ### Mathematics
 
-- Signed arbitrary-precision `BigInteger`
+- Signed arbitrary-precision `BigInt`
 - Arithmetic, bitwise operations, shifts, conversions, and arbitrary-radix text
 - GCD, modular inverse, modular exponentiation, and probable-prime operations
 - Binary-polynomial, raw natural-number, and elliptic-curve field arithmetic

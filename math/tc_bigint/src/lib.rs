@@ -9,8 +9,8 @@
 // not require the standard library.
 extern crate alloc;
 
-mod big_integer;
+mod big_int;
 mod traits;
 
-pub use big_integer::{BigInteger, BufferTooSmall, ParseBigIntegerError, TryFromBigIntegerError};
+pub use big_int::{BigInt, BufferTooSmall, ParseBigIntError, TryFromBigIntError};
 pub use traits::{Add, Pow};

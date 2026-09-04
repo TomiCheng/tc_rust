@@ -1,4 +1,4 @@
-use tc_bigint::BigInteger;
+use tc_bigint::BigInt;
 use tc_cipher::CipherDirection;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -44,12 +44,12 @@ impl core::error::Error for RsaError {}
 
 #[derive(Clone, Copy)]
 pub struct RsaPublicParams<'a> {
-    modulus: &'a BigInteger,
-    exponent: &'a BigInteger,
+    modulus: &'a BigInt,
+    exponent: &'a BigInt,
 }
 
 impl<'a> RsaPublicParams<'a> {
-    pub fn new(modulus: &'a BigInteger, exponent: &'a BigInteger) -> Result<Self, RsaError> {
+    pub fn new(modulus: &'a BigInt, exponent: &'a BigInt) -> Result<Self, RsaError> {
         if modulus.sign() <= 0 {
             return Err(RsaError::InvalidModulus);
         }
@@ -69,26 +69,26 @@ impl<'a> RsaPublicParams<'a> {
 
 #[derive(Clone, Copy)]
 pub struct RsaPrivateParams<'a> {
-    modulus: &'a BigInteger,
-    private_exponent: &'a BigInteger,
-    public_exponent: &'a BigInteger,
-    p: &'a BigInteger,
-    q: &'a BigInteger,
-    dp: &'a BigInteger,
-    dq: &'a BigInteger,
-    q_inv: &'a BigInteger,
+    modulus: &'a BigInt,
+    private_exponent: &'a BigInt,
+    public_exponent: &'a BigInt,
+    p: &'a BigInt,
+    q: &'a BigInt,
+    dp: &'a BigInt,
+    dq: &'a BigInt,
+    q_inv: &'a BigInt,
 }
 
 impl<'a> RsaPrivateParams<'a> {
     pub fn new(
-        modulus: &'a BigInteger,
-        private_exponent: &'a BigInteger,
-        public_exponent: &'a BigInteger,
-        p: &'a BigInteger,
-        q: &'a BigInteger,
-        dp: &'a BigInteger,
-        dq: &'a BigInteger,
-        q_inv: &'a BigInteger,
+        modulus: &'a BigInt,
+        private_exponent: &'a BigInt,
+        public_exponent: &'a BigInt,
+        p: &'a BigInt,
+        q: &'a BigInt,
+        dp: &'a BigInt,
+        dq: &'a BigInt,
+        q_inv: &'a BigInt,
     ) -> Result<Self, RsaError> {
         if modulus.sign() <= 0 {
             return Err(RsaError::InvalidModulus);
@@ -171,13 +171,13 @@ impl<'a> RsaCoreEngine<'a> {
         }
     }
 
-    pub fn convert_input(&self, input: &[u8]) -> Result<BigInteger, RsaError> {
+    pub fn convert_input(&self, input: &[u8]) -> Result<BigInt, RsaError> {
         let max_input_len = ((self.bit_size + 7) / 8) as usize;
         if input.len() > max_input_len {
             return Err(RsaError::InputTooLarge);
         }
 
-        let input = BigInteger::from_bytes_be_unsigned(input);
+        let input = BigInt::from_bytes_be_unsigned(input);
         if input <= 1 {
             return Err(RsaError::InputTooSmall);
         }
@@ -186,14 +186,14 @@ impl<'a> RsaCoreEngine<'a> {
             RsaKey::Standard(params) => params.modulus,
             RsaKey::PrivateCrt(params) => params.modulus,
         };
-        if input >= modulus - &BigInteger::from_u32(1) {
+        if input >= modulus - &BigInt::from_u32(1) {
             return Err(RsaError::InputTooLarge);
         }
 
         Ok(input)
     }
 
-    pub fn process_block(&self, input: &BigInteger) -> Result<BigInteger, RsaError> {
+    pub fn process_block(&self, input: &BigInt) -> Result<BigInt, RsaError> {
         match self.params {
             RsaKey::Standard(params) => Ok(input.mod_pow(params.exponent, params.modulus)),
             RsaKey::PrivateCrt(params) => {
@@ -212,11 +212,7 @@ impl<'a> RsaCoreEngine<'a> {
         }
     }
 
-    pub fn convert_output(
-        &self,
-        result: &BigInteger,
-        output: &mut [u8],
-    ) -> Result<usize, RsaError> {
+    pub fn convert_output(&self, result: &BigInt, output: &mut [u8]) -> Result<usize, RsaError> {
         let result_len = result.byte_length_unsigned();
         let output_len = match self.direction {
             CipherDirection::Encrypt => ((self.bit_size + 7) / 8) as usize,

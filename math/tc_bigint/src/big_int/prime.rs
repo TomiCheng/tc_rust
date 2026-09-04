@@ -1,15 +1,15 @@
 //! Primality testing and random prime generation.
 //!
 //! Split into a submodule so the `rand` dependency stays isolated here and the
-//! parent `big_integer.rs` remains pure arithmetic. As a descendant module this
-//! can reach the parent's private items (`sign`, `magnitude`, `BigInteger::new`).
+//! parent `big_int.rs` remains pure arithmetic. As a descendant module this
+//! can reach the parent's private items (`sign`, `magnitude`, `BigInt::new`).
 
-use super::{BigInteger, WORD_BITS};
+use super::{BigInt, WORD_BITS};
 use rand_core::Rng;
 
 use super::limb::Limb;
 
-impl BigInteger {
+impl BigInt {
     /// Miller-Rabin probabilistic primality test.
     ///
     /// Returns `true` if `self` is probably prime, `false` if definitely composite.
@@ -22,7 +22,7 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_bigint::BigInteger;
+    /// use tc_bigint::BigInt;
     /// # use rand_core::TryRng;
     /// # struct DemoRng(u64);
     /// # impl TryRng for DemoRng {
@@ -33,8 +33,8 @@ impl BigInteger {
     /// # }
     /// # let mut rng = DemoRng(1);
     /// // `rng` is any `rand_core::Rng` (e.g. from the `rand` crate)
-    /// assert!(BigInteger::from_u32(7919).is_probable_prime(40, &mut rng)); // 質數
-    /// assert!(!BigInteger::from_u32(7917).is_probable_prime(40, &mut rng)); // 合數
+    /// assert!(BigInt::from_u32(7919).is_probable_prime(40, &mut rng)); // 質數
+    /// assert!(!BigInt::from_u32(7917).is_probable_prime(40, &mut rng)); // 合數
     /// ```
     pub fn is_probable_prime(&self, certainty: u32, rng: &mut dyn Rng) -> bool {
         if certainty == 0 {
@@ -82,7 +82,7 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_bigint::BigInteger;
+    /// use tc_bigint::BigInt;
     /// # use rand_core::TryRng;
     /// # struct DemoRng(u64);
     /// # impl TryRng for DemoRng {
@@ -93,16 +93,16 @@ impl BigInteger {
     /// # }
     /// # let mut rng = DemoRng(1);
     /// // the next prime after 7 is 11 (9 is composite)
-    /// assert_eq!(BigInteger::from_u32(7).next_probable_prime(&mut rng), BigInteger::from_u32(11));
-    /// assert_eq!(BigInteger::from_i32(-5).next_probable_prime(&mut rng), BigInteger::from_u32(2));
+    /// assert_eq!(BigInt::from_u32(7).next_probable_prime(&mut rng), BigInt::from_u32(11));
+    /// assert_eq!(BigInt::from_i32(-5).next_probable_prime(&mut rng), BigInt::from_u32(2));
     /// ```
-    pub fn next_probable_prime(&self, rng: &mut dyn Rng) -> BigInteger {
-        let two = BigInteger::from_u32(2);
+    pub fn next_probable_prime(&self, rng: &mut dyn Rng) -> BigInt {
+        let two = BigInt::from_u32(2);
         if self < &two {
             return two; // self < 2（含負數 / 0 / 1）→ 大於它的最小質數是 2
         }
         // 大於 self 的最小奇數：self+1；若為偶則 set_bit(0) 進到 self+2
-        let mut n = (self + &BigInteger::from_u32(1)).set_bit(0);
+        let mut n = (self + &BigInt::from_u32(1)).set_bit(0);
         while !n.is_probable_prime(100, rng) {
             n = &n + &two;
         }
@@ -119,7 +119,7 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_bigint::BigInteger;
+    /// use tc_bigint::BigInt;
     /// # use rand_core::TryRng;
     /// # struct DemoRng(u64);
     /// # impl TryRng for DemoRng {
@@ -129,27 +129,27 @@ impl BigInteger {
     /// #     fn try_fill_bytes(&mut self, dst: &mut [u8]) -> Result<(), Self::Error> { for c in dst.chunks_mut(8) { c.copy_from_slice(&self.try_next_u64()?.to_le_bytes()[..c.len()]); } Ok(()) }
     /// # }
     /// # let mut rng = DemoRng(1);
-    /// let p = BigInteger::probable_prime(32, &mut rng);
+    /// let p = BigInt::probable_prime(32, &mut rng);
     /// assert_eq!(p.bit_length(), 32);
     /// assert!(p.is_probable_prime(40, &mut rng));
     /// ```
-    pub fn probable_prime(bit_length: u32, rng: &mut dyn Rng) -> BigInteger {
+    pub fn probable_prime(bit_length: u32, rng: &mut dyn Rng) -> BigInt {
         if bit_length < 2 {
             panic!("bit_length must be at least 2");
         }
         if bit_length == 2 {
             // 僅有的兩個 2-bit 質數，隨機挑一個
-            return if BigInteger::random_bits(1, rng).is_zero() {
-                BigInteger::from_u32(2)
+            return if BigInt::random_bits(1, rng).is_zero() {
+                BigInt::from_u32(2)
             } else {
-                BigInteger::from_u32(3)
+                BigInt::from_u32(3)
             };
         }
         let certainty = 100; // 預設確信度（對齊 bc-csharp with_probable_prime）
         let rounds = mr_iterations(certainty, bit_length, true); // 隨機候選 → FIPS 減輪
         loop {
             // 生成基底候選：大奇數、精確位長
-            let base = BigInteger::random_bits(bit_length, rng)
+            let base = BigInt::random_bits(bit_length, rng)
                 .set_bit(bit_length - 1)
                 .set_bit(0);
             let mut words = base.magnitude.to_vec(); // big-endian 字組
@@ -160,7 +160,7 @@ impl BigInteger {
             let mut j = 0;
             loop {
                 // 候選必為大奇數：只需試除 + Miller-Rabin（免完整前置篩）
-                let candidate = BigInteger::new(1, words.clone());
+                let candidate = BigInt::new(1, words.clone());
                 if !candidate.has_small_factor() && candidate.miller_rabin_test(rounds, rng) {
                     return candidate;
                 }
@@ -182,7 +182,7 @@ impl BigInteger {
     /// witnesses compositeness, otherwise `true` (probably prime).
     fn miller_rabin_test(&self, rounds: u32, rng: &mut dyn Rng) -> bool {
         let n = self;
-        let one = BigInteger::from_u32(1);
+        let one = BigInt::from_u32(1);
 
         // n − 1 = r · 2^s，r 為奇
         let n_minus_1 = n - &one;
@@ -196,7 +196,7 @@ impl BigInteger {
         for _ in 0..rounds {
             // 隨機見證 a：拒絕 0、≥n、以及會退化成基底 ±1 的 a（== R、== n−R）
             let a = loop {
-                let a = BigInteger::random_bits(n.bit_length(), rng);
+                let a = BigInt::random_bits(n.bit_length(), rng);
                 if a.is_zero() || &a >= n || a == mont_one || a == mont_minus_one {
                     continue;
                 }
@@ -204,7 +204,7 @@ impl BigInteger {
             };
 
             // y = a^r（convert=false，留在 Montgomery 域）→ 有效基底為 a·R⁻¹
-            let mut y = BigInteger::mod_pow_monty(&a, &r, n, false);
+            let mut y = BigInt::mod_pow_monty(&a, &r, n, false);
             if y != mont_one {
                 let mut j = 0;
                 while y != mont_minus_one {
@@ -212,7 +212,7 @@ impl BigInteger {
                     if j == s {
                         return false; // 平方 s 次仍沒 -1 → 合數
                     }
-                    y = BigInteger::mod_square_monty(&y, n);
+                    y = BigInt::mod_square_monty(&y, n);
                     if y == mont_one {
                         return false; // 提早變 1（1 的非平凡平方根）→ 合數
                     }
@@ -338,7 +338,7 @@ const PRIME_PRODUCTS: [u32; PRIME_LISTS.len()] = {
 
 #[cfg(test)]
 mod tests {
-    use super::BigInteger;
+    use super::BigInt;
     use core::convert::Infallible;
     use rand_core::TryRng;
 
@@ -409,18 +409,18 @@ mod tests {
         ];
         for (n, expected) in cases {
             assert_eq!(
-                BigInteger::from_u32(n).next_probable_prime(&mut rng),
-                BigInteger::from_u32(expected),
+                BigInt::from_u32(n).next_probable_prime(&mut rng),
+                BigInt::from_u32(expected),
                 "next after {n}"
             );
         }
         // 負數 → 2
         assert_eq!(
-            BigInteger::from_i32(-5).next_probable_prime(&mut rng),
-            BigInteger::from_u32(2)
+            BigInt::from_i32(-5).next_probable_prime(&mut rng),
+            BigInt::from_u32(2)
         );
         // 連續呼叫得遞增質數序列：2 → 3, 5, 7, 11, 13, 17
-        let mut p = BigInteger::from_u32(2);
+        let mut p = BigInt::from_u32(2);
         let mut seq = Vec::new();
         for _ in 0..6 {
             p = p.next_probable_prime(&mut rng);
@@ -428,7 +428,7 @@ mod tests {
         }
         let expected: Vec<_> = [3u32, 5, 7, 11, 13, 17]
             .iter()
-            .map(|&x| BigInteger::from_u32(x))
+            .map(|&x| BigInt::from_u32(x))
             .collect();
         assert_eq!(seq, expected);
     }
@@ -438,15 +438,15 @@ mod tests {
         let mut rng = SeqRng(0xABCD_1234_5678_9ABC);
         // 128-bit（4 字組）會走到 XOR 擾動路徑（中間字組）
         for bits in [3u32, 8, 16, 32, 64, 128] {
-            let p = BigInteger::probable_prime(bits, &mut rng);
+            let p = BigInt::probable_prime(bits, &mut rng);
             assert_eq!(p.bit_length(), bits, "bit_length for {bits}");
             assert!(p.test_bit(0), "{bits}-bit 應為奇數");
             assert!(p.is_probable_prime(40, &mut rng), "{bits}-bit 應為質數");
         }
         // bit_length == 2 → 只可能是 2 或 3
         for _ in 0..10 {
-            let p = BigInteger::probable_prime(2, &mut rng);
-            assert!(p == BigInteger::from_u32(2) || p == BigInteger::from_u32(3));
+            let p = BigInt::probable_prime(2, &mut rng);
+            assert!(p == BigInt::from_u32(2) || p == BigInt::from_u32(3));
         }
     }
 
@@ -454,7 +454,7 @@ mod tests {
     #[should_panic(expected = "bit_length must be at least 2")]
     fn probable_prime_too_small_panics() {
         let mut rng = SeqRng(1);
-        BigInteger::probable_prime(1, &mut rng);
+        BigInt::probable_prime(1, &mut rng);
     }
 
     #[test]
@@ -464,12 +464,12 @@ mod tests {
         // 質數 → true（含小質數、> 表上限的 1291、2¹²⁷−1）
         for p in [2u32, 3, 5, 7, 11, 13, 97, 1289, 1291, 7919, 104729] {
             assert!(
-                BigInteger::from_u32(p).is_probable_prime(cert, &mut rng),
+                BigInt::from_u32(p).is_probable_prime(cert, &mut rng),
                 "prime {p}"
             );
         }
         assert!(
-            BigInteger::from_str_radix("7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", 16)
+            BigInt::from_str_radix("7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", 16)
                 .unwrap()
                 .is_probable_prime(cert, &mut rng),
             "2^127-1"
@@ -477,20 +477,20 @@ mod tests {
         // 合數 → false（含偶數、小合數、Carmichael、平方、2¹²⁸−1）
         for c in [0u32, 1, 4, 6, 9, 15, 25, 91, 561, 1105, 1729, 2821, 100000] {
             assert!(
-                !BigInteger::from_u32(c).is_probable_prime(cert, &mut rng),
+                !BigInt::from_u32(c).is_probable_prime(cert, &mut rng),
                 "composite {c}"
             );
         }
         assert!(
-            !BigInteger::from_str_radix("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", 16)
+            !BigInt::from_str_radix("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", 16)
                 .unwrap()
                 .is_probable_prime(cert, &mut rng),
             "2^128-1"
         );
         // 負數走 abs：-97 視為 97 → true
-        assert!(BigInteger::from_i32(-97).is_probable_prime(cert, &mut rng));
+        assert!(BigInt::from_i32(-97).is_probable_prime(cert, &mut rng));
         // certainty == 0 → 一律 true（即使合數）
-        assert!(BigInteger::from_u32(9).is_probable_prime(0, &mut rng));
+        assert!(BigInt::from_u32(9).is_probable_prime(0, &mut rng));
     }
 
     #[test]
@@ -498,26 +498,26 @@ mod tests {
         let mut rng = SeqRng(0x00C0_FFEE_1234_5678);
         // 質數 → true（含 2¹²⁷−1 Mersenne 質數）
         let primes = [
-            BigInteger::from_u32(97),
-            BigInteger::from_u32(7919),
-            BigInteger::from_u32(104729),
-            BigInteger::from_str_radix("7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", 16).unwrap(),
+            BigInt::from_u32(97),
+            BigInt::from_u32(7919),
+            BigInt::from_u32(104729),
+            BigInt::from_str_radix("7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", 16).unwrap(),
         ];
         for p in &primes {
             assert!(p.miller_rabin_test(20, &mut rng), "prime {p} 應通過");
         }
         // 合數 → false（含 Carmichael 561/1105/1729/2821/8911、2¹²⁸−1）
         let composites = [
-            BigInteger::from_u32(9),
-            BigInteger::from_u32(15),
-            BigInteger::from_u32(25),
-            BigInteger::from_u32(91),
-            BigInteger::from_u32(561),
-            BigInteger::from_u32(1105),
-            BigInteger::from_u32(1729),
-            BigInteger::from_u32(2821),
-            BigInteger::from_u32(8911),
-            BigInteger::from_str_radix("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", 16).unwrap(),
+            BigInt::from_u32(9),
+            BigInt::from_u32(15),
+            BigInt::from_u32(25),
+            BigInt::from_u32(91),
+            BigInt::from_u32(561),
+            BigInt::from_u32(1105),
+            BigInt::from_u32(1729),
+            BigInt::from_u32(2821),
+            BigInt::from_u32(8911),
+            BigInt::from_str_radix("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", 16).unwrap(),
         ];
         for c in &composites {
             assert!(
@@ -532,7 +532,7 @@ mod tests {
         let mut rng = SeqRng(0x1234_5678_9ABC_DEF0);
         for bits in [0u32, 1, 7, 8, 9, 32, 33, 100, 256] {
             for _ in 0..50 {
-                let x = BigInteger::random_bits(bits, &mut rng);
+                let x = BigInt::random_bits(bits, &mut rng);
                 assert!(x.sign() >= 0, "非負 bits={bits}");
                 assert!(
                     x.bit_length() <= bits,
@@ -542,20 +542,17 @@ mod tests {
             }
         }
         // bit_length == 0 → 0
-        assert_eq!(
-            BigInteger::random_bits(0, &mut rng),
-            BigInteger::from_u32(0)
-        );
+        assert_eq!(BigInt::random_bits(0, &mut rng), BigInt::from_u32(0));
         // 有隨機性：兩次 128 位不應相同（極大機率）
-        let a = BigInteger::random_bits(128, &mut rng);
-        let b = BigInteger::random_bits(128, &mut rng);
+        let a = BigInt::random_bits(128, &mut rng);
+        let b = BigInt::random_bits(128, &mut rng);
         assert_ne!(a, b);
     }
 
     #[test]
     fn prime_module_reaches_private_fields() {
         // 冒煙測試：證明子模組能直接存取父模組的私有欄位（子孫可見）。
-        let n = BigInteger::from_u32(0);
+        let n = BigInt::from_u32(0);
         assert_eq!(n.sign, 0);
         assert!(n.magnitude.is_empty());
     }

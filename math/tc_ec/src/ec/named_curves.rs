@@ -16,7 +16,7 @@ use crate::ec::f2m_curve::F2mCurve;
 use crate::ec::f2m_point::F2mPoint;
 use crate::ec::fp_curve::FpCurve;
 use crate::ec::fp_point::FpPoint;
-use tc_bigint::BigInteger;
+use tc_bigint::BigInt;
 
 /// The SEC 2 **secp256k1** curve (`y² = x³ + 7` over GF(p)), with its base point `G`.
 ///
@@ -28,10 +28,10 @@ pub fn secp256k1() -> (Arc<FpCurve>, FpPoint) {
     let n = h("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141");
     let curve = Arc::new(FpCurve::new(
         p,
-        BigInteger::from_u32(0),       // a = 0
-        BigInteger::from_u32(7),       // b = 7
-        Some(n),                       // 群階 n
-        Some(BigInteger::from_u32(1)), // cofactor h = 1
+        BigInt::from_u32(0),       // a = 0
+        BigInt::from_u32(7),       // b = 7
+        Some(n),                   // 群階 n
+        Some(BigInt::from_u32(1)), // cofactor h = 1
     ));
     let gx = h("79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798");
     let gy = h("483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8");
@@ -50,13 +50,7 @@ pub fn secp256r1() -> (Arc<FpCurve>, FpPoint) {
     let a = h("FFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFC"); // p − 3
     let b = h("5AC635D8AA3A93E7B3EBBD55769886BC651D06B0CC53B0F63BCE3C3E27D2604B");
     let n = h("FFFFFFFF00000000FFFFFFFFFFFFFFFFBCE6FAADA7179E84F3B9CAC2FC632551");
-    let curve = Arc::new(FpCurve::new(
-        p,
-        a,
-        b,
-        Some(n),
-        Some(BigInteger::from_u32(1)),
-    ));
+    let curve = Arc::new(FpCurve::new(p, a, b, Some(n), Some(BigInt::from_u32(1))));
     let gx = h("6B17D1F2E12C4247F8BCE6E563A440F277037D812DEB33A0F4A13945D898C296");
     let gy = h("4FE342E2FE1A7F9B8EE7EB4A7C0F9E162BCE33576B315ECECBB6406837BF51F5");
     let g = curve.create_point(gx, gy);
@@ -73,10 +67,10 @@ pub fn sect163k1() -> (Arc<F2mCurve>, F2mPoint) {
         3,
         6,
         7,
-        BigInteger::from_u32(1),       // a = 1
-        BigInteger::from_u32(1),       // b = 1
-        Some(n),                       // 群階 n
-        Some(BigInteger::from_u32(2)), // cofactor h = 2
+        BigInt::from_u32(1),       // a = 1
+        BigInt::from_u32(1),       // b = 1
+        Some(n),                   // 群階 n
+        Some(BigInt::from_u32(2)), // cofactor h = 2
     ));
     let gx = h("02FE13C0537BBC11ACAA07D793DE4E6D5E5C94EEE8");
     let gy = h("0289070FB05D38FF58321F2E800536D538CCDAA3D9");
@@ -562,14 +556,14 @@ pub fn sect571r1() -> (Arc<F2mCurve>, F2mPoint) {
     (curve, g)
 }
 
-/// 16 進位字串 → BigInteger（模組內小工具，供各命名曲線共用）。
-fn h(s: &str) -> BigInteger {
-    BigInteger::from_str_radix(s, 16).unwrap()
+/// 16 進位字串 → BigInt（模組內小工具，供各命名曲線共用）。
+fn h(s: &str) -> BigInt {
+    BigInt::from_str_radix(s, 16).unwrap()
 }
 
-/// 小整數 → BigInteger（a/b/cofactor 的短常數）。
-fn i(v: u32) -> BigInteger {
-    BigInteger::from_u32(v)
+/// 小整數 → BigInt（a/b/cofactor 的短常數）。
+fn i(v: u32) -> BigInt {
+    BigInt::from_u32(v)
 }
 
 /// 16 進位字串 → 位元組（基點的 04||X||Y 編碼；長度須為偶數）。

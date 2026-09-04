@@ -9,7 +9,7 @@ pub trait Pow<Exponent> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{Add, BigInteger};
+    use crate::{Add, BigInt};
 
     fn add<L, R>(lhs: L, rhs: R) -> <L as Add<R>>::Output
     where
@@ -20,9 +20,9 @@ mod tests {
 
     #[test]
     fn add_is_exposed_for_generic_code() {
-        let lhs = BigInteger::from_i32(20);
-        let rhs = BigInteger::from_i32(22);
+        let lhs = BigInt::from_i32(20);
+        let rhs = BigInt::from_i32(22);
 
-        assert_eq!(add(&lhs, &rhs), BigInteger::from_i32(42));
+        assert_eq!(add(&lhs, &rhs), BigInt::from_i32(42));
     }
 }

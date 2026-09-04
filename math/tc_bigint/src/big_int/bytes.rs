@@ -1,12 +1,12 @@
-//! Big-endian / little-endian byte (de)serialization for [`BigInteger`].
+//! Big-endian / little-endian byte (de)serialization for [`BigInt`].
 //!
-//! Split into a submodule to keep `big_integer.rs` shorter. As a descendant
+//! Split into a submodule to keep `big_int.rs` shorter. As a descendant
 //! module this reaches the parent's private items (`sign`, `magnitude`,
-//! `BigInteger::new`, `byte_length*`, and the `make_magnitude_*` /
+//! `BigInt::new`, `byte_length*`, and the `make_magnitude_*` /
 //! `twos_complement_in_place` helpers), so nothing there needs widening.
 
 use super::{
-    BigInteger, BufferTooSmall, WORD_BITS, make_magnitude_be, make_magnitude_be_negative,
+    BigInt, BufferTooSmall, WORD_BITS, make_magnitude_be, make_magnitude_be_negative,
     make_magnitude_le, make_magnitude_le_negative, twos_complement_in_place,
 };
 
@@ -15,8 +15,8 @@ use super::{
 #[cfg(not(feature = "std"))]
 use alloc::{vec, vec::Vec};
 
-impl BigInteger {
-    /// Creates a `BigInteger` from a big-endian, two's-complement byte slice.
+impl BigInt {
+    /// Creates a `BigInt` from a big-endian, two's-complement byte slice.
     ///
     /// The most-significant byte comes first. A set top bit in that byte means
     /// the value is negative (two's complement). An empty slice is zero.
@@ -24,45 +24,45 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_bigint::BigInteger;
+    /// use tc_bigint::BigInt;
     ///
-    /// let n = BigInteger::from_bytes_be(&[0xFF]); // -1
+    /// let n = BigInt::from_bytes_be(&[0xFF]); // -1
     /// ```
     pub fn from_bytes_be(bytes: &[u8]) -> Self {
         if bytes.is_empty() {
-            return BigInteger::new(0, Vec::new());
+            return BigInt::new(0, Vec::new());
         }
         if bytes[0] & 0x80 != 0 {
             // 最高位為 1：兩補數負數
-            BigInteger::new(-1, make_magnitude_be_negative(bytes))
+            BigInt::new(-1, make_magnitude_be_negative(bytes))
         } else {
             // 非負：magnitude 為空時代表 0
             let magnitude = make_magnitude_be(bytes);
             let sign = if magnitude.is_empty() { 0 } else { 1 };
-            BigInteger::new(sign, magnitude)
+            BigInt::new(sign, magnitude)
         }
     }
 
-    /// Creates a non-negative `BigInteger` from a big-endian, **unsigned** byte
+    /// Creates a non-negative `BigInt` from a big-endian, **unsigned** byte
     /// slice: the top bit is data, never a sign. An empty (or all-zero) slice
     /// is zero.
     ///
     /// # Examples
     ///
     /// ```
-    /// use tc_bigint::BigInteger;
+    /// use tc_bigint::BigInt;
     ///
     /// // 有別於 from_bytes_be：0x80 是 128，不是 -128
-    /// assert_eq!(BigInteger::from_bytes_be_unsigned(&[0x80]), BigInteger::from_u32(128));
+    /// assert_eq!(BigInt::from_bytes_be_unsigned(&[0x80]), BigInt::from_u32(128));
     /// ```
     pub fn from_bytes_be_unsigned(bytes: &[u8]) -> Self {
         // 一律非負：最高位是資料，不是符號
         let magnitude = make_magnitude_be(bytes);
         let sign = if magnitude.is_empty() { 0 } else { 1 };
-        BigInteger::new(sign, magnitude)
+        BigInt::new(sign, magnitude)
     }
 
-    /// Creates a `BigInteger` from a little-endian, two's-complement byte slice.
+    /// Creates a `BigInt` from a little-endian, two's-complement byte slice.
     ///
     /// The least-significant byte comes first, so the sign lives in the top bit
     /// of the *last* byte. An empty slice is zero.
@@ -70,39 +70,39 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_bigint::BigInteger;
+    /// use tc_bigint::BigInt;
     ///
-    /// let n = BigInteger::from_bytes_le(&[0xFF]); // -1
+    /// let n = BigInt::from_bytes_le(&[0xFF]); // -1
     /// ```
     pub fn from_bytes_le(bytes: &[u8]) -> Self {
         if bytes.is_empty() {
-            return BigInteger::new(0, Vec::new());
+            return BigInt::new(0, Vec::new());
         }
         // little-endian：最高位元組在尾端，符號位取最後一個位元組
         if bytes[bytes.len() - 1] & 0x80 != 0 {
-            BigInteger::new(-1, make_magnitude_le_negative(bytes))
+            BigInt::new(-1, make_magnitude_le_negative(bytes))
         } else {
             let magnitude = make_magnitude_le(bytes);
             let sign = if magnitude.is_empty() { 0 } else { 1 };
-            BigInteger::new(sign, magnitude)
+            BigInt::new(sign, magnitude)
         }
     }
 
-    /// Creates a non-negative `BigInteger` from a little-endian, **unsigned**
+    /// Creates a non-negative `BigInt` from a little-endian, **unsigned**
     /// byte slice: the top bit (of the last byte) is data, never a sign. An
     /// empty (or all-zero) slice is zero.
     ///
     /// # Examples
     ///
     /// ```
-    /// use tc_bigint::BigInteger;
+    /// use tc_bigint::BigInt;
     ///
-    /// assert_eq!(BigInteger::from_bytes_le_unsigned(&[0x00, 0x80]), BigInteger::from_u32(0x8000));
+    /// assert_eq!(BigInt::from_bytes_le_unsigned(&[0x00, 0x80]), BigInt::from_u32(0x8000));
     /// ```
     pub fn from_bytes_le_unsigned(bytes: &[u8]) -> Self {
         let magnitude = make_magnitude_le(bytes);
         let sign = if magnitude.is_empty() { 0 } else { 1 };
-        BigInteger::new(sign, magnitude)
+        BigInt::new(sign, magnitude)
     }
 
     /// 把 `n = out.len()` 個位元組的 big-endian 編碼寫進 `out`（零配置核心）。
@@ -131,10 +131,10 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_bigint::BigInteger;
+    /// use tc_bigint::BigInt;
     ///
-    /// assert_eq!(BigInteger::from_u32(128).to_bytes_be_unsigned(), vec![0x80]);
-    /// assert_eq!(BigInteger::from_i32(-128).to_bytes_be_unsigned(), vec![0x80]); // 只看絕對值
+    /// assert_eq!(BigInt::from_u32(128).to_bytes_be_unsigned(), vec![0x80]);
+    /// assert_eq!(BigInt::from_i32(-128).to_bytes_be_unsigned(), vec![0x80]); // 只看絕對值
     /// ```
     pub fn to_bytes_be_unsigned(&self) -> Vec<u8> {
         let mut v = vec![0u8; self.byte_length_unsigned()];
@@ -142,7 +142,7 @@ impl BigInteger {
         v
     }
 
-    /// Little-endian counterpart of [`BigInteger::to_bytes_be_unsigned`].
+    /// Little-endian counterpart of [`BigInt::to_bytes_be_unsigned`].
     pub fn to_bytes_le_unsigned(&self) -> Vec<u8> {
         let mut v = self.to_bytes_be_unsigned();
         v.reverse(); // BE 最小位元組反轉即 LE
@@ -151,17 +151,17 @@ impl BigInteger {
 
     /// Returns the minimal two's-complement big-endian bytes (with sign).
     ///
-    /// Inverse of [`BigInteger::from_bytes_be`]. Zero is `[0]`. A leading
+    /// Inverse of [`BigInt::from_bytes_be`]. Zero is `[0]`. A leading
     /// `0x00` (non-negative) or `0xFF` (negative) byte is included when needed
     /// so the sign bit reads correctly.
     ///
     /// # Examples
     ///
     /// ```
-    /// use tc_bigint::BigInteger;
+    /// use tc_bigint::BigInt;
     ///
-    /// assert_eq!(BigInteger::from_i32(128).to_bytes_be(), vec![0x00, 0x80]);
-    /// assert_eq!(BigInteger::from_i32(-129).to_bytes_be(), vec![0xFF, 0x7F]);
+    /// assert_eq!(BigInt::from_i32(128).to_bytes_be(), vec![0x00, 0x80]);
+    /// assert_eq!(BigInt::from_i32(-129).to_bytes_be(), vec![0xFF, 0x7F]);
     /// ```
     pub fn to_bytes_be(&self) -> Vec<u8> {
         let mut v = vec![0u8; self.byte_length()];
@@ -169,7 +169,7 @@ impl BigInteger {
         v
     }
 
-    /// Little-endian counterpart of [`BigInteger::to_bytes_be`].
+    /// Little-endian counterpart of [`BigInt::to_bytes_be`].
     pub fn to_bytes_le(&self) -> Vec<u8> {
         let mut v = self.to_bytes_be();
         v.reverse();
@@ -177,7 +177,7 @@ impl BigInteger {
     }
 
     /// Writes the signed (two's-complement) big-endian encoding into the front
-    /// of `dst`, returning the number of bytes written (= [`BigInteger::byte_length`]),
+    /// of `dst`, returning the number of bytes written (= [`BigInt::byte_length`]),
     /// or [`BufferTooSmall`] if `dst` is too short. Allocation-free.
     pub fn try_to_bytes_be_into(&self, dst: &mut [u8]) -> Result<usize, BufferTooSmall> {
         let n = self.byte_length();
@@ -191,7 +191,7 @@ impl BigInteger {
         Ok(n)
     }
 
-    /// Little-endian counterpart of [`BigInteger::try_to_bytes_be_into`].
+    /// Little-endian counterpart of [`BigInt::try_to_bytes_be_into`].
     pub fn try_to_bytes_le_into(&self, dst: &mut [u8]) -> Result<usize, BufferTooSmall> {
         let n = self.byte_length();
         if dst.len() < n {
@@ -205,7 +205,7 @@ impl BigInteger {
         Ok(n)
     }
 
-    /// Unsigned (magnitude) big-endian counterpart of [`BigInteger::try_to_bytes_be_into`].
+    /// Unsigned (magnitude) big-endian counterpart of [`BigInt::try_to_bytes_be_into`].
     pub fn try_to_bytes_be_unsigned_into(&self, dst: &mut [u8]) -> Result<usize, BufferTooSmall> {
         let n = self.byte_length_unsigned();
         if dst.len() < n {
@@ -218,7 +218,7 @@ impl BigInteger {
         Ok(n)
     }
 
-    /// Little-endian counterpart of [`BigInteger::try_to_bytes_be_unsigned_into`].
+    /// Little-endian counterpart of [`BigInt::try_to_bytes_be_unsigned_into`].
     pub fn try_to_bytes_le_unsigned_into(&self, dst: &mut [u8]) -> Result<usize, BufferTooSmall> {
         let n = self.byte_length_unsigned();
         if dst.len() < n {
@@ -232,7 +232,7 @@ impl BigInteger {
         Ok(n)
     }
 
-    /// Panicking version of [`BigInteger::try_to_bytes_be_into`]; returns the
+    /// Panicking version of [`BigInt::try_to_bytes_be_into`]; returns the
     /// number of bytes written. Allocation-free.
     ///
     /// # Panics
@@ -242,9 +242,9 @@ impl BigInteger {
     /// # Examples
     ///
     /// ```
-    /// use tc_bigint::BigInteger;
+    /// use tc_bigint::BigInt;
     ///
-    /// let n = BigInteger::from_i32(-129);
+    /// let n = BigInt::from_i32(-129);
     /// let mut buf = [0u8; 8];
     /// let len = n.to_bytes_be_into(&mut buf);
     /// assert_eq!(&buf[..len], &[0xFF, 0x7F]);
@@ -254,7 +254,7 @@ impl BigInteger {
             .unwrap_or_else(|e| panic!("to_bytes_be_into: {e}"))
     }
 
-    /// Little-endian counterpart of [`BigInteger::to_bytes_be_into`].
+    /// Little-endian counterpart of [`BigInt::to_bytes_be_into`].
     ///
     /// # Panics
     ///
@@ -264,7 +264,7 @@ impl BigInteger {
             .unwrap_or_else(|e| panic!("to_bytes_le_into: {e}"))
     }
 
-    /// Panicking version of [`BigInteger::try_to_bytes_be_unsigned_into`].
+    /// Panicking version of [`BigInt::try_to_bytes_be_unsigned_into`].
     ///
     /// # Panics
     ///
@@ -274,7 +274,7 @@ impl BigInteger {
             .unwrap_or_else(|e| panic!("to_bytes_be_unsigned_into: {e}"))
     }
 
-    /// Little-endian counterpart of [`BigInteger::to_bytes_be_unsigned_into`].
+    /// Little-endian counterpart of [`BigInt::to_bytes_be_unsigned_into`].
     ///
     /// # Panics
     ///

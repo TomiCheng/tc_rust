@@ -22,7 +22,7 @@ project. Arbitrary-precision integers now live in the separate
 | `ec` | Elliptic curves: affine Fp/F2m curves and points, SEC named curves, rfc7748 (X25519) | `Math.EC` |
 
 Arbitrary-precision integer operations are provided by `tc_bigint`; import
-`tc_bigint::BigInteger` directly when an application needs them.
+`tc_bigint::BigInt` directly when an application needs them.
 
 ---
 
@@ -79,7 +79,7 @@ Arbitrary-precision integer operations are provided by `tc_bigint`; import
 variable-time** and **leak timing**. This is a matter of security correctness, not
 just speed:
 
-- `FpFieldElement` inversion goes through `tc_bigint::BigInteger::mod_inverse` (extended Euclid,
+- `FpFieldElement` inversion goes through `tc_bigint::BigInt::mod_inverse` (extended Euclid,
   variable-time); bc's counterpart is constant-time safegcd (`Mod.ModOddInverse`).
 - Scalar multiplication uses double-and-add, whose branches and access patterns depend
   on the scalar bits.

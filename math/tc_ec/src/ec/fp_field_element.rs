@@ -6,7 +6,7 @@
 
 use core::ops::{Add, Div, Mul, Neg, Sub};
 
-use tc_bigint::BigInteger;
+use tc_bigint::BigInt;
 
 /// An element of the prime field GF(p).
 ///
@@ -20,12 +20,12 @@ use tc_bigint::BigInteger;
 #[derive(Clone)]
 pub struct FpFieldElement {
     // 體域質數（模數）。
-    q: BigInteger,
+    q: BigInt,
     // 元素值，不變式：0 <= x < q。
-    x: BigInteger,
+    x: BigInt,
     // 快速模約簡用的預算殘值，由曲線建構時算好傳入；None 表示沒有快速形式，
     // 退回通用取模。目前僅存放，實際使用在 mod_reduce 快速路徑實作後。
-    r: Option<BigInteger>,
+    r: Option<BigInt>,
 }
 
 impl FpFieldElement {
@@ -39,7 +39,7 @@ impl FpFieldElement {
     /// elements through the curve.
     ///
     /// [`calculate_residue`]: FpFieldElement::calculate_residue
-    pub(crate) fn new(q: BigInteger, x: BigInteger, r: Option<BigInteger>) -> Self {
+    pub(crate) fn new(q: BigInt, x: BigInt, r: Option<BigInt>) -> Self {
         FpFieldElement { q, x, r }
     }
 
@@ -48,7 +48,7 @@ impl FpFieldElement {
     ///
     /// Corresponds to the `new FpFieldElement(q, r, result)` pattern used
     /// throughout Bouncy Castle's arithmetic methods.
-    fn with_value(&self, x: BigInteger) -> Self {
+    fn with_value(&self, x: BigInt) -> Self {
         FpFieldElement {
             q: self.q.clone(),
             x,
@@ -61,7 +61,7 @@ impl FpFieldElement {
     ///
     /// `x` may be negative or much larger than `q`; the result lands in
     /// `[0, q)`. Used by multiplication and squaring.
-    fn mod_reduce(&self, x: BigInteger) -> BigInteger {
+    fn mod_reduce(&self, x: BigInt) -> BigInt {
         let q = &self.q;
 
         // r == None：沒有快速形式，退回通用取模（非負餘數）。
@@ -70,7 +70,7 @@ impl FpFieldElement {
             Some(r) => r,
         };
 
-        let one = BigInteger::from_u32(1); // 這條路徑會用到好幾次，綁一次重用
+        let one = BigInt::from_u32(1); // 這條路徑會用到好幾次，綁一次重用
         let negative = x.sign() < 0;
         let mut x = if negative { x.abs() } else { x }; // 先取絕對值，最後再補回符號
         let q_len = q.bit_length();
@@ -116,7 +116,7 @@ impl FpFieldElement {
     ///
     /// Corresponds to `ModDouble` in Bouncy Castle. Used by the `q ≡ 1 (mod 8)`
     /// square-root branch (`fourX = mod_double(mod_double(x))`).
-    fn mod_double(&self, x: &BigInteger) -> BigInteger {
+    fn mod_double(&self, x: &BigInt) -> BigInt {
         let two_x = x << 1; // 2x
         if two_x >= self.q {
             &two_x - &self.q
@@ -130,7 +130,7 @@ impl FpFieldElement {
     /// Corresponds to `ModHalfAbs` in Bouncy Castle. Used by the `q ≡ 1 (mod 8)`
     /// square-root branch. `q` is an odd prime, so `q - x` is even when `x` is
     /// odd and the shift is exact.
-    fn mod_half_abs(&self, x: &BigInteger) -> BigInteger {
+    fn mod_half_abs(&self, x: &BigInt) -> BigInt {
         if x.test_bit(0) {
             let t = &self.q - x; // q − x（偶）
             &t >> 1
@@ -146,21 +146,16 @@ impl FpFieldElement {
     /// `lucas_q` is the Lucas sequence's second parameter (bc's `Q`) — not the
     /// field modulus `self.q`. Subtractions are reduced with [`Self::mod_reduce`]
     /// because the intermediate values may be negative or close to `q^2`.
-    fn lucas_sequence(
-        &self,
-        p: &BigInteger,
-        lucas_q: &BigInteger,
-        k: &BigInteger,
-    ) -> (BigInteger, BigInteger) {
+    fn lucas_sequence(&self, p: &BigInt, lucas_q: &BigInt, k: &BigInt) -> (BigInt, BigInt) {
         let n = k.bit_length();
         let s = k
             .get_lowest_set_bit()
             .expect("lucas_sequence: k must be non-zero");
 
-        let one = BigInteger::from_u32(1);
+        let one = BigInt::from_u32(1);
 
         let mut uh = one.clone(); // Uh = 1
-        let mut vl = BigInteger::from_u32(2); // Vl = 2
+        let mut vl = BigInt::from_u32(2); // Vl = 2
         let mut vh = p.clone(); // Vh = P
         let mut ql = one.clone(); // Ql = 1
         let mut qh = one.clone(); // Qh = 1
@@ -209,10 +204,10 @@ impl FpFieldElement {
     ///
     /// Called once by the curve at construction; `r` only affects the speed of
     /// reduction, never the result.
-    pub(crate) fn calculate_residue(q: &BigInteger) -> Option<BigInteger> {
+    pub(crate) fn calculate_residue(q: &BigInt) -> Option<BigInt> {
         let bit_length = q.bit_length();
         if bit_length >= 96 {
-            let one = BigInteger::from_u32(1);
+            let one = BigInt::from_u32(1);
             // 取 q 頂端 64 個位元。
             let first_word = q >> (bit_length - 64);
             let u64_max = &(&one << 64) - &one;
@@ -229,7 +224,7 @@ impl FpFieldElement {
     }
 
     /// Returns the field modulus `q` (the prime p).
-    pub fn q(&self) -> &BigInteger {
+    pub fn q(&self) -> &BigInt {
         &self.q
     }
 
@@ -256,7 +251,7 @@ impl FpFieldElement {
 
     /// Returns `self^2` in the field, i.e. `(x^2) mod q`.
     ///
-    /// Corresponds to `Square` in Bouncy Castle. Uses [`BigInteger::square`],
+    /// Corresponds to `Square` in Bouncy Castle. Uses [`BigInt::square`],
     /// which exploits symmetry, rather than a general multiply.
     pub fn square(&self) -> Self {
         self.with_value(self.mod_reduce(self.x.square()))
@@ -303,7 +298,7 @@ impl FpFieldElement {
     /// (Barrett) and `sum` exceeds `2 * bitlen(q)` bits, pre-subtract
     /// `q * 2^bitlen(q)` to bring `sum` into [`Self::mod_reduce`]'s Barrett
     /// input range. Mirrors bc's guard in `MultiplyPlusProduct`.
-    fn plus_correct(&self, sum: BigInteger) -> BigInteger {
+    fn plus_correct(&self, sum: BigInt) -> BigInt {
         if let Some(r) = &self.r {
             let q_len = self.q.bit_length();
             if r.sign() < 0 && sum.bit_length() > q_len << 1 {
@@ -324,7 +319,7 @@ impl FpFieldElement {
     //
     // TODO(ec-ct)：bc 的 Invert 走 constant-time safegcd（BigIntegers.ModOddInverse
     // → Mod.ModOddInverse，Bernstein–Yang）以防側通道。這裡先用通用的
-    // BigInteger::mod_inverse（extended Euclid，變動時間）—— 正確但會洩漏時序。
+    // BigInt::mod_inverse（extended Euclid，變動時間）—— 正確但會洩漏時序。
     // 之後為「安全性」移植 safegcd（需要 Nat 定長 limb 層）。
     pub fn invert(&self) -> Self {
         let inv = self
@@ -352,7 +347,7 @@ impl FpFieldElement {
         let q = &self.q;
         assert!(q.test_bit(0), "sqrt: even value of q is unsupported");
 
-        let one = BigInteger::from_u32(1);
+        let one = BigInt::from_u32(1);
 
         if q.test_bit(1) {
             // q ≡ 3 (mod 4)：z = x^((q+1)/4)。
@@ -368,7 +363,7 @@ impl FpFieldElement {
             if t3 == one {
                 return self.check_sqrt(self.with_value(t2));
             }
-            let t4 = BigInteger::from_u32(2).mod_pow(&(q >> 2), q); // 2^((q-1)/4)
+            let t4 = BigInt::from_u32(2).mod_pow(&(q >> 2), q); // 2^((q-1)/4)
             let y = self.mod_reduce(&t2 * &t4);
             return self.check_sqrt(self.with_value(y));
         }
@@ -424,10 +419,10 @@ impl FpFieldElement {
     /// sum is at most `q`, so the only reduction needed is mapping `q` back to
     /// `0` — no general modular reduction.
     pub fn add_one(&self) -> Self {
-        let x2 = &self.x + &BigInteger::from_u32(1);
+        let x2 = &self.x + &BigInt::from_u32(1);
         // x < q ⇒ x+1 ≤ q；唯一環繞是 x+1 == q → 0。
         let x2 = if x2 == self.q {
-            BigInteger::from_u32(0)
+            BigInt::from_u32(0)
         } else {
             x2
         };
@@ -445,8 +440,8 @@ impl core::fmt::Debug for FpFieldElement {
     }
 }
 
-impl AsRef<BigInteger> for FpFieldElement {
-    fn as_ref(&self) -> &BigInteger {
+impl AsRef<BigInt> for FpFieldElement {
+    fn as_ref(&self) -> &BigInt {
         &self.x
     }
 }
@@ -562,14 +557,14 @@ mod tests {
     use super::*;
 
     // 測試輔助：模擬未來曲線建 element（算好 r 再傳入）。
-    fn field_element(q: BigInteger, x: BigInteger) -> FpFieldElement {
+    fn field_element(q: BigInt, x: BigInt) -> FpFieldElement {
         let r = FpFieldElement::calculate_residue(&q);
         FpFieldElement::new(q, x, r)
     }
 
     #[test]
     fn accessors_report_field() {
-        let fe = field_element(BigInteger::from_u32(23), BigInteger::from_u32(1));
+        let fe = field_element(BigInt::from_u32(23), BigInt::from_u32(1));
         assert_eq!(fe.field_size(), 5); // 23 = 0b10111，5 位元
         assert!(fe.is_one());
         assert!(!fe.is_zero());
@@ -578,67 +573,67 @@ mod tests {
     #[test]
     fn residue_secp256k1_pseudo_mersenne() {
         // secp256k1 質數 p = 2^256 − 2^32 − 977，頂端 64 位元全為 1。
-        let p = BigInteger::from_str_radix(
+        let p = BigInt::from_str_radix(
             "fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f",
             16,
         )
         .unwrap();
         // r = 2^256 − p = 2^32 + 977 = 4294968273。
         let r = FpFieldElement::calculate_residue(&p);
-        assert_eq!(r, Some(BigInteger::from_u64(4_294_968_273)));
+        assert_eq!(r, Some(BigInt::from_u64(4_294_968_273)));
     }
 
     #[test]
     fn add_wraps_modulo_q() {
-        let q = BigInteger::from_u32(7);
-        let a = field_element(q.clone(), BigInteger::from_u32(5));
-        let b = field_element(q.clone(), BigInteger::from_u32(4));
+        let q = BigInt::from_u32(7);
+        let a = field_element(q.clone(), BigInt::from_u32(5));
+        let b = field_element(q.clone(), BigInt::from_u32(4));
         // 5 + 4 = 9 ≡ 2 (mod 7)。
-        assert_eq!((&a + &b).as_ref(), &BigInteger::from_u32(2));
+        assert_eq!((&a + &b).as_ref(), &BigInt::from_u32(2));
         // 加 0 為單位元。
-        let zero = field_element(q, BigInteger::from_u32(0));
-        assert_eq!((&a + &zero).as_ref(), &BigInteger::from_u32(5));
+        let zero = field_element(q, BigInt::from_u32(0));
+        assert_eq!((&a + &zero).as_ref(), &BigInt::from_u32(5));
     }
 
     #[test]
     fn sub_borrows_modulo_q() {
-        let q = BigInteger::from_u32(7);
-        let a = field_element(q.clone(), BigInteger::from_u32(3));
-        let b = field_element(q.clone(), BigInteger::from_u32(5));
+        let q = BigInt::from_u32(7);
+        let a = field_element(q.clone(), BigInt::from_u32(3));
+        let b = field_element(q.clone(), BigInt::from_u32(5));
         // 3 − 5 = −2 ≡ 5 (mod 7)。
-        assert_eq!((&a - &b).as_ref(), &BigInteger::from_u32(5));
+        assert_eq!((&a - &b).as_ref(), &BigInt::from_u32(5));
         // 無借位情形：5 − 3 = 2。
-        assert_eq!((&b - &a).as_ref(), &BigInteger::from_u32(2));
+        assert_eq!((&b - &a).as_ref(), &BigInt::from_u32(2));
     }
 
     #[test]
     fn neg_is_additive_inverse() {
-        let q = BigInteger::from_u32(7);
-        let a = field_element(q.clone(), BigInteger::from_u32(3));
+        let q = BigInt::from_u32(7);
+        let a = field_element(q.clone(), BigInt::from_u32(3));
         // −3 ≡ 4 (mod 7)。
-        assert_eq!((-&a).as_ref(), &BigInteger::from_u32(4));
+        assert_eq!((-&a).as_ref(), &BigInt::from_u32(4));
         // a + (−a) = 0。
         assert!((&a + &(-&a)).is_zero());
         // −0 = 0。
-        let zero = field_element(q, BigInteger::from_u32(0));
+        let zero = field_element(q, BigInt::from_u32(0));
         assert!((-&zero).is_zero());
     }
 
     #[test]
     fn mul_reduces_modulo_q() {
-        let q = BigInteger::from_u32(7);
-        let a = field_element(q.clone(), BigInteger::from_u32(5));
-        let b = field_element(q, BigInteger::from_u32(4));
+        let q = BigInt::from_u32(7);
+        let a = field_element(q.clone(), BigInt::from_u32(5));
+        let b = field_element(q, BigInt::from_u32(4));
         // 5 · 4 = 20 ≡ 6 (mod 7)。
-        assert_eq!((&a * &b).as_ref(), &BigInteger::from_u32(6));
+        assert_eq!((&a * &b).as_ref(), &BigInt::from_u32(6));
     }
 
     #[test]
     fn mul_matches_generic_on_large_field() {
         // secp256k1 上比對 x·y mod q 與通用取模。
         let q = secp256k1_prime();
-        let xv = &q - &BigInteger::from_u32(3);
-        let yv = &q - &BigInteger::from_u32(100);
+        let xv = &q - &BigInt::from_u32(3);
+        let yv = &q - &BigInt::from_u32(100);
         let x = field_element(q.clone(), xv.clone());
         let y = field_element(q.clone(), yv.clone());
         assert_eq!((&x * &y).as_ref(), &(&xv * &yv).rem_euclid(&q));
@@ -646,25 +641,25 @@ mod tests {
 
     #[test]
     fn square_matches_self_multiply() {
-        let q = BigInteger::from_u32(7);
-        let a = field_element(q.clone(), BigInteger::from_u32(5));
+        let q = BigInt::from_u32(7);
+        let a = field_element(q.clone(), BigInt::from_u32(5));
         // 5² = 25 ≡ 4 (mod 7)。
-        assert_eq!(a.square().as_ref(), &BigInteger::from_u32(4));
+        assert_eq!(a.square().as_ref(), &BigInt::from_u32(4));
 
         // 大體域：square 應等於 self·self。
         let q = secp256k1_prime();
-        let xv = &q - &BigInteger::from_u32(7);
+        let xv = &q - &BigInt::from_u32(7);
         let x = field_element(q, xv);
         assert_eq!(x.square().as_ref(), (&x * &x).as_ref());
     }
 
     #[test]
     fn div_is_multiply_by_inverse() {
-        let q = BigInteger::from_u32(7);
-        let a = field_element(q.clone(), BigInteger::from_u32(6));
-        let b = field_element(q.clone(), BigInteger::from_u32(3));
+        let q = BigInt::from_u32(7);
+        let a = field_element(q.clone(), BigInt::from_u32(6));
+        let b = field_element(q.clone(), BigInt::from_u32(3));
         // 6 / 3 = 6 · 3⁻¹ = 6 · 5 = 30 ≡ 2 (mod 7)。
-        assert_eq!((&a / &b).as_ref(), &BigInteger::from_u32(2));
+        assert_eq!((&a / &b).as_ref(), &BigInt::from_u32(2));
         // (a / b) · b = a。
         assert_eq!((&(&a / &b) * &b).as_ref(), a.as_ref());
     }
@@ -680,31 +675,31 @@ mod tests {
             s.finish()
         }
 
-        let q = BigInteger::from_u32(7);
-        let a = field_element(q.clone(), BigInteger::from_u32(3));
-        let b = field_element(q.clone(), BigInteger::from_u32(3));
-        let c = field_element(q, BigInteger::from_u32(4));
+        let q = BigInt::from_u32(7);
+        let a = field_element(q.clone(), BigInt::from_u32(3));
+        let b = field_element(q.clone(), BigInt::from_u32(3));
+        let c = field_element(q, BigInt::from_u32(4));
         // 同體域同值 → 相等且 hash 相等。
         assert_eq!(a, b);
         assert_eq!(h(&a), h(&b));
         // 同體域不同值 → 不相等。
         assert_ne!(a, c);
         // 不同體域 → 不相等。
-        let d = field_element(BigInteger::from_u32(11), BigInteger::from_u32(3));
+        let d = field_element(BigInt::from_u32(11), BigInt::from_u32(3));
         assert_ne!(a, d);
     }
 
     #[test]
     fn sqrt_zero_and_one() {
-        let q = BigInteger::from_u32(17);
+        let q = BigInt::from_u32(17);
         assert!(
-            field_element(q.clone(), BigInteger::from_u32(0))
+            field_element(q.clone(), BigInt::from_u32(0))
                 .sqrt()
                 .unwrap()
                 .is_zero()
         );
         assert!(
-            field_element(q, BigInteger::from_u32(1))
+            field_element(q, BigInt::from_u32(1))
                 .sqrt()
                 .unwrap()
                 .is_one()
@@ -715,7 +710,7 @@ mod tests {
     fn sqrt_q_3_mod_4() {
         // secp256k1 p ≡ 3 (mod 4)。完全平方開根，平方回原值。
         let q = secp256k1_prime();
-        let a = field_element(q.clone(), &q - &BigInteger::from_u32(9));
+        let a = field_element(q.clone(), &q - &BigInt::from_u32(9));
         let sq = a.square();
         let root = sq.sqrt().expect("完全平方必為二次剩餘");
         assert_eq!(root.square().as_ref(), sq.as_ref());
@@ -724,118 +719,94 @@ mod tests {
     #[test]
     fn sqrt_q_5_mod_8() {
         // GF(13)，13 ≡ 5 (mod 8)。QR = {1,3,4,9,10,12}。
-        let q = BigInteger::from_u32(13);
-        let four = field_element(q.clone(), BigInteger::from_u32(4));
-        assert_eq!(
-            four.sqrt().unwrap().square().as_ref(),
-            &BigInteger::from_u32(4)
-        );
+        let q = BigInt::from_u32(13);
+        let four = field_element(q.clone(), BigInt::from_u32(4));
+        assert_eq!(four.sqrt().unwrap().square().as_ref(), &BigInt::from_u32(4));
         // 2 非剩餘 → None。
-        assert!(field_element(q, BigInteger::from_u32(2)).sqrt().is_none());
+        assert!(field_element(q, BigInt::from_u32(2)).sqrt().is_none());
     }
 
     #[test]
     fn sqrt_q_1_mod_8() {
         // GF(17)，17 ≡ 1 (mod 8) → Lucas 分支。QR = {1,2,4,8,9,13,15,16}。
-        let q = BigInteger::from_u32(17);
+        let q = BigInt::from_u32(17);
         for v in [2u32, 4, 8, 9, 16] {
-            let fe = field_element(q.clone(), BigInteger::from_u32(v));
+            let fe = field_element(q.clone(), BigInt::from_u32(v));
             let root = fe.sqrt().unwrap_or_else(|| panic!("{v} 應為二次剩餘"));
-            assert_eq!(root.square().as_ref(), &BigInteger::from_u32(v));
+            assert_eq!(root.square().as_ref(), &BigInt::from_u32(v));
         }
         // 3 非剩餘 → None。
-        assert!(field_element(q, BigInteger::from_u32(3)).sqrt().is_none());
+        assert!(field_element(q, BigInt::from_u32(3)).sqrt().is_none());
     }
 
     #[test]
     fn invert_is_multiplicative_inverse() {
-        let q = BigInteger::from_u32(7);
+        let q = BigInt::from_u32(7);
         // 3⁻¹ ≡ 5 (mod 7)，且 3 · 3⁻¹ = 1。
-        let a = field_element(q.clone(), BigInteger::from_u32(3));
-        assert_eq!(a.invert().as_ref(), &BigInteger::from_u32(5));
+        let a = field_element(q.clone(), BigInt::from_u32(3));
+        assert_eq!(a.invert().as_ref(), &BigInt::from_u32(5));
         assert!((&a * &a.invert()).is_one());
 
         // 大體域:a · a⁻¹ = 1。
         let q = secp256k1_prime();
-        let a = field_element(q.clone(), &q - &BigInteger::from_u32(123456));
+        let a = field_element(q.clone(), &q - &BigInt::from_u32(123456));
         assert!((&a * &a.invert()).is_one());
     }
 
     #[test]
     #[should_panic(expected = "not invertible")]
     fn invert_zero_panics() {
-        let q = BigInteger::from_u32(7);
-        field_element(q, BigInteger::from_u32(0)).invert();
+        let q = BigInt::from_u32(7);
+        field_element(q, BigInt::from_u32(0)).invert();
     }
 
     #[test]
     fn add_one_wraps_at_q() {
-        let q = BigInteger::from_u32(7);
+        let q = BigInt::from_u32(7);
         // 一般情形：3 + 1 = 4。
-        let a = field_element(q.clone(), BigInteger::from_u32(3));
-        assert_eq!(a.add_one().as_ref(), &BigInteger::from_u32(4));
+        let a = field_element(q.clone(), BigInt::from_u32(3));
+        assert_eq!(a.add_one().as_ref(), &BigInt::from_u32(4));
         // 環繞：q−1 加一 → 0。
-        let top = field_element(q, BigInteger::from_u32(6));
+        let top = field_element(q, BigInt::from_u32(6));
         assert!(top.add_one().is_zero());
     }
 
     #[test]
     fn mod_double_wraps_modulo_q() {
-        let q = BigInteger::from_u32(7);
-        let fe = field_element(q.clone(), BigInteger::from_u32(0));
+        let q = BigInt::from_u32(7);
+        let fe = field_element(q.clone(), BigInt::from_u32(0));
         // 2·5 = 10 ≡ 3 (mod 7)；2·6 = 12 ≡ 5 (mod 7)。
-        assert_eq!(
-            fe.mod_double(&BigInteger::from_u32(5)),
-            BigInteger::from_u32(3)
-        );
-        assert_eq!(
-            fe.mod_double(&BigInteger::from_u32(6)),
-            BigInteger::from_u32(5)
-        );
-        assert_eq!(
-            fe.mod_double(&BigInteger::from_u32(3)),
-            BigInteger::from_u32(6)
-        );
+        assert_eq!(fe.mod_double(&BigInt::from_u32(5)), BigInt::from_u32(3));
+        assert_eq!(fe.mod_double(&BigInt::from_u32(6)), BigInt::from_u32(5));
+        assert_eq!(fe.mod_double(&BigInt::from_u32(3)), BigInt::from_u32(6));
     }
 
     #[test]
     fn mod_half_abs_even_and_odd() {
-        let q = BigInteger::from_u32(7);
-        let fe = field_element(q, BigInteger::from_u32(0));
+        let q = BigInt::from_u32(7);
+        let fe = field_element(q, BigInt::from_u32(0));
         // 偶：4/2 = 2、6/2 = 3。
-        assert_eq!(
-            fe.mod_half_abs(&BigInteger::from_u32(4)),
-            BigInteger::from_u32(2)
-        );
-        assert_eq!(
-            fe.mod_half_abs(&BigInteger::from_u32(6)),
-            BigInteger::from_u32(3)
-        );
+        assert_eq!(fe.mod_half_abs(&BigInt::from_u32(4)), BigInt::from_u32(2));
+        assert_eq!(fe.mod_half_abs(&BigInt::from_u32(6)), BigInt::from_u32(3));
         // 奇：(7−3)/2 = 2、(7−5)/2 = 1。
-        assert_eq!(
-            fe.mod_half_abs(&BigInteger::from_u32(3)),
-            BigInteger::from_u32(2)
-        );
-        assert_eq!(
-            fe.mod_half_abs(&BigInteger::from_u32(5)),
-            BigInteger::from_u32(1)
-        );
+        assert_eq!(fe.mod_half_abs(&BigInt::from_u32(3)), BigInt::from_u32(2));
+        assert_eq!(fe.mod_half_abs(&BigInt::from_u32(5)), BigInt::from_u32(1));
     }
 
     #[test]
     fn residue_small_prime_is_none() {
         // 位元長度 < 96 → 無快速形式。
-        assert!(FpFieldElement::calculate_residue(&BigInteger::from_u32(97)).is_none());
+        assert!(FpFieldElement::calculate_residue(&BigInt::from_u32(97)).is_none());
     }
 
     // 對給定的 q，用一組測資交叉驗證 mod_reduce 與通用取模一致（含負數）。
-    fn check_mod_reduce(q: &BigInteger) {
+    fn check_mod_reduce(q: &BigInt) {
         let r = FpFieldElement::calculate_residue(q);
-        let fe = FpFieldElement::new(q.clone(), BigInteger::from_u32(0), r);
+        let fe = FpFieldElement::new(q.clone(), BigInt::from_u32(0), r);
         let samples = [
-            q - &BigInteger::from_u32(1),
-            q - &BigInteger::from_u32(12345),
-            BigInteger::from_u32(2),
+            q - &BigInt::from_u32(1),
+            q - &BigInt::from_u32(12345),
+            BigInt::from_u32(2),
             q >> 1,
         ];
         for a in &samples {
@@ -847,21 +818,21 @@ mod tests {
             }
         }
         // 已在 [0, q) 的值：約簡應為原值。
-        let inside = q - &BigInteger::from_u32(7);
+        let inside = q - &BigInt::from_u32(7);
         assert_eq!(fe.mod_reduce(inside.clone()), inside);
     }
 
-    fn secp256k1_prime() -> BigInteger {
-        BigInteger::from_str_radix(
+    fn secp256k1_prime() -> BigInt {
+        BigInt::from_str_radix(
             "fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f",
             16,
         )
         .unwrap()
     }
 
-    fn p256_prime() -> BigInteger {
+    fn p256_prime() -> BigInt {
         // NIST P-256：byte 對齊、頂端非全 1 → Barrett residue（r < 0）。
-        BigInteger::from_str_radix(
+        BigInt::from_str_radix(
             "ffffffff00000001000000000000000000000000ffffffffffffffffffffffff",
             16,
         )
@@ -872,11 +843,11 @@ mod tests {
     fn fused_products_match_naive() {
         // fused a·b±x·y / a²±x·y 應等於樸素運算；含 Barrett 質數驗 plus 修正。
         for q in [secp256k1_prime(), p256_prime()] {
-            let fe = |v: BigInteger| field_element(q.clone(), v);
-            let a = fe(&q - &BigInteger::from_u32(3));
-            let b = fe(&q - &BigInteger::from_u32(5));
-            let x = fe(&q - &BigInteger::from_u32(7));
-            let y = fe(&q - &BigInteger::from_u32(11));
+            let fe = |v: BigInt| field_element(q.clone(), v);
+            let a = fe(&q - &BigInt::from_u32(3));
+            let b = fe(&q - &BigInt::from_u32(5));
+            let x = fe(&q - &BigInt::from_u32(7));
+            let y = fe(&q - &BigInt::from_u32(11));
 
             assert_eq!(
                 a.multiply_minus_product(&b, &x, &y),
@@ -897,7 +868,7 @@ mod tests {
     #[test]
     fn mod_reduce_barrett_matches_generic() {
         // NIST P-256：byte 對齊、頂端非全 1 → r < 0，走 Barrett 快速路徑。
-        let p = BigInteger::from_str_radix(
+        let p = BigInt::from_str_radix(
             "ffffffff00000001000000000000000000000000ffffffffffffffffffffffff",
             16,
         )
@@ -908,6 +879,6 @@ mod tests {
     #[test]
     fn mod_reduce_generic_matches() {
         // 小質數：r == None，走通用取模路徑。
-        check_mod_reduce(&BigInteger::from_u32(97));
+        check_mod_reduce(&BigInt::from_u32(97));
     }
 }

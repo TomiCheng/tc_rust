@@ -14,7 +14,7 @@ use core::ops::{Add, Mul, Neg, Sub};
 use crate::ec::CoordinateSystem;
 use crate::ec::fp_curve::FpCurve;
 use crate::ec::fp_field_element::FpFieldElement;
-use tc_bigint::BigInteger;
+use tc_bigint::BigInt;
 
 /// A point on an [`FpCurve`].
 ///
@@ -109,7 +109,7 @@ impl FpPoint {
         if self
             .curve
             .cofactor()
-            .is_some_and(|h| h == &BigInteger::from_u32(1))
+            .is_some_and(|h| h == &BigInt::from_u32(1))
         {
             return true;
         }
@@ -193,7 +193,7 @@ impl FpPoint {
     ///
     /// Kept as a named method so it survives alongside future windowed methods;
     /// [`Mul`] delegates here.
-    pub fn mul_double_and_add(&self, k: &BigInteger) -> Self {
+    pub fn mul_double_and_add(&self, k: &BigInt) -> Self {
         // k·O = O、0·P = O
         if self.is_infinity() || k.is_zero() {
             return FpPoint::infinity(Arc::clone(&self.curve));
@@ -248,7 +248,7 @@ impl core::fmt::Debug for FpPoint {
 
 /// Encodes a field-element value as fixed-length `len` big-endian bytes
 /// (left-padded with zeros), as required by the SEC point encoding.
-fn fixed_be(v: &BigInteger, len: usize) -> Vec<u8> {
+fn fixed_be(v: &BigInt, len: usize) -> Vec<u8> {
     let mut buf = alloc::vec![0u8; len];
     let n = v.byte_length_unsigned(); // 值的最小位元組數（≤ len）
     // 寫進 buffer 右段 → 左邊自然留零（免中間 Vec）。
@@ -318,10 +318,10 @@ impl Sub for &FpPoint {
 /// Corresponds to `Multiply` in Bouncy Castle. Currently delegates to
 /// [`FpPoint::mul_double_and_add`]; a windowed method can be selected here once
 /// added (see the TODO on that function).
-impl Mul<&BigInteger> for &FpPoint {
+impl Mul<&BigInt> for &FpPoint {
     type Output = FpPoint;
 
-    fn mul(self, k: &BigInteger) -> FpPoint {
+    fn mul(self, k: &BigInt) -> FpPoint {
         // TODO(wnaf)：現在直接走 double-and-add。bc 預設用視窗化 NAF
         // （ECMultiplier → WNafL2RMultiplier，把 k 編成 non-adjacent form + 預算奇數
         // 倍點表，加法次數約降到 1/(w+1)）。之後加 mul_wnaf 後在這裡依情況選用。
@@ -332,18 +332,18 @@ impl Mul<&BigInteger> for &FpPoint {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tc_bigint::BigInteger;
+    use tc_bigint::BigInt;
 
     fn secp256k1() -> Arc<FpCurve> {
-        let p = BigInteger::from_str_radix(
+        let p = BigInt::from_str_radix(
             "fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f",
             16,
         )
         .unwrap();
         Arc::new(FpCurve::new(
             p,
-            BigInteger::from_u32(0),
-            BigInteger::from_u32(7),
+            BigInt::from_u32(0),
+            BigInt::from_u32(7),
             None,
             None,
         ))
@@ -360,20 +360,20 @@ mod tests {
     #[test]
     fn affine_point_exposes_coords() {
         let curve = secp256k1();
-        let x = curve.create_field_element(BigInteger::from_u32(2));
-        let y = curve.create_field_element(BigInteger::from_u32(3));
+        let x = curve.create_field_element(BigInt::from_u32(2));
+        let y = curve.create_field_element(BigInt::from_u32(3));
         let p = FpPoint::new(Arc::clone(&curve), x, y);
         assert!(!p.is_infinity());
-        assert_eq!(p.x().unwrap().as_ref(), &BigInteger::from_u32(2));
-        assert_eq!(p.y().unwrap().as_ref(), &BigInteger::from_u32(3));
+        assert_eq!(p.x().unwrap().as_ref(), &BigInt::from_u32(2));
+        assert_eq!(p.y().unwrap().as_ref(), &BigInt::from_u32(3));
     }
 
     // 教科書曲線 y² = x³ + 2x + 2 over GF(17)。
     fn curve17() -> Arc<FpCurve> {
         Arc::new(FpCurve::new(
-            BigInteger::from_u32(17),
-            BigInteger::from_u32(2),
-            BigInteger::from_u32(2),
+            BigInt::from_u32(17),
+            BigInt::from_u32(2),
+            BigInt::from_u32(2),
             None,
             None,
         ))
@@ -382,8 +382,8 @@ mod tests {
     fn point17(curve: &Arc<FpCurve>, x: u32, y: u32) -> FpPoint {
         FpPoint::new(
             Arc::clone(curve),
-            curve.create_field_element(BigInteger::from_u32(x)),
-            curve.create_field_element(BigInteger::from_u32(y)),
+            curve.create_field_element(BigInt::from_u32(x)),
+            curve.create_field_element(BigInt::from_u32(y)),
         )
     }
 
@@ -393,8 +393,8 @@ mod tests {
         // 2·(5,1) = (6,3)。
         let g = point17(&curve, 5, 1);
         let two_g = g.twice();
-        assert_eq!(two_g.x().unwrap().as_ref(), &BigInteger::from_u32(6));
-        assert_eq!(two_g.y().unwrap().as_ref(), &BigInteger::from_u32(3));
+        assert_eq!(two_g.x().unwrap().as_ref(), &BigInt::from_u32(6));
+        assert_eq!(two_g.y().unwrap().as_ref(), &BigInt::from_u32(3));
     }
 
     #[test]
@@ -411,8 +411,8 @@ mod tests {
         let curve = curve17();
         // G + 2G = 3G = (10, 6)。
         let sum = &point17(&curve, 5, 1) + &point17(&curve, 6, 3);
-        assert_eq!(sum.x().unwrap().as_ref(), &BigInteger::from_u32(10));
-        assert_eq!(sum.y().unwrap().as_ref(), &BigInteger::from_u32(6));
+        assert_eq!(sum.x().unwrap().as_ref(), &BigInt::from_u32(10));
+        assert_eq!(sum.y().unwrap().as_ref(), &BigInt::from_u32(6));
     }
 
     #[test]
@@ -421,8 +421,8 @@ mod tests {
         // G + G = 2G = (6, 3)。
         let g = point17(&curve, 5, 1);
         let sum = &g + &g;
-        assert_eq!(sum.x().unwrap().as_ref(), &BigInteger::from_u32(6));
-        assert_eq!(sum.y().unwrap().as_ref(), &BigInteger::from_u32(3));
+        assert_eq!(sum.x().unwrap().as_ref(), &BigInt::from_u32(6));
+        assert_eq!(sum.y().unwrap().as_ref(), &BigInt::from_u32(3));
     }
 
     #[test]
@@ -431,8 +431,8 @@ mod tests {
         let g = point17(&curve, 5, 1);
         // 3G − G = 2G = (6, 3)。
         let r = &point17(&curve, 10, 6) - &g;
-        assert_eq!(r.x().unwrap().as_ref(), &BigInteger::from_u32(6));
-        assert_eq!(r.y().unwrap().as_ref(), &BigInteger::from_u32(3));
+        assert_eq!(r.x().unwrap().as_ref(), &BigInt::from_u32(6));
+        assert_eq!(r.y().unwrap().as_ref(), &BigInt::from_u32(3));
         // G − G = O。
         assert!((&g - &g).is_infinity());
     }
@@ -445,8 +445,8 @@ mod tests {
         assert!((&g + &(-&g)).is_infinity());
         // P + O = P、O + P = P。
         let inf = FpPoint::infinity(Arc::clone(&curve));
-        assert_eq!((&g + &inf).x().unwrap().as_ref(), &BigInteger::from_u32(5));
-        assert_eq!((&inf + &g).x().unwrap().as_ref(), &BigInteger::from_u32(5));
+        assert_eq!((&g + &inf).x().unwrap().as_ref(), &BigInt::from_u32(5));
+        assert_eq!((&inf + &g).x().unwrap().as_ref(), &BigInt::from_u32(5));
     }
 
     #[test]
@@ -455,12 +455,12 @@ mod tests {
         // 2G=(6,3), 4G=(3,1), 18G=(5,16)。
         let curve = curve17();
         let g = point17(&curve, 5, 1);
-        let two_g = &g * &BigInteger::from_u32(2);
-        assert_eq!(two_g.x().unwrap().as_ref(), &BigInteger::from_u32(6));
-        assert_eq!(two_g.y().unwrap().as_ref(), &BigInteger::from_u32(3));
-        let four_g = &g * &BigInteger::from_u32(4);
-        assert_eq!(four_g.x().unwrap().as_ref(), &BigInteger::from_u32(3));
-        assert_eq!(four_g.y().unwrap().as_ref(), &BigInteger::from_u32(1));
+        let two_g = &g * &BigInt::from_u32(2);
+        assert_eq!(two_g.x().unwrap().as_ref(), &BigInt::from_u32(6));
+        assert_eq!(two_g.y().unwrap().as_ref(), &BigInt::from_u32(3));
+        let four_g = &g * &BigInt::from_u32(4);
+        assert_eq!(four_g.x().unwrap().as_ref(), &BigInt::from_u32(3));
+        assert_eq!(four_g.y().unwrap().as_ref(), &BigInt::from_u32(1));
     }
 
     #[test]
@@ -468,14 +468,14 @@ mod tests {
         let curve = curve17();
         let g = point17(&curve, 5, 1);
         // 0·G = O、19·G = O（曲線階為 19）。
-        assert!((&g * &BigInteger::from_u32(0)).is_infinity());
-        assert!((&g * &BigInteger::from_u32(19)).is_infinity());
+        assert!((&g * &BigInt::from_u32(0)).is_infinity());
+        assert!((&g * &BigInt::from_u32(19)).is_infinity());
         // k·O = O。
-        assert!((&FpPoint::infinity(Arc::clone(&curve)) * &BigInteger::from_u32(5)).is_infinity());
+        assert!((&FpPoint::infinity(Arc::clone(&curve)) * &BigInt::from_u32(5)).is_infinity());
         // (−1)·G = −G = (5,16)。
-        let neg = &g * &BigInteger::from_i32(-1);
-        assert_eq!(neg.x().unwrap().as_ref(), &BigInteger::from_u32(5));
-        assert_eq!(neg.y().unwrap().as_ref(), &BigInteger::from_u32(16));
+        let neg = &g * &BigInt::from_i32(-1);
+        assert_eq!(neg.x().unwrap().as_ref(), &BigInt::from_u32(5));
+        assert_eq!(neg.y().unwrap().as_ref(), &BigInt::from_u32(16));
     }
 
     #[test]
@@ -487,15 +487,15 @@ mod tests {
         let enc = g.encode(false);
         assert_eq!(enc, vec![0x04, 5, 1]);
         let dec = curve.decode_point(&enc).unwrap();
-        assert_eq!(dec.x().unwrap().as_ref(), &BigInteger::from_u32(5));
-        assert_eq!(dec.y().unwrap().as_ref(), &BigInteger::from_u32(1));
+        assert_eq!(dec.x().unwrap().as_ref(), &BigInt::from_u32(5));
+        assert_eq!(dec.y().unwrap().as_ref(), &BigInt::from_u32(1));
 
         // 壓縮:y=1 奇 → 0x03 + X。
         let encc = g.encode(true);
         assert_eq!(encc, vec![0x03, 5]);
         assert_eq!(
             curve.decode_point(&encc).unwrap().y().unwrap().as_ref(),
-            &BigInteger::from_u32(1)
+            &BigInt::from_u32(1)
         );
 
         // 無窮遠點 → 單一 0x00。
@@ -509,10 +509,10 @@ mod tests {
     fn is_valid_checks_curve_and_order() {
         // curve17 附上階 n=19（cofactor 未知）→ 觸發 n·P 子群檢查。
         let curve = Arc::new(FpCurve::new(
-            BigInteger::from_u32(17),
-            BigInteger::from_u32(2),
-            BigInteger::from_u32(2),
-            Some(BigInteger::from_u32(19)),
+            BigInt::from_u32(17),
+            BigInt::from_u32(2),
+            BigInt::from_u32(2),
+            Some(BigInt::from_u32(19)),
             None,
         ));
         // (5,1) 在曲線上且 19·G=O → valid。
@@ -541,15 +541,15 @@ mod tests {
     #[test]
     fn negate_flips_y() {
         let curve = secp256k1();
-        let x = curve.create_field_element(BigInteger::from_u32(2));
-        let y = curve.create_field_element(BigInteger::from_u32(3));
+        let x = curve.create_field_element(BigInt::from_u32(2));
+        let y = curve.create_field_element(BigInt::from_u32(3));
         let p = FpPoint::new(Arc::clone(&curve), x, y);
         let neg = -&p;
         // x 不變，y → q − 3。
-        assert_eq!(neg.x().unwrap().as_ref(), &BigInteger::from_u32(2));
+        assert_eq!(neg.x().unwrap().as_ref(), &BigInt::from_u32(2));
         assert_eq!(
             neg.y().unwrap().as_ref(),
-            &(curve.q() - &BigInteger::from_u32(3))
+            &(curve.q() - &BigInt::from_u32(3))
         );
         // −O = O。
         assert!((-&FpPoint::infinity(curve)).is_infinity());
