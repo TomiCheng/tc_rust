@@ -4,7 +4,7 @@ use alloc::string::String;
 use alloc::vec::Vec;
 use core::cmp::Ordering;
 use core::fmt;
-use core::ops::{Neg, Shl, Shr};
+use core::ops::{Neg, Shl, ShlAssign, Shr, ShrAssign};
 
 #[cfg(test)]
 use crate::ConversionError;
@@ -330,6 +330,18 @@ impl CheckedShl for BigInt {
 impl CheckedShr for BigInt {
     fn checked_shr(&self, rhs: u32) -> Option<Self> {
         Some(self >> rhs as usize)
+    }
+}
+
+impl ShlAssign<usize> for BigInt {
+    fn shl_assign(&mut self, rhs: usize) {
+        *self = &*self << rhs;
+    }
+}
+
+impl ShrAssign<usize> for BigInt {
+    fn shr_assign(&mut self, rhs: usize) {
+        *self = &*self >> rhs;
     }
 }
 
@@ -660,6 +672,14 @@ mod tests {
         assert_eq!(left.clone() << 2, BigInt::from(48_i8));
         assert_eq!(&left >> 2, BigInt::from(3_i8));
         assert_eq!(left >> 2, BigInt::from(3_i8));
+
+        let mut assigned = BigInt::from(-1_i8);
+        assigned &= &BigInt::from(0b1110_i8);
+        assigned |= BigInt::from(1_i8);
+        assigned ^= &BigInt::from(0b0101_i8);
+        assigned <<= 2;
+        assigned >>= 1;
+        assert_eq!(assigned, BigInt::from(20_i8));
     }
 
     #[test]

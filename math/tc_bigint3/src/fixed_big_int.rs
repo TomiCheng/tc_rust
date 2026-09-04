@@ -2,7 +2,10 @@
 
 use core::cmp::Ordering;
 use core::fmt;
-use core::ops::{BitAnd, BitOr, BitXor, Neg, Not, Shl, Shr};
+use core::ops::{
+    BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Neg, Not, Shl, ShlAssign, Shr,
+    ShrAssign,
+};
 
 #[cfg(test)]
 use crate::ConversionError;
@@ -401,6 +404,26 @@ impl_borrowed_bitwise!(BitAnd, bitand, &);
 impl_borrowed_bitwise!(BitOr, bitor, |);
 impl_borrowed_bitwise!(BitXor, bitxor, ^);
 
+macro_rules! impl_fixed_int_bitwise_assign {
+    ($trait:ident, $method:ident, $operator:tt) => {
+        impl<const N: usize> $trait<&FixedBigInt<N>> for FixedBigInt<N> {
+            fn $method(&mut self, rhs: &FixedBigInt<N>) {
+                *self = *self $operator *rhs;
+            }
+        }
+
+        impl<const N: usize> $trait for FixedBigInt<N> {
+            fn $method(&mut self, rhs: Self) {
+                self.$method(&rhs);
+            }
+        }
+    };
+}
+
+impl_fixed_int_bitwise_assign!(BitAndAssign, bitand_assign, &);
+impl_fixed_int_bitwise_assign!(BitOrAssign, bitor_assign, |);
+impl_fixed_int_bitwise_assign!(BitXorAssign, bitxor_assign, ^);
+
 impl<const N: usize> Not for FixedBigInt<N> {
     type Output = Self;
 
@@ -491,6 +514,18 @@ impl<const N: usize> CheckedShr for FixedBigInt<N> {
     fn checked_shr(&self, rhs: u32) -> Option<Self> {
         let shift = rhs as usize;
         (shift < N * Word::BITS as usize).then(|| *self >> shift)
+    }
+}
+
+impl<const N: usize> ShlAssign<usize> for FixedBigInt<N> {
+    fn shl_assign(&mut self, rhs: usize) {
+        *self = *self << rhs;
+    }
+}
+
+impl<const N: usize> ShrAssign<usize> for FixedBigInt<N> {
+    fn shr_assign(&mut self, rhs: usize) {
+        *self = *self >> rhs;
     }
 }
 
@@ -812,6 +847,14 @@ mod tests {
         assert_eq!(&left << 2, I128::from(48_i8));
         assert_eq!(left >> 2, I128::from(3_i8));
         assert_eq!(&left >> 2, I128::from(3_i8));
+
+        let mut assigned = I128::from(-1_i8);
+        assigned &= &I128::from(0b1110_i8);
+        assigned |= I128::from(1_i8);
+        assigned ^= &I128::from(0b0101_i8);
+        assigned <<= 2;
+        assigned >>= 1;
+        assert_eq!(assigned, I128::from(20_i8));
     }
 
     #[test]

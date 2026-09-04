@@ -1,6 +1,6 @@
 //! Bitwise AND operations for [`BigInt`].
 
-use core::ops::BitAnd;
+use core::ops::{BitAnd, BitAndAssign};
 
 use crate::traits::AndNot;
 use crate::{BigInt, Limb, Word};
@@ -57,6 +57,18 @@ impl BitAnd<BigInt> for BigInt {
 
     fn bitand(self, rhs: BigInt) -> Self::Output {
         &self & &rhs
+    }
+}
+
+impl BitAndAssign<&BigInt> for BigInt {
+    fn bitand_assign(&mut self, rhs: &BigInt) {
+        *self = &*self & rhs;
+    }
+}
+
+impl BitAndAssign for BigInt {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self &= &rhs;
     }
 }
 

@@ -1,7 +1,10 @@
 //! Fixed-precision unsigned integers without allocation.
 
 use core::fmt;
-use core::ops::{BitAnd, BitOr, BitXor, Not, Shl, Shr};
+use core::ops::{
+    BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not, Shl, ShlAssign, Shr,
+    ShrAssign,
+};
 
 #[cfg(test)]
 use crate::ConversionError;
@@ -313,6 +316,26 @@ impl_borrowed_bitwise!(BitAnd, bitand, &);
 impl_borrowed_bitwise!(BitOr, bitor, |);
 impl_borrowed_bitwise!(BitXor, bitxor, ^);
 
+macro_rules! impl_fixed_uint_bitwise_assign {
+    ($trait:ident, $method:ident, $operator:tt) => {
+        impl<const N: usize> $trait<&FixedBigUint<N>> for FixedBigUint<N> {
+            fn $method(&mut self, rhs: &FixedBigUint<N>) {
+                *self = *self $operator *rhs;
+            }
+        }
+
+        impl<const N: usize> $trait for FixedBigUint<N> {
+            fn $method(&mut self, rhs: Self) {
+                self.$method(&rhs);
+            }
+        }
+    };
+}
+
+impl_fixed_uint_bitwise_assign!(BitAndAssign, bitand_assign, &);
+impl_fixed_uint_bitwise_assign!(BitOrAssign, bitor_assign, |);
+impl_fixed_uint_bitwise_assign!(BitXorAssign, bitxor_assign, ^);
+
 impl<const N: usize> Not for FixedBigUint<N> {
     type Output = Self;
 
@@ -412,6 +435,18 @@ impl<const N: usize> CheckedShr for FixedBigUint<N> {
     fn checked_shr(&self, rhs: u32) -> Option<Self> {
         let shift = rhs as usize;
         (shift < N * Word::BITS as usize).then(|| *self >> shift)
+    }
+}
+
+impl<const N: usize> ShlAssign<usize> for FixedBigUint<N> {
+    fn shl_assign(&mut self, rhs: usize) {
+        *self = *self << rhs;
+    }
+}
+
+impl<const N: usize> ShrAssign<usize> for FixedBigUint<N> {
+    fn shr_assign(&mut self, rhs: usize) {
+        *self = *self >> rhs;
     }
 }
 
@@ -701,6 +736,14 @@ mod tests {
         assert_eq!(&left << 2, U128::from(48_u8));
         assert_eq!(left >> 2, U128::from(3_u8));
         assert_eq!(&left >> 2, U128::from(3_u8));
+
+        let mut assigned = left;
+        assigned &= &right;
+        assigned |= U128::from(0b0011_u8);
+        assigned ^= &U128::from(0b0101_u8);
+        assigned <<= 2;
+        assigned >>= 1;
+        assert_eq!(assigned, U128::from(28_u8));
     }
 
     #[test]

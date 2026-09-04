@@ -3,7 +3,7 @@
 use alloc::string::String;
 use alloc::vec::Vec;
 use core::fmt;
-use core::ops::{Shl, Shr};
+use core::ops::{Shl, ShlAssign, Shr, ShrAssign};
 
 #[cfg(test)]
 use crate::ConversionError;
@@ -228,6 +228,18 @@ impl CheckedShl for BigUint {
 impl CheckedShr for BigUint {
     fn checked_shr(&self, rhs: u32) -> Option<Self> {
         Some(self >> rhs as usize)
+    }
+}
+
+impl ShlAssign<usize> for BigUint {
+    fn shl_assign(&mut self, rhs: usize) {
+        *self = &*self << rhs;
+    }
+}
+
+impl ShrAssign<usize> for BigUint {
+    fn shr_assign(&mut self, rhs: usize) {
+        *self = &*self >> rhs;
     }
 }
 
@@ -519,6 +531,14 @@ mod tests {
         assert_eq!(left.clone() << 2, BigUint::from(48_u8));
         assert_eq!(&left >> 2, BigUint::from(3_u8));
         assert_eq!(left >> 2, BigUint::from(3_u8));
+
+        let mut assigned = BigUint::from(0b1100_u8);
+        assigned &= &BigUint::from(0b1010_u8);
+        assigned |= BigUint::from(0b0011_u8);
+        assigned ^= &BigUint::from(0b0101_u8);
+        assigned <<= 2;
+        assigned >>= 1;
+        assert_eq!(assigned, BigUint::from(28_u8));
     }
 
     #[test]

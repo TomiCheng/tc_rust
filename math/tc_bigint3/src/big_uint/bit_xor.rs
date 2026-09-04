@@ -1,6 +1,6 @@
 //! Bitwise XOR operations for [`BigUint`].
 
-use core::ops::BitXor;
+use core::ops::{BitXor, BitXorAssign};
 
 use crate::{BigUint, Limb};
 
@@ -43,6 +43,18 @@ impl BitXor<BigUint> for BigUint {
 
     fn bitxor(self, rhs: BigUint) -> Self::Output {
         &self ^ &rhs
+    }
+}
+
+impl BitXorAssign<&BigUint> for BigUint {
+    fn bitxor_assign(&mut self, rhs: &BigUint) {
+        *self = &*self ^ rhs;
+    }
+}
+
+impl BitXorAssign for BigUint {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self ^= &rhs;
     }
 }
 

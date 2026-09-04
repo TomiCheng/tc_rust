@@ -1,6 +1,6 @@
 //! Bitwise OR operations for [`BigUint`].
 
-use core::ops::BitOr;
+use core::ops::{BitOr, BitOrAssign};
 
 use crate::{BigUint, Limb};
 
@@ -43,6 +43,18 @@ impl BitOr<BigUint> for BigUint {
 
     fn bitor(self, rhs: BigUint) -> Self::Output {
         &self | &rhs
+    }
+}
+
+impl BitOrAssign<&BigUint> for BigUint {
+    fn bitor_assign(&mut self, rhs: &BigUint) {
+        *self = &*self | rhs;
+    }
+}
+
+impl BitOrAssign for BigUint {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self |= &rhs;
     }
 }
 
