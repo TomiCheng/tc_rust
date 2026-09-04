@@ -76,49 +76,11 @@ impl BigUint {
 
     /// Returns `self^exponent mod modulus`.
     pub fn mod_pow(&self, exponent: &Self, modulus: &Self) -> Self {
-        assert!(!modulus.is_zero(), "modulus must be non-zero");
-        let mut result = Self::one() % modulus;
-        let exponent_bits = exponent.bits();
-        if exponent_bits == 0 {
-            return result;
-        }
-
-        let base = self % modulus;
-        let window = arithmetic::exponentiation_window(exponent_bits);
-        let table_len = 1 << (window - 1);
-        let mut odd_powers = Vec::with_capacity(table_len);
-        odd_powers.push(base.clone());
-        if table_len > 1 {
-            let base_squared = base.square() % modulus;
-            for index in 1..table_len {
-                odd_powers.push((&odd_powers[index - 1] * &base_squared) % modulus);
-            }
-        }
-
-        let mut remaining_bits = exponent_bits;
-        while remaining_bits != 0 {
-            let high = remaining_bits - 1;
-            if !exponent.test_bit(high) {
-                result = result.square() % modulus;
-                remaining_bits -= 1;
-                continue;
-            }
-
-            let mut low = remaining_bits.saturating_sub(window);
-            while !exponent.test_bit(low) {
-                low += 1;
-            }
-            let mut window_value = 0_usize;
-            for bit in (low..=high).rev() {
-                window_value = (window_value << 1) | usize::from(exponent.test_bit(bit));
-            }
-            for _ in low..=high {
-                result = result.square() % modulus;
-            }
-            result = (&result * &odd_powers[window_value >> 1]) % modulus;
-            remaining_bits = low;
-        }
-        result
+        Self::from_limbs(arithmetic::mod_pow(
+            &self.limbs,
+            &exponent.limbs,
+            &modulus.limbs,
+        ))
     }
 
     /// Returns whether bit `index` is set.

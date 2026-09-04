@@ -220,6 +220,193 @@ pub(crate) fn div_rem(dividend: &[Limb], divisor: &[Limb]) -> (Vec<Limb>, Vec<Li
     (quotient, remainder)
 }
 
+/// Computes modular exponentiation with Montgomery multiplication when the
+/// modulus is odd and falls back to division-based reduction when it is even.
+#[cfg(feature = "alloc")]
+pub(crate) fn mod_pow(value: &[Limb], exponent: &[Limb], modulus: &[Limb]) -> Vec<Limb> {
+    assert!(significant_len(modulus) != 0, "modulus must be non-zero");
+    if modulus[0].0 & 1 == 0 {
+        return division_mod_pow(value, exponent, modulus);
+    }
+
+    let modulus_len = significant_len(modulus);
+    let modulus = &modulus[..modulus_len];
+    if modulus_len == 1 && modulus[0].0 == 1 {
+        return Vec::new();
+    }
+
+    let inverse = montgomery_inverse(modulus[0].0);
+    let mut radix = vec![Limb(0); modulus_len + 1];
+    radix[modulus_len] = Limb(1);
+    let radix = div_rem(&radix, modulus).1;
+    let radix_squared = div_rem(&square(&radix), modulus).1;
+    let base = montgomery_mul(&div_rem(value, modulus).1, &radix_squared, modulus, inverse);
+    let exponent_bits = bit_len(exponent);
+    if exponent_bits == 0 {
+        return radix;
+    }
+
+    let window = exponentiation_window(exponent_bits);
+    let table_len = 1 << (window - 1);
+    let mut odd_powers = Vec::with_capacity(table_len);
+    odd_powers.push(base.clone());
+    if table_len > 1 {
+        let base_squared = montgomery_mul(&base, &base, modulus, inverse);
+        for index in 1..table_len {
+            odd_powers.push(montgomery_mul(
+                &odd_powers[index - 1],
+                &base_squared,
+                modulus,
+                inverse,
+            ));
+        }
+    }
+
+    let mut result = radix;
+    let mut remaining_bits = exponent_bits;
+    while remaining_bits != 0 {
+        let high = remaining_bits - 1;
+        if !test_bit(exponent, high) {
+            result = montgomery_mul(&result, &result, modulus, inverse);
+            remaining_bits -= 1;
+            continue;
+        }
+
+        let mut low = remaining_bits.saturating_sub(window);
+        while !test_bit(exponent, low) {
+            low += 1;
+        }
+        let mut window_value = 0_usize;
+        for bit in (low..=high).rev() {
+            window_value = (window_value << 1) | usize::from(test_bit(exponent, bit));
+        }
+        for _ in low..=high {
+            result = montgomery_mul(&result, &result, modulus, inverse);
+        }
+        result = montgomery_mul(&result, &odd_powers[window_value >> 1], modulus, inverse);
+        remaining_bits = low;
+    }
+
+    montgomery_mul(&result, &[Limb(1)], modulus, inverse)
+}
+
+#[cfg(feature = "alloc")]
+fn division_mod_pow(value: &[Limb], exponent: &[Limb], modulus: &[Limb]) -> Vec<Limb> {
+    let mut result = div_rem(&[Limb(1)], modulus).1;
+    let exponent_bits = bit_len(exponent);
+    if exponent_bits == 0 {
+        return result;
+    }
+
+    let base = div_rem(value, modulus).1;
+    let window = exponentiation_window(exponent_bits);
+    let table_len = 1 << (window - 1);
+    let mut odd_powers = Vec::with_capacity(table_len);
+    odd_powers.push(base.clone());
+    if table_len > 1 {
+        let base_squared = div_rem(&square(&base), modulus).1;
+        for index in 1..table_len {
+            odd_powers.push(div_rem(&mul(&odd_powers[index - 1], &base_squared), modulus).1);
+        }
+    }
+
+    let mut remaining_bits = exponent_bits;
+    while remaining_bits != 0 {
+        let high = remaining_bits - 1;
+        if !test_bit(exponent, high) {
+            result = div_rem(&square(&result), modulus).1;
+            remaining_bits -= 1;
+            continue;
+        }
+
+        let mut low = remaining_bits.saturating_sub(window);
+        while !test_bit(exponent, low) {
+            low += 1;
+        }
+        let mut window_value = 0_usize;
+        for bit in (low..=high).rev() {
+            window_value = (window_value << 1) | usize::from(test_bit(exponent, bit));
+        }
+        for _ in low..=high {
+            result = div_rem(&square(&result), modulus).1;
+        }
+        result = div_rem(&mul(&result, &odd_powers[window_value >> 1]), modulus).1;
+        remaining_bits = low;
+    }
+    result
+}
+
+#[cfg(feature = "alloc")]
+fn montgomery_inverse(word: Word) -> Word {
+    debug_assert_eq!(word & 1, 1);
+    let mut inverse = 1 as Word;
+    let mut correct_bits = 1;
+    while correct_bits < Word::BITS {
+        inverse = inverse.wrapping_mul((2 as Word).wrapping_sub(word.wrapping_mul(inverse)));
+        correct_bits *= 2;
+    }
+    inverse.wrapping_neg()
+}
+
+#[cfg(feature = "alloc")]
+fn montgomery_mul(lhs: &[Limb], rhs: &[Limb], modulus: &[Limb], inverse: Word) -> Vec<Limb> {
+    let len = modulus.len();
+    debug_assert!(len != 0 && modulus[0].0 & 1 == 1);
+    debug_assert!(cmp(lhs, modulus) == Ordering::Less);
+    debug_assert!(cmp(rhs, modulus) == Ordering::Less);
+
+    let mut product = mul(lhs, rhs);
+    product.resize(len * 2 + 1, Limb(0));
+    for offset in 0..len {
+        let multiplier = product[offset].0.wrapping_mul(inverse);
+        let mut carry = 0 as Word;
+        for index in 0..len {
+            let wide = multiplier as WideWord * modulus[index].0 as WideWord
+                + product[offset + index].0 as WideWord
+                + carry as WideWord;
+            product[offset + index] = Limb(wide as Word);
+            carry = (wide >> Word::BITS) as Word;
+        }
+
+        let mut index = offset + len;
+        let mut wide = product[index].0 as WideWord + carry as WideWord;
+        product[index] = Limb(wide as Word);
+        carry = (wide >> Word::BITS) as Word;
+        while carry != 0 {
+            index += 1;
+            wide = product[index].0 as WideWord + carry as WideWord;
+            product[index] = Limb(wide as Word);
+            carry = (wide >> Word::BITS) as Word;
+        }
+    }
+
+    let mut result = product[len..].to_vec();
+    normalize(&mut result);
+    if cmp(&result, modulus) != Ordering::Less {
+        subtract_assign(&mut result, modulus);
+    }
+    result
+}
+
+#[cfg(feature = "alloc")]
+fn subtract_assign(lhs: &mut Vec<Limb>, rhs: &[Limb]) {
+    debug_assert!(cmp(lhs, rhs) != Ordering::Less);
+    let mut borrow = Limb(0);
+    for index in 0..lhs.len() {
+        let right = rhs.get(index).copied().unwrap_or_default();
+        (lhs[index], borrow) = lhs[index].borrowing_sub(right, borrow);
+    }
+    debug_assert_eq!(borrow, Limb(0));
+    normalize(lhs);
+}
+
+#[cfg(feature = "alloc")]
+fn test_bit(words: &[Limb], index: usize) -> bool {
+    words
+        .get(index / Word::BITS as usize)
+        .is_some_and(|word| word.0 >> (index % Word::BITS as usize) & 1 != 0)
+}
+
 #[cfg(feature = "alloc")]
 pub(crate) fn shl(words: &[Limb], shift: usize) -> Vec<Limb> {
     if words.is_empty() {
@@ -959,5 +1146,47 @@ mod tests {
                 "square case {case}"
             );
         }
+    }
+
+    #[cfg(feature = "alloc")]
+    #[test]
+    fn montgomery_modular_power_matches_division_reduction_for_random_limbs() {
+        fn next_word(state: &mut u64) -> Word {
+            *state ^= *state << 13;
+            *state ^= *state >> 7;
+            *state ^= *state << 17;
+            *state as Word
+        }
+
+        let mut state = 0x1319_8a2e_0370_7344_u64;
+        for case in 0..600 {
+            let len = next_word(&mut state) as usize % 8 + 1;
+            let mut value = (0..len)
+                .map(|_| Limb(next_word(&mut state)))
+                .collect::<Vec<_>>();
+            let exponent = (0..(len.min(3)))
+                .map(|_| Limb(next_word(&mut state)))
+                .collect::<Vec<_>>();
+            let mut modulus = (0..len)
+                .map(|_| Limb(next_word(&mut state)))
+                .collect::<Vec<_>>();
+            modulus[0].0 |= 1;
+            modulus[len - 1].0 |= 1;
+            if modulus.len() == 1 && modulus[0].0 == 1 {
+                modulus[0].0 = 3;
+            }
+            if case % 3 == 0 {
+                value.push(Limb(next_word(&mut state)));
+            }
+
+            assert_eq!(
+                mod_pow(&value, &exponent, &modulus),
+                division_mod_pow(&value, &exponent, &modulus),
+                "case {case}"
+            );
+        }
+
+        assert_eq!(mod_pow(&[Limb(7)], &[Limb(13)], &[Limb(10)]), vec![Limb(7)]);
+        assert_eq!(mod_pow(&[Limb(7)], &[], &[Limb(1)]), Vec::<Limb>::new());
     }
 }
