@@ -6,7 +6,7 @@ use core::str::FromStr;
 use crate::arithmetic;
 use crate::encoding;
 use crate::traits::{FromPrimitive, ToPrimitive};
-use crate::{BigInt, ConversionError, FixedBigInt, Limb, Word};
+use crate::{BigInt, BigUint, ConversionError, FixedBigInt, Limb, Word};
 
 macro_rules! impl_from_signed {
     ($($type:ty),* $(,)?) => {
@@ -67,6 +67,18 @@ impl<const N: usize> From<FixedBigInt<N>> for BigInt {
     }
 }
 
+impl From<&BigUint> for BigInt {
+    fn from(value: &BigUint) -> Self {
+        Self::from_sign_magnitude(false, value.as_limbs().to_vec())
+    }
+}
+
+impl From<BigUint> for BigInt {
+    fn from(value: BigUint) -> Self {
+        Self::from(&value)
+    }
+}
+
 impl<const N: usize> TryFrom<&BigInt> for FixedBigInt<N> {
     type Error = ConversionError;
 
@@ -89,6 +101,14 @@ impl<const N: usize> TryFrom<&BigInt> for FixedBigInt<N> {
             return Err(ConversionError::InputTooLarge);
         }
         Ok(FixedBigInt::from_limbs(limbs))
+    }
+}
+
+impl<const N: usize> TryFrom<BigInt> for FixedBigInt<N> {
+    type Error = ConversionError;
+
+    fn try_from(value: BigInt) -> Result<Self, Self::Error> {
+        Self::try_from(&value)
     }
 }
 
@@ -157,7 +177,7 @@ fn magnitude_to_u128(magnitude: &[Limb]) -> Option<u128> {
 #[cfg(test)]
 mod tests {
     use crate::traits::{FromPrimitive, ToPrimitive};
-    use crate::{BigInt, FixedBigInt};
+    use crate::{BigInt, BigUint, FixedBigInt};
 
     #[test]
     fn every_signed_and_unsigned_primitive_from_impl_preserves_the_value() {
@@ -205,5 +225,14 @@ mod tests {
         assert_eq!(BigInt::from(-20_i8).to_i128(), Some(-20));
         assert_eq!(BigInt::from(21_u8).to_u64(), Some(21));
         assert_eq!(BigInt::from(22_u8).to_u128(), Some(22));
+    }
+
+    #[test]
+    fn unsigned_and_owned_fixed_conversions_preserve_values() {
+        assert_eq!(BigInt::from(BigUint::from(u128::MAX)), BigInt::from(u128::MAX));
+        assert_eq!(
+            FixedBigInt::<2>::try_from(BigInt::from(-7_i8)),
+            Ok(FixedBigInt::from(-7_i8))
+        );
     }
 }

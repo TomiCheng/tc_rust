@@ -4,7 +4,7 @@ use alloc::vec::Vec;
 use core::str::FromStr;
 
 use crate::traits::{FromPrimitive, ToPrimitive};
-use crate::{BigUint, ConversionError, FixedBigUint, Limb};
+use crate::{BigInt, BigUint, ConversionError, FixedBigUint, Limb};
 
 macro_rules! impl_from_unsigned {
     ($($type:ty),* $(,)?) => {
@@ -65,6 +65,33 @@ impl<const N: usize> TryFrom<&BigUint> for FixedBigUint<N> {
     }
 }
 
+impl<const N: usize> TryFrom<BigUint> for FixedBigUint<N> {
+    type Error = ConversionError;
+
+    fn try_from(value: BigUint) -> Result<Self, Self::Error> {
+        Self::try_from(&value)
+    }
+}
+
+impl TryFrom<&BigInt> for BigUint {
+    type Error = ConversionError;
+
+    fn try_from(value: &BigInt) -> Result<Self, Self::Error> {
+        if value.is_negative() {
+            return Err(ConversionError::NegativeValue);
+        }
+        Ok(Self::from_limbs(value.as_limbs().to_vec()))
+    }
+}
+
+impl TryFrom<BigInt> for BigUint {
+    type Error = ConversionError;
+
+    fn try_from(value: BigInt) -> Result<Self, Self::Error> {
+        Self::try_from(&value)
+    }
+}
+
 impl FromPrimitive for BigUint {
     fn from_i64(value: i64) -> Option<Self> {
         u64::try_from(value).ok().map(Self::from)
@@ -110,7 +137,7 @@ impl ToPrimitive for BigUint {
 #[cfg(test)]
 mod tests {
     use crate::traits::{FromPrimitive, ToPrimitive};
-    use crate::{BigUint, FixedBigUint};
+    use crate::{BigInt, BigUint, ConversionError, FixedBigUint};
 
     #[test]
     fn every_primitive_from_impl_preserves_the_value() {
@@ -152,5 +179,18 @@ mod tests {
         assert_eq!(BigUint::from(17_u8).to_i128(), Some(17));
         assert_eq!(BigUint::from(18_u8).to_u64(), Some(18));
         assert_eq!(BigUint::from(19_u8).to_u128(), Some(19));
+    }
+
+    #[test]
+    fn signed_and_owned_fixed_conversions_preserve_or_reject_values() {
+        assert_eq!(BigUint::try_from(BigInt::from(42_i8)), Ok(BigUint::from(42_u8)));
+        assert_eq!(
+            BigUint::try_from(&BigInt::from(-1_i8)),
+            Err(ConversionError::NegativeValue)
+        );
+        assert_eq!(
+            FixedBigUint::<2>::try_from(BigUint::from(7_u8)),
+            Ok(FixedBigUint::from(7_u8))
+        );
     }
 }

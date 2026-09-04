@@ -3,7 +3,7 @@
 use core::str::FromStr;
 
 use crate::traits::{FromPrimitive, ToPrimitive};
-use crate::{ConversionError, FixedBigInt, FixedBigUint};
+use crate::{ConversionError, FixedBigInt, FixedBigUint, Limb, Word, arithmetic};
 
 impl<const N: usize> FromStr for FixedBigInt<N> {
     type Err = crate::ParseBigIntError;
@@ -41,6 +41,56 @@ macro_rules! impl_from_unsigned {
 
 impl_from_signed!(i8, i16, i32, i64, i128, isize);
 impl_from_unsigned!(u8, u16, u32, u64, u128, usize);
+
+impl<const N: usize> TryFrom<FixedBigUint<N>> for FixedBigInt<N> {
+    type Error = ConversionError;
+
+    fn try_from(value: FixedBigUint<N>) -> Result<Self, Self::Error> {
+        Self::try_from(&value)
+    }
+}
+
+impl<const N: usize> TryFrom<&FixedBigUint<N>> for FixedBigInt<N> {
+    type Error = ConversionError;
+
+    fn try_from(value: &FixedBigUint<N>) -> Result<Self, Self::Error> {
+        if arithmetic::fixed_is_negative(value.as_limbs()) {
+            return Err(ConversionError::InputTooLarge);
+        }
+        Ok(Self::from_limbs(*value.as_limbs()))
+    }
+}
+
+impl<const SOURCE: usize, const DESTINATION: usize> TryFrom<&FixedBigInt<SOURCE>>
+    for FixedBigInt<DESTINATION>
+{
+    type Error = ConversionError;
+
+    fn try_from(value: &FixedBigInt<SOURCE>) -> Result<Self, Self::Error> {
+        let negative = value.is_negative();
+        let extension = if negative { Limb(Word::MAX) } else { Limb(0) };
+        if value.as_limbs()[DESTINATION.min(SOURCE)..]
+            .iter()
+            .any(|limb| *limb != extension)
+        {
+            return Err(ConversionError::InputTooLarge);
+        }
+
+        let mut limbs = [extension; DESTINATION];
+        let copy_len = SOURCE.min(DESTINATION);
+        limbs[..copy_len].copy_from_slice(&value.as_limbs()[..copy_len]);
+        if DESTINATION == 0 {
+            return value
+                .is_zero()
+                .then_some(Self::from_limbs(limbs))
+                .ok_or(ConversionError::InputTooLarge);
+        }
+        if arithmetic::fixed_is_negative(&limbs) != negative && !value.is_zero() {
+            return Err(ConversionError::InputTooLarge);
+        }
+        Ok(Self::from_limbs(limbs))
+    }
+}
 
 impl<const N: usize> TryFrom<&[u8]> for FixedBigInt<N> {
     type Error = ConversionError;
@@ -108,7 +158,7 @@ impl<const N: usize> ToPrimitive for FixedBigInt<N> {
 
 #[cfg(test)]
 mod tests {
-    use crate::FixedBigInt;
+    use crate::{ConversionError, FixedBigInt, FixedBigUint, Word};
     use crate::traits::{FromPrimitive, ToPrimitive};
 
     type I = FixedBigInt<2>;
@@ -142,5 +192,29 @@ mod tests {
         assert_eq!(I::from(-18_i8).to_i128(), Some(-18));
         assert_eq!(I::from(19_u8).to_u64(), Some(19));
         assert_eq!(I::from(20_u8).to_u128(), Some(20));
+    }
+
+    #[test]
+    fn unsigned_and_different_width_conversions_are_checked() {
+        assert_eq!(
+            FixedBigInt::<2>::try_from(FixedBigUint::<2>::from(42_u8)),
+            Ok(FixedBigInt::from(42_i8))
+        );
+        let sign_bit = FixedBigUint::<2>::from(1_u8).set_bit(2 * Word::BITS as usize - 1);
+        assert_eq!(
+            FixedBigInt::<2>::try_from(&sign_bit),
+            Err(ConversionError::InputTooLarge)
+        );
+
+        let negative = FixedBigInt::<1>::from(-7_i8);
+        assert_eq!(
+            FixedBigInt::<3>::try_from(&negative),
+            Ok(FixedBigInt::from(-7_i8))
+        );
+        let wide_positive = FixedBigInt::<2>::from(1_i8).set_bit(Word::BITS as usize);
+        assert_eq!(
+            FixedBigInt::<1>::try_from(&wide_positive),
+            Err(ConversionError::InputTooLarge)
+        );
     }
 }

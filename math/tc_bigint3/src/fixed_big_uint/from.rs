@@ -3,7 +3,7 @@
 use core::str::FromStr;
 
 use crate::traits::{FromPrimitive, ToPrimitive};
-use crate::{ConversionError, FixedBigUint};
+use crate::{ConversionError, FixedBigInt, FixedBigUint, Limb};
 
 impl<const N: usize> FromStr for FixedBigUint<N> {
     type Err = crate::ParseBigIntError;
@@ -27,6 +27,44 @@ macro_rules! impl_from_unsigned {
 }
 
 impl_from_unsigned!(u8, u16, u32, u64, u128, usize);
+
+impl<const N: usize> TryFrom<FixedBigInt<N>> for FixedBigUint<N> {
+    type Error = ConversionError;
+
+    fn try_from(value: FixedBigInt<N>) -> Result<Self, Self::Error> {
+        Self::try_from(&value)
+    }
+}
+
+impl<const N: usize> TryFrom<&FixedBigInt<N>> for FixedBigUint<N> {
+    type Error = ConversionError;
+
+    fn try_from(value: &FixedBigInt<N>) -> Result<Self, Self::Error> {
+        if value.is_negative() {
+            return Err(ConversionError::NegativeValue);
+        }
+        Ok(Self::from_limbs(*value.as_limbs()))
+    }
+}
+
+impl<const SOURCE: usize, const DESTINATION: usize> TryFrom<&FixedBigUint<SOURCE>>
+    for FixedBigUint<DESTINATION>
+{
+    type Error = ConversionError;
+
+    fn try_from(value: &FixedBigUint<SOURCE>) -> Result<Self, Self::Error> {
+        if value.as_limbs()[DESTINATION.min(SOURCE)..]
+            .iter()
+            .any(|limb| limb.0 != 0)
+        {
+            return Err(ConversionError::InputTooLarge);
+        }
+        let mut limbs = [Limb(0); DESTINATION];
+        let copy_len = SOURCE.min(DESTINATION);
+        limbs[..copy_len].copy_from_slice(&value.as_limbs()[..copy_len]);
+        Ok(Self::from_limbs(limbs))
+    }
+}
 
 impl<const N: usize> TryFrom<&[u8]> for FixedBigUint<N> {
     type Error = ConversionError;
@@ -91,7 +129,7 @@ impl<const N: usize> ToPrimitive for FixedBigUint<N> {
 
 #[cfg(test)]
 mod tests {
-    use crate::FixedBigUint;
+    use crate::{ConversionError, FixedBigInt, FixedBigUint, Word};
     use crate::traits::{FromPrimitive, ToPrimitive};
 
     type U = FixedBigUint<2>;
@@ -119,5 +157,28 @@ mod tests {
         assert_eq!(U::from(13_u8).to_i128(), Some(13));
         assert_eq!(U::from(14_u8).to_u64(), Some(14));
         assert_eq!(U::from(15_u8).to_u128(), Some(15));
+    }
+
+    #[test]
+    fn signed_and_different_width_conversions_are_checked() {
+        assert_eq!(
+            FixedBigUint::<2>::try_from(FixedBigInt::<2>::from(42_i8)),
+            Ok(FixedBigUint::from(42_u8))
+        );
+        assert_eq!(
+            FixedBigUint::<2>::try_from(&FixedBigInt::<2>::from(-1_i8)),
+            Err(ConversionError::NegativeValue)
+        );
+
+        let narrow = FixedBigUint::<1>::from(7_u8);
+        assert_eq!(
+            FixedBigUint::<3>::try_from(&narrow),
+            Ok(FixedBigUint::from(7_u8))
+        );
+        let wide = FixedBigUint::<2>::from(1_u8).set_bit(Word::BITS as usize);
+        assert_eq!(
+            FixedBigUint::<1>::try_from(&wide),
+            Err(ConversionError::InputTooLarge)
+        );
     }
 }

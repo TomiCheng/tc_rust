@@ -7,6 +7,8 @@ use core::fmt;
 pub enum ConversionError {
     /// The input does not fit in the destination precision.
     InputTooLarge,
+    /// A negative value was supplied to an unsigned destination.
+    NegativeValue,
     /// The caller-provided output buffer is too small.
     BufferTooSmall,
 }
@@ -15,6 +17,7 @@ impl fmt::Display for ConversionError {
     fn fmt(&self, output: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::InputTooLarge => output.write_str("input does not fit in the destination"),
+            Self::NegativeValue => output.write_str("negative value is not unsigned"),
             Self::BufferTooSmall => output.write_str("output buffer is too small"),
         }
     }
@@ -110,6 +113,10 @@ mod tests {
         assert_eq!(
             ConversionError::BufferTooSmall.to_string(),
             "output buffer is too small"
+        );
+        assert_eq!(
+            ConversionError::NegativeValue.to_string(),
+            "negative value is not unsigned"
         );
     }
 
