@@ -42,7 +42,8 @@ engines respectively; both provide streaming, clone, and reset behavior.
 | [`tc_ecb`](crypto/block_modes/tc_ecb), [`tc_cbc`](crypto/block_modes/tc_cbc), [`tc_cfb`](crypto/block_modes/tc_cfb), [`tc_ofb`](crypto/block_modes/tc_ofb), [`tc_ctr`](crypto/block_modes/tc_ctr) | Independent ECB, CBC, CFB/OpenPGP CFB, OFB/GCTR, and CTR/KCTR crates built on `tc_cipher` | Core-only `no_std`; `alloc` enables runtime-sized variants where needed |
 | [`tc_digest`](crypto/tc_digest) | Shared message-digest and XOF traits | Core-only `no_std` |
 | [Digest family crates](crypto/digest) | Independent message-digest, XOF, and digest-adapter implementations | `no_std`; allocation and optional CPU acceleration vary by family |
-| [`tc_bigint`](math/tc_bigint) | Signed arbitrary-precision integer and number-theory operations | `no_std + alloc` |
+| [`tc_bigint`](math/tc_bigint) | Fixed-width and arbitrary-precision signed/unsigned integers and number-theory operations | Fixed-width types are core-only; dynamic types require `alloc` |
+| [`tc_bigint_old`](math/tc_bigint_old) | Legacy signed arbitrary-precision integer used by crates awaiting migration | `no_std + alloc` |
 | [`tc_ec`](math/tc_ec) | Binary-polynomial, raw-integer, finite-field, and elliptic-curve foundations | `no_std + alloc` |
 
 The core trait crates do not depend on algorithm implementations. Concrete
@@ -175,7 +176,7 @@ Benchmarks are available in the algorithm crates:
 ```bash
 cargo bench -p tc_aes --bench aes
 cargo bench -p tc_blake2
-cargo bench -p tc_bigint --bench mod_pow
+cargo bench -p tc_bigint --bench integer_types
 ```
 
 ## Reference and license

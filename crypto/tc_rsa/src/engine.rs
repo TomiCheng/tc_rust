@@ -1,4 +1,4 @@
-use tc_bigint::BigInt;
+use tc_bigint_old::BigInt;
 use tc_cipher::CipherDirection;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

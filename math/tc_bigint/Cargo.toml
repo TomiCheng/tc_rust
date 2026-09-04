@@ -1,21 +1,23 @@
 [package]
 name = "tc_bigint"
-description = "A pure-Rust arbitrary-precision integer library ported from Bouncy Castle C#."
+description = "Little-endian fixed and arbitrary-precision integer primitives."
 version = "0.1.0"
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
 
 [features]
-default = ["std"]
-std = []
+default = ["alloc", "rand_core"]
+alloc = []
+rand_core = ["dep:rand_core"]
 
 [dependencies]
-rand_core = { workspace = true }
+rand_core = { workspace = true, optional = true }
 
 [dev-dependencies]
 criterion = { workspace = true }
 
 [[bench]]
-name = "mod_pow"
+name = "integer_types"
 harness = false
+required-features = ["alloc"]

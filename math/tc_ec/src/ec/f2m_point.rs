@@ -12,7 +12,7 @@ use core::ops::{Add, Mul, Neg, Sub};
 use crate::ec::coordinate_system::CoordinateSystem;
 use crate::ec::f2m_curve::F2mCurve;
 use crate::ec::f2m_field_element::F2mFieldElement;
-use tc_bigint::BigInt;
+use tc_bigint_old::BigInt;
 
 /// A point on an [`F2mCurve`].
 ///
@@ -331,7 +331,7 @@ impl Neg for &F2mPoint {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tc_bigint::BigInt;
+    use tc_bigint_old::BigInt;
 
     // 取一條可建點的 F2m 曲線（GF(2^4)，x^4+x+1）。本組只驗負點的代數結構，
     // 不要求點真的在曲線上。

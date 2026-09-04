@@ -1,24 +1,56 @@
-//! Signed arbitrary-precision integer arithmetic.
-//!
-//! See the crate [`README`](https://github.com/TomiCheng/tc_rust/tree/develop/math/tc_bigint)
-//! for usage, runtime requirements, and security limitations.
+#![doc = include_str!("../README.md")]
+#![no_std]
 
-#![cfg_attr(not(feature = "std"), no_std)]
-
-// Arbitrary-precision values require owned, dynamically sized storage, but do
-// not require the standard library.
+#[cfg(feature = "alloc")]
 extern crate alloc;
+#[cfg(test)]
+extern crate std;
 
+mod arithmetic;
+mod array;
+#[cfg(feature = "alloc")]
 mod big_int;
+#[cfg(feature = "alloc")]
+mod big_uint;
+mod encoding;
 mod error;
+mod fixed_big_int;
+mod fixed_big_uint;
+mod format;
 mod limb;
-mod magnitude;
+pub mod modular;
+mod non_zero;
+mod odd;
+#[cfg(feature = "rand_core")]
+mod prime;
 mod traits;
+mod types;
 
+pub use array::ArrayEncoding;
+#[cfg(feature = "alloc")]
 pub use big_int::BigInt;
-pub use error::{BufferTooSmall, ParseBigIntError, TryFromBigIntError};
-pub use limb::{WideWord, Word};
+#[cfg(feature = "alloc")]
+pub use big_uint::BigUint;
+#[cfg(feature = "rand_core")]
+pub use error::RandomBitsError;
+pub use error::{ConversionError, ParseBigIntError};
+pub use fixed_big_int::FixedBigInt;
+pub use fixed_big_uint::FixedBigUint;
+pub use limb::{Limb, WideWord, Word};
+pub use non_zero::NonZero;
+pub use odd::Odd;
+#[cfg(feature = "rand_core")]
+pub use rand_core;
 pub use traits::{
-    Add, CheckedAdd, FromPrimitive, Num, NumOps, One, OverflowingAdd, Pow, SaturatingAdd, Signed,
-    ToPrimitive, Unsigned, WrappingAdd, Zero,
+    AndNot, BitOps, Bounded, CheckedAdd, CheckedDiv, CheckedMul, CheckedNeg, CheckedRem,
+    CheckedShl, CheckedShr, CheckedSub, DivRem, FromPrimitive, Gcd, ModAdd, ModInverse, ModMul,
+    ModPow, ModSub, Num, NumAssign, NumAssignOps, NumAssignRef, NumOps, NumRef, One,
+    OverflowingAdd, OverflowingMul, OverflowingSub, Pow, RefNum, RemEuclid, SaturatingAdd,
+    SaturatingMul, SaturatingSub, Signed, Square, ToPrimitive, Unsigned, WrappingAdd, WrappingMul,
+    WrappingNeg, WrappingSub, Zero,
 };
+#[cfg(feature = "rand_core")]
+pub use traits::{
+    IsProbablePrime, NextProbablePrime, ProbablePrime, Random, RandomBits, RandomMod,
+};
+pub use types::{I64, I128, I1024, U64, U128, U1024, U2048};

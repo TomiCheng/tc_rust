@@ -124,7 +124,7 @@ pub fn scalar_mult(k: &[u8; SCALAR_SIZE], u: &[u8; POINT_SIZE]) -> [u8; POINT_SI
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tc_bigint::BigInt;
+    use tc_bigint_old::BigInt;
 
     fn p() -> BigInt {
         &(&BigInt::from_u32(1) << 255) - &BigInt::from_u32(19)

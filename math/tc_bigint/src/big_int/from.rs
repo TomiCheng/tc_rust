@@ -1,87 +1,232 @@
-//! Standard conversions to and from [`BigInt`].
+//! Conversions for [`BigInt`].
 
-use core::mem::size_of;
-use core::str::FromStr;
+use alloc::vec::Vec;
 
-use super::BigInt;
-use crate::error::{ParseBigIntError, TryFromBigIntError};
+use crate::arithmetic;
+use crate::encoding;
+use crate::traits::{FromPrimitive, ToPrimitive};
+use crate::{BigInt, BigUint, ConversionError, FixedBigInt, Limb, Word};
 
-impl FromStr for BigInt {
-    type Err = ParseBigIntError;
+macro_rules! impl_from_signed {
+    ($($type:ty),* $(,)?) => {
+        $(
+            impl From<$type> for BigInt {
+                fn from(value: $type) -> Self {
+                    Self::from_le_bytes(&value.to_le_bytes())
+                }
+            }
+        )*
+    };
+}
 
-    /// Parses in radix 10（讓 `"123".parse::<BigInt>()` 可用）。
-    fn from_str(s: &str) -> Result<BigInt, ParseBigIntError> {
-        BigInt::from_str_radix(s, 10)
+macro_rules! impl_from_unsigned {
+    ($($type:ty),* $(,)?) => {
+        $(
+            impl From<$type> for BigInt {
+                fn from(value: $type) -> Self {
+                    Self::from_unsigned_le_bytes(&value.to_le_bytes())
+                }
+            }
+        )*
+    };
+}
+
+impl_from_signed!(i8, i16, i32, i64, i128, isize);
+impl_from_unsigned!(u8, u16, u32, u64, u128, usize);
+
+impl From<&[u8]> for BigInt {
+    fn from(value: &[u8]) -> Self {
+        Self::from_le_bytes(value)
     }
 }
 
-/// 為每個固定寬度整數型別生成無損的 `From<$t> for BigInt`，委派給對應建構函式。
-macro_rules! impl_from_primitive {
-    ($($t:ty => $ctor:ident),* $(,)?) => {
-        $(
-            impl From<$t> for BigInt {
-                /// 無損轉換（固定寬度整數必可表示）。
-                fn from(value: $t) -> Self {
-                    BigInt::$ctor(value)
-                }
-            }
-        )*
-    };
+impl From<&[u32]> for BigInt {
+    fn from(value: &[u32]) -> Self {
+        Self::from_le_u32(value)
+    }
 }
 
-impl_from_primitive! {
-    u8 => from_u8, u16 => from_u16, u32 => from_u32, u64 => from_u64, u128 => from_u128,
-    i8 => from_i8, i16 => from_i16, i32 => from_i32, i64 => from_i64, i128 => from_i128,
+impl From<&[u64]> for BigInt {
+    fn from(value: &[u64]) -> Self {
+        Self::from_le_u64(value)
+    }
 }
 
-/// 為每個無號整數型別生成 `TryFrom<&BigInt>`：負數或超出範圍回 `Err`。
-macro_rules! impl_try_from_big_unsigned {
-    ($($t:ty),* $(,)?) => {
-        $(
-            impl TryFrom<&BigInt> for $t {
-                type Error = TryFromBigIntError;
-
-                fn try_from(value: &BigInt) -> Result<$t, TryFromBigIntError> {
-                    if value.sign() < 0 {
-                        return Err(TryFromBigIntError::new()); // 負數無法轉無號
-                    }
-                    const BYTES: usize = size_of::<$t>();
-                    let n = value.byte_length_unsigned();
-                    if n > BYTES {
-                        return Err(TryFromBigIntError::new()); // 位元組數超出目標
-                    }
-                    // magnitude 位元組右對齊寫進固定寬度 buffer，上方補 0
-                    let mut buf = [0u8; BYTES];
-                    value.to_bytes_be_unsigned_into(&mut buf[BYTES - n..]);
-                    Ok(<$t>::from_be_bytes(buf))
-                }
-            }
-        )*
-    };
+impl<const N: usize> From<FixedBigInt<N>> for BigInt {
+    fn from(value: FixedBigInt<N>) -> Self {
+        Self::from_limbs(Vec::from(*value.as_limbs()))
+    }
 }
 
-/// 為每個有號整數型別生成 `TryFrom<&BigInt>`：超出範圍回 `Err`。
-macro_rules! impl_try_from_big_signed {
-    ($($t:ty),* $(,)?) => {
-        $(
-            impl TryFrom<&BigInt> for $t {
-                type Error = TryFromBigIntError;
-
-                fn try_from(value: &BigInt) -> Result<$t, TryFromBigIntError> {
-                    const BYTES: usize = size_of::<$t>();
-                    let n = value.byte_length();
-                    if n > BYTES {
-                        return Err(TryFromBigIntError::new());
-                    }
-                    // 兩補數位元組右對齊寫入；上方以符號延伸填滿（負 0xFF、非負 0x00）
-                    let mut buf = if value.sign() < 0 { [0xFFu8; BYTES] } else { [0u8; BYTES] };
-                    value.to_bytes_be_into(&mut buf[BYTES - n..]);
-                    Ok(<$t>::from_be_bytes(buf))
-                }
-            }
-        )*
-    };
+impl From<&BigUint> for BigInt {
+    fn from(value: &BigUint) -> Self {
+        Self::from_sign_magnitude(false, value.as_limbs().to_vec())
+    }
 }
 
-impl_try_from_big_unsigned!(u8, u16, u32, u64, u128);
-impl_try_from_big_signed!(i8, i16, i32, i64, i128);
+impl From<BigUint> for BigInt {
+    fn from(value: BigUint) -> Self {
+        Self::from(&value)
+    }
+}
+
+impl<const N: usize> TryFrom<&BigInt> for FixedBigInt<N> {
+    type Error = ConversionError;
+
+    fn try_from(value: &BigInt) -> Result<Self, Self::Error> {
+        let negative = value.is_negative();
+        let extension = if negative { Limb(Word::MAX) } else { Limb(0) };
+        if value.limbs.len() > N && value.limbs[N..].iter().any(|word| *word != extension) {
+            return Err(ConversionError::InputTooLarge);
+        }
+        let mut limbs = [extension; N];
+        let copy_len = value.limbs.len().min(N);
+        limbs[..copy_len].copy_from_slice(&value.limbs[..copy_len]);
+        if N == 0 {
+            return value
+                .is_zero()
+                .then_some(FixedBigInt::from_limbs(limbs))
+                .ok_or(ConversionError::InputTooLarge);
+        }
+        if arithmetic::fixed_is_negative(&limbs) != negative && !value.is_zero() {
+            return Err(ConversionError::InputTooLarge);
+        }
+        Ok(FixedBigInt::from_limbs(limbs))
+    }
+}
+
+impl<const N: usize> TryFrom<BigInt> for FixedBigInt<N> {
+    type Error = ConversionError;
+
+    fn try_from(value: BigInt) -> Result<Self, Self::Error> {
+        Self::try_from(&value)
+    }
+}
+
+impl FromPrimitive for BigInt {
+    fn from_i64(value: i64) -> Option<Self> {
+        Some(Self::from(value))
+    }
+
+    fn from_i128(value: i128) -> Option<Self> {
+        Some(Self::from(value))
+    }
+
+    fn from_u64(value: u64) -> Option<Self> {
+        Some(Self::from(value))
+    }
+
+    fn from_u128(value: u128) -> Option<Self> {
+        Some(Self::from(value))
+    }
+}
+
+impl ToPrimitive for BigInt {
+    fn to_i64(&self) -> Option<i64> {
+        signed_to_i128(self).and_then(|value| i64::try_from(value).ok())
+    }
+
+    fn to_i128(&self) -> Option<i128> {
+        signed_to_i128(self)
+    }
+
+    fn to_u64(&self) -> Option<u64> {
+        self.to_u128().and_then(|value| u64::try_from(value).ok())
+    }
+
+    fn to_u128(&self) -> Option<u128> {
+        let (negative, magnitude) = self.sign_magnitude();
+        if negative {
+            return None;
+        }
+        magnitude_to_u128(&magnitude)
+    }
+}
+
+fn signed_to_i128(value: &BigInt) -> Option<i128> {
+    let (negative, magnitude) = value.sign_magnitude();
+    let magnitude = magnitude_to_u128(&magnitude)?;
+    if negative {
+        if magnitude == 1_u128 << 127 {
+            Some(i128::MIN)
+        } else {
+            i128::try_from(magnitude).ok().map(|value| -value)
+        }
+    } else {
+        i128::try_from(magnitude).ok()
+    }
+}
+
+fn magnitude_to_u128(magnitude: &[Limb]) -> Option<u128> {
+    if arithmetic::bit_len(magnitude) > 128 {
+        return None;
+    }
+    let words = encoding::unsigned_to_le_u64(magnitude);
+    Some(words[0] as u128 | (words.get(1).copied().unwrap_or(0) as u128) << 64)
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::traits::{FromPrimitive, ToPrimitive};
+    use crate::{BigInt, BigUint, FixedBigInt};
+
+    #[test]
+    fn every_signed_and_unsigned_primitive_from_impl_preserves_the_value() {
+        assert_eq!(BigInt::from(-1_i8).to_i128(), Some(-1));
+        assert_eq!(BigInt::from(-2_i16).to_i128(), Some(-2));
+        assert_eq!(BigInt::from(-3_i32).to_i128(), Some(-3));
+        assert_eq!(BigInt::from(-4_i64).to_i128(), Some(-4));
+        assert_eq!(BigInt::from(-5_i128).to_i128(), Some(-5));
+        assert_eq!(BigInt::from(-6_isize).to_i128(), Some(-6));
+        assert_eq!(BigInt::from(7_u8).to_u128(), Some(7));
+        assert_eq!(BigInt::from(8_u16).to_u128(), Some(8));
+        assert_eq!(BigInt::from(9_u32).to_u128(), Some(9));
+        assert_eq!(BigInt::from(10_u64).to_u128(), Some(10));
+        assert_eq!(BigInt::from(11_u128).to_u128(), Some(11));
+        assert_eq!(BigInt::from(12_usize).to_u128(), Some(12));
+    }
+
+    #[test]
+    fn decimal_strings_parse_through_the_standard_trait() {
+        assert_eq!(
+            "-123456789".parse::<BigInt>(),
+            Ok(BigInt::from(-123_456_789_i64))
+        );
+        assert!("1.5".parse::<BigInt>().is_err());
+    }
+
+    #[test]
+    fn slice_fixed_and_numeric_trait_conversions_are_covered() {
+        assert_eq!(BigInt::from(&[0xff_u8][..]), BigInt::from(-1_i8));
+        assert_eq!(BigInt::from(&[u32::MAX][..]), BigInt::from(-1_i8));
+        assert_eq!(BigInt::from(&[u64::MAX][..]), BigInt::from(-1_i8));
+
+        let fixed = FixedBigInt::<2>::from(-13_i8);
+        assert_eq!(BigInt::from(fixed), BigInt::from(-13_i8));
+        assert_eq!(
+            FixedBigInt::<2>::try_from(&BigInt::from(-14_i8)),
+            Ok(FixedBigInt::from(-14_i8))
+        );
+
+        assert_eq!(BigInt::from_i64(-15), Some(BigInt::from(-15_i8)));
+        assert_eq!(BigInt::from_i128(-16), Some(BigInt::from(-16_i8)));
+        assert_eq!(BigInt::from_u64(17), Some(BigInt::from(17_u8)));
+        assert_eq!(BigInt::from_u128(18), Some(BigInt::from(18_u8)));
+        assert_eq!(BigInt::from(-19_i8).to_i64(), Some(-19));
+        assert_eq!(BigInt::from(-20_i8).to_i128(), Some(-20));
+        assert_eq!(BigInt::from(21_u8).to_u64(), Some(21));
+        assert_eq!(BigInt::from(22_u8).to_u128(), Some(22));
+    }
+
+    #[test]
+    fn unsigned_and_owned_fixed_conversions_preserve_values() {
+        assert_eq!(
+            BigInt::from(BigUint::from(u128::MAX)),
+            BigInt::from(u128::MAX)
+        );
+        assert_eq!(
+            FixedBigInt::<2>::try_from(BigInt::from(-7_i8)),
+            Ok(FixedBigInt::from(-7_i8))
+        );
+    }
+}

@@ -3,10 +3,10 @@
 A pure-Rust finite-field and elliptic-curve foundation ported from the Bouncy
 Castle C# library (`bc-csharp`, baseline commit `f027bbe1`) as a learning
 project. Arbitrary-precision integers now live in the separate
-[`tc_bigint`](../tc_bigint) crate.
+[`tc_bigint_old`](../tc_bigint_old) crate.
 
 - **`no_std` + `alloc`**: the `std` feature is on by default;
-  `--no-default-features` switches both `tc_ec` and its `tc_bigint` dependency
+  `--no-default-features` switches both `tc_ec` and its `tc_bigint_old` dependency
   to `no_std`.
 - **Caller-provided randomness**: depends on `rand_core`; the library never calls
   `rand::rng()` internally.
@@ -21,8 +21,8 @@ project. Arbitrary-precision integers now live in the separate
 | `raw::Nat` | Const-generic fixed-size limb integers (foundation for custom Fp) | `Math.Raw.Nat*` |
 | `ec` | Elliptic curves: affine Fp/F2m curves and points, SEC named curves, rfc7748 (X25519) | `Math.EC` |
 
-Arbitrary-precision integer operations are provided by `tc_bigint`; import
-`tc_bigint::BigInt` directly when an application needs them.
+Arbitrary-precision integer operations are provided by `tc_bigint_old`; import
+`tc_bigint_old::BigInt` directly when an application needs them.
 
 ---
 
@@ -79,7 +79,7 @@ Arbitrary-precision integer operations are provided by `tc_bigint`; import
 variable-time** and **leak timing**. This is a matter of security correctness, not
 just speed:
 
-- `FpFieldElement` inversion goes through `tc_bigint::BigInt::mod_inverse` (extended Euclid,
+- `FpFieldElement` inversion goes through `tc_bigint_old::BigInt::mod_inverse` (extended Euclid,
   variable-time); bc's counterpart is constant-time safegcd (`Mod.ModOddInverse`).
 - Scalar multiplication uses double-and-add, whose branches and access patterns depend
   on the scalar bits.

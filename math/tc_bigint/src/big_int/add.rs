@@ -1,150 +1,245 @@
-//! Addition implementations for [`BigInt`].
+//! Addition for [`BigInt`].
 
 use alloc::vec::Vec;
-use core::borrow::Borrow;
-use core::cmp::Ordering;
-use core::ops::Add;
+use core::ops::{Add, AddAssign};
 
-use super::{BigInt, compare_magnitude, sub_in_place, trim_leading_zeros};
-use crate::Word;
-use crate::magnitude::add_in_place;
+use crate::traits::{CheckedAdd, OverflowingAdd, SaturatingAdd, WrappingAdd};
+use crate::{BigInt, Limb, Word};
 
-impl<Rhs> Add<Rhs> for &BigInt
-where
-    Rhs: Borrow<BigInt>,
-{
+impl Add<&BigInt> for &BigInt {
     type Output = BigInt;
 
-    fn add(self, rhs: Rhs) -> BigInt {
-        add_refs(self, rhs.borrow())
+    #[inline]
+    fn add(self, rhs: &BigInt) -> Self::Output {
+        let mut limbs = self.limbs.clone();
+        add_assign_limbs(&mut limbs, &rhs.limbs);
+        BigInt::from_limbs(limbs)
     }
 }
 
-impl<Rhs> Add<Rhs> for BigInt
-where
-    Rhs: Borrow<BigInt>,
-{
-    type Output = BigInt;
+impl Add<&BigInt> for BigInt {
+    type Output = Self;
 
-    fn add(self, rhs: Rhs) -> BigInt {
-        add_owned(self, rhs.borrow())
+    #[inline]
+    fn add(mut self, rhs: &Self) -> Self::Output {
+        add_assign_limbs(&mut self.limbs, &rhs.limbs);
+        Self::from_limbs(self.limbs)
     }
 }
 
-fn add_refs(lhs: &BigInt, rhs: &BigInt) -> BigInt {
-    if lhs.sign == 0 {
-        return rhs.clone();
-    }
-    if rhs.sign == 0 {
-        return lhs.clone();
-    }
+impl Add<BigInt> for &BigInt {
+    type Output = BigInt;
 
-    if lhs.sign == rhs.sign {
-        if lhs.magnitude.len() >= rhs.magnitude.len() {
-            add_owned(lhs.clone(), rhs)
+    #[inline]
+    fn add(self, mut rhs: BigInt) -> Self::Output {
+        add_assign_limbs(&mut rhs.limbs, &self.limbs);
+        BigInt::from_limbs(rhs.limbs)
+    }
+}
+
+impl Add for BigInt {
+    type Output = Self;
+
+    #[inline]
+    fn add(self, rhs: Self) -> Self::Output {
+        if self.limbs.capacity() >= rhs.limbs.capacity() {
+            self + &rhs
         } else {
-            add_owned(rhs.clone(), lhs)
-        }
-    } else {
-        match compare_magnitude(&lhs.magnitude, &rhs.magnitude) {
-            Ordering::Greater | Ordering::Equal => add_owned(lhs.clone(), rhs),
-            Ordering::Less => add_owned(rhs.clone(), lhs),
+            &self + rhs
         }
     }
 }
 
-fn add_owned(mut lhs: BigInt, rhs: &BigInt) -> BigInt {
-    if rhs.sign == 0 {
-        return lhs;
-    }
-    if lhs.sign == 0 {
-        return rhs.clone();
-    }
-
-    if lhs.sign == rhs.sign {
-        add_magnitude_in_place(&mut lhs.magnitude, &rhs.magnitude);
-        return lhs;
-    }
-
-    match compare_magnitude(&lhs.magnitude, &rhs.magnitude) {
-        Ordering::Greater => {
-            sub_in_place(&mut lhs.magnitude, &rhs.magnitude);
-            lhs.magnitude = trim_leading_zeros(lhs.magnitude);
-            lhs
-        }
-        Ordering::Equal => {
-            lhs.sign = 0;
-            lhs.magnitude.clear();
-            lhs
-        }
-        Ordering::Less => {
-            let mut result = rhs.clone();
-            sub_in_place(&mut result.magnitude, &lhs.magnitude);
-            result.magnitude = trim_leading_zeros(result.magnitude);
-            result
-        }
+impl AddAssign<&BigInt> for BigInt {
+    fn add_assign(&mut self, rhs: &BigInt) {
+        add_assign_limbs(&mut self.limbs, &rhs.limbs);
+        crate::encoding::normalize_signed(&mut self.limbs);
     }
 }
 
-fn add_magnitude_in_place(x: &mut Vec<Word>, y: &[Word]) {
-    let original_len = x.len();
-    let result_len = original_len.max(y.len()) + 1;
-    let offset = result_len - original_len;
-
-    x.resize(result_len, 0);
-    x.copy_within(..original_len, offset);
-    x[..offset].fill(0);
-
-    add_in_place(x, y);
-
-    if x[0] == 0 {
-        x.remove(0);
+impl AddAssign for BigInt {
+    fn add_assign(&mut self, rhs: Self) {
+        *self += &rhs;
     }
+}
+
+macro_rules! impl_add_unsigned_primitive {
+    ($($primitive:ty),* $(,)?) => {
+        $(
+            impl Add<$primitive> for BigInt {
+                type Output = Self;
+
+                #[inline]
+                fn add(mut self, rhs: $primitive) -> Self::Output {
+                    add_assign_u128(&mut self.limbs, rhs as u128);
+                    Self::from_limbs(self.limbs)
+                }
+            }
+
+            impl Add<$primitive> for &BigInt {
+                type Output = BigInt;
+
+                #[inline]
+                fn add(self, rhs: $primitive) -> Self::Output {
+                    self.clone() + rhs
+                }
+            }
+
+            impl AddAssign<$primitive> for BigInt {
+                #[inline]
+                fn add_assign(&mut self, rhs: $primitive) {
+                    add_assign_u128(&mut self.limbs, rhs as u128);
+                    crate::encoding::normalize_signed(&mut self.limbs);
+                }
+            }
+        )*
+    };
+}
+
+impl_add_unsigned_primitive!(u8, u16, u32, u64, u128);
+
+impl CheckedAdd for BigInt {
+    fn checked_add(&self, rhs: &Self) -> Option<Self> {
+        Some(self + rhs)
+    }
+}
+
+impl OverflowingAdd for BigInt {
+    fn overflowing_add(&self, rhs: &Self) -> (Self, bool) {
+        (self + rhs, false)
+    }
+}
+
+impl WrappingAdd for BigInt {
+    fn wrapping_add(&self, rhs: &Self) -> Self {
+        self + rhs
+    }
+}
+
+impl SaturatingAdd for BigInt {
+    fn saturating_add(&self, rhs: &Self) -> Self {
+        self + rhs
+    }
+}
+
+fn add_assign_limbs(lhs: &mut Vec<Limb>, rhs: &[Limb]) {
+    let lhs_extension = sign_extension(lhs);
+    let rhs_extension = sign_extension(rhs);
+    let width = lhs.len().max(rhs.len()) + 1;
+    lhs.resize(width, lhs_extension);
+
+    let mut carry = Limb(0);
+    for (index, left) in lhs.iter_mut().enumerate() {
+        let right = rhs.get(index).copied().unwrap_or(rhs_extension);
+        (*left, carry) = left.carrying_add(right, carry);
+    }
+}
+
+fn sign_extension(limbs: &[Limb]) -> Limb {
+    match limbs.last() {
+        Some(limb) if limb.0 >> (Word::BITS - 1) != 0 => Limb(Word::MAX),
+        _ => Limb(0),
+    }
+}
+
+#[inline]
+fn add_assign_u128(lhs: &mut Vec<Limb>, value: u128) {
+    // Five limbs cover the four-word 32-bit representation plus a positive
+    // sign limb. The 64-bit representation uses at most the first three.
+    let mut words = [Limb(0); 5];
+
+    #[cfg(target_pointer_width = "64")]
+    {
+        words[0] = Limb(value as Word);
+        words[1] = Limb((value >> 64) as Word);
+    }
+
+    #[cfg(not(target_pointer_width = "64"))]
+    {
+        words[0] = Limb(value as Word);
+        words[1] = Limb((value >> 32) as Word);
+        words[2] = Limb((value >> 64) as Word);
+        words[3] = Limb((value >> 96) as Word);
+    }
+
+    let mut used = words
+        .iter()
+        .rposition(|word| word.0 != 0)
+        .map_or(0, |index| index + 1);
+    if used != 0 && words[used - 1].0 >> (Word::BITS - 1) != 0 {
+        used += 1;
+    }
+    add_assign_limbs(lhs, &words[..used]);
 }
 
 #[cfg(test)]
 mod tests {
-    use super::BigInt;
+    use super::*;
+    use alloc::vec;
 
     #[test]
-    fn supports_owned_and_borrowed_operands() {
-        let lhs = BigInt::from_i32(20);
-        let rhs = BigInt::from_i32(22);
-        let expected = BigInt::from_i32(42);
+    fn in_place_core_sign_extends_both_operands() {
+        let mut positive = vec![Limb(Word::MAX >> 1)];
+        add_assign_limbs(&mut positive, &[Limb(1)]);
+        assert_eq!(
+            BigInt::from_limbs(positive),
+            BigInt::from(1_u8) << (Word::BITS - 1) as usize
+        );
 
-        assert_eq!(&lhs + &rhs, expected);
-        assert_eq!(&lhs + rhs.clone(), expected);
-        assert_eq!(lhs.clone() + &rhs, expected);
-        assert_eq!(lhs + rhs, expected);
+        let mut negative = vec![Limb(Word::MAX)];
+        add_assign_limbs(&mut negative, &[Limb(1)]);
+        assert!(BigInt::from_limbs(negative).is_zero());
     }
 
     #[test]
-    fn supports_mixed_signs() {
-        let lhs = BigInt::from_i32(20);
-        let rhs = BigInt::from_i32(-22);
-        let expected = BigInt::from_i32(-2);
+    fn bigint_addition_supports_all_ownership_and_assignment_forms() {
+        let left = BigInt::from(-20_i8);
+        let right = BigInt::from(6_i8);
+        let expected = BigInt::from(-14_i8);
+        assert_eq!(&left + &right, expected);
+        assert_eq!(&left + right.clone(), expected);
+        assert_eq!(left.clone() + &right, expected);
+        assert_eq!(left.clone() + right.clone(), expected);
 
-        assert_eq!(&lhs + &rhs, expected);
-        assert_eq!(&lhs + rhs.clone(), expected);
-        assert_eq!(lhs.clone() + &rhs, expected);
-        assert_eq!(lhs + rhs, expected);
+        let mut value = left;
+        value += &right;
+        assert_eq!(value, expected);
+        value = BigInt::from(-20_i8);
+        value += right;
+        assert_eq!(value, expected);
     }
 
     #[test]
-    fn carries_into_a_new_word() {
-        let lhs = BigInt::from(crate::Word::MAX);
-        let rhs = BigInt::from_u8(1);
+    fn unsigned_primitive_addition_supports_every_width_without_bigint_conversion() {
+        assert_eq!(BigInt::from(-1_i8) + 2_u8, BigInt::from(1_i8));
+        assert_eq!(&BigInt::from(-1_i8) + 2_u16, BigInt::from(1_i8));
+        assert_eq!(BigInt::from(-1_i8) + 2_u32, BigInt::from(1_i8));
+        assert_eq!(&BigInt::from(-1_i8) + 2_u64, BigInt::from(1_i8));
+        assert_eq!(BigInt::from(-1_i8) + 2_u128, BigInt::from(1_i8));
 
-        assert_eq!((lhs + rhs).magnitude, [1, 0]);
+        let mut value = BigInt::from(-1_i8);
+        value += u8::MAX;
+        value += u16::MAX;
+        value += u32::MAX;
+        value += u64::MAX;
+        value += u128::MAX;
+        let expected = BigInt::from(-1_i8)
+            + BigInt::from(u8::MAX)
+            + BigInt::from(u16::MAX)
+            + BigInt::from(u32::MAX)
+            + BigInt::from(u64::MAX)
+            + BigInt::from(u128::MAX);
+        assert_eq!(value, expected);
     }
 
     #[test]
-    fn opposite_values_cancel_to_zero() {
-        let lhs = BigInt::from_i32(42);
-        let rhs = BigInt::from_i32(-42);
-        let result = lhs + rhs;
-
-        assert_eq!(result.sign, 0);
-        assert!(result.magnitude.is_empty());
+    fn unbounded_signed_addition_traits_never_report_overflow() {
+        let value = BigInt::from(i128::MAX);
+        let one = BigInt::from(1_u8);
+        let sum = BigInt::from(i128::MAX) + BigInt::from(1_u8);
+        assert_eq!(value.checked_add(&one), Some(sum.clone()));
+        assert_eq!(value.overflowing_add(&one), (sum.clone(), false));
+        assert_eq!(value.wrapping_add(&one), sum.clone());
+        assert_eq!(value.saturating_add(&one), sum);
     }
 }

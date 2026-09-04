@@ -16,7 +16,7 @@ use crate::ec::f2m_field::F2mField;
 use crate::ec::f2m_field_element::F2mFieldElement;
 use crate::ec::f2m_point::F2mPoint;
 use crate::ec::point_codec::PointDecodeError;
-use tc_bigint::BigInt;
+use tc_bigint_old::BigInt;
 
 /// A short-Weierstrass elliptic curve `y² + xy = x³ + ax² + b` over `GF(2ᵐ)`.
 ///

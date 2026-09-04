@@ -16,7 +16,7 @@ use crate::ec::f2m_curve::F2mCurve;
 use crate::ec::f2m_point::F2mPoint;
 use crate::ec::fp_curve::FpCurve;
 use crate::ec::fp_point::FpPoint;
-use tc_bigint::BigInt;
+use tc_bigint_old::BigInt;
 
 /// The SEC 2 **secp256k1** curve (`y² = x³ + 7` over GF(p)), with its base point `G`.
 ///

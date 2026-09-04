@@ -8,8 +8,8 @@ repository.workspace = true
 
 [features]
 default = ["std"]
-std = ["tc_bigint/std"]
+std = ["tc_bigint_old/std"]
 
 [dependencies]
 rand_core = { workspace = true }
-tc_bigint = { version = "0.1.0", path = "../tc_bigint", default-features = false }
+tc_bigint_old = { version = "0.1.0", path = "../tc_bigint_old", default-features = false }

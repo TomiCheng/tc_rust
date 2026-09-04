@@ -14,7 +14,7 @@ use core::ops::{Add, Mul, Neg, Sub};
 use crate::ec::CoordinateSystem;
 use crate::ec::fp_curve::FpCurve;
 use crate::ec::fp_field_element::FpFieldElement;
-use tc_bigint::BigInt;
+use tc_bigint_old::BigInt;
 
 /// A point on an [`FpCurve`].
 ///
@@ -332,7 +332,7 @@ impl Mul<&BigInt> for &FpPoint {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tc_bigint::BigInt;
+    use tc_bigint_old::BigInt;
 
     fn secp256k1() -> Arc<FpCurve> {
         let p = BigInt::from_str_radix(

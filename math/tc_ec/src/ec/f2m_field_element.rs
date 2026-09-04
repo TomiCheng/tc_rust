@@ -12,7 +12,7 @@ use core::ops::{Add, Div, Mul, Neg, Sub};
 
 use crate::binpoly::BinaryPoly;
 use crate::ec::f2m_field::F2mField;
-use tc_bigint::BigInt;
+use tc_bigint_old::BigInt;
 
 /// An element of the binary field `GF(2ᵐ)` in polynomial basis.
 ///

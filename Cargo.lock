@@ -543,11 +543,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "tc_bigint2"
-version = "0.1.0"
-
-[[package]]
-name = "tc_bigint3"
+name = "tc_bigint_old"
 version = "0.1.0"
 dependencies = [
  "criterion",
@@ -810,7 +806,7 @@ name = "tc_ec"
 version = "0.1.0"
 dependencies = [
  "rand_core",
- "tc_bigint",
+ "tc_bigint_old",
 ]
 
 [[package]]
@@ -1178,7 +1174,7 @@ dependencies = [
 name = "tc_rsa"
 version = "0.1.0"
 dependencies = [
- "tc_bigint",
+ "tc_bigint_old",
  "tc_cipher",
 ]
 

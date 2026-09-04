@@ -14,7 +14,7 @@ use crate::ec::CoordinateSystem;
 use crate::ec::fp_field_element::FpFieldElement;
 use crate::ec::fp_point::FpPoint;
 use crate::ec::point_codec::PointDecodeError;
-use tc_bigint::BigInt;
+use tc_bigint_old::BigInt;
 
 /// A short-Weierstrass elliptic curve `y^2 = x^3 + ax + b` over GF(q).
 ///
