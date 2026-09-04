@@ -36,18 +36,6 @@ pub(crate) fn significant_len(words: &[Limb]) -> usize {
 }
 
 #[cfg(feature = "alloc")]
-fn sub_assign(lhs: &mut Vec<Limb>, rhs: &[Limb]) {
-    debug_assert!(cmp(lhs, rhs) != Ordering::Less);
-    let mut borrow = Limb(0);
-    for index in 0..lhs.len() {
-        let right = rhs.get(index).copied().unwrap_or_default();
-        (lhs[index], borrow) = lhs[index].borrowing_sub(right, borrow);
-    }
-    debug_assert_eq!(borrow, Limb(0));
-    normalize(lhs);
-}
-
-#[cfg(feature = "alloc")]
 pub(crate) fn mul(lhs: &[Limb], rhs: &[Limb]) -> Vec<Limb> {
     if lhs.is_empty() || rhs.is_empty() {
         return Vec::new();
@@ -89,52 +77,36 @@ pub(crate) fn square(words: &[Limb]) -> Vec<Limb> {
         return Vec::new();
     }
 
-    // This is the symmetric schoolbook square used by the original crate,
-    // indexed through the little-endian input without first reversing it.
     let mut result = vec![Limb(0); 2 * len];
-    let mut output = (2 * len - 1) as isize;
-
-    for big_endian_index in (1..len).rev() {
-        let value = words[len - 1 - big_endian_index].0 as WideWord;
-        let mut carry = value * value + result[output as usize].0 as WideWord;
-        result[output as usize] = Limb(carry as Word);
-        carry >>= Word::BITS;
-
-        for other_big_endian_index in (0..big_endian_index).rev() {
-            let product = value * words[len - 1 - other_big_endian_index].0 as WideWord;
-            output -= 1;
-            carry += result[output as usize].0 as WideWord + (((product as Word) << 1) as WideWord);
-            result[output as usize] = Limb(carry as Word);
-            carry = (carry >> Word::BITS) + (product >> (Word::BITS - 1));
+    for left in 0..len {
+        let diagonal = words[left].0 as WideWord * words[left].0 as WideWord;
+        add_wide_at(&mut result, left * 2, diagonal);
+        for right in left + 1..len {
+            let product = words[left].0 as WideWord * words[right].0 as WideWord;
+            add_wide_at(&mut result, left + right, product);
+            add_wide_at(&mut result, left + right, product);
         }
-
-        output -= 1;
-        carry += result[output as usize].0 as WideWord;
-        result[output as usize] = Limb(carry as Word);
-
-        output -= 1;
-        if output >= 0 {
-            result[output as usize] = Limb((carry >> Word::BITS) as Word);
-        } else {
-            debug_assert_eq!(carry >> Word::BITS, 0);
-        }
-        output += big_endian_index as isize;
     }
 
-    let value = words[len - 1].0 as WideWord;
-    let carry = value * value + result[output as usize].0 as WideWord;
-    result[output as usize] = Limb(carry as Word);
-    output -= 1;
-    if output >= 0 {
-        let index = output as usize;
-        result[index].0 = result[index].0.wrapping_add((carry >> Word::BITS) as Word);
-    } else {
-        debug_assert_eq!(carry >> Word::BITS, 0);
-    }
-
-    result.reverse();
     normalize(&mut result);
     result
+}
+
+#[cfg(feature = "alloc")]
+fn add_wide_at(words: &mut [Limb], index: usize, value: WideWord) {
+    let low = Limb(value as Word);
+    let high = Limb((value >> Word::BITS) as Word);
+    let (word, carry) = words[index].carrying_add(low, Limb(0));
+    words[index] = word;
+    let (word, mut carry) = words[index + 1].carrying_add(high, carry);
+    words[index + 1] = word;
+
+    let mut index = index + 2;
+    while carry.0 != 0 && index < words.len() {
+        (words[index], carry) = words[index].carrying_add(carry, Limb(0));
+        index += 1;
+    }
+    debug_assert_eq!(carry, Limb(0));
 }
 
 #[cfg(feature = "alloc")]
@@ -155,9 +127,10 @@ fn power_of_two_shift(words: &[Limb]) -> Option<usize> {
 #[cfg(feature = "alloc")]
 pub(crate) fn div_rem(dividend: &[Limb], divisor: &[Limb]) -> (Vec<Limb>, Vec<Limb>) {
     assert!(significant_len(divisor) != 0, "attempted to divide by zero");
+    let dividend_len = significant_len(dividend);
     let divisor_len = significant_len(divisor);
     if divisor_len == 1 {
-        let mut quotient = dividend.to_vec();
+        let mut quotient = dividend[..dividend_len].to_vec();
         let remainder = div_rem_small(&mut quotient, divisor[0].0);
         let remainder = if remainder == 0 {
             Vec::new()
@@ -166,27 +139,84 @@ pub(crate) fn div_rem(dividend: &[Limb], divisor: &[Limb]) -> (Vec<Limb>, Vec<Li
         };
         return (quotient, remainder);
     }
-    if cmp(dividend, divisor) == Ordering::Less {
-        let mut remainder = dividend.to_vec();
+    if dividend_len < divisor_len || cmp(dividend, divisor) == Ordering::Less {
+        let mut remainder = dividend[..dividend_len].to_vec();
         normalize(&mut remainder);
         return (Vec::new(), remainder);
     }
 
-    let shift = bit_len(dividend) - bit_len(divisor);
-    let mut shifted_divisor = shl(divisor, shift);
-    let mut remainder = dividend.to_vec();
-    normalize(&mut remainder);
-    let mut quotient = vec![Limb(0); shift / Word::BITS as usize + 1];
+    // Knuth, TAOCP volume 2, Algorithm D. Normalizing the divisor makes the
+    // two-word quotient estimate fit in `WideWord` on both 32- and 64-bit
+    // targets.
+    let normalization_shift = divisor[divisor_len - 1].0.leading_zeros() as usize;
+    let normalized_divisor = shl(&divisor[..divisor_len], normalization_shift);
+    debug_assert_eq!(normalized_divisor.len(), divisor_len);
+    let mut normalized_dividend = shl(&dividend[..dividend_len], normalization_shift);
+    normalized_dividend.resize(dividend_len + 1, Limb(0));
 
-    for bit in (0..=shift).rev() {
-        if cmp(&remainder, &shifted_divisor) != Ordering::Less {
-            sub_assign(&mut remainder, &shifted_divisor);
-            quotient[bit / Word::BITS as usize].0 |= (1 as Word) << (bit % Word::BITS as usize);
+    let quotient_len = dividend_len - divisor_len + 1;
+    let mut quotient = vec![Limb(0); quotient_len];
+    let base = (1 as WideWord) << Word::BITS;
+    let divisor_high = normalized_divisor[divisor_len - 1].0 as WideWord;
+
+    for offset in (0..quotient_len).rev() {
+        let numerator = ((normalized_dividend[offset + divisor_len].0 as WideWord) << Word::BITS)
+            | normalized_dividend[offset + divisor_len - 1].0 as WideWord;
+        let mut estimate = numerator / divisor_high;
+        let mut remainder = numerator % divisor_high;
+
+        if divisor_len > 1 {
+            let divisor_next = normalized_divisor[divisor_len - 2].0 as WideWord;
+            let dividend_next = normalized_dividend[offset + divisor_len - 2].0 as WideWord;
+            while estimate == base
+                || (remainder < base
+                    && estimate * divisor_next > (remainder << Word::BITS) + dividend_next)
+            {
+                estimate -= 1;
+                remainder += divisor_high;
+                if remainder >= base {
+                    break;
+                }
+            }
         }
-        shr_one_in_place(&mut shifted_divisor);
+
+        let estimate_word = estimate as Word;
+        let mut borrow = 0 as WideWord;
+        for index in 0..divisor_len {
+            let product =
+                estimate_word as WideWord * normalized_divisor[index].0 as WideWord + borrow;
+            let (difference, underflow) = normalized_dividend[offset + index]
+                .0
+                .overflowing_sub(product as Word);
+            normalized_dividend[offset + index] = Limb(difference);
+            borrow = (product >> Word::BITS) + underflow as WideWord;
+        }
+
+        let high_index = offset + divisor_len;
+        let (difference, negative) = normalized_dividend[high_index]
+            .0
+            .overflowing_sub(borrow as Word);
+        normalized_dividend[high_index] = Limb(difference);
+        if negative {
+            estimate -= 1;
+            let mut carry = Limb(0);
+            for index in 0..divisor_len {
+                (normalized_dividend[offset + index], carry) = normalized_dividend[offset + index]
+                    .carrying_add(normalized_divisor[index], carry);
+            }
+            normalized_dividend[high_index].0 =
+                normalized_dividend[high_index].0.wrapping_add(carry.0);
+        }
+        quotient[offset] = Limb(estimate as Word);
     }
 
     normalize(&mut quotient);
+    let mut remainder = if normalization_shift == 0 {
+        normalized_dividend[..divisor_len].to_vec()
+    } else {
+        shr(&normalized_dividend[..divisor_len], normalization_shift)
+    };
+    normalize(&mut remainder);
     (quotient, remainder)
 }
 
@@ -351,17 +381,6 @@ pub(crate) fn div_rem_small(words: &mut Vec<Limb>, divisor: Word) -> Word {
     }
     normalize(words);
     remainder as Word
-}
-
-#[cfg(feature = "alloc")]
-fn shr_one_in_place(words: &mut Vec<Limb>) {
-    let mut carry = 0 as Word;
-    for word in words.iter_mut().rev() {
-        let next = word.0 << (Word::BITS - 1);
-        word.0 = (word.0 >> 1) | carry;
-        carry = next;
-    }
-    normalize(words);
 }
 
 pub(crate) fn fixed_cmp<const N: usize>(lhs: &[Limb; N], rhs: &[Limb; N]) -> Ordering {
@@ -784,19 +803,12 @@ mod tests {
 
     #[cfg(feature = "alloc")]
     #[test]
-    fn dynamic_normalization_comparison_addition_and_subtraction_are_directly_covered() {
+    fn dynamic_normalization_and_comparison_are_directly_covered() {
         let mut words = vec![Limb(1), Limb(0), Limb(0)];
         normalize(&mut words);
         assert_eq!(words, [Limb(1)]);
         assert_eq!(significant_len(&[Limb(1), Limb(0)]), 1);
         assert_eq!(cmp(&[Limb(1), Limb(0)], &[Limb(2)]), Ordering::Less);
-        let mut difference = vec![Limb(0), Limb(1)];
-        sub_assign(&mut difference, &[Limb(1)]);
-        assert_eq!(difference, [Limb(Word::MAX)]);
-
-        let mut difference = vec![Limb(0), Limb(1)];
-        sub_assign(&mut difference, &[Limb(1)]);
-        assert_eq!(difference, [Limb(Word::MAX)]);
     }
 
     #[cfg(feature = "alloc")]
@@ -881,7 +893,7 @@ mod tests {
 
     #[cfg(feature = "alloc")]
     #[test]
-    fn small_arithmetic_parsing_and_in_place_shift_helpers_are_covered() {
+    fn small_arithmetic_and_parsing_helpers_are_covered() {
         let mut words = vec![Limb(Word::MAX)];
         add_small(&mut words, 1);
         assert_eq!(words, [Limb(0), Limb(1)]);
@@ -898,9 +910,54 @@ mod tests {
         let mut quotient = vec![Limb(100)];
         assert_eq!(div_rem_small(&mut quotient, 9), 1);
         assert_eq!(quotient, [Limb(11)]);
+    }
 
-        let mut shifted = vec![Limb(0), Limb(1)];
-        shr_one_in_place(&mut shifted);
-        assert_eq!(shifted, [Limb(1 << (Word::BITS - 1))]);
+    #[cfg(feature = "alloc")]
+    #[test]
+    fn knuth_division_and_square_match_algebraic_identities_for_random_limbs() {
+        fn next_word(state: &mut u64) -> Word {
+            *state ^= *state << 13;
+            *state ^= *state >> 7;
+            *state ^= *state << 17;
+            *state as Word
+        }
+
+        let mut state = 0x243f_6a88_85a3_08d3_u64;
+        for case in 0..4_000 {
+            let dividend_len = next_word(&mut state) as usize % 32 + 1;
+            let divisor_len = next_word(&mut state) as usize % dividend_len + 1;
+            let mut dividend = (0..dividend_len)
+                .map(|_| Limb(next_word(&mut state)))
+                .collect::<Vec<_>>();
+            let mut divisor = (0..divisor_len)
+                .map(|_| Limb(next_word(&mut state)))
+                .collect::<Vec<_>>();
+
+            // Exercise normalization and quotient-estimate edge cases as well
+            // as uniformly generated words.
+            match case % 4 {
+                0 => divisor[divisor_len - 1] = Limb(1),
+                1 => divisor[divisor_len - 1] = Limb(Word::MAX),
+                2 => dividend[dividend_len - 1] = Limb(Word::MAX),
+                _ => {}
+            }
+            if divisor.iter().all(|word| word.0 == 0) {
+                divisor[0] = Limb(1);
+            }
+
+            let (quotient, remainder) = div_rem(&dividend, &divisor);
+            let reconstructed = crate::BigUint::from_limbs(mul(&quotient, &divisor))
+                + crate::BigUint::from_limbs(remainder.clone());
+            let dividend = crate::BigUint::from_limbs(core::mem::take(&mut dividend));
+            assert_eq!(reconstructed, dividend, "division case {case}");
+            assert_eq!(cmp(&remainder, &divisor), Ordering::Less, "case {case}");
+
+            let square_input = crate::BigUint::from_limbs(divisor.clone());
+            assert_eq!(
+                crate::BigUint::from_limbs(square(&divisor)),
+                &square_input * &square_input,
+                "square case {case}"
+            );
+        }
     }
 }
