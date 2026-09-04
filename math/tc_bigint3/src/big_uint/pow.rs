@@ -1,12 +1,12 @@
 //! Exponentiation for [`BigUint`].
 
 use crate::traits::{ModPow, One, Pow};
-use crate::{BigUint, arithmetic};
+use crate::{BigUint, modular};
 
 impl BigUint {
     /// Returns `self^exponent mod modulus`.
     pub fn mod_pow(&self, exponent: &Self, modulus: &Self) -> Self {
-        Self::from_limbs(arithmetic::mod_pow(
+        Self::from_limbs(modular::mod_pow(
             &self.limbs,
             &exponent.limbs,
             &modulus.limbs,

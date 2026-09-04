@@ -18,6 +18,7 @@ mod fixed_big_int;
 mod fixed_big_uint;
 mod format;
 mod limb;
+pub mod modular;
 mod non_zero;
 #[cfg(feature = "rand_core")]
 mod prime;

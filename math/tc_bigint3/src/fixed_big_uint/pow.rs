@@ -1,13 +1,13 @@
 //! Exponentiation for [`FixedBigUint`].
 
 use crate::traits::{ModPow, One, Pow};
-use crate::{FixedBigUint, arithmetic};
+use crate::{FixedBigUint, modular};
 
 impl<const N: usize> FixedBigUint<N> {
     /// Returns `self^exponent mod modulus`.
     pub fn mod_pow(&self, exponent: &Self, modulus: &Self) -> Self {
         Self {
-            limbs: arithmetic::fixed_mod_pow(&self.limbs, &exponent.limbs, &modulus.limbs),
+            limbs: modular::fixed_mod_pow(&self.limbs, &exponent.limbs, &modulus.limbs),
         }
     }
 }

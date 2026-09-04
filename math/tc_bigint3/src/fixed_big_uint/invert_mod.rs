@@ -1,12 +1,12 @@
 //! Modular inverse support for [`FixedBigUint`].
 
 use crate::traits::ModInverse;
-use crate::{FixedBigUint, arithmetic};
+use crate::{FixedBigUint, modular};
 
 impl<const N: usize> FixedBigUint<N> {
     /// Returns the modular multiplicative inverse, when it exists.
     pub fn mod_inverse(&self, modulus: &Self) -> Option<Self> {
-        arithmetic::fixed_mod_inverse(&self.limbs, &modulus.limbs).map(|limbs| Self { limbs })
+        modular::fixed_mod_inverse(&self.limbs, &modulus.limbs).map(|limbs| Self { limbs })
     }
 }
 
