@@ -1,0 +1,255 @@
+//! Modular addition, subtraction, and multiplication implementations.
+
+use crate::arithmetic::{fixed_div_rem, fixed_is_zero};
+use crate::{FixedBigInt, FixedBigUint, ModAdd, ModMul, ModSub, Odd};
+
+use super::form::FixedMontyForm;
+use super::mul::{fixed_add_mod, fixed_mul_mod, fixed_sub_mod};
+use super::params::FixedMontyParams;
+
+#[cfg(feature = "alloc")]
+use super::{MontyForm, MontyParams};
+#[cfg(feature = "alloc")]
+use crate::{BigInt, BigUint};
+
+#[cfg(feature = "alloc")]
+impl ModAdd for BigUint {
+    type Output = Self;
+
+    fn mod_add(&self, rhs: &Self, modulus: &Self) -> Self {
+        assert!(!modulus.is_zero(), "modulus must be non-zero");
+        let lhs = self % modulus;
+        let rhs = rhs % modulus;
+        let distance = modulus - &rhs;
+        if lhs >= distance {
+            lhs - distance
+        } else {
+            lhs + rhs
+        }
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl ModSub for BigUint {
+    type Output = Self;
+
+    fn mod_sub(&self, rhs: &Self, modulus: &Self) -> Self {
+        assert!(!modulus.is_zero(), "modulus must be non-zero");
+        let lhs = self % modulus;
+        let rhs = rhs % modulus;
+        if lhs >= rhs {
+            lhs - rhs
+        } else {
+            modulus - (rhs - lhs)
+        }
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl ModMul for BigUint {
+    type Output = Self;
+
+    fn mod_mul(&self, rhs: &Self, modulus: &Self) -> Self {
+        assert!(!modulus.is_zero(), "modulus must be non-zero");
+        if let Some(modulus) = Odd::new(modulus.clone()) {
+            let params = MontyParams::new(modulus);
+            let lhs = MontyForm::new(self, params.clone());
+            let rhs = MontyForm::new(rhs, params);
+            return (lhs * rhs).retrieve();
+        }
+        ((self % modulus) * (rhs % modulus)) % modulus
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl ModAdd for BigInt {
+    type Output = Self;
+
+    fn mod_add(&self, rhs: &Self, modulus: &Self) -> Self {
+        assert!(modulus.sign() > 0, "modulus must be positive");
+        let lhs = self.rem_euclid(modulus);
+        let rhs = rhs.rem_euclid(modulus);
+        let distance = modulus - &rhs;
+        if lhs >= distance {
+            lhs - distance
+        } else {
+            lhs + rhs
+        }
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl ModSub for BigInt {
+    type Output = Self;
+
+    fn mod_sub(&self, rhs: &Self, modulus: &Self) -> Self {
+        assert!(modulus.sign() > 0, "modulus must be positive");
+        let lhs = self.rem_euclid(modulus);
+        let rhs = rhs.rem_euclid(modulus);
+        if lhs >= rhs {
+            lhs - rhs
+        } else {
+            modulus - (rhs - lhs)
+        }
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl ModMul for BigInt {
+    type Output = Self;
+
+    fn mod_mul(&self, rhs: &Self, modulus: &Self) -> Self {
+        assert!(modulus.sign() > 0, "modulus must be positive");
+        let lhs = BigUint::try_from(self.rem_euclid(modulus))
+            .expect("Euclidean remainder is non-negative");
+        let rhs = BigUint::try_from(rhs.rem_euclid(modulus))
+            .expect("Euclidean remainder is non-negative");
+        let modulus = BigUint::try_from(modulus.clone()).expect("modulus is positive");
+        BigInt::from(lhs.mod_mul(&rhs, &modulus))
+    }
+}
+
+impl<const N: usize> ModAdd for FixedBigUint<N> {
+    type Output = Self;
+
+    fn mod_add(&self, rhs: &Self, modulus: &Self) -> Self {
+        assert!(
+            !fixed_is_zero(modulus.as_limbs()),
+            "modulus must be non-zero"
+        );
+        let lhs = fixed_div_rem(self.as_limbs(), modulus.as_limbs()).1;
+        let rhs = fixed_div_rem(rhs.as_limbs(), modulus.as_limbs()).1;
+        Self::from_limbs(fixed_add_mod(&lhs, &rhs, modulus.as_limbs()))
+    }
+}
+
+impl<const N: usize> ModSub for FixedBigUint<N> {
+    type Output = Self;
+
+    fn mod_sub(&self, rhs: &Self, modulus: &Self) -> Self {
+        assert!(
+            !fixed_is_zero(modulus.as_limbs()),
+            "modulus must be non-zero"
+        );
+        let lhs = fixed_div_rem(self.as_limbs(), modulus.as_limbs()).1;
+        let rhs = fixed_div_rem(rhs.as_limbs(), modulus.as_limbs()).1;
+        Self::from_limbs(fixed_sub_mod(&lhs, &rhs, modulus.as_limbs()))
+    }
+}
+
+impl<const N: usize> ModMul for FixedBigUint<N> {
+    type Output = Self;
+
+    fn mod_mul(&self, rhs: &Self, modulus: &Self) -> Self {
+        assert!(
+            !fixed_is_zero(modulus.as_limbs()),
+            "modulus must be non-zero"
+        );
+        if let Some(modulus) = Odd::new(*modulus) {
+            let params = FixedMontyParams::new(modulus);
+            let lhs = FixedMontyForm::new(self, params);
+            let rhs = FixedMontyForm::new(rhs, params);
+            return (lhs * rhs).retrieve();
+        }
+        let lhs = fixed_div_rem(self.as_limbs(), modulus.as_limbs()).1;
+        let rhs = fixed_div_rem(rhs.as_limbs(), modulus.as_limbs()).1;
+        Self::from_limbs(fixed_mul_mod(&lhs, &rhs, modulus.as_limbs()))
+    }
+}
+
+impl<const N: usize> ModAdd for FixedBigInt<N> {
+    type Output = Self;
+
+    fn mod_add(&self, rhs: &Self, modulus: &Self) -> Self {
+        assert!(modulus.sign() > 0, "modulus must be positive");
+        let lhs = self.rem_euclid(modulus);
+        let rhs = rhs.rem_euclid(modulus);
+        Self::from_limbs(fixed_add_mod(
+            lhs.as_limbs(),
+            rhs.as_limbs(),
+            modulus.as_limbs(),
+        ))
+    }
+}
+
+impl<const N: usize> ModSub for FixedBigInt<N> {
+    type Output = Self;
+
+    fn mod_sub(&self, rhs: &Self, modulus: &Self) -> Self {
+        assert!(modulus.sign() > 0, "modulus must be positive");
+        let lhs = self.rem_euclid(modulus);
+        let rhs = rhs.rem_euclid(modulus);
+        Self::from_limbs(fixed_sub_mod(
+            lhs.as_limbs(),
+            rhs.as_limbs(),
+            modulus.as_limbs(),
+        ))
+    }
+}
+
+impl<const N: usize> ModMul for FixedBigInt<N> {
+    type Output = Self;
+
+    fn mod_mul(&self, rhs: &Self, modulus: &Self) -> Self {
+        assert!(modulus.sign() > 0, "modulus must be positive");
+        let lhs = self.rem_euclid(modulus);
+        let rhs = rhs.rem_euclid(modulus);
+        let unsigned_modulus = FixedBigUint::from_limbs(*modulus.as_limbs());
+        let result = FixedBigUint::from_limbs(*lhs.as_limbs()).mod_mul(
+            &FixedBigUint::from_limbs(*rhs.as_limbs()),
+            &unsigned_modulus,
+        );
+        Self::from_limbs(*result.as_limbs())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{I128, U128};
+
+    #[test]
+    fn fixed_unsigned_modular_operations_do_not_overflow() {
+        let modulus = U128::from(101_u8);
+        let max = U128::MAX;
+        assert_eq!(max.mod_add(&max, &modulus), U128::from(57_u8));
+        assert_eq!(
+            U128::from(3_u8).mod_sub(&U128::from(5_u8), &modulus),
+            U128::from(99_u8)
+        );
+
+        let result = max.mod_mul(&max, &modulus);
+        #[cfg(feature = "alloc")]
+        assert_eq!(
+            BigUint::from(result),
+            BigUint::from(max).mod_mul(&BigUint::from(max), &BigUint::from(101_u8))
+        );
+        #[cfg(not(feature = "alloc"))]
+        assert_eq!(result, U128::from(80_u8));
+    }
+
+    #[test]
+    fn fixed_signed_modular_operations_return_non_negative_residues() {
+        let modulus = I128::from(101_u8);
+        let left = I128::from(-7_i8);
+        let right = I128::from(9_i8);
+        assert_eq!(left.mod_add(&right, &modulus), I128::from(2_u8));
+        assert_eq!(left.mod_sub(&right, &modulus), I128::from(85_u8));
+        assert_eq!(left.mod_mul(&right, &modulus), I128::from(38_u8));
+    }
+
+    #[cfg(feature = "alloc")]
+    #[test]
+    fn dynamic_modular_operations_match_fixed_results() {
+        let modulus = BigUint::from(101_u8);
+        let left = BigUint::from(u128::MAX);
+        assert_eq!(left.mod_mul(&left, &modulus), BigUint::from(80_u8));
+
+        let modulus = BigInt::from(101_u8);
+        let left = BigInt::from(-7_i8);
+        let right = BigInt::from(9_i8);
+        assert_eq!(left.mod_add(&right, &modulus), BigInt::from(2_u8));
+        assert_eq!(left.mod_sub(&right, &modulus), BigInt::from(85_u8));
+        assert_eq!(left.mod_mul(&right, &modulus), BigInt::from(38_u8));
+    }
+}

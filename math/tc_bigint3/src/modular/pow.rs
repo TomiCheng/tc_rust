@@ -1,18 +1,21 @@
 //! Modular exponentiation over dynamic and fixed-width limbs.
 
 #[cfg(feature = "alloc")]
-use alloc::{vec, vec::Vec};
+use alloc::vec::Vec;
 
 use super::exponentiation_window;
 #[cfg(feature = "alloc")]
 use super::mul::montgomery_mul;
-use super::mul::{
-    fixed_add_mod, fixed_montgomery_mul, fixed_mul_mod, fixed_one_mod, montgomery_inverse,
-};
+use super::mul::{fixed_montgomery_mul, fixed_mul_mod, fixed_one_mod};
+use super::{FixedMontyForm, FixedMontyParams};
+#[cfg(feature = "alloc")]
+use super::{MontyForm, MontyParams};
+#[cfg(feature = "alloc")]
+use crate::BigUint;
 #[cfg(feature = "alloc")]
 use crate::arithmetic::{bit_len, div_rem, mul, significant_len, square};
 use crate::arithmetic::{fixed_bit_len, fixed_div_rem, fixed_test_bit};
-use crate::{Limb, Word};
+use crate::{FixedBigUint, Limb, Odd, Word};
 
 /// Computes modular exponentiation with Montgomery multiplication when the
 /// modulus is odd and falls back to division-based reduction when it is even.
@@ -29,23 +32,34 @@ pub(crate) fn mod_pow(value: &[Limb], exponent: &[Limb], modulus: &[Limb]) -> Ve
         return Vec::new();
     }
 
-    let inverse = montgomery_inverse(modulus[0].0);
-    let mut radix = vec![Limb(0); modulus_len + 1];
-    radix[modulus_len] = Limb(1);
-    let radix = div_rem(&radix, modulus).1;
-    let radix_squared = div_rem(&square(&radix), modulus).1;
-    let base = montgomery_mul(&div_rem(value, modulus).1, &radix_squared, modulus, inverse);
+    let modulus = BigUint::from_limbs(modulus.to_vec());
+    let params = MontyParams::new(Odd::new(modulus).expect("modulus is odd"));
+    MontyForm::new(&BigUint::from_limbs(value.to_vec()), params)
+        .pow(&BigUint::from_limbs(exponent.to_vec()))
+        .retrieve()
+        .as_limbs()
+        .to_vec()
+}
+
+#[cfg(feature = "alloc")]
+pub(super) fn montgomery_pow(
+    base: &[Limb],
+    exponent: &[Limb],
+    modulus: &[Limb],
+    inverse: Word,
+    one: &[Limb],
+) -> Vec<Limb> {
     let exponent_bits = bit_len(exponent);
     if exponent_bits == 0 {
-        return radix;
+        return one.to_vec();
     }
 
     let window = exponentiation_window(exponent_bits);
     let table_len = 1 << (window - 1);
     let mut odd_powers = Vec::with_capacity(table_len);
-    odd_powers.push(base.clone());
+    odd_powers.push(base.to_vec());
     if table_len > 1 {
-        let base_squared = montgomery_mul(&base, &base, modulus, inverse);
+        let base_squared = montgomery_mul(base, base, modulus, inverse);
         for index in 1..table_len {
             odd_powers.push(montgomery_mul(
                 &odd_powers[index - 1],
@@ -56,7 +70,7 @@ pub(crate) fn mod_pow(value: &[Limb], exponent: &[Limb], modulus: &[Limb]) -> Ve
         }
     }
 
-    let mut result = radix;
+    let mut result = one.to_vec();
     let mut remaining_bits = exponent_bits;
     while remaining_bits != 0 {
         let high = remaining_bits - 1;
@@ -81,7 +95,7 @@ pub(crate) fn mod_pow(value: &[Limb], exponent: &[Limb], modulus: &[Limb]) -> Ve
         remaining_bits = low;
     }
 
-    montgomery_mul(&result, &[Limb(1)], modulus, inverse)
+    result
 }
 
 #[cfg(feature = "alloc")]
@@ -216,40 +230,43 @@ fn fixed_montgomery_mod_pow<const N: usize>(
     exponent: &[Limb; N],
     modulus: &[Limb; N],
 ) -> [Limb; N] {
-    let one = fixed_one_mod(modulus);
+    let params = FixedMontyParams::new(
+        Odd::new(FixedBigUint::from_limbs(*modulus)).expect("modulus is odd"),
+    );
+    FixedMontyForm::new(&FixedBigUint::from_limbs(*value), params)
+        .pow(&FixedBigUint::from_limbs(*exponent))
+        .retrieve()
+        .into_limbs()
+}
+
+pub(super) fn fixed_montgomery_pow<const N: usize>(
+    base: &[Limb; N],
+    exponent: &[Limb; N],
+    modulus: &[Limb; N],
+    inverse: Word,
+    one: &[Limb; N],
+) -> [Limb; N] {
     let exponent_bits = fixed_bit_len(exponent);
     if exponent_bits == 0 {
-        return one;
+        return *one;
     }
 
-    let inverse = montgomery_inverse(modulus[0].0);
-    let mut radix = one;
-    for _ in 0..N * Word::BITS as usize {
-        radix = fixed_add_mod(&radix, &radix, modulus);
-    }
-    let mut radix_squared = radix;
-    for _ in 0..N * Word::BITS as usize {
-        radix_squared = fixed_add_mod(&radix_squared, &radix_squared, modulus);
-    }
-
-    let reduced = fixed_div_rem(value, modulus).1;
-    let base = fixed_montgomery_mul(&reduced, &radix_squared, modulus, inverse);
-    let mut result = radix;
+    let mut result = *one;
     let window = exponentiation_window(exponent_bits);
     if window == 1 {
         for bit in (0..exponent_bits).rev() {
             result = fixed_montgomery_mul(&result, &result, modulus, inverse);
             if fixed_test_bit(exponent, bit) {
-                result = fixed_montgomery_mul(&result, &base, modulus, inverse);
+                result = fixed_montgomery_mul(&result, base, modulus, inverse);
             }
         }
-        return fixed_montgomery_mul(&result, &one, modulus, inverse);
+        return result;
     }
 
     let table_len = 1 << (window - 1);
     let mut odd_powers = [[Limb(0); N]; 16];
-    odd_powers[0] = base;
-    let base_squared = fixed_montgomery_mul(&base, &base, modulus, inverse);
+    odd_powers[0] = *base;
+    let base_squared = fixed_montgomery_mul(base, base, modulus, inverse);
     for index in 1..table_len {
         odd_powers[index] =
             fixed_montgomery_mul(&odd_powers[index - 1], &base_squared, modulus, inverse);
@@ -279,13 +296,15 @@ fn fixed_montgomery_mod_pow<const N: usize>(
         remaining_bits = low;
     }
 
-    fixed_montgomery_mul(&result, &one, modulus, inverse)
+    result
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::arithmetic::{fixed_is_zero, fixed_shr_one};
+    #[cfg(feature = "alloc")]
+    use alloc::vec;
 
     #[test]
     fn sliding_window_modular_power_matches_binary_reference_at_every_threshold() {

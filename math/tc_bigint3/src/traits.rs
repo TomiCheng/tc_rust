@@ -191,6 +191,49 @@ pub trait ModPow<Exponent = Self, Modulus = Self> {
     fn mod_pow(&self, exponent: &Exponent, modulus: &Modulus) -> Self::Output;
 }
 
+/// Addition reduced modulo a non-zero modulus.
+pub trait ModAdd<Rhs = Self, Modulus = Self> {
+    /// Reduced result type.
+    type Output;
+
+    /// Returns `(self + rhs) mod modulus`.
+    ///
+    /// ```
+    /// use tc_bigint3::{ModAdd, U128};
+    /// assert_eq!(U128::from(100_u8).mod_add(&U128::from(5_u8), &U128::from(101_u8)), U128::from(4_u8));
+    /// ```
+    fn mod_add(&self, rhs: &Rhs, modulus: &Modulus) -> Self::Output;
+}
+
+/// Subtraction reduced to the least non-negative residue.
+pub trait ModSub<Rhs = Self, Modulus = Self> {
+    /// Reduced result type.
+    type Output;
+
+    /// Returns `(self - rhs) mod modulus`.
+    ///
+    /// ```
+    /// use tc_bigint3::{ModSub, U128};
+    /// assert_eq!(U128::from(3_u8).mod_sub(&U128::from(5_u8), &U128::from(101_u8)), U128::from(99_u8));
+    /// ```
+    fn mod_sub(&self, rhs: &Rhs, modulus: &Modulus) -> Self::Output;
+}
+
+/// Multiplication reduced modulo a non-zero modulus.
+pub trait ModMul<Rhs = Self, Modulus = Self> {
+    /// Reduced result type.
+    type Output;
+
+    /// Returns `(self * rhs) mod modulus` without requiring a full-width
+    /// intermediate result from the caller.
+    ///
+    /// ```
+    /// use tc_bigint3::{ModMul, U128};
+    /// assert_eq!(U128::MAX.mod_mul(&U128::MAX, &U128::from(101_u8)), U128::from(80_u8));
+    /// ```
+    fn mod_mul(&self, rhs: &Rhs, modulus: &Modulus) -> Self::Output;
+}
+
 /// Random full-width value generation.
 #[cfg(feature = "rand_core")]
 pub trait Random: Sized {

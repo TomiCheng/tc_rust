@@ -1,8 +1,18 @@
-//! Internal modular arithmetic over little-endian limbs.
+//! Reusable modular arithmetic over little-endian integers.
 
+mod form;
 mod inverse;
 mod mul;
+mod ops;
+mod params;
 mod pow;
+
+#[cfg(feature = "alloc")]
+pub use form::MontyForm;
+pub use form::{FixedMontyForm, Retrieve};
+pub use params::FixedMontyParams;
+#[cfg(feature = "alloc")]
+pub use params::MontyParams;
 
 pub(crate) use inverse::fixed_mod_inverse;
 pub(crate) use pow::fixed_mod_pow;

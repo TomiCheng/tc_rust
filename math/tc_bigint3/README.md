@@ -193,6 +193,47 @@ Castle's `BigInteger` does not expose it, and no migrated algorithm currently
 requires it. It can be introduced as a separate operation family when an
 algorithm such as integer factorization has a concrete need for it.
 
+## Modular arithmetic
+
+`ModAdd`, `ModSub`, and `ModMul` are implemented by all four integer types.
+They return the least non-negative residue and avoid constructing an
+overflowing full-width product. In particular, `FixedBigUint<N>::mod_mul`
+works when the ordinary fixed-width `Mul` operation would overflow.
+
+Odd moduli can also be prepared once. `MontyParams<BigUint>` and
+`FixedMontyParams<N>` store the Montgomery inverse, `R mod n`, and `R² mod n`.
+`MontyForm<BigUint>` and `FixedMontyForm<N>` then reuse those constants for
+addition, subtraction, multiplication, squaring, and exponentiation. Both
+forms implement `Retrieve`, and also provide an inherent `retrieve` method.
+The fixed-width forms remain allocation-free. Even moduli continue to use the
+division-reduction fallback exposed through the ordinary `Mod*` traits.
+
+```rust
+use tc_bigint3::{
+    modular::{FixedMontyForm, FixedMontyParams},
+    ModAdd, ModMul, ModSub, Odd, U128,
+};
+
+let modulus = U128::from(101_u8);
+let maximum = U128::MAX;
+
+// The ordinary fixed-width product overflows, but modular multiplication does
+// not need that product to fit in U128.
+assert_eq!(maximum.mod_mul(&maximum, &modulus), U128::from(80_u8));
+assert_eq!(U128::from(100_u8).mod_add(&U128::from(5_u8), &modulus), U128::from(4_u8));
+assert_eq!(U128::from(3_u8).mod_sub(&U128::from(5_u8), &modulus), U128::from(99_u8));
+
+let params = FixedMontyParams::new(Odd::new(modulus).unwrap());
+let seven = FixedMontyForm::new(&U128::from(7_u8), params);
+let nine = FixedMontyForm::new(&U128::from(9_u8), params);
+assert_eq!((seven * nine).retrieve(), U128::from(63_u8));
+assert_eq!(seven.pow(&U128::from(20_u8)).retrieve(), U128::from(84_u8));
+```
+
+`Odd<T>` only records the checked parity invariant; it does not claim that the
+value is prime. All modular arithmetic, including Montgomery operations,
+remains variable-time.
+
 For an arbitrary value, Miller-Rabin runs `ceil(certainty / 2)` rounds, based
 on the standard upper bound of one false-positive chance in four per round.
 During probable-prime generation, candidates are uniformly random, so the

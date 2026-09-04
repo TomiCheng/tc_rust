@@ -2,201 +2,24 @@
 
 use rand_core::{Rng, TryRng};
 
+#[cfg(test)]
+use crate::WideWord;
 use crate::arithmetic;
 use crate::traits::{
     IsProbablePrime, NextProbablePrime, ProbablePrime, Random, RandomBits, RandomMod,
 };
-use crate::{FixedBigInt, FixedBigUint, Limb, NonZero, RandomBitsError, WideWord, Word};
+use crate::{FixedBigInt, FixedBigUint, Limb, NonZero, RandomBitsError, Word};
 
 #[cfg(feature = "alloc")]
 use crate::{BigInt, BigUint};
-#[cfg(feature = "alloc")]
-use alloc::vec;
+
+mod generate;
+mod miller_rabin;
+
+use generate::*;
+use miller_rabin::*;
 
 const DEFAULT_CERTAINTY: u32 = 100;
-
-// Trial division removes inexpensive odd factors before Miller-Rabin. Two is
-// handled separately by the even-value check in `*_is_probable_prime`.
-const SMALL_PRIMES: &[Word] = &[
-    3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97,
-    101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193,
-    197, 199, 211, 223, 227, 229, 233, 239, 241, 251,
-];
-
-#[inline]
-fn try_random_word<R: TryRng + ?Sized>(rng: &mut R) -> Result<Word, R::Error> {
-    #[cfg(target_pointer_width = "64")]
-    {
-        let mut bytes = [0_u8; 8];
-        rng.try_fill_bytes(&mut bytes)?;
-        Ok(u64::from_le_bytes(bytes))
-    }
-    #[cfg(not(target_pointer_width = "64"))]
-    {
-        let mut bytes = [0_u8; 4];
-        rng.try_fill_bytes(&mut bytes)?;
-        Ok(u32::from_le_bytes(bytes))
-    }
-}
-
-#[inline]
-fn random_word<R: Rng + ?Sized>(rng: &mut R) -> Word {
-    match try_random_word(rng) {
-        Ok(value) => value,
-        Err(error) => match error {},
-    }
-}
-
-fn remainder_word(words: &[Limb], divisor: Word) -> Word {
-    let mut remainder = 0 as WideWord;
-    for word in words.iter().rev() {
-        let wide = (remainder << Word::BITS) | word.0 as WideWord;
-        remainder = wide % divisor as WideWord;
-    }
-    remainder as Word
-}
-
-fn equals_word(words: &[Limb], value: Word) -> bool {
-    words.first().map_or(value == 0, |word| word.0 == value)
-        && words.iter().skip(1).all(|word| word.0 == 0)
-}
-
-fn has_small_factor(words: &[Limb]) -> Option<bool> {
-    for &prime in SMALL_PRIMES {
-        if remainder_word(words, prime) == 0 {
-            return Some(!equals_word(words, prime));
-        }
-    }
-    None
-}
-
-fn miller_rabin_rounds(certainty: u32, bit_length: usize, randomly_selected: bool) -> u32 {
-    let mut rounds = certainty.div_ceil(2).max(1);
-    if randomly_selected {
-        // Bouncy Castle reduces the 100-bit-certainty baseline for candidates
-        // drawn uniformly at random. Its bound is stronger for this specific
-        // prime-generation case than for testing an arbitrary caller value.
-        let rounds_for_100 = match bit_length {
-            1024.. => 4,
-            512.. => 8,
-            256.. => 16,
-            _ => 50,
-        };
-        rounds = if certainty < 100 {
-            rounds.min(rounds_for_100)
-        } else {
-            rounds - 50 + rounds_for_100
-        };
-    }
-    rounds
-}
-
-fn fixed_small<const N: usize>(value: Word) -> FixedBigUint<N> {
-    let mut limbs = [Limb(0); N];
-    if N != 0 {
-        limbs[0] = Limb(value);
-    }
-    FixedBigUint::from_limbs(limbs)
-}
-
-fn fixed_bits_precision<const N: usize>() -> u32 {
-    u32::try_from(N.saturating_mul(Word::BITS as usize))
-        .expect("fixed integer precision exceeds u32::MAX bits")
-}
-
-fn try_random_fixed_uint<const N: usize, R: TryRng + ?Sized>(
-    bit_length: usize,
-    rng: &mut R,
-) -> Result<FixedBigUint<N>, R::Error> {
-    debug_assert!(bit_length <= N.saturating_mul(Word::BITS as usize));
-    let mut limbs = [Limb(0); N];
-    let used_limbs = bit_length.div_ceil(Word::BITS as usize);
-    for word in limbs.iter_mut().take(used_limbs) {
-        word.0 = try_random_word(rng)?;
-    }
-    let top_bits = bit_length % Word::BITS as usize;
-    if top_bits != 0 {
-        limbs[used_limbs - 1].0 &= Word::MAX >> (Word::BITS as usize - top_bits);
-    }
-    Ok(FixedBigUint::from_limbs(limbs))
-}
-
-fn random_fixed_uint<const N: usize, R: Rng + ?Sized>(
-    bit_length: usize,
-    rng: &mut R,
-) -> FixedBigUint<N> {
-    match try_random_fixed_uint(bit_length, rng) {
-        Ok(value) => value,
-        Err(error) => match error {},
-    }
-}
-
-fn random_fixed_below<const N: usize, R: Rng + ?Sized>(
-    upper: &FixedBigUint<N>,
-    rng: &mut R,
-) -> FixedBigUint<N> {
-    assert!(!upper.is_zero(), "random range must be non-empty");
-    loop {
-        let candidate = random_fixed_uint(upper.bit_length(), rng);
-        if &candidate < upper {
-            return candidate;
-        }
-    }
-}
-
-fn fixed_is_probable_prime<const N: usize, R: Rng + ?Sized>(
-    value: &FixedBigUint<N>,
-    certainty: u32,
-    randomly_selected: bool,
-    rng: &mut R,
-) -> bool {
-    if certainty == 0 {
-        return true;
-    }
-
-    let two = fixed_small(2);
-    let three = fixed_small(3);
-    if value < &two {
-        return false;
-    }
-    if value == &two || value == &three {
-        return true;
-    }
-    if !value.test_bit(0) {
-        return false;
-    }
-    if let Some(composite) = has_small_factor(value.as_limbs()) {
-        return !composite;
-    }
-
-    let one = fixed_small(1);
-    let n_minus_one = *value - one;
-    let s = n_minus_one
-        .lowest_set_bit()
-        .expect("an odd value above three has a non-zero predecessor");
-    let d = n_minus_one >> s;
-    let witness_range = *value - fixed_small(3);
-
-    'witness: for _ in 0..miller_rabin_rounds(certainty, value.bit_length(), randomly_selected) {
-        let witness = random_fixed_below(&witness_range, rng) + two;
-        let mut result = witness.mod_pow(&d, value);
-        if result == one || result == n_minus_one {
-            continue;
-        }
-        for _ in 1..s {
-            // Reuse the overflow-safe fixed-width modular multiplication path.
-            result = result.mod_pow(&two, value);
-            if result == n_minus_one {
-                continue 'witness;
-            }
-            if result == one {
-                return false;
-            }
-        }
-        return false;
-    }
-    true
-}
 
 impl<const N: usize> FixedBigUint<N> {
     /// Tests this value using trial division followed by Miller-Rabin rounds.
@@ -447,94 +270,6 @@ impl<const N: usize> NextProbablePrime for FixedBigInt<N> {
 }
 
 #[cfg(feature = "alloc")]
-fn try_random_big_uint<R: TryRng + ?Sized>(
-    bit_length: usize,
-    rng: &mut R,
-) -> Result<BigUint, R::Error> {
-    if bit_length == 0 {
-        return Ok(BigUint::default());
-    }
-    let word_count = bit_length.div_ceil(Word::BITS as usize);
-    let mut limbs = vec![Limb(0); word_count];
-    for word in &mut limbs {
-        word.0 = try_random_word(rng)?;
-    }
-    let top_bits = bit_length % Word::BITS as usize;
-    if top_bits != 0 {
-        limbs[word_count - 1].0 &= Word::MAX >> (Word::BITS as usize - top_bits);
-    }
-    Ok(BigUint::from_limbs(limbs))
-}
-
-#[cfg(feature = "alloc")]
-fn random_big_uint_below<R: Rng + ?Sized>(upper: &BigUint, rng: &mut R) -> BigUint {
-    assert!(!upper.is_zero(), "random range must be non-empty");
-    loop {
-        let candidate = <BigUint as RandomBits>::random_bits(
-            rng,
-            u32::try_from(upper.bits()).expect("integer exceeds u32::MAX bits"),
-        );
-        if &candidate < upper {
-            return candidate;
-        }
-    }
-}
-
-#[cfg(feature = "alloc")]
-fn big_uint_is_probable_prime<R: Rng + ?Sized>(
-    value: &BigUint,
-    certainty: u32,
-    randomly_selected: bool,
-    rng: &mut R,
-) -> bool {
-    if certainty == 0 {
-        return true;
-    }
-
-    let two = BigUint::from(2_u8);
-    let three = BigUint::from(3_u8);
-    if value < &two {
-        return false;
-    }
-    if value == &two || value == &three {
-        return true;
-    }
-    if !value.test_bit(0) {
-        return false;
-    }
-    if let Some(composite) = has_small_factor(value.as_limbs()) {
-        return !composite;
-    }
-
-    let one = BigUint::from(1_u8);
-    let n_minus_one = value - &one;
-    let s = n_minus_one
-        .lowest_set_bit()
-        .expect("an odd value above three has a non-zero predecessor");
-    let d = &n_minus_one >> s;
-    let witness_range = value - &BigUint::from(3_u8);
-
-    'witness: for _ in 0..miller_rabin_rounds(certainty, value.bits(), randomly_selected) {
-        let witness = random_big_uint_below(&witness_range, rng) + &two;
-        let mut result = witness.mod_pow(&d, value);
-        if result == one || result == n_minus_one {
-            continue;
-        }
-        for _ in 1..s {
-            result = result.square() % value;
-            if result == n_minus_one {
-                continue 'witness;
-            }
-            if result == one {
-                return false;
-            }
-        }
-        return false;
-    }
-    true
-}
-
-#[cfg(feature = "alloc")]
 impl BigUint {
     /// Tests this value using trial division followed by Miller-Rabin rounds.
     pub fn is_probable_prime<R: Rng + ?Sized>(&self, certainty: u32, rng: &mut R) -> bool {
@@ -641,17 +376,6 @@ impl NextProbablePrime for BigUint {
     fn next_probable_prime<R: Rng + ?Sized>(&self, rng: &mut R) -> Self::Output {
         BigUint::next_probable_prime(self, rng)
     }
-}
-
-#[cfg(feature = "alloc")]
-fn big_int_magnitude(value: &BigInt) -> BigUint {
-    let absolute = value.abs();
-    BigUint::from_limbs(absolute.as_limbs().to_vec())
-}
-
-#[cfg(feature = "alloc")]
-fn positive_big_int(value: &BigUint) -> BigInt {
-    BigInt::from_sign_magnitude(false, value.as_limbs().to_vec())
 }
 
 #[cfg(feature = "alloc")]
