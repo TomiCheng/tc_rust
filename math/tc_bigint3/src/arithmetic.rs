@@ -429,6 +429,7 @@ pub(crate) fn fixed_mul<const N: usize>(lhs: &[Limb; N], rhs: &[Limb; N]) -> ([L
     (result, overflow)
 }
 
+#[inline]
 pub(crate) fn fixed_mul_wide<const N: usize>(
     lhs: &[Limb; N],
     rhs: &[Limb; N],
@@ -593,6 +594,154 @@ pub(crate) fn fixed_div_rem<const N: usize>(
     (quotient, remainder)
 }
 
+#[inline]
+pub(crate) fn fixed_wide_rem<const N: usize>(
+    low: &[Limb; N],
+    high: &[Limb; N],
+    modulus: &[Limb; N],
+) -> [Limb; N] {
+    let modulus_len = fixed_significant_len(modulus);
+    assert!(modulus_len != 0, "attempted to divide by zero");
+
+    let high_len = fixed_significant_len(high);
+    if high_len == 0 {
+        return fixed_div_rem(low, modulus).1;
+    }
+
+    if modulus_len == 1 {
+        let divisor = modulus[0].0 as WideWord;
+        let mut remainder = 0 as WideWord;
+        for word in high.iter().rev().chain(low.iter().rev()) {
+            let wide = (remainder << Word::BITS) | word.0 as WideWord;
+            remainder = wide % divisor;
+        }
+        let mut result = [Limb(0); N];
+        result[0] = Limb(remainder as Word);
+        return result;
+    }
+
+    let normalization_shift = modulus[modulus_len - 1].0.leading_zeros() as usize;
+    let mut normalized_modulus = [Limb(0); N];
+    let modulus_carry = fixed_shl_words(
+        modulus,
+        modulus_len,
+        normalization_shift,
+        &mut normalized_modulus,
+    );
+    debug_assert_eq!(modulus_carry, 0);
+
+    // Process the normalized 2N-word dividend one word at a time. The current
+    // remainder is the only dividend window Knuth's algorithm needs, so this
+    // does not require an unstable `[Limb; 2 * N]` temporary.
+    let input_len = N + high_len;
+    let mut remainder = [Limb(0); N];
+    let base = (1 as WideWord) << Word::BITS;
+    let modulus_high = normalized_modulus[modulus_len - 1].0 as WideWord;
+    let modulus_next = normalized_modulus[modulus_len - 2].0 as WideWord;
+
+    // The first `modulus_len` most-significant words form a prefix smaller
+    // than the normalized modulus. Seed the rolling remainder with that
+    // prefix, then estimate only the quotient words that can be non-zero.
+    let first_quotient_input = input_len + 1 - modulus_len;
+    for (index, word) in remainder.iter_mut().take(modulus_len).enumerate() {
+        *word = Limb(fixed_normalized_wide_word(
+            low,
+            high,
+            first_quotient_input + index,
+            normalization_shift,
+        ));
+    }
+    debug_assert_eq!(fixed_cmp(&remainder, &normalized_modulus), Ordering::Less);
+
+    for input_index in (0..first_quotient_input).rev() {
+        let input_word = fixed_normalized_wide_word(low, high, input_index, normalization_shift);
+        let mut window_high = remainder[modulus_len - 1].0;
+        for index in (1..modulus_len).rev() {
+            remainder[index] = remainder[index - 1];
+        }
+        remainder[0] = Limb(input_word);
+
+        let numerator =
+            ((window_high as WideWord) << Word::BITS) | remainder[modulus_len - 1].0 as WideWord;
+        let mut estimate = numerator / modulus_high;
+        let mut estimate_remainder = numerator % modulus_high;
+        let dividend_next = remainder[modulus_len - 2].0 as WideWord;
+        while estimate == base
+            || (estimate_remainder < base
+                && estimate * modulus_next > (estimate_remainder << Word::BITS) + dividend_next)
+        {
+            estimate -= 1;
+            estimate_remainder += modulus_high;
+            if estimate_remainder >= base {
+                break;
+            }
+        }
+
+        let estimate_word = estimate as Word;
+        let mut borrow = 0 as WideWord;
+        for index in 0..modulus_len {
+            let product =
+                estimate_word as WideWord * normalized_modulus[index].0 as WideWord + borrow;
+            let (difference, underflow) = remainder[index].0.overflowing_sub(product as Word);
+            remainder[index] = Limb(difference);
+            borrow = (product >> Word::BITS) + underflow as WideWord;
+        }
+
+        let (difference, negative) = window_high.overflowing_sub(borrow as Word);
+        window_high = difference;
+        if negative {
+            let mut carry = Limb(0);
+            for index in 0..modulus_len {
+                (remainder[index], carry) =
+                    remainder[index].carrying_add(normalized_modulus[index], carry);
+            }
+            window_high = window_high.wrapping_add(carry.0);
+        }
+        debug_assert_eq!(window_high, 0);
+    }
+
+    if normalization_shift != 0 {
+        for index in 0..modulus_len {
+            let high = if index + 1 < modulus_len {
+                remainder[index + 1].0
+            } else {
+                0
+            };
+            remainder[index] = Limb(
+                (remainder[index].0 >> normalization_shift)
+                    | (high << (Word::BITS as usize - normalization_shift)),
+            );
+        }
+    }
+    remainder
+}
+
+#[inline(always)]
+fn fixed_normalized_wide_word<const N: usize>(
+    low: &[Limb; N],
+    high: &[Limb; N],
+    index: usize,
+    shift: usize,
+) -> Word {
+    let current = fixed_wide_word(low, high, index);
+    if shift == 0 {
+        return current;
+    }
+    let previous = index
+        .checked_sub(1)
+        .map_or(0, |previous| fixed_wide_word(low, high, previous));
+    (current << shift) | (previous >> (Word::BITS as usize - shift))
+}
+
+#[inline(always)]
+fn fixed_wide_word<const N: usize>(low: &[Limb; N], high: &[Limb; N], index: usize) -> Word {
+    if index < N {
+        low[index].0
+    } else {
+        high.get(index - N).map_or(0, |word| word.0)
+    }
+}
+
 fn fixed_significant_len<const N: usize>(words: &[Limb; N]) -> usize {
     words
         .iter()
@@ -699,6 +848,7 @@ pub(crate) fn fixed_is_one<const N: usize>(words: &[Limb; N]) -> bool {
     words.first() == Some(&Limb(1)) && words.iter().skip(1).all(|word| word.0 == 0)
 }
 
+#[cfg(test)]
 pub(crate) fn fixed_shr_one<const N: usize>(words: &mut [Limb; N]) {
     let mut carry = 0 as Word;
     for word in words.iter_mut().rev() {
@@ -743,6 +893,27 @@ mod tests {
         let (low, high) = fixed_mul_wide(&lhs, &rhs);
         assert_eq!(low, [Limb(15), Limb(8)]);
         assert_eq!(high, [Limb(1), Limb(0)]);
+    }
+
+    #[test]
+    fn fixed_wide_remainder_handles_a_full_width_modulus() {
+        type Wide = [Limb; 4];
+
+        let modulus: Wide = [Limb(Word::MAX); 4];
+        let mut value = modulus;
+        value[0] = Limb(Word::MAX - 1);
+        let (low, high) = fixed_mul_wide(&value, &value);
+        assert_eq!(
+            fixed_wide_rem(&low, &high, &modulus),
+            [Limb(1), Limb(0), Limb(0), Limb(0)]
+        );
+
+        let radix_low = [Limb(0); 4];
+        let radix_high = [Limb(1), Limb(0), Limb(0), Limb(0)];
+        assert_eq!(
+            fixed_wide_rem(&radix_low, &radix_high, &modulus),
+            [Limb(1), Limb(0), Limb(0), Limb(0)]
+        );
     }
 
     #[test]
@@ -978,6 +1149,57 @@ mod tests {
                 fixed_cmp(&remainder, &divisor),
                 Ordering::Less,
                 "case {case}"
+            );
+        }
+    }
+
+    #[cfg(feature = "alloc")]
+    #[test]
+    fn fixed_wide_remainder_matches_division_identities_for_random_limbs() {
+        type Wide = [Limb; 4];
+
+        fn next_word(state: &mut u64) -> Word {
+            *state ^= *state << 13;
+            *state ^= *state >> 7;
+            *state ^= *state << 17;
+            *state as Word
+        }
+
+        let mut state = 0x1319_8a2e_0370_7344_u64;
+        for case in 0..4_000 {
+            let low: Wide = core::array::from_fn(|_| Limb(next_word(&mut state)));
+            let high: Wide = core::array::from_fn(|_| Limb(next_word(&mut state)));
+            let mut modulus: Wide = core::array::from_fn(|_| Limb(next_word(&mut state)));
+            let modulus_len = next_word(&mut state) as usize % modulus.len() + 1;
+            modulus[modulus_len..].fill(Limb(0));
+            match case % 4 {
+                0 => modulus[modulus_len - 1] = Limb(1),
+                1 => modulus[modulus_len - 1] = Limb(Word::MAX),
+                2 => modulus = [Limb(Word::MAX); 4],
+                _ => {}
+            }
+            if modulus.iter().all(|word| word.0 == 0) {
+                modulus[0] = Limb(1);
+            }
+
+            let remainder = fixed_wide_rem(&low, &high, &modulus);
+            assert_eq!(
+                fixed_cmp(&remainder, &modulus),
+                Ordering::Less,
+                "case {case}"
+            );
+
+            let mut dividend_words = Vec::with_capacity(8);
+            dividend_words.extend_from_slice(&low);
+            dividend_words.extend_from_slice(&high);
+            let dividend = crate::BigUint::from_limbs(dividend_words);
+            let divisor = crate::BigUint::from_limbs(modulus.to_vec());
+            let quotient = &dividend / &divisor;
+            let remainder = crate::BigUint::from_limbs(remainder.to_vec());
+            assert_eq!(
+                &quotient * &divisor + &remainder,
+                dividend,
+                "q * d + r identity failed in case {case}: low={low:?}, high={high:?}, modulus={modulus:?}, remainder={remainder:?}"
             );
         }
     }

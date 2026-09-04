@@ -5,7 +5,10 @@
 use criterion::measurement::WallTime;
 use criterion::{BenchmarkGroup, Criterion, criterion_group, criterion_main};
 use std::hint::black_box;
-use tc_bigint3::{BigInt, BigUint, I1024, U1024};
+use tc_bigint3::modular::{FixedMontyForm, FixedMontyParams};
+use tc_bigint3::{BigInt, BigUint, FixedBigUint, I1024, ModMul, Odd, U1024, Word};
+
+type U256 = FixedBigUint<{ 256 / Word::BITS as usize }>;
 
 struct Values {
     big_uint: BigUint,
@@ -212,5 +215,77 @@ fn bench_mod_pow(c: &mut Criterion) {
     group.finish();
 }
 
-criterion_group!(benches, bench_add, bench_mul, bench_div, bench_mod_pow);
+fn bench_mod_mul(c: &mut Criterion) {
+    let lhs_bytes = patterned_bytes::<32>(0x37, 0xd1, false);
+    let rhs_bytes = patterned_bytes::<32>(0x91, 0xb3, false);
+    let odd_modulus_bytes = patterned_bytes::<32>(0x53, 0xf1, true);
+    let mut even_modulus_bytes = patterned_bytes::<32>(0x6b, 0xe7, false);
+    even_modulus_bytes[31] &= !1;
+
+    let big_lhs = BigUint::from_be_bytes(&lhs_bytes);
+    let big_rhs = BigUint::from_be_bytes(&rhs_bytes);
+    let big_modulus = BigUint::from_be_bytes(&odd_modulus_bytes);
+    let fixed_lhs = U256::from_be_bytes(&lhs_bytes).expect("value fits U256");
+    let fixed_rhs = U256::from_be_bytes(&rhs_bytes).expect("value fits U256");
+    let fixed_odd_modulus = U256::from_be_bytes(&odd_modulus_bytes).expect("modulus fits U256");
+    let fixed_even_modulus = U256::from_be_bytes(&even_modulus_bytes).expect("modulus fits U256");
+    let odd_modulus = Odd::new(fixed_odd_modulus).expect("modulus is odd");
+    let params = FixedMontyParams::new(odd_modulus);
+    let monty_lhs = FixedMontyForm::new(&fixed_lhs, params);
+    let monty_rhs = FixedMontyForm::new(&fixed_rhs, params);
+
+    let mut group = c.benchmark_group("mod_mul/256-bit");
+    bench_ternary(
+        &mut group,
+        "BigUint::mod_mul",
+        &big_lhs,
+        &big_rhs,
+        &big_modulus,
+        |a, b, m| a.mod_mul(b, m),
+    );
+    bench_ternary(
+        &mut group,
+        "BigUint naive multiply-rem",
+        &big_lhs,
+        &big_rhs,
+        &big_modulus,
+        |a, b, m| ((a % m) * (b % m)) % m,
+    );
+    bench_ternary(
+        &mut group,
+        "FixedBigUint::mod_mul/odd",
+        &fixed_lhs,
+        &fixed_rhs,
+        &fixed_odd_modulus,
+        |a, b, m| a.mod_mul(b, m),
+    );
+    bench_ternary(
+        &mut group,
+        "FixedBigUint::mod_mul/even",
+        &fixed_lhs,
+        &fixed_rhs,
+        &fixed_even_modulus,
+        |a, b, m| a.mod_mul(b, m),
+    );
+    bench_binary(
+        &mut group,
+        "FixedMontyForm::mul/reused-params",
+        &monty_lhs,
+        &monty_rhs,
+        |a, b| a * b,
+    );
+    group.bench_function("FixedMontyParams::new", |b| {
+        b.iter(|| black_box(FixedMontyParams::new(black_box(odd_modulus))))
+    });
+    group.finish();
+}
+
+criterion_group!(
+    benches,
+    bench_add,
+    bench_mul,
+    bench_div,
+    bench_mod_pow,
+    bench_mod_mul
+);
 criterion_main!(benches);

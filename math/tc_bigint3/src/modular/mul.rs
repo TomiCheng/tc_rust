@@ -8,7 +8,7 @@ use alloc::vec::Vec;
 #[cfg(feature = "alloc")]
 use crate::arithmetic::{cmp, mul, normalize};
 use crate::arithmetic::{
-    fixed_add, fixed_cmp, fixed_div_rem, fixed_is_zero, fixed_shr_one, fixed_sub,
+    fixed_add, fixed_cmp, fixed_div_rem, fixed_is_zero, fixed_mul_wide, fixed_sub, fixed_wide_rem,
 };
 use crate::{Limb, WideWord, Word};
 
@@ -80,6 +80,7 @@ fn subtract_assign(lhs: &mut Vec<Limb>, rhs: &[Limb]) {
     normalize(lhs);
 }
 
+#[inline]
 pub(super) fn fixed_montgomery_mul<const N: usize>(
     lhs: &[Limb; N],
     rhs: &[Limb; N],
@@ -141,20 +142,8 @@ pub(super) fn fixed_mul_mod<const N: usize>(
     rhs: &[Limb; N],
     modulus: &[Limb; N],
 ) -> [Limb; N] {
-    let mut result = [Limb(0); N];
-    let mut addend = fixed_div_rem(lhs, modulus).1;
-    let mut multiplier = *rhs;
-
-    while !fixed_is_zero(&multiplier) {
-        if multiplier[0].0 & 1 != 0 {
-            result = fixed_add_mod(&result, &addend, modulus);
-        }
-        fixed_shr_one(&mut multiplier);
-        if !fixed_is_zero(&multiplier) {
-            addend = fixed_add_mod(&addend, &addend, modulus);
-        }
-    }
-    result
+    let (low, high) = fixed_mul_wide(lhs, rhs);
+    fixed_wide_rem(&low, &high, modulus)
 }
 
 pub(super) fn fixed_add_mod<const N: usize>(

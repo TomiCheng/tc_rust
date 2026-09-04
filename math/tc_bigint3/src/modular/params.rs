@@ -3,9 +3,10 @@
 #[cfg(feature = "alloc")]
 use alloc::vec;
 
-use super::mul::{fixed_add_mod, fixed_one_mod, montgomery_inverse};
+use super::mul::montgomery_inverse;
 #[cfg(feature = "alloc")]
 use crate::arithmetic::{div_rem, square};
+use crate::arithmetic::{fixed_div_rem, fixed_mul_wide, fixed_wide_rem, fixed_wrapping_neg};
 #[cfg(feature = "alloc")]
 use crate::{BigUint, Limb};
 use crate::{FixedBigUint, Odd, Word};
@@ -106,15 +107,10 @@ impl<const N: usize> FixedMontyParams<N> {
         let modulus_words = modulus.as_ref().as_limbs();
         let mod_neg_inv = montgomery_inverse(modulus_words[0].0);
 
-        let mut r = fixed_one_mod(modulus_words);
-        for _ in 0..N.saturating_mul(Word::BITS as usize) {
-            r = fixed_add_mod(&r, &r, modulus_words);
-        }
-
-        let mut r2 = r;
-        for _ in 0..N.saturating_mul(Word::BITS as usize) {
-            r2 = fixed_add_mod(&r2, &r2, modulus_words);
-        }
+        let radix_minus_modulus = fixed_wrapping_neg(modulus_words);
+        let r = fixed_div_rem(&radix_minus_modulus, modulus_words).1;
+        let (r2_low, r2_high) = fixed_mul_wide(&r, &r);
+        let r2 = fixed_wide_rem(&r2_low, &r2_high, modulus_words);
 
         Self {
             modulus,

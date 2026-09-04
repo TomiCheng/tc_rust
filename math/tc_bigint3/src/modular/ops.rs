@@ -1,14 +1,9 @@
 //! Modular addition, subtraction, and multiplication implementations.
 
-use crate::arithmetic::{fixed_div_rem, fixed_is_zero};
-use crate::{FixedBigInt, FixedBigUint, ModAdd, ModMul, ModSub, Odd};
+use crate::arithmetic::{fixed_div_rem, fixed_is_zero, fixed_mul_wide, fixed_wide_rem};
+use crate::{FixedBigInt, FixedBigUint, ModAdd, ModMul, ModSub};
 
-use super::form::FixedMontyForm;
-use super::mul::{fixed_add_mod, fixed_mul_mod, fixed_sub_mod};
-use super::params::FixedMontyParams;
-
-#[cfg(feature = "alloc")]
-use super::{MontyForm, MontyParams};
+use super::mul::{fixed_add_mod, fixed_sub_mod};
 #[cfg(feature = "alloc")]
 use crate::{BigInt, BigUint};
 
@@ -51,12 +46,6 @@ impl ModMul for BigUint {
 
     fn mod_mul(&self, rhs: &Self, modulus: &Self) -> Self {
         assert!(!modulus.is_zero(), "modulus must be non-zero");
-        if let Some(modulus) = Odd::new(modulus.clone()) {
-            let params = MontyParams::new(modulus);
-            let lhs = MontyForm::new(self, params.clone());
-            let rhs = MontyForm::new(rhs, params);
-            return (lhs * rhs).retrieve();
-        }
         ((self % modulus) * (rhs % modulus)) % modulus
     }
 }
@@ -145,15 +134,8 @@ impl<const N: usize> ModMul for FixedBigUint<N> {
             !fixed_is_zero(modulus.as_limbs()),
             "modulus must be non-zero"
         );
-        if let Some(modulus) = Odd::new(*modulus) {
-            let params = FixedMontyParams::new(modulus);
-            let lhs = FixedMontyForm::new(self, params);
-            let rhs = FixedMontyForm::new(rhs, params);
-            return (lhs * rhs).retrieve();
-        }
-        let lhs = fixed_div_rem(self.as_limbs(), modulus.as_limbs()).1;
-        let rhs = fixed_div_rem(rhs.as_limbs(), modulus.as_limbs()).1;
-        Self::from_limbs(fixed_mul_mod(&lhs, &rhs, modulus.as_limbs()))
+        let (low, high) = fixed_mul_wide(self.as_limbs(), rhs.as_limbs());
+        Self::from_limbs(fixed_wide_rem(&low, &high, modulus.as_limbs()))
     }
 }
 
