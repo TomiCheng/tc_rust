@@ -820,6 +820,17 @@ mod tests {
         assert!(prime.is_probable_prime(40, &mut rng));
     }
 
+    #[cfg(feature = "alloc")]
+    #[test]
+    fn dynamic_probable_primes_preserve_requested_multi_word_width() {
+        let mut rng = SeqRng(0x6a09_e667_f3bc_c909);
+        for bits in [128_u32, 256, 512] {
+            let prime = BigUint::probable_prime(&mut rng, bits);
+            assert_eq!(prime.bits(), bits as usize);
+            assert!(prime.is_probable_prime(40, &mut rng));
+        }
+    }
+
     #[test]
     fn certainty_zero_skips_testing() {
         let mut rng = SeqRng(9);

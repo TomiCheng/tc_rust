@@ -139,8 +139,12 @@ impl BigUint {
     /// Returns a value with bit `index` set.
     pub fn set_bit(&self, index: usize) -> Self {
         let mut limbs = self.limbs.clone();
-        limbs.resize(index / Word::BITS as usize + 1, Limb(0));
-        limbs[index / Word::BITS as usize].0 |= (1 as Word) << (index % Word::BITS as usize);
+        let word_index = index / Word::BITS as usize;
+        let needed = word_index + 1;
+        if limbs.len() < needed {
+            limbs.resize(needed, Limb(0));
+        }
+        limbs[word_index].0 |= (1 as Word) << (index % Word::BITS as usize);
         Self::from_limbs(limbs)
     }
 
@@ -156,8 +160,12 @@ impl BigUint {
     /// Returns a value with bit `index` flipped.
     pub fn flip_bit(&self, index: usize) -> Self {
         let mut limbs = self.limbs.clone();
-        limbs.resize(index / Word::BITS as usize + 1, Limb(0));
-        limbs[index / Word::BITS as usize].0 ^= (1 as Word) << (index % Word::BITS as usize);
+        let word_index = index / Word::BITS as usize;
+        let needed = word_index + 1;
+        if limbs.len() < needed {
+            limbs.resize(needed, Limb(0));
+        }
+        limbs[word_index].0 ^= (1 as Word) << (index % Word::BITS as usize);
         Self::from_limbs(limbs)
     }
 
@@ -421,6 +429,22 @@ mod tests {
         assert_eq!(value.set_bit(0), BigUint::from(0b101101_u8));
         assert_eq!(value.clear_bit(3), BigUint::from(0b100100_u8));
         assert_eq!(value.flip_bit(2), BigUint::from(0b101000_u8));
+    }
+
+    #[test]
+    fn setting_or_flipping_a_low_bit_preserves_existing_high_limbs() {
+        let high = Word::BITS as usize * 2 - 1;
+        let value = BigUint::one().set_bit(high);
+
+        let set = value.set_bit(0);
+        assert!(set.test_bit(high));
+        assert!(set.test_bit(0));
+        assert_eq!(set.bits(), high + 1);
+
+        let flipped = value.flip_bit(1);
+        assert!(flipped.test_bit(high));
+        assert!(flipped.test_bit(1));
+        assert_eq!(flipped.bits(), high + 1);
     }
 
     #[test]
