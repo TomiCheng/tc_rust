@@ -220,6 +220,19 @@ mod tests {
     }
 
     #[test]
+    fn checked_wrapping_overflowing_and_saturating_products_are_distinct() {
+        type I = FixedBigInt<1>;
+        let max = I::max_value();
+        let two = I::from(2_i8);
+        let (wrapped, overflow) = max.overflowing_mul(&two);
+        assert!(overflow);
+        assert_eq!(wrapped, max.wrapping_mul(&two));
+        assert_eq!(max.checked_mul(&two), None);
+        assert_eq!(max.saturating_mul(&two), max);
+        assert_eq!(I::min_value().saturating_mul(&two), I::min_value());
+    }
+
+    #[test]
     #[should_panic(expected = "attempted to multiply with overflow")]
     fn primitive_multiplication_rejects_overflow() {
         let _ = FixedBigInt::<1>::max_value() * 2_u8;

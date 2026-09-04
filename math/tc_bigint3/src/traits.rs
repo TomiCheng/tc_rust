@@ -613,9 +613,11 @@ pub trait ToPrimitive {
 #[cfg(test)]
 mod tests {
     use super::{
-        AndNot, BitOps, CheckedAdd, CheckedSub, DivRem, FromPrimitive, Gcd, ModInverse, ModPow,
-        Num, NumAssignRef, NumRef, One, OverflowingAdd, Pow, RefNum, RemEuclid, SaturatingAdd,
-        Signed, Square, ToPrimitive, WrappingAdd, Zero,
+        AndNot, BitOps, Bounded, CheckedAdd, CheckedDiv, CheckedMul, CheckedNeg, CheckedRem,
+        CheckedShl, CheckedShr, CheckedSub, DivRem, FromPrimitive, Gcd, ModInverse, ModPow, Num,
+        NumAssignRef, NumRef, One, OverflowingAdd, OverflowingMul, OverflowingSub, Pow, RefNum,
+        RemEuclid, SaturatingAdd, SaturatingMul, SaturatingSub, Signed, Square, ToPrimitive,
+        WrappingAdd, WrappingMul, WrappingNeg, WrappingSub, Zero,
     };
     use crate::{FixedBigInt, FixedBigUint, Word};
 
@@ -642,6 +644,8 @@ mod tests {
         for<'a> &'a T: RefNum<T>,
     {
     }
+    fn assert_hash<T: core::hash::Hash>() {}
+    fn assert_default<T: Default>() {}
 
     #[test]
     fn identity_default_methods_and_numeric_marker_traits_work() {
@@ -655,6 +659,14 @@ mod tests {
         assert_num_ref::<U>();
         assert_num_assign_ref::<U>();
         assert_ref_num::<U>();
+        assert_hash::<I>();
+        assert_hash::<U>();
+        assert_default::<I>();
+        assert_default::<U>();
+        assert_eq!(<U as Bounded>::MIN, U::zero());
+        assert_eq!(<U as Bounded>::MAX, U::max_value());
+        assert_eq!(<I as Bounded>::MIN, I::min_value());
+        assert_eq!(<I as Bounded>::MAX, I::max_value());
     }
 
     #[test]
@@ -720,6 +732,34 @@ mod tests {
         );
         assert_eq!(WrappingAdd::wrapping_add(&max, &one), U::zero());
         assert_eq!(SaturatingAdd::saturating_add(&max, &one), max);
+    }
+
+    #[test]
+    fn checked_wrapping_overflowing_and_saturating_contracts_cover_boundaries() {
+        let max = U::max_value();
+        let zero = U::zero();
+        let one = U::from(1_u8);
+        let two = U::from(2_u8);
+
+        assert_eq!(CheckedMul::checked_mul(&max, &two), None);
+        assert_eq!(OverflowingMul::overflowing_mul(&max, &two), (max - one, true));
+        assert_eq!(WrappingMul::wrapping_mul(&max, &two), max - one);
+        assert_eq!(SaturatingMul::saturating_mul(&max, &two), max);
+        assert_eq!(OverflowingSub::overflowing_sub(&zero, &one), (max, true));
+        assert_eq!(WrappingSub::wrapping_sub(&zero, &one), max);
+        assert_eq!(SaturatingSub::saturating_sub(&zero, &one), zero);
+        assert_eq!(CheckedDiv::checked_div(&one, &zero), None);
+        assert_eq!(CheckedRem::checked_rem(&one, &zero), None);
+        assert_eq!(CheckedShl::checked_shl(&one, 127), Some(one << 127));
+        assert_eq!(CheckedShl::checked_shl(&max, 1), None);
+        assert_eq!(CheckedShr::checked_shr(&one, 128), None);
+
+        let signed_min = I::min_value();
+        assert_eq!(CheckedNeg::checked_neg(&signed_min), None);
+        assert_eq!(WrappingNeg::wrapping_neg(&signed_min), signed_min);
+        assert_eq!(CheckedShl::checked_shl(&I::from(1_i8), 126), Some(I::from(1_i8) << 126));
+        assert_eq!(CheckedShl::checked_shl(&I::from(1_i8), 127), None);
+        assert_eq!(CheckedShr::checked_shr(&I::from(-1_i8), 128), None);
     }
 
     #[test]

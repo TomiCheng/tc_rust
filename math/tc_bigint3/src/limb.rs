@@ -18,7 +18,7 @@ pub type WideWord = u64;
 
 /// One word of a multi-word integer.
 #[repr(transparent)]
-#[derive(Clone, Copy, Debug, Default, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Limb(pub Word);
 
 impl Limb {

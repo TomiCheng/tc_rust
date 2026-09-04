@@ -32,7 +32,7 @@ mod sub;
 ///
 /// Limbs are stored in canonical little-endian two's-complement form. Zero has
 /// no limbs; other values have no redundant high sign-extension limbs.
-#[derive(Clone, Default, Eq, PartialEq)]
+#[derive(Clone, Default, Eq, Hash, PartialEq)]
 pub struct BigInt {
     limbs: Vec<Limb>,
 }

@@ -11,8 +11,8 @@ use core::ops::{
 use crate::ConversionError;
 use crate::arithmetic;
 use crate::traits::{
-    AndNot, BitOps, CheckedNeg, CheckedShl, CheckedShr, Gcd, ModInverse, ModPow, Num, One, Pow,
-    Signed, ToPrimitive, WrappingNeg, Zero,
+    AndNot, BitOps, Bounded, CheckedNeg, CheckedShl, CheckedShr, Gcd, ModInverse, ModPow, Num, One,
+    Pow, Signed, ToPrimitive, WrappingNeg, Zero,
 };
 use crate::{FixedBigUint, Limb, ParseBigIntError, Word};
 
@@ -25,12 +25,30 @@ mod mul;
 mod sub;
 
 /// A signed two's-complement integer containing exactly `N` little-endian limbs.
-#[derive(Clone, Copy, Eq, PartialEq)]
+#[derive(Clone, Copy, Eq, Hash, PartialEq)]
 pub struct FixedBigInt<const N: usize> {
     limbs: [Limb; N],
 }
 
 impl<const N: usize> FixedBigInt<N> {
+    /// Lowest representable value.
+    pub const MIN: Self = {
+        let mut limbs = [Limb(0); N];
+        if N != 0 {
+            limbs[N - 1] = Limb(1 << (Word::BITS - 1));
+        }
+        Self { limbs }
+    };
+
+    /// Highest representable value.
+    pub const MAX: Self = {
+        let mut limbs = [Limb(Word::MAX); N];
+        if N != 0 {
+            limbs[N - 1] = Limb(Word::MAX >> 1);
+        }
+        Self { limbs }
+    };
+
     pub(crate) const fn from_limbs(limbs: [Limb; N]) -> Self {
         Self { limbs }
     }
@@ -42,20 +60,12 @@ impl<const N: usize> FixedBigInt<N> {
 
     /// Returns the lowest representable signed value.
     pub const fn min_value() -> Self {
-        let mut limbs = [Limb(0); N];
-        if N != 0 {
-            limbs[N - 1] = Limb(1 << (Word::BITS - 1));
-        }
-        Self { limbs }
+        Self::MIN
     }
 
     /// Returns the highest representable signed value.
     pub const fn max_value() -> Self {
-        let mut limbs = [Limb(Word::MAX); N];
-        if N != 0 {
-            limbs[N - 1] = Limb(Word::MAX >> 1);
-        }
-        Self { limbs }
+        Self::MAX
     }
 
     /// Borrows all little-endian two's-complement limbs.
@@ -143,6 +153,22 @@ impl<const N: usize> FixedBigInt<N> {
                 .map(|word| word.0.count_ones() as usize)
                 .sum()
         }
+    }
+
+    /// Counts zero bits from the most-significant end of the fixed-width
+    /// two's-complement representation.
+    pub fn leading_zeros(&self) -> usize {
+        self.limbs
+            .iter()
+            .rev()
+            .try_fold(0_usize, |count, limb| {
+                if limb.0 == 0 {
+                    Ok(count + Word::BITS as usize)
+                } else {
+                    Err(count + limb.0.leading_zeros() as usize)
+                }
+            })
+            .unwrap_or_else(|count| count)
     }
 
     /// Tests bit `index`, including mathematical sign extension above the width.
@@ -261,6 +287,11 @@ impl<const N: usize> Default for FixedBigInt<N> {
     fn default() -> Self {
         Self::zero()
     }
+}
+
+impl<const N: usize> Bounded for FixedBigInt<N> {
+    const MIN: Self = Self::MIN;
+    const MAX: Self = Self::MAX;
 }
 
 impl<const N: usize> fmt::Display for FixedBigInt<N> {
@@ -775,6 +806,16 @@ mod tests {
             FixedBigInt::<1>::from_str_radix("1".repeat(Word::BITS as usize).as_str(), 2),
             Err(ParseBigIntError::Overflow)
         );
+    }
+
+    #[test]
+    fn bounds_default_and_leading_zeros_are_available() {
+        assert_eq!(I128::MIN, I128::min_value());
+        assert_eq!(I128::MAX, I128::max_value());
+        assert_eq!(I128::default(), I128::zero());
+        assert_eq!(I128::zero().leading_zeros(), 128);
+        assert_eq!(I128::from(1_i8).leading_zeros(), 127);
+        assert_eq!(I128::from(-1_i8).leading_zeros(), 0);
     }
 
     #[test]

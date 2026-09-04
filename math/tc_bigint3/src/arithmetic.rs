@@ -615,6 +615,41 @@ pub(crate) fn fixed_mul<const N: usize>(lhs: &[Limb; N], rhs: &[Limb; N]) -> ([L
     (result, overflow)
 }
 
+pub(crate) fn fixed_mul_wide<const N: usize>(
+    lhs: &[Limb; N],
+    rhs: &[Limb; N],
+) -> ([Limb; N], [Limb; N]) {
+    let mut low = [Limb(0); N];
+    let mut high = [Limb(0); N];
+
+    for (left_index, left) in lhs.iter().enumerate() {
+        let mut carry = 0 as Word;
+        for (right_index, right) in rhs.iter().enumerate() {
+            let index = left_index + right_index;
+            let current = if index < N {
+                low[index].0
+            } else {
+                high[index - N].0
+            };
+            let wide = left.0 as WideWord * right.0 as WideWord
+                + current as WideWord
+                + carry as WideWord;
+            let output = Limb(wide as Word);
+            if index < N {
+                low[index] = output;
+            } else {
+                high[index - N] = output;
+            }
+            carry = (wide >> Word::BITS) as Word;
+        }
+        if N != 0 {
+            high[left_index] = Limb(carry);
+        }
+    }
+
+    (low, high)
+}
+
 pub(crate) fn fixed_div_rem<const N: usize>(
     dividend: &[Limb; N],
     divisor: &[Limb; N],
@@ -1177,6 +1212,15 @@ mod tests {
             ([Limb(21), Limb(0)], false)
         );
         assert!(fixed_mul(&max, &max).1);
+    }
+
+    #[test]
+    fn fixed_wide_multiplication_preserves_both_product_halves() {
+        let lhs = [Limb(3), Limb(1)];
+        let rhs = [Limb(5), Limb(1)];
+        let (low, high) = fixed_mul_wide(&lhs, &rhs);
+        assert_eq!(low, [Limb(15), Limb(8)]);
+        assert_eq!(high, [Limb(1), Limb(0)]);
     }
 
     #[test]

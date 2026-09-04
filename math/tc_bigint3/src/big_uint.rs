@@ -28,7 +28,7 @@ mod sub;
 ///
 /// Limbs are stored from least significant to most significant. Zero has an
 /// empty limb vector; non-zero values never contain redundant high zero limbs.
-#[derive(Clone, Default, Eq, PartialEq)]
+#[derive(Clone, Default, Eq, Hash, PartialEq)]
 pub struct BigUint {
     limbs: Vec<Limb>,
 }

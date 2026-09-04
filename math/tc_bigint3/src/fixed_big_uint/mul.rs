@@ -27,6 +27,32 @@ impl<const N: usize> FixedBigUint<N> {
         let (limbs, overflow) = arithmetic::fixed_mul(&self.limbs, &rhs.limbs);
         (!overflow).then_some(Self { limbs })
     }
+
+    /// Returns the full double-width product as `(low, high)` halves.
+    ///
+    /// The mathematical result is `low + high * 2^(N * Word::BITS)`.
+    /// Both halves retain exactly `N` little-endian limbs and this operation
+    /// does not allocate.
+    ///
+    /// ```
+    /// use tc_bigint3::{FixedBigUint, Word};
+    ///
+    /// type U = FixedBigUint<1>;
+    /// let (low, high) = U::max_value().mul_wide(&U::from(2_u8));
+    /// assert_eq!(low, U::max_value() - U::from(1_u8));
+    /// assert_eq!(high, U::from(1_u8));
+    /// assert_eq!(U::max_value().square_wide(), U::max_value().mul_wide(&U::max_value()));
+    /// # let _ = Word::BITS;
+    /// ```
+    pub fn mul_wide(&self, rhs: &Self) -> (Self, Self) {
+        let (low, high) = arithmetic::fixed_mul_wide(&self.limbs, &rhs.limbs);
+        (Self { limbs: low }, Self { limbs: high })
+    }
+
+    /// Returns the full double-width square as `(low, high)` halves.
+    pub fn square_wide(&self) -> (Self, Self) {
+        self.mul_wide(self)
+    }
 }
 
 impl<const N: usize> Mul for FixedBigUint<N> {
@@ -218,6 +244,19 @@ mod tests {
             (U::from(1_000_000_u64) * U::from(37_u8)).to_u128(),
             Some(37_000_000)
         );
+    }
+
+    #[test]
+    fn checked_wrapping_overflowing_saturating_and_wide_products_are_distinct() {
+        type U = FixedBigUint<1>;
+        let max = U::max_value();
+        let two = U::from(2_u8);
+        assert_eq!(max.checked_mul(&two), None);
+        assert_eq!(max.overflowing_mul(&two), (max - U::from(1_u8), true));
+        assert_eq!(max.wrapping_mul(&two), max - U::from(1_u8));
+        assert_eq!(max.saturating_mul(&two), max);
+        assert_eq!(max.mul_wide(&two), (max - U::from(1_u8), U::from(1_u8)));
+        assert_eq!(max.square_wide(), max.mul_wide(&max));
     }
 
     #[test]

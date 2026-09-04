@@ -10,7 +10,8 @@ use core::ops::{
 use crate::ConversionError;
 use crate::arithmetic;
 use crate::traits::{
-    AndNot, BitOps, CheckedShl, CheckedShr, Gcd, ModInverse, ModPow, Num, One, Pow, Unsigned, Zero,
+    AndNot, BitOps, Bounded, CheckedShl, CheckedShr, Gcd, ModInverse, ModPow, Num, One, Pow,
+    Unsigned, Zero,
 };
 use crate::{Limb, ParseBigIntError, Word};
 
@@ -23,12 +24,20 @@ mod mul;
 mod sub;
 
 /// An unsigned integer containing exactly `N` little-endian limbs.
-#[derive(Clone, Copy, Eq, PartialEq)]
+#[derive(Clone, Copy, Eq, Hash, PartialEq)]
 pub struct FixedBigUint<const N: usize> {
     limbs: [Limb; N],
 }
 
 impl<const N: usize> FixedBigUint<N> {
+    /// Lowest representable value.
+    pub const MIN: Self = Self::zero();
+
+    /// Highest representable value.
+    pub const MAX: Self = Self {
+        limbs: [Limb(Word::MAX); N],
+    };
+
     pub(crate) const fn from_limbs(limbs: [Limb; N]) -> Self {
         Self { limbs }
     }
@@ -44,11 +53,14 @@ impl<const N: usize> FixedBigUint<N> {
         }
     }
 
+    /// Returns the minimum representable value.
+    pub const fn min_value() -> Self {
+        Self::MIN
+    }
+
     /// Returns the maximum representable value.
     pub const fn max_value() -> Self {
-        Self {
-            limbs: [Limb(Word::MAX); N],
-        }
+        Self::MAX
     }
 
     /// Borrows all little-endian limbs, including high zero limbs.
@@ -97,6 +109,11 @@ impl<const N: usize> FixedBigUint<N> {
             .iter()
             .map(|word| word.0.count_ones() as usize)
             .sum()
+    }
+
+    /// Counts zero bits from the most-significant end of the fixed width.
+    pub fn leading_zeros(&self) -> usize {
+        N * Word::BITS as usize - self.bit_length()
     }
 
     /// Tests bit `index`.
@@ -218,6 +235,11 @@ impl<const N: usize> Default for FixedBigUint<N> {
     fn default() -> Self {
         Self::zero()
     }
+}
+
+impl<const N: usize> Bounded for FixedBigUint<N> {
+    const MIN: Self = Self::MIN;
+    const MAX: Self = Self::MAX;
 }
 
 impl<const N: usize> fmt::Display for FixedBigUint<N> {
@@ -677,6 +699,28 @@ mod tests {
             FixedBigUint::<1>::from_str_radix("1".repeat(Word::BITS as usize + 1).as_str(), 2),
             Err(ParseBigIntError::Overflow)
         );
+    }
+
+    #[test]
+    fn bounds_default_hash_and_leading_zeros_are_available() {
+        use core::hash::{Hash, Hasher};
+
+        struct Probe(u64);
+        impl Hasher for Probe {
+            fn finish(&self) -> u64 { self.0 }
+            fn write(&mut self, bytes: &[u8]) {
+                for byte in bytes { self.0 = self.0.wrapping_mul(31).wrapping_add(u64::from(*byte)); }
+            }
+        }
+
+        assert_eq!(U128::MIN, U128::zero());
+        assert_eq!(U128::MAX, U128::max_value());
+        assert_eq!(U128::default(), U128::MIN);
+        assert_eq!(U128::zero().leading_zeros(), 128);
+        assert_eq!(U128::from(1_u8).leading_zeros(), 127);
+        let mut hasher = Probe(0);
+        U128::from(1_u8).hash(&mut hasher);
+        assert_ne!(hasher.finish(), 0);
     }
 
     #[test]
