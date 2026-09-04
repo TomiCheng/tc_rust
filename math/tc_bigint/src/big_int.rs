@@ -26,9 +26,6 @@ mod prime;
 // Addition operator implementation.
 mod add;
 
-// Implement the crate's exponentiation contract separately from its definition.
-mod pow;
-
 // Standard-library conversion traits (`From`, `TryFrom`, and `FromStr`).
 mod from;
 
