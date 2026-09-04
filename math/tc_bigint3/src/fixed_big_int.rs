@@ -296,14 +296,7 @@ impl<const N: usize> Bounded for FixedBigInt<N> {
 
 impl<const N: usize> fmt::Display for FixedBigInt<N> {
     fn fmt(&self, output: &mut fmt::Formatter<'_>) -> fmt::Result {
-        crate::format::fmt_fixed(
-            &self.magnitude(),
-            self.is_negative(),
-            10,
-            false,
-            "",
-            output,
-        )
+        crate::format::fmt_fixed(&self.magnitude(), self.is_negative(), 10, false, "", output)
     }
 }
 

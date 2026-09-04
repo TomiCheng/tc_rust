@@ -158,8 +158,8 @@ impl<const N: usize> ToPrimitive for FixedBigInt<N> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{ConversionError, FixedBigInt, FixedBigUint, Word};
     use crate::traits::{FromPrimitive, ToPrimitive};
+    use crate::{ConversionError, FixedBigInt, FixedBigUint, Word};
 
     type I = FixedBigInt<2>;
 

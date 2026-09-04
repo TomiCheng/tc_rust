@@ -742,7 +742,10 @@ mod tests {
         let two = U::from(2_u8);
 
         assert_eq!(CheckedMul::checked_mul(&max, &two), None);
-        assert_eq!(OverflowingMul::overflowing_mul(&max, &two), (max - one, true));
+        assert_eq!(
+            OverflowingMul::overflowing_mul(&max, &two),
+            (max - one, true)
+        );
         assert_eq!(WrappingMul::wrapping_mul(&max, &two), max - one);
         assert_eq!(SaturatingMul::saturating_mul(&max, &two), max);
         assert_eq!(OverflowingSub::overflowing_sub(&zero, &one), (max, true));
@@ -757,7 +760,10 @@ mod tests {
         let signed_min = I::min_value();
         assert_eq!(CheckedNeg::checked_neg(&signed_min), None);
         assert_eq!(WrappingNeg::wrapping_neg(&signed_min), signed_min);
-        assert_eq!(CheckedShl::checked_shl(&I::from(1_i8), 126), Some(I::from(1_i8) << 126));
+        assert_eq!(
+            CheckedShl::checked_shl(&I::from(1_i8), 126),
+            Some(I::from(1_i8) << 126)
+        );
         assert_eq!(CheckedShl::checked_shl(&I::from(1_i8), 127), None);
         assert_eq!(CheckedShr::checked_shr(&I::from(-1_i8), 128), None);
     }

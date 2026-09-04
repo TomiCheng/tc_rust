@@ -258,14 +258,7 @@ macro_rules! impl_fixed_uint_format {
     ($trait:ident, $radix:expr, $uppercase:expr, $prefix:expr) => {
         impl<const N: usize> fmt::$trait for FixedBigUint<N> {
             fn fmt(&self, output: &mut fmt::Formatter<'_>) -> fmt::Result {
-                crate::format::fmt_fixed(
-                    &self.limbs,
-                    false,
-                    $radix,
-                    $uppercase,
-                    $prefix,
-                    output,
-                )
+                crate::format::fmt_fixed(&self.limbs, false, $radix, $uppercase, $prefix, output)
             }
         }
     };
@@ -707,9 +700,13 @@ mod tests {
 
         struct Probe(u64);
         impl Hasher for Probe {
-            fn finish(&self) -> u64 { self.0 }
+            fn finish(&self) -> u64 {
+                self.0
+            }
             fn write(&mut self, bytes: &[u8]) {
-                for byte in bytes { self.0 = self.0.wrapping_mul(31).wrapping_add(u64::from(*byte)); }
+                for byte in bytes {
+                    self.0 = self.0.wrapping_mul(31).wrapping_add(u64::from(*byte));
+                }
             }
         }
 

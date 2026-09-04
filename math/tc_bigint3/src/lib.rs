@@ -39,9 +39,9 @@ pub use non_zero::NonZero;
 #[cfg(feature = "rand_core")]
 pub use rand_core;
 pub use traits::{
-    AndNot, BitOps, Bounded, CheckedAdd, CheckedDiv, CheckedMul, CheckedNeg, CheckedRem, CheckedShl,
-    CheckedShr, CheckedSub, DivRem, FromPrimitive, Gcd, ModInverse, ModPow, Num, NumAssign,
-    NumAssignOps, NumAssignRef, NumOps, NumRef, One, OverflowingAdd, OverflowingMul,
+    AndNot, BitOps, Bounded, CheckedAdd, CheckedDiv, CheckedMul, CheckedNeg, CheckedRem,
+    CheckedShl, CheckedShr, CheckedSub, DivRem, FromPrimitive, Gcd, ModInverse, ModPow, Num,
+    NumAssign, NumAssignOps, NumAssignRef, NumOps, NumRef, One, OverflowingAdd, OverflowingMul,
     OverflowingSub, Pow, RefNum, RemEuclid, SaturatingAdd, SaturatingMul, SaturatingSub, Signed,
     Square, ToPrimitive, Unsigned, WrappingAdd, WrappingMul, WrappingNeg, WrappingSub, Zero,
 };

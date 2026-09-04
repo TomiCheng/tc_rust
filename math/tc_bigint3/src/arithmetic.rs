@@ -631,9 +631,8 @@ pub(crate) fn fixed_mul_wide<const N: usize>(
             } else {
                 high[index - N].0
             };
-            let wide = left.0 as WideWord * right.0 as WideWord
-                + current as WideWord
-                + carry as WideWord;
+            let wide =
+                left.0 as WideWord * right.0 as WideWord + current as WideWord + carry as WideWord;
             let output = Limb(wide as Word);
             if index < N {
                 low[index] = output;

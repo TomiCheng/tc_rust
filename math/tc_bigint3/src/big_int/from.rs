@@ -229,7 +229,10 @@ mod tests {
 
     #[test]
     fn unsigned_and_owned_fixed_conversions_preserve_values() {
-        assert_eq!(BigInt::from(BigUint::from(u128::MAX)), BigInt::from(u128::MAX));
+        assert_eq!(
+            BigInt::from(BigUint::from(u128::MAX)),
+            BigInt::from(u128::MAX)
+        );
         assert_eq!(
             FixedBigInt::<2>::try_from(BigInt::from(-7_i8)),
             Ok(FixedBigInt::from(-7_i8))

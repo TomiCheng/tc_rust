@@ -183,7 +183,10 @@ mod tests {
 
     #[test]
     fn signed_and_owned_fixed_conversions_preserve_or_reject_values() {
-        assert_eq!(BigUint::try_from(BigInt::from(42_i8)), Ok(BigUint::from(42_u8)));
+        assert_eq!(
+            BigUint::try_from(BigInt::from(42_i8)),
+            Ok(BigUint::from(42_u8))
+        );
         assert_eq!(
             BigUint::try_from(&BigInt::from(-1_i8)),
             Err(ConversionError::NegativeValue)

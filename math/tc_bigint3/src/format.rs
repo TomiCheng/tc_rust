@@ -216,10 +216,22 @@ mod tests {
 
         assert_eq!(std::format!("{unsigned}"), u128::MAX.to_string());
         assert_eq!(std::format!("{unsigned:?}"), u128::MAX.to_string());
-        assert_eq!(std::format!("{unsigned:x}"), std::format!("{:x}", u128::MAX));
-        assert_eq!(std::format!("{unsigned:X}"), std::format!("{:X}", u128::MAX));
-        assert_eq!(std::format!("{unsigned:o}"), std::format!("{:o}", u128::MAX));
-        assert_eq!(std::format!("{unsigned:b}"), std::format!("{:b}", u128::MAX));
+        assert_eq!(
+            std::format!("{unsigned:x}"),
+            std::format!("{:x}", u128::MAX)
+        );
+        assert_eq!(
+            std::format!("{unsigned:X}"),
+            std::format!("{:X}", u128::MAX)
+        );
+        assert_eq!(
+            std::format!("{unsigned:o}"),
+            std::format!("{:o}", u128::MAX)
+        );
+        assert_eq!(
+            std::format!("{unsigned:b}"),
+            std::format!("{:b}", u128::MAX)
+        );
         assert_eq!(std::format!("{:#010x}", U::from(0x2a_u8)), "0x0000002a");
         assert_eq!(std::format!("{signed}"), "-42");
         assert_eq!(std::format!("{signed:?}"), "-42");
@@ -233,14 +245,23 @@ mod tests {
 
         use crate::{BigInt, BigUint};
 
-        assert_eq!(FixedBigUint::<2>::from_str("255"), Ok(FixedBigUint::from(255_u16)));
-        assert_eq!(FixedBigInt::<2>::from_str("-255"), Ok(FixedBigInt::from(-255_i16)));
+        assert_eq!(
+            FixedBigUint::<2>::from_str("255"),
+            Ok(FixedBigUint::from(255_u16))
+        );
+        assert_eq!(
+            FixedBigInt::<2>::from_str("-255"),
+            Ok(FixedBigInt::from(-255_i16))
+        );
         assert_eq!(FixedBigUint::<2>::from(255_u16).to_str_radix(16), "ff");
         assert_eq!(FixedBigInt::<2>::from(-255_i16).to_str_radix(16), "-ff");
 
         let unsigned = BigUint::from(u128::MAX);
         let signed = BigInt::from(-255_i16);
-        assert_eq!(std::format!("{unsigned:#X}"), std::format!("{:#X}", u128::MAX));
+        assert_eq!(
+            std::format!("{unsigned:#X}"),
+            std::format!("{:#X}", u128::MAX)
+        );
         assert_eq!(std::format!("{signed:b}"), "-11111111");
         assert_eq!(std::format!("{unsigned:?}"), u128::MAX.to_string());
         assert_eq!(std::format!("{signed:?}"), "-255");
