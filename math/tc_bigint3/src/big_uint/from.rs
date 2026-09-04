@@ -1,7 +1,6 @@
 //! Conversions for [`BigUint`].
 
 use alloc::vec::Vec;
-use core::str::FromStr;
 
 use crate::traits::{FromPrimitive, ToPrimitive};
 use crate::{BigInt, BigUint, ConversionError, FixedBigUint, Limb};
@@ -19,14 +18,6 @@ macro_rules! impl_from_unsigned {
 }
 
 impl_from_unsigned!(u8, u16, u32, u64, u128, usize);
-
-impl FromStr for BigUint {
-    type Err = crate::ParseBigIntError;
-
-    fn from_str(value: &str) -> Result<Self, Self::Err> {
-        Self::from_str_radix(value, 10)
-    }
-}
 
 impl From<&[u8]> for BigUint {
     fn from(value: &[u8]) -> Self {

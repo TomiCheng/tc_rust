@@ -167,6 +167,11 @@ sliding windows and Montgomery multiplication for odd moduli; even moduli use a
 division-reduction fallback. Both the allocating and fixed-width paths use
 these implementations, while the fixed-width path remains allocation-free.
 
+Integer square root is intentionally not part of the current contract. Bouncy
+Castle's `BigInteger` does not expose it, and no migrated algorithm currently
+requires it. It can be introduced as a separate operation family when an
+algorithm such as integer factorization has a concrete need for it.
+
 For an arbitrary value, Miller-Rabin runs `ceil(certainty / 2)` rounds, based
 on the standard upper bound of one false-positive chance in four per round.
 During probable-prime generation, candidates are uniformly random, so the
