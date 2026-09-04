@@ -53,9 +53,6 @@ pub(crate) fn mul(lhs: &[Limb], rhs: &[Limb]) -> Vec<Limb> {
         return Vec::new();
     }
 
-    if core::ptr::eq(lhs, rhs) {
-        return square(lhs);
-    }
     if let Some(shift) = power_of_two_shift(lhs) {
         return shl(rhs, shift);
     }
@@ -727,7 +724,7 @@ mod tests {
 
     #[test]
     fn sliding_window_modular_power_matches_binary_reference_at_every_threshold() {
-        type Wide = [Limb; 8];
+        type Wide = [Limb; 512 / Word::BITS as usize];
 
         fn reference(base: &Wide, exponent: &Wide, modulus: &Wide) -> Wide {
             let mut result = fixed_one_mod(modulus);
@@ -751,10 +748,11 @@ mod tests {
         assert_eq!(exponentiation_window(141), 4);
         assert_eq!(exponentiation_window(451), 5);
 
-        let base = core::array::from_fn(|index| if index == 0 { Limb(7) } else { Limb(0) });
-        let modulus = core::array::from_fn(|index| if index == 0 { Limb(101) } else { Limb(0) });
+        let base: Wide = core::array::from_fn(|index| if index == 0 { Limb(7) } else { Limb(0) });
+        let modulus: Wide =
+            core::array::from_fn(|index| if index == 0 { Limb(101) } else { Limb(0) });
         for bits in [1_usize, 8, 37, 141, 451] {
-            let mut exponent = [Limb(0); 8];
+            let mut exponent: Wide = [Limb(0); 512 / Word::BITS as usize];
             exponent[(bits - 1) / Word::BITS as usize].0 |=
                 (1 as Word) << ((bits - 1) % Word::BITS as usize);
             exponent[0].0 |= 0b1011;

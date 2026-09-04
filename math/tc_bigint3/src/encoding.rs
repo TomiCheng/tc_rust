@@ -115,6 +115,105 @@ pub(crate) fn signed_to_le_u64(words: &[Limb]) -> Vec<u64> {
 }
 
 #[cfg(feature = "alloc")]
+pub(crate) fn write_unsigned_le_bytes(
+    words: &[Limb],
+    output: &mut [u8],
+) -> Result<usize, ConversionError> {
+    write_unsigned_units(words, 8, output, |value| value as u8)
+}
+
+#[cfg(feature = "alloc")]
+pub(crate) fn write_unsigned_le_u32(
+    words: &[Limb],
+    output: &mut [u32],
+) -> Result<usize, ConversionError> {
+    write_unsigned_units(words, 32, output, |value| value as u32)
+}
+
+#[cfg(feature = "alloc")]
+pub(crate) fn write_unsigned_le_u64(
+    words: &[Limb],
+    output: &mut [u64],
+) -> Result<usize, ConversionError> {
+    write_unsigned_units(words, 64, output, |value| value)
+}
+
+#[cfg(feature = "alloc")]
+pub(crate) fn write_signed_le_bytes(
+    words: &[Limb],
+    output: &mut [u8],
+) -> Result<usize, ConversionError> {
+    write_signed_units(words, 8, output, |value| value as u8)
+}
+
+#[cfg(feature = "alloc")]
+pub(crate) fn write_signed_le_u32(
+    words: &[Limb],
+    output: &mut [u32],
+) -> Result<usize, ConversionError> {
+    write_signed_units(words, 32, output, |value| value as u32)
+}
+
+#[cfg(feature = "alloc")]
+pub(crate) fn write_signed_le_u64(
+    words: &[Limb],
+    output: &mut [u64],
+) -> Result<usize, ConversionError> {
+    write_signed_units(words, 64, output, |value| value)
+}
+
+#[cfg(feature = "alloc")]
+fn write_unsigned_units<T>(
+    words: &[Limb],
+    unit_bits: usize,
+    output: &mut [T],
+    convert: impl Fn(u64) -> T,
+) -> Result<usize, ConversionError> {
+    let len = crate::arithmetic::bit_len(words).div_ceil(unit_bits).max(1);
+    if output.len() < len {
+        return Err(ConversionError::BufferTooSmall);
+    }
+    for (index, item) in output[..len].iter_mut().enumerate() {
+        *item = convert(extract_unit(words, index, unit_bits, 0));
+    }
+    Ok(len)
+}
+
+#[cfg(feature = "alloc")]
+fn write_signed_units<T>(
+    words: &[Limb],
+    unit_bits: usize,
+    output: &mut [T],
+    convert: impl Fn(u64) -> T,
+) -> Result<usize, ConversionError> {
+    let negative = is_negative(words);
+    let extension = if negative { Word::MAX } else { 0 };
+    let mut len = if words.is_empty() {
+        1
+    } else {
+        (words.len() * Word::BITS as usize).div_ceil(unit_bits)
+    };
+    let unit_max = unit_mask(unit_bits);
+    while len > 1 {
+        let high = extract_unit(words, len - 1, unit_bits, extension);
+        let next = extract_unit(words, len - 2, unit_bits, extension);
+        let next_negative = next >> (unit_bits - 1) != 0;
+        if (high == 0 && !next_negative) || (high == unit_max && next_negative) {
+            len -= 1;
+        } else {
+            break;
+        }
+    }
+    if output.len() < len {
+        return Err(ConversionError::BufferTooSmall);
+    }
+    for (index, item) in output[..len].iter_mut().enumerate() {
+        *item = convert(extract_unit(words, index, unit_bits, extension));
+    }
+    Ok(len)
+}
+
+#[cfg(feature = "alloc")]
 fn encode_unsigned(words: &[Limb], unit_bits: usize) -> Vec<u64> {
     let bits = crate::arithmetic::bit_len(words);
     let len = bits.div_ceil(unit_bits).max(1);

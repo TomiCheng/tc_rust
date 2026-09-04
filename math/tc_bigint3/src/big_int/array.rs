@@ -135,7 +135,7 @@ impl BigInt {
     /// assert_eq!(output, [0xfe]);
     /// ```
     pub fn write_le_bytes(&self, output: &mut [u8]) -> Result<usize, ConversionError> {
-        write_output(&self.to_le_bytes(), output)
+        encoding::write_signed_le_bytes(&self.limbs, output)
     }
 
     /// Writes canonical signed little-endian 32-bit words into `output`.
@@ -150,7 +150,7 @@ impl BigInt {
     /// assert_eq!(output, [u32::MAX - 1]);
     /// ```
     pub fn write_le_u32(&self, output: &mut [u32]) -> Result<usize, ConversionError> {
-        write_output(&self.to_le_u32(), output)
+        encoding::write_signed_le_u32(&self.limbs, output)
     }
 
     /// Writes canonical signed little-endian 64-bit words into `output`.
@@ -165,7 +165,7 @@ impl BigInt {
     /// assert_eq!(output, [u64::MAX - 1]);
     /// ```
     pub fn write_le_u64(&self, output: &mut [u64]) -> Result<usize, ConversionError> {
-        write_output(&self.to_le_u64(), output)
+        encoding::write_signed_le_u64(&self.limbs, output)
     }
 }
 
@@ -219,12 +219,4 @@ impl ArrayEncoding for BigInt {
     fn to_le_u64(&self) -> Vec<u64> {
         BigInt::to_le_u64(self)
     }
-}
-
-fn write_output<T: Copy>(values: &[T], output: &mut [T]) -> Result<usize, ConversionError> {
-    if output.len() < values.len() {
-        return Err(ConversionError::BufferTooSmall);
-    }
-    output[..values.len()].copy_from_slice(values);
-    Ok(values.len())
 }

@@ -15,8 +15,8 @@ use alloc::vec;
 
 const DEFAULT_CERTAINTY: u32 = 100;
 
-// Trial division removes inexpensive small factors before Miller-Rabin. The
-// probabilistic test remains responsible for all larger factors.
+// Trial division removes inexpensive odd factors before Miller-Rabin. Two is
+// handled separately by the even-value check in `*_is_probable_prime`.
 const SMALL_PRIMES: &[Word] = &[
     3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97,
     101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193,
@@ -91,6 +91,7 @@ fn try_random_fixed_uint<const N: usize, R: TryRng + ?Sized>(
     bit_length: usize,
     rng: &mut R,
 ) -> Result<FixedBigUint<N>, R::Error> {
+    debug_assert!(bit_length <= N.saturating_mul(Word::BITS as usize));
     let mut limbs = [Limb(0); N];
     let used_limbs = bit_length.div_ceil(Word::BITS as usize);
     for word in limbs.iter_mut().take(used_limbs) {
@@ -384,6 +385,20 @@ impl<const N: usize> RandomBits for FixedBigInt<N> {
         bit_length: u32,
         bits_precision: u32,
     ) -> Result<Self, RandomBitsError<R::Error>> {
+        let integer_bits = fixed_bits_precision::<N>();
+        if bits_precision != integer_bits {
+            return Err(RandomBitsError::BitsPrecisionMismatch {
+                bits_precision,
+                integer_bits,
+            });
+        }
+        let positive_bits = integer_bits.saturating_sub(1);
+        if bit_length > positive_bits {
+            return Err(RandomBitsError::BitLengthTooLarge {
+                bit_length,
+                bits_precision: positive_bits,
+            });
+        }
         <FixedBigUint<N> as RandomBits>::try_random_bits_with_precision(
             rng,
             bit_length,
@@ -854,6 +869,15 @@ mod tests {
             U128::try_random_bits(&mut rng, 129),
             Err(RandomBitsError::BitLengthTooLarge { .. })
         ));
+        assert!(matches!(
+            I128::try_random_bits(&mut rng, 128),
+            Err(RandomBitsError::BitLengthTooLarge {
+                bit_length: 128,
+                bits_precision: 127,
+            })
+        ));
+        let signed = I128::random_bits(&mut rng, 127);
+        assert!(!signed.is_negative());
     }
 
     #[test]

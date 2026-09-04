@@ -519,10 +519,10 @@ mod tests {
         Num, NumAssignRef, NumRef, One, OverflowingAdd, Pow, RefNum, RemEuclid, SaturatingAdd,
         Signed, Square, ToPrimitive, WrappingAdd, Zero,
     };
-    use crate::{FixedBigInt, FixedBigUint};
+    use crate::{FixedBigInt, FixedBigUint, Word};
 
-    type I = FixedBigInt<2>;
-    type U = FixedBigUint<2>;
+    type I = FixedBigInt<{ 128 / Word::BITS as usize }>;
+    type U = FixedBigUint<{ 128 / Word::BITS as usize }>;
 
     #[derive(Debug, Eq, PartialEq)]
     struct PrimitiveProbe(i64);

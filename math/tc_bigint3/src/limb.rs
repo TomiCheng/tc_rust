@@ -29,9 +29,12 @@ impl Limb {
         (Self(wide as Word), Self((wide >> Word::BITS) as Word))
     }
 
-    /// Computes `self - rhs - borrow` and returns the low word and borrow word.
+    /// Computes `self - rhs - borrow` and returns the low word and borrow bit.
+    ///
+    /// `borrow` must be either zero or one.
     #[inline(always)]
     pub const fn borrowing_sub(self, rhs: Self, borrow: Self) -> (Self, Self) {
+        assert!(borrow.0 <= 1, "borrow must be zero or one");
         let (first, first_borrow) = self.0.overflowing_sub(rhs.0);
         let (result, second_borrow) = first.overflowing_sub(borrow.0);
         (Self(result), Self((first_borrow || second_borrow) as Word))
@@ -141,5 +144,11 @@ mod tests {
     #[should_panic(expected = "attempted to subtract with underflow")]
     fn sub_panics_on_underflow() {
         let _ = Limb(0) - Limb(1);
+    }
+
+    #[test]
+    #[should_panic(expected = "borrow must be zero or one")]
+    fn borrowing_sub_rejects_a_non_bit_borrow() {
+        let _ = Limb(0).borrowing_sub(Limb(0), Limb(2));
     }
 }
