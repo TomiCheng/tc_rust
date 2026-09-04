@@ -2,7 +2,7 @@
 
 use core::cmp::Ordering;
 use core::hash::{Hash, Hasher};
-use core::ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Neg, Not, Rem, Shl, Shr, Sub};
+use core::ops::{BitAnd, BitOr, BitXor, Div, Mul, Neg, Not, Rem, Shl, Shr, Sub};
 use core::str::FromStr;
 
 use rand_core::Rng;
@@ -20,6 +20,12 @@ use alloc::{
 // 質數相關運算（Miller-Rabin、隨機質數生成）拆到子模組，隔離 `rand` 相依，
 // 讓本檔維持純算術。子模組是本模組的子孫，看得到 sign/magnitude 等私有項目。
 mod prime;
+
+// Addition operator implementation.
+mod add;
+
+// Implement the crate's exponentiation contract separately from its definition.
+mod pow;
 
 // 位元組序列化（be/le × signed/unsigned × from/to/into）同樣拆到子模組縮短本檔；
 // 仍靠父模組的 make_magnitude_* / byte_length* / BufferTooSmall（子孫可見）。
@@ -1399,25 +1405,6 @@ impl BitXor for &BigInteger {
             return self.clone(); // x ^ 0 = x
         }
         bitwise(self, rhs, (self.sign < 0) != (rhs.sign < 0), |a, b| a ^ b)
-    }
-}
-
-impl Add for &BigInteger {
-    type Output = BigInteger;
-
-    fn add(self, rhs: &BigInteger) -> BigInteger {
-        if self.sign == 0 {
-            rhs.clone()
-        } else if rhs.sign == 0 {
-            self.clone()
-        } else if self.sign == rhs.sign {
-            // 同號：magnitude 相加，沿用符號
-            BigInteger::new(self.sign, add_magnitudes(&self.magnitude, &rhs.magnitude))
-        } else if rhs.sign < 0 {
-            self - &(-rhs)
-        } else {
-            rhs - &(-self)
-        }
     }
 }
 
