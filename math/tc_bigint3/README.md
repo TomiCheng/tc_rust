@@ -4,8 +4,10 @@
 
 - `BigUint` and `BigInt` grow using `Vec<Limb>` and require the default `alloc`
   feature.
-- `FixedBigUint<N>` and `FixedBigInt<N>` contain exactly `[Limb; N]` and never
-  allocate. They remain available with `default-features = false`.
+- `FixedBigUint<N>` and `FixedBigInt<N>` contain exactly `[Limb; N]`; their
+  arithmetic and caller-buffer encodings never allocate. They remain available
+  with `default-features = false`. The optional `to_str_radix` convenience
+  method returns a `String` and therefore requires `alloc`.
 
 The default features are `alloc` and `rand_core`. Use
 `default-features = false, features = ["rand_core"]` for fixed-width random and
@@ -68,6 +70,53 @@ assert_eq!(words, [u64::MAX - 1, u64::MAX]);
 For signed types, `from_le_*` and `write_le_*` use two's-complement data.
 Explicit `from_unsigned_le_*` constructors are available when a positive
 magnitude must be converted into a signed type.
+
+## Checked arithmetic, formatting, and conversions
+
+Fixed-width arithmetic follows primitive-integer conventions. The ordinary
+operators panic on overflow in every build profile. The `Checked*`,
+`Overflowing*`, `Wrapping*`, and `Saturating*` traits make the desired behavior
+explicit. Division and remainder return `None` for a zero divisor; signed
+fixed-width division also rejects `MIN / -1`.
+
+`FixedBigUint::mul_wide` and `square_wide` return the full double-width result
+as `(low, high)` halves. A tuple is used because stable Rust cannot yet express
+`[Limb; N * 2]` for arbitrary const-generic `N`. The two halves are fixed-size
+and allocation-free.
+
+All four integer types implement decimal `FromStr`, `Display`, numeric `Debug`,
+`Binary`, `Octal`, `LowerHex`, and `UpperHex`. Fixed-width formatting itself is
+allocation-free. Signed formatting uses a leading minus sign and magnitude,
+including for hexadecimal output.
+
+```rust
+use tc_bigint3::{
+    Bounded, CheckedMul, ConversionError, FixedBigInt, FixedBigUint,
+    OverflowingMul, Word,
+};
+
+type U128 = FixedBigUint<{ 128 / Word::BITS as usize }>;
+type I128 = FixedBigInt<{ 128 / Word::BITS as usize }>;
+
+let value: U128 = "255".parse().unwrap();
+assert_eq!(format!("{value:#06x}"), "0x00ff");
+assert_eq!(format!("{:?}", I128::from(-42_i8)), "-42");
+
+let max = U128::MAX;
+assert_eq!(CheckedMul::checked_mul(&max, &U128::from(2_u8)), None);
+assert!(OverflowingMul::overflowing_mul(&max, &U128::from(2_u8)).1);
+let (_low, high) = max.mul_wide(&U128::from(2_u8));
+assert_eq!(high, U128::from(1_u8));
+assert_eq!(<U128 as Bounded>::MIN, U128::zero());
+
+let signed = I128::from(-1_i8);
+assert_eq!(
+    U128::try_from(signed),
+    Err(ConversionError::NegativeValue),
+);
+let wider = FixedBigUint::<4>::try_from(&value).unwrap();
+assert_eq!(wider, FixedBigUint::from(255_u16));
+```
 
 ## Random values and probable primes
 

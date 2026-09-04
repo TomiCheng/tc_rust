@@ -7,6 +7,9 @@ use crate::{FixedBigUint, Limb, WideWord, Word, arithmetic};
 
 impl<const N: usize> FixedBigUint<N> {
     /// Returns `self * self`.
+    ///
+    /// This panics if the square does not fit. Use [`Self::checked_mul`] to
+    /// detect overflow or [`Self::square_wide`] to retain the full product.
     pub fn square(&self) -> Self {
         *self * *self
     }
@@ -50,6 +53,14 @@ impl<const N: usize> FixedBigUint<N> {
     }
 
     /// Returns the full double-width square as `(low, high)` halves.
+    ///
+    /// ```
+    /// use tc_bigint3::FixedBigUint;
+    ///
+    /// type U = FixedBigUint<1>;
+    /// let square = U::max_value().square_wide();
+    /// assert_eq!(square, U::max_value().mul_wide(&U::max_value()));
+    /// ```
     pub fn square_wide(&self) -> (Self, Self) {
         self.mul_wide(self)
     }
