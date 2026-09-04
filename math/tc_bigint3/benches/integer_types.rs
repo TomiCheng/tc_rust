@@ -1,0 +1,216 @@
+//! Compares equivalent operations across all four integer representations.
+//!
+//! Run with: `cargo bench -p tc_bigint3 --bench integer_types`
+
+use criterion::measurement::WallTime;
+use criterion::{BenchmarkGroup, Criterion, criterion_group, criterion_main};
+use std::hint::black_box;
+use tc_bigint3::{BigInt, BigUint, I1024, U1024};
+
+struct Values {
+    big_uint: BigUint,
+    big_int: BigInt,
+    fixed_big_uint: U1024,
+    fixed_big_int: I1024,
+}
+
+impl Values {
+    fn from_unsigned_be_bytes(bytes: &[u8]) -> Self {
+        Self {
+            big_uint: BigUint::from_be_bytes(bytes),
+            big_int: BigInt::from_unsigned_be_bytes(bytes),
+            fixed_big_uint: U1024::from_be_bytes(bytes).expect("value fits U1024"),
+            fixed_big_int: I1024::from_unsigned_be_bytes(bytes).expect("value fits I1024"),
+        }
+    }
+}
+
+fn patterned_bytes<const N: usize>(seed: u8, high: u8, odd: bool) -> [u8; N] {
+    let mut bytes = [0_u8; N];
+    for (index, byte) in bytes.iter_mut().enumerate() {
+        *byte = seed
+            .wrapping_add(index as u8)
+            .wrapping_mul(0x9d)
+            .rotate_left((index % 8) as u32);
+    }
+    bytes[0] = high;
+    if odd {
+        bytes[N - 1] |= 1;
+    }
+    bytes
+}
+
+fn bench_binary<T, R>(
+    group: &mut BenchmarkGroup<'_, WallTime>,
+    name: &str,
+    lhs: &T,
+    rhs: &T,
+    mut operation: impl FnMut(&T, &T) -> R,
+) {
+    group.bench_function(name, |b| {
+        b.iter(|| black_box(operation(black_box(lhs), black_box(rhs))))
+    });
+}
+
+fn bench_ternary<T, R>(
+    group: &mut BenchmarkGroup<'_, WallTime>,
+    name: &str,
+    first: &T,
+    second: &T,
+    third: &T,
+    mut operation: impl FnMut(&T, &T, &T) -> R,
+) {
+    group.bench_function(name, |b| {
+        b.iter(|| {
+            black_box(operation(
+                black_box(first),
+                black_box(second),
+                black_box(third),
+            ))
+        })
+    });
+}
+
+fn bench_add(c: &mut Criterion) {
+    let lhs = Values::from_unsigned_be_bytes(&patterned_bytes::<128>(0x31, 0x18, false));
+    let rhs = Values::from_unsigned_be_bytes(&patterned_bytes::<128>(0x79, 0x08, false));
+    let mut group = c.benchmark_group("add/1024-bit");
+
+    bench_binary(
+        &mut group,
+        "BigUint",
+        &lhs.big_uint,
+        &rhs.big_uint,
+        |a, b| a + b,
+    );
+    bench_binary(&mut group, "BigInt", &lhs.big_int, &rhs.big_int, |a, b| {
+        a + b
+    });
+    bench_binary(
+        &mut group,
+        "FixedBigUint",
+        &lhs.fixed_big_uint,
+        &rhs.fixed_big_uint,
+        |a, b| a + b,
+    );
+    bench_binary(
+        &mut group,
+        "FixedBigInt",
+        &lhs.fixed_big_int,
+        &rhs.fixed_big_int,
+        |a, b| a + b,
+    );
+    group.finish();
+}
+
+fn bench_mul(c: &mut Criterion) {
+    let lhs = Values::from_unsigned_be_bytes(&patterned_bytes::<64>(0x43, 0x40, false));
+    let rhs = Values::from_unsigned_be_bytes(&patterned_bytes::<64>(0xa7, 0x20, false));
+    let mut group = c.benchmark_group("mul/512x512-bit");
+
+    bench_binary(
+        &mut group,
+        "BigUint",
+        &lhs.big_uint,
+        &rhs.big_uint,
+        |a, b| a * b,
+    );
+    bench_binary(&mut group, "BigInt", &lhs.big_int, &rhs.big_int, |a, b| {
+        a * b
+    });
+    bench_binary(
+        &mut group,
+        "FixedBigUint",
+        &lhs.fixed_big_uint,
+        &rhs.fixed_big_uint,
+        |a, b| a * b,
+    );
+    bench_binary(
+        &mut group,
+        "FixedBigInt",
+        &lhs.fixed_big_int,
+        &rhs.fixed_big_int,
+        |a, b| a * b,
+    );
+    group.finish();
+}
+
+fn bench_div(c: &mut Criterion) {
+    let dividend = Values::from_unsigned_be_bytes(&patterned_bytes::<128>(0x59, 0x30, false));
+    let divisor = Values::from_unsigned_be_bytes(&patterned_bytes::<64>(0x17, 0x40, true));
+    let mut group = c.benchmark_group("div/1024-by-512-bit");
+
+    bench_binary(
+        &mut group,
+        "BigUint",
+        &dividend.big_uint,
+        &divisor.big_uint,
+        |a, b| a / b,
+    );
+    bench_binary(
+        &mut group,
+        "BigInt",
+        &dividend.big_int,
+        &divisor.big_int,
+        |a, b| a / b,
+    );
+    bench_binary(
+        &mut group,
+        "FixedBigUint",
+        &dividend.fixed_big_uint,
+        &divisor.fixed_big_uint,
+        |a, b| a / b,
+    );
+    bench_binary(
+        &mut group,
+        "FixedBigInt",
+        &dividend.fixed_big_int,
+        &divisor.fixed_big_int,
+        |a, b| a / b,
+    );
+    group.finish();
+}
+
+fn bench_mod_pow(c: &mut Criterion) {
+    let base = Values::from_unsigned_be_bytes(&patterned_bytes::<128>(0x83, 0x20, false));
+    let exponent = Values::from_unsigned_be_bytes(&patterned_bytes::<32>(0x2d, 0x40, false));
+    let modulus = Values::from_unsigned_be_bytes(&patterned_bytes::<128>(0xc1, 0x70, true));
+    let mut group = c.benchmark_group("mod_pow/1024-bit-modulus-256-bit-exponent");
+
+    bench_ternary(
+        &mut group,
+        "BigUint",
+        &base.big_uint,
+        &exponent.big_uint,
+        &modulus.big_uint,
+        |a, e, m| a.mod_pow(e, m),
+    );
+    bench_ternary(
+        &mut group,
+        "BigInt",
+        &base.big_int,
+        &exponent.big_int,
+        &modulus.big_int,
+        |a, e, m| a.mod_pow(e, m),
+    );
+    bench_ternary(
+        &mut group,
+        "FixedBigUint",
+        &base.fixed_big_uint,
+        &exponent.fixed_big_uint,
+        &modulus.fixed_big_uint,
+        |a, e, m| a.mod_pow(e, m),
+    );
+    bench_ternary(
+        &mut group,
+        "FixedBigInt",
+        &base.fixed_big_int,
+        &exponent.fixed_big_int,
+        &modulus.fixed_big_int,
+        |a, e, m| a.mod_pow(e, m),
+    );
+    group.finish();
+}
+
+criterion_group!(benches, bench_add, bench_mul, bench_div, bench_mod_pow);
+criterion_main!(benches);

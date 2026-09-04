@@ -13,3 +13,11 @@ rand_core = ["dep:rand_core"]
 
 [dependencies]
 rand_core = { workspace = true, optional = true }
+
+[dev-dependencies]
+criterion = { workspace = true }
+
+[[bench]]
+name = "integer_types"
+harness = false
+required-features = ["alloc"]

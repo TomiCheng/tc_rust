@@ -308,3 +308,14 @@ assert_eq!(
 );
 # }
 ```
+
+## Benchmarks
+
+The `integer_types` benchmark compares the same positive operands across
+`BigUint`, `BigInt`, `FixedBigUint`, and `FixedBigInt`. It covers 1024-bit
+addition, 512-by-512-bit multiplication, 1024-by-512-bit division, and modular
+exponentiation with a 1024-bit modulus:
+
+```text
+cargo bench -p tc_bigint3 --bench integer_types
+```
