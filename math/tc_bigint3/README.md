@@ -14,8 +14,9 @@ The default features are `alloc` and `rand_core`. Use
 prime operations without an allocator, or disable both features for fixed-width
 arithmetic only.
 
-Signed values use two's complement. Limb index zero and external slice index
-zero are always the least-significant unit.
+Signed values use two's complement. Limb index zero is always the
+least-significant limb. External slices explicitly select little-endian or
+big-endian order through their method names.
 
 The crate defines its own numeric traits in `traits.rs`; it does not depend on
 `num-traits`, and the local traits are not type-compatible with
@@ -47,11 +48,14 @@ assert_eq!(mod_pow(&three, &BigUint::from(4_u8), &seven), BigUint::from(4_u8));
 # }
 ```
 
-## Little-endian conversion
+## Array conversion
 
-All four types accept `[u8]`, `[u32]`, and `[u64]` slices. Variable-width
-types return canonical `Vec` encodings; fixed-width types write their complete
-width into caller-owned buffers.
+All four types accept little-endian and big-endian `[u8]`, `[u32]`, and `[u64]`
+slices. Variable-width signed encodings are canonical two's complement.
+Fixed-width signed writers retain the complete fixed width, while the
+`write_unsigned_*` family emits the shortest absolute magnitude. Every writer
+has a matching `*_length()` query, so caller-owned storage can be sized without
+first allocating a temporary `Vec`.
 
 ```rust
 use tc_bigint3::{FixedBigInt, ToPrimitive, Word};
@@ -68,8 +72,25 @@ assert_eq!(words, [u64::MAX - 1, u64::MAX]);
 ```
 
 For signed types, `from_le_*` and `write_le_*` use two's-complement data.
-Explicit `from_unsigned_le_*` constructors are available when a positive
-magnitude must be converted into a signed type.
+The corresponding `from_be_*` and `write_be_*` methods use big-endian order.
+Explicit `from_unsigned_*` constructors and `to_unsigned_*` or
+`write_unsigned_*` encoders operate on a positive absolute magnitude instead
+of a signed representation.
+
+```rust
+# #[cfg(feature = "alloc")]
+# {
+use tc_bigint3::BigInt;
+
+let value = BigInt::from(-129_i16);
+assert_eq!(value.to_be_bytes(), [0xff, 0x7f]);
+assert_eq!(value.to_unsigned_be_bytes(), [0x81]);
+
+let mut modulus = [0_u8; 1];
+assert_eq!(modulus.len(), value.byte_length_unsigned());
+assert_eq!(value.write_unsigned_be_bytes(&mut modulus), Ok(1));
+# }
+```
 
 ## Checked arithmetic, formatting, and conversions
 

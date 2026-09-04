@@ -1,9 +1,15 @@
-//! Conversion between little-endian limbs and little-endian external units.
+//! Conversion between little-endian limbs and external units.
 
 use crate::{ConversionError, Limb, Word};
 
 #[cfg(feature = "alloc")]
 use alloc::{vec, vec::Vec};
+
+#[derive(Clone, Copy)]
+enum Endian {
+    Little,
+    Big,
+}
 
 #[cfg(feature = "alloc")]
 pub(crate) fn from_le_bytes(input: &[u8], signed: bool) -> Vec<Limb> {
@@ -28,6 +34,31 @@ pub(crate) fn from_le_u32(input: &[u32], signed: bool) -> Vec<Limb> {
 #[cfg(feature = "alloc")]
 pub(crate) fn from_le_u64(input: &[u64], signed: bool) -> Vec<Limb> {
     decode_units(input.iter().copied(), input.len(), 64, signed)
+}
+
+#[cfg(feature = "alloc")]
+pub(crate) fn from_be_bytes(input: &[u8], signed: bool) -> Vec<Limb> {
+    decode_units(
+        input.iter().rev().map(|value| *value as u64),
+        input.len(),
+        8,
+        signed,
+    )
+}
+
+#[cfg(feature = "alloc")]
+pub(crate) fn from_be_u32(input: &[u32], signed: bool) -> Vec<Limb> {
+    decode_units(
+        input.iter().rev().map(|value| *value as u64),
+        input.len(),
+        32,
+        signed,
+    )
+}
+
+#[cfg(feature = "alloc")]
+pub(crate) fn from_be_u64(input: &[u64], signed: bool) -> Vec<Limb> {
+    decode_units(input.iter().rev().copied(), input.len(), 64, signed)
 }
 
 #[cfg(feature = "alloc")]
@@ -74,7 +105,7 @@ fn decode_units(
 
 #[cfg(feature = "alloc")]
 pub(crate) fn unsigned_to_le_bytes(words: &[Limb]) -> Vec<u8> {
-    encode_unsigned(words, 8)
+    encode_magnitude(words, 8, false, Endian::Little)
         .into_iter()
         .map(|value| value as u8)
         .collect()
@@ -82,7 +113,7 @@ pub(crate) fn unsigned_to_le_bytes(words: &[Limb]) -> Vec<u8> {
 
 #[cfg(feature = "alloc")]
 pub(crate) fn unsigned_to_le_u32(words: &[Limb]) -> Vec<u32> {
-    encode_unsigned(words, 32)
+    encode_magnitude(words, 32, false, Endian::Little)
         .into_iter()
         .map(|value| value as u32)
         .collect()
@@ -90,12 +121,75 @@ pub(crate) fn unsigned_to_le_u32(words: &[Limb]) -> Vec<u32> {
 
 #[cfg(feature = "alloc")]
 pub(crate) fn unsigned_to_le_u64(words: &[Limb]) -> Vec<u64> {
-    encode_unsigned(words, 64)
+    encode_magnitude(words, 64, false, Endian::Little)
+}
+
+#[cfg(feature = "alloc")]
+pub(crate) fn unsigned_to_be_bytes(words: &[Limb]) -> Vec<u8> {
+    encode_magnitude(words, 8, false, Endian::Big)
+        .into_iter()
+        .map(|value| value as u8)
+        .collect()
+}
+
+#[cfg(feature = "alloc")]
+pub(crate) fn unsigned_to_be_u32(words: &[Limb]) -> Vec<u32> {
+    encode_magnitude(words, 32, false, Endian::Big)
+        .into_iter()
+        .map(|value| value as u32)
+        .collect()
+}
+
+#[cfg(feature = "alloc")]
+pub(crate) fn unsigned_to_be_u64(words: &[Limb]) -> Vec<u64> {
+    encode_magnitude(words, 64, false, Endian::Big)
+}
+
+#[cfg(feature = "alloc")]
+pub(crate) fn magnitude_to_le_bytes(words: &[Limb]) -> Vec<u8> {
+    encode_magnitude(words, 8, true, Endian::Little)
+        .into_iter()
+        .map(|value| value as u8)
+        .collect()
+}
+
+#[cfg(feature = "alloc")]
+pub(crate) fn magnitude_to_le_u32(words: &[Limb]) -> Vec<u32> {
+    encode_magnitude(words, 32, true, Endian::Little)
+        .into_iter()
+        .map(|value| value as u32)
+        .collect()
+}
+
+#[cfg(feature = "alloc")]
+pub(crate) fn magnitude_to_le_u64(words: &[Limb]) -> Vec<u64> {
+    encode_magnitude(words, 64, true, Endian::Little)
+}
+
+#[cfg(feature = "alloc")]
+pub(crate) fn magnitude_to_be_bytes(words: &[Limb]) -> Vec<u8> {
+    encode_magnitude(words, 8, true, Endian::Big)
+        .into_iter()
+        .map(|value| value as u8)
+        .collect()
+}
+
+#[cfg(feature = "alloc")]
+pub(crate) fn magnitude_to_be_u32(words: &[Limb]) -> Vec<u32> {
+    encode_magnitude(words, 32, true, Endian::Big)
+        .into_iter()
+        .map(|value| value as u32)
+        .collect()
+}
+
+#[cfg(feature = "alloc")]
+pub(crate) fn magnitude_to_be_u64(words: &[Limb]) -> Vec<u64> {
+    encode_magnitude(words, 64, true, Endian::Big)
 }
 
 #[cfg(feature = "alloc")]
 pub(crate) fn signed_to_le_bytes(words: &[Limb]) -> Vec<u8> {
-    encode_signed(words, 8)
+    encode_signed(words, 8, Endian::Little)
         .into_iter()
         .map(|value| value as u8)
         .collect()
@@ -103,7 +197,7 @@ pub(crate) fn signed_to_le_bytes(words: &[Limb]) -> Vec<u8> {
 
 #[cfg(feature = "alloc")]
 pub(crate) fn signed_to_le_u32(words: &[Limb]) -> Vec<u32> {
-    encode_signed(words, 32)
+    encode_signed(words, 32, Endian::Little)
         .into_iter()
         .map(|value| value as u32)
         .collect()
@@ -111,7 +205,28 @@ pub(crate) fn signed_to_le_u32(words: &[Limb]) -> Vec<u32> {
 
 #[cfg(feature = "alloc")]
 pub(crate) fn signed_to_le_u64(words: &[Limb]) -> Vec<u64> {
-    encode_signed(words, 64)
+    encode_signed(words, 64, Endian::Little)
+}
+
+#[cfg(feature = "alloc")]
+pub(crate) fn signed_to_be_bytes(words: &[Limb]) -> Vec<u8> {
+    encode_signed(words, 8, Endian::Big)
+        .into_iter()
+        .map(|value| value as u8)
+        .collect()
+}
+
+#[cfg(feature = "alloc")]
+pub(crate) fn signed_to_be_u32(words: &[Limb]) -> Vec<u32> {
+    encode_signed(words, 32, Endian::Big)
+        .into_iter()
+        .map(|value| value as u32)
+        .collect()
+}
+
+#[cfg(feature = "alloc")]
+pub(crate) fn signed_to_be_u64(words: &[Limb]) -> Vec<u64> {
+    encode_signed(words, 64, Endian::Big)
 }
 
 #[cfg(feature = "alloc")]
@@ -119,7 +234,7 @@ pub(crate) fn write_unsigned_le_bytes(
     words: &[Limb],
     output: &mut [u8],
 ) -> Result<usize, ConversionError> {
-    write_unsigned_units(words, 8, output, |value| value as u8)
+    write_magnitude_units(words, 8, false, Endian::Little, output, |value| value as u8)
 }
 
 #[cfg(feature = "alloc")]
@@ -127,7 +242,9 @@ pub(crate) fn write_unsigned_le_u32(
     words: &[Limb],
     output: &mut [u32],
 ) -> Result<usize, ConversionError> {
-    write_unsigned_units(words, 32, output, |value| value as u32)
+    write_magnitude_units(words, 32, false, Endian::Little, output, |value| {
+        value as u32
+    })
 }
 
 #[cfg(feature = "alloc")]
@@ -135,7 +252,81 @@ pub(crate) fn write_unsigned_le_u64(
     words: &[Limb],
     output: &mut [u64],
 ) -> Result<usize, ConversionError> {
-    write_unsigned_units(words, 64, output, |value| value)
+    write_magnitude_units(words, 64, false, Endian::Little, output, |value| value)
+}
+
+#[cfg(feature = "alloc")]
+pub(crate) fn write_unsigned_be_bytes(
+    words: &[Limb],
+    output: &mut [u8],
+) -> Result<usize, ConversionError> {
+    write_magnitude_units(words, 8, false, Endian::Big, output, |value| value as u8)
+}
+
+#[cfg(feature = "alloc")]
+pub(crate) fn write_unsigned_be_u32(
+    words: &[Limb],
+    output: &mut [u32],
+) -> Result<usize, ConversionError> {
+    write_magnitude_units(words, 32, false, Endian::Big, output, |value| value as u32)
+}
+
+#[cfg(feature = "alloc")]
+pub(crate) fn write_unsigned_be_u64(
+    words: &[Limb],
+    output: &mut [u64],
+) -> Result<usize, ConversionError> {
+    write_magnitude_units(words, 64, false, Endian::Big, output, |value| value)
+}
+
+#[cfg(feature = "alloc")]
+pub(crate) fn write_magnitude_le_bytes(
+    words: &[Limb],
+    output: &mut [u8],
+) -> Result<usize, ConversionError> {
+    write_magnitude_units(words, 8, true, Endian::Little, output, |value| value as u8)
+}
+
+#[cfg(feature = "alloc")]
+pub(crate) fn write_magnitude_le_u32(
+    words: &[Limb],
+    output: &mut [u32],
+) -> Result<usize, ConversionError> {
+    write_magnitude_units(words, 32, true, Endian::Little, output, |value| {
+        value as u32
+    })
+}
+
+#[cfg(feature = "alloc")]
+pub(crate) fn write_magnitude_le_u64(
+    words: &[Limb],
+    output: &mut [u64],
+) -> Result<usize, ConversionError> {
+    write_magnitude_units(words, 64, true, Endian::Little, output, |value| value)
+}
+
+#[cfg(feature = "alloc")]
+pub(crate) fn write_magnitude_be_bytes(
+    words: &[Limb],
+    output: &mut [u8],
+) -> Result<usize, ConversionError> {
+    write_magnitude_units(words, 8, true, Endian::Big, output, |value| value as u8)
+}
+
+#[cfg(feature = "alloc")]
+pub(crate) fn write_magnitude_be_u32(
+    words: &[Limb],
+    output: &mut [u32],
+) -> Result<usize, ConversionError> {
+    write_magnitude_units(words, 32, true, Endian::Big, output, |value| value as u32)
+}
+
+#[cfg(feature = "alloc")]
+pub(crate) fn write_magnitude_be_u64(
+    words: &[Limb],
+    output: &mut [u64],
+) -> Result<usize, ConversionError> {
+    write_magnitude_units(words, 64, true, Endian::Big, output, |value| value)
 }
 
 #[cfg(feature = "alloc")]
@@ -143,7 +334,7 @@ pub(crate) fn write_signed_le_bytes(
     words: &[Limb],
     output: &mut [u8],
 ) -> Result<usize, ConversionError> {
-    write_signed_units(words, 8, output, |value| value as u8)
+    write_signed_units(words, 8, Endian::Little, output, |value| value as u8)
 }
 
 #[cfg(feature = "alloc")]
@@ -151,7 +342,7 @@ pub(crate) fn write_signed_le_u32(
     words: &[Limb],
     output: &mut [u32],
 ) -> Result<usize, ConversionError> {
-    write_signed_units(words, 32, output, |value| value as u32)
+    write_signed_units(words, 32, Endian::Little, output, |value| value as u32)
 }
 
 #[cfg(feature = "alloc")]
@@ -159,40 +350,81 @@ pub(crate) fn write_signed_le_u64(
     words: &[Limb],
     output: &mut [u64],
 ) -> Result<usize, ConversionError> {
-    write_signed_units(words, 64, output, |value| value)
+    write_signed_units(words, 64, Endian::Little, output, |value| value)
 }
 
 #[cfg(feature = "alloc")]
-fn write_unsigned_units<T>(
+pub(crate) fn write_signed_be_bytes(
     words: &[Limb],
-    unit_bits: usize,
-    output: &mut [T],
-    convert: impl Fn(u64) -> T,
+    output: &mut [u8],
 ) -> Result<usize, ConversionError> {
-    let len = crate::arithmetic::bit_len(words).div_ceil(unit_bits).max(1);
-    if output.len() < len {
-        return Err(ConversionError::BufferTooSmall);
-    }
-    for (index, item) in output[..len].iter_mut().enumerate() {
-        *item = convert(extract_unit(words, index, unit_bits, 0));
-    }
-    Ok(len)
+    write_signed_units(words, 8, Endian::Big, output, |value| value as u8)
 }
 
 #[cfg(feature = "alloc")]
-fn write_signed_units<T>(
+pub(crate) fn write_signed_be_u32(
+    words: &[Limb],
+    output: &mut [u32],
+) -> Result<usize, ConversionError> {
+    write_signed_units(words, 32, Endian::Big, output, |value| value as u32)
+}
+
+#[cfg(feature = "alloc")]
+pub(crate) fn write_signed_be_u64(
+    words: &[Limb],
+    output: &mut [u64],
+) -> Result<usize, ConversionError> {
+    write_signed_units(words, 64, Endian::Big, output, |value| value)
+}
+
+#[cfg(feature = "alloc")]
+fn encode_magnitude(
     words: &[Limb],
     unit_bits: usize,
-    output: &mut [T],
-    convert: impl Fn(u64) -> T,
-) -> Result<usize, ConversionError> {
+    signed_source: bool,
+    endian: Endian,
+) -> Vec<u64> {
+    let mut result = vec![0; magnitude_len(words, unit_bits, signed_source)];
+    write_magnitude_units(
+        words,
+        unit_bits,
+        signed_source,
+        endian,
+        &mut result,
+        |value| value,
+    )
+    .expect("output has the exact magnitude length");
+    result
+}
+
+#[cfg(feature = "alloc")]
+fn encode_signed(words: &[Limb], unit_bits: usize, endian: Endian) -> Vec<u64> {
+    let mut result = vec![0; signed_len(words, unit_bits)];
+    write_signed_units(words, unit_bits, endian, &mut result, |value| value)
+        .expect("output has the exact signed length");
+    result
+}
+
+#[cfg(feature = "alloc")]
+pub(crate) fn unsigned_len(words: &[Limb], unit_bits: usize) -> usize {
+    unsigned_bit_len(words).div_ceil(unit_bits).max(1)
+}
+
+pub(crate) fn magnitude_len(words: &[Limb], unit_bits: usize, signed_source: bool) -> usize {
+    magnitude_bit_len(words, signed_source)
+        .div_ceil(unit_bits)
+        .max(1)
+}
+
+#[cfg(feature = "alloc")]
+pub(crate) fn signed_len(words: &[Limb], unit_bits: usize) -> usize {
+    if words.is_empty() {
+        return 1;
+    }
+
     let negative = is_negative(words);
     let extension = if negative { Word::MAX } else { 0 };
-    let mut len = if words.is_empty() {
-        1
-    } else {
-        (words.len() * Word::BITS as usize).div_ceil(unit_bits)
-    };
+    let mut len = (words.len() * Word::BITS as usize).div_ceil(unit_bits);
     let unit_max = unit_mask(unit_bits);
     while len > 1 {
         let high = extract_unit(words, len - 1, unit_bits, extension);
@@ -204,49 +436,93 @@ fn write_signed_units<T>(
             break;
         }
     }
+    len
+}
+
+fn magnitude_bit_len(words: &[Limb], signed_source: bool) -> usize {
+    if !signed_source || !is_negative(words) {
+        return unsigned_bit_len(words);
+    }
+
+    let mut carry = true;
+    let mut highest = None;
+    for (index, word) in words.iter().enumerate() {
+        let (magnitude, overflow) = (!word.0).overflowing_add(Word::from(carry));
+        carry = overflow;
+        if magnitude != 0 {
+            highest = Some((index, magnitude));
+        }
+    }
+    highest.map_or(0, |(index, word)| {
+        index * Word::BITS as usize + (Word::BITS - word.leading_zeros()) as usize
+    })
+}
+
+fn unsigned_bit_len(words: &[Limb]) -> usize {
+    words
+        .iter()
+        .rposition(|word| word.0 != 0)
+        .map_or(0, |index| {
+            index * Word::BITS as usize + (Word::BITS - words[index].0.leading_zeros()) as usize
+        })
+}
+
+fn write_magnitude_units<T>(
+    words: &[Limb],
+    unit_bits: usize,
+    signed_source: bool,
+    endian: Endian,
+    output: &mut [T],
+    convert: impl Fn(u64) -> T,
+) -> Result<usize, ConversionError> {
+    let len = magnitude_len(words, unit_bits, signed_source);
     if output.len() < len {
         return Err(ConversionError::BufferTooSmall);
     }
-    for (index, item) in output[..len].iter_mut().enumerate() {
-        *item = convert(extract_unit(words, index, unit_bits, extension));
+
+    let negative = signed_source && is_negative(words);
+    let extension = if negative { Word::MAX } else { 0 };
+    let mask = unit_mask(unit_bits);
+    let mut carry = u64::from(negative);
+    for source in 0..len {
+        let raw = extract_unit(words, source, unit_bits, extension);
+        let value = if negative {
+            let value = ((!raw) & mask).wrapping_add(carry) & mask;
+            carry = u64::from(carry != 0 && raw == 0);
+            value
+        } else {
+            raw
+        };
+        let target = match endian {
+            Endian::Little => source,
+            Endian::Big => len - 1 - source,
+        };
+        output[target] = convert(value);
     }
     Ok(len)
 }
 
 #[cfg(feature = "alloc")]
-fn encode_unsigned(words: &[Limb], unit_bits: usize) -> Vec<u64> {
-    let bits = crate::arithmetic::bit_len(words);
-    let len = bits.div_ceil(unit_bits).max(1);
-    (0..len)
-        .map(|index| extract_unit(words, index, unit_bits, 0))
-        .collect()
-}
-
-#[cfg(feature = "alloc")]
-fn encode_signed(words: &[Limb], unit_bits: usize) -> Vec<u64> {
-    if words.is_empty() {
-        return vec![0];
+fn write_signed_units<T>(
+    words: &[Limb],
+    unit_bits: usize,
+    endian: Endian,
+    output: &mut [T],
+    convert: impl Fn(u64) -> T,
+) -> Result<usize, ConversionError> {
+    let len = signed_len(words, unit_bits);
+    if output.len() < len {
+        return Err(ConversionError::BufferTooSmall);
     }
-
-    let negative = is_negative(words);
-    let extension = if negative { Word::MAX } else { 0 };
-    let word_bits = Word::BITS as usize;
-    let mut result: Vec<u64> = (0..(words.len() * word_bits).div_ceil(unit_bits))
-        .map(|index| extract_unit(words, index, unit_bits, extension))
-        .collect();
-    let unit_max = unit_mask(unit_bits);
-
-    while result.len() > 1 {
-        let high = result[result.len() - 1];
-        let next = result[result.len() - 2];
-        let next_negative = next >> (unit_bits - 1) != 0;
-        if (high == 0 && !next_negative) || (high == unit_max && next_negative) {
-            result.pop();
-        } else {
-            break;
-        }
+    let extension = if is_negative(words) { Word::MAX } else { 0 };
+    for source in 0..len {
+        let target = match endian {
+            Endian::Little => source,
+            Endian::Big => len - 1 - source,
+        };
+        output[target] = convert(extract_unit(words, source, unit_bits, extension));
     }
-    result
+    Ok(len)
 }
 
 pub(crate) fn fixed_from_le_bytes<const N: usize>(
@@ -268,6 +544,33 @@ pub(crate) fn fixed_from_le_u64<const N: usize>(
     signed: bool,
 ) -> Result<[Limb; N], ConversionError> {
     decode_fixed(input.len(), 64, signed, |index| input[index])
+}
+
+pub(crate) fn fixed_from_be_bytes<const N: usize>(
+    input: &[u8],
+    signed: bool,
+) -> Result<[Limb; N], ConversionError> {
+    decode_fixed(input.len(), 8, signed, |index| {
+        input[input.len() - 1 - index] as u64
+    })
+}
+
+pub(crate) fn fixed_from_be_u32<const N: usize>(
+    input: &[u32],
+    signed: bool,
+) -> Result<[Limb; N], ConversionError> {
+    decode_fixed(input.len(), 32, signed, |index| {
+        input[input.len() - 1 - index] as u64
+    })
+}
+
+pub(crate) fn fixed_from_be_u64<const N: usize>(
+    input: &[u64],
+    signed: bool,
+) -> Result<[Limb; N], ConversionError> {
+    decode_fixed(input.len(), 64, signed, |index| {
+        input[input.len() - 1 - index]
+    })
 }
 
 fn decode_fixed<const N: usize>(
@@ -318,15 +621,9 @@ pub(crate) fn write_fixed_le_bytes<const N: usize>(
     signed: bool,
     output: &mut [u8],
 ) -> Result<usize, ConversionError> {
-    let len = N * Word::BITS as usize / 8;
-    if output.len() < len {
-        return Err(ConversionError::BufferTooSmall);
-    }
-    let extension = signed_extension(words, signed);
-    for (index, item) in output[..len].iter_mut().enumerate() {
-        *item = extract_unit(words, index, 8, extension) as u8;
-    }
-    Ok(len)
+    write_fixed_units(words, signed, 8, Endian::Little, output, |value| {
+        value as u8
+    })
 }
 
 pub(crate) fn write_fixed_le_u32<const N: usize>(
@@ -334,15 +631,9 @@ pub(crate) fn write_fixed_le_u32<const N: usize>(
     signed: bool,
     output: &mut [u32],
 ) -> Result<usize, ConversionError> {
-    let len = (N * Word::BITS as usize).div_ceil(32);
-    if output.len() < len {
-        return Err(ConversionError::BufferTooSmall);
-    }
-    let extension = signed_extension(words, signed);
-    for (index, item) in output[..len].iter_mut().enumerate() {
-        *item = extract_unit(words, index, 32, extension) as u32;
-    }
-    Ok(len)
+    write_fixed_units(words, signed, 32, Endian::Little, output, |value| {
+        value as u32
+    })
 }
 
 pub(crate) fn write_fixed_le_u64<const N: usize>(
@@ -350,13 +641,115 @@ pub(crate) fn write_fixed_le_u64<const N: usize>(
     signed: bool,
     output: &mut [u64],
 ) -> Result<usize, ConversionError> {
-    let len = (N * Word::BITS as usize).div_ceil(64);
+    write_fixed_units(words, signed, 64, Endian::Little, output, |value| value)
+}
+
+pub(crate) fn write_fixed_be_bytes<const N: usize>(
+    words: &[Limb; N],
+    signed: bool,
+    output: &mut [u8],
+) -> Result<usize, ConversionError> {
+    write_fixed_units(words, signed, 8, Endian::Big, output, |value| value as u8)
+}
+
+pub(crate) fn write_fixed_be_u32<const N: usize>(
+    words: &[Limb; N],
+    signed: bool,
+    output: &mut [u32],
+) -> Result<usize, ConversionError> {
+    write_fixed_units(words, signed, 32, Endian::Big, output, |value| value as u32)
+}
+
+pub(crate) fn write_fixed_be_u64<const N: usize>(
+    words: &[Limb; N],
+    signed: bool,
+    output: &mut [u64],
+) -> Result<usize, ConversionError> {
+    write_fixed_units(words, signed, 64, Endian::Big, output, |value| value)
+}
+
+pub(crate) fn write_fixed_magnitude_le_bytes<const N: usize>(
+    words: &[Limb; N],
+    signed_source: bool,
+    output: &mut [u8],
+) -> Result<usize, ConversionError> {
+    write_magnitude_units(words, 8, signed_source, Endian::Little, output, |value| {
+        value as u8
+    })
+}
+
+pub(crate) fn write_fixed_magnitude_le_u32<const N: usize>(
+    words: &[Limb; N],
+    signed_source: bool,
+    output: &mut [u32],
+) -> Result<usize, ConversionError> {
+    write_magnitude_units(words, 32, signed_source, Endian::Little, output, |value| {
+        value as u32
+    })
+}
+
+pub(crate) fn write_fixed_magnitude_le_u64<const N: usize>(
+    words: &[Limb; N],
+    signed_source: bool,
+    output: &mut [u64],
+) -> Result<usize, ConversionError> {
+    write_magnitude_units(words, 64, signed_source, Endian::Little, output, |value| {
+        value
+    })
+}
+
+pub(crate) fn write_fixed_magnitude_be_bytes<const N: usize>(
+    words: &[Limb; N],
+    signed_source: bool,
+    output: &mut [u8],
+) -> Result<usize, ConversionError> {
+    write_magnitude_units(words, 8, signed_source, Endian::Big, output, |value| {
+        value as u8
+    })
+}
+
+pub(crate) fn write_fixed_magnitude_be_u32<const N: usize>(
+    words: &[Limb; N],
+    signed_source: bool,
+    output: &mut [u32],
+) -> Result<usize, ConversionError> {
+    write_magnitude_units(words, 32, signed_source, Endian::Big, output, |value| {
+        value as u32
+    })
+}
+
+pub(crate) fn write_fixed_magnitude_be_u64<const N: usize>(
+    words: &[Limb; N],
+    signed_source: bool,
+    output: &mut [u64],
+) -> Result<usize, ConversionError> {
+    write_magnitude_units(words, 64, signed_source, Endian::Big, output, |value| value)
+}
+
+fn write_fixed_units<const N: usize, T>(
+    words: &[Limb; N],
+    signed: bool,
+    unit_bits: usize,
+    endian: Endian,
+    output: &mut [T],
+    convert: impl Fn(u64) -> T,
+) -> Result<usize, ConversionError> {
+    let len = match unit_bits {
+        8 => N * Word::BITS as usize / 8,
+        32 => (N * Word::BITS as usize).div_ceil(32),
+        64 => (N * Word::BITS as usize).div_ceil(64),
+        _ => unreachable!("external units are u8, u32, or u64"),
+    };
     if output.len() < len {
         return Err(ConversionError::BufferTooSmall);
     }
     let extension = signed_extension(words, signed);
-    for (index, item) in output[..len].iter_mut().enumerate() {
-        *item = extract_unit(words, index, 64, extension);
+    for source in 0..len {
+        let target = match endian {
+            Endian::Little => source,
+            Endian::Big => len - 1 - source,
+        };
+        output[target] = convert(extract_unit(words, source, unit_bits, extension));
     }
     Ok(len)
 }
@@ -410,7 +803,6 @@ pub(crate) fn normalize_signed(words: &mut Vec<Limb>) {
     }
 }
 
-#[cfg(feature = "alloc")]
 pub(crate) fn is_negative(words: &[Limb]) -> bool {
     words
         .last()

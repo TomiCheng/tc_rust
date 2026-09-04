@@ -6,6 +6,27 @@ use crate::traits::{One, Signed, Zero};
 use crate::{BigInt, encoding};
 
 impl BigInt {
+    /// Returns `-1`, `0`, or `1` according to the value's sign.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tc_bigint3::BigInt;
+    ///
+    /// assert_eq!(BigInt::from(-7_i8).sign(), -1);
+    /// assert_eq!(BigInt::default().sign(), 0);
+    /// assert_eq!(BigInt::from(7_u8).sign(), 1);
+    /// ```
+    pub fn sign(&self) -> i32 {
+        if self.is_negative() {
+            -1
+        } else if self.is_zero() {
+            0
+        } else {
+            1
+        }
+    }
+
     /// Returns whether the value is negative.
     pub fn is_negative(&self) -> bool {
         encoding::is_negative(&self.limbs)
@@ -44,5 +65,17 @@ impl Signed for BigInt {
     }
     fn is_negative(&self) -> bool {
         self.is_negative()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn sign_reports_negative_zero_and_positive_values() {
+        assert_eq!(BigInt::from(-1_i8).sign(), -1);
+        assert_eq!(BigInt::zero().sign(), 0);
+        assert_eq!(BigInt::from(1_u8).sign(), 1);
     }
 }
