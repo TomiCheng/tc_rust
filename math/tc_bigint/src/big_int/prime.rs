@@ -7,7 +7,7 @@
 use super::{BigInt, WORD_BITS};
 use rand_core::Rng;
 
-use super::limb::Limb;
+use crate::limb::Limb;
 
 impl BigInt {
     /// Miller-Rabin probabilistic primality test.

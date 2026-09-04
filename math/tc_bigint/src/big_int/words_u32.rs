@@ -15,7 +15,8 @@ use super::{BigInt, BufferTooSmall, WORD_BITS, bit_len};
 
 // no_std 下沒有 std prelude，`vec!` 巨集與 `Vec` 型別需從 alloc 顯式引入；
 // std build 由 prelude 提供，故僅在關閉 std 時引入，避免重複 import 警告。
-use super::limb::{Limb, mag_from_u32_be, mag_to_u32_be};
+use super::platform::{mag_from_u32_be, mag_to_u32_be};
+use crate::limb::Limb;
 #[cfg(not(feature = "std"))]
 use alloc::{vec, vec::Vec};
 

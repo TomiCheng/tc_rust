@@ -12,7 +12,7 @@
 //! the whole word array as a base-2⁶⁴ two's-complement integer (sign = top bit of the
 //! most-significant word).
 
-use super::limb::mag_to_u64_be;
+use super::platform::mag_to_u64_be;
 use super::{BigInt, BufferTooSmall, WORD_BITS, bit_len};
 
 // no_std 下沒有 std prelude，`vec!` 巨集與 `Vec` 型別需從 alloc 顯式引入。

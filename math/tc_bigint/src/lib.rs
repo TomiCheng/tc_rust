@@ -10,7 +10,10 @@
 extern crate alloc;
 
 mod big_int;
+mod big_uint;
+mod limb;
 mod traits;
 
 pub use big_int::{BigInt, BufferTooSmall, ParseBigIntError, TryFromBigIntError};
+pub use big_uint::BigUint;
 pub use traits::{Add, Pow};

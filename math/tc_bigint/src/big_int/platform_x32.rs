@@ -1,9 +1,7 @@
 use alloc::{vec, vec::Vec};
 
 use super::{BigInt, WORD_BITS};
-
-pub(crate) type Limb = u32;
-pub(crate) type DoubleLimb = u64;
+use crate::limb::Limb;
 
 impl BigInt {
     /// Creates a `BigInt` from an unsigned 64-bit value.

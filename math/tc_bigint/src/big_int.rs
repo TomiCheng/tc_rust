@@ -37,11 +37,11 @@ mod words_u32;
 // u64 詞序列化：words_u32 家族的 u64 版（同一組函式，單位換成 64 位元字）。
 mod words_u64;
 
-#[cfg_attr(target_pointer_width = "64", path = "big_int/limb_x64.rs")]
-#[cfg_attr(not(target_pointer_width = "64"), path = "big_int/limb_x32.rs")]
-mod limb;
+#[cfg_attr(target_pointer_width = "64", path = "big_int/platform_x64.rs")]
+#[cfg_attr(not(target_pointer_width = "64"), path = "big_int/platform_x32.rs")]
+mod platform;
 
-use limb::{DoubleLimb, Limb};
+use crate::limb::{DoubleLimb, Limb};
 
 /// 一個 magnitude 字的位元數。集中定義，避免散落的 magic number。
 pub(crate) const WORD_BITS: usize = Limb::BITS as usize;
