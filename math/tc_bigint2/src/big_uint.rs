@@ -4,6 +4,7 @@ use alloc::vec::Vec;
 
 use crate::Limb;
 
+mod add;
 mod boxed;
 mod from;
 

@@ -4,6 +4,8 @@ use core::slice;
 
 use crate::Word;
 
+mod add;
+
 /// A single word of a multi-word integer.
 #[repr(transparent)]
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
