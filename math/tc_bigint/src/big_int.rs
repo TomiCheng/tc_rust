@@ -11,7 +11,6 @@ use rand_core::Rng;
 // std build 由 prelude 提供，故僅在關閉 std 時引入，避免重複 import 警告。
 #[cfg(not(feature = "std"))]
 use alloc::{
-    boxed::Box,
     string::{String, ToString},
     vec,
     vec::Vec,
@@ -123,17 +122,13 @@ impl core::error::Error for TryFromBigIntError {}
 #[derive(Clone, Debug)]
 pub struct BigInt {
     sign: i32,
-    /// 不可變、big-endian、無前導零；不可變型別故用 `Box<[Limb]>` 而非 `Vec<Limb>`。
-    magnitude: Box<[Limb]>,
+    /// Big-endian、無前導零；保留 `Vec` capacity 供後續 owned 運算重用。
+    magnitude: Vec<Limb>,
 }
 
 impl BigInt {
-    // 施工端用 `Vec<Limb>` 傳入，儲存時落地成 `Box<[Limb]>`。
     fn new(sign: i32, magnitude: Vec<Limb>) -> Self {
-        BigInt {
-            sign,
-            magnitude: magnitude.into_boxed_slice(),
-        }
+        BigInt { sign, magnitude }
     }
 
     /// 檢查版建構式（對應 bc-csharp `new BigInteger(sign, mag, checkMag: true)`）：
@@ -190,7 +185,7 @@ impl BigInt {
             self
         } else {
             // 負 → 正：搬移 buffer 重用，僅翻正符號
-            BigInt::new(1, Vec::from(self.magnitude))
+            BigInt::new(1, self.magnitude)
         }
     }
 
@@ -1179,7 +1174,7 @@ impl BigInt {
             return BigInt::new(0, Vec::new());
         }
         // `unsigned_abs` avoids overflow on `i64::MIN`; reuse `from_u64`'s word split.
-        let magnitude = Vec::from(BigInt::from_u64(value.unsigned_abs()).magnitude);
+        let magnitude = BigInt::from_u64(value.unsigned_abs()).magnitude;
         let sign = if value < 0 { -1 } else { 1 };
         BigInt::new(sign, magnitude)
     }
@@ -1198,7 +1193,7 @@ impl BigInt {
             return BigInt::new(0, Vec::new());
         }
         // `unsigned_abs` avoids overflow on `i128::MIN`; reuse `from_u128`'s word split.
-        let magnitude = Vec::from(BigInt::from_u128(value.unsigned_abs()).magnitude);
+        let magnitude = BigInt::from_u128(value.unsigned_abs()).magnitude;
         let sign = if value < 0 { -1 } else { 1 };
         BigInt::new(sign, magnitude)
     }
@@ -1334,9 +1329,7 @@ impl Neg for BigInt {
 
     /// 取負：只翻轉符號，magnitude 長度不變，故直接搬移（重用）buffer。
     fn neg(self) -> BigInt {
-        // `Vec::from` 接手 Box 的配置（O(1)），`new` 再 `into_boxed_slice` 收回（O(1)）；
-        // 全程無新配置。
-        BigInt::new(-self.sign, Vec::from(self.magnitude))
+        BigInt::new(-self.sign, self.magnitude)
     }
 }
 
@@ -1344,7 +1337,7 @@ impl Neg for &BigInt {
     type Output = BigInt;
 
     fn neg(self) -> BigInt {
-        BigInt::new(-self.sign, Vec::from(&*self.magnitude))
+        BigInt::new(-self.sign, self.magnitude.clone())
     }
 }
 
