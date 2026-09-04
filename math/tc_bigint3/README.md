@@ -94,6 +94,18 @@ testing, modular exponentiation, division, and rejection sampling must not be
 treated as side-channel-hardened merely because their contracts resemble
 `crypto-bigint`.
 
+Multi-limb division uses normalized Knuth division. Modular exponentiation uses
+sliding windows and Montgomery multiplication for odd moduli; even moduli use a
+division-reduction fallback. Both the allocating and fixed-width paths use
+these implementations, while the fixed-width path remains allocation-free.
+
+For an arbitrary value, Miller-Rabin runs `ceil(certainty / 2)` rounds, based
+on the standard upper bound of one false-positive chance in four per round.
+During probable-prime generation, candidates are uniformly random, so the
+100-bit default follows Bouncy Castle's size-aware policy: 16 rounds from 256
+bits, 8 rounds from 512 bits, and 4 rounds from 1024 bits. Calling
+`is_probable_prime` directly does not use this reduced random-candidate policy.
+
 ```rust
 # #[cfg(feature = "rand_core")]
 # {
