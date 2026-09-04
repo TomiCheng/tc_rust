@@ -13,6 +13,7 @@ mod big_int;
 mod big_uint;
 mod error;
 mod limb;
+mod magnitude;
 mod traits;
 
 pub use big_int::BigInt;

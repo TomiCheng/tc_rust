@@ -3,12 +3,12 @@
 use core::cmp::Ordering;
 use core::hash::{Hash, Hasher};
 use core::ops::{BitAnd, BitOr, BitXor, Div, Mul, Neg, Not, Rem, Shl, Shr, Sub};
-use core::str::FromStr;
 
 use rand_core::Rng;
 
-use crate::error::{BufferTooSmall, ParseBigIntError, TryFromBigIntError};
+use crate::error::{BufferTooSmall, ParseBigIntError};
 use crate::limb::{WideWord, Word};
+use crate::magnitude::add_in_place;
 
 // no_std 下沒有 std prelude，需從 alloc 顯式引入這些型別／巨集；
 // std build 由 prelude 提供，故僅在關閉 std 時引入，避免重複 import 警告。
@@ -28,6 +28,9 @@ mod add;
 
 // Implement the crate's exponentiation contract separately from its definition.
 mod pow;
+
+// Standard-library conversion traits (`From`, `TryFrom`, and `FromStr`).
+mod from;
 
 // 位元組序列化（be/le × signed/unsigned × from/to/into）同樣拆到子模組縮短本檔；
 // 仍靠父模組的 make_magnitude_* / byte_length* / BufferTooSmall（子孫可見）。
@@ -1402,15 +1405,6 @@ impl Rem for &BigInt {
     }
 }
 
-impl FromStr for BigInt {
-    type Err = ParseBigIntError;
-
-    /// Parses in radix 10（讓 `"123".parse::<BigInt>()` 可用）。
-    fn from_str(s: &str) -> Result<BigInt, ParseBigIntError> {
-        BigInt::from_str_radix(s, 10)
-    }
-}
-
 impl core::fmt::Display for BigInt {
     /// 十進制輸出（委派 `to_str_radix(10)`）；`{}`、`to_string()` 皆走此。
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
@@ -1466,77 +1460,6 @@ impl Shr<u32> for &BigInt {
         BigInt::new(sign, magnitude)
     }
 }
-
-/// 為每個固定寬度整數型別生成無損的 `From<$t> for BigInt`，委派給對應建構函式。
-macro_rules! impl_from_primitive {
-    ($($t:ty => $ctor:ident),* $(,)?) => {
-        $(
-            impl From<$t> for BigInt {
-                /// 無損轉換（固定寬度整數必可表示）。
-                fn from(value: $t) -> Self {
-                    BigInt::$ctor(value)
-                }
-            }
-        )*
-    };
-}
-
-impl_from_primitive! {
-    u8 => from_u8, u16 => from_u16, u32 => from_u32, u64 => from_u64, u128 => from_u128,
-    i8 => from_i8, i16 => from_i16, i32 => from_i32, i64 => from_i64, i128 => from_i128,
-}
-
-/// 為每個無號整數型別生成 `TryFrom<&BigInt>`：負數或超出範圍回 `Err`。
-macro_rules! impl_try_from_big_unsigned {
-    ($($t:ty),* $(,)?) => {
-        $(
-            impl TryFrom<&BigInt> for $t {
-                type Error = TryFromBigIntError;
-
-                fn try_from(value: &BigInt) -> Result<$t, TryFromBigIntError> {
-                    if value.sign() < 0 {
-                        return Err(TryFromBigIntError::new()); // 負數無法轉無號
-                    }
-                    const BYTES: usize = size_of::<$t>();
-                    let n = value.byte_length_unsigned();
-                    if n > BYTES {
-                        return Err(TryFromBigIntError::new()); // 位元組數超出目標
-                    }
-                    // magnitude 位元組右對齊寫進固定寬度 buffer，上方補 0
-                    let mut buf = [0u8; BYTES];
-                    value.to_bytes_be_unsigned_into(&mut buf[BYTES - n..]);
-                    Ok(<$t>::from_be_bytes(buf))
-                }
-            }
-        )*
-    };
-}
-
-/// 為每個有號整數型別生成 `TryFrom<&BigInt>`：超出範圍回 `Err`。
-macro_rules! impl_try_from_big_signed {
-    ($($t:ty),* $(,)?) => {
-        $(
-            impl TryFrom<&BigInt> for $t {
-                type Error = TryFromBigIntError;
-
-                fn try_from(value: &BigInt) -> Result<$t, TryFromBigIntError> {
-                    const BYTES: usize = size_of::<$t>();
-                    let n = value.byte_length();
-                    if n > BYTES {
-                        return Err(TryFromBigIntError::new());
-                    }
-                    // 兩補數位元組右對齊寫入；上方以符號延伸填滿（負 0xFF、非負 0x00）
-                    let mut buf = if value.sign() < 0 { [0xFFu8; BYTES] } else { [0u8; BYTES] };
-                    value.to_bytes_be_into(&mut buf[BYTES - n..]);
-                    Ok(<$t>::from_be_bytes(buf))
-                }
-            }
-        )*
-    };
-}
-
-impl_try_from_big_unsigned!(u8, u16, u32, u64, u128);
-impl_try_from_big_signed!(i8, i16, i32, i64, i128);
 
 /// 計算 magnitude（big-endian、無前導零）的位元長度，不含符號位。
 fn calc_bit_length(sign: i32, magnitude: &[Word]) -> u32 {
@@ -1875,34 +1798,6 @@ fn trim_leading_zeros(mut v: Vec<Word>) -> Vec<Word> {
     let start = v.iter().position(|&w| w != 0).unwrap_or(v.len());
     v.drain(..start);
     v
-}
-
-/// 原地加法：`x += y`（big-endian，低位對齊）。
-///
-/// 前提：`x.len() >= y.len()`，且 `x` 已預留足夠長度容納進位（最高位不溢出）。
-/// 供除法內圈與 `add_magnitudes` 使用，避免每次相加都配置。
-fn add_in_place(x: &mut [Word], y: &[Word]) {
-    debug_assert!(x.len() >= y.len(), "add_in_place 需要 x.len() >= y.len()");
-
-    let mut carry: WideWord = 0;
-    let mut xi = x.len();
-
-    // 先把 y 逐字加進 x 的低位端（兩者尾端對齊），進位隨 u64 高位帶著走
-    for &yw in y.iter().rev() {
-        xi -= 1;
-        carry += x[xi] as WideWord + yw as WideWord;
-        x[xi] = carry as Word;
-        carry >>= WORD_BITS;
-    }
-    // 剩餘進位繼續往更高位傳（xi > 0 護欄避免下溢，並讓下方 assert 給清楚訊息）
-    while carry != 0 && xi > 0 {
-        xi -= 1;
-        carry += x[xi] as WideWord;
-        x[xi] = carry as Word;
-        carry >>= WORD_BITS;
-    }
-
-    debug_assert!(carry == 0, "add_in_place 溢位：x 未預留足夠長度");
 }
 
 /// 兩個 magnitude（big-endian、無前導零）相加，回傳結果（無前導零）。
@@ -3109,29 +3004,6 @@ mod tests {
             let got = BigInt::from_u64(a).get_lowest_set_bit();
             assert_eq!(got, Some(a.trailing_zeros()), "value {a}");
         }
-    }
-
-    #[test]
-    fn add_in_place_basic() {
-        // x += y，低位對齊；x 須預留進位空間
-        let mut x = vec![0, 5];
-        add_in_place(&mut x, &[3]);
-        assert_eq!(x, vec![0, 8]);
-
-        // 跨字進位由預留的前導字吸收
-        let mut x = vec![0, Word::MAX];
-        add_in_place(&mut x, &[1]);
-        assert_eq!(x, vec![1, 0]);
-
-        // 進位鏈：0xFFFF_FFFF_FFFF_FFFF + 1
-        let mut x = vec![0, Word::MAX, Word::MAX];
-        add_in_place(&mut x, &[1]);
-        assert_eq!(x, vec![1, 0, 0]);
-
-        // 等長相加
-        let mut x = vec![0, 0x1000_0000];
-        add_in_place(&mut x, &[0, 0x2000_0000]);
-        assert_eq!(x, vec![0, 0x3000_0000]);
     }
 
     #[test]
