@@ -138,6 +138,48 @@ fn bench_mul(c: &mut Criterion) {
     group.finish();
 }
 
+fn bench_large_mul(c: &mut Criterion) {
+    for byte_len in [256, 512] {
+        let mut lhs_bytes = vec![0_u8; byte_len];
+        let mut rhs_bytes = vec![0_u8; byte_len];
+        for (index, byte) in lhs_bytes.iter_mut().enumerate() {
+            *byte = 0x43_u8
+                .wrapping_add(index as u8)
+                .wrapping_mul(0x9d)
+                .rotate_left((index % 8) as u32);
+        }
+        for (index, byte) in rhs_bytes.iter_mut().enumerate() {
+            *byte = 0xa7_u8
+                .wrapping_add(index as u8)
+                .wrapping_mul(0x6b)
+                .rotate_left((index % 8) as u32);
+        }
+        lhs_bytes[0] = 0xd3;
+        rhs_bytes[0] = 0xb5;
+
+        let lhs = BigUint::from_be_bytes(&lhs_bytes);
+        let rhs = BigUint::from_be_bytes(&rhs_bytes);
+        let bit_len = byte_len * 8;
+        let mut group = c.benchmark_group(format!("mul/{bit_len}x{bit_len}-bit"));
+        bench_binary(&mut group, "BigUint", &lhs, &rhs, |a, b| a * b);
+        group.finish();
+
+        let distinct_lhs = lhs.clone();
+        let mut group = c.benchmark_group(format!("square/{bit_len}-bit"));
+        group.bench_function("BigUint", |b| {
+            b.iter(|| black_box(black_box(&lhs).square()))
+        });
+        bench_binary(
+            &mut group,
+            "BigUint multiply distinct clone",
+            &lhs,
+            &distinct_lhs,
+            |a, b| a * b,
+        );
+        group.finish();
+    }
+}
+
 fn bench_div(c: &mut Criterion) {
     let dividend = Values::from_unsigned_be_bytes(&patterned_bytes::<128>(0x59, 0x30, false));
     let divisor = Values::from_unsigned_be_bytes(&patterned_bytes::<64>(0x17, 0x40, true));
@@ -284,6 +326,7 @@ criterion_group!(
     benches,
     bench_add,
     bench_mul,
+    bench_large_mul,
     bench_div,
     bench_mod_pow,
     bench_mod_mul

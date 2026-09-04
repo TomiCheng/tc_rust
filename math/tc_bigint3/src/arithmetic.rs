@@ -10,6 +10,12 @@ use crate::ParseBigIntError;
 #[cfg(feature = "alloc")]
 use alloc::{vec, vec::Vec};
 
+// The crossover is intentionally expressed in limbs. On the common 64-bit
+// target, 32 limbs starts Karatsuba at 2048-bit RSA-sized operands while
+// keeping 256-bit ECC arithmetic on the schoolbook path.
+#[cfg(feature = "alloc")]
+const KARATSUBA_THRESHOLD: usize = 32;
+
 #[cfg(feature = "alloc")]
 pub(crate) fn normalize(words: &mut Vec<Limb>) {
     while words.last() == Some(&Limb(0)) {
@@ -37,6 +43,8 @@ pub(crate) fn significant_len(words: &[Limb]) -> usize {
 
 #[cfg(feature = "alloc")]
 pub(crate) fn mul(lhs: &[Limb], rhs: &[Limb]) -> Vec<Limb> {
+    let lhs = &lhs[..significant_len(lhs)];
+    let rhs = &rhs[..significant_len(rhs)];
     if lhs.is_empty() || rhs.is_empty() {
         return Vec::new();
     }
@@ -46,6 +54,15 @@ pub(crate) fn mul(lhs: &[Limb], rhs: &[Limb]) -> Vec<Limb> {
     }
     if let Some(shift) = power_of_two_shift(rhs) {
         return shl(lhs, shift);
+    }
+
+    karatsuba_mul(lhs, rhs)
+}
+
+#[cfg(feature = "alloc")]
+fn schoolbook_mul(lhs: &[Limb], rhs: &[Limb]) -> Vec<Limb> {
+    if lhs.is_empty() || rhs.is_empty() {
+        return Vec::new();
     }
 
     let mut result = vec![Limb(0); lhs.len() + rhs.len()];
@@ -69,13 +86,130 @@ pub(crate) fn mul(lhs: &[Limb], rhs: &[Limb]) -> Vec<Limb> {
     result
 }
 
-/// Squares a magnitude while evaluating each off-diagonal product only once.
+#[cfg(feature = "alloc")]
+fn karatsuba_mul(lhs: &[Limb], rhs: &[Limb]) -> Vec<Limb> {
+    let lhs = &lhs[..significant_len(lhs)];
+    let rhs = &rhs[..significant_len(rhs)];
+    let (short, long) = if lhs.len() <= rhs.len() {
+        (lhs, rhs)
+    } else {
+        (rhs, lhs)
+    };
+
+    if short.len() < KARATSUBA_THRESHOLD {
+        return schoolbook_mul(short, long);
+    }
+    if short.len() < long.len() / 2 {
+        return karatsuba_uneven_mul(short, long);
+    }
+
+    let split = long.len() / 2;
+    let (short_low, short_high) = short.split_at(split);
+    let (long_low, long_high) = long.split_at(split);
+
+    let low_product = karatsuba_mul(short_low, long_low);
+    let high_product = karatsuba_mul(short_high, long_high);
+    let short_sum = add_magnitudes(short_low, short_high);
+    let long_sum = add_magnitudes(long_low, long_high);
+    let mut middle_product = karatsuba_mul(&short_sum, &long_sum);
+    sub_assign_magnitude(&mut middle_product, &low_product);
+    sub_assign_magnitude(&mut middle_product, &high_product);
+
+    let mut result = low_product;
+    result.reserve(short.len() + long.len() - result.len());
+    add_shifted_assign(&mut result, &middle_product, split);
+    add_shifted_assign(&mut result, &high_product, split * 2);
+    normalize(&mut result);
+    result
+}
+
+#[cfg(feature = "alloc")]
+fn karatsuba_uneven_mul(short: &[Limb], long: &[Limb]) -> Vec<Limb> {
+    debug_assert!(!short.is_empty() && short.len() < long.len() / 2);
+    let mut result = vec![Limb(0); short.len() + long.len()];
+    for (chunk_index, chunk) in long.chunks(short.len()).enumerate() {
+        let product = karatsuba_mul(short, chunk);
+        add_shifted_assign(&mut result, &product, chunk_index * short.len());
+    }
+    normalize(&mut result);
+    result
+}
+
+#[cfg(feature = "alloc")]
+fn add_magnitudes(lhs: &[Limb], rhs: &[Limb]) -> Vec<Limb> {
+    let len = lhs.len().max(rhs.len());
+    let mut result = Vec::with_capacity(len + 1);
+    let mut carry = Limb(0);
+    for index in 0..len {
+        let left = lhs.get(index).copied().unwrap_or_default();
+        let right = rhs.get(index).copied().unwrap_or_default();
+        let (sum, next_carry) = left.carrying_add(right, carry);
+        result.push(sum);
+        carry = next_carry;
+    }
+    if carry.0 != 0 {
+        result.push(carry);
+    }
+    result
+}
+
+#[cfg(feature = "alloc")]
+fn sub_assign_magnitude(lhs: &mut Vec<Limb>, rhs: &[Limb]) {
+    debug_assert!(cmp(lhs, rhs) != Ordering::Less);
+    let mut borrow = Limb(0);
+    for (index, left) in lhs.iter_mut().enumerate() {
+        let right = rhs.get(index).copied().unwrap_or_default();
+        (*left, borrow) = left.borrowing_sub(right, borrow);
+    }
+    debug_assert_eq!(borrow, Limb(0));
+    normalize(lhs);
+}
+
+#[cfg(feature = "alloc")]
+fn add_shifted_assign(lhs: &mut Vec<Limb>, rhs: &[Limb], shift: usize) {
+    if rhs.is_empty() {
+        return;
+    }
+    let required_len = shift + rhs.len();
+    if lhs.len() < required_len {
+        lhs.resize(required_len, Limb(0));
+    }
+
+    let mut carry = Limb(0);
+    for (index, right) in rhs.iter().copied().enumerate() {
+        let output = shift + index;
+        (lhs[output], carry) = lhs[output].carrying_add(right, carry);
+    }
+    let mut output = required_len;
+    while carry.0 != 0 {
+        if output == lhs.len() {
+            lhs.push(carry);
+            break;
+        }
+        (lhs[output], carry) = lhs[output].carrying_add(Limb(0), carry);
+        output += 1;
+    }
+}
+
+/// Squares a magnitude using symmetric schoolbook multiplication below the
+/// Karatsuba threshold and the recursive multiplication path above it.
 #[cfg(feature = "alloc")]
 pub(crate) fn square(words: &[Limb]) -> Vec<Limb> {
     let len = significant_len(words);
     if len == 0 {
         return Vec::new();
     }
+    let words = &words[..len];
+    if len < KARATSUBA_THRESHOLD {
+        schoolbook_square(words)
+    } else {
+        karatsuba_mul(words, words)
+    }
+}
+
+#[cfg(feature = "alloc")]
+fn schoolbook_square(words: &[Limb]) -> Vec<Limb> {
+    let len = words.len();
 
     let mut result = vec![Limb(0); 2 * len];
     for left in 0..len {
@@ -975,7 +1109,119 @@ mod tests {
         for value in cases {
             let copy = value.clone();
             assert_eq!(square(&value), mul(&value, &copy), "value={value:?}");
-            assert_eq!(mul(&value, &value), square(&value), "same-slice fast path");
+            assert_eq!(mul(&value, &value), square(&value));
+        }
+    }
+
+    #[cfg(feature = "alloc")]
+    #[test]
+    fn karatsuba_matches_schoolbook_around_the_threshold_and_for_uneven_lengths() {
+        fn next_word(state: &mut u64) -> Word {
+            *state ^= *state << 13;
+            *state ^= *state >> 7;
+            *state ^= *state << 17;
+            *state as Word
+        }
+
+        fn random_words(state: &mut u64, len: usize) -> Vec<Limb> {
+            let mut words = (0..len).map(|_| Limb(next_word(state))).collect::<Vec<_>>();
+            words[len - 1].0 |= 1;
+            words
+        }
+
+        let lengths = [
+            (KARATSUBA_THRESHOLD - 1, KARATSUBA_THRESHOLD - 1),
+            (KARATSUBA_THRESHOLD, KARATSUBA_THRESHOLD),
+            (KARATSUBA_THRESHOLD + 1, KARATSUBA_THRESHOLD),
+            (KARATSUBA_THRESHOLD, KARATSUBA_THRESHOLD + 1),
+            (KARATSUBA_THRESHOLD, KARATSUBA_THRESHOLD * 2 + 1),
+            (KARATSUBA_THRESHOLD, KARATSUBA_THRESHOLD * 3 + 7),
+            (KARATSUBA_THRESHOLD * 2 - 1, KARATSUBA_THRESHOLD * 2 + 1),
+        ];
+        let mut state = 0x082e_fa98_ec4e_6c89_u64;
+
+        for (case, (lhs_len, rhs_len)) in lengths.into_iter().enumerate() {
+            for repetition in 0..32 {
+                let lhs = random_words(&mut state, lhs_len);
+                let rhs = random_words(&mut state, rhs_len);
+                let expected = schoolbook_mul(&lhs, &rhs);
+                assert_eq!(
+                    mul(&lhs, &rhs),
+                    expected,
+                    "case {case}, repetition {repetition}"
+                );
+                assert_eq!(
+                    mul(&rhs, &lhs),
+                    expected,
+                    "reversed case {case}, repetition {repetition}"
+                );
+
+                let expected_square = schoolbook_square(&lhs);
+                let distinct = lhs.clone();
+                assert_eq!(
+                    square(&lhs),
+                    expected_square,
+                    "square case {case}, repetition {repetition}"
+                );
+                assert_eq!(
+                    square(&lhs),
+                    mul(&lhs, &distinct),
+                    "square/mul case {case}, repetition {repetition}"
+                );
+            }
+        }
+    }
+
+    #[cfg(feature = "alloc")]
+    #[test]
+    fn karatsuba_middle_product_preserves_the_extra_sum_limb() {
+        let lhs = vec![Limb(Word::MAX); KARATSUBA_THRESHOLD];
+        let mut rhs = lhs.clone();
+        rhs[KARATSUBA_THRESHOLD / 2] = Limb(Word::MAX - 1);
+
+        assert_eq!(mul(&lhs, &rhs), schoolbook_mul(&lhs, &rhs));
+        assert_eq!(square(&lhs), schoolbook_square(&lhs));
+        assert_eq!(square(&lhs), mul(&lhs, &lhs.clone()));
+
+        let mut sparse = vec![Limb(0); KARATSUBA_THRESHOLD];
+        sparse[KARATSUBA_THRESHOLD / 2] = Limb(3);
+        sparse[KARATSUBA_THRESHOLD - 1] = Limb(1);
+        assert_eq!(mul(&sparse, &rhs), schoolbook_mul(&sparse, &rhs));
+        assert_eq!(square(&sparse), schoolbook_square(&sparse));
+    }
+
+    #[cfg(feature = "alloc")]
+    #[test]
+    fn knuth_division_reconstructs_with_karatsuba_products() {
+        fn next_word(state: &mut u64) -> Word {
+            *state ^= *state << 13;
+            *state ^= *state >> 7;
+            *state ^= *state << 17;
+            *state as Word
+        }
+
+        let mut state = 0x4528_21e6_38d0_1377_u64;
+        for case in 0..128 {
+            let dividend_len = KARATSUBA_THRESHOLD * 2 + case % 7;
+            let divisor_len = KARATSUBA_THRESHOLD + case % 5;
+            let mut dividend = (0..dividend_len)
+                .map(|_| Limb(next_word(&mut state)))
+                .collect::<Vec<_>>();
+            let mut divisor = (0..divisor_len)
+                .map(|_| Limb(next_word(&mut state)))
+                .collect::<Vec<_>>();
+            dividend[dividend_len - 1].0 |= 1;
+            divisor[divisor_len - 1].0 |= 1;
+
+            let (quotient, remainder) = div_rem(&dividend, &divisor);
+            assert_eq!(cmp(&remainder, &divisor), Ordering::Less, "case {case}");
+            let reconstructed = crate::BigUint::from_limbs(mul(&quotient, &divisor))
+                + crate::BigUint::from_limbs(remainder);
+            assert_eq!(
+                reconstructed,
+                crate::BigUint::from_limbs(dividend),
+                "case {case}"
+            );
         }
     }
 

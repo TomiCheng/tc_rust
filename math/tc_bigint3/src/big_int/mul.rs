@@ -181,7 +181,6 @@ mod tests {
         let value = (BigInt::from(1_u8) << 130) + BigInt::from(17_u8);
         let distinct_copy = value.clone();
 
-        assert!(!core::ptr::eq(&value, &distinct_copy));
         assert_eq!(&value * &distinct_copy, value.square());
     }
 }
