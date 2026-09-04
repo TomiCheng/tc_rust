@@ -25,23 +25,13 @@ fn external_units_are_full_width_and_little_endian() {
 }
 
 #[test]
-fn modular_operations_do_not_allocate_or_overflow_intermediates() {
+fn modular_power_does_not_allocate_or_overflow_intermediates() {
     let three = U128::from(3_u8);
     let seven = U128::from(7_u8);
 
-    assert_eq!(U128::from(48_u8).gcd(&U128::from(18_u8)), U128::from(6_u8));
-    assert_eq!(three.mod_inverse(&seven), Some(U128::from(5_u8)));
-    assert_eq!(
-        three.mod_inverse(&U128::from(10_u8)),
-        Some(U128::from(7_u8))
-    );
     assert_eq!(three.mod_pow(&U128::from(4_u8), &seven), U128::from(4_u8));
 
     let max = U128::max_value();
-    assert_eq!(
-        U128::from(2_u8).mod_inverse(&max),
-        Some(U128::from(1_u8) << 127)
-    );
     assert_eq!(
         (max - U128::from(1_u8)).mod_pow(&U128::from(2_u8), &max),
         U128::from(1_u8)
@@ -233,12 +223,6 @@ fn left_shift_rejects_width_or_larger() {
 #[should_panic(expected = "attempted to shift right with overflow")]
 fn right_shift_rejects_width_or_larger() {
     let _ = U128::from(1_u8) >> 128;
-}
-
-#[test]
-#[should_panic(expected = "modulus must be non-zero")]
-fn modular_inverse_rejects_zero() {
-    let _ = U128::from(1_u8).mod_inverse(&U128::zero());
 }
 
 #[test]

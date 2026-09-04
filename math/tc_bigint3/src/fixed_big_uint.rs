@@ -2,8 +2,7 @@
 
 #[cfg(test)]
 use crate::ConversionError;
-use crate::arithmetic;
-use crate::traits::{Bounded, Gcd, ModInverse, One, Unsigned, Zero};
+use crate::traits::{Bounded, One, Unsigned, Zero};
 use crate::{Limb, Word};
 
 mod add;
@@ -16,6 +15,8 @@ mod bits;
 mod cmp;
 mod div;
 mod from;
+mod gcd;
+mod invert_mod;
 mod mul;
 mod pow;
 mod shl;
@@ -73,18 +74,6 @@ impl<const N: usize> FixedBigUint<N> {
         self.limbs.iter().all(|word| word.0 == 0)
     }
 
-    /// Returns the greatest common divisor.
-    pub fn gcd(&self, other: &Self) -> Self {
-        Self {
-            limbs: arithmetic::fixed_gcd(&self.limbs, &other.limbs),
-        }
-    }
-
-    /// Returns the modular multiplicative inverse, when it exists.
-    pub fn mod_inverse(&self, modulus: &Self) -> Option<Self> {
-        arithmetic::fixed_mod_inverse(&self.limbs, &modulus.limbs).map(|limbs| Self { limbs })
-    }
-
     fn checked_u128(&self) -> Option<u128> {
         let mut result = 0_u128;
         for (index, word) in self.limbs.iter().enumerate() {
@@ -129,22 +118,6 @@ impl<const N: usize> One for FixedBigUint<N> {
 }
 
 impl<const N: usize> Unsigned for FixedBigUint<N> {}
-
-impl<const N: usize> Gcd for FixedBigUint<N> {
-    type Output = Self;
-
-    fn gcd(&self, rhs: &Self) -> Self::Output {
-        FixedBigUint::gcd(self, rhs)
-    }
-}
-
-impl<const N: usize> ModInverse for FixedBigUint<N> {
-    type Output = Self;
-
-    fn mod_inverse(&self, modulus: &Self) -> Option<Self::Output> {
-        FixedBigUint::mod_inverse(self, modulus)
-    }
-}
 
 #[cfg(test)]
 mod tests;

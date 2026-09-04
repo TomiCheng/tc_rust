@@ -6,7 +6,7 @@ use alloc::vec::Vec;
 use crate::ConversionError;
 use crate::arithmetic;
 use crate::encoding;
-use crate::traits::{Gcd, ModInverse, One, Signed, Zero};
+use crate::traits::{One, Zero};
 use crate::{Limb, Word};
 
 mod add;
@@ -19,6 +19,8 @@ mod bits;
 mod cmp;
 mod div;
 mod from;
+mod gcd;
+mod invert_mod;
 mod mul;
 mod neg;
 mod pow;
@@ -88,39 +90,6 @@ impl BigInt {
     pub fn is_zero(&self) -> bool {
         self.limbs.is_empty()
     }
-
-    /// Returns the non-negative greatest common divisor.
-    pub fn gcd(&self, other: &Self) -> Self {
-        let mut left = self.abs();
-        let mut right = other.abs();
-        while !right.is_zero() {
-            let remainder = &left % &right;
-            left = right;
-            right = remainder;
-        }
-        left
-    }
-
-    /// Returns the modular multiplicative inverse, when it exists.
-    pub fn mod_inverse(&self, modulus: &Self) -> Option<Self> {
-        assert!(modulus.is_positive(), "modulus must be positive");
-        let mut old_remainder = modulus.clone();
-        let mut remainder = self.rem_euclid(modulus);
-        let mut old_coefficient = Self::zero();
-        let mut coefficient = Self::one();
-
-        while !remainder.is_zero() {
-            let quotient = &old_remainder / &remainder;
-            let next_remainder = &old_remainder - &quotient * &remainder;
-            let next_coefficient = &old_coefficient - &quotient * &coefficient;
-            old_remainder = remainder;
-            remainder = next_remainder;
-            old_coefficient = coefficient;
-            coefficient = next_coefficient;
-        }
-
-        (old_remainder == Self::one()).then(|| old_coefficient.rem_euclid(modulus))
-    }
 }
 
 impl Zero for BigInt {
@@ -136,22 +105,6 @@ impl Zero for BigInt {
 impl One for BigInt {
     fn one() -> Self {
         Self::from(1_u8)
-    }
-}
-
-impl Gcd for BigInt {
-    type Output = Self;
-
-    fn gcd(&self, rhs: &Self) -> Self::Output {
-        BigInt::gcd(self, rhs)
-    }
-}
-
-impl ModInverse for BigInt {
-    type Output = Self;
-
-    fn mod_inverse(&self, modulus: &Self) -> Option<Self::Output> {
-        BigInt::mod_inverse(self, modulus)
     }
 }
 

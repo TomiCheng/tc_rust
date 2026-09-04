@@ -5,7 +5,7 @@ use core::cmp::Ordering;
 #[cfg(test)]
 use crate::ConversionError;
 use crate::arithmetic;
-use crate::traits::{Bounded, Gcd, ModInverse, One, Signed, ToPrimitive, Zero};
+use crate::traits::{Bounded, One, ToPrimitive, Zero};
 use crate::{FixedBigUint, Limb, Word};
 
 mod add;
@@ -18,6 +18,8 @@ mod bits;
 mod cmp;
 mod div;
 mod from;
+mod gcd;
+mod invert_mod;
 mod mul;
 mod neg;
 mod pow;
@@ -81,19 +83,6 @@ impl<const N: usize> FixedBigInt<N> {
         self.limbs.iter().all(|word| word.0 == 0)
     }
 
-    /// Returns the non-negative greatest common divisor as an unsigned value.
-    pub fn gcd(&self, other: &Self) -> FixedBigUint<N> {
-        FixedBigUint::from_limbs(arithmetic::fixed_gcd(&self.magnitude(), &other.magnitude()))
-    }
-
-    /// Returns the modular multiplicative inverse, when it exists.
-    pub fn mod_inverse(&self, modulus: &Self) -> Option<Self> {
-        assert!(modulus.is_positive(), "modulus must be positive");
-        let value = self.rem_euclid(modulus);
-        arithmetic::fixed_mod_inverse(&value.limbs, &modulus.limbs)
-            .and_then(|limbs| Self::from_sign_magnitude(false, limbs))
-    }
-
     fn magnitude(&self) -> [Limb; N] {
         arithmetic::fixed_abs(&self.limbs)
     }
@@ -153,22 +142,6 @@ impl<const N: usize> Zero for FixedBigInt<N> {
 impl<const N: usize> One for FixedBigInt<N> {
     fn one() -> Self {
         Self::from(1_i8)
-    }
-}
-
-impl<const N: usize> Gcd for FixedBigInt<N> {
-    type Output = FixedBigUint<N>;
-
-    fn gcd(&self, rhs: &Self) -> Self::Output {
-        FixedBigInt::gcd(self, rhs)
-    }
-}
-
-impl<const N: usize> ModInverse for FixedBigInt<N> {
-    type Output = Self;
-
-    fn mod_inverse(&self, modulus: &Self) -> Option<Self::Output> {
-        FixedBigInt::mod_inverse(self, modulus)
     }
 }
 

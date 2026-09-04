@@ -32,16 +32,11 @@ fn bitwise_operations_use_infinite_sign_extension() {
 }
 
 #[test]
-fn number_theory_operations_match_known_values() {
+fn euclidean_remainder_and_modular_power_match_known_values() {
     let three = BigInt::from(3_i8);
     let seven = BigInt::from(7_i8);
 
-    assert_eq!(
-        BigInt::from(-12_i8).gcd(&BigInt::from(18_i8)),
-        BigInt::from(6_i8)
-    );
     assert_eq!(BigInt::from(-7_i8).rem_euclid(&three), BigInt::from(2_i8));
-    assert_eq!(three.mod_inverse(&seven), Some(BigInt::from(5_i8)));
     assert_eq!(
         three.mod_pow(&BigInt::from(4_i8), &seven),
         BigInt::from(4_i8)
@@ -195,12 +190,6 @@ fn conversion_traits_cover_dynamic_signed_specific_paths() {
     assert_eq!(BigInt::from(-1_i8).to_u128(), None);
     assert_eq!(BigInt::from(u128::MAX).to_i128(), None);
     assert_eq!(BigInt::from(u64::MAX).to_u64(), Some(u64::MAX));
-}
-
-#[test]
-#[should_panic(expected = "modulus must be positive")]
-fn modular_inverse_rejects_non_positive_modulus() {
-    let _ = BigInt::from(1_i8).mod_inverse(&BigInt::zero());
 }
 
 #[test]

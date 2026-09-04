@@ -34,16 +34,11 @@ fn right_shift_sign_extends() {
 }
 
 #[test]
-fn signed_number_theory_uses_unsigned_gcd_and_positive_modulus() {
+fn euclidean_remainder_and_modular_power_match_known_values() {
     let three = I128::from(3_i8);
     let seven = I128::from(7_i8);
 
-    assert_eq!(
-        I128::from(-12_i8).gcd(&I128::from(18_i8)),
-        FixedBigUint::from(6_u8)
-    );
     assert_eq!(I128::from(-7_i8).rem_euclid(&three), I128::from(2_i8));
-    assert_eq!(three.mod_inverse(&seven), Some(I128::from(5_i8)));
     assert_eq!(three.mod_pow(&I128::from(4_i8), &seven), I128::from(4_i8));
     assert_eq!(three.mod_pow(&I128::from(-1_i8), &seven), I128::from(5_i8));
 }
@@ -225,12 +220,6 @@ fn left_shift_rejects_width_or_larger() {
 #[should_panic(expected = "attempted to shift right with overflow")]
 fn right_shift_rejects_width_or_larger() {
     let _ = I128::from(1_i8) >> 128;
-}
-
-#[test]
-#[should_panic(expected = "modulus must be positive")]
-fn modular_inverse_rejects_non_positive_modulus() {
-    let _ = I128::from(1_i8).mod_inverse(&I128::zero());
 }
 
 #[test]

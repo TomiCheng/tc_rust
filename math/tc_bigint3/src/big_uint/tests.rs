@@ -26,22 +26,13 @@ fn external_units_are_little_endian() {
 }
 
 #[test]
-fn number_theory_operations_match_known_values() {
+fn modular_power_matches_known_value() {
     let three = BigUint::from(3_u8);
     let seven = BigUint::from(7_u8);
 
     assert_eq!(
-        BigUint::from(48_u8).gcd(&BigUint::from(18_u8)),
-        BigUint::from(6_u8)
-    );
-    assert_eq!(three.mod_inverse(&seven), Some(BigUint::from(5_u8)));
-    assert_eq!(
         three.mod_pow(&BigUint::from(4_u8), &seven),
         BigUint::from(4_u8)
-    );
-    assert_eq!(
-        three.mod_inverse(&BigUint::from(10_u8)),
-        Some(BigUint::from(7_u8))
     );
 }
 
@@ -205,12 +196,6 @@ fn conversion_traits_cover_dynamic_unsigned_specific_paths() {
 #[should_panic(expected = "radix must be in 2..=36")]
 fn formatting_panics_for_an_invalid_radix() {
     let _ = BigUint::from(1_u8).to_str_radix(37);
-}
-
-#[test]
-#[should_panic(expected = "modulus must be non-zero")]
-fn modular_inverse_rejects_a_zero_modulus() {
-    let _ = BigUint::from(1_u8).mod_inverse(&BigUint::zero());
 }
 
 #[test]
