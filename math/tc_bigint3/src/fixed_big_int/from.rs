@@ -1,7 +1,17 @@
 //! Conversions for [`FixedBigInt`].
 
+use core::str::FromStr;
+
 use crate::traits::{FromPrimitive, ToPrimitive};
 use crate::{ConversionError, FixedBigInt, FixedBigUint};
+
+impl<const N: usize> FromStr for FixedBigInt<N> {
+    type Err = crate::ParseBigIntError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        Self::from_str_radix(value, 10)
+    }
+}
 
 macro_rules! impl_from_signed {
     ($($type:ty),* $(,)?) => {

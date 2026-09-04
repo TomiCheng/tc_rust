@@ -28,7 +28,7 @@ mod sub;
 ///
 /// Limbs are stored from least significant to most significant. Zero has an
 /// empty limb vector; non-zero values never contain redundant high zero limbs.
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Default, Eq, PartialEq)]
 pub struct BigUint {
     limbs: Vec<Limb>,
 }
@@ -171,6 +171,20 @@ impl BigUint {
         digits.reverse();
         String::from_utf8(digits).expect("radix digits are ASCII")
     }
+
+    fn fmt_radix(
+        &self,
+        radix: u32,
+        uppercase: bool,
+        prefix: &'static str,
+        output: &mut fmt::Formatter<'_>,
+    ) -> fmt::Result {
+        let mut digits = self.to_str_radix(radix);
+        if uppercase {
+            digits.make_ascii_uppercase();
+        }
+        output.pad_integral(true, if output.alternate() { prefix } else { "" }, &digits)
+    }
 }
 
 impl Shl<usize> for &BigUint {
@@ -219,9 +233,30 @@ impl CheckedShr for BigUint {
 
 impl fmt::Display for BigUint {
     fn fmt(&self, output: &mut fmt::Formatter<'_>) -> fmt::Result {
-        output.write_str(&self.to_str_radix(10))
+        self.fmt_radix(10, false, "", output)
     }
 }
+
+impl fmt::Debug for BigUint {
+    fn fmt(&self, output: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Display::fmt(self, output)
+    }
+}
+
+macro_rules! impl_big_uint_format {
+    ($trait:ident, $radix:expr, $uppercase:expr, $prefix:expr) => {
+        impl fmt::$trait for BigUint {
+            fn fmt(&self, output: &mut fmt::Formatter<'_>) -> fmt::Result {
+                self.fmt_radix($radix, $uppercase, $prefix, output)
+            }
+        }
+    };
+}
+
+impl_big_uint_format!(Binary, 2, false, "0b");
+impl_big_uint_format!(Octal, 8, false, "0o");
+impl_big_uint_format!(LowerHex, 16, false, "0x");
+impl_big_uint_format!(UpperHex, 16, true, "0x");
 
 impl Zero for BigUint {
     fn zero() -> Self {

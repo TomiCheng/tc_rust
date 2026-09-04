@@ -1,5 +1,6 @@
 //! Fixed-precision unsigned integers without allocation.
 
+use core::fmt;
 use core::ops::{BitAnd, BitOr, BitXor, Not, Shl, Shr};
 
 #[cfg(test)]
@@ -19,7 +20,7 @@ mod mul;
 mod sub;
 
 /// An unsigned integer containing exactly `N` little-endian limbs.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Eq, PartialEq)]
 pub struct FixedBigUint<const N: usize> {
     limbs: [Limb; N],
 }
@@ -176,6 +177,12 @@ impl<const N: usize> FixedBigUint<N> {
         Ok(result)
     }
 
+    /// Formats this value in radix `2..=36`.
+    #[cfg(feature = "alloc")]
+    pub fn to_str_radix(&self, radix: u32) -> alloc::string::String {
+        crate::BigUint::from(*self).to_str_radix(radix)
+    }
+
     fn checked_u128(&self) -> Option<u128> {
         let mut result = 0_u128;
         for (index, word) in self.limbs.iter().enumerate() {
@@ -209,6 +216,40 @@ impl<const N: usize> Default for FixedBigUint<N> {
         Self::zero()
     }
 }
+
+impl<const N: usize> fmt::Display for FixedBigUint<N> {
+    fn fmt(&self, output: &mut fmt::Formatter<'_>) -> fmt::Result {
+        crate::format::fmt_fixed(&self.limbs, false, 10, false, "", output)
+    }
+}
+
+impl<const N: usize> fmt::Debug for FixedBigUint<N> {
+    fn fmt(&self, output: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Display::fmt(self, output)
+    }
+}
+
+macro_rules! impl_fixed_uint_format {
+    ($trait:ident, $radix:expr, $uppercase:expr, $prefix:expr) => {
+        impl<const N: usize> fmt::$trait for FixedBigUint<N> {
+            fn fmt(&self, output: &mut fmt::Formatter<'_>) -> fmt::Result {
+                crate::format::fmt_fixed(
+                    &self.limbs,
+                    false,
+                    $radix,
+                    $uppercase,
+                    $prefix,
+                    output,
+                )
+            }
+        }
+    };
+}
+
+impl_fixed_uint_format!(Binary, 2, false, "0b");
+impl_fixed_uint_format!(Octal, 8, false, "0o");
+impl_fixed_uint_format!(LowerHex, 16, false, "0x");
+impl_fixed_uint_format!(UpperHex, 16, true, "0x");
 
 impl<const N: usize> BitAnd for FixedBigUint<N> {
     type Output = Self;

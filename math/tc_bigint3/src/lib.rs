@@ -16,6 +16,7 @@ mod encoding;
 mod error;
 mod fixed_big_int;
 mod fixed_big_uint;
+mod format;
 mod limb;
 mod non_zero;
 #[cfg(feature = "rand_core")]
