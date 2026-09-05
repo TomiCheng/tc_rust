@@ -30,15 +30,15 @@ where
 mod tests {
     use super::*;
     use crate::FpCurve;
-    use crate::named_curves::{secp256k1, secp256r1};
+    use crate::named_curves::{secp256k1_dynamic, secp256r1_dynamic};
 
     #[test]
     fn generic_algorithm_runs_on_both_named_curves() {
-        for (_, point) in [secp256k1(), secp256r1()] {
+        for (_, point) in [secp256k1_dynamic(), secp256r1_dynamic()] {
             for scalar in [0_u32, 1, 2, 19, 255] {
                 let scalar = BigUint::from(scalar);
                 assert_eq!(
-                    scalar_mul::<FpCurve>(&point, &scalar),
+                    scalar_mul::<FpCurve<BigUint>>(&point, &scalar),
                     point.mul_double_and_add(&scalar)
                 );
             }

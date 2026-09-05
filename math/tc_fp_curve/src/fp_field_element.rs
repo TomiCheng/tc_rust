@@ -1,51 +1,68 @@
 //! 以 Montgomery domain 表示的質數體元素。
 //!
-//! 舊 `tc_ec` 把帶符號 `BigInt` 與快速 reduction residue 放在每個元素中；
-//! 本實作改用 `BigUint`，以共享的 [`FpField`] 保存質數與 Montgomery 參數，
-//! 元素永遠代表 `[0, q)`，因此不再需要任何符號修正分支。
+//! 體域整數由 [`FpInteger`] 決定；共享的 [`FpField`] 保存質數與 Montgomery
+//! 參數，元素永遠代表 `[0, q)`，不需要舊版帶符號 `BigInt` 的修正分支。
 
 use alloc::sync::Arc;
 use core::ops::{Add, Div, Mul, Neg, Sub};
 
-use tc_bigint::modular::{MontyForm, MontyParams};
+use tc_bigint::modular::Monty;
 use tc_bigint::{BigUint, Odd};
 
+use crate::FpInteger;
+
 /// 同一個 Fp 體域共用的 Montgomery 參數。
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub(crate) struct FpField {
-    params: MontyParams<BigUint>,
+#[derive(Clone)]
+pub(crate) struct FpField<B: FpInteger = BigUint> {
+    params: <B::Monty as Monty>::Params,
+    q: B,
 }
 
-impl FpField {
-    pub(crate) fn new(q: BigUint) -> Arc<Self> {
-        let modulus = Odd::new(q).expect("curve prime is odd");
+impl<B: FpInteger> FpField<B> {
+    pub(crate) fn new(q: B) -> Arc<Self> {
+        let modulus = Odd::new(q.clone()).expect("curve prime is odd");
         Arc::new(Self {
-            params: MontyParams::new(modulus),
+            params: B::Monty::new_params_vartime(modulus),
+            q,
         })
     }
 
-    pub(crate) fn q(&self) -> &BigUint {
-        self.params.modulus()
+    pub(crate) fn q(&self) -> &B {
+        &self.q
     }
 
-    pub(crate) fn element(self: &Arc<Self>, value: &BigUint) -> FpFieldElement {
+    pub(crate) fn element(self: &Arc<Self>, value: &B) -> FpFieldElement<B> {
         assert!(value < self.q(), "value invalid for Fp field element");
         FpFieldElement {
             field: Arc::clone(self),
-            value: MontyForm::new(value, self.params.clone()),
+            value: B::Monty::new(value, self.params.clone()),
         }
+    }
+}
+
+impl<B: FpInteger> PartialEq for FpField<B> {
+    fn eq(&self, other: &Self) -> bool {
+        self.q == other.q
+    }
+}
+
+impl<B: FpInteger> Eq for FpField<B> {}
+
+impl<B: FpInteger> core::fmt::Debug for FpField<B> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("FpField").field("q", &self.q).finish()
     }
 }
 
 /// 質數體 `GF(q)` 的一個元素。
 #[derive(Clone)]
-pub struct FpFieldElement {
-    field: Arc<FpField>,
-    value: MontyForm<BigUint>,
+pub struct FpFieldElement<B: FpInteger = BigUint> {
+    field: Arc<FpField<B>>,
+    value: B::Monty,
 }
 
-impl FpFieldElement {
-    fn with_monty(&self, value: MontyForm<BigUint>) -> Self {
+impl<B: FpInteger> FpFieldElement<B> {
+    fn with_monty(&self, value: B::Monty) -> Self {
         Self {
             field: Arc::clone(&self.field),
             value,
@@ -54,37 +71,37 @@ impl FpFieldElement {
 
     fn multiply(&self, rhs: &Self) -> Self {
         debug_assert_eq!(self.field, rhs.field, "different Fp fields");
-        self.with_monty(&self.value * &rhs.value)
+        self.with_monty(self.value.clone() * &rhs.value)
     }
 
     /// 回傳體域質數 `q`。
-    pub fn q(&self) -> &BigUint {
+    pub fn q(&self) -> &B {
         self.field.q()
     }
 
     /// 回傳 `q` 的有效位元數。
     pub fn field_size(&self) -> usize {
-        self.q().bits()
+        self.q().bit_length()
     }
 
     /// 離開 Montgomery domain，回傳 `[0, q)` 的標準整數。
-    pub fn to_big_uint(&self) -> BigUint {
+    pub fn to_big_uint(&self) -> B {
         self.value.retrieve()
     }
 
     /// 在同一個 Fp 體域中建立元素。
-    pub fn element_from_big_uint(&self, value: &BigUint) -> Self {
+    pub fn element_from_big_uint(&self, value: &B) -> Self {
         self.field.element(value)
     }
 
     /// 同一體域的加法單位元。
     pub fn zero(&self) -> Self {
-        self.element_from_big_uint(&BigUint::default())
+        self.with_monty(B::Monty::zero(self.value.params().clone()))
     }
 
     /// 同一體域的乘法單位元。
     pub fn one(&self) -> Self {
-        self.element_from_big_uint(&BigUint::from(1_u8))
+        self.with_monty(B::Monty::one(self.value.params().clone()))
     }
 
     /// 是否為零。
@@ -94,7 +111,7 @@ impl FpFieldElement {
 
     /// 是否為一。
     pub fn is_one(&self) -> bool {
-        self.to_big_uint() == BigUint::from(1_u8)
+        self.to_big_uint().is_one()
     }
 
     /// 在 Montgomery domain 內平方。
@@ -103,28 +120,22 @@ impl FpFieldElement {
     }
 
     /// 在 Montgomery domain 內做公開指數次方。
-    pub fn pow(&self, exponent: &BigUint) -> Self {
+    pub fn pow(&self, exponent: &B) -> Self {
         self.with_monty(self.value.pow(exponent))
     }
 
-    /// 回傳乘法反元素；零沒有反元素。
+    /// 回傳乘法反元素；零或不可逆元素回傳 `None`。
     ///
-    /// 使用費馬小定理 `x^(q-2)`，讓值全程留在 Montgomery domain，省去
-    /// `retrieve → ModInverse → MontyForm::new` 的兩次轉換。取捨是一般
-    /// `pow` 比專用 safegcd 反元素昂貴；日後可在不改公開表示的前提下替換。
+    /// 具體反元素路徑由 `B::Monty` 決定；本層只保留 Montgomery 抽象。
     pub fn invert(&self) -> Option<Self> {
-        if self.is_zero() {
-            return None;
-        }
-        let exponent = self.q() - 2_u8;
-        Some(self.pow(&exponent))
+        self.value.invert().map(|value| self.with_monty(value))
     }
 
     /// 回傳平方根；非二次剩餘時為 `None`。
     ///
     /// `q ≡ 3 (mod 4)` 與 `q ≡ 5 (mod 8)` 使用 BC 的直接公式；
-    /// `q ≡ 1 (mod 8)` 使用 Lucas sequence。所有 modular power 都透過
-    /// [`MontyForm::pow`]，不離開 Montgomery domain。
+    /// `q ≡ 1 (mod 8)` 使用 Lucas sequence。所有 modular power 都留在
+    /// Montgomery domain。
     pub fn sqrt(&self) -> Option<Self> {
         if self.is_zero() || self.is_one() {
             return Some(self.clone());
@@ -132,34 +143,35 @@ impl FpFieldElement {
 
         let q = self.q();
         assert!(q.test_bit(0), "sqrt does not support an even modulus");
-        let one_value = BigUint::from(1_u8);
+        let one_value = B::from_u8(1).expect("Fp integer represents one");
 
         if q.test_bit(1) {
-            let exponent = (q >> 2) + &one_value;
+            let exponent = (q.clone() >> 2) + &one_value;
             return self.check_sqrt(self.pow(&exponent));
         }
 
         if q.test_bit(2) {
-            let t1 = self.pow(&(q >> 3));
+            let t1 = self.pow(&(q.clone() >> 3));
             let t2 = &t1 * self;
             let t3 = &t2 * &t1;
             if t3.is_one() {
                 return self.check_sqrt(t2);
             }
-            let two = self.element_from_big_uint(&BigUint::from(2_u8));
-            let t4 = two.pow(&(q >> 2));
+            let two_value = B::from_u8(2).expect("Fp integer represents two");
+            let two = self.element_from_big_uint(&two_value);
+            let t4 = two.pow(&(q.clone() >> 2));
             return self.check_sqrt(&t2 * &t4);
         }
 
-        let legendre_exponent = q >> 1;
+        let legendre_exponent = q.clone() >> 1;
         if !self.pow(&legendre_exponent).is_one() {
             return None;
         }
 
         let two_x = self + self;
         let four_x = &two_x + &two_x;
-        let k = &legendre_exponent + &one_value;
-        let q_minus_one_value = q - &one_value;
+        let k = legendre_exponent.clone() + &one_value;
+        let q_minus_one_value = q.clone() - &one_value;
         let q_minus_one = self.element_from_big_uint(&q_minus_one_value);
         let mut p_value = one_value.clone();
 
@@ -178,7 +190,7 @@ impl FpFieldElement {
                     return None;
                 }
             }
-            p_value = &p_value + &one_value;
+            p_value = p_value + &one_value;
         }
     }
 
@@ -189,21 +201,22 @@ impl FpFieldElement {
     fn mod_half_abs(&self, value: &Self) -> Self {
         let value = value.to_big_uint();
         let half = if value.test_bit(0) {
-            (self.q() - &value) >> 1
+            (self.q().clone() - &value) >> 1
         } else {
             value >> 1
         };
         self.element_from_big_uint(&half)
     }
 
-    fn lucas_sequence(&self, p: &Self, lucas_q: &Self, k: &BigUint) -> (Self, Self) {
-        let n = k.bits();
+    fn lucas_sequence(&self, p: &Self, lucas_q: &Self, k: &B) -> (Self, Self) {
+        let n = k.bit_length();
         let s = k
             .lowest_set_bit()
             .expect("lucas_sequence requires non-zero k");
 
         let mut uh = self.one();
-        let mut vl = self.element_from_big_uint(&BigUint::from(2_u8));
+        let two_value = B::from_u8(2).expect("Fp integer represents two");
+        let mut vl = self.element_from_big_uint(&two_value);
         let mut vh = p.clone();
         let mut ql = self.one();
         let mut qh = self.one();
@@ -241,15 +254,15 @@ impl FpFieldElement {
     }
 }
 
-impl PartialEq for FpFieldElement {
+impl<B: FpInteger> PartialEq for FpFieldElement<B> {
     fn eq(&self, other: &Self) -> bool {
         self.field == other.field && self.value == other.value
     }
 }
 
-impl Eq for FpFieldElement {}
+impl<B: FpInteger> Eq for FpFieldElement<B> {}
 
-impl core::fmt::Debug for FpFieldElement {
+impl<B: FpInteger> core::fmt::Debug for FpFieldElement<B> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("FpFieldElement")
             .field("value", &self.to_big_uint())
@@ -258,34 +271,34 @@ impl core::fmt::Debug for FpFieldElement {
     }
 }
 
-impl Add for &FpFieldElement {
-    type Output = FpFieldElement;
+impl<B: FpInteger> Add for &FpFieldElement<B> {
+    type Output = FpFieldElement<B>;
 
     fn add(self, rhs: Self) -> Self::Output {
         debug_assert_eq!(self.field, rhs.field, "different Fp fields");
-        self.with_monty(&self.value + &rhs.value)
+        self.with_monty(self.value.clone() + &rhs.value)
     }
 }
 
-impl Sub for &FpFieldElement {
-    type Output = FpFieldElement;
+impl<B: FpInteger> Sub for &FpFieldElement<B> {
+    type Output = FpFieldElement<B>;
 
     fn sub(self, rhs: Self) -> Self::Output {
         debug_assert_eq!(self.field, rhs.field, "different Fp fields");
-        self.with_monty(&self.value - &rhs.value)
+        self.with_monty(self.value.clone() - &rhs.value)
     }
 }
 
-impl Mul for &FpFieldElement {
-    type Output = FpFieldElement;
+impl<B: FpInteger> Mul for &FpFieldElement<B> {
+    type Output = FpFieldElement<B>;
 
     fn mul(self, rhs: Self) -> Self::Output {
         self.multiply(rhs)
     }
 }
 
-impl Div for &FpFieldElement {
-    type Output = FpFieldElement;
+impl<B: FpInteger> Div for &FpFieldElement<B> {
+    type Output = FpFieldElement<B>;
 
     fn div(self, rhs: Self) -> Self::Output {
         let inverse = rhs.invert().expect("division by zero in Fp");
@@ -293,8 +306,8 @@ impl Div for &FpFieldElement {
     }
 }
 
-impl Neg for &FpFieldElement {
-    type Output = FpFieldElement;
+impl<B: FpInteger> Neg for &FpFieldElement<B> {
+    type Output = FpFieldElement<B>;
 
     fn neg(self) -> Self::Output {
         if self.is_zero() {

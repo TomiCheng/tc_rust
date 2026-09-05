@@ -1,7 +1,7 @@
 //! 質數曲線上的 affine 點。
 //!
-//! Step 2 先保留最容易與舊 `tc_ec` 對照的 affine 公式；每次加法或倍點會做
-//! 一次體域反元素。表示法故意不帶舊版的帶符號純量與 projective `Z` 座標。
+//! 目前保留最容易與舊 `tc_ec` 對照的 affine 公式；每次加法或倍點會做一次
+//! 體域反元素。表示法不帶舊版的帶符號純量與 projective `Z` 座標。
 
 use alloc::sync::Arc;
 use alloc::vec::Vec;
@@ -9,18 +9,18 @@ use core::ops::{Add, Mul, Neg, Sub};
 
 use tc_bigint::BigUint;
 
-use crate::{CoordinateSystem, FpCurve, FpFieldElement};
+use crate::{CoordinateSystem, FpCurve, FpFieldElement, FpInteger};
 
 /// [`FpCurve`] 上的一個點；`None` 表示群單位元（無窮遠點）。
 #[derive(Clone)]
-pub struct FpPoint {
-    curve: Arc<FpCurve>,
-    coords: Option<(FpFieldElement, FpFieldElement)>,
+pub struct FpPoint<B: FpInteger = BigUint> {
+    curve: Arc<FpCurve<B>>,
+    coords: Option<(FpFieldElement<B>, FpFieldElement<B>)>,
 }
 
-impl FpPoint {
+impl<B: FpInteger> FpPoint<B> {
     /// 建立 affine 點；呼叫端可用 [`Self::is_valid`] 驗證曲線方程式。
-    pub fn new(curve: Arc<FpCurve>, x: FpFieldElement, y: FpFieldElement) -> Self {
+    pub fn new(curve: Arc<FpCurve<B>>, x: FpFieldElement<B>, y: FpFieldElement<B>) -> Self {
         Self {
             curve,
             coords: Some((x, y)),
@@ -28,7 +28,7 @@ impl FpPoint {
     }
 
     /// 建立本曲線的無窮遠點。
-    pub fn infinity(curve: Arc<FpCurve>) -> Self {
+    pub fn infinity(curve: Arc<FpCurve<B>>) -> Self {
         Self {
             curve,
             coords: None,
@@ -36,7 +36,7 @@ impl FpPoint {
     }
 
     /// 回傳所屬曲線。
-    pub fn curve(&self) -> &Arc<FpCurve> {
+    pub fn curve(&self) -> &Arc<FpCurve<B>> {
         &self.curve
     }
 
@@ -46,12 +46,12 @@ impl FpPoint {
     }
 
     /// 回傳 affine X 座標；無窮遠點回傳 `None`。
-    pub fn x(&self) -> Option<&FpFieldElement> {
+    pub fn x(&self) -> Option<&FpFieldElement<B>> {
         self.coords.as_ref().map(|(x, _)| x)
     }
 
     /// 回傳 affine Y 座標；無窮遠點回傳 `None`。
-    pub fn y(&self) -> Option<&FpFieldElement> {
+    pub fn y(&self) -> Option<&FpFieldElement<B>> {
         self.coords.as_ref().map(|(_, y)| y)
     }
 
@@ -69,11 +69,8 @@ impl FpPoint {
     }
 
     fn satisfies_order(&self) -> bool {
-        if self
-            .curve
-            .cofactor()
-            .is_some_and(|h| h == &BigUint::from(1_u8))
-        {
+        let one = B::from_u8(1).expect("Fp integer represents one");
+        if self.curve.cofactor().is_some_and(|h| h == &one) {
             return true;
         }
         self.curve
@@ -95,7 +92,7 @@ impl FpPoint {
         }
     }
 
-    fn twice_affine(&self, x: &FpFieldElement, y: &FpFieldElement) -> Self {
+    fn twice_affine(&self, x: &FpFieldElement<B>, y: &FpFieldElement<B>) -> Self {
         let x_squared = x.square();
         let three_x_squared = &(&x_squared + &x_squared) + &x_squared;
         let lambda = &(&three_x_squared + self.curve.a()) / &(y + y);
@@ -123,12 +120,12 @@ impl FpPoint {
     }
 
     /// 以由最高位到最低位的 double-and-add 計算 `kP`。
-    pub fn mul_double_and_add(&self, scalar: &BigUint) -> Self {
+    pub fn mul_double_and_add(&self, scalar: &B) -> Self {
         if self.is_infinity() || scalar.is_zero() {
             return Self::infinity(Arc::clone(&self.curve));
         }
         let mut result = Self::infinity(Arc::clone(&self.curve));
-        let mut bit = scalar.bits();
+        let mut bit = scalar.bit_length();
         while bit > 0 {
             bit -= 1;
             result = result.twice();
@@ -165,8 +162,8 @@ impl FpPoint {
     }
 }
 
-fn fixed_be(value: &BigUint, len: usize) -> Vec<u8> {
-    let bytes = value.to_be_bytes();
+fn fixed_be<B: FpInteger>(value: &B, len: usize) -> Vec<u8> {
+    let bytes = value.to_unsigned_be_bytes();
     let mut output = alloc::vec![0_u8; len];
     let significant = if value.is_zero() { 0 } else { bytes.len() };
     if significant != 0 {
@@ -175,16 +172,16 @@ fn fixed_be(value: &BigUint, len: usize) -> Vec<u8> {
     output
 }
 
-impl PartialEq for FpPoint {
+impl<B: FpInteger> PartialEq for FpPoint<B> {
     fn eq(&self, other: &Self) -> bool {
         (Arc::ptr_eq(&self.curve, &other.curve) || self.curve == other.curve)
             && self.coords == other.coords
     }
 }
 
-impl Eq for FpPoint {}
+impl<B: FpInteger> Eq for FpPoint<B> {}
 
-impl core::fmt::Debug for FpPoint {
+impl<B: FpInteger> core::fmt::Debug for FpPoint<B> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match &self.coords {
             None => f.write_str("FpPoint(infinity)"),
@@ -197,8 +194,8 @@ impl core::fmt::Debug for FpPoint {
     }
 }
 
-impl Neg for &FpPoint {
-    type Output = FpPoint;
+impl<B: FpInteger> Neg for &FpPoint<B> {
+    type Output = FpPoint<B>;
 
     fn neg(self) -> Self::Output {
         match &self.coords {
@@ -208,8 +205,8 @@ impl Neg for &FpPoint {
     }
 }
 
-impl Add for &FpPoint {
-    type Output = FpPoint;
+impl<B: FpInteger> Add for &FpPoint<B> {
+    type Output = FpPoint<B>;
 
     fn add(self, rhs: Self) -> Self::Output {
         assert_eq!(
@@ -229,18 +226,18 @@ impl Add for &FpPoint {
     }
 }
 
-impl Sub for &FpPoint {
-    type Output = FpPoint;
+impl<B: FpInteger> Sub for &FpPoint<B> {
+    type Output = FpPoint<B>;
 
     fn sub(self, rhs: Self) -> Self::Output {
         self + &(-rhs)
     }
 }
 
-impl Mul<&BigUint> for &FpPoint {
-    type Output = FpPoint;
+impl<B: FpInteger> Mul<&B> for &FpPoint<B> {
+    type Output = FpPoint<B>;
 
-    fn mul(self, rhs: &BigUint) -> Self::Output {
+    fn mul(self, rhs: &B) -> Self::Output {
         self.mul_double_and_add(rhs)
     }
 }

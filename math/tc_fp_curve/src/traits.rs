@@ -4,12 +4,11 @@
 //! `SecP256R1FieldElement`／`SecP256R1Point` 直接成為另一組曲線實作，而不必
 //! 假裝所有曲線都共用目前的動態 `BigUint` 表示。
 
-use tc_bigint::BigUint;
 use tc_ec_core::{Curve, FieldElement, Point, PrimeFieldElement};
 
-use crate::{FpCurve, FpFieldElement, FpPoint};
+use crate::{FpCurve, FpFieldElement, FpInteger, FpPoint};
 
-impl FieldElement for FpFieldElement {
+impl<B: FpInteger> FieldElement for FpFieldElement<B> {
     fn zero(&self) -> Self {
         FpFieldElement::zero(self)
     }
@@ -51,8 +50,8 @@ impl FieldElement for FpFieldElement {
     }
 }
 
-impl PrimeFieldElement for FpFieldElement {
-    type BigUint = BigUint;
+impl<B: FpInteger> PrimeFieldElement for FpFieldElement<B> {
+    type BigUint = B;
 
     fn sqrt(&self) -> Option<Self> {
         FpFieldElement::sqrt(self)
@@ -67,10 +66,10 @@ impl PrimeFieldElement for FpFieldElement {
     }
 }
 
-impl Curve for FpCurve {
-    type Field = FpFieldElement;
-    type Point = FpPoint;
-    type Scalar = BigUint;
+impl<B: FpInteger> Curve for FpCurve<B> {
+    type Field = FpFieldElement<B>;
+    type Point = FpPoint<B>;
+    type Scalar = B;
 
     fn a(&self) -> &Self::Field {
         FpCurve::a(self)
@@ -89,8 +88,8 @@ impl Curve for FpCurve {
     }
 }
 
-impl Point for FpPoint {
-    type Curve = FpCurve;
+impl<B: FpInteger> Point for FpPoint<B> {
+    type Curve = FpCurve<B>;
 
     fn identity(&self) -> Self {
         self.curve().infinity()
