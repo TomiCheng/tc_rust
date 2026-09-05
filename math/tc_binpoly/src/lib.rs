@@ -11,6 +11,7 @@ extern crate std;
 pub mod bench_support;
 #[cfg(feature = "alloc")]
 mod binary_poly;
+mod binary_poly_ops;
 mod error;
 mod fixed_binary_poly;
 #[cfg(feature = "alloc")]
@@ -24,6 +25,7 @@ mod x86;
 
 #[cfg(feature = "alloc")]
 pub use binary_poly::BinaryPoly;
+pub use binary_poly_ops::BinaryPolyOps;
 pub use error::BinPolyError;
 pub use fixed_binary_poly::FixedBinaryPoly;
 #[cfg(feature = "alloc")]
