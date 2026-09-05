@@ -3,19 +3,20 @@
 //! 此演算法只依賴 [`Curve`] 與其關聯的 [`Point`]，因此同一份程式可套用到
 //! 通用 `FpCurve`，也可套用到未來擁有專用欄位與點型別的 `custom/sec` 曲線。
 
-use tc_bigint::BigUint;
+use tc_bigint::BitOps;
 use tc_ec_core::{Curve, Point};
 
 /// 使用由最高位到最低位的 double-and-add 計算 `scalar * point`。
 ///
 /// 此函式的目的在驗證抽象可承載真實泛型演算法；目前未宣稱常數時間，秘密純量
 /// 應改用後續的固定視窗或 ladder 實作。
-pub fn scalar_mul<C>(point: &C::Point, scalar: &BigUint) -> C::Point
+pub fn scalar_mul<C, S>(point: &C::Point, scalar: &S) -> C::Point
 where
-    C: Curve<Scalar = BigUint>,
+    C: Curve<Scalar = S>,
+    S: BitOps,
 {
     let mut result = point.identity();
-    let mut bit = scalar.bits();
+    let mut bit = scalar.bit_length();
     while bit > 0 {
         bit -= 1;
         result = result.double();
@@ -29,19 +30,25 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::FpCurve;
-    use crate::named_curves::{secp256k1_dynamic, secp256r1_dynamic};
+    use crate::named_curves::{secp256k1, secp256k1_dynamic, secp256r1, secp256r1_dynamic};
+    use crate::{FpCurve, FpInteger, FpPoint};
+    use tc_bigint::{BigUint, U256};
 
-    #[test]
-    fn generic_algorithm_runs_on_both_named_curves() {
-        for (_, point) in [secp256k1_dynamic(), secp256r1_dynamic()] {
+    fn assert_algorithm<B: FpInteger>(points: [FpPoint<B>; 2]) {
+        for point in points {
             for scalar in [0_u32, 1, 2, 19, 255] {
-                let scalar = BigUint::from(scalar);
+                let scalar = B::from_u32(scalar).expect("small scalar fits");
                 assert_eq!(
-                    scalar_mul::<FpCurve<BigUint>>(&point, &scalar),
+                    scalar_mul::<FpCurve<B>, B>(&point, &scalar),
                     point.mul_double_and_add(&scalar)
                 );
             }
         }
+    }
+
+    #[test]
+    fn generic_algorithm_runs_on_both_curves_and_integer_backends() {
+        assert_algorithm::<U256>([secp256k1().1, secp256r1().1]);
+        assert_algorithm::<BigUint>([secp256k1_dynamic().1, secp256r1_dynamic().1]);
     }
 }
