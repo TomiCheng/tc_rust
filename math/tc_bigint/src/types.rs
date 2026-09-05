@@ -15,7 +15,7 @@ macro_rules! define_fixed_ints {
     ($($bits:literal => $name:ident),* $(,)?) => {
         $(
             #[doc = concat!("A fixed-precision ", stringify!($bits), "-bit signed integer.")]
-            pub type $name = FixedBigInt<{ $bits / Word::BITS as usize }>;
+            pub type $name = FixedBigInt<{ ($bits as usize).div_ceil(Word::BITS as usize) }>;
         )*
     };
 }
@@ -41,6 +41,11 @@ mod tests {
     use core::mem::size_of;
 
     use super::{I64, I128, I1024, U64, U128, U256, U384, U521, U1024, U2048};
+    use crate::{FixedBigInt, Word};
+
+    define_fixed_ints! {
+        521 => TestI521,
+    }
 
     #[test]
     fn aliases_have_their_declared_storage_width() {
@@ -61,5 +66,10 @@ mod tests {
 
         assert_eq!(value.bit_length(), 521);
         assert!(size_of::<U521>() * 8 >= 521);
+    }
+
+    #[test]
+    fn non_word_aligned_signed_alias_rounds_storage_up() {
+        assert!(size_of::<TestI521>() * 8 >= 521);
     }
 }
