@@ -7,8 +7,8 @@ use crate::ops::clear;
 /// Allocation-free binary polynomial with exactly `N` little-endian limbs.
 ///
 /// The attached modulus must have `size(n) == N`. Multiplication and squaring
-/// use `[[u64; N]; 2]` as stack scratch, avoiding unstable `[u64; 2 * N]`
-/// generic-const expressions. Reducers still receive ordinary slices.
+/// use two `N`-limb rows as stack scratch, avoiding unstable `[u64; 2 * N]`
+/// generic-const expressions. Reducers still receive ordinary `u64` slices.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct FixedBinaryPoly<const N: usize> {
     multiplier: BinPolyMultiplier,
@@ -88,14 +88,9 @@ impl<const N: usize> FixedBinaryPoly<N> {
         if count == 0 {
             return self.clone();
         }
-        let mut current = WipeArray(self.limbs);
         let mut output = [0_u64; N];
-        for round in 0..count {
-            self.multiplier.square_fixed(current.as_ref(), &mut output);
-            if round + 1 < count {
-                current.as_mut().copy_from_slice(&output);
-            }
-        }
+        self.multiplier
+            .square_n_fixed(&self.limbs, count, &mut output);
         Self {
             multiplier: self.multiplier.clone(),
             limbs: output,
@@ -216,13 +211,7 @@ fn square_n_fixed<const N: usize>(
     z: &mut [u64; N],
 ) {
     debug_assert!(count > 0);
-    let mut current = WipeArray(*x);
-    for round in 0..count {
-        multiplier.square_fixed(current.as_ref(), z);
-        if round + 1 < count {
-            current.as_mut().copy_from_slice(z);
-        }
-    }
+    multiplier.square_n_fixed(x, count, z);
 }
 
 struct WipeArray<const N: usize>([u64; N]);
@@ -245,11 +234,14 @@ impl<const N: usize> Drop for WipeArray<N> {
 
 #[cfg(test)]
 mod tests {
+    #[cfg(feature = "alloc")]
+    use alloc::vec::Vec;
+
     use super::*;
 
     #[test]
     #[cfg(feature = "alloc")]
-    fn fixed_matches_allocating_facade() {
+    fn fixed_inverse_matches_allocating_facade() {
         let multiplier = BinPolyMultiplier::trinomial(113, 9).unwrap();
         let fixed =
             FixedBinaryPoly::<2>::from_limbs(multiplier.clone(), [0x0123_4567_89AB_CDEF, 0x1234])
@@ -259,13 +251,75 @@ mod tests {
                 .unwrap();
 
         assert_eq!(
-            fixed.square().as_limbs().as_slice(),
-            dynamic.square().as_limbs()
-        );
-        assert_eq!(
             fixed.invert().unwrap().as_limbs().as_slice(),
             dynamic.invert().unwrap().as_limbs()
         );
+    }
+
+    #[test]
+    #[cfg(feature = "alloc")]
+    fn fixed_square_matches_allocating_facade_across_moduli() {
+        let mut seed = 0xF17E_D5A4_2C39_81B7_u64;
+        check_fixed_squares::<2>(BinPolyMultiplier::trinomial(113, 9).unwrap(), &mut seed);
+        check_fixed_squares::<4>(BinPolyMultiplier::trinomial(193, 15).unwrap(), &mut seed);
+        check_fixed_squares::<4>(BinPolyMultiplier::trinomial(233, 74).unwrap(), &mut seed);
+        check_fixed_squares::<4>(BinPolyMultiplier::trinomial(239, 158).unwrap(), &mut seed);
+        check_fixed_squares::<7>(BinPolyMultiplier::trinomial(409, 87).unwrap(), &mut seed);
+        check_fixed_squares::<3>(
+            BinPolyMultiplier::pentanomial(131, 2, 3, 8).unwrap(),
+            &mut seed,
+        );
+        check_fixed_squares::<3>(
+            BinPolyMultiplier::pentanomial(163, 3, 6, 7).unwrap(),
+            &mut seed,
+        );
+        check_fixed_squares::<5>(
+            BinPolyMultiplier::pentanomial(283, 5, 7, 12).unwrap(),
+            &mut seed,
+        );
+        check_fixed_squares::<9>(
+            BinPolyMultiplier::pentanomial(571, 2, 5, 10).unwrap(),
+            &mut seed,
+        );
+        check_fixed_squares::<1>(BinPolyMultiplier::binomial(64).unwrap(), &mut seed);
+        check_fixed_squares::<2>(BinPolyMultiplier::binomial(127).unwrap(), &mut seed);
+    }
+
+    #[cfg(feature = "alloc")]
+    fn check_fixed_squares<const N: usize>(multiplier: BinPolyMultiplier, seed: &mut u64) {
+        for _ in 0..4 {
+            let mut limbs = [0_u64; N];
+            for word in &mut limbs {
+                *word = next(seed);
+            }
+            if multiplier.n() & 63 != 0 {
+                limbs[N - 1] &= (1_u64 << (multiplier.n() & 63)) - 1;
+            }
+
+            let fixed = FixedBinaryPoly::from_limbs(multiplier.clone(), limbs).unwrap();
+            let dynamic =
+                crate::BinaryPoly::from_limbs(multiplier.clone(), Vec::from(limbs)).unwrap();
+            assert_eq!(
+                fixed.square().as_limbs().as_slice(),
+                dynamic.square().as_limbs(),
+                "n={}",
+                multiplier.n()
+            );
+            assert_eq!(
+                fixed.square_pow(7).as_limbs().as_slice(),
+                dynamic.square_pow(7).as_limbs(),
+                "square_pow n={}",
+                multiplier.n()
+            );
+        }
+    }
+
+    #[cfg(feature = "alloc")]
+    fn next(seed: &mut u64) -> u64 {
+        *seed ^= *seed << 13;
+        *seed ^= *seed >> 7;
+        *seed ^= *seed << 17;
+        *seed
     }
 
     #[test]

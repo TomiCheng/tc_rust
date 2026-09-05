@@ -28,7 +28,7 @@ fn main() {}
 ```
 
 For an allocation-free value representation, make the limb count part of the
-type. Its extended product scratch is `[[u64; N]; 2]` on the stack:
+type. Its double-width scratch uses two `N`-limb rows on the stack:
 
 ```rust
 use tc_binpoly::{BinPolyMultiplier, FixedBinaryPoly};
@@ -65,6 +65,10 @@ On x86/x86_64, the `x86` feature enables the optional `tc_runtime` dependency.
 The factory detects PCLMULQDQ once and stores its proof token in the multiplier
 enum; multiplication does not repeat feature detection. Non-x86 targets do not
 pull in `tc_runtime`.
+
+Squaring uses BMI2 `PDEP` for bit expansion when available, with the portable
+shift-and-mask implementation as fallback. Set `TC_DISABLE_X86_BMI2` before
+process startup to exercise the portable path.
 
 With `std` enabled, set `TC_DISABLE_X86_PCLMULQDQ` before the process starts to
 force the scalar path. This uses `tc_runtime`'s runtime override and avoids a

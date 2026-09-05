@@ -1,5 +1,7 @@
 #[cfg(feature = "alloc")]
-use alloc::vec;
+use alloc::{vec, vec::Vec};
+use core::mem::MaybeUninit;
+use core::sync::atomic::{Ordering, compiler_fence};
 
 use crate::MAX_N;
 use crate::error::BinPolyError;
@@ -7,7 +9,7 @@ use crate::ops::{clear, size};
 use crate::reduce::{Reduce, Reducer};
 use crate::scalar;
 #[cfg(all(feature = "x86", any(target_arch = "x86", target_arch = "x86_64")))]
-use tc_runtime::intrinsics::x86::Pclmulqdq;
+use tc_runtime::intrinsics::x86::{Bmi2, Pclmulqdq};
 
 /// Extended scratch sizes at or below this many limbs stay on the stack.
 pub const STACK_ALLOC_CUTOFF: usize = 128;
@@ -149,15 +151,13 @@ impl BinPolyMulBase {
         self.check_output(z);
 
         if self.size_ext <= STACK_ALLOC_CUTOFF {
-            let mut buffer = [0_u64; STACK_ALLOC_CUTOFF];
-            let mut scratch = ClearOnDrop::new(&mut buffer[..self.size_ext]);
-            expand_square(x, scratch.as_mut());
-            self.reducer.reduce(scratch.as_mut(), z);
+            let mut buffer = [MaybeUninit::uninit(); STACK_ALLOC_CUTOFF];
+            let mut scratch = SquareScratch::new(&mut buffer[..self.size_ext]);
+            self.square_with_scratch(x, z, &mut scratch);
         } else {
-            let mut buffer = vec![0_u64; self.size_ext];
-            let mut scratch = ClearOnDrop::new(&mut buffer);
-            expand_square(x, scratch.as_mut());
-            self.reducer.reduce(scratch.as_mut(), z);
+            let mut buffer = uninit_vec(self.size_ext);
+            let mut scratch = SquareScratch::new(&mut buffer);
+            self.square_with_scratch(x, z, &mut scratch);
         }
     }
 
@@ -167,27 +167,41 @@ impl BinPolyMulBase {
         self.check_value(x);
         self.check_output(z);
 
-        if self.size <= STACK_ALLOC_CUTOFF {
-            let mut buffer = [0_u64; STACK_ALLOC_CUTOFF];
-            let mut current = ClearOnDrop::new(&mut buffer[..self.size]);
-            current.as_mut().copy_from_slice(x);
-            self.square_n_with_current(&mut current, count, z);
+        if self.size_ext <= STACK_ALLOC_CUTOFF {
+            let mut buffer = [MaybeUninit::uninit(); STACK_ALLOC_CUTOFF];
+            let mut scratch = SquareScratch::new(&mut buffer[..self.size_ext]);
+            self.square_n_with_scratch(x, count, z, &mut scratch);
         } else {
-            let mut buffer = vec![0_u64; self.size];
-            let mut current = ClearOnDrop::new(&mut buffer);
-            current.as_mut().copy_from_slice(x);
-            self.square_n_with_current(&mut current, count, z);
+            let mut buffer = uninit_vec(self.size_ext);
+            let mut scratch = SquareScratch::new(&mut buffer);
+            self.square_n_with_scratch(x, count, z, &mut scratch);
         }
     }
 
     #[cfg(feature = "alloc")]
-    fn square_n_with_current(&self, current: &mut ClearOnDrop<'_>, count: usize, z: &mut [u64]) {
-        for round in 0..count {
-            self.square(current.as_ref(), z);
-            if round + 1 < count {
-                current.as_mut().copy_from_slice(z);
-            }
+    fn square_n_with_scratch(
+        &self,
+        x: &[u64],
+        count: usize,
+        z: &mut [u64],
+        scratch: &mut SquareScratch<'_>,
+    ) {
+        self.square_with_scratch(x, z, scratch);
+        for _ in 1..count {
+            // Expansion consumes z before reduction overwrites it, so z and
+            // the persistent extended scratch form the two ping-pong buffers.
+            self.square_in_place_with_scratch(z, scratch);
         }
+    }
+
+    fn square_with_scratch(&self, x: &[u64], z: &mut [u64], scratch: &mut SquareScratch<'_>) {
+        scratch.expand(x);
+        self.reducer.reduce(scratch.initialized_mut(), z);
+    }
+
+    fn square_in_place_with_scratch(&self, z: &mut [u64], scratch: &mut SquareScratch<'_>) {
+        scratch.expand(z);
+        self.reducer.reduce(scratch.initialized_mut(), z);
     }
 
     #[cfg(feature = "alloc")]
@@ -223,9 +237,24 @@ impl BinPolyMulBase {
             "fixed polynomial width does not match modulus"
         );
         debug_assert_reduced(self.n, x);
-        let mut tt = FixedExtendedScratch([[0_u64; N]; 2]);
-        expand_square(x, tt.as_mut());
-        self.reducer.reduce(tt.as_mut(), z);
+        let mut buffer = [[MaybeUninit::uninit(); N]; 2];
+        let mut scratch = SquareScratch::new(buffer.as_flattened_mut());
+        self.square_with_scratch(x, z, &mut scratch);
+    }
+
+    fn square_n_fixed<const N: usize>(&self, x: &[u64; N], count: usize, z: &mut [u64; N]) {
+        assert!(count > 0, "square count must be positive");
+        assert_eq!(
+            N, self.size,
+            "fixed polynomial width does not match modulus"
+        );
+        debug_assert_reduced(self.n, x);
+        let mut buffer = [[MaybeUninit::uninit(); N]; 2];
+        let mut scratch = SquareScratch::new(buffer.as_flattened_mut());
+        self.square_with_scratch(x, z, &mut scratch);
+        for _ in 1..count {
+            self.square_in_place_with_scratch(z, &mut scratch);
+        }
     }
 
     #[cfg(all(feature = "x86", any(target_arch = "x86", target_arch = "x86_64")))]
@@ -379,6 +408,15 @@ impl BinPolyMultiplier {
     pub(crate) fn square_fixed<const N: usize>(&self, x: &[u64; N], z: &mut [u64; N]) {
         self.base().square_fixed(x, z);
     }
+
+    pub(crate) fn square_n_fixed<const N: usize>(
+        &self,
+        x: &[u64; N],
+        count: usize,
+        z: &mut [u64; N],
+    ) {
+        self.base().square_n_fixed(x, count, z);
+    }
 }
 
 #[cfg(feature = "alloc")]
@@ -424,22 +462,67 @@ fn validate_degree(n: usize, minimum: usize) -> Result<(), BinPolyError> {
     Ok(())
 }
 
-fn expand_square(x: &[u64], zz: &mut [u64]) {
+fn expand_square(x: &[u64], zz: &mut [MaybeUninit<u64>]) {
     debug_assert_eq!(zz.len(), x.len() * 2);
+    let backend = Expand32Backend::detect();
     for (i, &word) in x.iter().enumerate() {
-        zz[i * 2] = expand32(word as u32);
-        zz[i * 2 + 1] = expand32((word >> 32) as u32);
+        zz[i * 2].write(expand32(word as u32, backend));
+        zz[i * 2 + 1].write(expand32((word >> 32) as u32, backend));
+    }
+}
+
+#[derive(Clone, Copy)]
+enum Expand32Backend {
+    Portable,
+    #[cfg(all(feature = "x86", any(target_arch = "x86", target_arch = "x86_64")))]
+    Bmi2(Bmi2),
+}
+
+impl Expand32Backend {
+    fn detect() -> Self {
+        #[cfg(all(feature = "x86", any(target_arch = "x86", target_arch = "x86_64")))]
+        if let Some(proof) = Bmi2::detect() {
+            return Self::Bmi2(proof);
+        }
+        Self::Portable
     }
 }
 
 #[inline]
-fn expand32(value: u32) -> u64 {
+fn expand32(value: u32, backend: Expand32Backend) -> u64 {
+    #[cfg(all(feature = "x86", any(target_arch = "x86", target_arch = "x86_64")))]
+    if let Expand32Backend::Bmi2(proof) = backend {
+        // SAFETY: the proof token establishes BMI2 support.
+        return unsafe { expand32_bmi2(proof, value) };
+    }
+    let _ = backend;
+
     let mut z = u64::from(value);
     z = (z | z << 16) & 0x0000_FFFF_0000_FFFF;
     z = (z | z << 8) & 0x00FF_00FF_00FF_00FF;
     z = (z | z << 4) & 0x0F0F_0F0F_0F0F_0F0F;
     z = (z | z << 2) & 0x3333_3333_3333_3333;
     (z | z << 1) & 0x5555_5555_5555_5555
+}
+
+#[cfg(all(feature = "x86", target_arch = "x86"))]
+#[target_feature(enable = "bmi2")]
+unsafe fn expand32_bmi2(_proof: Bmi2, value: u32) -> u64 {
+    use core::arch::x86::_pdep_u32;
+
+    let lo = _pdep_u32(value, 0x5555_5555);
+    let hi = _pdep_u32(value >> 16, 0x5555_5555);
+    u64::from(lo) | (u64::from(hi) << 32)
+}
+
+#[cfg(all(feature = "x86", target_arch = "x86_64"))]
+#[target_feature(enable = "bmi2")]
+unsafe fn expand32_bmi2(_proof: Bmi2, value: u32) -> u64 {
+    use core::arch::x86_64::_pdep_u32;
+
+    let lo = _pdep_u32(value, 0x5555_5555);
+    let hi = _pdep_u32(value >> 16, 0x5555_5555);
+    u64::from(lo) | (u64::from(hi) << 32)
 }
 
 fn debug_assert_reduced(_n: usize, _value: &[u64]) {
@@ -467,10 +550,6 @@ impl<'a> ClearOnDrop<'a> {
     fn as_mut(&mut self) -> &mut [u64] {
         self.words
     }
-
-    fn as_ref(&self) -> &[u64] {
-        self.words
-    }
 }
 
 #[cfg(feature = "alloc")]
@@ -478,6 +557,45 @@ impl Drop for ClearOnDrop<'_> {
     fn drop(&mut self) {
         clear(self.words);
     }
+}
+
+struct SquareScratch<'a> {
+    words: &'a mut [MaybeUninit<u64>],
+}
+
+impl<'a> SquareScratch<'a> {
+    fn new(words: &'a mut [MaybeUninit<u64>]) -> Self {
+        Self { words }
+    }
+
+    fn expand(&mut self, x: &[u64]) {
+        expand_square(x, self.words);
+    }
+
+    fn initialized_mut(&mut self) -> &mut [u64] {
+        // SAFETY: `expand` assigns every entry before this method is called.
+        unsafe { core::slice::from_raw_parts_mut(self.words.as_mut_ptr().cast(), self.words.len()) }
+    }
+}
+
+impl Drop for SquareScratch<'_> {
+    fn drop(&mut self) {
+        for word in self.words.iter_mut() {
+            // SAFETY: writing a valid u64 does not read the possibly
+            // uninitialized previous contents.
+            unsafe { word.as_mut_ptr().write_volatile(0) };
+        }
+        compiler_fence(Ordering::SeqCst);
+    }
+}
+
+#[cfg(feature = "alloc")]
+fn uninit_vec(len: usize) -> Vec<MaybeUninit<u64>> {
+    let mut words = Vec::with_capacity(len);
+    // SAFETY: `MaybeUninit<u64>` needs no initialization, and its drop does
+    // not inspect the backing allocation. `SquareScratch` fills before read.
+    unsafe { words.set_len(len) };
+    words
 }
 
 struct FixedExtendedScratch<const N: usize>([[u64; N]; 2]);
@@ -709,7 +827,37 @@ mod tests {
                 let mut actual = vec![0_u64; multiplier.size()];
                 multiplier.multiply(&x, &y, &mut actual);
                 assert_eq!(actual, expected, "n={}", multiplier.n());
+
+                let expected_square = reference_multiply(modulus, &x, &x);
+                multiplier.square(&x, &mut actual);
+                assert_eq!(actual, expected_square, "square n={}", multiplier.n());
             }
+        }
+    }
+
+    #[test]
+    fn expand32_matches_independent_bit_expansion() {
+        let mut seed = 0xE32A_5EED_91C7_4B6D_u64;
+        let edge_cases = [0_u32, 1, u32::MAX, 0x8000_0000, 0xA5A5_5A5A];
+        for value in edge_cases
+            .into_iter()
+            .chain((0..4096).map(|_| next(&mut seed) as u32))
+        {
+            let mut expected = 0_u64;
+            for bit in 0..32 {
+                expected |= u64::from((value >> bit) & 1) << (bit * 2);
+            }
+
+            assert_eq!(
+                expand32(value, Expand32Backend::Portable),
+                expected,
+                "portable value={value:#010x}"
+            );
+            assert_eq!(
+                expand32(value, Expand32Backend::detect()),
+                expected,
+                "detected value={value:#010x}"
+            );
         }
     }
 
@@ -737,6 +885,14 @@ mod tests {
         let mut z = vec![0_u64; multiplier.size()];
         multiplier.multiply(&x, &y, &mut z);
         assert_eq!(z[0], 9);
+        assert!(z[1..].iter().all(|&word| word == 0));
+
+        multiplier.square(&x, &mut z);
+        assert_eq!(z[0], 5);
+        assert!(z[1..].iter().all(|&word| word == 0));
+
+        multiplier.square_n(&x, 2, &mut z);
+        assert_eq!(z[0], 17);
         assert!(z[1..].iter().all(|&word| word == 0));
     }
 }

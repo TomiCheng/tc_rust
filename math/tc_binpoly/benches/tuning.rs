@@ -85,7 +85,7 @@ fn bench_reducer_shapes(c: &mut Criterion) {
 }
 
 fn bench_scalar_cutoffs(c: &mut Criterion) {
-    const LENGTHS: &[usize] = &[6, 8, 9, 12, 16, 24, 32];
+    const LENGTHS: &[usize] = &[6, 7, 8, 9, 12, 16, 24, 32];
     const CUTOFFS: &[usize] = &[4, 6, 8, 10, 12, 16];
     let mut group = c.benchmark_group("binpoly/tuning/scalar-cutoff");
 
@@ -119,8 +119,8 @@ fn bench_scalar_cutoffs(c: &mut Criterion) {
 
 #[cfg(all(feature = "x86", any(target_arch = "x86", target_arch = "x86_64")))]
 fn bench_x86_cutoffs(c: &mut Criterion) {
-    const LENGTHS: &[usize] = &[24, 32, 48, 64, 72, 80, 88, 96, 112, 128];
-    const CUTOFFS: &[usize] = &[24, 32, 48, 64, 80, 96];
+    const LENGTHS: &[usize] = &[24, 32, 40, 48, 56, 64, 72, 80, 96, 112, 128];
+    const CUTOFFS: &[usize] = &[24, 32, 40, 48, 56, 64, 72, 80, 96];
     let mut group = c.benchmark_group("binpoly/tuning/x86-cutoff");
 
     for &len in LENGTHS {
