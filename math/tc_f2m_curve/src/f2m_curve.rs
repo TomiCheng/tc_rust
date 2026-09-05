@@ -6,13 +6,13 @@
 use alloc::sync::Arc;
 
 use tc_bigint::{BigUint, BitOps};
-use tc_binpoly::{BinPolyError, BinaryPoly};
+use tc_binpoly::{BinPolyError, BinaryPoly, BinaryPolyOps};
 use tc_ec_core::{CoordinateSystem, PointDecodeError};
 
 use crate::{F2mField, F2mFieldElement, F2mPoint, F2mPolynomial};
 
 /// `GF(2^m)` 上的二元短 Weierstrass 曲線。
-pub struct F2mCurve<P: F2mPolynomial = BinaryPoly> {
+pub struct F2mCurve<P: BinaryPolyOps = BinaryPoly> {
     field: Arc<F2mField>,
     a: F2mFieldElement<P>,
     b: F2mFieldElement<P>,
@@ -237,15 +237,15 @@ impl<P: F2mPolynomial> F2mCurve<P> {
     }
 }
 
-impl<P: F2mPolynomial> PartialEq for F2mCurve<P> {
+impl<P: BinaryPolyOps> PartialEq for F2mCurve<P> {
     fn eq(&self, other: &Self) -> bool {
         self.field == other.field && self.a == other.a && self.b == other.b
     }
 }
 
-impl<P: F2mPolynomial> Eq for F2mCurve<P> {}
+impl<P: BinaryPolyOps> Eq for F2mCurve<P> {}
 
-impl<P: F2mPolynomial> core::fmt::Debug for F2mCurve<P> {
+impl<P: BinaryPolyOps> core::fmt::Debug for F2mCurve<P> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("F2mCurve")
             .field("m", &self.field.m())

@@ -1,8 +1,8 @@
 //! 體元素的最小共通層。
 //!
-//! Fp 與 F2m 都需要加、減、乘、平方與反元素，但只有 Fp 需要平方根，
-//! F2m 則需要 trace 與解二次方程；共通運算留在本 trait，兩組專屬運算分到
-//! `PrimeFieldElement` 與 `BinaryFieldElement`，避免用無意義的方法填滿單一介面。
+//! Fp 與 F2m 都需要加、減、乘、平方、平方根與反元素。F2m 的平方根是便宜的
+//! Frobenius power，Fp 則可能沒有平方根，因此共通簽章仍以 `Option` 表達。
+//! trace 與 half-trace 才留在 `BinaryFieldElement` 專屬層。
 //!
 //! # API 狀態
 //!
@@ -34,6 +34,9 @@ pub trait FieldElement: Clone + Eq {
 
     /// 體域平方。
     fn square(&self) -> Self;
+
+    /// 若存在，回傳本元素的一個平方根。
+    fn sqrt(&self) -> Option<Self>;
 
     /// 加法反元素。
     fn negate(&self) -> Self;

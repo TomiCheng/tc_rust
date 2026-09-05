@@ -41,6 +41,10 @@ impl<B: FpInteger> FieldElement for FpFieldElement<B> {
         FpFieldElement::square(self)
     }
 
+    fn sqrt(&self) -> Option<Self> {
+        FpFieldElement::sqrt(self)
+    }
+
     fn negate(&self) -> Self {
         -self
     }
@@ -52,10 +56,6 @@ impl<B: FpInteger> FieldElement for FpFieldElement<B> {
 
 impl<B: FpInteger> PrimeFieldElement for FpFieldElement<B> {
     type BigUint = B;
-
-    fn sqrt(&self) -> Option<Self> {
-        FpFieldElement::sqrt(self)
-    }
 
     fn element_from_big_uint(&self, value: &Self::BigUint) -> Self {
         FpFieldElement::element_from_big_uint(self, value)
@@ -85,6 +85,14 @@ impl<B: FpInteger> Curve for FpCurve<B> {
 
     fn cofactor(&self) -> Option<&Self::Scalar> {
         FpCurve::cofactor(self)
+    }
+
+    fn scalar_bit_length(scalar: &Self::Scalar) -> usize {
+        scalar.bit_length()
+    }
+
+    fn scalar_test_bit(scalar: &Self::Scalar, index: usize) -> bool {
+        scalar.test_bit(index)
     }
 }
 
@@ -119,7 +127,9 @@ impl<B: FpInteger> Point for FpPoint<B> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::named_curves::secp256k1;
+    use crate::named_curves::{secp256k1, secp256k1_dynamic, secp256r1, secp256r1_dynamic};
+    use crate::{FpInteger, FpPoint, scalar_mul};
+    use tc_bigint::{BigUint, U256};
 
     #[test]
     fn trait_methods_delegate_to_the_concrete_implementation() {
@@ -131,6 +141,25 @@ mod tests {
 
         let x = point.x().unwrap();
         assert_eq!(FieldElement::square(x), x.square());
+        assert_eq!(FieldElement::sqrt(x), x.sqrt());
         assert_eq!(PrimeFieldElement::to_big_uint(x), x.to_big_uint());
+    }
+
+    fn assert_algorithm<B: FpInteger>(points: [FpPoint<B>; 2]) {
+        for point in points {
+            for scalar in [0_u32, 1, 2, 19, 255] {
+                let scalar = B::from_u32(scalar).expect("small scalar fits");
+                assert_eq!(
+                    scalar_mul::<FpCurve<B>>(&point, &scalar),
+                    point.mul_double_and_add(&scalar)
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn neutral_algorithm_runs_on_both_fp_integer_backends() {
+        assert_algorithm::<U256>([secp256k1().1, secp256r1().1]);
+        assert_algorithm::<BigUint>([secp256k1_dynamic().1, secp256r1_dynamic().1]);
     }
 }

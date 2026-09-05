@@ -34,4 +34,10 @@ pub trait Curve {
 
     /// Cofactor；未知時為 `None`。
     fn cofactor(&self) -> Option<&Self::Scalar>;
+
+    /// 標量的有效位元長度，供不綁定大整數 crate 的共用演算法使用。
+    fn scalar_bit_length(scalar: &Self::Scalar) -> usize;
+
+    /// 讀取標量位元，供不綁定大整數 crate 的共用演算法使用。
+    fn scalar_test_bit(scalar: &Self::Scalar, index: usize) -> bool;
 }

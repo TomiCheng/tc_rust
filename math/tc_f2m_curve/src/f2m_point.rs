@@ -8,14 +8,14 @@ use alloc::vec::Vec;
 use core::ops::{Add, Mul, Neg, Sub};
 
 use tc_bigint::{BigUint, BitOps};
-use tc_binpoly::BinaryPoly;
+use tc_binpoly::{BinaryPoly, BinaryPolyOps};
 use tc_ec_core::CoordinateSystem;
 
 use crate::{F2mCurve, F2mFieldElement, F2mPolynomial};
 
 /// [`F2mCurve`] 上的 affine 點；`coords == None` 代表無窮遠點。
 #[derive(Clone)]
-pub struct F2mPoint<P: F2mPolynomial = BinaryPoly> {
+pub struct F2mPoint<P: BinaryPolyOps = BinaryPoly> {
     curve: Arc<F2mCurve<P>>,
     coords: Option<(F2mFieldElement<P>, F2mFieldElement<P>)>,
 }
@@ -173,16 +173,16 @@ fn fixed_be(value: &BigUint, length: usize) -> Vec<u8> {
     encoded
 }
 
-impl<P: F2mPolynomial> PartialEq for F2mPoint<P> {
+impl<P: BinaryPolyOps> PartialEq for F2mPoint<P> {
     fn eq(&self, other: &Self) -> bool {
         (Arc::ptr_eq(&self.curve, &other.curve) || self.curve == other.curve)
             && self.coords == other.coords
     }
 }
 
-impl<P: F2mPolynomial> Eq for F2mPoint<P> {}
+impl<P: BinaryPolyOps> Eq for F2mPoint<P> {}
 
-impl<P: F2mPolynomial> core::fmt::Debug for F2mPoint<P> {
+impl<P: BinaryPolyOps> core::fmt::Debug for F2mPoint<P> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match &self.coords {
             None => f.write_str("F2mPoint(infinity)"),

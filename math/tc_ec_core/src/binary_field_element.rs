@@ -1,12 +1,13 @@
 //! 二元擴張體元素的專屬層。
 //!
-//! F2m 的 trace、half-trace 與解二次方程不適用於 Fp；其中
-//! `solve_quadratic` 與 Fp 的 `sqrt` 同樣服務點解壓縮，卻需要不同演算法，
-//! 因此兩者分層而不塞進共同 `FieldElement`。
+//! F2m 的 trace 與 half-trace 不適用於 Fp。`solve_quadratic` 需要曲線的
+//! 係數與解壓縮規則，BC 與舊 `tc_ec` 也都把它放在曲線層，因此不再放在
+//! 體元素 trait。平方根則因 Fp/F2m 都有而移到共同 [`FieldElement`]。
 //!
 //! # API 狀態
 //!
-//! Step 3 尚未實作 F2m；此介面保留為下一階段草案，請勿視為穩定 API。
+//! F2m 實作已把 trace 定為誠實表達 `{0, 1}` 的 `u8`；介面仍在拆分期，
+//! 請勿視為穩定 API。
 
 use crate::FieldElement;
 
@@ -17,7 +18,4 @@ pub trait BinaryFieldElement: FieldElement {
 
     /// 計算 half-trace。
     fn half_trace(&self) -> Self;
-
-    /// 解 `z² + z = self`；無解時回傳 `None`。
-    fn solve_quadratic(&self) -> Option<Self>;
 }

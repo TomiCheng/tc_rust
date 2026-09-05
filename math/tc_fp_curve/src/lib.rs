@@ -9,14 +9,12 @@ mod fp_field_element;
 mod fp_point;
 mod integer;
 pub mod named_curves;
-mod scalar_mul;
 mod traits;
 
 pub use fp_curve::FpCurve;
 pub use fp_field_element::FpFieldElement;
 pub use fp_point::FpPoint;
 pub use integer::FpInteger;
-pub use scalar_mul::scalar_mul;
 pub use tc_ec_core::{
-    CoordinateSystem, Curve, FieldElement, Point, PointDecodeError, PrimeFieldElement,
+    CoordinateSystem, Curve, FieldElement, Point, PointDecodeError, PrimeFieldElement, scalar_mul,
 };
