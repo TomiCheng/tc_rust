@@ -53,4 +53,4 @@ pub use traits::{
 pub use traits::{
     IsProbablePrime, NextProbablePrime, ProbablePrime, Random, RandomBits, RandomMod,
 };
-pub use types::{I64, I128, I1024, U64, U128, U1024, U2048};
+pub use types::{I64, I128, I1024, U64, U128, U256, U384, U521, U1024, U2048};
