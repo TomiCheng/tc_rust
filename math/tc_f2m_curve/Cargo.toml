@@ -1,0 +1,16 @@
+[package]
+name = "tc_f2m_curve"
+description = "Binary-field short-Weierstrass elliptic curves backed by tc_binpoly."
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+tc_bigint = { version = "0.1.0", path = "../tc_bigint", default-features = false, features = ["alloc"] }
+tc_binpoly = { version = "0.1.0", path = "../tc_binpoly", default-features = false, features = ["alloc", "x86"] }
+tc_ec_core = { version = "0.1.0", path = "../tc_ec_core" }
+
+[dev-dependencies]
+tc_bigint_old = { version = "0.1.0", path = "../tc_bigint_old" }
+tc_ec = { version = "0.1.0", path = "../tc_ec" }
