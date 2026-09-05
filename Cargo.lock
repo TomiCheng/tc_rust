@@ -600,6 +600,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_binpoly"
+version = "0.1.0"
+dependencies = [
+ "criterion",
+ "tc_runtime",
+]
+
+[[package]]
 name = "tc_blake2"
 version = "0.1.0"
 dependencies = [
