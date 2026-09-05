@@ -28,8 +28,8 @@ const K: [u32; 64] = [
 pub(crate) fn compress(h: &mut [u32; 8], block: &[u8; 64]) {
     // 讀成 16 個 BE u32,再擴展成 64 字排程。
     let mut w = [0u32; 64];
-    for (i, chunk) in block.chunks_exact(4).enumerate() {
-        w[i] = u32::from_be_bytes(chunk.try_into().unwrap());
+    for (i, chunk) in block.as_chunks::<4>().0.iter().enumerate() {
+        w[i] = u32::from_be_bytes(*chunk);
     }
     for i in 16..64 {
         let s0 = w[i - 15].rotate_right(7) ^ w[i - 15].rotate_right(18) ^ (w[i - 15] >> 3);

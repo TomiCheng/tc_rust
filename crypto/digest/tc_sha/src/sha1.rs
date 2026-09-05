@@ -55,8 +55,8 @@ impl Sha1Digest {
     fn compress(h: &mut [u32; 5], block: &[u8; 64]) {
         // SHA-1 為 big-endian:讀成 16 個 BE u32,再擴展成 80 字。
         let mut w = [0u32; 80];
-        for (i, chunk) in block.chunks_exact(4).enumerate() {
-            w[i] = u32::from_be_bytes(chunk.try_into().unwrap());
+        for (i, chunk) in block.as_chunks::<4>().0.iter().enumerate() {
+            w[i] = u32::from_be_bytes(*chunk);
         }
         for i in 16..80 {
             w[i] = (w[i - 3] ^ w[i - 8] ^ w[i - 14] ^ w[i - 16]).rotate_left(1);

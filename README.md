@@ -43,6 +43,7 @@ engines respectively; both provide streaming, clone, and reset behavior.
 | [`tc_digest`](crypto/tc_digest) | Shared message-digest and XOF traits | Core-only `no_std` |
 | [Digest family crates](crypto/digest) | Independent message-digest, XOF, and digest-adapter implementations | `no_std`; allocation and optional CPU acceleration vary by family |
 | [`tc_bigint`](math/tc_bigint) | Fixed-width and arbitrary-precision signed/unsigned integers and number-theory operations | Fixed-width types are core-only; dynamic types require `alloc` |
+| [`tc_prime`](math/tc_prime) | FIPS 186-4 small-factor, Miller-Rabin, enhanced Miller-Rabin, and optional Shawe-Taylor utilities | Fixed-width path is core-only; `alloc` enables dynamic integers and `digest` enables Shawe-Taylor |
 | [`tc_bigint_old`](math/tc_bigint_old) | Legacy signed arbitrary-precision integer used by crates awaiting migration | `no_std + alloc` |
 | [`tc_ec`](math/tc_ec) | Binary-polynomial, raw-integer, finite-field, and elliptic-curve foundations | `no_std + alloc` |
 
