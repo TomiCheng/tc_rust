@@ -1,0 +1,16 @@
+[package]
+name = "tc_fp_curve"
+description = "Prime-field short-Weierstrass elliptic curves backed by Montgomery arithmetic."
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+rand_core = { workspace = true }
+tc_bigint = { version = "0.1.0", path = "../tc_bigint", default-features = false, features = ["alloc", "rand_core"] }
+tc_ec_core = { version = "0.1.0", path = "../tc_ec_core" }
+
+[dev-dependencies]
+tc_bigint_old = { version = "0.1.0", path = "../tc_bigint_old" }
+tc_ec = { version = "0.1.0", path = "../tc_ec" }
