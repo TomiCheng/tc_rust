@@ -83,7 +83,7 @@ pub(crate) fn impl_karatsuba_with_leaf<Leaf>(
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "alloc"))]
 mod tests {
     use alloc::vec;
     use alloc::vec::Vec;

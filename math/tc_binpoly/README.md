@@ -10,15 +10,21 @@ Itoh-Tsujii inversion with binomial, trinomial, and pentanomial reduction.
 ## Example
 
 ```rust
-use tc_binpoly::{BinaryPoly, BinPolyMultiplier};
+#[cfg(feature = "alloc")]
+fn main() -> Result<(), tc_binpoly::BinPolyError> {
+    use tc_binpoly::{BinaryPoly, BinPolyMultiplier};
 
-let field = BinPolyMultiplier::trinomial(113, 9)?;
-let a = BinaryPoly::from_limbs(field.clone(), vec![0x1234, 0x55])?;
-let one = BinaryPoly::one(field);
+    let field = BinPolyMultiplier::trinomial(113, 9)?;
+    let a = BinaryPoly::from_limbs(field.clone(), vec![0x1234, 0x55])?;
+    let one = BinaryPoly::one(field);
 
-assert_eq!(a.multiply(&one)?, a);
-assert_eq!(a.multiply(&a.invert()?)?, one);
-# Ok::<(), tc_binpoly::BinPolyError>(())
+    assert_eq!(a.multiply(&one)?, a);
+    assert_eq!(a.multiply(&a.invert()?)?, one);
+    Ok(())
+}
+
+#[cfg(not(feature = "alloc"))]
+fn main() {}
 ```
 
 For an allocation-free value representation, make the limb count part of the
@@ -47,13 +53,26 @@ Callers using inversion attest that a trinomial or pentanomial is irreducible.
 Binomial inversion is rejected because `x^n + 1` is always reducible over
 `GF(2)`.
 
-## Allocation and backend selection
+## Features, allocation, and backend selection
 
-The crate is `no_std` and uses `alloc` only for `BinaryPoly` and large dynamic
-scratch buffers. Scratch up to 128 limbs stays on the stack. On x86/x86_64,
-the factory detects PCLMULQDQ once and stores its proof token in the multiplier
-enum; multiplication does not repeat feature detection. Use `force-scalar` to
-test or benchmark the portable backend.
+The crate is always `no_std`. Its default features are `std`, `alloc`, and
+`x86`. `alloc` enables `BinaryPoly`, the slice-based multiplication/inversion
+traits, and large dynamic scratch buffers. `FixedBinaryPoly<N>` and the core
+limb operations remain available with `--no-default-features` and do not need
+an allocator.
+
+On x86/x86_64, the `x86` feature enables the optional `tc_runtime` dependency.
+The factory detects PCLMULQDQ once and stores its proof token in the multiplier
+enum; multiplication does not repeat feature detection. Non-x86 targets do not
+pull in `tc_runtime`.
+
+With `std` enabled, set `TC_DISABLE_X86_PCLMULQDQ` before the process starts to
+force the scalar path. This uses `tc_runtime`'s runtime override and avoids a
+Cargo feature that would disable PCLMULQDQ for the whole workspace. Detection
+is cached, so changing the variable after the first factory call has no effect.
+The x86 tests emit a warning when PCLMULQDQ is unavailable (visible with
+`--nocapture`); CI can set `TC_REQUIRE_X86_PCLMULQDQ=1` to turn that skip into
+a test failure.
 
 `FixedBinaryPoly<N>` performs its arithmetic without heap allocation. Choose
 `N = (n + 63) / 64`; excessively large `N` values can consume substantial
@@ -75,8 +94,12 @@ contract.
 
 ```bash
 cargo test -p tc_binpoly --locked
-cargo test -p tc_binpoly --features force-scalar --locked
-cargo clippy -p tc_binpoly --all-targets --locked -- -D warnings
+cargo test -p tc_binpoly --no-default-features --locked
+cargo test -p tc_binpoly --no-default-features --features x86 --locked
+$env:TC_DISABLE_X86_PCLMULQDQ=1; cargo test -p tc_binpoly --locked
+$env:TC_REQUIRE_X86_PCLMULQDQ=1; cargo test -p tc_binpoly --locked x86::tests
+cargo clippy -p tc_binpoly --all-targets --all-features --locked -- -D warnings
 cargo doc -p tc_binpoly --no-deps --locked
 cargo bench -p tc_binpoly --bench baseline
+cargo bench -p tc_binpoly --bench tuning --features bench-internals
 ```

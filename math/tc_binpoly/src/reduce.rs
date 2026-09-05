@@ -109,10 +109,6 @@ impl TrinomialParameters {
         z.copy_from_slice(&tt[..words]);
         mask_top(self.n, z);
     }
-
-    fn reduce_words(self, tt: &mut [u64], z: &mut [u64]) {
-        reduce_words(self.n, self.k, &[0, self.k], tt, z);
-    }
 }
 
 /// Trinomial reducer dispatch.
@@ -181,38 +177,26 @@ impl TrinomialReducer {
             _ => Self::C(p),
         }
     }
-
-    fn parameters(&self) -> TrinomialParameters {
-        match *self {
-            Self::A(p)
-            | Self::A3(p)
-            | Self::A4(p)
-            | Self::A5(p)
-            | Self::A6(p)
-            | Self::A7(p)
-            | Self::A8(p)
-            | Self::B(p)
-            | Self::C(p)
-            | Self::C5(p)
-            | Self::C6(p)
-            | Self::C7(p)
-            | Self::C8(p)
-            | Self::D(p)
-            | Self::E(p) => p,
-        }
-    }
 }
 
 impl Reduce for TrinomialReducer {
     fn reduce(&self, tt: &mut [u64], z: &mut [u64]) {
         match self {
-            // D is the correctness fallback for the overlapping or residual
-            // word-aligned domains.
+            Self::A(p) => reduce_trinomial_a(p.n, p.k, tt, z),
+            Self::A3(p) => reduce_trinomial_a_const::<2, true>(p.n, p.k, tt, z),
+            Self::A4(p) => reduce_trinomial_a_const::<2, false>(p.n, p.k, tt, z),
+            Self::A5(p) => reduce_trinomial_a_const::<3, true>(p.n, p.k, tt, z),
+            Self::A6(p) => reduce_trinomial_a_const::<3, false>(p.n, p.k, tt, z),
+            Self::A7(p) => reduce_trinomial_a_const::<4, true>(p.n, p.k, tt, z),
+            Self::A8(p) => reduce_trinomial_a_const::<4, false>(p.n, p.k, tt, z),
+            Self::B(p) => reduce_trinomial_b(p.n, p.k, tt, z),
+            Self::C(p) => reduce_trinomial_c(p.n, p.k, tt, z),
+            Self::C5(p) => reduce_trinomial_c_const::<3, true>(p.n, p.k, tt, z),
+            Self::C6(p) => reduce_trinomial_c_const::<3, false>(p.n, p.k, tt, z),
+            Self::C7(p) => reduce_trinomial_c_const::<4, true>(p.n, p.k, tt, z),
+            Self::C8(p) => reduce_trinomial_c_const::<4, false>(p.n, p.k, tt, z),
             Self::D(p) => p.reduce_d(tt, z),
-            // The remaining variants share a word-at-a-time top-down fold.
-            // Their enum identities preserve BC's narrower future unrolling
-            // opportunities (including the A3/A5/A7 slack cases).
-            _ => self.parameters().reduce_words(tt, z),
+            Self::E(p) => reduce_trinomial_e(p.n, p.k, tt, z),
         }
     }
 }
@@ -244,10 +228,6 @@ impl PentanomialParameters {
         }
         z.copy_from_slice(&tt[..words]);
         mask_top(self.n, z);
-    }
-
-    fn reduce_words(self, tt: &mut [u64], z: &mut [u64]) {
-        reduce_words(self.n, self.k3, &[0, self.k1, self.k2, self.k3], tt, z);
     }
 }
 
@@ -304,29 +284,22 @@ impl PentanomialReducer {
         }
         Self::C(p)
     }
-
-    fn parameters(&self) -> PentanomialParameters {
-        match *self {
-            Self::A(p)
-            | Self::A3(p)
-            | Self::A4(p)
-            | Self::A5(p)
-            | Self::A6(p)
-            | Self::A7(p)
-            | Self::A8(p)
-            | Self::B(p)
-            | Self::C(p)
-            | Self::D(p)
-            | Self::E(p) => p,
-        }
-    }
 }
 
 impl Reduce for PentanomialReducer {
     fn reduce(&self, tt: &mut [u64], z: &mut [u64]) {
         match self {
+            Self::A(p) => reduce_pentanomial_a(p.n, p.k1, p.k2, p.k3, tt, z),
+            Self::A3(p) => reduce_pentanomial_a_const::<2, true>(p.n, p.k1, p.k2, p.k3, tt, z),
+            Self::A4(p) => reduce_pentanomial_a_const::<2, false>(p.n, p.k1, p.k2, p.k3, tt, z),
+            Self::A5(p) => reduce_pentanomial_a_const::<3, true>(p.n, p.k1, p.k2, p.k3, tt, z),
+            Self::A6(p) => reduce_pentanomial_a_const::<3, false>(p.n, p.k1, p.k2, p.k3, tt, z),
+            Self::A7(p) => reduce_pentanomial_a_const::<4, true>(p.n, p.k1, p.k2, p.k3, tt, z),
+            Self::A8(p) => reduce_pentanomial_a_const::<4, false>(p.n, p.k1, p.k2, p.k3, tt, z),
+            Self::B(p) => reduce_pentanomial_b(p.n, p.k1, p.k2, p.k3, tt, z),
             Self::C(p) => p.reduce_c(tt, z),
-            _ => self.parameters().reduce_words(tt, z),
+            Self::D(p) => reduce_pentanomial_d(p.n, p.k1, p.k2, p.k3, tt, z),
+            Self::E(p) => reduce_pentanomial_e(p.n, p.k1, p.k2, p.k3, tt, z),
         }
     }
 }
@@ -338,7 +311,14 @@ impl Reduce for PentanomialReducer {
 /// sufficient. Unlike BC's final per-family kernels, these generic bit-splice
 /// helpers also handle word-aligned taps without relying on masked shift-count
 /// behavior.
-fn reduce_words(n: usize, highest_tap: usize, taps: &[usize], tt: &mut [u64], z: &mut [u64]) {
+#[cfg(feature = "bench-internals")]
+pub(crate) fn reduce_words(
+    n: usize,
+    highest_tap: usize,
+    taps: &[usize],
+    tt: &mut [u64],
+    z: &mut [u64],
+) {
     debug_assert!(n - highest_tap >= 64);
     let words = size(n);
     assert_eq!(z.len(), words, "invalid reduced output length");
@@ -361,7 +341,259 @@ fn reduce_words(n: usize, highest_tap: usize, taps: &[usize], tt: &mut [u64], z:
     mask_top(n, z);
 }
 
+fn reduce_trinomial_a(n: usize, k: usize, tt: &mut [u64], z: &mut [u64]) {
+    let words = size(n);
+    debug_assert!(n & 63 != 0 && k < 64 && n - k >= 64 && words >= 5);
+    assert_eq!(z.len(), words, "invalid reduced output length");
+    assert!(tt.len() >= words * 2, "invalid extended input length");
+    debug_assert_product_slack(n, tt);
+    let w_n = words - 1;
+    let s_n = n & 63;
+    let mut pos = w_n;
+    let mut t_high = tt[pos + w_n + 1];
+    let mut t_low = tt[pos + w_n];
+    let first = (t_low >> s_n) | (t_high << (64 - s_n));
+    let mut carry = tt[pos] ^ first ^ (first << k);
+    tt[pos + 1] ^= first >> (64 - k);
+
+    while pos != 0 {
+        pos -= 1;
+        t_high = t_low;
+        t_low = tt[pos + w_n];
+        let t = (t_low >> s_n) | (t_high << (64 - s_n));
+        carry ^= t >> (64 - k);
+        tt[pos + 1] = carry;
+        carry = tt[pos] ^ t ^ (t << k);
+    }
+
+    z[0] = carry;
+    z[1..w_n].copy_from_slice(&tt[1..w_n]);
+    z[w_n] = tt[w_n] & ((1_u64 << s_n) - 1);
+}
+
+fn reduce_trinomial_a_const<const N: usize, const SLACK: bool>(
+    n: usize,
+    k: usize,
+    tt: &[u64],
+    z: &mut [u64],
+) {
+    debug_assert_eq!(size(n), N);
+    debug_assert!(n & 63 != 0 && k < 64 && n - k >= 64);
+    assert_eq!(z.len(), N, "invalid reduced output length");
+    assert!(tt.len() >= N * 2, "invalid extended input length");
+    debug_assert_product_slack(n, tt);
+    let mut local = [[0_u64; N]; 2];
+    let words = local.as_flattened_mut();
+    let copy_len = if SLACK { N * 2 - 1 } else { N * 2 };
+    words[..copy_len].copy_from_slice(&tt[..copy_len]);
+    let s_n = n & 63;
+    for pos in (0..N).rev() {
+        let t = (words[pos + N - 1] >> s_n) | (words[pos + N] << (64 - s_n));
+        words[pos] ^= t ^ (t << k);
+        words[pos + 1] ^= t >> (64 - k);
+    }
+    z.copy_from_slice(&words[..N]);
+    z[N - 1] &= (1_u64 << s_n) - 1;
+}
+
+fn reduce_trinomial_b(n: usize, k: usize, tt: &mut [u64], z: &mut [u64]) {
+    let words = size(n);
+    debug_assert!(n & 63 != 0 && k >= 64 && k & 63 == 0 && n - k >= 64);
+    assert_eq!(z.len(), words, "invalid reduced output length");
+    assert!(tt.len() >= words * 2, "invalid extended input length");
+    debug_assert_product_slack(n, tt);
+    let w_n = words - 1;
+    let s_n = n & 63;
+    let w_k = k >> 6;
+    for pos in (0..=w_n).rev() {
+        let t = (tt[pos + w_n] >> s_n) | (tt[pos + w_n + 1] << (64 - s_n));
+        tt[pos] ^= t;
+        tt[pos + w_k] ^= t;
+    }
+    z[..w_n].copy_from_slice(&tt[..w_n]);
+    z[w_n] = tt[w_n] & ((1_u64 << s_n) - 1);
+}
+
+fn reduce_trinomial_c(n: usize, k: usize, tt: &mut [u64], z: &mut [u64]) {
+    let words = size(n);
+    debug_assert!(n & 63 != 0 && k >= 64 && k & 63 != 0 && n - k >= 64);
+    assert_eq!(z.len(), words, "invalid reduced output length");
+    assert!(tt.len() >= words * 2, "invalid extended input length");
+    debug_assert_product_slack(n, tt);
+    let w_n = words - 1;
+    let s_n = n & 63;
+    let w_k = k >> 6;
+    let s_k = k & 63;
+    for pos in (0..=w_n).rev() {
+        let t = (tt[pos + w_n] >> s_n) | (tt[pos + w_n + 1] << (64 - s_n));
+        tt[pos] ^= t;
+        tt[pos + w_k] ^= t << s_k;
+        tt[pos + w_k + 1] ^= t >> (64 - s_k);
+    }
+    z[..w_n].copy_from_slice(&tt[..w_n]);
+    z[w_n] = tt[w_n] & ((1_u64 << s_n) - 1);
+}
+
+fn reduce_trinomial_c_const<const N: usize, const SLACK: bool>(
+    n: usize,
+    k: usize,
+    tt: &[u64],
+    z: &mut [u64],
+) {
+    debug_assert_eq!(size(n), N);
+    debug_assert!(n & 63 != 0 && k >= 64 && k & 63 != 0 && n - k >= 64);
+    assert_eq!(z.len(), N, "invalid reduced output length");
+    assert!(tt.len() >= N * 2, "invalid extended input length");
+    debug_assert_product_slack(n, tt);
+    let mut local = [[0_u64; N]; 2];
+    let words = local.as_flattened_mut();
+    let copy_len = if SLACK { N * 2 - 1 } else { N * 2 };
+    words[..copy_len].copy_from_slice(&tt[..copy_len]);
+    let s_n = n & 63;
+    let w_k = k >> 6;
+    let s_k = k & 63;
+    for pos in (0..N).rev() {
+        let t = (words[pos + N - 1] >> s_n) | (words[pos + N] << (64 - s_n));
+        words[pos] ^= t;
+        words[pos + w_k] ^= t << s_k;
+        words[pos + w_k + 1] ^= t >> (64 - s_k);
+    }
+    z.copy_from_slice(&words[..N]);
+    z[N - 1] &= (1_u64 << s_n) - 1;
+}
+
+fn reduce_trinomial_e(n: usize, k: usize, tt: &mut [u64], z: &mut [u64]) {
+    let words = size(n);
+    debug_assert!(n & 63 == 0 && k & 63 != 0 && n - k >= 64);
+    assert_eq!(z.len(), words, "invalid reduced output length");
+    assert!(tt.len() >= words * 2, "invalid extended input length");
+    debug_assert_product_slack(n, tt);
+    let w_k = k >> 6;
+    let s_k = k & 63;
+    for pos in (0..words).rev() {
+        let t = tt[pos + words];
+        tt[pos] ^= t;
+        tt[pos + w_k] ^= t << s_k;
+        tt[pos + w_k + 1] ^= t >> (64 - s_k);
+    }
+    z.copy_from_slice(&tt[..words]);
+}
+
+fn reduce_pentanomial_a(n: usize, k1: usize, k2: usize, k3: usize, tt: &mut [u64], z: &mut [u64]) {
+    let words = size(n);
+    debug_assert!(n & 63 != 0 && k3 < 64 && n - k3 >= 64 && words >= 5);
+    assert_eq!(z.len(), words, "invalid reduced output length");
+    assert!(tt.len() >= words * 2, "invalid extended input length");
+    debug_assert_product_slack(n, tt);
+    let w_n = words - 1;
+    let s_n = n & 63;
+    let mut pos = w_n;
+    let mut t_high = tt[pos + w_n + 1];
+    let mut t_low = tt[pos + w_n];
+    loop {
+        let t = (t_low >> s_n) | (t_high << (64 - s_n));
+        tt[pos] ^= t ^ (t << k1) ^ (t << k2) ^ (t << k3);
+        tt[pos + 1] ^= t >> (64 - k1) ^ t >> (64 - k2) ^ t >> (64 - k3);
+        if pos == 0 {
+            break;
+        }
+        pos -= 1;
+        t_high = t_low;
+        t_low = tt[pos + w_n];
+    }
+    z[..w_n].copy_from_slice(&tt[..w_n]);
+    z[w_n] = tt[w_n] & ((1_u64 << s_n) - 1);
+}
+
+fn reduce_pentanomial_a_const<const N: usize, const SLACK: bool>(
+    n: usize,
+    k1: usize,
+    k2: usize,
+    k3: usize,
+    tt: &[u64],
+    z: &mut [u64],
+) {
+    debug_assert_eq!(size(n), N);
+    debug_assert!(n & 63 != 0 && k3 < 64 && n - k3 >= 64);
+    assert_eq!(z.len(), N, "invalid reduced output length");
+    assert!(tt.len() >= N * 2, "invalid extended input length");
+    debug_assert_product_slack(n, tt);
+    let mut local = [[0_u64; N]; 2];
+    let words = local.as_flattened_mut();
+    let copy_len = if SLACK { N * 2 - 1 } else { N * 2 };
+    words[..copy_len].copy_from_slice(&tt[..copy_len]);
+    let s_n = n & 63;
+    for pos in (0..N).rev() {
+        let t = (words[pos + N - 1] >> s_n) | (words[pos + N] << (64 - s_n));
+        words[pos] ^= t ^ (t << k1) ^ (t << k2) ^ (t << k3);
+        words[pos + 1] ^= t >> (64 - k1) ^ t >> (64 - k2) ^ t >> (64 - k3);
+    }
+    z.copy_from_slice(&words[..N]);
+    z[N - 1] &= (1_u64 << s_n) - 1;
+}
+
+fn reduce_pentanomial_b(n: usize, k1: usize, k2: usize, k3: usize, tt: &mut [u64], z: &mut [u64]) {
+    let words = size(n);
+    debug_assert!(n & 63 != 0 && k2 >= 64 && n - k3 >= 64);
+    assert_eq!(z.len(), words, "invalid reduced output length");
+    assert!(tt.len() >= words * 2, "invalid extended input length");
+    debug_assert_product_slack(n, tt);
+    let w_n = words - 1;
+    let s_n = n & 63;
+    let taps = [(k1 >> 6, k1 & 63), (k2 >> 6, k2 & 63), (k3 >> 6, k3 & 63)];
+    for pos in (0..=w_n).rev() {
+        let t = (tt[pos + w_n] >> s_n) | (tt[pos + w_n + 1] << (64 - s_n));
+        tt[pos] ^= t;
+        for &(word, shift) in &taps {
+            tt[pos + word] ^= t << shift;
+            tt[pos + word + 1] ^= t >> (64 - shift);
+        }
+    }
+    z[..w_n].copy_from_slice(&tt[..w_n]);
+    z[w_n] = tt[w_n] & ((1_u64 << s_n) - 1);
+}
+
+fn reduce_pentanomial_d(n: usize, k1: usize, k2: usize, k3: usize, tt: &mut [u64], z: &mut [u64]) {
+    let words = size(n);
+    debug_assert!(n & 63 != 0 && k2 < 64 && k3 >= 64 && k3 & 63 != 0);
+    assert_eq!(z.len(), words, "invalid reduced output length");
+    assert!(tt.len() >= words * 2, "invalid extended input length");
+    debug_assert_product_slack(n, tt);
+    let w_n = words - 1;
+    let s_n = n & 63;
+    let w_k3 = k3 >> 6;
+    let s_k3 = k3 & 63;
+    for pos in (0..=w_n).rev() {
+        let t = (tt[pos + w_n] >> s_n) | (tt[pos + w_n + 1] << (64 - s_n));
+        tt[pos] ^= t ^ (t << k1) ^ (t << k2);
+        tt[pos + 1] ^= t >> (64 - k1) ^ t >> (64 - k2);
+        tt[pos + w_k3] ^= t << s_k3;
+        tt[pos + w_k3 + 1] ^= t >> (64 - s_k3);
+    }
+    z[..w_n].copy_from_slice(&tt[..w_n]);
+    z[w_n] = tt[w_n] & ((1_u64 << s_n) - 1);
+}
+
+fn reduce_pentanomial_e(n: usize, k1: usize, k2: usize, k3: usize, tt: &mut [u64], z: &mut [u64]) {
+    let words = size(n);
+    debug_assert!(n & 63 == 0 && n - k3 >= 64);
+    assert_eq!(z.len(), words, "invalid reduced output length");
+    assert!(tt.len() >= words * 2, "invalid extended input length");
+    debug_assert_product_slack(n, tt);
+    let taps = [(k1 >> 6, k1 & 63), (k2 >> 6, k2 & 63), (k3 >> 6, k3 & 63)];
+    for pos in (0..words).rev() {
+        let t = tt[pos + words];
+        tt[pos] ^= t;
+        for &(word, shift) in &taps {
+            tt[pos + word] ^= t << shift;
+            tt[pos + word + 1] ^= t >> (64 - shift);
+        }
+    }
+    z.copy_from_slice(&tt[..words]);
+}
+
 #[inline]
+#[cfg(feature = "bench-internals")]
 fn extract_word(words: &[u64], bit: usize) -> u64 {
     let index = bit >> 6;
     let shift = bit & 63;
@@ -373,6 +605,7 @@ fn extract_word(words: &[u64], bit: usize) -> u64 {
 }
 
 #[inline]
+#[cfg(feature = "bench-internals")]
 fn xor_word(words: &mut [u64], bit: usize, value: u64) {
     let index = bit >> 6;
     let shift = bit & 63;
@@ -383,7 +616,7 @@ fn xor_word(words: &mut [u64], bit: usize, value: u64) {
 }
 
 #[inline]
-#[cfg(test)]
+#[cfg(all(test, feature = "alloc"))]
 fn test_bit(words: &[u64], bit: usize) -> bool {
     bit_value(words, bit) != 0
 }
@@ -399,7 +632,7 @@ fn xor_bit_value(words: &mut [u64], bit: usize, value: u64) {
 }
 
 #[inline]
-#[cfg(test)]
+#[cfg(all(test, feature = "alloc"))]
 fn toggle_bit(words: &mut [u64], bit: usize) {
     words[bit >> 6] ^= 1_u64 << (bit & 63);
 }
@@ -426,7 +659,7 @@ fn debug_assert_product_slack(_n: usize, _tt: &[u64]) {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "alloc"))]
 mod tests {
     use alloc::vec;
     use alloc::vec::Vec;

@@ -1,32 +1,36 @@
-//! Binary-polynomial arithmetic over `GF(2)`.
-//!
-//! A polynomial is packed into little-endian `u64` limbs: bit `i` is the
-//! coefficient of `x^i`. The crate currently provides the scalar backend and
-//! generic, correctness-first reducers for binomial, trinomial, and
-//! pentanomial moduli.
-
+#![doc = include_str!("../README.md")]
 #![no_std]
 
+#[cfg(feature = "alloc")]
 extern crate alloc;
-#[cfg(test)]
+#[cfg(any(test, feature = "std"))]
 extern crate std;
 
+#[cfg(feature = "bench-internals")]
+#[doc(hidden)]
+pub mod bench_support;
+#[cfg(feature = "alloc")]
 mod binary_poly;
 mod error;
 mod fixed_binary_poly;
+#[cfg(feature = "alloc")]
 mod invert;
 mod multiplier;
 mod ops;
 mod reduce;
 pub mod scalar;
-#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+#[cfg(all(feature = "x86", any(target_arch = "x86", target_arch = "x86_64")))]
 mod x86;
 
+#[cfg(feature = "alloc")]
 pub use binary_poly::BinaryPoly;
 pub use error::BinPolyError;
 pub use fixed_binary_poly::FixedBinaryPoly;
+#[cfg(feature = "alloc")]
 pub use invert::{BinPolyInv, ItohTsujii};
-pub use multiplier::{BinPolyMul, BinPolyMulBase, BinPolyMultiplier, STACK_ALLOC_CUTOFF};
+#[cfg(feature = "alloc")]
+pub use multiplier::BinPolyMul;
+pub use multiplier::{BinPolyMulBase, BinPolyMultiplier, STACK_ALLOC_CUTOFF};
 pub use ops::{
     add, add_to, bit_length_var, clear, copy, equal_to, equal_to_one, equal_to_zero, one, size,
     zero,

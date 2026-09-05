@@ -91,7 +91,7 @@ fn impl_mul_word(table: &mut [u64; 16], x: u64, y: u64) -> (u64, u64) {
     (low, high)
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "alloc"))]
 mod tests {
     use alloc::vec;
     use alloc::vec::Vec;

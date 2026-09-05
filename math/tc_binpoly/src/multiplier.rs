@@ -1,3 +1,4 @@
+#[cfg(feature = "alloc")]
 use alloc::vec;
 
 use crate::MAX_N;
@@ -5,13 +6,14 @@ use crate::error::BinPolyError;
 use crate::ops::{clear, size};
 use crate::reduce::{Reduce, Reducer};
 use crate::scalar;
-#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+#[cfg(all(feature = "x86", any(target_arch = "x86", target_arch = "x86_64")))]
 use tc_runtime::intrinsics::x86::Pclmulqdq;
 
 /// Extended scratch sizes at or below this many limbs stay on the stack.
 pub const STACK_ALLOC_CUTOFF: usize = 128;
 
 /// Binary-polynomial multiplication and squaring modulo a fixed polynomial.
+#[cfg(feature = "alloc")]
 pub trait BinPolyMul {
     /// Polynomial bit length.
     fn n(&self) -> usize;
@@ -49,6 +51,7 @@ impl BinPolyMulBase {
         }
     }
 
+    #[cfg(feature = "alloc")]
     fn multiply_medium(&self, x: &[u64], y: &[u64], z: &mut [u64]) {
         self.check_value(x);
         self.check_value(y);
@@ -67,6 +70,7 @@ impl BinPolyMulBase {
         }
     }
 
+    #[cfg(feature = "alloc")]
     fn multiply_large(&self, x: &[u64], y: &[u64], z: &mut [u64]) {
         self.check_value(x);
         self.check_value(y);
@@ -89,7 +93,11 @@ impl BinPolyMulBase {
         }
     }
 
-    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+    #[cfg(all(
+        feature = "alloc",
+        feature = "x86",
+        any(target_arch = "x86", target_arch = "x86_64")
+    ))]
     fn multiply_x86_medium(&self, proof: Pclmulqdq, x: &[u64], y: &[u64], z: &mut [u64]) {
         self.check_value(x);
         self.check_value(y);
@@ -108,7 +116,11 @@ impl BinPolyMulBase {
         }
     }
 
-    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+    #[cfg(all(
+        feature = "alloc",
+        feature = "x86",
+        any(target_arch = "x86", target_arch = "x86_64")
+    ))]
     fn multiply_x86_large(&self, proof: Pclmulqdq, x: &[u64], y: &[u64], z: &mut [u64]) {
         self.check_value(x);
         self.check_value(y);
@@ -131,6 +143,7 @@ impl BinPolyMulBase {
         }
     }
 
+    #[cfg(feature = "alloc")]
     fn square(&self, x: &[u64], z: &mut [u64]) {
         self.check_value(x);
         self.check_output(z);
@@ -148,6 +161,7 @@ impl BinPolyMulBase {
         }
     }
 
+    #[cfg(feature = "alloc")]
     fn square_n(&self, x: &[u64], count: usize, z: &mut [u64]) {
         assert!(count > 0, "square count must be positive");
         self.check_value(x);
@@ -166,6 +180,7 @@ impl BinPolyMulBase {
         }
     }
 
+    #[cfg(feature = "alloc")]
     fn square_n_with_current(&self, current: &mut ClearOnDrop<'_>, count: usize, z: &mut [u64]) {
         for round in 0..count {
             self.square(current.as_ref(), z);
@@ -175,11 +190,13 @@ impl BinPolyMulBase {
         }
     }
 
+    #[cfg(feature = "alloc")]
     fn check_value(&self, value: &[u64]) {
         assert_eq!(value.len(), self.size, "invalid polynomial input length");
         debug_assert_reduced(self.n, value);
     }
 
+    #[cfg(feature = "alloc")]
     fn check_output(&self, output: &[u64]) {
         assert_eq!(output.len(), self.size, "invalid polynomial output length");
     }
@@ -211,7 +228,7 @@ impl BinPolyMulBase {
         self.reducer.reduce(tt.as_mut(), z);
     }
 
-    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+    #[cfg(all(feature = "x86", any(target_arch = "x86", target_arch = "x86_64")))]
     fn multiply_fixed_x86<const N: usize>(
         &self,
         proof: Pclmulqdq,
@@ -243,13 +260,13 @@ pub enum BinPolyMultiplier {
     /// Portable scalar Karatsuba multiplication with table-based leaves.
     ScalarLarge(BinPolyMulBase),
     /// PCLMULQDQ backend selected once at construction.
-    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+    #[cfg(all(feature = "x86", any(target_arch = "x86", target_arch = "x86_64")))]
     X86V128Medium {
         base: BinPolyMulBase,
         proof: Pclmulqdq,
     },
     /// PCLMULQDQ Karatsuba backend selected once at construction.
-    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+    #[cfg(all(feature = "x86", any(target_arch = "x86", target_arch = "x86_64")))]
     X86V128Large {
         base: BinPolyMulBase,
         proof: Pclmulqdq,
@@ -287,7 +304,7 @@ impl BinPolyMultiplier {
 
     fn scalar(n: usize, reducer: Reducer) -> Self {
         let base = BinPolyMulBase::new(n, reducer);
-        #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+        #[cfg(all(feature = "x86", any(target_arch = "x86", target_arch = "x86_64")))]
         if let Some(proof) = Pclmulqdq::detect() {
             return if base.size < crate::x86::KARATSUBA_CUTOFF {
                 Self::X86V128Medium { base, proof }
@@ -305,15 +322,25 @@ impl BinPolyMultiplier {
     fn base(&self) -> &BinPolyMulBase {
         match self {
             Self::ScalarMedium(base) | Self::ScalarLarge(base) => base,
-            #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+            #[cfg(all(feature = "x86", any(target_arch = "x86", target_arch = "x86_64")))]
             Self::X86V128Medium { base, .. } | Self::X86V128Large { base, .. } => base,
         }
+    }
+
+    /// Polynomial bit length.
+    pub fn n(&self) -> usize {
+        self.base().n
+    }
+
+    /// Number of limbs in a reduced value.
+    pub fn size(&self) -> usize {
+        self.base().size
     }
 
     pub(crate) const fn is_binomial(&self) -> bool {
         match self {
             Self::ScalarMedium(base) | Self::ScalarLarge(base) => base.is_binomial(),
-            #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+            #[cfg(all(feature = "x86", any(target_arch = "x86", target_arch = "x86_64")))]
             Self::X86V128Medium { base, .. } | Self::X86V128Large { base, .. } => {
                 base.is_binomial()
             }
@@ -326,6 +353,7 @@ impl BinPolyMultiplier {
     /// that already have a carryless extended product. `tt` must contain
     /// exactly `2 * self.size()` limbs and no coefficient above degree
     /// `2 * self.n() - 2`; its contents are arbitrary after the call.
+    #[cfg(feature = "alloc")]
     pub fn reduce_extended(&self, tt: &mut [u64], z: &mut [u64]) {
         let base = self.base();
         assert_eq!(tt.len(), base.size_ext, "invalid extended input length");
@@ -341,7 +369,7 @@ impl BinPolyMultiplier {
     ) {
         match self {
             Self::ScalarMedium(base) | Self::ScalarLarge(base) => base.multiply_fixed(x, y, z),
-            #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+            #[cfg(all(feature = "x86", any(target_arch = "x86", target_arch = "x86_64")))]
             Self::X86V128Medium { base, proof } | Self::X86V128Large { base, proof } => {
                 base.multiply_fixed_x86(*proof, x, y, z)
             }
@@ -353,6 +381,7 @@ impl BinPolyMultiplier {
     }
 }
 
+#[cfg(feature = "alloc")]
 impl BinPolyMul for BinPolyMultiplier {
     fn n(&self) -> usize {
         self.base().n
@@ -366,9 +395,9 @@ impl BinPolyMul for BinPolyMultiplier {
         match self {
             Self::ScalarMedium(base) => base.multiply_medium(x, y, z),
             Self::ScalarLarge(base) => base.multiply_large(x, y, z),
-            #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+            #[cfg(all(feature = "x86", any(target_arch = "x86", target_arch = "x86_64")))]
             Self::X86V128Medium { base, proof } => base.multiply_x86_medium(*proof, x, y, z),
-            #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+            #[cfg(all(feature = "x86", any(target_arch = "x86", target_arch = "x86_64")))]
             Self::X86V128Large { base, proof } => base.multiply_x86_large(*proof, x, y, z),
         }
     }
@@ -424,10 +453,12 @@ fn debug_assert_reduced(_n: usize, _value: &[u64]) {
     }
 }
 
+#[cfg(feature = "alloc")]
 struct ClearOnDrop<'a> {
     words: &'a mut [u64],
 }
 
+#[cfg(feature = "alloc")]
 impl<'a> ClearOnDrop<'a> {
     fn new(words: &'a mut [u64]) -> Self {
         Self { words }
@@ -442,6 +473,7 @@ impl<'a> ClearOnDrop<'a> {
     }
 }
 
+#[cfg(feature = "alloc")]
 impl Drop for ClearOnDrop<'_> {
     fn drop(&mut self) {
         clear(self.words);
@@ -462,7 +494,7 @@ impl<const N: usize> Drop for FixedExtendedScratch<N> {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "alloc"))]
 mod tests {
     use alloc::vec;
     use alloc::vec::Vec;
@@ -487,6 +519,36 @@ mod tests {
             BinPolyMultiplier::pentanomial(163, 3, 3, 7),
             Err(BinPolyError::InvalidPentanomialTaps { .. })
         ));
+    }
+
+    #[test]
+    #[cfg(all(
+        feature = "std",
+        feature = "x86",
+        any(target_arch = "x86", target_arch = "x86_64")
+    ))]
+    fn environment_override_forces_scalar_backend() {
+        const CHILD: &str = "TC_BINPOLY_FORCE_SCALAR_TEST_CHILD";
+        const TEST: &str = "multiplier::tests::environment_override_forces_scalar_backend";
+
+        if std::env::var_os(CHILD).is_some() {
+            let multiplier = BinPolyMultiplier::trinomial(113, 9).unwrap();
+            assert!(matches!(
+                multiplier,
+                BinPolyMultiplier::ScalarMedium(_) | BinPolyMultiplier::ScalarLarge(_)
+            ));
+            return;
+        }
+
+        let status = std::process::Command::new(std::env::current_exe().unwrap())
+            .arg("--exact")
+            .arg(TEST)
+            .arg("--nocapture")
+            .env(CHILD, "1")
+            .env("TC_DISABLE_X86_PCLMULQDQ", "1")
+            .status()
+            .expect("failed to launch force-scalar child test");
+        assert!(status.success(), "force-scalar child test failed");
     }
 
     #[test]
@@ -566,12 +628,32 @@ mod tests {
             }
         }
 
-        for p in (n..=2 * n - 2).rev() {
-            if zz[p >> 6] & (1_u64 << (p & 63)) == 0 {
-                continue;
+        reference_reduce_fixpoint(modulus, &mut zz);
+
+        zz.truncate(words);
+        if n & 63 != 0 {
+            zz[words - 1] &= (1_u64 << (n & 63)) - 1;
+        }
+        zz
+    }
+
+    /// Definition-level polynomial remainder independent of every production
+    /// reducer: repeatedly remove the current leading term until degree < n.
+    fn reference_reduce_fixpoint(modulus: ReferenceModulus, value: &mut [u64]) {
+        let n = modulus.n();
+        while let Some(top_word) = value.iter().rposition(|&word| word != 0) {
+            let top_bit = 63 - value[top_word].leading_zeros() as usize;
+            let p = top_word * 64 + top_bit;
+            if p < n {
+                break;
             }
+
+            // Clear x^p, then XOR x^(p-n) times the non-leading terms of the
+            // modulus. A replacement may still have degree >= n, so the next
+            // iteration searches for the leading term again from scratch.
+            value[p >> 6] ^= 1_u64 << (p & 63);
             let q = p - n;
-            let mut toggle = |bit: usize| zz[bit >> 6] ^= 1_u64 << (bit & 63);
+            let mut toggle = |bit: usize| value[bit >> 6] ^= 1_u64 << (bit & 63);
             match modulus {
                 ReferenceModulus::Binomial(_) => toggle(q),
                 ReferenceModulus::Trinomial(_, k) => {
@@ -586,12 +668,6 @@ mod tests {
                 }
             }
         }
-
-        zz.truncate(words);
-        if n & 63 != 0 {
-            zz[words - 1] &= (1_u64 << (n & 63)) - 1;
-        }
-        zz
     }
 
     fn next(seed: &mut u64) -> u64 {
@@ -635,6 +711,19 @@ mod tests {
                 assert_eq!(actual, expected, "n={}", multiplier.n());
             }
         }
+    }
+
+    #[test]
+    fn reference_reduction_is_a_true_fixpoint() {
+        let modulus = ReferenceModulus::Trinomial(17, 15);
+        let mut value = vec![0_u64; 2];
+        value[0] = 1_u64 << 31;
+
+        reference_reduce_fixpoint(modulus, &mut value);
+
+        assert!(value[1..].iter().all(|&word| word == 0));
+        assert_eq!(value[0] >> modulus.n(), 0);
+        assert_eq!(value[0], (1_u64 << 15) | 0x5555);
     }
 
     #[test]

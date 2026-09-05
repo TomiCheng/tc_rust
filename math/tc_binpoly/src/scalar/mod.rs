@@ -1,16 +1,23 @@
 //! Portable scalar multiplication backend.
 
 mod kernels;
+#[cfg(feature = "alloc")]
 mod large;
 
 pub use kernels::impl_mul;
-pub(crate) use large::{
-    impl_karatsuba, impl_karatsuba_with_leaf, karatsuba_scratch_size,
-    karatsuba_scratch_size_with_cutoff,
-};
+#[cfg(feature = "alloc")]
+pub(crate) use large::{impl_karatsuba, karatsuba_scratch_size};
+#[cfg(all(
+    feature = "alloc",
+    any(
+        feature = "bench-internals",
+        all(feature = "x86", any(target_arch = "x86", target_arch = "x86_64"))
+    )
+))]
+pub(crate) use large::{impl_karatsuba_with_leaf, karatsuba_scratch_size_with_cutoff};
 
-/// Initial scalar Karatsuba cutoff in `u64` limbs.
+/// Measured scalar Karatsuba crossover in `u64` limbs.
 ///
-/// This starts at BC's measured scalar cutoff and is intentionally a named
-/// constant so the crate benchmark can retune it for Rust code generation.
+/// Rust tuning across 6 through 32 limbs kept 8 in the best-performing group;
+/// nearby cutoffs varied by only a few percent across operand sizes.
 pub const KARATSUBA_CUTOFF: usize = 8;

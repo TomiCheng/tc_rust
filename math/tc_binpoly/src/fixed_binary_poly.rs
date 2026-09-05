@@ -1,7 +1,7 @@
 use core::ops::Add;
 
 use crate::error::BinPolyError;
-use crate::multiplier::{BinPolyMul, BinPolyMultiplier};
+use crate::multiplier::BinPolyMultiplier;
 use crate::ops::clear;
 
 /// Allocation-free binary polynomial with exactly `N` little-endian limbs.
@@ -248,6 +248,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[cfg(feature = "alloc")]
     fn fixed_matches_allocating_facade() {
         let multiplier = BinPolyMultiplier::trinomial(113, 9).unwrap();
         let fixed =

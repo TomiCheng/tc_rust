@@ -7,11 +7,14 @@ license.workspace = true
 repository.workspace = true
 
 [features]
-default = []
-force-scalar = ["tc_runtime/disable-x86-pclmulqdq"]
+default = ["alloc", "std", "x86"]
+alloc = []
+bench-internals = ["alloc"]
+std = ["alloc", "tc_runtime?/std"]
+x86 = ["dep:tc_runtime"]
 
-[dependencies]
-tc_runtime = { version = "0.1.0", path = "../../core/tc_runtime" }
+[target.'cfg(any(target_arch = "x86", target_arch = "x86_64"))'.dependencies]
+tc_runtime = { version = "0.1.0", path = "../../core/tc_runtime", optional = true }
 
 [dev-dependencies]
 criterion = { workspace = true }
@@ -19,3 +22,8 @@ criterion = { workspace = true }
 [[bench]]
 name = "baseline"
 harness = false
+
+[[bench]]
+name = "tuning"
+harness = false
+required-features = ["bench-internals"]
