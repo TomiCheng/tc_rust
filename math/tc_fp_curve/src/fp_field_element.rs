@@ -52,6 +52,11 @@ impl FpFieldElement {
         }
     }
 
+    fn multiply(&self, rhs: &Self) -> Self {
+        debug_assert_eq!(self.field, rhs.field, "different Fp fields");
+        self.with_monty(&self.value * &rhs.value)
+    }
+
     /// 回傳體域質數 `q`。
     pub fn q(&self) -> &BigUint {
         self.field.q()
@@ -68,18 +73,18 @@ impl FpFieldElement {
     }
 
     /// 在同一個 Fp 體域中建立元素。
-    pub fn from_big_uint(&self, value: &BigUint) -> Self {
+    pub fn element_from_big_uint(&self, value: &BigUint) -> Self {
         self.field.element(value)
     }
 
     /// 同一體域的加法單位元。
     pub fn zero(&self) -> Self {
-        self.from_big_uint(&BigUint::default())
+        self.element_from_big_uint(&BigUint::default())
     }
 
     /// 同一體域的乘法單位元。
     pub fn one(&self) -> Self {
-        self.from_big_uint(&BigUint::from(1_u8))
+        self.element_from_big_uint(&BigUint::from(1_u8))
     }
 
     /// 是否為零。
@@ -141,7 +146,7 @@ impl FpFieldElement {
             if t3.is_one() {
                 return self.check_sqrt(t2);
             }
-            let two = self.from_big_uint(&BigUint::from(2_u8));
+            let two = self.element_from_big_uint(&BigUint::from(2_u8));
             let t4 = two.pow(&(q >> 2));
             return self.check_sqrt(&t2 * &t4);
         }
@@ -155,14 +160,14 @@ impl FpFieldElement {
         let four_x = &two_x + &two_x;
         let k = &legendre_exponent + &one_value;
         let q_minus_one_value = q - &one_value;
-        let q_minus_one = self.from_big_uint(&q_minus_one_value);
+        let q_minus_one = self.element_from_big_uint(&q_minus_one_value);
         let mut p_value = one_value.clone();
 
         loop {
             if &p_value >= q {
                 return None;
             }
-            let p = self.from_big_uint(&p_value);
+            let p = self.element_from_big_uint(&p_value);
             let discriminant = &p.square() - &four_x;
             if discriminant.pow(&legendre_exponent) == q_minus_one {
                 let (u, v) = self.lucas_sequence(&p, self, &k);
@@ -188,7 +193,7 @@ impl FpFieldElement {
         } else {
             value >> 1
         };
-        self.from_big_uint(&half)
+        self.element_from_big_uint(&half)
     }
 
     fn lucas_sequence(&self, p: &Self, lucas_q: &Self, k: &BigUint) -> (Self, Self) {
@@ -198,7 +203,7 @@ impl FpFieldElement {
             .expect("lucas_sequence requires non-zero k");
 
         let mut uh = self.one();
-        let mut vl = self.from_big_uint(&BigUint::from(2_u8));
+        let mut vl = self.element_from_big_uint(&BigUint::from(2_u8));
         let mut vh = p.clone();
         let mut ql = self.one();
         let mut qh = self.one();
@@ -275,8 +280,7 @@ impl Mul for &FpFieldElement {
     type Output = FpFieldElement;
 
     fn mul(self, rhs: Self) -> Self::Output {
-        debug_assert_eq!(self.field, rhs.field, "different Fp fields");
-        self.with_monty(&self.value * &rhs.value)
+        self.multiply(rhs)
     }
 }
 
@@ -284,7 +288,8 @@ impl Div for &FpFieldElement {
     type Output = FpFieldElement;
 
     fn div(self, rhs: Self) -> Self::Output {
-        self * &rhs.invert().expect("division by zero in Fp")
+        let inverse = rhs.invert().expect("division by zero in Fp");
+        self.multiply(&inverse)
     }
 }
 
@@ -311,7 +316,7 @@ mod tests {
     #[test]
     fn montgomery_arithmetic_stays_in_range() {
         let x = element(17, 5);
-        let y = x.from_big_uint(&BigUint::from(9_u8));
+        let y = x.element_from_big_uint(&BigUint::from(9_u8));
         assert_eq!((&x + &y).to_big_uint(), BigUint::from(14_u8));
         assert_eq!((&x - &y).to_big_uint(), BigUint::from(13_u8));
         assert_eq!((&x * &y).to_big_uint(), BigUint::from(11_u8));

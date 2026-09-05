@@ -4,10 +4,9 @@
 //! `solve_quadratic` 與 Fp 的 `sqrt` 同樣服務點解壓縮，卻需要不同演算法，
 //! 因此兩者分層而不塞進共同 `FieldElement`。
 //!
-//! # Draft API
+//! # API 狀態
 //!
-//! 此簽章是 step 1 草案，預期會在 step 3 接受真實 Fp 實作壓力後大改；
-//! 請勿視為穩定 API。本次拆分不提供 F2m 實作。
+//! Step 3 尚未實作 F2m；此介面保留為下一階段草案，請勿視為穩定 API。
 
 use crate::FieldElement;
 

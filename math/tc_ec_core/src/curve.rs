@@ -4,20 +4,21 @@
 //! 關聯型別讓演算法保持全泛型，也讓未來像 BC `custom/sec` 的每曲線特化欄位
 //! 能提供自己的型別，不需要 trait object。
 //!
-//! # Draft API
+//! # API 狀態
 //!
-//! 此簽章是 step 1 草案，預期會在 step 3 接受真實 Fp 實作壓力後大改；
-//! 請勿視為穩定 API。
+//! Step 3 以真實 Fp 實作壓測後，移除了演算法不需要的 `Clone + Eq` 限制，
+//! 讓未來 BC `custom/sec` 形式的每曲線特化型別不必配合多餘界限。此介面仍在
+//! 拆分期，請勿視為穩定 API。
 
 use crate::{FieldElement, Point};
 
 /// 橢圓曲線的靜態型別介面。
-pub trait Curve: Clone + Eq {
+pub trait Curve {
     /// 曲線所屬體域的元素型別。
     type Field: FieldElement;
 
     /// 曲線點型別。
-    type Point: Point<Curve = Self, Field = Self::Field>;
+    type Point: Point<Curve = Self>;
 
     /// 標量、群階與 cofactor 使用的無號整數型別。
     type Scalar;

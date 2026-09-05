@@ -4,10 +4,10 @@
 //! F2m 則需要 trace 與解二次方程；共通運算留在本 trait，兩組專屬運算分到
 //! `PrimeFieldElement` 與 `BinaryFieldElement`，避免用無意義的方法填滿單一介面。
 //!
-//! # Draft API
+//! # API 狀態
 //!
-//! 此簽章是 step 1 草案，預期會在 step 3 接受真實 Fp 實作壓力後大改；
-//! 請勿視為穩定 API。
+//! Step 3 已用 Montgomery Fp 元素驗證此簽章；介面仍在拆分期，請勿視為
+//! 穩定 API。
 
 /// Fp 與 F2m 體元素共享的運算介面。
 pub trait FieldElement: Clone + Eq {

@@ -4,10 +4,10 @@
 //! 但數學與實作完全不同，因此平方根只放在本 trait。`BigUint` 以關聯型別
 //! 表達，使零相依的 core 不必直接依賴某個大整數 crate。
 //!
-//! # Draft API
+//! # API 狀態
 //!
-//! 此簽章是 step 1 草案，預期會在 step 3 接受真實 Fp 實作壓力後大改；
-//! 請勿視為穩定 API。
+//! Step 3 已用 Montgomery Fp 元素驗證從相同體域實例轉入、轉出 `BigUint`
+//! 的簽章；介面仍在拆分期，請勿視為穩定 API。
 
 use crate::FieldElement;
 
@@ -20,7 +20,7 @@ pub trait PrimeFieldElement: FieldElement {
     fn sqrt(&self) -> Option<Self>;
 
     /// 在同一體域中由 `[0, q)` 的無號整數建立元素。
-    fn from_big_uint(&self, value: &Self::BigUint) -> Self;
+    fn element_from_big_uint(&self, value: &Self::BigUint) -> Self;
 
     /// 離開體域表示並回傳 `[0, q)` 的無號整數。
     fn to_big_uint(&self) -> Self::BigUint;

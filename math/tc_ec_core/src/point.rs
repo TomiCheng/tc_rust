@@ -4,20 +4,18 @@
 //! 相同。關聯型別將點鎖回具體曲線與體元素，讓泛型演算法可靜態分派，並保留
 //! per-curve 特化實作空間。
 //!
-//! # Draft API
+//! # API 狀態
 //!
-//! 此簽章是 step 1 草案，預期會在 step 3 接受真實 Fp 實作壓力後大改；
-//! 請勿視為穩定 API。
+//! Step 3 的 Fp 實作證實 `Field` 可由 `Self::Curve::Field` 唯一決定，因此移除
+//! 點上的重複關聯型別。這可避免泛型演算法與 per-curve 特化實作維護兩份相同
+//! 約束；介面仍在拆分期，請勿視為穩定 API。
 
-use crate::{Curve, FieldElement};
+use crate::Curve;
 
 /// 橢圓曲線點的群運算介面。
 pub trait Point: Clone + Eq {
     /// 點所屬的曲線型別。
-    type Curve: Curve<Field = Self::Field, Point = Self>;
-
-    /// 座標的體元素型別。
-    type Field: FieldElement;
+    type Curve: Curve<Point = Self>;
 
     /// 產生同一條曲線上的群單位點。
     fn identity(&self) -> Self;
