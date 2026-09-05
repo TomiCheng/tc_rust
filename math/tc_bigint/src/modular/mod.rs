@@ -2,6 +2,7 @@
 
 mod form;
 mod inverse;
+mod monty;
 mod mul;
 mod ops;
 mod params;
@@ -10,6 +11,7 @@ mod pow;
 #[cfg(feature = "alloc")]
 pub use form::MontyForm;
 pub use form::{FixedMontyForm, Retrieve};
+pub use monty::{Monty, MontyInteger};
 pub use params::FixedMontyParams;
 #[cfg(feature = "alloc")]
 pub use params::MontyParams;
