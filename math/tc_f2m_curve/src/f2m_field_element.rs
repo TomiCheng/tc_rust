@@ -6,11 +6,13 @@
 use alloc::{sync::Arc, vec};
 use core::ops::{Add, Div, Mul, Neg, Sub};
 
-use tc_binpoly::{
-    BinaryPoly, BinaryPolyOps, STACK_ALLOC_CUTOFF, bit_length_var, equal_to_one, equal_to_zero,
-};
+use tc_binpoly::{BinaryPoly, BinaryPolyOps, bit_length_var, equal_to_one, equal_to_zero};
 
 use crate::{F2mField, F2mInteger, F2mPolynomial};
+
+const SMALL_INTEGER_STACK_LIMBS: usize = 4;
+const MEDIUM_INTEGER_STACK_LIMBS: usize = 8;
+const LARGE_INTEGER_STACK_LIMBS: usize = 16;
 
 /// `GF(2^m)` 的 polynomial-basis 元素。
 #[derive(Clone)]
@@ -68,12 +70,20 @@ impl<P: BinaryPolyOps> F2mFieldElement<P> {
         self.value.as_limbs()[0] & 1 == 1
     }
 
+    /// 嘗試將 polynomial-basis bits 解讀成指定的非負整數型別。
+    pub fn try_to_integer<B: F2mInteger>(&self) -> Option<B> {
+        B::from_le_u64(self.value.as_limbs()).ok()
+    }
+
     /// 將 polynomial-basis bits 解讀成指定的非負整數型別。
+    ///
+    /// # Panics
+    ///
+    /// 當元素無法放入 `B` 時 panic；需要處理寬度不相容時請使用
+    /// [`Self::try_to_integer`]。
     pub fn to_integer<B: F2mInteger>(&self) -> B {
-        match B::from_le_u64(self.value.as_limbs()) {
-            Ok(value) => value,
-            Err(_) => panic!("F2m field element does not fit the selected integer type"),
-        }
+        self.try_to_integer()
+            .expect("F2m field element does not fit the selected integer type")
     }
 
     /// 回傳同一個體域中的零。
@@ -199,9 +209,18 @@ impl<P: F2mPolynomial> F2mFieldElement<P> {
 
         // 固定整數會輸出完整寬度（例如 U256 是 4 limbs），可能大於 sect163
         // 元素的 3 limbs；緩衝取兩者較大值，驗證高位為零後再交給多項式。
+        // 分級陣列讓常用曲線只清實際相近的容量，不沿用乘法 scratch 的 128 limbs。
         let required = field.size().max(value.u64_length());
-        if required <= STACK_ALLOC_CUTOFF {
-            let mut limbs = [0_u64; STACK_ALLOC_CUTOFF];
+        if required <= SMALL_INTEGER_STACK_LIMBS {
+            let mut limbs = [0_u64; SMALL_INTEGER_STACK_LIMBS];
+            return Self::from_integer_limbs(field, value, &mut limbs[..required]);
+        }
+        if required <= MEDIUM_INTEGER_STACK_LIMBS {
+            let mut limbs = [0_u64; MEDIUM_INTEGER_STACK_LIMBS];
+            return Self::from_integer_limbs(field, value, &mut limbs[..required]);
+        }
+        if required <= LARGE_INTEGER_STACK_LIMBS {
+            let mut limbs = [0_u64; LARGE_INTEGER_STACK_LIMBS];
             return Self::from_integer_limbs(field, value, &mut limbs[..required]);
         }
 
@@ -303,7 +322,7 @@ impl<P: BinaryPolyOps> Neg for &F2mFieldElement<P> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tc_bigint::{BigUint, U256};
+    use tc_bigint::{BigUint, U128, U256};
     use tc_binpoly::FixedBinaryPoly;
 
     fn exercise<P: F2mPolynomial, B: F2mInteger>() {
@@ -328,5 +347,15 @@ mod tests {
     fn dynamic_and_fixed_values_share_field_formulas() {
         exercise::<BinaryPoly, BigUint>();
         exercise::<FixedBinaryPoly<1>, U256>();
+    }
+
+    #[test]
+    fn fallible_integer_conversion_reports_a_narrow_destination() {
+        let field = Arc::new(F2mField::pentanomial(163, 3, 6, 7).unwrap());
+        let wide = U256::from_le_u64(&[0, 0, 1]).unwrap();
+        let element = F2mFieldElement::<FixedBinaryPoly<3>>::from_integer(field, &wide);
+
+        assert_eq!(element.try_to_integer::<U128>(), None);
+        assert_eq!(element.try_to_integer::<U256>(), Some(wide));
     }
 }
