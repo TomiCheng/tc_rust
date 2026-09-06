@@ -9,7 +9,7 @@ use core::ops::{Add, Mul, Neg, Sub};
 
 use tc_bigint::BigUint;
 
-use crate::{CoordinateSystem, FpCurve, FpFieldElement, FpInteger};
+use crate::{CoordinateSystem, FpCurve, FpFieldElement, FpInteger, PointEncodeError};
 
 #[derive(Clone)]
 enum Coords<F> {
@@ -527,31 +527,61 @@ impl<B: FpInteger> FpPoint<B> {
         result
     }
 
-    /// 以 X9.62／SEC 1 格式編碼點；投影點只在此處做一次正規化。
-    pub fn encode(&self, compressed: bool) -> Vec<u8> {
+    /// 回傳 X9.62／SEC 1 編碼所需的精確位元組數。
+    pub fn encoded_length(&self, compressed: bool) -> usize {
+        if self.is_infinity() {
+            1
+        } else {
+            self.curve.affine_point_encoding_length(compressed)
+        }
+    }
+
+    /// 將 X9.62／SEC 1 編碼寫入呼叫端提供的緩衝。
+    ///
+    /// 投影點在寫入前只正規化一次；緩衝不足時不會寫入任何位元組。
+    pub fn encode_to(
+        &self,
+        compressed: bool,
+        output: &mut [u8],
+    ) -> Result<usize, PointEncodeError> {
+        let required = self.encoded_length(compressed);
+        if output.len() < required {
+            return Err(PointEncodeError::OutputTooShort {
+                required,
+                available: output.len(),
+            });
+        }
+        let output = &mut output[..required];
+        if self.is_infinity() {
+            output[0] = 0;
+            return Ok(1);
+        }
+
         let normalized = self.normalize();
-        let Some(x) = normalized.raw_x() else {
-            return alloc::vec![0];
-        };
+        let x = normalized.raw_x().expect("finite point has X");
         let y = normalized.raw_y().expect("finite point has Y");
         let len = self.curve.field_element_encoding_length();
-        let x = fixed_be(&x.to_big_uint(), len);
         if compressed {
-            let mut output = Vec::with_capacity(1 + len);
-            output.push(if y.to_big_uint().test_bit(0) {
+            output[0] = if y.to_big_uint().test_bit(0) {
                 0x03
             } else {
                 0x02
-            });
-            output.extend_from_slice(&x);
-            output
+            };
+            write_field_element(x, &mut output[1..1 + len]);
         } else {
-            let mut output = Vec::with_capacity(1 + 2 * len);
-            output.push(0x04);
-            output.extend_from_slice(&x);
-            output.extend_from_slice(&fixed_be(&y.to_big_uint(), len));
-            output
+            output[0] = 0x04;
+            write_field_element(x, &mut output[1..1 + len]);
+            write_field_element(y, &mut output[1 + len..1 + 2 * len]);
         }
+        Ok(required)
+    }
+
+    /// 配置並回傳 X9.62／SEC 1 編碼。
+    pub fn encode(&self, compressed: bool) -> Vec<u8> {
+        let mut output = alloc::vec![0; self.encoded_length(compressed)];
+        self.encode_to(compressed, &mut output)
+            .expect("freshly allocated point encoding buffer has the exact length");
+        output
     }
 
     fn add_point(&self, rhs: &Self) -> Self {
@@ -801,14 +831,17 @@ impl<B: FpInteger> FpPoint<B> {
     }
 }
 
-fn fixed_be<B: FpInteger>(value: &B, len: usize) -> Vec<u8> {
-    let bytes = value.to_unsigned_be_bytes();
-    let mut output = alloc::vec![0_u8; len];
-    let significant = if value.is_zero() { 0 } else { bytes.len() };
+fn write_field_element<B: FpInteger>(value: &FpFieldElement<B>, output: &mut [u8]) {
+    output.fill(0);
+    let integer = value.to_big_uint();
+    let significant = integer.byte_length_unsigned();
+    debug_assert!(significant <= output.len());
     if significant != 0 {
-        output[len - significant..].copy_from_slice(&bytes);
+        let start = output.len() - significant;
+        integer
+            .write_unsigned_be_bytes(&mut output[start..])
+            .expect("field element magnitude fits its fixed encoding width");
     }
-    output
 }
 
 fn two<B: FpInteger>(value: &FpFieldElement<B>) -> FpFieldElement<B> {
@@ -1069,5 +1102,57 @@ mod tests {
         assert_eq!(lazy.jacobian_modified_w(), eager.jacobian_modified_w());
         assert_eq!(lazy.twice_plus(&other), eager.twice_plus(&other));
         assert_eq!(lazy.three_times(), eager.three_times());
+    }
+
+    #[test]
+    fn encode_to_matches_allocating_encoding_in_every_coordinate_system() {
+        let (base_curve, generator) = crate::named_curves::secp256k1();
+        let x = generator.x().unwrap().to_big_uint();
+        let y = generator.y().unwrap().to_big_uint();
+
+        for coordinate_system in coordinate_systems() {
+            let curve = Arc::new(
+                (*base_curve)
+                    .clone()
+                    .with_coordinate_system(coordinate_system),
+            );
+            let point = curve.create_point(x, y).times_pow2(3);
+
+            for compressed in [false, true] {
+                let expected = point.encode(compressed);
+                let required = point.encoded_length(compressed);
+                assert_eq!(expected.len(), required);
+
+                let mut output = [0_u8; 65];
+                assert_eq!(
+                    point.encode_to(compressed, &mut output[..required]),
+                    Ok(required)
+                );
+                assert_eq!(&output[..required], expected);
+
+                let mut short = [0xA5_u8; 64];
+                assert_eq!(
+                    point.encode_to(compressed, &mut short[..required - 1]),
+                    Err(PointEncodeError::OutputTooShort {
+                        required,
+                        available: required - 1,
+                    })
+                );
+                assert!(short.iter().all(|byte| *byte == 0xA5));
+            }
+
+            let infinity = curve.infinity();
+            assert_eq!(infinity.encoded_length(false), 1);
+            let mut encoded = [0xA5];
+            assert_eq!(infinity.encode_to(false, &mut encoded), Ok(1));
+            assert_eq!(encoded, [0]);
+            assert_eq!(
+                infinity.encode_to(true, &mut []),
+                Err(PointEncodeError::OutputTooShort {
+                    required: 1,
+                    available: 0,
+                })
+            );
+        }
     }
 }

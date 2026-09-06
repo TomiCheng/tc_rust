@@ -19,5 +19,6 @@ pub use fp_field_element::{inversion_count, reset_inversion_count};
 pub use fp_point::FpPoint;
 pub use integer::FpInteger;
 pub use tc_ec_core::{
-    CoordinateSystem, Curve, FieldElement, Point, PointDecodeError, PrimeFieldElement, scalar_mul,
+    CoordinateSystem, Curve, FieldElement, Point, PointDecodeError, PointEncodeError,
+    PrimeFieldElement, scalar_mul,
 };

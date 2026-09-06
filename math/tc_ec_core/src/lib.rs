@@ -8,6 +8,7 @@ mod curve;
 mod field_element;
 mod point;
 mod point_decode_error;
+mod point_encode_error;
 mod prime_field_element;
 mod scalar_mul;
 
@@ -17,5 +18,6 @@ pub use curve::Curve;
 pub use field_element::FieldElement;
 pub use point::Point;
 pub use point_decode_error::PointDecodeError;
+pub use point_encode_error::PointEncodeError;
 pub use prime_field_element::PrimeFieldElement;
 pub use scalar_mul::scalar_mul;
