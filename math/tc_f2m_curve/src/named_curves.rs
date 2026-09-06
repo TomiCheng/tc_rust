@@ -1,30 +1,34 @@
 //! 本次 F2m 拆分使用的兩條 SEC 2 具名曲線。
 //!
 //! sect163k1 覆蓋五項式約簡，sect233k1 覆蓋三項式約簡。無後綴版本採用
-//! 固定 limb 表示，`_dynamic` 版本使用配置式 [`BinaryPoly`]，兩者共用參數。
+//! 固定 `FixedBinaryPoly + U256` 表示，`_dynamic` 版本使用配置式
+//! `BinaryPoly + BigUint`，兩者共用參數。
 
 use alloc::sync::Arc;
 
-use tc_bigint::BigUint;
+use tc_bigint::{BigUint, U256};
 use tc_binpoly::{BinaryPoly, FixedBinaryPoly};
 
-use crate::{F2mCurve, F2mPoint, F2mPolynomial};
+use crate::{F2mCurve, F2mInteger, F2mPoint, F2mPolynomial};
 
 /// 固定寬度的 SEC 2 sect163k1 與基點。
 pub fn sect163k1() -> (
-    Arc<F2mCurve<FixedBinaryPoly<3>>>,
-    F2mPoint<FixedBinaryPoly<3>>,
+    Arc<F2mCurve<FixedBinaryPoly<3>, U256>>,
+    F2mPoint<FixedBinaryPoly<3>, U256>,
 ) {
     sect163k1_with()
 }
 
 /// 配置式的 SEC 2 sect163k1 與基點。
-pub fn sect163k1_dynamic() -> (Arc<F2mCurve<BinaryPoly>>, F2mPoint<BinaryPoly>) {
+pub fn sect163k1_dynamic() -> (
+    Arc<F2mCurve<BinaryPoly, BigUint>>,
+    F2mPoint<BinaryPoly, BigUint>,
+) {
     sect163k1_with()
 }
 
 /// 以指定多項式表示建立 SEC 2 sect163k1。
-pub fn sect163k1_with<P: F2mPolynomial>() -> (Arc<F2mCurve<P>>, F2mPoint<P>) {
+pub fn sect163k1_with<P: F2mPolynomial, B: F2mInteger>() -> (Arc<F2mCurve<P, B>>, F2mPoint<P, B>) {
     let curve = Arc::new(
         F2mCurve::pentanomial(
             163,
@@ -47,19 +51,22 @@ pub fn sect163k1_with<P: F2mPolynomial>() -> (Arc<F2mCurve<P>>, F2mPoint<P>) {
 
 /// 固定寬度的 SEC 2 sect233k1 與基點。
 pub fn sect233k1() -> (
-    Arc<F2mCurve<FixedBinaryPoly<4>>>,
-    F2mPoint<FixedBinaryPoly<4>>,
+    Arc<F2mCurve<FixedBinaryPoly<4>, U256>>,
+    F2mPoint<FixedBinaryPoly<4>, U256>,
 ) {
     sect233k1_with()
 }
 
 /// 配置式的 SEC 2 sect233k1 與基點。
-pub fn sect233k1_dynamic() -> (Arc<F2mCurve<BinaryPoly>>, F2mPoint<BinaryPoly>) {
+pub fn sect233k1_dynamic() -> (
+    Arc<F2mCurve<BinaryPoly, BigUint>>,
+    F2mPoint<BinaryPoly, BigUint>,
+) {
     sect233k1_with()
 }
 
 /// 以指定多項式表示建立 SEC 2 sect233k1。
-pub fn sect233k1_with<P: F2mPolynomial>() -> (Arc<F2mCurve<P>>, F2mPoint<P>) {
+pub fn sect233k1_with<P: F2mPolynomial, B: F2mInteger>() -> (Arc<F2mCurve<P, B>>, F2mPoint<P, B>) {
     let curve = Arc::new(
         F2mCurve::trinomial(
             233,
@@ -80,12 +87,48 @@ pub fn sect233k1_with<P: F2mPolynomial>() -> (Arc<F2mCurve<P>>, F2mPoint<P>) {
     (curve, point)
 }
 
-fn hex(value: &str) -> BigUint {
-    BigUint::from_str_radix(value, 16).expect("named-curve constant is valid hexadecimal")
+pub(crate) fn hex<B: F2mInteger>(value: &str) -> B {
+    assert!(
+        value.len() <= 64,
+        "named-curve constants must be at most 256 bits"
+    );
+    let mut bytes = [0_u8; 32];
+    let byte_length = value.len().div_ceil(2);
+    let start = bytes.len() - byte_length;
+    let mut source = 0;
+    let mut target = start;
+    if value.len() & 1 != 0 {
+        bytes[target] = hex_digit(value.as_bytes()[0]);
+        source = 1;
+        target += 1;
+    }
+    while source < value.len() {
+        let high = hex_digit(value.as_bytes()[source]);
+        let low = hex_digit(value.as_bytes()[source + 1]);
+        bytes[target] = high << 4 | low;
+        source += 2;
+        target += 1;
+    }
+    match B::from_unsigned_be_bytes(&bytes[start..]) {
+        Ok(value) => value,
+        Err(_) => panic!("named-curve constant does not fit the selected integer type"),
+    }
 }
 
-fn integer(value: u8) -> BigUint {
-    BigUint::from(value)
+fn integer<B: F2mInteger>(value: u8) -> B {
+    match B::from_unsigned_be_bytes(&[value]) {
+        Ok(value) => value,
+        Err(_) => panic!("small named-curve constant fits the selected integer type"),
+    }
+}
+
+fn hex_digit(value: u8) -> u8 {
+    match value {
+        b'0'..=b'9' => value - b'0',
+        b'a'..=b'f' => value - b'a' + 10,
+        b'A'..=b'F' => value - b'A' + 10,
+        _ => panic!("named-curve constant is valid hexadecimal"),
+    }
 }
 
 #[cfg(test)]
@@ -94,11 +137,10 @@ mod tests {
     use alloc::vec::Vec;
 
     use super::*;
-    use tc_bigint::BitOps;
     use tc_bigint_old::BigInt;
 
-    fn assert_matches_old<P: F2mPolynomial>(
-        new_curve: &(Arc<F2mCurve<P>>, F2mPoint<P>),
+    fn assert_matches_old<P: F2mPolynomial, B: F2mInteger>(
+        new_curve: &(Arc<F2mCurve<P, B>>, F2mPoint<P, B>),
         old_curve: &(Arc<tc_ec::F2mCurve>, tc_ec::F2mPoint),
         bits: usize,
         seed: u64,
@@ -118,8 +160,8 @@ mod tests {
         let mut state = seed;
         let point_scalar_bytes = random_bits(bits, &mut state);
         let scalar_bytes = random_bits(bits, &mut state);
-        let point_scalar = BigUint::from_be_bytes(&point_scalar_bytes);
-        let scalar = BigUint::from_be_bytes(&scalar_bytes);
+        let point_scalar = decode_test_integer::<B>(&point_scalar_bytes);
+        let scalar = decode_test_integer::<B>(&scalar_bytes);
         assert_eq!(point_scalar.bit_length(), bits);
         assert_eq!(scalar.bit_length(), bits);
 
@@ -140,6 +182,13 @@ mod tests {
                     .unwrap(),
                 new_result
             );
+        }
+    }
+
+    fn decode_test_integer<B: F2mInteger>(bytes: &[u8]) -> B {
+        match B::from_unsigned_be_bytes(bytes) {
+            Ok(value) => value,
+            Err(_) => panic!("oracle scalar fits the selected integer type"),
         }
     }
 

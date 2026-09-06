@@ -3,13 +3,14 @@
 //! 元素只知道共享的 [`F2mField`] 與泛型多項式值 `P`；配置版與固定寬度版
 //! 因而共用完全相同的 EC 體域公式，差異只留在 `tc_binpoly` 的值表示內。
 
-use alloc::sync::Arc;
+use alloc::{sync::Arc, vec};
 use core::ops::{Add, Div, Mul, Neg, Sub};
 
-use tc_bigint::{BigUint, BitOps};
-use tc_binpoly::{BinaryPoly, BinaryPolyOps, bit_length_var, equal_to_one, equal_to_zero};
+use tc_binpoly::{
+    BinaryPoly, BinaryPolyOps, STACK_ALLOC_CUTOFF, bit_length_var, equal_to_one, equal_to_zero,
+};
 
-use crate::{F2mField, F2mPolynomial};
+use crate::{F2mField, F2mInteger, F2mPolynomial};
 
 /// `GF(2^m)` 的 polynomial-basis 元素。
 #[derive(Clone)]
@@ -67,9 +68,12 @@ impl<P: BinaryPolyOps> F2mFieldElement<P> {
         self.value.as_limbs()[0] & 1 == 1
     }
 
-    /// 將 polynomial-basis bits 解讀成非負整數。
-    pub fn to_big_uint(&self) -> BigUint {
-        BigUint::from_le_u64(self.value.as_limbs())
+    /// 將 polynomial-basis bits 解讀成指定的非負整數型別。
+    pub fn to_integer<B: F2mInteger>(&self) -> B {
+        match B::from_le_u64(self.value.as_limbs()) {
+            Ok(value) => value,
+            Err(_) => panic!("F2m field element does not fit the selected integer type"),
+        }
     }
 
     /// 回傳同一個體域中的零。
@@ -187,14 +191,37 @@ impl<P: BinaryPolyOps> F2mFieldElement<P> {
 }
 
 impl<P: F2mPolynomial> F2mFieldElement<P> {
-    pub(crate) fn from_big_uint(field: Arc<F2mField>, value: &BigUint) -> Self {
+    pub(crate) fn from_integer<B: F2mInteger>(field: Arc<F2mField>, value: &B) -> Self {
         assert!(
             value.bit_length() <= field.m(),
             "value invalid for F2m field element"
         );
-        let mut limbs = value.to_le_u64();
-        limbs.resize(field.size(), 0);
-        let value = P::from_limb_slice(field.multiplier().clone(), &limbs)
+
+        // 固定整數會輸出完整寬度（例如 U256 是 4 limbs），可能大於 sect163
+        // 元素的 3 limbs；緩衝取兩者較大值，驗證高位為零後再交給多項式。
+        let required = field.size().max(value.u64_length());
+        if required <= STACK_ALLOC_CUTOFF {
+            let mut limbs = [0_u64; STACK_ALLOC_CUTOFF];
+            return Self::from_integer_limbs(field, value, &mut limbs[..required]);
+        }
+
+        let mut limbs = vec![0_u64; required];
+        Self::from_integer_limbs(field, value, &mut limbs)
+    }
+
+    fn from_integer_limbs<B: F2mInteger>(
+        field: Arc<F2mField>,
+        value: &B,
+        limbs: &mut [u64],
+    ) -> Self {
+        let written = value
+            .write_le_u64(limbs)
+            .expect("buffer includes the integer's complete limb width");
+        assert!(
+            written <= field.size() || limbs[field.size()..written].iter().all(|limb| *limb == 0),
+            "value invalid for F2m field element"
+        );
+        let value = P::from_limb_slice(field.multiplier().clone(), &limbs[..field.size()])
             .expect("polynomial width must match the selected F2m field");
         Self::new(field, value)
     }
@@ -276,12 +303,17 @@ impl<P: BinaryPolyOps> Neg for &F2mFieldElement<P> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tc_bigint::{BigUint, U256};
     use tc_binpoly::FixedBinaryPoly;
 
-    fn exercise<P: F2mPolynomial>() {
+    fn exercise<P: F2mPolynomial, B: F2mInteger>() {
         let field = Arc::new(F2mField::trinomial(5, 2).unwrap());
-        let element =
-            F2mFieldElement::<P>::from_big_uint(Arc::clone(&field), &BigUint::from(0b1_1011_u8));
+        let integer = match B::from_unsigned_le_bytes(&[0b1_1011]) {
+            Ok(value) => value,
+            Err(_) => panic!("test value fits the selected integer type"),
+        };
+        let element = F2mFieldElement::<P>::from_integer(Arc::clone(&field), &integer);
+        assert!(element.to_integer::<B>() == integer);
         assert_eq!(element.sqrt().square(), element);
         assert_eq!(&element * &element.invert(), element.one());
         assert_eq!(element.square(), &element * &element);
@@ -294,7 +326,7 @@ mod tests {
 
     #[test]
     fn dynamic_and_fixed_values_share_field_formulas() {
-        exercise::<BinaryPoly>();
-        exercise::<FixedBinaryPoly<1>>();
+        exercise::<BinaryPoly, BigUint>();
+        exercise::<FixedBinaryPoly<1>, U256>();
     }
 }

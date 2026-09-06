@@ -1,35 +1,37 @@
 //! `GF(2^m)` 上的短 Weierstrass 曲線。
 //!
 //! 曲線方程為 `y^2 + xy = x^3 + ax^2 + b`。本檔保留舊 `tc_ec` 的 affine
-//! 公式與 SEC 點編解碼語意，但元素表示從一開始便由 `P` 靜態分派。
+//! 公式與 SEC 點編解碼語意；元素表示由 `P`、參數與純量整數由 `B` 靜態分派。
 
 use alloc::sync::Arc;
 
-use tc_bigint::{BigUint, BitOps};
+use tc_bigint::BigUint;
 use tc_binpoly::{BinPolyError, BinaryPoly, BinaryPolyOps};
 use tc_ec_core::{CoordinateSystem, PointDecodeError};
 
-use crate::{F2mField, F2mFieldElement, F2mPoint, F2mPolynomial};
+use crate::{F2mField, F2mFieldElement, F2mInteger, F2mPoint, F2mPolynomial};
 
 /// `GF(2^m)` 上的二元短 Weierstrass 曲線。
-pub struct F2mCurve<P: BinaryPolyOps = BinaryPoly> {
+///
+/// `P` 控制二進位多項式表示，`B` 只控制係數、座標與純量的整數表示。
+pub struct F2mCurve<P: BinaryPolyOps = BinaryPoly, B: F2mInteger = BigUint> {
     field: Arc<F2mField>,
     a: F2mFieldElement<P>,
     b: F2mFieldElement<P>,
-    order: Option<BigUint>,
-    cofactor: Option<BigUint>,
+    order: Option<B>,
+    cofactor: Option<B>,
     coordinate_system: CoordinateSystem,
 }
 
-impl<P: F2mPolynomial> F2mCurve<P> {
+impl<P: F2mPolynomial, B: F2mInteger> F2mCurve<P, B> {
     /// 以三項式 `x^m + x^k + 1` 建立曲線。
     pub fn trinomial(
         m: usize,
         k: usize,
-        a: BigUint,
-        b: BigUint,
-        order: Option<BigUint>,
-        cofactor: Option<BigUint>,
+        a: B,
+        b: B,
+        order: Option<B>,
+        cofactor: Option<B>,
     ) -> Result<Self, BinPolyError> {
         Self::from_field(Arc::new(F2mField::trinomial(m, k)?), a, b, order, cofactor)
     }
@@ -41,10 +43,10 @@ impl<P: F2mPolynomial> F2mCurve<P> {
         k1: usize,
         k2: usize,
         k3: usize,
-        a: BigUint,
-        b: BigUint,
-        order: Option<BigUint>,
-        cofactor: Option<BigUint>,
+        a: B,
+        b: B,
+        order: Option<B>,
+        cofactor: Option<B>,
     ) -> Result<Self, BinPolyError> {
         Self::from_field(
             Arc::new(F2mField::pentanomial(m, k1, k2, k3)?),
@@ -57,15 +59,15 @@ impl<P: F2mPolynomial> F2mCurve<P> {
 
     fn from_field(
         field: Arc<F2mField>,
-        a: BigUint,
-        b: BigUint,
-        order: Option<BigUint>,
-        cofactor: Option<BigUint>,
+        a: B,
+        b: B,
+        order: Option<B>,
+        cofactor: Option<B>,
     ) -> Result<Self, BinPolyError> {
         // 先以零建值可提早驗證 `FixedBinaryPoly<N>` 的 N 是否符合 m。
         P::zero(field.multiplier().clone())?;
-        let a = F2mFieldElement::from_big_uint(Arc::clone(&field), &a);
-        let b = F2mFieldElement::from_big_uint(Arc::clone(&field), &b);
+        let a = F2mFieldElement::from_integer(Arc::clone(&field), &a);
+        let b = F2mFieldElement::from_integer(Arc::clone(&field), &b);
         Ok(Self {
             field,
             a,
@@ -82,8 +84,8 @@ impl<P: F2mPolynomial> F2mCurve<P> {
     }
 
     /// 從非負整數建立同一體域的元素。
-    pub fn create_field_element(&self, value: BigUint) -> F2mFieldElement<P> {
-        F2mFieldElement::from_big_uint(Arc::clone(&self.field), &value)
+    pub fn create_field_element(&self, value: B) -> F2mFieldElement<P> {
+        F2mFieldElement::from_integer(Arc::clone(&self.field), &value)
     }
 
     /// 曲線係數 `a`。
@@ -97,12 +99,12 @@ impl<P: F2mPolynomial> F2mCurve<P> {
     }
 
     /// 基點子群階。
-    pub fn order(&self) -> Option<&BigUint> {
+    pub fn order(&self) -> Option<&B> {
         self.order.as_ref()
     }
 
     /// Cofactor。
-    pub fn cofactor(&self) -> Option<&BigUint> {
+    pub fn cofactor(&self) -> Option<&B> {
         self.cofactor.as_ref()
     }
 
@@ -132,12 +134,12 @@ impl<P: F2mPolynomial> F2mCurve<P> {
     }
 
     /// 同一條曲線上的無窮遠點。
-    pub fn infinity(self: &Arc<Self>) -> F2mPoint<P> {
+    pub fn infinity(self: &Arc<Self>) -> F2mPoint<P, B> {
         F2mPoint::infinity(Arc::clone(self))
     }
 
     /// 從 affine 整數座標建立點；不額外驗證是否在曲線上。
-    pub fn create_point(self: &Arc<Self>, x: BigUint, y: BigUint) -> F2mPoint<P> {
+    pub fn create_point(self: &Arc<Self>, x: B, y: B) -> F2mPoint<P, B> {
         F2mPoint::new(
             Arc::clone(self),
             self.create_field_element(x),
@@ -165,7 +167,7 @@ impl<P: F2mPolynomial> F2mCurve<P> {
     }
 
     /// 由 X 座標與 SEC y-tilde 位元還原 affine 點。
-    pub fn decompress_point(self: &Arc<Self>, y_tilde: u8, x: BigUint) -> Option<F2mPoint<P>> {
+    pub fn decompress_point(self: &Arc<Self>, y_tilde: u8, x: B) -> Option<F2mPoint<P, B>> {
         let x = self.create_field_element(x);
         let y = if x.is_zero() {
             self.b().sqrt()
@@ -181,15 +183,22 @@ impl<P: F2mPolynomial> F2mCurve<P> {
     }
 
     fn parse_coordinate(&self, bytes: &[u8]) -> Result<F2mFieldElement<P>, PointDecodeError> {
-        let value = BigUint::from_be_bytes(bytes);
+        let value = Self::decode_integer(bytes)?;
         if value.bit_length() > self.field.m() {
             return Err(PointDecodeError::CoordinateOutOfRange);
         }
         Ok(self.create_field_element(value))
     }
 
+    fn decode_integer(bytes: &[u8]) -> Result<B, PointDecodeError> {
+        B::from_unsigned_be_bytes(bytes).map_err(|_| PointDecodeError::CoordinateOutOfRange)
+    }
+
     /// 解碼 SEC infinity、compressed、uncompressed 與 hybrid 點格式。
-    pub fn decode_point(self: &Arc<Self>, encoded: &[u8]) -> Result<F2mPoint<P>, PointDecodeError> {
+    pub fn decode_point(
+        self: &Arc<Self>,
+        encoded: &[u8],
+    ) -> Result<F2mPoint<P, B>, PointDecodeError> {
         let length = self.field_element_encoding_length();
         let (&tag, rest) = encoded.split_first().ok_or(PointDecodeError::Empty)?;
         match tag {
@@ -199,7 +208,7 @@ impl<P: F2mPolynomial> F2mCurve<P> {
                 if rest.len() != length {
                     return Err(PointDecodeError::InvalidLength);
                 }
-                let x = BigUint::from_be_bytes(rest);
+                let x = Self::decode_integer(rest)?;
                 if x.bit_length() > self.field.m() {
                     return Err(PointDecodeError::CoordinateOutOfRange);
                 }
@@ -237,20 +246,20 @@ impl<P: F2mPolynomial> F2mCurve<P> {
     }
 }
 
-impl<P: BinaryPolyOps> PartialEq for F2mCurve<P> {
+impl<P: BinaryPolyOps, B: F2mInteger> PartialEq for F2mCurve<P, B> {
     fn eq(&self, other: &Self) -> bool {
         self.field == other.field && self.a == other.a && self.b == other.b
     }
 }
 
-impl<P: BinaryPolyOps> Eq for F2mCurve<P> {}
+impl<P: BinaryPolyOps, B: F2mInteger> Eq for F2mCurve<P, B> {}
 
-impl<P: BinaryPolyOps> core::fmt::Debug for F2mCurve<P> {
+impl<P: BinaryPolyOps, B: F2mInteger> core::fmt::Debug for F2mCurve<P, B> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("F2mCurve")
             .field("m", &self.field.m())
-            .field("a", &self.a.to_big_uint())
-            .field("b", &self.b.to_big_uint())
+            .field("a", &self.a.value().as_limbs())
+            .field("b", &self.b.value().as_limbs())
             .finish()
     }
 }
@@ -258,6 +267,7 @@ impl<P: BinaryPolyOps> core::fmt::Debug for F2mCurve<P> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tc_bigint::U256;
     use tc_binpoly::FixedBinaryPoly;
 
     #[test]
@@ -274,17 +284,17 @@ mod tests {
             Err(BinPolyError::InvalidLength { .. })
         ));
 
-        let curve = F2mCurve::<FixedBinaryPoly<4>>::trinomial(
+        let curve = F2mCurve::<FixedBinaryPoly<4>, U256>::trinomial(
             233,
             74,
-            BigUint::from(0_u8),
-            BigUint::from(1_u8),
+            U256::from(0_u8),
+            U256::from(1_u8),
             None,
             None,
         )
         .unwrap();
         assert_eq!(curve.field_size(), 233);
-        assert_eq!(curve.a().to_big_uint(), BigUint::from(0_u8));
-        assert_eq!(curve.b().to_big_uint(), BigUint::from(1_u8));
+        assert_eq!(curve.a().to_integer::<U256>(), U256::from(0_u8));
+        assert_eq!(curve.b().to_integer::<U256>(), U256::from(1_u8));
     }
 }

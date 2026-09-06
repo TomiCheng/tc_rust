@@ -4,10 +4,9 @@
 //! `solve_quadratic` 屬於曲線解壓縮流程，並讓中立的純量乘演算法跨 Fp/F2m
 //! 靜態分派。此處不建立 trait object。
 
-use tc_bigint::{BigUint, BitOps};
 use tc_ec_core::{BinaryFieldElement, Curve, FieldElement, Point};
 
-use crate::{F2mCurve, F2mFieldElement, F2mPoint, F2mPolynomial};
+use crate::{F2mCurve, F2mFieldElement, F2mInteger, F2mPoint, F2mPolynomial};
 
 impl<P: F2mPolynomial> FieldElement for F2mFieldElement<P> {
     fn zero(&self) -> Self {
@@ -69,10 +68,10 @@ impl<P: F2mPolynomial> BinaryFieldElement for F2mFieldElement<P> {
     }
 }
 
-impl<P: F2mPolynomial> Curve for F2mCurve<P> {
+impl<P: F2mPolynomial, B: F2mInteger> Curve for F2mCurve<P, B> {
     type Field = F2mFieldElement<P>;
-    type Point = F2mPoint<P>;
-    type Scalar = BigUint;
+    type Point = F2mPoint<P, B>;
+    type Scalar = B;
 
     fn a(&self) -> &Self::Field {
         F2mCurve::a(self)
@@ -99,8 +98,8 @@ impl<P: F2mPolynomial> Curve for F2mCurve<P> {
     }
 }
 
-impl<P: F2mPolynomial> Point for F2mPoint<P> {
-    type Curve = F2mCurve<P>;
+impl<P: F2mPolynomial, B: F2mInteger> Point for F2mPoint<P, B> {
+    type Curve = F2mCurve<P, B>;
 
     fn identity(&self) -> Self {
         self.curve().infinity()
@@ -130,13 +129,14 @@ impl<P: F2mPolynomial> Point for F2mPoint<P> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::named_curves::{sect163k1, sect163k1_dynamic, sect233k1, sect233k1_dynamic};
+    use crate::named_curves::{hex, sect163k1, sect163k1_dynamic, sect233k1, sect233k1_dynamic};
+    use tc_bigint::{BigUint, U256};
     use tc_binpoly::{BinaryPoly, FixedBinaryPoly};
     use tc_ec_core::scalar_mul;
 
-    fn assert_algorithm<P: F2mPolynomial>(point: F2mPoint<P>, scalar: &BigUint) {
+    fn assert_algorithm<P: F2mPolynomial, B: F2mInteger>(point: F2mPoint<P, B>, scalar: &B) {
         assert_eq!(
-            scalar_mul::<F2mCurve<P>>(&point, scalar),
+            scalar_mul::<F2mCurve<P, B>>(&point, scalar),
             point.mul_double_and_add(scalar)
         );
     }
@@ -156,17 +156,16 @@ mod tests {
 
     #[test]
     fn neutral_scalar_mul_runs_on_both_curves_and_polynomial_backends() {
-        let scalar_163 =
-            BigUint::from_str_radix("051F7A94D308C624B1E975A06D42F89C357E1ABCD", 16).unwrap();
-        let scalar_233 = BigUint::from_str_radix(
-            "01E46A835F1D90C27B469E03A758D124CB6F2809D537E41ACB9865D3F12",
-            16,
-        )
-        .unwrap();
+        let scalar_163_fixed = hex::<U256>("051F7A94D308C624B1E975A06D42F89C357E1ABCD");
+        let scalar_163_dynamic = hex::<BigUint>("051F7A94D308C624B1E975A06D42F89C357E1ABCD");
+        let scalar_233_fixed =
+            hex::<U256>("01E46A835F1D90C27B469E03A758D124CB6F2809D537E41ACB9865D3F12");
+        let scalar_233_dynamic =
+            hex::<BigUint>("01E46A835F1D90C27B469E03A758D124CB6F2809D537E41ACB9865D3F12");
 
-        assert_algorithm::<FixedBinaryPoly<3>>(sect163k1().1, &scalar_163);
-        assert_algorithm::<BinaryPoly>(sect163k1_dynamic().1, &scalar_163);
-        assert_algorithm::<FixedBinaryPoly<4>>(sect233k1().1, &scalar_233);
-        assert_algorithm::<BinaryPoly>(sect233k1_dynamic().1, &scalar_233);
+        assert_algorithm::<FixedBinaryPoly<3>, U256>(sect163k1().1, &scalar_163_fixed);
+        assert_algorithm::<BinaryPoly, BigUint>(sect163k1_dynamic().1, &scalar_163_dynamic);
+        assert_algorithm::<FixedBinaryPoly<4>, U256>(sect233k1().1, &scalar_233_fixed);
+        assert_algorithm::<BinaryPoly, BigUint>(sect233k1_dynamic().1, &scalar_233_dynamic);
     }
 }
