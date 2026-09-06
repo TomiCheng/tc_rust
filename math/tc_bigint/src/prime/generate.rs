@@ -30,9 +30,9 @@ pub(super) fn random_word<R: Rng + ?Sized>(rng: &mut R) -> Word {
 }
 
 pub(super) fn fixed_small<const N: usize>(value: Word) -> FixedBigUint<N> {
-    let mut limbs = [Limb(0); N];
+    let mut limbs = [Limb::new(0); N];
     if N != 0 {
-        limbs[0] = Limb(value);
+        limbs[0] = Limb::new(value);
     }
     FixedBigUint::from_limbs(limbs)
 }
@@ -47,14 +47,14 @@ pub(super) fn try_random_fixed_uint<const N: usize, R: TryRng + ?Sized>(
     rng: &mut R,
 ) -> Result<FixedBigUint<N>, R::Error> {
     debug_assert!(bit_length <= N.saturating_mul(Word::BITS as usize));
-    let mut limbs = [Limb(0); N];
+    let mut limbs = [Limb::new(0); N];
     let used_limbs = bit_length.div_ceil(Word::BITS as usize);
     for word in limbs.iter_mut().take(used_limbs) {
-        word.0 = try_random_word(rng)?;
+        *word = Limb::new(try_random_word(rng)?);
     }
     let top_bits = bit_length % Word::BITS as usize;
     if top_bits != 0 {
-        limbs[used_limbs - 1].0 &= Word::MAX >> (Word::BITS as usize - top_bits);
+        limbs[used_limbs - 1] = Limb::new(limbs[used_limbs - 1].to_word() & (Word::MAX >> (Word::BITS as usize - top_bits)));
     }
     Ok(FixedBigUint::from_limbs(limbs))
 }
@@ -91,13 +91,13 @@ pub(super) fn try_random_big_uint<R: TryRng + ?Sized>(
         return Ok(BigUint::default());
     }
     let word_count = bit_length.div_ceil(Word::BITS as usize);
-    let mut limbs = vec![Limb(0); word_count];
+    let mut limbs = vec![Limb::new(0); word_count];
     for word in &mut limbs {
-        word.0 = try_random_word(rng)?;
+        *word = Limb::new(try_random_word(rng)?);
     }
     let top_bits = bit_length % Word::BITS as usize;
     if top_bits != 0 {
-        limbs[word_count - 1].0 &= Word::MAX >> (Word::BITS as usize - top_bits);
+        limbs[word_count - 1] = Limb::new(limbs[word_count - 1].to_word() & (Word::MAX >> (Word::BITS as usize - top_bits)));
     }
     Ok(BigUint::from_limbs(limbs))
 }

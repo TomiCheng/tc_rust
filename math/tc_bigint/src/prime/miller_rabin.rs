@@ -19,15 +19,15 @@ const SMALL_PRIMES: &[Word] = &[
 pub(super) fn remainder_word(words: &[Limb], divisor: Word) -> Word {
     let mut remainder = 0 as WideWord;
     for word in words.iter().rev() {
-        let wide = (remainder << Word::BITS) | word.0 as WideWord;
+        let wide = (remainder << Word::BITS) | word.to_word() as WideWord;
         remainder = wide % divisor as WideWord;
     }
     remainder as Word
 }
 
 pub(super) fn equals_word(words: &[Limb], value: Word) -> bool {
-    words.first().map_or(value == 0, |word| word.0 == value)
-        && words.iter().skip(1).all(|word| word.0 == 0)
+    words.first().map_or(value == 0, |word| word.to_word() == value)
+        && words.iter().skip(1).all(|word| word.to_word() == 0)
 }
 
 pub(super) fn has_small_factor(words: &[Limb]) -> Option<bool> {

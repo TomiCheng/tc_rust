@@ -201,7 +201,7 @@ impl<const N: usize> FixedBigInt<N> {
         candidate
             .as_limbs()
             .last()
-            .is_some_and(|word| word.0 >> (Word::BITS - 1) == 0)
+            .is_some_and(|word| word.to_word() >> (Word::BITS - 1) == 0)
             .then(|| Self::from_limbs(candidate.into_limbs()))
     }
 }
@@ -651,10 +651,10 @@ mod tests {
 
     #[test]
     fn word_remainder_reads_little_endian_limbs() {
-        let words = [Limb(5), Limb(1)];
+        let words = [Limb::new(5), Limb::new(1)];
         let expected = ((1 as WideWord) << Word::BITS | 5) % 7;
         assert_eq!(remainder_word(&words, 7), expected as Word);
-        assert_eq!(fixed_small::<1>(3).as_limbs()[0], Limb(3));
+        assert_eq!(fixed_small::<1>(3).as_limbs()[0], Limb::new(3));
         assert_eq!(fixed_small::<0>(3).as_limbs(), &[]);
     }
 
@@ -663,11 +663,11 @@ mod tests {
         let mut rng = SeqRng(17);
         let _ = try_random_word(&mut rng).unwrap();
         let _ = random_word(&mut rng);
-        assert!(equals_word(&[Limb(7)], 7));
-        assert!(!equals_word(&[Limb(7), Limb(1)], 7));
-        assert_eq!(has_small_factor(&[Limb(7)]), Some(false));
-        assert_eq!(has_small_factor(&[Limb(49)]), Some(true));
-        assert_eq!(has_small_factor(&[Limb(257)]), None);
+        assert!(equals_word(&[Limb::new(7)], 7));
+        assert!(!equals_word(&[Limb::new(7), Limb::new(1)], 7));
+        assert_eq!(has_small_factor(&[Limb::new(7)]), Some(false));
+        assert_eq!(has_small_factor(&[Limb::new(49)]), Some(true));
+        assert_eq!(has_small_factor(&[Limb::new(257)]), None);
         assert_eq!(miller_rabin_rounds(0, 128, false), 1);
         assert_eq!(miller_rabin_rounds(5, 128, false), 3);
         assert_eq!(fixed_bits_precision::<2>(), 2 * Word::BITS);
