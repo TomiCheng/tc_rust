@@ -1320,6 +1320,8 @@ version = "0.1.0"
 [[package]]
 name = "tc_runtime"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5d9f70ee51cf053b9ba11bb992cb141769d0968ac50e4f92f00e2546ca4faae3"
 
 [[package]]
 name = "tc_salsa20"

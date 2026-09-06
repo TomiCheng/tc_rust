@@ -15,7 +15,7 @@ disable-x86-sse2 = ["tc_runtime/disable-x86-sse2"]
 tc_cipher = { version = "0.1", path = "../../tc_cipher" }
 tc_crypto = { version = "0.1", path = "../../tc_crypto" }
 tc_params = { version = "0.1", path = "../../tc_params" }
-tc_runtime = { version = "0.1", path = "../../../core/tc_runtime" }
+tc_runtime = "0.1.0"
 
 [dev-dependencies]
 criterion.workspace = true
