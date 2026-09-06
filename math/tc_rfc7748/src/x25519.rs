@@ -7,6 +7,7 @@
 //! [`Fe`]: super::x25519_field::Fe
 
 use super::x25519_field::Fe;
+use crate::ed25519_base;
 use rand_core::CryptoRng;
 
 /// Byte length of a `u`-coordinate / output point (RFC 7748 `PointSize`).
@@ -15,6 +16,7 @@ pub const POINT_SIZE: usize = 32;
 pub const SCALAR_SIZE: usize = 32;
 
 /// RFC 7748 所定義的 X25519 基點 `u = 9`。
+#[cfg(test)]
 const BASE_POINT: [u8; POINT_SIZE] = {
     let mut point = [0_u8; POINT_SIZE];
     point[0] = 9;
@@ -52,8 +54,8 @@ pub fn generate_private_key<R: CryptoRng + ?Sized>(rng: &mut R) -> [u8; SCALAR_S
 
 /// 從 X25519 私鑰產生公開鍵。
 ///
-/// 目前固定基點乘法走通用 Montgomery ladder；之後接入 Ed25519 預算表時，
-/// 可只替換 [`scalar_mult_base`] 的內部實作而不改公開 API。
+/// 固定基點乘法會使用編譯期 Ed25519 預算表，再把 Edwards `Y:Z` 轉回
+/// Montgomery `u` 座標。
 pub fn generate_public_key(private_key: &[u8; SCALAR_SIZE]) -> [u8; POINT_SIZE] {
     scalar_mult_base(private_key)
 }
@@ -174,11 +176,18 @@ pub fn scalar_mult(k: &[u8; SCALAR_SIZE], u: &[u8; POINT_SIZE]) -> [u8; POINT_SI
 
 /// X25519 固定基點乘法。
 ///
-/// 這是正確但較慢的通用 ladder fallback。Bouncy Castle 的最佳化版本會借用
-/// Ed25519 的固定基點預算表；本 crate 尚未有 RFC 8032 實作，因此先直接以
-/// RFC 7748 基點 `u = 9` 呼叫 [`scalar_mult`]。
+/// 與 Bouncy Castle 相同，這條路借用 Edwards 完整點加法與固定基點表，再以
+/// `u = (Z + Y) / (Z - Y)` 轉回 Montgomery 座標。完整 RFC 8032 簽章層不在
+/// 本 crate；這裡只有不依賴 SHA-512 的固定基點數學核心。
 pub fn scalar_mult_base(k: &[u8; SCALAR_SIZE]) -> [u8; POINT_SIZE] {
-    scalar_mult(k, &BASE_POINT)
+    let (y, z) = ed25519_base::scalar_mult_base_yz(k);
+    let (numerator, denominator) = z.apm(y);
+    numerator.mul(denominator.invert()).normalize().encode()
+}
+
+/// 觸及編譯期固定基點表。表已經靜態嵌入，因此不需要鎖、配置或執行期初始化。
+pub fn precompute() {
+    ed25519_base::precompute();
 }
 
 #[cfg(test)]
@@ -359,11 +368,21 @@ mod tests {
     }
 
     #[test]
-    fn scalar_mult_base_is_the_generic_base_point_ladder() {
-        let private_key = hb("77076d0a7318a57d3c16c17251b26645df4c2f87ebc0992ab177fba51db92c2a");
-        assert_eq!(
-            scalar_mult_base(&private_key),
-            scalar_mult(&private_key, &BASE_POINT)
-        );
+    fn scalar_mult_base_matches_the_generic_base_point_ladder() {
+        precompute();
+        let mut state = 0x6C8E_9CF5_71D2_A4B3_u64;
+        for _ in 0..32 {
+            let mut private_key = [0_u8; SCALAR_SIZE];
+            for byte in &mut private_key {
+                state ^= state << 13;
+                state ^= state >> 7;
+                state ^= state << 17;
+                *byte = state as u8;
+            }
+            assert_eq!(
+                scalar_mult_base(&private_key),
+                scalar_mult(&private_key, &BASE_POINT)
+            );
+        }
     }
 }

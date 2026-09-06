@@ -1,7 +1,7 @@
 //! Arithmetic in the field `GF(2²⁵⁵ − 19)`, the base field of Curve25519 / X25519.
 //!
 //! Ported from Bouncy Castle's `Org.BouncyCastle.Math.EC.Rfc7748.X25519Field`
-//! (scalar path; the AVX2/SSE2 vector paths are skipped, like binpoly's SIMD).
+//! scalar 核心外，`x86` feature 會在可用時以 AVX2/SSE2 加速加、減與 `apm`。
 //!
 //! # Representation (ref10, radix 2²⁵·⁵)
 //!
@@ -30,6 +30,9 @@
 
 /// Number of `i32` limbs in a field element (radix 2²⁵·⁵).
 pub const SIZE: usize = 10;
+
+#[cfg(all(feature = "x86", any(target_arch = "x86", target_arch = "x86_64")))]
+mod x86;
 
 /// Mask for a 24-bit limb (`2²⁴ − 1`). bc `X25519Field.M24`; used to drop bit 255 on
 /// decode (RFC 7748).
@@ -72,6 +75,15 @@ pub struct Fe([i32; SIZE]);
 // 承擔容易誤解的非正規化中間表示。
 #[allow(clippy::should_implement_trait)]
 impl Fe {
+    /// 取得內部 limb，僅供同 crate 的常數時間後端選擇使用。
+    #[cfg(any(
+        test,
+        all(feature = "x86", any(target_arch = "x86", target_arch = "x86_64"))
+    ))]
+    pub(crate) const fn raw_limbs(self) -> [i32; SIZE] {
+        self.0
+    }
+
     /// The additive identity `0` (all limbs zero). Corresponds to bc `X25519Field.Zero`
     /// (bc zeroes an out-parameter; we return a value — `Fe` is a `Copy` stack array,
     /// so this is allocation-free).
@@ -87,13 +99,27 @@ impl Fe {
         Fe(z)
     }
 
+    /// 回傳相同欄位元素。對應 bc 的 `Copy`；值型別本身也實作 [`Copy`]。
+    pub const fn copy(self) -> Fe {
+        self
+    }
+
     /// Field addition: limb-wise `i32` add, **without carrying** — the unsaturated
-    /// representation absorbs the growth. Corresponds to bc `X25519Field.Add` (scalar
-    /// path; the AVX2/SSE2 vector paths are skipped — see `TODO(x25519-simd)`).
+    /// representation absorbs the growth. Corresponds to bc `X25519Field.Add`，並在
+    /// 可用時選擇 AVX2 或 SSE2 後端。
     ///
     /// The result is *not* normalized: chain a few `add`/`sub`, then `carry` (added
     /// later) before a `mul`/`sqr`, which need limbs back in range.
     pub fn add(self, rhs: Fe) -> Fe {
+        #[cfg(all(feature = "x86", any(target_arch = "x86", target_arch = "x86_64")))]
+        {
+            if let Some(proof) = tc_runtime::intrinsics::x86::Avx2::detect() {
+                return x86::add_avx2(self, rhs, proof);
+            }
+            if let Some(proof) = tc_runtime::intrinsics::x86::Sse2::detect() {
+                return x86::add_sse2(self, rhs, proof);
+            }
+        }
         Fe(core::array::from_fn(|i| self.0[i] + rhs.0[i]))
     }
 
@@ -101,6 +127,15 @@ impl Fe {
     /// signed, so a negative difference is fine — the unsaturated representation and a
     /// later `carry` absorb it. Corresponds to bc `X25519Field.Sub` (scalar path).
     pub fn sub(self, rhs: Fe) -> Fe {
+        #[cfg(all(feature = "x86", any(target_arch = "x86", target_arch = "x86_64")))]
+        {
+            if let Some(proof) = tc_runtime::intrinsics::x86::Avx2::detect() {
+                return x86::sub_avx2(self, rhs, proof);
+            }
+            if let Some(proof) = tc_runtime::intrinsics::x86::Sse2::detect() {
+                return x86::sub_sse2(self, rhs, proof);
+            }
+        }
         Fe(core::array::from_fn(|i| self.0[i] - rhs.0[i]))
     }
 
@@ -339,9 +374,26 @@ impl Fe {
         Fe(z)
     }
 
+    /// Returns `self - 1` (subtracts 1 from the constant limb). Corresponds to bc
+    /// `X25519Field.SubOne`.
+    pub fn sub_one(self) -> Fe {
+        let mut z = self.0;
+        z[0] -= 1;
+        Fe(z)
+    }
+
     /// Returns `(self + rhs, self − rhs)` in one pass ("add-plus-minus"). Corresponds to
     /// bc `X25519Field.Apm` (scalar path); the ladder uses it to save a traversal.
     pub fn apm(self, rhs: Fe) -> (Fe, Fe) {
+        #[cfg(all(feature = "x86", any(target_arch = "x86", target_arch = "x86_64")))]
+        {
+            if let Some(proof) = tc_runtime::intrinsics::x86::Avx2::detect() {
+                return x86::apm_avx2(self, rhs, proof);
+            }
+            if let Some(proof) = tc_runtime::intrinsics::x86::Sse2::detect() {
+                return x86::apm_sse2(self, rhs, proof);
+            }
+        }
         let zp = core::array::from_fn(|i| self.0[i] + rhs.0[i]);
         let zm = core::array::from_fn(|i| self.0[i] - rhs.0[i]);
         (Fe(zp), Fe(zm))
@@ -368,33 +420,49 @@ impl Fe {
     /// Returns `true` if this element is `0`. Normalizes internally, so it is correct on
     /// any (un-normalized) representation. Corresponds to bc `X25519Field.IsZeroVar`.
     pub fn is_zero(self) -> bool {
-        self.normalize().0.iter().all(|&l| l == 0)
+        let mut difference = 0_i32;
+        for limb in self.normalize().0 {
+            difference |= limb;
+        }
+        difference == 0
     }
 
     /// Returns `true` if this element is `1`. Normalizes internally. Corresponds to bc
     /// `X25519Field.IsOneVar`.
     pub fn is_one(self) -> bool {
         let z = self.normalize().0;
-        z[0] == 1 && z[1..].iter().all(|&l| l == 0)
+        let mut difference = z[0] ^ 1;
+        for limb in &z[1..] {
+            difference |= *limb;
+        }
+        difference == 0
     }
 
-    // TODO(x25519-ct-predicates): port bc's *constant-time mask* predicates — `AreEqual`
-    // and `IsZero` return `-1`/`0` (`((d-1) & ~d) >> 31` over the XOR/OR of NORMALIZED
-    // limbs) for branchless combination, with `…Var` bool wrappers on top. Our current
-    // `is_zero`/`is_one` normalize + return `bool` (= the `…Var` behavior). The two stubs
-    // below reserve the `AreEqual` / `IsZeroVar` surface for when constant-time equality
-    // is actually needed (e.g. Ed25519); implement then (mask form + this Var form).
-
-    /// **Not yet implemented.** Constant-time equality of two field elements (bc
-    /// `X25519Field.AreEqual` / `AreEqualVar`). See `TODO(x25519-ct-predicates)`.
-    pub fn are_equal(_a: Fe, _b: Fe) -> bool {
-        todo!("are_equal: constant-time field equality — see TODO(x25519-ct-predicates)")
+    /// 比較兩個欄位元素的正規化值。完整掃過所有 limb，不會提早返回。
+    pub fn are_equal(a: Fe, b: Fe) -> bool {
+        let a = a.normalize().0;
+        let b = b.normalize().0;
+        let mut difference = 0_i32;
+        for i in 0..SIZE {
+            difference |= a[i] ^ b[i];
+        }
+        difference == 0
     }
 
-    /// **Not yet implemented.** Variable-time zero test (bc `X25519Field.IsZeroVar`);
-    /// functionally equal to [`is_zero`](Fe::is_zero). See `TODO(x25519-ct-predicates)`.
+    /// 變動時間相等判斷；只應用於公開值。對應 bc 的 `AreEqualVar`。
+    pub fn are_equal_var(a: Fe, b: Fe) -> bool {
+        a.normalize().0 == b.normalize().0
+    }
+
+    /// 變動時間零值判斷；只應用於公開值。對應 bc 的 `IsZeroVar`。
     pub fn is_zero_var(self) -> bool {
-        todo!("is_zero_var: see TODO(x25519-ct-predicates); functionally = is_zero()")
+        self.normalize().0.iter().all(|&limb| limb == 0)
+    }
+
+    /// 變動時間一值判斷；只應用於公開值。對應 bc 的 `IsOneVar`。
+    pub fn is_one_var(self) -> bool {
+        let z = self.normalize().0;
+        z[0] == 1 && z[1..].iter().all(|&limb| limb == 0)
     }
 
     /// Returns `self^(2ⁿ)` — `n` repeated squarings (`n >= 1`). Corresponds to bc
@@ -415,13 +483,64 @@ impl Fe {
     /// safegcd `Mod.ModOddInverse`). We use the self-contained addition-chain
     /// exponentiation instead.
     //
-    // TODO(ec-ct): port the shared safegcd (`Mod.ModOddInverse` / `…Var`) — it would
-    // give a faster constant-time `invert` here (and the Fp CT inverse) plus the
-    // variable-time `inv_var` bc has. Until then Fermat `invert` covers all needs.
+    // TODO(ec-ct): shared safegcd (`Mod.ModOddInverse`) 可取代這條固定 exponent，
+    // 進一步加速常數時間反元素；公開值使用的 `inv_var` 已有 binary GCD 路徑。
     pub fn invert(self) -> Fe {
         // (x3, z) = (x^3, x^((p−5)/8)); then z^8 · x^3 = x^(p−5) · x^3 = x^(p−2).
         let (x3, z) = self.pow_pm5d8();
         z.sqr_n(3).mul(x3)
+    }
+
+    /// 變動時間反元素，只可用於公開值。使用 binary extended GCD，迴圈次數與
+    /// 分支會反映輸入；相較固定 exponent 的 [`Fe::invert`] 可省掉大量欄位平方。
+    /// 對應 bc 的 `InvVar`（bc 以 `ModOddInverseVar` 實作）。
+    pub fn inv_var(self) -> Fe {
+        let encoded = self.normalize().encode();
+        let mut u = decode_u32_words(&encoded);
+        if words_are_zero(&u) {
+            return Fe::zero();
+        }
+
+        const P: [u32; 8] = [
+            0xFFFF_FFED,
+            0xFFFF_FFFF,
+            0xFFFF_FFFF,
+            0xFFFF_FFFF,
+            0xFFFF_FFFF,
+            0xFFFF_FFFF,
+            0xFFFF_FFFF,
+            0x7FFF_FFFF,
+        ];
+
+        let mut v = P;
+        let mut x1 = [0_u32; 8];
+        x1[0] = 1;
+        let mut x2 = [0_u32; 8];
+
+        while !words_are_one(&u) && !words_are_one(&v) {
+            while u[0] & 1 == 0 {
+                shift_right_one(&mut u);
+                half_mod_odd(&mut x1, &P);
+            }
+            while v[0] & 1 == 0 {
+                shift_right_one(&mut v);
+                half_mod_odd(&mut x2, &P);
+            }
+            if words_cmp(&u, &v).is_ge() {
+                subtract_words(&mut u, &v);
+                sub_mod(&mut x1, &x2, &P);
+            } else {
+                subtract_words(&mut v, &u);
+                sub_mod(&mut x2, &x1, &P);
+            }
+        }
+
+        let result = if words_are_one(&u) { x1 } else { x2 };
+        let mut bytes = [0_u8; 32];
+        for (index, word) in result.iter().enumerate() {
+            bytes[index * 4..index * 4 + 4].copy_from_slice(&word.to_le_bytes());
+        }
+        Fe::decode_255(&bytes)
     }
 
     /// Returns a square root of `u / v` if one exists (`Some`), else `None`. **Variable
@@ -455,7 +574,7 @@ impl Fe {
     /// (and later the square-root path).
     ///
     /// [`invert`]: Fe::invert
-    fn pow_pm5d8(self) -> (Fe, Fe) {
+    pub fn pow_pm5d8(self) -> (Fe, Fe) {
         let x = self;
         let x2 = x.sqr().mul(x); // x^(2²−1) = x³
         let x3 = x2.sqr().mul(x); // x^(2³−1)
@@ -662,7 +781,7 @@ impl Fe {
     /// One reduction pass: fold the bits of `z[9]` above 24 back via `2²⁵⁵ ≡ 19`
     /// (`× 19`), add `x` at the top first, and carry-propagate. bc `X25519Field.Reduce`,
     /// transcribed verbatim (limb widths 26,26,25,26,25,26,26,25,26,24).
-    fn reduce(self, x: i32) -> Fe {
+    pub fn reduce(self, x: i32) -> Fe {
         let mut z = self.0;
         let z9 = z[9] & M24;
         let t = (z[9] >> 24) + x;
@@ -711,6 +830,20 @@ impl Fe {
         out
     }
 
+    /// Encodes one little-endian 32-bit word. Corresponds to bc `Encode32`.
+    pub const fn encode_32(word: u32) -> [u8; 4] {
+        word.to_le_bytes()
+    }
+
+    /// Encodes the low 128 bits of a normalized element. Corresponds to the low-half
+    /// form of bc `Encode128`.
+    pub fn encode_128(self) -> [u8; 16] {
+        let encoded = self.normalize().encode();
+        let mut low = [0_u8; 16];
+        low.copy_from_slice(&encoded[..16]);
+        low
+    }
+
     /// Decodes 32 little-endian bytes into a field element. The top bit (bit 255) is
     /// masked off per RFC 7748. Corresponds to bc `X25519Field.Decode` (= `Decode255`).
     ///
@@ -722,6 +855,25 @@ impl Fe {
         decode_128(&bytes[16..32], &mut z[5..10]);
         z[9] &= M24; // 丟掉 bit 255（RFC 7748）
         Fe(z)
+    }
+
+    /// Decodes one little-endian 32-bit word. Corresponds to bc `Decode32`.
+    pub const fn decode_32(bytes: &[u8; 4]) -> u32 {
+        u32::from_le_bytes(*bytes)
+    }
+
+    /// Decodes a 128-bit little-endian value into the low half of an element.
+    /// Corresponds to bc `Decode128`.
+    pub fn decode_128(bytes: &[u8; 16]) -> Fe {
+        let mut limbs = [0_i32; SIZE];
+        decode_128(bytes, &mut limbs[..5]);
+        Fe(limbs)
+    }
+
+    /// Decodes an RFC 7748 255-bit field encoding. Alias of [`Fe::decode`] matching
+    /// bc's `Decode255` name.
+    pub fn decode_255(bytes: &[u8; 32]) -> Fe {
+        Self::decode(bytes)
     }
 }
 
@@ -759,11 +911,82 @@ fn decode_128(bs: &[u8], z: &mut [i32]) {
     z[4] = (t3 >> 7) as i32;
 }
 
-// TODO(x25519-simd): bc's Add/Mul/etc. have AVX2/SSE2 vector paths behind runtime
-// feature detection (Sse2.IsEnabled / Avx2.IsEnabled). We port only the scalar path.
-// A portable runtime-dispatched SIMD backend in no_std needs hand-rolled CPUID
-// (+ XGETBV for AVX) cached in an AtomicU8; `is_x86_feature_detected!` is std-only.
-// Deferred; release builds already auto-vectorize the simple loops (add/sub) to SSE2.
+fn decode_u32_words(bytes: &[u8; 32]) -> [u32; 8] {
+    core::array::from_fn(|index| {
+        u32::from_le_bytes(
+            bytes[index * 4..index * 4 + 4]
+                .try_into()
+                .expect("word slice has four bytes"),
+        )
+    })
+}
+
+fn words_are_zero(words: &[u32; 8]) -> bool {
+    words.iter().all(|&word| word == 0)
+}
+
+fn words_are_one(words: &[u32; 8]) -> bool {
+    words[0] == 1 && words[1..].iter().all(|&word| word == 0)
+}
+
+fn words_cmp(left: &[u32; 8], right: &[u32; 8]) -> core::cmp::Ordering {
+    for index in (0..8).rev() {
+        match left[index].cmp(&right[index]) {
+            core::cmp::Ordering::Equal => {}
+            ordering => return ordering,
+        }
+    }
+    core::cmp::Ordering::Equal
+}
+
+fn subtract_words(left: &mut [u32; 8], right: &[u32; 8]) {
+    debug_assert!(words_cmp(left, right).is_ge());
+    let mut borrow = 0_u64;
+    for index in 0..8 {
+        let subtrahend = right[index] as u64 + borrow;
+        let value = left[index] as u64;
+        left[index] = value.wrapping_sub(subtrahend) as u32;
+        borrow = u64::from(value < subtrahend);
+    }
+    debug_assert_eq!(borrow, 0);
+}
+
+fn add_words(left: &mut [u32; 8], right: &[u32; 8]) {
+    let mut carry = 0_u64;
+    for index in 0..8 {
+        let value = left[index] as u64 + right[index] as u64 + carry;
+        left[index] = value as u32;
+        carry = value >> 32;
+    }
+    debug_assert_eq!(carry, 0);
+}
+
+fn shift_right_one(words: &mut [u32; 8]) {
+    let mut carry = 0_u32;
+    for word in words.iter_mut().rev() {
+        let next = *word << 31;
+        *word = (*word >> 1) | carry;
+        carry = next;
+    }
+}
+
+fn half_mod_odd(value: &mut [u32; 8], modulus: &[u32; 8]) {
+    if value[0] & 1 != 0 {
+        add_words(value, modulus);
+    }
+    shift_right_one(value);
+}
+
+fn sub_mod(left: &mut [u32; 8], right: &[u32; 8], modulus: &[u32; 8]) {
+    if words_cmp(left, right).is_ge() {
+        subtract_words(left, right);
+    } else {
+        let mut difference = *right;
+        subtract_words(&mut difference, left);
+        *left = *modulus;
+        subtract_words(left, &difference);
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -831,6 +1054,8 @@ mod tests {
             if !av.is_zero() {
                 assert_eq!(fe_val(a.invert()), av.mod_inverse(&p).unwrap());
                 assert_eq!(fe_val(a.mul(a.invert())), BigUint::from(1_u8));
+                assert_eq!(fe_val(a.inv_var()), av.mod_inverse(&p).unwrap());
+                assert_eq!(fe_val(a.mul(a.inv_var())), BigUint::from(1_u8));
             }
             // negate / cnegate / add_one / apm 對照真值
             let negative_av = BigUint::default().mod_sub(&av, &p);
@@ -874,6 +1099,51 @@ mod tests {
         // 2 是 GF(2²⁵⁵−19) 的非二次剩餘（p ≡ 5 mod 8）→ sqrt(2/1) = None
         let two = Fe::one().add(Fe::one());
         assert!(Fe::sqrt_ratio_var(two, Fe::one()).is_none());
+    }
+
+    #[test]
+    fn ed25519_support_helpers_match_independent_properties() {
+        let p = p();
+        let bytes = [
+            0x91, 0x28, 0x57, 0xCA, 0x11, 0xE4, 0x73, 0x05, 0x8A, 0x34, 0x72, 0xB1, 0xC9, 0xE0,
+            0x4F, 0x6D, 0xAA, 0x1C, 0x98, 0x22, 0xD7, 0x45, 0x19, 0xB0, 0x63, 0x31, 0xF5, 0x87,
+            0x02, 0x6A, 0x4D, 0x39,
+        ];
+        let value = Fe::decode_255(&bytes);
+        let integer = bytes_val(&bytes).rem_euclid(&p);
+
+        assert_eq!(value.copy().raw_limbs(), value.raw_limbs());
+        assert!(Fe::are_equal(value, Fe::decode(&bytes)));
+        assert!(Fe::are_equal_var(value, Fe::decode(&bytes)));
+        assert!(!Fe::are_equal_var(value, value.add_one()));
+        assert!(Fe::zero().is_zero_var());
+        assert!(Fe::one().is_one_var());
+        assert_eq!(
+            fe_val(value.sub_one()),
+            integer.mod_sub(&BigUint::from(1_u8), &p)
+        );
+
+        let inverse = value.inv_var();
+        assert_eq!(fe_val(inverse), integer.mod_inverse(&p).unwrap());
+        assert_eq!(fe_val(value.mul(inverse)), BigUint::from(1_u8));
+
+        let (cube, pm5d8) = value.pow_pm5d8();
+        assert_eq!(
+            fe_val(cube),
+            (&(&integer * &integer) * &integer).rem_euclid(&p)
+        );
+        let exponent = (&p - BigUint::from(5_u8)) >> 3;
+        assert_eq!(fe_val(pm5d8), integer.mod_pow(&exponent, &p));
+
+        let word = 0xA5C3_197E_u32;
+        assert_eq!(Fe::decode_32(&Fe::encode_32(word)), word);
+        let low = value.encode_128();
+        assert_eq!(Fe::decode_128(&low).encode_128(), low);
+        assert_eq!(
+            fe_val(value.carry().reduce(0)),
+            fe_val(value),
+            "單趟 reduce 必須保留欄位真值"
+        );
     }
 
     #[test]
