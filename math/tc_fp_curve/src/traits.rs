@@ -11,14 +11,6 @@ use tc_ec_core::{Curve, FieldElement, Point, PrimeFieldElement};
 use crate::{FpCurve, FpFieldElement, FpInteger, FpPoint};
 
 impl<B: FpInteger> FieldElement for FpFieldElement<B> {
-    fn zero(&self) -> Self {
-        FpFieldElement::zero(self)
-    }
-
-    fn one(&self) -> Self {
-        FpFieldElement::one(self)
-    }
-
     fn is_zero(&self) -> bool {
         FpFieldElement::is_zero(self)
     }
@@ -87,6 +79,14 @@ impl<B: FpInteger> Curve for FpCurve<B> {
 
     fn cofactor(&self) -> Option<&Self::Scalar> {
         FpCurve::cofactor(self)
+    }
+
+    fn zero(&self) -> Self::Field {
+        self.a().zero()
+    }
+
+    fn one(&self) -> Self::Field {
+        self.a().one()
     }
 
     fn identity(self: &Arc<Self>) -> Self::Point {
@@ -210,6 +210,8 @@ mod tests {
             tc_ec_core::CoordinateSystem::Affine
         );
         assert!(Curve::identity(&curve).is_infinity());
+        assert!(Curve::zero(curve.as_ref()).is_zero());
+        assert!(Curve::one(curve.as_ref()).is_one());
         let x = point.x().unwrap();
         let y = point.y().unwrap();
         assert_eq!(Curve::create_point(&curve, x.clone(), y), point);

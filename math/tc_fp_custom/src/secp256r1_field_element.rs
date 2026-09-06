@@ -122,14 +122,6 @@ impl SecP256R1FieldElement {
 }
 
 impl FieldElement for SecP256R1FieldElement {
-    fn zero(&self) -> Self {
-        Self::ZERO
-    }
-
-    fn one(&self) -> Self {
-        Self::ONE
-    }
-
     fn is_zero(&self) -> bool {
         self.is_zero()
     }

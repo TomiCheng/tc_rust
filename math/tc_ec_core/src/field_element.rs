@@ -1,7 +1,8 @@
 //! 體元素的最小共通層。
 //!
-//! Fp 與 F2m 都需要加、減、乘、平方、平方根與反元素。F2m 的平方根是便宜的
-//! Frobenius power，Fp 則可能沒有平方根，因此共通簽章仍以 `Option` 表達。
+//! Fp 與 F2m 都需要加、減、乘、平方、平方根與反元素。零與一的工廠留在
+//! `Curve`，因為執行期欄位需要由曲線提供模數或約簡參數。F2m 的平方根是
+//! 便宜的 Frobenius power，Fp 則可能沒有平方根，因此共通簽章仍以 `Option` 表達。
 //! trace 與 half-trace 才留在 `BinaryFieldElement` 專屬層。
 //!
 //! # API 狀態
@@ -11,12 +12,6 @@
 
 /// Fp 與 F2m 體元素共享的運算介面。
 pub trait FieldElement: Clone + Eq {
-    /// 產生同一個體域中的加法單位元。
-    fn zero(&self) -> Self;
-
-    /// 產生同一個體域中的乘法單位元。
-    fn one(&self) -> Self;
-
     /// 是否為加法單位元。
     fn is_zero(&self) -> bool;
 

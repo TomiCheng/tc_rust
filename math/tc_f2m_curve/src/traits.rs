@@ -11,14 +11,6 @@ use tc_ec_core::{BinaryFieldElement, Curve, FieldElement, Point};
 use crate::{F2mCurve, F2mFieldElement, F2mInteger, F2mPoint, F2mPolynomial};
 
 impl<P: F2mPolynomial> FieldElement for F2mFieldElement<P> {
-    fn zero(&self) -> Self {
-        F2mFieldElement::zero(self)
-    }
-
-    fn one(&self) -> Self {
-        F2mFieldElement::one(self)
-    }
-
     fn is_zero(&self) -> bool {
         F2mFieldElement::is_zero(self)
     }
@@ -89,6 +81,14 @@ impl<P: F2mPolynomial, B: F2mInteger> Curve for F2mCurve<P, B> {
 
     fn cofactor(&self) -> Option<&Self::Scalar> {
         F2mCurve::cofactor(self)
+    }
+
+    fn zero(&self) -> Self::Field {
+        self.a().zero()
+    }
+
+    fn one(&self) -> Self::Field {
+        self.a().one()
     }
 
     fn identity(self: &Arc<Self>) -> Self::Point {
@@ -242,6 +242,8 @@ mod tests {
         assert_eq!(Point::double(&point), point.twice());
         assert!(Point::is_identity(&Point::identity(&point)));
         assert!(Curve::identity(&curve).is_infinity());
+        assert!(Curve::zero(curve.as_ref()).is_zero());
+        assert!(Curve::one(curve.as_ref()).is_one());
         assert_eq!(Curve::create_point(&curve, x.clone(), y.clone()), point);
         assert_eq!(Point::twice_plus(&point, &point), point.three_times());
         assert_eq!(Point::three_times(&point), &point.twice() + &point);

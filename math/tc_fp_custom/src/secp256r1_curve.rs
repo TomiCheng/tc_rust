@@ -213,6 +213,14 @@ impl Curve for SecP256R1Curve {
         Some(self.cofactor())
     }
 
+    fn zero(&self) -> Self::Field {
+        SecP256R1FieldElement::ZERO
+    }
+
+    fn one(&self) -> Self::Field {
+        SecP256R1FieldElement::ONE
+    }
+
     fn identity(self: &Arc<Self>) -> Self::Point {
         self.infinity()
     }

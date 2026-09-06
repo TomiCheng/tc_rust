@@ -37,6 +37,15 @@ pub trait Curve {
     /// Cofactor；未知時為 `None`。
     fn cofactor(&self) -> Option<&Self::Scalar>;
 
+    /// 建立本曲線體域的加法單位元。
+    ///
+    /// 工廠放在曲線而不是 [`FieldElement`] 上，因為執行期曲線需要使用曲線
+    /// 持有的模數或約簡參數；編譯期特化曲線則可直接回傳固定常數。
+    fn zero(&self) -> Self::Field;
+
+    /// 建立本曲線體域的乘法單位元。
+    fn one(&self) -> Self::Field;
+
     /// 建立本曲線的群單位點。
     fn identity(self: &Arc<Self>) -> Self::Point;
 
