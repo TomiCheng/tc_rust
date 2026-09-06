@@ -5,14 +5,17 @@
 //!
 //! # Representation (ref10, radix 2²⁵·⁵)
 //!
-//! A field element is [`SIZE`] = 10 signed 32-bit limbs, holding a 255-bit value in
-//! roughly **radix 2²⁵·⁵**: each limb holds 25–26 bits (see [`Fe::carry`] for bc's
+//! A field element is [`SIZE`](crate::x25519_field::SIZE) = 10 signed 32-bit limbs,
+//! holding a 255-bit value in roughly **radix 2²⁵·⁵**: each limb holds 25–26 bits
+//! (see [`Fe::carry`](crate::x25519_field::Fe::carry) for bc's
 //! exact per-limb widths — the 25-bit limbs are indices 2, 4, 7, 9). Each limb lives
 //! in an `i32` but uses only 25–26 bits, so the spare high bits absorb carries — the
 //! representation is **unsaturated**:
-//! addition is limb-wise `i32` add with no immediate carry, and [`carry`]/`normalize`
-//! reconcile later. Products of two ~26-bit limbs (~52 bits) accumulate in `i64`, so
-//! no 128-bit arithmetic is needed.
+//! addition is limb-wise `i32` add with no immediate carry, and
+//! [`Fe::carry`](crate::x25519_field::Fe::carry) /
+//! [`Fe::normalize`](crate::x25519_field::Fe::normalize) reconcile later. Products of
+//! two ~26-bit limbs (~52 bits) accumulate in `i64`, so no 128-bit arithmetic is
+//! needed.
 //!
 //! All operations are **constant-time** (straight-line, no data-dependent branches):
 //! this field is the constant-time answer for its curve, unlike the variable-time
@@ -53,8 +56,8 @@ const ROOT_NEG_ONE: Fe = Fe([
 
 /// An element of `GF(2²⁵⁵ − 19)` in the ref10 radix-2²⁵·⁵ representation: [`SIZE`]
 /// signed limbs, unsaturated (each limb uses 25–26 of its 32 bits). Values are not
-/// necessarily reduced/normalized between operations; [`carry`]/`normalize` bring a
-/// limb array back into range when needed.
+/// necessarily reduced/normalized between operations; [`Fe::carry`] /
+/// [`Fe::normalize`] bring a limb array back into range when needed.
 ///
 /// `Copy` — it is a small fixed array on the stack, so value-returning arithmetic
 /// costs no heap allocation (cleaner than bc's out-parameter style).
@@ -765,23 +768,23 @@ fn decode_128(bs: &[u8], z: &mut [i32]) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tc_bigint_old::BigInt;
+    use tc_bigint::{BigUint, ModSub};
 
-    fn p() -> BigInt {
+    fn p() -> BigUint {
         // p = 2²⁵⁵ − 19
-        &(&BigInt::from_u32(1) << 255) - &BigInt::from_u32(19)
+        &(&BigUint::from(1_u8) << 255) - &BigUint::from(19_u8)
     }
 
-    // 一個 Fe 的真值:normalize → encode → 讀成 BigInt。
-    fn fe_val(fe: Fe) -> BigInt {
-        BigInt::from_bytes_le_unsigned(&fe.normalize().encode())
+    // 一個 Fe 的真值:normalize → encode → 讀成 BigUint。
+    fn fe_val(fe: Fe) -> BigUint {
+        BigUint::from_le_bytes(&fe.normalize().encode())
     }
 
     // 一組 bytes 代表的值(decode 會丟 bit 255,故先清)。
-    fn bytes_val(bytes: &[u8; 32]) -> BigInt {
+    fn bytes_val(bytes: &[u8; 32]) -> BigUint {
         let mut b = *bytes;
         b[31] &= 0x7F;
-        BigInt::from_bytes_le_unsigned(&b)
+        BigUint::from_le_bytes(&b)
     }
 
     #[test]
@@ -810,14 +813,14 @@ mod tests {
             assert_eq!(fe_val(b), bv);
             // add / sub / mul 對照真值
             assert_eq!(fe_val(a.add(b)), (&av + &bv).rem_euclid(&p));
-            assert_eq!(fe_val(a.sub(b)), (&av - &bv).rem_euclid(&p));
+            assert_eq!(fe_val(a.sub(b)), av.mod_sub(&bv, &p));
             assert_eq!(fe_val(a.mul(b)), (&av * &bv).rem_euclid(&p));
             // sqr(a) == a² mod p == a·a
             assert_eq!(fe_val(a.sqr()), (&av * &av).rem_euclid(&p));
             assert_eq!(fe_val(a.sqr()), fe_val(a.mul(a)));
             // mul_i32（ladder 用 A24 = 121666）
             for &y in &[1i32, 19, 121665, 121666] {
-                let yv = BigInt::from_u32(y as u32);
+                let yv = BigUint::from(y as u32);
                 assert_eq!(
                     fe_val(a.mul_i32(y)),
                     (&av * &yv).rem_euclid(&p),
@@ -827,19 +830,20 @@ mod tests {
             // invert：a⁻¹ = a^(p−2)，且 a·a⁻¹ = 1（a ≠ 0）
             if !av.is_zero() {
                 assert_eq!(fe_val(a.invert()), av.mod_inverse(&p).unwrap());
-                assert_eq!(fe_val(a.mul(a.invert())), BigInt::from_u32(1));
+                assert_eq!(fe_val(a.mul(a.invert())), BigUint::from(1_u8));
             }
             // negate / cnegate / add_one / apm 對照真值
-            assert_eq!(fe_val(a.negate()), (-&av).rem_euclid(&p));
+            let negative_av = BigUint::default().mod_sub(&av, &p);
+            assert_eq!(fe_val(a.negate()), negative_av);
             assert_eq!(fe_val(a.cnegate(0)), av);
-            assert_eq!(fe_val(a.cnegate(1)), (-&av).rem_euclid(&p));
+            assert_eq!(fe_val(a.cnegate(1)), negative_av);
             assert_eq!(
                 fe_val(a.add_one()),
-                (&av + &BigInt::from_u32(1)).rem_euclid(&p)
+                (&av + &BigUint::from(1_u8)).rem_euclid(&p)
             );
             let (sp, sm) = a.apm(b);
             assert_eq!(fe_val(sp), (&av + &bv).rem_euclid(&p));
-            assert_eq!(fe_val(sm), (&av - &bv).rem_euclid(&p));
+            assert_eq!(fe_val(sm), av.mod_sub(&bv, &p));
         }
     }
 

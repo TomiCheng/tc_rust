@@ -10,4 +10,4 @@ repository.workspace = true
 rand_core = { workspace = true }
 
 [dev-dependencies]
-tc_bigint_old = { version = "0.1.0", path = "../tc_bigint_old" }
+tc_bigint = { version = "0.1.0", path = "../tc_bigint" }

@@ -108,6 +108,9 @@ fn decode_scalar(k: &[u8; SCALAR_SIZE]) -> [u32; 8] {
 /// X25519 scalar multiplication (RFC 7748): given a 32-byte scalar `k` and a 32-byte
 /// `u`-coordinate, returns `k · u` as 32 bytes — the Diffie–Hellman shared secret.
 ///
+/// `k` 會在內部解碼時依 RFC 7748 自動夾制；呼叫端不必先呼叫
+/// [`clamp_private_key`]。
+///
 /// Constant-time: a Montgomery ladder over [`Fe`] with `cswap`-driven, bit-independent
 /// control flow. Corresponds to bc `X25519.ScalarMult`, transcribed verbatim.
 pub fn scalar_mult(k: &[u8; SCALAR_SIZE], u: &[u8; POINT_SIZE]) -> [u8; POINT_SIZE] {
@@ -183,7 +186,7 @@ mod tests {
     use super::*;
     use core::convert::Infallible;
     use rand_core::{TryCryptoRng, TryRng};
-    use tc_bigint_old::BigInt;
+    use tc_bigint::{BigUint, ModSub};
 
     struct SequenceRng(u8);
 
@@ -213,18 +216,18 @@ mod tests {
 
     impl TryCryptoRng for SequenceRng {}
 
-    fn p() -> BigInt {
-        &(&BigInt::from_u32(1) << 255) - &BigInt::from_u32(19)
+    fn p() -> BigUint {
+        &(&BigUint::from(1_u8) << 255) - &BigUint::from(19_u8)
     }
-    fn val(f: Fe) -> BigInt {
-        BigInt::from_bytes_le_unsigned(&f.normalize().encode())
+    fn val(f: Fe) -> BigUint {
+        BigUint::from_le_bytes(&f.normalize().encode())
     }
 
     #[test]
     fn point_double_matches_montgomery_formula() {
         let p = p();
-        let one = BigInt::from_u32(1);
-        let a = BigInt::from_u32(C_A as u32); // 486662
+        let one = BigUint::from(1_u8);
+        let a = BigUint::from(C_A as u32); // 486662
         let u = Fe::decode(&[
             0x09, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD,
             0xEE, 0xFF, 0x10, 0x20, 0x30, 0x40, 0x50, 0x60, 0x70, 0x80, 0x90, 0xA0, 0xB0, 0xC0,
@@ -238,10 +241,10 @@ mod tests {
         // 參考:u' = (u²−1)² / (4u(u²+Au+1)) mod p
         let uv = val(u);
         let u2 = (&uv * &uv).rem_euclid(&p);
-        let num0 = (&u2 - &one).rem_euclid(&p);
+        let num0 = u2.mod_sub(&one, &p);
         let num = (&num0 * &num0).rem_euclid(&p); // (u²−1)²
         let inner = (&(&u2 + &(&a * &uv)) + &one).rem_euclid(&p); // u²+Au+1
-        let den = (&(&BigInt::from_u32(4) * &uv) * &inner).rem_euclid(&p); // 4u(...)
+        let den = (&(&BigUint::from(4_u8) * &uv) * &inner).rem_euclid(&p); // 4u(...)
         let expected = (&num * &den.mod_inverse(&p).unwrap()).rem_euclid(&p);
 
         assert_eq!(got, expected);

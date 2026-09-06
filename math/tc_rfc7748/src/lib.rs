@@ -10,6 +10,8 @@
 extern crate std;
 
 pub mod x25519;
+/// 提供後續 Ed25519 實作共用的內部欄位核心；可跨 crate 使用，但不承諾穩定 API。
+#[doc(hidden)]
 pub mod x25519_field;
 
 pub use x25519::{
