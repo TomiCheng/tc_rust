@@ -5,11 +5,30 @@
 
 use alloc::sync::Arc;
 use core::ops::{Add, Div, Mul, Neg, Sub};
+#[cfg(feature = "bench-internals")]
+use core::sync::atomic::{AtomicUsize, Ordering};
 
 use tc_bigint::modular::Monty;
 use tc_bigint::{BigUint, Odd};
 
 use crate::FpInteger;
+
+#[cfg(feature = "bench-internals")]
+static INVERSION_COUNT: AtomicUsize = AtomicUsize::new(0);
+
+/// 清除 benchmark 用的體域反元素計數器。
+#[cfg(feature = "bench-internals")]
+#[doc(hidden)]
+pub fn reset_inversion_count() {
+    INVERSION_COUNT.store(0, Ordering::Relaxed);
+}
+
+/// 讀取 benchmark 用的體域反元素次數。
+#[cfg(feature = "bench-internals")]
+#[doc(hidden)]
+pub fn inversion_count() -> usize {
+    INVERSION_COUNT.load(Ordering::Relaxed)
+}
 
 /// 同一個 Fp 體域共用的 Montgomery 參數。
 #[derive(Clone)]
@@ -128,6 +147,8 @@ impl<B: FpInteger> FpFieldElement<B> {
     ///
     /// 具體反元素路徑由 `B::Monty` 決定；本層只保留 Montgomery 抽象。
     pub fn invert(&self) -> Option<Self> {
+        #[cfg(feature = "bench-internals")]
+        INVERSION_COUNT.fetch_add(1, Ordering::Relaxed);
         self.value.invert().map(|value| self.with_monty(value))
     }
 

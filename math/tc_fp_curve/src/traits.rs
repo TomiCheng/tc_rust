@@ -4,6 +4,8 @@
 //! `SecP256R1FieldElement`／`SecP256R1Point` 直接成為另一組曲線實作，而不必
 //! 假裝所有曲線都共用目前的動態 `BigUint` 表示。
 
+use alloc::sync::Arc;
+
 use tc_ec_core::{Curve, FieldElement, Point, PrimeFieldElement};
 
 use crate::{FpCurve, FpFieldElement, FpInteger, FpPoint};
@@ -87,6 +89,18 @@ impl<B: FpInteger> Curve for FpCurve<B> {
         FpCurve::cofactor(self)
     }
 
+    fn identity(self: &Arc<Self>) -> Self::Point {
+        self.infinity()
+    }
+
+    fn create_point(self: &Arc<Self>, x: Self::Field, y: Self::Field) -> Self::Point {
+        FpPoint::new(Arc::clone(self), x, y)
+    }
+
+    fn coordinate_system(&self) -> tc_ec_core::CoordinateSystem {
+        FpCurve::coordinate_system(self)
+    }
+
     fn scalar_bit_length(scalar: &Self::Scalar) -> usize {
         scalar.bit_length()
     }
@@ -107,12 +121,32 @@ impl<B: FpInteger> Point for FpPoint<B> {
         FpPoint::is_infinity(self)
     }
 
+    fn x(&self) -> Option<<Self::Curve as Curve>::Field> {
+        FpPoint::x(self)
+    }
+
+    fn y(&self) -> Option<<Self::Curve as Curve>::Field> {
+        FpPoint::y(self)
+    }
+
     fn add(&self, rhs: &Self) -> Self {
         self + rhs
     }
 
     fn double(&self) -> Self {
         FpPoint::twice(self)
+    }
+
+    fn twice_plus(&self, rhs: &Self) -> Self {
+        FpPoint::twice_plus(self, rhs)
+    }
+
+    fn three_times(&self) -> Self {
+        FpPoint::three_times(self)
+    }
+
+    fn times_pow2(&self, exponent: usize) -> Self {
+        FpPoint::times_pow2(self, exponent)
     }
 
     fn negate(&self) -> Self {
@@ -135,14 +169,25 @@ mod tests {
     fn trait_methods_delegate_to_the_concrete_implementation() {
         let (curve, point) = secp256k1();
         assert_eq!(Curve::a(curve.as_ref()), curve.a());
+        assert_eq!(
+            Curve::coordinate_system(curve.as_ref()),
+            tc_ec_core::CoordinateSystem::Affine
+        );
+        assert!(Curve::identity(&curve).is_infinity());
+        let x = point.x().unwrap();
+        let y = point.y().unwrap();
+        assert_eq!(Curve::create_point(&curve, x.clone(), y), point);
+        assert_eq!(Point::x(&point), Some(x.clone()));
         assert_eq!(Point::double(&point), point.twice());
         assert_eq!(Point::add(&point, &point), point.twice());
+        assert_eq!(Point::twice_plus(&point, &point), point.three_times());
+        assert_eq!(Point::three_times(&point), &point.twice() + &point);
+        assert_eq!(Point::times_pow2(&point, 3), point.times_pow2(3));
         assert!(Point::is_identity(&Point::identity(&point)));
 
-        let x = point.x().unwrap();
-        assert_eq!(FieldElement::square(x), x.square());
-        assert_eq!(FieldElement::sqrt(x), x.sqrt());
-        assert_eq!(PrimeFieldElement::to_big_uint(x), x.to_big_uint());
+        assert_eq!(FieldElement::square(&x), x.square());
+        assert_eq!(FieldElement::sqrt(&x), x.sqrt());
+        assert_eq!(PrimeFieldElement::to_big_uint(&x), x.to_big_uint());
     }
 
     fn assert_algorithm<B: FpInteger>(points: [FpPoint<B>; 2]) {

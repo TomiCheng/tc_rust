@@ -13,6 +13,9 @@ mod traits;
 
 pub use fp_curve::FpCurve;
 pub use fp_field_element::FpFieldElement;
+#[cfg(feature = "bench-internals")]
+#[doc(hidden)]
+pub use fp_field_element::{inversion_count, reset_inversion_count};
 pub use fp_point::FpPoint;
 pub use integer::FpInteger;
 pub use tc_ec_core::{

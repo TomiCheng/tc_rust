@@ -895,6 +895,7 @@ dependencies = [
 name = "tc_fp_curve"
 version = "0.1.0"
 dependencies = [
+ "criterion",
  "rand_core",
  "tc_bigint",
  "tc_bigint_old",

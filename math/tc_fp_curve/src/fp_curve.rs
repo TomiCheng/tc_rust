@@ -1,8 +1,8 @@
 //! 以泛型無號整數表示參數的短 Weierstrass 質數曲線。
 //!
 //! 曲線保存一份共享的 Montgomery 參數；由曲線建立的係數、座標與暫存體域
-//! 元素都透過同一份參數運算。這一層目前刻意只支援 affine 座標，方便與舊
-//! `tc_ec` 建立逐位元 oracle，再於後續加入投影座標最佳化。
+//! 元素都透過同一份參數運算。點可使用 affine、homogeneous、Jacobian 或
+//! modified Jacobian；列舉中的 Chudnovsky 依 BC 行為保留但不提供算術。
 
 use alloc::sync::Arc;
 
@@ -111,11 +111,24 @@ impl<B: FpInteger> FpCurve<B> {
     }
 
     /// 建立使用指定座標系的曲線設定。
-    ///
-    /// 目前的算術只實作 affine；其他值先保留為未來擴充入口。
     pub fn with_coordinate_system(mut self, coordinate_system: CoordinateSystem) -> Self {
+        assert!(
+            Self::supports_coordinate_system(coordinate_system),
+            "unsupported Fp coordinate system"
+        );
         self.coordinate_system = coordinate_system;
         self
+    }
+
+    /// 是否支援指定的 Fp 座標系。
+    pub const fn supports_coordinate_system(coordinate_system: CoordinateSystem) -> bool {
+        matches!(
+            coordinate_system,
+            CoordinateSystem::Affine
+                | CoordinateSystem::Homogeneous
+                | CoordinateSystem::Jacobian
+                | CoordinateSystem::JacobianModified
+        )
     }
 
     /// 回傳本曲線的無窮遠點。
@@ -301,5 +314,22 @@ mod tests {
             assert!(curve.random_field_element(&mut rng).to_big_uint() < *curve.q());
             assert!(!curve.random_field_element_mult(&mut rng).is_zero());
         }
+    }
+
+    #[test]
+    fn coordinate_system_support_matches_bc_fp_curve() {
+        for coordinate_system in [
+            CoordinateSystem::Affine,
+            CoordinateSystem::Homogeneous,
+            CoordinateSystem::Jacobian,
+            CoordinateSystem::JacobianModified,
+        ] {
+            assert!(FpCurve::<BigUint>::supports_coordinate_system(
+                coordinate_system
+            ));
+        }
+        assert!(!FpCurve::<BigUint>::supports_coordinate_system(
+            CoordinateSystem::JacobianChudnovsky
+        ));
     }
 }

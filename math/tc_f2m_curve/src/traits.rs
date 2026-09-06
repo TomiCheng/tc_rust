@@ -4,6 +4,8 @@
 //! `solve_quadratic` 屬於曲線解壓縮流程，並讓中立的純量乘演算法跨 Fp/F2m
 //! 靜態分派。此處不建立 trait object。
 
+use alloc::sync::Arc;
+
 use tc_ec_core::{BinaryFieldElement, Curve, FieldElement, Point};
 
 use crate::{F2mCurve, F2mFieldElement, F2mInteger, F2mPoint, F2mPolynomial};
@@ -89,6 +91,18 @@ impl<P: F2mPolynomial, B: F2mInteger> Curve for F2mCurve<P, B> {
         F2mCurve::cofactor(self)
     }
 
+    fn identity(self: &Arc<Self>) -> Self::Point {
+        self.infinity()
+    }
+
+    fn create_point(self: &Arc<Self>, x: Self::Field, y: Self::Field) -> Self::Point {
+        F2mPoint::new(Arc::clone(self), x, y)
+    }
+
+    fn coordinate_system(&self) -> tc_ec_core::CoordinateSystem {
+        F2mCurve::coordinate_system(self)
+    }
+
     fn scalar_bit_length(scalar: &Self::Scalar) -> usize {
         scalar.bit_length()
     }
@@ -107,6 +121,14 @@ impl<P: F2mPolynomial, B: F2mInteger> Point for F2mPoint<P, B> {
 
     fn is_identity(&self) -> bool {
         F2mPoint::is_infinity(self)
+    }
+
+    fn x(&self) -> Option<<Self::Curve as Curve>::Field> {
+        F2mPoint::x(self).cloned()
+    }
+
+    fn y(&self) -> Option<<Self::Curve as Curve>::Field> {
+        F2mPoint::y(self).cloned()
     }
 
     fn add(&self, rhs: &Self) -> Self {
@@ -143,15 +165,27 @@ mod tests {
 
     #[test]
     fn trait_methods_delegate_to_f2m_formulas() {
-        let (_, point) = sect163k1();
+        let (curve, point) = sect163k1();
         let x = point.x().unwrap();
+        let y = point.y().unwrap();
         assert_eq!(FieldElement::square(x), x.square());
         assert_eq!(FieldElement::sqrt(x), Some(x.sqrt()));
         assert_eq!(BinaryFieldElement::trace(x), x.trace());
         assert_eq!(BinaryFieldElement::half_trace(x), x.half_trace());
         assert!(FieldElement::invert(&x.zero()).is_none());
+        assert_eq!(Point::x(&point), Some(x.clone()));
+        assert_eq!(Point::y(&point), Some(y.clone()));
         assert_eq!(Point::double(&point), point.twice());
         assert!(Point::is_identity(&Point::identity(&point)));
+        assert!(Curve::identity(&curve).is_infinity());
+        assert_eq!(Curve::create_point(&curve, x.clone(), y.clone()), point);
+        assert_eq!(Point::twice_plus(&point, &point), point.three_times());
+        assert_eq!(Point::three_times(&point), &point.twice() + &point);
+        assert_eq!(Point::times_pow2(&point, 3), point.twice().twice().twice());
+        assert_eq!(
+            Curve::coordinate_system(curve.as_ref()),
+            tc_ec_core::CoordinateSystem::Affine
+        );
     }
 
     #[test]

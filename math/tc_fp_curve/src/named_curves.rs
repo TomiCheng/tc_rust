@@ -77,6 +77,7 @@ fn integer<B: FpInteger>(value: u8) -> B {
 mod tests {
     use super::*;
     use tc_bigint_old::BigInt;
+    use tc_ec_core::CoordinateSystem;
 
     fn assert_matches_old<B: FpInteger>(
         new_curve: &(Arc<FpCurve<B>>, FpPoint<B>),
@@ -154,6 +155,51 @@ mod tests {
         }
     }
 
+    fn assert_coordinate_systems_match<B: FpInteger>(
+        base: (Arc<FpCurve<B>>, FpPoint<B>),
+        seed: u64,
+    ) {
+        let (base_curve, generator) = base;
+        let mut state = seed;
+        let point_scalar = decode_integer::<B>(&random_256_bits(&mut state));
+        let scalar = decode_integer::<B>(&random_256_bits(&mut state));
+        let random_point = generator.mul_double_and_add(&point_scalar).normalize();
+        let x = random_point.x().unwrap().to_big_uint();
+        let y = random_point.y().unwrap().to_big_uint();
+        let mut expected = None;
+        let mut expected_projective = None;
+
+        for coordinate_system in [
+            CoordinateSystem::Affine,
+            CoordinateSystem::Homogeneous,
+            CoordinateSystem::Jacobian,
+            CoordinateSystem::JacobianModified,
+        ] {
+            let curve = Arc::new(
+                (*base_curve)
+                    .clone()
+                    .with_coordinate_system(coordinate_system),
+            );
+            let point = curve.create_point(x.clone(), y.clone());
+            let result = crate::scalar_mul::<FpCurve<B>>(&point, &scalar);
+            assert!(result.is_valid());
+            if let Some(expected) = &expected_projective {
+                assert_eq!(&result, expected, "{coordinate_system:?}");
+            } else {
+                expected_projective = Some(result.clone());
+            }
+            let normalized = result.normalize();
+            assert!(normalized.is_normalized());
+            assert_eq!(normalized, point.mul_double_and_add(&scalar).normalize());
+            let encoded = normalized.encode(false);
+            if let Some(expected) = &expected {
+                assert_eq!(&encoded, expected, "{coordinate_system:?}");
+            } else {
+                expected = Some(encoded);
+            }
+        }
+    }
+
     #[test]
     fn secp256_curves_match_the_old_tc_ec_oracle() {
         let old_k1 = tc_ec::ec::named_curves::secp256k1();
@@ -172,5 +218,11 @@ mod tests {
         for (curve, point) in [secp256k1_dynamic(), secp256r1_dynamic()] {
             assert_round_trips(curve, point);
         }
+    }
+
+    #[test]
+    fn all_fp_coordinate_systems_match_on_full_width_scalars() {
+        assert_coordinate_systems_match(secp256k1(), 0x4B31_C00D_F00D_0001);
+        assert_coordinate_systems_match(secp256r1(), 0x5231_C00D_F00D_0001);
     }
 }

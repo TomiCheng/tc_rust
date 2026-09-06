@@ -23,11 +23,36 @@ pub trait Point: Clone + Eq {
     /// 是否為群單位點。
     fn is_identity(&self) -> bool;
 
+    /// 正規化後的 affine X 座標；單位點回傳 `None`。
+    fn x(&self) -> Option<<Self::Curve as Curve>::Field>;
+
+    /// 正規化後的 affine Y 座標；單位點回傳 `None`。
+    fn y(&self) -> Option<<Self::Curve as Curve>::Field>;
+
     /// 點加法。
     fn add(&self, rhs: &Self) -> Self;
 
     /// 點倍乘二。
     fn double(&self) -> Self;
+
+    /// 計算 `2P + Q`；具體座標系可覆寫此通用退路。
+    fn twice_plus(&self, rhs: &Self) -> Self {
+        self.double().add(rhs)
+    }
+
+    /// 計算 `3P`；具體座標系可覆寫此通用退路。
+    fn three_times(&self) -> Self {
+        self.double().add(self)
+    }
+
+    /// 計算 `P * 2^exponent`；具體座標系可覆寫此通用退路。
+    fn times_pow2(&self, exponent: usize) -> Self {
+        let mut result = self.clone();
+        for _ in 0..exponent {
+            result = result.double();
+        }
+        result
+    }
 
     /// 點的加法反元素。
     fn negate(&self) -> Self;
