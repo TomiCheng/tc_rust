@@ -1,10 +1,18 @@
 use alloc::sync::Arc;
 
-use tc_bigint::U256;
-use tc_ec_core::{Curve, FieldElement, Point, WNafTable, scalar_mul, wnaf_mul, wnaf_mul_point};
-use tc_fp_curve::FpCurve;
+use tc_bigint::{ArrayEncoding, BigUint, BitOps, FromPrimitive, ModAdd, ModMul, ModSub, U256};
+use tc_ec_core::{CoordinateSystem, Curve, Point, WNafTable, scalar_mul, wnaf_mul, wnaf_mul_point};
+use tc_fp_curve::{FpCurve, FpInteger};
 
-use crate::{SecP256R1Curve, SecP256R1FieldElement, SecP256R1Point, secp256r1};
+use crate::specialized_curve::{SpecializedCurve, named_curve};
+use crate::specialized_field::{PrimeFieldSpec, SpecializedField, SpecializedFieldElement};
+use crate::specialized_point::SpecializedPoint;
+use crate::{
+    SecP128R1Spec, SecP160K1Spec, SecP160R1Spec, SecP160R2Spec, SecP192K1Spec, SecP192R1Spec,
+    SecP224K1Spec, SecP224R1Spec, SecP256K1Spec, SecP256R1Curve, SecP256R1FieldElement,
+    SecP256R1Point, SecP384R1Spec, SecP521R1Spec, secp128r1, secp160k1, secp160r1, secp160r2,
+    secp192k1, secp192r1, secp224k1, secp224r1, secp256k1, secp256r1, secp384r1, secp521r1,
+};
 
 fn random_scalar(state: &mut u64) -> U256 {
     let mut bytes = [0_u8; 32];
@@ -130,8 +138,177 @@ fn identity_negation_y_zero_and_projective_equality_edges_hold() {
         <SecP256R1Curve as Curve>::coordinate_system(&curve),
         tc_ec_core::CoordinateSystem::Jacobian
     );
+    assert_eq!(Curve::zero(curve.as_ref()), SecP256R1FieldElement::ZERO);
+    assert_eq!(Curve::one(curve.as_ref()), SecP256R1FieldElement::ONE);
+}
+
+fn bigint<const N: usize>(words: &[u32; N]) -> BigUint {
+    BigUint::from_unsigned_le_u32(words).expect("u32 magnitude is non-negative")
+}
+
+fn canonical_words<const N: usize>(value: &BigUint) -> [u32; N] {
+    let mut words = [0_u32; N];
+    value
+        .write_unsigned_le_u32(&mut words)
+        .expect("reduced field value fits its limb width");
+    words
+}
+
+fn assert_specialized_field<S: PrimeFieldSpec<N>, const N: usize>() {
+    let modulus = bigint(&S::P);
+    let mut state = 0x8A5C_91E7_D00D_0001_u64 ^ S::BITS as u64;
+    for _ in 0..48 {
+        let mut left_words = [0_u32; N];
+        let mut right_words = [0_u32; N];
+        for word in left_words.iter_mut().chain(right_words.iter_mut()) {
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            *word = state as u32;
+        }
+        let left_big = bigint(&left_words) % &modulus;
+        let right_big = bigint(&right_words) % &modulus;
+        let left = canonical_words(&left_big);
+        let right = canonical_words(&right_big);
+
+        assert_eq!(
+            bigint(&SpecializedField::<S, N>::add(&left, &right)),
+            left_big.mod_add(&right_big, &modulus),
+            "{} add",
+            S::NAME
+        );
+        assert_eq!(
+            bigint(&SpecializedField::<S, N>::subtract(&left, &right)),
+            left_big.mod_sub(&right_big, &modulus),
+            "{} subtract",
+            S::NAME
+        );
+        assert_eq!(
+            bigint(&SpecializedField::<S, N>::multiply(&left, &right)),
+            left_big.mod_mul(&right_big, &modulus),
+            "{} multiply",
+            S::NAME
+        );
+        assert_eq!(
+            bigint(&SpecializedField::<S, N>::square(&left)),
+            left_big.mod_mul(&left_big, &modulus),
+            "{} square",
+            S::NAME
+        );
+    }
+}
+
+fn integer<S: PrimeFieldSpec<N>, const N: usize>(words: &[u32]) -> S::Integer {
+    S::Integer::from_unsigned_le_u32(words)
+        .unwrap_or_else(|_| panic!("{} constant fits integer", S::NAME))
+}
+
+fn assert_specialized_curve<S: PrimeFieldSpec<N>, const N: usize>(
+    pair: (Arc<SpecializedCurve<S, N>>, SpecializedPoint<S, N>),
+) where
+    S::Integer: FpInteger,
+{
+    let (custom_curve, custom_generator) = pair;
+    let q = integer::<S, N>(&S::P);
+    let a = integer::<S, N>(&S::A);
+    let b = integer::<S, N>(&S::B);
+    let order = integer::<S, N>(&S::ORDER);
+    let one = S::Integer::from_u32(1).expect("one fits every curve integer");
+    let generic_curve = Arc::new(
+        FpCurve::new(q, a, b, Some(order.clone()), Some(one))
+            .with_coordinate_system(CoordinateSystem::Jacobian),
+    );
+    let generic_generator =
+        generic_curve.create_point(integer::<S, N>(&S::GX), integer::<S, N>(&S::GY));
+
+    assert!(custom_generator.is_valid(), "{} generator", S::NAME);
     assert_eq!(
-        SecP256R1FieldElement::ONE.zero(),
-        SecP256R1FieldElement::ZERO
+        custom_generator.encode(false),
+        generic_generator.encode(false)
+    );
+    assert_eq!(
+        custom_generator.encode(true),
+        generic_generator.encode(true)
+    );
+    assert_eq!(
+        custom_curve
+            .decode_point(&generic_generator.encode(true))
+            .expect("generic compressed point decodes"),
+        custom_generator
+    );
+    assert_eq!(
+        generic_curve
+            .decode_point(&custom_generator.encode(false))
+            .expect("custom uncompressed point decodes"),
+        generic_generator
+    );
+
+    let point_scalar = order.clone() - &S::Integer::from_u32(17).unwrap();
+    let scalar = order - &S::Integer::from_u32(257).unwrap();
+    assert!(
+        point_scalar.bit_length() >= S::BITS,
+        "{} full-width point scalar",
+        S::NAME
+    );
+    let custom_point = scalar_mul::<SpecializedCurve<S, N>>(&custom_generator, &point_scalar);
+    let generic_point = scalar_mul::<FpCurve<S::Integer>>(&generic_generator, &point_scalar);
+    assert_eq!(custom_point.encode(false), generic_point.encode(false));
+    assert_eq!(
+        custom_point.twice().encode(false),
+        generic_point.twice().encode(false)
+    );
+    assert_eq!(
+        custom_point.add_point(&custom_generator).encode(false),
+        (&generic_point + &generic_generator).encode(false)
+    );
+    assert_eq!(
+        scalar_mul::<SpecializedCurve<S, N>>(&custom_point, &scalar).encode(false),
+        scalar_mul::<FpCurve<S::Integer>>(&generic_point, &scalar).encode(false)
+    );
+    assert_eq!(
+        wnaf_mul_point::<SpecializedCurve<S, N>>(&custom_point, &scalar).encode(false),
+        wnaf_mul_point::<FpCurve<S::Integer>>(&generic_point, &scalar).encode(false)
+    );
+
+    let identity = custom_curve.infinity();
+    assert_eq!(custom_generator.add_point(&identity), custom_generator);
+    assert_eq!(
+        custom_generator.add_point(&custom_generator.negate()),
+        identity
+    );
+}
+
+macro_rules! verify_curve {
+    ($spec:ty, $n:literal, $constructor:ident) => {{
+        assert_specialized_field::<$spec, $n>();
+        assert_specialized_curve::<$spec, $n>($constructor());
+    }};
+}
+
+#[test]
+fn all_remaining_sec_prime_curves_match_generic_montgomery_oracles() {
+    verify_curve!(SecP128R1Spec, 4, secp128r1);
+    verify_curve!(SecP160K1Spec, 5, secp160k1);
+    verify_curve!(SecP160R1Spec, 5, secp160r1);
+    verify_curve!(SecP160R2Spec, 5, secp160r2);
+    verify_curve!(SecP192K1Spec, 6, secp192k1);
+    verify_curve!(SecP192R1Spec, 6, secp192r1);
+    verify_curve!(SecP224K1Spec, 7, secp224k1);
+    verify_curve!(SecP224R1Spec, 7, secp224r1);
+    verify_curve!(SecP256K1Spec, 8, secp256k1);
+    verify_curve!(SecP384R1Spec, 12, secp384r1);
+    verify_curve!(SecP521R1Spec, 17, secp521r1);
+}
+
+#[test]
+fn shared_curve_factories_replace_field_element_receiver_factories() {
+    let (curve, _) = named_curve::<SecP256K1Spec, 8>();
+    assert_eq!(
+        Curve::zero(curve.as_ref()),
+        SpecializedFieldElement::<SecP256K1Spec, 8>::ZERO
+    );
+    assert_eq!(
+        Curve::one(curve.as_ref()),
+        SpecializedFieldElement::<SecP256K1Spec, 8>::ONE
     );
 }

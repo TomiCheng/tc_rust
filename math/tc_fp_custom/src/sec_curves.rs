@@ -1,0 +1,276 @@
+//! 其餘十一條 bc `custom/sec` 質數曲線的編譯期參數。
+//!
+//! 128/160-bit 曲線只為相容既有資料保留，安全強度已不適合新系統。
+
+use alloc::sync::Arc;
+
+use tc_bigint::{U128, U256, U384, U521};
+
+use crate::specialized_curve::{SpecializedCurve, named_curve};
+use crate::specialized_field::{
+    AForm, MAX_INTEGER_LIMBS, PrimeFieldSpec, ReductionKind, SpecializedField,
+    SpecializedFieldElement, hex_words,
+};
+use crate::specialized_point::SpecializedPoint;
+
+macro_rules! define_sec_curve {
+    (
+        $spec:ident, $field:ident, $element:ident, $curve:ident, $point:ident, $constructor:ident,
+        $n:literal, $integer:ty, $bits:literal, $a_form:ident, $reduction:expr,
+        $p:literal, $a:literal, $b:literal, $order:literal, $gx:literal, $gy:literal
+    ) => {
+        #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+        #[doc(hidden)]
+        pub struct $spec;
+
+        impl PrimeFieldSpec<$n> for $spec {
+            type Integer = $integer;
+
+            const NAME: &'static str = stringify!($constructor);
+            const BITS: usize = $bits;
+            const BYTES: usize = ($bits as usize).div_ceil(8);
+            const P: [u32; $n] = hex_words($p);
+            const A: [u32; $n] = hex_words($a);
+            const B: [u32; $n] = hex_words($b);
+            const ORDER: [u32; MAX_INTEGER_LIMBS] = hex_words($order);
+            const GX: [u32; $n] = hex_words($gx);
+            const GY: [u32; $n] = hex_words($gy);
+            const A_FORM: AForm = AForm::$a_form;
+            const REDUCTION: ReductionKind = $reduction;
+        }
+
+        #[doc = concat!(stringify!($constructor), " 的 u32-limb 欄位核心。")]
+        pub type $field = SpecializedField<$spec, $n>;
+        #[doc = concat!(stringify!($constructor), " 的固定欄位元素。")]
+        pub type $element = SpecializedFieldElement<$spec, $n>;
+        #[doc = concat!(stringify!($constructor), " 的固定參數曲線。")]
+        pub type $curve = SpecializedCurve<$spec, $n>;
+        #[doc = concat!(stringify!($constructor), " 的 Jacobian 點。")]
+        pub type $point = SpecializedPoint<$spec, $n>;
+
+        #[doc = concat!("建立 ", stringify!($constructor), " 曲線與標準生成點。")]
+        pub fn $constructor() -> (Arc<$curve>, $point) {
+            named_curve()
+        }
+    };
+}
+
+define_sec_curve!(
+    SecP128R1Spec,
+    SecP128R1Field,
+    SecP128R1FieldElement,
+    SecP128R1Curve,
+    SecP128R1Point,
+    secp128r1,
+    4,
+    U128,
+    128,
+    MinusThree,
+    ReductionKind::P128,
+    "FFFFFFFDFFFFFFFFFFFFFFFFFFFFFFFF",
+    "FFFFFFFDFFFFFFFFFFFFFFFFFFFFFFFC",
+    "E87579C11079F43DD824993C2CEE5ED3",
+    "FFFFFFFE0000000075A30D1B9038A115",
+    "161FF7528B899B2D0C28607CA52C5B86",
+    "CF5AC8395BAFEB13C02DA292DDED7A83"
+);
+
+define_sec_curve!(
+    SecP160K1Spec,
+    SecP160K1Field,
+    SecP160K1FieldElement,
+    SecP160K1Curve,
+    SecP160K1Point,
+    secp160k1,
+    5,
+    U256,
+    160,
+    Zero,
+    ReductionKind::SmallComplement(0x1_0000_538D),
+    "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFAC73",
+    "0",
+    "7",
+    "0100000000000000000001B8FA16DFAB9ACA16B6B3",
+    "3B4C382CE37AA192A4019E763036F4F5DD4D7EBB",
+    "938CF935318FDCED6BC28286531733C3F03C4FEE"
+);
+
+define_sec_curve!(
+    SecP160R1Spec,
+    SecP160R1Field,
+    SecP160R1FieldElement,
+    SecP160R1Curve,
+    SecP160R1Point,
+    secp160r1,
+    5,
+    U256,
+    160,
+    MinusThree,
+    ReductionKind::SmallComplement(0x8000_0001),
+    "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF7FFFFFFF",
+    "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF7FFFFFFC",
+    "1C97BEFC54BD7A8B65ACF89F81D4D4ADC565FA45",
+    "0100000000000000000001F4C8F927AED3CA752257",
+    "4A96B5688EF573284664698968C38BB913CBFC82",
+    "23A628553168947D59DCC912042351377AC5FB32"
+);
+
+define_sec_curve!(
+    SecP160R2Spec,
+    SecP160R2Field,
+    SecP160R2FieldElement,
+    SecP160R2Curve,
+    SecP160R2Point,
+    secp160r2,
+    5,
+    U256,
+    160,
+    MinusThree,
+    ReductionKind::SmallComplement(0x1_0000_538D),
+    "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFAC73",
+    "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFAC70",
+    "B4E134D3FB59EB8BAB57274904664D5AF50388BA",
+    "0100000000000000000000351EE786A818F3A1A16B",
+    "52DCB034293A117E1F4FF11B30F7199D3144CE6D",
+    "FEAFFEF2E331F296E071FA0DF9982CFEA7D43F2E"
+);
+
+define_sec_curve!(
+    SecP192K1Spec,
+    SecP192K1Field,
+    SecP192K1FieldElement,
+    SecP192K1Curve,
+    SecP192K1Point,
+    secp192k1,
+    6,
+    U256,
+    192,
+    Zero,
+    ReductionKind::SmallComplement(0x1_0000_11C9),
+    "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFEE37",
+    "0",
+    "3",
+    "FFFFFFFFFFFFFFFFFFFFFFFE26F2FC170F69466A74DEFD8D",
+    "DB4FF10EC057E9AE26B07D0280B7F4341DA5D1B1EAE06C7D",
+    "9B2F2F6D9C5628A7844163D015BE86344082AA88D95E2F9D"
+);
+
+define_sec_curve!(
+    SecP192R1Spec,
+    SecP192R1Field,
+    SecP192R1FieldElement,
+    SecP192R1Curve,
+    SecP192R1Point,
+    secp192r1,
+    6,
+    U256,
+    192,
+    MinusThree,
+    ReductionKind::P192R1,
+    "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFFFFFFFFFF",
+    "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFFFFFFFFFC",
+    "64210519E59C80E70FA7E9AB72243049FEB8DEECC146B9B1",
+    "FFFFFFFFFFFFFFFFFFFFFFFF99DEF836146BC9B1B4D22831",
+    "188DA80EB03090F67CBF20EB43A18800F4FF0AFD82FF1012",
+    "07192B95FFC8DA78631011ED6B24CDD573F977A11E794811"
+);
+
+define_sec_curve!(
+    SecP224K1Spec,
+    SecP224K1Field,
+    SecP224K1FieldElement,
+    SecP224K1Curve,
+    SecP224K1Point,
+    secp224k1,
+    7,
+    U256,
+    224,
+    Zero,
+    ReductionKind::SmallComplement(0x1_0000_1A93),
+    "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFE56D",
+    "0",
+    "5",
+    "010000000000000000000000000001DCE8D2EC6184CAF0A971769FB1F7",
+    "A1455B334DF099DF30FC28A169A467E9E47075A90F7E650EB6B7A45C",
+    "7E089FED7FBA344282CAFBD6F7E319F7C0B0BD59E2CA4BDB556D61A5"
+);
+
+define_sec_curve!(
+    SecP224R1Spec,
+    SecP224R1Field,
+    SecP224R1FieldElement,
+    SecP224R1Curve,
+    SecP224R1Point,
+    secp224r1,
+    7,
+    U256,
+    224,
+    MinusThree,
+    ReductionKind::P224R1,
+    "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF000000000000000000000001",
+    "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFFFFFFFFFFFFFFFFFE",
+    "B4050A850C04B3ABF54132565044B0B7D7BFD8BA270B39432355FFB4",
+    "FFFFFFFFFFFFFFFFFFFFFFFFFFFF16A2E0B8F03E13DD29455C5C2A3D",
+    "B70E0CBD6BB4BF7F321390B94A03C1D356C21122343280D6115C1D21",
+    "BD376388B5F723FB4C22DFE6CD4375A05A07476444D5819985007E34"
+);
+
+define_sec_curve!(
+    SecP256K1Spec,
+    SecP256K1Field,
+    SecP256K1FieldElement,
+    SecP256K1Curve,
+    SecP256K1Point,
+    secp256k1,
+    8,
+    U256,
+    256,
+    Zero,
+    ReductionKind::SmallComplement(0x1_0000_03D1),
+    "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F",
+    "0",
+    "7",
+    "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141",
+    "79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798",
+    "483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8"
+);
+
+define_sec_curve!(
+    SecP384R1Spec,
+    SecP384R1Field,
+    SecP384R1FieldElement,
+    SecP384R1Curve,
+    SecP384R1Point,
+    secp384r1,
+    12,
+    U384,
+    384,
+    MinusThree,
+    ReductionKind::P384,
+    "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFF0000000000000000FFFFFFFF",
+    "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFF0000000000000000FFFFFFFC",
+    "B3312FA7E23EE7E4988E056BE3F82D19181D9C6EFE8141120314088F5013875AC656398D8A2ED19D2A85C8EDD3EC2AEF",
+    "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFC7634D81F4372DDF581A0DB248B0A77AECEC196ACCC52973",
+    "AA87CA22BE8B05378EB1C71EF320AD746E1D3B628BA79B9859F741E082542A385502F25DBF55296C3A545E3872760AB7",
+    "3617DE4A96262C6F5D9E98BF9292DC29F8F41DBD289A147CE9DA3113B5F0B8C00A60B1CE1D7E819D7A431D7C90EA0E5F"
+);
+
+define_sec_curve!(
+    SecP521R1Spec,
+    SecP521R1Field,
+    SecP521R1FieldElement,
+    SecP521R1Curve,
+    SecP521R1Point,
+    secp521r1,
+    17,
+    U521,
+    521,
+    MinusThree,
+    ReductionKind::Mersenne521,
+    "01FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+    "01FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFC",
+    "0051953EB9618E1C9A1F929A21A0B68540EEA2DA725B99B315F3B8B489918EF109E156193951EC7E937B1652C0BD3BB1BF073573DF883D2C34F1EF451FD46B503F00",
+    "01FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFA51868783BF2F966B7FCC0148F709A5D03BB5C9B8899C47AEBB6FB71E91386409",
+    "00C6858E06B70404E9CD9E3ECB662395B4429C648139053FB521F828AF606B4D3DBAA14B5E77EFE75928FE1DC127A2FFA8DE3348B3C1856A429BF97E7E31C2E5BD66",
+    "011839296A789A3BC0045C8A5FB42C7D1BD998F54449579B446817AFBD17273E662C97EE72995EF42640C550B9013FAD0761353C7086A272C24088BE94769FD16650"
+);
