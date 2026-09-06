@@ -20,5 +20,7 @@ pub use f2m_point::F2mPoint;
 pub use integer::F2mInteger;
 pub use polynomial::F2mPolynomial;
 pub use tc_ec_core::{
-    BinaryFieldElement, CoordinateSystem, Curve, FieldElement, Point, PointDecodeError, scalar_mul,
+    BinaryFieldElement, CoordinateSystem, Curve, FieldElement, Point, PointDecodeError, WNafTable,
+    generate_compact_window_naf, generate_naf, generate_window_naf, get_naf_weight,
+    get_window_size, scalar_mul, wnaf_mul, wnaf_mul_point,
 };

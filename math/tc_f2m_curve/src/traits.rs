@@ -110,6 +110,34 @@ impl<P: F2mPolynomial, B: F2mInteger> Curve for F2mCurve<P, B> {
     fn scalar_test_bit(scalar: &Self::Scalar, index: usize) -> bool {
         scalar.test_bit(index)
     }
+
+    fn scalar_is_zero(scalar: &Self::Scalar) -> bool {
+        scalar.bit_length() == 0
+    }
+
+    fn scalar_shr1(scalar: &Self::Scalar) -> Self::Scalar {
+        scalar.clone() >> 1
+    }
+
+    fn scalar_low_bits(scalar: &Self::Scalar, width: usize) -> u32 {
+        assert!(width <= 32, "scalar low-bit width exceeds u32");
+        let mut low = 0_u32;
+        for bit in 0..width {
+            if scalar.test_bit(bit) {
+                low |= 1 << bit;
+            }
+        }
+        low
+    }
+
+    fn scalar_sub_digit(scalar: &Self::Scalar, digit: i32) -> Self::Scalar {
+        let magnitude = B::from_u32(digit.unsigned_abs()).expect("wNAF digit fits scalar type");
+        if digit < 0 {
+            scalar.clone() + &magnitude
+        } else {
+            scalar.clone() - &magnitude
+        }
+    }
 }
 
 impl<P: F2mPolynomial, B: F2mInteger> Point for F2mPoint<P, B> {
@@ -161,6 +189,31 @@ mod tests {
             scalar_mul::<F2mCurve<P, B>>(&point, scalar),
             point.mul_double_and_add(scalar)
         );
+        assert_eq!(
+            <F2mCurve<P, B> as Curve>::multiply(&point, scalar),
+            point.mul_double_and_add(scalar)
+        );
+    }
+
+    fn assert_scalar_helpers<B: F2mInteger>() {
+        type P = FixedBinaryPoly<3>;
+
+        let scalar = B::from_u32(0b101101).unwrap();
+        assert!(!<F2mCurve<P, B> as Curve>::scalar_is_zero(&scalar));
+        assert_eq!(
+            <F2mCurve<P, B> as Curve>::scalar_low_bits(&scalar, 4),
+            0b1101
+        );
+        assert!(<F2mCurve<P, B> as Curve>::scalar_shr1(&scalar) == B::from_u32(0b10110).unwrap());
+        assert!(
+            <F2mCurve<P, B> as Curve>::scalar_sub_digit(&scalar, 5) == B::from_u32(40).unwrap()
+        );
+        assert!(
+            <F2mCurve<P, B> as Curve>::scalar_sub_digit(&scalar, -3) == B::from_u32(48).unwrap()
+        );
+        assert!(<F2mCurve<P, B> as Curve>::scalar_is_zero(
+            &B::from_u32(0).unwrap()
+        ));
     }
 
     #[test]
@@ -201,5 +254,11 @@ mod tests {
         assert_algorithm::<BinaryPoly, BigUint>(sect163k1_dynamic().1, &scalar_163_dynamic);
         assert_algorithm::<FixedBinaryPoly<4>, U256>(sect233k1().1, &scalar_233_fixed);
         assert_algorithm::<BinaryPoly, BigUint>(sect233k1_dynamic().1, &scalar_233_dynamic);
+    }
+
+    #[test]
+    fn scalar_helpers_support_fixed_and_dynamic_integers() {
+        assert_scalar_helpers::<U256>();
+        assert_scalar_helpers::<BigUint>();
     }
 }

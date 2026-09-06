@@ -108,6 +108,34 @@ impl<B: FpInteger> Curve for FpCurve<B> {
     fn scalar_test_bit(scalar: &Self::Scalar, index: usize) -> bool {
         scalar.test_bit(index)
     }
+
+    fn scalar_is_zero(scalar: &Self::Scalar) -> bool {
+        scalar.is_zero()
+    }
+
+    fn scalar_shr1(scalar: &Self::Scalar) -> Self::Scalar {
+        scalar.clone() >> 1
+    }
+
+    fn scalar_low_bits(scalar: &Self::Scalar, width: usize) -> u32 {
+        assert!(width <= 32, "scalar low-bit width exceeds u32");
+        let mut low = 0_u32;
+        for bit in 0..width {
+            if scalar.test_bit(bit) {
+                low |= 1 << bit;
+            }
+        }
+        low
+    }
+
+    fn scalar_sub_digit(scalar: &Self::Scalar, digit: i32) -> Self::Scalar {
+        let magnitude = B::from_u32(digit.unsigned_abs()).expect("wNAF digit fits scalar type");
+        if digit < 0 {
+            scalar.clone() + &magnitude
+        } else {
+            scalar.clone() - &magnitude
+        }
+    }
 }
 
 impl<B: FpInteger> Point for FpPoint<B> {

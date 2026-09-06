@@ -23,3 +23,7 @@ tc_ec = { version = "0.1.0", path = "../tc_ec" }
 name = "coordinate_systems"
 harness = false
 required-features = ["bench-internals"]
+
+[[bench]]
+name = "wnaf"
+harness = false

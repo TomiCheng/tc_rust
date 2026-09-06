@@ -23,7 +23,7 @@ pub trait Curve {
     type Point: Point<Curve = Self>;
 
     /// 標量、群階與 cofactor 使用的無號整數型別。
-    type Scalar;
+    type Scalar: Clone;
 
     /// 曲線係數 `a`。
     fn a(&self) -> &Self::Field;
@@ -51,4 +51,31 @@ pub trait Curve {
 
     /// 讀取標量位元，供不綁定大整數 crate 的共用演算法使用。
     fn scalar_test_bit(scalar: &Self::Scalar, index: usize) -> bool;
+
+    /// 標量是否為零。
+    fn scalar_is_zero(scalar: &Self::Scalar) -> bool;
+
+    /// 將無號標量右移一位。
+    fn scalar_shr1(scalar: &Self::Scalar) -> Self::Scalar;
+
+    /// 讀取標量最低 `width` 位，等價於 `scalar mod 2^width`。
+    ///
+    /// `width` 不得超過 32。
+    fn scalar_low_bits(scalar: &Self::Scalar, width: usize) -> u32;
+
+    /// 計算 `scalar - digit`。
+    ///
+    /// 標量本身是無號整數，但 wNAF digit 可以是負數；例如 digit 為 `-3`
+    /// 時，本函式必須回傳 `scalar + 3`。
+    fn scalar_sub_digit(scalar: &Self::Scalar, digit: i32) -> Self::Scalar;
+
+    /// 使用預設的變動時間 wNAF 乘法器計算 `scalar * point`。
+    ///
+    /// 此方法只適合公開標量；秘密標量需要另行實作常數時間乘法器。
+    fn multiply(point: &Self::Point, scalar: &Self::Scalar) -> Self::Point
+    where
+        Self: Sized,
+    {
+        crate::wnaf_mul_point::<Self>(point, scalar)
+    }
 }
