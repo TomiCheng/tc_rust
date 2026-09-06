@@ -32,31 +32,31 @@ pub(super) fn montgomery_mul(
     inverse: Word,
 ) -> Vec<Limb> {
     let len = modulus.len();
-    debug_assert!(len != 0 && modulus[0].0 & 1 == 1);
+    debug_assert!(len != 0 && modulus[0].to_word() & 1 == 1);
     debug_assert!(cmp(lhs, modulus) == Ordering::Less);
     debug_assert!(cmp(rhs, modulus) == Ordering::Less);
 
     let mut product = mul(lhs, rhs);
-    product.resize(len * 2 + 1, Limb(0));
+    product.resize(len * 2 + 1, Limb::new(0));
     for offset in 0..len {
-        let multiplier = product[offset].0.wrapping_mul(inverse);
+        let multiplier = product[offset].to_word().wrapping_mul(inverse);
         let mut carry = 0 as Word;
         for index in 0..len {
-            let wide = multiplier as WideWord * modulus[index].0 as WideWord
-                + product[offset + index].0 as WideWord
+            let wide = multiplier as WideWord * modulus[index].to_word() as WideWord
+                + product[offset + index].to_word() as WideWord
                 + carry as WideWord;
-            product[offset + index] = Limb(wide as Word);
+            product[offset + index] = Limb::new(wide as Word);
             carry = (wide >> Word::BITS) as Word;
         }
 
         let mut index = offset + len;
-        let mut wide = product[index].0 as WideWord + carry as WideWord;
-        product[index] = Limb(wide as Word);
+        let mut wide = product[index].to_word() as WideWord + carry as WideWord;
+        product[index] = Limb::new(wide as Word);
         carry = (wide >> Word::BITS) as Word;
         while carry != 0 {
             index += 1;
-            wide = product[index].0 as WideWord + carry as WideWord;
-            product[index] = Limb(wide as Word);
+            wide = product[index].to_word() as WideWord + carry as WideWord;
+            product[index] = Limb::new(wide as Word);
             carry = (wide >> Word::BITS) as Word;
         }
     }
@@ -72,12 +72,12 @@ pub(super) fn montgomery_mul(
 #[cfg(feature = "alloc")]
 fn subtract_assign(lhs: &mut Vec<Limb>, rhs: &[Limb]) {
     debug_assert!(cmp(lhs, rhs) != Ordering::Less);
-    let mut borrow = Limb(0);
+    let mut borrow = Limb::new(0);
     for index in 0..lhs.len() {
         let right = rhs.get(index).copied().unwrap_or_default();
         (lhs[index], borrow) = lhs[index].borrowing_sub(right, borrow);
     }
-    debug_assert_eq!(borrow, Limb(0));
+    debug_assert_eq!(borrow, Limb::new(0));
     normalize(lhs);
 }
 
@@ -88,38 +88,38 @@ pub(super) fn fixed_montgomery_mul<const N: usize>(
     modulus: &[Limb; N],
     inverse: Word,
 ) -> [Limb; N] {
-    debug_assert!(!fixed_is_zero(modulus) && modulus[0].0 & 1 == 1);
+    debug_assert!(!fixed_is_zero(modulus) && modulus[0].to_word() & 1 == 1);
 
-    let mut result = [Limb(0); N];
+    let mut result = [Limb::new(0); N];
     let mut high = 0 as Word;
     for right in rhs {
         let mut carry = 0 as Word;
         for index in 0..N {
-            let wide = result[index].0 as WideWord
-                + lhs[index].0 as WideWord * right.0 as WideWord
+            let wide = result[index].to_word() as WideWord
+                + lhs[index].to_word() as WideWord * right.to_word() as WideWord
                 + carry as WideWord;
-            result[index] = Limb(wide as Word);
+            result[index] = Limb::new(wide as Word);
             carry = (wide >> Word::BITS) as Word;
         }
         let wide = high as WideWord + carry as WideWord;
         high = wide as Word;
         let upper = (wide >> Word::BITS) as Word;
 
-        let multiplier = result[0].0.wrapping_mul(inverse);
+        let multiplier = result[0].to_word().wrapping_mul(inverse);
         carry = 0;
         for index in 0..N {
-            let wide = result[index].0 as WideWord
-                + multiplier as WideWord * modulus[index].0 as WideWord
+            let wide = result[index].to_word() as WideWord
+                + multiplier as WideWord * modulus[index].to_word() as WideWord
                 + carry as WideWord;
             if index != 0 {
-                result[index - 1] = Limb(wide as Word);
+                result[index - 1] = Limb::new(wide as Word);
             } else {
                 debug_assert_eq!(wide as Word, 0);
             }
             carry = (wide >> Word::BITS) as Word;
         }
         let wide = high as WideWord + carry as WideWord;
-        result[N - 1] = Limb(wide as Word);
+        result[N - 1] = Limb::new(wide as Word);
         high = upper + (wide >> Word::BITS) as Word;
         debug_assert!(high <= 1);
     }
@@ -162,9 +162,9 @@ pub(super) fn fixed_sub_mod<const N: usize>(
 }
 
 pub(super) fn fixed_one_mod<const N: usize>(modulus: &[Limb; N]) -> [Limb; N] {
-    let mut one = [Limb(0); N];
+    let mut one = [Limb::new(0); N];
     if N != 0 {
-        one[0] = Limb(1);
+        one[0] = Limb::new(1);
     }
     fixed_div_rem(&one, modulus).1
 }

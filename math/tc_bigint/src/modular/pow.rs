@@ -22,13 +22,13 @@ use crate::{FixedBigUint, Limb, Odd, Word};
 #[cfg(feature = "alloc")]
 pub(crate) fn mod_pow(value: &[Limb], exponent: &[Limb], modulus: &[Limb]) -> Vec<Limb> {
     assert!(significant_len(modulus) != 0, "modulus must be non-zero");
-    if modulus[0].0 & 1 == 0 {
+    if modulus[0].to_word() & 1 == 0 {
         return division_mod_pow(value, exponent, modulus);
     }
 
     let modulus_len = significant_len(modulus);
     let modulus = &modulus[..modulus_len];
-    if modulus_len == 1 && modulus[0].0 == 1 {
+    if modulus_len == 1 && modulus[0].to_word() == 1 {
         return Vec::new();
     }
 
@@ -100,7 +100,7 @@ pub(super) fn montgomery_pow(
 
 #[cfg(feature = "alloc")]
 fn division_mod_pow(value: &[Limb], exponent: &[Limb], modulus: &[Limb]) -> Vec<Limb> {
-    let mut result = div_rem(&[Limb(1)], modulus).1;
+    let mut result = div_rem(&[Limb::new(1)], modulus).1;
     let exponent_bits = bit_len(exponent);
     if exponent_bits == 0 {
         return result;
@@ -148,7 +148,7 @@ fn division_mod_pow(value: &[Limb], exponent: &[Limb], modulus: &[Limb]) -> Vec<
 fn test_bit(words: &[Limb], index: usize) -> bool {
     words
         .get(index / Word::BITS as usize)
-        .is_some_and(|word| word.0 >> (index % Word::BITS as usize) & 1 != 0)
+        .is_some_and(|word| word.to_word() >> (index % Word::BITS as usize) & 1 != 0)
 }
 
 pub(crate) fn fixed_mod_pow<const N: usize>(
@@ -160,7 +160,7 @@ pub(crate) fn fixed_mod_pow<const N: usize>(
         !crate::arithmetic::fixed_is_zero(modulus),
         "modulus must be non-zero"
     );
-    if modulus[0].0 & 1 == 1 {
+    if modulus[0].to_word() & 1 == 1 {
         return fixed_montgomery_mod_pow(value, exponent, modulus);
     }
     fixed_division_mod_pow(value, exponent, modulus)
@@ -190,7 +190,7 @@ fn fixed_division_mod_pow<const N: usize>(
     }
 
     let table_len = 1 << (window - 1);
-    let mut odd_powers = [[Limb(0); N]; 16];
+    let mut odd_powers = [[Limb::new(0); N]; 16];
     odd_powers[0] = base;
     if table_len > 1 {
         let base_squared = fixed_mul_mod(&base, &base, modulus);
@@ -264,7 +264,7 @@ pub(super) fn fixed_montgomery_pow<const N: usize>(
     }
 
     let table_len = 1 << (window - 1);
-    let mut odd_powers = [[Limb(0); N]; 16];
+    let mut odd_powers = [[Limb::new(0); N]; 16];
     odd_powers[0] = *base;
     let base_squared = fixed_montgomery_mul(base, base, modulus, inverse);
     for index in 1..table_len {
@@ -315,7 +315,7 @@ mod tests {
             let mut base = fixed_div_rem(base, modulus).1;
             let mut exponent = *exponent;
             while !fixed_is_zero(&exponent) {
-                if exponent[0].0 & 1 != 0 {
+                if exponent[0].to_word() & 1 != 0 {
                     result = fixed_mul_mod(&result, &base, modulus);
                 }
                 fixed_shr_one(&mut exponent);
@@ -332,14 +332,13 @@ mod tests {
         assert_eq!(exponentiation_window(141), 4);
         assert_eq!(exponentiation_window(451), 5);
 
-        let base: Wide = core::array::from_fn(|index| if index == 0 { Limb(7) } else { Limb(0) });
+        let base: Wide = core::array::from_fn(|index| if index == 0 { Limb::new(7) } else { Limb::new(0) });
         let modulus: Wide =
-            core::array::from_fn(|index| if index == 0 { Limb(101) } else { Limb(0) });
+            core::array::from_fn(|index| if index == 0 { Limb::new(101) } else { Limb::new(0) });
         for bits in [1_usize, 8, 37, 141, 451] {
-            let mut exponent: Wide = [Limb(0); 512 / Word::BITS as usize];
-            exponent[(bits - 1) / Word::BITS as usize].0 |=
-                (1 as Word) << ((bits - 1) % Word::BITS as usize);
-            exponent[0].0 |= 0b1011;
+            let mut exponent: Wide = [Limb::new(0); 512 / Word::BITS as usize];
+            exponent[(bits - 1) / Word::BITS as usize] = Limb::new(exponent[(bits - 1) / Word::BITS as usize].to_word() | ((1 as Word) << ((bits - 1) % Word::BITS as usize)));
+            exponent[0] = Limb::new(exponent[0].to_word() | (0b1011));
             assert_eq!(fixed_bit_len(&exponent), bits.max(4));
             assert!(fixed_test_bit(&exponent, bits - 1));
             assert_eq!(
@@ -363,21 +362,21 @@ mod tests {
         for case in 0..600 {
             let len = next_word(&mut state) as usize % 8 + 1;
             let mut value = (0..len)
-                .map(|_| Limb(next_word(&mut state)))
+                .map(|_| Limb::new(next_word(&mut state)))
                 .collect::<Vec<_>>();
             let exponent = (0..(len.min(3)))
-                .map(|_| Limb(next_word(&mut state)))
+                .map(|_| Limb::new(next_word(&mut state)))
                 .collect::<Vec<_>>();
             let mut modulus = (0..len)
-                .map(|_| Limb(next_word(&mut state)))
+                .map(|_| Limb::new(next_word(&mut state)))
                 .collect::<Vec<_>>();
-            modulus[0].0 |= 1;
-            modulus[len - 1].0 |= 1;
-            if modulus.len() == 1 && modulus[0].0 == 1 {
-                modulus[0].0 = 3;
+            modulus[0] = Limb::new(modulus[0].to_word() | (1));
+            modulus[len - 1] = Limb::new(modulus[len - 1].to_word() | (1));
+            if modulus.len() == 1 && modulus[0].to_word() == 1 {
+                modulus[0] = Limb::new(3);
             }
             if case % 3 == 0 {
-                value.push(Limb(next_word(&mut state)));
+                value.push(Limb::new(next_word(&mut state)));
             }
 
             assert_eq!(
@@ -387,8 +386,8 @@ mod tests {
             );
         }
 
-        assert_eq!(mod_pow(&[Limb(7)], &[Limb(13)], &[Limb(10)]), vec![Limb(7)]);
-        assert_eq!(mod_pow(&[Limb(7)], &[], &[Limb(1)]), Vec::<Limb>::new());
+        assert_eq!(mod_pow(&[Limb::new(7)], &[Limb::new(13)], &[Limb::new(10)]), vec![Limb::new(7)]);
+        assert_eq!(mod_pow(&[Limb::new(7)], &[], &[Limb::new(1)]), Vec::<Limb>::new());
     }
 
     #[test]
@@ -404,12 +403,12 @@ mod tests {
 
         let mut state = 0x082e_fa98_ec4e_6c89_u64;
         for case in 0..200 {
-            let value: Wide = core::array::from_fn(|_| Limb(next_word(&mut state)));
-            let mut exponent = [Limb(0); 4];
-            exponent[0] = Limb(next_word(&mut state));
-            let mut modulus: Wide = core::array::from_fn(|_| Limb(next_word(&mut state)));
-            modulus[0].0 |= 1;
-            modulus[3].0 |= 1;
+            let value: Wide = core::array::from_fn(|_| Limb::new(next_word(&mut state)));
+            let mut exponent = [Limb::new(0); 4];
+            exponent[0] = Limb::new(next_word(&mut state));
+            let mut modulus: Wide = core::array::from_fn(|_| Limb::new(next_word(&mut state)));
+            modulus[0] = Limb::new(modulus[0].to_word() | (1));
+            modulus[3] = Limb::new(modulus[3].to_word() | (1));
 
             assert_eq!(
                 fixed_montgomery_mod_pow(&value, &exponent, &modulus),
@@ -420,11 +419,11 @@ mod tests {
 
         assert_eq!(
             fixed_mod_pow(
-                &[Limb(7), Limb(0)],
-                &[Limb(13), Limb(0)],
-                &[Limb(10), Limb(0)]
+                &[Limb::new(7), Limb::new(0)],
+                &[Limb::new(13), Limb::new(0)],
+                &[Limb::new(10), Limb::new(0)]
             ),
-            [Limb(7), Limb(0)]
+            [Limb::new(7), Limb::new(0)]
         );
     }
 }

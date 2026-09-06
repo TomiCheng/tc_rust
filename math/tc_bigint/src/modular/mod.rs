@@ -47,22 +47,22 @@ mod tests {
 
     #[test]
     fn fixed_modular_helpers_cover_reduction_and_non_invertible_values() {
-        let three: Words = [Limb(3), Limb(0)];
-        let four: Words = [Limb(4), Limb(0)];
-        let seven: Words = [Limb(7), Limb(0)];
+        let three: Words = [Limb::new(3), Limb::new(0)];
+        let four: Words = [Limb::new(4), Limb::new(0)];
+        let seven: Words = [Limb::new(7), Limb::new(0)];
 
-        assert_eq!(fixed_mod_inverse(&three, &seven), Some([Limb(5), Limb(0)]));
-        assert_eq!(fixed_mod_inverse(&four, &[Limb(6), Limb(0)]), None);
-        assert_eq!(fixed_mod_pow(&three, &four, &seven), [Limb(4), Limb(0)]);
-        assert_eq!(fixed_mul_mod(&three, &four, &seven), [Limb(5), Limb(0)]);
-        assert_eq!(fixed_add_mod(&three, &four, &seven), [Limb(0), Limb(0)]);
-        assert_eq!(fixed_add_mod(&[Limb(1), Limb(0)], &three, &seven), four);
-        assert_eq!(fixed_sub_mod(&four, &three, &seven), [Limb(1), Limb(0)]);
-        assert_eq!(fixed_sub_mod(&three, &four, &seven), [Limb(6), Limb(0)]);
-        assert_eq!(fixed_one_mod(&seven), [Limb(1), Limb(0)]);
-        assert_eq!(fixed_one_mod(&[Limb(1), Limb(0)]), [Limb(0), Limb(0)]);
-        assert!(fixed_is_zero(&[Limb(0), Limb(0)]));
-        assert!(fixed_is_one(&[Limb(1), Limb(0)]));
-        assert!(!fixed_is_one(&[Limb(1), Limb(1)]));
+        assert_eq!(fixed_mod_inverse(&three, &seven), Some([Limb::new(5), Limb::new(0)]));
+        assert_eq!(fixed_mod_inverse(&four, &[Limb::new(6), Limb::new(0)]), None);
+        assert_eq!(fixed_mod_pow(&three, &four, &seven), [Limb::new(4), Limb::new(0)]);
+        assert_eq!(fixed_mul_mod(&three, &four, &seven), [Limb::new(5), Limb::new(0)]);
+        assert_eq!(fixed_add_mod(&three, &four, &seven), [Limb::new(0), Limb::new(0)]);
+        assert_eq!(fixed_add_mod(&[Limb::new(1), Limb::new(0)], &three, &seven), four);
+        assert_eq!(fixed_sub_mod(&four, &three, &seven), [Limb::new(1), Limb::new(0)]);
+        assert_eq!(fixed_sub_mod(&three, &four, &seven), [Limb::new(6), Limb::new(0)]);
+        assert_eq!(fixed_one_mod(&seven), [Limb::new(1), Limb::new(0)]);
+        assert_eq!(fixed_one_mod(&[Limb::new(1), Limb::new(0)]), [Limb::new(0), Limb::new(0)]);
+        assert!(fixed_is_zero(&[Limb::new(0), Limb::new(0)]));
+        assert!(fixed_is_one(&[Limb::new(1), Limb::new(0)]));
+        assert!(!fixed_is_one(&[Limb::new(1), Limb::new(1)]));
     }
 }

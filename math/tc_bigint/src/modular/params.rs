@@ -38,9 +38,9 @@ impl MontyParams<BigUint> {
         let modulus_len = modulus_words.len();
         debug_assert!(modulus_len != 0);
 
-        let mod_neg_inv = montgomery_inverse(modulus_words[0].0);
-        let mut radix = vec![Limb(0); modulus_len + 1];
-        radix[modulus_len] = Limb(1);
+        let mod_neg_inv = montgomery_inverse(modulus_words[0].to_word());
+        let mut radix = vec![Limb::new(0); modulus_len + 1];
+        radix[modulus_len] = Limb::new(1);
         let r = BigUint::from_limbs(div_rem(&radix, modulus_words).1);
         let r2 = BigUint::from_limbs(div_rem(&square(r.as_limbs()), modulus_words).1);
 
@@ -105,7 +105,7 @@ impl<const N: usize> FixedMontyParams<N> {
     /// ```
     pub fn new(modulus: Odd<FixedBigUint<N>>) -> Self {
         let modulus_words = modulus.as_ref().as_limbs();
-        let mod_neg_inv = montgomery_inverse(modulus_words[0].0);
+        let mod_neg_inv = montgomery_inverse(modulus_words[0].to_word());
 
         let radix_minus_modulus = fixed_wrapping_neg(modulus_words);
         let r = fixed_div_rem(&radix_minus_modulus, modulus_words).1;
@@ -169,7 +169,7 @@ mod tests {
             params.one().mod_mul(params.one(), params.modulus()),
             *params.r2()
         );
-        assert_eq!(params.modulus().as_limbs()[0].0 & 1, 1 as Word);
+        assert_eq!(params.modulus().as_limbs()[0].to_word() & 1, 1 as Word);
     }
 
     #[cfg(feature = "alloc")]

@@ -17,7 +17,7 @@ pub(crate) fn fixed_mod_inverse<const N: usize>(
     assert!(!fixed_is_zero(modulus), "modulus must be non-zero");
     let mut old_remainder = *modulus;
     let mut remainder = fixed_div_rem(value, modulus).1;
-    let mut old_coefficient = [Limb(0); N];
+    let mut old_coefficient = [Limb::new(0); N];
     let mut coefficient = fixed_one_mod(modulus);
 
     while !fixed_is_zero(&remainder) {

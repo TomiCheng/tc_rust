@@ -108,12 +108,12 @@ impl MontyForm<BigUint> {
     /// assert_eq!(MontyForm::new(&BigUint::from(7_u8), params).retrieve(), BigUint::from(7_u8));
     /// ```
     pub fn retrieve(&self) -> BigUint {
-        if self.params.modulus().as_limbs() == [Limb(1)] {
+        if self.params.modulus().as_limbs() == [Limb::new(1)] {
             return BigUint::default();
         }
         BigUint::from_limbs(montgomery_mul(
             self.value.as_limbs(),
-            &[Limb(1)],
+            &[Limb::new(1)],
             self.params.modulus().as_limbs(),
             self.params.mod_neg_inv,
         ))
@@ -254,7 +254,7 @@ impl<const N: usize> FixedMontyForm<N> {
                 result = Self::conditional_select(
                     &result,
                     &incremented,
-                    Choice::from_lsb((limb.0 >> bit) as u8),
+                    Choice::from_lsb((limb.to_word() >> bit) as u8),
                 );
             }
         }
@@ -470,7 +470,7 @@ impl<const N: usize> FixedMontyForm<N> {
                 result = Self::conditional_select(
                     &result,
                     &multiplied,
-                    Choice::from_lsb((limb.0 >> bit) as u8),
+                    Choice::from_lsb((limb.to_word() >> bit) as u8),
                 );
             }
         }
