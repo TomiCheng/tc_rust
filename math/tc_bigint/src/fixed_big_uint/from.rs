@@ -45,11 +45,11 @@ impl<const SOURCE: usize, const DESTINATION: usize> TryFrom<&FixedBigUint<SOURCE
     fn try_from(value: &FixedBigUint<SOURCE>) -> Result<Self, Self::Error> {
         if value.as_limbs()[DESTINATION.min(SOURCE)..]
             .iter()
-            .any(|limb| limb.0 != 0)
+            .any(|limb| limb.to_word() != 0)
         {
             return Err(ConversionError::InputTooLarge);
         }
-        let mut limbs = [Limb(0); DESTINATION];
+        let mut limbs = [Limb::new(0); DESTINATION];
         let copy_len = SOURCE.min(DESTINATION);
         limbs[..copy_len].copy_from_slice(&value.as_limbs()[..copy_len]);
         Ok(Self::from_limbs(limbs))

@@ -16,14 +16,14 @@ impl<const N: usize> Shl<usize> for FixedBigUint<N> {
         let bit_shift = shift % Word::BITS as usize;
         let limbs = core::array::from_fn(|index| {
             if index < word_shift {
-                return Limb(0);
+                return Limb::new(0);
             }
             let source = index - word_shift;
-            let mut value = self.limbs[source].0 << bit_shift;
+            let mut value = self.limbs[source].to_word() << bit_shift;
             if bit_shift != 0 && source != 0 {
-                value |= self.limbs[source - 1].0 >> (Word::BITS as usize - bit_shift);
+                value |= self.limbs[source - 1].to_word() >> (Word::BITS as usize - bit_shift);
             }
-            Limb(value)
+            Limb::new(value)
         });
         Self { limbs }
     }

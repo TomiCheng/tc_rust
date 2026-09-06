@@ -8,7 +8,7 @@ impl<const N: usize> Not for FixedBigUint<N> {
     type Output = Self;
     fn not(self) -> Self {
         Self {
-            limbs: self.limbs.map(|word| Limb(!word.0)),
+            limbs: self.limbs.map(|word| Limb::new(!word.to_word())),
         }
     }
 }

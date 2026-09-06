@@ -22,6 +22,16 @@ pub type WideWord = u64;
 pub struct Limb(pub Word);
 
 impl Limb {
+    /// 從原生字建立 limb，供型別遷移期間統一呼叫方式。
+    pub const fn new(word: Word) -> Self {
+        Self(word)
+    }
+
+    /// 取得原生字，避免呼叫端依賴欄位可見性。
+    pub const fn to_word(self) -> Word {
+        self.0
+    }
+
     /// Computes `self + rhs + carry` and returns the low word and carry word.
     #[inline(always)]
     pub const fn carrying_add(self, rhs: Self, carry: Self) -> (Self, Self) {

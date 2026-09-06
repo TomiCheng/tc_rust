@@ -43,7 +43,7 @@ fn public_state_bit_and_parsing_methods_cover_normal_and_error_paths() {
     assert!(U128::default().is_zero());
     assert_eq!(
         U128::zero().as_limbs(),
-        &[Limb(0); 128 / Word::BITS as usize]
+        &[Limb::new(0); 128 / Word::BITS as usize]
     );
     assert_eq!(U128::max_value().bit_length(), 128);
 

@@ -113,13 +113,13 @@ fn checked_sub_u128<const N: usize>(
     mut rhs: u128,
 ) -> Option<FixedBigUint<N>> {
     let mut limbs = lhs.limbs;
-    let mut borrow = Limb(0);
+    let mut borrow = Limb::new(0);
     for limb in &mut limbs {
-        let rhs_limb = Limb(rhs as Word);
+        let rhs_limb = Limb::new(rhs as Word);
         rhs >>= Word::BITS;
         (*limb, borrow) = limb.borrowing_sub(rhs_limb, borrow);
     }
-    (rhs == 0 && borrow.0 == 0).then_some(FixedBigUint { limbs })
+    (rhs == 0 && borrow.to_word() == 0).then_some(FixedBigUint { limbs })
 }
 
 #[cfg(test)]

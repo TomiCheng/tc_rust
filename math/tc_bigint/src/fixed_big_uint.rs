@@ -36,7 +36,7 @@ impl<const N: usize> FixedBigUint<N> {
 
     /// Highest representable value.
     pub const MAX: Self = Self {
-        limbs: [Limb(Word::MAX); N],
+        limbs: [Limb::new(Word::MAX); N],
     };
 
     pub(crate) const fn from_limbs(limbs: [Limb; N]) -> Self {
@@ -50,7 +50,7 @@ impl<const N: usize> FixedBigUint<N> {
     /// Returns zero.
     pub const fn zero() -> Self {
         Self {
-            limbs: [Limb(0); N],
+            limbs: [Limb::new(0); N],
         }
     }
 
@@ -71,7 +71,7 @@ impl<const N: usize> FixedBigUint<N> {
 
     /// Returns whether this value is zero.
     pub fn is_zero(&self) -> bool {
-        self.limbs.iter().all(|word| word.0 == 0)
+        self.limbs.iter().all(|word| word.to_word() == 0)
     }
 
     fn checked_u128(&self) -> Option<u128> {
@@ -79,11 +79,11 @@ impl<const N: usize> FixedBigUint<N> {
         for (index, word) in self.limbs.iter().enumerate() {
             let shift = index * Word::BITS as usize;
             if shift >= 128 {
-                if word.0 != 0 {
+                if word.to_word() != 0 {
                     return None;
                 }
             } else {
-                result |= (word.0 as u128) << shift;
+                result |= (word.to_word() as u128) << shift;
             }
         }
         Some(result)

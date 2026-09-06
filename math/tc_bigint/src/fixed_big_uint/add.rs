@@ -115,29 +115,29 @@ impl<const N: usize> SaturatingAdd for FixedBigUint<N> {
 impl<const N: usize> FixedBigUint<N> {
     pub(super) fn checked_add_word(&self, value: Word) -> Option<Self> {
         let mut result = self.limbs;
-        let mut carry = Limb(value);
+        let mut carry = Limb::new(value);
         for word in &mut result {
-            if carry.0 == 0 {
+            if carry.to_word() == 0 {
                 break;
             }
-            (*word, carry) = word.carrying_add(carry, Limb(0));
+            (*word, carry) = word.carrying_add(carry, Limb::new(0));
         }
-        (carry.0 == 0).then_some(Self { limbs: result })
+        (carry.to_word() == 0).then_some(Self { limbs: result })
     }
 }
 
 #[inline]
 fn overflowing_add_u128<const N: usize>(lhs: &[Limb; N], mut rhs: u128) -> ([Limb; N], bool) {
     let mut limbs = *lhs;
-    let mut carry = Limb(0);
+    let mut carry = Limb::new(0);
 
     for limb in &mut limbs {
-        let rhs_limb = Limb(rhs as Word);
+        let rhs_limb = Limb::new(rhs as Word);
         rhs >>= Word::BITS;
         (*limb, carry) = limb.carrying_add(rhs_limb, carry);
     }
 
-    (limbs, rhs != 0 || carry.0 != 0)
+    (limbs, rhs != 0 || carry.to_word() != 0)
 }
 
 #[cfg(test)]
