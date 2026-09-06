@@ -904,6 +904,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_fp_custom"
+version = "0.1.0"
+dependencies = [
+ "criterion",
+ "tc_bigint",
+ "tc_ec_core",
+ "tc_fp_curve",
+]
+
+[[package]]
 name = "tc_gcm"
 version = "0.1.0"
 dependencies = [
