@@ -6,7 +6,7 @@ use crate::{FixedBigUint, arithmetic};
 
 impl<const N: usize> Ord for FixedBigUint<N> {
     fn cmp(&self, other: &Self) -> Ordering {
-        arithmetic::fixed_cmp(&self.limbs, &other.limbs)
+        arithmetic::fixed_cmp(self.limbs.as_limbs(), other.limbs.as_limbs())
     }
 }
 

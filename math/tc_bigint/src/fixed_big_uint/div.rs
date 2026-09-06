@@ -8,8 +8,16 @@ use crate::{FixedBigUint, Limb, Word, arithmetic};
 impl<const N: usize> FixedBigUint<N> {
     /// Returns the quotient and remainder together.
     pub fn div_rem(&self, rhs: &Self) -> (Self, Self) {
-        let (quotient, remainder) = arithmetic::fixed_div_rem(&self.limbs, &rhs.limbs);
-        (Self { limbs: quotient }, Self { limbs: remainder })
+        let (quotient, remainder) =
+            arithmetic::fixed_div_rem(self.limbs.as_limbs(), rhs.limbs.as_limbs());
+        (
+            Self {
+                limbs: crate::LimbArray::new(quotient),
+            },
+            Self {
+                limbs: crate::LimbArray::new(remainder),
+            },
+        )
     }
 
     /// Returns the Euclidean remainder.
@@ -183,10 +191,14 @@ fn div_rem_u128<const N: usize>(
     if divisor != 0 {
         return (FixedBigUint::zero(), *value);
     }
-    let (quotient, remainder) = arithmetic::fixed_div_rem(&value.limbs, &divisor_limbs);
+    let (quotient, remainder) = arithmetic::fixed_div_rem(value.limbs.as_limbs(), &divisor_limbs);
     (
-        FixedBigUint { limbs: quotient },
-        FixedBigUint { limbs: remainder },
+        FixedBigUint {
+            limbs: crate::LimbArray::new(quotient),
+        },
+        FixedBigUint {
+            limbs: crate::LimbArray::new(remainder),
+        },
     )
 }
 

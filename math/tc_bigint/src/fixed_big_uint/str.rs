@@ -66,7 +66,7 @@ impl<const N: usize> Num for FixedBigUint<N> {
 
 impl<const N: usize> fmt::Display for FixedBigUint<N> {
     fn fmt(&self, output: &mut fmt::Formatter<'_>) -> fmt::Result {
-        crate::format::fmt_fixed(&self.limbs, false, 10, false, "", output)
+        crate::format::fmt_fixed(self.limbs.as_limbs(), false, 10, false, "", output)
     }
 }
 
@@ -80,7 +80,14 @@ macro_rules! impl_fixed_uint_format {
     ($trait:ident, $radix:expr, $uppercase:expr, $prefix:expr) => {
         impl<const N: usize> fmt::$trait for FixedBigUint<N> {
             fn fmt(&self, output: &mut fmt::Formatter<'_>) -> fmt::Result {
-                crate::format::fmt_fixed(&self.limbs, false, $radix, $uppercase, $prefix, output)
+                crate::format::fmt_fixed(
+                    self.limbs.as_limbs(),
+                    false,
+                    $radix,
+                    $uppercase,
+                    $prefix,
+                    output,
+                )
             }
         }
     };

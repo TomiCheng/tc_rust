@@ -6,7 +6,11 @@ use crate::{FixedBigUint, modular};
 impl<const N: usize> FixedBigUint<N> {
     /// Returns the modular multiplicative inverse, when it exists.
     pub fn mod_inverse(&self, modulus: &Self) -> Option<Self> {
-        modular::fixed_mod_inverse(&self.limbs, &modulus.limbs).map(|limbs| Self { limbs })
+        modular::fixed_mod_inverse(self.limbs.as_limbs(), modulus.limbs.as_limbs()).map(|limbs| {
+            Self {
+                limbs: crate::LimbArray::new(limbs),
+            }
+        })
     }
 }
 

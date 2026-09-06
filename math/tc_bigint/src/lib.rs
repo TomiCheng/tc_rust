@@ -41,6 +41,7 @@ pub use error::{ConversionError, ParseBigIntError};
 pub use fixed_big_int::FixedBigInt;
 pub use fixed_big_uint::FixedBigUint;
 pub use tc_limb::{Limb, WideWord, Word};
+use tc_limb::LimbArray;
 pub use non_zero::NonZero;
 pub use odd::Odd;
 #[cfg(feature = "rand_core")]

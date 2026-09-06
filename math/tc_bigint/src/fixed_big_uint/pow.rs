@@ -7,7 +7,11 @@ impl<const N: usize> FixedBigUint<N> {
     /// Returns `self^exponent mod modulus`.
     pub fn mod_pow(&self, exponent: &Self, modulus: &Self) -> Self {
         Self {
-            limbs: modular::fixed_mod_pow(&self.limbs, &exponent.limbs, &modulus.limbs),
+            limbs: crate::LimbArray::new(modular::fixed_mod_pow(
+                self.limbs.as_limbs(),
+                exponent.limbs.as_limbs(),
+                modulus.limbs.as_limbs(),
+            )),
         }
     }
 }

@@ -27,7 +27,7 @@ mod sub;
 /// An unsigned integer containing exactly `N` little-endian limbs.
 #[derive(Clone, Copy, Eq, Hash, PartialEq)]
 pub struct FixedBigUint<const N: usize> {
-    limbs: [Limb; N],
+    limbs: crate::LimbArray<N>,
 }
 
 impl<const N: usize> FixedBigUint<N> {
@@ -36,21 +36,23 @@ impl<const N: usize> FixedBigUint<N> {
 
     /// Highest representable value.
     pub const MAX: Self = Self {
-        limbs: [Limb::new(Word::MAX); N],
+        limbs: crate::LimbArray::new([Limb::new(Word::MAX); N]),
     };
 
     pub(crate) const fn from_limbs(limbs: [Limb; N]) -> Self {
-        Self { limbs }
+        Self {
+            limbs: crate::LimbArray::new(limbs),
+        }
     }
 
     pub(crate) const fn into_limbs(self) -> [Limb; N] {
-        self.limbs
+        self.limbs.into_limbs()
     }
 
     /// Returns zero.
     pub const fn zero() -> Self {
         Self {
-            limbs: [Limb::new(0); N],
+            limbs: crate::LimbArray::new([Limb::new(0); N]),
         }
     }
 
@@ -66,17 +68,17 @@ impl<const N: usize> FixedBigUint<N> {
 
     /// Borrows all little-endian limbs, including high zero limbs.
     pub const fn as_limbs(&self) -> &[Limb; N] {
-        &self.limbs
+        self.limbs.as_limbs()
     }
 
     /// Returns whether this value is zero.
     pub fn is_zero(&self) -> bool {
-        self.limbs.iter().all(|word| word.to_word() == 0)
+        self.limbs.as_limbs().iter().all(|word| word.to_word() == 0)
     }
 
     fn checked_u128(&self) -> Option<u128> {
         let mut result = 0_u128;
-        for (index, word) in self.limbs.iter().enumerate() {
+        for (index, word) in self.limbs.as_limbs().iter().enumerate() {
             let shift = index * Word::BITS as usize;
             if shift >= 128 {
                 if word.to_word() != 0 {

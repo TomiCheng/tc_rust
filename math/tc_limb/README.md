@@ -15,7 +15,7 @@
 
 字寬沿用目前 `tc_bigint` 的 cfg，因此在 i686 上一個 limb 是 32 位元。`N` 是 limb 數量，不是位元數；固定寬度為 `N * Word::BITS`。跨平台的序列化格式應由呼叫端明確定義，不能直接假設記憶體配置與字寬一致。
 
-`LimbArray<const N: usize>` 是無號固定寬度儲存與算術原語，最高位元不是符號位。`abs` 與 `is_negative` 等有號解讀由上層 `FixedBigInt` 負責。私有欄位為 `[Limb; N]`，索引零是最低有效字。使用 `new`、`zero`、`as_limbs`、`into_limbs` 建立或取出固定長度儲存。兩個不同 `N` 的值無法互相算術運算，也不會隱式補零或截斷。
+`LimbArray<const N: usize>` 是無號固定寬度儲存與算術原語，最高位元不是符號位。`abs` 與 `is_negative` 等有號解讀由上層 `FixedBigInt` 負責。私有欄位為 `[Limb; N]`，索引零是最低有效字。使用 `new`、`zero`、`as_limbs`、`as_mut_limbs`、`into_limbs` 建立或取出固定長度儲存。兩個不同 `N` 的值無法互相算術運算，也不會隱式補零或截斷。
 
 ```rust
 use tc_limb::{Limb, LimbArray, Word};

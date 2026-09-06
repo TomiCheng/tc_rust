@@ -9,9 +9,11 @@ impl<const N: usize> Sub for FixedBigUint<N> {
     type Output = Self;
 
     fn sub(self, rhs: Self) -> Self::Output {
-        let (limbs, underflow) = arithmetic::fixed_sub(&self.limbs, &rhs.limbs);
+        let (limbs, underflow) = arithmetic::fixed_sub(self.limbs.as_limbs(), rhs.limbs.as_limbs());
         assert!(!underflow, "attempted to subtract with underflow");
-        Self { limbs }
+        Self {
+            limbs: crate::LimbArray::new(limbs),
+        }
     }
 }
 
@@ -84,15 +86,22 @@ impl_sub_primitive!(u8, u16, u32, u64, u128);
 
 impl<const N: usize> CheckedSub for FixedBigUint<N> {
     fn checked_sub(&self, rhs: &Self) -> Option<Self> {
-        let (limbs, underflow) = arithmetic::fixed_sub(&self.limbs, &rhs.limbs);
-        (!underflow).then_some(Self { limbs })
+        let (limbs, underflow) = arithmetic::fixed_sub(self.limbs.as_limbs(), rhs.limbs.as_limbs());
+        (!underflow).then_some(Self {
+            limbs: crate::LimbArray::new(limbs),
+        })
     }
 }
 
 impl<const N: usize> OverflowingSub for FixedBigUint<N> {
     fn overflowing_sub(&self, rhs: &Self) -> (Self, bool) {
-        let (limbs, underflow) = arithmetic::fixed_sub(&self.limbs, &rhs.limbs);
-        (Self { limbs }, underflow)
+        let (limbs, underflow) = arithmetic::fixed_sub(self.limbs.as_limbs(), rhs.limbs.as_limbs());
+        (
+            Self {
+                limbs: crate::LimbArray::new(limbs),
+            },
+            underflow,
+        )
     }
 }
 
@@ -112,14 +121,16 @@ fn checked_sub_u128<const N: usize>(
     lhs: &FixedBigUint<N>,
     mut rhs: u128,
 ) -> Option<FixedBigUint<N>> {
-    let mut limbs = lhs.limbs;
+    let mut limbs = lhs.limbs.into_limbs();
     let mut borrow = Limb::new(0);
     for limb in &mut limbs {
         let rhs_limb = Limb::new(rhs as Word);
         rhs >>= Word::BITS;
         (*limb, borrow) = limb.borrowing_sub(rhs_limb, borrow);
     }
-    (rhs == 0 && borrow.to_word() == 0).then_some(FixedBigUint { limbs })
+    (rhs == 0 && borrow.to_word() == 0).then_some(FixedBigUint {
+        limbs: crate::LimbArray::new(limbs),
+    })
 }
 
 #[cfg(test)]

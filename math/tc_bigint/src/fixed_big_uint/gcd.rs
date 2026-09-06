@@ -7,7 +7,10 @@ impl<const N: usize> FixedBigUint<N> {
     /// Returns the greatest common divisor.
     pub fn gcd(&self, other: &Self) -> Self {
         Self {
-            limbs: arithmetic::fixed_gcd(&self.limbs, &other.limbs),
+            limbs: crate::LimbArray::new(arithmetic::fixed_gcd(
+                self.limbs.as_limbs(),
+                other.limbs.as_limbs(),
+            )),
         }
     }
 }

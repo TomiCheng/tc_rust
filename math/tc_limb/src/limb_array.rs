@@ -47,6 +47,17 @@ impl<const N: usize> LimbArray<N> {
         &self.0
     }
 
+    /// 可變借用全部 limb；陣列長度仍固定為 `N`，不賦予有號語意。
+    /// ```
+    /// use tc_limb::{Limb, LimbArray};
+    /// let mut value = LimbArray::<2>::zero();
+    /// value.as_mut_limbs()[0] = Limb::new(7);
+    /// assert_eq!(value.as_limbs()[0].to_word(), 7);
+    /// ```
+    pub const fn as_mut_limbs(&mut self) -> &mut [Limb; N] {
+        &mut self.0
+    }
+
     /// 取出全部小端序 limb。
     /// ```
     /// use tc_limb::{Limb, LimbArray};

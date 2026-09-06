@@ -59,9 +59,9 @@ macro_rules! impl_add_primitive {
 
                 #[inline]
                 fn add(self, rhs: $primitive) -> Self::Output {
-                    let (limbs, overflow) = overflowing_add_u128(&self.limbs, rhs as u128);
+                    let (limbs, overflow) = overflowing_add_u128(self.limbs.as_limbs(), rhs as u128);
                     assert!(!overflow, "attempted to add with overflow");
-                    Self { limbs }
+                    Self { limbs: crate::LimbArray::new(limbs) }
                 }
             }
 
@@ -88,15 +88,22 @@ impl_add_primitive!(u8, u16, u32, u64, u128);
 
 impl<const N: usize> CheckedAdd for FixedBigUint<N> {
     fn checked_add(&self, rhs: &Self) -> Option<Self> {
-        let (limbs, overflow) = arithmetic::fixed_add(&self.limbs, &rhs.limbs);
-        (!overflow).then_some(Self { limbs })
+        let (limbs, overflow) = arithmetic::fixed_add(self.limbs.as_limbs(), rhs.limbs.as_limbs());
+        (!overflow).then_some(Self {
+            limbs: crate::LimbArray::new(limbs),
+        })
     }
 }
 
 impl<const N: usize> OverflowingAdd for FixedBigUint<N> {
     fn overflowing_add(&self, rhs: &Self) -> (Self, bool) {
-        let (limbs, overflow) = arithmetic::fixed_add(&self.limbs, &rhs.limbs);
-        (Self { limbs }, overflow)
+        let (limbs, overflow) = arithmetic::fixed_add(self.limbs.as_limbs(), rhs.limbs.as_limbs());
+        (
+            Self {
+                limbs: crate::LimbArray::new(limbs),
+            },
+            overflow,
+        )
     }
 }
 
@@ -114,7 +121,7 @@ impl<const N: usize> SaturatingAdd for FixedBigUint<N> {
 
 impl<const N: usize> FixedBigUint<N> {
     pub(super) fn checked_add_word(&self, value: Word) -> Option<Self> {
-        let mut result = self.limbs;
+        let mut result = self.limbs.into_limbs();
         let mut carry = Limb::new(value);
         for word in &mut result {
             if carry.to_word() == 0 {
@@ -122,7 +129,9 @@ impl<const N: usize> FixedBigUint<N> {
             }
             (*word, carry) = word.carrying_add(carry, Limb::new(0));
         }
-        (carry.to_word() == 0).then_some(Self { limbs: result })
+        (carry.to_word() == 0).then_some(Self {
+            limbs: crate::LimbArray::new(result),
+        })
     }
 }
 

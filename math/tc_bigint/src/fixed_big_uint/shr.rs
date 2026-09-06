@@ -19,13 +19,16 @@ impl<const N: usize> Shr<usize> for FixedBigUint<N> {
             if source >= N {
                 return Limb::new(0);
             }
-            let mut value = self.limbs[source].to_word() >> bit_shift;
+            let mut value = self.limbs.as_limbs()[source].to_word() >> bit_shift;
             if bit_shift != 0 && source + 1 < N {
-                value |= self.limbs[source + 1].to_word() << (Word::BITS as usize - bit_shift);
+                value |= self.limbs.as_limbs()[source + 1].to_word()
+                    << (Word::BITS as usize - bit_shift);
             }
             Limb::new(value)
         });
-        Self { limbs }
+        Self {
+            limbs: crate::LimbArray::new(limbs),
+        }
     }
 }
 
