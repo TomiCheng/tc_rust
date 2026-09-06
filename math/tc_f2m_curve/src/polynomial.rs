@@ -10,6 +10,14 @@ use tc_binpoly::{BinPolyError, BinPolyMultiplier, BinaryPoly, BinaryPolyOps, Fix
 pub trait F2mPolynomial: BinaryPolyOps {
     /// 由已約簡且長度符合 multiplier 的 limbs 建值。
     fn from_limb_slice(multiplier: BinPolyMultiplier, limbs: &[u64]) -> Result<Self, BinPolyError>;
+
+    /// `GF(2^m)` 中唯一的平方根。
+    ///
+    /// 通用表示使用 Frobenius `x^(2^(m-1))`；特化欄位可覆寫成位元拆分與
+    /// 常數乘法，避免 `m - 1` 次連續平方。
+    fn sqrt(&self) -> Self {
+        self.square_pow(self.multiplier().n() - 1)
+    }
 }
 
 impl F2mPolynomial for BinaryPoly {

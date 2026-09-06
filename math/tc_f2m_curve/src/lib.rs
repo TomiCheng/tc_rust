@@ -11,6 +11,7 @@ mod f2m_point;
 mod integer;
 pub mod named_curves;
 mod polynomial;
+mod tnaf;
 mod traits;
 
 pub use f2m_curve::F2mCurve;
@@ -24,3 +25,4 @@ pub use tc_ec_core::{
     generate_compact_window_naf, generate_naf, generate_window_naf, get_naf_weight,
     get_window_size, scalar_mul, wnaf_mul, wnaf_mul_point,
 };
+pub use tnaf::{WTauNafTable, ZTauElement, generate_tau_naf, wtnaf_mul, wtnaf_mul_point};

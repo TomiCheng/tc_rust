@@ -14,6 +14,7 @@ mod binary_poly;
 mod binary_poly_ops;
 mod error;
 mod fixed_binary_poly;
+pub mod interleave;
 #[cfg(feature = "alloc")]
 mod invert;
 mod multiplier;

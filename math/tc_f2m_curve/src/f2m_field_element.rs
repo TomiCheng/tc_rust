@@ -130,11 +130,14 @@ impl<P: BinaryPolyOps> F2mFieldElement<P> {
     }
 
     /// `GF(2^m)` 中唯一的平方根。
-    pub fn sqrt(&self) -> Self {
+    pub fn sqrt(&self) -> Self
+    where
+        P: F2mPolynomial,
+    {
         if self.bit_length() <= 1 {
             return self.clone();
         }
-        self.square_pow(self.field.m() - 1)
+        self.with_value(self.value.sqrt())
     }
 
     /// 計算 `self * b + x * y`。

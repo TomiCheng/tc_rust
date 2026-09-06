@@ -146,6 +146,14 @@ impl<P: F2mPolynomial, B: F2mInteger> Curve for F2mCurve<P, B> {
             scalar.clone() - &magnitude
         }
     }
+
+    fn multiply(point: &Self::Point, scalar: &Self::Scalar) -> Self::Point {
+        if point.curve().is_koblitz() {
+            crate::wtnaf_mul_point(point, scalar)
+        } else {
+            tc_ec_core::wnaf_mul_point::<Self>(point, scalar)
+        }
+    }
 }
 
 impl<P: F2mPolynomial, B: F2mInteger> Point for F2mPoint<P, B> {
@@ -160,11 +168,11 @@ impl<P: F2mPolynomial, B: F2mInteger> Point for F2mPoint<P, B> {
     }
 
     fn x(&self) -> Option<<Self::Curve as Curve>::Field> {
-        F2mPoint::x(self).cloned()
+        F2mPoint::x(self)
     }
 
     fn y(&self) -> Option<<Self::Curve as Curve>::Field> {
-        F2mPoint::y(self).cloned()
+        F2mPoint::y(self)
     }
 
     fn add(&self, rhs: &Self) -> Self {
@@ -173,6 +181,18 @@ impl<P: F2mPolynomial, B: F2mInteger> Point for F2mPoint<P, B> {
 
     fn double(&self) -> Self {
         F2mPoint::twice(self)
+    }
+
+    fn twice_plus(&self, rhs: &Self) -> Self {
+        F2mPoint::twice_plus(self, rhs)
+    }
+
+    fn three_times(&self) -> Self {
+        F2mPoint::three_times(self)
+    }
+
+    fn times_pow2(&self, exponent: usize) -> Self {
+        F2mPoint::times_pow2(self, exponent)
     }
 
     fn negate(&self) -> Self {
@@ -232,10 +252,10 @@ mod tests {
         let (curve, point) = sect163k1();
         let x = point.x().unwrap();
         let y = point.y().unwrap();
-        assert_eq!(FieldElement::square(x), x.square());
-        assert_eq!(FieldElement::sqrt(x), Some(x.sqrt()));
-        assert_eq!(BinaryFieldElement::trace(x), x.trace());
-        assert_eq!(BinaryFieldElement::half_trace(x), x.half_trace());
+        assert_eq!(FieldElement::square(&x), x.square());
+        assert_eq!(FieldElement::sqrt(&x), Some(x.sqrt()));
+        assert_eq!(BinaryFieldElement::trace(&x), x.trace());
+        assert_eq!(BinaryFieldElement::half_trace(&x), x.half_trace());
         assert!(FieldElement::invert(&x.zero()).is_none());
         assert_eq!(Point::x(&point), Some(x.clone()));
         assert_eq!(Point::y(&point), Some(y.clone()));
@@ -250,7 +270,7 @@ mod tests {
         assert_eq!(Point::times_pow2(&point, 3), point.twice().twice().twice());
         assert_eq!(
             Curve::coordinate_system(curve.as_ref()),
-            tc_ec_core::CoordinateSystem::Affine
+            tc_ec_core::CoordinateSystem::LambdaProjective
         );
     }
 

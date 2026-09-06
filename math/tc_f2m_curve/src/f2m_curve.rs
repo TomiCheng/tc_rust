@@ -1,7 +1,8 @@
 //! `GF(2^m)` 上的短 Weierstrass 曲線。
 //!
-//! 曲線方程為 `y^2 + xy = x^3 + ax^2 + b`。本檔保留舊 `tc_ec` 的 affine
-//! 公式與 SEC 點編解碼語意；元素表示由 `P`、參數與純量整數由 `B` 靜態分派。
+//! 曲線方程為 `y^2 + xy = x^3 + ax^2 + b`。元素表示由 `P`、參數與純量
+//! 整數由 `B` 靜態分派；點可使用 affine、homogeneous、lambda-affine 或
+//! lambda-projective 座標，預設與 BC 一樣採 lambda-projective。
 
 use alloc::sync::Arc;
 
@@ -74,7 +75,7 @@ impl<P: F2mPolynomial, B: F2mInteger> F2mCurve<P, B> {
             b,
             order,
             cofactor,
-            coordinate_system: CoordinateSystem::Affine,
+            coordinate_system: CoordinateSystem::LambdaProjective,
         })
     }
 
@@ -113,6 +114,14 @@ impl<P: F2mPolynomial, B: F2mInteger> F2mCurve<P, B> {
         self.field.m()
     }
 
+    /// 是否具備 Koblitz/ABC 結構，可使用 Frobenius WTNAF 乘法器。
+    pub fn is_koblitz(&self) -> bool {
+        (self.a.is_zero() || self.a.is_one())
+            && self.b.is_one()
+            && self.order.is_some()
+            && self.cofactor.is_some()
+    }
+
     /// 單一體元素的 SEC 固定編碼長度。
     pub fn field_element_encoding_length(&self) -> usize {
         self.field.m().div_ceil(8)
@@ -131,6 +140,27 @@ impl<P: F2mPolynomial, B: F2mInteger> F2mCurve<P, B> {
     /// 目前使用的座標系。
     pub const fn coordinate_system(&self) -> CoordinateSystem {
         self.coordinate_system
+    }
+
+    /// 建立使用指定座標系的曲線設定。
+    pub fn with_coordinate_system(mut self, coordinate_system: CoordinateSystem) -> Self {
+        assert!(
+            Self::supports_coordinate_system(coordinate_system),
+            "unsupported F2m coordinate system"
+        );
+        self.coordinate_system = coordinate_system;
+        self
+    }
+
+    /// 是否支援指定的 F2m 座標系。
+    pub const fn supports_coordinate_system(coordinate_system: CoordinateSystem) -> bool {
+        matches!(
+            coordinate_system,
+            CoordinateSystem::Affine
+                | CoordinateSystem::Homogeneous
+                | CoordinateSystem::LambdaAffine
+                | CoordinateSystem::LambdaProjective
+        )
     }
 
     /// 同一條曲線上的無窮遠點。

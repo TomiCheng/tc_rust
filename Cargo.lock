@@ -892,6 +892,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_f2m_custom"
+version = "0.1.0"
+dependencies = [
+ "tc_bigint",
+ "tc_binpoly",
+ "tc_ec_core",
+ "tc_f2m_curve",
+]
+
+[[package]]
 name = "tc_fp_curve"
 version = "0.1.0"
 dependencies = [
