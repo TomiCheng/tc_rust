@@ -17,13 +17,13 @@ impl<const N: usize> Shr<usize> for FixedBigInt<N> {
         let extension = if self.is_negative() { Word::MAX } else { 0 };
         let limbs = core::array::from_fn(|index| {
             let source = index + word_shift;
-            let low = self.limbs.get(source).map_or(extension, |word| word.0);
+            let low = self.limbs.get(source).map_or(extension, |word| word.to_word());
             let mut value = low >> bit_shift;
             if bit_shift != 0 {
-                let high = self.limbs.get(source + 1).map_or(extension, |word| word.0);
+                let high = self.limbs.get(source + 1).map_or(extension, |word| word.to_word());
                 value |= high << (Word::BITS as usize - bit_shift);
             }
-            Limb(value)
+            Limb::new(value)
         });
         Self { limbs }
     }

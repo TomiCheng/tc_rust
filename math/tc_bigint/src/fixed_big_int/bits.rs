@@ -10,16 +10,16 @@ impl<const N: usize> FixedBigInt<N> {
             .iter()
             .rposition(|word| {
                 if self.is_negative() {
-                    word.0 != Word::MAX
+                    word.to_word() != Word::MAX
                 } else {
-                    word.0 != 0
+                    word.to_word() != 0
                 }
             })
             .map_or(0, |index| {
                 let word = if self.is_negative() {
-                    !self.limbs[index].0
+                    !self.limbs[index].to_word()
                 } else {
-                    self.limbs[index].0
+                    self.limbs[index].to_word()
                 };
                 index * Word::BITS as usize + (Word::BITS - word.leading_zeros()) as usize
             })
@@ -30,12 +30,12 @@ impl<const N: usize> FixedBigInt<N> {
         if self.is_negative() {
             self.limbs
                 .iter()
-                .map(|word| (!word.0).count_ones() as usize)
+                .map(|word| (!word.to_word()).count_ones() as usize)
                 .sum()
         } else {
             self.limbs
                 .iter()
-                .map(|word| word.0.count_ones() as usize)
+                .map(|word| word.to_word().count_ones() as usize)
                 .sum()
         }
     }
@@ -46,10 +46,10 @@ impl<const N: usize> FixedBigInt<N> {
             .iter()
             .rev()
             .try_fold(0_usize, |count, limb| {
-                if limb.0 == 0 {
+                if limb.to_word() == 0 {
                     Ok(count + Word::BITS as usize)
                 } else {
-                    Err(count + limb.0.leading_zeros() as usize)
+                    Err(count + limb.to_word().leading_zeros() as usize)
                 }
             })
             .unwrap_or_else(|count| count)
@@ -60,7 +60,7 @@ impl<const N: usize> FixedBigInt<N> {
         self.limbs
             .get(index / Word::BITS as usize)
             .map_or(self.is_negative(), |word| {
-                word.0 >> (index % Word::BITS as usize) & 1 != 0
+                word.to_word() >> (index % Word::BITS as usize) & 1 != 0
             })
     }
 
@@ -71,7 +71,7 @@ impl<const N: usize> FixedBigInt<N> {
             "bit index is outside fixed width"
         );
         let mut result = *self;
-        result.limbs[index / Word::BITS as usize].0 |= (1 as Word) << (index % Word::BITS as usize);
+        result.limbs[index / Word::BITS as usize] = Limb::new(result.limbs[index / Word::BITS as usize].to_word() | ((1 as Word) << (index % Word::BITS as usize)));
         result
     }
 
@@ -82,8 +82,7 @@ impl<const N: usize> FixedBigInt<N> {
             "bit index is outside fixed width"
         );
         let mut result = *self;
-        result.limbs[index / Word::BITS as usize].0 &=
-            !((1 as Word) << (index % Word::BITS as usize));
+        result.limbs[index / Word::BITS as usize] = Limb::new(result.limbs[index / Word::BITS as usize].to_word() & (!((1 as Word) << (index % Word::BITS as usize))));
         result
     }
 
@@ -94,7 +93,7 @@ impl<const N: usize> FixedBigInt<N> {
             "bit index is outside fixed width"
         );
         let mut result = *self;
-        result.limbs[index / Word::BITS as usize].0 ^= (1 as Word) << (index % Word::BITS as usize);
+        result.limbs[index / Word::BITS as usize] = Limb::new(result.limbs[index / Word::BITS as usize].to_word() ^ ((1 as Word) << (index % Word::BITS as usize)));
         result
     }
 
@@ -103,14 +102,14 @@ impl<const N: usize> FixedBigInt<N> {
         self.limbs
             .iter()
             .enumerate()
-            .find(|(_, word)| word.0 != 0)
-            .map(|(index, word)| index * Word::BITS as usize + word.0.trailing_zeros() as usize)
+            .find(|(_, word)| word.to_word() != 0)
+            .map(|(index, word)| index * Word::BITS as usize + word.to_word().trailing_zeros() as usize)
     }
 
     /// Returns `self & !other`.
     pub fn and_not(&self, other: &Self) -> Self {
         Self {
-            limbs: core::array::from_fn(|index| Limb(self.limbs[index].0 & !other.limbs[index].0)),
+            limbs: core::array::from_fn(|index| Limb::new(self.limbs[index].to_word() & !other.limbs[index].to_word())),
         }
     }
 }

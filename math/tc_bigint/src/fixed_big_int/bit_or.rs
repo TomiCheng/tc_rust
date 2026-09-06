@@ -7,7 +7,7 @@ impl<const N: usize> BitOr for FixedBigInt<N> {
     type Output = Self;
     fn bitor(self, rhs: Self) -> Self {
         Self {
-            limbs: core::array::from_fn(|index| Limb(self.limbs[index].0 | rhs.limbs[index].0)),
+            limbs: core::array::from_fn(|index| Limb::new(self.limbs[index].to_word() | rhs.limbs[index].to_word())),
         }
     }
 }

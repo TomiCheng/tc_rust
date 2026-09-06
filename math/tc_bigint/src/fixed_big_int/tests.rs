@@ -50,7 +50,7 @@ fn public_state_bit_and_parsing_methods_cover_signed_cases() {
     assert!(!I128::max_value().is_negative());
     assert_eq!(
         I128::zero().as_limbs(),
-        &[Limb(0); 128 / Word::BITS as usize]
+        &[Limb::new(0); 128 / Word::BITS as usize]
     );
     assert_eq!(I128::from(-7_i8).abs(), I128::from(7_i8));
 

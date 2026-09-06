@@ -38,18 +38,18 @@ pub struct FixedBigInt<const N: usize> {
 impl<const N: usize> FixedBigInt<N> {
     /// Lowest representable value.
     pub const MIN: Self = {
-        let mut limbs = [Limb(0); N];
+        let mut limbs = [Limb::new(0); N];
         if N != 0 {
-            limbs[N - 1] = Limb(1 << (Word::BITS - 1));
+            limbs[N - 1] = Limb::new(1 << (Word::BITS - 1));
         }
         Self { limbs }
     };
 
     /// Highest representable value.
     pub const MAX: Self = {
-        let mut limbs = [Limb(Word::MAX); N];
+        let mut limbs = [Limb::new(Word::MAX); N];
         if N != 0 {
-            limbs[N - 1] = Limb(Word::MAX >> 1);
+            limbs[N - 1] = Limb::new(Word::MAX >> 1);
         }
         Self { limbs }
     };
@@ -60,7 +60,7 @@ impl<const N: usize> FixedBigInt<N> {
 
     /// Returns zero.
     pub const fn zero() -> Self {
-        Self::from_limbs([Limb(0); N])
+        Self::from_limbs([Limb::new(0); N])
     }
 
     /// Returns the lowest representable signed value.
@@ -80,7 +80,7 @@ impl<const N: usize> FixedBigInt<N> {
 
     /// Returns whether the value is zero.
     pub fn is_zero(&self) -> bool {
-        self.limbs.iter().all(|word| word.0 == 0)
+        self.limbs.iter().all(|word| word.to_word() == 0)
     }
 
     fn magnitude(&self) -> [Limb; N] {

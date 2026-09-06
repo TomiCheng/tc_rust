@@ -7,7 +7,7 @@ impl<const N: usize> BitAnd for FixedBigInt<N> {
     type Output = Self;
     fn bitand(self, rhs: Self) -> Self {
         Self {
-            limbs: core::array::from_fn(|index| Limb(self.limbs[index].0 & rhs.limbs[index].0)),
+            limbs: core::array::from_fn(|index| Limb::new(self.limbs[index].to_word() & rhs.limbs[index].to_word())),
         }
     }
 }

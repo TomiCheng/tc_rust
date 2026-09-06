@@ -58,7 +58,7 @@ impl<const SOURCE: usize, const DESTINATION: usize> TryFrom<&FixedBigInt<SOURCE>
 
     fn try_from(value: &FixedBigInt<SOURCE>) -> Result<Self, Self::Error> {
         let negative = value.is_negative();
-        let extension = if negative { Limb(Word::MAX) } else { Limb(0) };
+        let extension = if negative { Limb::new(Word::MAX) } else { Limb::new(0) };
         if value.as_limbs()[DESTINATION.min(SOURCE)..]
             .iter()
             .any(|limb| *limb != extension)

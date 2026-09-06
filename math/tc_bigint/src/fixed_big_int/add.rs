@@ -146,9 +146,9 @@ fn checked_add_u128<const N: usize>(lhs: &FixedBigInt<N>, mut rhs: u128) -> Opti
     }
 
     let mut limbs = lhs.limbs;
-    let mut carry = Limb(0);
+    let mut carry = Limb::new(0);
     for limb in &mut limbs {
-        let rhs_limb = Limb(rhs as Word);
+        let rhs_limb = Limb::new(rhs as Word);
         rhs >>= Word::BITS;
         (*limb, carry) = limb.carrying_add(rhs_limb, carry);
     }

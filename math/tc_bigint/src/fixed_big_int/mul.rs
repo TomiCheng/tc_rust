@@ -138,9 +138,9 @@ impl<const N: usize> SaturatingMul for FixedBigInt<N> {
 }
 
 fn checked_mul_u128<const N: usize>(lhs: &FixedBigInt<N>, mut rhs: u128) -> Option<FixedBigInt<N>> {
-    let mut rhs_limbs = [Limb(0); N];
+    let mut rhs_limbs = [Limb::new(0); N];
     for limb in &mut rhs_limbs {
-        *limb = Limb(rhs as Word);
+        *limb = Limb::new(rhs as Word);
         rhs >>= Word::BITS;
     }
     if rhs != 0 && !lhs.is_zero() {
