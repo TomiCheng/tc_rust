@@ -517,11 +517,11 @@ pub(crate) fn div_rem_small(words: &mut Vec<Limb>, divisor: Word) -> Word {
     remainder as Word
 }
 
-pub(crate) fn fixed_cmp<const N: usize>(lhs: &[Limb; N], rhs: &[Limb; N]) -> Ordering {
+pub fn fixed_cmp<const N: usize>(lhs: &[Limb; N], rhs: &[Limb; N]) -> Ordering {
     lhs.iter().rev().cmp(rhs.iter().rev())
 }
 
-pub(crate) fn fixed_add<const N: usize>(lhs: &[Limb; N], rhs: &[Limb; N]) -> ([Limb; N], bool) {
+pub fn fixed_add<const N: usize>(lhs: &[Limb; N], rhs: &[Limb; N]) -> ([Limb; N], bool) {
     let mut result = [Limb(0); N];
     let mut carry = Limb(0);
     for index in 0..N {
@@ -530,7 +530,7 @@ pub(crate) fn fixed_add<const N: usize>(lhs: &[Limb; N], rhs: &[Limb; N]) -> ([L
     (result, carry.0 != 0)
 }
 
-pub(crate) fn fixed_sub<const N: usize>(lhs: &[Limb; N], rhs: &[Limb; N]) -> ([Limb; N], bool) {
+pub fn fixed_sub<const N: usize>(lhs: &[Limb; N], rhs: &[Limb; N]) -> ([Limb; N], bool) {
     let mut result = [Limb(0); N];
     let mut borrow = Limb(0);
     for index in 0..N {
@@ -564,10 +564,7 @@ pub(crate) fn fixed_mul<const N: usize>(lhs: &[Limb; N], rhs: &[Limb; N]) -> ([L
 }
 
 #[inline]
-pub(crate) fn fixed_mul_wide<const N: usize>(
-    lhs: &[Limb; N],
-    rhs: &[Limb; N],
-) -> ([Limb; N], [Limb; N]) {
+pub fn fixed_mul_wide<const N: usize>(lhs: &[Limb; N], rhs: &[Limb; N]) -> ([Limb; N], [Limb; N]) {
     let mut low = [Limb(0); N];
     let mut high = [Limb(0); N];
 
@@ -596,6 +593,41 @@ pub(crate) fn fixed_mul_wide<const N: usize>(
     }
 
     (low, high)
+}
+
+/// Squares a fixed-width magnitude and returns its low and high halves.
+#[inline]
+pub fn fixed_square_wide<const N: usize>(value: &[Limb; N]) -> ([Limb; N], [Limb; N]) {
+    fixed_mul_wide(value, value)
+}
+
+/// Adds a full-width product into an existing double-width accumulator.
+///
+/// The accumulator is split into low and high halves because stable Rust cannot
+/// express `[Limb; 2 * N]`. The return value reports overflow beyond `2 * N`
+/// limbs.
+pub fn fixed_mul_add_to<const N: usize>(
+    lhs: &[Limb; N],
+    rhs: &[Limb; N],
+    low: &mut [Limb; N],
+    high: &mut [Limb; N],
+) -> bool {
+    let (product_low, product_high) = fixed_mul_wide(lhs, rhs);
+    let (next_low, low_overflow) = fixed_add(low, &product_low);
+    let (mut next_high, high_overflow) = fixed_add(high, &product_high);
+    let mut overflow = high_overflow;
+
+    if low_overflow {
+        let mut carry = Limb(1);
+        for word in &mut next_high {
+            (*word, carry) = word.carrying_add(Limb(0), carry);
+        }
+        overflow |= carry.0 != 0;
+    }
+
+    *low = next_low;
+    *high = next_high;
+    overflow
 }
 
 pub(crate) fn fixed_div_rem<const N: usize>(
@@ -974,22 +1006,34 @@ pub(crate) fn fixed_test_bit<const N: usize>(words: &[Limb; N], index: usize) ->
     words[index / Word::BITS as usize].0 >> (index % Word::BITS as usize) & 1 != 0
 }
 
-pub(crate) fn fixed_is_zero<const N: usize>(words: &[Limb; N]) -> bool {
+pub fn fixed_is_zero<const N: usize>(words: &[Limb; N]) -> bool {
     words.iter().all(|word| word.0 == 0)
 }
 
-pub(crate) fn fixed_is_one<const N: usize>(words: &[Limb; N]) -> bool {
+pub fn fixed_is_one<const N: usize>(words: &[Limb; N]) -> bool {
     words.first() == Some(&Limb(1)) && words.iter().skip(1).all(|word| word.0 == 0)
 }
 
-#[cfg(test)]
-pub(crate) fn fixed_shr_one<const N: usize>(words: &mut [Limb; N]) {
+pub fn fixed_shr_one<const N: usize>(words: &mut [Limb; N]) {
     let mut carry = 0 as Word;
     for word in words.iter_mut().rev() {
         let next = word.0 << (Word::BITS - 1);
         word.0 = (word.0 >> 1) | carry;
         carry = next;
     }
+}
+
+/// Shifts a fixed-width magnitude left by one bit in place.
+///
+/// Returns whether the most-significant bit was shifted out.
+pub fn fixed_shl_one<const N: usize>(words: &mut [Limb; N]) -> bool {
+    let mut carry = 0 as Word;
+    for word in words {
+        let next = word.0 >> (Word::BITS - 1);
+        word.0 = (word.0 << 1) | carry;
+        carry = next;
+    }
+    carry != 0
 }
 
 #[cfg(test)]
@@ -1027,6 +1071,25 @@ mod tests {
         let (low, high) = fixed_mul_wide(&lhs, &rhs);
         assert_eq!(low, [Limb(15), Limb(8)]);
         assert_eq!(high, [Limb(1), Limb(0)]);
+        assert_eq!(fixed_square_wide(&lhs), fixed_mul_wide(&lhs, &lhs));
+    }
+
+    #[test]
+    fn fixed_mul_add_to_propagates_carry_across_both_halves() {
+        let lhs = [Limb(Word::MAX), Limb(Word::MAX)];
+        let rhs = [Limb(1), Limb(0)];
+        let mut low = [Limb(1), Limb(0)];
+        let mut high = [Limb(7), Limb(0)];
+
+        assert!(!fixed_mul_add_to(&lhs, &rhs, &mut low, &mut high));
+        assert_eq!(low, [Limb(0), Limb(0)]);
+        assert_eq!(high, [Limb(8), Limb(0)]);
+
+        low = [Limb(1), Limb(0)];
+        high = [Limb(Word::MAX), Limb(Word::MAX)];
+        assert!(fixed_mul_add_to(&lhs, &rhs, &mut low, &mut high));
+        assert_eq!(low, [Limb(0), Limb(0)]);
+        assert_eq!(high, [Limb(0), Limb(0)]);
     }
 
     #[test]
@@ -1075,6 +1138,13 @@ mod tests {
         let mut value = [Limb(0), Limb(1)];
         fixed_shr_one(&mut value);
         assert_eq!(value, [Limb(1 << (Word::BITS - 1)), Limb(0)]);
+    }
+
+    #[test]
+    fn fixed_left_shift_helper_crosses_limb_boundaries_and_reports_carry() {
+        let mut value = [Limb(Word::MAX), Limb(1 << (Word::BITS - 1))];
+        assert!(fixed_shl_one(&mut value));
+        assert_eq!(value, [Limb(Word::MAX - 1), Limb(1)]);
     }
 
     #[test]

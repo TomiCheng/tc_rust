@@ -23,6 +23,7 @@ mod non_zero;
 mod odd;
 #[cfg(feature = "rand_core")]
 mod prime;
+pub mod raw;
 mod traits;
 mod types;
 
