@@ -16,7 +16,7 @@ enum Coords<F> {
     Affine { x: F, y: F },
     Homogeneous { x: F, y: F, z: F },
     Jacobian { x: F, y: F, z: F },
-    JacobianModified { x: F, y: F, z: F, az4: F },
+    JacobianModified { x: F, y: F, z: F, az4: Option<F> },
 }
 
 struct EqualityParts<'a, B: FpInteger> {
@@ -84,7 +84,7 @@ impl<B: FpInteger> FpPoint<B> {
                 x,
                 y,
                 z: one,
-                az4: curve.a().clone(),
+                az4: Some(curve.a().clone()),
             },
             _ => unreachable!("FpCurve rejects unsupported coordinate systems"),
         };
@@ -142,7 +142,7 @@ impl<B: FpInteger> FpPoint<B> {
         match (self.coords.as_ref()?, index) {
             (Coords::Homogeneous { z, .. } | Coords::Jacobian { z, .. }, 0) => Some(z),
             (Coords::JacobianModified { z, .. }, 0) => Some(z),
-            (Coords::JacobianModified { az4, .. }, 1) => Some(az4),
+            (Coords::JacobianModified { az4, .. }, 1) => az4.as_ref(),
             _ => None,
         }
     }
@@ -241,7 +241,7 @@ impl<B: FpInteger> FpPoint<B> {
             Coords::Affine { x, y } => self.twice_affine(x, y),
             Coords::Homogeneous { x, y, z } => self.twice_homogeneous(x, y, z),
             Coords::Jacobian { x, y, z } => self.twice_jacobian(x, y, z),
-            Coords::JacobianModified { .. } => self.twice_jacobian_modified(),
+            Coords::JacobianModified { .. } => self.twice_jacobian_modified(true),
         }
     }
 
@@ -319,12 +319,13 @@ impl<B: FpInteger> FpPoint<B> {
         self.point_from_jacobian(x3, y3, z3, None)
     }
 
-    fn twice_jacobian_modified(&self) -> Self {
-        let Coords::JacobianModified { x, y, z, az4 } = self.coords.as_ref().expect("finite point")
+    fn twice_jacobian_modified(&self, calculate_w: bool) -> Self {
+        let Coords::JacobianModified { x, y, z, .. } = self.coords.as_ref().expect("finite point")
         else {
             unreachable!()
         };
-        let m = &three(&x.square()) + az4;
+        let az4 = self.jacobian_modified_w();
+        let m = &three(&x.square()) + &az4;
         let two_y = two(y);
         let two_y_squared = &two_y * y;
         let s = two(&(x * &two_y_squared));
@@ -332,7 +333,7 @@ impl<B: FpInteger> FpPoint<B> {
         let four_t = two_y_squared.square();
         let eight_t = two(&four_t);
         let y3 = &(&m * &(&s - &x3)) - &eight_t;
-        let az4_3 = two(&(&eight_t * az4));
+        let az4_3 = calculate_w.then(|| two(&(&eight_t * &az4)));
         let z3 = if z.is_one() { two_y } else { &two_y * z };
         self.point_from_jacobian_modified(x3, y3, z3, az4_3)
     }
@@ -355,7 +356,9 @@ impl<B: FpInteger> FpPoint<B> {
 
         match self.curve.coordinate_system() {
             CoordinateSystem::Affine => self.twice_plus_affine(rhs),
-            CoordinateSystem::JacobianModified => self.twice_jacobian_modified().add_point(rhs),
+            CoordinateSystem::JacobianModified => {
+                self.twice_jacobian_modified(false).add_point(rhs)
+            }
             CoordinateSystem::Homogeneous | CoordinateSystem::Jacobian => {
                 self.twice().add_point(rhs)
             }
@@ -400,7 +403,9 @@ impl<B: FpInteger> FpPoint<B> {
         }
         match self.curve.coordinate_system() {
             CoordinateSystem::Affine => self.three_times_affine(),
-            CoordinateSystem::JacobianModified => self.twice_jacobian_modified().add_point(self),
+            CoordinateSystem::JacobianModified => {
+                self.twice_jacobian_modified(false).add_point(self)
+            }
             CoordinateSystem::Homogeneous | CoordinateSystem::Jacobian => {
                 self.twice().add_point(self)
             }
@@ -458,7 +463,7 @@ impl<B: FpInteger> FpPoint<B> {
                     w = self.calculate_jacobian_modified_w(&z, None);
                 }
                 CoordinateSystem::JacobianModified => {
-                    w = self.get_z_coord(1).expect("modified W is present").clone();
+                    w = self.jacobian_modified_w();
                 }
                 CoordinateSystem::Affine => unreachable!("affine Z is one"),
                 _ => unreachable!(),
@@ -498,7 +503,9 @@ impl<B: FpInteger> FpPoint<B> {
                 self.point_from_homogeneous(x, y, z)
             }
             CoordinateSystem::Jacobian => self.point_from_jacobian(x, y, z, None),
-            CoordinateSystem::JacobianModified => self.point_from_jacobian_modified(x, y, z, w),
+            CoordinateSystem::JacobianModified => {
+                self.point_from_jacobian_modified(x, y, z, Some(w))
+            }
             _ => unreachable!(),
         }
     }
@@ -736,7 +743,7 @@ impl<B: FpInteger> FpPoint<B> {
             }
             CoordinateSystem::JacobianModified => {
                 let az4 = self.calculate_jacobian_modified_w(&z, z_squared);
-                self.point_from_jacobian_modified(x, y, z, az4)
+                self.point_from_jacobian_modified(x, y, z, Some(az4))
             }
             _ => unreachable!(),
         }
@@ -747,7 +754,7 @@ impl<B: FpInteger> FpPoint<B> {
         x: FpFieldElement<B>,
         y: FpFieldElement<B>,
         z: FpFieldElement<B>,
-        az4: FpFieldElement<B>,
+        az4: Option<FpFieldElement<B>>,
     ) -> Self {
         Self::from_coords(
             Arc::clone(&self.curve),
@@ -766,6 +773,15 @@ impl<B: FpInteger> FpPoint<B> {
         }
         let z_squared = z_squared.cloned().unwrap_or_else(|| z.square());
         a * &z_squared.square()
+    }
+
+    fn jacobian_modified_w(&self) -> FpFieldElement<B> {
+        let Coords::JacobianModified { z, az4, .. } = self.coords.as_ref().expect("finite point")
+        else {
+            unreachable!()
+        };
+        az4.clone()
+            .unwrap_or_else(|| self.calculate_jacobian_modified_w(z, None))
     }
 
     fn equality_parts(&self) -> Option<EqualityParts<'_, B>> {
@@ -1022,7 +1038,7 @@ mod tests {
                     x: x * &lambda2,
                     y: y * &lambda3,
                     z: lambda,
-                    az4: point.get_z_coord(1).unwrap() * &lambda4,
+                    az4: Some(point.get_z_coord(1).unwrap() * &lambda4),
                 },
                 _ => unreachable!(),
             };
@@ -1031,5 +1047,27 @@ mod tests {
             assert_eq!(point, scaled);
             assert_eq!(point, scaled.normalize());
         }
+    }
+
+    #[test]
+    fn modified_jacobian_lazy_w_matches_the_eager_cache() {
+        let curve = curve17(CoordinateSystem::JacobianModified);
+        let point_value = point(&curve, 5, 1);
+        let other = point(&curve, 10, 6);
+        let eager = point_value.twice_jacobian_modified(true);
+        let lazy = point_value.twice_jacobian_modified(false);
+
+        assert!(matches!(
+            &eager.coords,
+            Some(Coords::JacobianModified { az4: Some(_), .. })
+        ));
+        assert!(matches!(
+            &lazy.coords,
+            Some(Coords::JacobianModified { az4: None, .. })
+        ));
+        assert_eq!(lazy, eager);
+        assert_eq!(lazy.jacobian_modified_w(), eager.jacobian_modified_w());
+        assert_eq!(lazy.twice_plus(&other), eager.twice_plus(&other));
+        assert_eq!(lazy.three_times(), eager.three_times());
     }
 }
