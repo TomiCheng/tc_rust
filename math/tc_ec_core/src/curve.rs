@@ -58,6 +58,18 @@ pub trait Curve {
     /// 將無號標量右移一位。
     fn scalar_shr1(scalar: &Self::Scalar) -> Self::Scalar;
 
+    /// 將無號標量右移 `count` 位。
+    ///
+    /// 預設實作只要求既有的一位位移契約；固定寬與動態大整數後端應覆寫成
+    /// 自己的 word-level 位移，讓 compact wNAF 能一次跳過連續零位元。
+    fn scalar_shr(scalar: &Self::Scalar, count: usize) -> Self::Scalar {
+        let mut shifted = scalar.clone();
+        for _ in 0..count {
+            shifted = Self::scalar_shr1(&shifted);
+        }
+        shifted
+    }
+
     /// 讀取標量最低 `width` 位，等價於 `scalar mod 2^width`。
     ///
     /// `width` 不得超過 32。

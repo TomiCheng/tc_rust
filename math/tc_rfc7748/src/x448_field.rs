@@ -2,6 +2,11 @@
 //!
 //! 表示法與 X25519 的 radix-2²⁵·⁵ 完全不同。所有秘密路徑使用固定次數迴圈；
 //! 乘法先做 schoolbook convolution，再利用 `2^448 = 2^224 + 1` 摺疊。
+//!
+//! 目前刻意只提供 X448 Montgomery ladder 與 DH API 需要的欄位操作。BC 另有
+//! `carry`、`cmov`、`normalize`、`reduce`、`is_one`、`sub_one` 及 Ed-facing
+//! helpers；那些是 Ed448 點運算／編解碼才會觸發的需求，不是現有 X448 功能
+//! 的缺陷。等 Ed448 核心加入時再連同對應 oracle 一起補齊。
 
 /// 欄位元素的 radix-2²⁸ limb 數。
 pub const SIZE: usize = 16;
@@ -93,7 +98,15 @@ impl Fe448 {
 
     /// 欄位平方。
     pub fn sqr(self) -> Self {
-        self.mul(self)
+        let mut product = [0_u128; SIZE * 2];
+        for i in 0..SIZE {
+            let left = self.0[i] as u128;
+            product[i * 2] += left * left;
+            for j in i + 1..SIZE {
+                product[i + j] += (left * self.0[j] as u128) << 1;
+            }
+        }
+        Self::reduce_wide(product)
     }
 
     /// 重複平方 `n` 次。

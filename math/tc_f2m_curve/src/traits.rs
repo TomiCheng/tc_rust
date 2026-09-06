@@ -119,6 +119,14 @@ impl<P: F2mPolynomial, B: F2mInteger> Curve for F2mCurve<P, B> {
         scalar.clone() >> 1
     }
 
+    fn scalar_shr(scalar: &Self::Scalar, count: usize) -> Self::Scalar {
+        if count >= scalar.bit_length() {
+            B::from_u32(0).expect("zero fits every scalar type")
+        } else {
+            scalar.clone() >> count
+        }
+    }
+
     fn scalar_low_bits(scalar: &Self::Scalar, width: usize) -> u32 {
         assert!(width <= 32, "scalar low-bit width exceeds u32");
         let mut low = 0_u32;
@@ -205,6 +213,9 @@ mod tests {
             0b1101
         );
         assert!(<F2mCurve<P, B> as Curve>::scalar_shr1(&scalar) == B::from_u32(0b10110).unwrap());
+        assert!(<F2mCurve<P, B> as Curve>::scalar_shr(&scalar, 3) == B::from_u32(0b101).unwrap());
+        assert!(<F2mCurve<P, B> as Curve>::scalar_shr(&scalar, 0) == scalar);
+        assert!(<F2mCurve<P, B> as Curve>::scalar_shr(&scalar, 256) == B::from_u32(0).unwrap());
         assert!(
             <F2mCurve<P, B> as Curve>::scalar_sub_digit(&scalar, 5) == B::from_u32(40).unwrap()
         );

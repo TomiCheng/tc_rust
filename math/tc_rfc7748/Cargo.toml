@@ -7,7 +7,9 @@ license.workspace = true
 repository.workspace = true
 
 [features]
-default = []
+# 與 tc_binpoly 採同一政策：一般建置啟用標準環境與 x86 runtime dispatch；
+# 發布者仍可用 --no-default-features 取得最小的純 scalar no_std 組合。
+default = ["std", "x86"]
 std = ["tc_runtime?/std"]
 x86 = ["dep:tc_runtime"]
 

@@ -117,6 +117,14 @@ impl<B: FpInteger> Curve for FpCurve<B> {
         scalar.clone() >> 1
     }
 
+    fn scalar_shr(scalar: &Self::Scalar, count: usize) -> Self::Scalar {
+        if count >= scalar.bit_length() {
+            B::from_u32(0).expect("zero fits every scalar type")
+        } else {
+            scalar.clone() >> count
+        }
+    }
+
     fn scalar_low_bits(scalar: &Self::Scalar, width: usize) -> u32 {
         assert!(width <= 32, "scalar low-bit width exceeds u32");
         let mut low = 0_u32;

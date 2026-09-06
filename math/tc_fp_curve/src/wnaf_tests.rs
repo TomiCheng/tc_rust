@@ -61,6 +61,15 @@ fn scalar_helpers_cover_dynamic_and_fixed_integers() {
             B::from_u32(0b10110).unwrap()
         );
         assert_eq!(
+            <FpCurve<B> as Curve>::scalar_shr(&scalar, 3),
+            B::from_u32(0b101).unwrap()
+        );
+        assert_eq!(<FpCurve<B> as Curve>::scalar_shr(&scalar, 0), scalar);
+        assert_eq!(
+            <FpCurve<B> as Curve>::scalar_shr(&scalar, 256),
+            B::from_u32(0).unwrap()
+        );
+        assert_eq!(
             <FpCurve<B> as Curve>::scalar_sub_digit(&scalar, 5),
             B::from_u32(40).unwrap()
         );

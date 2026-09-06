@@ -1,7 +1,7 @@
 //! RFC 7748 的固定基點、通用 ladder 與欄位加減基準線。
 //!
-//! 預設是 scalar；以 `--features x86` 重跑時，X25519 欄位的 `apm` 會自動
-//! 選擇 AVX2/SSE2，可直接比較 runtime 分派是否值得啟用。
+//! 預設啟用 x86 runtime 分派，X25519 欄位的 `apm` 會自動選擇 AVX2/SSE2。
+//! 以 `--no-default-features` 重跑可取得純 scalar 基準線，直接比較分派收益。
 
 use criterion::{Criterion, criterion_group, criterion_main};
 use std::hint::black_box;

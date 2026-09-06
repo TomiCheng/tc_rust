@@ -5,6 +5,9 @@
 //! 這個 crate 提供 X25519 與 X448。實作使用專用
 //! Montgomery ladder 與固定寬度欄位運算，刻意不接短 Weierstrass 曲線使用的
 //! `tc_ec_core` trait。
+//!
+//! 預設啟用 `std` 與 x86 runtime 分派；關閉 default features 時仍是純
+//! `no_std`、無外部配置需求的 scalar 實作。
 
 #[cfg(test)]
 extern crate std;
@@ -18,8 +21,3 @@ pub mod x448;
 /// X448 專用欄位核心；公開給後續 Ed448 實作共用，但不承諾穩定 API。
 #[doc(hidden)]
 pub mod x448_field;
-
-pub use x25519::{
-    POINT_SIZE, SCALAR_SIZE, calculate_agreement, clamp_private_key, generate_private_key,
-    generate_public_key, precompute, scalar_mult, scalar_mult_base,
-};

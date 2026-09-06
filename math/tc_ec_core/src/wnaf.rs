@@ -8,9 +8,19 @@ use alloc::vec::Vec;
 
 use crate::{Curve, Point};
 
+// BC `WNafUtilities.cs:11` 的預設窗寬門檻。
 const DEFAULT_WINDOW_SIZE_CUTOFFS: [usize; 6] = [13, 41, 121, 337, 897, 2305];
+// 這是 Rust dense 表示使用 `Vec<i8>` 的限制：width > 8 的有號 digit 無法
+// 放進 i8；不是 BC 演算法本身的限制（BC 的 dense 編碼型別不同）。
 const MAX_DENSE_WIDTH: usize = 8;
+// BC `WNafUtilities.cs:11` 的 `MAX_WIDTH`；compact digit 存在 i32 高 16 位。
 const MAX_COMPACT_WIDTH: usize = 16;
+
+// 刻意不在 `Curve` 加 `MAX_SCALAR_BITS`：BigUint 後端本來就無上限，填固定值
+// 會製造假的契約；改成 `Option` 也無法在 stable Rust 將泛型 associated const
+// 直接用作陣列長度。況且 `WNafTable` 自身仍以 Vec 保存預算點。若未來需要
+// 完整 no-alloc wNAF，應另設 caller-provided scratch／固定表 API，而不是讓所有
+// Curve 實作背負一個目前無法兌現的最大位元數。
 
 /// 產生只含 `-1`、`0`、`1` 的 NAF，最低位 digit 位於 index 0。
 ///
@@ -49,7 +59,7 @@ pub fn generate_window_naf<C: Curve>(width: usize, scalar: &C::Scalar) -> Vec<i8
             continue;
         }
 
-        value = scalar_shr::<C>(&value, position);
+        value = C::scalar_shr(&value, position);
         let mut digit = C::scalar_low_bits(&value, width) as i32;
         if carry {
             digit += 1;
@@ -98,7 +108,7 @@ pub fn generate_compact_window_naf<C: Curve>(width: usize, scalar: &C::Scalar) -
             continue;
         }
 
-        value = scalar_shr::<C>(&value, position);
+        value = C::scalar_shr(&value, position);
         let mut digit = C::scalar_low_bits(&value, width) as i32;
         if carry {
             digit += 1;
@@ -245,14 +255,6 @@ pub fn wnaf_mul_point<C: Curve>(point: &C::Point, scalar: &C::Scalar) -> C::Poin
     let width = get_window_size(C::scalar_bit_length(scalar));
     let table = WNafTable::new(point, width, true);
     wnaf_mul::<C>(&table, scalar)
-}
-
-fn scalar_shr<C: Curve>(scalar: &C::Scalar, count: usize) -> C::Scalar {
-    let mut shifted = scalar.clone();
-    for _ in 0..count {
-        shifted = C::scalar_shr1(&shifted);
-    }
-    shifted
 }
 
 fn unpack(compact: i32) -> (i32, usize) {
