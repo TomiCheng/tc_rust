@@ -592,14 +592,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tc_bigint_old"
-version = "0.1.0"
-dependencies = [
- "criterion",
- "rand_core",
-]
-
-[[package]]
 name = "tc_binpoly"
 version = "0.1.0"
 dependencies = [
@@ -1286,10 +1278,6 @@ dependencies = [
 [[package]]
 name = "tc_rsa"
 version = "0.1.0"
-dependencies = [
- "tc_bigint_old",
- "tc_cipher",
-]
 
 [[package]]
 name = "tc_runtime"
