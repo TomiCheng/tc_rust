@@ -1,0 +1,13 @@
+[package]
+name = "tc_rfc7748"
+description = "Allocation-free RFC 7748 X25519 primitives ported from Bouncy Castle C#."
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+rand_core = { workspace = true }
+
+[dev-dependencies]
+tc_bigint_old = { version = "0.1.0", path = "../tc_bigint_old" }

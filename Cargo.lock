@@ -1250,6 +1250,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_rfc7748"
+version = "0.1.0"
+dependencies = [
+ "rand_core",
+ "tc_bigint_old",
+]
+
+[[package]]
 name = "tc_rijndael"
 version = "0.1.0"
 dependencies = [
