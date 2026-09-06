@@ -117,12 +117,24 @@ impl<B: FpInteger> FpPoint<B> {
         self.coords.is_none()
     }
 
-    fn raw_x(&self) -> Option<&FpFieldElement<B>> {
+    /// 回傳未正規化的原始 X 座標。
+    ///
+    /// 投影座標系下這個值通常不等於 affine `x()`；需要可直接編碼或比較的
+    /// 仿射座標時，應使用 [`Self::x`] 或先呼叫 [`Self::normalize`]。
+    pub fn raw_x(&self) -> Option<&FpFieldElement<B>> {
         self.coords.as_ref().map(Coords::x)
     }
 
-    fn raw_y(&self) -> Option<&FpFieldElement<B>> {
+    /// 回傳未正規化的原始 Y 座標。
+    ///
+    /// 投影座標系下這個值通常不等於 affine `y()`；需要可直接編碼或比較的
+    /// 仿射座標時，應使用 [`Self::y`] 或先呼叫 [`Self::normalize`]。
+    pub fn raw_y(&self) -> Option<&FpFieldElement<B>> {
         self.coords.as_ref().map(Coords::y)
+    }
+
+    fn projective_z(&self) -> Option<&FpFieldElement<B>> {
+        self.coords.as_ref().and_then(Coords::z)
     }
 
     /// 回傳正規化後的 affine X 座標；無窮遠點回傳 `None`。
@@ -137,13 +149,32 @@ impl<B: FpInteger> FpPoint<B> {
         normalized.raw_y().cloned()
     }
 
-    /// 取得投影 Z 座標；modified Jacobian 的 index 1 是快取的 `aZ^4`。
-    pub fn get_z_coord(&self, index: usize) -> Option<&FpFieldElement<B>> {
+    /// 取得指定的投影 Z 分量。
+    ///
+    /// Modified Jacobian 的 index 1 是 `aZ^4`；若快取尚未建立，會在這裡
+    /// 計算後回傳，但不改變點本身。Affine 點與超出範圍的 index 回傳 `None`。
+    pub fn get_z_coord(&self, index: usize) -> Option<FpFieldElement<B>> {
         match (self.coords.as_ref()?, index) {
-            (Coords::Homogeneous { z, .. } | Coords::Jacobian { z, .. }, 0) => Some(z),
-            (Coords::JacobianModified { z, .. }, 0) => Some(z),
-            (Coords::JacobianModified { az4, .. }, 1) => az4.as_ref(),
+            (Coords::Homogeneous { z, .. } | Coords::Jacobian { z, .. }, 0) => Some(z.clone()),
+            (Coords::JacobianModified { z, .. }, 0) => Some(z.clone()),
+            (Coords::JacobianModified { .. }, 1) => Some(self.jacobian_modified_w()),
             _ => None,
+        }
+    }
+
+    /// 複製目前座標系的所有投影 Z 分量。
+    ///
+    /// Affine 回傳空集合，homogeneous／Jacobian 回傳 `[Z]`，modified
+    /// Jacobian 回傳 `[Z, aZ^4]`；缺少的 `aZ^4` 快取會依需求現算。
+    pub fn get_z_coords(&self) -> Vec<FpFieldElement<B>> {
+        match self.coords.as_ref() {
+            None | Some(Coords::Affine { .. }) => Vec::new(),
+            Some(Coords::Homogeneous { z, .. } | Coords::Jacobian { z, .. }) => {
+                alloc::vec![z.clone()]
+            }
+            Some(Coords::JacobianModified { z, .. }) => {
+                alloc::vec![z.clone(), self.jacobian_modified_w()]
+            }
         }
     }
 
@@ -448,7 +479,7 @@ impl<B: FpInteger> FpPoint<B> {
         let coordinate_system = self.curve.coordinate_system();
         let mut x = self.raw_x().expect("finite point").clone();
         let mut y = self.raw_y().expect("finite point").clone();
-        let mut z = self.get_z_coord(0).cloned().unwrap_or_else(|| x.one());
+        let mut z = self.get_z_coord(0).unwrap_or_else(|| x.one());
         let mut w = self.curve.a().clone();
 
         if !z.is_one() {
@@ -684,10 +715,10 @@ impl<B: FpInteger> FpPoint<B> {
     fn add_jacobian(&self, rhs: &Self) -> Self {
         let x1 = self.raw_x().expect("finite point");
         let y1 = self.raw_y().expect("finite point");
-        let z1 = self.get_z_coord(0).expect("Jacobian point has Z");
+        let z1 = self.projective_z().expect("Jacobian point has Z");
         let x2 = rhs.raw_x().expect("finite point");
         let y2 = rhs.raw_y().expect("finite point");
-        let z2 = rhs.get_z_coord(0).expect("Jacobian point has Z");
+        let z2 = rhs.projective_z().expect("Jacobian point has Z");
         let z1_is_one = z1.is_one();
 
         let (x3, y3, z3, z3_squared) = if !z1_is_one && z1 == z2 {
@@ -1071,15 +1102,34 @@ mod tests {
                     x: x * &lambda2,
                     y: y * &lambda3,
                     z: lambda,
-                    az4: Some(point.get_z_coord(1).unwrap() * &lambda4),
+                    az4: Some(&point.get_z_coord(1).unwrap() * &lambda4),
                 },
                 _ => unreachable!(),
             };
             let scaled = FpPoint::from_coords(Arc::clone(&curve), scaled);
             assert!(!scaled.is_normalized());
+            let affine_x = scaled.x().unwrap();
+            let affine_y = scaled.y().unwrap();
+            assert_ne!(scaled.raw_x().unwrap(), &affine_x);
+            assert_ne!(scaled.raw_y().unwrap(), &affine_y);
+            let z_coords = scaled.get_z_coords();
+            let expected_len = if coordinate_system == CoordinateSystem::JacobianModified {
+                2
+            } else {
+                1
+            };
+            assert_eq!(z_coords.len(), expected_len);
+            for (index, z) in z_coords.iter().enumerate() {
+                assert_eq!(scaled.get_z_coord(index).as_ref(), Some(z));
+            }
+            assert_eq!(scaled.get_z_coord(expected_len), None);
             assert_eq!(point, scaled);
             assert_eq!(point, scaled.normalize());
         }
+
+        let affine = point(&curve17(CoordinateSystem::Affine), 5, 1);
+        assert!(affine.get_z_coords().is_empty());
+        assert_eq!(affine.get_z_coord(0), None);
     }
 
     #[test]
@@ -1100,6 +1150,7 @@ mod tests {
         ));
         assert_eq!(lazy, eager);
         assert_eq!(lazy.jacobian_modified_w(), eager.jacobian_modified_w());
+        assert_eq!(lazy.get_z_coords(), eager.get_z_coords());
         assert_eq!(lazy.twice_plus(&other), eager.twice_plus(&other));
         assert_eq!(lazy.three_times(), eager.three_times());
     }
