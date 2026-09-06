@@ -436,20 +436,6 @@ impl<const N: usize> LimbArray<N> {
         Self::add_words(&inverted, &one).0
     }
 
-    pub(super) fn is_negative_words(words: &[Limb; N]) -> bool {
-        words
-            .last()
-            .is_some_and(|word| word.to_word() >> (Word::BITS - 1) != 0)
-    }
-
-    pub(super) fn abs_words(words: &[Limb; N]) -> [Limb; N] {
-        if Self::is_negative_words(words) {
-            Self::wrapping_neg_words(words)
-        } else {
-            *words
-        }
-    }
-
     pub(super) fn gcd_words(lhs: &[Limb; N], rhs: &[Limb; N]) -> [Limb; N] {
         let mut left = *lhs;
         let mut right = *rhs;

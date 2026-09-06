@@ -15,7 +15,7 @@
 
 字寬沿用目前 `tc_bigint` 的 cfg，因此在 i686 上一個 limb 是 32 位元。`N` 是 limb 數量，不是位元數；固定寬度為 `N * Word::BITS`。跨平台的序列化格式應由呼叫端明確定義，不能直接假設記憶體配置與字寬一致。
 
-`LimbArray<const N: usize>` 私有欄位為 `[Limb; N]`，索引零是最低有效字。使用 `new`、`zero`、`as_limbs`、`into_limbs` 建立或取出固定長度儲存。兩個不同 `N` 的值無法互相算術運算，也不會隱式補零或截斷。
+`LimbArray<const N: usize>` 是無號固定寬度儲存與算術原語，最高位元不是符號位。`abs` 與 `is_negative` 等有號解讀由上層 `FixedBigInt` 負責。私有欄位為 `[Limb; N]`，索引零是最低有效字。使用 `new`、`zero`、`as_limbs`、`into_limbs` 建立或取出固定長度儲存。兩個不同 `N` 的值無法互相算術運算，也不會隱式補零或截斷。
 
 ```rust
 use tc_limb::{Limb, LimbArray, Word};
@@ -57,9 +57,7 @@ assert!(high.is_zero());
 | `mul_add_to` | 將乘積加到可變的低半部與高半部累加器，回傳超出雙寬度的溢位旗標 |
 | `div_rem` | 無號商與餘數；除數為零時 panic |
 | `wide_rem` | `self` 為低半部、`high` 為高半部；對 `modulus` 取餘數，模數為零時 panic |
-| `wrapping_neg` | 固定寬度二補數取負 |
-| `is_negative` | 最高位元是否為一 |
-| `abs` | 將輸入解讀為二補數，回傳無號絕對值；最小負值的位元保持不變 |
+| `wrapping_neg` | 模 `2^(N * Word::BITS)` 的加法反元素，不賦予資料符號 |
 | `gcd` | 無號最大公因數，`gcd(0, 0) = 0` |
 | `bit_len` | 有效位元數，零為零 |
 | `test_bit` | 讀取指定有效索引；超出固定寬度時 panic |
@@ -69,7 +67,7 @@ assert!(high.is_zero());
 
 雙寬度結果表示 `low + high * 2^(N * Word::BITS)`。兩半各使用 `[Limb; N]`，不需要尚無法普遍使用的 `[Limb; 2 * N]` 型別運算，也不配置暫存向量。
 
-`N = 0` 是合法的零寬度數值：所有一般算術結果為零，進位／借位／乘法溢位為假；`is_zero` 為真，`is_one` 與 `is_negative` 為假。`div_rem`、`wide_rem` 必然遇到零除數而 panic；`test_bit` 沒有任何合法索引。
+`N = 0` 是合法的零寬度數值：所有一般算術結果為零，進位／借位／乘法溢位為假；`is_zero` 為真，`is_one` 為假。`div_rem`、`wide_rem` 必然遇到零除數而 panic；`test_bit` 沒有任何合法索引。
 
 ## 常數時間範圍
 
@@ -84,11 +82,11 @@ let selected = LimbArray::conditional_select(&a, &b, Choice::from_lsb(1));
 assert_eq!(selected.ct_eq(&b).unwrap_u8(), 1);
 ```
 
-一般 `==`、`cmp`、零值判斷、算術與除法不宣稱常數時間。特別是除法正規化、商估計修正、GCD 迴圈和絕對值的分支都可能依資料改變。`Choice::unwrap_u8` 會揭露比較結果；實際部署仍需依目標編譯器與硬體檢視產生的機器碼。
+一般 `==`、`cmp`、零值判斷、算術與除法不宣稱常數時間。特別是除法正規化、商估計修正與 GCD 迴圈都可能依資料改變。`Choice::unwrap_u8` 會揭露比較結果；實際部署仍需依目標編譯器與硬體檢視產生的機器碼。
 
 ## 來源與維護
 
-目前來源 `tc_bigint/src/arithmetic.rs` 實際含 25 個 `fixed_*`：19 個運算入口與 6 個內部輔助函式。運算透過上述型別方法提供（比較採 `Ord::cmp`），複製的核心作為私有關聯函式置於 `src/limb_array/arithmetic.rs`，所有陣列參數均保留相同 `N`。
+目前來源 `tc_bigint/src/arithmetic.rs` 實際含 25 個 `fixed_*`：19 個運算入口與 6 個內部輔助函式。排除留給上層的 `abs` 與 `is_negative` 後，其餘 17 個運算透過上述型別方法提供（比較採 `Ord::cmp`），複製的核心作為私有關聯函式置於 `src/limb_array/arithmetic.rs`，所有陣列參數均保留相同 `N`。
 
 未複製變長算術、配置功能、解析與 `FixedBigUint` 的 CT impl。`Limb` 的六個既有 const 原語保留語意，補上私有欄位存取與缺少的運算子；新 crate 中的 CT impl 僅屬於自己的 `Limb` 與 `LimbArray`。
 

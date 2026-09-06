@@ -6,7 +6,7 @@ mod arithmetic;
 /// 恰好 `N` 個小端序 limb，不配置記憶體，欄位私有。
 ///
 /// `N = 0` 代表零寬度的零；加減乘結果仍為零且不溢位。
-/// 符號相關方法以固定寬度二補數解讀；其餘算術以無號數解讀。
+/// 所有 limb 均為無號儲存，最高位元不是符號位；有號解讀由上層負責。
 /// 一般比較、除法、GCD 與其他算術不保證常數時間。
 ///
 /// ```
@@ -159,33 +159,13 @@ impl<const N: usize> LimbArray<N> {
         Self(Self::wide_rem_words(&self.0, &high.0, &modulus.0))
     }
 
-    /// 以固定寬度二補數取負；零寬度仍回傳零。
+    /// 回傳模 `2^(N * Word::BITS)` 的加法反元素；零寬度仍回傳零。
     /// ```
     /// use tc_limb::{Limb, LimbArray, Word};
     /// assert_eq!(LimbArray::new([Limb::new(1)]).wrapping_neg(), LimbArray::new([Limb::new(Word::MAX)]));
     /// ```
     pub fn wrapping_neg(&self) -> Self {
         Self(Self::wrapping_neg_words(&self.0))
-    }
-
-    /// 最高有效位元是否為一；零寬度回傳假。
-    /// ```
-    /// use tc_limb::{Limb, LimbArray, Word};
-    /// assert!(LimbArray::new([Limb::new(Word::MAX)]).is_negative());
-    /// ```
-    pub fn is_negative(&self) -> bool {
-        Self::is_negative_words(&self.0)
-    }
-
-    /// 以二補數解讀輸入並回傳無號絕對值。
-    ///
-    /// 最小負值的位元保持不變，作為無號數即其絕對值；此操作依符號分支。
-    /// ```
-    /// use tc_limb::{Limb, LimbArray, Word};
-    /// assert_eq!(LimbArray::new([Limb::new(Word::MAX)]).abs(), LimbArray::new([Limb::new(1)]));
-    /// ```
-    pub fn abs(&self) -> Self {
-        Self(Self::abs_words(&self.0))
     }
 
     /// 無號最大公因數，`gcd(0, 0) = 0`；控制流程依數值改變。

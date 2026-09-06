@@ -99,8 +99,6 @@ fn random_cases<const N: usize>() {
         let negated = (&radix - &oa) & &mask;
         assert_same(a.wrapping_neg(), negated.clone());
         let negative = oa.bit((width - 1) as u64);
-        assert_eq!(a.is_negative(), negative);
-        assert_same(a.abs(), if negative { negated } else { oa.clone() });
         assert_eq!(a.bit_len(), oa.bits() as usize);
         assert_eq!(a.is_zero(), oa == BigUint::from(0_u8));
         assert_eq!(a.is_one(), oa == BigUint::from(1_u8));
@@ -226,8 +224,6 @@ fn empty_width_and_full_carry_borrow_chains() {
     assert_eq!((low, high), (z, z));
     assert_eq!(z.gcd(&z), z);
     assert_eq!(z.wrapping_neg(), z);
-    assert_eq!(z.abs(), z);
-    assert!(!z.is_negative());
     assert!(z.is_zero());
     assert!(!z.is_one());
     assert_eq!(z.bit_len(), 0);
@@ -246,7 +242,6 @@ fn empty_width_and_full_carry_borrow_chains() {
     assert!(one.mul_add_to(&one, &mut low, &mut high));
     assert_eq!((low, high), (LimbArray::zero(), LimbArray::zero()));
     let min = LimbArray::new([Limb::new(0), Limb::new(1 << (Word::BITS - 1))]);
-    assert_eq!(min.abs(), min);
     assert_eq!(min.wrapping_neg(), min);
     for index in 0..4 {
         let mut limbs = max.into_limbs();
