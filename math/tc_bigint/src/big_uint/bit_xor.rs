@@ -12,9 +12,9 @@ impl BitXor<&BigUint> for &BigUint {
         BigUint::from_limbs(
             (0..width)
                 .map(|index| {
-                    Limb(
-                        self.limbs.get(index).map_or(0, |word| word.0)
-                            ^ rhs.limbs.get(index).map_or(0, |word| word.0),
+                    Limb::new(
+                        self.limbs.get(index).map_or(0, |word| word.to_word())
+                            ^ rhs.limbs.get(index).map_or(0, |word| word.to_word()),
                     )
                 })
                 .collect(),

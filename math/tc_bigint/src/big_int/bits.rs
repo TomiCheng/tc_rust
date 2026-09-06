@@ -18,12 +18,12 @@ impl BigInt {
         if self.is_negative() {
             self.limbs
                 .iter()
-                .map(|word| (!word.0).count_ones() as usize)
+                .map(|word| (!word.to_word()).count_ones() as usize)
                 .sum()
         } else {
             self.limbs
                 .iter()
-                .map(|word| word.0.count_ones() as usize)
+                .map(|word| word.to_word().count_ones() as usize)
                 .sum()
         }
     }
@@ -34,7 +34,7 @@ impl BigInt {
         let bit = index % Word::BITS as usize;
         self.limbs
             .get(word)
-            .map_or(self.is_negative(), |word| word.0 >> bit & 1 != 0)
+            .map_or(self.is_negative(), |word| word.to_word() >> bit & 1 != 0)
     }
 
     /// Returns a value with `index` set.
@@ -57,8 +57,8 @@ impl BigInt {
         self.limbs
             .iter()
             .enumerate()
-            .find(|(_, word)| word.0 != 0)
-            .map(|(index, word)| index * Word::BITS as usize + word.0.trailing_zeros() as usize)
+            .find(|(_, word)| word.to_word() != 0)
+            .map(|(index, word)| index * Word::BITS as usize + word.to_word().trailing_zeros() as usize)
     }
 
     /// Returns `self & !other`.

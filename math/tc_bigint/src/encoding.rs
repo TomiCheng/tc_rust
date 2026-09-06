@@ -74,7 +74,7 @@ fn decode_units(
 
     let total_bits = unit_len * unit_bits;
     let word_bits = Word::BITS as usize;
-    let mut words = vec![Limb(0); total_bits.div_ceil(word_bits)];
+    let mut words = vec![Limb::new(0); total_bits.div_ceil(word_bits)];
     let mut last = 0_u64;
 
     for (unit_index, unit) in units.enumerate() {
@@ -82,9 +82,9 @@ fn decode_units(
         let bit = unit_index * unit_bits;
         let word_index = bit / word_bits;
         let shift = bit % word_bits;
-        words[word_index].0 |= (unit as Word) << shift;
+        words[word_index] = Limb::new(words[word_index].to_word() | ((unit as Word) << shift));
         if shift + unit_bits > word_bits {
-            words[word_index + 1].0 |= (unit >> (word_bits - shift)) as Word;
+            words[word_index + 1] = Limb::new(words[word_index + 1].to_word() | ((unit >> (word_bits - shift)) as Word));
         }
     }
 
@@ -92,7 +92,7 @@ fn decode_units(
     let used_high_bits = total_bits % word_bits;
     if negative && used_high_bits != 0 {
         let last_word = words.last_mut().expect("non-empty input has a word");
-        last_word.0 |= Word::MAX << used_high_bits;
+        *last_word = Limb::new(last_word.to_word() | (Word::MAX << used_high_bits));
     }
 
     if signed {
@@ -447,7 +447,7 @@ fn magnitude_bit_len(words: &[Limb], signed_source: bool) -> usize {
     let mut carry = true;
     let mut highest = None;
     for (index, word) in words.iter().enumerate() {
-        let (magnitude, overflow) = (!word.0).overflowing_add(Word::from(carry));
+        let (magnitude, overflow) = (!word.to_word()).overflowing_add(Word::from(carry));
         carry = overflow;
         if magnitude != 0 {
             highest = Some((index, magnitude));
@@ -461,9 +461,9 @@ fn magnitude_bit_len(words: &[Limb], signed_source: bool) -> usize {
 fn unsigned_bit_len(words: &[Limb]) -> usize {
     words
         .iter()
-        .rposition(|word| word.0 != 0)
+        .rposition(|word| word.to_word() != 0)
         .map_or(0, |index| {
-            index * Word::BITS as usize + (Word::BITS - words[index].0.leading_zeros()) as usize
+            index * Word::BITS as usize + (Word::BITS - words[index].to_word().leading_zeros()) as usize
         })
 }
 
@@ -583,7 +583,7 @@ fn decode_fixed<const N: usize>(
     let extension_bit = u64::from(negative);
     let extension_word = if negative { Word::MAX } else { 0 };
     let capacity_bits = N * Word::BITS as usize;
-    let mut result = [Limb(extension_word); N];
+    let mut result = [Limb::new(extension_word); N];
 
     for bit in 0..unit_len * unit_bits {
         let bit_value = unit(bit / unit_bits) >> (bit % unit_bits) & 1;
@@ -594,12 +594,12 @@ fn decode_fixed<const N: usize>(
             continue;
         }
 
-        let word = &mut result[bit / Word::BITS as usize].0;
+        let word = &mut result[bit / Word::BITS as usize];
         let mask = (1 as Word) << (bit % Word::BITS as usize);
         if bit_value == 0 {
-            *word &= !mask;
+            *word = Limb::new(word.to_word() & !mask);
         } else {
-            *word |= mask;
+            *word = Limb::new(word.to_word() | mask);
         }
     }
 
@@ -759,10 +759,10 @@ fn extract_unit(words: &[Limb], index: usize, unit_bits: usize, extension: Word)
     let bit = index * unit_bits;
     let word_index = bit / word_bits;
     let shift = bit % word_bits;
-    let low = word_to_u64(words.get(word_index).map_or(extension, |word| word.0));
+    let low = word_to_u64(words.get(word_index).map_or(extension, |word| word.to_word()));
     let mut result = low >> shift;
     if shift + unit_bits > word_bits {
-        let high = word_to_u64(words.get(word_index + 1).map_or(extension, |word| word.0));
+        let high = word_to_u64(words.get(word_index + 1).map_or(extension, |word| word.to_word()));
         result |= high << (word_bits - shift);
     }
     result & unit_mask(unit_bits)
@@ -789,8 +789,8 @@ fn word_to_u64(value: Word) -> u64 {
 #[cfg(feature = "alloc")]
 pub(crate) fn normalize_signed(words: &mut Vec<Limb>) {
     while words.len() > 1 {
-        let high = words[words.len() - 1].0;
-        let next = words[words.len() - 2].0;
+        let high = words[words.len() - 1].to_word();
+        let next = words[words.len() - 2].to_word();
         let next_negative = next >> (Word::BITS - 1) != 0;
         if (high == 0 && !next_negative) || (high == Word::MAX && next_negative) {
             words.pop();
@@ -798,7 +798,7 @@ pub(crate) fn normalize_signed(words: &mut Vec<Limb>) {
             break;
         }
     }
-    if *words == [Limb(0)] {
+    if *words == [Limb::new(0)] {
         words.clear();
     }
 }
@@ -806,7 +806,7 @@ pub(crate) fn normalize_signed(words: &mut Vec<Limb>) {
 pub(crate) fn is_negative(words: &[Limb]) -> bool {
     words
         .last()
-        .is_some_and(|word| word.0 >> (Word::BITS - 1) != 0)
+        .is_some_and(|word| word.to_word() >> (Word::BITS - 1) != 0)
 }
 
 fn signed_extension<const N: usize>(words: &[Limb; N], signed: bool) -> Word {
@@ -820,7 +820,7 @@ fn signed_extension<const N: usize>(words: &[Limb; N], signed: bool) -> Word {
 fn fixed_is_negative<const N: usize>(words: &[Limb; N]) -> bool {
     words
         .last()
-        .is_some_and(|word| word.0 >> (Word::BITS - 1) != 0)
+        .is_some_and(|word| word.to_word() >> (Word::BITS - 1) != 0)
 }
 
 #[cfg(test)]
@@ -836,7 +836,7 @@ mod tests {
         assert_eq!(from_u32, from_u64);
 
         let negative = fixed_from_le_bytes::<1>(&[0xff], true).unwrap();
-        assert_eq!(negative, [Limb(Word::MAX)]);
+        assert_eq!(negative, [Limb::new(Word::MAX)]);
         assert!(fixed_is_negative(&negative));
         assert_eq!(signed_extension(&negative, true), Word::MAX);
         assert_eq!(signed_extension(&negative, false), 0);
@@ -866,17 +866,17 @@ mod tests {
         let signed_positive_overflow = [0xff_u8; (Word::BITS / 8) as usize];
         assert_eq!(
             fixed_from_le_bytes::<1>(&signed_positive_overflow, false),
-            Ok([Limb(Word::MAX)])
+            Ok([Limb::new(Word::MAX)])
         );
         assert_eq!(
             fixed_from_le_bytes::<1>(&[0x80], true),
-            Ok([Limb(Word::MAX - 0x7f)])
+            Ok([Limb::new(Word::MAX - 0x7f)])
         );
     }
 
     #[test]
     fn fixed_writers_cover_each_unit_and_buffer_error() {
-        let words = [Limb(0x1122_3344_5566_7788_u64 as Word)];
+        let words = [Limb::new(0x1122_3344_5566_7788_u64 as Word)];
         let mut bytes = [0_u8; (Word::BITS / 8) as usize];
         let mut words32 = [0_u32; (Word::BITS / 32) as usize];
         let mut words64 = [0_u64; 1];
@@ -892,7 +892,7 @@ mod tests {
         );
         assert_eq!(words32[0], 0x5566_7788);
         assert_eq!(write_fixed_le_u64(&words, false, &mut words64), Ok(1));
-        assert_eq!(words64[0] as Word, words[0].0);
+        assert_eq!(words64[0] as Word, words[0].to_word());
 
         assert_eq!(
             write_fixed_le_bytes(&words, false, &mut []),
@@ -913,7 +913,7 @@ mod tests {
         assert_eq!(unit_mask(8), 0xff);
         assert_eq!(unit_mask(64), u64::MAX);
         assert_eq!(word_to_u64(7), 7);
-        assert_eq!(extract_unit(&[Limb(0x1234)], 0, 8, 0), 0x34);
+        assert_eq!(extract_unit(&[Limb::new(0x1234)], 0, 8, 0), 0x34);
         assert_eq!(extract_unit(&[], 0, 8, Word::MAX), 0xff);
     }
 
@@ -949,15 +949,15 @@ mod tests {
     #[cfg(feature = "alloc")]
     #[test]
     fn signed_normalization_removes_only_redundant_extension_limbs() {
-        let mut positive = vec![Limb(1), Limb(0)];
+        let mut positive = vec![Limb::new(1), Limb::new(0)];
         normalize_signed(&mut positive);
-        assert_eq!(positive, [Limb(1)]);
+        assert_eq!(positive, [Limb::new(1)]);
 
-        let mut negative = vec![Limb(Word::MAX - 1), Limb(Word::MAX)];
+        let mut negative = vec![Limb::new(Word::MAX - 1), Limb::new(Word::MAX)];
         normalize_signed(&mut negative);
-        assert_eq!(negative, [Limb(Word::MAX - 1)]);
+        assert_eq!(negative, [Limb::new(Word::MAX - 1)]);
 
-        let mut zero = vec![Limb(0)];
+        let mut zero = vec![Limb::new(0)];
         normalize_signed(&mut zero);
         assert!(zero.is_empty());
     }

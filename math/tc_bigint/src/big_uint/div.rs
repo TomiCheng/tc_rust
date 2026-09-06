@@ -169,19 +169,19 @@ fn div_rem_u128(value: &BigUint, divisor: u128) -> (BigUint, BigUint) {
     assert!(divisor != 0, "attempted to divide by zero");
 
     #[cfg(target_pointer_width = "64")]
-    let divisor_limbs = [Limb(divisor as Word), Limb((divisor >> 64) as Word)];
+    let divisor_limbs = [Limb::new(divisor as Word), Limb::new((divisor >> 64) as Word)];
 
     #[cfg(not(target_pointer_width = "64"))]
     let divisor_limbs = [
-        Limb(divisor as Word),
-        Limb((divisor >> 32) as Word),
-        Limb((divisor >> 64) as Word),
-        Limb((divisor >> 96) as Word),
+        Limb::new(divisor as Word),
+        Limb::new((divisor >> 32) as Word),
+        Limb::new((divisor >> 64) as Word),
+        Limb::new((divisor >> 96) as Word),
     ];
 
     let used = divisor_limbs
         .iter()
-        .rposition(|word| word.0 != 0)
+        .rposition(|word| word.to_word() != 0)
         .map_or(0, |index| index + 1);
     let (quotient, remainder) = arithmetic::div_rem(&value.limbs, &divisor_limbs[..used]);
     (

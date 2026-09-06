@@ -52,18 +52,18 @@ impl BigInt {
         }
 
         if !negative {
-            if magnitude.last().expect("non-empty").0 >> (Word::BITS - 1) != 0 {
-                magnitude.push(Limb(0));
+            if magnitude.last().expect("non-empty").to_word() >> (Word::BITS - 1) != 0 {
+                magnitude.push(Limb::new(0));
             }
             return Self::from_limbs(magnitude);
         }
 
         for word in &mut magnitude {
-            word.0 = !word.0;
+            *word = Limb::new(!word.to_word());
         }
         arithmetic::add_small(&mut magnitude, 1);
-        if magnitude.last().expect("non-empty").0 >> (Word::BITS - 1) == 0 {
-            magnitude.push(Limb(Word::MAX));
+        if magnitude.last().expect("non-empty").to_word() >> (Word::BITS - 1) == 0 {
+            magnitude.push(Limb::new(Word::MAX));
         }
         Self::from_limbs(magnitude)
     }
@@ -75,7 +75,7 @@ impl BigInt {
             return (false, magnitude);
         }
 
-        let mut magnitude: Vec<Limb> = self.limbs.iter().map(|word| Limb(!word.0)).collect();
+        let mut magnitude: Vec<Limb> = self.limbs.iter().map(|word| Limb::new(!word.to_word())).collect();
         arithmetic::add_small(&mut magnitude, 1);
         arithmetic::normalize(&mut magnitude);
         (true, magnitude)

@@ -12,7 +12,7 @@ impl BitAnd<&BigUint> for &BigUint {
             self.limbs
                 .iter()
                 .zip(&rhs.limbs)
-                .map(|(left, right)| Limb(left.0 & right.0))
+                .map(|(left, right)| Limb::new(left.to_word() & right.to_word()))
                 .collect(),
         )
     }

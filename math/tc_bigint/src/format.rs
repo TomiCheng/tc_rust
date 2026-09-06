@@ -191,15 +191,15 @@ fn word_digit_count(mut value: Word, radix: Word) -> usize {
 fn div_rem_word<const N: usize>(mut value: [Limb; N], divisor: Word) -> ([Limb; N], Word) {
     let mut remainder = 0 as Word;
     for limb in value.iter_mut().rev() {
-        let wide = ((remainder as WideWord) << Word::BITS) | limb.0 as WideWord;
-        *limb = Limb((wide / divisor as WideWord) as Word);
+        let wide = ((remainder as WideWord) << Word::BITS) | limb.to_word() as WideWord;
+        *limb = Limb::new((wide / divisor as WideWord) as Word);
         remainder = (wide % divisor as WideWord) as Word;
     }
     (value, remainder)
 }
 
 fn is_zero(limbs: &[Limb]) -> bool {
-    limbs.iter().all(|limb| limb.0 == 0)
+    limbs.iter().all(|limb| limb.to_word() == 0)
 }
 
 #[cfg(test)]

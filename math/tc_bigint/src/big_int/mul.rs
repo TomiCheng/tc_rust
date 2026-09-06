@@ -117,19 +117,19 @@ fn mul_u128(lhs: &BigInt, rhs: u128) -> BigInt {
     let (negative, magnitude) = lhs.sign_magnitude();
 
     #[cfg(target_pointer_width = "64")]
-    let words = [Limb(rhs as Word), Limb((rhs >> 64) as Word)];
+    let words = [Limb::new(rhs as Word), Limb::new((rhs >> 64) as Word)];
 
     #[cfg(not(target_pointer_width = "64"))]
     let words = [
-        Limb(rhs as Word),
-        Limb((rhs >> 32) as Word),
-        Limb((rhs >> 64) as Word),
-        Limb((rhs >> 96) as Word),
+        Limb::new(rhs as Word),
+        Limb::new((rhs >> 32) as Word),
+        Limb::new((rhs >> 64) as Word),
+        Limb::new((rhs >> 96) as Word),
     ];
 
     let used = words
         .iter()
-        .rposition(|word| word.0 != 0)
+        .rposition(|word| word.to_word() != 0)
         .map_or(0, |index| index + 1);
     BigInt::from_sign_magnitude(negative, arithmetic::mul(&magnitude, &words[..used]))
 }

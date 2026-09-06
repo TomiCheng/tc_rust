@@ -50,7 +50,7 @@ impl<const N: usize> TryFrom<&BigUint> for FixedBigUint<N> {
         if value.limbs.len() > N {
             return Err(ConversionError::InputTooLarge);
         }
-        let mut limbs = [Limb(0); N];
+        let mut limbs = [Limb::new(0); N];
         limbs[..value.limbs.len()].copy_from_slice(&value.limbs);
         Ok(Self::from_limbs(limbs))
     }

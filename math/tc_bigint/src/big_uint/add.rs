@@ -122,20 +122,20 @@ impl SaturatingAdd for BigUint {
 
 fn add_assign_limbs(lhs: &mut Vec<Limb>, rhs: &[Limb]) {
     if lhs.len() < rhs.len() {
-        lhs.resize(rhs.len(), Limb(0));
+        lhs.resize(rhs.len(), Limb::new(0));
     }
 
-    let mut carry = Limb(0);
+    let mut carry = Limb::new(0);
     for (left, right) in lhs.iter_mut().zip(rhs.iter().copied()) {
         (*left, carry) = left.carrying_add(right, carry);
     }
     for left in lhs.iter_mut().skip(rhs.len()) {
-        if carry.0 == 0 {
+        if carry.to_word() == 0 {
             break;
         }
-        (*left, carry) = left.carrying_add(Limb(0), carry);
+        (*left, carry) = left.carrying_add(Limb::new(0), carry);
     }
-    if carry.0 != 0 {
+    if carry.to_word() != 0 {
         lhs.push(carry);
     }
 }
@@ -143,19 +143,19 @@ fn add_assign_limbs(lhs: &mut Vec<Limb>, rhs: &[Limb]) {
 #[inline]
 fn add_assign_u128(lhs: &mut Vec<Limb>, value: u128) {
     #[cfg(target_pointer_width = "64")]
-    let words = [Limb(value as Word), Limb((value >> 64) as Word)];
+    let words = [Limb::new(value as Word), Limb::new((value >> 64) as Word)];
 
     #[cfg(not(target_pointer_width = "64"))]
     let words = [
-        Limb(value as Word),
-        Limb((value >> 32) as Word),
-        Limb((value >> 64) as Word),
-        Limb((value >> 96) as Word),
+        Limb::new(value as Word),
+        Limb::new((value >> 32) as Word),
+        Limb::new((value >> 64) as Word),
+        Limb::new((value >> 96) as Word),
     ];
 
     let used = words
         .iter()
-        .rposition(|word| word.0 != 0)
+        .rposition(|word| word.to_word() != 0)
         .map_or(0, |index| index + 1);
     add_assign_limbs(lhs, &words[..used]);
 }
@@ -167,9 +167,9 @@ mod tests {
 
     #[test]
     fn in_place_core_grows_and_propagates_carry() {
-        let mut lhs = vec![Limb(Word::MAX), Limb(Word::MAX)];
-        add_assign_limbs(&mut lhs, &[Limb(1)]);
-        assert_eq!(lhs, [Limb(0), Limb(0), Limb(1)]);
+        let mut lhs = vec![Limb::new(Word::MAX), Limb::new(Word::MAX)];
+        add_assign_limbs(&mut lhs, &[Limb::new(1)]);
+        assert_eq!(lhs, [Limb::new(0), Limb::new(0), Limb::new(1)]);
     }
 
     #[test]

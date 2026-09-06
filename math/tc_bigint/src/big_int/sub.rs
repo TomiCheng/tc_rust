@@ -99,33 +99,33 @@ impl SaturatingSub for BigInt {
 
 fn sub_assign_u128(lhs: &mut Vec<Limb>, rhs: u128) {
     let lhs_extension = match lhs.last() {
-        Some(word) if word.0 >> (Word::BITS - 1) != 0 => Limb(Word::MAX),
-        _ => Limb(0),
+        Some(word) if word.to_word() >> (Word::BITS - 1) != 0 => Limb::new(Word::MAX),
+        _ => Limb::new(0),
     };
 
     #[cfg(target_pointer_width = "64")]
-    let words = [Limb(rhs as Word), Limb((rhs >> 64) as Word), Limb(0)];
+    let words = [Limb::new(rhs as Word), Limb::new((rhs >> 64) as Word), Limb::new(0)];
 
     #[cfg(not(target_pointer_width = "64"))]
     let words = [
-        Limb(rhs as Word),
-        Limb((rhs >> 32) as Word),
-        Limb((rhs >> 64) as Word),
-        Limb((rhs >> 96) as Word),
-        Limb(0),
+        Limb::new(rhs as Word),
+        Limb::new((rhs >> 32) as Word),
+        Limb::new((rhs >> 64) as Word),
+        Limb::new((rhs >> 96) as Word),
+        Limb::new(0),
     ];
 
     let mut rhs_len = words.len() - 1;
-    while rhs_len != 0 && words[rhs_len - 1].0 == 0 {
+    while rhs_len != 0 && words[rhs_len - 1].to_word() == 0 {
         rhs_len -= 1;
     }
-    if rhs_len != 0 && words[rhs_len - 1].0 >> (Word::BITS - 1) != 0 {
+    if rhs_len != 0 && words[rhs_len - 1].to_word() >> (Word::BITS - 1) != 0 {
         rhs_len += 1;
     }
 
     let width = lhs.len().max(rhs_len) + 1;
     lhs.resize(width, lhs_extension);
-    let mut borrow = Limb(0);
+    let mut borrow = Limb::new(0);
     for (index, left) in lhs.iter_mut().enumerate() {
         let right = words.get(index).copied().unwrap_or_default();
         (*left, borrow) = left.borrowing_sub(right, borrow);

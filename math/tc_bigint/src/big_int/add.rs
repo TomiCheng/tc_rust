@@ -128,7 +128,7 @@ fn add_assign_limbs(lhs: &mut Vec<Limb>, rhs: &[Limb]) {
     let width = lhs.len().max(rhs.len()) + 1;
     lhs.resize(width, lhs_extension);
 
-    let mut carry = Limb(0);
+    let mut carry = Limb::new(0);
     for (index, left) in lhs.iter_mut().enumerate() {
         let right = rhs.get(index).copied().unwrap_or(rhs_extension);
         (*left, carry) = left.carrying_add(right, carry);
@@ -137,8 +137,8 @@ fn add_assign_limbs(lhs: &mut Vec<Limb>, rhs: &[Limb]) {
 
 fn sign_extension(limbs: &[Limb]) -> Limb {
     match limbs.last() {
-        Some(limb) if limb.0 >> (Word::BITS - 1) != 0 => Limb(Word::MAX),
-        _ => Limb(0),
+        Some(limb) if limb.to_word() >> (Word::BITS - 1) != 0 => Limb::new(Word::MAX),
+        _ => Limb::new(0),
     }
 }
 
@@ -146,27 +146,27 @@ fn sign_extension(limbs: &[Limb]) -> Limb {
 fn add_assign_u128(lhs: &mut Vec<Limb>, value: u128) {
     // Five limbs cover the four-word 32-bit representation plus a positive
     // sign limb. The 64-bit representation uses at most the first three.
-    let mut words = [Limb(0); 5];
+    let mut words = [Limb::new(0); 5];
 
     #[cfg(target_pointer_width = "64")]
     {
-        words[0] = Limb(value as Word);
-        words[1] = Limb((value >> 64) as Word);
+        words[0] = Limb::new(value as Word);
+        words[1] = Limb::new((value >> 64) as Word);
     }
 
     #[cfg(not(target_pointer_width = "64"))]
     {
-        words[0] = Limb(value as Word);
-        words[1] = Limb((value >> 32) as Word);
-        words[2] = Limb((value >> 64) as Word);
-        words[3] = Limb((value >> 96) as Word);
+        words[0] = Limb::new(value as Word);
+        words[1] = Limb::new((value >> 32) as Word);
+        words[2] = Limb::new((value >> 64) as Word);
+        words[3] = Limb::new((value >> 96) as Word);
     }
 
     let mut used = words
         .iter()
-        .rposition(|word| word.0 != 0)
+        .rposition(|word| word.to_word() != 0)
         .map_or(0, |index| index + 1);
-    if used != 0 && words[used - 1].0 >> (Word::BITS - 1) != 0 {
+    if used != 0 && words[used - 1].to_word() >> (Word::BITS - 1) != 0 {
         used += 1;
     }
     add_assign_limbs(lhs, &words[..used]);
@@ -179,15 +179,15 @@ mod tests {
 
     #[test]
     fn in_place_core_sign_extends_both_operands() {
-        let mut positive = vec![Limb(Word::MAX >> 1)];
-        add_assign_limbs(&mut positive, &[Limb(1)]);
+        let mut positive = vec![Limb::new(Word::MAX >> 1)];
+        add_assign_limbs(&mut positive, &[Limb::new(1)]);
         assert_eq!(
             BigInt::from_limbs(positive),
             BigInt::from(1_u8) << (Word::BITS - 1) as usize
         );
 
-        let mut negative = vec![Limb(Word::MAX)];
-        add_assign_limbs(&mut negative, &[Limb(1)]);
+        let mut negative = vec![Limb::new(Word::MAX)];
+        add_assign_limbs(&mut negative, &[Limb::new(1)]);
         assert!(BigInt::from_limbs(negative).is_zero());
     }
 

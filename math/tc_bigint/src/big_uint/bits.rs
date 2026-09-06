@@ -13,14 +13,14 @@ impl BigUint {
     pub fn test_bit(&self, index: usize) -> bool {
         self.limbs
             .get(index / Word::BITS as usize)
-            .is_some_and(|word| word.0 >> (index % Word::BITS as usize) & 1 != 0)
+            .is_some_and(|word| word.to_word() >> (index % Word::BITS as usize) & 1 != 0)
     }
 
     /// Counts all set bits.
     pub fn bit_count(&self) -> usize {
         self.limbs
             .iter()
-            .map(|word| word.0.count_ones() as usize)
+            .map(|word| word.to_word().count_ones() as usize)
             .sum()
     }
 
@@ -30,9 +30,9 @@ impl BigUint {
         let word_index = index / Word::BITS as usize;
         let needed = word_index + 1;
         if limbs.len() < needed {
-            limbs.resize(needed, Limb(0));
+            limbs.resize(needed, Limb::new(0));
         }
-        limbs[word_index].0 |= (1 as Word) << (index % Word::BITS as usize);
+        limbs[word_index] = Limb::new(limbs[word_index].to_word() | ((1 as Word) << (index % Word::BITS as usize)));
         Self::from_limbs(limbs)
     }
 
@@ -40,7 +40,7 @@ impl BigUint {
     pub fn clear_bit(&self, index: usize) -> Self {
         let mut limbs = self.limbs.clone();
         if let Some(word) = limbs.get_mut(index / Word::BITS as usize) {
-            word.0 &= !((1 as Word) << (index % Word::BITS as usize));
+            *word = Limb::new(word.to_word() & (!((1 as Word) << (index % Word::BITS as usize))));
         }
         Self::from_limbs(limbs)
     }
@@ -51,9 +51,9 @@ impl BigUint {
         let word_index = index / Word::BITS as usize;
         let needed = word_index + 1;
         if limbs.len() < needed {
-            limbs.resize(needed, Limb(0));
+            limbs.resize(needed, Limb::new(0));
         }
-        limbs[word_index].0 ^= (1 as Word) << (index % Word::BITS as usize);
+        limbs[word_index] = Limb::new(limbs[word_index].to_word() ^ ((1 as Word) << (index % Word::BITS as usize)));
         Self::from_limbs(limbs)
     }
 
@@ -62,8 +62,8 @@ impl BigUint {
         self.limbs
             .iter()
             .enumerate()
-            .find(|(_, word)| word.0 != 0)
-            .map(|(index, word)| index * Word::BITS as usize + word.0.trailing_zeros() as usize)
+            .find(|(_, word)| word.to_word() != 0)
+            .map(|(index, word)| index * Word::BITS as usize + word.to_word().trailing_zeros() as usize)
     }
 
     /// Returns `self & !other` within this value's finite magnitude.
@@ -73,7 +73,7 @@ impl BigUint {
                 .iter()
                 .enumerate()
                 .map(|(index, word)| {
-                    Limb(word.0 & !other.limbs.get(index).map_or(0, |other| other.0))
+                    Limb::new(word.to_word() & !other.limbs.get(index).map_or(0, |other| other.to_word()))
                 })
                 .collect(),
         )

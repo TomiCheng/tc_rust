@@ -12,9 +12,9 @@ impl BigInt {
         Self::from_limbs(
             (0..width)
                 .map(|index| {
-                    Limb(operation(
-                        lhs.limbs.get(index).map_or(lhs_extension, |word| word.0),
-                        rhs.limbs.get(index).map_or(rhs_extension, |word| word.0),
+                    Limb::new(operation(
+                        lhs.limbs.get(index).map_or(lhs_extension, |word| word.to_word()),
+                        rhs.limbs.get(index).map_or(rhs_extension, |word| word.to_word()),
                     ))
                 })
                 .collect(),

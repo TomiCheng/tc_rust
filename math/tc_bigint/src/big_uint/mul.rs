@@ -118,30 +118,30 @@ fn mul_assign_u128(lhs: &mut alloc::vec::Vec<Limb>, rhs: u128) {
     if rhs <= Word::MAX as u128 {
         let mut carry = 0 as Word;
         for limb in lhs.iter_mut() {
-            let product = limb.0 as WideWord * rhs as WideWord + carry as WideWord;
-            *limb = Limb(product as Word);
+            let product = limb.to_word() as WideWord * rhs as WideWord + carry as WideWord;
+            *limb = Limb::new(product as Word);
             carry = (product >> Word::BITS) as Word;
         }
         if carry != 0 {
-            lhs.push(Limb(carry));
+            lhs.push(Limb::new(carry));
         }
         return;
     }
 
     #[cfg(target_pointer_width = "64")]
-    let words = [Limb(rhs as Word), Limb((rhs >> 64) as Word)];
+    let words = [Limb::new(rhs as Word), Limb::new((rhs >> 64) as Word)];
 
     #[cfg(not(target_pointer_width = "64"))]
     let words = [
-        Limb(rhs as Word),
-        Limb((rhs >> 32) as Word),
-        Limb((rhs >> 64) as Word),
-        Limb((rhs >> 96) as Word),
+        Limb::new(rhs as Word),
+        Limb::new((rhs >> 32) as Word),
+        Limb::new((rhs >> 64) as Word),
+        Limb::new((rhs >> 96) as Word),
     ];
 
     let used = words
         .iter()
-        .rposition(|word| word.0 != 0)
+        .rposition(|word| word.to_word() != 0)
         .map_or(0, |index| index + 1);
     *lhs = arithmetic::mul(lhs, &words[..used]);
 }

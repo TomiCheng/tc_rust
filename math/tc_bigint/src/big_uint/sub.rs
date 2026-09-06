@@ -127,12 +127,12 @@ fn sub_assign_limbs(lhs: &mut Vec<Limb>, rhs: &[Limb]) -> bool {
         return false;
     }
 
-    let mut borrow = Limb(0);
+    let mut borrow = Limb::new(0);
     for index in 0..lhs.len() {
         let right = rhs.get(index).copied().unwrap_or_default();
         (lhs[index], borrow) = lhs[index].borrowing_sub(right, borrow);
     }
-    debug_assert_eq!(borrow, Limb(0));
+    debug_assert_eq!(borrow, Limb::new(0));
     arithmetic::normalize(lhs);
     true
 }
@@ -143,32 +143,32 @@ fn sub_into_rhs(lhs: &[Limb], rhs: &mut Vec<Limb>) -> bool {
     }
 
     let rhs_len = rhs.len();
-    rhs.resize(lhs.len(), Limb(0));
-    let mut borrow = Limb(0);
+    rhs.resize(lhs.len(), Limb::new(0));
+    let mut borrow = Limb::new(0);
     for index in 0..lhs.len() {
-        let right = if index < rhs_len { rhs[index] } else { Limb(0) };
+        let right = if index < rhs_len { rhs[index] } else { Limb::new(0) };
         (rhs[index], borrow) = lhs[index].borrowing_sub(right, borrow);
     }
-    debug_assert_eq!(borrow, Limb(0));
+    debug_assert_eq!(borrow, Limb::new(0));
     arithmetic::normalize(rhs);
     true
 }
 
 fn sub_assign_u128(lhs: &mut Vec<Limb>, rhs: u128) -> bool {
     #[cfg(target_pointer_width = "64")]
-    let words = [Limb(rhs as Word), Limb((rhs >> 64) as Word)];
+    let words = [Limb::new(rhs as Word), Limb::new((rhs >> 64) as Word)];
 
     #[cfg(not(target_pointer_width = "64"))]
     let words = [
-        Limb(rhs as Word),
-        Limb((rhs >> 32) as Word),
-        Limb((rhs >> 64) as Word),
-        Limb((rhs >> 96) as Word),
+        Limb::new(rhs as Word),
+        Limb::new((rhs >> 32) as Word),
+        Limb::new((rhs >> 64) as Word),
+        Limb::new((rhs >> 96) as Word),
     ];
 
     let used = words
         .iter()
-        .rposition(|word| word.0 != 0)
+        .rposition(|word| word.to_word() != 0)
         .map_or(0, |index| index + 1);
     sub_assign_limbs(lhs, &words[..used])
 }
