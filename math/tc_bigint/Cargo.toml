@@ -12,7 +12,7 @@ alloc = []
 rand_core = ["dep:rand_core"]
 
 [dependencies]
-tc_constant_time = { path = "../../core/tc_constant_time", version = "0.1.0" }
+tc_constant_time = { path = "../tc_constant_time", version = "0.1.0" }
 rand_core = { workspace = true, optional = true }
 
 [dev-dependencies]

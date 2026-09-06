@@ -7,7 +7,7 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
-tc_constant_time = { version = "0.1.0", path = "../../core/tc_constant_time" }
+tc_constant_time = { version = "0.1.0", path = "../tc_constant_time" }
 
 [dev-dependencies]
 num-bigint = "0.5.1"
