@@ -10,42 +10,42 @@ impl<const N: usize> FixedBigInt<N> {
     /// Decodes signed little-endian two's-complement bytes.
     pub fn from_le_bytes(input: &[u8]) -> Result<Self, ConversionError> {
         Ok(Self {
-            limbs: encoding::fixed_from_le_bytes(input, true)?,
+            limbs: crate::LimbArray::new(encoding::fixed_from_le_bytes(input, true)?),
         })
     }
 
     /// Decodes signed little-endian two's-complement 32-bit words.
     pub fn from_le_u32(input: &[u32]) -> Result<Self, ConversionError> {
         Ok(Self {
-            limbs: encoding::fixed_from_le_u32(input, true)?,
+            limbs: crate::LimbArray::new(encoding::fixed_from_le_u32(input, true)?),
         })
     }
 
     /// Decodes signed little-endian two's-complement 64-bit words.
     pub fn from_le_u64(input: &[u64]) -> Result<Self, ConversionError> {
         Ok(Self {
-            limbs: encoding::fixed_from_le_u64(input, true)?,
+            limbs: crate::LimbArray::new(encoding::fixed_from_le_u64(input, true)?),
         })
     }
 
     /// Decodes signed big-endian two's-complement bytes.
     pub fn from_be_bytes(input: &[u8]) -> Result<Self, ConversionError> {
         Ok(Self {
-            limbs: encoding::fixed_from_be_bytes(input, true)?,
+            limbs: crate::LimbArray::new(encoding::fixed_from_be_bytes(input, true)?),
         })
     }
 
     /// Decodes signed big-endian two's-complement 32-bit words.
     pub fn from_be_u32(input: &[u32]) -> Result<Self, ConversionError> {
         Ok(Self {
-            limbs: encoding::fixed_from_be_u32(input, true)?,
+            limbs: crate::LimbArray::new(encoding::fixed_from_be_u32(input, true)?),
         })
     }
 
     /// Decodes signed big-endian two's-complement 64-bit words.
     pub fn from_be_u64(input: &[u64]) -> Result<Self, ConversionError> {
         Ok(Self {
-            limbs: encoding::fixed_from_be_u64(input, true)?,
+            limbs: crate::LimbArray::new(encoding::fixed_from_be_u64(input, true)?),
         })
     }
 
@@ -87,62 +87,62 @@ impl<const N: usize> FixedBigInt<N> {
 
     /// Writes the full fixed width as signed little-endian bytes.
     pub fn write_le_bytes(&self, output: &mut [u8]) -> Result<usize, ConversionError> {
-        encoding::write_fixed_le_bytes(&self.limbs, true, output)
+        encoding::write_fixed_le_bytes(self.limbs.as_limbs(), true, output)
     }
 
     /// Writes the full fixed width as signed little-endian 32-bit words.
     pub fn write_le_u32(&self, output: &mut [u32]) -> Result<usize, ConversionError> {
-        encoding::write_fixed_le_u32(&self.limbs, true, output)
+        encoding::write_fixed_le_u32(self.limbs.as_limbs(), true, output)
     }
 
     /// Writes the full fixed width as signed little-endian 64-bit words.
     pub fn write_le_u64(&self, output: &mut [u64]) -> Result<usize, ConversionError> {
-        encoding::write_fixed_le_u64(&self.limbs, true, output)
+        encoding::write_fixed_le_u64(self.limbs.as_limbs(), true, output)
     }
 
     /// Writes the full fixed width as signed big-endian bytes.
     pub fn write_be_bytes(&self, output: &mut [u8]) -> Result<usize, ConversionError> {
-        encoding::write_fixed_be_bytes(&self.limbs, true, output)
+        encoding::write_fixed_be_bytes(self.limbs.as_limbs(), true, output)
     }
 
     /// Writes the full fixed width as signed big-endian 32-bit words.
     pub fn write_be_u32(&self, output: &mut [u32]) -> Result<usize, ConversionError> {
-        encoding::write_fixed_be_u32(&self.limbs, true, output)
+        encoding::write_fixed_be_u32(self.limbs.as_limbs(), true, output)
     }
 
     /// Writes the full fixed width as signed big-endian 64-bit words.
     pub fn write_be_u64(&self, output: &mut [u64]) -> Result<usize, ConversionError> {
-        encoding::write_fixed_be_u64(&self.limbs, true, output)
+        encoding::write_fixed_be_u64(self.limbs.as_limbs(), true, output)
     }
 
     /// Writes the shortest little-endian absolute magnitude as bytes.
     pub fn write_unsigned_le_bytes(&self, output: &mut [u8]) -> Result<usize, ConversionError> {
-        encoding::write_fixed_magnitude_le_bytes(&self.limbs, true, output)
+        encoding::write_fixed_magnitude_le_bytes(self.limbs.as_limbs(), true, output)
     }
 
     /// Writes the shortest little-endian absolute magnitude as 32-bit words.
     pub fn write_unsigned_le_u32(&self, output: &mut [u32]) -> Result<usize, ConversionError> {
-        encoding::write_fixed_magnitude_le_u32(&self.limbs, true, output)
+        encoding::write_fixed_magnitude_le_u32(self.limbs.as_limbs(), true, output)
     }
 
     /// Writes the shortest little-endian absolute magnitude as 64-bit words.
     pub fn write_unsigned_le_u64(&self, output: &mut [u64]) -> Result<usize, ConversionError> {
-        encoding::write_fixed_magnitude_le_u64(&self.limbs, true, output)
+        encoding::write_fixed_magnitude_le_u64(self.limbs.as_limbs(), true, output)
     }
 
     /// Writes the shortest big-endian absolute magnitude as bytes.
     pub fn write_unsigned_be_bytes(&self, output: &mut [u8]) -> Result<usize, ConversionError> {
-        encoding::write_fixed_magnitude_be_bytes(&self.limbs, true, output)
+        encoding::write_fixed_magnitude_be_bytes(self.limbs.as_limbs(), true, output)
     }
 
     /// Writes the shortest big-endian absolute magnitude as 32-bit words.
     pub fn write_unsigned_be_u32(&self, output: &mut [u32]) -> Result<usize, ConversionError> {
-        encoding::write_fixed_magnitude_be_u32(&self.limbs, true, output)
+        encoding::write_fixed_magnitude_be_u32(self.limbs.as_limbs(), true, output)
     }
 
     /// Writes the shortest big-endian absolute magnitude as 64-bit words.
     pub fn write_unsigned_be_u64(&self, output: &mut [u64]) -> Result<usize, ConversionError> {
-        encoding::write_fixed_magnitude_be_u64(&self.limbs, true, output)
+        encoding::write_fixed_magnitude_be_u64(self.limbs.as_limbs(), true, output)
     }
 
     /// Returns the full fixed byte width.
@@ -152,7 +152,7 @@ impl<const N: usize> FixedBigInt<N> {
 
     /// Returns the shortest byte length of the absolute value.
     pub fn byte_length_unsigned(&self) -> usize {
-        encoding::magnitude_len(&self.limbs, 8, true)
+        encoding::magnitude_len(self.limbs.as_limbs(), 8, true)
     }
 
     /// Returns the full fixed width in 32-bit words.
@@ -162,7 +162,7 @@ impl<const N: usize> FixedBigInt<N> {
 
     /// Returns the shortest 32-bit-word length of the absolute value.
     pub fn u32_length_unsigned(&self) -> usize {
-        encoding::magnitude_len(&self.limbs, 32, true)
+        encoding::magnitude_len(self.limbs.as_limbs(), 32, true)
     }
 
     /// Returns the full fixed width in 64-bit words.
@@ -172,7 +172,7 @@ impl<const N: usize> FixedBigInt<N> {
 
     /// Returns the shortest 64-bit-word length of the absolute value.
     pub fn u64_length_unsigned(&self) -> usize {
-        encoding::magnitude_len(&self.limbs, 64, true)
+        encoding::magnitude_len(self.limbs.as_limbs(), 64, true)
     }
 }
 

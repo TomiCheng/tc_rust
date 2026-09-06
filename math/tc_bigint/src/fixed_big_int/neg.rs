@@ -13,7 +13,7 @@ impl<const N: usize> Neg for FixedBigInt<N> {
             "attempted to negate with overflow"
         );
         Self {
-            limbs: arithmetic::fixed_wrapping_neg(&self.limbs),
+            limbs: crate::LimbArray::new(arithmetic::fixed_wrapping_neg(self.limbs.as_limbs())),
         }
     }
 }
@@ -28,7 +28,7 @@ impl<const N: usize> Neg for &FixedBigInt<N> {
 impl<const N: usize> CheckedNeg for FixedBigInt<N> {
     fn checked_neg(&self) -> Option<Self> {
         (*self != Self::min_value()).then(|| Self {
-            limbs: arithmetic::fixed_wrapping_neg(&self.limbs),
+            limbs: crate::LimbArray::new(arithmetic::fixed_wrapping_neg(self.limbs.as_limbs())),
         })
     }
 }
@@ -36,7 +36,7 @@ impl<const N: usize> CheckedNeg for FixedBigInt<N> {
 impl<const N: usize> WrappingNeg for FixedBigInt<N> {
     fn wrapping_neg(&self) -> Self {
         Self {
-            limbs: arithmetic::fixed_wrapping_neg(&self.limbs),
+            limbs: crate::LimbArray::new(arithmetic::fixed_wrapping_neg(self.limbs.as_limbs())),
         }
     }
 }

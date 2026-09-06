@@ -8,7 +8,7 @@ impl<const N: usize> FixedBigInt<N> {
     pub fn mod_inverse(&self, modulus: &Self) -> Option<Self> {
         assert!(modulus.is_positive(), "modulus must be positive");
         let value = self.rem_euclid(modulus);
-        modular::fixed_mod_inverse(&value.limbs, &modulus.limbs)
+        modular::fixed_mod_inverse(value.limbs.as_limbs(), modulus.limbs.as_limbs())
             .and_then(|limbs| Self::from_sign_magnitude(false, limbs))
     }
 }

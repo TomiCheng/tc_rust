@@ -58,7 +58,11 @@ impl<const SOURCE: usize, const DESTINATION: usize> TryFrom<&FixedBigInt<SOURCE>
 
     fn try_from(value: &FixedBigInt<SOURCE>) -> Result<Self, Self::Error> {
         let negative = value.is_negative();
-        let extension = if negative { Limb::new(Word::MAX) } else { Limb::new(0) };
+        let extension = if negative {
+            Limb::new(Word::MAX)
+        } else {
+            Limb::new(0)
+        };
         if value.as_limbs()[DESTINATION.min(SOURCE)..]
             .iter()
             .any(|limb| *limb != extension)
@@ -141,7 +145,7 @@ impl<const N: usize> ToPrimitive for FixedBigInt<N> {
         if self.is_negative() {
             None
         } else {
-            FixedBigUint::from_limbs(self.limbs).to_u128()
+            FixedBigUint::from_limbs(self.limbs.into_limbs()).to_u128()
         }
     }
 }

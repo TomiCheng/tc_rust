@@ -7,6 +7,7 @@ impl<const N: usize> FixedBigInt<N> {
     /// Returns the significant bit length excluding sign extension.
     pub fn bit_length(&self) -> usize {
         self.limbs
+            .into_limbs()
             .iter()
             .rposition(|word| {
                 if self.is_negative() {
@@ -17,9 +18,9 @@ impl<const N: usize> FixedBigInt<N> {
             })
             .map_or(0, |index| {
                 let word = if self.is_negative() {
-                    !self.limbs[index].to_word()
+                    !self.limbs.as_limbs()[index].to_word()
                 } else {
-                    self.limbs[index].to_word()
+                    self.limbs.as_limbs()[index].to_word()
                 };
                 index * Word::BITS as usize + (Word::BITS - word.leading_zeros()) as usize
             })
@@ -29,11 +30,13 @@ impl<const N: usize> FixedBigInt<N> {
     pub fn bit_count(&self) -> usize {
         if self.is_negative() {
             self.limbs
+                .into_limbs()
                 .iter()
                 .map(|word| (!word.to_word()).count_ones() as usize)
                 .sum()
         } else {
             self.limbs
+                .into_limbs()
                 .iter()
                 .map(|word| word.to_word().count_ones() as usize)
                 .sum()
@@ -43,6 +46,7 @@ impl<const N: usize> FixedBigInt<N> {
     /// Counts zero bits from the most-significant end of the representation.
     pub fn leading_zeros(&self) -> usize {
         self.limbs
+            .into_limbs()
             .iter()
             .rev()
             .try_fold(0_usize, |count, limb| {
@@ -58,6 +62,7 @@ impl<const N: usize> FixedBigInt<N> {
     /// Tests bit `index`, including mathematical sign extension above the width.
     pub fn test_bit(&self, index: usize) -> bool {
         self.limbs
+            .into_limbs()
             .get(index / Word::BITS as usize)
             .map_or(self.is_negative(), |word| {
                 word.to_word() >> (index % Word::BITS as usize) & 1 != 0
@@ -71,7 +76,10 @@ impl<const N: usize> FixedBigInt<N> {
             "bit index is outside fixed width"
         );
         let mut result = *self;
-        result.limbs[index / Word::BITS as usize] = Limb::new(result.limbs[index / Word::BITS as usize].to_word() | ((1 as Word) << (index % Word::BITS as usize)));
+        result.limbs.as_mut_limbs()[index / Word::BITS as usize] = Limb::new(
+            result.limbs.as_limbs()[index / Word::BITS as usize].to_word()
+                | ((1 as Word) << (index % Word::BITS as usize)),
+        );
         result
     }
 
@@ -82,7 +90,10 @@ impl<const N: usize> FixedBigInt<N> {
             "bit index is outside fixed width"
         );
         let mut result = *self;
-        result.limbs[index / Word::BITS as usize] = Limb::new(result.limbs[index / Word::BITS as usize].to_word() & (!((1 as Word) << (index % Word::BITS as usize))));
+        result.limbs.as_mut_limbs()[index / Word::BITS as usize] = Limb::new(
+            result.limbs.as_limbs()[index / Word::BITS as usize].to_word()
+                & (!((1 as Word) << (index % Word::BITS as usize))),
+        );
         result
     }
 
@@ -93,23 +104,34 @@ impl<const N: usize> FixedBigInt<N> {
             "bit index is outside fixed width"
         );
         let mut result = *self;
-        result.limbs[index / Word::BITS as usize] = Limb::new(result.limbs[index / Word::BITS as usize].to_word() ^ ((1 as Word) << (index % Word::BITS as usize)));
+        result.limbs.as_mut_limbs()[index / Word::BITS as usize] = Limb::new(
+            result.limbs.as_limbs()[index / Word::BITS as usize].to_word()
+                ^ ((1 as Word) << (index % Word::BITS as usize)),
+        );
         result
     }
 
     /// Returns the index of the least-significant set bit.
     pub fn lowest_set_bit(&self) -> Option<usize> {
         self.limbs
+            .into_limbs()
             .iter()
             .enumerate()
             .find(|(_, word)| word.to_word() != 0)
-            .map(|(index, word)| index * Word::BITS as usize + word.to_word().trailing_zeros() as usize)
+            .map(|(index, word)| {
+                index * Word::BITS as usize + word.to_word().trailing_zeros() as usize
+            })
     }
 
     /// Returns `self & !other`.
     pub fn and_not(&self, other: &Self) -> Self {
         Self {
-            limbs: core::array::from_fn(|index| Limb::new(self.limbs[index].to_word() & !other.limbs[index].to_word())),
+            limbs: crate::LimbArray::new(core::array::from_fn(|index| {
+                Limb::new(
+                    self.limbs.as_limbs()[index].to_word()
+                        & !other.limbs.as_limbs()[index].to_word(),
+                )
+            })),
         }
     }
 }

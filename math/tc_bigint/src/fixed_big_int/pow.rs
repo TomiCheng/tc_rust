@@ -10,7 +10,11 @@ impl<const N: usize> FixedBigInt<N> {
     pub fn mod_pow(&self, exponent: &Self, modulus: &Self) -> Self {
         assert!(modulus.is_positive(), "modulus must be positive");
         let base = self.rem_euclid(modulus);
-        let result = modular::fixed_mod_pow(&base.limbs, &exponent.magnitude(), &modulus.limbs);
+        let result = modular::fixed_mod_pow(
+            base.limbs.as_limbs(),
+            &exponent.magnitude(),
+            modulus.limbs.as_limbs(),
+        );
         let result = Self::from_sign_magnitude(false, result)
             .expect("a modular result is smaller than the positive modulus");
         if exponent.is_negative() {

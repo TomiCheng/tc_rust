@@ -87,19 +87,26 @@ impl_add_unsigned_primitive!(u8, u16, u32, u64, u128);
 
 impl<const N: usize> CheckedAdd for FixedBigInt<N> {
     fn checked_add(&self, rhs: &Self) -> Option<Self> {
-        let (limbs, _) = arithmetic::fixed_add(&self.limbs, &rhs.limbs);
+        let (limbs, _) = arithmetic::fixed_add(self.limbs.as_limbs(), rhs.limbs.as_limbs());
         let overflow = self.is_negative() == rhs.is_negative()
             && arithmetic::fixed_is_negative(&limbs) != self.is_negative();
-        (!overflow).then_some(Self { limbs })
+        (!overflow).then_some(Self {
+            limbs: crate::LimbArray::new(limbs),
+        })
     }
 }
 
 impl<const N: usize> OverflowingAdd for FixedBigInt<N> {
     fn overflowing_add(&self, rhs: &Self) -> (Self, bool) {
-        let (limbs, _) = arithmetic::fixed_add(&self.limbs, &rhs.limbs);
+        let (limbs, _) = arithmetic::fixed_add(self.limbs.as_limbs(), rhs.limbs.as_limbs());
         let overflow = self.is_negative() == rhs.is_negative()
             && arithmetic::fixed_is_negative(&limbs) != self.is_negative();
-        (Self { limbs }, overflow)
+        (
+            Self {
+                limbs: crate::LimbArray::new(limbs),
+            },
+            overflow,
+        )
     }
 }
 
@@ -145,7 +152,7 @@ fn checked_add_u128<const N: usize>(lhs: &FixedBigInt<N>, mut rhs: u128) -> Opti
         }
     }
 
-    let mut limbs = lhs.limbs;
+    let mut limbs = lhs.limbs.into_limbs();
     let mut carry = Limb::new(0);
     for limb in &mut limbs {
         let rhs_limb = Limb::new(rhs as Word);
@@ -156,7 +163,9 @@ fn checked_add_u128<const N: usize>(lhs: &FixedBigInt<N>, mut rhs: u128) -> Opti
     if width > 128 && !lhs.is_negative() && arithmetic::fixed_is_negative(&limbs) {
         return None;
     }
-    Some(FixedBigInt { limbs })
+    Some(FixedBigInt {
+        limbs: crate::LimbArray::new(limbs),
+    })
 }
 
 #[cfg(test)]

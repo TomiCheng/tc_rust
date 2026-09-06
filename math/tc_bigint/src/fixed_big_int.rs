@@ -32,7 +32,7 @@ mod sub;
 /// A signed two's-complement integer containing exactly `N` little-endian limbs.
 #[derive(Clone, Copy, Eq, Hash, PartialEq)]
 pub struct FixedBigInt<const N: usize> {
-    limbs: [Limb; N],
+    limbs: crate::LimbArray<N>,
 }
 
 impl<const N: usize> FixedBigInt<N> {
@@ -42,7 +42,9 @@ impl<const N: usize> FixedBigInt<N> {
         if N != 0 {
             limbs[N - 1] = Limb::new(1 << (Word::BITS - 1));
         }
-        Self { limbs }
+        Self {
+            limbs: crate::LimbArray::new(limbs),
+        }
     };
 
     /// Highest representable value.
@@ -51,11 +53,15 @@ impl<const N: usize> FixedBigInt<N> {
         if N != 0 {
             limbs[N - 1] = Limb::new(Word::MAX >> 1);
         }
-        Self { limbs }
+        Self {
+            limbs: crate::LimbArray::new(limbs),
+        }
     };
 
     pub(crate) const fn from_limbs(limbs: [Limb; N]) -> Self {
-        Self { limbs }
+        Self {
+            limbs: crate::LimbArray::new(limbs),
+        }
     }
 
     /// Returns zero.
@@ -75,32 +81,34 @@ impl<const N: usize> FixedBigInt<N> {
 
     /// Borrows all little-endian two's-complement limbs.
     pub const fn as_limbs(&self) -> &[Limb; N] {
-        &self.limbs
+        self.limbs.as_limbs()
     }
 
     /// Returns whether the value is zero.
     pub fn is_zero(&self) -> bool {
-        self.limbs.iter().all(|word| word.to_word() == 0)
+        self.limbs.as_limbs().iter().all(|word| word.to_word() == 0)
     }
 
     fn magnitude(&self) -> [Limb; N] {
-        arithmetic::fixed_abs(&self.limbs)
+        arithmetic::fixed_abs(self.limbs.as_limbs())
     }
 
     fn from_sign_magnitude(negative: bool, magnitude: [Limb; N]) -> Option<Self> {
-        let min_magnitude = Self::min_value().limbs;
+        let min_magnitude = Self::min_value().limbs.into_limbs();
         if negative {
             if arithmetic::fixed_cmp(&magnitude, &min_magnitude) == Ordering::Greater {
                 return None;
             }
             Some(Self {
-                limbs: arithmetic::fixed_wrapping_neg(&magnitude),
+                limbs: crate::LimbArray::new(arithmetic::fixed_wrapping_neg(&magnitude)),
             })
         } else {
             if arithmetic::fixed_is_negative(&magnitude) {
                 return None;
             }
-            Some(Self { limbs: magnitude })
+            Some(Self {
+                limbs: crate::LimbArray::new(magnitude),
+            })
         }
     }
 

@@ -12,9 +12,9 @@ impl<const N: usize> Shl<usize> for FixedBigInt<N> {
             shift < N * Word::BITS as usize,
             "attempted to shift left with overflow"
         );
-        let unsigned = FixedBigUint::from_limbs(self.limbs) << shift;
+        let unsigned = FixedBigUint::from_limbs(self.limbs.into_limbs()) << shift;
         Self {
-            limbs: unsigned.into_limbs(),
+            limbs: crate::LimbArray::new(unsigned.into_limbs()),
         }
     }
 }

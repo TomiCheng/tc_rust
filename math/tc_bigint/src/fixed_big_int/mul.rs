@@ -114,8 +114,13 @@ impl<const N: usize> CheckedMul for FixedBigInt<N> {
 
 impl<const N: usize> OverflowingMul for FixedBigInt<N> {
     fn overflowing_mul(&self, rhs: &Self) -> (Self, bool) {
-        let limbs = arithmetic::fixed_mul(&self.limbs, &rhs.limbs).0;
-        (Self { limbs }, self.checked_mul(rhs).is_none())
+        let limbs = arithmetic::fixed_mul(self.limbs.as_limbs(), rhs.limbs.as_limbs()).0;
+        (
+            Self {
+                limbs: crate::LimbArray::new(limbs),
+            },
+            self.checked_mul(rhs).is_none(),
+        )
     }
 }
 

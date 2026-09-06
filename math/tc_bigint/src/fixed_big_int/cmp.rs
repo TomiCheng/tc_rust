@@ -9,7 +9,7 @@ impl<const N: usize> Ord for FixedBigInt<N> {
         match (self.is_negative(), other.is_negative()) {
             (true, false) => Ordering::Less,
             (false, true) => Ordering::Greater,
-            _ => arithmetic::fixed_cmp(&self.limbs, &other.limbs),
+            _ => arithmetic::fixed_cmp(self.limbs.as_limbs(), other.limbs.as_limbs()),
         }
     }
 }

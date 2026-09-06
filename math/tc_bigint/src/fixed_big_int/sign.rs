@@ -27,7 +27,7 @@ impl<const N: usize> FixedBigInt<N> {
 
     /// Returns whether the sign bit is set.
     pub fn is_negative(&self) -> bool {
-        arithmetic::fixed_is_negative(&self.limbs)
+        arithmetic::fixed_is_negative(self.limbs.as_limbs())
     }
 
     /// Returns the absolute value, panicking when called on `MIN`.

@@ -9,11 +9,13 @@ impl<const N: usize> Sub for FixedBigInt<N> {
     type Output = Self;
 
     fn sub(self, rhs: Self) -> Self::Output {
-        let (limbs, _) = arithmetic::fixed_sub(&self.limbs, &rhs.limbs);
+        let (limbs, _) = arithmetic::fixed_sub(self.limbs.as_limbs(), rhs.limbs.as_limbs());
         let overflow = self.is_negative() != rhs.is_negative()
             && arithmetic::fixed_is_negative(&limbs) != self.is_negative();
         assert!(!overflow, "attempted to subtract with overflow");
-        Self { limbs }
+        Self {
+            limbs: crate::LimbArray::new(limbs),
+        }
     }
 }
 
@@ -86,19 +88,26 @@ impl_sub_unsigned_primitive!(u8, u16, u32, u64, u128);
 
 impl<const N: usize> CheckedSub for FixedBigInt<N> {
     fn checked_sub(&self, rhs: &Self) -> Option<Self> {
-        let (limbs, _) = arithmetic::fixed_sub(&self.limbs, &rhs.limbs);
+        let (limbs, _) = arithmetic::fixed_sub(self.limbs.as_limbs(), rhs.limbs.as_limbs());
         let overflow = self.is_negative() != rhs.is_negative()
             && arithmetic::fixed_is_negative(&limbs) != self.is_negative();
-        (!overflow).then_some(Self { limbs })
+        (!overflow).then_some(Self {
+            limbs: crate::LimbArray::new(limbs),
+        })
     }
 }
 
 impl<const N: usize> OverflowingSub for FixedBigInt<N> {
     fn overflowing_sub(&self, rhs: &Self) -> (Self, bool) {
-        let (limbs, _) = arithmetic::fixed_sub(&self.limbs, &rhs.limbs);
+        let (limbs, _) = arithmetic::fixed_sub(self.limbs.as_limbs(), rhs.limbs.as_limbs());
         let overflow = self.is_negative() != rhs.is_negative()
             && arithmetic::fixed_is_negative(&limbs) != self.is_negative();
-        (Self { limbs }, overflow)
+        (
+            Self {
+                limbs: crate::LimbArray::new(limbs),
+            },
+            overflow,
+        )
     }
 }
 
@@ -141,7 +150,7 @@ fn checked_sub_u128<const N: usize>(lhs: &FixedBigInt<N>, mut rhs: u128) -> Opti
         }
     }
 
-    let mut limbs = lhs.limbs;
+    let mut limbs = lhs.limbs.into_limbs();
     let mut borrow = Limb::new(0);
     for limb in &mut limbs {
         let rhs_limb = Limb::new(rhs as Word);
@@ -152,7 +161,9 @@ fn checked_sub_u128<const N: usize>(lhs: &FixedBigInt<N>, mut rhs: u128) -> Opti
     if width > 128 && lhs.is_negative() && !arithmetic::fixed_is_negative(&limbs) {
         return None;
     }
-    Some(FixedBigInt { limbs })
+    Some(FixedBigInt {
+        limbs: crate::LimbArray::new(limbs),
+    })
 }
 
 #[cfg(test)]
