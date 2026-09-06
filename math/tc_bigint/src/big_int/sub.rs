@@ -104,7 +104,11 @@ fn sub_assign_u128(lhs: &mut Vec<Limb>, rhs: u128) {
     };
 
     #[cfg(target_pointer_width = "64")]
-    let words = [Limb::new(rhs as Word), Limb::new((rhs >> 64) as Word), Limb::new(0)];
+    let words = [
+        Limb::new(rhs as Word),
+        Limb::new((rhs >> 64) as Word),
+        Limb::new(0),
+    ];
 
     #[cfg(not(target_pointer_width = "64"))]
     let words = [

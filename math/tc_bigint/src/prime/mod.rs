@@ -4,7 +4,6 @@ use rand_core::{Rng, TryRng};
 
 #[cfg(test)]
 use crate::WideWord;
-use crate::arithmetic;
 use crate::traits::{
     IsProbablePrime, NextProbablePrime, ProbablePrime, Random, RandomBits, RandomMod,
 };
@@ -69,13 +68,21 @@ impl<const N: usize> FixedBigUint<N> {
         }
 
         let one = fixed_small(1);
-        let candidate = arithmetic::fixed_add(self.as_limbs(), one.as_limbs());
+        let candidate = {
+            let (value, overflow) = crate::LimbArray::new(*(self.as_limbs()))
+                .add(&crate::LimbArray::new(*(one.as_limbs())));
+            (value.into_limbs(), overflow)
+        };
         if candidate.1 {
             return None;
         }
         let mut candidate = Self::from_limbs(candidate.0);
         if !candidate.test_bit(0) {
-            let next = arithmetic::fixed_add(candidate.as_limbs(), one.as_limbs());
+            let next = {
+                let (value, overflow) = crate::LimbArray::new(*(candidate.as_limbs()))
+                    .add(&crate::LimbArray::new(*(one.as_limbs())));
+                (value.into_limbs(), overflow)
+            };
             if next.1 {
                 return None;
             }
@@ -86,7 +93,11 @@ impl<const N: usize> FixedBigUint<N> {
             if candidate.is_probable_prime(DEFAULT_CERTAINTY, rng) {
                 return Some(candidate);
             }
-            let next = arithmetic::fixed_add(candidate.as_limbs(), two.as_limbs());
+            let next = {
+                let (value, overflow) = crate::LimbArray::new(*(candidate.as_limbs()))
+                    .add(&crate::LimbArray::new(*(two.as_limbs())));
+                (value.into_limbs(), overflow)
+            };
             if next.1 {
                 return None;
             }
@@ -168,7 +179,9 @@ impl<const N: usize> NextProbablePrime for FixedBigUint<N> {
 impl<const N: usize> FixedBigInt<N> {
     /// Tests the absolute value using trial division and Miller-Rabin rounds.
     pub fn is_probable_prime<R: Rng + ?Sized>(&self, certainty: u32, rng: &mut R) -> bool {
-        let magnitude = FixedBigUint::from_limbs(arithmetic::fixed_abs(self.as_limbs()));
+        let magnitude = FixedBigUint::from_limbs(
+            crate::FixedBigInt::from_limbs(*(self.as_limbs())).magnitude(),
+        );
         magnitude.is_probable_prime(certainty, rng)
     }
 

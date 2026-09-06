@@ -3,21 +3,13 @@
 use core::ops::{Div, DivAssign, Rem, RemAssign};
 
 use crate::traits::{CheckedDiv, CheckedRem, DivRem, RemEuclid};
-use crate::{FixedBigUint, Limb, Word, arithmetic};
+use crate::{FixedBigUint, Limb, Word};
 
 impl<const N: usize> FixedBigUint<N> {
     /// Returns the quotient and remainder together.
     pub fn div_rem(&self, rhs: &Self) -> (Self, Self) {
-        let (quotient, remainder) =
-            arithmetic::fixed_div_rem(self.limbs.as_limbs(), rhs.limbs.as_limbs());
-        (
-            Self {
-                limbs: crate::LimbArray::new(quotient),
-            },
-            Self {
-                limbs: crate::LimbArray::new(remainder),
-            },
-        )
+        let (quotient, remainder) = self.limbs.div_rem(&rhs.limbs);
+        (Self { limbs: quotient }, Self { limbs: remainder })
     }
 
     /// Returns the Euclidean remainder.
@@ -191,14 +183,10 @@ fn div_rem_u128<const N: usize>(
     if divisor != 0 {
         return (FixedBigUint::zero(), *value);
     }
-    let (quotient, remainder) = arithmetic::fixed_div_rem(value.limbs.as_limbs(), &divisor_limbs);
+    let (quotient, remainder) = value.limbs.div_rem(&crate::LimbArray::new(divisor_limbs));
     (
-        FixedBigUint {
-            limbs: crate::LimbArray::new(quotient),
-        },
-        FixedBigUint {
-            limbs: crate::LimbArray::new(remainder),
-        },
+        FixedBigUint { limbs: quotient },
+        FixedBigUint { limbs: remainder },
     )
 }
 

@@ -1,16 +1,13 @@
 //! Greatest common divisor support for [`FixedBigUint`].
 
+use crate::FixedBigUint;
 use crate::traits::Gcd;
-use crate::{FixedBigUint, arithmetic};
 
 impl<const N: usize> FixedBigUint<N> {
     /// Returns the greatest common divisor.
     pub fn gcd(&self, other: &Self) -> Self {
         Self {
-            limbs: crate::LimbArray::new(arithmetic::fixed_gcd(
-                self.limbs.as_limbs(),
-                other.limbs.as_limbs(),
-            )),
+            limbs: crate::LimbArray::new(self.limbs.gcd(&other.limbs).into_limbs()),
         }
     }
 }

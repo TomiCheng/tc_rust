@@ -4,7 +4,7 @@
 
 - `BigUint` and `BigInt` grow using `Vec<Limb>` and require the default `alloc`
   feature.
-- `FixedBigUint<N>` and `FixedBigInt<N>` contain exactly `[Limb; N]`; their
+- `FixedBigUint<N>` and `FixedBigInt<N>` store their `N` limbs in `tc_limb::LimbArray<N>`; their
   arithmetic and caller-buffer encodings never allocate. They remain available
   with `default-features = false`. The optional `to_str_radix` convenience
   method returns a `String` and therefore requires `alloc`.
@@ -17,6 +17,11 @@ arithmetic only.
 Signed values use two's complement. Limb index zero is always the
 least-significant limb. External slices explicitly select little-endian or
 big-endian order through their method names.
+
+`Limb`、`Word`、`WideWord` 由 `tc_limb` 重新匯出；使用 `Limb::new(word)`
+與 `to_word()` 存取字值，欄位私有。`as_limbs()` 仍回傳原本的陣列參照。
+`LimbArray` 僅負責無號固定寬度原語，最高位不具有符號語意；二補數的
+符號判斷與絕對值由 `FixedBigInt` 負責。變長算術與配置仍留在 `tc_bigint`。
 
 The crate defines its own numeric traits in `traits.rs`; it does not depend on
 `num-traits`, and the local traits are not type-compatible with

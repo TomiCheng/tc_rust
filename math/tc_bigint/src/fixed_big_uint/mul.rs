@@ -3,7 +3,7 @@
 use core::ops::{Mul, MulAssign};
 
 use crate::traits::{CheckedMul, OverflowingMul, SaturatingMul, Square, WrappingMul};
-use crate::{FixedBigUint, Limb, WideWord, Word, arithmetic};
+use crate::{FixedBigUint, Limb, WideWord, Word};
 
 impl<const N: usize> FixedBigUint<N> {
     /// Returns `self * self`.
@@ -29,10 +29,8 @@ impl<const N: usize> FixedBigUint<N> {
 
     /// Returns `self * rhs`, or `None` when the product does not fit.
     pub fn checked_mul(&self, rhs: &Self) -> Option<Self> {
-        let (limbs, overflow) = arithmetic::fixed_mul(self.limbs.as_limbs(), rhs.limbs.as_limbs());
-        (!overflow).then_some(Self {
-            limbs: crate::LimbArray::new(limbs),
-        })
+        let (limbs, overflow) = self.limbs.mul(&rhs.limbs);
+        (!overflow).then_some(Self { limbs })
     }
 
     /// Returns the full double-width product as `(low, high)` halves.
@@ -52,15 +50,8 @@ impl<const N: usize> FixedBigUint<N> {
     /// # let _ = Word::BITS;
     /// ```
     pub fn mul_wide(&self, rhs: &Self) -> (Self, Self) {
-        let (low, high) = arithmetic::fixed_mul_wide(self.limbs.as_limbs(), rhs.limbs.as_limbs());
-        (
-            Self {
-                limbs: crate::LimbArray::new(low),
-            },
-            Self {
-                limbs: crate::LimbArray::new(high),
-            },
-        )
+        let (low, high) = self.limbs.mul_wide(&rhs.limbs);
+        (Self { limbs: low }, Self { limbs: high })
     }
 
     /// Returns the full double-width square as `(low, high)` halves.
@@ -169,13 +160,8 @@ impl<const N: usize> CheckedMul for FixedBigUint<N> {
 
 impl<const N: usize> OverflowingMul for FixedBigUint<N> {
     fn overflowing_mul(&self, rhs: &Self) -> (Self, bool) {
-        let (limbs, overflow) = arithmetic::fixed_mul(self.limbs.as_limbs(), rhs.limbs.as_limbs());
-        (
-            Self {
-                limbs: crate::LimbArray::new(limbs),
-            },
-            overflow,
-        )
+        let (limbs, overflow) = self.limbs.mul(&rhs.limbs);
+        (Self { limbs }, overflow)
     }
 }
 
@@ -203,10 +189,8 @@ fn checked_mul_u128<const N: usize>(
     if rhs != 0 && !lhs.is_zero() {
         return None;
     }
-    let (limbs, overflow) = arithmetic::fixed_mul(lhs.limbs.as_limbs(), &rhs_limbs);
-    (!overflow).then_some(FixedBigUint {
-        limbs: crate::LimbArray::new(limbs),
-    })
+    let (limbs, overflow) = lhs.limbs.mul(&crate::LimbArray::new(rhs_limbs));
+    (!overflow).then_some(FixedBigUint { limbs })
 }
 
 #[cfg(test)]

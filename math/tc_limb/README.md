@@ -2,7 +2,7 @@
 
 固定寬度、小端序 limb 算術。此 crate 使用 `#![no_std]`，不使用 `alloc`、堆積配置或 `unsafe`。正式依賴只有 `tc_constant_time`；`num-bigint` 僅用於測試 oracle，沒有 `tc_bigint` 的正式或開發依賴。
 
-這是獨立建立的新 crate。現有 `tc_bigint` 的程式、型別與依賴都不變，尚未改用 `tc_limb`。
+`tc_bigint` 的固定寬度整數共用本 crate 的 `LimbArray` 儲存與無號原語；有號解讀與變長整數仍由 `tc_bigint` 負責。本 crate 不反向依賴 `tc_bigint`。
 
 ## 儲存模型
 
@@ -86,7 +86,7 @@ assert_eq!(selected.ct_eq(&b).unwrap_u8(), 1);
 
 ## 來源與維護
 
-目前來源 `tc_bigint/src/arithmetic.rs` 實際含 25 個 `fixed_*`：19 個運算入口與 6 個內部輔助函式。排除留給上層的 `abs` 與 `is_negative` 後，其餘 17 個運算透過上述型別方法提供（比較採 `Ord::cmp`），複製的核心作為私有關聯函式置於 `src/limb_array/arithmetic.rs`，所有陣列參數均保留相同 `N`。
+初始實作取自 `tc_bigint/src/arithmetic.rs` 當時的 25 個 `fixed_*`：19 個運算入口與 6 個內部輔助函式。排除留給上層的 `abs` 與 `is_negative` 後，其餘 17 個運算透過上述型別方法提供（比較採 `Ord::cmp`），核心作為私有關聯函式置於 `src/limb_array/arithmetic.rs`，所有陣列參數均保留相同 `N`。`tc_bigint` 的正式程式已刪除重複核心，僅保留測試轉接器以維持既有回歸斷言。
 
 未複製變長算術、配置功能、解析與 `FixedBigUint` 的 CT impl。`Limb` 的六個既有 const 原語保留語意，補上私有欄位存取與缺少的運算子；新 crate 中的 CT impl 僅屬於自己的 `Limb` 與 `LimbArray`。
 
@@ -101,7 +101,6 @@ cargo test --workspace
 cargo clippy -p tc_limb --all-targets -- -D warnings
 cargo fmt -p tc_limb --check
 cargo doc -p tc_limb --no-deps
-git status --short -- math/tc_bigint
 ```
 
-最後一行應沒有輸出。i686 測試需要對應的 Rust target 及可用的 MSVC x86 linker／執行環境。公開 API 的範例由 `cargo test` 執行；crate 同時啟用 `missing_docs` 檢查，避免新增未記錄的 API。
+i686 測試需要對應的 Rust target 及可用的 MSVC x86 linker／執行環境。公開 API 的範例由 `cargo test` 執行；crate 同時啟用 `missing_docs` 檢查，避免新增未記錄的 API。

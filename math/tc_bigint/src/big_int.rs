@@ -75,7 +75,11 @@ impl BigInt {
             return (false, magnitude);
         }
 
-        let mut magnitude: Vec<Limb> = self.limbs.iter().map(|word| Limb::new(!word.to_word())).collect();
+        let mut magnitude: Vec<Limb> = self
+            .limbs
+            .iter()
+            .map(|word| Limb::new(!word.to_word()))
+            .collect();
         arithmetic::add_small(&mut magnitude, 1);
         arithmetic::normalize(&mut magnitude);
         (true, magnitude)

@@ -17,10 +17,22 @@ mod tests {
 
     #[test]
     fn overflowing_and_wrapping_operations_match_word_arithmetic() {
-        assert_eq!(Limb::new(Word::MAX).overflowing_add(Limb::new(1)), (Limb::new(0), true));
-        assert_eq!(Limb::new(0).overflowing_sub(Limb::new(1)), (Limb::new(Word::MAX), true));
-        assert_eq!(Limb::new(Word::MAX).wrapping_add(Limb::new(1)), Limb::new(0));
-        assert_eq!(Limb::new(0).wrapping_sub(Limb::new(1)), Limb::new(Word::MAX));
+        assert_eq!(
+            Limb::new(Word::MAX).overflowing_add(Limb::new(1)),
+            (Limb::new(0), true)
+        );
+        assert_eq!(
+            Limb::new(0).overflowing_sub(Limb::new(1)),
+            (Limb::new(Word::MAX), true)
+        );
+        assert_eq!(
+            Limb::new(Word::MAX).wrapping_add(Limb::new(1)),
+            Limb::new(0)
+        );
+        assert_eq!(
+            Limb::new(0).wrapping_sub(Limb::new(1)),
+            Limb::new(Word::MAX)
+        );
     }
 
     #[test]

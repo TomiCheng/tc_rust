@@ -4,7 +4,6 @@ use core::cmp::Ordering;
 
 #[cfg(test)]
 use crate::ConversionError;
-use crate::arithmetic;
 use crate::traits::{Bounded, One, ToPrimitive, Zero};
 use crate::{FixedBigUint, Limb, Word};
 
@@ -89,21 +88,36 @@ impl<const N: usize> FixedBigInt<N> {
         self.limbs.as_limbs().iter().all(|word| word.to_word() == 0)
     }
 
-    fn magnitude(&self) -> [Limb; N] {
-        arithmetic::fixed_abs(self.limbs.as_limbs())
+    pub(crate) fn magnitude(&self) -> [Limb; N] {
+        if self.is_negative() {
+            self.limbs.wrapping_neg().into_limbs()
+        } else {
+            self.limbs.into_limbs()
+        }
+    }
+
+    // 符號只屬於有號整數層，底層 LimbArray 保持無號。
+    pub(crate) fn is_negative_limbs(words: &[Limb; N]) -> bool {
+        words
+            .last()
+            .is_some_and(|word| word.to_word() >> (Word::BITS - 1) != 0)
     }
 
     fn from_sign_magnitude(negative: bool, magnitude: [Limb; N]) -> Option<Self> {
         let min_magnitude = Self::min_value().limbs.into_limbs();
         if negative {
-            if arithmetic::fixed_cmp(&magnitude, &min_magnitude) == Ordering::Greater {
+            if crate::LimbArray::new(magnitude).cmp(&crate::LimbArray::new(min_magnitude))
+                == Ordering::Greater
+            {
                 return None;
             }
             Some(Self {
-                limbs: crate::LimbArray::new(arithmetic::fixed_wrapping_neg(&magnitude)),
+                limbs: crate::LimbArray::new(
+                    crate::LimbArray::new(magnitude).wrapping_neg().into_limbs(),
+                ),
             })
         } else {
-            if arithmetic::fixed_is_negative(&magnitude) {
+            if crate::FixedBigInt::is_negative_limbs(&magnitude) {
                 return None;
             }
             Some(Self {

@@ -32,7 +32,8 @@ impl BigUint {
         if limbs.len() < needed {
             limbs.resize(needed, Limb::new(0));
         }
-        limbs[word_index] = Limb::new(limbs[word_index].to_word() | ((1 as Word) << (index % Word::BITS as usize)));
+        limbs[word_index] =
+            Limb::new(limbs[word_index].to_word() | ((1 as Word) << (index % Word::BITS as usize)));
         Self::from_limbs(limbs)
     }
 
@@ -53,7 +54,8 @@ impl BigUint {
         if limbs.len() < needed {
             limbs.resize(needed, Limb::new(0));
         }
-        limbs[word_index] = Limb::new(limbs[word_index].to_word() ^ ((1 as Word) << (index % Word::BITS as usize)));
+        limbs[word_index] =
+            Limb::new(limbs[word_index].to_word() ^ ((1 as Word) << (index % Word::BITS as usize)));
         Self::from_limbs(limbs)
     }
 
@@ -63,7 +65,9 @@ impl BigUint {
             .iter()
             .enumerate()
             .find(|(_, word)| word.to_word() != 0)
-            .map(|(index, word)| index * Word::BITS as usize + word.to_word().trailing_zeros() as usize)
+            .map(|(index, word)| {
+                index * Word::BITS as usize + word.to_word().trailing_zeros() as usize
+            })
     }
 
     /// Returns `self & !other` within this value's finite magnitude.
@@ -73,7 +77,9 @@ impl BigUint {
                 .iter()
                 .enumerate()
                 .map(|(index, word)| {
-                    Limb::new(word.to_word() & !other.limbs.get(index).map_or(0, |other| other.to_word()))
+                    Limb::new(
+                        word.to_word() & !other.limbs.get(index).map_or(0, |other| other.to_word()),
+                    )
                 })
                 .collect(),
         )

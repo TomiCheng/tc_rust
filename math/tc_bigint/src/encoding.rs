@@ -84,7 +84,9 @@ fn decode_units(
         let shift = bit % word_bits;
         words[word_index] = Limb::new(words[word_index].to_word() | ((unit as Word) << shift));
         if shift + unit_bits > word_bits {
-            words[word_index + 1] = Limb::new(words[word_index + 1].to_word() | ((unit >> (word_bits - shift)) as Word));
+            words[word_index + 1] = Limb::new(
+                words[word_index + 1].to_word() | ((unit >> (word_bits - shift)) as Word),
+            );
         }
     }
 
@@ -463,7 +465,8 @@ fn unsigned_bit_len(words: &[Limb]) -> usize {
         .iter()
         .rposition(|word| word.to_word() != 0)
         .map_or(0, |index| {
-            index * Word::BITS as usize + (Word::BITS - words[index].to_word().leading_zeros()) as usize
+            index * Word::BITS as usize
+                + (Word::BITS - words[index].to_word().leading_zeros()) as usize
         })
 }
 
@@ -759,10 +762,18 @@ fn extract_unit(words: &[Limb], index: usize, unit_bits: usize, extension: Word)
     let bit = index * unit_bits;
     let word_index = bit / word_bits;
     let shift = bit % word_bits;
-    let low = word_to_u64(words.get(word_index).map_or(extension, |word| word.to_word()));
+    let low = word_to_u64(
+        words
+            .get(word_index)
+            .map_or(extension, |word| word.to_word()),
+    );
     let mut result = low >> shift;
     if shift + unit_bits > word_bits {
-        let high = word_to_u64(words.get(word_index + 1).map_or(extension, |word| word.to_word()));
+        let high = word_to_u64(
+            words
+                .get(word_index + 1)
+                .map_or(extension, |word| word.to_word()),
+        );
         result |= high << (word_bits - shift);
     }
     result & unit_mask(unit_bits)
@@ -810,7 +821,7 @@ pub(crate) fn is_negative(words: &[Limb]) -> bool {
 }
 
 fn signed_extension<const N: usize>(words: &[Limb; N], signed: bool) -> Word {
-    if signed && crate::arithmetic::fixed_is_negative(words) {
+    if signed && crate::FixedBigInt::is_negative_limbs(words) {
         Word::MAX
     } else {
         0

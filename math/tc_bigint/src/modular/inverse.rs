@@ -5,7 +5,6 @@ use alloc::vec;
 
 use super::mul::{fixed_mul_mod, fixed_one_mod, fixed_sub_mod};
 use crate::Limb;
-use crate::arithmetic::{fixed_div_rem, fixed_is_one, fixed_is_zero};
 
 #[cfg(feature = "alloc")]
 const M30: i32 = 0x3fff_ffff;
@@ -14,14 +13,26 @@ pub(crate) fn fixed_mod_inverse<const N: usize>(
     value: &[Limb; N],
     modulus: &[Limb; N],
 ) -> Option<[Limb; N]> {
-    assert!(!fixed_is_zero(modulus), "modulus must be non-zero");
+    assert!(
+        !crate::LimbArray::new(*(modulus)).is_zero(),
+        "modulus must be non-zero"
+    );
     let mut old_remainder = *modulus;
-    let mut remainder = fixed_div_rem(value, modulus).1;
+    let mut remainder = {
+        let (low, high) =
+            crate::LimbArray::new(*(value)).div_rem(&crate::LimbArray::new(*(modulus)));
+        (low.into_limbs(), high.into_limbs())
+    }
+    .1;
     let mut old_coefficient = [Limb::new(0); N];
     let mut coefficient = fixed_one_mod(modulus);
 
-    while !fixed_is_zero(&remainder) {
-        let (quotient, next_remainder) = fixed_div_rem(&old_remainder, &remainder);
+    while !crate::LimbArray::new(remainder).is_zero() {
+        let (quotient, next_remainder) = {
+            let (low, high) =
+                crate::LimbArray::new(old_remainder).div_rem(&crate::LimbArray::new(remainder));
+            (low.into_limbs(), high.into_limbs())
+        };
         let product = fixed_mul_mod(&quotient, &coefficient, modulus);
         let next_coefficient = fixed_sub_mod(&old_coefficient, &product, modulus);
         old_remainder = remainder;
@@ -30,7 +41,9 @@ pub(crate) fn fixed_mod_inverse<const N: usize>(
         coefficient = next_coefficient;
     }
 
-    fixed_is_one(&old_remainder).then_some(old_coefficient)
+    crate::LimbArray::new(old_remainder)
+        .is_one()
+        .then_some(old_coefficient)
 }
 
 /// `checked_mod_odd_inverse` 的輸入或可逆性錯誤。

@@ -1,12 +1,16 @@
 //! Greatest common divisor support for [`FixedBigInt`].
 
 use crate::traits::Gcd;
-use crate::{FixedBigInt, FixedBigUint, arithmetic};
+use crate::{FixedBigInt, FixedBigUint};
 
 impl<const N: usize> FixedBigInt<N> {
     /// Returns the non-negative greatest common divisor as an unsigned value.
     pub fn gcd(&self, other: &Self) -> FixedBigUint<N> {
-        FixedBigUint::from_limbs(arithmetic::fixed_gcd(&self.magnitude(), &other.magnitude()))
+        FixedBigUint::from_limbs(
+            crate::LimbArray::new(self.magnitude())
+                .gcd(&crate::LimbArray::new(other.magnitude()))
+                .into_limbs(),
+        )
     }
 }
 

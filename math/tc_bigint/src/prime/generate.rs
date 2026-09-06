@@ -54,7 +54,9 @@ pub(super) fn try_random_fixed_uint<const N: usize, R: TryRng + ?Sized>(
     }
     let top_bits = bit_length % Word::BITS as usize;
     if top_bits != 0 {
-        limbs[used_limbs - 1] = Limb::new(limbs[used_limbs - 1].to_word() & (Word::MAX >> (Word::BITS as usize - top_bits)));
+        limbs[used_limbs - 1] = Limb::new(
+            limbs[used_limbs - 1].to_word() & (Word::MAX >> (Word::BITS as usize - top_bits)),
+        );
     }
     Ok(FixedBigUint::from_limbs(limbs))
 }
@@ -97,7 +99,9 @@ pub(super) fn try_random_big_uint<R: TryRng + ?Sized>(
     }
     let top_bits = bit_length % Word::BITS as usize;
     if top_bits != 0 {
-        limbs[word_count - 1] = Limb::new(limbs[word_count - 1].to_word() & (Word::MAX >> (Word::BITS as usize - top_bits)));
+        limbs[word_count - 1] = Limb::new(
+            limbs[word_count - 1].to_word() & (Word::MAX >> (Word::BITS as usize - top_bits)),
+        );
     }
     Ok(BigUint::from_limbs(limbs))
 }

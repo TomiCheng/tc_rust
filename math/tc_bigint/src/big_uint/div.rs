@@ -169,7 +169,10 @@ fn div_rem_u128(value: &BigUint, divisor: u128) -> (BigUint, BigUint) {
     assert!(divisor != 0, "attempted to divide by zero");
 
     #[cfg(target_pointer_width = "64")]
-    let divisor_limbs = [Limb::new(divisor as Word), Limb::new((divisor >> 64) as Word)];
+    let divisor_limbs = [
+        Limb::new(divisor as Word),
+        Limb::new((divisor >> 64) as Word),
+    ];
 
     #[cfg(not(target_pointer_width = "64"))]
     let divisor_limbs = [

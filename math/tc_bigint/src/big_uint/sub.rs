@@ -146,7 +146,11 @@ fn sub_into_rhs(lhs: &[Limb], rhs: &mut Vec<Limb>) -> bool {
     rhs.resize(lhs.len(), Limb::new(0));
     let mut borrow = Limb::new(0);
     for index in 0..lhs.len() {
-        let right = if index < rhs_len { rhs[index] } else { Limb::new(0) };
+        let right = if index < rhs_len {
+            rhs[index]
+        } else {
+            Limb::new(0)
+        };
         (rhs[index], borrow) = lhs[index].borrowing_sub(right, borrow);
     }
     debug_assert_eq!(borrow, Limb::new(0));

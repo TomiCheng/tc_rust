@@ -75,7 +75,11 @@ impl<const N: usize> TryFrom<&BigInt> for FixedBigInt<N> {
 
     fn try_from(value: &BigInt) -> Result<Self, Self::Error> {
         let negative = value.is_negative();
-        let extension = if negative { Limb::new(Word::MAX) } else { Limb::new(0) };
+        let extension = if negative {
+            Limb::new(Word::MAX)
+        } else {
+            Limb::new(0)
+        };
         if value.limbs.len() > N && value.limbs[N..].iter().any(|word| *word != extension) {
             return Err(ConversionError::InputTooLarge);
         }
@@ -88,7 +92,7 @@ impl<const N: usize> TryFrom<&BigInt> for FixedBigInt<N> {
                 .then_some(FixedBigInt::from_limbs(limbs))
                 .ok_or(ConversionError::InputTooLarge);
         }
-        if arithmetic::fixed_is_negative(&limbs) != negative && !value.is_zero() {
+        if crate::FixedBigInt::is_negative_limbs(&limbs) != negative && !value.is_zero() {
             return Err(ConversionError::InputTooLarge);
         }
         Ok(FixedBigInt::from_limbs(limbs))

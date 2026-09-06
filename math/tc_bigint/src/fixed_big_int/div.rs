@@ -3,15 +3,19 @@
 use core::ops::{Div, DivAssign, Rem, RemAssign};
 
 use crate::traits::{CheckedDiv, CheckedRem, DivRem, RemEuclid};
-use crate::{FixedBigInt, Limb, Word, arithmetic};
+use crate::{FixedBigInt, Limb, Word};
 
 impl<const N: usize> FixedBigInt<N> {
     /// Returns the truncated quotient and remainder together.
     pub fn div_rem(&self, rhs: &Self) -> (Self, Self) {
-        let (quotient, remainder) = arithmetic::fixed_div_rem(&self.magnitude(), &rhs.magnitude());
-        let quotient = Self::from_sign_magnitude(self.is_negative() != rhs.is_negative(), quotient)
-            .expect("attempted to divide with overflow");
-        let remainder = Self::from_sign_magnitude(self.is_negative(), remainder)
+        let (quotient, remainder) = crate::LimbArray::new(self.magnitude())
+            .div_rem(&crate::LimbArray::new(rhs.magnitude()));
+        let quotient = Self::from_sign_magnitude(
+            self.is_negative() != rhs.is_negative(),
+            quotient.into_limbs(),
+        )
+        .expect("attempted to divide with overflow");
+        let remainder = Self::from_sign_magnitude(self.is_negative(), remainder.into_limbs())
             .expect("remainder always fits the dividend type");
         (quotient, remainder)
     }
@@ -207,10 +211,11 @@ fn div_rem_u128<const N: usize>(
         return (FixedBigInt::zero(), *value);
     }
 
-    let (quotient, remainder) = arithmetic::fixed_div_rem(&value.magnitude(), &divisor_limbs);
-    let quotient = FixedBigInt::from_sign_magnitude(value.is_negative(), quotient)
+    let (quotient, remainder) =
+        crate::LimbArray::new(value.magnitude()).div_rem(&crate::LimbArray::new(divisor_limbs));
+    let quotient = FixedBigInt::from_sign_magnitude(value.is_negative(), quotient.into_limbs())
         .expect("division by a positive primitive cannot overflow");
-    let remainder = FixedBigInt::from_sign_magnitude(value.is_negative(), remainder)
+    let remainder = FixedBigInt::from_sign_magnitude(value.is_negative(), remainder.into_limbs())
         .expect("remainder always fits the dividend type");
     (quotient, remainder)
 }

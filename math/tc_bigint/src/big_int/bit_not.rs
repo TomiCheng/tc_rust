@@ -12,7 +12,14 @@ impl Not for &BigInt {
         let extension = if self.is_negative() { Word::MAX } else { 0 };
         BigInt::from_limbs(
             (0..width)
-                .map(|index| Limb::new(!self.limbs.get(index).map_or(extension, |word| word.to_word())))
+                .map(|index| {
+                    Limb::new(
+                        !self
+                            .limbs
+                            .get(index)
+                            .map_or(extension, |word| word.to_word()),
+                    )
+                })
                 .collect(),
         )
     }

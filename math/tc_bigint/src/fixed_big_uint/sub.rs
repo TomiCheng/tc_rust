@@ -3,17 +3,15 @@
 use core::ops::{Sub, SubAssign};
 
 use crate::traits::{CheckedSub, OverflowingSub, SaturatingSub, WrappingSub};
-use crate::{FixedBigUint, Limb, Word, arithmetic};
+use crate::{FixedBigUint, Limb, Word};
 
 impl<const N: usize> Sub for FixedBigUint<N> {
     type Output = Self;
 
     fn sub(self, rhs: Self) -> Self::Output {
-        let (limbs, underflow) = arithmetic::fixed_sub(self.limbs.as_limbs(), rhs.limbs.as_limbs());
+        let (limbs, underflow) = self.limbs.sub(&rhs.limbs);
         assert!(!underflow, "attempted to subtract with underflow");
-        Self {
-            limbs: crate::LimbArray::new(limbs),
-        }
+        Self { limbs }
     }
 }
 
@@ -86,22 +84,15 @@ impl_sub_primitive!(u8, u16, u32, u64, u128);
 
 impl<const N: usize> CheckedSub for FixedBigUint<N> {
     fn checked_sub(&self, rhs: &Self) -> Option<Self> {
-        let (limbs, underflow) = arithmetic::fixed_sub(self.limbs.as_limbs(), rhs.limbs.as_limbs());
-        (!underflow).then_some(Self {
-            limbs: crate::LimbArray::new(limbs),
-        })
+        let (limbs, underflow) = self.limbs.sub(&rhs.limbs);
+        (!underflow).then_some(Self { limbs })
     }
 }
 
 impl<const N: usize> OverflowingSub for FixedBigUint<N> {
     fn overflowing_sub(&self, rhs: &Self) -> (Self, bool) {
-        let (limbs, underflow) = arithmetic::fixed_sub(self.limbs.as_limbs(), rhs.limbs.as_limbs());
-        (
-            Self {
-                limbs: crate::LimbArray::new(limbs),
-            },
-            underflow,
-        )
+        let (limbs, underflow) = self.limbs.sub(&rhs.limbs);
+        (Self { limbs }, underflow)
     }
 }
 

@@ -3,7 +3,7 @@
 use core::ops::{Mul, MulAssign};
 
 use crate::traits::{CheckedMul, OverflowingMul, SaturatingMul, Square, WrappingMul};
-use crate::{FixedBigInt, Limb, Word, arithmetic};
+use crate::{FixedBigInt, Limb, Word};
 
 impl<const N: usize> FixedBigInt<N> {
     /// Returns `self * self`.
@@ -14,11 +14,12 @@ impl<const N: usize> FixedBigInt<N> {
     /// Returns `self * rhs`, or `None` when the product does not fit.
     pub fn checked_mul(&self, rhs: &Self) -> Option<Self> {
         let negative = self.is_negative() != rhs.is_negative();
-        let (magnitude, overflow) = arithmetic::fixed_mul(&self.magnitude(), &rhs.magnitude());
+        let (magnitude, overflow) =
+            crate::LimbArray::new(self.magnitude()).mul(&crate::LimbArray::new(rhs.magnitude()));
         if overflow {
             return None;
         }
-        Self::from_sign_magnitude(negative, magnitude)
+        Self::from_sign_magnitude(negative, magnitude.into_limbs())
     }
 }
 
@@ -114,7 +115,11 @@ impl<const N: usize> CheckedMul for FixedBigInt<N> {
 
 impl<const N: usize> OverflowingMul for FixedBigInt<N> {
     fn overflowing_mul(&self, rhs: &Self) -> (Self, bool) {
-        let limbs = arithmetic::fixed_mul(self.limbs.as_limbs(), rhs.limbs.as_limbs()).0;
+        let limbs = {
+            let (value, overflow) = self.limbs.mul(&rhs.limbs);
+            (value.into_limbs(), overflow)
+        }
+        .0;
         (
             Self {
                 limbs: crate::LimbArray::new(limbs),
@@ -151,11 +156,12 @@ fn checked_mul_u128<const N: usize>(lhs: &FixedBigInt<N>, mut rhs: u128) -> Opti
     if rhs != 0 && !lhs.is_zero() {
         return None;
     }
-    let (magnitude, overflow) = arithmetic::fixed_mul(&lhs.magnitude(), &rhs_limbs);
+    let (magnitude, overflow) =
+        crate::LimbArray::new(lhs.magnitude()).mul(&crate::LimbArray::new(rhs_limbs));
     if overflow {
         return None;
     }
-    FixedBigInt::from_sign_magnitude(lhs.is_negative(), magnitude)
+    FixedBigInt::from_sign_magnitude(lhs.is_negative(), magnitude.into_limbs())
 }
 
 #[cfg(test)]

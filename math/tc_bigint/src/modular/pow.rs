@@ -14,7 +14,7 @@ use super::{MontyForm, MontyParams};
 use crate::BigUint;
 #[cfg(feature = "alloc")]
 use crate::arithmetic::{bit_len, div_rem, mul, significant_len, square};
-use crate::arithmetic::{fixed_bit_len, fixed_div_rem, fixed_test_bit};
+
 use crate::{FixedBigUint, Limb, Odd, Word};
 
 /// Computes modular exponentiation with Montgomery multiplication when the
@@ -157,7 +157,7 @@ pub(crate) fn fixed_mod_pow<const N: usize>(
     modulus: &[Limb; N],
 ) -> [Limb; N] {
     assert!(
-        !crate::arithmetic::fixed_is_zero(modulus),
+        !crate::LimbArray::new(*(modulus)).is_zero(),
         "modulus must be non-zero"
     );
     if modulus[0].to_word() & 1 == 1 {
@@ -172,17 +172,22 @@ fn fixed_division_mod_pow<const N: usize>(
     modulus: &[Limb; N],
 ) -> [Limb; N] {
     let mut result = fixed_one_mod(modulus);
-    let exponent_bits = fixed_bit_len(exponent);
+    let exponent_bits = crate::LimbArray::new(*(exponent)).bit_len();
     if exponent_bits == 0 {
         return result;
     }
 
-    let base = fixed_div_rem(value, modulus).1;
+    let base = {
+        let (low, high) =
+            crate::LimbArray::new(*(value)).div_rem(&crate::LimbArray::new(*(modulus)));
+        (low.into_limbs(), high.into_limbs())
+    }
+    .1;
     let window = exponentiation_window(exponent_bits);
     if window == 1 {
         for bit in (0..exponent_bits).rev() {
             result = fixed_mul_mod(&result, &result, modulus);
-            if fixed_test_bit(exponent, bit) {
+            if crate::LimbArray::new(*(exponent)).test_bit(bit) {
                 result = fixed_mul_mod(&result, &base, modulus);
             }
         }
@@ -202,19 +207,20 @@ fn fixed_division_mod_pow<const N: usize>(
     let mut remaining_bits = exponent_bits;
     while remaining_bits != 0 {
         let high = remaining_bits - 1;
-        if !fixed_test_bit(exponent, high) {
+        if !crate::LimbArray::new(*(exponent)).test_bit(high) {
             result = fixed_mul_mod(&result, &result, modulus);
             remaining_bits -= 1;
             continue;
         }
 
         let mut low = remaining_bits.saturating_sub(window);
-        while !fixed_test_bit(exponent, low) {
+        while !crate::LimbArray::new(*(exponent)).test_bit(low) {
             low += 1;
         }
         let mut window_value = 0_usize;
         for bit in (low..=high).rev() {
-            window_value = (window_value << 1) | usize::from(fixed_test_bit(exponent, bit));
+            window_value =
+                (window_value << 1) | usize::from(crate::LimbArray::new(*(exponent)).test_bit(bit));
         }
         for _ in low..=high {
             result = fixed_mul_mod(&result, &result, modulus);
@@ -246,7 +252,7 @@ pub(super) fn fixed_montgomery_pow<const N: usize>(
     inverse: Word,
     one: &[Limb; N],
 ) -> [Limb; N] {
-    let exponent_bits = fixed_bit_len(exponent);
+    let exponent_bits = crate::LimbArray::new(*(exponent)).bit_len();
     if exponent_bits == 0 {
         return *one;
     }
@@ -256,7 +262,7 @@ pub(super) fn fixed_montgomery_pow<const N: usize>(
     if window == 1 {
         for bit in (0..exponent_bits).rev() {
             result = fixed_montgomery_mul(&result, &result, modulus, inverse);
-            if fixed_test_bit(exponent, bit) {
+            if crate::LimbArray::new(*(exponent)).test_bit(bit) {
                 result = fixed_montgomery_mul(&result, base, modulus, inverse);
             }
         }
@@ -275,19 +281,20 @@ pub(super) fn fixed_montgomery_pow<const N: usize>(
     let mut remaining_bits = exponent_bits;
     while remaining_bits != 0 {
         let high = remaining_bits - 1;
-        if !fixed_test_bit(exponent, high) {
+        if !crate::LimbArray::new(*(exponent)).test_bit(high) {
             result = fixed_montgomery_mul(&result, &result, modulus, inverse);
             remaining_bits -= 1;
             continue;
         }
 
         let mut low = remaining_bits.saturating_sub(window);
-        while !fixed_test_bit(exponent, low) {
+        while !crate::LimbArray::new(*(exponent)).test_bit(low) {
             low += 1;
         }
         let mut window_value = 0_usize;
         for bit in (low..=high).rev() {
-            window_value = (window_value << 1) | usize::from(fixed_test_bit(exponent, bit));
+            window_value =
+                (window_value << 1) | usize::from(crate::LimbArray::new(*(exponent)).test_bit(bit));
         }
         for _ in low..=high {
             result = fixed_montgomery_mul(&result, &result, modulus, inverse);
@@ -302,7 +309,8 @@ pub(super) fn fixed_montgomery_pow<const N: usize>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::arithmetic::{fixed_is_zero, fixed_shr_one};
+    use crate::arithmetic::tests::{fixed_bit_len, fixed_div_rem, fixed_test_bit};
+    use crate::arithmetic::tests::{fixed_is_zero, fixed_shr_one};
     #[cfg(feature = "alloc")]
     use alloc::vec;
 
@@ -332,12 +340,26 @@ mod tests {
         assert_eq!(exponentiation_window(141), 4);
         assert_eq!(exponentiation_window(451), 5);
 
-        let base: Wide = core::array::from_fn(|index| if index == 0 { Limb::new(7) } else { Limb::new(0) });
-        let modulus: Wide =
-            core::array::from_fn(|index| if index == 0 { Limb::new(101) } else { Limb::new(0) });
+        let base: Wide = core::array::from_fn(|index| {
+            if index == 0 {
+                Limb::new(7)
+            } else {
+                Limb::new(0)
+            }
+        });
+        let modulus: Wide = core::array::from_fn(|index| {
+            if index == 0 {
+                Limb::new(101)
+            } else {
+                Limb::new(0)
+            }
+        });
         for bits in [1_usize, 8, 37, 141, 451] {
             let mut exponent: Wide = [Limb::new(0); 512 / Word::BITS as usize];
-            exponent[(bits - 1) / Word::BITS as usize] = Limb::new(exponent[(bits - 1) / Word::BITS as usize].to_word() | ((1 as Word) << ((bits - 1) % Word::BITS as usize)));
+            exponent[(bits - 1) / Word::BITS as usize] = Limb::new(
+                exponent[(bits - 1) / Word::BITS as usize].to_word()
+                    | ((1 as Word) << ((bits - 1) % Word::BITS as usize)),
+            );
             exponent[0] = Limb::new(exponent[0].to_word() | (0b1011));
             assert_eq!(fixed_bit_len(&exponent), bits.max(4));
             assert!(fixed_test_bit(&exponent, bits - 1));
@@ -386,8 +408,14 @@ mod tests {
             );
         }
 
-        assert_eq!(mod_pow(&[Limb::new(7)], &[Limb::new(13)], &[Limb::new(10)]), vec![Limb::new(7)]);
-        assert_eq!(mod_pow(&[Limb::new(7)], &[], &[Limb::new(1)]), Vec::<Limb>::new());
+        assert_eq!(
+            mod_pow(&[Limb::new(7)], &[Limb::new(13)], &[Limb::new(10)]),
+            vec![Limb::new(7)]
+        );
+        assert_eq!(
+            mod_pow(&[Limb::new(7)], &[], &[Limb::new(1)]),
+            Vec::<Limb>::new()
+        );
     }
 
     #[test]

@@ -2,7 +2,6 @@
 
 use core::ops::{Add, AddAssign};
 
-use crate::arithmetic;
 use crate::traits::{CheckedAdd, OverflowingAdd, SaturatingAdd, WrappingAdd};
 use crate::{FixedBigUint, Limb, Word};
 
@@ -88,22 +87,15 @@ impl_add_primitive!(u8, u16, u32, u64, u128);
 
 impl<const N: usize> CheckedAdd for FixedBigUint<N> {
     fn checked_add(&self, rhs: &Self) -> Option<Self> {
-        let (limbs, overflow) = arithmetic::fixed_add(self.limbs.as_limbs(), rhs.limbs.as_limbs());
-        (!overflow).then_some(Self {
-            limbs: crate::LimbArray::new(limbs),
-        })
+        let (limbs, overflow) = self.limbs.add(&rhs.limbs);
+        (!overflow).then_some(Self { limbs })
     }
 }
 
 impl<const N: usize> OverflowingAdd for FixedBigUint<N> {
     fn overflowing_add(&self, rhs: &Self) -> (Self, bool) {
-        let (limbs, overflow) = arithmetic::fixed_add(self.limbs.as_limbs(), rhs.limbs.as_limbs());
-        (
-            Self {
-                limbs: crate::LimbArray::new(limbs),
-            },
-            overflow,
-        )
+        let (limbs, overflow) = self.limbs.add(&rhs.limbs);
+        (Self { limbs }, overflow)
     }
 }
 

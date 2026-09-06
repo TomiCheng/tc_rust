@@ -2,14 +2,14 @@
 
 use core::cmp::Ordering;
 
-use crate::{FixedBigInt, arithmetic};
+use crate::FixedBigInt;
 
 impl<const N: usize> Ord for FixedBigInt<N> {
     fn cmp(&self, other: &Self) -> Ordering {
         match (self.is_negative(), other.is_negative()) {
             (true, false) => Ordering::Less,
             (false, true) => Ordering::Greater,
-            _ => arithmetic::fixed_cmp(self.limbs.as_limbs(), other.limbs.as_limbs()),
+            _ => self.limbs.cmp(&other.limbs),
         }
     }
 }

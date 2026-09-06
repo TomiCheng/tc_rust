@@ -6,7 +6,7 @@ use alloc::vec;
 use super::mul::montgomery_inverse;
 #[cfg(feature = "alloc")]
 use crate::arithmetic::{div_rem, square};
-use crate::arithmetic::{fixed_div_rem, fixed_mul_wide, fixed_wide_rem, fixed_wrapping_neg};
+
 #[cfg(feature = "alloc")]
 use crate::{BigUint, Limb};
 use crate::{FixedBigUint, Odd, Word};
@@ -107,10 +107,25 @@ impl<const N: usize> FixedMontyParams<N> {
         let modulus_words = modulus.as_ref().as_limbs();
         let mod_neg_inv = montgomery_inverse(modulus_words[0].to_word());
 
-        let radix_minus_modulus = fixed_wrapping_neg(modulus_words);
-        let r = fixed_div_rem(&radix_minus_modulus, modulus_words).1;
-        let (r2_low, r2_high) = fixed_mul_wide(&r, &r);
-        let r2 = fixed_wide_rem(&r2_low, &r2_high, modulus_words);
+        let radix_minus_modulus = crate::LimbArray::new(*(modulus_words))
+            .wrapping_neg()
+            .into_limbs();
+        let r = {
+            let (low, high) = crate::LimbArray::new(radix_minus_modulus)
+                .div_rem(&crate::LimbArray::new(*(modulus_words)));
+            (low.into_limbs(), high.into_limbs())
+        }
+        .1;
+        let (r2_low, r2_high) = {
+            let (low, high) = crate::LimbArray::new(r).mul_wide(&crate::LimbArray::new(r));
+            (low.into_limbs(), high.into_limbs())
+        };
+        let r2 = crate::LimbArray::new(r2_low)
+            .wide_rem(
+                &crate::LimbArray::new(r2_high),
+                &crate::LimbArray::new(*(modulus_words)),
+            )
+            .into_limbs();
 
         Self {
             modulus,

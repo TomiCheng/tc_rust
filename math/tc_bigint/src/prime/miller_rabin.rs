@@ -26,7 +26,9 @@ pub(super) fn remainder_word(words: &[Limb], divisor: Word) -> Word {
 }
 
 pub(super) fn equals_word(words: &[Limb], value: Word) -> bool {
-    words.first().map_or(value == 0, |word| word.to_word() == value)
+    words
+        .first()
+        .map_or(value == 0, |word| word.to_word() == value)
         && words.iter().skip(1).all(|word| word.to_word() == 0)
 }
 

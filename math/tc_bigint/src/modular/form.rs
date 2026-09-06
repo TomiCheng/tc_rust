@@ -18,7 +18,7 @@ use crate::FixedBigUint;
 use crate::Limb;
 #[cfg(feature = "alloc")]
 use crate::arithmetic::div_rem;
-use crate::arithmetic::{fixed_div_rem, fixed_is_one};
+
 use crate::{Choice, ConditionallySelectable, ConstantTimeEq};
 
 /// Recovers an ordinary integer from an alternate arithmetic representation.
@@ -270,7 +270,12 @@ impl<const N: usize> FixedMontyForm<N> {
     /// ```
     pub fn new(value: &FixedBigUint<N>, params: FixedMontyParams<N>) -> Self {
         let modulus = params.modulus().as_limbs();
-        let reduced = fixed_div_rem(value.as_limbs(), modulus).1;
+        let reduced = {
+            let (low, high) = crate::LimbArray::new(*(value.as_limbs()))
+                .div_rem(&crate::LimbArray::new(*(modulus)));
+            (low.into_limbs(), high.into_limbs())
+        }
+        .1;
         let value = fixed_montgomery_mul(
             &reduced,
             params.r2().as_limbs(),
@@ -318,7 +323,7 @@ impl<const N: usize> FixedMontyForm<N> {
     /// ```
     pub fn retrieve(&self) -> FixedBigUint<N> {
         let modulus = self.params.modulus().as_limbs();
-        if fixed_is_one(modulus) {
+        if crate::LimbArray::new(*(modulus)).is_one() {
             return FixedBigUint::zero();
         }
         let one = FixedBigUint::<N>::from(1_u8);

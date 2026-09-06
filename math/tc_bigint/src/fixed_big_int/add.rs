@@ -2,7 +2,6 @@
 
 use core::ops::{Add, AddAssign};
 
-use crate::arithmetic;
 use crate::traits::{CheckedAdd, OverflowingAdd, SaturatingAdd, WrappingAdd};
 use crate::{FixedBigInt, Limb, Word};
 
@@ -87,26 +86,19 @@ impl_add_unsigned_primitive!(u8, u16, u32, u64, u128);
 
 impl<const N: usize> CheckedAdd for FixedBigInt<N> {
     fn checked_add(&self, rhs: &Self) -> Option<Self> {
-        let (limbs, _) = arithmetic::fixed_add(self.limbs.as_limbs(), rhs.limbs.as_limbs());
+        let (limbs, _) = self.limbs.add(&rhs.limbs);
         let overflow = self.is_negative() == rhs.is_negative()
-            && arithmetic::fixed_is_negative(&limbs) != self.is_negative();
-        (!overflow).then_some(Self {
-            limbs: crate::LimbArray::new(limbs),
-        })
+            && crate::FixedBigInt::is_negative_limbs(limbs.as_limbs()) != self.is_negative();
+        (!overflow).then_some(Self { limbs })
     }
 }
 
 impl<const N: usize> OverflowingAdd for FixedBigInt<N> {
     fn overflowing_add(&self, rhs: &Self) -> (Self, bool) {
-        let (limbs, _) = arithmetic::fixed_add(self.limbs.as_limbs(), rhs.limbs.as_limbs());
+        let (limbs, _) = self.limbs.add(&rhs.limbs);
         let overflow = self.is_negative() == rhs.is_negative()
-            && arithmetic::fixed_is_negative(&limbs) != self.is_negative();
-        (
-            Self {
-                limbs: crate::LimbArray::new(limbs),
-            },
-            overflow,
-        )
+            && crate::FixedBigInt::is_negative_limbs(limbs.as_limbs()) != self.is_negative();
+        (Self { limbs }, overflow)
     }
 }
 
@@ -160,7 +152,7 @@ fn checked_add_u128<const N: usize>(lhs: &FixedBigInt<N>, mut rhs: u128) -> Opti
         (*limb, carry) = limb.carrying_add(rhs_limb, carry);
     }
 
-    if width > 128 && !lhs.is_negative() && arithmetic::fixed_is_negative(&limbs) {
+    if width > 128 && !lhs.is_negative() && crate::FixedBigInt::is_negative_limbs(&limbs) {
         return None;
     }
     Some(FixedBigInt {

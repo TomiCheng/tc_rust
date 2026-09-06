@@ -8,9 +8,7 @@ use alloc::vec::Vec;
 
 #[cfg(feature = "alloc")]
 use crate::arithmetic::{cmp, mul, normalize};
-use crate::arithmetic::{
-    fixed_add, fixed_div_rem, fixed_is_zero, fixed_mul_wide, fixed_sub, fixed_wide_rem,
-};
+
 use crate::{Choice, ConditionallySelectable, Limb, WideWord, Word};
 
 pub(super) fn montgomery_inverse(word: Word) -> Word {
@@ -88,7 +86,7 @@ pub(super) fn fixed_montgomery_mul<const N: usize>(
     modulus: &[Limb; N],
     inverse: Word,
 ) -> [Limb; N] {
-    debug_assert!(!fixed_is_zero(modulus) && modulus[0].to_word() & 1 == 1);
+    debug_assert!(!crate::LimbArray::new(*(modulus)).is_zero() && modulus[0].to_word() & 1 == 1);
 
     let mut result = [Limb::new(0); N];
     let mut high = 0 as Word;
@@ -124,7 +122,11 @@ pub(super) fn fixed_montgomery_mul<const N: usize>(
         debug_assert!(high <= 1);
     }
 
-    let (reduced, borrow) = fixed_sub(&result, modulus);
+    let (reduced, borrow) = {
+        let (value, overflow) =
+            crate::LimbArray::new(result).sub(&crate::LimbArray::new(*(modulus)));
+        (value.into_limbs(), overflow)
+    };
     <[Limb; N]>::conditional_select(
         &result,
         &reduced,
@@ -137,8 +139,16 @@ pub(super) fn fixed_mul_mod<const N: usize>(
     rhs: &[Limb; N],
     modulus: &[Limb; N],
 ) -> [Limb; N] {
-    let (low, high) = fixed_mul_wide(lhs, rhs);
-    fixed_wide_rem(&low, &high, modulus)
+    let (low, high) = {
+        let (low, high) = crate::LimbArray::new(*(lhs)).mul_wide(&crate::LimbArray::new(*(rhs)));
+        (low.into_limbs(), high.into_limbs())
+    };
+    crate::LimbArray::new(low)
+        .wide_rem(
+            &crate::LimbArray::new(high),
+            &crate::LimbArray::new(*(modulus)),
+        )
+        .into_limbs()
 }
 
 pub(super) fn fixed_add_mod<const N: usize>(
@@ -146,8 +156,14 @@ pub(super) fn fixed_add_mod<const N: usize>(
     rhs: &[Limb; N],
     modulus: &[Limb; N],
 ) -> [Limb; N] {
-    let (sum, carry) = fixed_add(lhs, rhs);
-    let (reduced, borrow) = fixed_sub(&sum, modulus);
+    let (sum, carry) = {
+        let (value, overflow) = crate::LimbArray::new(*(lhs)).add(&crate::LimbArray::new(*(rhs)));
+        (value.into_limbs(), overflow)
+    };
+    let (reduced, borrow) = {
+        let (value, overflow) = crate::LimbArray::new(sum).sub(&crate::LimbArray::new(*(modulus)));
+        (value.into_limbs(), overflow)
+    };
     <[Limb; N]>::conditional_select(&sum, &reduced, Choice::from_lsb((carry | !borrow) as u8))
 }
 
@@ -156,8 +172,16 @@ pub(super) fn fixed_sub_mod<const N: usize>(
     rhs: &[Limb; N],
     modulus: &[Limb; N],
 ) -> [Limb; N] {
-    let (difference, borrow) = fixed_sub(lhs, rhs);
-    let corrected = fixed_add(&difference, modulus).0;
+    let (difference, borrow) = {
+        let (value, overflow) = crate::LimbArray::new(*(lhs)).sub(&crate::LimbArray::new(*(rhs)));
+        (value.into_limbs(), overflow)
+    };
+    let corrected = {
+        let (value, overflow) =
+            crate::LimbArray::new(difference).add(&crate::LimbArray::new(*(modulus)));
+        (value.into_limbs(), overflow)
+    }
+    .0;
     <[Limb; N]>::conditional_select(&difference, &corrected, Choice::from_lsb(borrow as u8))
 }
 
@@ -166,5 +190,9 @@ pub(super) fn fixed_one_mod<const N: usize>(modulus: &[Limb; N]) -> [Limb; N] {
     if N != 0 {
         one[0] = Limb::new(1);
     }
-    fixed_div_rem(&one, modulus).1
+    {
+        let (low, high) = crate::LimbArray::new(one).div_rem(&crate::LimbArray::new(*(modulus)));
+        (low.into_limbs(), high.into_limbs())
+    }
+    .1
 }

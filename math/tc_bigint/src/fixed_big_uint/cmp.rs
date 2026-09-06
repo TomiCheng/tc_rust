@@ -2,11 +2,11 @@
 
 use core::cmp::Ordering;
 
-use crate::{FixedBigUint, arithmetic};
+use crate::FixedBigUint;
 
 impl<const N: usize> Ord for FixedBigUint<N> {
     fn cmp(&self, other: &Self) -> Ordering {
-        arithmetic::fixed_cmp(self.limbs.as_limbs(), other.limbs.as_limbs())
+        self.limbs.cmp(&other.limbs)
     }
 }
 

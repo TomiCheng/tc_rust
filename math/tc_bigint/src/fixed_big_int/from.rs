@@ -1,7 +1,7 @@
 //! Conversions for [`FixedBigInt`].
 
 use crate::traits::{FromPrimitive, ToPrimitive};
-use crate::{ConversionError, FixedBigInt, FixedBigUint, Limb, Word, arithmetic};
+use crate::{ConversionError, FixedBigInt, FixedBigUint, Limb, Word};
 
 macro_rules! impl_from_signed {
     ($($type:ty),* $(,)?) => {
@@ -44,7 +44,7 @@ impl<const N: usize> TryFrom<&FixedBigUint<N>> for FixedBigInt<N> {
     type Error = ConversionError;
 
     fn try_from(value: &FixedBigUint<N>) -> Result<Self, Self::Error> {
-        if arithmetic::fixed_is_negative(value.as_limbs()) {
+        if crate::FixedBigInt::is_negative_limbs(value.as_limbs()) {
             return Err(ConversionError::InputTooLarge);
         }
         Ok(Self::from_limbs(*value.as_limbs()))
@@ -79,7 +79,7 @@ impl<const SOURCE: usize, const DESTINATION: usize> TryFrom<&FixedBigInt<SOURCE>
                 .then_some(Self::from_limbs(limbs))
                 .ok_or(ConversionError::InputTooLarge);
         }
-        if arithmetic::fixed_is_negative(&limbs) != negative && !value.is_zero() {
+        if crate::FixedBigInt::is_negative_limbs(&limbs) != negative && !value.is_zero() {
             return Err(ConversionError::InputTooLarge);
         }
         Ok(Self::from_limbs(limbs))

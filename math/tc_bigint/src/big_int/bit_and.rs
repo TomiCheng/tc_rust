@@ -13,8 +13,12 @@ impl BigInt {
             (0..width)
                 .map(|index| {
                     Limb::new(operation(
-                        lhs.limbs.get(index).map_or(lhs_extension, |word| word.to_word()),
-                        rhs.limbs.get(index).map_or(rhs_extension, |word| word.to_word()),
+                        lhs.limbs
+                            .get(index)
+                            .map_or(lhs_extension, |word| word.to_word()),
+                        rhs.limbs
+                            .get(index)
+                            .map_or(rhs_extension, |word| word.to_word()),
                     ))
                 })
                 .collect(),

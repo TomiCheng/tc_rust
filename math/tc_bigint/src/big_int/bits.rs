@@ -58,7 +58,9 @@ impl BigInt {
             .iter()
             .enumerate()
             .find(|(_, word)| word.to_word() != 0)
-            .map(|(index, word)| index * Word::BITS as usize + word.to_word().trailing_zeros() as usize)
+            .map(|(index, word)| {
+                index * Word::BITS as usize + word.to_word().trailing_zeros() as usize
+            })
     }
 
     /// Returns `self & !other`.

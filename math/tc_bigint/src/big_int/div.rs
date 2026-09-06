@@ -179,7 +179,10 @@ fn div_rem_u128(value: &BigInt, divisor: u128) -> (BigInt, BigInt) {
     let (negative, magnitude) = value.sign_magnitude();
 
     #[cfg(target_pointer_width = "64")]
-    let divisor_limbs = [Limb::new(divisor as Word), Limb::new((divisor >> 64) as Word)];
+    let divisor_limbs = [
+        Limb::new(divisor as Word),
+        Limb::new((divisor >> 64) as Word),
+    ];
 
     #[cfg(not(target_pointer_width = "64"))]
     let divisor_limbs = [
