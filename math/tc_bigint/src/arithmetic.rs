@@ -517,11 +517,11 @@ pub(crate) fn div_rem_small(words: &mut Vec<Limb>, divisor: Word) -> Word {
     remainder as Word
 }
 
-pub fn fixed_cmp<const N: usize>(lhs: &[Limb; N], rhs: &[Limb; N]) -> Ordering {
+pub(crate) fn fixed_cmp<const N: usize>(lhs: &[Limb; N], rhs: &[Limb; N]) -> Ordering {
     lhs.iter().rev().cmp(rhs.iter().rev())
 }
 
-pub fn fixed_add<const N: usize>(lhs: &[Limb; N], rhs: &[Limb; N]) -> ([Limb; N], bool) {
+pub(crate) fn fixed_add<const N: usize>(lhs: &[Limb; N], rhs: &[Limb; N]) -> ([Limb; N], bool) {
     let mut result = [Limb(0); N];
     let mut carry = Limb(0);
     for index in 0..N {
@@ -530,7 +530,7 @@ pub fn fixed_add<const N: usize>(lhs: &[Limb; N], rhs: &[Limb; N]) -> ([Limb; N]
     (result, carry.0 != 0)
 }
 
-pub fn fixed_sub<const N: usize>(lhs: &[Limb; N], rhs: &[Limb; N]) -> ([Limb; N], bool) {
+pub(crate) fn fixed_sub<const N: usize>(lhs: &[Limb; N], rhs: &[Limb; N]) -> ([Limb; N], bool) {
     let mut result = [Limb(0); N];
     let mut borrow = Limb(0);
     for index in 0..N {
@@ -564,7 +564,10 @@ pub(crate) fn fixed_mul<const N: usize>(lhs: &[Limb; N], rhs: &[Limb; N]) -> ([L
 }
 
 #[inline]
-pub fn fixed_mul_wide<const N: usize>(lhs: &[Limb; N], rhs: &[Limb; N]) -> ([Limb; N], [Limb; N]) {
+pub(crate) fn fixed_mul_wide<const N: usize>(
+    lhs: &[Limb; N],
+    rhs: &[Limb; N],
+) -> ([Limb; N], [Limb; N]) {
     let mut low = [Limb(0); N];
     let mut high = [Limb(0); N];
 
@@ -597,7 +600,9 @@ pub fn fixed_mul_wide<const N: usize>(lhs: &[Limb; N], rhs: &[Limb; N]) -> ([Lim
 
 /// Squares a fixed-width magnitude and returns its low and high halves.
 #[inline]
-pub fn fixed_square_wide<const N: usize>(value: &[Limb; N]) -> ([Limb; N], [Limb; N]) {
+// 保留已驗證的內部 primitive；等真正的 64-bit 特化消費者出現再公開。
+#[allow(dead_code)]
+pub(crate) fn fixed_square_wide<const N: usize>(value: &[Limb; N]) -> ([Limb; N], [Limb; N]) {
     fixed_mul_wide(value, value)
 }
 
@@ -606,7 +611,8 @@ pub fn fixed_square_wide<const N: usize>(value: &[Limb; N]) -> ([Limb; N], [Limb
 /// The accumulator is split into low and high halves because stable Rust cannot
 /// express `[Limb; 2 * N]`. The return value reports overflow beyond `2 * N`
 /// limbs.
-pub fn fixed_mul_add_to<const N: usize>(
+#[allow(dead_code)]
+pub(crate) fn fixed_mul_add_to<const N: usize>(
     lhs: &[Limb; N],
     rhs: &[Limb; N],
     low: &mut [Limb; N],
@@ -1006,15 +1012,16 @@ pub(crate) fn fixed_test_bit<const N: usize>(words: &[Limb; N], index: usize) ->
     words[index / Word::BITS as usize].0 >> (index % Word::BITS as usize) & 1 != 0
 }
 
-pub fn fixed_is_zero<const N: usize>(words: &[Limb; N]) -> bool {
+pub(crate) fn fixed_is_zero<const N: usize>(words: &[Limb; N]) -> bool {
     words.iter().all(|word| word.0 == 0)
 }
 
-pub fn fixed_is_one<const N: usize>(words: &[Limb; N]) -> bool {
+pub(crate) fn fixed_is_one<const N: usize>(words: &[Limb; N]) -> bool {
     words.first() == Some(&Limb(1)) && words.iter().skip(1).all(|word| word.0 == 0)
 }
 
-pub fn fixed_shr_one<const N: usize>(words: &mut [Limb; N]) {
+#[cfg(test)]
+pub(crate) fn fixed_shr_one<const N: usize>(words: &mut [Limb; N]) {
     let mut carry = 0 as Word;
     for word in words.iter_mut().rev() {
         let next = word.0 << (Word::BITS - 1);
@@ -1026,7 +1033,8 @@ pub fn fixed_shr_one<const N: usize>(words: &mut [Limb; N]) {
 /// Shifts a fixed-width magnitude left by one bit in place.
 ///
 /// Returns whether the most-significant bit was shifted out.
-pub fn fixed_shl_one<const N: usize>(words: &mut [Limb; N]) -> bool {
+#[allow(dead_code)]
+pub(crate) fn fixed_shl_one<const N: usize>(words: &mut [Limb; N]) -> bool {
     let mut carry = 0 as Word;
     for word in words {
         let next = word.0 >> (Word::BITS - 1);
