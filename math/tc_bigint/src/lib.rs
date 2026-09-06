@@ -19,6 +19,8 @@ mod error;
 mod fixed_big_int;
 mod fixed_big_uint;
 mod format;
+#[cfg(test)]
+#[path = "limb_tests.rs"]
 mod limb;
 pub mod modular;
 mod non_zero;
@@ -38,7 +40,7 @@ pub use error::RandomBitsError;
 pub use error::{ConversionError, ParseBigIntError};
 pub use fixed_big_int::FixedBigInt;
 pub use fixed_big_uint::FixedBigUint;
-pub use limb::{Limb, WideWord, Word};
+pub use tc_limb::{Limb, WideWord, Word};
 pub use non_zero::NonZero;
 pub use odd::Odd;
 #[cfg(feature = "rand_core")]

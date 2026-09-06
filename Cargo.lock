@@ -609,6 +609,7 @@ dependencies = [
  "criterion",
  "rand_core",
  "tc_constant_time",
+ "tc_limb",
 ]
 
 [[package]]
