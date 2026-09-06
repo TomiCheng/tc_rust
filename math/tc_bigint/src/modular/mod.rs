@@ -11,6 +11,11 @@ mod pow;
 #[cfg(feature = "alloc")]
 pub use form::MontyForm;
 pub use form::{FixedMontyForm, Retrieve};
+#[cfg(feature = "alloc")]
+pub use inverse::{
+    ModOddInverseError, checked_mod_odd_inverse, checked_mod_odd_inverse_var, mod_odd_inverse,
+    mod_odd_inverse_var, mod_odd_is_coprime, mod_odd_is_coprime_var,
+};
 pub use monty::{Monty, MontyInteger};
 pub use params::FixedMontyParams;
 #[cfg(feature = "alloc")]
