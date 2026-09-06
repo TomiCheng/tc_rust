@@ -46,21 +46,21 @@ pub(crate) fn fixed_mod_inverse<const N: usize>(
         .then_some(old_coefficient)
 }
 
-/// `checked_mod_odd_inverse` 的輸入或可逆性錯誤。
+/// An input or invertibility error from `checked_mod_odd_inverse`.
 #[cfg(feature = "alloc")]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ModOddInverseError {
-    /// 模數、輸入與輸出 slice 的長度不相容。
+    /// The modulus, input, and output slices have incompatible lengths.
     InvalidLength,
-    /// 模數必須是正規化、非零的奇數。
+    /// The modulus must be normalized, nonzero, and odd.
     InvalidModulus,
-    /// 輸入必須落在 `[0, modulus)`。
+    /// The input must be in `[0, modulus)`.
     ValueOutOfRange,
-    /// 輸入與模數不互質，因此反元素不存在。
+    /// The input and modulus are not coprime, so no inverse exists.
     NotInvertible,
 }
 
-/// 驗證輸入後，以固定步數 safegcd 計算奇模數反元素。
+/// Validates the inputs, then computes the inverse modulo an odd modulus using fixed-step safegcd.
 #[cfg(feature = "alloc")]
 pub fn checked_mod_odd_inverse(
     modulus: &[u32],
@@ -75,9 +75,9 @@ pub fn checked_mod_odd_inverse(
     }
 }
 
-/// 驗證輸入後，以變動時間 safegcd 計算奇模數反元素。
+/// Validates the inputs, then computes the inverse modulo an odd modulus using variable-time safegcd.
 ///
-/// 此版本的執行時間會洩漏輸入值，只能用於公開資料。
+/// The execution time of this variant leaks information about the input; use it only for public data.
 #[cfg(feature = "alloc")]
 pub fn checked_mod_odd_inverse_var(
     modulus: &[u32],
@@ -92,10 +92,10 @@ pub fn checked_mod_odd_inverse_var(
     }
 }
 
-/// 以 Bernstein–Yang half-delta safegcd 計算奇模數反元素。
+/// Computes the inverse modulo an odd modulus using Bernstein-Yang half-delta safegcd.
 ///
-/// 迴圈次數只取決於公開的模數位元數；`value` 必須小於 `modulus`。
-/// 回傳 `false` 表示反元素不存在。輸入與輸出採 little-endian 32-bit words。
+/// The iteration count depends only on the public modulus bit length; `value` must be less than `modulus`.
+/// Returns `false` if no inverse exists. Inputs and outputs use little-endian 32-bit words.
 #[cfg(feature = "alloc")]
 pub fn mod_odd_inverse(modulus: &[u32], value: &[u32], output: &mut [u32]) -> bool {
     assert_mod_odd_inputs(modulus, value, output);
@@ -134,10 +134,10 @@ pub fn mod_odd_inverse(modulus: &[u32], value: &[u32], output: &mut [u32]) -> bo
     equal_to30(&f, 1) & equal_to30(&g, 0) != 0
 }
 
-/// 以變動時間 safegcd 計算奇模數反元素。
+/// Computes the inverse modulo an odd modulus using variable-time safegcd.
 ///
-/// 此版本會依 `value` 提早結束，只能用於公開資料。其餘契約與
-/// [`mod_odd_inverse`] 相同。
+/// This variant may exit early depending on `value` and is only suitable for public data. Otherwise, its contract matches
+/// [`mod_odd_inverse`].
 #[cfg(feature = "alloc")]
 pub fn mod_odd_inverse_var(modulus: &[u32], value: &[u32], output: &mut [u32]) -> bool {
     assert_mod_odd_inputs(modulus, value, output);
@@ -196,7 +196,7 @@ pub fn mod_odd_inverse_var(modulus: &[u32], value: &[u32], output: &mut [u32]) -
     true
 }
 
-/// 以固定步數 safegcd 判斷兩個數是否互質。
+/// Tests whether two numbers are coprime using fixed-step safegcd.
 #[cfg(feature = "alloc")]
 pub fn mod_odd_is_coprime(modulus: &[u32], value: &[u32]) -> bool {
     assert_mod_odd_pair(modulus, value);
@@ -225,7 +225,7 @@ pub fn mod_odd_is_coprime(modulus: &[u32], value: &[u32]) -> bool {
     equal_to30(&f, 1) & equal_to30(&g, 0) != 0
 }
 
-/// 以變動時間 safegcd 判斷兩個數是否互質，只能用於公開資料。
+/// Tests whether two numbers are coprime using variable-time safegcd; use only for public data.
 #[cfg(feature = "alloc")]
 pub fn mod_odd_is_coprime_var(modulus: &[u32], value: &[u32]) -> bool {
     assert_mod_odd_pair(modulus, value);

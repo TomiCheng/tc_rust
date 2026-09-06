@@ -1,4 +1,4 @@
-//! 原固定寬度回歸測試；轉接器只在測試中存在，斷言與期望值保持不變。
+//! Original fixed-width regression tests; adapters exist only in tests, preserving assertions and expected values.
 pub(crate) fn fixed_cmp<const N: usize>(arg0: &[Limb; N], arg1: &[Limb; N]) -> Ordering {
     crate::LimbArray::new(*(arg0)).cmp(&crate::LimbArray::new(*(arg1)))
 }

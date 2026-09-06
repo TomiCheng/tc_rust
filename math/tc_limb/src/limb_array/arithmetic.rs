@@ -1,4 +1,4 @@
-//! 從 tc_bigint 複製的固定寬度核心；僅供同長度型別的方法使用。
+//! Fixed-width core copied from tc_bigint, used only by methods whose operands have the same length.
 use super::LimbArray;
 use crate::{Limb, WideWord, Word};
 use core::cmp::Ordering;
@@ -278,13 +278,13 @@ impl<const N: usize> LimbArray<N> {
             &mut normalized_modulus,
         );
         debug_assert_eq!(modulus_carry, 0);
-        // 逐字處理正規化的雙寬度被除數，只保留目前餘數視窗，避免配置 2N 陣列。
+        // Process the normalized double-width dividend word by word, keeping only the current remainder window to avoid a 2N array.
         let input_len = N + high_len;
         let mut remainder = [Limb::new(0); N];
         let base = (1 as WideWord) << Word::BITS;
         let modulus_high = normalized_modulus[modulus_len - 1].to_word() as WideWord;
         let modulus_next = normalized_modulus[modulus_len - 2].to_word() as WideWord;
-        // 最高的 modulus_len 個字形成小於模數的前綴，作為滾動餘數的初值。
+        // The highest modulus_len words form a prefix smaller than the modulus, initializing the rolling remainder.
         let first_quotient_input = input_len + 1 - modulus_len;
         for (index, word) in remainder.iter_mut().take(modulus_len).enumerate() {
             *word = Limb::new(Self::normalized_wide_word(

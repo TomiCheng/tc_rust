@@ -3,15 +3,15 @@
 #![forbid(unsafe_code)]
 #![doc = include_str!("../README.md")]
 //!
-//! ## 編譯期邊界
+//! ## Compile-time boundaries
 //!
-//! 長度不相同會在編譯期被拒絕：
+//! Mismatched lengths are rejected at compile time:
 //! ```compile_fail
 //! use tc_limb::LimbArray;
 //! let _ = LimbArray::<1>::zero().add(&LimbArray::<2>::zero());
 //! ```
 //!
-//! 呼叫端無法直接存取任一型別的內部欄位：
+//! Callers cannot directly access the internal fields of either type:
 //! ```compile_fail
 //! use tc_limb::Limb;
 //! let _ = Limb::new(1).0;

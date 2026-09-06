@@ -96,7 +96,7 @@ impl<const N: usize> FixedBigInt<N> {
         }
     }
 
-    // 符號只屬於有號整數層，底層 LimbArray 保持無號。
+    // Sign interpretation belongs to the signed integer layer; the underlying LimbArray remains unsigned.
     pub(crate) fn is_negative_limbs(words: &[Limb; N]) -> bool {
         words
             .last()

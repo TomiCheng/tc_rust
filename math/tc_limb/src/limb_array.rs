@@ -3,11 +3,11 @@ use core::cmp::Ordering;
 
 mod arithmetic;
 
-/// 恰好 `N` 個小端序 limb，不配置記憶體，欄位私有。
+/// Exactly `N` little-endian limbs, stored in a private field without heap allocation.
 ///
-/// `N = 0` 代表零寬度的零；加減乘結果仍為零且不溢位。
-/// 所有 limb 均為無號儲存，最高位元不是符號位；有號解讀由上層負責。
-/// 一般比較、除法、GCD 與其他算術不保證常數時間。
+/// `N = 0` represents a zero-width zero; addition, subtraction, and multiplication return zero without overflow.
+/// All limbs are unsigned storage, and the highest bit is not a sign bit; signed interpretation belongs to higher layers.
+/// Ordinary comparisons, division, GCD, and other arithmetic are not guaranteed to run in constant time.
 ///
 /// ```
 /// use tc_limb::{Limb, LimbArray};
@@ -20,7 +20,7 @@ mod arithmetic;
 pub struct LimbArray<const N: usize>([Limb; N]);
 
 impl<const N: usize> LimbArray<N> {
-    /// 使用恰好 `N` 個小端序 limb 建立數值，保留最高位的零。
+    /// Creates a value from exactly `N` little-endian limbs, preserving leading zeros.
     /// ```
     /// use tc_limb::{Limb, LimbArray};
     /// assert_eq!(LimbArray::new([Limb::new(3)]).as_limbs(), &[Limb::new(3)]);
@@ -29,7 +29,7 @@ impl<const N: usize> LimbArray<N> {
         Self(limbs)
     }
 
-    /// 建立全部 limb 為零的數值。
+    /// Creates a value with all limbs set to zero.
     /// ```
     /// use tc_limb::LimbArray;
     /// assert!(LimbArray::<4>::zero().is_zero());
@@ -38,7 +38,7 @@ impl<const N: usize> LimbArray<N> {
         Self([Limb::new(0); N])
     }
 
-    /// 借用全部小端序 limb，保留固定長度。
+    /// Borrows all little-endian limbs, preserving the fixed length.
     /// ```
     /// use tc_limb::LimbArray;
     /// assert_eq!(LimbArray::<3>::zero().as_limbs().len(), 3);
@@ -47,7 +47,7 @@ impl<const N: usize> LimbArray<N> {
         &self.0
     }
 
-    /// 可變借用全部 limb；陣列長度仍固定為 `N`，不賦予有號語意。
+    /// Mutably borrows all limbs; the array length remains fixed at `N`, with no signed interpretation.
     /// ```
     /// use tc_limb::{Limb, LimbArray};
     /// let mut value = LimbArray::<2>::zero();
@@ -58,7 +58,7 @@ impl<const N: usize> LimbArray<N> {
         &mut self.0
     }
 
-    /// 取出全部小端序 limb。
+    /// Returns all little-endian limbs by value.
     /// ```
     /// use tc_limb::{Limb, LimbArray};
     /// assert_eq!(LimbArray::<2>::zero().into_limbs(), [Limb::new(0); 2]);
@@ -67,7 +67,7 @@ impl<const N: usize> LimbArray<N> {
         self.0
     }
 
-    /// 回傳固定寬度的和與最高 limb 的進位旗標。
+    /// Returns the fixed-width sum and the carry flag from the highest limb.
     /// ```
     /// use tc_limb::{Limb, LimbArray, Word};
     /// let max = LimbArray::new([Limb::new(Word::MAX)]);
@@ -78,7 +78,7 @@ impl<const N: usize> LimbArray<N> {
         (Self(value), overflow)
     }
 
-    /// 回傳固定寬度的差與最低位減法造成的最終借位旗標。
+    /// Returns the fixed-width difference and the final borrow flag after propagating through all limbs.
     /// ```
     /// use tc_limb::{Limb, LimbArray, Word};
     /// let one = LimbArray::new([Limb::new(1)]);
@@ -89,7 +89,7 @@ impl<const N: usize> LimbArray<N> {
         (Self(value), overflow)
     }
 
-    /// 回傳乘積低半部；高半部非零時溢位旗標為真。
+    /// Returns the low half of the product; the overflow flag is true when the high half is nonzero.
     /// ```
     /// use tc_limb::{Limb, LimbArray, Word};
     /// let max = LimbArray::new([Limb::new(Word::MAX)]);
@@ -100,9 +100,9 @@ impl<const N: usize> LimbArray<N> {
         (Self(value), overflow)
     }
 
-    /// 回傳完整乘積的 `(低半部, 高半部)`，各有 `N` 個 limb。
+    /// Returns the full product as `(low, high)`, with `N` limbs in each half.
     ///
-    /// 完整值為 `low + high * 2^(N * Word::BITS)`。
+    /// The full value is `low + high * 2^(N * Word::BITS)`.
     /// ```
     /// use tc_limb::{Limb, LimbArray, Word};
     /// let max = LimbArray::new([Limb::new(Word::MAX)]);
@@ -114,7 +114,7 @@ impl<const N: usize> LimbArray<N> {
         (Self(low), Self(high))
     }
 
-    /// 回傳完整平方的低半部與高半部。
+    /// Returns the low and high halves of the full square.
     /// ```
     /// use tc_limb::{Limb, LimbArray};
     /// let x = LimbArray::new([Limb::new(7)]);
@@ -125,9 +125,9 @@ impl<const N: usize> LimbArray<N> {
         (Self(low), Self(high))
     }
 
-    /// 將完整乘積加到雙倍寬度累加器，回傳超過 `2N` 個 limb 的溢位旗標。
+    /// Adds the full product to a double-width accumulator, returning an overflow flag beyond `2N` limbs.
     ///
-    /// `low` 與 `high` 原地更新，溢位時保留模 `2^(2N * Word::BITS)` 的結果。
+    /// Updates `low` and `high` in place, retaining the result modulo `2^(2N * Word::BITS)` on overflow.
     /// ```
     /// use tc_limb::{Limb, LimbArray};
     /// let x = LimbArray::new([Limb::new(3)]);
@@ -140,10 +140,10 @@ impl<const N: usize> LimbArray<N> {
         Self::mul_add_to_words(&self.0, &rhs.0, &mut low.0, &mut high.0)
     }
 
-    /// 無號除法，回傳商與餘數；控制流程依數值改變。
+    /// Performs unsigned division, returning the quotient and remainder; control flow depends on the values.
     ///
     /// # Panics
-    /// 除數為零時 panic，包含 `N = 0`。
+    /// Panics if the divisor is zero, including when `N = 0`.
     /// ```
     /// use tc_limb::{Limb, LimbArray};
     /// let a = LimbArray::new([Limb::new(17)]);
@@ -155,10 +155,10 @@ impl<const N: usize> LimbArray<N> {
         (Self(quotient), Self(remainder))
     }
 
-    /// 對雙倍寬度無號數取餘數，`self` 是低半部，`high` 是高半部。
+    /// Computes the remainder of a double-width unsigned value, with `self` as the low half and `high` as the high half.
     ///
     /// # Panics
-    /// `modulus` 為零時 panic，包含 `N = 0`。此方法不保證常數時間。
+    /// Panics if `modulus` is zero, including when `N = 0`. This method is not guaranteed to run in constant time.
     /// ```
     /// use tc_limb::{Limb, LimbArray, Word};
     /// let low = LimbArray::new([Limb::new(Word::MAX)]);
@@ -170,7 +170,7 @@ impl<const N: usize> LimbArray<N> {
         Self(Self::wide_rem_words(&self.0, &high.0, &modulus.0))
     }
 
-    /// 回傳模 `2^(N * Word::BITS)` 的加法反元素；零寬度仍回傳零。
+    /// Returns the additive inverse modulo `2^(N * Word::BITS)`; a zero-width value remains zero.
     /// ```
     /// use tc_limb::{Limb, LimbArray, Word};
     /// assert_eq!(LimbArray::new([Limb::new(1)]).wrapping_neg(), LimbArray::new([Limb::new(Word::MAX)]));
@@ -179,7 +179,7 @@ impl<const N: usize> LimbArray<N> {
         Self(Self::wrapping_neg_words(&self.0))
     }
 
-    /// 無號最大公因數，`gcd(0, 0) = 0`；控制流程依數值改變。
+    /// Computes the unsigned greatest common divisor, with `gcd(0, 0) = 0`; control flow depends on the values.
     /// ```
     /// use tc_limb::{Limb, LimbArray};
     /// assert_eq!(LimbArray::new([Limb::new(12)]).gcd(&LimbArray::new([Limb::new(8)])),
@@ -189,7 +189,7 @@ impl<const N: usize> LimbArray<N> {
         Self(Self::gcd_words(&self.0, &rhs.0))
     }
 
-    /// 無號表示需要的有效位元數；零回傳零。
+    /// Returns the number of significant bits in the unsigned representation, or zero for zero.
     /// ```
     /// use tc_limb::{Limb, LimbArray};
     /// assert_eq!(LimbArray::new([Limb::new(8)]).bit_len(), 4);
@@ -198,10 +198,10 @@ impl<const N: usize> LimbArray<N> {
         Self::bit_len_words(&self.0)
     }
 
-    /// 讀取位元，索引零是最低位元。
+    /// Reads a bit, with index zero denoting the least significant bit.
     ///
     /// # Panics
-    /// 索引超出固定寬度時 panic；零寬度沒有有效索引。
+    /// Panics if the index exceeds the fixed width; a zero-width value has no valid indices.
     /// ```
     /// use tc_limb::{Limb, LimbArray};
     /// let x = LimbArray::new([Limb::new(8)]);
@@ -212,7 +212,7 @@ impl<const N: usize> LimbArray<N> {
         Self::test_bit_words(&self.0, index)
     }
 
-    /// 是否所有 limb 都為零；零寬度回傳真。此比較可能提早退出。
+    /// Returns whether all limbs are zero; true for zero width. This comparison may exit early.
     /// ```
     /// use tc_limb::LimbArray;
     /// assert!(LimbArray::<0>::zero().is_zero());
@@ -221,7 +221,7 @@ impl<const N: usize> LimbArray<N> {
         Self::is_zero_words(&self.0)
     }
 
-    /// 是否等於一；零寬度回傳假。此比較可能提早退出。
+    /// Returns whether the value equals one; false for zero width. This comparison may exit early.
     /// ```
     /// use tc_limb::{Limb, LimbArray};
     /// assert!(LimbArray::new([Limb::new(1), Limb::new(0)]).is_one());
@@ -230,7 +230,7 @@ impl<const N: usize> LimbArray<N> {
         Self::is_one_words(&self.0)
     }
 
-    /// 原地邏輯右移一位，捨棄最低位元；零寬度不變。
+    /// Shifts right logically by one bit in place, discarding the lowest bit; zero width is unchanged.
     /// ```
     /// use tc_limb::{Limb, LimbArray};
     /// let mut x = LimbArray::new([Limb::new(7)]);
@@ -241,7 +241,7 @@ impl<const N: usize> LimbArray<N> {
         Self::shr_one_words(&mut self.0);
     }
 
-    /// 原地左移一位並回傳被移出的最高位元；零寬度回傳假。
+    /// Shifts left by one bit in place and returns the highest bit shifted out; false for zero width.
     /// ```
     /// use tc_limb::{Limb, LimbArray, Word};
     /// let mut x = LimbArray::new([Limb::new(1 << (Word::BITS - 1))]);
@@ -259,7 +259,7 @@ impl<const N: usize> Default for LimbArray<N> {
     }
 }
 
-/// 從最高 limb 開始作無號數值比較，可能提早退出。
+/// Compares unsigned values starting at the highest limb, with possible early exit.
 /// ```
 /// use tc_limb::{Limb, LimbArray};
 /// use core::cmp::Ordering;
@@ -278,7 +278,7 @@ impl<const N: usize> PartialOrd for LimbArray<N> {
     }
 }
 
-/// 逐 limb 選取且不依輸入值分支，零選 `a`，一選 `b`。
+/// Selects limb by limb without branching on input values; zero selects `a`, and one selects `b`.
 /// ```
 /// use tc_limb::{Choice, ConditionallySelectable, Limb, LimbArray};
 /// let a = LimbArray::<1>::zero();
@@ -291,7 +291,7 @@ impl<const N: usize> ConditionallySelectable for LimbArray<N> {
     }
 }
 
-/// 比較全部 `N` 個 limb，不提早退出；零寬度的兩個值相等。
+/// Compares all `N` limbs without early exit; two zero-width values are equal.
 /// ```
 /// use tc_limb::{ConstantTimeEq, LimbArray};
 /// assert_eq!(LimbArray::<0>::zero().ct_eq(&LimbArray::zero()).unwrap_u8(), 1);

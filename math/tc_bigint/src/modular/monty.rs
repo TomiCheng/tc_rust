@@ -1,8 +1,8 @@
-//! Montgomery 形式與原始整數之間的泛型連結。
+//! Generic links between Montgomery forms and their underlying integers.
 //!
-//! 此介面沿用 RustCrypto `crypto-bigint` 的分層：演算法面向 Montgomery 形式，
-//! 整數則以反向關聯型別指出對應表示。tc_bigint 使用一般 [`Option`] 回傳反元素，
-//! 不為此抽象引入 `subtle`。
+//! This interface follows the layering of RustCrypto `crypto-bigint`: algorithms operate on Montgomery forms,
+//! while integers identify their representation through an associated type. tc_bigint returns inverses in an ordinary [`Option`],
+//! without introducing a dependency on `subtle` for this abstraction.
 
 use core::ops::{Add, Mul, Sub};
 
@@ -14,7 +14,7 @@ use super::{FixedMontyForm, FixedMontyParams};
 #[cfg(feature = "alloc")]
 use super::{MontyForm, MontyParams};
 
-/// 可重用參數的 Montgomery 形式。
+/// A Montgomery form with reusable parameters.
 pub trait Monty:
     Clone
     + Eq
@@ -23,49 +23,49 @@ pub trait Monty:
     + for<'a> Sub<&'a Self, Output = Self>
     + for<'a> Mul<&'a Self, Output = Self>
 {
-    /// 離開 Montgomery domain 後的整數型別。
+    /// The integer type obtained when leaving the Montgomery domain.
     type Integer;
 
-    /// 此表示需要的預先計算參數。
+    /// The precomputed parameters required by this representation.
     type Params: Clone;
 
-    /// 由奇數模數建立參數；計算時間可依模數而變。
+    /// Creates parameters from an odd modulus; execution time may depend on the modulus.
     fn new_params_vartime(modulus: Odd<Self::Integer>) -> Self::Params;
 
-    /// 將整數轉入指定 Montgomery domain。
+    /// Converts an integer into the specified Montgomery domain.
     fn new(value: &Self::Integer, params: Self::Params) -> Self;
 
-    /// 建立指定 domain 的零。
+    /// Creates zero in the specified domain.
     fn zero(params: Self::Params) -> Self;
 
-    /// 建立指定 domain 的一。
+    /// Creates one in the specified domain.
     fn one(params: Self::Params) -> Self;
 
-    /// 回傳此值的預先計算參數。
+    /// Returns the precomputed parameters for this value.
     fn params(&self) -> &Self::Params;
 
-    /// 回傳此值所屬 domain 的模數。
+    /// Returns the modulus of this value's domain.
     fn modulus(&self) -> &Self::Integer;
 
-    /// 離開 Montgomery domain。
+    /// Converts out of the Montgomery domain.
     fn retrieve(&self) -> Self::Integer;
 
-    /// 平方並留在相同 domain。
+    /// Squares the value within the same domain.
     fn square(&self) -> Self;
 
-    /// 加倍並留在相同 domain。
+    /// Doubles the value within the same domain.
     fn double(&self) -> Self;
 
-    /// 以同型別整數為指數做次方。
+    /// Raises the value to an exponent of the associated integer type.
     fn pow(&self, exponent: &Self::Integer) -> Self;
 
-    /// 回傳乘法反元素；不存在時回傳 `None`。
+    /// Returns the multiplicative inverse, or `None` if it does not exist.
     fn invert(&self) -> Option<Self>;
 }
 
-/// 原始整數到其 Montgomery 形式的反向連結。
+/// An association from an underlying integer to its Montgomery form.
 pub trait MontyInteger: Sized {
-    /// 此整數對應的 Montgomery 表示。
+    /// The Montgomery representation associated with this integer.
     type Monty: Monty<Integer = Self>;
 }
 

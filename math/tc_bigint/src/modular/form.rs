@@ -74,7 +74,7 @@ impl MontyForm<BigUint> {
         Self { value, params }
     }
 
-    /// 在指定 Montgomery domain 中建立零。
+    /// Creates zero in the specified Montgomery domain.
     pub fn zero(params: MontyParams<BigUint>) -> Self {
         Self {
             value: BigUint::default(),
@@ -82,7 +82,7 @@ impl MontyForm<BigUint> {
         }
     }
 
-    /// 在指定 Montgomery domain 中建立一。
+    /// Creates one in the specified Montgomery domain.
     pub fn one(params: MontyParams<BigUint>) -> Self {
         Self {
             value: params.one().clone(),
@@ -90,12 +90,12 @@ impl MontyForm<BigUint> {
         }
     }
 
-    /// 回傳建立此值時使用的 Montgomery 參數。
+    /// Returns the Montgomery parameters used to create this value.
     pub fn params(&self) -> &MontyParams<BigUint> {
         &self.params
     }
 
-    /// 回傳此 Montgomery domain 的模數。
+    /// Returns the modulus of this Montgomery domain.
     pub fn modulus(&self) -> &BigUint {
         self.params.modulus()
     }
@@ -140,7 +140,7 @@ impl MontyForm<BigUint> {
         }
     }
 
-    /// 在相同 Montgomery domain 中計算兩倍。
+    /// Doubles the value within the same Montgomery domain.
     pub fn double(&self) -> Self {
         self + self
     }
@@ -167,9 +167,9 @@ impl MontyForm<BigUint> {
         }
     }
 
-    /// 回傳乘法反元素；不存在時回傳 `None`。
+    /// Returns the multiplicative inverse, or `None` if it does not exist.
     ///
-    /// 此薄封裝只串接既有的離開 domain、整數模反元素與重新進入 domain 路徑。
+    /// This thin wrapper combines the existing paths for leaving the domain, computing the integer modular inverse, and re-entering the domain.
     pub fn invert(&self) -> Option<Self> {
         let inverse = self.retrieve().mod_inverse(self.modulus())?;
         Some(Self::new(&inverse, self.params.clone()))
@@ -288,7 +288,7 @@ impl<const N: usize> FixedMontyForm<N> {
         }
     }
 
-    /// 在指定 Montgomery domain 中建立零。
+    /// Creates zero in the specified Montgomery domain.
     pub fn zero(params: FixedMontyParams<N>) -> Self {
         Self {
             value: FixedBigUint::zero(),
@@ -296,7 +296,7 @@ impl<const N: usize> FixedMontyForm<N> {
         }
     }
 
-    /// 在指定 Montgomery domain 中建立一。
+    /// Creates one in the specified Montgomery domain.
     pub fn one(params: FixedMontyParams<N>) -> Self {
         Self {
             value: *params.one(),
@@ -304,12 +304,12 @@ impl<const N: usize> FixedMontyForm<N> {
         }
     }
 
-    /// 回傳建立此值時使用的 Montgomery 參數。
+    /// Returns the Montgomery parameters used to create this value.
     pub fn params(&self) -> &FixedMontyParams<N> {
         &self.params
     }
 
-    /// 回傳此 Montgomery domain 的模數。
+    /// Returns the modulus of this Montgomery domain.
     pub fn modulus(&self) -> &FixedBigUint<N> {
         self.params.modulus()
     }
@@ -356,7 +356,7 @@ impl<const N: usize> FixedMontyForm<N> {
         }
     }
 
-    /// 在相同 Montgomery domain 中計算兩倍。
+    /// Doubles the value within the same Montgomery domain.
     pub fn double(&self) -> Self {
         self + self
     }
@@ -383,9 +383,9 @@ impl<const N: usize> FixedMontyForm<N> {
         }
     }
 
-    /// 回傳乘法反元素；不存在時回傳 `None`。
+    /// Returns the multiplicative inverse, or `None` if it does not exist.
     ///
-    /// 此薄封裝只串接既有的離開 domain、整數模反元素與重新進入 domain 路徑。
+    /// This thin wrapper combines the existing paths for leaving the domain, computing the integer modular inverse, and re-entering the domain.
     pub fn invert(&self) -> Option<Self> {
         let inverse = self.retrieve().mod_inverse(self.modulus())?;
         Some(Self::new(&inverse, self.params))

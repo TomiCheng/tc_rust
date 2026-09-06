@@ -2,22 +2,22 @@ use crate::{Choice, ConditionallySelectable, ConstantTimeEq};
 use core::ops::{Add, AddAssign, BitAnd, BitOr, BitXor, Mul, Not, Shl, Shr, Sub, SubAssign};
 
 #[cfg(target_pointer_width = "64")]
-/// 64-bit 平台使用 `u64`；16-bit 與 32-bit 平台使用 `u32`，與 `tc_bigint` 相同。
+/// Uses `u64` on 64-bit platforms and `u32` on 16-bit and 32-bit platforms, matching `tc_bigint`.
 pub type Word = u64;
 #[cfg(not(target_pointer_width = "64"))]
-/// 64-bit 平台使用 `u64`；16-bit 與 32-bit 平台使用 `u32`，與 `tc_bigint` 相同。
+/// Uses `u64` on 64-bit platforms and `u32` on 16-bit and 32-bit platforms, matching `tc_bigint`.
 pub type Word = u32;
 #[cfg(target_pointer_width = "64")]
-/// 字寬為 [`Word`] 兩倍的中間運算型別。
+/// An intermediate arithmetic type with twice the bit width of [`Word`].
 pub type WideWord = u128;
 #[cfg(not(target_pointer_width = "64"))]
-/// 字寬為 [`Word`] 兩倍的中間運算型別。
+/// An intermediate arithmetic type with twice the bit width of [`Word`].
 pub type WideWord = u64;
 
-/// 單一儲存字，透過 [`Self::new`] 與 [`Self::to_word`] 存取內容。
+/// A single storage word, accessed through [`Self::new`] and [`Self::to_word`].
 ///
-/// `+`、`-`、`*` 在溢位時一律 panic（包含 release）；位移量必須小於字寬。
-/// 位元運算直接作用於整個字。需要截斷結果時使用 `wrapping_*` 方法。
+/// `+`, `-`, and `*` panic on overflow, including in release builds; shift counts must be less than the word width.
+/// Bitwise operations act on the entire word. Use `wrapping_*` methods when a truncated result is required.
 ///
 /// ```
 /// use tc_limb::{Limb, Word};
@@ -41,7 +41,7 @@ pub type WideWord = u64;
 pub struct Limb(Word);
 
 impl Limb {
-    /// 從原生字建立 limb。
+    /// Creates a limb from a native word.
     /// ```
     /// use tc_limb::Limb;
     /// const VALUE: Limb = Limb::new(7);
@@ -51,7 +51,7 @@ impl Limb {
         Self(word)
     }
 
-    /// 取得原生字，不改變內容。
+    /// Returns the native word without changing its value.
     /// ```
     /// use tc_limb::Limb;
     /// assert_eq!(Limb::new(42).to_word(), 42);
@@ -60,7 +60,7 @@ impl Limb {
         self.0
     }
 
-    /// 計算 `self + rhs + carry`，回傳低字與進位字；`carry` 可為任意字。
+    /// Computes `self + rhs + carry`, returning the low word and carry word; `carry` may be any word.
     /// ```
     /// use tc_limb::{Limb, Word};
     /// let m = Limb::new(Word::MAX);
@@ -72,10 +72,10 @@ impl Limb {
         (Self(wide as Word), Self((wide >> Word::BITS) as Word))
     }
 
-    /// 計算 `self - rhs - borrow`，回傳低字與借位位元。
+    /// Computes `self - rhs - borrow`, returning the low word and borrow bit.
     ///
     /// # Panics
-    /// `borrow` 不是零或一時 panic。
+    /// Panics if `borrow` is neither zero nor one.
     /// ```
     /// use tc_limb::{Limb, Word};
     /// assert_eq!(Limb::new(0).borrowing_sub(Limb::new(1), Limb::new(0)),
@@ -89,7 +89,7 @@ impl Limb {
         (Self(result), Self((first_borrow | second_borrow) as Word))
     }
 
-    /// 回傳截斷的和與溢位旗標。
+    /// Returns the truncated sum and an overflow flag.
     /// ```
     /// use tc_limb::{Limb, Word};
     /// assert_eq!(Limb::new(Word::MAX).overflowing_add(Limb::new(1)), (Limb::new(0), true));
@@ -99,7 +99,7 @@ impl Limb {
         (value, carry.0 != 0)
     }
 
-    /// 回傳截斷的差與借位旗標。
+    /// Returns the truncated difference and a borrow flag.
     /// ```
     /// use tc_limb::{Limb, Word};
     /// assert_eq!(Limb::new(0).overflowing_sub(Limb::new(1)), (Limb::new(Word::MAX), true));
@@ -109,7 +109,7 @@ impl Limb {
         (value, borrow.0 != 0)
     }
 
-    /// 模 `2^Word::BITS` 加法。
+    /// Adds modulo `2^Word::BITS`.
     /// ```
     /// use tc_limb::{Limb, Word};
     /// assert_eq!(Limb::new(Word::MAX).wrapping_add(Limb::new(1)), Limb::new(0));
@@ -118,7 +118,7 @@ impl Limb {
         Self(self.0.wrapping_add(rhs.0))
     }
 
-    /// 模 `2^Word::BITS` 減法。
+    /// Subtracts modulo `2^Word::BITS`.
     /// ```
     /// use tc_limb::{Limb, Word};
     /// assert_eq!(Limb::new(0).wrapping_sub(Limb::new(1)), Limb::new(Word::MAX));
@@ -127,7 +127,7 @@ impl Limb {
         Self(self.0.wrapping_sub(rhs.0))
     }
 
-    /// 回傳完整乘積的低字與高字。
+    /// Returns the low and high words of the full product.
     /// ```
     /// use tc_limb::{Limb, Word};
     /// assert_eq!(Limb::new(Word::MAX).widening_mul(Limb::new(2)),
@@ -138,7 +138,7 @@ impl Limb {
         (Self(wide as Word), Self((wide >> Word::BITS) as Word))
     }
 
-    /// 模 `2^Word::BITS` 取負，零仍為零。
+    /// Negates modulo `2^Word::BITS`, leaving zero unchanged.
     /// ```
     /// use tc_limb::{Limb, Word};
     /// assert_eq!(Limb::new(1).wrapping_neg(), Limb::new(Word::MAX));
@@ -221,7 +221,7 @@ impl Shr<usize> for Limb {
     }
 }
 
-/// 不依選擇位元或輸入值分支；零選 `a`，一選 `b`。
+/// Selects without branching on the choice bit or input values; zero selects `a`, and one selects `b`.
 /// ```
 /// use tc_limb::{Choice, ConditionallySelectable, Limb};
 /// assert_eq!(Limb::conditional_select(&Limb::new(2), &Limb::new(9), Choice::from_lsb(1)), Limb::new(9));
@@ -231,7 +231,7 @@ impl ConditionallySelectable for Limb {
         Self(Word::conditional_select(&a.0, &b.0, choice))
     }
 }
-/// 不因值不相等而提早退出的相等比較。
+/// Compares for equality without exiting early on a mismatch.
 /// ```
 /// use tc_limb::{ConstantTimeEq, Limb};
 /// assert_eq!(Limb::new(5).ct_eq(&Limb::new(5)).unwrap_u8(), 1);

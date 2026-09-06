@@ -18,10 +18,12 @@ Signed values use two's complement. Limb index zero is always the
 least-significant limb. External slices explicitly select little-endian or
 big-endian order through their method names.
 
-`Limb`、`Word`、`WideWord` 由 `tc_limb` 重新匯出；使用 `Limb::new(word)`
-與 `to_word()` 存取字值，欄位私有。`as_limbs()` 仍回傳原本的陣列參照。
-`LimbArray` 僅負責無號固定寬度原語，最高位不具有符號語意；二補數的
-符號判斷與絕對值由 `FixedBigInt` 負責。變長算術與配置仍留在 `tc_bigint`。
+`Limb`, `Word`, and `WideWord` are re-exported from `tc_limb`. Use
+`Limb::new(word)` and `to_word()` to access word values; the field is private.
+`as_limbs()` still returns the original array reference. `LimbArray` provides
+only unsigned fixed-width primitives, with no sign interpretation for the
+highest bit. Two's-complement sign checks and absolute values belong to
+`FixedBigInt`. Variable-length arithmetic and allocation remain in `tc_bigint`.
 
 The crate defines its own numeric traits in `traits.rs`; it does not depend on
 `num-traits`, and the local traits are not type-compatible with

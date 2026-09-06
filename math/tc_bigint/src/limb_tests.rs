@@ -1,4 +1,4 @@
-//! 保留原 limb 模組的回歸測試，驗證重新匯出的型別。
+//! Retains the original limb module regression tests to validate the re-exported types.
 #[cfg(test)]
 mod tests {
     use crate::{Limb, Word};

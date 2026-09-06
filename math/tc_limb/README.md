@@ -1,21 +1,36 @@
 # tc_limb
 
-固定寬度、小端序 limb 算術。此 crate 使用 `#![no_std]`，不使用 `alloc`、堆積配置或 `unsafe`。正式依賴只有 `tc_constant_time`；`num-bigint` 僅用於測試 oracle，沒有 `tc_bigint` 的正式或開發依賴。
+Fixed-width, little-endian limb arithmetic. This crate uses `#![no_std]` with
+no `alloc`, heap allocation, or `unsafe`. Its only runtime dependency is
+`tc_constant_time`; `num-bigint` is used solely as a test oracle. It has no
+runtime or development dependency on `tc_bigint`.
 
-`tc_bigint` 的固定寬度整數共用本 crate 的 `LimbArray` 儲存與無號原語；有號解讀與變長整數仍由 `tc_bigint` 負責。本 crate 不反向依賴 `tc_bigint`。
+The fixed-width integers in `tc_bigint` share this crate's `LimbArray` storage
+and unsigned primitives. Signed interpretation and variable-length integers
+remain the responsibility of `tc_bigint`; this crate does not depend on it.
 
-## 儲存模型
+## Storage model
 
-`Limb` 包裝一個私有的 `Word`，使用 `Limb::new(word)` 建立，以 `to_word()` 取值。
+`Limb` wraps a private `Word`. Construct it with `Limb::new(word)` and retrieve
+its value with `to_word()`.
 
-| 目標指標寬度 | `Word` | `WideWord` |
+| Target pointer width | `Word` | `WideWord` |
 | --- | --- | --- |
 | 64-bit | `u64` | `u128` |
-| 16-bit、32-bit | `u32` | `u64` |
+| 16-bit, 32-bit | `u32` | `u64` |
 
-字寬沿用目前 `tc_bigint` 的 cfg，因此在 i686 上一個 limb 是 32 位元。`N` 是 limb 數量，不是位元數；固定寬度為 `N * Word::BITS`。跨平台的序列化格式應由呼叫端明確定義，不能直接假設記憶體配置與字寬一致。
+Word widths follow the existing `tc_bigint` configuration, so each limb is
+32 bits on i686. `N` counts limbs, not bits; the fixed bit width is
+`N * Word::BITS`. Callers must explicitly define portable serialization formats
+rather than assume that memory layout and word width are identical across targets.
 
-`LimbArray<const N: usize>` 是無號固定寬度儲存與算術原語，最高位元不是符號位。`abs` 與 `is_negative` 等有號解讀由上層 `FixedBigInt` 負責。私有欄位為 `[Limb; N]`，索引零是最低有效字。使用 `new`、`zero`、`as_limbs`、`as_mut_limbs`、`into_limbs` 建立或取出固定長度儲存。兩個不同 `N` 的值無法互相算術運算，也不會隱式補零或截斷。
+`LimbArray<const N: usize>` provides unsigned fixed-width storage and arithmetic
+primitives. Its highest bit is not a sign bit. Signed interpretation, including
+`abs` and `is_negative`, belongs to the higher-level `FixedBigInt` type. The
+private field is `[Limb; N]`, with index zero holding the least significant word.
+Use `new`, `zero`, `as_limbs`, `as_mut_limbs`, and `into_limbs` to construct or
+access the fixed-length storage. Values with different `N` cannot be combined
+in arithmetic operations; there is no implicit zero extension or truncation.
 
 ```rust
 use tc_limb::{Limb, LimbArray, Word};
@@ -31,47 +46,57 @@ assert_eq!(low, max);
 assert!(high.is_zero());
 ```
 
-## 單一 limb 的語意
+## Single-limb semantics
 
-| 操作 | 結果與限制 |
+| Operation | Result and constraints |
 | --- | --- |
-| `carrying_add` | `self + rhs + carry` 的低字與進位字；輸入 carry 可為任意字，輸出 carry 可大於一 |
-| `borrowing_sub` | `self - rhs - borrow` 的低字與借位位元；輸入 borrow 必須為零或一 |
-| `overflowing_add`、`overflowing_sub` | 截斷結果與溢位／借位旗標 |
-| `wrapping_add`、`wrapping_sub`、`wrapping_neg` | 模 `2^Word::BITS` 的結果 |
-| `widening_mul` | 完整乘積的低字、高字 |
-| `+`、`+=`、`-`、`-=`、`*` | 算術溢位時一律 panic，debug 與 release 相同 |
-| `&`、`\|`、`^`、`!` | 對完整字執行位元運算 |
-| `<< usize`、`>> usize` | 邏輯位移；位移量必須小於 `Word::BITS`，左移移出的位元直接捨棄 |
+| `carrying_add` | Low word and carry word of `self + rhs + carry`; the input carry may be any word, and the output carry may exceed one |
+| `borrowing_sub` | Low word and borrow bit of `self - rhs - borrow`; the input borrow must be zero or one |
+| `overflowing_add`, `overflowing_sub` | Truncated result and overflow/borrow flag |
+| `wrapping_add`, `wrapping_sub`, `wrapping_neg` | Result modulo `2^Word::BITS` |
+| `widening_mul` | Low and high words of the full product |
+| `+`, `+=`, `-`, `-=`, `*` | Always panic on arithmetic overflow, in both debug and release builds |
+| `&`, `\|`, `^`, `!` | Bitwise operations on the entire word |
+| `<< usize`, `>> usize` | Logical shifts; the count must be less than `Word::BITS`, and bits shifted out to the left are discarded |
 
-## 固定寬度方法
+## Fixed-width methods
 
-所有二元參數以及雙寬度運算的每一半都是相同的 `LimbArray<N>`。
+Both operands of binary operations and each half of double-width operations
+use the same `LimbArray<N>` type.
 
-| 方法 | 語意 |
+| Method | Semantics |
 | --- | --- |
-| `cmp`、`Ord`、`PartialOrd` | 從最高 limb 開始，依無號數值排序 |
-| `add`、`sub` | 模固定寬度的結果與最終進位／借位旗標 |
-| `mul` | 乘積低半部與高半部是否非零 |
-| `mul_wide`、`square_wide` | 完整乘積／平方的 `(low, high)` |
-| `mul_add_to` | 將乘積加到可變的低半部與高半部累加器，回傳超出雙寬度的溢位旗標 |
-| `div_rem` | 無號商與餘數；除數為零時 panic |
-| `wide_rem` | `self` 為低半部、`high` 為高半部；對 `modulus` 取餘數，模數為零時 panic |
-| `wrapping_neg` | 模 `2^(N * Word::BITS)` 的加法反元素，不賦予資料符號 |
-| `gcd` | 無號最大公因數，`gcd(0, 0) = 0` |
-| `bit_len` | 有效位元數，零為零 |
-| `test_bit` | 讀取指定有效索引；超出固定寬度時 panic |
-| `is_zero`、`is_one` | 是否等於零／一 |
-| `shr_one` | 原地邏輯右移一位，捨棄最低位元 |
-| `shl_one` | 原地左移一位，回傳被移出的最高位元 |
+| `cmp`, `Ord`, `PartialOrd` | Unsigned numeric ordering, starting at the highest limb |
+| `add`, `sub` | Result modulo the fixed width, with the final carry/borrow flag |
+| `mul` | Low half of the product and a flag indicating whether the high half is nonzero |
+| `mul_wide`, `square_wide` | Full product/square as `(low, high)` |
+| `mul_add_to` | Adds the product to mutable low and high accumulators; returns overflow beyond double width |
+| `div_rem` | Unsigned quotient and remainder; panics on a zero divisor |
+| `wide_rem` | Remainder modulo `modulus`, with `self` as the low half and `high` as the high half; panics on a zero modulus |
+| `wrapping_neg` | Additive inverse modulo `2^(N * Word::BITS)`, without signed interpretation |
+| `gcd` | Unsigned greatest common divisor, with `gcd(0, 0) = 0` |
+| `bit_len` | Number of significant bits; zero for zero |
+| `test_bit` | Reads the bit at a valid index; panics outside the fixed width |
+| `is_zero`, `is_one` | Tests for zero/one |
+| `shr_one` | Logical right shift by one bit in place, discarding the lowest bit |
+| `shl_one` | Left shift by one bit in place, returning the highest bit shifted out |
 
-雙寬度結果表示 `low + high * 2^(N * Word::BITS)`。兩半各使用 `[Limb; N]`，不需要尚無法普遍使用的 `[Limb; 2 * N]` 型別運算，也不配置暫存向量。
+A double-width result represents `low + high * 2^(N * Word::BITS)`. Each half
+uses `[Limb; N]`, avoiding the generally unavailable `[Limb; 2 * N]` type-level
+expression and temporary vector allocation.
 
-`N = 0` 是合法的零寬度數值：所有一般算術結果為零，進位／借位／乘法溢位為假；`is_zero` 為真，`is_one` 為假。`div_rem`、`wide_rem` 必然遇到零除數而 panic；`test_bit` 沒有任何合法索引。
+`N = 0` is a valid zero-width value: ordinary arithmetic results are zero,
+carry/borrow/multiplication overflow flags are false, `is_zero` is true, and
+`is_one` is false. `div_rem` and `wide_rem` necessarily encounter a zero divisor
+and panic; `test_bit` has no valid index.
 
-## 常數時間範圍
+## Constant-time scope
 
-`Limb` 與 `LimbArray<N>` 實作並重新匯出 `tc_constant_time` 的 `ConditionallySelectable` 與 `ConstantTimeEq`。選取不依選擇位元或輸入值分支，相等比較讀取全部 limb 而不提早退出。這些保證針對值；公開的陣列長度 `N` 可以影響執行時間。
+`Limb` and `LimbArray<N>` implement `ConditionallySelectable` and `ConstantTimeEq`
+from `tc_constant_time`, and this crate re-exports those traits. Selection does
+not branch on the choice bit or input values; equality reads every limb without
+early exit. These guarantees concern values; the public array length `N` may
+affect execution time.
 
 ```rust
 use tc_limb::{Choice, ConditionallySelectable, ConstantTimeEq, Limb, LimbArray};
@@ -82,17 +107,39 @@ let selected = LimbArray::conditional_select(&a, &b, Choice::from_lsb(1));
 assert_eq!(selected.ct_eq(&b).unwrap_u8(), 1);
 ```
 
-一般 `==`、`cmp`、零值判斷、算術與除法不宣稱常數時間。特別是除法正規化、商估計修正與 GCD 迴圈都可能依資料改變。`Choice::unwrap_u8` 會揭露比較結果；實際部署仍需依目標編譯器與硬體檢視產生的機器碼。
+Ordinary `==`, `cmp`, zero checks, arithmetic, and division make no constant-time
+claim. In particular, division normalization, quotient-estimate corrections,
+and GCD loops may depend on the data. `Choice::unwrap_u8` reveals the comparison
+result; deployments still require reviewing generated machine code for the
+target compiler and hardware.
 
-## 來源與維護
+## Origins and maintenance
 
-初始實作取自 `tc_bigint/src/arithmetic.rs` 當時的 25 個 `fixed_*`：19 個運算入口與 6 個內部輔助函式。排除留給上層的 `abs` 與 `is_negative` 後，其餘 17 個運算透過上述型別方法提供（比較採 `Ord::cmp`），核心作為私有關聯函式置於 `src/limb_array/arithmetic.rs`，所有陣列參數均保留相同 `N`。`tc_bigint` 的正式程式已刪除重複核心，僅保留測試轉接器以維持既有回歸斷言。
+The initial implementation came from the 25 `fixed_*` functions then present in
+`tc_bigint/src/arithmetic.rs`: 19 operation entry points and 6 internal helpers.
+After leaving `abs` and `is_negative` to the higher layer, the remaining
+17 operations are exposed through the methods above, with comparison provided
+by `Ord::cmp`. The core lives in `src/limb_array/arithmetic.rs` as private
+associated functions whose array arguments all retain the same `N`. The
+duplicate production core has been removed from `tc_bigint`; only test adapters
+remain to preserve existing regression assertions.
 
-未複製變長算術、配置功能、解析與 `FixedBigUint` 的 CT impl。`Limb` 的六個既有 const 原語保留語意，補上私有欄位存取與缺少的運算子；新 crate 中的 CT impl 僅屬於自己的 `Limb` 與 `LimbArray`。
+Variable-length arithmetic, allocation, parsing, and the constant-time
+implementations for `FixedBigUint` were not copied. The six existing `Limb`
+const primitives retain their semantics, with accessors for the private field
+and the missing operators added. This crate's constant-time implementations
+apply only to its own `Limb` and `LimbArray` types.
 
-## 驗證
+## Validation
 
-測試使用固定種子的偽隨機輸入以便重現，逐 limb 對照獨立的 `num_bigint::BigUint`。測試涵蓋 `N = 1, 2, 4, 8`、零寬度、完整進位／借位鏈、最高 limb 溢位、雙寬度累加與餘數、全部公開算術、CT 選取和相等比較。完整乘積另外以任意精度 oracle 重組高低半部驗證；固定寬度截斷與溢位由模數及完整結果獨立計算。
+Tests use pseudorandom inputs with a fixed seed for reproducibility and compare
+each limb against the independent `num_bigint::BigUint` oracle. Coverage includes
+`N = 1, 2, 4, 8`, zero width, full carry/borrow chains, overflow at the highest
+limb, double-width accumulation and remainders, all public arithmetic, and
+constant-time selection and equality. Full products are also checked by
+reconstructing the low and high halves with the arbitrary-precision oracle;
+fixed-width truncation and overflow are computed independently from the modulus
+and full result.
 
 ```text
 cargo test -p tc_limb
@@ -103,4 +150,6 @@ cargo fmt -p tc_limb --check
 cargo doc -p tc_limb --no-deps
 ```
 
-i686 測試需要對應的 Rust target 及可用的 MSVC x86 linker／執行環境。公開 API 的範例由 `cargo test` 執行；crate 同時啟用 `missing_docs` 檢查，避免新增未記錄的 API。
+The i686 tests require the corresponding Rust target and a working MSVC x86
+linker and execution environment. `cargo test` runs the public API examples;
+the crate also enables `missing_docs` to prevent undocumented API additions.

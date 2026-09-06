@@ -34,7 +34,7 @@ fn assert_same<const N: usize>(value: LimbArray<N>, expected: BigUint) {
     assert_eq!(value.into_limbs().map(Limb::to_word), expected_words);
 }
 
-// 用獨立 oracle 的位移與加法重組兩半，不呼叫被測試的算術。
+// Reconstruct both halves using the independent oracle's shifts and addition, not the arithmetic under test.
 fn joined<const N: usize>(low: &LimbArray<N>, high: &LimbArray<N>) -> BigUint {
     oracle(low) + (oracle(high) << (N * Word::BITS as usize))
 }
@@ -49,7 +49,7 @@ fn random_cases<const N: usize>() {
     for case in 0..600 {
         let mut a: [Limb; N] = core::array::from_fn(|_| Limb::new(next(&mut state)));
         let mut b: [Limb; N] = core::array::from_fn(|_| Limb::new(next(&mut state)));
-        // 涵蓋單字除數、前導零、正規化邊界、全滿進位與大小相等。
+        // Cover single-word divisors, leading zeros, normalization boundaries, full carry chains, and equal operands.
         let len = case % N + 1;
         b[len..].fill(Limb::new(0));
         match case % 6 {
