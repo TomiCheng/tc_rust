@@ -499,7 +499,7 @@ mod tests {
         let lambda = ZTauElement::new(BigInt::from(123_456_u32), BigInt::from(-789_i16));
         for mu in [-1, 1] {
             let digits = generate_tau_naf(mu, &lambda);
-            assert!(digits.iter().all(|digit| matches!(digit, -1 | 0 | 1)));
+            assert!(digits.iter().all(|digit| matches!(digit, -1..=1)));
             assert!(digits.windows(2).all(|pair| pair[0] == 0 || pair[1] == 0));
         }
     }

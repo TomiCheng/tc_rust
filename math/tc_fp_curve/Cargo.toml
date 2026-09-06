@@ -16,8 +16,6 @@ tc_ec_core = { version = "0.1.0", path = "../tc_ec_core" }
 
 [dev-dependencies]
 criterion = { workspace = true }
-tc_bigint_old = { version = "0.1.0", path = "../tc_bigint_old" }
-tc_ec = { version = "0.1.0", path = "../tc_ec" }
 
 [[bench]]
 name = "coordinate_systems"

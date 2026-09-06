@@ -1,6 +1,8 @@
 use alloc::sync::Arc;
 
-use tc_bigint::{ArrayEncoding, BigUint, BitOps, FromPrimitive, ModAdd, ModMul, ModSub, U256};
+use tc_bigint::{
+    ArrayEncoding, BigUint, BitOps, FromPrimitive, ModAdd, ModMul, ModSub, U256, U384,
+};
 use tc_ec_core::{CoordinateSystem, Curve, Point, WNafTable, scalar_mul, wnaf_mul, wnaf_mul_point};
 use tc_fp_curve::{FpCurve, FpInteger};
 
@@ -80,6 +82,34 @@ fn unchanged_generic_algorithms_run_on_the_specialized_curve() {
 
     let table = WNafTable::new(&generator, 5, true);
     assert_eq!(wnaf_mul::<SecP256R1Curve>(&table, &scalar), expected);
+}
+
+#[test]
+fn secp384r1_scalar_multiplication_matches_rfc6979_key_pair() {
+    // RFC 6979 A.2.6 的 NIST P-384 key pair，直接錨定完整 `x * G` 座標。
+    let (_, generator) = secp384r1();
+    let scalar = U384::from_str_radix(
+        "6B9D3DAD2E1B8C1C05B19875B6659F4DE23C3B667BF297BA9AA47740787137D896D5724E4C70A825F872C9EA60D2EDF5",
+        16,
+    )
+    .unwrap();
+    let point = generator.mul_double_and_add(&scalar);
+    assert_eq!(
+        point.x().unwrap().to_integer(),
+        U384::from_str_radix(
+            "EC3A4E415B4E19A4568618029F427FA5DA9A8BC4AE92E02E06AAE5286B300C64DEF8F0EA9055866064A254515480BC13",
+            16,
+        )
+        .unwrap()
+    );
+    assert_eq!(
+        point.y().unwrap().to_integer(),
+        U384::from_str_radix(
+            "8015D9B72D7D57244EA8EF9AC0C621896708A59367F9DFB9F54CA84B3F1C9DB1288B231C3AE0D4FE7344FD2533264720",
+            16,
+        )
+        .unwrap()
+    );
 }
 
 #[test]

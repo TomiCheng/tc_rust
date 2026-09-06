@@ -1,14 +1,81 @@
-//! 驗證用的兩條 256-bit 具名質數曲線。
+//! SEC 2 泛型質數曲線。
 //!
-//! 此模組只帶 secp256k1 與 secp256r1；其餘具名曲線仍留在舊 `tc_ec`，
-//! 避免這次 Fp 拆分擴張到完整 registry。無後綴函式使用固定寬度 `U256`，
-//! `_dynamic` 版本保留 `BigUint` 具體化以供交叉驗證。
+//! bc 沒有為 secp112r1、secp112r2 與 secp128r2 提供特化欄位，因此三者
+//! 留在本泛型 Montgomery 層。256-bit 曲線則同時作為通用後端與特化曲線
+//! 的參考實作。無後綴函式採固定寬度整數，`_dynamic` 使用 `BigUint`。
 
 use alloc::sync::Arc;
 
-use tc_bigint::{BigUint, U256};
+use tc_bigint::{BigUint, U128, U256};
 
 use crate::{FpCurve, FpInteger, FpPoint};
+
+macro_rules! define_small_curve {
+    ($name:ident, $dynamic:ident, $with:ident,
+     $p:expr, $a:expr, $b:expr, $order:expr, $cofactor:expr, $gx:expr, $gy:expr) => {
+        #[doc = concat!("建立固定寬度 SEC 2 `", stringify!($name), "` 與基點 `G`。")]
+        #[deprecated(note = "cryptographically weak; interop/completeness only")]
+        pub fn $name() -> (Arc<FpCurve<U128>>, FpPoint<U128>) {
+            $with()
+        }
+
+        #[doc = concat!("建立動態寬度 SEC 2 `", stringify!($name), "` 與基點 `G`。")]
+        #[deprecated(note = "cryptographically weak; interop/completeness only")]
+        pub fn $dynamic() -> (Arc<FpCurve<BigUint>>, FpPoint<BigUint>) {
+            $with()
+        }
+
+        #[doc = concat!("以指定 Fp 整數表示建立 SEC 2 `", stringify!($name), "`。")]
+        pub fn $with<B: FpInteger>() -> (Arc<FpCurve<B>>, FpPoint<B>) {
+            let curve = Arc::new(FpCurve::new(
+                hex($p),
+                hex($a),
+                hex($b),
+                Some(hex($order)),
+                Some(integer($cofactor)),
+            ));
+            let point = curve.create_point(hex($gx), hex($gy));
+            (curve, point)
+        }
+    };
+}
+
+define_small_curve!(
+    secp112r1,
+    secp112r1_dynamic,
+    secp112r1_with,
+    "DB7C2ABF62E35E668076BEAD208B",
+    "DB7C2ABF62E35E668076BEAD2088",
+    "659EF8BA043916EEDE8911702B22",
+    "DB7C2ABF62E35E7628DFAC6561C5",
+    1,
+    "09487239995A5EE76B55F9C2F098",
+    "A89CE5AF8724C0A23E0E0FF77500"
+);
+define_small_curve!(
+    secp112r2,
+    secp112r2_dynamic,
+    secp112r2_with,
+    "DB7C2ABF62E35E668076BEAD208B",
+    "6127C24C05F38A0AAAF65C0EF02C",
+    "51DEF1815DB5ED74FCC34C85D709",
+    "36DF0AAFD8B8D7597CA10520D04B",
+    4,
+    "4BA30AB5E892B4E1649DD0928643",
+    "ADCD46F5882E3747DEF36E956E97"
+);
+define_small_curve!(
+    secp128r2,
+    secp128r2_dynamic,
+    secp128r2_with,
+    "FFFFFFFDFFFFFFFFFFFFFFFFFFFFFFFF",
+    "D6031998D1B3BBFEBF59CC9BBFF9AEE1",
+    "5EEEFCA380D02919DC2C6558BB6D8A5D",
+    "3FFFFFFF7FFFFFFFBE0024720613B5A3",
+    4,
+    "7B6AA5D85E572983E6FB32A7CDEBC140",
+    "27B6916A894D3AEE7106FE805FC34B44"
+);
 
 /// 建立固定寬度 SEC 2 secp256k1 與基點 `G`。
 pub fn secp256k1() -> (Arc<FpCurve<U256>>, FpPoint<U256>) {
@@ -63,10 +130,7 @@ pub fn secp256r1_with<B: FpInteger>() -> (Arc<FpCurve<B>>, FpPoint<B>) {
 }
 
 fn hex<B: FpInteger>(value: &str) -> B {
-    match B::from_str_radix(value, 16) {
-        Ok(value) => value,
-        Err(_) => panic!("named-curve constant is valid hex"),
-    }
+    B::from_str_radix(value, 16).unwrap_or_else(|_| panic!("named-curve constant is valid hex"))
 }
 
 fn integer<B: FpInteger>(value: u8) -> B {
@@ -76,64 +140,146 @@ fn integer<B: FpInteger>(value: u8) -> B {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tc_bigint_old::BigInt;
     use tc_ec_core::CoordinateSystem;
 
-    fn assert_matches_old<B: FpInteger>(
-        new_curve: &(Arc<FpCurve<B>>, FpPoint<B>),
-        old_curve: &(alloc::sync::Arc<tc_ec::FpCurve>, tc_ec::FpPoint),
-        seed: u64,
+    #[allow(clippy::too_many_arguments)]
+    fn assert_parameters<B: FpInteger>(
+        pair: &(Arc<FpCurve<B>>, FpPoint<B>),
+        p: &str,
+        a: &str,
+        b: &str,
+        order: &str,
+        cofactor: u8,
+        gx: &str,
+        gy: &str,
     ) {
-        let (_, new_g) = new_curve;
-        let (_, old_g) = old_curve;
-        assert!(new_g.is_valid());
-        assert_eq!(new_g.encode(false), old_g.encode(false));
+        let (curve, generator) = pair;
+        assert_eq!(curve.q(), &hex(p));
+        assert_eq!(curve.a().to_big_uint(), hex(a));
+        assert_eq!(curve.b().to_big_uint(), hex(b));
+        assert_eq!(curve.order(), Some(&hex(order)));
+        assert_eq!(curve.cofactor(), Some(&integer(cofactor)));
+        assert_eq!(generator.x().unwrap().to_big_uint(), hex(gx));
+        assert_eq!(generator.y().unwrap().to_big_uint(), hex(gy));
+        assert!(generator.is_valid());
+    }
 
-        let new_double = new_g.twice();
-        let old_double = old_g.twice();
-        assert_eq!(new_double.encode(false), old_double.encode(false));
+    fn assert_round_trips_and_order<B: FpInteger>(curve: Arc<FpCurve<B>>, point: FpPoint<B>) {
+        for compressed in [false, true] {
+            let encoded = point.encode(compressed);
+            assert_eq!(curve.decode_point(&encoded).unwrap(), point);
+        }
+        assert!(
+            point
+                .mul_double_and_add(curve.order().expect("SEC curve has an order"))
+                .is_infinity()
+        );
+    }
+
+    #[allow(deprecated)]
+    #[test]
+    fn sec2_parameters_are_pinned_to_the_published_values() {
+        assert_parameters(
+            &secp112r1(),
+            "DB7C2ABF62E35E668076BEAD208B",
+            "DB7C2ABF62E35E668076BEAD2088",
+            "659EF8BA043916EEDE8911702B22",
+            "DB7C2ABF62E35E7628DFAC6561C5",
+            1,
+            "09487239995A5EE76B55F9C2F098",
+            "A89CE5AF8724C0A23E0E0FF77500",
+        );
+        assert_parameters(
+            &secp112r2(),
+            "DB7C2ABF62E35E668076BEAD208B",
+            "6127C24C05F38A0AAAF65C0EF02C",
+            "51DEF1815DB5ED74FCC34C85D709",
+            "36DF0AAFD8B8D7597CA10520D04B",
+            4,
+            "4BA30AB5E892B4E1649DD0928643",
+            "ADCD46F5882E3747DEF36E956E97",
+        );
+        assert_parameters(
+            &secp128r2(),
+            "FFFFFFFDFFFFFFFFFFFFFFFFFFFFFFFF",
+            "D6031998D1B3BBFEBF59CC9BBFF9AEE1",
+            "5EEEFCA380D02919DC2C6558BB6D8A5D",
+            "3FFFFFFF7FFFFFFFBE0024720613B5A3",
+            4,
+            "7B6AA5D85E572983E6FB32A7CDEBC140",
+            "27B6916A894D3AEE7106FE805FC34B44",
+        );
+        assert_parameters(
+            &secp256k1(),
+            "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F",
+            "0",
+            "7",
+            "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141",
+            1,
+            "79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798",
+            "483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8",
+        );
+        assert_parameters(
+            &secp256r1(),
+            "FFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFF",
+            "FFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFC",
+            "5AC635D8AA3A93E7B3EBBD55769886BC651D06B0CC53B0F63BCE3C3E27D2604B",
+            "FFFFFFFF00000000FFFFFFFFFFFFFFFFBCE6FAADA7179E84F3B9CAC2FC632551",
+            1,
+            "6B17D1F2E12C4247F8BCE6E563A440F277037D812DEB33A0F4A13945D898C296",
+            "4FE342E2FE1A7F9B8EE7EB4A7C0F9E162BCE33576B315ECECBB6406837BF51F5",
+        );
+    }
+
+    #[allow(deprecated)]
+    #[test]
+    fn every_generic_fp_named_curve_has_the_declared_order_and_sec1_round_trips() {
+        for pair in [secp112r1(), secp112r2(), secp128r2()] {
+            assert_round_trips_and_order(pair.0, pair.1);
+        }
+        for pair in [
+            secp112r1_dynamic(),
+            secp112r2_dynamic(),
+            secp128r2_dynamic(),
+        ] {
+            assert_round_trips_and_order(pair.0, pair.1);
+        }
+        for pair in [secp256k1(), secp256r1()] {
+            assert_round_trips_and_order(pair.0, pair.1);
+        }
+        for pair in [secp256k1_dynamic(), secp256r1_dynamic()] {
+            assert_round_trips_and_order(pair.0, pair.1);
+        }
+    }
+
+    #[test]
+    fn standard_scalar_multiplication_kats_match_rfc6979_and_bip340() {
+        // RFC 6979 A.2.5 的 NIST P-256 key pair。
+        let (_, p256_generator) = secp256r1();
+        let p256 = p256_generator.mul_double_and_add(&hex(
+            "C9AFA9D845BA75166B5C215767B1D6934E50C3DB36E89B127B8A622B120F6721",
+        ));
         assert_eq!(
-            (&new_double + new_g).encode(false),
-            (&old_double + old_g).encode(false)
+            p256.x().unwrap().to_big_uint(),
+            hex("60FED4BA255A9D31C961EB74C6356D68C049B8923B61FA6CE669622E60F29FB6")
+        );
+        assert_eq!(
+            p256.y().unwrap().to_big_uint(),
+            hex("7903FE1008B8BC99A41AE9E95628BC64F2F1B20C2D7E9F5177A3C294D4462299")
         );
 
-        for scalar in [3_u32, 19, 255] {
-            let new_scalar = B::from_u32(scalar).expect("small scalar fits");
-            let new_result = new_g.mul_double_and_add(&new_scalar);
-            let old_result = old_g.mul_double_and_add(&BigInt::from_u32(scalar));
-            assert_eq!(
-                new_result.encode(false),
-                old_result.encode(false),
-                "scalar {scalar}"
-            );
-        }
-
-        // 以固定種子產生可重現的 256-bit 純量；先乘出隨機有效點，再以另一份
-        // 完整寬度純量交叉驗證，避免測試只覆蓋生成點與最低 8 bits。
-        let mut state = seed;
-        let point_scalar_bytes = random_256_bits(&mut state);
-        let scalar_bytes = random_256_bits(&mut state);
-        let point_scalar = decode_integer::<B>(&point_scalar_bytes);
-        let scalar = decode_integer::<B>(&scalar_bytes);
-        assert_eq!(point_scalar.bit_length(), 256);
-        assert_eq!(scalar.bit_length(), 256);
-
-        let old_point_scalar = BigInt::from_bytes_be_unsigned(&point_scalar_bytes);
-        let old_scalar = BigInt::from_bytes_be_unsigned(&scalar_bytes);
-        let new_point = new_g.mul_double_and_add(&point_scalar);
-        let old_point = old_g.mul_double_and_add(&old_point_scalar);
-        assert_eq!(new_point.encode(false), old_point.encode(false));
-
-        let new_result = new_point.mul_double_and_add(&scalar);
-        let old_result = old_point.mul_double_and_add(&old_scalar);
-        assert_eq!(new_result.encode(false), old_result.encode(false));
+        // BIP 340 test vector 0：secret key 3 的 x-only 公鑰。
+        let (_, k1_generator) = secp256k1();
+        let k1 = k1_generator.mul_double_and_add(&integer(3));
+        assert_eq!(
+            k1.x().unwrap().to_big_uint(),
+            hex("F9308A019258C31049344F85F89D5229B531C845836F99B08601F113BCE036F9")
+        );
+        assert!(!k1.y().unwrap().to_big_uint().test_bit(0));
     }
 
     fn decode_integer<B: FpInteger>(bytes: &[u8]) -> B {
-        match B::from_be_bytes(bytes) {
-            Ok(value) => value,
-            Err(_) => panic!("256-bit test scalar fits selected backend"),
-        }
+        B::from_be_bytes(bytes).unwrap_or_else(|_| panic!("test scalar fits selected backend"))
     }
 
     fn random_256_bits(state: &mut u64) -> [u8; 32] {
@@ -146,13 +292,6 @@ mod tests {
         }
         bytes[0] |= 0x80;
         bytes
-    }
-
-    fn assert_round_trips<B: FpInteger>(curve: Arc<FpCurve<B>>, point: FpPoint<B>) {
-        for compressed in [false, true] {
-            let encoded = point.encode(compressed);
-            assert_eq!(curve.decode_point(&encoded).unwrap(), point);
-        }
     }
 
     fn assert_coordinate_systems_match<B: FpInteger>(
@@ -197,26 +336,6 @@ mod tests {
             } else {
                 expected = Some(encoded);
             }
-        }
-    }
-
-    #[test]
-    fn secp256_curves_match_the_old_tc_ec_oracle() {
-        let old_k1 = tc_ec::ec::named_curves::secp256k1();
-        let old_r1 = tc_ec::ec::named_curves::secp256r1();
-        assert_matches_old(&secp256k1(), &old_k1, 0x4B31_C0DE_2560_0001);
-        assert_matches_old(&secp256k1_dynamic(), &old_k1, 0x4B31_C0DE_2560_0001);
-        assert_matches_old(&secp256r1(), &old_r1, 0x5231_C0DE_2560_0001);
-        assert_matches_old(&secp256r1_dynamic(), &old_r1, 0x5231_C0DE_2560_0001);
-    }
-
-    #[test]
-    fn named_points_round_trip_both_sec_encodings() {
-        for (curve, point) in [secp256k1(), secp256r1()] {
-            assert_round_trips(curve, point);
-        }
-        for (curve, point) in [secp256k1_dynamic(), secp256r1_dynamic()] {
-            assert_round_trips(curve, point);
         }
     }
 
