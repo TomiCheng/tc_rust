@@ -100,6 +100,14 @@ impl<S: PrimeFieldSpec<N>, const N: usize> SpecializedPoint<S, N> {
             .z
             .invert()
             .expect("finite Jacobian point has non-zero Z");
+        self.normalize_with_inverse(&z_inverse)
+    }
+
+    pub(crate) fn normalize_with_inverse(&self, inverse: &SpecializedFieldElement<S, N>) -> Self {
+        let Some(point) = &self.coordinates else {
+            return self.clone();
+        };
+        let z_inverse = *inverse;
         let z_inverse_squared = z_inverse.square();
         let z_inverse_cubed = &z_inverse_squared * &z_inverse;
         Self::new(
@@ -331,6 +339,21 @@ fn octuple<S: PrimeFieldSpec<N>, const N: usize>(
 
 impl<S: PrimeFieldSpec<N>, const N: usize> Point for SpecializedPoint<S, N> {
     type Curve = SpecializedCurve<S, N>;
+
+    fn projective_z(&self) -> Option<<Self::Curve as Curve>::Field> {
+        self.z().copied()
+    }
+    fn normalize_with_inverse(&self, inverse: &<Self::Curve as Curve>::Field) -> Self {
+        self.normalize_with_inverse(inverse)
+    }
+
+    fn curve(&self) -> &Arc<Self::Curve> {
+        self.curve()
+    }
+
+    fn is_valid(&self) -> bool {
+        self.is_valid()
+    }
 
     fn identity(&self) -> Self {
         self.curve.infinity()

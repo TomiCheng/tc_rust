@@ -1,0 +1,13 @@
+[package]
+name = "tc_ed448"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "RFC 8032 Ed448 and Ed448ph signatures."
+
+[dependencies]
+rand_core = { workspace = true }
+tc_edwards = { path = "../tc_edwards", version = "0.1.0" }
+tc_keccak = { path = "../digest/tc_keccak", version = "0.1.0" }
+tc_digest = { path = "../tc_digest", version = "0.1.0" }

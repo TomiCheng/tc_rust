@@ -1,0 +1,14 @@
+[package]
+name = "tc_ed25519"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "RFC 8032 Ed25519, Ed25519ctx and Ed25519ph signatures."
+
+[dependencies]
+rand_core = { workspace = true }
+tc_edwards = { path = "../tc_edwards", version = "0.1.0" }
+tc_sha = { path = "../digest/tc_sha", version = "0.1.0" }
+tc_digest = { path = "../tc_digest", version = "0.1.0" }
+tc_rfc7748 = { path = "../../math/tc_rfc7748", version = "0.1.0", default-features = false }

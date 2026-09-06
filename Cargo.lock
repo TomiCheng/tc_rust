@@ -589,6 +589,7 @@ version = "0.1.0"
 dependencies = [
  "criterion",
  "rand_core",
+ "tc_constant_time",
 ]
 
 [[package]]
@@ -753,6 +754,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_constant_time"
+version = "0.1.0"
+
+[[package]]
 name = "tc_crypto"
 version = "0.1.0"
 
@@ -853,6 +858,9 @@ dependencies = [
 [[package]]
 name = "tc_ec_core"
 version = "0.1.0"
+dependencies = [
+ "tc_constant_time",
+]
 
 [[package]]
 name = "tc_ecb"
@@ -862,6 +870,35 @@ dependencies = [
  "tc_cipher",
  "tc_crypto",
  "tc_params",
+]
+
+[[package]]
+name = "tc_ed25519"
+version = "0.1.0"
+dependencies = [
+ "rand_core",
+ "tc_digest",
+ "tc_edwards",
+ "tc_rfc7748",
+ "tc_sha",
+]
+
+[[package]]
+name = "tc_ed448"
+version = "0.1.0"
+dependencies = [
+ "rand_core",
+ "tc_digest",
+ "tc_edwards",
+ "tc_keccak",
+]
+
+[[package]]
+name = "tc_edwards"
+version = "0.1.0"
+dependencies = [
+ "tc_constant_time",
+ "tc_rfc7748",
 ]
 
 [[package]]
@@ -900,6 +937,7 @@ dependencies = [
  "criterion",
  "tc_bigint",
  "tc_ec_core",
+ "tc_f2m_custom",
  "tc_fp_curve",
 ]
 

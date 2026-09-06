@@ -6,6 +6,12 @@
 
 use tc_binpoly::{BinPolyError, BinPolyMultiplier, BinaryPoly, BinaryPolyOps, FixedBinaryPoly};
 
+/// Storage whose cloning, limb access and reconstruction of canonical values
+/// depend only on the public field size, never on coefficient values.
+pub trait SecretPolynomial: F2mPolynomial {}
+impl SecretPolynomial for BinaryPoly {}
+impl<const N: usize> SecretPolynomial for FixedBinaryPoly<N> {}
+
 /// 可由 little-endian limb slice 建立的二進位多項式值。
 pub trait F2mPolynomial: BinaryPolyOps {
     /// 由已約簡且長度符合 multiplier 的 limbs 建值。

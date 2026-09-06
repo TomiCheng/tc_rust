@@ -149,6 +149,21 @@ impl<B: FpInteger> Curve for FpCurve<B> {
 impl<B: FpInteger> Point for FpPoint<B> {
     type Curve = FpCurve<B>;
 
+    fn projective_z(&self) -> Option<<Self::Curve as Curve>::Field> {
+        self.get_z_coord(0)
+    }
+    fn normalize_with_inverse(&self, inverse: &<Self::Curve as Curve>::Field) -> Self {
+        self.normalize_with_inverse(inverse)
+    }
+
+    fn curve(&self) -> &Arc<Self::Curve> {
+        self.curve()
+    }
+
+    fn is_valid(&self) -> bool {
+        self.is_valid()
+    }
+
     fn identity(&self) -> Self {
         self.curve().infinity()
     }

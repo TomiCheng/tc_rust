@@ -19,7 +19,7 @@ pub use f2m_field::{F2mField, ReductionPolynomial};
 pub use f2m_field_element::F2mFieldElement;
 pub use f2m_point::F2mPoint;
 pub use integer::F2mInteger;
-pub use polynomial::F2mPolynomial;
+pub use polynomial::{F2mPolynomial, SecretPolynomial};
 pub use tc_ec_core::{
     BinaryFieldElement, CoordinateSystem, Curve, FieldElement, Point, PointDecodeError, WNafTable,
     generate_compact_window_naf, generate_naf, generate_window_naf, get_naf_weight,

@@ -29,6 +29,11 @@ fn bench_x448(c: &mut Criterion) {
     let scalar = [0x5A_u8; x448::SCALAR_SIZE];
     let mut base = [0_u8; x448::POINT_SIZE];
     base[0] = 5;
+    let a = tc_rfc7748::x448_field::Fe448::decode(&[0x55; 56]);
+    let b = tc_rfc7748::x448_field::Fe448::decode(&[0xa3; 56]);
+    c.bench_function("rfc7748/x448/field_mul", |bench| {
+        bench.iter(|| black_box(a).mul(black_box(b)))
+    });
 
     c.bench_function("rfc7748/x448/scalar_mult", |b| {
         b.iter(|| x448::scalar_mult(black_box(&scalar), black_box(&base)))

@@ -37,7 +37,7 @@ impl Limb {
         assert!(borrow.0 <= 1, "borrow must be zero or one");
         let (first, first_borrow) = self.0.overflowing_sub(rhs.0);
         let (result, second_borrow) = first.overflowing_sub(borrow.0);
-        (Self(result), Self((first_borrow || second_borrow) as Word))
+        (Self(result), Self((first_borrow | second_borrow) as Word))
     }
 
     /// Computes `self + rhs` and reports overflow.

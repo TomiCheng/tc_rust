@@ -8,6 +8,38 @@ use alloc::vec::Vec;
 
 use crate::{Curve, Point};
 
+/// Joint sparse form of two unsigned scalars, least significant pair first.
+/// Digits are in `-1..=1`. Carry bits avoid overflowing fixed-width scalars.
+/// Variable time; suitable only for public scalars.
+pub fn generate_jsf<C: Curve>(a: &C::Scalar, b: &C::Scalar) -> Vec<[i8; 2]> {
+    let mut values = [a.clone(), b.clone()];
+    let mut carry = [0_i32; 2];
+    let mut result = Vec::new();
+    while carry != [0, 0] || values.iter().any(|v| !C::scalar_is_zero(v)) {
+        let n = [
+            (C::scalar_low_bits(&values[0], 3) as i32 + carry[0]) & 7,
+            (C::scalar_low_bits(&values[1], 3) as i32 + carry[1]) & 7,
+        ];
+        let mut digit = [0_i8; 2];
+        for i in 0..2 {
+            let mut u = n[i] & 1;
+            if u != 0 {
+                u -= n[i] & 2;
+                if n[i] + u == 4 && n[1 - i] & 3 == 2 {
+                    u = -u;
+                }
+            }
+            if carry[i] * 2 == 1 + u {
+                carry[i] ^= 1;
+            }
+            digit[i] = u as i8;
+            values[i] = C::scalar_shr1(&values[i]);
+        }
+        result.push(digit);
+    }
+    result
+}
+
 // BC `WNafUtilities.cs:11` 的預設窗寬門檻。
 const DEFAULT_WINDOW_SIZE_CUTOFFS: [usize; 6] = [13, 41, 121, 337, 897, 2305];
 // 這是 Rust dense 表示使用 `Vec<i8>` 的限制：width > 8 的有號 digit 無法
@@ -172,6 +204,7 @@ impl<P: Point> WNafTable<P> {
             current = current.add(&twice);
             precomputed.push(current.clone());
         }
+        crate::normalize_all(&mut precomputed).expect("precomputed points share a valid curve");
         let precomputed_negated =
             include_negated.then(|| precomputed.iter().map(Point::negate).collect::<Vec<_>>());
         Self {
@@ -196,7 +229,7 @@ impl<P: Point> WNafTable<P> {
         self.precomputed_negated.as_deref()
     }
 
-    fn select(&self, digit: i32) -> P {
+    pub(crate) fn select(&self, digit: i32) -> P {
         let index = digit.unsigned_abs() as usize >> 1;
         if digit < 0 {
             self.precomputed_negated.as_ref().map_or_else(

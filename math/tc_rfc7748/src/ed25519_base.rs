@@ -1,7 +1,7 @@
-//! X25519 固定基點路徑使用的最小 Ed25519 數學核心。
+//! Shared full Ed25519 fixed-base multiplication for X25519 and RFC 8032.
 //!
-//! 完整 RFC 8032 簽章層需要 SHA-512，應位於 crypto 層；這裡只保留 Edwards
-//! 完整點加法與編譯期固定基點表，避免 `tc_rfc7748` 與未來簽章 crate 形成依賴環。
+//! The SHA-512 signature layer lives in `tc_ed25519`. This module owns the
+//! Edwards point formulas and compile-time table, avoiding a dependency cycle.
 
 use crate::x25519::clamp_private_key;
 use crate::x25519_field::Fe;
@@ -119,11 +119,18 @@ pub(crate) fn precompute() {
 /// 以 signed radix-16 固定視窗計算 Ed25519 基點倍數，回傳 projective `Y`、`Z`。
 ///
 /// 表的第 `i` 列保存 `1..=8` 倍的 `256^i B`。先累加奇數 nibble、固定倍點
-/// 四次，再累加偶數 nibble，因此整次乘法只有 64 次 mixed-add 與 4 次倍點。
+/// 四次，再累加偶數 nibble。完整 256-bit 路徑另外處理 signed recoding 的最高進位。
 pub(crate) fn scalar_mult_base_yz(k: &[u8; 32]) -> (Fe, Fe) {
     let mut scalar = *k;
     clamp_private_key(&mut scalar);
+    let (_, y, z, _) = scalar_mult_base(&scalar);
+    (y, z)
+}
 
+/// Multiplies the Edwards base point by all 256 input bits, without clamping.
+/// Returns extended `(X, Y, Z, T)` coordinates for the RFC 8032 layer.
+/// The table is scanned with masks; no secret index is used.
+pub fn scalar_mult_base(scalar: &[u8; 32]) -> (Fe, Fe, Fe, Fe) {
     let mut digits = [0_i8; 64];
     for (index, byte) in scalar.iter().enumerate() {
         digits[index * 2] = (byte & 0x0F) as i8;
@@ -135,7 +142,9 @@ pub(crate) fn scalar_mult_base_yz(k: &[u8; 32]) -> (Fe, Fe) {
         carry = (value + 8) >> 4;
         *digit = value - (carry << 4);
     }
-    digits[63] += carry;
+    let top = digits[63] + carry;
+    let overflow = (top + 8) >> 4;
+    digits[63] = top - (overflow << 4);
 
     let mut result = EdPoint::identity();
     for position in 0..32 {
@@ -147,7 +156,33 @@ pub(crate) fn scalar_mult_base_yz(k: &[u8; 32]) -> (Fe, Fe) {
     for position in 0..32 {
         result = result.add_precomputed(EdPrecomp::select(position, digits[position * 2]));
     }
-    (result.y, result.z)
+    // Signed recoding may produce a 257th bit. Derive 2^256 B from a
+    // public table entry (8 * 256^31 B), then include it with a mask.
+    let mut high = EdPoint::identity().add_precomputed(EdPrecomp::select(31, 8));
+    for _ in 0..5 {
+        high = high.double();
+    }
+    high.x = Fe::cmov(overflow as i32, high.x, Fe::zero());
+    high.y = Fe::cmov(overflow as i32, high.y, Fe::one());
+    high.z = Fe::cmov(overflow as i32, high.z, Fe::one());
+    high.t = Fe::cmov(overflow as i32, high.t, Fe::zero());
+    let d = Fe::edwards_d();
+    let a = result.x.mul(high.x);
+    let b = result.y.mul(high.y);
+    let c = d.mul(result.t).mul(high.t);
+    let z = result.z.mul(high.z);
+    let e = result
+        .x
+        .add(result.y)
+        .carry()
+        .mul(high.x.add(high.y).carry())
+        .sub(a)
+        .sub(b)
+        .carry();
+    let f = z.sub(c).carry();
+    let g = z.add(c).carry();
+    let h = b.add(a).carry();
+    (e.mul(f), g.mul(h), f.mul(g), e.mul(h))
 }
 
 // 每個欄位元素以 canonical 32-byte encoding 的四個 little-endian u64 保存，

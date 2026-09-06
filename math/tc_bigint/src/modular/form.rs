@@ -19,6 +19,7 @@ use crate::Limb;
 #[cfg(feature = "alloc")]
 use crate::arithmetic::div_rem;
 use crate::arithmetic::{fixed_div_rem, fixed_is_one};
+use crate::{Choice, ConditionallySelectable, ConstantTimeEq};
 
 /// Recovers an ordinary integer from an alternate arithmetic representation.
 pub trait Retrieve {
@@ -241,6 +242,24 @@ pub struct FixedMontyForm<const N: usize> {
 }
 
 impl<const N: usize> FixedMontyForm<N> {
+    /// Reduces a secret fixed-width integer with a fixed schedule and enters
+    /// the public Montgomery domain. Unlike `new`, this does not use division.
+    pub fn new_ct(value: &FixedBigUint<N>, params: FixedMontyParams<N>) -> Self {
+        let mut result = Self::zero(params);
+        let one = Self::one(params);
+        for limb in value.as_limbs().iter().rev() {
+            for bit in (0..crate::Word::BITS).rev() {
+                result = result.double();
+                let incremented = result + one;
+                result = Self::conditional_select(
+                    &result,
+                    &incremented,
+                    Choice::from_lsb((limb.0 >> bit) as u8),
+                );
+            }
+        }
+        result
+    }
     /// Reduces `value` and enters the Montgomery domain without allocating.
     ///
     /// ```
@@ -420,6 +439,42 @@ impl<const N: usize> Retrieve for FixedMontyForm<N> {
 
     fn retrieve(&self) -> Self::Output {
         FixedMontyForm::retrieve(self)
+    }
+}
+
+impl<const N: usize> ConditionallySelectable for FixedMontyForm<N> {
+    fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
+        a.assert_same_params(b); // Domain parameters are public.
+        Self {
+            value: FixedBigUint::conditional_select(&a.value, &b.value, choice),
+            params: a.params,
+        }
+    }
+}
+impl<const N: usize> ConstantTimeEq for FixedMontyForm<N> {
+    fn ct_eq(&self, rhs: &Self) -> Choice {
+        self.assert_same_params(rhs);
+        self.value.ct_eq(&rhs.value)
+    }
+}
+
+impl<const N: usize> FixedMontyForm<N> {
+    /// Fixed-schedule exponentiation over every bit of the fixed-width exponent.
+    /// Modulus and limb count are public. Unlike `pow`, exponent bits are secret.
+    pub fn pow_ct(&self, exponent: &FixedBigUint<N>) -> Self {
+        let mut result = Self::one(self.params);
+        for limb in exponent.as_limbs().iter().rev() {
+            for bit in (0..crate::Word::BITS).rev() {
+                result = result.square();
+                let multiplied = result * self;
+                result = Self::conditional_select(
+                    &result,
+                    &multiplied,
+                    Choice::from_lsb((limb.0 >> bit) as u8),
+                );
+            }
+        }
+        result
     }
 }
 

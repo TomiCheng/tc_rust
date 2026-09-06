@@ -1,5 +1,6 @@
 //! Montgomery and division-based modular multiplication helpers.
 
+#[cfg(feature = "alloc")]
 use core::cmp::Ordering;
 
 #[cfg(feature = "alloc")]
@@ -8,9 +9,9 @@ use alloc::vec::Vec;
 #[cfg(feature = "alloc")]
 use crate::arithmetic::{cmp, mul, normalize};
 use crate::arithmetic::{
-    fixed_add, fixed_cmp, fixed_div_rem, fixed_is_zero, fixed_mul_wide, fixed_sub, fixed_wide_rem,
+    fixed_add, fixed_div_rem, fixed_is_zero, fixed_mul_wide, fixed_sub, fixed_wide_rem,
 };
-use crate::{Limb, WideWord, Word};
+use crate::{Choice, ConditionallySelectable, Limb, WideWord, Word};
 
 pub(super) fn montgomery_inverse(word: Word) -> Word {
     debug_assert_eq!(word & 1, 1);
@@ -88,8 +89,6 @@ pub(super) fn fixed_montgomery_mul<const N: usize>(
     inverse: Word,
 ) -> [Limb; N] {
     debug_assert!(!fixed_is_zero(modulus) && modulus[0].0 & 1 == 1);
-    debug_assert!(fixed_cmp(lhs, modulus) == Ordering::Less);
-    debug_assert!(fixed_cmp(rhs, modulus) == Ordering::Less);
 
     let mut result = [Limb(0); N];
     let mut high = 0 as Word;
@@ -125,16 +124,12 @@ pub(super) fn fixed_montgomery_mul<const N: usize>(
         debug_assert!(high <= 1);
     }
 
-    if high != 0 {
-        let (reduced, borrow) = fixed_sub(&result, modulus);
-        debug_assert_eq!(high, 1);
-        debug_assert!(borrow);
-        reduced
-    } else if fixed_cmp(&result, modulus) != Ordering::Less {
-        fixed_sub(&result, modulus).0
-    } else {
-        result
-    }
+    let (reduced, borrow) = fixed_sub(&result, modulus);
+    <[Limb; N]>::conditional_select(
+        &result,
+        &reduced,
+        Choice::from_lsb((high as u8) | ((!borrow) as u8)),
+    )
 }
 
 pub(super) fn fixed_mul_mod<const N: usize>(
@@ -151,17 +146,9 @@ pub(super) fn fixed_add_mod<const N: usize>(
     rhs: &[Limb; N],
     modulus: &[Limb; N],
 ) -> [Limb; N] {
-    debug_assert!(fixed_cmp(lhs, modulus) == Ordering::Less);
-    debug_assert!(fixed_cmp(rhs, modulus) == Ordering::Less);
-    let (distance, borrow) = fixed_sub(modulus, rhs);
-    debug_assert!(!borrow);
-    if fixed_cmp(lhs, &distance) != Ordering::Less {
-        fixed_sub(lhs, &distance).0
-    } else {
-        let (sum, overflow) = fixed_add(lhs, rhs);
-        debug_assert!(!overflow);
-        sum
-    }
+    let (sum, carry) = fixed_add(lhs, rhs);
+    let (reduced, borrow) = fixed_sub(&sum, modulus);
+    <[Limb; N]>::conditional_select(&sum, &reduced, Choice::from_lsb((carry | !borrow) as u8))
 }
 
 pub(super) fn fixed_sub_mod<const N: usize>(
@@ -169,12 +156,9 @@ pub(super) fn fixed_sub_mod<const N: usize>(
     rhs: &[Limb; N],
     modulus: &[Limb; N],
 ) -> [Limb; N] {
-    if fixed_cmp(lhs, rhs) != Ordering::Less {
-        fixed_sub(lhs, rhs).0
-    } else {
-        let difference = fixed_sub(rhs, lhs).0;
-        fixed_sub(modulus, &difference).0
-    }
+    let (difference, borrow) = fixed_sub(lhs, rhs);
+    let corrected = fixed_add(&difference, modulus).0;
+    <[Limb; N]>::conditional_select(&difference, &corrected, Choice::from_lsb(borrow as u8))
 }
 
 pub(super) fn fixed_one_mod<const N: usize>(modulus: &[Limb; N]) -> [Limb; N] {

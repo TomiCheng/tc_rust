@@ -198,6 +198,17 @@ impl<B: FpInteger> FpPoint<B> {
         }
 
         let z_inv = z.invert().expect("finite projective point has non-zero Z");
+        self.normalize_with_inverse(&z_inv)
+    }
+
+    pub(crate) fn normalize_with_inverse(&self, inverse: &FpFieldElement<B>) -> Self {
+        let Some(coords) = &self.coords else {
+            return self.clone();
+        };
+        if coords.z().is_none() {
+            return self.clone();
+        }
+        let z_inv = inverse.clone();
         let (x, y) = match coords {
             Coords::Homogeneous { x, y, .. } => (x * &z_inv, y * &z_inv),
             Coords::Jacobian { x, y, .. } | Coords::JacobianModified { x, y, .. } => {

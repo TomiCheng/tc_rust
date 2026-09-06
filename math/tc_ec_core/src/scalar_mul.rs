@@ -1,6 +1,6 @@
 //! 不綁定 Fp、F2m 或特定大整數 crate 的純量乘演算法。
 //!
-//! 標量的位元存取由 [`Curve`] 提供，因此 `tc_ec_core` 可維持零外部相依，
+//! 標量的位元存取由 [`Curve`] 提供，因此 `tc_ec_core` 不依賴大整數實作，
 //! 同一份 double-and-add 也能套用到動態整數、固定寬度整數與未來特化曲線。
 
 use crate::{Curve, Point};

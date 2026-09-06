@@ -316,6 +316,12 @@ macro_rules! verify_curve {
 }
 
 #[test]
+fn sm2_matches_generic_montgomery_oracles() {
+    assert_specialized_field::<crate::Sm2P256V1Spec, 8>();
+    assert_specialized_curve::<crate::Sm2P256V1Spec, 8>(crate::sm2p256v1());
+}
+
+#[test]
 fn all_remaining_sec_prime_curves_match_generic_montgomery_oracles() {
     verify_curve!(SecP128R1Spec, 4, secp128r1);
     verify_curve!(SecP160K1Spec, 5, secp160k1);

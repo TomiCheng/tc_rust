@@ -23,7 +23,8 @@ higher-level elliptic-curve work still have known gaps.
 | Block modes | 8 mode families | Padding, buffering, and ciphertext stealing are not provided |
 | Digests and XOFs | 45 exported digest, XOF, and wrapper types | The current Bouncy Castle digest inventory is complete |
 | Key wrapping | RFC 3394, RFC 5649, and DSTU 7624 | RFC 3211, DESede, and RC2 wrappers |
-| Mathematics | Big integers, binary-polynomial and raw arithmetic, prime-field support, X25519, and 33 named SEC curves | General constant-time EC scalar multiplication, projective/WNAF paths, and the remaining X25519 helpers |
+| Mathematics | Big integers, binary fields, SEC and SM2 curves, public multi-scalar algorithms, secret fixed-window multiplication, X25519 and X448 | Target-specific timing review and further performance tuning |
+| Edwards signatures | Ed25519, Ed25519ctx, Ed25519ph, Ed448 and Ed448ph; BC-compatible and explicit strict verification | Canonical encodings; no ZIP-215 mode |
 
 GOST 34.11-94 and Skein 1.3 reuse the workspace's GOST 28147 and Threefish
 engines respectively; both provide streaming, clone, and reset behavior.
@@ -44,7 +45,12 @@ engines respectively; both provide streaming, clone, and reset behavior.
 | [Digest family crates](crypto/digest) | Independent message-digest, XOF, and digest-adapter implementations | `no_std`; allocation and optional CPU acceleration vary by family |
 | [`tc_bigint`](math/tc_bigint) | Fixed-width and arbitrary-precision signed/unsigned integers and number-theory operations | Fixed-width types are core-only; dynamic types require `alloc` |
 | [`tc_prime`](math/tc_prime) | FIPS 186-4 small-factor, Miller-Rabin, enhanced Miller-Rabin, and optional Shawe-Taylor utilities | Fixed-width path is core-only; `alloc` enables dynamic integers and `digest` enables Shawe-Taylor |
-| [`tc_ec`](math/tc_ec) | Binary-polynomial, raw-integer, finite-field, and elliptic-curve foundations | `no_std + alloc` |
+| [`tc_constant_time`](core/tc_constant_time) | Fixed-width masked selection and equality | Core-only `no_std` |
+| [`tc_ec_core`](math/tc_ec_core) | Curve traits, multi-scalar algorithms, comb/GLV interfaces and secret fixed-window arithmetic | `no_std + alloc` |
+| [`tc_fp_curve`](math/tc_fp_curve), [`tc_f2m_curve`](math/tc_f2m_curve) | Generic prime/binary curves | `no_std + alloc` |
+| [`tc_fp_custom`](math/tc_fp_custom), [`tc_f2m_custom`](math/tc_f2m_custom) | Specialized SEC/SM2 curve backends | `no_std + alloc` |
+| [`tc_rfc7748`](math/tc_rfc7748) | X25519/X448 and shared Edwards field arithmetic | `no_std`; optional x86 dispatch |
+| [`tc_ed25519`](crypto/tc_ed25519), [`tc_ed448`](crypto/tc_ed448) | RFC 8032 signatures using [`tc_edwards`](crypto/tc_edwards) arithmetic | `no_std` |
 
 The core trait crates do not depend on algorithm implementations. Concrete
 algorithm crates depend on the appropriate core crate, which keeps the
@@ -109,11 +115,15 @@ details and usage examples.
 - Signed arbitrary-precision `BigInt`
 - Arithmetic, bitwise operations, shifts, conversions, and arbitrary-radix text
 - GCD, modular inverse, modular exponentiation, and probable-prime operations
-- Binary-polynomial, raw natural-number, and elliptic-curve field arithmetic
-- X25519 scalar multiplication and 33 named SEC curves
+- Binary-polynomial and elliptic-curve field arithmetic
+- X25519/X448, named SEC curves and SM2P256V1
+- Interleaved wNAF, JSF, batch inversion/normalization, fixed-base comb and secp256k1 GLV
+- Fixed-window secret scalar multiplication with complete masked exceptional cases
 
-Except for the X25519 ladder, the general `tc_ec` arithmetic is not promised
-to be constant-time.
+Ordinary point multiplication and wNAF remain variable time. Secret scalar APIs
+use separate `SecretField` operations and fixed-length scalar bytes; dynamic
+`BigUint` Fp fields do not implement that contract. See the
+[EC developer guide](math/tc_ec_core/README.md) for boundaries and validation.
 
 ## Feature model
 

@@ -14,6 +14,7 @@ tc_bigint = { version = "0.1.0", path = "../tc_bigint", default-features = false
 tc_ec_core = { version = "0.1.0", path = "../tc_ec_core" }
 
 [dev-dependencies]
+tc_f2m_custom = { version = "0.1.0", path = "../tc_f2m_custom" }
 criterion = { workspace = true }
 tc_fp_curve = { version = "0.1.0", path = "../tc_fp_curve" }
 

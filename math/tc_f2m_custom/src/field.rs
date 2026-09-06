@@ -14,6 +14,10 @@ use tc_binpoly::interleave::{
 use tc_binpoly::scalar::impl_mul;
 use tc_binpoly::{BinPolyError, BinPolyMultiplier, BinaryPolyOps, FixedBinaryPoly, equal_to_zero};
 use tc_f2m_curve::F2mPolynomial;
+impl<S: BinaryFieldSpec<N>, const N: usize> tc_f2m_curve::SecretPolynomial
+    for SpecializedBinaryPoly<S, N>
+{
+}
 
 /// 編譯期固定的二元體約簡多項式。
 #[doc(hidden)]

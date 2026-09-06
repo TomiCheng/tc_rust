@@ -8,7 +8,105 @@ use core::ops::{Add, Div, Mul, Neg, Sub};
 
 use tc_binpoly::{BinaryPoly, BinaryPolyOps, bit_length_var, equal_to_one, equal_to_zero};
 
+use crate::polynomial::SecretPolynomial;
 use crate::{F2mField, F2mInteger, F2mPolynomial};
+use tc_ec_core::{Choice, ConditionallySelectable, ConstantTimeEq, SecretField};
+
+impl<P: SecretPolynomial> F2mFieldElement<P> {
+    fn ct_from_words(&self, words: &[u64]) -> Self {
+        self.with_value(
+            P::from_limb_slice(self.field.multiplier().clone(), words)
+                .expect("canonical field coefficients"),
+        )
+    }
+}
+impl<P: SecretPolynomial> ConditionallySelectable for F2mFieldElement<P> {
+    fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
+        assert_eq!(a.field, b.field); // Public domain.
+        let words: alloc::vec::Vec<_> = a
+            .value
+            .as_limbs()
+            .iter()
+            .zip(b.value.as_limbs())
+            .map(|(a, b)| u64::conditional_select(a, b, choice))
+            .collect();
+        a.ct_from_words(&words)
+    }
+}
+impl<P: SecretPolynomial> ConstantTimeEq for F2mFieldElement<P> {
+    fn ct_eq(&self, rhs: &Self) -> Choice {
+        assert_eq!(self.field, rhs.field);
+        let mut difference = 0_u64;
+        for (a, b) in self.value.as_limbs().iter().zip(rhs.value.as_limbs()) {
+            difference |= a ^ b;
+        }
+        difference.ct_eq(&0)
+    }
+}
+impl<P: SecretPolynomial> SecretField for F2mFieldElement<P> {
+    fn ct_zero(&self) -> Self {
+        self.ct_from_words(&vec![0; self.field.size()])
+    }
+    fn ct_one(&self) -> Self {
+        let mut words = vec![0; self.field.size()];
+        words[0] = 1;
+        self.ct_from_words(&words)
+    }
+    fn ct_add(&self, rhs: &Self) -> Self {
+        assert_eq!(self.field, rhs.field);
+        let words: alloc::vec::Vec<_> = self
+            .value
+            .as_limbs()
+            .iter()
+            .zip(rhs.value.as_limbs())
+            .map(|(a, b)| a ^ b)
+            .collect();
+        self.ct_from_words(&words)
+    }
+    fn ct_sub(&self, rhs: &Self) -> Self {
+        self.ct_add(rhs)
+    }
+    fn ct_mul(&self, rhs: &Self) -> Self {
+        assert_eq!(self.field, rhs.field);
+        let m = self.field.m();
+        let mut row = self.value.as_limbs().to_vec();
+        let mut result = vec![0; row.len()];
+        for bit in 0..m {
+            let mask = 0_u64.wrapping_sub((rhs.value.as_limbs()[bit / 64] >> (bit % 64)) & 1);
+            for i in 0..row.len() {
+                result[i] ^= row[i] & mask;
+            }
+            let overflow = (row[(m - 1) / 64] >> ((m - 1) % 64)) & 1;
+            let mut carry = 0;
+            for word in &mut row {
+                let next = *word >> 63;
+                *word = (*word << 1) | carry;
+                carry = next;
+            }
+            if !m.is_multiple_of(64) {
+                row[m / 64] &= (1_u64 << (m % 64)) - 1;
+            }
+            row[0] ^= overflow;
+            for tap in [self.field.k1(), self.field.k2(), self.field.k3()] {
+                if tap != 0 {
+                    row[tap / 64] ^= overflow << (tap % 64);
+                }
+            }
+        }
+        self.ct_from_words(&result)
+    }
+    fn ct_invert(&self) -> Self {
+        // x^(2^m-2), including x=0. Iteration count is the public field degree.
+        let mut result = self.clone();
+        for _ in 1..self.field.m() - 1 {
+            result = result.ct_square().ct_mul(self);
+        }
+        result.ct_square()
+    }
+}
+impl<P: SecretPolynomial, B: F2mInteger> tc_ec_core::SecretCurve for crate::F2mCurve<P, B> {
+    const BINARY: bool = true;
+}
 
 const SMALL_INTEGER_STACK_LIMBS: usize = 4;
 const MEDIUM_INTEGER_STACK_LIMBS: usize = 8;

@@ -7,6 +7,8 @@ extern crate alloc;
 extern crate std;
 
 mod arithmetic;
+mod constant_time;
+pub use tc_constant_time::{Choice, ConditionallySelectable, ConstantTimeEq};
 mod array;
 #[cfg(feature = "alloc")]
 mod big_int;

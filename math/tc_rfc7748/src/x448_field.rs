@@ -3,13 +3,15 @@
 //! 表示法與 X25519 的 radix-2²⁵·⁵ 完全不同。所有秘密路徑使用固定次數迴圈；
 //! 乘法先做 schoolbook convolution，再利用 `2^448 = 2^224 + 1` 摺疊。
 //!
-//! 目前刻意只提供 X448 Montgomery ladder 與 DH API 需要的欄位操作。BC 另有
-//! `carry`、`cmov`、`normalize`、`reduce`、`is_one`、`sub_one` 及 Ed-facing
-//! helpers；那些是 Ed448 點運算／編解碼才會觸發的需求，不是現有 X448 功能
-//! 的缺陷。等 Ed448 核心加入時再連同對應 oracle 一起補齊。
+//! X448 and Ed448 share this canonical field representation. Selection and
+//! square-root-of-ratio support RFC 8032 point arithmetic and decoding. With the
+//! x86 feature, AVX2 accelerates the convolution while reusing scalar reduction.
 
 /// 欄位元素的 radix-2²⁸ limb 數。
 pub const SIZE: usize = 16;
+
+#[cfg(all(feature = "x86", any(target_arch = "x86", target_arch = "x86_64")))]
+mod x86;
 
 const M28: u32 = 0x0FFF_FFFF;
 const RADIX_BITS: usize = 28;
@@ -25,6 +27,27 @@ pub struct Fe448([u32; SIZE]);
 
 #[allow(clippy::should_implement_trait)]
 impl Fe448 {
+    /// Selects `a` for zero and `b` for one, with a fixed limb scan.
+    pub fn cmov(choice: u32, a: Self, b: Self) -> Self {
+        let mask = 0_u32.wrapping_sub(choice & 1);
+        Self(core::array::from_fn(|i| {
+            a.0[i] ^ ((a.0[i] ^ b.0[i]) & mask)
+        }))
+    }
+
+    /// Returns a square root of `u/v`, if it exists. Public-input decoding only.
+    pub fn sqrt_ratio_var(u: Self, v: Self) -> Option<Self> {
+        let ratio = u.mul(v.invert());
+        let mut root = Self::one();
+        // (p+1)/4 = 2^446 - 2^222.
+        for bit in (0..446).rev() {
+            root = root.sqr();
+            if bit >= 222 {
+                root = root.mul(ratio);
+            }
+        }
+        (root.sqr().mul(v) == u).then_some(root)
+    }
     /// 加法單位元素。
     pub const fn zero() -> Self {
         Self([0; SIZE])
@@ -81,6 +104,14 @@ impl Fe448 {
 
     /// 欄位乘法。
     pub fn mul(self, rhs: Self) -> Self {
+        #[cfg(all(feature = "x86", any(target_arch = "x86", target_arch = "x86_64")))]
+        if let Some(proof) = tc_runtime::intrinsics::x86::Avx2::detect() {
+            return x86::multiply(self, rhs, proof);
+        }
+        self.mul_scalar(rhs)
+    }
+
+    fn mul_scalar(self, rhs: Self) -> Self {
         let mut product = [0_u128; SIZE * 2];
         for i in 0..SIZE {
             for j in 0..SIZE {

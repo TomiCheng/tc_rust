@@ -99,6 +99,14 @@ impl SecP256R1Point {
             .z
             .invert()
             .expect("finite Jacobian point has non-zero Z");
+        self.normalize_with_inverse(&z_inverse)
+    }
+
+    pub(crate) fn normalize_with_inverse(&self, inverse: &SecP256R1FieldElement) -> Self {
+        let Some(point) = &self.coordinates else {
+            return self.clone();
+        };
+        let z_inverse = *inverse;
         let z_inverse_squared = z_inverse.square();
         let z_inverse_cubed = &z_inverse_squared * &z_inverse;
         Self::new(
@@ -317,6 +325,21 @@ fn octuple(value: &SecP256R1FieldElement) -> SecP256R1FieldElement {
 
 impl Point for SecP256R1Point {
     type Curve = SecP256R1Curve;
+
+    fn projective_z(&self) -> Option<<Self::Curve as Curve>::Field> {
+        self.z().copied()
+    }
+    fn normalize_with_inverse(&self, inverse: &<Self::Curve as Curve>::Field) -> Self {
+        self.normalize_with_inverse(inverse)
+    }
+
+    fn curve(&self) -> &Arc<Self::Curve> {
+        self.curve()
+    }
+
+    fn is_valid(&self) -> bool {
+        self.is_valid()
+    }
 
     fn identity(&self) -> Self {
         self.curve.infinity()

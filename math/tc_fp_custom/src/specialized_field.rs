@@ -55,6 +55,8 @@ pub enum AForm {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[doc(hidden)]
 pub enum ReductionKind {
+    /// General Solinas folding for SM2's sparse modulus complement.
+    Sm2,
     /// P-128 的 `2^128 - 2^97 - 1` 展開式。
     P128,
     /// `c` 可放入 u64 的 word-aligned 質數。
@@ -222,7 +224,7 @@ impl<S: PrimeFieldSpec<N>, const N: usize> SpecializedFieldElement<S, N> {
         Self::new_unchecked(words)
     };
 
-    const fn new_unchecked(words: [u32; N]) -> Self {
+    pub(crate) const fn new_unchecked(words: [u32; N]) -> Self {
         Self {
             words,
             marker: PhantomData,
@@ -489,6 +491,7 @@ impl<S: PrimeFieldSpec<N>, const N: usize> Debug for SpecializedFieldElement<S, 
 
 fn reduce<S: PrimeFieldSpec<N>, const N: usize>(wide: &[u32; MAX_WIDE_LIMBS]) -> [u32; N] {
     match S::REDUCTION {
+        ReductionKind::Sm2 => reduce_solinas::<S, N>(wide),
         ReductionKind::P128 => reduce_p128::<S, N>(wide),
         ReductionKind::SmallComplement(complement) => {
             reduce_small_complement::<S, N>(wide, complement)

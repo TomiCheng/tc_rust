@@ -12,7 +12,9 @@
 #[cfg(test)]
 extern crate std;
 
-mod ed25519_base;
+/// Edwards fixed-base arithmetic shared with RFC 8032; draft internal API.
+#[doc(hidden)]
+pub mod ed25519_base;
 pub mod x25519;
 /// 提供後續 Ed25519 實作共用的內部欄位核心；可跨 crate 使用，但不承諾穩定 API。
 #[doc(hidden)]

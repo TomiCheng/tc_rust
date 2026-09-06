@@ -12,6 +12,50 @@ use tc_bigint::modular::Monty;
 use tc_bigint::{BigUint, Odd};
 
 use crate::FpInteger;
+use tc_bigint::{
+    Choice, ConditionallySelectable, ConstantTimeEq, FixedBigUint, modular::FixedMontyForm,
+};
+use tc_ec_core::SecretField;
+
+impl<const N: usize> ConditionallySelectable for FpFieldElement<FixedBigUint<N>> {
+    fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
+        a.with_monty(FixedMontyForm::conditional_select(
+            &a.value, &b.value, choice,
+        ))
+    }
+}
+impl<const N: usize> ConstantTimeEq for FpFieldElement<FixedBigUint<N>> {
+    fn ct_eq(&self, rhs: &Self) -> Choice {
+        self.value.ct_eq(&rhs.value)
+    }
+}
+impl<const N: usize> SecretField for FpFieldElement<FixedBigUint<N>> {
+    fn ct_zero(&self) -> Self {
+        self.with_monty(FixedMontyForm::zero(*self.value.params()))
+    }
+    fn ct_one(&self) -> Self {
+        self.with_monty(FixedMontyForm::one(*self.value.params()))
+    }
+    fn ct_add(&self, rhs: &Self) -> Self {
+        self.with_monty(self.value + rhs.value)
+    }
+    fn ct_sub(&self, rhs: &Self) -> Self {
+        self.with_monty(self.value - rhs.value)
+    }
+    fn ct_mul(&self, rhs: &Self) -> Self {
+        self.with_monty(self.value * rhs.value)
+    }
+    fn ct_square(&self) -> Self {
+        self.with_monty(self.value.square())
+    }
+    fn ct_invert(&self) -> Self {
+        let exponent = *self.q() - FixedBigUint::from(2_u8);
+        self.with_monty(self.value.pow_ct(&exponent))
+    }
+}
+impl<const N: usize> tc_ec_core::SecretCurve for crate::FpCurve<FixedBigUint<N>> {
+    const BINARY: bool = false;
+}
 
 #[cfg(feature = "bench-internals")]
 static INVERSION_COUNT: AtomicUsize = AtomicUsize::new(0);

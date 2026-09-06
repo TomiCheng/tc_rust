@@ -187,6 +187,17 @@ impl<P: F2mPolynomial, B: F2mInteger> F2mPoint<P, B> {
         }
 
         let z_inv = z.invert();
+        self.normalize_with_inverse(&z_inv)
+    }
+
+    pub(crate) fn normalize_with_inverse(&self, inverse: &F2mFieldElement<P>) -> Self {
+        let Some(coords) = &self.coords else {
+            return self.clone();
+        };
+        let Some(z) = coords.z() else {
+            return self.clone();
+        };
+        let z_inv = inverse.clone();
         let one = z.one();
         let normalized = match coords {
             Coords::Homogeneous { x, y, .. } => Coords::Homogeneous {

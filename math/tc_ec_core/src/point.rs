@@ -17,6 +17,13 @@ pub trait Point: Clone + Eq {
     /// 點所屬的曲線型別。
     type Curve: Curve<Point = Self>;
 
+    /// Returns the curve that owns this point.
+    fn curve(&self) -> &alloc::sync::Arc<Self::Curve>;
+
+    /// Checks the curve equation and, when known, subgroup membership.
+    /// The identity is valid; protocols must reject it separately when required.
+    fn is_valid(&self) -> bool;
+
     /// 產生同一條曲線上的群單位點。
     fn identity(&self) -> Self;
 
@@ -59,4 +66,11 @@ pub trait Point: Clone + Eq {
 
     /// 轉為正規化表示。
     fn normalize(&self) -> Self;
+
+    /// Returns the projective scale, or `None` for identity/affine points.
+    fn projective_z(&self) -> Option<<Self::Curve as Curve>::Field>;
+
+    /// Normalizes using a supplied inverse of `projective_z()`. The caller must
+    /// supply the correct inverse in the same field. No inversion is performed.
+    fn normalize_with_inverse(&self, inverse: &<Self::Curve as Curve>::Field) -> Self;
 }
