@@ -113,23 +113,6 @@ and GCD loops may depend on the data. `Choice::unwrap_u8` reveals the comparison
 result; deployments still require reviewing generated machine code for the
 target compiler and hardware.
 
-## Origins and maintenance
-
-The initial implementation came from the 25 `fixed_*` functions then present in
-`tc_bigint/src/arithmetic.rs`: 19 operation entry points and 6 internal helpers.
-After leaving `abs` and `is_negative` to the higher layer, the remaining
-17 operations are exposed through the methods above, with comparison provided
-by `Ord::cmp`. The core lives in `src/limb_array/arithmetic.rs` as private
-associated functions whose array arguments all retain the same `N`. The
-duplicate production core has been removed from `tc_bigint`; only test adapters
-remain to preserve existing regression assertions.
-
-Variable-length arithmetic, allocation, parsing, and the constant-time
-implementations for `FixedBigUint` were not copied. The six existing `Limb`
-const primitives retain their semantics, with accessors for the private field
-and the missing operators added. This crate's constant-time implementations
-apply only to its own `Limb` and `LimbArray` types.
-
 ## Validation
 
 Tests use pseudorandom inputs with a fixed seed for reproducibility and compare
