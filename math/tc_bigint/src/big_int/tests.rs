@@ -26,8 +26,8 @@ fn bitwise_operations_use_infinite_sign_extension() {
     let minus_one = BigInt::from(-1_i8);
     let value = BigInt::from(0x1234_u16);
 
-    assert_eq!((&minus_one & &value), value);
-    assert_eq!((&minus_one | &value), minus_one);
+    assert_eq!(&minus_one & &value, value);
+    assert_eq!(&minus_one | &value, minus_one);
     assert_eq!((&minus_one ^ &value).to_i64(), Some(!0x1234_i64));
 }
 

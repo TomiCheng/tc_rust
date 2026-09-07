@@ -287,13 +287,11 @@ fn assert_mod_odd_pair(modulus: &[u32], value: &[u32]) {
         modulus.len(),
         "value length must match modulus"
     );
-    assert!(modulus[0] & 1 != 0, "modulus must be odd");
-    assert!(
-        modulus[modulus.len() - 1] != 0,
-        "modulus must be normalized"
-    );
-    assert!(
-        cmp32(value, modulus) == core::cmp::Ordering::Less,
+    assert_ne!(modulus[0] & 1, 0, "modulus must be odd");
+    assert_ne!(modulus[modulus.len() - 1], 0, "modulus must be normalized");
+    assert_eq!(
+        cmp32(value, modulus),
+        core::cmp::Ordering::Less,
         "value must be smaller than modulus"
     );
 }

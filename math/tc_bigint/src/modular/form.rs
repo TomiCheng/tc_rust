@@ -218,8 +218,8 @@ impl MontyForm<BigUint> {
     }
 
     fn assert_same_params(&self, rhs: &Self) {
-        assert!(
-            self.params == rhs.params,
+        assert_eq!(
+            self.params, rhs.params,
             "Montgomery forms use different moduli"
         );
     }
@@ -442,8 +442,8 @@ impl<const N: usize> FixedMontyForm<N> {
     }
 
     fn assert_same_params(&self, rhs: &Self) {
-        assert!(
-            self.params == rhs.params,
+        assert_eq!(
+            self.params, rhs.params,
             "Montgomery forms use different moduli"
         );
     }

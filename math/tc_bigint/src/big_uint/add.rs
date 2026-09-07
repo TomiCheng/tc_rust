@@ -192,11 +192,11 @@ mod tests {
 
     #[test]
     fn primitive_addition_is_direct_and_supports_every_unsigned_width() {
-        assert_eq!((BigUint::from(1_u8) + 2_u8), BigUint::from(3_u8));
-        assert_eq!((&BigUint::from(1_u8) + 2_u16), BigUint::from(3_u8));
-        assert_eq!((BigUint::from(1_u8) + 2_u32), BigUint::from(3_u8));
-        assert_eq!((&BigUint::from(1_u8) + 2_u64), BigUint::from(3_u8));
-        assert_eq!((BigUint::from(1_u8) + 2_u128), BigUint::from(3_u8));
+        assert_eq!(BigUint::from(1_u8) + 2_u8, BigUint::from(3_u8));
+        assert_eq!(&BigUint::from(1_u8) + 2_u16, BigUint::from(3_u8));
+        assert_eq!(BigUint::from(1_u8) + 2_u32, BigUint::from(3_u8));
+        assert_eq!(&BigUint::from(1_u8) + 2_u64, BigUint::from(3_u8));
+        assert_eq!(BigUint::from(1_u8) + 2_u128, BigUint::from(3_u8));
 
         let mut value = BigUint::from(1_u8);
         value += u8::MAX;

@@ -92,7 +92,7 @@ impl<const N: usize> TryFrom<&BigInt> for FixedBigInt<N> {
                 .then_some(FixedBigInt::from_limbs(limbs))
                 .ok_or(ConversionError::InputTooLarge);
         }
-        if crate::FixedBigInt::is_negative_limbs(&limbs) != negative && !value.is_zero() {
+        if FixedBigInt::is_negative_limbs(&limbs) != negative && !value.is_zero() {
             return Err(ConversionError::InputTooLarge);
         }
         Ok(FixedBigInt::from_limbs(limbs))

@@ -201,7 +201,7 @@ fn div_rem_u128<const N: usize>(
     value: &FixedBigInt<N>,
     mut divisor: u128,
 ) -> (FixedBigInt<N>, FixedBigInt<N>) {
-    assert!(divisor != 0, "attempted to divide by zero");
+    assert_ne!(divisor, 0, "attempted to divide by zero");
     let mut divisor_limbs = [Limb::new(0); N];
     for limb in &mut divisor_limbs {
         *limb = Limb::new(divisor as Word);

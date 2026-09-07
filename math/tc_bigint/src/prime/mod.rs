@@ -179,9 +179,8 @@ impl<const N: usize> NextProbablePrime for FixedBigUint<N> {
 impl<const N: usize> FixedBigInt<N> {
     /// Tests the absolute value using trial division and Miller-Rabin rounds.
     pub fn is_probable_prime<R: Rng + ?Sized>(&self, certainty: u32, rng: &mut R) -> bool {
-        let magnitude = FixedBigUint::from_limbs(
-            crate::FixedBigInt::from_limbs(*(self.as_limbs())).magnitude(),
-        );
+        let magnitude =
+            FixedBigUint::from_limbs(FixedBigInt::from_limbs(*(self.as_limbs())).magnitude());
         magnitude.is_probable_prime(certainty, rng)
     }
 

@@ -8,10 +8,7 @@ use crate::traits::{CheckedNeg, WrappingNeg};
 impl<const N: usize> Neg for FixedBigInt<N> {
     type Output = Self;
     fn neg(self) -> Self {
-        assert!(
-            self != Self::min_value(),
-            "attempted to negate with overflow"
-        );
+        assert_ne!(self, Self::min_value(), "attempted to negate with overflow");
         Self {
             limbs: self.limbs.wrapping_neg(),
         }

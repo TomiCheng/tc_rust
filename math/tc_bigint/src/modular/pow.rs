@@ -21,7 +21,7 @@ use crate::{FixedBigUint, Limb, Odd, Word};
 /// modulus is odd and falls back to division-based reduction when it is even.
 #[cfg(feature = "alloc")]
 pub(crate) fn mod_pow(value: &[Limb], exponent: &[Limb], modulus: &[Limb]) -> Vec<Limb> {
-    assert!(significant_len(modulus) != 0, "modulus must be non-zero");
+    assert_ne!(significant_len(modulus), 0, "modulus must be non-zero");
     if modulus[0].to_word() & 1 == 0 {
         return division_mod_pow(value, exponent, modulus);
     }
@@ -386,7 +386,7 @@ mod tests {
             let mut value = (0..len)
                 .map(|_| Limb::new(next_word(&mut state)))
                 .collect::<Vec<_>>();
-            let exponent = (0..(len.min(3)))
+            let exponent = (0..len.min(3))
                 .map(|_| Limb::new(next_word(&mut state)))
                 .collect::<Vec<_>>();
             let mut modulus = (0..len)

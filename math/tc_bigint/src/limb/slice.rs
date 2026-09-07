@@ -259,7 +259,7 @@ fn power_of_two_shift(words: &[Limb]) -> Option<usize> {
 
 #[cfg(feature = "alloc")]
 pub(crate) fn div_rem(dividend: &[Limb], divisor: &[Limb]) -> (Vec<Limb>, Vec<Limb>) {
-    assert!(significant_len(divisor) != 0, "attempted to divide by zero");
+    assert_ne!(significant_len(divisor), 0, "attempted to divide by zero");
     let dividend_len = significant_len(dividend);
     let divisor_len = significant_len(divisor);
     if divisor_len == 1 {

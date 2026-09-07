@@ -154,7 +154,7 @@ impl CheckedRem for BigUint {
 }
 
 fn div_assign_u128(value: &mut BigUint, divisor: u128) {
-    assert!(divisor != 0, "attempted to divide by zero");
+    assert_ne!(divisor, 0, "attempted to divide by zero");
     if divisor <= Word::MAX as u128 {
         let _remainder = slice::div_rem_small(&mut value.limbs, divisor as Word);
         slice::normalize(&mut value.limbs);
@@ -166,7 +166,7 @@ fn div_assign_u128(value: &mut BigUint, divisor: u128) {
 }
 
 fn div_rem_u128(value: &BigUint, divisor: u128) -> (BigUint, BigUint) {
-    assert!(divisor != 0, "attempted to divide by zero");
+    assert_ne!(divisor, 0, "attempted to divide by zero");
 
     #[cfg(target_pointer_width = "64")]
     let divisor_limbs = [

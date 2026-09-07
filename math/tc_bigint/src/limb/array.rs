@@ -412,7 +412,7 @@ impl<const N: usize> LimbArray<N> {
     fn div_rem_words(dividend: &[Limb; N], divisor: &[Limb; N]) -> ([Limb; N], [Limb; N]) {
         let dividend_len = Self::significant_len(dividend);
         let divisor_len = Self::significant_len(divisor);
-        assert!(divisor_len != 0, "attempted to divide by zero");
+        assert_ne!(divisor_len, 0, "attempted to divide by zero");
 
         let mut quotient = [Limb::new(0); N];
         if dividend_len < divisor_len || Self::cmp_words(dividend, divisor) == Ordering::Less {
@@ -542,7 +542,7 @@ impl<const N: usize> LimbArray<N> {
     #[inline]
     fn wide_rem_words(low: &[Limb; N], high: &[Limb; N], modulus: &[Limb; N]) -> [Limb; N] {
         let modulus_len = Self::significant_len(modulus);
-        assert!(modulus_len != 0, "attempted to divide by zero");
+        assert_ne!(modulus_len, 0, "attempted to divide by zero");
 
         let high_len = Self::significant_len(high);
         if high_len == 0 {
@@ -1007,9 +1007,9 @@ mod oracle_tests {
         assert!(expected.bits() <= (N * Word::BITS as usize) as u64);
         let expected_words: [Word; N] = core::array::from_fn(|index| {
             let mut word = 0 as Word;
-            for byte in 0..core::mem::size_of::<Word>() {
+            for byte in 0..size_of::<Word>() {
                 word |= (bytes
-                    .get(index * core::mem::size_of::<Word>() + byte)
+                    .get(index * size_of::<Word>() + byte)
                     .copied()
                     .unwrap_or(0) as Word)
                     << (byte * 8);

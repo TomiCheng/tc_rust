@@ -44,7 +44,7 @@ impl<const N: usize> TryFrom<&FixedBigUint<N>> for FixedBigInt<N> {
     type Error = ConversionError;
 
     fn try_from(value: &FixedBigUint<N>) -> Result<Self, Self::Error> {
-        if crate::FixedBigInt::is_negative_limbs(value.as_limbs()) {
+        if FixedBigInt::is_negative_limbs(value.as_limbs()) {
             return Err(ConversionError::InputTooLarge);
         }
         Ok(Self::from_limbs(*value.as_limbs()))
@@ -79,7 +79,7 @@ impl<const SOURCE: usize, const DESTINATION: usize> TryFrom<&FixedBigInt<SOURCE>
                 .then_some(Self::from_limbs(limbs))
                 .ok_or(ConversionError::InputTooLarge);
         }
-        if crate::FixedBigInt::is_negative_limbs(&limbs) != negative && !value.is_zero() {
+        if FixedBigInt::is_negative_limbs(&limbs) != negative && !value.is_zero() {
             return Err(ConversionError::InputTooLarge);
         }
         Ok(Self::from_limbs(limbs))

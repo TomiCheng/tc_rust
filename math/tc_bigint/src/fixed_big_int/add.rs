@@ -52,7 +52,7 @@ impl<const N: usize> CheckedAdd for FixedBigInt<N> {
     fn checked_add(&self, rhs: &Self) -> Option<Self> {
         let (limbs, _) = self.limbs.add(&rhs.limbs);
         let overflow = self.is_negative() == rhs.is_negative()
-            && crate::FixedBigInt::is_negative_limbs(limbs.as_limbs()) != self.is_negative();
+            && FixedBigInt::is_negative_limbs(limbs.as_limbs()) != self.is_negative();
         (!overflow).then_some(Self { limbs })
     }
 }
@@ -61,7 +61,7 @@ impl<const N: usize> OverflowingAdd for FixedBigInt<N> {
     fn overflowing_add(&self, rhs: &Self) -> (Self, bool) {
         let (limbs, _) = self.limbs.add(&rhs.limbs);
         let overflow = self.is_negative() == rhs.is_negative()
-            && crate::FixedBigInt::is_negative_limbs(limbs.as_limbs()) != self.is_negative();
+            && FixedBigInt::is_negative_limbs(limbs.as_limbs()) != self.is_negative();
         (Self { limbs }, overflow)
     }
 }
@@ -116,7 +116,7 @@ fn checked_add_u128<const N: usize>(lhs: &FixedBigInt<N>, mut rhs: u128) -> Opti
         (*limb, carry) = limb.carrying_add(rhs_limb, carry);
     }
 
-    if width > 128 && !lhs.is_negative() && crate::FixedBigInt::is_negative_limbs(&limbs) {
+    if width > 128 && !lhs.is_negative() && FixedBigInt::is_negative_limbs(&limbs) {
         return None;
     }
     Some(FixedBigInt {

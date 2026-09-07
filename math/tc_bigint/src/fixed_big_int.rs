@@ -117,7 +117,7 @@ impl<const N: usize> FixedBigInt<N> {
                 ),
             })
         } else {
-            if crate::FixedBigInt::is_negative_limbs(&magnitude) {
+            if FixedBigInt::is_negative_limbs(&magnitude) {
                 return None;
             }
             Some(Self {

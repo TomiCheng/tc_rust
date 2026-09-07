@@ -175,7 +175,7 @@ impl CheckedRem for BigInt {
 }
 
 fn div_rem_u128(value: &BigInt, divisor: u128) -> (BigInt, BigInt) {
-    assert!(divisor != 0, "attempted to divide by zero");
+    assert_ne!(divisor, 0, "attempted to divide by zero");
     let (negative, magnitude) = value.sign_magnitude();
 
     #[cfg(target_pointer_width = "64")]

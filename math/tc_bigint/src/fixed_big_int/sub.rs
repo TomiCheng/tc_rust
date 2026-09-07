@@ -11,7 +11,7 @@ impl<const N: usize> Sub for FixedBigInt<N> {
     fn sub(self, rhs: Self) -> Self::Output {
         let (limbs, _) = self.limbs.sub(&rhs.limbs);
         let overflow = self.is_negative() != rhs.is_negative()
-            && crate::FixedBigInt::is_negative_limbs(limbs.as_limbs()) != self.is_negative();
+            && FixedBigInt::is_negative_limbs(limbs.as_limbs()) != self.is_negative();
         assert!(!overflow, "attempted to subtract with overflow");
         Self { limbs }
     }
@@ -52,7 +52,7 @@ impl<const N: usize> CheckedSub for FixedBigInt<N> {
     fn checked_sub(&self, rhs: &Self) -> Option<Self> {
         let (limbs, _) = self.limbs.sub(&rhs.limbs);
         let overflow = self.is_negative() != rhs.is_negative()
-            && crate::FixedBigInt::is_negative_limbs(limbs.as_limbs()) != self.is_negative();
+            && FixedBigInt::is_negative_limbs(limbs.as_limbs()) != self.is_negative();
         (!overflow).then_some(Self { limbs })
     }
 }
@@ -61,7 +61,7 @@ impl<const N: usize> OverflowingSub for FixedBigInt<N> {
     fn overflowing_sub(&self, rhs: &Self) -> (Self, bool) {
         let (limbs, _) = self.limbs.sub(&rhs.limbs);
         let overflow = self.is_negative() != rhs.is_negative()
-            && crate::FixedBigInt::is_negative_limbs(limbs.as_limbs()) != self.is_negative();
+            && FixedBigInt::is_negative_limbs(limbs.as_limbs()) != self.is_negative();
         (Self { limbs }, overflow)
     }
 }
@@ -113,7 +113,7 @@ fn checked_sub_u128<const N: usize>(lhs: &FixedBigInt<N>, mut rhs: u128) -> Opti
         (*limb, borrow) = limb.borrowing_sub(rhs_limb, borrow);
     }
 
-    if width > 128 && lhs.is_negative() && !crate::FixedBigInt::is_negative_limbs(&limbs) {
+    if width > 128 && lhs.is_negative() && !FixedBigInt::is_negative_limbs(&limbs) {
         return None;
     }
     Some(FixedBigInt {

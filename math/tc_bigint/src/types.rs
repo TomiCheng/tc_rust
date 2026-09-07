@@ -4,7 +4,7 @@ use crate::{FixedBigInt, FixedBigUint, Word};
 
 /// Returns the limb count needed to store `bits` bits on the current target.
 ///
-/// Limb width is a target detail: [`Word`](crate::Word) is 64 bits on 64-bit
+/// Limb width is a target detail: [`Word`](Word) is 64 bits on 64-bit
 /// targets and 32 bits elsewhere. Use this to size [`FixedBigUint`] and
 /// [`FixedBigInt`] by bit width instead of restating the division.
 ///

@@ -54,7 +54,7 @@ impl<const N: usize> FixedBigUint<N> {
     ///
     /// 要求 `N == 2 * H`。寬度是公開參數，因此此斷言不洩漏秘密。
     pub fn concat<const H: usize>(low: &FixedBigUint<H>, high: &FixedBigUint<H>) -> Self {
-        assert!(N == 2 * H, "destination width must be twice the half width");
+        assert_eq!(N, 2 * H, "destination width must be twice the half width");
         let mut limbs = [Limb::new(0); N];
         limbs[..H].copy_from_slice(low.as_limbs());
         limbs[H..].copy_from_slice(high.as_limbs());
