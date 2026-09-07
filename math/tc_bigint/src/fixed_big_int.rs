@@ -79,7 +79,7 @@ impl<const N: usize> FixedBigInt<N> {
     }
 
     /// Borrows all little-endian two's-complement limbs.
-    pub const fn as_limbs(&self) -> &[Limb; N] {
+    pub(crate) const fn as_limbs(&self) -> &[Limb; N] {
         self.limbs.as_limbs()
     }
 

@@ -86,7 +86,7 @@ impl BigInt {
     }
 
     /// Borrows the canonical little-endian two's-complement limbs.
-    pub fn as_limbs(&self) -> &[Limb] {
+    pub(crate) fn as_limbs(&self) -> &[Limb] {
         &self.limbs
     }
 

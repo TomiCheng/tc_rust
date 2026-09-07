@@ -43,7 +43,7 @@ impl BigUint {
     }
 
     /// Borrows the canonical little-endian limbs.
-    pub fn as_limbs(&self) -> &[Limb] {
+    pub(crate) fn as_limbs(&self) -> &[Limb] {
         &self.limbs
     }
 
