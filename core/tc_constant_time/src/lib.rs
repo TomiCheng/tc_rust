@@ -53,6 +53,7 @@
 //! target compiler and hardware before relying on timing properties. Ordinary
 //! comparisons or branches after revealing a `Choice` are outside this contract.
 
+mod array;
 mod choice;
 mod slice;
 mod traits;
@@ -150,24 +151,6 @@ macro_rules! unsigned_ordering {
     )*};
 }
 unsigned_ordering!(u8, u16, u32, u64, u128, usize);
-
-impl<T: ConditionallySelectable, const N: usize> ConditionallySelectable for [T; N] {
-    fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
-        core::array::from_fn(|i| T::conditional_select(&a[i], &b[i], choice))
-    }
-
-    fn conditional_assign(&mut self, other: &Self, choice: Choice) {
-        for (value, source) in self.iter_mut().zip(other) {
-            value.conditional_assign(source, choice);
-        }
-    }
-
-    fn conditional_swap(a: &mut Self, b: &mut Self, choice: Choice) {
-        for (left, right) in a.iter_mut().zip(b) {
-            T::conditional_swap(left, right, choice);
-        }
-    }
-}
 
 impl<T: ConditionallyNegatable, const N: usize> ConditionallyNegatable for [T; N] {
     fn conditional_negate(&mut self, choice: Choice) {
