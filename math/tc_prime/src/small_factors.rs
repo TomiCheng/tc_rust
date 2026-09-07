@@ -66,9 +66,7 @@ mod tests {
     use super::*;
     #[cfg(feature = "alloc")]
     use tc_bigint::BigUint;
-    use tc_bigint::{FixedBigUint, Word};
-
-    type U256 = FixedBigUint<{ 256 / Word::BITS as usize }>;
+    use tc_bigint::U256;
 
     fn verify_all_groups<T: PrimeInteger>() {
         let prime = T::from_u64(1_000_003).expect("test prime fits");

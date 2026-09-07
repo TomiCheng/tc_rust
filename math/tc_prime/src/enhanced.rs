@@ -140,9 +140,7 @@ mod tests {
     use rand::{SeedableRng, rngs::StdRng};
     #[cfg(feature = "alloc")]
     use tc_bigint::BigUint;
-    use tc_bigint::{FixedBigUint, Word};
-
-    type U256 = FixedBigUint<{ 256 / Word::BITS as usize }>;
+    use tc_bigint::U256;
 
     fn value<T: PrimeInteger>(input: u64) -> T {
         T::from_u64(input).expect("test value fits")

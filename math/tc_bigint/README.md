@@ -18,9 +18,11 @@ Signed values use two's complement. Limb index zero is always the
 least-significant limb. External slices explicitly select little-endian or
 big-endian order through their method names.
 
-`Limb`, `Word`, and `WideWord` are re-exported from `tc_limb`. Use
-`Limb::new(word)` and `to_word()` to access word values; the field is private.
-`as_limbs()` still returns the original array reference. `LimbArray` provides
+Limb width is a target detail and is not part of this crate's public API. Size
+fixed-width values with the bit-width aliases (`U256`, `U2048`, ...) or with
+`limbs_for_bits(bits)` where a limb count is needed as a const generic
+argument. `tc_limb::{Limb, Word, WideWord}` remain available from that crate
+for callers working at the limb level. `LimbArray` provides
 only unsigned fixed-width primitives, with no sign interpretation for the
 highest bit. Two's-complement sign checks and absolute values belong to
 `FixedBigInt`. Variable-length arithmetic and allocation remain in `tc_bigint`.
@@ -151,9 +153,8 @@ has a matching `*_length()` query, so caller-owned storage can be sized without
 first allocating a temporary `Vec`.
 
 ```rust
-use tc_bigint::{FixedBigInt, ToPrimitive, Word};
+use tc_bigint::{I128, ToPrimitive};
 
-type I128 = FixedBigInt<{ 128 / Word::BITS as usize }>;
 
 // A one-byte signed value is sign-extended into the fixed-width destination.
 let minus_two = I128::from_le_bytes(&[0xfe]).unwrap();
@@ -214,11 +215,9 @@ including for hexadecimal output.
 ```rust
 use tc_bigint::{
     Bounded, CheckedMul, ConversionError, FixedBigInt, FixedBigUint,
-    OverflowingMul, Word,
+    OverflowingMul, U128, I128,
 };
 
-type U128 = FixedBigUint<{ 128 / Word::BITS as usize }>;
-type I128 = FixedBigInt<{ 128 / Word::BITS as usize }>;
 
 let value: U128 = "255".parse().unwrap();
 assert_eq!(format!("{value:#06x}"), "0x00ff");
@@ -340,7 +339,7 @@ bits, 8 rounds from 512 bits, and 4 rounds from 1024 bits. Calling
 use core::convert::Infallible;
 use tc_bigint::{
     rand_core::{self, TryRng},
-    FixedBigUint, NonZero, ProbablePrime, Random, RandomBits, RandomMod, Word,
+    NonZero, ProbablePrime, Random, RandomBits, RandomMod, U128,
 };
 
 // Deterministic for a reproducible doctest. Production cryptographic code
@@ -371,7 +370,6 @@ impl TryRng for DemoRng {
     }
 }
 
-type U128 = FixedBigUint<{ 128 / Word::BITS as usize }>;
 
 fn random<T: RandomBits>(bits: u32, rng: &mut impl rand_core::Rng) -> T {
     T::random_bits(rng, bits)

@@ -38,8 +38,7 @@ pub use non_zero::NonZero;
 pub use odd::Odd;
 #[cfg(feature = "rand_core")]
 pub use rand_core;
-use tc_limb::LimbArray;
-pub use tc_limb::{Limb, WideWord, Word};
+use tc_limb::{Limb, LimbArray, WideWord, Word};
 pub use traits::{
     AndNot, ArrayEncoding, BitOps, Bounded, CheckedAdd, CheckedDiv, CheckedMul, CheckedNeg,
     CheckedRem, CheckedShl, CheckedShr, CheckedSub, DivRem, FromPrimitive, Gcd, ModAdd, ModInverse,
@@ -52,4 +51,7 @@ pub use traits::{
 pub use traits::{
     IsProbablePrime, NextProbablePrime, ProbablePrime, Random, RandomBits, RandomMod,
 };
-pub use types::{I64, I128, I1024, U64, U128, U256, U384, U521, U1024, U2048};
+pub use types::{
+    I64, I128, I1024, U64, U128, U256, U384, U512, U521, U1024, U1536, U2048, U3072, U4096,
+    limbs_for_bits,
+};

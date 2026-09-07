@@ -40,14 +40,13 @@ impl<const N: usize> FixedBigUint<N> {
     /// does not allocate.
     ///
     /// ```
-    /// use tc_bigint::{FixedBigUint, Word};
+    /// use tc_bigint::FixedBigUint;
     ///
     /// type U = FixedBigUint<1>;
     /// let (low, high) = U::max_value().mul_wide(&U::from(2_u8));
     /// assert_eq!(low, U::max_value() - U::from(1_u8));
     /// assert_eq!(high, U::from(1_u8));
     /// assert_eq!(U::max_value().square_wide(), U::max_value().mul_wide(&U::max_value()));
-    /// # let _ = Word::BITS;
     /// ```
     pub fn mul_wide(&self, rhs: &Self) -> (Self, Self) {
         let (low, high) = self.limbs.mul_wide(&rhs.limbs);

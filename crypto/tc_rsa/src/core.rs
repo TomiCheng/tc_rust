@@ -2,15 +2,11 @@
 
 use rand_core::CryptoRng;
 use tc_bigint::modular::{FixedMontyForm, FixedMontyParams};
-use tc_bigint::{BigUint, FixedBigUint, NonZero, Odd, RandomMod, Word};
+use tc_bigint::{BigUint, FixedBigUint, NonZero, Odd, RandomMod, limbs_for_bits};
 use tc_cipher::CipherDirection;
 use tc_constant_time::ConstantTimeEq;
 
 use crate::{RsaError, RsaKey, RsaKeyParameters, RsaPrivateCrtKeyParameters};
-
-const fn limbs(bits: usize) -> usize {
-    bits / Word::BITS as usize
-}
 
 #[derive(Clone, Copy)]
 struct StandardInner<const N: usize> {
@@ -65,10 +61,10 @@ impl<const N: usize> StandardInner<N> {
 // 金鑰桶刻意直接持有固定寬度資料，避免額外間接層；桶寬是公開資訊。
 #[allow(clippy::large_enum_variant)]
 enum StandardKey {
-    Bits1024(StandardInner<{ limbs(1024) }>),
-    Bits2048(StandardInner<{ limbs(2048) }>),
-    Bits3072(StandardInner<{ limbs(3072) }>),
-    Bits4096(StandardInner<{ limbs(4096) }>),
+    Bits1024(StandardInner<{ limbs_for_bits(1024) }>),
+    Bits2048(StandardInner<{ limbs_for_bits(2048) }>),
+    Bits3072(StandardInner<{ limbs_for_bits(3072) }>),
+    Bits4096(StandardInner<{ limbs_for_bits(4096) }>),
 }
 
 macro_rules! with_standard_inner {
@@ -207,10 +203,10 @@ impl<const N: usize, const H: usize> CrtInner<N, H> {
 // 工單指定 enum 只留在最外層，內層 CrtInner 保持單一泛型實作。
 #[allow(clippy::large_enum_variant)]
 pub(crate) enum RsaPrivateCrtKey {
-    Bits1024(CrtInner<{ limbs(1024) }, { limbs(512) }>),
-    Bits2048(CrtInner<{ limbs(2048) }, { limbs(1024) }>),
-    Bits3072(CrtInner<{ limbs(3072) }, { limbs(1536) }>),
-    Bits4096(CrtInner<{ limbs(4096) }, { limbs(2048) }>),
+    Bits1024(CrtInner<{ limbs_for_bits(1024) }, { limbs_for_bits(512) }>),
+    Bits2048(CrtInner<{ limbs_for_bits(2048) }, { limbs_for_bits(1024) }>),
+    Bits3072(CrtInner<{ limbs_for_bits(3072) }, { limbs_for_bits(1536) }>),
+    Bits4096(CrtInner<{ limbs_for_bits(4096) }, { limbs_for_bits(2048) }>),
 }
 
 macro_rules! with_crt_inner {

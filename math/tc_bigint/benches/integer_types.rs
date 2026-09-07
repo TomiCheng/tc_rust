@@ -6,9 +6,7 @@ use criterion::measurement::WallTime;
 use criterion::{BenchmarkGroup, Criterion, criterion_group, criterion_main};
 use std::hint::black_box;
 use tc_bigint::modular::{FixedMontyForm, FixedMontyParams};
-use tc_bigint::{BigInt, BigUint, FixedBigUint, I1024, ModMul, Odd, U1024, Word};
-
-type U256 = FixedBigUint<{ 256 / Word::BITS as usize }>;
+use tc_bigint::{BigInt, BigUint, I1024, ModMul, Odd, U256, U1024};
 
 struct Values {
     big_uint: BigUint,
