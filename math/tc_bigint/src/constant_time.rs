@@ -1,19 +1,17 @@
 //! Selection primitives for fixed-width integers. Dynamic BigUint is excluded:
 //! its allocation length and normalization depend on the represented value.
-use crate::{Choice, ConditionallySelectable, ConstantTimeEq, FixedBigUint, Limb};
+use crate::{Choice, ConditionallySelectable, ConstantTimeEq, FixedBigUint, LimbArray};
 
 impl<const N: usize> ConditionallySelectable for FixedBigUint<N> {
     fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
-        Self::from_limbs(<[Limb; N]>::conditional_select(
-            a.as_limbs(),
-            b.as_limbs(),
-            choice,
-        ))
+        Self {
+            limbs: LimbArray::conditional_select(&a.limbs, &b.limbs, choice),
+        }
     }
 }
 impl<const N: usize> ConstantTimeEq for FixedBigUint<N> {
     fn ct_eq(&self, rhs: &Self) -> Choice {
-        self.as_limbs().ct_eq(rhs.as_limbs())
+        self.limbs.ct_eq(&rhs.limbs)
     }
 }
 

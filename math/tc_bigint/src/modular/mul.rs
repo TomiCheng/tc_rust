@@ -9,7 +9,7 @@ use alloc::vec::Vec;
 #[cfg(feature = "alloc")]
 use crate::arithmetic::{cmp, mul, normalize};
 
-use crate::{Choice, ConditionallySelectable, Limb, WideWord, Word};
+use crate::{Choice, ConditionallySelectable, Limb, LimbArray, WideWord, Word};
 
 pub(super) fn montgomery_inverse(word: Word) -> Word {
     debug_assert_eq!(word & 1, 1);
@@ -127,11 +127,12 @@ pub(super) fn fixed_montgomery_mul<const N: usize>(
             crate::LimbArray::new(result).sub(&crate::LimbArray::new(*(modulus)));
         (value.into_limbs(), overflow)
     };
-    <[Limb; N]>::conditional_select(
-        &result,
-        &reduced,
+    LimbArray::conditional_select(
+        &LimbArray::new(result),
+        &LimbArray::new(reduced),
         Choice::from_lsb((high as u8) | ((!borrow) as u8)),
     )
+    .into_limbs()
 }
 
 pub(super) fn fixed_mul_mod<const N: usize>(
@@ -164,7 +165,12 @@ pub(super) fn fixed_add_mod<const N: usize>(
         let (value, overflow) = crate::LimbArray::new(sum).sub(&crate::LimbArray::new(*(modulus)));
         (value.into_limbs(), overflow)
     };
-    <[Limb; N]>::conditional_select(&sum, &reduced, Choice::from_lsb((carry | !borrow) as u8))
+    LimbArray::conditional_select(
+        &LimbArray::new(sum),
+        &LimbArray::new(reduced),
+        Choice::from_lsb((carry | !borrow) as u8),
+    )
+    .into_limbs()
 }
 
 pub(super) fn fixed_sub_mod<const N: usize>(
@@ -182,7 +188,12 @@ pub(super) fn fixed_sub_mod<const N: usize>(
         (value.into_limbs(), overflow)
     }
     .0;
-    <[Limb; N]>::conditional_select(&difference, &corrected, Choice::from_lsb(borrow as u8))
+    LimbArray::conditional_select(
+        &LimbArray::new(difference),
+        &LimbArray::new(corrected),
+        Choice::from_lsb(borrow as u8),
+    )
+    .into_limbs()
 }
 
 pub(super) fn fixed_one_mod<const N: usize>(modulus: &[Limb; N]) -> [Limb; N] {

@@ -27,7 +27,7 @@ mod sub;
 /// An unsigned integer containing exactly `N` little-endian limbs.
 #[derive(Clone, Copy, Eq, Hash, PartialEq)]
 pub struct FixedBigUint<const N: usize> {
-    limbs: crate::LimbArray<N>,
+    pub(crate) limbs: crate::LimbArray<N>,
 }
 
 impl<const N: usize> FixedBigUint<N> {

@@ -187,10 +187,10 @@ impl<const N: usize> LimbArray<N> {
         Self::bit_len_words(&self.0)
     }
 
-    /// 讀取指定位元；索引零代表最低位元。
+    /// Tests the bit at `index`, with index zero denoting the least significant bit.
     ///
     /// # Panics
-    /// 索引超出固定寬度時 panic；零寬度值沒有有效索引。
+    /// Panics if the index is outside the fixed width; zero-width values have no valid indices.
     /// ```
     /// use tc_limb::{Limb, LimbArray};
     /// let x = LimbArray::new([Limb::new(8)]);
@@ -205,10 +205,10 @@ impl<const N: usize> LimbArray<N> {
         Self::test_bit_words(&self.0, index)
     }
 
-    /// 回傳將指定位元設為一的新值；索引零代表最低位元。
+    /// Returns a new value with the bit at `index` set, with index zero denoting the least significant bit.
     ///
     /// # Panics
-    /// 索引超出固定寬度時 panic；零寬度值沒有有效索引。
+    /// Panics if the index is outside the fixed width; zero-width values have no valid indices.
     /// ```
     /// use tc_limb::{LimbArray, Word};
     /// let value = LimbArray::<2>::zero().set_bit(Word::BITS as usize);
@@ -222,10 +222,10 @@ impl<const N: usize> LimbArray<N> {
         Self(Self::set_bit_words(&self.0, index))
     }
 
-    /// 回傳將指定位元清為零的新值；索引零代表最低位元。
+    /// Returns a new value with the bit at `index` cleared, with index zero denoting the least significant bit.
     ///
     /// # Panics
-    /// 索引超出固定寬度時 panic；零寬度值沒有有效索引。
+    /// Panics if the index is outside the fixed width; zero-width values have no valid indices.
     /// ```
     /// use tc_limb::{Limb, LimbArray};
     /// let value = LimbArray::new([Limb::new(1)]).clear_bit(0);
@@ -239,10 +239,10 @@ impl<const N: usize> LimbArray<N> {
         Self(Self::clear_bit_words(&self.0, index))
     }
 
-    /// 回傳將指定位元反轉的新值；索引零代表最低位元。
+    /// Returns a new value with the bit at `index` flipped, with index zero denoting the least significant bit.
     ///
     /// # Panics
-    /// 索引超出固定寬度時 panic；零寬度值沒有有效索引。
+    /// Panics if the index is outside the fixed width; zero-width values have no valid indices.
     /// ```
     /// use tc_limb::LimbArray;
     /// let value = LimbArray::<1>::zero().flip_bit(0);

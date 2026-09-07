@@ -1,5 +1,4 @@
 use crate::{Choice, ConditionallySelectable, ConstantTimeEq};
-use core::ops::{Add, AddAssign, BitAnd, BitOr, BitXor, Mul, Not, Shl, Shr, Sub, SubAssign};
 
 #[cfg(target_pointer_width = "64")]
 /// Uses `u64` on 64-bit platforms and `u32` on 16-bit and 32-bit platforms, matching `tc_bigint`.
@@ -16,25 +15,15 @@ pub type WideWord = u64;
 
 /// A single storage word, accessed through [`Self::new`] and [`Self::to_word`].
 ///
-/// `+`, `-`, and `*` panic on overflow, including in release builds; shift counts must be less than the word width.
-/// Bitwise operations act on the entire word. Use `wrapping_*` methods when a truncated result is required.
+/// Arithmetic is exposed through named methods that make overflow behavior explicit.
 ///
 /// ```
-/// use tc_limb::{Limb, Word};
+/// use tc_limb::Limb;
 /// let a = Limb::new(6);
 /// let b = Limb::new(3);
-/// assert_eq!((a + b).to_word(), 9);
-/// assert_eq!((a - b).to_word(), 3);
-/// assert_eq!((a * b).to_word(), 18);
-/// assert_eq!((a & b).to_word(), 2);
-/// assert_eq!((a | b).to_word(), 7);
-/// assert_eq!((a ^ b).to_word(), 5);
-/// assert_eq!((!Limb::new(0)).to_word(), Word::MAX);
-/// assert_eq!(((a << 1_usize) >> 1_usize), a);
-/// let mut c = a;
-/// c += b;
-/// c -= b;
-/// assert_eq!(c, a);
+/// assert_eq!(a.wrapping_add(b).to_word(), 9);
+/// assert_eq!(a.wrapping_sub(b).to_word(), 3);
+/// assert_eq!(a.widening_mul(b), (Limb::new(18), Limb::new(0)));
 /// ```
 #[repr(transparent)]
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -145,79 +134,6 @@ impl Limb {
     /// ```
     pub const fn wrapping_neg(self) -> Self {
         Self(self.0.wrapping_neg())
-    }
-}
-
-impl Add for Limb {
-    type Output = Self;
-    fn add(self, rhs: Self) -> Self {
-        let (value, overflow) = self.overflowing_add(rhs);
-        assert!(!overflow, "attempted to add with overflow");
-        value
-    }
-}
-impl Sub for Limb {
-    type Output = Self;
-    fn sub(self, rhs: Self) -> Self {
-        let (value, overflow) = self.overflowing_sub(rhs);
-        assert!(!overflow, "attempted to subtract with underflow");
-        value
-    }
-}
-impl Mul for Limb {
-    type Output = Self;
-    fn mul(self, rhs: Self) -> Self {
-        let (low, high) = self.widening_mul(rhs);
-        assert!(high.0 == 0, "attempted to multiply with overflow");
-        low
-    }
-}
-impl AddAssign for Limb {
-    fn add_assign(&mut self, rhs: Self) {
-        *self = *self + rhs;
-    }
-}
-impl SubAssign for Limb {
-    fn sub_assign(&mut self, rhs: Self) {
-        *self = *self - rhs;
-    }
-}
-impl BitAnd for Limb {
-    type Output = Self;
-    fn bitand(self, rhs: Self) -> Self {
-        Self(self.0 & rhs.0)
-    }
-}
-impl BitOr for Limb {
-    type Output = Self;
-    fn bitor(self, rhs: Self) -> Self {
-        Self(self.0 | rhs.0)
-    }
-}
-impl BitXor for Limb {
-    type Output = Self;
-    fn bitxor(self, rhs: Self) -> Self {
-        Self(self.0 ^ rhs.0)
-    }
-}
-impl Not for Limb {
-    type Output = Self;
-    fn not(self) -> Self {
-        Self(!self.0)
-    }
-}
-impl Shl<usize> for Limb {
-    type Output = Self;
-    fn shl(self, shift: usize) -> Self {
-        assert!(shift < Word::BITS as usize, "shift is outside word width");
-        Self(self.0 << shift)
-    }
-}
-impl Shr<usize> for Limb {
-    type Output = Self;
-    fn shr(self, shift: usize) -> Self {
-        assert!(shift < Word::BITS as usize, "shift is outside word width");
-        Self(self.0 >> shift)
     }
 }
 
