@@ -28,7 +28,7 @@ mathematical backends can share it without depending on each other's layer.
 | Types | Selection, assignment, swap | Wrapping negation | Equality | Ordering |
 | --- | --- | --- | --- | --- |
 | `u8`, `u16`, `u32`, `u64`, `u128`, `usize` | Yes | Yes | Yes | Yes |
-| `i32`, `i64` | Yes | Yes | Yes | No |
+| `i8`, `i16`, `i32`, `i64`, `i128`, `isize` | Yes | Yes | Yes | No |
 | `[T; N]` | When supported by `T` | When supported by `T` | When supported by `T` | No |
 | `[T]` | No | No | When supported by `T` | No |
 
@@ -42,8 +42,8 @@ checksum verification only when the result is intended to be public. It is the
 crate's only convenience function that converts a `Choice` to `bool`; retain a
 `Choice` with `ct_eq` when combining secret predicates.
 
-Negation wraps modulo the integer width, so negating `i32::MIN` or `i64::MIN`
-leaves the value unchanged. `ConstantTimeOrd` is intentionally unsigned-only;
+Negation wraps modulo the integer width, so negating the minimum value of any
+signed integer type leaves it unchanged. `ConstantTimeOrd` is intentionally unsigned-only;
 array ordering is left to higher layers because limb order is a domain choice.
 
 `Choice` supports `Copy` and `Clone` and keeps its field private. It does not
@@ -113,9 +113,11 @@ exhaustion test; `src/tests.rs` declares all test modules.
 The unit test exhaustively checks selection with both choices and equality for
 every pair of byte values. All new byte APIs are also compared against public
 reference operations over all 256-by-256 input pairs. Additional tests cover
-choice normalization and operators, every bit boundary of each unsigned width,
+choice normalization and operators, every bit boundary of each integer width,
 signed extremes, array updates, non-`Copy` default implementations, and slice
 scan behavior after a mismatch.
+Signed byte selection, equality, assignment, swap, and negation are also checked
+over all 256-by-256 `i8` input pairs against public reference operations.
 Doctests cover bit normalization, choice operators,
 integer and array operations, empty arrays, and custom trait implementations.
 Missing public documentation and unsafe code are rejected by crate-level lints.

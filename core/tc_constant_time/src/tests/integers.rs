@@ -116,5 +116,34 @@ macro_rules! signed_boundaries {
         }
     };
 }
+signed_boundaries!(signed_i8_boundaries, i8);
+signed_boundaries!(signed_i16_boundaries, i16);
 signed_boundaries!(signed_i32_boundaries, i32);
 signed_boundaries!(signed_i64_boundaries, i64);
+signed_boundaries!(signed_i128_boundaries, i128);
+signed_boundaries!(signed_isize_boundaries, isize);
+
+#[test]
+fn exhaustive_signed_byte_api_matches_public_references() {
+    for a in i8::MIN..=i8::MAX {
+        for b in i8::MIN..=i8::MAX {
+            assert_eq!(a.ct_eq(&b).unwrap_u8(), u8::from(a == b));
+            for bit in 0..=1 {
+                let choice = Choice::from_lsb(bit);
+                assert_eq!(
+                    i8::conditional_select(&a, &b, choice),
+                    if bit == 0 { a } else { b }
+                );
+                let mut assigned = a;
+                assigned.conditional_assign(&b, choice);
+                assert_eq!(assigned, if bit == 0 { a } else { b });
+                let (mut left, mut right) = (a, b);
+                i8::conditional_swap(&mut left, &mut right, choice);
+                assert_eq!((left, right), if bit == 0 { (a, b) } else { (b, a) });
+                let mut negated = a;
+                negated.conditional_negate(choice);
+                assert_eq!(negated, if bit == 0 { a } else { a.wrapping_neg() });
+            }
+        }
+    }
+}

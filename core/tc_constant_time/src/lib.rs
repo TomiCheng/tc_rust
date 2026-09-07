@@ -5,7 +5,7 @@
 //!
 //! [`Choice`] holds one bit. [`ConditionallySelectable`] chooses between two
 //! values, and [`ConstantTimeEq`] compares them without an early exit on a
-//! mismatch. Both traits support unsigned integers, `i32`, `i64`, and fixed-size
+//! mismatch. Both traits support all primitive integer types and fixed-size
 //! arrays. Equality also supports slices with public lengths. [`ConstantTimeOrd`]
 //! orders unsigned integers, and [`ConditionallyNegatable`] provides wrapping
 //! negation. [`fixed_time_eq`] deliberately reveals a byte-slice comparison.
@@ -38,6 +38,31 @@
 //! let empty: [u32; 0] = [];
 //! assert_eq!(empty.ct_eq(&empty).unwrap_u8(), 1);
 //! assert_eq!(<[u32; 0]>::conditional_select(&empty, &empty, Choice::from_lsb(1)), empty);
+//! ```
+//!
+//! # Signed integers
+//!
+//! Selection, equality, and conditional negation support `i8`, `i16`, `i32`,
+//! `i64`, `i128`, and `isize`. Negation wraps at the type's width, including
+//! its minimum value. Ordering remains unsigned-only.
+//!
+//! ```
+//! use tc_constant_time::{
+//!     Choice, ConditionallyNegatable, ConditionallySelectable, ConstantTimeEq,
+//! };
+//!
+//! let yes = Choice::from_lsb(1);
+//! assert_eq!(i8::conditional_select(&-7, &9, yes), 9);
+//! let mut value = -3_i16;
+//! value.conditional_assign(&5, yes);
+//! assert_eq!(value, 5);
+//! let mut minimum = i128::MIN;
+//! minimum.conditional_negate(yes);
+//! assert_eq!(minimum, i128::MIN);
+//! let (mut a, mut b) = (isize::MIN, isize::MAX);
+//! isize::conditional_swap(&mut a, &mut b, yes);
+//! assert_eq!((a, b), (isize::MAX, isize::MIN));
+//! assert_eq!(a.ct_eq(&isize::MAX).unwrap_u8(), 1);
 //! ```
 //!
 //! # Timing contract
