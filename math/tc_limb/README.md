@@ -48,6 +48,10 @@ assert!(high.is_zero());
 
 ## Single-limb semantics
 
+`Limb` intentionally implements no arithmetic, bitwise, or shift traits from
+`core::ops`. Callers must use the named methods below or explicitly cross into
+`Word` through `to_word()`.
+
 | Operation | Result and constraints |
 | --- | --- |
 | `carrying_add` | Low word and carry word of `self + rhs + carry`; the input carry may be any word, and the output carry may exceed one |
@@ -55,9 +59,7 @@ assert!(high.is_zero());
 | `overflowing_add`, `overflowing_sub` | Truncated result and overflow/borrow flag |
 | `wrapping_add`, `wrapping_sub`, `wrapping_neg` | Result modulo `2^Word::BITS` |
 | `widening_mul` | Low and high words of the full product |
-| `+`, `+=`, `-`, `-=`, `*` | Always panic on arithmetic overflow, in both debug and release builds |
-| `&`, `\|`, `^`, `!` | Bitwise operations on the entire word |
-| `<< usize`, `>> usize` | Logical shifts; the count must be less than `Word::BITS`, and bits shifted out to the left are discarded |
+| `to_word`, then `Limb::new` | Explicit escape hatch for operations without a named method, including bitwise operations and shifts; callers choose the native `Word` semantics deliberately |
 
 ## Fixed-width methods
 
