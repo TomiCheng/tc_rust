@@ -19,9 +19,6 @@ mod error;
 mod fixed_big_int;
 mod fixed_big_uint;
 mod format;
-#[cfg(test)]
-#[path = "limb_tests.rs"]
-mod limb;
 pub mod modular;
 mod non_zero;
 mod odd;
