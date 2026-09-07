@@ -9,7 +9,6 @@ extern crate std;
 mod arithmetic;
 mod constant_time;
 pub use tc_constant_time::{Choice, ConditionallySelectable, ConstantTimeEq};
-mod array;
 #[cfg(feature = "alloc")]
 mod big_int;
 #[cfg(feature = "alloc")]
@@ -27,7 +26,6 @@ mod prime;
 mod traits;
 mod types;
 
-pub use array::ArrayEncoding;
 #[cfg(feature = "alloc")]
 pub use big_int::BigInt;
 #[cfg(feature = "alloc")]
@@ -44,9 +42,9 @@ pub use rand_core;
 use tc_limb::LimbArray;
 pub use tc_limb::{Limb, WideWord, Word};
 pub use traits::{
-    AndNot, BitOps, Bounded, CheckedAdd, CheckedDiv, CheckedMul, CheckedNeg, CheckedRem,
-    CheckedShl, CheckedShr, CheckedSub, DivRem, FromPrimitive, Gcd, ModAdd, ModInverse, ModMul,
-    ModPow, ModSub, Num, NumAssign, NumAssignOps, NumAssignRef, NumOps, NumRef, One,
+    AndNot, ArrayEncoding, BitOps, Bounded, CheckedAdd, CheckedDiv, CheckedMul, CheckedNeg,
+    CheckedRem, CheckedShl, CheckedShr, CheckedSub, DivRem, FromPrimitive, Gcd, ModAdd, ModInverse,
+    ModMul, ModPow, ModSub, Num, NumAssign, NumAssignOps, NumAssignRef, NumOps, NumRef, One,
     OverflowingAdd, OverflowingMul, OverflowingSub, Pow, RefNum, RemEuclid, SaturatingAdd,
     SaturatingMul, SaturatingSub, Signed, Square, ToPrimitive, Unsigned, WrappingAdd, WrappingMul,
     WrappingNeg, WrappingSub, Zero,

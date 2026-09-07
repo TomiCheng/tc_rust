@@ -29,6 +29,92 @@ The crate defines its own numeric traits in `traits.rs`; it does not depend on
 `num-traits`, and the local traits are not type-compatible with
 `num_traits::*`.
 
+## Trait implementations
+
+`BU` is `BigUint`, `BI` is `BigInt`, `FU` is `FixedBigUint<N>` and `FI` is
+`FixedBigInt<N>`. The groups follow the modules under `src/traits/`. A blank
+cell marks a contract that does not apply to that representation rather than
+one that is merely missing; the reasons follow.
+
+### `numeric` — identities, markers and bound aggregators
+
+| Trait | BU | BI | FU | FI |
+| --- | :-: | :-: | :-: | :-: |
+| `Zero` `One` `Num` | ✓ | ✓ | ✓ | ✓ |
+| `Bounded` | | | ✓ | ✓ |
+| `Signed` | | ✓ | | ✓ |
+| `Unsigned` | ✓ | | ✓ | |
+| `NumOps` `NumRef` `RefNum` | ✓ | ✓ | ✓ | ✓ |
+| `NumAssignOps` `NumAssign` `NumAssignRef` | ✓ | ✓ | ✓ | ✓ |
+
+The last two rows are blanket implementations over the operator bounds rather
+than per-type implementations, so every type meeting those bounds gets them.
+
+### `ops` — big-integer operations
+
+| Trait | BU | BI | FU | FI |
+| --- | :-: | :-: | :-: | :-: |
+| `Pow` `Square` | ✓ | ✓ | ✓ | ✓ |
+| `DivRem` `RemEuclid` `Gcd` | ✓ | ✓ | ✓ | ✓ |
+| `ModInverse` `ModPow` | ✓ | ✓ | ✓ | ✓ |
+| `ModAdd` `ModSub` `ModMul` | ✓ | ✓ | ✓ | ✓ |
+| `BitOps` `AndNot` | ✓ | ✓ | ✓ | ✓ |
+
+### `checked` — overflow policies
+
+| Trait | BU | BI | FU | FI |
+| --- | :-: | :-: | :-: | :-: |
+| `CheckedAdd` `CheckedSub` `CheckedMul` | ✓ | ✓ | ✓ | ✓ |
+| `CheckedDiv` `CheckedRem` | ✓ | ✓ | ✓ | ✓ |
+| `CheckedShl` `CheckedShr` | ✓ | ✓ | ✓ | ✓ |
+| `CheckedNeg` `WrappingNeg` | | ✓ | | ✓ |
+| `OverflowingAdd` `WrappingAdd` | ✓ | ✓ | ✓ | ✓ |
+| `OverflowingSub` `WrappingSub` | | ✓ | ✓ | ✓ |
+| `OverflowingMul` `WrappingMul` | ✓ | ✓ | ✓ | ✓ |
+| `SaturatingAdd` `SaturatingSub` `SaturatingMul` | ✓ | ✓ | ✓ | ✓ |
+
+### `convert` — primitive conversion
+
+| Trait | BU | BI | FU | FI |
+| --- | :-: | :-: | :-: | :-: |
+| `FromPrimitive` `ToPrimitive` | ✓ | ✓ | ✓ | ✓ |
+
+### `array` — byte and word slice conversion
+
+| Trait | BU | BI | FU | FI |
+| --- | :-: | :-: | :-: | :-: |
+| `ArrayEncoding` | ✓ | ✓ | ✓ | ✓ |
+
+`ArrayEncoding` names the byte order in each method rather than exposing the
+internal little-endian limb layout, so callers pick the external format
+explicitly.
+
+### `random` — randomised construction and primality
+
+Requires the `rand_core` feature.
+
+| Trait | BU | BI | FU | FI |
+| --- | :-: | :-: | :-: | :-: |
+| `Random` | | | ✓ | ✓ |
+| `RandomBits` | ✓ | ✓ | ✓ | ✓ |
+| `RandomMod` | ✓ | | ✓ | |
+| `ProbablePrime` `IsProbablePrime` `NextProbablePrime` | ✓ | ✓ | ✓ | ✓ |
+
+### Why the blanks
+
+- `Signed` and `Unsigned` partition the four types by sign, as do `CheckedNeg`
+  and `WrappingNeg`: negation is only meaningful where the sign bit is.
+- `Bounded` and `Random` need a width known ahead of time, so they exist only
+  for the fixed-width pair. `RandomBits` takes the bit length as an argument
+  and therefore applies to all four.
+- `RandomMod` samples below an unsigned modulus, so the signed types do not
+  implement it.
+- `OverflowingSub` and `WrappingSub` need a width to wrap at. `BigUint` grows
+  on demand and cannot represent a negative result, so an underflowing
+  subtraction has nothing to wrap to; use `CheckedSub` there instead.
+
+The `BU` and `BI` columns require the `alloc` feature throughout.
+
 ```rust
 # #[cfg(feature = "alloc")]
 # {

@@ -1,22 +1,4 @@
-//! Bounds and conversions to and from primitive integers.
-
-/// Values with finite lower and upper bounds.
-pub trait Bounded: Sized {
-    /// Lowest representable value.
-    const MIN: Self;
-    /// Highest representable value.
-    const MAX: Self;
-
-    /// Returns [`Self::MIN`].
-    fn min_value() -> Self {
-        Self::MIN
-    }
-
-    /// Returns [`Self::MAX`].
-    fn max_value() -> Self {
-        Self::MAX
-    }
-}
+//! Conversions to and from primitive numeric types.
 
 /// Conversion from primitive numeric types.
 pub trait FromPrimitive: Sized {
@@ -166,7 +148,7 @@ pub trait ToPrimitive {
 
 #[cfg(test)]
 mod tests {
-    use super::{Bounded, FromPrimitive, ToPrimitive};
+    use super::{FromPrimitive, ToPrimitive};
     use crate::{FixedBigInt, FixedBigUint, Word};
 
     type I = FixedBigInt<{ 128 / Word::BITS as usize }>;
@@ -183,14 +165,6 @@ mod tests {
         fn from_u64(value: u64) -> Option<Self> {
             i64::try_from(value).ok().map(Self)
         }
-    }
-
-    #[test]
-    fn bounded_contracts_expose_the_representable_limits() {
-        assert_eq!(<U as Bounded>::MIN, U::zero());
-        assert_eq!(<U as Bounded>::MAX, U::max_value());
-        assert_eq!(<I as Bounded>::MIN, I::min_value());
-        assert_eq!(<I as Bounded>::MAX, I::max_value());
     }
 
     #[test]

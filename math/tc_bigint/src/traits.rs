@@ -4,6 +4,7 @@
 //! in this crate. No `num-traits` dependency is required, and these are distinct
 //! Rust traits rather than drop-in implementations of `num_traits::*`.
 
+mod array;
 mod checked;
 mod convert;
 mod numeric;
@@ -11,14 +12,16 @@ mod ops;
 #[cfg(feature = "rand_core")]
 mod random;
 
+pub use array::ArrayEncoding;
 pub use checked::{
     CheckedAdd, CheckedDiv, CheckedMul, CheckedNeg, CheckedRem, CheckedShl, CheckedShr, CheckedSub,
     OverflowingAdd, OverflowingMul, OverflowingSub, SaturatingAdd, SaturatingMul, SaturatingSub,
     WrappingAdd, WrappingMul, WrappingNeg, WrappingSub,
 };
-pub use convert::{Bounded, FromPrimitive, ToPrimitive};
+pub use convert::{FromPrimitive, ToPrimitive};
 pub use numeric::{
-    Num, NumAssign, NumAssignOps, NumAssignRef, NumOps, NumRef, One, RefNum, Signed, Unsigned, Zero,
+    Bounded, Num, NumAssign, NumAssignOps, NumAssignRef, NumOps, NumRef, One, RefNum, Signed,
+    Unsigned, Zero,
 };
 pub use ops::{
     AndNot, BitOps, DivRem, Gcd, ModAdd, ModInverse, ModMul, ModPow, ModSub, Pow, RemEuclid, Square,

@@ -37,6 +37,24 @@ pub trait One: Sized + Mul<Self, Output = Self> {
     }
 }
 
+/// Values with finite lower and upper bounds.
+pub trait Bounded: Sized {
+    /// Lowest representable value.
+    const MIN: Self;
+    /// Highest representable value.
+    const MAX: Self;
+
+    /// Returns [`Self::MIN`].
+    fn min_value() -> Self {
+        Self::MIN
+    }
+
+    /// Returns [`Self::MAX`].
+    fn max_value() -> Self {
+        Self::MAX
+    }
+}
+
 /// The five basic numeric operators.
 pub trait NumOps<Rhs = Self, Output = Self>:
     Add<Rhs, Output = Output>
@@ -119,7 +137,7 @@ pub trait Unsigned: Num {}
 
 #[cfg(test)]
 mod tests {
-    use super::{Num, NumAssignRef, NumRef, One, RefNum, Signed, Zero};
+    use super::{Bounded, Num, NumAssignRef, NumRef, One, RefNum, Signed, Zero};
     use crate::{FixedBigInt, FixedBigUint, Word};
 
     type I = FixedBigInt<{ 128 / Word::BITS as usize }>;
@@ -151,6 +169,14 @@ mod tests {
         assert_hash::<U>();
         assert_default::<I>();
         assert_default::<U>();
+    }
+
+    #[test]
+    fn bounded_contracts_expose_the_representable_limits() {
+        assert_eq!(<U as Bounded>::MIN, U::zero());
+        assert_eq!(<U as Bounded>::MAX, U::max_value());
+        assert_eq!(<I as Bounded>::MIN, I::min_value());
+        assert_eq!(<I as Bounded>::MAX, I::max_value());
     }
 
     #[test]
