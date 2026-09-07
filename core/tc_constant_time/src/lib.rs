@@ -152,20 +152,6 @@ macro_rules! unsigned_ordering {
 }
 unsigned_ordering!(u8, u16, u32, u64, u128, usize);
 
-impl<T: ConditionallyNegatable, const N: usize> ConditionallyNegatable for [T; N] {
-    fn conditional_negate(&mut self, choice: Choice) {
-        for value in self {
-            value.conditional_negate(choice);
-        }
-    }
-}
-
-impl<T: ConstantTimeEq, const N: usize> ConstantTimeEq for [T; N] {
-    fn ct_eq(&self, rhs: &Self) -> Choice {
-        self.as_slice().ct_eq(rhs.as_slice())
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
