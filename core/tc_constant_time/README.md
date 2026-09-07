@@ -106,6 +106,10 @@ choice into ordinary control flow to skip work on subsequent fields.
 
 ## Validation
 
+Unit tests live in `src/tests/`, grouped into `choice`, `integers`, `array`,
+`slice`, and `traits` modules. The `api` module retains the cross-API byte
+exhaustion test; `src/tests.rs` declares all test modules.
+
 The unit test exhaustively checks selection with both choices and equality for
 every pair of byte values. All new byte APIs are also compared against public
 reference operations over all 256-by-256 input pairs. Additional tests cover
