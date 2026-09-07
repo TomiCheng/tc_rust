@@ -833,6 +833,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_drbg"
+version = "0.1.0"
+dependencies = [
+ "rand_core",
+ "tc_aes",
+ "tc_cipher",
+ "tc_digest",
+ "tc_hmac",
+ "tc_macs",
+ "tc_params",
+ "tc_sha",
+]
+
+[[package]]
 name = "tc_dstu7564"
 version = "0.1.0"
 dependencies = [
