@@ -1,34 +1,26 @@
 # tc_bigint
 
-`tc_bigint` provides four little-endian integer representations:
+Four little-endian integer types, in two pairs:
 
-- `BigUint` and `BigInt` grow using `Vec<Limb>` and require the default `alloc`
-  feature.
-- `FixedBigUint<N>` and `FixedBigInt<N>` store their `N` limbs in an internal `LimbArray<N>`; their
-  arithmetic and caller-buffer encodings never allocate. They remain available
-  with `default-features = false`. The optional `to_str_radix` convenience
-  method returns a `String` and therefore requires `alloc`.
+- `BigUint` and `BigInt` grow as needed and require the default `alloc` feature.
+- `FixedBigUint<N>` and `FixedBigInt<N>` hold exactly `N` limbs. Their
+  arithmetic and caller-buffer encodings never allocate, so they remain
+  available with `default-features = false`. Only `to_str_radix` needs `alloc`.
+
+Name the fixed-width types through the bit-width aliases: `U256`, `U2048`,
+`I1024` and so on. Limb width follows the target and is not part of the public
+API.
+
+Signed values use two's complement. Conversions name their byte order, so
+callers choose it explicitly rather than inheriting an internal layout.
 
 The default features are `alloc` and `rand_core`. Use
 `default-features = false, features = ["rand_core"]` for fixed-width random and
-prime operations without an allocator, or disable both features for fixed-width
+prime operations without an allocator, or disable both for fixed-width
 arithmetic only.
 
-Signed values use two's complement. Limb index zero is always the
-least-significant limb. External slices explicitly select little-endian or
-big-endian order through their method names.
-
-Limb width is a target detail and is not part of this crate's public API. Size
-fixed-width values with the bit-width aliases (`U256`, `U2048`, ...) or with
-`limbs_for_bits(bits)` where a limb count is needed as a const generic
-argument. The limb layer itself is internal to this crate. `LimbArray` provides
-only unsigned fixed-width primitives, with no sign interpretation for the
-highest bit. Two's-complement sign checks and absolute values belong to
-`FixedBigInt`. Variable-length arithmetic and allocation remain in `tc_bigint`.
-
-The crate defines its own numeric traits in `traits.rs`; it does not depend on
-`num-traits`, and the local traits are not type-compatible with
-`num_traits::*`.
+The numeric traits are defined here rather than taken from `num-traits`, and
+are not type-compatible with `num_traits::*`.
 
 ## Trait implementations
 

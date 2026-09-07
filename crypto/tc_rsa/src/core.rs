@@ -2,11 +2,21 @@
 
 use rand_core::CryptoRng;
 use tc_bigint::modular::{FixedMontyForm, FixedMontyParams};
-use tc_bigint::{BigUint, FixedBigUint, NonZero, Odd, RandomMod, limbs_for_bits};
+use tc_bigint::{BigUint, FixedBigUint, NonZero, Odd, RandomMod};
 use tc_cipher::CipherDirection;
 use tc_constant_time::ConstantTimeEq;
 
 use crate::{RsaError, RsaKey, RsaKeyParameters, RsaPrivateCrtKeyParameters};
+
+/// 桶寬對應的 limb 數；tc_bigint 不公開字寬，這裡自行推導。
+#[cfg(target_pointer_width = "64")]
+const LIMB_BITS: usize = 64;
+#[cfg(not(target_pointer_width = "64"))]
+const LIMB_BITS: usize = 32;
+
+const fn limbs_for_bits(bits: usize) -> usize {
+    bits.div_ceil(LIMB_BITS)
+}
 
 #[derive(Clone, Copy)]
 struct StandardInner<const N: usize> {

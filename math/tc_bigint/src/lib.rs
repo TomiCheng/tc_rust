@@ -55,5 +55,4 @@ pub use traits::{
 };
 pub use types::{
     I64, I128, I1024, U64, U128, U256, U384, U512, U521, U1024, U1536, U2048, U3072, U4096,
-    limbs_for_bits,
 };

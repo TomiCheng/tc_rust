@@ -8,12 +8,7 @@ use crate::{FixedBigInt, FixedBigUint, Word};
 /// targets and 32 bits elsewhere. Use this to size [`FixedBigUint`] and
 /// [`FixedBigInt`] by bit width instead of restating the division.
 ///
-/// ```
-/// use tc_bigint::{FixedBigUint, limbs_for_bits};
-/// type U2048 = FixedBigUint<{ limbs_for_bits(2048) }>;
-/// assert_eq!(core::mem::size_of::<U2048>() * 8, 2048);
-/// ```
-pub const fn limbs_for_bits(bits: usize) -> usize {
+pub(crate) const fn limbs_for_bits(bits: usize) -> usize {
     bits.div_ceil(Word::BITS as usize)
 }
 
@@ -21,7 +16,7 @@ macro_rules! define_fixed_uints {
     ($($bits:literal => $name:ident),* $(,)?) => {
         $(
             #[doc = concat!("A fixed-precision ", stringify!($bits), "-bit unsigned integer.")]
-            pub type $name = FixedBigUint<{ crate::limbs_for_bits($bits as usize) }>;
+            pub type $name = FixedBigUint<{ crate::types::limbs_for_bits($bits as usize) }>;
         )*
     };
 }
@@ -30,7 +25,7 @@ macro_rules! define_fixed_ints {
     ($($bits:literal => $name:ident),* $(,)?) => {
         $(
             #[doc = concat!("A fixed-precision ", stringify!($bits), "-bit signed integer.")]
-            pub type $name = FixedBigInt<{ crate::limbs_for_bits($bits as usize) }>;
+            pub type $name = FixedBigInt<{ crate::types::limbs_for_bits($bits as usize) }>;
         )*
     };
 }
