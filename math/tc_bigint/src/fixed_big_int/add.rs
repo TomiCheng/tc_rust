@@ -14,42 +14,6 @@ impl<const N: usize> Add for FixedBigInt<N> {
     }
 }
 
-impl<const N: usize> Add<&FixedBigInt<N>> for FixedBigInt<N> {
-    type Output = Self;
-
-    fn add(self, rhs: &Self) -> Self::Output {
-        self + *rhs
-    }
-}
-
-impl<const N: usize> Add<FixedBigInt<N>> for &FixedBigInt<N> {
-    type Output = FixedBigInt<N>;
-
-    fn add(self, rhs: FixedBigInt<N>) -> Self::Output {
-        *self + rhs
-    }
-}
-
-impl<const N: usize> Add<&FixedBigInt<N>> for &FixedBigInt<N> {
-    type Output = FixedBigInt<N>;
-
-    fn add(self, rhs: &FixedBigInt<N>) -> Self::Output {
-        *self + *rhs
-    }
-}
-
-impl<const N: usize> AddAssign for FixedBigInt<N> {
-    fn add_assign(&mut self, rhs: Self) {
-        *self = *self + rhs;
-    }
-}
-
-impl<const N: usize> AddAssign<&FixedBigInt<N>> for FixedBigInt<N> {
-    fn add_assign(&mut self, rhs: &FixedBigInt<N>) {
-        *self = *self + *rhs;
-    }
-}
-
 macro_rules! impl_add_unsigned_primitive {
     ($($primitive:ty),* $(,)?) => {
         $(
@@ -254,3 +218,5 @@ mod tests {
         let _ = FixedBigInt::<{ 128 / Word::BITS as usize }>::zero() + u128::MAX;
     }
 }
+
+crate::ops_forward::forward_binop_fixed!(Add, add, AddAssign, add_assign, FixedBigInt);

@@ -76,42 +76,6 @@ impl<const N: usize> Mul for FixedBigUint<N> {
     }
 }
 
-impl<const N: usize> Mul<&FixedBigUint<N>> for FixedBigUint<N> {
-    type Output = Self;
-
-    fn mul(self, rhs: &Self) -> Self::Output {
-        self * *rhs
-    }
-}
-
-impl<const N: usize> Mul<FixedBigUint<N>> for &FixedBigUint<N> {
-    type Output = FixedBigUint<N>;
-
-    fn mul(self, rhs: FixedBigUint<N>) -> Self::Output {
-        *self * rhs
-    }
-}
-
-impl<const N: usize> Mul<&FixedBigUint<N>> for &FixedBigUint<N> {
-    type Output = FixedBigUint<N>;
-
-    fn mul(self, rhs: &FixedBigUint<N>) -> Self::Output {
-        *self * *rhs
-    }
-}
-
-impl<const N: usize> MulAssign for FixedBigUint<N> {
-    fn mul_assign(&mut self, rhs: Self) {
-        *self = *self * rhs;
-    }
-}
-
-impl<const N: usize> MulAssign<&FixedBigUint<N>> for FixedBigUint<N> {
-    fn mul_assign(&mut self, rhs: &FixedBigUint<N>) {
-        *self = *self * *rhs;
-    }
-}
-
 macro_rules! impl_mul_primitive {
     ($($primitive:ty),* $(,)?) => {
         $(
@@ -277,3 +241,5 @@ mod tests {
         let _ = FixedBigUint::<1>::max_value() * 2_u8;
     }
 }
+
+crate::ops_forward::forward_binop_fixed!(Mul, mul, MulAssign, mul_assign, FixedBigUint);

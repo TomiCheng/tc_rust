@@ -15,42 +15,6 @@ impl<const N: usize> Sub for FixedBigUint<N> {
     }
 }
 
-impl<const N: usize> Sub<&FixedBigUint<N>> for FixedBigUint<N> {
-    type Output = Self;
-
-    fn sub(self, rhs: &Self) -> Self::Output {
-        self - *rhs
-    }
-}
-
-impl<const N: usize> Sub<FixedBigUint<N>> for &FixedBigUint<N> {
-    type Output = FixedBigUint<N>;
-
-    fn sub(self, rhs: FixedBigUint<N>) -> Self::Output {
-        *self - rhs
-    }
-}
-
-impl<const N: usize> Sub<&FixedBigUint<N>> for &FixedBigUint<N> {
-    type Output = FixedBigUint<N>;
-
-    fn sub(self, rhs: &FixedBigUint<N>) -> Self::Output {
-        *self - *rhs
-    }
-}
-
-impl<const N: usize> SubAssign for FixedBigUint<N> {
-    fn sub_assign(&mut self, rhs: Self) {
-        *self = *self - rhs;
-    }
-}
-
-impl<const N: usize> SubAssign<&FixedBigUint<N>> for FixedBigUint<N> {
-    fn sub_assign(&mut self, rhs: &FixedBigUint<N>) {
-        *self = *self - *rhs;
-    }
-}
-
 macro_rules! impl_sub_primitive {
     ($($primitive:ty),* $(,)?) => {
         $(
@@ -210,3 +174,5 @@ mod tests {
         let _ = FixedBigUint::<1>::zero() - 1_u8;
     }
 }
+
+crate::ops_forward::forward_binop_fixed!(Sub, sub, SubAssign, sub_assign, FixedBigUint);

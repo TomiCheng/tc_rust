@@ -21,6 +21,7 @@ mod limb;
 pub mod modular;
 mod non_zero;
 mod odd;
+mod ops_forward;
 #[cfg(feature = "rand_core")]
 mod prime;
 mod traits;

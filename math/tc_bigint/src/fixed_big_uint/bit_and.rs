@@ -17,35 +17,4 @@ impl<const N: usize> BitAnd for FixedBigUint<N> {
     }
 }
 
-impl<const N: usize> BitAnd<&Self> for FixedBigUint<N> {
-    type Output = Self;
-    fn bitand(self, rhs: &Self) -> Self {
-        self & *rhs
-    }
-}
-
-impl<const N: usize> BitAnd<FixedBigUint<N>> for &FixedBigUint<N> {
-    type Output = FixedBigUint<N>;
-    fn bitand(self, rhs: FixedBigUint<N>) -> Self::Output {
-        *self & rhs
-    }
-}
-
-impl<const N: usize> BitAnd for &FixedBigUint<N> {
-    type Output = FixedBigUint<N>;
-    fn bitand(self, rhs: Self) -> Self::Output {
-        *self & *rhs
-    }
-}
-
-impl<const N: usize> BitAndAssign<&Self> for FixedBigUint<N> {
-    fn bitand_assign(&mut self, rhs: &Self) {
-        *self = *self & *rhs;
-    }
-}
-
-impl<const N: usize> BitAndAssign for FixedBigUint<N> {
-    fn bitand_assign(&mut self, rhs: Self) {
-        *self &= &rhs;
-    }
-}
+crate::ops_forward::forward_binop_fixed!(BitAnd, bitand, BitAndAssign, bitand_assign, FixedBigUint);

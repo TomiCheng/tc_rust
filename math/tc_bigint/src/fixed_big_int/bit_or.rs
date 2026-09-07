@@ -16,35 +16,4 @@ impl<const N: usize> BitOr for FixedBigInt<N> {
     }
 }
 
-impl<const N: usize> BitOr<&Self> for FixedBigInt<N> {
-    type Output = Self;
-    fn bitor(self, rhs: &Self) -> Self {
-        self | *rhs
-    }
-}
-
-impl<const N: usize> BitOr<FixedBigInt<N>> for &FixedBigInt<N> {
-    type Output = FixedBigInt<N>;
-    fn bitor(self, rhs: FixedBigInt<N>) -> Self::Output {
-        *self | rhs
-    }
-}
-
-impl<const N: usize> BitOr for &FixedBigInt<N> {
-    type Output = FixedBigInt<N>;
-    fn bitor(self, rhs: Self) -> Self::Output {
-        *self | *rhs
-    }
-}
-
-impl<const N: usize> BitOrAssign<&Self> for FixedBigInt<N> {
-    fn bitor_assign(&mut self, rhs: &Self) {
-        *self = *self | *rhs;
-    }
-}
-
-impl<const N: usize> BitOrAssign for FixedBigInt<N> {
-    fn bitor_assign(&mut self, rhs: Self) {
-        *self |= &rhs;
-    }
-}
+crate::ops_forward::forward_binop_fixed!(BitOr, bitor, BitOrAssign, bitor_assign, FixedBigInt);
