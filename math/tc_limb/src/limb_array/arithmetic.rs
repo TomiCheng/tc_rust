@@ -461,6 +461,30 @@ impl<const N: usize> LimbArray<N> {
         words[index / Word::BITS as usize].to_word() >> (index % Word::BITS as usize) & 1 != 0
     }
 
+    pub(super) fn set_bit_words(words: &[Limb; N], index: usize) -> [Limb; N] {
+        let mut result = *words;
+        let word = index / Word::BITS as usize;
+        result[word] =
+            Limb::new(result[word].to_word() | ((1 as Word) << (index % Word::BITS as usize)));
+        result
+    }
+
+    pub(super) fn clear_bit_words(words: &[Limb; N], index: usize) -> [Limb; N] {
+        let mut result = *words;
+        let word = index / Word::BITS as usize;
+        result[word] =
+            Limb::new(result[word].to_word() & !((1 as Word) << (index % Word::BITS as usize)));
+        result
+    }
+
+    pub(super) fn flip_bit_words(words: &[Limb; N], index: usize) -> [Limb; N] {
+        let mut result = *words;
+        let word = index / Word::BITS as usize;
+        result[word] =
+            Limb::new(result[word].to_word() ^ ((1 as Word) << (index % Word::BITS as usize)));
+        result
+    }
+
     pub(super) fn is_zero_words(words: &[Limb; N]) -> bool {
         words.iter().all(|word| word.to_word() == 0)
     }

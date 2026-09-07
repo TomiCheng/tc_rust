@@ -1,4 +1,4 @@
-use crate::{Choice, ConditionallySelectable, ConstantTimeEq, Limb};
+use crate::{Choice, ConditionallySelectable, ConstantTimeEq, Limb, Word};
 use core::cmp::Ordering;
 
 mod arithmetic;
@@ -45,17 +45,6 @@ impl<const N: usize> LimbArray<N> {
     /// ```
     pub const fn as_limbs(&self) -> &[Limb; N] {
         &self.0
-    }
-
-    /// Mutably borrows all limbs; the array length remains fixed at `N`, with no signed interpretation.
-    /// ```
-    /// use tc_limb::{Limb, LimbArray};
-    /// let mut value = LimbArray::<2>::zero();
-    /// value.as_mut_limbs()[0] = Limb::new(7);
-    /// assert_eq!(value.as_limbs()[0].to_word(), 7);
-    /// ```
-    pub const fn as_mut_limbs(&mut self) -> &mut [Limb; N] {
-        &mut self.0
     }
 
     /// Returns all little-endian limbs by value.
@@ -198,10 +187,10 @@ impl<const N: usize> LimbArray<N> {
         Self::bit_len_words(&self.0)
     }
 
-    /// Reads a bit, with index zero denoting the least significant bit.
+    /// 讀取指定位元；索引零代表最低位元。
     ///
     /// # Panics
-    /// Panics if the index exceeds the fixed width; a zero-width value has no valid indices.
+    /// 索引超出固定寬度時 panic；零寬度值沒有有效索引。
     /// ```
     /// use tc_limb::{Limb, LimbArray};
     /// let x = LimbArray::new([Limb::new(8)]);
@@ -209,7 +198,63 @@ impl<const N: usize> LimbArray<N> {
     /// assert!(!x.test_bit(0));
     /// ```
     pub fn test_bit(&self, index: usize) -> bool {
+        assert!(
+            index < N * Word::BITS as usize,
+            "bit index is outside fixed width"
+        );
         Self::test_bit_words(&self.0, index)
+    }
+
+    /// 回傳將指定位元設為一的新值；索引零代表最低位元。
+    ///
+    /// # Panics
+    /// 索引超出固定寬度時 panic；零寬度值沒有有效索引。
+    /// ```
+    /// use tc_limb::{LimbArray, Word};
+    /// let value = LimbArray::<2>::zero().set_bit(Word::BITS as usize);
+    /// assert!(value.test_bit(Word::BITS as usize));
+    /// ```
+    pub fn set_bit(&self, index: usize) -> Self {
+        assert!(
+            index < N * Word::BITS as usize,
+            "bit index is outside fixed width"
+        );
+        Self(Self::set_bit_words(&self.0, index))
+    }
+
+    /// 回傳將指定位元清為零的新值；索引零代表最低位元。
+    ///
+    /// # Panics
+    /// 索引超出固定寬度時 panic；零寬度值沒有有效索引。
+    /// ```
+    /// use tc_limb::{Limb, LimbArray};
+    /// let value = LimbArray::new([Limb::new(1)]).clear_bit(0);
+    /// assert!(!value.test_bit(0));
+    /// ```
+    pub fn clear_bit(&self, index: usize) -> Self {
+        assert!(
+            index < N * Word::BITS as usize,
+            "bit index is outside fixed width"
+        );
+        Self(Self::clear_bit_words(&self.0, index))
+    }
+
+    /// 回傳將指定位元反轉的新值；索引零代表最低位元。
+    ///
+    /// # Panics
+    /// 索引超出固定寬度時 panic；零寬度值沒有有效索引。
+    /// ```
+    /// use tc_limb::LimbArray;
+    /// let value = LimbArray::<1>::zero().flip_bit(0);
+    /// assert!(value.test_bit(0));
+    /// assert_eq!(value.flip_bit(0), LimbArray::zero());
+    /// ```
+    pub fn flip_bit(&self, index: usize) -> Self {
+        assert!(
+            index < N * Word::BITS as usize,
+            "bit index is outside fixed width"
+        );
+        Self(Self::flip_bit_words(&self.0, index))
     }
 
     /// Returns whether all limbs are zero; true for zero width. This comparison may exit early.

@@ -71,44 +71,23 @@ impl<const N: usize> FixedBigInt<N> {
 
     /// Returns a value with bit `index` set.
     pub fn set_bit(&self, index: usize) -> Self {
-        assert!(
-            index < N * Word::BITS as usize,
-            "bit index is outside fixed width"
-        );
-        let mut result = *self;
-        result.limbs.as_mut_limbs()[index / Word::BITS as usize] = Limb::new(
-            result.limbs.as_limbs()[index / Word::BITS as usize].to_word()
-                | ((1 as Word) << (index % Word::BITS as usize)),
-        );
-        result
+        Self {
+            limbs: self.limbs.set_bit(index),
+        }
     }
 
     /// Returns a value with bit `index` cleared.
     pub fn clear_bit(&self, index: usize) -> Self {
-        assert!(
-            index < N * Word::BITS as usize,
-            "bit index is outside fixed width"
-        );
-        let mut result = *self;
-        result.limbs.as_mut_limbs()[index / Word::BITS as usize] = Limb::new(
-            result.limbs.as_limbs()[index / Word::BITS as usize].to_word()
-                & (!((1 as Word) << (index % Word::BITS as usize))),
-        );
-        result
+        Self {
+            limbs: self.limbs.clear_bit(index),
+        }
     }
 
     /// Returns a value with bit `index` flipped.
     pub fn flip_bit(&self, index: usize) -> Self {
-        assert!(
-            index < N * Word::BITS as usize,
-            "bit index is outside fixed width"
-        );
-        let mut result = *self;
-        result.limbs.as_mut_limbs()[index / Word::BITS as usize] = Limb::new(
-            result.limbs.as_limbs()[index / Word::BITS as usize].to_word()
-                ^ ((1 as Word) << (index % Word::BITS as usize)),
-        );
-        result
+        Self {
+            limbs: self.limbs.flip_bit(index),
+        }
     }
 
     /// Returns the index of the least-significant set bit.

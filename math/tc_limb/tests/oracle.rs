@@ -251,6 +251,47 @@ fn empty_width_and_full_carry_borrow_chains() {
 }
 
 #[test]
+fn bit_changes_cover_every_limb_boundary() {
+    const N: usize = 3;
+    let zero = LimbArray::<N>::zero();
+    for index in [
+        0,
+        Word::BITS as usize - 1,
+        Word::BITS as usize,
+        N * Word::BITS as usize - 1,
+    ] {
+        let set = zero.set_bit(index);
+        assert!(set.test_bit(index));
+        assert!(!set.clear_bit(index).test_bit(index));
+        assert_eq!(zero.flip_bit(index).flip_bit(index), zero);
+    }
+}
+
+#[test]
+#[should_panic(expected = "bit index is outside fixed width")]
+fn test_bit_rejects_out_of_range_index() {
+    let _ = LimbArray::<2>::zero().test_bit(2 * Word::BITS as usize);
+}
+
+#[test]
+#[should_panic(expected = "bit index is outside fixed width")]
+fn set_bit_rejects_out_of_range_index() {
+    let _ = LimbArray::<2>::zero().set_bit(2 * Word::BITS as usize);
+}
+
+#[test]
+#[should_panic(expected = "bit index is outside fixed width")]
+fn clear_bit_rejects_out_of_range_index() {
+    let _ = LimbArray::<2>::zero().clear_bit(2 * Word::BITS as usize);
+}
+
+#[test]
+#[should_panic(expected = "bit index is outside fixed width")]
+fn flip_bit_rejects_out_of_range_index() {
+    let _ = LimbArray::<2>::zero().flip_bit(2 * Word::BITS as usize);
+}
+
+#[test]
 fn invalid_inputs_panic_instead_of_silently_truncating() {
     let max = Limb::new(Word::MAX);
     let one = Limb::new(1);

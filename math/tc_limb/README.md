@@ -28,8 +28,8 @@ rather than assume that memory layout and word width are identical across target
 primitives. Its highest bit is not a sign bit. Signed interpretation, including
 `abs` and `is_negative`, belongs to the higher-level `FixedBigInt` type. The
 private field is `[Limb; N]`, with index zero holding the least significant word.
-Use `new`, `zero`, `as_limbs`, `as_mut_limbs`, and `into_limbs` to construct or
-access the fixed-length storage. Values with different `N` cannot be combined
+Use `new`, `zero`, `as_limbs`, and `into_limbs` to construct or access the
+fixed-length storage. Values with different `N` cannot be combined
 in arithmetic operations; there is no implicit zero extension or truncation.
 
 ```rust
@@ -76,7 +76,7 @@ use the same `LimbArray<N>` type.
 | `wrapping_neg` | Additive inverse modulo `2^(N * Word::BITS)`, without signed interpretation |
 | `gcd` | Unsigned greatest common divisor, with `gcd(0, 0) = 0` |
 | `bit_len` | Number of significant bits; zero for zero |
-| `test_bit` | Reads the bit at a valid index; panics outside the fixed width |
+| `test_bit`, `set_bit`, `clear_bit`, `flip_bit` | Reads or returns a copy with a bit changed at a valid index; panics outside the fixed width |
 | `is_zero`, `is_one` | Tests for zero/one |
 | `shr_one` | Logical right shift by one bit in place, discarding the lowest bit |
 | `shl_one` | Left shift by one bit in place, returning the highest bit shifted out |
