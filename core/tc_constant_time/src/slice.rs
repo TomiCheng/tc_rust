@@ -25,3 +25,24 @@ impl<T: ConstantTimeEq> ConstantTimeEq for [T] {
         equal
     }
 }
+
+/// Compares byte slices and deliberately reveals the equality result.
+///
+/// Use this convenience function only when the verification result is intended
+/// to be public, such as authentication-tag verification. For intermediate
+/// secret predicates, use [`ConstantTimeEq::ct_eq`] and retain the [`Choice`].
+///
+/// Lengths are public: different lengths return `false` immediately. Equal
+/// lengths scan every byte, without an early exit on a mismatch. Empty slices
+/// compare equal. This contract does not hide slice lengths.
+///
+/// ```
+/// use tc_constant_time::fixed_time_eq;
+/// assert!(fixed_time_eq(b"tag", b"tag"));
+/// assert!(!fixed_time_eq(b"tag", b"tam"));
+/// assert!(!fixed_time_eq(b"tag", b"tag\0"));
+/// assert!(fixed_time_eq(b"", b""));
+/// ```
+pub fn fixed_time_eq(a: &[u8], b: &[u8]) -> bool {
+    a.ct_eq(b).unwrap_u8() == 1
+}

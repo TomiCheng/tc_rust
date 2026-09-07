@@ -55,102 +55,15 @@
 
 mod array;
 mod choice;
+mod integers;
 mod slice;
 mod traits;
 
 pub use choice::Choice;
+pub use slice::fixed_time_eq;
 pub use traits::{
     ConditionallyNegatable, ConditionallySelectable, ConstantTimeEq, ConstantTimeOrd,
 };
-
-/// Compares byte slices and deliberately reveals the equality result.
-///
-/// Use this convenience function only when the verification result is intended
-/// to be public, such as authentication-tag verification. For intermediate
-/// secret predicates, use [`ConstantTimeEq::ct_eq`] and retain the [`Choice`].
-///
-/// Lengths are public: different lengths return `false` immediately. Equal
-/// lengths scan every byte, without an early exit on a mismatch. Empty slices
-/// compare equal. This contract does not hide slice lengths.
-///
-/// ```
-/// use tc_constant_time::fixed_time_eq;
-/// assert!(fixed_time_eq(b"tag", b"tag"));
-/// assert!(!fixed_time_eq(b"tag", b"tam"));
-/// assert!(!fixed_time_eq(b"tag", b"tag\0"));
-/// assert!(fixed_time_eq(b"", b""));
-/// ```
-pub fn fixed_time_eq(a: &[u8], b: &[u8]) -> bool {
-    a.ct_eq(b).unwrap_u8() == 1
-}
-
-macro_rules! integers {
-    ($(($t:ty, $unsigned:ty)),*) => {$ (
-        impl ConditionallySelectable for $t {
-            #[inline(always)]
-            fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
-                let mask = (0 as $t).wrapping_sub(choice.0 as $t);
-                a ^ ((a ^ b) & mask)
-            }
-
-            #[inline(always)]
-            fn conditional_assign(&mut self, other: &Self, choice: Choice) {
-                let mask = (0 as $t).wrapping_sub(choice.0 as $t);
-                *self ^= (*self ^ other) & mask;
-            }
-
-            #[inline(always)]
-            fn conditional_swap(a: &mut Self, b: &mut Self, choice: Choice) {
-                let mask = (0 as $t).wrapping_sub(choice.0 as $t);
-                let difference = (*a ^ *b) & mask;
-                *a ^= difference;
-                *b ^= difference;
-            }
-        }
-
-        impl ConditionallyNegatable for $t {
-            #[inline(always)]
-            fn conditional_negate(&mut self, choice: Choice) {
-                let mask = (0 as $t).wrapping_sub(choice.0 as $t);
-                *self = (*self ^ mask).wrapping_sub(mask);
-            }
-        }
-
-        impl ConstantTimeEq for $t {
-            #[inline(always)]
-            fn ct_eq(&self, rhs: &Self) -> Choice {
-                // Cast before shifting: signed right shifts would propagate the sign bit.
-                let difference = (*self ^ *rhs) as $unsigned;
-                Choice::from_lsb((((difference | difference.wrapping_neg()) >> (<$unsigned>::BITS - 1)) ^ 1) as u8)
-            }
-        }
-    )*};
-}
-integers!(
-    (u8, u8),
-    (u16, u16),
-    (u32, u32),
-    (u64, u64),
-    (u128, u128),
-    (usize, usize),
-    (i32, u32),
-    (i64, u64)
-);
-
-macro_rules! unsigned_ordering {
-    ($($t:ty),*) => {$ (
-        impl ConstantTimeOrd for $t {
-            #[inline(always)]
-            fn ct_lt(&self, rhs: &Self) -> Choice {
-                let (x, y) = (*self, *rhs);
-                // Hacker's Delight, section 2-12: borrow bit without a wider integer.
-                let less = ((!x & y) | ((!x | y) & x.wrapping_sub(y))) >> (<$t>::BITS - 1);
-                Choice::from_lsb(less as u8)
-            }
-        }
-    )*};
-}
-unsigned_ordering!(u8, u16, u32, u64, u128, usize);
 
 #[cfg(test)]
 mod tests {
