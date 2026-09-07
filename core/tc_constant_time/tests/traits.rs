@@ -1,4 +1,4 @@
-use crate::{Choice, ConditionallySelectable};
+use tc_constant_time::{Choice, ConditionallySelectable};
 
 #[test]
 fn default_assignment_and_swap_do_not_require_copy_or_clone() {

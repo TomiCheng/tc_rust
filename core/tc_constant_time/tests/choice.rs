@@ -1,4 +1,4 @@
-use crate::Choice;
+use tc_constant_time::Choice;
 
 #[test]
 fn choice_normalizes_every_byte_and_combines_bits() {

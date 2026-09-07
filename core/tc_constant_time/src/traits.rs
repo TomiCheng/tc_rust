@@ -135,10 +135,11 @@ pub trait ConditionallyNegatable {
     fn conditional_negate(&mut self, choice: Choice);
 }
 
-/// Unsigned numeric ordering without value-dependent branches or addresses.
+/// Numeric ordering without value-dependent branches or addresses.
 ///
-/// Implemented for `u8`, `u16`, `u32`, `u64`, `u128`, and `usize`. Signed
-/// integers, arrays, and slices have no ordering implementation in this crate.
+/// Implemented for all primitive signed and unsigned integer types, following
+/// each type's numeric order. Arrays and slices have no ordering implementation
+/// in this crate.
 ///
 /// ```
 /// use tc_constant_time::ConstantTimeOrd;
@@ -146,6 +147,19 @@ pub trait ConditionallyNegatable {
 /// assert_eq!(u128::MAX.ct_gt(&0).unwrap_u8(), 1);
 /// assert_eq!(7_u16.ct_le(&7).unwrap_u8(), 1);
 /// assert_eq!(7_u16.ct_ge(&8).unwrap_u8(), 0);
+/// ```
+///
+/// Signed comparisons order negative values before zero and positive values,
+/// including the minimum and maximum values without arithmetic overflow.
+///
+/// ```
+/// use tc_constant_time::ConstantTimeOrd;
+/// assert_eq!(i8::MIN.ct_lt(&i8::MAX).unwrap_u8(), 1);
+/// assert_eq!((-1_i16).ct_lt(&0).unwrap_u8(), 1);
+/// assert_eq!(0_i32.ct_gt(&-1).unwrap_u8(), 1);
+/// assert_eq!((-7_i64).ct_le(&-7).unwrap_u8(), 1);
+/// assert_eq!(i128::MAX.ct_ge(&i128::MIN).unwrap_u8(), 1);
+/// assert_eq!(isize::MIN.ct_lt(&0).unwrap_u8(), 1);
 /// ```
 pub trait ConstantTimeOrd: ConstantTimeEq {
     /// Returns one when `self < rhs`, and zero otherwise.

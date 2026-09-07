@@ -1,4 +1,4 @@
-use crate::{
+use tc_constant_time::{
     Choice, ConditionallyNegatable, ConditionallySelectable, ConstantTimeEq, ConstantTimeOrd,
     fixed_time_eq,
 };

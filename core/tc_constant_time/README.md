@@ -22,13 +22,13 @@ mathematical backends can share it without depending on each other's layer.
 | `conditional_swap` | Swaps two values for one and leaves them unchanged for zero |
 | `ConditionallyNegatable::conditional_negate` | Negates in place with wrapping arithmetic for one |
 | `ConstantTimeEq::ct_eq(a, b)` | Returns a one choice for equality and zero otherwise, without early exit on a mismatch |
-| `ConstantTimeOrd::{ct_lt, ct_gt, ct_le, ct_ge}` | Unsigned ordering that returns a `Choice` |
+| `ConstantTimeOrd::{ct_lt, ct_gt, ct_le, ct_ge}` | Numeric ordering that returns a `Choice` |
 | `fixed_time_eq(a, b)` | Compares byte slices and deliberately reveals a `bool` for public verification results |
 
 | Types | Selection, assignment, swap | Wrapping negation | Equality | Ordering |
 | --- | --- | --- | --- | --- |
 | `u8`, `u16`, `u32`, `u64`, `u128`, `usize` | Yes | Yes | Yes | Yes |
-| `i8`, `i16`, `i32`, `i64`, `i128`, `isize` | Yes | Yes | Yes | No |
+| `i8`, `i16`, `i32`, `i64`, `i128`, `isize` | Yes | Yes | Yes | Yes |
 | `[T; N]` | When supported by `T` | When supported by `T` | When supported by `T` | No |
 | `[T]` | No | No | When supported by `T` | No |
 
@@ -43,8 +43,9 @@ crate's only convenience function that converts a `Choice` to `bool`; retain a
 `Choice` with `ct_eq` when combining secret predicates.
 
 Negation wraps modulo the integer width, so negating the minimum value of any
-signed integer type leaves it unchanged. `ConstantTimeOrd` is intentionally unsigned-only;
-array ordering is left to higher layers because limb order is a domain choice.
+signed integer type leaves it unchanged. `ConstantTimeOrd` follows each integer
+type's numeric order. Array ordering is left to higher layers because limb order
+is a domain choice.
 
 `Choice` supports `Copy` and `Clone` and keeps its field private. It does not
 provide an implicit conversion to `bool`. `from_lsb` accepts any byte, but it is
@@ -99,6 +100,9 @@ using a revealed bit as an index is outside the timing contract.
 Unsigned ordering derives the subtraction borrow bit without a wider integer,
 including for `u128`. Signed equality first casts to the corresponding unsigned
 type so its final shift is logical, not arithmetic.
+Signed ordering casts to the corresponding unsigned type and flips its highest
+bit before reusing unsigned comparison. This maps negative values before
+nonnegative values without branches, subtraction overflow, or wider integers.
 
 For composite types, select each field through `ConditionallySelectable` and
 combine all field comparisons through `Choice` operators. Do not convert a
@@ -106,17 +110,17 @@ choice into ordinary control flow to skip work on subsequent fields.
 
 ## Validation
 
-Unit tests live in `src/tests/`, grouped into `choice`, `integers`, `array`,
-`slice`, and `traits` modules. The `api` module retains the cross-API byte
-exhaustion test; `src/tests.rs` declares all test modules.
+Integration tests live in `tests/`, grouped into `choice`, `integers`, `array`,
+`slice`, and `traits` files. The `api` file retains the cross-API byte
+exhaustion test. All tests import the crate's public API as an external consumer.
 
-The unit test exhaustively checks selection with both choices and equality for
+The byte test exhaustively checks selection with both choices and equality for
 every pair of byte values. All new byte APIs are also compared against public
 reference operations over all 256-by-256 input pairs. Additional tests cover
 choice normalization and operators, every bit boundary of each integer width,
 signed extremes, array updates, non-`Copy` default implementations, and slice
 scan behavior after a mismatch.
-Signed byte selection, equality, assignment, swap, and negation are also checked
+Signed byte selection, equality, ordering, assignment, swap, and negation are also checked
 over all 256-by-256 `i8` input pairs against public reference operations.
 Doctests cover bit normalization, choice operators,
 integer and array operations, empty arrays, and custom trait implementations.
@@ -144,7 +148,7 @@ cargo package -p tc_constant_time --list --locked
 cargo publish -p tc_constant_time --dry-run --locked
 ```
 
-The archive includes both license texts, this README, and the source. The
+The archive includes both license texts, this README, the source, and integration tests. The
 publication dry run packages and verifies the crate without uploading it.
 
 ## License

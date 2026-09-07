@@ -75,3 +75,26 @@ macro_rules! unsigned_ordering {
     )*};
 }
 unsigned_ordering!(u8, u16, u32, u64, u128, usize);
+
+macro_rules! signed_ordering {
+    ($(($t:ty, $unsigned:ty)),*) => {$ (
+        impl ConstantTimeOrd for $t {
+            #[inline(always)]
+            fn ct_lt(&self, rhs: &Self) -> Choice {
+                // Flipping the sign bit maps signed order to unsigned order.
+                let sign_bit = (1 as $unsigned) << (<$unsigned>::BITS - 1);
+                let x = (*self as $unsigned) ^ sign_bit;
+                let y = (*rhs as $unsigned) ^ sign_bit;
+                x.ct_lt(&y)
+            }
+        }
+    )*};
+}
+signed_ordering!(
+    (i8, u8),
+    (i16, u16),
+    (i32, u32),
+    (i64, u64),
+    (i128, u128),
+    (isize, usize)
+);

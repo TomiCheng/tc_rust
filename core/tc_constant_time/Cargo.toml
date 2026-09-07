@@ -10,4 +10,4 @@ readme = "README.md"
 documentation = "https://docs.rs/tc_constant_time"
 keywords = ["constant-time", "cryptography", "no-std"]
 categories = ["cryptography", "no-std", "algorithms"]
-include = ["src/**", "README.md", "LICENSE-MIT", "LICENSE-APACHE"]
+include = ["src/**", "tests/**", "README.md", "LICENSE-MIT", "LICENSE-APACHE"]

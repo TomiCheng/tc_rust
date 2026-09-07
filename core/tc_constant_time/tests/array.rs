@@ -1,4 +1,4 @@
-use crate::{Choice, ConditionallyNegatable, ConditionallySelectable, ConstantTimeEq};
+use tc_constant_time::{Choice, ConditionallyNegatable, ConditionallySelectable, ConstantTimeEq};
 
 #[test]
 fn arrays_select_and_compare_every_position() {

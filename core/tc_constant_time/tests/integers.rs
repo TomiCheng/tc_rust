@@ -1,4 +1,4 @@
-use crate::{
+use tc_constant_time::{
     Choice, ConditionallyNegatable, ConditionallySelectable, ConstantTimeEq, ConstantTimeOrd,
 };
 
@@ -90,10 +90,26 @@ macro_rules! signed_boundaries {
         fn $name() {
             for bit in 0..<$t>::BITS {
                 let power = (1 as $t) << bit;
-                let values = [<$t>::MIN, <$t>::MIN + 1, -1, 0, 1, <$t>::MAX, power, !power];
+                let values = [
+                    <$t>::MIN,
+                    <$t>::MIN + 1,
+                    -1,
+                    0,
+                    1,
+                    <$t>::MAX,
+                    power,
+                    !power,
+                    power.wrapping_sub(1),
+                    power.wrapping_add(1),
+                    power.wrapping_neg(),
+                ];
                 for a in values {
                     for b in values {
                         assert_eq!(a.ct_eq(&b).unwrap_u8(), u8::from(a == b));
+                        assert_eq!(a.ct_lt(&b).unwrap_u8(), u8::from(a < b));
+                        assert_eq!(a.ct_gt(&b).unwrap_u8(), u8::from(a > b));
+                        assert_eq!(a.ct_le(&b).unwrap_u8(), u8::from(a <= b));
+                        assert_eq!(a.ct_ge(&b).unwrap_u8(), u8::from(a >= b));
                         for bit in 0..=1 {
                             let choice = Choice::from_lsb(bit);
                             assert_eq!(
@@ -128,6 +144,10 @@ fn exhaustive_signed_byte_api_matches_public_references() {
     for a in i8::MIN..=i8::MAX {
         for b in i8::MIN..=i8::MAX {
             assert_eq!(a.ct_eq(&b).unwrap_u8(), u8::from(a == b));
+            assert_eq!(a.ct_lt(&b).unwrap_u8(), u8::from(a < b));
+            assert_eq!(a.ct_gt(&b).unwrap_u8(), u8::from(a > b));
+            assert_eq!(a.ct_le(&b).unwrap_u8(), u8::from(a <= b));
+            assert_eq!(a.ct_ge(&b).unwrap_u8(), u8::from(a >= b));
             for bit in 0..=1 {
                 let choice = Choice::from_lsb(bit);
                 assert_eq!(

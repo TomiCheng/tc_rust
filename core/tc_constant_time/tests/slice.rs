@@ -1,4 +1,4 @@
-use crate::{Choice, ConstantTimeEq, fixed_time_eq};
+use tc_constant_time::{Choice, ConstantTimeEq, fixed_time_eq};
 
 #[test]
 fn slices_scan_all_elements_but_can_reveal_public_length_mismatches() {

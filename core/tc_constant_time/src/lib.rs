@@ -7,7 +7,7 @@
 //! values, and [`ConstantTimeEq`] compares them without an early exit on a
 //! mismatch. Both traits support all primitive integer types and fixed-size
 //! arrays. Equality also supports slices with public lengths. [`ConstantTimeOrd`]
-//! orders unsigned integers, and [`ConditionallyNegatable`] provides wrapping
+//! orders all primitive integers, and [`ConditionallyNegatable`] provides wrapping
 //! negation. [`fixed_time_eq`] deliberately reveals a byte-slice comparison.
 //! The crate is `no_std` and has no dependencies or feature flags.
 //!
@@ -42,9 +42,9 @@
 //!
 //! # Signed integers
 //!
-//! Selection, equality, and conditional negation support `i8`, `i16`, `i32`,
+//! Selection, equality, ordering, and conditional negation support `i8`, `i16`, `i32`,
 //! `i64`, `i128`, and `isize`. Negation wraps at the type's width, including
-//! its minimum value. Ordering remains unsigned-only.
+//! its minimum value. Ordering follows each type's signed numeric order.
 //!
 //! ```
 //! use tc_constant_time::{
@@ -89,6 +89,3 @@ pub use slice::fixed_time_eq;
 pub use traits::{
     ConditionallyNegatable, ConditionallySelectable, ConstantTimeEq, ConstantTimeOrd,
 };
-
-#[cfg(test)]
-mod tests;
