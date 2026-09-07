@@ -4,7 +4,7 @@
 
 - `BigUint` and `BigInt` grow using `Vec<Limb>` and require the default `alloc`
   feature.
-- `FixedBigUint<N>` and `FixedBigInt<N>` store their `N` limbs in `tc_limb::LimbArray<N>`; their
+- `FixedBigUint<N>` and `FixedBigInt<N>` store their `N` limbs in an internal `LimbArray<N>`; their
   arithmetic and caller-buffer encodings never allocate. They remain available
   with `default-features = false`. The optional `to_str_radix` convenience
   method returns a `String` and therefore requires `alloc`.
@@ -21,8 +21,7 @@ big-endian order through their method names.
 Limb width is a target detail and is not part of this crate's public API. Size
 fixed-width values with the bit-width aliases (`U256`, `U2048`, ...) or with
 `limbs_for_bits(bits)` where a limb count is needed as a const generic
-argument. `tc_limb::{Limb, Word, WideWord}` remain available from that crate
-for callers working at the limb level. `LimbArray` provides
+argument. The limb layer itself is internal to this crate. `LimbArray` provides
 only unsigned fixed-width primitives, with no sign interpretation for the
 highest bit. Two's-complement sign checks and absolute values belong to
 `FixedBigInt`. Variable-length arithmetic and allocation remain in `tc_bigint`.

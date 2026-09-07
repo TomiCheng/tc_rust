@@ -17,6 +17,10 @@ mod error;
 mod fixed_big_int;
 mod fixed_big_uint;
 mod format;
+#[allow(dead_code)]
+mod limb;
+#[allow(dead_code)]
+mod limb_array;
 pub mod modular;
 mod non_zero;
 mod odd;
@@ -34,11 +38,12 @@ pub use error::RandomBitsError;
 pub use error::{ConversionError, ParseBigIntError};
 pub use fixed_big_int::FixedBigInt;
 pub use fixed_big_uint::FixedBigUint;
+pub(crate) use limb::{Limb, WideWord, Word};
+pub(crate) use limb_array::LimbArray;
 pub use non_zero::NonZero;
 pub use odd::Odd;
 #[cfg(feature = "rand_core")]
 pub use rand_core;
-use tc_limb::{Limb, LimbArray, WideWord, Word};
 pub use traits::{
     AndNot, ArrayEncoding, BitOps, Bounded, CheckedAdd, CheckedDiv, CheckedMul, CheckedNeg,
     CheckedRem, CheckedShl, CheckedShr, CheckedSub, DivRem, FromPrimitive, Gcd, ModAdd, ModInverse,

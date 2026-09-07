@@ -9,7 +9,6 @@ Depend on the crate that provides the abstraction you need; there is no umbrella
 
 | Crate | Functionality | Runtime and allocation |
 | --- | --- | --- |
-| [`tc_limb`](tc_limb/README.md) | `Limb` and `LimbArray<N>`: unsigned fixed-width storage, carry/borrow arithmetic, wide multiplication, division, GCD, and bit operations | Core-only `no_std`; no heap allocation |
 | [`tc_bigint`](tc_bigint/README.md) | Fixed-width and arbitrary-precision signed/unsigned integers, encoding, numeric traits, modular and Montgomery arithmetic, and general-purpose probable-prime operations | `no_std`; fixed-width arithmetic needs no allocator; dynamic integers require `alloc`; `rand_core` enables random operations |
 | [`tc_binpoly`](tc_binpoly/README.md) | Polynomial arithmetic over `GF(2)`, including carryless multiplication, squaring, reduction, and inversion; fixed and dynamic representations | `no_std`; fixed storage and core arithmetic work without allocation; defaults enable `alloc`, `std`, and optional x86 acceleration |
 | [`tc_prime`](tc_prime/README.md) | FIPS 186-4 small-factor screening, Miller-Rabin tests, enhanced Miller-Rabin results, and optional Shawe-Taylor provable-prime generation | `no_std`; fixed-width testing works without allocation; `alloc` is enabled by default; `digest` enables Shawe-Taylor and requires `alloc` |
@@ -32,12 +31,12 @@ selection, comparison, or conditional arithmetic is needed. These compiler/timin
 primitives come from crates.io and are shared by mathematical backends and
 cryptographic algorithms.
 
-Use `tc_limb` to implement fixed-width arithmetic over raw unsigned limbs. Use
+Use
 `tc_bigint` for integer semantics, signed values, conversions, overflow policies,
 or modular arithmetic. `FixedBigUint<N>` and `FixedBigInt<N>` share
-`tc_limb::LimbArray<N>` storage. Sign interpretation belongs to `FixedBigInt`;
+internal `LimbArray<N>` storage. Sign interpretation belongs to `FixedBigInt`;
 `LimbArray` does not assign a sign to its highest bit. `N` counts limbs, and
-`tc_limb::Word::BITS` determines their platform-dependent width.
+`limbs_for_bits(bits)` converts a bit width to that count.
 
 Use `tc_binpoly` for polynomial arithmetic over `GF(2)`. Its bits represent
 polynomial coefficients, so its arithmetic is distinct from integer arithmetic.
@@ -59,9 +58,7 @@ under `crypto/`; they are not signature APIs of `tc_rfc7748`.
 
 ## Dependency and feature boundaries
 
-- `tc_limb` depends on `tc_constant_time`. `tc_bigint` depends on both, and
-  `tc_prime` builds on `tc_bigint`. There is no reverse dependency from
-  `tc_limb` to `tc_bigint`.
+- `tc_bigint` depends on `tc_constant_time`.
 - `tc_ec_core` depends on `tc_constant_time` without choosing an integer or field
   backend. Concrete curve crates supply those implementations.
 - `tc_binpoly` and `tc_rfc7748` optionally use the published `tc_runtime` crate
@@ -80,9 +77,7 @@ interfaces in `tc_ec_core`.
 Run Cargo commands from the workspace root and select the crate being changed:
 
 ```text
-cargo test -p tc_limb --locked
 cargo test -p tc_bigint --target i686-pc-windows-msvc --locked
-cargo clippy -p tc_limb --all-targets --locked -- -D warnings
 cargo doc -p tc_prime --all-features --no-deps --locked
 ```
 

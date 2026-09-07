@@ -1,5 +1,9 @@
+//! Fuzzed comparison of LimbArray arithmetic against num-bigint.
+
+use alloc::vec::Vec;
+
+use crate::{Choice, ConditionallySelectable, ConstantTimeEq, Limb, LimbArray, WideWord, Word};
 use num_bigint::BigUint;
-use tc_limb::{Choice, ConditionallySelectable, ConstantTimeEq, Limb, LimbArray, WideWord, Word};
 
 fn next(state: &mut u64) -> Word {
     *state ^= *state << 13;
