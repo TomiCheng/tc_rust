@@ -5,7 +5,7 @@ use alloc::vec;
 
 use super::mul::montgomery_inverse;
 #[cfg(feature = "alloc")]
-use crate::arithmetic::{div_rem, square};
+use crate::limb::slice::{div_rem, square};
 
 #[cfg(feature = "alloc")]
 use crate::{BigUint, Limb};

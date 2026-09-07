@@ -7,7 +7,7 @@ use core::cmp::Ordering;
 use alloc::vec::Vec;
 
 #[cfg(feature = "alloc")]
-use crate::arithmetic::{cmp, mul, normalize};
+use crate::limb::slice::{cmp, mul, normalize};
 
 use crate::{Choice, ConditionallySelectable, Limb, WideWord, Word};
 

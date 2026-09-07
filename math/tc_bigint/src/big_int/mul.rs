@@ -3,13 +3,13 @@
 use core::ops::{Mul, MulAssign};
 
 use crate::traits::{CheckedMul, OverflowingMul, SaturatingMul, Square, WrappingMul};
-use crate::{BigInt, Limb, Word, arithmetic};
+use crate::{BigInt, Limb, Word, limb::slice};
 
 impl BigInt {
     /// Returns `self * self`.
     pub fn square(&self) -> Self {
         let (_, magnitude) = self.sign_magnitude();
-        Self::from_sign_magnitude(false, arithmetic::square(&magnitude))
+        Self::from_sign_magnitude(false, slice::square(&magnitude))
     }
 
     fn mul_ref(lhs: &Self, rhs: &Self) -> Self {
@@ -17,7 +17,7 @@ impl BigInt {
         let (rhs_negative, rhs_magnitude) = rhs.sign_magnitude();
         Self::from_sign_magnitude(
             lhs_negative != rhs_negative,
-            arithmetic::mul(&lhs_magnitude, &rhs_magnitude),
+            slice::mul(&lhs_magnitude, &rhs_magnitude),
         )
     }
 }
@@ -131,7 +131,7 @@ fn mul_u128(lhs: &BigInt, rhs: u128) -> BigInt {
         .iter()
         .rposition(|word| word.to_word() != 0)
         .map_or(0, |index| index + 1);
-    BigInt::from_sign_magnitude(negative, arithmetic::mul(&magnitude, &words[..used]))
+    BigInt::from_sign_magnitude(negative, slice::mul(&magnitude, &words[..used]))
 }
 
 #[cfg(test)]

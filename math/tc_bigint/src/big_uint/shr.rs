@@ -3,13 +3,13 @@
 use core::ops::{Shr, ShrAssign};
 
 use crate::traits::CheckedShr;
-use crate::{BigUint, arithmetic};
+use crate::{BigUint, limb::slice};
 
 impl Shr<usize> for &BigUint {
     type Output = BigUint;
 
     fn shr(self, rhs: usize) -> Self::Output {
-        BigUint::from_limbs(arithmetic::shr(&self.limbs, rhs))
+        BigUint::from_limbs(slice::shr(&self.limbs, rhs))
     }
 }
 

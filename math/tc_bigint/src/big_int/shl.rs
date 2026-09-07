@@ -3,13 +3,13 @@
 use core::ops::{Shl, ShlAssign};
 
 use crate::traits::CheckedShl;
-use crate::{BigInt, arithmetic};
+use crate::{BigInt, limb::slice};
 
 impl Shl<usize> for &BigInt {
     type Output = BigInt;
     fn shl(self, rhs: usize) -> BigInt {
         let (negative, magnitude) = self.sign_magnitude();
-        BigInt::from_sign_magnitude(negative, arithmetic::shl(&magnitude, rhs))
+        BigInt::from_sign_magnitude(negative, slice::shl(&magnitude, rhs))
     }
 }
 

@@ -5,7 +5,7 @@ use alloc::vec::Vec;
 #[cfg(test)]
 use crate::ConversionError;
 use crate::Limb;
-use crate::arithmetic;
+use crate::limb::slice;
 use crate::traits::{One, Unsigned, Zero};
 
 mod add;
@@ -38,7 +38,7 @@ pub struct BigUint {
 
 impl BigUint {
     pub(crate) fn from_limbs(mut limbs: Vec<Limb>) -> Self {
-        arithmetic::normalize(&mut limbs);
+        slice::normalize(&mut limbs);
         Self { limbs }
     }
 

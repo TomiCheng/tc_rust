@@ -3,16 +3,16 @@
 use core::ops::{Shr, ShrAssign};
 
 use crate::traits::CheckedShr;
-use crate::{BigInt, arithmetic};
+use crate::{BigInt, limb::slice};
 
 impl Shr<usize> for &BigInt {
     type Output = BigInt;
     fn shr(self, rhs: usize) -> BigInt {
         let (negative, magnitude) = self.sign_magnitude();
-        let discarded = negative && arithmetic::truncated_bits_are_nonzero(&magnitude, rhs);
-        let mut shifted = arithmetic::shr(&magnitude, rhs);
+        let discarded = negative && slice::truncated_bits_are_nonzero(&magnitude, rhs);
+        let mut shifted = slice::shr(&magnitude, rhs);
         if discarded {
-            arithmetic::add_small(&mut shifted, 1);
+            slice::add_small(&mut shifted, 1);
         }
         BigInt::from_sign_magnitude(negative, shifted)
     }

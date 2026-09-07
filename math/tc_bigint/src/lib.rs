@@ -6,7 +6,6 @@ extern crate alloc;
 #[cfg(test)]
 extern crate std;
 
-mod arithmetic;
 pub use tc_constant_time::{Choice, ConditionallySelectable, ConstantTimeEq};
 #[cfg(feature = "alloc")]
 mod big_int;
@@ -19,8 +18,6 @@ mod fixed_big_uint;
 mod format;
 #[allow(dead_code)]
 mod limb;
-#[allow(dead_code)]
-mod limb_array;
 pub mod modular;
 mod non_zero;
 mod odd;
@@ -38,8 +35,8 @@ pub use error::RandomBitsError;
 pub use error::{ConversionError, ParseBigIntError};
 pub use fixed_big_int::FixedBigInt;
 pub use fixed_big_uint::FixedBigUint;
+pub(crate) use limb::array::LimbArray;
 pub(crate) use limb::{Limb, WideWord, Word};
-pub(crate) use limb_array::LimbArray;
 pub use non_zero::NonZero;
 pub use odd::Odd;
 #[cfg(feature = "rand_core")]

@@ -2,7 +2,7 @@
 
 use core::cmp::Ordering;
 
-use crate::{BigInt, arithmetic};
+use crate::{BigInt, limb::slice};
 
 impl Ord for BigInt {
     fn cmp(&self, other: &Self) -> Ordering {
@@ -11,8 +11,8 @@ impl Ord for BigInt {
         match (lhs_negative, rhs_negative) {
             (true, false) => Ordering::Less,
             (false, true) => Ordering::Greater,
-            (false, false) => arithmetic::cmp(&lhs_magnitude, &rhs_magnitude),
-            (true, true) => arithmetic::cmp(&rhs_magnitude, &lhs_magnitude),
+            (false, false) => slice::cmp(&lhs_magnitude, &rhs_magnitude),
+            (true, true) => slice::cmp(&rhs_magnitude, &lhs_magnitude),
         }
     }
 }

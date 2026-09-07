@@ -2,8 +2,8 @@
 
 use alloc::vec::Vec;
 
-use crate::arithmetic;
 use crate::encoding;
+use crate::limb::slice;
 use crate::traits::{FromPrimitive, ToPrimitive};
 use crate::{BigInt, BigUint, ConversionError, FixedBigInt, Limb, Word};
 
@@ -162,7 +162,7 @@ fn signed_to_i128(value: &BigInt) -> Option<i128> {
 }
 
 fn magnitude_to_u128(magnitude: &[Limb]) -> Option<u128> {
-    if arithmetic::bit_len(magnitude) > 128 {
+    if slice::bit_len(magnitude) > 128 {
         return None;
     }
     let words = encoding::unsigned_to_le_u64(magnitude);

@@ -5,7 +5,7 @@ use core::cmp::Ordering;
 use core::ops::{Sub, SubAssign};
 
 use crate::traits::{CheckedSub, SaturatingSub};
-use crate::{BigUint, Limb, Word, arithmetic};
+use crate::{BigUint, Limb, Word, limb::slice};
 
 impl Sub<&BigUint> for &BigUint {
     type Output = BigUint;
@@ -106,7 +106,7 @@ impl_sub_primitive!(u8, u16, u32, u64, u128);
 
 impl CheckedSub for BigUint {
     fn checked_sub(&self, rhs: &Self) -> Option<Self> {
-        if arithmetic::cmp(&self.limbs, &rhs.limbs) == Ordering::Less {
+        if slice::cmp(&self.limbs, &rhs.limbs) == Ordering::Less {
             return None;
         }
         let mut limbs = self.limbs.clone();
@@ -123,7 +123,7 @@ impl SaturatingSub for BigUint {
 }
 
 fn sub_assign_limbs(lhs: &mut Vec<Limb>, rhs: &[Limb]) -> bool {
-    if arithmetic::cmp(lhs, rhs) == Ordering::Less {
+    if slice::cmp(lhs, rhs) == Ordering::Less {
         return false;
     }
 
@@ -133,12 +133,12 @@ fn sub_assign_limbs(lhs: &mut Vec<Limb>, rhs: &[Limb]) -> bool {
         (lhs[index], borrow) = lhs[index].borrowing_sub(right, borrow);
     }
     debug_assert_eq!(borrow, Limb::new(0));
-    arithmetic::normalize(lhs);
+    slice::normalize(lhs);
     true
 }
 
 fn sub_into_rhs(lhs: &[Limb], rhs: &mut Vec<Limb>) -> bool {
-    if arithmetic::cmp(lhs, rhs) == Ordering::Less {
+    if slice::cmp(lhs, rhs) == Ordering::Less {
         return false;
     }
 
@@ -154,7 +154,7 @@ fn sub_into_rhs(lhs: &[Limb], rhs: &mut Vec<Limb>) -> bool {
         (rhs[index], borrow) = lhs[index].borrowing_sub(right, borrow);
     }
     debug_assert_eq!(borrow, Limb::new(0));
-    arithmetic::normalize(rhs);
+    slice::normalize(rhs);
     true
 }
 

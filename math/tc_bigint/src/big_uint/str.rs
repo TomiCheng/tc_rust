@@ -6,12 +6,12 @@ use core::fmt;
 use core::str::FromStr;
 
 use crate::traits::Num;
-use crate::{BigUint, ParseBigIntError, Word, arithmetic};
+use crate::{BigUint, ParseBigIntError, Word};
 
 impl BigUint {
     /// Parses an unsigned value in radix `2..=36`.
     pub fn from_str_radix(value: &str, radix: u32) -> Result<Self, ParseBigIntError> {
-        let (negative, limbs) = arithmetic::parse_unsigned(value, radix)?;
+        let (negative, limbs) = crate::format::parse_unsigned(value, radix)?;
         if negative {
             return Err(ParseBigIntError::NegativeUnsigned);
         }
@@ -28,7 +28,7 @@ impl BigUint {
         let mut words = self.limbs.clone();
         let mut digits = Vec::new();
         while !words.is_empty() {
-            let digit = arithmetic::div_rem_small(&mut words, radix as Word) as u8;
+            let digit = crate::limb::slice::div_rem_small(&mut words, radix as Word) as u8;
             digits.push(if digit < 10 {
                 b'0' + digit
             } else {

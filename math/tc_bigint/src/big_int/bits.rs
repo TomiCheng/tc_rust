@@ -1,7 +1,7 @@
 //! Bit inspection and mutation for [`BigInt`].
 
 use crate::traits::{AndNot, BitOps, One};
-use crate::{BigInt, Word, arithmetic};
+use crate::{BigInt, Word, limb::slice};
 
 impl BigInt {
     /// Returns the significant bit length excluding sign extension.
@@ -9,7 +9,7 @@ impl BigInt {
         if self.is_negative() {
             (!self).bit_length()
         } else {
-            arithmetic::bit_len(&self.limbs)
+            slice::bit_len(&self.limbs)
         }
     }
 

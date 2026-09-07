@@ -13,7 +13,7 @@ use super::{MontyForm, MontyParams};
 #[cfg(feature = "alloc")]
 use crate::BigUint;
 #[cfg(feature = "alloc")]
-use crate::arithmetic::{bit_len, div_rem, mul, significant_len, square};
+use crate::limb::slice::{bit_len, div_rem, mul, significant_len, square};
 
 use crate::{FixedBigUint, Limb, Odd, Word};
 
@@ -309,8 +309,8 @@ pub(super) fn fixed_montgomery_pow<const N: usize>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::arithmetic::tests::{fixed_bit_len, fixed_div_rem, fixed_test_bit};
-    use crate::arithmetic::tests::{fixed_is_zero, fixed_shr_one};
+    use crate::limb::slice::tests::{fixed_bit_len, fixed_div_rem, fixed_test_bit};
+    use crate::limb::slice::tests::{fixed_is_zero, fixed_shr_one};
     #[cfg(feature = "alloc")]
     use alloc::vec;
 

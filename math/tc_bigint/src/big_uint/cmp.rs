@@ -2,11 +2,11 @@
 
 use core::cmp::Ordering;
 
-use crate::{BigUint, arithmetic};
+use crate::{BigUint, limb::slice};
 
 impl Ord for BigUint {
     fn cmp(&self, other: &Self) -> Ordering {
-        arithmetic::cmp(&self.limbs, &other.limbs)
+        slice::cmp(&self.limbs, &other.limbs)
     }
 }
 

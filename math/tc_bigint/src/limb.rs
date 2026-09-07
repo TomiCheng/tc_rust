@@ -1,3 +1,6 @@
+pub(crate) mod array;
+pub(crate) mod slice;
+
 use crate::{Choice, ConditionallySelectable, ConstantTimeEq};
 
 #[cfg(target_pointer_width = "64")]

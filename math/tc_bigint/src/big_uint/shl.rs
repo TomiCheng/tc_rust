@@ -3,13 +3,13 @@
 use core::ops::{Shl, ShlAssign};
 
 use crate::traits::CheckedShl;
-use crate::{BigUint, arithmetic};
+use crate::{BigUint, limb::slice};
 
 impl Shl<usize> for &BigUint {
     type Output = BigUint;
 
     fn shl(self, rhs: usize) -> Self::Output {
-        BigUint::from_limbs(arithmetic::shl(&self.limbs, rhs))
+        BigUint::from_limbs(slice::shl(&self.limbs, rhs))
     }
 }
 

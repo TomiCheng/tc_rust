@@ -3,12 +3,12 @@
 use core::ops::{Div, DivAssign, Rem, RemAssign};
 
 use crate::traits::{CheckedDiv, CheckedRem, DivRem, RemEuclid};
-use crate::{BigUint, Limb, Word, arithmetic};
+use crate::{BigUint, Limb, Word, limb::slice};
 
 impl BigUint {
     /// Returns the quotient and remainder together.
     pub fn div_rem(&self, divisor: &Self) -> (Self, Self) {
-        let (quotient, remainder) = arithmetic::div_rem(&self.limbs, &divisor.limbs);
+        let (quotient, remainder) = slice::div_rem(&self.limbs, &divisor.limbs);
         (Self::from_limbs(quotient), Self::from_limbs(remainder))
     }
 
@@ -156,8 +156,8 @@ impl CheckedRem for BigUint {
 fn div_assign_u128(value: &mut BigUint, divisor: u128) {
     assert!(divisor != 0, "attempted to divide by zero");
     if divisor <= Word::MAX as u128 {
-        let _remainder = arithmetic::div_rem_small(&mut value.limbs, divisor as Word);
-        arithmetic::normalize(&mut value.limbs);
+        let _remainder = slice::div_rem_small(&mut value.limbs, divisor as Word);
+        slice::normalize(&mut value.limbs);
         return;
     }
 
@@ -186,7 +186,7 @@ fn div_rem_u128(value: &BigUint, divisor: u128) -> (BigUint, BigUint) {
         .iter()
         .rposition(|word| word.to_word() != 0)
         .map_or(0, |index| index + 1);
-    let (quotient, remainder) = arithmetic::div_rem(&value.limbs, &divisor_limbs[..used]);
+    let (quotient, remainder) = slice::div_rem(&value.limbs, &divisor_limbs[..used]);
     (
         BigUint::from_limbs(quotient),
         BigUint::from_limbs(remainder),

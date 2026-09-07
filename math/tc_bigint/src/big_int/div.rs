@@ -3,7 +3,7 @@
 use core::ops::{Div, DivAssign, Rem, RemAssign};
 
 use crate::traits::{CheckedDiv, CheckedRem, DivRem, RemEuclid};
-use crate::{BigInt, Limb, Word, arithmetic};
+use crate::{BigInt, Limb, Word, limb::slice};
 
 impl BigInt {
     /// Returns the truncated quotient and remainder together.
@@ -32,7 +32,7 @@ impl BigInt {
     fn div_rem_ref(lhs: &Self, rhs: &Self) -> (Self, Self) {
         let (lhs_negative, lhs_magnitude) = lhs.sign_magnitude();
         let (rhs_negative, rhs_magnitude) = rhs.sign_magnitude();
-        let (quotient, remainder) = arithmetic::div_rem(&lhs_magnitude, &rhs_magnitude);
+        let (quotient, remainder) = slice::div_rem(&lhs_magnitude, &rhs_magnitude);
         (
             Self::from_sign_magnitude(lhs_negative != rhs_negative, quotient),
             Self::from_sign_magnitude(lhs_negative, remainder),
@@ -196,7 +196,7 @@ fn div_rem_u128(value: &BigInt, divisor: u128) -> (BigInt, BigInt) {
         .iter()
         .rposition(|word| word.to_word() != 0)
         .map_or(0, |index| index + 1);
-    let (quotient, remainder) = arithmetic::div_rem(&magnitude, &divisor_limbs[..used]);
+    let (quotient, remainder) = slice::div_rem(&magnitude, &divisor_limbs[..used]);
     (
         BigInt::from_sign_magnitude(negative, quotient),
         BigInt::from_sign_magnitude(negative, remainder),

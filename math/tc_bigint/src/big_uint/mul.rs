@@ -3,16 +3,16 @@
 use core::ops::{Mul, MulAssign};
 
 use crate::traits::{CheckedMul, OverflowingMul, SaturatingMul, Square, WrappingMul};
-use crate::{BigUint, Limb, WideWord, Word, arithmetic};
+use crate::{BigUint, Limb, WideWord, Word, limb::slice};
 
 impl BigUint {
     /// Returns `self * self`.
     pub fn square(&self) -> Self {
-        Self::from_limbs(arithmetic::square(&self.limbs))
+        Self::from_limbs(slice::square(&self.limbs))
     }
 
     fn mul_ref(lhs: &Self, rhs: &Self) -> Self {
-        Self::from_limbs(arithmetic::mul(&lhs.limbs, &rhs.limbs))
+        Self::from_limbs(slice::mul(&lhs.limbs, &rhs.limbs))
     }
 }
 
@@ -68,7 +68,7 @@ macro_rules! impl_mul_primitive {
             impl MulAssign<$primitive> for BigUint {
                 fn mul_assign(&mut self, rhs: $primitive) {
                     mul_assign_u128(&mut self.limbs, rhs as u128);
-                    arithmetic::normalize(&mut self.limbs);
+                    slice::normalize(&mut self.limbs);
                 }
             }
         )*
@@ -143,7 +143,7 @@ fn mul_assign_u128(lhs: &mut alloc::vec::Vec<Limb>, rhs: u128) {
         .iter()
         .rposition(|word| word.to_word() != 0)
         .map_or(0, |index| index + 1);
-    *lhs = arithmetic::mul(lhs, &words[..used]);
+    *lhs = slice::mul(lhs, &words[..used]);
 }
 
 #[cfg(test)]

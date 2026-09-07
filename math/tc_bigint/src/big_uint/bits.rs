@@ -6,7 +6,7 @@ use crate::{BigUint, Limb, Word};
 impl BigUint {
     /// Returns the number of significant bits.
     pub fn bits(&self) -> usize {
-        crate::arithmetic::bit_len(&self.limbs)
+        crate::limb::slice::bit_len(&self.limbs)
     }
 
     /// Returns whether bit `index` is set.

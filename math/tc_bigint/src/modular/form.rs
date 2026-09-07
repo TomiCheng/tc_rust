@@ -17,7 +17,7 @@ use crate::FixedBigUint;
 #[cfg(feature = "alloc")]
 use crate::Limb;
 #[cfg(feature = "alloc")]
-use crate::arithmetic::div_rem;
+use crate::limb::slice::div_rem;
 
 use crate::{Choice, ConditionallySelectable, ConstantTimeEq};
 

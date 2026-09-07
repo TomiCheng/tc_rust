@@ -41,7 +41,7 @@ mod tests {
     use super::mul::{fixed_add_mod, fixed_mul_mod, fixed_one_mod, fixed_sub_mod};
     use super::*;
     use crate::Limb;
-    use crate::arithmetic::tests::{fixed_is_one, fixed_is_zero};
+    use crate::limb::slice::tests::{fixed_is_one, fixed_is_zero};
 
     type Words = [Limb; 2];
 

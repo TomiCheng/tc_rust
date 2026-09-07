@@ -4,8 +4,8 @@ use alloc::vec::Vec;
 
 #[cfg(test)]
 use crate::ConversionError;
-use crate::arithmetic;
 use crate::encoding;
+use crate::limb::slice;
 use crate::traits::{One, Zero};
 use crate::{Limb, Word};
 
@@ -46,7 +46,7 @@ impl BigInt {
     }
 
     pub(crate) fn from_sign_magnitude(negative: bool, mut magnitude: Vec<Limb>) -> Self {
-        arithmetic::normalize(&mut magnitude);
+        slice::normalize(&mut magnitude);
         if magnitude.is_empty() {
             return Self::default();
         }
@@ -61,7 +61,7 @@ impl BigInt {
         for word in &mut magnitude {
             *word = Limb::new(!word.to_word());
         }
-        arithmetic::add_small(&mut magnitude, 1);
+        slice::add_small(&mut magnitude, 1);
         if magnitude.last().expect("non-empty").to_word() >> (Word::BITS - 1) == 0 {
             magnitude.push(Limb::new(Word::MAX));
         }
@@ -71,7 +71,7 @@ impl BigInt {
     fn sign_magnitude(&self) -> (bool, Vec<Limb>) {
         if !self.is_negative() {
             let mut magnitude = self.limbs.clone();
-            arithmetic::normalize(&mut magnitude);
+            slice::normalize(&mut magnitude);
             return (false, magnitude);
         }
 
@@ -80,8 +80,8 @@ impl BigInt {
             .iter()
             .map(|word| Limb::new(!word.to_word()))
             .collect();
-        arithmetic::add_small(&mut magnitude, 1);
-        arithmetic::normalize(&mut magnitude);
+        slice::add_small(&mut magnitude, 1);
+        slice::normalize(&mut magnitude);
         (true, magnitude)
     }
 

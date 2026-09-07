@@ -90,7 +90,7 @@ fn decode_units(
     if signed {
         normalize_signed(&mut words);
     } else {
-        crate::arithmetic::normalize(&mut words);
+        crate::limb::slice::normalize(&mut words);
     }
     words
 }

@@ -5,12 +5,12 @@ use core::fmt;
 use core::str::FromStr;
 
 use crate::traits::Num;
-use crate::{BigInt, BigUint, ParseBigIntError, arithmetic};
+use crate::{BigInt, BigUint, ParseBigIntError};
 
 impl BigInt {
     /// Parses a signed value in radix `2..=36`.
     pub fn from_str_radix(value: &str, radix: u32) -> Result<Self, ParseBigIntError> {
-        let (negative, magnitude) = arithmetic::parse_unsigned(value, radix)?;
+        let (negative, magnitude) = crate::format::parse_unsigned(value, radix)?;
         Ok(Self::from_sign_magnitude(negative, magnitude))
     }
 
