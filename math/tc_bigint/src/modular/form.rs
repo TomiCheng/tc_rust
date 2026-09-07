@@ -245,6 +245,16 @@ impl<const N: usize> FixedMontyForm<N> {
     /// Reduces a secret fixed-width integer with a fixed schedule and enters
     /// the public Montgomery domain. Unlike `new`, this does not use division.
     pub fn new_ct(value: &FixedBigUint<N>, params: FixedMontyParams<N>) -> Self {
+        Self::new_ct_wide(value, params)
+    }
+
+    /// 將任意寬度的秘密值以固定排程約簡進本域，不使用除法。
+    ///
+    /// 執行次數只由公開的輸入寬度 `M` 決定，與輸入值無關。
+    pub fn new_ct_wide<const M: usize>(
+        value: &FixedBigUint<M>,
+        params: FixedMontyParams<N>,
+    ) -> Self {
         let mut result = Self::zero(params);
         let one = Self::one(params);
         for limb in value.as_limbs().iter().rev() {
@@ -653,6 +663,31 @@ mod tests {
     use super::*;
     use crate::{Odd, U128};
 
+    fn assert_new_ct_wide_matches_new<const M: usize>() {
+        type Domain = FixedBigUint<2>;
+
+        let modulus = Domain::from(101_u8);
+        let modulus_wide = FixedBigUint::<M>::from(101_u8);
+        let params = FixedMontyParams::new(Odd::new(modulus).unwrap());
+        let inputs = [
+            FixedBigUint::<M>::zero(),
+            FixedBigUint::<M>::from(1_u8),
+            modulus_wide - FixedBigUint::<M>::from(1_u8),
+            modulus_wide,
+            modulus_wide + FixedBigUint::<M>::from(1_u8),
+            FixedBigUint::<M>::max_value(),
+        ];
+
+        for input in inputs {
+            let reduced = input % modulus_wide;
+            let reduced = Domain::try_from(&reduced).unwrap();
+            assert_eq!(
+                FixedMontyForm::<2>::new_ct_wide(&input, params),
+                FixedMontyForm::new(&reduced, params)
+            );
+        }
+    }
+
     #[test]
     fn fixed_form_reuses_parameters_for_arithmetic_and_power() {
         let params = FixedMontyParams::new(Odd::new(U128::from(101_u8)).unwrap());
@@ -664,6 +699,13 @@ mod tests {
         assert_eq!((seven * nine).retrieve(), U128::from(63_u8));
         assert_eq!(seven.square().retrieve(), U128::from(49_u8));
         assert_eq!(seven.pow(&U128::from(20_u8)).retrieve(), U128::from(84_u8));
+    }
+
+    #[test]
+    fn fixed_form_new_ct_accepts_narrow_equal_and_wide_inputs() {
+        assert_new_ct_wide_matches_new::<1>();
+        assert_new_ct_wide_matches_new::<2>();
+        assert_new_ct_wide_matches_new::<4>();
     }
 
     #[cfg(feature = "alloc")]

@@ -49,6 +49,30 @@ impl<const N: usize> FixedBigUint<N> {
         self.limbs.into_limbs()
     }
 
+    /// 由兩個半寬值接成全寬值，低位在前。
+    ///
+    /// 要求 `N == 2 * H`。寬度是公開參數，因此此斷言不洩漏秘密。
+    pub fn concat<const H: usize>(low: &FixedBigUint<H>, high: &FixedBigUint<H>) -> Self {
+        assert!(N == 2 * H, "destination width must be twice the half width");
+        let mut limbs = [Limb::new(0); N];
+        limbs[..H].copy_from_slice(low.as_limbs());
+        limbs[H..].copy_from_slice(high.as_limbs());
+        Self::from_limbs(limbs)
+    }
+
+    /// 將較窄的值以高位補零擴展到此寬度。
+    ///
+    /// 要求 `N >= H`。寬度是公開參數，因此此斷言不洩漏秘密。
+    pub fn widen_from<const H: usize>(value: &FixedBigUint<H>) -> Self {
+        assert!(
+            N >= H,
+            "destination width must not be narrower than source width"
+        );
+        let mut limbs = [Limb::new(0); N];
+        limbs[..H].copy_from_slice(value.as_limbs());
+        Self::from_limbs(limbs)
+    }
+
     /// Returns zero.
     pub const fn zero() -> Self {
         Self {

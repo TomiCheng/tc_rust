@@ -196,6 +196,21 @@ fn numeric_trait_specific_paths_are_covered() {
 }
 
 #[test]
+fn concat_reassembles_the_full_wide_product() {
+    type Half = FixedBigUint<2>;
+    type Wide = FixedBigUint<4>;
+
+    let left = Half::max_value() - Half::from(7_u8);
+    let right = Half::max_value() - Half::from(11_u8);
+    let (low, high) = left.mul_wide(&right);
+
+    assert_eq!(
+        Wide::concat(&low, &high),
+        Wide::widen_from(&left) * Wide::widen_from(&right)
+    );
+}
+
+#[test]
 #[should_panic(expected = "bit index is outside fixed width")]
 fn set_bit_rejects_out_of_range_index() {
     let _ = U128::zero().set_bit(128);

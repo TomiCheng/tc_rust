@@ -1361,6 +1361,12 @@ dependencies = [
 [[package]]
 name = "tc_rsa"
 version = "0.1.0"
+dependencies = [
+ "rand_core",
+ "tc_bigint",
+ "tc_cipher",
+ "tc_constant_time",
+]
 
 [[package]]
 name = "tc_runtime"
