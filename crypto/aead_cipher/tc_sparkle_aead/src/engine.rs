@@ -1,6 +1,7 @@
 //! Incremental SCHWAEMM authenticated-encryption engine.
 
 use tc_cipher::{AeadCipher, AeadCipherInit, AeadError, CipherDirection, InitError};
+use tc_constant_time::fixed_time_eq;
 use tc_crypto::AlgorithmName;
 use tc_params::{InitialAadParams, IvParams, KeyParams};
 
@@ -686,15 +687,6 @@ fn arx_box(rc: u32, x: &mut u32, y: &mut u32) {
 #[inline]
 fn ell(x: u32) -> u32 {
     x.rotate_right(16) ^ (x & 0xffff)
-}
-
-fn fixed_time_eq(left: &[u8], right: &[u8]) -> bool {
-    debug_assert_eq!(left.len(), right.len());
-    let mut difference = 0_u8;
-    for (&left, &right) in left.iter().zip(right) {
-        difference |= left ^ right;
-    }
-    difference == 0
 }
 
 #[cfg(all(

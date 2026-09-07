@@ -6,6 +6,7 @@
 
 use super::x448_field::Fe448;
 use rand_core::CryptoRng;
+use tc_constant_time::Choice;
 
 /// X448 `u` 座標與輸出的 byte 長度。
 pub const POINT_SIZE: usize = 56;
@@ -102,7 +103,7 @@ pub fn scalar_mult(scalar: &[u8; SCALAR_SIZE], u: &[u8; POINT_SIZE]) -> [u8; POI
     debug_assert_eq!(words[13] >> 31, 1);
 
     let mut bit = 447_i32;
-    let mut swap = 1_u32;
+    let mut swap = Choice::from_lsb(1);
     loop {
         let (sum3, difference3) = x3.apm(z3);
         x3 = difference3;
@@ -126,8 +127,8 @@ pub fn scalar_mult(scalar: &[u8; SCALAR_SIZE], u: &[u8; POINT_SIZE]) -> [u8; POI
         bit -= 1;
         let word = (bit >> 5) as usize;
         let shift = bit & 31;
-        let scalar_bit = (words[word] >> shift) & 1;
-        swap ^= scalar_bit;
+        let scalar_bit = Choice::from_lsb((words[word] >> shift) as u8);
+        swap = swap ^ scalar_bit;
         (x2, x3) = Fe448::cswap(swap, x2, x3);
         (z2, z3) = Fe448::cswap(swap, z2, z3);
         swap = scalar_bit;
@@ -136,7 +137,7 @@ pub fn scalar_mult(scalar: &[u8; SCALAR_SIZE], u: &[u8; POINT_SIZE]) -> [u8; POI
             break;
         }
     }
-    debug_assert_eq!(swap, 0);
+    debug_assert_eq!(swap.unwrap_u8(), 0); // The clamped low bits are public constants.
 
     // Clamp 清掉最低兩位，因此尾端固定做兩次倍點。
     for _ in 0..2 {

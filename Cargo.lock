@@ -598,6 +598,7 @@ name = "tc_ascon_aead"
 version = "0.1.0"
 dependencies = [
  "tc_cipher",
+ "tc_constant_time",
  "tc_crypto",
  "tc_params",
 ]
@@ -708,6 +709,7 @@ version = "0.1.0"
 dependencies = [
  "tc_aes",
  "tc_cipher",
+ "tc_constant_time",
  "tc_crypto",
  "tc_params",
 ]
@@ -749,6 +751,7 @@ version = "0.1.0"
 dependencies = [
  "tc_chacha",
  "tc_cipher",
+ "tc_constant_time",
  "tc_crypto",
  "tc_macs",
  "tc_params",
@@ -807,6 +810,7 @@ version = "0.1.0"
 dependencies = [
  "rand_core",
  "tc_cipher",
+ "tc_constant_time",
  "tc_crypto",
  "tc_des",
  "tc_digest",
@@ -871,6 +875,7 @@ version = "0.1.0"
 dependencies = [
  "tc_aes",
  "tc_cipher",
+ "tc_constant_time",
  "tc_crypto",
  "tc_params",
 ]
@@ -956,6 +961,7 @@ version = "0.1.0"
 dependencies = [
  "criterion",
  "tc_bigint",
+ "tc_constant_time",
  "tc_ec_core",
  "tc_f2m_custom",
  "tc_fp_curve",
@@ -967,6 +973,7 @@ version = "0.1.0"
 dependencies = [
  "tc_aes",
  "tc_cipher",
+ "tc_constant_time",
  "tc_crypto",
  "tc_params",
 ]
@@ -977,6 +984,7 @@ version = "0.1.0"
 dependencies = [
  "tc_aes",
  "tc_cipher",
+ "tc_constant_time",
  "tc_crypto",
  "tc_params",
 ]
@@ -1026,6 +1034,7 @@ name = "tc_grain128_aead"
 version = "0.1.0"
 dependencies = [
  "tc_cipher",
+ "tc_constant_time",
  "tc_crypto",
  "tc_params",
 ]
@@ -1116,6 +1125,7 @@ name = "tc_kccm"
 version = "0.1.0"
 dependencies = [
  "tc_cipher",
+ "tc_constant_time",
  "tc_crypto",
  "tc_dstu7624",
  "tc_params",
@@ -1173,6 +1183,7 @@ version = "0.1.0"
 dependencies = [
  "tc_aes",
  "tc_cipher",
+ "tc_constant_time",
  "tc_crypto",
  "tc_params",
 ]
@@ -1246,6 +1257,7 @@ version = "0.1.0"
 dependencies = [
  "rand_core",
  "tc_cipher",
+ "tc_constant_time",
  "tc_crypto",
  "tc_digest",
  "tc_params",
@@ -1299,6 +1311,7 @@ version = "0.1.0"
 dependencies = [
  "tc_aes",
  "tc_cipher",
+ "tc_constant_time",
  "tc_crypto",
  "tc_params",
 ]
@@ -1310,6 +1323,7 @@ dependencies = [
  "tc_aes",
  "tc_aria",
  "tc_cipher",
+ "tc_constant_time",
  "tc_crypto",
  "tc_params",
  "tc_rfc3394",
@@ -1322,6 +1336,7 @@ dependencies = [
  "criterion",
  "rand_core",
  "tc_bigint",
+ "tc_constant_time",
  "tc_runtime",
 ]
 
@@ -1441,6 +1456,7 @@ version = "0.1.0"
 dependencies = [
  "criterion",
  "tc_cipher",
+ "tc_constant_time",
  "tc_crypto",
  "tc_params",
  "tc_runtime",

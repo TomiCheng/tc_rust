@@ -1,6 +1,7 @@
 //! Ascon-AEAD128 authenticated-encryption engine.
 
 use tc_cipher::{AeadCipher, AeadCipherInit, AeadError, CipherDirection, InitError};
+use tc_constant_time::fixed_time_eq;
 use tc_crypto::AlgorithmName;
 use tc_params::{InitialAadParams, IvParams, KeyParams};
 
@@ -545,12 +546,4 @@ where
 
 fn load_u64(input: &[u8]) -> u64 {
     u64::from_le_bytes(input[..8].try_into().unwrap())
-}
-
-fn fixed_time_eq(left: &[u8; TAG_BYTES], right: &[u8; TAG_BYTES]) -> bool {
-    let mut difference = 0u8;
-    for (&left, &right) in left.iter().zip(right) {
-        difference |= left ^ right;
-    }
-    difference == 0
 }

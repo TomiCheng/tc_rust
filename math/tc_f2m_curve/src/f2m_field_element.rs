@@ -72,9 +72,10 @@ impl<P: SecretPolynomial> SecretField for F2mFieldElement<P> {
         let mut row = self.value.as_limbs().to_vec();
         let mut result = vec![0; row.len()];
         for bit in 0..m {
-            let mask = 0_u64.wrapping_sub((rhs.value.as_limbs()[bit / 64] >> (bit % 64)) & 1);
+            let choice = Choice::from_lsb((rhs.value.as_limbs()[bit / 64] >> (bit % 64)) as u8);
             for i in 0..row.len() {
-                result[i] ^= row[i] & mask;
+                let added = result[i] ^ row[i];
+                result[i].conditional_assign(&added, choice);
             }
             let overflow = (row[(m - 1) / 64] >> ((m - 1) % 64)) & 1;
             let mut carry = 0;

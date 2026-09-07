@@ -3,6 +3,7 @@
 use alloc::vec;
 use alloc::vec::Vec;
 use core::fmt;
+use tc_constant_time::fixed_time_eq;
 
 use tc_cipher::{
     AeadBlockCipher, AeadBlockError, AeadBlockInitError, AeadCipher, AeadCipherInit, AeadError,
@@ -429,15 +430,4 @@ fn add_le(target: &mut [u8], value: &[u8]) {
         *target = carry as u8;
         carry >>= 8;
     }
-}
-
-fn fixed_time_eq(left: &[u8], right: &[u8]) -> bool {
-    if left.len() != right.len() {
-        return false;
-    }
-    let mut difference = 0u8;
-    for (&left, &right) in left.iter().zip(right) {
-        difference |= left ^ right;
-    }
-    difference == 0
 }

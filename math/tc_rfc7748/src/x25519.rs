@@ -9,6 +9,7 @@
 use super::x25519_field::Fe;
 use crate::ed25519_base;
 use rand_core::CryptoRng;
+use tc_constant_time::Choice;
 
 /// Byte length of a `u`-coordinate / output point (RFC 7748 `PointSize`).
 pub const POINT_SIZE: usize = 32;
@@ -125,7 +126,7 @@ pub fn scalar_mult(k: &[u8; SCALAR_SIZE], u: &[u8; POINT_SIZE]) -> [u8; POINT_SI
     debug_assert_eq!(n[7] >> 30, 1);
 
     let mut bit = 254i32;
-    let mut swap = 1i32;
+    let mut swap = Choice::from_lsb(1);
     loop {
         let (t1, nx3) = x3.apm(z3); // t1 = x3+z3; x3 = x3−z3
         x3 = nx3;
@@ -153,8 +154,8 @@ pub fn scalar_mult(k: &[u8; SCALAR_SIZE], u: &[u8; POINT_SIZE]) -> [u8; POINT_SI
         bit -= 1;
         let word = (bit >> 5) as usize;
         let shift = bit & 0x1F;
-        let kt = ((n[word] >> shift) & 1) as i32;
-        swap ^= kt;
+        let kt = Choice::from_lsb((n[word] >> shift) as u8);
+        swap = swap ^ kt;
         (x2, x3) = Fe::cswap(swap, x2, x3);
         (z2, z3) = Fe::cswap(swap, z2, z3);
         swap = kt;
@@ -163,7 +164,7 @@ pub fn scalar_mult(k: &[u8; SCALAR_SIZE], u: &[u8; POINT_SIZE]) -> [u8; POINT_SI
             break;
         }
     }
-    debug_assert_eq!(swap, 0);
+    debug_assert_eq!(swap.unwrap_u8(), 0); // The clamped low bits are public constants.
 
     // 尾端 3 次倍點 = ×8（clamp 已把低 3 位清零 → cofactor 清除）。
     for _ in 0..3 {

@@ -28,6 +28,8 @@
 // the ×19/38/76 reduction constants all change together). Deferred as a 64-bit
 // optimization; this 10×i32 port is the faithful, all-platform baseline.
 
+use tc_constant_time::{Choice, ConditionallyNegatable, ConditionallySelectable};
+
 /// Number of `i32` limbs in a field element (radix 2²⁵·⁵).
 pub const SIZE: usize = 10;
 
@@ -355,17 +357,9 @@ impl Fe {
     /// `swap == 1`, branchlessly (via a `0`/all-ones mask). Corresponds to bc
     /// `X25519Field.CSwap`; the Montgomery ladder uses it to swap the working points on
     /// each scalar bit without leaking the bit through timing.
-    pub fn cswap(swap: i32, a: Fe, b: Fe) -> (Fe, Fe) {
-        debug_assert!(swap == 0 || swap == 1);
-        let mask = -swap; // 0 → 0x0000_0000, 1 → 0xFFFF_FFFF
-        let mut ra = a.0;
-        let mut rb = b.0;
-        for i in 0..SIZE {
-            let dummy = mask & (ra[i] ^ rb[i]);
-            ra[i] ^= dummy;
-            rb[i] ^= dummy;
-        }
-        (Fe(ra), Fe(rb))
+    pub fn cswap(swap: Choice, mut a: Fe, mut b: Fe) -> (Fe, Fe) {
+        <[i32; SIZE]>::conditional_swap(&mut a.0, &mut b.0, swap);
+        (a, b)
     }
 
     /// Negation `−self` (limb-wise `−x`; unsaturated, not normalized). Corresponds to
@@ -409,20 +403,16 @@ impl Fe {
 
     /// Constant-time conditional move: returns `x` if `cond == 1`, else `z`, branchlessly.
     /// Corresponds to bc `X25519Field.CMov`.
-    pub fn cmov(cond: i32, x: Fe, z: Fe) -> Fe {
-        debug_assert!(cond == 0 || cond == 1);
-        let mask = -cond;
-        Fe(core::array::from_fn(|i| {
-            z.0[i] ^ (mask & (z.0[i] ^ x.0[i]))
-        }))
+    pub fn cmov(cond: Choice, x: Fe, mut z: Fe) -> Fe {
+        z.0.conditional_assign(&x.0, cond);
+        z
     }
 
     /// Constant-time conditional negate: `−self` if `neg == 1`, else `self`, branchlessly.
     /// Corresponds to bc `X25519Field.CNegate`.
-    pub fn cnegate(self, neg: i32) -> Fe {
-        debug_assert!(neg == 0 || neg == 1);
-        let mask = -neg;
-        Fe(core::array::from_fn(|i| (self.0[i] ^ mask) - mask))
+    pub fn cnegate(mut self, neg: Choice) -> Fe {
+        self.0.conditional_negate(neg);
+        self
     }
 
     /// Returns `true` if this element is `0`. Normalizes internally, so it is correct on
@@ -1068,8 +1058,8 @@ mod tests {
             // negate / cnegate / add_one / apm 對照真值
             let negative_av = BigUint::default().mod_sub(&av, &p);
             assert_eq!(fe_val(a.negate()), negative_av);
-            assert_eq!(fe_val(a.cnegate(0)), av);
-            assert_eq!(fe_val(a.cnegate(1)), negative_av);
+            assert_eq!(fe_val(a.cnegate(Choice::from_lsb(0))), av);
+            assert_eq!(fe_val(a.cnegate(Choice::from_lsb(1))), negative_av);
             assert_eq!(
                 fe_val(a.add_one()),
                 (&av + &BigUint::from(1_u8)).rem_euclid(&p)
@@ -1158,8 +1148,8 @@ mod tests {
     fn cmov_selects() {
         let a = Fe([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
         let b = Fe([10, 20, 30, 40, 50, 60, 70, 80, 90, 100]);
-        assert_eq!(Fe::cmov(0, a, b).0, b.0); // cond 0 → z（b）
-        assert_eq!(Fe::cmov(1, a, b).0, a.0); // cond 1 → x（a）
+        assert_eq!(Fe::cmov(Choice::from_lsb(0), a, b).0, b.0); // cond 0 → z（b）
+        assert_eq!(Fe::cmov(Choice::from_lsb(1), a, b).0, a.0); // cond 1 → x（a）
     }
 
     #[test]
@@ -1178,10 +1168,10 @@ mod tests {
         let a = Fe([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
         let b = Fe([10, 20, 30, 40, 50, 60, 70, 80, 90, 100]);
         // swap = 0：不動
-        let (a0, b0) = Fe::cswap(0, a, b);
+        let (a0, b0) = Fe::cswap(Choice::from_lsb(0), a, b);
         assert_eq!((a0.0, b0.0), (a.0, b.0));
         // swap = 1：交換
-        let (a1, b1) = Fe::cswap(1, a, b);
+        let (a1, b1) = Fe::cswap(Choice::from_lsb(1), a, b);
         assert_eq!((a1.0, b1.0), (b.0, a.0));
     }
 

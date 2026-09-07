@@ -32,4 +32,6 @@ pub use secp256r1_point::SecP256R1Point;
 pub use tc_ec_core::{PointDecodeError, PointEncodeError};
 
 #[cfg(test)]
+mod comparison_tests;
+#[cfg(test)]
 mod tests;

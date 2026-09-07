@@ -3,6 +3,7 @@
 use alloc::vec;
 use alloc::vec::Vec;
 use core::fmt;
+use tc_constant_time::fixed_time_eq;
 
 use tc_cipher::{
     AeadBlockCipher, AeadBlockError, AeadBlockInitError, AeadCipher, AeadCipherInit, AeadError,
@@ -481,15 +482,4 @@ fn xor_in_place(target: &mut [u8; BLOCK_BYTES], value: &[u8; BLOCK_BYTES]) {
     for (target, value) in target.iter_mut().zip(value) {
         *target ^= *value;
     }
-}
-
-fn fixed_time_eq(left: &[u8], right: &[u8]) -> bool {
-    if left.len() != right.len() {
-        return false;
-    }
-    let mut difference = 0u8;
-    for (&left, &right) in left.iter().zip(right) {
-        difference |= left ^ right;
-    }
-    difference == 0
 }

@@ -12,6 +12,7 @@ std = ["tc_runtime/std"]
 disable-x86-sse2 = ["tc_runtime/disable-x86-sse2"]
 
 [dependencies]
+tc_constant_time = { path = "../../../core/tc_constant_time", version = "0.1.0" }
 tc_cipher = { version = "0.1", path = "../../tc_cipher" }
 tc_crypto = { version = "0.1", path = "../../tc_crypto" }
 tc_params = { version = "0.1", path = "../../tc_params" }

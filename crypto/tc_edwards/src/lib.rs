@@ -48,7 +48,7 @@ impl EdwardsField for Fe {
         self.invert()
     }
     fn select(a: Self, b: Self, c: Choice) -> Self {
-        Self::cmov(c.unwrap_u8() as i32, b, a)
+        Self::cmov(c, b, a)
     }
     fn encode(self, output: &mut [u8]) {
         output.copy_from_slice(&self.normalize().encode());
@@ -87,7 +87,7 @@ impl EdwardsField for Fe448 {
         self.invert()
     }
     fn select(a: Self, b: Self, c: Choice) -> Self {
-        Self::cmov(c.unwrap_u8() as u32, a, b)
+        Self::cmov(c, a, b)
     }
     fn encode(self, output: &mut [u8]) {
         output[..56].copy_from_slice(&self.encode());

@@ -7,7 +7,9 @@
 //! square-root-of-ratio support RFC 8032 point arithmetic and decoding. With the
 //! x86 feature, AVX2 accelerates the convolution while reusing scalar reduction.
 
-/// 欄位元素的 radix-2²⁸ limb 數。
+use tc_constant_time::{Choice, ConditionallySelectable};
+
+/// Number of radix-2^28 limbs in a field element.
 pub const SIZE: usize = 16;
 
 #[cfg(all(feature = "x86", any(target_arch = "x86", target_arch = "x86_64")))]
@@ -28,11 +30,9 @@ pub struct Fe448([u32; SIZE]);
 #[allow(clippy::should_implement_trait)]
 impl Fe448 {
     /// Selects `a` for zero and `b` for one, with a fixed limb scan.
-    pub fn cmov(choice: u32, a: Self, b: Self) -> Self {
-        let mask = 0_u32.wrapping_sub(choice & 1);
-        Self(core::array::from_fn(|i| {
-            a.0[i] ^ ((a.0[i] ^ b.0[i]) & mask)
-        }))
+    pub fn cmov(choice: Choice, mut a: Self, b: Self) -> Self {
+        a.0.conditional_assign(&b.0, choice);
+        a
     }
 
     /// Returns a square root of `u/v`, if it exists. Public-input decoding only.
@@ -162,18 +162,10 @@ impl Fe448 {
         result
     }
 
-    /// 常數時間條件交換；`swap` 必須為 0 或 1。
-    pub fn cswap(swap: u32, a: Self, b: Self) -> (Self, Self) {
-        debug_assert!(swap <= 1);
-        let mask = 0_u32.wrapping_sub(swap);
-        let mut left = a.0;
-        let mut right = b.0;
-        for i in 0..SIZE {
-            let difference = mask & (left[i] ^ right[i]);
-            left[i] ^= difference;
-            right[i] ^= difference;
-        }
-        (Self(left), Self(right))
+    /// Swaps the values for a one choice and retains their order for zero.
+    pub fn cswap(swap: Choice, mut a: Self, mut b: Self) -> (Self, Self) {
+        <[u32; SIZE]>::conditional_swap(&mut a.0, &mut b.0, swap);
+        (a, b)
     }
 
     /// 判斷 canonical 值是否為零，完整掃過所有 limb。

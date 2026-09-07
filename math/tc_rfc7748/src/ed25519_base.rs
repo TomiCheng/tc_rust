@@ -5,6 +5,7 @@
 
 use crate::x25519::clamp_private_key;
 use crate::x25519_field::Fe;
+use tc_constant_time::{Choice, ConditionallySelectable, ConstantTimeEq};
 
 #[derive(Clone, Copy)]
 struct EdPoint {
@@ -73,21 +74,15 @@ impl EdPrecomp {
         let signed = digit as i32;
         let negative = (signed >> 31) & 1;
         let absolute = ((signed ^ -negative) + negative) as u8;
+        let negative = Choice::from_lsb(negative as u8);
 
         // abs(digit) == 0 時保留 Niels identity `(1, 1, 0)`。
         let mut packed = [[0_u64; 4]; 3];
         packed[0][0] = 1;
         packed[1][0] = 1;
         for (index, candidate) in BASE_TABLE[position].iter().enumerate() {
-            let difference = (absolute ^ (index as u8 + 1)) as u64;
-            let equal = ((difference | difference.wrapping_neg()) >> 63) ^ 1;
-            let mask = 0_u64.wrapping_sub(equal);
-            for coordinate in 0..3 {
-                for word in 0..4 {
-                    packed[coordinate][word] ^=
-                        mask & (packed[coordinate][word] ^ candidate[coordinate][word]);
-                }
-            }
+            let equal = absolute.ct_eq(&(index as u8 + 1));
+            packed.conditional_assign(candidate, equal);
         }
 
         let mut selected = Self {
@@ -162,10 +157,11 @@ pub fn scalar_mult_base(scalar: &[u8; 32]) -> (Fe, Fe, Fe, Fe) {
     for _ in 0..5 {
         high = high.double();
     }
-    high.x = Fe::cmov(overflow as i32, high.x, Fe::zero());
-    high.y = Fe::cmov(overflow as i32, high.y, Fe::one());
-    high.z = Fe::cmov(overflow as i32, high.z, Fe::one());
-    high.t = Fe::cmov(overflow as i32, high.t, Fe::zero());
+    let overflow = Choice::from_lsb(overflow as u8);
+    high.x = Fe::cmov(overflow, high.x, Fe::zero());
+    high.y = Fe::cmov(overflow, high.y, Fe::one());
+    high.z = Fe::cmov(overflow, high.z, Fe::one());
+    high.t = Fe::cmov(overflow, high.t, Fe::zero());
     let d = Fe::edwards_d();
     let a = result.x.mul(high.x);
     let b = result.y.mul(high.y);

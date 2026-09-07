@@ -14,6 +14,7 @@ std = ["tc_runtime?/std"]
 x86 = ["dep:tc_runtime"]
 
 [dependencies]
+tc_constant_time = { path = "../../core/tc_constant_time", version = "0.1.0" }
 rand_core = { workspace = true }
 
 [target.'cfg(any(target_arch = "x86", target_arch = "x86_64"))'.dependencies]

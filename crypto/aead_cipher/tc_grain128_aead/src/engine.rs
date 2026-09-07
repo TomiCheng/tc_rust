@@ -1,8 +1,9 @@
 //! Incremental Grain-128AEAD engine.
 
-#[cfg(feature = "alloc")]
 use alloc::vec::Vec;
 use tc_cipher::{AeadCipher, AeadCipherInit, AeadError, CipherDirection, InitError};
+#[cfg(feature = "alloc")]
+use tc_constant_time::fixed_time_eq;
 use tc_crypto::AlgorithmName;
 use tc_params::{InitialAadParams, IvParams, KeyParams};
 
@@ -826,12 +827,4 @@ fn shift_bit(words: &mut [u32; 4], value: u32) {
     words[1] = (words[1] >> 1) | (words[2] << 31);
     words[2] = (words[2] >> 1) | (words[3] << 31);
     words[3] = (words[3] >> 1) | (value << 31);
-}
-
-fn fixed_time_eq(left: &[u8; TAG_BYTES], right: &[u8; TAG_BYTES]) -> bool {
-    let mut difference = 0_u8;
-    for (&left, &right) in left.iter().zip(right) {
-        difference |= left ^ right;
-    }
-    difference == 0
 }

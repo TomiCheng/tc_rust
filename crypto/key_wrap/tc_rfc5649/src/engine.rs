@@ -3,9 +3,10 @@
 use tc_cipher::{
     BlockCipher, BlockCipherInit, CipherDirection, KeyWrap, KeyWrapInit, WrapDirection,
 };
+use tc_constant_time::fixed_time_eq;
 use tc_crypto::AlgorithmName;
 use tc_params::OptionalIvParams;
-use tc_rfc3394::{fixed_time_eq, unwrap_core_into, wrap_core_in_place};
+use tc_rfc3394::{unwrap_core_into, wrap_core_in_place};
 
 use crate::{Rfc5649Error, Rfc5649InitError};
 

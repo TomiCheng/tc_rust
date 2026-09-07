@@ -29,7 +29,8 @@ impl SecP256R1FieldElement {
 
     /// 從八個 little-endian words 建立體元素。
     pub fn from_words(words: [u32; 8]) -> Option<Self> {
-        (!gte(&words, &SecP256R1Field::P)).then_some(Self(words))
+        // Canonical-input validation intentionally exposes acceptance through Option.
+        (gte(&words, &SecP256R1Field::P).unwrap_u8() == 0).then_some(Self(words))
     }
 
     /// 轉回一般固定寬整數。

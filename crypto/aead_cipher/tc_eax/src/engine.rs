@@ -2,6 +2,7 @@
 
 use alloc::vec::Vec;
 use core::fmt;
+use tc_constant_time::fixed_time_eq;
 
 use tc_cipher::{
     AeadBlockCipher, AeadBlockError, AeadCipher, AeadCipherInit, AeadError, BlockCipher,
@@ -546,15 +547,4 @@ fn increment_be(counter: &mut [u8]) {
             break;
         }
     }
-}
-
-fn fixed_time_eq(left: &[u8], right: &[u8]) -> bool {
-    if left.len() != right.len() {
-        return false;
-    }
-    let mut difference = 0u8;
-    for (&left, &right) in left.iter().zip(right) {
-        difference |= left ^ right;
-    }
-    difference == 0
 }

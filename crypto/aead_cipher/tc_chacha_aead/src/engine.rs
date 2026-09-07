@@ -1,6 +1,7 @@
 //! ChaCha20-Poly1305 authenticated-encryption engine.
 
 use core::fmt;
+use tc_constant_time::fixed_time_eq;
 
 use tc_chacha::{ChaCha7539Engine, XChaCha20Engine};
 use tc_cipher::{
@@ -682,12 +683,4 @@ fn map_stream_error(error: StreamError) -> AeadError {
         StreamError::MaxBytesExceeded | StreamError::CounterExhausted => AeadError::InputTooLong,
         _ => AeadError::InternalFailure,
     }
-}
-
-fn fixed_time_eq(left: &[u8; TAG_BYTES], right: &[u8; TAG_BYTES]) -> bool {
-    let mut difference = 0u8;
-    for (&left, &right) in left.iter().zip(right) {
-        difference |= left ^ right;
-    }
-    difference == 0
 }

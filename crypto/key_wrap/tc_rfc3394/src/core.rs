@@ -85,13 +85,6 @@ fn crypt_block<C: BlockCipher>(cipher: &mut C, block: &mut [u8]) -> Result<(), C
     Ok(())
 }
 
-/// Constant-time equality for equal-length byte slices.
+/// Shared byte-slice comparison with an explicitly public result.
 #[doc(hidden)]
-pub fn fixed_time_eq(left: &[u8], right: &[u8]) -> bool {
-    debug_assert_eq!(left.len(), right.len());
-    let mut difference = 0u8;
-    for (left, right) in left.iter().zip(right.iter()) {
-        difference |= left ^ right;
-    }
-    difference == 0
-}
+pub use tc_constant_time::fixed_time_eq;

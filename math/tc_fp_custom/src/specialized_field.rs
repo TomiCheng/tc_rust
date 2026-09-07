@@ -9,6 +9,7 @@ use core::marker::PhantomData;
 use core::ops::{Add, Mul, Neg, Shr, Sub};
 
 use tc_bigint::{ArrayEncoding, BitOps, FromPrimitive, NumRef, modular::mod_odd_inverse};
+use tc_constant_time::{Choice, ConstantTimeEq, ConstantTimeOrd};
 use tc_ec_core::{FieldElement, PrimeFieldElement};
 
 const MAX_LIMBS: usize = 17;
@@ -147,7 +148,7 @@ impl<S: PrimeFieldSpec<N>, const N: usize> SpecializedField<S, N> {
             wide[..N].copy_from_slice(&result);
             wide[N] = 1;
             reduce_solinas::<S, N>(&wide)
-        } else if gte(&result, &S::P) {
+        } else if gte(&result, &S::P).unwrap_u8() != 0 {
             sub_words(&result, &S::P).0
         } else {
             result
@@ -233,7 +234,8 @@ impl<S: PrimeFieldSpec<N>, const N: usize> SpecializedFieldElement<S, N> {
 
     /// 從 canonical little-endian limbs 建立元素。
     pub fn from_words(words: [u32; N]) -> Option<Self> {
-        (!gte(&words, &S::P)).then_some(Self::new_unchecked(words))
+        // Canonical-input validation intentionally exposes acceptance through Option.
+        (gte(&words, &S::P).unwrap_u8() == 0).then_some(Self::new_unchecked(words))
     }
 
     /// 從固定寬整數建立元素。
@@ -530,7 +532,8 @@ fn reduce_solinas<S: PrimeFieldSpec<N>, const N: usize>(wide: &[u32; MAX_WIDE_LI
     if S::BITS % 32 != 0 {
         result[N - 1] &= (1_u32 << (S::BITS % 32)) - 1;
     }
-    while gte(&result, &S::P) {
+    // This public-value reduction path intentionally reveals the comparison.
+    while gte(&result, &S::P).unwrap_u8() != 0 {
         result = sub_words(&result, &S::P).0;
     }
     result
@@ -701,7 +704,8 @@ fn canonicalize<S: PrimeFieldSpec<N>, const N: usize>(
         wide[N] = 1;
         return reduce_solinas::<S, N>(&wide);
     }
-    if gte(&result, &S::P) {
+    // This public-value reduction path intentionally reveals the comparison.
+    if gte(&result, &S::P).unwrap_u8() != 0 {
         result = sub_words(&result, &S::P).0;
     }
     result
@@ -760,7 +764,8 @@ fn reduce_small_complement<S: PrimeFieldSpec<N>, const N: usize>(
 
     let mut result = [0_u32; N];
     result.copy_from_slice(&accumulator[..N]);
-    while gte(&result, &S::P) {
+    // This public-value reduction path intentionally reveals the comparison.
+    while gte(&result, &S::P).unwrap_u8() != 0 {
         result = sub_words(&result, &S::P).0;
     }
     result
@@ -835,7 +840,8 @@ fn reduce_mersenne_521<S: PrimeFieldSpec<N>, const N: usize>(
     }
     let mut result = [0_u32; N];
     result.copy_from_slice(&current[..N]);
-    while gte(&result, &S::P) {
+    // This public-value reduction path intentionally reveals the comparison.
+    while gte(&result, &S::P).unwrap_u8() != 0 {
         result = sub_words(&result, &S::P).0;
     }
     result
@@ -935,8 +941,14 @@ pub(crate) fn is_one<const N: usize>(value: &[u32; N]) -> bool {
     value.first() == Some(&1) && value[1..].iter().all(|word| *word == 0)
 }
 
-pub(crate) fn gte<const N: usize>(left: &[u32; N], right: &[u32; N]) -> bool {
-    left.iter().rev().cmp(right.iter().rev()).is_ge()
+/// Compares little-endian limbs without exposing the result or exiting early.
+pub(crate) fn gte<const N: usize>(left: &[u32; N], right: &[u32; N]) -> Choice {
+    let mut greater_or_equal = Choice::from_lsb(1);
+    for (left, right) in left.iter().zip(right) {
+        // A more significant unequal limb overrides all lower limbs.
+        greater_or_equal = left.ct_ge(right) & (!left.ct_eq(right) | greater_or_equal);
+    }
+    greater_or_equal
 }
 
 fn add_words<const N: usize>(left: &[u32; N], right: &[u32; N]) -> ([u32; N], bool) {

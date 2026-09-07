@@ -3,7 +3,7 @@
 //! 第一版刻意維持 bc `SecP256R1Field` 的 limb 寬度與 Solinas 約簡形狀，
 //! 讓移植風險集中在逐行語意對應；64-bit limb 版需要重新推導，留待獨立效能工作。
 
-use core::cmp::Ordering;
+pub(crate) use crate::specialized_field::gte;
 
 use tc_bigint::modular::mod_odd_inverse;
 
@@ -26,7 +26,8 @@ impl SecP256R1Field {
     /// 模數內加法。
     pub fn add(left: &[u32; 8], right: &[u32; 8]) -> [u32; 8] {
         let (mut result, carry) = add_words(left, right);
-        if carry || gte(&result, &Self::P) {
+        // This public-value reduction path intentionally reveals the comparison.
+        if carry || gte(&result, &Self::P).unwrap_u8() != 0 {
             add_p_inverse_to(&mut result);
         }
         result
@@ -50,7 +51,8 @@ impl SecP256R1Field {
             *output = (*word << 1) | carry;
             carry = next;
         }
-        if carry != 0 || gte(&result, &Self::P) {
+        // This public-value reduction path intentionally reveals the comparison.
+        if carry != 0 || gte(&result, &Self::P).unwrap_u8() != 0 {
             add_p_inverse_to(&mut result);
         }
         result
@@ -152,10 +154,6 @@ pub(crate) fn is_one(value: &[u32; 8]) -> bool {
     value[0] == 1 && value[1..].iter().all(|word| *word == 0)
 }
 
-pub(crate) fn gte(left: &[u32; 8], right: &[u32; 8]) -> bool {
-    left.iter().rev().cmp(right.iter().rev()) != Ordering::Less
-}
-
 fn add_words(left: &[u32; 8], right: &[u32; 8]) -> ([u32; 8], bool) {
     let mut result = [0_u32; 8];
     let mut carry = 0_u64;
@@ -232,7 +230,8 @@ fn reduce32(value: u32, result: &mut [u32; 8]) {
         carry >>= 32;
         debug_assert!(carry == 0 || carry == 1);
     }
-    if carry != 0 || gte(result, &SecP256R1Field::P) {
+    // This public-value reduction path intentionally reveals the comparison.
+    if carry != 0 || gte(result, &SecP256R1Field::P).unwrap_u8() != 0 {
         add_p_inverse_to(result);
     }
 }
@@ -319,10 +318,12 @@ mod tests {
                 state ^= state << 17;
                 *word = state as u32;
             }
-            if gte(&left, &SecP256R1Field::P) {
+            // This public-value reduction path intentionally reveals the comparison.
+            if gte(&left, &SecP256R1Field::P).unwrap_u8() != 0 {
                 left = sub_words(&left, &SecP256R1Field::P).0;
             }
-            if gte(&right, &SecP256R1Field::P) {
+            // This public-value reduction path intentionally reveals the comparison.
+            if gte(&right, &SecP256R1Field::P).unwrap_u8() != 0 {
                 right = sub_words(&right, &SecP256R1Field::P).0;
             }
             let left_big = bigint(&left);

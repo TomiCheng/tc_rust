@@ -4,6 +4,7 @@ use rand_core::CryptoRng;
 use tc_cipher::{
     BlockCipher, BlockCipherInit, CipherDirection, KeyWrap, KeyWrapInit, WrapDirection,
 };
+use tc_constant_time::fixed_time_eq;
 use tc_crypto::AlgorithmName;
 use tc_des::DesEdeEngine;
 use tc_digest::Digest;
@@ -240,13 +241,4 @@ where
         self.direction = Some(direction);
         Ok(())
     }
-}
-
-fn fixed_time_eq(left: &[u8], right: &[u8]) -> bool {
-    debug_assert_eq!(left.len(), right.len());
-    let mut difference = 0u8;
-    for (left, right) in left.iter().zip(right.iter()) {
-        difference |= left ^ right;
-    }
-    difference == 0
 }
