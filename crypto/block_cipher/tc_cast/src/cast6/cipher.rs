@@ -28,8 +28,8 @@ impl Cast6KeySchedule {
         let mut padded = [0u8; 32];
         padded[..key.len()].copy_from_slice(key);
         let mut working = [0u32; 8];
-        for (index, chunk) in padded.chunks_exact(4).enumerate() {
-            working[index] = u32::from_be_bytes(chunk.try_into().unwrap());
+        for (index, chunk) in padded.as_chunks::<4>().0.iter().enumerate() {
+            working[index] = u32::from_be_bytes(*chunk);
         }
 
         let mut mask_constant = 0x5a82_7999u32;

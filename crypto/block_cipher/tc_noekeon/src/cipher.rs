@@ -71,15 +71,15 @@ pub(crate) fn decrypt_block(
 /// Reads four big-endian words from a block.
 fn read_words(input: &[u8; BLOCK_BYTES]) -> [u32; 4] {
     let mut words = [0_u32; 4];
-    for (word, chunk) in words.iter_mut().zip(input.chunks_exact(4)) {
-        *word = u32::from_be_bytes(chunk.try_into().unwrap());
+    for (word, chunk) in words.iter_mut().zip(input.as_chunks::<4>().0.iter()) {
+        *word = u32::from_be_bytes(*chunk);
     }
     words
 }
 
 /// Writes four words back into a block as big-endian bytes.
 fn write_words(words: &[u32; 4], output: &mut [u8; BLOCK_BYTES]) {
-    for (word, chunk) in words.iter().zip(output.chunks_exact_mut(4)) {
+    for (word, chunk) in words.iter().zip(output.as_chunks_mut::<4>().0.iter_mut()) {
         chunk.copy_from_slice(&word.to_be_bytes());
     }
 }

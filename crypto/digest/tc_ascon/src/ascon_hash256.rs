@@ -108,7 +108,12 @@ impl TryDigest for AsconHash256 {
         self.state[0] ^= u64::from_le_bytes(final_block);
         p12(&mut self.state);
 
-        for (index, chunk) in output[..DIGEST_LENGTH].chunks_exact_mut(RATE).enumerate() {
+        for (index, chunk) in output[..DIGEST_LENGTH]
+            .as_chunks_mut::<RATE>()
+            .0
+            .iter_mut()
+            .enumerate()
+        {
             if index != 0 {
                 p12(&mut self.state);
             }

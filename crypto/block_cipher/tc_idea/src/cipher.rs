@@ -38,7 +38,7 @@ pub(crate) fn process_block(
     let mut x3 = u32::from(u16::from_be_bytes([input[6], input[7]]));
 
     let (rounds, output_transform) = working_key.split_at(ROUNDS * ROUND_WORDS);
-    for round in rounds.chunks_exact(ROUND_WORDS) {
+    for round in rounds.as_chunks::<ROUND_WORDS>().0 {
         x0 = mul(x0, u32::from(round[0]));
         x1 = (x1 + u32::from(round[1])) & MASK;
         x2 = (x2 + u32::from(round[2])) & MASK;
@@ -121,7 +121,7 @@ fn add_inv(x: u32) -> u32 {
 /// rotated left by 25 bits.
 fn expand_key(key: &[u8; KEY_BYTES]) -> [u16; SUBKEY_WORDS] {
     let mut schedule = [0_u16; SUBKEY_WORDS];
-    for (word, bytes) in schedule.iter_mut().zip(key.chunks_exact(2)) {
+    for (word, bytes) in schedule.iter_mut().zip(key.as_chunks::<2>().0.iter()) {
         *word = u16::from_be_bytes([bytes[0], bytes[1]]);
     }
     for index in 8..SUBKEY_WORDS {

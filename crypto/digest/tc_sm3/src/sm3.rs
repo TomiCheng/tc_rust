@@ -36,8 +36,8 @@ fn p1(x: u32) -> u32 {
 /// Compresses one 512-bit SM3 block.
 fn compress(state: &mut [u32; 8], block: &[u8; 64]) {
     let mut w = [0u32; 68];
-    for (word, bytes) in w[..16].iter_mut().zip(block.chunks_exact(4)) {
-        *word = u32::from_be_bytes(bytes.try_into().expect("4-byte SM3 word"));
+    for (word, bytes) in w[..16].iter_mut().zip(block.as_chunks::<4>().0.iter()) {
+        *word = u32::from_be_bytes(*bytes);
     }
     for j in 16..68 {
         w[j] = p1(w[j - 16] ^ w[j - 9] ^ w[j - 3].rotate_left(15))

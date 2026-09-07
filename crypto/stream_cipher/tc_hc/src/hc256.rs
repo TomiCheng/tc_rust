@@ -91,11 +91,11 @@ impl Hc256Engine {
         self.word = [0; 4];
 
         let mut words = [0u32; 2560];
-        for (index, bytes) in self.key.chunks_exact(4).enumerate() {
-            words[index] = u32::from_le_bytes(bytes.try_into().unwrap());
+        for (index, bytes) in self.key.as_chunks::<4>().0.iter().enumerate() {
+            words[index] = u32::from_le_bytes(*bytes);
         }
-        for (index, bytes) in self.iv.chunks_exact(4).enumerate() {
-            words[8 + index] = u32::from_le_bytes(bytes.try_into().unwrap());
+        for (index, bytes) in self.iv.as_chunks::<4>().0.iter().enumerate() {
+            words[8 + index] = u32::from_le_bytes(*bytes);
         }
         for index in 16..words.len() {
             let x = words[index - 2];

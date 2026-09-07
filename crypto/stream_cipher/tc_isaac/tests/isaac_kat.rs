@@ -50,7 +50,7 @@ fn bc_short_key_vectors() {
 #[test]
 fn bc_full_state_vectors() {
     let mut key = [0; MAX_KEY_BYTES];
-    for word in key.chunks_exact_mut(4) {
+    for word in key.as_chunks_mut::<4>().0 {
         word[..2].fill(0xff);
     }
     assert_eq!(
@@ -63,7 +63,7 @@ fn bc_full_state_vectors() {
         )
     );
 
-    for word in key.chunks_exact_mut(4) {
+    for word in key.as_chunks_mut::<4>().0 {
         word[..2].fill(0);
         word[2..].fill(0xff);
     }

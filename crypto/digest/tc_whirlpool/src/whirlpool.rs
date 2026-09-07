@@ -101,8 +101,8 @@ fn transform(input: &[u64; 8]) -> [u64; 8] {
 /// 壓縮一個 512-bit block (Whirlpool cipher + Miyaguchi–Preneel feed-forward)。
 fn compress(hash: &mut [u64; 8], block: &[u8; 64]) {
     let mut message = [0u64; 8];
-    for (word, bytes) in message.iter_mut().zip(block.chunks_exact(8)) {
-        *word = u64::from_be_bytes(bytes.try_into().expect("8-byte Whirlpool word"));
+    for (word, bytes) in message.iter_mut().zip(block.as_chunks::<8>().0.iter()) {
+        *word = u64::from_be_bytes(*bytes);
     }
 
     let mut key = *hash;

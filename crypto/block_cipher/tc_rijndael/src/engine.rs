@@ -231,7 +231,7 @@ fn expand_key<const BLOCK_COLUMNS: usize>(
     let total_columns = (rounds + 1) * BLOCK_COLUMNS;
 
     let mut temporary_key = [[0u8; 8]; 4];
-    for (column, bytes) in key.chunks_exact(4).enumerate() {
+    for (column, bytes) in key.as_chunks::<4>().0.iter().enumerate() {
         for row in 0..4 {
             temporary_key[row][column] = bytes[row];
         }

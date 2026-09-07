@@ -114,7 +114,7 @@ pub(crate) fn expand_key(key: &[u8], rounds: usize) -> RoundKeys {
     let mut round_keys = [[0u8; BLOCK_BYTES]; MAX_ROUND_KEYS];
     for (round_key, bytes) in round_keys
         .iter_mut()
-        .zip(expanded[..expanded_len].chunks_exact(BLOCK_BYTES))
+        .zip(expanded[..expanded_len].as_chunks::<BLOCK_BYTES>().0.iter())
     {
         round_key.copy_from_slice(bytes);
     }

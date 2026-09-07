@@ -103,8 +103,8 @@ fn key_schedule(x: &mut [u64; 8]) {
 /// 壓縮一個 64-byte block。
 fn compress(state: &mut [u64; 3], block: &[u8; 64]) {
     let mut x = [0u64; 8];
-    for (word, bytes) in x.iter_mut().zip(block.chunks_exact(8)) {
-        *word = u64::from_le_bytes(bytes.try_into().expect("8-byte Tiger word"));
+    for (word, bytes) in x.iter_mut().zip(block.as_chunks::<8>().0.iter()) {
+        *word = u64::from_le_bytes(*bytes);
     }
 
     let [mut a, mut b, mut c] = *state;

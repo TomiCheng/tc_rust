@@ -66,8 +66,8 @@ fn generate_working_key(key: &[u8], rounds: usize, for_encryption: bool) -> Work
     let total_words = (rounds + 1) * 4;
     let mut working_key = [0_u32; MAX_WORKING_KEY_WORDS];
 
-    for (word, bytes) in working_key.iter_mut().zip(key.chunks_exact(4)) {
-        *word = u32::from_le_bytes(bytes.try_into().unwrap());
+    for (word, bytes) in working_key.iter_mut().zip(key.as_chunks::<4>().0.iter()) {
+        *word = u32::from_le_bytes(*bytes);
     }
 
     let mut rcon = 1_u8;
@@ -119,14 +119,14 @@ fn inverse_substitute_shift_rows(state: &[u32; 4]) -> [u32; 4] {
 
 fn load_state(input: &[u8; BLOCK_BYTES]) -> [u32; 4] {
     let mut state = [0_u32; 4];
-    for (column, bytes) in state.iter_mut().zip(input.chunks_exact(4)) {
-        *column = u32::from_le_bytes(bytes.try_into().unwrap());
+    for (column, bytes) in state.iter_mut().zip(input.as_chunks::<4>().0.iter()) {
+        *column = u32::from_le_bytes(*bytes);
     }
     state
 }
 
 fn store_state(state: &[u32; 4], output: &mut [u8; BLOCK_BYTES]) {
-    for (word, chunk) in state.iter().zip(output.chunks_exact_mut(4)) {
+    for (word, chunk) in state.iter().zip(output.as_chunks_mut::<4>().0.iter_mut()) {
         chunk.copy_from_slice(&word.to_le_bytes());
     }
 }

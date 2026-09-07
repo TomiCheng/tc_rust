@@ -410,8 +410,8 @@ impl TryXof for Blake3Digest {
 
 /// 從位元組讀 LE u32 字填入 `words`。
 fn load_words_le(bytes: &[u8], words: &mut [u32]) {
-    for (word, chunk) in words.iter_mut().zip(bytes.chunks_exact(4)) {
-        *word = u32::from_le_bytes(chunk.try_into().unwrap());
+    for (word, chunk) in words.iter_mut().zip(bytes.as_chunks::<4>().0.iter()) {
+        *word = u32::from_le_bytes(*chunk);
     }
 }
 

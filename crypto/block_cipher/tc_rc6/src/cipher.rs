@@ -95,14 +95,14 @@ fn mix(value: u32) -> u32 {
 
 fn read_block(input: &[u8; 16]) -> [u32; 4] {
     let mut words = [0u32; 4];
-    for (word, bytes) in words.iter_mut().zip(input.chunks_exact(4)) {
-        *word = u32::from_le_bytes(bytes.try_into().unwrap());
+    for (word, bytes) in words.iter_mut().zip(input.as_chunks::<4>().0.iter()) {
+        *word = u32::from_le_bytes(*bytes);
     }
     words
 }
 
 fn write_block(output: &mut [u8; 16], words: [u32; 4]) {
-    for (word, bytes) in words.iter().zip(output.chunks_exact_mut(4)) {
+    for (word, bytes) in words.iter().zip(output.as_chunks_mut::<4>().0.iter_mut()) {
         bytes.copy_from_slice(&word.to_le_bytes());
     }
 }

@@ -75,9 +75,9 @@ impl<const WORDS: usize> BlockCipher for ThreefishEngine<WORDS> {
         let mut input_words = [0u64; WORDS];
         for (word, bytes) in input_words
             .iter_mut()
-            .zip(input[..block_bytes].chunks_exact(8))
+            .zip(input[..block_bytes].as_chunks::<8>().0.iter())
         {
-            *word = u64::from_le_bytes(bytes.try_into().unwrap());
+            *word = u64::from_le_bytes(*bytes);
         }
 
         let mut output_words = [0u64; WORDS];
@@ -104,7 +104,7 @@ impl<const WORDS: usize> BlockCipher for ThreefishEngine<WORDS> {
 
         for (word, bytes) in output_words
             .iter()
-            .zip(output[..block_bytes].chunks_exact_mut(8))
+            .zip(output[..block_bytes].as_chunks_mut::<8>().0.iter_mut())
         {
             bytes.copy_from_slice(&word.to_le_bytes());
         }
@@ -131,15 +131,15 @@ impl<P: KeyParams + TweakParams + ?Sized, const WORDS: usize> BlockCipherInit<P>
             return Err(InitError::InvalidTweakLength(tweak.len()));
         }
 
-        for (word, bytes) in self.key.iter_mut().zip(key.chunks_exact(8)) {
-            *word = u64::from_le_bytes(bytes.try_into().unwrap());
+        for (word, bytes) in self.key.iter_mut().zip(key.as_chunks::<8>().0.iter()) {
+            *word = u64::from_le_bytes(*bytes);
         }
         self.parity = self.key.iter().fold(C_240, |parity, word| parity ^ word);
 
         let mut tweak_words = [0u64; 2];
         if let Some(tweak) = tweak {
-            for (word, bytes) in tweak_words.iter_mut().zip(tweak.chunks_exact(8)) {
-                *word = u64::from_le_bytes(bytes.try_into().unwrap());
+            for (word, bytes) in tweak_words.iter_mut().zip(tweak.as_chunks::<8>().0.iter()) {
+                *word = u64::from_le_bytes(*bytes);
             }
         }
         self.tweak = [

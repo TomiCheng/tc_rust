@@ -46,8 +46,8 @@ const CK: [u32; 32] = [
 pub(crate) fn expand_key(for_encryption: bool, key: &[u8; KEY_BYTES]) -> [u32; ROUNDS] {
     // 前四個字先與系統參數 FK 相抵,之後就是一個滑動視窗。
     let mut window = [0_u32; 4];
-    for ((word, chunk), fixed) in window.iter_mut().zip(key.chunks_exact(4)).zip(FK) {
-        *word = u32::from_be_bytes(chunk.try_into().unwrap()) ^ fixed;
+    for ((word, chunk), fixed) in window.iter_mut().zip(key.as_chunks::<4>().0.iter()).zip(FK) {
+        *word = u32::from_be_bytes(*chunk) ^ fixed;
     }
 
     let mut round_keys = [0_u32; ROUNDS];
@@ -70,11 +70,11 @@ pub(crate) fn process_block(
     output: &mut [u8; BLOCK_BYTES],
 ) {
     let mut x = [0_u32; 4];
-    for (word, chunk) in x.iter_mut().zip(input.chunks_exact(4)) {
-        *word = u32::from_be_bytes(chunk.try_into().unwrap());
+    for (word, chunk) in x.iter_mut().zip(input.as_chunks::<4>().0.iter()) {
+        *word = u32::from_be_bytes(*chunk);
     }
 
-    for round in round_keys.chunks_exact(4) {
+    for round in round_keys.as_chunks::<4>().0 {
         x[0] ^= t(x[1] ^ x[2] ^ x[3] ^ round[0]);
         x[1] ^= t(x[2] ^ x[3] ^ x[0] ^ round[1]);
         x[2] ^= t(x[3] ^ x[0] ^ x[1] ^ round[2]);
@@ -82,7 +82,7 @@ pub(crate) fn process_block(
     }
 
     // 最後的反序置換:輸出是 X35, X34, X33, X32。
-    for (word, chunk) in x.iter().rev().zip(output.chunks_exact_mut(4)) {
+    for (word, chunk) in x.iter().rev().zip(output.as_chunks_mut::<4>().0.iter_mut()) {
         chunk.copy_from_slice(&word.to_be_bytes());
     }
 }

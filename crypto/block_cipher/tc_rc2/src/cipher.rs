@@ -85,14 +85,14 @@ pub(crate) fn decrypt(working_key: &[u16; SUBKEYS], input: &[u8; 8], output: &mu
 
 fn read_block(input: &[u8; 8]) -> [i32; 4] {
     let mut words = [0i32; 4];
-    for (word, bytes) in words.iter_mut().zip(input.chunks_exact(2)) {
+    for (word, bytes) in words.iter_mut().zip(input.as_chunks::<2>().0.iter()) {
         *word = i32::from(u16::from_le_bytes([bytes[0], bytes[1]]));
     }
     words
 }
 
 fn write_block(output: &mut [u8; 8], words: &[i32; 4]) {
-    for (word, bytes) in words.iter().zip(output.chunks_exact_mut(2)) {
+    for (word, bytes) in words.iter().zip(output.as_chunks_mut::<2>().0.iter_mut()) {
         bytes.copy_from_slice(&(*word as u16).to_le_bytes());
     }
 }

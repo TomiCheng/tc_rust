@@ -74,11 +74,10 @@ impl IsaacEngine {
         self.key_stream_pos = 0;
 
         let key = &self.working_key[..self.key_len];
-        let mut chunks = key.chunks_exact(4);
-        for (destination, bytes) in self.state.iter_mut().zip(chunks.by_ref()) {
-            *destination = u32::from_le_bytes(bytes.try_into().unwrap());
+        let (chunks, remainder) = key.as_chunks::<4>();
+        for (destination, bytes) in self.state.iter_mut().zip(chunks) {
+            *destination = u32::from_le_bytes(*bytes);
         }
-        let remainder = chunks.remainder();
         if !remainder.is_empty() {
             let mut word = [0; 4];
             word[..remainder.len()].copy_from_slice(remainder);

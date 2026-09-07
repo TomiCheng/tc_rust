@@ -179,8 +179,8 @@ impl CamelliaKeySchedule {
         self.fl_key = [0; 12];
 
         let mut k = [0u32; 8];
-        for (index, chunk) in key.chunks_exact(4).enumerate() {
-            k[index] = u32::from_be_bytes(chunk.try_into().unwrap());
+        for (index, chunk) in key.as_chunks::<4>().0.iter().enumerate() {
+            k[index] = u32::from_be_bytes(*chunk);
         }
 
         self.key_is_128 = key.len() == 16;
@@ -222,9 +222,8 @@ impl CamelliaKeySchedule {
         f2: impl Fn(&mut [u32; 4], &[u32], usize),
     ) {
         let mut state = [0u32; 4];
-        for (index, chunk) in input.chunks_exact(4).enumerate() {
-            state[index] =
-                u32::from_be_bytes(chunk.try_into().unwrap()) ^ self.whitening_key[index];
+        for (index, chunk) in input.as_chunks::<4>().0.iter().enumerate() {
+            state[index] = u32::from_be_bytes(*chunk) ^ self.whitening_key[index];
         }
 
         f2(&mut state, &self.subkey, 0);

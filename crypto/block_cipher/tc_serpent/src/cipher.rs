@@ -19,8 +19,8 @@ pub(crate) fn expand_key(key: &[u8], representation: Representation) -> [u32; WO
 
     match representation {
         Representation::Serpent => {
-            for (word, chunk) in padded.iter_mut().zip(key.chunks_exact(4)) {
-                *word = u32::from_le_bytes(chunk.try_into().unwrap());
+            for (word, chunk) in padded.iter_mut().zip(key.as_chunks::<4>().0.iter()) {
+                *word = u32::from_le_bytes(*chunk);
             }
         }
         Representation::Tnepres => {
@@ -441,8 +441,8 @@ fn read_state(input: &[u8; BLOCK_BYTES], representation: Representation) -> [u32
     let mut state = [0_u32; 4];
     match representation {
         Representation::Serpent => {
-            for (word, chunk) in state.iter_mut().zip(input.chunks_exact(4)) {
-                *word = u32::from_le_bytes(chunk.try_into().unwrap());
+            for (word, chunk) in state.iter_mut().zip(input.as_chunks::<4>().0.iter()) {
+                *word = u32::from_le_bytes(*chunk);
             }
         }
         Representation::Tnepres => {
@@ -458,7 +458,7 @@ fn read_state(input: &[u8; BLOCK_BYTES], representation: Representation) -> [u32
 fn write_state(state: [u32; 4], representation: Representation, output: &mut [u8; BLOCK_BYTES]) {
     match representation {
         Representation::Serpent => {
-            for (word, chunk) in state.iter().zip(output.chunks_exact_mut(4)) {
+            for (word, chunk) in state.iter().zip(output.as_chunks_mut::<4>().0.iter_mut()) {
                 chunk.copy_from_slice(&word.to_le_bytes());
             }
         }

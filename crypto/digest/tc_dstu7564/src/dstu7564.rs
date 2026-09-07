@@ -253,8 +253,8 @@ fn compress(state: &mut [u64; WIDE_COLUMNS], block: &[u8], columns: usize, round
     let mut p_state = [0u64; WIDE_COLUMNS];
     let mut q_state = [0u64; WIDE_COLUMNS];
 
-    for (column, bytes) in block.chunks_exact(8).enumerate() {
-        let word = u64::from_le_bytes(bytes.try_into().expect("8-byte Kupyna word"));
+    for (column, bytes) in block.as_chunks::<8>().0.iter().enumerate() {
+        let word = u64::from_le_bytes(*bytes);
         p_state[column] = state[column] ^ word;
         q_state[column] = word;
     }

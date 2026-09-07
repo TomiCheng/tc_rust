@@ -49,8 +49,10 @@ fn bc_fips_81_ecb_vector() {
     engine.init(CipherDirection::Encrypt, &params).unwrap();
 
     for (input, output) in plaintext
-        .chunks_exact(BLOCK_BYTES)
-        .zip(encrypted.chunks_exact_mut(BLOCK_BYTES))
+        .as_chunks::<BLOCK_BYTES>()
+        .0
+        .iter()
+        .zip(encrypted.as_chunks_mut::<BLOCK_BYTES>().0.iter_mut())
     {
         engine.process_block(input, output).unwrap();
     }
@@ -59,8 +61,10 @@ fn bc_fips_81_ecb_vector() {
     let mut recovered = [0u8; 24];
     engine.init(CipherDirection::Decrypt, &params).unwrap();
     for (input, output) in ciphertext
-        .chunks_exact(BLOCK_BYTES)
-        .zip(recovered.chunks_exact_mut(BLOCK_BYTES))
+        .as_chunks::<BLOCK_BYTES>()
+        .0
+        .iter()
+        .zip(recovered.as_chunks_mut::<BLOCK_BYTES>().0.iter_mut())
     {
         engine.process_block(input, output).unwrap();
     }

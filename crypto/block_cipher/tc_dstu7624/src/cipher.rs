@@ -29,8 +29,8 @@ impl<const BLOCK_WORDS: usize> Dstu7624Cipher<BLOCK_WORDS> {
         self.round_keys = [[0; BLOCK_WORDS]; MAX_ROUND_KEYS];
 
         let mut working_key = [0u64; MAX_WORDS];
-        for (slot, bytes) in working_key.iter_mut().zip(key.chunks_exact(8)) {
-            *slot = u64::from_le_bytes(bytes.try_into().unwrap());
+        for (slot, bytes) in working_key.iter_mut().zip(key.as_chunks::<8>().0) {
+            *slot = u64::from_le_bytes(*bytes);
         }
 
         let temp_key = Self::expand_kt(&working_key, key_words);
@@ -169,8 +169,8 @@ impl<const BLOCK_WORDS: usize> Dstu7624Cipher<BLOCK_WORDS> {
 
 fn read_words(input: &[u8], words: usize) -> [u64; MAX_WORDS] {
     let mut result = [0u64; MAX_WORDS];
-    for (index, chunk) in input[..words * 8].chunks_exact(8).enumerate() {
-        result[index] = u64::from_le_bytes(chunk.try_into().unwrap());
+    for (index, chunk) in input[..words * 8].as_chunks::<8>().0.iter().enumerate() {
+        result[index] = u64::from_le_bytes(*chunk);
     }
     result
 }

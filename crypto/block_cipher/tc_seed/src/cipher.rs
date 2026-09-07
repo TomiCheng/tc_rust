@@ -167,7 +167,7 @@ pub(crate) fn create_working_key(key: &[u8; KEY_BYTES]) -> [u32; WORKING_KEY_WOR
     let mut key3 = u32::from_be_bytes(key[12..16].try_into().unwrap());
 
     let mut working_key = [0_u32; WORKING_KEY_WORDS];
-    for (step, pair) in working_key.chunks_exact_mut(2).enumerate() {
+    for (step, pair) in working_key.as_chunks_mut::<2>().0.iter_mut().enumerate() {
         let constant = KC[step];
         pair[0] = g(key0.wrapping_add(key2).wrapping_sub(constant));
         pair[1] = g(key1.wrapping_sub(key3).wrapping_add(constant));
@@ -193,7 +193,7 @@ pub(crate) fn encrypt_block(
     output: &mut [u8; BLOCK_BYTES],
 ) {
     let (mut left, mut right) = read_halves(input);
-    for round in working_key.chunks_exact(4) {
+    for round in working_key.as_chunks::<4>().0.iter() {
         left ^= f(round[0], round[1], right);
         right ^= f(round[2], round[3], left);
     }
@@ -207,7 +207,7 @@ pub(crate) fn decrypt_block(
 ) {
     let (mut left, mut right) = read_halves(input);
     // 同一份工作金鑰,只是輪次由後往前,且每輪的兩對子鑰互換。
-    for round in working_key.chunks_exact(4).rev() {
+    for round in working_key.as_chunks::<4>().0.iter().rev() {
         left ^= f(round[2], round[3], right);
         right ^= f(round[0], round[1], left);
     }

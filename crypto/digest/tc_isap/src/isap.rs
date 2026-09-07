@@ -107,7 +107,7 @@ impl TryDigest for IsapDigest {
         final_block[self.buffer_position] = 0x80;
         self.state[0] ^= u64::from_be_bytes(final_block);
 
-        for chunk in output[..DIGEST_LENGTH].chunks_exact_mut(BYTE_LENGTH) {
+        for chunk in output[..DIGEST_LENGTH].as_chunks_mut::<BYTE_LENGTH>().0 {
             p12(&mut self.state);
             chunk.copy_from_slice(&self.state[0].to_be_bytes());
         }

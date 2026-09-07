@@ -55,8 +55,8 @@ impl RipeMD256Digest {
 
     fn compress(h: &mut [u32; 8], block: &[u8; 64]) {
         let mut x = [0u32; 16];
-        for (i, chunk) in block.chunks_exact(4).enumerate() {
-            x[i] = u32::from_le_bytes(chunk.try_into().unwrap());
+        for (i, chunk) in block.as_chunks::<4>().0.iter().enumerate() {
+            x[i] = u32::from_le_bytes(*chunk);
         }
 
         let (mut al, mut bl, mut cl, mut dl) = (h[0], h[1], h[2], h[3]);

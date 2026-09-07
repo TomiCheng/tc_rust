@@ -17,8 +17,10 @@ fn run_vector(key: &str, plaintext: &str, ciphertext: &str) {
 
     engine.init(CipherDirection::Encrypt, &params).unwrap();
     for (input, output) in plaintext
-        .chunks_exact(BLOCK_BYTES)
-        .zip(encrypted.chunks_exact_mut(BLOCK_BYTES))
+        .as_chunks::<BLOCK_BYTES>()
+        .0
+        .iter()
+        .zip(encrypted.as_chunks_mut::<BLOCK_BYTES>().0.iter_mut())
     {
         engine.process_block(input, output).unwrap();
     }
@@ -27,8 +29,10 @@ fn run_vector(key: &str, plaintext: &str, ciphertext: &str) {
     let mut recovered = vec![0u8; ciphertext.len()];
     engine.init(CipherDirection::Decrypt, &params).unwrap();
     for (input, output) in ciphertext
-        .chunks_exact(BLOCK_BYTES)
-        .zip(recovered.chunks_exact_mut(BLOCK_BYTES))
+        .as_chunks::<BLOCK_BYTES>()
+        .0
+        .iter()
+        .zip(recovered.as_chunks_mut::<BLOCK_BYTES>().0.iter_mut())
     {
         engine.process_block(input, output).unwrap();
     }

@@ -170,7 +170,10 @@ impl XoodyakDigest {
 
     fn squeeze(&self, output: &mut [u8]) {
         debug_assert_eq!(output.len(), SQUEEZE_RATE);
-        for (word, chunk) in self.state[..4].iter().zip(output.chunks_exact_mut(4)) {
+        for (word, chunk) in self.state[..4]
+            .iter()
+            .zip(output.as_chunks_mut::<4>().0.iter_mut())
+        {
             chunk.copy_from_slice(&word.to_le_bytes());
         }
     }

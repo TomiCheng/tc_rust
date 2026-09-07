@@ -88,7 +88,13 @@ impl State {
     fn next_byte(&mut self) -> u8 {
         if self.index == 0 {
             let output = block(self.rounds, &self.words);
-            for (bytes, word) in self.key_stream.chunks_exact_mut(4).zip(output) {
+            for (bytes, word) in self
+                .key_stream
+                .as_chunks_mut::<4>()
+                .0
+                .iter_mut()
+                .zip(output)
+            {
                 bytes.copy_from_slice(&word.to_le_bytes());
             }
             self.words[8] = self.words[8].wrapping_add(1);
@@ -125,14 +131,14 @@ pub(crate) fn set_key(state: &mut [u32; STATE_WORDS], key: &[u8], iv: &[u8]) {
     state[10] = constants[2];
     state[15] = constants[3];
 
-    for (index, bytes) in key[..16].chunks_exact(4).enumerate() {
-        state[1 + index] = u32::from_le_bytes(bytes.try_into().unwrap());
+    for (index, bytes) in key[..16].as_chunks::<4>().0.iter().enumerate() {
+        state[1 + index] = u32::from_le_bytes(*bytes);
     }
-    for (index, bytes) in key[key.len() - 16..].chunks_exact(4).enumerate() {
-        state[11 + index] = u32::from_le_bytes(bytes.try_into().unwrap());
+    for (index, bytes) in key[key.len() - 16..].as_chunks::<4>().0.iter().enumerate() {
+        state[11 + index] = u32::from_le_bytes(*bytes);
     }
-    for (index, bytes) in iv[..8].chunks_exact(4).enumerate() {
-        state[6 + index] = u32::from_le_bytes(bytes.try_into().unwrap());
+    for (index, bytes) in iv[..8].as_chunks::<4>().0.iter().enumerate() {
+        state[6 + index] = u32::from_le_bytes(*bytes);
     }
 }
 

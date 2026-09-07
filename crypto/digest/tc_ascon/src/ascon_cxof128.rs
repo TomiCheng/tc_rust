@@ -83,12 +83,11 @@ impl AsconCXof128 {
             state[0] ^= (z.len() as u64) << 3;
             p12(&mut state);
 
-            let mut chunks = z.chunks_exact(RATE);
-            for block in chunks.by_ref() {
-                state[0] ^= u64::from_le_bytes(block.try_into().unwrap());
+            let (chunks, rem) = z.as_chunks::<RATE>();
+            for block in chunks {
+                state[0] ^= u64::from_le_bytes(*block);
                 p12(&mut state);
             }
-            let rem = chunks.remainder();
             let mut last = [0u8; RATE];
             last[..rem.len()].copy_from_slice(rem);
             last[rem.len()] = 0x01;

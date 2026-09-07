@@ -111,7 +111,12 @@ fn bc_custom_s_box_vector() {
 
     // 交替遞增與遞減的列;不是標準表,但每列仍是排列。
     let mut table = [0u8; s_box::BYTES];
-    for (row, entries) in table.chunks_exact_mut(s_box::COLUMNS).enumerate() {
+    for (row, entries) in table
+        .as_chunks_mut::<{ s_box::COLUMNS }>()
+        .0
+        .iter_mut()
+        .enumerate()
+    {
         for (column, value) in entries.iter_mut().enumerate() {
             *value = if row % 2 == 0 {
                 column as u8

@@ -42,8 +42,8 @@ impl Md5Digest {
     fn compress(h: &mut [u32; 4], block: &[u8; 64]) {
         // MD5 為 little-endian:讀成 16 個 LE u32 字。
         let mut x = [0u32; 16];
-        for (i, chunk) in block.chunks_exact(4).enumerate() {
-            x[i] = u32::from_le_bytes(chunk.try_into().unwrap());
+        for (i, chunk) in block.as_chunks::<4>().0.iter().enumerate() {
+            x[i] = u32::from_le_bytes(*chunk);
         }
 
         // 四個基本函式(注意 G、K 與 MD4 不同)。

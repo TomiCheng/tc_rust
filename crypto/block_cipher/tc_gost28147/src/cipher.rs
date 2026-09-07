@@ -34,8 +34,8 @@ const DECRYPT_ORDER: [usize; ROUNDS] = [
 /// schedule, and only the order they are used in changes.
 pub(crate) fn expand_key(key: &[u8; KEY_BYTES]) -> [u32; SUBKEYS] {
     let mut subkeys = [0_u32; SUBKEYS];
-    for (word, chunk) in subkeys.iter_mut().zip(key.chunks_exact(4)) {
-        *word = u32::from_le_bytes(chunk.try_into().unwrap());
+    for (word, chunk) in subkeys.iter_mut().zip(key.as_chunks::<4>().0) {
+        *word = u32::from_le_bytes(*chunk);
     }
     subkeys
 }

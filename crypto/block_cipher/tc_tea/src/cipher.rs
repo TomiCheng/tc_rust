@@ -12,8 +12,8 @@ const KEY_WORDS: usize = KEY_BYTES / 4;
 /// Splits the key into its big-endian 32-bit words.
 fn key_words(key: &[u8; KEY_BYTES]) -> [u32; KEY_WORDS] {
     let mut words = [0_u32; KEY_WORDS];
-    for (word, chunk) in words.iter_mut().zip(key.chunks_exact(4)) {
-        *word = u32::from_be_bytes(chunk.try_into().unwrap());
+    for (word, chunk) in words.iter_mut().zip(key.as_chunks::<4>().0.iter()) {
+        *word = u32::from_be_bytes(*chunk);
     }
     words
 }

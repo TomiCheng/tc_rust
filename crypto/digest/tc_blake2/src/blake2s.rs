@@ -66,8 +66,8 @@ fn compress_portable(
     block: &[u8; BLOCK_LENGTH],
 ) {
     let mut message = [0u32; 16];
-    for (word, bytes) in message.iter_mut().zip(block.chunks_exact(4)) {
-        *word = u32::from_le_bytes(bytes.try_into().expect("4-byte BLAKE2s word"));
+    for (word, bytes) in message.iter_mut().zip(block.as_chunks::<4>().0.iter()) {
+        *word = u32::from_le_bytes(*bytes);
     }
 
     let mut state = [0u32; 16];
@@ -219,8 +219,8 @@ mod sse2 {
         // and all pointers refer to properly sized local arrays.
         unsafe {
             let mut message = [0u32; 16];
-            for (word, bytes) in message.iter_mut().zip(block.chunks_exact(4)) {
-                *word = u32::from_le_bytes(bytes.try_into().expect("4-byte BLAKE2s word"));
+            for (word, bytes) in message.iter_mut().zip(block.as_chunks::<4>().0.iter()) {
+                *word = u32::from_le_bytes(*bytes);
             }
 
             let original_low = set4(chain[0], chain[1], chain[2], chain[3]);

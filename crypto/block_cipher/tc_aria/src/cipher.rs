@@ -216,7 +216,7 @@ fn fe(state: &mut [u8; BLOCK_BYTES], round_key: &[u8; BLOCK_BYTES]) {
 }
 
 fn substitute_layer_1(state: &mut [u8; BLOCK_BYTES]) {
-    for chunk in state.chunks_exact_mut(4) {
+    for chunk in state.as_chunks_mut::<4>().0 {
         chunk[0] = SB1[usize::from(chunk[0])];
         chunk[1] = SB2[usize::from(chunk[1])];
         chunk[2] = SB3[usize::from(chunk[2])];
@@ -225,7 +225,7 @@ fn substitute_layer_1(state: &mut [u8; BLOCK_BYTES]) {
 }
 
 fn substitute_layer_2(state: &mut [u8; BLOCK_BYTES]) {
-    for chunk in state.chunks_exact_mut(4) {
+    for chunk in state.as_chunks_mut::<4>().0 {
         chunk[0] = SB3[usize::from(chunk[0])];
         chunk[1] = SB4[usize::from(chunk[1])];
         chunk[2] = SB1[usize::from(chunk[2])];

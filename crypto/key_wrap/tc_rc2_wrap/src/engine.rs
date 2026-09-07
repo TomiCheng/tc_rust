@@ -54,7 +54,7 @@ impl<R> Rc2WrapEngine<R> {
     fn encrypt_cbc(&mut self, buffer: &mut [u8], iv: &[u8; 8]) -> Result<(), Rc2WrapError> {
         let mut chain = *iv;
         let mut input = [0u8; BLOCK_BYTES];
-        for block in buffer.chunks_exact_mut(BLOCK_BYTES) {
+        for block in buffer.as_chunks_mut::<BLOCK_BYTES>().0 {
             for index in 0..BLOCK_BYTES {
                 input[index] = block[index] ^ chain[index];
             }
@@ -71,7 +71,7 @@ impl<R> Rc2WrapEngine<R> {
     fn decrypt_cbc(&mut self, buffer: &mut [u8], iv: &[u8; 8]) -> Result<(), Rc2WrapError> {
         let mut chain = *iv;
         let mut input = [0u8; BLOCK_BYTES];
-        for block in buffer.chunks_exact_mut(BLOCK_BYTES) {
+        for block in buffer.as_chunks_mut::<BLOCK_BYTES>().0 {
             input.copy_from_slice(block);
             self.cipher
                 .process_block(&input, block)
