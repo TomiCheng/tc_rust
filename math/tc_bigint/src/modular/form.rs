@@ -3,6 +3,8 @@
 use core::ops::{Add, Mul, Sub};
 
 #[cfg(feature = "alloc")]
+use super::traits::Retrieve;
+
 use super::mul::montgomery_mul;
 use super::mul::{fixed_add_mod, fixed_montgomery_mul, fixed_sub_mod};
 use super::params::FixedMontyParams;
@@ -20,25 +22,6 @@ use crate::Limb;
 use crate::limb::slice::div_rem;
 
 use crate::{Choice, ConditionallySelectable, ConstantTimeEq};
-
-/// Recovers an ordinary integer from an alternate arithmetic representation.
-pub trait Retrieve {
-    /// Recovered integer type.
-    type Output;
-
-    /// Returns the represented ordinary integer.
-    ///
-    /// ```
-    /// use tc_bigint::{
-    ///     Odd, U128,
-    ///     modular::{FixedMontyForm, FixedMontyParams, Retrieve},
-    /// };
-    /// let params = FixedMontyParams::new(Odd::new(U128::from(101_u8)).unwrap());
-    /// let value = FixedMontyForm::new(&U128::from(108_u8), params);
-    /// assert_eq!(Retrieve::retrieve(&value), U128::from(7_u8));
-    /// ```
-    fn retrieve(&self) -> Self::Output;
-}
 
 /// A dynamically sized value in Montgomery form.
 ///

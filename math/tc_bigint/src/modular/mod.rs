@@ -7,19 +7,20 @@ mod mul;
 mod ops;
 mod params;
 mod pow;
+mod traits;
 
+pub use form::FixedMontyForm;
 #[cfg(feature = "alloc")]
 pub use form::MontyForm;
-pub use form::{FixedMontyForm, Retrieve};
 #[cfg(feature = "alloc")]
 pub use inverse::{
     ModOddInverseError, checked_mod_odd_inverse, checked_mod_odd_inverse_var, mod_odd_inverse,
     mod_odd_inverse_var, mod_odd_is_coprime, mod_odd_is_coprime_var,
 };
-pub use monty::{Monty, MontyInteger};
 pub use params::FixedMontyParams;
 #[cfg(feature = "alloc")]
 pub use params::MontyParams;
+pub use traits::{Monty, MontyInteger, Retrieve};
 
 pub(crate) use inverse::fixed_mod_inverse;
 pub(crate) use pow::fixed_mod_pow;

@@ -4,70 +4,15 @@
 //! while integers identify their representation through an associated type. tc_bigint returns inverses in an ordinary [`Option`],
 //! without introducing a dependency on `subtle` for this abstraction.
 
-use core::ops::{Add, Mul, Sub};
-
 #[cfg(feature = "alloc")]
 use crate::BigUint;
 use crate::{FixedBigUint, Odd};
 
+use super::traits::{Monty, MontyInteger};
+
 use super::{FixedMontyForm, FixedMontyParams};
 #[cfg(feature = "alloc")]
 use super::{MontyForm, MontyParams};
-
-/// A Montgomery form with reusable parameters.
-pub trait Monty:
-    Clone
-    + Eq
-    + Sized
-    + for<'a> Add<&'a Self, Output = Self>
-    + for<'a> Sub<&'a Self, Output = Self>
-    + for<'a> Mul<&'a Self, Output = Self>
-{
-    /// The integer type obtained when leaving the Montgomery domain.
-    type Integer;
-
-    /// The precomputed parameters required by this representation.
-    type Params: Clone;
-
-    /// Creates parameters from an odd modulus; execution time may depend on the modulus.
-    fn new_params_vartime(modulus: Odd<Self::Integer>) -> Self::Params;
-
-    /// Converts an integer into the specified Montgomery domain.
-    fn new(value: &Self::Integer, params: Self::Params) -> Self;
-
-    /// Creates zero in the specified domain.
-    fn zero(params: Self::Params) -> Self;
-
-    /// Creates one in the specified domain.
-    fn one(params: Self::Params) -> Self;
-
-    /// Returns the precomputed parameters for this value.
-    fn params(&self) -> &Self::Params;
-
-    /// Returns the modulus of this value's domain.
-    fn modulus(&self) -> &Self::Integer;
-
-    /// Converts out of the Montgomery domain.
-    fn retrieve(&self) -> Self::Integer;
-
-    /// Squares the value within the same domain.
-    fn square(&self) -> Self;
-
-    /// Doubles the value within the same domain.
-    fn double(&self) -> Self;
-
-    /// Raises the value to an exponent of the associated integer type.
-    fn pow(&self, exponent: &Self::Integer) -> Self;
-
-    /// Returns the multiplicative inverse, or `None` if it does not exist.
-    fn invert(&self) -> Option<Self>;
-}
-
-/// An association from an underlying integer to its Montgomery form.
-pub trait MontyInteger: Sized {
-    /// The Montgomery representation associated with this integer.
-    type Monty: Monty<Integer = Self>;
-}
 
 #[cfg(feature = "alloc")]
 impl Monty for MontyForm<BigUint> {
