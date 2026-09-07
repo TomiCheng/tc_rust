@@ -1,5 +1,6 @@
 #![no_std]
-#![warn(missing_docs)]
+#![deny(missing_docs)]
+#![forbid(unsafe_code)]
 //! Fixed-width conditional selection and equality without heap allocation.
 //!
 //! [`Choice`] holds one bit. [`ConditionallySelectable`] chooses between two

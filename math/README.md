@@ -9,7 +9,6 @@ Depend on the crate that provides the abstraction you need; there is no umbrella
 
 | Crate | Functionality | Runtime and allocation |
 | --- | --- | --- |
-| [`tc_constant_time`](tc_constant_time/README.md) | `Choice`, masked conditional selection, and equality for supported unsigned integers and fixed-size arrays | Core-only `no_std`; no dependencies or heap allocation |
 | [`tc_limb`](tc_limb/README.md) | `Limb` and `LimbArray<N>`: unsigned fixed-width storage, carry/borrow arithmetic, wide multiplication, division, GCD, and bit operations | Core-only `no_std`; no heap allocation |
 | [`tc_bigint`](tc_bigint/README.md) | Fixed-width and arbitrary-precision signed/unsigned integers, encoding, numeric traits, modular and Montgomery arithmetic, and general-purpose probable-prime operations | `no_std`; fixed-width arithmetic needs no allocator; dynamic integers require `alloc`; `rand_core` enables random operations |
 | [`tc_binpoly`](tc_binpoly/README.md) | Polynomial arithmetic over `GF(2)`, including carryless multiplication, squaring, reduction, and inversion; fixed and dynamic representations | `no_std`; fixed storage and core arithmetic work without allocation; defaults enable `alloc`, `std`, and optional x86 acceleration |
@@ -28,9 +27,9 @@ that a crate disables in its own dependency declaration.
 
 ## Choosing a layer
 
-Use `tc_constant_time` when only masked selection or equality is needed. It
-contains compiler/timing primitives rather than mathematical operations; its
-location here avoids a separate `core/` directory containing just one crate.
+Use [`tc_constant_time`](../core/tc_constant_time/README.md) when only masked
+selection or equality is needed. These compiler/timing primitives live under
+`core/` and are shared by mathematical backends and cryptographic algorithms.
 
 Use `tc_limb` to implement fixed-width arithmetic over raw unsigned limbs. Use
 `tc_bigint` for integer semantics, signed values, conversions, overflow policies,

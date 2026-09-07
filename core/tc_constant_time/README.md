@@ -7,8 +7,8 @@ allocation, or `unsafe` code.
 Requires Rust 1.85 or later (edition 2024).
 
 `tc_constant_time` provides compiler/timing primitives rather than mathematical
-operations. It lives under `math/` to avoid a separate `core/` directory containing
-only one crate.
+operations. It lives under `core/` so both cryptographic algorithms and
+mathematical backends can share it without depending on each other's layer.
 
 ## API
 
