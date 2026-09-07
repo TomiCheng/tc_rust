@@ -32,6 +32,12 @@ pub trait SecretField: FieldElement + ConditionallySelectable + ConstantTimeEq {
 pub trait SecretCurve: Curve {
     /// Selects binary homogeneous formulas instead of prime Jacobian formulas.
     const BINARY: bool;
+
+    /// 將公開的體元素位元表示轉成曲線的純量整數型別。
+    ///
+    /// ECDSA 會用這個入口把正規化後的 affine X 座標轉成整數；若純量型別
+    /// 無法容納完整座標，回傳 `None`。
+    fn field_element_to_scalar(value: &Self::Field) -> Option<Self::Scalar>;
 }
 
 /// A point whose coordinates may be secret. It deliberately has no Debug or Eq.

@@ -3,7 +3,9 @@
 use crate::specialized_curve::SpecializedCurve;
 use crate::specialized_field::{PrimeFieldSpec, SpecializedFieldElement};
 use crate::{SecP256R1Curve, SecP256R1Field, SecP256R1FieldElement};
-use tc_ec_core::{Choice, ConditionallySelectable, ConstantTimeEq, SecretCurve, SecretField};
+use tc_ec_core::{
+    Choice, ConditionallySelectable, ConstantTimeEq, PrimeFieldElement, SecretCurve, SecretField,
+};
 
 fn subtract<const N: usize>(a: &[u32; N], b: &[u32; N]) -> ([u32; N], u8) {
     let mut borrow = 0_i64;
@@ -105,6 +107,10 @@ impl<S: PrimeFieldSpec<N>, const N: usize> SecretField for SpecializedFieldEleme
 }
 impl<S: PrimeFieldSpec<N>, const N: usize> SecretCurve for SpecializedCurve<S, N> {
     const BINARY: bool = false;
+
+    fn field_element_to_scalar(value: &Self::Field) -> Option<Self::Scalar> {
+        Some(value.to_big_uint())
+    }
 }
 
 impl ConditionallySelectable for SecP256R1FieldElement {
@@ -139,4 +145,8 @@ impl SecretField for SecP256R1FieldElement {
 }
 impl SecretCurve for SecP256R1Curve {
     const BINARY: bool = false;
+
+    fn field_element_to_scalar(value: &Self::Field) -> Option<Self::Scalar> {
+        Some(value.to_big_uint())
+    }
 }

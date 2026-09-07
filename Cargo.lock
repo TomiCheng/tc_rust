@@ -900,6 +900,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_ecdsa"
+version = "0.1.0"
+dependencies = [
+ "rand_core",
+ "tc_bigint",
+ "tc_digest",
+ "tc_ec_core",
+ "tc_f2m_custom",
+ "tc_fp_curve",
+ "tc_fp_custom",
+ "tc_hmac",
+ "tc_macs",
+ "tc_params",
+ "tc_sha",
+]
+
+[[package]]
 name = "tc_ed25519"
 version = "0.1.0"
 dependencies = [

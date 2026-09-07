@@ -1,0 +1,22 @@
+[package]
+name = "tc_ecdsa"
+description = "ECDSA signatures over fixed-width short-Weierstrass curves."
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+rand_core = { workspace = true }
+tc_bigint = { version = "0.1.0", path = "../../math/tc_bigint", default-features = false, features = ["alloc", "rand_core"] }
+tc_digest = { version = "0.1.0", path = "../tc_digest" }
+tc_ec_core = { version = "0.1.0", path = "../../math/tc_ec_core" }
+tc_hmac = { version = "0.1.0", path = "../macs/tc_hmac" }
+tc_macs = { version = "0.1.0", path = "../tc_macs" }
+tc_params = { version = "0.1.0", path = "../tc_params" }
+
+[dev-dependencies]
+tc_f2m_custom = { version = "0.1.0", path = "../../math/tc_f2m_custom" }
+tc_fp_curve = { version = "0.1.0", path = "../../math/tc_fp_curve" }
+tc_fp_custom = { version = "0.1.0", path = "../../math/tc_fp_custom" }
+tc_sha = { version = "0.1.0", path = "../digest/tc_sha" }
