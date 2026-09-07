@@ -40,7 +40,7 @@ fn modular_power_matches_known_value() {
 fn bit_operations_match_the_le_value() {
     let value = BigUint::from(0b101100_u8);
 
-    assert_eq!(value.bits(), 6);
+    assert_eq!(value.bit_length(), 6);
     assert_eq!(value.bit_count(), 3);
     assert_eq!(value.lowest_set_bit(), Some(2));
     assert_eq!(value.set_bit(0), BigUint::from(0b101101_u8));
@@ -56,12 +56,12 @@ fn setting_or_flipping_a_low_bit_preserves_existing_high_limbs() {
     let set = value.set_bit(0);
     assert!(set.test_bit(high));
     assert!(set.test_bit(0));
-    assert_eq!(set.bits(), high + 1);
+    assert_eq!(set.bit_length(), high + 1);
 
     let flipped = value.flip_bit(1);
     assert!(flipped.test_bit(high));
     assert!(flipped.test_bit(1));
-    assert_eq!(flipped.bits(), high + 1);
+    assert_eq!(flipped.bit_length(), high + 1);
 }
 
 #[test]

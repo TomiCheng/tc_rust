@@ -214,7 +214,7 @@ fn uneven_key(dp: &BigUint) -> [BigUint; 8] {
 fn unequal_factor_width_selects_from_the_larger_factor_and_computes_correctly() {
     let dp = BigUint::from(19_u8);
     let values = uneven_key(&dp);
-    assert_eq!(values[3].bits(), values[4].bits() + 1);
+    assert_eq!(values[3].bit_length(), values[4].bit_length() + 1);
 
     let private = RsaKeyParameters::new(true, &values[0], &values[2]).unwrap();
     let mut plain =

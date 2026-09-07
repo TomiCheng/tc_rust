@@ -112,7 +112,7 @@ pub(super) fn random_big_uint_below<R: Rng + ?Sized>(upper: &BigUint, rng: &mut 
     loop {
         let candidate = <BigUint as RandomBits>::random_bits(
             rng,
-            u32::try_from(upper.bits()).expect("integer exceeds u32::MAX bits"),
+            u32::try_from(upper.bit_length()).expect("integer exceeds u32::MAX bits"),
         );
         if &candidate < upper {
             return candidate;

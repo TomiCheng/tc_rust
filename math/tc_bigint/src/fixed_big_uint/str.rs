@@ -97,3 +97,10 @@ impl_fixed_uint_format!(Binary, 2, false, "0b");
 impl_fixed_uint_format!(Octal, 8, false, "0o");
 impl_fixed_uint_format!(LowerHex, 16, false, "0x");
 impl_fixed_uint_format!(UpperHex, 16, true, "0x");
+
+#[cfg(feature = "alloc")]
+impl<const N: usize> crate::ToStrRadix for FixedBigUint<N> {
+    fn to_str_radix(&self, radix: u32) -> alloc::string::String {
+        FixedBigUint::<N>::to_str_radix(self, radix)
+    }
+}

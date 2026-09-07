@@ -170,7 +170,7 @@ fn validate_modulus(modulus: &BigUint) -> Result<(), RsaError> {
     if !modulus.test_bit(0) {
         return Err(RsaError::EvenModulus);
     }
-    if modulus.bits() > 4096 {
+    if modulus.bit_length() > 4096 {
         return Err(RsaError::InvalidModulus);
     }
 

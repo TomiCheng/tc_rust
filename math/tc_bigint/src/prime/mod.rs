@@ -360,7 +360,7 @@ impl RandomMod for BigUint {
         modulus: &NonZero<Self>,
     ) -> Result<Self, R::Error> {
         loop {
-            let candidate = try_random_big_uint(modulus.bits(), rng)?;
+            let candidate = try_random_big_uint(modulus.bit_length(), rng)?;
             if candidate < **modulus {
                 return Ok(candidate);
             }
@@ -568,7 +568,7 @@ mod tests {
     fn dynamic_random_and_prime_operations_match_fixed_semantics() {
         let mut rng = SeqRng(0x1234_5678_9abc_def0);
         for bits in [0_u32, 1, 7, 64, 65, 127, 256] {
-            assert!(BigUint::random_bits(&mut rng, bits).bits() <= bits as usize);
+            assert!(BigUint::random_bits(&mut rng, bits).bit_length() <= bits as usize);
             let value = BigInt::random_bits(&mut rng, bits);
             assert!(!value.is_negative());
             assert!(value.bit_length() <= bits as usize);
@@ -597,7 +597,7 @@ mod tests {
         assert!(BigInt::from(-97_i16).is_probable_prime(40, &mut rng));
 
         let prime = BigUint::probable_prime(&mut rng, 32);
-        assert_eq!(prime.bits(), 32);
+        assert_eq!(prime.bit_length(), 32);
         assert!(prime.is_probable_prime(40, &mut rng));
     }
 
@@ -607,7 +607,7 @@ mod tests {
         let mut rng = SeqRng(0x6a09_e667_f3bc_c909);
         for bits in [128_u32, 256, 512] {
             let prime = BigUint::probable_prime(&mut rng, bits);
-            assert_eq!(prime.bits(), bits as usize);
+            assert_eq!(prime.bit_length(), bits as usize);
             assert!(prime.is_probable_prime(40, &mut rng));
         }
     }
@@ -760,7 +760,10 @@ mod tests {
         );
         assert_eq!(positive_big_int(&BigUint::from(13_u8)), BigInt::from(13_u8));
 
-        assert!(<BigUint as RandomBits>::random_bits_with_precision(&mut rng, 17, 32).bits() <= 17);
+        assert!(
+            <BigUint as RandomBits>::random_bits_with_precision(&mut rng, 17, 32).bit_length()
+                <= 17
+        );
         assert!(
             <BigInt as RandomBits>::random_bits_with_precision(&mut rng, 17, 32).bit_length() <= 17
         );

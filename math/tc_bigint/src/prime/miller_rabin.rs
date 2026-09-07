@@ -157,7 +157,7 @@ pub(super) fn big_uint_is_probable_prime<R: Rng + ?Sized>(
     let witness_range = value - &BigUint::from(3_u8);
     let params = MontyParams::new(Odd::new(value.clone()).expect("candidate is odd"));
 
-    'witness: for _ in 0..miller_rabin_rounds(certainty, value.bits(), randomly_selected) {
+    'witness: for _ in 0..miller_rabin_rounds(certainty, value.bit_length(), randomly_selected) {
         let witness = random_big_uint_below(&witness_range, rng) + &two;
         let mut result = MontyForm::new(&witness, params.clone()).pow(&d);
         let mut residue = result.retrieve();

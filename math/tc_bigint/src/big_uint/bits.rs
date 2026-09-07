@@ -5,7 +5,7 @@ use crate::{BigUint, Limb, Word};
 
 impl BigUint {
     /// Returns the number of significant bits.
-    pub fn bits(&self) -> usize {
+    pub fn bit_length(&self) -> usize {
         crate::limb::slice::bit_len(&self.limbs)
     }
 
@@ -90,7 +90,7 @@ impl BitOps for BigUint {
     type Output = Self;
 
     fn bit_length(&self) -> usize {
-        self.bits()
+        self.bit_length()
     }
     fn bit_count(&self) -> usize {
         BigUint::bit_count(self)
@@ -127,8 +127,8 @@ mod tests {
     #[test]
     fn and_not_and_low_bit_changes_preserve_high_limbs() {
         let high = BigUint::from(1_u8).set_bit(127);
-        assert_eq!(high.set_bit(0).bits(), 128);
-        assert_eq!(high.flip_bit(0).bits(), 128);
+        assert_eq!(high.set_bit(0).bit_length(), 128);
+        assert_eq!(high.flip_bit(0).bit_length(), 128);
         assert_eq!(
             AndNot::and_not(&BigUint::from(0b1100_u8), &BigUint::from(0b1010_u8)),
             BigUint::from(0b0100_u8)

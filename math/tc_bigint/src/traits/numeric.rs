@@ -130,6 +130,20 @@ pub trait Signed: Sized + Num + Neg<Output = Self> {
 
     /// Returns whether the value is negative.
     fn is_negative(&self) -> bool;
+
+    /// Returns `-1`, `0` or `1`, the sign as a plain integer.
+    ///
+    /// [`signum`](Self::signum) answers the same question in `Self`; this form
+    /// is for callers that want to branch on the sign directly.
+    fn sign(&self) -> i32 {
+        if self.is_negative() {
+            -1
+        } else if self.is_positive() {
+            1
+        } else {
+            0
+        }
+    }
 }
 
 /// Marker trait for numeric values which cannot be negative.

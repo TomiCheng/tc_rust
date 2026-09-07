@@ -41,6 +41,8 @@ pub use non_zero::NonZero;
 pub use odd::Odd;
 #[cfg(feature = "rand_core")]
 pub use rand_core;
+#[cfg(feature = "alloc")]
+pub use traits::ToStrRadix;
 pub use traits::{
     AndNot, ArrayEncoding, BitOps, Bounded, CheckedAdd, CheckedDiv, CheckedMul, CheckedNeg,
     CheckedRem, CheckedShl, CheckedShr, CheckedSub, DivRem, FromPrimitive, Gcd, ModAdd, ModInverse,

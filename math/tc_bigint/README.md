@@ -423,7 +423,7 @@ impl TryRng for DemoRng {
 
 let mut rng = DemoRng(7);
 let prime = BigUint::probable_prime(&mut rng, 32);
-assert_eq!(prime.bits(), 32);
+assert_eq!(prime.bit_length(), 32);
 assert!(prime.is_probable_prime(40, &mut rng));
 assert_eq!(
     BigUint::from(7_u8).next_probable_prime(&mut rng),

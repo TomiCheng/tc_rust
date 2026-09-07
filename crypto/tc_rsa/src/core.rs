@@ -90,7 +90,7 @@ macro_rules! with_standard_inner {
 
 impl StandardKey {
     fn new(params: &RsaKeyParameters<'_>) -> Result<Self, RsaError> {
-        match bucket(params.modulus().bits())? {
+        match bucket(params.modulus().bit_length())? {
             1024 => Ok(Self::Bits1024(StandardInner::new(params)?)),
             2048 => Ok(Self::Bits2048(StandardInner::new(params)?)),
             3072 => Ok(Self::Bits3072(StandardInner::new(params)?)),
@@ -232,7 +232,7 @@ macro_rules! with_crt_inner {
 
 impl RsaPrivateCrtKey {
     fn new_by_half_width(params: &RsaPrivateCrtKeyParameters<'_>) -> Result<Self, RsaError> {
-        match params.p().bits().max(params.q().bits()) {
+        match params.p().bit_length().max(params.q().bit_length()) {
             0..=512 => Ok(Self::Bits1024(CrtInner::new(params)?)),
             513..=1024 => Ok(Self::Bits2048(CrtInner::new(params)?)),
             1025..=1536 => Ok(Self::Bits3072(CrtInner::new(params)?)),
@@ -276,11 +276,11 @@ impl RsaCoreEngine {
         let (key, bit_size) = match params {
             RsaKey::Standard(params) => (
                 CoreKey::Standard(StandardKey::new(params)?),
-                params.modulus().bits(),
+                params.modulus().bit_length(),
             ),
             RsaKey::PrivateCrt(params) => (
                 CoreKey::PrivateCrt(RsaPrivateCrtKey::new_by_half_width(params)?),
-                params.modulus().bits(),
+                params.modulus().bit_length(),
             ),
         };
         Ok(Self {

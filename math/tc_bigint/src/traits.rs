@@ -18,6 +18,8 @@ pub use checked::{
     OverflowingAdd, OverflowingMul, OverflowingSub, SaturatingAdd, SaturatingMul, SaturatingSub,
     WrappingAdd, WrappingMul, WrappingNeg, WrappingSub,
 };
+#[cfg(feature = "alloc")]
+pub use convert::ToStrRadix;
 pub use convert::{FromPrimitive, ToPrimitive};
 pub use numeric::{
     Bounded, Num, NumAssign, NumAssignOps, NumAssignRef, NumOps, NumRef, One, RefNum, Signed,

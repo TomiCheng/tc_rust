@@ -1,5 +1,19 @@
 //! Conversions to and from primitive numeric types.
 
+/// Formatting into a radix string, the counterpart of
+/// [`Num::from_str_radix`](crate::Num::from_str_radix).
+///
+/// The result is heap allocated, so this contract is separate from `Num` and
+/// available only with the `alloc` feature.
+#[cfg(feature = "alloc")]
+pub trait ToStrRadix {
+    /// Formats the value in radix `2..=36`.
+    ///
+    /// # Panics
+    /// Panics if the radix is outside `2..=36`.
+    fn to_str_radix(&self, radix: u32) -> alloc::string::String;
+}
+
 /// Conversion from primitive numeric types.
 pub trait FromPrimitive: Sized {
     /// Converts an `isize`.

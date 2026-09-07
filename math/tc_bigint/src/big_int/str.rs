@@ -84,3 +84,10 @@ impl_big_int_format!(Binary, 2, false, "0b");
 impl_big_int_format!(Octal, 8, false, "0o");
 impl_big_int_format!(LowerHex, 16, false, "0x");
 impl_big_int_format!(UpperHex, 16, true, "0x");
+
+#[cfg(feature = "alloc")]
+impl crate::ToStrRadix for BigInt {
+    fn to_str_radix(&self, radix: u32) -> String {
+        BigInt::to_str_radix(self, radix)
+    }
+}
