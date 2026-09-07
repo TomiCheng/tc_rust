@@ -1,17 +1,13 @@
 //! Bitwise AND operations for [`FixedBigInt`].
 
-use crate::{FixedBigInt, Limb};
+use crate::FixedBigInt;
 use core::ops::{BitAnd, BitAndAssign};
 
 impl<const N: usize> BitAnd for FixedBigInt<N> {
     type Output = Self;
     fn bitand(self, rhs: Self) -> Self {
         Self {
-            limbs: crate::LimbArray::new(core::array::from_fn(|index| {
-                Limb::new(
-                    self.limbs.as_limbs()[index].to_word() & rhs.limbs.as_limbs()[index].to_word(),
-                )
-            })),
+            limbs: self.limbs.bitand(&rhs.limbs),
         }
     }
 }

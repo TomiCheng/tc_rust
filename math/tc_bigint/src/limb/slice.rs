@@ -74,11 +74,9 @@ fn schoolbook_mul(lhs: &[Limb], rhs: &[Limb]) -> Vec<Limb> {
         let mut carry = 0 as Word;
         for (right_index, right) in rhs.iter().enumerate() {
             let index = left_index + right_index;
-            let wide = left.to_word() as WideWord * right.to_word() as WideWord
-                + result[index].to_word() as WideWord
-                + carry as WideWord;
-            result[index] = Limb::new(wide as Word);
-            carry = (wide >> Word::BITS) as Word;
+            let (low, high) = (*left).carrying_mul_add(*right, result[index], Limb::new(carry));
+            result[index] = low;
+            carry = high.to_word();
         }
         result[left_index + rhs.len()] = Limb::new(carry);
     }
@@ -466,9 +464,9 @@ pub(crate) fn mul_small(words: &mut Vec<Limb>, value: Word) {
 
     let mut carry = 0 as Word;
     for word in words.iter_mut() {
-        let wide = word.to_word() as WideWord * value as WideWord + carry as WideWord;
-        *word = Limb::new(wide as Word);
-        carry = (wide >> Word::BITS) as Word;
+        let (low, high) = word.carrying_mul_add(Limb::new(value), Limb::new(0), Limb::new(carry));
+        *word = low;
+        carry = high.to_word();
     }
     if carry != 0 {
         words.push(Limb::new(carry));

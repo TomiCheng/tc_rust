@@ -40,11 +40,13 @@ pub(super) fn montgomery_mul(
         let multiplier = product[offset].to_word().wrapping_mul(inverse);
         let mut carry = 0 as Word;
         for index in 0..len {
-            let wide = multiplier as WideWord * modulus[index].to_word() as WideWord
-                + product[offset + index].to_word() as WideWord
-                + carry as WideWord;
-            product[offset + index] = Limb::new(wide as Word);
-            carry = (wide >> Word::BITS) as Word;
+            let (low, high) = Limb::new(multiplier).carrying_mul_add(
+                modulus[index],
+                product[offset + index],
+                Limb::new(carry),
+            );
+            product[offset + index] = low;
+            carry = high.to_word();
         }
 
         let mut index = offset + len;
@@ -93,11 +95,10 @@ pub(super) fn fixed_montgomery_mul<const N: usize>(
     for right in rhs {
         let mut carry = 0 as Word;
         for index in 0..N {
-            let wide = result[index].to_word() as WideWord
-                + lhs[index].to_word() as WideWord * right.to_word() as WideWord
-                + carry as WideWord;
-            result[index] = Limb::new(wide as Word);
-            carry = (wide >> Word::BITS) as Word;
+            let (low, next_carry) =
+                lhs[index].carrying_mul_add(*right, result[index], Limb::new(carry));
+            result[index] = low;
+            carry = next_carry.to_word();
         }
         let wide = high as WideWord + carry as WideWord;
         high = wide as Word;
@@ -106,15 +107,17 @@ pub(super) fn fixed_montgomery_mul<const N: usize>(
         let multiplier = result[0].to_word().wrapping_mul(inverse);
         carry = 0;
         for index in 0..N {
-            let wide = result[index].to_word() as WideWord
-                + multiplier as WideWord * modulus[index].to_word() as WideWord
-                + carry as WideWord;
+            let (low, next_carry) = Limb::new(multiplier).carrying_mul_add(
+                modulus[index],
+                result[index],
+                Limb::new(carry),
+            );
             if index != 0 {
-                result[index - 1] = Limb::new(wide as Word);
+                result[index - 1] = low;
             } else {
-                debug_assert_eq!(wide as Word, 0);
+                debug_assert_eq!(low.to_word(), 0);
             }
-            carry = (wide >> Word::BITS) as Word;
+            carry = next_carry.to_word();
         }
         let wide = high as WideWord + carry as WideWord;
         result[N - 1] = Limb::new(wide as Word);

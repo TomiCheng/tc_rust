@@ -63,7 +63,8 @@ impl<const N: usize> FixedBigUint<N> {
     /// assert_eq!(square, U::max_value().mul_wide(&U::max_value()));
     /// ```
     pub fn square_wide(&self) -> (Self, Self) {
-        self.mul_wide(self)
+        let (low, high) = self.limbs.square_wide();
+        (Self { limbs: low }, Self { limbs: high })
     }
 }
 

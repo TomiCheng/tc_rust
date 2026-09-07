@@ -16,7 +16,6 @@ mod error;
 mod fixed_big_int;
 mod fixed_big_uint;
 mod format;
-#[allow(dead_code)]
 mod limb;
 pub mod modular;
 mod non_zero;

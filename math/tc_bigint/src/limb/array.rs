@@ -77,11 +77,10 @@ impl<const N: usize> LimbArray<N> {
                         overflow |= left.to_word() != 0 && right.to_word() != 0;
                         continue;
                     }
-                    let wide = left.to_word() as WideWord * right.to_word() as WideWord
-                        + result[index].to_word() as WideWord
-                        + carry as WideWord;
-                    result[index] = Limb::new(wide as Word);
-                    carry = (wide >> Word::BITS) as Word;
+                    let (low, high) =
+                        (*left).carrying_mul_add(*right, result[index], Limb::new(carry));
+                    result[index] = low;
+                    carry = high.to_word();
                 }
                 overflow |= carry != 0;
             }
@@ -110,16 +109,14 @@ impl<const N: usize> LimbArray<N> {
                     } else {
                         high[index - N].to_word()
                     };
-                    let wide = left.to_word() as WideWord * right.to_word() as WideWord
-                        + current as WideWord
-                        + carry as WideWord;
-                    let output = Limb::new(wide as Word);
+                    let (output, next_carry) =
+                        (*left).carrying_mul_add(*right, Limb::new(current), Limb::new(carry));
                     if index < N {
                         low[index] = output;
                     } else {
                         high[index - N] = output;
                     }
-                    carry = (wide >> Word::BITS) as Word;
+                    carry = next_carry.to_word();
                 }
                 if N != 0 {
                     high[left_index] = Limb::new(carry);
@@ -143,6 +140,8 @@ impl<const N: usize> LimbArray<N> {
     /// Adds the full product to a double-width accumulator, returning an overflow flag beyond `2N` limbs.
     ///
     /// Updates `low` and `high` in place, retaining the result modulo `2^(2N * Word::BITS)` on overflow.
+    // 只有測試消費：mul_add_to 與 shr_one 是既有回歸測試的入口。
+    #[allow(dead_code)]
     pub fn mul_add_to(&self, rhs: &Self, low: &mut Self, high: &mut Self) -> bool {
         {
             let lhs = &self.0;
@@ -226,6 +225,34 @@ impl<const N: usize> LimbArray<N> {
                         + (Word::BITS - words[index].to_word().leading_zeros()) as usize
                 })
         }
+    }
+
+    /// Returns the bitwise AND of every limb pair.
+    pub fn bitand(&self, rhs: &Self) -> Self {
+        Self(core::array::from_fn(|index| {
+            Limb::new(self.0[index].to_word() & rhs.0[index].to_word())
+        }))
+    }
+
+    /// Returns the bitwise OR of every limb pair.
+    pub fn bitor(&self, rhs: &Self) -> Self {
+        Self(core::array::from_fn(|index| {
+            Limb::new(self.0[index].to_word() | rhs.0[index].to_word())
+        }))
+    }
+
+    /// Returns the bitwise exclusive OR of every limb pair.
+    pub fn bitxor(&self, rhs: &Self) -> Self {
+        Self(core::array::from_fn(|index| {
+            Limb::new(self.0[index].to_word() ^ rhs.0[index].to_word())
+        }))
+    }
+
+    /// Returns the bitwise complement of every limb, keeping the fixed width.
+    pub fn not(&self) -> Self {
+        Self(core::array::from_fn(|index| {
+            Limb::new(!self.0[index].to_word())
+        }))
     }
 
     /// Tests the bit at `index`, with index zero denoting the least significant bit.
@@ -318,6 +345,8 @@ impl<const N: usize> LimbArray<N> {
     }
 
     /// Shifts right logically by one bit in place, discarding the lowest bit; zero width is unchanged.
+    // 只有測試消費：mul_add_to 與 shr_one 是既有回歸測試的入口。
+    #[allow(dead_code)]
     pub fn shr_one(&mut self) {
         {
             let words = &mut self.0;
@@ -331,6 +360,8 @@ impl<const N: usize> LimbArray<N> {
     }
 
     /// Shifts left by one bit in place and returns the highest bit shifted out; false for zero width.
+    // 只有測試消費：與 shr_one 成對，是既有回歸測試的入口。
+    #[allow(dead_code)]
     pub fn shl_one(&mut self) -> bool {
         Self::shl_one_words(&mut self.0)
     }
@@ -348,39 +379,6 @@ impl<const N: usize> LimbArray<N> {
         (result, carry.to_word() != 0)
     }
 
-    fn sub_words(lhs: &[Limb; N], rhs: &[Limb; N]) -> ([Limb; N], bool) {
-        let mut result = [Limb::new(0); N];
-        let mut borrow = Limb::new(0);
-        for index in 0..N {
-            (result[index], borrow) = lhs[index].borrowing_sub(rhs[index], borrow);
-        }
-        (result, borrow.to_word() != 0)
-    }
-
-    fn mul_words(lhs: &[Limb; N], rhs: &[Limb; N]) -> ([Limb; N], bool) {
-        let mut result = [Limb::new(0); N];
-        let mut overflow = false;
-
-        for (left_index, left) in lhs.iter().enumerate() {
-            let mut carry = 0 as Word;
-            for (right_index, right) in rhs.iter().enumerate() {
-                let index = left_index + right_index;
-                if index >= N {
-                    overflow |= left.to_word() != 0 && right.to_word() != 0;
-                    continue;
-                }
-                let wide = left.to_word() as WideWord * right.to_word() as WideWord
-                    + result[index].to_word() as WideWord
-                    + carry as WideWord;
-                result[index] = Limb::new(wide as Word);
-                carry = (wide >> Word::BITS) as Word;
-            }
-            overflow |= carry != 0;
-        }
-
-        (result, overflow)
-    }
-
     #[inline]
     fn mul_wide_words(lhs: &[Limb; N], rhs: &[Limb; N]) -> ([Limb; N], [Limb; N]) {
         let mut low = [Limb::new(0); N];
@@ -395,16 +393,14 @@ impl<const N: usize> LimbArray<N> {
                 } else {
                     high[index - N].to_word()
                 };
-                let wide = left.to_word() as WideWord * right.to_word() as WideWord
-                    + current as WideWord
-                    + carry as WideWord;
-                let output = Limb::new(wide as Word);
+                let (output, next_carry) =
+                    (*left).carrying_mul_add(*right, Limb::new(current), Limb::new(carry));
                 if index < N {
                     low[index] = output;
                 } else {
                     high[index - N] = output;
                 }
-                carry = (wide >> Word::BITS) as Word;
+                carry = next_carry.to_word();
             }
             if N != 0 {
                 high[left_index] = Limb::new(carry);
@@ -413,34 +409,6 @@ impl<const N: usize> LimbArray<N> {
 
         (low, high)
     }
-    #[inline]
-    fn square_wide_words(value: &[Limb; N]) -> ([Limb; N], [Limb; N]) {
-        Self::mul_wide_words(value, value)
-    }
-    fn mul_add_to_words(
-        lhs: &[Limb; N],
-        rhs: &[Limb; N],
-        low: &mut [Limb; N],
-        high: &mut [Limb; N],
-    ) -> bool {
-        let (product_low, product_high) = Self::mul_wide_words(lhs, rhs);
-        let (next_low, low_overflow) = Self::add_words(low, &product_low);
-        let (mut next_high, high_overflow) = Self::add_words(high, &product_high);
-        let mut overflow = high_overflow;
-
-        if low_overflow {
-            let mut carry = Limb::new(1);
-            for word in &mut next_high {
-                (*word, carry) = word.carrying_add(Limb::new(0), carry);
-            }
-            overflow |= carry.to_word() != 0;
-        }
-
-        *low = next_low;
-        *high = next_high;
-        overflow
-    }
-
     fn div_rem_words(dividend: &[Limb; N], divisor: &[Limb; N]) -> ([Limb; N], [Limb; N]) {
         let dividend_len = Self::significant_len(dividend);
         let divisor_len = Self::significant_len(divisor);
@@ -751,80 +719,10 @@ impl<const N: usize> LimbArray<N> {
         }
     }
 
-    fn wrapping_neg_words(words: &[Limb; N]) -> [Limb; N] {
-        let inverted = words.map(|word| Limb::new(!word.to_word()));
-        let mut one = [Limb::new(0); N];
-        if N != 0 {
-            one[0] = Limb::new(1);
-        }
-        Self::add_words(&inverted, &one).0
-    }
-
-    fn gcd_words(lhs: &[Limb; N], rhs: &[Limb; N]) -> [Limb; N] {
-        let mut left = *lhs;
-        let mut right = *rhs;
-        while !Self::is_zero_words(&right) {
-            let remainder = Self::div_rem_words(&left, &right).1;
-            left = right;
-            right = remainder;
-        }
-        left
-    }
-
-    fn bit_len_words(words: &[Limb; N]) -> usize {
-        words
-            .iter()
-            .rposition(|word| word.to_word() != 0)
-            .map_or(0, |index| {
-                index * Word::BITS as usize
-                    + (Word::BITS - words[index].to_word().leading_zeros()) as usize
-            })
-    }
-
-    fn test_bit_words(words: &[Limb; N], index: usize) -> bool {
-        words[index / Word::BITS as usize].to_word() >> (index % Word::BITS as usize) & 1 != 0
-    }
-
-    fn set_bit_words(words: &[Limb; N], index: usize) -> [Limb; N] {
-        let mut result = *words;
-        let word = index / Word::BITS as usize;
-        result[word] =
-            Limb::new(result[word].to_word() | ((1 as Word) << (index % Word::BITS as usize)));
-        result
-    }
-
-    fn clear_bit_words(words: &[Limb; N], index: usize) -> [Limb; N] {
-        let mut result = *words;
-        let word = index / Word::BITS as usize;
-        result[word] =
-            Limb::new(result[word].to_word() & !((1 as Word) << (index % Word::BITS as usize)));
-        result
-    }
-
-    fn flip_bit_words(words: &[Limb; N], index: usize) -> [Limb; N] {
-        let mut result = *words;
-        let word = index / Word::BITS as usize;
-        result[word] =
-            Limb::new(result[word].to_word() ^ ((1 as Word) << (index % Word::BITS as usize)));
-        result
-    }
-
     fn is_zero_words(words: &[Limb; N]) -> bool {
         words.iter().all(|word| word.to_word() == 0)
     }
 
-    fn is_one_words(words: &[Limb; N]) -> bool {
-        words.first() == Some(&Limb::new(1)) && words.iter().skip(1).all(|word| word.to_word() == 0)
-    }
-
-    fn shr_one_words(words: &mut [Limb; N]) {
-        let mut carry = 0 as Word;
-        for word in words.iter_mut().rev() {
-            let next = word.to_word() << (Word::BITS - 1);
-            *word = Limb::new((word.to_word() >> 1) | carry);
-            carry = next;
-        }
-    }
     fn shl_one_words(words: &mut [Limb; N]) -> bool {
         let mut carry = 0 as Word;
         for word in words {
@@ -1228,80 +1126,6 @@ mod oracle_tests {
     }
 
     #[test]
-    fn limb_operations_match_native_and_double_width_words() {
-        let mut state = 0x1319_8a2e_0370_7344;
-        for _ in 0..4000 {
-            let a = next(&mut state);
-            let b = next(&mut state);
-            let carry = next(&mut state);
-            let x = Limb::new(a);
-            let y = Limb::new(b);
-            let sum = a as WideWord + b as WideWord + carry as WideWord;
-            let (low, high) = x.carrying_add(y, Limb::new(carry));
-            assert_eq!(
-                (low.to_word(), high.to_word()),
-                (sum as Word, (sum >> Word::BITS) as Word)
-            );
-            for borrow in [0, 1] {
-                let (first, b1) = a.overflowing_sub(b);
-                let (difference, b2) = first.overflowing_sub(borrow);
-                assert_eq!(
-                    x.borrowing_sub(y, Limb::new(borrow)),
-                    (Limb::new(difference), Limb::new((b1 | b2) as Word))
-                );
-            }
-            assert_eq!(x.overflowing_add(y), {
-                let (v, f) = a.overflowing_add(b);
-                (Limb::new(v), f)
-            });
-            assert_eq!(x.overflowing_sub(y), {
-                let (v, f) = a.overflowing_sub(b);
-                (Limb::new(v), f)
-            });
-            assert_eq!(x.wrapping_add(y).to_word(), a.wrapping_add(b));
-            assert_eq!(x.wrapping_sub(y).to_word(), a.wrapping_sub(b));
-            assert_eq!(x.wrapping_neg().to_word(), a.wrapping_neg());
-            let product = a as WideWord * b as WideWord;
-            assert_eq!(
-                x.widening_mul(y),
-                (
-                    Limb::new(product as Word),
-                    Limb::new((product >> Word::BITS) as Word)
-                )
-            );
-            assert_eq!(Limb::new(x.to_word() & y.to_word()).to_word(), a & b);
-            assert_eq!(Limb::new(x.to_word() | y.to_word()).to_word(), a | b);
-            assert_eq!(Limb::new(x.to_word() ^ y.to_word()).to_word(), a ^ b);
-            assert_eq!(Limb::new(!x.to_word()).to_word(), !a);
-            let shift = carry as usize % Word::BITS as usize;
-            assert_eq!(Limb::new(x.to_word() << shift).to_word(), a << shift);
-            assert_eq!(Limb::new(x.to_word() >> shift).to_word(), a >> shift);
-            let small_a = Limb::new(a & 0xff);
-            let small_b = Limb::new(b & 0xff);
-            assert_eq!(
-                small_a.widening_mul(small_b).0.to_word(),
-                (a & 0xff) * (b & 0xff)
-            );
-            assert_eq!(
-                small_a.wrapping_add(small_b).to_word(),
-                (a & 0xff) + (b & 0xff)
-            );
-            let mut assigned = small_a;
-            assigned = assigned.wrapping_add(small_b);
-            assigned = assigned.wrapping_sub(small_b);
-            assert_eq!(assigned, small_a);
-            assert_eq!(x.ct_eq(&y).unwrap_u8(), (a == b) as u8);
-            assert_eq!(x.ct_eq(&x).unwrap_u8(), 1);
-            for bit in [0, 1] {
-                assert_eq!(
-                    Limb::conditional_select(&x, &y, Choice::from_lsb(bit)),
-                    if bit == 0 { x } else { y }
-                );
-            }
-        }
-    }
-
-    #[test]
     fn empty_width_and_full_carry_borrow_chains() {
         let z = LimbArray::<0>::zero();
         assert_eq!(z, LimbArray::default());
@@ -1397,5 +1221,78 @@ mod oracle_tests {
         assert!(std::panic::catch_unwind(|| z.div_rem(&z)).is_err());
         assert!(std::panic::catch_unwind(|| z.wide_rem(&z, &z)).is_err());
         assert!(std::panic::catch_unwind(|| z.test_bit(0)).is_err());
+    }
+    #[test]
+    fn limb_operations_match_native_and_double_width_words() {
+        let mut state = 0x1319_8a2e_0370_7344;
+        for _ in 0..4000 {
+            let a = next(&mut state);
+            let b = next(&mut state);
+            let carry = next(&mut state);
+            let x = Limb::new(a);
+            let y = Limb::new(b);
+            let sum = a as WideWord + b as WideWord + carry as WideWord;
+            let (low, high) = x.carrying_add(y, Limb::new(carry));
+            assert_eq!(
+                (low.to_word(), high.to_word()),
+                (sum as Word, (sum >> Word::BITS) as Word)
+            );
+            for borrow in [0, 1] {
+                let (first, b1) = a.overflowing_sub(b);
+                let (difference, b2) = first.overflowing_sub(borrow);
+                assert_eq!(
+                    x.borrowing_sub(y, Limb::new(borrow)),
+                    (Limb::new(difference), Limb::new((b1 | b2) as Word))
+                );
+            }
+            assert_eq!(x.overflowing_add(y), {
+                let (v, f) = a.overflowing_add(b);
+                (Limb::new(v), f)
+            });
+            assert_eq!(x.overflowing_sub(y), {
+                let (v, f) = a.overflowing_sub(b);
+                (Limb::new(v), f)
+            });
+            assert_eq!(x.wrapping_add(y).to_word(), a.wrapping_add(b));
+            assert_eq!(x.wrapping_sub(y).to_word(), a.wrapping_sub(b));
+            assert_eq!(x.wrapping_neg().to_word(), a.wrapping_neg());
+            let product = a as WideWord * b as WideWord;
+            assert_eq!(
+                x.widening_mul(y),
+                (
+                    Limb::new(product as Word),
+                    Limb::new((product >> Word::BITS) as Word)
+                )
+            );
+            assert_eq!(Limb::new(x.to_word() & y.to_word()).to_word(), a & b);
+            assert_eq!(Limb::new(x.to_word() | y.to_word()).to_word(), a | b);
+            assert_eq!(Limb::new(x.to_word() ^ y.to_word()).to_word(), a ^ b);
+            assert_eq!(Limb::new(!x.to_word()).to_word(), !a);
+            let shift = carry as usize % Word::BITS as usize;
+            assert_eq!(Limb::new(x.to_word() << shift).to_word(), a << shift);
+            assert_eq!(Limb::new(x.to_word() >> shift).to_word(), a >> shift);
+            let small_a = Limb::new(a & 0xff);
+            let small_b = Limb::new(b & 0xff);
+            assert_eq!(
+                small_a.widening_mul(small_b).0.to_word(),
+                (a & 0xff) * (b & 0xff)
+            );
+            assert_eq!(
+                small_a.wrapping_add(small_b).to_word(),
+                (a & 0xff) + (b & 0xff)
+            );
+            let mut assigned = small_a;
+            assigned = assigned.wrapping_add(small_b);
+            assigned = assigned.wrapping_sub(small_b);
+            assert_eq!(assigned, small_a);
+            assert_eq!(x.ct_eq(&y).unwrap_u8(), (a == b) as u8);
+            assert_eq!(x.ct_eq(&x).unwrap_u8(), 1);
+            for bit in [0, 1] {
+                assert_eq!(
+                    Limb::conditional_select(&x, &y, Choice::from_lsb(bit)),
+                    if bit == 0 { x } else { y }
+                );
+            }
+        }
     }
 }

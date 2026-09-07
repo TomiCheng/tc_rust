@@ -2,17 +2,13 @@
 
 use core::ops::Not;
 
-use crate::{FixedBigUint, Limb};
+use crate::FixedBigUint;
 
 impl<const N: usize> Not for FixedBigUint<N> {
     type Output = Self;
     fn not(self) -> Self {
         Self {
-            limbs: crate::LimbArray::new(
-                self.limbs
-                    .into_limbs()
-                    .map(|word| Limb::new(!word.to_word())),
-            ),
+            limbs: self.limbs.not(),
         }
     }
 }

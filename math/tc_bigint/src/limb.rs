@@ -54,34 +54,57 @@ impl Limb {
     }
 
     /// Returns the truncated sum and an overflow flag.
+    // 只有測試消費：保留完整的字寬算術表面，實作端一律走 carrying_* 形式。
+    #[allow(dead_code)]
     pub const fn overflowing_add(self, rhs: Self) -> (Self, bool) {
         let (value, carry) = self.carrying_add(rhs, Self(0));
         (value, carry.0 != 0)
     }
 
     /// Returns the truncated difference and a borrow flag.
+    // 只有測試消費：保留完整的字寬算術表面，實作端一律走 carrying_* 形式。
+    #[allow(dead_code)]
     pub const fn overflowing_sub(self, rhs: Self) -> (Self, bool) {
         let (value, borrow) = self.borrowing_sub(rhs, Self(0));
         (value, borrow.0 != 0)
     }
 
     /// Adds modulo `2^Word::BITS`.
+    // 只有測試消費：保留完整的字寬算術表面，實作端一律走 carrying_* 形式。
+    #[allow(dead_code)]
     pub const fn wrapping_add(self, rhs: Self) -> Self {
         Self(self.0.wrapping_add(rhs.0))
     }
 
     /// Subtracts modulo `2^Word::BITS`.
+    // 只有測試消費：保留完整的字寬算術表面，實作端一律走 carrying_* 形式。
+    #[allow(dead_code)]
     pub const fn wrapping_sub(self, rhs: Self) -> Self {
         Self(self.0.wrapping_sub(rhs.0))
     }
 
     /// Returns the low and high words of the full product.
+    // 只有測試消費：保留完整的字寬算術表面，實作端一律走 carrying_* 形式。
+    #[allow(dead_code)]
     pub const fn widening_mul(self, rhs: Self) -> (Self, Self) {
         let wide = self.0 as WideWord * rhs.0 as WideWord;
         (Self(wide as Word), Self((wide >> Word::BITS) as Word))
     }
 
+    /// Computes `self * rhs + addend + carry`, returning the low and high words.
+    ///
+    /// All four operands are one word wide, so the product plus both addends
+    /// always fits in two words; this fused form cannot lose a carry.
+    #[inline(always)]
+    pub const fn carrying_mul_add(self, rhs: Self, addend: Self, carry: Self) -> (Self, Self) {
+        let wide =
+            self.0 as WideWord * rhs.0 as WideWord + addend.0 as WideWord + carry.0 as WideWord;
+        (Self(wide as Word), Self((wide >> Word::BITS) as Word))
+    }
+
     /// Negates modulo `2^Word::BITS`, leaving zero unchanged.
+    // 只有測試消費：保留完整的字寬算術表面，實作端一律走 carrying_* 形式。
+    #[allow(dead_code)]
     pub const fn wrapping_neg(self) -> Self {
         Self(self.0.wrapping_neg())
     }
