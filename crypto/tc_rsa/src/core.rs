@@ -1,9 +1,7 @@
 //! RSA 核心運算與輸入輸出轉換。
 
-use alloc::vec;
-
 use rand_core::CryptoRng;
-use tc_bigint::modular::{FixedMontyForm, FixedMontyParams, checked_mod_odd_inverse};
+use tc_bigint::modular::{FixedMontyForm, FixedMontyParams};
 use tc_bigint::{BigUint, FixedBigUint, NonZero, Odd, RandomMod, Word};
 use tc_cipher::CipherDirection;
 use tc_constant_time::ConstantTimeEq;
@@ -190,7 +188,10 @@ impl<const N: usize, const H: usize> CrtInner<N, H> {
 
         let blind = FixedMontyForm::new(&r, self.params_n).pow(&self.public_exponent);
         // FixedMontyForm::invert 目前走變動時間 Euclid；秘密 r 改用公開的固定步 safegcd。
-        let inverse = invert_secret(&r, &self.modulus)?;
+        let modulus = Odd::new(self.modulus).ok_or(RsaError::InvalidModulus)?;
+        let inverse = r
+            .mod_odd_inverse_ct(&modulus)
+            .ok_or(RsaError::FaultyDecryptionOrSigning)?;
         let unblind = FixedMontyForm::new_ct(&inverse, self.params_n);
         let input_form = FixedMontyForm::new(&input, self.params_n);
         let blinded_input = (blind * input_form).retrieve();
@@ -370,25 +371,6 @@ fn convert_output<const N: usize>(
         .write_unsigned_be_bytes(&mut output[output_len - result_len..output_len])
         .map_err(|_| RsaError::OutputTooShort)?;
     Ok(output_len)
-}
-
-fn invert_secret<const N: usize>(
-    value: &FixedBigUint<N>,
-    modulus: &FixedBigUint<N>,
-) -> Result<FixedBigUint<N>, RsaError> {
-    let words = modulus.u32_length_unsigned();
-    let mut modulus_words = vec![0_u32; words];
-    let mut value_words = vec![0_u32; words];
-    let mut inverse_words = vec![0_u32; words];
-    modulus
-        .write_unsigned_le_u32(&mut modulus_words)
-        .map_err(|_| RsaError::InvalidModulus)?;
-    value
-        .write_unsigned_le_u32(&mut value_words)
-        .map_err(|_| RsaError::FaultyDecryptionOrSigning)?;
-    checked_mod_odd_inverse(&modulus_words, &value_words, &mut inverse_words)
-        .map_err(|_| RsaError::FaultyDecryptionOrSigning)?;
-    FixedBigUint::from_le_u32(&inverse_words).map_err(|_| RsaError::FaultyDecryptionOrSigning)
 }
 
 #[cfg(test)]

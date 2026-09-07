@@ -108,6 +108,10 @@ impl<S: PrimeFieldSpec<N>, const N: usize> SecretField for SpecializedFieldEleme
 impl<S: PrimeFieldSpec<N>, const N: usize> SecretCurve for SpecializedCurve<S, N> {
     const BINARY: bool = false;
 
+    fn field_size(&self) -> usize {
+        S::BITS
+    }
+
     fn field_element_to_scalar(value: &Self::Field) -> Option<Self::Scalar> {
         Some(value.to_big_uint())
     }
@@ -145,6 +149,10 @@ impl SecretField for SecP256R1FieldElement {
 }
 impl SecretCurve for SecP256R1Curve {
     const BINARY: bool = false;
+
+    fn field_size(&self) -> usize {
+        256
+    }
 
     fn field_element_to_scalar(value: &Self::Field) -> Option<Self::Scalar> {
         Some(value.to_big_uint())

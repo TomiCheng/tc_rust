@@ -900,6 +900,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_ecdh"
+version = "0.1.0"
+dependencies = [
+ "tc_bigint",
+ "tc_ec_core",
+ "tc_f2m_custom",
+ "tc_fp_curve",
+ "tc_fp_custom",
+]
+
+[[package]]
 name = "tc_ecdsa"
 version = "0.1.0"
 dependencies = [
@@ -1552,6 +1563,14 @@ name = "tc_whirlpool"
 version = "0.1.0"
 dependencies = [
  "tc_digest",
+]
+
+[[package]]
+name = "tc_x25519"
+version = "0.1.0"
+dependencies = [
+ "rand_core",
+ "tc_rfc7748",
 ]
 
 [[package]]

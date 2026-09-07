@@ -108,6 +108,10 @@ impl<P: SecretPolynomial> SecretField for F2mFieldElement<P> {
 impl<P: SecretPolynomial, B: F2mInteger> tc_ec_core::SecretCurve for crate::F2mCurve<P, B> {
     const BINARY: bool = true;
 
+    fn field_size(&self) -> usize {
+        self.field_size()
+    }
+
     fn field_element_to_scalar(value: &Self::Field) -> Option<Self::Scalar> {
         value.try_to_integer()
     }

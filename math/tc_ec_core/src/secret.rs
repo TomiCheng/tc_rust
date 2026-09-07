@@ -33,6 +33,9 @@ pub trait SecretCurve: Curve {
     /// Selects binary homogeneous formulas instead of prime Jacobian formulas.
     const BINARY: bool;
 
+    /// 回傳體域的有效位元數，供 shared secret 產生定長編碼。
+    fn field_size(&self) -> usize;
+
     /// 將公開的體元素位元表示轉成曲線的純量整數型別。
     ///
     /// ECDSA 會用這個入口把正規化後的 affine X 座標轉成整數；若純量型別

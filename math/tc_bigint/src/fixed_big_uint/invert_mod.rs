@@ -17,10 +17,17 @@ impl<const N: usize> FixedBigUint<N> {
     pub fn mod_odd_inverse_ct(&self, modulus: &Odd<Self>) -> Option<Self> {
         let params = FixedMontyParams::new(*modulus);
         let reduced = modular::FixedMontyForm::new_ct(self, params).retrieve();
-        let modulus_words = ArrayEncoding::to_unsigned_le_u32(modulus.as_ref());
-        let mut value_words = ArrayEncoding::to_unsigned_le_u32(&reduced);
-        value_words.resize(modulus_words.len(), 0);
-        let mut output = vec![0; modulus_words.len()];
+        let words = modulus.as_ref().u32_length_unsigned();
+        let mut modulus_words = vec![0_u32; words];
+        let mut value_words = vec![0_u32; words];
+        let mut output = vec![0_u32; words];
+        modulus
+            .as_ref()
+            .write_unsigned_le_u32(&mut modulus_words)
+            .expect("寬度由公開模數決定");
+        reduced
+            .write_unsigned_le_u32(&mut value_words)
+            .expect("寬度由公開模數決定");
 
         modular::mod_odd_inverse(&modulus_words, &value_words, &mut output)
             .then(|| Self::from_le_u32(&output).expect("反元素必定符合原本的固定寬度"))
@@ -93,6 +100,16 @@ mod tests {
             Some(U128::from(29_u8))
         );
         assert_eq!(U128::zero().mod_odd_inverse_ct(&modulus), None);
+    }
+
+    #[test]
+    fn constant_time_odd_inverse_uses_public_modulus_width_for_every_value() {
+        let modulus = Odd::new(U128::max_value()).unwrap();
+        let low_value = U128::from(2_u8);
+        let high_value = U128::from(1_u8) << 127;
+
+        assert_eq!(low_value.mod_odd_inverse_ct(&modulus), Some(high_value));
+        assert_eq!(high_value.mod_odd_inverse_ct(&modulus), Some(low_value));
     }
 
     #[test]

@@ -1,0 +1,11 @@
+[package]
+name = "tc_x25519"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Type-safe X25519 and X448 Diffie-Hellman wrappers."
+
+[dependencies]
+rand_core = { workspace = true }
+tc_rfc7748 = { path = "../../math/tc_rfc7748", version = "0.1.0", default-features = false }

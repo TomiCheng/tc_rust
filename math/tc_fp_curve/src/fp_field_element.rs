@@ -56,6 +56,10 @@ impl<const N: usize> SecretField for FpFieldElement<FixedBigUint<N>> {
 impl<const N: usize> tc_ec_core::SecretCurve for crate::FpCurve<FixedBigUint<N>> {
     const BINARY: bool = false;
 
+    fn field_size(&self) -> usize {
+        self.field_size()
+    }
+
     fn field_element_to_scalar(value: &Self::Field) -> Option<Self::Scalar> {
         Some(value.to_big_uint())
     }
