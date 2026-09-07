@@ -779,6 +779,8 @@ dependencies = [
 [[package]]
 name = "tc_constant_time"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0bcfe3e4732defe64408b706121575a0fdbd7011a3647566cd0a353daf64c165"
 
 [[package]]
 name = "tc_crypto"

@@ -27,9 +27,10 @@ that a crate disables in its own dependency declaration.
 
 ## Choosing a layer
 
-Use [`tc_constant_time`](../core/tc_constant_time/README.md) when only masked
-selection or equality is needed. These compiler/timing primitives live under
-`core/` and are shared by mathematical backends and cryptographic algorithms.
+Use [`tc_constant_time`](https://crates.io/crates/tc_constant_time) when only masked
+selection, comparison, or conditional arithmetic is needed. These compiler/timing
+primitives come from crates.io and are shared by mathematical backends and
+cryptographic algorithms.
 
 Use `tc_limb` to implement fixed-width arithmetic over raw unsigned limbs. Use
 `tc_bigint` for integer semantics, signed values, conversions, overflow policies,
@@ -81,7 +82,7 @@ Run Cargo commands from the workspace root and select the crate being changed:
 ```text
 cargo test -p tc_limb --locked
 cargo test -p tc_bigint --target i686-pc-windows-msvc --locked
-cargo clippy -p tc_constant_time --all-targets --locked -- -D warnings
+cargo clippy -p tc_limb --all-targets --locked -- -D warnings
 cargo doc -p tc_prime --all-features --no-deps --locked
 ```
 

@@ -7,5 +7,5 @@ repository.workspace = true
 description = "Shared RFC 8032 Edwards point and scalar arithmetic."
 
 [dependencies]
-tc_constant_time = { path = "../../core/tc_constant_time", version = "0.1.0" }
+tc_constant_time = "0.1.0"
 tc_rfc7748 = { path = "../../math/tc_rfc7748", version = "0.1.0", default-features = false }

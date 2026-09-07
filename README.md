@@ -45,7 +45,7 @@ engines respectively; both provide streaming, clone, and reset behavior.
 | [Digest family crates](crypto/digest) | Independent message-digest, XOF, and digest-adapter implementations | `no_std`; allocation and optional CPU acceleration vary by family |
 | [`tc_bigint`](math/tc_bigint) | Fixed-width and arbitrary-precision signed/unsigned integers and number-theory operations | Fixed-width types are core-only; dynamic types require `alloc` |
 | [`tc_prime`](math/tc_prime) | FIPS 186-4 small-factor, Miller-Rabin, enhanced Miller-Rabin, and optional Shawe-Taylor utilities | Fixed-width path is core-only; `alloc` enables dynamic integers and `digest` enables Shawe-Taylor |
-| [`tc_constant_time`](core/tc_constant_time) | Shared masked selection and equality primitives | Core-only `no_std` |
+| [`tc_constant_time`](https://crates.io/crates/tc_constant_time) | Shared masked selection, comparison, and conditional arithmetic primitives (external dependency) | Core-only `no_std` |
 | [`tc_ec_core`](math/tc_ec_core) | Curve traits, multi-scalar algorithms, comb/GLV interfaces and secret fixed-window arithmetic | `no_std + alloc` |
 | [`tc_fp_curve`](math/tc_fp_curve), [`tc_f2m_curve`](math/tc_f2m_curve) | Generic prime/binary curves | `no_std + alloc` |
 | [`tc_fp_custom`](math/tc_fp_custom), [`tc_f2m_custom`](math/tc_f2m_custom) | Specialized SEC/SM2 curve backends | `no_std + alloc` |
@@ -53,7 +53,7 @@ engines respectively; both provide streaming, clone, and reset behavior.
 | [`tc_ed25519`](crypto/tc_ed25519), [`tc_ed448`](crypto/tc_ed448) | RFC 8032 signatures using [`tc_edwards`](crypto/tc_edwards) arithmetic | `no_std` |
 
 `tc_constant_time` provides compiler/timing primitives rather than mathematical
-operations; it lives under `core/` for use by both `crypto/` and `math/` crates.
+operations. Both `crypto/` and `math/` crates use its published crates.io package.
 
 The core trait crates do not depend on algorithm implementations. Concrete
 algorithm crates depend on the appropriate core crate, which keeps the

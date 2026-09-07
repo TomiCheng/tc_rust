@@ -10,7 +10,7 @@ repository.workspace = true
 bench-internals = []
 
 [dependencies]
-tc_constant_time = { path = "../../core/tc_constant_time", version = "0.1.0" }
+tc_constant_time = "0.1.0"
 tc_bigint = { version = "0.1.0", path = "../tc_bigint", default-features = false, features = ["alloc"] }
 tc_ec_core = { version = "0.1.0", path = "../tc_ec_core" }
 
