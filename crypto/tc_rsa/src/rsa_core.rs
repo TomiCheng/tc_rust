@@ -1,5 +1,7 @@
 //! RSA 核心運算的後端實作。
 
+use tc_bigint::limbs_for_bits;
+
 use crate::{RsaError, RsaKeyParams};
 
 mod fixed;
@@ -7,17 +9,6 @@ mod heap;
 
 pub use fixed::FixedRsaCoreEngine;
 pub use heap::HeapRsaCoreEngine;
-
-/// limb 的位元寬度；`tc_bigint` 不公開字寬，這裡自行推導。
-#[cfg(target_pointer_width = "64")]
-const LIMB_BITS: usize = 64;
-#[cfg(not(target_pointer_width = "64"))]
-const LIMB_BITS: usize = 32;
-
-/// 容納 `bits` 位元所需的 limb 數。
-pub const fn limbs_for_bits(bits: usize) -> usize {
-    bits.div_ceil(LIMB_BITS)
-}
 
 /// 大端序位元組所代表的位元長度；全零（含空切片）回 0。
 pub(crate) fn bit_length(bytes: &[u8]) -> usize {
@@ -103,7 +94,7 @@ mod tests {
     use super::fixed::FixedRsaCoreEngine;
     use super::heap::HeapRsaCoreEngine;
     use super::validate;
-    use super::{LIMB_BITS, bit_length, is_odd, is_zero, limbs_for_bits};
+    use super::{bit_length, is_odd, is_zero};
     use alloc::vec;
     use alloc::vec::Vec;
 
@@ -149,15 +140,6 @@ mod tests {
     use tc_cipher::AsymmetricBlockCipher;
 
     use crate::{Rsa, RsaInit, RsaKeyRef as Key};
-
-    #[test]
-    fn limb_count_rounds_up() {
-        assert_eq!(limbs_for_bits(0), 0);
-        assert_eq!(limbs_for_bits(1), 1);
-        assert_eq!(limbs_for_bits(LIMB_BITS), 1);
-        assert_eq!(limbs_for_bits(LIMB_BITS + 1), 2);
-        assert_eq!(limbs_for_bits(2048), 2048 / LIMB_BITS);
-    }
 
     #[test]
     fn bit_length_ignores_leading_zeros() {

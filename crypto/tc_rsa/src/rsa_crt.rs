@@ -1,6 +1,8 @@
 //! CRT 私鑰運算的後端實作。
 
-use crate::rsa_core::{bit_length, is_odd, is_zero, limbs_for_bits};
+use tc_bigint::limbs_for_bits;
+
+use crate::rsa_core::{bit_length, is_odd, is_zero};
 use crate::{RsaError, RsaPrivateCrtKeyParams};
 
 mod fixed;

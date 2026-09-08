@@ -4,11 +4,19 @@ use crate::{FixedBigInt, FixedBigUint, Word};
 
 /// Returns the limb count needed to store `bits` bits on the current target.
 ///
-/// Limb width is a target detail: [`Word`](Word) is 64 bits on 64-bit
-/// targets and 32 bits elsewhere. Use this to size [`FixedBigUint`] and
-/// [`FixedBigInt`] by bit width instead of restating the division.
+/// Limb width is a target detail this crate does not otherwise expose: a limb
+/// is 64 bits on 64-bit targets and 32 bits elsewhere. Use this to size
+/// [`FixedBigUint`] and [`FixedBigInt`] by bit width — including in const
+/// generic argument position, as the fixed-width aliases in this module do —
+/// rather than restating the division against a width you would have to guess.
 ///
-pub(crate) const fn limbs_for_bits(bits: usize) -> usize {
+/// ```
+/// use tc_bigint::{limbs_for_bits, FixedBigUint};
+///
+/// type Modulus = FixedBigUint<{ limbs_for_bits(2048) }>;
+/// assert_eq!(Modulus::default(), FixedBigUint::default());
+/// ```
+pub const fn limbs_for_bits(bits: usize) -> usize {
     bits.div_ceil(Word::BITS as usize)
 }
 
@@ -54,11 +62,27 @@ define_fixed_ints! {
 mod tests {
     use core::mem::size_of;
 
-    use super::{I64, I128, I1024, U64, U128, U256, U384, U521, U1024, U2048};
-    use crate::FixedBigInt;
+    use super::{I64, I128, I1024, U64, U128, U256, U384, U521, U1024, U2048, limbs_for_bits};
+    use crate::{FixedBigInt, FixedBigUint};
 
     define_fixed_ints! {
         521 => TestI521,
+    }
+
+    #[test]
+    fn limb_count_rounds_up_and_sizes_a_fixed_width_type() {
+        let limb_bits = size_of::<U64>() * 8;
+
+        assert_eq!(limbs_for_bits(0), 0);
+        assert_eq!(limbs_for_bits(1), 1);
+        assert_eq!(limbs_for_bits(limb_bits), 1);
+        assert_eq!(limbs_for_bits(limb_bits + 1), 2);
+
+        // 常數泛型引數位置也能用，這正是外部消費端需要它的原因。
+        assert_eq!(
+            size_of::<FixedBigUint<{ limbs_for_bits(2048) }>>(),
+            size_of::<U2048>()
+        );
     }
 
     #[test]

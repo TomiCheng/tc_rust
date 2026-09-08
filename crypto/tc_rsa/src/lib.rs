@@ -49,12 +49,15 @@ pub mod rsa_core;
 pub mod rsa_crt;
 pub mod traits;
 
+// 固定寬度引擎的 `N` 由呼叫端指定，這裡轉出以免使用者為了算 limb 數而直接相依
+// `tc_bigint`。
+pub use tc_bigint::limbs_for_bits;
+
 pub use blinded_engine::RsaBlindedEngine;
 pub use error::RsaError;
 pub use params::{RsaKeyOwned, RsaKeyRef, RsaPrivateCrtKeyOwned, RsaPrivateCrtKeyRef};
 pub use rsa_core::{
     FixedRsaCoreEngine, HeapRsaCoreEngine, Rsa1024Core, Rsa2048Core, Rsa3072Core, Rsa4096Core,
-    limbs_for_bits,
 };
 pub use rsa_crt::{
     FixedRsaCrtCoreEngine, HeapRsaCrtCoreEngine, Rsa1024CrtCore, Rsa2048CrtCore, Rsa3072CrtCore,
