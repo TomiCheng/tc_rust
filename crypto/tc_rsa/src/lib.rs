@@ -15,6 +15,7 @@ extern crate alloc;
 //
 // mod core;
 // mod engine;
+mod blinded_engine;
 mod error;
 mod params;
 pub mod rsa_core;
@@ -23,6 +24,7 @@ pub mod traits;
 
 //
 // pub use engine::RsaBlindedEngine;
+pub use blinded_engine::RsaBlindedEngine;
 pub use error::RsaError;
 pub use params::{RsaKeyOwned, RsaKeyRef, RsaPrivateCrtKeyOwned, RsaPrivateCrtKeyRef};
 pub use rsa_core::{

@@ -106,6 +106,7 @@ mod tests {
     use super::{LIMB_BITS, bit_length, is_odd, is_zero, limbs_for_bits};
     use alloc::vec;
 
+    use crate::RsaBlindedEngine;
     use crate::rsa_crt::{FixedRsaCrtCoreEngine, HeapRsaCrtCoreEngine};
     use crate::{RsaCrt, RsaCrtInit, RsaKeyOwned, RsaPrivateCrtKeyOwned, RsaPrivateCrtKeyRef};
     use core::convert::Infallible;
@@ -803,5 +804,88 @@ mod tests {
             Err(RsaError::NotInitialized)
         );
         assert_eq!(AsymmetricBlockCipher::input_block_size(&empty), 0);
+    }
+
+    #[test]
+    fn the_blinded_engine_matches_the_unblinded_crt_path() {
+        let mut engine: RsaBlindedEngine<FixedRsaCrtCoreEngine<2, 1>, _> =
+            RsaBlindedEngine::new(SequenceRng(0));
+        engine.init(CipherDirection::Decrypt, &crt_key()).unwrap();
+        let mut reference = crt_engine();
+
+        let mut public = fixed_engine(
+            CipherDirection::Encrypt,
+            &Key::new(false, &MODULUS, &EXPONENT),
+        );
+
+        for message in [&[2_u8][..], &[42][..], &[0x0f, 0xf5][..]] {
+            let mut ciphertext = [0_u8; 2];
+            let cipher_len =
+                AsymmetricBlockCipher::process_block(&mut public, message, &mut ciphertext)
+                    .unwrap();
+
+            let mut expected = [0_u8; 2];
+            let value = reference.convert_input(&ciphertext[..cipher_len]).unwrap();
+            let result = reference.process_int(&value).unwrap();
+            let expected_len = reference.convert_output(&result, &mut expected).unwrap();
+
+            let mut recovered = [0_u8; 2];
+            let length = AsymmetricBlockCipher::process_block(
+                &mut engine,
+                &ciphertext[..cipher_len],
+                &mut recovered,
+            )
+            .unwrap();
+
+            assert_eq!(&recovered[..length], &expected[..expected_len]);
+            assert_eq!(&recovered[..length], message);
+        }
+
+        // 門面只是轉發，區塊大小要跟被包的核心一致。
+        assert_eq!(
+            AsymmetricBlockCipher::input_block_size(&engine),
+            AsymmetricBlockCipher::input_block_size(&reference)
+        );
+        assert_eq!(
+            AsymmetricBlockCipher::output_block_size(&engine),
+            AsymmetricBlockCipher::output_block_size(&reference)
+        );
+    }
+
+    #[test]
+    fn the_blinded_engine_wraps_a_heap_core_too() {
+        let mut engine: RsaBlindedEngine<HeapRsaCrtCoreEngine, _> =
+            RsaBlindedEngine::new(SequenceRng(0));
+        engine.init(CipherDirection::Decrypt, &crt_key()).unwrap();
+
+        let mut public = fixed_engine(
+            CipherDirection::Encrypt,
+            &Key::new(false, &MODULUS, &EXPONENT),
+        );
+        let mut ciphertext = [0_u8; 2];
+        let cipher_len =
+            AsymmetricBlockCipher::process_block(&mut public, &[42], &mut ciphertext).unwrap();
+
+        let mut recovered = [0_u8; 2];
+        let length = AsymmetricBlockCipher::process_block(
+            &mut engine,
+            &ciphertext[..cipher_len],
+            &mut recovered,
+        )
+        .unwrap();
+        assert_eq!(&recovered[..length], &[42]);
+    }
+
+    #[test]
+    fn an_uninitialised_blinded_engine_reports_no_capacity() {
+        let mut engine: RsaBlindedEngine<FixedRsaCrtCoreEngine<2, 1>, _> =
+            RsaBlindedEngine::new(SequenceRng(0));
+
+        assert_eq!(AsymmetricBlockCipher::input_block_size(&engine), 0);
+        assert_eq!(AsymmetricBlockCipher::output_block_size(&engine), 0);
+        assert_eq!(
+            AsymmetricBlockCipher::process_block(&mut engine, &[42], &mut [0_u8; 2]),
+            Err(RsaError::NotInitialized)
+        );
     }
 }
