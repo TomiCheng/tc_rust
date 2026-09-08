@@ -2,7 +2,7 @@
 
 use tc_bigint::modular::{FixedMontyForm, FixedMontyParams};
 use tc_bigint::{FixedBigUint, Odd};
-use tc_cipher::CipherDirection;
+use tc_cipher::{AsymmetricBlockCipher, CipherDirection};
 
 use crate::rsa_core::validate;
 use crate::{Rsa, RsaError, RsaInit, RsaKeyParams};
@@ -75,8 +75,7 @@ impl<K: RsaKeyParams + ?Sized, const N: usize> RsaInit<K> for FixedRsaCoreEngine
     }
 }
 
-impl<const N: usize> Rsa for FixedRsaCoreEngine<N> {
-    type RsaBigInt = FixedBigUint<N>;
+impl<const N: usize> AsymmetricBlockCipher for FixedRsaCoreEngine<N> {
     type Error = RsaError;
 
     fn input_block_size(&self) -> usize {
@@ -93,6 +92,17 @@ impl<const N: usize> Rsa for FixedRsaCoreEngine<N> {
         })
     }
 
+    /// 位元組層的單一區塊運算：轉換輸入、做原始 RSA、寫回輸出。
+    fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
+        let value = self.convert_input(input)?;
+        let result = self.process_int(&value)?;
+        self.convert_output(&result, output)
+    }
+}
+
+impl<const N: usize> Rsa for FixedRsaCoreEngine<N> {
+    type RsaBigInt = FixedBigUint<N>;
+
     fn convert_input(&self, input: &[u8]) -> Result<Self::RsaBigInt, Self::Error> {
         let inner = self.inner()?;
         let input = fixed(input, RsaError::InputTooLarge)?;
@@ -106,7 +116,7 @@ impl<const N: usize> Rsa for FixedRsaCoreEngine<N> {
         Ok(input)
     }
 
-    fn process_block(&mut self, input: &Self::RsaBigInt) -> Result<Self::RsaBigInt, Self::Error> {
+    fn process_int(&mut self, input: &Self::RsaBigInt) -> Result<Self::RsaBigInt, Self::Error> {
         // 私鑰指數是秘密，走固定排程；公鑰的 e 是公開值，用變動時間版本比較快。
         // 兩條分支不可合併成一條。
         let inner = self.inner()?;

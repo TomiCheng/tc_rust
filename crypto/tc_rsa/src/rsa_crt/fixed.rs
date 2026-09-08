@@ -3,7 +3,7 @@
 use rand_core::CryptoRng;
 use tc_bigint::modular::{FixedMontyForm, FixedMontyParams};
 use tc_bigint::{FixedBigUint, NonZero, Odd, RandomMod};
-use tc_cipher::CipherDirection;
+use tc_cipher::{AsymmetricBlockCipher, CipherDirection};
 use tc_constant_time::ConstantTimeEq;
 
 use crate::rsa_crt::validate;
@@ -103,8 +103,7 @@ impl<K: RsaPrivateCrtKeyParams + ?Sized, const N: usize, const H: usize> RsaCrtI
     }
 }
 
-impl<const N: usize, const H: usize> Rsa for FixedRsaCrtCoreEngine<N, H> {
-    type RsaBigInt = FixedBigUint<N>;
+impl<const N: usize, const H: usize> AsymmetricBlockCipher for FixedRsaCrtCoreEngine<N, H> {
     type Error = RsaError;
 
     fn input_block_size(&self) -> usize {
@@ -120,6 +119,20 @@ impl<const N: usize, const H: usize> Rsa for FixedRsaCrtCoreEngine<N, H> {
             CipherDirection::Decrypt => inner.bit_size.saturating_sub(1) / 8,
         })
     }
+
+    /// 位元組層的單一區塊運算：轉換輸入、做 CRT 運算、寫回輸出。
+    ///
+    /// 走的是不盲化的 [`Rsa::process_int`]。私鑰暴露在遠端計時之下時，請改用
+    /// [`RsaCrt::process_int_blinded`]。
+    fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
+        let value = self.convert_input(input)?;
+        let result = self.process_int(&value)?;
+        self.convert_output(&result, output)
+    }
+}
+
+impl<const N: usize, const H: usize> Rsa for FixedRsaCrtCoreEngine<N, H> {
+    type RsaBigInt = FixedBigUint<N>;
 
     fn convert_input(&self, input: &[u8]) -> Result<Self::RsaBigInt, Self::Error> {
         let inner = self.inner()?;
@@ -137,8 +150,8 @@ impl<const N: usize, const H: usize> Rsa for FixedRsaCrtCoreEngine<N, H> {
     /// 不盲化的 CRT 運算。
     ///
     /// 只做中國剩餘定理與 Lenstra 故障檢查，**不含盲化**。私鑰暴露在遠端計時
-    /// 之下時請改用 [`RsaCrt::process_block_blinded`]。
-    fn process_block(&mut self, input: &Self::RsaBigInt) -> Result<Self::RsaBigInt, Self::Error> {
+    /// 之下時請改用 [`RsaCrt::process_int_blinded`]。
+    fn process_int(&mut self, input: &Self::RsaBigInt) -> Result<Self::RsaBigInt, Self::Error> {
         self.inner()?.process_crt(input)
     }
 
@@ -167,7 +180,7 @@ impl<const N: usize, const H: usize> Rsa for FixedRsaCrtCoreEngine<N, H> {
 }
 
 impl<const N: usize, const H: usize> RsaCrt for FixedRsaCrtCoreEngine<N, H> {
-    fn process_block_blinded<R: CryptoRng + ?Sized>(
+    fn process_int_blinded<R: CryptoRng + ?Sized>(
         &mut self,
         input: &Self::RsaBigInt,
         rng: &mut R,

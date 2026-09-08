@@ -143,6 +143,8 @@ mod tests {
 
     impl TryCryptoRng for SequenceRng {}
 
+    use tc_cipher::AsymmetricBlockCipher;
+
     use crate::{Rsa, RsaInit, RsaKeyRef as Key};
 
     #[test]
@@ -319,8 +321,8 @@ mod tests {
 
         for message in [&[2_u8][..], &[42][..], &[0x0f, 0xf5][..]] {
             let plain = public.convert_input(message).unwrap();
-            let cipher = public.process_block(&plain).unwrap();
-            let recovered = private.process_block(&cipher).unwrap();
+            let cipher = public.process_int(&plain).unwrap();
+            let recovered = private.process_int(&cipher).unwrap();
             assert_eq!(recovered, plain);
 
             let mut output = [0_u8; 2];
@@ -358,21 +360,21 @@ mod tests {
         for message in [&[2_u8][..], &[42][..], &[0x0f, 0xf5][..]] {
             let mut from_fixed = [0_u8; 2];
             let plain = fixed_public.convert_input(message).unwrap();
-            let cipher = fixed_public.process_block(&plain).unwrap();
+            let cipher = fixed_public.process_int(&plain).unwrap();
             let fixed_len = fixed_public
                 .convert_output(&cipher, &mut from_fixed)
                 .unwrap();
 
             let mut from_heap = [0_u8; 2];
             let plain = heap_public.convert_input(message).unwrap();
-            let cipher = heap_public.process_block(&plain).unwrap();
+            let cipher = heap_public.process_int(&plain).unwrap();
             let heap_len = heap_public.convert_output(&cipher, &mut from_heap).unwrap();
 
             assert_eq!(&from_heap[..heap_len], &from_fixed[..fixed_len]);
 
             let mut recovered = [0_u8; 2];
             let cipher = heap_private.convert_input(&from_heap[..heap_len]).unwrap();
-            let plain = heap_private.process_block(&cipher).unwrap();
+            let plain = heap_private.process_int(&cipher).unwrap();
             let length = heap_private.convert_output(&plain, &mut recovered).unwrap();
             assert_eq!(&recovered[..length], message);
         }
@@ -458,18 +460,18 @@ mod tests {
             // 兩個引擎的整數寬度不同（1 vs 2 limb），所以比對輸出位元組。
             let mut expected = [0_u8; 2];
             let value = plain.convert_input(message).unwrap();
-            let result = plain.process_block(&value).unwrap();
+            let result = plain.process_int(&value).unwrap();
             let expected_len = plain.convert_output(&result, &mut expected).unwrap();
 
             let value = crt.convert_input(message).unwrap();
 
             let mut plain_crt = [0_u8; 2];
-            let result = crt.process_block(&value).unwrap();
+            let result = crt.process_int(&value).unwrap();
             let length = crt.convert_output(&result, &mut plain_crt).unwrap();
             assert_eq!(&plain_crt[..length], &expected[..expected_len]);
 
             let mut blinded = [0_u8; 2];
-            let result = crt.process_block_blinded(&value, &mut rng).unwrap();
+            let result = crt.process_int_blinded(&value, &mut rng).unwrap();
             let length = crt.convert_output(&result, &mut blinded).unwrap();
             assert_eq!(&blinded[..length], &expected[..expected_len]);
         }
@@ -494,7 +496,7 @@ mod tests {
 
         let value = engine.convert_input(&[42]).unwrap();
         assert_eq!(
-            engine.process_block(&value),
+            engine.process_int(&value),
             Err(RsaError::FaultyDecryptionOrSigning)
         );
     }
@@ -527,12 +529,12 @@ mod tests {
             for message in [&[2_u8][..], &[42][..], &[0x0f, 0xf5][..]] {
                 // 兩個後端的整數型別不同，所以比對轉換後的輸出位元組。
                 let value = fixed.convert_input(message).unwrap();
-                let result = fixed.process_block(&value).unwrap();
+                let result = fixed.process_int(&value).unwrap();
                 let mut expected = [0_u8; 2];
                 let expected_len = fixed.convert_output(&result, &mut expected).unwrap();
 
                 let value = heap.convert_input(message).unwrap();
-                let result = heap.process_block(&value).unwrap();
+                let result = heap.process_int(&value).unwrap();
                 let mut output = [0_u8; 2];
                 let length = heap.convert_output(&result, &mut output).unwrap();
                 assert_eq!(&output[..length], &expected[..expected_len]);
@@ -547,9 +549,9 @@ mod tests {
 
         for message in [&[2_u8][..], &[42][..], &[0x0f, 0xf5][..]] {
             let input = engine.convert_input(message).unwrap();
-            let expected = engine.process_block(&input).unwrap();
-            let first = engine.process_block_blinded(&input, &mut rng).unwrap();
-            let second = engine.process_block_blinded(&input, &mut rng).unwrap();
+            let expected = engine.process_int(&input).unwrap();
+            let first = engine.process_int_blinded(&input, &mut rng).unwrap();
+            let second = engine.process_int_blinded(&input, &mut rng).unwrap();
             assert_eq!(first, expected);
             assert_eq!(second, expected);
         }
@@ -576,11 +578,11 @@ mod tests {
 
         let input = engine.convert_input(&[42]).unwrap();
         assert_eq!(
-            engine.process_block(&input),
+            engine.process_int(&input),
             Err(RsaError::FaultyDecryptionOrSigning)
         );
         assert_eq!(
-            engine.process_block_blinded(&input, &mut SequenceRng(0)),
+            engine.process_int_blinded(&input, &mut SequenceRng(0)),
             Err(RsaError::FaultyDecryptionOrSigning)
         );
     }
@@ -593,9 +595,9 @@ mod tests {
         assert_eq!(engine.input_block_size(), 0);
         assert_eq!(engine.output_block_size(), 0);
         assert_eq!(engine.convert_input(&[2]), Err(RsaError::NotInitialized));
-        assert_eq!(engine.process_block(&input), Err(RsaError::NotInitialized));
+        assert_eq!(engine.process_int(&input), Err(RsaError::NotInitialized));
         assert_eq!(
-            engine.process_block_blinded(&input, &mut SequenceRng(0)),
+            engine.process_int_blinded(&input, &mut SequenceRng(0)),
             Err(RsaError::NotInitialized)
         );
         assert_eq!(
@@ -624,11 +626,11 @@ mod tests {
 
         // 輸入 6 時 m_p=2、m_q=65；只加一次 p=61 仍會下溢，必須先算 m_q mod p。
         let input = heap.convert_input(&[6]).unwrap();
-        let result = heap.process_block(&input).unwrap();
+        let result = heap.process_int(&input).unwrap();
         let mut output = [0_u8; 2];
         let length = heap.convert_output(&result, &mut output).unwrap();
         let input = fixed.convert_input(&[6]).unwrap();
-        let result = fixed.process_block(&input).unwrap();
+        let result = fixed.process_int(&input).unwrap();
         let mut expected = [0_u8; 2];
         let expected_len = fixed.convert_output(&result, &mut expected).unwrap();
         assert_eq!(&output[..length], &expected[..expected_len]);
@@ -639,7 +641,7 @@ mod tests {
         let key = crt_key();
         let mut heap = heap_crt_engine();
         let input = heap.convert_input(&[42]).unwrap();
-        let expected = heap.process_block(&input).unwrap();
+        let expected = heap.process_int(&input).unwrap();
 
         for (index, value, error) in [
             (0, &[][..], RsaError::InvalidModulus),
@@ -676,7 +678,7 @@ mod tests {
             assert_eq!(heap.init(CipherDirection::Encrypt, &invalid), Err(error));
             assert_eq!(heap.input_block_size(), 2);
             assert_eq!(heap.output_block_size(), 1);
-            assert_eq!(heap.process_block(&input).unwrap(), expected);
+            assert_eq!(heap.process_int(&input).unwrap(), expected);
         }
     }
 
@@ -694,8 +696,8 @@ mod tests {
 
         let value = from_owned.convert_input(&[42]).unwrap();
         assert_eq!(
-            from_owned.process_block(&value).unwrap(),
-            borrowed.clone().process_block(&value).unwrap()
+            from_owned.process_int(&value).unwrap(),
+            borrowed.clone().process_int(&value).unwrap()
         );
     }
 
@@ -718,8 +720,88 @@ mod tests {
 
         let value = engine.convert_input(&[42]).unwrap();
         assert_eq!(
-            engine.process_block(&value).unwrap(),
-            expected.process_block(&value).unwrap()
+            engine.process_int(&value).unwrap(),
+            expected.process_int(&value).unwrap()
         );
+    }
+
+    #[test]
+    fn the_byte_interface_matches_the_three_step_path() {
+        let public = Key::new(false, &MODULUS, &EXPONENT);
+        let message = &[42_u8][..];
+
+        let mut fixed = fixed_engine(CipherDirection::Encrypt, &public);
+        let mut heap = heap_engine(CipherDirection::Encrypt, &public);
+        let mut fixed_crt = crt_engine();
+        let mut heap_crt = heap_crt_engine();
+
+        let mut expected = [0_u8; 2];
+        let value = fixed.convert_input(message).unwrap();
+        let result = fixed.process_int(&value).unwrap();
+        let expected_len = fixed.convert_output(&result, &mut expected).unwrap();
+
+        for (name, actual) in [
+            ("fixed", {
+                let mut buffer = [0_u8; 2];
+                let length =
+                    AsymmetricBlockCipher::process_block(&mut fixed, message, &mut buffer).unwrap();
+                (buffer, length)
+            }),
+            ("heap", {
+                let mut buffer = [0_u8; 2];
+                let length =
+                    AsymmetricBlockCipher::process_block(&mut heap, message, &mut buffer).unwrap();
+                (buffer, length)
+            }),
+        ] {
+            assert_eq!(&actual.0[..actual.1], &expected[..expected_len], "{name}");
+        }
+
+        // 兩個 CRT 引擎是解密方向，對同一密文的位元組介面結果也要一致。
+        let mut ciphertext = [0_u8; 2];
+        let cipher_len =
+            AsymmetricBlockCipher::process_block(&mut fixed, message, &mut ciphertext).unwrap();
+
+        let mut from_fixed_crt = [0_u8; 2];
+        let fixed_crt_len = AsymmetricBlockCipher::process_block(
+            &mut fixed_crt,
+            &ciphertext[..cipher_len],
+            &mut from_fixed_crt,
+        )
+        .unwrap();
+        let mut from_heap_crt = [0_u8; 2];
+        let heap_crt_len = AsymmetricBlockCipher::process_block(
+            &mut heap_crt,
+            &ciphertext[..cipher_len],
+            &mut from_heap_crt,
+        )
+        .unwrap();
+
+        assert_eq!(&from_fixed_crt[..fixed_crt_len], message);
+        assert_eq!(&from_heap_crt[..heap_crt_len], message);
+    }
+
+    #[test]
+    fn the_byte_interface_passes_errors_through() {
+        let mut engine = fixed_engine(
+            CipherDirection::Encrypt,
+            &Key::new(false, &MODULUS, &EXPONENT),
+        );
+
+        assert_eq!(
+            AsymmetricBlockCipher::process_block(&mut engine, &[1], &mut [0_u8; 2]),
+            Err(RsaError::InputTooSmall)
+        );
+        assert_eq!(
+            AsymmetricBlockCipher::process_block(&mut engine, &[42], &mut [0_u8; 1]),
+            Err(RsaError::OutputTooShort)
+        );
+
+        let mut empty = FixedRsaCoreEngine::<1>::default();
+        assert_eq!(
+            AsymmetricBlockCipher::process_block(&mut empty, &[42], &mut [0_u8; 2]),
+            Err(RsaError::NotInitialized)
+        );
+        assert_eq!(AsymmetricBlockCipher::input_block_size(&empty), 0);
     }
 }

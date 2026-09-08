@@ -2,7 +2,7 @@
 
 use rand_core::CryptoRng;
 use tc_bigint::{BigUint, NonZero, RandomMod};
-use tc_cipher::CipherDirection;
+use tc_cipher::{AsymmetricBlockCipher, CipherDirection};
 
 use crate::rsa_crt::validate;
 use crate::{Rsa, RsaCrt, RsaCrtInit, RsaError, RsaPrivateCrtKeyParams};
@@ -18,7 +18,7 @@ use crate::{Rsa, RsaCrt, RsaCrtInit, RsaError, RsaPrivateCrtKeyParams};
 /// 底層的 [`BigUint`] 是長度隨數值變動的堆配置整數，`mod_pow` 與 `mod_inverse`
 /// 都沒有固定排程，而且秘密材料會留在無法歸零的堆緩衝區裡。CRT 的中間值
 /// `m_p`、`m_q`、`h` 都是秘密，其長度隨值變動；Lenstra 比較也不是常數時間。
-/// [`RsaCrt::process_block_blinded`] 仍會在每次運算重新取樣盲化因子，降低遠端計時
+/// [`RsaCrt::process_int_blinded`] 仍會在每次運算重新取樣盲化因子，降低遠端計時
 /// 的可觀測性，但不等同固定排程。需要固定排程的私鑰運算請改用固定寬度版本。
 ///
 /// 以 [`Default`] 建立的引擎尚未持有金鑰，運算方法會回
@@ -81,8 +81,7 @@ impl<K: RsaPrivateCrtKeyParams + ?Sized> RsaCrtInit<K> for HeapRsaCrtCoreEngine 
     }
 }
 
-impl Rsa for HeapRsaCrtCoreEngine {
-    type RsaBigInt = BigUint;
+impl AsymmetricBlockCipher for HeapRsaCrtCoreEngine {
     type Error = RsaError;
 
     fn input_block_size(&self) -> usize {
@@ -103,6 +102,20 @@ impl Rsa for HeapRsaCrtCoreEngine {
             })
     }
 
+    /// 位元組層的單一區塊運算：轉換輸入、做 CRT 運算、寫回輸出。
+    ///
+    /// 走的是不盲化的 [`Rsa::process_int`]。私鑰暴露在遠端計時之下時，請改用
+    /// [`RsaCrt::process_int_blinded`]。
+    fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
+        let value = self.convert_input(input)?;
+        let result = self.process_int(&value)?;
+        self.convert_output(&result, output)
+    }
+}
+
+impl Rsa for HeapRsaCrtCoreEngine {
+    type RsaBigInt = BigUint;
+
     fn convert_input(&self, input: &[u8]) -> Result<Self::RsaBigInt, Self::Error> {
         let inner = self.inner()?;
         let input = BigUint::from_be_bytes(input);
@@ -119,8 +132,8 @@ impl Rsa for HeapRsaCrtCoreEngine {
     /// 不盲化的 CRT 運算。
     ///
     /// 只做中國剩餘定理與 Lenstra 故障檢查，**不含盲化**。私鑰暴露在遠端計時
-    /// 之下時請改用 [`RsaCrt::process_block_blinded`]。
-    fn process_block(&mut self, input: &Self::RsaBigInt) -> Result<Self::RsaBigInt, Self::Error> {
+    /// 之下時請改用 [`RsaCrt::process_int_blinded`]。
+    fn process_int(&mut self, input: &Self::RsaBigInt) -> Result<Self::RsaBigInt, Self::Error> {
         self.inner()?.process_crt(input)
     }
 
@@ -148,7 +161,7 @@ impl Rsa for HeapRsaCrtCoreEngine {
 }
 
 impl RsaCrt for HeapRsaCrtCoreEngine {
-    fn process_block_blinded<R: CryptoRng + ?Sized>(
+    fn process_int_blinded<R: CryptoRng + ?Sized>(
         &mut self,
         input: &Self::RsaBigInt,
         rng: &mut R,

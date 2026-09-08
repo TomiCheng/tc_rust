@@ -1,7 +1,7 @@
 //! Key and raw-operation contracts for RSA.
 
 use rand_core::CryptoRng;
-use tc_cipher::CipherDirection;
+use tc_cipher::{AsymmetricBlockCipher, CipherDirection};
 
 /// A key usable by an RSA operation: a modulus plus one exponent.
 ///
@@ -55,27 +55,26 @@ pub trait RsaPrivateCrtKeyParams: RsaKeyParams {
     fn q_inv(&self) -> &[u8];
 }
 
-/// Raw RSA operations with separate byte conversion and integer processing.
+/// Raw RSA operations, splitting byte conversion from integer processing.
 ///
-/// This trait carries no key type, so an initialized engine can be used — and
-/// stored behind `dyn Rsa<RsaBigInt = _, Error = _>` — without naming the
-/// parameters it was built from. Initialization is provided independently by
-/// [`RsaInit`].
-pub trait Rsa {
+/// Extends [`AsymmetricBlockCipher`], which supplies the byte-level entry point
+/// and the block sizes; this trait adds the three steps that
+/// `process_block` is built from, so a padding layer can reach the intermediate
+/// integer. `Self::Error` is the supertrait's error type — this trait declares
+/// none of its own, which keeps `Self::Error` unambiguous.
+///
+/// It carries no key type, so an initialized engine can be used without naming
+/// the parameters it was built from. Initialization is provided independently
+/// by [`RsaInit`].
+pub trait Rsa: AsymmetricBlockCipher {
+    /// The integer representation this engine operates on.
     type RsaBigInt;
-    type Error: core::error::Error;
-
-    /// Returns the maximum input length in bytes for the current direction.
-    fn input_block_size(&self) -> usize;
-
-    /// Returns the maximum output length in bytes for the current direction.
-    fn output_block_size(&self) -> usize;
 
     /// Validates and converts a big-endian input block to an unsigned integer.
     fn convert_input(&self, input: &[u8]) -> Result<Self::RsaBigInt, Self::Error>;
 
     /// Applies the raw RSA operation to a converted input integer.
-    fn process_block(&mut self, input: &Self::RsaBigInt) -> Result<Self::RsaBigInt, Self::Error>;
+    fn process_int(&mut self, input: &Self::RsaBigInt) -> Result<Self::RsaBigInt, Self::Error>;
 
     /// Writes the result in big-endian form and returns the number of bytes written.
     ///
@@ -105,7 +104,7 @@ pub trait RsaInit<K: RsaKeyParams + ?Sized> {
 /// A CRT-capable RSA engine, whose private operation is blinded per call.
 pub trait RsaCrt: Rsa {
     /// Applies the CRT private operation with freshly sampled RSA blinding.
-    fn process_block_blinded<R: CryptoRng + ?Sized>(
+    fn process_int_blinded<R: CryptoRng + ?Sized>(
         &mut self,
         input: &Self::RsaBigInt,
         rng: &mut R,

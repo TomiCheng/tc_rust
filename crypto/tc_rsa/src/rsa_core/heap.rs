@@ -1,7 +1,7 @@
 //! 以堆配置的 RSA 核心；模數寬度在執行期決定。
 
 use tc_bigint::BigUint;
-use tc_cipher::CipherDirection;
+use tc_cipher::{AsymmetricBlockCipher, CipherDirection};
 
 use crate::rsa_core::validate;
 use crate::{Rsa, RsaError, RsaInit, RsaKeyParams};
@@ -69,8 +69,7 @@ impl<K: RsaKeyParams + ?Sized> RsaInit<K> for HeapRsaCoreEngine {
     }
 }
 
-impl Rsa for HeapRsaCoreEngine {
-    type RsaBigInt = BigUint;
+impl AsymmetricBlockCipher for HeapRsaCoreEngine {
     type Error = RsaError;
 
     fn input_block_size(&self) -> usize {
@@ -91,6 +90,17 @@ impl Rsa for HeapRsaCoreEngine {
             })
     }
 
+    /// 位元組層的單一區塊運算：轉換輸入、做原始 RSA、寫回輸出。
+    fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
+        let value = self.convert_input(input)?;
+        let result = self.process_int(&value)?;
+        self.convert_output(&result, output)
+    }
+}
+
+impl Rsa for HeapRsaCoreEngine {
+    type RsaBigInt = BigUint;
+
     fn convert_input(&self, input: &[u8]) -> Result<Self::RsaBigInt, Self::Error> {
         let inner = self.inner()?;
         let input = BigUint::from_be_bytes(input);
@@ -104,7 +114,7 @@ impl Rsa for HeapRsaCoreEngine {
         Ok(input)
     }
 
-    fn process_block(&mut self, input: &Self::RsaBigInt) -> Result<Self::RsaBigInt, Self::Error> {
+    fn process_int(&mut self, input: &Self::RsaBigInt) -> Result<Self::RsaBigInt, Self::Error> {
         // `mod_pow` 是變動時間；私鑰在這個後端沒有排程保護，見型別文件。
         let inner = self.inner()?;
         let _ = inner.is_private;
