@@ -106,7 +106,7 @@ mod tests {
     use super::{LIMB_BITS, bit_length, is_odd, is_zero, limbs_for_bits};
     use alloc::vec;
 
-    use crate::rsa_crt::FixedRsaCrtCoreEngine;
+    use crate::rsa_crt::{FixedRsaCrtCoreEngine, HeapRsaCrtCoreEngine};
     use crate::{RsaCrt, RsaCrtInit, RsaKeyOwned, RsaPrivateCrtKeyOwned, RsaPrivateCrtKeyRef};
     use core::convert::Infallible;
 
@@ -506,6 +506,178 @@ mod tests {
         assert_eq!(engine.input_block_size(), 0);
         assert_eq!(engine.output_block_size(), 0);
         assert_eq!(engine.convert_input(&[2]), Err(RsaError::NotInitialized));
+    }
+
+    fn heap_crt_engine() -> HeapRsaCrtCoreEngine {
+        let mut engine = HeapRsaCrtCoreEngine::default();
+        engine.init(CipherDirection::Decrypt, &crt_key()).unwrap();
+        engine
+    }
+
+    #[test]
+    fn the_heap_crt_backend_matches_the_fixed_crt_backend() {
+        for direction in [CipherDirection::Encrypt, CipherDirection::Decrypt] {
+            let mut fixed = FixedRsaCrtCoreEngine::<2, 1>::default();
+            let mut heap = HeapRsaCrtCoreEngine::default();
+            fixed.init(direction, &crt_key()).unwrap();
+            heap.init(direction, &crt_key()).unwrap();
+            assert_eq!(heap.input_block_size(), fixed.input_block_size());
+            assert_eq!(heap.output_block_size(), fixed.output_block_size());
+
+            for message in [&[2_u8][..], &[42][..], &[0x0f, 0xf5][..]] {
+                // 兩個後端的整數型別不同，所以比對轉換後的輸出位元組。
+                let value = fixed.convert_input(message).unwrap();
+                let result = fixed.process_block(&value).unwrap();
+                let mut expected = [0_u8; 2];
+                let expected_len = fixed.convert_output(&result, &mut expected).unwrap();
+
+                let value = heap.convert_input(message).unwrap();
+                let result = heap.process_block(&value).unwrap();
+                let mut output = [0_u8; 2];
+                let length = heap.convert_output(&result, &mut output).unwrap();
+                assert_eq!(&output[..length], &expected[..expected_len]);
+            }
+        }
+    }
+
+    #[test]
+    fn heap_crt_blinding_does_not_change_the_result() {
+        let mut engine = heap_crt_engine();
+        let mut rng = SequenceRng(0);
+
+        for message in [&[2_u8][..], &[42][..], &[0x0f, 0xf5][..]] {
+            let input = engine.convert_input(message).unwrap();
+            let expected = engine.process_block(&input).unwrap();
+            let first = engine.process_block_blinded(&input, &mut rng).unwrap();
+            let second = engine.process_block_blinded(&input, &mut rng).unwrap();
+            assert_eq!(first, expected);
+            assert_eq!(second, expected);
+        }
+        // 確認盲化路徑確實使用了呼叫端的亂數來源。
+        assert_ne!(rng.0, 0);
+    }
+
+    #[test]
+    fn the_heap_crt_backend_rejects_a_faulty_exponent() {
+        let valid = crt_key();
+        // dp 從 19 翻成 17，兩條運算路徑都必須被 Lenstra 檢查擋下。
+        let key = RsaPrivateCrtKeyRef::new(
+            &MODULUS,
+            &EXPONENT,
+            valid.private_exponent(),
+            valid.p(),
+            valid.q(),
+            &[17],
+            valid.dq(),
+            valid.q_inv(),
+        );
+        let mut engine = HeapRsaCrtCoreEngine::default();
+        engine.init(CipherDirection::Decrypt, &key).unwrap();
+
+        let input = engine.convert_input(&[42]).unwrap();
+        assert_eq!(
+            engine.process_block(&input),
+            Err(RsaError::FaultyDecryptionOrSigning)
+        );
+        assert_eq!(
+            engine.process_block_blinded(&input, &mut SequenceRng(0)),
+            Err(RsaError::FaultyDecryptionOrSigning)
+        );
+    }
+
+    #[test]
+    fn an_uninitialised_heap_crt_engine_reports_no_capacity() {
+        let mut engine = HeapRsaCrtCoreEngine::default();
+        let input = tc_bigint::BigUint::from(2_u8);
+
+        assert_eq!(engine.input_block_size(), 0);
+        assert_eq!(engine.output_block_size(), 0);
+        assert_eq!(engine.convert_input(&[2]), Err(RsaError::NotInitialized));
+        assert_eq!(engine.process_block(&input), Err(RsaError::NotInitialized));
+        assert_eq!(
+            engine.process_block_blinded(&input, &mut SequenceRng(0)),
+            Err(RsaError::NotInitialized)
+        );
+        assert_eq!(
+            engine.convert_output(&input, &mut [0; 2]),
+            Err(RsaError::NotInitialized)
+        );
+    }
+
+    #[test]
+    fn heap_crt_recombination_reduces_m_q_before_unsigned_subtraction() {
+        let valid = crt_key();
+        // 交換 p、q 與 dp、dq，新的 qInv 是 67^-1 mod 61 = 51。
+        let key = RsaPrivateCrtKeyRef::new(
+            &MODULUS,
+            &EXPONENT,
+            valid.private_exponent(),
+            valid.q(),
+            valid.p(),
+            valid.dq(),
+            valid.dp(),
+            &[51],
+        );
+        let mut heap = HeapRsaCrtCoreEngine::default();
+        heap.init(CipherDirection::Decrypt, &key).unwrap();
+        let mut fixed = crt_engine();
+
+        // 輸入 6 時 m_p=2、m_q=65；只加一次 p=61 仍會下溢，必須先算 m_q mod p。
+        let input = heap.convert_input(&[6]).unwrap();
+        let result = heap.process_block(&input).unwrap();
+        let mut output = [0_u8; 2];
+        let length = heap.convert_output(&result, &mut output).unwrap();
+        let input = fixed.convert_input(&[6]).unwrap();
+        let result = fixed.process_block(&input).unwrap();
+        let mut expected = [0_u8; 2];
+        let expected_len = fixed.convert_output(&result, &mut expected).unwrap();
+        assert_eq!(&output[..length], &expected[..expected_len]);
+    }
+
+    #[test]
+    fn crt_backends_share_validation_and_failed_init_preserves_the_heap_state() {
+        let key = crt_key();
+        let mut heap = heap_crt_engine();
+        let input = heap.convert_input(&[42]).unwrap();
+        let expected = heap.process_block(&input).unwrap();
+
+        for (index, value, error) in [
+            (0, &[][..], RsaError::InvalidModulus),
+            (0, &[4][..], RsaError::EvenModulus),
+            (1, &[][..], RsaError::InvalidExponent),
+            (1, &[4][..], RsaError::EvenPublicExponent),
+            (2, &[][..], RsaError::InvalidPrivateExponent),
+            (2, &[4][..], RsaError::InvalidPrivateExponent),
+            (3, &[][..], RsaError::InvalidP),
+            (3, &[4][..], RsaError::InvalidP),
+            (4, &[][..], RsaError::InvalidQ),
+            (4, &[4][..], RsaError::InvalidQ),
+            (5, &[][..], RsaError::InvalidDp),
+            (6, &[][..], RsaError::InvalidDq),
+            (7, &[][..], RsaError::InvalidQInv),
+        ] {
+            let mut fields = [
+                key.modulus(),
+                key.public_exponent(),
+                key.private_exponent(),
+                key.p(),
+                key.q(),
+                key.dp(),
+                key.dq(),
+                key.q_inv(),
+            ];
+            fields[index] = value;
+            let invalid = RsaPrivateCrtKeyRef::new(
+                fields[0], fields[1], fields[2], fields[3], fields[4], fields[5], fields[6],
+                fields[7],
+            );
+            let mut fixed = crt_engine();
+            assert_eq!(fixed.init(CipherDirection::Encrypt, &invalid), Err(error));
+            assert_eq!(heap.init(CipherDirection::Encrypt, &invalid), Err(error));
+            assert_eq!(heap.input_block_size(), 2);
+            assert_eq!(heap.output_block_size(), 1);
+            assert_eq!(heap.process_block(&input).unwrap(), expected);
+        }
     }
 
     #[test]

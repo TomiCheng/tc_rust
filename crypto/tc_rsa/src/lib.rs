@@ -30,6 +30,7 @@ pub use rsa_core::{
     limbs_for_bits,
 };
 pub use rsa_crt::{
-    FixedRsaCrtCoreEngine, Rsa1024CrtCore, Rsa2048CrtCore, Rsa3072CrtCore, Rsa4096CrtCore,
+    FixedRsaCrtCoreEngine, HeapRsaCrtCoreEngine, Rsa1024CrtCore, Rsa2048CrtCore, Rsa3072CrtCore,
+    Rsa4096CrtCore,
 };
 pub use traits::{Rsa, RsaCrt, RsaCrtInit, RsaInit, RsaKeyParams, RsaPrivateCrtKeyParams};
