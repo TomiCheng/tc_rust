@@ -3,6 +3,8 @@
 //! 這些型別只是大端序位元組的容器，建構時不做任何有效性檢查；金鑰能不能用，
 //! 由 `RsaCoreEngine` 初始化時判定。
 
+use alloc::vec::Vec;
+
 use crate::traits;
 
 /// 公開金鑰或非 CRT 私鑰的參數。
@@ -166,21 +168,140 @@ impl traits::RsaPrivateCrtKeyParams for RsaPrivateCrtKeyRef<'_> {
     }
 }
 
-/// 可交給 RSA 引擎的金鑰種類。
-#[derive(Clone, Copy, Eq, PartialEq)]
-pub enum RsaKey<'a> {
-    Standard(RsaKeyRef<'a>),
-    PrivateCrt(RsaPrivateCrtKeyRef<'a>),
+/// 擁有位元組的公開金鑰或非 CRT 私鑰參數。
+///
+/// 與 [`RsaKeyRef`] 的差別只在所有權：從 DER／PKCS#8 解出來的位元組沒有更長壽
+/// 的借用來源時用這個，其餘語意（大端序、允許前導零、建構不驗證）完全相同。
+#[derive(Clone, Eq, PartialEq)]
+pub struct RsaKeyOwned {
+    is_private: bool,
+    modulus: Vec<u8>,
+    exponent: Vec<u8>,
 }
 
-impl<'a> From<RsaKeyRef<'a>> for RsaKey<'a> {
-    fn from(value: RsaKeyRef<'a>) -> Self {
-        Self::Standard(value)
+impl RsaKeyOwned {
+    /// 建立擁有位元組的 RSA 金鑰參數。
+    ///
+    /// `exponent` 對公開金鑰是 `e`，對私鑰是 `d`。
+    pub const fn new(is_private: bool, modulus: Vec<u8>, exponent: Vec<u8>) -> Self {
+        Self {
+            is_private,
+            modulus,
+            exponent,
+        }
+    }
+
+    /// 借出一份 [`RsaKeyRef`]。
+    pub fn as_key_ref(&self) -> RsaKeyRef<'_> {
+        RsaKeyRef::new(self.is_private, &self.modulus, &self.exponent)
     }
 }
 
-impl<'a> From<RsaPrivateCrtKeyRef<'a>> for RsaKey<'a> {
-    fn from(value: RsaPrivateCrtKeyRef<'a>) -> Self {
-        Self::PrivateCrt(value)
+impl traits::RsaKeyParams for RsaKeyOwned {
+    fn is_private_key(&self) -> bool {
+        self.is_private
+    }
+
+    fn modulus(&self) -> &[u8] {
+        &self.modulus
+    }
+
+    fn exponent(&self) -> &[u8] {
+        &self.exponent
+    }
+}
+
+/// 擁有位元組的 CRT 私鑰參數。
+///
+/// 與 [`RsaPrivateCrtKeyRef`] 的差別只在所有權。
+#[derive(Clone, Eq, PartialEq)]
+pub struct RsaPrivateCrtKeyOwned {
+    modulus: Vec<u8>,
+    public_exponent: Vec<u8>,
+    private_exponent: Vec<u8>,
+    p: Vec<u8>,
+    q: Vec<u8>,
+    dp: Vec<u8>,
+    dq: Vec<u8>,
+    q_inv: Vec<u8>,
+}
+
+impl RsaPrivateCrtKeyOwned {
+    /// 建立擁有位元組的 CRT 私鑰參數。
+    #[allow(clippy::too_many_arguments)]
+    pub const fn new(
+        modulus: Vec<u8>,
+        public_exponent: Vec<u8>,
+        private_exponent: Vec<u8>,
+        p: Vec<u8>,
+        q: Vec<u8>,
+        dp: Vec<u8>,
+        dq: Vec<u8>,
+        q_inv: Vec<u8>,
+    ) -> Self {
+        Self {
+            modulus,
+            public_exponent,
+            private_exponent,
+            p,
+            q,
+            dp,
+            dq,
+            q_inv,
+        }
+    }
+
+    /// 借出一份 [`RsaPrivateCrtKeyRef`]。
+    pub fn as_key_ref(&self) -> RsaPrivateCrtKeyRef<'_> {
+        RsaPrivateCrtKeyRef::new(
+            &self.modulus,
+            &self.public_exponent,
+            &self.private_exponent,
+            &self.p,
+            &self.q,
+            &self.dp,
+            &self.dq,
+            &self.q_inv,
+        )
+    }
+}
+
+impl traits::RsaKeyParams for RsaPrivateCrtKeyOwned {
+    fn is_private_key(&self) -> bool {
+        true
+    }
+
+    fn modulus(&self) -> &[u8] {
+        &self.modulus
+    }
+
+    fn exponent(&self) -> &[u8] {
+        &self.private_exponent
+    }
+}
+
+impl traits::RsaPrivateCrtKeyParams for RsaPrivateCrtKeyOwned {
+    fn public_exponent(&self) -> &[u8] {
+        &self.public_exponent
+    }
+
+    fn p(&self) -> &[u8] {
+        &self.p
+    }
+
+    fn q(&self) -> &[u8] {
+        &self.q
+    }
+
+    fn dp(&self) -> &[u8] {
+        &self.dp
+    }
+
+    fn dq(&self) -> &[u8] {
+        &self.dq
+    }
+
+    fn q_inv(&self) -> &[u8] {
+        &self.q_inv
     }
 }

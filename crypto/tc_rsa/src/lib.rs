@@ -24,7 +24,7 @@ pub mod traits;
 //
 // pub use engine::RsaBlindedEngine;
 pub use error::RsaError;
-pub use params::{RsaKey, RsaKeyRef, RsaPrivateCrtKeyRef};
+pub use params::{RsaKeyOwned, RsaKeyRef, RsaPrivateCrtKeyOwned, RsaPrivateCrtKeyRef};
 pub use rsa_core::{
     FixedRsaCoreEngine, HeapRsaCoreEngine, Rsa1024Core, Rsa2048Core, Rsa3072Core, Rsa4096Core,
     limbs_for_bits,

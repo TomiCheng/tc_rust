@@ -104,8 +104,10 @@ mod tests {
     use super::heap::HeapRsaCoreEngine;
     use super::validate;
     use super::{LIMB_BITS, bit_length, is_odd, is_zero, limbs_for_bits};
+    use alloc::vec;
+
     use crate::rsa_crt::FixedRsaCrtCoreEngine;
-    use crate::{RsaCrt, RsaCrtInit, RsaPrivateCrtKeyRef};
+    use crate::{RsaCrt, RsaCrtInit, RsaKeyOwned, RsaPrivateCrtKeyOwned, RsaPrivateCrtKeyRef};
     use core::convert::Infallible;
 
     use rand_core::{TryCryptoRng, TryRng};
@@ -504,5 +506,48 @@ mod tests {
         assert_eq!(engine.input_block_size(), 0);
         assert_eq!(engine.output_block_size(), 0);
         assert_eq!(engine.convert_input(&[2]), Err(RsaError::NotInitialized));
+    }
+
+    #[test]
+    fn owned_parameters_behave_like_the_borrowed_ones() {
+        let owned = RsaKeyOwned::new(false, MODULUS.to_vec(), EXPONENT.to_vec());
+        assert_eq!(validate(&owned), validate(&owned.as_key_ref()));
+
+        let mut from_owned = FixedRsaCoreEngine::<1>::default();
+        from_owned.init(CipherDirection::Encrypt, &owned).unwrap();
+        let borrowed = fixed_engine(
+            CipherDirection::Encrypt,
+            &Key::new(false, &MODULUS, &EXPONENT),
+        );
+
+        let value = from_owned.convert_input(&[42]).unwrap();
+        assert_eq!(
+            from_owned.process_block(&value).unwrap(),
+            borrowed.clone().process_block(&value).unwrap()
+        );
+    }
+
+    #[test]
+    fn owned_crt_parameters_drive_the_crt_engine() {
+        let owned = RsaPrivateCrtKeyOwned::new(
+            MODULUS.to_vec(),
+            EXPONENT.to_vec(),
+            vec![0x08, 0xd7],
+            vec![67],
+            vec![61],
+            vec![19],
+            vec![43],
+            vec![11],
+        );
+
+        let mut engine = FixedRsaCrtCoreEngine::<2, 1>::default();
+        engine.init(CipherDirection::Decrypt, &owned).unwrap();
+        let mut expected = crt_engine();
+
+        let value = engine.convert_input(&[42]).unwrap();
+        assert_eq!(
+            engine.process_block(&value).unwrap(),
+            expected.process_block(&value).unwrap()
+        );
     }
 }
