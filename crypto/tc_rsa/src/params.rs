@@ -8,6 +8,24 @@ use alloc::vec::Vec;
 use crate::traits;
 
 /// 公開金鑰或非 CRT 私鑰的參數。
+///
+/// 借用呼叫端持有的大端序位元組，建構時不驗證，初始化時才檢查。
+///
+/// ```
+/// use tc_cipher::{AsymmetricBlockCipher, CipherDirection};
+/// use tc_rsa::{Rsa2048Core, RsaInit, RsaKeyRef};
+///
+/// // 小型金鑰僅供示範，不可用於實際場合。
+/// let modulus = [0x0f, 0xf7];
+/// let exponent = [7];
+/// let key = RsaKeyRef::new(false, &modulus, &exponent);
+/// let mut engine = Rsa2048Core::default();
+/// engine.init(CipherDirection::Encrypt, &key)?;
+/// let mut output = [0_u8; 2];
+/// let len = engine.process_block(&[2], &mut output)?;
+/// assert_eq!(&output[..len], &[0, 128]);
+/// # Ok::<(), tc_rsa::RsaError>(())
+/// ```
 #[derive(Clone, Copy, Eq, PartialEq)]
 pub struct RsaKeyRef<'a> {
     is_private: bool,
@@ -172,6 +190,24 @@ impl traits::RsaPrivateCrtKeyParams for RsaPrivateCrtKeyRef<'_> {
 ///
 /// 與 [`RsaKeyRef`] 的差別只在所有權：從 DER／PKCS#8 解出來的位元組沒有更長壽
 /// 的借用來源時用這個，其餘語意（大端序、允許前導零、建構不驗證）完全相同。
+///
+/// ```
+/// use tc_cipher::{AsymmetricBlockCipher, CipherDirection};
+/// use tc_rsa::{Rsa2048Core, RsaInit, RsaKeyOwned};
+///
+/// // 小型金鑰僅供示範；位元組的所有權交給參數容器。
+/// let key = RsaKeyOwned::new(false, vec![0x0f, 0xf7], vec![7]);
+/// let borrowed = key.as_key_ref();
+/// assert_eq!(borrowed.modulus(), &[0x0f, 0xf7]);
+/// let mut engine = Rsa2048Core::default();
+/// engine.init(CipherDirection::Encrypt, &borrowed)?;
+/// // 初始化後，核心持有自己的整數值，不借用原始容器。
+/// drop(key);
+/// let mut output = [0_u8; 2];
+/// let len = engine.process_block(&[2], &mut output)?;
+/// assert_eq!(&output[..len], &[0, 128]);
+/// # Ok::<(), tc_rsa::RsaError>(())
+/// ```
 #[derive(Clone, Eq, PartialEq)]
 pub struct RsaKeyOwned {
     is_private: bool,
