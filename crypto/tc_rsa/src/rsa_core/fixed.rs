@@ -5,11 +5,11 @@ use tc_bigint::{FixedBigUint, Odd};
 use tc_cipher::CipherDirection;
 
 use crate::rsa_core::{bit_length, is_odd, is_zero};
-use crate::{Rsa, RsaError, RsaKeyParams};
+use crate::{Rsa, RsaError, RsaInit, RsaKeyParams};
 
 /// 固定 `N` 個 limb 寬的 RSA 核心；`N` 由呼叫端決定，crate 本身沒有模數上限。
 #[derive(Clone, Copy)]
-pub(crate) struct FixedRsaCoreEngine<const N: usize> {
+pub struct FixedRsaCoreEngine<const N: usize> {
     modulus: FixedBigUint<N>,
     exponent: FixedBigUint<N>,
     params_n: FixedMontyParams<N>,
@@ -22,7 +22,7 @@ impl<const N: usize> FixedRsaCoreEngine<N> {
     /// 以已驗證的金鑰建立核心。
     ///
     /// 沒有未初始化的狀態：拿得到引擎就表示金鑰已通過檢查且放得進 `N` 個 limb。
-    pub(crate) fn new<K: RsaKeyParams>(
+    pub fn new<K: RsaKeyParams + ?Sized>(
         direction: CipherDirection,
         key: &K,
     ) -> Result<Self, RsaError> {
@@ -50,14 +50,18 @@ impl<const N: usize> FixedRsaCoreEngine<N> {
     }
 }
 
-impl<K: RsaKeyParams, const N: usize> Rsa<K> for FixedRsaCoreEngine<N> {
-    type RsaBigInt = FixedBigUint<N>;
+impl<K: RsaKeyParams + ?Sized, const N: usize> RsaInit<K> for FixedRsaCoreEngine<N> {
     type Error = RsaError;
 
     fn init(&mut self, direction: CipherDirection, parameters: &K) -> Result<(), Self::Error> {
         *self = Self::new(direction, parameters)?;
         Ok(())
     }
+}
+
+impl<const N: usize> Rsa for FixedRsaCoreEngine<N> {
+    type RsaBigInt = FixedBigUint<N>;
+    type Error = RsaError;
 
     fn input_block_size(&self) -> usize {
         match self.direction {
@@ -136,7 +140,7 @@ fn fixed<const N: usize>(value: &[u8], error: RsaError) -> Result<FixedBigUint<N
     FixedBigUint::from_be_bytes(value).map_err(|_| error)
 }
 
-pub(super) fn validate<K: RsaKeyParams>(key: &K) -> Result<usize, RsaError> {
+pub(super) fn validate<K: RsaKeyParams + ?Sized>(key: &K) -> Result<usize, RsaError> {
     let modulus = key.modulus();
     if is_zero(modulus) {
         return Err(RsaError::InvalidModulus);

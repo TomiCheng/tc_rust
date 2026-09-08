@@ -17,11 +17,14 @@ extern crate alloc;
 // mod engine;
 mod error;
 mod params;
-mod rsa_core;
+pub mod rsa_core;
 pub mod traits;
 
 //
 // pub use engine::RsaBlindedEngine;
 pub use error::RsaError;
 pub use params::{RsaKey, RsaKeyRef, RsaPrivateCrtKeyRef};
-pub use traits::{Rsa, RsaCrt, RsaKeyParams, RsaPrivateCrtKeyParams};
+pub use rsa_core::{
+    FixedRsaCoreEngine, Rsa1024Core, Rsa2048Core, Rsa3072Core, Rsa4096Core, limbs_for_bits,
+};
+pub use traits::{Rsa, RsaCrt, RsaCrtInit, RsaInit, RsaKeyParams, RsaPrivateCrtKeyParams};

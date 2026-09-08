@@ -56,12 +56,14 @@ pub trait RsaPrivateCrtKeyParams: RsaKeyParams {
 }
 
 /// Raw RSA operations with separate byte conversion and integer processing.
-pub trait Rsa<K: RsaKeyParams> {
+///
+/// This trait carries no key type, so an initialized engine can be used — and
+/// stored behind `dyn Rsa<RsaBigInt = _, Error = _>` — without naming the
+/// parameters it was built from. Initialization is provided independently by
+/// [`RsaInit`].
+pub trait Rsa {
     type RsaBigInt;
     type Error: core::error::Error;
-
-    /// Initializes the operation direction and key.
-    fn init(&mut self, direction: CipherDirection, parameters: &K) -> Result<(), Self::Error>;
 
     /// Returns the maximum input length in bytes for the current direction.
     fn input_block_size(&self) -> usize;
@@ -87,10 +89,34 @@ pub trait Rsa<K: RsaKeyParams> {
     ) -> Result<usize, Self::Error>;
 }
 
-pub trait RsaCrt<K: RsaPrivateCrtKeyParams>: Rsa<K> {
+/// Initializes an RSA engine from key parameters of type `K`.
+///
+/// Independent from [`Rsa`], so the operation methods stay free of the key
+/// type. Consumers that need both write
+/// `E: Rsa + RsaInit<K>`.
+pub trait RsaInit<K: RsaKeyParams + ?Sized> {
+    /// The failure type returned by initialization.
+    type Error: core::error::Error;
+
+    /// Initializes the operation direction and key.
+    fn init(&mut self, direction: CipherDirection, parameters: &K) -> Result<(), Self::Error>;
+}
+
+/// A CRT-capable RSA engine, whose private operation is blinded per call.
+pub trait RsaCrt: Rsa {
+    /// Applies the CRT private operation with freshly sampled RSA blinding.
     fn process_block_blinded<R: CryptoRng + ?Sized>(
         &mut self,
         input: &Self::RsaBigInt,
         rng: &mut R,
     ) -> Result<Self::RsaBigInt, Self::Error>;
+}
+
+/// Initializes a CRT engine from private key parameters of type `K`.
+pub trait RsaCrtInit<K: RsaPrivateCrtKeyParams + ?Sized> {
+    /// The failure type returned by initialization.
+    type Error: core::error::Error;
+
+    /// Initializes the operation direction and CRT key.
+    fn init(&mut self, direction: CipherDirection, parameters: &K) -> Result<(), Self::Error>;
 }
