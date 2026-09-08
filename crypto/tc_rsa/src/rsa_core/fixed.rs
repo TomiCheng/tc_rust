@@ -4,7 +4,7 @@ use tc_bigint::modular::{FixedMontyForm, FixedMontyParams};
 use tc_bigint::{FixedBigUint, Odd};
 use tc_cipher::CipherDirection;
 
-use crate::rsa_core::{bit_length, is_odd, is_zero};
+use crate::rsa_core::validate;
 use crate::{Rsa, RsaError, RsaInit, RsaKeyParams};
 
 /// 固定 `N` 個 limb 寬的 RSA 核心；`N` 由呼叫端決定，crate 本身沒有模數上限。
@@ -127,45 +127,7 @@ impl<const N: usize> Rsa for FixedRsaCoreEngine<N> {
     }
 }
 
-/// 檢查金鑰參數的位元組是否構成可用的 RSA 金鑰，通過則回傳模數的位元長度。
-///
-/// 只做位元組層次的判斷：模數非零且為奇數、指數非零且為奇數。是否放得進
-/// `FixedBigUint<N>` 由後續轉換負責，質因數篩選與模數合成性檢查則待
-/// `tc_bigint` 質數模組整合後補上。
-///
-/// 這些檢查原本在 `RsaKeyRef::new` 做；照專案慣例，參數型別只是位元組容器，
-/// 有效性一律在 `init` 判定。
 /// 把大端序位元組轉成固定寬度整數；放不進 `N` 個 limb 時回傳指定的錯誤。
 fn fixed<const N: usize>(value: &[u8], error: RsaError) -> Result<FixedBigUint<N>, RsaError> {
     FixedBigUint::from_be_bytes(value).map_err(|_| error)
-}
-
-pub(super) fn validate<K: RsaKeyParams + ?Sized>(key: &K) -> Result<usize, RsaError> {
-    let modulus = key.modulus();
-    if is_zero(modulus) {
-        return Err(RsaError::InvalidModulus);
-    }
-    if !is_odd(modulus) {
-        return Err(RsaError::EvenModulus);
-    }
-
-    let exponent = key.exponent();
-    let is_private = key.is_private_key();
-    if is_zero(exponent) {
-        return Err(if is_private {
-            RsaError::InvalidPrivateExponent
-        } else {
-            RsaError::InvalidExponent
-        });
-    }
-    if !is_odd(exponent) {
-        // 私鑰的 d 必為奇數：e 為奇數且 d*e ≡ 1 (mod λ(n))，λ(n) 為偶數。
-        return Err(if is_private {
-            RsaError::InvalidPrivateExponent
-        } else {
-            RsaError::EvenPublicExponent
-        });
-    }
-
-    Ok(bit_length(modulus))
 }

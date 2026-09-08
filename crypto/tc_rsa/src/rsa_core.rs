@@ -1,8 +1,12 @@
 //! RSA 核心運算的後端實作。
 
+use crate::{RsaError, RsaKeyParams};
+
 mod fixed;
+mod heap;
 
 pub use fixed::FixedRsaCoreEngine;
+pub use heap::HeapRsaCoreEngine;
 
 /// limb 的位元寬度；`tc_bigint` 不公開字寬，這裡自行推導。
 #[cfg(target_pointer_width = "64")]
@@ -34,6 +38,52 @@ pub(crate) fn is_odd(bytes: &[u8]) -> bool {
     bytes.last().is_some_and(|byte| byte & 1 == 1)
 }
 
+/// 檢查金鑰參數的位元組是否構成可用的 RSA 金鑰，通過則回傳模數的位元長度。
+///
+/// 只做位元組層次的判斷：模數非零且為奇數、指數非零且為奇數。是否放得進
+/// `FixedBigUint<N>` 由後續轉換負責，質因數篩選與模數合成性檢查則待
+/// `tc_bigint` 質數模組整合後補上。
+///
+/// 這些檢查原本在 `RsaKeyRef::new` 做；照專案慣例，參數型別只是位元組容器，
+/// 有效性一律在 `init` 判定。
+/// 檢查金鑰參數的位元組是否構成可用的 RSA 金鑰，通過則回傳模數的位元長度。
+///
+/// 只做位元組層次的判斷：模數非零且為奇數、指數非零且為奇數。是否放得進
+/// `FixedBigUint<N>` 由後續轉換負責，質因數篩選與模數合成性檢查則待
+/// `tc_bigint` 質數模組整合後補上。
+///
+/// 這些檢查原本在 `RsaKeyRef::new` 做；照專案慣例，參數型別只是位元組容器，
+/// 有效性一律在 `init` 判定。
+pub(crate) fn validate<K: RsaKeyParams + ?Sized>(key: &K) -> Result<usize, RsaError> {
+    let modulus = key.modulus();
+    if is_zero(modulus) {
+        return Err(RsaError::InvalidModulus);
+    }
+    if !is_odd(modulus) {
+        return Err(RsaError::EvenModulus);
+    }
+
+    let exponent = key.exponent();
+    let is_private = key.is_private_key();
+    if is_zero(exponent) {
+        return Err(if is_private {
+            RsaError::InvalidPrivateExponent
+        } else {
+            RsaError::InvalidExponent
+        });
+    }
+    if !is_odd(exponent) {
+        // 私鑰的 d 必為奇數：e 為奇數且 d*e ≡ 1 (mod λ(n))，λ(n) 為偶數。
+        return Err(if is_private {
+            RsaError::InvalidPrivateExponent
+        } else {
+            RsaError::EvenPublicExponent
+        });
+    }
+
+    Ok(bit_length(modulus))
+}
+
 /// 模數上限 1024 位元的核心。
 pub type Rsa1024Core = FixedRsaCoreEngine<{ limbs_for_bits(1024) }>;
 
@@ -50,7 +100,9 @@ pub type Rsa4096Core = FixedRsaCoreEngine<{ limbs_for_bits(4096) }>;
 mod tests {
     use tc_cipher::CipherDirection;
 
-    use super::fixed::{FixedRsaCoreEngine, validate};
+    use super::fixed::FixedRsaCoreEngine;
+    use super::heap::HeapRsaCoreEngine;
+    use super::validate;
     use super::{LIMB_BITS, bit_length, is_odd, is_zero, limbs_for_bits};
     use crate::{Rsa, RsaKeyRef as Key};
     use crate::{RsaError, RsaKeyRef};
@@ -227,5 +279,74 @@ mod tests {
             let length = private.convert_output(&recovered, &mut output).unwrap();
             assert_eq!(&output[..length], message);
         }
+    }
+
+    #[test]
+    fn the_heap_backend_matches_the_fixed_backend() {
+        const PRIVATE_EXPONENT: [u8; 2] = [0x08, 0xd7];
+
+        let mut fixed_public = FixedRsaCoreEngine::<1>::new(
+            CipherDirection::Encrypt,
+            &Key::new(false, &MODULUS, &EXPONENT),
+        )
+        .unwrap();
+        let mut heap_public = HeapRsaCoreEngine::new(
+            CipherDirection::Encrypt,
+            &Key::new(false, &MODULUS, &EXPONENT),
+        )
+        .unwrap();
+        let mut heap_private = HeapRsaCoreEngine::new(
+            CipherDirection::Decrypt,
+            &Key::new(true, &MODULUS, &PRIVATE_EXPONENT),
+        )
+        .unwrap();
+
+        assert_eq!(
+            heap_public.input_block_size(),
+            fixed_public.input_block_size()
+        );
+        assert_eq!(
+            heap_public.output_block_size(),
+            fixed_public.output_block_size()
+        );
+
+        for message in [&[2_u8][..], &[42][..], &[0x0f, 0xf5][..]] {
+            let mut from_fixed = [0_u8; 2];
+            let plain = fixed_public.convert_input(message).unwrap();
+            let cipher = fixed_public.process_block(&plain).unwrap();
+            let fixed_len = fixed_public
+                .convert_output(&cipher, &mut from_fixed)
+                .unwrap();
+
+            let mut from_heap = [0_u8; 2];
+            let plain = heap_public.convert_input(message).unwrap();
+            let cipher = heap_public.process_block(&plain).unwrap();
+            let heap_len = heap_public.convert_output(&cipher, &mut from_heap).unwrap();
+
+            assert_eq!(&from_heap[..heap_len], &from_fixed[..fixed_len]);
+
+            let mut recovered = [0_u8; 2];
+            let cipher = heap_private.convert_input(&from_heap[..heap_len]).unwrap();
+            let plain = heap_private.process_block(&cipher).unwrap();
+            let length = heap_private.convert_output(&plain, &mut recovered).unwrap();
+            assert_eq!(&recovered[..length], message);
+        }
+    }
+
+    #[test]
+    fn the_heap_backend_shares_the_key_validation() {
+        assert_eq!(
+            HeapRsaCoreEngine::new(
+                CipherDirection::Encrypt,
+                &Key::new(false, &[0x0f, 0xf6], &EXPONENT)
+            )
+            .err(),
+            Some(RsaError::EvenModulus)
+        );
+        assert_eq!(
+            HeapRsaCoreEngine::new(CipherDirection::Encrypt, &Key::new(false, &MODULUS, &[4]))
+                .err(),
+            Some(RsaError::EvenPublicExponent)
+        );
     }
 }
