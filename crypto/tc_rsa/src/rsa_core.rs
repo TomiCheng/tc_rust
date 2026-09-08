@@ -104,8 +104,44 @@ mod tests {
     use super::heap::HeapRsaCoreEngine;
     use super::validate;
     use super::{LIMB_BITS, bit_length, is_odd, is_zero, limbs_for_bits};
-    use crate::{Rsa, RsaKeyRef as Key};
-    use crate::{RsaError, RsaKeyRef};
+    use crate::rsa_crt::FixedRsaCrtCoreEngine;
+    use crate::{RsaCrt, RsaCrtInit, RsaPrivateCrtKeyRef};
+    use core::convert::Infallible;
+
+    use rand_core::{TryCryptoRng, TryRng};
+
+    use crate::RsaError;
+
+    /// 決定性的測試亂數來源；盲化只要求可用，不要求隨機品質。
+    struct SequenceRng(u8);
+
+    impl TryRng for SequenceRng {
+        type Error = Infallible;
+
+        fn try_next_u32(&mut self) -> Result<u32, Self::Error> {
+            let mut bytes = [0_u8; 4];
+            self.try_fill_bytes(&mut bytes)?;
+            Ok(u32::from_le_bytes(bytes))
+        }
+
+        fn try_next_u64(&mut self) -> Result<u64, Self::Error> {
+            let mut bytes = [0_u8; 8];
+            self.try_fill_bytes(&mut bytes)?;
+            Ok(u64::from_le_bytes(bytes))
+        }
+
+        fn try_fill_bytes(&mut self, output: &mut [u8]) -> Result<(), Self::Error> {
+            for byte in output {
+                self.0 = self.0.wrapping_add(1);
+                *byte = self.0;
+            }
+            Ok(())
+        }
+    }
+
+    impl TryCryptoRng for SequenceRng {}
+
+    use crate::{Rsa, RsaInit, RsaKeyRef as Key};
 
     #[test]
     fn limb_count_rounds_up() {
@@ -146,34 +182,28 @@ mod tests {
 
     #[test]
     fn accepts_odd_modulus_with_odd_exponent() {
-        assert_eq!(
-            validate(&RsaKeyRef::new(false, &MODULUS, &EXPONENT)),
-            Ok(12)
-        );
-        assert_eq!(validate(&RsaKeyRef::new(true, &MODULUS, &EXPONENT)), Ok(12));
+        assert_eq!(validate(&Key::new(false, &MODULUS, &EXPONENT)), Ok(12));
+        assert_eq!(validate(&Key::new(true, &MODULUS, &EXPONENT)), Ok(12));
     }
 
     #[test]
     fn leading_zeros_do_not_change_the_verdict() {
         let padded = [0x00, 0x00, 0x0f, 0xf7];
-        assert_eq!(
-            validate(&RsaKeyRef::new(false, &padded, &[0x00, 0x07])),
-            Ok(12)
-        );
+        assert_eq!(validate(&Key::new(false, &padded, &[0x00, 0x07])), Ok(12));
     }
 
     #[test]
     fn rejects_a_zero_or_even_modulus() {
         assert_eq!(
-            validate(&RsaKeyRef::new(false, &[], &EXPONENT)),
+            validate(&Key::new(false, &[], &EXPONENT)),
             Err(RsaError::InvalidModulus)
         );
         assert_eq!(
-            validate(&RsaKeyRef::new(false, &[0, 0], &EXPONENT)),
+            validate(&Key::new(false, &[0, 0], &EXPONENT)),
             Err(RsaError::InvalidModulus)
         );
         assert_eq!(
-            validate(&RsaKeyRef::new(false, &[0x0f, 0xf6], &EXPONENT)),
+            validate(&Key::new(false, &[0x0f, 0xf6], &EXPONENT)),
             Err(RsaError::EvenModulus)
         );
     }
@@ -181,26 +211,44 @@ mod tests {
     #[test]
     fn exponent_errors_depend_on_whether_the_key_is_private() {
         assert_eq!(
-            validate(&RsaKeyRef::new(false, &MODULUS, &[0])),
+            validate(&Key::new(false, &MODULUS, &[0])),
             Err(RsaError::InvalidExponent)
         );
         assert_eq!(
-            validate(&RsaKeyRef::new(true, &MODULUS, &[0])),
+            validate(&Key::new(true, &MODULUS, &[0])),
             Err(RsaError::InvalidPrivateExponent)
         );
         assert_eq!(
-            validate(&RsaKeyRef::new(false, &MODULUS, &[4])),
+            validate(&Key::new(false, &MODULUS, &[4])),
             Err(RsaError::EvenPublicExponent)
         );
         assert_eq!(
-            validate(&RsaKeyRef::new(true, &MODULUS, &[4])),
+            validate(&Key::new(true, &MODULUS, &[4])),
             Err(RsaError::InvalidPrivateExponent)
         );
     }
 
     /// 以 4087 = 0x0ff7 為模數建一個單 limb 的核心。
     fn engine(direction: CipherDirection) -> FixedRsaCoreEngine<1> {
-        FixedRsaCoreEngine::new(direction, &RsaKeyRef::new(false, &MODULUS, &EXPONENT)).unwrap()
+        fixed_engine(direction, &Key::new(false, &MODULUS, &EXPONENT))
+    }
+
+    /// 以 `Default` 建立再 `init`，這是引擎唯一的金鑰入口。
+    fn fixed_engine(direction: CipherDirection, key: &Key<'_>) -> FixedRsaCoreEngine<1> {
+        let mut engine = FixedRsaCoreEngine::<1>::default();
+        engine.init(direction, key).unwrap();
+        engine
+    }
+
+    fn heap_engine(direction: CipherDirection, key: &Key<'_>) -> HeapRsaCoreEngine {
+        let mut engine = HeapRsaCoreEngine::default();
+        engine.init(direction, key).unwrap();
+        engine
+    }
+
+    fn heap_error(key: &Key<'_>) -> Option<RsaError> {
+        let mut engine = HeapRsaCoreEngine::default();
+        RsaInit::init(&mut engine, CipherDirection::Encrypt, key).err()
     }
 
     #[test]
@@ -258,16 +306,14 @@ mod tests {
         // 4087 = 61 * 67，λ(4087) = lcm(60, 66) = 660，7 * 2263 ≡ 1 (mod 660)。
         const PRIVATE_EXPONENT: [u8; 2] = [0x08, 0xd7];
 
-        let mut public = FixedRsaCoreEngine::<1>::new(
+        let mut public = fixed_engine(
             CipherDirection::Encrypt,
             &Key::new(false, &MODULUS, &EXPONENT),
-        )
-        .unwrap();
-        let mut private = FixedRsaCoreEngine::<1>::new(
+        );
+        let mut private = fixed_engine(
             CipherDirection::Decrypt,
             &Key::new(true, &MODULUS, &PRIVATE_EXPONENT),
-        )
-        .unwrap();
+        );
 
         for message in [&[2_u8][..], &[42][..], &[0x0f, 0xf5][..]] {
             let plain = public.convert_input(message).unwrap();
@@ -285,21 +331,18 @@ mod tests {
     fn the_heap_backend_matches_the_fixed_backend() {
         const PRIVATE_EXPONENT: [u8; 2] = [0x08, 0xd7];
 
-        let mut fixed_public = FixedRsaCoreEngine::<1>::new(
+        let mut fixed_public = fixed_engine(
             CipherDirection::Encrypt,
             &Key::new(false, &MODULUS, &EXPONENT),
-        )
-        .unwrap();
-        let mut heap_public = HeapRsaCoreEngine::new(
+        );
+        let mut heap_public = heap_engine(
             CipherDirection::Encrypt,
             &Key::new(false, &MODULUS, &EXPONENT),
-        )
-        .unwrap();
-        let mut heap_private = HeapRsaCoreEngine::new(
+        );
+        let mut heap_private = heap_engine(
             CipherDirection::Decrypt,
             &Key::new(true, &MODULUS, &PRIVATE_EXPONENT),
-        )
-        .unwrap();
+        );
 
         assert_eq!(
             heap_public.input_block_size(),
@@ -336,17 +379,130 @@ mod tests {
     #[test]
     fn the_heap_backend_shares_the_key_validation() {
         assert_eq!(
-            HeapRsaCoreEngine::new(
-                CipherDirection::Encrypt,
-                &Key::new(false, &[0x0f, 0xf6], &EXPONENT)
-            )
-            .err(),
+            heap_error(&Key::new(false, &[0x0f, 0xf6], &EXPONENT)),
             Some(RsaError::EvenModulus)
         );
         assert_eq!(
-            HeapRsaCoreEngine::new(CipherDirection::Encrypt, &Key::new(false, &MODULUS, &[4]))
-                .err(),
+            heap_error(&Key::new(false, &MODULUS, &[4])),
             Some(RsaError::EvenPublicExponent)
         );
+    }
+
+    #[test]
+    fn an_uninitialised_engine_reports_no_capacity() {
+        let fixed = FixedRsaCoreEngine::<1>::default();
+        let heap = HeapRsaCoreEngine::default();
+
+        assert_eq!(fixed.input_block_size(), 0);
+        assert_eq!(fixed.output_block_size(), 0);
+        assert_eq!(fixed.convert_input(&[2]), Err(RsaError::NotInitialized));
+        assert_eq!(heap.input_block_size(), 0);
+        assert_eq!(heap.output_block_size(), 0);
+        assert_eq!(heap.convert_input(&[2]), Err(RsaError::NotInitialized));
+    }
+
+    #[test]
+    fn a_failed_init_leaves_the_previous_key_in_place() {
+        let mut engine = fixed_engine(
+            CipherDirection::Encrypt,
+            &Key::new(false, &MODULUS, &EXPONENT),
+        );
+        let before = engine.input_block_size();
+
+        assert_eq!(
+            RsaInit::init(
+                &mut engine,
+                CipherDirection::Decrypt,
+                &Key::new(false, &[0x0f, 0xf6], &EXPONENT)
+            ),
+            Err(RsaError::EvenModulus)
+        );
+        assert_eq!(engine.input_block_size(), before);
+    }
+
+    /// 4087 = 61 * 67 的完整 CRT 私鑰：e=7、d=2263、dp=19、dq=43、qInv=11。
+    fn crt_key() -> RsaPrivateCrtKeyRef<'static> {
+        const PRIVATE_EXPONENT: [u8; 2] = [0x08, 0xd7];
+        RsaPrivateCrtKeyRef::new(
+            &MODULUS,
+            &EXPONENT,
+            &PRIVATE_EXPONENT,
+            &[67],
+            &[61],
+            &[19],
+            &[43],
+            &[11],
+        )
+    }
+
+    fn crt_engine() -> FixedRsaCrtCoreEngine<2, 1> {
+        let mut engine = FixedRsaCrtCoreEngine::<2, 1>::default();
+        engine.init(CipherDirection::Decrypt, &crt_key()).unwrap();
+        engine
+    }
+
+    #[test]
+    fn the_crt_backend_matches_the_plain_private_exponent() {
+        const PRIVATE_EXPONENT: [u8; 2] = [0x08, 0xd7];
+
+        let mut plain = fixed_engine(
+            CipherDirection::Decrypt,
+            &Key::new(true, &MODULUS, &PRIVATE_EXPONENT),
+        );
+        let mut crt = crt_engine();
+        let mut rng = SequenceRng(0);
+
+        for message in [&[2_u8][..], &[42][..], &[0x0f, 0xf5][..]] {
+            // 兩個引擎的整數寬度不同（1 vs 2 limb），所以比對輸出位元組。
+            let mut expected = [0_u8; 2];
+            let value = plain.convert_input(message).unwrap();
+            let result = plain.process_block(&value).unwrap();
+            let expected_len = plain.convert_output(&result, &mut expected).unwrap();
+
+            let value = crt.convert_input(message).unwrap();
+
+            let mut plain_crt = [0_u8; 2];
+            let result = crt.process_block(&value).unwrap();
+            let length = crt.convert_output(&result, &mut plain_crt).unwrap();
+            assert_eq!(&plain_crt[..length], &expected[..expected_len]);
+
+            let mut blinded = [0_u8; 2];
+            let result = crt.process_block_blinded(&value, &mut rng).unwrap();
+            let length = crt.convert_output(&result, &mut blinded).unwrap();
+            assert_eq!(&blinded[..length], &expected[..expected_len]);
+        }
+    }
+
+    #[test]
+    fn the_crt_backend_rejects_a_faulty_exponent() {
+        const PRIVATE_EXPONENT: [u8; 2] = [0x08, 0xd7];
+        // dp 從 19 翻成 17，單邊的 CRT 結果就會錯，必須被 Lenstra 檢查擋下。
+        let key = RsaPrivateCrtKeyRef::new(
+            &MODULUS,
+            &EXPONENT,
+            &PRIVATE_EXPONENT,
+            &[67],
+            &[61],
+            &[17],
+            &[43],
+            &[11],
+        );
+        let mut engine = FixedRsaCrtCoreEngine::<2, 1>::default();
+        engine.init(CipherDirection::Decrypt, &key).unwrap();
+
+        let value = engine.convert_input(&[42]).unwrap();
+        assert_eq!(
+            engine.process_block(&value),
+            Err(RsaError::FaultyDecryptionOrSigning)
+        );
+    }
+
+    #[test]
+    fn an_uninitialised_crt_engine_reports_no_capacity() {
+        let engine = FixedRsaCrtCoreEngine::<2, 1>::default();
+
+        assert_eq!(engine.input_block_size(), 0);
+        assert_eq!(engine.output_block_size(), 0);
+        assert_eq!(engine.convert_input(&[2]), Err(RsaError::NotInitialized));
     }
 }

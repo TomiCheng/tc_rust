@@ -3,6 +3,7 @@
 /// 原始 RSA 引擎的錯誤。
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum RsaError {
+    NotInitialized,
     InvalidModulus,
     InvalidExponent,
     InvalidPrivateExponent,
@@ -22,6 +23,7 @@ pub enum RsaError {
 impl ::core::fmt::Display for RsaError {
     fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
         f.write_str(match self {
+            Self::NotInitialized => "RSA engine not initialised",
             Self::InvalidModulus => "not a valid RSA modulus",
             Self::InvalidExponent => "not a valid RSA exponent",
             Self::InvalidPrivateExponent => "not a valid RSA private exponent",

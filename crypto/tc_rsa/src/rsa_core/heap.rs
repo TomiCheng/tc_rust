@@ -17,8 +17,16 @@ use crate::{Rsa, RsaError, RsaInit, RsaKeyParams};
 /// 底層的 [`BigUint`] 是長度隨數值變動的堆配置整數，`mod_pow` 也沒有固定排程，
 /// 而且秘密材料會留在無法歸零的堆緩衝區裡。私鑰運算若暴露在遠端計時之下，
 /// 請改用固定寬度版本。
-#[derive(Clone, Debug)]
+/// 以 [`Default`] 建立的引擎尚未持有金鑰，運算方法會回
+/// [`RsaError::NotInitialized`]，區塊大小則為 `0`。
+#[derive(Clone, Debug, Default)]
 pub struct HeapRsaCoreEngine {
+    inner: Option<Inner>,
+}
+
+/// 初始化後才存在的狀態。
+#[derive(Clone, Debug)]
+struct Inner {
     modulus: BigUint,
     exponent: BigUint,
     is_private: bool,
@@ -26,9 +34,8 @@ pub struct HeapRsaCoreEngine {
     direction: CipherDirection,
 }
 
-impl HeapRsaCoreEngine {
-    /// 以已驗證的金鑰建立核心。
-    pub fn new<K: RsaKeyParams + ?Sized>(
+impl Inner {
+    fn new<K: RsaKeyParams + ?Sized>(
         direction: CipherDirection,
         key: &K,
     ) -> Result<Self, RsaError> {
@@ -44,11 +51,20 @@ impl HeapRsaCoreEngine {
     }
 }
 
+impl HeapRsaCoreEngine {
+    /// 取得初始化後的狀態，未初始化時回 [`RsaError::NotInitialized`]。
+    fn inner(&self) -> Result<&Inner, RsaError> {
+        self.inner.as_ref().ok_or(RsaError::NotInitialized)
+    }
+}
+
 impl<K: RsaKeyParams + ?Sized> RsaInit<K> for HeapRsaCoreEngine {
     type Error = RsaError;
 
     fn init(&mut self, direction: CipherDirection, parameters: &K) -> Result<(), Self::Error> {
-        *self = Self::new(direction, parameters)?;
+        // 先建好再寫回，失敗時引擎維持原狀，不會留下半初始化的金鑰。
+        let inner = Inner::new(direction, parameters)?;
+        self.inner = Some(inner);
         Ok(())
     }
 }
@@ -58,26 +74,31 @@ impl Rsa for HeapRsaCoreEngine {
     type Error = RsaError;
 
     fn input_block_size(&self) -> usize {
-        match self.direction {
-            CipherDirection::Encrypt => self.bit_size.saturating_sub(1) / 8,
-            CipherDirection::Decrypt => self.bit_size.div_ceil(8),
-        }
+        self.inner
+            .as_ref()
+            .map_or(0, |inner| match inner.direction {
+                CipherDirection::Encrypt => inner.bit_size.saturating_sub(1) / 8,
+                CipherDirection::Decrypt => inner.bit_size.div_ceil(8),
+            })
     }
 
     fn output_block_size(&self) -> usize {
-        match self.direction {
-            CipherDirection::Encrypt => self.bit_size.div_ceil(8),
-            CipherDirection::Decrypt => self.bit_size.saturating_sub(1) / 8,
-        }
+        self.inner
+            .as_ref()
+            .map_or(0, |inner| match inner.direction {
+                CipherDirection::Encrypt => inner.bit_size.div_ceil(8),
+                CipherDirection::Decrypt => inner.bit_size.saturating_sub(1) / 8,
+            })
     }
 
     fn convert_input(&self, input: &[u8]) -> Result<Self::RsaBigInt, Self::Error> {
+        let inner = self.inner()?;
         let input = BigUint::from_be_bytes(input);
         // 0、1 與 n-1 的模冪結果等於自身，帶不出資訊；一律當成無效輸入擋掉。
         if input <= BigUint::from(1_u8) {
             return Err(RsaError::InputTooSmall);
         }
-        if input >= &self.modulus - BigUint::from(1_u8) {
+        if input >= &inner.modulus - BigUint::from(1_u8) {
             return Err(RsaError::InputTooLarge);
         }
         Ok(input)
@@ -85,8 +106,9 @@ impl Rsa for HeapRsaCoreEngine {
 
     fn process_block(&mut self, input: &Self::RsaBigInt) -> Result<Self::RsaBigInt, Self::Error> {
         // `mod_pow` 是變動時間；私鑰在這個後端沒有排程保護，見型別文件。
-        let _ = self.is_private;
-        Ok(input.mod_pow(&self.exponent, &self.modulus))
+        let inner = self.inner()?;
+        let _ = inner.is_private;
+        Ok(input.mod_pow(&inner.exponent, &inner.modulus))
     }
 
     fn convert_output(
@@ -94,11 +116,12 @@ impl Rsa for HeapRsaCoreEngine {
         result: &Self::RsaBigInt,
         output: &mut [u8],
     ) -> Result<usize, Self::Error> {
+        let inner = self.inner()?;
         let bytes = result.to_be_bytes();
         let result_len = bytes.len();
         // 加密輸出固定補到模數長度；解密輸出用最短表示法，與 Bouncy Castle 一致。
-        let output_len = match self.direction {
-            CipherDirection::Encrypt => self.bit_size.div_ceil(8),
+        let output_len = match inner.direction {
+            CipherDirection::Encrypt => inner.bit_size.div_ceil(8),
             CipherDirection::Decrypt => result_len,
         };
         if output.len() < output_len || result_len > output_len {

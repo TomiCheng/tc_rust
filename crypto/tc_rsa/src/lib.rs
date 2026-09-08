@@ -18,6 +18,7 @@ extern crate alloc;
 mod error;
 mod params;
 pub mod rsa_core;
+pub mod rsa_crt;
 pub mod traits;
 
 //
@@ -27,5 +28,8 @@ pub use params::{RsaKey, RsaKeyRef, RsaPrivateCrtKeyRef};
 pub use rsa_core::{
     FixedRsaCoreEngine, HeapRsaCoreEngine, Rsa1024Core, Rsa2048Core, Rsa3072Core, Rsa4096Core,
     limbs_for_bits,
+};
+pub use rsa_crt::{
+    FixedRsaCrtCoreEngine, Rsa1024CrtCore, Rsa2048CrtCore, Rsa3072CrtCore, Rsa4096CrtCore,
 };
 pub use traits::{Rsa, RsaCrt, RsaCrtInit, RsaInit, RsaKeyParams, RsaPrivateCrtKeyParams};
