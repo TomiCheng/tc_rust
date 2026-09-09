@@ -668,6 +668,85 @@ mod tests {
     }
 
     #[test]
+    fn owned_clones_keep_their_fields_after_the_original_is_dropped() {
+        fn has_drop_policy<T: tc_bigint::ZeroizeOnDrop>(_: &T) {}
+
+        let owned = RsaKeyOwned::new(false, MODULUS.to_vec(), EXPONENT.to_vec());
+        has_drop_policy(&owned);
+        let cloned = owned.clone();
+        drop(owned);
+        let borrowed = cloned.as_key_ref();
+        assert!(!borrowed.is_private());
+        assert_eq!(borrowed.modulus(), MODULUS);
+        assert_eq!(borrowed.exponent(), EXPONENT);
+
+        let key = crt_key();
+        let owned = RsaPrivateCrtKeyOwned::new(
+            key.modulus().to_vec(),
+            key.public_exponent().to_vec(),
+            key.private_exponent().to_vec(),
+            key.p().to_vec(),
+            key.q().to_vec(),
+            key.dp().to_vec(),
+            key.dq().to_vec(),
+            key.q_inv().to_vec(),
+        );
+        has_drop_policy(&owned);
+        let cloned = owned.clone();
+        drop(owned);
+        let borrowed = cloned.as_key_ref();
+        // 比較測試向量的各個欄位，不為金鑰容器重新定義相等語意。
+        for (actual, expected) in [
+            (borrowed.modulus(), key.modulus()),
+            (borrowed.public_exponent(), key.public_exponent()),
+            (borrowed.private_exponent(), key.private_exponent()),
+            (borrowed.p(), key.p()),
+            (borrowed.q(), key.q()),
+            (borrowed.dp(), key.dp()),
+            (borrowed.dq(), key.dq()),
+            (borrowed.q_inv(), key.q_inv()),
+        ] {
+            assert_eq!(actual, expected);
+        }
+    }
+
+    #[test]
+    fn heap_clones_survive_reinitialization_and_drop_of_the_original() {
+        let key = crt_key();
+        let private = Key::new(true, key.modulus(), key.private_exponent());
+        let public = Key::new(false, &MODULUS, &EXPONENT);
+        let mut plain = HeapRsaCoreEngine::default();
+        plain.init(CipherDirection::Decrypt, &private).unwrap();
+        let input = plain.convert_input(&[2]).unwrap();
+        let expected = plain.process_int(&input).unwrap();
+        let mut plain_clone = plain.clone();
+
+        plain.init(CipherDirection::Encrypt, &public).unwrap();
+        assert_eq!(
+            plain.process_int(&input).unwrap(),
+            tc_bigint::BigUint::from(128_u8)
+        );
+        drop(plain);
+        assert_eq!(plain_clone.process_int(&input).unwrap(), expected);
+
+        let mut crt = HeapRsaCrtCoreEngine::default();
+        crt.init(CipherDirection::Decrypt, &key).unwrap();
+        let mut crt_clone = crt.clone();
+        crt.init(CipherDirection::Encrypt, &key).unwrap();
+        assert_eq!(crt.output_block_size(), 2);
+        assert_eq!(crt.process_int(&input).unwrap(), expected);
+        drop(crt);
+        assert_eq!(crt_clone.output_block_size(), 1);
+        assert_eq!(crt_clone.process_int(&input).unwrap(), expected);
+        assert_eq!(
+            crt_clone
+                .process_int_blinded(&input, &mut SequenceRng(0))
+                .unwrap(),
+            expected
+        );
+    }
+
+    #[test]
     fn owned_parameters_behave_like_the_borrowed_ones() {
         let owned = RsaKeyOwned::new(false, MODULUS.to_vec(), EXPONENT.to_vec());
         assert_eq!(validate(&owned), validate(&owned.as_key_ref()));

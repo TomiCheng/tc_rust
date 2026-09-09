@@ -2,7 +2,7 @@
 
 use rand_core::CryptoRng;
 use tc_bigint::modular::{FixedMontyForm, FixedMontyParams};
-use tc_bigint::{FixedBigUint, NonZero, Odd, RandomMod};
+use tc_bigint::{FixedBigUint, NonZero, Odd, RandomMod, Zeroizing};
 use tc_cipher::{AsymmetricBlockCipher, CipherDirection};
 use tc_constant_time::ConstantTimeEq;
 
@@ -19,6 +19,13 @@ use crate::{Rsa, RsaCrt, RsaCrtInit, RsaError, RsaPrivateCrtKeyParams};
 /// 不能互相取代。
 /// 以 [`Default`] 建立的引擎尚未持有金鑰，運算方法會回
 /// [`RsaError::NotInitialized`]，區塊大小則為 `0`。
+///
+/// # 記憶體清除
+///
+/// 本體與內部狀態保留 `Copy`，不能實作 `Drop`，因此不會自動清除金鑰。
+/// 呼叫端須自行管理機密生命週期，並清除自己可存取的原始金鑰與輸入副本；
+/// 本型別不提供清除內部狀態的 API。盲化因子與模反元素雖有區域守衛，
+/// 但只能盡力清除守衛中的值，無法追回按值複製或最佳化器留下的堆疊副本。
 #[derive(Clone, Copy, Default)]
 pub struct FixedRsaCrtCoreEngine<const N: usize, const H: usize> {
     inner: Option<Inner<N, H>>,
@@ -224,14 +231,19 @@ impl<const N: usize, const H: usize> Inner<N, H> {
     ) -> Result<FixedBigUint<N>, RsaError> {
         let upper = NonZero::new(self.modulus - FixedBigUint::from(1_u8))
             .ok_or(RsaError::InvalidModulus)?;
-        let r = FixedBigUint::random_mod_vartime(rng, &upper) + FixedBigUint::from(1_u8);
+        // FixedBigUint 是 Copy；守衛只能盡力清除持有的值，無法管理解參考或
+        // 後續運算留下的按值副本，不具備堆版 BigUint 相同的所有權保護。
+        let r = Zeroizing::new(
+            FixedBigUint::random_mod_vartime(rng, &upper) + FixedBigUint::from(1_u8),
+        );
 
         let blind = FixedMontyForm::new(&r, self.params_n).pow(&self.public_exponent);
         // FixedMontyForm::invert 走變動時間 Euclid；秘密 r 改用固定步數的 safegcd。
         let modulus = Odd::new(self.modulus).ok_or(RsaError::InvalidModulus)?;
-        let inverse = r
-            .mod_odd_inverse_ct(&modulus)
-            .ok_or(RsaError::FaultyDecryptionOrSigning)?;
+        let inverse = Zeroizing::new(
+            r.mod_odd_inverse_ct(&modulus)
+                .ok_or(RsaError::FaultyDecryptionOrSigning)?,
+        );
         let unblind = FixedMontyForm::new_ct(&inverse, self.params_n);
 
         let input_form = FixedMontyForm::new(input, self.params_n);

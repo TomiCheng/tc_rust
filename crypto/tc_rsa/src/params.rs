@@ -2,14 +2,17 @@
 //!
 //! 這些型別只是大端序位元組的容器，建構時不做任何有效性檢查；金鑰能不能用，
 //! 由 `RsaCoreEngine` 初始化時判定。
+//! 容器不提供相等比較：逐位元組比較不是常數時間，也不代表忽略前導零後的數值相等。
 
 use alloc::vec::Vec;
+use tc_bigint::{Zeroize, ZeroizeOnDrop};
 
 use crate::traits;
 
 /// 公開金鑰或非 CRT 私鑰的參數。
 ///
 /// 借用呼叫端持有的大端序位元組，建構時不驗證，初始化時才檢查。
+/// 所有權決定清除責任：此型別不修改借用資料，歸零由持有位元組的呼叫端負責。
 ///
 /// ```
 /// use tc_cipher::{AsymmetricBlockCipher, CipherDirection};
@@ -26,7 +29,7 @@ use crate::traits;
 /// assert_eq!(&output[..len], &[0, 128]);
 /// # Ok::<(), tc_rsa::RsaError>(())
 /// ```
-#[derive(Clone, Copy, Eq, PartialEq)]
+#[derive(Clone, Copy)]
 pub struct RsaKeyRef<'a> {
     is_private: bool,
     modulus: &'a [u8],
@@ -76,7 +79,9 @@ impl traits::RsaKeyParams for RsaKeyRef<'_> {
 }
 
 /// 含中國剩餘定理因子的 RSA 私鑰參數。
-#[derive(Clone, Copy, Eq, PartialEq)]
+///
+/// 所有權決定清除責任：此型別不修改借用資料，歸零由持有位元組的呼叫端負責。
+#[derive(Clone, Copy)]
 pub struct RsaPrivateCrtKeyRef<'a> {
     modulus: &'a [u8],
     public_exponent: &'a [u8],
@@ -190,6 +195,9 @@ impl traits::RsaPrivateCrtKeyParams for RsaPrivateCrtKeyRef<'_> {
 ///
 /// 與 [`RsaKeyRef`] 的差別只在所有權：從 DER／PKCS#8 解出來的位元組沒有更長壽
 /// 的借用來源時用這個，其餘語意（大端序、允許前導零、建構不驗證）完全相同。
+/// drop 時會以易失寫入清除所有位元組欄位的有效內容，再釋放配置。
+/// 建構後不再增長或重新配置，因此持有期間不會新增重配置留下的舊緩衝。
+/// 清除範圍不含 spare capacity，也無法追回建構前的舊配置或其他副本。
 ///
 /// ```
 /// use tc_cipher::{AsymmetricBlockCipher, CipherDirection};
@@ -208,12 +216,21 @@ impl traits::RsaPrivateCrtKeyParams for RsaPrivateCrtKeyRef<'_> {
 /// assert_eq!(&output[..len], &[0, 128]);
 /// # Ok::<(), tc_rsa::RsaError>(())
 /// ```
-#[derive(Clone, Eq, PartialEq)]
+#[derive(Clone)]
 pub struct RsaKeyOwned {
     is_private: bool,
     modulus: Vec<u8>,
     exponent: Vec<u8>,
 }
+
+impl Drop for RsaKeyOwned {
+    fn drop(&mut self) {
+        self.modulus[..].zeroize();
+        self.exponent[..].zeroize();
+    }
+}
+
+impl ZeroizeOnDrop for RsaKeyOwned {}
 
 impl RsaKeyOwned {
     /// 建立擁有位元組的 RSA 金鑰參數。
@@ -250,7 +267,10 @@ impl traits::RsaKeyParams for RsaKeyOwned {
 /// 擁有位元組的 CRT 私鑰參數。
 ///
 /// 與 [`RsaPrivateCrtKeyRef`] 的差別只在所有權。
-#[derive(Clone, Eq, PartialEq)]
+/// drop 時會以易失寫入清除所有位元組欄位的有效內容，再釋放配置。
+/// 建構後不再增長或重新配置，因此持有期間不會新增重配置留下的舊緩衝。
+/// 清除範圍不含 spare capacity，也無法追回建構前的舊配置或其他副本。
+#[derive(Clone)]
 pub struct RsaPrivateCrtKeyOwned {
     modulus: Vec<u8>,
     public_exponent: Vec<u8>,
@@ -261,6 +281,21 @@ pub struct RsaPrivateCrtKeyOwned {
     dq: Vec<u8>,
     q_inv: Vec<u8>,
 }
+
+impl Drop for RsaPrivateCrtKeyOwned {
+    fn drop(&mut self) {
+        self.modulus[..].zeroize();
+        self.public_exponent[..].zeroize();
+        self.private_exponent[..].zeroize();
+        self.p[..].zeroize();
+        self.q[..].zeroize();
+        self.dp[..].zeroize();
+        self.dq[..].zeroize();
+        self.q_inv[..].zeroize();
+    }
+}
+
+impl ZeroizeOnDrop for RsaPrivateCrtKeyOwned {}
 
 impl RsaPrivateCrtKeyOwned {
     /// 建立擁有位元組的 CRT 私鑰參數。

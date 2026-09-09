@@ -12,6 +12,13 @@ use crate::{Rsa, RsaError, RsaInit, RsaKeyParams};
 /// 以 [`Default`] 建立的引擎尚未持有金鑰，運算方法會回
 /// [`RsaError::NotInitialized`]，區塊大小則為 `0`；呼叫
 /// [`RsaInit::init`](crate::RsaInit::init) 之後才可用。
+///
+/// # 記憶體清除
+///
+/// 本體與內部狀態保留 `Copy`，不能實作 `Drop`，因此不會自動清除金鑰。
+/// 呼叫端須自行管理機密生命週期，並清除自己可存取的原始金鑰與輸入副本；
+/// 本型別不提供清除內部狀態的 API。按值複製與最佳化器留下的堆疊副本也無法追回，
+/// 重新初始化或離開作用域不代表舊狀態已歸零。
 #[derive(Clone, Copy, Default)]
 pub struct FixedRsaCoreEngine<const N: usize> {
     inner: Option<Inner<N>>,

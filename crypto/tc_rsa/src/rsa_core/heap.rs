@@ -1,6 +1,6 @@
 //! 以堆配置的 RSA 核心；模數寬度在執行期決定。
 
-use tc_bigint::BigUint;
+use tc_bigint::{BigUint, Zeroize, ZeroizeOnDrop};
 use tc_cipher::{AsymmetricBlockCipher, CipherDirection};
 
 use crate::rsa_core::validate;
@@ -15,10 +15,16 @@ use crate::{Rsa, RsaError, RsaInit, RsaKeyParams};
 /// # 不保證常數時間
 ///
 /// 底層的 [`BigUint`] 是長度隨數值變動的堆配置整數，`mod_pow` 也沒有固定排程，
-/// 而且秘密材料會留在無法歸零的堆緩衝區裡。私鑰運算若暴露在遠端計時之下，
+/// 私鑰運算若暴露在遠端計時之下，
 /// 請改用固定寬度版本。
 /// 以 [`Default`] 建立的引擎尚未持有金鑰，運算方法會回
 /// [`RsaError::NotInitialized`]，區塊大小則為 `0`。
+///
+/// # 記憶體清除
+///
+/// 狀態在引擎 drop 或成功重新初始化時，會清除所有整數欄位目前有效的 limb。
+/// 初始化失敗仍保留原狀態。清除不涵蓋 spare capacity、先前重配置的舊緩衝、
+/// 其他副本或運算中間值，也不改變這個後端的計時性質。
 #[derive(Clone, Debug, Default)]
 pub struct HeapRsaCoreEngine {
     inner: Option<Inner>,
@@ -33,6 +39,15 @@ struct Inner {
     bit_size: usize,
     direction: CipherDirection,
 }
+
+impl Drop for Inner {
+    fn drop(&mut self) {
+        self.modulus.zeroize();
+        self.exponent.zeroize();
+    }
+}
+
+impl ZeroizeOnDrop for Inner {}
 
 impl Inner {
     fn new<K: RsaKeyParams + ?Sized>(

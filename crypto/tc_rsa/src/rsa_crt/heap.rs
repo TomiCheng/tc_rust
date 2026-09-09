@@ -1,7 +1,7 @@
 //! 以堆配置的 CRT 私鑰核心；模數寬度在執行期決定。
 
 use rand_core::CryptoRng;
-use tc_bigint::{BigUint, NonZero, RandomMod};
+use tc_bigint::{BigUint, NonZero, RandomMod, Zeroize, ZeroizeOnDrop, Zeroizing};
 use tc_cipher::{AsymmetricBlockCipher, CipherDirection};
 
 use crate::rsa_crt::validate;
@@ -16,13 +16,20 @@ use crate::{Rsa, RsaCrt, RsaCrtInit, RsaError, RsaPrivateCrtKeyParams};
 /// # 不保證常數時間
 ///
 /// 底層的 [`BigUint`] 是長度隨數值變動的堆配置整數，`mod_pow` 與 `mod_inverse`
-/// 都沒有固定排程，而且秘密材料會留在無法歸零的堆緩衝區裡。CRT 的中間值
+/// 都沒有固定排程。CRT 的中間值
 /// `m_p`、`m_q`、`h` 都是秘密，其長度隨值變動；Lenstra 比較也不是常數時間。
 /// [`RsaCrt::process_int_blinded`] 仍會在每次運算重新取樣盲化因子，降低遠端計時
 /// 的可觀測性，但不等同固定排程。需要固定排程的私鑰運算請改用固定寬度版本。
 ///
 /// 以 [`Default`] 建立的引擎尚未持有金鑰，運算方法會回
 /// [`RsaError::NotInitialized`]，區塊大小則為 `0`。
+///
+/// # 記憶體清除
+///
+/// 狀態在引擎 drop 或成功重新初始化時，會清除所有整數欄位目前有效的 limb。
+/// 初始化失敗仍保留原狀態。盲化因子與模反元素另以區域守衛在離開作用域時清除。
+/// 清除不涵蓋 spare capacity、先前重配置的舊緩衝或其他副本；其餘 CRT 與
+/// 盲化運算中間值目前不清除。這個政策不改變後端的計時性質。
 #[derive(Clone, Debug, Default)]
 pub struct HeapRsaCrtCoreEngine {
     inner: Option<Inner>,
@@ -41,6 +48,20 @@ struct Inner {
     bit_size: usize,
     direction: CipherDirection,
 }
+
+impl Drop for Inner {
+    fn drop(&mut self) {
+        self.modulus.zeroize();
+        self.public_exponent.zeroize();
+        self.p.zeroize();
+        self.q.zeroize();
+        self.dp.zeroize();
+        self.dq.zeroize();
+        self.q_inv.zeroize();
+    }
+}
+
+impl ZeroizeOnDrop for Inner {}
 
 impl Inner {
     fn new<K: RsaPrivateCrtKeyParams + ?Sized>(
@@ -199,16 +220,19 @@ impl Inner {
     ) -> Result<BigUint, RsaError> {
         let upper =
             NonZero::new(&self.modulus - BigUint::from(1_u8)).ok_or(RsaError::InvalidModulus)?;
-        let r = BigUint::random_mod_vartime(rng, &upper) + BigUint::from(1_u8);
+        // BigUint 由守衛持有且以下以借用操作，離開作用域時清除目前有效的 limb；
+        // 不會像固定寬度 Copy 型別那樣隱含複製，但無法追回舊配置或中間副本。
+        let r = Zeroizing::new(BigUint::random_mod_vartime(rng, &upper) + BigUint::from(1_u8));
 
         let blind = r.mod_pow(&self.public_exponent, &self.modulus);
         // 堆版沿用 BigUint 的變動時間模反元素，沒有固定步數的保證。
-        let inverse = r
-            .mod_inverse(&self.modulus)
-            .ok_or(RsaError::FaultyDecryptionOrSigning)?;
+        let inverse = Zeroizing::new(
+            r.mod_inverse(&self.modulus)
+                .ok_or(RsaError::FaultyDecryptionOrSigning)?,
+        );
         let blinded_input = (input * blind) % &self.modulus;
         let blinded_result = self.process_crt(&blinded_input)?;
 
-        Ok((blinded_result * inverse) % &self.modulus)
+        Ok((blinded_result * &*inverse) % &self.modulus)
     }
 }
