@@ -1,6 +1,6 @@
 //! Exponentiation for [`FixedBigUint`].
 
-use crate::traits::{ModPow, One, Pow};
+use crate::traits::{One, Pow};
 use crate::{FixedBigUint, modular};
 
 impl<const N: usize> FixedBigUint<N> {
@@ -52,12 +52,5 @@ impl<const N: usize> Pow<&u32> for &FixedBigUint<N> {
     type Output = FixedBigUint<N>;
     fn pow(self, exponent: &u32) -> Self::Output {
         Pow::pow(*self, *exponent)
-    }
-}
-
-impl<const N: usize> ModPow for FixedBigUint<N> {
-    type Output = Self;
-    fn mod_pow(&self, exponent: &Self, modulus: &Self) -> Self {
-        FixedBigUint::mod_pow(self, exponent, modulus)
     }
 }

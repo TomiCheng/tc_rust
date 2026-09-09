@@ -1,6 +1,10 @@
-//! Modular addition, subtraction, and multiplication implementations.
+//! Implementations of the crate's modular operation traits.
+//!
+//! The integer types keep their inherent modular methods, which need access to
+//! their own representation; these impls forward to them so that every `Mod*`
+//! trait is implemented in one place.
 
-use crate::{FixedBigInt, FixedBigUint, ModAdd, ModMul, ModSub};
+use crate::{FixedBigInt, FixedBigUint, ModAdd, ModInverse, ModMul, ModPow, ModSub};
 
 use super::mul::{fixed_add_mod, fixed_sub_mod};
 #[cfg(feature = "alloc")]
@@ -212,6 +216,68 @@ impl<const N: usize> ModMul for FixedBigInt<N> {
             &unsigned_modulus,
         );
         Self::from_limbs(*result.as_limbs())
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl ModPow for BigUint {
+    type Output = Self;
+
+    fn mod_pow(&self, exponent: &Self, modulus: &Self) -> Self {
+        BigUint::mod_pow(self, exponent, modulus)
+    }
+}
+
+impl ModPow for BigInt {
+    type Output = Self;
+    fn mod_pow(&self, exponent: &Self, modulus: &Self) -> Self {
+        BigInt::mod_pow(self, exponent, modulus)
+    }
+}
+
+impl<const N: usize> ModPow for FixedBigUint<N> {
+    type Output = Self;
+    fn mod_pow(&self, exponent: &Self, modulus: &Self) -> Self {
+        FixedBigUint::mod_pow(self, exponent, modulus)
+    }
+}
+
+impl<const N: usize> ModPow for FixedBigInt<N> {
+    type Output = Self;
+    fn mod_pow(&self, exponent: &Self, modulus: &Self) -> Self {
+        FixedBigInt::mod_pow(self, exponent, modulus)
+    }
+}
+
+impl ModInverse for BigUint {
+    type Output = Self;
+
+    fn mod_inverse(&self, modulus: &Self) -> Option<Self::Output> {
+        BigUint::mod_inverse(self, modulus)
+    }
+}
+
+impl ModInverse for BigInt {
+    type Output = Self;
+
+    fn mod_inverse(&self, modulus: &Self) -> Option<Self::Output> {
+        BigInt::mod_inverse(self, modulus)
+    }
+}
+
+impl<const N: usize> ModInverse for FixedBigUint<N> {
+    type Output = Self;
+
+    fn mod_inverse(&self, modulus: &Self) -> Option<Self::Output> {
+        FixedBigUint::mod_inverse(self, modulus)
+    }
+}
+
+impl<const N: usize> ModInverse for FixedBigInt<N> {
+    type Output = Self;
+
+    fn mod_inverse(&self, modulus: &Self) -> Option<Self::Output> {
+        FixedBigInt::mod_inverse(self, modulus)
     }
 }
 

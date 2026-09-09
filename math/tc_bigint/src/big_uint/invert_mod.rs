@@ -1,6 +1,5 @@
 //! Modular inverse support for [`BigUint`].
 
-use crate::traits::ModInverse;
 use crate::{BigInt, BigUint};
 
 impl BigUint {
@@ -12,14 +11,6 @@ impl BigUint {
         value
             .mod_inverse(&modulus)
             .map(|inverse| Self::from_le_u64(&inverse.to_le_u64()))
-    }
-}
-
-impl ModInverse for BigUint {
-    type Output = Self;
-
-    fn mod_inverse(&self, modulus: &Self) -> Option<Self::Output> {
-        BigUint::mod_inverse(self, modulus)
     }
 }
 

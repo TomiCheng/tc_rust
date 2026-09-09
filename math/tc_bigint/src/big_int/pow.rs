@@ -1,6 +1,6 @@
 //! Exponentiation for [`BigInt`].
 
-use crate::traits::{ModPow, One, Pow, Signed};
+use crate::traits::{One, Pow, Signed};
 use crate::{BigInt, BigUint};
 
 impl BigInt {
@@ -64,12 +64,5 @@ impl Pow<&u32> for &BigInt {
     type Output = BigInt;
     fn pow(self, exponent: &u32) -> BigInt {
         Pow::pow(self.clone(), *exponent)
-    }
-}
-
-impl ModPow for BigInt {
-    type Output = Self;
-    fn mod_pow(&self, exponent: &Self, modulus: &Self) -> Self {
-        BigInt::mod_pow(self, exponent, modulus)
     }
 }

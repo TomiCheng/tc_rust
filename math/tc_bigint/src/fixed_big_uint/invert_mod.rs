@@ -3,7 +3,6 @@
 #[cfg(feature = "alloc")]
 use alloc::vec;
 
-use crate::traits::ModInverse;
 #[cfg(feature = "alloc")]
 use crate::{ArrayEncoding, Odd, modular::FixedMontyParams};
 use crate::{FixedBigUint, modular};
@@ -57,14 +56,6 @@ impl<const N: usize> FixedBigUint<N> {
                 limbs: crate::LimbArray::new(limbs),
             }
         })
-    }
-}
-
-impl<const N: usize> ModInverse for FixedBigUint<N> {
-    type Output = Self;
-
-    fn mod_inverse(&self, modulus: &Self) -> Option<Self::Output> {
-        FixedBigUint::mod_inverse(self, modulus)
     }
 }
 

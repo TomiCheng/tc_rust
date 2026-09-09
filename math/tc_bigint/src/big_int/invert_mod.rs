@@ -1,7 +1,7 @@
 //! Modular inverse support for [`BigInt`].
 
 use crate::BigInt;
-use crate::traits::{ModInverse, One, Signed, Zero};
+use crate::traits::{One, Signed, Zero};
 
 impl BigInt {
     /// Returns the modular multiplicative inverse, when it exists.
@@ -23,14 +23,6 @@ impl BigInt {
         }
 
         (old_remainder == Self::one()).then(|| old_coefficient.rem_euclid(modulus))
-    }
-}
-
-impl ModInverse for BigInt {
-    type Output = Self;
-
-    fn mod_inverse(&self, modulus: &Self) -> Option<Self::Output> {
-        BigInt::mod_inverse(self, modulus)
     }
 }
 
