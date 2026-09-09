@@ -62,7 +62,9 @@ impl<const N: usize> FixedBigUint<N> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{Odd, Word};
+    #[cfg(feature = "alloc")]
+    use crate::Odd;
+    use crate::Word;
 
     type U128 = FixedBigUint<{ 128 / Word::BITS as usize }>;
 
@@ -82,6 +84,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "alloc")]
     #[test]
     fn constant_time_odd_inverse_reduces_and_inverts() {
         let modulus = Odd::new(U128::from(101_u8)).unwrap();
@@ -93,6 +96,7 @@ mod tests {
         assert_eq!(U128::zero().mod_odd_inverse_ct(&modulus), None);
     }
 
+    #[cfg(feature = "alloc")]
     #[test]
     fn constant_time_odd_inverse_uses_public_modulus_width_for_every_value() {
         let modulus = Odd::new(U128::max_value()).unwrap();
@@ -103,6 +107,7 @@ mod tests {
         assert_eq!(high_value.mod_odd_inverse_ct(&modulus), Some(low_value));
     }
 
+    #[cfg(feature = "alloc")]
     #[test]
     fn variable_time_odd_inverse_reduces_and_inverts() {
         let modulus = Odd::new(U128::from(101_u8)).unwrap();

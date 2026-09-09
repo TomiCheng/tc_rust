@@ -2,9 +2,9 @@
 
 use core::ops::{Add, Mul, Sub};
 
-#[cfg(feature = "alloc")]
 use super::traits::Retrieve;
 
+#[cfg(feature = "alloc")]
 use super::mul::montgomery_mul;
 use super::mul::{fixed_add_mod, fixed_montgomery_mul, fixed_sub_mod};
 use super::params::FixedMontyParams;

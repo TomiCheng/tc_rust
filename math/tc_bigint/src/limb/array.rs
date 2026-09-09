@@ -985,7 +985,7 @@ mod doc_tests {
 }
 
 /// Fuzzed comparison against num-bigint.
-#[cfg(test)]
+#[cfg(all(test, feature = "alloc"))]
 mod oracle_tests {
     use alloc::vec::Vec;
 

@@ -228,6 +228,7 @@ impl ModPow for BigUint {
     }
 }
 
+#[cfg(feature = "alloc")]
 impl ModPow for BigInt {
     type Output = Self;
     fn mod_pow(&self, exponent: &Self, modulus: &Self) -> Self {
@@ -249,6 +250,7 @@ impl<const N: usize> ModPow for FixedBigInt<N> {
     }
 }
 
+#[cfg(feature = "alloc")]
 impl ModInverse for BigUint {
     type Output = Self;
 
@@ -257,6 +259,7 @@ impl ModInverse for BigUint {
     }
 }
 
+#[cfg(feature = "alloc")]
 impl ModInverse for BigInt {
     type Output = Self;
 
