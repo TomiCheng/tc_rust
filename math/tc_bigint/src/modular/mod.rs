@@ -5,6 +5,18 @@ mod inverse;
 mod monty;
 mod mul;
 mod ops;
+#[cfg(feature = "alloc")]
+mod padded_form;
+#[cfg(feature = "alloc")]
+mod padded_inverse;
+#[cfg(feature = "alloc")]
+mod padded_mul;
+#[cfg(feature = "alloc")]
+mod padded_params;
+#[cfg(feature = "alloc")]
+mod padded_pow;
+#[cfg(all(test, feature = "alloc"))]
+mod padded_tests;
 mod params;
 mod pow;
 mod traits;
@@ -17,6 +29,10 @@ pub use inverse::{
     ModOddInverseError, checked_mod_odd_inverse, checked_mod_odd_inverse_var, mod_odd_inverse,
     mod_odd_inverse_var, mod_odd_is_coprime, mod_odd_is_coprime_var,
 };
+#[cfg(feature = "alloc")]
+pub use padded_form::PaddedMontyForm;
+#[cfg(feature = "alloc")]
+pub use padded_params::PaddedMontyParams;
 pub use params::FixedMontyParams;
 #[cfg(feature = "alloc")]
 pub use params::MontyParams;
