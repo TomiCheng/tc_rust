@@ -7,9 +7,11 @@ use crate::{RsaError, RsaPrivateCrtKeyParams};
 
 mod fixed;
 mod heap;
+mod padded;
 
 pub use fixed::FixedRsaCrtCoreEngine;
 pub use heap::HeapRsaCrtCoreEngine;
+pub use padded::PaddedRsaCrtCoreEngine;
 
 /// 模數上限 1024 位元的 CRT 核心。
 pub type Rsa1024CrtCore = FixedRsaCrtCoreEngine<{ limbs_for_bits(1024) }, { limbs_for_bits(512) }>;

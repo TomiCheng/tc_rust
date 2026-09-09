@@ -183,9 +183,11 @@ pub use tc_bigint::limbs_for_bits;
 pub use blinded_engine::RsaBlindedEngine;
 pub use error::RsaError;
 pub use params::{RsaKeyOwned, RsaKeyRef, RsaPrivateCrtKeyOwned, RsaPrivateCrtKeyRef};
+pub use rsa_core::PaddedRsaCoreEngine;
 pub use rsa_core::{
     FixedRsaCoreEngine, HeapRsaCoreEngine, Rsa1024Core, Rsa2048Core, Rsa3072Core, Rsa4096Core,
 };
+pub use rsa_crt::PaddedRsaCrtCoreEngine;
 pub use rsa_crt::{
     FixedRsaCrtCoreEngine, HeapRsaCrtCoreEngine, Rsa1024CrtCore, Rsa2048CrtCore, Rsa3072CrtCore,
     Rsa4096CrtCore,

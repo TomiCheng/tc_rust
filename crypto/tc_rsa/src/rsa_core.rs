@@ -6,9 +6,12 @@ use crate::{RsaError, RsaKeyParams};
 
 mod fixed;
 mod heap;
+mod padded;
 
 pub use fixed::FixedRsaCoreEngine;
 pub use heap::HeapRsaCoreEngine;
+pub use padded::PaddedRsaCoreEngine;
+pub(crate) use padded::padded;
 
 /// 大端序位元組所代表的位元長度；全零（含空切片）回 0。
 pub(crate) fn bit_length(bytes: &[u8]) -> usize {

@@ -7,8 +7,9 @@ use criterion::{BenchmarkGroup, Criterion, criterion_group, criterion_main};
 use std::hint::black_box;
 use tc_cipher::{AsymmetricBlockCipher, CipherDirection};
 use tc_rsa::{
-    HeapRsaCoreEngine, HeapRsaCrtCoreEngine, Rsa2048Core, Rsa2048CrtCore, RsaBlindedEngine,
-    RsaCrtInit, RsaError, RsaInit, RsaKeyRef, RsaPrivateCrtKeyRef,
+    HeapRsaCoreEngine, HeapRsaCrtCoreEngine, PaddedRsaCoreEngine, PaddedRsaCrtCoreEngine,
+    Rsa2048Core, Rsa2048CrtCore, RsaBlindedEngine, RsaCrtInit, RsaError, RsaInit, RsaKeyRef,
+    RsaPrivateCrtKeyRef,
 };
 
 fn bench_engine(
@@ -43,35 +44,45 @@ fn rsa2048(c: &mut Criterion) {
 
     let mut fixed = Rsa2048Core::default();
     let mut heap = HeapRsaCoreEngine::default();
+    let mut padded = PaddedRsaCoreEngine::default();
     fixed.init(CipherDirection::Encrypt, &public_key).unwrap();
     heap.init(CipherDirection::Encrypt, &public_key).unwrap();
+    padded.init(CipherDirection::Encrypt, &public_key).unwrap();
     let mut group = c.benchmark_group("public");
     bench_engine(&mut group, "fixed", &mut fixed);
     bench_engine(&mut group, "heap", &mut heap);
+    bench_engine(&mut group, "padded", &mut padded);
     group.finish();
 
     fixed.init(CipherDirection::Decrypt, &private_key).unwrap();
     heap.init(CipherDirection::Decrypt, &private_key).unwrap();
+    padded.init(CipherDirection::Decrypt, &private_key).unwrap();
     let mut group = c.benchmark_group("private_plain");
     bench_engine(&mut group, "fixed", &mut fixed);
     bench_engine(&mut group, "heap", &mut heap);
+    bench_engine(&mut group, "padded", &mut padded);
     group.finish();
 
     let mut fixed = Rsa2048CrtCore::default();
     let mut heap = HeapRsaCrtCoreEngine::default();
+    let mut padded = PaddedRsaCrtCoreEngine::default();
     fixed.init(CipherDirection::Decrypt, &crt_key).unwrap();
     heap.init(CipherDirection::Decrypt, &crt_key).unwrap();
+    RsaCrtInit::init(&mut padded, CipherDirection::Decrypt, &crt_key).unwrap();
     let mut group = c.benchmark_group("private_crt");
     bench_engine(&mut group, "fixed", &mut fixed);
     bench_engine(&mut group, "heap", &mut heap);
+    bench_engine(&mut group, "padded", &mut padded);
     group.finish();
 
     // 沿用已初始化的 CRT 核心；每次運算仍重新取樣盲化因子。
     let mut fixed = RsaBlindedEngine::from_parts(fixed, ExampleRng(1));
     let mut heap = RsaBlindedEngine::from_parts(heap, ExampleRng(1));
+    let mut padded = RsaBlindedEngine::from_parts(padded, ExampleRng(1));
     let mut group = c.benchmark_group("private_crt_blinded");
     bench_engine(&mut group, "fixed", &mut fixed);
     bench_engine(&mut group, "heap", &mut heap);
+    bench_engine(&mut group, "padded", &mut padded);
     group.finish();
 }
 
