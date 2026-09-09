@@ -5,7 +5,7 @@ use core::cmp::Ordering;
 #[cfg(test)]
 use crate::ConversionError;
 use crate::traits::{Bounded, One, ToPrimitive, Zero};
-use crate::{FixedBigUint, Limb, Word};
+use crate::{FixedBigUint, Limb, Word, Zeroize};
 
 mod add;
 mod array;
@@ -29,9 +29,20 @@ mod str;
 mod sub;
 
 /// A signed two's-complement integer containing exactly `N` little-endian limbs.
+///
+/// [`Zeroize`] overwrites every limb of this value, preserving its width. This
+/// type remains `Copy`: erasure is manual and best-effort, does not reach other
+/// copies, and cannot run through a `Drop` implementation on this type. General
+/// storage offers the capability, not the [`crate::ZeroizeOnDrop`] policy.
 #[derive(Clone, Copy, Eq, Hash, PartialEq)]
 pub struct FixedBigInt<const N: usize> {
     limbs: crate::LimbArray<N>,
+}
+
+impl<const N: usize> Zeroize for FixedBigInt<N> {
+    fn zeroize(&mut self) {
+        self.limbs.zeroize();
+    }
 }
 
 impl<const N: usize> FixedBigInt<N> {

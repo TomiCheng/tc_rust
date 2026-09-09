@@ -611,6 +611,7 @@ dependencies = [
  "num-bigint",
  "rand_core",
  "tc_constant_time",
+ "tc_zeroize",
 ]
 
 [[package]]

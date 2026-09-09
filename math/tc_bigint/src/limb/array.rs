@@ -1,4 +1,4 @@
-use crate::{Choice, ConditionallySelectable, ConstantTimeEq, Limb, WideWord, Word};
+use crate::{Choice, ConditionallySelectable, ConstantTimeEq, Limb, WideWord, Word, Zeroize};
 use core::cmp::Ordering;
 
 /// Exactly `N` little-endian limbs, stored in a private field without heap allocation.
@@ -9,6 +9,12 @@ use core::cmp::Ordering;
 #[repr(transparent)]
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct LimbArray<const N: usize>([Limb; N]);
+
+impl<const N: usize> Zeroize for LimbArray<N> {
+    fn zeroize(&mut self) {
+        self.0.zeroize();
+    }
+}
 
 impl<const N: usize> LimbArray<N> {
     /// Creates a value from exactly `N` little-endian limbs, preserving leading zeros.

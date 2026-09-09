@@ -38,6 +38,30 @@
 //! construction. The crate README lists which of the four types implements
 //! each one.
 //!
+//! # Explicit erasure
+//!
+//! All four integer types implement [`Zeroize`] as a capability. General-purpose
+//! storage does not know whether its contents are secret, so none implements
+//! [`ZeroizeOnDrop`] or automatically erases itself. Consumers that know they
+//! hold secrets choose the drop policy, for example with [`Zeroizing`].
+//!
+//! Fixed-width erasure overwrites every limb. These types remain `Copy` and
+//! cannot implement `Drop`: clearing one binding does not erase other copies.
+//! Dynamic-width erasure overwrites the current live limbs before clearing the
+//! vector length to restore canonical zero. It does not wipe spare capacity or
+//! inaccessible buffers left by earlier reallocations, and retains the current
+//! allocation for reuse. Neither path erases copies left elsewhere by moves,
+//! the compiler, or the operating system. See [`tc_zeroize`] for the mechanism
+//! and its limitations.
+//!
+//! ```
+//! use tc_bigint::{U256, Zeroize, Zeroizing};
+//! let mut scratch = U256::from(7_u8);
+//! scratch.zeroize();
+//! assert!(scratch.is_zero());
+//! let _secret = Zeroizing::new(U256::from(9_u8));
+//! ```
+//!
 //! # Features
 //!
 //! `alloc` and `rand_core` are on by default. Use
@@ -51,6 +75,7 @@ extern crate alloc;
 extern crate std;
 
 pub use tc_constant_time::{Choice, ConditionallySelectable, ConstantTimeEq};
+pub use tc_zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
 #[cfg(feature = "alloc")]
 mod big_int;
 #[cfg(feature = "alloc")]

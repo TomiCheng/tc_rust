@@ -6,6 +6,26 @@ use crate::{FixedBigUint, ParseBigIntError, Pow, Word};
 use alloc::string::ToString;
 
 #[test]
+fn zeroize_restores_canonical_zero() {
+    for mut value in [
+        BigUint::zero(),
+        BigUint::from(7_u8),
+        BigUint::from_le_bytes(&[0xff; 32]),
+    ] {
+        value.zeroize();
+        assert!(value.is_zero());
+        assert_eq!(value.bit_length(), 0);
+        assert!(value.as_limbs().is_empty());
+        assert_eq!(value, BigUint::zero());
+        value.zeroize();
+        assert!(value.is_zero());
+        // Canonical zero remains usable by ordinary arithmetic.
+        value += BigUint::from(3_u8);
+        assert_eq!(value, BigUint::from(3_u8));
+    }
+}
+
+#[test]
 fn radix_round_trip() {
     assert_eq!(
         BigUint::from_str_radix("ff", 16).unwrap(),

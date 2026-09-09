@@ -6,6 +6,27 @@ use crate::{FixedBigInt, ParseBigIntError, Pow};
 use alloc::string::ToString;
 
 #[test]
+fn zeroize_restores_canonical_zero() {
+    for mut value in [
+        BigInt::zero(),
+        BigInt::from(-1_i8),
+        BigInt::from(i128::MIN),
+        BigInt::from(u128::MAX),
+    ] {
+        value.zeroize();
+        assert!(value.is_zero());
+        assert_eq!(value.bit_length(), 0);
+        assert!(value.as_limbs().is_empty());
+        assert!(!value.is_negative());
+        assert_eq!(value, BigInt::zero());
+        value.zeroize();
+        assert!(value.is_zero());
+        value -= BigInt::from(3_u8);
+        assert_eq!(value, BigInt::from(-3_i8));
+    }
+}
+
+#[test]
 fn signed_external_units_round_trip() {
     for value in [i128::MIN, -129, -128, -1, 0, 1, 127, 128, i128::MAX] {
         let value = BigInt::from(value);

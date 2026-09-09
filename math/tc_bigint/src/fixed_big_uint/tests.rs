@@ -7,6 +7,26 @@ use crate::{ParseBigIntError, Pow};
 type U128 = FixedBigUint<{ 128 / Word::BITS as usize }>;
 
 #[test]
+fn zeroize_clears_every_limb_including_zero_width() {
+    for mut value in [U128::zero(), U128::from(7_u8), U128::MAX] {
+        let copy = value;
+        value.zeroize();
+        assert!(value.is_zero());
+        assert_eq!(value.bit_length(), 0);
+        assert_eq!(value, U128::zero());
+        value.zeroize();
+        assert!(value.is_zero());
+        if !copy.is_zero() {
+            assert_ne!(copy, value);
+        }
+    }
+    let mut empty = FixedBigUint::<0>::zero();
+    empty.zeroize();
+    assert!(empty.is_zero());
+    assert_eq!(empty.bit_length(), 0);
+}
+
+#[test]
 fn external_units_are_full_width_and_little_endian() {
     let value = U128::from_le_u64(&[0x1122_3344_5566_7788]).unwrap();
     let mut bytes = [0_u8; 16];

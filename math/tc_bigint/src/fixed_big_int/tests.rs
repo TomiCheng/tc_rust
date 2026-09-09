@@ -7,6 +7,27 @@ use crate::{ParseBigIntError, Pow};
 type I128 = FixedBigInt<{ 128 / Word::BITS as usize }>;
 
 #[test]
+fn zeroize_clears_signed_limbs_including_zero_width() {
+    for mut value in [I128::zero(), I128::from(-1_i8), I128::MIN, I128::MAX] {
+        let copy = value;
+        value.zeroize();
+        assert!(value.is_zero());
+        assert_eq!(value.bit_length(), 0);
+        assert!(!value.is_negative());
+        assert_eq!(value, I128::zero());
+        value.zeroize();
+        assert!(value.is_zero());
+        if !copy.is_zero() {
+            assert_ne!(copy, value);
+        }
+    }
+    let mut empty = FixedBigInt::<0>::zero();
+    empty.zeroize();
+    assert!(empty.is_zero());
+    assert_eq!(empty.bit_length(), 0);
+}
+
+#[test]
 fn fixed_signed_io_is_twos_complement_and_little_endian() {
     let value = I128::from(-2_i8);
     let mut bytes = [0_u8; 16];

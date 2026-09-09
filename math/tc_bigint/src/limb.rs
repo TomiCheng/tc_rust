@@ -1,7 +1,7 @@
 pub(crate) mod array;
 pub(crate) mod slice;
 
-use crate::{Choice, ConditionallySelectable, ConstantTimeEq};
+use crate::{Choice, ConditionallySelectable, ConstantTimeEq, Zeroize};
 
 #[cfg(target_pointer_width = "64")]
 /// Uses `u64` on 64-bit platforms and `u32` on 16-bit and 32-bit platforms, matching `tc_bigint`.
@@ -22,6 +22,12 @@ pub type WideWord = u64;
 #[repr(transparent)]
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Limb(Word);
+
+impl Zeroize for Limb {
+    fn zeroize(&mut self) {
+        self.0.zeroize();
+    }
+}
 
 impl Limb {
     /// Creates a limb from a native word.

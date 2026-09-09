@@ -7,7 +7,7 @@ use crate::ConversionError;
 use crate::encoding;
 use crate::limb::slice;
 use crate::traits::{One, Zero};
-use crate::{Limb, Word};
+use crate::{Limb, Word, Zeroize};
 
 mod add;
 mod array;
@@ -34,9 +34,23 @@ mod sub;
 ///
 /// Limbs are stored in canonical little-endian two's-complement form. Zero has
 /// no limbs; other values have no redundant high sign-extension limbs.
+///
+/// [`Zeroize`] overwrites the live limbs before clearing their length, restoring
+/// canonical zero while retaining the allocation. Spare capacity, earlier
+/// allocations left by growth, and other copies are not erased. This storage
+/// type offers explicit erasure, not the [`crate::ZeroizeOnDrop`] policy.
 #[derive(Clone, Default, Eq, Hash, PartialEq)]
 pub struct BigInt {
     limbs: Vec<Limb>,
+}
+
+impl Zeroize for BigInt {
+    fn zeroize(&mut self) {
+        // Wipe before removing the limbs, including any sign-extension limb,
+        // so the final empty vector represents canonical zero.
+        self.limbs.zeroize();
+        self.limbs.clear();
+    }
 }
 
 impl BigInt {

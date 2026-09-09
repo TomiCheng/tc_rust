@@ -3,7 +3,7 @@
 #[cfg(test)]
 use crate::ConversionError;
 use crate::traits::{Bounded, One, Unsigned, Zero};
-use crate::{Limb, Word};
+use crate::{Limb, Word, Zeroize};
 
 mod add;
 mod array;
@@ -26,9 +26,20 @@ mod str;
 mod sub;
 
 /// An unsigned integer containing exactly `N` little-endian limbs.
+///
+/// [`Zeroize`] overwrites every limb of this value, preserving its width. This
+/// type remains `Copy`: erasure is manual and best-effort, does not reach other
+/// copies, and cannot run through a `Drop` implementation on this type. General
+/// storage offers the capability, not the [`crate::ZeroizeOnDrop`] policy.
 #[derive(Clone, Copy, Eq, Hash, PartialEq)]
 pub struct FixedBigUint<const N: usize> {
     limbs: crate::LimbArray<N>,
+}
+
+impl<const N: usize> Zeroize for FixedBigUint<N> {
+    fn zeroize(&mut self) {
+        self.limbs.zeroize();
+    }
 }
 
 impl<const N: usize> FixedBigUint<N> {

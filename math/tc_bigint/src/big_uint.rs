@@ -4,9 +4,9 @@ use alloc::vec::Vec;
 
 #[cfg(test)]
 use crate::ConversionError;
-use crate::Limb;
 use crate::limb::slice;
 use crate::traits::{One, Unsigned, Zero};
+use crate::{Limb, Zeroize};
 
 mod add;
 mod array;
@@ -31,9 +31,23 @@ mod sub;
 ///
 /// Limbs are stored from least significant to most significant. Zero has an
 /// empty limb vector; non-zero values never contain redundant high zero limbs.
+///
+/// [`Zeroize`] overwrites the live limbs before clearing their length, restoring
+/// canonical zero while retaining the allocation. Spare capacity, earlier
+/// allocations left by growth, and other copies are not erased. This storage
+/// type offers explicit erasure, not the [`crate::ZeroizeOnDrop`] policy.
 #[derive(Clone, Default, Eq, Hash, PartialEq)]
 pub struct BigUint {
     limbs: Vec<Limb>,
+}
+
+impl Zeroize for BigUint {
+    fn zeroize(&mut self) {
+        // Wipe while the live elements are still accessible, then restore
+        // canonical zero. Only the current live slice is covered.
+        self.limbs.zeroize();
+        self.limbs.clear();
+    }
 }
 
 impl BigUint {
