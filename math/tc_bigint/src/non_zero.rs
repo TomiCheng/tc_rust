@@ -8,6 +8,22 @@ use crate::Zero;
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub struct NonZero<T>(T);
 
+#[cfg(feature = "alloc")]
+impl NonZero<crate::PaddedBigUint> {
+    /// 變動時間：只能用於公開值。非零時建立包裝，保留原本的寬度。
+    ///
+    /// [`Self::new`] 要求 `T: Zero`，而 `Zero` 要求 `Add<Self>`；
+    /// [`crate::PaddedBigUint`] 刻意不提供運算子，所以另開這個入口。
+    pub fn new_padded(value: crate::PaddedBigUint) -> Option<Self> {
+        (!value.is_zero()).then_some(Self(value))
+    }
+
+    /// CT：取出被包住的值，不掃描數值，也不改變寬度。
+    pub fn into_padded(self) -> crate::PaddedBigUint {
+        self.0
+    }
+}
+
 impl<T: Zero> NonZero<T> {
     /// Creates a wrapper when `value` is non-zero.
     pub fn new(value: T) -> Option<Self> {
