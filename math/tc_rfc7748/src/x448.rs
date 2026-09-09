@@ -289,7 +289,14 @@ mod tests {
         );
     }
 
+    /// RFC 7748 §5.2 的 1000 次迭代向量。
+    ///
+    /// 1000 次 X448 純量乘法在 debug profile 約需 45 秒，佔這個 crate 測試
+    /// 時間的八成以上（X25519 的同一項只要 2.7 秒——X448 的體域是 16 個
+    /// radix-2²⁸ limb，純量也長得多）。因此預設不跑，改由
+    /// `cargo test -p tc_rfc7748 -- --ignored` 執行；CI 有獨立步驟涵蓋。
     #[test]
+    #[ignore = "1000 X448 ladder iterations; run with --ignored"]
     fn rfc7748_iterated_vector_at_1000() {
         let mut scalar = BASE_POINT;
         let mut u = scalar;

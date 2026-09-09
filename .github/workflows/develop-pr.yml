@@ -35,5 +35,10 @@ jobs:
       - name: Run tests
         run: cargo +stable test --workspace --all-features --locked
 
+      # Slow interop vectors excluded from the default run, notably RFC 7748
+      # §5.2's 1000-iteration X448 ladder.
+      - name: Run ignored tests
+        run: cargo +stable test --workspace --all-features --locked -- --ignored
+
       - name: Build without default features
         run: cargo +stable build --workspace --no-default-features --locked
