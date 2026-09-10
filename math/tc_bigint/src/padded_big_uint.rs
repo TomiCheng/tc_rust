@@ -11,30 +11,41 @@ use crate::{
 };
 
 mod add;
+mod bits;
+mod checked;
+mod convert;
+mod div;
+mod modular;
 mod mul;
+mod ops;
 #[cfg(feature = "rand_core")]
 mod random;
 mod shift;
+mod str;
 mod sub;
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod trait_tests;
 
 /// 一個無號整數，持有建構時決定的 limb 寬度，並保留全部前導零。
 ///
 /// 它與 [`BigUint`] 的唯一可觀察差異就是**不做正規化**：`BigUint` 會砍掉前導零，
 /// 於是配置長度與迴圈次數都隨數值大小改變；本型別的寬度一經建構就固定，
-/// 任何運算都不得改變它。常數時間的演算法靠這個性質決定排程。
+/// CT 方法不改變它。常數時間的演算法靠這個性質決定排程。
+/// 變動時間運算子則將兩邊補到較大的寬度，結果與賦值目的地都採該寬度。
 ///
 /// # 常數時間約定
 ///
 /// `len()` 是**公開資訊**，可以用來決定迴圈次數；數值本身是秘密。方法分成兩類，
 /// 各自的 doc 都會標明屬於哪一類：
 ///
-/// * **CT** —— 排程只由寬度決定，與數值無關。算術、位移、[`ConstantTimeEq`]、
+/// * **CT** —— 排程只由寬度決定，與數值無關。具名算術、位移、[`ConstantTimeEq`]、
 ///   [`ConditionallySelectable`]、[`Zeroize`] 都屬於這類。
 /// * **變動時間** —— 排程會洩漏數值，doc 會寫明「只能用於公開值」。
 ///   [`Self::significant_len`]、[`Self::bit_len`]、[`Self::is_zero`]、
 ///   [`Self::to_big_uint`] 與比較運算子都屬於這類。
+///   新增的運算子與數值 trait 也只能用於公開值；秘密值使用具名 CT 方法。
 ///
 /// CT 方法的實作內部不得呼叫任何變動時間方法。
 ///

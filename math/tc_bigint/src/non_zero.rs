@@ -12,8 +12,7 @@ pub struct NonZero<T>(T);
 impl NonZero<crate::PaddedBigUint> {
     /// 變動時間：只能用於公開值。非零時建立包裝，保留原本的寬度。
     ///
-    /// [`Self::new`] 要求 `T: Zero`，而 `Zero` 要求 `Add<Self>`；
-    /// [`crate::PaddedBigUint`] 刻意不提供運算子，所以另開這個入口。
+    /// 保留較早版本的專用入口；目前也能使用 [`Self::new`]。
     pub fn new_padded(value: crate::PaddedBigUint) -> Option<Self> {
         (!value.is_zero()).then_some(Self(value))
     }
