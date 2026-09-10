@@ -11,9 +11,57 @@ use crate::ed25519_base;
 use rand_core::CryptoRng;
 use tc_constant_time::Choice;
 
-/// Byte length of a `u`-coordinate / output point (RFC 7748 `PointSize`).
+/// 常數時間：X25519 公開鍵、共享秘密與 u 座標的位元組長度，為 32。
+///
+/// 這是編譯期公開常數，讀取不涉及秘密值。
+///
+/// # Examples
+///
+/// [RFC 7748 §6.1](https://www.rfc-editor.org/rfc/rfc7748.html#section-6.1) 的 Alice 測試向量。
+///
+/// ```
+/// use tc_rfc7748::x25519;
+///
+/// let alice_private: [u8; x25519::SCALAR_SIZE] = [
+///     0x77, 0x07, 0x6d, 0x0a, 0x73, 0x18, 0xa5, 0x7d,
+///     0x3c, 0x16, 0xc1, 0x72, 0x51, 0xb2, 0x66, 0x45,
+///     0xdf, 0x4c, 0x2f, 0x87, 0xeb, 0xc0, 0x99, 0x2a,
+///     0xb1, 0x77, 0xfb, 0xa5, 0x1d, 0xb9, 0x2c, 0x2a,
+/// ];
+/// let alice_public: [u8; x25519::POINT_SIZE] = [
+///     0x85, 0x20, 0xf0, 0x09, 0x89, 0x30, 0xa7, 0x54,
+///     0x74, 0x8b, 0x7d, 0xdc, 0xb4, 0x3e, 0xf7, 0x5a,
+///     0x0d, 0xbf, 0x3a, 0x0d, 0x26, 0x38, 0x1a, 0xf4,
+///     0xeb, 0xa4, 0xa9, 0x8e, 0xaa, 0x9b, 0x4e, 0x6a,
+/// ];
+/// assert_eq!(x25519::generate_public_key(&alice_private), alice_public);
+/// ```
 pub const POINT_SIZE: usize = 32;
-/// Byte length of a scalar / private key (RFC 7748 `ScalarSize`).
+/// 常數時間：X25519 純量與私鑰的位元組長度，為 32。
+///
+/// 這是編譯期公開常數，讀取不涉及秘密值。
+///
+/// # Examples
+///
+/// [RFC 7748 §6.1](https://www.rfc-editor.org/rfc/rfc7748.html#section-6.1) 的 Alice 測試向量。
+///
+/// ```
+/// use tc_rfc7748::x25519;
+///
+/// let alice_private: [u8; x25519::SCALAR_SIZE] = [
+///     0x77, 0x07, 0x6d, 0x0a, 0x73, 0x18, 0xa5, 0x7d,
+///     0x3c, 0x16, 0xc1, 0x72, 0x51, 0xb2, 0x66, 0x45,
+///     0xdf, 0x4c, 0x2f, 0x87, 0xeb, 0xc0, 0x99, 0x2a,
+///     0xb1, 0x77, 0xfb, 0xa5, 0x1d, 0xb9, 0x2c, 0x2a,
+/// ];
+/// let alice_public: [u8; x25519::POINT_SIZE] = [
+///     0x85, 0x20, 0xf0, 0x09, 0x89, 0x30, 0xa7, 0x54,
+///     0x74, 0x8b, 0x7d, 0xdc, 0xb4, 0x3e, 0xf7, 0x5a,
+///     0x0d, 0xbf, 0x3a, 0x0d, 0x26, 0x38, 0x1a, 0xf4,
+///     0xeb, 0xa4, 0xa9, 0x8e, 0xaa, 0x9b, 0x4e, 0x6a,
+/// ];
+/// assert_eq!(x25519::generate_public_key(&alice_private), alice_public);
+/// ```
 pub const SCALAR_SIZE: usize = 32;
 
 /// RFC 7748 所定義的 X25519 基點 `u = 9`。
@@ -32,20 +80,65 @@ const C_A24: i32 = (C_A + 2) / 4;
 
 const _: () = assert!(C_A24 == 121666);
 
-/// 依 RFC 7748 section 5 夾制 X25519 私鑰。
+/// 常數時間：依 RFC 7748 §5 夾制私鑰，只對固定位置做位元遮罩。
 ///
-/// 此操作會清除最低三位與最高位，並設定 bit 254。即使呼叫端傳入未夾制的
-/// scalar，[`scalar_mult`] 也會在解碼時套用相同規則；公開這個函式是為了讓
-/// 私鑰產生與儲存格式符合 RFC 7748。
+/// 清除最低三位與最高位，並設定 bit 254。
+/// 即使呼叫端傳入未夾制的純量，[`scalar_mult`] 也會在解碼時套用同樣規則。
+/// 這個入口讓呼叫端能先將私鑰調整成夾制後的儲存格式。
+///
+/// # Examples
+///
+/// [RFC 7748 §6.1](https://www.rfc-editor.org/rfc/rfc7748.html#section-6.1) 的 Alice 測試向量。
+/// 夾制改變儲存位元組，但不改變純量乘法結果。
+///
+/// ```
+/// use tc_rfc7748::x25519;
+///
+/// let mut private = [
+///     0x77, 0x07, 0x6d, 0x0a, 0x73, 0x18, 0xa5, 0x7d,
+///     0x3c, 0x16, 0xc1, 0x72, 0x51, 0xb2, 0x66, 0x45,
+///     0xdf, 0x4c, 0x2f, 0x87, 0xeb, 0xc0, 0x99, 0x2a,
+///     0xb1, 0x77, 0xfb, 0xa5, 0x1d, 0xb9, 0x2c, 0x2a,
+/// ];
+/// x25519::clamp_private_key(&mut private);
+/// assert_eq!(private[0], 0x70);
+/// assert_eq!(private[31], 0x6a);
+/// let expected_public = [
+///     0x85, 0x20, 0xf0, 0x09, 0x89, 0x30, 0xa7, 0x54,
+///     0x74, 0x8b, 0x7d, 0xdc, 0xb4, 0x3e, 0xf7, 0x5a,
+///     0x0d, 0xbf, 0x3a, 0x0d, 0x26, 0x38, 0x1a, 0xf4,
+///     0xeb, 0xa4, 0xa9, 0x8e, 0xaa, 0x9b, 0x4e, 0x6a,
+/// ];
+/// assert_eq!(x25519::generate_public_key(&private), expected_public);
+/// ```
 pub fn clamp_private_key(private_key: &mut [u8; SCALAR_SIZE]) {
     private_key[0] &= 0xF8;
     private_key[SCALAR_SIZE - 1] &= 0x7F;
     private_key[SCALAR_SIZE - 1] |= 0x40;
 }
 
-/// 使用呼叫端提供的密碼學安全亂數來源產生已夾制的 X25519 私鑰。
+/// 變動時間（取決於 RNG）：從呼叫端的密碼學安全 RNG 產生 X25519 私鑰。
 ///
-/// crate 不自行取得系統熵；亂數來源與其生命週期完全由呼叫端控制。
+/// 本函式固定取得 32 個位元組，再以常數時間的 [`clamp_private_key`] 夾制；
+/// 不自行取得系統熵，也不能替任意 RNG 保證執行時間。亂數來源由呼叫端管理。
+///
+/// # Examples
+///
+/// 此範例只編譯，不執行 RNG；回傳值已符合 RFC 7748 §5 的夾制規則。
+///
+/// ```no_run
+/// use tc_rfc7748::x25519;
+///
+/// use rand_core::CryptoRng;
+///
+/// // 將應用程式已建立的 RNG 傳入；此處不提供示範用偽亂數產生器。
+/// fn new_private_key(rng: &mut impl CryptoRng) -> [u8; x25519::SCALAR_SIZE] {
+///     let key = x25519::generate_private_key(rng);
+///     assert_eq!(key[0] & 7, 0);
+///     assert_eq!(key[31] & 0xc0, 0x40);
+///     key
+/// }
+/// ```
 pub fn generate_private_key<R: CryptoRng + ?Sized>(rng: &mut R) -> [u8; SCALAR_SIZE] {
     let mut private_key = [0_u8; SCALAR_SIZE];
     rng.fill_bytes(&mut private_key);
@@ -53,18 +146,85 @@ pub fn generate_private_key<R: CryptoRng + ?Sized>(rng: &mut R) -> [u8; SCALAR_S
     private_key
 }
 
-/// 從 X25519 私鑰產生公開鍵。
+/// 常數時間：X25519 由私鑰產生公開鍵。
 ///
-/// 固定基點乘法會使用編譯期 Ed25519 預算表，再把 Edwards `Y:Z` 轉回
-/// Montgomery `u` 座標。
+/// 以 signed radix-16 固定視窗與完整 Edwards 點公式運算；
+/// 每個視窗掃完整列公開預算表，以遮罩選擇，沒有秘密索引。
+/// 最後把 `Y:Z` 轉回 Montgomery u 座標，最後以固定加法鏈的 `invert` 求反元素，不走變動時間的 `inv_var`。
+///
+/// # Examples
+///
+/// [RFC 7748 §6.1](https://www.rfc-editor.org/rfc/rfc7748.html#section-6.1) 的 Alice 測試向量。
+///
+/// ```
+/// use tc_rfc7748::x25519;
+///
+/// let alice_private: [u8; x25519::SCALAR_SIZE] = [
+///     0x77, 0x07, 0x6d, 0x0a, 0x73, 0x18, 0xa5, 0x7d,
+///     0x3c, 0x16, 0xc1, 0x72, 0x51, 0xb2, 0x66, 0x45,
+///     0xdf, 0x4c, 0x2f, 0x87, 0xeb, 0xc0, 0x99, 0x2a,
+///     0xb1, 0x77, 0xfb, 0xa5, 0x1d, 0xb9, 0x2c, 0x2a,
+/// ];
+/// let alice_public: [u8; x25519::POINT_SIZE] = [
+///     0x85, 0x20, 0xf0, 0x09, 0x89, 0x30, 0xa7, 0x54,
+///     0x74, 0x8b, 0x7d, 0xdc, 0xb4, 0x3e, 0xf7, 0x5a,
+///     0x0d, 0xbf, 0x3a, 0x0d, 0x26, 0x38, 0x1a, 0xf4,
+///     0xeb, 0xa4, 0xa9, 0x8e, 0xaa, 0x9b, 0x4e, 0x6a,
+/// ];
+/// assert_eq!(x25519::generate_public_key(&alice_private), alice_public);
+/// ```
 pub fn generate_public_key(private_key: &[u8; SCALAR_SIZE]) -> [u8; POINT_SIZE] {
     scalar_mult_base(private_key)
 }
 
-/// 計算 X25519 Diffie-Hellman shared secret。
+/// 常數時間（末端僅揭露是否全零）：計算 X25519 Diffie-Hellman 共享秘密。
 ///
 /// 回傳 `None` 代表結果全為零，也就是對方送入低階點；呼叫端必須拒絕這個
 /// agreement。全零檢查會掃過完整輸出，不會在第一個非零 byte 提前結束。
+///
+/// [`scalar_mult`] 的 ladder 圈數固定，交換使用 `cswap` 遮罩。
+/// 最後以固定加法鏈的 `invert` 求反元素，不走變動時間的 `inv_var`。
+///
+/// 末端的 `Some`／`None` 會揭露全零判定，這是本 API 刻意回報的拒絕條件。
+/// 呼叫端收到 `None` 必須拒絕協議，不能用 `unwrap_or_default()` 把它換成全零秘密。
+/// 需要金鑰衍生時，應將有效結果交給上層協議指定的 KDF。
+///
+/// # Examples
+///
+/// [RFC 7748 §6.1](https://www.rfc-editor.org/rfc/rfc7748.html#section-6.1) 的 Alice 測試向量。
+/// 先檢查有效協議，再示範低階點被拒絕。
+///
+/// ```
+/// use tc_rfc7748::x25519;
+///
+/// let alice_private = [
+///     0x77, 0x07, 0x6d, 0x0a, 0x73, 0x18, 0xa5, 0x7d,
+///     0x3c, 0x16, 0xc1, 0x72, 0x51, 0xb2, 0x66, 0x45,
+///     0xdf, 0x4c, 0x2f, 0x87, 0xeb, 0xc0, 0x99, 0x2a,
+///     0xb1, 0x77, 0xfb, 0xa5, 0x1d, 0xb9, 0x2c, 0x2a,
+/// ];
+/// let bob_public = [
+///     0xde, 0x9e, 0xdb, 0x7d, 0x7b, 0x7d, 0xc1, 0xb4,
+///     0xd3, 0x5b, 0x61, 0xc2, 0xec, 0xe4, 0x35, 0x37,
+///     0x3f, 0x83, 0x43, 0xc8, 0x5b, 0x78, 0x67, 0x4d,
+///     0xad, 0xfc, 0x7e, 0x14, 0x6f, 0x88, 0x2b, 0x4f,
+/// ];
+/// let expected_shared = [
+///     0x4a, 0x5d, 0x9d, 0x5b, 0xa4, 0xce, 0x2d, 0xe1,
+///     0x72, 0x8e, 0x3b, 0xf4, 0x80, 0x35, 0x0f, 0x25,
+///     0xe0, 0x7e, 0x21, 0xc9, 0x47, 0xd1, 0x9e, 0x33,
+///     0x76, 0xf0, 0x9b, 0x3c, 0x1e, 0x16, 0x17, 0x42,
+/// ];
+/// assert_eq!(
+///     x25519::calculate_agreement(&alice_private, &bob_public),
+///     Some(expected_shared),
+/// );
+///
+/// // 對方送入低階點 u = 0：必須拒絕，不可取預設的全零陣列。
+/// let low_order_point = [0; x25519::POINT_SIZE];
+/// let rejected = x25519::calculate_agreement(&alice_private, &low_order_point);
+/// assert!(rejected.is_none());
+/// ```
 pub fn calculate_agreement(
     private_key: &[u8; SCALAR_SIZE],
     peer_public_key: &[u8; POINT_SIZE],
@@ -108,14 +268,41 @@ fn decode_scalar(k: &[u8; SCALAR_SIZE]) -> [u32; 8] {
     n
 }
 
-/// X25519 scalar multiplication (RFC 7748): given a 32-byte scalar `k` and a 32-byte
-/// `u`-coordinate, returns `k · u` as 32 bytes — the Diffie–Hellman shared secret.
+/// 常數時間：X25519 純量乘法，回傳小端序的 u 座標。
 ///
-/// `k` 會在內部解碼時依 RFC 7748 自動夾制；呼叫端不必先呼叫
-/// [`clamp_private_key`]。
+/// 純量在解碼時自動依 RFC 7748 夾制；呼叫端不必先呼叫 [`clamp_private_key`]。
+/// ladder 圈數固定，條件交換由 `cswap` 遮罩完成，秘密位元不決定分支或索引。
+/// 最後以固定加法鏈的 `invert` 求反元素，不走變動時間的 `inv_var`。
 ///
-/// Constant-time: a Montgomery ladder over [`Fe`] with `cswap`-driven, bit-independent
-/// control flow. Corresponds to bc `X25519.ScalarMult`, transcribed verbatim.
+/// 這是原語入口，不拒絕全零輸出；金鑰協議請用 [`calculate_agreement`]。
+///
+/// # Examples
+///
+/// [RFC 7748 §5.2](https://www.rfc-editor.org/rfc/rfc7748.html#section-5.2) 的第一組純量乘法向量。
+///
+/// ```
+/// use tc_rfc7748::x25519;
+///
+/// let scalar = [
+///     0xa5, 0x46, 0xe3, 0x6b, 0xf0, 0x52, 0x7c, 0x9d,
+///     0x3b, 0x16, 0x15, 0x4b, 0x82, 0x46, 0x5e, 0xdd,
+///     0x62, 0x14, 0x4c, 0x0a, 0xc1, 0xfc, 0x5a, 0x18,
+///     0x50, 0x6a, 0x22, 0x44, 0xba, 0x44, 0x9a, 0xc4,
+/// ];
+/// let u = [
+///     0xe6, 0xdb, 0x68, 0x67, 0x58, 0x30, 0x30, 0xdb,
+///     0x35, 0x94, 0xc1, 0xa4, 0x24, 0xb1, 0x5f, 0x7c,
+///     0x72, 0x66, 0x24, 0xec, 0x26, 0xb3, 0x35, 0x3b,
+///     0x10, 0xa9, 0x03, 0xa6, 0xd0, 0xab, 0x1c, 0x4c,
+/// ];
+/// let expected = [
+///     0xc3, 0xda, 0x55, 0x37, 0x9d, 0xe9, 0xc6, 0x90,
+///     0x8e, 0x94, 0xea, 0x4d, 0xf2, 0x8d, 0x08, 0x4f,
+///     0x32, 0xec, 0xcf, 0x03, 0x49, 0x1c, 0x71, 0xf7,
+///     0x54, 0xb4, 0x07, 0x55, 0x77, 0xa2, 0x85, 0x52,
+/// ];
+/// assert_eq!(x25519::scalar_mult(&scalar, &u), expected);
+/// ```
 pub fn scalar_mult(k: &[u8; SCALAR_SIZE], u: &[u8; POINT_SIZE]) -> [u8; POINT_SIZE] {
     let n = decode_scalar(k);
     let x1 = Fe::decode(u);
@@ -175,18 +362,68 @@ pub fn scalar_mult(k: &[u8; SCALAR_SIZE], u: &[u8; POINT_SIZE]) -> [u8; POINT_SI
     x2.normalize().encode()
 }
 
-/// X25519 固定基點乘法。
+/// 常數時間：X25519 固定基點純量乘法。
 ///
-/// 與 Bouncy Castle 相同，這條路借用 Edwards 完整點加法與固定基點表，再以
-/// `u = (Z + Y) / (Z - Y)` 轉回 Montgomery 座標。完整 RFC 8032 簽章層不在
-/// 本 crate；這裡只有不依賴 SHA-512 的固定基點數學核心。
+/// 以 signed radix-16 固定視窗與完整 Edwards 點公式運算；
+/// 每個視窗掃完整列公開預算表，以遮罩選擇，沒有秘密索引。
+/// 最後把 `Y:Z` 轉回 Montgomery u 座標，最後以固定加法鏈的 `invert` 求反元素，不走變動時間的 `inv_var`。
+///
+/// # Examples
+///
+/// [RFC 7748 §6.1](https://www.rfc-editor.org/rfc/rfc7748.html#section-6.1) 的 Alice 測試向量。
+///
+/// ```
+/// use tc_rfc7748::x25519;
+///
+/// let alice_private: [u8; x25519::SCALAR_SIZE] = [
+///     0x77, 0x07, 0x6d, 0x0a, 0x73, 0x18, 0xa5, 0x7d,
+///     0x3c, 0x16, 0xc1, 0x72, 0x51, 0xb2, 0x66, 0x45,
+///     0xdf, 0x4c, 0x2f, 0x87, 0xeb, 0xc0, 0x99, 0x2a,
+///     0xb1, 0x77, 0xfb, 0xa5, 0x1d, 0xb9, 0x2c, 0x2a,
+/// ];
+/// let alice_public: [u8; x25519::POINT_SIZE] = [
+///     0x85, 0x20, 0xf0, 0x09, 0x89, 0x30, 0xa7, 0x54,
+///     0x74, 0x8b, 0x7d, 0xdc, 0xb4, 0x3e, 0xf7, 0x5a,
+///     0x0d, 0xbf, 0x3a, 0x0d, 0x26, 0x38, 0x1a, 0xf4,
+///     0xeb, 0xa4, 0xa9, 0x8e, 0xaa, 0x9b, 0x4e, 0x6a,
+/// ];
+/// assert_eq!(x25519::scalar_mult_base(&alice_private), alice_public);
+/// ```
 pub fn scalar_mult_base(k: &[u8; SCALAR_SIZE]) -> [u8; POINT_SIZE] {
     let (y, z) = ed25519_base::scalar_mult_base_yz(k);
     let (numerator, denominator) = z.apm(y);
     numerator.mul(denominator.invert()).normalize().encode()
 }
 
-/// 觸及編譯期固定基點表。表已經靜態嵌入，因此不需要鎖、配置或執行期初始化。
+/// 常數時間：保留與 Bouncy Castle 對等的預算入口，不涉及秘密。
+///
+/// 目前不建表、不加鎖，也不初始化 CPU 偵測；只將編譯期公開表的參考
+/// 交給 `black_box`，不保證預讀整張表或暖機快取。Bouncy Castle 的對應入口
+/// 會延遲建表並加鎖，這裡的表已靜態嵌入，因此不需要那個初始化流程。
+///
+/// # Examples
+///
+/// [RFC 7748 §6.1](https://www.rfc-editor.org/rfc/rfc7748.html#section-6.1) 的 Alice 測試向量。
+/// 預算入口可以呼叫，但公鑰運算不以呼叫過它為前提。
+///
+/// ```
+/// use tc_rfc7748::x25519;
+///
+/// x25519::precompute();
+/// let alice_private: [u8; x25519::SCALAR_SIZE] = [
+///     0x77, 0x07, 0x6d, 0x0a, 0x73, 0x18, 0xa5, 0x7d,
+///     0x3c, 0x16, 0xc1, 0x72, 0x51, 0xb2, 0x66, 0x45,
+///     0xdf, 0x4c, 0x2f, 0x87, 0xeb, 0xc0, 0x99, 0x2a,
+///     0xb1, 0x77, 0xfb, 0xa5, 0x1d, 0xb9, 0x2c, 0x2a,
+/// ];
+/// let alice_public: [u8; x25519::POINT_SIZE] = [
+///     0x85, 0x20, 0xf0, 0x09, 0x89, 0x30, 0xa7, 0x54,
+///     0x74, 0x8b, 0x7d, 0xdc, 0xb4, 0x3e, 0xf7, 0x5a,
+///     0x0d, 0xbf, 0x3a, 0x0d, 0x26, 0x38, 0x1a, 0xf4,
+///     0xeb, 0xa4, 0xa9, 0x8e, 0xaa, 0x9b, 0x4e, 0x6a,
+/// ];
+/// assert_eq!(x25519::generate_public_key(&alice_private), alice_public);
+/// ```
 pub fn precompute() {
     ed25519_base::precompute();
 }

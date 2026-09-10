@@ -1,7 +1,9 @@
-//! Shared full Ed25519 fixed-base multiplication for X25519 and RFC 8032.
+//! 供 X25519 與 RFC 8032 共用的完整 Ed25519 固定基點乘法。
 //!
-//! The SHA-512 signature layer lives in `tc_ed25519`. This module owns the
-//! Edwards point formulas and compile-time table, avoiding a dependency cycle.
+//! Edwards 點公式與編譯期表放在這裡，讓上層簽章實作可跨 crate 共用，避免循環相依。
+//! Rust 沒有「只給某個外部 crate 使用」的可見性，因此採 `pub` 搭配 `#[doc(hidden)]`。
+//! 這仍是內部共用介面：不承諾跨版本 API、ABI 或座標表示法穩定，
+//! 也不提供雜湊、簽章協議或金鑰驗證。一般金鑰協議請使用 [`crate::x25519`]。
 
 use crate::x25519::clamp_private_key;
 use crate::x25519_field::Fe;

@@ -3,6 +3,11 @@
 //! Ported from Bouncy Castle's `Org.BouncyCastle.Math.EC.Rfc7748.X25519Field`
 //! scalar 核心外，`x86` feature 會在可用時以 AVX2/SSE2 加速加、減與 `apm`。
 //!
+//! 本模組公開是為了讓 RFC 8032 等上層實作跨 crate 共用欄位核心；Rust 沒有
+//! 「只給某個外部 crate 使用」的可見性，因此以 `#[doc(hidden)]` 隱藏內部介面。
+//! 不承諾跨版本 API、ABI 或 limb 表示法穩定；公開也不代表每個輔助方法都能處理秘密。
+//! 一般金鑰協議請使用 [`crate::x25519`]，不要依賴這些內部表示細節。
+//!
 //! # Representation (ref10, radix 2²⁵·⁵)
 //!
 //! A field element is [`SIZE`](crate::x25519_field::SIZE) = 10 signed 32-bit limbs,
@@ -17,9 +22,12 @@
 //! two ~26-bit limbs (~52 bits) accumulate in `i64`, so no 128-bit arithmetic is
 //! needed.
 //!
-//! All operations are **constant-time** (straight-line, no data-dependent branches):
-//! this field is the constant-time answer for its curve, unlike the variable-time
-//! generic Fp/F2m layers.
+//! X25519 路徑使用固定排程的欄位方法，反元素選
+//! [`Fe::invert`](crate::x25519_field::Fe::invert) 的固定加法鏈。
+//! 本模組另外提供變動時間的公開值輔助方法，例如
+//! [`Fe::inv_var`](crate::x25519_field::Fe::inv_var) 與
+//! [`Fe::sqrt_ratio_var`](crate::x25519_field::Fe::sqrt_ratio_var)；
+//! 這些方法只能用於公開值，不可放進秘密純量的路徑。
 //
 // TODO(x25519-field-5limb): on 64-bit targets a radix-2⁵¹ representation (5 × u64,
 // products in u128) is substantially faster — ~1/4 the partial products and full use

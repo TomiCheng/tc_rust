@@ -6,6 +6,13 @@
 //! X448 and Ed448 share this canonical field representation. Selection and
 //! square-root-of-ratio support RFC 8032 point arithmetic and decoding. With the
 //! x86 feature, AVX2 accelerates the convolution while reusing scalar reduction.
+//!
+//! 本模組公開是為了讓 X448 與 RFC 8032 上層實作跨 crate 共用欄位核心；Rust 沒有
+//! 「只給某個外部 crate 使用」的可見性，因此以 `#[doc(hidden)]` 隱藏內部介面。
+//! 不承諾跨版本 API、ABI 或 limb 表示法穩定，也不承諾所有輔助方法都是常數時間：
+//! [`Fe448::sqrt_ratio_var`](crate::x448_field::Fe448::sqrt_ratio_var)
+//! 只供公開輸入的點解碼使用。
+//! 一般金鑰協議請使用 [`crate::x448`]，而非直接依賴欄位表示法。
 
 use tc_constant_time::{Choice, ConditionallySelectable};
 

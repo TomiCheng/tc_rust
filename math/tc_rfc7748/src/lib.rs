@@ -4,15 +4,19 @@
 //!
 //! 這個 crate 提供 X25519 與 X448。實作使用專用
 //! Montgomery ladder 與固定寬度欄位運算，刻意不接短 Weierstrass 曲線使用的
-//! `tc_ec_core` trait。
+//! 通用曲線 trait。
 //!
 //! 預設啟用 `std` 與 x86 runtime 分派；關閉 default features 時仍是純
 //! `no_std`、無外部配置需求的 scalar 實作。
+//!
+//! [`x25519`]／[`x448`] 的純量乘法採固定排程；具體路徑與時間性質見各函式。
+//! 這是原始碼層的常數時間約定，不是對所有編譯器、機器碼與硬體的計時證明。
+//! 私鑰生成的時間取決於呼叫端 RNG；協議入口末端會揭露輸出是否全零。
 
 #[cfg(test)]
 extern crate std;
 
-/// Edwards fixed-base arithmetic shared with RFC 8032; draft internal API.
+/// 供跨 crate 共用的 Edwards 固定基點核心；不承諾穩定 API。
 #[doc(hidden)]
 pub mod ed25519_base;
 pub mod x25519;
