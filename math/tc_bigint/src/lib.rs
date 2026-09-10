@@ -73,11 +73,8 @@
 //! and prime operations without an allocator, or disable both for fixed-width
 //! arithmetic only.
 
-
 // core
 
-mod traits;
-mod types;
 mod encoding;
 mod error;
 mod fixed_big_int;
@@ -87,6 +84,8 @@ mod limb;
 mod non_zero;
 mod odd;
 mod ops_forward;
+mod traits;
+mod types;
 
 pub use traits::{
     AndNot, ArrayEncoding, BitOps, Bounded, CheckedAdd, CheckedDiv, CheckedMul, CheckedNeg,
@@ -100,19 +99,19 @@ pub use traits::{
 pub use tc_constant_time::{ConditionallySelectable, ConstantTimeEq};
 pub use tc_zeroize::{Zeroize, ZeroizeOnDrop};
 
-pub use tc_constant_time::Choice;
-pub use tc_zeroize::Zeroizing;
 pub use error::{ConversionError, ParseBigIntError};
 pub use fixed_big_int::FixedBigInt;
 pub use fixed_big_uint::FixedBigUint;
+pub(crate) use limb::array::LimbArray;
+pub(crate) use limb::{Limb, WideWord, Word};
 pub use non_zero::NonZero;
 pub use odd::Odd;
+pub use tc_constant_time::Choice;
+pub use tc_zeroize::Zeroizing;
 pub use types::limbs_for_bits;
 pub use types::{
     I64, I128, I1024, U64, U128, U256, U384, U512, U521, U1024, U1536, U2048, U3072, U4096,
 };
-pub(crate) use limb::array::LimbArray;
-pub(crate) use limb::{Limb, WideWord, Word};
 
 // alloc
 
