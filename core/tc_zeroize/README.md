@@ -5,8 +5,9 @@ is `no_std` and has no dependencies. A single, default-off `alloc` feature adds
 heap-backed containers through the sysroot `alloc` crate. Its primitive
 implementations use small, documented `unsafe` blocks for volatile writes.
 
-This crate is incubating in `tc_rust`. Publication metadata, a changelog, and
-crate-local license files are deferred until its move to `tc_core`.
+This crate is developed in `tc_rust`, with publication metadata and crate-local
+licenses included. Its move to `tc_core` and crates.io publication are separate
+release steps. The minimum supported Rust version is 1.85.
 
 ## API
 
@@ -55,8 +56,9 @@ does not enforce or implement this behavior.
 
 `Zeroizing<T>` applies that policy to a local value. The guard implements neither
 `Clone` nor `Copy`. Dereferencing it can still allow a caller to copy or clone the
-inner value; those separate values are not guarded. No downstream crate is wired
-to this capability in this initial version.
+inner value; those separate values are not guarded. In `tc_rust`, `tc_bigint`
+implements and re-exports the erasure API. `tc_rsa` uses it in owned key
+containers and heap engine destructors, and guards local CRT blinding values.
 
 ## Usage
 
@@ -99,7 +101,7 @@ do not erase copies left elsewhere by the compiler or operating system, such as
 registers, stack spills, swap, or core dumps. Padding bytes are not covered.
 
 `Copy` values permit implicit copies on by-value use. Clearing one binding does
-not clear other copies; `FixedBigUint` is a relevant example in `tc_rust`. A
+not clear other copies; a `Copy` fixed-width integer type is one example. A
 `Copy` type cannot implement `Drop`, so it cannot perform its own scope-exit
 cleanup. Even moves of non-`Copy` types can leave bytes at an old location.
 `Zeroizing` clears only its current contents, not those old copies.
@@ -123,6 +125,8 @@ implementation can also leave a composite value partially cleared.
 Integration tests import the public API and cover every supported primitive,
 empty and nested containers, non-`Copy` elements, slice boundaries, clearing
 before a payload's destructor, and guard cleanup on scope exit and unwinding.
+With `alloc`, tests also check spare capacity in still-live vector allocations,
+element destruction order, boxed slices, and nested vectors.
 Crate and type documentation contains executable examples. Missing public docs
 and unsafe operations without explicit unsafe blocks in unsafe functions are
 rejected by crate-level lints.
@@ -135,12 +139,36 @@ Run these commands from the `tc_rust` workspace root:
 
 ```text
 cargo fmt --all
-cargo clippy --workspace --all-targets -- -D warnings
-cargo test --workspace
+cargo clippy --workspace --all-targets --all-features -- -D warnings
+cargo test --workspace --all-features
+cargo build --workspace --no-default-features
 cargo doc -p tc_zeroize --no-deps
+cargo build -p tc_zeroize --no-default-features
+cargo test -p tc_zeroize --features alloc
+cargo package -p tc_zeroize --list
+cargo publish -p tc_zeroize --dry-run
 ```
+
+Inspect the package list for both license files, this README, all source files,
+and integration tests. It must not include `target/` or other build artifacts.
+The publish dry run packages and verifies the crate without uploading it.
+
+## Graduation checklist
+
+The following steps belong to the later move to `tc_core` and publication:
+
+1. Move this crate to `tc_core`, retaining its metadata, licenses, and tests.
+2. After publishing version 0.1.0, remove the now-empty `"core/*"` member from
+   the `tc_rust` workspace root `Cargo.toml`.
+3. Replace the path dependency in `math/tc_bigint/Cargo.toml` with
+   `tc_zeroize = { version = "0.1.0", features = [] }`, retaining the
+   `alloc = ["tc_zeroize/alloc"]` feature forwarding.
+4. Change the root README's `tc_zeroize` row to a crates.io link and mark it as
+   an external dependency, following `tc_constant_time`.
+5. Compare the migration diff with `6c43339` (published `tc_constant_time`) and
+   `bd8df7a` (published `tc_runtime`), then rerun the workspace checks.
 
 ## License
 
-Licensed under either the [MIT license](../../LICENSE-MIT) or the
-[Apache License, Version 2.0](../../LICENSE-APACHE), at your option.
+Licensed under either the [MIT license](LICENSE-MIT) or the
+[Apache License, Version 2.0](LICENSE-APACHE), at your option.

@@ -2,9 +2,15 @@
 name = "tc_zeroize"
 version = "0.1.0"
 edition.workspace = true
+rust-version = "1.85"
 license.workspace = true
 repository.workspace = true
 description = "Explicit memory erasure with volatile writes and opt-in scope guards."
+readme = "README.md"
+documentation = "https://docs.rs/tc_zeroize"
+keywords = ["zeroize", "cryptography", "no-std", "memory"]
+categories = ["cryptography", "no-std", "memory-management"]
+include = ["src/**", "tests/**", "README.md", "LICENSE-MIT", "LICENSE-APACHE"]
 
 [features]
 default = []

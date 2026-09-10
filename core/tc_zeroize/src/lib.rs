@@ -63,7 +63,7 @@
 //! system, including registers, stack spills, swap, and core dumps.
 //!
 //! A `Copy` value can be implicitly copied on by-value use. Clearing one binding
-//! cannot clear other copies; this matters for types such as `FixedBigUint`.
+//! cannot clear other copies; this matters for a `Copy` fixed-width integer type.
 //! Such types cannot implement `Drop` and therefore cannot clear themselves
 //! automatically at scope exit. Even ordinary moves may leave old bytes behind.
 //! A [`Zeroizing`] guard clears its current value, not copies made before or

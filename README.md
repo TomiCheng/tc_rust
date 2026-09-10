@@ -46,6 +46,7 @@ engines respectively; both provide streaming, clone, and reset behavior.
 | [`tc_bigint`](math/tc_bigint) | Fixed-width and arbitrary-precision signed/unsigned integers and number-theory operations | Fixed-width types are core-only; dynamic types require `alloc` |
 | [`tc_prime`](math/tc_prime) | FIPS 186-4 small-factor, Miller-Rabin, enhanced Miller-Rabin, and optional Shawe-Taylor utilities | Fixed-width path is core-only; `alloc` enables dynamic integers and `digest` enables Shawe-Taylor |
 | [`tc_constant_time`](https://crates.io/crates/tc_constant_time) | Shared masked selection, comparison, and conditional arithmetic primitives (external dependency) | Core-only `no_std` |
+| [`tc_zeroize`](core/tc_zeroize) | Explicit memory erasure with volatile writes and opt-in scope guards. | Core-only `no_std`; optional `alloc` adds `Vec` and `Box` support |
 | [`tc_ec_core`](math/tc_ec_core) | Curve traits, multi-scalar algorithms, comb/GLV interfaces and secret fixed-window arithmetic | `no_std + alloc` |
 | [`tc_fp_curve`](math/tc_fp_curve), [`tc_f2m_curve`](math/tc_f2m_curve) | Generic prime/binary curves | `no_std + alloc` |
 | [`tc_fp_custom`](math/tc_fp_custom), [`tc_f2m_custom`](math/tc_f2m_custom) | Specialized SEC/SM2 curve backends | `no_std + alloc` |
