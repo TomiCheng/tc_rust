@@ -1,8 +1,8 @@
 //! Incremental Grain-128AEAD engine.
 
+#[cfg(feature = "alloc")]
 use alloc::vec::Vec;
 use tc_cipher::{AeadCipher, AeadCipherInit, AeadError, CipherDirection, InitError};
-#[cfg(feature = "alloc")]
 use tc_constant_time::fixed_time_eq;
 use tc_crypto::AlgorithmName;
 use tc_params::{InitialAadParams, IvParams, KeyParams};
