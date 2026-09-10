@@ -13,7 +13,7 @@ rand_core = ["dep:rand_core"]
 
 [dependencies]
 tc_constant_time = "0.1.0"
-tc_zeroize = { version = "0.1.0", path = "../../core/tc_zeroize" }
+tc_zeroize = { version = "0.1.0", default-features = false }
 rand_core = { workspace = true, optional = true }
 
 [dev-dependencies]
