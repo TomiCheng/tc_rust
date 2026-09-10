@@ -9,6 +9,26 @@ use rand_core::{Rng, TryRng};
 impl RandomBits for PaddedBigInt {
     /// 變動時間：只能用於公開的位元數。寬度為 `limbs_for_bits(bits + 1)`，預留符號位。
     /// 零個隨機位元仍配置符號位，因此得到一個 limb 的零。
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tc_bigint::{PaddedBigInt, RandomBits, limbs_for_bits};
+    /// // 固定全一的測試 RNG，刻意把第 64 個隨機位元設成一。
+    /// # struct Ones;
+    /// # impl tc_bigint::rand_core::TryRng for Ones {
+    /// #     type Error = core::convert::Infallible;
+    /// #     fn try_next_u32(&mut self) -> Result<u32, Self::Error> { Ok(u32::MAX) }
+    /// #     fn try_next_u64(&mut self) -> Result<u64, Self::Error> { Ok(u64::MAX) }
+    /// #     fn try_fill_bytes(&mut self, out: &mut [u8]) -> Result<(), Self::Error> {
+    /// #         out.fill(0xff); Ok(())
+    /// #     }
+    /// # }
+    /// let value = PaddedBigInt::try_random_bits(&mut Ones, 64).unwrap();
+    /// assert_eq!(value.len(), limbs_for_bits(65));
+    /// assert_eq!(value.to_big_int(), u64::MAX.into());
+    /// assert!(!value.is_negative());
+    /// ```
     fn try_random_bits<R: TryRng + ?Sized>(
         rng: &mut R,
         bits: u32,
@@ -30,6 +50,25 @@ impl RandomBits for PaddedBigInt {
     /// 變動時間：只能用於公開的位元數與精度。寬度為 `limbs_for_bits(precision)`。
     /// precision 包含符號位，必須嚴格大於 bits；無號版本則允許相等。
     /// 即使向上補齊 limb 留有空間，也不放寬這個精度契約。參數錯誤不消耗 RNG。
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tc_bigint::{PaddedBigInt, RandomBits, RandomBitsError};
+    /// // 不應呼叫到的 RNG：錯誤精度要在取樣之前被拒絕。
+    /// # struct UnusedRng;
+    /// # impl tc_bigint::rand_core::TryRng for UnusedRng {
+    /// #     type Error = core::convert::Infallible;
+    /// #     fn try_next_u32(&mut self) -> Result<u32, Self::Error> { panic!("unexpected sampling") }
+    /// #     fn try_next_u64(&mut self) -> Result<u64, Self::Error> { panic!("unexpected sampling") }
+    /// #     fn try_fill_bytes(&mut self, _: &mut [u8]) -> Result<(), Self::Error> { panic!("unexpected sampling") }
+    /// # }
+    /// // 有號精度包含符號位：64 個隨機位元需要至少 65 位元的精度。
+    /// let result = PaddedBigInt::try_random_bits_with_precision(&mut UnusedRng, 64, 64);
+    /// assert!(matches!(result, Err(RandomBitsError::BitLengthTooLarge {
+    ///     bit_length: 64, bits_precision: 64,
+    /// })));
+    /// ```
     fn try_random_bits_with_precision<R: TryRng + ?Sized>(
         rng: &mut R,
         bits: u32,

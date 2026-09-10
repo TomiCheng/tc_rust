@@ -56,6 +56,23 @@ impl PaddedMontyForm {
     ///
     /// 圈數、分支與查表位置都由指數決定，用在私鑰指數上會洩漏它。
     /// 這個版本是給公開指數用的 —— 例如 RSA 的驗算與盲化都是拿公開的 `e` 做冪。
+    /// 秘密指數請使用 [`Self::pow_ct`]。
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tc_bigint::modular::{PaddedMontyForm, PaddedMontyParams};
+    /// use tc_bigint::{Odd, PaddedBigUint};
+    ///
+    /// let modulus = PaddedBigUint::from_be_bytes(&[101], 2).unwrap();
+    /// let params = PaddedMontyParams::new(Odd::new(modulus.clone()).unwrap());
+    /// let input = PaddedBigUint::from_be_bytes(&[7], 2).unwrap();
+    /// let base = PaddedMontyForm::new(&input, params);
+    /// // 指數 3 是公開的，才能使用滑動視窗；秘密指數改用 pow_ct。
+    /// let public_exponent = PaddedBigUint::from_be_bytes(&[3], 2).unwrap();
+    /// assert_eq!(base.pow(&public_exponent).retrieve(),
+    ///     PaddedBigUint::from_be_bytes(&[40], 2).unwrap());
+    /// ```
     pub fn pow(&self, exponent: &PaddedBigUint) -> Self {
         let bits = exponent.bit_len();
         let mut result = Self::one(self.params().clone());

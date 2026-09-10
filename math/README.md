@@ -9,7 +9,7 @@ Depend on the crate that provides the abstraction you need; there is no umbrella
 
 | Crate | Functionality | Runtime and allocation |
 | --- | --- | --- |
-| [`tc_bigint`](tc_bigint/README.md) | Fixed-width and arbitrary-precision signed/unsigned integers, encoding, numeric traits, modular and Montgomery arithmetic, and general-purpose probable-prime operations | `no_std`; fixed-width arithmetic needs no allocator; dynamic integers require `alloc`; `rand_core` enables random operations |
+| [`tc_bigint`](tc_bigint/README.md) | Compile-time fixed-width, runtime fixed-width, and arbitrary-precision signed/unsigned integers, encoding, numeric traits, modular and Montgomery arithmetic, and general-purpose probable-prime operations | `no_std`; compile-time fixed-width arithmetic needs no allocator; runtime fixed-width and dynamic integers require `alloc`; `rand_core` enables random operations |
 | [`tc_binpoly`](tc_binpoly/README.md) | Polynomial arithmetic over `GF(2)`, including carryless multiplication, squaring, reduction, and inversion; fixed and dynamic representations | `no_std`; fixed storage and core arithmetic work without allocation; defaults enable `alloc`, `std`, and optional x86 acceleration |
 | [`tc_prime`](tc_prime/README.md) | FIPS 186-4 small-factor screening, Miller-Rabin tests, enhanced Miller-Rabin results, and optional Shawe-Taylor provable-prime generation | `no_std`; fixed-width testing works without allocation; `alloc` is enabled by default; `digest` enables Shawe-Taylor and requires `alloc` |
 | [`tc_ec_core`](tc_ec_core/README.md) | Shared field, curve, and point traits; scalar and multi-scalar algorithms, batch normalization, precomputation, GLV interfaces, and separate secret-scalar APIs | `no_std` with `alloc` |
@@ -37,6 +37,11 @@ or modular arithmetic. `FixedBigUint<N>` and `FixedBigInt<N>` share
 internal `LimbArray<N>` storage. Sign interpretation belongs to `FixedBigInt`;
 `LimbArray` does not assign a sign to its highest bit. `N` counts limbs, and
 `limbs_for_bits(bits)` converts a bit width to that count.
+
+需要常數時間、但寬度到執行期才知道時，選用堆上固定寬度的
+`PaddedBigUint`／`PaddedBigInt`。典型場景是 RSA：模數寬度要載入金鑰才確定。
+曲線的場寬則是曲線定義的一部分，在編譯期已知，使用 `FixedBigUint<N>`／
+`FixedBigInt<N>` 即可；是否需要 CT 並不是選擇 Padded 型別的唯一條件。
 
 Use `tc_binpoly` for polynomial arithmetic over `GF(2)`. Its bits represent
 polynomial coefficients, so its arithmetic is distinct from integer arithmetic.

@@ -11,10 +11,23 @@ use crate::{Odd, PaddedBigUint, Word};
 ///
 /// 每個 [`super::PaddedMontyForm`] 都持有一份這個型別。它是 owned 的 —— 不帶
 /// 生命週期，所以能存進結構、跨執行緒傳遞；而 clone 只是一次參考計數遞增，
-/// 不會複製模數與兩個 radix 常數。深拷貝在這裡不可接受：常數時間的模冪每個
-/// 位元都會產生新的 form，深拷貝會變成數千次配置。
+/// 不會複製模數與 radix 常數；多個 form 因此能共用同一組預計算結果。
 ///
-/// 參數全部由公開的模數導出，本身不是秘密；建構過程不必是常數時間。
+/// 變動時間：參數建構只能用於公開值。參數全部由公開的模數導出，本身不是秘密；
+/// 秘密輸入進域請用 [`super::PaddedMontyForm::new_ct`]。
+///
+/// # Examples
+///
+/// ```
+/// use tc_bigint::modular::PaddedMontyParams;
+/// use tc_bigint::{Odd, PaddedBigUint};
+///
+/// let modulus = Odd::new(PaddedBigUint::from_be_bytes(&[101], 2).unwrap()).unwrap();
+/// let params = PaddedMontyParams::new(modulus);
+/// let shared = params.clone();
+/// // clone 共用同一份模數，而不是建立內容相等的新配置。
+/// assert!(core::ptr::eq(params.modulus(), shared.modulus()));
+/// ```
 #[derive(Clone)]
 pub struct PaddedMontyParams(Arc<Inner>);
 
@@ -27,10 +40,10 @@ struct Inner {
 }
 
 impl PaddedMontyParams {
-    /// 由奇模數導出參數。寬度即模數的寬度。
+    /// 變動時間：只能用於公開值。由奇模數導出參數，寬度即模數寬度。
     ///
     /// `R` 與 `R²` 都用逐次倍加取模求出，不需要除法。輸入是公開的，
-    /// 所以這裡只求正確，不求最快。
+    /// 所以這裡只求正確，不求最快。秘密輸入進域請用 [`super::PaddedMontyForm::new_ct`]。
     ///
     /// # Examples
     ///
@@ -73,7 +86,19 @@ impl PaddedMontyParams {
         }))
     }
 
-    /// 奇模數。
+    /// CT：借出公開的奇模數，不掃描數值。
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tc_bigint::modular::PaddedMontyParams;
+    /// use tc_bigint::{Odd, PaddedBigUint};
+    ///
+    /// let modulus = PaddedBigUint::from_be_bytes(&[101], 2).unwrap();
+    /// let params = PaddedMontyParams::new(Odd::new(modulus.clone()).unwrap());
+    /// assert_eq!(params.modulus(), &modulus);
+    /// assert_eq!(params.modulus().len(), 2);
+    /// ```
     pub fn modulus(&self) -> &PaddedBigUint {
         self.0.modulus.as_ref()
     }
@@ -83,22 +108,75 @@ impl PaddedMontyParams {
         &self.0.plain_one
     }
 
-    /// Montgomery 域中的一，也就是 `R mod n`。
+    /// CT：借出 Montgomery 域中的一，也就是 `R mod n`。
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tc_bigint::modular::PaddedMontyParams;
+    /// use tc_bigint::{Odd, PaddedBigUint};
+    ///
+    /// let modulus = PaddedBigUint::from_be_bytes(&[101], 2).unwrap();
+    /// let params = PaddedMontyParams::new(Odd::new(modulus.clone()).unwrap());
+    /// // 這是 R mod n，不是一般表示法的整數一。
+    /// use tc_bigint::{ArrayEncoding, BigUint};
+    /// let storage_bits = modulus.to_be_bytes().len() * 8;
+    /// let radix = BigUint::from(1_u8) << storage_bits;
+    /// assert_eq!(params.one().to_big_uint(), &radix % modulus.to_big_uint());
+    /// ```
     pub fn one(&self) -> &PaddedBigUint {
         &self.0.one
     }
 
-    /// `R² mod n`，用來把值送進 Montgomery 域。
+    /// CT：借出 `R² mod n`，用來把值送進 Montgomery 域。
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tc_bigint::modular::PaddedMontyParams;
+    /// use tc_bigint::{Odd, PaddedBigUint};
+    ///
+    /// let modulus = PaddedBigUint::from_be_bytes(&[101], 2).unwrap();
+    /// let params = PaddedMontyParams::new(Odd::new(modulus.clone()).unwrap());
+    /// use tc_bigint::{ArrayEncoding, BigUint};
+    /// let storage_bits = modulus.to_be_bytes().len() * 8;
+    /// let radix = BigUint::from(1_u8) << storage_bits;
+    /// assert_eq!(params.r2().to_big_uint(), (&radix * &radix) % modulus.to_big_uint());
+    /// ```
     pub fn r2(&self) -> &PaddedBigUint {
         &self.0.r2
     }
 
-    /// 模數的寬度，以 limb 計。公開資訊。
+    /// CT：模數的寬度，以 limb 計。公開資訊。
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tc_bigint::modular::PaddedMontyParams;
+    /// use tc_bigint::{Odd, PaddedBigUint};
+    ///
+    /// let modulus = PaddedBigUint::from_be_bytes(&[101], 2).unwrap();
+    /// let params = PaddedMontyParams::new(Odd::new(modulus.clone()).unwrap());
+    /// assert_eq!(params.len(), 2);
+    /// assert_eq!(params.one().len(), params.len());
+    /// ```
     pub fn len(&self) -> usize {
         self.0.modulus.as_ref().len()
     }
 
-    /// 模數寬度是否為零。
+    /// CT：模數寬度是否為零。
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tc_bigint::modular::PaddedMontyParams;
+    /// use tc_bigint::{Odd, PaddedBigUint};
+    ///
+    /// let modulus = PaddedBigUint::from_be_bytes(&[101], 2).unwrap();
+    /// let params = PaddedMontyParams::new(Odd::new(modulus.clone()).unwrap());
+    /// // 奇模數不可能是零，因此有效參數至少有一個 limb。
+    /// assert!(!params.is_empty());
+    /// ```
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }

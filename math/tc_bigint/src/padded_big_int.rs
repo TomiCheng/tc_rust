@@ -43,6 +43,10 @@ mod trait_tests;
 /// 本型別實作 [`ZeroizeOnDrop`]，析構時清除全部 limb；複製或移動留下的
 /// 舊副本無法追回。`Debug` 只顯示公開寬度，不顯示數值。
 ///
+/// # Examples
+///
+/// 同值的不同寬度比較相等，公開值的運算子以符號擴展對齊寬度。
+///
 /// ```
 /// use tc_bigint::{BigInt, PaddedBigInt};
 /// let a = PaddedBigInt::from_be_bytes(&[0xff], 4).unwrap();
@@ -51,6 +55,15 @@ mod trait_tests;
 /// let (sum, overflow) = PaddedBigInt::add(&a, &b.resize(4).unwrap());
 /// assert!(!overflow);
 /// assert_eq!(sum.len(), 4);
+///
+/// // -2 加寬後仍是 -2；算術右移以一補高位，得到 -1。
+/// let narrow = PaddedBigInt::from_be_bytes(&[0xfe], 1).unwrap();
+/// let wide = narrow.resize(4).unwrap();
+/// assert_eq!(wide, narrow);
+/// assert_eq!((narrow.len(), wide.len()), (1, 4));
+/// let shifted = &wide >> 1;
+/// assert_eq!(shifted.to_big_int(), BigInt::from(-1));
+/// assert_eq!(shifted.len(), 4);
 /// ```
 pub struct PaddedBigInt {
     limbs: Box<[Limb]>,
@@ -58,11 +71,31 @@ pub struct PaddedBigInt {
 
 impl PaddedBigInt {
     /// CT：建立指定 limb 寬度的零；寬度是公開資訊。
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tc_bigint::{PaddedBigInt, BigInt};
+    ///
+    /// let zero = PaddedBigInt::zero_with_limbs(3);
+    /// assert_eq!(zero.len(), 3);
+    /// assert_eq!(zero.ct_is_zero().unwrap_u8(), 1);
+    /// ```
     pub fn zero_with_limbs(limbs: usize) -> Self {
         Self::from_limbs(vec![Limb::new(0); limbs].into_boxed_slice())
     }
 
     /// CT：建立足以儲存 `bits` 個位元的零，位元數包含符號位。
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tc_bigint::{PaddedBigInt, BigInt, limbs_for_bits};
+    ///
+    /// let zero = PaddedBigInt::zero_with_bits(129);
+    /// assert_eq!(zero.len(), limbs_for_bits(129));
+    /// assert_eq!(zero.ct_is_zero().unwrap_u8(), 1);
+    /// ```
     pub fn zero_with_bits(bits: usize) -> Self {
         Self::zero_with_limbs(crate::limbs_for_bits(bits))
     }
@@ -73,11 +106,30 @@ impl PaddedBigInt {
     }
 
     /// CT：公開的儲存寬度，以 limb 計。
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tc_bigint::{PaddedBigInt, BigInt};
+    ///
+    /// let value = PaddedBigInt::from_be_bytes(&[7], 4).unwrap();
+    /// // 儲存寬度保留前導零，不是數值的有效 limb 數。
+    /// assert_eq!(value.len(), 4);
+    /// ```
     pub fn len(&self) -> usize {
         self.limbs.len()
     }
 
     /// CT：儲存寬度是否為零。
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tc_bigint::{PaddedBigInt, BigInt};
+    ///
+    /// assert!(PaddedBigInt::zero_with_limbs(0).is_empty());
+    /// assert!(!PaddedBigInt::zero_with_limbs(2).is_empty());
+    /// ```
     pub fn is_empty(&self) -> bool {
         self.limbs.is_empty()
     }
@@ -86,11 +138,31 @@ impl PaddedBigInt {
     ///
     /// 空輸入代表零。掃描全部輸入後，僅揭露是否能放進指定寬度；
     /// 放不下回 [`ConversionError::InputTooLarge`]，不截斷數值。
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tc_bigint::{PaddedBigInt, BigInt};
+    ///
+    /// let value = PaddedBigInt::from_be_bytes(&[0xff], 2).unwrap();
+    /// assert_eq!(value.len(), 2);
+    /// assert_eq!(value.to_big_int(), BigInt::from(-1_i32));
+    /// ```
     pub fn from_be_bytes(bytes: &[u8], limbs: usize) -> Result<Self, ConversionError> {
         Self::from_bytes(bytes, limbs, true)
     }
 
     /// CT（末端溢位判定除外）：由小端序二補數建構，契約同 [`Self::from_be_bytes`]。
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tc_bigint::{PaddedBigInt, BigInt};
+    ///
+    /// let value = PaddedBigInt::from_le_bytes(&[0xfe, 0xff], 2).unwrap();
+    /// assert_eq!(value, PaddedBigInt::from_be_bytes(&[0xff, 0xfe], 2).unwrap());
+    /// assert_eq!(value.to_big_int(), BigInt::from(-2_i32));
+    /// ```
     pub fn from_le_bytes(bytes: &[u8], limbs: usize) -> Result<Self, ConversionError> {
         Self::from_bytes(bytes, limbs, false)
     }
@@ -131,11 +203,36 @@ impl PaddedBigInt {
     }
 
     /// 變動時間：只能用於公開值。把 `BigInt` 以符號擴展補到指定寬度。
+    /// 秘密輸入請使用 [`Self::from_be_bytes`]，留意其末端溢位揭露。
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tc_bigint::{PaddedBigInt, BigInt};
+    ///
+    /// // 來源數值是公開資訊，秘密輸入應以定長位元組建構。
+    /// let public = BigInt::from(-7_i32);
+    /// let value = PaddedBigInt::from_big_int(&public, 4).unwrap();
+    /// assert_eq!(value.len(), 4);
+    /// assert_eq!(value.to_big_int(), public);
+    /// ```
     pub fn from_big_int(value: &BigInt, limbs: usize) -> Result<Self, ConversionError> {
         Self::copy_into_width(value.as_limbs(), limbs)
     }
 
     /// 變動時間：只能用於公開值。轉為最小二補數寬度的 `BigInt`。
+    /// 秘密值應保留本型別；編碼請用 [`Self::write_be_bytes`]，留意末端溢位揭露。
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tc_bigint::{PaddedBigInt, BigInt};
+    ///
+    /// // 正規化會揭露數值長度，只轉換公開值。
+    /// let public = PaddedBigInt::from_be_bytes(&[0xff], 4).unwrap();
+    /// assert_eq!(public.to_big_int(), BigInt::from(-1_i32));
+    /// assert_eq!(public.len(), 4);
+    /// ```
     pub fn to_big_int(&self) -> BigInt {
         BigInt::from_limbs(self.limbs.to_vec())
     }
@@ -144,6 +241,21 @@ impl PaddedBigInt {
     ///
     /// 擴寬補原符號位；縮窄須同時滿足被移除 limb 都是原符號擴展值，
     /// 且保留部分的符號位不變。零寬只容納零。掃描完成後才回傳溢位錯誤。
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tc_bigint::{PaddedBigInt, BigInt};
+    ///
+    /// let narrow = PaddedBigInt::from_be_bytes(&[0xfe], 1).unwrap();
+    /// let wide = narrow.resize(4).unwrap();
+    /// assert_eq!(narrow, wide);
+    /// assert_eq!((narrow.len(), wide.len()), (1, 4));
+    /// assert_eq!(wide.resize(1).unwrap(), narrow);
+    /// assert!(narrow.resize(0).is_err());
+    /// // 負值加寬補一；公開值的右移也以一補高位。
+    /// assert_eq!((&wide >> 1).to_big_int(), BigInt::from(-1));
+    /// ```
     pub fn resize(&self, limbs: usize) -> Result<Self, ConversionError> {
         Self::copy_into_width(&self.limbs, limbs)
     }
@@ -174,6 +286,22 @@ impl PaddedBigInt {
     ///
     /// 空輸出回 `BufferTooSmall`。縮窄不得改變符號或數值，失敗時輸出保持原狀。
     /// 與 `ArrayEncoding` 的完整儲存寬度寫入不同，本方法採呼叫端指定的寬度。
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tc_bigint::{PaddedBigInt, BigInt};
+    ///
+    /// let value = PaddedBigInt::from_be_bytes(&[0xfe], 2).unwrap();
+    /// let mut bytes = [0; 3];
+    /// value.write_be_bytes(&mut bytes).unwrap();
+    /// assert_eq!(bytes, [0xff, 0xff, 0xfe]);
+    /// // +128 需要前導零保住符號，不能縮成代表 -128 的 [0x80]。
+    /// let positive = PaddedBigInt::from_be_bytes(&[0, 0x80], 2).unwrap();
+    /// let mut too_short = [0x55];
+    /// assert!(positive.write_be_bytes(&mut too_short).is_err());
+    /// assert_eq!(too_short, [0x55]);
+    /// ```
     pub fn write_be_bytes(&self, out: &mut [u8]) -> Result<(), ConversionError> {
         let extension = self.sign_extension() as u8;
         let mut overflow = u8::from(out.is_empty());
@@ -211,11 +339,31 @@ impl PaddedBigInt {
     }
 
     /// CT：以 `Choice` 回傳符號位，零寬回假。
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tc_bigint::{PaddedBigInt, BigInt};
+    ///
+    /// let negative = PaddedBigInt::from_be_bytes(&[0xff], 2).unwrap();
+    /// assert_eq!(negative.ct_is_negative().unwrap_u8(), 1);
+    /// assert_eq!(PaddedBigInt::zero_with_limbs(0).ct_is_negative().unwrap_u8(), 0);
+    /// ```
     pub fn ct_is_negative(&self) -> Choice {
         Choice::from_lsb(self.sign_bit() as u8)
     }
 
     /// CT：全寬掃描零值，排程只由公開寬度決定。
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tc_bigint::{PaddedBigInt, BigInt};
+    ///
+    /// let zero = PaddedBigInt::zero_with_limbs(3);
+    /// assert_eq!(zero.ct_is_zero().unwrap_u8(), 1);
+    /// assert_eq!(PaddedBigInt::from_be_bytes(&[7], 3).unwrap().ct_is_zero().unwrap_u8(), 0);
+    /// ```
     pub fn ct_is_zero(&self) -> Choice {
         let mut aggregate = 0 as Word;
         for limb in &self.limbs {
@@ -225,6 +373,17 @@ impl PaddedBigInt {
     }
 
     /// 變動時間：只能用於公開值。秘密值請使用 [`Self::ct_is_zero`]。
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tc_bigint::{PaddedBigInt, BigInt};
+    ///
+    /// // 此處的值是公開的；秘密值使用 ct_is_zero 的 Choice。
+    /// assert!(PaddedBigInt::zero_with_limbs(0).is_zero());
+    /// assert!(PaddedBigInt::zero_with_limbs(3).is_zero());
+    /// assert!(!PaddedBigInt::from_be_bytes(&[7], 2).unwrap().is_zero());
+    /// ```
     pub fn is_zero(&self) -> bool {
         self.limbs.iter().all(|limb| limb.to_word() == 0)
     }

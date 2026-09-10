@@ -13,6 +13,28 @@ impl PaddedBigUint {
     ///
     /// 走拒絕取樣，所以重試次數隨機；上界是公開的，取樣本身不洩漏結果。
     /// 也可透過 [`crate::RandomMod`] 使用相同的取樣契約。
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tc_bigint::{NonZero, PaddedBigUint};
+    ///
+    /// // 僅用固定輸出示範呼叫；實際使用時傳入適合用途的 RNG。
+    /// # struct ExampleRng;
+    /// # impl tc_bigint::rand_core::TryRng for ExampleRng {
+    /// #     type Error = core::convert::Infallible;
+    /// #     fn try_next_u32(&mut self) -> Result<u32, Self::Error> { Ok(7) }
+    /// #     fn try_next_u64(&mut self) -> Result<u64, Self::Error> { Ok(7) }
+    /// #     fn try_fill_bytes(&mut self, out: &mut [u8]) -> Result<(), Self::Error> {
+    /// #         out.fill(7); Ok(())
+    /// #     }
+    /// # }
+    /// let mut rng = ExampleRng;
+    /// let upper = NonZero::new(PaddedBigUint::from_be_bytes(&[101], 3).unwrap()).unwrap();
+    /// let sample = PaddedBigUint::try_random_mod_vartime(&mut rng, &upper).unwrap();
+    /// assert!(sample < *upper);
+    /// assert_eq!(sample.len(), 3);
+    /// ```
     pub fn try_random_mod_vartime<R: TryRng + ?Sized>(
         rng: &mut R,
         upper: &NonZero<Self>,
@@ -28,6 +50,28 @@ impl PaddedBigUint {
     }
 
     /// 變動時間：只能用於公開的上界。無誤差 RNG 版本的 [`Self::try_random_mod_vartime`]。
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tc_bigint::{NonZero, PaddedBigUint};
+    ///
+    /// // 僅用固定輸出示範呼叫；實際使用時傳入適合用途的 RNG。
+    /// # struct ExampleRng;
+    /// # impl tc_bigint::rand_core::TryRng for ExampleRng {
+    /// #     type Error = core::convert::Infallible;
+    /// #     fn try_next_u32(&mut self) -> Result<u32, Self::Error> { Ok(7) }
+    /// #     fn try_next_u64(&mut self) -> Result<u64, Self::Error> { Ok(7) }
+    /// #     fn try_fill_bytes(&mut self, out: &mut [u8]) -> Result<(), Self::Error> {
+    /// #         out.fill(7); Ok(())
+    /// #     }
+    /// # }
+    /// let mut rng = ExampleRng;
+    /// let upper = NonZero::new(PaddedBigUint::from_be_bytes(&[101], 3).unwrap()).unwrap();
+    /// let sample = PaddedBigUint::random_mod_vartime(&mut rng, &upper);
+    /// assert!(sample < *upper);
+    /// assert_eq!(sample.len(), 3);
+    /// ```
     pub fn random_mod_vartime<R: Rng + ?Sized>(rng: &mut R, upper: &NonZero<Self>) -> Self {
         match Self::try_random_mod_vartime(rng, upper) {
             Ok(value) => value,

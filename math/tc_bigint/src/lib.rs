@@ -1,10 +1,11 @@
 #![no_std]
-//! Four little-endian big-integer types, in two pairs.
+//! 6 個小端序大整數型別，分成 3 對。
 //!
-//! [`BigUint`] and [`BigInt`] grow as needed and require the default `alloc`
-//! feature. [`FixedBigUint<N>`] and [`FixedBigInt<N>`] hold exactly `N` limbs;
-//! their arithmetic and caller-buffer encodings never allocate, so they remain
-//! available with `default-features = false`.
+//! [`BigUint`]／[`BigInt`] 的長度隨數值變動，需要 `alloc`，不適合常數時間路徑。
+//! [`FixedBigUint<N>`]／[`FixedBigInt<N>`] 的寬度是型別參數，實作 `Copy`；
+//! 算術與呼叫端緩衝編碼不配置，停用預設功能後仍可使用。
+//! [`PaddedBigUint`]／[`PaddedBigInt`] 的固定寬度是執行期值，儲存在堆上，
+//! 需要 `alloc`，並實作 [`ZeroizeOnDrop`]；秘密值使用其具名 CT 方法。
 //!
 //! # Widths
 //!
@@ -16,6 +17,10 @@
 //! assert_eq!(size_of::<U256>() * 8, 256);
 //! assert_eq!(size_of::<U2048>() * 8, 2048);
 //! ```
+//!
+//! Padded 型別不用型別別名指定寬度：以 [`limbs_for_bits(bits)`](limbs_for_bits)
+//! 計算 limb 數，或直接使用 [`PaddedBigUint::zero_with_bits`]／
+//! [`PaddedBigInt::zero_with_bits`]；有號型別的位元數包含符號位。
 //!
 //! # Representation
 //!
@@ -35,17 +40,16 @@
 //! and are not type-compatible with `num_traits::*`. They are grouped by role:
 //! identities and bound aggregators, big-integer operations, overflow
 //! policies, primitive conversion, slice conversion, and randomised
-//! construction. The crate README lists which of the four types implements
+//! construction. The crate README lists which of the six types implements
 //! each one.
 //!
 //! # Explicit erasure
 //!
-//! All four integer types implement [`Zeroize`] as a capability. General-purpose
-//! storage does not know whether its contents are secret, so none implements
-//! [`ZeroizeOnDrop`] or automatically erases itself. Consumers that know they
-//! hold secrets choose the drop policy, for example with [`Zeroizing`].
+//! 六個整數型別皆實作 [`Zeroize`]。`PaddedBigUint`／`PaddedBigInt` 另實作
+//! [`ZeroizeOnDrop`]，析構時清除全部 limb；其餘四個型別由呼叫端選擇清除政策，
+//! 例如以 [`Zeroizing`] 包裝秘密值。
 //!
-//! Fixed-width erasure overwrites every limb. These types remain `Copy` and
+//! Erasure of the `Fixed*` pair overwrites every limb. These types remain `Copy` and
 //! cannot implement `Drop`: clearing one binding does not erase other copies.
 //! Dynamic-width erasure overwrites the current live limbs before clearing the
 //! vector length to restore canonical zero, then clears spare capacity. It

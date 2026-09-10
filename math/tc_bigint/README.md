@@ -28,7 +28,11 @@ inheriting an internal layout.
 ## Trait implementations
 
 `BU` is `BigUint`, `BI` is `BigInt`, `FU` is `FixedBigUint<N>` and `FI` is
-`FixedBigInt<N>`. `PU`／`PI` 是需要 `alloc` 的 `PaddedBigUint`／`PaddedBigInt`。The groups follow the modules under `src/traits/`. A blank
+`FixedBigInt<N>`.
+
+`PU`／`PI` 是需要 `alloc` 的 `PaddedBigUint`／`PaddedBigInt`。
+
+The groups follow the modules under `src/traits/`. A blank
 cell marks a contract that does not apply to that representation rather than
 one that is merely missing; the reasons follow.
 
@@ -98,13 +102,13 @@ Requires the `rand_core` feature.
 
 ### Why the blanks
 
-- `Signed` and `Unsigned` partition the four types by sign, as do `CheckedNeg`
+- `Signed` and `Unsigned` partition the six types by sign, as do `CheckedNeg`
   and `WrappingNeg`: negation is only meaningful where the sign bit is.
   `PU` 比照 `FU`／`BU`：支援 `Unsigned`，不支援 `Signed`、`CheckedNeg`、`WrappingNeg`。
   `PI` 比照 `FI`／`BI`：支援 `Signed`、`CheckedNeg`、`WrappingNeg`，不支援 `Unsigned`。
 - `Bounded` and `Random` need a width known ahead of time, so they exist only
-  for the fixed-width pair. `RandomBits` takes the bit length as an argument
-  and therefore applies to all four.
+  for the compile-time fixed-width pair. `RandomBits` takes the bit length as an argument
+  and therefore applies to all six.
   `PU`／`PI` 的寬度在執行期決定，無法提供型別層的 `Bounded::MIN`／`MAX`，
   也無法從沒有寬度參數的 `Random::random_from_rng` 得知精度，所以這兩列留空；
   `RandomBits` 有位元數參數，可決定儲存寬度，因此支援。
@@ -116,7 +120,7 @@ Requires the `rand_core` feature.
   `PU` 則有實際儲存寬度，因此支援 `OverflowingSub` 與 `WrappingSub`，
   跨寬度時以兩邊最大寬度為環繞界限。
 
-The `BU` and `BI` columns require the `alloc` feature throughout.
+The `BU`, `BI`, `PU` and `PI` columns require the `alloc` feature throughout.
 
 ### `PU` 的寬度與時間契約
 
@@ -189,7 +193,7 @@ modulus.
 ## Modular arithmetic
 
 `ModAdd`, `ModSub`, `ModMul`, `ModPow` and `ModInverse` are implemented by all
-four types and return the least non-negative residue.
+six types and return the least non-negative residue.
 
 For a modulus reused many times, prepare it once. `MontyParams<BigUint>` and
 `FixedMontyParams<N>` store the Montgomery inverse, `R mod n` and `R^2 mod n`;
@@ -202,6 +206,19 @@ generic over the integer backend.
 values: `new_ct` reduces without division, and `pow_ct` exponentiates without
 branching on the exponent. The dynamic form has no such path, because `BigUint`
 normalizes and its limb count therefore depends on the value it holds.
+
+`PaddedMontyParams`／`PaddedMontyForm` 是需要 `alloc`、寬度在執行期決定的
+第三對，供固定寬度的秘密值使用。參數以 `Arc` 共享；clone 參數只遞增參考計數，
+不複製模數與 radix 常數。form 的 clone 仍會複製自身的值。
+參數由 form 持有且不帶借用生命週期，因此 form 可以直接存進結構。
+
+秘密輸入選 `PaddedMontyForm::new_ct`，以固定排程、不經除法進域；公開輸入
+選 `new`，以變動時間的除法約簡進域。與逐位元約簡相比，公開值的除法路徑
+可快兩個數量級；目前 `new_ct` 對不超過模數兩倍寬的輸入已改走三次模乘，
+該倍率不代表兩個入口在所有寬度上的效能差距。
+秘密指數選 `pow_ct`，它處理完整儲存寬度的每個位元，包含前導零；
+公開指數選滑動視窗的 `pow`。既有動態 Montgomery 後端供公開值使用，
+`FixedMontyForm<N>` 則適用於編譯期已知寬度的 CT 路徑。
 
 `mod_odd_inverse` and `mod_odd_inverse_var` implement safegcd inversion, the
 first with a fixed schedule.

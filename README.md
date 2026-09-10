@@ -43,7 +43,7 @@ engines respectively; both provide streaming, clone, and reset behavior.
 | [`tc_ecb`](crypto/block_modes/tc_ecb), [`tc_cbc`](crypto/block_modes/tc_cbc), [`tc_cfb`](crypto/block_modes/tc_cfb), [`tc_ofb`](crypto/block_modes/tc_ofb), [`tc_ctr`](crypto/block_modes/tc_ctr) | Independent ECB, CBC, CFB/OpenPGP CFB, OFB/GCTR, and CTR/KCTR crates built on `tc_cipher` | Core-only `no_std`; `alloc` enables runtime-sized variants where needed |
 | [`tc_digest`](crypto/tc_digest) | Shared message-digest and XOF traits | Core-only `no_std` |
 | [Digest family crates](crypto/digest) | Independent message-digest, XOF, and digest-adapter implementations | `no_std`; allocation and optional CPU acceleration vary by family |
-| [`tc_bigint`](math/tc_bigint) | Fixed-width and arbitrary-precision signed/unsigned integers and number-theory operations | Fixed-width types are core-only; dynamic types require `alloc` |
+| [`tc_bigint`](math/tc_bigint) | Compile-time fixed-width, runtime fixed-width, and arbitrary-precision signed/unsigned integers and number-theory operations | Compile-time fixed-width types are core-only; runtime fixed-width and dynamic types require `alloc` |
 | [`tc_prime`](math/tc_prime) | FIPS 186-4 small-factor, Miller-Rabin, enhanced Miller-Rabin, and optional Shawe-Taylor utilities | Fixed-width path is core-only; `alloc` enables dynamic integers and `digest` enables Shawe-Taylor |
 | [`tc_constant_time`](https://crates.io/crates/tc_constant_time) | Shared masked selection, comparison, and conditional arithmetic primitives (external dependency) | Core-only `no_std` |
 | [`tc_zeroize`](core/tc_zeroize) | Explicit memory erasure with volatile writes and opt-in scope guards. | Core-only `no_std`; optional `alloc` adds `Vec` and `Box` support |

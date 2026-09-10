@@ -6,6 +6,19 @@ impl PaddedBigInt {
     ///
     /// 旗標表示異號相減得到與左值不同號的結果，不是無號借位。
     /// 結果寬度不變，排程只由公開寬度決定。
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tc_bigint::PaddedBigInt;
+    ///
+    /// let zero = PaddedBigInt::zero_with_limbs(2);
+    /// let one = PaddedBigInt::from_be_bytes(&[1], 2).unwrap();
+    /// let (difference, overflow) = PaddedBigInt::sub(&zero, &one);
+    /// // 0 - 1 有無號借位，但 -1 在有號範圍內。
+    /// assert!(!overflow);
+    /// assert_eq!(difference, PaddedBigInt::from_be_bytes(&[0xff], 2).unwrap());
+    /// ```
     pub fn sub(&self, rhs: &Self) -> (Self, bool) {
         self.assert_same_width(rhs);
         let mut out = Self::zero_with_limbs(self.len());

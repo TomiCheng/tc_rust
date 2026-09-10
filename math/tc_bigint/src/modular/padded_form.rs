@@ -25,6 +25,26 @@ pub use super::padded_params::PaddedMontyParams;
 /// 可以直接存進結構，clone 也只複製值本身。
 ///
 /// [`fmt::Debug`] 只輸出寬度，不輸出值，避免秘密進到記錄。
+/// 秘密輸入使用 [`Self::new_ct`]，秘密指數使用 [`Self::pow_ct`]；
+/// [`Self::new`]／[`Self::pow`] 則分別只接受公開輸入／公開指數。
+///
+/// # Examples
+///
+/// ```
+/// use tc_bigint::modular::{PaddedMontyForm, PaddedMontyParams};
+/// use tc_bigint::{Odd, PaddedBigUint};
+///
+/// // form 持有參數，不需要讓結構帶借用生命週期。
+/// struct Accumulator {
+///     value: PaddedMontyForm,
+/// }
+/// let modulus = Odd::new(PaddedBigUint::from_be_bytes(&[101], 2).unwrap()).unwrap();
+/// let accumulator = {
+///     let params = PaddedMontyParams::new(modulus);
+///     Accumulator { value: PaddedMontyForm::one(params) }
+/// };
+/// assert_eq!(accumulator.value.retrieve(), PaddedBigUint::from_be_bytes(&[1], 2).unwrap());
+/// ```
 #[derive(Clone)]
 pub struct PaddedMontyForm {
     value: PaddedBigUint,
@@ -36,6 +56,7 @@ impl PaddedMontyForm {
     ///
     /// `value` 的寬度可以大於模數寬度 —— RSA 的中國剩餘定理就會拿模數兩倍寬的
     /// 輸入進半寬的域。圈數只由 `value` 的公開寬度決定，與數值無關。
+    /// 若輸入已確定公開，可改用除法約簡的 [`Self::new`]。
     ///
     /// # Examples
     ///
@@ -46,6 +67,7 @@ impl PaddedMontyForm {
     /// let modulus = Odd::new(PaddedBigUint::from_be_bytes(&[101], 1).unwrap()).unwrap();
     /// let params = PaddedMontyParams::new(modulus);
     /// let value = PaddedBigUint::from_be_bytes(&[108], 1).unwrap();
+    /// // 把 value 視為秘密輸入，選 new_ct；不能因測試值很小就改用 new。
     /// let form = PaddedMontyForm::new_ct(&value, params);
     /// assert_eq!(form.retrieve(), PaddedBigUint::from_be_bytes(&[7], 1).unwrap());
     /// ```
@@ -113,8 +135,9 @@ impl PaddedMontyForm {
 
     /// 變動時間：**只能用於公開值**。用除法約簡後進入 Montgomery 域。
     ///
-    /// 公鑰運算的模數、指數與輸入全是公開的，走這條比逐位元的
-    /// [`Self::new_ct`] 快兩個數量級。用在秘密值上會洩漏它。
+    /// 公開輸入可走這條除法約簡路徑；秘密值必須使用 [`Self::new_ct`]。
+    /// 與逐位元約簡相比可快兩個數量級，但 `new_ct` 已對不超過模數兩倍寬的
+    /// 輸入使用三次模乘，不能把該倍率視為所有輸入的保證。
     ///
     /// # Examples
     ///
@@ -125,6 +148,7 @@ impl PaddedMontyForm {
     /// let modulus = Odd::new(PaddedBigUint::from_be_bytes(&[101], 1).unwrap()).unwrap();
     /// let params = PaddedMontyParams::new(modulus);
     /// let value = PaddedBigUint::from_be_bytes(&[108], 1).unwrap();
+    /// // 此處明確把 value 視為公開輸入，才選 new；秘密輸入改用 new_ct。
     /// assert_eq!(
     ///     PaddedMontyForm::new(&value, params).retrieve(),
     ///     PaddedBigUint::from_be_bytes(&[7], 1).unwrap()
@@ -141,6 +165,18 @@ impl PaddedMontyForm {
     }
 
     /// CT：Montgomery 域中的零。
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tc_bigint::modular::{PaddedMontyForm, PaddedMontyParams};
+    /// use tc_bigint::{Odd, PaddedBigUint};
+    ///
+    /// let modulus = PaddedBigUint::from_be_bytes(&[101], 2).unwrap();
+    /// let params = PaddedMontyParams::new(Odd::new(modulus.clone()).unwrap());
+    /// let zero = PaddedMontyForm::zero(params);
+    /// assert_eq!(zero.retrieve(), PaddedBigUint::zero_with_limbs(2));
+    /// ```
     pub fn zero(params: PaddedMontyParams) -> Self {
         Self {
             value: PaddedBigUint::zero_with_limbs(params.len()),
@@ -149,6 +185,18 @@ impl PaddedMontyForm {
     }
 
     /// CT：Montgomery 域中的一。
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tc_bigint::modular::{PaddedMontyForm, PaddedMontyParams};
+    /// use tc_bigint::{Odd, PaddedBigUint};
+    ///
+    /// let modulus = PaddedBigUint::from_be_bytes(&[101], 2).unwrap();
+    /// let params = PaddedMontyParams::new(Odd::new(modulus.clone()).unwrap());
+    /// let one = PaddedMontyForm::one(params);
+    /// assert_eq!(one.retrieve(), PaddedBigUint::from_be_bytes(&[1], 2).unwrap());
+    /// ```
     pub fn one(params: PaddedMontyParams) -> Self {
         Self {
             value: params.one().clone(),
@@ -157,6 +205,21 @@ impl PaddedMontyForm {
     }
 
     /// CT：離開 Montgomery 域，回到一般表示法。寬度等於模數寬度。
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tc_bigint::modular::{PaddedMontyForm, PaddedMontyParams};
+    /// use tc_bigint::{Odd, PaddedBigUint};
+    ///
+    /// let modulus = PaddedBigUint::from_be_bytes(&[101], 2).unwrap();
+    /// let params = PaddedMontyParams::new(Odd::new(modulus.clone()).unwrap());
+    /// let input = PaddedBigUint::from_be_bytes(&[108], 4).unwrap();
+    /// let form = PaddedMontyForm::new_ct(&input, params);
+    /// let reduced = form.retrieve();
+    /// assert_eq!(reduced.len(), 2);
+    /// assert_eq!(reduced, PaddedBigUint::from_be_bytes(&[7], 2).unwrap());
+    /// ```
     pub fn retrieve(&self) -> PaddedBigUint {
         montgomery_mul(
             &self.value,
@@ -166,7 +229,21 @@ impl PaddedMontyForm {
         )
     }
 
-    /// 這個值所屬的參數。
+    /// CT：借出這個值所屬的公開參數，不掃描數值。
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tc_bigint::modular::{PaddedMontyForm, PaddedMontyParams};
+    /// use tc_bigint::{Odd, PaddedBigUint};
+    ///
+    /// let modulus = PaddedBigUint::from_be_bytes(&[101], 2).unwrap();
+    /// let params = PaddedMontyParams::new(Odd::new(modulus.clone()).unwrap());
+    /// let one = PaddedMontyForm::one(params);
+    /// let zero = PaddedMontyForm::zero(one.params().clone());
+    /// assert_eq!(one.params().modulus(), &modulus);
+    /// assert_eq!((&one + &zero).retrieve(), one.retrieve());
+    /// ```
     pub fn params(&self) -> &PaddedMontyParams {
         &self.params
     }
@@ -183,11 +260,39 @@ impl PaddedMontyForm {
     }
 
     /// CT：域內平方。
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tc_bigint::modular::{PaddedMontyForm, PaddedMontyParams};
+    /// use tc_bigint::{Odd, PaddedBigUint};
+    ///
+    /// let modulus = PaddedBigUint::from_be_bytes(&[101], 2).unwrap();
+    /// let params = PaddedMontyParams::new(Odd::new(modulus.clone()).unwrap());
+    /// let value = PaddedBigUint::from_be_bytes(&[11], 2).unwrap();
+    /// let form = PaddedMontyForm::new_ct(&value, params);
+    /// // 11² mod 101 = 20。
+    /// assert_eq!(form.square().retrieve(), PaddedBigUint::from_be_bytes(&[20], 2).unwrap());
+    /// ```
     pub fn square(&self) -> Self {
         self.multiply(self)
     }
 
     /// CT：域內加倍。
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tc_bigint::modular::{PaddedMontyForm, PaddedMontyParams};
+    /// use tc_bigint::{Odd, PaddedBigUint};
+    ///
+    /// let modulus = PaddedBigUint::from_be_bytes(&[101], 2).unwrap();
+    /// let params = PaddedMontyParams::new(Odd::new(modulus.clone()).unwrap());
+    /// let value = PaddedBigUint::from_be_bytes(&[60], 2).unwrap();
+    /// let form = PaddedMontyForm::new_ct(&value, params);
+    /// // 2 × 60 mod 101 = 19。
+    /// assert_eq!(form.double().retrieve(), PaddedBigUint::from_be_bytes(&[19], 2).unwrap());
+    /// ```
     pub fn double(&self) -> Self {
         Self {
             value: double_mod(&self.value, self.params.modulus()),

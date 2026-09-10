@@ -22,6 +22,39 @@ impl PaddedBigUint {
     /// assert_eq!(sum.len(), 1);
     /// assert!(!carry);
     /// ```
+    ///
+    /// 進位時回傳環繞後的零，不會因數值溢位而 panic。
+    ///
+    /// ```
+    /// use tc_bigint::{PaddedBigUint, limbs_for_bits};
+    /// let width = limbs_for_bits(128);
+    /// let max = PaddedBigUint::from_be_bytes(&[0xff; 16], width).unwrap();
+    /// let one = PaddedBigUint::from_be_bytes(&[1], width).unwrap();
+    /// let (wrapped, carry) = PaddedBigUint::add(&max, &one);
+    /// assert!(carry);
+    /// assert_eq!(wrapped.ct_is_zero().unwrap_u8(), 1);
+    /// assert_eq!(wrapped.len(), width);
+    /// ```
+    ///
+    /// CT 加法要求同寬，即使較窄一邊的數值放得下也不自動補零。
+    ///
+    /// ```should_panic
+    /// use tc_bigint::PaddedBigUint;
+    /// let narrow = PaddedBigUint::from_be_bytes(&[1], 1).unwrap();
+    /// let wide = narrow.resize(2).unwrap();
+    /// let _ = PaddedBigUint::add(&narrow, &wide);
+    /// ```
+    ///
+    /// 公開值的 `+` 容忍不同寬度，但最大寬度仍放不下時會 panic。
+    /// 秘密值請用上述具名方法，不要改用運算子。
+    ///
+    /// ```should_panic
+    /// use tc_bigint::{PaddedBigUint, limbs_for_bits};
+    /// let width = limbs_for_bits(128);
+    /// let max = PaddedBigUint::from_be_bytes(&[0xff; 16], width).unwrap();
+    /// let one = PaddedBigUint::from_be_bytes(&[1], width).unwrap();
+    /// let _ = &max + &one;
+    /// ```
     pub fn add(&self, rhs: &Self) -> (Self, bool) {
         self.assert_same_width(rhs);
         let mut out = Self::zero_with_limbs(self.len());
