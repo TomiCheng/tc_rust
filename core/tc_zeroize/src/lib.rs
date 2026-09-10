@@ -5,7 +5,8 @@
 //!
 //! The crate has no dependencies, feature flags, or allocation support.
 //! [`Zeroize`] supports all primitive integers, `bool`, `char`, arrays, slices,
-//! and `Option<T>`. [`Zeroizing`] clears a local value when its guard is dropped.
+//! `Option<T>`, and [`core::mem::MaybeUninit<T>`]. [`Zeroizing`] clears a local
+//! value when its guard is dropped.
 //!
 //! # Capability and policy
 //!
@@ -52,6 +53,9 @@
 //! `None`. Composite implementations inherit the erasure behavior of their
 //! elements. This is not a constant-time API: an option's presence and custom
 //! implementations may affect control flow. Padding bytes are not covered.
+//! `MaybeUninit<T>` receives a typed volatile zero store and remains logically
+//! uninitialized; this does not promise to overwrite padding in `T`. Padding-free
+//! storage such as bytes and integer limbs has no such gap.
 //!
 //! Erasure applies only to the storage reached through the current mutable
 //! borrow. It cannot recover copies left elsewhere by the compiler or operating
@@ -72,6 +76,7 @@
 //! implementation panics, composite erasure can remain incomplete.
 
 mod array;
+mod maybe_uninit;
 mod option;
 mod primitives;
 mod slice;

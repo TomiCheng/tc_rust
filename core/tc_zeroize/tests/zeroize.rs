@@ -1,6 +1,7 @@
 //! Functional checks through the public API; these do not prove code generation.
 
 use core::cell::Cell;
+use core::mem::MaybeUninit;
 use tc_zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
 
 macro_rules! integer_tests {
@@ -68,6 +69,34 @@ fn empty_slices() {
     let mut value = [9_u8];
     value[..0].zeroize();
     assert_eq!(value, [9]);
+}
+
+#[test]
+fn maybe_uninit_initialized_and_uninitialized_integers() {
+    for mut value in [MaybeUninit::new(u64::MAX), MaybeUninit::<u64>::uninit()] {
+        value.zeroize();
+        // SAFETY: The zero store initialized every byte of padding-free `u64`,
+        // and zero is a valid `u64` value.
+        assert_eq!(unsafe { value.assume_init() }, 0);
+    }
+}
+
+#[test]
+fn maybe_uninit_arrays_and_slices() {
+    let mut values = [MaybeUninit::new(u8::MAX); 4];
+    values.zeroize();
+    for value in values {
+        // SAFETY: The zero store initialized this padding-free byte.
+        assert_eq!(unsafe { value.assume_init() }, 0);
+    }
+    let mut values = [MaybeUninit::<u8>::uninit(); 4];
+    values.as_mut_slice().zeroize();
+    for value in values {
+        // SAFETY: The zero store initialized this padding-free byte.
+        assert_eq!(unsafe { value.assume_init() }, 0);
+    }
+    let mut empty: [MaybeUninit<u8>; 0] = [];
+    empty.zeroize();
 }
 
 // Observe the still-live payload inside its destructor, never freed storage.

@@ -25,6 +25,7 @@ crate-local license files are deferred until its move to `tc_core`.
 | `char` | `'\0'` |
 | `[T; N]`, `[T]` where `T: Zeroize` | Every element is cleared; length is preserved |
 | `Option<T>` where `T: Zeroize` | A present payload is cleared, then dropped, and the option becomes `None` |
+| `MaybeUninit<T>` for any `T` | A typed volatile zero store clears storage, excluding any padding guarantee; the slot remains logically uninitialized |
 
 Empty arrays and slices are supported. Slice lengths are public. Array and slice
 implementations visit every element and inherit the erasure behavior of `T`.
