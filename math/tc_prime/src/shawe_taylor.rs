@@ -302,7 +302,7 @@ fn is_prime32(candidate: u32) -> bool {
 mod tests {
     use super::*;
     use rand::{SeedableRng, rngs::StdRng};
-    use tc_bigint::{BigUint, BitOps};
+    use tc_bigint::BigUint;
     use tc_sha::{Sha1Digest, Sha256Digest};
 
     fn verify_digest<D>(first: D, second: D, flipped: D)
