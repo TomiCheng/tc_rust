@@ -36,9 +36,9 @@ mod sub;
 /// no limbs; other values have no redundant high sign-extension limbs.
 ///
 /// [`Zeroize`] overwrites the live limbs before clearing their length, restoring
-/// canonical zero while retaining the allocation. Spare capacity, earlier
-/// allocations left by growth, and other copies are not erased. This storage
-/// type offers explicit erasure, not the [`crate::ZeroizeOnDrop`] policy.
+/// canonical zero while retaining the allocation, and clears spare capacity.
+/// Earlier allocations left by growth and other copies are not erased. This
+/// storage type offers explicit erasure, not the [`crate::ZeroizeOnDrop`] policy.
 #[derive(Clone, Default, Eq, Hash, PartialEq)]
 pub struct BigInt {
     limbs: Vec<Limb>,
@@ -47,9 +47,8 @@ pub struct BigInt {
 impl Zeroize for BigInt {
     fn zeroize(&mut self) {
         // Wipe before removing the limbs, including any sign-extension limb,
-        // so the final empty vector represents canonical zero.
+        // then clear spare capacity. The empty vector represents canonical zero.
         self.limbs.zeroize();
-        self.limbs.clear();
     }
 }
 

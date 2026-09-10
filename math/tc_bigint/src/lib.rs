@@ -48,10 +48,10 @@
 //! Fixed-width erasure overwrites every limb. These types remain `Copy` and
 //! cannot implement `Drop`: clearing one binding does not erase other copies.
 //! Dynamic-width erasure overwrites the current live limbs before clearing the
-//! vector length to restore canonical zero. It does not wipe spare capacity or
-//! inaccessible buffers left by earlier reallocations, and retains the current
-//! allocation for reuse. Neither path erases copies left elsewhere by moves,
-//! the compiler, or the operating system. See [`tc_zeroize`] for the mechanism
+//! vector length to restore canonical zero, then clears spare capacity. It
+//! retains the current allocation for reuse but cannot reach inaccessible buffers
+//! left by earlier reallocations. Neither path erases copies left elsewhere by
+//! moves, the compiler, or the operating system. See [`tc_zeroize`] for the mechanism
 //! and its limitations.
 //!
 //! ```

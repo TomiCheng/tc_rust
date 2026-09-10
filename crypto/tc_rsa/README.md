@@ -79,8 +79,8 @@ schedule. Blinding reduces the observability of remote timing and extra
 Montgomery reductions. They address different problems and cannot replace
 one another; heap blinding does not establish a fixed schedule.
 
-Owned key containers wipe their byte fields' live contents on drop. They never grow
-after construction, so they do not leave new reallocation buffers during their
+Owned key containers wipe their byte fields' live contents and spare capacity on
+drop. They never grow after construction, so they do not leave new reallocation buffers during their
 ownership. Borrowed parameters leave erasure to the caller. Parameter containers
 do not implement equality: byte equality is neither constant-time nor numeric
 equality under the leading-zero contract.
@@ -91,8 +91,9 @@ and its inverse with `Zeroizing`. Fixed-width engines remain `Copy` and do not
 automatically wipe their key state; their local guards are best-effort because
 copied fixed-width values are outside the guard's protection.
 
-These wipes cover current live storage, not spare capacity, old allocations,
-or copies left elsewhere. Other CRT and blinding intermediates remain unwiped.
+These wipes cover current live storage and heap allocations' spare capacity.
+They cannot reach old allocations or copies left elsewhere. Other CRT and
+blinding intermediates remain unwiped.
 Cleanup requires destructors to run and does not flush caches or supply a
 hardware memory barrier.
 

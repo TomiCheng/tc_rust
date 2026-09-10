@@ -195,9 +195,9 @@ impl traits::RsaPrivateCrtKeyParams for RsaPrivateCrtKeyRef<'_> {
 ///
 /// 與 [`RsaKeyRef`] 的差別只在所有權：從 DER／PKCS#8 解出來的位元組沒有更長壽
 /// 的借用來源時用這個，其餘語意（大端序、允許前導零、建構不驗證）完全相同。
-/// drop 時會以易失寫入清除所有位元組欄位的有效內容，再釋放配置。
+/// drop 時會以易失寫入清除所有位元組欄位的有效內容與 spare capacity，再釋放配置。
 /// 建構後不再增長或重新配置，因此持有期間不會新增重配置留下的舊緩衝。
-/// 清除範圍不含 spare capacity，也無法追回建構前的舊配置或其他副本。
+/// 清除無法追回建構前的舊配置或其他副本。
 ///
 /// ```
 /// use tc_cipher::{AsymmetricBlockCipher, CipherDirection};
@@ -225,8 +225,8 @@ pub struct RsaKeyOwned {
 
 impl Drop for RsaKeyOwned {
     fn drop(&mut self) {
-        self.modulus[..].zeroize();
-        self.exponent[..].zeroize();
+        self.modulus.zeroize();
+        self.exponent.zeroize();
     }
 }
 
@@ -267,9 +267,9 @@ impl traits::RsaKeyParams for RsaKeyOwned {
 /// 擁有位元組的 CRT 私鑰參數。
 ///
 /// 與 [`RsaPrivateCrtKeyRef`] 的差別只在所有權。
-/// drop 時會以易失寫入清除所有位元組欄位的有效內容，再釋放配置。
+/// drop 時會以易失寫入清除所有位元組欄位的有效內容與 spare capacity，再釋放配置。
 /// 建構後不再增長或重新配置，因此持有期間不會新增重配置留下的舊緩衝。
-/// 清除範圍不含 spare capacity，也無法追回建構前的舊配置或其他副本。
+/// 清除無法追回建構前的舊配置或其他副本。
 #[derive(Clone)]
 pub struct RsaPrivateCrtKeyOwned {
     modulus: Vec<u8>,
@@ -284,14 +284,14 @@ pub struct RsaPrivateCrtKeyOwned {
 
 impl Drop for RsaPrivateCrtKeyOwned {
     fn drop(&mut self) {
-        self.modulus[..].zeroize();
-        self.public_exponent[..].zeroize();
-        self.private_exponent[..].zeroize();
-        self.p[..].zeroize();
-        self.q[..].zeroize();
-        self.dp[..].zeroize();
-        self.dq[..].zeroize();
-        self.q_inv[..].zeroize();
+        self.modulus.zeroize();
+        self.public_exponent.zeroize();
+        self.private_exponent.zeroize();
+        self.p.zeroize();
+        self.q.zeroize();
+        self.dp.zeroize();
+        self.dq.zeroize();
+        self.q_inv.zeroize();
     }
 }
 

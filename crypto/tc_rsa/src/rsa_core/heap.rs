@@ -22,8 +22,8 @@ use crate::{Rsa, RsaError, RsaInit, RsaKeyParams};
 ///
 /// # 記憶體清除
 ///
-/// 狀態在引擎 drop 或成功重新初始化時，會清除所有整數欄位目前有效的 limb。
-/// 初始化失敗仍保留原狀態。清除不涵蓋 spare capacity、先前重配置的舊緩衝、
+/// 狀態在引擎 drop 或成功重新初始化時，會清除所有整數欄位目前有效的 limb 與 spare capacity。
+/// 初始化失敗仍保留原狀態。清除不涵蓋先前重配置的舊緩衝、
 /// 其他副本或運算中間值，也不改變這個後端的計時性質。
 #[derive(Clone, Debug, Default)]
 pub struct HeapRsaCoreEngine {

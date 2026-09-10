@@ -8,7 +8,7 @@ repository.workspace = true
 
 [features]
 default = ["alloc", "rand_core"]
-alloc = []
+alloc = ["tc_zeroize/alloc"]
 rand_core = ["dep:rand_core"]
 
 [dependencies]

@@ -33,9 +33,9 @@ mod sub;
 /// empty limb vector; non-zero values never contain redundant high zero limbs.
 ///
 /// [`Zeroize`] overwrites the live limbs before clearing their length, restoring
-/// canonical zero while retaining the allocation. Spare capacity, earlier
-/// allocations left by growth, and other copies are not erased. This storage
-/// type offers explicit erasure, not the [`crate::ZeroizeOnDrop`] policy.
+/// canonical zero while retaining the allocation, and clears spare capacity.
+/// Earlier allocations left by growth and other copies are not erased. This
+/// storage type offers explicit erasure, not the [`crate::ZeroizeOnDrop`] policy.
 #[derive(Clone, Default, Eq, Hash, PartialEq)]
 pub struct BigUint {
     limbs: Vec<Limb>,
@@ -43,10 +43,7 @@ pub struct BigUint {
 
 impl Zeroize for BigUint {
     fn zeroize(&mut self) {
-        // Wipe while the live elements are still accessible, then restore
-        // canonical zero. Only the current live slice is covered.
         self.limbs.zeroize();
-        self.limbs.clear();
     }
 }
 
