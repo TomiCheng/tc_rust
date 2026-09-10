@@ -748,18 +748,23 @@ fn readme_pu_column_matches_the_implemented_contracts() {
     let readme = include_str!("../../README.md");
     let mut headings = 0;
     let mut rows = 0;
+    // 欄位位置由標題列決定，日後新增欄位不會讓這個測試壞掉。
+    let mut column = None;
     for line in readme.lines().filter(|line| line.starts_with('|')) {
         let cells: Vec<_> = line.split('|').map(str::trim).collect();
         if cells.get(1) == Some(&"Trait") {
-            assert_eq!(cells.get(6), Some(&"PU"));
+            column = cells.iter().position(|cell| *cell == "PU");
+            assert!(column.is_some(), "README 的標題列少了 PU 欄：{line}");
             headings += 1;
+            continue;
         }
-        if cells.len() == 8 && cells[1].starts_with('`') {
+        let Some(index) = column else { continue };
+        if cells.len() > index && cells[1].starts_with('`') {
             let blank = matches!(
                 cells[1],
                 "`Bounded`" | "`Random`" | "`Signed`" | "`CheckedNeg` `WrappingNeg`"
             );
-            assert_eq!(cells[6], if blank { "" } else { "✓" }, "{line}");
+            assert_eq!(cells[index], if blank { "" } else { "✓" }, "{line}");
             rows += 1;
         }
     }

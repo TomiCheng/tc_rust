@@ -16,6 +16,7 @@ are not type-compatible with `num_traits::*`.
 | `FixedBigUint<N>` | exactly `N` limbs, never allocates | |
 | `FixedBigInt<N>` | exactly `N` limbs, two's complement | |
 | `PaddedBigUint` | 堆積儲存，建構時決定寬度，保留前導零 | yes |
+| `PaddedBigInt` | 堆積儲存，建構時決定二補數寬度，保留符號擴展位 | yes |
 
 Name the fixed-width types through the bit-width aliases: `U64` `U128` `U256`
 `U384` `U512` `U521` `U1024` `U1536` `U2048` `U3072` `U4096`, and `I64` `I128`
@@ -27,58 +28,58 @@ inheriting an internal layout.
 ## Trait implementations
 
 `BU` is `BigUint`, `BI` is `BigInt`, `FU` is `FixedBigUint<N>` and `FI` is
-`FixedBigInt<N>`. `PU` 是需要 `alloc` 的 `PaddedBigUint`。The groups follow the modules under `src/traits/`. A blank
+`FixedBigInt<N>`. `PU`／`PI` 是需要 `alloc` 的 `PaddedBigUint`／`PaddedBigInt`。The groups follow the modules under `src/traits/`. A blank
 cell marks a contract that does not apply to that representation rather than
 one that is merely missing; the reasons follow.
 
 ### `numeric` — identities, markers and bound aggregators
 
-| Trait | BU | BI | FU | FI | PU |
-| --- | :-: | :-: | :-: | :-: | :-: |
-| `Zero` `One` `Num` | ✓ | ✓ | ✓ | ✓ | ✓ |
-| `Bounded` | | | ✓ | ✓ |  |
-| `Signed` | | ✓ | | ✓ |  |
-| `Unsigned` | ✓ | | ✓ | | ✓ |
-| `NumOps` `NumRef` `RefNum` | ✓ | ✓ | ✓ | ✓ | ✓ |
-| `NumAssignOps` `NumAssign` `NumAssignRef` | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Trait | BU | BI | FU | FI | PU | PI |
+| --- | :-: | :-: | :-: | :-: | :-: | :-: |
+| `Zero` `One` `Num` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `Bounded` | | | ✓ | ✓ |  |  |
+| `Signed` | | ✓ | | ✓ |  | ✓ |
+| `Unsigned` | ✓ | | ✓ | | ✓ |  |
+| `NumOps` `NumRef` `RefNum` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `NumAssignOps` `NumAssign` `NumAssignRef` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 
 The last two rows are blanket implementations over the operator bounds rather
 than per-type implementations, so every type meeting those bounds gets them.
 
 ### `ops` — big-integer operations
 
-| Trait | BU | BI | FU | FI | PU |
-| --- | :-: | :-: | :-: | :-: | :-: |
-| `Pow` `Square` | ✓ | ✓ | ✓ | ✓ | ✓ |
-| `DivRem` `RemEuclid` `Gcd` | ✓ | ✓ | ✓ | ✓ | ✓ |
-| `ModInverse` `ModPow` | ✓ | ✓ | ✓ | ✓ | ✓ |
-| `ModAdd` `ModSub` `ModMul` | ✓ | ✓ | ✓ | ✓ | ✓ |
-| `BitOps` `AndNot` | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Trait | BU | BI | FU | FI | PU | PI |
+| --- | :-: | :-: | :-: | :-: | :-: | :-: |
+| `Pow` `Square` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `DivRem` `RemEuclid` `Gcd` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `ModInverse` `ModPow` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `ModAdd` `ModSub` `ModMul` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `BitOps` `AndNot` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 
 ### `checked` — overflow policies
 
-| Trait | BU | BI | FU | FI | PU |
-| --- | :-: | :-: | :-: | :-: | :-: |
-| `CheckedAdd` `CheckedSub` `CheckedMul` | ✓ | ✓ | ✓ | ✓ | ✓ |
-| `CheckedDiv` `CheckedRem` | ✓ | ✓ | ✓ | ✓ | ✓ |
-| `CheckedShl` `CheckedShr` | ✓ | ✓ | ✓ | ✓ | ✓ |
-| `CheckedNeg` `WrappingNeg` | | ✓ | | ✓ |  |
-| `OverflowingAdd` `WrappingAdd` | ✓ | ✓ | ✓ | ✓ | ✓ |
-| `OverflowingSub` `WrappingSub` | | ✓ | ✓ | ✓ | ✓ |
-| `OverflowingMul` `WrappingMul` | ✓ | ✓ | ✓ | ✓ | ✓ |
-| `SaturatingAdd` `SaturatingSub` `SaturatingMul` | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Trait | BU | BI | FU | FI | PU | PI |
+| --- | :-: | :-: | :-: | :-: | :-: | :-: |
+| `CheckedAdd` `CheckedSub` `CheckedMul` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `CheckedDiv` `CheckedRem` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `CheckedShl` `CheckedShr` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `CheckedNeg` `WrappingNeg` | | ✓ | | ✓ |  | ✓ |
+| `OverflowingAdd` `WrappingAdd` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `OverflowingSub` `WrappingSub` | | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `OverflowingMul` `WrappingMul` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `SaturatingAdd` `SaturatingSub` `SaturatingMul` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 
 ### `convert` — primitive conversion
 
-| Trait | BU | BI | FU | FI | PU |
-| --- | :-: | :-: | :-: | :-: | :-: |
-| `FromPrimitive` `ToPrimitive` | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Trait | BU | BI | FU | FI | PU | PI |
+| --- | :-: | :-: | :-: | :-: | :-: | :-: |
+| `FromPrimitive` `ToPrimitive` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 
 ### `array` — byte and word slice conversion
 
-| Trait | BU | BI | FU | FI | PU |
-| --- | :-: | :-: | :-: | :-: | :-: |
-| `ArrayEncoding` | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Trait | BU | BI | FU | FI | PU | PI |
+| --- | :-: | :-: | :-: | :-: | :-: | :-: |
+| `ArrayEncoding` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 
 `ArrayEncoding` names the byte order in each method rather than exposing the
 internal little-endian limb layout, so callers pick the external format
@@ -88,22 +89,23 @@ explicitly.
 
 Requires the `rand_core` feature.
 
-| Trait | BU | BI | FU | FI | PU |
-| --- | :-: | :-: | :-: | :-: | :-: |
-| `Random` | | | ✓ | ✓ |  |
-| `RandomBits` | ✓ | ✓ | ✓ | ✓ | ✓ |
-| `RandomMod` | ✓ | | ✓ | | ✓ |
-| `ProbablePrime` `IsProbablePrime` `NextProbablePrime` | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Trait | BU | BI | FU | FI | PU | PI |
+| --- | :-: | :-: | :-: | :-: | :-: | :-: |
+| `Random` | | | ✓ | ✓ |  |  |
+| `RandomBits` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `RandomMod` | ✓ | | ✓ | | ✓ |  |
+| `ProbablePrime` `IsProbablePrime` `NextProbablePrime` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 
 ### Why the blanks
 
 - `Signed` and `Unsigned` partition the four types by sign, as do `CheckedNeg`
   and `WrappingNeg`: negation is only meaningful where the sign bit is.
   `PU` 比照 `FU`／`BU`：支援 `Unsigned`，不支援 `Signed`、`CheckedNeg`、`WrappingNeg`。
+  `PI` 比照 `FI`／`BI`：支援 `Signed`、`CheckedNeg`、`WrappingNeg`，不支援 `Unsigned`。
 - `Bounded` and `Random` need a width known ahead of time, so they exist only
   for the fixed-width pair. `RandomBits` takes the bit length as an argument
   and therefore applies to all four.
-  `PU` 的寬度在執行期決定，無法提供型別層的 `Bounded::MIN`／`MAX`，
+  `PU`／`PI` 的寬度在執行期決定，無法提供型別層的 `Bounded::MIN`／`MAX`，
   也無法從沒有寬度參數的 `Random::random_from_rng` 得知精度，所以這兩列留空；
   `RandomBits` 有位元數參數，可決定儲存寬度，因此支援。
 - `RandomMod` samples below an unsigned modulus, so the signed types do not
@@ -140,6 +142,38 @@ CT 路徑請明寫 `PaddedBigUint::add(&a, &b)`、`PaddedBigUint::sub(&a, &b)` �
 trait 的 caller-buffer 寫入只改動回傳長度的前綴，和 `FixedBigUint` 一致。
 既有 `PaddedBigUint::write_be_bytes` 仍按傳入 buffer 長度補零；
 需要 trait 版本請明寫 `ArrayEncoding::write_be_bytes(&value, out)`。
+
+### `PI` 的寬度與時間契約
+
+`PaddedBigInt` 使用二補數，最高位是符號位。所有運算子與數值 trait 都是
+**變動時間：只能用於公開值**。二元運算以符號擴展補到最大寬度，
+加減乘、除法的結果放不下時 panic；模運算採模數寬度，並委派 `BigInt`。
+`ModPow` 會洩漏指數，不可用於秘密指數，也不提供有號 Montgomery 入口。
+
+具名 CT 算術僅有嚴格同寬的 `add`／`sub`，回傳**有號溢位**，不是進位／借位。
+`ct_eq` 與條件選擇同樣嚴格同寬。乘法與位移採私有固定排程核心，
+仍納入 CT 回歸掃描；沒有公有 `mul_wide`、具名 `shl`／`shr` 或原地 CT 算術系列。
+`Zeroize` 與 `set_zero()` 清除全部 limb 並保留寬度；`Zero::zero()`／`Default`
+則建立零寬。`One` 建立一個 limb，離開作用域時透過 `ZeroizeOnDrop` 清除儲存。
+
+擴寬補符號位；縮窄要求被移除的 limb 都是原符號擴展值，且保留部分的符號位
+不變。零寬只表示非負零。`>>` 是算術右移，負值高位補一；`<<` 截斷高位，
+只檢查位移量。`CheckedShl` 另要求「左移後算術右移還原」得到原值，
+才能保證有號數值沒有溢位。零寬的位移運算子對任何位移量都回零寬零。
+
+有號 `FromPrimitive` 依來源型別位元數決定寬度；無號輸入若放不進同樣寬度的
+有號範圍則回 `None`。字串解析採 `BigInt` 的最小二補數寬度。
+`ArrayEncoding` 一般輸入採二補數、輸出保留完整寬度；無號輸入採非負 magnitude，
+輸出採絕對值的最短 magnitude。無號輸入若需要額外符號 limb 則回 `InputTooLarge`。
+PU ↔ PI 的 `TryFrom` 保持同寬：PI 負值轉 PU 回 `NegativeValue`，
+PU 最高位為一時轉 PI 回 `InputTooLarge`；可先明確加寬 PU 再轉換。
+
+`RandomBits::random_bits(bits)` 的值域保持 `0..2^bits`，寬度為
+`limbs_for_bits(bits + 1)`，預留符號位；bits 為零時亦有一個 limb。
+明確 precision 的版本採 `limbs_for_bits(precision)`，但必須滿足
+`precision > bits`，否則回 `BitLengthTooLarge`；無號版本允許相等，
+兩者差別就是符號位。`ProbablePrime` 同樣預留符號位；`NextProbablePrime`
+保留原寬度，超寬回 `None`。質數測試的通過不代表數學證明。
 
 ## Wrapper types
 

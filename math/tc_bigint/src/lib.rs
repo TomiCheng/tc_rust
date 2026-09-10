@@ -91,6 +91,8 @@ mod non_zero;
 mod odd;
 mod ops_forward;
 #[cfg(feature = "alloc")]
+mod padded_big_int;
+#[cfg(feature = "alloc")]
 mod padded_big_uint;
 #[cfg(feature = "rand_core")]
 mod prime;
@@ -110,6 +112,8 @@ pub(crate) use limb::array::LimbArray;
 pub(crate) use limb::{Limb, WideWord, Word};
 pub use non_zero::NonZero;
 pub use odd::Odd;
+#[cfg(feature = "alloc")]
+pub use padded_big_int::PaddedBigInt;
 #[cfg(feature = "alloc")]
 pub use padded_big_uint::PaddedBigUint;
 #[cfg(feature = "rand_core")]
