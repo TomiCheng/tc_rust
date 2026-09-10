@@ -1,9 +1,9 @@
 # tc_zeroize
 
 Explicit memory erasure with volatile writes and opt-in scope guards. The crate
-is `no_std`, has no dependencies or feature flags, and uses no `alloc` or heap
-allocation. Its primitive implementations use small, documented `unsafe` blocks
-for volatile writes.
+is `no_std` and has no dependencies. A single, default-off `alloc` feature adds
+heap-backed containers through the sysroot `alloc` crate. Its primitive
+implementations use small, documented `unsafe` blocks for volatile writes.
 
 This crate is incubating in `tc_rust`. Publication metadata, a changelog, and
 crate-local license files are deferred until its move to `tc_core`.
@@ -26,10 +26,21 @@ crate-local license files are deferred until its move to `tc_core`.
 | `[T; N]`, `[T]` where `T: Zeroize` | Every element is cleared; length is preserved |
 | `Option<T>` where `T: Zeroize` | A present payload is cleared, then dropped, and the option becomes `None` |
 | `MaybeUninit<T>` for any `T` | A typed volatile zero store clears storage, excluding any padding guarantee; the slot remains logically uninitialized |
+| `Vec<T>` where `T: Zeroize` (`alloc`) | Live elements are cleared and dropped, then the current allocation including spare capacity is cleared; length becomes zero and capacity is retained, subject to the padding limitation |
+| `Box<T>` where `T: Zeroize + ?Sized` (`alloc`) | The contents are cleared in place; the box and allocation are retained, including the length of a boxed slice |
 
 Empty arrays and slices are supported. Slice lengths are public. Array and slice
 implementations visit every element and inherit the erasure behavior of `T`.
 An option branches on whether a value is present. This is not a constant-time API.
+
+## Features
+
+| Features | Support |
+| --- | --- |
+| None (default) | Core-only `no_std`: primitives, arrays, slices, options, `MaybeUninit`, and scope guards |
+| `alloc` | All core-only support plus `Vec<T>` and `Box<T: ?Sized>`; still `no_std`, with no external dependencies |
+
+`String`, `VecDeque`, `BTreeMap`, and `Cow` are not supported.
 
 ## Capability and policy
 
@@ -93,10 +104,15 @@ not clear other copies; `FixedBigUint` is a relevant example in `tc_rust`. A
 cleanup. Even moves of non-`Copy` types can leave bytes at an old location.
 `Zeroizing` clears only its current contents, not those old copies.
 
-Collection reallocations can leave data in inaccessible old buffers. `Vec<T>`
-and `String` are not supported in version 0.1, and there is no `alloc` feature.
-Clearing only a collection's live slice does not clear its spare capacity or any
-previous allocation. This crate makes no such collection-wide guarantee.
+With `alloc`, `Vec<T>::zeroize` clears live elements before their destructors run,
+then clears the entire current allocation, including spare capacity. Typed
+volatile stores do not guarantee erasure of padding in `T`; padding-free bytes
+and integer limbs are fully covered. The empty vector retains its capacity.
+This covers the current allocation, not every buffer used during its lifetime:
+growth, `shrink_to_fit`, and `into_boxed_slice` can leave inaccessible old buffers.
+Reserve enough capacity before storing secrets to avoid this gap. A `Box<[T]>`
+is a good fit for fixed-size secret storage because its allocation has no spare
+capacity and does not grow; converting an existing vector can still reallocate.
 
 Drop-based cleanup requires the destructor to run. Forgetting or leaking the
 guard, or aborting the process, bypasses cleanup. A panicking custom `zeroize`

@@ -5,3 +5,7 @@ edition.workspace = true
 license.workspace = true
 repository.workspace = true
 description = "Explicit memory erasure with volatile writes and opt-in scope guards."
+
+[features]
+default = []
+alloc = []

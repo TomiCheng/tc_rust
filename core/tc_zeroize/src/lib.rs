@@ -3,7 +3,8 @@
 #![deny(unsafe_op_in_unsafe_fn)]
 //! Explicit memory erasure with volatile writes and opt-in scope guards.
 //!
-//! The crate has no dependencies, feature flags, or allocation support.
+//! The crate has no dependencies. Its single `alloc` feature is off by default
+//! and adds support for `Vec<T>` and `Box<T>`, including boxed slices.
 //! [`Zeroize`] supports all primitive integers, `bool`, `char`, arrays, slices,
 //! `Option<T>`, and [`core::mem::MaybeUninit<T>`]. [`Zeroizing`] clears a local
 //! value when its guard is dropped.
@@ -68,13 +69,25 @@
 //! A [`Zeroizing`] guard clears its current value, not copies made before or
 //! during its lifetime. It cannot prevent copies through [`core::ops::Deref`].
 //!
-//! Collection reallocations can leave data in old buffers that are no longer
-//! accessible. `Vec<T>` and `String` are deliberately unsupported in this version;
-//! clearing their live slice alone would not clear spare capacity or old buffers.
+//! With `alloc`, `Vec<T>` clears its live elements before dropping them, then
+//! clears the whole current allocation through its spare capacity. Its length
+//! becomes zero and capacity is retained. The padding limitation above still
+//! applies. `Box<T>` delegates to its contents without releasing the allocation.
+//! Collection reallocations can leave data in inaccessible old buffers: erasure
+//! cannot reach earlier allocations left by growth, `shrink_to_fit`, or
+//! `into_boxed_slice`. Reserve sufficient capacity up front or use `Box<[T]>`
+//! for fixed-size secret storage to avoid reallocations while holding secrets.
+//! `String` is not supported.
+//!
 //! Drop-based erasure also requires that the destructor runs: forgetting a guard,
 //! leaking it, or aborting the process bypasses its cleanup. If a custom `zeroize`
 //! implementation panics, composite erasure can remain incomplete.
 
+#[cfg(feature = "alloc")]
+extern crate alloc;
+
+#[cfg(feature = "alloc")]
+mod alloc_impls;
 mod array;
 mod maybe_uninit;
 mod option;
