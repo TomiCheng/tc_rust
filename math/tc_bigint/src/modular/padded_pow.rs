@@ -4,6 +4,7 @@ use alloc::vec::Vec;
 
 use super::exponentiation_window;
 use super::padded_form::PaddedMontyForm;
+use super::padded_mul::montgomery_mul_into;
 use crate::{PaddedBigUint, Word};
 
 impl PaddedMontyForm {
@@ -30,16 +31,25 @@ impl PaddedMontyForm {
     /// );
     /// ```
     pub fn pow_ct(&self, exponent: &PaddedBigUint) -> Self {
-        let mut result = Self::one(self.params().clone());
+        let params = self.params().clone();
+        let modulus = params.modulus();
+        let inverse = params.mod_neg_inv();
+        let base = self.as_value();
+
+        // 三個緩衝在迴圈外配置一次，之後靠 swap 換手，內圈完全不配置。
+        let mut result = params.one().clone();
+        let mut squared = PaddedBigUint::zero_with_limbs(params.len());
+        let mut multiplied = PaddedBigUint::zero_with_limbs(params.len());
 
         for bit in (0..exponent.len() * Word::BITS as usize).rev() {
-            result = result.square();
-            let multiplied = &result * self;
-            // 原地選擇，省下每個位元一次配置。
-            result.conditional_assign(&multiplied, exponent.bit_choice(bit));
+            montgomery_mul_into(&mut squared, &result, &result, modulus, inverse);
+            montgomery_mul_into(&mut multiplied, &squared, base, modulus, inverse);
+            // 無分支選擇，再把選中的那個換成下一輪的 result。
+            squared.conditional_assign(&multiplied, exponent.bit_choice(bit));
+            core::mem::swap(&mut result, &mut squared);
         }
 
-        result
+        Self::from_value(result, params)
     }
 
     /// 變動時間：**只能用於公開指數**。走滑動視窗的模冪。

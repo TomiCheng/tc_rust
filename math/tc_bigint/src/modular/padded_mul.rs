@@ -4,29 +4,52 @@
 //! [`PaddedBigUint`] 的原地運算，因為配置與 drop 時的歸零在模冪的內圈裡
 //! 會累積成主要成本。
 
-use crate::{Choice, Limb, PaddedBigUint, WideWord, Word};
+use crate::{Choice, Limb, PaddedBigUint, WideWord, Word, Zeroize};
 
 /// CT：Montgomery 乘法，排程只由模數寬度決定。
 ///
 /// 走 CIOS，與 [`super::mul::fixed_montgomery_mul`] 同一套；最後的條件減法
 /// 原地進行，不是資料相依的分支。三個運算元的寬度必須相同，
 /// 且 `lhs`、`rhs` 都小於 `modulus`。
+///
+/// 這個版本會配置回傳值。模冪的內圈請改用 [`montgomery_mul_into`]。
 pub(super) fn montgomery_mul(
     lhs: &PaddedBigUint,
     rhs: &PaddedBigUint,
     modulus: &PaddedBigUint,
     inverse: Word,
 ) -> PaddedBigUint {
+    let mut out = PaddedBigUint::zero_with_limbs(modulus.len());
+    montgomery_mul_into(&mut out, lhs, rhs, modulus, inverse);
+    out
+}
+
+/// CT：把 Montgomery 乘積寫進 `out`，完全不配置記憶體。
+///
+/// `out` 的原有內容會被覆寫，寬度必須與模數相同。`lhs` 與 `rhs` 可以是同一個
+/// 物件（平方），但 `out` 不能與其中任何一個是同一個物件 —— 演算法邊讀邊寫，
+/// 別名會算錯。這個前提沒有便宜的檢查方式，由呼叫端負責。
+///
+/// 模冪的內圈靠這個版本重複使用緩衝區：每個位元少兩次配置，
+/// 連帶少兩次 drop 時的歸零。
+pub(super) fn montgomery_mul_into(
+    out: &mut PaddedBigUint,
+    lhs: &PaddedBigUint,
+    rhs: &PaddedBigUint,
+    modulus: &PaddedBigUint,
+    inverse: Word,
+) {
     lhs.assert_same_width(rhs);
     lhs.assert_same_width(modulus);
+    out.assert_same_width(modulus);
     let width = modulus.len();
     if width == 0 {
-        return PaddedBigUint::zero_with_limbs(0);
+        return;
     }
     debug_assert!(modulus.as_limbs()[0].to_word() & 1 == 1);
 
-    // 這是整個函式唯一的配置：回傳值本身。內圈全部原地改它。
-    let mut result = PaddedBigUint::zero_with_limbs(width);
+    let result = out;
+    result.zeroize();
     let mut high = 0 as Word;
 
     for step in 0..width {
@@ -70,7 +93,6 @@ pub(super) fn montgomery_mul(
 
     // 結果落在 `[0, 2n)`，原地收進 `[0, n)`。
     result.conditional_sub_assign(modulus, Choice::from_lsb(high as u8));
-    result
 }
 
 /// CT：`(lhs + rhs) mod modulus`，兩個運算元都必須已經小於模數。

@@ -50,12 +50,57 @@ impl PaddedMontyForm {
     /// assert_eq!(form.retrieve(), PaddedBigUint::from_be_bytes(&[7], 1).unwrap());
     /// ```
     pub fn new_ct(value: &PaddedBigUint, params: PaddedMontyParams) -> Self {
+        // 兩條路的圈數都只由公開的寬度決定，這個分支不洩漏數值。
+        let value = if value.len() <= 2 * params.len() {
+            Self::split_into_domain(value, &params)
+        } else {
+            Self::reduce_by_horner(value, &params)
+        };
+        Self { value, params }
+    }
+
+    /// CT：輸入不寬於模數兩倍時，拆成高低兩段各自進域再相加。
+    ///
+    /// 記 `R` 為 `2^(N * Word::BITS)`，把輸入寫成 `lo + hi * R`，則它的
+    /// Montgomery 表示法是 `lo * R + hi * R²`。三次模乘就能算出來：
+    ///
+    /// * `mont(lo, R²) = lo * R`
+    /// * `mont(hi, R²) = hi * R`，再 `mont(hi * R, R²) = hi * R²`
+    ///
+    /// 取代逐位元的 [`reduce_by_horner`]：`2N * Word::BITS` 圈變成三次模乘。
+    ///
+    /// 兩段都可能大於等於模數，但 CIOS 只要求其中一個運算元小於模數，
+    /// 而 `R²` 已經約簡過，所以結果仍落在 `[0, 2n)`，由模乘自己收回來。
+    fn split_into_domain(value: &PaddedBigUint, params: &PaddedMontyParams) -> PaddedBigUint {
+        let modulus = params.modulus();
+        let inverse = params.mod_neg_inv();
+        let r2 = params.r2();
+        let width = modulus.len();
+
+        let (low, high) = value.split_at(width);
+        // 兩段都不寬於模數，所以只會補零，不會失敗。
+        let low = low
+            .resize(width)
+            .expect("the low half is never wider than the modulus");
+        let high = high
+            .resize(width)
+            .expect("the high half is never wider than the modulus");
+
+        let low = montgomery_mul(&low, r2, modulus, inverse);
+        let mut high = montgomery_mul(&high, r2, modulus, inverse);
+        high = montgomery_mul(&high, r2, modulus, inverse);
+        add_mod(&low, &high, modulus)
+    }
+
+    /// CT：逐位元的 Horner 約簡，圈數是 `value.len() * Word::BITS`。
+    ///
+    /// 只在輸入寬於模數兩倍時用得到 —— [`split_into_domain`] 需要那個上界。
+    /// 整個迴圈走原地運算，不配置記憶體。
+    fn reduce_by_horner(value: &PaddedBigUint, params: &PaddedMontyParams) -> PaddedBigUint {
         let modulus = params.modulus();
         let one = params.plain_one();
         let mut reduced = PaddedBigUint::zero_with_limbs(modulus.len());
 
-        // 由最高位往下的 Horner：每一步倍加，再依該位元決定要不要加一。
-        // 整個迴圈都走原地運算，只有最後的模乘會配置。
         for bit in (0..value.len() * Word::BITS as usize).rev() {
             double_mod_assign(&mut reduced, modulus);
             let carry = reduced.conditional_add_assign(one, value.bit_choice(bit));
@@ -63,8 +108,7 @@ impl PaddedMontyForm {
         }
 
         // 乘上 R² 就從一般表示法進到 Montgomery 域。
-        let value = montgomery_mul(&reduced, params.r2(), modulus, params.mod_neg_inv());
-        Self { value, params }
+        montgomery_mul(&reduced, params.r2(), modulus, params.mod_neg_inv())
     }
 
     /// 變動時間：**只能用於公開值**。用除法約簡後進入 Montgomery 域。
@@ -122,19 +166,20 @@ impl PaddedMontyForm {
         )
     }
 
-    /// CT：`choice` 為一時原地換成 `other` 的值，為零時保持原值。不配置記憶體。
-    ///
-    /// # Panics
-    ///
-    /// 兩個值的模數不同時 panic。
-    pub(super) fn conditional_assign(&mut self, other: &Self, choice: Choice) {
-        self.assert_same_params(other);
-        self.value.conditional_assign(&other.value, choice);
-    }
-
     /// 這個值所屬的參數。
     pub fn params(&self) -> &PaddedMontyParams {
         &self.params
+    }
+
+    /// 域內的原始表示法，供同模組的模冪重複使用緩衝區。
+    pub(super) fn as_value(&self) -> &PaddedBigUint {
+        &self.value
+    }
+
+    /// 以既有參數包住一個域內表示法。
+    pub(super) fn from_value(value: PaddedBigUint, params: PaddedMontyParams) -> Self {
+        debug_assert_eq!(value.len(), params.len());
+        Self { value, params }
     }
 
     /// CT：域內平方。

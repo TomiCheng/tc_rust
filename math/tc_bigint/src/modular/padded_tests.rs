@@ -161,6 +161,53 @@ fn a_value_wider_than_the_modulus_reduces_correctly() {
 }
 
 #[test]
+fn an_input_wider_than_twice_the_modulus_takes_the_horner_fallback() {
+    let mut rng = XorShift(0x18f5_60b3_c479_2ade);
+
+    for case in 0..40 {
+        let width = case % 3 + 1;
+        let modulus = rng.next_odd_modulus(width);
+
+        // 三倍與五倍寬都超過拆半路徑的上界，只能走逐位元約簡。
+        for multiple in [3, 5] {
+            let wide = rng.next_value(multiple * width);
+            let padded = PaddedMontyForm::new_ct(&wide, params_for(&modulus));
+            let reference = MontyForm::new(&wide.to_big_uint(), reference_params(&modulus));
+
+            assert_eq!(
+                padded.retrieve().to_big_uint(),
+                reference.retrieve(),
+                "case {case}, {multiple} 倍寬"
+            );
+            assert_eq!(padded.retrieve().len(), width);
+        }
+    }
+}
+
+#[test]
+fn both_domain_entry_paths_agree_at_the_width_boundary() {
+    let mut rng = XorShift(0x2ea9_71c4_0d38_b5f7);
+
+    for case in 0..60 {
+        let width = case % 3 + 1;
+        let modulus = rng.next_odd_modulus(width);
+        let params = params_for(&modulus);
+
+        // 恰好兩倍寬走拆半，多一個 limb 就退回 Horner；同一個數值兩邊要一致。
+        let exact = rng.next_value(2 * width);
+        let padded = exact
+            .resize(2 * width + 1)
+            .expect("widening never overflows");
+
+        assert_eq!(
+            PaddedMontyForm::new_ct(&exact, params.clone()).retrieve(),
+            PaddedMontyForm::new_ct(&padded, params).retrieve(),
+            "case {case}"
+        );
+    }
+}
+
+#[test]
 fn domain_arithmetic_matches_plain_modular_arithmetic() {
     let mut rng = XorShift(0x39ad_5c74_1e60_b2f9);
 
