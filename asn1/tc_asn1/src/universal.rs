@@ -1,6 +1,7 @@
 //! X.680 的通用型別。
 
 mod asn1_bit_string;
+mod asn1_bmp_string;
 mod asn1_boolean;
 mod asn1_enumerated;
 mod asn1_external;
@@ -14,6 +15,7 @@ mod asn1_oid;
 mod asn1_printable_string;
 mod asn1_sequence_of;
 mod asn1_set_of;
+mod asn1_universal_string;
 mod asn1_utc_time;
 mod asn1_utf8_string;
 mod asn1_visible_string;
@@ -23,6 +25,7 @@ mod opaque;
 pub mod tag;
 
 pub use asn1_bit_string::Asn1BitString;
+pub use asn1_bmp_string::Asn1BmpString;
 pub use asn1_boolean::Asn1Boolean;
 pub use asn1_enumerated::Asn1Enumerated;
 pub use asn1_external::{Asn1External, ExternalEncoding};
@@ -36,6 +39,7 @@ pub use asn1_oid::{Arcs, Asn1Oid};
 pub use asn1_printable_string::Asn1PrintableString;
 pub use asn1_sequence_of::{Asn1Sequence, Asn1SequenceOf};
 pub use asn1_set_of::{Asn1Set, Asn1SetOf};
+pub use asn1_universal_string::Asn1UniversalString;
 pub use asn1_utc_time::Asn1UtcTime;
 pub use asn1_utf8_string::Asn1Utf8String;
 pub use asn1_visible_string::Asn1VisibleString;
