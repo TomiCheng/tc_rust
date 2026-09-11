@@ -8,6 +8,7 @@ mod asn1_generalized_time;
 mod asn1_ia5_string;
 mod asn1_integer;
 mod asn1_null;
+mod asn1_numeric_string;
 mod asn1_octet_string;
 mod asn1_oid;
 mod asn1_printable_string;
@@ -15,6 +16,7 @@ mod asn1_sequence_of;
 mod asn1_set_of;
 mod asn1_utc_time;
 mod asn1_utf8_string;
+mod asn1_visible_string;
 mod date_time;
 mod integer_octets;
 mod opaque;
@@ -28,6 +30,7 @@ pub use asn1_generalized_time::Asn1GeneralizedTime;
 pub use asn1_ia5_string::Asn1Ia5String;
 pub use asn1_integer::Asn1Integer;
 pub use asn1_null::Asn1Null;
+pub use asn1_numeric_string::Asn1NumericString;
 pub use asn1_octet_string::Asn1OctetString;
 pub use asn1_oid::{Arcs, Asn1Oid};
 pub use asn1_printable_string::Asn1PrintableString;
@@ -35,4 +38,8 @@ pub use asn1_sequence_of::{Asn1Sequence, Asn1SequenceOf};
 pub use asn1_set_of::{Asn1Set, Asn1SetOf};
 pub use asn1_utc_time::Asn1UtcTime;
 pub use asn1_utf8_string::Asn1Utf8String;
-pub use opaque::{Asn1GraphicString, Asn1ObjectDescriptor};
+pub use asn1_visible_string::Asn1VisibleString;
+pub use opaque::{
+    Asn1GeneralString, Asn1GraphicString, Asn1ObjectDescriptor, Asn1TeletexString,
+    Asn1VideotexString,
+};
