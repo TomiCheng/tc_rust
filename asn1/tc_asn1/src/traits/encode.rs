@@ -26,6 +26,12 @@ pub trait Encode {
         self.encode_tagged(self.tag(), rules, out)
     }
 
+    /// 用呼叫端給的 tag 時完整 TLV 的位元組數。
+    fn encoded_len_tagged(&self, tag: &[u8], rules: EncodingType) -> usize {
+        let content_len = self.content_len(rules);
+        tag.len() + len_octets(content_len) + content_len
+    }
+
     /// 用呼叫端給的 tag 寫完整的 TLV —— IMPLICIT 走這裡。
     fn encode_tagged(
         &self,

@@ -6,6 +6,9 @@ pub const BIT_STRING: &[u8] = &[0x03];
 pub const OCTET_STRING: &[u8] = &[0x04];
 pub const NULL: &[u8] = &[0x05];
 pub const OBJECT_IDENTIFIER: &[u8] = &[0x06];
+pub const OBJECT_DESCRIPTOR: &[u8] = &[0x07];
+/// 永遠是 constructed：`[UNIVERSAL 8] IMPLICIT SEQUENCE`。
+pub const EXTERNAL: &[u8] = &[0x28];
 pub const ENUMERATED: &[u8] = &[0x0A];
 pub const UTF8_STRING: &[u8] = &[0x0C];
 pub const SEQUENCE: &[u8] = &[0x30];
@@ -15,5 +18,6 @@ pub const TELETEX_STRING: &[u8] = &[0x14];
 pub const IA5_STRING: &[u8] = &[0x16];
 pub const UTC_TIME: &[u8] = &[0x17];
 pub const GENERALIZED_TIME: &[u8] = &[0x18];
+pub const GRAPHIC_STRING: &[u8] = &[0x19];
 pub const UNIVERSAL_STRING: &[u8] = &[0x1C];
 pub const BMP_STRING: &[u8] = &[0x1E];

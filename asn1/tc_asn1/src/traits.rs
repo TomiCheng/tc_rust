@@ -5,3 +5,4 @@ mod encode;
 
 pub use decode::{TryDecode, TryDecodeContent};
 pub use encode::Encode;
+pub(crate) use encode::{len_octets, write_len};

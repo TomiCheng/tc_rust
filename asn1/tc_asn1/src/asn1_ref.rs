@@ -13,6 +13,7 @@ pub enum Asn1Class {
     Private,
 }
 
+#[derive(Clone, Copy, Debug)]
 pub struct Asn1Ref<'a> {
     /// 整段 TLV，含表頭；不定長時含 EOC。
     raw: &'a [u8],
