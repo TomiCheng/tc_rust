@@ -72,4 +72,4 @@ pub use depth::Depth;
 pub use encoding_type::EncodingType;
 pub use error::Asn1Error;
 pub use traits::{Encode, TryDecode, TryDecodeContent};
-pub use universal::{Asn1Boolean, Asn1Integer, Asn1Null};
+pub use universal::{Asn1BitString, Asn1Boolean, Asn1Integer, Asn1Null, Asn1OctetString};
