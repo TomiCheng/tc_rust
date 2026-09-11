@@ -7,7 +7,7 @@ use crate::encoding_type::EncodingType;
 use crate::error::Asn1Error;
 use crate::traits::{Encode, TryDecodeContent};
 
-const TAG: &[u8] = &[0x13];
+use super::tag::PRINTABLE_STRING as TAG;
 
 /// X.680 41.4 的字元集：英數、空白，以及 `' ( ) + , - . / : = ?`。
 ///

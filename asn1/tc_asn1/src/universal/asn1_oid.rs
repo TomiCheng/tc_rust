@@ -9,7 +9,7 @@ use crate::encoding_type::EncodingType;
 use crate::error::Asn1Error;
 use crate::traits::{Encode, TryDecodeContent};
 
-const TAG: &[u8] = &[0x06];
+use super::tag::OBJECT_IDENTIFIER as TAG;
 
 /// 存 DER 內容。子識別碼的最短編碼是 BER 也要求的，所以位元組就是正規形式，
 /// 比對直接比位元組。

@@ -7,7 +7,7 @@ use crate::encoding_type::EncodingType;
 use crate::error::Asn1Error;
 use crate::traits::{Encode, TryDecodeContent};
 
-const TAG: &[u8] = &[0x04];
+use super::tag::OCTET_STRING as TAG;
 
 /// 任意位元組，沒有解讀。
 #[derive(Clone, Debug, Default, Eq, PartialEq)]

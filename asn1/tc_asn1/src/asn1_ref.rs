@@ -122,7 +122,8 @@ pub struct Children<'a> {
 }
 
 impl<'a> Children<'a> {
-    pub(crate) fn new(rest: &'a [u8], depth: Depth) -> Self {
+    /// 從一段內容位元組開始走訪 —— constructed 型別的 `try_decode_content` 用這個。
+    pub fn new(rest: &'a [u8], depth: Depth) -> Self {
         Self { rest, depth }
     }
 }

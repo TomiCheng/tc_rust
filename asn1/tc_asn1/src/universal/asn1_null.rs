@@ -5,7 +5,7 @@ use crate::encoding_type::EncodingType;
 use crate::error::Asn1Error;
 use crate::traits::{Encode, TryDecodeContent};
 
-const TAG: &[u8] = &[0x05];
+use super::tag::NULL as TAG;
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct Asn1Null;

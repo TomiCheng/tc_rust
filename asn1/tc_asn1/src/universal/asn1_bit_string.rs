@@ -7,7 +7,7 @@ use crate::encoding_type::EncodingType;
 use crate::error::Asn1Error;
 use crate::traits::{Encode, TryDecodeContent};
 
-const TAG: &[u8] = &[0x03];
+use super::tag::BIT_STRING as TAG;
 
 /// 位元 0 是第一個位元組的最高位。最後一個位元組沒用到的位永遠存成 0。
 #[derive(Clone, Debug, Eq, PartialEq)]

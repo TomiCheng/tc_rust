@@ -5,7 +5,7 @@ use crate::encoding_type::EncodingType;
 use crate::error::Asn1Error;
 use crate::traits::{Encode, TryDecodeContent};
 
-const TAG: &[u8] = &[0x01];
+use super::tag::BOOLEAN as TAG;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Asn1Boolean(pub bool);

@@ -7,7 +7,7 @@ use crate::encoding_type::EncodingType;
 use crate::error::Asn1Error;
 use crate::traits::{Encode, TryDecodeContent};
 
-const TAG: &[u8] = &[0x16];
+use super::tag::IA5_STRING as TAG;
 
 /// 內容保證全是 ASCII，所以 `as_str` 不會失敗。
 #[derive(Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd)]

@@ -7,7 +7,7 @@ use crate::encoding_type::EncodingType;
 use crate::error::Asn1Error;
 use crate::traits::{Encode, TryDecodeContent};
 
-const TAG: &[u8] = &[0x0C];
+use super::tag::UTF8_STRING as TAG;
 
 /// Rust 的 `String` 本來就是合法 UTF-8，建構不會失敗；只有解碼要驗。
 #[derive(Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd)]

@@ -7,7 +7,7 @@ use crate::encoding_type::EncodingType;
 use crate::error::Asn1Error;
 use crate::traits::{Encode, TryDecodeContent};
 
-const TAG: &[u8] = &[0x02];
+use super::tag::INTEGER as TAG;
 
 /// 內容是二補數大端序、最短形式，擁有。
 #[derive(Clone, Debug, Eq, PartialEq)]

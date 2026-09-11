@@ -74,7 +74,8 @@ pub use depth::Depth;
 pub use encoding_type::EncodingType;
 pub use error::Asn1Error;
 pub use traits::{Encode, TryDecode, TryDecodeContent};
+pub use universal::tag;
 pub use universal::{
     Arcs, Asn1BitString, Asn1Boolean, Asn1Ia5String, Asn1Integer, Asn1Null, Asn1OctetString,
-    Asn1Oid, Asn1PrintableString, Asn1Utf8String,
+    Asn1Oid, Asn1PrintableString, Asn1Sequence, Asn1SequenceOf, Asn1Utf8String,
 };
