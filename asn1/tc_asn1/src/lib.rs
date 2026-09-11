@@ -76,8 +76,8 @@ pub use error::Asn1Error;
 pub use traits::{Encode, TryDecode, TryDecodeContent};
 pub use universal::tag;
 pub use universal::{
-    Arcs, Asn1BitString, Asn1Boolean, Asn1External, Asn1GeneralizedTime, Asn1GraphicString,
-    Asn1Ia5String, Asn1Integer, Asn1Null, Asn1ObjectDescriptor, Asn1OctetString, Asn1Oid,
-    Asn1PrintableString, Asn1Sequence, Asn1SequenceOf, Asn1Set, Asn1SetOf, Asn1UtcTime,
+    Arcs, Asn1BitString, Asn1Boolean, Asn1Enumerated, Asn1External, Asn1GeneralizedTime,
+    Asn1GraphicString, Asn1Ia5String, Asn1Integer, Asn1Null, Asn1ObjectDescriptor, Asn1OctetString,
+    Asn1Oid, Asn1PrintableString, Asn1Sequence, Asn1SequenceOf, Asn1Set, Asn1SetOf, Asn1UtcTime,
     Asn1Utf8String, ExternalEncoding,
 };

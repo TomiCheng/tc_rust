@@ -2,6 +2,7 @@
 
 mod asn1_bit_string;
 mod asn1_boolean;
+mod asn1_enumerated;
 mod asn1_external;
 mod asn1_generalized_time;
 mod asn1_ia5_string;
@@ -15,11 +16,13 @@ mod asn1_set_of;
 mod asn1_utc_time;
 mod asn1_utf8_string;
 mod date_time;
+mod integer_octets;
 mod opaque;
 pub mod tag;
 
 pub use asn1_bit_string::Asn1BitString;
 pub use asn1_boolean::Asn1Boolean;
+pub use asn1_enumerated::Asn1Enumerated;
 pub use asn1_external::{Asn1External, ExternalEncoding};
 pub use asn1_generalized_time::Asn1GeneralizedTime;
 pub use asn1_ia5_string::Asn1Ia5String;

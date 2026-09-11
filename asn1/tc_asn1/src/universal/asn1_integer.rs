@@ -7,6 +7,7 @@ use crate::encoding_type::EncodingType;
 use crate::error::Asn1Error;
 use crate::traits::{Encode, TryDecodeContent};
 
+use super::integer_octets::{minimal_signed, validate_integer_octets};
 use super::tag::INTEGER as TAG;
 
 /// 內容是二補數大端序、最短形式，擁有。
@@ -18,15 +19,10 @@ pub struct Asn1Integer {
 impl Asn1Integer {
     /// 由已經是 DER 形式的位元組建立；驗證非空且沒有多餘的符號位元組。
     pub fn from_der_bytes(bytes: &[u8]) -> Result<Self, Asn1Error> {
-        match bytes {
-            [] => Err(Asn1Error::MalformedValue),
-            // 多餘的符號位元組（X.690 8.3.2），BER 也禁止。
-            [0x00, next, ..] if next & 0x80 == 0 => Err(Asn1Error::MalformedValue),
-            [0xFF, next, ..] if next & 0x80 != 0 => Err(Asn1Error::MalformedValue),
-            _ => Ok(Self {
-                value: bytes.to_vec(),
-            }),
-        }
+        validate_integer_octets(bytes)?;
+        Ok(Self {
+            value: bytes.to_vec(),
+        })
     }
 
     /// 由無號大端序建立（大數 `to_bytes_be` 的形式）：去前導零，最高位為 1 就補 `00`。
@@ -46,17 +42,8 @@ impl Asn1Integer {
 
     /// 由固定寬度的二補數建立：去掉多餘的符號位元組。
     fn from_signed_bytes(twos_complement: &[u8]) -> Self {
-        let mut bytes = twos_complement;
-        while let [first, next, ..] = bytes {
-            let redundant =
-                (*first == 0x00 && next & 0x80 == 0) || (*first == 0xFF && next & 0x80 != 0);
-            if !redundant {
-                break;
-            }
-            bytes = &bytes[1..];
-        }
         Self {
-            value: bytes.to_vec(),
+            value: minimal_signed(twos_complement).to_vec(),
         }
     }
 
