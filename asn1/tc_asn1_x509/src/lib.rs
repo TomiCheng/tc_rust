@@ -8,5 +8,7 @@
 extern crate alloc;
 
 mod algorithm_identifier;
+mod digest_info;
 
 pub use algorithm_identifier::{AlgorithmIdentifier, AlgorithmParameters};
+pub use digest_info::DigestInfo;
