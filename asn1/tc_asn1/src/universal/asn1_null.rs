@@ -1,14 +1,17 @@
 //! ASN.1 `NULL`。
 
 use crate::depth::Depth;
+use crate::encoding_type::EncodingType;
 use crate::error::Asn1Error;
-use crate::traits::TryDecodeContent;
+use crate::traits::{Encode, TryDecodeContent};
+
+const TAG: &[u8] = &[0x05];
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct Asn1Null;
 
 impl<'a> TryDecodeContent<'a> for Asn1Null {
-    const TAG: &'static [u8] = &[0x05];
+    const TAG: &'static [u8] = TAG;
 
     fn try_decode_content(value: &'a [u8], _: Depth) -> Result<Self, Asn1Error> {
         if value.is_empty() {
@@ -19,10 +22,31 @@ impl<'a> TryDecodeContent<'a> for Asn1Null {
     }
 }
 
+impl Encode for Asn1Null {
+    fn tag(&self) -> &[u8] {
+        TAG
+    }
+    fn content_len(&self, _: EncodingType) -> usize {
+        0
+    }
+    fn encode_content(&self, _: EncodingType, _: &mut [u8]) -> Result<usize, Asn1Error> {
+        Ok(0)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::traits::TryDecode;
+
+    #[test]
+    fn null_encodes_as_the_two_byte_sequence() {
+        let mut out = [0xAA_u8; 4];
+        let written = Asn1Null.encode(EncodingType::Der, &mut out).unwrap();
+        assert_eq!(&out[..written], &[0x05, 0x00]);
+        assert_eq!(out[2], 0xAA, "只寫前兩個位元組");
+        assert_eq!(written, Asn1Null.encoded_len(EncodingType::Der));
+    }
 
     const DEPTH: Depth = Depth::DEFAULT;
 
