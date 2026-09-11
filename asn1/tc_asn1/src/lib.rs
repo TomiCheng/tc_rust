@@ -60,6 +60,7 @@
 
 extern crate alloc;
 
+mod asn1_any;
 mod asn1_ref;
 mod depth;
 mod encoding_type;
@@ -67,6 +68,7 @@ mod error;
 mod traits;
 mod universal;
 
+pub use asn1_any::Asn1Any;
 pub use asn1_ref::{Asn1Class, Asn1Ref, Children};
 pub use depth::Depth;
 pub use encoding_type::EncodingType;

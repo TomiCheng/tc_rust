@@ -61,6 +61,15 @@ impl<'a> Asn1Ref<'a> {
         }
     }
 
+    /// 由已經拆開的 tag 與內容建一個視角；`total_len` 是它寫出來會佔的位元組數。
+    pub(crate) fn from_parts(tag: &'a [u8], value: &'a [u8]) -> Self {
+        Self {
+            tag,
+            value,
+            total_len: tag.len() + crate::traits::len_octets(value.len()) + value.len(),
+        }
+    }
+
     pub fn tag(&self) -> &'a [u8] {
         self.tag
     }
