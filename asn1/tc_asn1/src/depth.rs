@@ -6,7 +6,7 @@
 //! 它同時也保護解構：`Vec<Asn1Object>` 的 `Drop` 一樣是遞迴的，深樹在釋放時
 //! 會爆堆疊。解碼時擋住了，就不會有那麼深的樹存在。
 
-use crate::asn1_error::Asn1Error;
+use crate::error::Asn1Error;
 
 /// 還能往下走幾層。
 ///

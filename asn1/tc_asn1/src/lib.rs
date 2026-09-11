@@ -58,20 +58,10 @@
 //! `UTCTime` / `GeneralizedTime` 還沒做。它們是憑證 `Validity` 才需要的，而且
 //! 各自帶著兩位數年份的世紀規則與日曆驗證。等做憑證時再一併處理。
 
-extern crate alloc;
-
-mod asn1_error;
-mod asn1_object;
+mod asn1_ref;
 mod depth;
-mod encoding_type;
-mod length;
-mod tag;
-mod traits;
+mod error;
 
-pub use asn1_error::Asn1Error;
-pub use asn1_object::Asn1Object;
-pub use asn1_object::asn1_integer::Asn1Integer;
+pub use asn1_ref::{Asn1Class, Asn1Ref, Children};
 pub use depth::Depth;
-pub use encoding_type::EncodingType;
-pub use tag::{Class, Tag};
-pub use traits::{TryDecode, TryEncode};
+pub use error::Asn1Error;
