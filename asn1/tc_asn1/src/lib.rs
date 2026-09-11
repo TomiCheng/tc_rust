@@ -61,7 +61,11 @@
 mod asn1_ref;
 mod depth;
 mod error;
+mod traits;
+mod universal;
 
 pub use asn1_ref::{Asn1Class, Asn1Ref, Children};
 pub use depth::Depth;
 pub use error::Asn1Error;
+pub use traits::{TryDecode, TryDecodeContent};
+pub use universal::{Asn1Boolean, Asn1Null};
