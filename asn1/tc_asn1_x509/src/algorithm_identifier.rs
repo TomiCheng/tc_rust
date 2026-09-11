@@ -14,11 +14,10 @@
 use alloc::boxed::Box;
 use core::fmt;
 
+use tc_asn1::tag::{NULL, SEQUENCE as TAG};
 use tc_asn1::{
-    Asn1Any, Asn1Error, Asn1Oid, Children, Depth, Encode, EncodingType, TryDecodeContent,
+    Asn1Any, Asn1Error, Asn1Null, Asn1Oid, Children, Depth, Encode, EncodingType, TryDecodeContent,
 };
-
-use tc_asn1::tag::SEQUENCE as TAG;
 
 /// `parameters` 的型別由 `algorithm` 決定，所以兩個方向的表示不同。
 ///
@@ -28,9 +27,11 @@ use tc_asn1::tag::SEQUENCE as TAG;
 pub enum AlgorithmParameters {
     /// 沒有參數。
     Absent,
+    /// `NULL`。光看 tag 就認得，不必查演算法，所以解碼時直接是它。
+    Null,
     /// 自己造的：型別知道，只需要寫出去。
     Built(Box<dyn Encode>),
-    /// 解進來的：型別待查，用的時候照 `algorithm` 去 `decode_as`。
+    /// 解進來的、不是 NULL 的：型別待查，用的時候照 `algorithm` 去 `decode_as`。
     Decoded(Asn1Any),
 }
 
@@ -38,6 +39,7 @@ impl fmt::Debug for AlgorithmParameters {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Absent => f.write_str("Absent"),
+            Self::Null => f.write_str("Null"),
             Self::Built(_) => f.write_str("Built(..)"),
             Self::Decoded(any) => f.debug_tuple("Decoded").field(any).finish(),
         }
@@ -55,13 +57,10 @@ impl fmt::Debug for AlgorithmParameters {
 /// 建構時參數直接放型別化的值；解碼時參數不解讀，要用時照 `algorithm` 決定型別：
 ///
 /// ```
-/// use tc_asn1::{Asn1Null, Depth, Encode, EncodingType, TryDecode};
-/// use tc_asn1_x509::AlgorithmIdentifier;
+/// use tc_asn1::{Depth, Encode, EncodingType, TryDecode};
+/// use tc_asn1_x509::{AlgorithmIdentifier, AlgorithmParameters};
 ///
-/// let alg = AlgorithmIdentifier::with_parameters(
-///     "1.2.840.113549.1.1.1".parse()?,   // rsaEncryption
-///     Asn1Null,
-/// );
+/// let alg = AlgorithmIdentifier::with_null("1.2.840.113549.1.1.1".parse()?); // rsaEncryption
 ///
 /// // 先問要多大，再配剛好的緩衝
 /// let mut out = vec![0_u8; alg.encoded_len(EncodingType::Der)];
@@ -76,9 +75,8 @@ impl fmt::Debug for AlgorithmParameters {
 /// assert_eq!(used, out.len());
 /// assert_eq!(decoded.algorithm().to_string(), "1.2.840.113549.1.1.1");
 ///
-/// // 參數解進來是 Asn1Any；知道是 rsaEncryption，這時才當 NULL 解
-/// let params = decoded.decoded_parameters().expect("rsaEncryption 帶 NULL");
-/// assert_eq!(params.as_ref().decode_as::<Asn1Null>(Depth::DEFAULT)?, Asn1Null);
+/// // NULL 光看 tag 就認得，解碼直接給變體
+/// assert!(matches!(decoded.parameters(), AlgorithmParameters::Null));
 /// # Ok::<(), tc_asn1::Asn1Error>(())
 /// ```
 ///
@@ -100,7 +98,15 @@ impl AlgorithmIdentifier {
         }
     }
 
-    /// 帶參數，例如 rsaEncryption 配 `Asn1Null`、ecPublicKey 配曲線的 OID。
+    /// 參數是 NULL：rsaEncryption 和所有 `*WithRSAEncryption` 的簽章演算法。
+    pub fn with_null(algorithm: Asn1Oid) -> Self {
+        Self {
+            algorithm,
+            parameters: AlgorithmParameters::Null,
+        }
+    }
+
+    /// 帶其他參數，例如 ecPublicKey 配曲線的 OID。
     pub fn with_parameters(algorithm: Asn1Oid, parameters: impl Encode + 'static) -> Self {
         Self {
             algorithm,
@@ -118,7 +124,7 @@ impl AlgorithmIdentifier {
         &self.parameters
     }
 
-    /// 解進來的參數；沒有或不是解進來的回 `None`。
+    /// 解進來、而且不是 NULL 的參數；其他情況回 `None`。
     pub fn decoded_parameters(&self) -> Option<&Asn1Any> {
         match &self.parameters {
             AlgorithmParameters::Decoded(any) => Some(any),
@@ -144,8 +150,12 @@ impl<'a> TryDecodeContent<'a> for AlgorithmIdentifier {
             .decode_as::<Asn1Oid>(depth)?;
 
         let parameters = match fields.next().transpose()? {
-            Some(field) => AlgorithmParameters::Decoded(Asn1Any::from(&field)),
             None => AlgorithmParameters::Absent,
+            Some(field) if field.tag() == NULL => {
+                field.decode_as::<Asn1Null>(depth)?; // 驗內容是空的
+                AlgorithmParameters::Null
+            }
+            Some(field) => AlgorithmParameters::Decoded(Asn1Any::from(&field)),
         };
 
         if fields.next().is_some() {
@@ -166,6 +176,7 @@ impl Encode for AlgorithmIdentifier {
     fn content_len(&self, rules: EncodingType) -> usize {
         let parameters = match &self.parameters {
             AlgorithmParameters::Absent => 0,
+            AlgorithmParameters::Null => Asn1Null.encoded_len(rules),
             AlgorithmParameters::Built(p) => p.encoded_len(rules),
             AlgorithmParameters::Decoded(p) => p.encoded_len(rules),
         };
@@ -176,6 +187,7 @@ impl Encode for AlgorithmIdentifier {
         let mut at = self.algorithm.encode(rules, out)?;
         at += match &self.parameters {
             AlgorithmParameters::Absent => 0,
+            AlgorithmParameters::Null => Asn1Null.encode(rules, &mut out[at..])?,
             AlgorithmParameters::Built(p) => p.encode(rules, &mut out[at..])?,
             AlgorithmParameters::Decoded(p) => p.encode(rules, &mut out[at..])?,
         };
@@ -188,7 +200,7 @@ mod tests {
     use super::*;
     use alloc::string::ToString;
     use alloc::vec::Vec;
-    use tc_asn1::{Asn1Null, TryDecode};
+    use tc_asn1::TryDecode;
 
     const DEPTH: Depth = Depth::DEFAULT;
 
@@ -219,8 +231,8 @@ mod tests {
         assert_eq!(used, RSA.len());
         assert_eq!(alg.algorithm().to_string(), "1.2.840.113549.1.1.1");
 
-        let params = alg.decoded_parameters().expect("RSA 帶 NULL 參數");
-        assert_eq!(params.as_ref().decode_as::<Asn1Null>(DEPTH), Ok(Asn1Null));
+        assert!(matches!(alg.parameters(), AlgorithmParameters::Null));
+        assert!(alg.decoded_parameters().is_none(), "NULL 不算 Decoded");
 
         assert_eq!(encode(&alg), RSA);
     }
@@ -250,9 +262,8 @@ mod tests {
 
     #[test]
     fn a_built_value_encodes_to_the_known_bytes() {
-        // 這就是分 Built / Decoded 的理由：造的時候型別知道，直接放 Asn1Null。
-        let alg =
-            AlgorithmIdentifier::with_parameters("1.2.840.113549.1.1.1".parse().unwrap(), Asn1Null);
+        // NULL 有專屬的建構子，不用 Box
+        let alg = AlgorithmIdentifier::with_null("1.2.840.113549.1.1.1".parse().unwrap());
         assert_eq!(encode(&alg), RSA);
 
         let alg = AlgorithmIdentifier::with_parameters(
@@ -263,6 +274,19 @@ mod tests {
 
         let alg = AlgorithmIdentifier::new("1.3.101.112".parse().unwrap());
         assert_eq!(encode(&alg), ED25519);
+    }
+
+    #[test]
+    fn a_null_carrying_contents_is_malformed_not_decoded() {
+        // 05 01 00 有 NULL 的 tag 但內容不空：是壞資料，不該掉進 Decoded
+        let input = [
+            0x30, 0x0E, 0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x01, 0x01, 0x05,
+            0x01, 0x00,
+        ];
+        assert_eq!(
+            AlgorithmIdentifier::try_decode(&input, DEPTH).err(),
+            Some(Asn1Error::MalformedValue)
+        );
     }
 
     #[test]
