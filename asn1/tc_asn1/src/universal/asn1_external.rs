@@ -13,7 +13,7 @@
 //! }
 //! ```
 //!
-//! 它是唯一一個「universal tag 套在 SEQUENCE 上」的通用型別：內容照 SEQUENCE 編，
+//! 這個通用型別的內容照 SEQUENCE 編，
 //! tag 換成 `28`。PKIX 用不到，照 bc 補齊。
 
 use alloc::boxed::Box;

@@ -11,25 +11,16 @@
 //!
 //! # 中間層
 //!
-//! 具名結構不直接寫位元組，中間隔一層 [`Asn1Object`]：
-//!
-//! ```text
-//! 具名結構  →  Asn1Object  →  位元組
-//! 位元組    →  Asn1Object  →  具名結構
-//! ```
-//!
-//! 這讓兩件事各自獨立：結構對映不必知道編碼規則，編碼規則不必知道有哪些結構。
-//! N 個結構配 M 種規則要寫 N + M 份程式碼，不是 N × M。異質的 `SET` 也因此
-//! 只是一個 `Vec<Asn1Object>`，不需要 trait 物件。
-//!
-//! 這是 Bouncy Castle 的分法（`ToAsn1Object()` 加 `GetEncoding(encoding)`），
-//! 移植對照接得回去。
+//! 具名結構實作 [`Encode`]，透過共同的 tag、長度與內容契約編碼；解碼時可用
+//! [`Asn1Ref`] 借用檢視 TLV，或由 [`TryDecode`] 建立擁有內容的型別。
+//! 未知型別可由 [`Asn1Any`] 保留原始編碼。異質的 [`Asn1Set`] 使用 trait 物件，
+//! 同質的 [`Asn1SetOf`] 則使用泛型；兩者的 DER 排序規則不同。
 //!
 //! # 編碼要選規則，解碼不用
 //!
-//! [`TryEncode`] 收 [`EncodingType`]：同一個值在 BER、DL、DER 下有不同寫法。
+//! [`Encode`] 收 [`EncodingType`]，選擇 BER 或 DER。
 //!
-//! [`TryDecode`] 不收：讀進來的位元組只有一種讀法，一律照 BER（三者的超集）
+//! [`TryDecode`] 不收：讀進來的位元組只有一種讀法，一律照 BER（DER 的超集）
 //! 寬鬆解。需要「輸入必須是 DER」的地方用往返比較 —— 重編成 DER 後與原位元組
 //! 相等才算數。這成立是因為 DER 的定義就是一個值只有一種合法編碼，所以不需要
 //! 第二個嚴格解碼器。
@@ -53,10 +44,25 @@
 //! 無號大端序（大數給的形式）和 DER 的有號最小編碼之間要補符號位元組，這個轉換
 //! 由本 crate 負責 —— 漏掉它是 ASN.1 互通最經典的錯。
 //!
-//! # 尚未涵蓋
+//! # 精確數值、識別碼與時間
 //!
-//! `UTCTime` / `GeneralizedTime` 還沒做。它們是憑證 `Validity` 才需要的，而且
-//! 各自帶著兩位數年份的世紀規則與日曆驗證。等做憑證時再一併處理。
+//! [`Asn1Real`] 保存任意精度的二進位或十進位表示，不做四則運算；轉成 `f64`
+//! 必須精確，不能表示時回傳 [`Asn1Error::InexactValue`]。REAL、TIME 與 DURATION
+//! 的 BER 解碼會正規化，重新編碼可能與輸入不同。
+//!
+//! [`Asn1RelativeOid`] 延續 OID 每個弧為 `u64` 的範圍。兩個 IRI 型別驗證 Unicode
+//! 標籤的線路語法，不做登記查詢或 A-label 正規化；相等性比較字串。
+//! [`Asn1EmbeddedPdv`] 與 [`Asn1CharacterString`] 攜帶語法識別和原始資料，
+//! 不解讀資料指定的傳輸語法。
+//!
+//! [`Asn1Time`] 包含日期、時間、區間、持續時間與重複區間；有用型別
+//! [`Asn1Date`]、[`Asn1TimeOfDay`]、[`Asn1DateTime`]、[`Asn1Duration`] 各自限制
+//! 格式。驗證日曆及分量結構，不查詢閏秒公告、時區資料庫或判斷區間先後。
+//! 原有 [`Asn1UtcTime`] 與 [`Asn1GeneralizedTime`] 保留原本的契約。
+//!
+//! 規則依據：[X.680](https://www.itu.int/rec/T-REC-X.680-202102-I/en)、
+//! [X.690](https://www.itu.int/rec/T-REC-X.690-202102-I/en) 與
+//! [X.660](https://www.itu.int/rec/T-REC-X.660-201107-I/en)。
 
 extern crate alloc;
 
@@ -76,10 +82,12 @@ pub use error::Asn1Error;
 pub use traits::{Encode, TryDecode, TryDecodeContent};
 pub use universal::tag;
 pub use universal::{
-    Arcs, Asn1BitString, Asn1BmpString, Asn1Boolean, Asn1Enumerated, Asn1External,
-    Asn1GeneralString, Asn1GeneralizedTime, Asn1GraphicString, Asn1Ia5String, Asn1Integer,
-    Asn1Null, Asn1NumericString, Asn1ObjectDescriptor, Asn1OctetString, Asn1Oid,
-    Asn1PrintableString, Asn1Sequence, Asn1SequenceOf, Asn1Set, Asn1SetOf, Asn1TeletexString,
+    Arcs, Asn1BitString, Asn1BmpString, Asn1Boolean, Asn1CharacterString, Asn1Date, Asn1DateTime,
+    Asn1Duration, Asn1EmbeddedPdv, Asn1Enumerated, Asn1External, Asn1GeneralString,
+    Asn1GeneralizedTime, Asn1GraphicString, Asn1Ia5String, Asn1Integer, Asn1Null,
+    Asn1NumericString, Asn1ObjectDescriptor, Asn1OctetString, Asn1Oid, Asn1OidIri,
+    Asn1PrintableString, Asn1Real, Asn1RelativeOid, Asn1RelativeOidIri, Asn1Sequence,
+    Asn1SequenceOf, Asn1Set, Asn1SetOf, Asn1TeletexString, Asn1Time, Asn1TimeOfDay,
     Asn1UniversalString, Asn1UtcTime, Asn1Utf8String, Asn1VideotexString, Asn1VisibleString,
-    ExternalEncoding,
+    ExternalEncoding, PdvIdentification,
 };

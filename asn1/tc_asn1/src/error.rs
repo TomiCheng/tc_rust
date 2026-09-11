@@ -30,6 +30,9 @@ pub enum Asn1Error {
     /// 內容位元組不符合該型別的規則。
     MalformedValue,
 
+    /// 數值無法精確表示於目標型別；不進行捨入、溢位或下溢轉換。
+    InexactValue,
+
     /// 巢狀比允許的深度更深。
     DepthExceeded,
 
@@ -47,6 +50,7 @@ impl fmt::Display for Asn1Error {
             Self::LengthOverflow => "length exceeds the platform's usize",
             Self::UnexpectedTag => "tag does not match the expected type",
             Self::MalformedValue => "contents are not valid for this type",
+            Self::InexactValue => "value cannot be represented exactly by the target type",
             Self::DepthExceeded => "nesting is deeper than the allowed limit",
             Self::BufferTooSmall => "output buffer is too small",
         })
