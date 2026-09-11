@@ -20,10 +20,6 @@ pub trait TryDecode<'a>: Sized {
 impl<'a, T: TryDecodeContent<'a>> TryDecode<'a> for T {
     fn try_decode(buff: &'a [u8], depth: Depth) -> Result<(usize, Self), Asn1Error> {
         let element = Asn1Ref::parse(buff, depth)?;
-        if element.tag() != T::TAG {
-            return Err(Asn1Error::UnexpectedTag);
-        }
-        let value = T::try_decode_content(element.value(), depth)?;
-        Ok((element.total_len(), value))
+        Ok((element.total_len(), element.decode_as(depth)?))
     }
 }

@@ -2,6 +2,7 @@
 
 use crate::depth::Depth;
 use crate::error::Asn1Error;
+use crate::traits::TryDecodeContent;
 
 /// tag 的類別，取自識別位元組的最高兩位。
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
@@ -87,20 +88,34 @@ impl<'a> Asn1Ref<'a> {
 
     /// 走訪子元素。primitive 沒有子元素，回空的迭代器。
     pub fn children(&self, depth: Depth) -> Children<'a> {
-        Children {
-            rest: if self.is_constructed() {
+        Children::new(
+            if self.is_constructed() {
                 self.value
             } else {
                 &[]
             },
             depth,
+        )
+    }
+
+    /// 把這個元素當成 `T` 解：驗 tag，然後只解內容。表頭不重解。
+    pub fn decode_as<T: TryDecodeContent<'a>>(&self, depth: Depth) -> Result<T, Asn1Error> {
+        if self.tag != T::TAG {
+            return Err(Asn1Error::UnexpectedTag);
         }
+        T::try_decode_content(self.value, depth)
     }
 }
 
 pub struct Children<'a> {
     rest: &'a [u8],
     depth: Depth,
+}
+
+impl<'a> Children<'a> {
+    pub(crate) fn new(rest: &'a [u8], depth: Depth) -> Self {
+        Self { rest, depth }
+    }
 }
 
 impl<'a> Iterator for Children<'a> {
