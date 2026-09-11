@@ -14,9 +14,10 @@ pub enum Asn1Class {
 }
 
 pub struct Asn1Ref<'a> {
+    /// 整段 TLV，含表頭；不定長時含 EOC。
+    raw: &'a [u8],
     tag: &'a [u8],
     value: &'a [u8],
-    total_len: usize,
 }
 
 impl<'a> Asn1Ref<'a> {
@@ -30,9 +31,9 @@ impl<'a> Asn1Ref<'a> {
                 let end = offset.checked_add(n).ok_or(Asn1Error::LengthOverflow)?;
                 let value = buff.get(offset..end).ok_or(Asn1Error::Truncated)?;
                 Ok(Self {
+                    raw: &buff[..end],
                     tag,
                     value,
-                    total_len: end,
                 })
             }
             None => {
@@ -50,24 +51,20 @@ impl<'a> Asn1Ref<'a> {
                     if rest[..2] == [0x00, 0x00] {
                         break;
                     }
-                    at += Self::parse(rest, depth)?.total_len; // 整個子 TLV 跳過
+                    at += Self::parse(rest, depth)?.total_len(); // 整個子 TLV 跳過
                 }
                 Ok(Self {
+                    raw: &buff[..at + 2],
                     tag,
                     value: &buff[offset..at],
-                    total_len: at + 2,
                 })
             }
         }
     }
 
-    /// 由已經拆開的 tag 與內容建一個視角；`total_len` 是它寫出來會佔的位元組數。
-    pub(crate) fn from_parts(tag: &'a [u8], value: &'a [u8]) -> Self {
-        Self {
-            tag,
-            value,
-            total_len: tag.len() + crate::traits::len_octets(value.len()) + value.len(),
-        }
+    /// 整段 TLV，含表頭。把子元素當另一個型別 `try_decode` 時用它。
+    pub fn raw(&self) -> &'a [u8] {
+        self.raw
     }
 
     pub fn tag(&self) -> &'a [u8] {
@@ -92,7 +89,7 @@ impl<'a> Asn1Ref<'a> {
     }
 
     pub fn total_len(&self) -> usize {
-        self.total_len
+        self.raw.len()
     }
 
     /// 走訪子元素。primitive 沒有子元素，回空的迭代器。
@@ -137,7 +134,7 @@ impl<'a> Iterator for Children<'a> {
         }
         match Asn1Ref::parse(self.rest, self.depth) {
             Ok(child) => {
-                self.rest = &self.rest[child.total_len..];
+                self.rest = &self.rest[child.total_len()..];
                 Some(Ok(child))
             }
             Err(error) => {
@@ -267,6 +264,17 @@ mod tests {
         assert_eq!(element.tag(), &[0x02]);
         assert_eq!(element.value(), &[0x05]);
         assert_eq!(element.total_len(), 3, "不含後面的 0xAA");
+    }
+
+    #[test]
+    fn raw_is_the_whole_tlv_and_value_sits_inside_it() {
+        let element = parse(&[0x02, 0x01, 0x05, 0xAA]);
+        assert_eq!(element.raw(), &[0x02, 0x01, 0x05]);
+
+        // 不定長：raw 含 EOC，value 不含
+        let element = parse(&[0x30, 0x80, 0x05, 0x00, 0x00, 0x00, 0xAA]);
+        assert_eq!(element.raw(), &[0x30, 0x80, 0x05, 0x00, 0x00, 0x00]);
+        assert_eq!(element.value(), &[0x05, 0x00]);
     }
 
     #[test]
