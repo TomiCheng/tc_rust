@@ -50,6 +50,10 @@ impl<'a> DecodeContent<'a> for Asn1Ia5String {
 
 crate::segments::constructed_string_decode!(Asn1Ia5String);
 
+impl crate::EncodeContent for Asn1Ia5String {
+    crate::segments::cer_string_content_encode!();
+}
+
 impl Encode for Asn1Ia5String {
     crate::segments::cer_string_encode!();
     fn tag(&self) -> &[u8] {

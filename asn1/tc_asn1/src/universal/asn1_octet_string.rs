@@ -54,6 +54,10 @@ impl<'a> DecodeConstructed<'a> for Asn1OctetString {
     }
 }
 
+impl crate::EncodeContent for Asn1OctetString {
+    crate::segments::cer_string_content_encode!();
+}
+
 impl Encode for Asn1OctetString {
     crate::segments::cer_string_encode!();
     fn tag(&self) -> &[u8] {

@@ -78,6 +78,10 @@ impl<'a> DecodeContent<'a> for Asn1UniversalString {
 
 crate::segments::constructed_string_decode!(Asn1UniversalString);
 
+impl crate::EncodeContent for Asn1UniversalString {
+    crate::segments::cer_string_content_encode!();
+}
+
 impl Encode for Asn1UniversalString {
     crate::segments::cer_string_encode!();
     /// 回傳 UniversalString 的識別位元組。

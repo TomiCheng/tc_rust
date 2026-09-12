@@ -75,6 +75,28 @@ impl<'a, T: DecodeContent<'a>> DecodeContent<'a> for Asn1SequenceOf<T> {
     }
 }
 
+impl<T: Encode> crate::EncodeContent for Asn1SequenceOf<T> {
+    type Error = Asn1Error;
+
+    /// Length of the contents, excluding the outer header and EOC.
+    /// Variable-time contract: public values only; no constant-time alternative is provided.
+    fn content_len_v2(&self, rules: EncodingOptions) -> usize {
+        <Self as Encode>::content_len(self, rules)
+    }
+
+    /// Write only the contents, leaving any remaining output bytes unchanged.
+    /// Variable-time contract: public values only; no constant-time alternative is provided.
+    fn encode_content_v2(
+        &self,
+        rules: EncodingOptions,
+        out: &mut [u8],
+    ) -> Result<usize, Asn1Error> {
+        let len = self.content_len_v2(rules);
+        let out = out.get_mut(..len).ok_or(Asn1Error::BufferTooSmall)?;
+        <Self as Encode>::encode_content(self, rules, out)
+    }
+}
+
 impl<T: Encode> Encode for Asn1SequenceOf<T> {
     fn tag(&self) -> &[u8] {
         TAG

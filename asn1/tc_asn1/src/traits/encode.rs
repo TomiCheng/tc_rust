@@ -6,6 +6,38 @@ use alloc::vec::Vec;
 use crate::encoding_options::EncodingOptions;
 use crate::error::Asn1Error;
 
+/// Encode contents without the outer tag, length field, or end-of-contents marker.
+pub trait EncodeContent {
+    type Error: core::error::Error;
+
+    /// Allocate a Vec and encode only the contents, without the outer header or EOC.
+    /// Encoding errors are returned unchanged.
+    /// Variable-time contract: public values only; no constant-time alternative is provided.
+    fn encode_content_to_vec(&self, rules: EncodingOptions) -> Result<Vec<u8>, Self::Error> {
+        let mut out = alloc::vec![0; self.content_len_v2(rules)];
+        let written = self.encode_content_v2(rules, &mut out)?;
+        debug_assert_eq!(
+            written,
+            out.len(),
+            "content_len_v2 and encode_content_v2 disagree"
+        );
+        Ok(out)
+    }
+
+    /// Content length in bytes; use the same options for length calculation and encoding.
+    /// Variable-time contract: public values only; no constant-time alternative is provided.
+    fn content_len_v2(&self, rules: EncodingOptions) -> usize;
+
+    /// Write only the contents and return the number of bytes written.
+    /// The caller must provide at least `content_len_v2(rules)` bytes in `out`.
+    /// Variable-time contract: public values only; no constant-time alternative is provided.
+    fn encode_content_v2(
+        &self,
+        rules: EncodingOptions,
+        out: &mut [u8],
+    ) -> Result<usize, Self::Error>;
+}
+
 pub trait Encode {
     /// 配置剛好大小的 Vec 並寫入完整 TLV。變動時間：分支只依編碼結構。
     ///

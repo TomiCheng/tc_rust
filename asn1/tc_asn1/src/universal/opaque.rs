@@ -55,6 +55,10 @@ macro_rules! opaque_bytes {
 
         $crate::segments::constructed_string_decode!($name);
 
+        impl $crate::EncodeContent for $name {
+            $crate::segments::cer_string_content_encode!();
+        }
+
         impl $crate::traits::Encode for $name {
             $crate::segments::cer_string_encode!();
             /// 回傳此型別的識別位元組。

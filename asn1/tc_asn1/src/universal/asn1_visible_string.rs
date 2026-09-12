@@ -60,6 +60,10 @@ impl<'a> DecodeContent<'a> for Asn1VisibleString {
 
 crate::segments::constructed_string_decode!(Asn1VisibleString);
 
+impl crate::EncodeContent for Asn1VisibleString {
+    crate::segments::cer_string_content_encode!();
+}
+
 impl Encode for Asn1VisibleString {
     crate::segments::cer_string_encode!();
     /// 回傳 VisibleString 的識別位元組。
