@@ -107,6 +107,56 @@ macro_rules! cer_string_encode {
 }
 pub(crate) use cer_string_encode;
 
+/// Concatenates primitive segment contents, including nested constructed segments.
+/// Callers validate the joined bytes, so multioctet characters can cross boundaries.
+/// Variable time: branches only on the encoding structure.
+pub(crate) fn join_segments(
+    tag: &[u8],
+    value: &[u8],
+    depth: crate::Depth,
+) -> Result<alloc::vec::Vec<u8>, Asn1Error> {
+    fn append(
+        tag: &[u8],
+        value: &[u8],
+        depth: crate::Depth,
+        joined: &mut alloc::vec::Vec<u8>,
+    ) -> Result<(), Asn1Error> {
+        let depth = depth.descend()?;
+        for child in crate::Children::new(value, depth) {
+            let child = child?;
+            if child.tag() == tag {
+                joined.extend_from_slice(child.value());
+            } else if crate::asn1_ref::is_constructed_form(child.tag(), tag) {
+                append(tag, child.value(), depth, joined)?;
+            } else {
+                return Err(Asn1Error::UnexpectedTag);
+            }
+        }
+        Ok(())
+    }
+    let mut joined = alloc::vec::Vec::new();
+    append(tag, value, depth, &mut joined)?;
+    Ok(joined)
+}
+
+macro_rules! constructed_string_decode {
+    ($name:ty) => {
+        impl<'a> $crate::DecodeConstructed<'a> for $name {
+            /// Joins OCTET STRING segments before validating the character encoding.
+            /// Variable time: branches only on the encoding structure.
+            fn try_decode_constructed(
+                value: &'a [u8],
+                depth: $crate::Depth,
+            ) -> Result<Self, $crate::Asn1Error> {
+                let joined =
+                    $crate::segments::join_segments($crate::tag::OCTET_STRING, value, depth)?;
+                <Self as $crate::DecodeContent<'_>>::try_decode_content(&joined, depth)
+            }
+        }
+    };
+}
+pub(crate) use constructed_string_decode;
+
 #[cfg(test)]
 mod tests {
     use crate::*;

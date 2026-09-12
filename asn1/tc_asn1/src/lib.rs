@@ -19,9 +19,11 @@
 //! 沒有 schema 時，用 [`Asn1Object`] 把不認識的緩衝區整棵解開，輸出樹狀文字或
 //! 比對節點；尚未建立具名型別時，也能直接拼樹編碼。具名結構仍走 [`Fields`]。
 //! [`Asn1Any`] 保留原始位元組，樹則解讀值；已解讀部分重編會正規化，驗簽章
-//! 必須用原位元組。樹的 [`Asn1Object::Unknown`] 保留未支援的 universal 編碼，
-//! 包括 BER constructed 字元字串與未指派號碼；這些不會正規化，因此樹的往返比較
-//! 不能代替完整的 DER 驗證。此樹不歸零，只能存公開資料。
+//! 必須用原位元組。此樹不歸零，只能存公開資料。
+//!
+//! [`Asn1Object::Unknown`] preserves unassigned universal tags and unsupported
+//! constructed forms of non-string types. These are not canonicalised, so a
+//! tree round trip cannot replace complete DER validation.
 //!
 //! # 具名結構怎麼寫
 //!

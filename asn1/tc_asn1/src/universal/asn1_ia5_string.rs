@@ -33,6 +33,8 @@ impl Asn1Ia5String {
 
 impl<'a> DecodeContent<'a> for Asn1Ia5String {
     const TAG: &'static [u8] = TAG;
+    const CONSTRUCTED: Option<fn(&'a [u8], Depth) -> Result<Self, Asn1Error>> =
+        Some(<Self as crate::DecodeConstructed<'a>>::try_decode_constructed);
 
     fn try_decode_content(value: &'a [u8], _: Depth) -> Result<Self, Asn1Error> {
         if !value.is_ascii() {
@@ -45,6 +47,8 @@ impl<'a> DecodeContent<'a> for Asn1Ia5String {
         })
     }
 }
+
+crate::segments::constructed_string_decode!(Asn1Ia5String);
 
 impl Encode for Asn1Ia5String {
     crate::segments::cer_string_encode!();

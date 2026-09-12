@@ -2,7 +2,6 @@
 
 use alloc::vec::Vec;
 
-use crate::asn1_ref::Children;
 use crate::depth::Depth;
 use crate::encoding_type::EncodingType;
 use crate::error::Asn1Error;
@@ -49,18 +48,9 @@ impl<'a> DecodeConstructed<'a> for Asn1OctetString {
     /// 串接 BER 分段字串，巢狀分段透過新的 constructed 解碼入口處理。
     /// 變動時間：分支只依編碼結構，只能用於公開值；沒有常數時間替代方法。
     fn try_decode_constructed(value: &'a [u8], depth: Depth) -> Result<Self, Asn1Error> {
-        let depth = depth.descend()?;
-        let mut bytes = Vec::new();
-        for child in Children::new(value, depth) {
-            let child = child?;
-            let part = if child.is_constructed() {
-                child.decode_constructed_as::<Self>(depth)?
-            } else {
-                child.decode_as::<Self>(depth)?
-            };
-            bytes.extend_from_slice(&part.bytes);
-        }
-        Ok(Self { bytes })
+        Ok(Self::from(crate::segments::join_segments(
+            TAG, value, depth,
+        )?))
     }
 }
 

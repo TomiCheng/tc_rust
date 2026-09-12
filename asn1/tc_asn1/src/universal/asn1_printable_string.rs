@@ -42,6 +42,8 @@ impl Asn1PrintableString {
 
 impl<'a> DecodeContent<'a> for Asn1PrintableString {
     const TAG: &'static [u8] = TAG;
+    const CONSTRUCTED: Option<fn(&'a [u8], Depth) -> Result<Self, Asn1Error>> =
+        Some(<Self as crate::DecodeConstructed<'a>>::try_decode_constructed);
 
     fn try_decode_content(value: &'a [u8], _: Depth) -> Result<Self, Asn1Error> {
         if !value.iter().all(|b| is_printable(*b)) {
@@ -54,6 +56,8 @@ impl<'a> DecodeContent<'a> for Asn1PrintableString {
         })
     }
 }
+
+crate::segments::constructed_string_decode!(Asn1PrintableString);
 
 impl Encode for Asn1PrintableString {
     crate::segments::cer_string_encode!();

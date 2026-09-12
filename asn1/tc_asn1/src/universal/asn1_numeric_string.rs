@@ -50,6 +50,8 @@ impl Asn1NumericString {
 
 impl<'a> DecodeContent<'a> for Asn1NumericString {
     const TAG: &'static [u8] = TAG;
+    const CONSTRUCTED: Option<fn(&'a [u8], Depth) -> Result<Self, Asn1Error>> =
+        Some(<Self as crate::DecodeConstructed<'a>>::try_decode_constructed);
 
     /// 以建構時相同的字集規則驗證內容。
     /// 變動時間：依內容長度與字元分支。
@@ -58,6 +60,8 @@ impl<'a> DecodeContent<'a> for Asn1NumericString {
         Self::new(text)
     }
 }
+
+crate::segments::constructed_string_decode!(Asn1NumericString);
 
 impl Encode for Asn1NumericString {
     crate::segments::cer_string_encode!();

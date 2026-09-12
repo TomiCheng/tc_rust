@@ -35,6 +35,8 @@ impl From<String> for Asn1Utf8String {
 
 impl<'a> DecodeContent<'a> for Asn1Utf8String {
     const TAG: &'static [u8] = TAG;
+    const CONSTRUCTED: Option<fn(&'a [u8], Depth) -> Result<Self, Asn1Error>> =
+        Some(<Self as crate::DecodeConstructed<'a>>::try_decode_constructed);
 
     /// 不合法的 UTF-8（含過長編碼、代理對）一律拒絕，這是 `from_utf8` 的規則。
     fn try_decode_content(value: &'a [u8], _: Depth) -> Result<Self, Asn1Error> {
@@ -42,6 +44,8 @@ impl<'a> DecodeContent<'a> for Asn1Utf8String {
         Ok(Self::new(text))
     }
 }
+
+crate::segments::constructed_string_decode!(Asn1Utf8String);
 
 impl Encode for Asn1Utf8String {
     crate::segments::cer_string_encode!();
@@ -74,11 +78,49 @@ mod tests {
         assert_eq!(value.encode_to_vec(EncodingType::Cer).unwrap(), expected);
         let tree = crate::Asn1Object::from(value.clone());
         assert_eq!(tree.encode_to_vec(EncodingType::Cer).unwrap(), expected);
+        assert_eq!(
+            Asn1Utf8String::try_decode_exact(&expected, DEPTH),
+            Ok(value.clone())
+        );
+        assert_eq!(
+            crate::Asn1Object::try_decode_exact(&expected, DEPTH),
+            Ok(tree)
+        );
         let mut definite = alloc::vec![0x0c, 0x82, 3, 0xe9];
         definite.extend_from_slice(text.as_bytes());
         for rules in [EncodingType::Ber, EncodingType::Der] {
             assert_eq!(value.encode_to_vec(rules).unwrap(), definite);
         }
+    }
+
+    #[test]
+    fn constructed_utf8_validates_after_joining_and_rejects_wrong_segment_tags() {
+        for input in [
+            &[0x2c, 4, 4, 2, 0xc3, 0xa9][..],
+            &[0x2c, 6, 4, 1, 0xc3, 4, 1, 0xa9],
+            &[0x2c, 8, 0x24, 3, 4, 1, 0xc3, 4, 1, 0xa9],
+        ] {
+            assert_eq!(
+                Asn1Utf8String::try_decode_exact(input, DEPTH)
+                    .unwrap()
+                    .as_str(),
+                "é"
+            );
+        }
+        assert_eq!(
+            Asn1Utf8String::try_decode_exact(&[0x2c, 3, 4, 1, 0xc3], DEPTH),
+            Err(Asn1Error::MalformedValue)
+        );
+        assert_eq!(
+            Asn1Utf8String::try_decode_exact(&[0x2c, 3, 0x0c, 1, b'A'], DEPTH),
+            Err(Asn1Error::UnexpectedTag)
+        );
+        let tree = crate::Asn1Object::try_decode_exact(&[0x2c, 3, 4, 1, b'A'], DEPTH).unwrap();
+        assert_eq!(tree, crate::Asn1Object::from(Asn1Utf8String::new("A")));
+        assert_eq!(
+            alloc::string::ToString::to_string(&tree),
+            "UTF8String \"A\"\n"
+        );
     }
 
     #[test]

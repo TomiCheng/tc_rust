@@ -76,7 +76,7 @@ pub enum Asn1Object {
     RelativeOidIri(Asn1RelativeOidIri),
     /// 非 universal 類別；constructed 解成子元素，primitive 保留內容。
     Tagged(Asn1Tagged),
-    /// 未支援的 universal 編碼，例如 BER constructed 字元字串（UTF8String 等）或未指派號碼。
+    /// Unassigned universal tags and unsupported constructed forms of non-string types.
     /// dump 遇到超過 `u64` 的號碼時，以 `tag=` 加完整十六進位識別位元組顯示。
     /// Raw encodings are not canonicalised under CER either.
     Unknown(Asn1Any),
@@ -305,6 +305,44 @@ impl Asn1Object {
             }
             tag::OID_IRI => Self::OidIri(Asn1OidIri::try_decode_content(element.value(), depth)?),
             tag::RELATIVE_OID_IRI => Self::RelativeOidIri(Asn1RelativeOidIri::try_decode_content(
+                element.value(),
+                depth,
+            )?),
+            tag::CONSTRUCTED_OBJECT_DESCRIPTOR => Self::ObjectDescriptor(
+                Asn1ObjectDescriptor::try_decode_constructed(element.value(), depth)?,
+            ),
+            tag::CONSTRUCTED_UTF8_STRING => Self::Utf8String(
+                Asn1Utf8String::try_decode_constructed(element.value(), depth)?,
+            ),
+            tag::CONSTRUCTED_NUMERIC_STRING => Self::NumericString(
+                Asn1NumericString::try_decode_constructed(element.value(), depth)?,
+            ),
+            tag::CONSTRUCTED_PRINTABLE_STRING => Self::PrintableString(
+                Asn1PrintableString::try_decode_constructed(element.value(), depth)?,
+            ),
+            tag::CONSTRUCTED_TELETEX_STRING => Self::TeletexString(
+                Asn1TeletexString::try_decode_constructed(element.value(), depth)?,
+            ),
+            tag::CONSTRUCTED_VIDEOTEX_STRING => Self::VideotexString(
+                Asn1VideotexString::try_decode_constructed(element.value(), depth)?,
+            ),
+            tag::CONSTRUCTED_IA5_STRING => Self::Ia5String(Asn1Ia5String::try_decode_constructed(
+                element.value(),
+                depth,
+            )?),
+            tag::CONSTRUCTED_GRAPHIC_STRING => Self::GraphicString(
+                Asn1GraphicString::try_decode_constructed(element.value(), depth)?,
+            ),
+            tag::CONSTRUCTED_VISIBLE_STRING => Self::VisibleString(
+                Asn1VisibleString::try_decode_constructed(element.value(), depth)?,
+            ),
+            tag::CONSTRUCTED_GENERAL_STRING => Self::GeneralString(
+                Asn1GeneralString::try_decode_constructed(element.value(), depth)?,
+            ),
+            tag::CONSTRUCTED_UNIVERSAL_STRING => Self::UniversalString(
+                Asn1UniversalString::try_decode_constructed(element.value(), depth)?,
+            ),
+            tag::CONSTRUCTED_BMP_STRING => Self::BmpString(Asn1BmpString::try_decode_constructed(
                 element.value(),
                 depth,
             )?),
@@ -746,8 +784,8 @@ mod tests {
     fn unknown_universal_elements_preserve_their_full_encoding_even_under_der() {
         for (input, text) in [
             (
-                &b"\x2c\x03\x0c\x01\x41"[..],
-                "[UNIVERSAL 12] constructed (3 bytes) 0c0141\n",
+                &b"\x21\x03\x01\x01\x41"[..],
+                "[UNIVERSAL 1] constructed (3 bytes) 010141\n",
             ),
             (&b"\x1f\x25\x00"[..], "[UNIVERSAL 37] (0 bytes)\n"),
             (
@@ -755,8 +793,8 @@ mod tests {
                 "[UNIVERSAL 37] (1 bytes) aa\n",
             ),
             (
-                &b"\x2c\x80\x0c\x01\x41\x00\x00"[..],
-                "[UNIVERSAL 12] constructed (3 bytes) 0c0141\n",
+                &b"\x21\x80\x01\x01\x41\x00\x00"[..],
+                "[UNIVERSAL 1] constructed (3 bytes) 010141\n",
             ),
         ] {
             let tree = decode(input);
@@ -954,6 +992,12 @@ mod tests {
                 b"\x07\x00",
                 Asn1Object::ObjectDescriptor(_)
             ),
+            (
+                CONSTRUCTED_OBJECT_DESCRIPTOR,
+                b"\x27\x02\x04\x00",
+                Asn1Object::ObjectDescriptor(_),
+                b"\x07\x00"
+            ),
             (EXTERNAL, b"\x28\x04\x81\x02AB", Asn1Object::External(_)),
             (REAL, b"\x09\x00", Asn1Object::Real(_)),
             (ENUMERATED, b"\x0a\x01\x00", Asn1Object::Enumerated(_)),
@@ -963,19 +1007,55 @@ mod tests {
                 Asn1Object::EmbeddedPdv(_)
             ),
             (UTF8_STRING, b"\x0c\x00", Asn1Object::Utf8String(_)),
+            (
+                CONSTRUCTED_UTF8_STRING,
+                b"\x2c\x02\x04\x00",
+                Asn1Object::Utf8String(_),
+                b"\x0c\x00"
+            ),
             (RELATIVE_OID, b"\x0d\x01\x00", Asn1Object::RelativeOid(_)),
             (TIME, b"\x0e\x042024", Asn1Object::Time(_)),
             (SEQUENCE, b"\x30\x00", Asn1Object::Sequence(_)),
             (SET, b"\x31\x00", Asn1Object::Set(_)),
             (NUMERIC_STRING, b"\x12\x00", Asn1Object::NumericString(_)),
             (
+                CONSTRUCTED_NUMERIC_STRING,
+                b"\x32\x02\x04\x00",
+                Asn1Object::NumericString(_),
+                b"\x12\x00"
+            ),
+            (
                 PRINTABLE_STRING,
                 b"\x13\x00",
                 Asn1Object::PrintableString(_)
             ),
+            (
+                CONSTRUCTED_PRINTABLE_STRING,
+                b"\x33\x02\x04\x00",
+                Asn1Object::PrintableString(_),
+                b"\x13\x00"
+            ),
             (TELETEX_STRING, b"\x14\x00", Asn1Object::TeletexString(_)),
+            (
+                CONSTRUCTED_TELETEX_STRING,
+                b"\x34\x02\x04\x00",
+                Asn1Object::TeletexString(_),
+                b"\x14\x00"
+            ),
             (VIDEOTEX_STRING, b"\x15\x00", Asn1Object::VideotexString(_)),
+            (
+                CONSTRUCTED_VIDEOTEX_STRING,
+                b"\x35\x02\x04\x00",
+                Asn1Object::VideotexString(_),
+                b"\x15\x00"
+            ),
             (IA5_STRING, b"\x16\x00", Asn1Object::Ia5String(_)),
+            (
+                CONSTRUCTED_IA5_STRING,
+                b"\x36\x02\x04\x00",
+                Asn1Object::Ia5String(_),
+                b"\x16\x00"
+            ),
             (UTC_TIME, b"\x17\x0d230101000000Z", Asn1Object::UtcTime(_)),
             (
                 GENERALIZED_TIME,
@@ -983,12 +1063,36 @@ mod tests {
                 Asn1Object::GeneralizedTime(_)
             ),
             (GRAPHIC_STRING, b"\x19\x00", Asn1Object::GraphicString(_)),
+            (
+                CONSTRUCTED_GRAPHIC_STRING,
+                b"\x39\x02\x04\x00",
+                Asn1Object::GraphicString(_),
+                b"\x19\x00"
+            ),
             (VISIBLE_STRING, b"\x1a\x00", Asn1Object::VisibleString(_)),
+            (
+                CONSTRUCTED_VISIBLE_STRING,
+                b"\x3a\x02\x04\x00",
+                Asn1Object::VisibleString(_),
+                b"\x1a\x00"
+            ),
             (GENERAL_STRING, b"\x1b\x00", Asn1Object::GeneralString(_)),
+            (
+                CONSTRUCTED_GENERAL_STRING,
+                b"\x3b\x02\x04\x00",
+                Asn1Object::GeneralString(_),
+                b"\x1b\x00"
+            ),
             (
                 UNIVERSAL_STRING,
                 b"\x1c\x00",
                 Asn1Object::UniversalString(_)
+            ),
+            (
+                CONSTRUCTED_UNIVERSAL_STRING,
+                b"\x3c\x02\x04\x00",
+                Asn1Object::UniversalString(_),
+                b"\x1c\x00"
             ),
             (
                 CHARACTER_STRING,
@@ -996,6 +1100,12 @@ mod tests {
                 Asn1Object::CharacterString(_)
             ),
             (BMP_STRING, b"\x1e\x00", Asn1Object::BmpString(_)),
+            (
+                CONSTRUCTED_BMP_STRING,
+                b"\x3e\x02\x04\x00",
+                Asn1Object::BmpString(_),
+                b"\x1e\x00"
+            ),
             (DATE, b"\x1f\x1f\x0820240229", Asn1Object::Date(_)),
             (TIME_OF_DAY, b"\x1f\x20\x06123000", Asn1Object::TimeOfDay(_)),
             (

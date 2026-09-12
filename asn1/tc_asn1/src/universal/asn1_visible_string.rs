@@ -47,6 +47,8 @@ impl Asn1VisibleString {
 
 impl<'a> DecodeContent<'a> for Asn1VisibleString {
     const TAG: &'static [u8] = TAG;
+    const CONSTRUCTED: Option<fn(&'a [u8], Depth) -> Result<Self, Asn1Error>> =
+        Some(<Self as crate::DecodeConstructed<'a>>::try_decode_constructed);
 
     /// 以建構時相同的字集規則驗證內容。
     /// 變動時間：依內容長度與字元分支。
@@ -55,6 +57,8 @@ impl<'a> DecodeContent<'a> for Asn1VisibleString {
         Self::new(text)
     }
 }
+
+crate::segments::constructed_string_decode!(Asn1VisibleString);
 
 impl Encode for Asn1VisibleString {
     crate::segments::cer_string_encode!();

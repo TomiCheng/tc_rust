@@ -53,8 +53,8 @@ pub trait Decode<'a>: Sized {
     /// 以 DER 往返比較檢查已解讀部分，重編不同時回傳 [`Asn1Error::NotDer`]。
     /// 變動時間：分支只依編碼結構，最後比較公開的編碼位元組。
     ///
-    /// [`crate::Asn1Any`] 與 [`crate::Asn1Object::Unknown`] 保真，原樣重送的
-    /// 部分無法查出 DER 違規；例如下例的 constructed 字元字串仍會通過。
+    /// [`crate::Asn1Any`] and [`crate::Asn1Object::Unknown`] preserve raw encodings.
+    /// These opaque parts cannot be validated by comparing their encodings.
     /// [`crate::Asn1Object::Set`] 缺少 schema，也無法保證 SET OF CHOICE 的排序。
     /// 呼叫端需選擇符合 schema 的型別；這不是對任意 ASN.1 的完整 DER 驗證器。
     ///
@@ -66,7 +66,7 @@ pub trait Decode<'a>: Sized {
     /// assert_eq!(Asn1Boolean::try_decode_der(&[1, 1, 255], Depth::DEFAULT),
     ///     Ok(Asn1Boolean(true)));
     /// // Unknown 內容不解讀，不能靠往返比較驗證其中的 DER。
-    /// assert!(Asn1Object::try_decode_der(&[0x30, 3, 0x2c, 1, 0x41], Depth::DEFAULT).is_ok());
+    /// assert!(Asn1Object::try_decode_der(&[0x30, 3, 0x21, 1, 0x41], Depth::DEFAULT).is_ok());
     /// ```
     fn try_decode_der(buff: &'a [u8], depth: Depth) -> Result<Self, Asn1Error>
     where
@@ -152,7 +152,7 @@ mod tests {
 
     #[test]
     fn der_round_trip_checks_cannot_validate_opaque_encodings() {
-        let input = [0x30, 3, 0x2c, 1, 0x41];
+        let input = [0x30, 3, 0x21, 1, 0x41];
         let value = Asn1Object::try_decode_der(&input, Depth::DEFAULT).unwrap();
         assert!(matches!(
             &value.as_sequence().unwrap()[0],

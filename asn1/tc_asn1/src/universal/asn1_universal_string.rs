@@ -56,6 +56,8 @@ impl From<String> for Asn1UniversalString {
 
 impl<'a> DecodeContent<'a> for Asn1UniversalString {
     const TAG: &'static [u8] = TAG;
+    const CONSTRUCTED: Option<fn(&'a [u8], Depth) -> Result<Self, Asn1Error>> =
+        Some(<Self as crate::DecodeConstructed<'a>>::try_decode_constructed);
 
     /// 解讀 UCS-4 大端序；長度不是四的倍數或碼位不是 Unicode 純量值時拒絕。
     /// 變動時間：依內容長度與碼位分支。
@@ -73,6 +75,8 @@ impl<'a> DecodeContent<'a> for Asn1UniversalString {
         Ok(Self { text })
     }
 }
+
+crate::segments::constructed_string_decode!(Asn1UniversalString);
 
 impl Encode for Asn1UniversalString {
     crate::segments::cer_string_encode!();

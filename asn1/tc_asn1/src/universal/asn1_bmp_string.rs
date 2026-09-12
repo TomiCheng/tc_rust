@@ -52,6 +52,8 @@ impl Asn1BmpString {
 
 impl<'a> DecodeContent<'a> for Asn1BmpString {
     const TAG: &'static [u8] = TAG;
+    const CONSTRUCTED: Option<fn(&'a [u8], Depth) -> Result<Self, Asn1Error>> =
+        Some(<Self as crate::DecodeConstructed<'a>>::try_decode_constructed);
 
     /// 逐個解讀兩位元組的 UCS-2 碼位；奇數長度與所有代理碼一律拒絕。
     /// 變動時間：依內容長度與碼位分支，不嘗試合併代理對。
@@ -69,6 +71,8 @@ impl<'a> DecodeContent<'a> for Asn1BmpString {
         Ok(Self { text })
     }
 }
+
+crate::segments::constructed_string_decode!(Asn1BmpString);
 
 impl Encode for Asn1BmpString {
     crate::segments::cer_string_encode!();

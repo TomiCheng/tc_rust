@@ -39,6 +39,9 @@ macro_rules! opaque_bytes {
 
         impl<'a> $crate::traits::DecodeContent<'a> for $name {
             const TAG: &'static [u8] = $tag;
+            const CONSTRUCTED: Option<
+                fn(&'a [u8], $crate::Depth) -> Result<Self, $crate::Asn1Error>,
+            > = Some(<Self as $crate::DecodeConstructed<'a>>::try_decode_constructed);
 
             /// 任何內容都合法，包括空的。
             /// 變動時間：配置與複製量由內容長度決定。
@@ -49,6 +52,8 @@ macro_rules! opaque_bytes {
                 Ok(Self::new(value))
             }
         }
+
+        $crate::segments::constructed_string_decode!($name);
 
         impl $crate::traits::Encode for $name {
             $crate::segments::cer_string_encode!();
