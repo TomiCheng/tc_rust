@@ -25,8 +25,8 @@ use crate::depth::Depth;
 use crate::encoding_type::EncodingType;
 use crate::error::Asn1Error;
 #[cfg(test)]
-use crate::traits::TryDecode;
-use crate::traits::{Encode, TryDecodeContent};
+use crate::traits::Decode;
+use crate::traits::{DecodeContent, Encode};
 use crate::{Explicit, Fields, Implicit, SequenceFields};
 
 const SINGLE_ASN1_TYPE: &[u8] = &[0xA0]; // [0] EXPLICIT，constructed
@@ -82,7 +82,7 @@ impl Asn1External {
     }
 }
 
-impl<'a> TryDecodeContent<'a> for Asn1External {
+impl<'a> DecodeContent<'a> for Asn1External {
     const TAG: &'static [u8] = TAG;
 
     /// 變動時間：分支只依編碼結構。

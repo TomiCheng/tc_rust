@@ -3,14 +3,14 @@
 use crate::depth::Depth;
 use crate::encoding_type::EncodingType;
 use crate::error::Asn1Error;
-use crate::traits::{Encode, TryDecodeContent};
+use crate::traits::{DecodeContent, Encode};
 
 use super::tag::BOOLEAN as TAG;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Asn1Boolean(pub bool);
 
-impl<'a> TryDecodeContent<'a> for Asn1Boolean {
+impl<'a> DecodeContent<'a> for Asn1Boolean {
     const TAG: &'static [u8] = TAG;
 
     fn try_decode_content(value: &'a [u8], _: Depth) -> Result<Self, Asn1Error> {
@@ -39,7 +39,7 @@ impl Encode for Asn1Boolean {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::traits::TryDecode;
+    use crate::traits::Decode;
 
     #[test]
     fn true_is_written_as_all_ones_and_false_as_zero() {

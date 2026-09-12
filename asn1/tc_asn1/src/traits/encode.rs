@@ -108,7 +108,7 @@ pub(crate) fn write_len(length: usize, out: &mut [u8]) -> usize {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{Asn1Boolean, Asn1Object, Asn1Tagged, Depth, TryDecode};
+    use crate::{Asn1Boolean, Asn1Object, Asn1Tagged, Decode, Depth};
     use alloc::vec;
 
     #[test]

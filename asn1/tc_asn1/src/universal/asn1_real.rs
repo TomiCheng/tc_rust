@@ -9,7 +9,7 @@ use super::{
     real_number::{Exponent, Magnitude},
     tag::REAL as TAG,
 };
-use crate::{Asn1Error, Depth, Encode, EncodingType, TryDecodeContent};
+use crate::{Asn1Error, DecodeContent, Depth, Encode, EncodingType};
 use alloc::{vec, vec::Vec};
 
 /// 已正規化的 REAL 編碼。相等比較採 DER 表示：二進位與十進位表示保持區別；
@@ -351,7 +351,7 @@ impl TryFrom<&Asn1Real> for f64 {
         }
     }
 }
-impl<'a> TryDecodeContent<'a> for Asn1Real {
+impl<'a> DecodeContent<'a> for Asn1Real {
     const TAG: &'static [u8] = TAG;
     /// 變動時間：接受 BER 各種 REAL 表示並正規化，保留原本的二進位或十進位底數。
     fn try_decode_content(value: &'a [u8], _: Depth) -> Result<Self, Asn1Error> {
@@ -376,7 +376,7 @@ impl Encode for Asn1Real {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::TryDecode;
+    use crate::Decode;
     #[test]
     fn binary_real_vectors_normalize_base_scaling_and_even_mantissas() {
         for (input, expected) in [

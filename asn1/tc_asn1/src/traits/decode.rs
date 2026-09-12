@@ -6,7 +6,7 @@ use crate::error::Asn1Error;
 use crate::{Encode, EncodingType};
 
 /// 只解內容，不碰表頭。IMPLICIT 標記過的欄位走這裡。
-pub trait TryDecodeContent<'a>: Sized {
+pub trait DecodeContent<'a>: Sized {
     /// 沒有被重新標記時，這個型別的識別位元組。
     const TAG: &'static [u8];
 
@@ -20,15 +20,15 @@ pub trait TryDecodeContent<'a>: Sized {
     }
 }
 
-/// 解一個完整的 TLV。由 [`TryDecodeContent`] 自動得到。
-pub trait TryDecode<'a>: Sized {
+/// 解一個完整的 TLV。由 [`DecodeContent`] 自動得到。
+pub trait Decode<'a>: Sized {
     fn try_decode(buff: &'a [u8], depth: Depth) -> Result<(usize, Self), Asn1Error>;
 
     /// 剛好一個 TLV，後面不准有東西。變動時間：分支只依編碼結構。
     ///
     /// # Examples
     /// ```
-    /// use tc_asn1::{Asn1Error, Asn1Null, Depth, TryDecode};
+    /// use tc_asn1::{Asn1Error, Asn1Null, Depth, Decode};
     /// assert_eq!(Asn1Null::try_decode_exact(&[5, 0], Depth::DEFAULT), Ok(Asn1Null));
     /// assert_eq!(Asn1Null::try_decode_exact(&[5, 0, 5, 0], Depth::DEFAULT),
     ///     Err(Asn1Error::TrailingData));
@@ -51,7 +51,7 @@ pub trait TryDecode<'a>: Sized {
     ///
     /// # Examples
     /// ```
-    /// use tc_asn1::{Asn1Boolean, Asn1Error, Asn1Object, Depth, TryDecode};
+    /// use tc_asn1::{Asn1Boolean, Asn1Error, Asn1Object, Depth, Decode};
     /// assert_eq!(Asn1Boolean::try_decode_der(&[1, 1, 1], Depth::DEFAULT),
     ///     Err(Asn1Error::NotDer));
     /// assert_eq!(Asn1Boolean::try_decode_der(&[1, 1, 255], Depth::DEFAULT),
@@ -71,7 +71,7 @@ pub trait TryDecode<'a>: Sized {
     }
 }
 
-impl<'a, T: TryDecodeContent<'a>> TryDecode<'a> for T {
+impl<'a, T: DecodeContent<'a>> Decode<'a> for T {
     fn try_decode(buff: &'a [u8], depth: Depth) -> Result<(usize, Self), Asn1Error> {
         let element = Asn1Ref::parse(buff, depth)?;
         Ok((element.total_len(), element.decode_as(depth)?))

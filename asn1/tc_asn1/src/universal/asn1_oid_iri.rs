@@ -5,7 +5,7 @@
 //! §7.5.3 允許實作者容忍未來可能解除保留的字元；這裡接受列出的純量範圍。
 
 use super::tag;
-use crate::{Asn1Error, Depth, Encode, EncodingType, TryDecodeContent};
+use crate::{Asn1Error, DecodeContent, Depth, Encode, EncodingType};
 use alloc::string::String;
 
 fn valid_label(label: &str) -> bool {
@@ -59,7 +59,7 @@ macro_rules! iri {
                 &self.text
             }
         }
-        impl<'a> TryDecodeContent<'a> for $name {
+        impl<'a> DecodeContent<'a> for $name {
             const TAG: &'static [u8] = tag::$tag;
             /// 變動時間：驗證 UTF-8、路徑與標籤。
             fn try_decode_content(value: &'a [u8], _: Depth) -> Result<Self, Asn1Error> {
@@ -116,7 +116,7 @@ assert!(Asn1RelativeOidIri::new("/台北").is_err());
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::TryDecode;
+    use crate::Decode;
     #[test]
     fn unicode_and_unbounded_integer_labels_round_trip_with_high_tags() {
         for text in [

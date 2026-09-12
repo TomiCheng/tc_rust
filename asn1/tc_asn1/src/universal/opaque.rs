@@ -37,7 +37,7 @@ macro_rules! opaque_bytes {
             }
         }
 
-        impl<'a> $crate::traits::TryDecodeContent<'a> for $name {
+        impl<'a> $crate::traits::DecodeContent<'a> for $name {
             const TAG: &'static [u8] = $tag;
 
             /// 任何內容都合法，包括空的。
@@ -114,7 +114,7 @@ opaque_bytes!(
 解碼不會移除控制位元組或拒絕非 UTF-8 內容。
 
 ```
-use tc_asn1::{Asn1VideotexString, Depth, TryDecode};
+use tc_asn1::{Asn1VideotexString, Depth, Decode};
 
 let (used, value) = Asn1VideotexString::try_decode(
     &[0x15, 3, 0x1B, 0, 0xFF], Depth::DEFAULT,
@@ -149,7 +149,7 @@ mod tests {
     use crate::depth::Depth;
     use crate::encoding_type::EncodingType;
     use crate::error::Asn1Error;
-    use crate::traits::{Encode, TryDecode};
+    use crate::traits::{Decode, Encode};
 
     const DEPTH: Depth = Depth::DEFAULT;
 

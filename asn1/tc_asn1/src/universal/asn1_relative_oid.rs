@@ -1,7 +1,7 @@
 //! ASN.1 `RELATIVE-OID`，每個弧各自使用最短 base-128 編碼。
 
 use super::tag::RELATIVE_OID as TAG;
-use crate::{Asn1Error, Depth, Encode, EncodingType, TryDecodeContent};
+use crate::{Asn1Error, DecodeContent, Depth, Encode, EncodingType};
 use alloc::vec::Vec;
 use core::{fmt, str::FromStr};
 
@@ -106,7 +106,7 @@ impl fmt::Display for Asn1RelativeOid {
         Ok(())
     }
 }
-impl<'a> TryDecodeContent<'a> for Asn1RelativeOid {
+impl<'a> DecodeContent<'a> for Asn1RelativeOid {
     const TAG: &'static [u8] = TAG;
     /// 變動時間：驗證每個弧，不合併開頭的弧。
     fn try_decode_content(value: &'a [u8], _: Depth) -> Result<Self, Asn1Error> {
@@ -131,7 +131,7 @@ impl Encode for Asn1RelativeOid {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::TryDecode;
+    use crate::Decode;
     #[test]
     fn arcs_are_independent_and_round_trip_through_both_encodings() {
         let value = Asn1RelativeOid::from_arcs(&[4, 3, 128]).unwrap();

@@ -5,7 +5,7 @@ use alloc::vec::Vec;
 use crate::depth::Depth;
 use crate::encoding_type::EncodingType;
 use crate::error::Asn1Error;
-use crate::traits::{Encode, TryDecodeContent};
+use crate::traits::{DecodeContent, Encode};
 
 use super::integer_octets::{minimal_signed, validate_integer_octets};
 use super::tag::ENUMERATED as TAG;
@@ -21,7 +21,7 @@ use super::tag::ENUMERATED as TAG;
 /// 編碼列舉值 5，再解回原值；標籤與 INTEGER 不同。
 ///
 /// ```
-/// use tc_asn1::{Asn1Enumerated, Depth, Encode, EncodingType, TryDecode};
+/// use tc_asn1::{Asn1Enumerated, Depth, Encode, EncodingType, Decode};
 ///
 /// let value = Asn1Enumerated::from(5_u64);
 /// let mut out = [0; 3];
@@ -125,7 +125,7 @@ impl TryFrom<&Asn1Enumerated> for i64 {
     }
 }
 
-impl<'a> TryDecodeContent<'a> for Asn1Enumerated {
+impl<'a> DecodeContent<'a> for Asn1Enumerated {
     const TAG: &'static [u8] = TAG;
 
     /// 驗證內容非空且沒有多餘符號位元組，與 INTEGER 共用規則。
@@ -157,7 +157,7 @@ impl Encode for Asn1Enumerated {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::traits::TryDecode;
+    use crate::traits::Decode;
 
     const DEPTH: Depth = Depth::DEFAULT;
 

@@ -5,7 +5,7 @@ use alloc::string::String;
 use crate::depth::Depth;
 use crate::encoding_type::EncodingType;
 use crate::error::Asn1Error;
-use crate::traits::{Encode, TryDecodeContent};
+use crate::traits::{DecodeContent, Encode};
 
 use super::tag::BMP_STRING as TAG;
 
@@ -50,7 +50,7 @@ impl Asn1BmpString {
     }
 }
 
-impl<'a> TryDecodeContent<'a> for Asn1BmpString {
+impl<'a> DecodeContent<'a> for Asn1BmpString {
     const TAG: &'static [u8] = TAG;
 
     /// 逐個解讀兩位元組的 UCS-2 碼位；奇數長度與所有代理碼一律拒絕。
@@ -96,7 +96,7 @@ impl Encode for Asn1BmpString {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::TryDecode;
+    use crate::Decode;
 
     #[test]
     fn latin_and_chinese_text_round_trip_as_two_bytes_per_character() {

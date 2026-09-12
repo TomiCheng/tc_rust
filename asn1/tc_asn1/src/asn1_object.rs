@@ -13,8 +13,7 @@ pub use tagged::{Asn1Tagged, TaggedContent};
 use crate::traits::len_octets;
 use crate::universal::*;
 use crate::{
-    Asn1Any, Asn1Class, Asn1Error, Asn1Ref, Depth, Encode, EncodingType, TryDecode,
-    TryDecodeContent,
+    Asn1Any, Asn1Class, Asn1Error, Asn1Ref, Decode, DecodeContent, Depth, Encode, EncodingType,
 };
 use alloc::vec::Vec;
 
@@ -29,7 +28,7 @@ use alloc::vec::Vec;
 /// 拿到未知結構時，先解成樹看內容，再重編。
 ///
 /// ```
-/// use tc_asn1::{Asn1Object, Depth, Encode, EncodingType, TryDecode};
+/// use tc_asn1::{Asn1Object, Depth, Encode, EncodingType, Decode};
 ///
 /// let input = [0x30, 5, 2, 1, 42, 5, 0];
 /// let (used, tree) = Asn1Object::try_decode(&input, Depth::DEFAULT).unwrap();
@@ -192,7 +191,7 @@ impl Asn1Object {
     /// [`Asn1Any`] 保存的原始元素可以另行解讀，原資料仍保留。
     ///
     /// ```
-    /// use tc_asn1::{Asn1Any, Asn1Object, Depth, TryDecode};
+    /// use tc_asn1::{Asn1Any, Asn1Object, Depth, Decode};
     ///
     /// let (_, any) = Asn1Any::try_decode(&[2, 1, 7], Depth::DEFAULT).unwrap();
     /// let tree = Asn1Object::from_ref(&any.as_ref(), Depth::DEFAULT).unwrap();
@@ -314,7 +313,7 @@ impl Asn1Object {
     }
 }
 
-impl<'a> TryDecode<'a> for Asn1Object {
+impl<'a> Decode<'a> for Asn1Object {
     /// 解讀第一個完整元素。變動時間：分支只依編碼結構。
     fn try_decode(buff: &'a [u8], depth: Depth) -> Result<(usize, Self), Asn1Error> {
         let element = Asn1Ref::parse(buff, depth)?;

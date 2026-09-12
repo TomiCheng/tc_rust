@@ -13,8 +13,7 @@
 
 use tc_asn1::tag::SEQUENCE as TAG;
 use tc_asn1::{
-    Asn1Error, Asn1OctetString, Depth, Encode, EncodingType, Fields, SequenceFields,
-    TryDecodeContent,
+    Asn1Error, Asn1OctetString, DecodeContent, Depth, Encode, EncodingType, Fields, SequenceFields,
 };
 
 use crate::AlgorithmIdentifier;
@@ -24,7 +23,7 @@ use crate::AlgorithmIdentifier;
 /// # 範例
 ///
 /// ```
-/// use tc_asn1::{Asn1Null, Depth, Encode, EncodingType, TryDecode};
+/// use tc_asn1::{Asn1Null, Depth, Encode, EncodingType, Decode};
 /// use tc_asn1_x509::{AlgorithmIdentifier, DigestInfo};
 ///
 /// let digest = [0xAB_u8; 32];
@@ -76,7 +75,7 @@ impl DigestInfo {
     }
 }
 
-impl<'a> TryDecodeContent<'a> for DigestInfo {
+impl<'a> DecodeContent<'a> for DigestInfo {
     const TAG: &'static [u8] = TAG;
 
     /// 變動時間：分支只依編碼結構。剛好兩個欄位，多的回
@@ -108,7 +107,7 @@ mod tests {
     use super::*;
     use alloc::string::ToString;
     use alloc::vec::Vec;
-    use tc_asn1::{Asn1Null, TryDecode};
+    use tc_asn1::{Asn1Null, Decode};
 
     const DEPTH: Depth = Depth::DEFAULT;
 

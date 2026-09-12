@@ -5,7 +5,7 @@ use alloc::vec::Vec;
 use super::{Asn1Object, children_len, decode_children, encode_children};
 use crate::asn1_ref::parse_tag;
 use crate::universal::{copy_encodings, tag_key};
-use crate::{Asn1Class, Asn1Error, Asn1Ref, Depth, Encode, EncodingType, TryDecodeContent};
+use crate::{Asn1Class, Asn1Error, Asn1Ref, DecodeContent, Depth, Encode, EncodingType};
 
 /// 非 universal 標記的值，保留標記與可解讀的子樹。
 ///
@@ -94,10 +94,7 @@ impl Asn1Tagged {
     /// 依 schema 指定的型別解讀 primitive 內容。變動時間：分支只依編碼結構。
     ///
     /// constructed 回傳 `MalformedValue`；其子元素請用 [`Self::children`]。
-    pub fn implicit_as<T: for<'a> TryDecodeContent<'a>>(
-        &self,
-        depth: Depth,
-    ) -> Result<T, Asn1Error> {
+    pub fn implicit_as<T: for<'a> DecodeContent<'a>>(&self, depth: Depth) -> Result<T, Asn1Error> {
         match &self.content {
             TaggedContent::Primitive(bytes) => T::try_decode_content(bytes, depth),
             TaggedContent::Constructed(_) => Err(Asn1Error::MalformedValue),
@@ -155,7 +152,7 @@ impl Encode for Asn1Tagged {
 mod tests {
     use super::*;
     use crate::universal::encode_member;
-    use crate::{Asn1Boolean, Asn1Integer, TryDecode};
+    use crate::{Asn1Boolean, Asn1Integer, Decode};
     use alloc::{string::ToString, vec};
 
     #[test]

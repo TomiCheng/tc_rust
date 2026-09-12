@@ -7,7 +7,7 @@ use core::str::FromStr;
 use crate::depth::Depth;
 use crate::encoding_type::EncodingType;
 use crate::error::Asn1Error;
-use crate::traits::{Encode, TryDecodeContent};
+use crate::traits::{DecodeContent, Encode};
 
 use super::tag::OBJECT_IDENTIFIER as TAG;
 
@@ -169,7 +169,7 @@ impl FromStr for Asn1Oid {
     }
 }
 
-impl<'a> TryDecodeContent<'a> for Asn1Oid {
+impl<'a> DecodeContent<'a> for Asn1Oid {
     const TAG: &'static [u8] = TAG;
 
     fn try_decode_content(value: &'a [u8], _: Depth) -> Result<Self, Asn1Error> {
@@ -193,7 +193,7 @@ impl Encode for Asn1Oid {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::traits::TryDecode;
+    use crate::traits::Decode;
     use alloc::string::ToString;
     use alloc::vec::Vec;
 

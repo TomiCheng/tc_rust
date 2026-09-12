@@ -12,7 +12,7 @@
 //! # 中間層
 //!
 //! 具名結構實作 [`Encode`]，透過共同的 tag、長度與內容契約編碼；解碼時可用
-//! [`Asn1Ref`] 借用檢視 TLV，或由 [`TryDecode`] 建立擁有內容的型別。
+//! [`Asn1Ref`] 借用檢視 TLV，或由 [`Decode`] 建立擁有內容的型別。
 //! 未知型別可由 [`Asn1Any`] 保留原始編碼。異質結構可用 [`Asn1Object::Set`]，
 //! 同質的 [`Asn1SetOf`] 則使用泛型；兩者的 DER 排序規則不同。
 //!
@@ -25,24 +25,24 @@
 //!
 //! # 具名結構怎麼寫
 //!
-//! [`TryDecodeContent`] 用 [`Fields`] 依序取欄位，最後呼叫 [`Fields::finish`]。
+//! [`DecodeContent`] 用 [`Fields`] 依序取欄位，最後呼叫 [`Fields::finish`]。
 //! 編碼實作 [`SequenceFields`]，再用 [`impl_sequence_encode!`] 產生 [`Encode`]。
 //! 標記用 [`Explicit`]／[`Implicit`] 包裝借用值，欄位的省略條件放在清單中。
-//! CHOICE 自己實作 [`TryDecode`]；OPTIONAL CHOICE 可用 [`Fields::peek`] 判斷。
+//! CHOICE 自己實作 [`Decode`]；OPTIONAL CHOICE 可用 [`Fields::peek`] 判斷。
 //!
 //! # 編碼要選規則，解碼不用
 //!
 //! [`Encode`] 收 [`EncodingType`]，選擇 BER 或 DER。
 //!
-//! [`TryDecode`] 不收：讀進來的位元組只有一種讀法，一律照 BER（DER 的超集）
+//! [`Decode`] 不收：讀進來的位元組只有一種讀法，一律照 BER（DER 的超集）
 //! 寬鬆解。需要「輸入必須是 DER」的地方用往返比較 —— 重編成 DER 後與原位元組
 //! 相等才算數。這成立是因為 DER 的定義就是一個值只有一種合法編碼，所以不需要
 //! 第二個嚴格解碼器。
 //!
 //! BER constructed OCTET STRING 與 BIT STRING 會串接成一般字串，重編一律
-//! 使用 primitive 形式；[`TryDecode::try_decode_der`] 會用往返比較辨識這項差異。
+//! 使用 primitive 形式；[`Decode::try_decode_der`] 會用往返比較辨識這項差異。
 //!
-//! **驗簽章要用原始位元組**，不能用重編出來的。理由見 [`TryDecode`]。
+//! **驗簽章要用原始位元組**，不能用重編出來的。理由見 [`Decode`]。
 //!
 //! # 值是擁有的
 //!
@@ -100,7 +100,7 @@ pub use depth::Depth;
 pub use encoding_type::EncodingType;
 pub use error::Asn1Error;
 pub use schema::{Explicit, Fields, Implicit, SequenceFields};
-pub use traits::{Encode, TryDecode, TryDecodeContent};
+pub use traits::{Decode, DecodeContent, Encode};
 pub use universal::tag;
 pub use universal::{
     Arcs, Asn1BitString, Asn1BmpString, Asn1Boolean, Asn1CharacterString, Asn1Date, Asn1DateTime,

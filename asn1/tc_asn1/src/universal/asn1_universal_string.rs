@@ -5,7 +5,7 @@ use alloc::string::String;
 use crate::depth::Depth;
 use crate::encoding_type::EncodingType;
 use crate::error::Asn1Error;
-use crate::traits::{Encode, TryDecodeContent};
+use crate::traits::{DecodeContent, Encode};
 
 use super::tag::UNIVERSAL_STRING as TAG;
 
@@ -19,7 +19,7 @@ use super::tag::UNIVERSAL_STRING as TAG;
 /// emoji 可以直接以單一 UCS-4 碼位表示，不使用 UTF-16 代理對。
 ///
 /// ```
-/// use tc_asn1::{Asn1UniversalString, Depth, Encode, EncodingType, TryDecode};
+/// use tc_asn1::{Asn1UniversalString, Depth, Encode, EncodingType, Decode};
 ///
 /// let value = Asn1UniversalString::new("😀");
 /// let mut out = [0; 6];
@@ -54,7 +54,7 @@ impl From<String> for Asn1UniversalString {
     }
 }
 
-impl<'a> TryDecodeContent<'a> for Asn1UniversalString {
+impl<'a> DecodeContent<'a> for Asn1UniversalString {
     const TAG: &'static [u8] = TAG;
 
     /// 解讀 UCS-4 大端序；長度不是四的倍數或碼位不是 Unicode 純量值時拒絕。
@@ -99,7 +99,7 @@ impl Encode for Asn1UniversalString {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::TryDecode;
+    use crate::Decode;
 
     #[test]
     fn latin_chinese_and_emoji_text_round_trip_as_four_bytes_per_character() {

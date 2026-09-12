@@ -9,7 +9,7 @@ use crate::asn1_ref::Asn1Ref;
 use crate::depth::Depth;
 use crate::encoding_type::EncodingType;
 use crate::error::Asn1Error;
-use crate::traits::{Encode, TryDecode};
+use crate::traits::{Decode, Encode};
 
 /// 整段 TLV，含表頭；建構時驗過是一個完整的元素。
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -39,8 +39,8 @@ impl From<&Asn1Ref<'_>> for Asn1Any {
     }
 }
 
-/// 沒有固定 tag，所以不走 `TryDecodeContent` 的 blanket，直接解整個 TLV。
-impl<'a> TryDecode<'a> for Asn1Any {
+/// 沒有固定 tag，所以不走 `DecodeContent` 的 blanket，直接解整個 TLV。
+impl<'a> Decode<'a> for Asn1Any {
     fn try_decode(buff: &'a [u8], depth: Depth) -> Result<(usize, Self), Asn1Error> {
         let element = Asn1Ref::parse(buff, depth)?;
         Ok((element.total_len(), Self::from(&element)))

@@ -2,7 +2,7 @@
 //!
 //! 解碼以 [`Fields::new`] 進入 constructed 內容，再按 schema 讀取欄位。
 //! 每個成功的解碼路徑最後都必須呼叫 [`Fields::finish`]，避免接受未預期的尾端欄位。
-//! CHOICE 自己實作 [`crate::TryDecode`]，OPTIONAL CHOICE 可用 [`Fields::peek`]
+//! CHOICE 自己實作 [`crate::Decode`]，OPTIONAL CHOICE 可用 [`Fields::peek`]
 //! 判斷；本模組不猜測哪個 tag 屬於某個 CHOICE。
 //!
 //! 編碼實作 [`SequenceFields`]，再呼叫 [`crate::impl_sequence_encode!`]。

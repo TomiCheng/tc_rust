@@ -6,7 +6,7 @@ use crate::asn1_ref::Children;
 use crate::depth::Depth;
 use crate::encoding_type::EncodingType;
 use crate::error::Asn1Error;
-use crate::traits::{Encode, TryDecodeContent};
+use crate::traits::{DecodeContent, Encode};
 
 use super::tag::BIT_STRING as TAG;
 
@@ -62,7 +62,7 @@ fn mask_unused(bytes: &mut [u8], unused_bits: u8) {
     }
 }
 
-impl<'a> TryDecodeContent<'a> for Asn1BitString {
+impl<'a> DecodeContent<'a> for Asn1BitString {
     const TAG: &'static [u8] = TAG;
 
     /// 寬鬆照 BER：沒用到的位不是 0 也接受，存起來時清掉。
@@ -115,7 +115,7 @@ impl Encode for Asn1BitString {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::traits::TryDecode;
+    use crate::traits::Decode;
 
     const DEPTH: Depth = Depth::DEFAULT;
 

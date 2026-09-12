@@ -5,7 +5,7 @@ use alloc::string::String;
 use crate::depth::Depth;
 use crate::encoding_type::EncodingType;
 use crate::error::Asn1Error;
-use crate::traits::{Encode, TryDecodeContent};
+use crate::traits::{DecodeContent, Encode};
 
 use super::tag::IA5_STRING as TAG;
 
@@ -31,7 +31,7 @@ impl Asn1Ia5String {
     }
 }
 
-impl<'a> TryDecodeContent<'a> for Asn1Ia5String {
+impl<'a> DecodeContent<'a> for Asn1Ia5String {
     const TAG: &'static [u8] = TAG;
 
     fn try_decode_content(value: &'a [u8], _: Depth) -> Result<Self, Asn1Error> {
@@ -62,7 +62,7 @@ impl Encode for Asn1Ia5String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::traits::TryDecode;
+    use crate::traits::Decode;
 
     const DEPTH: Depth = Depth::DEFAULT;
 

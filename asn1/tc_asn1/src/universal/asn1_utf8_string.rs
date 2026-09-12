@@ -5,7 +5,7 @@ use alloc::string::String;
 use crate::depth::Depth;
 use crate::encoding_type::EncodingType;
 use crate::error::Asn1Error;
-use crate::traits::{Encode, TryDecodeContent};
+use crate::traits::{DecodeContent, Encode};
 
 use super::tag::UTF8_STRING as TAG;
 
@@ -33,7 +33,7 @@ impl From<String> for Asn1Utf8String {
     }
 }
 
-impl<'a> TryDecodeContent<'a> for Asn1Utf8String {
+impl<'a> DecodeContent<'a> for Asn1Utf8String {
     const TAG: &'static [u8] = TAG;
 
     /// 不合法的 UTF-8（含過長編碼、代理對）一律拒絕，這是 `from_utf8` 的規則。
@@ -59,7 +59,7 @@ impl Encode for Asn1Utf8String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::traits::TryDecode;
+    use crate::traits::Decode;
 
     const DEPTH: Depth = Depth::DEFAULT;
 

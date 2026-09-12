@@ -42,7 +42,7 @@ BC 對照基準：`bc-csharp` 的 `7fa86379`，`crypto/src/asn1/x509/` 共 **91 
 | ID | 狀態 | 能力／缺口 | 影響 |
 | --- | --- | --- | --- |
 | P1 | 已完成 | INTEGER、ENUMERATED、OID、字串、BIT STRING、OCTET STRING、SEQUENCE OF、SET OF | RDN 的 DER 排序可用 `Asn1SetOf`；不需要等更多基本型別 |
-| P2 | 已完成 | `Fields`、`Explicit`、`Implicit`、`SequenceFields`、`impl_sequence_encode!` | 必要／OPTIONAL／DEFAULT／標記已可重用；CHOICE 自行實作 `TryDecode` |
+| P2 | 已完成 | `Fields`、`Explicit`、`Implicit`、`SequenceFields`、`impl_sequence_encode!` | 必要／OPTIONAL／DEFAULT／標記已可重用；CHOICE 自行實作 `Decode` |
 | P3 | **部分完成** | 日曆驗證已補，剩跨 UTCTime／GeneralizedTime 比較（屬 X.509 `Time`） | 兩種時間已驗證格里曆日期；`Validity`、CRL 等跨型別時間比較仍待 `Time`。新增的通用 `Asn1Time` 不是 X.509 `Time` 的替代品 |
 | P4 | **前置未完成** | Certificate／CRL 模型保存原始 TBS TLV 的設計 | `Asn1Ref::raw()` 已能取得位元組，但尚無憑證模型保存它；驗簽必須用收到的原始 TBS，不能重編後代替 |
 | P5 | **前置未完成** | 結構解碼與嚴格 DER／PKIX profile 檢查的邊界 | `Asn1Any` 原樣重發，未知 ANY 或 extension 的往返相等不能證明其內部是 DER；需明列可檢查範圍及未知值政策 |

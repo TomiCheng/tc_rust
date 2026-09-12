@@ -12,7 +12,7 @@ use super::tag::UTC_TIME as TAG;
 use crate::depth::Depth;
 use crate::encoding_type::EncodingType;
 use crate::error::Asn1Error;
-use crate::traits::{Encode, TryDecodeContent};
+use crate::traits::{DecodeContent, Encode};
 
 /// DER 形式的長度：`YYMMDDhhmmssZ`。
 const LEN: usize = 13;
@@ -60,7 +60,7 @@ impl Asn1UtcTime {
     }
 }
 
-impl<'a> TryDecodeContent<'a> for Asn1UtcTime {
+impl<'a> DecodeContent<'a> for Asn1UtcTime {
     const TAG: &'static [u8] = TAG;
 
     /// 變動時間：分支只依編碼結構。只接受 `YYMMDDhhmmssZ`。
@@ -116,7 +116,7 @@ impl fmt::Display for Asn1UtcTime {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::traits::TryDecode;
+    use crate::traits::Decode;
     use alloc::string::ToString;
 
     const DEPTH: Depth = Depth::DEFAULT;

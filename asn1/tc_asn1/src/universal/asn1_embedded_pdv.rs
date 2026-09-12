@@ -6,7 +6,7 @@
 
 use super::{Asn1Integer, Asn1Oid, tag};
 use crate::traits::{len_octets, write_len};
-use crate::{Asn1Error, Asn1Ref, Children, Depth, Encode, EncodingType, TryDecodeContent};
+use crate::{Asn1Error, Asn1Ref, Children, DecodeContent, Depth, Encode, EncodingType};
 use alloc::vec::Vec;
 
 /// 識別抽象語法與傳輸語法的六種方式。
@@ -158,7 +158,7 @@ macro_rules! container {
                 &self.value
             }
         }
-        impl<'a> TryDecodeContent<'a> for $name {
+        impl<'a> DecodeContent<'a> for $name {
             const TAG: &'static [u8] = tag::$tag;
             /// 變動時間：檢查欄位標記與巢狀結構，再複製資料。
             fn try_decode_content(value: &'a [u8], depth: Depth) -> Result<Self, Asn1Error> {
@@ -239,7 +239,7 @@ assert_eq!(value.as_bytes(), &[0xff]); // 不假設 UTF-8
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::TryDecode;
+    use crate::Decode;
     use alloc::vec;
     #[test]
     fn all_identification_choices_match_automatic_tagging_and_round_trip() {

@@ -5,7 +5,7 @@ use alloc::vec::Vec;
 use crate::depth::Depth;
 use crate::encoding_type::EncodingType;
 use crate::error::Asn1Error;
-use crate::traits::{Encode, TryDecodeContent};
+use crate::traits::{DecodeContent, Encode};
 
 use super::integer_octets::{minimal_signed, validate_integer_octets};
 use super::tag::INTEGER as TAG;
@@ -136,7 +136,7 @@ macro_rules! try_into_signed {
 try_into_unsigned!(u8, u16, u32, u64, u128);
 try_into_signed!(i8, i16, i32, i64, i128);
 
-impl<'a> TryDecodeContent<'a> for Asn1Integer {
+impl<'a> DecodeContent<'a> for Asn1Integer {
     const TAG: &'static [u8] = TAG;
 
     fn try_decode_content(value: &'a [u8], _: Depth) -> Result<Self, Asn1Error> {
@@ -160,7 +160,7 @@ impl Encode for Asn1Integer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::traits::TryDecode;
+    use crate::traits::Decode;
 
     const DEPTH: Depth = Depth::DEFAULT;
 

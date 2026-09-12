@@ -10,10 +10,10 @@ use crate::error::Asn1Error;
 
 /// 還能往下走幾層。
 ///
-/// 每個 [`TryDecode::try_decode`] 在進入時消耗一層，constructed 型別把剩下的
+/// 每個 [`Decode::try_decode`] 在進入時消耗一層，constructed 型別把剩下的
 /// 傳給子元素。
 ///
-/// [`TryDecode::try_decode`]: crate::TryDecode::try_decode
+/// [`Decode::try_decode`]: crate::Decode::try_decode
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Depth(u32);
 

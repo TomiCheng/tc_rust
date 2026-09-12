@@ -12,7 +12,7 @@ use crate::asn1_ref::Children;
 use crate::depth::Depth;
 use crate::encoding_type::EncodingType;
 use crate::error::Asn1Error;
-use crate::traits::{Encode, TryDecodeContent};
+use crate::traits::{DecodeContent, Encode};
 
 use super::tag::SET as TAG;
 
@@ -93,7 +93,7 @@ impl<T> FromIterator<T> for Asn1SetOf<T> {
     }
 }
 
-impl<'a, T: TryDecodeContent<'a>> TryDecodeContent<'a> for Asn1SetOf<T> {
+impl<'a, T: DecodeContent<'a>> DecodeContent<'a> for Asn1SetOf<T> {
     const TAG: &'static [u8] = TAG;
 
     /// 逐一解碼並保留輸入順序，不排序也不驗序；任何成員失敗便整體失敗。
@@ -194,7 +194,7 @@ pub(crate) fn copy_encodings<'a>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{Asn1Any, Asn1Boolean, Asn1Integer, Asn1Null, TryDecode};
+    use crate::{Asn1Any, Asn1Boolean, Asn1Integer, Asn1Null, Decode};
 
     fn any(input: &[u8]) -> Asn1Any {
         Asn1Any::try_decode(input, Depth::DEFAULT).unwrap().1

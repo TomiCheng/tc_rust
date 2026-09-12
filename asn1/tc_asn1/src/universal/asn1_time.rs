@@ -7,7 +7,7 @@
 //! 時區資料庫，也不判斷區間端點的先後。秒數 60 的實際適用性由上層判斷。
 
 use super::{tag, time_value};
-use crate::{Asn1Error, Depth, Encode, EncodingType, TryDecodeContent};
+use crate::{Asn1Error, DecodeContent, Depth, Encode, EncodingType};
 use alloc::{format, string::String};
 
 #[derive(Clone, Copy)]
@@ -89,7 +89,7 @@ macro_rules! time_type {
                 &self.text
             }
         }
-        impl<'a> TryDecodeContent<'a> for $name {
+        impl<'a> DecodeContent<'a> for $name {
             const TAG: &'static [u8] = tag::$tag;
             /// 變動時間：從線路格式還原值記法，驗證並正規化。
             fn try_decode_content(value: &'a [u8], _: Depth) -> Result<Self, Asn1Error> {
@@ -199,7 +199,7 @@ assert_ne!(duration, Asn1Duration::new("P2M").unwrap());
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::TryDecode;
+    use crate::Decode;
     #[test]
     fn useful_time_types_write_the_standard_separator_free_contents() {
         type Case = (alloc::boxed::Box<dyn Encode>, &'static [u8], &'static [u8]);

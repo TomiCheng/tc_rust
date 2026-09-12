@@ -14,8 +14,8 @@
 
 use tc_asn1::tag::SEQUENCE as TAG;
 use tc_asn1::{
-    Asn1Boolean, Asn1Error, Asn1OctetString, Asn1Oid, Depth, Encode, EncodingType, Fields,
-    SequenceFields, TryDecode, TryDecodeContent,
+    Asn1Boolean, Asn1Error, Asn1OctetString, Asn1Oid, Decode, DecodeContent, Depth, Encode,
+    EncodingType, Fields, SequenceFields,
 };
 
 /// 一個 X.509 extension。
@@ -23,7 +23,7 @@ use tc_asn1::{
 /// # 範例
 ///
 /// ```
-/// use tc_asn1::{Asn1Boolean, Asn1SequenceOf, Depth, Encode, EncodingType, TryDecode};
+/// use tc_asn1::{Asn1Boolean, Asn1SequenceOf, Depth, Encode, EncodingType, Decode};
 /// use tc_asn1_x509::Extension;
 ///
 /// // basicConstraints，critical，內容是 SEQUENCE { cA TRUE }
@@ -84,12 +84,12 @@ impl Extension {
     ///
     /// `T` 由 `extn_id` 決定 —— 這個型別不知道對應表，呼叫端知道。
     /// 變動時間：分支只依編碼結構；此處只驗證完整消耗，不驗證 DER 正規形式。
-    pub fn extn_value_as<'a, T: TryDecode<'a>>(&'a self, depth: Depth) -> Result<T, Asn1Error> {
+    pub fn extn_value_as<'a, T: Decode<'a>>(&'a self, depth: Depth) -> Result<T, Asn1Error> {
         T::try_decode_exact(self.extn_value.as_bytes(), depth)
     }
 }
 
-impl<'a> TryDecodeContent<'a> for Extension {
+impl<'a> DecodeContent<'a> for Extension {
     const TAG: &'static [u8] = TAG;
 
     /// 變動時間：分支只依編碼結構。

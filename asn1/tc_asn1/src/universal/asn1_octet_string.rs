@@ -6,7 +6,7 @@ use crate::asn1_ref::Children;
 use crate::depth::Depth;
 use crate::encoding_type::EncodingType;
 use crate::error::Asn1Error;
-use crate::traits::{Encode, TryDecodeContent};
+use crate::traits::{DecodeContent, Encode};
 
 use super::tag::OCTET_STRING as TAG;
 
@@ -34,7 +34,7 @@ impl From<Vec<u8>> for Asn1OctetString {
     }
 }
 
-impl<'a> TryDecodeContent<'a> for Asn1OctetString {
+impl<'a> DecodeContent<'a> for Asn1OctetString {
     const TAG: &'static [u8] = TAG;
 
     /// 任何內容都合法，包括空的。
@@ -71,7 +71,7 @@ impl Encode for Asn1OctetString {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::traits::TryDecode;
+    use crate::traits::Decode;
 
     const DEPTH: Depth = Depth::DEFAULT;
 

@@ -5,7 +5,7 @@ use alloc::string::String;
 use crate::depth::Depth;
 use crate::encoding_type::EncodingType;
 use crate::error::Asn1Error;
-use crate::traits::{Encode, TryDecodeContent};
+use crate::traits::{DecodeContent, Encode};
 
 use super::tag::NUMERIC_STRING as TAG;
 
@@ -48,7 +48,7 @@ impl Asn1NumericString {
     }
 }
 
-impl<'a> TryDecodeContent<'a> for Asn1NumericString {
+impl<'a> DecodeContent<'a> for Asn1NumericString {
     const TAG: &'static [u8] = TAG;
 
     /// 以建構時相同的字集規則驗證內容。
@@ -80,7 +80,7 @@ impl Encode for Asn1NumericString {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::TryDecode;
+    use crate::Decode;
 
     #[test]
     fn digits_and_spaces_round_trip_under_both_encoding_rules() {

@@ -6,7 +6,7 @@ use crate::asn1_ref::Children;
 use crate::depth::Depth;
 use crate::encoding_type::EncodingType;
 use crate::error::Asn1Error;
-use crate::traits::{Encode, TryDecodeContent};
+use crate::traits::{DecodeContent, Encode};
 
 use super::tag::SEQUENCE as TAG;
 
@@ -62,7 +62,7 @@ impl<T> FromIterator<T> for Asn1SequenceOf<T> {
     }
 }
 
-impl<'a, T: TryDecodeContent<'a>> TryDecodeContent<'a> for Asn1SequenceOf<T> {
+impl<'a, T: DecodeContent<'a>> DecodeContent<'a> for Asn1SequenceOf<T> {
     const TAG: &'static [u8] = TAG;
 
     /// 急切解：每個子元素當場 `decode_as::<T>`，任何一個失敗整個失敗。
@@ -94,7 +94,7 @@ impl<T: Encode> Encode for Asn1SequenceOf<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::traits::TryDecode;
+    use crate::traits::Decode;
     use crate::universal::{Asn1Boolean, Asn1Integer, Asn1Null};
 
     const DEPTH: Depth = Depth::DEFAULT;

@@ -16,8 +16,8 @@ use core::fmt;
 
 use tc_asn1::tag::{NULL, SEQUENCE as TAG};
 use tc_asn1::{
-    Asn1Any, Asn1Error, Asn1Null, Asn1Oid, Depth, Encode, EncodingType, Fields, SequenceFields,
-    TryDecodeContent,
+    Asn1Any, Asn1Error, Asn1Null, Asn1Oid, DecodeContent, Depth, Encode, EncodingType, Fields,
+    SequenceFields,
 };
 
 /// `parameters` 的型別由 `algorithm` 決定，所以兩個方向的表示不同。
@@ -58,7 +58,7 @@ impl fmt::Debug for AlgorithmParameters {
 /// 建構時參數直接放型別化的值；解碼時參數不解讀，要用時照 `algorithm` 決定型別：
 ///
 /// ```
-/// use tc_asn1::{Depth, Encode, EncodingType, TryDecode};
+/// use tc_asn1::{Depth, Encode, EncodingType, Decode};
 /// use tc_asn1_x509::{AlgorithmIdentifier, AlgorithmParameters};
 ///
 /// let alg = AlgorithmIdentifier::with_null("1.2.840.113549.1.1.1".parse()?); // rsaEncryption
@@ -134,7 +134,7 @@ impl AlgorithmIdentifier {
     }
 }
 
-impl<'a> TryDecodeContent<'a> for AlgorithmIdentifier {
+impl<'a> DecodeContent<'a> for AlgorithmIdentifier {
     const TAG: &'static [u8] = TAG;
 
     /// 變動時間：分支只依編碼結構。
@@ -180,7 +180,7 @@ mod tests {
     use super::*;
     use alloc::string::ToString;
     use alloc::vec::Vec;
-    use tc_asn1::TryDecode;
+    use tc_asn1::Decode;
 
     const DEPTH: Depth = Depth::DEFAULT;
 

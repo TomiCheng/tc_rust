@@ -1,6 +1,6 @@
 //! 具名 constructed 值的解碼游標。
 use crate::asn1_ref::is_constructed_form;
-use crate::{Asn1Error, Asn1Ref, Children, Depth, TryDecode, TryDecodeContent};
+use crate::{Asn1Error, Asn1Ref, Children, Decode, DecodeContent, Depth};
 
 /// 依 schema 順序讀取欄位；成功路徑最後必須呼叫 [`Self::finish`]。
 /// 忘記呼叫不會有編譯器警告，但可能錯誤接受多餘欄位。
@@ -36,7 +36,7 @@ impl<'a> Fields<'a> {
     }
     /// 讀取必要欄位，支援 CHOICE 與 ANY；沒有欄位回傳 `Truncated`。
     /// 解碼器必須消耗完整的子 TLV。變動時間：分支只依編碼結構。
-    pub fn required<T: TryDecode<'a>>(&mut self) -> Result<T, Asn1Error> {
+    pub fn required<T: Decode<'a>>(&mut self) -> Result<T, Asn1Error> {
         let child = self.next()?;
         let (used, value) = T::try_decode(child.raw(), self.depth)?;
         if used != child.total_len() {
@@ -46,7 +46,7 @@ impl<'a> Fields<'a> {
     }
     /// tag 相同或是其 constructed 形式才取走欄位，否則保留給後續欄位。
     /// 型別不支援 constructed 時傳回錯誤。變動時間：分支只依編碼結構。
-    pub fn optional<T: TryDecodeContent<'a>>(&mut self) -> Result<Option<T>, Asn1Error> {
+    pub fn optional<T: DecodeContent<'a>>(&mut self) -> Result<Option<T>, Asn1Error> {
         if self
             .peek()?
             .is_some_and(|field| field.tag() == T::TAG || is_constructed_form(field.tag(), T::TAG))
@@ -58,12 +58,12 @@ impl<'a> Fields<'a> {
     }
     /// 省略時採預設值；不拒絕 BER 明寫的預設值。變動時間：分支只依編碼結構。
     /// 嚴格 DER 檢查由重編碼後的往返比較負責。
-    pub fn default<T: TryDecodeContent<'a>>(&mut self, default: T) -> Result<T, Asn1Error> {
+    pub fn default<T: DecodeContent<'a>>(&mut self, default: T) -> Result<T, Asn1Error> {
         Ok(self.optional()?.unwrap_or(default))
     }
     /// 讀取 EXPLICIT constructed 包裝，內部必須剛好一個完整 TLV。
     /// 包裝另外消耗一層深度。變動時間：分支只依編碼結構。
-    pub fn explicit<T: TryDecode<'a>>(&mut self, tag: &[u8]) -> Result<T, Asn1Error> {
+    pub fn explicit<T: Decode<'a>>(&mut self, tag: &[u8]) -> Result<T, Asn1Error> {
         let child = self.next()?;
         if child.tag() != tag || !child.is_constructed() {
             return Err(Asn1Error::UnexpectedTag);
@@ -74,10 +74,7 @@ impl<'a> Fields<'a> {
         Ok(value)
     }
     /// 只有 tag 相符才取走 EXPLICIT 欄位。變動時間：分支只依編碼結構。
-    pub fn optional_explicit<T: TryDecode<'a>>(
-        &mut self,
-        tag: &[u8],
-    ) -> Result<Option<T>, Asn1Error> {
+    pub fn optional_explicit<T: Decode<'a>>(&mut self, tag: &[u8]) -> Result<Option<T>, Asn1Error> {
         if self.peek()?.is_some_and(|field| field.tag() == tag) {
             self.explicit(tag).map(Some)
         } else {
@@ -87,7 +84,7 @@ impl<'a> Fields<'a> {
     /// 驗證替換後的 tag，直接按 T 的內容規則解碼；不增加額外包裝層。
     /// tag 為 primitive 時，也接受其 constructed 形式並解讀分段內容。
     /// 變動時間：分支只依編碼結構。
-    pub fn implicit<T: TryDecodeContent<'a>>(&mut self, tag: &[u8]) -> Result<T, Asn1Error> {
+    pub fn implicit<T: DecodeContent<'a>>(&mut self, tag: &[u8]) -> Result<T, Asn1Error> {
         let child = self.next()?;
         if child.tag() == tag {
             T::try_decode_content(child.value(), self.depth)
@@ -99,7 +96,7 @@ impl<'a> Fields<'a> {
     }
     /// tag 相同或是其 constructed 形式才取走 IMPLICIT 欄位。
     /// 變動時間：分支只依編碼結構。
-    pub fn optional_implicit<T: TryDecodeContent<'a>>(
+    pub fn optional_implicit<T: DecodeContent<'a>>(
         &mut self,
         tag: &[u8],
     ) -> Result<Option<T>, Asn1Error> {
@@ -288,7 +285,7 @@ mod tests {
     #[test]
     fn any_and_choice_decoders_can_read_required_and_explicit_fields() {
         struct Choice(Asn1Boolean);
-        impl<'a> TryDecode<'a> for Choice {
+        impl<'a> Decode<'a> for Choice {
             fn try_decode(bytes: &'a [u8], depth: Depth) -> Result<(usize, Self), Asn1Error> {
                 Asn1Boolean::try_decode(bytes, depth).map(|(n, v)| (n, Self(v)))
             }

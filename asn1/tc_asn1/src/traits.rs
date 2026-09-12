@@ -3,6 +3,6 @@
 mod decode;
 mod encode;
 
-pub use decode::{TryDecode, TryDecodeContent};
+pub use decode::{Decode, DecodeContent};
 pub use encode::Encode;
 pub(crate) use encode::{len_octets, write_len};

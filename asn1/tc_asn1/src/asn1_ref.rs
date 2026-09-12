@@ -2,7 +2,7 @@
 
 use crate::depth::Depth;
 use crate::error::Asn1Error;
-use crate::traits::TryDecodeContent;
+use crate::traits::DecodeContent;
 
 /// tag 的類別，取自識別位元組的最高兩位。
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
@@ -112,7 +112,7 @@ impl<'a> Asn1Ref<'a> {
     }
 
     /// 把這個元素當成 `T` 解：驗 tag，然後只解內容。表頭不重解。
-    pub fn decode_as<T: TryDecodeContent<'a>>(&self, depth: Depth) -> Result<T, Asn1Error> {
+    pub fn decode_as<T: DecodeContent<'a>>(&self, depth: Depth) -> Result<T, Asn1Error> {
         if self.tag == T::TAG {
             T::try_decode_content(self.value, depth)
         } else if is_constructed_form(self.tag, T::TAG) {

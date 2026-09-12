@@ -119,7 +119,7 @@ impl fmt::Display for DateTime {
 
 #[cfg(test)]
 mod tests {
-    use crate::{Asn1Error, Asn1GeneralizedTime, Asn1UtcTime, Depth, TryDecodeContent};
+    use crate::{Asn1Error, Asn1GeneralizedTime, Asn1UtcTime, DecodeContent, Depth};
 
     #[test]
     fn utc_times_validate_calendar_dates_after_expanding_two_digit_years() {
