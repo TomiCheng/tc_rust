@@ -241,17 +241,7 @@ impl Encode for Asn1Set {
         let mut encodings = self
             .members
             .iter()
-            .map(|member| {
-                let tag = member.tag();
-                // 解析器保留任意長度的標籤；轉成排序鍵之前另檢查 u64 上限。
-                if tag.len() > 11 || (tag.len() == 11 && tag[1] & 0x7F > 1) {
-                    return Err(Asn1Error::TagOverflow);
-                }
-                if tag.is_empty() {
-                    return Err(Asn1Error::MalformedValue);
-                }
-                Ok((tag_key(tag), encode_member(member, rules)?))
-            })
+            .map(|member| Ok((tag_key(member.tag())?, encode_member(member, rules)?)))
             .collect::<Result<Vec<_>, _>>()?;
         encodings.sort_by_key(|(key, _)| *key);
         copy_encodings(
@@ -261,8 +251,14 @@ impl Encode for Asn1Set {
     }
 }
 
-// 呼叫端已確認標籤非空且號碼可放入 u64；標籤須為合法的識別位元組。
-fn tag_key(tag: &[u8]) -> (u8, u64) {
+// 標籤須為合法的識別位元組；解析器保留任意長度，排序鍵另限制為 u64。
+pub(crate) fn tag_key(tag: &[u8]) -> Result<(u8, u64), Asn1Error> {
+    if tag.is_empty() {
+        return Err(Asn1Error::MalformedValue);
+    }
+    if tag.len() > 11 || (tag.len() == 11 && tag[1] & 0x7F > 1) {
+        return Err(Asn1Error::TagOverflow);
+    }
     let class = tag[0] >> 6;
     let mut number = u64::from(tag[0] & 0x1F);
     if number == 0x1F {
@@ -274,10 +270,10 @@ fn tag_key(tag: &[u8]) -> (u8, u64) {
             }
         }
     }
-    (class, number)
+    Ok((class, number))
 }
 
-fn encode_member<T: Encode + ?Sized>(
+pub(crate) fn encode_member<T: Encode + ?Sized>(
     member: &T,
     rules: EncodingType,
 ) -> Result<Vec<u8>, Asn1Error> {
@@ -287,7 +283,7 @@ fn encode_member<T: Encode + ?Sized>(
     Ok(encoding)
 }
 
-fn copy_encodings<'a>(
+pub(crate) fn copy_encodings<'a>(
     encodings: impl Iterator<Item = &'a [u8]>,
     out: &mut [u8],
 ) -> Result<usize, Asn1Error> {
@@ -412,7 +408,7 @@ mod tests {
         let mut set = Asn1Set::new();
         set.push_boxed(any(&max));
         assert!(set.encode(EncodingType::Der, &mut [0; 32]).is_ok());
-        assert_eq!(tag_key(&max[..11]), (2, u64::MAX));
+        assert_eq!(tag_key(&max[..11]), Ok((2, u64::MAX)));
         max[1] = 0x82;
         set.push_boxed(any(&max));
         assert_eq!(

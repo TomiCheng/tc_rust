@@ -16,6 +16,13 @@
 //! 未知型別可由 [`Asn1Any`] 保留原始編碼。異質的 [`Asn1Set`] 使用 trait 物件，
 //! 同質的 [`Asn1SetOf`] 則使用泛型；兩者的 DER 排序規則不同。
 //!
+//! 沒有 schema 時，用 [`Asn1Object`] 把不認識的緩衝區整棵解開，輸出樹狀文字或
+//! 比對節點；尚未建立具名型別時，也能直接拼樹編碼。具名結構仍走 [`Fields`]。
+//! [`Asn1Any`] 保留原始位元組，樹則解讀值；已解讀部分重編會正規化，驗簽章
+//! 必須用原位元組。樹的 [`Asn1Object::Unknown`] 保留未支援的 universal 編碼，
+//! 包括 BER constructed 字串與未指派號碼；這些不會正規化，因此樹的往返比較
+//! 不能代替完整的 DER 驗證。此樹不歸零，只能存公開資料。
+//!
 //! # 具名結構怎麼寫
 //!
 //! [`TryDecodeContent`] 用 [`Fields`] 依序取欄位，最後呼叫 [`Fields::finish`]。
@@ -74,6 +81,7 @@
 extern crate alloc;
 
 mod asn1_any;
+mod asn1_object;
 mod asn1_ref;
 mod depth;
 mod encoding_type;
@@ -83,6 +91,7 @@ mod traits;
 mod universal;
 
 pub use asn1_any::Asn1Any;
+pub use asn1_object::{Asn1Object, Asn1Tagged, TaggedContent};
 pub use asn1_ref::{Asn1Class, Asn1Ref, Children};
 pub use depth::Depth;
 pub use encoding_type::EncodingType;

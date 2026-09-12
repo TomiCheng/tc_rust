@@ -13,6 +13,17 @@ pub enum Asn1Class {
     Private,
 }
 
+impl Asn1Class {
+    pub(crate) fn of(first: u8) -> Self {
+        match first >> 6 {
+            0 => Self::Universal,
+            1 => Self::Application,
+            2 => Self::ContextSpecific,
+            _ => Self::Private,
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug)]
 pub struct Asn1Ref<'a> {
     /// 整段 TLV，含表頭；不定長時含 EOC。
@@ -73,12 +84,7 @@ impl<'a> Asn1Ref<'a> {
     }
 
     pub fn class(&self) -> Asn1Class {
-        match self.tag[0] >> 6 {
-            0 => Asn1Class::Universal,
-            1 => Asn1Class::Application,
-            2 => Asn1Class::ContextSpecific,
-            _ => Asn1Class::Private,
-        }
+        Asn1Class::of(self.tag[0])
     }
 
     pub fn is_constructed(&self) -> bool {
@@ -147,7 +153,7 @@ impl<'a> Iterator for Children<'a> {
 }
 
 /// 由 `buff` 前端切出識別位元組，不解析號碼。
-fn parse_tag(buff: &[u8]) -> Result<&[u8], Asn1Error> {
+pub(crate) fn parse_tag(buff: &[u8]) -> Result<&[u8], Asn1Error> {
     let first = *buff.first().ok_or(Asn1Error::Truncated)?;
     if first & 0x1F != 0x1F {
         return Ok(&buff[..1]);

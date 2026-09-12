@@ -20,7 +20,7 @@ use alloc::boxed::Box;
 
 use super::tag::EXTERNAL as TAG;
 use super::{Asn1BitString, Asn1Integer, Asn1ObjectDescriptor, Asn1OctetString, Asn1Oid};
-use crate::asn1_any::Asn1Any;
+use crate::asn1_object::Asn1Object;
 use crate::depth::Depth;
 use crate::encoding_type::EncodingType;
 use crate::error::Asn1Error;
@@ -35,26 +35,17 @@ const ARBITRARY: &[u8] = &[0x82]; // [2] IMPLICIT，primitive
 
 /// `encoding` 那個 CHOICE。三支的標記方式不同：`[0]` 裡是任意型別所以 EXPLICIT
 /// （保留內層的 tag），`[1]` `[2]` 型別已知所以 IMPLICIT。
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ExternalEncoding {
-    /// `[0]` EXPLICIT：任何值。解進來是 [`Asn1Any`]；造的時候給一個能編碼的值。
-    SingleAsn1Type(Box<dyn Encode>),
+    /// `[0]` EXPLICIT：任意型別，解碼與建構兩個方向都是 [`Asn1Object`]。
+    SingleAsn1Type(Box<Asn1Object>),
     /// `[1]` IMPLICIT OCTET STRING。
     OctetAligned(Asn1OctetString),
     /// `[2]` IMPLICIT BIT STRING。
     Arbitrary(Asn1BitString),
 }
 
-impl core::fmt::Debug for ExternalEncoding {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        match self {
-            Self::SingleAsn1Type(_) => f.write_str("SingleAsn1Type(..)"),
-            Self::OctetAligned(s) => f.debug_tuple("OctetAligned").field(s).finish(),
-            Self::Arbitrary(b) => f.debug_tuple("Arbitrary").field(b).finish(),
-        }
-    }
-}
-
-#[derive(Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Asn1External {
     direct_reference: Option<Asn1Oid>,
     indirect_reference: Option<Asn1Integer>,
@@ -105,7 +96,7 @@ impl<'a> TryDecodeContent<'a> for Asn1External {
         let data_value_descriptor = fields.optional()?;
         let encoding = match fields.peek()?.ok_or(Asn1Error::Truncated)?.tag() {
             SINGLE_ASN1_TYPE => ExternalEncoding::SingleAsn1Type(Box::new(
-                fields.explicit::<Asn1Any>(SINGLE_ASN1_TYPE)?,
+                fields.explicit::<Asn1Object>(SINGLE_ASN1_TYPE)?,
             )),
             OCTET_ALIGNED => ExternalEncoding::OctetAligned(fields.implicit(OCTET_ALIGNED)?),
             ARBITRARY => ExternalEncoding::Arbitrary(fields.implicit(ARBITRARY)?),
@@ -209,7 +200,7 @@ mod tests {
             None,
             Some(Asn1Integer::from(7_u8)),
             None,
-            ExternalEncoding::SingleAsn1Type(Box::new(Asn1Integer::from(5_u8))),
+            ExternalEncoding::SingleAsn1Type(Box::new(Asn1Integer::from(5_u8).into())),
         );
         assert_eq!(
             encode(&e),

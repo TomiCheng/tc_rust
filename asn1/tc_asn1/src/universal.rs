@@ -59,3 +59,5 @@ pub use opaque::{
     Asn1GeneralString, Asn1GraphicString, Asn1ObjectDescriptor, Asn1TeletexString,
     Asn1VideotexString,
 };
+
+pub(crate) use asn1_set_of::{copy_encodings, encode_member, tag_key};
