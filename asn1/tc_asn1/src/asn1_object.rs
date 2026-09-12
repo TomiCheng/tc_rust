@@ -10,7 +10,6 @@ mod tagged;
 
 pub use tagged::{Asn1Tagged, TaggedContent};
 
-use crate::traits::len_octets;
 use crate::universal::*;
 use crate::{
     Asn1Any, Asn1Class, Asn1Error, Asn1Ref, Decode, DecodeConstructed, DecodeContent, Depth,
@@ -79,6 +78,7 @@ pub enum Asn1Object {
     Tagged(Asn1Tagged),
     /// 未支援的 universal 編碼，例如 BER constructed 字元字串（UTF8String 等）或未指派號碼。
     /// dump 遇到超過 `u64` 的號碼時，以 `tag=` 加完整十六進位識別位元組顯示。
+    /// Raw encodings are not canonicalised under CER either.
     Unknown(Asn1Any),
 }
 
@@ -462,8 +462,7 @@ impl Encode for Asn1Object {
         if let Self::Unknown(value) = self {
             return value.encoded_len(rules);
         }
-        let len = self.content_len(rules);
-        self.tag().len() + len_octets(len) + len
+        self.encoded_len_tagged(self.tag(), rules)
     }
 
     /// 寫出完整元素；未知元素連原始表頭一起複製。變動時間：分支只依編碼結構。

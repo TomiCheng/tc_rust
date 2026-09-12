@@ -35,8 +35,7 @@ pub trait Encode {
 
     /// 完整 TLV 的位元組數。
     fn encoded_len(&self, rules: EncodingType) -> usize {
-        let content_len = self.content_len(rules);
-        self.tag().len() + len_octets(content_len) + content_len
+        self.encoded_len_tagged(self.tag(), rules)
     }
 
     /// 用自己的 tag 寫完整的 TLV。
@@ -46,8 +45,7 @@ pub trait Encode {
 
     /// 用呼叫端給的 tag 時完整 TLV 的位元組數。
     fn encoded_len_tagged(&self, tag: &[u8], rules: EncodingType) -> usize {
-        let content_len = self.content_len(rules);
-        tag.len() + len_octets(content_len) + content_len
+        default_encoded_len(self, tag, rules)
     }
 
     /// 用呼叫端給的 tag 寫完整的 TLV —— IMPLICIT 走這裡。
@@ -57,17 +55,63 @@ pub trait Encode {
         rules: EncodingType,
         out: &mut [u8],
     ) -> Result<usize, Asn1Error> {
-        let content_len = self.content_len(rules);
-        let total = tag.len() + len_octets(content_len) + content_len;
-        let out = out.get_mut(..total).ok_or(Asn1Error::BufferTooSmall)?;
-
-        out[..tag.len()].copy_from_slice(tag);
-        let mut at = tag.len();
-        at += write_len(content_len, &mut out[at..]);
-        let written = self.encode_content(rules, &mut out[at..])?;
-        debug_assert_eq!(written, content_len, "content_len 與 encode_content 不一致");
-        Ok(total)
+        default_encode(self, tag, rules, out)
     }
+}
+
+/// CER writes every constructed value with indefinite length. Constant time.
+pub(crate) const fn uses_indefinite(tag: &[u8], rules: EncodingType) -> bool {
+    matches!(rules, EncodingType::Cer) && tag[0] & 0x20 != 0
+}
+
+/// Length of an ordinary TLV. Variable time: branches only on the encoding structure.
+pub(crate) fn default_encoded_len<T: Encode + ?Sized>(
+    value: &T,
+    tag: &[u8],
+    rules: EncodingType,
+) -> usize {
+    let len = value.content_len(rules);
+    tag.len()
+        + if uses_indefinite(tag, rules) {
+            1 + len + 2
+        } else {
+            len_octets(len) + len
+        }
+}
+
+/// Writes an ordinary TLV. Variable time: branches only on the encoding structure.
+pub(crate) fn default_encode<T: Encode + ?Sized>(
+    value: &T,
+    tag: &[u8],
+    rules: EncodingType,
+    out: &mut [u8],
+) -> Result<usize, Asn1Error> {
+    let content_len = value.content_len(rules);
+    let indefinite = uses_indefinite(tag, rules);
+    let total = tag.len()
+        + if indefinite {
+            1 + content_len + 2
+        } else {
+            len_octets(content_len) + content_len
+        };
+    let out = out.get_mut(..total).ok_or(Asn1Error::BufferTooSmall)?;
+    out[..tag.len()].copy_from_slice(tag);
+    let mut at = tag.len();
+    if indefinite {
+        out[at] = 0x80;
+        at += 1;
+    } else {
+        at += write_len(content_len, &mut out[at..]);
+    }
+    let written = value.encode_content(rules, &mut out[at..at + content_len])?;
+    debug_assert_eq!(
+        written, content_len,
+        "content_len and encode_content disagree"
+    );
+    if indefinite {
+        out[at + content_len..].fill(0);
+    }
+    Ok(total)
 }
 
 impl<T: ?Sized + Encode> Encode for Box<T> {
@@ -110,6 +154,68 @@ mod tests {
     use super::*;
     use crate::{Asn1Boolean, Asn1Object, Asn1Tagged, Decode, Depth};
     use alloc::vec;
+
+    #[test]
+    fn cer_constructed_values_use_indefinite_lengths_and_sorted_sets() {
+        use crate::{Asn1Integer, Explicit};
+        let sequence =
+            Asn1Object::Sequence(vec![Asn1Integer::from(42_u8).into(), Asn1Object::Null]);
+        let set = Asn1Object::Set(vec![
+            Asn1Integer::from(5_u8).into(),
+            Asn1Integer::from(3_u8).into(),
+        ]);
+        for (value, expected) in [
+            (sequence, &[0x30, 0x80, 2, 1, 42, 5, 0, 0, 0][..]),
+            (set, &[0x31, 0x80, 2, 1, 3, 2, 1, 5, 0, 0][..]),
+        ] {
+            assert_eq!(value.encoded_len(EncodingType::Cer), expected.len());
+            assert_eq!(value.encode_to_vec(EncodingType::Cer).unwrap(), expected);
+            assert_eq!(
+                Asn1Object::try_decode_exact(expected, Depth::DEFAULT)
+                    .unwrap()
+                    .encode_to_vec(EncodingType::Cer)
+                    .unwrap(),
+                expected
+            );
+            assert_eq!(
+                value.encode(EncodingType::Cer, &mut vec![0; expected.len() - 1]),
+                Err(Asn1Error::BufferTooSmall)
+            );
+            let mut out = vec![0xaa; expected.len() + 3];
+            assert_eq!(
+                value.encode(EncodingType::Cer, &mut out).unwrap(),
+                expected.len()
+            );
+            assert_eq!(&out[expected.len()..], &[0xaa; 3]);
+        }
+        let integer = Asn1Integer::from(2_u8);
+        assert_eq!(
+            Explicit::new(&[0xa0], &integer)
+                .encode_to_vec(EncodingType::Cer)
+                .unwrap(),
+            [0xa0, 0x80, 2, 1, 2, 0, 0]
+        );
+    }
+
+    #[test]
+    fn cer_preserves_raw_unknown_encodings() {
+        use crate::Asn1Any;
+        let input = [0x1f, 0x25, 0x81, 0];
+        assert_eq!(
+            Asn1Any::try_decode_exact(&input, Depth::DEFAULT)
+                .unwrap()
+                .encode_to_vec(EncodingType::Cer)
+                .unwrap(),
+            input
+        );
+        assert_eq!(
+            Asn1Object::try_decode_exact(&input, Depth::DEFAULT)
+                .unwrap()
+                .encode_to_vec(EncodingType::Cer)
+                .unwrap(),
+            input
+        );
+    }
 
     #[test]
     fn vector_encoding_matches_manual_encoding_and_remains_available_through_trait_objects() {

@@ -12,6 +12,7 @@ use crate::error::Asn1Error;
 use crate::traits::{Decode, Encode};
 
 /// 整段 TLV，含表頭；建構時驗過是一個完整的元素。
+/// Raw encodings are not canonicalised under CER either.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Asn1Any {
     raw: Vec<u8>,
