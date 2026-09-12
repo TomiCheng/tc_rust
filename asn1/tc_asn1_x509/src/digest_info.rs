@@ -111,6 +111,48 @@ mod tests {
 
     const DEPTH: Depth = Depth::DEFAULT;
 
+    #[test]
+    fn sha256_digest_info_round_trips_through_cer_without_changing_der() {
+        let value = DigestInfo::new(
+            AlgorithmIdentifier::with_parameters(
+                "2.16.840.1.101.3.4.2.1".parse().unwrap(),
+                Asn1Null,
+            ),
+            &[0xab; 32],
+        );
+        let mut cer = alloc::vec![
+            0x30, 0x80, 0x30, 0x80, 6, 9, 0x60, 0x86, 0x48, 1, 0x65, 3, 4, 2, 1, 5, 0, 0, 0, 4, 32
+        ];
+        cer.extend_from_slice(&[0xab; 32]);
+        cer.extend_from_slice(&[0, 0]);
+        assert_eq!(cer.len(), 55);
+        assert_eq!(value.encoded_len(EncodingType::Cer), 55);
+        assert_eq!(value.encode_to_vec(EncodingType::Cer).unwrap(), cer);
+        let decoded = DigestInfo::try_decode_exact(&cer, DEPTH).unwrap();
+        assert_eq!(decoded.digest(), value.digest());
+        assert_eq!(
+            decoded
+                .digest_algorithm()
+                .encode_to_vec(EncodingType::Der)
+                .unwrap(),
+            value
+                .digest_algorithm()
+                .encode_to_vec(EncodingType::Der)
+                .unwrap()
+        );
+        assert_eq!(decoded.encode_to_vec(EncodingType::Cer).unwrap(), cer);
+        assert!(matches!(
+            DigestInfo::try_decode_der(&cer, DEPTH),
+            Err(Asn1Error::NotDer)
+        ));
+        let mut der = alloc::vec![
+            0x30, 0x31, 0x30, 0x0d, 6, 9, 0x60, 0x86, 0x48, 1, 0x65, 3, 4, 2, 1, 5, 0, 4, 32
+        ];
+        der.extend_from_slice(&[0xab; 32]);
+        assert_eq!(value.encode_to_vec(EncodingType::Der).unwrap(), der);
+        assert_eq!(decoded.encode_to_vec(EncodingType::Der).unwrap(), der);
+    }
+
     /// RFC 8017 §9.2 note 1 列的 SHA-1 表頭。
     const SHA1_PREFIX: &[u8] = &[
         0x30, 0x21, 0x30, 0x09, 0x06, 0x05, 0x2B, 0x0E, 0x03, 0x02, 0x1A, 0x05, 0x00, 0x04, 0x14,

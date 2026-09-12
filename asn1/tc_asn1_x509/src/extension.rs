@@ -131,6 +131,33 @@ mod tests {
 
     const DEPTH: Depth = Depth::DEFAULT;
 
+    #[test]
+    fn long_extension_values_round_trip_through_generic_cer_fields_and_keep_der_bytes() {
+        let value = Extension::new("2.5.29.14".parse().unwrap(), false, &[0xaa; 1001]);
+        let mut cer = alloc::vec![
+            0x30, 0x80, 6, 3, 0x55, 0x1d, 0x0e, 0x24, 0x80, 4, 0x82, 3, 0xe8
+        ];
+        cer.extend_from_slice(&[0xaa; 1000]);
+        cer.extend_from_slice(&[4, 1, 0xaa, 0, 0, 0, 0]);
+        assert_eq!(value.encoded_len(EncodingType::Cer), cer.len());
+        assert_eq!(value.encode_to_vec(EncodingType::Cer).unwrap(), cer);
+        let decoded = Extension::try_decode_exact(&cer, DEPTH).unwrap();
+        assert_eq!(decoded.extn_id(), value.extn_id());
+        assert_eq!(decoded.critical(), value.critical());
+        assert_eq!(decoded.extn_value(), value.extn_value());
+        assert_eq!(decoded.encode_to_vec(EncodingType::Cer).unwrap(), cer);
+        assert!(matches!(
+            Extension::try_decode_der(&cer, DEPTH),
+            Err(Asn1Error::NotDer)
+        ));
+        let mut der = alloc::vec![
+            0x30, 0x82, 3, 0xf2, 6, 3, 0x55, 0x1d, 0x0e, 4, 0x82, 3, 0xe9
+        ];
+        der.extend_from_slice(&[0xaa; 1001]);
+        assert_eq!(value.encode_to_vec(EncodingType::Der).unwrap(), der);
+        assert_eq!(decoded.encode_to_vec(EncodingType::Der).unwrap(), der);
+    }
+
     /// subjectKeyIdentifier，非 critical：critical 省略，extnValue 是 OCTET STRING 包 OCTET STRING。
     fn ski() -> Vec<u8> {
         let mut v = alloc::vec![

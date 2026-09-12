@@ -4,6 +4,10 @@
 //! 沒有 schema 就無法區分 SET 與 SET OF CHOICE；此樹的 SET 依類別、號碼、
 //! 完整編碼排序，不承諾所有 schema 下皆是標準 DER，也不承諾與 bc 遞迴比較
 //! 的結果相同。已知是 SET OF 時應使用 [`Asn1SetOf`]。
+//!
+//! CER SET ordering also depends on schema: an untagged CHOICE is ordered by
+//! its smallest possible tag (§9.3). This schema-free tree uses actual tags and
+//! cannot enforce that rule without the CHOICE definition.
 
 mod dump;
 mod tagged;

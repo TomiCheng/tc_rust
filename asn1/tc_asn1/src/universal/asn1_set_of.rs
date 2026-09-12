@@ -16,7 +16,7 @@ use crate::traits::{DecodeContent, Encode};
 
 use super::tag::SET as TAG;
 
-/// 同型別的 `SET OF`；保留加入或解碼的順序，只有 DER 輸出會排序。
+/// A homogeneous SET OF; insertion and decoding preserve order, while CER and DER sort output.
 ///
 /// X.690 §11.6 比較成員的完整 DER 編碼，採位元組字典序。條文的尾端補零
 /// 對合法的完整 TLV 不影響結果：一個 TLV 不會是另一個的真前綴，表頭的

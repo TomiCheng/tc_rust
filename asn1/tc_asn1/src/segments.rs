@@ -162,6 +162,252 @@ mod tests {
     use crate::*;
 
     #[test]
+    fn cer_external_alternatives_and_long_descriptors_round_trip() {
+        for encoding in [
+            ExternalEncoding::OctetAligned(Asn1OctetString::new(&[0xaa; 1001])),
+            ExternalEncoding::Arbitrary(Asn1BitString::from_bits(&[0xf0; 1000], 7996)),
+            ExternalEncoding::SingleAsn1Type(alloc::boxed::Box::new(
+                Asn1OctetString::new(&[0xaa; 1001]).into(),
+            )),
+        ] {
+            let value = Asn1External::new(
+                None,
+                None,
+                Some(Asn1ObjectDescriptor::new(&[b'A'; 1001])),
+                encoding,
+            );
+            let cer = value.encode_to_vec(EncodingType::Cer).unwrap();
+            assert_eq!(&cer[..4], &[0x28, 0x80, 0x27, 0x80]);
+            assert_eq!(
+                Asn1External::try_decode_exact(&cer, Depth::DEFAULT),
+                Ok(value.clone())
+            );
+            assert_eq!(
+                Asn1Object::try_decode_exact(&cer, Depth::DEFAULT),
+                Ok(value.clone().into())
+            );
+            assert_eq!(
+                Asn1External::try_decode_der(&cer, Depth::DEFAULT),
+                Err(Asn1Error::NotDer)
+            );
+        }
+    }
+
+    #[test]
+    fn cer_bit_segments_handle_exact_data_multiples_and_preserve_unused_bits() {
+        for len in [999, 1000, 1998, 1999, 2997] {
+            for unused in [0, 1, 7] {
+                let value = Asn1BitString::from_bits(&alloc::vec![0xff; len], len * 8 - unused);
+                let wire = value.encode_to_vec(EncodingType::Cer).unwrap();
+                assert_eq!(
+                    Asn1BitString::try_decode_exact(&wire, Depth::DEFAULT),
+                    Ok(value.clone())
+                );
+                if len >= 1000 {
+                    let element = Asn1Ref::parse(&wire, Depth::DEFAULT).unwrap();
+                    let parts: alloc::vec::Vec<_> = element
+                        .children(Depth::DEFAULT)
+                        .map(Result::unwrap)
+                        .collect();
+                    for part in &parts[..parts.len() - 1] {
+                        assert_eq!(part.tag(), tag::BIT_STRING);
+                        assert_eq!(part.value().len(), 1000);
+                        assert_eq!(part.value()[0], 0);
+                    }
+                    assert_eq!(parts.last().unwrap().value()[0], unused as u8);
+                    assert_eq!(
+                        Asn1BitString::try_decode_der(&wire, Depth::DEFAULT),
+                        Err(Asn1Error::NotDer)
+                    );
+                } else {
+                    assert_eq!(
+                        Asn1BitString::try_decode_der(&wire, Depth::DEFAULT),
+                        Ok(value)
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn cer_set_of_sorts_complete_encodings_and_rejects_der_round_trip_validation() {
+        let set = Asn1SetOf::from(alloc::vec![
+            Asn1Integer::from(5_u8),
+            Asn1Integer::from(3_u8)
+        ]);
+        let expected = [0x31, 0x80, 2, 1, 3, 2, 1, 5, 0, 0];
+        assert_eq!(set.encode_to_vec(EncodingType::Cer).unwrap(), expected);
+        assert_eq!(
+            Asn1SetOf::<Asn1Integer>::try_decode_der(&expected, Depth::DEFAULT),
+            Err(Asn1Error::NotDer)
+        );
+        let decoded =
+            Asn1SetOf::<Asn1Integer>::try_decode_exact(&expected, Depth::DEFAULT).unwrap();
+        assert_eq!(
+            decoded.members(),
+            &[Asn1Integer::from(3_u8), Asn1Integer::from(5_u8)]
+        );
+        let sequence = Asn1Object::Sequence(alloc::vec![
+            Asn1Integer::from(42_u8).into(),
+            Asn1Object::Null
+        ]);
+        assert_eq!(
+            Asn1Object::try_decode_der(
+                &sequence.encode_to_vec(EncodingType::Cer).unwrap(),
+                Depth::DEFAULT
+            ),
+            Err(Asn1Error::NotDer)
+        );
+    }
+
+    fn check_string<T>(value: T)
+    where
+        T: for<'a> DecodeContent<'a>
+            + Encode
+            + Clone
+            + core::fmt::Debug
+            + PartialEq
+            + Into<Asn1Object>,
+    {
+        let len = value.content_len(EncodingType::Der);
+        let cer = value.encode_to_vec(EncodingType::Cer).unwrap();
+        let tree: Asn1Object = value.clone().into();
+        assert_eq!(tree.encode_to_vec(EncodingType::Cer).unwrap(), cer);
+        assert_eq!(T::try_decode_exact(&cer, Depth::DEFAULT).unwrap(), value);
+        assert_eq!(
+            Asn1Object::try_decode_exact(&cer, Depth::DEFAULT).unwrap(),
+            tree
+        );
+        let der = value.encode_to_vec(EncodingType::Der).unwrap();
+        assert_eq!(value.encode_to_vec(EncodingType::Ber).unwrap(), der);
+        if len > 1000 {
+            assert_eq!(cer[0], Encode::tag(&value)[0] | 0x20);
+            assert_eq!(cer[1], 0x80);
+            let outer = Asn1Ref::parse(&cer, Depth::DEFAULT).unwrap();
+            let parts: alloc::vec::Vec<_> =
+                outer.children(Depth::DEFAULT).map(Result::unwrap).collect();
+            for (index, part) in parts.iter().enumerate() {
+                assert_eq!(part.tag(), tag::OCTET_STRING);
+                assert!(!part.is_constructed());
+                assert_eq!(
+                    part.value().len(),
+                    if index + 1 == parts.len() {
+                        (len - 1) % 1000 + 1
+                    } else {
+                        1000
+                    }
+                );
+            }
+            assert_eq!(
+                T::try_decode_der(&cer, Depth::DEFAULT),
+                Err(Asn1Error::NotDer)
+            );
+            assert_eq!(
+                Asn1Object::try_decode_der(&cer, Depth::DEFAULT),
+                Err(Asn1Error::NotDer)
+            );
+        } else {
+            assert_eq!(cer, der);
+            assert_eq!(T::try_decode_der(&cer, Depth::DEFAULT).unwrap(), value);
+        }
+        assert_eq!(
+            value.encode(EncodingType::Cer, &mut alloc::vec![0; cer.len() - 1]),
+            Err(Asn1Error::BufferTooSmall)
+        );
+    }
+
+    #[test]
+    fn every_segmentable_character_type_round_trips_as_a_typed_value_and_object() {
+        for count in [0, 1, 999, 1000, 1001, 2000, 2001] {
+            let ascii = "1".repeat(count);
+            check_string(Asn1Utf8String::new(&ascii));
+            check_string(Asn1NumericString::new(&ascii).unwrap());
+            check_string(Asn1PrintableString::new(&ascii).unwrap());
+            check_string(Asn1Ia5String::new(&ascii).unwrap());
+            check_string(Asn1VisibleString::new(&ascii).unwrap());
+            check_string(Asn1TeletexString::new(ascii.as_bytes()));
+            check_string(Asn1VideotexString::new(ascii.as_bytes()));
+            check_string(Asn1GeneralString::new(ascii.as_bytes()));
+            check_string(Asn1GraphicString::new(ascii.as_bytes()));
+            check_string(Asn1ObjectDescriptor::new(ascii.as_bytes()));
+        }
+        for count in [0, 1, 249, 250, 251, 499, 500, 501, 1000] {
+            check_string(Asn1BmpString::new(&"台".repeat(count)).unwrap());
+            check_string(Asn1UniversalString::new(&"🦀".repeat(count)));
+        }
+    }
+
+    #[test]
+    fn joining_segments_validates_character_sets_and_code_units_after_concatenation() {
+        assert_eq!(
+            Asn1BmpString::try_decode_exact(&[0x3e, 6, 4, 1, 0x53, 4, 1, 0xf0], Depth::DEFAULT)
+                .unwrap()
+                .as_str(),
+            "台"
+        );
+        assert_eq!(
+            Asn1UniversalString::try_decode_exact(
+                &[0x3c, 8, 4, 1, 0, 4, 3, 0, 0x53, 0xf0],
+                Depth::DEFAULT
+            )
+            .unwrap()
+            .as_str(),
+            "台"
+        );
+        assert_eq!(
+            Asn1BmpString::try_decode_exact(&[0x3e, 6, 4, 1, 0xd8, 4, 1, 0], Depth::DEFAULT),
+            Err(Asn1Error::MalformedValue)
+        );
+        assert_eq!(
+            Asn1NumericString::try_decode_exact(&[0x32, 3, 4, 1, b'A'], Depth::DEFAULT),
+            Err(Asn1Error::MalformedValue)
+        );
+        assert_eq!(
+            Asn1VisibleString::try_decode_exact(&[0x3a, 3, 4, 1, 0x7f], Depth::DEFAULT),
+            Err(Asn1Error::MalformedValue)
+        );
+        assert_eq!(
+            Asn1Ia5String::try_decode_exact(&[0x36, 3, 4, 1, 0xff], Depth::DEFAULT),
+            Err(Asn1Error::MalformedValue)
+        );
+        let nested = [0x2c, 5, 0x24, 3, 4, 1, b'A'];
+        assert_eq!(
+            Asn1Utf8String::try_decode_exact(&nested, Depth::new(1)),
+            Err(Asn1Error::DepthExceeded)
+        );
+        assert_eq!(
+            Asn1Utf8String::try_decode_exact(&nested, Depth::new(2))
+                .unwrap()
+                .as_str(),
+            "A"
+        );
+    }
+
+    #[test]
+    fn oid_iri_encodings_stay_primitive_even_above_the_cer_string_limit() {
+        let label = "a".repeat(1001);
+        let absolute = Asn1OidIri::new(&alloc::format!("/ISO/{label}")).unwrap();
+        let relative = Asn1RelativeOidIri::new(&label).unwrap();
+        for value in [Asn1Object::from(absolute), Asn1Object::from(relative)] {
+            let cer = value.encode_to_vec(EncodingType::Cer).unwrap();
+            assert_eq!(cer[0] & 0x20, 0);
+            assert_eq!(cer, value.encode_to_vec(EncodingType::Der).unwrap());
+            assert_eq!(
+                Asn1Object::try_decode_exact(&cer, Depth::DEFAULT).unwrap(),
+                value
+            );
+        }
+        assert_eq!(
+            Asn1OidIri::try_decode_exact(&[0x3f, 0x23, 0], Depth::DEFAULT),
+            Err(Asn1Error::UnexpectedTag)
+        );
+        assert_eq!(
+            Asn1RelativeOidIri::try_decode_exact(&[0x3f, 0x24, 0], Depth::DEFAULT),
+            Err(Asn1Error::UnexpectedTag)
+        );
+    }
+
+    #[test]
     fn cer_embedded_payloads_round_trip_with_indefinite_identification_wrappers() {
         for value in [
             Asn1Object::from(Asn1EmbeddedPdv::new(
