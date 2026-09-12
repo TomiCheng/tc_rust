@@ -18,14 +18,16 @@
 
 use alloc::boxed::Box;
 
-use super::tag::{EXTERNAL as TAG, INTEGER, OBJECT_DESCRIPTOR, OBJECT_IDENTIFIER};
+use super::tag::EXTERNAL as TAG;
 use super::{Asn1BitString, Asn1Integer, Asn1ObjectDescriptor, Asn1OctetString, Asn1Oid};
 use crate::asn1_any::Asn1Any;
-use crate::asn1_ref::{Asn1Ref, Children};
 use crate::depth::Depth;
 use crate::encoding_type::EncodingType;
 use crate::error::Asn1Error;
-use crate::traits::{Encode, TryDecode, TryDecodeContent};
+#[cfg(test)]
+use crate::traits::TryDecode;
+use crate::traits::{Encode, TryDecodeContent};
+use crate::{Explicit, Fields, Implicit, SequenceFields};
 
 const SINGLE_ASN1_TYPE: &[u8] = &[0xA0]; // [0] EXPLICIT，constructed
 const OCTET_ALIGNED: &[u8] = &[0x81]; // [1] IMPLICIT，primitive
@@ -97,52 +99,19 @@ impl<'a> TryDecodeContent<'a> for Asn1External {
     /// 三個 OPTIONAL 靠 tag 分（照 bc 的做法逐個試），最後一個必須是 `[0]`、`[1]`
     /// 或 `[2]`。
     fn try_decode_content(value: &'a [u8], depth: Depth) -> Result<Self, Asn1Error> {
-        let depth = depth.descend()?;
-        let mut fields = Children::new(value, depth);
-        let mut next = fields.next().ok_or(Asn1Error::Truncated)??;
-
-        // 三個 OPTIONAL：是就吃掉、往下看一個；不是就留給下一個判斷。
-        let mut take =
-            |expected: &[u8], next: &mut Asn1Ref<'a>| -> Result<Option<Asn1Ref<'a>>, Asn1Error> {
-                if next.tag() != expected {
-                    return Ok(None);
-                }
-                let taken = *next;
-                *next = fields.next().ok_or(Asn1Error::Truncated)??;
-                Ok(Some(taken))
-            };
-        let direct_reference = take(OBJECT_IDENTIFIER, &mut next)?
-            .map(|f| f.decode_as::<Asn1Oid>(depth))
-            .transpose()?;
-        let indirect_reference = take(INTEGER, &mut next)?
-            .map(|f| f.decode_as::<Asn1Integer>(depth))
-            .transpose()?;
-        let data_value_descriptor = take(OBJECT_DESCRIPTOR, &mut next)?
-            .map(|f| f.decode_as::<Asn1ObjectDescriptor>(depth))
-            .transpose()?;
-
-        let encoding = match next.tag() {
-            SINGLE_ASN1_TYPE => {
-                // EXPLICIT：[0] 裡剛好一個完整的 TLV。
-                let (used, inner) = Asn1Any::try_decode(next.value(), depth)?;
-                if used != next.value().len() {
-                    return Err(Asn1Error::TrailingData);
-                }
-                ExternalEncoding::SingleAsn1Type(Box::new(inner))
-            }
-            OCTET_ALIGNED => ExternalEncoding::OctetAligned(Asn1OctetString::try_decode_content(
-                next.value(),
-                depth,
-            )?),
-            ARBITRARY => {
-                ExternalEncoding::Arbitrary(Asn1BitString::try_decode_content(next.value(), depth)?)
-            }
+        let mut fields = Fields::new(value, depth)?;
+        let direct_reference = fields.optional()?;
+        let indirect_reference = fields.optional()?;
+        let data_value_descriptor = fields.optional()?;
+        let encoding = match fields.peek()?.ok_or(Asn1Error::Truncated)?.tag() {
+            SINGLE_ASN1_TYPE => ExternalEncoding::SingleAsn1Type(Box::new(
+                fields.explicit::<Asn1Any>(SINGLE_ASN1_TYPE)?,
+            )),
+            OCTET_ALIGNED => ExternalEncoding::OctetAligned(fields.implicit(OCTET_ALIGNED)?),
+            ARBITRARY => ExternalEncoding::Arbitrary(fields.implicit(ARBITRARY)?),
             _ => return Err(Asn1Error::UnexpectedTag),
         };
-
-        if fields.next().is_some() {
-            return Err(Asn1Error::TrailingData);
-        }
+        fields.finish()?;
         Ok(Self {
             direct_reference,
             indirect_reference,
@@ -152,69 +121,29 @@ impl<'a> TryDecodeContent<'a> for Asn1External {
     }
 }
 
-impl ExternalEncoding {
-    fn encoded_len(&self, rules: EncodingType) -> usize {
-        match self {
-            // EXPLICIT：外層 [0] 的內容是內層的完整 TLV。
-            Self::SingleAsn1Type(inner) => {
-                let inner_len = inner.encoded_len(rules);
-                SINGLE_ASN1_TYPE.len() + crate::traits::len_octets(inner_len) + inner_len
-            }
-            Self::OctetAligned(s) => s.encoded_len_tagged(OCTET_ALIGNED, rules),
-            Self::Arbitrary(b) => b.encoded_len_tagged(ARBITRARY, rules),
+impl SequenceFields for Asn1External {
+    /// 變動時間：分支只依編碼結構。
+    fn fields(&self, _: EncodingType, sink: &mut dyn FnMut(&dyn Encode)) {
+        if let Some(value) = &self.direct_reference {
+            sink(value);
         }
-    }
-
-    fn encode(&self, rules: EncodingType, out: &mut [u8]) -> Result<usize, Asn1Error> {
-        match self {
-            Self::SingleAsn1Type(inner) => {
-                let inner_len = inner.encoded_len(rules);
-                out[..1].copy_from_slice(SINGLE_ASN1_TYPE);
-                let mut at = 1 + crate::traits::write_len(inner_len, &mut out[1..]);
-                at += inner.encode(rules, &mut out[at..])?;
-                Ok(at)
+        if let Some(value) = &self.indirect_reference {
+            sink(value);
+        }
+        if let Some(value) = &self.data_value_descriptor {
+            sink(value);
+        }
+        match &self.encoding {
+            ExternalEncoding::SingleAsn1Type(inner) => {
+                sink(&Explicit::new(SINGLE_ASN1_TYPE, inner.as_ref()))
             }
-            Self::OctetAligned(s) => s.encode_tagged(OCTET_ALIGNED, rules, out),
-            Self::Arbitrary(b) => b.encode_tagged(ARBITRARY, rules, out),
+            ExternalEncoding::OctetAligned(value) => sink(&Implicit::new(OCTET_ALIGNED, value)),
+            ExternalEncoding::Arbitrary(value) => sink(&Implicit::new(ARBITRARY, value)),
         }
     }
 }
 
-impl Encode for Asn1External {
-    fn tag(&self) -> &[u8] {
-        TAG
-    }
-
-    fn content_len(&self, rules: EncodingType) -> usize {
-        self.direct_reference
-            .as_ref()
-            .map_or(0, |v| v.encoded_len(rules))
-            + self
-                .indirect_reference
-                .as_ref()
-                .map_or(0, |v| v.encoded_len(rules))
-            + self
-                .data_value_descriptor
-                .as_ref()
-                .map_or(0, |v| v.encoded_len(rules))
-            + self.encoding.encoded_len(rules)
-    }
-
-    fn encode_content(&self, rules: EncodingType, out: &mut [u8]) -> Result<usize, Asn1Error> {
-        let mut at = 0;
-        if let Some(v) = &self.direct_reference {
-            at += v.encode(rules, &mut out[at..])?;
-        }
-        if let Some(v) = &self.indirect_reference {
-            at += v.encode(rules, &mut out[at..])?;
-        }
-        if let Some(v) = &self.data_value_descriptor {
-            at += v.encode(rules, &mut out[at..])?;
-        }
-        at += self.encoding.encode(rules, &mut out[at..])?;
-        Ok(at)
-    }
-}
+crate::impl_sequence_encode!(Asn1External, TAG);
 
 #[cfg(test)]
 mod tests {

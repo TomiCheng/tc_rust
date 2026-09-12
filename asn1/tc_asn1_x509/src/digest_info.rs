@@ -13,7 +13,8 @@
 
 use tc_asn1::tag::SEQUENCE as TAG;
 use tc_asn1::{
-    Asn1Error, Asn1OctetString, Children, Depth, Encode, EncodingType, TryDecodeContent,
+    Asn1Error, Asn1OctetString, Depth, Encode, EncodingType, Fields, SequenceFields,
+    TryDecodeContent,
 };
 
 use crate::AlgorithmIdentifier;
@@ -81,21 +82,10 @@ impl<'a> TryDecodeContent<'a> for DigestInfo {
     /// 變動時間：分支只依編碼結構。剛好兩個欄位，多的回
     /// [`Asn1Error::TrailingData`]，少的回 [`Asn1Error::Truncated`]。
     fn try_decode_content(value: &'a [u8], depth: Depth) -> Result<Self, Asn1Error> {
-        let depth = depth.descend()?;
-        let mut fields = Children::new(value, depth);
-
-        let digest_algorithm = fields
-            .next()
-            .ok_or(Asn1Error::Truncated)??
-            .decode_as::<AlgorithmIdentifier>(depth)?;
-        let digest = fields
-            .next()
-            .ok_or(Asn1Error::Truncated)??
-            .decode_as::<Asn1OctetString>(depth)?;
-
-        if fields.next().is_some() {
-            return Err(Asn1Error::TrailingData);
-        }
+        let mut fields = Fields::new(value, depth)?;
+        let digest_algorithm = fields.required()?;
+        let digest = fields.required()?;
+        fields.finish()?;
         Ok(Self {
             digest_algorithm,
             digest,
@@ -103,21 +93,15 @@ impl<'a> TryDecodeContent<'a> for DigestInfo {
     }
 }
 
-impl Encode for DigestInfo {
-    fn tag(&self) -> &[u8] {
-        TAG
-    }
-
-    fn content_len(&self, rules: EncodingType) -> usize {
-        self.digest_algorithm.encoded_len(rules) + self.digest.encoded_len(rules)
-    }
-
-    fn encode_content(&self, rules: EncodingType, out: &mut [u8]) -> Result<usize, Asn1Error> {
-        let mut at = self.digest_algorithm.encode(rules, out)?;
-        at += self.digest.encode(rules, &mut out[at..])?;
-        Ok(at)
+impl SequenceFields for DigestInfo {
+    /// 變動時間：分支只依編碼結構。
+    fn fields(&self, _: EncodingType, sink: &mut dyn FnMut(&dyn Encode)) {
+        sink(&self.digest_algorithm);
+        sink(&self.digest);
     }
 }
+
+tc_asn1::impl_sequence_encode!(DigestInfo);
 
 #[cfg(test)]
 mod tests {

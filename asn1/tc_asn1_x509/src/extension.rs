@@ -12,10 +12,10 @@
 //! `critical` 為 false 時整個欄位不存在），以及**OCTET STRING 包 DER**（殼要先剝，
 //! 裡面的型別由 `extnID` 決定）。
 
-use tc_asn1::tag::{BOOLEAN, SEQUENCE as TAG};
+use tc_asn1::tag::SEQUENCE as TAG;
 use tc_asn1::{
-    Asn1Boolean, Asn1Error, Asn1OctetString, Asn1Oid, Children, Depth, Encode, EncodingType,
-    TryDecode, TryDecodeContent,
+    Asn1Boolean, Asn1Error, Asn1OctetString, Asn1Oid, Depth, Encode, EncodingType, Fields,
+    SequenceFields, TryDecode, TryDecodeContent,
 };
 
 /// 一個 X.509 extension。
@@ -101,29 +101,11 @@ impl<'a> TryDecodeContent<'a> for Extension {
     /// `critical` 是 DEFAULT FALSE：第二個子元素的 tag 是 BOOLEAN 就是它，否則
     /// 視為省略。明寫 `FALSE` 不是 DER，但寬鬆接受；重編時會消失。
     fn try_decode_content(value: &'a [u8], depth: Depth) -> Result<Self, Asn1Error> {
-        let depth = depth.descend()?;
-        let mut fields = Children::new(value, depth);
-
-        let extn_id = fields
-            .next()
-            .ok_or(Asn1Error::Truncated)??
-            .decode_as::<Asn1Oid>(depth)?;
-
-        // 偷看 tag 決定第二個是 critical 還是 extnValue。
-        let mut next = fields.next().ok_or(Asn1Error::Truncated)??;
-        let critical = if next.tag() == BOOLEAN {
-            let flag = next.decode_as::<Asn1Boolean>(depth)?.0;
-            next = fields.next().ok_or(Asn1Error::Truncated)??;
-            flag
-        } else {
-            false
-        };
-
-        let extn_value = next.decode_as::<Asn1OctetString>(depth)?;
-
-        if fields.next().is_some() {
-            return Err(Asn1Error::TrailingData);
-        }
+        let mut fields = Fields::new(value, depth)?;
+        let extn_id = fields.required()?;
+        let critical = fields.default(Asn1Boolean(false))?.0;
+        let extn_value = fields.required()?;
+        fields.finish()?;
         Ok(Self {
             extn_id,
             critical,
@@ -132,29 +114,18 @@ impl<'a> TryDecodeContent<'a> for Extension {
     }
 }
 
-impl Encode for Extension {
-    fn tag(&self) -> &[u8] {
-        TAG
-    }
-
-    fn content_len(&self, rules: EncodingType) -> usize {
-        let critical = if self.critical {
-            Asn1Boolean(true).encoded_len(rules)
-        } else {
-            0 // DEFAULT FALSE：等於預設值就不寫
-        };
-        self.extn_id.encoded_len(rules) + critical + self.extn_value.encoded_len(rules)
-    }
-
-    fn encode_content(&self, rules: EncodingType, out: &mut [u8]) -> Result<usize, Asn1Error> {
-        let mut at = self.extn_id.encode(rules, out)?;
+impl SequenceFields for Extension {
+    /// 變動時間：分支只依編碼結構。
+    fn fields(&self, _: EncodingType, sink: &mut dyn FnMut(&dyn Encode)) {
+        sink(&self.extn_id);
         if self.critical {
-            at += Asn1Boolean(true).encode(rules, &mut out[at..])?;
+            sink(&Asn1Boolean(true));
         }
-        at += self.extn_value.encode(rules, &mut out[at..])?;
-        Ok(at)
+        sink(&self.extn_value);
     }
 }
+
+tc_asn1::impl_sequence_encode!(Extension);
 
 #[cfg(test)]
 mod tests {

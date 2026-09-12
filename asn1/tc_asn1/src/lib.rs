@@ -16,6 +16,13 @@
 //! 未知型別可由 [`Asn1Any`] 保留原始編碼。異質的 [`Asn1Set`] 使用 trait 物件，
 //! 同質的 [`Asn1SetOf`] 則使用泛型；兩者的 DER 排序規則不同。
 //!
+//! # 具名結構怎麼寫
+//!
+//! [`TryDecodeContent`] 用 [`Fields`] 依序取欄位，最後呼叫 [`Fields::finish`]。
+//! 編碼實作 [`SequenceFields`]，再用 [`impl_sequence_encode!`] 產生 [`Encode`]。
+//! 標記用 [`Explicit`]／[`Implicit`] 包裝借用值，欄位的省略條件放在清單中。
+//! CHOICE 自己實作 [`TryDecode`]；OPTIONAL CHOICE 可用 [`Fields::peek`] 判斷。
+//!
 //! # 編碼要選規則，解碼不用
 //!
 //! [`Encode`] 收 [`EncodingType`]，選擇 BER 或 DER。
@@ -71,6 +78,7 @@ mod asn1_ref;
 mod depth;
 mod encoding_type;
 mod error;
+mod schema;
 mod traits;
 mod universal;
 
@@ -79,6 +87,7 @@ pub use asn1_ref::{Asn1Class, Asn1Ref, Children};
 pub use depth::Depth;
 pub use encoding_type::EncodingType;
 pub use error::Asn1Error;
+pub use schema::{Explicit, Fields, Implicit, SequenceFields};
 pub use traits::{Encode, TryDecode, TryDecodeContent};
 pub use universal::tag;
 pub use universal::{

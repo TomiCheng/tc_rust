@@ -16,7 +16,8 @@ use core::fmt;
 
 use tc_asn1::tag::{NULL, SEQUENCE as TAG};
 use tc_asn1::{
-    Asn1Any, Asn1Error, Asn1Null, Asn1Oid, Children, Depth, Encode, EncodingType, TryDecodeContent,
+    Asn1Any, Asn1Error, Asn1Null, Asn1Oid, Depth, Encode, EncodingType, Fields, SequenceFields,
+    TryDecodeContent,
 };
 
 /// `parameters` 的型別由 `algorithm` 決定，所以兩個方向的表示不同。
@@ -141,26 +142,17 @@ impl<'a> TryDecodeContent<'a> for AlgorithmIdentifier {
     /// 剛好兩個以內的欄位；第三個回 [`Asn1Error::TrailingData`]，
     /// 少了 `algorithm` 回 [`Asn1Error::Truncated`]。
     fn try_decode_content(value: &'a [u8], depth: Depth) -> Result<Self, Asn1Error> {
-        let depth = depth.descend()?;
-        let mut fields = Children::new(value, depth);
-
-        let algorithm = fields
-            .next()
-            .ok_or(Asn1Error::Truncated)??
-            .decode_as::<Asn1Oid>(depth)?;
-
-        let parameters = match fields.next().transpose()? {
+        let mut fields = Fields::new(value, depth)?;
+        let algorithm = fields.required()?;
+        let parameters = match fields.peek()? {
             None => AlgorithmParameters::Absent,
             Some(field) if field.tag() == NULL => {
-                field.decode_as::<Asn1Null>(depth)?; // 驗內容是空的
+                fields.required::<Asn1Null>()?;
                 AlgorithmParameters::Null
             }
-            Some(field) => AlgorithmParameters::Decoded(Asn1Any::from(&field)),
+            Some(_) => AlgorithmParameters::Decoded(fields.required::<Asn1Any>()?),
         };
-
-        if fields.next().is_some() {
-            return Err(Asn1Error::TrailingData);
-        }
+        fields.finish()?;
         Ok(Self {
             algorithm,
             parameters,
@@ -168,32 +160,20 @@ impl<'a> TryDecodeContent<'a> for AlgorithmIdentifier {
     }
 }
 
-impl Encode for AlgorithmIdentifier {
-    fn tag(&self) -> &[u8] {
-        TAG
-    }
-
-    fn content_len(&self, rules: EncodingType) -> usize {
-        let parameters = match &self.parameters {
-            AlgorithmParameters::Absent => 0,
-            AlgorithmParameters::Null => Asn1Null.encoded_len(rules),
-            AlgorithmParameters::Built(p) => p.encoded_len(rules),
-            AlgorithmParameters::Decoded(p) => p.encoded_len(rules),
-        };
-        self.algorithm.encoded_len(rules) + parameters
-    }
-
-    fn encode_content(&self, rules: EncodingType, out: &mut [u8]) -> Result<usize, Asn1Error> {
-        let mut at = self.algorithm.encode(rules, out)?;
-        at += match &self.parameters {
-            AlgorithmParameters::Absent => 0,
-            AlgorithmParameters::Null => Asn1Null.encode(rules, &mut out[at..])?,
-            AlgorithmParameters::Built(p) => p.encode(rules, &mut out[at..])?,
-            AlgorithmParameters::Decoded(p) => p.encode(rules, &mut out[at..])?,
-        };
-        Ok(at)
+impl SequenceFields for AlgorithmIdentifier {
+    /// 變動時間：分支只依編碼結構。
+    fn fields(&self, _: EncodingType, sink: &mut dyn FnMut(&dyn Encode)) {
+        sink(&self.algorithm);
+        match &self.parameters {
+            AlgorithmParameters::Absent => {}
+            AlgorithmParameters::Null => sink(&Asn1Null),
+            AlgorithmParameters::Built(value) => sink(value.as_ref()),
+            AlgorithmParameters::Decoded(value) => sink(value),
+        }
     }
 }
+
+tc_asn1::impl_sequence_encode!(AlgorithmIdentifier);
 
 #[cfg(test)]
 mod tests {
