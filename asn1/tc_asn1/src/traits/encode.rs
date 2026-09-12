@@ -115,6 +115,23 @@ pub(crate) fn default_encode<T: Encode + ?Sized>(
 }
 
 impl<T: ?Sized + Encode> Encode for Box<T> {
+    fn encoded_len(&self, rules: EncodingType) -> usize {
+        (**self).encoded_len(rules)
+    }
+    fn encode(&self, rules: EncodingType, out: &mut [u8]) -> Result<usize, Asn1Error> {
+        (**self).encode(rules, out)
+    }
+    fn encoded_len_tagged(&self, tag: &[u8], rules: EncodingType) -> usize {
+        (**self).encoded_len_tagged(tag, rules)
+    }
+    fn encode_tagged(
+        &self,
+        tag: &[u8],
+        rules: EncodingType,
+        out: &mut [u8],
+    ) -> Result<usize, Asn1Error> {
+        (**self).encode_tagged(tag, rules, out)
+    }
     fn tag(&self) -> &[u8] {
         (**self).tag()
     }

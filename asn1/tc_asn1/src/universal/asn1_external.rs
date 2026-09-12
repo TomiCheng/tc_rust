@@ -98,8 +98,10 @@ impl<'a> DecodeContent<'a> for Asn1External {
             SINGLE_ASN1_TYPE => ExternalEncoding::SingleAsn1Type(Box::new(
                 fields.explicit::<Asn1Object>(SINGLE_ASN1_TYPE)?,
             )),
-            OCTET_ALIGNED => ExternalEncoding::OctetAligned(fields.implicit(OCTET_ALIGNED)?),
-            ARBITRARY => ExternalEncoding::Arbitrary(fields.implicit(ARBITRARY)?),
+            OCTET_ALIGNED | [0xa1] => {
+                ExternalEncoding::OctetAligned(fields.implicit(OCTET_ALIGNED)?)
+            }
+            ARBITRARY | [0xa2] => ExternalEncoding::Arbitrary(fields.implicit(ARBITRARY)?),
             _ => return Err(Asn1Error::UnexpectedTag),
         };
         fields.finish()?;

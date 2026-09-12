@@ -66,6 +66,19 @@ impl<'a> Implicit<'a> {
     }
 }
 impl Encode for Implicit<'_> {
+    /// Variable time: branches only on the encoding structure.
+    fn encoded_len_tagged(&self, tag: &[u8], rules: EncodingType) -> usize {
+        self.inner.encoded_len_tagged(tag, rules)
+    }
+    /// Variable time: branches only on the encoding structure.
+    fn encode_tagged(
+        &self,
+        tag: &[u8],
+        rules: EncodingType,
+        out: &mut [u8],
+    ) -> Result<usize, Asn1Error> {
+        self.inner.encode_tagged(tag, rules, out)
+    }
     /// 取得替換 tag。變動時間契約：分支只依編碼結構。
     fn tag(&self) -> &[u8] {
         self.tag

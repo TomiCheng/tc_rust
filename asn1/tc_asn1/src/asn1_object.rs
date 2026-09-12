@@ -457,20 +457,181 @@ impl Encode for Asn1Object {
         }
     }
 
-    /// 計算完整長度；未知元素包含原始表頭。變動時間：分支只依編碼結構。
+    /// Variable time: branches only on the encoding structure.
     fn encoded_len(&self, rules: EncodingType) -> usize {
-        if let Self::Unknown(value) = self {
-            return value.encoded_len(rules);
+        match self {
+            Self::Boolean(value) => value.encoded_len(rules),
+            Self::Integer(value) => value.encoded_len(rules),
+            Self::BitString(value) => value.encoded_len(rules),
+            Self::OctetString(value) => value.encoded_len(rules),
+            Self::Oid(value) => value.encoded_len(rules),
+            Self::ObjectDescriptor(value) => value.encoded_len(rules),
+            Self::External(value) => value.encoded_len(rules),
+            Self::Real(value) => value.encoded_len(rules),
+            Self::Enumerated(value) => value.encoded_len(rules),
+            Self::EmbeddedPdv(value) => value.encoded_len(rules),
+            Self::Utf8String(value) => value.encoded_len(rules),
+            Self::RelativeOid(value) => value.encoded_len(rules),
+            Self::Time(value) => value.encoded_len(rules),
+            Self::NumericString(value) => value.encoded_len(rules),
+            Self::PrintableString(value) => value.encoded_len(rules),
+            Self::TeletexString(value) => value.encoded_len(rules),
+            Self::VideotexString(value) => value.encoded_len(rules),
+            Self::Ia5String(value) => value.encoded_len(rules),
+            Self::UtcTime(value) => value.encoded_len(rules),
+            Self::GeneralizedTime(value) => value.encoded_len(rules),
+            Self::GraphicString(value) => value.encoded_len(rules),
+            Self::VisibleString(value) => value.encoded_len(rules),
+            Self::GeneralString(value) => value.encoded_len(rules),
+            Self::UniversalString(value) => value.encoded_len(rules),
+            Self::CharacterString(value) => value.encoded_len(rules),
+            Self::BmpString(value) => value.encoded_len(rules),
+            Self::Date(value) => value.encoded_len(rules),
+            Self::TimeOfDay(value) => value.encoded_len(rules),
+            Self::DateTime(value) => value.encoded_len(rules),
+            Self::Duration(value) => value.encoded_len(rules),
+            Self::OidIri(value) => value.encoded_len(rules),
+            Self::RelativeOidIri(value) => value.encoded_len(rules),
+            Self::Tagged(value) => value.encoded_len(rules),
+            Self::Unknown(value) => value.encoded_len(rules),
+            Self::Null | Self::Sequence(_) | Self::Set(_) => {
+                self.encoded_len_tagged(self.tag(), rules)
+            }
         }
-        self.encoded_len_tagged(self.tag(), rules)
     }
 
-    /// 寫出完整元素；未知元素連原始表頭一起複製。變動時間：分支只依編碼結構。
+    /// Variable time: branches only on the encoding structure.
     fn encode(&self, rules: EncodingType, out: &mut [u8]) -> Result<usize, Asn1Error> {
-        if let Self::Unknown(value) = self {
-            return value.encode(rules, out);
+        match self {
+            Self::Boolean(value) => value.encode(rules, out),
+            Self::Integer(value) => value.encode(rules, out),
+            Self::BitString(value) => value.encode(rules, out),
+            Self::OctetString(value) => value.encode(rules, out),
+            Self::Oid(value) => value.encode(rules, out),
+            Self::ObjectDescriptor(value) => value.encode(rules, out),
+            Self::External(value) => value.encode(rules, out),
+            Self::Real(value) => value.encode(rules, out),
+            Self::Enumerated(value) => value.encode(rules, out),
+            Self::EmbeddedPdv(value) => value.encode(rules, out),
+            Self::Utf8String(value) => value.encode(rules, out),
+            Self::RelativeOid(value) => value.encode(rules, out),
+            Self::Time(value) => value.encode(rules, out),
+            Self::NumericString(value) => value.encode(rules, out),
+            Self::PrintableString(value) => value.encode(rules, out),
+            Self::TeletexString(value) => value.encode(rules, out),
+            Self::VideotexString(value) => value.encode(rules, out),
+            Self::Ia5String(value) => value.encode(rules, out),
+            Self::UtcTime(value) => value.encode(rules, out),
+            Self::GeneralizedTime(value) => value.encode(rules, out),
+            Self::GraphicString(value) => value.encode(rules, out),
+            Self::VisibleString(value) => value.encode(rules, out),
+            Self::GeneralString(value) => value.encode(rules, out),
+            Self::UniversalString(value) => value.encode(rules, out),
+            Self::CharacterString(value) => value.encode(rules, out),
+            Self::BmpString(value) => value.encode(rules, out),
+            Self::Date(value) => value.encode(rules, out),
+            Self::TimeOfDay(value) => value.encode(rules, out),
+            Self::DateTime(value) => value.encode(rules, out),
+            Self::Duration(value) => value.encode(rules, out),
+            Self::OidIri(value) => value.encode(rules, out),
+            Self::RelativeOidIri(value) => value.encode(rules, out),
+            Self::Tagged(value) => value.encode(rules, out),
+            Self::Unknown(value) => value.encode(rules, out),
+            Self::Null | Self::Sequence(_) | Self::Set(_) => {
+                self.encode_tagged(self.tag(), rules, out)
+            }
         }
-        self.encode_tagged(self.tag(), rules, out)
+    }
+
+    /// Variable time: branches only on the encoding structure.
+    fn encoded_len_tagged(&self, tag: &[u8], rules: EncodingType) -> usize {
+        match self {
+            Self::Boolean(value) => value.encoded_len_tagged(tag, rules),
+            Self::Integer(value) => value.encoded_len_tagged(tag, rules),
+            Self::BitString(value) => value.encoded_len_tagged(tag, rules),
+            Self::OctetString(value) => value.encoded_len_tagged(tag, rules),
+            Self::Oid(value) => value.encoded_len_tagged(tag, rules),
+            Self::ObjectDescriptor(value) => value.encoded_len_tagged(tag, rules),
+            Self::External(value) => value.encoded_len_tagged(tag, rules),
+            Self::Real(value) => value.encoded_len_tagged(tag, rules),
+            Self::Enumerated(value) => value.encoded_len_tagged(tag, rules),
+            Self::EmbeddedPdv(value) => value.encoded_len_tagged(tag, rules),
+            Self::Utf8String(value) => value.encoded_len_tagged(tag, rules),
+            Self::RelativeOid(value) => value.encoded_len_tagged(tag, rules),
+            Self::Time(value) => value.encoded_len_tagged(tag, rules),
+            Self::NumericString(value) => value.encoded_len_tagged(tag, rules),
+            Self::PrintableString(value) => value.encoded_len_tagged(tag, rules),
+            Self::TeletexString(value) => value.encoded_len_tagged(tag, rules),
+            Self::VideotexString(value) => value.encoded_len_tagged(tag, rules),
+            Self::Ia5String(value) => value.encoded_len_tagged(tag, rules),
+            Self::UtcTime(value) => value.encoded_len_tagged(tag, rules),
+            Self::GeneralizedTime(value) => value.encoded_len_tagged(tag, rules),
+            Self::GraphicString(value) => value.encoded_len_tagged(tag, rules),
+            Self::VisibleString(value) => value.encoded_len_tagged(tag, rules),
+            Self::GeneralString(value) => value.encoded_len_tagged(tag, rules),
+            Self::UniversalString(value) => value.encoded_len_tagged(tag, rules),
+            Self::CharacterString(value) => value.encoded_len_tagged(tag, rules),
+            Self::BmpString(value) => value.encoded_len_tagged(tag, rules),
+            Self::Date(value) => value.encoded_len_tagged(tag, rules),
+            Self::TimeOfDay(value) => value.encoded_len_tagged(tag, rules),
+            Self::DateTime(value) => value.encoded_len_tagged(tag, rules),
+            Self::Duration(value) => value.encoded_len_tagged(tag, rules),
+            Self::OidIri(value) => value.encoded_len_tagged(tag, rules),
+            Self::RelativeOidIri(value) => value.encoded_len_tagged(tag, rules),
+            Self::Tagged(value) => value.encoded_len_tagged(tag, rules),
+            Self::Unknown(value) => value.encoded_len_tagged(tag, rules),
+            Self::Null | Self::Sequence(_) | Self::Set(_) => {
+                crate::traits::default_encoded_len(self, tag, rules)
+            }
+        }
+    }
+
+    /// Variable time: branches only on the encoding structure.
+    fn encode_tagged(
+        &self,
+        tag: &[u8],
+        rules: EncodingType,
+        out: &mut [u8],
+    ) -> Result<usize, Asn1Error> {
+        match self {
+            Self::Boolean(value) => value.encode_tagged(tag, rules, out),
+            Self::Integer(value) => value.encode_tagged(tag, rules, out),
+            Self::BitString(value) => value.encode_tagged(tag, rules, out),
+            Self::OctetString(value) => value.encode_tagged(tag, rules, out),
+            Self::Oid(value) => value.encode_tagged(tag, rules, out),
+            Self::ObjectDescriptor(value) => value.encode_tagged(tag, rules, out),
+            Self::External(value) => value.encode_tagged(tag, rules, out),
+            Self::Real(value) => value.encode_tagged(tag, rules, out),
+            Self::Enumerated(value) => value.encode_tagged(tag, rules, out),
+            Self::EmbeddedPdv(value) => value.encode_tagged(tag, rules, out),
+            Self::Utf8String(value) => value.encode_tagged(tag, rules, out),
+            Self::RelativeOid(value) => value.encode_tagged(tag, rules, out),
+            Self::Time(value) => value.encode_tagged(tag, rules, out),
+            Self::NumericString(value) => value.encode_tagged(tag, rules, out),
+            Self::PrintableString(value) => value.encode_tagged(tag, rules, out),
+            Self::TeletexString(value) => value.encode_tagged(tag, rules, out),
+            Self::VideotexString(value) => value.encode_tagged(tag, rules, out),
+            Self::Ia5String(value) => value.encode_tagged(tag, rules, out),
+            Self::UtcTime(value) => value.encode_tagged(tag, rules, out),
+            Self::GeneralizedTime(value) => value.encode_tagged(tag, rules, out),
+            Self::GraphicString(value) => value.encode_tagged(tag, rules, out),
+            Self::VisibleString(value) => value.encode_tagged(tag, rules, out),
+            Self::GeneralString(value) => value.encode_tagged(tag, rules, out),
+            Self::UniversalString(value) => value.encode_tagged(tag, rules, out),
+            Self::CharacterString(value) => value.encode_tagged(tag, rules, out),
+            Self::BmpString(value) => value.encode_tagged(tag, rules, out),
+            Self::Date(value) => value.encode_tagged(tag, rules, out),
+            Self::TimeOfDay(value) => value.encode_tagged(tag, rules, out),
+            Self::DateTime(value) => value.encode_tagged(tag, rules, out),
+            Self::Duration(value) => value.encode_tagged(tag, rules, out),
+            Self::OidIri(value) => value.encode_tagged(tag, rules, out),
+            Self::RelativeOidIri(value) => value.encode_tagged(tag, rules, out),
+            Self::Tagged(value) => value.encode_tagged(tag, rules, out),
+            Self::Unknown(value) => value.encode_tagged(tag, rules, out),
+            Self::Null | Self::Sequence(_) | Self::Set(_) => {
+                crate::traits::default_encode(self, tag, rules, out)
+            }
+        }
     }
 }
 

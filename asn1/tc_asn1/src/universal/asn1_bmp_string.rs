@@ -71,6 +71,7 @@ impl<'a> DecodeContent<'a> for Asn1BmpString {
 }
 
 impl Encode for Asn1BmpString {
+    crate::segments::cer_string_encode!();
     /// 回傳 BMPString 的識別位元組。
     fn tag(&self) -> &[u8] {
         TAG

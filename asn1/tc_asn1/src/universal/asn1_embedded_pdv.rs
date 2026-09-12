@@ -164,7 +164,7 @@ macro_rules! container {
             fn try_decode_content(value: &'a [u8], depth: Depth) -> Result<Self, Asn1Error> {
                 let depth = depth.descend()?;
                 let (identification, data) = two_fields(value, depth)?;
-                if identification.tag() != [0xA0] || data.tag() != [0x82] {
+                if identification.tag() != [0xA0] || (data.tag() != [0x82] && data.tag() != [0xA2]) {
                     return Err(Asn1Error::UnexpectedTag);
                 }
                 let inner_depth = depth.descend()?;
@@ -174,7 +174,11 @@ macro_rules! container {
                 }
                 Ok(Self::new(
                     PdvIdentification::decode(inner, inner_depth)?,
-                    data.value().to_vec(),
+                    if data.tag() == [0x82] {
+                        data.value().to_vec()
+                    } else {
+                        <crate::Asn1OctetString as crate::DecodeConstructed>::try_decode_constructed(data.value(), depth)?.as_bytes().to_vec()
+                    },
                 ))
             }
         }
@@ -184,12 +188,12 @@ macro_rules! container {
             }
             /// 變動時間：依識別選項與資料長度計算。
             fn content_len(&self, rules: EncodingType) -> usize {
-                let id_len = self.identification.encoded_len(rules);
-                1 + len_octets(id_len)
-                    + id_len
-                    + 1
-                    + len_octets(self.value.len())
-                    + self.value.len()
+                let id_len = crate::Explicit::new(&[0xa0], &self.identification).encoded_len(rules);
+                id_len + if rules == EncodingType::Cer {
+                    crate::segments::segmented_len(&[0x82], tag::OCTET_STRING, self.value.len())
+                } else {
+                    1 + len_octets(self.value.len()) + self.value.len()
+                }
             }
             /// 變動時間：寫入 EXPLICIT 識別選項與 IMPLICIT OCTET STRING。
             fn encode_content(
@@ -197,9 +201,10 @@ macro_rules! container {
                 rules: EncodingType,
                 out: &mut [u8],
             ) -> Result<usize, Asn1Error> {
-                out[0] = 0xA0;
-                let mut at = 1 + write_len(self.identification.encoded_len(rules), &mut out[1..]);
-                at += self.identification.encode(rules, &mut out[at..])?;
+                let mut at = crate::Explicit::new(&[0xa0], &self.identification).encode(rules, out)?;
+                if rules == EncodingType::Cer {
+                    return Ok(at + crate::segments::encode_segmented(&[0x82], tag::OCTET_STRING, &self.value, &mut out[at..])?);
+                }
                 out[at] = 0x82;
                 at += 1;
                 at += write_len(self.value.len(), &mut out[at..]);

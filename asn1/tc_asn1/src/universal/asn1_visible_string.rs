@@ -57,6 +57,7 @@ impl<'a> DecodeContent<'a> for Asn1VisibleString {
 }
 
 impl Encode for Asn1VisibleString {
+    crate::segments::cer_string_encode!();
     /// 回傳 VisibleString 的識別位元組。
     fn tag(&self) -> &[u8] {
         TAG

@@ -108,6 +108,55 @@ impl<'a> DecodeConstructed<'a> for Asn1BitString {
 }
 
 impl Encode for Asn1BitString {
+    /// Variable time: branches only on the encoding structure.
+    fn encoded_len_tagged(&self, tag: &[u8], rules: EncodingType) -> usize {
+        if rules != EncodingType::Cer || self.bytes.len() < 1000 {
+            return crate::traits::default_encoded_len(self, tag, rules);
+        }
+        tag.len()
+            + 3
+            + self
+                .bytes
+                .chunks(999)
+                .map(|part| 1 + crate::traits::len_octets(part.len() + 1) + 1 + part.len())
+                .sum::<usize>()
+    }
+
+    /// Each nonfinal segment carries zero unused bits and 999 data octets.
+    /// Variable time: branches only on the encoding structure.
+    fn encode_tagged(
+        &self,
+        tag: &[u8],
+        rules: EncodingType,
+        out: &mut [u8],
+    ) -> Result<usize, Asn1Error> {
+        if rules != EncodingType::Cer || self.bytes.len() < 1000 {
+            return crate::traits::default_encode(self, tag, rules, out);
+        }
+        let total = self.encoded_len_tagged(tag, rules);
+        let out = out.get_mut(..total).ok_or(Asn1Error::BufferTooSmall)?;
+        out[..tag.len()].copy_from_slice(tag);
+        out[0] |= 0x20;
+        out[tag.len()] = 0x80;
+        let mut at = tag.len() + 1;
+        let count = self.bytes.len().div_ceil(999);
+        for (index, part) in self.bytes.chunks(999).enumerate() {
+            out[at] = TAG[0];
+            at += 1;
+            at += crate::traits::write_len(part.len() + 1, &mut out[at..]);
+            out[at] = if index + 1 == count {
+                self.unused_bits
+            } else {
+                0
+            };
+            at += 1;
+            out[at..at + part.len()].copy_from_slice(part);
+            at += part.len();
+        }
+        out[at..].fill(0);
+        Ok(total)
+    }
+
     fn tag(&self) -> &[u8] {
         TAG
     }
@@ -127,6 +176,40 @@ mod tests {
     use crate::traits::Decode;
 
     const DEPTH: Depth = Depth::DEFAULT;
+
+    #[test]
+    fn cer_bits_count_the_pad_octet_and_keep_padding_only_in_the_final_segment() {
+        let short = Asn1BitString::from_bytes(&[0xaa; 999]);
+        let mut expected = alloc::vec![3, 0x82, 3, 0xe8, 0];
+        expected.extend_from_slice(&[0xaa; 999]);
+        assert_eq!(short.encode_to_vec(EncodingType::Cer).unwrap(), expected);
+        let mut bytes = [0xaa; 1000];
+        bytes[999] = 0xf0;
+        let value = Asn1BitString::from_bits(&bytes, 7996);
+        let mut expected = alloc::vec![0x23, 0x80, 3, 0x82, 3, 0xe8, 0];
+        expected.extend_from_slice(&bytes[..999]);
+        expected.extend_from_slice(&[3, 2, 4, 0xf0, 0, 0]);
+        assert_eq!(expected.len(), 1012);
+        assert_eq!(value.encoded_len(EncodingType::Cer), 1012);
+        assert_eq!(value.encode_to_vec(EncodingType::Cer).unwrap(), expected);
+        assert_eq!(
+            value.encode(EncodingType::Cer, &mut [0; 1011]),
+            Err(Asn1Error::BufferTooSmall)
+        );
+        assert_eq!(
+            Asn1BitString::try_decode_exact(&expected, DEPTH),
+            Ok(value.clone())
+        );
+        assert_eq!(
+            crate::Asn1Object::try_decode_exact(&expected, DEPTH),
+            Ok(value.clone().into())
+        );
+        let mut definite = alloc::vec![3, 0x82, 3, 0xe9, 4];
+        definite.extend_from_slice(&bytes);
+        for rules in [EncodingType::Ber, EncodingType::Der] {
+            assert_eq!(value.encode_to_vec(rules).unwrap(), definite);
+        }
+    }
 
     #[test]
     fn a_whole_number_of_bytes_has_no_unused_bits() {

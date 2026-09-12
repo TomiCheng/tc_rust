@@ -65,6 +65,7 @@ impl<'a> DecodeConstructed<'a> for Asn1OctetString {
 }
 
 impl Encode for Asn1OctetString {
+    crate::segments::cer_string_encode!();
     fn tag(&self) -> &[u8] {
         TAG
     }
@@ -83,6 +84,52 @@ mod tests {
     use crate::traits::Decode;
 
     const DEPTH: Depth = Depth::DEFAULT;
+
+    #[test]
+    fn cer_octets_segment_at_1000_and_preserve_implicit_and_erased_dispatch() {
+        use crate::{Asn1Object, Implicit};
+        let short = Asn1OctetString::new(&[0xaa; 1000]);
+        let mut expected = alloc::vec![4, 0x82, 3, 0xe8];
+        expected.extend_from_slice(&[0xaa; 1000]);
+        assert_eq!(short.encode_to_vec(EncodingType::Cer).unwrap(), expected);
+        let value = Asn1OctetString::new(&[0xaa; 1001]);
+        let mut expected = alloc::vec![0x24, 0x80, 4, 0x82, 3, 0xe8];
+        expected.extend_from_slice(&[0xaa; 1000]);
+        expected.extend_from_slice(&[4, 1, 0xaa, 0, 0]);
+        assert_eq!(expected.len(), 1011);
+        let tree = Asn1Object::from(value.clone());
+        let boxed: alloc::boxed::Box<dyn Encode> = alloc::boxed::Box::new(value.clone());
+        for encoder in [&value as &dyn Encode, &tree, &boxed] {
+            assert_eq!(encoder.encoded_len(EncodingType::Cer), 1011);
+            assert_eq!(encoder.encode_to_vec(EncodingType::Cer).unwrap(), expected);
+            assert_eq!(
+                encoder.encode(EncodingType::Cer, &mut [0; 1010]),
+                Err(Asn1Error::BufferTooSmall)
+            );
+        }
+        assert_eq!(
+            Asn1OctetString::try_decode_exact(&expected, DEPTH),
+            Ok(value.clone())
+        );
+        assert_eq!(
+            Asn1Object::try_decode_exact(&expected, DEPTH),
+            Ok(tree.clone())
+        );
+        expected[0] = 0xa0;
+        for encoder in [&value as &dyn Encode, &tree, &boxed] {
+            assert_eq!(
+                Implicit::new(&[0x80], encoder)
+                    .encode_to_vec(EncodingType::Cer)
+                    .unwrap(),
+                expected
+            );
+        }
+        let mut definite = alloc::vec![4, 0x82, 3, 0xe9];
+        definite.extend_from_slice(&[0xaa; 1001]);
+        for rules in [EncodingType::Ber, EncodingType::Der] {
+            assert_eq!(value.encode_to_vec(rules).unwrap(), definite);
+        }
+    }
 
     #[test]
     fn bytes_pass_through_untouched_in_both_directions() {

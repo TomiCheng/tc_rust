@@ -75,6 +75,7 @@ impl<'a> DecodeContent<'a> for Asn1UniversalString {
 }
 
 impl Encode for Asn1UniversalString {
+    crate::segments::cer_string_encode!();
     /// 回傳 UniversalString 的識別位元組。
     fn tag(&self) -> &[u8] {
         TAG

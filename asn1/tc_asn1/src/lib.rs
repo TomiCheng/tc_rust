@@ -90,6 +90,7 @@ mod depth;
 mod encoding_type;
 mod error;
 mod schema;
+mod segments;
 mod traits;
 mod universal;
 

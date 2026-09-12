@@ -24,6 +24,7 @@ pub enum TaggedContent {
     /// constructed 內容逐一解成子元素，不推斷 EXPLICIT 或 IMPLICIT。
     Constructed(Vec<Asn1Object>),
     /// primitive 保留原始內容位元組。
+    /// CER does not canonicalise or segment these bytes: their universal type is unknown.
     Primitive(Vec<u8>),
 }
 

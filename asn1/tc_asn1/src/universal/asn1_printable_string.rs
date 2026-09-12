@@ -56,6 +56,7 @@ impl<'a> DecodeContent<'a> for Asn1PrintableString {
 }
 
 impl Encode for Asn1PrintableString {
+    crate::segments::cer_string_encode!();
     fn tag(&self) -> &[u8] {
         TAG
     }

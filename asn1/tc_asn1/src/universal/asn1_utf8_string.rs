@@ -44,6 +44,7 @@ impl<'a> DecodeContent<'a> for Asn1Utf8String {
 }
 
 impl Encode for Asn1Utf8String {
+    crate::segments::cer_string_encode!();
     fn tag(&self) -> &[u8] {
         TAG
     }
@@ -62,6 +63,23 @@ mod tests {
     use crate::traits::Decode;
 
     const DEPTH: Depth = Depth::DEFAULT;
+
+    #[test]
+    fn cer_utf8_segments_are_octet_strings_and_may_split_a_character() {
+        let text = alloc::format!("{}é", "a".repeat(999));
+        let value = Asn1Utf8String::new(&text);
+        let mut expected = alloc::vec![0x2c, 0x80, 4, 0x82, 3, 0xe8];
+        expected.extend_from_slice(&[b'a'; 999]);
+        expected.extend_from_slice(&[0xc3, 4, 1, 0xa9, 0, 0]);
+        assert_eq!(value.encode_to_vec(EncodingType::Cer).unwrap(), expected);
+        let tree = crate::Asn1Object::from(value.clone());
+        assert_eq!(tree.encode_to_vec(EncodingType::Cer).unwrap(), expected);
+        let mut definite = alloc::vec![0x0c, 0x82, 3, 0xe9];
+        definite.extend_from_slice(text.as_bytes());
+        for rules in [EncodingType::Ber, EncodingType::Der] {
+            assert_eq!(value.encode_to_vec(rules).unwrap(), definite);
+        }
+    }
 
     #[test]
     fn multibyte_text_round_trips() {
