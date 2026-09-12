@@ -75,7 +75,7 @@
 //! [`Asn1Time`] 包含日期、時間、區間、持續時間與重複區間；有用型別
 //! [`Asn1Date`]、[`Asn1TimeOfDay`]、[`Asn1DateTime`]、[`Asn1Duration`] 各自限制
 //! 格式。驗證日曆及分量結構，不查詢閏秒公告、時區資料庫或判斷區間先後。
-//! 原有 [`Asn1UtcTime`] 與 [`Asn1GeneralizedTime`] 保留原本的契約。
+//! [`Asn1UtcTime`] 與 [`Asn1GeneralizedTime`] 也驗證格里曆日期；不處理閏秒，秒限 0–59。
 //!
 //! 規則依據：[X.680](https://www.itu.int/rec/T-REC-X.680-202102-I/en)、
 //! [X.690](https://www.itu.int/rec/T-REC-X.690-202102-I/en) 與

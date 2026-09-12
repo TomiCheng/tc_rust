@@ -5,6 +5,26 @@ use core::fmt;
 
 use crate::error::Asn1Error;
 
+/// 格里曆閏年：四年一閏、百年不閏、四百年再閏。
+pub(crate) fn is_leap_year(year: u16) -> bool {
+    year.is_multiple_of(4) && (!year.is_multiple_of(100) || year.is_multiple_of(400))
+}
+
+/// 該月天數；呼叫端已確認 month 在 1–12。
+pub(crate) fn days_in_month(leap: bool, month: u8) -> u8 {
+    match month {
+        2 => {
+            if leap {
+                29
+            } else {
+                28
+            }
+        }
+        4 | 6 | 9 | 11 => 30,
+        _ => 31,
+    }
+}
+
 /// 欄位順序就是時間順序，所以 `Ord` 直接是先後。
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub(crate) struct DateTime {
@@ -17,8 +37,8 @@ pub(crate) struct DateTime {
 }
 
 impl DateTime {
-    /// 月 1–12、日 1–31、時 0–23、分秒 0–59。年份的範圍由呼叫端先驗過。
-    /// 不做日曆驗證（2 月 30 日會過）—— 憑證只拿它比大小。
+    /// 驗證格里曆日期，月 1–12、時 0–23、分秒 0–59。年份範圍由呼叫端先驗過。
+    /// 不處理閏秒，秒仍是 0–59。變動時間：分支只依日期與時間欄位。
     pub(crate) fn checked(
         year: u16,
         month: u8,
@@ -28,7 +48,7 @@ impl DateTime {
         second: u8,
     ) -> Result<Self, Asn1Error> {
         let in_range = (1..=12).contains(&month)
-            && (1..=31).contains(&day)
+            && (1..=days_in_month(is_leap_year(year), month)).contains(&day)
             && hour <= 23
             && minute <= 59
             && second <= 59;
@@ -94,5 +114,73 @@ impl fmt::Display for DateTime {
             "{:04}-{:02}-{:02}T{:02}:{:02}:{:02}Z",
             self.year, self.month, self.day, self.hour, self.minute, self.second
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{Asn1Error, Asn1GeneralizedTime, Asn1UtcTime, Depth, TryDecodeContent};
+
+    #[test]
+    fn utc_times_validate_calendar_dates_after_expanding_two_digit_years() {
+        for (wire, year, month, day, valid) in [
+            (b"240229000000Z", 2024, 2, 29, true),
+            (b"230229000000Z", 2023, 2, 29, false),
+            (b"000229000000Z", 2000, 2, 29, true),
+            (b"240230000000Z", 2024, 2, 30, false),
+            (b"240431000000Z", 2024, 4, 31, false),
+            (b"240631000000Z", 2024, 6, 31, false),
+            (b"240931000000Z", 2024, 9, 31, false),
+            (b"241131000000Z", 2024, 11, 31, false),
+            (b"240131000000Z", 2024, 1, 31, true),
+            (b"240331000000Z", 2024, 3, 31, true),
+            (b"241231000000Z", 2024, 12, 31, true),
+        ] {
+            let decoded = Asn1UtcTime::try_decode_content(wire, Depth::DEFAULT);
+            let built = Asn1UtcTime::new(year, month, day, 0, 0, 0);
+            if valid {
+                let value = decoded.unwrap();
+                assert_eq!(
+                    (value.year(), value.month(), value.day()),
+                    (year, month, day)
+                );
+                assert_eq!(built, Ok(value));
+            } else {
+                assert_eq!(decoded, Err(Asn1Error::MalformedValue), "{wire:?}");
+                assert_eq!(built, Err(Asn1Error::MalformedValue));
+            }
+        }
+    }
+
+    #[test]
+    fn generalized_times_validate_month_lengths_and_gregorian_century_exceptions() {
+        for (wire, year, month, day, valid) in [
+            (b"19000229000000Z", 1900, 2, 29, false),
+            (b"20000229000000Z", 2000, 2, 29, true),
+            (b"20240229000000Z", 2024, 2, 29, true),
+            (b"20230229000000Z", 2023, 2, 29, false),
+            (b"20240230000000Z", 2024, 2, 30, false),
+            (b"20240431000000Z", 2024, 4, 31, false),
+            (b"20240631000000Z", 2024, 6, 31, false),
+            (b"20240931000000Z", 2024, 9, 31, false),
+            (b"20241131000000Z", 2024, 11, 31, false),
+            (b"20240131000000Z", 2024, 1, 31, true),
+            (b"20240331000000Z", 2024, 3, 31, true),
+            (b"20241231000000Z", 2024, 12, 31, true),
+        ] {
+            let decoded = Asn1GeneralizedTime::try_decode_content(wire, Depth::DEFAULT);
+            let built = Asn1GeneralizedTime::new(year, month, day, 0, 0, 0);
+            if valid {
+                let value = decoded.unwrap();
+                assert_eq!(
+                    (value.year(), value.month(), value.day()),
+                    (year, month, day)
+                );
+                assert_eq!(built, Ok(value));
+            } else {
+                assert_eq!(decoded, Err(Asn1Error::MalformedValue), "{wire:?}");
+                assert_eq!(built, Err(Asn1Error::MalformedValue));
+            }
+        }
     }
 }

@@ -1,4 +1,5 @@
 //! TIME 的值記法驗證與 X.690 §11.9 正規化；不處理時區資料庫或日期運算。
+use super::date_time::days_in_month;
 use crate::Asn1Error;
 use alloc::{format, string::String, vec::Vec};
 type Result<T> = core::result::Result<T, Asn1Error>;
@@ -97,17 +98,7 @@ fn date(s: &str) -> Result<(u8, usize)> {
     let month = small(month, 2)?;
     require((1..=12).contains(&month))?;
     if let Some(day) = day {
-        let max = match month {
-            2 => {
-                if leap {
-                    29
-                } else {
-                    28
-                }
-            }
-            4 | 6 | 9 | 11 => 30,
-            _ => 31,
-        };
+        let max = u32::from(days_in_month(leap, month as u8));
         require((1..=max).contains(&small(day, 2)?))?;
     }
     Ok((if day.is_some() { 3 } else { 2 }, class))

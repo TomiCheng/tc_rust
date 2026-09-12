@@ -43,7 +43,7 @@ BC 對照基準：`bc-csharp` 的 `7fa86379`，`crypto/src/asn1/x509/` 共 **91 
 | --- | --- | --- | --- |
 | P1 | 已完成 | INTEGER、ENUMERATED、OID、字串、BIT STRING、OCTET STRING、SEQUENCE OF、SET OF | RDN 的 DER 排序可用 `Asn1SetOf`；不需要等更多基本型別 |
 | P2 | 已完成 | `Fields`、`Explicit`、`Implicit`、`SequenceFields`、`impl_sequence_encode!` | 必要／OPTIONAL／DEFAULT／標記已可重用；CHOICE 自行實作 `TryDecode` |
-| P3 | **前置未完成** | X.509 時間的完整日曆驗證與跨 UTCTime／GeneralizedTime 的比較 | 現有兩種時間只驗月 1–12、日 1–31，2 月 30 日會通過；完成 `Validity`、CRL 時間與屬性憑證前要補齊。新增的通用 `Asn1Time` 不是 X.509 `Time` 的替代品 |
+| P3 | **部分完成** | 日曆驗證已補，剩跨 UTCTime／GeneralizedTime 比較（屬 X.509 `Time`） | 兩種時間已驗證格里曆日期；`Validity`、CRL 等跨型別時間比較仍待 `Time`。新增的通用 `Asn1Time` 不是 X.509 `Time` 的替代品 |
 | P4 | **前置未完成** | Certificate／CRL 模型保存原始 TBS TLV 的設計 | `Asn1Ref::raw()` 已能取得位元組，但尚無憑證模型保存它；驗簽必須用收到的原始 TBS，不能重編後代替 |
 | P5 | **前置未完成** | 結構解碼與嚴格 DER／PKIX profile 檢查的邊界 | `Asn1Any` 原樣重發，未知 ANY 或 extension 的往返相等不能證明其內部是 DER；需明列可檢查範圍及未知值政策 |
 | P6 | **前置未完成** | DN 比較、字串正規化、IDNA／國際化郵件處理 | 不阻擋 Name／GeneralName 的線路模型；阻擋語意相等、名稱限制及主機名稱比對的完整功能 |
@@ -63,7 +63,7 @@ BC 對照基準：`bc-csharp` 的 `7fa86379`，`crypto/src/asn1/x509/` 共 **91 
 | `RdnSequence`、`Name` | **前置未完成** | 等 RDN；SEQUENCE OF 保留 RDN 順序，Name 走 CHOICE 解碼；空 subject 是否可用由憑證 profile 判定 | `X509Name.cs` 的線路部分 |
 | DN 的文字解析、轉義、顯示 | 後續選配 | 等 Name；保留多值 RDN、OID 名稱映射，定義 RFC 4514 與 BC 文字形式的相容界線 | `X509NameTokenizer.cs`、`X509NameEntryConverter.cs`、`X509DefaultEntryConverter.cs` |
 | DN 語意比較與標準化 | **前置未完成** | 等 Name、P6；不能直接把顯示字串或 DER 位元組相等當作名稱相等 | `x500/style/IetfUtilities.cs`、`X509Name.cs` 的比較部分 |
-| `Time` | 可開工 | UTCTime／GeneralizedTime CHOICE；建構時的年份選擇與 profile 檢查分清楚；日曆正確性待 P3 | `Time.cs`、`Rfc5280Asn1Utilities.cs`，後者吸收到時間 helper |
+| `Time` | 可開工 | UTCTime／GeneralizedTime CHOICE；建構時的年份選擇與 profile 檢查分清楚；日曆驗證已完成，跨型別比較待 P3 | `Time.cs`、`Rfc5280Asn1Utilities.cs`，後者吸收到時間 helper |
 | `Validity` | **前置未完成** | 等 Time、P3；notBefore／notAfter，定義順序檢查位置；不綁系統時鐘 | `Validity.cs` |
 | `Extensions` | 可開工 | 非空與重複 OID 規則、保留欄位順序、依 OID 查詢、未知 critical 的交付；P8 差異要寫明 | `Extensions.cs`、`X509Extensions.cs` |
 | `SubjectPublicKeyInfo` | 可開工 | `AlgorithmIdentifier` + BIT STRING；提供原始公鑰位元組，不先綁演算法後端 | `SubjectPublicKeyInfo.cs` |
