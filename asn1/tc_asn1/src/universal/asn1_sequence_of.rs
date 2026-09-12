@@ -3,7 +3,7 @@
 use alloc::vec::Vec;
 
 use crate::asn1_ref::Children;
-use crate::depth::Depth;
+use crate::decoding_options::DecodingOptions;
 use crate::encoding_options::EncodingOptions;
 use crate::error::Asn1Error;
 use crate::traits::{DecodeContent, Encode};
@@ -62,14 +62,28 @@ impl<T> FromIterator<T> for Asn1SequenceOf<T> {
     }
 }
 
-impl<'a, T: DecodeContent<'a>> DecodeContent<'a> for Asn1SequenceOf<T> {
-    const TAG: &'static [u8] = TAG;
+impl<'a, T: crate::Decode<'a>> crate::Decode<'a> for Asn1SequenceOf<T> {
+    fn try_decode(
+        buff: &'a [u8],
+        options: crate::DecodingOptions,
+    ) -> Result<(usize, Self), crate::Asn1Error> {
+        let element = crate::Asn1Ref::parse(buff, options)?;
+        if !element.is_constructed() {
+            return Err(crate::Asn1Error::UnexpectedTag);
+        }
+        let value =
+            <Self as crate::DecodeContent<'a>>::try_decode_content(element.value(), options)?;
+        Ok((element.total_len(), value))
+    }
+}
 
+impl<'a, T: crate::Decode<'a>> DecodeContent<'a> for Asn1SequenceOf<T> {
     /// 急切解：每個子元素當場 `decode_as::<T>`，任何一個失敗整個失敗。
-    fn try_decode_content(value: &'a [u8], depth: Depth) -> Result<Self, Asn1Error> {
-        let depth = depth.descend()?;
-        let members = Children::new(value, depth)
-            .map(|child| child?.decode_as::<T>(depth))
+    fn try_decode_content(value: &'a [u8], options: DecodingOptions) -> Result<Self, Asn1Error> {
+        options.check_content_len(value.len())?;
+        let options = options.descend()?;
+        let members = Children::new(value, options)
+            .map(|child| child?.decode_as::<T>(options))
             .collect::<Result<Vec<T>, _>>()?;
         Ok(Self { members })
     }
@@ -109,24 +123,25 @@ mod tests {
     use crate::traits::Decode;
     use crate::universal::{Asn1Boolean, Asn1Integer, Asn1Null};
 
-    const DEPTH: Depth = Depth::DEFAULT;
+    const OPTIONS: DecodingOptions =
+        DecodingOptions::new(crate::Depth::DEFAULT, 16 * 1024 * 1024, 65_536);
 
     #[test]
     fn a_homogeneous_sequence_decodes_each_member_as_t() {
         // 30 06  01 01 FF  01 01 00
         let input = [0x30, 0x06, 0x01, 0x01, 0xFF, 0x01, 0x01, 0x00];
-        let (used, seq) = Asn1SequenceOf::<Asn1Boolean>::try_decode(&input, DEPTH).unwrap();
+        let (used, seq) = Asn1SequenceOf::<Asn1Boolean>::try_decode(&input, OPTIONS).unwrap();
 
         assert_eq!(used, 8);
         assert_eq!(seq.members(), &[Asn1Boolean(true), Asn1Boolean(false)]);
     }
 
     #[test]
-    fn a_member_of_the_wrong_type_fails_the_whole_sequence() {
+    fn a_member_with_invalid_content_fails_the_whole_sequence() {
         let input = [0x30, 0x05, 0x01, 0x01, 0xFF, 0x05, 0x00];
         assert_eq!(
-            Asn1SequenceOf::<Asn1Boolean>::try_decode(&input, DEPTH).err(),
-            Some(Asn1Error::UnexpectedTag)
+            Asn1SequenceOf::<Asn1Boolean>::try_decode(&input, OPTIONS).err(),
+            Some(Asn1Error::MalformedValue)
         );
     }
 
@@ -153,7 +168,7 @@ mod tests {
 
     #[test]
     fn an_empty_sequence_is_a_header_alone() {
-        let (used, seq) = Asn1SequenceOf::<Asn1Null>::try_decode(&[0x30, 0x00], DEPTH).unwrap();
+        let (used, seq) = Asn1SequenceOf::<Asn1Null>::try_decode(&[0x30, 0x00], OPTIONS).unwrap();
         assert_eq!(used, 2);
         assert!(seq.is_empty());
 
@@ -167,9 +182,19 @@ mod tests {
         // 30 04  30 02  30 00 —— 三層
         let input = [0x30, 0x04, 0x30, 0x02, 0x30, 0x00];
         type Nested = Asn1SequenceOf<Asn1SequenceOf<Asn1SequenceOf<Asn1Null>>>;
-        assert!(Nested::try_decode(&input, Depth::new(3)).is_ok());
+        assert!(
+            Nested::try_decode(
+                &input,
+                DecodingOptions::new(crate::Depth::new(3), 16 * 1024 * 1024, 65_536)
+            )
+            .is_ok()
+        );
         assert_eq!(
-            Nested::try_decode(&input, Depth::new(2)).err(),
+            Nested::try_decode(
+                &input,
+                DecodingOptions::new(crate::Depth::new(2), 16 * 1024 * 1024, 65_536)
+            )
+            .err(),
             Some(Asn1Error::DepthExceeded)
         );
     }
@@ -181,7 +206,7 @@ mod tests {
         let mut out = [0_u8; 16];
         let written = original.encode(EncodingOptions::Der, &mut out).unwrap();
         let (_, decoded) =
-            Asn1SequenceOf::<Asn1Integer>::try_decode(&out[..written], DEPTH).unwrap();
+            Asn1SequenceOf::<Asn1Integer>::try_decode(&out[..written], OPTIONS).unwrap();
         assert_eq!(decoded, original);
     }
 }

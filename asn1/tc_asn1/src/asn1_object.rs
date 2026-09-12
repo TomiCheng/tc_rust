@@ -16,8 +16,8 @@ pub use tagged::{Asn1Tagged, TaggedContent};
 
 use crate::universal::*;
 use crate::{
-    Asn1Any, Asn1Class, Asn1Error, Asn1Ref, Decode, DecodeConstructed, DecodeContent, Depth,
-    Encode, EncodeTagged, EncodingOptions,
+    Asn1Any, Asn1Class, Asn1Error, Asn1Ref, Decode, DecodeConstructed, DecodeContent,
+    DecodingOptions, Encode, EncodeTagged, EncodingOptions,
 };
 use alloc::vec::Vec;
 
@@ -32,10 +32,10 @@ use alloc::vec::Vec;
 /// 拿到未知結構時，先解成樹看內容，再重編。
 ///
 /// ```
-/// use tc_asn1::{Asn1Object, Depth, Encode, EncodingOptions, Decode};
+/// use tc_asn1::{Asn1Object, DecodingOptions, Encode, EncodingOptions, Decode};
 ///
 /// let input = [0x30, 5, 2, 1, 42, 5, 0];
-/// let (used, tree) = Asn1Object::try_decode(&input, Depth::DEFAULT).unwrap();
+/// let (used, tree) = Asn1Object::try_decode(&input, DecodingOptions::default()).unwrap();
 /// assert_eq!(used, input.len());
 /// assert_eq!(tree.to_string(), "SEQUENCE\n  INTEGER 42\n  NULL\n");
 /// let out = tree.encode_to_vec(EncodingOptions::Der).unwrap();
@@ -196,159 +196,169 @@ impl Asn1Object {
     /// [`Asn1Any`] 保存的原始元素可以另行解讀，原資料仍保留。
     ///
     /// ```
-    /// use tc_asn1::{Asn1Any, Asn1Object, Depth, Decode};
+    /// use tc_asn1::{Asn1Any, Asn1Object, DecodingOptions, Decode};
     ///
-    /// let (_, any) = Asn1Any::try_decode(&[2, 1, 7], Depth::DEFAULT).unwrap();
-    /// let tree = Asn1Object::from_ref(&any.as_ref(), Depth::DEFAULT).unwrap();
+    /// let (_, any) = Asn1Any::try_decode(&[2, 1, 7], DecodingOptions::default()).unwrap();
+    /// let tree = Asn1Object::from_ref(&any.as_ref(), DecodingOptions::default()).unwrap();
     /// assert_eq!(i64::try_from(tree.as_integer().unwrap()), Ok(7));
     /// assert_eq!(any.raw(), [2, 1, 7]);
     /// ```
-    pub fn from_ref(element: &Asn1Ref<'_>, depth: Depth) -> Result<Self, Asn1Error> {
+    pub fn from_ref(element: &Asn1Ref<'_>, options: DecodingOptions) -> Result<Self, Asn1Error> {
+        options.check_content_len(element.value().len())?;
         if element.class() != Asn1Class::Universal {
-            return Ok(Self::Tagged(Asn1Tagged::from_ref(element, depth)?));
+            return Ok(Self::Tagged(Asn1Tagged::from_ref(element, options)?));
         }
         Ok(match element.tag() {
-            tag::BOOLEAN => Self::Boolean(Asn1Boolean::try_decode_content(element.value(), depth)?),
-            tag::INTEGER => Self::Integer(Asn1Integer::try_decode_content(element.value(), depth)?),
+            tag::BOOLEAN => {
+                Self::Boolean(Asn1Boolean::try_decode_content(element.value(), options)?)
+            }
+            tag::INTEGER => {
+                Self::Integer(Asn1Integer::try_decode_content(element.value(), options)?)
+            }
             tag::BIT_STRING => {
-                Self::BitString(Asn1BitString::try_decode_content(element.value(), depth)?)
+                Self::BitString(Asn1BitString::try_decode_content(element.value(), options)?)
             }
-            tag::OCTET_STRING => {
-                Self::OctetString(Asn1OctetString::try_decode_content(element.value(), depth)?)
-            }
+            tag::OCTET_STRING => Self::OctetString(Asn1OctetString::try_decode_content(
+                element.value(),
+                options,
+            )?),
             tag::CONSTRUCTED_OCTET_STRING => Self::OctetString(
-                Asn1OctetString::try_decode_constructed(element.value(), depth)?,
+                Asn1OctetString::try_decode_constructed(element.value(), options)?,
             ),
             tag::CONSTRUCTED_BIT_STRING => Self::BitString(Asn1BitString::try_decode_constructed(
                 element.value(),
-                depth,
+                options,
             )?),
             tag::NULL => {
-                Asn1Null::try_decode_content(element.value(), depth)?;
+                Asn1Null::try_decode_content(element.value(), options)?;
                 Self::Null
             }
             tag::OBJECT_IDENTIFIER => {
-                Self::Oid(Asn1Oid::try_decode_content(element.value(), depth)?)
+                Self::Oid(Asn1Oid::try_decode_content(element.value(), options)?)
             }
             tag::OBJECT_DESCRIPTOR => Self::ObjectDescriptor(
-                Asn1ObjectDescriptor::try_decode_content(element.value(), depth)?,
+                Asn1ObjectDescriptor::try_decode_content(element.value(), options)?,
             ),
             tag::EXTERNAL => {
-                Self::External(Asn1External::try_decode_content(element.value(), depth)?)
+                Self::External(Asn1External::try_decode_content(element.value(), options)?)
             }
-            tag::REAL => Self::Real(Asn1Real::try_decode_content(element.value(), depth)?),
-            tag::ENUMERATED => {
-                Self::Enumerated(Asn1Enumerated::try_decode_content(element.value(), depth)?)
-            }
-            tag::EMBEDDED_PDV => {
-                Self::EmbeddedPdv(Asn1EmbeddedPdv::try_decode_content(element.value(), depth)?)
-            }
-            tag::UTF8_STRING => {
-                Self::Utf8String(Asn1Utf8String::try_decode_content(element.value(), depth)?)
-            }
-            tag::RELATIVE_OID => {
-                Self::RelativeOid(Asn1RelativeOid::try_decode_content(element.value(), depth)?)
-            }
-            tag::TIME => Self::Time(Asn1Time::try_decode_content(element.value(), depth)?),
-            tag::SEQUENCE => Self::Sequence(decode_children(element, depth)?),
-            tag::SET => Self::Set(decode_children(element, depth)?),
+            tag::REAL => Self::Real(Asn1Real::try_decode_content(element.value(), options)?),
+            tag::ENUMERATED => Self::Enumerated(Asn1Enumerated::try_decode_content(
+                element.value(),
+                options,
+            )?),
+            tag::EMBEDDED_PDV => Self::EmbeddedPdv(Asn1EmbeddedPdv::try_decode_content(
+                element.value(),
+                options,
+            )?),
+            tag::UTF8_STRING => Self::Utf8String(Asn1Utf8String::try_decode_content(
+                element.value(),
+                options,
+            )?),
+            tag::RELATIVE_OID => Self::RelativeOid(Asn1RelativeOid::try_decode_content(
+                element.value(),
+                options,
+            )?),
+            tag::TIME => Self::Time(Asn1Time::try_decode_content(element.value(), options)?),
+            tag::SEQUENCE => Self::Sequence(decode_children(element, options)?),
+            tag::SET => Self::Set(decode_children(element, options)?),
             tag::NUMERIC_STRING => Self::NumericString(Asn1NumericString::try_decode_content(
                 element.value(),
-                depth,
+                options,
             )?),
             tag::PRINTABLE_STRING => Self::PrintableString(
-                Asn1PrintableString::try_decode_content(element.value(), depth)?,
+                Asn1PrintableString::try_decode_content(element.value(), options)?,
             ),
             tag::TELETEX_STRING => Self::TeletexString(Asn1TeletexString::try_decode_content(
                 element.value(),
-                depth,
+                options,
             )?),
             tag::VIDEOTEX_STRING => Self::VideotexString(Asn1VideotexString::try_decode_content(
                 element.value(),
-                depth,
+                options,
             )?),
             tag::IA5_STRING => {
-                Self::Ia5String(Asn1Ia5String::try_decode_content(element.value(), depth)?)
+                Self::Ia5String(Asn1Ia5String::try_decode_content(element.value(), options)?)
             }
             tag::UTC_TIME => {
-                Self::UtcTime(Asn1UtcTime::try_decode_content(element.value(), depth)?)
+                Self::UtcTime(Asn1UtcTime::try_decode_content(element.value(), options)?)
             }
             tag::GENERALIZED_TIME => Self::GeneralizedTime(
-                Asn1GeneralizedTime::try_decode_content(element.value(), depth)?,
+                Asn1GeneralizedTime::try_decode_content(element.value(), options)?,
             ),
             tag::GRAPHIC_STRING => Self::GraphicString(Asn1GraphicString::try_decode_content(
                 element.value(),
-                depth,
+                options,
             )?),
             tag::VISIBLE_STRING => Self::VisibleString(Asn1VisibleString::try_decode_content(
                 element.value(),
-                depth,
+                options,
             )?),
             tag::GENERAL_STRING => Self::GeneralString(Asn1GeneralString::try_decode_content(
                 element.value(),
-                depth,
+                options,
             )?),
             tag::UNIVERSAL_STRING => Self::UniversalString(
-                Asn1UniversalString::try_decode_content(element.value(), depth)?,
+                Asn1UniversalString::try_decode_content(element.value(), options)?,
             ),
             tag::CHARACTER_STRING => Self::CharacterString(
-                Asn1CharacterString::try_decode_content(element.value(), depth)?,
+                Asn1CharacterString::try_decode_content(element.value(), options)?,
             ),
             tag::BMP_STRING => {
-                Self::BmpString(Asn1BmpString::try_decode_content(element.value(), depth)?)
+                Self::BmpString(Asn1BmpString::try_decode_content(element.value(), options)?)
             }
-            tag::DATE => Self::Date(Asn1Date::try_decode_content(element.value(), depth)?),
+            tag::DATE => Self::Date(Asn1Date::try_decode_content(element.value(), options)?),
             tag::TIME_OF_DAY => {
-                Self::TimeOfDay(Asn1TimeOfDay::try_decode_content(element.value(), depth)?)
+                Self::TimeOfDay(Asn1TimeOfDay::try_decode_content(element.value(), options)?)
             }
             tag::DATE_TIME => {
-                Self::DateTime(Asn1DateTime::try_decode_content(element.value(), depth)?)
+                Self::DateTime(Asn1DateTime::try_decode_content(element.value(), options)?)
             }
             tag::DURATION => {
-                Self::Duration(Asn1Duration::try_decode_content(element.value(), depth)?)
+                Self::Duration(Asn1Duration::try_decode_content(element.value(), options)?)
             }
-            tag::OID_IRI => Self::OidIri(Asn1OidIri::try_decode_content(element.value(), depth)?),
+            tag::OID_IRI => Self::OidIri(Asn1OidIri::try_decode_content(element.value(), options)?),
             tag::RELATIVE_OID_IRI => Self::RelativeOidIri(Asn1RelativeOidIri::try_decode_content(
                 element.value(),
-                depth,
+                options,
             )?),
             tag::CONSTRUCTED_OBJECT_DESCRIPTOR => Self::ObjectDescriptor(
-                Asn1ObjectDescriptor::try_decode_constructed(element.value(), depth)?,
+                Asn1ObjectDescriptor::try_decode_constructed(element.value(), options)?,
             ),
             tag::CONSTRUCTED_UTF8_STRING => Self::Utf8String(
-                Asn1Utf8String::try_decode_constructed(element.value(), depth)?,
+                Asn1Utf8String::try_decode_constructed(element.value(), options)?,
             ),
             tag::CONSTRUCTED_NUMERIC_STRING => Self::NumericString(
-                Asn1NumericString::try_decode_constructed(element.value(), depth)?,
+                Asn1NumericString::try_decode_constructed(element.value(), options)?,
             ),
             tag::CONSTRUCTED_PRINTABLE_STRING => Self::PrintableString(
-                Asn1PrintableString::try_decode_constructed(element.value(), depth)?,
+                Asn1PrintableString::try_decode_constructed(element.value(), options)?,
             ),
             tag::CONSTRUCTED_TELETEX_STRING => Self::TeletexString(
-                Asn1TeletexString::try_decode_constructed(element.value(), depth)?,
+                Asn1TeletexString::try_decode_constructed(element.value(), options)?,
             ),
             tag::CONSTRUCTED_VIDEOTEX_STRING => Self::VideotexString(
-                Asn1VideotexString::try_decode_constructed(element.value(), depth)?,
+                Asn1VideotexString::try_decode_constructed(element.value(), options)?,
             ),
             tag::CONSTRUCTED_IA5_STRING => Self::Ia5String(Asn1Ia5String::try_decode_constructed(
                 element.value(),
-                depth,
+                options,
             )?),
             tag::CONSTRUCTED_GRAPHIC_STRING => Self::GraphicString(
-                Asn1GraphicString::try_decode_constructed(element.value(), depth)?,
+                Asn1GraphicString::try_decode_constructed(element.value(), options)?,
             ),
             tag::CONSTRUCTED_VISIBLE_STRING => Self::VisibleString(
-                Asn1VisibleString::try_decode_constructed(element.value(), depth)?,
+                Asn1VisibleString::try_decode_constructed(element.value(), options)?,
             ),
             tag::CONSTRUCTED_GENERAL_STRING => Self::GeneralString(
-                Asn1GeneralString::try_decode_constructed(element.value(), depth)?,
+                Asn1GeneralString::try_decode_constructed(element.value(), options)?,
             ),
             tag::CONSTRUCTED_UNIVERSAL_STRING => Self::UniversalString(
-                Asn1UniversalString::try_decode_constructed(element.value(), depth)?,
+                Asn1UniversalString::try_decode_constructed(element.value(), options)?,
             ),
             tag::CONSTRUCTED_BMP_STRING => Self::BmpString(Asn1BmpString::try_decode_constructed(
                 element.value(),
-                depth,
+                options,
             )?),
             _ => Self::Unknown(Asn1Any::from(element)),
         })
@@ -357,9 +367,9 @@ impl Asn1Object {
 
 impl<'a> Decode<'a> for Asn1Object {
     /// 解讀第一個完整元素。變動時間：分支只依編碼結構。
-    fn try_decode(buff: &'a [u8], depth: Depth) -> Result<(usize, Self), Asn1Error> {
-        let element = Asn1Ref::parse(buff, depth)?;
-        Ok((element.total_len(), Self::from_ref(&element, depth)?))
+    fn try_decode(buff: &'a [u8], options: DecodingOptions) -> Result<(usize, Self), Asn1Error> {
+        let element = Asn1Ref::parse(buff, options)?;
+        Ok((element.total_len(), Self::from_ref(&element, options)?))
     }
 }
 
@@ -685,11 +695,14 @@ impl Encode for Asn1Object {
     }
 }
 
-fn decode_children(element: &Asn1Ref<'_>, depth: Depth) -> Result<Vec<Asn1Object>, Asn1Error> {
-    let depth = depth.descend()?;
+fn decode_children(
+    element: &Asn1Ref<'_>,
+    options: DecodingOptions,
+) -> Result<Vec<Asn1Object>, Asn1Error> {
+    let options = options.descend()?;
     element
-        .children(depth)
-        .map(|child| Asn1Object::from_ref(&child?, depth))
+        .children(options)
+        .map(|child| Asn1Object::from_ref(&child?, options))
         .collect()
 }
 
@@ -716,7 +729,7 @@ mod tests {
     use alloc::{boxed::Box, string::ToString, vec};
 
     fn decode(input: &[u8]) -> Asn1Object {
-        let (used, tree) = Asn1Object::try_decode(input, Depth::DEFAULT).unwrap();
+        let (used, tree) = Asn1Object::try_decode(input, DecodingOptions::default()).unwrap();
         assert_eq!(used, input.len());
         tree
     }
@@ -846,14 +859,26 @@ mod tests {
             &b"\xa0\x04\x31\x02\x30\x00"[..],
             &b"\x30\x80\x30\x80\x30\x80\x00\x00\x00\x00\x00\x00"[..],
         ] {
-            assert!(Asn1Object::try_decode(input, Depth::new(3)).is_ok());
+            assert!(
+                Asn1Object::try_decode(
+                    input,
+                    DecodingOptions::new(crate::Depth::new(3), 16 * 1024 * 1024, 65_536)
+                )
+                .is_ok()
+            );
             assert_eq!(
-                Asn1Object::try_decode(input, Depth::new(2)),
+                Asn1Object::try_decode(
+                    input,
+                    DecodingOptions::new(crate::Depth::new(2), 16 * 1024 * 1024, 65_536)
+                ),
                 Err(Asn1Error::DepthExceeded)
             );
         }
         assert_eq!(
-            Asn1Object::try_decode(b"\x30\x06\x30\x04\x30\x02\x30\x00", Depth::new(3)),
+            Asn1Object::try_decode(
+                b"\x30\x06\x30\x04\x30\x02\x30\x00",
+                DecodingOptions::new(crate::Depth::new(3), 16 * 1024 * 1024, 65_536)
+            ),
             Err(Asn1Error::DepthExceeded)
         );
     }
@@ -892,9 +917,10 @@ mod tests {
             &b"\x30\x01\x02"[..],
             &b"\xa0\x01\x02"[..],
         ] {
-            assert!(Asn1Object::try_decode(input, Depth::DEFAULT).is_err());
+            assert!(Asn1Object::try_decode(input, DecodingOptions::default()).is_err());
         }
-        let (used, value) = Asn1Object::try_decode(&[5, 0, 1, 1, 0], Depth::DEFAULT).unwrap();
+        let (used, value) =
+            Asn1Object::try_decode(&[5, 0, 1, 1, 0], DecodingOptions::default()).unwrap();
         assert_eq!((used, value), (2, Asn1Object::Null));
     }
 
@@ -1180,7 +1206,11 @@ mod tests {
             &[0x5f, 0x82, 0, 0],
         ]
         .into_iter()
-        .map(|input| Asn1Object::try_decode_exact(input, Depth::DEFAULT).unwrap())
+        .map(|input| {
+            Asn1Object::try_decode(input, DecodingOptions::default())
+                .map(|(_, value)| value)
+                .unwrap()
+        })
         .collect();
         let tree = Asn1Object::Set(values);
         assert_eq!(

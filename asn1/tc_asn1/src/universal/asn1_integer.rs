@@ -2,7 +2,7 @@
 
 use alloc::vec::Vec;
 
-use crate::depth::Depth;
+use crate::decoding_options::DecodingOptions;
 use crate::encoding_options::EncodingOptions;
 use crate::error::Asn1Error;
 use crate::traits::{DecodeContent, Encode};
@@ -136,10 +136,24 @@ macro_rules! try_into_signed {
 try_into_unsigned!(u8, u16, u32, u64, u128);
 try_into_signed!(i8, i16, i32, i64, i128);
 
-impl<'a> DecodeContent<'a> for Asn1Integer {
-    const TAG: &'static [u8] = TAG;
+impl<'a> crate::Decode<'a> for Asn1Integer {
+    fn try_decode(
+        buff: &'a [u8],
+        options: crate::DecodingOptions,
+    ) -> Result<(usize, Self), crate::Asn1Error> {
+        let element = crate::Asn1Ref::parse(buff, options)?;
+        if element.is_constructed() {
+            return Err(crate::Asn1Error::UnexpectedTag);
+        }
+        let value =
+            <Self as crate::DecodeContent<'a>>::try_decode_content(element.value(), options)?;
+        Ok((element.total_len(), value))
+    }
+}
 
-    fn try_decode_content(value: &'a [u8], _: Depth) -> Result<Self, Asn1Error> {
+impl<'a> DecodeContent<'a> for Asn1Integer {
+    fn try_decode_content(value: &'a [u8], options: DecodingOptions) -> Result<Self, Asn1Error> {
+        options.check_content_len(value.len())?;
         Self::from_der_bytes(value)
     }
 }
@@ -175,7 +189,8 @@ mod tests {
     use crate::EncodeTagged;
     use crate::traits::Decode;
 
-    const DEPTH: Depth = Depth::DEFAULT;
+    const OPTIONS: DecodingOptions =
+        DecodingOptions::new(crate::Depth::DEFAULT, 16 * 1024 * 1024, 65_536);
 
     #[test]
     fn unsigned_primitives_produce_the_minimal_signed_form() {
@@ -287,7 +302,7 @@ mod tests {
     #[test]
     fn decode_and_encode_round_trip() {
         let input = [0x02, 0x02, 0x01, 0x00];
-        let (used, n) = Asn1Integer::try_decode(&input, DEPTH).unwrap();
+        let (used, n) = Asn1Integer::try_decode(&input, OPTIONS).unwrap();
         assert_eq!(used, 4);
         assert_eq!(u64::try_from(&n), Ok(256));
 

@@ -10,7 +10,7 @@ use core::fmt;
 
 use super::date_time::{DateTime, digits, two_digits};
 use super::tag::GENERALIZED_TIME as TAG;
-use crate::depth::Depth;
+use crate::decoding_options::DecodingOptions;
 use crate::encoding_options::EncodingOptions;
 use crate::error::Asn1Error;
 use crate::traits::{DecodeContent, Encode};
@@ -58,11 +58,25 @@ impl Asn1GeneralizedTime {
     }
 }
 
-impl<'a> DecodeContent<'a> for Asn1GeneralizedTime {
-    const TAG: &'static [u8] = TAG;
+impl<'a> crate::Decode<'a> for Asn1GeneralizedTime {
+    fn try_decode(
+        buff: &'a [u8],
+        options: crate::DecodingOptions,
+    ) -> Result<(usize, Self), crate::Asn1Error> {
+        let element = crate::Asn1Ref::parse(buff, options)?;
+        if element.is_constructed() {
+            return Err(crate::Asn1Error::UnexpectedTag);
+        }
+        let value =
+            <Self as crate::DecodeContent<'a>>::try_decode_content(element.value(), options)?;
+        Ok((element.total_len(), value))
+    }
+}
 
+impl<'a> DecodeContent<'a> for Asn1GeneralizedTime {
     /// 變動時間：分支只依編碼結構。只接受 `YYYYMMDDhhmmssZ`。
-    fn try_decode_content(value: &'a [u8], _: Depth) -> Result<Self, Asn1Error> {
+    fn try_decode_content(value: &'a [u8], options: DecodingOptions) -> Result<Self, Asn1Error> {
+        options.check_content_len(value.len())?;
         let [body @ .., b'Z'] = value else {
             return Err(Asn1Error::MalformedValue);
         };
@@ -119,12 +133,13 @@ mod tests {
     use crate::traits::Decode;
     use alloc::string::ToString;
 
-    const DEPTH: Depth = Depth::DEFAULT;
+    const OPTIONS: DecodingOptions =
+        DecodingOptions::new(crate::Depth::DEFAULT, 16 * 1024 * 1024, 65_536);
 
     #[test]
     fn a_der_generalized_time_decodes_and_prints_as_iso_8601() {
         let input = b"\x18\x0F20500101000000Z";
-        let (used, t) = Asn1GeneralizedTime::try_decode(input, DEPTH).unwrap();
+        let (used, t) = Asn1GeneralizedTime::try_decode(input, OPTIONS).unwrap();
         assert_eq!(used, 17);
         assert_eq!(t.to_string(), "2050-01-01T00:00:00Z");
         assert_eq!(t, Asn1GeneralizedTime::new(2050, 1, 1, 0, 0, 0).unwrap());
@@ -133,13 +148,13 @@ mod tests {
     #[test]
     fn four_digit_years_have_no_century_rule() {
         assert_eq!(
-            Asn1GeneralizedTime::try_decode_content(b"19500101000000Z", DEPTH)
+            Asn1GeneralizedTime::try_decode_content(b"19500101000000Z", OPTIONS)
                 .unwrap()
                 .year(),
             1950
         );
         assert_eq!(
-            Asn1GeneralizedTime::try_decode_content(b"99991231235959Z", DEPTH)
+            Asn1GeneralizedTime::try_decode_content(b"99991231235959Z", OPTIONS)
                 .unwrap()
                 .year(),
             9999
@@ -153,23 +168,23 @@ mod tests {
     #[test]
     fn fractional_seconds_and_ber_variants_are_rejected() {
         assert!(
-            Asn1GeneralizedTime::try_decode_content(b"20240911123000.5Z", DEPTH).is_err(),
+            Asn1GeneralizedTime::try_decode_content(b"20240911123000.5Z", OPTIONS).is_err(),
             "小數秒，RFC 5280 禁止"
         );
         assert!(
-            Asn1GeneralizedTime::try_decode_content(b"202409111230Z", DEPTH).is_err(),
+            Asn1GeneralizedTime::try_decode_content(b"202409111230Z", OPTIONS).is_err(),
             "沒有秒"
         );
         assert!(
-            Asn1GeneralizedTime::try_decode_content(b"20240911123000+0800", DEPTH).is_err(),
+            Asn1GeneralizedTime::try_decode_content(b"20240911123000+0800", OPTIONS).is_err(),
             "時區偏移"
         );
         assert!(
-            Asn1GeneralizedTime::try_decode_content(b"20240911123000", DEPTH).is_err(),
+            Asn1GeneralizedTime::try_decode_content(b"20240911123000", OPTIONS).is_err(),
             "沒有 Z"
         );
         assert!(
-            Asn1GeneralizedTime::try_decode_content(b"240911123000Z", DEPTH).is_err(),
+            Asn1GeneralizedTime::try_decode_content(b"240911123000Z", OPTIONS).is_err(),
             "兩位年是 UTCTime 的事"
         );
     }
@@ -181,7 +196,7 @@ mod tests {
         let written = t.encode(EncodingOptions::Der, &mut out).unwrap();
         assert_eq!(&out[..written], b"\x18\x0F20991231235959Z");
 
-        let (_, back) = Asn1GeneralizedTime::try_decode(&out[..written], DEPTH).unwrap();
+        let (_, back) = Asn1GeneralizedTime::try_decode(&out[..written], OPTIONS).unwrap();
         assert_eq!(back, t);
     }
 }

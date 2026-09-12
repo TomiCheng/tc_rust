@@ -2,7 +2,7 @@
 
 use alloc::string::String;
 
-use crate::depth::Depth;
+use crate::decoding_options::DecodingOptions;
 use crate::encoding_options::EncodingOptions;
 use crate::error::Asn1Error;
 use crate::traits::{DecodeContent, Encode};
@@ -48,14 +48,29 @@ impl Asn1NumericString {
     }
 }
 
-impl<'a> DecodeContent<'a> for Asn1NumericString {
-    const TAG: &'static [u8] = TAG;
-    const CONSTRUCTED: Option<fn(&'a [u8], Depth) -> Result<Self, Asn1Error>> =
-        Some(<Self as crate::DecodeConstructed<'a>>::try_decode_constructed);
+impl<'a> crate::Decode<'a> for Asn1NumericString {
+    fn try_decode(
+        buff: &'a [u8],
+        options: crate::DecodingOptions,
+    ) -> Result<(usize, Self), crate::Asn1Error> {
+        let element = crate::Asn1Ref::parse(buff, options)?;
+        let value = if element.is_constructed() {
+            <Self as crate::DecodeConstructed<'a>>::try_decode_constructed(
+                element.value(),
+                options,
+            )?
+        } else {
+            <Self as crate::DecodeContent<'a>>::try_decode_content(element.value(), options)?
+        };
+        Ok((element.total_len(), value))
+    }
+}
 
+impl<'a> DecodeContent<'a> for Asn1NumericString {
     /// 以建構時相同的字集規則驗證內容。
     /// 變動時間：依內容長度與字元分支。
-    fn try_decode_content(value: &'a [u8], _: Depth) -> Result<Self, Asn1Error> {
+    fn try_decode_content(value: &'a [u8], options: DecodingOptions) -> Result<Self, Asn1Error> {
+        options.check_content_len(value.len())?;
         let text = core::str::from_utf8(value).map_err(|_| Asn1Error::MalformedValue)?;
         Self::new(text)
     }
@@ -117,7 +132,8 @@ mod tests {
             assert_eq!(&out[..2], &[0x12, 11]);
             assert_eq!(&out[2..], text.as_bytes());
             assert_eq!(value.content_len(rules), 11);
-            let (used, decoded) = Asn1NumericString::try_decode(&out, Depth::DEFAULT).unwrap();
+            let (used, decoded) =
+                Asn1NumericString::try_decode(&out, DecodingOptions::default()).unwrap();
             assert_eq!(used, out.len());
             assert_eq!(decoded, value);
             assert_eq!(decoded.as_str(), text);
@@ -129,12 +145,12 @@ mod tests {
         for text in ["+1", "-1", "a", "1\t2", "１２", "\0"] {
             assert_eq!(Asn1NumericString::new(text), Err(Asn1Error::MalformedValue));
             assert_eq!(
-                Asn1NumericString::try_decode_content(text.as_bytes(), Depth::DEFAULT),
+                Asn1NumericString::try_decode_content(text.as_bytes(), DecodingOptions::default()),
                 Err(Asn1Error::MalformedValue)
             );
         }
         assert_eq!(
-            Asn1NumericString::try_decode_content(&[0xFF], Depth::DEFAULT),
+            Asn1NumericString::try_decode_content(&[0xFF], DecodingOptions::default()),
             Err(Asn1Error::MalformedValue)
         );
     }
@@ -148,15 +164,16 @@ mod tests {
         assert_eq!(value.encode(EncodingOptions::Der, &mut out), Ok(2));
         assert_eq!(out, [0x12, 0]);
         assert_eq!(
-            Asn1NumericString::try_decode(&out, Depth::DEFAULT),
+            Asn1NumericString::try_decode(&out, DecodingOptions::default()),
             Ok((2, value))
         );
     }
 
     #[test]
-    fn a_numeric_string_rejects_an_ia5_string_tag() {
+    fn the_schema_checks_tags_a_numeric_string_rejects_an_ia5_string_tag() {
         assert_eq!(
-            Asn1NumericString::try_decode(&[0x16, 1, b'1'], Depth::DEFAULT),
+            crate::Fields::new(&[0x16, 1, b'1'], DecodingOptions::default())
+                .and_then(|mut fields| fields.required::<Asn1NumericString>(TAG)),
             Err(Asn1Error::UnexpectedTag)
         );
     }

@@ -37,18 +37,35 @@ macro_rules! opaque_bytes {
             }
         }
 
-        impl<'a> $crate::traits::DecodeContent<'a> for $name {
-            const TAG: &'static [u8] = $tag;
-            const CONSTRUCTED: Option<
-                fn(&'a [u8], $crate::Depth) -> Result<Self, $crate::Asn1Error>,
-            > = Some(<Self as $crate::DecodeConstructed<'a>>::try_decode_constructed);
+        impl<'a> $crate::Decode<'a> for $name {
+            fn try_decode(
+                buff: &'a [u8],
+                options: $crate::DecodingOptions,
+            ) -> Result<(usize, Self), $crate::Asn1Error> {
+                let element = $crate::Asn1Ref::parse(buff, options)?;
+                let value = if element.is_constructed() {
+                    <Self as $crate::DecodeConstructed<'a>>::try_decode_constructed(
+                        element.value(),
+                        options,
+                    )?
+                } else {
+                    <Self as $crate::DecodeContent<'a>>::try_decode_content(
+                        element.value(),
+                        options,
+                    )?
+                };
+                Ok((element.total_len(), value))
+            }
+        }
 
+        impl<'a> $crate::traits::DecodeContent<'a> for $name {
             /// 任何內容都合法，包括空的。
             /// 變動時間：配置與複製量由內容長度決定。
             fn try_decode_content(
                 value: &'a [u8],
-                _: $crate::depth::Depth,
+                options: $crate::decoding_options::DecodingOptions,
             ) -> Result<Self, $crate::error::Asn1Error> {
+                options.check_content_len(value.len())?;
                 Ok(Self::new(value))
             }
         }
@@ -138,10 +155,10 @@ opaque_bytes!(
 解碼不會移除控制位元組或拒絕非 UTF-8 內容。
 
 ```
-use tc_asn1::{Asn1VideotexString, Depth, Decode};
+use tc_asn1::{Asn1VideotexString, DecodingOptions, Decode};
 
 let (used, value) = Asn1VideotexString::try_decode(
-    &[0x15, 3, 0x1B, 0, 0xFF], Depth::DEFAULT,
+    &[0x15, 3, 0x1B, 0, 0xFF], DecodingOptions::default(),
 ).unwrap();
 assert_eq!(used, 5);
 assert_eq!(value.as_bytes(), &[0x1B, 0, 0xFF]);
@@ -171,12 +188,13 @@ assert_eq!(out, [0x1B, 2, 0, 0xFF]);
 mod tests {
     use super::*;
     use crate::EncodeContent;
-    use crate::depth::Depth;
+    use crate::decoding_options::DecodingOptions;
     use crate::encoding_options::EncodingOptions;
     use crate::error::Asn1Error;
     use crate::traits::{Decode, Encode};
 
-    const DEPTH: Depth = Depth::DEFAULT;
+    const OPTIONS: DecodingOptions =
+        DecodingOptions::new(crate::Depth::DEFAULT, 16 * 1024 * 1024, 65_536);
 
     macro_rules! opaque_string_tests {
         ($module:ident, $name:ident, $tag:expr) => {
@@ -196,7 +214,7 @@ mod tests {
                         assert_eq!(value.encode(rules, &mut out), Ok(5));
                         assert_eq!(out, [$tag, 3, b'A', b'B', b'C']);
                         assert_eq!(value.content_len(rules), 3);
-                        assert_eq!($name::try_decode(&out, DEPTH), Ok((5, value.clone())));
+                        assert_eq!($name::try_decode(&out, OPTIONS), Ok((5, value.clone())));
                     }
                 }
 
@@ -213,7 +231,7 @@ mod tests {
                         assert_eq!(value.encode(rules, &mut out), Ok(out.len()));
                         assert_eq!(&out[..4], &[$tag, 0x82, 1, 0]);
                         assert_eq!(&out[4..], bytes.as_slice());
-                        let (used, decoded) = $name::try_decode(&out, DEPTH).unwrap();
+                        let (used, decoded) = $name::try_decode(&out, OPTIONS).unwrap();
                         assert_eq!(used, out.len());
                         assert_eq!(decoded, value);
                     }
@@ -227,13 +245,15 @@ mod tests {
                     let mut out = [0; 2];
                     assert_eq!(value.encode(EncodingOptions::Der, &mut out), Ok(2));
                     assert_eq!(out, [$tag, 0]);
-                    assert_eq!($name::try_decode(&out, DEPTH), Ok((2, value)));
+                    assert_eq!($name::try_decode(&out, OPTIONS), Ok((2, value)));
                 }
 
                 #[test]
-                fn an_octet_string_tag_is_rejected_even_with_valid_contents() {
+                fn the_schema_checks_tags_an_octet_string_tag_is_rejected_even_with_valid_contents()
+                {
                     assert_eq!(
-                        $name::try_decode(&[4, 1, b'A'], DEPTH),
+                        crate::Fields::new(&[4, 1, b'A'], OPTIONS)
+                            .and_then(|mut fields| fields.required::<$name>(&[$tag])),
                         Err(Asn1Error::UnexpectedTag)
                     );
                 }
@@ -249,25 +269,30 @@ mod tests {
     fn graphic_string_and_object_descriptor_pass_bytes_through_untouched() {
         let mut out = [0_u8; 8];
 
-        let (used, s) = Asn1GraphicString::try_decode(&[0x19, 0x02, 0xDE, 0xAD], DEPTH).unwrap();
+        let (used, s) = Asn1GraphicString::try_decode(&[0x19, 0x02, 0xDE, 0xAD], OPTIONS).unwrap();
         assert_eq!((used, s.as_bytes()), (4, &[0xDE, 0xAD][..]));
         assert_eq!(s.encode(EncodingOptions::Der, &mut out).unwrap(), 4);
         assert_eq!(&out[..4], &[0x19, 0x02, 0xDE, 0xAD]);
 
-        let (used, d) = Asn1ObjectDescriptor::try_decode(&[0x07, 0x01, b'x'], DEPTH).unwrap();
+        let (used, d) = Asn1ObjectDescriptor::try_decode(&[0x07, 0x01, b'x'], OPTIONS).unwrap();
         assert_eq!((used, d.as_bytes()), (3, &b"x"[..]));
         assert_eq!(d.encode(EncodingOptions::Der, &mut out).unwrap(), 3);
         assert_eq!(&out[..3], &[0x07, 0x01, b'x']);
     }
 
     #[test]
-    fn the_two_tags_are_not_interchangeable() {
+    fn the_schema_checks_tags_the_two_tags_are_not_interchangeable() {
         assert_eq!(
-            Asn1GraphicString::try_decode(&[0x07, 0x00], DEPTH),
+            crate::Fields::new(&[0x07, 0x00], OPTIONS)
+                .and_then(
+                    |mut fields| fields.required::<Asn1GraphicString>(crate::tag::GRAPHIC_STRING)
+                ),
             Err(Asn1Error::UnexpectedTag)
         );
         assert_eq!(
-            Asn1ObjectDescriptor::try_decode(&[0x19, 0x00], DEPTH),
+            crate::Fields::new(&[0x19, 0x00], OPTIONS)
+                .and_then(|mut fields| fields
+                    .required::<Asn1ObjectDescriptor>(crate::tag::OBJECT_DESCRIPTOR)),
             Err(Asn1Error::UnexpectedTag)
         );
     }

@@ -36,13 +36,12 @@
 //!
 //! [`Encode`] 收 [`EncodingOptions`]，選擇 BER（定長或不定長）、CER 或 DER。
 //!
-//! [`Decode`] 不收：讀進來的位元組只有一種讀法，一律照 BER（DER 的超集）
-//! 寬鬆解。需要「輸入必須是 DER」的地方用往返比較 —— 重編成 DER 後與原位元組
-//! 相等才算數。這成立是因為 DER 的定義就是一個值只有一種合法編碼，所以不需要
-//! 第二個嚴格解碼器。
+//! [`Decode`] 收 [`DecodingOptions`]，依 BER 規則解碼並傳遞資源限制。
+//! schema 決定 tag 對應的型別；具體值的解碼器驗證內容與編碼形式。
+//! 解碼成功不代表輸入符合 DER，嚴格 DER 驗證是呼叫端的責任。
 //!
 //! BER constructed OCTET STRING 與 BIT STRING 會串接成一般字串，重編一律
-//! 使用 primitive 形式；[`Decode::try_decode_der`] 會用往返比較辨識這項差異。
+//! 在 DER 下使用 primitive 形式；CER 依內容長度決定是否分段。
 //!
 //! **驗簽章要用原始位元組**，不能用重編出來的。理由見 [`Decode`]。
 //!
@@ -88,7 +87,7 @@ extern crate alloc;
 mod asn1_any;
 mod asn1_object;
 mod asn1_ref;
-mod depth;
+mod decoding_options;
 mod encoding;
 mod encoding_options;
 mod error;
@@ -100,7 +99,7 @@ mod universal;
 pub use asn1_any::Asn1Any;
 pub use asn1_object::{Asn1Object, Asn1Tagged, TaggedContent};
 pub use asn1_ref::{Asn1Class, Asn1Ref, Children};
-pub use depth::Depth;
+pub use decoding_options::{DecodingOptions, Depth};
 pub use encoding_options::{EncodingOptions, LengthForm};
 pub use error::Asn1Error;
 pub use schema::{Explicit, Fields, Implicit, SequenceFields};

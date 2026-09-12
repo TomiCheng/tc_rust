@@ -14,10 +14,10 @@
 use alloc::boxed::Box;
 use core::fmt;
 
-use tc_asn1::tag::{NULL, SEQUENCE as TAG};
+use tc_asn1::tag::NULL;
 use tc_asn1::{
-    Asn1Any, Asn1Error, Asn1Null, Asn1Oid, DecodeContent, Depth, Encode, EncodingOptions, Fields,
-    SequenceFields,
+    Asn1Any, Asn1Error, Asn1Null, Asn1Oid, DecodeContent, DecodingOptions, Encode, EncodingOptions,
+    Fields, SequenceFields,
 };
 
 /// `parameters` 的型別由 `algorithm` 決定，所以兩個方向的表示不同。
@@ -58,7 +58,7 @@ impl fmt::Debug for AlgorithmParameters {
 /// 建構時參數直接放型別化的值；解碼時參數不解讀，要用時照 `algorithm` 決定型別：
 ///
 /// ```
-/// use tc_asn1::{Depth, Encode, EncodingOptions, Decode};
+/// use tc_asn1::{DecodingOptions, Encode, EncodingOptions, Decode};
 /// use tc_asn1_x509::{AlgorithmIdentifier, AlgorithmParameters};
 ///
 /// let alg = AlgorithmIdentifier::with_null("1.2.840.113549.1.1.1".parse()?); // rsaEncryption
@@ -72,7 +72,7 @@ impl fmt::Debug for AlgorithmParameters {
 /// );
 ///
 /// // 解回來：消耗整個緩衝
-/// let (used, decoded) = AlgorithmIdentifier::try_decode(&out, Depth::DEFAULT)?;
+/// let (used, decoded) = AlgorithmIdentifier::try_decode(&out, DecodingOptions::default())?;
 /// assert_eq!(used, out.len());
 /// assert_eq!(decoded.algorithm().to_string(), "1.2.840.113549.1.1.1");
 ///
@@ -134,23 +134,36 @@ impl AlgorithmIdentifier {
     }
 }
 
-impl<'a> DecodeContent<'a> for AlgorithmIdentifier {
-    const TAG: &'static [u8] = TAG;
+impl<'a> tc_asn1::Decode<'a> for AlgorithmIdentifier {
+    fn try_decode(
+        buff: &'a [u8],
+        options: tc_asn1::DecodingOptions,
+    ) -> Result<(usize, Self), tc_asn1::Asn1Error> {
+        let element = tc_asn1::Asn1Ref::parse(buff, options)?;
+        if !element.is_constructed() {
+            return Err(tc_asn1::Asn1Error::UnexpectedTag);
+        }
+        let value =
+            <Self as tc_asn1::DecodeContent<'a>>::try_decode_content(element.value(), options)?;
+        Ok((element.total_len(), value))
+    }
+}
 
+impl<'a> DecodeContent<'a> for AlgorithmIdentifier {
     /// 變動時間：分支只依編碼結構。
     ///
     /// 剛好兩個以內的欄位；第三個回 [`Asn1Error::TrailingData`]，
     /// 少了 `algorithm` 回 [`Asn1Error::Truncated`]。
-    fn try_decode_content(value: &'a [u8], depth: Depth) -> Result<Self, Asn1Error> {
-        let mut fields = Fields::new(value, depth)?;
-        let algorithm = fields.required()?;
+    fn try_decode_content(value: &'a [u8], options: DecodingOptions) -> Result<Self, Asn1Error> {
+        let mut fields = Fields::new(value, options)?;
+        let algorithm = fields.required(tc_asn1::tag::OBJECT_IDENTIFIER)?;
         let parameters = match fields.peek()? {
             None => AlgorithmParameters::Absent,
             Some(field) if field.tag() == NULL => {
-                fields.required::<Asn1Null>()?;
+                fields.required::<Asn1Null>(NULL)?;
                 AlgorithmParameters::Null
             }
-            Some(_) => AlgorithmParameters::Decoded(fields.required::<Asn1Any>()?),
+            Some(_) => AlgorithmParameters::Decoded(Asn1Any::from(&fields.next()?)),
         };
         fields.finish()?;
         Ok(Self {
@@ -182,7 +195,8 @@ mod tests {
     use alloc::vec::Vec;
     use tc_asn1::Decode;
 
-    const DEPTH: Depth = Depth::DEFAULT;
+    const OPTIONS: DecodingOptions =
+        DecodingOptions::new(tc_asn1::Depth::DEFAULT, 16 * 1024 * 1024, 65_536);
 
     /// rsaEncryption，參數是 NULL —— RSA 憑證裡最常見的那個。
     const RSA: &[u8] = &[
@@ -206,7 +220,7 @@ mod tests {
 
     #[test]
     fn rsa_with_null_parameters_decodes_and_re_encodes_identically() {
-        let (used, alg) = AlgorithmIdentifier::try_decode(RSA, DEPTH).unwrap();
+        let (used, alg) = AlgorithmIdentifier::try_decode(RSA, OPTIONS).unwrap();
 
         assert_eq!(used, RSA.len());
         assert_eq!(alg.algorithm().to_string(), "1.2.840.113549.1.1.1");
@@ -219,21 +233,21 @@ mod tests {
 
     #[test]
     fn ec_parameters_are_read_as_an_oid_when_the_caller_knows_the_algorithm() {
-        let (_, alg) = AlgorithmIdentifier::try_decode(EC_P256, DEPTH).unwrap();
+        let (_, alg) = AlgorithmIdentifier::try_decode(EC_P256, OPTIONS).unwrap();
         assert_eq!(alg.algorithm().to_string(), "1.2.840.10045.2.1");
 
         let curve = alg
             .decoded_parameters()
             .unwrap()
             .as_ref()
-            .decode_as::<Asn1Oid>(DEPTH)
+            .decode_as::<Asn1Oid>(OPTIONS)
             .unwrap();
         assert_eq!(curve.to_string(), "1.2.840.10045.3.1.7");
     }
 
     #[test]
     fn absent_parameters_decode_as_absent_and_encode_as_nothing() {
-        let (used, alg) = AlgorithmIdentifier::try_decode(ED25519, DEPTH).unwrap();
+        let (used, alg) = AlgorithmIdentifier::try_decode(ED25519, OPTIONS).unwrap();
 
         assert_eq!(used, ED25519.len());
         assert!(matches!(alg.parameters(), AlgorithmParameters::Absent));
@@ -264,7 +278,7 @@ mod tests {
             0x01, 0x00,
         ];
         assert_eq!(
-            AlgorithmIdentifier::try_decode(&input, DEPTH).err(),
+            AlgorithmIdentifier::try_decode(&input, OPTIONS).err(),
             Some(Asn1Error::MalformedValue)
         );
     }
@@ -276,7 +290,7 @@ mod tests {
         input.extend_from_slice(&[0x05, 0x00]);
 
         assert_eq!(
-            AlgorithmIdentifier::try_decode(&input, DEPTH).err(),
+            AlgorithmIdentifier::try_decode(&input, OPTIONS).err(),
             Some(Asn1Error::TrailingData)
         );
     }
@@ -284,11 +298,11 @@ mod tests {
     #[test]
     fn a_missing_algorithm_is_truncated_and_a_wrong_type_is_unexpected() {
         assert_eq!(
-            AlgorithmIdentifier::try_decode(&[0x30, 0x00], DEPTH).err(),
+            AlgorithmIdentifier::try_decode(&[0x30, 0x00], OPTIONS).err(),
             Some(Asn1Error::Truncated)
         );
         assert_eq!(
-            AlgorithmIdentifier::try_decode(&[0x30, 0x02, 0x05, 0x00], DEPTH).err(),
+            AlgorithmIdentifier::try_decode(&[0x30, 0x02, 0x05, 0x00], OPTIONS).err(),
             Some(Asn1Error::UnexpectedTag)
         );
     }

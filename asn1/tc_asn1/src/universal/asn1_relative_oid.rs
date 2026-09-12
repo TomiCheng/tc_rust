@@ -1,7 +1,7 @@
 //! ASN.1 `RELATIVE-OID`，每個弧各自使用最短 base-128 編碼。
 
 use super::tag::RELATIVE_OID as TAG;
-use crate::{Asn1Error, DecodeContent, Depth, Encode, EncodingOptions};
+use crate::{Asn1Error, DecodeContent, DecodingOptions, Encode, EncodingOptions};
 use alloc::vec::Vec;
 use core::{fmt, str::FromStr};
 
@@ -106,10 +106,25 @@ impl fmt::Display for Asn1RelativeOid {
         Ok(())
     }
 }
+impl<'a> crate::Decode<'a> for Asn1RelativeOid {
+    fn try_decode(
+        buff: &'a [u8],
+        options: crate::DecodingOptions,
+    ) -> Result<(usize, Self), crate::Asn1Error> {
+        let element = crate::Asn1Ref::parse(buff, options)?;
+        if element.is_constructed() {
+            return Err(crate::Asn1Error::UnexpectedTag);
+        }
+        let value =
+            <Self as crate::DecodeContent<'a>>::try_decode_content(element.value(), options)?;
+        Ok((element.total_len(), value))
+    }
+}
+
 impl<'a> DecodeContent<'a> for Asn1RelativeOid {
-    const TAG: &'static [u8] = TAG;
     /// 變動時間：驗證每個弧，不合併開頭的弧。
-    fn try_decode_content(value: &'a [u8], _: Depth) -> Result<Self, Asn1Error> {
+    fn try_decode_content(value: &'a [u8], options: DecodingOptions) -> Result<Self, Asn1Error> {
+        options.check_content_len(value.len())?;
         Self::from_der_bytes(value)
     }
 }
@@ -156,7 +171,7 @@ mod tests {
             assert_eq!(value.encode(rules, &mut out), Ok(6));
             assert_eq!(out, [13, 4, 4, 3, 129, 0]);
             assert_eq!(
-                Asn1RelativeOid::try_decode(&out, Depth::DEFAULT),
+                Asn1RelativeOid::try_decode(&out, DecodingOptions::default()),
                 Ok((6, value.clone()))
             );
         }
@@ -185,7 +200,8 @@ mod tests {
             assert!(text.parse::<Asn1RelativeOid>().is_err());
         }
         assert_eq!(
-            Asn1RelativeOid::try_decode(&[6, 1, 0], Depth::DEFAULT),
+            crate::Fields::new(&[6, 1, 0], DecodingOptions::default())
+                .and_then(|mut fields| fields.required::<Asn1RelativeOid>(TAG)),
             Err(Asn1Error::UnexpectedTag)
         );
     }

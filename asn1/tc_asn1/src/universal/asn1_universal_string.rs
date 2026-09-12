@@ -2,7 +2,7 @@
 
 use alloc::string::String;
 
-use crate::depth::Depth;
+use crate::decoding_options::DecodingOptions;
 use crate::encoding_options::EncodingOptions;
 use crate::error::Asn1Error;
 use crate::traits::{DecodeContent, Encode};
@@ -19,13 +19,13 @@ use super::tag::UNIVERSAL_STRING as TAG;
 /// emoji 可以直接以單一 UCS-4 碼位表示，不使用 UTF-16 代理對。
 ///
 /// ```
-/// use tc_asn1::{Asn1UniversalString, Depth, Encode, EncodingOptions, Decode};
+/// use tc_asn1::{Asn1UniversalString, DecodingOptions, Encode, EncodingOptions, Decode};
 ///
 /// let value = Asn1UniversalString::new("😀");
 /// let mut out = [0; 6];
 /// value.encode(EncodingOptions::Der, &mut out).unwrap();
 /// assert_eq!(out, [0x1C, 4, 0, 1, 0xF6, 0]);
-/// let (_, decoded) = Asn1UniversalString::try_decode(&out, Depth::DEFAULT).unwrap();
+/// let (_, decoded) = Asn1UniversalString::try_decode(&out, DecodingOptions::default()).unwrap();
 /// assert_eq!(decoded.as_str(), "😀");
 /// ```
 #[derive(Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd)]
@@ -54,14 +54,29 @@ impl From<String> for Asn1UniversalString {
     }
 }
 
-impl<'a> DecodeContent<'a> for Asn1UniversalString {
-    const TAG: &'static [u8] = TAG;
-    const CONSTRUCTED: Option<fn(&'a [u8], Depth) -> Result<Self, Asn1Error>> =
-        Some(<Self as crate::DecodeConstructed<'a>>::try_decode_constructed);
+impl<'a> crate::Decode<'a> for Asn1UniversalString {
+    fn try_decode(
+        buff: &'a [u8],
+        options: crate::DecodingOptions,
+    ) -> Result<(usize, Self), crate::Asn1Error> {
+        let element = crate::Asn1Ref::parse(buff, options)?;
+        let value = if element.is_constructed() {
+            <Self as crate::DecodeConstructed<'a>>::try_decode_constructed(
+                element.value(),
+                options,
+            )?
+        } else {
+            <Self as crate::DecodeContent<'a>>::try_decode_content(element.value(), options)?
+        };
+        Ok((element.total_len(), value))
+    }
+}
 
+impl<'a> DecodeContent<'a> for Asn1UniversalString {
     /// 解讀 UCS-4 大端序；長度不是四的倍數或碼位不是 Unicode 純量值時拒絕。
     /// 變動時間：依內容長度與碼位分支。
-    fn try_decode_content(value: &'a [u8], _: Depth) -> Result<Self, Asn1Error> {
+    fn try_decode_content(value: &'a [u8], options: DecodingOptions) -> Result<Self, Asn1Error> {
+        options.check_content_len(value.len())?;
         let (units, remainder) = value.as_chunks::<4>();
         if !remainder.is_empty() {
             return Err(Asn1Error::MalformedValue);
@@ -146,7 +161,8 @@ mod tests {
                 assert_eq!(original.content_len(rules), 4 * text.chars().count());
                 assert_eq!(written, original.encoded_len(rules));
                 let (used, decoded) =
-                    Asn1UniversalString::try_decode(&out[..written], Depth::DEFAULT).unwrap();
+                    Asn1UniversalString::try_decode(&out[..written], DecodingOptions::default())
+                        .unwrap();
                 assert_eq!(used, written);
                 assert_eq!(decoded, original);
                 assert_eq!(decoded.as_str(), text);
@@ -158,7 +174,10 @@ mod tests {
     fn content_lengths_that_are_not_multiples_of_four_are_rejected() {
         for length in [1, 2, 3, 5, 6, 7] {
             assert_eq!(
-                Asn1UniversalString::try_decode_content(&[0; 7][..length], Depth::DEFAULT),
+                Asn1UniversalString::try_decode_content(
+                    &[0; 7][..length],
+                    DecodingOptions::default()
+                ),
                 Err(Asn1Error::MalformedValue)
             );
         }
@@ -168,7 +187,10 @@ mod tests {
     fn surrogate_code_points_are_rejected_including_both_range_boundaries() {
         for unit in [0xD800_u32, 0xDBFF, 0xDC00, 0xDFFF] {
             assert_eq!(
-                Asn1UniversalString::try_decode_content(&unit.to_be_bytes(), Depth::DEFAULT),
+                Asn1UniversalString::try_decode_content(
+                    &unit.to_be_bytes(),
+                    DecodingOptions::default()
+                ),
                 Err(Asn1Error::MalformedValue)
             );
         }
@@ -178,7 +200,10 @@ mod tests {
     fn code_points_above_the_unicode_maximum_are_rejected() {
         for unit in [0x110000_u32, u32::MAX] {
             assert_eq!(
-                Asn1UniversalString::try_decode_content(&unit.to_be_bytes(), Depth::DEFAULT),
+                Asn1UniversalString::try_decode_content(
+                    &unit.to_be_bytes(),
+                    DecodingOptions::default()
+                ),
                 Err(Asn1Error::MalformedValue)
             );
         }
@@ -192,7 +217,7 @@ mod tests {
         assert_eq!(original.encode(EncodingOptions::Der, &mut out), Ok(26));
         assert_eq!(&out[22..], &[0, 0x10, 0xFF, 0xFF]);
         assert_eq!(
-            Asn1UniversalString::try_decode(&out, Depth::DEFAULT),
+            Asn1UniversalString::try_decode(&out, DecodingOptions::default()),
             Ok((26, original))
         );
     }
@@ -205,15 +230,16 @@ mod tests {
         assert_eq!(original.encode(EncodingOptions::Der, &mut out), Ok(2));
         assert_eq!(out, [0x1C, 0]);
         assert_eq!(
-            Asn1UniversalString::try_decode(&out, Depth::DEFAULT),
+            Asn1UniversalString::try_decode(&out, DecodingOptions::default()),
             Ok((2, original))
         );
     }
 
     #[test]
-    fn a_universal_string_rejects_a_bmp_string_tag() {
+    fn the_schema_checks_tags_a_universal_string_rejects_a_bmp_string_tag() {
         assert_eq!(
-            Asn1UniversalString::try_decode(&[0x1E, 0], Depth::DEFAULT),
+            crate::Fields::new(&[0x1E, 0], DecodingOptions::default())
+                .and_then(|mut fields| fields.required::<Asn1UniversalString>(TAG)),
             Err(Asn1Error::UnexpectedTag)
         );
     }

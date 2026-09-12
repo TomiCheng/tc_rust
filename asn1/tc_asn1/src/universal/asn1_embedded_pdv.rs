@@ -7,7 +7,8 @@
 use super::{Asn1Integer, Asn1Oid, tag};
 use crate::encoding::{len_octets, write_len};
 use crate::{
-    Asn1Error, Asn1Ref, Children, DecodeContent, Depth, Encode, EncodeTagged, EncodingOptions,
+    Asn1Error, Asn1Ref, Children, DecodeContent, DecodingOptions, Encode, EncodeTagged,
+    EncodingOptions,
 };
 use alloc::vec::Vec;
 
@@ -43,8 +44,11 @@ pub enum PdvIdentification {
     Fixed,
 }
 
-fn two_fields(value: &[u8], depth: Depth) -> Result<(Asn1Ref<'_>, Asn1Ref<'_>), Asn1Error> {
-    let mut fields = Children::new(value, depth);
+fn two_fields(
+    value: &[u8],
+    options: DecodingOptions,
+) -> Result<(Asn1Ref<'_>, Asn1Ref<'_>), Asn1Error> {
+    let mut fields = Children::new(value, options);
     let first = fields.next().ok_or(Asn1Error::Truncated)??;
     let second = fields.next().ok_or(Asn1Error::Truncated)??;
     if let Some(extra) = fields.next() {
@@ -55,10 +59,10 @@ fn two_fields(value: &[u8], depth: Depth) -> Result<(Asn1Ref<'_>, Asn1Ref<'_>), 
 }
 
 impl PdvIdentification {
-    fn decode(field: Asn1Ref<'_>, depth: Depth) -> Result<Self, Asn1Error> {
+    fn decode(field: Asn1Ref<'_>, options: DecodingOptions) -> Result<Self, Asn1Error> {
         Ok(match field.tag() {
             [0xA0] | [0xA3] => {
-                let (first, second) = two_fields(field.value(), depth.descend()?)?;
+                let (first, second) = two_fields(field.value(), options.descend()?)?;
                 if first.tag() != [0x80] || second.tag() != [0x81] {
                     return Err(Asn1Error::UnexpectedTag);
                 }
@@ -179,26 +183,37 @@ macro_rules! container {
                 &self.value
             }
         }
+        impl<'a> crate::Decode<'a> for $name {
+            fn try_decode(buff: &'a [u8], options: crate::DecodingOptions) -> Result<(usize, Self), crate::Asn1Error> {
+                let element = crate::Asn1Ref::parse(buff, options)?;
+                if !element.is_constructed() {
+                    return Err(crate::Asn1Error::UnexpectedTag);
+                }
+                let value = <Self as crate::DecodeContent<'a>>::try_decode_content(element.value(), options)?;
+                Ok((element.total_len(), value))
+            }
+        }
+
         impl<'a> DecodeContent<'a> for $name {
-            const TAG: &'static [u8] = tag::$tag;
             /// 變動時間：檢查欄位標記與巢狀結構，再複製資料。
-            fn try_decode_content(value: &'a [u8], depth: Depth) -> Result<Self, Asn1Error> {
-                let depth = depth.descend()?;
-                let (identification, data) = two_fields(value, depth)?;
+            fn try_decode_content(value: &'a [u8], options: DecodingOptions) -> Result<Self, Asn1Error> {
+                options.check_content_len(value.len())?;
+                let options = options.descend()?;
+                let (identification, data) = two_fields(value, options)?;
                 if identification.tag() != [0xA0] || (data.tag() != [0x82] && data.tag() != [0xA2]) {
                     return Err(Asn1Error::UnexpectedTag);
                 }
-                let inner_depth = depth.descend()?;
-                let inner = Asn1Ref::parse(identification.value(), inner_depth)?;
+                let inner_options = options.descend()?;
+                let inner = Asn1Ref::parse(identification.value(), inner_options)?;
                 if inner.total_len() != identification.value().len() {
                     return Err(Asn1Error::TrailingData);
                 }
                 Ok(Self::new(
-                    PdvIdentification::decode(inner, inner_depth)?,
+                    PdvIdentification::decode(inner, inner_options)?,
                     if data.tag() == [0x82] {
                         data.value().to_vec()
                     } else {
-                        <crate::Asn1OctetString as crate::DecodeConstructed>::try_decode_constructed(data.value(), depth)?.as_bytes().to_vec()
+                        <crate::Asn1OctetString as crate::DecodeConstructed>::try_decode_constructed(data.value(), options)?.as_bytes().to_vec()
                     },
                 ))
             }
@@ -319,12 +334,14 @@ mod tests {
                 assert_eq!(value.encode(rules, &mut out), Ok(expected.len()));
                 assert_eq!(out, expected);
                 assert_eq!(
-                    Asn1EmbeddedPdv::try_decode(&out, Depth::DEFAULT).unwrap().1,
+                    Asn1EmbeddedPdv::try_decode(&out, DecodingOptions::default())
+                        .unwrap()
+                        .1,
                     value
                 );
                 out[0] = 0x3D;
                 assert_eq!(
-                    Asn1CharacterString::try_decode(&out, Depth::DEFAULT)
+                    Asn1CharacterString::try_decode(&out, DecodingOptions::default())
                         .unwrap()
                         .1,
                     Asn1CharacterString::new(id.clone(), vec![0xFF])
@@ -343,8 +360,12 @@ mod tests {
             &[0xA0, 5, 0xA0, 3, 0x80, 1, 42, 0x82, 0],
             &[0xA0, 2, 0x85, 0],
         ] {
-            assert!(Asn1EmbeddedPdv::try_decode_content(bytes, Depth::DEFAULT).is_err());
-            assert!(Asn1CharacterString::try_decode_content(bytes, Depth::DEFAULT).is_err());
+            assert!(
+                Asn1EmbeddedPdv::try_decode_content(bytes, DecodingOptions::default()).is_err()
+            );
+            assert!(
+                Asn1CharacterString::try_decode_content(bytes, DecodingOptions::default()).is_err()
+            );
         }
     }
     #[test]
@@ -353,9 +374,18 @@ mod tests {
             0x2B, 12, 0xA0, 8, 0xA0, 6, 0x80, 1, 42, 0x81, 1, 42, 0x82, 0,
         ];
         assert_eq!(
-            Asn1EmbeddedPdv::try_decode(&bytes, Depth::new(2)),
+            Asn1EmbeddedPdv::try_decode(
+                &bytes,
+                DecodingOptions::new(crate::Depth::new(2), 16 * 1024 * 1024, 65_536)
+            ),
             Err(Asn1Error::DepthExceeded)
         );
-        assert!(Asn1EmbeddedPdv::try_decode(&bytes, Depth::new(3)).is_ok());
+        assert!(
+            Asn1EmbeddedPdv::try_decode(
+                &bytes,
+                DecodingOptions::new(crate::Depth::new(3), 16 * 1024 * 1024, 65_536)
+            )
+            .is_ok()
+        );
     }
 }

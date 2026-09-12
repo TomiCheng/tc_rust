@@ -39,6 +39,12 @@ pub enum Asn1Error {
     /// 巢狀比允許的深度更深。
     DepthExceeded,
 
+    /// Contents exceed the configured per-element byte limit.
+    ContentLengthExceeded,
+
+    /// A constructed value exceeds the configured direct-child limit.
+    ChildrenExceeded,
+
     /// 呼叫端提供的輸出緩衝不足。
     BufferTooSmall,
 }
@@ -56,6 +62,8 @@ impl fmt::Display for Asn1Error {
             Self::MalformedValue => "contents are not valid for this type",
             Self::InexactValue => "value cannot be represented exactly by the target type",
             Self::DepthExceeded => "nesting is deeper than the allowed limit",
+            Self::ContentLengthExceeded => "contents exceed the configured length limit",
+            Self::ChildrenExceeded => "child count exceeds the configured limit",
             Self::BufferTooSmall => "output buffer is too small",
         })
     }

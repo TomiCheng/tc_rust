@@ -9,7 +9,7 @@ use super::{
     real_number::{Exponent, Magnitude},
     tag::REAL as TAG,
 };
-use crate::{Asn1Error, DecodeContent, Depth, Encode, EncodingOptions};
+use crate::{Asn1Error, DecodeContent, DecodingOptions, Encode, EncodingOptions};
 use alloc::{vec, vec::Vec};
 
 /// 已正規化的 REAL 編碼。相等比較採 DER 表示：二進位與十進位表示保持區別；
@@ -351,10 +351,25 @@ impl TryFrom<&Asn1Real> for f64 {
         }
     }
 }
+impl<'a> crate::Decode<'a> for Asn1Real {
+    fn try_decode(
+        buff: &'a [u8],
+        options: crate::DecodingOptions,
+    ) -> Result<(usize, Self), crate::Asn1Error> {
+        let element = crate::Asn1Ref::parse(buff, options)?;
+        if element.is_constructed() {
+            return Err(crate::Asn1Error::UnexpectedTag);
+        }
+        let value =
+            <Self as crate::DecodeContent<'a>>::try_decode_content(element.value(), options)?;
+        Ok((element.total_len(), value))
+    }
+}
+
 impl<'a> DecodeContent<'a> for Asn1Real {
-    const TAG: &'static [u8] = TAG;
     /// 變動時間：接受 BER 各種 REAL 表示並正規化，保留原本的二進位或十進位底數。
-    fn try_decode_content(value: &'a [u8], _: Depth) -> Result<Self, Asn1Error> {
+    fn try_decode_content(value: &'a [u8], options: DecodingOptions) -> Result<Self, Asn1Error> {
+        options.check_content_len(value.len())?;
         decode(value)
     }
 }
@@ -399,7 +414,7 @@ mod tests {
             (&[0xAC, 0xFF, 3], &[0x80, 0xFF, 3]),
             (&[0xC0, 0, 0, 8], &[0xC0, 3, 1]),
         ] {
-            let value = Asn1Real::try_decode_content(input, Depth::DEFAULT).unwrap();
+            let value = Asn1Real::try_decode_content(input, DecodingOptions::default()).unwrap();
             assert_eq!(value.as_bytes(), expected);
             assert_eq!(Asn1Real::from_der_bytes(expected), Ok(value));
         }
@@ -411,7 +426,7 @@ mod tests {
             &b"\x02123.00"[..],
             &b"\x03  +1,2300E+2"[..],
         ] {
-            let value = Asn1Real::try_decode_content(input, Depth::DEFAULT).unwrap();
+            let value = Asn1Real::try_decode_content(input, DecodingOptions::default()).unwrap();
             assert_eq!(value.as_bytes(), b"\x03123.E+0");
             assert_eq!(f64::try_from(&value), Ok(123.0));
         }
@@ -466,7 +481,7 @@ mod tests {
             let mut out = vec![0; real.encoded_len(EncodingOptions::Der)];
             let written = real.encode(EncodingOptions::Der, &mut out).unwrap();
             assert_eq!(
-                Asn1Real::try_decode(&out, Depth::DEFAULT),
+                Asn1Real::try_decode(&out, DecodingOptions::default()),
                 Ok((written, real))
             );
         }
@@ -502,14 +517,15 @@ mod tests {
             b"\x02NaN",
         ] {
             assert_eq!(
-                Asn1Real::try_decode_content(contents, Depth::DEFAULT),
+                Asn1Real::try_decode_content(contents, DecodingOptions::default()),
                 Err(Asn1Error::MalformedValue),
                 "{contents:?}"
             );
         }
         assert!(Asn1Real::from_der_bytes(&[0x80, 0, 2]).is_err());
         assert_eq!(
-            Asn1Real::try_decode(&[2, 1, 0], Depth::DEFAULT),
+            crate::Fields::new(&[2, 1, 0], DecodingOptions::default())
+                .and_then(|mut fields| fields.required::<Asn1Real>(crate::tag::REAL)),
             Err(Asn1Error::UnexpectedTag)
         );
     }
@@ -534,13 +550,13 @@ mod tests {
             b"\x031.E+1 ",
         ] {
             assert!(
-                Asn1Real::try_decode_content(bytes, Depth::DEFAULT).is_err(),
+                Asn1Real::try_decode_content(bytes, DecodingOptions::default()).is_err(),
                 "{bytes:?}"
             );
         }
         for bytes in [&b"\x03 .1e1"[..], b"\x031.E+0", b"\x021.", b"\x02.1"] {
             assert!(
-                Asn1Real::try_decode_content(bytes, Depth::DEFAULT).is_ok(),
+                Asn1Real::try_decode_content(bytes, DecodingOptions::default()).is_ok(),
                 "{bytes:?}"
             );
         }
@@ -569,7 +585,7 @@ mod tests {
             let text = alloc::format!("{value:.1074}");
             let mut content = vec![2];
             content.extend_from_slice(text.as_bytes());
-            let real = Asn1Real::try_decode_content(&content, Depth::DEFAULT).unwrap();
+            let real = Asn1Real::try_decode_content(&content, DecodingOptions::default()).unwrap();
             assert_eq!(f64::try_from(&real).unwrap().to_bits(), value.to_bits());
         }
     }

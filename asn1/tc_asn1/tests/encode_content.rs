@@ -11,7 +11,7 @@ fn check<T: Encode + EncodeContent>(value: T) {
     let encoder: &dyn EncodeContent = &value;
     for rules in RULES {
         let wire = value.encode_to_vec(rules).unwrap();
-        let parsed = Asn1Ref::parse(&wire, Depth::DEFAULT).unwrap();
+        let parsed = Asn1Ref::parse(&wire, DecodingOptions::default()).unwrap();
         let expected = parsed.value();
         let len = encoder.content_len(rules);
         assert_eq!(
@@ -44,7 +44,7 @@ fn check_decoded<T>(contents: &[u8])
 where
     T: for<'a> DecodeContent<'a> + Encode + EncodeContent,
 {
-    check(T::try_decode_content(contents, Depth::DEFAULT).unwrap());
+    check(T::try_decode_content(contents, DecodingOptions::default()).unwrap());
 }
 
 #[test]

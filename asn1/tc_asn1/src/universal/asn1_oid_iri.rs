@@ -5,7 +5,7 @@
 //! §7.5.3 允許實作者容忍未來可能解除保留的字元；這裡接受列出的純量範圍。
 
 use super::tag;
-use crate::{Asn1Error, DecodeContent, Depth, Encode, EncodingOptions};
+use crate::{Asn1Error, DecodeContent, DecodingOptions, Encode, EncodingOptions};
 use alloc::string::String;
 
 fn valid_label(label: &str) -> bool {
@@ -59,10 +59,30 @@ macro_rules! iri {
                 &self.text
             }
         }
+        impl<'a> crate::Decode<'a> for $name {
+            fn try_decode(
+                buff: &'a [u8],
+                options: crate::DecodingOptions,
+            ) -> Result<(usize, Self), crate::Asn1Error> {
+                let element = crate::Asn1Ref::parse(buff, options)?;
+                if element.is_constructed() {
+                    return Err(crate::Asn1Error::UnexpectedTag);
+                }
+                let value = <Self as crate::DecodeContent<'a>>::try_decode_content(
+                    element.value(),
+                    options,
+                )?;
+                Ok((element.total_len(), value))
+            }
+        }
+
         impl<'a> DecodeContent<'a> for $name {
-            const TAG: &'static [u8] = tag::$tag;
             /// 變動時間：驗證 UTF-8、路徑與標籤。
-            fn try_decode_content(value: &'a [u8], _: Depth) -> Result<Self, Asn1Error> {
+            fn try_decode_content(
+                value: &'a [u8],
+                options: DecodingOptions,
+            ) -> Result<Self, Asn1Error> {
+                options.check_content_len(value.len())?;
                 Self::new(core::str::from_utf8(value).map_err(|_| Asn1Error::MalformedValue)?)
             }
         }
@@ -152,7 +172,9 @@ mod tests {
             value.encode(EncodingOptions::Der, &mut out).unwrap();
             assert_eq!(&out[..2], &[0x1F, 0x23]);
             assert_eq!(
-                Asn1OidIri::try_decode(&out, Depth::DEFAULT).unwrap().1,
+                Asn1OidIri::try_decode(&out, DecodingOptions::default())
+                    .unwrap()
+                    .1,
                 value
             );
         }
@@ -164,13 +186,14 @@ mod tests {
             .unwrap();
         assert_eq!(&out[..2], &[0x1F, 0x24]);
         assert_eq!(
-            Asn1RelativeOidIri::try_decode(&out, Depth::DEFAULT)
+            Asn1RelativeOidIri::try_decode(&out, DecodingOptions::default())
                 .unwrap()
                 .1,
             value
         );
         assert_eq!(
-            Asn1OidIri::try_decode(&out, Depth::DEFAULT),
+            crate::Fields::new(&out, DecodingOptions::default())
+                .and_then(|mut fields| fields.required::<Asn1OidIri>(crate::tag::OID_IRI)),
             Err(Asn1Error::UnexpectedTag)
         );
     }
@@ -197,6 +220,6 @@ mod tests {
             assert!(Asn1OidIri::new(text).is_err(), "{text:?}");
         }
         assert!(Asn1RelativeOidIri::new("").is_err());
-        assert!(Asn1OidIri::try_decode_content(&[0xFF], Depth::DEFAULT).is_err());
+        assert!(Asn1OidIri::try_decode_content(&[0xFF], DecodingOptions::default()).is_err());
     }
 }

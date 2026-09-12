@@ -2,7 +2,7 @@
 
 use alloc::string::String;
 
-use crate::depth::Depth;
+use crate::decoding_options::DecodingOptions;
 use crate::encoding_options::EncodingOptions;
 use crate::error::Asn1Error;
 use crate::traits::{DecodeContent, Encode};
@@ -31,12 +31,27 @@ impl Asn1Ia5String {
     }
 }
 
-impl<'a> DecodeContent<'a> for Asn1Ia5String {
-    const TAG: &'static [u8] = TAG;
-    const CONSTRUCTED: Option<fn(&'a [u8], Depth) -> Result<Self, Asn1Error>> =
-        Some(<Self as crate::DecodeConstructed<'a>>::try_decode_constructed);
+impl<'a> crate::Decode<'a> for Asn1Ia5String {
+    fn try_decode(
+        buff: &'a [u8],
+        options: crate::DecodingOptions,
+    ) -> Result<(usize, Self), crate::Asn1Error> {
+        let element = crate::Asn1Ref::parse(buff, options)?;
+        let value = if element.is_constructed() {
+            <Self as crate::DecodeConstructed<'a>>::try_decode_constructed(
+                element.value(),
+                options,
+            )?
+        } else {
+            <Self as crate::DecodeContent<'a>>::try_decode_content(element.value(), options)?
+        };
+        Ok((element.total_len(), value))
+    }
+}
 
-    fn try_decode_content(value: &'a [u8], _: Depth) -> Result<Self, Asn1Error> {
+impl<'a> DecodeContent<'a> for Asn1Ia5String {
+    fn try_decode_content(value: &'a [u8], options: DecodingOptions) -> Result<Self, Asn1Error> {
+        options.check_content_len(value.len())?;
         if !value.is_ascii() {
             return Err(Asn1Error::MalformedValue);
         }
@@ -88,12 +103,13 @@ mod tests {
     use super::*;
     use crate::traits::Decode;
 
-    const DEPTH: Depth = Depth::DEFAULT;
+    const OPTIONS: DecodingOptions =
+        DecodingOptions::new(crate::Depth::DEFAULT, 16 * 1024 * 1024, 65_536);
 
     #[test]
     fn ascii_text_round_trips() {
         let input = [0x16, 0x05, b'a', b'@', b'b', b'.', b'c'];
-        let (used, s) = Asn1Ia5String::try_decode(&input, DEPTH).unwrap();
+        let (used, s) = Asn1Ia5String::try_decode(&input, OPTIONS).unwrap();
         assert_eq!(used, 7);
         assert_eq!(s.as_str(), "a@b.c");
 
@@ -111,21 +127,21 @@ mod tests {
             )
             .is_ok()
         );
-        assert!(Asn1Ia5String::try_decode_content(&[0x00, 0x7F], DEPTH).is_ok());
+        assert!(Asn1Ia5String::try_decode_content(&[0x00, 0x7F], OPTIONS).is_ok());
     }
 
     #[test]
     fn anything_above_seven_bits_is_rejected() {
         assert_eq!(Asn1Ia5String::new("café"), Err(Asn1Error::MalformedValue));
         assert_eq!(
-            Asn1Ia5String::try_decode_content(&[0x61, 0x80], DEPTH),
+            Asn1Ia5String::try_decode_content(&[0x61, 0x80], OPTIONS),
             Err(Asn1Error::MalformedValue)
         );
     }
 
     #[test]
     fn an_empty_string_is_valid() {
-        let (used, s) = Asn1Ia5String::try_decode(&[0x16, 0x00], DEPTH).unwrap();
+        let (used, s) = Asn1Ia5String::try_decode(&[0x16, 0x00], OPTIONS).unwrap();
         assert_eq!(used, 2);
         assert_eq!(s.as_str(), "");
     }

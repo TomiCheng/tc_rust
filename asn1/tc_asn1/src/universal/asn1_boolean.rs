@@ -1,6 +1,6 @@
 //! ASN.1 `BOOLEAN`。
 
-use crate::depth::Depth;
+use crate::decoding_options::DecodingOptions;
 use crate::encoding_options::EncodingOptions;
 use crate::error::Asn1Error;
 use crate::traits::{DecodeContent, Encode};
@@ -16,10 +16,24 @@ impl From<bool> for Asn1Boolean {
     }
 }
 
-impl<'a> DecodeContent<'a> for Asn1Boolean {
-    const TAG: &'static [u8] = TAG;
+impl<'a> crate::Decode<'a> for Asn1Boolean {
+    fn try_decode(
+        buff: &'a [u8],
+        options: crate::DecodingOptions,
+    ) -> Result<(usize, Self), crate::Asn1Error> {
+        let element = crate::Asn1Ref::parse(buff, options)?;
+        if element.is_constructed() {
+            return Err(crate::Asn1Error::UnexpectedTag);
+        }
+        let value =
+            <Self as crate::DecodeContent<'a>>::try_decode_content(element.value(), options)?;
+        Ok((element.total_len(), value))
+    }
+}
 
-    fn try_decode_content(value: &'a [u8], _: Depth) -> Result<Self, Asn1Error> {
+impl<'a> DecodeContent<'a> for Asn1Boolean {
+    fn try_decode_content(value: &'a [u8], options: DecodingOptions) -> Result<Self, Asn1Error> {
+        options.check_content_len(value.len())?;
         match value {
             // 寬鬆照 BER：任何非零都是真。DER 只允許 FF，靠往返比較判定。
             [octet] => Ok(Asn1Boolean(*octet != 0)),
@@ -109,22 +123,23 @@ mod tests {
     #[test]
     fn a_non_canonical_true_re_encodes_as_der() {
         // 這就是往返比較判定「不是 DER」的機制：01 進來，FF 出去。
-        let (_, b) = Asn1Boolean::try_decode(&[0x01, 0x01, 0x01], DEPTH).unwrap();
+        let (_, b) = Asn1Boolean::try_decode(&[0x01, 0x01, 0x01], OPTIONS).unwrap();
         let mut out = [0_u8; 4];
         b.encode(EncodingOptions::Der, &mut out).unwrap();
         assert_eq!(&out[..3], &[0x01, 0x01, 0xFF]);
     }
 
-    const DEPTH: Depth = Depth::DEFAULT;
+    const OPTIONS: DecodingOptions =
+        DecodingOptions::new(crate::Depth::DEFAULT, 16 * 1024 * 1024, 65_536);
 
     #[test]
     fn true_and_false_decode_from_their_single_octet() {
         assert_eq!(
-            Asn1Boolean::try_decode(&[0x01, 0x01, 0xFF], DEPTH),
+            Asn1Boolean::try_decode(&[0x01, 0x01, 0xFF], OPTIONS),
             Ok((3, Asn1Boolean(true)))
         );
         assert_eq!(
-            Asn1Boolean::try_decode(&[0x01, 0x01, 0x00], DEPTH),
+            Asn1Boolean::try_decode(&[0x01, 0x01, 0x00], OPTIONS),
             Ok((3, Asn1Boolean(false)))
         );
     }
@@ -133,7 +148,7 @@ mod tests {
     fn any_non_zero_octet_is_true_under_ber() {
         for octet in [0x01_u8, 0x7F, 0x80, 0xFE] {
             assert_eq!(
-                Asn1Boolean::try_decode_content(&[octet], DEPTH),
+                Asn1Boolean::try_decode_content(&[octet], OPTIONS),
                 Ok(Asn1Boolean(true))
             );
         }
@@ -142,11 +157,11 @@ mod tests {
     #[test]
     fn contents_of_any_length_but_one_are_rejected() {
         assert_eq!(
-            Asn1Boolean::try_decode_content(&[], DEPTH),
+            Asn1Boolean::try_decode_content(&[], OPTIONS),
             Err(Asn1Error::MalformedValue)
         );
         assert_eq!(
-            Asn1Boolean::try_decode_content(&[0xFF, 0xFF], DEPTH),
+            Asn1Boolean::try_decode_content(&[0xFF, 0xFF], OPTIONS),
             Err(Asn1Error::MalformedValue)
         );
     }

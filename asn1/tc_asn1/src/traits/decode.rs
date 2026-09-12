@@ -1,175 +1,46 @@
-//! 讀入的契約。
+//! Decoding contracts for schema-selected types.
 
-use crate::asn1_ref::Asn1Ref;
-use crate::depth::Depth;
-use crate::error::Asn1Error;
-use crate::{Encode, EncodingOptions};
+use crate::{Asn1Error, DecodingOptions};
 
-/// 只解內容，不碰表頭。IMPLICIT 標記過的欄位走這裡。
+/// Decode contents without an outer identifier or length field.
+/// The caller's schema selects the type and validates the outer tag.
+/// For segmented strings, use [`DecodeConstructed`] instead.
 pub trait DecodeContent<'a>: Sized {
-    /// 沒有被重新標記時，這個型別的識別位元組。
-    const TAG: &'static [u8];
-
-    /// Entry point for the BER constructed form of `TAG`, when the type has one.
-    /// Types register the function they implement through [`DecodeConstructed`];
-    /// everything else leaves the default `None` and the generic decoders reject
-    /// the constructed form with `UnexpectedTag`.
-    #[allow(clippy::type_complexity)] // Keep the optional callback signature visible at registration.
-    const CONSTRUCTED: Option<fn(&'a [u8], Depth) -> Result<Self, Asn1Error>> = None;
-
-    /// 變動時間：分支只依編碼結構。
-    fn try_decode_content(value: &'a [u8], depth: Depth) -> Result<Self, Asn1Error>;
+    /// Decode and validate all content bytes, borrowing from them if needed.
+    /// Variable time: public values only; no constant-time alternative is provided.
+    fn try_decode_content(value: &'a [u8], options: DecodingOptions) -> Result<Self, Asn1Error>;
 }
 
-/// 解碼 BER constructed 字串的內容，不含外層 tag 與長度。
-/// 只由支援分段形式的型別實作，不提供預設的拒絕實作。
+/// Decode the contents of a BER constructed string, without its outer header.
+/// Implemented only by types supporting segmented string encodings.
 pub trait DecodeConstructed<'a>: Sized {
-    /// 將一串成分 TLV 解碼並合併，成分可再使用巢狀的 constructed 形式。
-    /// 變動時間：分支只依編碼結構，只能用於公開值；沒有常數時間替代方法。
-    fn try_decode_constructed(value: &'a [u8], depth: Depth) -> Result<Self, Asn1Error>;
+    /// Decode and join component TLVs, including nested constructed components.
+    /// Component identifiers must follow the string type's encoding rules.
+    /// Variable time: public values only; no constant-time alternative is provided.
+    fn try_decode_constructed(value: &'a [u8], options: DecodingOptions)
+    -> Result<Self, Asn1Error>;
 }
 
-/// 解一個完整的 TLV。由 [`DecodeContent`] 自動得到。
+/// Decode one complete TLV as the type selected by the caller's schema.
+///
+/// Implementations select the appropriate content decoder from the encoded form.
+/// The schema checks the tag class and number; concrete value decoders can thus
+/// accept IMPLICIT tags. Dynamic types such as [`crate::Asn1Object`] inspect tags
+/// to select their variants. Implementing [`DecodeContent`] does not implement
+/// this trait automatically.
 pub trait Decode<'a>: Sized {
-    fn try_decode(buff: &'a [u8], depth: Depth) -> Result<(usize, Self), Asn1Error>;
-
-    /// 剛好一個 TLV，後面不准有東西。變動時間：分支只依編碼結構。
+    /// Return the consumed byte count and decoded value. Bytes following the first
+    /// TLV belong to the caller. Contents inside that TLV must be fully validated.
+    /// Variable time: public values only; no constant-time alternative is provided.
     ///
     /// # Examples
     /// ```
-    /// use tc_asn1::{Asn1Error, Asn1Null, Depth, Decode};
-    /// assert_eq!(Asn1Null::try_decode_exact(&[5, 0], Depth::DEFAULT), Ok(Asn1Null));
-    /// assert_eq!(Asn1Null::try_decode_exact(&[5, 0, 5, 0], Depth::DEFAULT),
-    ///     Err(Asn1Error::TrailingData));
+    /// use tc_asn1::{Asn1Boolean, Decode, DecodingOptions};
+    /// // The schema selected [0] IMPLICIT BOOLEAN. The last byte is a sibling.
+    /// let (used, value) = Asn1Boolean::try_decode(&[0x80, 1, 0xff, 0], DecodingOptions::default())?;
+    /// assert_eq!(used, 3);
+    /// assert!(value.0);
+    /// # Ok::<(), tc_asn1::Asn1Error>(())
     /// ```
-    fn try_decode_exact(buff: &'a [u8], depth: Depth) -> Result<Self, Asn1Error> {
-        let (used, value) = Self::try_decode(buff, depth)?;
-        if used != buff.len() {
-            return Err(Asn1Error::TrailingData);
-        }
-        Ok(value)
-    }
-
-    /// 以 DER 往返比較檢查已解讀部分，重編不同時回傳 [`Asn1Error::NotDer`]。
-    /// 變動時間：分支只依編碼結構，最後比較公開的編碼位元組。
-    ///
-    /// [`crate::Asn1Any`] and [`crate::Asn1Object::Unknown`] preserve raw encodings.
-    /// These opaque parts cannot be validated by comparing their encodings.
-    /// [`crate::Asn1Object::Set`] 缺少 schema，也無法保證 SET OF CHOICE 的排序。
-    /// 呼叫端需選擇符合 schema 的型別；這不是對任意 ASN.1 的完整 DER 驗證器。
-    ///
-    /// # Examples
-    /// ```
-    /// use tc_asn1::{Asn1Boolean, Asn1Error, Asn1Object, Depth, Decode};
-    /// assert_eq!(Asn1Boolean::try_decode_der(&[1, 1, 1], Depth::DEFAULT),
-    ///     Err(Asn1Error::NotDer));
-    /// assert_eq!(Asn1Boolean::try_decode_der(&[1, 1, 255], Depth::DEFAULT),
-    ///     Ok(Asn1Boolean(true)));
-    /// // Unknown 內容不解讀，不能靠往返比較驗證其中的 DER。
-    /// assert!(Asn1Object::try_decode_der(&[0x30, 3, 0x21, 1, 0x41], Depth::DEFAULT).is_ok());
-    /// ```
-    fn try_decode_der(buff: &'a [u8], depth: Depth) -> Result<Self, Asn1Error>
-    where
-        Self: Encode,
-    {
-        let value = Self::try_decode_exact(buff, depth)?;
-        if value.encode_to_vec(EncodingOptions::Der)? != buff {
-            return Err(Asn1Error::NotDer);
-        }
-        Ok(value)
-    }
-}
-
-impl<'a, T: DecodeContent<'a>> Decode<'a> for T {
-    fn try_decode(buff: &'a [u8], depth: Depth) -> Result<(usize, Self), Asn1Error> {
-        let element = Asn1Ref::parse(buff, depth)?;
-        Ok((element.total_len(), element.decode_as(depth)?))
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::{
-        Asn1Any, Asn1Boolean, Asn1Integer, Asn1Null, Asn1Object, Asn1OctetString, Asn1SetOf,
-    };
-
-    #[test]
-    fn exact_decode_rejects_trailing_data_and_preserves_decode_errors() {
-        assert_eq!(
-            Asn1Null::try_decode_exact(&[5, 0], Depth::DEFAULT),
-            Ok(Asn1Null)
-        );
-        assert_eq!(
-            Asn1Null::try_decode_exact(&[5, 0, 5, 0], Depth::DEFAULT),
-            Err(Asn1Error::TrailingData)
-        );
-        assert_eq!(
-            Asn1Null::try_decode_exact(&[5], Depth::DEFAULT),
-            Err(Asn1Error::Truncated)
-        );
-    }
-
-    #[test]
-    fn der_decode_rejects_noncanonical_booleans_lengths_sets_and_constructed_strings() {
-        assert_eq!(
-            Asn1Boolean::try_decode_der(&[1, 1, 1], Depth::DEFAULT),
-            Err(Asn1Error::NotDer)
-        );
-        assert_eq!(
-            Asn1Boolean::try_decode_der(&[1, 1, 255], Depth::DEFAULT),
-            Ok(Asn1Boolean(true))
-        );
-        assert_eq!(
-            Asn1Null::try_decode_der(&[5, 0x81, 0], Depth::DEFAULT),
-            Err(Asn1Error::NotDer)
-        );
-        assert_eq!(
-            Asn1Null::try_decode_der(&[5, 0, 5, 0], Depth::DEFAULT),
-            Err(Asn1Error::TrailingData)
-        );
-        assert_eq!(
-            Asn1SetOf::<Asn1Integer>::try_decode_der(&[0x31, 6, 2, 1, 5, 2, 1, 3], Depth::DEFAULT),
-            Err(Asn1Error::NotDer)
-        );
-        assert!(
-            Asn1SetOf::<Asn1Integer>::try_decode_der(&[0x31, 6, 2, 1, 3, 2, 1, 5], Depth::DEFAULT)
-                .is_ok()
-        );
-        assert_eq!(
-            Asn1OctetString::try_decode_der(&[0x24, 3, 4, 1, 0xaa], Depth::DEFAULT),
-            Err(Asn1Error::NotDer)
-        );
-        assert_eq!(
-            Asn1Object::try_decode_der(&[0x24, 3, 4, 1, 0xaa], Depth::DEFAULT),
-            Err(Asn1Error::NotDer)
-        );
-        assert_eq!(
-            alloc::string::ToString::to_string(&Asn1Error::NotDer),
-            "encoding is not DER"
-        );
-    }
-
-    #[test]
-    fn der_round_trip_checks_cannot_validate_opaque_encodings() {
-        let input = [0x30, 3, 0x21, 1, 0x41];
-        let value = Asn1Object::try_decode_der(&input, Depth::DEFAULT).unwrap();
-        assert!(matches!(
-            &value.as_sequence().unwrap()[0],
-            Asn1Object::Unknown(_)
-        ));
-        let input = [1, 0x81, 1, 1];
-        assert!(Asn1Any::try_decode_der(&input, Depth::DEFAULT).is_ok());
-    }
-
-    #[test]
-    fn der_decode_propagates_encoding_errors_instead_of_replacing_them_with_not_der() {
-        let input = [
-            0x31, 12, 0x1f, 0x82, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0, 0,
-        ];
-        assert_eq!(
-            Asn1Object::try_decode_der(&input, Depth::DEFAULT),
-            Err(Asn1Error::TagOverflow)
-        );
-    }
+    fn try_decode(buff: &'a [u8], options: DecodingOptions) -> Result<(usize, Self), Asn1Error>;
 }

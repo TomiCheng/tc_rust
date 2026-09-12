@@ -5,7 +5,9 @@ use alloc::vec::Vec;
 use super::{Asn1Object, children_len, decode_children, encode_children};
 use crate::asn1_ref::parse_tag;
 use crate::universal::{copy_encodings, tag_key};
-use crate::{Asn1Class, Asn1Error, Asn1Ref, DecodeContent, Depth, Encode, EncodingOptions};
+use crate::{
+    Asn1Class, Asn1Error, Asn1Ref, DecodeContent, DecodingOptions, Encode, EncodingOptions,
+};
 
 /// 非 universal 標記的值，保留標記與可解讀的子樹。
 ///
@@ -95,17 +97,23 @@ impl Asn1Tagged {
     /// 依 schema 指定的型別解讀 primitive 內容。變動時間：分支只依編碼結構。
     ///
     /// constructed 回傳 `MalformedValue`；其子元素請用 [`Self::children`]。
-    pub fn implicit_as<T: for<'a> DecodeContent<'a>>(&self, depth: Depth) -> Result<T, Asn1Error> {
+    pub fn implicit_as<T: for<'a> DecodeContent<'a>>(
+        &self,
+        options: DecodingOptions,
+    ) -> Result<T, Asn1Error> {
         match &self.content {
-            TaggedContent::Primitive(bytes) => T::try_decode_content(bytes, depth),
+            TaggedContent::Primitive(bytes) => T::try_decode_content(bytes, options),
             TaggedContent::Constructed(_) => Err(Asn1Error::MalformedValue),
         }
     }
 
-    pub(super) fn from_ref(element: &Asn1Ref<'_>, depth: Depth) -> Result<Self, Asn1Error> {
+    pub(super) fn from_ref(
+        element: &Asn1Ref<'_>,
+        options: DecodingOptions,
+    ) -> Result<Self, Asn1Error> {
         let tag = checked_tag(element.tag())?;
         let content = if element.is_constructed() {
-            TaggedContent::Constructed(decode_children(element, depth)?)
+            TaggedContent::Constructed(decode_children(element, options)?)
         } else {
             TaggedContent::Primitive(element.value().to_vec())
         };
@@ -168,7 +176,7 @@ mod tests {
     #[test]
     fn explicit_context_tags_decode_their_single_child_and_round_trip() {
         let input = [0xa0, 3, 2, 1, 2];
-        let (_, tree) = Asn1Object::try_decode(&input, Depth::DEFAULT).unwrap();
+        let (_, tree) = Asn1Object::try_decode(&input, DecodingOptions::default()).unwrap();
         let tagged = tree.as_tagged().unwrap();
         assert_eq!(tagged.class(), Asn1Class::ContextSpecific);
         assert_eq!(tagged.number(), 0);
@@ -176,7 +184,7 @@ mod tests {
         assert_eq!(tagged.explicit().unwrap(), &Asn1Integer::from(2_u8).into());
         assert_eq!(tagged.children().unwrap().len(), 1);
         assert_eq!(
-            tagged.implicit_as::<Asn1Boolean>(Depth::DEFAULT),
+            tagged.implicit_as::<Asn1Boolean>(DecodingOptions::default()),
             Err(Asn1Error::MalformedValue)
         );
         assert_eq!(tree.to_string(), "[CONTEXT 0]\n  INTEGER 2\n");
@@ -186,11 +194,11 @@ mod tests {
     #[test]
     fn primitive_context_tags_require_a_schema_to_interpret_their_contents() {
         let input = [0x80, 1, 0xff];
-        let (_, tree) = Asn1Object::try_decode(&input, Depth::DEFAULT).unwrap();
+        let (_, tree) = Asn1Object::try_decode(&input, DecodingOptions::default()).unwrap();
         let tagged = tree.as_tagged().unwrap();
         assert_eq!(tagged.content(), &TaggedContent::Primitive(vec![0xff]));
         assert_eq!(
-            tagged.implicit_as::<Asn1Boolean>(Depth::DEFAULT),
+            tagged.implicit_as::<Asn1Boolean>(DecodingOptions::default()),
             Ok(Asn1Boolean(true))
         );
         assert_eq!(tagged.explicit(), Err(Asn1Error::MalformedValue));
@@ -255,7 +263,9 @@ mod tests {
         let value = Asn1Tagged::primitive(&tag, &[]).unwrap();
         assert_eq!(value.number(), u64::MAX);
         let encoded = encode_member(&value, EncodingOptions::Der).unwrap();
-        let tree = Asn1Object::try_decode(&encoded, Depth::DEFAULT).unwrap().1;
+        let tree = Asn1Object::try_decode(&encoded, DecodingOptions::default())
+            .unwrap()
+            .1;
         assert_eq!(tree.as_tagged().unwrap().number(), u64::MAX);
         tag[1] = 0x82;
         assert_eq!(
@@ -274,7 +284,7 @@ mod tests {
         );
         tag.push(0);
         assert_eq!(
-            Asn1Object::try_decode(&tag, Depth::DEFAULT),
+            Asn1Object::try_decode(&tag, DecodingOptions::default()),
             Err(Asn1Error::TagOverflow)
         );
     }

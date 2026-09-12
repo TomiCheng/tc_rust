@@ -2,7 +2,7 @@
 
 use alloc::string::String;
 
-use crate::depth::Depth;
+use crate::decoding_options::DecodingOptions;
 use crate::encoding_options::EncodingOptions;
 use crate::error::Asn1Error;
 use crate::traits::{DecodeContent, Encode};
@@ -40,12 +40,27 @@ impl Asn1PrintableString {
     }
 }
 
-impl<'a> DecodeContent<'a> for Asn1PrintableString {
-    const TAG: &'static [u8] = TAG;
-    const CONSTRUCTED: Option<fn(&'a [u8], Depth) -> Result<Self, Asn1Error>> =
-        Some(<Self as crate::DecodeConstructed<'a>>::try_decode_constructed);
+impl<'a> crate::Decode<'a> for Asn1PrintableString {
+    fn try_decode(
+        buff: &'a [u8],
+        options: crate::DecodingOptions,
+    ) -> Result<(usize, Self), crate::Asn1Error> {
+        let element = crate::Asn1Ref::parse(buff, options)?;
+        let value = if element.is_constructed() {
+            <Self as crate::DecodeConstructed<'a>>::try_decode_constructed(
+                element.value(),
+                options,
+            )?
+        } else {
+            <Self as crate::DecodeContent<'a>>::try_decode_content(element.value(), options)?
+        };
+        Ok((element.total_len(), value))
+    }
+}
 
-    fn try_decode_content(value: &'a [u8], _: Depth) -> Result<Self, Asn1Error> {
+impl<'a> DecodeContent<'a> for Asn1PrintableString {
+    fn try_decode_content(value: &'a [u8], options: DecodingOptions) -> Result<Self, Asn1Error> {
+        options.check_content_len(value.len())?;
         if !value.iter().all(|b| is_printable(*b)) {
             return Err(Asn1Error::MalformedValue);
         }
@@ -97,7 +112,8 @@ mod tests {
     use super::*;
     use crate::traits::Decode;
 
-    const DEPTH: Depth = Depth::DEFAULT;
+    const OPTIONS: DecodingOptions =
+        DecodingOptions::new(crate::Depth::DEFAULT, 16 * 1024 * 1024, 65_536);
 
     #[test]
     fn the_whole_permitted_set_is_accepted() {
@@ -121,7 +137,7 @@ mod tests {
     fn a_country_code_round_trips() {
         // C=TW 的值
         let input = [0x13, 0x02, b'T', b'W'];
-        let (used, s) = Asn1PrintableString::try_decode(&input, DEPTH).unwrap();
+        let (used, s) = Asn1PrintableString::try_decode(&input, OPTIONS).unwrap();
         assert_eq!(used, 4);
         assert_eq!(s.as_str(), "TW");
 

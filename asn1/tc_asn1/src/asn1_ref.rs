@@ -1,8 +1,8 @@
 //! 借用輸入位元組的一個 TLV。
 
-use crate::depth::Depth;
+use crate::decoding_options::DecodingOptions;
 use crate::error::Asn1Error;
-use crate::traits::{DecodeConstructed, DecodeContent};
+use crate::traits::{Decode, DecodeConstructed};
 
 /// tag 的類別，取自識別位元組的最高兩位。
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
@@ -33,7 +33,24 @@ pub struct Asn1Ref<'a> {
 }
 
 impl<'a> Asn1Ref<'a> {
-    pub fn parse(buff: &'a [u8], depth: Depth) -> Result<Self, Asn1Error> {
+    pub(crate) fn from_validated_parts(
+        raw: &'a [u8],
+        tag_len: usize,
+        value_offset: usize,
+        value_len: usize,
+    ) -> Self {
+        Self {
+            raw,
+            tag: &raw[..tag_len],
+            value: &raw[value_offset..value_offset + value_len],
+        }
+    }
+
+    /// Parse the first TLV with the supplied decoding limits.
+    /// Definite-length contents stay borrowed; their children are checked when
+    /// traversed. Indefinite lengths require traversal to locate the closing EOC.
+    /// Variable time: public values only; no constant-time alternative is provided.
+    pub fn parse(buff: &'a [u8], options: DecodingOptions) -> Result<Self, Asn1Error> {
         let tag = parse_tag(buff)?;
         let (len_len, length) = parse_len(&buff[tag.len()..])?;
         let offset = tag.len() + len_len;
@@ -41,6 +58,7 @@ impl<'a> Asn1Ref<'a> {
         match length {
             Some(n) => {
                 let end = offset.checked_add(n).ok_or(Asn1Error::LengthOverflow)?;
+                options.check_content_len(n)?;
                 let value = buff.get(offset..end).ok_or(Asn1Error::Truncated)?;
                 Ok(Self {
                     raw: &buff[..end],
@@ -53,8 +71,9 @@ impl<'a> Asn1Ref<'a> {
                 if tag[0] & 0x20 == 0 {
                     return Err(Asn1Error::MalformedValue);
                 }
-                let depth = depth.descend()?;
+                let options = options.descend()?;
                 let mut at = offset;
+                let mut count = 0;
                 loop {
                     let rest = buff.get(at..).ok_or(Asn1Error::Truncated)?;
                     if rest.len() < 2 {
@@ -63,7 +82,12 @@ impl<'a> Asn1Ref<'a> {
                     if rest[..2] == [0x00, 0x00] {
                         break;
                     }
-                    at += Self::parse(rest, depth)?.total_len(); // 整個子 TLV 跳過
+                    if count == options.max_children() {
+                        return Err(Asn1Error::ChildrenExceeded);
+                    }
+                    at += Self::parse(rest, options)?.total_len(); // 整個子 TLV 跳過
+                    count += 1;
+                    options.check_content_len(at - offset)?;
                 }
                 Ok(Self {
                     raw: &buff[..at + 2],
@@ -100,43 +124,40 @@ impl<'a> Asn1Ref<'a> {
     }
 
     /// 走訪子元素。primitive 沒有子元素，回空的迭代器。
-    pub fn children(&self, depth: Depth) -> Children<'a> {
+    pub fn children(&self, options: DecodingOptions) -> Children<'a> {
         Children::new(
             if self.is_constructed() {
                 self.value
             } else {
                 &[]
             },
-            depth,
+            options,
         )
     }
 
-    /// 把這個元素當成 `T` 解：驗 tag，然後只解內容。表頭不重解。
-    /// A matching tag decodes normally; its constructed form uses the entry
-    /// registered in [`DecodeContent::CONSTRUCTED`], or returns `UnexpectedTag`.
-    pub fn decode_as<T: DecodeContent<'a>>(&self, depth: Depth) -> Result<T, Asn1Error> {
-        if self.tag == T::TAG {
-            T::try_decode_content(self.value, depth)
-        } else if is_constructed_form(self.tag, T::TAG) {
-            T::CONSTRUCTED.ok_or(Asn1Error::UnexpectedTag)?(self.value, depth)
-        } else {
-            Err(Asn1Error::UnexpectedTag)
+    /// Decode this complete element as the type selected by the caller's schema.
+    /// The schema validates the identifier; this method requires full consumption
+    /// of this element. Variable time: public values only; no constant-time alternative.
+    pub fn decode_as<T: Decode<'a>>(&self, options: DecodingOptions) -> Result<T, Asn1Error> {
+        let (used, value) = T::try_decode(self.raw, options)?;
+        if used != self.total_len() {
+            return Err(Asn1Error::TrailingData);
         }
+        Ok(value)
     }
 
-    /// 解碼 `T::TAG` 對應的 constructed 形式；其他標記回傳 `UnexpectedTag`。
-    /// `DecodeContent` 提供原始 tag，內容交由 `DecodeConstructed` 解碼。
-    /// The general [`Self::decode_as`] entry already dispatches registered forms;
-    /// use this entry when only the constructed form is acceptable.
+    /// Decode constructed string contents as the type selected by the schema.
+    /// Checks the constructed bit; the caller validates the tag class and number.
     /// 變動時間：分支只依編碼結構，只能用於公開值；沒有常數時間替代方法。
-    pub fn decode_constructed_as<T>(&self, depth: Depth) -> Result<T, Asn1Error>
+    pub fn decode_constructed_as<T>(&self, options: DecodingOptions) -> Result<T, Asn1Error>
     where
-        T: DecodeContent<'a> + DecodeConstructed<'a>,
+        T: DecodeConstructed<'a>,
     {
-        if !is_constructed_form(self.tag, T::TAG) {
+        if !self.is_constructed() {
             return Err(Asn1Error::UnexpectedTag);
         }
-        <T as DecodeConstructed<'a>>::try_decode_constructed(self.value, depth)
+        options.check_content_len(self.value.len())?;
+        <T as DecodeConstructed<'a>>::try_decode_constructed(self.value, options)
     }
 }
 
@@ -151,13 +172,20 @@ pub(crate) fn is_constructed_form(tag: &[u8], primitive_tag: &[u8]) -> bool {
 
 pub struct Children<'a> {
     rest: &'a [u8],
-    depth: Depth,
+    options: DecodingOptions,
+    remaining: usize,
+    oversized: bool,
 }
 
 impl<'a> Children<'a> {
     /// 從一段內容位元組開始走訪 —— constructed 型別的 `try_decode_content` 用這個。
-    pub fn new(rest: &'a [u8], depth: Depth) -> Self {
-        Self { rest, depth }
+    pub fn new(rest: &'a [u8], options: DecodingOptions) -> Self {
+        Self {
+            rest,
+            options,
+            remaining: options.max_children(),
+            oversized: rest.len() > options.max_content_len(),
+        }
     }
 }
 
@@ -168,8 +196,17 @@ impl<'a> Iterator for Children<'a> {
         if self.rest.is_empty() {
             return None;
         }
-        match Asn1Ref::parse(self.rest, self.depth) {
+        if self.oversized || self.remaining == 0 {
+            self.rest = &[];
+            return Some(Err(if self.oversized {
+                Asn1Error::ContentLengthExceeded
+            } else {
+                Asn1Error::ChildrenExceeded
+            }));
+        }
+        match Asn1Ref::parse(self.rest, self.options) {
             Ok(child) => {
+                self.remaining -= 1;
                 self.rest = &self.rest[child.total_len()..];
                 Some(Ok(child))
             }
@@ -230,10 +267,11 @@ fn parse_len(buff: &[u8]) -> Result<(usize, Option<usize>), Asn1Error> {
 mod tests {
     use super::*;
 
-    const DEPTH: Depth = Depth::DEFAULT;
+    const OPTIONS: DecodingOptions =
+        DecodingOptions::new(crate::Depth::DEFAULT, 16 * 1024 * 1024, 65_536);
 
     fn parse(bytes: &[u8]) -> Asn1Ref<'_> {
-        Asn1Ref::parse(bytes, DEPTH).unwrap()
+        Asn1Ref::parse(bytes, OPTIONS).unwrap()
     }
 
     // ---- parse_tag
@@ -316,7 +354,7 @@ mod tests {
     #[test]
     fn a_length_promising_more_than_the_input_holds_is_rejected() {
         assert_eq!(
-            Asn1Ref::parse(&[0x04, 0x05, 0x01, 0x02], DEPTH).err(),
+            Asn1Ref::parse(&[0x04, 0x05, 0x01, 0x02], OPTIONS).err(),
             Some(Asn1Error::Truncated)
         );
     }
@@ -328,7 +366,7 @@ mod tests {
         input[0] = 0x04;
         input[1] = 0x88; // 8 個長度位元組
         assert_eq!(
-            Asn1Ref::parse(&input, DEPTH).err(),
+            Asn1Ref::parse(&input, OPTIONS).err(),
             Some(Asn1Error::LengthOverflow)
         );
     }
@@ -376,7 +414,7 @@ mod tests {
     #[test]
     fn an_indefinite_length_without_its_marker_is_rejected() {
         assert_eq!(
-            Asn1Ref::parse(&[0x30, 0x80, 0x05, 0x00], DEPTH).err(),
+            Asn1Ref::parse(&[0x30, 0x80, 0x05, 0x00], OPTIONS).err(),
             Some(Asn1Error::Truncated)
         );
     }
@@ -384,7 +422,7 @@ mod tests {
     #[test]
     fn an_indefinite_length_on_a_primitive_tag_is_rejected() {
         assert_eq!(
-            Asn1Ref::parse(&[0x04, 0x80, 0x00, 0x00], DEPTH).err(),
+            Asn1Ref::parse(&[0x04, 0x80, 0x00, 0x00], OPTIONS).err(),
             Some(Asn1Error::MalformedValue)
         );
     }
@@ -404,9 +442,19 @@ mod tests {
         at += 2 + 2 * levels; // 05 00，然後 EOC 都是零
         let input = &bytes[..at];
 
-        assert!(Asn1Ref::parse(input, Depth::new(16)).is_ok());
+        assert!(
+            Asn1Ref::parse(
+                input,
+                DecodingOptions::new(crate::Depth::new(16), 16 * 1024 * 1024, 65_536)
+            )
+            .is_ok()
+        );
         assert_eq!(
-            Asn1Ref::parse(input, Depth::new(4)).err(),
+            Asn1Ref::parse(
+                input,
+                DecodingOptions::new(crate::Depth::new(4), 16 * 1024 * 1024, 65_536)
+            )
+            .err(),
             Some(Asn1Error::DepthExceeded)
         );
     }
@@ -438,7 +486,7 @@ mod tests {
         let mut tags = [0_u8; 4];
         let mut count = 0;
 
-        for child in seq.children(DEPTH) {
+        for child in seq.children(OPTIONS) {
             tags[count] = child.unwrap().tag()[0];
             count += 1;
         }
@@ -449,14 +497,14 @@ mod tests {
 
     #[test]
     fn a_primitive_has_no_children() {
-        assert_eq!(parse(&[0x02, 0x01, 0x05]).children(DEPTH).count(), 0);
+        assert_eq!(parse(&[0x02, 0x01, 0x05]).children(OPTIONS).count(), 0);
     }
 
     #[test]
     fn a_broken_child_is_reported_once_and_then_iteration_stops() {
         // 30 04  05 00  02 05     ← 第二個子元素說有 5 個位元組，沒有
         let seq = parse(&[0x30, 0x04, 0x05, 0x00, 0x02, 0x05]);
-        let mut children = seq.children(DEPTH);
+        let mut children = seq.children(OPTIONS);
 
         assert!(children.next().unwrap().is_ok());
         assert_eq!(children.next().unwrap().err(), Some(Asn1Error::Truncated));
@@ -466,7 +514,7 @@ mod tests {
     #[test]
     fn children_of_an_indefinite_length_value_do_not_include_the_marker() {
         let seq = parse(&[0x30, 0x80, 0x05, 0x00, 0x05, 0x00, 0x00, 0x00]);
-        assert_eq!(seq.children(DEPTH).count(), 2);
+        assert_eq!(seq.children(OPTIONS).count(), 2);
     }
     #[test]
     fn constructed_form_matching_changes_only_the_constructed_bit_of_a_complete_identifier() {

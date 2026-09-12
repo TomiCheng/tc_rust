@@ -119,7 +119,7 @@ impl fmt::Display for DateTime {
 
 #[cfg(test)]
 mod tests {
-    use crate::{Asn1Error, Asn1GeneralizedTime, Asn1UtcTime, DecodeContent, Depth};
+    use crate::{Asn1Error, Asn1GeneralizedTime, Asn1UtcTime, DecodeContent, DecodingOptions};
 
     #[test]
     fn utc_times_validate_calendar_dates_after_expanding_two_digit_years() {
@@ -136,7 +136,7 @@ mod tests {
             (b"240331000000Z", 2024, 3, 31, true),
             (b"241231000000Z", 2024, 12, 31, true),
         ] {
-            let decoded = Asn1UtcTime::try_decode_content(wire, Depth::DEFAULT);
+            let decoded = Asn1UtcTime::try_decode_content(wire, DecodingOptions::default());
             let built = Asn1UtcTime::new(year, month, day, 0, 0, 0);
             if valid {
                 let value = decoded.unwrap();
@@ -168,7 +168,7 @@ mod tests {
             (b"20240331000000Z", 2024, 3, 31, true),
             (b"20241231000000Z", 2024, 12, 31, true),
         ] {
-            let decoded = Asn1GeneralizedTime::try_decode_content(wire, Depth::DEFAULT);
+            let decoded = Asn1GeneralizedTime::try_decode_content(wire, DecodingOptions::default());
             let built = Asn1GeneralizedTime::new(year, month, day, 0, 0, 0);
             if valid {
                 let value = decoded.unwrap();

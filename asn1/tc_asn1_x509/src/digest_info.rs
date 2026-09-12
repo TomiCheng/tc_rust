@@ -11,9 +11,8 @@
 //! 表頭是固定的位元組，實作常直接寫死 —— 例如 SHA-256 是
 //! `30 31 30 0D 06 09 60 86 48 01 65 03 04 02 01 05 00 04 20` 接 32 個位元組。
 
-use tc_asn1::tag::SEQUENCE as TAG;
 use tc_asn1::{
-    Asn1Error, Asn1OctetString, DecodeContent, Depth, Encode, EncodingOptions, Fields,
+    Asn1Error, Asn1OctetString, DecodeContent, DecodingOptions, Encode, EncodingOptions, Fields,
     SequenceFields,
 };
 
@@ -24,7 +23,7 @@ use crate::AlgorithmIdentifier;
 /// # 範例
 ///
 /// ```
-/// use tc_asn1::{Asn1Null, Depth, Encode, EncodingOptions, Decode};
+/// use tc_asn1::{Asn1Null, DecodingOptions, Encode, EncodingOptions, Decode};
 /// use tc_asn1_x509::{AlgorithmIdentifier, DigestInfo};
 ///
 /// let digest = [0xAB_u8; 32];
@@ -43,7 +42,7 @@ use crate::AlgorithmIdentifier;
 /// );
 /// assert_eq!(&out[19..], &digest);
 ///
-/// let (used, decoded) = DigestInfo::try_decode(&out, Depth::DEFAULT)?;
+/// let (used, decoded) = DigestInfo::try_decode(&out, DecodingOptions::default())?;
 /// assert_eq!(used, out.len());
 /// assert_eq!(decoded.digest(), &digest);
 /// assert_eq!(decoded.digest_algorithm().algorithm().to_string(), "2.16.840.1.101.3.4.2.1");
@@ -76,15 +75,34 @@ impl DigestInfo {
     }
 }
 
-impl<'a> DecodeContent<'a> for DigestInfo {
-    const TAG: &'static [u8] = TAG;
+impl<'a> tc_asn1::Decode<'a> for DigestInfo {
+    fn try_decode(
+        buff: &'a [u8],
+        options: tc_asn1::DecodingOptions,
+    ) -> Result<(usize, Self), tc_asn1::Asn1Error> {
+        let element = tc_asn1::Asn1Ref::parse(buff, options)?;
+        if !element.is_constructed() {
+            return Err(tc_asn1::Asn1Error::UnexpectedTag);
+        }
+        let value =
+            <Self as tc_asn1::DecodeContent<'a>>::try_decode_content(element.value(), options)?;
+        Ok((element.total_len(), value))
+    }
+}
 
+impl<'a> DecodeContent<'a> for DigestInfo {
     /// 變動時間：分支只依編碼結構。剛好兩個欄位，多的回
     /// [`Asn1Error::TrailingData`]，少的回 [`Asn1Error::Truncated`]。
-    fn try_decode_content(value: &'a [u8], depth: Depth) -> Result<Self, Asn1Error> {
-        let mut fields = Fields::new(value, depth)?;
-        let digest_algorithm = fields.required()?;
-        let digest = fields.required()?;
+    fn try_decode_content(value: &'a [u8], options: DecodingOptions) -> Result<Self, Asn1Error> {
+        let mut fields = Fields::new(value, options)?;
+        let digest_algorithm = fields.required(tc_asn1::tag::SEQUENCE)?;
+        let value_tag = fields.peek()?.ok_or(Asn1Error::Truncated)?.tag();
+        if value_tag != tc_asn1::tag::OCTET_STRING
+            && value_tag != tc_asn1::tag::CONSTRUCTED_OCTET_STRING
+        {
+            return Err(Asn1Error::UnexpectedTag);
+        }
+        let digest = fields.required(value_tag)?;
         fields.finish()?;
         Ok(Self {
             digest_algorithm,
@@ -110,7 +128,8 @@ mod tests {
     use alloc::vec::Vec;
     use tc_asn1::{Asn1Null, Decode};
 
-    const DEPTH: Depth = Depth::DEFAULT;
+    const OPTIONS: DecodingOptions =
+        DecodingOptions::new(tc_asn1::Depth::DEFAULT, 16 * 1024 * 1024, 65_536);
 
     #[test]
     fn sha256_digest_info_round_trips_through_cer_without_changing_der() {
@@ -132,7 +151,9 @@ mod tests {
         let ber = EncodingOptions::Ber(tc_asn1::LengthForm::Indefinite);
         assert_eq!(value.encoded_len(ber), cer.len());
         assert_eq!(value.encode_to_vec(ber).unwrap(), cer);
-        let decoded = DigestInfo::try_decode_exact(&cer, DEPTH).unwrap();
+        let decoded = DigestInfo::try_decode(&cer, OPTIONS)
+            .map(|(_, value)| value)
+            .unwrap();
         assert_eq!(decoded.digest(), value.digest());
         assert_eq!(
             decoded
@@ -146,7 +167,18 @@ mod tests {
         );
         assert_eq!(decoded.encode_to_vec(EncodingOptions::Cer).unwrap(), cer);
         assert!(matches!(
-            DigestInfo::try_decode_der(&cer, DEPTH),
+            {
+                let input: &[u8] = &cer;
+                DigestInfo::try_decode(input, OPTIONS).and_then(|(used, value)| {
+                    if used != input.len() {
+                        Err(tc_asn1::Asn1Error::TrailingData)
+                    } else if value.encode_to_vec(tc_asn1::EncodingOptions::Der)? != input {
+                        Err(tc_asn1::Asn1Error::NotDer)
+                    } else {
+                        Ok(value)
+                    }
+                })
+            },
             Err(Asn1Error::NotDer)
         ));
         let mut der = alloc::vec![
@@ -186,7 +218,7 @@ mod tests {
         let mut input = SHA1_PREFIX.to_vec();
         input.extend_from_slice(&[0x11; 20]);
 
-        let (used, info) = DigestInfo::try_decode(&input, DEPTH).unwrap();
+        let (used, info) = DigestInfo::try_decode(&input, OPTIONS).unwrap();
         assert_eq!(used, input.len());
         assert_eq!(
             info.digest_algorithm().algorithm().to_string(),
@@ -203,7 +235,7 @@ mod tests {
             0x30, 0x0B, 0x30, 0x09, 0x06, 0x05, 0x2B, 0x0E, 0x03, 0x02, 0x1A, 0x05, 0x00,
         ];
         assert_eq!(
-            DigestInfo::try_decode(&input, DEPTH).err(),
+            DigestInfo::try_decode(&input, OPTIONS).err(),
             Some(Asn1Error::Truncated)
         );
     }
@@ -215,7 +247,7 @@ mod tests {
         input.extend_from_slice(&[0x02, 0x01, 0x05]);
         input[1] = (input.len() - 2) as u8;
         assert_eq!(
-            DigestInfo::try_decode(&input, DEPTH).err(),
+            DigestInfo::try_decode(&input, OPTIONS).err(),
             Some(Asn1Error::UnexpectedTag)
         );
     }

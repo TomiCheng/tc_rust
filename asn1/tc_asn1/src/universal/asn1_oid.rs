@@ -4,7 +4,7 @@ use alloc::vec::Vec;
 use core::fmt;
 use core::str::FromStr;
 
-use crate::depth::Depth;
+use crate::decoding_options::DecodingOptions;
 use crate::encoding_options::EncodingOptions;
 use crate::error::Asn1Error;
 use crate::traits::{DecodeContent, Encode};
@@ -169,10 +169,24 @@ impl FromStr for Asn1Oid {
     }
 }
 
-impl<'a> DecodeContent<'a> for Asn1Oid {
-    const TAG: &'static [u8] = TAG;
+impl<'a> crate::Decode<'a> for Asn1Oid {
+    fn try_decode(
+        buff: &'a [u8],
+        options: crate::DecodingOptions,
+    ) -> Result<(usize, Self), crate::Asn1Error> {
+        let element = crate::Asn1Ref::parse(buff, options)?;
+        if element.is_constructed() {
+            return Err(crate::Asn1Error::UnexpectedTag);
+        }
+        let value =
+            <Self as crate::DecodeContent<'a>>::try_decode_content(element.value(), options)?;
+        Ok((element.total_len(), value))
+    }
+}
 
-    fn try_decode_content(value: &'a [u8], _: Depth) -> Result<Self, Asn1Error> {
+impl<'a> DecodeContent<'a> for Asn1Oid {
+    fn try_decode_content(value: &'a [u8], options: DecodingOptions) -> Result<Self, Asn1Error> {
+        options.check_content_len(value.len())?;
         Self::from_der_bytes(value)
     }
 }
@@ -209,7 +223,8 @@ mod tests {
     use alloc::string::ToString;
     use alloc::vec::Vec;
 
-    const DEPTH: Depth = Depth::DEFAULT;
+    const OPTIONS: DecodingOptions =
+        DecodingOptions::new(crate::Depth::DEFAULT, 16 * 1024 * 1024, 65_536);
 
     /// rsaEncryption：1.2.840.113549.1.1.1
     const RSA: &[u8] = &[
@@ -218,7 +233,7 @@ mod tests {
 
     #[test]
     fn a_real_oid_decodes_to_its_arcs_and_prints_dotted() {
-        let (used, oid) = Asn1Oid::try_decode(RSA, DEPTH).unwrap();
+        let (used, oid) = Asn1Oid::try_decode(RSA, OPTIONS).unwrap();
         assert_eq!(used, RSA.len());
         assert_eq!(oid.arcs().collect::<Vec<_>>(), [1, 2, 840, 113549, 1, 1, 1]);
         assert_eq!(oid.to_string(), "1.2.840.113549.1.1.1");

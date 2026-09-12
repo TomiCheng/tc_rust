@@ -12,10 +12,9 @@
 //! `critical` 為 false 時整個欄位不存在），以及**OCTET STRING 包 DER**（殼要先剝，
 //! 裡面的型別由 `extnID` 決定）。
 
-use tc_asn1::tag::SEQUENCE as TAG;
 use tc_asn1::{
-    Asn1Boolean, Asn1Error, Asn1OctetString, Asn1Oid, Decode, DecodeContent, Depth, Encode,
-    EncodingOptions, Fields, SequenceFields,
+    Asn1Boolean, Asn1Error, Asn1OctetString, Asn1Oid, Decode, DecodeContent, DecodingOptions,
+    Encode, EncodingOptions, Fields, SequenceFields,
 };
 
 /// 一個 X.509 extension。
@@ -23,7 +22,7 @@ use tc_asn1::{
 /// # 範例
 ///
 /// ```
-/// use tc_asn1::{Asn1Boolean, Asn1SequenceOf, Depth, Encode, EncodingOptions, Decode};
+/// use tc_asn1::{Asn1Boolean, Asn1SequenceOf, DecodingOptions, Encode, EncodingOptions, Decode};
 /// use tc_asn1_x509::Extension;
 ///
 /// // basicConstraints，critical，內容是 SEQUENCE { cA TRUE }
@@ -31,13 +30,13 @@ use tc_asn1::{
 ///     0x30, 0x0F, 0x06, 0x03, 0x55, 0x1D, 0x13, 0x01, 0x01, 0xFF,
 ///     0x04, 0x05, 0x30, 0x03, 0x01, 0x01, 0xFF,
 /// ];
-/// let (used, ext) = Extension::try_decode(&bytes, Depth::DEFAULT)?;
+/// let (used, ext) = Extension::try_decode(&bytes, DecodingOptions::default())?;
 /// assert_eq!(used, bytes.len());
 /// assert_eq!(ext.extn_id().to_string(), "2.5.29.19");
 /// assert!(ext.critical());
 ///
 /// // 殼裡的東西：知道 2.5.29.19 是 BasicConstraints 才這樣解
-/// let inner = ext.extn_value_as::<Asn1SequenceOf<Asn1Boolean>>(Depth::DEFAULT)?;
+/// let inner = ext.extn_value_as::<Asn1SequenceOf<Asn1Boolean>>(DecodingOptions::default())?;
 /// assert_eq!(inner.members(), &[Asn1Boolean(true)]);
 ///
 /// // 重編回原位元組
@@ -84,23 +83,49 @@ impl Extension {
     ///
     /// `T` 由 `extn_id` 決定 —— 這個型別不知道對應表，呼叫端知道。
     /// 變動時間：分支只依編碼結構；此處只驗證完整消耗，不驗證 DER 正規形式。
-    pub fn extn_value_as<'a, T: Decode<'a>>(&'a self, depth: Depth) -> Result<T, Asn1Error> {
-        T::try_decode_exact(self.extn_value.as_bytes(), depth)
+    pub fn extn_value_as<'a, T: Decode<'a>>(
+        &'a self,
+        options: DecodingOptions,
+    ) -> Result<T, Asn1Error> {
+        let (used, value) = T::try_decode(self.extn_value.as_bytes(), options)?;
+        if used != self.extn_value.as_bytes().len() {
+            return Err(Asn1Error::TrailingData);
+        }
+        Ok(value)
+    }
+}
+
+impl<'a> tc_asn1::Decode<'a> for Extension {
+    fn try_decode(
+        buff: &'a [u8],
+        options: tc_asn1::DecodingOptions,
+    ) -> Result<(usize, Self), tc_asn1::Asn1Error> {
+        let element = tc_asn1::Asn1Ref::parse(buff, options)?;
+        if !element.is_constructed() {
+            return Err(tc_asn1::Asn1Error::UnexpectedTag);
+        }
+        let value =
+            <Self as tc_asn1::DecodeContent<'a>>::try_decode_content(element.value(), options)?;
+        Ok((element.total_len(), value))
     }
 }
 
 impl<'a> DecodeContent<'a> for Extension {
-    const TAG: &'static [u8] = TAG;
-
     /// 變動時間：分支只依編碼結構。
     ///
     /// `critical` 是 DEFAULT FALSE：第二個子元素的 tag 是 BOOLEAN 就是它，否則
     /// 視為省略。明寫 `FALSE` 不是 DER，但寬鬆接受；重編時會消失。
-    fn try_decode_content(value: &'a [u8], depth: Depth) -> Result<Self, Asn1Error> {
-        let mut fields = Fields::new(value, depth)?;
-        let extn_id = fields.required()?;
-        let critical = fields.default(Asn1Boolean(false))?.0;
-        let extn_value = fields.required()?;
+    fn try_decode_content(value: &'a [u8], options: DecodingOptions) -> Result<Self, Asn1Error> {
+        let mut fields = Fields::new(value, options)?;
+        let extn_id = fields.required(tc_asn1::tag::OBJECT_IDENTIFIER)?;
+        let critical = fields.default(tc_asn1::tag::BOOLEAN, Asn1Boolean(false))?.0;
+        let value_tag = fields.peek()?.ok_or(Asn1Error::Truncated)?.tag();
+        if value_tag != tc_asn1::tag::OCTET_STRING
+            && value_tag != tc_asn1::tag::CONSTRUCTED_OCTET_STRING
+        {
+            return Err(Asn1Error::UnexpectedTag);
+        }
+        let extn_value = fields.required(value_tag)?;
         fields.finish()?;
         Ok(Self {
             extn_id,
@@ -129,7 +154,8 @@ mod tests {
     use alloc::string::ToString;
     use alloc::vec::Vec;
 
-    const DEPTH: Depth = Depth::DEFAULT;
+    const OPTIONS: DecodingOptions =
+        DecodingOptions::new(tc_asn1::Depth::DEFAULT, 16 * 1024 * 1024, 65_536);
 
     #[test]
     fn long_extension_values_round_trip_through_generic_cer_fields_and_keep_der_bytes() {
@@ -141,13 +167,26 @@ mod tests {
         cer.extend_from_slice(&[4, 1, 0xaa, 0, 0, 0, 0]);
         assert_eq!(value.encoded_len(EncodingOptions::Cer), cer.len());
         assert_eq!(value.encode_to_vec(EncodingOptions::Cer).unwrap(), cer);
-        let decoded = Extension::try_decode_exact(&cer, DEPTH).unwrap();
+        let decoded = Extension::try_decode(&cer, OPTIONS)
+            .map(|(_, value)| value)
+            .unwrap();
         assert_eq!(decoded.extn_id(), value.extn_id());
         assert_eq!(decoded.critical(), value.critical());
         assert_eq!(decoded.extn_value(), value.extn_value());
         assert_eq!(decoded.encode_to_vec(EncodingOptions::Cer).unwrap(), cer);
         assert!(matches!(
-            Extension::try_decode_der(&cer, DEPTH),
+            {
+                let input: &[u8] = &cer;
+                Extension::try_decode(input, OPTIONS).and_then(|(used, value)| {
+                    if used != input.len() {
+                        Err(tc_asn1::Asn1Error::TrailingData)
+                    } else if value.encode_to_vec(tc_asn1::EncodingOptions::Der)? != input {
+                        Err(tc_asn1::Asn1Error::NotDer)
+                    } else {
+                        Ok(value)
+                    }
+                })
+            },
             Err(Asn1Error::NotDer)
         ));
         let mut der = alloc::vec![
@@ -176,13 +215,13 @@ mod tests {
     #[test]
     fn an_omitted_critical_decodes_as_false_and_stays_omitted() {
         let input = ski();
-        let (used, ext) = Extension::try_decode(&input, DEPTH).unwrap();
+        let (used, ext) = Extension::try_decode(&input, OPTIONS).unwrap();
 
         assert_eq!(used, input.len());
         assert_eq!(ext.extn_id().to_string(), "2.5.29.14");
         assert!(!ext.critical());
         assert_eq!(
-            ext.extn_value_as::<Asn1OctetString>(DEPTH)
+            ext.extn_value_as::<Asn1OctetString>(OPTIONS)
                 .unwrap()
                 .as_bytes(),
             &[0xAB; 20]
@@ -197,7 +236,7 @@ mod tests {
         input.splice(7..7, [0x01, 0x01, 0x00]);
         input[1] += 3;
 
-        let (used, ext) = Extension::try_decode(&input, DEPTH).unwrap();
+        let (used, ext) = Extension::try_decode(&input, OPTIONS).unwrap();
         assert_eq!(used, input.len());
         assert!(!ext.critical());
 
@@ -223,7 +262,7 @@ mod tests {
         // 只有 extnID 和 critical
         let input = [0x30, 0x08, 0x06, 0x03, 0x55, 0x1D, 0x13, 0x01, 0x01, 0xFF];
         assert_eq!(
-            Extension::try_decode(&input, DEPTH).err(),
+            Extension::try_decode(&input, OPTIONS).err(),
             Some(Asn1Error::Truncated)
         );
     }
@@ -237,7 +276,7 @@ mod tests {
             &[0x04, 0x01, 0xAA, 0x05, 0x00],
         );
         assert_eq!(
-            ext.extn_value_as::<Asn1OctetString>(DEPTH).err(),
+            ext.extn_value_as::<Asn1OctetString>(OPTIONS).err(),
             Some(Asn1Error::TrailingData)
         );
     }
