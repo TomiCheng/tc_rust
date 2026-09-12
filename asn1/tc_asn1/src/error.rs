@@ -1,42 +1,45 @@
-//! 解析與編碼的失敗原因。
+//! Errors reported during ASN.1 parsing and encoding.
 
 use core::fmt;
 
-/// ASN.1 解析或編碼失敗的原因。
+/// An error encountered while parsing or encoding ASN.1 data.
 ///
-/// 每個變體對應一個具體缺陷，不做「無效編碼」這種籠統歸類 —— 拒絕的理由本身
-/// 是有用的診斷資訊，尤其在對接別家實作時。
+/// Each variant identifies a specific failure rather than a generic invalid
+/// encoding, helping callers diagnose interoperability problems.
+/// Additional variants may be introduced; downstream matches must include a
+/// fallback arm.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[non_exhaustive]
 pub enum Asn1Error {
-    /// 輸入在一個 TLV 中途結束。
+    /// The input ends before a complete tag-length-value (TLV) element is available.
     Truncated,
 
-    /// 一個完整的值之後還有位元組。
+    /// Unexpected bytes remain after a complete value.
     TrailingData,
 
-    /// 解得開，但不是 DER：重編後與輸入不同。
+    /// The value can be decoded, but its DER re-encoding differs from the input.
     NotDer,
 
-    /// tag 號碼使用了非最短的高號碼形式。
+    /// The tag number uses a nonminimal high-tag-number encoding.
     NonMinimalTag,
 
-    /// tag 號碼大於本實作支援的上限。
+    /// The tag number exceeds the range supported by this implementation.
     TagOverflow,
 
-    /// 長度大於本平台的 `usize` 所能表示。
+    /// A length exceeds the range representable by the platform's `usize`.
     LengthOverflow,
 
-    /// 讀到的 tag 不是這個位置預期的型別。
+    /// The tag does not match the type or encoded form expected at this position.
     UnexpectedTag,
 
-    /// 內容位元組不符合該型別的規則。
+    /// The content bytes do not satisfy the selected type's encoding rules.
     MalformedValue,
 
-    /// 數值無法精確表示於目標型別；不進行捨入、溢位或下溢轉換。
+    /// The value cannot be represented exactly by the target type.
+    /// Conversions do not round, overflow, or underflow to produce a result.
     InexactValue,
 
-    /// 巢狀比允許的深度更深。
+    /// Nesting exceeds the configured depth budget.
     DepthExceeded,
 
     /// Contents exceed the configured per-element byte limit.
@@ -45,7 +48,7 @@ pub enum Asn1Error {
     /// A constructed value exceeds the configured direct-child limit.
     ChildrenExceeded,
 
-    /// 呼叫端提供的輸出緩衝不足。
+    /// The caller-provided output buffer is too small.
     BufferTooSmall,
 }
 
