@@ -2,7 +2,7 @@
 
 use crate::depth::Depth;
 use crate::error::Asn1Error;
-use crate::traits::DecodeContent;
+use crate::traits::{DecodeConstructed, DecodeContent};
 
 /// tag 的類別，取自識別位元組的最高兩位。
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
@@ -112,14 +112,26 @@ impl<'a> Asn1Ref<'a> {
     }
 
     /// 把這個元素當成 `T` 解：驗 tag，然後只解內容。表頭不重解。
+    /// tag 必須完全相符；分段字串請使用 [`Self::decode_constructed_as`]。
     pub fn decode_as<T: DecodeContent<'a>>(&self, depth: Depth) -> Result<T, Asn1Error> {
         if self.tag == T::TAG {
             T::try_decode_content(self.value, depth)
-        } else if is_constructed_form(self.tag, T::TAG) {
-            T::try_decode_constructed(self.value, depth)
         } else {
             Err(Asn1Error::UnexpectedTag)
         }
+    }
+
+    /// 解碼 `T::TAG` 對應的 constructed 形式；其他標記回傳 `UnexpectedTag`。
+    /// `DecodeContent` 提供原始 tag，內容交由 `DecodeConstructed` 解碼。
+    /// 變動時間：分支只依編碼結構，只能用於公開值；沒有常數時間替代方法。
+    pub fn decode_constructed_as<T>(&self, depth: Depth) -> Result<T, Asn1Error>
+    where
+        T: DecodeContent<'a> + DecodeConstructed<'a>,
+    {
+        if !is_constructed_form(self.tag, T::TAG) {
+            return Err(Asn1Error::UnexpectedTag);
+        }
+        <T as DecodeConstructed<'a>>::try_decode_constructed(self.value, depth)
     }
 }
 

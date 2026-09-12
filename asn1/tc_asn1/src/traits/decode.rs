@@ -12,12 +12,14 @@ pub trait DecodeContent<'a>: Sized {
 
     /// 變動時間：分支只依編碼結構。
     fn try_decode_content(value: &'a [u8], depth: Depth) -> Result<Self, Asn1Error>;
-    /// 同號碼的 BER constructed 形式；內容是一串成分 TLV，預設不支援。
-    /// 變動時間：分支只依編碼結構。
-    fn try_decode_constructed(value: &'a [u8], depth: Depth) -> Result<Self, Asn1Error> {
-        let _ = (value, depth);
-        Err(Asn1Error::UnexpectedTag)
-    }
+}
+
+/// 解碼 BER constructed 字串的內容，不含外層 tag 與長度。
+/// 只由支援分段形式的型別實作，不提供預設的拒絕實作。
+pub trait DecodeConstructed<'a>: Sized {
+    /// 將一串成分 TLV 解碼並合併，成分可再使用巢狀的 constructed 形式。
+    /// 變動時間：分支只依編碼結構，只能用於公開值；沒有常數時間替代方法。
+    fn try_decode_constructed(value: &'a [u8], depth: Depth) -> Result<Self, Asn1Error>;
 }
 
 /// 解一個完整的 TLV。由 [`DecodeContent`] 自動得到。
@@ -129,7 +131,7 @@ mod tests {
         );
         assert_eq!(
             Asn1OctetString::try_decode_der(&[0x24, 3, 4, 1, 0xaa], Depth::DEFAULT),
-            Err(Asn1Error::NotDer)
+            Err(Asn1Error::UnexpectedTag)
         );
         assert_eq!(
             Asn1Object::try_decode_der(&[0x24, 3, 4, 1, 0xaa], Depth::DEFAULT),

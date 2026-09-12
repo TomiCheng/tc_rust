@@ -13,7 +13,8 @@ pub use tagged::{Asn1Tagged, TaggedContent};
 use crate::traits::len_octets;
 use crate::universal::*;
 use crate::{
-    Asn1Any, Asn1Class, Asn1Error, Asn1Ref, Decode, DecodeContent, Depth, Encode, EncodingType,
+    Asn1Any, Asn1Class, Asn1Error, Asn1Ref, Decode, DecodeConstructed, DecodeContent, Depth,
+    Encode, EncodingType,
 };
 use alloc::vec::Vec;
 
@@ -211,11 +212,10 @@ impl Asn1Object {
             tag::OCTET_STRING => {
                 Self::OctetString(Asn1OctetString::try_decode_content(element.value(), depth)?)
             }
-            [0x24] => Self::OctetString(Asn1OctetString::try_decode_constructed(
-                element.value(),
-                depth,
-            )?),
-            [0x23] => Self::BitString(Asn1BitString::try_decode_constructed(
+            tag::CONSTRUCTED_OCTET_STRING => Self::OctetString(
+                Asn1OctetString::try_decode_constructed(element.value(), depth)?,
+            ),
+            tag::CONSTRUCTED_BIT_STRING => Self::BitString(Asn1BitString::try_decode_constructed(
                 element.value(),
                 depth,
             )?),
@@ -753,14 +753,18 @@ mod tests {
     fn every_declared_universal_tag_decodes_to_its_own_variant_and_reencodes() {
         // 表格同時記錄常數名稱、獨立的線路向量與預期分支；新增 tag 必須同步補表。
         macro_rules! cases {
-            ($(($tag:ident, $input:expr, $variant:pat)),* $(,)?) => {{
+            (@der $input:expr) => { $input };
+            (@der $input:expr, $der:expr) => { $der };
+            ($(($tag:ident, $input:expr, $variant:pat $(, $der:expr)?)),* $(,)?) => {{
                 let names = [$(stringify!($tag)),*];
                 $(
                     let input: &[u8] = $input;
+                    let expected: &[u8] = cases!(@der input $(, $der)?);
                     let tree = decode(input);
-                    assert_eq!(tree.tag(), tag::$tag, "{}", stringify!($tag));
+                    assert!(input.starts_with(tag::$tag), "{}", stringify!($tag));
+                    assert_eq!(tree.tag(), &expected[..tag::$tag.len()], "{}", stringify!($tag));
                     assert!(matches!(tree, $variant), "{}: {tree:?}", stringify!($tag));
-                    assert_eq!(encode_member(&tree, EncodingType::Der).unwrap(), input, "{}", stringify!($tag));
+                    assert_eq!(encode_member(&tree, EncodingType::Der).unwrap(), expected, "{}", stringify!($tag));
                     assert!(tree.to_string().ends_with('\n'));
                 )*
                 names
@@ -770,7 +774,19 @@ mod tests {
             (BOOLEAN, b"\x01\x01\x00", Asn1Object::Boolean(_)),
             (INTEGER, b"\x02\x01\x00", Asn1Object::Integer(_)),
             (BIT_STRING, b"\x03\x01\x00", Asn1Object::BitString(_)),
+            (
+                CONSTRUCTED_BIT_STRING,
+                b"\x23\x03\x03\x01\x00",
+                Asn1Object::BitString(_),
+                b"\x03\x01\x00"
+            ),
             (OCTET_STRING, b"\x04\x00", Asn1Object::OctetString(_)),
+            (
+                CONSTRUCTED_OCTET_STRING,
+                b"\x24\x02\x04\x00",
+                Asn1Object::OctetString(_),
+                b"\x04\x00"
+            ),
             (NULL, b"\x05\x00", Asn1Object::Null),
             (OBJECT_IDENTIFIER, b"\x06\x01\x00", Asn1Object::Oid(_)),
             (

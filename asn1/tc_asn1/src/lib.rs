@@ -100,7 +100,7 @@ pub use depth::Depth;
 pub use encoding_type::EncodingType;
 pub use error::Asn1Error;
 pub use schema::{Explicit, Fields, Implicit, SequenceFields};
-pub use traits::{Decode, DecodeContent, Encode};
+pub use traits::{Decode, DecodeConstructed, DecodeContent, Encode};
 pub use universal::tag;
 pub use universal::{
     Arcs, Asn1BitString, Asn1BmpString, Asn1Boolean, Asn1CharacterString, Asn1Date, Asn1DateTime,

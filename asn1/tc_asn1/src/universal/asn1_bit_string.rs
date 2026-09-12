@@ -6,7 +6,7 @@ use crate::asn1_ref::Children;
 use crate::depth::Depth;
 use crate::encoding_type::EncodingType;
 use crate::error::Asn1Error;
-use crate::traits::{DecodeContent, Encode};
+use crate::traits::{DecodeConstructed, DecodeContent, Encode};
 
 use super::tag::BIT_STRING as TAG;
 
@@ -78,10 +78,12 @@ impl<'a> DecodeContent<'a> for Asn1BitString {
             bytes,
         })
     }
+}
 
-    /// 串接 BER 分段字串，允許巢狀；重編一律使用 primitive 形式。
+impl<'a> DecodeConstructed<'a> for Asn1BitString {
+    /// 串接 BER 分段字串，巢狀分段透過新的 constructed 解碼入口處理。
     /// 除最後一個成分外，未用位元數必須為零，否則回傳 `MalformedValue`。
-    /// 變動時間：分支只依編碼結構。
+    /// 變動時間：分支只依編碼結構，只能用於公開值；沒有常數時間替代方法。
     fn try_decode_constructed(value: &'a [u8], depth: Depth) -> Result<Self, Asn1Error> {
         let depth = depth.descend()?;
         let mut bytes = Vec::new();
@@ -90,7 +92,12 @@ impl<'a> DecodeContent<'a> for Asn1BitString {
             if unused_bits != 0 {
                 return Err(Asn1Error::MalformedValue);
             }
-            let part = child?.decode_as::<Asn1BitString>(depth)?;
+            let child = child?;
+            let part = if child.is_constructed() {
+                child.decode_constructed_as::<Self>(depth)?
+            } else {
+                child.decode_as::<Self>(depth)?
+            };
             unused_bits = part.unused_bits;
             bytes.extend_from_slice(&part.bytes);
         }
@@ -200,6 +207,11 @@ mod tests {
         let (_, decoded) = Asn1BitString::try_decode(&out[..written], DEPTH).unwrap();
         assert_eq!(decoded, original);
     }
+    fn decode_constructed(input: &[u8], depth: Depth) -> Result<(usize, Asn1BitString), Asn1Error> {
+        let element = crate::Asn1Ref::parse(input, depth)?;
+        Ok((element.total_len(), element.decode_constructed_as(depth)?))
+    }
+
     #[test]
     fn constructed_bits_preserve_only_the_last_components_unused_bit_count() {
         for input in [
@@ -207,7 +219,11 @@ mod tests {
             &b"\x23\x80\x03\x02\x00\xf0\x03\x02\x04\xa0\x00\x00"[..],
             &b"\x23\x0a\x03\x02\x00\xf0\x23\x04\x03\x02\x04\xa0"[..],
         ] {
-            let (used, bits) = Asn1BitString::try_decode(input, DEPTH).unwrap();
+            let (used, bits) = decode_constructed(input, DEPTH).unwrap();
+            assert_eq!(
+                Asn1BitString::try_decode(input, DEPTH),
+                Err(Asn1Error::UnexpectedTag)
+            );
             assert_eq!(used, input.len());
             assert_eq!(bits.as_bytes(), &[0xf0, 0xa0]);
             assert_eq!(bits.unused_bits(), 4);
@@ -233,7 +249,7 @@ mod tests {
             &b"\x23\x0a\x23\x04\x03\x02\x04\xf0\x03\x02\x00\xa0"[..],
         ] {
             assert_eq!(
-                Asn1BitString::try_decode(input, DEPTH),
+                decode_constructed(input, DEPTH),
                 Err(Asn1Error::MalformedValue)
             );
         }
@@ -242,24 +258,67 @@ mod tests {
     #[test]
     fn empty_constructed_bits_are_valid_but_wrong_components_and_excessive_depth_are_not() {
         for input in [&b"\x23\x00"[..], &b"\x23\x80\x00\x00"[..]] {
-            let bits = Asn1BitString::try_decode_exact(input, DEPTH).unwrap();
+            let bits = decode_constructed(input, DEPTH)
+                .map(|(_, value)| value)
+                .unwrap();
             assert_eq!(bits.bit_len(), 0);
             assert_eq!(bits.unused_bits(), 0);
             assert_eq!(bits.encode_to_vec(EncodingType::Der).unwrap(), [3, 1, 0]);
         }
         assert_eq!(
-            Asn1BitString::try_decode(b"\x23\x03\x04\x01\x00", DEPTH),
+            decode_constructed(b"\x23\x03\x04\x01\x00", DEPTH),
             Err(Asn1Error::UnexpectedTag)
         );
         assert_eq!(
-            Asn1BitString::try_decode(b"\x23\x02\x03\x00", DEPTH),
+            decode_constructed(b"\x23\x02\x03\x00", DEPTH),
             Err(Asn1Error::MalformedValue)
         );
         let input = b"\x23\x02\x23\x00";
         assert_eq!(
-            Asn1BitString::try_decode(input, Depth::new(1)),
+            decode_constructed(input, Depth::new(1)),
             Err(Asn1Error::DepthExceeded)
         );
-        assert!(Asn1BitString::try_decode(input, Depth::new(2)).is_ok());
+        assert!(decode_constructed(input, Depth::new(2)).is_ok());
+    }
+    #[test]
+    fn the_constructed_entry_flattens_nested_bits_and_enforces_padding_tags_and_depth() {
+        for (input, depth, expected) in [
+            (
+                &b"\x23\x08\x03\x02\x00\xf0\x03\x02\x04\xa0"[..],
+                1,
+                Ok(Asn1BitString::from_bits(&[0xf0, 0xa0], 12)),
+            ),
+            (
+                &b"\x23\x80\x03\x02\x00\xf0\x23\x04\x03\x02\x04\xa0\x00\x00"[..],
+                2,
+                Ok(Asn1BitString::from_bits(&[0xf0, 0xa0], 12)),
+            ),
+            (&b"\x23\x00"[..], 1, Ok(Asn1BitString::from_bytes(&[]))),
+            (
+                &b"\x23\x08\x03\x02\x04\xf0\x03\x02\x00\xa0"[..],
+                1,
+                Err(Asn1Error::MalformedValue),
+            ),
+            (
+                &b"\x23\x03\x04\x01\x00"[..],
+                1,
+                Err(Asn1Error::UnexpectedTag),
+            ),
+            (&b"\x23\x02\x24\x00"[..], 2, Err(Asn1Error::UnexpectedTag)),
+            (&b"\x03\x01\x00"[..], 1, Err(Asn1Error::UnexpectedTag)),
+            (&b"\x23\x02\x23\x00"[..], 1, Err(Asn1Error::DepthExceeded)),
+            (
+                &b"\x23\x02\x23\x00"[..],
+                2,
+                Ok(Asn1BitString::from_bytes(&[])),
+            ),
+        ] {
+            let element = crate::Asn1Ref::parse(input, DEPTH).unwrap();
+            assert_eq!(
+                element.decode_constructed_as::<Asn1BitString>(Depth::new(depth)),
+                expected,
+                "{input:?}"
+            );
+        }
     }
 }

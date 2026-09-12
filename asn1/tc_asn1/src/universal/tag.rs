@@ -3,7 +3,11 @@
 pub const BOOLEAN: &[u8] = &[0x01];
 pub const INTEGER: &[u8] = &[0x02];
 pub const BIT_STRING: &[u8] = &[0x03];
+/// BER 分段位元字串的識別位元組。
+pub const CONSTRUCTED_BIT_STRING: &[u8] = &[0x23];
 pub const OCTET_STRING: &[u8] = &[0x04];
+/// BER 分段八位元字串的識別位元組。
+pub const CONSTRUCTED_OCTET_STRING: &[u8] = &[0x24];
 pub const NULL: &[u8] = &[0x05];
 pub const OBJECT_IDENTIFIER: &[u8] = &[0x06];
 pub const OBJECT_DESCRIPTOR: &[u8] = &[0x07];

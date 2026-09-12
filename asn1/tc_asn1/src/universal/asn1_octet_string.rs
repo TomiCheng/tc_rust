@@ -6,7 +6,7 @@ use crate::asn1_ref::Children;
 use crate::depth::Depth;
 use crate::encoding_type::EncodingType;
 use crate::error::Asn1Error;
-use crate::traits::{DecodeContent, Encode};
+use crate::traits::{DecodeConstructed, DecodeContent, Encode};
 
 use super::tag::OCTET_STRING as TAG;
 
@@ -41,14 +41,21 @@ impl<'a> DecodeContent<'a> for Asn1OctetString {
     fn try_decode_content(value: &'a [u8], _: Depth) -> Result<Self, Asn1Error> {
         Ok(Self::new(value))
     }
+}
 
-    /// 串接 BER 分段字串，允許巢狀；重編一律使用 primitive 形式。
-    /// 變動時間：分支只依編碼結構。
+impl<'a> DecodeConstructed<'a> for Asn1OctetString {
+    /// 串接 BER 分段字串，巢狀分段透過新的 constructed 解碼入口處理。
+    /// 變動時間：分支只依編碼結構，只能用於公開值；沒有常數時間替代方法。
     fn try_decode_constructed(value: &'a [u8], depth: Depth) -> Result<Self, Asn1Error> {
         let depth = depth.descend()?;
         let mut bytes = Vec::new();
         for child in Children::new(value, depth) {
-            let part = child?.decode_as::<Asn1OctetString>(depth)?;
+            let child = child?;
+            let part = if child.is_constructed() {
+                child.decode_constructed_as::<Self>(depth)?
+            } else {
+                child.decode_as::<Self>(depth)?
+            };
             bytes.extend_from_slice(&part.bytes);
         }
         Ok(Self { bytes })
@@ -102,13 +109,25 @@ mod tests {
             Err(Asn1Error::UnexpectedTag)
         );
     }
+    fn decode_constructed(
+        input: &[u8],
+        depth: Depth,
+    ) -> Result<(usize, Asn1OctetString), Asn1Error> {
+        let element = crate::Asn1Ref::parse(input, depth)?;
+        Ok((element.total_len(), element.decode_constructed_as(depth)?))
+    }
+
     #[test]
     fn definite_and_indefinite_constructed_octets_flatten_and_encode_as_primitive() {
         for input in [
             &b"\x24\x06\x04\x01\xaa\x04\x01\xbb"[..],
             &b"\x24\x80\x04\x01\xaa\x04\x01\xbb\x00\x00"[..],
         ] {
-            let (used, value) = Asn1OctetString::try_decode(input, DEPTH).unwrap();
+            let (used, value) = decode_constructed(input, DEPTH).unwrap();
+            assert_eq!(
+                Asn1OctetString::try_decode(input, DEPTH),
+                Err(Asn1Error::UnexpectedTag)
+            );
             assert_eq!(used, input.len());
             assert_eq!(value.as_bytes(), &[0xaa, 0xbb]);
             for rules in [EncodingType::Der, EncodingType::Ber] {
@@ -127,10 +146,10 @@ mod tests {
     fn nested_constructed_octets_consume_one_depth_unit_per_layer() {
         let input = b"\x24\x80\x24\x03\x04\x01\xaa\x04\x01\xbb\x00\x00";
         assert_eq!(
-            Asn1OctetString::try_decode(input, Depth::new(1)),
+            decode_constructed(input, Depth::new(1)),
             Err(Asn1Error::DepthExceeded)
         );
-        let (used, value) = Asn1OctetString::try_decode(input, Depth::new(2)).unwrap();
+        let (used, value) = decode_constructed(input, Depth::new(2)).unwrap();
         assert_eq!(used, input.len());
         assert_eq!(value.as_bytes(), &[0xaa, 0xbb]);
     }
@@ -138,27 +157,69 @@ mod tests {
     #[test]
     fn constructed_octets_reject_other_component_types_and_allow_no_components() {
         assert_eq!(
-            Asn1OctetString::try_decode(b"\x24\x03\x02\x01\xaa", DEPTH),
+            decode_constructed(b"\x24\x03\x02\x01\xaa", DEPTH),
             Err(Asn1Error::UnexpectedTag)
         );
         assert_eq!(
-            Asn1OctetString::try_decode(b"\x24\x01\x04", DEPTH),
+            decode_constructed(b"\x24\x01\x04", DEPTH),
             Err(Asn1Error::Truncated)
         );
         for input in [&b"\x24\x00"[..], &b"\x24\x80\x00\x00"[..]] {
-            let value = Asn1OctetString::try_decode_exact(input, DEPTH).unwrap();
+            let value = decode_constructed(input, DEPTH)
+                .map(|(_, value)| value)
+                .unwrap();
             assert!(value.as_bytes().is_empty());
             assert_eq!(value.encode_to_vec(EncodingType::Der).unwrap(), [4, 0]);
         }
     }
 
     #[test]
-    fn sequences_of_octets_accept_constructed_members() {
-        let value = crate::Asn1SequenceOf::<Asn1OctetString>::try_decode_exact(
-            b"\x30\x05\x24\x03\x04\x01\xaa",
-            DEPTH,
-        )
-        .unwrap();
-        assert_eq!(value.members(), &[Asn1OctetString::new(&[0xaa])]);
+    fn sequences_of_octets_reject_constructed_members_without_explicit_dispatch() {
+        assert_eq!(
+            crate::Asn1SequenceOf::<Asn1OctetString>::try_decode_exact(
+                b"\x30\x05\x24\x03\x04\x01\xaa",
+                DEPTH,
+            ),
+            Err(Asn1Error::UnexpectedTag)
+        );
+    }
+
+    #[test]
+    fn the_constructed_entry_flattens_nested_octets_and_enforces_component_tags_and_depth() {
+        for (input, depth, expected) in [
+            (
+                &b"\x24\x06\x04\x01\xaa\x04\x01\xbb"[..],
+                1,
+                Ok(Asn1OctetString::new(&[0xaa, 0xbb])),
+            ),
+            (
+                &b"\x24\x80\x04\x01\xaa\x04\x01\xbb\x00\x00"[..],
+                1,
+                Ok(Asn1OctetString::new(&[0xaa, 0xbb])),
+            ),
+            (
+                &b"\x24\x80\x24\x03\x04\x01\xaa\x04\x01\xbb\x00\x00"[..],
+                2,
+                Ok(Asn1OctetString::new(&[0xaa, 0xbb])),
+            ),
+            (&b"\x24\x00"[..], 1, Ok(Asn1OctetString::default())),
+            (
+                &b"\x24\x03\x02\x01\xaa"[..],
+                1,
+                Err(Asn1Error::UnexpectedTag),
+            ),
+            (&b"\x24\x02\x23\x00"[..], 2, Err(Asn1Error::UnexpectedTag)),
+            (&b"\x24\x01\x04"[..], 1, Err(Asn1Error::Truncated)),
+            (&b"\x04\x00"[..], 1, Err(Asn1Error::UnexpectedTag)),
+            (&b"\x24\x02\x24\x00"[..], 1, Err(Asn1Error::DepthExceeded)),
+            (&b"\x24\x02\x24\x00"[..], 2, Ok(Asn1OctetString::default())),
+        ] {
+            let element = crate::Asn1Ref::parse(input, DEPTH).unwrap();
+            assert_eq!(
+                element.decode_constructed_as::<Asn1OctetString>(Depth::new(depth)),
+                expected,
+                "{input:?}"
+            );
+        }
     }
 }
