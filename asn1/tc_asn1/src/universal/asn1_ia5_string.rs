@@ -50,21 +50,36 @@ impl<'a> DecodeContent<'a> for Asn1Ia5String {
 
 crate::segments::constructed_string_decode!(Asn1Ia5String);
 
+impl Asn1Ia5String {
+    fn primitive_content_len(&self, _: EncodingOptions) -> usize {
+        self.text.len()
+    }
+
+    fn encode_primitive_content(
+        &self,
+        _: EncodingOptions,
+        out: &mut [u8],
+    ) -> Result<usize, Asn1Error> {
+        out[..self.text.len()].copy_from_slice(self.text.as_bytes());
+        Ok(self.text.len())
+    }
+}
+
 impl crate::EncodeContent for Asn1Ia5String {
     crate::segments::cer_string_content_encode!();
 }
 
-impl Encode for Asn1Ia5String {
+impl crate::EncodeTagged for Asn1Ia5String {
     crate::segments::cer_string_encode!();
-    fn tag(&self) -> &[u8] {
-        TAG
+}
+
+impl Encode for Asn1Ia5String {
+    fn encoded_len(&self, rules: EncodingOptions) -> usize {
+        crate::EncodeTagged::encoded_len_tagged(self, TAG, rules)
     }
-    fn content_len(&self, _: EncodingOptions) -> usize {
-        self.text.len()
-    }
-    fn encode_content(&self, _: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
-        out[..self.text.len()].copy_from_slice(self.text.as_bytes());
-        Ok(self.text.len())
+
+    fn encode(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+        crate::EncodeTagged::encode_tagged(self, TAG, rules, out)
     }
 }
 

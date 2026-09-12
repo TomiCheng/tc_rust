@@ -55,28 +55,42 @@ macro_rules! opaque_bytes {
 
         $crate::segments::constructed_string_decode!($name);
 
-        impl $crate::EncodeContent for $name {
-            $crate::segments::cer_string_content_encode!();
-        }
-
-        impl $crate::traits::Encode for $name {
-            $crate::segments::cer_string_encode!();
-            /// 回傳此型別的識別位元組。
-            fn tag(&self) -> &[u8] {
-                $tag
-            }
+        impl $name {
             /// 回傳內容長度。常數時間：讀取已儲存的容器長度。
-            fn content_len(&self, _: $crate::encoding_options::EncodingOptions) -> usize {
+            fn primitive_content_len(&self, _: $crate::encoding_options::EncodingOptions) -> usize {
                 self.bytes.len()
             }
+
             /// 原樣寫入內容。變動時間：複製量由內容長度決定。
-            fn encode_content(
+            fn encode_primitive_content(
                 &self,
                 _: $crate::encoding_options::EncodingOptions,
                 out: &mut [u8],
             ) -> Result<usize, $crate::error::Asn1Error> {
                 out[..self.bytes.len()].copy_from_slice(&self.bytes);
                 Ok(self.bytes.len())
+            }
+        }
+
+        impl $crate::EncodeContent for $name {
+            $crate::segments::cer_string_content_encode!();
+        }
+
+        impl $crate::EncodeTagged for $name {
+            $crate::segments::cer_string_encode!();
+        }
+
+        impl $crate::traits::Encode for $name {
+            fn encoded_len(&self, rules: $crate::EncodingOptions) -> usize {
+                $crate::EncodeTagged::encoded_len_tagged(self, $tag, rules)
+            }
+
+            fn encode(
+                &self,
+                rules: $crate::EncodingOptions,
+                out: &mut [u8],
+            ) -> Result<usize, $crate::Asn1Error> {
+                $crate::EncodeTagged::encode_tagged(self, $tag, rules, out)
             }
         }
     };
@@ -156,6 +170,7 @@ assert_eq!(out, [0x1B, 2, 0, 0xFF]);
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::EncodeContent;
     use crate::depth::Depth;
     use crate::encoding_options::EncodingOptions;
     use crate::error::Asn1Error;

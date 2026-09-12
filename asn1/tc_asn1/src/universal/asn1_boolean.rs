@@ -3,7 +3,7 @@
 use crate::depth::Depth;
 use crate::encoding_options::EncodingOptions;
 use crate::error::Asn1Error;
-use crate::traits::{DecodeContent, Encode, EncodeContent};
+use crate::traits::{DecodeContent, Encode};
 
 use super::tag::BOOLEAN as TAG;
 
@@ -28,42 +28,39 @@ impl<'a> DecodeContent<'a> for Asn1Boolean {
     }
 }
 
-impl EncodeContent for Asn1Boolean {
-    type Error = Asn1Error;
-
+impl crate::EncodeContent for Asn1Boolean {
     /// BOOLEAN contents always occupy one octet.
     /// Variable-time contract: public values only; no constant-time alternative is provided.
-    fn content_len_v2(&self, _: EncodingOptions) -> usize {
+    fn content_len(&self, _: EncodingOptions) -> usize {
         1
     }
 
     /// Write FF for true or 00 for false, without the outer header or EOC.
     /// Return BufferTooSmall for an empty buffer; leave any remaining bytes unchanged.
     /// Variable-time contract: public values only; no constant-time alternative is provided.
-    fn encode_content_v2(&self, _: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+    fn encode_content(&self, _: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         let octet = out.first_mut().ok_or(Asn1Error::BufferTooSmall)?;
         *octet = u8::from(self.0).wrapping_neg();
         Ok(1)
     }
 }
 
+impl crate::EncodeTagged for Asn1Boolean {}
+
 impl Encode for Asn1Boolean {
-    fn tag(&self) -> &[u8] {
-        TAG
+    fn encoded_len(&self, rules: EncodingOptions) -> usize {
+        crate::EncodeTagged::encoded_len_tagged(self, TAG, rules)
     }
-    fn content_len(&self, _: EncodingOptions) -> usize {
-        1
-    }
-    /// 真永遠寫 `FF`：三種規則下都合法，而且直接是 DER 形式。
-    fn encode_content(&self, _: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
-        out[0] = u8::from(self.0).wrapping_neg(); // true → 1 → 0xFF，沒有分支
-        Ok(1)
+
+    fn encode(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+        crate::EncodeTagged::encode_tagged(self, TAG, rules, out)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::EncodeContent;
     use crate::traits::Decode;
 
     #[test]
@@ -75,15 +72,15 @@ mod tests {
             EncodingOptions::Der,
         ] {
             for (value, expected) in [(Asn1Boolean(false), 0x00), (Asn1Boolean(true), 0xFF)] {
-                let encoder: &dyn EncodeContent<Error = Asn1Error> = &value;
-                assert_eq!(encoder.content_len_v2(rules), 1);
+                let encoder: &dyn EncodeContent = &value;
+                assert_eq!(encoder.content_len(rules), 1);
                 assert_eq!(encoder.encode_content_to_vec(rules).unwrap(), [expected]);
 
                 let mut out = [0xAA; 3];
-                assert_eq!(encoder.encode_content_v2(rules, &mut out), Ok(1));
+                assert_eq!(encoder.encode_content(rules, &mut out), Ok(1));
                 assert_eq!(out, [expected, 0xAA, 0xAA]);
                 assert_eq!(
-                    encoder.encode_content_v2(rules, &mut []),
+                    encoder.encode_content(rules, &mut []),
                     Err(Asn1Error::BufferTooSmall)
                 );
             }

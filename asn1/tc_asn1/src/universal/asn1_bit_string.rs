@@ -6,7 +6,7 @@ use crate::asn1_ref::Children;
 use crate::depth::Depth;
 use crate::encoding_options::EncodingOptions;
 use crate::error::Asn1Error;
-use crate::traits::{DecodeConstructed, DecodeContent, Encode, EncodeContent};
+use crate::traits::{DecodeConstructed, DecodeContent, Encode};
 
 use super::tag::BIT_STRING as TAG;
 
@@ -107,18 +107,17 @@ impl<'a> DecodeConstructed<'a> for Asn1BitString {
     }
 }
 
-impl EncodeContent for Asn1BitString {
-    type Error = Asn1Error;
+impl crate::EncodeContent for Asn1BitString {
     /// Length of the contents, including segment headers for long CER values.
     /// The CER threshold includes the unused-bit count: 999 data octets remain primitive.
     /// Variable time: public values only; no constant-time alternative is provided.
-    fn content_len_v2(&self, rules: EncodingOptions) -> usize {
+    fn content_len(&self, rules: EncodingOptions) -> usize {
         if rules != EncodingOptions::Cer || self.bytes.len() < 1000 {
             return 1 + self.bytes.len();
         }
         self.bytes
             .chunks(999)
-            .map(|part| 1 + crate::traits::len_octets(part.len() + 1) + 1 + part.len())
+            .map(|part| 1 + crate::encoding::len_octets(part.len() + 1) + 1 + part.len())
             .sum()
     }
 
@@ -127,12 +126,8 @@ impl EncodeContent for Asn1BitString {
     /// carries the value's unused-bit count. Neither form includes the outer header or EOC.
     /// BER (either length form) and DER always use primitive contents.
     /// Variable time: public values only; no constant-time alternative is provided.
-    fn encode_content_v2(
-        &self,
-        rules: EncodingOptions,
-        out: &mut [u8],
-    ) -> Result<usize, Asn1Error> {
-        let total = self.content_len_v2(rules);
+    fn encode_content(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+        let total = self.content_len(rules);
         let out = out.get_mut(..total).ok_or(Asn1Error::BufferTooSmall)?;
         if rules != EncodingOptions::Cer || self.bytes.len() < 1000 {
             out[0] = self.unused_bits;
@@ -144,7 +139,7 @@ impl EncodeContent for Asn1BitString {
         for (index, part) in self.bytes.chunks(999).enumerate() {
             out[at] = TAG[0];
             at += 1;
-            at += crate::traits::write_len(part.len() + 1, &mut out[at..]);
+            at += crate::encoding::write_len(part.len() + 1, &mut out[at..]);
             out[at] = if index + 1 == count {
                 self.unused_bits
             } else {
@@ -158,18 +153,18 @@ impl EncodeContent for Asn1BitString {
     }
 }
 
-impl Encode for Asn1BitString {
+impl crate::EncodeTagged for Asn1BitString {
     /// Variable time: branches only on the encoding structure.
     fn encoded_len_tagged(&self, tag: &[u8], rules: EncodingOptions) -> usize {
         if rules != EncodingOptions::Cer || self.bytes.len() < 1000 {
-            return crate::traits::default_encoded_len(self, tag, rules);
+            return crate::encoding::default_encoded_len(self, tag, rules);
         }
         tag.len()
             + 3
             + self
                 .bytes
                 .chunks(999)
-                .map(|part| 1 + crate::traits::len_octets(part.len() + 1) + 1 + part.len())
+                .map(|part| 1 + crate::encoding::len_octets(part.len() + 1) + 1 + part.len())
                 .sum::<usize>()
     }
 
@@ -182,7 +177,7 @@ impl Encode for Asn1BitString {
         out: &mut [u8],
     ) -> Result<usize, Asn1Error> {
         if rules != EncodingOptions::Cer || self.bytes.len() < 1000 {
-            return crate::traits::default_encode(self, tag, rules, out);
+            return crate::encoding::default_encode(self, tag, rules, out);
         }
         let total = self.encoded_len_tagged(tag, rules);
         let out = out.get_mut(..total).ok_or(Asn1Error::BufferTooSmall)?;
@@ -194,7 +189,7 @@ impl Encode for Asn1BitString {
         for (index, part) in self.bytes.chunks(999).enumerate() {
             out[at] = TAG[0];
             at += 1;
-            at += crate::traits::write_len(part.len() + 1, &mut out[at..]);
+            at += crate::encoding::write_len(part.len() + 1, &mut out[at..]);
             out[at] = if index + 1 == count {
                 self.unused_bits
             } else {
@@ -207,23 +202,22 @@ impl Encode for Asn1BitString {
         out[at..].fill(0);
         Ok(total)
     }
+}
 
-    fn tag(&self) -> &[u8] {
-        TAG
+impl Encode for Asn1BitString {
+    fn encoded_len(&self, rules: EncodingOptions) -> usize {
+        crate::EncodeTagged::encoded_len_tagged(self, TAG, rules)
     }
-    fn content_len(&self, _: EncodingOptions) -> usize {
-        1 + self.bytes.len()
-    }
-    fn encode_content(&self, _: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
-        out[0] = self.unused_bits;
-        out[1..=self.bytes.len()].copy_from_slice(&self.bytes);
-        Ok(1 + self.bytes.len())
+
+    fn encode(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+        crate::EncodeTagged::encode_tagged(self, TAG, rules, out)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::EncodeContent;
     use crate::traits::Decode;
 
     const DEPTH: Depth = Depth::DEFAULT;
@@ -246,11 +240,11 @@ mod tests {
                 if options == EncodingOptions::Cer && data_len == 1000 {
                     continue;
                 }
-                let encoder: &dyn EncodeContent<Error = Asn1Error> = &value;
-                assert_eq!(encoder.content_len_v2(options), expected.len());
+                let encoder: &dyn EncodeContent = &value;
+                assert_eq!(encoder.content_len(options), expected.len());
                 let mut out = alloc::vec![0xaa; expected.len() + 2];
                 assert_eq!(
-                    encoder.encode_content_v2(options, &mut out),
+                    encoder.encode_content(options, &mut out),
                     Ok(expected.len())
                 );
                 assert_eq!(&out[..expected.len()], expected);
@@ -269,12 +263,9 @@ mod tests {
         expected.extend_from_slice(&[3, 2, 4, 0xf0]);
         assert_eq!(expected.len(), 1008);
         let options = EncodingOptions::Cer;
-        assert_eq!(value.content_len_v2(options), expected.len());
+        assert_eq!(value.content_len(options), expected.len());
         let mut out = alloc::vec![0xaa; expected.len() + 2];
-        assert_eq!(
-            value.encode_content_v2(options, &mut out),
-            Ok(expected.len())
-        );
+        assert_eq!(value.encode_content(options, &mut out), Ok(expected.len()));
         assert_eq!(&out[..expected.len()], expected);
         assert_eq!(&out[expected.len()..], &[0xaa; 2]);
         assert_eq!(
@@ -291,15 +282,15 @@ mod tests {
                 (data_len * 8).saturating_sub(7),
             );
             let options = EncodingOptions::Cer;
-            let len = value.content_len_v2(options);
+            let len = value.content_len(options);
             let mut out = alloc::vec![0; len];
-            assert_eq!(value.encode_content_v2(options, &mut out), Ok(len));
+            assert_eq!(value.encode_content(options, &mut out), Ok(len));
             let wire = value.encode_to_vec(options).unwrap();
             let element = crate::Asn1Ref::parse(&wire, DEPTH).unwrap();
             assert_eq!(out, element.value());
             let mut short = alloc::vec![0xaa; len - 1];
             assert_eq!(
-                value.encode_content_v2(options, &mut short),
+                value.encode_content(options, &mut short),
                 Err(Asn1Error::BufferTooSmall)
             );
             assert!(short.iter().all(|byte| *byte == 0xaa));

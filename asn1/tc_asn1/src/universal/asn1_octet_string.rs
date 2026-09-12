@@ -54,21 +54,36 @@ impl<'a> DecodeConstructed<'a> for Asn1OctetString {
     }
 }
 
+impl Asn1OctetString {
+    fn primitive_content_len(&self, _: EncodingOptions) -> usize {
+        self.bytes.len()
+    }
+
+    fn encode_primitive_content(
+        &self,
+        _: EncodingOptions,
+        out: &mut [u8],
+    ) -> Result<usize, Asn1Error> {
+        out[..self.bytes.len()].copy_from_slice(&self.bytes);
+        Ok(self.bytes.len())
+    }
+}
+
 impl crate::EncodeContent for Asn1OctetString {
     crate::segments::cer_string_content_encode!();
 }
 
-impl Encode for Asn1OctetString {
+impl crate::EncodeTagged for Asn1OctetString {
     crate::segments::cer_string_encode!();
-    fn tag(&self) -> &[u8] {
-        TAG
+}
+
+impl Encode for Asn1OctetString {
+    fn encoded_len(&self, rules: EncodingOptions) -> usize {
+        crate::EncodeTagged::encoded_len_tagged(self, TAG, rules)
     }
-    fn content_len(&self, _: EncodingOptions) -> usize {
-        self.bytes.len()
-    }
-    fn encode_content(&self, _: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
-        out[..self.bytes.len()].copy_from_slice(&self.bytes);
-        Ok(self.bytes.len())
+
+    fn encode(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+        crate::EncodeTagged::encode_tagged(self, TAG, rules, out)
     }
 }
 

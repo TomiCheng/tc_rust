@@ -92,40 +92,30 @@ impl Asn1UtcTime {
 }
 
 impl crate::EncodeContent for Asn1UtcTime {
-    type Error = Asn1Error;
-
-    /// Length of the contents, excluding the outer header and EOC.
-    /// Variable-time contract: public values only; no constant-time alternative is provided.
-    fn content_len_v2(&self, rules: EncodingOptions) -> usize {
-        <Self as Encode>::content_len(self, rules)
-    }
-
-    /// Write only the contents, leaving any remaining output bytes unchanged.
-    /// Variable-time contract: public values only; no constant-time alternative is provided.
-    fn encode_content_v2(
-        &self,
-        rules: EncodingOptions,
-        out: &mut [u8],
-    ) -> Result<usize, Asn1Error> {
-        let len = self.content_len_v2(rules);
-        let out = out.get_mut(..len).ok_or(Asn1Error::BufferTooSmall)?;
-        <Self as Encode>::encode_content(self, rules, out)
-    }
-}
-
-impl Encode for Asn1UtcTime {
-    fn tag(&self) -> &[u8] {
-        TAG
-    }
     fn content_len(&self, _: EncodingOptions) -> usize {
         LEN
     }
-    fn encode_content(&self, _: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+
+    fn encode_content(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+        let len = crate::EncodeContent::content_len(self, rules);
+        let out = out.get_mut(..len).ok_or(Asn1Error::BufferTooSmall)?;
         out[0..2].copy_from_slice(&digits((self.0.year % 100) as u8));
         self.0
             .write_fields((&mut out[2..12]).try_into().expect("十個位元組"));
         out[12] = b'Z';
         Ok(LEN)
+    }
+}
+
+impl crate::EncodeTagged for Asn1UtcTime {}
+
+impl Encode for Asn1UtcTime {
+    fn encoded_len(&self, rules: EncodingOptions) -> usize {
+        crate::EncodeTagged::encoded_len_tagged(self, TAG, rules)
+    }
+
+    fn encode(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+        crate::EncodeTagged::encode_tagged(self, TAG, rules, out)
     }
 }
 

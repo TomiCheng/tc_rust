@@ -4,11 +4,18 @@ use crate::depth::Depth;
 use crate::encoding_options::EncodingOptions;
 use crate::error::Asn1Error;
 use crate::traits::{DecodeContent, Encode};
+use core::fmt::{Display, Formatter};
 
 use super::tag::NULL as TAG;
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct Asn1Null;
+
+impl Display for Asn1Null {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        f.write_str("NULL")
+    }
+}
 
 impl<'a> DecodeContent<'a> for Asn1Null {
     const TAG: &'static [u8] = TAG;
@@ -23,36 +30,28 @@ impl<'a> DecodeContent<'a> for Asn1Null {
 }
 
 impl crate::EncodeContent for Asn1Null {
-    type Error = Asn1Error;
-
     /// Length of the contents, excluding the outer header and EOC.
     /// Variable-time contract: public values only; no constant-time alternative is provided.
-    fn content_len_v2(&self, rules: EncodingOptions) -> usize {
-        <Self as Encode>::content_len(self, rules)
+    fn content_len(&self, _: EncodingOptions) -> usize {
+        0
     }
 
     /// Write only the contents, leaving any remaining output bytes unchanged.
     /// Variable-time contract: public values only; no constant-time alternative is provided.
-    fn encode_content_v2(
-        &self,
-        rules: EncodingOptions,
-        out: &mut [u8],
-    ) -> Result<usize, Asn1Error> {
-        let len = self.content_len_v2(rules);
-        let out = out.get_mut(..len).ok_or(Asn1Error::BufferTooSmall)?;
-        <Self as Encode>::encode_content(self, rules, out)
+    fn encode_content(&self, _: EncodingOptions, _: &mut [u8]) -> Result<usize, Asn1Error> {
+        Ok(0)
     }
 }
 
+impl crate::EncodeTagged for Asn1Null {}
+
 impl Encode for Asn1Null {
-    fn tag(&self) -> &[u8] {
-        TAG
+    fn encoded_len(&self, rules: EncodingOptions) -> usize {
+        crate::EncodeTagged::encoded_len_tagged(self, TAG, rules)
     }
-    fn content_len(&self, _: EncodingOptions) -> usize {
-        0
-    }
-    fn encode_content(&self, _: EncodingOptions, _: &mut [u8]) -> Result<usize, Asn1Error> {
-        Ok(0)
+
+    fn encode(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+        crate::EncodeTagged::encode_tagged(self, TAG, rules, out)
     }
 }
 

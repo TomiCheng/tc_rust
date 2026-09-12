@@ -1,7 +1,7 @@
 //! CER string segmentation and shared encoding overrides.
 
-use crate::traits::{default_encode, default_encoded_len, len_octets, write_len};
-use crate::{Asn1Error, Encode, EncodingOptions};
+use crate::encoding::{default_encode, default_encoded_len, len_octets, write_len};
+use crate::{Asn1Error, EncodeContent, EncodingOptions};
 
 /// Length of a CER string TLV. Variable time: branches only on the encoding structure.
 pub(crate) fn segmented_len(tag: &[u8], universal_tag: &[u8], contents_len: usize) -> usize {
@@ -51,48 +51,52 @@ pub(crate) fn encode_segmented(
     Ok(total)
 }
 
-/// Computes the wire length without materialising the primitive contents.
+/// Computes the wire length from the encoded contents, including CER segment headers.
 /// Variable time: branches only on the encoding structure.
-pub(crate) fn string_len<T: Encode + ?Sized>(
+pub(crate) fn string_len<T: EncodeContent + ?Sized>(
     value: &T,
     tag: &[u8],
-    segment_tag: &[u8],
     rules: EncodingOptions,
 ) -> usize {
-    if rules == EncodingOptions::Cer && value.content_len(rules) > 1000 {
-        segmented_len(tag, segment_tag, value.content_len(rules))
+    if rules == EncodingOptions::Cer && value.content_len(EncodingOptions::Der) > 1000 {
+        tag.len() + 3 + value.content_len(rules)
     } else {
         default_encoded_len(value, tag, rules)
     }
 }
 
-/// Materialises long primitive contents once before segmentation.
+/// Wraps already segmented CER contents with the constructed outer header and EOC.
 /// Variable time: branches only on the encoding structure.
-pub(crate) fn encode_string<T: Encode + ?Sized>(
+pub(crate) fn encode_string<T: EncodeContent + ?Sized>(
     value: &T,
     tag: &[u8],
-    segment_tag: &[u8],
     rules: EncodingOptions,
     out: &mut [u8],
 ) -> Result<usize, Asn1Error> {
-    let len = value.content_len(rules);
-    if rules != EncodingOptions::Cer || len <= 1000 {
+    if rules != EncodingOptions::Cer || value.content_len(EncodingOptions::Der) <= 1000 {
         return default_encode(value, tag, rules, out);
     }
-    if out.len() < segmented_len(tag, segment_tag, len) {
-        return Err(Asn1Error::BufferTooSmall);
-    }
-    let mut contents = alloc::vec![0; len];
-    let written = value.encode_content(rules, &mut contents)?;
-    debug_assert_eq!(written, len, "primitive string content length disagrees");
-    encode_segmented(tag, segment_tag, &contents, out)
+    let total = string_len(value, tag, rules);
+    let out = out.get_mut(..total).ok_or(Asn1Error::BufferTooSmall)?;
+    out[..tag.len()].copy_from_slice(tag);
+    out[0] |= 0x20;
+    out[tag.len()] = 0x80;
+    let at = tag.len() + 1;
+    let written = value.encode_content(rules, &mut out[at..total - 2])?;
+    debug_assert_eq!(
+        at + written + 2,
+        total,
+        "segmented string content length disagrees"
+    );
+    out[total - 2..].fill(0);
+    Ok(total)
 }
 
 macro_rules! cer_string_encode {
     () => {
         /// Variable time: branches only on the encoding structure.
         fn encoded_len_tagged(&self, tag: &[u8], rules: $crate::EncodingOptions) -> usize {
-            $crate::segments::string_len(self, tag, $crate::tag::OCTET_STRING, rules)
+            $crate::segments::string_len(self, tag, rules)
         }
         /// Variable time: branches only on the encoding structure.
         fn encode_tagged(
@@ -101,7 +105,7 @@ macro_rules! cer_string_encode {
             rules: $crate::EncodingOptions,
             out: &mut [u8],
         ) -> Result<usize, $crate::Asn1Error> {
-            $crate::segments::encode_string(self, tag, $crate::tag::OCTET_STRING, rules, out)
+            $crate::segments::encode_string(self, tag, rules, out)
         }
     };
 }
@@ -109,8 +113,7 @@ pub(crate) use cer_string_encode;
 
 /// Content length for a string, including CER segment headers but no outer header or EOC.
 /// Variable time: public values only; no constant-time alternative is provided.
-pub(crate) fn string_content_len<T: Encode + ?Sized>(value: &T, rules: EncodingOptions) -> usize {
-    let len = value.content_len(rules);
+pub(crate) fn string_content_len(len: usize, rules: EncodingOptions) -> usize {
     if rules == EncodingOptions::Cer && len > 1000 {
         // With no outer tag, the full encoding adds one length octet and two EOC octets.
         segmented_len(&[], crate::tag::OCTET_STRING, len) - 3
@@ -121,19 +124,19 @@ pub(crate) fn string_content_len<T: Encode + ?Sized>(value: &T, rules: EncodingO
 
 /// Write primitive contents or CER segment TLVs, leaving the output tail unchanged.
 /// Variable time: public values only; no constant-time alternative is provided.
-pub(crate) fn encode_string_content<T: Encode + ?Sized>(
-    value: &T,
+pub(crate) fn encode_string_content(
+    len: usize,
     rules: EncodingOptions,
     out: &mut [u8],
+    write_primitive: impl FnOnce(&mut [u8]) -> Result<usize, Asn1Error>,
 ) -> Result<usize, Asn1Error> {
-    let total = string_content_len(value, rules);
+    let total = string_content_len(len, rules);
     let out = out.get_mut(..total).ok_or(Asn1Error::BufferTooSmall)?;
-    let len = value.content_len(rules);
     if rules != EncodingOptions::Cer || len <= 1000 {
-        return value.encode_content(rules, out);
+        return write_primitive(out);
     }
     let mut contents = alloc::vec![0; len];
-    let written = value.encode_content(rules, &mut contents)?;
+    let written = write_primitive(&mut contents)?;
     debug_assert_eq!(written, len, "primitive string content length disagrees");
     let mut at = 0;
     for segment in contents.chunks(1000) {
@@ -149,22 +152,25 @@ pub(crate) fn encode_string_content<T: Encode + ?Sized>(
 
 macro_rules! cer_string_content_encode {
     () => {
-        type Error = $crate::Asn1Error;
-
         /// Content length, including CER segment headers but no outer header or EOC.
         /// Variable-time contract: public values only; no constant-time alternative is provided.
-        fn content_len_v2(&self, rules: $crate::EncodingOptions) -> usize {
-            $crate::segments::string_content_len(self, rules)
+        fn content_len(&self, rules: $crate::EncodingOptions) -> usize {
+            $crate::segments::string_content_len(self.primitive_content_len(rules), rules)
         }
 
         /// Write primitive contents or CER segment TLVs, leaving any output tail unchanged.
         /// Variable-time contract: public values only; no constant-time alternative is provided.
-        fn encode_content_v2(
+        fn encode_content(
             &self,
             rules: $crate::EncodingOptions,
             out: &mut [u8],
         ) -> Result<usize, $crate::Asn1Error> {
-            $crate::segments::encode_string_content(self, rules, out)
+            $crate::segments::encode_string_content(
+                self.primitive_content_len(rules),
+                rules,
+                out,
+                |out| self.encode_primitive_content(rules, out),
+            )
         }
     };
 }
@@ -349,7 +355,7 @@ mod tests {
             der
         );
         if len > 1000 {
-            assert_eq!(cer[0], Encode::tag(&value)[0] | 0x20);
+            assert_eq!(cer[0], <T as DecodeContent>::TAG[0] | 0x20);
             assert_eq!(cer[1], 0x80);
             let outer = Asn1Ref::parse(&cer, Depth::DEFAULT).unwrap();
             let parts: alloc::vec::Vec<_> =

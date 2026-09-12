@@ -51,21 +51,27 @@ impl<'a> Decode<'a> for Asn1Any {
 /// 原樣重送，不看 `rules`：它不知道內容是什麼，也就無從正規化 —— 這正是拿它
 /// 保真的理由。`encode` 連長度的寫法都保留；`encode_tagged` 換了 tag 就只能
 /// 重寫表頭，內容不變。
-impl Encode for Asn1Any {
-    fn tag(&self) -> &[u8] {
-        self.as_ref().tag()
-    }
+impl crate::EncodeContent for Asn1Any {
     fn content_len(&self, _: EncodingOptions) -> usize {
         self.as_ref().value().len()
     }
-    fn encode_content(&self, _: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+
+    fn encode_content(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+        let len = crate::EncodeContent::content_len(self, rules);
+        let out = out.get_mut(..len).ok_or(Asn1Error::BufferTooSmall)?;
         let value = self.as_ref().value();
         out[..value.len()].copy_from_slice(value);
         Ok(value.len())
     }
+}
+
+impl crate::EncodeTagged for Asn1Any {}
+
+impl Encode for Asn1Any {
     fn encoded_len(&self, _: EncodingOptions) -> usize {
         self.raw.len()
     }
+
     fn encode(&self, _: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         let out = out
             .get_mut(..self.raw.len())
@@ -78,6 +84,7 @@ impl Encode for Asn1Any {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::EncodeTagged;
     use crate::asn1_ref::Asn1Class;
     use crate::universal::Asn1Boolean;
 

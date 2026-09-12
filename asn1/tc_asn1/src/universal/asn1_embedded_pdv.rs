@@ -5,8 +5,10 @@
 //! 本層只驗證線路結構；識別的語法是否適用、OSI context 是否存在由上層判斷。
 
 use super::{Asn1Integer, Asn1Oid, tag};
-use crate::traits::{len_octets, write_len};
-use crate::{Asn1Error, Asn1Ref, Children, DecodeContent, Depth, Encode, EncodingOptions};
+use crate::encoding::{len_octets, write_len};
+use crate::{
+    Asn1Error, Asn1Ref, Children, DecodeContent, Depth, Encode, EncodeTagged, EncodingOptions,
+};
 use alloc::vec::Vec;
 
 /// 識別抽象語法與傳輸語法的六種方式。
@@ -82,29 +84,8 @@ impl PdvIdentification {
         })
     }
 }
-impl crate::EncodeContent for PdvIdentification {
-    type Error = Asn1Error;
 
-    /// Length of the contents, excluding the outer header and EOC.
-    /// Variable-time contract: public values only; no constant-time alternative is provided.
-    fn content_len_v2(&self, rules: EncodingOptions) -> usize {
-        <Self as Encode>::content_len(self, rules)
-    }
-
-    /// Write only the contents, leaving any remaining output bytes unchanged.
-    /// Variable-time contract: public values only; no constant-time alternative is provided.
-    fn encode_content_v2(
-        &self,
-        rules: EncodingOptions,
-        out: &mut [u8],
-    ) -> Result<usize, Asn1Error> {
-        let len = self.content_len_v2(rules);
-        let out = out.get_mut(..len).ok_or(Asn1Error::BufferTooSmall)?;
-        <Self as Encode>::encode_content(self, rules, out)
-    }
-}
-
-impl Encode for PdvIdentification {
+impl PdvIdentification {
     fn tag(&self) -> &[u8] {
         match self {
             Self::Syntaxes { .. } => &[0xA0],
@@ -115,6 +96,9 @@ impl Encode for PdvIdentification {
             Self::Fixed => &[0x85],
         }
     }
+}
+
+impl crate::EncodeContent for PdvIdentification {
     /// 變動時間：依選項及內容結構計算。
     fn content_len(&self, rules: EncodingOptions) -> usize {
         match self {
@@ -131,8 +115,11 @@ impl Encode for PdvIdentification {
             Self::Fixed => 0,
         }
     }
+
     /// 變動時間：依選項寫入 IMPLICIT 內容。
     fn encode_content(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+        let len = crate::EncodeContent::content_len(self, rules);
+        let out = out.get_mut(..len).ok_or(Asn1Error::BufferTooSmall)?;
         match self {
             Self::Syntaxes {
                 abstract_syntax,
@@ -152,6 +139,18 @@ impl Encode for PdvIdentification {
             Self::PresentationContextId(id) => id.encode_content(rules, out),
             Self::Fixed => Ok(0),
         }
+    }
+}
+
+impl crate::EncodeTagged for PdvIdentification {}
+
+impl Encode for PdvIdentification {
+    fn encoded_len(&self, rules: EncodingOptions) -> usize {
+        crate::EncodeTagged::encoded_len_tagged(self, self.tag(), rules)
+    }
+
+    fn encode(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+        crate::EncodeTagged::encode_tagged(self, self.tag(), rules, out)
     }
 }
 
@@ -204,28 +203,8 @@ macro_rules! container {
                 ))
             }
         }
-        impl crate::EncodeContent for $name {
-            type Error = Asn1Error;
 
-            /// Length of the contents, excluding the outer header and EOC.
-            /// Variable-time contract: public values only; no constant-time alternative is provided.
-            fn content_len_v2(&self, rules: EncodingOptions) -> usize {
-                <Self as Encode>::content_len(self, rules)
-            }
-
-            /// Write only the contents, leaving any remaining output bytes unchanged.
-            /// Variable-time contract: public values only; no constant-time alternative is provided.
-            fn encode_content_v2(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
-                let len = self.content_len_v2(rules);
-                let out = out.get_mut(..len).ok_or(Asn1Error::BufferTooSmall)?;
-                <Self as Encode>::encode_content(self, rules, out)
-            }
-        }
-
-        impl Encode for $name {
-            fn tag(&self) -> &[u8] {
-                tag::$tag
-            }
+        impl $crate::EncodeContent for $name {
             /// 變動時間：依識別選項與資料長度計算。
             fn content_len(&self, rules: EncodingOptions) -> usize {
                 let id_len = crate::Explicit::new(&[0xa0], &self.identification).encoded_len(rules);
@@ -235,12 +214,15 @@ macro_rules! container {
                     1 + len_octets(self.value.len()) + self.value.len()
                 }
             }
+
             /// 變動時間：寫入 EXPLICIT 識別選項與 IMPLICIT OCTET STRING。
             fn encode_content(
                 &self,
                 rules: EncodingOptions,
                 out: &mut [u8],
             ) -> Result<usize, Asn1Error> {
+                let len = $crate::EncodeContent::content_len(self, rules);
+                let out = out.get_mut(..len).ok_or($crate::Asn1Error::BufferTooSmall)?;
                 let mut at = crate::Explicit::new(&[0xa0], &self.identification).encode(rules, out)?;
                 if rules == EncodingOptions::Cer {
                     return Ok(at + crate::segments::encode_segmented(&[0x82], tag::OCTET_STRING, &self.value, &mut out[at..])?);
@@ -250,6 +232,18 @@ macro_rules! container {
                 at += write_len(self.value.len(), &mut out[at..]);
                 out[at..at + self.value.len()].copy_from_slice(&self.value);
                 Ok(at + self.value.len())
+            }
+        }
+
+        impl $crate::EncodeTagged for $name {        }
+
+        impl Encode for $name {
+            fn encoded_len(&self, rules: $crate::EncodingOptions) -> usize {
+                $crate::EncodeTagged::encoded_len_tagged(self, tag::$tag, rules)
+            }
+
+            fn encode(&self, rules: $crate::EncodingOptions, out: &mut [u8]) -> Result<usize, $crate::Asn1Error> {
+                $crate::EncodeTagged::encode_tagged(self, tag::$tag, rules, out)
             }
         }
     };

@@ -124,12 +124,7 @@ fn checked_tag(tag: &[u8]) -> Result<Vec<u8>, Asn1Error> {
     Ok(tag.to_vec())
 }
 
-impl Encode for Asn1Tagged {
-    /// 借用識別位元組。常數時間。
-    fn tag(&self) -> &[u8] {
-        self.tag()
-    }
-
+impl crate::EncodeContent for Asn1Tagged {
     /// 計算內容長度。變動時間：分支只依編碼結構。
     fn content_len(&self, rules: EncodingOptions) -> usize {
         match &self.content {
@@ -140,12 +135,26 @@ impl Encode for Asn1Tagged {
 
     /// 依原順序編碼子元素或複製原始內容。變動時間：分支只依編碼結構。
     fn encode_content(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+        let len = crate::EncodeContent::content_len(self, rules);
+        let out = out.get_mut(..len).ok_or(Asn1Error::BufferTooSmall)?;
         match &self.content {
             TaggedContent::Constructed(children) => encode_children(children, rules, out),
             TaggedContent::Primitive(bytes) => {
                 copy_encodings(core::iter::once(bytes.as_slice()), out)
             }
         }
+    }
+}
+
+impl crate::EncodeTagged for Asn1Tagged {}
+
+impl Encode for Asn1Tagged {
+    fn encoded_len(&self, rules: EncodingOptions) -> usize {
+        crate::EncodeTagged::encoded_len_tagged(self, self.tag(), rules)
+    }
+
+    fn encode(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+        crate::EncodeTagged::encode_tagged(self, self.tag(), rules, out)
     }
 }
 

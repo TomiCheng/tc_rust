@@ -7,13 +7,13 @@ const RULES: [EncodingOptions; 4] = [
     EncodingOptions::Der,
 ];
 
-fn check<T: Encode + EncodeContent<Error = Asn1Error>>(value: T) {
-    let encoder: &dyn EncodeContent<Error = Asn1Error> = &value;
+fn check<T: Encode + EncodeContent>(value: T) {
+    let encoder: &dyn EncodeContent = &value;
     for rules in RULES {
         let wire = value.encode_to_vec(rules).unwrap();
         let parsed = Asn1Ref::parse(&wire, Depth::DEFAULT).unwrap();
         let expected = parsed.value();
-        let len = encoder.content_len_v2(rules);
+        let len = encoder.content_len(rules);
         assert_eq!(
             len,
             expected.len(),
@@ -23,16 +23,16 @@ fn check<T: Encode + EncodeContent<Error = Asn1Error>>(value: T) {
         assert_eq!(encoder.encode_content_to_vec(rules).unwrap(), expected);
 
         let mut exact = vec![0xAA; len];
-        assert_eq!(encoder.encode_content_v2(rules, &mut exact), Ok(len));
+        assert_eq!(encoder.encode_content(rules, &mut exact), Ok(len));
         assert_eq!(exact, expected);
         let mut oversized = vec![0xAA; len + 3];
-        assert_eq!(encoder.encode_content_v2(rules, &mut oversized), Ok(len));
+        assert_eq!(encoder.encode_content(rules, &mut oversized), Ok(len));
         assert_eq!(&oversized[..len], expected);
         assert_eq!(&oversized[len..], &[0xAA; 3]);
         if len > 0 {
             let mut short = vec![0xAA; len - 1];
             assert_eq!(
-                encoder.encode_content_v2(rules, &mut short),
+                encoder.encode_content(rules, &mut short),
                 Err(Asn1Error::BufferTooSmall)
             );
             assert!(short.iter().all(|byte| *byte == 0xAA));
@@ -42,7 +42,7 @@ fn check<T: Encode + EncodeContent<Error = Asn1Error>>(value: T) {
 
 fn check_decoded<T>(contents: &[u8])
 where
-    T: for<'a> DecodeContent<'a> + Encode + EncodeContent<Error = Asn1Error>,
+    T: for<'a> DecodeContent<'a> + Encode + EncodeContent,
 {
     check(T::try_decode_content(contents, Depth::DEFAULT).unwrap());
 }
@@ -192,15 +192,29 @@ fn constructed_contents_preserve_child_headers_end_markers_and_set_ordering() {
 #[test]
 fn collections_propagate_child_encoding_errors_to_the_vec_helper() {
     struct Failing;
-    impl Encode for Failing {
-        fn tag(&self) -> &[u8] {
-            tag::INTEGER
-        }
+    impl tc_asn1::EncodeContent for Failing {
         fn content_len(&self, _: EncodingOptions) -> usize {
             1
         }
+
         fn encode_content(&self, _: EncodingOptions, _: &mut [u8]) -> Result<usize, Asn1Error> {
             Err(Asn1Error::MalformedValue)
+        }
+    }
+
+    impl tc_asn1::EncodeTagged for Failing {}
+
+    impl Encode for Failing {
+        fn encoded_len(&self, rules: tc_asn1::EncodingOptions) -> usize {
+            tc_asn1::EncodeTagged::encoded_len_tagged(self, tag::INTEGER, rules)
+        }
+
+        fn encode(
+            &self,
+            rules: tc_asn1::EncodingOptions,
+            out: &mut [u8],
+        ) -> Result<usize, tc_asn1::Asn1Error> {
+            tc_asn1::EncodeTagged::encode_tagged(self, tag::INTEGER, rules, out)
         }
     }
     for rules in RULES {

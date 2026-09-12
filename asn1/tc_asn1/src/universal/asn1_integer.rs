@@ -145,43 +145,34 @@ impl<'a> DecodeContent<'a> for Asn1Integer {
 }
 
 impl crate::EncodeContent for Asn1Integer {
-    type Error = Asn1Error;
-
-    /// Length of the contents, excluding the outer header and EOC.
-    /// Variable-time contract: public values only; no constant-time alternative is provided.
-    fn content_len_v2(&self, rules: EncodingOptions) -> usize {
-        <Self as Encode>::content_len(self, rules)
-    }
-
-    /// Write only the contents, leaving any remaining output bytes unchanged.
-    /// Variable-time contract: public values only; no constant-time alternative is provided.
-    fn encode_content_v2(
-        &self,
-        rules: EncodingOptions,
-        out: &mut [u8],
-    ) -> Result<usize, Asn1Error> {
-        let len = self.content_len_v2(rules);
-        let out = out.get_mut(..len).ok_or(Asn1Error::BufferTooSmall)?;
-        <Self as Encode>::encode_content(self, rules, out)
-    }
-}
-
-impl Encode for Asn1Integer {
-    fn tag(&self) -> &[u8] {
-        TAG
-    }
     fn content_len(&self, _: EncodingOptions) -> usize {
         self.value.len()
     }
-    fn encode_content(&self, _: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+
+    fn encode_content(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+        let len = crate::EncodeContent::content_len(self, rules);
+        let out = out.get_mut(..len).ok_or(Asn1Error::BufferTooSmall)?;
         out[..self.value.len()].copy_from_slice(&self.value);
         Ok(self.value.len())
+    }
+}
+
+impl crate::EncodeTagged for Asn1Integer {}
+
+impl Encode for Asn1Integer {
+    fn encoded_len(&self, rules: EncodingOptions) -> usize {
+        crate::EncodeTagged::encoded_len_tagged(self, TAG, rules)
+    }
+
+    fn encode(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+        crate::EncodeTagged::encode_tagged(self, TAG, rules, out)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::EncodeTagged;
     use crate::traits::Decode;
 
     const DEPTH: Depth = Depth::DEFAULT;

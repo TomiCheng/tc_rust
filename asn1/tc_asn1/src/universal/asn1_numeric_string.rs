@@ -63,26 +63,38 @@ impl<'a> DecodeContent<'a> for Asn1NumericString {
 
 crate::segments::constructed_string_decode!(Asn1NumericString);
 
-impl crate::EncodeContent for Asn1NumericString {
-    crate::segments::cer_string_content_encode!();
-}
-
-impl Encode for Asn1NumericString {
-    crate::segments::cer_string_encode!();
-    /// 回傳 NumericString 的識別位元組。
-    fn tag(&self) -> &[u8] {
-        TAG
-    }
-
+impl Asn1NumericString {
     /// 回傳內容長度。常數時間：讀取已儲存的字串長度。
-    fn content_len(&self, _: EncodingOptions) -> usize {
+    fn primitive_content_len(&self, _: EncodingOptions) -> usize {
         self.text.len()
     }
 
     /// 原樣寫入已驗證的內容。變動時間：複製量由內容長度決定。
-    fn encode_content(&self, _: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+    fn encode_primitive_content(
+        &self,
+        _: EncodingOptions,
+        out: &mut [u8],
+    ) -> Result<usize, Asn1Error> {
         out[..self.text.len()].copy_from_slice(self.text.as_bytes());
         Ok(self.text.len())
+    }
+}
+
+impl crate::EncodeContent for Asn1NumericString {
+    crate::segments::cer_string_content_encode!();
+}
+
+impl crate::EncodeTagged for Asn1NumericString {
+    crate::segments::cer_string_encode!();
+}
+
+impl Encode for Asn1NumericString {
+    fn encoded_len(&self, rules: EncodingOptions) -> usize {
+        crate::EncodeTagged::encoded_len_tagged(self, TAG, rules)
+    }
+
+    fn encode(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+        crate::EncodeTagged::encode_tagged(self, TAG, rules, out)
     }
 }
 
@@ -90,6 +102,7 @@ impl Encode for Asn1NumericString {
 mod tests {
     use super::*;
     use crate::Decode;
+    use crate::EncodeContent;
 
     #[test]
     fn digits_and_spaces_round_trip_under_both_encoding_rules() {

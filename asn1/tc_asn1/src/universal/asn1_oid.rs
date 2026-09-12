@@ -178,37 +178,27 @@ impl<'a> DecodeContent<'a> for Asn1Oid {
 }
 
 impl crate::EncodeContent for Asn1Oid {
-    type Error = Asn1Error;
-
-    /// Length of the contents, excluding the outer header and EOC.
-    /// Variable-time contract: public values only; no constant-time alternative is provided.
-    fn content_len_v2(&self, rules: EncodingOptions) -> usize {
-        <Self as Encode>::content_len(self, rules)
-    }
-
-    /// Write only the contents, leaving any remaining output bytes unchanged.
-    /// Variable-time contract: public values only; no constant-time alternative is provided.
-    fn encode_content_v2(
-        &self,
-        rules: EncodingOptions,
-        out: &mut [u8],
-    ) -> Result<usize, Asn1Error> {
-        let len = self.content_len_v2(rules);
-        let out = out.get_mut(..len).ok_or(Asn1Error::BufferTooSmall)?;
-        <Self as Encode>::encode_content(self, rules, out)
-    }
-}
-
-impl Encode for Asn1Oid {
-    fn tag(&self) -> &[u8] {
-        TAG
-    }
     fn content_len(&self, _: EncodingOptions) -> usize {
         self.bytes.len()
     }
-    fn encode_content(&self, _: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+
+    fn encode_content(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+        let len = crate::EncodeContent::content_len(self, rules);
+        let out = out.get_mut(..len).ok_or(Asn1Error::BufferTooSmall)?;
         out[..self.bytes.len()].copy_from_slice(&self.bytes);
         Ok(self.bytes.len())
+    }
+}
+
+impl crate::EncodeTagged for Asn1Oid {}
+
+impl Encode for Asn1Oid {
+    fn encoded_len(&self, rules: EncodingOptions) -> usize {
+        crate::EncodeTagged::encoded_len_tagged(self, TAG, rules)
+    }
+
+    fn encode(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+        crate::EncodeTagged::encode_tagged(self, TAG, rules, out)
     }
 }
 

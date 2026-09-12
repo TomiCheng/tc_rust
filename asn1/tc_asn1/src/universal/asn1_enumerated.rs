@@ -136,33 +136,6 @@ impl<'a> DecodeContent<'a> for Asn1Enumerated {
 }
 
 impl crate::EncodeContent for Asn1Enumerated {
-    type Error = Asn1Error;
-
-    /// Length of the contents, excluding the outer header and EOC.
-    /// Variable-time contract: public values only; no constant-time alternative is provided.
-    fn content_len_v2(&self, rules: EncodingOptions) -> usize {
-        <Self as Encode>::content_len(self, rules)
-    }
-
-    /// Write only the contents, leaving any remaining output bytes unchanged.
-    /// Variable-time contract: public values only; no constant-time alternative is provided.
-    fn encode_content_v2(
-        &self,
-        rules: EncodingOptions,
-        out: &mut [u8],
-    ) -> Result<usize, Asn1Error> {
-        let len = self.content_len_v2(rules);
-        let out = out.get_mut(..len).ok_or(Asn1Error::BufferTooSmall)?;
-        <Self as Encode>::encode_content(self, rules, out)
-    }
-}
-
-impl Encode for Asn1Enumerated {
-    /// 回傳 ENUMERATED 的識別位元組。
-    fn tag(&self) -> &[u8] {
-        TAG
-    }
-
     /// 回傳內容位元組數。常數時間：直接讀取已儲存的內容長度。
     fn content_len(&self, _: EncodingOptions) -> usize {
         self.value.len()
@@ -170,15 +143,30 @@ impl Encode for Asn1Enumerated {
 
     /// 原樣寫入二補數內容，不含標籤。
     /// 變動時間：複製量由內容長度決定。
-    fn encode_content(&self, _: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+    fn encode_content(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+        let len = crate::EncodeContent::content_len(self, rules);
+        let out = out.get_mut(..len).ok_or(Asn1Error::BufferTooSmall)?;
         out[..self.value.len()].copy_from_slice(&self.value);
         Ok(self.value.len())
+    }
+}
+
+impl crate::EncodeTagged for Asn1Enumerated {}
+
+impl Encode for Asn1Enumerated {
+    fn encoded_len(&self, rules: EncodingOptions) -> usize {
+        crate::EncodeTagged::encoded_len_tagged(self, TAG, rules)
+    }
+
+    fn encode(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+        crate::EncodeTagged::encode_tagged(self, TAG, rules, out)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::EncodeContent;
     use crate::traits::Decode;
 
     const DEPTH: Depth = Depth::DEFAULT;

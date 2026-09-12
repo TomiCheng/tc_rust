@@ -29,7 +29,7 @@ pub trait SequenceFields {
 }
 
 /// 由 [`SequenceFields`] 產生 [`Encode`]；預設 SEQUENCE，可給第二個參數換 tag。
-/// 不使用 blanket impl，以免與 `Box<T>: Encode` 的實作重疊。
+/// 由巨集為指定型別產生實作，不使用 blanket impl。
 ///
 /// # Examples
 /// ```
@@ -50,11 +50,7 @@ macro_rules! impl_sequence_encode {
         $crate::impl_sequence_encode!($t, $crate::tag::SEQUENCE);
     };
     ($t:ty, $tag:expr) => {
-        impl $crate::Encode for $t {
-            /// 回傳結構的 tag。變動時間契約：分支只依編碼結構。
-            fn tag(&self) -> &[u8] {
-                $tag
-            }
+        impl $crate::EncodeContent for $t {
             /// 累加欄位的完整 TLV 長度。變動時間：分支只依編碼結構。
             fn content_len(&self, rules: $crate::EncodingOptions) -> usize {
                 let mut total = 0;
@@ -63,12 +59,17 @@ macro_rules! impl_sequence_encode {
                 });
                 total
             }
+
             /// 依序寫入欄位，回傳第一個編碼錯誤。變動時間：分支只依編碼結構。
             fn encode_content(
                 &self,
                 rules: $crate::EncodingOptions,
                 out: &mut [u8],
             ) -> ::core::result::Result<usize, $crate::Asn1Error> {
+                let len = $crate::EncodeContent::content_len(self, rules);
+                let out = out
+                    .get_mut(..len)
+                    .ok_or($crate::Asn1Error::BufferTooSmall)?;
                 let mut at = 0;
                 let mut error = ::core::option::Option::None;
                 $crate::SequenceFields::fields(self, rules, &mut |field| {
@@ -84,11 +85,28 @@ macro_rules! impl_sequence_encode {
                 error.map_or(::core::result::Result::Ok(at), ::core::result::Result::Err)
             }
         }
+
+        impl $crate::EncodeTagged for $t {}
+
+        impl $crate::Encode for $t {
+            fn encoded_len(&self, rules: $crate::EncodingOptions) -> usize {
+                $crate::EncodeTagged::encoded_len_tagged(self, $tag, rules)
+            }
+
+            fn encode(
+                &self,
+                rules: $crate::EncodingOptions,
+                out: &mut [u8],
+            ) -> ::core::result::Result<usize, $crate::Asn1Error> {
+                $crate::EncodeTagged::encode_tagged(self, $tag, rules, out)
+            }
+        }
     };
 }
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::EncodeContent;
     use crate::{Asn1Boolean, Asn1Error, Asn1Integer, Explicit, Implicit};
     struct Pair(Asn1Boolean, Asn1Integer);
     impl SequenceFields for Pair {
@@ -132,15 +150,25 @@ mod tests {
     #[test]
     fn the_first_encoding_error_prevents_later_fields_from_being_written() {
         struct Fail;
-        impl Encode for Fail {
-            fn tag(&self) -> &[u8] {
-                &[5]
-            }
+        impl crate::EncodeContent for Fail {
             fn content_len(&self, _: EncodingOptions) -> usize {
                 0
             }
+
             fn encode_content(&self, _: EncodingOptions, _: &mut [u8]) -> Result<usize, Asn1Error> {
                 Err(Asn1Error::MalformedValue)
+            }
+        }
+
+        impl crate::EncodeTagged for Fail {}
+
+        impl Encode for Fail {
+            fn encoded_len(&self, rules: EncodingOptions) -> usize {
+                crate::EncodeTagged::encoded_len_tagged(self, &[5], rules)
+            }
+
+            fn encode(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+                crate::EncodeTagged::encode_tagged(self, &[5], rules, out)
             }
         }
         struct FailedSequence;

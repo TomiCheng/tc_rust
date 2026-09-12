@@ -108,33 +108,6 @@ impl<'a, T: DecodeContent<'a>> DecodeContent<'a> for Asn1SetOf<T> {
 }
 
 impl<T: Encode> crate::EncodeContent for Asn1SetOf<T> {
-    type Error = Asn1Error;
-
-    /// Length of the contents, excluding the outer header and EOC.
-    /// Variable-time contract: public values only; no constant-time alternative is provided.
-    fn content_len_v2(&self, rules: EncodingOptions) -> usize {
-        <Self as Encode>::content_len(self, rules)
-    }
-
-    /// Write only the contents, leaving any remaining output bytes unchanged.
-    /// Variable-time contract: public values only; no constant-time alternative is provided.
-    fn encode_content_v2(
-        &self,
-        rules: EncodingOptions,
-        out: &mut [u8],
-    ) -> Result<usize, Asn1Error> {
-        let len = self.content_len_v2(rules);
-        let out = out.get_mut(..len).ok_or(Asn1Error::BufferTooSmall)?;
-        <Self as Encode>::encode_content(self, rules, out)
-    }
-}
-
-impl<T: Encode> Encode for Asn1SetOf<T> {
-    /// 回傳集合標籤。
-    fn tag(&self) -> &[u8] {
-        TAG
-    }
-
     /// 加總成員的完整編碼長度，排序不影響長度。
     /// 變動時間：分支只依編碼結構。
     fn content_len(&self, rules: EncodingOptions) -> usize {
@@ -147,6 +120,8 @@ impl<T: Encode> Encode for Asn1SetOf<T> {
     /// BER 的兩種長度形式都按原順序寫入；CER 與 DER 暫存成員編碼後依字典序寫入。
     /// 變動時間：依編碼結構分支，正規排序另比較成員的編碼位元組。
     fn encode_content(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+        let len = crate::EncodeContent::content_len(self, rules);
+        let out = out.get_mut(..len).ok_or(Asn1Error::BufferTooSmall)?;
         if !rules.is_canonical() {
             let mut at = 0;
             for member in &self.members {
@@ -162,6 +137,18 @@ impl<T: Encode> Encode for Asn1SetOf<T> {
             .collect::<Result<Vec<_>, _>>()?;
         encodings.sort();
         copy_encodings(encodings.iter().map(Vec::as_slice), out)
+    }
+}
+
+impl<T: Encode> crate::EncodeTagged for Asn1SetOf<T> {}
+
+impl<T: Encode> Encode for Asn1SetOf<T> {
+    fn encoded_len(&self, rules: EncodingOptions) -> usize {
+        crate::EncodeTagged::encoded_len_tagged(self, TAG, rules)
+    }
+
+    fn encode(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+        crate::EncodeTagged::encode_tagged(self, TAG, rules, out)
     }
 }
 
@@ -216,6 +203,7 @@ pub(crate) fn copy_encodings<'a>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::EncodeContent;
     use crate::{Asn1Any, Asn1Boolean, Asn1Integer, Asn1Null, Decode};
 
     fn any(input: &[u8]) -> Asn1Any {

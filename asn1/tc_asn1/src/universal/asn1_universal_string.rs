@@ -78,24 +78,18 @@ impl<'a> DecodeContent<'a> for Asn1UniversalString {
 
 crate::segments::constructed_string_decode!(Asn1UniversalString);
 
-impl crate::EncodeContent for Asn1UniversalString {
-    crate::segments::cer_string_content_encode!();
-}
-
-impl Encode for Asn1UniversalString {
-    crate::segments::cer_string_encode!();
-    /// 回傳 UniversalString 的識別位元組。
-    fn tag(&self) -> &[u8] {
-        TAG
-    }
-
+impl Asn1UniversalString {
     /// 內容長度是字元數的四倍。變動時間：需要走訪字串計算字元數。
-    fn content_len(&self, _: EncodingOptions) -> usize {
+    fn primitive_content_len(&self, _: EncodingOptions) -> usize {
         self.text.chars().count() * 4
     }
 
     /// 每個字元寫成 UCS-4 大端序。變動時間：依字串長度走訪字元。
-    fn encode_content(&self, _: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+    fn encode_primitive_content(
+        &self,
+        _: EncodingOptions,
+        out: &mut [u8],
+    ) -> Result<usize, Asn1Error> {
         let mut at = 0;
         for ch in self.text.chars() {
             out[at..at + 4].copy_from_slice(&u32::from(ch).to_be_bytes());
@@ -105,10 +99,29 @@ impl Encode for Asn1UniversalString {
     }
 }
 
+impl crate::EncodeContent for Asn1UniversalString {
+    crate::segments::cer_string_content_encode!();
+}
+
+impl crate::EncodeTagged for Asn1UniversalString {
+    crate::segments::cer_string_encode!();
+}
+
+impl Encode for Asn1UniversalString {
+    fn encoded_len(&self, rules: EncodingOptions) -> usize {
+        crate::EncodeTagged::encoded_len_tagged(self, TAG, rules)
+    }
+
+    fn encode(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+        crate::EncodeTagged::encode_tagged(self, TAG, rules, out)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::Decode;
+    use crate::EncodeContent;
 
     #[test]
     fn latin_chinese_and_emoji_text_round_trip_as_four_bytes_per_character() {

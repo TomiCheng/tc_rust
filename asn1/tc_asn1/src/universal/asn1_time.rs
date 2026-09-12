@@ -97,44 +97,41 @@ macro_rules! time_type {
                 Self::new(&Kind::$kind.notation(wire)?)
             }
         }
-        impl crate::EncodeContent for $name {
-            type Error = Asn1Error;
 
-            /// Length of the contents, excluding the outer header and EOC.
-            /// Variable-time contract: public values only; no constant-time alternative is provided.
-            fn content_len_v2(&self, rules: EncodingOptions) -> usize {
-                <Self as Encode>::content_len(self, rules)
-            }
-
-            /// Write only the contents, leaving any remaining output bytes unchanged.
-            /// Variable-time contract: public values only; no constant-time alternative is provided.
-            fn encode_content_v2(
-                &self,
-                rules: EncodingOptions,
-                out: &mut [u8],
-            ) -> Result<usize, Asn1Error> {
-                let len = self.content_len_v2(rules);
-                let out = out.get_mut(..len).ok_or(Asn1Error::BufferTooSmall)?;
-                <Self as Encode>::encode_content(self, rules, out)
-            }
-        }
-
-        impl Encode for $name {
-            fn tag(&self) -> &[u8] {
-                tag::$tag
-            }
+        impl $crate::EncodeContent for $name {
             /// 常數時間：讀取已準備的線路內容長度。
             fn content_len(&self, _: EncodingOptions) -> usize {
                 self.wire.len()
             }
+
             /// 變動時間：複製正規化後的線路內容。
             fn encode_content(
                 &self,
-                _: EncodingOptions,
+                rules: EncodingOptions,
                 out: &mut [u8],
             ) -> Result<usize, Asn1Error> {
+                let len = $crate::EncodeContent::content_len(self, rules);
+                let out = out
+                    .get_mut(..len)
+                    .ok_or($crate::Asn1Error::BufferTooSmall)?;
                 out[..self.wire.len()].copy_from_slice(self.wire.as_bytes());
                 Ok(self.wire.len())
+            }
+        }
+
+        impl $crate::EncodeTagged for $name {}
+
+        impl Encode for $name {
+            fn encoded_len(&self, rules: $crate::EncodingOptions) -> usize {
+                $crate::EncodeTagged::encoded_len_tagged(self, tag::$tag, rules)
+            }
+
+            fn encode(
+                &self,
+                rules: $crate::EncodingOptions,
+                out: &mut [u8],
+            ) -> Result<usize, $crate::Asn1Error> {
+                $crate::EncodeTagged::encode_tagged(self, tag::$tag, rules, out)
             }
         }
     };

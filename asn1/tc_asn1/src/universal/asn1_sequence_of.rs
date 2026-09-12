@@ -76,40 +76,30 @@ impl<'a, T: DecodeContent<'a>> DecodeContent<'a> for Asn1SequenceOf<T> {
 }
 
 impl<T: Encode> crate::EncodeContent for Asn1SequenceOf<T> {
-    type Error = Asn1Error;
-
-    /// Length of the contents, excluding the outer header and EOC.
-    /// Variable-time contract: public values only; no constant-time alternative is provided.
-    fn content_len_v2(&self, rules: EncodingOptions) -> usize {
-        <Self as Encode>::content_len(self, rules)
-    }
-
-    /// Write only the contents, leaving any remaining output bytes unchanged.
-    /// Variable-time contract: public values only; no constant-time alternative is provided.
-    fn encode_content_v2(
-        &self,
-        rules: EncodingOptions,
-        out: &mut [u8],
-    ) -> Result<usize, Asn1Error> {
-        let len = self.content_len_v2(rules);
-        let out = out.get_mut(..len).ok_or(Asn1Error::BufferTooSmall)?;
-        <Self as Encode>::encode_content(self, rules, out)
-    }
-}
-
-impl<T: Encode> Encode for Asn1SequenceOf<T> {
-    fn tag(&self) -> &[u8] {
-        TAG
-    }
     fn content_len(&self, rules: EncodingOptions) -> usize {
         self.members.iter().map(|m| m.encoded_len(rules)).sum()
     }
+
     fn encode_content(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+        let len = crate::EncodeContent::content_len(self, rules);
+        let out = out.get_mut(..len).ok_or(Asn1Error::BufferTooSmall)?;
         let mut at = 0;
         for member in &self.members {
             at += member.encode(rules, &mut out[at..])?;
         }
         Ok(at)
+    }
+}
+
+impl<T: Encode> crate::EncodeTagged for Asn1SequenceOf<T> {}
+
+impl<T: Encode> Encode for Asn1SequenceOf<T> {
+    fn encoded_len(&self, rules: EncodingOptions) -> usize {
+        crate::EncodeTagged::encoded_len_tagged(self, TAG, rules)
+    }
+
+    fn encode(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+        crate::EncodeTagged::encode_tagged(self, TAG, rules, out)
     }
 }
 

@@ -89,6 +89,7 @@ mod asn1_any;
 mod asn1_object;
 mod asn1_ref;
 mod depth;
+mod encoding;
 mod encoding_options;
 mod error;
 mod schema;
@@ -103,7 +104,7 @@ pub use depth::Depth;
 pub use encoding_options::{EncodingOptions, LengthForm};
 pub use error::Asn1Error;
 pub use schema::{Explicit, Fields, Implicit, SequenceFields};
-pub use traits::{Decode, DecodeConstructed, DecodeContent, Encode, EncodeContent};
+pub use traits::{Decode, DecodeConstructed, DecodeContent, Encode, EncodeContent, EncodeTagged};
 pub use universal::tag;
 pub use universal::{
     Arcs, Asn1BitString, Asn1BmpString, Asn1Boolean, Asn1CharacterString, Asn1Date, Asn1DateTime,
