@@ -411,7 +411,7 @@ impl Encode for Asn1Object {
     fn encode_content(&self, rules: EncodingType, out: &mut [u8]) -> Result<usize, Asn1Error> {
         match self {
             Self::Null => Ok(0),
-            Self::Set(children) if rules == EncodingType::Der => {
+            Self::Set(children) if rules.is_canonical() => {
                 let mut encodings = children
                     .iter()
                     .map(|member| Ok((tag_key(member.tag())?, encode_member(member, rules)?)))
