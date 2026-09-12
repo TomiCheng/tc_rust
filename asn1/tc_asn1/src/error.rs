@@ -15,6 +15,9 @@ pub enum Asn1Error {
     /// 一個完整的值之後還有位元組。
     TrailingData,
 
+    /// 解得開，但不是 DER：重編後與輸入不同。
+    NotDer,
+
     /// tag 號碼使用了非最短的高號碼形式。
     NonMinimalTag,
 
@@ -45,6 +48,7 @@ impl fmt::Display for Asn1Error {
         output.write_str(match self {
             Self::Truncated => "input ended inside a TLV",
             Self::TrailingData => "unexpected bytes after the encoded value",
+            Self::NotDer => "encoding is not DER",
             Self::NonMinimalTag => "tag number is not in the shortest form",
             Self::TagOverflow => "tag number exceeds the supported range",
             Self::LengthOverflow => "length exceeds the platform's usize",

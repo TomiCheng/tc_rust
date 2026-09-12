@@ -113,11 +113,23 @@ impl<'a> Asn1Ref<'a> {
 
     /// 把這個元素當成 `T` 解：驗 tag，然後只解內容。表頭不重解。
     pub fn decode_as<T: TryDecodeContent<'a>>(&self, depth: Depth) -> Result<T, Asn1Error> {
-        if self.tag != T::TAG {
-            return Err(Asn1Error::UnexpectedTag);
+        if self.tag == T::TAG {
+            T::try_decode_content(self.value, depth)
+        } else if is_constructed_form(self.tag, T::TAG) {
+            T::try_decode_constructed(self.value, depth)
+        } else {
+            Err(Asn1Error::UnexpectedTag)
         }
-        T::try_decode_content(self.value, depth)
     }
+}
+
+/// 同長度、首位元組只多 constructed 位，且原標記本身為 primitive。
+pub(crate) fn is_constructed_form(tag: &[u8], primitive_tag: &[u8]) -> bool {
+    !primitive_tag.is_empty()
+        && tag.len() == primitive_tag.len()
+        && primitive_tag[0] & 0x20 == 0
+        && tag[0] == primitive_tag[0] | 0x20
+        && tag[1..] == primitive_tag[1..]
 }
 
 pub struct Children<'a> {
@@ -438,5 +450,22 @@ mod tests {
     fn children_of_an_indefinite_length_value_do_not_include_the_marker() {
         let seq = parse(&[0x30, 0x80, 0x05, 0x00, 0x05, 0x00, 0x00, 0x00]);
         assert_eq!(seq.children(DEPTH).count(), 2);
+    }
+    #[test]
+    fn constructed_form_matching_changes_only_the_constructed_bit_of_a_complete_identifier() {
+        assert!(is_constructed_form(&[0x24], &[4]));
+        assert!(is_constructed_form(&[0xbf, 0x81, 0], &[0x9f, 0x81, 0]));
+        for (tag, primitive) in [
+            (&[][..], &[][..]),
+            (&[0x24][..], &[][..]),
+            (&[][..], &[4][..]),
+            (&[0x24][..], &[0x24][..]),
+            (&[4][..], &[4][..]),
+            (&[0x64][..], &[4][..]),
+            (&[0x24, 0][..], &[4][..]),
+            (&[0xbf, 0x81, 1][..], &[0x9f, 0x81, 0][..]),
+        ] {
+            assert!(!is_constructed_form(tag, primitive));
+        }
     }
 }

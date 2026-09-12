@@ -1,11 +1,29 @@
 //! 寫出的契約。object-safe：只有方法，沒有關聯常數，才能放進 `dyn`。
 
 use alloc::boxed::Box;
+use alloc::vec::Vec;
 
 use crate::encoding_type::EncodingType;
 use crate::error::Asn1Error;
 
 pub trait Encode {
+    /// 配置剛好大小的 Vec 並寫入完整 TLV。變動時間：分支只依編碼結構。
+    ///
+    /// 對照 bc 的 `GetEncoded(encoding)`；編碼失敗時傳回錯誤，不轉成 panic。
+    ///
+    /// # Examples
+    /// ```
+    /// use tc_asn1::{Asn1Boolean, Encode, EncodingType};
+    /// assert_eq!(Asn1Boolean(true).encode_to_vec(EncodingType::Der)?, [1, 1, 255]);
+    /// # Ok::<(), tc_asn1::Asn1Error>(())
+    /// ```
+    fn encode_to_vec(&self, rules: EncodingType) -> Result<Vec<u8>, Asn1Error> {
+        let mut out = alloc::vec![0; self.encoded_len(rules)];
+        let written = self.encode(rules, &mut out)?;
+        debug_assert_eq!(written, out.len(), "encoded_len 與 encode 不一致");
+        Ok(out)
+    }
+
     /// 沒有被重新標記時的識別位元組。
     fn tag(&self) -> &[u8];
 
@@ -85,4 +103,53 @@ pub(crate) fn write_len(length: usize, out: &mut [u8]) -> usize {
         *slot = (length >> (8 * (count - 1 - index))) as u8;
     }
     1 + count
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{Asn1Boolean, Asn1Object, Asn1Tagged, Depth, TryDecode};
+    use alloc::vec;
+
+    #[test]
+    fn vector_encoding_matches_manual_encoding_and_remains_available_through_trait_objects() {
+        let value: &dyn Encode = &Asn1Boolean(true);
+        assert_eq!(value.encode_to_vec(EncodingType::Der).unwrap(), [1, 1, 255]);
+        let tree = Asn1Object::Sequence(vec![Asn1Object::Sequence(vec![
+            Asn1Tagged::constructed(&[0x80], vec![Asn1Boolean(true).into()])
+                .unwrap()
+                .into(),
+        ])]);
+        for rules in [EncodingType::Der, EncodingType::Ber] {
+            let mut out = vec![0; tree.encoded_len(rules)];
+            let written = tree.encode(rules, &mut out).unwrap();
+            assert_eq!(written, out.len());
+            assert_eq!(tree.encode_to_vec(rules).unwrap(), out);
+        }
+    }
+
+    #[test]
+    fn vector_encoding_preserves_unknown_headers_and_returns_sorting_errors() {
+        let tree = Asn1Object::try_decode_exact(&[0x1f, 0x25, 0x81, 0], Depth::DEFAULT).unwrap();
+        assert_eq!(
+            tree.encode_to_vec(EncodingType::Der).unwrap(),
+            [0x1f, 0x25, 0x81, 0]
+        );
+        let value: &dyn Encode = &tree;
+        assert_eq!(
+            value.encode_to_vec(EncodingType::Der).unwrap(),
+            [0x1f, 0x25, 0x81, 0]
+        );
+        let input = [
+            0x1f, 0x82, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0, 0,
+        ];
+        let tree = Asn1Object::Set(vec![
+            Asn1Object::try_decode_exact(&input, Depth::DEFAULT).unwrap(),
+        ]);
+        assert_eq!(
+            tree.encode_to_vec(EncodingType::Der),
+            Err(Asn1Error::TagOverflow)
+        );
+        assert!(tree.encode_to_vec(EncodingType::Ber).is_ok());
+    }
 }

@@ -1,4 +1,5 @@
 //! 具名 constructed 值的解碼游標。
+use crate::asn1_ref::is_constructed_form;
 use crate::{Asn1Error, Asn1Ref, Children, Depth, TryDecode, TryDecodeContent};
 
 /// 依 schema 順序讀取欄位；成功路徑最後必須呼叫 [`Self::finish`]。
@@ -43,9 +44,13 @@ impl<'a> Fields<'a> {
         }
         Ok(value)
     }
-    /// tag 相同才取走欄位，否則保留給後續欄位。變動時間：分支只依編碼結構。
+    /// tag 相同或是其 constructed 形式才取走欄位，否則保留給後續欄位。
+    /// 型別不支援 constructed 時傳回錯誤。變動時間：分支只依編碼結構。
     pub fn optional<T: TryDecodeContent<'a>>(&mut self) -> Result<Option<T>, Asn1Error> {
-        if self.peek()?.is_some_and(|field| field.tag() == T::TAG) {
+        if self
+            .peek()?
+            .is_some_and(|field| field.tag() == T::TAG || is_constructed_form(field.tag(), T::TAG))
+        {
             self.required().map(Some)
         } else {
             Ok(None)
@@ -80,20 +85,28 @@ impl<'a> Fields<'a> {
         }
     }
     /// 驗證替換後的 tag，直接按 T 的內容規則解碼；不增加額外包裝層。
+    /// tag 為 primitive 時，也接受其 constructed 形式並解讀分段內容。
     /// 變動時間：分支只依編碼結構。
     pub fn implicit<T: TryDecodeContent<'a>>(&mut self, tag: &[u8]) -> Result<T, Asn1Error> {
         let child = self.next()?;
-        if child.tag() != tag {
-            return Err(Asn1Error::UnexpectedTag);
+        if child.tag() == tag {
+            T::try_decode_content(child.value(), self.depth)
+        } else if is_constructed_form(child.tag(), tag) {
+            T::try_decode_constructed(child.value(), self.depth)
+        } else {
+            Err(Asn1Error::UnexpectedTag)
         }
-        T::try_decode_content(child.value(), self.depth)
     }
-    /// 只有 tag 相符才取走 IMPLICIT 欄位。變動時間：分支只依編碼結構。
+    /// tag 相同或是其 constructed 形式才取走 IMPLICIT 欄位。
+    /// 變動時間：分支只依編碼結構。
     pub fn optional_implicit<T: TryDecodeContent<'a>>(
         &mut self,
         tag: &[u8],
     ) -> Result<Option<T>, Asn1Error> {
-        if self.peek()?.is_some_and(|field| field.tag() == tag) {
+        if self
+            .peek()?
+            .is_some_and(|field| field.tag() == tag || is_constructed_form(field.tag(), tag))
+        {
             self.implicit(tag).map(Some)
         } else {
             Ok(None)
@@ -222,7 +235,7 @@ mod tests {
     #[test]
     fn optional_tagged_fields_leave_nonmatching_values_and_decode_matching_values() {
         let mut fields = Fields::new(&[0xA0, 2, 5, 0, 0x80, 1, 255], Depth::DEFAULT).unwrap();
-        assert_eq!(fields.optional_implicit::<Asn1Boolean>(&[0x80]), Ok(None));
+        assert_eq!(fields.optional_implicit::<Asn1Boolean>(&[0x81]), Ok(None));
         assert_eq!(fields.optional_explicit::<Asn1Null>(&[0xA1]), Ok(None));
         assert_eq!(
             fields.optional_explicit::<Asn1Null>(&[0xA0]),
@@ -285,5 +298,92 @@ mod tests {
         let any = fields.explicit::<Asn1Any>(&[0xA0]).unwrap();
         assert_eq!(any.as_ref().tag(), &[5]);
         fields.finish().unwrap();
+    }
+    #[test]
+    fn optional_and_default_fields_accept_constructed_octets() {
+        use crate::Asn1OctetString;
+        let input = [0x24, 3, 4, 1, 0xaa];
+        let mut fields = Fields::new(&input, Depth::DEFAULT).unwrap();
+        assert_eq!(
+            fields.optional::<Asn1OctetString>().unwrap(),
+            Some(Asn1OctetString::new(&[0xaa]))
+        );
+        fields.finish().unwrap();
+        let mut fields = Fields::new(&input, Depth::DEFAULT).unwrap();
+        assert_eq!(
+            fields
+                .default(Asn1OctetString::new(&[]))
+                .unwrap()
+                .as_bytes(),
+            &[0xaa]
+        );
+        fields.finish().unwrap();
+    }
+
+    #[test]
+    fn implicit_constructed_fields_route_to_string_components_without_extra_wrapper_depth() {
+        use crate::Asn1OctetString;
+        let input = [0xa0, 3, 4, 1, 0xaa];
+        let mut fields = Fields::new(&input, Depth::new(2)).unwrap();
+        assert_eq!(
+            fields
+                .implicit::<Asn1OctetString>(&[0x80])
+                .unwrap()
+                .as_bytes(),
+            &[0xaa]
+        );
+        fields.finish().unwrap();
+        let mut fields = Fields::new(&input, Depth::new(2)).unwrap();
+        assert_eq!(
+            fields
+                .optional_implicit::<Asn1OctetString>(&[0x80])
+                .unwrap(),
+            Some(Asn1OctetString::new(&[0xaa]))
+        );
+        fields.finish().unwrap();
+        assert_eq!(
+            Fields::new(&input, Depth::new(1))
+                .unwrap()
+                .implicit::<Asn1OctetString>(&[0x80]),
+            Err(Asn1Error::DepthExceeded)
+        );
+        let high = [0xbf, 0x81, 0, 3, 4, 1, 0xaa];
+        assert!(
+            Fields::new(&high, Depth::DEFAULT)
+                .unwrap()
+                .optional_implicit::<Asn1OctetString>(&[0x9f, 0x81, 0])
+                .unwrap()
+                .is_some()
+        );
+        let mut fields = Fields::new(&input, Depth::DEFAULT).unwrap();
+        assert_eq!(
+            fields.optional_implicit::<Asn1OctetString>(&[0x81]),
+            Ok(None)
+        );
+        assert_eq!(fields.peek().unwrap().unwrap().tag(), &[0xa0]);
+    }
+
+    #[test]
+    fn optional_constructed_forms_of_unsupported_types_are_errors_instead_of_absent_fields() {
+        let input = [0x21, 3, 1, 1, 0xff];
+        assert_eq!(
+            Fields::new(&input, Depth::DEFAULT)
+                .unwrap()
+                .optional::<Asn1Boolean>(),
+            Err(Asn1Error::UnexpectedTag)
+        );
+        assert_eq!(
+            Fields::new(&input, Depth::DEFAULT)
+                .unwrap()
+                .default(Asn1Boolean(false)),
+            Err(Asn1Error::UnexpectedTag)
+        );
+        let input = [0xa0, 3, 1, 1, 0xff];
+        assert_eq!(
+            Fields::new(&input, Depth::DEFAULT)
+                .unwrap()
+                .optional_implicit::<Asn1Boolean>(&[0x80]),
+            Err(Asn1Error::UnexpectedTag)
+        );
     }
 }

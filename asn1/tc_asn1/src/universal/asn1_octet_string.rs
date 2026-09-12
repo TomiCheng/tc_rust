@@ -2,6 +2,7 @@
 
 use alloc::vec::Vec;
 
+use crate::asn1_ref::Children;
 use crate::depth::Depth;
 use crate::encoding_type::EncodingType;
 use crate::error::Asn1Error;
@@ -39,6 +40,18 @@ impl<'a> TryDecodeContent<'a> for Asn1OctetString {
     /// 任何內容都合法，包括空的。
     fn try_decode_content(value: &'a [u8], _: Depth) -> Result<Self, Asn1Error> {
         Ok(Self::new(value))
+    }
+
+    /// 串接 BER 分段字串，允許巢狀；重編一律使用 primitive 形式。
+    /// 變動時間：分支只依編碼結構。
+    fn try_decode_constructed(value: &'a [u8], depth: Depth) -> Result<Self, Asn1Error> {
+        let depth = depth.descend()?;
+        let mut bytes = Vec::new();
+        for child in Children::new(value, depth) {
+            let part = child?.decode_as::<Asn1OctetString>(depth)?;
+            bytes.extend_from_slice(&part.bytes);
+        }
+        Ok(Self { bytes })
     }
 }
 
@@ -88,5 +101,64 @@ mod tests {
             Asn1OctetString::try_decode(&[0x03, 0x01, 0x00], DEPTH),
             Err(Asn1Error::UnexpectedTag)
         );
+    }
+    #[test]
+    fn definite_and_indefinite_constructed_octets_flatten_and_encode_as_primitive() {
+        for input in [
+            &b"\x24\x06\x04\x01\xaa\x04\x01\xbb"[..],
+            &b"\x24\x80\x04\x01\xaa\x04\x01\xbb\x00\x00"[..],
+        ] {
+            let (used, value) = Asn1OctetString::try_decode(input, DEPTH).unwrap();
+            assert_eq!(used, input.len());
+            assert_eq!(value.as_bytes(), &[0xaa, 0xbb]);
+            for rules in [EncodingType::Der, EncodingType::Ber] {
+                assert_eq!(value.encode_to_vec(rules).unwrap(), [4, 2, 0xaa, 0xbb]);
+            }
+            let tree = crate::Asn1Object::try_decode(input, DEPTH).unwrap().1;
+            assert_eq!(tree, crate::Asn1Object::OctetString(value));
+            assert_eq!(
+                alloc::string::ToString::to_string(&tree),
+                "OCTET STRING (2 bytes) aabb\n"
+            );
+        }
+    }
+
+    #[test]
+    fn nested_constructed_octets_consume_one_depth_unit_per_layer() {
+        let input = b"\x24\x80\x24\x03\x04\x01\xaa\x04\x01\xbb\x00\x00";
+        assert_eq!(
+            Asn1OctetString::try_decode(input, Depth::new(1)),
+            Err(Asn1Error::DepthExceeded)
+        );
+        let (used, value) = Asn1OctetString::try_decode(input, Depth::new(2)).unwrap();
+        assert_eq!(used, input.len());
+        assert_eq!(value.as_bytes(), &[0xaa, 0xbb]);
+    }
+
+    #[test]
+    fn constructed_octets_reject_other_component_types_and_allow_no_components() {
+        assert_eq!(
+            Asn1OctetString::try_decode(b"\x24\x03\x02\x01\xaa", DEPTH),
+            Err(Asn1Error::UnexpectedTag)
+        );
+        assert_eq!(
+            Asn1OctetString::try_decode(b"\x24\x01\x04", DEPTH),
+            Err(Asn1Error::Truncated)
+        );
+        for input in [&b"\x24\x00"[..], &b"\x24\x80\x00\x00"[..]] {
+            let value = Asn1OctetString::try_decode_exact(input, DEPTH).unwrap();
+            assert!(value.as_bytes().is_empty());
+            assert_eq!(value.encode_to_vec(EncodingType::Der).unwrap(), [4, 0]);
+        }
+    }
+
+    #[test]
+    fn sequences_of_octets_accept_constructed_members() {
+        let value = crate::Asn1SequenceOf::<Asn1OctetString>::try_decode_exact(
+            b"\x30\x05\x24\x03\x04\x01\xaa",
+            DEPTH,
+        )
+        .unwrap();
+        assert_eq!(value.members(), &[Asn1OctetString::new(&[0xaa])]);
     }
 }

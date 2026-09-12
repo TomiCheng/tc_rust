@@ -1,6 +1,5 @@
 //! ASN.1 `SEQUENCE OF`。
 
-use alloc::boxed::Box;
 use alloc::vec::Vec;
 
 use crate::asn1_ref::Children;
@@ -13,14 +12,11 @@ use super::tag::SEQUENCE as TAG;
 
 /// 有序、同型別。三種規則下順序都不動，所以是最簡單的集合。
 ///
-/// `T = Box<dyn Encode>` 就是異質的編碼側 builder，見 [`Asn1Sequence`]。
+/// 異質結構可使用 [`crate::Asn1Object::Sequence`]。
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Asn1SequenceOf<T> {
     members: Vec<T>,
 }
-
-/// 異質的 `SEQUENCE`：只能編，不能解（解出來不知道要 box 誰）。
-pub type Asn1Sequence = Asn1SequenceOf<Box<dyn Encode>>;
 
 impl<T> Asn1SequenceOf<T> {
     pub fn new() -> Self {
@@ -63,13 +59,6 @@ impl<T> FromIterator<T> for Asn1SequenceOf<T> {
         Self {
             members: iter.into_iter().collect(),
         }
-    }
-}
-
-impl Asn1Sequence {
-    /// 異質 builder 的 `push`：任何能編碼的值。
-    pub fn push_boxed<E: Encode + 'static>(&mut self, member: E) {
-        self.members.push(Box::new(member));
     }
 }
 
@@ -145,21 +134,6 @@ mod tests {
             );
             assert_eq!(written, seq.encoded_len(rules));
         }
-    }
-
-    #[test]
-    fn the_heterogeneous_builder_encodes_mixed_members_in_order() {
-        let mut seq = Asn1Sequence::new();
-        seq.push_boxed(Asn1Null);
-        seq.push_boxed(Asn1Boolean(true));
-        seq.push_boxed(Asn1Integer::from(5_u8));
-
-        let mut out = [0_u8; 16];
-        let written = seq.encode(EncodingType::Der, &mut out).unwrap();
-        assert_eq!(
-            &out[..written],
-            &[0x30, 0x08, 0x05, 0x00, 0x01, 0x01, 0xFF, 0x02, 0x01, 0x05]
-        );
     }
 
     #[test]

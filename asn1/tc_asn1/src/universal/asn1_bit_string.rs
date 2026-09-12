@@ -2,6 +2,7 @@
 
 use alloc::vec::Vec;
 
+use crate::asn1_ref::Children;
 use crate::depth::Depth;
 use crate::encoding_type::EncodingType;
 use crate::error::Asn1Error;
@@ -76,6 +77,24 @@ impl<'a> TryDecodeContent<'a> for Asn1BitString {
             unused_bits: *unused_bits,
             bytes,
         })
+    }
+
+    /// 串接 BER 分段字串，允許巢狀；重編一律使用 primitive 形式。
+    /// 除最後一個成分外，未用位元數必須為零，否則回傳 `MalformedValue`。
+    /// 變動時間：分支只依編碼結構。
+    fn try_decode_constructed(value: &'a [u8], depth: Depth) -> Result<Self, Asn1Error> {
+        let depth = depth.descend()?;
+        let mut bytes = Vec::new();
+        let mut unused_bits = 0;
+        for child in Children::new(value, depth) {
+            if unused_bits != 0 {
+                return Err(Asn1Error::MalformedValue);
+            }
+            let part = child?.decode_as::<Asn1BitString>(depth)?;
+            unused_bits = part.unused_bits;
+            bytes.extend_from_slice(&part.bytes);
+        }
+        Ok(Self { bytes, unused_bits })
     }
 }
 
@@ -180,5 +199,67 @@ mod tests {
 
         let (_, decoded) = Asn1BitString::try_decode(&out[..written], DEPTH).unwrap();
         assert_eq!(decoded, original);
+    }
+    #[test]
+    fn constructed_bits_preserve_only_the_last_components_unused_bit_count() {
+        for input in [
+            &b"\x23\x08\x03\x02\x00\xf0\x03\x02\x04\xa0"[..],
+            &b"\x23\x80\x03\x02\x00\xf0\x03\x02\x04\xa0\x00\x00"[..],
+            &b"\x23\x0a\x03\x02\x00\xf0\x23\x04\x03\x02\x04\xa0"[..],
+        ] {
+            let (used, bits) = Asn1BitString::try_decode(input, DEPTH).unwrap();
+            assert_eq!(used, input.len());
+            assert_eq!(bits.as_bytes(), &[0xf0, 0xa0]);
+            assert_eq!(bits.unused_bits(), 4);
+            assert_eq!(bits.bit_len(), 12);
+            assert_eq!(
+                bits.encode_to_vec(EncodingType::Der).unwrap(),
+                [3, 3, 4, 0xf0, 0xa0]
+            );
+            let tree = crate::Asn1Object::try_decode_exact(input, DEPTH).unwrap();
+            assert_eq!(tree, crate::Asn1Object::BitString(bits));
+            assert_eq!(
+                alloc::string::ToString::to_string(&tree),
+                "BIT STRING (12 bits) f0a0\n"
+            );
+        }
+    }
+
+    #[test]
+    fn nonfinal_bit_components_must_be_byte_aligned_even_before_an_empty_component() {
+        for input in [
+            &b"\x23\x08\x03\x02\x04\xf0\x03\x02\x00\xa0"[..],
+            &b"\x23\x07\x03\x02\x04\xf0\x03\x01\x00"[..],
+            &b"\x23\x0a\x23\x04\x03\x02\x04\xf0\x03\x02\x00\xa0"[..],
+        ] {
+            assert_eq!(
+                Asn1BitString::try_decode(input, DEPTH),
+                Err(Asn1Error::MalformedValue)
+            );
+        }
+    }
+
+    #[test]
+    fn empty_constructed_bits_are_valid_but_wrong_components_and_excessive_depth_are_not() {
+        for input in [&b"\x23\x00"[..], &b"\x23\x80\x00\x00"[..]] {
+            let bits = Asn1BitString::try_decode_exact(input, DEPTH).unwrap();
+            assert_eq!(bits.bit_len(), 0);
+            assert_eq!(bits.unused_bits(), 0);
+            assert_eq!(bits.encode_to_vec(EncodingType::Der).unwrap(), [3, 1, 0]);
+        }
+        assert_eq!(
+            Asn1BitString::try_decode(b"\x23\x03\x04\x01\x00", DEPTH),
+            Err(Asn1Error::UnexpectedTag)
+        );
+        assert_eq!(
+            Asn1BitString::try_decode(b"\x23\x02\x03\x00", DEPTH),
+            Err(Asn1Error::MalformedValue)
+        );
+        let input = b"\x23\x02\x23\x00";
+        assert_eq!(
+            Asn1BitString::try_decode(input, Depth::new(1)),
+            Err(Asn1Error::DepthExceeded)
+        );
+        assert!(Asn1BitString::try_decode(input, Depth::new(2)).is_ok());
     }
 }

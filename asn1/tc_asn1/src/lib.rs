@@ -13,14 +13,14 @@
 //!
 //! 具名結構實作 [`Encode`]，透過共同的 tag、長度與內容契約編碼；解碼時可用
 //! [`Asn1Ref`] 借用檢視 TLV，或由 [`TryDecode`] 建立擁有內容的型別。
-//! 未知型別可由 [`Asn1Any`] 保留原始編碼。異質的 [`Asn1Set`] 使用 trait 物件，
+//! 未知型別可由 [`Asn1Any`] 保留原始編碼。異質結構可用 [`Asn1Object::Set`]，
 //! 同質的 [`Asn1SetOf`] 則使用泛型；兩者的 DER 排序規則不同。
 //!
 //! 沒有 schema 時，用 [`Asn1Object`] 把不認識的緩衝區整棵解開，輸出樹狀文字或
 //! 比對節點；尚未建立具名型別時，也能直接拼樹編碼。具名結構仍走 [`Fields`]。
 //! [`Asn1Any`] 保留原始位元組，樹則解讀值；已解讀部分重編會正規化，驗簽章
 //! 必須用原位元組。樹的 [`Asn1Object::Unknown`] 保留未支援的 universal 編碼，
-//! 包括 BER constructed 字串與未指派號碼；這些不會正規化，因此樹的往返比較
+//! 包括 BER constructed 字元字串與未指派號碼；這些不會正規化，因此樹的往返比較
 //! 不能代替完整的 DER 驗證。此樹不歸零，只能存公開資料。
 //!
 //! # 具名結構怎麼寫
@@ -38,6 +38,9 @@
 //! 寬鬆解。需要「輸入必須是 DER」的地方用往返比較 —— 重編成 DER 後與原位元組
 //! 相等才算數。這成立是因為 DER 的定義就是一個值只有一種合法編碼，所以不需要
 //! 第二個嚴格解碼器。
+//!
+//! BER constructed OCTET STRING 與 BIT STRING 會串接成一般字串，重編一律
+//! 使用 primitive 形式；[`TryDecode::try_decode_der`] 會用往返比較辨識這項差異。
 //!
 //! **驗簽章要用原始位元組**，不能用重編出來的。理由見 [`TryDecode`]。
 //!
@@ -104,8 +107,7 @@ pub use universal::{
     Asn1Duration, Asn1EmbeddedPdv, Asn1Enumerated, Asn1External, Asn1GeneralString,
     Asn1GeneralizedTime, Asn1GraphicString, Asn1Ia5String, Asn1Integer, Asn1Null,
     Asn1NumericString, Asn1ObjectDescriptor, Asn1OctetString, Asn1Oid, Asn1OidIri,
-    Asn1PrintableString, Asn1Real, Asn1RelativeOid, Asn1RelativeOidIri, Asn1Sequence,
-    Asn1SequenceOf, Asn1Set, Asn1SetOf, Asn1TeletexString, Asn1Time, Asn1TimeOfDay,
-    Asn1UniversalString, Asn1UtcTime, Asn1Utf8String, Asn1VideotexString, Asn1VisibleString,
-    ExternalEncoding, PdvIdentification,
+    Asn1PrintableString, Asn1Real, Asn1RelativeOid, Asn1RelativeOidIri, Asn1SequenceOf, Asn1SetOf,
+    Asn1TeletexString, Asn1Time, Asn1TimeOfDay, Asn1UniversalString, Asn1UtcTime, Asn1Utf8String,
+    Asn1VideotexString, Asn1VisibleString, ExternalEncoding, PdvIdentification,
 };

@@ -83,13 +83,9 @@ impl Extension {
     /// 剝掉 OCTET STRING 的殼，把裡面的 DER 解成 `T`。要求剛好用完。
     ///
     /// `T` 由 `extn_id` 決定 —— 這個型別不知道對應表，呼叫端知道。
+    /// 變動時間：分支只依編碼結構；此處只驗證完整消耗，不驗證 DER 正規形式。
     pub fn extn_value_as<'a, T: TryDecode<'a>>(&'a self, depth: Depth) -> Result<T, Asn1Error> {
-        let bytes = self.extn_value.as_bytes();
-        let (used, value) = T::try_decode(bytes, depth)?;
-        if used != bytes.len() {
-            return Err(Asn1Error::TrailingData);
-        }
-        Ok(value)
+        T::try_decode_exact(self.extn_value.as_bytes(), depth)
     }
 }
 

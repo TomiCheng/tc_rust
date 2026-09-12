@@ -140,15 +140,8 @@ crate::impl_sequence_encode!(Asn1External, TAG);
 mod tests {
     use super::*;
     use alloc::string::ToString;
-    use alloc::vec::Vec;
 
     const DEPTH: Depth = Depth::DEFAULT;
-
-    fn encode(e: &Asn1External) -> Vec<u8> {
-        let mut out = alloc::vec![0_u8; e.encoded_len(EncodingType::Der)];
-        e.encode(EncodingType::Der, &mut out).unwrap();
-        out
-    }
 
     #[test]
     fn octet_aligned_with_a_direct_reference_round_trips() {
@@ -160,7 +153,7 @@ mod tests {
         assert_eq!(e.direct_reference().unwrap().to_string(), "1.2.3");
         assert!(e.indirect_reference().is_none());
         assert!(matches!(e.encoding(), ExternalEncoding::OctetAligned(s) if s.as_bytes() == b"AB"));
-        assert_eq!(encode(&e), input);
+        assert_eq!(e.encode_to_vec(EncodingType::Der).unwrap(), input);
     }
 
     #[test]
@@ -175,7 +168,7 @@ mod tests {
             panic!("應該是 [0]");
         };
         assert_eq!(inner.tag(), &[0x02]);
-        assert_eq!(encode(&e), input);
+        assert_eq!(e.encode_to_vec(EncodingType::Der).unwrap(), input);
     }
 
     #[test]
@@ -191,7 +184,7 @@ mod tests {
         assert_eq!(u8::try_from(e.indirect_reference().unwrap()), Ok(7));
         assert_eq!(e.data_value_descriptor().unwrap().as_bytes(), b"x");
         assert!(matches!(e.encoding(), ExternalEncoding::Arbitrary(b) if b.as_bytes() == [0xA0]));
-        assert_eq!(encode(&e), input);
+        assert_eq!(e.encode_to_vec(EncodingType::Der).unwrap(), input);
     }
 
     #[test]
@@ -203,7 +196,7 @@ mod tests {
             ExternalEncoding::SingleAsn1Type(Box::new(Asn1Integer::from(5_u8).into())),
         );
         assert_eq!(
-            encode(&e),
+            e.encode_to_vec(EncodingType::Der).unwrap(),
             [0x28, 0x08, 0x02, 0x01, 0x07, 0xA0, 0x03, 0x02, 0x01, 0x05]
         );
     }

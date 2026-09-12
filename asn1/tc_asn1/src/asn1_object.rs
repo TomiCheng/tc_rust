@@ -35,8 +35,7 @@ use alloc::vec::Vec;
 /// let (used, tree) = Asn1Object::try_decode(&input, Depth::DEFAULT).unwrap();
 /// assert_eq!(used, input.len());
 /// assert_eq!(tree.to_string(), "SEQUENCE\n  INTEGER 42\n  NULL\n");
-/// let mut out = vec![0; tree.encoded_len(EncodingType::Der)];
-/// tree.encode(EncodingType::Der, &mut out).unwrap();
+/// let out = tree.encode_to_vec(EncodingType::Der).unwrap();
 /// assert_eq!(out, input);
 /// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -78,7 +77,7 @@ pub enum Asn1Object {
     RelativeOidIri(Asn1RelativeOidIri),
     /// 非 universal 類別；constructed 解成子元素，primitive 保留內容。
     Tagged(Asn1Tagged),
-    /// 未支援的 universal 編碼，例如 BER constructed 字串或未指派號碼。
+    /// 未支援的 universal 編碼，例如 BER constructed 字元字串（UTF8String 等）或未指派號碼。
     /// dump 遇到超過 `u64` 的號碼時，以 `tag=` 加完整十六進位識別位元組顯示。
     Unknown(Asn1Any),
 }
@@ -213,6 +212,14 @@ impl Asn1Object {
             tag::OCTET_STRING => {
                 Self::OctetString(Asn1OctetString::try_decode_content(element.value(), depth)?)
             }
+            [0x24] => Self::OctetString(Asn1OctetString::try_decode_constructed(
+                element.value(),
+                depth,
+            )?),
+            [0x23] => Self::BitString(Asn1BitString::try_decode_constructed(
+                element.value(),
+                depth,
+            )?),
             tag::NULL => {
                 Asn1Null::try_decode_content(element.value(), depth)?;
                 Self::Null
@@ -580,8 +587,8 @@ mod tests {
     fn unknown_universal_elements_preserve_their_full_encoding_even_under_der() {
         for (input, text) in [
             (
-                &b"\x24\x03\x04\x01\xaa"[..],
-                "[UNIVERSAL 4] constructed (3 bytes) 0401aa\n",
+                &b"\x2c\x03\x0c\x01\x41"[..],
+                "[UNIVERSAL 12] constructed (3 bytes) 0c0141\n",
             ),
             (&b"\x1f\x25\x00"[..], "[UNIVERSAL 37] (0 bytes)\n"),
             (
@@ -589,8 +596,8 @@ mod tests {
                 "[UNIVERSAL 37] (1 bytes) aa\n",
             ),
             (
-                &b"\x24\x80\x04\x01\xaa\x00\x00"[..],
-                "[UNIVERSAL 4] constructed (3 bytes) 0401aa\n",
+                &b"\x2c\x80\x0c\x01\x41\x00\x00"[..],
+                "[UNIVERSAL 12] constructed (3 bytes) 0c0141\n",
             ),
         ] {
             let tree = decode(input);
@@ -835,5 +842,44 @@ mod tests {
             .map(|rest| rest.split(':').next().unwrap())
             .collect();
         assert_eq!(declared, names);
+    }
+    #[test]
+    fn tree_sets_order_choice_tags_differently_from_typed_sets_of_choices() {
+        let first = Asn1Tagged::constructed(&[0xa0], vec![Asn1Object::Sequence(vec![])]).unwrap();
+        let second = Asn1Tagged::primitive(&[0x81], &[5]).unwrap();
+        let tree = Asn1Object::Set(vec![second.clone().into(), first.clone().into()]);
+        assert_eq!(
+            tree.encode_to_vec(EncodingType::Der).unwrap(),
+            [0x31, 7, 0xa0, 2, 0x30, 0, 0x81, 1, 5]
+        );
+        assert_eq!(
+            tree.encode_to_vec(EncodingType::Ber).unwrap(),
+            [0x31, 7, 0x81, 1, 5, 0xa0, 2, 0x30, 0]
+        );
+        let set_of = Asn1SetOf::from(vec![first, second]);
+        assert_eq!(
+            set_of.encode_to_vec(EncodingType::Der).unwrap(),
+            [0x31, 7, 0x81, 1, 5, 0xa0, 2, 0x30, 0]
+        );
+    }
+
+    #[test]
+    fn tree_sets_order_classes_before_high_tag_numbers() {
+        let values = [
+            &[0xc0, 0][..],
+            &[0x9f, 0x81, 0x80, 0, 0],
+            &[0x9f, 0xff, 0x7f, 0],
+            &[0x5f, 0x82, 0, 0],
+        ]
+        .into_iter()
+        .map(|input| Asn1Object::try_decode_exact(input, Depth::DEFAULT).unwrap())
+        .collect();
+        let tree = Asn1Object::Set(values);
+        assert_eq!(
+            tree.encode_to_vec(EncodingType::Der).unwrap(),
+            [
+                0x31, 15, 0x5f, 0x82, 0, 0, 0x9f, 0xff, 0x7f, 0, 0x9f, 0x81, 0x80, 0, 0, 0xc0, 0,
+            ]
+        );
     }
 }
