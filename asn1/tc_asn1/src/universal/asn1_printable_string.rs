@@ -3,7 +3,7 @@
 use alloc::string::String;
 
 use crate::depth::Depth;
-use crate::encoding_type::EncodingType;
+use crate::encoding_options::EncodingOptions;
 use crate::error::Asn1Error;
 use crate::traits::{DecodeContent, Encode};
 
@@ -64,10 +64,10 @@ impl Encode for Asn1PrintableString {
     fn tag(&self) -> &[u8] {
         TAG
     }
-    fn content_len(&self, _: EncodingType) -> usize {
+    fn content_len(&self, _: EncodingOptions) -> usize {
         self.text.len()
     }
-    fn encode_content(&self, _: EncodingType, out: &mut [u8]) -> Result<usize, Asn1Error> {
+    fn encode_content(&self, _: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         out[..self.text.len()].copy_from_slice(self.text.as_bytes());
         Ok(self.text.len())
     }
@@ -107,7 +107,7 @@ mod tests {
         assert_eq!(s.as_str(), "TW");
 
         let mut out = [0_u8; 8];
-        let written = s.encode(EncodingType::Der, &mut out).unwrap();
+        let written = s.encode(EncodingOptions::Der, &mut out).unwrap();
         assert_eq!(&out[..written], &input);
     }
 }

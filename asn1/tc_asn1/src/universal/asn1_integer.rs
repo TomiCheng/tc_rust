@@ -3,7 +3,7 @@
 use alloc::vec::Vec;
 
 use crate::depth::Depth;
-use crate::encoding_type::EncodingType;
+use crate::encoding_options::EncodingOptions;
 use crate::error::Asn1Error;
 use crate::traits::{DecodeContent, Encode};
 
@@ -148,10 +148,10 @@ impl Encode for Asn1Integer {
     fn tag(&self) -> &[u8] {
         TAG
     }
-    fn content_len(&self, _: EncodingType) -> usize {
+    fn content_len(&self, _: EncodingOptions) -> usize {
         self.value.len()
     }
-    fn encode_content(&self, _: EncodingType, out: &mut [u8]) -> Result<usize, Asn1Error> {
+    fn encode_content(&self, _: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         out[..self.value.len()].copy_from_slice(&self.value);
         Ok(self.value.len())
     }
@@ -279,16 +279,16 @@ mod tests {
         assert_eq!(u64::try_from(&n), Ok(256));
 
         let mut out = [0_u8; 8];
-        let written = n.encode(EncodingType::Der, &mut out).unwrap();
+        let written = n.encode(EncodingOptions::Der, &mut out).unwrap();
         assert_eq!(&out[..written], &input);
-        assert_eq!(written, n.encoded_len(EncodingType::Der));
+        assert_eq!(written, n.encoded_len(EncodingOptions::Der));
     }
 
     #[test]
     fn implicit_tagging_writes_the_callers_tag_over_the_same_contents() {
         let mut out = [0_u8; 8];
         let written = Asn1Integer::from(5_u64)
-            .encode_tagged(&[0x80], EncodingType::Der, &mut out)
+            .encode_tagged(&[0x80], EncodingOptions::Der, &mut out)
             .unwrap();
         assert_eq!(&out[..written], &[0x80, 0x01, 0x05]);
     }

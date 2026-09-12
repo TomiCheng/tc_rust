@@ -3,7 +3,7 @@
 use alloc::string::String;
 
 use crate::depth::Depth;
-use crate::encoding_type::EncodingType;
+use crate::encoding_options::EncodingOptions;
 use crate::error::Asn1Error;
 use crate::traits::{DecodeContent, Encode};
 
@@ -68,12 +68,12 @@ impl Encode for Asn1VisibleString {
     }
 
     /// 回傳內容長度。常數時間：讀取已儲存的字串長度。
-    fn content_len(&self, _: EncodingType) -> usize {
+    fn content_len(&self, _: EncodingOptions) -> usize {
         self.text.len()
     }
 
     /// 原樣寫入已驗證的內容。變動時間：複製量由內容長度決定。
-    fn encode_content(&self, _: EncodingType, out: &mut [u8]) -> Result<usize, Asn1Error> {
+    fn encode_content(&self, _: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         out[..self.text.len()].copy_from_slice(self.text.as_bytes());
         Ok(self.text.len())
     }
@@ -87,7 +87,10 @@ mod tests {
     #[test]
     fn printable_ascii_round_trips_under_both_encoding_rules() {
         let value = Asn1VisibleString::new("A 9~").unwrap();
-        for rules in [EncodingType::Ber, EncodingType::Der] {
+        for rules in [
+            EncodingOptions::Ber(crate::LengthForm::Definite),
+            EncodingOptions::Der,
+        ] {
             let mut out = [0; 6];
             assert_eq!(value.encode(rules, &mut out), Ok(out.len()));
             assert_eq!(out, [0x1A, 4, b'A', b' ', b'9', b'~']);
@@ -131,7 +134,7 @@ mod tests {
         assert_eq!(value, Asn1VisibleString::default());
         assert_eq!(value.as_str(), "");
         let mut out = [0; 2];
-        assert_eq!(value.encode(EncodingType::Der, &mut out), Ok(2));
+        assert_eq!(value.encode(EncodingOptions::Der, &mut out), Ok(2));
         assert_eq!(out, [0x1A, 0]);
         assert_eq!(
             Asn1VisibleString::try_decode(&out, Depth::DEFAULT),

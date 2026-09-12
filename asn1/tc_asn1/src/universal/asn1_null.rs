@@ -1,7 +1,7 @@
 //! ASN.1 `NULL`。
 
 use crate::depth::Depth;
-use crate::encoding_type::EncodingType;
+use crate::encoding_options::EncodingOptions;
 use crate::error::Asn1Error;
 use crate::traits::{DecodeContent, Encode};
 
@@ -26,10 +26,10 @@ impl Encode for Asn1Null {
     fn tag(&self) -> &[u8] {
         TAG
     }
-    fn content_len(&self, _: EncodingType) -> usize {
+    fn content_len(&self, _: EncodingOptions) -> usize {
         0
     }
-    fn encode_content(&self, _: EncodingType, _: &mut [u8]) -> Result<usize, Asn1Error> {
+    fn encode_content(&self, _: EncodingOptions, _: &mut [u8]) -> Result<usize, Asn1Error> {
         Ok(0)
     }
 }
@@ -42,10 +42,10 @@ mod tests {
     #[test]
     fn null_encodes_as_the_two_byte_sequence() {
         let mut out = [0xAA_u8; 4];
-        let written = Asn1Null.encode(EncodingType::Der, &mut out).unwrap();
+        let written = Asn1Null.encode(EncodingOptions::Der, &mut out).unwrap();
         assert_eq!(&out[..written], &[0x05, 0x00]);
         assert_eq!(out[2], 0xAA, "只寫前兩個位元組");
-        assert_eq!(written, Asn1Null.encoded_len(EncodingType::Der));
+        assert_eq!(written, Asn1Null.encoded_len(EncodingOptions::Der));
     }
 
     const DEPTH: Depth = Depth::DEFAULT;

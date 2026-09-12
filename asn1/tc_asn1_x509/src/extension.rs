@@ -15,7 +15,7 @@
 use tc_asn1::tag::SEQUENCE as TAG;
 use tc_asn1::{
     Asn1Boolean, Asn1Error, Asn1OctetString, Asn1Oid, Decode, DecodeContent, Depth, Encode,
-    EncodingType, Fields, SequenceFields,
+    EncodingOptions, Fields, SequenceFields,
 };
 
 /// 一個 X.509 extension。
@@ -23,7 +23,7 @@ use tc_asn1::{
 /// # 範例
 ///
 /// ```
-/// use tc_asn1::{Asn1Boolean, Asn1SequenceOf, Depth, Encode, EncodingType, Decode};
+/// use tc_asn1::{Asn1Boolean, Asn1SequenceOf, Depth, Encode, EncodingOptions, Decode};
 /// use tc_asn1_x509::Extension;
 ///
 /// // basicConstraints，critical，內容是 SEQUENCE { cA TRUE }
@@ -41,8 +41,8 @@ use tc_asn1::{
 /// assert_eq!(inner.members(), &[Asn1Boolean(true)]);
 ///
 /// // 重編回原位元組
-/// let mut out = vec![0_u8; ext.encoded_len(EncodingType::Der)];
-/// ext.encode(EncodingType::Der, &mut out)?;
+/// let mut out = vec![0_u8; ext.encoded_len(EncodingOptions::Der)];
+/// ext.encode(EncodingOptions::Der, &mut out)?;
 /// assert_eq!(out, bytes);
 /// # Ok::<(), tc_asn1::Asn1Error>(())
 /// ```
@@ -112,7 +112,7 @@ impl<'a> DecodeContent<'a> for Extension {
 
 impl SequenceFields for Extension {
     /// 變動時間：分支只依編碼結構。
-    fn fields(&self, _: EncodingType, sink: &mut dyn FnMut(&dyn Encode)) {
+    fn fields(&self, _: EncodingOptions, sink: &mut dyn FnMut(&dyn Encode)) {
         sink(&self.extn_id);
         if self.critical {
             sink(&Asn1Boolean(true));
@@ -139,13 +139,13 @@ mod tests {
         ];
         cer.extend_from_slice(&[0xaa; 1000]);
         cer.extend_from_slice(&[4, 1, 0xaa, 0, 0, 0, 0]);
-        assert_eq!(value.encoded_len(EncodingType::Cer), cer.len());
-        assert_eq!(value.encode_to_vec(EncodingType::Cer).unwrap(), cer);
+        assert_eq!(value.encoded_len(EncodingOptions::Cer), cer.len());
+        assert_eq!(value.encode_to_vec(EncodingOptions::Cer).unwrap(), cer);
         let decoded = Extension::try_decode_exact(&cer, DEPTH).unwrap();
         assert_eq!(decoded.extn_id(), value.extn_id());
         assert_eq!(decoded.critical(), value.critical());
         assert_eq!(decoded.extn_value(), value.extn_value());
-        assert_eq!(decoded.encode_to_vec(EncodingType::Cer).unwrap(), cer);
+        assert_eq!(decoded.encode_to_vec(EncodingOptions::Cer).unwrap(), cer);
         assert!(matches!(
             Extension::try_decode_der(&cer, DEPTH),
             Err(Asn1Error::NotDer)
@@ -154,8 +154,8 @@ mod tests {
             0x30, 0x82, 3, 0xf2, 6, 3, 0x55, 0x1d, 0x0e, 4, 0x82, 3, 0xe9
         ];
         der.extend_from_slice(&[0xaa; 1001]);
-        assert_eq!(value.encode_to_vec(EncodingType::Der).unwrap(), der);
-        assert_eq!(decoded.encode_to_vec(EncodingType::Der).unwrap(), der);
+        assert_eq!(value.encode_to_vec(EncodingOptions::Der).unwrap(), der);
+        assert_eq!(decoded.encode_to_vec(EncodingOptions::Der).unwrap(), der);
     }
 
     /// subjectKeyIdentifier，非 critical：critical 省略，extnValue 是 OCTET STRING 包 OCTET STRING。
@@ -168,8 +168,8 @@ mod tests {
     }
 
     fn encode(ext: &Extension) -> Vec<u8> {
-        let mut out = alloc::vec![0_u8; ext.encoded_len(EncodingType::Der)];
-        ext.encode(EncodingType::Der, &mut out).unwrap();
+        let mut out = alloc::vec![0_u8; ext.encoded_len(EncodingOptions::Der)];
+        ext.encode(EncodingOptions::Der, &mut out).unwrap();
         out
     }
 

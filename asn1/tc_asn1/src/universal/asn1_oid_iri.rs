@@ -5,7 +5,7 @@
 //! §7.5.3 允許實作者容忍未來可能解除保留的字元；這裡接受列出的純量範圍。
 
 use super::tag;
-use crate::{Asn1Error, DecodeContent, Depth, Encode, EncodingType};
+use crate::{Asn1Error, DecodeContent, Depth, Encode, EncodingOptions};
 use alloc::string::String;
 
 fn valid_label(label: &str) -> bool {
@@ -71,11 +71,15 @@ macro_rules! iri {
                 tag::$tag
             }
             /// 常數時間：讀取 UTF-8 位元組長度。
-            fn content_len(&self, _: EncodingType) -> usize {
+            fn content_len(&self, _: EncodingOptions) -> usize {
                 self.text.len()
             }
             /// 變動時間：依 UTF-8 位元組長度複製。
-            fn encode_content(&self, _: EncodingType, out: &mut [u8]) -> Result<usize, Asn1Error> {
+            fn encode_content(
+                &self,
+                _: EncodingOptions,
+                out: &mut [u8],
+            ) -> Result<usize, Asn1Error> {
                 out[..self.text.len()].copy_from_slice(self.text.as_bytes());
                 Ok(self.text.len())
             }
@@ -125,8 +129,8 @@ mod tests {
             "/a\u{a0}b",
         ] {
             let value = Asn1OidIri::new(text).unwrap();
-            let mut out = alloc::vec![0; value.encoded_len(EncodingType::Der)];
-            value.encode(EncodingType::Der, &mut out).unwrap();
+            let mut out = alloc::vec![0; value.encoded_len(EncodingOptions::Der)];
+            value.encode(EncodingOptions::Der, &mut out).unwrap();
             assert_eq!(&out[..2], &[0x1F, 0x23]);
             assert_eq!(
                 Asn1OidIri::try_decode(&out, Depth::DEFAULT).unwrap().1,
@@ -134,8 +138,11 @@ mod tests {
             );
         }
         let value = Asn1RelativeOidIri::new("台北/1").unwrap();
-        let mut out = alloc::vec![0; value.encoded_len(EncodingType::Ber)];
-        value.encode(EncodingType::Ber, &mut out).unwrap();
+        let mut out =
+            alloc::vec![0; value.encoded_len(EncodingOptions::Ber(crate::LengthForm::Definite))];
+        value
+            .encode(EncodingOptions::Ber(crate::LengthForm::Definite), &mut out)
+            .unwrap();
         assert_eq!(&out[..2], &[0x1F, 0x24]);
         assert_eq!(
             Asn1RelativeOidIri::try_decode(&out, Depth::DEFAULT)

@@ -508,12 +508,12 @@ mod tests {
             "[UNIVERSAL tag=1f82808080808080808000] (0 bytes)\n"
         );
         assert_eq!(
-            universal::encode_member(&tree, EncodingType::Der).unwrap(),
+            universal::encode_member(&tree, EncodingOptions::Der).unwrap(),
             input
         );
         let set = Asn1Object::Set(vec![tree]);
         assert_eq!(
-            universal::encode_member(&set, EncodingType::Der),
+            universal::encode_member(&set, EncodingOptions::Der),
             Err(Asn1Error::TagOverflow)
         );
     }

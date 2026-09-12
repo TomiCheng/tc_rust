@@ -4,7 +4,7 @@ use alloc::vec::Vec;
 
 use crate::asn1_ref::Children;
 use crate::depth::Depth;
-use crate::encoding_type::EncodingType;
+use crate::encoding_options::EncodingOptions;
 use crate::error::Asn1Error;
 use crate::traits::{DecodeContent, Encode};
 
@@ -79,10 +79,10 @@ impl<T: Encode> Encode for Asn1SequenceOf<T> {
     fn tag(&self) -> &[u8] {
         TAG
     }
-    fn content_len(&self, rules: EncodingType) -> usize {
+    fn content_len(&self, rules: EncodingOptions) -> usize {
         self.members.iter().map(|m| m.encoded_len(rules)).sum()
     }
-    fn encode_content(&self, rules: EncodingType, out: &mut [u8]) -> Result<usize, Asn1Error> {
+    fn encode_content(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         let mut at = 0;
         for member in &self.members {
             at += member.encode(rules, &mut out[at..])?;
@@ -124,7 +124,10 @@ mod tests {
         seq.push(Asn1Integer::from(2_u8));
         seq.push(Asn1Integer::from(1_u8));
 
-        for rules in [EncodingType::Ber, EncodingType::Der] {
+        for rules in [
+            EncodingOptions::Ber(crate::LengthForm::Definite),
+            EncodingOptions::Der,
+        ] {
             let mut out = [0_u8; 16];
             let written = seq.encode(rules, &mut out).unwrap();
             assert_eq!(
@@ -143,7 +146,7 @@ mod tests {
         assert!(seq.is_empty());
 
         let mut out = [0_u8; 4];
-        assert_eq!(seq.encode(EncodingType::Der, &mut out).unwrap(), 2);
+        assert_eq!(seq.encode(EncodingOptions::Der, &mut out).unwrap(), 2);
         assert_eq!(&out[..2], &[0x30, 0x00]);
     }
 
@@ -164,7 +167,7 @@ mod tests {
         let original: Asn1SequenceOf<Asn1Integer> =
             [1_u8, 2, 3].into_iter().map(Asn1Integer::from).collect();
         let mut out = [0_u8; 16];
-        let written = original.encode(EncodingType::Der, &mut out).unwrap();
+        let written = original.encode(EncodingOptions::Der, &mut out).unwrap();
         let (_, decoded) =
             Asn1SequenceOf::<Asn1Integer>::try_decode(&out[..written], DEPTH).unwrap();
         assert_eq!(decoded, original);

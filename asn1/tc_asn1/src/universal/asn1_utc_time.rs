@@ -10,7 +10,7 @@ use core::fmt;
 use super::date_time::{DateTime, digits, two_digits};
 use super::tag::UTC_TIME as TAG;
 use crate::depth::Depth;
-use crate::encoding_type::EncodingType;
+use crate::encoding_options::EncodingOptions;
 use crate::error::Asn1Error;
 use crate::traits::{DecodeContent, Encode};
 
@@ -95,10 +95,10 @@ impl Encode for Asn1UtcTime {
     fn tag(&self) -> &[u8] {
         TAG
     }
-    fn content_len(&self, _: EncodingType) -> usize {
+    fn content_len(&self, _: EncodingOptions) -> usize {
         LEN
     }
-    fn encode_content(&self, _: EncodingType, out: &mut [u8]) -> Result<usize, Asn1Error> {
+    fn encode_content(&self, _: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         out[0..2].copy_from_slice(&digits((self.0.year % 100) as u8));
         self.0
             .write_fields((&mut out[2..12]).try_into().expect("十個位元組"));
@@ -213,7 +213,7 @@ mod tests {
     fn encode_and_decode_round_trip() {
         let t = Asn1UtcTime::new(2049, 12, 31, 23, 59, 59).unwrap();
         let mut out = [0_u8; 16];
-        let written = t.encode(EncodingType::Der, &mut out).unwrap();
+        let written = t.encode(EncodingOptions::Der, &mut out).unwrap();
         assert_eq!(&out[..written], b"\x17\x0D491231235959Z");
 
         let (_, back) = Asn1UtcTime::try_decode(&out[..written], DEPTH).unwrap();

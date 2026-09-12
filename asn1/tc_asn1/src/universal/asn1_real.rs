@@ -9,7 +9,7 @@ use super::{
     real_number::{Exponent, Magnitude},
     tag::REAL as TAG,
 };
-use crate::{Asn1Error, DecodeContent, Depth, Encode, EncodingType};
+use crate::{Asn1Error, DecodeContent, Depth, Encode, EncodingOptions};
 use alloc::{vec, vec::Vec};
 
 /// 已正規化的 REAL 編碼。相等比較採 DER 表示：二進位與十進位表示保持區別；
@@ -17,12 +17,12 @@ use alloc::{vec, vec::Vec};
 ///
 /// # Examples
 /// ```
-/// use tc_asn1::{Asn1Real, Asn1Error, Encode, EncodingType};
+/// use tc_asn1::{Asn1Real, Asn1Error, Encode, EncodingOptions};
 /// let exact = Asn1Real::from_decimal_parts(false, "1", "-1").unwrap();
 /// assert_eq!(f64::try_from(&exact), Err(Asn1Error::InexactValue));
 /// let half = Asn1Real::from(1.5_f64);
 /// let mut out = [0; 5];
-/// half.encode(EncodingType::Der, &mut out).unwrap();
+/// half.encode(EncodingOptions::Der, &mut out).unwrap();
 /// assert_eq!(out, [9, 3, 0x80, 0xFF, 3]);
 /// assert_eq!(f64::try_from(&half), Ok(1.5));
 /// ```
@@ -363,11 +363,11 @@ impl Encode for Asn1Real {
         TAG
     }
     /// 常數時間：已保存正規內容。
-    fn content_len(&self, _: EncodingType) -> usize {
+    fn content_len(&self, _: EncodingOptions) -> usize {
         self.contents.len()
     }
     /// 變動時間：BER 與 DER 都寫出保存的正規內容。
-    fn encode_content(&self, _: EncodingType, out: &mut [u8]) -> Result<usize, Asn1Error> {
+    fn encode_content(&self, _: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         out[..self.contents.len()].copy_from_slice(&self.contents);
         Ok(self.contents.len())
     }
@@ -450,8 +450,8 @@ mod tests {
         ] {
             let real = Asn1Real::from(value);
             assert_eq!(f64::try_from(&real).unwrap().to_bits(), value.to_bits());
-            let mut out = vec![0; real.encoded_len(EncodingType::Der)];
-            let written = real.encode(EncodingType::Der, &mut out).unwrap();
+            let mut out = vec![0; real.encoded_len(EncodingOptions::Der)];
+            let written = real.encode(EncodingOptions::Der, &mut out).unwrap();
             assert_eq!(
                 Asn1Real::try_decode(&out, Depth::DEFAULT),
                 Ok((written, real))

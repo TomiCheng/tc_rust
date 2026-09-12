@@ -16,7 +16,7 @@ use core::fmt;
 
 use tc_asn1::tag::{NULL, SEQUENCE as TAG};
 use tc_asn1::{
-    Asn1Any, Asn1Error, Asn1Null, Asn1Oid, DecodeContent, Depth, Encode, EncodingType, Fields,
+    Asn1Any, Asn1Error, Asn1Null, Asn1Oid, DecodeContent, Depth, Encode, EncodingOptions, Fields,
     SequenceFields,
 };
 
@@ -58,14 +58,14 @@ impl fmt::Debug for AlgorithmParameters {
 /// 建構時參數直接放型別化的值；解碼時參數不解讀，要用時照 `algorithm` 決定型別：
 ///
 /// ```
-/// use tc_asn1::{Depth, Encode, EncodingType, Decode};
+/// use tc_asn1::{Depth, Encode, EncodingOptions, Decode};
 /// use tc_asn1_x509::{AlgorithmIdentifier, AlgorithmParameters};
 ///
 /// let alg = AlgorithmIdentifier::with_null("1.2.840.113549.1.1.1".parse()?); // rsaEncryption
 ///
 /// // 先問要多大，再配剛好的緩衝
-/// let mut out = vec![0_u8; alg.encoded_len(EncodingType::Der)];
-/// alg.encode(EncodingType::Der, &mut out)?;
+/// let mut out = vec![0_u8; alg.encoded_len(EncodingOptions::Der)];
+/// alg.encode(EncodingOptions::Der, &mut out)?;
 /// assert_eq!(
 ///     out,
 ///     [0x30, 0x0D, 0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x01, 0x01, 0x05, 0x00],
@@ -162,7 +162,7 @@ impl<'a> DecodeContent<'a> for AlgorithmIdentifier {
 
 impl SequenceFields for AlgorithmIdentifier {
     /// 變動時間：分支只依編碼結構。
-    fn fields(&self, _: EncodingType, sink: &mut dyn FnMut(&dyn Encode)) {
+    fn fields(&self, _: EncodingOptions, sink: &mut dyn FnMut(&dyn Encode)) {
         sink(&self.algorithm);
         match &self.parameters {
             AlgorithmParameters::Absent => {}
@@ -199,8 +199,8 @@ mod tests {
     const ED25519: &[u8] = &[0x30, 0x05, 0x06, 0x03, 0x2B, 0x65, 0x70];
 
     fn encode(alg: &AlgorithmIdentifier) -> Vec<u8> {
-        let mut out = alloc::vec![0_u8; alg.encoded_len(EncodingType::Der)];
-        alg.encode(EncodingType::Der, &mut out).unwrap();
+        let mut out = alloc::vec![0_u8; alg.encoded_len(EncodingOptions::Der)];
+        alg.encode(EncodingOptions::Der, &mut out).unwrap();
         out
     }
 

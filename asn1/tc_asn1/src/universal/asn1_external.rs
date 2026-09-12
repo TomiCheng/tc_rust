@@ -22,7 +22,7 @@ use super::tag::EXTERNAL as TAG;
 use super::{Asn1BitString, Asn1Integer, Asn1ObjectDescriptor, Asn1OctetString, Asn1Oid};
 use crate::asn1_object::Asn1Object;
 use crate::depth::Depth;
-use crate::encoding_type::EncodingType;
+use crate::encoding_options::EncodingOptions;
 use crate::error::Asn1Error;
 #[cfg(test)]
 use crate::traits::Decode;
@@ -116,7 +116,7 @@ impl<'a> DecodeContent<'a> for Asn1External {
 
 impl SequenceFields for Asn1External {
     /// 變動時間：分支只依編碼結構。
-    fn fields(&self, _: EncodingType, sink: &mut dyn FnMut(&dyn Encode)) {
+    fn fields(&self, _: EncodingOptions, sink: &mut dyn FnMut(&dyn Encode)) {
         if let Some(value) = &self.direct_reference {
             sink(value);
         }
@@ -155,7 +155,7 @@ mod tests {
         assert_eq!(e.direct_reference().unwrap().to_string(), "1.2.3");
         assert!(e.indirect_reference().is_none());
         assert!(matches!(e.encoding(), ExternalEncoding::OctetAligned(s) if s.as_bytes() == b"AB"));
-        assert_eq!(e.encode_to_vec(EncodingType::Der).unwrap(), input);
+        assert_eq!(e.encode_to_vec(EncodingOptions::Der).unwrap(), input);
     }
 
     #[test]
@@ -170,7 +170,7 @@ mod tests {
             panic!("應該是 [0]");
         };
         assert_eq!(inner.tag(), &[0x02]);
-        assert_eq!(e.encode_to_vec(EncodingType::Der).unwrap(), input);
+        assert_eq!(e.encode_to_vec(EncodingOptions::Der).unwrap(), input);
     }
 
     #[test]
@@ -186,7 +186,7 @@ mod tests {
         assert_eq!(u8::try_from(e.indirect_reference().unwrap()), Ok(7));
         assert_eq!(e.data_value_descriptor().unwrap().as_bytes(), b"x");
         assert!(matches!(e.encoding(), ExternalEncoding::Arbitrary(b) if b.as_bytes() == [0xA0]));
-        assert_eq!(e.encode_to_vec(EncodingType::Der).unwrap(), input);
+        assert_eq!(e.encode_to_vec(EncodingOptions::Der).unwrap(), input);
     }
 
     #[test]
@@ -198,7 +198,7 @@ mod tests {
             ExternalEncoding::SingleAsn1Type(Box::new(Asn1Integer::from(5_u8).into())),
         );
         assert_eq!(
-            e.encode_to_vec(EncodingType::Der).unwrap(),
+            e.encode_to_vec(EncodingOptions::Der).unwrap(),
             [0x28, 0x08, 0x02, 0x01, 0x07, 0xA0, 0x03, 0x02, 0x01, 0x05]
         );
     }

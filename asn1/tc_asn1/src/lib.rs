@@ -34,7 +34,7 @@
 //!
 //! # 編碼要選規則，解碼不用
 //!
-//! [`Encode`] 收 [`EncodingType`]，選擇 BER 或 DER。
+//! [`Encode`] 收 [`EncodingOptions`]，選擇 BER（定長或不定長）、CER 或 DER。
 //!
 //! [`Decode`] 不收：讀進來的位元組只有一種讀法，一律照 BER（DER 的超集）
 //! 寬鬆解。需要「輸入必須是 DER」的地方用往返比較 —— 重編成 DER 後與原位元組
@@ -89,7 +89,7 @@ mod asn1_any;
 mod asn1_object;
 mod asn1_ref;
 mod depth;
-mod encoding_type;
+mod encoding_options;
 mod error;
 mod schema;
 mod segments;
@@ -100,7 +100,7 @@ pub use asn1_any::Asn1Any;
 pub use asn1_object::{Asn1Object, Asn1Tagged, TaggedContent};
 pub use asn1_ref::{Asn1Class, Asn1Ref, Children};
 pub use depth::Depth;
-pub use encoding_type::EncodingType;
+pub use encoding_options::{EncodingOptions, LengthForm};
 pub use error::Asn1Error;
 pub use schema::{Explicit, Fields, Implicit, SequenceFields};
 pub use traits::{Decode, DecodeConstructed, DecodeContent, Encode};

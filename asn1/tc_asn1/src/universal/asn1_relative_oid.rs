@@ -1,7 +1,7 @@
 //! ASN.1 `RELATIVE-OID`，每個弧各自使用最短 base-128 編碼。
 
 use super::tag::RELATIVE_OID as TAG;
-use crate::{Asn1Error, DecodeContent, Depth, Encode, EncodingType};
+use crate::{Asn1Error, DecodeContent, Depth, Encode, EncodingOptions};
 use alloc::vec::Vec;
 use core::{fmt, str::FromStr};
 
@@ -10,10 +10,10 @@ use core::{fmt, str::FromStr};
 ///
 /// # Examples
 /// ```
-/// use tc_asn1::{Asn1RelativeOid, Encode, EncodingType};
+/// use tc_asn1::{Asn1RelativeOid, Encode, EncodingOptions};
 /// let value: Asn1RelativeOid = "4.3.128".parse().unwrap();
 /// let mut out = [0; 6];
-/// value.encode(EncodingType::Der, &mut out).unwrap();
+/// value.encode(EncodingOptions::Der, &mut out).unwrap();
 /// assert_eq!(out, [0x0D, 4, 4, 3, 0x81, 0]);
 /// ```
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
@@ -118,11 +118,11 @@ impl Encode for Asn1RelativeOid {
         TAG
     }
     /// 常數時間：已存有內容長度。
-    fn content_len(&self, _: EncodingType) -> usize {
+    fn content_len(&self, _: EncodingOptions) -> usize {
         self.bytes.len()
     }
     /// 變動時間：原樣複製已驗證的內容。
-    fn encode_content(&self, _: EncodingType, out: &mut [u8]) -> Result<usize, Asn1Error> {
+    fn encode_content(&self, _: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         out[..self.bytes.len()].copy_from_slice(&self.bytes);
         Ok(self.bytes.len())
     }
@@ -135,7 +135,10 @@ mod tests {
     #[test]
     fn arcs_are_independent_and_round_trip_through_both_encodings() {
         let value = Asn1RelativeOid::from_arcs(&[4, 3, 128]).unwrap();
-        for rules in [EncodingType::Ber, EncodingType::Der] {
+        for rules in [
+            EncodingOptions::Ber(crate::LengthForm::Definite),
+            EncodingOptions::Der,
+        ] {
             let mut out = [0; 6];
             assert_eq!(value.encode(rules, &mut out), Ok(6));
             assert_eq!(out, [13, 4, 4, 3, 129, 0]);

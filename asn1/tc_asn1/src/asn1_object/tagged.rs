@@ -5,7 +5,7 @@ use alloc::vec::Vec;
 use super::{Asn1Object, children_len, decode_children, encode_children};
 use crate::asn1_ref::parse_tag;
 use crate::universal::{copy_encodings, tag_key};
-use crate::{Asn1Class, Asn1Error, Asn1Ref, DecodeContent, Depth, Encode, EncodingType};
+use crate::{Asn1Class, Asn1Error, Asn1Ref, DecodeContent, Depth, Encode, EncodingOptions};
 
 /// 非 universal 標記的值，保留標記與可解讀的子樹。
 ///
@@ -131,7 +131,7 @@ impl Encode for Asn1Tagged {
     }
 
     /// 計算內容長度。變動時間：分支只依編碼結構。
-    fn content_len(&self, rules: EncodingType) -> usize {
+    fn content_len(&self, rules: EncodingOptions) -> usize {
         match &self.content {
             TaggedContent::Constructed(children) => children_len(children, rules),
             TaggedContent::Primitive(bytes) => bytes.len(),
@@ -139,7 +139,7 @@ impl Encode for Asn1Tagged {
     }
 
     /// 依原順序編碼子元素或複製原始內容。變動時間：分支只依編碼結構。
-    fn encode_content(&self, rules: EncodingType, out: &mut [u8]) -> Result<usize, Asn1Error> {
+    fn encode_content(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         match &self.content {
             TaggedContent::Constructed(children) => encode_children(children, rules, out),
             TaggedContent::Primitive(bytes) => {
@@ -171,7 +171,7 @@ mod tests {
             Err(Asn1Error::MalformedValue)
         );
         assert_eq!(tree.to_string(), "[CONTEXT 0]\n  INTEGER 2\n");
-        assert_eq!(encode_member(&tree, EncodingType::Der).unwrap(), input);
+        assert_eq!(encode_member(&tree, EncodingOptions::Der).unwrap(), input);
     }
 
     #[test]
@@ -188,7 +188,7 @@ mod tests {
         assert!(tagged.children().is_none());
         assert!(!tagged.is_constructed());
         assert_eq!(tree.to_string(), "[CONTEXT 0] (1 bytes) ff\n");
-        assert_eq!(encode_member(&tree, EncodingType::Der).unwrap(), input);
+        assert_eq!(encode_member(&tree, EncodingOptions::Der).unwrap(), input);
     }
 
     #[test]
@@ -245,7 +245,7 @@ mod tests {
         tag.push(0x7f);
         let value = Asn1Tagged::primitive(&tag, &[]).unwrap();
         assert_eq!(value.number(), u64::MAX);
-        let encoded = encode_member(&value, EncodingType::Der).unwrap();
+        let encoded = encode_member(&value, EncodingOptions::Der).unwrap();
         let tree = Asn1Object::try_decode(&encoded, Depth::DEFAULT).unwrap().1;
         assert_eq!(tree.as_tagged().unwrap().number(), u64::MAX);
         tag[1] = 0x82;

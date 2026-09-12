@@ -1,7 +1,7 @@
 //! CER string segmentation and shared encoding overrides.
 
 use crate::traits::{default_encode, default_encoded_len, len_octets, write_len};
-use crate::{Asn1Error, Encode, EncodingType};
+use crate::{Asn1Error, Encode, EncodingOptions};
 
 /// Length of a CER string TLV. Variable time: branches only on the encoding structure.
 pub(crate) fn segmented_len(tag: &[u8], universal_tag: &[u8], contents_len: usize) -> usize {
@@ -57,9 +57,9 @@ pub(crate) fn string_len<T: Encode + ?Sized>(
     value: &T,
     tag: &[u8],
     segment_tag: &[u8],
-    rules: EncodingType,
+    rules: EncodingOptions,
 ) -> usize {
-    if rules == EncodingType::Cer && value.content_len(rules) > 1000 {
+    if rules == EncodingOptions::Cer && value.content_len(rules) > 1000 {
         segmented_len(tag, segment_tag, value.content_len(rules))
     } else {
         default_encoded_len(value, tag, rules)
@@ -72,11 +72,11 @@ pub(crate) fn encode_string<T: Encode + ?Sized>(
     value: &T,
     tag: &[u8],
     segment_tag: &[u8],
-    rules: EncodingType,
+    rules: EncodingOptions,
     out: &mut [u8],
 ) -> Result<usize, Asn1Error> {
     let len = value.content_len(rules);
-    if rules != EncodingType::Cer || len <= 1000 {
+    if rules != EncodingOptions::Cer || len <= 1000 {
         return default_encode(value, tag, rules, out);
     }
     if out.len() < segmented_len(tag, segment_tag, len) {
@@ -91,14 +91,14 @@ pub(crate) fn encode_string<T: Encode + ?Sized>(
 macro_rules! cer_string_encode {
     () => {
         /// Variable time: branches only on the encoding structure.
-        fn encoded_len_tagged(&self, tag: &[u8], rules: $crate::EncodingType) -> usize {
+        fn encoded_len_tagged(&self, tag: &[u8], rules: $crate::EncodingOptions) -> usize {
             $crate::segments::string_len(self, tag, $crate::tag::OCTET_STRING, rules)
         }
         /// Variable time: branches only on the encoding structure.
         fn encode_tagged(
             &self,
             tag: &[u8],
-            rules: $crate::EncodingType,
+            rules: $crate::EncodingOptions,
             out: &mut [u8],
         ) -> Result<usize, $crate::Asn1Error> {
             $crate::segments::encode_string(self, tag, $crate::tag::OCTET_STRING, rules, out)
@@ -176,7 +176,7 @@ mod tests {
                 Some(Asn1ObjectDescriptor::new(&[b'A'; 1001])),
                 encoding,
             );
-            let cer = value.encode_to_vec(EncodingType::Cer).unwrap();
+            let cer = value.encode_to_vec(EncodingOptions::Cer).unwrap();
             assert_eq!(&cer[..4], &[0x28, 0x80, 0x27, 0x80]);
             assert_eq!(
                 Asn1External::try_decode_exact(&cer, Depth::DEFAULT),
@@ -198,7 +198,7 @@ mod tests {
         for len in [999, 1000, 1998, 1999, 2997] {
             for unused in [0, 1, 7] {
                 let value = Asn1BitString::from_bits(&alloc::vec![0xff; len], len * 8 - unused);
-                let wire = value.encode_to_vec(EncodingType::Cer).unwrap();
+                let wire = value.encode_to_vec(EncodingOptions::Cer).unwrap();
                 assert_eq!(
                     Asn1BitString::try_decode_exact(&wire, Depth::DEFAULT),
                     Ok(value.clone())
@@ -236,7 +236,7 @@ mod tests {
             Asn1Integer::from(3_u8)
         ]);
         let expected = [0x31, 0x80, 2, 1, 3, 2, 1, 5, 0, 0];
-        assert_eq!(set.encode_to_vec(EncodingType::Cer).unwrap(), expected);
+        assert_eq!(set.encode_to_vec(EncodingOptions::Cer).unwrap(), expected);
         assert_eq!(
             Asn1SetOf::<Asn1Integer>::try_decode_der(&expected, Depth::DEFAULT),
             Err(Asn1Error::NotDer)
@@ -253,7 +253,7 @@ mod tests {
         ]);
         assert_eq!(
             Asn1Object::try_decode_der(
-                &sequence.encode_to_vec(EncodingType::Cer).unwrap(),
+                &sequence.encode_to_vec(EncodingOptions::Cer).unwrap(),
                 Depth::DEFAULT
             ),
             Err(Asn1Error::NotDer)
@@ -269,17 +269,22 @@ mod tests {
             + PartialEq
             + Into<Asn1Object>,
     {
-        let len = value.content_len(EncodingType::Der);
-        let cer = value.encode_to_vec(EncodingType::Cer).unwrap();
+        let len = value.content_len(EncodingOptions::Der);
+        let cer = value.encode_to_vec(EncodingOptions::Cer).unwrap();
         let tree: Asn1Object = value.clone().into();
-        assert_eq!(tree.encode_to_vec(EncodingType::Cer).unwrap(), cer);
+        assert_eq!(tree.encode_to_vec(EncodingOptions::Cer).unwrap(), cer);
         assert_eq!(T::try_decode_exact(&cer, Depth::DEFAULT).unwrap(), value);
         assert_eq!(
             Asn1Object::try_decode_exact(&cer, Depth::DEFAULT).unwrap(),
             tree
         );
-        let der = value.encode_to_vec(EncodingType::Der).unwrap();
-        assert_eq!(value.encode_to_vec(EncodingType::Ber).unwrap(), der);
+        let der = value.encode_to_vec(EncodingOptions::Der).unwrap();
+        assert_eq!(
+            value
+                .encode_to_vec(EncodingOptions::Ber(crate::LengthForm::Definite))
+                .unwrap(),
+            der
+        );
         if len > 1000 {
             assert_eq!(cer[0], Encode::tag(&value)[0] | 0x20);
             assert_eq!(cer[1], 0x80);
@@ -311,7 +316,7 @@ mod tests {
             assert_eq!(T::try_decode_der(&cer, Depth::DEFAULT).unwrap(), value);
         }
         assert_eq!(
-            value.encode(EncodingType::Cer, &mut alloc::vec![0; cer.len() - 1]),
+            value.encode(EncodingOptions::Cer, &mut alloc::vec![0; cer.len() - 1]),
             Err(Asn1Error::BufferTooSmall)
         );
     }
@@ -389,9 +394,9 @@ mod tests {
         let absolute = Asn1OidIri::new(&alloc::format!("/ISO/{label}")).unwrap();
         let relative = Asn1RelativeOidIri::new(&label).unwrap();
         for value in [Asn1Object::from(absolute), Asn1Object::from(relative)] {
-            let cer = value.encode_to_vec(EncodingType::Cer).unwrap();
+            let cer = value.encode_to_vec(EncodingOptions::Cer).unwrap();
             assert_eq!(cer[0] & 0x20, 0);
-            assert_eq!(cer, value.encode_to_vec(EncodingType::Der).unwrap());
+            assert_eq!(cer, value.encode_to_vec(EncodingOptions::Der).unwrap());
             assert_eq!(
                 Asn1Object::try_decode_exact(&cer, Depth::DEFAULT).unwrap(),
                 value
@@ -419,7 +424,7 @@ mod tests {
                 alloc::vec![0xaa; 1001],
             )),
         ] {
-            let wire = value.encode_to_vec(EncodingType::Cer).unwrap();
+            let wire = value.encode_to_vec(EncodingOptions::Cer).unwrap();
             assert_eq!(&wire[1..10], &[0x80, 0xa0, 0x80, 0x85, 0, 0, 0, 0xa2, 0x80]);
             assert_eq!(
                 Asn1Object::try_decode_exact(&wire, Depth::DEFAULT),
@@ -432,14 +437,14 @@ mod tests {
     fn cer_string_segmentation_handles_exact_multiples_and_high_implicit_tags() {
         for len in [0, 999, 1000, 1001, 1999, 2000, 2001, 3000] {
             let value = Asn1OctetString::new(&alloc::vec![0xaa; len]);
-            let wire = value.encode_to_vec(EncodingType::Cer).unwrap();
-            assert_eq!(wire.len(), value.encoded_len(EncodingType::Cer));
+            let wire = value.encode_to_vec(EncodingOptions::Cer).unwrap();
+            assert_eq!(wire.len(), value.encoded_len(EncodingOptions::Cer));
             assert_eq!(
                 Asn1OctetString::try_decode_exact(&wire, Depth::DEFAULT),
                 Ok(value.clone())
             );
             let tagged = Implicit::new(&[0x9f, 0x81, 0], &value);
-            let wire = tagged.encode_to_vec(EncodingType::Cer).unwrap();
+            let wire = tagged.encode_to_vec(EncodingOptions::Cer).unwrap();
             assert_eq!(wire[0], if len > 1000 { 0xbf } else { 0x9f });
             let mut fields = Fields::new(&wire, Depth::DEFAULT).unwrap();
             assert_eq!(

@@ -3,7 +3,7 @@
 use alloc::string::String;
 
 use crate::depth::Depth;
-use crate::encoding_type::EncodingType;
+use crate::encoding_options::EncodingOptions;
 use crate::error::Asn1Error;
 use crate::traits::{DecodeContent, Encode};
 
@@ -52,10 +52,10 @@ impl Encode for Asn1Utf8String {
     fn tag(&self) -> &[u8] {
         TAG
     }
-    fn content_len(&self, _: EncodingType) -> usize {
+    fn content_len(&self, _: EncodingOptions) -> usize {
         self.text.len()
     }
-    fn encode_content(&self, _: EncodingType, out: &mut [u8]) -> Result<usize, Asn1Error> {
+    fn encode_content(&self, _: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         out[..self.text.len()].copy_from_slice(self.text.as_bytes());
         Ok(self.text.len())
     }
@@ -75,9 +75,9 @@ mod tests {
         let mut expected = alloc::vec![0x2c, 0x80, 4, 0x82, 3, 0xe8];
         expected.extend_from_slice(&[b'a'; 999]);
         expected.extend_from_slice(&[0xc3, 4, 1, 0xa9, 0, 0]);
-        assert_eq!(value.encode_to_vec(EncodingType::Cer).unwrap(), expected);
+        assert_eq!(value.encode_to_vec(EncodingOptions::Cer).unwrap(), expected);
         let tree = crate::Asn1Object::from(value.clone());
-        assert_eq!(tree.encode_to_vec(EncodingType::Cer).unwrap(), expected);
+        assert_eq!(tree.encode_to_vec(EncodingOptions::Cer).unwrap(), expected);
         assert_eq!(
             Asn1Utf8String::try_decode_exact(&expected, DEPTH),
             Ok(value.clone())
@@ -88,7 +88,10 @@ mod tests {
         );
         let mut definite = alloc::vec![0x0c, 0x82, 3, 0xe9];
         definite.extend_from_slice(text.as_bytes());
-        for rules in [EncodingType::Ber, EncodingType::Der] {
+        for rules in [
+            EncodingOptions::Ber(crate::LengthForm::Definite),
+            EncodingOptions::Der,
+        ] {
             assert_eq!(value.encode_to_vec(rules).unwrap(), definite);
         }
     }
@@ -128,13 +131,13 @@ mod tests {
         let text = "café 台北";
         let s = Asn1Utf8String::new(text);
         assert_eq!(
-            s.content_len(EncodingType::Der),
+            s.content_len(EncodingOptions::Der),
             text.len(),
             "位元組數不是字元數"
         );
 
         let mut out = [0_u8; 32];
-        let written = s.encode(EncodingType::Der, &mut out).unwrap();
+        let written = s.encode(EncodingOptions::Der, &mut out).unwrap();
         assert_eq!(out[0], 0x0C);
 
         let (used, decoded) = Asn1Utf8String::try_decode(&out[..written], DEPTH).unwrap();

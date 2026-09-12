@@ -3,7 +3,7 @@
 use alloc::string::String;
 
 use crate::depth::Depth;
-use crate::encoding_type::EncodingType;
+use crate::encoding_options::EncodingOptions;
 use crate::error::Asn1Error;
 use crate::traits::{DecodeContent, Encode};
 
@@ -19,11 +19,11 @@ use super::tag::BMP_STRING as TAG;
 /// BMP 的中文字元可編碼，emoji 則必須使用其他字串型別。
 ///
 /// ```
-/// use tc_asn1::{Asn1BmpString, Asn1Error, Encode, EncodingType};
+/// use tc_asn1::{Asn1BmpString, Asn1Error, Encode, EncodingOptions};
 ///
 /// let value = Asn1BmpString::new("台北").unwrap();
 /// let mut out = [0; 6];
-/// value.encode(EncodingType::Der, &mut out).unwrap();
+/// value.encode(EncodingOptions::Der, &mut out).unwrap();
 /// assert_eq!(out, [0x1E, 4, 0x53, 0xF0, 0x53, 0x17]);
 /// assert_eq!(Asn1BmpString::new("😀"), Err(Asn1Error::MalformedValue));
 /// ```
@@ -82,12 +82,12 @@ impl Encode for Asn1BmpString {
     }
 
     /// 內容長度是字元數的兩倍。變動時間：需要走訪字串計算字元數。
-    fn content_len(&self, _: EncodingType) -> usize {
+    fn content_len(&self, _: EncodingOptions) -> usize {
         self.text.chars().count() * 2
     }
 
     /// 每個字元寫成 UCS-2 大端序。變動時間：依字串長度走訪字元。
-    fn encode_content(&self, _: EncodingType, out: &mut [u8]) -> Result<usize, Asn1Error> {
+    fn encode_content(&self, _: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         let mut at = 0;
         for ch in self.text.chars() {
             // 建構與解碼已保證碼位不超過 U+FFFF。
@@ -110,7 +110,10 @@ mod tests {
             ("台北", &[0x53, 0xF0, 0x53, 0x17]),
         ] {
             let original = Asn1BmpString::new(text).unwrap();
-            for rules in [EncodingType::Ber, EncodingType::Der] {
+            for rules in [
+                EncodingOptions::Ber(crate::LengthForm::Definite),
+                EncodingOptions::Der,
+            ] {
                 let mut out = [0; 16];
                 let written = original.encode(rules, &mut out).unwrap();
                 assert_eq!(&out[..2], &[0x1E, contents.len() as u8]);
@@ -164,7 +167,7 @@ mod tests {
         let text = "\0\u{D7FF}\u{E000}\u{FFFF}";
         let original = Asn1BmpString::new(text).unwrap();
         let mut out = [0; 10];
-        assert_eq!(original.encode(EncodingType::Der, &mut out), Ok(10));
+        assert_eq!(original.encode(EncodingOptions::Der, &mut out), Ok(10));
         assert_eq!(out, [0x1E, 8, 0, 0, 0xD7, 0xFF, 0xE0, 0, 0xFF, 0xFF]);
         assert_eq!(
             Asn1BmpString::try_decode(&out, Depth::DEFAULT),
@@ -177,7 +180,7 @@ mod tests {
         let original = Asn1BmpString::new("").unwrap();
         assert_eq!(original, Asn1BmpString::default());
         let mut out = [0; 2];
-        assert_eq!(original.encode(EncodingType::Der, &mut out), Ok(2));
+        assert_eq!(original.encode(EncodingOptions::Der, &mut out), Ok(2));
         assert_eq!(out, [0x1E, 0]);
         assert_eq!(
             Asn1BmpString::try_decode(&out, Depth::DEFAULT),

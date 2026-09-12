@@ -3,7 +3,7 @@
 use crate::asn1_ref::Asn1Ref;
 use crate::depth::Depth;
 use crate::error::Asn1Error;
-use crate::{Encode, EncodingType};
+use crate::{Encode, EncodingOptions};
 
 /// 只解內容，不碰表頭。IMPLICIT 標記過的欄位走這裡。
 pub trait DecodeContent<'a>: Sized {
@@ -73,7 +73,7 @@ pub trait Decode<'a>: Sized {
         Self: Encode,
     {
         let value = Self::try_decode_exact(buff, depth)?;
-        if value.encode_to_vec(EncodingType::Der)? != buff {
+        if value.encode_to_vec(EncodingOptions::Der)? != buff {
             return Err(Asn1Error::NotDer);
         }
         Ok(value)

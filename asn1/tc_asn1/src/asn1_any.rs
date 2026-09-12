@@ -7,7 +7,7 @@ use alloc::vec::Vec;
 
 use crate::asn1_ref::Asn1Ref;
 use crate::depth::Depth;
-use crate::encoding_type::EncodingType;
+use crate::encoding_options::EncodingOptions;
 use crate::error::Asn1Error;
 use crate::traits::{Decode, Encode};
 
@@ -55,18 +55,18 @@ impl Encode for Asn1Any {
     fn tag(&self) -> &[u8] {
         self.as_ref().tag()
     }
-    fn content_len(&self, _: EncodingType) -> usize {
+    fn content_len(&self, _: EncodingOptions) -> usize {
         self.as_ref().value().len()
     }
-    fn encode_content(&self, _: EncodingType, out: &mut [u8]) -> Result<usize, Asn1Error> {
+    fn encode_content(&self, _: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         let value = self.as_ref().value();
         out[..value.len()].copy_from_slice(value);
         Ok(value.len())
     }
-    fn encoded_len(&self, _: EncodingType) -> usize {
+    fn encoded_len(&self, _: EncodingOptions) -> usize {
         self.raw.len()
     }
-    fn encode(&self, _: EncodingType, out: &mut [u8]) -> Result<usize, Asn1Error> {
+    fn encode(&self, _: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         let out = out
             .get_mut(..self.raw.len())
             .ok_or(Asn1Error::BufferTooSmall)?;
@@ -96,7 +96,7 @@ mod tests {
         assert_eq!(any.as_ref().class(), Asn1Class::ContextSpecific);
 
         let mut out = [0_u8; 8];
-        let written = any.encode(EncodingType::Der, &mut out).unwrap();
+        let written = any.encode(EncodingOptions::Der, &mut out).unwrap();
         assert_eq!(&out[..written], &input[..5]);
     }
 
@@ -107,9 +107,9 @@ mod tests {
         let (_, any) = Asn1Any::try_decode(&input, DEPTH).unwrap();
 
         let mut out = [0_u8; 8];
-        let written = any.encode(EncodingType::Der, &mut out).unwrap();
+        let written = any.encode(EncodingOptions::Der, &mut out).unwrap();
         assert_eq!(&out[..written], &input);
-        assert_eq!(any.encoded_len(EncodingType::Der), 6);
+        assert_eq!(any.encoded_len(EncodingOptions::Der), 6);
     }
 
     #[test]
@@ -117,7 +117,7 @@ mod tests {
         let (_, any) = Asn1Any::try_decode(&[0x04, 0x81, 0x01, 0xAA], DEPTH).unwrap();
         let mut out = [0_u8; 8];
         let written = any
-            .encode_tagged(&[0x80], EncodingType::Der, &mut out)
+            .encode_tagged(&[0x80], EncodingOptions::Der, &mut out)
             .unwrap();
         assert_eq!(&out[..written], &[0x80, 0x01, 0xAA], "換 tag 就得重寫表頭");
     }
@@ -152,7 +152,7 @@ mod tests {
         let input = [0x01, 0x01, 0x01];
         let (_, any) = Asn1Any::try_decode(&input, DEPTH).unwrap();
         let mut out = [0_u8; 8];
-        let written = any.encode(EncodingType::Der, &mut out).unwrap();
+        let written = any.encode(EncodingOptions::Der, &mut out).unwrap();
         assert_eq!(&out[..written], &input, "保真優先於正規化");
     }
 }

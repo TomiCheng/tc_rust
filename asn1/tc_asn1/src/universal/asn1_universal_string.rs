@@ -3,7 +3,7 @@
 use alloc::string::String;
 
 use crate::depth::Depth;
-use crate::encoding_type::EncodingType;
+use crate::encoding_options::EncodingOptions;
 use crate::error::Asn1Error;
 use crate::traits::{DecodeContent, Encode};
 
@@ -19,11 +19,11 @@ use super::tag::UNIVERSAL_STRING as TAG;
 /// emoji 可以直接以單一 UCS-4 碼位表示，不使用 UTF-16 代理對。
 ///
 /// ```
-/// use tc_asn1::{Asn1UniversalString, Depth, Encode, EncodingType, Decode};
+/// use tc_asn1::{Asn1UniversalString, Depth, Encode, EncodingOptions, Decode};
 ///
 /// let value = Asn1UniversalString::new("😀");
 /// let mut out = [0; 6];
-/// value.encode(EncodingType::Der, &mut out).unwrap();
+/// value.encode(EncodingOptions::Der, &mut out).unwrap();
 /// assert_eq!(out, [0x1C, 4, 0, 1, 0xF6, 0]);
 /// let (_, decoded) = Asn1UniversalString::try_decode(&out, Depth::DEFAULT).unwrap();
 /// assert_eq!(decoded.as_str(), "😀");
@@ -86,12 +86,12 @@ impl Encode for Asn1UniversalString {
     }
 
     /// 內容長度是字元數的四倍。變動時間：需要走訪字串計算字元數。
-    fn content_len(&self, _: EncodingType) -> usize {
+    fn content_len(&self, _: EncodingOptions) -> usize {
         self.text.chars().count() * 4
     }
 
     /// 每個字元寫成 UCS-4 大端序。變動時間：依字串長度走訪字元。
-    fn encode_content(&self, _: EncodingType, out: &mut [u8]) -> Result<usize, Asn1Error> {
+    fn encode_content(&self, _: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         let mut at = 0;
         for ch in self.text.chars() {
             out[at..at + 4].copy_from_slice(&u32::from(ch).to_be_bytes());
@@ -118,7 +118,10 @@ mod tests {
         ] {
             let original = Asn1UniversalString::new(text);
             assert_eq!(original, Asn1UniversalString::from(String::from(text)));
-            for rules in [EncodingType::Ber, EncodingType::Der] {
+            for rules in [
+                EncodingOptions::Ber(crate::LengthForm::Definite),
+                EncodingOptions::Der,
+            ] {
                 let mut out = [0; 24];
                 let written = original.encode(rules, &mut out).unwrap();
                 assert_eq!(&out[..2], &[0x1C, contents.len() as u8]);
@@ -169,7 +172,7 @@ mod tests {
         let text = "\0\u{D7FF}\u{E000}\u{FFFF}\u{10000}\u{10FFFF}";
         let original = Asn1UniversalString::new(text);
         let mut out = [0; 26];
-        assert_eq!(original.encode(EncodingType::Der, &mut out), Ok(26));
+        assert_eq!(original.encode(EncodingOptions::Der, &mut out), Ok(26));
         assert_eq!(&out[22..], &[0, 0x10, 0xFF, 0xFF]);
         assert_eq!(
             Asn1UniversalString::try_decode(&out, Depth::DEFAULT),
@@ -182,7 +185,7 @@ mod tests {
         let original = Asn1UniversalString::new("");
         assert_eq!(original, Asn1UniversalString::default());
         let mut out = [0; 2];
-        assert_eq!(original.encode(EncodingType::Der, &mut out), Ok(2));
+        assert_eq!(original.encode(EncodingOptions::Der, &mut out), Ok(2));
         assert_eq!(out, [0x1C, 0]);
         assert_eq!(
             Asn1UniversalString::try_decode(&out, Depth::DEFAULT),

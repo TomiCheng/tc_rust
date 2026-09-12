@@ -3,7 +3,7 @@
 use alloc::vec::Vec;
 
 use crate::depth::Depth;
-use crate::encoding_type::EncodingType;
+use crate::encoding_options::EncodingOptions;
 use crate::error::Asn1Error;
 use crate::traits::{DecodeContent, Encode};
 
@@ -21,11 +21,11 @@ use super::tag::ENUMERATED as TAG;
 /// 編碼列舉值 5，再解回原值；標籤與 INTEGER 不同。
 ///
 /// ```
-/// use tc_asn1::{Asn1Enumerated, Depth, Encode, EncodingType, Decode};
+/// use tc_asn1::{Asn1Enumerated, Depth, Encode, EncodingOptions, Decode};
 ///
 /// let value = Asn1Enumerated::from(5_u64);
 /// let mut out = [0; 3];
-/// value.encode(EncodingType::Der, &mut out).unwrap();
+/// value.encode(EncodingOptions::Der, &mut out).unwrap();
 /// assert_eq!(out, [0x0A, 1, 5]);
 /// let (used, decoded) = Asn1Enumerated::try_decode(&out, Depth::DEFAULT).unwrap();
 /// assert_eq!(used, out.len());
@@ -142,13 +142,13 @@ impl Encode for Asn1Enumerated {
     }
 
     /// 回傳內容位元組數。常數時間：直接讀取已儲存的內容長度。
-    fn content_len(&self, _: EncodingType) -> usize {
+    fn content_len(&self, _: EncodingOptions) -> usize {
         self.value.len()
     }
 
     /// 原樣寫入二補數內容，不含標籤。
     /// 變動時間：複製量由內容長度決定。
-    fn encode_content(&self, _: EncodingType, out: &mut [u8]) -> Result<usize, Asn1Error> {
+    fn encode_content(&self, _: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         out[..self.value.len()].copy_from_slice(&self.value);
         Ok(self.value.len())
     }
@@ -198,7 +198,10 @@ mod tests {
             (-129, &[0x0A, 2, 0xFF, 0x7F]),
         ] {
             let original = Asn1Enumerated::from(value);
-            for rules in [EncodingType::Ber, EncodingType::Der] {
+            for rules in [
+                EncodingOptions::Ber(crate::LengthForm::Definite),
+                EncodingOptions::Der,
+            ] {
                 let mut out = [0; 16];
                 let written = original.encode(rules, &mut out).unwrap();
                 assert_eq!(&out[..written], expected);
@@ -217,14 +220,14 @@ mod tests {
         for value in [0, 127, 128, u64::MAX] {
             let original = Asn1Enumerated::from(value);
             let mut out = [0; 11];
-            let written = original.encode(EncodingType::Der, &mut out).unwrap();
+            let written = original.encode(EncodingOptions::Der, &mut out).unwrap();
             let (_, decoded) = Asn1Enumerated::try_decode(&out[..written], DEPTH).unwrap();
             assert_eq!(u64::try_from(&decoded), Ok(value));
         }
         for value in [i64::MIN, i64::MAX] {
             let original = Asn1Enumerated::from(value);
             let mut out = [0; 10];
-            let written = original.encode(EncodingType::Der, &mut out).unwrap();
+            let written = original.encode(EncodingOptions::Der, &mut out).unwrap();
             let (_, decoded) = Asn1Enumerated::try_decode(&out[..written], DEPTH).unwrap();
             assert_eq!(i64::try_from(&decoded), Ok(value));
         }
@@ -242,7 +245,10 @@ mod tests {
                 Asn1Error::LengthOverflow
             };
             assert_eq!(u64::try_from(&original), Err(unsigned_error));
-            for rules in [EncodingType::Ber, EncodingType::Der] {
+            for rules in [
+                EncodingOptions::Ber(crate::LengthForm::Definite),
+                EncodingOptions::Der,
+            ] {
                 let mut out = [0; 14];
                 assert_eq!(original.encode(rules, &mut out), Ok(out.len()));
                 assert_eq!(&out[..2], &[0x0A, 12]);

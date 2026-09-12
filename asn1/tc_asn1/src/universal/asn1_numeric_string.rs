@@ -3,7 +3,7 @@
 use alloc::string::String;
 
 use crate::depth::Depth;
-use crate::encoding_type::EncodingType;
+use crate::encoding_options::EncodingOptions;
 use crate::error::Asn1Error;
 use crate::traits::{DecodeContent, Encode};
 
@@ -71,12 +71,12 @@ impl Encode for Asn1NumericString {
     }
 
     /// 回傳內容長度。常數時間：讀取已儲存的字串長度。
-    fn content_len(&self, _: EncodingType) -> usize {
+    fn content_len(&self, _: EncodingOptions) -> usize {
         self.text.len()
     }
 
     /// 原樣寫入已驗證的內容。變動時間：複製量由內容長度決定。
-    fn encode_content(&self, _: EncodingType, out: &mut [u8]) -> Result<usize, Asn1Error> {
+    fn encode_content(&self, _: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         out[..self.text.len()].copy_from_slice(self.text.as_bytes());
         Ok(self.text.len())
     }
@@ -91,7 +91,10 @@ mod tests {
     fn digits_and_spaces_round_trip_under_both_encoding_rules() {
         let text = "012 3456789";
         let value = Asn1NumericString::new(text).unwrap();
-        for rules in [EncodingType::Ber, EncodingType::Der] {
+        for rules in [
+            EncodingOptions::Ber(crate::LengthForm::Definite),
+            EncodingOptions::Der,
+        ] {
             let mut out = [0; 13];
             assert_eq!(value.encode(rules, &mut out), Ok(out.len()));
             assert_eq!(&out[..2], &[0x12, 11]);
@@ -125,7 +128,7 @@ mod tests {
         assert_eq!(value, Asn1NumericString::default());
         assert_eq!(value.as_str(), "");
         let mut out = [0; 2];
-        assert_eq!(value.encode(EncodingType::Der, &mut out), Ok(2));
+        assert_eq!(value.encode(EncodingOptions::Der, &mut out), Ok(2));
         assert_eq!(out, [0x12, 0]);
         assert_eq!(
             Asn1NumericString::try_decode(&out, Depth::DEFAULT),

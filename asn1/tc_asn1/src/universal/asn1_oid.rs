@@ -5,7 +5,7 @@ use core::fmt;
 use core::str::FromStr;
 
 use crate::depth::Depth;
-use crate::encoding_type::EncodingType;
+use crate::encoding_options::EncodingOptions;
 use crate::error::Asn1Error;
 use crate::traits::{DecodeContent, Encode};
 
@@ -181,10 +181,10 @@ impl Encode for Asn1Oid {
     fn tag(&self) -> &[u8] {
         TAG
     }
-    fn content_len(&self, _: EncodingType) -> usize {
+    fn content_len(&self, _: EncodingOptions) -> usize {
         self.bytes.len()
     }
-    fn encode_content(&self, _: EncodingType, out: &mut [u8]) -> Result<usize, Asn1Error> {
+    fn encode_content(&self, _: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         out[..self.bytes.len()].copy_from_slice(&self.bytes);
         Ok(self.bytes.len())
     }
@@ -216,7 +216,7 @@ mod tests {
     fn arcs_round_trip_through_from_arcs_and_encode() {
         let oid = Asn1Oid::from_arcs(&[1, 2, 840, 113549, 1, 1, 1]).unwrap();
         let mut out = [0_u8; 16];
-        let written = oid.encode(EncodingType::Der, &mut out).unwrap();
+        let written = oid.encode(EncodingOptions::Der, &mut out).unwrap();
         assert_eq!(&out[..written], RSA);
     }
 
@@ -267,7 +267,7 @@ mod tests {
     fn a_dotted_string_parses_and_prints_back_the_same() {
         let oid: Asn1Oid = "1.2.840.113549.1.1.1".parse().unwrap();
         let mut out = [0_u8; 16];
-        let written = oid.encode(EncodingType::Der, &mut out).unwrap();
+        let written = oid.encode(EncodingOptions::Der, &mut out).unwrap();
         assert_eq!(&out[..written], RSA);
         assert_eq!(oid.to_string(), "1.2.840.113549.1.1.1");
     }

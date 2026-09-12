@@ -6,7 +6,7 @@
 
 use super::{Asn1Integer, Asn1Oid, tag};
 use crate::traits::{len_octets, write_len};
-use crate::{Asn1Error, Asn1Ref, Children, DecodeContent, Depth, Encode, EncodingType};
+use crate::{Asn1Error, Asn1Ref, Children, DecodeContent, Depth, Encode, EncodingOptions};
 use alloc::vec::Vec;
 
 /// 識別抽象語法與傳輸語法的六種方式。
@@ -94,7 +94,7 @@ impl Encode for PdvIdentification {
         }
     }
     /// 變動時間：依選項及內容結構計算。
-    fn content_len(&self, rules: EncodingType) -> usize {
+    fn content_len(&self, rules: EncodingOptions) -> usize {
         match self {
             Self::Syntaxes {
                 abstract_syntax,
@@ -110,7 +110,7 @@ impl Encode for PdvIdentification {
         }
     }
     /// 變動時間：依選項寫入 IMPLICIT 內容。
-    fn encode_content(&self, rules: EncodingType, out: &mut [u8]) -> Result<usize, Asn1Error> {
+    fn encode_content(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         match self {
             Self::Syntaxes {
                 abstract_syntax,
@@ -187,9 +187,9 @@ macro_rules! container {
                 tag::$tag
             }
             /// 變動時間：依識別選項與資料長度計算。
-            fn content_len(&self, rules: EncodingType) -> usize {
+            fn content_len(&self, rules: EncodingOptions) -> usize {
                 let id_len = crate::Explicit::new(&[0xa0], &self.identification).encoded_len(rules);
-                id_len + if rules == EncodingType::Cer {
+                id_len + if rules == EncodingOptions::Cer {
                     crate::segments::segmented_len(&[0x82], tag::OCTET_STRING, self.value.len())
                 } else {
                     1 + len_octets(self.value.len()) + self.value.len()
@@ -198,11 +198,11 @@ macro_rules! container {
             /// 變動時間：寫入 EXPLICIT 識別選項與 IMPLICIT OCTET STRING。
             fn encode_content(
                 &self,
-                rules: EncodingType,
+                rules: EncodingOptions,
                 out: &mut [u8],
             ) -> Result<usize, Asn1Error> {
                 let mut at = crate::Explicit::new(&[0xa0], &self.identification).encode(rules, out)?;
-                if rules == EncodingType::Cer {
+                if rules == EncodingOptions::Cer {
                     return Ok(at + crate::segments::encode_segmented(&[0x82], tag::OCTET_STRING, &self.value, &mut out[at..])?);
                 }
                 out[at] = 0x82;
@@ -273,7 +273,10 @@ mod tests {
             (PdvIdentification::Fixed, vec![0x85, 0]),
         ];
         for (id, encoded) in cases {
-            for rules in [EncodingType::Ber, EncodingType::Der] {
+            for rules in [
+                EncodingOptions::Ber(crate::LengthForm::Definite),
+                EncodingOptions::Der,
+            ] {
                 let value = Asn1EmbeddedPdv::new(id.clone(), vec![0xFF]);
                 let mut expected = vec![0x2B, (encoded.len() + 5) as u8, 0xA0, encoded.len() as u8];
                 expected.extend_from_slice(&encoded);

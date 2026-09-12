@@ -7,7 +7,7 @@
 //! 時區資料庫，也不判斷區間端點的先後。秒數 60 的實際適用性由上層判斷。
 
 use super::{tag, time_value};
-use crate::{Asn1Error, DecodeContent, Depth, Encode, EncodingType};
+use crate::{Asn1Error, DecodeContent, Depth, Encode, EncodingOptions};
 use alloc::{format, string::String};
 
 #[derive(Clone, Copy)]
@@ -102,11 +102,15 @@ macro_rules! time_type {
                 tag::$tag
             }
             /// 常數時間：讀取已準備的線路內容長度。
-            fn content_len(&self, _: EncodingType) -> usize {
+            fn content_len(&self, _: EncodingOptions) -> usize {
                 self.wire.len()
             }
             /// 變動時間：複製正規化後的線路內容。
-            fn encode_content(&self, _: EncodingType, out: &mut [u8]) -> Result<usize, Asn1Error> {
+            fn encode_content(
+                &self,
+                _: EncodingOptions,
+                out: &mut [u8],
+            ) -> Result<usize, Asn1Error> {
                 out[..self.wire.len()].copy_from_slice(self.wire.as_bytes());
                 Ok(self.wire.len())
             }
@@ -139,10 +143,10 @@ time_type!(
 # Examples
 
 ```
-use tc_asn1::{Asn1Date, Encode, EncodingType};
+use tc_asn1::{Asn1Date, Encode, EncodingOptions};
 let date = Asn1Date::new("2024-02-29").unwrap();
 let mut out = [0; 11];
-date.encode(EncodingType::Der, &mut out).unwrap();
+date.encode(EncodingOptions::Der, &mut out).unwrap();
 assert_eq!(&out[..3], &[0x1f, 0x1f, 8]);
 assert_eq!(&out[3..], b"20240229");
 assert!(Asn1Date::new("2023-02-29").is_err());
@@ -226,7 +230,10 @@ mod tests {
             ),
         ];
         for (value, tag, content) in cases {
-            for rules in [EncodingType::Ber, EncodingType::Der] {
+            for rules in [
+                EncodingOptions::Ber(crate::LengthForm::Definite),
+                EncodingOptions::Der,
+            ] {
                 let mut out = alloc::vec![0; value.encoded_len(rules)];
                 assert_eq!(value.encode(rules, &mut out), Ok(out.len()));
                 assert_eq!(&out[..2], tag);
@@ -252,8 +259,8 @@ mod tests {
         macro_rules! check {
             ($ty:ident, $text:literal) => {
                 let value = $ty::new($text).unwrap();
-                let mut out = alloc::vec![0; value.encoded_len(EncodingType::Der)];
-                value.encode(EncodingType::Der, &mut out).unwrap();
+                let mut out = alloc::vec![0; value.encoded_len(EncodingOptions::Der)];
+                value.encode(EncodingOptions::Der, &mut out).unwrap();
                 assert_eq!($ty::try_decode(&out, Depth::DEFAULT).unwrap().1, value);
                 if out[0] == 0x1F { out[1] = 0x25; } else { out[0] = 0x04; }
                 assert_eq!($ty::try_decode(&out, Depth::DEFAULT), Err(Asn1Error::UnexpectedTag));

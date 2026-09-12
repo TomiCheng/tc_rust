@@ -1,7 +1,7 @@
 //! ASN.1 `BOOLEAN`。
 
 use crate::depth::Depth;
-use crate::encoding_type::EncodingType;
+use crate::encoding_options::EncodingOptions;
 use crate::error::Asn1Error;
 use crate::traits::{DecodeContent, Encode};
 
@@ -26,11 +26,11 @@ impl Encode for Asn1Boolean {
     fn tag(&self) -> &[u8] {
         TAG
     }
-    fn content_len(&self, _: EncodingType) -> usize {
+    fn content_len(&self, _: EncodingOptions) -> usize {
         1
     }
     /// 真永遠寫 `FF`：三種規則下都合法，而且直接是 DER 形式。
-    fn encode_content(&self, _: EncodingType, out: &mut [u8]) -> Result<usize, Asn1Error> {
+    fn encode_content(&self, _: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         out[0] = u8::from(self.0).wrapping_neg(); // true → 1 → 0xFF，沒有分支
         Ok(1)
     }
@@ -46,14 +46,14 @@ mod tests {
         let mut out = [0_u8; 4];
         assert_eq!(
             Asn1Boolean(true)
-                .encode(EncodingType::Der, &mut out)
+                .encode(EncodingOptions::Der, &mut out)
                 .unwrap(),
             3
         );
         assert_eq!(&out[..3], &[0x01, 0x01, 0xFF]);
         assert_eq!(
             Asn1Boolean(false)
-                .encode(EncodingType::Ber, &mut out)
+                .encode(EncodingOptions::Ber(crate::LengthForm::Definite), &mut out)
                 .unwrap(),
             3
         );
@@ -65,7 +65,7 @@ mod tests {
         // 這就是往返比較判定「不是 DER」的機制：01 進來，FF 出去。
         let (_, b) = Asn1Boolean::try_decode(&[0x01, 0x01, 0x01], DEPTH).unwrap();
         let mut out = [0_u8; 4];
-        b.encode(EncodingType::Der, &mut out).unwrap();
+        b.encode(EncodingOptions::Der, &mut out).unwrap();
         assert_eq!(&out[..3], &[0x01, 0x01, 0xFF]);
     }
 

@@ -3,7 +3,7 @@
 use alloc::vec::Vec;
 
 use crate::depth::Depth;
-use crate::encoding_type::EncodingType;
+use crate::encoding_options::EncodingOptions;
 use crate::error::Asn1Error;
 use crate::traits::{DecodeConstructed, DecodeContent, Encode};
 
@@ -59,10 +59,10 @@ impl Encode for Asn1OctetString {
     fn tag(&self) -> &[u8] {
         TAG
     }
-    fn content_len(&self, _: EncodingType) -> usize {
+    fn content_len(&self, _: EncodingOptions) -> usize {
         self.bytes.len()
     }
-    fn encode_content(&self, _: EncodingType, out: &mut [u8]) -> Result<usize, Asn1Error> {
+    fn encode_content(&self, _: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         out[..self.bytes.len()].copy_from_slice(&self.bytes);
         Ok(self.bytes.len())
     }
@@ -81,7 +81,7 @@ mod tests {
         let short = Asn1OctetString::new(&[0xaa; 1000]);
         let mut expected = alloc::vec![4, 0x82, 3, 0xe8];
         expected.extend_from_slice(&[0xaa; 1000]);
-        assert_eq!(short.encode_to_vec(EncodingType::Cer).unwrap(), expected);
+        assert_eq!(short.encode_to_vec(EncodingOptions::Cer).unwrap(), expected);
         let value = Asn1OctetString::new(&[0xaa; 1001]);
         let mut expected = alloc::vec![0x24, 0x80, 4, 0x82, 3, 0xe8];
         expected.extend_from_slice(&[0xaa; 1000]);
@@ -90,10 +90,13 @@ mod tests {
         let tree = Asn1Object::from(value.clone());
         let boxed: alloc::boxed::Box<dyn Encode> = alloc::boxed::Box::new(value.clone());
         for encoder in [&value as &dyn Encode, &tree, &boxed] {
-            assert_eq!(encoder.encoded_len(EncodingType::Cer), 1011);
-            assert_eq!(encoder.encode_to_vec(EncodingType::Cer).unwrap(), expected);
+            assert_eq!(encoder.encoded_len(EncodingOptions::Cer), 1011);
             assert_eq!(
-                encoder.encode(EncodingType::Cer, &mut [0; 1010]),
+                encoder.encode_to_vec(EncodingOptions::Cer).unwrap(),
+                expected
+            );
+            assert_eq!(
+                encoder.encode(EncodingOptions::Cer, &mut [0; 1010]),
                 Err(Asn1Error::BufferTooSmall)
             );
         }
@@ -109,14 +112,17 @@ mod tests {
         for encoder in [&value as &dyn Encode, &tree, &boxed] {
             assert_eq!(
                 Implicit::new(&[0x80], encoder)
-                    .encode_to_vec(EncodingType::Cer)
+                    .encode_to_vec(EncodingOptions::Cer)
                     .unwrap(),
                 expected
             );
         }
         let mut definite = alloc::vec![4, 0x82, 3, 0xe9];
         definite.extend_from_slice(&[0xaa; 1001]);
-        for rules in [EncodingType::Ber, EncodingType::Der] {
+        for rules in [
+            EncodingOptions::Ber(crate::LengthForm::Definite),
+            EncodingOptions::Der,
+        ] {
             assert_eq!(value.encode_to_vec(rules).unwrap(), definite);
         }
     }
@@ -129,7 +135,7 @@ mod tests {
         assert_eq!(s.as_bytes(), &[0xDE, 0xAD, 0x00]);
 
         let mut out = [0_u8; 8];
-        let written = s.encode(EncodingType::Der, &mut out).unwrap();
+        let written = s.encode(EncodingOptions::Der, &mut out).unwrap();
         assert_eq!(&out[..written], &input);
     }
 
@@ -169,7 +175,10 @@ mod tests {
             );
             assert_eq!(used, input.len());
             assert_eq!(value.as_bytes(), &[0xaa, 0xbb]);
-            for rules in [EncodingType::Der, EncodingType::Ber] {
+            for rules in [
+                EncodingOptions::Der,
+                EncodingOptions::Ber(crate::LengthForm::Definite),
+            ] {
                 assert_eq!(value.encode_to_vec(rules).unwrap(), [4, 2, 0xaa, 0xbb]);
             }
             let tree = crate::Asn1Object::try_decode(input, DEPTH).unwrap().1;
@@ -208,7 +217,7 @@ mod tests {
                 .map(|(_, value)| value)
                 .unwrap();
             assert!(value.as_bytes().is_empty());
-            assert_eq!(value.encode_to_vec(EncodingType::Der).unwrap(), [4, 0]);
+            assert_eq!(value.encode_to_vec(EncodingOptions::Der).unwrap(), [4, 0]);
         }
     }
 
