@@ -36,6 +36,8 @@ impl From<Vec<u8>> for Asn1OctetString {
 
 impl<'a> DecodeContent<'a> for Asn1OctetString {
     const TAG: &'static [u8] = TAG;
+    const CONSTRUCTED: Option<fn(&'a [u8], Depth) -> Result<Self, Asn1Error>> =
+        Some(<Self as DecodeConstructed<'a>>::try_decode_constructed);
 
     /// 任何內容都合法，包括空的。
     fn try_decode_content(value: &'a [u8], _: Depth) -> Result<Self, Asn1Error> {
@@ -126,7 +128,7 @@ mod tests {
             let (used, value) = decode_constructed(input, DEPTH).unwrap();
             assert_eq!(
                 Asn1OctetString::try_decode(input, DEPTH),
-                Err(Asn1Error::UnexpectedTag)
+                Ok((used, value.clone()))
             );
             assert_eq!(used, input.len());
             assert_eq!(value.as_bytes(), &[0xaa, 0xbb]);
@@ -174,13 +176,15 @@ mod tests {
     }
 
     #[test]
-    fn sequences_of_octets_reject_constructed_members_without_explicit_dispatch() {
+    fn sequences_of_octets_accept_registered_constructed_members() {
         assert_eq!(
             crate::Asn1SequenceOf::<Asn1OctetString>::try_decode_exact(
                 b"\x30\x05\x24\x03\x04\x01\xaa",
                 DEPTH,
             ),
-            Err(Asn1Error::UnexpectedTag)
+            Ok(crate::Asn1SequenceOf::from(alloc::vec![
+                Asn1OctetString::new(&[0xaa])
+            ]))
         );
     }
 

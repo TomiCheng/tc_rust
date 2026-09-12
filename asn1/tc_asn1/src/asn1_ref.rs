@@ -112,10 +112,13 @@ impl<'a> Asn1Ref<'a> {
     }
 
     /// 把這個元素當成 `T` 解：驗 tag，然後只解內容。表頭不重解。
-    /// tag 必須完全相符；分段字串請使用 [`Self::decode_constructed_as`]。
+    /// A matching tag decodes normally; its constructed form uses the entry
+    /// registered in [`DecodeContent::CONSTRUCTED`], or returns `UnexpectedTag`.
     pub fn decode_as<T: DecodeContent<'a>>(&self, depth: Depth) -> Result<T, Asn1Error> {
         if self.tag == T::TAG {
             T::try_decode_content(self.value, depth)
+        } else if is_constructed_form(self.tag, T::TAG) {
+            T::CONSTRUCTED.ok_or(Asn1Error::UnexpectedTag)?(self.value, depth)
         } else {
             Err(Asn1Error::UnexpectedTag)
         }
@@ -123,6 +126,8 @@ impl<'a> Asn1Ref<'a> {
 
     /// 解碼 `T::TAG` 對應的 constructed 形式；其他標記回傳 `UnexpectedTag`。
     /// `DecodeContent` 提供原始 tag，內容交由 `DecodeConstructed` 解碼。
+    /// The general [`Self::decode_as`] entry already dispatches registered forms;
+    /// use this entry when only the constructed form is acceptable.
     /// 變動時間：分支只依編碼結構，只能用於公開值；沒有常數時間替代方法。
     pub fn decode_constructed_as<T>(&self, depth: Depth) -> Result<T, Asn1Error>
     where

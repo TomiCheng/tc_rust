@@ -64,6 +64,8 @@ fn mask_unused(bytes: &mut [u8], unused_bits: u8) {
 
 impl<'a> DecodeContent<'a> for Asn1BitString {
     const TAG: &'static [u8] = TAG;
+    const CONSTRUCTED: Option<fn(&'a [u8], Depth) -> Result<Self, Asn1Error>> =
+        Some(<Self as DecodeConstructed<'a>>::try_decode_constructed);
 
     /// 寬鬆照 BER：沒用到的位不是 0 也接受，存起來時清掉。
     fn try_decode_content(value: &'a [u8], _: Depth) -> Result<Self, Asn1Error> {
@@ -222,7 +224,7 @@ mod tests {
             let (used, bits) = decode_constructed(input, DEPTH).unwrap();
             assert_eq!(
                 Asn1BitString::try_decode(input, DEPTH),
-                Err(Asn1Error::UnexpectedTag)
+                Ok((used, bits.clone()))
             );
             assert_eq!(used, input.len());
             assert_eq!(bits.as_bytes(), &[0xf0, 0xa0]);

@@ -10,6 +10,13 @@ pub trait DecodeContent<'a>: Sized {
     /// 沒有被重新標記時，這個型別的識別位元組。
     const TAG: &'static [u8];
 
+    /// Entry point for the BER constructed form of `TAG`, when the type has one.
+    /// Types register the function they implement through [`DecodeConstructed`];
+    /// everything else leaves the default `None` and the generic decoders reject
+    /// the constructed form with `UnexpectedTag`.
+    #[allow(clippy::type_complexity)] // Keep the optional callback signature visible at registration.
+    const CONSTRUCTED: Option<fn(&'a [u8], Depth) -> Result<Self, Asn1Error>> = None;
+
     /// 變動時間：分支只依編碼結構。
     fn try_decode_content(value: &'a [u8], depth: Depth) -> Result<Self, Asn1Error>;
 }
@@ -131,7 +138,7 @@ mod tests {
         );
         assert_eq!(
             Asn1OctetString::try_decode_der(&[0x24, 3, 4, 1, 0xaa], Depth::DEFAULT),
-            Err(Asn1Error::UnexpectedTag)
+            Err(Asn1Error::NotDer)
         );
         assert_eq!(
             Asn1Object::try_decode_der(&[0x24, 3, 4, 1, 0xaa], Depth::DEFAULT),
