@@ -5,10 +5,13 @@ use crate::encoding_options::EncodingOptions;
 use crate::error::Asn1Error;
 use crate::traits::{DecodeContent, Encode};
 
-use super::tag::BOOLEAN as TAG;
-
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Asn1Boolean(pub bool);
+
+impl Asn1Boolean {
+    /// Universal identifier octets for this type's default encoding form.
+    pub const TAG: &'static [u8] = super::tag::BOOLEAN;
+}
 
 impl From<bool> for Asn1Boolean {
     fn from(value: bool) -> Self {
@@ -63,11 +66,11 @@ impl crate::EncodeTagged for Asn1Boolean {}
 
 impl Encode for Asn1Boolean {
     fn encoded_len(&self, rules: EncodingOptions) -> usize {
-        crate::EncodeTagged::encoded_len_tagged(self, TAG, rules)
+        crate::EncodeTagged::encoded_len_tagged(self, Self::TAG, rules)
     }
 
     fn encode(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
-        crate::EncodeTagged::encode_tagged(self, TAG, rules, out)
+        crate::EncodeTagged::encode_tagged(self, Self::TAG, rules, out)
     }
 }
 

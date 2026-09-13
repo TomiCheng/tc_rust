@@ -7,7 +7,6 @@
 use super::{
     integer_octets::validate_integer_octets,
     real_number::{Exponent, Magnitude},
-    tag::REAL as TAG,
 };
 use crate::{Asn1Error, DecodeContent, DecodingOptions, Encode, EncodingOptions};
 use alloc::{vec, vec::Vec};
@@ -32,6 +31,9 @@ pub struct Asn1Real {
 }
 
 impl Asn1Real {
+    /// Universal identifier octets for this type's default encoding form.
+    pub const TAG: &'static [u8] = super::tag::REAL;
+
     /// 建立 `(-1)^negative × mantissa × 2^exponent`。
     /// mantissa 是無號大端序，exponent 是非空二補數大端序。變動時間：正規化尾端零位元。
     pub fn from_binary_parts(
@@ -393,11 +395,11 @@ impl crate::EncodeTagged for Asn1Real {}
 
 impl Encode for Asn1Real {
     fn encoded_len(&self, rules: EncodingOptions) -> usize {
-        crate::EncodeTagged::encoded_len_tagged(self, TAG, rules)
+        crate::EncodeTagged::encoded_len_tagged(self, Self::TAG, rules)
     }
 
     fn encode(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
-        crate::EncodeTagged::encode_tagged(self, TAG, rules, out)
+        crate::EncodeTagged::encode_tagged(self, Self::TAG, rules, out)
     }
 }
 

@@ -9,7 +9,7 @@
 
 /// 生一個位元組容器型別：`new` / `as_bytes` / `From<Vec<u8>>`、雙向編解碼、基本測試。
 macro_rules! opaque_bytes {
-    ($name:ident, $tag:expr, $doc:literal) => {
+    ($name:ident, $tag:expr, $constructed_tag:expr, $doc:literal) => {
         #[doc = $doc]
         #[derive(Clone, Debug, Default, Eq, PartialEq)]
         pub struct $name {
@@ -17,6 +17,12 @@ macro_rules! opaque_bytes {
         }
 
         impl $name {
+            /// Universal primitive identifier octets for this string type.
+            pub const TAG: &'static [u8] = $tag;
+
+            /// Universal constructed identifier for segmented encodings.
+            pub const CONSTRUCTED_TAG: &'static [u8] = $constructed_tag;
+
             /// 複製位元組，不驗字集。變動時間：配置與複製量由內容長度決定。
             pub fn new(bytes: &[u8]) -> Self {
                 Self {
@@ -99,7 +105,7 @@ macro_rules! opaque_bytes {
 
         impl $crate::traits::Encode for $name {
             fn encoded_len(&self, rules: $crate::EncodingOptions) -> usize {
-                $crate::EncodeTagged::encoded_len_tagged(self, $tag, rules)
+                $crate::EncodeTagged::encoded_len_tagged(self, Self::TAG, rules)
             }
 
             fn encode(
@@ -107,7 +113,7 @@ macro_rules! opaque_bytes {
                 rules: $crate::EncodingOptions,
                 out: &mut [u8],
             ) -> Result<usize, $crate::Asn1Error> {
-                $crate::EncodeTagged::encode_tagged(self, $tag, rules, out)
+                $crate::EncodeTagged::encode_tagged(self, Self::TAG, rules, out)
             }
         }
     };
@@ -116,18 +122,21 @@ macro_rules! opaque_bytes {
 opaque_bytes!(
     Asn1GraphicString,
     super::tag::GRAPHIC_STRING,
+    super::tag::CONSTRUCTED_GRAPHIC_STRING,
     "ASN.1 `GraphicString`。位元組原樣，不驗字集。"
 );
 
 opaque_bytes!(
     Asn1ObjectDescriptor,
     super::tag::OBJECT_DESCRIPTOR,
+    super::tag::CONSTRUCTED_OBJECT_DESCRIPTOR,
     "ASN.1 `ObjectDescriptor`：給人看的物件描述，內容是 GraphicString。"
 );
 
 opaque_bytes!(
     Asn1TeletexString,
     super::tag::TELETEX_STRING,
+    super::tag::CONSTRUCTED_TELETEX_STRING,
     r#"ASN.1 `TeletexString`。位元組原樣保存，不驗證 T.61 字集。
 
 # Examples
@@ -148,6 +157,7 @@ assert_eq!(value.as_bytes(), &[0xC1, b'e']);
 opaque_bytes!(
     Asn1VideotexString,
     super::tag::VIDEOTEX_STRING,
+    super::tag::CONSTRUCTED_VIDEOTEX_STRING,
     r#"ASN.1 `VideotexString`。位元組原樣保存，不驗字集。
 
 # Examples
@@ -168,6 +178,7 @@ assert_eq!(value.as_bytes(), &[0x1B, 0, 0xFF]);
 opaque_bytes!(
     Asn1GeneralString,
     super::tag::GENERAL_STRING,
+    super::tag::CONSTRUCTED_GENERAL_STRING,
     r#"ASN.1 `GeneralString`。位元組原樣保存，不驗字集或正規化字集切換。
 
 # Examples

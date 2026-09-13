@@ -8,7 +8,6 @@ use crate::error::Asn1Error;
 use crate::traits::{DecodeContent, Encode};
 
 use super::integer_octets::{minimal_signed, validate_integer_octets};
-use super::tag::INTEGER as TAG;
 
 /// 內容是二補數大端序、最短形式，擁有。
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -17,6 +16,9 @@ pub struct Asn1Integer {
 }
 
 impl Asn1Integer {
+    /// Universal identifier octets for this type's default encoding form.
+    pub const TAG: &'static [u8] = super::tag::INTEGER;
+
     /// 由已經是 DER 形式的位元組建立；驗證非空且沒有多餘的符號位元組。
     pub fn from_der_bytes(bytes: &[u8]) -> Result<Self, Asn1Error> {
         validate_integer_octets(bytes)?;
@@ -175,11 +177,11 @@ impl crate::EncodeTagged for Asn1Integer {}
 
 impl Encode for Asn1Integer {
     fn encoded_len(&self, rules: EncodingOptions) -> usize {
-        crate::EncodeTagged::encoded_len_tagged(self, TAG, rules)
+        crate::EncodeTagged::encoded_len_tagged(self, Self::TAG, rules)
     }
 
     fn encode(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
-        crate::EncodeTagged::encode_tagged(self, TAG, rules, out)
+        crate::EncodeTagged::encode_tagged(self, Self::TAG, rules, out)
     }
 }
 

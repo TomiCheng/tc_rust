@@ -8,8 +8,6 @@ use crate::encoding_options::EncodingOptions;
 use crate::error::Asn1Error;
 use crate::traits::{DecodeConstructed, DecodeContent, Encode};
 
-use super::tag::BIT_STRING as TAG;
-
 /// 位元 0 是第一個位元組的最高位。最後一個位元組沒用到的位永遠存成 0。
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Asn1BitString {
@@ -18,6 +16,12 @@ pub struct Asn1BitString {
 }
 
 impl Asn1BitString {
+    /// Universal identifier octets for this type's default encoding form.
+    pub const TAG: &'static [u8] = super::tag::BIT_STRING;
+
+    /// Universal constructed identifier for segmented encodings.
+    pub const CONSTRUCTED_TAG: &'static [u8] = super::tag::CONSTRUCTED_BIT_STRING;
+
     /// 整數個位元組，沒有未用的位 —— 公鑰、簽章這種容器用法。
     pub fn from_bytes(bytes: &[u8]) -> Self {
         Self {
@@ -114,7 +118,7 @@ impl<'a> DecodeConstructed<'a> for Asn1BitString {
                 return Err(Asn1Error::MalformedValue);
             }
             let child = child?;
-            if child.tag() != TAG && child.tag() != crate::tag::CONSTRUCTED_BIT_STRING {
+            if child.tag() != Self::TAG && child.tag() != Self::CONSTRUCTED_TAG {
                 return Err(Asn1Error::UnexpectedTag);
             }
             let part = if child.is_constructed() {
@@ -159,7 +163,7 @@ impl crate::EncodeContent for Asn1BitString {
         let mut at = 0;
         let count = self.bytes.len().div_ceil(999);
         for (index, part) in self.bytes.chunks(999).enumerate() {
-            out[at] = TAG[0];
+            out[at] = Self::TAG[0];
             at += 1;
             at += crate::encoding::write_len(part.len() + 1, &mut out[at..]);
             out[at] = if index + 1 == count {
@@ -209,7 +213,7 @@ impl crate::EncodeTagged for Asn1BitString {
         let mut at = tag.len() + 1;
         let count = self.bytes.len().div_ceil(999);
         for (index, part) in self.bytes.chunks(999).enumerate() {
-            out[at] = TAG[0];
+            out[at] = Self::TAG[0];
             at += 1;
             at += crate::encoding::write_len(part.len() + 1, &mut out[at..]);
             out[at] = if index + 1 == count {
@@ -228,11 +232,11 @@ impl crate::EncodeTagged for Asn1BitString {
 
 impl Encode for Asn1BitString {
     fn encoded_len(&self, rules: EncodingOptions) -> usize {
-        crate::EncodeTagged::encoded_len_tagged(self, TAG, rules)
+        crate::EncodeTagged::encoded_len_tagged(self, Self::TAG, rules)
     }
 
     fn encode(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
-        crate::EncodeTagged::encode_tagged(self, TAG, rules, out)
+        crate::EncodeTagged::encode_tagged(self, Self::TAG, rules, out)
     }
 }
 
@@ -550,7 +554,7 @@ mod tests {
                 Err(Asn1Error::UnexpectedTag),
             ),
             (&b"\x23\x02\x24\x00"[..], 2, Err(Asn1Error::UnexpectedTag)),
-            (&b"\x03\x01\x00"[..], 1, Err(Asn1Error::UnexpectedTag)),
+            (&b"\x03\x01\x00"[..], 0, Ok(Asn1BitString::from_bytes(&[]))),
             (&b"\x23\x02\x23\x00"[..], 1, Err(Asn1Error::DepthExceeded)),
             (
                 &b"\x23\x02\x23\x00"[..],

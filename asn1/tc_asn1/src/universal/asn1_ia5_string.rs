@@ -7,8 +7,6 @@ use crate::encoding_options::EncodingOptions;
 use crate::error::Asn1Error;
 use crate::traits::{DecodeContent, Encode};
 
-use super::tag::IA5_STRING as TAG;
-
 /// 內容保證全是 ASCII，所以 `as_str` 不會失敗。
 #[derive(Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Asn1Ia5String {
@@ -16,6 +14,12 @@ pub struct Asn1Ia5String {
 }
 
 impl Asn1Ia5String {
+    /// Universal identifier octets for this type's default encoding form.
+    pub const TAG: &'static [u8] = super::tag::IA5_STRING;
+
+    /// Universal constructed identifier for segmented encodings.
+    pub const CONSTRUCTED_TAG: &'static [u8] = super::tag::CONSTRUCTED_IA5_STRING;
+
     /// 含非 ASCII 字元就拒絕。
     pub fn new(text: &str) -> Result<Self, Asn1Error> {
         if !text.is_ascii() {
@@ -90,11 +94,11 @@ impl crate::EncodeTagged for Asn1Ia5String {
 
 impl Encode for Asn1Ia5String {
     fn encoded_len(&self, rules: EncodingOptions) -> usize {
-        crate::EncodeTagged::encoded_len_tagged(self, TAG, rules)
+        crate::EncodeTagged::encoded_len_tagged(self, Self::TAG, rules)
     }
 
     fn encode(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
-        crate::EncodeTagged::encode_tagged(self, TAG, rules, out)
+        crate::EncodeTagged::encode_tagged(self, Self::TAG, rules, out)
     }
 }
 

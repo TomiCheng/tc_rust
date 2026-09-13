@@ -7,8 +7,6 @@ use crate::encoding_options::EncodingOptions;
 use crate::error::Asn1Error;
 use crate::traits::{DecodeContent, Encode};
 
-use super::tag::VISIBLE_STRING as TAG;
-
 /// 內容保證位於 `0x20`–`0x7E`，不接受控制字元或非 ASCII 字元。
 ///
 /// # Examples
@@ -28,6 +26,12 @@ pub struct Asn1VisibleString {
 }
 
 impl Asn1VisibleString {
+    /// Universal identifier octets for this type's default encoding form.
+    pub const TAG: &'static [u8] = super::tag::VISIBLE_STRING;
+
+    /// Universal constructed identifier for segmented encodings.
+    pub const CONSTRUCTED_TAG: &'static [u8] = super::tag::CONSTRUCTED_VISIBLE_STRING;
+
     /// 驗證字集並複製內容；不合法時回傳 [`Asn1Error::MalformedValue`]。
     /// 變動時間：依內容長度與遇到的字元決定掃描量。
     pub fn new(text: &str) -> Result<Self, Asn1Error> {
@@ -102,11 +106,11 @@ impl crate::EncodeTagged for Asn1VisibleString {
 
 impl Encode for Asn1VisibleString {
     fn encoded_len(&self, rules: EncodingOptions) -> usize {
-        crate::EncodeTagged::encoded_len_tagged(self, TAG, rules)
+        crate::EncodeTagged::encoded_len_tagged(self, Self::TAG, rules)
     }
 
     fn encode(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
-        crate::EncodeTagged::encode_tagged(self, TAG, rules, out)
+        crate::EncodeTagged::encode_tagged(self, Self::TAG, rules, out)
     }
 }
 
@@ -180,7 +184,7 @@ mod tests {
     fn the_schema_checks_tags_a_visible_string_rejects_an_ia5_string_tag() {
         assert_eq!(
             crate::Fields::new(&[0x16, 1, b'A'], DecodingOptions::default())
-                .and_then(|mut fields| fields.required::<Asn1VisibleString>(TAG)),
+                .and_then(|mut fields| fields.required::<Asn1VisibleString>(Asn1VisibleString::TAG)),
             Err(Asn1Error::UnexpectedTag)
         );
     }

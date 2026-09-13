@@ -7,8 +7,6 @@ use crate::encoding_options::EncodingOptions;
 use crate::error::Asn1Error;
 use crate::traits::{DecodeContent, Encode};
 
-use super::tag::NUMERIC_STRING as TAG;
-
 /// 內容只含 ASCII 數字 `0`–`9` 與空白，因此可以直接借用為字串。
 ///
 /// # Examples
@@ -28,6 +26,12 @@ pub struct Asn1NumericString {
 }
 
 impl Asn1NumericString {
+    /// Universal identifier octets for this type's default encoding form.
+    pub const TAG: &'static [u8] = super::tag::NUMERIC_STRING;
+
+    /// Universal constructed identifier for segmented encodings.
+    pub const CONSTRUCTED_TAG: &'static [u8] = super::tag::CONSTRUCTED_NUMERIC_STRING;
+
     /// 驗證字集並複製內容；不合法時回傳 [`Asn1Error::MalformedValue`]。
     /// 變動時間：依內容長度與遇到的字元決定掃描量。
     pub fn new(text: &str) -> Result<Self, Asn1Error> {
@@ -105,11 +109,11 @@ impl crate::EncodeTagged for Asn1NumericString {
 
 impl Encode for Asn1NumericString {
     fn encoded_len(&self, rules: EncodingOptions) -> usize {
-        crate::EncodeTagged::encoded_len_tagged(self, TAG, rules)
+        crate::EncodeTagged::encoded_len_tagged(self, Self::TAG, rules)
     }
 
     fn encode(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
-        crate::EncodeTagged::encode_tagged(self, TAG, rules, out)
+        crate::EncodeTagged::encode_tagged(self, Self::TAG, rules, out)
     }
 }
 
@@ -173,7 +177,7 @@ mod tests {
     fn the_schema_checks_tags_a_numeric_string_rejects_an_ia5_string_tag() {
         assert_eq!(
             crate::Fields::new(&[0x16, 1, b'1'], DecodingOptions::default())
-                .and_then(|mut fields| fields.required::<Asn1NumericString>(TAG)),
+                .and_then(|mut fields| fields.required::<Asn1NumericString>(Asn1NumericString::TAG)),
             Err(Asn1Error::UnexpectedTag)
         );
     }

@@ -14,8 +14,6 @@ use crate::encoding_options::EncodingOptions;
 use crate::error::Asn1Error;
 use crate::traits::{DecodeContent, Encode};
 
-use super::tag::SET as TAG;
-
 /// A homogeneous SET OF; insertion and decoding preserve order, while CER and DER sort output.
 ///
 /// X.690 §11.6 比較成員的完整 DER 編碼，採位元組字典序。條文的尾端補零
@@ -42,6 +40,12 @@ pub struct Asn1SetOf<T> {
 }
 
 impl<T> Asn1SetOf<T> {
+    /// Universal identifier octets for this type's default encoding form.
+    pub const TAG: &'static [u8] = super::tag::SET;
+
+    /// Universal constructed identifier; identical to `TAG` because this type is always constructed.
+    pub const CONSTRUCTED_TAG: &'static [u8] = Self::TAG;
+
     /// 建立空集合。
     pub fn new() -> Self {
         Self {
@@ -158,11 +162,11 @@ impl<T: Encode> crate::EncodeTagged for Asn1SetOf<T> {}
 
 impl<T: Encode> Encode for Asn1SetOf<T> {
     fn encoded_len(&self, rules: EncodingOptions) -> usize {
-        crate::EncodeTagged::encoded_len_tagged(self, TAG, rules)
+        crate::EncodeTagged::encoded_len_tagged(self, Self::TAG, rules)
     }
 
     fn encode(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
-        crate::EncodeTagged::encode_tagged(self, TAG, rules, out)
+        crate::EncodeTagged::encode_tagged(self, Self::TAG, rules, out)
     }
 }
 
@@ -328,7 +332,9 @@ mod tests {
     fn the_schema_checks_the_outer_tag_and_members_validate_contents() {
         assert_eq!(
             crate::Fields::new(&[0x30, 0], DecodingOptions::default())
-                .and_then(|mut fields| fields.required::<Asn1SetOf<Asn1Boolean>>(TAG))
+                .and_then(
+                    |mut fields| fields.required::<Asn1SetOf<Asn1Boolean>>(Asn1SetOf::<()>::TAG)
+                )
                 .err(),
             Some(Asn1Error::UnexpectedTag)
         );

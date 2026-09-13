@@ -7,8 +7,6 @@ use crate::encoding_options::EncodingOptions;
 use crate::error::Asn1Error;
 use crate::traits::{DecodeConstructed, DecodeContent, Encode};
 
-use super::tag::OCTET_STRING as TAG;
-
 /// 任意位元組，沒有解讀。
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Asn1OctetString {
@@ -16,6 +14,42 @@ pub struct Asn1OctetString {
 }
 
 impl Asn1OctetString {
+    /// Universal identifier octets for this type's default encoding form.
+    ///
+    /// # Examples
+    ///
+    /// Use associated constants in patterns to select the schema's content decoder.
+    /// The byte arrays below are wire examples, including their tag and length fields.
+    ///
+    /// ```
+    /// use tc_asn1::{Asn1Error, Asn1Integer, Asn1OctetString, Asn1Ref, DecodingOptions};
+    ///
+    /// let options = DecodingOptions::default();
+    /// for wire in [
+    ///     &[2, 1, 5][..],
+    ///     &[4, 2, b'A', b'B'],
+    ///     &[0x24, 6, 4, 1, b'A', 4, 1, b'B'],
+    /// ] {
+    ///     let element = Asn1Ref::parse(wire, options)?;
+    ///     match element.tag() {
+    ///         Asn1Integer::TAG => {
+    ///             let value = element.decode_as::<Asn1Integer>(options)?;
+    ///             assert_eq!(i64::try_from(&value)?, 5);
+    ///         }
+    ///         Asn1OctetString::TAG | Asn1OctetString::CONSTRUCTED_TAG => {
+    ///             let value = element.decode_constructed_as::<Asn1OctetString>(options)?;
+    ///             assert_eq!(value.as_bytes(), b"AB");
+    ///         }
+    ///         _ => return Err(Asn1Error::UnexpectedTag),
+    ///     }
+    /// }
+    /// # Ok::<(), Asn1Error>(())
+    /// ```
+    pub const TAG: &'static [u8] = super::tag::OCTET_STRING;
+
+    /// Universal constructed identifier for segmented encodings.
+    pub const CONSTRUCTED_TAG: &'static [u8] = super::tag::CONSTRUCTED_OCTET_STRING;
+
     pub fn new(bytes: &[u8]) -> Self {
         Self {
             bytes: bytes.to_vec(),
@@ -68,7 +102,9 @@ impl<'a> DecodeConstructed<'a> for Asn1OctetString {
     ) -> Result<Self, Asn1Error> {
         options.check_content_len(value.len())?;
         Ok(Self::from(crate::segments::join_segments(
-            TAG, value, options,
+            Self::TAG,
+            value,
+            options,
         )?))
     }
 }
@@ -98,11 +134,11 @@ impl crate::EncodeTagged for Asn1OctetString {
 
 impl Encode for Asn1OctetString {
     fn encoded_len(&self, rules: EncodingOptions) -> usize {
-        crate::EncodeTagged::encoded_len_tagged(self, TAG, rules)
+        crate::EncodeTagged::encoded_len_tagged(self, Self::TAG, rules)
     }
 
     fn encode(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
-        crate::EncodeTagged::encode_tagged(self, TAG, rules, out)
+        crate::EncodeTagged::encode_tagged(self, Self::TAG, rules, out)
     }
 }
 
@@ -190,7 +226,7 @@ mod tests {
     fn the_schema_checks_tags_a_bit_string_tag_is_not_an_octet_string() {
         assert_eq!(
             crate::Fields::new(&[0x03, 0x01, 0x00], OPTIONS)
-                .and_then(|mut fields| fields.required::<Asn1OctetString>(TAG)),
+                .and_then(|mut fields| fields.required::<Asn1OctetString>(Asn1OctetString::TAG)),
             Err(Asn1Error::UnexpectedTag)
         );
     }
@@ -308,7 +344,7 @@ mod tests {
             ),
             (&b"\x24\x02\x23\x00"[..], 2, Err(Asn1Error::UnexpectedTag)),
             (&b"\x24\x01\x04"[..], 1, Err(Asn1Error::Truncated)),
-            (&b"\x04\x00"[..], 1, Err(Asn1Error::UnexpectedTag)),
+            (&b"\x04\x00"[..], 0, Ok(Asn1OctetString::default())),
             (&b"\x24\x02\x24\x00"[..], 1, Err(Asn1Error::DepthExceeded)),
             (&b"\x24\x02\x24\x00"[..], 2, Ok(Asn1OctetString::default())),
         ] {

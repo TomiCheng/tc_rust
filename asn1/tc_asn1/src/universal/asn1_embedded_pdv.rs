@@ -12,6 +12,18 @@ use crate::{
 };
 use alloc::vec::Vec;
 
+const SYNTAX_TAG: &[u8] = &[0x81];
+const PRESENTATION_CONTEXT_ID_TAG: &[u8] = &[0x82];
+const TRANSFER_SYNTAX_TAG: &[u8] = &[0x84];
+const FIXED_TAG: &[u8] = &[0x85];
+const SYNTAXES_TAG: &[u8] = &[0xA0];
+const CONTEXT_NEGOTIATION_TAG: &[u8] = &[0xA3];
+const FIRST_COMPONENT_TAG: &[u8] = &[0x80];
+const SECOND_COMPONENT_TAG: &[u8] = &[0x81];
+const IDENTIFICATION_TAG: &[u8] = &[0xA0];
+const DATA_VALUE_TAG: &[u8] = &[0x82];
+const CONSTRUCTED_DATA_VALUE_TAG: &[u8] = &[0xA2];
+
 /// 識別抽象語法與傳輸語法的六種方式。
 ///
 /// # Examples
@@ -61,13 +73,13 @@ fn two_fields(
 impl PdvIdentification {
     fn decode(field: Asn1Ref<'_>, options: DecodingOptions) -> Result<Self, Asn1Error> {
         Ok(match field.tag() {
-            [0xA0] | [0xA3] => {
+            SYNTAXES_TAG | CONTEXT_NEGOTIATION_TAG => {
                 let (first, second) = two_fields(field.value(), options.descend()?)?;
-                if first.tag() != [0x80] || second.tag() != [0x81] {
+                if first.tag() != FIRST_COMPONENT_TAG || second.tag() != SECOND_COMPONENT_TAG {
                     return Err(Asn1Error::UnexpectedTag);
                 }
                 let transfer_syntax = Asn1Oid::from_der_bytes(second.value())?;
-                if field.tag() == [0xA0] {
+                if field.tag() == SYNTAXES_TAG {
                     Self::Syntaxes {
                         abstract_syntax: Asn1Oid::from_der_bytes(first.value())?,
                         transfer_syntax,
@@ -79,11 +91,13 @@ impl PdvIdentification {
                     }
                 }
             }
-            [0x81] => Self::Syntax(Asn1Oid::from_der_bytes(field.value())?),
-            [0x82] => Self::PresentationContextId(Asn1Integer::from_der_bytes(field.value())?),
-            [0x84] => Self::TransferSyntax(Asn1Oid::from_der_bytes(field.value())?),
-            [0x85] if field.value().is_empty() => Self::Fixed,
-            [0x85] => return Err(Asn1Error::MalformedValue),
+            SYNTAX_TAG => Self::Syntax(Asn1Oid::from_der_bytes(field.value())?),
+            PRESENTATION_CONTEXT_ID_TAG => {
+                Self::PresentationContextId(Asn1Integer::from_der_bytes(field.value())?)
+            }
+            TRANSFER_SYNTAX_TAG => Self::TransferSyntax(Asn1Oid::from_der_bytes(field.value())?),
+            FIXED_TAG if field.value().is_empty() => Self::Fixed,
+            FIXED_TAG => return Err(Asn1Error::MalformedValue),
             _ => return Err(Asn1Error::UnexpectedTag),
         })
     }
@@ -92,12 +106,12 @@ impl PdvIdentification {
 impl PdvIdentification {
     fn tag(&self) -> &[u8] {
         match self {
-            Self::Syntaxes { .. } => &[0xA0],
-            Self::Syntax(_) => &[0x81],
-            Self::PresentationContextId(_) => &[0x82],
-            Self::ContextNegotiation { .. } => &[0xA3],
-            Self::TransferSyntax(_) => &[0x84],
-            Self::Fixed => &[0x85],
+            Self::Syntaxes { .. } => SYNTAXES_TAG,
+            Self::Syntax(_) => SYNTAX_TAG,
+            Self::PresentationContextId(_) => PRESENTATION_CONTEXT_ID_TAG,
+            Self::ContextNegotiation { .. } => CONTEXT_NEGOTIATION_TAG,
+            Self::TransferSyntax(_) => TRANSFER_SYNTAX_TAG,
+            Self::Fixed => FIXED_TAG,
         }
     }
 }
@@ -129,15 +143,17 @@ impl crate::EncodeContent for PdvIdentification {
                 abstract_syntax,
                 transfer_syntax,
             } => {
-                let at = abstract_syntax.encode_tagged(&[0x80], rules, out)?;
-                Ok(at + transfer_syntax.encode_tagged(&[0x81], rules, &mut out[at..])?)
+                let at = abstract_syntax.encode_tagged(FIRST_COMPONENT_TAG, rules, out)?;
+                Ok(at
+                    + transfer_syntax.encode_tagged(SECOND_COMPONENT_TAG, rules, &mut out[at..])?)
             }
             Self::ContextNegotiation {
                 presentation_context_id,
                 transfer_syntax,
             } => {
-                let at = presentation_context_id.encode_tagged(&[0x80], rules, out)?;
-                Ok(at + transfer_syntax.encode_tagged(&[0x81], rules, &mut out[at..])?)
+                let at = presentation_context_id.encode_tagged(FIRST_COMPONENT_TAG, rules, out)?;
+                Ok(at
+                    + transfer_syntax.encode_tagged(SECOND_COMPONENT_TAG, rules, &mut out[at..])?)
             }
             Self::Syntax(oid) | Self::TransferSyntax(oid) => oid.encode_content(rules, out),
             Self::PresentationContextId(id) => id.encode_content(rules, out),
@@ -167,6 +183,12 @@ macro_rules! container {
             value: Vec<u8>,
         }
         impl $name {
+            /// Universal identifier octets for this type.
+            pub const TAG: &'static [u8] = tag::$tag;
+
+            /// Universal constructed identifier; this type is always constructed.
+            pub const CONSTRUCTED_TAG: &'static [u8] = Self::TAG;
+
             /// 接收識別方式與資料的所有權；不解讀被包裝的傳輸語法。
             pub fn new(identification: PdvIdentification, value: Vec<u8>) -> Self {
                 Self {
@@ -200,7 +222,7 @@ macro_rules! container {
                 options.check_content_len(value.len())?;
                 let options = options.descend()?;
                 let (identification, data) = two_fields(value, options)?;
-                if identification.tag() != [0xA0] || (data.tag() != [0x82] && data.tag() != [0xA2]) {
+                if identification.tag() != IDENTIFICATION_TAG || (data.tag() != DATA_VALUE_TAG && data.tag() != CONSTRUCTED_DATA_VALUE_TAG) {
                     return Err(Asn1Error::UnexpectedTag);
                 }
                 let inner_options = options.descend()?;
@@ -210,7 +232,7 @@ macro_rules! container {
                 }
                 Ok(Self::new(
                     PdvIdentification::decode(inner, inner_options)?,
-                    if data.tag() == [0x82] {
+                    if data.tag() == DATA_VALUE_TAG {
                         data.value().to_vec()
                     } else {
                         <crate::Asn1OctetString as crate::DecodeConstructed>::try_decode_constructed(data.value(), options)?.as_bytes().to_vec()
@@ -222,9 +244,9 @@ macro_rules! container {
         impl $crate::EncodeContent for $name {
             /// 變動時間：依識別選項與資料長度計算。
             fn content_len(&self, rules: EncodingOptions) -> usize {
-                let id_len = crate::Explicit::new(&[0xa0], &self.identification).encoded_len(rules);
+                let id_len = crate::Explicit::new(IDENTIFICATION_TAG, &self.identification).encoded_len(rules);
                 id_len + if rules == EncodingOptions::Cer {
-                    crate::segments::segmented_len(&[0x82], tag::OCTET_STRING, self.value.len())
+                    crate::segments::segmented_len(DATA_VALUE_TAG, crate::Asn1OctetString::TAG, self.value.len())
                 } else {
                     1 + len_octets(self.value.len()) + self.value.len()
                 }
@@ -238,11 +260,11 @@ macro_rules! container {
             ) -> Result<usize, Asn1Error> {
                 let len = $crate::EncodeContent::content_len(self, rules);
                 let out = out.get_mut(..len).ok_or($crate::Asn1Error::BufferTooSmall)?;
-                let mut at = crate::Explicit::new(&[0xa0], &self.identification).encode(rules, out)?;
+                let mut at = crate::Explicit::new(IDENTIFICATION_TAG, &self.identification).encode(rules, out)?;
                 if rules == EncodingOptions::Cer {
-                    return Ok(at + crate::segments::encode_segmented(&[0x82], tag::OCTET_STRING, &self.value, &mut out[at..])?);
+                    return Ok(at + crate::segments::encode_segmented(DATA_VALUE_TAG, crate::Asn1OctetString::TAG, &self.value, &mut out[at..])?);
                 }
-                out[at] = 0x82;
+                out[at] = DATA_VALUE_TAG[0];
                 at += 1;
                 at += write_len(self.value.len(), &mut out[at..]);
                 out[at..at + self.value.len()].copy_from_slice(&self.value);
@@ -254,11 +276,11 @@ macro_rules! container {
 
         impl Encode for $name {
             fn encoded_len(&self, rules: $crate::EncodingOptions) -> usize {
-                $crate::EncodeTagged::encoded_len_tagged(self, tag::$tag, rules)
+                $crate::EncodeTagged::encoded_len_tagged(self, Self::TAG, rules)
             }
 
             fn encode(&self, rules: $crate::EncodingOptions, out: &mut [u8]) -> Result<usize, $crate::Asn1Error> {
-                $crate::EncodeTagged::encode_tagged(self, tag::$tag, rules, out)
+                $crate::EncodeTagged::encode_tagged(self, Self::TAG, rules, out)
             }
         }
     };

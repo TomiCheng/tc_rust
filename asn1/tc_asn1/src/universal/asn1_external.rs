@@ -18,7 +18,6 @@
 
 use alloc::boxed::Box;
 
-use super::tag::EXTERNAL as TAG;
 use super::{Asn1BitString, Asn1Integer, Asn1ObjectDescriptor, Asn1OctetString, Asn1Oid};
 use crate::asn1_object::Asn1Object;
 use crate::decoding_options::DecodingOptions;
@@ -32,6 +31,8 @@ use crate::{Explicit, Fields, Implicit, SequenceFields};
 const SINGLE_ASN1_TYPE: &[u8] = &[0xA0]; // [0] EXPLICIT，constructed
 const OCTET_ALIGNED: &[u8] = &[0x81]; // [1] IMPLICIT，primitive
 const ARBITRARY: &[u8] = &[0x82]; // [2] IMPLICIT，primitive
+const CONSTRUCTED_OCTET_ALIGNED: &[u8] = &[0xA1];
+const CONSTRUCTED_ARBITRARY: &[u8] = &[0xA2];
 
 /// `encoding` 那個 CHOICE。三支的標記方式不同：`[0]` 裡是任意型別所以 EXPLICIT
 /// （保留內層的 tag），`[1]` `[2]` 型別已知所以 IMPLICIT。
@@ -54,6 +55,12 @@ pub struct Asn1External {
 }
 
 impl Asn1External {
+    /// Universal identifier octets for this type's default encoding form.
+    pub const TAG: &'static [u8] = super::tag::EXTERNAL;
+
+    /// Universal constructed identifier; identical to `TAG` because this type is always constructed.
+    pub const CONSTRUCTED_TAG: &'static [u8] = Self::TAG;
+
     pub fn new(
         direct_reference: Option<Asn1Oid>,
         indirect_reference: Option<Asn1Integer>,
@@ -105,13 +112,13 @@ impl<'a> DecodeContent<'a> for Asn1External {
     fn try_decode_content(value: &'a [u8], depth: DecodingOptions) -> Result<Self, Asn1Error> {
         depth.check_content_len(value.len())?;
         let mut fields = Fields::new(value, depth)?;
-        let direct_reference = fields.optional(crate::tag::OBJECT_IDENTIFIER)?;
-        let indirect_reference = fields.optional(crate::tag::INTEGER)?;
+        let direct_reference = fields.optional(Asn1Oid::TAG)?;
+        let indirect_reference = fields.optional(Asn1Integer::TAG)?;
         let descriptor_tag = match fields.peek()? {
-            Some(field) if field.tag() == crate::tag::CONSTRUCTED_OBJECT_DESCRIPTOR => {
-                crate::tag::CONSTRUCTED_OBJECT_DESCRIPTOR
+            Some(field) if field.tag() == Asn1ObjectDescriptor::CONSTRUCTED_TAG => {
+                Asn1ObjectDescriptor::CONSTRUCTED_TAG
             }
-            _ => crate::tag::OBJECT_DESCRIPTOR,
+            _ => Asn1ObjectDescriptor::TAG,
         };
         let data_value_descriptor = fields.optional(descriptor_tag)?;
         let encoding = match fields.peek()?.ok_or(Asn1Error::Truncated)?.tag() {
@@ -120,8 +127,12 @@ impl<'a> DecodeContent<'a> for Asn1External {
             )),
             OCTET_ALIGNED => ExternalEncoding::OctetAligned(fields.implicit(OCTET_ALIGNED)?),
             ARBITRARY => ExternalEncoding::Arbitrary(fields.implicit(ARBITRARY)?),
-            [0xa1] => ExternalEncoding::OctetAligned(fields.implicit_constructed(OCTET_ALIGNED)?),
-            [0xa2] => ExternalEncoding::Arbitrary(fields.implicit_constructed(ARBITRARY)?),
+            CONSTRUCTED_OCTET_ALIGNED => {
+                ExternalEncoding::OctetAligned(fields.implicit_constructed(OCTET_ALIGNED)?)
+            }
+            CONSTRUCTED_ARBITRARY => {
+                ExternalEncoding::Arbitrary(fields.implicit_constructed(ARBITRARY)?)
+            }
             _ => return Err(Asn1Error::UnexpectedTag),
         };
         fields.finish()?;
@@ -156,7 +167,7 @@ impl SequenceFields for Asn1External {
     }
 }
 
-crate::impl_sequence_encode!(Asn1External, TAG);
+crate::impl_sequence_encode!(Asn1External, Asn1External::TAG);
 
 #[cfg(test)]
 mod tests {

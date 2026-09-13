@@ -40,6 +40,9 @@ macro_rules! iri {
             text: String,
         }
         impl $name {
+            /// Universal identifier octets for this type.
+            pub const TAG: &'static [u8] = tag::$tag;
+
             /// 驗證路徑與每個標籤後複製。變動時間：依字元與路徑長度分支。
             pub fn new(text: &str) -> Result<Self, Asn1Error> {
                 let labels = if $absolute {
@@ -112,7 +115,7 @@ macro_rules! iri {
 
         impl Encode for $name {
             fn encoded_len(&self, rules: $crate::EncodingOptions) -> usize {
-                $crate::EncodeTagged::encoded_len_tagged(self, tag::$tag, rules)
+                $crate::EncodeTagged::encoded_len_tagged(self, Self::TAG, rules)
             }
 
             fn encode(
@@ -120,7 +123,7 @@ macro_rules! iri {
                 rules: $crate::EncodingOptions,
                 out: &mut [u8],
             ) -> Result<usize, $crate::Asn1Error> {
-                $crate::EncodeTagged::encode_tagged(self, tag::$tag, rules, out)
+                $crate::EncodeTagged::encode_tagged(self, Self::TAG, rules, out)
             }
         }
     };

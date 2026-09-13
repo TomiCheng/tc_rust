@@ -7,8 +7,6 @@ use crate::encoding_options::EncodingOptions;
 use crate::error::Asn1Error;
 use crate::traits::{DecodeContent, Encode};
 
-use super::tag::BMP_STRING as TAG;
-
 /// 以 Rust 字串持有 BMP 字元，線路上每個字元使用兩個大端序位元組。
 ///
 /// UCS-2 不是 UTF-16：非 BMP 字元不能改用代理對表示。
@@ -33,6 +31,12 @@ pub struct Asn1BmpString {
 }
 
 impl Asn1BmpString {
+    /// Universal identifier octets for this type's default encoding form.
+    pub const TAG: &'static [u8] = super::tag::BMP_STRING;
+
+    /// Universal constructed identifier for segmented encodings.
+    pub const CONSTRUCTED_TAG: &'static [u8] = super::tag::CONSTRUCTED_BMP_STRING;
+
     /// 驗證每個字元都在 BMP 內，否則回傳 [`Asn1Error::MalformedValue`]。
     /// 變動時間：依字元數與遇到的字元決定掃描量。
     pub fn new(text: &str) -> Result<Self, Asn1Error> {
@@ -121,11 +125,11 @@ impl crate::EncodeTagged for Asn1BmpString {
 
 impl Encode for Asn1BmpString {
     fn encoded_len(&self, rules: EncodingOptions) -> usize {
-        crate::EncodeTagged::encoded_len_tagged(self, TAG, rules)
+        crate::EncodeTagged::encoded_len_tagged(self, Self::TAG, rules)
     }
 
     fn encode(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
-        crate::EncodeTagged::encode_tagged(self, TAG, rules, out)
+        crate::EncodeTagged::encode_tagged(self, Self::TAG, rules, out)
     }
 }
 
@@ -224,7 +228,7 @@ mod tests {
     fn the_schema_checks_tags_a_bmp_string_rejects_a_utf8_string_tag() {
         assert_eq!(
             crate::Fields::new(&[0x0C, 0], DecodingOptions::default())
-                .and_then(|mut fields| fields.required::<Asn1BmpString>(TAG)),
+                .and_then(|mut fields| fields.required::<Asn1BmpString>(Asn1BmpString::TAG)),
             Err(Asn1Error::UnexpectedTag)
         );
     }

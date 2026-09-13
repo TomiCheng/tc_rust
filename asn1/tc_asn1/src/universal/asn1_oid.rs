@@ -9,8 +9,6 @@ use crate::encoding_options::EncodingOptions;
 use crate::error::Asn1Error;
 use crate::traits::{DecodeContent, Encode};
 
-use super::tag::OBJECT_IDENTIFIER as TAG;
-
 /// 存 DER 內容。子識別碼的最短編碼是 BER 也要求的，所以位元組就是正規形式，
 /// 比對直接比位元組。
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
@@ -19,6 +17,9 @@ pub struct Asn1Oid {
 }
 
 impl Asn1Oid {
+    /// Universal identifier octets for this type's default encoding form.
+    pub const TAG: &'static [u8] = super::tag::OBJECT_IDENTIFIER;
+
     /// 由已編好的內容建立；驗證每個子識別碼都最短且完整。
     pub fn from_der_bytes(bytes: &[u8]) -> Result<Self, Asn1Error> {
         if bytes.is_empty() {
@@ -208,11 +209,11 @@ impl crate::EncodeTagged for Asn1Oid {}
 
 impl Encode for Asn1Oid {
     fn encoded_len(&self, rules: EncodingOptions) -> usize {
-        crate::EncodeTagged::encoded_len_tagged(self, TAG, rules)
+        crate::EncodeTagged::encoded_len_tagged(self, Self::TAG, rules)
     }
 
     fn encode(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
-        crate::EncodeTagged::encode_tagged(self, TAG, rules, out)
+        crate::EncodeTagged::encode_tagged(self, Self::TAG, rules, out)
     }
 }
 

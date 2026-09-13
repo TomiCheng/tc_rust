@@ -77,6 +77,9 @@ macro_rules! time_type {
             wire: String,
         }
         impl $name {
+            /// Universal identifier octets for this type.
+            pub const TAG: &'static [u8] = tag::$tag;
+
             /// 驗證值記法並正規化。變動時間：依日期分量、數字與字串長度分支。
             /// 無效的結構或數值回傳 [`Asn1Error::MalformedValue`]。
             pub fn new(text: &str) -> Result<Self, Asn1Error> {
@@ -143,7 +146,7 @@ macro_rules! time_type {
 
         impl Encode for $name {
             fn encoded_len(&self, rules: $crate::EncodingOptions) -> usize {
-                $crate::EncodeTagged::encoded_len_tagged(self, tag::$tag, rules)
+                $crate::EncodeTagged::encoded_len_tagged(self, Self::TAG, rules)
             }
 
             fn encode(
@@ -151,7 +154,7 @@ macro_rules! time_type {
                 rules: $crate::EncodingOptions,
                 out: &mut [u8],
             ) -> Result<usize, $crate::Asn1Error> {
-                $crate::EncodeTagged::encode_tagged(self, tag::$tag, rules, out)
+                $crate::EncodeTagged::encode_tagged(self, Self::TAG, rules, out)
             }
         }
     };

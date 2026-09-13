@@ -1,4 +1,10 @@
-//! X.680 的通用型別。
+//! ASN.1 universal types defined by X.680.
+//!
+//! Every fixed universal type exposes `TAG`, the complete identifier octets for
+//! its default encoding form. Types with supported constructed encodings also
+//! expose `CONSTRUCTED_TAG`. For types that are always constructed, such as
+//! [`Asn1SequenceOf`], both constants contain the same identifier.
+//! These constants do not impose tag checks on schema-selected decoders.
 
 mod asn1_bit_string;
 mod asn1_bmp_string;

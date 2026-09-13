@@ -13,7 +13,8 @@ pub trait DecodeContent<'a>: Sized {
 
 /// Decode the contents of a BER constructed string, without its outer header.
 /// Implemented only by types supporting segmented string encodings.
-pub trait DecodeConstructed<'a>: Sized {
+/// Implementors must also support unsegmented contents through [`DecodeContent`].
+pub trait DecodeConstructed<'a>: DecodeContent<'a> {
     /// Decode and join component TLVs, including nested constructed components.
     /// Component identifiers must follow the string type's encoding rules.
     /// Variable time: public values only; no constant-time alternative is provided.

@@ -8,8 +8,6 @@ use crate::encoding_options::EncodingOptions;
 use crate::error::Asn1Error;
 use crate::traits::{DecodeContent, Encode};
 
-use super::tag::SEQUENCE as TAG;
-
 /// 有序、同型別。三種規則下順序都不動，所以是最簡單的集合。
 ///
 /// 異質結構可使用 [`crate::Asn1Object::Sequence`]。
@@ -19,6 +17,12 @@ pub struct Asn1SequenceOf<T> {
 }
 
 impl<T> Asn1SequenceOf<T> {
+    /// Universal identifier octets for this type's default encoding form.
+    pub const TAG: &'static [u8] = super::tag::SEQUENCE;
+
+    /// Universal constructed identifier; identical to `TAG` because this type is always constructed.
+    pub const CONSTRUCTED_TAG: &'static [u8] = Self::TAG;
+
     pub fn new() -> Self {
         Self {
             members: Vec::new(),
@@ -109,11 +113,11 @@ impl<T: Encode> crate::EncodeTagged for Asn1SequenceOf<T> {}
 
 impl<T: Encode> Encode for Asn1SequenceOf<T> {
     fn encoded_len(&self, rules: EncodingOptions) -> usize {
-        crate::EncodeTagged::encoded_len_tagged(self, TAG, rules)
+        crate::EncodeTagged::encoded_len_tagged(self, Self::TAG, rules)
     }
 
     fn encode(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
-        crate::EncodeTagged::encode_tagged(self, TAG, rules, out)
+        crate::EncodeTagged::encode_tagged(self, Self::TAG, rules, out)
     }
 }
 

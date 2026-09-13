@@ -7,8 +7,6 @@ use crate::encoding_options::EncodingOptions;
 use crate::error::Asn1Error;
 use crate::traits::{DecodeContent, Encode};
 
-use super::tag::UTF8_STRING as TAG;
-
 /// Rust 的 `String` 本來就是合法 UTF-8，建構不會失敗；只有解碼要驗。
 #[derive(Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Asn1Utf8String {
@@ -16,6 +14,12 @@ pub struct Asn1Utf8String {
 }
 
 impl Asn1Utf8String {
+    /// Universal identifier octets for this type's default encoding form.
+    pub const TAG: &'static [u8] = super::tag::UTF8_STRING;
+
+    /// Universal constructed identifier for segmented encodings.
+    pub const CONSTRUCTED_TAG: &'static [u8] = super::tag::CONSTRUCTED_UTF8_STRING;
+
     pub fn new(text: &str) -> Self {
         Self {
             text: String::from(text),
@@ -87,11 +91,11 @@ impl crate::EncodeTagged for Asn1Utf8String {
 
 impl Encode for Asn1Utf8String {
     fn encoded_len(&self, rules: EncodingOptions) -> usize {
-        crate::EncodeTagged::encoded_len_tagged(self, TAG, rules)
+        crate::EncodeTagged::encoded_len_tagged(self, Self::TAG, rules)
     }
 
     fn encode(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
-        crate::EncodeTagged::encode_tagged(self, TAG, rules, out)
+        crate::EncodeTagged::encode_tagged(self, Self::TAG, rules, out)
     }
 }
 

@@ -8,7 +8,6 @@
 use core::fmt;
 
 use super::date_time::{DateTime, digits, two_digits};
-use super::tag::UTC_TIME as TAG;
 use crate::decoding_options::DecodingOptions;
 use crate::encoding_options::EncodingOptions;
 use crate::error::Asn1Error;
@@ -25,6 +24,9 @@ const LEN: usize = 13;
 pub struct Asn1UtcTime(DateTime);
 
 impl Asn1UtcTime {
+    /// Universal identifier octets for this type's default encoding form.
+    pub const TAG: &'static [u8] = super::tag::UTC_TIME;
+
     /// 年 1950–2049，其餘欄位的範圍見 `DateTime::checked`。
     pub fn new(
         year: u16,
@@ -125,11 +127,11 @@ impl crate::EncodeTagged for Asn1UtcTime {}
 
 impl Encode for Asn1UtcTime {
     fn encoded_len(&self, rules: EncodingOptions) -> usize {
-        crate::EncodeTagged::encoded_len_tagged(self, TAG, rules)
+        crate::EncodeTagged::encoded_len_tagged(self, Self::TAG, rules)
     }
 
     fn encode(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
-        crate::EncodeTagged::encode_tagged(self, TAG, rules, out)
+        crate::EncodeTagged::encode_tagged(self, Self::TAG, rules, out)
     }
 }
 

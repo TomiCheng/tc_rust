@@ -8,7 +8,6 @@ use crate::error::Asn1Error;
 use crate::traits::{DecodeContent, Encode};
 
 use super::integer_octets::{minimal_signed, validate_integer_octets};
-use super::tag::ENUMERATED as TAG;
 
 /// 擁有最短二補數大端序內容的 `ENUMERATED`。
 ///
@@ -37,6 +36,9 @@ pub struct Asn1Enumerated {
 }
 
 impl Asn1Enumerated {
+    /// Universal identifier octets for this type's default encoding form.
+    pub const TAG: &'static [u8] = super::tag::ENUMERATED;
+
     /// 由最短二補數大端序內容建立，不含 tag 與長度欄位。
     /// 非空且沒有多餘符號位元組才接受，否則回傳 [`Asn1Error::MalformedValue`]。
     /// 變動時間：依內容長度與符號位元組分支。
@@ -169,11 +171,11 @@ impl crate::EncodeTagged for Asn1Enumerated {}
 
 impl Encode for Asn1Enumerated {
     fn encoded_len(&self, rules: EncodingOptions) -> usize {
-        crate::EncodeTagged::encoded_len_tagged(self, TAG, rules)
+        crate::EncodeTagged::encoded_len_tagged(self, Self::TAG, rules)
     }
 
     fn encode(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
-        crate::EncodeTagged::encode_tagged(self, TAG, rules, out)
+        crate::EncodeTagged::encode_tagged(self, Self::TAG, rules, out)
     }
 }
 
@@ -198,7 +200,7 @@ mod tests {
     fn the_schema_checks_tags_an_integer_tag_is_rejected_even_when_its_content_is_valid() {
         assert_eq!(
             crate::Fields::new(&[2, 1, 5], OPTIONS)
-                .and_then(|mut fields| fields.required::<Asn1Enumerated>(TAG)),
+                .and_then(|mut fields| fields.required::<Asn1Enumerated>(Asn1Enumerated::TAG)),
             Err(Asn1Error::UnexpectedTag)
         );
     }

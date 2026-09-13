@@ -7,8 +7,6 @@ use crate::encoding_options::EncodingOptions;
 use crate::error::Asn1Error;
 use crate::traits::{DecodeContent, Encode};
 
-use super::tag::PRINTABLE_STRING as TAG;
-
 /// X.680 41.4 的字元集：英數、空白，以及 `' ( ) + , - . / : = ?`。
 ///
 /// 注意**沒有** `@`、`&`、`*`、`_`，所以 email 不能放這裡（要用 IA5String）。
@@ -26,6 +24,12 @@ pub struct Asn1PrintableString {
 }
 
 impl Asn1PrintableString {
+    /// Universal identifier octets for this type's default encoding form.
+    pub const TAG: &'static [u8] = super::tag::PRINTABLE_STRING;
+
+    /// Universal constructed identifier for segmented encodings.
+    pub const CONSTRUCTED_TAG: &'static [u8] = super::tag::CONSTRUCTED_PRINTABLE_STRING;
+
     pub fn new(text: &str) -> Result<Self, Asn1Error> {
         if !text.bytes().all(is_printable) {
             return Err(Asn1Error::MalformedValue);
@@ -99,11 +103,11 @@ impl crate::EncodeTagged for Asn1PrintableString {
 
 impl Encode for Asn1PrintableString {
     fn encoded_len(&self, rules: EncodingOptions) -> usize {
-        crate::EncodeTagged::encoded_len_tagged(self, TAG, rules)
+        crate::EncodeTagged::encoded_len_tagged(self, Self::TAG, rules)
     }
 
     fn encode(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
-        crate::EncodeTagged::encode_tagged(self, TAG, rules, out)
+        crate::EncodeTagged::encode_tagged(self, Self::TAG, rules, out)
     }
 }
 

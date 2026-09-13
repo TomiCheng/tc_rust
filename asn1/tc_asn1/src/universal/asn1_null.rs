@@ -6,10 +6,13 @@ use crate::error::Asn1Error;
 use crate::traits::{DecodeContent, Encode};
 use core::fmt::{Display, Formatter};
 
-use super::tag::NULL as TAG;
-
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct Asn1Null;
+
+impl Asn1Null {
+    /// Universal identifier octets for this type's default encoding form.
+    pub const TAG: &'static [u8] = super::tag::NULL;
+}
 
 impl Display for Asn1Null {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
@@ -61,11 +64,11 @@ impl crate::EncodeTagged for Asn1Null {}
 
 impl Encode for Asn1Null {
     fn encoded_len(&self, rules: EncodingOptions) -> usize {
-        crate::EncodeTagged::encoded_len_tagged(self, TAG, rules)
+        crate::EncodeTagged::encoded_len_tagged(self, Self::TAG, rules)
     }
 
     fn encode(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
-        crate::EncodeTagged::encode_tagged(self, TAG, rules, out)
+        crate::EncodeTagged::encode_tagged(self, Self::TAG, rules, out)
     }
 }
 
@@ -119,7 +122,7 @@ mod tests {
     fn the_schema_checks_tags_a_tag_other_than_null_is_rejected() {
         assert_eq!(
             crate::Fields::new(&[0x02, 0x00], OPTIONS)
-                .and_then(|mut fields| fields.required::<Asn1Null>(TAG)),
+                .and_then(|mut fields| fields.required::<Asn1Null>(Asn1Null::TAG)),
             Err(Asn1Error::UnexpectedTag)
         );
     }

@@ -1,6 +1,5 @@
 //! ASN.1 `RELATIVE-OID`，每個弧各自使用最短 base-128 編碼。
 
-use super::tag::RELATIVE_OID as TAG;
 use crate::{Asn1Error, DecodeContent, DecodingOptions, Encode, EncodingOptions};
 use alloc::vec::Vec;
 use core::{fmt, str::FromStr};
@@ -22,6 +21,9 @@ pub struct Asn1RelativeOid {
 }
 
 impl Asn1RelativeOid {
+    /// Universal identifier octets for this type's default encoding form.
+    pub const TAG: &'static [u8] = super::tag::RELATIVE_OID;
+
     /// 驗證非空、每個弧完整且最短。變動時間：依內容長度與弧分支。
     pub fn from_der_bytes(bytes: &[u8]) -> Result<Self, Asn1Error> {
         if bytes.is_empty() {
@@ -148,11 +150,11 @@ impl crate::EncodeTagged for Asn1RelativeOid {}
 
 impl Encode for Asn1RelativeOid {
     fn encoded_len(&self, rules: EncodingOptions) -> usize {
-        crate::EncodeTagged::encoded_len_tagged(self, TAG, rules)
+        crate::EncodeTagged::encoded_len_tagged(self, Self::TAG, rules)
     }
 
     fn encode(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
-        crate::EncodeTagged::encode_tagged(self, TAG, rules, out)
+        crate::EncodeTagged::encode_tagged(self, Self::TAG, rules, out)
     }
 }
 
@@ -201,7 +203,7 @@ mod tests {
         }
         assert_eq!(
             crate::Fields::new(&[6, 1, 0], DecodingOptions::default())
-                .and_then(|mut fields| fields.required::<Asn1RelativeOid>(TAG)),
+                .and_then(|mut fields| fields.required::<Asn1RelativeOid>(Asn1RelativeOid::TAG)),
             Err(Asn1Error::UnexpectedTag)
         );
     }
