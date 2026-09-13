@@ -9,10 +9,10 @@ use core::{fmt, str::FromStr};
 ///
 /// # Examples
 /// ```
-/// use tc_asn1::{Asn1RelativeOid, Encode, EncodingOptions};
+/// use tc_asn1::{Asn1RelativeOid, Encode, EncodingOptions, EncodingType};
 /// let value: Asn1RelativeOid = "4.3.128".parse().unwrap();
 /// let mut out = [0; 6];
-/// value.encode(EncodingOptions::Der, &mut out).unwrap();
+/// value.encode(&EncodingOptions::new(EncodingType::Der), &mut out).unwrap();
 /// assert_eq!(out, [0x0D, 4, 4, 3, 0x81, 0]);
 /// ```
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
@@ -133,12 +133,12 @@ impl<'a> DecodeContent<'a> for Asn1RelativeOid {
 
 impl crate::EncodeContent for Asn1RelativeOid {
     /// 常數時間：已存有內容長度。
-    fn content_len(&self, _: EncodingOptions) -> usize {
+    fn content_len(&self, _: &EncodingOptions) -> usize {
         self.bytes.len()
     }
 
     /// 變動時間：原樣複製已驗證的內容。
-    fn encode_content(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+    fn encode_content(&self, rules: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         let len = crate::EncodeContent::content_len(self, rules);
         let out = out.get_mut(..len).ok_or(Asn1Error::BufferTooSmall)?;
         out[..self.bytes.len()].copy_from_slice(&self.bytes);
@@ -149,11 +149,11 @@ impl crate::EncodeContent for Asn1RelativeOid {
 impl crate::EncodeTagged for Asn1RelativeOid {}
 
 impl Encode for Asn1RelativeOid {
-    fn encoded_len(&self, rules: EncodingOptions) -> usize {
+    fn encoded_len(&self, rules: &EncodingOptions) -> usize {
         crate::EncodeTagged::encoded_len_tagged(self, Self::TAG, rules)
     }
 
-    fn encode(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+    fn encode(&self, rules: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         crate::EncodeTagged::encode_tagged(self, Self::TAG, rules, out)
     }
 }
@@ -162,12 +162,13 @@ impl Encode for Asn1RelativeOid {
 mod tests {
     use super::*;
     use crate::Decode;
+    use crate::EncodingType;
     #[test]
     fn arcs_are_independent_and_round_trip_through_both_encodings() {
         let value = Asn1RelativeOid::from_arcs(&[4, 3, 128]).unwrap();
         for rules in [
-            EncodingOptions::Ber(crate::LengthForm::Definite),
-            EncodingOptions::Der,
+            &EncodingOptions::new(EncodingType::Ber(crate::LengthForm::Definite)),
+            &EncodingOptions::new(EncodingType::Der),
         ] {
             let mut out = [0; 6];
             assert_eq!(value.encode(rules, &mut out), Ok(6));

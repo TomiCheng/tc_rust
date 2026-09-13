@@ -2,8 +2,8 @@
 
 use alloc::vec::Vec;
 
+use crate::EncodingOptions;
 use crate::decoding_options::DecodingOptions;
-use crate::encoding_options::EncodingOptions;
 use crate::error::Asn1Error;
 use crate::traits::{DecodeContent, Encode};
 
@@ -161,11 +161,11 @@ impl<'a> DecodeContent<'a> for Asn1Integer {
 }
 
 impl crate::EncodeContent for Asn1Integer {
-    fn content_len(&self, _: EncodingOptions) -> usize {
+    fn content_len(&self, _: &EncodingOptions) -> usize {
         self.value.len()
     }
 
-    fn encode_content(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+    fn encode_content(&self, rules: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         let len = crate::EncodeContent::content_len(self, rules);
         let out = out.get_mut(..len).ok_or(Asn1Error::BufferTooSmall)?;
         out[..self.value.len()].copy_from_slice(&self.value);
@@ -176,11 +176,11 @@ impl crate::EncodeContent for Asn1Integer {
 impl crate::EncodeTagged for Asn1Integer {}
 
 impl Encode for Asn1Integer {
-    fn encoded_len(&self, rules: EncodingOptions) -> usize {
+    fn encoded_len(&self, rules: &EncodingOptions) -> usize {
         crate::EncodeTagged::encoded_len_tagged(self, Self::TAG, rules)
     }
 
-    fn encode(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+    fn encode(&self, rules: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         crate::EncodeTagged::encode_tagged(self, Self::TAG, rules, out)
     }
 }
@@ -189,6 +189,7 @@ impl Encode for Asn1Integer {
 mod tests {
     use super::*;
     use crate::EncodeTagged;
+    use crate::EncodingType;
     use crate::traits::Decode;
 
     const OPTIONS: DecodingOptions =
@@ -309,16 +310,21 @@ mod tests {
         assert_eq!(u64::try_from(&n), Ok(256));
 
         let mut out = [0_u8; 8];
-        let written = n.encode(EncodingOptions::Der, &mut out).unwrap();
+        let written = n
+            .encode(&EncodingOptions::new(EncodingType::Der), &mut out)
+            .unwrap();
         assert_eq!(&out[..written], &input);
-        assert_eq!(written, n.encoded_len(EncodingOptions::Der));
+        assert_eq!(
+            written,
+            n.encoded_len(&EncodingOptions::new(EncodingType::Der))
+        );
     }
 
     #[test]
     fn implicit_tagging_writes_the_callers_tag_over_the_same_contents() {
         let mut out = [0_u8; 8];
         let written = Asn1Integer::from(5_u64)
-            .encode_tagged(&[0x80], EncodingOptions::Der, &mut out)
+            .encode_tagged(&[0x80], &EncodingOptions::new(EncodingType::Der), &mut out)
             .unwrap();
         assert_eq!(&out[..written], &[0x80, 0x01, 0x05]);
     }

@@ -27,12 +27,12 @@ data without a schema.
 ```rust
 use tc_asn1::{
     Asn1Error, Asn1Integer, Asn1Ref, Decode, DecodingOptions, Encode,
-    EncodingOptions, tag,
+    EncodingOptions, EncodingType, tag,
 };
 
 fn main() -> Result<(), Asn1Error> {
     let value = Asn1Integer::from(42_u8);
-    let wire = value.encode_to_vec(EncodingOptions::Der)?;
+    let wire = value.encode_to_vec(&EncodingOptions::new(EncodingType::Der))?;
     assert_eq!(wire, [0x02, 0x01, 0x2a]);
 
     let options = DecodingOptions::default();
@@ -49,9 +49,30 @@ fn main() -> Result<(), Asn1Error> {
 
 ### Encoding options
 
-Pass the same `EncodingOptions` to length calculation and encoding.
+`EncodingType` selects BER, CER, or DER. `EncodingOptions` contains that selection
+in a private field and leaves room for additional settings. Construct it with
+`EncodingOptions::new(encoding_type)` and read the selection with `encoding_type()`.
+`EncodingType` is `Copy`; `EncodingOptions` is not. Length calculation and encoding
+borrow the same options through `&EncodingOptions`.
 
-| Option | Behavior for interpreted values |
+This replaces the former options enum. To migrate, construct an `EncodingType`
+inside `EncodingOptions::new`, borrow the options at call sites, and change custom
+implementations of `EncodeContent`, `EncodeTagged`, `Encode`, and `SequenceFields`
+to accept `&EncodingOptions`. Match on `options.encoding_type()` to inspect the
+selected rule. Decoding APIs are unchanged.
+
+```rust
+use tc_asn1::{Asn1Integer, Encode, EncodingOptions, EncodingType};
+
+let options = EncodingOptions::new(EncodingType::Der);
+let value = Asn1Integer::from(42_u8);
+let mut out = vec![0; value.encoded_len(&options)];
+value.encode(&options, &mut out)?;
+assert_eq!(out, [0x02, 0x01, 0x2A]);
+# Ok::<(), tc_asn1::Asn1Error>(())
+```
+
+| Encoding type | Behavior for interpreted values |
 | --- | --- |
 | `Ber(LengthForm::Definite)` | Uses definite lengths and preserves stored collection order. |
 | `Ber(LengthForm::Indefinite)` | Uses indefinite lengths for constructed values; primitive values remain definite-length. |
@@ -192,14 +213,14 @@ Complete successful field reads with `finish()` to reject remaining fields.
 
 ```rust
 use tc_asn1::{
-    Asn1Error, Asn1Integer, DecodingOptions, EncodeTagged, EncodingOptions, Fields,
+    Asn1Error, Asn1Integer, DecodingOptions, EncodeTagged, EncodingOptions, EncodingType, Fields,
 };
 
 fn main() -> Result<(), Asn1Error> {
     let value = Asn1Integer::from(42_u8);
     let tag = &[0x80]; // [0] IMPLICIT INTEGER, as specified by the schema.
     let mut wire = [0; 3];
-    let written = value.encode_tagged(tag, EncodingOptions::Der, &mut wire)?;
+    let written = value.encode_tagged(tag, &EncodingOptions::new(EncodingType::Der), &mut wire)?;
     assert_eq!(wire, [0x80, 1, 42]);
 
     // These bytes are a field list containing one element, without a parent header.
@@ -297,12 +318,12 @@ If member identifiers require additional schema checks, implement those checks
 in the element decoder or read the fields explicitly.
 
 ```rust
-use tc_asn1::{Asn1Error, Asn1Integer, Asn1SequenceOf, Encode, EncodingOptions};
+use tc_asn1::{Asn1Error, Asn1Integer, Asn1SequenceOf, Encode, EncodingOptions, EncodingType};
 
 fn main() -> Result<(), Asn1Error> {
     let values: Asn1SequenceOf<Asn1Integer> =
         [1_u8, 2, 3].into_iter().map(Asn1Integer::from).collect();
-    let wire = values.encode_to_vec(EncodingOptions::Der)?;
+    let wire = values.encode_to_vec(&EncodingOptions::new(EncodingType::Der))?;
     assert_eq!(wire, [0x30, 9, 2, 1, 1, 2, 1, 2, 2, 1, 3]);
     Ok(())
 }

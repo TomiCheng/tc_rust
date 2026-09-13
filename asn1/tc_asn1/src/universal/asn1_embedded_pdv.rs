@@ -8,7 +8,7 @@ use super::{Asn1Integer, Asn1Oid, tag};
 use crate::encoding::{len_octets, write_len};
 use crate::{
     Asn1Error, Asn1Ref, Children, DecodeContent, DecodingOptions, Encode, EncodeTagged,
-    EncodingOptions,
+    EncodingOptions, EncodingType,
 };
 use alloc::vec::Vec;
 
@@ -118,7 +118,7 @@ impl PdvIdentification {
 
 impl crate::EncodeContent for PdvIdentification {
     /// 變動時間：依選項及內容結構計算。
-    fn content_len(&self, rules: EncodingOptions) -> usize {
+    fn content_len(&self, rules: &EncodingOptions) -> usize {
         match self {
             Self::Syntaxes {
                 abstract_syntax,
@@ -135,7 +135,7 @@ impl crate::EncodeContent for PdvIdentification {
     }
 
     /// 變動時間：依選項寫入 IMPLICIT 內容。
-    fn encode_content(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+    fn encode_content(&self, rules: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         let len = crate::EncodeContent::content_len(self, rules);
         let out = out.get_mut(..len).ok_or(Asn1Error::BufferTooSmall)?;
         match self {
@@ -165,11 +165,11 @@ impl crate::EncodeContent for PdvIdentification {
 impl crate::EncodeTagged for PdvIdentification {}
 
 impl Encode for PdvIdentification {
-    fn encoded_len(&self, rules: EncodingOptions) -> usize {
+    fn encoded_len(&self, rules: &EncodingOptions) -> usize {
         crate::EncodeTagged::encoded_len_tagged(self, self.tag(), rules)
     }
 
-    fn encode(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+    fn encode(&self, rules: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         crate::EncodeTagged::encode_tagged(self, self.tag(), rules, out)
     }
 }
@@ -243,9 +243,9 @@ macro_rules! container {
 
         impl $crate::EncodeContent for $name {
             /// 變動時間：依識別選項與資料長度計算。
-            fn content_len(&self, rules: EncodingOptions) -> usize {
+            fn content_len(&self, rules: &EncodingOptions) -> usize {
                 let id_len = crate::Explicit::new(IDENTIFICATION_TAG, &self.identification).encoded_len(rules);
-                id_len + if rules == EncodingOptions::Cer {
+                id_len + if rules.encoding_type() == EncodingType::Cer {
                     crate::segments::segmented_len(DATA_VALUE_TAG, crate::Asn1OctetString::TAG, self.value.len())
                 } else {
                     1 + len_octets(self.value.len()) + self.value.len()
@@ -255,13 +255,13 @@ macro_rules! container {
             /// 變動時間：寫入 EXPLICIT 識別選項與 IMPLICIT OCTET STRING。
             fn encode_content(
                 &self,
-                rules: EncodingOptions,
+                rules: &EncodingOptions,
                 out: &mut [u8],
             ) -> Result<usize, Asn1Error> {
                 let len = $crate::EncodeContent::content_len(self, rules);
                 let out = out.get_mut(..len).ok_or($crate::Asn1Error::BufferTooSmall)?;
                 let mut at = crate::Explicit::new(IDENTIFICATION_TAG, &self.identification).encode(rules, out)?;
-                if rules == EncodingOptions::Cer {
+                if rules.encoding_type() == EncodingType::Cer {
                     return Ok(at + crate::segments::encode_segmented(DATA_VALUE_TAG, crate::Asn1OctetString::TAG, &self.value, &mut out[at..])?);
                 }
                 out[at] = DATA_VALUE_TAG[0];
@@ -275,11 +275,11 @@ macro_rules! container {
         impl $crate::EncodeTagged for $name {        }
 
         impl Encode for $name {
-            fn encoded_len(&self, rules: $crate::EncodingOptions) -> usize {
+            fn encoded_len(&self, rules: &$crate::EncodingOptions) -> usize {
                 $crate::EncodeTagged::encoded_len_tagged(self, Self::TAG, rules)
             }
 
-            fn encode(&self, rules: $crate::EncodingOptions, out: &mut [u8]) -> Result<usize, $crate::Asn1Error> {
+            fn encode(&self, rules: &$crate::EncodingOptions, out: &mut [u8]) -> Result<usize, $crate::Asn1Error> {
                 $crate::EncodeTagged::encode_tagged(self, Self::TAG, rules, out)
             }
         }
@@ -345,8 +345,8 @@ mod tests {
         ];
         for (id, encoded) in cases {
             for rules in [
-                EncodingOptions::Ber(crate::LengthForm::Definite),
-                EncodingOptions::Der,
+                &EncodingOptions::new(EncodingType::Ber(crate::LengthForm::Definite)),
+                &EncodingOptions::new(EncodingType::Der),
             ] {
                 let value = Asn1EmbeddedPdv::new(id.clone(), vec![0xFF]);
                 let mut expected = vec![0x2B, (encoded.len() + 5) as u8, 0xA0, encoded.len() as u8];

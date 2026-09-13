@@ -1,10 +1,10 @@
 use tc_asn1::*;
 
-const RULES: [EncodingOptions; 4] = [
-    EncodingOptions::Ber(LengthForm::Definite),
-    EncodingOptions::Ber(LengthForm::Indefinite),
-    EncodingOptions::Cer,
-    EncodingOptions::Der,
+const RULES: [&EncodingOptions; 4] = [
+    &EncodingOptions::new(EncodingType::Ber(LengthForm::Definite)),
+    &EncodingOptions::new(EncodingType::Ber(LengthForm::Indefinite)),
+    &EncodingOptions::new(EncodingType::Cer),
+    &EncodingOptions::new(EncodingType::Der),
 ];
 
 fn check<T: Encode + EncodeContent>(value: T) {
@@ -120,7 +120,7 @@ fn cer_strings_cover_empty_values_thresholds_and_complete_final_segments() {
     expected.extend_from_slice(&[4, 1, 0xAA]);
     assert_eq!(
         Asn1OctetString::new(&[0xAA; 1001])
-            .encode_content_to_vec(EncodingOptions::Cer)
+            .encode_content_to_vec(&EncodingOptions::new(EncodingType::Cer))
             .unwrap(),
         expected
     );
@@ -196,11 +196,11 @@ fn constructed_contents_preserve_child_headers_end_markers_and_set_ordering() {
 fn collections_propagate_child_encoding_errors_to_the_vec_helper() {
     struct Failing;
     impl tc_asn1::EncodeContent for Failing {
-        fn content_len(&self, _: EncodingOptions) -> usize {
+        fn content_len(&self, _: &EncodingOptions) -> usize {
             1
         }
 
-        fn encode_content(&self, _: EncodingOptions, _: &mut [u8]) -> Result<usize, Asn1Error> {
+        fn encode_content(&self, _: &EncodingOptions, _: &mut [u8]) -> Result<usize, Asn1Error> {
             Err(Asn1Error::MalformedValue)
         }
     }
@@ -208,13 +208,13 @@ fn collections_propagate_child_encoding_errors_to_the_vec_helper() {
     impl tc_asn1::EncodeTagged for Failing {}
 
     impl Encode for Failing {
-        fn encoded_len(&self, rules: tc_asn1::EncodingOptions) -> usize {
+        fn encoded_len(&self, rules: &tc_asn1::EncodingOptions) -> usize {
             tc_asn1::EncodeTagged::encoded_len_tagged(self, tag::INTEGER, rules)
         }
 
         fn encode(
             &self,
-            rules: tc_asn1::EncodingOptions,
+            rules: &tc_asn1::EncodingOptions,
             out: &mut [u8],
         ) -> Result<usize, tc_asn1::Asn1Error> {
             tc_asn1::EncodeTagged::encode_tagged(self, tag::INTEGER, rules, out)

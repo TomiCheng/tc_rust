@@ -2,8 +2,8 @@
 
 use alloc::string::String;
 
+use crate::EncodingOptions;
 use crate::decoding_options::DecodingOptions;
-use crate::encoding_options::EncodingOptions;
 use crate::error::Asn1Error;
 use crate::traits::{DecodeContent, Encode};
 
@@ -17,11 +17,11 @@ use crate::traits::{DecodeContent, Encode};
 /// BMP 的中文字元可編碼，emoji 則必須使用其他字串型別。
 ///
 /// ```
-/// use tc_asn1::{Asn1BmpString, Asn1Error, Encode, EncodingOptions};
+/// use tc_asn1::{Asn1BmpString, Asn1Error, Encode, EncodingOptions, EncodingType};
 ///
 /// let value = Asn1BmpString::new("台北").unwrap();
 /// let mut out = [0; 6];
-/// value.encode(EncodingOptions::Der, &mut out).unwrap();
+/// value.encode(&EncodingOptions::new(EncodingType::Der), &mut out).unwrap();
 /// assert_eq!(out, [0x1E, 4, 0x53, 0xF0, 0x53, 0x17]);
 /// assert_eq!(Asn1BmpString::new("😀"), Err(Asn1Error::MalformedValue));
 /// ```
@@ -95,14 +95,14 @@ crate::segments::constructed_string_decode!(Asn1BmpString);
 
 impl Asn1BmpString {
     /// 內容長度是字元數的兩倍。變動時間：需要走訪字串計算字元數。
-    fn primitive_content_len(&self, _: EncodingOptions) -> usize {
+    fn primitive_content_len(&self, _: &EncodingOptions) -> usize {
         self.text.chars().count() * 2
     }
 
     /// 每個字元寫成 UCS-2 大端序。變動時間：依字串長度走訪字元。
     fn encode_primitive_content(
         &self,
-        _: EncodingOptions,
+        _: &EncodingOptions,
         out: &mut [u8],
     ) -> Result<usize, Asn1Error> {
         let mut at = 0;
@@ -124,11 +124,11 @@ impl crate::EncodeTagged for Asn1BmpString {
 }
 
 impl Encode for Asn1BmpString {
-    fn encoded_len(&self, rules: EncodingOptions) -> usize {
+    fn encoded_len(&self, rules: &EncodingOptions) -> usize {
         crate::EncodeTagged::encoded_len_tagged(self, Self::TAG, rules)
     }
 
-    fn encode(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+    fn encode(&self, rules: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         crate::EncodeTagged::encode_tagged(self, Self::TAG, rules, out)
     }
 }
@@ -138,6 +138,7 @@ mod tests {
     use super::*;
     use crate::Decode;
     use crate::EncodeContent;
+    use crate::EncodingType;
 
     #[test]
     fn latin_and_chinese_text_round_trip_as_two_bytes_per_character() {
@@ -147,8 +148,8 @@ mod tests {
         ] {
             let original = Asn1BmpString::new(text).unwrap();
             for rules in [
-                EncodingOptions::Ber(crate::LengthForm::Definite),
-                EncodingOptions::Der,
+                &EncodingOptions::new(EncodingType::Ber(crate::LengthForm::Definite)),
+                &EncodingOptions::new(EncodingType::Der),
             ] {
                 let mut out = [0; 16];
                 let written = original.encode(rules, &mut out).unwrap();
@@ -203,7 +204,10 @@ mod tests {
         let text = "\0\u{D7FF}\u{E000}\u{FFFF}";
         let original = Asn1BmpString::new(text).unwrap();
         let mut out = [0; 10];
-        assert_eq!(original.encode(EncodingOptions::Der, &mut out), Ok(10));
+        assert_eq!(
+            original.encode(&EncodingOptions::new(EncodingType::Der), &mut out),
+            Ok(10)
+        );
         assert_eq!(out, [0x1E, 8, 0, 0, 0xD7, 0xFF, 0xE0, 0, 0xFF, 0xFF]);
         assert_eq!(
             Asn1BmpString::try_decode(&out, DecodingOptions::default()),
@@ -216,7 +220,10 @@ mod tests {
         let original = Asn1BmpString::new("").unwrap();
         assert_eq!(original, Asn1BmpString::default());
         let mut out = [0; 2];
-        assert_eq!(original.encode(EncodingOptions::Der, &mut out), Ok(2));
+        assert_eq!(
+            original.encode(&EncodingOptions::new(EncodingType::Der), &mut out),
+            Ok(2)
+        );
         assert_eq!(out, [0x1E, 0]);
         assert_eq!(
             Asn1BmpString::try_decode(&out, DecodingOptions::default()),

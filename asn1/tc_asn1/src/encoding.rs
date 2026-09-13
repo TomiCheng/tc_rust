@@ -1,12 +1,12 @@
 //! Shared TLV encoding and length-field helpers.
 
-use crate::{Asn1Error, EncodeContent, EncodingOptions};
+use crate::{Asn1Error, EncodeContent, EncodingOptions, EncodingType};
 
 /// CER 與 BER 不定長選項對每一層 constructed 使用不定長。常數時間。
-const fn uses_indefinite(tag: &[u8], rules: EncodingOptions) -> bool {
+const fn uses_indefinite(tag: &[u8], rules: &EncodingOptions) -> bool {
     matches!(
-        rules,
-        EncodingOptions::Cer | EncodingOptions::Ber(crate::LengthForm::Indefinite)
+        rules.encoding_type(),
+        EncodingType::Cer | EncodingType::Ber(crate::LengthForm::Indefinite)
     ) && tag[0] & 0x20 != 0
 }
 
@@ -14,7 +14,7 @@ const fn uses_indefinite(tag: &[u8], rules: EncodingOptions) -> bool {
 pub(crate) fn default_encoded_len<T: EncodeContent + ?Sized>(
     value: &T,
     tag: &[u8],
-    rules: EncodingOptions,
+    rules: &EncodingOptions,
 ) -> usize {
     let len = value.content_len(rules);
     tag.len()
@@ -29,7 +29,7 @@ pub(crate) fn default_encoded_len<T: EncodeContent + ?Sized>(
 pub(crate) fn default_encode<T: EncodeContent + ?Sized>(
     value: &T,
     tag: &[u8],
-    rules: EncodingOptions,
+    rules: &EncodingOptions,
     out: &mut [u8],
 ) -> Result<usize, Asn1Error> {
     let content_len = value.content_len(rules);

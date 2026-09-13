@@ -2,8 +2,8 @@
 
 use alloc::string::String;
 
+use crate::EncodingOptions;
 use crate::decoding_options::DecodingOptions;
-use crate::encoding_options::EncodingOptions;
 use crate::error::Asn1Error;
 use crate::traits::{DecodeContent, Encode};
 
@@ -84,14 +84,14 @@ crate::segments::constructed_string_decode!(Asn1NumericString);
 
 impl Asn1NumericString {
     /// 回傳內容長度。常數時間：讀取已儲存的字串長度。
-    fn primitive_content_len(&self, _: EncodingOptions) -> usize {
+    fn primitive_content_len(&self, _: &EncodingOptions) -> usize {
         self.text.len()
     }
 
     /// 原樣寫入已驗證的內容。變動時間：複製量由內容長度決定。
     fn encode_primitive_content(
         &self,
-        _: EncodingOptions,
+        _: &EncodingOptions,
         out: &mut [u8],
     ) -> Result<usize, Asn1Error> {
         out[..self.text.len()].copy_from_slice(self.text.as_bytes());
@@ -108,11 +108,11 @@ impl crate::EncodeTagged for Asn1NumericString {
 }
 
 impl Encode for Asn1NumericString {
-    fn encoded_len(&self, rules: EncodingOptions) -> usize {
+    fn encoded_len(&self, rules: &EncodingOptions) -> usize {
         crate::EncodeTagged::encoded_len_tagged(self, Self::TAG, rules)
     }
 
-    fn encode(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+    fn encode(&self, rules: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         crate::EncodeTagged::encode_tagged(self, Self::TAG, rules, out)
     }
 }
@@ -122,14 +122,15 @@ mod tests {
     use super::*;
     use crate::Decode;
     use crate::EncodeContent;
+    use crate::EncodingType;
 
     #[test]
     fn digits_and_spaces_round_trip_under_both_encoding_rules() {
         let text = "012 3456789";
         let value = Asn1NumericString::new(text).unwrap();
         for rules in [
-            EncodingOptions::Ber(crate::LengthForm::Definite),
-            EncodingOptions::Der,
+            &EncodingOptions::new(EncodingType::Ber(crate::LengthForm::Definite)),
+            &EncodingOptions::new(EncodingType::Der),
         ] {
             let mut out = [0; 13];
             assert_eq!(value.encode(rules, &mut out), Ok(out.len()));
@@ -165,7 +166,10 @@ mod tests {
         assert_eq!(value, Asn1NumericString::default());
         assert_eq!(value.as_str(), "");
         let mut out = [0; 2];
-        assert_eq!(value.encode(EncodingOptions::Der, &mut out), Ok(2));
+        assert_eq!(
+            value.encode(&EncodingOptions::new(EncodingType::Der), &mut out),
+            Ok(2)
+        );
         assert_eq!(out, [0x12, 0]);
         assert_eq!(
             Asn1NumericString::try_decode(&out, DecodingOptions::default()),

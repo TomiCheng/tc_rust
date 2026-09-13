@@ -34,7 +34,8 @@
 //!
 //! # 編碼要選規則，解碼不用
 //!
-//! [`Encode`] 收 [`EncodingOptions`]，選擇 BER（定長或不定長）、CER 或 DER。
+//! [`Encode`] borrows [`EncodingOptions`], whose [`EncodingType`] selects BER
+//! (definite or indefinite length), CER, or DER.
 //!
 //! [`Decode`] 收 [`DecodingOptions`]，依 BER 規則解碼並傳遞資源限制。
 //! schema 決定 tag 對應的型別；具體值的解碼器驗證內容與編碼形式。
@@ -90,6 +91,7 @@ mod asn1_ref;
 mod decoding_options;
 mod encoding;
 mod encoding_options;
+mod encoding_type;
 mod error;
 mod schema;
 mod segments;
@@ -100,7 +102,8 @@ pub use asn1_any::Asn1Any;
 pub use asn1_object::{Asn1Object, Asn1Tagged, TaggedContent};
 pub use asn1_ref::{Asn1Class, Asn1Ref, Children};
 pub use decoding_options::{DecodingOptions, Depth};
-pub use encoding_options::{EncodingOptions, LengthForm};
+pub use encoding_options::EncodingOptions;
+pub use encoding_type::{EncodingType, LengthForm};
 pub use error::Asn1Error;
 pub use schema::{Explicit, Fields, Implicit, SequenceFields};
 pub use traits::{Decode, DecodeConstructed, DecodeContent, Encode, EncodeContent, EncodeTagged};

@@ -16,12 +16,12 @@ use alloc::{vec, vec::Vec};
 ///
 /// # Examples
 /// ```
-/// use tc_asn1::{Asn1Real, Asn1Error, Encode, EncodingOptions};
+/// use tc_asn1::{Asn1Real, Asn1Error, Encode, EncodingOptions, EncodingType};
 /// let exact = Asn1Real::from_decimal_parts(false, "1", "-1").unwrap();
 /// assert_eq!(f64::try_from(&exact), Err(Asn1Error::InexactValue));
 /// let half = Asn1Real::from(1.5_f64);
 /// let mut out = [0; 5];
-/// half.encode(EncodingOptions::Der, &mut out).unwrap();
+/// half.encode(&EncodingOptions::new(EncodingType::Der), &mut out).unwrap();
 /// assert_eq!(out, [9, 3, 0x80, 0xFF, 3]);
 /// assert_eq!(f64::try_from(&half), Ok(1.5));
 /// ```
@@ -378,12 +378,12 @@ impl<'a> DecodeContent<'a> for Asn1Real {
 
 impl crate::EncodeContent for Asn1Real {
     /// 常數時間：已保存正規內容。
-    fn content_len(&self, _: EncodingOptions) -> usize {
+    fn content_len(&self, _: &EncodingOptions) -> usize {
         self.contents.len()
     }
 
     /// 變動時間：BER 與 DER 都寫出保存的正規內容。
-    fn encode_content(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+    fn encode_content(&self, rules: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         let len = crate::EncodeContent::content_len(self, rules);
         let out = out.get_mut(..len).ok_or(Asn1Error::BufferTooSmall)?;
         out[..self.contents.len()].copy_from_slice(&self.contents);
@@ -394,11 +394,11 @@ impl crate::EncodeContent for Asn1Real {
 impl crate::EncodeTagged for Asn1Real {}
 
 impl Encode for Asn1Real {
-    fn encoded_len(&self, rules: EncodingOptions) -> usize {
+    fn encoded_len(&self, rules: &EncodingOptions) -> usize {
         crate::EncodeTagged::encoded_len_tagged(self, Self::TAG, rules)
     }
 
-    fn encode(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+    fn encode(&self, rules: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         crate::EncodeTagged::encode_tagged(self, Self::TAG, rules, out)
     }
 }
@@ -407,6 +407,7 @@ impl Encode for Asn1Real {
 mod tests {
     use super::*;
     use crate::Decode;
+    use crate::EncodingType;
     #[test]
     fn binary_real_vectors_normalize_base_scaling_and_even_mantissas() {
         for (input, expected) in [
@@ -480,8 +481,10 @@ mod tests {
         ] {
             let real = Asn1Real::from(value);
             assert_eq!(f64::try_from(&real).unwrap().to_bits(), value.to_bits());
-            let mut out = vec![0; real.encoded_len(EncodingOptions::Der)];
-            let written = real.encode(EncodingOptions::Der, &mut out).unwrap();
+            let mut out = vec![0; real.encoded_len(&EncodingOptions::new(EncodingType::Der))];
+            let written = real
+                .encode(&EncodingOptions::new(EncodingType::Der), &mut out)
+                .unwrap();
             assert_eq!(
                 Asn1Real::try_decode(&out, DecodingOptions::default()),
                 Ok((written, real))

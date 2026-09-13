@@ -7,9 +7,9 @@
 
 use alloc::vec::Vec;
 
+use crate::EncodingOptions;
 use crate::asn1_ref::Asn1Ref;
 use crate::decoding_options::DecodingOptions;
-use crate::encoding_options::EncodingOptions;
 use crate::error::Asn1Error;
 use crate::traits::{Decode, Encode};
 
@@ -34,7 +34,7 @@ use crate::traits::{Decode, Encode};
 /// # Examples
 ///
 /// ```
-/// use tc_asn1::{Asn1Any, Decode, DecodingOptions, Encode, EncodingOptions};
+/// use tc_asn1::{Asn1Any, Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
 ///
 /// let saved = {
 ///     let input = vec![0x83, 0x81, 1, 0xAA]; // Unknown tag, long-form length.
@@ -44,7 +44,7 @@ use crate::traits::{Decode, Encode};
 /// };
 /// assert_eq!(saved.as_ref().tag(), &[0x83]);
 /// assert_eq!(saved.as_ref().value(), &[0xAA]);
-/// assert_eq!(saved.encode_to_vec(EncodingOptions::Der)?, &[0x83, 0x81, 1, 0xAA]);
+/// assert_eq!(saved.encode_to_vec(&EncodingOptions::new(EncodingType::Der))?, &[0x83, 0x81, 1, 0xAA]);
 /// # Ok::<(), tc_asn1::Asn1Error>(())
 /// ```
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -163,7 +163,7 @@ impl crate::EncodeContent for Asn1Any {
     /// Return the content length, excluding this element's header and closing EOC.
     /// Nested TLVs remain complete. Encoding rules do not affect the result.
     /// Constant time: obtains the length from saved boundaries.
-    fn content_len(&self, _: EncodingOptions) -> usize {
+    fn content_len(&self, _: &EncodingOptions) -> usize {
         self.as_ref().value().len()
     }
 
@@ -174,21 +174,21 @@ impl crate::EncodeContent for Asn1Any {
     /// # Examples
     ///
     /// ```
-    /// use tc_asn1::{Asn1Any, Asn1Error, Decode, DecodingOptions, EncodeContent, EncodingOptions};
+    /// use tc_asn1::{Asn1Any, Asn1Error, Decode, DecodingOptions, EncodeContent, EncodingOptions, EncodingType};
     /// let (_, saved) = Asn1Any::try_decode(
     ///     &[0x30, 0x80, 5, 0, 0, 0], DecodingOptions::default(),
     /// )?;
     /// let mut out = [0xAA; 3];
-    /// assert_eq!(saved.content_len(EncodingOptions::Der), 2);
-    /// assert_eq!(saved.encode_content(EncodingOptions::Der, &mut out)?, 2);
+    /// assert_eq!(saved.content_len(&EncodingOptions::new(EncodingType::Der)), 2);
+    /// assert_eq!(saved.encode_content(&EncodingOptions::new(EncodingType::Der), &mut out)?, 2);
     /// assert_eq!(out, [5, 0, 0xAA]);
     /// assert_eq!(
-    ///     saved.encode_content(EncodingOptions::Der, &mut [0]),
+    ///     saved.encode_content(&EncodingOptions::new(EncodingType::Der), &mut [0]),
     ///     Err(Asn1Error::BufferTooSmall),
     /// );
     /// # Ok::<(), Asn1Error>(())
     /// ```
-    fn encode_content(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+    fn encode_content(&self, rules: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         let len = crate::EncodeContent::content_len(self, rules);
         let out = out.get_mut(..len).ok_or(Asn1Error::BufferTooSmall)?;
         let value = self.as_ref().value();
@@ -207,10 +207,10 @@ impl crate::EncodeContent for Asn1Any {
 /// # Examples
 ///
 /// ```
-/// use tc_asn1::{Asn1Any, Decode, DecodingOptions, EncodeTagged, EncodingOptions};
+/// use tc_asn1::{Asn1Any, Decode, DecodingOptions, EncodeTagged, EncodingOptions, EncodingType};
 /// let (_, saved) = Asn1Any::try_decode(&[4, 0x81, 1, 0xAA], DecodingOptions::default())?;
 /// let mut out = [0; 3];
-/// assert_eq!(saved.encode_tagged(&[0x80], EncodingOptions::Der, &mut out)?, 3);
+/// assert_eq!(saved.encode_tagged(&[0x80], &EncodingOptions::new(EncodingType::Der), &mut out)?, 3);
 /// assert_eq!(out, [0x80, 1, 0xAA]);
 /// # Ok::<(), tc_asn1::Asn1Error>(())
 /// ```
@@ -219,7 +219,7 @@ impl crate::EncodeTagged for Asn1Any {}
 impl Encode for Asn1Any {
     /// Return the size of the complete original TLV under any encoding rule.
     /// Constant time: reads the stored vector's length.
-    fn encoded_len(&self, _: EncodingOptions) -> usize {
+    fn encoded_len(&self, _: &EncodingOptions) -> usize {
         self.raw.len()
     }
 
@@ -233,9 +233,9 @@ impl Encode for Asn1Any {
     /// # Examples
     ///
     /// ```
-    /// use tc_asn1::{Asn1Any, Decode, DecodingOptions, Encode, EncodingOptions};
+    /// use tc_asn1::{Asn1Any, Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
     /// let (_, saved) = Asn1Any::try_decode(&[1, 1, 1], DecodingOptions::default())?;
-    /// for rules in [EncodingOptions::Der, EncodingOptions::Cer] {
+    /// for rules in [&EncodingOptions::new(EncodingType::Der), &EncodingOptions::new(EncodingType::Cer)] {
     ///     let mut out = [0xAA; 4];
     ///     assert_eq!(saved.encoded_len(rules), 3);
     ///     assert_eq!(saved.encode(rules, &mut out)?, 3);
@@ -243,7 +243,7 @@ impl Encode for Asn1Any {
     /// }
     /// # Ok::<(), tc_asn1::Asn1Error>(())
     /// ```
-    fn encode(&self, _: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+    fn encode(&self, _: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         let out = out
             .get_mut(..self.raw.len())
             .ok_or(Asn1Error::BufferTooSmall)?;
@@ -256,6 +256,7 @@ impl Encode for Asn1Any {
 mod tests {
     use super::*;
     use crate::EncodeTagged;
+    use crate::EncodingType;
     use crate::asn1_ref::Asn1Class;
     use crate::universal::Asn1Boolean;
 
@@ -275,7 +276,9 @@ mod tests {
         assert_eq!(any.as_ref().class(), Asn1Class::ContextSpecific);
 
         let mut out = [0_u8; 8];
-        let written = any.encode(EncodingOptions::Der, &mut out).unwrap();
+        let written = any
+            .encode(&EncodingOptions::new(EncodingType::Der), &mut out)
+            .unwrap();
         assert_eq!(&out[..written], &input[..5]);
     }
 
@@ -286,9 +289,11 @@ mod tests {
         let (_, any) = Asn1Any::try_decode(&input, OPTIONS).unwrap();
 
         let mut out = [0_u8; 8];
-        let written = any.encode(EncodingOptions::Der, &mut out).unwrap();
+        let written = any
+            .encode(&EncodingOptions::new(EncodingType::Der), &mut out)
+            .unwrap();
         assert_eq!(&out[..written], &input);
-        assert_eq!(any.encoded_len(EncodingOptions::Der), 6);
+        assert_eq!(any.encoded_len(&EncodingOptions::new(EncodingType::Der)), 6);
     }
 
     #[test]
@@ -296,7 +301,7 @@ mod tests {
         let (_, any) = Asn1Any::try_decode(&[0x04, 0x81, 0x01, 0xAA], OPTIONS).unwrap();
         let mut out = [0_u8; 8];
         let written = any
-            .encode_tagged(&[0x80], EncodingOptions::Der, &mut out)
+            .encode_tagged(&[0x80], &EncodingOptions::new(EncodingType::Der), &mut out)
             .unwrap();
         assert_eq!(&out[..written], &[0x80, 0x01, 0xAA], "換 tag 就得重寫表頭");
     }
@@ -331,7 +336,9 @@ mod tests {
         let input = [0x01, 0x01, 0x01];
         let (_, any) = Asn1Any::try_decode(&input, OPTIONS).unwrap();
         let mut out = [0_u8; 8];
-        let written = any.encode(EncodingOptions::Der, &mut out).unwrap();
+        let written = any
+            .encode(&EncodingOptions::new(EncodingType::Der), &mut out)
+            .unwrap();
         assert_eq!(&out[..written], &input, "保真優先於正規化");
     }
 }

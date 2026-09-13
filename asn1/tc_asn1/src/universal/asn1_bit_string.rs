@@ -4,9 +4,9 @@ use alloc::vec::Vec;
 
 use crate::asn1_ref::Children;
 use crate::decoding_options::DecodingOptions;
-use crate::encoding_options::EncodingOptions;
 use crate::error::Asn1Error;
 use crate::traits::{DecodeConstructed, DecodeContent, Encode};
+use crate::{EncodingOptions, EncodingType};
 
 /// 位元 0 是第一個位元組的最高位。最後一個位元組沒用到的位永遠存成 0。
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -137,8 +137,8 @@ impl crate::EncodeContent for Asn1BitString {
     /// Length of the contents, including segment headers for long CER values.
     /// The CER threshold includes the unused-bit count: 999 data octets remain primitive.
     /// Variable time: public values only; no constant-time alternative is provided.
-    fn content_len(&self, rules: EncodingOptions) -> usize {
-        if rules != EncodingOptions::Cer || self.bytes.len() < 1000 {
+    fn content_len(&self, rules: &EncodingOptions) -> usize {
+        if rules.encoding_type() != EncodingType::Cer || self.bytes.len() < 1000 {
             return 1 + self.bytes.len();
         }
         self.bytes
@@ -152,10 +152,10 @@ impl crate::EncodeContent for Asn1BitString {
     /// carries the value's unused-bit count. Neither form includes the outer header or EOC.
     /// BER (either length form) and DER always use primitive contents.
     /// Variable time: public values only; no constant-time alternative is provided.
-    fn encode_content(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+    fn encode_content(&self, rules: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         let total = self.content_len(rules);
         let out = out.get_mut(..total).ok_or(Asn1Error::BufferTooSmall)?;
-        if rules != EncodingOptions::Cer || self.bytes.len() < 1000 {
+        if rules.encoding_type() != EncodingType::Cer || self.bytes.len() < 1000 {
             out[0] = self.unused_bits;
             out[1..].copy_from_slice(&self.bytes);
             return Ok(total);
@@ -181,8 +181,8 @@ impl crate::EncodeContent for Asn1BitString {
 
 impl crate::EncodeTagged for Asn1BitString {
     /// Variable time: branches only on the encoding structure.
-    fn encoded_len_tagged(&self, tag: &[u8], rules: EncodingOptions) -> usize {
-        if rules != EncodingOptions::Cer || self.bytes.len() < 1000 {
+    fn encoded_len_tagged(&self, tag: &[u8], rules: &EncodingOptions) -> usize {
+        if rules.encoding_type() != EncodingType::Cer || self.bytes.len() < 1000 {
             return crate::encoding::default_encoded_len(self, tag, rules);
         }
         tag.len()
@@ -199,10 +199,10 @@ impl crate::EncodeTagged for Asn1BitString {
     fn encode_tagged(
         &self,
         tag: &[u8],
-        rules: EncodingOptions,
+        rules: &EncodingOptions,
         out: &mut [u8],
     ) -> Result<usize, Asn1Error> {
-        if rules != EncodingOptions::Cer || self.bytes.len() < 1000 {
+        if rules.encoding_type() != EncodingType::Cer || self.bytes.len() < 1000 {
             return crate::encoding::default_encode(self, tag, rules, out);
         }
         let total = self.encoded_len_tagged(tag, rules);
@@ -231,11 +231,11 @@ impl crate::EncodeTagged for Asn1BitString {
 }
 
 impl Encode for Asn1BitString {
-    fn encoded_len(&self, rules: EncodingOptions) -> usize {
+    fn encoded_len(&self, rules: &EncodingOptions) -> usize {
         crate::EncodeTagged::encoded_len_tagged(self, Self::TAG, rules)
     }
 
-    fn encode(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+    fn encode(&self, rules: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         crate::EncodeTagged::encode_tagged(self, Self::TAG, rules, out)
     }
 }
@@ -259,12 +259,12 @@ mod tests {
             let mut expected = alloc::vec![value.unused_bits()];
             expected.extend_from_slice(value.as_bytes());
             for options in [
-                EncodingOptions::Ber(crate::LengthForm::Definite),
-                EncodingOptions::Ber(crate::LengthForm::Indefinite),
-                EncodingOptions::Der,
-                EncodingOptions::Cer,
+                &EncodingOptions::new(EncodingType::Ber(crate::LengthForm::Definite)),
+                &EncodingOptions::new(EncodingType::Ber(crate::LengthForm::Indefinite)),
+                &EncodingOptions::new(EncodingType::Der),
+                &EncodingOptions::new(EncodingType::Cer),
             ] {
-                if options == EncodingOptions::Cer && data_len == 1000 {
+                if options.encoding_type() == EncodingType::Cer && data_len == 1000 {
                     continue;
                 }
                 let encoder: &dyn EncodeContent = &value;
@@ -289,7 +289,7 @@ mod tests {
         expected.extend_from_slice(&bytes[..999]);
         expected.extend_from_slice(&[3, 2, 4, 0xf0]);
         assert_eq!(expected.len(), 1008);
-        let options = EncodingOptions::Cer;
+        let options = &EncodingOptions::new(EncodingType::Cer);
         assert_eq!(value.content_len(options), expected.len());
         let mut out = alloc::vec![0xaa; expected.len() + 2];
         assert_eq!(value.encode_content(options, &mut out), Ok(expected.len()));
@@ -308,7 +308,7 @@ mod tests {
                 &alloc::vec![0xff; data_len],
                 (data_len * 8).saturating_sub(7),
             );
-            let options = EncodingOptions::Cer;
+            let options = &EncodingOptions::new(EncodingType::Cer);
             let len = value.content_len(options);
             let mut out = alloc::vec![0; len];
             assert_eq!(value.encode_content(options, &mut out), Ok(len));
@@ -329,7 +329,12 @@ mod tests {
         let short = Asn1BitString::from_bytes(&[0xaa; 999]);
         let mut expected = alloc::vec![3, 0x82, 3, 0xe8, 0];
         expected.extend_from_slice(&[0xaa; 999]);
-        assert_eq!(short.encode_to_vec(EncodingOptions::Cer).unwrap(), expected);
+        assert_eq!(
+            short
+                .encode_to_vec(&EncodingOptions::new(EncodingType::Cer))
+                .unwrap(),
+            expected
+        );
         let mut bytes = [0xaa; 1000];
         bytes[999] = 0xf0;
         let value = Asn1BitString::from_bits(&bytes, 7996);
@@ -337,10 +342,18 @@ mod tests {
         expected.extend_from_slice(&bytes[..999]);
         expected.extend_from_slice(&[3, 2, 4, 0xf0, 0, 0]);
         assert_eq!(expected.len(), 1012);
-        assert_eq!(value.encoded_len(EncodingOptions::Cer), 1012);
-        assert_eq!(value.encode_to_vec(EncodingOptions::Cer).unwrap(), expected);
         assert_eq!(
-            value.encode(EncodingOptions::Cer, &mut [0; 1011]),
+            value.encoded_len(&EncodingOptions::new(EncodingType::Cer)),
+            1012
+        );
+        assert_eq!(
+            value
+                .encode_to_vec(&EncodingOptions::new(EncodingType::Cer))
+                .unwrap(),
+            expected
+        );
+        assert_eq!(
+            value.encode(&EncodingOptions::new(EncodingType::Cer), &mut [0; 1011]),
             Err(Asn1Error::BufferTooSmall)
         );
         assert_eq!(
@@ -354,8 +367,8 @@ mod tests {
         let mut definite = alloc::vec![3, 0x82, 3, 0xe9, 4];
         definite.extend_from_slice(&bytes);
         for rules in [
-            EncodingOptions::Ber(crate::LengthForm::Definite),
-            EncodingOptions::Der,
+            &EncodingOptions::new(EncodingType::Ber(crate::LengthForm::Definite)),
+            &EncodingOptions::new(EncodingType::Der),
         ] {
             assert_eq!(value.encode_to_vec(rules).unwrap(), definite);
         }
@@ -401,7 +414,9 @@ mod tests {
         assert_eq!(bits.as_bytes(), &[0x40], "存起來時清掉");
 
         let mut out = [0_u8; 8];
-        let written = bits.encode(EncodingOptions::Der, &mut out).unwrap();
+        let written = bits
+            .encode(&EncodingOptions::new(EncodingType::Der), &mut out)
+            .unwrap();
         assert_eq!(&out[..written], &[0x03, 0x02, 0x06, 0x40], "重編就是 DER");
     }
 
@@ -436,7 +451,9 @@ mod tests {
     fn encode_and_decode_round_trip() {
         let original = Asn1BitString::from_bits(&[0xA5, 0xFF], 12);
         let mut out = [0_u8; 8];
-        let written = original.encode(EncodingOptions::Der, &mut out).unwrap();
+        let written = original
+            .encode(&EncodingOptions::new(EncodingType::Der), &mut out)
+            .unwrap();
         assert_eq!(&out[..written], &[0x03, 0x03, 0x04, 0xA5, 0xF0]);
 
         let (_, decoded) = Asn1BitString::try_decode(&out[..written], OPTIONS).unwrap();
@@ -467,7 +484,8 @@ mod tests {
             assert_eq!(bits.unused_bits(), 4);
             assert_eq!(bits.bit_len(), 12);
             assert_eq!(
-                bits.encode_to_vec(EncodingOptions::Der).unwrap(),
+                bits.encode_to_vec(&EncodingOptions::new(EncodingType::Der))
+                    .unwrap(),
                 [3, 3, 4, 0xf0, 0xa0]
             );
             let tree = crate::Asn1Object::try_decode(input, OPTIONS)
@@ -503,7 +521,11 @@ mod tests {
                 .unwrap();
             assert_eq!(bits.bit_len(), 0);
             assert_eq!(bits.unused_bits(), 0);
-            assert_eq!(bits.encode_to_vec(EncodingOptions::Der).unwrap(), [3, 1, 0]);
+            assert_eq!(
+                bits.encode_to_vec(&EncodingOptions::new(EncodingType::Der))
+                    .unwrap(),
+                [3, 1, 0]
+            );
         }
         assert_eq!(
             decode_constructed(b"\x23\x03\x04\x01\x00", OPTIONS),

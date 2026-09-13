@@ -2,8 +2,8 @@
 
 use alloc::string::String;
 
+use crate::EncodingOptions;
 use crate::decoding_options::DecodingOptions;
-use crate::encoding_options::EncodingOptions;
 use crate::error::Asn1Error;
 use crate::traits::{DecodeContent, Encode};
 
@@ -17,11 +17,11 @@ use crate::traits::{DecodeContent, Encode};
 /// emoji 可以直接以單一 UCS-4 碼位表示，不使用 UTF-16 代理對。
 ///
 /// ```
-/// use tc_asn1::{Asn1UniversalString, DecodingOptions, Encode, EncodingOptions, Decode};
+/// use tc_asn1::{Asn1UniversalString, DecodingOptions, Encode, EncodingOptions, EncodingType, Decode};
 ///
 /// let value = Asn1UniversalString::new("😀");
 /// let mut out = [0; 6];
-/// value.encode(EncodingOptions::Der, &mut out).unwrap();
+/// value.encode(&EncodingOptions::new(EncodingType::Der), &mut out).unwrap();
 /// assert_eq!(out, [0x1C, 4, 0, 1, 0xF6, 0]);
 /// let (_, decoded) = Asn1UniversalString::try_decode(&out, DecodingOptions::default()).unwrap();
 /// assert_eq!(decoded.as_str(), "😀");
@@ -99,14 +99,14 @@ crate::segments::constructed_string_decode!(Asn1UniversalString);
 
 impl Asn1UniversalString {
     /// 內容長度是字元數的四倍。變動時間：需要走訪字串計算字元數。
-    fn primitive_content_len(&self, _: EncodingOptions) -> usize {
+    fn primitive_content_len(&self, _: &EncodingOptions) -> usize {
         self.text.chars().count() * 4
     }
 
     /// 每個字元寫成 UCS-4 大端序。變動時間：依字串長度走訪字元。
     fn encode_primitive_content(
         &self,
-        _: EncodingOptions,
+        _: &EncodingOptions,
         out: &mut [u8],
     ) -> Result<usize, Asn1Error> {
         let mut at = 0;
@@ -127,11 +127,11 @@ impl crate::EncodeTagged for Asn1UniversalString {
 }
 
 impl Encode for Asn1UniversalString {
-    fn encoded_len(&self, rules: EncodingOptions) -> usize {
+    fn encoded_len(&self, rules: &EncodingOptions) -> usize {
         crate::EncodeTagged::encoded_len_tagged(self, Self::TAG, rules)
     }
 
-    fn encode(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+    fn encode(&self, rules: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         crate::EncodeTagged::encode_tagged(self, Self::TAG, rules, out)
     }
 }
@@ -141,6 +141,7 @@ mod tests {
     use super::*;
     use crate::Decode;
     use crate::EncodeContent;
+    use crate::EncodingType;
 
     #[test]
     fn latin_chinese_and_emoji_text_round_trip_as_four_bytes_per_character() {
@@ -155,8 +156,8 @@ mod tests {
             let original = Asn1UniversalString::new(text);
             assert_eq!(original, Asn1UniversalString::from(String::from(text)));
             for rules in [
-                EncodingOptions::Ber(crate::LengthForm::Definite),
-                EncodingOptions::Der,
+                &EncodingOptions::new(EncodingType::Ber(crate::LengthForm::Definite)),
+                &EncodingOptions::new(EncodingType::Der),
             ] {
                 let mut out = [0; 24];
                 let written = original.encode(rules, &mut out).unwrap();
@@ -218,7 +219,10 @@ mod tests {
         let text = "\0\u{D7FF}\u{E000}\u{FFFF}\u{10000}\u{10FFFF}";
         let original = Asn1UniversalString::new(text);
         let mut out = [0; 26];
-        assert_eq!(original.encode(EncodingOptions::Der, &mut out), Ok(26));
+        assert_eq!(
+            original.encode(&EncodingOptions::new(EncodingType::Der), &mut out),
+            Ok(26)
+        );
         assert_eq!(&out[22..], &[0, 0x10, 0xFF, 0xFF]);
         assert_eq!(
             Asn1UniversalString::try_decode(&out, DecodingOptions::default()),
@@ -231,7 +235,10 @@ mod tests {
         let original = Asn1UniversalString::new("");
         assert_eq!(original, Asn1UniversalString::default());
         let mut out = [0; 2];
-        assert_eq!(original.encode(EncodingOptions::Der, &mut out), Ok(2));
+        assert_eq!(
+            original.encode(&EncodingOptions::new(EncodingType::Der), &mut out),
+            Ok(2)
+        );
         assert_eq!(out, [0x1C, 0]);
         assert_eq!(
             Asn1UniversalString::try_decode(&out, DecodingOptions::default()),

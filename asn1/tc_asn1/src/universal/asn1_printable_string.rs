@@ -2,8 +2,8 @@
 
 use alloc::string::String;
 
+use crate::EncodingOptions;
 use crate::decoding_options::DecodingOptions;
-use crate::encoding_options::EncodingOptions;
 use crate::error::Asn1Error;
 use crate::traits::{DecodeContent, Encode};
 
@@ -79,13 +79,13 @@ impl<'a> DecodeContent<'a> for Asn1PrintableString {
 crate::segments::constructed_string_decode!(Asn1PrintableString);
 
 impl Asn1PrintableString {
-    fn primitive_content_len(&self, _: EncodingOptions) -> usize {
+    fn primitive_content_len(&self, _: &EncodingOptions) -> usize {
         self.text.len()
     }
 
     fn encode_primitive_content(
         &self,
-        _: EncodingOptions,
+        _: &EncodingOptions,
         out: &mut [u8],
     ) -> Result<usize, Asn1Error> {
         out[..self.text.len()].copy_from_slice(self.text.as_bytes());
@@ -102,11 +102,11 @@ impl crate::EncodeTagged for Asn1PrintableString {
 }
 
 impl Encode for Asn1PrintableString {
-    fn encoded_len(&self, rules: EncodingOptions) -> usize {
+    fn encoded_len(&self, rules: &EncodingOptions) -> usize {
         crate::EncodeTagged::encoded_len_tagged(self, Self::TAG, rules)
     }
 
-    fn encode(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+    fn encode(&self, rules: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         crate::EncodeTagged::encode_tagged(self, Self::TAG, rules, out)
     }
 }
@@ -114,6 +114,7 @@ impl Encode for Asn1PrintableString {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::EncodingType;
     use crate::traits::Decode;
 
     const OPTIONS: DecodingOptions =
@@ -146,7 +147,9 @@ mod tests {
         assert_eq!(s.as_str(), "TW");
 
         let mut out = [0_u8; 8];
-        let written = s.encode(EncodingOptions::Der, &mut out).unwrap();
+        let written = s
+            .encode(&EncodingOptions::new(EncodingType::Der), &mut out)
+            .unwrap();
         assert_eq!(&out[..written], &input);
     }
 }

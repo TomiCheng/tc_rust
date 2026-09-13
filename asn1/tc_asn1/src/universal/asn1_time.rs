@@ -123,14 +123,14 @@ macro_rules! time_type {
 
         impl $crate::EncodeContent for $name {
             /// 常數時間：讀取已準備的線路內容長度。
-            fn content_len(&self, _: EncodingOptions) -> usize {
+            fn content_len(&self, _: &EncodingOptions) -> usize {
                 self.wire.len()
             }
 
             /// 變動時間：複製正規化後的線路內容。
             fn encode_content(
                 &self,
-                rules: EncodingOptions,
+                rules: &EncodingOptions,
                 out: &mut [u8],
             ) -> Result<usize, Asn1Error> {
                 let len = $crate::EncodeContent::content_len(self, rules);
@@ -145,13 +145,13 @@ macro_rules! time_type {
         impl $crate::EncodeTagged for $name {}
 
         impl Encode for $name {
-            fn encoded_len(&self, rules: $crate::EncodingOptions) -> usize {
+            fn encoded_len(&self, rules: &$crate::EncodingOptions) -> usize {
                 $crate::EncodeTagged::encoded_len_tagged(self, Self::TAG, rules)
             }
 
             fn encode(
                 &self,
-                rules: $crate::EncodingOptions,
+                rules: &$crate::EncodingOptions,
                 out: &mut [u8],
             ) -> Result<usize, $crate::Asn1Error> {
                 $crate::EncodeTagged::encode_tagged(self, Self::TAG, rules, out)
@@ -185,10 +185,10 @@ time_type!(
 # Examples
 
 ```
-use tc_asn1::{Asn1Date, Encode, EncodingOptions};
+use tc_asn1::{Asn1Date, Encode, EncodingOptions, EncodingType};
 let date = Asn1Date::new("2024-02-29").unwrap();
 let mut out = [0; 11];
-date.encode(EncodingOptions::Der, &mut out).unwrap();
+date.encode(&EncodingOptions::new(EncodingType::Der), &mut out).unwrap();
 assert_eq!(&out[..3], &[0x1f, 0x1f, 8]);
 assert_eq!(&out[3..], b"20240229");
 assert!(Asn1Date::new("2023-02-29").is_err());
@@ -246,6 +246,7 @@ assert_ne!(duration, Asn1Duration::new("P2M").unwrap());
 mod tests {
     use super::*;
     use crate::Decode;
+    use crate::EncodingType;
     #[test]
     fn useful_time_types_write_the_standard_separator_free_contents() {
         type Case = (alloc::boxed::Box<dyn Encode>, &'static [u8], &'static [u8]);
@@ -273,8 +274,8 @@ mod tests {
         ];
         for (value, tag, content) in cases {
             for rules in [
-                EncodingOptions::Ber(crate::LengthForm::Definite),
-                EncodingOptions::Der,
+                &EncodingOptions::new(EncodingType::Ber(crate::LengthForm::Definite)),
+                &EncodingOptions::new(EncodingType::Der),
             ] {
                 let mut out = alloc::vec![0; value.encoded_len(rules)];
                 assert_eq!(value.encode(rules, &mut out), Ok(out.len()));
@@ -301,8 +302,8 @@ mod tests {
         macro_rules! check {
             ($ty:ident, $text:literal) => {
                 let value = $ty::new($text).unwrap();
-                let mut out = alloc::vec![0; value.encoded_len(EncodingOptions::Der)];
-                value.encode(EncodingOptions::Der, &mut out).unwrap();
+                let mut out = alloc::vec![0; value.encoded_len(&EncodingOptions::new(EncodingType::Der))];
+                value.encode(&EncodingOptions::new(EncodingType::Der), &mut out).unwrap();
                 assert_eq!($ty::try_decode(&out, DecodingOptions::default()).unwrap().1, value);
                 let expected_tag = crate::Asn1Ref::parse(&out, DecodingOptions::default()).unwrap().tag().to_vec();
                 if out[0] == 0x1F { out[1] = 0x25; } else { out[0] = 0x04; }

@@ -32,13 +32,13 @@ use alloc::vec::Vec;
 /// 拿到未知結構時，先解成樹看內容，再重編。
 ///
 /// ```
-/// use tc_asn1::{Asn1Object, DecodingOptions, Encode, EncodingOptions, Decode};
+/// use tc_asn1::{Asn1Object, DecodingOptions, Encode, EncodingOptions, EncodingType, Decode};
 ///
 /// let input = [0x30, 5, 2, 1, 42, 5, 0];
 /// let (used, tree) = Asn1Object::try_decode(&input, DecodingOptions::default()).unwrap();
 /// assert_eq!(used, input.len());
 /// assert_eq!(tree.to_string(), "SEQUENCE\n  INTEGER 42\n  NULL\n");
-/// let out = tree.encode_to_vec(EncodingOptions::Der).unwrap();
+/// let out = tree.encode_to_vec(&EncodingOptions::new(EncodingType::Der)).unwrap();
 /// assert_eq!(out, input);
 /// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -420,7 +420,7 @@ impl Asn1Object {
 
 impl crate::EncodeContent for Asn1Object {
     /// 計算內容長度。變動時間：分支只依編碼結構。
-    fn content_len(&self, rules: EncodingOptions) -> usize {
+    fn content_len(&self, rules: &EncodingOptions) -> usize {
         match self {
             Self::Null => 0,
             Self::Sequence(children) | Self::Set(children) => children_len(children, rules),
@@ -462,7 +462,7 @@ impl crate::EncodeContent for Asn1Object {
     }
 
     /// 寫入內容。變動時間：分支只依編碼結構，SET 排序另比較公開編碼內容。
-    fn encode_content(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+    fn encode_content(&self, rules: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         let len = crate::EncodeContent::content_len(self, rules);
         let out = out.get_mut(..len).ok_or(Asn1Error::BufferTooSmall)?;
         match self {
@@ -516,7 +516,7 @@ impl crate::EncodeContent for Asn1Object {
 
 impl crate::EncodeTagged for Asn1Object {
     /// Variable time: branches only on the encoding structure.
-    fn encoded_len_tagged(&self, tag: &[u8], rules: EncodingOptions) -> usize {
+    fn encoded_len_tagged(&self, tag: &[u8], rules: &EncodingOptions) -> usize {
         match self {
             Self::Boolean(value) => value.encoded_len_tagged(tag, rules),
             Self::Integer(value) => value.encoded_len_tagged(tag, rules),
@@ -562,7 +562,7 @@ impl crate::EncodeTagged for Asn1Object {
     fn encode_tagged(
         &self,
         tag: &[u8],
-        rules: EncodingOptions,
+        rules: &EncodingOptions,
         out: &mut [u8],
     ) -> Result<usize, Asn1Error> {
         match self {
@@ -609,7 +609,7 @@ impl crate::EncodeTagged for Asn1Object {
 
 impl Encode for Asn1Object {
     /// Variable time: branches only on the encoding structure.
-    fn encoded_len(&self, rules: EncodingOptions) -> usize {
+    fn encoded_len(&self, rules: &EncodingOptions) -> usize {
         match self {
             Self::Boolean(value) => value.encoded_len(rules),
             Self::Integer(value) => value.encoded_len(rules),
@@ -652,7 +652,7 @@ impl Encode for Asn1Object {
     }
 
     /// Variable time: branches only on the encoding structure.
-    fn encode(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+    fn encode(&self, rules: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         match self {
             Self::Boolean(value) => value.encode(rules, out),
             Self::Integer(value) => value.encode(rules, out),
@@ -706,13 +706,13 @@ fn decode_children(
         .collect()
 }
 
-fn children_len(children: &[Asn1Object], rules: EncodingOptions) -> usize {
+fn children_len(children: &[Asn1Object], rules: &EncodingOptions) -> usize {
     children.iter().map(|child| child.encoded_len(rules)).sum()
 }
 
 fn encode_children(
     children: &[Asn1Object],
-    rules: EncodingOptions,
+    rules: &EncodingOptions,
     out: &mut [u8],
 ) -> Result<usize, Asn1Error> {
     let mut at = 0;
@@ -726,6 +726,7 @@ fn encode_children(
 mod tests {
     use super::*;
     use crate::EncodeContent;
+    use crate::EncodingType;
     use alloc::{boxed::Box, string::ToString, vec};
 
     fn decode(input: &[u8]) -> Asn1Object {
@@ -758,7 +759,10 @@ mod tests {
                 "abababababababababababababababababababababababababababababababab\n"
             )
         );
-        assert_eq!(encode_member(&tree, EncodingOptions::Der).unwrap(), input);
+        assert_eq!(
+            encode_member(&tree, &EncodingOptions::new(EncodingType::Der)).unwrap(),
+            input
+        );
         assert_eq!(
             tree.as_sequence().unwrap()[0].as_sequence().unwrap()[0]
                 .as_oid()
@@ -782,12 +786,16 @@ mod tests {
             Asn1Object::Sequence(vec![]),
         ]);
         assert_eq!(
-            encode_member(&tree, EncodingOptions::Der).unwrap(),
+            encode_member(&tree, &EncodingOptions::new(EncodingType::Der)).unwrap(),
             b"\x31\x11\x30\x00\x17\x0d230101000000Z"
         );
         let ber = b"\x31\x11\x17\x0d230101000000Z\x30\x00";
         assert_eq!(
-            encode_member(&tree, EncodingOptions::Ber(crate::LengthForm::Definite)).unwrap(),
+            encode_member(
+                &tree,
+                &EncodingOptions::new(EncodingType::Ber(crate::LengthForm::Definite))
+            )
+            .unwrap(),
             ber
         );
         assert_eq!(decode(ber), tree);
@@ -801,12 +809,16 @@ mod tests {
             Asn1Integer::from(3_u8).into(),
         ]);
         assert_eq!(
-            encode_member(&tree, EncodingOptions::Der).unwrap(),
+            encode_member(&tree, &EncodingOptions::new(EncodingType::Der)).unwrap(),
             [0x31, 6, 2, 1, 3, 2, 1, 5]
         );
         let ber = [0x31, 6, 2, 1, 5, 2, 1, 3];
         assert_eq!(
-            encode_member(&tree, EncodingOptions::Ber(crate::LengthForm::Definite)).unwrap(),
+            encode_member(
+                &tree,
+                &EncodingOptions::new(EncodingType::Ber(crate::LengthForm::Definite))
+            )
+            .unwrap(),
             ber
         );
         assert_eq!(decode(&ber), tree);
@@ -832,10 +844,17 @@ mod tests {
             let tree = decode(input);
             assert!(matches!(tree, Asn1Object::Unknown(_)));
             assert_eq!(tree.to_string(), text);
-            assert_eq!(tree.encoded_len(EncodingOptions::Der), input.len());
-            assert_eq!(encode_member(&tree, EncodingOptions::Der).unwrap(), input);
+            assert_eq!(
+                tree.encoded_len(&EncodingOptions::new(EncodingType::Der)),
+                input.len()
+            );
+            assert_eq!(
+                encode_member(&tree, &EncodingOptions::new(EncodingType::Der)).unwrap(),
+                input
+            );
             let nested = Asn1Object::Sequence(vec![tree.clone()]);
-            let encoding = encode_member(&nested, EncodingOptions::Der).unwrap();
+            let encoding =
+                encode_member(&nested, &EncodingOptions::new(EncodingType::Der)).unwrap();
             assert_eq!(&encoding[2..], input);
             assert_eq!(decode(&encoding), nested);
         }
@@ -850,7 +869,7 @@ mod tests {
             Asn1Object::Sequence(vec![Asn1Boolean::from(true).into()])
         );
         assert_eq!(
-            encode_member(&tree, EncodingOptions::Der).unwrap(),
+            encode_member(&tree, &EncodingOptions::new(EncodingType::Der)).unwrap(),
             [0x30, 3, 1, 1, 0xff]
         );
     }
@@ -905,7 +924,10 @@ mod tests {
             value.encoding(),
             &ExternalEncoding::SingleAsn1Type(Box::new(Asn1Boolean::from(true).into()))
         );
-        assert_eq!(encode_member(&tree, EncodingOptions::Der).unwrap(), input);
+        assert_eq!(
+            encode_member(&tree, &EncodingOptions::new(EncodingType::Der)).unwrap(),
+            input
+        );
         assert_eq!(
             tree.to_string(),
             "EXTERNAL\n  encoding [0]\n    BOOLEAN true\n"
@@ -940,8 +962,8 @@ mod tests {
             decode(&[0x1f, 0x25, 0x81, 1, 0xaa]),
         ] {
             for rules in [
-                EncodingOptions::Ber(crate::LengthForm::Definite),
-                EncodingOptions::Der,
+                &EncodingOptions::new(EncodingType::Ber(crate::LengthForm::Definite)),
+                &EncodingOptions::new(EncodingType::Der),
             ] {
                 let len = tree.encoded_len(rules);
                 assert_eq!(
@@ -1013,7 +1035,7 @@ mod tests {
                     assert!(input.starts_with(tag::$tag), "{}", stringify!($tag));
                     assert_eq!(tree.tag(), &expected[..tag::$tag.len()], "{}", stringify!($tag));
                     assert!(matches!(tree, $variant), "{}: {tree:?}", stringify!($tag));
-                    assert_eq!(encode_member(&tree, EncodingOptions::Der).unwrap(), expected, "{}", stringify!($tag));
+                    assert_eq!(encode_member(&tree, &EncodingOptions::new(EncodingType::Der)).unwrap(), expected, "{}", stringify!($tag));
                     assert!(tree.to_string().ends_with('\n'));
                 )*
                 names
@@ -1185,17 +1207,22 @@ mod tests {
         let second = Asn1Tagged::primitive(&[0x81], &[5]).unwrap();
         let tree = Asn1Object::Set(vec![second.clone().into(), first.clone().into()]);
         assert_eq!(
-            tree.encode_to_vec(EncodingOptions::Der).unwrap(),
+            tree.encode_to_vec(&EncodingOptions::new(EncodingType::Der))
+                .unwrap(),
             [0x31, 7, 0xa0, 2, 0x30, 0, 0x81, 1, 5]
         );
         assert_eq!(
-            tree.encode_to_vec(EncodingOptions::Ber(crate::LengthForm::Definite))
-                .unwrap(),
+            tree.encode_to_vec(&EncodingOptions::new(EncodingType::Ber(
+                crate::LengthForm::Definite
+            )))
+            .unwrap(),
             [0x31, 7, 0x81, 1, 5, 0xa0, 2, 0x30, 0]
         );
         let set_of = Asn1SetOf::from(vec![first, second]);
         assert_eq!(
-            set_of.encode_to_vec(EncodingOptions::Der).unwrap(),
+            set_of
+                .encode_to_vec(&EncodingOptions::new(EncodingType::Der))
+                .unwrap(),
             [0x31, 7, 0x81, 1, 5, 0xa0, 2, 0x30, 0]
         );
     }
@@ -1217,7 +1244,8 @@ mod tests {
         .collect();
         let tree = Asn1Object::Set(values);
         assert_eq!(
-            tree.encode_to_vec(EncodingOptions::Der).unwrap(),
+            tree.encode_to_vec(&EncodingOptions::new(EncodingType::Der))
+                .unwrap(),
             [
                 0x31, 15, 0x5f, 0x82, 0, 0, 0x9f, 0xff, 0x7f, 0, 0x9f, 0x81, 0x80, 0, 0, 0xc0, 0,
             ]

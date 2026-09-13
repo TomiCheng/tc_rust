@@ -8,10 +8,10 @@ use crate::{Encode, EncodingOptions};
 ///
 /// # Examples
 /// ```
-/// use tc_asn1::{Asn1Boolean, Asn1Integer, Encode, EncodingOptions, SequenceFields, impl_sequence_encode};
+/// use tc_asn1::{Asn1Boolean, Asn1Integer, Encode, EncodingOptions, EncodingType, SequenceFields, impl_sequence_encode};
 /// struct Pair { flag: Asn1Boolean, count: Asn1Integer }
 /// impl SequenceFields for Pair {
-///     fn fields(&self, _: EncodingOptions, sink: &mut dyn FnMut(&dyn Encode)) {
+///     fn fields(&self, _: &EncodingOptions, sink: &mut dyn FnMut(&dyn Encode)) {
 ///         sink(&self.flag);
 ///         sink(&self.count);
 ///     }
@@ -19,13 +19,13 @@ use crate::{Encode, EncodingOptions};
 /// impl_sequence_encode!(Pair);
 /// let value = Pair { flag: Asn1Boolean::from(true), count: 5_u8.into() };
 /// let mut out = [0; 8];
-/// value.encode(EncodingOptions::Der, &mut out)?;
+/// value.encode(&EncodingOptions::new(EncodingType::Der), &mut out)?;
 /// assert_eq!(out, [0x30, 6, 1, 1, 0xFF, 2, 1, 5]);
 /// # Ok::<(), tc_asn1::Asn1Error>(())
 /// ```
 pub trait SequenceFields {
     /// 按 schema 順序同步提供欄位。變動時間：分支只依編碼結構。
-    fn fields(&self, rules: EncodingOptions, sink: &mut dyn FnMut(&dyn Encode));
+    fn fields(&self, rules: &EncodingOptions, sink: &mut dyn FnMut(&dyn Encode));
 }
 
 /// 由 [`SequenceFields`] 產生 [`Encode`]；預設 SEQUENCE，可給第二個參數換 tag。
@@ -33,14 +33,14 @@ pub trait SequenceFields {
 ///
 /// # Examples
 /// ```
-/// use tc_asn1::{Encode, EncodingOptions, SequenceFields, impl_sequence_encode};
+/// use tc_asn1::{Encode, EncodingOptions, EncodingType, SequenceFields, impl_sequence_encode};
 /// struct EmptyApplication;
 /// impl SequenceFields for EmptyApplication {
-///     fn fields(&self, _: EncodingOptions, _: &mut dyn FnMut(&dyn Encode)) {}
+///     fn fields(&self, _: &EncodingOptions, _: &mut dyn FnMut(&dyn Encode)) {}
 /// }
 /// impl_sequence_encode!(EmptyApplication, &[0x60]);
 /// let mut out = [0; 2];
-/// EmptyApplication.encode(EncodingOptions::Der, &mut out)?;
+/// EmptyApplication.encode(&EncodingOptions::new(EncodingType::Der), &mut out)?;
 /// assert_eq!(out, [0x60, 0]);
 /// # Ok::<(), tc_asn1::Asn1Error>(())
 /// ```
@@ -52,7 +52,7 @@ macro_rules! impl_sequence_encode {
     ($t:ty, $tag:expr) => {
         impl $crate::EncodeContent for $t {
             /// 累加欄位的完整 TLV 長度。變動時間：分支只依編碼結構。
-            fn content_len(&self, rules: $crate::EncodingOptions) -> usize {
+            fn content_len(&self, rules: &$crate::EncodingOptions) -> usize {
                 let mut total = 0;
                 $crate::SequenceFields::fields(self, rules, &mut |field| {
                     total += field.encoded_len(rules)
@@ -63,7 +63,7 @@ macro_rules! impl_sequence_encode {
             /// 依序寫入欄位，回傳第一個編碼錯誤。變動時間：分支只依編碼結構。
             fn encode_content(
                 &self,
-                rules: $crate::EncodingOptions,
+                rules: &$crate::EncodingOptions,
                 out: &mut [u8],
             ) -> ::core::result::Result<usize, $crate::Asn1Error> {
                 let len = $crate::EncodeContent::content_len(self, rules);
@@ -89,13 +89,13 @@ macro_rules! impl_sequence_encode {
         impl $crate::EncodeTagged for $t {}
 
         impl $crate::Encode for $t {
-            fn encoded_len(&self, rules: $crate::EncodingOptions) -> usize {
+            fn encoded_len(&self, rules: &$crate::EncodingOptions) -> usize {
                 $crate::EncodeTagged::encoded_len_tagged(self, $tag, rules)
             }
 
             fn encode(
                 &self,
-                rules: $crate::EncodingOptions,
+                rules: &$crate::EncodingOptions,
                 out: &mut [u8],
             ) -> ::core::result::Result<usize, $crate::Asn1Error> {
                 $crate::EncodeTagged::encode_tagged(self, $tag, rules, out)
@@ -107,10 +107,11 @@ macro_rules! impl_sequence_encode {
 mod tests {
     use super::*;
     use crate::EncodeContent;
+    use crate::EncodingType;
     use crate::{Asn1Boolean, Asn1Error, Asn1Integer, Explicit, Implicit};
     struct Pair(Asn1Boolean, Asn1Integer);
     impl SequenceFields for Pair {
-        fn fields(&self, _: EncodingOptions, sink: &mut dyn FnMut(&dyn Encode)) {
+        fn fields(&self, _: &EncodingOptions, sink: &mut dyn FnMut(&dyn Encode)) {
             sink(&self.0);
             sink(&self.1);
         }
@@ -120,13 +121,16 @@ mod tests {
     fn the_sequence_macro_encodes_two_fields_in_schema_order() {
         let value = Pair(Asn1Boolean::from(true), 5_u8.into());
         let mut out = [0; 8];
-        assert_eq!(value.encode(EncodingOptions::Der, &mut out), Ok(8));
+        assert_eq!(
+            value.encode(&EncodingOptions::new(EncodingType::Der), &mut out),
+            Ok(8)
+        );
         assert_eq!(out, [0x30, 6, 1, 1, 255, 2, 1, 5]);
     }
     struct Tagged;
     impl SequenceFields for Tagged {
-        fn fields(&self, rules: EncodingOptions, sink: &mut dyn FnMut(&dyn Encode)) {
-            if rules == EncodingOptions::Ber(crate::LengthForm::Definite) {
+        fn fields(&self, rules: &EncodingOptions, sink: &mut dyn FnMut(&dyn Encode)) {
+            if rules.encoding_type() == EncodingType::Ber(crate::LengthForm::Definite) {
                 sink(&Implicit::new(&[0x80], &Asn1Boolean::from(false)));
             }
             sink(&Explicit::new(&[0xA0], &Asn1Boolean::from(true)));
@@ -136,9 +140,12 @@ mod tests {
     #[test]
     fn custom_tags_temporary_wrappers_and_rule_dependent_fields_work_together() {
         for (rules, expected) in [
-            (EncodingOptions::Der, &[0x60, 5, 0xA0, 3, 1, 1, 255][..]),
             (
-                EncodingOptions::Ber(crate::LengthForm::Definite),
+                &EncodingOptions::new(EncodingType::Der),
+                &[0x60, 5, 0xA0, 3, 1, 1, 255][..],
+            ),
+            (
+                &EncodingOptions::new(EncodingType::Ber(crate::LengthForm::Definite)),
                 &[0x60, 8, 0x80, 1, 0, 0xA0, 3, 1, 1, 255],
             ),
         ] {
@@ -151,11 +158,15 @@ mod tests {
     fn the_first_encoding_error_prevents_later_fields_from_being_written() {
         struct Fail;
         impl crate::EncodeContent for Fail {
-            fn content_len(&self, _: EncodingOptions) -> usize {
+            fn content_len(&self, _: &EncodingOptions) -> usize {
                 0
             }
 
-            fn encode_content(&self, _: EncodingOptions, _: &mut [u8]) -> Result<usize, Asn1Error> {
+            fn encode_content(
+                &self,
+                _: &EncodingOptions,
+                _: &mut [u8],
+            ) -> Result<usize, Asn1Error> {
                 Err(Asn1Error::MalformedValue)
             }
         }
@@ -163,17 +174,17 @@ mod tests {
         impl crate::EncodeTagged for Fail {}
 
         impl Encode for Fail {
-            fn encoded_len(&self, rules: EncodingOptions) -> usize {
+            fn encoded_len(&self, rules: &EncodingOptions) -> usize {
                 crate::EncodeTagged::encoded_len_tagged(self, &[5], rules)
             }
 
-            fn encode(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+            fn encode(&self, rules: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
                 crate::EncodeTagged::encode_tagged(self, &[5], rules, out)
             }
         }
         struct FailedSequence;
         impl SequenceFields for FailedSequence {
-            fn fields(&self, _: EncodingOptions, sink: &mut dyn FnMut(&dyn Encode)) {
+            fn fields(&self, _: &EncodingOptions, sink: &mut dyn FnMut(&dyn Encode)) {
                 sink(&Fail);
                 sink(&Asn1Boolean::from(true));
             }
@@ -181,7 +192,7 @@ mod tests {
         crate::impl_sequence_encode!(FailedSequence);
         let mut out = [0xAA; 5];
         assert_eq!(
-            FailedSequence.encode_content(EncodingOptions::Der, &mut out),
+            FailedSequence.encode_content(&EncodingOptions::new(EncodingType::Der), &mut out),
             Err(Asn1Error::MalformedValue)
         );
         assert_eq!(&out[2..], &[0xAA; 3]);

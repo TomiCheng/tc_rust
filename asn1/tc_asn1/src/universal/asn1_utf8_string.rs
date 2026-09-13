@@ -2,8 +2,8 @@
 
 use alloc::string::String;
 
+use crate::EncodingOptions;
 use crate::decoding_options::DecodingOptions;
-use crate::encoding_options::EncodingOptions;
 use crate::error::Asn1Error;
 use crate::traits::{DecodeContent, Encode};
 
@@ -67,13 +67,13 @@ impl<'a> DecodeContent<'a> for Asn1Utf8String {
 crate::segments::constructed_string_decode!(Asn1Utf8String);
 
 impl Asn1Utf8String {
-    fn primitive_content_len(&self, _: EncodingOptions) -> usize {
+    fn primitive_content_len(&self, _: &EncodingOptions) -> usize {
         self.text.len()
     }
 
     fn encode_primitive_content(
         &self,
-        _: EncodingOptions,
+        _: &EncodingOptions,
         out: &mut [u8],
     ) -> Result<usize, Asn1Error> {
         out[..self.text.len()].copy_from_slice(self.text.as_bytes());
@@ -90,11 +90,11 @@ impl crate::EncodeTagged for Asn1Utf8String {
 }
 
 impl Encode for Asn1Utf8String {
-    fn encoded_len(&self, rules: EncodingOptions) -> usize {
+    fn encoded_len(&self, rules: &EncodingOptions) -> usize {
         crate::EncodeTagged::encoded_len_tagged(self, Self::TAG, rules)
     }
 
-    fn encode(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+    fn encode(&self, rules: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         crate::EncodeTagged::encode_tagged(self, Self::TAG, rules, out)
     }
 }
@@ -103,6 +103,7 @@ impl Encode for Asn1Utf8String {
 mod tests {
     use super::*;
     use crate::EncodeContent;
+    use crate::EncodingType;
     use crate::traits::Decode;
 
     const OPTIONS: DecodingOptions =
@@ -115,9 +116,18 @@ mod tests {
         let mut expected = alloc::vec![0x2c, 0x80, 4, 0x82, 3, 0xe8];
         expected.extend_from_slice(&[b'a'; 999]);
         expected.extend_from_slice(&[0xc3, 4, 1, 0xa9, 0, 0]);
-        assert_eq!(value.encode_to_vec(EncodingOptions::Cer).unwrap(), expected);
+        assert_eq!(
+            value
+                .encode_to_vec(&EncodingOptions::new(EncodingType::Cer))
+                .unwrap(),
+            expected
+        );
         let tree = crate::Asn1Object::from(value.clone());
-        assert_eq!(tree.encode_to_vec(EncodingOptions::Cer).unwrap(), expected);
+        assert_eq!(
+            tree.encode_to_vec(&EncodingOptions::new(EncodingType::Cer))
+                .unwrap(),
+            expected
+        );
         assert_eq!(
             Asn1Utf8String::try_decode(&expected, OPTIONS).map(|(_, value)| value),
             Ok(value.clone())
@@ -129,8 +139,8 @@ mod tests {
         let mut definite = alloc::vec![0x0c, 0x82, 3, 0xe9];
         definite.extend_from_slice(text.as_bytes());
         for rules in [
-            EncodingOptions::Ber(crate::LengthForm::Definite),
-            EncodingOptions::Der,
+            &EncodingOptions::new(EncodingType::Ber(crate::LengthForm::Definite)),
+            &EncodingOptions::new(EncodingType::Der),
         ] {
             assert_eq!(value.encode_to_vec(rules).unwrap(), definite);
         }
@@ -174,13 +184,15 @@ mod tests {
         let text = "café 台北";
         let s = Asn1Utf8String::new(text);
         assert_eq!(
-            s.content_len(EncodingOptions::Der),
+            s.content_len(&EncodingOptions::new(EncodingType::Der)),
             text.len(),
             "位元組數不是字元數"
         );
 
         let mut out = [0_u8; 32];
-        let written = s.encode(EncodingOptions::Der, &mut out).unwrap();
+        let written = s
+            .encode(&EncodingOptions::new(EncodingType::Der), &mut out)
+            .unwrap();
         assert_eq!(out[0], 0x0C);
 
         let (used, decoded) = Asn1Utf8String::try_decode(&out[..written], OPTIONS).unwrap();

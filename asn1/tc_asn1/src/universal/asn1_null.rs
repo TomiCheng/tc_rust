@@ -1,7 +1,7 @@
 //! ASN.1 `NULL`。
 
+use crate::EncodingOptions;
 use crate::decoding_options::DecodingOptions;
-use crate::encoding_options::EncodingOptions;
 use crate::error::Asn1Error;
 use crate::traits::{DecodeContent, Encode};
 use core::fmt::{Display, Formatter};
@@ -49,13 +49,13 @@ impl<'a> DecodeContent<'a> for Asn1Null {
 impl crate::EncodeContent for Asn1Null {
     /// Length of the contents, excluding the outer header and EOC.
     /// Variable-time contract: public values only; no constant-time alternative is provided.
-    fn content_len(&self, _: EncodingOptions) -> usize {
+    fn content_len(&self, _: &EncodingOptions) -> usize {
         0
     }
 
     /// Write only the contents, leaving any remaining output bytes unchanged.
     /// Variable-time contract: public values only; no constant-time alternative is provided.
-    fn encode_content(&self, _: EncodingOptions, _: &mut [u8]) -> Result<usize, Asn1Error> {
+    fn encode_content(&self, _: &EncodingOptions, _: &mut [u8]) -> Result<usize, Asn1Error> {
         Ok(0)
     }
 }
@@ -63,11 +63,11 @@ impl crate::EncodeContent for Asn1Null {
 impl crate::EncodeTagged for Asn1Null {}
 
 impl Encode for Asn1Null {
-    fn encoded_len(&self, rules: EncodingOptions) -> usize {
+    fn encoded_len(&self, rules: &EncodingOptions) -> usize {
         crate::EncodeTagged::encoded_len_tagged(self, Self::TAG, rules)
     }
 
-    fn encode(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+    fn encode(&self, rules: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         crate::EncodeTagged::encode_tagged(self, Self::TAG, rules, out)
     }
 }
@@ -75,15 +75,21 @@ impl Encode for Asn1Null {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::EncodingType;
     use crate::traits::Decode;
 
     #[test]
     fn null_encodes_as_the_two_byte_sequence() {
         let mut out = [0xAA_u8; 4];
-        let written = Asn1Null.encode(EncodingOptions::Der, &mut out).unwrap();
+        let written = Asn1Null
+            .encode(&EncodingOptions::new(EncodingType::Der), &mut out)
+            .unwrap();
         assert_eq!(&out[..written], &[0x05, 0x00]);
         assert_eq!(out[2], 0xAA, "只寫前兩個位元組");
-        assert_eq!(written, Asn1Null.encoded_len(EncodingOptions::Der));
+        assert_eq!(
+            written,
+            Asn1Null.encoded_len(&EncodingOptions::new(EncodingType::Der))
+        );
     }
 
     const OPTIONS: DecodingOptions =

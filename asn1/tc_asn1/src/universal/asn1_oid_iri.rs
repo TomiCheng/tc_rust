@@ -92,14 +92,14 @@ macro_rules! iri {
 
         impl $crate::EncodeContent for $name {
             /// 常數時間：讀取 UTF-8 位元組長度。
-            fn content_len(&self, _: EncodingOptions) -> usize {
+            fn content_len(&self, _: &EncodingOptions) -> usize {
                 self.text.len()
             }
 
             /// 變動時間：依 UTF-8 位元組長度複製。
             fn encode_content(
                 &self,
-                rules: EncodingOptions,
+                rules: &EncodingOptions,
                 out: &mut [u8],
             ) -> Result<usize, Asn1Error> {
                 let len = $crate::EncodeContent::content_len(self, rules);
@@ -114,13 +114,13 @@ macro_rules! iri {
         impl $crate::EncodeTagged for $name {}
 
         impl Encode for $name {
-            fn encoded_len(&self, rules: $crate::EncodingOptions) -> usize {
+            fn encoded_len(&self, rules: &$crate::EncodingOptions) -> usize {
                 $crate::EncodeTagged::encoded_len_tagged(self, Self::TAG, rules)
             }
 
             fn encode(
                 &self,
-                rules: $crate::EncodingOptions,
+                rules: &$crate::EncodingOptions,
                 out: &mut [u8],
             ) -> Result<usize, $crate::Asn1Error> {
                 $crate::EncodeTagged::encode_tagged(self, Self::TAG, rules, out)
@@ -163,6 +163,7 @@ assert!(Asn1RelativeOidIri::new("/台北").is_err());
 mod tests {
     use super::*;
     use crate::Decode;
+    use crate::EncodingType;
     #[test]
     fn unicode_and_unbounded_integer_labels_round_trip_with_high_tags() {
         for text in [
@@ -171,8 +172,11 @@ mod tests {
             "/a\u{a0}b",
         ] {
             let value = Asn1OidIri::new(text).unwrap();
-            let mut out = alloc::vec![0; value.encoded_len(EncodingOptions::Der)];
-            value.encode(EncodingOptions::Der, &mut out).unwrap();
+            let mut out =
+                alloc::vec![0; value.encoded_len(&EncodingOptions::new(EncodingType::Der))];
+            value
+                .encode(&EncodingOptions::new(EncodingType::Der), &mut out)
+                .unwrap();
             assert_eq!(&out[..2], &[0x1F, 0x23]);
             assert_eq!(
                 Asn1OidIri::try_decode(&out, DecodingOptions::default())
@@ -182,10 +186,12 @@ mod tests {
             );
         }
         let value = Asn1RelativeOidIri::new("台北/1").unwrap();
-        let mut out =
-            alloc::vec![0; value.encoded_len(EncodingOptions::Ber(crate::LengthForm::Definite))];
+        let mut out = alloc::vec![0; value.encoded_len(&EncodingOptions::new(EncodingType::Ber(crate::LengthForm::Definite)))];
         value
-            .encode(EncodingOptions::Ber(crate::LengthForm::Definite), &mut out)
+            .encode(
+                &EncodingOptions::new(EncodingType::Ber(crate::LengthForm::Definite)),
+                &mut out,
+            )
             .unwrap();
         assert_eq!(&out[..2], &[0x1F, 0x24]);
         assert_eq!(

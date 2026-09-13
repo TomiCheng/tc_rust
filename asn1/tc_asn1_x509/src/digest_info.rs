@@ -23,7 +23,7 @@ use crate::AlgorithmIdentifier;
 /// # 範例
 ///
 /// ```
-/// use tc_asn1::{Asn1Null, DecodingOptions, Encode, EncodingOptions, Decode};
+/// use tc_asn1::{Asn1Null, DecodingOptions, Encode, EncodingOptions, EncodingType, Decode};
 /// use tc_asn1_x509::{AlgorithmIdentifier, DigestInfo};
 ///
 /// let digest = [0xAB_u8; 32];
@@ -32,8 +32,8 @@ use crate::AlgorithmIdentifier;
 ///     &digest,
 /// );
 ///
-/// let mut out = vec![0_u8; info.encoded_len(EncodingOptions::Der)];
-/// info.encode(EncodingOptions::Der, &mut out)?;
+/// let mut out = vec![0_u8; info.encoded_len(&EncodingOptions::new(EncodingType::Der))];
+/// info.encode(&EncodingOptions::new(EncodingType::Der), &mut out)?;
 ///
 /// // 前 19 個位元組就是大家寫死的那個 SHA-256 表頭
 /// assert_eq!(
@@ -113,7 +113,7 @@ impl<'a> DecodeContent<'a> for DigestInfo {
 
 impl SequenceFields for DigestInfo {
     /// 變動時間：分支只依編碼結構。
-    fn fields(&self, _: EncodingOptions, sink: &mut dyn FnMut(&dyn Encode)) {
+    fn fields(&self, _: &EncodingOptions, sink: &mut dyn FnMut(&dyn Encode)) {
         sink(&self.digest_algorithm);
         sink(&self.digest);
     }
@@ -126,6 +126,7 @@ mod tests {
     use super::*;
     use alloc::string::ToString;
     use alloc::vec::Vec;
+    use tc_asn1::EncodingType;
     use tc_asn1::{Asn1Null, Decode};
 
     const OPTIONS: DecodingOptions =
@@ -146,9 +147,17 @@ mod tests {
         cer.extend_from_slice(&[0xab; 32]);
         cer.extend_from_slice(&[0, 0]);
         assert_eq!(cer.len(), 55);
-        assert_eq!(value.encoded_len(EncodingOptions::Cer), 55);
-        assert_eq!(value.encode_to_vec(EncodingOptions::Cer).unwrap(), cer);
-        let ber = EncodingOptions::Ber(tc_asn1::LengthForm::Indefinite);
+        assert_eq!(
+            value.encoded_len(&EncodingOptions::new(EncodingType::Cer)),
+            55
+        );
+        assert_eq!(
+            value
+                .encode_to_vec(&EncodingOptions::new(EncodingType::Cer))
+                .unwrap(),
+            cer
+        );
+        let ber = &EncodingOptions::new(EncodingType::Ber(tc_asn1::LengthForm::Indefinite));
         assert_eq!(value.encoded_len(ber), cer.len());
         assert_eq!(value.encode_to_vec(ber).unwrap(), cer);
         let decoded = DigestInfo::try_decode(&cer, OPTIONS)
@@ -158,21 +167,29 @@ mod tests {
         assert_eq!(
             decoded
                 .digest_algorithm()
-                .encode_to_vec(EncodingOptions::Der)
+                .encode_to_vec(&EncodingOptions::new(EncodingType::Der))
                 .unwrap(),
             value
                 .digest_algorithm()
-                .encode_to_vec(EncodingOptions::Der)
+                .encode_to_vec(&EncodingOptions::new(EncodingType::Der))
                 .unwrap()
         );
-        assert_eq!(decoded.encode_to_vec(EncodingOptions::Cer).unwrap(), cer);
+        assert_eq!(
+            decoded
+                .encode_to_vec(&EncodingOptions::new(EncodingType::Cer))
+                .unwrap(),
+            cer
+        );
         assert!(matches!(
             {
                 let input: &[u8] = &cer;
                 DigestInfo::try_decode(input, OPTIONS).and_then(|(used, value)| {
                     if used != input.len() {
                         Err(tc_asn1::Asn1Error::TrailingData)
-                    } else if value.encode_to_vec(tc_asn1::EncodingOptions::Der)? != input {
+                    } else if value
+                        .encode_to_vec(&tc_asn1::EncodingOptions::new(tc_asn1::EncodingType::Der))?
+                        != input
+                    {
                         Err(tc_asn1::Asn1Error::NotDer)
                     } else {
                         Ok(value)
@@ -185,8 +202,18 @@ mod tests {
             0x30, 0x31, 0x30, 0x0d, 6, 9, 0x60, 0x86, 0x48, 1, 0x65, 3, 4, 2, 1, 5, 0, 4, 32
         ];
         der.extend_from_slice(&[0xab; 32]);
-        assert_eq!(value.encode_to_vec(EncodingOptions::Der).unwrap(), der);
-        assert_eq!(decoded.encode_to_vec(EncodingOptions::Der).unwrap(), der);
+        assert_eq!(
+            value
+                .encode_to_vec(&EncodingOptions::new(EncodingType::Der))
+                .unwrap(),
+            der
+        );
+        assert_eq!(
+            decoded
+                .encode_to_vec(&EncodingOptions::new(EncodingType::Der))
+                .unwrap(),
+            der
+        );
     }
 
     /// RFC 8017 §9.2 note 1 列的 SHA-1 表頭。
@@ -195,8 +222,9 @@ mod tests {
     ];
 
     fn encode(info: &DigestInfo) -> Vec<u8> {
-        let mut out = alloc::vec![0_u8; info.encoded_len(EncodingOptions::Der)];
-        info.encode(EncodingOptions::Der, &mut out).unwrap();
+        let mut out = alloc::vec![0_u8; info.encoded_len(&EncodingOptions::new(EncodingType::Der))];
+        info.encode(&EncodingOptions::new(EncodingType::Der), &mut out)
+            .unwrap();
         out
     }
 

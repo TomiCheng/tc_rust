@@ -4,11 +4,13 @@
 //! tag and the outer framing, and [`Encode`] selects the value's own tag.
 //! Implementing a prerequisite trait does not automatically implement the next
 //! trait: each type opts in explicitly and may override the default methods.
+//! All encoding methods borrow [`EncodingOptions`]; use the same configuration
+//! for length calculation and writing, and forward that borrow to child encoders.
 
 use alloc::vec::Vec;
 
+use crate::EncodingOptions;
 use crate::encoding::{default_encode, default_encoded_len};
-use crate::encoding_options::EncodingOptions;
 use crate::error::Asn1Error;
 
 /// Encode contents without the outer tag, length field, or end-of-contents marker.
@@ -23,10 +25,10 @@ use crate::error::Asn1Error;
 /// # Examples
 ///
 /// ```
-/// use tc_asn1::{Asn1Boolean, EncodeContent, EncodingOptions};
+/// use tc_asn1::{Asn1Boolean, EncodeContent, EncodingOptions, EncodingType};
 ///
 /// let value: &dyn EncodeContent = &Asn1Boolean::from(true);
-/// assert_eq!(value.encode_content_to_vec(EncodingOptions::Der)?, [0xff]);
+/// assert_eq!(value.encode_content_to_vec(&EncodingOptions::new(EncodingType::Der))?, [0xff]);
 /// # Ok::<(), tc_asn1::Asn1Error>(())
 /// ```
 pub trait EncodeContent {
@@ -42,7 +44,7 @@ pub trait EncodeContent {
     /// # Panics
     ///
     /// In debug builds, panics if the reported and written content lengths disagree.
-    fn encode_content_to_vec(&self, rules: EncodingOptions) -> Result<Vec<u8>, Asn1Error> {
+    fn encode_content_to_vec(&self, rules: &EncodingOptions) -> Result<Vec<u8>, Asn1Error> {
         let mut out = alloc::vec![0; self.content_len(rules)];
         let written = self.encode_content(rules, &mut out)?;
         debug_assert_eq!(
@@ -58,7 +60,7 @@ pub trait EncodeContent {
     /// Includes any child or segment TLVs, but excludes the outer tag, length field,
     /// and end-of-contents marker. Must match [`encode_content`](Self::encode_content).
     /// Variable-time contract: public values only; no constant-time alternative is provided.
-    fn content_len(&self, rules: EncodingOptions) -> usize;
+    fn content_len(&self, rules: &EncodingOptions) -> usize;
 
     /// Write only the contents and return the number of bytes written.
     ///
@@ -71,7 +73,7 @@ pub trait EncodeContent {
     /// Returns errors encountered while encoding the contents or their children.
     /// The crate's implementations return [`Asn1Error::BufferTooSmall`] for insufficient
     /// output space. Output may be partially written when an encoding error occurs.
-    fn encode_content(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error>;
+    fn encode_content(&self, rules: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error>;
 }
 
 /// Encode a complete TLV using a caller-supplied tag.
@@ -95,11 +97,11 @@ pub trait EncodeContent {
 /// # Examples
 ///
 /// ```
-/// use tc_asn1::{Asn1Integer, EncodeTagged, EncodingOptions};
+/// use tc_asn1::{Asn1Integer, EncodeTagged, EncodingOptions, EncodingType};
 ///
 /// let value = Asn1Integer::from(5_u8);
 /// let mut out = [0; 3];
-/// let written = value.encode_tagged(&[0x80], EncodingOptions::Der, &mut out)?;
+/// let written = value.encode_tagged(&[0x80], &EncodingOptions::new(EncodingType::Der), &mut out)?;
 /// assert_eq!(written, 3);
 /// assert_eq!(out, [0x80, 1, 5]); // Context-specific [0] IMPLICIT INTEGER.
 /// # Ok::<(), tc_asn1::Asn1Error>(())
@@ -115,7 +117,7 @@ pub trait EncodeTagged: EncodeContent {
     /// # Panics
     ///
     /// The default implementation may panic if `tag` is empty.
-    fn encoded_len_tagged(&self, tag: &[u8], rules: EncodingOptions) -> usize {
+    fn encoded_len_tagged(&self, tag: &[u8], rules: &EncodingOptions) -> usize {
         default_encoded_len(self, tag, rules)
     }
 
@@ -139,7 +141,7 @@ pub trait EncodeTagged: EncodeContent {
     fn encode_tagged(
         &self,
         tag: &[u8],
-        rules: EncodingOptions,
+        rules: &EncodingOptions,
         out: &mut [u8],
     ) -> Result<usize, Asn1Error> {
         default_encode(self, tag, rules, out)
@@ -174,11 +176,11 @@ pub trait Encode: EncodeTagged {
     /// # Examples
     ///
     /// ```
-    /// use tc_asn1::{Asn1Boolean, Encode, EncodingOptions};
-    /// assert_eq!(Asn1Boolean::from(true).encode_to_vec(EncodingOptions::Der)?, [1, 1, 255]);
+    /// use tc_asn1::{Asn1Boolean, Encode, EncodingOptions, EncodingType};
+    /// assert_eq!(Asn1Boolean::from(true).encode_to_vec(&EncodingOptions::new(EncodingType::Der))?, [1, 1, 255]);
     /// # Ok::<(), tc_asn1::Asn1Error>(())
     /// ```
-    fn encode_to_vec(&self, rules: EncodingOptions) -> Result<Vec<u8>, Asn1Error> {
+    fn encode_to_vec(&self, rules: &EncodingOptions) -> Result<Vec<u8>, Asn1Error> {
         let mut out = alloc::vec![0; self.encoded_len(rules)];
         let written = self.encode(rules, &mut out)?;
         debug_assert_eq!(written, out.len(), "encoded_len and encode disagree");
@@ -190,7 +192,7 @@ pub trait Encode: EncodeTagged {
     /// Includes the outer framing and any end-of-contents marker. Must match
     /// [`encode`](Self::encode) for the same value and encoding rules.
     /// Variable-time contract: public values only; no constant-time alternative is provided.
-    fn encoded_len(&self, rules: EncodingOptions) -> usize;
+    fn encoded_len(&self, rules: &EncodingOptions) -> usize;
 
     /// Write a complete TLV using the value's own tag.
     ///
@@ -207,32 +209,33 @@ pub trait Encode: EncodeTagged {
     /// # Examples
     ///
     /// ```
-    /// use tc_asn1::{Asn1Integer, Encode, EncodingOptions};
+    /// use tc_asn1::{Asn1Integer, Encode, EncodingOptions, EncodingType};
     ///
     /// let value = Asn1Integer::from(5_u8);
     /// let mut out = [0; 3];
-    /// assert_eq!(value.encode(EncodingOptions::Der, &mut out)?, 3);
+    /// assert_eq!(value.encode(&EncodingOptions::new(EncodingType::Der), &mut out)?, 3);
     /// assert_eq!(out, [2, 1, 5]); // Universal INTEGER tag.
     /// # Ok::<(), tc_asn1::Asn1Error>(())
     /// ```
-    fn encode(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error>;
+    fn encode(&self, rules: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error>;
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::EncodingType;
     use crate::{Asn1Boolean, Asn1Object, Asn1Tagged, Decode, DecodingOptions};
     use alloc::boxed::Box;
     use alloc::vec;
 
     impl<T: ?Sized + EncodeContent> EncodeContent for Box<T> {
-        fn content_len(&self, rules: EncodingOptions) -> usize {
+        fn content_len(&self, rules: &EncodingOptions) -> usize {
             (**self).content_len(rules)
         }
 
         fn encode_content(
             &self,
-            rules: EncodingOptions,
+            rules: &EncodingOptions,
             out: &mut [u8],
         ) -> Result<usize, Asn1Error> {
             (**self).encode_content(rules, out)
@@ -240,14 +243,14 @@ mod tests {
     }
 
     impl<T: ?Sized + EncodeTagged> EncodeTagged for Box<T> {
-        fn encoded_len_tagged(&self, tag: &[u8], rules: EncodingOptions) -> usize {
+        fn encoded_len_tagged(&self, tag: &[u8], rules: &EncodingOptions) -> usize {
             (**self).encoded_len_tagged(tag, rules)
         }
 
         fn encode_tagged(
             &self,
             tag: &[u8],
-            rules: EncodingOptions,
+            rules: &EncodingOptions,
             out: &mut [u8],
         ) -> Result<usize, Asn1Error> {
             (**self).encode_tagged(tag, rules, out)
@@ -255,11 +258,11 @@ mod tests {
     }
 
     impl<T: ?Sized + Encode> Encode for Box<T> {
-        fn encoded_len(&self, rules: EncodingOptions) -> usize {
+        fn encoded_len(&self, rules: &EncodingOptions) -> usize {
             (**self).encoded_len(rules)
         }
 
-        fn encode(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+        fn encode(&self, rules: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
             (**self).encode(rules, out)
         }
     }
@@ -267,7 +270,7 @@ mod tests {
     #[test]
     fn indefinite_ber_preserves_nested_set_order_and_accounts_for_every_end_marker() {
         use crate::{Asn1Integer, LengthForm};
-        let options = EncodingOptions::Ber(LengthForm::Indefinite);
+        let options = &EncodingOptions::new(EncodingType::Ber(LengthForm::Indefinite));
         let set = Asn1Object::Set(vec![
             Asn1Integer::from(5_u8).into(),
             Asn1Integer::from(3_u8).into(),
@@ -308,18 +311,21 @@ mod tests {
         let set = Asn1SetOf::from(vec![Asn1Boolean::from(true), Asn1Boolean::from(false)]);
         for (options, expected) in [
             (
-                EncodingOptions::Ber(LengthForm::Definite),
+                &EncodingOptions::new(EncodingType::Ber(LengthForm::Definite)),
                 vec![0x31, 6, 1, 1, 255, 1, 1, 0],
             ),
             (
-                EncodingOptions::Ber(LengthForm::Indefinite),
+                &EncodingOptions::new(EncodingType::Ber(LengthForm::Indefinite)),
                 vec![0x31, 0x80, 1, 1, 255, 1, 1, 0, 0, 0],
             ),
             (
-                EncodingOptions::Cer,
+                &EncodingOptions::new(EncodingType::Cer),
                 vec![0x31, 0x80, 1, 1, 0, 1, 1, 255, 0, 0],
             ),
-            (EncodingOptions::Der, vec![0x31, 6, 1, 1, 0, 1, 1, 255]),
+            (
+                &EncodingOptions::new(EncodingType::Der),
+                vec![0x31, 6, 1, 1, 0, 1, 1, 255],
+            ),
         ] {
             assert_eq!(set.encoded_len(options), expected.len());
             assert_eq!(set.encode_to_vec(options).unwrap(), expected);
@@ -339,7 +345,7 @@ mod tests {
         use crate::{
             Asn1BitString, Asn1OctetString, Asn1Utf8String, Explicit, Implicit, LengthForm,
         };
-        let options = EncodingOptions::Ber(LengthForm::Indefinite);
+        let options = &EncodingOptions::new(EncodingType::Ber(LengthForm::Indefinite));
         let octets = Asn1OctetString::new(&vec![0xaa; 1001]);
         let bits = Asn1BitString::from_bytes(&vec![0xaa; 1001]);
         let text = Asn1Utf8String::new(&"a".repeat(1001));
@@ -348,7 +354,9 @@ mod tests {
             assert_eq!(
                 wire,
                 value
-                    .encode_to_vec(EncodingOptions::Ber(LengthForm::Definite))
+                    .encode_to_vec(&EncodingOptions::new(EncodingType::Ber(
+                        LengthForm::Definite
+                    )))
                     .unwrap()
             );
             assert_eq!(wire.len(), value.encoded_len(options));
@@ -392,23 +400,36 @@ mod tests {
             (sequence, &[0x30, 0x80, 2, 1, 42, 5, 0, 0, 0][..]),
             (set, &[0x31, 0x80, 2, 1, 3, 2, 1, 5, 0, 0][..]),
         ] {
-            assert_eq!(value.encoded_len(EncodingOptions::Cer), expected.len());
-            assert_eq!(value.encode_to_vec(EncodingOptions::Cer).unwrap(), expected);
             assert_eq!(
-                Asn1Object::try_decode(expected, DecodingOptions::default())
-                    .map(|(_, value)| value)
-                    .unwrap()
-                    .encode_to_vec(EncodingOptions::Cer)
+                value.encoded_len(&EncodingOptions::new(EncodingType::Cer)),
+                expected.len()
+            );
+            assert_eq!(
+                value
+                    .encode_to_vec(&EncodingOptions::new(EncodingType::Cer))
                     .unwrap(),
                 expected
             );
             assert_eq!(
-                value.encode(EncodingOptions::Cer, &mut vec![0; expected.len() - 1]),
+                Asn1Object::try_decode(expected, DecodingOptions::default())
+                    .map(|(_, value)| value)
+                    .unwrap()
+                    .encode_to_vec(&EncodingOptions::new(EncodingType::Cer))
+                    .unwrap(),
+                expected
+            );
+            assert_eq!(
+                value.encode(
+                    &EncodingOptions::new(EncodingType::Cer),
+                    &mut vec![0; expected.len() - 1]
+                ),
                 Err(Asn1Error::BufferTooSmall)
             );
             let mut out = vec![0xaa; expected.len() + 3];
             assert_eq!(
-                value.encode(EncodingOptions::Cer, &mut out).unwrap(),
+                value
+                    .encode(&EncodingOptions::new(EncodingType::Cer), &mut out)
+                    .unwrap(),
                 expected.len()
             );
             assert_eq!(&out[expected.len()..], &[0xaa; 3]);
@@ -416,7 +437,7 @@ mod tests {
         let integer = Asn1Integer::from(2_u8);
         assert_eq!(
             Explicit::new(&[0xa0], &integer)
-                .encode_to_vec(EncodingOptions::Cer)
+                .encode_to_vec(&EncodingOptions::new(EncodingType::Cer))
                 .unwrap(),
             [0xa0, 0x80, 2, 1, 2, 0, 0]
         );
@@ -430,7 +451,7 @@ mod tests {
             Asn1Any::try_decode(&input, DecodingOptions::default())
                 .map(|(_, value)| value)
                 .unwrap()
-                .encode_to_vec(EncodingOptions::Cer)
+                .encode_to_vec(&EncodingOptions::new(EncodingType::Cer))
                 .unwrap(),
             input
         );
@@ -438,7 +459,7 @@ mod tests {
             Asn1Object::try_decode(&input, DecodingOptions::default())
                 .map(|(_, value)| value)
                 .unwrap()
-                .encode_to_vec(EncodingOptions::Cer)
+                .encode_to_vec(&EncodingOptions::new(EncodingType::Cer))
                 .unwrap(),
             input
         );
@@ -448,7 +469,9 @@ mod tests {
     fn vector_encoding_matches_manual_encoding_and_remains_available_through_trait_objects() {
         let value: &dyn Encode = &Asn1Boolean::from(true);
         assert_eq!(
-            value.encode_to_vec(EncodingOptions::Der).unwrap(),
+            value
+                .encode_to_vec(&EncodingOptions::new(EncodingType::Der))
+                .unwrap(),
             [1, 1, 255]
         );
         let tree = Asn1Object::Sequence(vec![Asn1Object::Sequence(vec![
@@ -457,8 +480,8 @@ mod tests {
                 .into(),
         ])]);
         for rules in [
-            EncodingOptions::Der,
-            EncodingOptions::Ber(crate::LengthForm::Definite),
+            &EncodingOptions::new(EncodingType::Der),
+            &EncodingOptions::new(EncodingType::Ber(crate::LengthForm::Definite)),
         ] {
             let mut out = vec![0; tree.encoded_len(rules)];
             let written = tree.encode(rules, &mut out).unwrap();
@@ -473,12 +496,15 @@ mod tests {
             .map(|(_, value)| value)
             .unwrap();
         assert_eq!(
-            tree.encode_to_vec(EncodingOptions::Der).unwrap(),
+            tree.encode_to_vec(&EncodingOptions::new(EncodingType::Der))
+                .unwrap(),
             [0x1f, 0x25, 0x81, 0]
         );
         let value: &dyn Encode = &tree;
         assert_eq!(
-            value.encode_to_vec(EncodingOptions::Der).unwrap(),
+            value
+                .encode_to_vec(&EncodingOptions::new(EncodingType::Der))
+                .unwrap(),
             [0x1f, 0x25, 0x81, 0]
         );
         let input = [
@@ -490,12 +516,14 @@ mod tests {
                 .unwrap(),
         ]);
         assert_eq!(
-            tree.encode_to_vec(EncodingOptions::Der),
+            tree.encode_to_vec(&EncodingOptions::new(EncodingType::Der)),
             Err(Asn1Error::TagOverflow)
         );
         assert!(
-            tree.encode_to_vec(EncodingOptions::Ber(crate::LengthForm::Definite))
-                .is_ok()
+            tree.encode_to_vec(&EncodingOptions::new(EncodingType::Ber(
+                crate::LengthForm::Definite
+            )))
+            .is_ok()
         );
     }
 }

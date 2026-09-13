@@ -5,7 +5,7 @@ fn custom_identifiers_round_trip_after_the_schema_selects_the_type() {
     let value = Asn1Integer::from(42_u8);
     for tag in [&[0x80][..], &[0x5f, 0x81, 0], &[0xdf, 0x81, 0]] {
         let wire = Implicit::new(tag, &value)
-            .encode_to_vec(EncodingOptions::Der)
+            .encode_to_vec(&EncodingOptions::new(EncodingType::Der))
             .unwrap();
         let options = DecodingOptions::default();
         let (used, decoded) = Asn1Integer::try_decode(&wire, options).unwrap();
@@ -220,5 +220,9 @@ fn opaque_values_keep_parsed_boundaries_when_the_original_budget_exceeds_the_def
     assert_eq!(used, wire.len());
     assert_eq!(any.as_ref().raw(), wire);
     assert_eq!(any.as_ref().value(), &wire[2..wire.len() - 2]);
-    assert_eq!(any.encode_to_vec(EncodingOptions::Der).unwrap(), wire);
+    assert_eq!(
+        any.encode_to_vec(&EncodingOptions::new(EncodingType::Der))
+            .unwrap(),
+        wire
+    );
 }

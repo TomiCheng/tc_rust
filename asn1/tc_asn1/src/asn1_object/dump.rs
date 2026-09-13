@@ -268,6 +268,7 @@ fn dump(obj: &Asn1Object, level: usize, f: &mut fmt::Formatter<'_>) -> fmt::Resu
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::EncodingType;
     use crate::*;
     use alloc::{boxed::Box, string::ToString, vec};
 
@@ -508,12 +509,12 @@ mod tests {
             "[UNIVERSAL tag=1f82808080808080808000] (0 bytes)\n"
         );
         assert_eq!(
-            universal::encode_member(&tree, EncodingOptions::Der).unwrap(),
+            universal::encode_member(&tree, &EncodingOptions::new(EncodingType::Der)).unwrap(),
             input
         );
         let set = Asn1Object::Set(vec![tree]);
         assert_eq!(
-            universal::encode_member(&set, EncodingOptions::Der),
+            universal::encode_member(&set, &EncodingOptions::new(EncodingType::Der)),
             Err(Asn1Error::TagOverflow)
         );
     }

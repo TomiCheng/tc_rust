@@ -2,8 +2,8 @@
 
 use alloc::vec::Vec;
 
+use crate::EncodingOptions;
 use crate::decoding_options::DecodingOptions;
-use crate::encoding_options::EncodingOptions;
 use crate::error::Asn1Error;
 use crate::traits::{DecodeConstructed, DecodeContent, Encode};
 
@@ -110,13 +110,13 @@ impl<'a> DecodeConstructed<'a> for Asn1OctetString {
 }
 
 impl Asn1OctetString {
-    fn primitive_content_len(&self, _: EncodingOptions) -> usize {
+    fn primitive_content_len(&self, _: &EncodingOptions) -> usize {
         self.bytes.len()
     }
 
     fn encode_primitive_content(
         &self,
-        _: EncodingOptions,
+        _: &EncodingOptions,
         out: &mut [u8],
     ) -> Result<usize, Asn1Error> {
         out[..self.bytes.len()].copy_from_slice(&self.bytes);
@@ -133,11 +133,11 @@ impl crate::EncodeTagged for Asn1OctetString {
 }
 
 impl Encode for Asn1OctetString {
-    fn encoded_len(&self, rules: EncodingOptions) -> usize {
+    fn encoded_len(&self, rules: &EncodingOptions) -> usize {
         crate::EncodeTagged::encoded_len_tagged(self, Self::TAG, rules)
     }
 
-    fn encode(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+    fn encode(&self, rules: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         crate::EncodeTagged::encode_tagged(self, Self::TAG, rules, out)
     }
 }
@@ -145,6 +145,7 @@ impl Encode for Asn1OctetString {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::EncodingType;
     use crate::traits::Decode;
 
     const OPTIONS: DecodingOptions =
@@ -156,7 +157,12 @@ mod tests {
         let short = Asn1OctetString::new(&[0xaa; 1000]);
         let mut expected = alloc::vec![4, 0x82, 3, 0xe8];
         expected.extend_from_slice(&[0xaa; 1000]);
-        assert_eq!(short.encode_to_vec(EncodingOptions::Cer).unwrap(), expected);
+        assert_eq!(
+            short
+                .encode_to_vec(&EncodingOptions::new(EncodingType::Cer))
+                .unwrap(),
+            expected
+        );
         let value = Asn1OctetString::new(&[0xaa; 1001]);
         let mut expected = alloc::vec![0x24, 0x80, 4, 0x82, 3, 0xe8];
         expected.extend_from_slice(&[0xaa; 1000]);
@@ -165,13 +171,18 @@ mod tests {
         let tree = Asn1Object::from(value.clone());
         let boxed: alloc::boxed::Box<dyn Encode> = alloc::boxed::Box::new(value.clone());
         for encoder in [&value as &dyn Encode, &tree, &boxed] {
-            assert_eq!(encoder.encoded_len(EncodingOptions::Cer), 1011);
             assert_eq!(
-                encoder.encode_to_vec(EncodingOptions::Cer).unwrap(),
+                encoder.encoded_len(&EncodingOptions::new(EncodingType::Cer)),
+                1011
+            );
+            assert_eq!(
+                encoder
+                    .encode_to_vec(&EncodingOptions::new(EncodingType::Cer))
+                    .unwrap(),
                 expected
             );
             assert_eq!(
-                encoder.encode(EncodingOptions::Cer, &mut [0; 1010]),
+                encoder.encode(&EncodingOptions::new(EncodingType::Cer), &mut [0; 1010]),
                 Err(Asn1Error::BufferTooSmall)
             );
         }
@@ -187,7 +198,7 @@ mod tests {
         for encoder in [&value as &dyn Encode, &tree, &boxed] {
             assert_eq!(
                 Implicit::new(&[0x80], encoder)
-                    .encode_to_vec(EncodingOptions::Cer)
+                    .encode_to_vec(&EncodingOptions::new(EncodingType::Cer))
                     .unwrap(),
                 expected
             );
@@ -195,8 +206,8 @@ mod tests {
         let mut definite = alloc::vec![4, 0x82, 3, 0xe9];
         definite.extend_from_slice(&[0xaa; 1001]);
         for rules in [
-            EncodingOptions::Ber(crate::LengthForm::Definite),
-            EncodingOptions::Der,
+            &EncodingOptions::new(EncodingType::Ber(crate::LengthForm::Definite)),
+            &EncodingOptions::new(EncodingType::Der),
         ] {
             assert_eq!(value.encode_to_vec(rules).unwrap(), definite);
         }
@@ -210,7 +221,9 @@ mod tests {
         assert_eq!(s.as_bytes(), &[0xDE, 0xAD, 0x00]);
 
         let mut out = [0_u8; 8];
-        let written = s.encode(EncodingOptions::Der, &mut out).unwrap();
+        let written = s
+            .encode(&EncodingOptions::new(EncodingType::Der), &mut out)
+            .unwrap();
         assert_eq!(&out[..written], &input);
     }
 
@@ -252,8 +265,8 @@ mod tests {
             assert_eq!(used, input.len());
             assert_eq!(value.as_bytes(), &[0xaa, 0xbb]);
             for rules in [
-                EncodingOptions::Der,
-                EncodingOptions::Ber(crate::LengthForm::Definite),
+                &EncodingOptions::new(EncodingType::Der),
+                &EncodingOptions::new(EncodingType::Ber(crate::LengthForm::Definite)),
             ] {
                 assert_eq!(value.encode_to_vec(rules).unwrap(), [4, 2, 0xaa, 0xbb]);
             }
@@ -300,7 +313,12 @@ mod tests {
                 .map(|(_, value)| value)
                 .unwrap();
             assert!(value.as_bytes().is_empty());
-            assert_eq!(value.encode_to_vec(EncodingOptions::Der).unwrap(), [4, 0]);
+            assert_eq!(
+                value
+                    .encode_to_vec(&EncodingOptions::new(EncodingType::Der))
+                    .unwrap(),
+                [4, 0]
+            );
         }
     }
 

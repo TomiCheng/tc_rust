@@ -8,8 +8,8 @@
 use core::fmt;
 
 use super::date_time::{DateTime, digits, two_digits};
+use crate::EncodingOptions;
 use crate::decoding_options::DecodingOptions;
-use crate::encoding_options::EncodingOptions;
 use crate::error::Asn1Error;
 use crate::traits::{DecodeContent, Encode};
 
@@ -108,11 +108,11 @@ impl Asn1UtcTime {
 }
 
 impl crate::EncodeContent for Asn1UtcTime {
-    fn content_len(&self, _: EncodingOptions) -> usize {
+    fn content_len(&self, _: &EncodingOptions) -> usize {
         LEN
     }
 
-    fn encode_content(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+    fn encode_content(&self, rules: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         let len = crate::EncodeContent::content_len(self, rules);
         let out = out.get_mut(..len).ok_or(Asn1Error::BufferTooSmall)?;
         out[0..2].copy_from_slice(&digits((self.0.year % 100) as u8));
@@ -126,11 +126,11 @@ impl crate::EncodeContent for Asn1UtcTime {
 impl crate::EncodeTagged for Asn1UtcTime {}
 
 impl Encode for Asn1UtcTime {
-    fn encoded_len(&self, rules: EncodingOptions) -> usize {
+    fn encoded_len(&self, rules: &EncodingOptions) -> usize {
         crate::EncodeTagged::encoded_len_tagged(self, Self::TAG, rules)
     }
 
-    fn encode(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+    fn encode(&self, rules: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         crate::EncodeTagged::encode_tagged(self, Self::TAG, rules, out)
     }
 }
@@ -144,6 +144,7 @@ impl fmt::Display for Asn1UtcTime {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::EncodingType;
     use crate::traits::Decode;
     use alloc::string::ToString;
 
@@ -242,7 +243,9 @@ mod tests {
     fn encode_and_decode_round_trip() {
         let t = Asn1UtcTime::new(2049, 12, 31, 23, 59, 59).unwrap();
         let mut out = [0_u8; 16];
-        let written = t.encode(EncodingOptions::Der, &mut out).unwrap();
+        let written = t
+            .encode(&EncodingOptions::new(EncodingType::Der), &mut out)
+            .unwrap();
         assert_eq!(&out[..written], b"\x17\x0D491231235959Z");
 
         let (_, back) = Asn1UtcTime::try_decode(&out[..written], OPTIONS).unwrap();

@@ -80,14 +80,14 @@ macro_rules! opaque_bytes {
 
         impl $name {
             /// 回傳內容長度。常數時間：讀取已儲存的容器長度。
-            fn primitive_content_len(&self, _: $crate::encoding_options::EncodingOptions) -> usize {
+            fn primitive_content_len(&self, _: &$crate::EncodingOptions) -> usize {
                 self.bytes.len()
             }
 
             /// 原樣寫入內容。變動時間：複製量由內容長度決定。
             fn encode_primitive_content(
                 &self,
-                _: $crate::encoding_options::EncodingOptions,
+                _: &$crate::EncodingOptions,
                 out: &mut [u8],
             ) -> Result<usize, $crate::error::Asn1Error> {
                 out[..self.bytes.len()].copy_from_slice(&self.bytes);
@@ -104,13 +104,13 @@ macro_rules! opaque_bytes {
         }
 
         impl $crate::traits::Encode for $name {
-            fn encoded_len(&self, rules: $crate::EncodingOptions) -> usize {
+            fn encoded_len(&self, rules: &$crate::EncodingOptions) -> usize {
                 $crate::EncodeTagged::encoded_len_tagged(self, Self::TAG, rules)
             }
 
             fn encode(
                 &self,
-                rules: $crate::EncodingOptions,
+                rules: &$crate::EncodingOptions,
                 out: &mut [u8],
             ) -> Result<usize, $crate::Asn1Error> {
                 $crate::EncodeTagged::encode_tagged(self, Self::TAG, rules, out)
@@ -144,11 +144,11 @@ opaque_bytes!(
 內容不必是 UTF-8；編碼保留原始位元組。
 
 ```
-use tc_asn1::{Asn1TeletexString, Encode, EncodingOptions};
+use tc_asn1::{Asn1TeletexString, Encode, EncodingOptions, EncodingType};
 
 let value = Asn1TeletexString::new(&[0xC1, b'e']);
 let mut out = [0; 4];
-value.encode(EncodingOptions::Der, &mut out).unwrap();
+value.encode(&EncodingOptions::new(EncodingType::Der), &mut out).unwrap();
 assert_eq!(out, [0x14, 2, 0xC1, b'e']);
 assert_eq!(value.as_bytes(), &[0xC1, b'e']);
 ```"#
@@ -186,11 +186,11 @@ opaque_bytes!(
 可以直接接收擁有的位元組容器，寫出時只加上此型別的標籤與長度。
 
 ```
-use tc_asn1::{Asn1GeneralString, Encode, EncodingOptions};
+use tc_asn1::{Asn1GeneralString, Encode, EncodingOptions, EncodingType};
 
 let value = Asn1GeneralString::from(vec![0, 0xFF]);
 let mut out = [0; 4];
-value.encode(EncodingOptions::Ber(tc_asn1::LengthForm::Definite), &mut out).unwrap();
+value.encode(&EncodingOptions::new(EncodingType::Ber(tc_asn1::LengthForm::Definite)), &mut out).unwrap();
 assert_eq!(out, [0x1B, 2, 0, 0xFF]);
 ```"#
 );
@@ -200,9 +200,9 @@ mod tests {
     use super::*;
     use crate::EncodeContent;
     use crate::decoding_options::DecodingOptions;
-    use crate::encoding_options::EncodingOptions;
     use crate::error::Asn1Error;
     use crate::traits::{Decode, Encode};
+    use crate::{EncodingOptions, EncodingType};
 
     const OPTIONS: DecodingOptions =
         DecodingOptions::new(crate::Depth::DEFAULT, 16 * 1024 * 1024, 65_536);
@@ -218,8 +218,8 @@ mod tests {
                 fn ordinary_contents_round_trip_under_both_encoding_rules() {
                     let value = $name::new(b"ABC");
                     for rules in [
-                        EncodingOptions::Ber(crate::LengthForm::Definite),
-                        EncodingOptions::Der,
+                        &EncodingOptions::new(EncodingType::Ber(crate::LengthForm::Definite)),
+                        &EncodingOptions::new(EncodingType::Der),
                     ] {
                         let mut out = [0; 5];
                         assert_eq!(value.encode(rules, &mut out), Ok(5));
@@ -235,8 +235,8 @@ mod tests {
                     let value = $name::from(bytes.clone());
                     assert_eq!(value.as_bytes(), bytes.as_slice());
                     for rules in [
-                        EncodingOptions::Ber(crate::LengthForm::Definite),
-                        EncodingOptions::Der,
+                        &EncodingOptions::new(EncodingType::Ber(crate::LengthForm::Definite)),
+                        &EncodingOptions::new(EncodingType::Der),
                     ] {
                         let mut out = vec![0; value.encoded_len(rules)];
                         assert_eq!(value.encode(rules, &mut out), Ok(out.len()));
@@ -254,7 +254,10 @@ mod tests {
                     assert_eq!(value, $name::default());
                     assert_eq!(value.as_bytes(), &[]);
                     let mut out = [0; 2];
-                    assert_eq!(value.encode(EncodingOptions::Der, &mut out), Ok(2));
+                    assert_eq!(
+                        value.encode(&EncodingOptions::new(EncodingType::Der), &mut out),
+                        Ok(2)
+                    );
                     assert_eq!(out, [$tag, 0]);
                     assert_eq!($name::try_decode(&out, OPTIONS), Ok((2, value)));
                 }
@@ -282,12 +285,20 @@ mod tests {
 
         let (used, s) = Asn1GraphicString::try_decode(&[0x19, 0x02, 0xDE, 0xAD], OPTIONS).unwrap();
         assert_eq!((used, s.as_bytes()), (4, &[0xDE, 0xAD][..]));
-        assert_eq!(s.encode(EncodingOptions::Der, &mut out).unwrap(), 4);
+        assert_eq!(
+            s.encode(&EncodingOptions::new(EncodingType::Der), &mut out)
+                .unwrap(),
+            4
+        );
         assert_eq!(&out[..4], &[0x19, 0x02, 0xDE, 0xAD]);
 
         let (used, d) = Asn1ObjectDescriptor::try_decode(&[0x07, 0x01, b'x'], OPTIONS).unwrap();
         assert_eq!((used, d.as_bytes()), (3, &b"x"[..]));
-        assert_eq!(d.encode(EncodingOptions::Der, &mut out).unwrap(), 3);
+        assert_eq!(
+            d.encode(&EncodingOptions::new(EncodingType::Der), &mut out)
+                .unwrap(),
+            3
+        );
         assert_eq!(&out[..3], &[0x07, 0x01, b'x']);
     }
 

@@ -134,7 +134,7 @@ fn checked_tag(tag: &[u8]) -> Result<Vec<u8>, Asn1Error> {
 
 impl crate::EncodeContent for Asn1Tagged {
     /// 計算內容長度。變動時間：分支只依編碼結構。
-    fn content_len(&self, rules: EncodingOptions) -> usize {
+    fn content_len(&self, rules: &EncodingOptions) -> usize {
         match &self.content {
             TaggedContent::Constructed(children) => children_len(children, rules),
             TaggedContent::Primitive(bytes) => bytes.len(),
@@ -142,7 +142,7 @@ impl crate::EncodeContent for Asn1Tagged {
     }
 
     /// 依原順序編碼子元素或複製原始內容。變動時間：分支只依編碼結構。
-    fn encode_content(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+    fn encode_content(&self, rules: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         let len = crate::EncodeContent::content_len(self, rules);
         let out = out.get_mut(..len).ok_or(Asn1Error::BufferTooSmall)?;
         match &self.content {
@@ -157,11 +157,11 @@ impl crate::EncodeContent for Asn1Tagged {
 impl crate::EncodeTagged for Asn1Tagged {}
 
 impl Encode for Asn1Tagged {
-    fn encoded_len(&self, rules: EncodingOptions) -> usize {
+    fn encoded_len(&self, rules: &EncodingOptions) -> usize {
         crate::EncodeTagged::encoded_len_tagged(self, self.tag(), rules)
     }
 
-    fn encode(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+    fn encode(&self, rules: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         crate::EncodeTagged::encode_tagged(self, self.tag(), rules, out)
     }
 }
@@ -169,6 +169,7 @@ impl Encode for Asn1Tagged {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::EncodingType;
     use crate::universal::encode_member;
     use crate::{Asn1Boolean, Asn1Integer, Decode};
     use alloc::{string::ToString, vec};
@@ -188,7 +189,10 @@ mod tests {
             Err(Asn1Error::MalformedValue)
         );
         assert_eq!(tree.to_string(), "[CONTEXT 0]\n  INTEGER 2\n");
-        assert_eq!(encode_member(&tree, EncodingOptions::Der).unwrap(), input);
+        assert_eq!(
+            encode_member(&tree, &EncodingOptions::new(EncodingType::Der)).unwrap(),
+            input
+        );
     }
 
     #[test]
@@ -205,7 +209,10 @@ mod tests {
         assert!(tagged.children().is_none());
         assert!(!tagged.is_constructed());
         assert_eq!(tree.to_string(), "[CONTEXT 0] (1 bytes) ff\n");
-        assert_eq!(encode_member(&tree, EncodingOptions::Der).unwrap(), input);
+        assert_eq!(
+            encode_member(&tree, &EncodingOptions::new(EncodingType::Der)).unwrap(),
+            input
+        );
     }
 
     #[test]
@@ -262,7 +269,7 @@ mod tests {
         tag.push(0x7f);
         let value = Asn1Tagged::primitive(&tag, &[]).unwrap();
         assert_eq!(value.number(), u64::MAX);
-        let encoded = encode_member(&value, EncodingOptions::Der).unwrap();
+        let encoded = encode_member(&value, &EncodingOptions::new(EncodingType::Der)).unwrap();
         let tree = Asn1Object::try_decode(&encoded, DecodingOptions::default())
             .unwrap()
             .1;

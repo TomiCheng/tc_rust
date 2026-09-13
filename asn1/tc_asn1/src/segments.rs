@@ -1,7 +1,7 @@
 //! CER string segmentation and shared encoding overrides.
 
 use crate::encoding::{default_encode, default_encoded_len, len_octets, write_len};
-use crate::{Asn1Error, EncodeContent, EncodingOptions};
+use crate::{Asn1Error, EncodeContent, EncodingOptions, EncodingType};
 
 /// Length of a CER string TLV. Variable time: branches only on the encoding structure.
 pub(crate) fn segmented_len(tag: &[u8], universal_tag: &[u8], contents_len: usize) -> usize {
@@ -56,9 +56,11 @@ pub(crate) fn encode_segmented(
 pub(crate) fn string_len<T: EncodeContent + ?Sized>(
     value: &T,
     tag: &[u8],
-    rules: EncodingOptions,
+    rules: &EncodingOptions,
 ) -> usize {
-    if rules == EncodingOptions::Cer && value.content_len(EncodingOptions::Der) > 1000 {
+    if rules.encoding_type() == EncodingType::Cer
+        && value.content_len(&EncodingOptions::new(EncodingType::Der)) > 1000
+    {
         tag.len() + 3 + value.content_len(rules)
     } else {
         default_encoded_len(value, tag, rules)
@@ -70,10 +72,12 @@ pub(crate) fn string_len<T: EncodeContent + ?Sized>(
 pub(crate) fn encode_string<T: EncodeContent + ?Sized>(
     value: &T,
     tag: &[u8],
-    rules: EncodingOptions,
+    rules: &EncodingOptions,
     out: &mut [u8],
 ) -> Result<usize, Asn1Error> {
-    if rules != EncodingOptions::Cer || value.content_len(EncodingOptions::Der) <= 1000 {
+    if rules.encoding_type() != EncodingType::Cer
+        || value.content_len(&EncodingOptions::new(EncodingType::Der)) <= 1000
+    {
         return default_encode(value, tag, rules, out);
     }
     let total = string_len(value, tag, rules);
@@ -95,14 +99,14 @@ pub(crate) fn encode_string<T: EncodeContent + ?Sized>(
 macro_rules! cer_string_encode {
     () => {
         /// Variable time: branches only on the encoding structure.
-        fn encoded_len_tagged(&self, tag: &[u8], rules: $crate::EncodingOptions) -> usize {
+        fn encoded_len_tagged(&self, tag: &[u8], rules: &$crate::EncodingOptions) -> usize {
             $crate::segments::string_len(self, tag, rules)
         }
         /// Variable time: branches only on the encoding structure.
         fn encode_tagged(
             &self,
             tag: &[u8],
-            rules: $crate::EncodingOptions,
+            rules: &$crate::EncodingOptions,
             out: &mut [u8],
         ) -> Result<usize, $crate::Asn1Error> {
             $crate::segments::encode_string(self, tag, rules, out)
@@ -113,8 +117,8 @@ pub(crate) use cer_string_encode;
 
 /// Content length for a string, including CER segment headers but no outer header or EOC.
 /// Variable time: public values only; no constant-time alternative is provided.
-pub(crate) fn string_content_len(len: usize, rules: EncodingOptions) -> usize {
-    if rules == EncodingOptions::Cer && len > 1000 {
+pub(crate) fn string_content_len(len: usize, rules: &EncodingOptions) -> usize {
+    if rules.encoding_type() == EncodingType::Cer && len > 1000 {
         // With no outer tag, the full encoding adds one length octet and two EOC octets.
         segmented_len(&[], crate::tag::OCTET_STRING, len) - 3
     } else {
@@ -126,13 +130,13 @@ pub(crate) fn string_content_len(len: usize, rules: EncodingOptions) -> usize {
 /// Variable time: public values only; no constant-time alternative is provided.
 pub(crate) fn encode_string_content(
     len: usize,
-    rules: EncodingOptions,
+    rules: &EncodingOptions,
     out: &mut [u8],
     write_primitive: impl FnOnce(&mut [u8]) -> Result<usize, Asn1Error>,
 ) -> Result<usize, Asn1Error> {
     let total = string_content_len(len, rules);
     let out = out.get_mut(..total).ok_or(Asn1Error::BufferTooSmall)?;
-    if rules != EncodingOptions::Cer || len <= 1000 {
+    if rules.encoding_type() != EncodingType::Cer || len <= 1000 {
         return write_primitive(out);
     }
     let mut contents = alloc::vec![0; len];
@@ -154,7 +158,7 @@ macro_rules! cer_string_content_encode {
     () => {
         /// Content length, including CER segment headers but no outer header or EOC.
         /// Variable-time contract: public values only; no constant-time alternative is provided.
-        fn content_len(&self, rules: $crate::EncodingOptions) -> usize {
+        fn content_len(&self, rules: &$crate::EncodingOptions) -> usize {
             $crate::segments::string_content_len(self.primitive_content_len(rules), rules)
         }
 
@@ -162,7 +166,7 @@ macro_rules! cer_string_content_encode {
         /// Variable-time contract: public values only; no constant-time alternative is provided.
         fn encode_content(
             &self,
-            rules: $crate::EncodingOptions,
+            rules: &$crate::EncodingOptions,
             out: &mut [u8],
         ) -> Result<usize, $crate::Asn1Error> {
             $crate::segments::encode_string_content(
@@ -246,7 +250,9 @@ mod tests {
                 Some(Asn1ObjectDescriptor::new(&[b'A'; 1001])),
                 encoding,
             );
-            let cer = value.encode_to_vec(EncodingOptions::Cer).unwrap();
+            let cer = value
+                .encode_to_vec(&EncodingOptions::new(EncodingType::Cer))
+                .unwrap();
             assert_eq!(&cer[..4], &[0x28, 0x80, 0x27, 0x80]);
             assert_eq!(
                 Asn1External::try_decode(&cer, DecodingOptions::default()).map(|(_, value)| value),
@@ -263,7 +269,10 @@ mod tests {
                         |(used, value)| {
                             if used != input.len() {
                                 Err(crate::Asn1Error::TrailingData)
-                            } else if value.encode_to_vec(crate::EncodingOptions::Der)? != input {
+                            } else if value.encode_to_vec(&crate::EncodingOptions::new(
+                                crate::EncodingType::Der,
+                            ))? != input
+                            {
                                 Err(crate::Asn1Error::NotDer)
                             } else {
                                 Ok(value)
@@ -281,7 +290,9 @@ mod tests {
         for len in [999, 1000, 1998, 1999, 2997] {
             for unused in [0, 1, 7] {
                 let value = Asn1BitString::from_bits(&alloc::vec![0xff; len], len * 8 - unused);
-                let wire = value.encode_to_vec(EncodingOptions::Cer).unwrap();
+                let wire = value
+                    .encode_to_vec(&EncodingOptions::new(EncodingType::Cer))
+                    .unwrap();
                 assert_eq!(
                     Asn1BitString::try_decode(&wire, DecodingOptions::default())
                         .map(|(_, value)| value),
@@ -306,8 +317,9 @@ mod tests {
                                 |(used, value)| {
                                     if used != input.len() {
                                         Err(crate::Asn1Error::TrailingData)
-                                    } else if value.encode_to_vec(crate::EncodingOptions::Der)?
-                                        != input
+                                    } else if value.encode_to_vec(&crate::EncodingOptions::new(
+                                        crate::EncodingType::Der,
+                                    ))? != input
                                     {
                                         Err(crate::Asn1Error::NotDer)
                                     } else {
@@ -326,8 +338,9 @@ mod tests {
                                 |(used, value)| {
                                     if used != input.len() {
                                         Err(crate::Asn1Error::TrailingData)
-                                    } else if value.encode_to_vec(crate::EncodingOptions::Der)?
-                                        != input
+                                    } else if value.encode_to_vec(&crate::EncodingOptions::new(
+                                        crate::EncodingType::Der,
+                                    ))? != input
                                     {
                                         Err(crate::Asn1Error::NotDer)
                                     } else {
@@ -350,7 +363,11 @@ mod tests {
             Asn1Integer::from(3_u8)
         ]);
         let expected = [0x31, 0x80, 2, 1, 3, 2, 1, 5, 0, 0];
-        assert_eq!(set.encode_to_vec(EncodingOptions::Cer).unwrap(), expected);
+        assert_eq!(
+            set.encode_to_vec(&EncodingOptions::new(EncodingType::Cer))
+                .unwrap(),
+            expected
+        );
         assert_eq!(
             {
                 let input: &[u8] = &expected;
@@ -358,7 +375,10 @@ mod tests {
                     |(used, value)| {
                         if used != input.len() {
                             Err(crate::Asn1Error::TrailingData)
-                        } else if value.encode_to_vec(crate::EncodingOptions::Der)? != input {
+                        } else if value
+                            .encode_to_vec(&crate::EncodingOptions::new(crate::EncodingType::Der))?
+                            != input
+                        {
                             Err(crate::Asn1Error::NotDer)
                         } else {
                             Ok(value)
@@ -381,12 +401,17 @@ mod tests {
         ]);
         assert_eq!(
             {
-                let input: &[u8] = &sequence.encode_to_vec(EncodingOptions::Cer).unwrap();
+                let input: &[u8] = &sequence
+                    .encode_to_vec(&EncodingOptions::new(EncodingType::Cer))
+                    .unwrap();
                 Asn1Object::try_decode(input, DecodingOptions::default()).and_then(
                     |(used, value)| {
                         if used != input.len() {
                             Err(crate::Asn1Error::TrailingData)
-                        } else if value.encode_to_vec(crate::EncodingOptions::Der)? != input {
+                        } else if value
+                            .encode_to_vec(&crate::EncodingOptions::new(crate::EncodingType::Der))?
+                            != input
+                        {
                             Err(crate::Asn1Error::NotDer)
                         } else {
                             Ok(value)
@@ -402,10 +427,16 @@ mod tests {
     where
         T: for<'a> Decode<'a> + Encode + Clone + core::fmt::Debug + PartialEq + Into<Asn1Object>,
     {
-        let len = value.content_len(EncodingOptions::Der);
-        let cer = value.encode_to_vec(EncodingOptions::Cer).unwrap();
+        let len = value.content_len(&EncodingOptions::new(EncodingType::Der));
+        let cer = value
+            .encode_to_vec(&EncodingOptions::new(EncodingType::Cer))
+            .unwrap();
         let tree: Asn1Object = value.clone().into();
-        assert_eq!(tree.encode_to_vec(EncodingOptions::Cer).unwrap(), cer);
+        assert_eq!(
+            tree.encode_to_vec(&EncodingOptions::new(EncodingType::Cer))
+                .unwrap(),
+            cer
+        );
         assert_eq!(
             T::try_decode(&cer, DecodingOptions::default())
                 .map(|(_, value)| value)
@@ -418,10 +449,14 @@ mod tests {
                 .unwrap(),
             tree
         );
-        let der = value.encode_to_vec(EncodingOptions::Der).unwrap();
+        let der = value
+            .encode_to_vec(&EncodingOptions::new(EncodingType::Der))
+            .unwrap();
         assert_eq!(
             value
-                .encode_to_vec(EncodingOptions::Ber(crate::LengthForm::Definite))
+                .encode_to_vec(&EncodingOptions::new(EncodingType::Ber(
+                    crate::LengthForm::Definite
+                )))
                 .unwrap(),
             der
         );
@@ -451,7 +486,10 @@ mod tests {
                     T::try_decode(input, DecodingOptions::default()).and_then(|(used, value)| {
                         if used != input.len() {
                             Err(crate::Asn1Error::TrailingData)
-                        } else if value.encode_to_vec(crate::EncodingOptions::Der)? != input {
+                        } else if value
+                            .encode_to_vec(&crate::EncodingOptions::new(crate::EncodingType::Der))?
+                            != input
+                        {
                             Err(crate::Asn1Error::NotDer)
                         } else {
                             Ok(value)
@@ -467,7 +505,10 @@ mod tests {
                         |(used, value)| {
                             if used != input.len() {
                                 Err(crate::Asn1Error::TrailingData)
-                            } else if value.encode_to_vec(crate::EncodingOptions::Der)? != input {
+                            } else if value.encode_to_vec(&crate::EncodingOptions::new(
+                                crate::EncodingType::Der,
+                            ))? != input
+                            {
                                 Err(crate::Asn1Error::NotDer)
                             } else {
                                 Ok(value)
@@ -485,7 +526,10 @@ mod tests {
                     T::try_decode(input, DecodingOptions::default()).and_then(|(used, value)| {
                         if used != input.len() {
                             Err(crate::Asn1Error::TrailingData)
-                        } else if value.encode_to_vec(crate::EncodingOptions::Der)? != input {
+                        } else if value
+                            .encode_to_vec(&crate::EncodingOptions::new(crate::EncodingType::Der))?
+                            != input
+                        {
                             Err(crate::Asn1Error::NotDer)
                         } else {
                             Ok(value)
@@ -497,7 +541,10 @@ mod tests {
             );
         }
         assert_eq!(
-            value.encode(EncodingOptions::Cer, &mut alloc::vec![0; cer.len() - 1]),
+            value.encode(
+                &EncodingOptions::new(EncodingType::Cer),
+                &mut alloc::vec![0; cer.len() - 1]
+            ),
             Err(Asn1Error::BufferTooSmall)
         );
     }
@@ -592,9 +639,16 @@ mod tests {
         let absolute = Asn1OidIri::new(&alloc::format!("/ISO/{label}")).unwrap();
         let relative = Asn1RelativeOidIri::new(&label).unwrap();
         for value in [Asn1Object::from(absolute), Asn1Object::from(relative)] {
-            let cer = value.encode_to_vec(EncodingOptions::Cer).unwrap();
+            let cer = value
+                .encode_to_vec(&EncodingOptions::new(EncodingType::Cer))
+                .unwrap();
             assert_eq!(cer[0] & 0x20, 0);
-            assert_eq!(cer, value.encode_to_vec(EncodingOptions::Der).unwrap());
+            assert_eq!(
+                cer,
+                value
+                    .encode_to_vec(&EncodingOptions::new(EncodingType::Der))
+                    .unwrap()
+            );
             assert_eq!(
                 Asn1Object::try_decode(&cer, DecodingOptions::default())
                     .map(|(_, value)| value)
@@ -626,7 +680,9 @@ mod tests {
                 alloc::vec![0xaa; 1001],
             )),
         ] {
-            let wire = value.encode_to_vec(EncodingOptions::Cer).unwrap();
+            let wire = value
+                .encode_to_vec(&EncodingOptions::new(EncodingType::Cer))
+                .unwrap();
             assert_eq!(&wire[1..10], &[0x80, 0xa0, 0x80, 0x85, 0, 0, 0, 0xa2, 0x80]);
             assert_eq!(
                 Asn1Object::try_decode(&wire, DecodingOptions::default()).map(|(_, value)| value),
@@ -639,15 +695,22 @@ mod tests {
     fn cer_string_segmentation_handles_exact_multiples_and_high_implicit_tags() {
         for len in [0, 999, 1000, 1001, 1999, 2000, 2001, 3000] {
             let value = Asn1OctetString::new(&alloc::vec![0xaa; len]);
-            let wire = value.encode_to_vec(EncodingOptions::Cer).unwrap();
-            assert_eq!(wire.len(), value.encoded_len(EncodingOptions::Cer));
+            let wire = value
+                .encode_to_vec(&EncodingOptions::new(EncodingType::Cer))
+                .unwrap();
+            assert_eq!(
+                wire.len(),
+                value.encoded_len(&EncodingOptions::new(EncodingType::Cer))
+            );
             assert_eq!(
                 Asn1OctetString::try_decode(&wire, DecodingOptions::default())
                     .map(|(_, value)| value),
                 Ok(value.clone())
             );
             let tagged = Implicit::new(&[0x9f, 0x81, 0], &value);
-            let wire = tagged.encode_to_vec(EncodingOptions::Cer).unwrap();
+            let wire = tagged
+                .encode_to_vec(&EncodingOptions::new(EncodingType::Cer))
+                .unwrap();
             assert_eq!(wire[0], if len > 1000 { 0xbf } else { 0x9f });
             let mut fields = Fields::new(&wire, DecodingOptions::default()).unwrap();
             assert_eq!(

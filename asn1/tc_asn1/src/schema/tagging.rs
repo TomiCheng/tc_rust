@@ -6,11 +6,11 @@ use crate::{Asn1Error, Encode, EncodingOptions};
 ///
 /// # Examples
 /// ```
-/// use tc_asn1::{Asn1Integer, Encode, EncodingOptions, Explicit};
+/// use tc_asn1::{Asn1Integer, Encode, EncodingOptions, EncodingType, Explicit};
 /// let number = Asn1Integer::from(2_u8);
 /// let tagged = Explicit::new(&[0xA0], &number);
 /// let mut out = [0; 5];
-/// tagged.encode(EncodingOptions::Der, &mut out)?;
+/// tagged.encode(&EncodingOptions::new(EncodingType::Der), &mut out)?;
 /// assert_eq!(out, [0xA0, 3, 2, 1, 2]);
 /// # Ok::<(), tc_asn1::Asn1Error>(())
 /// ```
@@ -31,12 +31,12 @@ impl<'a> Explicit<'a> {
 }
 impl crate::EncodeContent for Explicit<'_> {
     /// 內層完整 TLV 的長度。變動時間：分支只依編碼結構。
-    fn content_len(&self, rules: EncodingOptions) -> usize {
+    fn content_len(&self, rules: &EncodingOptions) -> usize {
         self.inner.encoded_len(rules)
     }
 
     /// 寫出內層完整 TLV。變動時間：分支只依編碼結構。
-    fn encode_content(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+    fn encode_content(&self, rules: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         let len = crate::EncodeContent::content_len(self, rules);
         let out = out.get_mut(..len).ok_or(Asn1Error::BufferTooSmall)?;
         self.inner.encode(rules, out)
@@ -46,11 +46,11 @@ impl crate::EncodeContent for Explicit<'_> {
 impl crate::EncodeTagged for Explicit<'_> {}
 
 impl Encode for Explicit<'_> {
-    fn encoded_len(&self, rules: EncodingOptions) -> usize {
+    fn encoded_len(&self, rules: &EncodingOptions) -> usize {
         crate::EncodeTagged::encoded_len_tagged(self, self.tag, rules)
     }
 
-    fn encode(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+    fn encode(&self, rules: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         crate::EncodeTagged::encode_tagged(self, self.tag, rules, out)
     }
 }
@@ -59,11 +59,11 @@ impl Encode for Explicit<'_> {
 ///
 /// # Examples
 /// ```
-/// use tc_asn1::{Asn1Boolean, Encode, EncodingOptions, Implicit};
+/// use tc_asn1::{Asn1Boolean, Encode, EncodingOptions, EncodingType, Implicit};
 /// let flag = Asn1Boolean::from(true);
 /// let tagged = Implicit::new(&[0x80], &flag);
 /// let mut out = [0; 3];
-/// tagged.encode(EncodingOptions::Der, &mut out)?;
+/// tagged.encode(&EncodingOptions::new(EncodingType::Der), &mut out)?;
 /// assert_eq!(out, [0x80, 1, 0xFF]);
 /// # Ok::<(), tc_asn1::Asn1Error>(())
 /// ```
@@ -79,12 +79,12 @@ impl<'a> Implicit<'a> {
 }
 impl crate::EncodeContent for Implicit<'_> {
     /// 保留內層內容長度。變動時間：分支只依編碼結構。
-    fn content_len(&self, rules: EncodingOptions) -> usize {
+    fn content_len(&self, rules: &EncodingOptions) -> usize {
         self.inner.content_len(rules)
     }
 
     /// 保留內層內容。變動時間：分支只依編碼結構。
-    fn encode_content(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+    fn encode_content(&self, rules: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         let len = crate::EncodeContent::content_len(self, rules);
         let out = out.get_mut(..len).ok_or(Asn1Error::BufferTooSmall)?;
         self.inner.encode_content(rules, out)
@@ -93,7 +93,7 @@ impl crate::EncodeContent for Implicit<'_> {
 
 impl crate::EncodeTagged for Implicit<'_> {
     /// Variable time: branches only on the encoding structure.
-    fn encoded_len_tagged(&self, tag: &[u8], rules: EncodingOptions) -> usize {
+    fn encoded_len_tagged(&self, tag: &[u8], rules: &EncodingOptions) -> usize {
         self.inner.encoded_len_tagged(tag, rules)
     }
 
@@ -101,7 +101,7 @@ impl crate::EncodeTagged for Implicit<'_> {
     fn encode_tagged(
         &self,
         tag: &[u8],
-        rules: EncodingOptions,
+        rules: &EncodingOptions,
         out: &mut [u8],
     ) -> Result<usize, Asn1Error> {
         self.inner.encode_tagged(tag, rules, out)
@@ -109,25 +109,26 @@ impl crate::EncodeTagged for Implicit<'_> {
 }
 
 impl Encode for Implicit<'_> {
-    fn encoded_len(&self, rules: EncodingOptions) -> usize {
+    fn encoded_len(&self, rules: &EncodingOptions) -> usize {
         crate::EncodeTagged::encoded_len_tagged(self, self.tag, rules)
     }
 
-    fn encode(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+    fn encode(&self, rules: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         crate::EncodeTagged::encode_tagged(self, self.tag, rules, out)
     }
 }
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::EncodingType;
     use crate::{Asn1Boolean, Asn1Integer, Asn1OctetString};
     #[test]
     fn explicit_tagging_wraps_the_entire_inner_tlv() {
         let number = Asn1Integer::from(2_u8);
         let value = Explicit::new(&[0xA0], &number);
         for rules in [
-            EncodingOptions::Ber(crate::LengthForm::Definite),
-            EncodingOptions::Der,
+            &EncodingOptions::new(EncodingType::Ber(crate::LengthForm::Definite)),
+            &EncodingOptions::new(EncodingType::Der),
         ] {
             assert_eq!(value.encoded_len(rules), 5);
             let mut out = [0; 5];
@@ -144,20 +145,26 @@ mod tests {
         let flag = Asn1Boolean::from(true);
         let value = Implicit::new(&[0x80], &flag);
         let mut out = [0; 3];
-        value.encode(EncodingOptions::Der, &mut out).unwrap();
+        value
+            .encode(&EncodingOptions::new(EncodingType::Der), &mut out)
+            .unwrap();
         assert_eq!(out, [0x80, 1, 255]);
     }
     #[test]
     fn tagging_supports_high_tag_numbers_and_long_content_lengths() {
         let octets = Asn1OctetString::new(&[7; 128]);
         let explicit = Explicit::new(&[0xBF, 0x20], &octets);
-        let mut out = alloc::vec![0;explicit.encoded_len(EncodingOptions::Der)];
-        explicit.encode(EncodingOptions::Der, &mut out).unwrap();
+        let mut out = alloc::vec![0;explicit.encoded_len(&EncodingOptions::new(EncodingType::Der))];
+        explicit
+            .encode(&EncodingOptions::new(EncodingType::Der), &mut out)
+            .unwrap();
         assert_eq!(&out[..7], &[0xBF, 0x20, 0x81, 131, 4, 0x81, 128]);
         assert_eq!(out.len(), 135);
         let implicit = Implicit::new(&[0x9F, 0x20], &octets);
-        let mut out = alloc::vec![0;implicit.encoded_len(EncodingOptions::Der)];
-        implicit.encode(EncodingOptions::Der, &mut out).unwrap();
+        let mut out = alloc::vec![0;implicit.encoded_len(&EncodingOptions::new(EncodingType::Der))];
+        implicit
+            .encode(&EncodingOptions::new(EncodingType::Der), &mut out)
+            .unwrap();
         assert_eq!(&out[..4], &[0x9F, 0x20, 0x81, 128]);
         assert_eq!(out.len(), 132);
     }

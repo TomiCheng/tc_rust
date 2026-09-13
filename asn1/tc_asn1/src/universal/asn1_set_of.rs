@@ -8,9 +8,9 @@
 use alloc::vec;
 use alloc::vec::Vec;
 
+use crate::EncodingOptions;
 use crate::asn1_ref::Children;
 use crate::decoding_options::DecodingOptions;
-use crate::encoding_options::EncodingOptions;
 use crate::error::Asn1Error;
 use crate::traits::{DecodeContent, Encode};
 
@@ -26,11 +26,11 @@ use crate::traits::{DecodeContent, Encode};
 /// DER 排序不會改動儲存的順序。
 ///
 /// ```
-/// use tc_asn1::{Asn1Boolean, Asn1SetOf, Encode, EncodingOptions};
+/// use tc_asn1::{Asn1Boolean, Asn1SetOf, Encode, EncodingOptions, EncodingType};
 ///
 /// let values = Asn1SetOf::from(vec![Asn1Boolean::from(true), Asn1Boolean::from(false)]);
 /// let mut out = [0; 8];
-/// values.encode(EncodingOptions::Der, &mut out).unwrap();
+/// values.encode(&EncodingOptions::new(EncodingType::Der), &mut out).unwrap();
 /// assert_eq!(out, [0x31, 6, 1, 1, 0, 1, 1, 0xFF]);
 /// assert_eq!(values.members()[0], Asn1Boolean::from(true));
 /// ```
@@ -128,7 +128,7 @@ impl<'a, T: crate::Decode<'a>> DecodeContent<'a> for Asn1SetOf<T> {
 impl<T: Encode> crate::EncodeContent for Asn1SetOf<T> {
     /// 加總成員的完整編碼長度，排序不影響長度。
     /// 變動時間：分支只依編碼結構。
-    fn content_len(&self, rules: EncodingOptions) -> usize {
+    fn content_len(&self, rules: &EncodingOptions) -> usize {
         self.members
             .iter()
             .map(|member| member.encoded_len(rules))
@@ -137,7 +137,7 @@ impl<T: Encode> crate::EncodeContent for Asn1SetOf<T> {
 
     /// BER 的兩種長度形式都按原順序寫入；CER 與 DER 暫存成員編碼後依字典序寫入。
     /// 變動時間：依編碼結構分支，正規排序另比較成員的編碼位元組。
-    fn encode_content(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+    fn encode_content(&self, rules: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         let len = crate::EncodeContent::content_len(self, rules);
         let out = out.get_mut(..len).ok_or(Asn1Error::BufferTooSmall)?;
         if !rules.is_canonical() {
@@ -161,11 +161,11 @@ impl<T: Encode> crate::EncodeContent for Asn1SetOf<T> {
 impl<T: Encode> crate::EncodeTagged for Asn1SetOf<T> {}
 
 impl<T: Encode> Encode for Asn1SetOf<T> {
-    fn encoded_len(&self, rules: EncodingOptions) -> usize {
+    fn encoded_len(&self, rules: &EncodingOptions) -> usize {
         crate::EncodeTagged::encoded_len_tagged(self, Self::TAG, rules)
     }
 
-    fn encode(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+    fn encode(&self, rules: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         crate::EncodeTagged::encode_tagged(self, Self::TAG, rules, out)
     }
 }
@@ -194,7 +194,7 @@ pub(crate) fn tag_key(tag: &[u8]) -> Result<(u8, u64), Asn1Error> {
 
 pub(crate) fn encode_member<T: Encode + ?Sized>(
     member: &T,
-    rules: EncodingOptions,
+    rules: &EncodingOptions,
 ) -> Result<Vec<u8>, Asn1Error> {
     let mut encoding = vec![0; member.encoded_len(rules)];
     let written = member.encode(rules, &mut encoding)?;
@@ -222,6 +222,7 @@ pub(crate) fn copy_encodings<'a>(
 mod tests {
     use super::*;
     use crate::EncodeContent;
+    use crate::EncodingType;
     use crate::{Asn1Any, Asn1Boolean, Asn1Integer, Asn1Null, Decode};
 
     fn any(input: &[u8]) -> Asn1Any {
@@ -234,12 +235,15 @@ mod tests {
     fn a_set_of_orders_choice_encodings_with_81_before_a0_under_der() {
         let set = Asn1SetOf::from(vec![any(&[0xA0, 2, 0x30, 0]), any(&[0x81, 1, 5])]);
         assert_eq!(
-            set.encode_to_vec(EncodingOptions::Der).unwrap(),
+            set.encode_to_vec(&EncodingOptions::new(EncodingType::Der))
+                .unwrap(),
             [0x31, 7, 0x81, 1, 5, 0xA0, 2, 0x30, 0]
         );
         assert_eq!(
-            set.encode_to_vec(EncodingOptions::Ber(crate::LengthForm::Definite))
-                .unwrap(),
+            set.encode_to_vec(&EncodingOptions::new(EncodingType::Ber(
+                crate::LengthForm::Definite
+            )))
+            .unwrap(),
             [0x31, 7, 0xA0, 2, 0x30, 0, 0x81, 1, 5]
         );
     }
@@ -250,7 +254,8 @@ mod tests {
         set.push(Asn1Boolean::from(true));
         set.push(Asn1Boolean::from(false));
         assert_eq!(
-            set.encode_to_vec(EncodingOptions::Der).unwrap(),
+            set.encode_to_vec(&EncodingOptions::new(EncodingType::Der))
+                .unwrap(),
             [0x31, 6, 1, 1, 0, 1, 1, 0xFF]
         );
         assert_eq!(
@@ -264,7 +269,8 @@ mod tests {
     fn a_set_of_compares_length_octets_before_content_octets() {
         let set = Asn1SetOf::from(vec![any(&[4, 2, 0, 0]), any(&[4, 1, 0xFF])]);
         assert_eq!(
-            set.encode_to_vec(EncodingOptions::Der).unwrap(),
+            set.encode_to_vec(&EncodingOptions::new(EncodingType::Der))
+                .unwrap(),
             [0x31, 7, 4, 1, 0xFF, 4, 2, 0, 0]
         );
     }
@@ -280,18 +286,26 @@ mod tests {
             &[Asn1Boolean::from(true), Asn1Boolean::from(false)]
         );
         assert_eq!(
-            set.encode_to_vec(EncodingOptions::Ber(crate::LengthForm::Definite))
+            set.encode_to_vec(&EncodingOptions::new(EncodingType::Ber(
+                crate::LengthForm::Definite
+            )))
+            .unwrap(),
+            input
+        );
+        assert_ne!(
+            set.encode_to_vec(&EncodingOptions::new(EncodingType::Der))
                 .unwrap(),
             input
         );
-        assert_ne!(set.encode_to_vec(EncodingOptions::Der).unwrap(), input);
     }
 
     #[test]
     fn a_sorted_set_of_round_trips_under_der() {
         let original: Asn1SetOf<Asn1Integer> =
             [1_u8, 2, 3].into_iter().map(Asn1Integer::from).collect();
-        let bytes = original.encode_to_vec(EncodingOptions::Der).unwrap();
+        let bytes = original
+            .encode_to_vec(&EncodingOptions::new(EncodingType::Der))
+            .unwrap();
         let (_, decoded) =
             Asn1SetOf::<Asn1Integer>::try_decode(&bytes, DecodingOptions::default()).unwrap();
         assert_eq!(decoded, original);
@@ -302,8 +316,8 @@ mod tests {
         let set_of = Asn1SetOf::<Asn1Null>::default();
         assert!(set_of.is_empty());
         for rules in [
-            EncodingOptions::Ber(crate::LengthForm::Definite),
-            EncodingOptions::Der,
+            &EncodingOptions::new(EncodingType::Ber(crate::LengthForm::Definite)),
+            &EncodingOptions::new(EncodingType::Der),
         ] {
             assert_eq!(set_of.encode_to_vec(rules).unwrap(), [0x31, 0]);
         }
@@ -355,8 +369,8 @@ mod tests {
     fn set_of_content_lengths_match_bytes_written() {
         let value = Asn1SetOf::from(vec![Asn1Boolean::from(true), Asn1Boolean::from(false)]);
         for rules in [
-            EncodingOptions::Ber(crate::LengthForm::Definite),
-            EncodingOptions::Der,
+            &EncodingOptions::new(EncodingType::Ber(crate::LengthForm::Definite)),
+            &EncodingOptions::new(EncodingType::Der),
         ] {
             let mut out = vec![0; value.content_len(rules)];
             assert_eq!(value.encode_content(rules, &mut out), Ok(out.len()));

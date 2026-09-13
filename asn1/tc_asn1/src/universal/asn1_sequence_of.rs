@@ -2,9 +2,9 @@
 
 use alloc::vec::Vec;
 
+use crate::EncodingOptions;
 use crate::asn1_ref::Children;
 use crate::decoding_options::DecodingOptions;
-use crate::encoding_options::EncodingOptions;
 use crate::error::Asn1Error;
 use crate::traits::{DecodeContent, Encode};
 
@@ -94,11 +94,11 @@ impl<'a, T: crate::Decode<'a>> DecodeContent<'a> for Asn1SequenceOf<T> {
 }
 
 impl<T: Encode> crate::EncodeContent for Asn1SequenceOf<T> {
-    fn content_len(&self, rules: EncodingOptions) -> usize {
+    fn content_len(&self, rules: &EncodingOptions) -> usize {
         self.members.iter().map(|m| m.encoded_len(rules)).sum()
     }
 
-    fn encode_content(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+    fn encode_content(&self, rules: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         let len = crate::EncodeContent::content_len(self, rules);
         let out = out.get_mut(..len).ok_or(Asn1Error::BufferTooSmall)?;
         let mut at = 0;
@@ -112,11 +112,11 @@ impl<T: Encode> crate::EncodeContent for Asn1SequenceOf<T> {
 impl<T: Encode> crate::EncodeTagged for Asn1SequenceOf<T> {}
 
 impl<T: Encode> Encode for Asn1SequenceOf<T> {
-    fn encoded_len(&self, rules: EncodingOptions) -> usize {
+    fn encoded_len(&self, rules: &EncodingOptions) -> usize {
         crate::EncodeTagged::encoded_len_tagged(self, Self::TAG, rules)
     }
 
-    fn encode(&self, rules: EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+    fn encode(&self, rules: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         crate::EncodeTagged::encode_tagged(self, Self::TAG, rules, out)
     }
 }
@@ -124,6 +124,7 @@ impl<T: Encode> Encode for Asn1SequenceOf<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::EncodingType;
     use crate::traits::Decode;
     use crate::universal::{Asn1Boolean, Asn1Integer, Asn1Null};
 
@@ -159,8 +160,8 @@ mod tests {
         seq.push(Asn1Integer::from(1_u8));
 
         for rules in [
-            EncodingOptions::Ber(crate::LengthForm::Definite),
-            EncodingOptions::Der,
+            &EncodingOptions::new(EncodingType::Ber(crate::LengthForm::Definite)),
+            &EncodingOptions::new(EncodingType::Der),
         ] {
             let mut out = [0_u8; 16];
             let written = seq.encode(rules, &mut out).unwrap();
@@ -180,7 +181,11 @@ mod tests {
         assert!(seq.is_empty());
 
         let mut out = [0_u8; 4];
-        assert_eq!(seq.encode(EncodingOptions::Der, &mut out).unwrap(), 2);
+        assert_eq!(
+            seq.encode(&EncodingOptions::new(EncodingType::Der), &mut out)
+                .unwrap(),
+            2
+        );
         assert_eq!(&out[..2], &[0x30, 0x00]);
     }
 
@@ -211,7 +216,9 @@ mod tests {
         let original: Asn1SequenceOf<Asn1Integer> =
             [1_u8, 2, 3].into_iter().map(Asn1Integer::from).collect();
         let mut out = [0_u8; 16];
-        let written = original.encode(EncodingOptions::Der, &mut out).unwrap();
+        let written = original
+            .encode(&EncodingOptions::new(EncodingType::Der), &mut out)
+            .unwrap();
         let (_, decoded) =
             Asn1SequenceOf::<Asn1Integer>::try_decode(&out[..written], OPTIONS).unwrap();
         assert_eq!(decoded, original);
