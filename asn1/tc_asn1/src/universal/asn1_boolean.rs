@@ -5,12 +5,36 @@ use crate::encoding_options::EncodingOptions;
 use crate::error::Asn1Error;
 use crate::traits::{DecodeContent, Encode};
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct Asn1Boolean(pub bool);
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+pub struct Asn1Boolean(bool);
 
 impl Asn1Boolean {
     /// Universal identifier octets for this type's default encoding form.
     pub const TAG: &'static [u8] = super::tag::BOOLEAN;
+
+    /// Return whether this value is true. Constant time.
+    ///
+    /// # Examples
+    /// ```
+    /// use tc_asn1::Asn1Boolean;
+    /// assert!(Asn1Boolean::from(true).is_true());
+    /// assert!(!Asn1Boolean::from(false).is_true());
+    /// ```
+    pub const fn is_true(&self) -> bool {
+        self.0
+    }
+
+    /// Return whether this value is false. Constant time.
+    ///
+    /// # Examples
+    /// ```
+    /// use tc_asn1::Asn1Boolean;
+    /// assert!(Asn1Boolean::from(false).is_false());
+    /// assert!(!Asn1Boolean::from(true).is_false());
+    /// ```
+    pub const fn is_false(&self) -> bool {
+        !self.0
+    }
 }
 
 impl From<bool> for Asn1Boolean {
@@ -19,17 +43,28 @@ impl From<bool> for Asn1Boolean {
     }
 }
 
+/// Format the value as `true` or `false`, matching Rust's `bool` formatting.
+/// Variable time: public values only; no constant-time alternative is provided.
+///
+/// # Examples
+/// ```
+/// use tc_asn1::Asn1Boolean;
+/// assert_eq!(Asn1Boolean::from(true).to_string(), "true");
+/// assert_eq!(Asn1Boolean::from(false).to_string(), "false");
+/// ```
+impl core::fmt::Display for Asn1Boolean {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        core::fmt::Display::fmt(&self.0, f)
+    }
+}
+
 impl<'a> crate::Decode<'a> for Asn1Boolean {
-    fn try_decode(
-        buff: &'a [u8],
-        options: crate::DecodingOptions,
-    ) -> Result<(usize, Self), crate::Asn1Error> {
+    fn try_decode(buff: &'a [u8], options: DecodingOptions) -> Result<(usize, Self), Asn1Error> {
         let element = crate::Asn1Ref::parse(buff, options)?;
         if element.is_constructed() {
-            return Err(crate::Asn1Error::UnexpectedTag);
+            return Err(Asn1Error::UnexpectedTag);
         }
-        let value =
-            <Self as crate::DecodeContent<'a>>::try_decode_content(element.value(), options)?;
+        let value = <Self as DecodeContent<'a>>::try_decode_content(element.value(), options)?;
         Ok((element.total_len(), value))
     }
 }

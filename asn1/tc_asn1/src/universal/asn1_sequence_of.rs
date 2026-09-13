@@ -137,7 +137,10 @@ mod tests {
         let (used, seq) = Asn1SequenceOf::<Asn1Boolean>::try_decode(&input, OPTIONS).unwrap();
 
         assert_eq!(used, 8);
-        assert_eq!(seq.members(), &[Asn1Boolean(true), Asn1Boolean(false)]);
+        assert_eq!(
+            seq.members(),
+            &[Asn1Boolean::from(true), Asn1Boolean::from(false)]
+        );
     }
 
     #[test]

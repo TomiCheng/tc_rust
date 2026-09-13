@@ -25,7 +25,7 @@ use crate::error::Asn1Error;
 /// ```
 /// use tc_asn1::{Asn1Boolean, EncodeContent, EncodingOptions};
 ///
-/// let value: &dyn EncodeContent = &Asn1Boolean(true);
+/// let value: &dyn EncodeContent = &Asn1Boolean::from(true);
 /// assert_eq!(value.encode_content_to_vec(EncodingOptions::Der)?, [0xff]);
 /// # Ok::<(), tc_asn1::Asn1Error>(())
 /// ```
@@ -175,7 +175,7 @@ pub trait Encode: EncodeTagged {
     ///
     /// ```
     /// use tc_asn1::{Asn1Boolean, Encode, EncodingOptions};
-    /// assert_eq!(Asn1Boolean(true).encode_to_vec(EncodingOptions::Der)?, [1, 1, 255]);
+    /// assert_eq!(Asn1Boolean::from(true).encode_to_vec(EncodingOptions::Der)?, [1, 1, 255]);
     /// # Ok::<(), tc_asn1::Asn1Error>(())
     /// ```
     fn encode_to_vec(&self, rules: EncodingOptions) -> Result<Vec<u8>, Asn1Error> {
@@ -305,7 +305,7 @@ mod tests {
     #[test]
     fn indefinite_ber_does_not_apply_canonical_set_of_sorting() {
         use crate::{Asn1SetOf, LengthForm};
-        let set = Asn1SetOf::from(vec![Asn1Boolean(true), Asn1Boolean(false)]);
+        let set = Asn1SetOf::from(vec![Asn1Boolean::from(true), Asn1Boolean::from(false)]);
         for (options, expected) in [
             (
                 EncodingOptions::Ber(LengthForm::Definite),
@@ -354,7 +354,7 @@ mod tests {
             assert_eq!(wire.len(), value.encoded_len(options));
             assert_eq!(wire[0] & 0x20, 0);
         }
-        let sequence = Asn1Object::Sequence(vec![Asn1Boolean(true).into()]);
+        let sequence = Asn1Object::Sequence(vec![Asn1Boolean::from(true).into()]);
         for (value, expected) in [
             (
                 Explicit::new(&[0xa0], &sequence)
@@ -369,7 +369,7 @@ mod tests {
                 vec![0xbf, 0x81, 0, 0x80, 1, 1, 255, 0, 0],
             ),
             (
-                Implicit::new(&[0x80], &Asn1Boolean(true))
+                Implicit::new(&[0x80], &Asn1Boolean::from(true))
                     .encode_to_vec(options)
                     .unwrap(),
                 vec![0x80, 1, 255],
@@ -446,13 +446,13 @@ mod tests {
 
     #[test]
     fn vector_encoding_matches_manual_encoding_and_remains_available_through_trait_objects() {
-        let value: &dyn Encode = &Asn1Boolean(true);
+        let value: &dyn Encode = &Asn1Boolean::from(true);
         assert_eq!(
             value.encode_to_vec(EncodingOptions::Der).unwrap(),
             [1, 1, 255]
         );
         let tree = Asn1Object::Sequence(vec![Asn1Object::Sequence(vec![
-            Asn1Tagged::constructed(&[0x80], vec![Asn1Boolean(true).into()])
+            Asn1Tagged::constructed(&[0x80], vec![Asn1Boolean::from(true).into()])
                 .unwrap()
                 .into(),
         ])]);

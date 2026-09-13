@@ -28,11 +28,11 @@ use crate::traits::{DecodeContent, Encode};
 /// ```
 /// use tc_asn1::{Asn1Boolean, Asn1SetOf, Encode, EncodingOptions};
 ///
-/// let values = Asn1SetOf::from(vec![Asn1Boolean(true), Asn1Boolean(false)]);
+/// let values = Asn1SetOf::from(vec![Asn1Boolean::from(true), Asn1Boolean::from(false)]);
 /// let mut out = [0; 8];
 /// values.encode(EncodingOptions::Der, &mut out).unwrap();
 /// assert_eq!(out, [0x31, 6, 1, 1, 0, 1, 1, 0xFF]);
-/// assert_eq!(values.members()[0], Asn1Boolean(true));
+/// assert_eq!(values.members()[0], Asn1Boolean::from(true));
 /// ```
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Asn1SetOf<T> {
@@ -247,13 +247,16 @@ mod tests {
     #[test]
     fn a_set_of_places_false_before_true_without_changing_stored_members() {
         let mut set = Asn1SetOf::new();
-        set.push(Asn1Boolean(true));
-        set.push(Asn1Boolean(false));
+        set.push(Asn1Boolean::from(true));
+        set.push(Asn1Boolean::from(false));
         assert_eq!(
             set.encode_to_vec(EncodingOptions::Der).unwrap(),
             [0x31, 6, 1, 1, 0, 1, 1, 0xFF]
         );
-        assert_eq!(set.members(), &[Asn1Boolean(true), Asn1Boolean(false)]);
+        assert_eq!(
+            set.members(),
+            &[Asn1Boolean::from(true), Asn1Boolean::from(false)]
+        );
         assert_eq!(set.len(), 2);
     }
 
@@ -272,7 +275,10 @@ mod tests {
         let (used, set) =
             Asn1SetOf::<Asn1Boolean>::try_decode(&input, DecodingOptions::default()).unwrap();
         assert_eq!(used, input.len());
-        assert_eq!(set.members(), &[Asn1Boolean(true), Asn1Boolean(false)]);
+        assert_eq!(
+            set.members(),
+            &[Asn1Boolean::from(true), Asn1Boolean::from(false)]
+        );
         assert_eq!(
             set.encode_to_vec(EncodingOptions::Ber(crate::LengthForm::Definite))
                 .unwrap(),
@@ -347,7 +353,7 @@ mod tests {
 
     #[test]
     fn set_of_content_lengths_match_bytes_written() {
-        let value = Asn1SetOf::from(vec![Asn1Boolean(true), Asn1Boolean(false)]);
+        let value = Asn1SetOf::from(vec![Asn1Boolean::from(true), Asn1Boolean::from(false)]);
         for rules in [
             EncodingOptions::Ber(crate::LengthForm::Definite),
             EncodingOptions::Der,

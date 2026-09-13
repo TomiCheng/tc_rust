@@ -17,7 +17,7 @@ use crate::{Encode, EncodingOptions};
 ///     }
 /// }
 /// impl_sequence_encode!(Pair);
-/// let value = Pair { flag: Asn1Boolean(true), count: 5_u8.into() };
+/// let value = Pair { flag: Asn1Boolean::from(true), count: 5_u8.into() };
 /// let mut out = [0; 8];
 /// value.encode(EncodingOptions::Der, &mut out)?;
 /// assert_eq!(out, [0x30, 6, 1, 1, 0xFF, 2, 1, 5]);
@@ -118,7 +118,7 @@ mod tests {
     crate::impl_sequence_encode!(Pair);
     #[test]
     fn the_sequence_macro_encodes_two_fields_in_schema_order() {
-        let value = Pair(Asn1Boolean(true), 5_u8.into());
+        let value = Pair(Asn1Boolean::from(true), 5_u8.into());
         let mut out = [0; 8];
         assert_eq!(value.encode(EncodingOptions::Der, &mut out), Ok(8));
         assert_eq!(out, [0x30, 6, 1, 1, 255, 2, 1, 5]);
@@ -127,9 +127,9 @@ mod tests {
     impl SequenceFields for Tagged {
         fn fields(&self, rules: EncodingOptions, sink: &mut dyn FnMut(&dyn Encode)) {
             if rules == EncodingOptions::Ber(crate::LengthForm::Definite) {
-                sink(&Implicit::new(&[0x80], &Asn1Boolean(false)));
+                sink(&Implicit::new(&[0x80], &Asn1Boolean::from(false)));
             }
-            sink(&Explicit::new(&[0xA0], &Asn1Boolean(true)));
+            sink(&Explicit::new(&[0xA0], &Asn1Boolean::from(true)));
         }
     }
     crate::impl_sequence_encode!(Tagged, &[0x60]);
@@ -175,7 +175,7 @@ mod tests {
         impl SequenceFields for FailedSequence {
             fn fields(&self, _: EncodingOptions, sink: &mut dyn FnMut(&dyn Encode)) {
                 sink(&Fail);
-                sink(&Asn1Boolean(true));
+                sink(&Asn1Boolean::from(true));
             }
         }
         crate::impl_sequence_encode!(FailedSequence);

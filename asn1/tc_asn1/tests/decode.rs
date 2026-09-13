@@ -31,7 +31,7 @@ fn the_first_tlv_is_consumed_but_all_of_its_content_must_be_valid() {
     let options = DecodingOptions::default();
     assert_eq!(
         Asn1Boolean::try_decode(&[0x80, 1, 0xff, 0], options),
-        Ok((3, Asn1Boolean(true)))
+        Ok((3, Asn1Boolean::from(true)))
     );
     assert_eq!(
         Asn1Null::try_decode(&[0x80, 0, 0], options),

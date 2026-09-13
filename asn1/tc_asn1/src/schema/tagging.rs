@@ -60,7 +60,8 @@ impl Encode for Explicit<'_> {
 /// # Examples
 /// ```
 /// use tc_asn1::{Asn1Boolean, Encode, EncodingOptions, Implicit};
-/// let tagged = Implicit::new(&[0x80], &Asn1Boolean(true));
+/// let flag = Asn1Boolean::from(true);
+/// let tagged = Implicit::new(&[0x80], &flag);
 /// let mut out = [0; 3];
 /// tagged.encode(EncodingOptions::Der, &mut out)?;
 /// assert_eq!(out, [0x80, 1, 0xFF]);
@@ -140,7 +141,8 @@ mod tests {
     }
     #[test]
     fn implicit_tagging_replaces_only_the_identifier() {
-        let value = Implicit::new(&[0x80], &Asn1Boolean(true));
+        let flag = Asn1Boolean::from(true);
+        let value = Implicit::new(&[0x80], &flag);
         let mut out = [0; 3];
         value.encode(EncodingOptions::Der, &mut out).unwrap();
         assert_eq!(out, [0x80, 1, 255]);

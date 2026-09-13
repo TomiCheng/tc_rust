@@ -11,7 +11,7 @@ use crate::{
 /// ```
 /// use tc_asn1::{Asn1Boolean, Asn1Integer, DecodingOptions, Fields};
 /// let mut fields = Fields::new(&[2, 1, 5], DecodingOptions::default())?;
-/// assert!(!fields.default(&[1], Asn1Boolean(false))?.0);
+/// assert!(!fields.default(&[1], Asn1Boolean::from(false))?.is_true());
 /// let number: Asn1Integer = fields.required(&[2])?;
 /// assert_eq!(i64::try_from(&number)?, 5);
 /// fields.finish()?;
@@ -197,23 +197,23 @@ mod tests {
         assert!(
             Fields::new(&[1, 1, 255], DecodingOptions::default())
                 .unwrap()
-                .default(&[1], Asn1Boolean(false))
+                .default(&[1], Asn1Boolean::from(false))
                 .unwrap()
-                .0
+                .is_true()
         );
         assert!(
             !Fields::new(&[], DecodingOptions::default())
                 .unwrap()
-                .default(&[1], Asn1Boolean(false))
+                .default(&[1], Asn1Boolean::from(false))
                 .unwrap()
-                .0
+                .is_true()
         );
         assert!(
             !Fields::new(&[1, 1, 0], DecodingOptions::default())
                 .unwrap()
-                .default(&[1], Asn1Boolean(false))
+                .default(&[1], Asn1Boolean::from(false))
                 .unwrap()
-                .0
+                .is_true()
         );
     }
     #[test]
@@ -251,7 +251,7 @@ mod tests {
         .unwrap();
         assert_eq!(
             fields.implicit::<Asn1Boolean>(&[0x80]),
-            Ok(Asn1Boolean(true))
+            Ok(Asn1Boolean::from(true))
         );
         assert_eq!(fields.finish(), Ok(()));
         assert_eq!(
@@ -273,7 +273,7 @@ mod tests {
         );
         assert_eq!(
             fields.optional_implicit::<Asn1Boolean>(&[0x80]),
-            Ok(Some(Asn1Boolean(true)))
+            Ok(Some(Asn1Boolean::from(true)))
         );
         assert_eq!(fields.optional_explicit::<Asn1Null>(&[0xA0]), Ok(None));
         assert_eq!(fields.finish(), Ok(()));
@@ -347,7 +347,7 @@ mod tests {
         }
         let mut fields =
             Fields::new(&[1, 1, 255, 0xA0, 2, 5, 0], DecodingOptions::default()).unwrap();
-        assert!(fields.required::<Choice>(&[1]).unwrap().0.0);
+        assert!(fields.required::<Choice>(&[1]).unwrap().0.is_true());
         let any = fields.explicit::<Asn1Any>(&[0xA0]).unwrap();
         assert_eq!(any.as_ref().tag(), &[5]);
         fields.finish().unwrap();
@@ -481,8 +481,8 @@ mod tests {
         let mut fields = Fields::new(&input, DecodingOptions::default()).unwrap();
         assert_eq!(fields.optional::<Asn1Boolean>(&[1]), Ok(None));
         assert_eq!(
-            fields.default(&[1], Asn1Boolean(false)),
-            Ok(Asn1Boolean(false))
+            fields.default(&[1], Asn1Boolean::from(false)),
+            Ok(Asn1Boolean::from(false))
         );
         assert_eq!(fields.peek().unwrap().unwrap().raw(), input);
         fields.required::<Asn1Any>(&[0x21]).unwrap();

@@ -89,7 +89,7 @@ impl Asn1Any {
     /// let (_, saved) = Asn1Any::try_decode(&[1, 1, 0xFF], options)?;
     /// let view = saved.as_ref();
     /// assert_eq!(view.tag(), Asn1Boolean::TAG); // Validate the schema's tag first.
-    /// assert!(view.decode_as::<Asn1Boolean>(options)?.0);
+    /// assert!(view.decode_as::<Asn1Boolean>(options)?.is_true());
     /// assert_eq!(view.raw().as_ptr(), saved.raw().as_ptr());
     /// # Ok::<(), tc_asn1::Asn1Error>(())
     /// ```
@@ -306,7 +306,7 @@ mod tests {
         let (_, any) = Asn1Any::try_decode(&[0x01, 0x01, 0xFF], OPTIONS).unwrap();
         assert_eq!(
             any.as_ref().decode_as::<Asn1Boolean>(OPTIONS),
-            Ok(Asn1Boolean(true))
+            Ok(Asn1Boolean::from(true))
         );
     }
 

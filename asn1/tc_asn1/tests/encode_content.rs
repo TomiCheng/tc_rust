@@ -81,10 +81,13 @@ fn every_universal_value_encodes_contents_through_the_public_trait() {
     check_decoded::<Asn1TeletexString>(&[0xFF]);
     check_decoded::<Asn1VideotexString>(&[0xFF]);
     check(Asn1SequenceOf::from(vec![
-        Asn1Boolean(true),
-        Asn1Boolean(false),
+        Asn1Boolean::from(true),
+        Asn1Boolean::from(false),
     ]));
-    check(Asn1SetOf::from(vec![Asn1Boolean(true), Asn1Boolean(false)]));
+    check(Asn1SetOf::from(vec![
+        Asn1Boolean::from(true),
+        Asn1Boolean::from(false),
+    ]));
     check(Asn1SequenceOf::<Asn1Null>::new());
     check(Asn1SetOf::<Asn1Null>::new());
     check_decoded::<Asn1Real>(&[]);
@@ -161,7 +164,7 @@ fn constructed_contents_preserve_child_headers_end_markers_and_set_ordering() {
     }
     for encoding in [
         ExternalEncoding::SingleAsn1Type(Box::new(Asn1Object::Sequence(vec![
-            Asn1Boolean(true).into(),
+            Asn1Boolean::from(true).into(),
         ]))),
         ExternalEncoding::OctetAligned(Asn1OctetString::new(&[0xAA; 1001])),
         ExternalEncoding::Arbitrary(Asn1BitString::from_bits(&[0xF8; 1000], 7997)),
@@ -178,7 +181,7 @@ fn constructed_contents_preserve_child_headers_end_markers_and_set_ordering() {
         Asn1OctetString::new(&[0xFF; 1001]),
         Asn1OctetString::new(&[0x00; 1001]),
     ])]));
-    let set = Asn1SetOf::from(vec![Asn1Boolean(true), Asn1Boolean(false)]);
+    let set = Asn1SetOf::from(vec![Asn1Boolean::from(true), Asn1Boolean::from(false)]);
     for rules in RULES {
         let expected = if rules.is_canonical() {
             [1, 1, 0, 1, 1, 0xFF]

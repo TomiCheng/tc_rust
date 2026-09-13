@@ -37,7 +37,7 @@ use tc_asn1::{
 ///
 /// // 殼裡的東西：知道 2.5.29.19 是 BasicConstraints 才這樣解
 /// let inner = ext.extn_value_as::<Asn1SequenceOf<Asn1Boolean>>(DecodingOptions::default())?;
-/// assert_eq!(inner.members(), &[Asn1Boolean(true)]);
+/// assert_eq!(inner.members(), &[Asn1Boolean::from(true)]);
 ///
 /// // 重編回原位元組
 /// let mut out = vec![0_u8; ext.encoded_len(EncodingOptions::Der)];
@@ -118,7 +118,9 @@ impl<'a> DecodeContent<'a> for Extension {
     fn try_decode_content(value: &'a [u8], options: DecodingOptions) -> Result<Self, Asn1Error> {
         let mut fields = Fields::new(value, options)?;
         let extn_id = fields.required(tc_asn1::tag::OBJECT_IDENTIFIER)?;
-        let critical = fields.default(tc_asn1::tag::BOOLEAN, Asn1Boolean(false))?.0;
+        let critical = fields
+            .default(tc_asn1::tag::BOOLEAN, Asn1Boolean::from(false))?
+            .is_true();
         let value_tag = fields.peek()?.ok_or(Asn1Error::Truncated)?.tag();
         if value_tag != tc_asn1::tag::OCTET_STRING
             && value_tag != tc_asn1::tag::CONSTRUCTED_OCTET_STRING
@@ -140,7 +142,7 @@ impl SequenceFields for Extension {
     fn fields(&self, _: EncodingOptions, sink: &mut dyn FnMut(&dyn Encode)) {
         sink(&self.extn_id);
         if self.critical {
-            sink(&Asn1Boolean(true));
+            sink(&Asn1Boolean::from(true));
         }
         sink(&self.extn_value);
     }

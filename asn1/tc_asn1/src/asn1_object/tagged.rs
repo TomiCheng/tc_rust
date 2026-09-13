@@ -199,7 +199,7 @@ mod tests {
         assert_eq!(tagged.content(), &TaggedContent::Primitive(vec![0xff]));
         assert_eq!(
             tagged.implicit_as::<Asn1Boolean>(DecodingOptions::default()),
-            Ok(Asn1Boolean(true))
+            Ok(Asn1Boolean::from(true))
         );
         assert_eq!(tagged.explicit(), Err(Asn1Error::MalformedValue));
         assert!(tagged.children().is_none());

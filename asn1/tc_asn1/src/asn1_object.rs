@@ -845,7 +845,10 @@ mod tests {
     fn known_elements_normalize_ber_headers_and_boolean_contents() {
         let input = [0x30, 0x80, 1, 0x81, 1, 1, 0, 0];
         let tree = decode(&input);
-        assert_eq!(tree, Asn1Object::Sequence(vec![Asn1Boolean(true).into()]));
+        assert_eq!(
+            tree,
+            Asn1Object::Sequence(vec![Asn1Boolean::from(true).into()])
+        );
         assert_eq!(
             encode_member(&tree, EncodingOptions::Der).unwrap(),
             [0x30, 3, 1, 1, 0xff]
@@ -891,7 +894,7 @@ mod tests {
             None,
             None,
             None,
-            ExternalEncoding::SingleAsn1Type(Box::new(Asn1Boolean(true).into())),
+            ExternalEncoding::SingleAsn1Type(Box::new(Asn1Boolean::from(true).into())),
         );
         assert_eq!(tree, Asn1Object::External(expected.clone()));
         let Asn1Object::External(value) = &tree else {
@@ -900,7 +903,7 @@ mod tests {
         assert_eq!(value, &expected);
         assert_eq!(
             value.encoding(),
-            &ExternalEncoding::SingleAsn1Type(Box::new(Asn1Boolean(true).into()))
+            &ExternalEncoding::SingleAsn1Type(Box::new(Asn1Boolean::from(true).into()))
         );
         assert_eq!(encode_member(&tree, EncodingOptions::Der).unwrap(), input);
         assert_eq!(
@@ -929,7 +932,7 @@ mod tests {
         for tree in [
             Asn1Object::Null,
             Asn1Object::Sequence(vec![Asn1Integer::from(7_u8).into()]),
-            Asn1Object::Set(vec![Asn1Object::Null, Asn1Boolean(false).into()]),
+            Asn1Object::Set(vec![Asn1Object::Null, Asn1Boolean::from(false).into()]),
             Asn1Tagged::primitive(&[0x80], &[1, 2]).unwrap().into(),
             Asn1Tagged::constructed(&[0x80], vec![Asn1Object::Null])
                 .unwrap()

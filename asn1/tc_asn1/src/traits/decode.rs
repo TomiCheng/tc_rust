@@ -40,7 +40,7 @@ pub trait Decode<'a>: Sized {
     /// // The schema selected [0] IMPLICIT BOOLEAN. The last byte is a sibling.
     /// let (used, value) = Asn1Boolean::try_decode(&[0x80, 1, 0xff, 0], DecodingOptions::default())?;
     /// assert_eq!(used, 3);
-    /// assert!(value.0);
+    /// assert!(value.is_true());
     /// # Ok::<(), tc_asn1::Asn1Error>(())
     /// ```
     fn try_decode(buff: &'a [u8], options: DecodingOptions) -> Result<(usize, Self), Asn1Error>;
