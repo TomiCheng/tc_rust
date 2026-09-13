@@ -120,20 +120,21 @@ pub struct Asn1Ref<'a> {
 
 impl<'a> Asn1Ref<'a> {
     /// Restore boundaries previously obtained from a parsed element. Constant time.
-    /// `raw` must contain exactly that element, with only its optional EOC after
-    /// `value_offset + value_len`. The caller must preserve the validated offsets.
+    /// `raw` must contain exactly that element, with the identifier ending at
+    /// `length_offset`, contents in `value_offset..eoc_offset`, and only the
+    /// optional EOC after `eoc_offset`. The caller must preserve the validated offsets.
     pub(crate) fn from_validated_parts(
         raw: &'a [u8],
-        tag_len: usize,
+        length_offset: usize,
         value_offset: usize,
-        value_len: usize,
+        eoc_offset: usize,
     ) -> Self {
         Self {
             raw,
             total_len: raw.len(),
-            tag: &raw[..tag_len],
-            value: &raw[value_offset..value_offset + value_len],
-            eoc: &raw[value_offset + value_len..],
+            tag: &raw[..length_offset],
+            value: &raw[value_offset..eoc_offset],
+            eoc: &raw[eoc_offset..],
         }
     }
 
