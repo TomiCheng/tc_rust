@@ -25,7 +25,7 @@ use crate::traits::{DecodeContent, Encode};
 /// # Examples
 /// ```
 /// use tc_asn1::{Asn1Boolean, Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
-/// let (used, value) = Asn1Boolean::try_decode(
+/// let (used, value) = Asn1Boolean::decode(
 ///     &[0x01, 0x01, 0x7F], DecodingOptions::default(),
 /// )?;
 /// assert_eq!(used, 3);
@@ -118,25 +118,25 @@ impl<'a> crate::Decode<'a> for Asn1Boolean {
     /// let options = DecodingOptions::default();
     /// // The schema selected context-specific [0] IMPLICIT BOOLEAN.
     /// let input = [0x80, 1, 0xFF, 0];
-    /// let (used, value) = Asn1Boolean::try_decode(&input, options)?;
+    /// let (used, value) = Asn1Boolean::decode(&input, options)?;
     /// assert!(value.is_true());
     /// assert_eq!(&input[used..], &[0]);
     /// assert_eq!(
-    ///     Asn1Boolean::try_decode(&[0x01, 2, 0xFF, 0], options),
+    ///     Asn1Boolean::decode(&[0x01, 2, 0xFF, 0], options),
     ///     Err(Asn1Error::MalformedValue),
     /// );
     /// assert_eq!(
-    ///     Asn1Boolean::try_decode(&[0x21, 0], options),
+    ///     Asn1Boolean::decode(&[0x21, 0], options),
     ///     Err(Asn1Error::UnexpectedTag),
     /// );
     /// # Ok::<(), Asn1Error>(())
     /// ```
-    fn try_decode(buff: &'a [u8], options: DecodingOptions) -> Result<(usize, Self), Asn1Error> {
+    fn decode(buff: &'a [u8], options: DecodingOptions) -> Result<(usize, Self), Asn1Error> {
         let element = crate::Asn1Ref::parse(buff, options)?;
         if element.is_constructed() {
             return Err(Asn1Error::UnexpectedTag);
         }
-        let value = <Self as DecodeContent<'a>>::try_decode_content(element.value(), options)?;
+        let value = <Self as DecodeContent<'a>>::decode_content(element.value(), options)?;
         Ok((element.total_len(), value))
     }
 }
@@ -157,15 +157,15 @@ impl<'a> DecodeContent<'a> for Asn1Boolean {
     /// ```
     /// use tc_asn1::{Asn1Boolean, Asn1Error, DecodeContent, DecodingOptions};
     /// let options = DecodingOptions::default();
-    /// assert!(Asn1Boolean::try_decode_content(&[0], options)?.is_false());
-    /// assert!(Asn1Boolean::try_decode_content(&[1], options)?.is_true());
+    /// assert!(Asn1Boolean::decode_content(&[0], options)?.is_false());
+    /// assert!(Asn1Boolean::decode_content(&[1], options)?.is_true());
     /// assert_eq!(
-    ///     Asn1Boolean::try_decode_content(&[], options),
+    ///     Asn1Boolean::decode_content(&[], options),
     ///     Err(Asn1Error::MalformedValue),
     /// );
     /// # Ok::<(), Asn1Error>(())
     /// ```
-    fn try_decode_content(value: &'a [u8], options: DecodingOptions) -> Result<Self, Asn1Error> {
+    fn decode_content(value: &'a [u8], options: DecodingOptions) -> Result<Self, Asn1Error> {
         options.check_content_len(value.len())?;
         match value {
             // Accept BER truth values; re-encoding normalizes nonzero octets to FF.
@@ -333,7 +333,7 @@ mod tests {
     #[test]
     fn a_non_canonical_true_re_encodes_as_der() {
         // Re-encoding exposes the noncanonical TRUE octet: 01 becomes FF.
-        let (_, b) = Asn1Boolean::try_decode(&[0x01, 0x01, 0x01], OPTIONS).unwrap();
+        let (_, b) = Asn1Boolean::decode(&[0x01, 0x01, 0x01], OPTIONS).unwrap();
         let mut out = [0_u8; 4];
         b.encode(&EncodingOptions::new(EncodingType::Der), &mut out)
             .unwrap();
@@ -346,11 +346,11 @@ mod tests {
     #[test]
     fn true_and_false_decode_from_their_single_octet() {
         assert_eq!(
-            Asn1Boolean::try_decode(&[0x01, 0x01, 0xFF], OPTIONS),
+            Asn1Boolean::decode(&[0x01, 0x01, 0xFF], OPTIONS),
             Ok((3, Asn1Boolean(true)))
         );
         assert_eq!(
-            Asn1Boolean::try_decode(&[0x01, 0x01, 0x00], OPTIONS),
+            Asn1Boolean::decode(&[0x01, 0x01, 0x00], OPTIONS),
             Ok((3, Asn1Boolean(false)))
         );
     }
@@ -359,7 +359,7 @@ mod tests {
     fn any_non_zero_octet_is_true_under_ber() {
         for octet in [0x01_u8, 0x7F, 0x80, 0xFE] {
             assert_eq!(
-                Asn1Boolean::try_decode_content(&[octet], OPTIONS),
+                Asn1Boolean::decode_content(&[octet], OPTIONS),
                 Ok(Asn1Boolean(true))
             );
         }
@@ -368,11 +368,11 @@ mod tests {
     #[test]
     fn contents_of_any_length_but_one_are_rejected() {
         assert_eq!(
-            Asn1Boolean::try_decode_content(&[], OPTIONS),
+            Asn1Boolean::decode_content(&[], OPTIONS),
             Err(Asn1Error::MalformedValue)
         );
         assert_eq!(
-            Asn1Boolean::try_decode_content(&[0xFF, 0xFF], OPTIONS),
+            Asn1Boolean::decode_content(&[0xFF, 0xFF], OPTIONS),
             Err(Asn1Error::MalformedValue)
         );
     }

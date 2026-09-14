@@ -30,7 +30,7 @@ use tc_asn1::{
 ///     0x30, 0x0F, 0x06, 0x03, 0x55, 0x1D, 0x13, 0x01, 0x01, 0xFF,
 ///     0x04, 0x05, 0x30, 0x03, 0x01, 0x01, 0xFF,
 /// ];
-/// let (used, ext) = Extension::try_decode(&bytes, DecodingOptions::default())?;
+/// let (used, ext) = Extension::decode(&bytes, DecodingOptions::default())?;
 /// assert_eq!(used, bytes.len());
 /// assert_eq!(ext.extn_id().to_string(), "2.5.29.19");
 /// assert!(ext.critical());
@@ -87,7 +87,7 @@ impl Extension {
         &'a self,
         options: DecodingOptions,
     ) -> Result<T, Asn1Error> {
-        let (used, value) = T::try_decode(self.extn_value.as_bytes(), options)?;
+        let (used, value) = T::decode(self.extn_value.as_bytes(), options)?;
         if used != self.extn_value.as_bytes().len() {
             return Err(Asn1Error::TrailingData);
         }
@@ -96,7 +96,7 @@ impl Extension {
 }
 
 impl<'a> tc_asn1::Decode<'a> for Extension {
-    fn try_decode(
+    fn decode(
         buff: &'a [u8],
         options: tc_asn1::DecodingOptions,
     ) -> Result<(usize, Self), tc_asn1::Asn1Error> {
@@ -104,8 +104,7 @@ impl<'a> tc_asn1::Decode<'a> for Extension {
         if !element.is_constructed() {
             return Err(tc_asn1::Asn1Error::UnexpectedTag);
         }
-        let value =
-            <Self as tc_asn1::DecodeContent<'a>>::try_decode_content(element.value(), options)?;
+        let value = <Self as tc_asn1::DecodeContent<'a>>::decode_content(element.value(), options)?;
         Ok((element.total_len(), value))
     }
 }
@@ -115,7 +114,7 @@ impl<'a> DecodeContent<'a> for Extension {
     ///
     /// `critical` 是 DEFAULT FALSE：第二個子元素的 tag 是 BOOLEAN 就是它，否則
     /// 視為省略。明寫 `FALSE` 不是 DER，但寬鬆接受；重編時會消失。
-    fn try_decode_content(value: &'a [u8], options: DecodingOptions) -> Result<Self, Asn1Error> {
+    fn decode_content(value: &'a [u8], options: DecodingOptions) -> Result<Self, Asn1Error> {
         let mut fields = Fields::new(value, options)?;
         let extn_id = fields.required(tc_asn1::tag::OBJECT_IDENTIFIER)?;
         let critical = fields
@@ -178,7 +177,7 @@ mod tests {
                 .unwrap(),
             cer
         );
-        let decoded = Extension::try_decode(&cer, OPTIONS)
+        let decoded = Extension::decode(&cer, OPTIONS)
             .map(|(_, value)| value)
             .unwrap();
         assert_eq!(decoded.extn_id(), value.extn_id());
@@ -193,7 +192,7 @@ mod tests {
         assert!(matches!(
             {
                 let input: &[u8] = &cer;
-                Extension::try_decode(input, OPTIONS).and_then(|(used, value)| {
+                Extension::decode(input, OPTIONS).and_then(|(used, value)| {
                     if used != input.len() {
                         Err(tc_asn1::Asn1Error::TrailingData)
                     } else if value
@@ -245,7 +244,7 @@ mod tests {
     #[test]
     fn an_omitted_critical_decodes_as_false_and_stays_omitted() {
         let input = ski();
-        let (used, ext) = Extension::try_decode(&input, OPTIONS).unwrap();
+        let (used, ext) = Extension::decode(&input, OPTIONS).unwrap();
 
         assert_eq!(used, input.len());
         assert_eq!(ext.extn_id().to_string(), "2.5.29.14");
@@ -266,7 +265,7 @@ mod tests {
         input.splice(7..7, [0x01, 0x01, 0x00]);
         input[1] += 3;
 
-        let (used, ext) = Extension::try_decode(&input, OPTIONS).unwrap();
+        let (used, ext) = Extension::decode(&input, OPTIONS).unwrap();
         assert_eq!(used, input.len());
         assert!(!ext.critical());
 
@@ -292,7 +291,7 @@ mod tests {
         // 只有 extnID 和 critical
         let input = [0x30, 0x08, 0x06, 0x03, 0x55, 0x1D, 0x13, 0x01, 0x01, 0xFF];
         assert_eq!(
-            Extension::try_decode(&input, OPTIONS).err(),
+            Extension::decode(&input, OPTIONS).err(),
             Some(Asn1Error::Truncated)
         );
     }

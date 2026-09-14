@@ -42,7 +42,7 @@ use crate::AlgorithmIdentifier;
 /// );
 /// assert_eq!(&out[19..], &digest);
 ///
-/// let (used, decoded) = DigestInfo::try_decode(&out, DecodingOptions::default())?;
+/// let (used, decoded) = DigestInfo::decode(&out, DecodingOptions::default())?;
 /// assert_eq!(used, out.len());
 /// assert_eq!(decoded.digest(), &digest);
 /// assert_eq!(decoded.digest_algorithm().algorithm().to_string(), "2.16.840.1.101.3.4.2.1");
@@ -76,7 +76,7 @@ impl DigestInfo {
 }
 
 impl<'a> tc_asn1::Decode<'a> for DigestInfo {
-    fn try_decode(
+    fn decode(
         buff: &'a [u8],
         options: tc_asn1::DecodingOptions,
     ) -> Result<(usize, Self), tc_asn1::Asn1Error> {
@@ -84,8 +84,7 @@ impl<'a> tc_asn1::Decode<'a> for DigestInfo {
         if !element.is_constructed() {
             return Err(tc_asn1::Asn1Error::UnexpectedTag);
         }
-        let value =
-            <Self as tc_asn1::DecodeContent<'a>>::try_decode_content(element.value(), options)?;
+        let value = <Self as tc_asn1::DecodeContent<'a>>::decode_content(element.value(), options)?;
         Ok((element.total_len(), value))
     }
 }
@@ -93,7 +92,7 @@ impl<'a> tc_asn1::Decode<'a> for DigestInfo {
 impl<'a> DecodeContent<'a> for DigestInfo {
     /// 變動時間：分支只依編碼結構。剛好兩個欄位，多的回
     /// [`Asn1Error::TrailingData`]，少的回 [`Asn1Error::Truncated`]。
-    fn try_decode_content(value: &'a [u8], options: DecodingOptions) -> Result<Self, Asn1Error> {
+    fn decode_content(value: &'a [u8], options: DecodingOptions) -> Result<Self, Asn1Error> {
         let mut fields = Fields::new(value, options)?;
         let digest_algorithm = fields.required(tc_asn1::tag::SEQUENCE)?;
         let value_tag = fields.peek()?.ok_or(Asn1Error::Truncated)?.tag();
@@ -160,7 +159,7 @@ mod tests {
         let ber = &EncodingOptions::new(EncodingType::Ber(tc_asn1::LengthForm::Indefinite));
         assert_eq!(value.encoded_len(ber), cer.len());
         assert_eq!(value.encode_to_vec(ber).unwrap(), cer);
-        let decoded = DigestInfo::try_decode(&cer, OPTIONS)
+        let decoded = DigestInfo::decode(&cer, OPTIONS)
             .map(|(_, value)| value)
             .unwrap();
         assert_eq!(decoded.digest(), value.digest());
@@ -183,7 +182,7 @@ mod tests {
         assert!(matches!(
             {
                 let input: &[u8] = &cer;
-                DigestInfo::try_decode(input, OPTIONS).and_then(|(used, value)| {
+                DigestInfo::decode(input, OPTIONS).and_then(|(used, value)| {
                     if used != input.len() {
                         Err(tc_asn1::Asn1Error::TrailingData)
                     } else if value
@@ -246,7 +245,7 @@ mod tests {
         let mut input = SHA1_PREFIX.to_vec();
         input.extend_from_slice(&[0x11; 20]);
 
-        let (used, info) = DigestInfo::try_decode(&input, OPTIONS).unwrap();
+        let (used, info) = DigestInfo::decode(&input, OPTIONS).unwrap();
         assert_eq!(used, input.len());
         assert_eq!(
             info.digest_algorithm().algorithm().to_string(),
@@ -263,7 +262,7 @@ mod tests {
             0x30, 0x0B, 0x30, 0x09, 0x06, 0x05, 0x2B, 0x0E, 0x03, 0x02, 0x1A, 0x05, 0x00,
         ];
         assert_eq!(
-            DigestInfo::try_decode(&input, OPTIONS).err(),
+            DigestInfo::decode(&input, OPTIONS).err(),
             Some(Asn1Error::Truncated)
         );
     }
@@ -275,7 +274,7 @@ mod tests {
         input.extend_from_slice(&[0x02, 0x01, 0x05]);
         input[1] = (input.len() - 2) as u8;
         assert_eq!(
-            DigestInfo::try_decode(&input, OPTIONS).err(),
+            DigestInfo::decode(&input, OPTIONS).err(),
             Some(Asn1Error::UnexpectedTag)
         );
     }

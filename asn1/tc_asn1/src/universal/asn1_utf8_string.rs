@@ -38,18 +38,15 @@ impl From<String> for Asn1Utf8String {
 }
 
 impl<'a> crate::Decode<'a> for Asn1Utf8String {
-    fn try_decode(
+    fn decode(
         buff: &'a [u8],
         options: crate::DecodingOptions,
     ) -> Result<(usize, Self), crate::Asn1Error> {
         let element = crate::Asn1Ref::parse(buff, options)?;
         let value = if element.is_constructed() {
-            <Self as crate::DecodeConstructed<'a>>::try_decode_constructed(
-                element.value(),
-                options,
-            )?
+            <Self as crate::DecodeConstructed<'a>>::decode_constructed(element.value(), options)?
         } else {
-            <Self as crate::DecodeContent<'a>>::try_decode_content(element.value(), options)?
+            <Self as crate::DecodeContent<'a>>::decode_content(element.value(), options)?
         };
         Ok((element.total_len(), value))
     }
@@ -57,7 +54,7 @@ impl<'a> crate::Decode<'a> for Asn1Utf8String {
 
 impl<'a> DecodeContent<'a> for Asn1Utf8String {
     /// 不合法的 UTF-8（含過長編碼、代理對）一律拒絕，這是 `from_utf8` 的規則。
-    fn try_decode_content(value: &'a [u8], options: DecodingOptions) -> Result<Self, Asn1Error> {
+    fn decode_content(value: &'a [u8], options: DecodingOptions) -> Result<Self, Asn1Error> {
         options.check_content_len(value.len())?;
         let text = core::str::from_utf8(value).map_err(|_| Asn1Error::MalformedValue)?;
         Ok(Self::new(text))
@@ -129,11 +126,11 @@ mod tests {
             expected
         );
         assert_eq!(
-            Asn1Utf8String::try_decode(&expected, OPTIONS).map(|(_, value)| value),
+            Asn1Utf8String::decode(&expected, OPTIONS).map(|(_, value)| value),
             Ok(value.clone())
         );
         assert_eq!(
-            crate::Asn1Object::try_decode(&expected, OPTIONS).map(|(_, value)| value),
+            crate::Asn1Object::decode(&expected, OPTIONS).map(|(_, value)| value),
             Ok(tree)
         );
         let mut definite = alloc::vec![0x0c, 0x82, 3, 0xe9];
@@ -154,7 +151,7 @@ mod tests {
             &[0x2c, 8, 0x24, 3, 4, 1, 0xc3, 4, 1, 0xa9],
         ] {
             assert_eq!(
-                Asn1Utf8String::try_decode(input, OPTIONS)
+                Asn1Utf8String::decode(input, OPTIONS)
                     .map(|(_, value)| value)
                     .unwrap()
                     .as_str(),
@@ -162,14 +159,14 @@ mod tests {
             );
         }
         assert_eq!(
-            Asn1Utf8String::try_decode(&[0x2c, 3, 4, 1, 0xc3], OPTIONS).map(|(_, value)| value),
+            Asn1Utf8String::decode(&[0x2c, 3, 4, 1, 0xc3], OPTIONS).map(|(_, value)| value),
             Err(Asn1Error::MalformedValue)
         );
         assert_eq!(
-            Asn1Utf8String::try_decode(&[0x2c, 3, 0x0c, 1, b'A'], OPTIONS).map(|(_, value)| value),
+            Asn1Utf8String::decode(&[0x2c, 3, 0x0c, 1, b'A'], OPTIONS).map(|(_, value)| value),
             Err(Asn1Error::UnexpectedTag)
         );
-        let tree = crate::Asn1Object::try_decode(&[0x2c, 3, 4, 1, b'A'], OPTIONS)
+        let tree = crate::Asn1Object::decode(&[0x2c, 3, 4, 1, b'A'], OPTIONS)
             .map(|(_, value)| value)
             .unwrap();
         assert_eq!(tree, crate::Asn1Object::from(Asn1Utf8String::new("A")));
@@ -195,7 +192,7 @@ mod tests {
             .unwrap();
         assert_eq!(out[0], 0x0C);
 
-        let (used, decoded) = Asn1Utf8String::try_decode(&out[..written], OPTIONS).unwrap();
+        let (used, decoded) = Asn1Utf8String::decode(&out[..written], OPTIONS).unwrap();
         assert_eq!(used, written);
         assert_eq!(decoded.as_str(), text);
     }
@@ -209,7 +206,7 @@ mod tests {
             &[0xE4, 0xB8],
         ] {
             assert_eq!(
-                Asn1Utf8String::try_decode_content(bytes, OPTIONS),
+                Asn1Utf8String::decode_content(bytes, OPTIONS),
                 Err(Asn1Error::MalformedValue),
                 "{bytes:02X?}"
             );
@@ -218,7 +215,7 @@ mod tests {
 
     #[test]
     fn an_empty_string_is_valid() {
-        let (used, s) = Asn1Utf8String::try_decode(&[0x0C, 0x00], OPTIONS).unwrap();
+        let (used, s) = Asn1Utf8String::decode(&[0x0C, 0x00], OPTIONS).unwrap();
         assert_eq!(used, 2);
         assert_eq!(s.as_str(), "");
     }

@@ -63,7 +63,7 @@ impl Asn1UtcTime {
 }
 
 impl<'a> crate::Decode<'a> for Asn1UtcTime {
-    fn try_decode(
+    fn decode(
         buff: &'a [u8],
         options: crate::DecodingOptions,
     ) -> Result<(usize, Self), crate::Asn1Error> {
@@ -71,15 +71,14 @@ impl<'a> crate::Decode<'a> for Asn1UtcTime {
         if element.is_constructed() {
             return Err(crate::Asn1Error::UnexpectedTag);
         }
-        let value =
-            <Self as crate::DecodeContent<'a>>::try_decode_content(element.value(), options)?;
+        let value = <Self as crate::DecodeContent<'a>>::decode_content(element.value(), options)?;
         Ok((element.total_len(), value))
     }
 }
 
 impl<'a> DecodeContent<'a> for Asn1UtcTime {
     /// 變動時間：分支只依編碼結構。只接受 `YYMMDDhhmmssZ`。
-    fn try_decode_content(value: &'a [u8], options: DecodingOptions) -> Result<Self, Asn1Error> {
+    fn decode_content(value: &'a [u8], options: DecodingOptions) -> Result<Self, Asn1Error> {
         options.check_content_len(value.len())?;
         let [yy @ .., b'Z'] = value else {
             return Err(Asn1Error::MalformedValue);
@@ -154,7 +153,7 @@ mod tests {
     #[test]
     fn a_der_utc_time_decodes_and_prints_as_iso_8601() {
         let input = b"\x17\x0D240911123000Z";
-        let (used, t) = Asn1UtcTime::try_decode(input, OPTIONS).unwrap();
+        let (used, t) = Asn1UtcTime::decode(input, OPTIONS).unwrap();
         assert_eq!(used, 15);
         assert_eq!(t.to_string(), "2024-09-11T12:30:00Z");
         assert_eq!(t, Asn1UtcTime::new(2024, 9, 11, 12, 30, 0).unwrap());
@@ -163,25 +162,25 @@ mod tests {
     #[test]
     fn the_century_flips_at_fifty() {
         assert_eq!(
-            Asn1UtcTime::try_decode_content(b"500101000000Z", OPTIONS)
+            Asn1UtcTime::decode_content(b"500101000000Z", OPTIONS)
                 .unwrap()
                 .year(),
             1950
         );
         assert_eq!(
-            Asn1UtcTime::try_decode_content(b"991231235959Z", OPTIONS)
+            Asn1UtcTime::decode_content(b"991231235959Z", OPTIONS)
                 .unwrap()
                 .year(),
             1999
         );
         assert_eq!(
-            Asn1UtcTime::try_decode_content(b"000101000000Z", OPTIONS)
+            Asn1UtcTime::decode_content(b"000101000000Z", OPTIONS)
                 .unwrap()
                 .year(),
             2000
         );
         assert_eq!(
-            Asn1UtcTime::try_decode_content(b"491231235959Z", OPTIONS)
+            Asn1UtcTime::decode_content(b"491231235959Z", OPTIONS)
                 .unwrap()
                 .year(),
             2049
@@ -191,15 +190,15 @@ mod tests {
     #[test]
     fn ber_variants_are_deliberately_rejected() {
         assert!(
-            Asn1UtcTime::try_decode_content(b"2409111230Z", OPTIONS).is_err(),
+            Asn1UtcTime::decode_content(b"2409111230Z", OPTIONS).is_err(),
             "沒有秒"
         );
         assert!(
-            Asn1UtcTime::try_decode_content(b"240911123000+0800", OPTIONS).is_err(),
+            Asn1UtcTime::decode_content(b"240911123000+0800", OPTIONS).is_err(),
             "時區偏移"
         );
         assert!(
-            Asn1UtcTime::try_decode_content(b"240911123000", OPTIONS).is_err(),
+            Asn1UtcTime::decode_content(b"240911123000", OPTIONS).is_err(),
             "沒有 Z"
         );
     }
@@ -207,23 +206,23 @@ mod tests {
     #[test]
     fn out_of_range_fields_are_rejected() {
         assert!(
-            Asn1UtcTime::try_decode_content(b"241311123000Z", OPTIONS).is_err(),
+            Asn1UtcTime::decode_content(b"241311123000Z", OPTIONS).is_err(),
             "13 月"
         );
         assert!(
-            Asn1UtcTime::try_decode_content(b"240900123000Z", OPTIONS).is_err(),
+            Asn1UtcTime::decode_content(b"240900123000Z", OPTIONS).is_err(),
             "0 日"
         );
         assert!(
-            Asn1UtcTime::try_decode_content(b"240911243000Z", OPTIONS).is_err(),
+            Asn1UtcTime::decode_content(b"240911243000Z", OPTIONS).is_err(),
             "24 時"
         );
         assert!(
-            Asn1UtcTime::try_decode_content(b"240911126000Z", OPTIONS).is_err(),
+            Asn1UtcTime::decode_content(b"240911126000Z", OPTIONS).is_err(),
             "60 分"
         );
         assert!(
-            Asn1UtcTime::try_decode_content(b"24091112300AZ", OPTIONS).is_err(),
+            Asn1UtcTime::decode_content(b"24091112300AZ", OPTIONS).is_err(),
             "非數字"
         );
         assert!(
@@ -248,7 +247,7 @@ mod tests {
             .unwrap();
         assert_eq!(&out[..written], b"\x17\x0D491231235959Z");
 
-        let (_, back) = Asn1UtcTime::try_decode(&out[..written], OPTIONS).unwrap();
+        let (_, back) = Asn1UtcTime::decode(&out[..written], OPTIONS).unwrap();
         assert_eq!(back, t);
     }
 }

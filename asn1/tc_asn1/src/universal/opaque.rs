@@ -44,21 +44,18 @@ macro_rules! opaque_bytes {
         }
 
         impl<'a> $crate::Decode<'a> for $name {
-            fn try_decode(
+            fn decode(
                 buff: &'a [u8],
                 options: $crate::DecodingOptions,
             ) -> Result<(usize, Self), $crate::Asn1Error> {
                 let element = $crate::Asn1Ref::parse(buff, options)?;
                 let value = if element.is_constructed() {
-                    <Self as $crate::DecodeConstructed<'a>>::try_decode_constructed(
+                    <Self as $crate::DecodeConstructed<'a>>::decode_constructed(
                         element.value(),
                         options,
                     )?
                 } else {
-                    <Self as $crate::DecodeContent<'a>>::try_decode_content(
-                        element.value(),
-                        options,
-                    )?
+                    <Self as $crate::DecodeContent<'a>>::decode_content(element.value(), options)?
                 };
                 Ok((element.total_len(), value))
             }
@@ -67,7 +64,7 @@ macro_rules! opaque_bytes {
         impl<'a> $crate::traits::DecodeContent<'a> for $name {
             /// 任何內容都合法，包括空的。
             /// 變動時間：配置與複製量由內容長度決定。
-            fn try_decode_content(
+            fn decode_content(
                 value: &'a [u8],
                 options: $crate::decoding_options::DecodingOptions,
             ) -> Result<Self, $crate::error::Asn1Error> {
@@ -167,7 +164,7 @@ opaque_bytes!(
 ```
 use tc_asn1::{Asn1VideotexString, DecodingOptions, Decode};
 
-let (used, value) = Asn1VideotexString::try_decode(
+let (used, value) = Asn1VideotexString::decode(
     &[0x15, 3, 0x1B, 0, 0xFF], DecodingOptions::default(),
 ).unwrap();
 assert_eq!(used, 5);
@@ -225,7 +222,7 @@ mod tests {
                         assert_eq!(value.encode(rules, &mut out), Ok(5));
                         assert_eq!(out, [$tag, 3, b'A', b'B', b'C']);
                         assert_eq!(value.content_len(rules), 3);
-                        assert_eq!($name::try_decode(&out, OPTIONS), Ok((5, value.clone())));
+                        assert_eq!($name::decode(&out, OPTIONS), Ok((5, value.clone())));
                     }
                 }
 
@@ -242,7 +239,7 @@ mod tests {
                         assert_eq!(value.encode(rules, &mut out), Ok(out.len()));
                         assert_eq!(&out[..4], &[$tag, 0x82, 1, 0]);
                         assert_eq!(&out[4..], bytes.as_slice());
-                        let (used, decoded) = $name::try_decode(&out, OPTIONS).unwrap();
+                        let (used, decoded) = $name::decode(&out, OPTIONS).unwrap();
                         assert_eq!(used, out.len());
                         assert_eq!(decoded, value);
                     }
@@ -259,7 +256,7 @@ mod tests {
                         Ok(2)
                     );
                     assert_eq!(out, [$tag, 0]);
-                    assert_eq!($name::try_decode(&out, OPTIONS), Ok((2, value)));
+                    assert_eq!($name::decode(&out, OPTIONS), Ok((2, value)));
                 }
 
                 #[test]
@@ -283,7 +280,7 @@ mod tests {
     fn graphic_string_and_object_descriptor_pass_bytes_through_untouched() {
         let mut out = [0_u8; 8];
 
-        let (used, s) = Asn1GraphicString::try_decode(&[0x19, 0x02, 0xDE, 0xAD], OPTIONS).unwrap();
+        let (used, s) = Asn1GraphicString::decode(&[0x19, 0x02, 0xDE, 0xAD], OPTIONS).unwrap();
         assert_eq!((used, s.as_bytes()), (4, &[0xDE, 0xAD][..]));
         assert_eq!(
             s.encode(&EncodingOptions::new(EncodingType::Der), &mut out)
@@ -292,7 +289,7 @@ mod tests {
         );
         assert_eq!(&out[..4], &[0x19, 0x02, 0xDE, 0xAD]);
 
-        let (used, d) = Asn1ObjectDescriptor::try_decode(&[0x07, 0x01, b'x'], OPTIONS).unwrap();
+        let (used, d) = Asn1ObjectDescriptor::decode(&[0x07, 0x01, b'x'], OPTIONS).unwrap();
         assert_eq!((used, d.as_bytes()), (3, &b"x"[..]));
         assert_eq!(
             d.encode(&EncodingOptions::new(EncodingType::Der), &mut out)

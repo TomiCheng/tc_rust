@@ -21,7 +21,7 @@ impl Display for Asn1Null {
 }
 
 impl<'a> crate::Decode<'a> for Asn1Null {
-    fn try_decode(
+    fn decode(
         buff: &'a [u8],
         options: crate::DecodingOptions,
     ) -> Result<(usize, Self), crate::Asn1Error> {
@@ -29,14 +29,13 @@ impl<'a> crate::Decode<'a> for Asn1Null {
         if element.is_constructed() {
             return Err(crate::Asn1Error::UnexpectedTag);
         }
-        let value =
-            <Self as crate::DecodeContent<'a>>::try_decode_content(element.value(), options)?;
+        let value = <Self as crate::DecodeContent<'a>>::decode_content(element.value(), options)?;
         Ok((element.total_len(), value))
     }
 }
 
 impl<'a> DecodeContent<'a> for Asn1Null {
-    fn try_decode_content(value: &'a [u8], options: DecodingOptions) -> Result<Self, Asn1Error> {
+    fn decode_content(value: &'a [u8], options: DecodingOptions) -> Result<Self, Asn1Error> {
         options.check_content_len(value.len())?;
         if value.is_empty() {
             Ok(Asn1Null)
@@ -98,7 +97,7 @@ mod tests {
     #[test]
     fn null_decodes_and_reports_its_two_bytes() {
         assert_eq!(
-            Asn1Null::try_decode(&[0x05, 0x00, 0xAA], OPTIONS),
+            Asn1Null::decode(&[0x05, 0x00, 0xAA], OPTIONS),
             Ok((2, Asn1Null))
         );
     }
@@ -106,7 +105,7 @@ mod tests {
     #[test]
     fn a_redundant_ber_length_form_still_decodes_as_null() {
         assert_eq!(
-            Asn1Null::try_decode(&[0x05, 0x81, 0x00], OPTIONS),
+            Asn1Null::decode(&[0x05, 0x81, 0x00], OPTIONS),
             Ok((3, Asn1Null))
         );
     }
@@ -114,12 +113,12 @@ mod tests {
     #[test]
     fn a_null_carrying_contents_is_rejected() {
         assert_eq!(
-            Asn1Null::try_decode(&[0x05, 0x01, 0x00], OPTIONS),
+            Asn1Null::decode(&[0x05, 0x01, 0x00], OPTIONS),
             Err(Asn1Error::MalformedValue)
         );
         // IMPLICIT 那條路（直接餵內容）也擋得住。
         assert_eq!(
-            Asn1Null::try_decode_content(&[0x00], OPTIONS),
+            Asn1Null::decode_content(&[0x00], OPTIONS),
             Err(Asn1Error::MalformedValue)
         );
     }

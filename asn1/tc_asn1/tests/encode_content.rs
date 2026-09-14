@@ -44,7 +44,7 @@ fn check_decoded<T>(contents: &[u8])
 where
     T: for<'a> DecodeContent<'a> + Encode + EncodeContent,
 {
-    check(T::try_decode_content(contents, DecodingOptions::default()).unwrap());
+    check(T::decode_content(contents, DecodingOptions::default()).unwrap());
 }
 
 #[test]

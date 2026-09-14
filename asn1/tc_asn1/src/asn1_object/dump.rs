@@ -503,7 +503,7 @@ mod tests {
         let input = [
             0x1f, 0x82, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0, 0,
         ];
-        let (_, tree) = Asn1Object::try_decode(&input, DecodingOptions::default()).unwrap();
+        let (_, tree) = Asn1Object::decode(&input, DecodingOptions::default()).unwrap();
         assert_eq!(
             tree.to_string(),
             "[UNIVERSAL tag=1f82808080808080808000] (0 bytes)\n"

@@ -139,7 +139,7 @@ try_into_unsigned!(u8, u16, u32, u64, u128);
 try_into_signed!(i8, i16, i32, i64, i128);
 
 impl<'a> crate::Decode<'a> for Asn1Integer {
-    fn try_decode(
+    fn decode(
         buff: &'a [u8],
         options: crate::DecodingOptions,
     ) -> Result<(usize, Self), crate::Asn1Error> {
@@ -147,14 +147,13 @@ impl<'a> crate::Decode<'a> for Asn1Integer {
         if element.is_constructed() {
             return Err(crate::Asn1Error::UnexpectedTag);
         }
-        let value =
-            <Self as crate::DecodeContent<'a>>::try_decode_content(element.value(), options)?;
+        let value = <Self as crate::DecodeContent<'a>>::decode_content(element.value(), options)?;
         Ok((element.total_len(), value))
     }
 }
 
 impl<'a> DecodeContent<'a> for Asn1Integer {
-    fn try_decode_content(value: &'a [u8], options: DecodingOptions) -> Result<Self, Asn1Error> {
+    fn decode_content(value: &'a [u8], options: DecodingOptions) -> Result<Self, Asn1Error> {
         options.check_content_len(value.len())?;
         Self::from_der_bytes(value)
     }
@@ -305,7 +304,7 @@ mod tests {
     #[test]
     fn decode_and_encode_round_trip() {
         let input = [0x02, 0x02, 0x01, 0x00];
-        let (used, n) = Asn1Integer::try_decode(&input, OPTIONS).unwrap();
+        let (used, n) = Asn1Integer::decode(&input, OPTIONS).unwrap();
         assert_eq!(used, 4);
         assert_eq!(u64::try_from(&n), Ok(256));
 

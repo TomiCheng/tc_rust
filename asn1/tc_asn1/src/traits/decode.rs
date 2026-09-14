@@ -8,7 +8,7 @@ use crate::{Asn1Error, DecodingOptions};
 pub trait DecodeContent<'a>: Sized {
     /// Decode and validate all content bytes, borrowing from them if needed.
     /// Variable time: public values only; no constant-time alternative is provided.
-    fn try_decode_content(value: &'a [u8], options: DecodingOptions) -> Result<Self, Asn1Error>;
+    fn decode_content(value: &'a [u8], options: DecodingOptions) -> Result<Self, Asn1Error>;
 }
 
 /// Decode the contents of a BER constructed string, without its outer header.
@@ -18,8 +18,7 @@ pub trait DecodeConstructed<'a>: DecodeContent<'a> {
     /// Decode and join component TLVs, including nested constructed components.
     /// Component identifiers must follow the string type's encoding rules.
     /// Variable time: public values only; no constant-time alternative is provided.
-    fn try_decode_constructed(value: &'a [u8], options: DecodingOptions)
-    -> Result<Self, Asn1Error>;
+    fn decode_constructed(value: &'a [u8], options: DecodingOptions) -> Result<Self, Asn1Error>;
 }
 
 /// Decode one complete TLV as the type selected by the caller's schema.
@@ -38,10 +37,10 @@ pub trait Decode<'a>: Sized {
     /// ```
     /// use tc_asn1::{Asn1Boolean, Decode, DecodingOptions};
     /// // The schema selected [0] IMPLICIT BOOLEAN. The last byte is a sibling.
-    /// let (used, value) = Asn1Boolean::try_decode(&[0x80, 1, 0xff, 0], DecodingOptions::default())?;
+    /// let (used, value) = Asn1Boolean::decode(&[0x80, 1, 0xff, 0], DecodingOptions::default())?;
     /// assert_eq!(used, 3);
     /// assert!(value.is_true());
     /// # Ok::<(), tc_asn1::Asn1Error>(())
     /// ```
-    fn try_decode(buff: &'a [u8], options: DecodingOptions) -> Result<(usize, Self), Asn1Error>;
+    fn decode(buff: &'a [u8], options: DecodingOptions) -> Result<(usize, Self), Asn1Error>;
 }

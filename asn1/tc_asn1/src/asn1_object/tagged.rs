@@ -102,7 +102,7 @@ impl Asn1Tagged {
         options: DecodingOptions,
     ) -> Result<T, Asn1Error> {
         match &self.content {
-            TaggedContent::Primitive(bytes) => T::try_decode_content(bytes, options),
+            TaggedContent::Primitive(bytes) => T::decode_content(bytes, options),
             TaggedContent::Constructed(_) => Err(Asn1Error::MalformedValue),
         }
     }
@@ -177,7 +177,7 @@ mod tests {
     #[test]
     fn explicit_context_tags_decode_their_single_child_and_round_trip() {
         let input = [0xa0, 3, 2, 1, 2];
-        let (_, tree) = Asn1Object::try_decode(&input, DecodingOptions::default()).unwrap();
+        let (_, tree) = Asn1Object::decode(&input, DecodingOptions::default()).unwrap();
         let tagged = tree.as_tagged().unwrap();
         assert_eq!(tagged.class(), Asn1Class::ContextSpecific);
         assert_eq!(tagged.number(), 0);
@@ -198,7 +198,7 @@ mod tests {
     #[test]
     fn primitive_context_tags_require_a_schema_to_interpret_their_contents() {
         let input = [0x80, 1, 0xff];
-        let (_, tree) = Asn1Object::try_decode(&input, DecodingOptions::default()).unwrap();
+        let (_, tree) = Asn1Object::decode(&input, DecodingOptions::default()).unwrap();
         let tagged = tree.as_tagged().unwrap();
         assert_eq!(tagged.content(), &TaggedContent::Primitive(vec![0xff]));
         assert_eq!(
@@ -270,7 +270,7 @@ mod tests {
         let value = Asn1Tagged::primitive(&tag, &[]).unwrap();
         assert_eq!(value.number(), u64::MAX);
         let encoded = encode_member(&value, &EncodingOptions::new(EncodingType::Der)).unwrap();
-        let tree = Asn1Object::try_decode(&encoded, DecodingOptions::default())
+        let tree = Asn1Object::decode(&encoded, DecodingOptions::default())
             .unwrap()
             .1;
         assert_eq!(tree.as_tagged().unwrap().number(), u64::MAX);
@@ -291,7 +291,7 @@ mod tests {
         );
         tag.push(0);
         assert_eq!(
-            Asn1Object::try_decode(&tag, DecodingOptions::default()),
+            Asn1Object::decode(&tag, DecodingOptions::default()),
             Err(Asn1Error::TagOverflow)
         );
     }

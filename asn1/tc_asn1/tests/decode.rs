@@ -8,7 +8,7 @@ fn custom_identifiers_round_trip_after_the_schema_selects_the_type() {
             .encode_to_vec(&EncodingOptions::new(EncodingType::Der))
             .unwrap();
         let options = DecodingOptions::default();
-        let (used, decoded) = Asn1Integer::try_decode(&wire, options).unwrap();
+        let (used, decoded) = Asn1Integer::decode(&wire, options).unwrap();
         assert_eq!(used, wire.len());
         assert_eq!(decoded, value);
         let element = Asn1Ref::parse(&wire, options).unwrap();
@@ -30,23 +30,20 @@ fn custom_identifiers_round_trip_after_the_schema_selects_the_type() {
 fn the_first_tlv_is_consumed_but_all_of_its_content_must_be_valid() {
     let options = DecodingOptions::default();
     assert_eq!(
-        Asn1Boolean::try_decode(&[0x80, 1, 0xff, 0], options),
+        Asn1Boolean::decode(&[0x80, 1, 0xff, 0], options),
         Ok((3, Asn1Boolean::from(true)))
     );
+    assert_eq!(Asn1Null::decode(&[0x80, 0, 0], options), Ok((2, Asn1Null)));
     assert_eq!(
-        Asn1Null::try_decode(&[0x80, 0, 0], options),
-        Ok((2, Asn1Null))
-    );
-    assert_eq!(
-        Asn1Boolean::try_decode(&[0x80, 2, 0xff, 0], options),
+        Asn1Boolean::decode(&[0x80, 2, 0xff, 0], options),
         Err(Asn1Error::MalformedValue)
     );
     assert_eq!(
-        Asn1Null::try_decode(&[0x80, 1, 0], options),
+        Asn1Null::decode(&[0x80, 1, 0], options),
         Err(Asn1Error::MalformedValue)
     );
     assert_eq!(
-        Asn1Boolean::try_decode(&[0xa0, 3, 1, 1, 0xff], options),
+        Asn1Boolean::decode(&[0xa0, 3, 1, 1, 0xff], options),
         Err(Asn1Error::UnexpectedTag)
     );
 }
@@ -56,26 +53,23 @@ fn content_and_full_tlv_traits_can_be_implemented_independently_with_borrowed_va
     #[derive(Debug, PartialEq)]
     struct Borrowed<'a>(&'a [u8]);
     impl<'a> DecodeContent<'a> for Borrowed<'a> {
-        fn try_decode_content(value: &'a [u8], _: DecodingOptions) -> Result<Self, Asn1Error> {
+        fn decode_content(value: &'a [u8], _: DecodingOptions) -> Result<Self, Asn1Error> {
             Ok(Self(value))
         }
     }
     // This explicit implementation would conflict with the former blanket impl.
     impl<'a> Decode<'a> for Borrowed<'a> {
-        fn try_decode(
-            buff: &'a [u8],
-            options: DecodingOptions,
-        ) -> Result<(usize, Self), Asn1Error> {
+        fn decode(buff: &'a [u8], options: DecodingOptions) -> Result<(usize, Self), Asn1Error> {
             let element = Asn1Ref::parse(buff, options)?;
             Ok((
                 element.total_len(),
-                Self::try_decode_content(element.value(), options)?,
+                Self::decode_content(element.value(), options)?,
             ))
         }
     }
     struct ContentOnly;
     impl<'a> DecodeContent<'a> for ContentOnly {
-        fn try_decode_content(_: &'a [u8], _: DecodingOptions) -> Result<Self, Asn1Error> {
+        fn decode_content(_: &'a [u8], _: DecodingOptions) -> Result<Self, Asn1Error> {
             Ok(Self)
         }
     }
@@ -101,7 +95,7 @@ fn constructed_implicit_strings_dispatch_by_form_and_validate_component_tags() {
         &[0xa0, 6, 4, 1, 0xaa, 4, 1, 0xbb][..],
         &[0xa0, 0x80, 4, 1, 0xaa, 4, 1, 0xbb, 0, 0],
     ] {
-        let (used, value) = Asn1OctetString::try_decode(wire, options).unwrap();
+        let (used, value) = Asn1OctetString::decode(wire, options).unwrap();
         assert_eq!(used, wire.len());
         assert_eq!(value.as_bytes(), &[0xaa, 0xbb]);
         let mut fields = Fields::new(wire, options).unwrap();
@@ -114,11 +108,11 @@ fn constructed_implicit_strings_dispatch_by_form_and_validate_component_tags() {
         fields.finish().unwrap();
     }
     assert_eq!(
-        Asn1OctetString::try_decode(&[0xa0, 3, 2, 1, 42], options),
+        Asn1OctetString::decode(&[0xa0, 3, 2, 1, 42], options),
         Err(Asn1Error::UnexpectedTag)
     );
     assert_eq!(
-        Asn1BitString::try_decode(&[0xa0, 3, 4, 1, 0], options),
+        Asn1BitString::decode(&[0xa0, 3, 4, 1, 0], options),
         Err(Asn1Error::UnexpectedTag)
     );
 }
@@ -126,17 +120,17 @@ fn constructed_implicit_strings_dispatch_by_form_and_validate_component_tags() {
 #[test]
 fn content_limits_apply_at_tlv_and_direct_content_entries() {
     let options = DecodingOptions::new(Depth::new(4), 2, 2);
-    assert!(Asn1OctetString::try_decode(&[0x80, 2, 1, 2], options).is_ok());
+    assert!(Asn1OctetString::decode(&[0x80, 2, 1, 2], options).is_ok());
     assert_eq!(
-        Asn1OctetString::try_decode(&[0x80, 3, 1, 2, 3], options),
+        Asn1OctetString::decode(&[0x80, 3, 1, 2, 3], options),
         Err(Asn1Error::ContentLengthExceeded)
     );
     assert_eq!(
-        Asn1OctetString::try_decode_content(&[1, 2, 3], options),
+        Asn1OctetString::decode_content(&[1, 2, 3], options),
         Err(Asn1Error::ContentLengthExceeded)
     );
     assert_eq!(
-        Asn1OctetString::try_decode_constructed(&[4, 1, 0], options),
+        Asn1OctetString::decode_constructed(&[4, 1, 0], options),
         Err(Asn1Error::ContentLengthExceeded)
     );
     assert_eq!(
@@ -150,7 +144,7 @@ fn child_limits_apply_to_definite_and_indefinite_values_and_iteration_stops_afte
     let options = DecodingOptions::new(Depth::new(4), 32, 1);
     for wire in [&[0x30, 4, 5, 0, 5, 0][..], &[0x30, 0x80, 5, 0, 5, 0, 0, 0]] {
         assert_eq!(
-            Asn1SequenceOf::<Asn1Null>::try_decode(wire, options),
+            Asn1SequenceOf::<Asn1Null>::decode(wire, options),
             Err(Asn1Error::ChildrenExceeded)
         );
     }
@@ -162,22 +156,22 @@ fn child_limits_apply_to_definite_and_indefinite_values_and_iteration_stops_afte
     );
     assert!(children.next().is_none());
     let zero = DecodingOptions::new(Depth::new(1), 0, 0);
-    assert!(Asn1SequenceOf::<Asn1Null>::try_decode(&[0x30, 0], zero).is_ok());
-    assert!(Asn1Null::try_decode(&[5, 0], zero).is_ok());
+    assert!(Asn1SequenceOf::<Asn1Null>::decode(&[0x30, 0], zero).is_ok());
+    assert!(Asn1Null::decode(&[5, 0], zero).is_ok());
 }
 
 #[test]
 fn nested_decoders_preserve_custom_limits_and_spend_depth_per_constructed_layer() {
     let nested = [0x30, 4, 0x30, 2, 5, 0];
     type Nested = Asn1SequenceOf<Asn1SequenceOf<Asn1Null>>;
-    assert!(Nested::try_decode(&nested, DecodingOptions::new(Depth::new(2), 4, 1)).is_ok());
+    assert!(Nested::decode(&nested, DecodingOptions::new(Depth::new(2), 4, 1)).is_ok());
     assert_eq!(
-        Nested::try_decode(&nested, DecodingOptions::new(Depth::new(1), 4, 1)),
+        Nested::decode(&nested, DecodingOptions::new(Depth::new(1), 4, 1)),
         Err(Asn1Error::DepthExceeded)
     );
     let too_many = [0x30, 6, 0x30, 4, 5, 0, 5, 0];
     assert_eq!(
-        Nested::try_decode(&too_many, DecodingOptions::new(Depth::new(2), 6, 1)),
+        Nested::decode(&too_many, DecodingOptions::new(Depth::new(2), 6, 1)),
         Err(Asn1Error::ChildrenExceeded)
     );
 }
@@ -187,7 +181,7 @@ fn parsed_elements_require_custom_decoders_to_consume_the_complete_element() {
     #[derive(Debug, PartialEq)]
     struct Partial;
     impl<'a> Decode<'a> for Partial {
-        fn try_decode(_: &'a [u8], _: DecodingOptions) -> Result<(usize, Self), Asn1Error> {
+        fn decode(_: &'a [u8], _: DecodingOptions) -> Result<(usize, Self), Asn1Error> {
             Ok((0, Self))
         }
     }
@@ -216,7 +210,7 @@ fn opaque_values_keep_parsed_boundaries_when_the_original_budget_exceeds_the_def
         wire.extend_from_slice(&[0, 0]);
     }
     let options = DecodingOptions::new(Depth::new(40), wire.len(), 1);
-    let (used, any) = Asn1Any::try_decode(&wire, options).unwrap();
+    let (used, any) = Asn1Any::decode(&wire, options).unwrap();
     assert_eq!(used, wire.len());
     assert_eq!(any.as_ref().raw(), wire);
     assert_eq!(any.as_ref().value(), &wire[2..wire.len() - 2]);

@@ -206,23 +206,32 @@ macro_rules! container {
             }
         }
         impl<'a> crate::Decode<'a> for $name {
-            fn try_decode(buff: &'a [u8], options: crate::DecodingOptions) -> Result<(usize, Self), crate::Asn1Error> {
+            fn decode(
+                buff: &'a [u8],
+                options: crate::DecodingOptions,
+            ) -> Result<(usize, Self), crate::Asn1Error> {
                 let element = crate::Asn1Ref::parse(buff, options)?;
                 if !element.is_constructed() {
                     return Err(crate::Asn1Error::UnexpectedTag);
                 }
-                let value = <Self as crate::DecodeContent<'a>>::try_decode_content(element.value(), options)?;
+                let value =
+                    <Self as crate::DecodeContent<'a>>::decode_content(element.value(), options)?;
                 Ok((element.total_len(), value))
             }
         }
 
         impl<'a> DecodeContent<'a> for $name {
             /// 變動時間：檢查欄位標記與巢狀結構，再複製資料。
-            fn try_decode_content(value: &'a [u8], options: DecodingOptions) -> Result<Self, Asn1Error> {
+            fn decode_content(
+                value: &'a [u8],
+                options: DecodingOptions,
+            ) -> Result<Self, Asn1Error> {
                 options.check_content_len(value.len())?;
                 let options = options.descend()?;
                 let (identification, data) = two_fields(value, options)?;
-                if identification.tag() != IDENTIFICATION_TAG || (data.tag() != DATA_VALUE_TAG && data.tag() != CONSTRUCTED_DATA_VALUE_TAG) {
+                if identification.tag() != IDENTIFICATION_TAG
+                    || (data.tag() != DATA_VALUE_TAG && data.tag() != CONSTRUCTED_DATA_VALUE_TAG)
+                {
                     return Err(Asn1Error::UnexpectedTag);
                 }
                 let inner_options = options.descend()?;
@@ -235,7 +244,12 @@ macro_rules! container {
                     if data.tag() == DATA_VALUE_TAG {
                         data.value().to_vec()
                     } else {
-                        <crate::Asn1OctetString as crate::DecodeConstructed>::try_decode_constructed(data.value(), options)?.as_bytes().to_vec()
+                        <crate::Asn1OctetString as crate::DecodeConstructed>::decode_constructed(
+                            data.value(),
+                            options,
+                        )?
+                        .as_bytes()
+                        .to_vec()
                     },
                 ))
             }
@@ -244,12 +258,18 @@ macro_rules! container {
         impl $crate::EncodeContent for $name {
             /// 變動時間：依識別選項與資料長度計算。
             fn content_len(&self, rules: &EncodingOptions) -> usize {
-                let id_len = crate::Explicit::new(IDENTIFICATION_TAG, &self.identification).encoded_len(rules);
-                id_len + if rules.encoding_type() == EncodingType::Cer {
-                    crate::segments::segmented_len(DATA_VALUE_TAG, crate::Asn1OctetString::TAG, self.value.len())
-                } else {
-                    1 + len_octets(self.value.len()) + self.value.len()
-                }
+                let id_len = crate::Explicit::new(IDENTIFICATION_TAG, &self.identification)
+                    .encoded_len(rules);
+                id_len
+                    + if rules.encoding_type() == EncodingType::Cer {
+                        crate::segments::segmented_len(
+                            DATA_VALUE_TAG,
+                            crate::Asn1OctetString::TAG,
+                            self.value.len(),
+                        )
+                    } else {
+                        1 + len_octets(self.value.len()) + self.value.len()
+                    }
             }
 
             /// 變動時間：寫入 EXPLICIT 識別選項與 IMPLICIT OCTET STRING。
@@ -259,10 +279,19 @@ macro_rules! container {
                 out: &mut [u8],
             ) -> Result<usize, Asn1Error> {
                 let len = $crate::EncodeContent::content_len(self, rules);
-                let out = out.get_mut(..len).ok_or($crate::Asn1Error::BufferTooSmall)?;
-                let mut at = crate::Explicit::new(IDENTIFICATION_TAG, &self.identification).encode(rules, out)?;
+                let out = out
+                    .get_mut(..len)
+                    .ok_or($crate::Asn1Error::BufferTooSmall)?;
+                let mut at = crate::Explicit::new(IDENTIFICATION_TAG, &self.identification)
+                    .encode(rules, out)?;
                 if rules.encoding_type() == EncodingType::Cer {
-                    return Ok(at + crate::segments::encode_segmented(DATA_VALUE_TAG, crate::Asn1OctetString::TAG, &self.value, &mut out[at..])?);
+                    return Ok(at
+                        + crate::segments::encode_segmented(
+                            DATA_VALUE_TAG,
+                            crate::Asn1OctetString::TAG,
+                            &self.value,
+                            &mut out[at..],
+                        )?);
                 }
                 out[at] = DATA_VALUE_TAG[0];
                 at += 1;
@@ -272,14 +301,18 @@ macro_rules! container {
             }
         }
 
-        impl $crate::EncodeTagged for $name {        }
+        impl $crate::EncodeTagged for $name {}
 
         impl Encode for $name {
             fn encoded_len(&self, rules: &$crate::EncodingOptions) -> usize {
                 $crate::EncodeTagged::encoded_len_tagged(self, Self::TAG, rules)
             }
 
-            fn encode(&self, rules: &$crate::EncodingOptions, out: &mut [u8]) -> Result<usize, $crate::Asn1Error> {
+            fn encode(
+                &self,
+                rules: &$crate::EncodingOptions,
+                out: &mut [u8],
+            ) -> Result<usize, $crate::Asn1Error> {
                 $crate::EncodeTagged::encode_tagged(self, Self::TAG, rules, out)
             }
         }
@@ -356,14 +389,14 @@ mod tests {
                 assert_eq!(value.encode(rules, &mut out), Ok(expected.len()));
                 assert_eq!(out, expected);
                 assert_eq!(
-                    Asn1EmbeddedPdv::try_decode(&out, DecodingOptions::default())
+                    Asn1EmbeddedPdv::decode(&out, DecodingOptions::default())
                         .unwrap()
                         .1,
                     value
                 );
                 out[0] = 0x3D;
                 assert_eq!(
-                    Asn1CharacterString::try_decode(&out, DecodingOptions::default())
+                    Asn1CharacterString::decode(&out, DecodingOptions::default())
                         .unwrap()
                         .1,
                     Asn1CharacterString::new(id.clone(), vec![0xFF])
@@ -382,11 +415,9 @@ mod tests {
             &[0xA0, 5, 0xA0, 3, 0x80, 1, 42, 0x82, 0],
             &[0xA0, 2, 0x85, 0],
         ] {
+            assert!(Asn1EmbeddedPdv::decode_content(bytes, DecodingOptions::default()).is_err());
             assert!(
-                Asn1EmbeddedPdv::try_decode_content(bytes, DecodingOptions::default()).is_err()
-            );
-            assert!(
-                Asn1CharacterString::try_decode_content(bytes, DecodingOptions::default()).is_err()
+                Asn1CharacterString::decode_content(bytes, DecodingOptions::default()).is_err()
             );
         }
     }
@@ -396,14 +427,14 @@ mod tests {
             0x2B, 12, 0xA0, 8, 0xA0, 6, 0x80, 1, 42, 0x81, 1, 42, 0x82, 0,
         ];
         assert_eq!(
-            Asn1EmbeddedPdv::try_decode(
+            Asn1EmbeddedPdv::decode(
                 &bytes,
                 DecodingOptions::new(crate::Depth::new(2), 16 * 1024 * 1024, 65_536)
             ),
             Err(Asn1Error::DepthExceeded)
         );
         assert!(
-            Asn1EmbeddedPdv::try_decode(
+            Asn1EmbeddedPdv::decode(
                 &bytes,
                 DecodingOptions::new(crate::Depth::new(3), 16 * 1024 * 1024, 65_536)
             )

@@ -45,25 +45,22 @@ impl Asn1PrintableString {
 }
 
 impl<'a> crate::Decode<'a> for Asn1PrintableString {
-    fn try_decode(
+    fn decode(
         buff: &'a [u8],
         options: crate::DecodingOptions,
     ) -> Result<(usize, Self), crate::Asn1Error> {
         let element = crate::Asn1Ref::parse(buff, options)?;
         let value = if element.is_constructed() {
-            <Self as crate::DecodeConstructed<'a>>::try_decode_constructed(
-                element.value(),
-                options,
-            )?
+            <Self as crate::DecodeConstructed<'a>>::decode_constructed(element.value(), options)?
         } else {
-            <Self as crate::DecodeContent<'a>>::try_decode_content(element.value(), options)?
+            <Self as crate::DecodeContent<'a>>::decode_content(element.value(), options)?
         };
         Ok((element.total_len(), value))
     }
 }
 
 impl<'a> DecodeContent<'a> for Asn1PrintableString {
-    fn try_decode_content(value: &'a [u8], options: DecodingOptions) -> Result<Self, Asn1Error> {
+    fn decode_content(value: &'a [u8], options: DecodingOptions) -> Result<Self, Asn1Error> {
         options.check_content_len(value.len())?;
         if !value.iter().all(|b| is_printable(*b)) {
             return Err(Asn1Error::MalformedValue);
@@ -142,7 +139,7 @@ mod tests {
     fn a_country_code_round_trips() {
         // C=TW 的值
         let input = [0x13, 0x02, b'T', b'W'];
-        let (used, s) = Asn1PrintableString::try_decode(&input, OPTIONS).unwrap();
+        let (used, s) = Asn1PrintableString::decode(&input, OPTIONS).unwrap();
         assert_eq!(used, 4);
         assert_eq!(s.as_str(), "TW");
 

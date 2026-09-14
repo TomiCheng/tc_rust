@@ -50,18 +50,15 @@ impl Asn1VisibleString {
 }
 
 impl<'a> crate::Decode<'a> for Asn1VisibleString {
-    fn try_decode(
+    fn decode(
         buff: &'a [u8],
         options: crate::DecodingOptions,
     ) -> Result<(usize, Self), crate::Asn1Error> {
         let element = crate::Asn1Ref::parse(buff, options)?;
         let value = if element.is_constructed() {
-            <Self as crate::DecodeConstructed<'a>>::try_decode_constructed(
-                element.value(),
-                options,
-            )?
+            <Self as crate::DecodeConstructed<'a>>::decode_constructed(element.value(), options)?
         } else {
-            <Self as crate::DecodeContent<'a>>::try_decode_content(element.value(), options)?
+            <Self as crate::DecodeContent<'a>>::decode_content(element.value(), options)?
         };
         Ok((element.total_len(), value))
     }
@@ -70,7 +67,7 @@ impl<'a> crate::Decode<'a> for Asn1VisibleString {
 impl<'a> DecodeContent<'a> for Asn1VisibleString {
     /// 以建構時相同的字集規則驗證內容。
     /// 變動時間：依內容長度與字元分支。
-    fn try_decode_content(value: &'a [u8], options: DecodingOptions) -> Result<Self, Asn1Error> {
+    fn decode_content(value: &'a [u8], options: DecodingOptions) -> Result<Self, Asn1Error> {
         options.check_content_len(value.len())?;
         let text = core::str::from_utf8(value).map_err(|_| Asn1Error::MalformedValue)?;
         Self::new(text)
@@ -133,7 +130,7 @@ mod tests {
             assert_eq!(out, [0x1A, 4, b'A', b' ', b'9', b'~']);
             assert_eq!(value.content_len(rules), 4);
             let (used, decoded) =
-                Asn1VisibleString::try_decode(&out, DecodingOptions::default()).unwrap();
+                Asn1VisibleString::decode(&out, DecodingOptions::default()).unwrap();
             assert_eq!(used, out.len());
             assert_eq!(decoded, value);
             assert_eq!(decoded.as_str(), "A 9~");
@@ -145,7 +142,7 @@ mod tests {
         for (text, accepted) in [("\x1F", false), (" ", true), ("~", true), ("\x7F", false)] {
             assert_eq!(Asn1VisibleString::new(text).is_ok(), accepted);
             assert_eq!(
-                Asn1VisibleString::try_decode_content(text.as_bytes(), DecodingOptions::default())
+                Asn1VisibleString::decode_content(text.as_bytes(), DecodingOptions::default())
                     .is_ok(),
                 accepted
             );
@@ -157,12 +154,12 @@ mod tests {
         for text in ["台北", "café", "a\nb", "\0"] {
             assert_eq!(Asn1VisibleString::new(text), Err(Asn1Error::MalformedValue));
             assert_eq!(
-                Asn1VisibleString::try_decode_content(text.as_bytes(), DecodingOptions::default()),
+                Asn1VisibleString::decode_content(text.as_bytes(), DecodingOptions::default()),
                 Err(Asn1Error::MalformedValue)
             );
         }
         assert_eq!(
-            Asn1VisibleString::try_decode_content(&[0x80], DecodingOptions::default()),
+            Asn1VisibleString::decode_content(&[0x80], DecodingOptions::default()),
             Err(Asn1Error::MalformedValue)
         );
     }
@@ -179,7 +176,7 @@ mod tests {
         );
         assert_eq!(out, [0x1A, 0]);
         assert_eq!(
-            Asn1VisibleString::try_decode(&out, DecodingOptions::default()),
+            Asn1VisibleString::decode(&out, DecodingOptions::default()),
             Ok((2, value))
         );
     }

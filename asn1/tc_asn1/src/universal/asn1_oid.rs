@@ -171,7 +171,7 @@ impl FromStr for Asn1Oid {
 }
 
 impl<'a> crate::Decode<'a> for Asn1Oid {
-    fn try_decode(
+    fn decode(
         buff: &'a [u8],
         options: crate::DecodingOptions,
     ) -> Result<(usize, Self), crate::Asn1Error> {
@@ -179,14 +179,13 @@ impl<'a> crate::Decode<'a> for Asn1Oid {
         if element.is_constructed() {
             return Err(crate::Asn1Error::UnexpectedTag);
         }
-        let value =
-            <Self as crate::DecodeContent<'a>>::try_decode_content(element.value(), options)?;
+        let value = <Self as crate::DecodeContent<'a>>::decode_content(element.value(), options)?;
         Ok((element.total_len(), value))
     }
 }
 
 impl<'a> DecodeContent<'a> for Asn1Oid {
-    fn try_decode_content(value: &'a [u8], options: DecodingOptions) -> Result<Self, Asn1Error> {
+    fn decode_content(value: &'a [u8], options: DecodingOptions) -> Result<Self, Asn1Error> {
         options.check_content_len(value.len())?;
         Self::from_der_bytes(value)
     }
@@ -235,7 +234,7 @@ mod tests {
 
     #[test]
     fn a_real_oid_decodes_to_its_arcs_and_prints_dotted() {
-        let (used, oid) = Asn1Oid::try_decode(RSA, OPTIONS).unwrap();
+        let (used, oid) = Asn1Oid::decode(RSA, OPTIONS).unwrap();
         assert_eq!(used, RSA.len());
         assert_eq!(oid.arcs().collect::<Vec<_>>(), [1, 2, 840, 113549, 1, 1, 1]);
         assert_eq!(oid.to_string(), "1.2.840.113549.1.1.1");

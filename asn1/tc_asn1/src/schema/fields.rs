@@ -47,7 +47,7 @@ impl<'a> Fields<'a> {
         if child.tag() != tag {
             return Err(Asn1Error::UnexpectedTag);
         }
-        let (used, value) = T::try_decode(child.raw(), self.options)?;
+        let (used, value) = T::decode(child.raw(), self.options)?;
         if used != child.total_len() {
             return Err(Asn1Error::TrailingData);
         }
@@ -94,7 +94,7 @@ impl<'a> Fields<'a> {
     pub fn implicit<T: DecodeContent<'a>>(&mut self, tag: &[u8]) -> Result<T, Asn1Error> {
         let child = self.next()?;
         if child.tag() == tag {
-            T::try_decode_content(child.value(), self.options)
+            T::decode_content(child.value(), self.options)
         } else {
             Err(Asn1Error::UnexpectedTag)
         }
@@ -122,7 +122,7 @@ impl<'a> Fields<'a> {
         if !is_constructed_form(child.tag(), tag) {
             return Err(Asn1Error::UnexpectedTag);
         }
-        T::try_decode_constructed(child.value(), self.options)
+        T::decode_constructed(child.value(), self.options)
     }
     /// Consume an IMPLICIT field with the exact tag selected by the schema;
     /// otherwise leave it for the next reader.
@@ -338,11 +338,8 @@ mod tests {
     fn any_and_choice_decoders_can_read_required_and_explicit_fields() {
         struct Choice(Asn1Boolean);
         impl<'a> Decode<'a> for Choice {
-            fn try_decode(
-                bytes: &'a [u8],
-                depth: DecodingOptions,
-            ) -> Result<(usize, Self), Asn1Error> {
-                Asn1Boolean::try_decode(bytes, depth).map(|(n, v)| (n, Self(v)))
+            fn decode(bytes: &'a [u8], depth: DecodingOptions) -> Result<(usize, Self), Asn1Error> {
+                Asn1Boolean::decode(bytes, depth).map(|(n, v)| (n, Self(v)))
             }
         }
         let mut fields =
@@ -475,7 +472,7 @@ mod tests {
     fn unschema_selected_constructed_forms_are_rejected_or_left_for_the_next_field() {
         let input = [0x21, 3, 1, 1, 0xff];
         assert_eq!(
-            Asn1Boolean::try_decode(&input, DecodingOptions::default()),
+            Asn1Boolean::decode(&input, DecodingOptions::default()),
             Err(Asn1Error::UnexpectedTag)
         );
         let mut fields = Fields::new(&input, DecodingOptions::default()).unwrap();

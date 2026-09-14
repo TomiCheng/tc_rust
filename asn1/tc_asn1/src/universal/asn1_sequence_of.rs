@@ -67,7 +67,7 @@ impl<T> FromIterator<T> for Asn1SequenceOf<T> {
 }
 
 impl<'a, T: crate::Decode<'a>> crate::Decode<'a> for Asn1SequenceOf<T> {
-    fn try_decode(
+    fn decode(
         buff: &'a [u8],
         options: crate::DecodingOptions,
     ) -> Result<(usize, Self), crate::Asn1Error> {
@@ -75,15 +75,14 @@ impl<'a, T: crate::Decode<'a>> crate::Decode<'a> for Asn1SequenceOf<T> {
         if !element.is_constructed() {
             return Err(crate::Asn1Error::UnexpectedTag);
         }
-        let value =
-            <Self as crate::DecodeContent<'a>>::try_decode_content(element.value(), options)?;
+        let value = <Self as crate::DecodeContent<'a>>::decode_content(element.value(), options)?;
         Ok((element.total_len(), value))
     }
 }
 
 impl<'a, T: crate::Decode<'a>> DecodeContent<'a> for Asn1SequenceOf<T> {
     /// 急切解：每個子元素當場 `decode_as::<T>`，任何一個失敗整個失敗。
-    fn try_decode_content(value: &'a [u8], options: DecodingOptions) -> Result<Self, Asn1Error> {
+    fn decode_content(value: &'a [u8], options: DecodingOptions) -> Result<Self, Asn1Error> {
         options.check_content_len(value.len())?;
         let options = options.descend()?;
         let members = Children::new(value, options)
@@ -135,7 +134,7 @@ mod tests {
     fn a_homogeneous_sequence_decodes_each_member_as_t() {
         // 30 06  01 01 FF  01 01 00
         let input = [0x30, 0x06, 0x01, 0x01, 0xFF, 0x01, 0x01, 0x00];
-        let (used, seq) = Asn1SequenceOf::<Asn1Boolean>::try_decode(&input, OPTIONS).unwrap();
+        let (used, seq) = Asn1SequenceOf::<Asn1Boolean>::decode(&input, OPTIONS).unwrap();
 
         assert_eq!(used, 8);
         assert_eq!(
@@ -148,7 +147,7 @@ mod tests {
     fn a_member_with_invalid_content_fails_the_whole_sequence() {
         let input = [0x30, 0x05, 0x01, 0x01, 0xFF, 0x05, 0x00];
         assert_eq!(
-            Asn1SequenceOf::<Asn1Boolean>::try_decode(&input, OPTIONS).err(),
+            Asn1SequenceOf::<Asn1Boolean>::decode(&input, OPTIONS).err(),
             Some(Asn1Error::MalformedValue)
         );
     }
@@ -176,7 +175,7 @@ mod tests {
 
     #[test]
     fn an_empty_sequence_is_a_header_alone() {
-        let (used, seq) = Asn1SequenceOf::<Asn1Null>::try_decode(&[0x30, 0x00], OPTIONS).unwrap();
+        let (used, seq) = Asn1SequenceOf::<Asn1Null>::decode(&[0x30, 0x00], OPTIONS).unwrap();
         assert_eq!(used, 2);
         assert!(seq.is_empty());
 
@@ -195,14 +194,14 @@ mod tests {
         let input = [0x30, 0x04, 0x30, 0x02, 0x30, 0x00];
         type Nested = Asn1SequenceOf<Asn1SequenceOf<Asn1SequenceOf<Asn1Null>>>;
         assert!(
-            Nested::try_decode(
+            Nested::decode(
                 &input,
                 DecodingOptions::new(crate::Depth::new(3), 16 * 1024 * 1024, 65_536)
             )
             .is_ok()
         );
         assert_eq!(
-            Nested::try_decode(
+            Nested::decode(
                 &input,
                 DecodingOptions::new(crate::Depth::new(2), 16 * 1024 * 1024, 65_536)
             )
@@ -219,8 +218,7 @@ mod tests {
         let written = original
             .encode(&EncodingOptions::new(EncodingType::Der), &mut out)
             .unwrap();
-        let (_, decoded) =
-            Asn1SequenceOf::<Asn1Integer>::try_decode(&out[..written], OPTIONS).unwrap();
+        let (_, decoded) = Asn1SequenceOf::<Asn1Integer>::decode(&out[..written], OPTIONS).unwrap();
         assert_eq!(decoded, original);
     }
 }

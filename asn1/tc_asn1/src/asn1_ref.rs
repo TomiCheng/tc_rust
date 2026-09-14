@@ -391,7 +391,7 @@ impl<'a> Asn1Ref<'a> {
     /// # Ok::<(), tc_asn1::Asn1Error>(())
     /// ```
     pub fn decode_as<T: Decode<'a>>(&self, options: DecodingOptions) -> Result<T, Asn1Error> {
-        let (used, value) = T::try_decode(self.raw, options)?;
+        let (used, value) = T::decode(self.raw, options)?;
         if used != self.total_len() {
             return Err(Asn1Error::TrailingData);
         }
@@ -399,8 +399,8 @@ impl<'a> Asn1Ref<'a> {
     }
 
     /// Decode primitive or constructed string contents as the schema-selected type.
-    /// Uses [`DecodeConstructed::try_decode_constructed`] when the constructed bit
-    /// is set, and [`crate::DecodeContent::try_decode_content`] otherwise.
+    /// Uses [`DecodeConstructed::decode_constructed`] when the constructed bit
+    /// is set, and [`crate::DecodeContent::decode_content`] otherwise.
     /// The caller validates the tag class and number.
     /// Returns [`Asn1Error::ContentLengthExceeded`] for oversized contents and propagates
     /// decoder errors. The decoder receives unchanged options and handles nesting.
@@ -426,9 +426,9 @@ impl<'a> Asn1Ref<'a> {
     {
         options.check_content_len(self.value.len())?;
         if self.is_constructed() {
-            T::try_decode_constructed(self.value, options)
+            T::decode_constructed(self.value, options)
         } else {
-            T::try_decode_content(self.value, options)
+            T::decode_content(self.value, options)
         }
     }
 }

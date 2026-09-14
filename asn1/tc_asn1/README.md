@@ -40,7 +40,7 @@ fn main() -> Result<(), Asn1Error> {
     if element.tag() != tag::INTEGER {
         return Err(Asn1Error::UnexpectedTag);
     }
-    let (used, decoded) = Asn1Integer::try_decode(&wire, options)?;
+    let (used, decoded) = Asn1Integer::decode(&wire, options)?;
     assert_eq!(used, wire.len());
     assert_eq!(decoded, value);
     Ok(())
@@ -161,9 +161,9 @@ no blanket implementation deriving `Decode` from `DecodeContent`.
 
 | Trait | Method | Input | Result |
 | --- | --- | --- | --- |
-| `DecodeContent<'a>` | `try_decode_content` | Contents without the outer header. | `Result<Self, Asn1Error>` |
-| `DecodeConstructed<'a>` | `try_decode_constructed` | Component TLVs inside a constructed string. | `Result<Self, Asn1Error>` |
-| `Decode<'a>` | `try_decode` | A buffer starting with a complete TLV. | `Result<(usize, Self), Asn1Error>` |
+| `DecodeContent<'a>` | `decode_content` | Contents without the outer header. | `Result<Self, Asn1Error>` |
+| `DecodeConstructed<'a>` | `decode_constructed` | Component TLVs inside a constructed string. | `Result<Self, Asn1Error>` |
+| `Decode<'a>` | `decode` | A buffer starting with a complete TLV. | `Result<(usize, Self), Asn1Error>` |
 
 Each method accepts `DecodingOptions`. The lifetime `'a` allows implementations
 to borrow from the input; it does not require them to borrow. All three traits
@@ -177,13 +177,13 @@ character strings. It validates component identifiers and joins their contents;
 it is not a general decoder for every constructed type. SEQUENCE and SET contents
 are handled by their `DecodeContent` implementations.
 
-`Decode::try_decode` consumes one element and returns its size. Following bytes
+`Decode::decode` consumes one element and returns its size. Following bytes
 belong to the caller. If the input must contain exactly one element, compare the
 returned size with the buffer length. This check is separate from validating
 contents: a BOOLEAN with two content bytes or a NULL with nonempty contents is
 invalid even when trailing bytes outside a valid TLV would be allowed.
 
-`Asn1Ref::decode_as::<T>()` calls `T::try_decode` and requires consumption of the
+`Asn1Ref::decode_as::<T>()` calls `T::decode` and requires consumption of the
 entire referenced element. It does not select or validate the schema's identifier
 for `T`. `decode_constructed_as::<T>()` selects the constructed-content or
 primitive-content entry point from the constructed bit. `DecodeConstructed`

@@ -68,18 +68,15 @@ impl From<Vec<u8>> for Asn1OctetString {
 }
 
 impl<'a> crate::Decode<'a> for Asn1OctetString {
-    fn try_decode(
+    fn decode(
         buff: &'a [u8],
         options: crate::DecodingOptions,
     ) -> Result<(usize, Self), crate::Asn1Error> {
         let element = crate::Asn1Ref::parse(buff, options)?;
         let value = if element.is_constructed() {
-            <Self as crate::DecodeConstructed<'a>>::try_decode_constructed(
-                element.value(),
-                options,
-            )?
+            <Self as crate::DecodeConstructed<'a>>::decode_constructed(element.value(), options)?
         } else {
-            <Self as crate::DecodeContent<'a>>::try_decode_content(element.value(), options)?
+            <Self as crate::DecodeContent<'a>>::decode_content(element.value(), options)?
         };
         Ok((element.total_len(), value))
     }
@@ -87,7 +84,7 @@ impl<'a> crate::Decode<'a> for Asn1OctetString {
 
 impl<'a> DecodeContent<'a> for Asn1OctetString {
     /// 任何內容都合法，包括空的。
-    fn try_decode_content(value: &'a [u8], options: DecodingOptions) -> Result<Self, Asn1Error> {
+    fn decode_content(value: &'a [u8], options: DecodingOptions) -> Result<Self, Asn1Error> {
         options.check_content_len(value.len())?;
         Ok(Self::new(value))
     }
@@ -96,10 +93,7 @@ impl<'a> DecodeContent<'a> for Asn1OctetString {
 impl<'a> DecodeConstructed<'a> for Asn1OctetString {
     /// 串接 BER 分段字串，巢狀分段透過新的 constructed 解碼入口處理。
     /// 變動時間：分支只依編碼結構，只能用於公開值；沒有常數時間替代方法。
-    fn try_decode_constructed(
-        value: &'a [u8],
-        options: DecodingOptions,
-    ) -> Result<Self, Asn1Error> {
+    fn decode_constructed(value: &'a [u8], options: DecodingOptions) -> Result<Self, Asn1Error> {
         options.check_content_len(value.len())?;
         Ok(Self::from(crate::segments::join_segments(
             Self::TAG,
@@ -187,11 +181,11 @@ mod tests {
             );
         }
         assert_eq!(
-            Asn1OctetString::try_decode(&expected, OPTIONS).map(|(_, value)| value),
+            Asn1OctetString::decode(&expected, OPTIONS).map(|(_, value)| value),
             Ok(value.clone())
         );
         assert_eq!(
-            Asn1Object::try_decode(&expected, OPTIONS).map(|(_, value)| value),
+            Asn1Object::decode(&expected, OPTIONS).map(|(_, value)| value),
             Ok(tree.clone())
         );
         expected[0] = 0xa0;
@@ -216,7 +210,7 @@ mod tests {
     #[test]
     fn bytes_pass_through_untouched_in_both_directions() {
         let input = [0x04, 0x03, 0xDE, 0xAD, 0x00];
-        let (used, s) = Asn1OctetString::try_decode(&input, OPTIONS).unwrap();
+        let (used, s) = Asn1OctetString::decode(&input, OPTIONS).unwrap();
         assert_eq!(used, 5);
         assert_eq!(s.as_bytes(), &[0xDE, 0xAD, 0x00]);
 
@@ -229,7 +223,7 @@ mod tests {
 
     #[test]
     fn an_empty_octet_string_is_valid() {
-        let (used, s) = Asn1OctetString::try_decode(&[0x04, 0x00], OPTIONS).unwrap();
+        let (used, s) = Asn1OctetString::decode(&[0x04, 0x00], OPTIONS).unwrap();
         assert_eq!(used, 2);
         assert!(s.as_bytes().is_empty());
         assert_eq!(s, Asn1OctetString::default());
@@ -259,7 +253,7 @@ mod tests {
         ] {
             let (used, value) = decode_constructed(input, OPTIONS).unwrap();
             assert_eq!(
-                Asn1OctetString::try_decode(input, OPTIONS),
+                Asn1OctetString::decode(input, OPTIONS),
                 Ok((used, value.clone()))
             );
             assert_eq!(used, input.len());
@@ -270,7 +264,7 @@ mod tests {
             ] {
                 assert_eq!(value.encode_to_vec(rules).unwrap(), [4, 2, 0xaa, 0xbb]);
             }
-            let tree = crate::Asn1Object::try_decode(input, OPTIONS).unwrap().1;
+            let tree = crate::Asn1Object::decode(input, OPTIONS).unwrap().1;
             assert_eq!(tree, crate::Asn1Object::OctetString(value));
             assert_eq!(
                 alloc::string::ToString::to_string(&tree),
@@ -325,7 +319,7 @@ mod tests {
     #[test]
     fn sequences_of_octets_accept_constructed_members() {
         assert_eq!(
-            crate::Asn1SequenceOf::<Asn1OctetString>::try_decode(
+            crate::Asn1SequenceOf::<Asn1OctetString>::decode(
                 b"\x30\x05\x24\x03\x04\x01\xaa",
                 OPTIONS
             )
