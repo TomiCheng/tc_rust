@@ -2,8 +2,8 @@
 
 use alloc::string::String;
 
+use crate::DecodingContext;
 use crate::EncodingOptions;
-use crate::decoding_options::DecodingOptions;
 use crate::error::Asn1Error;
 use crate::traits::{DecodeContent, Encode};
 
@@ -49,28 +49,64 @@ impl Asn1VisibleString {
     }
 }
 
+impl<'a> crate::DecodeInner<'a> for Asn1VisibleString {
+    fn decode_inner(
+        buff: &'a [u8],
+        context: &mut crate::DecodingContext<'_>,
+    ) -> Result<(usize, Self), crate::Asn1Error> {
+        let element = crate::Asn1Ref::parse(buff, context)?;
+        let value = if element.is_constructed() {
+            <Self as crate::DecodeConstructed<'a>>::decode_constructed(element.value(), context)?
+        } else {
+            <Self as crate::DecodeContent<'a>>::decode_content(element.value(), context)?
+        };
+        Ok((element.total_len(), value))
+    }
+    fn decode_inner_der(
+        buff: &'a [u8],
+        context: &mut crate::DecodingContext<'_>,
+    ) -> Result<(usize, Self), crate::Asn1Error> {
+        let element = crate::Asn1Ref::parse_der(buff, context)?;
+        if element.is_constructed() {
+            return Err(crate::Asn1Error::NotDer);
+        }
+        let value = if element.is_constructed() {
+            <Self as crate::DecodeConstructed<'a>>::decode_constructed(element.value(), context)?
+        } else {
+            <Self as crate::DecodeContent<'a>>::decode_content_der(element.value(), context)?
+        };
+        Ok((element.total_len(), value))
+    }
+}
 impl<'a> crate::Decode<'a> for Asn1VisibleString {
     fn decode(
         buff: &'a [u8],
-        options: crate::DecodingOptions,
+        options: &crate::DecodingOptions,
     ) -> Result<(usize, Self), crate::Asn1Error> {
-        let element = crate::Asn1Ref::parse(buff, options)?;
-        let value = if element.is_constructed() {
-            <Self as crate::DecodeConstructed<'a>>::decode_constructed(element.value(), options)?
-        } else {
-            <Self as crate::DecodeContent<'a>>::decode_content(element.value(), options)?
-        };
-        Ok((element.total_len(), value))
+        <Self as crate::DecodeInner<'a>>::decode_inner(
+            buff,
+            &mut crate::DecodingContext::new(options),
+        )
     }
 }
 
 impl<'a> DecodeContent<'a> for Asn1VisibleString {
     /// 以建構時相同的字集規則驗證內容。
     /// 變動時間：依內容長度與字元分支。
-    fn decode_content(value: &'a [u8], options: DecodingOptions) -> Result<Self, Asn1Error> {
-        options.check_content_len(value.len())?;
+    fn decode_content(
+        value: &'a [u8],
+        context: &mut DecodingContext<'_>,
+    ) -> Result<Self, Asn1Error> {
+        context.options().check_content_len(value.len())?;
         let text = core::str::from_utf8(value).map_err(|_| Asn1Error::MalformedValue)?;
         Self::new(text)
+    }
+
+    fn decode_content_der(
+        value: &'a [u8],
+        context: &mut crate::DecodingContext<'_>,
+    ) -> Result<Self, crate::Asn1Error> {
+        crate::decoding::decode_der_content::<Self>(value, context)
     }
 }
 
@@ -114,7 +150,9 @@ impl Encode for Asn1VisibleString {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(test)]
     use crate::Decode;
+    use crate::DecodingOptions;
     use crate::EncodeContent;
     use crate::EncodingType;
 
@@ -130,7 +168,7 @@ mod tests {
             assert_eq!(out, [0x1A, 4, b'A', b' ', b'9', b'~']);
             assert_eq!(value.content_len(rules), 4);
             let (used, decoded) =
-                Asn1VisibleString::decode(&out, DecodingOptions::default()).unwrap();
+                Asn1VisibleString::decode(&out, &DecodingOptions::default()).unwrap();
             assert_eq!(used, out.len());
             assert_eq!(decoded, value);
             assert_eq!(decoded.as_str(), "A 9~");
@@ -142,8 +180,11 @@ mod tests {
         for (text, accepted) in [("\x1F", false), (" ", true), ("~", true), ("\x7F", false)] {
             assert_eq!(Asn1VisibleString::new(text).is_ok(), accepted);
             assert_eq!(
-                Asn1VisibleString::decode_content(text.as_bytes(), DecodingOptions::default())
-                    .is_ok(),
+                Asn1VisibleString::decode_content(
+                    text.as_bytes(),
+                    &mut DecodingContext::new(&DecodingOptions::default())
+                )
+                .is_ok(),
                 accepted
             );
         }
@@ -154,12 +195,18 @@ mod tests {
         for text in ["台北", "café", "a\nb", "\0"] {
             assert_eq!(Asn1VisibleString::new(text), Err(Asn1Error::MalformedValue));
             assert_eq!(
-                Asn1VisibleString::decode_content(text.as_bytes(), DecodingOptions::default()),
+                Asn1VisibleString::decode_content(
+                    text.as_bytes(),
+                    &mut DecodingContext::new(&DecodingOptions::default())
+                ),
                 Err(Asn1Error::MalformedValue)
             );
         }
         assert_eq!(
-            Asn1VisibleString::decode_content(&[0x80], DecodingOptions::default()),
+            Asn1VisibleString::decode_content(
+                &[0x80],
+                &mut DecodingContext::new(&DecodingOptions::default())
+            ),
             Err(Asn1Error::MalformedValue)
         );
     }
@@ -176,7 +223,7 @@ mod tests {
         );
         assert_eq!(out, [0x1A, 0]);
         assert_eq!(
-            Asn1VisibleString::decode(&out, DecodingOptions::default()),
+            Asn1VisibleString::decode(&out, &DecodingOptions::default()),
             Ok((2, value))
         );
     }
@@ -184,8 +231,11 @@ mod tests {
     #[test]
     fn the_schema_checks_tags_a_visible_string_rejects_an_ia5_string_tag() {
         assert_eq!(
-            crate::Fields::new(&[0x16, 1, b'A'], DecodingOptions::default())
-                .and_then(|mut fields| fields.required::<Asn1VisibleString>(Asn1VisibleString::TAG)),
+            crate::Fields::new(
+                &[0x16, 1, b'A'],
+                &mut DecodingContext::new(&DecodingOptions::default())
+            )
+            .and_then(|mut fields| fields.required::<Asn1VisibleString>(Asn1VisibleString::TAG)),
             Err(Asn1Error::UnexpectedTag)
         );
     }

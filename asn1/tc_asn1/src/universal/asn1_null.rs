@@ -1,7 +1,7 @@
 //! ASN.1 `NULL`。
 
+use crate::DecodingContext;
 use crate::EncodingOptions;
-use crate::decoding_options::DecodingOptions;
 use crate::error::Asn1Error;
 use crate::traits::{DecodeContent, Encode};
 use core::fmt::{Display, Formatter};
@@ -20,28 +20,61 @@ impl Display for Asn1Null {
     }
 }
 
-impl<'a> crate::Decode<'a> for Asn1Null {
-    fn decode(
+impl<'a> crate::DecodeInner<'a> for Asn1Null {
+    fn decode_inner(
         buff: &'a [u8],
-        options: crate::DecodingOptions,
+        context: &mut crate::DecodingContext<'_>,
     ) -> Result<(usize, Self), crate::Asn1Error> {
-        let element = crate::Asn1Ref::parse(buff, options)?;
+        let element = crate::Asn1Ref::parse(buff, context)?;
         if element.is_constructed() {
             return Err(crate::Asn1Error::UnexpectedTag);
         }
-        let value = <Self as crate::DecodeContent<'a>>::decode_content(element.value(), options)?;
+        let value = <Self as crate::DecodeContent<'a>>::decode_content(element.value(), context)?;
         Ok((element.total_len(), value))
+    }
+    fn decode_inner_der(
+        buff: &'a [u8],
+        context: &mut crate::DecodingContext<'_>,
+    ) -> Result<(usize, Self), crate::Asn1Error> {
+        let element = crate::Asn1Ref::parse_der(buff, context)?;
+        if element.is_constructed() {
+            return Err(crate::Asn1Error::UnexpectedTag);
+        }
+        let value =
+            <Self as crate::DecodeContent<'a>>::decode_content_der(element.value(), context)?;
+        Ok((element.total_len(), value))
+    }
+}
+impl<'a> crate::Decode<'a> for Asn1Null {
+    fn decode(
+        buff: &'a [u8],
+        options: &crate::DecodingOptions,
+    ) -> Result<(usize, Self), crate::Asn1Error> {
+        <Self as crate::DecodeInner<'a>>::decode_inner(
+            buff,
+            &mut crate::DecodingContext::new(options),
+        )
     }
 }
 
 impl<'a> DecodeContent<'a> for Asn1Null {
-    fn decode_content(value: &'a [u8], options: DecodingOptions) -> Result<Self, Asn1Error> {
-        options.check_content_len(value.len())?;
+    fn decode_content(
+        value: &'a [u8],
+        context: &mut DecodingContext<'_>,
+    ) -> Result<Self, Asn1Error> {
+        context.options().check_content_len(value.len())?;
         if value.is_empty() {
             Ok(Asn1Null)
         } else {
             Err(Asn1Error::MalformedValue)
         }
+    }
+
+    fn decode_content_der(
+        value: &'a [u8],
+        context: &mut crate::DecodingContext<'_>,
+    ) -> Result<Self, crate::Asn1Error> {
+        crate::decoding::decode_der_content::<Self>(value, context)
     }
 }
 
@@ -74,6 +107,7 @@ impl Encode for Asn1Null {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::DecodingOptions;
     use crate::EncodingType;
     use crate::traits::Decode;
 
@@ -92,12 +126,12 @@ mod tests {
     }
 
     const OPTIONS: DecodingOptions =
-        DecodingOptions::new(crate::Depth::DEFAULT, 16 * 1024 * 1024, 65_536);
+        DecodingOptions::new(crate::Depth::DEFAULT.get(), 16 * 1024 * 1024, 65_536);
 
     #[test]
     fn null_decodes_and_reports_its_two_bytes() {
         assert_eq!(
-            Asn1Null::decode(&[0x05, 0x00, 0xAA], OPTIONS),
+            Asn1Null::decode(&[0x05, 0x00, 0xAA], &OPTIONS),
             Ok((2, Asn1Null))
         );
     }
@@ -105,7 +139,7 @@ mod tests {
     #[test]
     fn a_redundant_ber_length_form_still_decodes_as_null() {
         assert_eq!(
-            Asn1Null::decode(&[0x05, 0x81, 0x00], OPTIONS),
+            Asn1Null::decode(&[0x05, 0x81, 0x00], &OPTIONS),
             Ok((3, Asn1Null))
         );
     }
@@ -113,12 +147,12 @@ mod tests {
     #[test]
     fn a_null_carrying_contents_is_rejected() {
         assert_eq!(
-            Asn1Null::decode(&[0x05, 0x01, 0x00], OPTIONS),
+            Asn1Null::decode(&[0x05, 0x01, 0x00], &OPTIONS),
             Err(Asn1Error::MalformedValue)
         );
         // IMPLICIT 那條路（直接餵內容）也擋得住。
         assert_eq!(
-            Asn1Null::decode_content(&[0x00], OPTIONS),
+            Asn1Null::decode_content(&[0x00], &mut DecodingContext::new(&OPTIONS)),
             Err(Asn1Error::MalformedValue)
         );
     }
@@ -126,7 +160,7 @@ mod tests {
     #[test]
     fn the_schema_checks_tags_a_tag_other_than_null_is_rejected() {
         assert_eq!(
-            crate::Fields::new(&[0x02, 0x00], OPTIONS)
+            crate::Fields::new(&[0x02, 0x00], &mut DecodingContext::new(&OPTIONS))
                 .and_then(|mut fields| fields.required::<Asn1Null>(Asn1Null::TAG)),
             Err(Asn1Error::UnexpectedTag)
         );

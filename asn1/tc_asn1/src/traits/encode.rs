@@ -7,6 +7,8 @@
 //! All encoding methods borrow [`EncodingOptions`]; use the same configuration
 //! for length calculation and writing, and forward that borrow to child encoders.
 
+#[cfg(test)]
+use crate::Decode;
 use alloc::vec::Vec;
 
 use crate::EncodingOptions;
@@ -224,7 +226,7 @@ pub trait Encode: EncodeTagged {
 mod tests {
     use super::*;
     use crate::EncodingType;
-    use crate::{Asn1Boolean, Asn1Object, Asn1Tagged, Decode, DecodingOptions};
+    use crate::{Asn1Boolean, Asn1Object, Asn1Tagged, DecodingOptions};
     use alloc::boxed::Box;
     use alloc::vec;
 
@@ -297,7 +299,7 @@ mod tests {
                 );
             }
             assert_eq!(
-                Asn1Object::decode(&expected, DecodingOptions::default())
+                Asn1Object::decode(&expected, &DecodingOptions::default())
                     .map(|(_, value)| value)
                     .unwrap(),
                 tree
@@ -331,7 +333,7 @@ mod tests {
             assert_eq!(set.encode_to_vec(options).unwrap(), expected);
             if !options.is_canonical() {
                 assert_eq!(
-                    Asn1SetOf::<Asn1Boolean>::decode(&expected, DecodingOptions::default())
+                    Asn1SetOf::<Asn1Boolean>::decode(&expected, &DecodingOptions::default())
                         .map(|(_, value)| value)
                         .unwrap(),
                     set
@@ -411,7 +413,7 @@ mod tests {
                 expected
             );
             assert_eq!(
-                Asn1Object::decode(expected, DecodingOptions::default())
+                Asn1Object::decode(expected, &DecodingOptions::default())
                     .map(|(_, value)| value)
                     .unwrap()
                     .encode_to_vec(&EncodingOptions::new(EncodingType::Cer))
@@ -448,7 +450,7 @@ mod tests {
         use crate::Asn1Any;
         let input = [0x1f, 0x25, 0x81, 0];
         assert_eq!(
-            Asn1Any::decode(&input, DecodingOptions::default())
+            Asn1Any::decode(&input, &DecodingOptions::default())
                 .map(|(_, value)| value)
                 .unwrap()
                 .encode_to_vec(&EncodingOptions::new(EncodingType::Cer))
@@ -456,7 +458,7 @@ mod tests {
             input
         );
         assert_eq!(
-            Asn1Object::decode(&input, DecodingOptions::default())
+            Asn1Object::decode(&input, &DecodingOptions::default())
                 .map(|(_, value)| value)
                 .unwrap()
                 .encode_to_vec(&EncodingOptions::new(EncodingType::Cer))
@@ -492,7 +494,7 @@ mod tests {
 
     #[test]
     fn vector_encoding_preserves_unknown_headers_and_returns_sorting_errors() {
-        let tree = Asn1Object::decode(&[0x1f, 0x25, 0x81, 0], DecodingOptions::default())
+        let tree = Asn1Object::decode(&[0x1f, 0x25, 0x81, 0], &DecodingOptions::default())
             .map(|(_, value)| value)
             .unwrap();
         assert_eq!(
@@ -511,7 +513,7 @@ mod tests {
             0x1f, 0x82, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0, 0,
         ];
         let tree = Asn1Object::Set(vec![
-            Asn1Object::decode(&input, DecodingOptions::default())
+            Asn1Object::decode(&input, &DecodingOptions::default())
                 .map(|(_, value)| value)
                 .unwrap(),
         ]);

@@ -4,8 +4,8 @@ use alloc::vec::Vec;
 use core::fmt;
 use core::str::FromStr;
 
+use crate::DecodingContext;
 use crate::EncodingOptions;
-use crate::decoding_options::DecodingOptions;
 use crate::error::Asn1Error;
 use crate::traits::{DecodeContent, Encode};
 
@@ -170,24 +170,57 @@ impl FromStr for Asn1Oid {
     }
 }
 
-impl<'a> crate::Decode<'a> for Asn1Oid {
-    fn decode(
+impl<'a> crate::DecodeInner<'a> for Asn1Oid {
+    fn decode_inner(
         buff: &'a [u8],
-        options: crate::DecodingOptions,
+        context: &mut crate::DecodingContext<'_>,
     ) -> Result<(usize, Self), crate::Asn1Error> {
-        let element = crate::Asn1Ref::parse(buff, options)?;
+        let element = crate::Asn1Ref::parse(buff, context)?;
         if element.is_constructed() {
             return Err(crate::Asn1Error::UnexpectedTag);
         }
-        let value = <Self as crate::DecodeContent<'a>>::decode_content(element.value(), options)?;
+        let value = <Self as crate::DecodeContent<'a>>::decode_content(element.value(), context)?;
         Ok((element.total_len(), value))
+    }
+    fn decode_inner_der(
+        buff: &'a [u8],
+        context: &mut crate::DecodingContext<'_>,
+    ) -> Result<(usize, Self), crate::Asn1Error> {
+        let element = crate::Asn1Ref::parse_der(buff, context)?;
+        if element.is_constructed() {
+            return Err(crate::Asn1Error::UnexpectedTag);
+        }
+        let value =
+            <Self as crate::DecodeContent<'a>>::decode_content_der(element.value(), context)?;
+        Ok((element.total_len(), value))
+    }
+}
+impl<'a> crate::Decode<'a> for Asn1Oid {
+    fn decode(
+        buff: &'a [u8],
+        options: &crate::DecodingOptions,
+    ) -> Result<(usize, Self), crate::Asn1Error> {
+        <Self as crate::DecodeInner<'a>>::decode_inner(
+            buff,
+            &mut crate::DecodingContext::new(options),
+        )
     }
 }
 
 impl<'a> DecodeContent<'a> for Asn1Oid {
-    fn decode_content(value: &'a [u8], options: DecodingOptions) -> Result<Self, Asn1Error> {
-        options.check_content_len(value.len())?;
+    fn decode_content(
+        value: &'a [u8],
+        context: &mut DecodingContext<'_>,
+    ) -> Result<Self, Asn1Error> {
+        context.options().check_content_len(value.len())?;
         Self::from_der_bytes(value)
+    }
+
+    fn decode_content_der(
+        value: &'a [u8],
+        context: &mut crate::DecodingContext<'_>,
+    ) -> Result<Self, crate::Asn1Error> {
+        crate::decoding::decode_der_content::<Self>(value, context)
     }
 }
 
@@ -219,13 +252,14 @@ impl Encode for Asn1Oid {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::DecodingOptions;
     use crate::EncodingType;
     use crate::traits::Decode;
     use alloc::string::ToString;
     use alloc::vec::Vec;
 
     const OPTIONS: DecodingOptions =
-        DecodingOptions::new(crate::Depth::DEFAULT, 16 * 1024 * 1024, 65_536);
+        DecodingOptions::new(crate::Depth::DEFAULT.get(), 16 * 1024 * 1024, 65_536);
 
     /// rsaEncryption：1.2.840.113549.1.1.1
     const RSA: &[u8] = &[
@@ -234,7 +268,7 @@ mod tests {
 
     #[test]
     fn a_real_oid_decodes_to_its_arcs_and_prints_dotted() {
-        let (used, oid) = Asn1Oid::decode(RSA, OPTIONS).unwrap();
+        let (used, oid) = Asn1Oid::decode(RSA, &OPTIONS).unwrap();
         assert_eq!(used, RSA.len());
         assert_eq!(oid.arcs().collect::<Vec<_>>(), [1, 2, 840, 113549, 1, 1, 1]);
         assert_eq!(oid.to_string(), "1.2.840.113549.1.1.1");

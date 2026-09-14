@@ -268,6 +268,7 @@ fn dump(obj: &Asn1Object, level: usize, f: &mut fmt::Formatter<'_>) -> fmt::Resu
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::DecodingOptions;
     use crate::EncodingType;
     use crate::*;
     use alloc::{boxed::Box, string::ToString, vec};
@@ -503,7 +504,7 @@ mod tests {
         let input = [
             0x1f, 0x82, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0, 0,
         ];
-        let (_, tree) = Asn1Object::decode(&input, DecodingOptions::default()).unwrap();
+        let (_, tree) = Asn1Object::decode(&input, &DecodingOptions::default()).unwrap();
         assert_eq!(
             tree.to_string(),
             "[UNIVERSAL tag=1f82808080808080808000] (0 bytes)\n"

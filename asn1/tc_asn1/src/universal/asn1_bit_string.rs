@@ -2,8 +2,7 @@
 
 use alloc::vec::Vec;
 
-use crate::asn1_ref::Children;
-use crate::decoding_options::DecodingOptions;
+use crate::DecodingContext;
 use crate::error::Asn1Error;
 use crate::traits::{DecodeConstructed, DecodeContent, Encode};
 use crate::{EncodingOptions, EncodingType};
@@ -66,25 +65,54 @@ fn mask_unused(bytes: &mut [u8], unused_bits: u8) {
     }
 }
 
+impl<'a> crate::DecodeInner<'a> for Asn1BitString {
+    fn decode_inner(
+        buff: &'a [u8],
+        context: &mut crate::DecodingContext<'_>,
+    ) -> Result<(usize, Self), crate::Asn1Error> {
+        let element = crate::Asn1Ref::parse(buff, context)?;
+        let value = if element.is_constructed() {
+            <Self as crate::DecodeConstructed<'a>>::decode_constructed(element.value(), context)?
+        } else {
+            <Self as crate::DecodeContent<'a>>::decode_content(element.value(), context)?
+        };
+        Ok((element.total_len(), value))
+    }
+    fn decode_inner_der(
+        buff: &'a [u8],
+        context: &mut crate::DecodingContext<'_>,
+    ) -> Result<(usize, Self), crate::Asn1Error> {
+        let element = crate::Asn1Ref::parse_der(buff, context)?;
+        if element.is_constructed() {
+            return Err(crate::Asn1Error::NotDer);
+        }
+        let value = if element.is_constructed() {
+            <Self as crate::DecodeConstructed<'a>>::decode_constructed(element.value(), context)?
+        } else {
+            <Self as crate::DecodeContent<'a>>::decode_content_der(element.value(), context)?
+        };
+        Ok((element.total_len(), value))
+    }
+}
 impl<'a> crate::Decode<'a> for Asn1BitString {
     fn decode(
         buff: &'a [u8],
-        options: crate::DecodingOptions,
+        options: &crate::DecodingOptions,
     ) -> Result<(usize, Self), crate::Asn1Error> {
-        let element = crate::Asn1Ref::parse(buff, options)?;
-        let value = if element.is_constructed() {
-            <Self as crate::DecodeConstructed<'a>>::decode_constructed(element.value(), options)?
-        } else {
-            <Self as crate::DecodeContent<'a>>::decode_content(element.value(), options)?
-        };
-        Ok((element.total_len(), value))
+        <Self as crate::DecodeInner<'a>>::decode_inner(
+            buff,
+            &mut crate::DecodingContext::new(options),
+        )
     }
 }
 
 impl<'a> DecodeContent<'a> for Asn1BitString {
     /// 寬鬆照 BER：沒用到的位不是 0 也接受，存起來時清掉。
-    fn decode_content(value: &'a [u8], options: DecodingOptions) -> Result<Self, Asn1Error> {
-        options.check_content_len(value.len())?;
+    fn decode_content(
+        value: &'a [u8],
+        context: &mut DecodingContext<'_>,
+    ) -> Result<Self, Asn1Error> {
+        context.options().check_content_len(value.len())?;
         let (unused_bits, data) = value.split_first().ok_or(Asn1Error::MalformedValue)?;
         if *unused_bits > 7 || (data.is_empty() && *unused_bits != 0) {
             return Err(Asn1Error::MalformedValue);
@@ -96,34 +124,46 @@ impl<'a> DecodeContent<'a> for Asn1BitString {
             bytes,
         })
     }
+
+    fn decode_content_der(
+        value: &'a [u8],
+        context: &mut crate::DecodingContext<'_>,
+    ) -> Result<Self, crate::Asn1Error> {
+        crate::decoding::decode_der_content::<Self>(value, context)
+    }
 }
 
 impl<'a> DecodeConstructed<'a> for Asn1BitString {
     /// 串接 BER 分段字串，巢狀分段透過新的 constructed 解碼入口處理。
     /// 除最後一個成分外，未用位元數必須為零，否則回傳 `MalformedValue`。
     /// 變動時間：分支只依編碼結構，只能用於公開值；沒有常數時間替代方法。
-    fn decode_constructed(value: &'a [u8], options: DecodingOptions) -> Result<Self, Asn1Error> {
-        options.check_content_len(value.len())?;
-        let options = options.descend()?;
-        let mut bytes = Vec::new();
-        let mut unused_bits = 0;
-        for child in Children::new(value, options) {
-            if unused_bits != 0 {
-                return Err(Asn1Error::MalformedValue);
+    fn decode_constructed(
+        value: &'a [u8],
+        context: &mut DecodingContext<'_>,
+    ) -> Result<Self, Asn1Error> {
+        context.options().check_content_len(value.len())?;
+        context.with_child(|context| {
+            let mut bytes = Vec::new();
+            let mut unused_bits = 0;
+            let mut children = crate::asn1_ref::ChildCursor::new(value, context.options());
+            while let Some(child) = children.next(context) {
+                if unused_bits != 0 {
+                    return Err(Asn1Error::MalformedValue);
+                }
+                let child = child?;
+                if child.tag() != Self::TAG && child.tag() != Self::CONSTRUCTED_TAG {
+                    return Err(Asn1Error::UnexpectedTag);
+                }
+                let part = if child.is_constructed() {
+                    child.decode_constructed_as::<Self>(context)?
+                } else {
+                    child.decode_as::<Self>(context)?
+                };
+                unused_bits = part.unused_bits;
+                bytes.extend_from_slice(&part.bytes);
             }
-            let child = child?;
-            if child.tag() != Self::TAG && child.tag() != Self::CONSTRUCTED_TAG {
-                return Err(Asn1Error::UnexpectedTag);
-            }
-            let part = if child.is_constructed() {
-                child.decode_constructed_as::<Self>(options)?
-            } else {
-                child.decode_as::<Self>(options)?
-            };
-            unused_bits = part.unused_bits;
-            bytes.extend_from_slice(&part.bytes);
-        }
-        Ok(Self { bytes, unused_bits })
+            Ok(Self { bytes, unused_bits })
+        })
     }
 }
 
@@ -237,11 +277,12 @@ impl Encode for Asn1BitString {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::DecodingOptions;
     use crate::EncodeContent;
     use crate::traits::Decode;
 
     const OPTIONS: DecodingOptions =
-        DecodingOptions::new(crate::Depth::DEFAULT, 16 * 1024 * 1024, 65_536);
+        DecodingOptions::new(crate::Depth::DEFAULT.get(), 16 * 1024 * 1024, 65_536);
 
     #[test]
     fn content_encoding_keeps_empty_short_and_non_cer_values_primitive() {
@@ -290,7 +331,7 @@ mod tests {
         assert_eq!(&out[..expected.len()], expected);
         assert_eq!(&out[expected.len()..], &[0xaa; 2]);
         assert_eq!(
-            Asn1BitString::decode_constructed(&expected, OPTIONS),
+            Asn1BitString::decode_constructed(&expected, &mut DecodingContext::new(&OPTIONS)),
             Ok(value)
         );
     }
@@ -307,7 +348,8 @@ mod tests {
             let mut out = alloc::vec![0; len];
             assert_eq!(value.encode_content(options, &mut out), Ok(len));
             let wire = value.encode_to_vec(options).unwrap();
-            let element = crate::Asn1Ref::parse(&wire, OPTIONS).unwrap();
+            let element =
+                crate::Asn1Ref::parse(&wire, &mut DecodingContext::new(&OPTIONS)).unwrap();
             assert_eq!(out, element.value());
             let mut short = alloc::vec![0xaa; len - 1];
             assert_eq!(
@@ -351,11 +393,11 @@ mod tests {
             Err(Asn1Error::BufferTooSmall)
         );
         assert_eq!(
-            Asn1BitString::decode(&expected, OPTIONS).map(|(_, value)| value),
+            Asn1BitString::decode(&expected, &OPTIONS).map(|(_, value)| value),
             Ok(value.clone())
         );
         assert_eq!(
-            crate::Asn1Object::decode(&expected, OPTIONS).map(|(_, value)| value),
+            crate::Asn1Object::decode(&expected, &OPTIONS).map(|(_, value)| value),
             Ok(value.clone().into())
         );
         let mut definite = alloc::vec![3, 0x82, 3, 0xe9, 4];
@@ -370,7 +412,8 @@ mod tests {
 
     #[test]
     fn a_whole_number_of_bytes_has_no_unused_bits() {
-        let (used, bits) = Asn1BitString::decode(&[0x03, 0x03, 0x00, 0xA0, 0x5B], OPTIONS).unwrap();
+        let (used, bits) =
+            Asn1BitString::decode(&[0x03, 0x03, 0x00, 0xA0, 0x5B], &OPTIONS).unwrap();
         assert_eq!(used, 5);
         assert_eq!(bits.as_bytes(), &[0xA0, 0x5B]);
         assert_eq!(bits.bit_len(), 16);
@@ -380,13 +423,13 @@ mod tests {
     #[test]
     fn bit_zero_is_the_high_bit_of_the_first_byte() {
         // KeyUsage = digitalSignature(0)：03 02 07 80
-        let (_, bits) = Asn1BitString::decode(&[0x03, 0x02, 0x07, 0x80], OPTIONS).unwrap();
+        let (_, bits) = Asn1BitString::decode(&[0x03, 0x02, 0x07, 0x80], &OPTIONS).unwrap();
         assert_eq!(bits.bit_len(), 1);
         assert!(bits.bit(0));
         assert!(!bits.bit(1), "超出範圍是 false");
 
         // 0100 0000 加 6 位未用 = 01
-        let (_, bits) = Asn1BitString::decode(&[0x03, 0x02, 0x06, 0x40], OPTIONS).unwrap();
+        let (_, bits) = Asn1BitString::decode(&[0x03, 0x02, 0x06, 0x40], &OPTIONS).unwrap();
         assert!(!bits.bit(0));
         assert!(bits.bit(1));
         assert_eq!(bits.bit_len(), 2);
@@ -394,7 +437,7 @@ mod tests {
 
     #[test]
     fn an_empty_bit_string_is_just_the_count_byte() {
-        let (used, bits) = Asn1BitString::decode(&[0x03, 0x01, 0x00], OPTIONS).unwrap();
+        let (used, bits) = Asn1BitString::decode(&[0x03, 0x01, 0x00], &OPTIONS).unwrap();
         assert_eq!(used, 3);
         assert_eq!(bits.bit_len(), 0);
         assert!(bits.as_bytes().is_empty());
@@ -403,7 +446,7 @@ mod tests {
     #[test]
     fn unused_bits_that_are_set_are_accepted_and_cleared() {
         // 03 02 06 7F 不是 DER（未用的 6 位不是 0），但是合法 BER。
-        let (_, bits) = Asn1BitString::decode(&[0x03, 0x02, 0x06, 0x7F], OPTIONS).unwrap();
+        let (_, bits) = Asn1BitString::decode(&[0x03, 0x02, 0x06, 0x7F], &OPTIONS).unwrap();
         assert_eq!(bits.as_bytes(), &[0x40], "存起來時清掉");
 
         let mut out = [0_u8; 8];
@@ -416,15 +459,16 @@ mod tests {
     #[test]
     fn malformed_counts_are_rejected() {
         assert!(
-            Asn1BitString::decode_content(&[], OPTIONS).is_err(),
+            Asn1BitString::decode_content(&[], &mut DecodingContext::new(&OPTIONS)).is_err(),
             "沒有計數位元組"
         );
         assert!(
-            Asn1BitString::decode_content(&[0x08, 0xFF], OPTIONS).is_err(),
+            Asn1BitString::decode_content(&[0x08, 0xFF], &mut DecodingContext::new(&OPTIONS))
+                .is_err(),
             "計數 > 7"
         );
         assert!(
-            Asn1BitString::decode_content(&[0x03], OPTIONS).is_err(),
+            Asn1BitString::decode_content(&[0x03], &mut DecodingContext::new(&OPTIONS)).is_err(),
             "沒資料卻說有未用的位"
         );
     }
@@ -449,15 +493,18 @@ mod tests {
             .unwrap();
         assert_eq!(&out[..written], &[0x03, 0x03, 0x04, 0xA5, 0xF0]);
 
-        let (_, decoded) = Asn1BitString::decode(&out[..written], OPTIONS).unwrap();
+        let (_, decoded) = Asn1BitString::decode(&out[..written], &OPTIONS).unwrap();
         assert_eq!(decoded, original);
     }
     fn decode_constructed(
         input: &[u8],
         depth: DecodingOptions,
     ) -> Result<(usize, Asn1BitString), Asn1Error> {
-        let element = crate::Asn1Ref::parse(input, depth)?;
-        Ok((element.total_len(), element.decode_constructed_as(depth)?))
+        let element = crate::Asn1Ref::parse(input, &mut DecodingContext::new(&depth))?;
+        Ok((
+            element.total_len(),
+            element.decode_constructed_as(&mut DecodingContext::new(&depth))?,
+        ))
     }
 
     #[test]
@@ -469,7 +516,7 @@ mod tests {
         ] {
             let (used, bits) = decode_constructed(input, OPTIONS).unwrap();
             assert_eq!(
-                Asn1BitString::decode(input, OPTIONS),
+                Asn1BitString::decode(input, &OPTIONS),
                 Ok((used, bits.clone()))
             );
             assert_eq!(used, input.len());
@@ -481,7 +528,7 @@ mod tests {
                     .unwrap(),
                 [3, 3, 4, 0xf0, 0xa0]
             );
-            let tree = crate::Asn1Object::decode(input, OPTIONS)
+            let tree = crate::Asn1Object::decode(input, &OPTIONS)
                 .map(|(_, value)| value)
                 .unwrap();
             assert_eq!(tree, crate::Asn1Object::BitString(bits));
@@ -530,18 +577,11 @@ mod tests {
         );
         let input = b"\x23\x02\x23\x00";
         assert_eq!(
-            decode_constructed(
-                input,
-                DecodingOptions::new(crate::Depth::new(1), 16 * 1024 * 1024, 65_536)
-            ),
+            decode_constructed(input, DecodingOptions::new(1, 16 * 1024 * 1024, 65_536)),
             Err(Asn1Error::DepthExceeded)
         );
         assert!(
-            decode_constructed(
-                input,
-                DecodingOptions::new(crate::Depth::new(2), 16 * 1024 * 1024, 65_536)
-            )
-            .is_ok()
+            decode_constructed(input, DecodingOptions::new(2, 16 * 1024 * 1024, 65_536)).is_ok()
         );
     }
     #[test]
@@ -577,12 +617,11 @@ mod tests {
                 Ok(Asn1BitString::from_bytes(&[])),
             ),
         ] {
-            let element = crate::Asn1Ref::parse(input, OPTIONS).unwrap();
+            let element =
+                crate::Asn1Ref::parse(input, &mut DecodingContext::new(&OPTIONS)).unwrap();
             assert_eq!(
-                element.decode_constructed_as::<Asn1BitString>(DecodingOptions::new(
-                    crate::Depth::new(depth),
-                    16 * 1024 * 1024,
-                    65_536
+                element.decode_constructed_as::<Asn1BitString>(&mut DecodingContext::new(
+                    &DecodingOptions::new(depth, 16 * 1024 * 1024, 65_536)
                 )),
                 expected,
                 "{input:?}"

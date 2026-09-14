@@ -88,6 +88,8 @@ extern crate alloc;
 mod asn1_any;
 mod asn1_object;
 mod asn1_ref;
+mod decoding;
+mod decoding_context;
 mod decoding_options;
 mod encoding;
 mod encoding_options;
@@ -101,12 +103,15 @@ mod universal;
 pub use asn1_any::Asn1Any;
 pub use asn1_object::{Asn1Object, Asn1Tagged, TaggedContent};
 pub use asn1_ref::{Asn1Class, Asn1Ref, Children};
+pub use decoding_context::DecodingContext;
 pub use decoding_options::{DecodingOptions, Depth};
 pub use encoding_options::EncodingOptions;
 pub use encoding_type::{EncodingType, LengthForm};
 pub use error::Asn1Error;
 pub use schema::{Explicit, Fields, Implicit, SequenceFields};
-pub use traits::{Decode, DecodeConstructed, DecodeContent, Encode, EncodeContent, EncodeTagged};
+pub use traits::{
+    Decode, DecodeConstructed, DecodeContent, DecodeInner, Encode, EncodeContent, EncodeTagged,
+};
 pub use universal::tag;
 pub use universal::{
     Arcs, Asn1BitString, Asn1BmpString, Asn1Boolean, Asn1CharacterString, Asn1Date, Asn1DateTime,

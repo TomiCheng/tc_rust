@@ -186,29 +186,31 @@ pub(crate) use cer_string_content_encode;
 pub(crate) fn join_segments(
     tag: &[u8],
     value: &[u8],
-    options: crate::DecodingOptions,
+    context: &mut crate::DecodingContext<'_>,
 ) -> Result<alloc::vec::Vec<u8>, Asn1Error> {
     fn append(
         tag: &[u8],
         value: &[u8],
-        options: crate::DecodingOptions,
+        context: &mut crate::DecodingContext<'_>,
         joined: &mut alloc::vec::Vec<u8>,
     ) -> Result<(), Asn1Error> {
-        let options = options.descend()?;
-        for child in crate::Children::new(value, options) {
-            let child = child?;
-            if child.tag() == tag {
-                joined.extend_from_slice(child.value());
-            } else if crate::asn1_ref::is_constructed_form(child.tag(), tag) {
-                append(tag, child.value(), options, joined)?;
-            } else {
-                return Err(Asn1Error::UnexpectedTag);
+        context.with_child(|context| {
+            let mut children = crate::asn1_ref::ChildCursor::new(value, context.options());
+            while let Some(child) = children.next(context) {
+                let child = child?;
+                if child.tag() == tag {
+                    joined.extend_from_slice(child.value());
+                } else if crate::asn1_ref::is_constructed_form(child.tag(), tag) {
+                    append(tag, child.value(), context, joined)?;
+                } else {
+                    return Err(Asn1Error::UnexpectedTag);
+                }
             }
-        }
-        Ok(())
+            Ok(())
+        })
     }
     let mut joined = alloc::vec::Vec::new();
-    append(tag, value, options, &mut joined)?;
+    append(tag, value, context, &mut joined)?;
     Ok(joined)
 }
 
@@ -219,12 +221,12 @@ macro_rules! constructed_string_decode {
             /// Variable time: branches only on the encoding structure.
             fn decode_constructed(
                 value: &'a [u8],
-                options: $crate::DecodingOptions,
+                context: &mut $crate::DecodingContext<'_>,
             ) -> Result<Self, $crate::Asn1Error> {
-                options.check_content_len(value.len())?;
+                context.options().check_content_len(value.len())?;
                 let joined =
-                    $crate::segments::join_segments($crate::tag::OCTET_STRING, value, options)?;
-                <Self as $crate::DecodeContent<'_>>::decode_content(&joined, options)
+                    $crate::segments::join_segments($crate::tag::OCTET_STRING, value, context)?;
+                <Self as $crate::DecodeContent<'_>>::decode_content(&joined, context)
             }
         }
     };
@@ -233,6 +235,7 @@ pub(crate) use constructed_string_decode;
 
 #[cfg(test)]
 mod tests {
+    use crate::DecodingOptions;
     use crate::*;
 
     #[test]
@@ -255,17 +258,17 @@ mod tests {
                 .unwrap();
             assert_eq!(&cer[..4], &[0x28, 0x80, 0x27, 0x80]);
             assert_eq!(
-                Asn1External::decode(&cer, DecodingOptions::default()).map(|(_, value)| value),
+                Asn1External::decode(&cer, &DecodingOptions::default()).map(|(_, value)| value),
                 Ok(value.clone())
             );
             assert_eq!(
-                Asn1Object::decode(&cer, DecodingOptions::default()).map(|(_, value)| value),
+                Asn1Object::decode(&cer, &DecodingOptions::default()).map(|(_, value)| value),
                 Ok(value.clone().into())
             );
             assert_eq!(
                 {
                     let input: &[u8] = &cer;
-                    Asn1External::decode(input, DecodingOptions::default()).and_then(
+                    Asn1External::decode(input, &DecodingOptions::default()).and_then(
                         |(used, value)| {
                             if used != input.len() {
                                 Err(crate::Asn1Error::TrailingData)
@@ -294,14 +297,18 @@ mod tests {
                     .encode_to_vec(&EncodingOptions::new(EncodingType::Cer))
                     .unwrap();
                 assert_eq!(
-                    Asn1BitString::decode(&wire, DecodingOptions::default())
+                    Asn1BitString::decode(&wire, &DecodingOptions::default())
                         .map(|(_, value)| value),
                     Ok(value.clone())
                 );
                 if len >= 1000 {
-                    let element = Asn1Ref::parse(&wire, DecodingOptions::default()).unwrap();
+                    let element = Asn1Ref::parse(
+                        &wire,
+                        &mut DecodingContext::new(&DecodingOptions::default()),
+                    )
+                    .unwrap();
                     let parts: alloc::vec::Vec<_> = element
-                        .children(DecodingOptions::default())
+                        .children(&mut DecodingContext::new(&DecodingOptions::default()))
                         .map(Result::unwrap)
                         .collect();
                     for part in &parts[..parts.len() - 1] {
@@ -313,7 +320,7 @@ mod tests {
                     assert_eq!(
                         {
                             let input: &[u8] = &wire;
-                            Asn1BitString::decode(input, DecodingOptions::default()).and_then(
+                            Asn1BitString::decode(input, &DecodingOptions::default()).and_then(
                                 |(used, value)| {
                                     if used != input.len() {
                                         Err(crate::Asn1Error::TrailingData)
@@ -334,7 +341,7 @@ mod tests {
                     assert_eq!(
                         {
                             let input: &[u8] = &wire;
-                            Asn1BitString::decode(input, DecodingOptions::default()).and_then(
+                            Asn1BitString::decode(input, &DecodingOptions::default()).and_then(
                                 |(used, value)| {
                                     if used != input.len() {
                                         Err(crate::Asn1Error::TrailingData)
@@ -371,7 +378,7 @@ mod tests {
         assert_eq!(
             {
                 let input: &[u8] = &expected;
-                Asn1SetOf::<Asn1Integer>::decode(input, DecodingOptions::default()).and_then(
+                Asn1SetOf::<Asn1Integer>::decode(input, &DecodingOptions::default()).and_then(
                     |(used, value)| {
                         if used != input.len() {
                             Err(crate::Asn1Error::TrailingData)
@@ -388,7 +395,7 @@ mod tests {
             },
             Err(Asn1Error::NotDer)
         );
-        let decoded = Asn1SetOf::<Asn1Integer>::decode(&expected, DecodingOptions::default())
+        let decoded = Asn1SetOf::<Asn1Integer>::decode(&expected, &DecodingOptions::default())
             .map(|(_, value)| value)
             .unwrap();
         assert_eq!(
@@ -404,7 +411,7 @@ mod tests {
                 let input: &[u8] = &sequence
                     .encode_to_vec(&EncodingOptions::new(EncodingType::Cer))
                     .unwrap();
-                Asn1Object::decode(input, DecodingOptions::default()).and_then(|(used, value)| {
+                Asn1Object::decode(input, &DecodingOptions::default()).and_then(|(used, value)| {
                     if used != input.len() {
                         Err(crate::Asn1Error::TrailingData)
                     } else if value
@@ -423,7 +430,13 @@ mod tests {
 
     fn check_string<T>(value: T)
     where
-        T: for<'a> Decode<'a> + Encode + Clone + core::fmt::Debug + PartialEq + Into<Asn1Object>,
+        T: for<'a> Decode<'a>
+            + for<'a> DecodeInner<'a>
+            + Encode
+            + Clone
+            + core::fmt::Debug
+            + PartialEq
+            + Into<Asn1Object>,
     {
         let len = value.content_len(&EncodingOptions::new(EncodingType::Der));
         let cer = value
@@ -436,13 +449,13 @@ mod tests {
             cer
         );
         assert_eq!(
-            T::decode(&cer, DecodingOptions::default())
+            T::decode(&cer, &DecodingOptions::default())
                 .map(|(_, value)| value)
                 .unwrap(),
             value
         );
         assert_eq!(
-            Asn1Object::decode(&cer, DecodingOptions::default())
+            Asn1Object::decode(&cer, &DecodingOptions::default())
                 .map(|(_, value)| value)
                 .unwrap(),
             tree
@@ -461,9 +474,11 @@ mod tests {
         if len > 1000 {
             assert_eq!(cer[0], der[0] | 0x20);
             assert_eq!(cer[1], 0x80);
-            let outer = Asn1Ref::parse(&cer, DecodingOptions::default()).unwrap();
+            let outer =
+                Asn1Ref::parse(&cer, &mut DecodingContext::new(&DecodingOptions::default()))
+                    .unwrap();
             let parts: alloc::vec::Vec<_> = outer
-                .children(DecodingOptions::default())
+                .children(&mut DecodingContext::new(&DecodingOptions::default()))
                 .map(Result::unwrap)
                 .collect();
             for (index, part) in parts.iter().enumerate() {
@@ -481,7 +496,7 @@ mod tests {
             assert_eq!(
                 {
                     let input: &[u8] = &cer;
-                    T::decode(input, DecodingOptions::default()).and_then(|(used, value)| {
+                    T::decode(input, &DecodingOptions::default()).and_then(|(used, value)| {
                         if used != input.len() {
                             Err(crate::Asn1Error::TrailingData)
                         } else if value
@@ -499,7 +514,7 @@ mod tests {
             assert_eq!(
                 {
                     let input: &[u8] = &cer;
-                    Asn1Object::decode(input, DecodingOptions::default()).and_then(
+                    Asn1Object::decode(input, &DecodingOptions::default()).and_then(
                         |(used, value)| {
                             if used != input.len() {
                                 Err(crate::Asn1Error::TrailingData)
@@ -521,7 +536,7 @@ mod tests {
             assert_eq!(
                 {
                     let input: &[u8] = &cer;
-                    T::decode(input, DecodingOptions::default()).and_then(|(used, value)| {
+                    T::decode(input, &DecodingOptions::default()).and_then(|(used, value)| {
                         if used != input.len() {
                             Err(crate::Asn1Error::TrailingData)
                         } else if value
@@ -573,7 +588,7 @@ mod tests {
         assert_eq!(
             Asn1BmpString::decode(
                 &[0x3e, 6, 4, 1, 0x53, 4, 1, 0xf0],
-                DecodingOptions::default()
+                &DecodingOptions::default()
             )
             .map(|(_, value)| value)
             .unwrap()
@@ -583,7 +598,7 @@ mod tests {
         assert_eq!(
             Asn1UniversalString::decode(
                 &[0x3c, 8, 4, 1, 0, 4, 3, 0, 0x53, 0xf0],
-                DecodingOptions::default()
+                &DecodingOptions::default()
             )
             .map(|(_, value)| value)
             .unwrap()
@@ -591,42 +606,36 @@ mod tests {
             "台"
         );
         assert_eq!(
-            Asn1BmpString::decode(&[0x3e, 6, 4, 1, 0xd8, 4, 1, 0], DecodingOptions::default())
+            Asn1BmpString::decode(&[0x3e, 6, 4, 1, 0xd8, 4, 1, 0], &DecodingOptions::default())
                 .map(|(_, value)| value),
             Err(Asn1Error::MalformedValue)
         );
         assert_eq!(
-            Asn1NumericString::decode(&[0x32, 3, 4, 1, b'A'], DecodingOptions::default())
+            Asn1NumericString::decode(&[0x32, 3, 4, 1, b'A'], &DecodingOptions::default())
                 .map(|(_, value)| value),
             Err(Asn1Error::MalformedValue)
         );
         assert_eq!(
-            Asn1VisibleString::decode(&[0x3a, 3, 4, 1, 0x7f], DecodingOptions::default())
+            Asn1VisibleString::decode(&[0x3a, 3, 4, 1, 0x7f], &DecodingOptions::default())
                 .map(|(_, value)| value),
             Err(Asn1Error::MalformedValue)
         );
         assert_eq!(
-            Asn1Ia5String::decode(&[0x36, 3, 4, 1, 0xff], DecodingOptions::default())
+            Asn1Ia5String::decode(&[0x36, 3, 4, 1, 0xff], &DecodingOptions::default())
                 .map(|(_, value)| value),
             Err(Asn1Error::MalformedValue)
         );
         let nested = [0x2c, 5, 0x24, 3, 4, 1, b'A'];
         assert_eq!(
-            Asn1Utf8String::decode(
-                &nested,
-                DecodingOptions::new(crate::Depth::new(1), 16 * 1024 * 1024, 65_536)
-            )
-            .map(|(_, value)| value),
+            Asn1Utf8String::decode(&nested, &DecodingOptions::new(1, 16 * 1024 * 1024, 65_536))
+                .map(|(_, value)| value),
             Err(Asn1Error::DepthExceeded)
         );
         assert_eq!(
-            Asn1Utf8String::decode(
-                &nested,
-                DecodingOptions::new(crate::Depth::new(2), 16 * 1024 * 1024, 65_536)
-            )
-            .map(|(_, value)| value)
-            .unwrap()
-            .as_str(),
+            Asn1Utf8String::decode(&nested, &DecodingOptions::new(2, 16 * 1024 * 1024, 65_536))
+                .map(|(_, value)| value)
+                .unwrap()
+                .as_str(),
             "A"
         );
     }
@@ -648,19 +657,19 @@ mod tests {
                     .unwrap()
             );
             assert_eq!(
-                Asn1Object::decode(&cer, DecodingOptions::default())
+                Asn1Object::decode(&cer, &DecodingOptions::default())
                     .map(|(_, value)| value)
                     .unwrap(),
                 value
             );
         }
         assert_eq!(
-            Asn1OidIri::decode(&[0x3f, 0x23, 0], DecodingOptions::default())
+            Asn1OidIri::decode(&[0x3f, 0x23, 0], &DecodingOptions::default())
                 .map(|(_, value)| value),
             Err(Asn1Error::UnexpectedTag)
         );
         assert_eq!(
-            Asn1RelativeOidIri::decode(&[0x3f, 0x24, 0], DecodingOptions::default())
+            Asn1RelativeOidIri::decode(&[0x3f, 0x24, 0], &DecodingOptions::default())
                 .map(|(_, value)| value),
             Err(Asn1Error::UnexpectedTag)
         );
@@ -683,7 +692,7 @@ mod tests {
                 .unwrap();
             assert_eq!(&wire[1..10], &[0x80, 0xa0, 0x80, 0x85, 0, 0, 0, 0xa2, 0x80]);
             assert_eq!(
-                Asn1Object::decode(&wire, DecodingOptions::default()).map(|(_, value)| value),
+                Asn1Object::decode(&wire, &DecodingOptions::default()).map(|(_, value)| value),
                 Ok(value)
             );
         }
@@ -701,7 +710,7 @@ mod tests {
                 value.encoded_len(&EncodingOptions::new(EncodingType::Cer))
             );
             assert_eq!(
-                Asn1OctetString::decode(&wire, DecodingOptions::default()).map(|(_, value)| value),
+                Asn1OctetString::decode(&wire, &DecodingOptions::default()).map(|(_, value)| value),
                 Ok(value.clone())
             );
             let tagged = Implicit::new(&[0x9f, 0x81, 0], &value);
@@ -709,7 +718,9 @@ mod tests {
                 .encode_to_vec(&EncodingOptions::new(EncodingType::Cer))
                 .unwrap();
             assert_eq!(wire[0], if len > 1000 { 0xbf } else { 0x9f });
-            let mut fields = Fields::new(&wire, DecodingOptions::default()).unwrap();
+            let options = DecodingOptions::default();
+            let mut context = DecodingContext::new(&options);
+            let mut fields = Fields::new(&wire, &mut context).unwrap();
             assert_eq!(
                 if len > 1000 {
                     fields.implicit_constructed::<Asn1OctetString>(&[0x9f, 0x81, 0])

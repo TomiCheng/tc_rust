@@ -7,7 +7,7 @@
 //! 時區資料庫，也不判斷區間端點的先後。秒數 60 的實際適用性由上層判斷。
 
 use super::{tag, time_value};
-use crate::{Asn1Error, DecodeContent, DecodingOptions, Encode, EncodingOptions};
+use crate::{Asn1Error, DecodeContent, DecodingContext, Encode, EncodingOptions};
 use alloc::{format, string::String};
 
 #[derive(Clone, Copy)]
@@ -92,18 +92,43 @@ macro_rules! time_type {
                 &self.text
             }
         }
-        impl<'a> crate::Decode<'a> for $name {
-            fn decode(
+        impl<'a> crate::DecodeInner<'a> for $name {
+            fn decode_inner(
                 buff: &'a [u8],
-                options: crate::DecodingOptions,
+                context: &mut crate::DecodingContext<'_>,
             ) -> Result<(usize, Self), crate::Asn1Error> {
-                let element = crate::Asn1Ref::parse(buff, options)?;
+                let element = crate::Asn1Ref::parse(buff, context)?;
                 if element.is_constructed() {
                     return Err(crate::Asn1Error::UnexpectedTag);
                 }
                 let value =
-                    <Self as crate::DecodeContent<'a>>::decode_content(element.value(), options)?;
+                    <Self as crate::DecodeContent<'a>>::decode_content(element.value(), context)?;
                 Ok((element.total_len(), value))
+            }
+            fn decode_inner_der(
+                buff: &'a [u8],
+                context: &mut crate::DecodingContext<'_>,
+            ) -> Result<(usize, Self), crate::Asn1Error> {
+                let element = crate::Asn1Ref::parse_der(buff, context)?;
+                if element.is_constructed() {
+                    return Err(crate::Asn1Error::UnexpectedTag);
+                }
+                let value = <Self as crate::DecodeContent<'a>>::decode_content_der(
+                    element.value(),
+                    context,
+                )?;
+                Ok((element.total_len(), value))
+            }
+        }
+        impl<'a> crate::Decode<'a> for $name {
+            fn decode(
+                buff: &'a [u8],
+                options: &crate::DecodingOptions,
+            ) -> Result<(usize, Self), crate::Asn1Error> {
+                <Self as crate::DecodeInner<'a>>::decode_inner(
+                    buff,
+                    &mut crate::DecodingContext::new(options),
+                )
             }
         }
 
@@ -111,11 +136,18 @@ macro_rules! time_type {
             /// 變動時間：從線路格式還原值記法，驗證並正規化。
             fn decode_content(
                 value: &'a [u8],
-                options: DecodingOptions,
+                context: &mut DecodingContext<'_>,
             ) -> Result<Self, Asn1Error> {
-                options.check_content_len(value.len())?;
+                context.options().check_content_len(value.len())?;
                 let wire = core::str::from_utf8(value).map_err(|_| Asn1Error::MalformedValue)?;
                 Self::new(&Kind::$kind.notation(wire)?)
+            }
+
+            fn decode_content_der(
+                value: &'a [u8],
+                context: &mut crate::DecodingContext<'_>,
+            ) -> Result<Self, crate::Asn1Error> {
+                crate::decoding::decode_der_content::<Self>(value, context)
             }
         }
 
@@ -243,7 +275,9 @@ assert_ne!(duration, Asn1Duration::new("P2M").unwrap());
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(test)]
     use crate::Decode;
+    use crate::DecodingOptions;
     use crate::EncodingType;
     #[test]
     fn useful_time_types_write_the_standard_separator_free_contents() {
@@ -287,7 +321,7 @@ mod tests {
                 &[
                     0x1f, 0x1f, 8, b'2', b'0', b'2', b'4', b'0', b'2', b'2', b'9'
                 ],
-                DecodingOptions::default()
+                &DecodingOptions::default()
             )
             .unwrap()
             .1
@@ -302,12 +336,12 @@ mod tests {
                 let value = $ty::new($text).unwrap();
                 let mut out = alloc::vec![0; value.encoded_len(&EncodingOptions::new(EncodingType::Der))];
                 value.encode(&EncodingOptions::new(EncodingType::Der), &mut out).unwrap();
-                assert_eq!($ty::decode(&out, DecodingOptions::default()).unwrap().1, value);
-                let expected_tag = crate::Asn1Ref::parse(&out, DecodingOptions::default()).unwrap().tag().to_vec();
+                assert_eq!($ty::decode(&out, &DecodingOptions::default()).unwrap().1, value);
+                let expected_tag = crate::Asn1Ref::parse(&out, &mut DecodingContext::new(&DecodingOptions::default())).unwrap().tag().to_vec();
                 if out[0] == 0x1F { out[1] = 0x25; } else { out[0] = 0x04; }
-                assert_eq!(crate::Fields::new(&out, DecodingOptions::default()).and_then(|mut fields| fields.required::<$ty>(&expected_tag)), Err(Asn1Error::UnexpectedTag));
-                assert!($ty::decode_content(&[], DecodingOptions::default()).is_err());
-                assert!($ty::decode_content(&[0xff], DecodingOptions::default()).is_err());
+                assert_eq!(crate::Fields::new(&out, &mut DecodingContext::new(&DecodingOptions::default())).and_then(|mut fields| fields.required::<$ty>(&expected_tag)), Err(Asn1Error::UnexpectedTag));
+                assert!($ty::decode_content(&[], &mut DecodingContext::new(&DecodingOptions::default())).is_err());
+                assert!($ty::decode_content(&[0xff], &mut DecodingContext::new(&DecodingOptions::default())).is_err());
             }
         }
         check!(Asn1Time, "R/P1W");
@@ -315,8 +349,20 @@ mod tests {
         check!(Asn1TimeOfDay, "00:00:00");
         check!(Asn1DateTime, "9999-12-31T23:59:59");
         check!(Asn1Duration, "PT0.000S");
-        assert!(Asn1Date::decode_content(b"2024-02-29", DecodingOptions::default()).is_err());
-        assert!(Asn1Duration::decode_content(b"P1D", DecodingOptions::default()).is_err());
+        assert!(
+            Asn1Date::decode_content(
+                b"2024-02-29",
+                &mut DecodingContext::new(&DecodingOptions::default())
+            )
+            .is_err()
+        );
+        assert!(
+            Asn1Duration::decode_content(
+                b"P1D",
+                &mut DecodingContext::new(&DecodingOptions::default())
+            )
+            .is_err()
+        );
     }
     #[test]
     fn gregorian_dates_ordinal_dates_and_iso_weeks_obey_calendar_boundaries() {

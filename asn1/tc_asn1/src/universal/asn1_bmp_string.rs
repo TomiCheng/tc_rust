@@ -2,8 +2,8 @@
 
 use alloc::string::String;
 
+use crate::DecodingContext;
 use crate::EncodingOptions;
-use crate::decoding_options::DecodingOptions;
 use crate::error::Asn1Error;
 use crate::traits::{DecodeContent, Encode};
 
@@ -54,26 +54,55 @@ impl Asn1BmpString {
     }
 }
 
+impl<'a> crate::DecodeInner<'a> for Asn1BmpString {
+    fn decode_inner(
+        buff: &'a [u8],
+        context: &mut crate::DecodingContext<'_>,
+    ) -> Result<(usize, Self), crate::Asn1Error> {
+        let element = crate::Asn1Ref::parse(buff, context)?;
+        let value = if element.is_constructed() {
+            <Self as crate::DecodeConstructed<'a>>::decode_constructed(element.value(), context)?
+        } else {
+            <Self as crate::DecodeContent<'a>>::decode_content(element.value(), context)?
+        };
+        Ok((element.total_len(), value))
+    }
+    fn decode_inner_der(
+        buff: &'a [u8],
+        context: &mut crate::DecodingContext<'_>,
+    ) -> Result<(usize, Self), crate::Asn1Error> {
+        let element = crate::Asn1Ref::parse_der(buff, context)?;
+        if element.is_constructed() {
+            return Err(crate::Asn1Error::NotDer);
+        }
+        let value = if element.is_constructed() {
+            <Self as crate::DecodeConstructed<'a>>::decode_constructed(element.value(), context)?
+        } else {
+            <Self as crate::DecodeContent<'a>>::decode_content_der(element.value(), context)?
+        };
+        Ok((element.total_len(), value))
+    }
+}
 impl<'a> crate::Decode<'a> for Asn1BmpString {
     fn decode(
         buff: &'a [u8],
-        options: crate::DecodingOptions,
+        options: &crate::DecodingOptions,
     ) -> Result<(usize, Self), crate::Asn1Error> {
-        let element = crate::Asn1Ref::parse(buff, options)?;
-        let value = if element.is_constructed() {
-            <Self as crate::DecodeConstructed<'a>>::decode_constructed(element.value(), options)?
-        } else {
-            <Self as crate::DecodeContent<'a>>::decode_content(element.value(), options)?
-        };
-        Ok((element.total_len(), value))
+        <Self as crate::DecodeInner<'a>>::decode_inner(
+            buff,
+            &mut crate::DecodingContext::new(options),
+        )
     }
 }
 
 impl<'a> DecodeContent<'a> for Asn1BmpString {
     /// 逐個解讀兩位元組的 UCS-2 碼位；奇數長度與所有代理碼一律拒絕。
     /// 變動時間：依內容長度與碼位分支，不嘗試合併代理對。
-    fn decode_content(value: &'a [u8], options: DecodingOptions) -> Result<Self, Asn1Error> {
-        options.check_content_len(value.len())?;
+    fn decode_content(
+        value: &'a [u8],
+        context: &mut DecodingContext<'_>,
+    ) -> Result<Self, Asn1Error> {
+        context.options().check_content_len(value.len())?;
         let (units, remainder) = value.as_chunks::<2>();
         if !remainder.is_empty() {
             return Err(Asn1Error::MalformedValue);
@@ -85,6 +114,13 @@ impl<'a> DecodeContent<'a> for Asn1BmpString {
             text.push(ch);
         }
         Ok(Self { text })
+    }
+
+    fn decode_content_der(
+        value: &'a [u8],
+        context: &mut crate::DecodingContext<'_>,
+    ) -> Result<Self, crate::Asn1Error> {
+        crate::decoding::decode_der_content::<Self>(value, context)
     }
 }
 
@@ -133,7 +169,9 @@ impl Encode for Asn1BmpString {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(test)]
     use crate::Decode;
+    use crate::DecodingOptions;
     use crate::EncodeContent;
     use crate::EncodingType;
 
@@ -155,7 +193,7 @@ mod tests {
                 assert_eq!(original.content_len(rules), 2 * text.chars().count());
                 assert_eq!(written, original.encoded_len(rules));
                 let (used, decoded) =
-                    Asn1BmpString::decode(&out[..written], DecodingOptions::default()).unwrap();
+                    Asn1BmpString::decode(&out[..written], &DecodingOptions::default()).unwrap();
                 assert_eq!(used, written);
                 assert_eq!(decoded, original);
                 assert_eq!(decoded.as_str(), text);
@@ -167,7 +205,10 @@ mod tests {
     fn an_odd_number_of_content_bytes_is_rejected() {
         for value in [&[0][..], &[0, b'A', 0]] {
             assert_eq!(
-                Asn1BmpString::decode_content(value, DecodingOptions::default()),
+                Asn1BmpString::decode_content(
+                    value,
+                    &mut DecodingContext::new(&DecodingOptions::default())
+                ),
                 Err(Asn1Error::MalformedValue)
             );
         }
@@ -183,7 +224,10 @@ mod tests {
             &[0xD8, 0x3D, 0xDE, 0],
         ] {
             assert_eq!(
-                Asn1BmpString::decode_content(value, DecodingOptions::default()),
+                Asn1BmpString::decode_content(
+                    value,
+                    &mut DecodingContext::new(&DecodingOptions::default())
+                ),
                 Err(Asn1Error::MalformedValue)
             );
         }
@@ -207,7 +251,7 @@ mod tests {
         );
         assert_eq!(out, [0x1E, 8, 0, 0, 0xD7, 0xFF, 0xE0, 0, 0xFF, 0xFF]);
         assert_eq!(
-            Asn1BmpString::decode(&out, DecodingOptions::default()),
+            Asn1BmpString::decode(&out, &DecodingOptions::default()),
             Ok((10, original))
         );
     }
@@ -223,7 +267,7 @@ mod tests {
         );
         assert_eq!(out, [0x1E, 0]);
         assert_eq!(
-            Asn1BmpString::decode(&out, DecodingOptions::default()),
+            Asn1BmpString::decode(&out, &DecodingOptions::default()),
             Ok((2, original))
         );
     }
@@ -231,8 +275,11 @@ mod tests {
     #[test]
     fn the_schema_checks_tags_a_bmp_string_rejects_a_utf8_string_tag() {
         assert_eq!(
-            crate::Fields::new(&[0x0C, 0], DecodingOptions::default())
-                .and_then(|mut fields| fields.required::<Asn1BmpString>(Asn1BmpString::TAG)),
+            crate::Fields::new(
+                &[0x0C, 0],
+                &mut DecodingContext::new(&DecodingOptions::default())
+            )
+            .and_then(|mut fields| fields.required::<Asn1BmpString>(Asn1BmpString::TAG)),
             Err(Asn1Error::UnexpectedTag)
         );
     }

@@ -26,7 +26,7 @@ data without a schema.
 
 ```rust
 use tc_asn1::{
-    Asn1Error, Asn1Integer, Asn1Ref, Decode, DecodingOptions, Encode,
+    Asn1Error, Asn1Integer, DecodingContext, Asn1Ref, Decode, DecodingOptions, Encode,
     EncodingOptions, EncodingType, tag,
 };
 
@@ -36,11 +36,11 @@ fn main() -> Result<(), Asn1Error> {
     assert_eq!(wire, [0x02, 0x01, 0x2a]);
 
     let options = DecodingOptions::default();
-    let element = Asn1Ref::parse(&wire, options)?;
+    let element = Asn1Ref::parse(&wire, &mut DecodingContext::new(&options))?;
     if element.tag() != tag::INTEGER {
         return Err(Asn1Error::UnexpectedTag);
     }
-    let (used, decoded) = Asn1Integer::decode(&wire, options)?;
+    let (used, decoded) = Asn1Integer::decode(&wire, &options)?;
     assert_eq!(used, wire.len());
     assert_eq!(decoded, value);
     Ok(())
@@ -92,21 +92,23 @@ constructor, and the getters `depth()`, `max_content_len()`, and `max_children()
 
 | Setting | Default | Meaning |
 | --- | --- | --- |
-| `depth` | `Depth::DEFAULT`, or 32 levels | Remaining nesting budget along a decoding path. |
+| `depth: u32` | 32 levels | Maximum active constructed-content scopes. |
 | `max_content_len` | 16 MiB | Maximum contents of one element, excluding its outer header and EOC marker. |
 | `max_children` | 65,536 | Maximum number of direct children of one constructed element. |
 
 These limits are not a shared budget for total allocations or all nodes in a
 tree. Definite-length opaque contents are not traversed during parsing; limits
 on their descendants apply when those descendants are decoded or iterated.
-Copying options does not spend depth. `Depth::descend()` returns a reduced budget
-or `Asn1Error::DepthExceeded` when no levels remain.
+`DecodingContext` borrows these options and tracks the current depth. Entering
+constructed contents spends one level until that scope ends. Siblings reuse the
+same depth, and errors or panic unwinding restore the parent depth. Options are
+not `Copy`; their configured limits remain unchanged.
 
 ```rust
-use tc_asn1::{DecodingOptions, Depth};
+use tc_asn1::DecodingOptions;
 
-let options = DecodingOptions::new(Depth::new(8), 4096, 64);
-assert_eq!(options.depth().get(), 8);
+let options = DecodingOptions::new(8, 4096, 64);
+assert_eq!(options.depth(), 8);
 assert_eq!(options.max_content_len(), 4096);
 assert_eq!(options.max_children(), 64);
 ```
@@ -161,12 +163,14 @@ no blanket implementation deriving `Decode` from `DecodeContent`.
 
 | Trait | Method | Input | Result |
 | --- | --- | --- | --- |
-| `DecodeContent<'a>` | `decode_content` | Contents without the outer header. | `Result<Self, Asn1Error>` |
+| `DecodeContent<'a>` | `decode_content`, `decode_content_der` | Contents without the outer header. | `Result<Self, Asn1Error>` |
 | `DecodeConstructed<'a>` | `decode_constructed` | Component TLVs inside a constructed string. | `Result<Self, Asn1Error>` |
+| `DecodeInner<'a>` | `decode_inner`, `decode_inner_der` | A TLV and an existing context. | `Result<(usize, Self), Asn1Error>` |
 | `Decode<'a>` | `decode` | A buffer starting with a complete TLV. | `Result<(usize, Self), Asn1Error>` |
 
-Each method accepts `DecodingOptions`. The lifetime `'a` allows implementations
-to borrow from the input; it does not require them to borrow. All three traits
+`decode` borrows `&DecodingOptions`; the other methods take
+`&mut DecodingContext<'_>`. Input and configuration lifetimes are independent.
+The lifetime `'a` permits borrowing from the input. All four traits
 require `Sized`, so they are used with concrete types or generics rather than
 trait objects.
 
@@ -183,11 +187,25 @@ returned size with the buffer length. This check is separate from validating
 contents: a BOOLEAN with two content bytes or a NULL with nonempty contents is
 invalid even when trailing bytes outside a valid TLV would be allowed.
 
-`Asn1Ref::decode_as::<T>()` calls `T::decode` and requires consumption of the
+`Asn1Ref::decode_as::<T>()` calls `T::decode_inner` and requires consumption of the
 entire referenced element. It does not select or validate the schema's identifier
 for `T`. `decode_constructed_as::<T>()` selects the constructed-content or
 primitive-content entry point from the constructed bit. `DecodeConstructed`
 requires `DecodeContent`, so both entries are available.
+
+DER is selected explicitly through the methods ending in `_der`. The context
+contains no encoding-rule flag. A DER container calls DER decoders for all its
+ASN.1 fields. A schema accepting BER can instead select DER for individual fields
+using `Fields::required_der`, `implicit_der`, or `explicit_der`.
+`default_der` rejects an explicitly encoded default value. DER header parsing
+requires definite, minimal lengths, while value decoders check type-specific
+restrictions. SET OF also checks member ordering. There is no
+`decode_constructed_der`: segmented string forms are not DER.
+
+`Asn1Ref::parse_der` validates the header and known universal forms; it does not
+replace typed content validation. `decode_as_der` invokes the selected type's
+complete DER decoder. Open values and opaque legacy string representations still
+need schema-specific validation where their underlying semantics are unknown.
 
 Every fixed universal type exposes its identifier as `TAG`, for example
 `Asn1Integer::TAG`. Types supporting constructed encodings also expose
@@ -213,7 +231,7 @@ Complete successful field reads with `finish()` to reject remaining fields.
 
 ```rust
 use tc_asn1::{
-    Asn1Error, Asn1Integer, DecodingOptions, EncodeTagged, EncodingOptions, EncodingType, Fields,
+    Asn1Error, Asn1Integer, DecodingContext, DecodingOptions, EncodeTagged, EncodingOptions, EncodingType, Fields,
 };
 
 fn main() -> Result<(), Asn1Error> {
@@ -224,7 +242,9 @@ fn main() -> Result<(), Asn1Error> {
     assert_eq!(wire, [0x80, 1, 42]);
 
     // These bytes are a field list containing one element, without a parent header.
-    let mut fields = Fields::new(&wire[..written], DecodingOptions::default())?;
+    let options = DecodingOptions::default();
+    let mut context = DecodingContext::new(&options);
+    let mut fields = Fields::new(&wire[..written], &mut context)?;
     let decoded: Asn1Integer = fields.implicit(tag)?;
     fields.finish()?;
     assert_eq!(decoded, value);
@@ -318,7 +338,7 @@ If member identifiers require additional schema checks, implement those checks
 in the element decoder or read the fields explicitly.
 
 ```rust
-use tc_asn1::{Asn1Error, Asn1Integer, Asn1SequenceOf, Encode, EncodingOptions, EncodingType};
+use tc_asn1::{Asn1Error, Asn1Integer, DecodingContext, Asn1SequenceOf, Encode, EncodingOptions, EncodingType};
 
 fn main() -> Result<(), Asn1Error> {
     let values: Asn1SequenceOf<Asn1Integer> =

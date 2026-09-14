@@ -2,8 +2,8 @@
 
 use alloc::vec::Vec;
 
+use crate::DecodingContext;
 use crate::EncodingOptions;
-use crate::decoding_options::DecodingOptions;
 use crate::error::Asn1Error;
 use crate::traits::{DecodeConstructed, DecodeContent, Encode};
 
@@ -22,22 +22,23 @@ impl Asn1OctetString {
     /// The byte arrays below are wire examples, including their tag and length fields.
     ///
     /// ```
-    /// use tc_asn1::{Asn1Error, Asn1Integer, Asn1OctetString, Asn1Ref, DecodingOptions};
+    /// use tc_asn1::{Asn1Error, Asn1Integer, Asn1OctetString, Asn1Ref, DecodingContext, DecodingOptions};
     ///
     /// let options = DecodingOptions::default();
+    /// let mut context = DecodingContext::new(&options);
     /// for wire in [
     ///     &[2, 1, 5][..],
     ///     &[4, 2, b'A', b'B'],
     ///     &[0x24, 6, 4, 1, b'A', 4, 1, b'B'],
     /// ] {
-    ///     let element = Asn1Ref::parse(wire, options)?;
+    ///     let element = Asn1Ref::parse(wire, &mut context)?;
     ///     match element.tag() {
     ///         Asn1Integer::TAG => {
-    ///             let value = element.decode_as::<Asn1Integer>(options)?;
+    ///             let value = element.decode_as::<Asn1Integer>(&mut context)?;
     ///             assert_eq!(i64::try_from(&value)?, 5);
     ///         }
     ///         Asn1OctetString::TAG | Asn1OctetString::CONSTRUCTED_TAG => {
-    ///             let value = element.decode_constructed_as::<Asn1OctetString>(options)?;
+    ///             let value = element.decode_constructed_as::<Asn1OctetString>(&mut context)?;
     ///             assert_eq!(value.as_bytes(), b"AB");
     ///         }
     ///         _ => return Err(Asn1Error::UnexpectedTag),
@@ -67,38 +68,77 @@ impl From<Vec<u8>> for Asn1OctetString {
     }
 }
 
+impl<'a> crate::DecodeInner<'a> for Asn1OctetString {
+    fn decode_inner(
+        buff: &'a [u8],
+        context: &mut crate::DecodingContext<'_>,
+    ) -> Result<(usize, Self), crate::Asn1Error> {
+        let element = crate::Asn1Ref::parse(buff, context)?;
+        let value = if element.is_constructed() {
+            <Self as crate::DecodeConstructed<'a>>::decode_constructed(element.value(), context)?
+        } else {
+            <Self as crate::DecodeContent<'a>>::decode_content(element.value(), context)?
+        };
+        Ok((element.total_len(), value))
+    }
+    fn decode_inner_der(
+        buff: &'a [u8],
+        context: &mut crate::DecodingContext<'_>,
+    ) -> Result<(usize, Self), crate::Asn1Error> {
+        let element = crate::Asn1Ref::parse_der(buff, context)?;
+        if element.is_constructed() {
+            return Err(crate::Asn1Error::NotDer);
+        }
+        let value = if element.is_constructed() {
+            <Self as crate::DecodeConstructed<'a>>::decode_constructed(element.value(), context)?
+        } else {
+            <Self as crate::DecodeContent<'a>>::decode_content_der(element.value(), context)?
+        };
+        Ok((element.total_len(), value))
+    }
+}
 impl<'a> crate::Decode<'a> for Asn1OctetString {
     fn decode(
         buff: &'a [u8],
-        options: crate::DecodingOptions,
+        options: &crate::DecodingOptions,
     ) -> Result<(usize, Self), crate::Asn1Error> {
-        let element = crate::Asn1Ref::parse(buff, options)?;
-        let value = if element.is_constructed() {
-            <Self as crate::DecodeConstructed<'a>>::decode_constructed(element.value(), options)?
-        } else {
-            <Self as crate::DecodeContent<'a>>::decode_content(element.value(), options)?
-        };
-        Ok((element.total_len(), value))
+        <Self as crate::DecodeInner<'a>>::decode_inner(
+            buff,
+            &mut crate::DecodingContext::new(options),
+        )
     }
 }
 
 impl<'a> DecodeContent<'a> for Asn1OctetString {
     /// 任何內容都合法，包括空的。
-    fn decode_content(value: &'a [u8], options: DecodingOptions) -> Result<Self, Asn1Error> {
-        options.check_content_len(value.len())?;
+    fn decode_content(
+        value: &'a [u8],
+        context: &mut DecodingContext<'_>,
+    ) -> Result<Self, Asn1Error> {
+        context.options().check_content_len(value.len())?;
         Ok(Self::new(value))
+    }
+
+    fn decode_content_der(
+        value: &'a [u8],
+        context: &mut crate::DecodingContext<'_>,
+    ) -> Result<Self, crate::Asn1Error> {
+        crate::decoding::decode_der_content::<Self>(value, context)
     }
 }
 
 impl<'a> DecodeConstructed<'a> for Asn1OctetString {
     /// 串接 BER 分段字串，巢狀分段透過新的 constructed 解碼入口處理。
     /// 變動時間：分支只依編碼結構，只能用於公開值；沒有常數時間替代方法。
-    fn decode_constructed(value: &'a [u8], options: DecodingOptions) -> Result<Self, Asn1Error> {
-        options.check_content_len(value.len())?;
+    fn decode_constructed(
+        value: &'a [u8],
+        context: &mut DecodingContext<'_>,
+    ) -> Result<Self, Asn1Error> {
+        context.options().check_content_len(value.len())?;
         Ok(Self::from(crate::segments::join_segments(
             Self::TAG,
             value,
-            options,
+            context,
         )?))
     }
 }
@@ -139,11 +179,12 @@ impl Encode for Asn1OctetString {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::DecodingOptions;
     use crate::EncodingType;
     use crate::traits::Decode;
 
     const OPTIONS: DecodingOptions =
-        DecodingOptions::new(crate::Depth::DEFAULT, 16 * 1024 * 1024, 65_536);
+        DecodingOptions::new(crate::Depth::DEFAULT.get(), 16 * 1024 * 1024, 65_536);
 
     #[test]
     fn cer_octets_segment_at_1000_and_preserve_implicit_and_erased_dispatch() {
@@ -181,11 +222,11 @@ mod tests {
             );
         }
         assert_eq!(
-            Asn1OctetString::decode(&expected, OPTIONS).map(|(_, value)| value),
+            Asn1OctetString::decode(&expected, &OPTIONS).map(|(_, value)| value),
             Ok(value.clone())
         );
         assert_eq!(
-            Asn1Object::decode(&expected, OPTIONS).map(|(_, value)| value),
+            Asn1Object::decode(&expected, &OPTIONS).map(|(_, value)| value),
             Ok(tree.clone())
         );
         expected[0] = 0xa0;
@@ -210,7 +251,7 @@ mod tests {
     #[test]
     fn bytes_pass_through_untouched_in_both_directions() {
         let input = [0x04, 0x03, 0xDE, 0xAD, 0x00];
-        let (used, s) = Asn1OctetString::decode(&input, OPTIONS).unwrap();
+        let (used, s) = Asn1OctetString::decode(&input, &OPTIONS).unwrap();
         assert_eq!(used, 5);
         assert_eq!(s.as_bytes(), &[0xDE, 0xAD, 0x00]);
 
@@ -223,7 +264,7 @@ mod tests {
 
     #[test]
     fn an_empty_octet_string_is_valid() {
-        let (used, s) = Asn1OctetString::decode(&[0x04, 0x00], OPTIONS).unwrap();
+        let (used, s) = Asn1OctetString::decode(&[0x04, 0x00], &OPTIONS).unwrap();
         assert_eq!(used, 2);
         assert!(s.as_bytes().is_empty());
         assert_eq!(s, Asn1OctetString::default());
@@ -232,7 +273,7 @@ mod tests {
     #[test]
     fn the_schema_checks_tags_a_bit_string_tag_is_not_an_octet_string() {
         assert_eq!(
-            crate::Fields::new(&[0x03, 0x01, 0x00], OPTIONS)
+            crate::Fields::new(&[0x03, 0x01, 0x00], &mut DecodingContext::new(&OPTIONS))
                 .and_then(|mut fields| fields.required::<Asn1OctetString>(Asn1OctetString::TAG)),
             Err(Asn1Error::UnexpectedTag)
         );
@@ -241,8 +282,11 @@ mod tests {
         input: &[u8],
         depth: DecodingOptions,
     ) -> Result<(usize, Asn1OctetString), Asn1Error> {
-        let element = crate::Asn1Ref::parse(input, depth)?;
-        Ok((element.total_len(), element.decode_constructed_as(depth)?))
+        let element = crate::Asn1Ref::parse(input, &mut DecodingContext::new(&depth))?;
+        Ok((
+            element.total_len(),
+            element.decode_constructed_as(&mut DecodingContext::new(&depth))?,
+        ))
     }
 
     #[test]
@@ -253,7 +297,7 @@ mod tests {
         ] {
             let (used, value) = decode_constructed(input, OPTIONS).unwrap();
             assert_eq!(
-                Asn1OctetString::decode(input, OPTIONS),
+                Asn1OctetString::decode(input, &OPTIONS),
                 Ok((used, value.clone()))
             );
             assert_eq!(used, input.len());
@@ -264,7 +308,7 @@ mod tests {
             ] {
                 assert_eq!(value.encode_to_vec(rules).unwrap(), [4, 2, 0xaa, 0xbb]);
             }
-            let tree = crate::Asn1Object::decode(input, OPTIONS).unwrap().1;
+            let tree = crate::Asn1Object::decode(input, &OPTIONS).unwrap().1;
             assert_eq!(tree, crate::Asn1Object::OctetString(value));
             assert_eq!(
                 alloc::string::ToString::to_string(&tree),
@@ -277,17 +321,11 @@ mod tests {
     fn nested_constructed_octets_consume_one_depth_unit_per_layer() {
         let input = b"\x24\x80\x24\x03\x04\x01\xaa\x04\x01\xbb\x00\x00";
         assert_eq!(
-            decode_constructed(
-                input,
-                DecodingOptions::new(crate::Depth::new(1), 16 * 1024 * 1024, 65_536)
-            ),
+            decode_constructed(input, DecodingOptions::new(1, 16 * 1024 * 1024, 65_536)),
             Err(Asn1Error::DepthExceeded)
         );
-        let (used, value) = decode_constructed(
-            input,
-            DecodingOptions::new(crate::Depth::new(2), 16 * 1024 * 1024, 65_536),
-        )
-        .unwrap();
+        let (used, value) =
+            decode_constructed(input, DecodingOptions::new(2, 16 * 1024 * 1024, 65_536)).unwrap();
         assert_eq!(used, input.len());
         assert_eq!(value.as_bytes(), &[0xaa, 0xbb]);
     }
@@ -321,7 +359,7 @@ mod tests {
         assert_eq!(
             crate::Asn1SequenceOf::<Asn1OctetString>::decode(
                 b"\x30\x05\x24\x03\x04\x01\xaa",
-                OPTIONS
+                &OPTIONS
             )
             .map(|(_, value)| value),
             Ok(crate::Asn1SequenceOf::from(alloc::vec![
@@ -360,12 +398,11 @@ mod tests {
             (&b"\x24\x02\x24\x00"[..], 1, Err(Asn1Error::DepthExceeded)),
             (&b"\x24\x02\x24\x00"[..], 2, Ok(Asn1OctetString::default())),
         ] {
-            let element = crate::Asn1Ref::parse(input, OPTIONS).unwrap();
+            let element =
+                crate::Asn1Ref::parse(input, &mut DecodingContext::new(&OPTIONS)).unwrap();
             assert_eq!(
-                element.decode_constructed_as::<Asn1OctetString>(DecodingOptions::new(
-                    crate::Depth::new(depth),
-                    16 * 1024 * 1024,
-                    65_536
+                element.decode_constructed_as::<Asn1OctetString>(&mut DecodingContext::new(
+                    &DecodingOptions::new(depth, 16 * 1024 * 1024, 65_536)
                 )),
                 expected,
                 "{input:?}"

@@ -9,6 +9,8 @@
 //! its smallest possible tag (§9.3). This schema-free tree uses actual tags and
 //! cannot enforce that rule without the CHOICE definition.
 
+#[cfg(test)]
+use crate::Decode;
 mod dump;
 mod tagged;
 
@@ -16,8 +18,8 @@ pub use tagged::{Asn1Tagged, TaggedContent};
 
 use crate::universal::*;
 use crate::{
-    Asn1Any, Asn1Class, Asn1Error, Asn1Ref, Decode, DecodeConstructed, DecodeContent,
-    DecodingOptions, Encode, EncodeTagged, EncodingOptions,
+    Asn1Any, Asn1Class, Asn1Error, Asn1Ref, DecodeConstructed, DecodeContent, DecodeInner,
+    DecodingContext, Encode, EncodeTagged, EncodingOptions,
 };
 use alloc::vec::Vec;
 
@@ -32,10 +34,10 @@ use alloc::vec::Vec;
 /// 拿到未知結構時，先解成樹看內容，再重編。
 ///
 /// ```
-/// use tc_asn1::{Asn1Object, DecodingOptions, Encode, EncodingOptions, EncodingType, Decode};
+/// use tc_asn1::{Decode, Asn1Object, DecodingOptions, Encode, EncodingOptions, EncodingType, DecodeInner};
 ///
 /// let input = [0x30, 5, 2, 1, 42, 5, 0];
-/// let (used, tree) = Asn1Object::decode(&input, DecodingOptions::default()).unwrap();
+/// let (used, tree) = Asn1Object::decode(&input, &DecodingOptions::default()).unwrap();
 /// assert_eq!(used, input.len());
 /// assert_eq!(tree.to_string(), "SEQUENCE\n  INTEGER 42\n  NULL\n");
 /// let out = tree.encode_to_vec(&EncodingOptions::new(EncodingType::Der)).unwrap();
@@ -196,165 +198,395 @@ impl Asn1Object {
     /// [`Asn1Any`] 保存的原始元素可以另行解讀，原資料仍保留。
     ///
     /// ```
-    /// use tc_asn1::{Asn1Any, Asn1Object, DecodingOptions, Decode};
+    /// use tc_asn1::{Decode, Asn1Any, Asn1Object, DecodingContext, DecodingOptions, DecodeInner};
+    /// let options = DecodingOptions::default();
+    /// let mut context = DecodingContext::new(&options);
     ///
-    /// let (_, any) = Asn1Any::decode(&[2, 1, 7], DecodingOptions::default()).unwrap();
-    /// let tree = Asn1Object::from_ref(&any.as_ref(), DecodingOptions::default()).unwrap();
+    /// let (_, any) = Asn1Any::decode(&[2, 1, 7], &DecodingOptions::default()).unwrap();
+    /// let tree = Asn1Object::from_ref(&any.as_ref(), &mut context).unwrap();
     /// assert_eq!(i64::try_from(tree.as_integer().unwrap()), Ok(7));
     /// assert_eq!(any.raw(), [2, 1, 7]);
     /// ```
-    pub fn from_ref(element: &Asn1Ref<'_>, options: DecodingOptions) -> Result<Self, Asn1Error> {
-        options.check_content_len(element.value().len())?;
+    pub fn from_ref(
+        element: &Asn1Ref<'_>,
+        context: &mut DecodingContext<'_>,
+    ) -> Result<Self, Asn1Error> {
+        context.options().check_content_len(element.value().len())?;
         if element.class() != Asn1Class::Universal {
-            return Ok(Self::Tagged(Asn1Tagged::from_ref(element, options)?));
+            return Ok(Self::Tagged(Asn1Tagged::from_ref(element, context)?));
         }
         Ok(match element.tag() {
-            tag::BOOLEAN => Self::Boolean(Asn1Boolean::decode_content(element.value(), options)?),
-            tag::INTEGER => Self::Integer(Asn1Integer::decode_content(element.value(), options)?),
-            tag::BIT_STRING => {
-                Self::BitString(Asn1BitString::decode_content(element.value(), options)?)
-            }
-            tag::OCTET_STRING => {
-                Self::OctetString(Asn1OctetString::decode_content(element.value(), options)?)
-            }
+            tag::BOOLEAN => Self::Boolean(crate::decoding::content::<Asn1Boolean>(
+                element.value(),
+                context,
+            )?),
+            tag::INTEGER => Self::Integer(crate::decoding::content::<Asn1Integer>(
+                element.value(),
+                context,
+            )?),
+            tag::BIT_STRING => Self::BitString(crate::decoding::content::<Asn1BitString>(
+                element.value(),
+                context,
+            )?),
+            tag::OCTET_STRING => Self::OctetString(crate::decoding::content::<Asn1OctetString>(
+                element.value(),
+                context,
+            )?),
             tag::CONSTRUCTED_OCTET_STRING => Self::OctetString(
-                Asn1OctetString::decode_constructed(element.value(), options)?,
+                Asn1OctetString::decode_constructed(element.value(), context)?,
             ),
             tag::CONSTRUCTED_BIT_STRING => {
-                Self::BitString(Asn1BitString::decode_constructed(element.value(), options)?)
+                Self::BitString(Asn1BitString::decode_constructed(element.value(), context)?)
             }
             tag::NULL => {
-                Asn1Null::decode_content(element.value(), options)?;
+                crate::decoding::content::<Asn1Null>(element.value(), context)?;
                 Self::Null
             }
-            tag::OBJECT_IDENTIFIER => Self::Oid(Asn1Oid::decode_content(element.value(), options)?),
-            tag::OBJECT_DESCRIPTOR => Self::ObjectDescriptor(Asn1ObjectDescriptor::decode_content(
+            tag::OBJECT_IDENTIFIER => Self::Oid(crate::decoding::content::<Asn1Oid>(
                 element.value(),
-                options,
+                context,
             )?),
-            tag::EXTERNAL => {
-                Self::External(Asn1External::decode_content(element.value(), options)?)
-            }
-            tag::REAL => Self::Real(Asn1Real::decode_content(element.value(), options)?),
-            tag::ENUMERATED => {
-                Self::Enumerated(Asn1Enumerated::decode_content(element.value(), options)?)
-            }
-            tag::EMBEDDED_PDV => {
-                Self::EmbeddedPdv(Asn1EmbeddedPdv::decode_content(element.value(), options)?)
-            }
-            tag::UTF8_STRING => {
-                Self::Utf8String(Asn1Utf8String::decode_content(element.value(), options)?)
-            }
-            tag::RELATIVE_OID => {
-                Self::RelativeOid(Asn1RelativeOid::decode_content(element.value(), options)?)
-            }
-            tag::TIME => Self::Time(Asn1Time::decode_content(element.value(), options)?),
-            tag::SEQUENCE => Self::Sequence(decode_children(element, options)?),
-            tag::SET => Self::Set(decode_children(element, options)?),
-            tag::NUMERIC_STRING => {
-                Self::NumericString(Asn1NumericString::decode_content(element.value(), options)?)
-            }
-            tag::PRINTABLE_STRING => Self::PrintableString(Asn1PrintableString::decode_content(
+            tag::OBJECT_DESCRIPTOR => Self::ObjectDescriptor(crate::decoding::content::<
+                Asn1ObjectDescriptor,
+            >(
+                element.value(), context
+            )?),
+            tag::EXTERNAL => Self::External(crate::decoding::content::<Asn1External>(
                 element.value(),
-                options,
+                context,
             )?),
-            tag::TELETEX_STRING => {
-                Self::TeletexString(Asn1TeletexString::decode_content(element.value(), options)?)
-            }
-            tag::VIDEOTEX_STRING => Self::VideotexString(Asn1VideotexString::decode_content(
+            tag::REAL => Self::Real(crate::decoding::content::<Asn1Real>(
                 element.value(),
-                options,
+                context,
             )?),
-            tag::IA5_STRING => {
-                Self::Ia5String(Asn1Ia5String::decode_content(element.value(), options)?)
-            }
-            tag::UTC_TIME => Self::UtcTime(Asn1UtcTime::decode_content(element.value(), options)?),
-            tag::GENERALIZED_TIME => Self::GeneralizedTime(Asn1GeneralizedTime::decode_content(
+            tag::ENUMERATED => Self::Enumerated(crate::decoding::content::<Asn1Enumerated>(
                 element.value(),
-                options,
+                context,
             )?),
-            tag::GRAPHIC_STRING => {
-                Self::GraphicString(Asn1GraphicString::decode_content(element.value(), options)?)
-            }
-            tag::VISIBLE_STRING => {
-                Self::VisibleString(Asn1VisibleString::decode_content(element.value(), options)?)
-            }
-            tag::GENERAL_STRING => {
-                Self::GeneralString(Asn1GeneralString::decode_content(element.value(), options)?)
-            }
-            tag::UNIVERSAL_STRING => Self::UniversalString(Asn1UniversalString::decode_content(
+            tag::EMBEDDED_PDV => Self::EmbeddedPdv(crate::decoding::content::<Asn1EmbeddedPdv>(
                 element.value(),
-                options,
+                context,
             )?),
-            tag::CHARACTER_STRING => Self::CharacterString(Asn1CharacterString::decode_content(
+            tag::UTF8_STRING => Self::Utf8String(crate::decoding::content::<Asn1Utf8String>(
                 element.value(),
-                options,
+                context,
             )?),
-            tag::BMP_STRING => {
-                Self::BmpString(Asn1BmpString::decode_content(element.value(), options)?)
-            }
-            tag::DATE => Self::Date(Asn1Date::decode_content(element.value(), options)?),
-            tag::TIME_OF_DAY => {
-                Self::TimeOfDay(Asn1TimeOfDay::decode_content(element.value(), options)?)
-            }
-            tag::DATE_TIME => {
-                Self::DateTime(Asn1DateTime::decode_content(element.value(), options)?)
-            }
-            tag::DURATION => {
-                Self::Duration(Asn1Duration::decode_content(element.value(), options)?)
-            }
-            tag::OID_IRI => Self::OidIri(Asn1OidIri::decode_content(element.value(), options)?),
-            tag::RELATIVE_OID_IRI => Self::RelativeOidIri(Asn1RelativeOidIri::decode_content(
+            tag::RELATIVE_OID => Self::RelativeOid(crate::decoding::content::<Asn1RelativeOid>(
                 element.value(),
-                options,
+                context,
             )?),
+            tag::TIME => Self::Time(crate::decoding::content::<Asn1Time>(
+                element.value(),
+                context,
+            )?),
+            tag::SEQUENCE => Self::Sequence(decode_children(element, context)?),
+            tag::SET => Self::Set(decode_children(element, context)?),
+            tag::NUMERIC_STRING => Self::NumericString(crate::decoding::content::<
+                Asn1NumericString,
+            >(element.value(), context)?),
+            tag::PRINTABLE_STRING => Self::PrintableString(crate::decoding::content::<
+                Asn1PrintableString,
+            >(element.value(), context)?),
+            tag::TELETEX_STRING => Self::TeletexString(crate::decoding::content::<
+                Asn1TeletexString,
+            >(element.value(), context)?),
+            tag::VIDEOTEX_STRING => Self::VideotexString(crate::decoding::content::<
+                Asn1VideotexString,
+            >(element.value(), context)?),
+            tag::IA5_STRING => Self::Ia5String(crate::decoding::content::<Asn1Ia5String>(
+                element.value(),
+                context,
+            )?),
+            tag::UTC_TIME => Self::UtcTime(crate::decoding::content::<Asn1UtcTime>(
+                element.value(),
+                context,
+            )?),
+            tag::GENERALIZED_TIME => Self::GeneralizedTime(crate::decoding::content::<
+                Asn1GeneralizedTime,
+            >(element.value(), context)?),
+            tag::GRAPHIC_STRING => Self::GraphicString(crate::decoding::content::<
+                Asn1GraphicString,
+            >(element.value(), context)?),
+            tag::VISIBLE_STRING => Self::VisibleString(crate::decoding::content::<
+                Asn1VisibleString,
+            >(element.value(), context)?),
+            tag::GENERAL_STRING => Self::GeneralString(crate::decoding::content::<
+                Asn1GeneralString,
+            >(element.value(), context)?),
+            tag::UNIVERSAL_STRING => Self::UniversalString(crate::decoding::content::<
+                Asn1UniversalString,
+            >(element.value(), context)?),
+            tag::CHARACTER_STRING => Self::CharacterString(crate::decoding::content::<
+                Asn1CharacterString,
+            >(element.value(), context)?),
+            tag::BMP_STRING => Self::BmpString(crate::decoding::content::<Asn1BmpString>(
+                element.value(),
+                context,
+            )?),
+            tag::DATE => Self::Date(crate::decoding::content::<Asn1Date>(
+                element.value(),
+                context,
+            )?),
+            tag::TIME_OF_DAY => Self::TimeOfDay(crate::decoding::content::<Asn1TimeOfDay>(
+                element.value(),
+                context,
+            )?),
+            tag::DATE_TIME => Self::DateTime(crate::decoding::content::<Asn1DateTime>(
+                element.value(),
+                context,
+            )?),
+            tag::DURATION => Self::Duration(crate::decoding::content::<Asn1Duration>(
+                element.value(),
+                context,
+            )?),
+            tag::OID_IRI => Self::OidIri(crate::decoding::content::<Asn1OidIri>(
+                element.value(),
+                context,
+            )?),
+            tag::RELATIVE_OID_IRI => Self::RelativeOidIri(crate::decoding::content::<
+                Asn1RelativeOidIri,
+            >(element.value(), context)?),
             tag::CONSTRUCTED_OBJECT_DESCRIPTOR => Self::ObjectDescriptor(
-                Asn1ObjectDescriptor::decode_constructed(element.value(), options)?,
+                Asn1ObjectDescriptor::decode_constructed(element.value(), context)?,
             ),
             tag::CONSTRUCTED_UTF8_STRING => Self::Utf8String(Asn1Utf8String::decode_constructed(
                 element.value(),
-                options,
+                context,
             )?),
             tag::CONSTRUCTED_NUMERIC_STRING => Self::NumericString(
-                Asn1NumericString::decode_constructed(element.value(), options)?,
+                Asn1NumericString::decode_constructed(element.value(), context)?,
             ),
             tag::CONSTRUCTED_PRINTABLE_STRING => Self::PrintableString(
-                Asn1PrintableString::decode_constructed(element.value(), options)?,
+                Asn1PrintableString::decode_constructed(element.value(), context)?,
             ),
             tag::CONSTRUCTED_TELETEX_STRING => Self::TeletexString(
-                Asn1TeletexString::decode_constructed(element.value(), options)?,
+                Asn1TeletexString::decode_constructed(element.value(), context)?,
             ),
             tag::CONSTRUCTED_VIDEOTEX_STRING => Self::VideotexString(
-                Asn1VideotexString::decode_constructed(element.value(), options)?,
+                Asn1VideotexString::decode_constructed(element.value(), context)?,
             ),
             tag::CONSTRUCTED_IA5_STRING => {
-                Self::Ia5String(Asn1Ia5String::decode_constructed(element.value(), options)?)
+                Self::Ia5String(Asn1Ia5String::decode_constructed(element.value(), context)?)
             }
             tag::CONSTRUCTED_GRAPHIC_STRING => Self::GraphicString(
-                Asn1GraphicString::decode_constructed(element.value(), options)?,
+                Asn1GraphicString::decode_constructed(element.value(), context)?,
             ),
             tag::CONSTRUCTED_VISIBLE_STRING => Self::VisibleString(
-                Asn1VisibleString::decode_constructed(element.value(), options)?,
+                Asn1VisibleString::decode_constructed(element.value(), context)?,
             ),
             tag::CONSTRUCTED_GENERAL_STRING => Self::GeneralString(
-                Asn1GeneralString::decode_constructed(element.value(), options)?,
+                Asn1GeneralString::decode_constructed(element.value(), context)?,
             ),
             tag::CONSTRUCTED_UNIVERSAL_STRING => Self::UniversalString(
-                Asn1UniversalString::decode_constructed(element.value(), options)?,
+                Asn1UniversalString::decode_constructed(element.value(), context)?,
             ),
             tag::CONSTRUCTED_BMP_STRING => {
-                Self::BmpString(Asn1BmpString::decode_constructed(element.value(), options)?)
+                Self::BmpString(Asn1BmpString::decode_constructed(element.value(), context)?)
             }
             _ => Self::Unknown(Asn1Any::from(element)),
         })
     }
+    /// Interpret this view using DER validation for known types and child TLVs.
+    /// Unknown IMPLICIT contents still require a schema. Variable time: public
+    /// input only; no constant-time alternative is provided.
+    pub fn from_ref_der(
+        element: &Asn1Ref<'_>,
+        context: &mut DecodingContext<'_>,
+    ) -> Result<Self, Asn1Error> {
+        Asn1Ref::parse_der(element.raw(), context)?;
+        if element.class() != Asn1Class::Universal {
+            return Ok(Self::Tagged(Asn1Tagged::from_ref_der(element, context)?));
+        }
+        let decoded = match element.tag() {
+            tag::BOOLEAN => {
+                Self::Boolean(Asn1Boolean::decode_content_der(element.value(), context)?)
+            }
+            tag::INTEGER => {
+                Self::Integer(Asn1Integer::decode_content_der(element.value(), context)?)
+            }
+            tag::BIT_STRING => {
+                Self::BitString(Asn1BitString::decode_content_der(element.value(), context)?)
+            }
+            tag::OCTET_STRING => Self::OctetString(Asn1OctetString::decode_content_der(
+                element.value(),
+                context,
+            )?),
+            tag::CONSTRUCTED_OCTET_STRING => Self::OctetString(
+                Asn1OctetString::decode_constructed(element.value(), context)?,
+            ),
+            tag::CONSTRUCTED_BIT_STRING => {
+                Self::BitString(Asn1BitString::decode_constructed(element.value(), context)?)
+            }
+            tag::NULL => {
+                Asn1Null::decode_content_der(element.value(), context)?;
+                Self::Null
+            }
+            tag::OBJECT_IDENTIFIER => {
+                Self::Oid(Asn1Oid::decode_content_der(element.value(), context)?)
+            }
+            tag::OBJECT_DESCRIPTOR => Self::ObjectDescriptor(crate::decoding::content::<
+                Asn1ObjectDescriptor,
+            >(
+                element.value(), context
+            )?),
+            tag::EXTERNAL => {
+                Self::External(Asn1External::decode_content_der(element.value(), context)?)
+            }
+            tag::REAL => Self::Real(Asn1Real::decode_content_der(element.value(), context)?),
+            tag::ENUMERATED => Self::Enumerated(Asn1Enumerated::decode_content_der(
+                element.value(),
+                context,
+            )?),
+            tag::EMBEDDED_PDV => Self::EmbeddedPdv(Asn1EmbeddedPdv::decode_content_der(
+                element.value(),
+                context,
+            )?),
+            tag::UTF8_STRING => Self::Utf8String(Asn1Utf8String::decode_content_der(
+                element.value(),
+                context,
+            )?),
+            tag::RELATIVE_OID => Self::RelativeOid(Asn1RelativeOid::decode_content_der(
+                element.value(),
+                context,
+            )?),
+            tag::TIME => Self::Time(Asn1Time::decode_content_der(element.value(), context)?),
+            tag::SEQUENCE => Self::Sequence(decode_children_der(element, context)?),
+            tag::SET => Self::Set(decode_children_der(element, context)?),
+            tag::NUMERIC_STRING => Self::NumericString(crate::decoding::content::<
+                Asn1NumericString,
+            >(element.value(), context)?),
+            tag::PRINTABLE_STRING => Self::PrintableString(crate::decoding::content::<
+                Asn1PrintableString,
+            >(element.value(), context)?),
+            tag::TELETEX_STRING => Self::TeletexString(crate::decoding::content::<
+                Asn1TeletexString,
+            >(element.value(), context)?),
+            tag::VIDEOTEX_STRING => Self::VideotexString(crate::decoding::content::<
+                Asn1VideotexString,
+            >(element.value(), context)?),
+            tag::IA5_STRING => {
+                Self::Ia5String(Asn1Ia5String::decode_content_der(element.value(), context)?)
+            }
+            tag::UTC_TIME => {
+                Self::UtcTime(Asn1UtcTime::decode_content_der(element.value(), context)?)
+            }
+            tag::GENERALIZED_TIME => Self::GeneralizedTime(crate::decoding::content::<
+                Asn1GeneralizedTime,
+            >(element.value(), context)?),
+            tag::GRAPHIC_STRING => Self::GraphicString(crate::decoding::content::<
+                Asn1GraphicString,
+            >(element.value(), context)?),
+            tag::VISIBLE_STRING => Self::VisibleString(crate::decoding::content::<
+                Asn1VisibleString,
+            >(element.value(), context)?),
+            tag::GENERAL_STRING => Self::GeneralString(crate::decoding::content::<
+                Asn1GeneralString,
+            >(element.value(), context)?),
+            tag::UNIVERSAL_STRING => Self::UniversalString(crate::decoding::content::<
+                Asn1UniversalString,
+            >(element.value(), context)?),
+            tag::CHARACTER_STRING => Self::CharacterString(crate::decoding::content::<
+                Asn1CharacterString,
+            >(element.value(), context)?),
+            tag::BMP_STRING => {
+                Self::BmpString(Asn1BmpString::decode_content_der(element.value(), context)?)
+            }
+            tag::DATE => Self::Date(Asn1Date::decode_content_der(element.value(), context)?),
+            tag::TIME_OF_DAY => {
+                Self::TimeOfDay(Asn1TimeOfDay::decode_content_der(element.value(), context)?)
+            }
+            tag::DATE_TIME => {
+                Self::DateTime(Asn1DateTime::decode_content_der(element.value(), context)?)
+            }
+            tag::DURATION => {
+                Self::Duration(Asn1Duration::decode_content_der(element.value(), context)?)
+            }
+            tag::OID_IRI => Self::OidIri(Asn1OidIri::decode_content_der(element.value(), context)?),
+            tag::RELATIVE_OID_IRI => Self::RelativeOidIri(crate::decoding::content::<
+                Asn1RelativeOidIri,
+            >(element.value(), context)?),
+            tag::CONSTRUCTED_OBJECT_DESCRIPTOR => Self::ObjectDescriptor(
+                Asn1ObjectDescriptor::decode_constructed(element.value(), context)?,
+            ),
+            tag::CONSTRUCTED_UTF8_STRING => Self::Utf8String(Asn1Utf8String::decode_constructed(
+                element.value(),
+                context,
+            )?),
+            tag::CONSTRUCTED_NUMERIC_STRING => Self::NumericString(
+                Asn1NumericString::decode_constructed(element.value(), context)?,
+            ),
+            tag::CONSTRUCTED_PRINTABLE_STRING => Self::PrintableString(
+                Asn1PrintableString::decode_constructed(element.value(), context)?,
+            ),
+            tag::CONSTRUCTED_TELETEX_STRING => Self::TeletexString(
+                Asn1TeletexString::decode_constructed(element.value(), context)?,
+            ),
+            tag::CONSTRUCTED_VIDEOTEX_STRING => Self::VideotexString(
+                Asn1VideotexString::decode_constructed(element.value(), context)?,
+            ),
+            tag::CONSTRUCTED_IA5_STRING => {
+                Self::Ia5String(Asn1Ia5String::decode_constructed(element.value(), context)?)
+            }
+            tag::CONSTRUCTED_GRAPHIC_STRING => Self::GraphicString(
+                Asn1GraphicString::decode_constructed(element.value(), context)?,
+            ),
+            tag::CONSTRUCTED_VISIBLE_STRING => Self::VisibleString(
+                Asn1VisibleString::decode_constructed(element.value(), context)?,
+            ),
+            tag::CONSTRUCTED_GENERAL_STRING => Self::GeneralString(
+                Asn1GeneralString::decode_constructed(element.value(), context)?,
+            ),
+            tag::CONSTRUCTED_UNIVERSAL_STRING => Self::UniversalString(
+                Asn1UniversalString::decode_constructed(element.value(), context)?,
+            ),
+            tag::CONSTRUCTED_BMP_STRING => {
+                Self::BmpString(Asn1BmpString::decode_constructed(element.value(), context)?)
+            }
+            _ => {
+                if element.is_constructed() {
+                    decode_children_der(element, context)?;
+                }
+                Self::Unknown(Asn1Any::from(element))
+            }
+        };
+        let canonical = crate::EncodeContent::encode_content_to_vec(
+            &decoded,
+            &EncodingOptions::new(crate::EncodingType::Der),
+        )?;
+        if canonical != element.value() {
+            return Err(Asn1Error::NotDer);
+        }
+        Ok(decoded)
+    }
 }
 
-impl<'a> Decode<'a> for Asn1Object {
+impl<'a> DecodeInner<'a> for Asn1Object {
     /// 解讀第一個完整元素。變動時間：分支只依編碼結構。
-    fn decode(buff: &'a [u8], options: DecodingOptions) -> Result<(usize, Self), Asn1Error> {
-        let element = Asn1Ref::parse(buff, options)?;
-        Ok((element.total_len(), Self::from_ref(&element, options)?))
+    fn decode_inner(
+        buff: &'a [u8],
+        context: &mut DecodingContext<'_>,
+    ) -> Result<(usize, Self), Asn1Error> {
+        let element = Asn1Ref::parse(buff, context)?;
+        Ok((element.total_len(), Self::from_ref(&element, context)?))
+    }
+    fn decode_inner_der(
+        buff: &'a [u8],
+        context: &mut DecodingContext<'_>,
+    ) -> Result<(usize, Self), Asn1Error> {
+        let element = Asn1Ref::parse_der(buff, context)?;
+        let decoded = Self::from_ref_der(&element, context)?;
+        Ok((element.total_len(), decoded))
+    }
+}
+impl<'a> crate::Decode<'a> for Asn1Object {
+    fn decode(
+        buff: &'a [u8],
+        options: &crate::DecodingOptions,
+    ) -> Result<(usize, Self), crate::Asn1Error> {
+        <Self as crate::DecodeInner<'a>>::decode_inner(
+            buff,
+            &mut crate::DecodingContext::new(options),
+        )
     }
 }
 
@@ -682,13 +914,29 @@ impl Encode for Asn1Object {
 
 fn decode_children(
     element: &Asn1Ref<'_>,
-    options: DecodingOptions,
+    context: &mut DecodingContext<'_>,
 ) -> Result<Vec<Asn1Object>, Asn1Error> {
-    let options = options.descend()?;
-    element
-        .children(options)
-        .map(|child| Asn1Object::from_ref(&child?, options))
-        .collect()
+    context.with_child(|context| {
+        let mut children = crate::asn1_ref::ChildCursor::new(element.value(), context.options());
+        let mut values = Vec::new();
+        while let Some(child) = children.next(context) {
+            values.push(Asn1Object::from_ref(&child?, context)?);
+        }
+        Ok(values)
+    })
+}
+fn decode_children_der(
+    element: &Asn1Ref<'_>,
+    context: &mut DecodingContext<'_>,
+) -> Result<Vec<Asn1Object>, Asn1Error> {
+    context.with_child(|context| {
+        let mut children = crate::asn1_ref::ChildCursor::new(element.value(), context.options());
+        let mut values = Vec::new();
+        while let Some(child) = children.next(context) {
+            values.push(Asn1Object::from_ref_der(&child?, context)?);
+        }
+        Ok(values)
+    })
 }
 
 fn children_len(children: &[Asn1Object], rules: &EncodingOptions) -> usize {
@@ -710,12 +958,13 @@ fn encode_children(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::DecodingOptions;
     use crate::EncodeContent;
     use crate::EncodingType;
     use alloc::{boxed::Box, string::ToString, vec};
 
     fn decode(input: &[u8]) -> Asn1Object {
-        let (used, tree) = Asn1Object::decode(input, DecodingOptions::default()).unwrap();
+        let (used, tree) = Asn1Object::decode(input, &DecodingOptions::default()).unwrap();
         assert_eq!(used, input.len());
         tree
     }
@@ -867,24 +1116,18 @@ mod tests {
             &b"\x30\x80\x30\x80\x30\x80\x00\x00\x00\x00\x00\x00"[..],
         ] {
             assert!(
-                Asn1Object::decode(
-                    input,
-                    DecodingOptions::new(crate::Depth::new(3), 16 * 1024 * 1024, 65_536)
-                )
-                .is_ok()
+                Asn1Object::decode(input, &DecodingOptions::new(3, 16 * 1024 * 1024, 65_536))
+                    .is_ok()
             );
             assert_eq!(
-                Asn1Object::decode(
-                    input,
-                    DecodingOptions::new(crate::Depth::new(2), 16 * 1024 * 1024, 65_536)
-                ),
+                Asn1Object::decode(input, &DecodingOptions::new(2, 16 * 1024 * 1024, 65_536)),
                 Err(Asn1Error::DepthExceeded)
             );
         }
         assert_eq!(
             Asn1Object::decode(
                 b"\x30\x06\x30\x04\x30\x02\x30\x00",
-                DecodingOptions::new(crate::Depth::new(3), 16 * 1024 * 1024, 65_536)
+                &DecodingOptions::new(3, 16 * 1024 * 1024, 65_536)
             ),
             Err(Asn1Error::DepthExceeded)
         );
@@ -927,10 +1170,10 @@ mod tests {
             &b"\x30\x01\x02"[..],
             &b"\xa0\x01\x02"[..],
         ] {
-            assert!(Asn1Object::decode(input, DecodingOptions::default()).is_err());
+            assert!(Asn1Object::decode(input, &DecodingOptions::default()).is_err());
         }
         let (used, value) =
-            Asn1Object::decode(&[5, 0, 1, 1, 0], DecodingOptions::default()).unwrap();
+            Asn1Object::decode(&[5, 0, 1, 1, 0], &DecodingOptions::default()).unwrap();
         assert_eq!((used, value), (2, Asn1Object::Null));
     }
 
@@ -987,10 +1230,18 @@ mod tests {
         ] {
             let mut has_timing = false;
             let mut count = 0;
-            for line in source.split("#[cfg(test)]").next().unwrap().lines() {
+            for line in source
+                .split("#[cfg(test)]\nmod tests")
+                .next()
+                .unwrap()
+                .lines()
+            {
                 let line = line.trim();
                 if line.starts_with("///") {
-                    has_timing |= line.contains("常數時間") || line.contains("變動時間");
+                    has_timing |= line.contains("常數時間")
+                        || line.contains("變動時間")
+                        || line.contains("Constant time")
+                        || line.contains("Variable time");
                     continue;
                 }
                 if line.starts_with("pub fn ") || line.starts_with("pub const fn ") {
@@ -1222,7 +1473,7 @@ mod tests {
         ]
         .into_iter()
         .map(|input| {
-            Asn1Object::decode(input, DecodingOptions::default())
+            Asn1Object::decode(input, &DecodingOptions::default())
                 .map(|(_, value)| value)
                 .unwrap()
         })

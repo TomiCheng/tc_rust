@@ -5,13 +5,15 @@
 //! exposes a borrowed [`Asn1Ref`] when inspection or typed decoding is needed.
 //! Construct new typed values with their corresponding ASN.1 value types.
 
+#[cfg(test)]
+use crate::Decode;
 use alloc::vec::Vec;
 
+use crate::DecodingContext;
 use crate::EncodingOptions;
 use crate::asn1_ref::Asn1Ref;
-use crate::decoding_options::DecodingOptions;
 use crate::error::Asn1Error;
-use crate::traits::{Decode, Encode};
+use crate::traits::{DecodeInner, Encode};
 
 /// An owned counterpart of [`Asn1Ref`] that preserves one complete encoded element.
 ///
@@ -28,17 +30,17 @@ use crate::traits::{Decode, Encode};
 /// DER and CER; selecting a rule does not canonicalize this value. Equality
 /// compares the stored representation, not the abstract value after typed decoding.
 ///
-/// This type implements [`Decode`], but not [`crate::DecodeContent`]: contents
+/// This type implements [`crate::Decode`], but not [`crate::DecodeContent`]: contents
 /// alone do not supply the identifier or original header needed to preserve a TLV.
 ///
 /// # Examples
 ///
 /// ```
-/// use tc_asn1::{Asn1Any, Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+/// use tc_asn1::{Decode, Asn1Any, DecodeInner, DecodingOptions, Encode, EncodingOptions, EncodingType};
 ///
 /// let saved = {
 ///     let input = vec![0x83, 0x81, 1, 0xAA]; // Unknown tag, long-form length.
-///     let (used, saved) = Asn1Any::decode(&input, DecodingOptions::default())?;
+///     let (used, saved) = Asn1Any::decode(&input, &DecodingOptions::default())?;
 ///     assert_eq!(used, input.len());
 ///     saved
 /// };
@@ -66,8 +68,8 @@ impl Asn1Any {
     /// # Examples
     ///
     /// ```
-    /// use tc_asn1::{Asn1Any, Decode, DecodingOptions};
-    /// let (_, saved) = Asn1Any::decode(&[5, 0, 2, 1, 7], DecodingOptions::default())?;
+    /// use tc_asn1::{Decode, Asn1Any, DecodeInner, DecodingOptions};
+    /// let (_, saved) = Asn1Any::decode(&[5, 0, 2, 1, 7], &DecodingOptions::default())?;
     /// assert_eq!(saved.raw(), &[5, 0]); // Following elements are not retained.
     /// # Ok::<(), tc_asn1::Asn1Error>(())
     /// ```
@@ -84,12 +86,13 @@ impl Asn1Any {
     /// # Examples
     ///
     /// ```
-    /// use tc_asn1::{Asn1Any, Asn1Boolean, Decode, DecodingOptions};
+    /// use tc_asn1::{Decode, Asn1Any, Asn1Boolean, DecodeInner, DecodingContext, DecodingOptions};
     /// let options = DecodingOptions::default();
-    /// let (_, saved) = Asn1Any::decode(&[1, 1, 0xFF], options)?;
+    /// let mut context = DecodingContext::new(&options);
+    /// let (_, saved) = Asn1Any::decode(&[1, 1, 0xFF], &options)?;
     /// let view = saved.as_ref();
     /// assert_eq!(view.tag(), Asn1Boolean::TAG); // Validate the schema's tag first.
-    /// assert!(view.decode_as::<Asn1Boolean>(options)?.is_true());
+    /// assert!(view.decode_as::<Asn1Boolean>(&mut context)?.is_true());
     /// assert_eq!(view.raw().as_ptr(), saved.raw().as_ptr());
     /// # Ok::<(), tc_asn1::Asn1Error>(())
     /// ```
@@ -112,9 +115,11 @@ impl From<&Asn1Ref<'_>> for Asn1Any {
     /// # Examples
     ///
     /// ```
-    /// use tc_asn1::{Asn1Any, Asn1Ref, DecodingOptions};
+    /// use tc_asn1::{Asn1Any, Asn1Ref, DecodingContext, DecodingOptions};
+    /// let options = DecodingOptions::default();
+    /// let mut context = DecodingContext::new(&options);
     /// let input = [0x30, 0x80, 5, 0, 0, 0];
-    /// let view = Asn1Ref::parse(&input, DecodingOptions::default())?;
+    /// let view = Asn1Ref::parse(&input, &mut context)?;
     /// let saved = Asn1Any::from(&view);
     /// assert_eq!(saved.raw(), &input);
     /// assert_eq!(saved.as_ref().value(), &[5, 0]);
@@ -133,7 +138,7 @@ impl From<&Asn1Ref<'_>> for Asn1Any {
 }
 
 /// Preserve one complete TLV without assigning a content type.
-impl<'a> Decode<'a> for Asn1Any {
+impl<'a> DecodeInner<'a> for Asn1Any {
     /// Parse and copy the first complete element, returning its consumed length.
     /// Trailing input is left to the caller. Errors from [`Asn1Ref::parse`] are
     /// propagated, including truncation, malformed headers, and exceeded limits.
@@ -142,19 +147,41 @@ impl<'a> Decode<'a> for Asn1Any {
     /// # Examples
     ///
     /// ```
-    /// use tc_asn1::{Asn1Any, Asn1Error, Decode, DecodingOptions};
+    /// use tc_asn1::{Decode, Asn1Any, Asn1Error, DecodeInner, DecodingOptions};
     /// let options = DecodingOptions::default();
     /// let input = [0x83, 1, 0xAA, 5, 0];
-    /// let (used, saved) = Asn1Any::decode(&input, options)?;
+    /// let (used, saved) = Asn1Any::decode(&input, &options)?;
     /// assert_eq!(used, 3);
     /// assert_eq!(saved.raw(), &input[..used]);
     /// assert_eq!(&input[used..], &[5, 0]);
-    /// assert_eq!(Asn1Any::decode(&[4, 1], options), Err(Asn1Error::Truncated));
+    /// assert_eq!(Asn1Any::decode(&[4, 1], &options), Err(Asn1Error::Truncated));
     /// # Ok::<(), Asn1Error>(())
     /// ```
-    fn decode(buff: &'a [u8], options: DecodingOptions) -> Result<(usize, Self), Asn1Error> {
-        let element = Asn1Ref::parse(buff, options)?;
+    fn decode_inner(
+        buff: &'a [u8],
+        context: &mut DecodingContext<'_>,
+    ) -> Result<(usize, Self), Asn1Error> {
+        let element = Asn1Ref::parse(buff, context)?;
         Ok((element.total_len(), Self::from(&element)))
+    }
+    fn decode_inner_der(
+        buff: &'a [u8],
+        context: &mut DecodingContext<'_>,
+    ) -> Result<(usize, Self), Asn1Error> {
+        let element = Asn1Ref::parse_der(buff, context)?;
+        crate::Asn1Object::decode_inner_der(element.raw(), context)?;
+        Ok((element.total_len(), Self::from(&element)))
+    }
+}
+impl<'a> crate::Decode<'a> for Asn1Any {
+    fn decode(
+        buff: &'a [u8],
+        options: &crate::DecodingOptions,
+    ) -> Result<(usize, Self), crate::Asn1Error> {
+        <Self as crate::DecodeInner<'a>>::decode_inner(
+            buff,
+            &mut crate::DecodingContext::new(options),
+        )
     }
 }
 
@@ -174,9 +201,9 @@ impl crate::EncodeContent for Asn1Any {
     /// # Examples
     ///
     /// ```
-    /// use tc_asn1::{Asn1Any, Asn1Error, Decode, DecodingOptions, EncodeContent, EncodingOptions, EncodingType};
+    /// use tc_asn1::{Decode, Asn1Any, Asn1Error, DecodeInner, DecodingOptions, EncodeContent, EncodingOptions, EncodingType};
     /// let (_, saved) = Asn1Any::decode(
-    ///     &[0x30, 0x80, 5, 0, 0, 0], DecodingOptions::default(),
+    ///     &[0x30, 0x80, 5, 0, 0, 0], &DecodingOptions::default(),
     /// )?;
     /// let mut out = [0xAA; 3];
     /// assert_eq!(saved.content_len(&EncodingOptions::new(EncodingType::Der)), 2);
@@ -207,8 +234,8 @@ impl crate::EncodeContent for Asn1Any {
 /// # Examples
 ///
 /// ```
-/// use tc_asn1::{Asn1Any, Decode, DecodingOptions, EncodeTagged, EncodingOptions, EncodingType};
-/// let (_, saved) = Asn1Any::decode(&[4, 0x81, 1, 0xAA], DecodingOptions::default())?;
+/// use tc_asn1::{Decode, Asn1Any, DecodeInner, DecodingOptions, EncodeTagged, EncodingOptions, EncodingType};
+/// let (_, saved) = Asn1Any::decode(&[4, 0x81, 1, 0xAA], &DecodingOptions::default())?;
 /// let mut out = [0; 3];
 /// assert_eq!(saved.encode_tagged(&[0x80], &EncodingOptions::new(EncodingType::Der), &mut out)?, 3);
 /// assert_eq!(out, [0x80, 1, 0xAA]);
@@ -233,8 +260,8 @@ impl Encode for Asn1Any {
     /// # Examples
     ///
     /// ```
-    /// use tc_asn1::{Asn1Any, Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
-    /// let (_, saved) = Asn1Any::decode(&[1, 1, 1], DecodingOptions::default())?;
+    /// use tc_asn1::{Decode, Asn1Any, DecodeInner, DecodingOptions, Encode, EncodingOptions, EncodingType};
+    /// let (_, saved) = Asn1Any::decode(&[1, 1, 1], &DecodingOptions::default())?;
     /// for rules in [&EncodingOptions::new(EncodingType::Der), &EncodingOptions::new(EncodingType::Cer)] {
     ///     let mut out = [0xAA; 4];
     ///     assert_eq!(saved.encoded_len(rules), 3);
@@ -255,19 +282,20 @@ impl Encode for Asn1Any {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::DecodingOptions;
     use crate::EncodeTagged;
     use crate::EncodingType;
     use crate::asn1_ref::Asn1Class;
     use crate::universal::Asn1Boolean;
 
     const OPTIONS: DecodingOptions =
-        DecodingOptions::new(crate::Depth::DEFAULT, 16 * 1024 * 1024, 65_536);
+        DecodingOptions::new(crate::Depth::DEFAULT.get(), 16 * 1024 * 1024, 65_536);
 
     #[test]
     fn an_unknown_context_specific_value_survives_a_round_trip_untouched() {
         // [3] IMPLICIT 某個東西，內容不知道是什麼；後面還有別的
         let input = [0x83, 0x03, 0xDE, 0xAD, 0x01, 0xAA];
-        let (used, any) = Asn1Any::decode(&input, OPTIONS).unwrap();
+        let (used, any) = Asn1Any::decode(&input, &OPTIONS).unwrap();
 
         assert_eq!(used, 5);
         assert_eq!(any.raw(), &input[..5]);
@@ -286,7 +314,7 @@ mod tests {
     fn even_the_length_form_is_preserved_on_re_emission() {
         // 81 03 不是最短的長度寫法。原樣留著。
         let input = [0x04, 0x81, 0x03, 0xAA, 0xBB, 0xCC];
-        let (_, any) = Asn1Any::decode(&input, OPTIONS).unwrap();
+        let (_, any) = Asn1Any::decode(&input, &OPTIONS).unwrap();
 
         let mut out = [0_u8; 8];
         let written = any
@@ -298,7 +326,7 @@ mod tests {
 
     #[test]
     fn retagging_rebuilds_the_header_but_keeps_the_contents() {
-        let (_, any) = Asn1Any::decode(&[0x04, 0x81, 0x01, 0xAA], OPTIONS).unwrap();
+        let (_, any) = Asn1Any::decode(&[0x04, 0x81, 0x01, 0xAA], &OPTIONS).unwrap();
         let mut out = [0_u8; 8];
         let written = any
             .encode_tagged(&[0x80], &EncodingOptions::new(EncodingType::Der), &mut out)
@@ -308,33 +336,44 @@ mod tests {
 
     #[test]
     fn a_known_type_can_be_recovered_later_through_as_ref() {
-        let (_, any) = Asn1Any::decode(&[0x01, 0x01, 0xFF], OPTIONS).unwrap();
+        let (_, any) = Asn1Any::decode(&[0x01, 0x01, 0xFF], &OPTIONS).unwrap();
         assert_eq!(
-            any.as_ref().decode_as::<Asn1Boolean>(OPTIONS),
+            any.as_ref()
+                .decode_as::<Asn1Boolean>(&mut DecodingContext::new(&OPTIONS)),
             Ok(Asn1Boolean::from(true))
         );
     }
 
     #[test]
     fn a_constructed_value_keeps_its_children_reachable() {
-        let (_, any) = Asn1Any::decode(&[0x30, 0x04, 0x05, 0x00, 0x05, 0x00], OPTIONS).unwrap();
+        let (_, any) = Asn1Any::decode(&[0x30, 0x04, 0x05, 0x00, 0x05, 0x00], &OPTIONS).unwrap();
         assert!(any.as_ref().is_constructed());
-        assert_eq!(any.as_ref().children(OPTIONS).count(), 2);
+        assert_eq!(
+            any.as_ref()
+                .children(&mut DecodingContext::new(&OPTIONS))
+                .count(),
+            2
+        );
     }
 
     #[test]
     fn an_indefinite_length_value_re_parses_to_the_same_shape() {
         let input = [0x30, 0x80, 0x05, 0x00, 0x00, 0x00];
-        let (_, any) = Asn1Any::decode(&input, OPTIONS).unwrap();
+        let (_, any) = Asn1Any::decode(&input, &OPTIONS).unwrap();
         assert_eq!(any.as_ref().value(), &[0x05, 0x00]);
-        assert_eq!(any.as_ref().children(OPTIONS).count(), 1);
+        assert_eq!(
+            any.as_ref()
+                .children(&mut DecodingContext::new(&OPTIONS))
+                .count(),
+            1
+        );
     }
 
     #[test]
     fn non_der_input_is_re_emitted_as_is_not_normalised() {
         // BOOLEAN 真寫成 01 不是 DER；Asn1Any 不知道那是 BOOLEAN，所以原樣重送。
         let input = [0x01, 0x01, 0x01];
-        let (_, any) = Asn1Any::decode(&input, OPTIONS).unwrap();
+        let (_, any) = Asn1Any::decode(&input, &OPTIONS).unwrap();
         let mut out = [0_u8; 8];
         let written = any
             .encode(&EncodingOptions::new(EncodingType::Der), &mut out)

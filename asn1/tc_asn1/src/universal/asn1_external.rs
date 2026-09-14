@@ -19,9 +19,9 @@
 use alloc::boxed::Box;
 
 use super::{Asn1BitString, Asn1Integer, Asn1ObjectDescriptor, Asn1OctetString, Asn1Oid};
+use crate::DecodingContext;
 use crate::EncodingOptions;
 use crate::asn1_object::Asn1Object;
-use crate::decoding_options::DecodingOptions;
 use crate::error::Asn1Error;
 #[cfg(test)]
 use crate::traits::Decode;
@@ -89,17 +89,40 @@ impl Asn1External {
     }
 }
 
-impl<'a> crate::Decode<'a> for Asn1External {
-    fn decode(
+impl<'a> crate::DecodeInner<'a> for Asn1External {
+    fn decode_inner(
         buff: &'a [u8],
-        options: crate::DecodingOptions,
+        context: &mut crate::DecodingContext<'_>,
     ) -> Result<(usize, Self), crate::Asn1Error> {
-        let element = crate::Asn1Ref::parse(buff, options)?;
+        let element = crate::Asn1Ref::parse(buff, context)?;
         if !element.is_constructed() {
             return Err(crate::Asn1Error::UnexpectedTag);
         }
-        let value = <Self as crate::DecodeContent<'a>>::decode_content(element.value(), options)?;
+        let value = <Self as crate::DecodeContent<'a>>::decode_content(element.value(), context)?;
         Ok((element.total_len(), value))
+    }
+    fn decode_inner_der(
+        buff: &'a [u8],
+        context: &mut crate::DecodingContext<'_>,
+    ) -> Result<(usize, Self), crate::Asn1Error> {
+        let element = crate::Asn1Ref::parse_der(buff, context)?;
+        if !element.is_constructed() {
+            return Err(crate::Asn1Error::UnexpectedTag);
+        }
+        let value =
+            <Self as crate::DecodeContent<'a>>::decode_content_der(element.value(), context)?;
+        Ok((element.total_len(), value))
+    }
+}
+impl<'a> crate::Decode<'a> for Asn1External {
+    fn decode(
+        buff: &'a [u8],
+        options: &crate::DecodingOptions,
+    ) -> Result<(usize, Self), crate::Asn1Error> {
+        <Self as crate::DecodeInner<'a>>::decode_inner(
+            buff,
+            &mut crate::DecodingContext::new(options),
+        )
     }
 }
 
@@ -108,9 +131,12 @@ impl<'a> DecodeContent<'a> for Asn1External {
     ///
     /// 三個 OPTIONAL 靠 tag 分（照 bc 的做法逐個試），最後一個必須是 `[0]`、`[1]`
     /// 或 `[2]`。
-    fn decode_content(value: &'a [u8], depth: DecodingOptions) -> Result<Self, Asn1Error> {
-        depth.check_content_len(value.len())?;
-        let mut fields = Fields::new(value, depth)?;
+    fn decode_content(
+        value: &'a [u8],
+        context: &mut DecodingContext<'_>,
+    ) -> Result<Self, Asn1Error> {
+        context.options().check_content_len(value.len())?;
+        let mut fields = Fields::new(value, context)?;
         let direct_reference = fields.optional(Asn1Oid::TAG)?;
         let indirect_reference = fields.optional(Asn1Integer::TAG)?;
         let descriptor_tag = match fields.peek()? {
@@ -132,6 +158,40 @@ impl<'a> DecodeContent<'a> for Asn1External {
             CONSTRUCTED_ARBITRARY => {
                 ExternalEncoding::Arbitrary(fields.implicit_constructed(ARBITRARY)?)
             }
+            _ => return Err(Asn1Error::UnexpectedTag),
+        };
+        fields.finish()?;
+        Ok(Self {
+            direct_reference,
+            indirect_reference,
+            data_value_descriptor,
+            encoding,
+        })
+    }
+
+    fn decode_content_der(
+        value: &'a [u8],
+        context: &mut DecodingContext<'_>,
+    ) -> Result<Self, Asn1Error> {
+        context.options().check_content_len(value.len())?;
+        let mut fields = Fields::new(value, context)?;
+        let direct_reference = fields.optional_der(Asn1Oid::TAG)?;
+        let indirect_reference = fields.optional_der(Asn1Integer::TAG)?;
+        let descriptor_tag = match fields.peek()? {
+            Some(field) if field.tag() == Asn1ObjectDescriptor::CONSTRUCTED_TAG => {
+                Asn1ObjectDescriptor::CONSTRUCTED_TAG
+            }
+            _ => Asn1ObjectDescriptor::TAG,
+        };
+        let data_value_descriptor = fields.optional_der(descriptor_tag)?;
+        let encoding = match fields.peek()?.ok_or(Asn1Error::Truncated)?.tag() {
+            SINGLE_ASN1_TYPE => ExternalEncoding::SingleAsn1Type(Box::new(
+                fields.explicit::<Asn1Object>(SINGLE_ASN1_TYPE)?,
+            )),
+            OCTET_ALIGNED => ExternalEncoding::OctetAligned(fields.implicit_der(OCTET_ALIGNED)?),
+            ARBITRARY => ExternalEncoding::Arbitrary(fields.implicit_der(ARBITRARY)?),
+            CONSTRUCTED_OCTET_ALIGNED => return Err(Asn1Error::NotDer),
+            CONSTRUCTED_ARBITRARY => return Err(Asn1Error::NotDer),
             _ => return Err(Asn1Error::UnexpectedTag),
         };
         fields.finish()?;
@@ -171,17 +231,18 @@ crate::impl_sequence_encode!(Asn1External, Asn1External::TAG);
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::DecodingOptions;
     use crate::EncodingType;
     use alloc::string::ToString;
 
     const OPTIONS: DecodingOptions =
-        DecodingOptions::new(crate::Depth::DEFAULT, 16 * 1024 * 1024, 65_536);
+        DecodingOptions::new(crate::Depth::DEFAULT.get(), 16 * 1024 * 1024, 65_536);
 
     #[test]
     fn octet_aligned_with_a_direct_reference_round_trips() {
         // 28 08  06 02 2A 03  81 02 41 42
         let input = [0x28, 0x08, 0x06, 0x02, 0x2A, 0x03, 0x81, 0x02, 0x41, 0x42];
-        let (used, e) = Asn1External::decode(&input, OPTIONS).unwrap();
+        let (used, e) = Asn1External::decode(&input, &OPTIONS).unwrap();
 
         assert_eq!(used, input.len());
         assert_eq!(e.direct_reference().unwrap().to_string(), "1.2.3");
@@ -200,7 +261,7 @@ mod tests {
         let input = [
             0x28, 0x09, 0x06, 0x02, 0x2A, 0x03, 0xA0, 0x03, 0x02, 0x01, 0x05,
         ];
-        let (_, e) = Asn1External::decode(&input, OPTIONS).unwrap();
+        let (_, e) = Asn1External::decode(&input, &OPTIONS).unwrap();
 
         let ExternalEncoding::SingleAsn1Type(inner) = e.encoding() else {
             panic!("應該是 [0]");
@@ -220,7 +281,7 @@ mod tests {
             0x28, 0x0E, 0x06, 0x02, 0x2A, 0x03, 0x02, 0x01, 0x07, 0x07, 0x01, 0x78, 0x82, 0x02,
             0x00, 0xA0,
         ];
-        let (_, e) = Asn1External::decode(&input, OPTIONS).unwrap();
+        let (_, e) = Asn1External::decode(&input, &OPTIONS).unwrap();
 
         assert_eq!(e.direct_reference().unwrap().to_string(), "1.2.3");
         assert_eq!(u8::try_from(e.indirect_reference().unwrap()), Ok(7));
@@ -251,19 +312,19 @@ mod tests {
     #[test]
     fn the_encoding_is_mandatory_and_must_be_one_of_the_three() {
         assert_eq!(
-            Asn1External::decode(&[0x28, 0x04, 0x06, 0x02, 0x2A, 0x03], OPTIONS).err(),
+            Asn1External::decode(&[0x28, 0x04, 0x06, 0x02, 0x2A, 0x03], &OPTIONS).err(),
             Some(Asn1Error::Truncated),
             "只有 OPTIONAL，沒有 encoding"
         );
         assert_eq!(
-            Asn1External::decode(&[0x28, 0x02, 0x83, 0x00], OPTIONS).err(),
+            Asn1External::decode(&[0x28, 0x02, 0x83, 0x00], &OPTIONS).err(),
             Some(Asn1Error::UnexpectedTag),
             "[3] 不存在"
         );
         assert_eq!(
             Asn1External::decode(
                 &[0x28, 0x07, 0xA0, 0x05, 0x02, 0x01, 0x05, 0x05, 0x00],
-                OPTIONS
+                &OPTIONS
             )
             .err(),
             Some(Asn1Error::TrailingData),

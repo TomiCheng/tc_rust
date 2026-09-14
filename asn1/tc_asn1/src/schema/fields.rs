@@ -1,7 +1,10 @@
 //! 具名 constructed 值的解碼游標。
+#[cfg(test)]
+use crate::Decode;
 use crate::asn1_ref::is_constructed_form;
 use crate::{
-    Asn1Error, Asn1Ref, Children, Decode, DecodeConstructed, DecodeContent, DecodingOptions,
+    Asn1Error, Asn1Ref, DecodeConstructed, DecodeContent, DecodeInner, DecodingContext,
+    DecodingOptions,
 };
 
 /// 依 schema 順序讀取欄位；成功路徑最後必須呼叫 [`Self::finish`]。
@@ -9,54 +12,57 @@ use crate::{
 ///
 /// # Examples
 /// ```
-/// use tc_asn1::{Asn1Boolean, Asn1Integer, DecodingOptions, Fields};
-/// let mut fields = Fields::new(&[2, 1, 5], DecodingOptions::default())?;
+/// use tc_asn1::{Asn1Boolean, Asn1Integer, DecodingContext, DecodingOptions, Fields};
+/// let options = DecodingOptions::default();
+/// let mut context = DecodingContext::new(&options);
+/// let mut fields = Fields::new(&[2, 1, 5], &mut context)?;
 /// assert!(!fields.default(&[1], Asn1Boolean::from(false))?.is_true());
 /// let number: Asn1Integer = fields.required(&[2])?;
 /// assert_eq!(i64::try_from(&number)?, 5);
 /// fields.finish()?;
 /// # Ok::<(), tc_asn1::Asn1Error>(())
 /// ```
-pub struct Fields<'a> {
-    children: Children<'a>,
-    options: DecodingOptions,
+pub struct Fields<'a, 'c, 'o> {
+    children: crate::asn1_ref::ChildCursor<'a>,
+    scope: crate::decoding_context::DepthScope<'c, 'o>,
     lookahead: Option<Asn1Ref<'a>>,
 }
-impl<'a> Fields<'a> {
-    /// 進入 constructed 的內容，消耗一層深度。變動時間：分支只依編碼結構。
-    pub fn new(value: &'a [u8], options: DecodingOptions) -> Result<Self, Asn1Error> {
-        options.check_content_len(value.len())?;
-        let options = options.descend()?;
+impl<'a, 'c, 'o> Fields<'a, 'c, 'o> {
+    /// Enter constructed contents, restoring the parent depth when dropped.
+    /// Variable time: public input only; no constant-time alternative is provided.
+    pub fn new(value: &'a [u8], context: &'c mut DecodingContext<'o>) -> Result<Self, Asn1Error> {
+        context.options().check_content_len(value.len())?;
+        let children = crate::asn1_ref::ChildCursor::new(value, context.options());
         Ok(Self {
-            children: Children::new(value, options),
-            options,
+            children,
+            scope: context.enter()?,
             lookahead: None,
         })
     }
-    /// Return the options for child fields, including the remaining depth.
-    /// Constant time: copies the stored configuration.
-    pub fn options(&self) -> DecodingOptions {
-        self.options
+    /// Borrow the shared decoding configuration. Constant time.
+    pub fn options(&self) -> &'o DecodingOptions {
+        self.scope.options()
+    }
+    /// Borrow the active context for decoding a field at the current depth.
+    /// Constant time.
+    pub fn context(&mut self) -> &mut DecodingContext<'o> {
+        self.scope.context()
     }
     /// 讀取必要欄位，支援 CHOICE 與 ANY；沒有欄位回傳 `Truncated`。
     /// The schema supplies the exact identifier, including its constructed bit.
     /// For an unrestricted ANY or CHOICE, use [`Self::next`] and [`Asn1Ref::decode_as`].
     /// 解碼器必須消耗完整的子 TLV。變動時間：分支只依編碼結構。
-    pub fn required<T: Decode<'a>>(&mut self, tag: &[u8]) -> Result<T, Asn1Error> {
+    pub fn required<T: DecodeInner<'a>>(&mut self, tag: &[u8]) -> Result<T, Asn1Error> {
         let child = self.next()?;
         if child.tag() != tag {
             return Err(Asn1Error::UnexpectedTag);
         }
-        let (used, value) = T::decode(child.raw(), self.options)?;
-        if used != child.total_len() {
-            return Err(Asn1Error::TrailingData);
-        }
-        Ok(value)
+        child.decode_as(self.context())
     }
     /// Consume the exact identifier selected by the schema, or leave the field
     /// for the next reader. Pass a constructed identifier to accept that form.
     /// Variable time: branches only on the encoding structure.
-    pub fn optional<T: Decode<'a>>(&mut self, tag: &[u8]) -> Result<Option<T>, Asn1Error> {
+    pub fn optional<T: DecodeInner<'a>>(&mut self, tag: &[u8]) -> Result<Option<T>, Asn1Error> {
         if self.peek()?.is_some_and(|field| field.tag() == tag) {
             self.required(tag).map(Some)
         } else {
@@ -64,23 +70,29 @@ impl<'a> Fields<'a> {
         }
     }
     /// 省略時採預設值；不拒絕 BER 明寫的預設值。變動時間：分支只依編碼結構。
-    pub fn default<T: Decode<'a>>(&mut self, tag: &[u8], default: T) -> Result<T, Asn1Error> {
-        Ok(self.optional(tag)?.unwrap_or(default))
+    pub fn default<T: DecodeInner<'a>>(&mut self, tag: &[u8], default: T) -> Result<T, Asn1Error> {
+        match self.optional(tag)? {
+            Some(value) => Ok(value),
+            None => Ok(default),
+        }
     }
     /// 讀取 EXPLICIT constructed 包裝，內部必須剛好一個完整 TLV。
     /// 包裝另外消耗一層深度。變動時間：分支只依編碼結構。
-    pub fn explicit<T: Decode<'a>>(&mut self, tag: &[u8]) -> Result<T, Asn1Error> {
+    pub fn explicit<T: DecodeInner<'a>>(&mut self, tag: &[u8]) -> Result<T, Asn1Error> {
         let child = self.next()?;
         if child.tag() != tag || !child.is_constructed() {
             return Err(Asn1Error::UnexpectedTag);
         }
-        let mut inner = Self::new(child.value(), self.options)?;
-        let value = inner.next()?.decode_as(inner.options())?;
+        let mut inner = Fields::new(child.value(), self.context())?;
+        let value = inner.next()?.decode_as(inner.context())?;
         inner.finish()?;
         Ok(value)
     }
     /// 只有 tag 相符才取走 EXPLICIT 欄位。變動時間：分支只依編碼結構。
-    pub fn optional_explicit<T: Decode<'a>>(&mut self, tag: &[u8]) -> Result<Option<T>, Asn1Error> {
+    pub fn optional_explicit<T: DecodeInner<'a>>(
+        &mut self,
+        tag: &[u8],
+    ) -> Result<Option<T>, Asn1Error> {
         if self.peek()?.is_some_and(|field| field.tag() == tag) {
             self.explicit(tag).map(Some)
         } else {
@@ -94,7 +106,7 @@ impl<'a> Fields<'a> {
     pub fn implicit<T: DecodeContent<'a>>(&mut self, tag: &[u8]) -> Result<T, Asn1Error> {
         let child = self.next()?;
         if child.tag() == tag {
-            T::decode_content(child.value(), self.options)
+            crate::decoding::content::<T>(child.value(), self.context())
         } else {
             Err(Asn1Error::UnexpectedTag)
         }
@@ -105,10 +117,11 @@ impl<'a> Fields<'a> {
     ///
     /// # Examples
     /// ```
-    /// use tc_asn1::{Asn1OctetString, DecodingOptions, Fields};
+    /// use tc_asn1::{Asn1OctetString, DecodingContext, DecodingOptions, Fields};
     /// // [0] IMPLICIT OCTET STRING 的 BER 分段形式。
-    /// let options = DecodingOptions::new(tc_asn1::Depth::new(2), 4096, 64);
-    /// let mut fields = Fields::new(&[0xa0, 3, 4, 1, 0xaa], options)?;
+    /// let options = DecodingOptions::new(2, 4096, 64);
+    /// let mut context = DecodingContext::new(&options);
+    /// let mut fields = Fields::new(&[0xa0, 3, 4, 1, 0xaa], &mut context)?;
     /// let value: Asn1OctetString = fields.implicit_constructed(&[0x80])?;
     /// assert_eq!(value.as_bytes(), &[0xaa]);
     /// fields.finish()?;
@@ -122,7 +135,7 @@ impl<'a> Fields<'a> {
         if !is_constructed_form(child.tag(), tag) {
             return Err(Asn1Error::UnexpectedTag);
         }
-        T::decode_constructed(child.value(), self.options)
+        T::decode_constructed(child.value(), self.context())
     }
     /// Consume an IMPLICIT field with the exact tag selected by the schema;
     /// otherwise leave it for the next reader.
@@ -137,11 +150,111 @@ impl<'a> Fields<'a> {
             Ok(None)
         }
     }
+
+    /// Read this field using DER validation, including nested ASN.1 elements.
+    /// Variable time: public input only; no constant-time alternative is provided.
+    ///
+    /// # Examples
+    /// ```
+    /// use tc_asn1::{Asn1Boolean, DecodingContext, DecodingOptions, Fields};
+    /// let options = DecodingOptions::default();
+    /// let mut context = DecodingContext::new(&options);
+    /// let mut fields = Fields::new(&[1, 1, 0xff, 1, 1, 1], &mut context)?;
+    /// let first: Asn1Boolean = fields.required_der(Asn1Boolean::TAG)?;
+    /// let second: Asn1Boolean = fields.required(Asn1Boolean::TAG)?;
+    /// assert!(first.is_true() && second.is_true());
+    /// fields.finish()?;
+    /// assert_eq!(context.depth(), 0);
+    /// # Ok::<(), tc_asn1::Asn1Error>(())
+    /// ```
+    pub fn required_der<T: DecodeInner<'a>>(&mut self, tag: &[u8]) -> Result<T, Asn1Error> {
+        let child = self.next()?;
+        if child.tag() != tag {
+            return Err(Asn1Error::UnexpectedTag);
+        }
+        child.decode_as_der(self.context())
+    }
+
+    /// Read this field using DER validation, including nested ASN.1 elements.
+    /// Variable time: public input only; no constant-time alternative is provided.
+    pub fn optional_der<T: DecodeInner<'a>>(&mut self, tag: &[u8]) -> Result<Option<T>, Asn1Error> {
+        if self.peek()?.is_some_and(|field| field.tag() == tag) {
+            self.required_der(tag).map(Some)
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Read this field using DER validation, including nested ASN.1 elements.
+    /// Variable time: public input only; no constant-time alternative is provided.
+    pub fn default_der<T: DecodeInner<'a> + PartialEq>(
+        &mut self,
+        tag: &[u8],
+        default: T,
+    ) -> Result<T, Asn1Error> {
+        match self.optional_der(tag)? {
+            Some(value) if value == default => Err(Asn1Error::NotDer),
+            Some(value) => Ok(value),
+            None => Ok(default),
+        }
+    }
+
+    /// Read this field using DER validation, including nested ASN.1 elements.
+    /// Variable time: public input only; no constant-time alternative is provided.
+    pub fn explicit_der<T: DecodeInner<'a>>(&mut self, tag: &[u8]) -> Result<T, Asn1Error> {
+        let child = self.next()?;
+        Asn1Ref::parse_der(child.raw(), self.context())?;
+        if child.tag() != tag || !child.is_constructed() {
+            return Err(Asn1Error::UnexpectedTag);
+        }
+        let mut inner = Fields::new(child.value(), self.context())?;
+        let value = inner.next()?.decode_as_der(inner.context())?;
+        inner.finish()?;
+        Ok(value)
+    }
+
+    /// Read this field using DER validation, including nested ASN.1 elements.
+    /// Variable time: public input only; no constant-time alternative is provided.
+    pub fn optional_explicit_der<T: DecodeInner<'a>>(
+        &mut self,
+        tag: &[u8],
+    ) -> Result<Option<T>, Asn1Error> {
+        if self.peek()?.is_some_and(|field| field.tag() == tag) {
+            self.explicit_der(tag).map(Some)
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Read this field using DER validation, including nested ASN.1 elements.
+    /// Variable time: public input only; no constant-time alternative is provided.
+    pub fn implicit_der<T: DecodeContent<'a>>(&mut self, tag: &[u8]) -> Result<T, Asn1Error> {
+        let child = self.next()?;
+        Asn1Ref::parse_der(child.raw(), self.context())?;
+        if child.tag() == tag {
+            T::decode_content_der(child.value(), self.context())
+        } else {
+            Err(Asn1Error::UnexpectedTag)
+        }
+    }
+
+    /// Read this field using DER validation, including nested ASN.1 elements.
+    /// Variable time: public input only; no constant-time alternative is provided.
+    pub fn optional_implicit_der<T: DecodeContent<'a>>(
+        &mut self,
+        tag: &[u8],
+    ) -> Result<Option<T>, Asn1Error> {
+        if self.peek()?.is_some_and(|field| field.tag() == tag) {
+            self.implicit_der(tag).map(Some)
+        } else {
+            Ok(None)
+        }
+    }
     /// 偷看下一個欄位而不取走；解析失敗時呼叫端應立即返回錯誤。
     /// 變動時間：分支只依編碼結構。
     pub fn peek(&mut self) -> Result<Option<Asn1Ref<'a>>, Asn1Error> {
         if self.lookahead.is_none() {
-            self.lookahead = self.children.next().transpose()?;
+            self.lookahead = self.children.next(self.scope.context()).transpose()?;
         }
         Ok(self.lookahead)
     }
@@ -151,13 +264,15 @@ impl<'a> Fields<'a> {
         if let Some(child) = self.lookahead.take() {
             Ok(child)
         } else {
-            self.children.next().ok_or(Asn1Error::Truncated)?
+            self.children
+                .next(self.scope.context())
+                .ok_or(Asn1Error::Truncated)?
         }
     }
     /// 完成讀取，任何剩餘欄位（含損壞的尾端）都回傳 `TrailingData`。
     /// 每個成功的解碼路徑都必須呼叫。變動時間：分支只依編碼結構。
     pub fn finish(mut self) -> Result<(), Asn1Error> {
-        if self.lookahead.is_some() || self.children.next().is_some() {
+        if self.lookahead.is_some() || self.children.next(self.scope.context()).is_some() {
             Err(Asn1Error::TrailingData)
         } else {
             Ok(())
@@ -172,21 +287,26 @@ mod tests {
     #[test]
     fn required_fields_reject_missing_values_and_unexpected_tags() {
         assert_eq!(
-            Fields::new(&[], DecodingOptions::default())
+            Fields::new(&[], &mut DecodingContext::new(&DecodingOptions::default()))
                 .unwrap()
                 .required::<Asn1Null>(&[5]),
             Err(Asn1Error::Truncated)
         );
         assert_eq!(
-            Fields::new(&[1, 1, 0], DecodingOptions::default())
-                .unwrap()
-                .required::<Asn1Null>(&[5]),
+            Fields::new(
+                &[1, 1, 0],
+                &mut DecodingContext::new(&DecodingOptions::default())
+            )
+            .unwrap()
+            .required::<Asn1Null>(&[5]),
             Err(Asn1Error::UnexpectedTag)
         );
     }
     #[test]
     fn optional_fields_preserve_a_nonmatching_lookahead_for_the_next_reader() {
-        let mut fields = Fields::new(&[5, 0], DecodingOptions::default()).unwrap();
+        let options_0 = DecodingOptions::default();
+        let mut options_2 = DecodingContext::new(&options_0);
+        let mut fields = Fields::new(&[5, 0], &mut options_2).unwrap();
         assert_eq!(fields.optional::<Asn1Boolean>(&[1]), Ok(None));
         assert_eq!(fields.peek().unwrap().unwrap().tag(), &[5]);
         assert_eq!(fields.required::<Asn1Null>(&[5]), Ok(Asn1Null));
@@ -195,33 +315,42 @@ mod tests {
     #[test]
     fn default_fields_accept_explicit_values_and_supply_omitted_values() {
         assert!(
-            Fields::new(&[1, 1, 255], DecodingOptions::default())
+            Fields::new(
+                &[1, 1, 255],
+                &mut DecodingContext::new(&DecodingOptions::default())
+            )
+            .unwrap()
+            .default(&[1], Asn1Boolean::from(false))
+            .unwrap()
+            .is_true()
+        );
+        assert!(
+            !Fields::new(&[], &mut DecodingContext::new(&DecodingOptions::default()))
                 .unwrap()
                 .default(&[1], Asn1Boolean::from(false))
                 .unwrap()
                 .is_true()
         );
         assert!(
-            !Fields::new(&[], DecodingOptions::default())
-                .unwrap()
-                .default(&[1], Asn1Boolean::from(false))
-                .unwrap()
-                .is_true()
-        );
-        assert!(
-            !Fields::new(&[1, 1, 0], DecodingOptions::default())
-                .unwrap()
-                .default(&[1], Asn1Boolean::from(false))
-                .unwrap()
-                .is_true()
+            !Fields::new(
+                &[1, 1, 0],
+                &mut DecodingContext::new(&DecodingOptions::default())
+            )
+            .unwrap()
+            .default(&[1], Asn1Boolean::from(false))
+            .unwrap()
+            .is_true()
         );
     }
     #[test]
     fn explicit_fields_require_one_inner_tlv_and_the_requested_constructed_tag() {
-        let n: Asn1Integer = Fields::new(&[0xA0, 3, 2, 1, 2], DecodingOptions::default())
-            .unwrap()
-            .explicit(&[0xA0])
-            .unwrap();
+        let n: Asn1Integer = Fields::new(
+            &[0xA0, 3, 2, 1, 2],
+            &mut DecodingContext::new(&DecodingOptions::default()),
+        )
+        .unwrap()
+        .explicit(&[0xA0])
+        .unwrap();
         assert_eq!(i64::try_from(&n), Ok(2));
         for (bytes, error) in [
             (&[0xA0, 0][..], Asn1Error::Truncated),
@@ -229,42 +358,50 @@ mod tests {
             (&[0xA1, 3, 2, 1, 2], Asn1Error::UnexpectedTag),
         ] {
             assert_eq!(
-                Fields::new(bytes, DecodingOptions::default())
-                    .unwrap()
-                    .explicit::<Asn1Integer>(&[0xA0]),
+                Fields::new(
+                    bytes,
+                    &mut DecodingContext::new(&DecodingOptions::default())
+                )
+                .unwrap()
+                .explicit::<Asn1Integer>(&[0xA0]),
                 Err(error)
             );
         }
         assert_eq!(
-            Fields::new(&[0x80, 3, 2, 1, 2], DecodingOptions::default())
-                .unwrap()
-                .explicit::<Asn1Integer>(&[0x80]),
+            Fields::new(
+                &[0x80, 3, 2, 1, 2],
+                &mut DecodingContext::new(&DecodingOptions::default())
+            )
+            .unwrap()
+            .explicit::<Asn1Integer>(&[0x80]),
             Err(Asn1Error::UnexpectedTag)
         );
     }
     #[test]
     fn implicit_fields_replace_tags_without_adding_a_depth_layer() {
-        let mut fields = Fields::new(
-            &[0x80, 1, 255],
-            DecodingOptions::new(crate::Depth::new(1), 16 * 1024 * 1024, 65_536),
-        )
-        .unwrap();
+        let options_1 = DecodingOptions::new(1, 16 * 1024 * 1024, 65_536);
+        let mut options_4 = DecodingContext::new(&options_1);
+        let mut fields = Fields::new(&[0x80, 1, 255], &mut options_4).unwrap();
         assert_eq!(
             fields.implicit::<Asn1Boolean>(&[0x80]),
             Ok(Asn1Boolean::from(true))
         );
         assert_eq!(fields.finish(), Ok(()));
         assert_eq!(
-            Fields::new(&[0x81, 1, 255], DecodingOptions::default())
-                .unwrap()
-                .implicit::<Asn1Boolean>(&[0x80]),
+            Fields::new(
+                &[0x81, 1, 255],
+                &mut DecodingContext::new(&DecodingOptions::default())
+            )
+            .unwrap()
+            .implicit::<Asn1Boolean>(&[0x80]),
             Err(Asn1Error::UnexpectedTag)
         );
     }
     #[test]
     fn optional_tagged_fields_leave_nonmatching_values_and_decode_matching_values() {
-        let mut fields =
-            Fields::new(&[0xA0, 2, 5, 0, 0x80, 1, 255], DecodingOptions::default()).unwrap();
+        let options_2 = DecodingOptions::default();
+        let mut options_6 = DecodingContext::new(&options_2);
+        let mut fields = Fields::new(&[0xA0, 2, 5, 0, 0x80, 1, 255], &mut options_6).unwrap();
         assert_eq!(fields.optional_implicit::<Asn1Boolean>(&[0x81]), Ok(None));
         assert_eq!(fields.optional_explicit::<Asn1Null>(&[0xA1]), Ok(None));
         assert_eq!(
@@ -280,17 +417,19 @@ mod tests {
     }
     #[test]
     fn finishing_rejects_remaining_fields_including_buffered_or_malformed_tails() {
-        let mut fields = Fields::new(&[5, 0], DecodingOptions::default()).unwrap();
+        let options_3 = DecodingOptions::default();
+        let mut options_8 = DecodingContext::new(&options_3);
+        let mut fields = Fields::new(&[5, 0], &mut options_8).unwrap();
         fields.peek().unwrap();
         assert_eq!(fields.finish(), Err(Asn1Error::TrailingData));
         assert_eq!(
-            Fields::new(&[5], DecodingOptions::default())
+            Fields::new(&[5], &mut DecodingContext::new(&DecodingOptions::default()))
                 .unwrap()
                 .finish(),
             Err(Asn1Error::TrailingData)
         );
         assert_eq!(
-            Fields::new(&[], DecodingOptions::default())
+            Fields::new(&[], &mut DecodingContext::new(&DecodingOptions::default()))
                 .unwrap()
                 .finish(),
             Ok(())
@@ -301,7 +440,7 @@ mod tests {
         assert!(matches!(
             Fields::new(
                 &[],
-                DecodingOptions::new(crate::Depth::new(0), 16 * 1024 * 1024, 65_536)
+                &mut DecodingContext::new(&DecodingOptions::new(0, 16 * 1024 * 1024, 65_536))
             ),
             Err(Asn1Error::DepthExceeded)
         ));
@@ -309,7 +448,7 @@ mod tests {
         assert_eq!(
             Fields::new(
                 &bytes,
-                DecodingOptions::new(crate::Depth::new(1), 16 * 1024 * 1024, 65_536)
+                &mut DecodingContext::new(&DecodingOptions::new(1, 16 * 1024 * 1024, 65_536))
             )
             .unwrap()
             .explicit::<Asn1Null>(&[0xA0]),
@@ -318,7 +457,7 @@ mod tests {
         assert_eq!(
             Fields::new(
                 &bytes,
-                DecodingOptions::new(crate::Depth::new(2), 16 * 1024 * 1024, 65_536)
+                &mut DecodingContext::new(&DecodingOptions::new(2, 16 * 1024 * 1024, 65_536))
             )
             .unwrap()
             .explicit::<Asn1Null>(&[0xA0]),
@@ -327,7 +466,7 @@ mod tests {
         assert!(matches!(
             Fields::new(
                 &[0x30, 0],
-                DecodingOptions::new(crate::Depth::new(1), 16 * 1024 * 1024, 65_536)
+                &mut DecodingContext::new(&DecodingOptions::new(1, 16 * 1024 * 1024, 65_536))
             )
             .unwrap()
             .required::<Asn1SequenceOf<Asn1Null>>(&[0x30]),
@@ -337,13 +476,23 @@ mod tests {
     #[test]
     fn any_and_choice_decoders_can_read_required_and_explicit_fields() {
         struct Choice(Asn1Boolean);
-        impl<'a> Decode<'a> for Choice {
-            fn decode(bytes: &'a [u8], depth: DecodingOptions) -> Result<(usize, Self), Asn1Error> {
-                Asn1Boolean::decode(bytes, depth).map(|(n, v)| (n, Self(v)))
+        impl<'a> DecodeInner<'a> for Choice {
+            fn decode_inner(
+                bytes: &'a [u8],
+                context: &mut DecodingContext<'_>,
+            ) -> Result<(usize, Self), Asn1Error> {
+                Asn1Boolean::decode_inner(bytes, context).map(|(n, v)| (n, Self(v)))
+            }
+            fn decode_inner_der(
+                bytes: &'a [u8],
+                context: &mut DecodingContext<'_>,
+            ) -> Result<(usize, Self), Asn1Error> {
+                Asn1Boolean::decode_inner_der(bytes, context).map(|(n, v)| (n, Self(v)))
             }
         }
-        let mut fields =
-            Fields::new(&[1, 1, 255, 0xA0, 2, 5, 0], DecodingOptions::default()).unwrap();
+        let options_4 = DecodingOptions::default();
+        let mut options_10 = DecodingContext::new(&options_4);
+        let mut fields = Fields::new(&[1, 1, 255, 0xA0, 2, 5, 0], &mut options_10).unwrap();
         assert!(fields.required::<Choice>(&[1]).unwrap().0.is_true());
         let any = fields.explicit::<Asn1Any>(&[0xA0]).unwrap();
         assert_eq!(any.as_ref().tag(), &[5]);
@@ -353,13 +502,17 @@ mod tests {
     fn optional_and_default_fields_accept_schema_selected_constructed_octets() {
         use crate::Asn1OctetString;
         let input = [0x24, 3, 4, 1, 0xaa];
-        let mut fields = Fields::new(&input, DecodingOptions::default()).unwrap();
+        let options_5 = DecodingOptions::default();
+        let mut options_12 = DecodingContext::new(&options_5);
+        let mut fields = Fields::new(&input, &mut options_12).unwrap();
         assert_eq!(
             fields.optional::<Asn1OctetString>(&[0x24]),
             Ok(Some(Asn1OctetString::new(&[0xaa])))
         );
         fields.finish().unwrap();
-        let mut fields = Fields::new(&input, DecodingOptions::default()).unwrap();
+        let options_6 = DecodingOptions::default();
+        let mut context_14 = DecodingContext::new(&options_6);
+        let mut fields = Fields::new(&input, &mut context_14).unwrap();
         assert_eq!(
             fields.default(&[0x24], Asn1OctetString::new(&[])),
             Ok(Asn1OctetString::new(&[0xaa]))
@@ -371,21 +524,17 @@ mod tests {
     fn the_schema_selects_constructed_implicit_fields_without_extra_wrapper_depth() {
         use crate::Asn1OctetString;
         let input = [0xa0, 3, 4, 1, 0xaa];
-        let mut fields = Fields::new(
-            &input,
-            DecodingOptions::new(crate::Depth::new(2), 16 * 1024 * 1024, 65_536),
-        )
-        .unwrap();
+        let options_7 = DecodingOptions::new(2, 16 * 1024 * 1024, 65_536);
+        let mut context_16 = DecodingContext::new(&options_7);
+        let mut fields = Fields::new(&input, &mut context_16).unwrap();
         assert_eq!(
             fields.implicit_constructed::<Asn1OctetString>(&[0x80]),
             Ok(Asn1OctetString::new(&[0xaa]))
         );
         fields.finish().unwrap();
-        let mut fields = Fields::new(
-            &input,
-            DecodingOptions::new(crate::Depth::new(2), 16 * 1024 * 1024, 65_536),
-        )
-        .unwrap();
+        let options_8 = DecodingOptions::new(2, 16 * 1024 * 1024, 65_536);
+        let mut context_18 = DecodingContext::new(&options_8);
+        let mut fields = Fields::new(&input, &mut context_18).unwrap();
         assert_eq!(
             fields.optional::<Asn1OctetString>(&[0xa0]),
             Ok(Some(Asn1OctetString::new(&[0xaa])))
@@ -394,7 +543,7 @@ mod tests {
         assert_eq!(
             Fields::new(
                 &input,
-                DecodingOptions::new(crate::Depth::new(1), 16 * 1024 * 1024, 65_536)
+                &mut DecodingContext::new(&DecodingOptions::new(1, 16 * 1024 * 1024, 65_536))
             )
             .unwrap()
             .implicit_constructed::<Asn1OctetString>(&[0x80]),
@@ -402,12 +551,17 @@ mod tests {
         );
         let high = [0xbf, 0x81, 0, 3, 4, 1, 0xaa];
         assert_eq!(
-            Fields::new(&high, DecodingOptions::default())
-                .unwrap()
-                .optional::<Asn1OctetString>(&[0xbf, 0x81, 0]),
+            Fields::new(
+                &high,
+                &mut DecodingContext::new(&DecodingOptions::default())
+            )
+            .unwrap()
+            .optional::<Asn1OctetString>(&[0xbf, 0x81, 0]),
             Ok(Some(Asn1OctetString::new(&[0xaa])))
         );
-        let mut fields = Fields::new(&input, DecodingOptions::default()).unwrap();
+        let options_9 = DecodingOptions::default();
+        let mut context_20 = DecodingContext::new(&options_9);
+        let mut fields = Fields::new(&input, &mut context_20).unwrap();
         assert_eq!(
             fields.optional_implicit::<Asn1OctetString>(&[0x81]),
             Ok(None)
@@ -439,11 +593,9 @@ mod tests {
             (&[0xa0, 2, 5, 0], &[0x80], 2, Err(Asn1Error::UnexpectedTag)),
             (&[], &[0x80], 2, Err(Asn1Error::Truncated)),
         ] {
-            let mut fields = Fields::new(
-                input,
-                DecodingOptions::new(crate::Depth::new(depth), 16 * 1024 * 1024, 65_536),
-            )
-            .unwrap();
+            let options = DecodingOptions::new(depth, 16 * 1024 * 1024, 65_536);
+            let mut context = DecodingContext::new(&options);
+            let mut fields = Fields::new(input, &mut context).unwrap();
             assert_eq!(
                 fields
                     .implicit_constructed::<Asn1OctetString>(tag)
@@ -454,11 +606,9 @@ mod tests {
                 fields.finish().unwrap();
             }
         }
-        let mut fields = Fields::new(
-            &[0xa0, 4, 3, 2, 7, 0x80],
-            DecodingOptions::new(crate::Depth::new(2), 16 * 1024 * 1024, 65_536),
-        )
-        .unwrap();
+        let options_10 = DecodingOptions::new(2, 16 * 1024 * 1024, 65_536);
+        let mut context_22 = DecodingContext::new(&options_10);
+        let mut fields = Fields::new(&[0xa0, 4, 3, 2, 7, 0x80], &mut context_22).unwrap();
         assert_eq!(
             fields
                 .implicit_constructed::<Asn1BitString>(&[0x80])
@@ -472,10 +622,12 @@ mod tests {
     fn unschema_selected_constructed_forms_are_rejected_or_left_for_the_next_field() {
         let input = [0x21, 3, 1, 1, 0xff];
         assert_eq!(
-            Asn1Boolean::decode(&input, DecodingOptions::default()),
+            Asn1Boolean::decode(&input, &DecodingOptions::default()),
             Err(Asn1Error::UnexpectedTag)
         );
-        let mut fields = Fields::new(&input, DecodingOptions::default()).unwrap();
+        let options_11 = DecodingOptions::default();
+        let mut context_24 = DecodingContext::new(&options_11);
+        let mut fields = Fields::new(&input, &mut context_24).unwrap();
         assert_eq!(fields.optional::<Asn1Boolean>(&[1]), Ok(None));
         assert_eq!(
             fields.default(&[1], Asn1Boolean::from(false)),
@@ -486,7 +638,9 @@ mod tests {
         fields.finish().unwrap();
 
         let input = [0xa0, 3, 1, 1, 0xff];
-        let mut fields = Fields::new(&input, DecodingOptions::default()).unwrap();
+        let options_12 = DecodingOptions::default();
+        let mut context_26 = DecodingContext::new(&options_12);
+        let mut fields = Fields::new(&input, &mut context_26).unwrap();
         assert_eq!(fields.optional_implicit::<Asn1Boolean>(&[0x80]), Ok(None));
         assert_eq!(fields.peek().unwrap().unwrap().raw(), input);
         assert_eq!(

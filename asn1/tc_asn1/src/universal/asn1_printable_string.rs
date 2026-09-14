@@ -2,8 +2,8 @@
 
 use alloc::string::String;
 
+use crate::DecodingContext;
 use crate::EncodingOptions;
-use crate::decoding_options::DecodingOptions;
 use crate::error::Asn1Error;
 use crate::traits::{DecodeContent, Encode};
 
@@ -44,24 +44,53 @@ impl Asn1PrintableString {
     }
 }
 
-impl<'a> crate::Decode<'a> for Asn1PrintableString {
-    fn decode(
+impl<'a> crate::DecodeInner<'a> for Asn1PrintableString {
+    fn decode_inner(
         buff: &'a [u8],
-        options: crate::DecodingOptions,
+        context: &mut crate::DecodingContext<'_>,
     ) -> Result<(usize, Self), crate::Asn1Error> {
-        let element = crate::Asn1Ref::parse(buff, options)?;
+        let element = crate::Asn1Ref::parse(buff, context)?;
         let value = if element.is_constructed() {
-            <Self as crate::DecodeConstructed<'a>>::decode_constructed(element.value(), options)?
+            <Self as crate::DecodeConstructed<'a>>::decode_constructed(element.value(), context)?
         } else {
-            <Self as crate::DecodeContent<'a>>::decode_content(element.value(), options)?
+            <Self as crate::DecodeContent<'a>>::decode_content(element.value(), context)?
+        };
+        Ok((element.total_len(), value))
+    }
+    fn decode_inner_der(
+        buff: &'a [u8],
+        context: &mut crate::DecodingContext<'_>,
+    ) -> Result<(usize, Self), crate::Asn1Error> {
+        let element = crate::Asn1Ref::parse_der(buff, context)?;
+        if element.is_constructed() {
+            return Err(crate::Asn1Error::NotDer);
+        }
+        let value = if element.is_constructed() {
+            <Self as crate::DecodeConstructed<'a>>::decode_constructed(element.value(), context)?
+        } else {
+            <Self as crate::DecodeContent<'a>>::decode_content_der(element.value(), context)?
         };
         Ok((element.total_len(), value))
     }
 }
+impl<'a> crate::Decode<'a> for Asn1PrintableString {
+    fn decode(
+        buff: &'a [u8],
+        options: &crate::DecodingOptions,
+    ) -> Result<(usize, Self), crate::Asn1Error> {
+        <Self as crate::DecodeInner<'a>>::decode_inner(
+            buff,
+            &mut crate::DecodingContext::new(options),
+        )
+    }
+}
 
 impl<'a> DecodeContent<'a> for Asn1PrintableString {
-    fn decode_content(value: &'a [u8], options: DecodingOptions) -> Result<Self, Asn1Error> {
-        options.check_content_len(value.len())?;
+    fn decode_content(
+        value: &'a [u8],
+        context: &mut DecodingContext<'_>,
+    ) -> Result<Self, Asn1Error> {
+        context.options().check_content_len(value.len())?;
         if !value.iter().all(|b| is_printable(*b)) {
             return Err(Asn1Error::MalformedValue);
         }
@@ -70,6 +99,13 @@ impl<'a> DecodeContent<'a> for Asn1PrintableString {
         Ok(Self {
             text: String::from(text),
         })
+    }
+
+    fn decode_content_der(
+        value: &'a [u8],
+        context: &mut crate::DecodingContext<'_>,
+    ) -> Result<Self, crate::Asn1Error> {
+        crate::decoding::decode_der_content::<Self>(value, context)
     }
 }
 
@@ -111,11 +147,12 @@ impl Encode for Asn1PrintableString {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::DecodingOptions;
     use crate::EncodingType;
     use crate::traits::Decode;
 
     const OPTIONS: DecodingOptions =
-        DecodingOptions::new(crate::Depth::DEFAULT, 16 * 1024 * 1024, 65_536);
+        DecodingOptions::new(crate::Depth::DEFAULT.get(), 16 * 1024 * 1024, 65_536);
 
     #[test]
     fn the_whole_permitted_set_is_accepted() {
@@ -139,7 +176,7 @@ mod tests {
     fn a_country_code_round_trips() {
         // C=TW 的值
         let input = [0x13, 0x02, b'T', b'W'];
-        let (used, s) = Asn1PrintableString::decode(&input, OPTIONS).unwrap();
+        let (used, s) = Asn1PrintableString::decode(&input, &OPTIONS).unwrap();
         assert_eq!(used, 4);
         assert_eq!(s.as_str(), "TW");
 

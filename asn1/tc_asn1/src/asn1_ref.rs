@@ -8,9 +8,9 @@
 //! Definite-length contents are inspected lazily. Indefinite-length contents
 //! must be traversed at TLV boundaries to find their closing EOC.
 
-use crate::decoding_options::DecodingOptions;
 use crate::error::Asn1Error;
-use crate::traits::{Decode, DecodeConstructed};
+use crate::traits::{DecodeConstructed, DecodeInner};
+use crate::{DecodingContext, DecodingOptions};
 
 /// Tag class encoded by the two most significant bits of the first identifier octet.
 ///
@@ -19,8 +19,10 @@ use crate::traits::{Decode, DecodeConstructed};
 /// # Examples
 ///
 /// ```
-/// use tc_asn1::{Asn1Class, Asn1Ref, DecodingOptions};
-/// let element = Asn1Ref::parse(&[0xA0, 0], DecodingOptions::default())?;
+/// use tc_asn1::{Asn1Class, Asn1Ref, DecodingContext, DecodingOptions};
+/// let options = DecodingOptions::default();
+/// let mut context = DecodingContext::new(&options);
+/// let element = Asn1Ref::parse(&[0xA0, 0], &mut context)?;
 /// assert_eq!(element.class(), Asn1Class::ContextSpecific);
 /// assert!(element.is_constructed());
 /// # Ok::<(), tc_asn1::Asn1Error>(())
@@ -64,44 +66,39 @@ impl Asn1Class {
 /// The input array contains the raw wire encoding, including tags and lengths.
 ///
 /// ```
-/// use tc_asn1::{
-///     Asn1Error, Asn1Integer, Asn1OctetString,
-///     Asn1Ref, DecodingOptions,
-/// };
+/// use tc_asn1::{Asn1Error, Asn1Integer, Asn1OctetString, Asn1Ref, DecodingContext, DecodingOptions};
 ///
 /// fn main() -> Result<(), Asn1Error> {
 ///     let options = DecodingOptions::default();
+///     let mut context = DecodingContext::new(&options);
 ///     let seq = Asn1Ref::parse(&[
 ///         0x30, 11,                // SEQUENCE
 ///         2, 1, 5,                 // INTEGER 5
 ///         0x24, 6,                 // Constructed OCTET STRING
 ///         4, 1, b'A', 4, 1, b'B', // Two segments
-///     ], options)?;
+///     ], &mut context)?;
 ///
-///     let child_options = DecodingOptions::new(
-///         options.depth().descend()?,
-///         options.max_content_len(),
-///         options.max_children(),
-///     );
+///     context.with_child(|context| {
+///         let mut children = seq.children(context);
+///         while let Some(child) = children.next() {
+///             let child = child?;
 ///
-///     for child in seq.children(child_options) {
-///         let child = child?;
-///
-///         match child.tag() {
-///             Asn1Integer::TAG => {
-///                 let value = child.decode_as::<Asn1Integer>(child_options)?;
-///                 println!("INTEGER: {}", i64::try_from(&value)?);
+///             match child.tag() {
+///                 Asn1Integer::TAG => {
+///                     let value = child.decode_as::<Asn1Integer>(children.context())?;
+///                     println!("INTEGER: {}", i64::try_from(&value)?);
+///                 }
+///                 Asn1OctetString::TAG | Asn1OctetString::CONSTRUCTED_TAG => {
+///                     let value = child
+///                         .decode_constructed_as::<Asn1OctetString>(children.context())?;
+///                     println!("OCTET STRING: {:?}", value.as_bytes());
+///                 }
+///                 _ => return Err(Asn1Error::UnexpectedTag),
 ///             }
-///             Asn1OctetString::TAG | Asn1OctetString::CONSTRUCTED_TAG => {
-///                 let value = child
-///                     .decode_constructed_as::<Asn1OctetString>(child_options)?;
-///                 println!("OCTET STRING: {:?}", value.as_bytes());
-///             }
-///             _ => return Err(Asn1Error::UnexpectedTag),
 ///         }
-///     }
 ///
-///     Ok(())
+///         Ok(())
+///     })
 /// }
 /// ```
 #[derive(Clone, Copy, Debug)]
@@ -166,18 +163,19 @@ impl<'a> Asn1Ref<'a> {
     /// # Examples
     ///
     /// ```
-    /// use tc_asn1::{Asn1Error, Asn1Ref, DecodingOptions};
+    /// use tc_asn1::{Asn1Error, Asn1Ref, DecodingContext, DecodingOptions};
     /// let options = DecodingOptions::default();
-    /// let element = Asn1Ref::parse(&[0x30, 0x80, 5, 0, 0, 0], options)?;
+    /// let mut context = DecodingContext::new(&options);
+    /// let element = Asn1Ref::parse(&[0x30, 0x80, 5, 0, 0, 0], &mut context)?;
     /// assert_eq!(element.value(), &[5, 0]);
     /// assert_eq!(element.eoc(), &[0, 0]);
     /// assert_eq!(
-    ///     Asn1Ref::parse(&[0x30, 0x80, 5, 0], options).err(),
+    ///     Asn1Ref::parse(&[0x30, 0x80, 5, 0], &mut context).err(),
     ///     Some(Asn1Error::Truncated),
     /// );
     /// # Ok::<(), Asn1Error>(())
     /// ```
-    pub fn parse(buff: &'a [u8], options: DecodingOptions) -> Result<Self, Asn1Error> {
+    pub fn parse(buff: &'a [u8], context: &mut DecodingContext<'_>) -> Result<Self, Asn1Error> {
         let tag = parse_tag(buff)?;
         let (len_len, length) = parse_len(&buff[tag.len()..])?;
         let offset = tag.len() + len_len;
@@ -185,7 +183,7 @@ impl<'a> Asn1Ref<'a> {
         match length {
             Some(n) => {
                 let end = offset.checked_add(n).ok_or(Asn1Error::LengthOverflow)?;
-                options.check_content_len(n)?;
+                context.options().check_content_len(n)?;
                 let value = buff.get(offset..end).ok_or(Asn1Error::Truncated)?;
                 Ok(Self {
                     raw: &buff[..end],
@@ -200,33 +198,49 @@ impl<'a> Asn1Ref<'a> {
                 if tag[0] & 0x20 == 0 {
                     return Err(Asn1Error::MalformedValue);
                 }
-                let options = options.descend()?;
-                let mut at = offset;
-                let mut count = 0;
-                loop {
-                    let rest = buff.get(at..).ok_or(Asn1Error::Truncated)?;
-                    if rest.len() < 2 {
-                        return Err(Asn1Error::Truncated);
+                context.with_child(|context| {
+                    let mut at = offset;
+                    let mut count = 0;
+                    loop {
+                        let rest = buff.get(at..).ok_or(Asn1Error::Truncated)?;
+                        if rest.len() < 2 {
+                            return Err(Asn1Error::Truncated);
+                        }
+                        if rest[..2] == [0x00, 0x00] {
+                            break;
+                        }
+                        if count == context.options().max_children() {
+                            return Err(Asn1Error::ChildrenExceeded);
+                        }
+                        at += Self::parse(rest, context)?.total_len(); // Skip the complete child TLV.
+                        count += 1;
+                        context.options().check_content_len(at - offset)?;
                     }
-                    if rest[..2] == [0x00, 0x00] {
-                        break;
-                    }
-                    if count == options.max_children() {
-                        return Err(Asn1Error::ChildrenExceeded);
-                    }
-                    at += Self::parse(rest, options)?.total_len(); // Skip the complete child TLV.
-                    count += 1;
-                    options.check_content_len(at - offset)?;
-                }
-                Ok(Self {
-                    raw: &buff[..at + 2],
-                    total_len: at + 2,
-                    tag,
-                    value: &buff[offset..at],
-                    eoc: &buff[at..at + 2],
+                    Ok(Self {
+                        raw: &buff[..at + 2],
+                        total_len: at + 2,
+                        tag,
+                        value: &buff[offset..at],
+                        eoc: &buff[at..at + 2],
+                    })
                 })
             }
         }
+    }
+    /// Parse the first TLV with a definite, minimal DER header.
+    /// This checks framing and known universal encoding forms, not schema contents.
+    /// Variable time: public input only; no constant-time alternative is provided.
+    pub fn parse_der(buff: &'a [u8], context: &mut DecodingContext<'_>) -> Result<Self, Asn1Error> {
+        let tag = parse_tag(buff)?;
+        crate::decoding::check_der_tag(tag)?;
+        let (len_len, length) = parse_len(&buff[tag.len()..])?;
+        if tag == [0]
+            || length.is_none()
+            || length.is_some_and(|n| len_len != crate::encoding::len_octets(n))
+        {
+            return Err(Asn1Error::NotDer);
+        }
+        Self::parse(buff, context)
     }
 
     /// Borrow the complete TLV, including the header and any closing EOC.
@@ -235,8 +249,10 @@ impl<'a> Asn1Ref<'a> {
     /// # Examples
     ///
     /// ```
-    /// use tc_asn1::{Asn1Ref, DecodingOptions};
-    /// let element = Asn1Ref::parse(&[5, 0, 2, 1, 7], DecodingOptions::default())?;
+    /// use tc_asn1::{Asn1Ref, DecodingContext, DecodingOptions};
+    /// let options = DecodingOptions::default();
+    /// let mut context = DecodingContext::new(&options);
+    /// let element = Asn1Ref::parse(&[5, 0, 2, 1, 7], &mut context)?;
     /// assert_eq!(element.raw(), &[5, 0]);
     /// # Ok::<(), tc_asn1::Asn1Error>(())
     /// ```
@@ -250,8 +266,10 @@ impl<'a> Asn1Ref<'a> {
     /// # Examples
     ///
     /// ```
-    /// use tc_asn1::{Asn1Ref, DecodingOptions};
-    /// let element = Asn1Ref::parse(&[0x9F, 0x81, 0, 0], DecodingOptions::default())?;
+    /// use tc_asn1::{Asn1Ref, DecodingContext, DecodingOptions};
+    /// let options = DecodingOptions::default();
+    /// let mut context = DecodingContext::new(&options);
+    /// let element = Asn1Ref::parse(&[0x9F, 0x81, 0, 0], &mut context)?;
     /// assert_eq!(element.tag(), &[0x9F, 0x81, 0]);
     /// # Ok::<(), tc_asn1::Asn1Error>(())
     /// ```
@@ -272,10 +290,11 @@ impl<'a> Asn1Ref<'a> {
     /// # Examples
     ///
     /// ```
-    /// use tc_asn1::{Asn1Ref, DecodingOptions};
+    /// use tc_asn1::{Asn1Ref, DecodingContext, DecodingOptions};
     /// let options = DecodingOptions::default();
-    /// assert!(Asn1Ref::parse(&[0x30, 0], options)?.is_constructed());
-    /// assert!(!Asn1Ref::parse(&[5, 0], options)?.is_constructed());
+    /// let mut context = DecodingContext::new(&options);
+    /// assert!(Asn1Ref::parse(&[0x30, 0], &mut context)?.is_constructed());
+    /// assert!(!Asn1Ref::parse(&[5, 0], &mut context)?.is_constructed());
     /// # Ok::<(), tc_asn1::Asn1Error>(())
     /// ```
     pub fn is_constructed(&self) -> bool {
@@ -288,9 +307,11 @@ impl<'a> Asn1Ref<'a> {
     /// # Examples
     ///
     /// ```
-    /// use tc_asn1::{Asn1Ref, DecodingOptions};
+    /// use tc_asn1::{Asn1Ref, DecodingContext, DecodingOptions};
+    /// let options = DecodingOptions::default();
+    /// let mut context = DecodingContext::new(&options);
     /// let element = Asn1Ref::parse(
-    ///     &[0x30, 0x80, 0x30, 0x80, 0, 0, 0, 0], DecodingOptions::default(),
+    ///     &[0x30, 0x80, 0x30, 0x80, 0, 0, 0, 0], &mut context,
     /// )?;
     /// assert_eq!(element.value(), &[0x30, 0x80, 0, 0]);
     /// assert_eq!(element.eoc(), &[0, 0]);
@@ -306,9 +327,11 @@ impl<'a> Asn1Ref<'a> {
     /// # Examples
     ///
     /// ```
-    /// use tc_asn1::{Asn1Ref, DecodingOptions};
+    /// use tc_asn1::{Asn1Ref, DecodingContext, DecodingOptions};
+    /// let options = DecodingOptions::default();
+    /// let mut context = DecodingContext::new(&options);
     /// let input = [2, 1, 5, 5, 0];
-    /// let element = Asn1Ref::parse(&input, DecodingOptions::default())?;
+    /// let element = Asn1Ref::parse(&input, &mut context)?;
     /// assert_eq!(element.total_len(), element.raw().len());
     /// assert_eq!(&input[element.total_len()..], &[5, 0]);
     /// # Ok::<(), tc_asn1::Asn1Error>(())
@@ -323,14 +346,15 @@ impl<'a> Asn1Ref<'a> {
     /// # Examples
     ///
     /// ```
-    /// use tc_asn1::{Asn1Ref, DecodingOptions};
+    /// use tc_asn1::{Asn1Ref, DecodingContext, DecodingOptions};
     ///
     /// let options = DecodingOptions::default();
-    /// let element = Asn1Ref::parse(&[0x30, 0x80, 5, 0, 0, 0], options)?;
+    /// let mut context = DecodingContext::new(&options);
+    /// let element = Asn1Ref::parse(&[0x30, 0x80, 5, 0, 0, 0], &mut context)?;
     /// assert_eq!(element.value(), &[5, 0]);
     /// assert_eq!(element.eoc(), &[0, 0]);
     /// assert_eq!(element.total_len(), 6);
-    /// let definite = Asn1Ref::parse(&[0x30, 2, 5, 0], options)?;
+    /// let definite = Asn1Ref::parse(&[0x30, 2, 5, 0], &mut context)?;
     /// assert!(definite.eoc().is_empty());
     /// assert_eq!(definite.total_len(), 4);
     /// # Ok::<(), tc_asn1::Asn1Error>(())
@@ -342,27 +366,27 @@ impl<'a> Asn1Ref<'a> {
     /// Iterate over the direct child TLVs of a constructed element.
     /// Primitive elements return an empty iterator. The closing EOC is excluded.
     ///
-    /// Pass options for the child level: this method does not decrement depth.
-    /// A recursive caller must spend one level before entering constructed
-    /// contents and carry the reduced options into subsequent child decoding.
+    /// Enter the parent with [`DecodingContext::with_child`] before iterating.
+    /// This method does not change depth. Decode yielded values through
+    /// [`Children::context`] to retain the same active scope.
     /// Creating the iterator is constant time; advancing it is variable time
     /// on public input only, with no constant-time alternative.
     ///
     /// # Examples
     ///
     /// ```
-    /// use tc_asn1::{Asn1Ref, DecodingOptions};
+    /// use tc_asn1::{Asn1Ref, DecodingContext, DecodingOptions};
     /// let options = DecodingOptions::default();
-    /// let element = Asn1Ref::parse(&[0x30, 2, 5, 0], options)?;
-    /// let child_options = DecodingOptions::new(
-    ///     options.depth().descend()?, options.max_content_len(), options.max_children(),
-    /// );
-    /// let children = element.children(child_options).collect::<Result<Vec<_>, _>>()?;
+    /// let mut context = DecodingContext::new(&options);
+    /// let element = Asn1Ref::parse(&[0x30, 2, 5, 0], &mut context)?;
+    /// let children = context.with_child(|context| {
+    ///     element.children(context).collect::<Result<Vec<_>, _>>()
+    /// })?;
     /// assert_eq!(children.len(), 1);
     /// assert_eq!(children[0].tag(), tc_asn1::Asn1Null::TAG);
     /// # Ok::<(), tc_asn1::Asn1Error>(())
     /// ```
-    pub fn children(&self, options: DecodingOptions) -> Children<'a> {
+    pub fn children<'c, 'o>(&self, options: &'c mut DecodingContext<'o>) -> Children<'a, 'c, 'o> {
         Children::new(
             if self.is_constructed() {
                 self.value
@@ -377,21 +401,37 @@ impl<'a> Asn1Ref<'a> {
     /// The schema validates the identifier; this method requires full consumption
     /// of this element. Variable time: public values only; no constant-time alternative.
     /// Decoder errors are propagated; incomplete or excessive consumption returns
-    /// [`Asn1Error::TrailingData`]. Options are passed unchanged to the decoder.
+    /// [`Asn1Error::TrailingData`]. The decoder shares the caller's context.
     ///
     /// # Examples
     ///
     /// ```
-    /// use tc_asn1::{Asn1Integer, Asn1Ref, DecodingOptions};
+    /// use tc_asn1::{Asn1Integer, Asn1Ref, DecodingContext, DecodingOptions};
     /// let options = DecodingOptions::default();
-    /// let element = Asn1Ref::parse(&[0x80, 1, 7], options)?;
+    /// let mut context = DecodingContext::new(&options);
+    /// let element = Asn1Ref::parse(&[0x80, 1, 7], &mut context)?;
     /// assert_eq!(element.tag(), &[0x80]); // Schema: [0] IMPLICIT INTEGER.
-    /// let integer = element.decode_as::<Asn1Integer>(options)?;
+    /// let integer = element.decode_as::<Asn1Integer>(&mut context)?;
     /// assert_eq!(i64::try_from(&integer)?, 7);
     /// # Ok::<(), tc_asn1::Asn1Error>(())
     /// ```
-    pub fn decode_as<T: Decode<'a>>(&self, options: DecodingOptions) -> Result<T, Asn1Error> {
-        let (used, value) = T::decode(self.raw, options)?;
+    pub fn decode_as<T: DecodeInner<'a>>(
+        &self,
+        context: &mut DecodingContext<'_>,
+    ) -> Result<T, Asn1Error> {
+        let (used, value) = T::decode_inner(self.raw, context)?;
+        if used != self.total_len() {
+            return Err(Asn1Error::TrailingData);
+        }
+        Ok(value)
+    }
+    /// Decode the complete view using the selected type's DER decoder.
+    /// Variable time: public input only; no constant-time alternative is provided.
+    pub fn decode_as_der<T: DecodeInner<'a>>(
+        &self,
+        context: &mut DecodingContext<'_>,
+    ) -> Result<T, Asn1Error> {
+        let (used, value) = T::decode_inner_der(self.raw, context)?;
         if used != self.total_len() {
             return Err(Asn1Error::TrailingData);
         }
@@ -403,32 +443,37 @@ impl<'a> Asn1Ref<'a> {
     /// is set, and [`crate::DecodeContent::decode_content`] otherwise.
     /// The caller validates the tag class and number.
     /// Returns [`Asn1Error::ContentLengthExceeded`] for oversized contents and propagates
-    /// decoder errors. The decoder receives unchanged options and handles nesting.
+    /// decoder errors. The decoder shares the caller's context and handles nesting.
     /// Variable time: public values only; no constant-time alternative is provided.
     ///
     /// # Examples
     ///
     /// ```
-    /// use tc_asn1::{Asn1OctetString, Asn1Ref, DecodingOptions};
+    /// use tc_asn1::{Asn1OctetString, Asn1Ref, DecodingContext, DecodingOptions};
     /// let options = DecodingOptions::default();
-    /// let element = Asn1Ref::parse(&[0xA0, 6, 4, 1, b'A', 4, 1, b'B'], options)?;
+    /// let mut context = DecodingContext::new(&options);
+    /// let element = Asn1Ref::parse(&[0xA0, 6, 4, 1, b'A', 4, 1, b'B'], &mut context)?;
     /// assert_eq!(element.tag(), &[0xA0]); // Schema: [0] IMPLICIT OCTET STRING.
-    /// let octets = element.decode_constructed_as::<Asn1OctetString>(options)?;
+    /// let octets = element.decode_constructed_as::<Asn1OctetString>(&mut context)?;
     /// assert_eq!(octets.as_bytes(), b"AB");
-    /// let primitive = Asn1Ref::parse(&[0x80, 2, b'A', b'B'], options)?;
+    /// let primitive = Asn1Ref::parse(&[0x80, 2, b'A', b'B'], &mut context)?;
     /// assert_eq!(primitive.tag(), &[0x80]); // Same schema type, primitive form.
-    /// assert_eq!(primitive.decode_constructed_as::<Asn1OctetString>(options)?, octets);
+    /// assert_eq!(primitive.decode_constructed_as::<Asn1OctetString>(&mut context)?, octets);
     /// # Ok::<(), tc_asn1::Asn1Error>(())
     /// ```
-    pub fn decode_constructed_as<T>(&self, options: DecodingOptions) -> Result<T, Asn1Error>
+    pub fn decode_constructed_as<T>(
+        &self,
+        context: &mut DecodingContext<'_>,
+    ) -> Result<T, Asn1Error>
     where
         T: DecodeConstructed<'a>,
     {
-        options.check_content_len(self.value.len())?;
+        context.options().check_content_len(self.value.len())?;
+
         if self.is_constructed() {
-            T::decode_constructed(self.value, options)
+            T::decode_constructed(self.value, context)
         } else {
-            T::decode_content(self.value, options)
+            T::decode_content(self.value, context)
         }
     }
 }
@@ -453,41 +498,63 @@ pub(crate) fn is_constructed_form(tag: &[u8], primitive_tag: &[u8]) -> bool {
 /// # Examples
 ///
 /// ```
-/// use tc_asn1::{Asn1Error, Children, DecodingOptions};
-/// let mut children = Children::new(&[5, 0, 2, 1], DecodingOptions::default());
+/// use tc_asn1::{Asn1Error, Children, DecodingContext, DecodingOptions};
+/// let options = DecodingOptions::default();
+/// let mut context = DecodingContext::new(&options);
+/// let mut children = Children::new(&[5, 0, 2, 1], &mut context);
 /// assert_eq!(children.next().unwrap()?.tag(), &[5]);
 /// assert_eq!(children.next().unwrap().err(), Some(Asn1Error::Truncated));
 /// assert!(children.next().is_none());
 /// # Ok::<(), Asn1Error>(())
 /// ```
-pub struct Children<'a> {
+pub struct Children<'a, 'c, 'o> {
+    cursor: ChildCursor<'a>,
+    context: &'c mut DecodingContext<'o>,
+}
+
+impl<'a, 'c, 'o> Children<'a, 'c, 'o> {
+    /// Iterate over contents at the context's current depth. Constant time.
+    /// The caller enters the parent's constructed scope before creating this iterator.
+    pub fn new(rest: &'a [u8], context: &'c mut DecodingContext<'o>) -> Self {
+        Self {
+            cursor: ChildCursor::new(rest, context.options()),
+            context,
+        }
+    }
+
+    /// Borrow the active context to decode a yielded child without resetting depth.
+    /// Constant time.
+    pub fn context(&mut self) -> &mut DecodingContext<'o> {
+        self.context
+    }
+}
+
+impl<'a> Iterator for Children<'a, '_, '_> {
+    type Item = Result<Asn1Ref<'a>, Asn1Error>;
+    fn next(&mut self) -> Option<Self::Item> {
+        self.cursor.next(self.context)
+    }
+}
+
+pub(crate) struct ChildCursor<'a> {
     rest: &'a [u8],
-    options: DecodingOptions,
     remaining: usize,
     oversized: bool,
 }
 
-impl<'a> Children<'a> {
-    /// Create an iterator over contents without the parent's header or closing EOC.
-    ///
-    /// The caller supplies options for the child level, spending the parent's
-    /// depth before entering its contents. This constructor does not decrement
-    /// depth or eagerly validate child TLVs. Constant time.
-    /// See [`Children`] for an example of lazy error reporting.
-    pub fn new(rest: &'a [u8], options: DecodingOptions) -> Self {
+impl<'a> ChildCursor<'a> {
+    pub(crate) fn new(rest: &'a [u8], options: &DecodingOptions) -> Self {
         Self {
             rest,
-            options,
             remaining: options.max_children(),
             oversized: rest.len() > options.max_content_len(),
         }
     }
-}
 
-impl<'a> Iterator for Children<'a> {
-    type Item = Result<Asn1Ref<'a>, Asn1Error>;
-
-    fn next(&mut self) -> Option<Self::Item> {
+    pub(crate) fn next(
+        &mut self,
+        context: &mut DecodingContext<'_>,
+    ) -> Option<Result<Asn1Ref<'a>, Asn1Error>> {
         if self.rest.is_empty() {
             return None;
         }
@@ -499,14 +566,14 @@ impl<'a> Iterator for Children<'a> {
                 Asn1Error::ChildrenExceeded
             }));
         }
-        match Asn1Ref::parse(self.rest, self.options) {
+        match Asn1Ref::parse(self.rest, context) {
             Ok(child) => {
                 self.remaining -= 1;
                 self.rest = &self.rest[child.total_len()..];
                 Some(Ok(child))
             }
             Err(error) => {
-                self.rest = &[]; // Stop after the first error.
+                self.rest = &[];
                 Some(Err(error))
             }
         }
@@ -565,10 +632,10 @@ mod tests {
     use super::*;
 
     const OPTIONS: DecodingOptions =
-        DecodingOptions::new(crate::Depth::DEFAULT, 16 * 1024 * 1024, 65_536);
+        DecodingOptions::new(crate::Depth::DEFAULT.get(), 16 * 1024 * 1024, 65_536);
 
     fn parse(bytes: &[u8]) -> Asn1Ref<'_> {
-        Asn1Ref::parse(bytes, OPTIONS).unwrap()
+        Asn1Ref::parse(bytes, &mut DecodingContext::new(&OPTIONS)).unwrap()
     }
 
     // ---- parse_tag
@@ -651,7 +718,11 @@ mod tests {
     #[test]
     fn a_length_promising_more_than_the_input_holds_is_rejected() {
         assert_eq!(
-            Asn1Ref::parse(&[0x04, 0x05, 0x01, 0x02], OPTIONS).err(),
+            Asn1Ref::parse(
+                &[0x04, 0x05, 0x01, 0x02],
+                &mut DecodingContext::new(&OPTIONS)
+            )
+            .err(),
             Some(Asn1Error::Truncated)
         );
     }
@@ -663,7 +734,7 @@ mod tests {
         input[0] = 0x04;
         input[1] = 0x88; // 8 個長度位元組
         assert_eq!(
-            Asn1Ref::parse(&input, OPTIONS).err(),
+            Asn1Ref::parse(&input, &mut DecodingContext::new(&OPTIONS)).err(),
             Some(Asn1Error::LengthOverflow)
         );
     }
@@ -711,7 +782,11 @@ mod tests {
     #[test]
     fn an_indefinite_length_without_its_marker_is_rejected() {
         assert_eq!(
-            Asn1Ref::parse(&[0x30, 0x80, 0x05, 0x00], OPTIONS).err(),
+            Asn1Ref::parse(
+                &[0x30, 0x80, 0x05, 0x00],
+                &mut DecodingContext::new(&OPTIONS)
+            )
+            .err(),
             Some(Asn1Error::Truncated)
         );
     }
@@ -719,7 +794,11 @@ mod tests {
     #[test]
     fn an_indefinite_length_on_a_primitive_tag_is_rejected() {
         assert_eq!(
-            Asn1Ref::parse(&[0x04, 0x80, 0x00, 0x00], OPTIONS).err(),
+            Asn1Ref::parse(
+                &[0x04, 0x80, 0x00, 0x00],
+                &mut DecodingContext::new(&OPTIONS)
+            )
+            .err(),
             Some(Asn1Error::MalformedValue)
         );
     }
@@ -742,14 +821,14 @@ mod tests {
         assert!(
             Asn1Ref::parse(
                 input,
-                DecodingOptions::new(crate::Depth::new(16), 16 * 1024 * 1024, 65_536)
+                &mut DecodingContext::new(&DecodingOptions::new(16, 16 * 1024 * 1024, 65_536))
             )
             .is_ok()
         );
         assert_eq!(
             Asn1Ref::parse(
                 input,
-                DecodingOptions::new(crate::Depth::new(4), 16 * 1024 * 1024, 65_536)
+                &mut DecodingContext::new(&DecodingOptions::new(4, 16 * 1024 * 1024, 65_536))
             )
             .err(),
             Some(Asn1Error::DepthExceeded)
@@ -767,12 +846,16 @@ mod tests {
         ] {
             let element = parse(wire);
             assert_eq!(
-                element.decode_constructed_as::<crate::Asn1OctetString>(OPTIONS),
+                element.decode_constructed_as::<crate::Asn1OctetString>(&mut DecodingContext::new(
+                    &OPTIONS
+                )),
                 Ok(crate::Asn1OctetString::new(b"AB"))
             );
-            let limited = DecodingOptions::new(crate::Depth::DEFAULT, 1, 1);
+            let limited = DecodingOptions::new(crate::Depth::DEFAULT.get(), 1, 1);
             assert_eq!(
-                element.decode_constructed_as::<crate::Asn1OctetString>(limited),
+                element.decode_constructed_as::<crate::Asn1OctetString>(&mut DecodingContext::new(
+                    &limited
+                )),
                 Err(Asn1Error::ContentLengthExceeded)
             );
         }
@@ -780,23 +863,29 @@ mod tests {
 
     #[test]
     fn string_decoding_preserves_content_validation_and_constructed_depth_checks() {
-        let zero_depth = DecodingOptions::new(crate::Depth::new(0), 16, 1);
+        let zero_depth = DecodingOptions::new(0, 16, 1);
         assert!(
             parse(&[0x80, 1, b'A'])
-                .decode_constructed_as::<crate::Asn1OctetString>(zero_depth)
+                .decode_constructed_as::<crate::Asn1OctetString>(&mut DecodingContext::new(
+                    &zero_depth
+                ))
                 .is_ok()
         );
         assert_eq!(
-            parse(&[0xa0, 3, 4, 1, b'A'])
-                .decode_constructed_as::<crate::Asn1OctetString>(zero_depth),
+            parse(&[0xa0, 3, 4, 1, b'A']).decode_constructed_as::<crate::Asn1OctetString>(
+                &mut DecodingContext::new(&zero_depth)
+            ),
             Err(Asn1Error::DepthExceeded)
         );
         assert_eq!(
-            parse(&[0x80, 1, 8]).decode_constructed_as::<crate::Asn1BitString>(OPTIONS),
+            parse(&[0x80, 1, 8])
+                .decode_constructed_as::<crate::Asn1BitString>(&mut DecodingContext::new(&OPTIONS)),
             Err(Asn1Error::MalformedValue)
         );
         assert_eq!(
-            parse(&[0xa0, 3, 2, 1, 5]).decode_constructed_as::<crate::Asn1OctetString>(OPTIONS),
+            parse(&[0xa0, 3, 2, 1, 5]).decode_constructed_as::<crate::Asn1OctetString>(
+                &mut DecodingContext::new(&OPTIONS)
+            ),
             Err(Asn1Error::UnexpectedTag)
         );
     }
@@ -826,7 +915,7 @@ mod tests {
         let mut tags = [0_u8; 4];
         let mut count = 0;
 
-        for child in seq.children(OPTIONS) {
+        for child in seq.children(&mut DecodingContext::new(&OPTIONS)) {
             tags[count] = child.unwrap().tag()[0];
             count += 1;
         }
@@ -837,14 +926,20 @@ mod tests {
 
     #[test]
     fn a_primitive_has_no_children() {
-        assert_eq!(parse(&[0x02, 0x01, 0x05]).children(OPTIONS).count(), 0);
+        assert_eq!(
+            parse(&[0x02, 0x01, 0x05])
+                .children(&mut DecodingContext::new(&OPTIONS))
+                .count(),
+            0
+        );
     }
 
     #[test]
     fn a_broken_child_is_reported_once_and_then_iteration_stops() {
         // 30 04  05 00  02 05     ← 第二個子元素說有 5 個位元組，沒有
         let seq = parse(&[0x30, 0x04, 0x05, 0x00, 0x02, 0x05]);
-        let mut children = seq.children(OPTIONS);
+        let mut context_12 = DecodingContext::new(&OPTIONS);
+        let mut children = seq.children(&mut context_12);
 
         assert!(children.next().unwrap().is_ok());
         assert_eq!(children.next().unwrap().err(), Some(Asn1Error::Truncated));
@@ -854,7 +949,7 @@ mod tests {
     #[test]
     fn children_of_an_indefinite_length_value_do_not_include_the_marker() {
         let seq = parse(&[0x30, 0x80, 0x05, 0x00, 0x05, 0x00, 0x00, 0x00]);
-        assert_eq!(seq.children(OPTIONS).count(), 2);
+        assert_eq!(seq.children(&mut DecodingContext::new(&OPTIONS)).count(), 2);
     }
 
     #[test]
@@ -874,7 +969,11 @@ mod tests {
             );
             if !outer.value().is_empty() {
                 assert_eq!(outer.value(), &[0x30, 0x80, 0, 0]);
-                let inner = outer.children(OPTIONS).next().unwrap().unwrap();
+                let inner = outer
+                    .children(&mut DecodingContext::new(&OPTIONS))
+                    .next()
+                    .unwrap()
+                    .unwrap();
                 assert!(inner.value().is_empty());
                 assert_eq!(inner.eoc(), &[0, 0]);
                 assert_eq!(inner.total_len(), 4);

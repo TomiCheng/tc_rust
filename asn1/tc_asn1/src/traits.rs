@@ -3,5 +3,5 @@
 mod decode;
 mod encode;
 
-pub use decode::{Decode, DecodeConstructed, DecodeContent};
+pub use decode::{Decode, DecodeConstructed, DecodeContent, DecodeInner};
 pub use encode::{Encode, EncodeContent, EncodeTagged};

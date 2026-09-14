@@ -5,12 +5,13 @@
 //! 的選項若有不同的 constructed 位，標籤號碼順序可能與完整編碼順序相反。
 //! 一般 RDN 的直接成員都是 `SEQUENCE`，不會遇到這個直接成員標籤的反例。
 
+#[cfg(test)]
+use crate::Decode;
 use alloc::vec;
 use alloc::vec::Vec;
 
+use crate::DecodingContext;
 use crate::EncodingOptions;
-use crate::asn1_ref::Children;
-use crate::decoding_options::DecodingOptions;
 use crate::error::Asn1Error;
 use crate::traits::{DecodeContent, Encode};
 
@@ -97,30 +98,81 @@ impl<T> FromIterator<T> for Asn1SetOf<T> {
     }
 }
 
-impl<'a, T: crate::Decode<'a>> crate::Decode<'a> for Asn1SetOf<T> {
-    fn decode(
+impl<'a, T: crate::DecodeInner<'a>> crate::DecodeInner<'a> for Asn1SetOf<T> {
+    fn decode_inner(
         buff: &'a [u8],
-        options: crate::DecodingOptions,
+        context: &mut crate::DecodingContext<'_>,
     ) -> Result<(usize, Self), crate::Asn1Error> {
-        let element = crate::Asn1Ref::parse(buff, options)?;
+        let element = crate::Asn1Ref::parse(buff, context)?;
         if !element.is_constructed() {
             return Err(crate::Asn1Error::UnexpectedTag);
         }
-        let value = <Self as crate::DecodeContent<'a>>::decode_content(element.value(), options)?;
+        let value = <Self as crate::DecodeContent<'a>>::decode_content(element.value(), context)?;
+        Ok((element.total_len(), value))
+    }
+    fn decode_inner_der(
+        buff: &'a [u8],
+        context: &mut crate::DecodingContext<'_>,
+    ) -> Result<(usize, Self), crate::Asn1Error> {
+        let element = crate::Asn1Ref::parse_der(buff, context)?;
+        if !element.is_constructed() {
+            return Err(crate::Asn1Error::UnexpectedTag);
+        }
+        let value =
+            <Self as crate::DecodeContent<'a>>::decode_content_der(element.value(), context)?;
         Ok((element.total_len(), value))
     }
 }
+impl<'a, T: crate::DecodeInner<'a>> crate::Decode<'a> for Asn1SetOf<T> {
+    fn decode(
+        buff: &'a [u8],
+        options: &crate::DecodingOptions,
+    ) -> Result<(usize, Self), crate::Asn1Error> {
+        <Self as crate::DecodeInner<'a>>::decode_inner(
+            buff,
+            &mut crate::DecodingContext::new(options),
+        )
+    }
+}
 
-impl<'a, T: crate::Decode<'a>> DecodeContent<'a> for Asn1SetOf<T> {
+impl<'a, T: crate::DecodeInner<'a>> DecodeContent<'a> for Asn1SetOf<T> {
     /// 逐一解碼並保留輸入順序，不排序也不驗序；任何成員失敗便整體失敗。
     /// 變動時間：分支只依編碼結構。
-    fn decode_content(value: &'a [u8], options: DecodingOptions) -> Result<Self, Asn1Error> {
-        options.check_content_len(value.len())?;
-        let options = options.descend()?;
-        let members = Children::new(value, options)
-            .map(|child| child?.decode_as::<T>(options))
-            .collect::<Result<Vec<T>, _>>()?;
-        Ok(Self { members })
+    fn decode_content(
+        value: &'a [u8],
+        context: &mut DecodingContext<'_>,
+    ) -> Result<Self, Asn1Error> {
+        context.options().check_content_len(value.len())?;
+        context.with_child(|context| {
+            let mut children = crate::asn1_ref::ChildCursor::new(value, context.options());
+            let mut members = Vec::new();
+            while let Some(child) = children.next(context) {
+                let child = child?;
+                members.push(child.decode_as::<T>(context)?);
+            }
+            Ok(Self { members })
+        })
+    }
+
+    fn decode_content_der(
+        value: &'a [u8],
+        context: &mut DecodingContext<'_>,
+    ) -> Result<Self, Asn1Error> {
+        context.options().check_content_len(value.len())?;
+        context.with_child(|context| {
+            let mut children = crate::asn1_ref::ChildCursor::new(value, context.options());
+            let mut members = Vec::new();
+            let mut previous: Option<&[u8]> = None;
+            while let Some(child) = children.next(context) {
+                let child = child?;
+                if previous.is_some_and(|raw| raw > child.raw()) {
+                    return Err(Asn1Error::NotDer);
+                }
+                previous = Some(child.raw());
+                members.push(child.decode_as_der::<T>(context)?);
+            }
+            Ok(Self { members })
+        })
     }
 }
 
@@ -220,12 +272,13 @@ pub(crate) fn copy_encodings<'a>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::DecodingOptions;
     use crate::EncodeContent;
     use crate::EncodingType;
-    use crate::{Asn1Any, Asn1Boolean, Asn1Integer, Asn1Null, Decode};
+    use crate::{Asn1Any, Asn1Boolean, Asn1Integer, Asn1Null};
 
     fn any(input: &[u8]) -> Asn1Any {
-        Asn1Any::decode(input, DecodingOptions::default())
+        Asn1Any::decode(input, &DecodingOptions::default())
             .unwrap()
             .1
     }
@@ -278,7 +331,7 @@ mod tests {
     fn decoding_preserves_unsorted_input_and_ber_round_trips_it() {
         let input = [0x31, 6, 1, 1, 0xFF, 1, 1, 0];
         let (used, set) =
-            Asn1SetOf::<Asn1Boolean>::decode(&input, DecodingOptions::default()).unwrap();
+            Asn1SetOf::<Asn1Boolean>::decode(&input, &DecodingOptions::default()).unwrap();
         assert_eq!(used, input.len());
         assert_eq!(
             set.members(),
@@ -306,7 +359,7 @@ mod tests {
             .encode_to_vec(&EncodingOptions::new(EncodingType::Der))
             .unwrap();
         let (_, decoded) =
-            Asn1SetOf::<Asn1Integer>::decode(&bytes, DecodingOptions::default()).unwrap();
+            Asn1SetOf::<Asn1Integer>::decode(&bytes, &DecodingOptions::default()).unwrap();
         assert_eq!(decoded, original);
     }
 
@@ -321,7 +374,7 @@ mod tests {
             assert_eq!(set_of.encode_to_vec(rules).unwrap(), [0x31, 0]);
         }
         assert_eq!(
-            Asn1SetOf::<Asn1Null>::decode(&[0x31, 0], DecodingOptions::default()),
+            Asn1SetOf::<Asn1Null>::decode(&[0x31, 0], &DecodingOptions::default()),
             Ok((2, set_of))
         );
     }
@@ -330,19 +383,9 @@ mod tests {
     fn each_nested_set_of_consumes_one_level_of_depth() {
         let input = [0x31, 4, 0x31, 2, 0x31, 0];
         type Nested = Asn1SetOf<Asn1SetOf<Asn1SetOf<Asn1Null>>>;
-        assert!(
-            Nested::decode(
-                &input,
-                DecodingOptions::new(crate::Depth::new(3), 16 * 1024 * 1024, 65_536)
-            )
-            .is_ok()
-        );
+        assert!(Nested::decode(&input, &DecodingOptions::new(3, 16 * 1024 * 1024, 65_536)).is_ok());
         assert_eq!(
-            Nested::decode(
-                &input,
-                DecodingOptions::new(crate::Depth::new(2), 16 * 1024 * 1024, 65_536)
-            )
-            .err(),
+            Nested::decode(&input, &DecodingOptions::new(2, 16 * 1024 * 1024, 65_536)).err(),
             Some(Asn1Error::DepthExceeded)
         );
     }
@@ -350,15 +393,16 @@ mod tests {
     #[test]
     fn the_schema_checks_the_outer_tag_and_members_validate_contents() {
         assert_eq!(
-            crate::Fields::new(&[0x30, 0], DecodingOptions::default())
-                .and_then(
-                    |mut fields| fields.required::<Asn1SetOf<Asn1Boolean>>(Asn1SetOf::<()>::TAG)
-                )
-                .err(),
+            crate::Fields::new(
+                &[0x30, 0],
+                &mut DecodingContext::new(&DecodingOptions::default())
+            )
+            .and_then(|mut fields| fields.required::<Asn1SetOf<Asn1Boolean>>(Asn1SetOf::<()>::TAG))
+            .err(),
             Some(Asn1Error::UnexpectedTag)
         );
         assert_eq!(
-            Asn1SetOf::<Asn1Boolean>::decode(&[0x31, 2, 5, 0], DecodingOptions::default()).err(),
+            Asn1SetOf::<Asn1Boolean>::decode(&[0x31, 2, 5, 0], &DecodingOptions::default()).err(),
             Some(Asn1Error::MalformedValue)
         );
     }

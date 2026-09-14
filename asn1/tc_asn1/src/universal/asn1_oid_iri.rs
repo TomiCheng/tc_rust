@@ -5,7 +5,7 @@
 //! §7.5.3 允許實作者容忍未來可能解除保留的字元；這裡接受列出的純量範圍。
 
 use super::tag;
-use crate::{Asn1Error, DecodeContent, DecodingOptions, Encode, EncodingOptions};
+use crate::{Asn1Error, DecodeContent, DecodingContext, Encode, EncodingOptions};
 use alloc::string::String;
 
 fn valid_label(label: &str) -> bool {
@@ -62,18 +62,43 @@ macro_rules! iri {
                 &self.text
             }
         }
-        impl<'a> crate::Decode<'a> for $name {
-            fn decode(
+        impl<'a> crate::DecodeInner<'a> for $name {
+            fn decode_inner(
                 buff: &'a [u8],
-                options: crate::DecodingOptions,
+                context: &mut crate::DecodingContext<'_>,
             ) -> Result<(usize, Self), crate::Asn1Error> {
-                let element = crate::Asn1Ref::parse(buff, options)?;
+                let element = crate::Asn1Ref::parse(buff, context)?;
                 if element.is_constructed() {
                     return Err(crate::Asn1Error::UnexpectedTag);
                 }
                 let value =
-                    <Self as crate::DecodeContent<'a>>::decode_content(element.value(), options)?;
+                    <Self as crate::DecodeContent<'a>>::decode_content(element.value(), context)?;
                 Ok((element.total_len(), value))
+            }
+            fn decode_inner_der(
+                buff: &'a [u8],
+                context: &mut crate::DecodingContext<'_>,
+            ) -> Result<(usize, Self), crate::Asn1Error> {
+                let element = crate::Asn1Ref::parse_der(buff, context)?;
+                if element.is_constructed() {
+                    return Err(crate::Asn1Error::UnexpectedTag);
+                }
+                let value = <Self as crate::DecodeContent<'a>>::decode_content_der(
+                    element.value(),
+                    context,
+                )?;
+                Ok((element.total_len(), value))
+            }
+        }
+        impl<'a> crate::Decode<'a> for $name {
+            fn decode(
+                buff: &'a [u8],
+                options: &crate::DecodingOptions,
+            ) -> Result<(usize, Self), crate::Asn1Error> {
+                <Self as crate::DecodeInner<'a>>::decode_inner(
+                    buff,
+                    &mut crate::DecodingContext::new(options),
+                )
             }
         }
 
@@ -81,10 +106,17 @@ macro_rules! iri {
             /// 變動時間：驗證 UTF-8、路徑與標籤。
             fn decode_content(
                 value: &'a [u8],
-                options: DecodingOptions,
+                context: &mut DecodingContext<'_>,
             ) -> Result<Self, Asn1Error> {
-                options.check_content_len(value.len())?;
+                context.options().check_content_len(value.len())?;
                 Self::new(core::str::from_utf8(value).map_err(|_| Asn1Error::MalformedValue)?)
+            }
+
+            fn decode_content_der(
+                value: &'a [u8],
+                context: &mut crate::DecodingContext<'_>,
+            ) -> Result<Self, crate::Asn1Error> {
+                crate::decoding::decode_der_content::<Self>(value, context)
             }
         }
 
@@ -160,7 +192,9 @@ assert!(Asn1RelativeOidIri::new("/台北").is_err());
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(test)]
     use crate::Decode;
+    use crate::DecodingOptions;
     use crate::EncodingType;
     #[test]
     fn unicode_and_unbounded_integer_labels_round_trip_with_high_tags() {
@@ -177,7 +211,7 @@ mod tests {
                 .unwrap();
             assert_eq!(&out[..2], &[0x1F, 0x23]);
             assert_eq!(
-                Asn1OidIri::decode(&out, DecodingOptions::default())
+                Asn1OidIri::decode(&out, &DecodingOptions::default())
                     .unwrap()
                     .1,
                 value
@@ -193,13 +227,13 @@ mod tests {
             .unwrap();
         assert_eq!(&out[..2], &[0x1F, 0x24]);
         assert_eq!(
-            Asn1RelativeOidIri::decode(&out, DecodingOptions::default())
+            Asn1RelativeOidIri::decode(&out, &DecodingOptions::default())
                 .unwrap()
                 .1,
             value
         );
         assert_eq!(
-            crate::Fields::new(&out, DecodingOptions::default())
+            crate::Fields::new(&out, &mut DecodingContext::new(&DecodingOptions::default()))
                 .and_then(|mut fields| fields.required::<Asn1OidIri>(crate::tag::OID_IRI)),
             Err(Asn1Error::UnexpectedTag)
         );
@@ -227,6 +261,12 @@ mod tests {
             assert!(Asn1OidIri::new(text).is_err(), "{text:?}");
         }
         assert!(Asn1RelativeOidIri::new("").is_err());
-        assert!(Asn1OidIri::decode_content(&[0xFF], DecodingOptions::default()).is_err());
+        assert!(
+            Asn1OidIri::decode_content(
+                &[0xFF],
+                &mut DecodingContext::new(&DecodingOptions::default())
+            )
+            .is_err()
+        );
     }
 }

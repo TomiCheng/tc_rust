@@ -9,8 +9,8 @@
 use core::fmt;
 
 use super::date_time::{DateTime, digits, two_digits};
+use crate::DecodingContext;
 use crate::EncodingOptions;
-use crate::decoding_options::DecodingOptions;
 use crate::error::Asn1Error;
 use crate::traits::{DecodeContent, Encode};
 
@@ -60,24 +60,50 @@ impl Asn1GeneralizedTime {
     }
 }
 
-impl<'a> crate::Decode<'a> for Asn1GeneralizedTime {
-    fn decode(
+impl<'a> crate::DecodeInner<'a> for Asn1GeneralizedTime {
+    fn decode_inner(
         buff: &'a [u8],
-        options: crate::DecodingOptions,
+        context: &mut crate::DecodingContext<'_>,
     ) -> Result<(usize, Self), crate::Asn1Error> {
-        let element = crate::Asn1Ref::parse(buff, options)?;
+        let element = crate::Asn1Ref::parse(buff, context)?;
         if element.is_constructed() {
             return Err(crate::Asn1Error::UnexpectedTag);
         }
-        let value = <Self as crate::DecodeContent<'a>>::decode_content(element.value(), options)?;
+        let value = <Self as crate::DecodeContent<'a>>::decode_content(element.value(), context)?;
         Ok((element.total_len(), value))
+    }
+    fn decode_inner_der(
+        buff: &'a [u8],
+        context: &mut crate::DecodingContext<'_>,
+    ) -> Result<(usize, Self), crate::Asn1Error> {
+        let element = crate::Asn1Ref::parse_der(buff, context)?;
+        if element.is_constructed() {
+            return Err(crate::Asn1Error::UnexpectedTag);
+        }
+        let value =
+            <Self as crate::DecodeContent<'a>>::decode_content_der(element.value(), context)?;
+        Ok((element.total_len(), value))
+    }
+}
+impl<'a> crate::Decode<'a> for Asn1GeneralizedTime {
+    fn decode(
+        buff: &'a [u8],
+        options: &crate::DecodingOptions,
+    ) -> Result<(usize, Self), crate::Asn1Error> {
+        <Self as crate::DecodeInner<'a>>::decode_inner(
+            buff,
+            &mut crate::DecodingContext::new(options),
+        )
     }
 }
 
 impl<'a> DecodeContent<'a> for Asn1GeneralizedTime {
     /// 變動時間：分支只依編碼結構。只接受 `YYYYMMDDhhmmssZ`。
-    fn decode_content(value: &'a [u8], options: DecodingOptions) -> Result<Self, Asn1Error> {
-        options.check_content_len(value.len())?;
+    fn decode_content(
+        value: &'a [u8],
+        context: &mut DecodingContext<'_>,
+    ) -> Result<Self, Asn1Error> {
+        context.options().check_content_len(value.len())?;
         let [body @ .., b'Z'] = value else {
             return Err(Asn1Error::MalformedValue);
         };
@@ -90,6 +116,13 @@ impl<'a> DecodeContent<'a> for Asn1GeneralizedTime {
         };
         let year = u16::from(two_digits(hi)?) * 100 + u16::from(two_digits(lo)?);
         DateTime::from_fields(year, fields).map(Self)
+    }
+
+    fn decode_content_der(
+        value: &'a [u8],
+        context: &mut crate::DecodingContext<'_>,
+    ) -> Result<Self, crate::Asn1Error> {
+        crate::decoding::decode_der_content::<Self>(value, context)
     }
 }
 
@@ -131,17 +164,18 @@ impl fmt::Display for Asn1GeneralizedTime {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::DecodingOptions;
     use crate::EncodingType;
     use crate::traits::Decode;
     use alloc::string::ToString;
 
     const OPTIONS: DecodingOptions =
-        DecodingOptions::new(crate::Depth::DEFAULT, 16 * 1024 * 1024, 65_536);
+        DecodingOptions::new(crate::Depth::DEFAULT.get(), 16 * 1024 * 1024, 65_536);
 
     #[test]
     fn a_der_generalized_time_decodes_and_prints_as_iso_8601() {
         let input = b"\x18\x0F20500101000000Z";
-        let (used, t) = Asn1GeneralizedTime::decode(input, OPTIONS).unwrap();
+        let (used, t) = Asn1GeneralizedTime::decode(input, &OPTIONS).unwrap();
         assert_eq!(used, 17);
         assert_eq!(t.to_string(), "2050-01-01T00:00:00Z");
         assert_eq!(t, Asn1GeneralizedTime::new(2050, 1, 1, 0, 0, 0).unwrap());
@@ -150,15 +184,21 @@ mod tests {
     #[test]
     fn four_digit_years_have_no_century_rule() {
         assert_eq!(
-            Asn1GeneralizedTime::decode_content(b"19500101000000Z", OPTIONS)
-                .unwrap()
-                .year(),
+            Asn1GeneralizedTime::decode_content(
+                b"19500101000000Z",
+                &mut DecodingContext::new(&OPTIONS)
+            )
+            .unwrap()
+            .year(),
             1950
         );
         assert_eq!(
-            Asn1GeneralizedTime::decode_content(b"99991231235959Z", OPTIONS)
-                .unwrap()
-                .year(),
+            Asn1GeneralizedTime::decode_content(
+                b"99991231235959Z",
+                &mut DecodingContext::new(&OPTIONS)
+            )
+            .unwrap()
+            .year(),
             9999
         );
         assert!(
@@ -170,23 +210,43 @@ mod tests {
     #[test]
     fn fractional_seconds_and_ber_variants_are_rejected() {
         assert!(
-            Asn1GeneralizedTime::decode_content(b"20240911123000.5Z", OPTIONS).is_err(),
+            Asn1GeneralizedTime::decode_content(
+                b"20240911123000.5Z",
+                &mut DecodingContext::new(&OPTIONS)
+            )
+            .is_err(),
             "小數秒，RFC 5280 禁止"
         );
         assert!(
-            Asn1GeneralizedTime::decode_content(b"202409111230Z", OPTIONS).is_err(),
+            Asn1GeneralizedTime::decode_content(
+                b"202409111230Z",
+                &mut DecodingContext::new(&OPTIONS)
+            )
+            .is_err(),
             "沒有秒"
         );
         assert!(
-            Asn1GeneralizedTime::decode_content(b"20240911123000+0800", OPTIONS).is_err(),
+            Asn1GeneralizedTime::decode_content(
+                b"20240911123000+0800",
+                &mut DecodingContext::new(&OPTIONS)
+            )
+            .is_err(),
             "時區偏移"
         );
         assert!(
-            Asn1GeneralizedTime::decode_content(b"20240911123000", OPTIONS).is_err(),
+            Asn1GeneralizedTime::decode_content(
+                b"20240911123000",
+                &mut DecodingContext::new(&OPTIONS)
+            )
+            .is_err(),
             "沒有 Z"
         );
         assert!(
-            Asn1GeneralizedTime::decode_content(b"240911123000Z", OPTIONS).is_err(),
+            Asn1GeneralizedTime::decode_content(
+                b"240911123000Z",
+                &mut DecodingContext::new(&OPTIONS)
+            )
+            .is_err(),
             "兩位年是 UTCTime 的事"
         );
     }
@@ -200,7 +260,7 @@ mod tests {
             .unwrap();
         assert_eq!(&out[..written], b"\x18\x0F20991231235959Z");
 
-        let (_, back) = Asn1GeneralizedTime::decode(&out[..written], OPTIONS).unwrap();
+        let (_, back) = Asn1GeneralizedTime::decode(&out[..written], &OPTIONS).unwrap();
         assert_eq!(back, t);
     }
 }

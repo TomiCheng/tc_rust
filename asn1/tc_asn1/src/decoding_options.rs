@@ -1,12 +1,11 @@
 //! Decoding options and nesting-depth budgets.
 //!
 //! Recursive decoding of deeply nested constructed values can exhaust the stack.
-//! [`Depth`] carries the remaining nesting budget through the decoding path.
+//! [`crate::DecodingContext`] tracks active nesting while borrowing these limits.
 //! Limiting the depth of decoded trees also bounds their recursive destruction.
 //!
-//! [`DecodingOptions`] groups the depth budget with content-length and child-count
-//! limits. Decoders carry these options through nested values without resetting
-//! the configured limits.
+//! [`DecodingOptions`] groups a maximum depth with content-length and child-count
+//! limits. Nested decoders share a context without copying these options.
 //! Definite-length opaque values are not traversed: limits on their descendants
 //! apply when the caller decodes or iterates those descendants.
 
@@ -14,27 +13,27 @@ use crate::error::Asn1Error;
 
 /// Configuration for decoding depth, content length, and direct child count.
 ///
-/// Defaults to [`Depth::DEFAULT`], 16 MiB of contents per element, and 65,536 direct
+/// Defaults to 32 levels, 16 MiB of contents per element, and 65,536 direct
 /// children per constructed element. These are per-element limits, not a shared
 /// budget for total allocations or total nodes in a decoded tree.
 ///
 /// Fields are private. Use [`new`](Self::new) to select limits and the getters to
-/// inspect them. Creating or copying options does not consume any depth budget.
+/// inspect them. Creating options does not consume any depth budget.
 ///
 /// # Examples
 ///
 /// ```
-/// use tc_asn1::{DecodingOptions, Depth};
+/// use tc_asn1::{DecodingOptions};
 ///
 /// let options = DecodingOptions::default();
-/// assert_eq!(options.depth(), Depth::DEFAULT);
+/// assert_eq!(options.depth(), 32);
 /// assert_eq!(options.max_content_len(), 16 * 1024 * 1024);
 /// assert_eq!(options.max_children(), 65_536);
 /// ```
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct DecodingOptions {
-    /// Remaining nesting-depth budget for decoding.
-    depth: Depth,
+    /// Maximum number of active constructed-content scopes.
+    depth: u32,
     /// Maximum content length in bytes for a single element.
     max_content_len: usize,
     /// Maximum number of direct children of each constructed element.
@@ -42,14 +41,7 @@ pub struct DecodingOptions {
 }
 
 impl DecodingOptions {
-    pub(crate) fn descend(self) -> Result<Self, Asn1Error> {
-        Ok(Self {
-            depth: self.depth.descend()?,
-            ..self
-        })
-    }
-
-    pub(crate) fn check_content_len(self, len: usize) -> Result<(), Asn1Error> {
+    pub(crate) fn check_content_len(&self, len: usize) -> Result<(), Asn1Error> {
         if len > self.max_content_len {
             Err(Asn1Error::ContentLengthExceeded)
         } else {
@@ -65,14 +57,14 @@ impl DecodingOptions {
     /// # Examples
     ///
     /// ```
-    /// use tc_asn1::{DecodingOptions, Depth};
+    /// use tc_asn1::{DecodingOptions};
     ///
-    /// const OPTIONS: DecodingOptions = DecodingOptions::new(Depth::new(8), 4096, 64);
-    /// assert_eq!(OPTIONS.depth().get(), 8);
+    /// const OPTIONS: DecodingOptions = DecodingOptions::new(8, 4096, 64);
+    /// assert_eq!(OPTIONS.depth(), 8);
     /// assert_eq!(OPTIONS.max_content_len(), 4096);
     /// assert_eq!(OPTIONS.max_children(), 64);
     /// ```
-    pub const fn new(depth: Depth, max_content_len: usize, max_children: usize) -> Self {
+    pub const fn new(depth: u32, max_content_len: usize, max_children: usize) -> Self {
         Self {
             depth,
             max_content_len,
@@ -80,20 +72,18 @@ impl DecodingOptions {
         }
     }
 
-    /// Return a copy of the remaining nesting-depth budget without consuming it.
+    /// Return the configured maximum depth without changing the active context.
     /// Constant time: reads the stored budget.
     ///
     /// # Examples
     ///
     /// ```
-    /// use tc_asn1::{DecodingOptions, Depth};
+    /// use tc_asn1::{DecodingOptions};
     ///
-    /// let options = DecodingOptions::new(Depth::new(2), 1024, 16);
-    /// assert_eq!(options.depth().descend()?.get(), 1);
-    /// assert_eq!(options.depth().get(), 2);
-    /// # Ok::<(), tc_asn1::Asn1Error>(())
+    /// let options = DecodingOptions::new(2, 1024, 16);
+    /// assert_eq!(options.depth(), 2);
     /// ```
-    pub const fn depth(&self) -> Depth {
+    pub const fn depth(&self) -> u32 {
         self.depth
     }
 
@@ -106,9 +96,9 @@ impl DecodingOptions {
     /// # Examples
     ///
     /// ```
-    /// use tc_asn1::{DecodingOptions, Depth};
+    /// use tc_asn1::{DecodingOptions};
     ///
-    /// let options = DecodingOptions::new(Depth::DEFAULT, 4096, 64);
+    /// let options = DecodingOptions::new(32, 4096, 64);
     /// assert_eq!(options.max_content_len(), 4096);
     /// ```
     pub const fn max_content_len(&self) -> usize {
@@ -123,9 +113,9 @@ impl DecodingOptions {
     /// # Examples
     ///
     /// ```
-    /// use tc_asn1::{DecodingOptions, Depth};
+    /// use tc_asn1::{DecodingOptions};
     ///
-    /// let options = DecodingOptions::new(Depth::DEFAULT, 4096, 64);
+    /// let options = DecodingOptions::new(32, 4096, 64);
     /// assert_eq!(options.max_children(), 64);
     /// ```
     pub const fn max_children(&self) -> usize {
@@ -138,7 +128,7 @@ impl Default for DecodingOptions {
     /// Constant time: initializes fixed configuration values.
     fn default() -> Self {
         Self {
-            depth: Depth::DEFAULT,
+            depth: 32,
             max_content_len: 16 * 1024 * 1024,
             max_children: 65_536,
         }
@@ -241,6 +231,7 @@ impl Default for Depth {
 
 #[cfg(test)]
 mod tests {
+
     use super::*;
 
     #[test]

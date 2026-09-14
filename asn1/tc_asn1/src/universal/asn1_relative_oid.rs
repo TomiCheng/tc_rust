@@ -1,6 +1,6 @@
 //! ASN.1 `RELATIVE-OID`，每個弧各自使用最短 base-128 編碼。
 
-use crate::{Asn1Error, DecodeContent, DecodingOptions, Encode, EncodingOptions};
+use crate::{Asn1Error, DecodeContent, DecodingContext, Encode, EncodingOptions};
 use alloc::vec::Vec;
 use core::{fmt, str::FromStr};
 
@@ -108,25 +108,58 @@ impl fmt::Display for Asn1RelativeOid {
         Ok(())
     }
 }
-impl<'a> crate::Decode<'a> for Asn1RelativeOid {
-    fn decode(
+impl<'a> crate::DecodeInner<'a> for Asn1RelativeOid {
+    fn decode_inner(
         buff: &'a [u8],
-        options: crate::DecodingOptions,
+        context: &mut crate::DecodingContext<'_>,
     ) -> Result<(usize, Self), crate::Asn1Error> {
-        let element = crate::Asn1Ref::parse(buff, options)?;
+        let element = crate::Asn1Ref::parse(buff, context)?;
         if element.is_constructed() {
             return Err(crate::Asn1Error::UnexpectedTag);
         }
-        let value = <Self as crate::DecodeContent<'a>>::decode_content(element.value(), options)?;
+        let value = <Self as crate::DecodeContent<'a>>::decode_content(element.value(), context)?;
         Ok((element.total_len(), value))
+    }
+    fn decode_inner_der(
+        buff: &'a [u8],
+        context: &mut crate::DecodingContext<'_>,
+    ) -> Result<(usize, Self), crate::Asn1Error> {
+        let element = crate::Asn1Ref::parse_der(buff, context)?;
+        if element.is_constructed() {
+            return Err(crate::Asn1Error::UnexpectedTag);
+        }
+        let value =
+            <Self as crate::DecodeContent<'a>>::decode_content_der(element.value(), context)?;
+        Ok((element.total_len(), value))
+    }
+}
+impl<'a> crate::Decode<'a> for Asn1RelativeOid {
+    fn decode(
+        buff: &'a [u8],
+        options: &crate::DecodingOptions,
+    ) -> Result<(usize, Self), crate::Asn1Error> {
+        <Self as crate::DecodeInner<'a>>::decode_inner(
+            buff,
+            &mut crate::DecodingContext::new(options),
+        )
     }
 }
 
 impl<'a> DecodeContent<'a> for Asn1RelativeOid {
     /// 變動時間：驗證每個弧，不合併開頭的弧。
-    fn decode_content(value: &'a [u8], options: DecodingOptions) -> Result<Self, Asn1Error> {
-        options.check_content_len(value.len())?;
+    fn decode_content(
+        value: &'a [u8],
+        context: &mut DecodingContext<'_>,
+    ) -> Result<Self, Asn1Error> {
+        context.options().check_content_len(value.len())?;
         Self::from_der_bytes(value)
+    }
+
+    fn decode_content_der(
+        value: &'a [u8],
+        context: &mut crate::DecodingContext<'_>,
+    ) -> Result<Self, crate::Asn1Error> {
+        crate::decoding::decode_der_content::<Self>(value, context)
     }
 }
 
@@ -160,7 +193,9 @@ impl Encode for Asn1RelativeOid {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(test)]
     use crate::Decode;
+    use crate::DecodingOptions;
     use crate::EncodingType;
     #[test]
     fn arcs_are_independent_and_round_trip_through_both_encodings() {
@@ -173,7 +208,7 @@ mod tests {
             assert_eq!(value.encode(rules, &mut out), Ok(6));
             assert_eq!(out, [13, 4, 4, 3, 129, 0]);
             assert_eq!(
-                Asn1RelativeOid::decode(&out, DecodingOptions::default()),
+                Asn1RelativeOid::decode(&out, &DecodingOptions::default()),
                 Ok((6, value.clone()))
             );
         }
@@ -202,8 +237,11 @@ mod tests {
             assert!(text.parse::<Asn1RelativeOid>().is_err());
         }
         assert_eq!(
-            crate::Fields::new(&[6, 1, 0], DecodingOptions::default())
-                .and_then(|mut fields| fields.required::<Asn1RelativeOid>(Asn1RelativeOid::TAG)),
+            crate::Fields::new(
+                &[6, 1, 0],
+                &mut DecodingContext::new(&DecodingOptions::default())
+            )
+            .and_then(|mut fields| fields.required::<Asn1RelativeOid>(Asn1RelativeOid::TAG)),
             Err(Asn1Error::UnexpectedTag)
         );
     }
