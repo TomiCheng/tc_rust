@@ -30,7 +30,9 @@ pub use traits::{
 };
 pub use universal::tag;
 pub use universal::{
-    //     Arcs, Asn1BitString, Asn1BmpString,
+    //     Arcs,
+    Asn1BitString,
+    //     Asn1BmpString,
     Asn1Boolean,
     //Asn1CharacterString, Asn1Date, Asn1DateTime,
     //     Asn1Duration, Asn1EmbeddedPdv, Asn1Enumerated, Asn1External, Asn1GeneralString,

@@ -1,4 +1,4 @@
-//mod asn1_bit_string;
+mod asn1_bit_string;
 // mod asn1_bmp_string;
 mod asn1_boolean;
 // mod asn1_embedded_pdv;
@@ -29,7 +29,7 @@ mod integer_octets;
 pub mod tag;
 // mod time_value;
 //
-// pub use asn1_bit_string::Asn1BitString;
+pub use asn1_bit_string::Asn1BitString;
 // pub use asn1_bmp_string::Asn1BmpString;
 pub use asn1_boolean::Asn1Boolean;
 // pub use asn1_embedded_pdv::{Asn1CharacterString, Asn1EmbeddedPdv, PdvIdentification};
