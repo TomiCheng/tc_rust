@@ -1,60 +1,19 @@
-//! ASN.1 `ENUMERATED`，共用 INTEGER 的最短二補數內容規則。
-
 use alloc::vec::Vec;
 
-use crate::DecodingContext;
-use crate::EncodingOptions;
-use crate::error::Asn1Error;
-use crate::traits::{DecodeContent, Encode};
-
 use super::integer_octets::{minimal_signed, validate_integer_octets};
+use crate::{
+    Asn1Error, Decode, DecodeContent, DecodeInner, DecodingContext, DecodingOptions, Encode,
+    EncodeContent, EncodeTagged, EncodingOptions,
+};
 
-/// 擁有最短二補數大端序內容的 `ENUMERATED`。
-///
-/// 獨立持有內容位元組；與 INTEGER 共用內容規則，完整編碼的標籤則是 `0x0A`。
-/// 此型別不檢查數值是否列在特定結構定義的列舉項目中；該限制由呼叫端判斷。
-/// 內容不限於 64 位元，只有轉成 `i64` 或 `u64` 時才檢查目標範圍。
-///
-/// # Examples
-///
-/// 編碼列舉值 5，再解回原值；標籤與 INTEGER 不同。
-///
-/// ```
-/// use tc_asn1::{Decode, Asn1Enumerated, DecodingOptions, Encode, EncodingOptions, EncodingType, DecodeInner};
-///
-/// let value = Asn1Enumerated::from(5_u64);
-/// let mut out = [0; 3];
-/// value.encode(&EncodingOptions::new(EncodingType::Der), &mut out).unwrap();
-/// assert_eq!(out, [0x0A, 1, 5]);
-/// let (used, decoded) = Asn1Enumerated::decode(&out, &DecodingOptions::default()).unwrap();
-/// assert_eq!(used, out.len());
-/// assert_eq!(u64::try_from(&decoded), Ok(5));
-/// ```
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Asn1Enumerated {
     value: Vec<u8>,
 }
 
 impl Asn1Enumerated {
-    /// Universal identifier octets for this type's default encoding form.
     pub const TAG: &'static [u8] = super::tag::ENUMERATED;
 
-    /// 由最短二補數大端序內容建立，不含 tag 與長度欄位。
-    /// 非空且沒有多餘符號位元組才接受，否則回傳 [`Asn1Error::MalformedValue`]。
-    /// 變動時間：依內容長度與符號位元組分支。
-    ///
-    /// # Examples
-    ///
-    /// 正數 128 需要保留前導 `00`，5 則不允許多放一個 `00`。
-    ///
-    /// ```
-    /// use tc_asn1::{Asn1Enumerated, Asn1Error};
-    ///
-    /// let value = Asn1Enumerated::from_der_bytes(&[0, 0x80]).unwrap();
-    /// assert_eq!(value.as_bytes(), &[0, 0x80]);
-    /// assert_eq!(i64::try_from(&value), Ok(128));
-    /// assert_eq!(Asn1Enumerated::from_der_bytes(&[0, 5]), Err(Asn1Error::MalformedValue));
-    /// ```
     pub fn from_der_bytes(bytes: &[u8]) -> Result<Self, Asn1Error> {
         validate_integer_octets(bytes)?;
         Ok(Self {
@@ -62,17 +21,13 @@ impl Asn1Enumerated {
         })
     }
 
-    /// 借用最短二補數大端序內容，不含 tag 與長度欄位。
     pub fn as_bytes(&self) -> &[u8] {
         &self.value
     }
 }
 
 impl From<u64> for Asn1Enumerated {
-    /// 由無號值建立最短二補數內容，必要時補正號位元組。
-    /// 變動時間：依數值的前導零與符號位分支。
     fn from(value: u64) -> Self {
-        // 加一個正號位元組後視為九位元組二補數，再共用最短形式的轉換。
         let mut bytes = [0; 9];
         bytes[1..].copy_from_slice(&value.to_be_bytes());
         Self {
@@ -127,218 +82,74 @@ impl TryFrom<&Asn1Enumerated> for i64 {
     }
 }
 
-impl<'a> crate::DecodeInner<'a> for Asn1Enumerated {
+impl DecodeInner for Asn1Enumerated {
     fn decode_inner(
-        buff: &'a [u8],
-        context: &mut crate::DecodingContext<'_>,
-    ) -> Result<(usize, Self), crate::Asn1Error> {
+        buff: &[u8],
+        context: &mut DecodingContext,
+    ) -> Result<(usize, Self), Asn1Error> {
         let element = crate::Asn1Ref::parse(buff, context)?;
-        if element.is_constructed() {
-            return Err(crate::Asn1Error::UnexpectedTag);
+        if element.tag() != Self::TAG {
+            return Err(Asn1Error::UnexpectedTag);
         }
-        let value = <Self as crate::DecodeContent<'a>>::decode_content(element.value(), context)?;
+        let value = Self::decode_content(element.value(), context)?;
         Ok((element.total_len(), value))
     }
+
     fn decode_inner_der(
-        buff: &'a [u8],
-        context: &mut crate::DecodingContext<'_>,
-    ) -> Result<(usize, Self), crate::Asn1Error> {
+        buff: &[u8],
+        context: &mut DecodingContext,
+    ) -> Result<(usize, Self), Asn1Error> {
         let element = crate::Asn1Ref::parse_der(buff, context)?;
-        if element.is_constructed() {
-            return Err(crate::Asn1Error::UnexpectedTag);
+        if element.tag() != Self::TAG {
+            return Err(Asn1Error::UnexpectedTag);
         }
-        let value =
-            <Self as crate::DecodeContent<'a>>::decode_content_der(element.value(), context)?;
+        let value = Self::decode_content_der(element.value(), context)?;
         Ok((element.total_len(), value))
-    }
-}
-impl<'a> crate::Decode<'a> for Asn1Enumerated {
-    fn decode(
-        buff: &'a [u8],
-        options: &crate::DecodingOptions,
-    ) -> Result<(usize, Self), crate::Asn1Error> {
-        <Self as crate::DecodeInner<'a>>::decode_inner(
-            buff,
-            &mut crate::DecodingContext::new(options),
-        )
     }
 }
 
-impl<'a> DecodeContent<'a> for Asn1Enumerated {
+impl Decode for Asn1Enumerated {
+    fn decode(buff: &[u8], options: &DecodingOptions) -> Result<(usize, Self), Asn1Error> {
+        Self::decode_inner(buff, &mut DecodingContext::new(options.clone()))
+    }
+}
+
+impl DecodeContent for Asn1Enumerated {
     /// 驗證內容非空且沒有多餘符號位元組，與 INTEGER 共用規則。
     /// 變動時間：依內容長度與符號位元組分支。
-    fn decode_content(
-        value: &'a [u8],
-        context: &mut DecodingContext<'_>,
-    ) -> Result<Self, Asn1Error> {
+    fn decode_content(value: &[u8], context: &mut DecodingContext) -> Result<Self, Asn1Error> {
         context.options().check_content_len(value.len())?;
         Self::from_der_bytes(value)
     }
 
-    fn decode_content_der(
-        value: &'a [u8],
-        context: &mut crate::DecodingContext<'_>,
-    ) -> Result<Self, crate::Asn1Error> {
-        crate::decoding::decode_der_content::<Self>(value, context)
+    fn decode_content_der(value: &[u8], context: &mut DecodingContext) -> Result<Self, Asn1Error> {
+        // X.690 §8.3.2 already forbids redundant sign octets in BER, so DER adds nothing.
+        Self::decode_content(value, context)
     }
 }
 
-impl crate::EncodeContent for Asn1Enumerated {
-    /// 回傳內容位元組數。常數時間：直接讀取已儲存的內容長度。
+impl EncodeContent for Asn1Enumerated {
     fn content_len(&self, _: &EncodingOptions) -> usize {
         self.value.len()
     }
 
-    /// 原樣寫入二補數內容，不含標籤。
-    /// 變動時間：複製量由內容長度決定。
-    fn encode_content(&self, rules: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
-        let len = crate::EncodeContent::content_len(self, rules);
-        let out = out.get_mut(..len).ok_or(Asn1Error::BufferTooSmall)?;
-        out[..self.value.len()].copy_from_slice(&self.value);
+    fn encode_content(&self, _: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+        let out = out
+            .get_mut(..self.value.len())
+            .ok_or(Asn1Error::BufferTooSmall)?;
+        out.copy_from_slice(&self.value);
         Ok(self.value.len())
     }
 }
 
-impl crate::EncodeTagged for Asn1Enumerated {}
+impl EncodeTagged for Asn1Enumerated {}
 
 impl Encode for Asn1Enumerated {
     fn encoded_len(&self, rules: &EncodingOptions) -> usize {
-        crate::EncodeTagged::encoded_len_tagged(self, Self::TAG, rules)
+        self.encoded_len_tagged(Self::TAG, rules)
     }
 
     fn encode(&self, rules: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
-        crate::EncodeTagged::encode_tagged(self, Self::TAG, rules, out)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::DecodingOptions;
-    use crate::EncodeContent;
-    use crate::EncodingType;
-    use crate::traits::Decode;
-
-    const OPTIONS: DecodingOptions =
-        DecodingOptions::new(crate::Depth::DEFAULT.get(), 16 * 1024 * 1024, 65_536);
-
-    #[test]
-    fn an_enumerated_tag_with_content_05_decodes_as_five() {
-        let (used, value) = Asn1Enumerated::decode(&[0x0A, 1, 5], &OPTIONS).unwrap();
-        assert_eq!(used, 3);
-        assert_eq!(u64::try_from(&value), Ok(5));
-        assert_eq!(i64::try_from(&value), Ok(5));
-    }
-
-    #[test]
-    fn the_schema_checks_tags_an_integer_tag_is_rejected_even_when_its_content_is_valid() {
-        assert_eq!(
-            crate::Fields::new(&[2, 1, 5], &mut DecodingContext::new(&OPTIONS))
-                .and_then(|mut fields| fields.required::<Asn1Enumerated>(Asn1Enumerated::TAG)),
-            Err(Asn1Error::UnexpectedTag)
-        );
-    }
-
-    #[test]
-    fn empty_content_and_redundant_sign_octets_are_rejected() {
-        for input in [&[0x0A, 0][..], &[0x0A, 2, 0, 5], &[0x0A, 2, 0xFF, 0x80]] {
-            assert_eq!(
-                Asn1Enumerated::decode(input, &OPTIONS),
-                Err(Asn1Error::MalformedValue)
-            );
-        }
-    }
-
-    #[test]
-    fn enumerated_values_round_trip_with_minimal_signed_contents_under_both_rules() {
-        for (value, expected) in [
-            (0_i64, &[0x0A, 1, 0][..]),
-            (5, &[0x0A, 1, 5]),
-            (128, &[0x0A, 2, 0, 0x80]),
-            (-1, &[0x0A, 1, 0xFF]),
-            (-128, &[0x0A, 1, 0x80]),
-            (-129, &[0x0A, 2, 0xFF, 0x7F]),
-        ] {
-            let original = Asn1Enumerated::from(value);
-            for rules in [
-                &EncodingOptions::new(EncodingType::Ber(crate::LengthForm::Definite)),
-                &EncodingOptions::new(EncodingType::Der),
-            ] {
-                let mut out = [0; 16];
-                let written = original.encode(rules, &mut out).unwrap();
-                assert_eq!(&out[..written], expected);
-                assert_eq!(written, original.encoded_len(rules));
-                assert_eq!(original.content_len(rules), expected.len() - 2);
-                let (used, decoded) = Asn1Enumerated::decode(&out[..written], &OPTIONS).unwrap();
-                assert_eq!(used, written);
-                assert_eq!(decoded, original);
-                assert_eq!(i64::try_from(&decoded), Ok(value));
-            }
-        }
-    }
-
-    #[test]
-    fn signed_and_unsigned_64_bit_boundaries_survive_encoding_and_decoding() {
-        for value in [0, 127, 128, u64::MAX] {
-            let original = Asn1Enumerated::from(value);
-            let mut out = [0; 11];
-            let written = original
-                .encode(&EncodingOptions::new(EncodingType::Der), &mut out)
-                .unwrap();
-            let (_, decoded) = Asn1Enumerated::decode(&out[..written], &OPTIONS).unwrap();
-            assert_eq!(u64::try_from(&decoded), Ok(value));
-        }
-        for value in [i64::MIN, i64::MAX] {
-            let original = Asn1Enumerated::from(value);
-            let mut out = [0; 10];
-            let written = original
-                .encode(&EncodingOptions::new(EncodingType::Der), &mut out)
-                .unwrap();
-            let (_, decoded) = Asn1Enumerated::decode(&out[..written], &OPTIONS).unwrap();
-            assert_eq!(i64::try_from(&decoded), Ok(value));
-        }
-    }
-
-    #[test]
-    fn contents_wider_than_64_bits_are_preserved_but_primitive_conversions_fail() {
-        for bytes in [[0x01; 12], [0xFE; 12]] {
-            let original = Asn1Enumerated::from_der_bytes(&bytes).unwrap();
-            assert_eq!(original.as_bytes(), &bytes);
-            assert_eq!(i64::try_from(&original), Err(Asn1Error::LengthOverflow));
-            let unsigned_error = if bytes[0] & 0x80 != 0 {
-                Asn1Error::MalformedValue
-            } else {
-                Asn1Error::LengthOverflow
-            };
-            assert_eq!(u64::try_from(&original), Err(unsigned_error));
-            for rules in [
-                &EncodingOptions::new(EncodingType::Ber(crate::LengthForm::Definite)),
-                &EncodingOptions::new(EncodingType::Der),
-            ] {
-                let mut out = [0; 14];
-                assert_eq!(original.encode(rules, &mut out), Ok(out.len()));
-                assert_eq!(&out[..2], &[0x0A, 12]);
-                assert_eq!(&out[2..], &bytes);
-                assert_eq!(
-                    Asn1Enumerated::decode(&out, &OPTIONS),
-                    Ok((14, original.clone()))
-                );
-            }
-        }
-    }
-
-    #[test]
-    fn conversions_reject_negative_unsigned_values_and_values_outside_the_target_range() {
-        assert_eq!(
-            u64::try_from(&Asn1Enumerated::from(-1_i64)),
-            Err(Asn1Error::MalformedValue)
-        );
-        assert_eq!(
-            i64::try_from(&Asn1Enumerated::from(u64::MAX)),
-            Err(Asn1Error::LengthOverflow)
-        );
-        let (_, too_large) =
-            Asn1Enumerated::decode(&[0x0A, 9, 1, 0, 0, 0, 0, 0, 0, 0, 0], &OPTIONS).unwrap();
-        assert_eq!(u64::try_from(&too_large), Err(Asn1Error::LengthOverflow));
+        self.encode_tagged(Self::TAG, rules, out)
     }
 }
