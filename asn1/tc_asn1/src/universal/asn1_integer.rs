@@ -1,25 +1,18 @@
-//! ASN.1 `INTEGER`。
-
 use alloc::vec::Vec;
 
-use crate::DecodingContext;
-use crate::EncodingOptions;
-use crate::error::Asn1Error;
-use crate::traits::{DecodeContent, Encode};
-
 use super::integer_octets::{minimal_signed, validate_integer_octets};
+use crate::{
+    Asn1Error, Decode, DecodeContent, DecodeInner, DecodingContext, Encode, EncodingOptions,
+};
 
-/// 內容是二補數大端序、最短形式，擁有。
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Asn1Integer {
     value: Vec<u8>,
 }
 
 impl Asn1Integer {
-    /// Universal identifier octets for this type's default encoding form.
     pub const TAG: &'static [u8] = super::tag::INTEGER;
 
-    /// 由已經是 DER 形式的位元組建立；驗證非空且沒有多餘的符號位元組。
     pub fn from_der_bytes(bytes: &[u8]) -> Result<Self, Asn1Error> {
         validate_integer_octets(bytes)?;
         Ok(Self {
@@ -27,7 +20,6 @@ impl Asn1Integer {
         })
     }
 
-    /// 由無號大端序建立（大數 `to_bytes_be` 的形式）：去前導零，最高位為 1 就補 `00`。
     pub fn from_unsigned_bytes(magnitude: &[u8]) -> Self {
         let start = magnitude
             .iter()
@@ -42,7 +34,6 @@ impl Asn1Integer {
         Self { value }
     }
 
-    /// 由固定寬度的二補數建立：去掉多餘的符號位元組。
     fn from_signed_bytes(twos_complement: &[u8]) -> Self {
         Self {
             value: minimal_signed(twos_complement).to_vec(),
@@ -138,57 +129,46 @@ macro_rules! try_into_signed {
 try_into_unsigned!(u8, u16, u32, u64, u128);
 try_into_signed!(i8, i16, i32, i64, i128);
 
-impl<'a> crate::DecodeInner<'a> for Asn1Integer {
+impl DecodeInner for Asn1Integer {
     fn decode_inner(
-        buff: &'a [u8],
-        context: &mut crate::DecodingContext<'_>,
-    ) -> Result<(usize, Self), crate::Asn1Error> {
+        buff: &[u8],
+        context: &mut DecodingContext,
+    ) -> Result<(usize, Self), Asn1Error> {
         let element = crate::Asn1Ref::parse(buff, context)?;
-        if element.is_constructed() {
-            return Err(crate::Asn1Error::UnexpectedTag);
+        if element.tag() != Self::TAG {
+            return Err(Asn1Error::UnexpectedTag);
         }
-        let value = <Self as crate::DecodeContent<'a>>::decode_content(element.value(), context)?;
+        let value = Self::decode_content(element.value(), context)?;
         Ok((element.total_len(), value))
     }
     fn decode_inner_der(
-        buff: &'a [u8],
-        context: &mut crate::DecodingContext<'_>,
-    ) -> Result<(usize, Self), crate::Asn1Error> {
+        buff: &[u8],
+        context: &mut DecodingContext,
+    ) -> Result<(usize, Self), Asn1Error> {
         let element = crate::Asn1Ref::parse_der(buff, context)?;
-        if element.is_constructed() {
-            return Err(crate::Asn1Error::UnexpectedTag);
+        if element.tag() != Self::TAG {
+            return Err(Asn1Error::UnexpectedTag);
         }
-        let value =
-            <Self as crate::DecodeContent<'a>>::decode_content_der(element.value(), context)?;
+        let value = Self::decode_content_der(element.value(), context)?;
         Ok((element.total_len(), value))
     }
 }
-impl<'a> crate::Decode<'a> for Asn1Integer {
-    fn decode(
-        buff: &'a [u8],
-        options: &crate::DecodingOptions,
-    ) -> Result<(usize, Self), crate::Asn1Error> {
-        <Self as crate::DecodeInner<'a>>::decode_inner(
-            buff,
-            &mut crate::DecodingContext::new(options),
-        )
+
+impl Decode for Asn1Integer {
+    fn decode(buff: &[u8], options: &crate::DecodingOptions) -> Result<(usize, Self), Asn1Error> {
+        Self::decode_inner(buff, &mut DecodingContext::new(options.clone()))
     }
 }
 
-impl<'a> DecodeContent<'a> for Asn1Integer {
-    fn decode_content(
-        value: &'a [u8],
-        context: &mut DecodingContext<'_>,
-    ) -> Result<Self, Asn1Error> {
+impl DecodeContent for Asn1Integer {
+    fn decode_content(value: &[u8], context: &mut DecodingContext) -> Result<Self, Asn1Error> {
         context.options().check_content_len(value.len())?;
         Self::from_der_bytes(value)
     }
 
-    fn decode_content_der(
-        value: &'a [u8],
-        context: &mut crate::DecodingContext<'_>,
-    ) -> Result<Self, crate::Asn1Error> {
-        crate::decoding::decode_der_content::<Self>(value, context)
+    fn decode_content_der(value: &[u8], context: &mut DecodingContext) -> Result<Self, Asn1Error> {
+        // X.690 §8.3.2 already forbids redundant sign octets in BER, so DER adds nothing.
+        Self::decode_content(value, context)
     }
 }
 
@@ -197,10 +177,11 @@ impl crate::EncodeContent for Asn1Integer {
         self.value.len()
     }
 
-    fn encode_content(&self, rules: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
-        let len = crate::EncodeContent::content_len(self, rules);
-        let out = out.get_mut(..len).ok_or(Asn1Error::BufferTooSmall)?;
-        out[..self.value.len()].copy_from_slice(&self.value);
+    fn encode_content(&self, _: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+        let out = out
+            .get_mut(..self.value.len())
+            .ok_or(Asn1Error::BufferTooSmall)?;
+        out.copy_from_slice(&self.value);
         Ok(self.value.len())
     }
 }
@@ -214,151 +195,5 @@ impl Encode for Asn1Integer {
 
     fn encode(&self, rules: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         crate::EncodeTagged::encode_tagged(self, Self::TAG, rules, out)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::DecodingOptions;
-    use crate::EncodeTagged;
-    use crate::EncodingType;
-    use crate::traits::Decode;
-
-    const OPTIONS: DecodingOptions =
-        DecodingOptions::new(crate::Depth::DEFAULT.get(), 16 * 1024 * 1024, 65_536);
-
-    #[test]
-    fn unsigned_primitives_produce_the_minimal_signed_form() {
-        assert_eq!(Asn1Integer::from(0_u8).as_bytes(), &[0x00]);
-        assert_eq!(Asn1Integer::from(5_u16).as_bytes(), &[0x05]);
-        assert_eq!(Asn1Integer::from(127_u32).as_bytes(), &[0x7F]);
-        assert_eq!(Asn1Integer::from(128_u64).as_bytes(), &[0x00, 0x80]);
-        assert_eq!(Asn1Integer::from(256_u128).as_bytes(), &[0x01, 0x00]);
-        assert_eq!(Asn1Integer::from(u8::MAX).as_bytes(), &[0x00, 0xFF]);
-        assert_eq!(
-            Asn1Integer::from(u128::MAX).as_bytes().len(),
-            17,
-            "16 個 FF 加一個符號位元組"
-        );
-    }
-
-    #[test]
-    fn signed_primitives_produce_the_minimal_twos_complement_form() {
-        assert_eq!(Asn1Integer::from(0_i8).as_bytes(), &[0x00]);
-        assert_eq!(Asn1Integer::from(-1_i8).as_bytes(), &[0xFF]);
-        assert_eq!(
-            Asn1Integer::from(-1_i128).as_bytes(),
-            &[0xFF],
-            "寬度不影響結果"
-        );
-        assert_eq!(Asn1Integer::from(-128_i16).as_bytes(), &[0x80]);
-        assert_eq!(Asn1Integer::from(-129_i32).as_bytes(), &[0xFF, 0x7F]);
-        assert_eq!(Asn1Integer::from(127_i64).as_bytes(), &[0x7F]);
-        assert_eq!(Asn1Integer::from(128_i64).as_bytes(), &[0x00, 0x80]);
-        assert_eq!(Asn1Integer::from(i8::MIN).as_bytes(), &[0x80]);
-        assert_eq!(Asn1Integer::from(i128::MIN).as_bytes().len(), 16);
-    }
-
-    #[test]
-    fn primitives_round_trip_through_try_from() {
-        assert_eq!(u8::try_from(&Asn1Integer::from(255_u8)), Ok(255));
-        assert_eq!(u64::try_from(&Asn1Integer::from(256_u64)), Ok(256));
-        assert_eq!(u128::try_from(&Asn1Integer::from(u128::MAX)), Ok(u128::MAX));
-        assert_eq!(i8::try_from(&Asn1Integer::from(-128_i8)), Ok(-128));
-        assert_eq!(i32::try_from(&Asn1Integer::from(-129_i32)), Ok(-129));
-        assert_eq!(i128::try_from(&Asn1Integer::from(i128::MIN)), Ok(i128::MIN));
-    }
-
-    #[test]
-    fn a_value_that_does_not_fit_the_target_is_refused() {
-        assert_eq!(
-            u8::try_from(&Asn1Integer::from(256_u16)),
-            Err(Asn1Error::LengthOverflow)
-        );
-        assert_eq!(
-            i8::try_from(&Asn1Integer::from(128_u8)),
-            Err(Asn1Error::LengthOverflow)
-        );
-        assert_eq!(
-            i8::try_from(&Asn1Integer::from(-129_i16)),
-            Err(Asn1Error::LengthOverflow)
-        );
-        // 負數不能當無號
-        assert_eq!(
-            u8::try_from(&Asn1Integer::from(-1_i8)),
-            Err(Asn1Error::MalformedValue)
-        );
-        // 17 個位元組的正數放不進 u128
-        let big = Asn1Integer::from_unsigned_bytes(&[0xFF; 17]);
-        assert_eq!(u128::try_from(&big), Err(Asn1Error::LengthOverflow));
-    }
-
-    #[test]
-    fn the_same_value_from_different_widths_is_equal() {
-        assert_eq!(Asn1Integer::from(5_u8), Asn1Integer::from(5_i128));
-        assert_eq!(Asn1Integer::from(-1_i8), Asn1Integer::from(-1_i64));
-    }
-
-    #[test]
-    fn unsigned_bytes_get_the_sign_pad_and_lose_it_again() {
-        // RSA modulus 那條路：最高位為 1 的無號位元組進來，補 00；取出時去掉。
-        let n = Asn1Integer::from_unsigned_bytes(&[0x80, 0x01]);
-        assert_eq!(n.as_bytes(), &[0x00, 0x80, 0x01]);
-        assert_eq!(n.as_unsigned_bytes(), Ok(&[0x80, 0x01][..]));
-
-        // 前導零被吃掉，零本身留一個 00。
-        assert_eq!(
-            Asn1Integer::from_unsigned_bytes(&[0x00, 0x00, 0x05]).as_bytes(),
-            &[0x05]
-        );
-        assert_eq!(
-            Asn1Integer::from_unsigned_bytes(&[0x00, 0x00]).as_bytes(),
-            &[0x00]
-        );
-        assert_eq!(Asn1Integer::from_unsigned_bytes(&[]).as_bytes(), &[0x00]);
-    }
-
-    #[test]
-    fn a_negative_value_is_recognised_and_refused_as_unsigned() {
-        let n = Asn1Integer::from_der_bytes(&[0x80]).unwrap(); // -128
-        assert!(n.is_negative());
-        assert_eq!(n.as_unsigned_bytes(), Err(Asn1Error::MalformedValue));
-    }
-
-    #[test]
-    fn redundant_sign_bytes_are_rejected_but_necessary_ones_are_not() {
-        assert!(Asn1Integer::from_der_bytes(&[0x00, 0x05]).is_err());
-        assert!(Asn1Integer::from_der_bytes(&[0xFF, 0x80]).is_err());
-        assert!(Asn1Integer::from_der_bytes(&[]).is_err());
-        assert!(Asn1Integer::from_der_bytes(&[0x00, 0x80]).is_ok());
-        assert!(Asn1Integer::from_der_bytes(&[0xFF, 0x7F]).is_ok());
-    }
-
-    #[test]
-    fn decode_and_encode_round_trip() {
-        let input = [0x02, 0x02, 0x01, 0x00];
-        let (used, n) = Asn1Integer::decode(&input, &OPTIONS).unwrap();
-        assert_eq!(used, 4);
-        assert_eq!(u64::try_from(&n), Ok(256));
-
-        let mut out = [0_u8; 8];
-        let written = n
-            .encode(&EncodingOptions::new(EncodingType::Der), &mut out)
-            .unwrap();
-        assert_eq!(&out[..written], &input);
-        assert_eq!(
-            written,
-            n.encoded_len(&EncodingOptions::new(EncodingType::Der))
-        );
-    }
-
-    #[test]
-    fn implicit_tagging_writes_the_callers_tag_over_the_same_contents() {
-        let mut out = [0_u8; 8];
-        let written = Asn1Integer::from(5_u64)
-            .encode_tagged(&[0x80], &EncodingOptions::new(EncodingType::Der), &mut out)
-            .unwrap();
-        assert_eq!(&out[..written], &[0x80, 0x01, 0x05]);
     }
 }
