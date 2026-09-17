@@ -11,7 +11,7 @@ mod decoding_options;
 mod encoding_options;
 mod encoding_type;
 mod error;
-// mod schema;
+mod schema;
 // mod segments;
 mod traits;
 mod universal;
@@ -24,7 +24,7 @@ pub use decoding_options::DecodingOptions;
 pub use encoding_options::EncodingOptions;
 pub use encoding_type::{EncodingType, LengthForm};
 pub use error::Asn1Error;
-// pub use schema::{Explicit, Fields, Implicit, SequenceFields};
+//pub use schema::{Explicit, Fields, Implicit, SequenceFields};
 pub use traits::{
     Decode, DecodeConstructed, DecodeContent, DecodeInner, Encode, EncodeContent, EncodeTagged,
 };
@@ -38,7 +38,7 @@ pub use universal::{
     //     Asn1Duration, Asn1EmbeddedPdv, Asn1Enumerated, Asn1External, Asn1GeneralString,
     //     Asn1GeneralizedTime, Asn1GraphicString, Asn1Ia5String,
     Asn1Integer,
-    //Asn1Null,
+    Asn1Null,
     //     Asn1NumericString, Asn1ObjectDescriptor, Asn1OctetString, Asn1Oid, Asn1OidIri,
     //     Asn1PrintableString, Asn1Real, Asn1RelativeOid, Asn1RelativeOidIri, Asn1SequenceOf, Asn1SetOf,
     //     Asn1TeletexString, Asn1Time, Asn1TimeOfDay, Asn1UniversalString, Asn1UtcTime, Asn1Utf8String,
