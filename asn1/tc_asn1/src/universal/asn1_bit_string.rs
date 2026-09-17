@@ -1,13 +1,10 @@
-//! ASN.1 `BIT STRING`。
-
 use alloc::vec::Vec;
 
 use crate::DecodingContext;
-use crate::error::Asn1Error;
-use crate::traits::{DecodeConstructed, DecodeContent, Encode};
+use crate::Asn1Error;
+use crate::{DecodeConstructed, DecodeContent, Encode};
 use crate::{EncodingOptions, EncodingType};
 
-/// 位元 0 是第一個位元組的最高位。最後一個位元組沒用到的位永遠存成 0。
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Asn1BitString {
     unused_bits: u8,

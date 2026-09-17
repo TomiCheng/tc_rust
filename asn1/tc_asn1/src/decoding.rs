@@ -4,16 +4,16 @@ use crate::{
     Asn1Error, DecodeContent, DecodingContext, EncodeContent, EncodingOptions, EncodingType,
 };
 
-pub(crate) fn content<'a, T: DecodeContent<'a>>(
-    value: &'a [u8],
-    context: &mut DecodingContext<'_>,
+pub(crate) fn content<T: DecodeContent>(
+    value: &[u8],
+    context: &mut DecodingContext,
 ) -> Result<T, Asn1Error> {
     T::decode_content(value, context)
 }
 
-pub(crate) fn decode_der_content<'a, T: DecodeContent<'a> + EncodeContent>(
-    value: &'a [u8],
-    context: &mut DecodingContext<'_>,
+pub(crate) fn decode_der_content<T: DecodeContent + EncodeContent>(
+    value: &[u8],
+    context: &mut DecodingContext,
 ) -> Result<T, Asn1Error> {
     let decoded = T::decode_content(value, context)?;
     let options = EncodingOptions::new(EncodingType::Der);

@@ -1,54 +1,20 @@
-//! Errors reported during ASN.1 parsing and encoding.
-
 use core::fmt;
 
-/// An error encountered while parsing or encoding ASN.1 data.
-///
-/// Each variant identifies a specific failure rather than a generic invalid
-/// encoding, helping callers diagnose interoperability problems.
-/// Additional variants may be introduced; downstream matches must include a
-/// fallback arm.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[non_exhaustive]
 pub enum Asn1Error {
-    /// The input ends before a complete tag-length-value (TLV) element is available.
     Truncated,
-
-    /// Unexpected bytes remain after a complete value.
     TrailingData,
-
-    /// The value can be decoded, but its DER re-encoding differs from the input.
     NotDer,
-
-    /// The tag number uses a nonminimal high-tag-number encoding.
     NonMinimalTag,
-
-    /// The tag number exceeds the range supported by this implementation.
     TagOverflow,
-
-    /// A length exceeds the range representable by the platform's `usize`.
     LengthOverflow,
-
-    /// The tag does not match the type or encoded form expected at this position.
     UnexpectedTag,
-
-    /// The content bytes do not satisfy the selected type's encoding rules.
     MalformedValue,
-
-    /// The value cannot be represented exactly by the target type.
-    /// Conversions do not round, overflow, or underflow to produce a result.
     InexactValue,
-
-    /// Nesting exceeds the configured depth budget.
     DepthExceeded,
-
-    /// Contents exceed the configured per-element byte limit.
     ContentLengthExceeded,
-
-    /// A constructed value exceeds the configured direct-child limit.
     ChildrenExceeded,
-
-    /// The caller-provided output buffer is too small.
     BufferTooSmall,
 }
 

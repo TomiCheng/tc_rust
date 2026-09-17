@@ -1,69 +1,61 @@
-//! ASN.1 universal types defined by X.680.
-//!
-//! Every fixed universal type exposes `TAG`, the complete identifier octets for
-//! its default encoding form. Types with supported constructed encodings also
-//! expose `CONSTRUCTED_TAG`. For types that are always constructed, such as
-//! [`Asn1SequenceOf`], both constants contain the same identifier.
-//! These constants do not impose tag checks on schema-selected decoders.
-
-mod asn1_bit_string;
-mod asn1_bmp_string;
+//mod asn1_bit_string;
+// mod asn1_bmp_string;
 mod asn1_boolean;
-mod asn1_embedded_pdv;
-mod asn1_enumerated;
-mod asn1_external;
-mod asn1_generalized_time;
-mod asn1_ia5_string;
-mod asn1_integer;
-mod asn1_null;
-mod asn1_numeric_string;
-mod asn1_octet_string;
-mod asn1_oid;
-mod asn1_oid_iri;
-mod asn1_printable_string;
-mod asn1_real;
-mod asn1_relative_oid;
-mod asn1_sequence_of;
-mod asn1_set_of;
-mod asn1_time;
-mod asn1_universal_string;
-mod asn1_utc_time;
-mod asn1_utf8_string;
-mod asn1_visible_string;
-mod date_time;
-mod integer_octets;
-mod opaque;
-mod real_number;
+// mod asn1_embedded_pdv;
+// mod asn1_enumerated;
+// mod asn1_external;
+// mod asn1_generalized_time;
+// mod asn1_ia5_string;
+// mod asn1_integer;
+// mod asn1_null;
+// mod asn1_numeric_string;
+// mod asn1_octet_string;
+// mod asn1_oid;
+// mod asn1_oid_iri;
+// mod asn1_printable_string;
+// mod asn1_real;
+// mod asn1_relative_oid;
+// mod asn1_sequence_of;
+// mod asn1_set_of;
+// mod asn1_time;
+// mod asn1_universal_string;
+// mod asn1_utc_time;
+// mod asn1_utf8_string;
+// mod asn1_visible_string;
+// mod date_time;
+// mod integer_octets;
+// mod opaque;
+// mod real_number;
 pub mod tag;
-mod time_value;
-
-pub use asn1_bit_string::Asn1BitString;
-pub use asn1_bmp_string::Asn1BmpString;
+// mod time_value;
+//
+// pub use asn1_bit_string::Asn1BitString;
+// pub use asn1_bmp_string::Asn1BmpString;
 pub use asn1_boolean::Asn1Boolean;
-pub use asn1_embedded_pdv::{Asn1CharacterString, Asn1EmbeddedPdv, PdvIdentification};
-pub use asn1_enumerated::Asn1Enumerated;
-pub use asn1_external::{Asn1External, ExternalEncoding};
-pub use asn1_generalized_time::Asn1GeneralizedTime;
-pub use asn1_ia5_string::Asn1Ia5String;
-pub use asn1_integer::Asn1Integer;
-pub use asn1_null::Asn1Null;
-pub use asn1_numeric_string::Asn1NumericString;
-pub use asn1_octet_string::Asn1OctetString;
-pub use asn1_oid::{Arcs, Asn1Oid};
-pub use asn1_oid_iri::{Asn1OidIri, Asn1RelativeOidIri};
-pub use asn1_printable_string::Asn1PrintableString;
-pub use asn1_real::Asn1Real;
-pub use asn1_relative_oid::Asn1RelativeOid;
-pub use asn1_sequence_of::Asn1SequenceOf;
-pub use asn1_set_of::Asn1SetOf;
-pub use asn1_time::{Asn1Date, Asn1DateTime, Asn1Duration, Asn1Time, Asn1TimeOfDay};
-pub use asn1_universal_string::Asn1UniversalString;
-pub use asn1_utc_time::Asn1UtcTime;
-pub use asn1_utf8_string::Asn1Utf8String;
-pub use asn1_visible_string::Asn1VisibleString;
-pub use opaque::{
-    Asn1GeneralString, Asn1GraphicString, Asn1ObjectDescriptor, Asn1TeletexString,
-    Asn1VideotexString,
-};
-
-pub(crate) use asn1_set_of::{copy_encodings, encode_member, tag_key};
+// pub use asn1_embedded_pdv::{Asn1CharacterString, Asn1EmbeddedPdv, PdvIdentification};
+// pub use asn1_enumerated::Asn1Enumerated;
+// pub use asn1_external::{Asn1External, ExternalEncoding};
+// pub use asn1_generalized_time::Asn1GeneralizedTime;
+// pub use asn1_ia5_string::Asn1Ia5String;
+// pub use asn1_integer::Asn1Integer;
+// pub use asn1_null::Asn1Null;
+// pub use asn1_numeric_string::Asn1NumericString;
+// pub use asn1_octet_string::Asn1OctetString;
+// pub use asn1_oid::{Arcs, Asn1Oid};
+// pub use asn1_oid_iri::{Asn1OidIri, Asn1RelativeOidIri};
+// pub use asn1_printable_string::Asn1PrintableString;
+// pub use asn1_real::Asn1Real;
+// pub use asn1_relative_oid::Asn1RelativeOid;
+// pub use asn1_sequence_of::Asn1SequenceOf;
+// pub use asn1_set_of::Asn1SetOf;
+// pub use asn1_time::{Asn1Date, Asn1DateTime, Asn1Duration, Asn1Time, Asn1TimeOfDay};
+// pub use asn1_universal_string::Asn1UniversalString;
+// pub use asn1_utc_time::Asn1UtcTime;
+// pub use asn1_utf8_string::Asn1Utf8String;
+// pub use asn1_visible_string::Asn1VisibleString;
+// pub use opaque::{
+//     Asn1GeneralString, Asn1GraphicString, Asn1ObjectDescriptor, Asn1TeletexString,
+//     Asn1VideotexString,
+// };
+//
+// pub(crate) use asn1_set_of::{copy_encodings, encode_member, tag_key};
