@@ -2,6 +2,7 @@ use alloc::vec::Vec;
 use core::fmt;
 use core::str::FromStr;
 
+use super::base128::{push_base128, validate_base128};
 use crate::{
     Asn1Error, Decode, DecodeContent, DecodeInner, DecodingContext, DecodingOptions, Encode,
     EncodeContent, EncodeTagged, EncodingOptions,
@@ -16,27 +17,7 @@ impl Asn1Oid {
     pub const TAG: &'static [u8] = super::tag::OBJECT_IDENTIFIER;
 
     pub fn from_der_bytes(bytes: &[u8]) -> Result<Self, Asn1Error> {
-        if bytes.is_empty() {
-            return Err(Asn1Error::MalformedValue);
-        }
-        let mut at_start = true;
-        let mut value: u64 = 0;
-        for byte in bytes {
-            if at_start && *byte == 0x80 {
-                return Err(Asn1Error::MalformedValue);
-            }
-            value = value
-                .checked_mul(128)
-                .and_then(|v| v.checked_add(u64::from(byte & 0x7F)))
-                .ok_or(Asn1Error::LengthOverflow)?;
-            at_start = byte & 0x80 == 0;
-            if at_start {
-                value = 0;
-            }
-        }
-        if !at_start {
-            return Err(Asn1Error::MalformedValue);
-        }
+        validate_base128(bytes)?;
         Ok(Self {
             bytes: bytes.to_vec(),
         })
@@ -76,16 +57,6 @@ impl Asn1Oid {
             pending: None,
             first: true,
         }
-    }
-}
-
-fn push_base128(out: &mut Vec<u8>, value: u64) {
-    let bits = 64 - value.leading_zeros();
-    let count = bits.div_ceil(7).max(1) as usize;
-    for index in 0..count {
-        let shift = 7 * (count - 1 - index);
-        let more = if index + 1 < count { 0x80 } else { 0 };
-        out.push(((value >> shift) & 0x7F) as u8 | more);
     }
 }
 
