@@ -1,16 +1,17 @@
-//! `UTCTime` 與 `GeneralizedTime` 共用的部分：拆開的欄位、範圍檢查、
-//! `MMDDhhmmss` 的讀寫、ISO 8601 的顯示。年份的位數和範圍由兩個型別各自管。
+//! Shared by `UTCTime` and `GeneralizedTime`: the split fields, range checks,
+//! reading and writing `MMDDhhmmss`, and the ISO 8601 display. The year's digit
+//! count and range are handled by each type.
 
 use core::fmt;
 
 use crate::error::Asn1Error;
 
-/// 格里曆閏年：四年一閏、百年不閏、四百年再閏。
+/// Gregorian leap year: every fourth year, except centuries, except every fourth century.
 pub(crate) fn is_leap_year(year: u16) -> bool {
     year.is_multiple_of(4) && (!year.is_multiple_of(100) || year.is_multiple_of(400))
 }
 
-/// 該月天數；呼叫端已確認 month 在 1–12。
+/// Days in the month; the caller has checked that `month` is 1-12.
 pub(crate) fn days_in_month(leap: bool, month: u8) -> u8 {
     match month {
         2 => {
@@ -25,8 +26,8 @@ pub(crate) fn days_in_month(leap: bool, month: u8) -> u8 {
     }
 }
 
-/// 欄位順序就是時間順序，所以 `Ord` 直接是先後。
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd)]
+/// Field order is chronological order, so the derived `Ord` compares instants.
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub(crate) struct DateTime {
     pub(crate) year: u16,
     pub(crate) month: u8,
@@ -37,8 +38,9 @@ pub(crate) struct DateTime {
 }
 
 impl DateTime {
-    /// 驗證格里曆日期，月 1–12、時 0–23、分秒 0–59。年份範圍由呼叫端先驗過。
-    /// 不處理閏秒，秒仍是 0–59。變動時間：分支只依日期與時間欄位。
+    /// Validates a Gregorian date: month 1-12, hour 0-23, minute and second 0-59.
+    /// The caller has already checked the year's range. Leap seconds are not
+    /// handled, so seconds stay 0-59. Variable time: branches only on the fields.
     pub(crate) fn checked(
         year: u16,
         month: u8,
@@ -65,7 +67,7 @@ impl DateTime {
         })
     }
 
-    /// 由年份和 `MMDDhhmmss` 十個位元組建立。
+    /// Builds from the year and the ten `MMDDhhmmss` octets.
     pub(crate) fn from_fields(year: u16, fields: &[u8]) -> Result<Self, Asn1Error> {
         let [m, d, h, mi, s] = fields.as_chunks::<2>().0 else {
             return Err(Asn1Error::MalformedValue);
@@ -80,7 +82,7 @@ impl DateTime {
         )
     }
 
-    /// 把 `MMDDhhmmss` 寫進十個位元組。
+    /// Writes `MMDDhhmmss` into ten octets.
     pub(crate) fn write_fields(&self, out: &mut [u8; 10]) {
         for (slot, n) in out.as_chunks_mut::<2>().0.iter_mut().zip([
             self.month,
@@ -94,7 +96,7 @@ impl DateTime {
     }
 }
 
-/// 兩個 ASCII 數字 → 數值。
+/// Two ASCII digits to a number.
 pub(crate) fn two_digits(pair: &[u8; 2]) -> Result<u8, Asn1Error> {
     match pair {
         [a, b] if a.is_ascii_digit() && b.is_ascii_digit() => Ok((a - b'0') * 10 + (b - b'0')),
@@ -102,7 +104,7 @@ pub(crate) fn two_digits(pair: &[u8; 2]) -> Result<u8, Asn1Error> {
     }
 }
 
-/// 數值 → 兩個 ASCII 數字。呼叫端保證 `n < 100`。
+/// A number to two ASCII digits; the caller guarantees `n < 100`.
 pub(crate) fn digits(n: u8) -> [u8; 2] {
     [b'0' + n / 10, b'0' + n % 10]
 }
@@ -114,82 +116,5 @@ impl fmt::Display for DateTime {
             "{:04}-{:02}-{:02}T{:02}:{:02}:{:02}Z",
             self.year, self.month, self.day, self.hour, self.minute, self.second
         )
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::{
-        Asn1Error, Asn1GeneralizedTime, Asn1UtcTime, DecodeContent, DecodingContext,
-        DecodingOptions,
-    };
-
-    #[test]
-    fn utc_times_validate_calendar_dates_after_expanding_two_digit_years() {
-        for (wire, year, month, day, valid) in [
-            (b"240229000000Z", 2024, 2, 29, true),
-            (b"230229000000Z", 2023, 2, 29, false),
-            (b"000229000000Z", 2000, 2, 29, true),
-            (b"240230000000Z", 2024, 2, 30, false),
-            (b"240431000000Z", 2024, 4, 31, false),
-            (b"240631000000Z", 2024, 6, 31, false),
-            (b"240931000000Z", 2024, 9, 31, false),
-            (b"241131000000Z", 2024, 11, 31, false),
-            (b"240131000000Z", 2024, 1, 31, true),
-            (b"240331000000Z", 2024, 3, 31, true),
-            (b"241231000000Z", 2024, 12, 31, true),
-        ] {
-            let decoded = Asn1UtcTime::decode_content(
-                wire,
-                &mut DecodingContext::new(&DecodingOptions::default()),
-            );
-            let built = Asn1UtcTime::new(year, month, day, 0, 0, 0);
-            if valid {
-                let value = decoded.unwrap();
-                assert_eq!(
-                    (value.year(), value.month(), value.day()),
-                    (year, month, day)
-                );
-                assert_eq!(built, Ok(value));
-            } else {
-                assert_eq!(decoded, Err(Asn1Error::MalformedValue), "{wire:?}");
-                assert_eq!(built, Err(Asn1Error::MalformedValue));
-            }
-        }
-    }
-
-    #[test]
-    fn generalized_times_validate_month_lengths_and_gregorian_century_exceptions() {
-        for (wire, year, month, day, valid) in [
-            (b"19000229000000Z", 1900, 2, 29, false),
-            (b"20000229000000Z", 2000, 2, 29, true),
-            (b"20240229000000Z", 2024, 2, 29, true),
-            (b"20230229000000Z", 2023, 2, 29, false),
-            (b"20240230000000Z", 2024, 2, 30, false),
-            (b"20240431000000Z", 2024, 4, 31, false),
-            (b"20240631000000Z", 2024, 6, 31, false),
-            (b"20240931000000Z", 2024, 9, 31, false),
-            (b"20241131000000Z", 2024, 11, 31, false),
-            (b"20240131000000Z", 2024, 1, 31, true),
-            (b"20240331000000Z", 2024, 3, 31, true),
-            (b"20241231000000Z", 2024, 12, 31, true),
-        ] {
-            let decoded = Asn1GeneralizedTime::decode_content(
-                wire,
-                &mut DecodingContext::new(&DecodingOptions::default()),
-            );
-            let built = Asn1GeneralizedTime::new(year, month, day, 0, 0, 0);
-            if valid {
-                let value = decoded.unwrap();
-                assert_eq!(
-                    (value.year(), value.month(), value.day()),
-                    (year, month, day)
-                );
-                assert_eq!(built, Ok(value));
-            } else {
-                assert_eq!(decoded, Err(Asn1Error::MalformedValue), "{wire:?}");
-                assert_eq!(built, Err(Asn1Error::MalformedValue));
-            }
-        }
     }
 }

@@ -58,7 +58,7 @@ pub use universal::{
     //Asn1RelativeOidIri, Asn1SequenceOf, Asn1SetOf,
     //     Asn1TeletexString, Asn1Time, Asn1TimeOfDay,
     Asn1UniversalString,
-    //     Asn1UtcTime,
+    Asn1UtcTime,
     Asn1Utf8String,
     //     Asn1VideotexString,
     Asn1VisibleString,
