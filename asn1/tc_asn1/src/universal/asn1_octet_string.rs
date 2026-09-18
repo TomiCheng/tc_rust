@@ -1,5 +1,7 @@
 use alloc::vec::Vec;
 
+use super::cer_common::too_long_for_cer;
+use crate::traits::encode::default_encode;
 use crate::{
     Asn1Error, Decode, DecodeContent, DecodeInner, DecodingContext, DecodingOptions, Encode,
     EncodeContent, EncodeTagged, EncodingOptions,
@@ -12,8 +14,6 @@ pub struct Asn1OctetString {
 
 impl Asn1OctetString {
     pub const TAG: &'static [u8] = super::tag::OCTET_STRING;
-
-    pub const CONSTRUCTED_TAG: &'static [u8] = super::tag::CONSTRUCTED_OCTET_STRING;
 
     pub fn new(bytes: &[u8]) -> Self {
         Self {
@@ -92,7 +92,23 @@ impl EncodeContent for Asn1OctetString {
     }
 }
 
-impl EncodeTagged for Asn1OctetString {}
+impl EncodeTagged for Asn1OctetString {
+    /// Always primitive. Under CER a value over 1000 octets cannot be written by
+    /// this type: `encode_tagged` returns [`Asn1Error::PrimitiveTooLong`], and the
+    /// caller splits it with `Asn1OctetStringConstructed` instead.
+    /// Variable time: branches only on the encoding structure.
+    fn encode_tagged(
+        &self,
+        tag: &[u8],
+        rules: &EncodingOptions,
+        out: &mut [u8],
+    ) -> Result<usize, Asn1Error> {
+        if too_long_for_cer(self.bytes.len(), rules) {
+            return Err(Asn1Error::PrimitiveTooLong);
+        }
+        default_encode(self, tag, rules, out)
+    }
+}
 
 impl Encode for Asn1OctetString {
     fn encoded_len(&self, rules: &EncodingOptions) -> usize {

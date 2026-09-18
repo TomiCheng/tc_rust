@@ -1,10 +1,10 @@
 use alloc::vec::Vec;
 
-use super::asn1_bit_string_constructed::CER_SEGMENT_LEN;
+use super::cer_common::too_long_for_cer;
 use crate::traits::encode::default_encode;
 use crate::{
     Asn1Error, Decode, DecodeContent, DecodeInner, DecodingContext, DecodingOptions, Encode,
-    EncodeContent, EncodeTagged, EncodingOptions, EncodingType,
+    EncodeContent, EncodeTagged, EncodingOptions,
 };
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -48,10 +48,6 @@ impl Asn1BitString {
         index < self.bit_len() && self.bytes[index / 8] & (0x80 >> (index % 8)) != 0
     }
 
-    /// CER only allows the primitive form up to 1000 contents octets (X.690 §9.2).
-    fn too_long_for_cer(&self, rules: &EncodingOptions) -> bool {
-        rules.encoding_type() == EncodingType::Cer && 1 + self.bytes.len() > CER_SEGMENT_LEN
-    }
 }
 
 fn mask_unused(bytes: &mut [u8], unused_bits: u8) {
@@ -141,7 +137,7 @@ impl EncodeTagged for Asn1BitString {
         rules: &EncodingOptions,
         out: &mut [u8],
     ) -> Result<usize, Asn1Error> {
-        if self.too_long_for_cer(rules) {
+        if too_long_for_cer(1 + self.bytes.len(), rules) {
             return Err(Asn1Error::PrimitiveTooLong);
         }
         default_encode(self, tag, rules, out)

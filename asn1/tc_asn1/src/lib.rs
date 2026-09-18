@@ -44,6 +44,7 @@ pub use universal::{
     Asn1Null,
     //     Asn1NumericString, Asn1ObjectDescriptor,
     Asn1OctetString,
+    Asn1OctetStringConstructed,
     Asn1Oid,
     //Asn1OidIri,
     //     Asn1PrintableString, Asn1Real,
