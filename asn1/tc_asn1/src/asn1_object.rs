@@ -35,6 +35,47 @@ pub enum Asn1Object {
     Unknown(Asn1Any),
 }
 
+/// `Asn1Object::from(value)` for every variant, so mixed elements can be
+/// written as `vec![oid.into(), Asn1Null.into()]`.
+macro_rules! from_variant {
+    ($($variant:ident: $ty:ty),* $(,)?) => {$(
+        impl From<$ty> for Asn1Object {
+            fn from(value: $ty) -> Self {
+                Self::$variant(value)
+            }
+        }
+    )*};
+}
+from_variant! {
+    Boolean: Asn1Boolean,
+    Integer: Asn1Integer,
+    BitString: Asn1BitString,
+    OctetString: Asn1OctetString,
+    Null: Asn1Null,
+    Oid: Asn1Oid,
+    Real: Asn1Real,
+    Enumerated: Asn1Enumerated,
+    Utf8String: Asn1Utf8String,
+    RelativeOid: Asn1RelativeOid,
+    Time: Asn1Time,
+    NumericString: Asn1NumericString,
+    PrintableString: Asn1PrintableString,
+    Ia5String: Asn1Ia5String,
+    UtcTime: Asn1UtcTime,
+    GeneralizedTime: Asn1GeneralizedTime,
+    VisibleString: Asn1VisibleString,
+    UniversalString: Asn1UniversalString,
+    BmpString: Asn1BmpString,
+    Date: Asn1Date,
+    TimeOfDay: Asn1TimeOfDay,
+    DateTime: Asn1DateTime,
+    Duration: Asn1Duration,
+    OidIri: Asn1OidIri,
+    RelativeOidIri: Asn1RelativeOidIri,
+    Constructed: Asn1Constructed<Asn1Object>,
+    Unknown: Asn1Any,
+}
+
 impl Asn1Object {
     /// Interprets one primitive element by its universal tag; anything else is
     /// kept as `Unknown`. Variable time: branches only on the identifier.
