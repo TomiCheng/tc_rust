@@ -57,7 +57,7 @@ pub use universal::{
     //Asn1OidIri,
     Asn1PrintableString,
     //Asn1PrintableStringConstructed,
-    //     Asn1Real,
+    Asn1Real,
     Asn1RelativeOid,
     //Asn1RelativeOidIri, Asn1SequenceOf, Asn1SetOf,
     //     Asn1TeletexString,

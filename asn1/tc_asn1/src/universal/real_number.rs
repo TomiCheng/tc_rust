@@ -1,10 +1,10 @@
-//! REAL 正規化所需的最小整數操作；不提供公開算術 API。
+//! The minimal integer operations REAL normalization needs; no public arithmetic API.
 
 use crate::Asn1Error;
 use alloc::{string::String, vec, vec::Vec};
 use core::cmp::Ordering;
 
-/// 小端序 base-256 絕對值；零使用空向量。
+/// Little-endian base-256 magnitude; zero is the empty vector.
 #[derive(Clone, Debug, Default)]
 pub(super) struct Magnitude(pub(super) Vec<u8>);
 impl Magnitude {
