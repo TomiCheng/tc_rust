@@ -29,6 +29,7 @@ pub use error::Asn1Error;
 
 pub use traits::{
     Decode, DecodeConstructed, DecodeContent, DecodeInner, Encode, EncodeContent, EncodeTagged,
+    Tagged,
 };
 pub use universal::tag;
 pub use universal::{

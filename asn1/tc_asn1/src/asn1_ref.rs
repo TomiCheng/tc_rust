@@ -2,7 +2,7 @@ use crate::decoding_context::DepthScope;
 use crate::error::Asn1Error;
 use crate::traits::DecodeInner;
 use crate::traits::encode::len_octets;
-use crate::{DecodingContext, DecodingOptions};
+use crate::{DecodingContext, DecodingOptions, Tagged};
 
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub enum Asn1Class {
@@ -156,6 +156,14 @@ impl<'a> Asn1Ref<'a> {
         }
         Ok(value)
     }
+
+    pub fn assert_tag(self, tag: &[u8]) -> Result<Self, Asn1Error> {
+        if self.tag != tag {
+            Err(Asn1Error::UnexpectedTag)
+        } else {
+            Ok(self)
+        }
+    }
 }
 
 pub(crate) fn is_constructed_form(tag: &[u8], primitive_tag: &[u8]) -> bool {
@@ -166,27 +174,82 @@ pub(crate) fn is_constructed_form(tag: &[u8], primitive_tag: &[u8]) -> bool {
         && tag[1..] == primitive_tag[1..]
 }
 
+/// The elements of a constructed value, one level deeper in the context.
 pub struct Children<'a, 'b> {
     cursor: ChildCursor<'a>,
     scope: DepthScope<'b>,
+    /// An element read by `peek` and not yet handed out by `next`.
+    lookahead: Option<Result<Asn1Ref<'a>, Asn1Error>>,
 }
 
 impl<'a, 'b> Children<'a, 'b> {
-    pub fn new(rest: &'a [u8], scope: DepthScope<'b>) -> Self {
+    pub(crate) fn new(rest: &'a [u8], scope: DepthScope<'b>) -> Self {
         Self {
             cursor: ChildCursor::new(rest, scope.options()),
             scope,
+            lookahead: None,
         }
     }
 
     pub fn context(&mut self) -> &mut DecodingContext {
         self.scope.context()
     }
+
+    pub fn peek(&mut self) -> Option<Result<Asn1Ref<'a>, Asn1Error>> {
+        if self.lookahead.is_none() {
+            self.lookahead = self.cursor.next(&mut self.scope);
+        }
+        self.lookahead
+    }
+
+    pub fn get<T: DecodeInner>(&mut self) -> Result<T, Asn1Error> {
+        self.next()
+            .ok_or(Asn1Error::Truncated)??
+            .decode_as::<T>(self.context())
+    }
+
+    pub fn get_opt<T: DecodeInner + Tagged>(&mut self) -> Result<Option<T>, Asn1Error> {
+        match self.peek() {
+            Some(Ok(child)) if child.tag() == T::TAG => self.get().map(Some),
+            _ => Ok(None),
+        }
+    }
+
+    /// An OPTIONAL field with a DEFAULT: the value when present, `default`
+    /// otherwise. Under DER a value equal to the default must not be written
+    /// (X.690 §11.5), so one that is present is `NotDer`.
+    /// Variable time: branches only on the encoding structure.
+    pub fn get_default<T: DecodeInner + Tagged + PartialEq>(
+        &mut self,
+        default: T,
+    ) -> Result<T, Asn1Error> {
+        match self.get_opt::<T>()? {
+            Some(value) => {
+                if value == default && self.context().is_der() {
+                    return Err(Asn1Error::NotDer);
+                }
+                Ok(value)
+            }
+            None => Ok(default),
+        }
+    }
+
+    pub fn end(mut self) -> Result<(), Asn1Error> {
+        match self.next() {
+            None => Ok(()),
+            Some(Err(e)) => Err(e),
+            Some(Ok(_)) => Err(Asn1Error::TrailingData),
+        }
+    }
 }
+
 impl<'a> Iterator for Children<'a, '_> {
     type Item = Result<Asn1Ref<'a>, Asn1Error>;
     fn next(&mut self) -> Option<Self::Item> {
-        self.cursor.next(&mut self.scope)
+        match self.lookahead.take() {
+            Some(item) => Some(item),
+            None => self.cursor.next(&mut self.scope),
+        }
     }
 }
 

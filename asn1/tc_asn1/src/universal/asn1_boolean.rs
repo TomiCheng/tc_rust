@@ -1,5 +1,5 @@
 use crate::{
-    Asn1Error, Decode, DecodeContent, DecodeInner, DecodingContext, Encode, EncodingOptions,
+    Asn1Error, Decode, DecodeContent, DecodeInner, DecodingContext, Encode, EncodingOptions, Tagged,
 };
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
@@ -43,6 +43,11 @@ impl DecodeInner for Asn1Boolean {
     }
 }
 impl Decode for Asn1Boolean {}
+
+impl Tagged for Asn1Boolean {
+    const TAG: &'static [u8] = Self::TAG;
+}
+
 impl DecodeContent for Asn1Boolean {
     fn decode_content(value: &[u8], context: &mut DecodingContext) -> Result<Self, Asn1Error> {
         context.options().check_content_len(value.len())?;

@@ -2,6 +2,8 @@
 
 mod decode;
 pub(crate) mod encode;
+mod tagged;
 
 pub use decode::{Decode, DecodeConstructed, DecodeContent, DecodeInner};
 pub use encode::{Encode, EncodeContent, EncodeTagged};
+pub use tagged::Tagged;
