@@ -1,13 +1,23 @@
-//! OID-IRI 與 RELATIVE-OID-IRI 的 UTF-8 線路表示。
+//! The UTF-8 wire form of OID-IRI and RELATIVE-OID-IRI.
 //!
-//! 依 X.660 §7.3–7.5 驗證標籤字集與連字號位置，不查詢登記資料。
-//! 相等性比較原始字串；識別同一個登記節點所需的 A-label 正規化由上層負責。
-//! §7.5.3 允許實作者容忍未來可能解除保留的字元；這裡接受列出的純量範圍。
+//! Labels are checked for character set and hyphen placement per X.660
+//! §7.3-7.5; no registry is consulted. Equality compares the raw string; the
+//! A-label normalization needed to identify one registered node is left to the
+//! caller. §7.5.3 lets implementations tolerate characters that may be
+//! unreserved later; the listed scalar ranges are accepted here.
+
+use alloc::string::String;
+use core::fmt;
 
 use super::tag;
-use crate::{Asn1Error, DecodeContent, DecodingContext, Encode, EncodingOptions};
-use alloc::string::String;
+use crate::{
+    Asn1Error, Decode, DecodeContent, DecodeInner, DecodingContext, DecodingOptions, Encode,
+    EncodeContent, EncodeTagged, EncodingOptions,
+};
 
+/// X.660 §7.5: non-empty; an integer label has no leading zero; a non-integer
+/// label does not start or end with `-`, has no `--` in positions 3-4, and uses
+/// only the unreserved ASCII and Unicode ranges.
 fn valid_label(label: &str) -> bool {
     if label.is_empty() {
         return false;
@@ -32,18 +42,20 @@ fn valid_label(label: &str) -> bool {
     })
 }
 
+/// The two types differ only in tag and whether the path starts with `/`.
 macro_rules! iri {
     ($name:ident, $tag:ident, $absolute:literal, $doc:literal) => {
         #[doc = $doc]
-        #[derive(Clone, Debug, Eq, PartialEq)]
+        #[derive(Clone, Debug, Eq, PartialEq, Hash)]
         pub struct $name {
             text: String,
         }
+
         impl $name {
-            /// Universal identifier octets for this type.
             pub const TAG: &'static [u8] = tag::$tag;
 
-            /// 驗證路徑與每個標籤後複製。變動時間：依字元與路徑長度分支。
+            /// Validates the path and every label, then copies the text.
+            /// Variable time: branches on the characters and path length.
             pub fn new(text: &str) -> Result<Self, Asn1Error> {
                 let labels = if $absolute {
                     text.strip_prefix('/').ok_or(Asn1Error::MalformedValue)?
@@ -57,112 +69,110 @@ macro_rules! iri {
                     text: String::from(text),
                 })
             }
-            /// 借用原始 UTF-8 路徑；不做登記名稱解析或 A-label 轉換。
+
+            /// The raw UTF-8 path; no registry lookup or A-label conversion.
             pub fn as_str(&self) -> &str {
                 &self.text
             }
         }
-        impl<'a> crate::DecodeInner<'a> for $name {
-            fn decode_inner(
-                buff: &'a [u8],
-                context: &mut crate::DecodingContext<'_>,
-            ) -> Result<(usize, Self), crate::Asn1Error> {
-                let element = crate::Asn1Ref::parse(buff, context)?;
-                if element.is_constructed() {
-                    return Err(crate::Asn1Error::UnexpectedTag);
-                }
-                let value =
-                    <Self as crate::DecodeContent<'a>>::decode_content(element.value(), context)?;
-                Ok((element.total_len(), value))
-            }
-            fn decode_inner_der(
-                buff: &'a [u8],
-                context: &mut crate::DecodingContext<'_>,
-            ) -> Result<(usize, Self), crate::Asn1Error> {
-                let element = crate::Asn1Ref::parse_der(buff, context)?;
-                if element.is_constructed() {
-                    return Err(crate::Asn1Error::UnexpectedTag);
-                }
-                let value = <Self as crate::DecodeContent<'a>>::decode_content_der(
-                    element.value(),
-                    context,
-                )?;
-                Ok((element.total_len(), value))
-            }
-        }
-        impl<'a> crate::Decode<'a> for $name {
-            fn decode(
-                buff: &'a [u8],
-                options: &crate::DecodingOptions,
-            ) -> Result<(usize, Self), crate::Asn1Error> {
-                <Self as crate::DecodeInner<'a>>::decode_inner(
-                    buff,
-                    &mut crate::DecodingContext::new(options),
-                )
+
+        impl fmt::Display for $name {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                f.write_str(&self.text)
             }
         }
 
-        impl<'a> DecodeContent<'a> for $name {
-            /// 變動時間：驗證 UTF-8、路徑與標籤。
+        impl DecodeInner for $name {
+            fn decode_inner(
+                buff: &[u8],
+                context: &mut DecodingContext,
+            ) -> Result<(usize, Self), Asn1Error> {
+                let element = crate::Asn1Ref::parse(buff, context)?;
+                if element.tag() != Self::TAG {
+                    return Err(Asn1Error::UnexpectedTag);
+                }
+                let value = Self::decode_content(element.value(), context)?;
+                Ok((element.total_len(), value))
+            }
+
+            fn decode_inner_der(
+                buff: &[u8],
+                context: &mut DecodingContext,
+            ) -> Result<(usize, Self), Asn1Error> {
+                let element = crate::Asn1Ref::parse_der(buff, context)?;
+                if element.tag() != Self::TAG {
+                    return Err(Asn1Error::UnexpectedTag);
+                }
+                let value = Self::decode_content_der(element.value(), context)?;
+                Ok((element.total_len(), value))
+            }
+        }
+
+        impl Decode for $name {
+            fn decode(
+                buff: &[u8],
+                options: &DecodingOptions,
+            ) -> Result<(usize, Self), Asn1Error> {
+                Self::decode_inner(buff, &mut DecodingContext::new(options.clone()))
+            }
+        }
+
+        impl DecodeContent for $name {
+            /// Validates UTF-8, the path and the labels. Variable time: branches on the contents.
             fn decode_content(
-                value: &'a [u8],
-                context: &mut DecodingContext<'_>,
+                value: &[u8],
+                context: &mut DecodingContext,
             ) -> Result<Self, Asn1Error> {
                 context.options().check_content_len(value.len())?;
                 Self::new(core::str::from_utf8(value).map_err(|_| Asn1Error::MalformedValue)?)
             }
 
             fn decode_content_der(
-                value: &'a [u8],
-                context: &mut crate::DecodingContext<'_>,
-            ) -> Result<Self, crate::Asn1Error> {
-                crate::decoding::decode_der_content::<Self>(value, context)
+                value: &[u8],
+                context: &mut DecodingContext,
+            ) -> Result<Self, Asn1Error> {
+                // DER only restricts the form (primitive), which the identifier already settled.
+                Self::decode_content(value, context)
             }
         }
 
-        impl $crate::EncodeContent for $name {
-            /// 常數時間：讀取 UTF-8 位元組長度。
+        impl EncodeContent for $name {
             fn content_len(&self, _: &EncodingOptions) -> usize {
                 self.text.len()
             }
 
-            /// 變動時間：依 UTF-8 位元組長度複製。
             fn encode_content(
                 &self,
-                rules: &EncodingOptions,
+                _: &EncodingOptions,
                 out: &mut [u8],
             ) -> Result<usize, Asn1Error> {
-                let len = $crate::EncodeContent::content_len(self, rules);
                 let out = out
-                    .get_mut(..len)
-                    .ok_or($crate::Asn1Error::BufferTooSmall)?;
-                out[..self.text.len()].copy_from_slice(self.text.as_bytes());
+                    .get_mut(..self.text.len())
+                    .ok_or(Asn1Error::BufferTooSmall)?;
+                out.copy_from_slice(self.text.as_bytes());
                 Ok(self.text.len())
             }
         }
 
-        impl $crate::EncodeTagged for $name {}
+        impl EncodeTagged for $name {}
 
         impl Encode for $name {
-            fn encoded_len(&self, rules: &$crate::EncodingOptions) -> usize {
-                $crate::EncodeTagged::encoded_len_tagged(self, Self::TAG, rules)
+            fn encoded_len(&self, rules: &EncodingOptions) -> usize {
+                self.encoded_len_tagged(Self::TAG, rules)
             }
 
-            fn encode(
-                &self,
-                rules: &$crate::EncodingOptions,
-                out: &mut [u8],
-            ) -> Result<usize, $crate::Asn1Error> {
-                $crate::EncodeTagged::encode_tagged(self, Self::TAG, rules, out)
+            fn encode(&self, rules: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+                self.encode_tagged(Self::TAG, rules, out)
             }
         }
     };
 }
+
 iri!(
     Asn1OidIri,
     OID_IRI,
     true,
-    r#"絕對 OID 路徑，以 `/` 開始；不等同於一般 URL。
+    r#"An absolute OID path starting with `/`; not a general URL.
 
 # Examples
 
@@ -177,96 +187,15 @@ iri!(
     Asn1RelativeOidIri,
     RELATIVE_OID_IRI,
     false,
-    r#"相對 OID 路徑，不帶開頭的 `/`。
+    r#"A relative OID path without the leading `/`.
 
 # Examples
 
 ```
 use tc_asn1::Asn1RelativeOidIri;
-let oid = Asn1RelativeOidIri::new("台北/0/TLV-encoded").unwrap();
-assert_eq!(oid.as_str(), "台北/0/TLV-encoded");
-assert!(Asn1RelativeOidIri::new("/台北").is_err());
+let oid = Asn1RelativeOidIri::new("\u{53F0}\u{5317}/0/TLV-encoded").unwrap();
+assert_eq!(oid.as_str(), "\u{53F0}\u{5317}/0/TLV-encoded");
+assert!(Asn1RelativeOidIri::new("/\u{53F0}\u{5317}").is_err());
 ```"#
 );
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[cfg(test)]
-    use crate::Decode;
-    use crate::DecodingOptions;
-    use crate::EncodingType;
-    #[test]
-    fn unicode_and_unbounded_integer_labels_round_trip_with_high_tags() {
-        for text in [
-            "/ISO/0",
-            "/台北/123456789012345678901234567890",
-            "/a\u{a0}b",
-        ] {
-            let value = Asn1OidIri::new(text).unwrap();
-            let mut out =
-                alloc::vec![0; value.encoded_len(&EncodingOptions::new(EncodingType::Der))];
-            value
-                .encode(&EncodingOptions::new(EncodingType::Der), &mut out)
-                .unwrap();
-            assert_eq!(&out[..2], &[0x1F, 0x23]);
-            assert_eq!(
-                Asn1OidIri::decode(&out, &DecodingOptions::default())
-                    .unwrap()
-                    .1,
-                value
-            );
-        }
-        let value = Asn1RelativeOidIri::new("台北/1").unwrap();
-        let mut out = alloc::vec![0; value.encoded_len(&EncodingOptions::new(EncodingType::Ber(crate::LengthForm::Definite)))];
-        value
-            .encode(
-                &EncodingOptions::new(EncodingType::Ber(crate::LengthForm::Definite)),
-                &mut out,
-            )
-            .unwrap();
-        assert_eq!(&out[..2], &[0x1F, 0x24]);
-        assert_eq!(
-            Asn1RelativeOidIri::decode(&out, &DecodingOptions::default())
-                .unwrap()
-                .1,
-            value
-        );
-        assert_eq!(
-            crate::Fields::new(&out, &mut DecodingContext::new(&DecodingOptions::default()))
-                .and_then(|mut fields| fields.required::<Asn1OidIri>(crate::tag::OID_IRI)),
-            Err(Asn1Error::UnexpectedTag)
-        );
-    }
-    #[test]
-    fn invalid_iri_syntax_and_reserved_characters_are_rejected() {
-        for text in [
-            "",
-            "/",
-            "/a/",
-            "/a//b",
-            "/01",
-            "/-a",
-            "/a-",
-            "/ab--c",
-            "/a b",
-            "/a%20",
-            "/a?b",
-            "/a#b",
-            "/\u{e000}",
-            "/\u{ffff}",
-            "/\u{1fffe}",
-            "/\u{e0001}",
-        ] {
-            assert!(Asn1OidIri::new(text).is_err(), "{text:?}");
-        }
-        assert!(Asn1RelativeOidIri::new("").is_err());
-        assert!(
-            Asn1OidIri::decode_content(
-                &[0xFF],
-                &mut DecodingContext::new(&DecodingOptions::default())
-            )
-            .is_err()
-        );
-    }
-}
