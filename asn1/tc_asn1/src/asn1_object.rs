@@ -4,6 +4,8 @@ use crate::{
 };
 use crate::universal::*;
 
+mod dump;
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Asn1Object {
     Boolean(Asn1Boolean),

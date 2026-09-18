@@ -26,7 +26,7 @@ pub use decoding_options::DecodingOptions;
 pub use encoding_options::EncodingOptions;
 pub use encoding_type::{EncodingType, LengthForm};
 pub use error::Asn1Error;
-//pub use schema::{Explicit, Fields, Implicit, SequenceFields};
+
 pub use traits::{
     Decode, DecodeConstructed, DecodeContent, DecodeInner, Encode, EncodeContent, EncodeTagged,
 };
@@ -34,38 +34,28 @@ pub use universal::tag;
 pub use universal::{
     Arcs,
     Asn1BitString,
-    //Asn1BitStringConstructed,
     Asn1BmpString,
     Asn1Boolean,
-    //Asn1CharacterString,
     Asn1Date,
     Asn1DateTime,
     Asn1Duration,
-    //     Asn1EmbeddedPdv,
     Asn1Enumerated,
-    //     Asn1External,
     Asn1GeneralizedTime,
     Asn1Ia5String,
-    //Asn1Ia5StringConstructed,
     Asn1Integer,
     Asn1Null,
     Asn1NumericString,
-    //Asn1NumericStringConstructed,
     Asn1OctetString,
-    //Asn1OctetStringConstructed,
     Asn1Oid,
     Asn1OidIri,
     Asn1PrintableString,
-    //Asn1PrintableStringConstructed,
     Asn1Real,
     Asn1RelativeOid,
     Asn1RelativeOidIri,
-    //Asn1SequenceOf, Asn1SetOf,
     Asn1Time,
     Asn1TimeOfDay,
     Asn1UniversalString,
     Asn1UtcTime,
     Asn1Utf8String,
     Asn1VisibleString,
-    //     ExternalEncoding, PdvIdentification,
 };
