@@ -4,7 +4,7 @@ extern crate alloc;
 
 mod asn1_any;
 mod asn1_constructed;
-// mod asn1_object;
+mod asn1_object;
 mod asn1_ref;
 mod decoding;
 mod decoding_context;
@@ -19,7 +19,7 @@ mod universal;
 
 pub use asn1_any::Asn1Any;
 pub use asn1_constructed::Asn1Constructed;
-// pub use asn1_object::{Asn1Object, Asn1Tagged, TaggedContent};
+pub use asn1_object::Asn1Object;
 pub use asn1_ref::{Asn1Class, Asn1Ref, Children};
 pub use decoding_context::DecodingContext;
 pub use decoding_options::DecodingOptions;
