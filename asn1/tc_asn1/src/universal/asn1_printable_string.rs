@@ -39,6 +39,12 @@ impl Asn1PrintableString {
     }
 }
 
+impl core::fmt::Display for Asn1PrintableString {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.write_str(&self.text)
+    }
+}
+
 impl DecodeInner for Asn1PrintableString {
     fn decode_inner(
         buff: &[u8],

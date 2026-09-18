@@ -30,6 +30,12 @@ impl Asn1Ia5String {
     }
 }
 
+impl core::fmt::Display for Asn1Ia5String {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.write_str(&self.text)
+    }
+}
+
 impl DecodeInner for Asn1Ia5String {
     fn decode_inner(
         buff: &[u8],

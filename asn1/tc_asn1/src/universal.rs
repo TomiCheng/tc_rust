@@ -26,7 +26,7 @@ mod asn1_relative_oid;
 // mod asn1_time;
 // mod asn1_universal_string;
 // mod asn1_utc_time;
-// mod asn1_utf8_string;
+mod asn1_utf8_string;
 mod asn1_visible_string;
 // mod date_time;
 mod integer_octets;
@@ -64,7 +64,7 @@ pub use asn1_relative_oid::Asn1RelativeOid;
 // pub use asn1_time::{Asn1Date, Asn1DateTime, Asn1Duration, Asn1Time, Asn1TimeOfDay};
 // pub use asn1_universal_string::Asn1UniversalString;
 // pub use asn1_utc_time::Asn1UtcTime;
-// pub use asn1_utf8_string::Asn1Utf8String;
+pub use asn1_utf8_string::Asn1Utf8String;
 pub use asn1_visible_string::Asn1VisibleString;
 // pub use opaque::{
 //     Asn1GeneralString, Asn1GraphicString, Asn1ObjectDescriptor, Asn1TeletexString,

@@ -36,6 +36,12 @@ impl Asn1VisibleString {
     }
 }
 
+impl core::fmt::Display for Asn1VisibleString {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.write_str(&self.text)
+    }
+}
+
 impl DecodeInner for Asn1VisibleString {
     fn decode_inner(
         buff: &[u8],

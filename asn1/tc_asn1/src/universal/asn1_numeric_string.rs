@@ -36,6 +36,12 @@ impl Asn1NumericString {
     }
 }
 
+impl core::fmt::Display for Asn1NumericString {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.write_str(&self.text)
+    }
+}
+
 impl DecodeInner for Asn1NumericString {
     fn decode_inner(
         buff: &[u8],
