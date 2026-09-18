@@ -14,7 +14,7 @@ use super::{
 };
 use crate::{
     Asn1Error, Decode, DecodeContent, DecodeInner, DecodingContext, Encode, EncodeContent,
-    EncodeTagged, EncodingOptions,
+    EncodeTagged, EncodingOptions, Tagged,
 };
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
@@ -359,6 +359,9 @@ impl DecodeInner for Asn1Real {
 }
 
 impl Decode for Asn1Real {}
+impl Tagged for Asn1Real {
+    const TAG: &'static [u8] = Self::TAG;
+}
 
 impl DecodeContent for Asn1Real {
     /// Accepts every BER form of REAL and normalizes it, keeping the original

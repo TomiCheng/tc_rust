@@ -2,7 +2,7 @@ use alloc::vec::Vec;
 
 use super::integer_octets::{minimal_signed, validate_integer_octets};
 use crate::{
-    Asn1Error, Decode, DecodeContent, DecodeInner, DecodingContext, Encode, EncodingOptions,
+    Asn1Error, Decode, DecodeContent, DecodeInner, DecodingContext, Encode, EncodingOptions, Tagged,
 };
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
@@ -143,10 +143,9 @@ impl DecodeInner for Asn1Integer {
     }
 }
 
-impl Decode for Asn1Integer {
-    fn decode(buff: &[u8], options: &crate::DecodingOptions) -> Result<(usize, Self), Asn1Error> {
-        Self::decode_inner(buff, &mut DecodingContext::new(options.clone()))
-    }
+impl Decode for Asn1Integer {}
+impl Tagged for Asn1Integer {
+    const TAG: &'static [u8] = Self::TAG;
 }
 
 impl DecodeContent for Asn1Integer {

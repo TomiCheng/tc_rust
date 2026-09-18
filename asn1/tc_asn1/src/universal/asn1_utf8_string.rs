@@ -4,7 +4,7 @@ use super::cer_common::too_long_for_cer;
 use crate::traits::encode::default_encode;
 use crate::{
     Asn1Error, Decode, DecodeContent, DecodeInner, DecodingContext, Encode, EncodeContent,
-    EncodeTagged, EncodingOptions,
+    EncodeTagged, EncodingOptions, Tagged,
 };
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -54,6 +54,9 @@ impl DecodeInner for Asn1Utf8String {
 }
 
 impl Decode for Asn1Utf8String {}
+impl Tagged for Asn1Utf8String {
+    const TAG: &'static [u8] = Self::TAG;
+}
 
 impl DecodeContent for Asn1Utf8String {
     fn decode_content(value: &[u8], context: &mut DecodingContext) -> Result<Self, Asn1Error> {

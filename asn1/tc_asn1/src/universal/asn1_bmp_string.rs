@@ -6,7 +6,7 @@ use super::cer_common::too_long_for_cer;
 use crate::traits::encode::default_encode;
 use crate::{
     Asn1Error, Decode, DecodeContent, DecodeInner, DecodingContext, Encode, EncodeContent,
-    EncodeTagged, EncodingOptions,
+    EncodeTagged, EncodingOptions, Tagged,
 };
 
 /// Holds BMP characters as a Rust string; on the wire each character is two
@@ -64,6 +64,9 @@ impl DecodeInner for Asn1BmpString {
 }
 
 impl Decode for Asn1BmpString {}
+impl Tagged for Asn1BmpString {
+    const TAG: &'static [u8] = Self::TAG;
+}
 
 impl DecodeContent for Asn1BmpString {
     fn decode_content(value: &[u8], context: &mut DecodingContext) -> Result<Self, Asn1Error> {

@@ -12,7 +12,7 @@ use core::fmt;
 use super::date_time::{DateTime, digits, two_digits};
 use crate::{
     Asn1Error, Decode, DecodeContent, DecodeInner, DecodingContext, Encode, EncodeContent,
-    EncodeTagged, EncodingOptions,
+    EncodeTagged, EncodingOptions, Tagged,
 };
 
 /// Length of the DER form `YYMMDDhhmmssZ`.
@@ -83,6 +83,9 @@ impl DecodeInner for Asn1UtcTime {
 }
 
 impl Decode for Asn1UtcTime {}
+impl Tagged for Asn1UtcTime {
+    const TAG: &'static [u8] = Self::TAG;
+}
 
 impl DecodeContent for Asn1UtcTime {
     /// Accepts `YYMMDDhhmmssZ` only. Variable time: branches only on the encoding structure.

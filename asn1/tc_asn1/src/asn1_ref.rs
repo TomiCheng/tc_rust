@@ -234,6 +234,14 @@ impl<'a, 'b> Children<'a, 'b> {
         }
     }
 
+    pub fn get_any_opt<T: DecodeInner>(&mut self) -> Result<Option<T>, Asn1Error> {
+        match self.peek() {
+            Some(Ok(_)) => self.get().map(Some),
+            Some(Err(e)) => Err(e),
+            None => Ok(None),
+        }
+    }
+
     pub fn end(mut self) -> Result<(), Asn1Error> {
         match self.next() {
             None => Ok(()),

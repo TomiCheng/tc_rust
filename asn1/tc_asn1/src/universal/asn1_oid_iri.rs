@@ -12,7 +12,7 @@ use core::fmt;
 use super::tag;
 use crate::{
     Asn1Error, Decode, DecodeContent, DecodeInner, DecodingContext, Encode, EncodeContent,
-    EncodeTagged, EncodingOptions,
+    EncodeTagged, EncodingOptions, Tagged,
 };
 
 /// X.660 §7.5: non-empty; an integer label has no leading zero; a non-integer
@@ -97,6 +97,9 @@ macro_rules! iri {
         }
 
         impl Decode for $name {}
+        impl Tagged for $name {
+            const TAG: &'static [u8] = Self::TAG;
+        }
 
         impl DecodeContent for $name {
             /// Validates UTF-8, the path and the labels. Variable time: branches on the contents.

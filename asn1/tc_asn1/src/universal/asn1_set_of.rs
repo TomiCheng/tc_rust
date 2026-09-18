@@ -6,7 +6,7 @@ use super::cer_common::constructed_tag;
 use crate::traits::encode::{default_encode, default_encoded_len};
 use crate::{
     Asn1Constructed, Asn1Error, Decode, DecodeInner, DecodingContext, Encode, EncodeContent,
-    EncodeTagged, EncodingOptions,
+    EncodeTagged, EncodingOptions, Tagged,
 };
 
 /// A homogeneous SET OF. Construction and decoding keep the given order; CER
@@ -49,6 +49,9 @@ impl<T: DecodeInner> DecodeInner for Asn1SetOf<T> {
 }
 
 impl<T: DecodeInner> Decode for Asn1SetOf<T> {}
+impl<T> Tagged for Asn1SetOf<T> {
+    const TAG: &'static [u8] = Self::TAG;
+}
 
 impl<T: Encode> EncodeContent for Asn1SetOf<T> {
     /// Sorting does not change the length. Variable time: branches only on the structure.

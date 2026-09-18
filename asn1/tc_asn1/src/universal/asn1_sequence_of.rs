@@ -6,7 +6,7 @@ use super::cer_common::constructed_tag;
 use crate::traits::encode::{default_encode, default_encoded_len};
 use crate::{
     Asn1Constructed, Asn1Error, Decode, DecodeInner, DecodingContext, Encode, EncodeContent,
-    EncodeTagged, EncodingOptions,
+    EncodeTagged, EncodingOptions, Tagged,
 };
 
 /// A homogeneous SEQUENCE OF. Order is significant, so every rule set writes
@@ -48,6 +48,9 @@ impl<T: DecodeInner> DecodeInner for Asn1SequenceOf<T> {
 }
 
 impl<T: DecodeInner> Decode for Asn1SequenceOf<T> {}
+impl<T> Tagged for Asn1SequenceOf<T> {
+    const TAG: &'static [u8] = Self::TAG;
+}
 
 impl<T: Encode> EncodeContent for Asn1SequenceOf<T> {
     fn content_len(&self, rules: &EncodingOptions) -> usize {

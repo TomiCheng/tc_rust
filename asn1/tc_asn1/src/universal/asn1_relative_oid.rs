@@ -4,7 +4,7 @@ use core::{fmt, str::FromStr};
 use super::base128::{push_base128, validate_base128};
 use crate::{
     Asn1Error, Decode, DecodeContent, DecodeInner, DecodingContext, Encode, EncodeContent,
-    EncodeTagged, EncodingOptions,
+    EncodeTagged, EncodingOptions, Tagged,
 };
 
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -88,6 +88,9 @@ impl DecodeInner for Asn1RelativeOid {
     }
 }
 impl Decode for Asn1RelativeOid {}
+impl Tagged for Asn1RelativeOid {
+    const TAG: &'static [u8] = Self::TAG;
+}
 
 impl DecodeContent for Asn1RelativeOid {
     fn decode_content(value: &[u8], context: &mut DecodingContext) -> Result<Self, Asn1Error> {

@@ -1,7 +1,7 @@
 use core::fmt::{Display, Formatter};
 
 use crate::{
-    Asn1Error, Decode, DecodeContent, DecodeInner, DecodingContext, Encode, EncodingOptions,
+    Asn1Error, Decode, DecodeContent, DecodeInner, DecodingContext, Encode, EncodingOptions, Tagged,
 };
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Hash)]
@@ -31,6 +31,9 @@ impl DecodeInner for Asn1Null {
     }
 }
 impl Decode for Asn1Null {}
+impl Tagged for Asn1Null {
+    const TAG: &'static [u8] = Self::TAG;
+}
 
 impl DecodeContent for Asn1Null {
     fn decode_content(value: &[u8], context: &mut DecodingContext) -> Result<Self, Asn1Error> {

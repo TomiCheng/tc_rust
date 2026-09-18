@@ -3,7 +3,7 @@ use alloc::vec::Vec;
 use super::integer_octets::{minimal_signed, validate_integer_octets};
 use crate::{
     Asn1Error, Decode, DecodeContent, DecodeInner, DecodingContext, Encode, EncodeContent,
-    EncodeTagged, EncodingOptions,
+    EncodeTagged, EncodingOptions, Tagged,
 };
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
@@ -97,6 +97,9 @@ impl DecodeInner for Asn1Enumerated {
 }
 
 impl Decode for Asn1Enumerated {}
+impl Tagged for Asn1Enumerated {
+    const TAG: &'static [u8] = Self::TAG;
+}
 
 impl DecodeContent for Asn1Enumerated {
     /// 驗證內容非空且沒有多餘符號位元組，與 INTEGER 共用規則。

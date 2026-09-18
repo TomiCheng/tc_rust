@@ -6,7 +6,7 @@ use super::cer_common::too_long_for_cer;
 use crate::traits::encode::default_encode;
 use crate::{
     Asn1Error, Decode, DecodeContent, DecodeInner, DecodingContext, Encode, EncodeContent,
-    EncodeTagged, EncodingOptions,
+    EncodeTagged, EncodingOptions, Tagged,
 };
 
 /// ISO 646 printable characters `0x20`-`0x7E`; no control characters.
@@ -58,6 +58,9 @@ impl DecodeInner for Asn1VisibleString {
 }
 
 impl Decode for Asn1VisibleString {}
+impl Tagged for Asn1VisibleString {
+    const TAG: &'static [u8] = Self::TAG;
+}
 
 impl DecodeContent for Asn1VisibleString {
     fn decode_content(value: &[u8], context: &mut DecodingContext) -> Result<Self, Asn1Error> {

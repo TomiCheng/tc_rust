@@ -1,6 +1,6 @@
 use tc_asn1::{
     Asn1Boolean, Asn1Error, Asn1OctetString, Asn1Oid, Asn1Ref, Decode, DecodeInner,
-    DecodingContext, Encode, EncodeContent, EncodeTagged, EncodingOptions, tag,
+    DecodingContext, Encode, EncodeContent, EncodeTagged, EncodingOptions, Tagged, tag,
 };
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
@@ -71,6 +71,9 @@ impl DecodeInner for Extension {
 }
 
 impl Decode for Extension {}
+impl Tagged for Extension {
+    const TAG: &'static [u8] = tag::SEQUENCE;
+}
 
 impl EncodeContent for Extension {
     fn content_len(&self, rules: &EncodingOptions) -> usize {

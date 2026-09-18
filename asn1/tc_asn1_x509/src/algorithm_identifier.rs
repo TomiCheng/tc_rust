@@ -1,6 +1,6 @@
 use tc_asn1::{
     Asn1Error, Asn1Null, Asn1Object, Asn1Oid, Asn1Ref, Decode, DecodeInner, DecodingContext,
-    Encode, EncodeContent, EncodeTagged, EncodingOptions, tag,
+    Encode, EncodeContent, EncodeTagged, EncodingOptions, Tagged, tag,
 };
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
@@ -73,22 +73,12 @@ impl DecodeInner for AlgorithmIdentifier {
         buff: &[u8],
         context: &mut DecodingContext,
     ) -> Result<(usize, Self), Asn1Error> {
-        let element = Asn1Ref::parse(buff, context)?;
-        if element.tag() != tag::SEQUENCE {
-            return Err(Asn1Error::UnexpectedTag);
-        }
+        let element = Asn1Ref::parse(buff, context)?.assert_tag(tag::SEQUENCE)?;
         let mut children = element.children(context)?;
-        let algorithm = children
-            .next()
-            .ok_or(Asn1Error::Truncated)??
-            .decode_as::<Asn1Oid>(children.context())?;
-        let parameters = match children.next() {
-            Some(child) => Some(child?.decode_as::<Asn1Object>(children.context())?),
-            None => None,
-        };
-        if children.next().is_some() {
-            return Err(Asn1Error::TrailingData);
-        }
+        let algorithm: Asn1Oid = children.get()?;
+        let parameters = children.get_any_opt()?;
+        children.end()?;
+
         Ok((
             element.total_len(),
             Self {
@@ -100,3 +90,6 @@ impl DecodeInner for AlgorithmIdentifier {
 }
 
 impl Decode for AlgorithmIdentifier {}
+impl Tagged for AlgorithmIdentifier {
+    const TAG: &'static [u8] = tag::SEQUENCE;
+}

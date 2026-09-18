@@ -15,7 +15,7 @@ use core::fmt;
 use super::{tag, time_value};
 use crate::{
     Asn1Error, Decode, DecodeContent, DecodeInner, DecodingContext, Encode, EncodeContent,
-    EncodeTagged, EncodingOptions,
+    EncodeTagged, EncodingOptions, Tagged,
 };
 
 #[derive(Clone, Copy)]
@@ -131,6 +131,9 @@ macro_rules! time_type {
         }
 
         impl Decode for $name {}
+        impl Tagged for $name {
+            const TAG: &'static [u8] = Self::TAG;
+        }
 
         impl DecodeContent for $name {
             /// Restores the notation from the wire contents, then validates and

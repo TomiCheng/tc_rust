@@ -10,7 +10,7 @@ use core::fmt;
 use super::date_time::{DateTime, digits, two_digits};
 use crate::{
     Asn1Error, Decode, DecodeContent, DecodeInner, DecodingContext, Encode, EncodeContent,
-    EncodeTagged, EncodingOptions,
+    EncodeTagged, EncodingOptions, Tagged,
 };
 
 /// Length of `YYYYMMDDhhmmssZ`.
@@ -79,6 +79,9 @@ impl DecodeInner for Asn1GeneralizedTime {
 }
 
 impl Decode for Asn1GeneralizedTime {}
+impl Tagged for Asn1GeneralizedTime {
+    const TAG: &'static [u8] = Self::TAG;
+}
 
 impl DecodeContent for Asn1GeneralizedTime {
     /// Accepts `YYYYMMDDhhmmssZ` only. Variable time: branches only on the encoding structure.

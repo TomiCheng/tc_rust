@@ -6,7 +6,7 @@ use super::cer_common::too_long_for_cer;
 use crate::traits::encode::default_encode;
 use crate::{
     Asn1Error, Decode, DecodeContent, DecodeInner, DecodingContext, Encode, EncodeContent,
-    EncodeTagged, EncodingOptions,
+    EncodeTagged, EncodingOptions, Tagged,
 };
 
 fn is_printable(byte: u8) -> bool {
@@ -61,6 +61,9 @@ impl DecodeInner for Asn1PrintableString {
 }
 
 impl Decode for Asn1PrintableString {}
+impl Tagged for Asn1PrintableString {
+    const TAG: &'static [u8] = Self::TAG;
+}
 
 impl DecodeContent for Asn1PrintableString {
     fn decode_content(value: &[u8], context: &mut DecodingContext) -> Result<Self, Asn1Error> {

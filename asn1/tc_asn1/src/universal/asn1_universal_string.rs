@@ -6,7 +6,7 @@ use super::cer_common::too_long_for_cer;
 use crate::traits::encode::default_encode;
 use crate::{
     Asn1Error, Decode, DecodeContent, DecodeInner, DecodingContext, Encode, EncodeContent,
-    EncodeTagged, EncodingOptions,
+    EncodeTagged, EncodingOptions, Tagged,
 };
 
 /// Holds Unicode scalar values as a Rust string; on the wire each is four
@@ -65,6 +65,9 @@ impl DecodeInner for Asn1UniversalString {
 }
 
 impl Decode for Asn1UniversalString {}
+impl Tagged for Asn1UniversalString {
+    const TAG: &'static [u8] = Self::TAG;
+}
 
 impl DecodeContent for Asn1UniversalString {
     fn decode_content(value: &[u8], context: &mut DecodingContext) -> Result<Self, Asn1Error> {
