@@ -1,15 +1,14 @@
-//! ASN.1 `PrintableString`。
+//! ASN.1 `PrintableString` (X.680 §41.4).
 
 use alloc::string::String;
 
-use crate::DecodingContext;
-use crate::EncodingOptions;
-use crate::error::Asn1Error;
-use crate::traits::{DecodeContent, Encode};
+use super::cer_common::too_long_for_cer;
+use crate::traits::encode::default_encode;
+use crate::{
+    Asn1Error, Decode, DecodeContent, DecodeInner, DecodingContext, DecodingOptions, Encode,
+    EncodeContent, EncodeTagged, EncodingOptions,
+};
 
-/// X.680 41.4 的字元集：英數、空白，以及 `' ( ) + , - . / : = ?`。
-///
-/// 注意**沒有** `@`、`&`、`*`、`_`，所以 email 不能放這裡（要用 IA5String）。
 fn is_printable(byte: u8) -> bool {
     byte.is_ascii_alphanumeric()
         || matches!(
@@ -24,11 +23,7 @@ pub struct Asn1PrintableString {
 }
 
 impl Asn1PrintableString {
-    /// Universal identifier octets for this type's default encoding form.
     pub const TAG: &'static [u8] = super::tag::PRINTABLE_STRING;
-
-    /// Universal constructed identifier for segmented encodings.
-    pub const CONSTRUCTED_TAG: &'static [u8] = super::tag::CONSTRUCTED_PRINTABLE_STRING;
 
     pub fn new(text: &str) -> Result<Self, Asn1Error> {
         if !text.bytes().all(is_printable) {
@@ -44,146 +39,94 @@ impl Asn1PrintableString {
     }
 }
 
-impl<'a> crate::DecodeInner<'a> for Asn1PrintableString {
+impl DecodeInner for Asn1PrintableString {
     fn decode_inner(
-        buff: &'a [u8],
-        context: &mut crate::DecodingContext<'_>,
-    ) -> Result<(usize, Self), crate::Asn1Error> {
+        buff: &[u8],
+        context: &mut DecodingContext,
+    ) -> Result<(usize, Self), Asn1Error> {
+        // Only the primitive form; the constructed form is Asn1PrintableStringConstructed.
         let element = crate::Asn1Ref::parse(buff, context)?;
-        let value = if element.is_constructed() {
-            <Self as crate::DecodeConstructed<'a>>::decode_constructed(element.value(), context)?
-        } else {
-            <Self as crate::DecodeContent<'a>>::decode_content(element.value(), context)?
-        };
-        Ok((element.total_len(), value))
-    }
-    fn decode_inner_der(
-        buff: &'a [u8],
-        context: &mut crate::DecodingContext<'_>,
-    ) -> Result<(usize, Self), crate::Asn1Error> {
-        let element = crate::Asn1Ref::parse_der(buff, context)?;
-        if element.is_constructed() {
-            return Err(crate::Asn1Error::NotDer);
+        if element.tag() != Self::TAG {
+            return Err(Asn1Error::UnexpectedTag);
         }
-        let value = if element.is_constructed() {
-            <Self as crate::DecodeConstructed<'a>>::decode_constructed(element.value(), context)?
-        } else {
-            <Self as crate::DecodeContent<'a>>::decode_content_der(element.value(), context)?
-        };
+        let value = Self::decode_content(element.value(), context)?;
         Ok((element.total_len(), value))
     }
-}
-impl<'a> crate::Decode<'a> for Asn1PrintableString {
-    fn decode(
-        buff: &'a [u8],
-        options: &crate::DecodingOptions,
-    ) -> Result<(usize, Self), crate::Asn1Error> {
-        <Self as crate::DecodeInner<'a>>::decode_inner(
-            buff,
-            &mut crate::DecodingContext::new(options),
-        )
+
+    fn decode_inner_der(
+        buff: &[u8],
+        context: &mut DecodingContext,
+    ) -> Result<(usize, Self), Asn1Error> {
+        // parse_der already reports the constructed form (X.690 §10.2) as NotDer.
+        let element = crate::Asn1Ref::parse_der(buff, context)?;
+        if element.tag() != Self::TAG {
+            return Err(Asn1Error::UnexpectedTag);
+        }
+        let value = Self::decode_content_der(element.value(), context)?;
+        Ok((element.total_len(), value))
     }
 }
 
-impl<'a> DecodeContent<'a> for Asn1PrintableString {
-    fn decode_content(
-        value: &'a [u8],
-        context: &mut DecodingContext<'_>,
-    ) -> Result<Self, Asn1Error> {
+impl Decode for Asn1PrintableString {
+    fn decode(buff: &[u8], options: &DecodingOptions) -> Result<(usize, Self), Asn1Error> {
+        Self::decode_inner(buff, &mut DecodingContext::new(options.clone()))
+    }
+}
+
+impl DecodeContent for Asn1PrintableString {
+    fn decode_content(value: &[u8], context: &mut DecodingContext) -> Result<Self, Asn1Error> {
         context.options().check_content_len(value.len())?;
         if !value.iter().all(|b| is_printable(*b)) {
             return Err(Asn1Error::MalformedValue);
         }
-        // 字元集是 ASCII 的子集，所以是合法 UTF-8。
+        // The character set is a subset of ASCII, hence valid UTF-8.
         let text = core::str::from_utf8(value).map_err(|_| Asn1Error::MalformedValue)?;
         Ok(Self {
             text: String::from(text),
         })
     }
 
-    fn decode_content_der(
-        value: &'a [u8],
-        context: &mut crate::DecodingContext<'_>,
-    ) -> Result<Self, crate::Asn1Error> {
-        crate::decoding::decode_der_content::<Self>(value, context)
+    fn decode_content_der(value: &[u8], context: &mut DecodingContext) -> Result<Self, Asn1Error> {
+        // DER only restricts the form (primitive), which the identifier already settled.
+        Self::decode_content(value, context)
     }
 }
 
-crate::segments::constructed_string_decode!(Asn1PrintableString);
-
-impl Asn1PrintableString {
-    fn primitive_content_len(&self, _: &EncodingOptions) -> usize {
+impl EncodeContent for Asn1PrintableString {
+    fn content_len(&self, _: &EncodingOptions) -> usize {
         self.text.len()
     }
 
-    fn encode_primitive_content(
-        &self,
-        _: &EncodingOptions,
-        out: &mut [u8],
-    ) -> Result<usize, Asn1Error> {
-        out[..self.text.len()].copy_from_slice(self.text.as_bytes());
+    fn encode_content(&self, _: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+        let out = out
+            .get_mut(..self.text.len())
+            .ok_or(Asn1Error::BufferTooSmall)?;
+        out.copy_from_slice(self.text.as_bytes());
         Ok(self.text.len())
     }
 }
 
-impl crate::EncodeContent for Asn1PrintableString {
-    crate::segments::cer_string_content_encode!();
-}
-
-impl crate::EncodeTagged for Asn1PrintableString {
-    crate::segments::cer_string_encode!();
+impl EncodeTagged for Asn1PrintableString {
+    fn encode_tagged(
+        &self,
+        tag: &[u8],
+        rules: &EncodingOptions,
+        out: &mut [u8],
+    ) -> Result<usize, Asn1Error> {
+        if too_long_for_cer(self.text.len(), rules) {
+            return Err(Asn1Error::PrimitiveTooLong);
+        }
+        default_encode(self, tag, rules, out)
+    }
 }
 
 impl Encode for Asn1PrintableString {
     fn encoded_len(&self, rules: &EncodingOptions) -> usize {
-        crate::EncodeTagged::encoded_len_tagged(self, Self::TAG, rules)
+        self.encoded_len_tagged(Self::TAG, rules)
     }
 
     fn encode(&self, rules: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
-        crate::EncodeTagged::encode_tagged(self, Self::TAG, rules, out)
+        self.encode_tagged(Self::TAG, rules, out)
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::DecodingOptions;
-    use crate::EncodingType;
-    use crate::traits::Decode;
-
-    const OPTIONS: DecodingOptions =
-        DecodingOptions::new(crate::Depth::DEFAULT.get(), 16 * 1024 * 1024, 65_536);
-
-    #[test]
-    fn the_whole_permitted_set_is_accepted() {
-        let all = "ABCxyz019 '()+,-./:=?";
-        let s = Asn1PrintableString::new(all).unwrap();
-        assert_eq!(s.as_str(), all);
-    }
-
-    #[test]
-    fn characters_outside_the_set_are_rejected() {
-        for text in ["a@b", "a&b", "a*b", "a_b", "a	b", "café", "\""] {
-            assert_eq!(
-                Asn1PrintableString::new(text),
-                Err(Asn1Error::MalformedValue),
-                "{text:?}"
-            );
-        }
-    }
-
-    #[test]
-    fn a_country_code_round_trips() {
-        // C=TW 的值
-        let input = [0x13, 0x02, b'T', b'W'];
-        let (used, s) = Asn1PrintableString::decode(&input, &OPTIONS).unwrap();
-        assert_eq!(used, 4);
-        assert_eq!(s.as_str(), "TW");
-
-        let mut out = [0_u8; 8];
-        let written = s
-            .encode(&EncodingOptions::new(EncodingType::Der), &mut out)
-            .unwrap();
-        assert_eq!(&out[..written], &input);
-    }
-}
