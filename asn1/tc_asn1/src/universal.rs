@@ -27,10 +27,13 @@ mod asn1_relative_oid;
 mod integer_octets;
 // mod opaque;
 // mod real_number;
+mod asn1_bit_string_constructed;
 pub mod tag;
+
 // mod time_value;
 //
 pub use asn1_bit_string::Asn1BitString;
+pub use asn1_bit_string_constructed::Asn1BitStringConstructed;
 // pub use asn1_bmp_string::Asn1BmpString;
 pub use asn1_boolean::Asn1Boolean;
 // pub use asn1_embedded_pdv::{Asn1CharacterString, Asn1EmbeddedPdv, PdvIdentification};

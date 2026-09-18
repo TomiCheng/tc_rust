@@ -1,7 +1,7 @@
 use crate::decoding_context::DepthScope;
 use crate::error::Asn1Error;
 use crate::traits::encode::len_octets;
-use crate::traits::{DecodeConstructed, DecodeInner};
+use crate::traits::DecodeInner;
 use crate::{DecodingContext, DecodingOptions};
 
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
@@ -166,19 +166,6 @@ impl<'a> Asn1Ref<'a> {
             return Err(Asn1Error::TrailingData);
         }
         Ok(value)
-    }
-
-    pub fn decode_constructed_as<T>(&self, context: &mut DecodingContext) -> Result<T, Asn1Error>
-    where
-        T: DecodeConstructed,
-    {
-        context.options().check_content_len(self.value.len())?;
-
-        if self.is_constructed() {
-            T::decode_constructed(self.value, context)
-        } else {
-            T::decode_content(self.value, context)
-        }
     }
 }
 

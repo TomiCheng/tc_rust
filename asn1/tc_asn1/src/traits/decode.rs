@@ -6,7 +6,7 @@ pub trait DecodeContent: Sized {
     fn decode_content_der(value: &[u8], context: &mut DecodingContext) -> Result<Self, Asn1Error>;
 }
 
-pub trait DecodeConstructed: DecodeContent {
+pub trait DecodeConstructed: Sized {
     fn decode_constructed(value: &[u8], context: &mut DecodingContext) -> Result<Self, Asn1Error>;
 }
 

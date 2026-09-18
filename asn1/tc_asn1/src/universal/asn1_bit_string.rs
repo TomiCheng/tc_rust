@@ -1,14 +1,11 @@
 use alloc::vec::Vec;
 
-use crate::asn1_ref::Children;
-use crate::traits::encode::{default_encode, default_encoded_len, len_octets, write_len};
+use super::asn1_bit_string_constructed::CER_SEGMENT_LEN;
+use crate::traits::encode::default_encode;
 use crate::{
-    Asn1Error, Decode, DecodeConstructed, DecodeContent, DecodeInner, DecodingContext,
-    DecodingOptions, Encode, EncodeContent, EncodeTagged, EncodingOptions, EncodingType,
+    Asn1Error, Decode, DecodeContent, DecodeInner, DecodingContext, DecodingOptions, Encode,
+    EncodeContent, EncodeTagged, EncodingOptions, EncodingType,
 };
-
-/// CER segments hold 1000 content octets; one of them is the unused-bit count.
-const CER_SEGMENT_DATA: usize = 999;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Asn1BitString {
@@ -18,8 +15,6 @@ pub struct Asn1BitString {
 
 impl Asn1BitString {
     pub const TAG: &'static [u8] = super::tag::BIT_STRING;
-
-    pub const CONSTRUCTED_TAG: &'static [u8] = super::tag::CONSTRUCTED_BIT_STRING;
 
     pub fn from_bytes(bytes: &[u8]) -> Self {
         Self {
@@ -53,34 +48,9 @@ impl Asn1BitString {
         index < self.bit_len() && self.bytes[index / 8] & (0x80 >> (index % 8)) != 0
     }
 
-    fn cer_segmented(&self, rules: &EncodingOptions) -> bool {
-        rules.encoding_type() == EncodingType::Cer && self.bytes.len() >= 1000
-    }
-
-    fn segments_len(&self) -> usize {
-        self.bytes
-            .chunks(CER_SEGMENT_DATA)
-            .map(|part| 1 + len_octets(part.len() + 1) + 1 + part.len())
-            .sum()
-    }
-
-    fn write_segments(&self, out: &mut [u8]) -> usize {
-        let mut at = 0;
-        let count = self.bytes.len().div_ceil(CER_SEGMENT_DATA);
-        for (index, part) in self.bytes.chunks(CER_SEGMENT_DATA).enumerate() {
-            out[at] = Self::TAG[0];
-            at += 1;
-            at += write_len(part.len() + 1, &mut out[at..]);
-            out[at] = if index + 1 == count {
-                self.unused_bits
-            } else {
-                0
-            };
-            at += 1;
-            out[at..at + part.len()].copy_from_slice(part);
-            at += part.len();
-        }
-        at
+    /// CER only allows the primitive form up to 1000 contents octets (X.690 §9.2).
+    fn too_long_for_cer(&self, rules: &EncodingOptions) -> bool {
+        rules.encoding_type() == EncodingType::Cer && 1 + self.bytes.len() > CER_SEGMENT_LEN
     }
 }
 
@@ -95,14 +65,12 @@ impl DecodeInner for Asn1BitString {
         buff: &[u8],
         context: &mut DecodingContext,
     ) -> Result<(usize, Self), Asn1Error> {
+        // Only the primitive form; the constructed form is Asn1BitStringConstructed.
         let element = crate::Asn1Ref::parse(buff, context)?;
-        let value = if element.tag() == Self::TAG {
-            Self::decode_content(element.value(), context)?
-        } else if element.tag() == Self::CONSTRUCTED_TAG {
-            Self::decode_constructed(element.value(), context)?
-        } else {
+        if element.tag() != Self::TAG {
             return Err(Asn1Error::UnexpectedTag);
-        };
+        }
+        let value = Self::decode_content(element.value(), context)?;
         Ok((element.total_len(), value))
     }
 
@@ -150,78 +118,33 @@ impl DecodeContent for Asn1BitString {
     }
 }
 
-impl DecodeConstructed for Asn1BitString {
-    fn decode_constructed(value: &[u8], context: &mut DecodingContext) -> Result<Self, Asn1Error> {
-        context.options().check_content_len(value.len())?;
-        let mut children = Children::new(value, context.enter()?);
-        let mut bytes = Vec::new();
-        let mut unused_bits = 0;
-        while let Some(child) = children.next() {
-            if unused_bits != 0 {
-                return Err(Asn1Error::MalformedValue);
-            }
-            let child = child?;
-            let part = if child.tag() == Self::TAG {
-                Self::decode_content(child.value(), children.context())?
-            } else if child.tag() == Self::CONSTRUCTED_TAG {
-                Self::decode_constructed(child.value(), children.context())?
-            } else {
-                return Err(Asn1Error::UnexpectedTag);
-            };
-            unused_bits = part.unused_bits;
-            bytes.extend_from_slice(&part.bytes);
-        }
-        Ok(Self { bytes, unused_bits })
-    }
-}
-
 impl EncodeContent for Asn1BitString {
-    fn content_len(&self, rules: &EncodingOptions) -> usize {
-        if self.cer_segmented(rules) {
-            self.segments_len()
-        } else {
-            1 + self.bytes.len()
-        }
+    /// The primitive contents: unused-bit count followed by the data.
+    fn content_len(&self, _: &EncodingOptions) -> usize {
+        1 + self.bytes.len()
     }
 
-    fn encode_content(&self, rules: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
-        let total = self.content_len(rules);
-        let out = out.get_mut(..total).ok_or(Asn1Error::BufferTooSmall)?;
-        if self.cer_segmented(rules) {
-            return Ok(self.write_segments(out));
-        }
+    fn encode_content(&self, _: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+        let out = out
+            .get_mut(..1 + self.bytes.len())
+            .ok_or(Asn1Error::BufferTooSmall)?;
         out[0] = self.unused_bits;
         out[1..].copy_from_slice(&self.bytes);
-        Ok(total)
+        Ok(out.len())
     }
 }
 
 impl EncodeTagged for Asn1BitString {
-    fn encoded_len_tagged(&self, tag: &[u8], rules: &EncodingOptions) -> usize {
-        if !self.cer_segmented(rules) {
-            return default_encoded_len(self, tag, rules);
-        }
-        tag.len() + 1 + self.segments_len() + 2
-    }
-
     fn encode_tagged(
         &self,
         tag: &[u8],
         rules: &EncodingOptions,
         out: &mut [u8],
     ) -> Result<usize, Asn1Error> {
-        if !self.cer_segmented(rules) {
-            return default_encode(self, tag, rules, out);
+        if self.too_long_for_cer(rules) {
+            return Err(Asn1Error::PrimitiveTooLong);
         }
-        let total = self.encoded_len_tagged(tag, rules);
-        let out = out.get_mut(..total).ok_or(Asn1Error::BufferTooSmall)?;
-        out[..tag.len()].copy_from_slice(tag);
-        out[0] |= 0x20;
-        out[tag.len()] = 0x80;
-        let start = tag.len() + 1;
-        let at = start + self.write_segments(&mut out[start..]);
-        out[at..].fill(0);
-        Ok(total)
+        default_encode(self, tag, rules, out)
     }
 }
 
