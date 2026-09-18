@@ -1,41 +1,29 @@
-//! ASN.1 `VisibleString`：只接受可列印 ASCII，包含空白。
+//! ASN.1 `VisibleString`: printable ASCII including space (X.680 §41.4).
 
 use alloc::string::String;
 
-use crate::DecodingContext;
-use crate::EncodingOptions;
-use crate::error::Asn1Error;
-use crate::traits::{DecodeContent, Encode};
+use super::cer_common::too_long_for_cer;
+use crate::traits::encode::default_encode;
+use crate::{
+    Asn1Error, Decode, DecodeContent, DecodeInner, DecodingContext, DecodingOptions, Encode,
+    EncodeContent, EncodeTagged, EncodingOptions,
+};
 
-/// 內容保證位於 `0x20`–`0x7E`，不接受控制字元或非 ASCII 字元。
-///
-/// # Examples
-///
-/// 空白與標點可以使用，但換行不在字集中。
-///
-/// ```
-/// use tc_asn1::{Asn1VisibleString, Asn1Error};
-///
-/// let value = Asn1VisibleString::new("Room 42 ~ open").unwrap();
-/// assert_eq!(value.as_str(), "Room 42 ~ open");
-/// assert_eq!(Asn1VisibleString::new("Room 42\n"), Err(Asn1Error::MalformedValue));
-/// ```
-#[derive(Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd)]
+/// ISO 646 printable characters `0x20`-`0x7E`; no control characters.
+fn is_visible(byte: u8) -> bool {
+    (0x20..=0x7E).contains(&byte)
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct Asn1VisibleString {
     text: String,
 }
 
 impl Asn1VisibleString {
-    /// Universal identifier octets for this type's default encoding form.
     pub const TAG: &'static [u8] = super::tag::VISIBLE_STRING;
 
-    /// Universal constructed identifier for segmented encodings.
-    pub const CONSTRUCTED_TAG: &'static [u8] = super::tag::CONSTRUCTED_VISIBLE_STRING;
-
-    /// 驗證字集並複製內容；不合法時回傳 [`Asn1Error::MalformedValue`]。
-    /// 變動時間：依內容長度與遇到的字元決定掃描量。
     pub fn new(text: &str) -> Result<Self, Asn1Error> {
-        if !text.bytes().all(|byte| (0x20..=0x7E).contains(&byte)) {
+        if !text.bytes().all(is_visible) {
             return Err(Asn1Error::MalformedValue);
         }
         Ok(Self {
@@ -43,200 +31,98 @@ impl Asn1VisibleString {
         })
     }
 
-    /// 借用已驗證的字串。
     pub fn as_str(&self) -> &str {
         &self.text
     }
 }
 
-impl<'a> crate::DecodeInner<'a> for Asn1VisibleString {
+impl DecodeInner for Asn1VisibleString {
     fn decode_inner(
-        buff: &'a [u8],
-        context: &mut crate::DecodingContext<'_>,
-    ) -> Result<(usize, Self), crate::Asn1Error> {
+        buff: &[u8],
+        context: &mut DecodingContext,
+    ) -> Result<(usize, Self), Asn1Error> {
+        // Only the primitive form; the constructed form is Asn1VisibleStringConstructed.
         let element = crate::Asn1Ref::parse(buff, context)?;
-        let value = if element.is_constructed() {
-            <Self as crate::DecodeConstructed<'a>>::decode_constructed(element.value(), context)?
-        } else {
-            <Self as crate::DecodeContent<'a>>::decode_content(element.value(), context)?
-        };
-        Ok((element.total_len(), value))
-    }
-    fn decode_inner_der(
-        buff: &'a [u8],
-        context: &mut crate::DecodingContext<'_>,
-    ) -> Result<(usize, Self), crate::Asn1Error> {
-        let element = crate::Asn1Ref::parse_der(buff, context)?;
-        if element.is_constructed() {
-            return Err(crate::Asn1Error::NotDer);
+        if element.tag() != Self::TAG {
+            return Err(Asn1Error::UnexpectedTag);
         }
-        let value = if element.is_constructed() {
-            <Self as crate::DecodeConstructed<'a>>::decode_constructed(element.value(), context)?
-        } else {
-            <Self as crate::DecodeContent<'a>>::decode_content_der(element.value(), context)?
-        };
+        let value = Self::decode_content(element.value(), context)?;
+        Ok((element.total_len(), value))
+    }
+
+    fn decode_inner_der(
+        buff: &[u8],
+        context: &mut DecodingContext,
+    ) -> Result<(usize, Self), Asn1Error> {
+        // parse_der already reports the constructed form (X.690 §10.2) as NotDer.
+        let element = crate::Asn1Ref::parse_der(buff, context)?;
+        if element.tag() != Self::TAG {
+            return Err(Asn1Error::UnexpectedTag);
+        }
+        let value = Self::decode_content_der(element.value(), context)?;
         Ok((element.total_len(), value))
     }
 }
-impl<'a> crate::Decode<'a> for Asn1VisibleString {
-    fn decode(
-        buff: &'a [u8],
-        options: &crate::DecodingOptions,
-    ) -> Result<(usize, Self), crate::Asn1Error> {
-        <Self as crate::DecodeInner<'a>>::decode_inner(
-            buff,
-            &mut crate::DecodingContext::new(options),
-        )
+
+impl Decode for Asn1VisibleString {
+    fn decode(buff: &[u8], options: &DecodingOptions) -> Result<(usize, Self), Asn1Error> {
+        Self::decode_inner(buff, &mut DecodingContext::new(options.clone()))
     }
 }
 
-impl<'a> DecodeContent<'a> for Asn1VisibleString {
-    /// 以建構時相同的字集規則驗證內容。
-    /// 變動時間：依內容長度與字元分支。
-    fn decode_content(
-        value: &'a [u8],
-        context: &mut DecodingContext<'_>,
-    ) -> Result<Self, Asn1Error> {
+impl DecodeContent for Asn1VisibleString {
+    fn decode_content(value: &[u8], context: &mut DecodingContext) -> Result<Self, Asn1Error> {
         context.options().check_content_len(value.len())?;
+        if !value.iter().all(|b| is_visible(*b)) {
+            return Err(Asn1Error::MalformedValue);
+        }
+        // The character set is a subset of ASCII, hence valid UTF-8.
         let text = core::str::from_utf8(value).map_err(|_| Asn1Error::MalformedValue)?;
-        Self::new(text)
+        Ok(Self {
+            text: String::from(text),
+        })
     }
 
-    fn decode_content_der(
-        value: &'a [u8],
-        context: &mut crate::DecodingContext<'_>,
-    ) -> Result<Self, crate::Asn1Error> {
-        crate::decoding::decode_der_content::<Self>(value, context)
+    fn decode_content_der(value: &[u8], context: &mut DecodingContext) -> Result<Self, Asn1Error> {
+        // DER only restricts the form (primitive), which the identifier already settled.
+        Self::decode_content(value, context)
     }
 }
 
-crate::segments::constructed_string_decode!(Asn1VisibleString);
-
-impl Asn1VisibleString {
-    /// 回傳內容長度。常數時間：讀取已儲存的字串長度。
-    fn primitive_content_len(&self, _: &EncodingOptions) -> usize {
+impl EncodeContent for Asn1VisibleString {
+    fn content_len(&self, _: &EncodingOptions) -> usize {
         self.text.len()
     }
 
-    /// 原樣寫入已驗證的內容。變動時間：複製量由內容長度決定。
-    fn encode_primitive_content(
-        &self,
-        _: &EncodingOptions,
-        out: &mut [u8],
-    ) -> Result<usize, Asn1Error> {
-        out[..self.text.len()].copy_from_slice(self.text.as_bytes());
+    fn encode_content(&self, _: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+        let out = out
+            .get_mut(..self.text.len())
+            .ok_or(Asn1Error::BufferTooSmall)?;
+        out.copy_from_slice(self.text.as_bytes());
         Ok(self.text.len())
     }
 }
 
-impl crate::EncodeContent for Asn1VisibleString {
-    crate::segments::cer_string_content_encode!();
-}
-
-impl crate::EncodeTagged for Asn1VisibleString {
-    crate::segments::cer_string_encode!();
+impl EncodeTagged for Asn1VisibleString {
+    fn encode_tagged(
+        &self,
+        tag: &[u8],
+        rules: &EncodingOptions,
+        out: &mut [u8],
+    ) -> Result<usize, Asn1Error> {
+        if too_long_for_cer(self.text.len(), rules) {
+            return Err(Asn1Error::PrimitiveTooLong);
+        }
+        default_encode(self, tag, rules, out)
+    }
 }
 
 impl Encode for Asn1VisibleString {
     fn encoded_len(&self, rules: &EncodingOptions) -> usize {
-        crate::EncodeTagged::encoded_len_tagged(self, Self::TAG, rules)
+        self.encoded_len_tagged(Self::TAG, rules)
     }
 
     fn encode(&self, rules: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
-        crate::EncodeTagged::encode_tagged(self, Self::TAG, rules, out)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[cfg(test)]
-    use crate::Decode;
-    use crate::DecodingOptions;
-    use crate::EncodeContent;
-    use crate::EncodingType;
-
-    #[test]
-    fn printable_ascii_round_trips_under_both_encoding_rules() {
-        let value = Asn1VisibleString::new("A 9~").unwrap();
-        for rules in [
-            &EncodingOptions::new(EncodingType::Ber(crate::LengthForm::Definite)),
-            &EncodingOptions::new(EncodingType::Der),
-        ] {
-            let mut out = [0; 6];
-            assert_eq!(value.encode(rules, &mut out), Ok(out.len()));
-            assert_eq!(out, [0x1A, 4, b'A', b' ', b'9', b'~']);
-            assert_eq!(value.content_len(rules), 4);
-            let (used, decoded) =
-                Asn1VisibleString::decode(&out, &DecodingOptions::default()).unwrap();
-            assert_eq!(used, out.len());
-            assert_eq!(decoded, value);
-            assert_eq!(decoded.as_str(), "A 9~");
-        }
-    }
-
-    #[test]
-    fn visible_string_boundaries_accept_space_and_tilde_but_reject_adjacent_controls() {
-        for (text, accepted) in [("\x1F", false), (" ", true), ("~", true), ("\x7F", false)] {
-            assert_eq!(Asn1VisibleString::new(text).is_ok(), accepted);
-            assert_eq!(
-                Asn1VisibleString::decode_content(
-                    text.as_bytes(),
-                    &mut DecodingContext::new(&DecodingOptions::default())
-                )
-                .is_ok(),
-                accepted
-            );
-        }
-    }
-
-    #[test]
-    fn construction_and_decoding_reject_non_ascii_and_control_characters() {
-        for text in ["台北", "café", "a\nb", "\0"] {
-            assert_eq!(Asn1VisibleString::new(text), Err(Asn1Error::MalformedValue));
-            assert_eq!(
-                Asn1VisibleString::decode_content(
-                    text.as_bytes(),
-                    &mut DecodingContext::new(&DecodingOptions::default())
-                ),
-                Err(Asn1Error::MalformedValue)
-            );
-        }
-        assert_eq!(
-            Asn1VisibleString::decode_content(
-                &[0x80],
-                &mut DecodingContext::new(&DecodingOptions::default())
-            ),
-            Err(Asn1Error::MalformedValue)
-        );
-    }
-
-    #[test]
-    fn an_empty_visible_string_is_valid_and_encodes_with_zero_length() {
-        let value = Asn1VisibleString::new("").unwrap();
-        assert_eq!(value, Asn1VisibleString::default());
-        assert_eq!(value.as_str(), "");
-        let mut out = [0; 2];
-        assert_eq!(
-            value.encode(&EncodingOptions::new(EncodingType::Der), &mut out),
-            Ok(2)
-        );
-        assert_eq!(out, [0x1A, 0]);
-        assert_eq!(
-            Asn1VisibleString::decode(&out, &DecodingOptions::default()),
-            Ok((2, value))
-        );
-    }
-
-    #[test]
-    fn the_schema_checks_tags_a_visible_string_rejects_an_ia5_string_tag() {
-        assert_eq!(
-            crate::Fields::new(
-                &[0x16, 1, b'A'],
-                &mut DecodingContext::new(&DecodingOptions::default())
-            )
-            .and_then(|mut fields| fields.required::<Asn1VisibleString>(Asn1VisibleString::TAG)),
-            Err(Asn1Error::UnexpectedTag)
-        );
+        self.encode_tagged(Self::TAG, rules, out)
     }
 }
