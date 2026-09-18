@@ -37,6 +37,7 @@ impl Asn1Any {
     pub fn raw(&self) -> &[u8] {
         &self.raw
     }
+
     pub fn as_ref(&self) -> Asn1Ref<'_> {
         Asn1Ref::from_validated_parts(
             &self.raw,
