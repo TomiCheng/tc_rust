@@ -1,5 +1,5 @@
 mod asn1_bit_string;
-// mod asn1_bmp_string;
+mod asn1_bmp_string;
 mod asn1_boolean;
 mod base128;
 mod cer_common;
@@ -39,7 +39,7 @@ pub mod tag;
 //
 pub use asn1_bit_string::Asn1BitString;
 //pub use asn1_bit_string_constructed::Asn1BitStringConstructed;
-// pub use asn1_bmp_string::Asn1BmpString;
+pub use asn1_bmp_string::Asn1BmpString;
 pub use asn1_boolean::Asn1Boolean;
 // pub use asn1_embedded_pdv::{Asn1CharacterString, Asn1EmbeddedPdv, PdvIdentification};
 pub use asn1_enumerated::Asn1Enumerated;

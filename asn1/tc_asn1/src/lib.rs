@@ -33,7 +33,7 @@ pub use universal::{
     Arcs,
     Asn1BitString,
     //Asn1BitStringConstructed,
-    //     Asn1BmpString,
+    Asn1BmpString,
     Asn1Boolean,
     //Asn1CharacterString, Asn1Date, Asn1DateTime,
     //     Asn1Duration, Asn1EmbeddedPdv,
