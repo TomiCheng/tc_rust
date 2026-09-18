@@ -30,7 +30,6 @@ mod asn1_utf8_string;
 mod asn1_visible_string;
 mod date_time;
 mod integer_octets;
-// mod opaque;
 mod real_number;
 //mod asn1_bit_string_constructed;
 pub mod tag;
@@ -66,9 +65,5 @@ pub use asn1_universal_string::Asn1UniversalString;
 pub use asn1_utc_time::Asn1UtcTime;
 pub use asn1_utf8_string::Asn1Utf8String;
 pub use asn1_visible_string::Asn1VisibleString;
-// pub use opaque::{
-//     Asn1GeneralString, Asn1GraphicString, Asn1ObjectDescriptor, Asn1TeletexString,
-//     Asn1VideotexString,
-// };
 //
 // pub(crate) use asn1_set_of::{copy_encodings, encode_member, tag_key};
