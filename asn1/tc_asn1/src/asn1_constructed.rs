@@ -3,8 +3,8 @@ use alloc::vec::Vec;
 use crate::traits::encode::{default_encode, default_encoded_len};
 use crate::universal::cer_common::constructed_tag;
 use crate::{
-    Asn1Error, Asn1Ref, Decode, DecodeInner, DecodingContext, DecodingOptions, Encode,
-    EncodeContent, EncodeTagged, EncodingOptions,
+    Asn1Error, Asn1Ref, Decode, DecodeInner, DecodingContext, Encode, EncodeContent, EncodeTagged,
+    EncodingOptions,
 };
 
 /// A constructed encoding: an identifier and a series of `T` values.
@@ -71,38 +71,9 @@ impl<T: DecodeInner> DecodeInner for Asn1Constructed<T> {
             },
         ))
     }
-
-    fn decode_inner_der(
-        buff: &[u8],
-        context: &mut DecodingContext,
-    ) -> Result<(usize, Self), Asn1Error> {
-        let element = Asn1Ref::parse_der(buff, context)?;
-        if !element.is_constructed() {
-            return Err(Asn1Error::UnexpectedTag);
-        }
-        let mut children = element.children(context)?;
-        let mut items = Vec::new();
-        while let Some(child) = children.next() {
-            let child = child?;
-            let (used, item) = T::decode_inner_der(child.raw(), children.context())?;
-            debug_assert_eq!(used, child.total_len(), "child length disagrees");
-            items.push(item);
-        }
-        Ok((
-            element.total_len(),
-            Self {
-                tag: element.tag().to_vec(),
-                items,
-            },
-        ))
-    }
 }
 
-impl<T: DecodeInner> Decode for Asn1Constructed<T> {
-    fn decode(buff: &[u8], options: &DecodingOptions) -> Result<(usize, Self), Asn1Error> {
-        Self::decode_inner(buff, &mut DecodingContext::new(options.clone()))
-    }
-}
+impl<T: DecodeInner> Decode for Asn1Constructed<T> {}
 
 impl<T: Encode> EncodeContent for Asn1Constructed<T> {
     /// The elements' TLVs back to back. Variable time: branches only on the structure.

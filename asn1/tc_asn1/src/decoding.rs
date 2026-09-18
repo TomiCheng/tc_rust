@@ -1,31 +1,6 @@
 //! Shared validation for decoded representations.
 
-use crate::{
-    Asn1Error, DecodeContent, DecodingContext, EncodeContent, EncodingOptions, EncodingType,
-};
-
-pub(crate) fn content<T: DecodeContent>(
-    value: &[u8],
-    context: &mut DecodingContext,
-) -> Result<T, Asn1Error> {
-    T::decode_content(value, context)
-}
-
-pub(crate) fn decode_der_content<T: DecodeContent + EncodeContent>(
-    value: &[u8],
-    context: &mut DecodingContext,
-) -> Result<T, Asn1Error> {
-    let decoded = T::decode_content(value, context)?;
-    let options = EncodingOptions::new(EncodingType::Der);
-    if decoded.content_len(&options) != value.len() {
-        return Err(Asn1Error::NotDer);
-    }
-    let canonical = decoded.encode_content_to_vec(&options)?;
-    if canonical != value {
-        return Err(Asn1Error::NotDer);
-    }
-    Ok(decoded)
-}
+use crate::Asn1Error;
 
 /// Check the DER encoding form of known universal identifiers.
 pub(crate) fn check_der_tag(identifier: &[u8]) -> Result<(), Asn1Error> {

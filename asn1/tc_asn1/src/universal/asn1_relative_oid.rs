@@ -3,8 +3,8 @@ use core::{fmt, str::FromStr};
 
 use super::base128::{push_base128, validate_base128};
 use crate::{
-    Asn1Error, Decode, DecodeContent, DecodeInner, DecodingContext, DecodingOptions, Encode,
-    EncodeContent, EncodeTagged, EncodingOptions,
+    Asn1Error, Decode, DecodeContent, DecodeInner, DecodingContext, Encode, EncodeContent,
+    EncodeTagged, EncodingOptions,
 };
 
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -86,34 +86,13 @@ impl DecodeInner for Asn1RelativeOid {
         let value = Self::decode_content(element.value(), context)?;
         Ok((element.total_len(), value))
     }
-
-    fn decode_inner_der(
-        buff: &[u8],
-        context: &mut DecodingContext,
-    ) -> Result<(usize, Self), Asn1Error> {
-        let element = crate::Asn1Ref::parse_der(buff, context)?;
-        if element.tag() != Self::TAG {
-            return Err(Asn1Error::UnexpectedTag);
-        }
-        let value = Self::decode_content_der(element.value(), context)?;
-        Ok((element.total_len(), value))
-    }
 }
-impl Decode for Asn1RelativeOid {
-    fn decode(buff: &[u8], options: &DecodingOptions) -> Result<(usize, Self), Asn1Error> {
-        Self::decode_inner(buff, &mut DecodingContext::new(options.clone()))
-    }
-}
+impl Decode for Asn1RelativeOid {}
 
 impl DecodeContent for Asn1RelativeOid {
     fn decode_content(value: &[u8], context: &mut DecodingContext) -> Result<Self, Asn1Error> {
         context.options().check_content_len(value.len())?;
         Self::from_der_bytes(value)
-    }
-
-    fn decode_content_der(value: &[u8], context: &mut DecodingContext) -> Result<Self, Asn1Error> {
-        // X.690 §8.19.2 already requires the shortest base-128 form in BER, so DER adds nothing.
-        Self::decode_content(value, context)
     }
 }
 

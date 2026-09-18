@@ -3,8 +3,8 @@ use alloc::string::String;
 use super::cer_common::too_long_for_cer;
 use crate::traits::encode::default_encode;
 use crate::{
-    Asn1Error, Decode, DecodeContent, DecodeInner, DecodingContext, DecodingOptions, Encode,
-    EncodeContent, EncodeTagged, EncodingOptions,
+    Asn1Error, Decode, DecodeContent, DecodeInner, DecodingContext, Encode, EncodeContent,
+    EncodeTagged, EncodingOptions,
 };
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -50,26 +50,9 @@ impl DecodeInner for Asn1Ia5String {
         let value = Self::decode_content(element.value(), context)?;
         Ok((element.total_len(), value))
     }
-
-    fn decode_inner_der(
-        buff: &[u8],
-        context: &mut DecodingContext,
-    ) -> Result<(usize, Self), Asn1Error> {
-        // parse_der already reports the constructed form (X.690 §10.2) as NotDer.
-        let element = crate::Asn1Ref::parse_der(buff, context)?;
-        if element.tag() != Self::TAG {
-            return Err(Asn1Error::UnexpectedTag);
-        }
-        let value = Self::decode_content_der(element.value(), context)?;
-        Ok((element.total_len(), value))
-    }
 }
 
-impl Decode for Asn1Ia5String {
-    fn decode(buff: &[u8], options: &DecodingOptions) -> Result<(usize, Self), Asn1Error> {
-        Self::decode_inner(buff, &mut DecodingContext::new(options.clone()))
-    }
-}
+impl Decode for Asn1Ia5String {}
 
 impl DecodeContent for Asn1Ia5String {
     fn decode_content(value: &[u8], context: &mut DecodingContext) -> Result<Self, Asn1Error> {
@@ -82,11 +65,6 @@ impl DecodeContent for Asn1Ia5String {
         Ok(Self {
             text: String::from(text),
         })
-    }
-
-    fn decode_content_der(value: &[u8], context: &mut DecodingContext) -> Result<Self, Asn1Error> {
-        // DER only restricts the form (primitive), which the identifier already settled.
-        Self::decode_content(value, context)
     }
 }
 

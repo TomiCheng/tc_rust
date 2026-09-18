@@ -16,6 +16,15 @@ impl DecodingContext {
         }
     }
 
+    /// A context that applies the DER rules from the start.
+    pub const fn new_der(options: DecodingOptions) -> Self {
+        Self {
+            options,
+            depth: 0,
+            is_der: true,
+        }
+    }
+
     pub const fn options(&self) -> &DecodingOptions {
         &self.options
     }
@@ -45,7 +54,7 @@ impl DecodingContext {
         self.is_der = true;
         DerScope {
             context: self,
-            old_value
+            old_value,
         }
     }
 }
@@ -73,7 +82,7 @@ impl Drop for DepthScope<'_> {
 
 pub struct DerScope<'c> {
     context: &'c mut DecodingContext,
-    old_value: bool
+    old_value: bool,
 }
 
 impl<'c> DerScope<'c> {

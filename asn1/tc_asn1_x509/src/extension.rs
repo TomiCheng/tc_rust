@@ -1,6 +1,6 @@
 use tc_asn1::{
     Asn1Boolean, Asn1Error, Asn1OctetString, Asn1Oid, Asn1Ref, Decode, DecodeInner,
-    DecodingContext, DecodingOptions, Encode, EncodeContent, EncodeTagged, EncodingOptions, tag,
+    DecodingContext, Encode, EncodeContent, EncodeTagged, EncodingOptions, tag,
 };
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
@@ -39,7 +39,8 @@ impl Extension {
         context: &mut DecodingContext,
     ) -> Result<T, Asn1Error> {
         let bytes = self.extn_value.as_bytes();
-        let (used, value) = T::decode_inner_der(bytes, context)?;
+        let mut der = context.enter_der();
+        let (used, value) = T::decode_inner(bytes, der.context())?;
         if used != bytes.len() {
             return Err(Asn1Error::TrailingData);
         }
@@ -59,8 +60,6 @@ impl DecodeInner for Extension {
         // let extn_value = children.get_octet()?;
         // children.end()?;
 
-
-
         let element = Asn1Ref::parse(buff, context)?;
         if element.tag() != tag::SEQUENCE {
             return Err(Asn1Error::UnexpectedTag);
@@ -75,6 +74,10 @@ impl DecodeInner for Extension {
 
         let critical = if r.tag() == tag::BOOLEAN {
             let flag = r.decode_as::<Asn1Boolean>(children.context())?;
+            // X.690 §11.5: DER never writes a DEFAULT value.
+            if flag.is_false() && children.context().is_der() {
+                return Err(Asn1Error::NotDer);
+            }
             r = children.next().ok_or(Asn1Error::Truncated)??;
             flag
         } else {
@@ -95,67 +98,9 @@ impl DecodeInner for Extension {
             },
         ))
     }
-
-    /// DER adds one rule to the BER reading: a DEFAULT value must be omitted
-    /// (X.690 §11.5), so an explicit `critical FALSE` is `NotDer`.
-    fn decode_inner_der(
-        buff: &[u8],
-        context: &mut DecodingContext,
-    ) -> Result<(usize, Self), Asn1Error> {
-        // let element = Asn1Ref::parse_der(buff, context)?.assert_tag(tag::SEQUENCE)?;
-        // let mut children = element.children(context)?;
-        // let extn_id = children.get_der<Asn1Oid>()?;
-        // let critical = children.get_der_opt<Asn1Bool>()?;
-        // let extn_value = children.get_der<Asn1OctetString>()?;
-        // children.end()?;
-
-todo!()
-
-
-        // let element = Asn1Ref::parse_der(buff, context)?;
-        // if element.tag() != tag::SEQUENCE {
-        //     return Err(Asn1Error::UnexpectedTag);
-        // }
-        // let mut children = element.children(context)?;
-        // let extn_id = children
-        //     .next()
-        //     .ok_or(Asn1Error::Truncated)??
-        //     .decode_as_der::<Asn1Oid>(children.context())?;
-        //
-        // let mut r = children.next().ok_or(Asn1Error::Truncated)??;
-        //
-        // let critical = if r.tag() == tag::BOOLEAN {
-        //     let flag = r.decode_as_der::<Asn1Boolean>(children.context())?;
-        //     if flag.is_false() {
-        //         return Err(Asn1Error::NotDer);
-        //     }
-        //     r = children.next().ok_or(Asn1Error::Truncated)??;
-        //     flag
-        // } else {
-        //     false.into()
-        // };
-        //
-        // let extn_value = r.decode_as_der::<Asn1OctetString>(children.context())?;
-        // if children.next().is_some() {
-        //     return Err(Asn1Error::TrailingData);
-        // }
-        //
-        // Ok((
-        //     element.total_len(),
-        //     Self {
-        //         extn_id,
-        //         critical,
-        //         extn_value,
-        //     },
-        // ))
-    }
 }
 
-impl Decode for Extension {
-    fn decode(buff: &[u8], options: &DecodingOptions) -> Result<(usize, Self), Asn1Error> {
-        Self::decode_inner(buff, &mut DecodingContext::new(options.clone()))
-    }
-}
+impl Decode for Extension {}
 
 impl EncodeContent for Extension {
     fn content_len(&self, rules: &EncodingOptions) -> usize {

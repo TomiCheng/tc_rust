@@ -1,7 +1,7 @@
 use crate::decoding_context::DepthScope;
 use crate::error::Asn1Error;
-use crate::traits::encode::len_octets;
 use crate::traits::DecodeInner;
+use crate::traits::encode::len_octets;
 use crate::{DecodingContext, DecodingOptions};
 
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
@@ -46,9 +46,18 @@ impl<'a> Asn1Ref<'a> {
         }
     }
 
+    /// Reads one TLV. With `context.is_der()` the identifier must be in DER
+    /// form, the length definite and shortest (X.690 §10.1, §10.2).
+    /// Variable time: branches only on the encoding structure.
     pub fn parse(buff: &'a [u8], context: &mut DecodingContext) -> Result<Self, Asn1Error> {
         let tag = parse_tag(buff)?;
         let (len_len, length) = parse_len(&buff[tag.len()..])?;
+        if context.is_der() {
+            crate::decoding::check_der_tag(tag)?;
+            if tag == [0] || length.is_none() || length.is_some_and(|n| len_len != len_octets(n)) {
+                return Err(Asn1Error::NotDer);
+            }
+        }
         let offset = tag.len() + len_len;
 
         match length {
@@ -97,16 +106,6 @@ impl<'a> Asn1Ref<'a> {
         }
     }
 
-    pub fn parse_der(buff: &'a [u8], context: &mut DecodingContext) -> Result<Self, Asn1Error> {
-        let tag = parse_tag(buff)?;
-        crate::decoding::check_der_tag(tag)?;
-        let (len_len, length) = parse_len(&buff[tag.len()..])?;
-        if tag == [0] || length.is_none() || length.is_some_and(|n| len_len != len_octets(n)) {
-            return Err(Asn1Error::NotDer);
-        }
-        Self::parse(buff, context)
-    }
-
     pub fn raw(&self) -> &'a [u8] {
         self.raw
     }
@@ -152,16 +151,6 @@ impl<'a> Asn1Ref<'a> {
 
     pub fn decode_as<T: DecodeInner>(&self, context: &mut DecodingContext) -> Result<T, Asn1Error> {
         let (used, value) = T::decode_inner(self.raw, context)?;
-        if used != self.total_len() {
-            return Err(Asn1Error::TrailingData);
-        }
-        Ok(value)
-    }
-    pub fn decode_as_der<T: DecodeInner>(
-        &self,
-        context: &mut DecodingContext,
-    ) -> Result<T, Asn1Error> {
-        let (used, value) = T::decode_inner_der(self.raw, context)?;
         if used != self.total_len() {
             return Err(Asn1Error::TrailingData);
         }

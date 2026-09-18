@@ -11,8 +11,8 @@ use core::fmt;
 
 use super::tag;
 use crate::{
-    Asn1Error, Decode, DecodeContent, DecodeInner, DecodingContext, DecodingOptions, Encode,
-    EncodeContent, EncodeTagged, EncodingOptions,
+    Asn1Error, Decode, DecodeContent, DecodeInner, DecodingContext, Encode, EncodeContent,
+    EncodeTagged, EncodingOptions,
 };
 
 /// X.660 §7.5: non-empty; an integer label has no leading zero; a non-integer
@@ -94,28 +94,9 @@ macro_rules! iri {
                 let value = Self::decode_content(element.value(), context)?;
                 Ok((element.total_len(), value))
             }
-
-            fn decode_inner_der(
-                buff: &[u8],
-                context: &mut DecodingContext,
-            ) -> Result<(usize, Self), Asn1Error> {
-                let element = crate::Asn1Ref::parse_der(buff, context)?;
-                if element.tag() != Self::TAG {
-                    return Err(Asn1Error::UnexpectedTag);
-                }
-                let value = Self::decode_content_der(element.value(), context)?;
-                Ok((element.total_len(), value))
-            }
         }
 
-        impl Decode for $name {
-            fn decode(
-                buff: &[u8],
-                options: &DecodingOptions,
-            ) -> Result<(usize, Self), Asn1Error> {
-                Self::decode_inner(buff, &mut DecodingContext::new(options.clone()))
-            }
-        }
+        impl Decode for $name {}
 
         impl DecodeContent for $name {
             /// Validates UTF-8, the path and the labels. Variable time: branches on the contents.
@@ -125,14 +106,6 @@ macro_rules! iri {
             ) -> Result<Self, Asn1Error> {
                 context.options().check_content_len(value.len())?;
                 Self::new(core::str::from_utf8(value).map_err(|_| Asn1Error::MalformedValue)?)
-            }
-
-            fn decode_content_der(
-                value: &[u8],
-                context: &mut DecodingContext,
-            ) -> Result<Self, Asn1Error> {
-                // DER only restricts the form (primitive), which the identifier already settled.
-                Self::decode_content(value, context)
             }
         }
 
@@ -198,4 +171,3 @@ assert_eq!(oid.as_str(), "\u{53F0}\u{5317}/0/TLV-encoded");
 assert!(Asn1RelativeOidIri::new("/\u{53F0}\u{5317}").is_err());
 ```"#
 );
-

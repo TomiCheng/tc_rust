@@ -1,5 +1,5 @@
 // use tc_asn1::*;
-// 
+//
 // #[test]
 // fn custom_identifiers_round_trip_after_the_schema_selects_the_type() {
 //     let value = Asn1Integer::from(42_u8);
@@ -32,7 +32,7 @@
 //         );
 //     }
 // }
-// 
+//
 // #[test]
 // fn the_first_tlv_is_consumed_but_all_of_its_content_must_be_valid() {
 //     let options = DecodingOptions::default();
@@ -57,7 +57,7 @@
 //         Err(Asn1Error::UnexpectedTag)
 //     );
 // }
-// 
+//
 // #[test]
 // fn content_and_full_tlv_traits_can_be_implemented_independently_with_borrowed_values() {
 //     #[derive(Debug, PartialEq)]
@@ -66,7 +66,7 @@
 //         fn decode_content(value: &'a [u8], _: &mut DecodingContext<'_>) -> Result<Self, Asn1Error> {
 //             Ok(Self(value))
 //         }
-// 
+//
 //         fn decode_content_der(
 //             value: &'a [u8],
 //             context: &mut crate::DecodingContext<'_>,
@@ -108,13 +108,13 @@
 //             )
 //         }
 //     }
-// 
+//
 //     struct ContentOnly;
 //     impl<'a> DecodeContent<'a> for ContentOnly {
 //         fn decode_content(_: &'a [u8], _: &mut DecodingContext<'_>) -> Result<Self, Asn1Error> {
 //             Ok(Self)
 //         }
-// 
+//
 //         fn decode_content_der(
 //             value: &'a [u8],
 //             context: &mut crate::DecodingContext<'_>,
@@ -136,7 +136,7 @@
 //             .is_ok()
 //     );
 // }
-// 
+//
 // #[test]
 // fn constructed_implicit_strings_dispatch_by_form_and_validate_component_tags() {
 //     let options = DecodingOptions::default();
@@ -167,7 +167,7 @@
 //         Err(Asn1Error::UnexpectedTag)
 //     );
 // }
-// 
+//
 // #[test]
 // fn content_limits_apply_at_tlv_and_direct_content_entries() {
 //     let options = DecodingOptions::new(4, 2, 2);
@@ -196,7 +196,7 @@
 //         Some(Asn1Error::ContentLengthExceeded)
 //     );
 // }
-// 
+//
 // #[test]
 // fn child_limits_apply_to_definite_and_indefinite_values_and_iteration_stops_after_error() {
 //     let options = DecodingOptions::new(4, 32, 1);
@@ -221,7 +221,7 @@
 //     );
 //     assert!(Asn1Null::decode_inner(&[5, 0], &mut DecodingContext::new(&zero)).is_ok());
 // }
-// 
+//
 // #[test]
 // fn nested_decoders_preserve_custom_limits_and_spend_depth_per_constructed_layer() {
 //     let nested = [0x30, 4, 0x30, 2, 5, 0];
@@ -249,7 +249,7 @@
 //         Err(Asn1Error::ChildrenExceeded)
 //     );
 // }
-// 
+//
 // #[test]
 // fn parsed_elements_require_custom_decoders_to_consume_the_complete_element() {
 //     #[derive(Debug, PartialEq)]
@@ -279,7 +279,7 @@
 //             )
 //         }
 //     }
-// 
+//
 //     let options = DecodingOptions::default();
 //     let element = Asn1Ref::parse(&[5, 0], &mut DecodingContext::new(&options)).unwrap();
 //     assert_eq!(
@@ -293,7 +293,7 @@
 //         Err(Asn1Error::TrailingData)
 //     );
 // }
-// 
+//
 // #[test]
 // fn opaque_values_keep_parsed_boundaries_when_the_original_budget_exceeds_the_default() {
 //     let mut wire = Vec::new();

@@ -1,6 +1,5 @@
 use crate::{
-    Asn1Error, Decode, DecodeContent, DecodeInner, DecodingContext, DecodingOptions, Encode,
-    EncodingOptions,
+    Asn1Error, Decode, DecodeContent, DecodeInner, DecodingContext, Encode, EncodingOptions,
 };
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
@@ -42,49 +41,20 @@ impl DecodeInner for Asn1Boolean {
         let value = Self::decode_content(element.value(), context)?;
         Ok((element.total_len(), value))
     }
-    fn decode_inner_der(
-        buff: &[u8],
-        context: &mut DecodingContext,
-    ) -> Result<(usize, Self), Asn1Error> {
-        let element = crate::Asn1Ref::parse_der(buff, context)?;
-        if element.tag() != Self::TAG {
-            return Err(Asn1Error::UnexpectedTag);
-        }
-        let value = Self::decode_content_der(element.value(), context)?;
-        Ok((element.total_len(), value))
-    }
 }
-impl Decode for Asn1Boolean {
-    fn decode(
-        buff: &[u8],
-        options: &DecodingOptions,
-    ) -> Result<(usize, Self), Asn1Error> {
-        let mut context = DecodingContext::new(options.clone());
-        Self::decode_inner(buff, &mut context)
-    }
-}
+impl Decode for Asn1Boolean {}
 impl DecodeContent for Asn1Boolean {
-    fn decode_content(
-        value: &[u8],
-        context: &mut DecodingContext,
-    ) -> Result<Self, Asn1Error> {
+    fn decode_content(value: &[u8], context: &mut DecodingContext) -> Result<Self, Asn1Error> {
         context.options().check_content_len(value.len())?;
         match value {
-            // Accept BER truth values; re-encoding normalizes nonzero octets to FF.
-            [octet] => Ok(Asn1Boolean(*octet != 0)),
-            _ => Err(Asn1Error::MalformedValue),
-        }
-    }
-
-    fn decode_content_der(
-        value: &[u8],
-        _context: &mut DecodingContext,
-    ) -> Result<Self, Asn1Error> {
-        // X.690 §11.1: DER writes TRUE as FF and FALSE as 00; nothing else.
-        match value {
-            [0x00] => Ok(Asn1Boolean(false)),
-            [0xFF] => Ok(Asn1Boolean(true)),
-            [_] => Err(Asn1Error::NotDer),
+            // BER accepts any nonzero octet as TRUE; DER writes TRUE as FF only
+            // (X.690 §11.1). Re-encoding normalizes to FF either way.
+            [octet] => {
+                if context.is_der() && !matches!(octet, 0x00 | 0xFF) {
+                    return Err(Asn1Error::NotDer);
+                }
+                Ok(Asn1Boolean(*octet != 0))
+            }
             _ => Err(Asn1Error::MalformedValue),
         }
     }

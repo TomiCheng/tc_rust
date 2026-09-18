@@ -1,10 +1,10 @@
 // use tc_asn1::*;
-// 
+//
 // fn der<'a, T: DecodeInner<'a>>(wire: &'a [u8]) -> Result<T, Asn1Error> {
 //     T::decode_inner_der(wire, &mut DecodingContext::new(&DecodingOptions::default()))
 //         .map(|(_, value)| value)
 // }
-// 
+//
 // #[test]
 // fn der_boolean_accepts_only_the_canonical_true_octet() {
 //     let options = DecodingOptions::default();
@@ -24,7 +24,7 @@
 //         }
 //     }
 // }
-// 
+//
 // #[test]
 // fn der_checks_headers_and_encoding_forms_even_with_implicit_tags() {
 //     for wire in [&[0x80, 0x81, 1, 0xff][..], &[0x80, 0x82, 0, 1, 0xff]] {
@@ -43,7 +43,7 @@
 //     assert!(der::<Asn1Any>(&[0x22, 0]).is_err());
 //     assert_eq!(der::<Asn1Any>(&[0, 0]), Err(Asn1Error::NotDer));
 // }
-// 
+//
 // #[test]
 // fn der_parent_decoders_reject_non_der_children_at_every_level() {
 //     type Nested = Asn1SequenceOf<Asn1SequenceOf<Asn1Boolean>>;
@@ -58,7 +58,7 @@
 //     }
 //     assert!(der::<Nested>(&[0x30, 5, 0x30, 3, 1, 1, 255]).is_ok());
 // }
-// 
+//
 // #[test]
 // fn schema_fields_select_der_independently_without_changing_the_context() {
 //     let options = DecodingOptions::default();
@@ -84,7 +84,7 @@
 //     );
 //     fields.finish().unwrap();
 //     assert_eq!(context.depth(), 0);
-// 
+//
 //     let mut fields = Fields::new(&[1, 1, 1, 1, 1, 2], &mut context).unwrap();
 //     assert_eq!(
 //         fields.required_der::<Asn1Boolean>(Asn1Boolean::TAG),
@@ -98,7 +98,7 @@
 //     );
 //     fields.finish().unwrap();
 // }
-// 
+//
 // #[test]
 // fn der_fields_validate_implicit_contents_explicit_headers_and_default_omission() {
 //     let options = DecodingOptions::default();
@@ -131,7 +131,7 @@
 //     fields.finish().unwrap();
 //     assert_eq!(context.depth(), 0);
 // }
-// 
+//
 // #[test]
 // fn der_set_of_requires_lexicographic_order_and_der_members() {
 //     type Set = Asn1SetOf<Asn1Boolean>;
@@ -141,7 +141,7 @@
 //         assert_eq!(der::<Set>(wire), Err(Asn1Error::NotDer));
 //     }
 // }
-// 
+//
 // #[test]
 // fn der_bit_strings_reject_nonzero_padding_bits() {
 //     let wire = [3, 2, 3, 0xff];
@@ -149,7 +149,7 @@
 //     assert_eq!(der::<Asn1BitString>(&wire), Err(Asn1Error::NotDer));
 //     assert!(der::<Asn1BitString>(&[3, 2, 3, 0xf8]).is_ok());
 // }
-// 
+//
 // #[test]
 // fn nested_decoders_share_depth_and_restore_it_after_success_or_failure() {
 //     type Nested = Asn1SequenceOf<Asn1SequenceOf<Asn1Null>>;
@@ -175,7 +175,7 @@
 //     );
 //     assert_eq!(context.depth(), 0);
 // }
-// 
+//
 // #[test]
 // fn inner_decoders_can_borrow_input_longer_than_the_options_live() {
 //     struct Borrowed<'a>(&'a [u8]);

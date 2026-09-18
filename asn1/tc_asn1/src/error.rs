@@ -37,7 +37,9 @@ impl fmt::Display for Asn1Error {
             Self::ContentLengthExceeded => "contents exceed the configured length limit",
             Self::ChildrenExceeded => "child count exceeds the configured limit",
             Self::BufferTooSmall => "output buffer is too small",
-            Self::PrimitiveTooLong => "CER requires the constructed form for contents over 1000 octets",
+            Self::PrimitiveTooLong => {
+                "CER requires the constructed form for contents over 1000 octets"
+            }
         })
     }
 }

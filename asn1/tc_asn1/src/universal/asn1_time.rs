@@ -14,8 +14,8 @@ use core::fmt;
 
 use super::{tag, time_value};
 use crate::{
-    Asn1Error, Decode, DecodeContent, DecodeInner, DecodingContext, DecodingOptions, Encode,
-    EncodeContent, EncodeTagged, EncodingOptions,
+    Asn1Error, Decode, DecodeContent, DecodeInner, DecodingContext, Encode, EncodeContent,
+    EncodeTagged, EncodingOptions,
 };
 
 #[derive(Clone, Copy)]
@@ -128,28 +128,9 @@ macro_rules! time_type {
                 let value = Self::decode_content(element.value(), context)?;
                 Ok((element.total_len(), value))
             }
-
-            fn decode_inner_der(
-                buff: &[u8],
-                context: &mut DecodingContext,
-            ) -> Result<(usize, Self), Asn1Error> {
-                let element = crate::Asn1Ref::parse_der(buff, context)?;
-                if element.tag() != Self::TAG {
-                    return Err(Asn1Error::UnexpectedTag);
-                }
-                let value = Self::decode_content_der(element.value(), context)?;
-                Ok((element.total_len(), value))
-            }
         }
 
-        impl Decode for $name {
-            fn decode(
-                buff: &[u8],
-                options: &DecodingOptions,
-            ) -> Result<(usize, Self), Asn1Error> {
-                Self::decode_inner(buff, &mut DecodingContext::new(options.clone()))
-            }
-        }
+        impl Decode for $name {}
 
         impl DecodeContent for $name {
             /// Restores the notation from the wire contents, then validates and
@@ -160,17 +141,10 @@ macro_rules! time_type {
             ) -> Result<Self, Asn1Error> {
                 context.options().check_content_len(value.len())?;
                 let wire = core::str::from_utf8(value).map_err(|_| Asn1Error::MalformedValue)?;
-                Self::new(&Kind::$kind.notation(wire)?)
-            }
-
-            /// DER contents are the §11.9 canonical form, which is what the
-            /// value stores: anything else re-encodes differently.
-            fn decode_content_der(
-                value: &[u8],
-                context: &mut DecodingContext,
-            ) -> Result<Self, Asn1Error> {
-                let decoded = Self::decode_content(value, context)?;
-                if decoded.wire.as_bytes() != value {
+                let decoded = Self::new(&Kind::$kind.notation(wire)?)?;
+                // DER contents are the §11.9 canonical form, which is what the
+                // value stores: anything else re-encodes differently.
+                if context.is_der() && decoded.wire.as_bytes() != value {
                     return Err(Asn1Error::NotDer);
                 }
                 Ok(decoded)
@@ -294,4 +268,3 @@ assert_eq!(duration.as_str(), "P2MT0.00S");
 assert_ne!(duration, Asn1Duration::new("P2M").unwrap());
 ```"#
 );
-

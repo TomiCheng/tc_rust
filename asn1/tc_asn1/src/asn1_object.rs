@@ -1,10 +1,10 @@
 use alloc::vec::Vec;
 
+use crate::universal::*;
 use crate::{
     Asn1Any, Asn1Constructed, Asn1Error, Asn1Ref, Decode, DecodeContent, DecodeInner,
-    DecodingContext, DecodingOptions, Encode, EncodeContent, EncodeTagged, EncodingOptions,
+    DecodingContext, Encode, EncodeContent, EncodeTagged, EncodingOptions,
 };
-use crate::universal::*;
 
 mod dump;
 
@@ -165,82 +165,6 @@ impl Asn1Object {
             _ => return Ok(Self::Unknown(Asn1Any::primitive(tag, value))),
         })
     }
-
-    /// The DER counterpart of [`Self::primitive`].
-    fn primitive_der(
-        tag: &[u8],
-        value: &[u8],
-        context: &mut DecodingContext,
-    ) -> Result<Self, Asn1Error> {
-        Ok(match tag {
-            t if t == tag::BOOLEAN => {
-                Self::Boolean(Asn1Boolean::decode_content_der(value, context)?)
-            }
-            t if t == tag::INTEGER => {
-                Self::Integer(Asn1Integer::decode_content_der(value, context)?)
-            }
-            t if t == tag::BIT_STRING => {
-                Self::BitString(Asn1BitString::decode_content_der(value, context)?)
-            }
-            t if t == tag::OCTET_STRING => {
-                Self::OctetString(Asn1OctetString::decode_content_der(value, context)?)
-            }
-            t if t == tag::NULL => Self::Null(Asn1Null::decode_content_der(value, context)?),
-            t if t == tag::OBJECT_IDENTIFIER => {
-                Self::Oid(Asn1Oid::decode_content_der(value, context)?)
-            }
-            t if t == tag::REAL => Self::Real(Asn1Real::decode_content_der(value, context)?),
-            t if t == tag::ENUMERATED => {
-                Self::Enumerated(Asn1Enumerated::decode_content_der(value, context)?)
-            }
-            t if t == tag::UTF8_STRING => {
-                Self::Utf8String(Asn1Utf8String::decode_content_der(value, context)?)
-            }
-            t if t == tag::RELATIVE_OID => {
-                Self::RelativeOid(Asn1RelativeOid::decode_content_der(value, context)?)
-            }
-            t if t == tag::TIME => Self::Time(Asn1Time::decode_content_der(value, context)?),
-            t if t == tag::NUMERIC_STRING => {
-                Self::NumericString(Asn1NumericString::decode_content_der(value, context)?)
-            }
-            t if t == tag::PRINTABLE_STRING => {
-                Self::PrintableString(Asn1PrintableString::decode_content_der(value, context)?)
-            }
-            t if t == tag::IA5_STRING => {
-                Self::Ia5String(Asn1Ia5String::decode_content_der(value, context)?)
-            }
-            t if t == tag::UTC_TIME => {
-                Self::UtcTime(Asn1UtcTime::decode_content_der(value, context)?)
-            }
-            t if t == tag::GENERALIZED_TIME => {
-                Self::GeneralizedTime(Asn1GeneralizedTime::decode_content_der(value, context)?)
-            }
-            t if t == tag::VISIBLE_STRING => {
-                Self::VisibleString(Asn1VisibleString::decode_content_der(value, context)?)
-            }
-            t if t == tag::UNIVERSAL_STRING => {
-                Self::UniversalString(Asn1UniversalString::decode_content_der(value, context)?)
-            }
-            t if t == tag::BMP_STRING => {
-                Self::BmpString(Asn1BmpString::decode_content_der(value, context)?)
-            }
-            t if t == tag::DATE => Self::Date(Asn1Date::decode_content_der(value, context)?),
-            t if t == tag::TIME_OF_DAY => {
-                Self::TimeOfDay(Asn1TimeOfDay::decode_content_der(value, context)?)
-            }
-            t if t == tag::DATE_TIME => {
-                Self::DateTime(Asn1DateTime::decode_content_der(value, context)?)
-            }
-            t if t == tag::DURATION => {
-                Self::Duration(Asn1Duration::decode_content_der(value, context)?)
-            }
-            t if t == tag::OID_IRI => Self::OidIri(Asn1OidIri::decode_content_der(value, context)?),
-            t if t == tag::RELATIVE_OID_IRI => {
-                Self::RelativeOidIri(Asn1RelativeOidIri::decode_content_der(value, context)?)
-            }
-            _ => return Ok(Self::Unknown(Asn1Any::primitive(tag, value))),
-        })
-    }
 }
 
 impl DecodeInner for Asn1Object {
@@ -267,34 +191,9 @@ impl DecodeInner for Asn1Object {
         let value = Self::primitive(element.tag(), element.value(), context)?;
         Ok((element.total_len(), value))
     }
-
-    fn decode_inner_der(
-        buff: &[u8],
-        context: &mut DecodingContext,
-    ) -> Result<(usize, Self), Asn1Error> {
-        let element = Asn1Ref::parse_der(buff, context)?;
-        if element.tag() == tag::SEQUENCE {
-            let (used, inner) = Asn1SequenceOf::decode_inner_der(element.raw(), context)?;
-            return Ok((used, Self::SequenceOf(inner)));
-        }
-        if element.tag() == tag::SET {
-            let (used, inner) = Asn1SetOf::decode_inner_der(element.raw(), context)?;
-            return Ok((used, Self::SetOf(inner)));
-        }
-        if element.is_constructed() {
-            let (used, inner) = Asn1Constructed::decode_inner_der(element.raw(), context)?;
-            return Ok((used, Self::Constructed(inner)));
-        }
-        let value = Self::primitive_der(element.tag(), element.value(), context)?;
-        Ok((element.total_len(), value))
-    }
 }
 
-impl Decode for Asn1Object {
-    fn decode(buff: &[u8], options: &DecodingOptions) -> Result<(usize, Self), Asn1Error> {
-        Self::decode_inner(buff, &mut DecodingContext::new(options.clone()))
-    }
-}
+impl Decode for Asn1Object {}
 
 impl EncodeContent for Asn1Object {
     fn content_len(&self, rules: &EncodingOptions) -> usize {

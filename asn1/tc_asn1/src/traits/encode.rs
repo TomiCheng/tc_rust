@@ -1,7 +1,7 @@
 use alloc::vec::Vec;
 
-use crate::{EncodingOptions, EncodingType};
 use crate::Asn1Error;
+use crate::{EncodingOptions, EncodingType};
 
 pub trait EncodeContent {
     fn encode_content_to_vec(&self, rules: &EncodingOptions) -> Result<Vec<u8>, Asn1Error> {
@@ -57,10 +57,10 @@ pub(crate) fn default_encoded_len<T: EncodeContent + ?Sized>(
     let len = value.content_len(rules);
     tag.len()
         + if uses_indefinite(tag, rules) {
-        1 + len + 2
-    } else {
-        len_octets(len) + len
-    }
+            1 + len + 2
+        } else {
+            len_octets(len) + len
+        }
 }
 
 const fn uses_indefinite(tag: &[u8], rules: &EncodingOptions) -> bool {
@@ -81,10 +81,10 @@ pub(crate) fn default_encode<T: EncodeContent + ?Sized>(
     let indefinite = uses_indefinite(tag, rules);
     let total = tag.len()
         + if indefinite {
-        1 + content_len + 2
-    } else {
-        len_octets(content_len) + content_len
-    };
+            1 + content_len + 2
+        } else {
+            len_octets(content_len) + content_len
+        };
     let out = out.get_mut(..total).ok_or(Asn1Error::BufferTooSmall)?;
     out[..tag.len()].copy_from_slice(tag);
     let mut at = tag.len();

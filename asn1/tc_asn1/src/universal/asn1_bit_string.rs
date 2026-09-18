@@ -3,8 +3,8 @@ use alloc::vec::Vec;
 use super::cer_common::too_long_for_cer;
 use crate::traits::encode::default_encode;
 use crate::{
-    Asn1Error, Decode, DecodeContent, DecodeInner, DecodingContext, DecodingOptions, Encode,
-    EncodeContent, EncodeTagged, EncodingOptions,
+    Asn1Error, Decode, DecodeContent, DecodeInner, DecodingContext, Encode, EncodeContent,
+    EncodeTagged, EncodingOptions,
 };
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
@@ -47,7 +47,6 @@ impl Asn1BitString {
     pub fn bit(&self, index: usize) -> bool {
         index < self.bit_len() && self.bytes[index / 8] & (0x80 >> (index % 8)) != 0
     }
-
 }
 
 fn mask_unused(bytes: &mut [u8], unused_bits: u8) {
@@ -69,26 +68,9 @@ impl DecodeInner for Asn1BitString {
         let value = Self::decode_content(element.value(), context)?;
         Ok((element.total_len(), value))
     }
-
-    fn decode_inner_der(
-        buff: &[u8],
-        context: &mut DecodingContext,
-    ) -> Result<(usize, Self), Asn1Error> {
-        // parse_der already reports the constructed form (X.690 §10.2) as NotDer.
-        let element = crate::Asn1Ref::parse_der(buff, context)?;
-        if element.tag() != Self::TAG {
-            return Err(Asn1Error::UnexpectedTag);
-        }
-        let value = Self::decode_content_der(element.value(), context)?;
-        Ok((element.total_len(), value))
-    }
 }
 
-impl Decode for Asn1BitString {
-    fn decode(buff: &[u8], options: &DecodingOptions) -> Result<(usize, Self), Asn1Error> {
-        Self::decode_inner(buff, &mut DecodingContext::new(options.clone()))
-    }
-}
+impl Decode for Asn1BitString {}
 
 impl DecodeContent for Asn1BitString {
     fn decode_content(value: &[u8], context: &mut DecodingContext) -> Result<Self, Asn1Error> {
@@ -99,18 +81,14 @@ impl DecodeContent for Asn1BitString {
         }
         let mut bytes = data.to_vec();
         mask_unused(&mut bytes, *unused_bits);
+        // X.690 §11.2.1: DER requires the unused bits to be zero.
+        if context.is_der() && bytes.last() != data.last() {
+            return Err(Asn1Error::NotDer);
+        }
         Ok(Self {
             unused_bits: *unused_bits,
             bytes,
         })
-    }
-
-    fn decode_content_der(value: &[u8], context: &mut DecodingContext) -> Result<Self, Asn1Error> {
-        let decoded = Self::decode_content(value, context)?;
-        if value.len() > 1 && decoded.bytes.last() != value.last() {
-            return Err(Asn1Error::NotDer);
-        }
-        Ok(decoded)
     }
 }
 

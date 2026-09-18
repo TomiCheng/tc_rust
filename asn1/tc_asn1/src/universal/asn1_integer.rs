@@ -141,17 +141,6 @@ impl DecodeInner for Asn1Integer {
         let value = Self::decode_content(element.value(), context)?;
         Ok((element.total_len(), value))
     }
-    fn decode_inner_der(
-        buff: &[u8],
-        context: &mut DecodingContext,
-    ) -> Result<(usize, Self), Asn1Error> {
-        let element = crate::Asn1Ref::parse_der(buff, context)?;
-        if element.tag() != Self::TAG {
-            return Err(Asn1Error::UnexpectedTag);
-        }
-        let value = Self::decode_content_der(element.value(), context)?;
-        Ok((element.total_len(), value))
-    }
 }
 
 impl Decode for Asn1Integer {
@@ -164,11 +153,6 @@ impl DecodeContent for Asn1Integer {
     fn decode_content(value: &[u8], context: &mut DecodingContext) -> Result<Self, Asn1Error> {
         context.options().check_content_len(value.len())?;
         Self::from_der_bytes(value)
-    }
-
-    fn decode_content_der(value: &[u8], context: &mut DecodingContext) -> Result<Self, Asn1Error> {
-        // X.690 §8.3.2 already forbids redundant sign octets in BER, so DER adds nothing.
-        Self::decode_content(value, context)
     }
 }
 

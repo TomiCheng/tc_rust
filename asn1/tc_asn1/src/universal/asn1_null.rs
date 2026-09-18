@@ -1,8 +1,7 @@
 use core::fmt::{Display, Formatter};
 
 use crate::{
-    Asn1Error, Decode, DecodeContent, DecodeInner, DecodingContext, DecodingOptions, Encode,
-    EncodingOptions,
+    Asn1Error, Decode, DecodeContent, DecodeInner, DecodingContext, Encode, EncodingOptions,
 };
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Hash)]
@@ -30,23 +29,8 @@ impl DecodeInner for Asn1Null {
         let value = Self::decode_content(element.value(), context)?;
         Ok((element.total_len(), value))
     }
-    fn decode_inner_der(
-        buff: &[u8],
-        context: &mut DecodingContext,
-    ) -> Result<(usize, Self), Asn1Error> {
-        let element = crate::Asn1Ref::parse_der(buff, context)?;
-        if element.tag() != Self::TAG {
-            return Err(Asn1Error::UnexpectedTag);
-        }
-        let value = Self::decode_content_der(element.value(), context)?;
-        Ok((element.total_len(), value))
-    }
 }
-impl Decode for Asn1Null {
-    fn decode(buff: &[u8], options: &DecodingOptions) -> Result<(usize, Self), Asn1Error> {
-        Self::decode_inner(buff, &mut DecodingContext::new(options.clone()))
-    }
-}
+impl Decode for Asn1Null {}
 
 impl DecodeContent for Asn1Null {
     fn decode_content(value: &[u8], context: &mut DecodingContext) -> Result<Self, Asn1Error> {
@@ -56,11 +40,6 @@ impl DecodeContent for Asn1Null {
         } else {
             Err(Asn1Error::MalformedValue)
         }
-    }
-
-    fn decode_content_der(value: &[u8], context: &mut DecodingContext) -> Result<Self, Asn1Error> {
-        // The contents are always empty, so BER and DER agree.
-        Self::decode_content(value, context)
     }
 }
 

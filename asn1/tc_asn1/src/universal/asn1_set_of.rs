@@ -5,8 +5,8 @@ use alloc::vec::Vec;
 use super::cer_common::constructed_tag;
 use crate::traits::encode::{default_encode, default_encoded_len};
 use crate::{
-    Asn1Constructed, Asn1Error, Decode, DecodeInner, DecodingContext, DecodingOptions, Encode,
-    EncodeContent, EncodeTagged, EncodingOptions,
+    Asn1Constructed, Asn1Error, Decode, DecodeInner, DecodingContext, Encode, EncodeContent,
+    EncodeTagged, EncodingOptions,
 };
 
 /// A homogeneous SET OF. Construction and decoding keep the given order; CER
@@ -46,24 +46,9 @@ impl<T: DecodeInner> DecodeInner for Asn1SetOf<T> {
         }
         Ok((used, Self { members }))
     }
-
-    fn decode_inner_der(
-        buff: &[u8],
-        context: &mut DecodingContext,
-    ) -> Result<(usize, Self), Asn1Error> {
-        let (used, members) = Asn1Constructed::decode_inner_der(buff, context)?;
-        if members.tag() != Self::TAG {
-            return Err(Asn1Error::UnexpectedTag);
-        }
-        Ok((used, Self { members }))
-    }
 }
 
-impl<T: DecodeInner> Decode for Asn1SetOf<T> {
-    fn decode(buff: &[u8], options: &DecodingOptions) -> Result<(usize, Self), Asn1Error> {
-        Self::decode_inner(buff, &mut DecodingContext::new(options.clone()))
-    }
-}
+impl<T: DecodeInner> Decode for Asn1SetOf<T> {}
 
 impl<T: Encode> EncodeContent for Asn1SetOf<T> {
     /// Sorting does not change the length. Variable time: branches only on the structure.

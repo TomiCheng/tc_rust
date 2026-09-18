@@ -2,14 +2,14 @@
 //     Asn1BitString, Asn1Error, Asn1Object, Asn1OctetString, EncodeContent, EncodeTagged,
 //     EncodingOptions, EncodingType, LengthForm,
 // };
-// 
+//
 // struct Contents;
-// 
+//
 // impl EncodeContent for Contents {
 //     fn content_len(&self, _: &EncodingOptions) -> usize {
 //         2
 //     }
-// 
+//
 //     fn encode_content(&self, _: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
 //         out.get_mut(..2)
 //             .ok_or(Asn1Error::BufferTooSmall)?
@@ -17,13 +17,13 @@
 //         Ok(2)
 //     }
 // }
-// 
+//
 // impl EncodeTagged for Contents {}
-// 
+//
 // #[test]
 // fn nested_schema_wrappers_share_the_callers_options_for_length_and_encoding() {
 //     use tc_asn1::{Asn1Boolean, Encode, Explicit, Implicit, SequenceFields, impl_sequence_encode};
-// 
+//
 //     struct FieldsWithOptions<'a>(&'a EncodingOptions);
 //     impl SequenceFields for FieldsWithOptions<'_> {
 //         fn fields(&self, options: &EncodingOptions, sink: &mut dyn FnMut(&dyn Encode)) {
@@ -32,7 +32,7 @@
 //         }
 //     }
 //     impl_sequence_encode!(FieldsWithOptions<'_>);
-// 
+//
 //     for encoding_type in [
 //         EncodingType::Ber(LengthForm::Definite),
 //         EncodingType::Ber(LengthForm::Indefinite),
@@ -55,7 +55,7 @@
 //         assert_eq!(options.encoding_type(), encoding_type);
 //     }
 // }
-// 
+//
 // #[test]
 // fn content_and_default_tagged_encoding_work_without_encode() {
 //     let content: Box<dyn EncodeContent> = Box::new(Contents);
@@ -78,7 +78,7 @@
 //         );
 //     }
 // }
-// 
+//
 // fn check_encoding(
 //     encoder: &dyn EncodeTagged,
 //     tag: &[u8],
@@ -100,17 +100,17 @@
 //     );
 //     assert!(short.iter().all(|&byte| byte == 0xaa));
 // }
-// 
+//
 // #[test]
 // fn boxed_tagged_encoding_preserves_cer_string_overrides() {
 //     let mut octets = vec![0xbf, 0x20, 0x80, 4, 0x82, 3, 0xe8];
 //     octets.extend_from_slice(&[0xaa; 1000]);
 //     octets.extend_from_slice(&[4, 1, 0xaa, 0, 0]);
-// 
+//
 //     let mut bits = vec![0xbf, 0x20, 0x80, 3, 0x82, 3, 0xe8, 0];
 //     bits.extend_from_slice(&[0xaa; 999]);
 //     bits.extend_from_slice(&[3, 2, 0, 0xaa, 0, 0]);
-// 
+//
 //     let values: [(Box<dyn EncodeTagged>, &[u8]); 3] = [
 //         (Box::new(Asn1OctetString::new(&[0xaa; 1001])), &octets),
 //         (Box::new(Asn1BitString::from_bytes(&[0xaa; 1000])), &bits),
@@ -128,20 +128,20 @@
 //         );
 //     }
 // }
-// 
+//
 // mod schema_with_result_alias {
 //     use tc_asn1::{Encode, EncodingOptions, EncodingType, SequenceFields, impl_sequence_encode};
-// 
+//
 //     type Result<T> = core::result::Result<T, tc_asn1::Asn1Error>;
-// 
+//
 //     struct Empty;
-// 
+//
 //     impl SequenceFields for Empty {
 //         fn fields(&self, _: &EncodingOptions, _: &mut dyn FnMut(&dyn Encode)) {}
 //     }
-// 
+//
 //     impl_sequence_encode!(Empty);
-// 
+//
 //     #[test]
 //     fn sequence_macro_does_not_capture_the_callers_result_alias() -> Result<()> {
 //         assert_eq!(

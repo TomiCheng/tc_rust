@@ -5,8 +5,8 @@ use alloc::vec::Vec;
 use super::cer_common::constructed_tag;
 use crate::traits::encode::{default_encode, default_encoded_len};
 use crate::{
-    Asn1Constructed, Asn1Error, Decode, DecodeInner, DecodingContext, DecodingOptions, Encode,
-    EncodeContent, EncodeTagged, EncodingOptions,
+    Asn1Constructed, Asn1Error, Decode, DecodeInner, DecodingContext, Encode, EncodeContent,
+    EncodeTagged, EncodingOptions,
 };
 
 /// A homogeneous SEQUENCE OF. Order is significant, so every rule set writes
@@ -45,24 +45,9 @@ impl<T: DecodeInner> DecodeInner for Asn1SequenceOf<T> {
         }
         Ok((used, Self { elements }))
     }
-
-    fn decode_inner_der(
-        buff: &[u8],
-        context: &mut DecodingContext,
-    ) -> Result<(usize, Self), Asn1Error> {
-        let (used, elements) = Asn1Constructed::decode_inner_der(buff, context)?;
-        if elements.tag() != Self::TAG {
-            return Err(Asn1Error::UnexpectedTag);
-        }
-        Ok((used, Self { elements }))
-    }
 }
 
-impl<T: DecodeInner> Decode for Asn1SequenceOf<T> {
-    fn decode(buff: &[u8], options: &DecodingOptions) -> Result<(usize, Self), Asn1Error> {
-        Self::decode_inner(buff, &mut DecodingContext::new(options.clone()))
-    }
-}
+impl<T: DecodeInner> Decode for Asn1SequenceOf<T> {}
 
 impl<T: Encode> EncodeContent for Asn1SequenceOf<T> {
     fn content_len(&self, rules: &EncodingOptions) -> usize {

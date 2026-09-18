@@ -1,8 +1,6 @@
 mod asn1_bit_string;
 mod asn1_bmp_string;
 mod asn1_boolean;
-mod base128;
-pub(crate) mod cer_common;
 mod asn1_enumerated;
 mod asn1_generalized_time;
 mod asn1_ia5_string;
@@ -22,6 +20,8 @@ mod asn1_universal_string;
 mod asn1_utc_time;
 mod asn1_utf8_string;
 mod asn1_visible_string;
+mod base128;
+pub(crate) mod cer_common;
 mod date_time;
 mod integer_octets;
 mod real_number;
@@ -51,4 +51,3 @@ pub use asn1_universal_string::Asn1UniversalString;
 pub use asn1_utc_time::Asn1UtcTime;
 pub use asn1_utf8_string::Asn1Utf8String;
 pub use asn1_visible_string::Asn1VisibleString;
-

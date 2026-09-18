@@ -2,8 +2,8 @@ use alloc::vec::Vec;
 
 use crate::traits::encode::{len_octets, write_len};
 use crate::{
-    Asn1Error, Asn1Ref, Decode, DecodeInner, DecodingContext, DecodingOptions, Encode,
-    EncodeContent, EncodeTagged, EncodingOptions,
+    Asn1Error, Asn1Ref, Decode, DecodeInner, DecodingContext, Encode, EncodeContent, EncodeTagged,
+    EncodingOptions,
 };
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
@@ -60,23 +60,17 @@ impl From<&Asn1Ref<'_>> for Asn1Any {
     }
 }
 
-/// Structural DER check of one element and, recursively, of every element
-/// inside a constructed one: identifiers in DER form, lengths definite and
-/// shortest. Contents rules that need the type (BOOLEAN FF, BIT STRING unused
-/// bits, SET order) are not checked here; Asn1Object covers those.
-/// Variable time: branches only on the encoding structure.
-fn check_der_structure(element: &Asn1Ref<'_>, context: &mut DecodingContext) -> Result<(), Asn1Error> {
+/// Walks every nested element so that, under DER, each one goes through
+/// `Asn1Ref::parse`'s identifier and length checks. Contents rules that need
+/// the type (BOOLEAN FF, BIT STRING unused bits, SET order) are not checked
+/// here; Asn1Object covers those. Variable time: branches only on the structure.
+fn walk(element: &Asn1Ref<'_>, context: &mut DecodingContext) -> Result<(), Asn1Error> {
     if !element.is_constructed() {
         return Ok(());
     }
     let mut children = element.children(context)?;
-    let mut rest = element.value();
     while let Some(child) = children.next() {
-        let child = child?;
-        // children() only splits; re-parse each child with the DER checks.
-        let checked = Asn1Ref::parse_der(rest, children.context())?;
-        check_der_structure(&checked, children.context())?;
-        rest = &rest[child.total_len()..];
+        walk(&child?, children.context())?;
     }
     Ok(())
 }
@@ -87,24 +81,14 @@ impl DecodeInner for Asn1Any {
         context: &mut DecodingContext,
     ) -> Result<(usize, Self), Asn1Error> {
         let element = Asn1Ref::parse(buff, context)?;
-        Ok((element.total_len(), Self::from(&element)))
-    }
-
-    fn decode_inner_der(
-        buff: &[u8],
-        context: &mut DecodingContext,
-    ) -> Result<(usize, Self), Asn1Error> {
-        let element = Asn1Ref::parse_der(buff, context)?;
-        check_der_structure(&element, context)?;
+        if context.is_der() {
+            walk(&element, context)?;
+        }
         Ok((element.total_len(), Self::from(&element)))
     }
 }
 
-impl Decode for Asn1Any {
-    fn decode(buff: &[u8], options: &DecodingOptions) -> Result<(usize, Self), Asn1Error> {
-        Self::decode_inner(buff, &mut DecodingContext::new(options.clone()))
-    }
-}
+impl Decode for Asn1Any {}
 
 impl EncodeContent for Asn1Any {
     /// The stored contents octets, whatever the rules.
