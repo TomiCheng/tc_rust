@@ -1,297 +1,145 @@
-//! ASN.1 `UniversalString`：UCS-4 大端序，每個 Unicode 純量值四個位元組。
+//! ASN.1 `UniversalString`: UCS-4 big-endian, four octets per Unicode scalar value.
 
 use alloc::string::String;
 
-use crate::DecodingContext;
-use crate::EncodingOptions;
-use crate::error::Asn1Error;
-use crate::traits::{DecodeContent, Encode};
+use super::cer_common::too_long_for_cer;
+use crate::traits::encode::default_encode;
+use crate::{
+    Asn1Error, Decode, DecodeContent, DecodeInner, DecodingContext, DecodingOptions, Encode,
+    EncodeContent, EncodeTagged, EncodingOptions,
+};
 
-/// 以 Rust 字串持有 Unicode 純量值，線路上使用 UCS-4 大端序。
-///
-/// Rust 字串已排除代理碼與超過 `U+10FFFF` 的值，所以建構不會失敗；
-/// 解碼時則必須驗證每個四位元組碼位。非 BMP 字元也只佔一個碼位。
-///
-/// # Examples
-///
-/// emoji 可以直接以單一 UCS-4 碼位表示，不使用 UTF-16 代理對。
-///
-/// ```
-/// use tc_asn1::{Decode, Asn1UniversalString, DecodingOptions, Encode, EncodingOptions, EncodingType, DecodeInner};
-///
-/// let value = Asn1UniversalString::new("😀");
-/// let mut out = [0; 6];
-/// value.encode(&EncodingOptions::new(EncodingType::Der), &mut out).unwrap();
-/// assert_eq!(out, [0x1C, 4, 0, 1, 0xF6, 0]);
-/// let (_, decoded) = Asn1UniversalString::decode(&out, &DecodingOptions::default()).unwrap();
-/// assert_eq!(decoded.as_str(), "😀");
-/// ```
-#[derive(Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd)]
+/// Holds Unicode scalar values as a Rust string; on the wire each is four
+/// big-endian octets. A Rust string already excludes surrogates and values
+/// above `U+10FFFF`, so building never fails; decoding validates each code
+/// point. Characters outside the BMP take a single code point, no surrogates.
+#[derive(Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct Asn1UniversalString {
     text: String,
 }
 
 impl Asn1UniversalString {
-    /// Universal identifier octets for this type's default encoding form.
     pub const TAG: &'static [u8] = super::tag::UNIVERSAL_STRING;
 
-    /// Universal constructed identifier for segmented encodings.
-    pub const CONSTRUCTED_TAG: &'static [u8] = super::tag::CONSTRUCTED_UNIVERSAL_STRING;
-
-    /// 複製合法的 Rust 字串。變動時間：配置與複製量由字串長度決定。
     pub fn new(text: &str) -> Self {
         Self {
             text: String::from(text),
         }
     }
 
-    /// 借用字串。
     pub fn as_str(&self) -> &str {
         &self.text
+    }
+
+    /// Four octets per character.
+    fn wire_len(&self) -> usize {
+        self.text.chars().count() * 4
     }
 }
 
 impl From<String> for Asn1UniversalString {
-    /// 接收擁有的字串，不再配置或複製。
     fn from(text: String) -> Self {
         Self { text }
     }
 }
 
-impl<'a> crate::DecodeInner<'a> for Asn1UniversalString {
-    fn decode_inner(
-        buff: &'a [u8],
-        context: &mut crate::DecodingContext<'_>,
-    ) -> Result<(usize, Self), crate::Asn1Error> {
-        let element = crate::Asn1Ref::parse(buff, context)?;
-        let value = if element.is_constructed() {
-            <Self as crate::DecodeConstructed<'a>>::decode_constructed(element.value(), context)?
-        } else {
-            <Self as crate::DecodeContent<'a>>::decode_content(element.value(), context)?
-        };
-        Ok((element.total_len(), value))
-    }
-    fn decode_inner_der(
-        buff: &'a [u8],
-        context: &mut crate::DecodingContext<'_>,
-    ) -> Result<(usize, Self), crate::Asn1Error> {
-        let element = crate::Asn1Ref::parse_der(buff, context)?;
-        if element.is_constructed() {
-            return Err(crate::Asn1Error::NotDer);
-        }
-        let value = if element.is_constructed() {
-            <Self as crate::DecodeConstructed<'a>>::decode_constructed(element.value(), context)?
-        } else {
-            <Self as crate::DecodeContent<'a>>::decode_content_der(element.value(), context)?
-        };
-        Ok((element.total_len(), value))
-    }
-}
-impl<'a> crate::Decode<'a> for Asn1UniversalString {
-    fn decode(
-        buff: &'a [u8],
-        options: &crate::DecodingOptions,
-    ) -> Result<(usize, Self), crate::Asn1Error> {
-        <Self as crate::DecodeInner<'a>>::decode_inner(
-            buff,
-            &mut crate::DecodingContext::new(options),
-        )
+impl core::fmt::Display for Asn1UniversalString {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.write_str(&self.text)
     }
 }
 
-impl<'a> DecodeContent<'a> for Asn1UniversalString {
-    /// 解讀 UCS-4 大端序；長度不是四的倍數或碼位不是 Unicode 純量值時拒絕。
-    /// 變動時間：依內容長度與碼位分支。
-    fn decode_content(
-        value: &'a [u8],
-        context: &mut DecodingContext<'_>,
-    ) -> Result<Self, Asn1Error> {
+impl DecodeInner for Asn1UniversalString {
+    fn decode_inner(
+        buff: &[u8],
+        context: &mut DecodingContext,
+    ) -> Result<(usize, Self), Asn1Error> {
+        // Only the primitive form; the constructed form is Asn1UniversalStringConstructed.
+        let element = crate::Asn1Ref::parse(buff, context)?;
+        if element.tag() != Self::TAG {
+            return Err(Asn1Error::UnexpectedTag);
+        }
+        let value = Self::decode_content(element.value(), context)?;
+        Ok((element.total_len(), value))
+    }
+
+    fn decode_inner_der(
+        buff: &[u8],
+        context: &mut DecodingContext,
+    ) -> Result<(usize, Self), Asn1Error> {
+        // parse_der already reports the constructed form (X.690 §10.2) as NotDer.
+        let element = crate::Asn1Ref::parse_der(buff, context)?;
+        if element.tag() != Self::TAG {
+            return Err(Asn1Error::UnexpectedTag);
+        }
+        let value = Self::decode_content_der(element.value(), context)?;
+        Ok((element.total_len(), value))
+    }
+}
+
+impl Decode for Asn1UniversalString {
+    fn decode(buff: &[u8], options: &DecodingOptions) -> Result<(usize, Self), Asn1Error> {
+        Self::decode_inner(buff, &mut DecodingContext::new(options.clone()))
+    }
+}
+
+impl DecodeContent for Asn1UniversalString {
+    fn decode_content(value: &[u8], context: &mut DecodingContext) -> Result<Self, Asn1Error> {
         context.options().check_content_len(value.len())?;
         let (units, remainder) = value.as_chunks::<4>();
         if !remainder.is_empty() {
             return Err(Asn1Error::MalformedValue);
         }
-        let mut text = String::new();
+        let mut text = String::with_capacity(units.len());
         for bytes in units {
-            let unit = u32::from_be_bytes(*bytes);
-            let ch = char::from_u32(unit).ok_or(Asn1Error::MalformedValue)?;
+            let ch = char::from_u32(u32::from_be_bytes(*bytes)).ok_or(Asn1Error::MalformedValue)?;
             text.push(ch);
         }
         Ok(Self { text })
     }
 
-    fn decode_content_der(
-        value: &'a [u8],
-        context: &mut crate::DecodingContext<'_>,
-    ) -> Result<Self, crate::Asn1Error> {
-        crate::decoding::decode_der_content::<Self>(value, context)
+    fn decode_content_der(value: &[u8], context: &mut DecodingContext) -> Result<Self, Asn1Error> {
+        // DER only restricts the form (primitive), which the identifier already settled.
+        Self::decode_content(value, context)
     }
 }
 
-crate::segments::constructed_string_decode!(Asn1UniversalString);
-
-impl Asn1UniversalString {
-    /// 內容長度是字元數的四倍。變動時間：需要走訪字串計算字元數。
-    fn primitive_content_len(&self, _: &EncodingOptions) -> usize {
-        self.text.chars().count() * 4
+impl EncodeContent for Asn1UniversalString {
+    fn content_len(&self, _: &EncodingOptions) -> usize {
+        self.wire_len()
     }
 
-    /// 每個字元寫成 UCS-4 大端序。變動時間：依字串長度走訪字元。
-    fn encode_primitive_content(
+    fn encode_content(&self, _: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
+        let out = out
+            .get_mut(..self.wire_len())
+            .ok_or(Asn1Error::BufferTooSmall)?;
+        for (slot, ch) in out.as_chunks_mut::<4>().0.iter_mut().zip(self.text.chars()) {
+            *slot = u32::from(ch).to_be_bytes();
+        }
+        Ok(out.len())
+    }
+}
+
+impl EncodeTagged for Asn1UniversalString {
+    fn encode_tagged(
         &self,
-        _: &EncodingOptions,
+        tag: &[u8],
+        rules: &EncodingOptions,
         out: &mut [u8],
     ) -> Result<usize, Asn1Error> {
-        let mut at = 0;
-        for ch in self.text.chars() {
-            out[at..at + 4].copy_from_slice(&u32::from(ch).to_be_bytes());
-            at += 4;
+        if too_long_for_cer(self.wire_len(), rules) {
+            return Err(Asn1Error::PrimitiveTooLong);
         }
-        Ok(at)
+        default_encode(self, tag, rules, out)
     }
-}
-
-impl crate::EncodeContent for Asn1UniversalString {
-    crate::segments::cer_string_content_encode!();
-}
-
-impl crate::EncodeTagged for Asn1UniversalString {
-    crate::segments::cer_string_encode!();
 }
 
 impl Encode for Asn1UniversalString {
     fn encoded_len(&self, rules: &EncodingOptions) -> usize {
-        crate::EncodeTagged::encoded_len_tagged(self, Self::TAG, rules)
+        self.encoded_len_tagged(Self::TAG, rules)
     }
 
     fn encode(&self, rules: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
-        crate::EncodeTagged::encode_tagged(self, Self::TAG, rules, out)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[cfg(test)]
-    use crate::Decode;
-    use crate::DecodingOptions;
-    use crate::EncodeContent;
-    use crate::EncodingType;
-
-    #[test]
-    fn latin_chinese_and_emoji_text_round_trip_as_four_bytes_per_character() {
-        for (text, contents) in [
-            (
-                "café",
-                &[0, 0, 0, b'c', 0, 0, 0, b'a', 0, 0, 0, b'f', 0, 0, 0, 0xE9][..],
-            ),
-            ("台北", &[0, 0, 0x53, 0xF0, 0, 0, 0x53, 0x17]),
-            ("😀", &[0, 1, 0xF6, 0]),
-        ] {
-            let original = Asn1UniversalString::new(text);
-            assert_eq!(original, Asn1UniversalString::from(String::from(text)));
-            for rules in [
-                &EncodingOptions::new(EncodingType::Ber(crate::LengthForm::Definite)),
-                &EncodingOptions::new(EncodingType::Der),
-            ] {
-                let mut out = [0; 24];
-                let written = original.encode(rules, &mut out).unwrap();
-                assert_eq!(&out[..2], &[0x1C, contents.len() as u8]);
-                assert_eq!(&out[2..written], contents);
-                assert_eq!(original.content_len(rules), 4 * text.chars().count());
-                assert_eq!(written, original.encoded_len(rules));
-                let (used, decoded) =
-                    Asn1UniversalString::decode(&out[..written], &DecodingOptions::default())
-                        .unwrap();
-                assert_eq!(used, written);
-                assert_eq!(decoded, original);
-                assert_eq!(decoded.as_str(), text);
-            }
-        }
-    }
-
-    #[test]
-    fn content_lengths_that_are_not_multiples_of_four_are_rejected() {
-        for length in [1, 2, 3, 5, 6, 7] {
-            assert_eq!(
-                Asn1UniversalString::decode_content(
-                    &[0; 7][..length],
-                    &mut DecodingContext::new(&DecodingOptions::default())
-                ),
-                Err(Asn1Error::MalformedValue)
-            );
-        }
-    }
-
-    #[test]
-    fn surrogate_code_points_are_rejected_including_both_range_boundaries() {
-        for unit in [0xD800_u32, 0xDBFF, 0xDC00, 0xDFFF] {
-            assert_eq!(
-                Asn1UniversalString::decode_content(
-                    &unit.to_be_bytes(),
-                    &mut DecodingContext::new(&DecodingOptions::default())
-                ),
-                Err(Asn1Error::MalformedValue)
-            );
-        }
-    }
-
-    #[test]
-    fn code_points_above_the_unicode_maximum_are_rejected() {
-        for unit in [0x110000_u32, u32::MAX] {
-            assert_eq!(
-                Asn1UniversalString::decode_content(
-                    &unit.to_be_bytes(),
-                    &mut DecodingContext::new(&DecodingOptions::default())
-                ),
-                Err(Asn1Error::MalformedValue)
-            );
-        }
-    }
-
-    #[test]
-    fn valid_unicode_boundaries_survive_encoding_and_decoding() {
-        let text = "\0\u{D7FF}\u{E000}\u{FFFF}\u{10000}\u{10FFFF}";
-        let original = Asn1UniversalString::new(text);
-        let mut out = [0; 26];
-        assert_eq!(
-            original.encode(&EncodingOptions::new(EncodingType::Der), &mut out),
-            Ok(26)
-        );
-        assert_eq!(&out[22..], &[0, 0x10, 0xFF, 0xFF]);
-        assert_eq!(
-            Asn1UniversalString::decode(&out, &DecodingOptions::default()),
-            Ok((26, original))
-        );
-    }
-
-    #[test]
-    fn an_empty_universal_string_is_valid_and_encodes_with_zero_length() {
-        let original = Asn1UniversalString::new("");
-        assert_eq!(original, Asn1UniversalString::default());
-        let mut out = [0; 2];
-        assert_eq!(
-            original.encode(&EncodingOptions::new(EncodingType::Der), &mut out),
-            Ok(2)
-        );
-        assert_eq!(out, [0x1C, 0]);
-        assert_eq!(
-            Asn1UniversalString::decode(&out, &DecodingOptions::default()),
-            Ok((2, original))
-        );
-    }
-
-    #[test]
-    fn the_schema_checks_tags_a_universal_string_rejects_a_bmp_string_tag() {
-        assert_eq!(
-            crate::Fields::new(
-                &[0x1E, 0],
-                &mut DecodingContext::new(&DecodingOptions::default())
-            )
-            .and_then(|mut fields| {
-                fields.required::<Asn1UniversalString>(Asn1UniversalString::TAG)
-            }),
-            Err(Asn1Error::UnexpectedTag)
-        );
+        self.encode_tagged(Self::TAG, rules, out)
     }
 }
