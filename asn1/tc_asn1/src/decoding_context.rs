@@ -28,14 +28,6 @@ impl DecodingContext {
         self.is_der
     }
 
-    // pub fn with_child<T>(
-    //     &mut self,
-    //     operation: impl FnOnce(&mut Self) -> Result<T, Asn1Error>,
-    // ) -> Result<T, Asn1Error> {
-    //     let mut scope = self.enter()?;
-    //     operation(scope.context())
-    // }
-    //
     pub(crate) fn enter(&mut self) -> Result<DepthScope<'_>, Asn1Error> {
         if self.depth >= self.options.depth() {
             return Err(Asn1Error::DepthExceeded);
