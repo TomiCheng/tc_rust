@@ -21,6 +21,24 @@ impl Asn1OctetStringConstructed {
         &self.segments
     }
 
+    /// Reads one constructed TLV whose identifier is `tag` rather than 24. The
+    /// character string types are encoded as IMPLICIT OCTET STRING (X.690 §8.23),
+    /// so their constructed forms (36 for IA5String, 2C for UTF8String, ...) carry
+    /// the same OCTET STRING segments; validate the joined bytes afterwards.
+    /// Variable time: branches only on the encoding structure.
+    pub fn decode_tagged(
+        tag: &[u8],
+        buff: &[u8],
+        context: &mut DecodingContext,
+    ) -> Result<(usize, Self), Asn1Error> {
+        let element = crate::Asn1Ref::parse(buff, context)?;
+        if element.tag() != tag || !element.is_constructed() {
+            return Err(Asn1Error::UnexpectedTag);
+        }
+        let value = Self::decode_constructed(element.value(), context)?;
+        Ok((element.total_len(), value))
+    }
+
     /// Splits a value into segments of at most `segment_len` octets (at least 1).
     /// Variable time: branches only on the value's length.
     pub fn split(value: &Asn1OctetString, segment_len: usize) -> Self {
@@ -110,12 +128,7 @@ impl DecodeInner for Asn1OctetStringConstructed {
         buff: &[u8],
         context: &mut DecodingContext,
     ) -> Result<(usize, Self), Asn1Error> {
-        let element = crate::Asn1Ref::parse(buff, context)?;
-        if element.tag() != Self::TAG {
-            return Err(Asn1Error::UnexpectedTag);
-        }
-        let value = Self::decode_constructed(element.value(), context)?;
-        Ok((element.total_len(), value))
+        Self::decode_tagged(Self::TAG, buff, context)
     }
 
     fn decode_inner_der(_: &[u8], _: &mut DecodingContext) -> Result<(usize, Self), Asn1Error> {
