@@ -25,3 +25,14 @@ pub(crate) fn primitive_tag(tag: &[u8]) -> Vec<u8> {
     }
     tag
 }
+
+/// The identifier with the constructed bit set: X.690 §8.14.3 makes the form
+/// follow the base encoding, so a constructed value sets it whatever the
+/// caller passed.
+pub(crate) fn constructed_tag(tag: &[u8]) -> Vec<u8> {
+    let mut tag = tag.to_vec();
+    if let Some(first) = tag.first_mut() {
+        *first |= 0x20;
+    }
+    tag
+}

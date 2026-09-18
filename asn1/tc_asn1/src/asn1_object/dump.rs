@@ -144,6 +144,22 @@ fn dump(obj: &Asn1Object, level: usize, f: &mut fmt::Formatter<'_>) -> fmt::Resu
         Duration(value) => writeln!(f, "DURATION {}", value.as_str()),
         OidIri(value) => writeln!(f, "OID-IRI {}", value.as_str()),
         RelativeOidIri(value) => writeln!(f, "RELATIVE-OID-IRI {}", value.as_str()),
+        SequenceOf(value) => {
+            f.write_str("SEQUENCE
+")?;
+            for child in value.elements() {
+                dump(child, level + 1, f)?;
+            }
+            Ok(())
+        }
+        SetOf(value) => {
+            f.write_str("SET
+")?;
+            for child in value.members() {
+                dump(child, level + 1, f)?;
+            }
+            Ok(())
+        }
         Constructed(value) => {
             identifier(value.tag(), f)?;
             f.write_str("\n")?;

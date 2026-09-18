@@ -52,6 +52,8 @@ pub use universal::{
     Asn1Real,
     Asn1RelativeOid,
     Asn1RelativeOidIri,
+    Asn1SequenceOf,
+    Asn1SetOf,
     Asn1Time,
     Asn1TimeOfDay,
     Asn1UniversalString,

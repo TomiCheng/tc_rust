@@ -1,5 +1,7 @@
 use alloc::vec::Vec;
 
+use crate::traits::encode::{default_encode, default_encoded_len};
+use crate::universal::cer_common::constructed_tag;
 use crate::{
     Asn1Error, Asn1Ref, Decode, DecodeInner, DecodingContext, DecodingOptions, Encode,
     EncodeContent, EncodeTagged, EncodingOptions,
@@ -119,9 +121,22 @@ impl<T: Encode> EncodeContent for Asn1Constructed<T> {
     }
 }
 
-/// The default header: definite length, or `80 ... 00 00` under CER and
-/// indefinite BER, since the identifier is constructed.
-impl<T: Encode> EncodeTagged for Asn1Constructed<T> {}
+/// The default header with the constructed bit forced on: definite length,
+/// or `80 ... 00 00` under CER and indefinite BER.
+impl<T: Encode> EncodeTagged for Asn1Constructed<T> {
+    fn encoded_len_tagged(&self, tag: &[u8], rules: &EncodingOptions) -> usize {
+        default_encoded_len(self, &constructed_tag(tag), rules)
+    }
+
+    fn encode_tagged(
+        &self,
+        tag: &[u8],
+        rules: &EncodingOptions,
+        out: &mut [u8],
+    ) -> Result<usize, Asn1Error> {
+        default_encode(self, &constructed_tag(tag), rules, out)
+    }
+}
 
 impl<T: Encode> Encode for Asn1Constructed<T> {
     fn encoded_len(&self, rules: &EncodingOptions) -> usize {

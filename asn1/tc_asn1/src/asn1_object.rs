@@ -1,3 +1,5 @@
+use alloc::vec::Vec;
+
 use crate::{
     Asn1Any, Asn1Constructed, Asn1Error, Asn1Ref, Decode, DecodeContent, DecodeInner,
     DecodingContext, DecodingOptions, Encode, EncodeContent, EncodeTagged, EncodingOptions,
@@ -33,6 +35,10 @@ pub enum Asn1Object {
     Duration(Asn1Duration),
     OidIri(Asn1OidIri),
     RelativeOidIri(Asn1RelativeOidIri),
+    /// A universal SEQUENCE (30).
+    SequenceOf(Asn1SequenceOf<Asn1Object>),
+    /// A universal SET (31): sorted under CER and DER like a SET OF.
+    SetOf(Asn1SetOf<Asn1Object>),
     Constructed(Asn1Constructed<Asn1Object>),
     Unknown(Asn1Any),
 }
@@ -74,11 +80,23 @@ from_variant! {
     Duration: Asn1Duration,
     OidIri: Asn1OidIri,
     RelativeOidIri: Asn1RelativeOidIri,
+    SequenceOf: Asn1SequenceOf<Asn1Object>,
+    SetOf: Asn1SetOf<Asn1Object>,
     Constructed: Asn1Constructed<Asn1Object>,
     Unknown: Asn1Any,
 }
 
 impl Asn1Object {
+    /// A SEQUENCE node; fixes the element type so `vec![a.into(), b.into()]` infers.
+    pub fn sequence(elements: Vec<Asn1Object>) -> Self {
+        Self::SequenceOf(Asn1SequenceOf::new(elements))
+    }
+
+    /// A SET node, sorted on CER and DER output.
+    pub fn set(members: Vec<Asn1Object>) -> Self {
+        Self::SetOf(Asn1SetOf::new(members))
+    }
+
     /// Interprets one primitive element by its universal tag; anything else is
     /// kept as `Unknown`. Variable time: branches only on the identifier.
     fn primitive(
@@ -234,6 +252,14 @@ impl DecodeInner for Asn1Object {
         context: &mut DecodingContext,
     ) -> Result<(usize, Self), Asn1Error> {
         let element = Asn1Ref::parse(buff, context)?;
+        if element.tag() == tag::SEQUENCE {
+            let (used, inner) = Asn1SequenceOf::decode_inner(element.raw(), context)?;
+            return Ok((used, Self::SequenceOf(inner)));
+        }
+        if element.tag() == tag::SET {
+            let (used, inner) = Asn1SetOf::decode_inner(element.raw(), context)?;
+            return Ok((used, Self::SetOf(inner)));
+        }
         if element.is_constructed() {
             let (used, inner) = Asn1Constructed::decode_inner(element.raw(), context)?;
             return Ok((used, Self::Constructed(inner)));
@@ -247,6 +273,14 @@ impl DecodeInner for Asn1Object {
         context: &mut DecodingContext,
     ) -> Result<(usize, Self), Asn1Error> {
         let element = Asn1Ref::parse_der(buff, context)?;
+        if element.tag() == tag::SEQUENCE {
+            let (used, inner) = Asn1SequenceOf::decode_inner_der(element.raw(), context)?;
+            return Ok((used, Self::SequenceOf(inner)));
+        }
+        if element.tag() == tag::SET {
+            let (used, inner) = Asn1SetOf::decode_inner_der(element.raw(), context)?;
+            return Ok((used, Self::SetOf(inner)));
+        }
         if element.is_constructed() {
             let (used, inner) = Asn1Constructed::decode_inner_der(element.raw(), context)?;
             return Ok((used, Self::Constructed(inner)));
@@ -290,6 +324,8 @@ impl EncodeContent for Asn1Object {
             Self::Duration(inner) => inner.content_len(rules),
             Self::OidIri(inner) => inner.content_len(rules),
             Self::RelativeOidIri(inner) => inner.content_len(rules),
+            Self::SequenceOf(inner) => inner.content_len(rules),
+            Self::SetOf(inner) => inner.content_len(rules),
             Self::Constructed(inner) => inner.content_len(rules),
             Self::Unknown(inner) => inner.content_len(rules),
         }
@@ -322,6 +358,8 @@ impl EncodeContent for Asn1Object {
             Self::Duration(inner) => inner.encode_content(rules, out),
             Self::OidIri(inner) => inner.encode_content(rules, out),
             Self::RelativeOidIri(inner) => inner.encode_content(rules, out),
+            Self::SequenceOf(inner) => inner.encode_content(rules, out),
+            Self::SetOf(inner) => inner.encode_content(rules, out),
             Self::Constructed(inner) => inner.encode_content(rules, out),
             Self::Unknown(inner) => inner.encode_content(rules, out),
         }
@@ -357,6 +395,8 @@ impl EncodeTagged for Asn1Object {
             Self::Duration(inner) => inner.encoded_len_tagged(tag, rules),
             Self::OidIri(inner) => inner.encoded_len_tagged(tag, rules),
             Self::RelativeOidIri(inner) => inner.encoded_len_tagged(tag, rules),
+            Self::SequenceOf(inner) => inner.encoded_len_tagged(tag, rules),
+            Self::SetOf(inner) => inner.encoded_len_tagged(tag, rules),
             Self::Constructed(inner) => inner.encoded_len_tagged(tag, rules),
             Self::Unknown(inner) => inner.encoded_len_tagged(tag, rules),
         }
@@ -394,6 +434,8 @@ impl EncodeTagged for Asn1Object {
             Self::Duration(inner) => inner.encode_tagged(tag, rules, out),
             Self::OidIri(inner) => inner.encode_tagged(tag, rules, out),
             Self::RelativeOidIri(inner) => inner.encode_tagged(tag, rules, out),
+            Self::SequenceOf(inner) => inner.encode_tagged(tag, rules, out),
+            Self::SetOf(inner) => inner.encode_tagged(tag, rules, out),
             Self::Constructed(inner) => inner.encode_tagged(tag, rules, out),
             Self::Unknown(inner) => inner.encode_tagged(tag, rules, out),
         }
@@ -430,6 +472,8 @@ impl Encode for Asn1Object {
             Self::Duration(inner) => inner.encoded_len(rules),
             Self::OidIri(inner) => inner.encoded_len(rules),
             Self::RelativeOidIri(inner) => inner.encoded_len(rules),
+            Self::SequenceOf(inner) => inner.encoded_len(rules),
+            Self::SetOf(inner) => inner.encoded_len(rules),
             Self::Constructed(inner) => inner.encoded_len(rules),
             Self::Unknown(inner) => inner.encoded_len(rules),
         }
@@ -462,6 +506,8 @@ impl Encode for Asn1Object {
             Self::Duration(inner) => inner.encode(rules, out),
             Self::OidIri(inner) => inner.encode(rules, out),
             Self::RelativeOidIri(inner) => inner.encode(rules, out),
+            Self::SequenceOf(inner) => inner.encode(rules, out),
+            Self::SetOf(inner) => inner.encode(rules, out),
             Self::Constructed(inner) => inner.encode(rules, out),
             Self::Unknown(inner) => inner.encode(rules, out),
         }
