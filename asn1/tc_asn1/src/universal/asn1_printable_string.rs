@@ -17,7 +17,7 @@ fn is_printable(byte: u8) -> bool {
         )
 }
 
-#[derive(Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct Asn1PrintableString {
     text: String,
 }

@@ -5,7 +5,7 @@ use crate::{
     EncodingOptions,
 };
 
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Hash)]
 pub struct Asn1Null;
 
 impl Asn1Null {

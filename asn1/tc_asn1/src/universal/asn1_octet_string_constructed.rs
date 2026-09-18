@@ -9,7 +9,7 @@ use crate::{
 };
 
 /// The constructed form of an OCTET STRING: a series of primitive segments.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct Asn1OctetStringConstructed {
     segments: Vec<Asn1OctetString>,
 }

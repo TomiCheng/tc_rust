@@ -7,7 +7,7 @@ use crate::{
     EncodeContent, EncodeTagged, EncodingOptions,
 };
 
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, PartialEq, Hash)]
 pub struct Asn1OctetString {
     bytes: Vec<u8>,
 }

@@ -5,7 +5,7 @@ use crate::{
     Asn1Error, Decode, DecodeContent, DecodeInner, DecodingContext, Encode, EncodingOptions,
 };
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct Asn1Integer {
     value: Vec<u8>,
 }

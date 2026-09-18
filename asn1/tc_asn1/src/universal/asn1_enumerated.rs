@@ -6,7 +6,7 @@ use crate::{
     EncodeContent, EncodeTagged, EncodingOptions,
 };
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct Asn1Enumerated {
     value: Vec<u8>,
 }

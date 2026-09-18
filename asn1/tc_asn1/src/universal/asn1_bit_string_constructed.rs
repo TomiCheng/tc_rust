@@ -9,7 +9,7 @@ use crate::{
 };
 
 /// The constructed form of a BIT STRING: a series of primitive segments.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct Asn1BitStringConstructed {
     segments: Vec<Asn1BitString>,
 }

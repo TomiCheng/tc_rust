@@ -2,7 +2,7 @@ use alloc::vec::Vec;
 
 use crate::Asn1Ref;
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct Asn1Any {
     raw: Vec<u8>,
     length_offset: usize,

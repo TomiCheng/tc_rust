@@ -7,7 +7,7 @@ use crate::{
     EncodeContent, EncodeTagged, EncodingOptions,
 };
 
-#[derive(Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct Asn1Ia5String {
     text: String,
 }

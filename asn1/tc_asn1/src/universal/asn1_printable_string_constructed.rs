@@ -7,7 +7,7 @@ use crate::{
 /// The constructed form of a PrintableString. X.690 §8.23 encodes character
 /// strings as IMPLICIT OCTET STRING, so the segments are OCTET STRINGs; the text
 /// is validated only after joining.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct Asn1PrintableStringConstructed(Asn1OctetStringConstructed);
 
 impl Asn1PrintableStringConstructed {
