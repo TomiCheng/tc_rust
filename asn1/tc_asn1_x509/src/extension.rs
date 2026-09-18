@@ -52,6 +52,15 @@ impl DecodeInner for Extension {
         buff: &[u8],
         context: &mut DecodingContext,
     ) -> Result<(usize, Self), Asn1Error> {
+        // let element = Asn1Ref::parse_der(buff, context)?.assert_tag(tag::SEQUENCE)?;
+        // let mut children = element.children(context)?;
+        // let extn_id = children.get_oid()?;
+        // let critical = children.get_bool_opt()?;
+        // let extn_value = children.get_octet()?;
+        // children.end()?;
+
+
+
         let element = Asn1Ref::parse(buff, context)?;
         if element.tag() != tag::SEQUENCE {
             return Err(Asn1Error::UnexpectedTag);
@@ -93,42 +102,52 @@ impl DecodeInner for Extension {
         buff: &[u8],
         context: &mut DecodingContext,
     ) -> Result<(usize, Self), Asn1Error> {
-        let element = Asn1Ref::parse_der(buff, context)?;
-        if element.tag() != tag::SEQUENCE {
-            return Err(Asn1Error::UnexpectedTag);
-        }
-        let mut children = element.children(context)?;
-        let extn_id = children
-            .next()
-            .ok_or(Asn1Error::Truncated)??
-            .decode_as_der::<Asn1Oid>(children.context())?;
+        // let element = Asn1Ref::parse_der(buff, context)?.assert_tag(tag::SEQUENCE)?;
+        // let mut children = element.children(context)?;
+        // let extn_id = children.get_der<Asn1Oid>()?;
+        // let critical = children.get_der_opt<Asn1Bool>()?;
+        // let extn_value = children.get_der<Asn1OctetString>()?;
+        // children.end()?;
 
-        let mut r = children.next().ok_or(Asn1Error::Truncated)??;
+todo!()
 
-        let critical = if r.tag() == tag::BOOLEAN {
-            let flag = r.decode_as_der::<Asn1Boolean>(children.context())?;
-            if flag.is_false() {
-                return Err(Asn1Error::NotDer);
-            }
-            r = children.next().ok_or(Asn1Error::Truncated)??;
-            flag
-        } else {
-            false.into()
-        };
 
-        let extn_value = r.decode_as_der::<Asn1OctetString>(children.context())?;
-        if children.next().is_some() {
-            return Err(Asn1Error::TrailingData);
-        }
-
-        Ok((
-            element.total_len(),
-            Self {
-                extn_id,
-                critical,
-                extn_value,
-            },
-        ))
+        // let element = Asn1Ref::parse_der(buff, context)?;
+        // if element.tag() != tag::SEQUENCE {
+        //     return Err(Asn1Error::UnexpectedTag);
+        // }
+        // let mut children = element.children(context)?;
+        // let extn_id = children
+        //     .next()
+        //     .ok_or(Asn1Error::Truncated)??
+        //     .decode_as_der::<Asn1Oid>(children.context())?;
+        //
+        // let mut r = children.next().ok_or(Asn1Error::Truncated)??;
+        //
+        // let critical = if r.tag() == tag::BOOLEAN {
+        //     let flag = r.decode_as_der::<Asn1Boolean>(children.context())?;
+        //     if flag.is_false() {
+        //         return Err(Asn1Error::NotDer);
+        //     }
+        //     r = children.next().ok_or(Asn1Error::Truncated)??;
+        //     flag
+        // } else {
+        //     false.into()
+        // };
+        //
+        // let extn_value = r.decode_as_der::<Asn1OctetString>(children.context())?;
+        // if children.next().is_some() {
+        //     return Err(Asn1Error::TrailingData);
+        // }
+        //
+        // Ok((
+        //     element.total_len(),
+        //     Self {
+        //         extn_id,
+        //         critical,
+        //         extn_value,
+        //     },
+        // ))
     }
 }
 

@@ -39,6 +39,15 @@ impl DecodingContext {
             parent_depth,
         })
     }
+
+    pub fn enter_der(&mut self) -> DerScope<'_> {
+        let old_value = self.is_der;
+        self.is_der = true;
+        DerScope {
+            context: self,
+            old_value
+        }
+    }
 }
 
 pub(crate) struct DepthScope<'c> {
@@ -59,5 +68,26 @@ impl<'c> DepthScope<'c> {
 impl Drop for DepthScope<'_> {
     fn drop(&mut self) {
         self.context.depth = self.parent_depth;
+    }
+}
+
+pub struct DerScope<'c> {
+    context: &'c mut DecodingContext,
+    old_value: bool
+}
+
+impl<'c> DerScope<'c> {
+    pub fn context(&mut self) -> &mut DecodingContext {
+        self.context
+    }
+
+    pub fn options(&self) -> &DecodingOptions {
+        self.context.options()
+    }
+}
+
+impl<'c> Drop for DerScope<'c> {
+    fn drop(&mut self) {
+        self.context.is_der = self.old_value;
     }
 }
