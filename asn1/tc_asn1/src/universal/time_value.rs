@@ -1,4 +1,5 @@
-//! TIME 的值記法驗證與 X.690 §11.9 正規化；不處理時區資料庫或日期運算。
+//! Validation of the TIME value notation and X.690 §11.9 normalization; no
+//! time-zone database and no date arithmetic.
 use super::date_time::days_in_month;
 use crate::Asn1Error;
 use alloc::{format, string::String, vec::Vec};
@@ -27,7 +28,8 @@ fn fraction(s: &str) -> Result<(&str, usize)> {
     }
 }
 
-// 日期格式：C、Y、YM、YMD、YD、YW、YWD。年份類別與精度也用於區間一致性。
+// Date forms: C, Y, YM, YMD, YD, YW, YWD. The year class and precision are also
+// used to check that interval endpoints agree.
 fn date(s: &str) -> Result<(u8, usize)> {
     require(s.is_ascii())?;
     let negative = s.starts_with('-');

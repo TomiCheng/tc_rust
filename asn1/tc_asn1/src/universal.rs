@@ -23,7 +23,7 @@ mod asn1_printable_string;
 mod asn1_relative_oid;
 // mod asn1_sequence_of;
 // mod asn1_set_of;
-// mod asn1_time;
+mod asn1_time;
 mod asn1_universal_string;
 mod asn1_utc_time;
 mod asn1_utf8_string;
@@ -35,7 +35,7 @@ mod integer_octets;
 //mod asn1_bit_string_constructed;
 pub mod tag;
 
-// mod time_value;
+mod time_value;
 //
 pub use asn1_bit_string::Asn1BitString;
 //pub use asn1_bit_string_constructed::Asn1BitStringConstructed;
@@ -61,7 +61,7 @@ pub use asn1_printable_string::Asn1PrintableString;
 pub use asn1_relative_oid::Asn1RelativeOid;
 // pub use asn1_sequence_of::Asn1SequenceOf;
 // pub use asn1_set_of::Asn1SetOf;
-// pub use asn1_time::{Asn1Date, Asn1DateTime, Asn1Duration, Asn1Time, Asn1TimeOfDay};
+pub use asn1_time::{Asn1Date, Asn1DateTime, Asn1Duration, Asn1Time, Asn1TimeOfDay};
 pub use asn1_universal_string::Asn1UniversalString;
 pub use asn1_utc_time::Asn1UtcTime;
 pub use asn1_utf8_string::Asn1Utf8String;
