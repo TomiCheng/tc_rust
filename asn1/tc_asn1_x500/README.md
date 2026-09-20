@@ -12,11 +12,6 @@ decoded (unknown attribute values round-trip as decoded ASN.1 trees). Names
 also have their RFC 4514 text form both ways, and the relaxed comparison that
 RFC 5280 §7.1 asks for when matching an issuer to a subject.
 
-Bouncy Castle counterpart:
-[`crypto/src/asn1/x500/`](https://github.com/bcgit/bc-csharp/tree/7fa86379/crypto/src/asn1/x500)
-plus the wire part of `x509/X509Name.cs`; the text parsing and comparison
-half of `IetfUtilities.cs` is in `Name`, the rest is not needed.
-
 ## Usage
 
 ```rust
