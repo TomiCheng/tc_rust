@@ -1,4 +1,4 @@
-//! RFC 5280 §4.2.1.12 `ExtendedKeyUsage`, extension 2.5.29.37.
+//! RFC 5280 §4.2.1.12 `ExtendedKeyUsage`, the value of extension 2.5.29.37.
 //!
 //! ```text
 //! ExtendedKeyUsage ::= SEQUENCE SIZE (1..MAX) OF KeyPurposeId
@@ -16,7 +16,7 @@ use core::fmt;
 
 use tc_asn1::{
     Asn1Error, Asn1Oid, Asn1SequenceOf, Decode, DecodeInner, DecodingContext, Encode,
-    EncodeContent, EncodeTagged, EncodingOptions, NamedOid, Tagged,
+    EncodeContent, EncodeTagged, EncodingOptions, Tagged,
 };
 
 use crate::KeyPurposeId;
@@ -58,9 +58,6 @@ impl ExtendedKeyUsage {
             purposes: Asn1SequenceOf::new(purposes),
         })
     }
-
-    /// The extension's OID, id-ce-extKeyUsage 2.5.29.37.
-    pub const OID: NamedOid = NamedOid::new(&[0x55, 0x1d, 0x25], "2.5.29.37", "extKeyUsage");
 
     /// The purposes in order, never empty.
     pub fn purposes(&self) -> &[Asn1Oid] {
@@ -146,7 +143,7 @@ mod tests {
     };
 
     use super::ExtendedKeyUsage;
-    use crate::{Extension, KeyPurposeId};
+    use crate::{Extension, ExtensionId, KeyPurposeId};
 
     fn der() -> EncodingOptions {
         EncodingOptions::new(EncodingType::Der)
@@ -226,7 +223,7 @@ mod tests {
     fn it_travels_inside_an_extension() {
         let eku = ExtendedKeyUsage::new(Vec::from([KeyPurposeId::OCSP_SIGNING.oid()])).unwrap();
         let extension = Extension::new(
-            ExtendedKeyUsage::OID,
+            ExtensionId::EXT_KEY_USAGE,
             false,
             &eku.encode_to_vec(&der()).unwrap(),
         );

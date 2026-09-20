@@ -1,4 +1,4 @@
-//! RFC 5280 §4.2.1.9 `BasicConstraints`, extension 2.5.29.19.
+//! RFC 5280 §4.2.1.9 `BasicConstraints`, the value of extension 2.5.29.19.
 //!
 //! ```text
 //! BasicConstraints ::= SEQUENCE {
@@ -15,7 +15,7 @@ use core::fmt;
 
 use tc_asn1::{
     Asn1Boolean, Asn1Error, Asn1Integer, Asn1Ref, Decode, DecodeInner, DecodingContext, Encode,
-    EncodeContent, EncodeTagged, EncodingOptions, NamedOid, Tagged, tag,
+    EncodeContent, EncodeTagged, EncodingOptions, Tagged, tag,
 };
 
 /// CA or end entity, with the optional path length limit.
@@ -64,9 +64,6 @@ impl BasicConstraints {
             path_len_constraint,
         }
     }
-
-    /// The extension's OID, id-ce-basicConstraints 2.5.29.19.
-    pub const OID: NamedOid = NamedOid::new(&[0x55, 0x1d, 0x13], "2.5.29.19", "basicConstraints");
 
     pub fn is_ca(&self) -> bool {
         self.ca
@@ -175,7 +172,7 @@ mod tests {
     };
 
     use super::BasicConstraints;
-    use crate::Extension;
+    use crate::{Extension, ExtensionId};
 
     fn der() -> EncodingOptions {
         EncodingOptions::new(EncodingType::Der)
@@ -262,7 +259,7 @@ mod tests {
     fn it_travels_inside_a_critical_extension() {
         let bc = BasicConstraints::ca(Some(1));
         let extension = Extension::new(
-            BasicConstraints::OID,
+            ExtensionId::BASIC_CONSTRAINTS,
             true,
             &bc.encode_to_vec(&der()).unwrap(),
         );

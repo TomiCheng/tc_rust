@@ -27,20 +27,20 @@ use crate::Extension;
 ///
 /// ```
 /// use tc_asn1::{Decode, DecodingContext, DecodingOptions, Encode, EncodingOptions, EncodingType};
-/// use tc_asn1_x509::{BasicConstraints, Extension, Extensions, KeyUsage};
+/// use tc_asn1_x509::{BasicConstraints, Extension, ExtensionId, Extensions, KeyUsage};
 ///
 /// let der = EncodingOptions::new(EncodingType::Der);
 /// // A CA certificate's extensions: both critical, as RFC 5280 recommends.
 /// let extensions = Extensions::new(vec![
-///     Extension::new(BasicConstraints::OID, true, &BasicConstraints::ca(None).encode_to_vec(&der)?),
-///     Extension::new(KeyUsage::OID, true, &(KeyUsage::KEY_CERT_SIGN | KeyUsage::CRL_SIGN).encode_to_vec(&der)?),
+///     Extension::new(ExtensionId::BASIC_CONSTRAINTS, true, &BasicConstraints::ca(None).encode_to_vec(&der)?),
+///     Extension::new(ExtensionId::KEY_USAGE, true, &(KeyUsage::KEY_CERT_SIGN | KeyUsage::CRL_SIGN).encode_to_vec(&der)?),
 /// ])?;
 ///
 /// // Look one up by OID and decode its value in one step.
 /// let mut context = DecodingContext::new(DecodingOptions::default());
-/// let usage: Option<KeyUsage> = extensions.get_as(KeyUsage::OID, &mut context)?;
+/// let usage: Option<KeyUsage> = extensions.get_as(ExtensionId::KEY_USAGE, &mut context)?;
 /// assert!(usage.unwrap().contains(KeyUsage::KEY_CERT_SIGN));
-/// assert!(extensions.get(tc_asn1_x509::ExtendedKeyUsage::OID).is_none());
+/// assert!(extensions.get(ExtensionId::EXT_KEY_USAGE).is_none());
 /// # Ok::<(), tc_asn1::Asn1Error>(())
 /// ```
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
@@ -78,7 +78,7 @@ impl Extensions {
     }
 
     /// The extension with this OID, if present; takes a `NamedOid` constant
-    /// such as [`KeyUsage::OID`](crate::KeyUsage::OID) or an `Asn1Oid`.
+    /// such as [`ExtensionId::KEY_USAGE`](crate::ExtensionId::KEY_USAGE) or an `Asn1Oid`.
     /// Variable time; for public values.
     pub fn get(&self, extn_id: impl PartialEq<Asn1Oid>) -> Option<&Extension> {
         self.extensions()
@@ -150,7 +150,7 @@ mod tests {
     };
 
     use super::Extensions;
-    use crate::{BasicConstraints, ExtendedKeyUsage, Extension, KeyUsage};
+    use crate::{BasicConstraints, ExtendedKeyUsage, Extension, ExtensionId, KeyUsage};
 
     fn der() -> EncodingOptions {
         EncodingOptions::new(EncodingType::Der)
@@ -163,12 +163,12 @@ mod tests {
     fn ca_extensions() -> Extensions {
         Extensions::new(Vec::from([
             Extension::new(
-                BasicConstraints::OID,
+                ExtensionId::BASIC_CONSTRAINTS,
                 true,
                 &BasicConstraints::ca(Some(0)).encode_to_vec(&der()).unwrap(),
             ),
             Extension::new(
-                KeyUsage::OID,
+                ExtensionId::KEY_USAGE,
                 true,
                 &(KeyUsage::KEY_CERT_SIGN | KeyUsage::CRL_SIGN)
                     .encode_to_vec(&der())
@@ -191,17 +191,20 @@ mod tests {
         assert_eq!((used, &decoded), (CA.len(), &extensions));
         assert_eq!(
             decoded.extensions()[0].extn_id(),
-            &BasicConstraints::OID.oid()
+            &ExtensionId::BASIC_CONSTRAINTS.oid()
         );
-        assert_eq!(decoded.extensions()[1].extn_id(), &KeyUsage::OID.oid());
+        assert_eq!(
+            decoded.extensions()[1].extn_id(),
+            &ExtensionId::KEY_USAGE.oid()
+        );
     }
 
     #[test]
     fn lookup_by_oid_finds_decodes_or_says_absent() {
         let (_, extensions) = Extensions::decode(CA, &options()).unwrap();
         let mut context = DecodingContext::new(options());
-        assert!(extensions.get(KeyUsage::OID).unwrap().critical());
-        assert!(extensions.get(ExtendedKeyUsage::OID).is_none());
+        assert!(extensions.get(ExtensionId::KEY_USAGE).unwrap().critical());
+        assert!(extensions.get(ExtensionId::EXT_KEY_USAGE).is_none());
         assert!(
             extensions
                 .get("2.5.29.15".parse::<tc_asn1::Asn1Oid>().unwrap())
@@ -209,25 +212,25 @@ mod tests {
         );
 
         let usage: KeyUsage = extensions
-            .get_as(KeyUsage::OID, &mut context)
+            .get_as(ExtensionId::KEY_USAGE, &mut context)
             .unwrap()
             .unwrap();
         assert_eq!(usage, KeyUsage::KEY_CERT_SIGN | KeyUsage::CRL_SIGN);
         let bc: BasicConstraints = extensions
-            .get_as(BasicConstraints::OID, &mut context)
+            .get_as(ExtensionId::BASIC_CONSTRAINTS, &mut context)
             .unwrap()
             .unwrap();
         assert_eq!(bc.path_len_constraint(), Some(0));
         assert!(
             extensions
-                .get_as::<ExtendedKeyUsage>(ExtendedKeyUsage::OID, &mut context)
+                .get_as::<ExtendedKeyUsage>(ExtensionId::EXT_KEY_USAGE, &mut context)
                 .unwrap()
                 .is_none()
         );
         // present, but the value is not what was asked for
         assert!(
             extensions
-                .get_as::<KeyUsage>(BasicConstraints::OID, &mut context)
+                .get_as::<KeyUsage>(ExtensionId::BASIC_CONSTRAINTS, &mut context)
                 .is_err()
         );
     }
@@ -243,7 +246,7 @@ mod tests {
             Err(Asn1Error::MalformedValue)
         ));
         let usage = Extension::new(
-            KeyUsage::OID,
+            ExtensionId::KEY_USAGE,
             false,
             &KeyUsage::DIGITAL_SIGNATURE.encode_to_vec(&der()).unwrap(),
         );

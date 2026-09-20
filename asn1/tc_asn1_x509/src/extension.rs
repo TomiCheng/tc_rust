@@ -24,10 +24,10 @@ use tc_asn1::{
 ///
 /// ```
 /// use tc_asn1::{Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
-/// use tc_asn1_x509::{BasicConstraints, Extension};
+/// use tc_asn1_x509::{Extension, ExtensionId};
 ///
 /// // basicConstraints, critical, with value SEQUENCE { cA TRUE }
-/// let ext = Extension::new(BasicConstraints::OID, true, &[0x30, 0x03, 0x01, 0x01, 0xFF]);
+/// let ext = Extension::new(ExtensionId::BASIC_CONSTRAINTS, true, &[0x30, 0x03, 0x01, 0x01, 0xFF]);
 /// let out = ext.encode_to_vec(&EncodingOptions::new(EncodingType::Der))?;
 /// assert_eq!(
 ///     out,

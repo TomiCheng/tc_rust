@@ -1,4 +1,4 @@
-//! RFC 5280 §4.2.1.3 `KeyUsage`, extension 2.5.29.15.
+//! RFC 5280 §4.2.1.3 `KeyUsage`, the value of extension 2.5.29.15.
 //!
 //! ```text
 //! KeyUsage ::= BIT STRING {
@@ -17,7 +17,7 @@ use core::ops::{BitOr, BitOrAssign};
 
 use tc_asn1::{
     Asn1BitString, Asn1Error, Decode, DecodeInner, DecodingContext, Encode, EncodeContent,
-    EncodeTagged, EncodingOptions, NamedOid, Tagged,
+    EncodeTagged, EncodingOptions, Tagged,
 };
 
 /// The set of purposes a key may be used for. Combine flags with `|`.
@@ -74,9 +74,6 @@ impl KeyUsage {
         (Self::DECIPHER_ONLY, "decipherOnly"),
     ];
     const DEFINED: u32 = 0xFF80_0000;
-
-    /// The extension's OID, id-ce-keyUsage 2.5.29.15.
-    pub const OID: NamedOid = NamedOid::new(&[0x55, 0x1d, 0x0f], "2.5.29.15", "keyUsage");
 
     /// From the raw bits, `1 << (31 - i)` for bit `i`. No bit set or an
     /// undefined bit set is `MalformedValue`.
@@ -200,7 +197,7 @@ mod tests {
     };
 
     use super::KeyUsage;
-    use crate::Extension;
+    use crate::{Extension, ExtensionId};
 
     fn der() -> EncodingOptions {
         EncodingOptions::new(EncodingType::Der)
@@ -302,7 +299,11 @@ mod tests {
     #[test]
     fn it_travels_inside_a_critical_extension() {
         let usage = KeyUsage::KEY_CERT_SIGN | KeyUsage::CRL_SIGN;
-        let extension = Extension::new(KeyUsage::OID, true, &usage.encode_to_vec(&der()).unwrap());
+        let extension = Extension::new(
+            ExtensionId::KEY_USAGE,
+            true,
+            &usage.encode_to_vec(&der()).unwrap(),
+        );
         assert_eq!(extension.extn_id().to_string(), "2.5.29.15");
         let wire = extension.encode_to_vec(&der()).unwrap();
         assert_eq!(
