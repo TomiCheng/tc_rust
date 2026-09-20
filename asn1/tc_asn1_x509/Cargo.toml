@@ -8,3 +8,4 @@ repository.workspace = true
 
 [dependencies]
 tc_asn1 = { path = "../tc_asn1" }
+tc_asn1_x500 = { path = "../tc_asn1_x500" }

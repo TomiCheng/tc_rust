@@ -1,10 +1,27 @@
+use alloc::string::String;
 use alloc::vec::Vec;
+use core::fmt;
 
 use super::integer_octets::{minimal_signed, validate_integer_octets};
 use crate::{
     Asn1Error, Decode, DecodeContent, DecodeInner, DecodingContext, Encode, EncodingOptions, Tagged,
 };
 
+/// An INTEGER of any size, kept as its two's-complement content octets.
+///
+/// # Examples
+///
+/// ```
+/// use tc_asn1::Asn1Integer;
+///
+/// let serial = Asn1Integer::from_unsigned_bytes(&[0x04, 0x00, 0x00, 0x00, 0x00, 0x01, 0x15, 0x4b]);
+/// assert_eq!(serial.to_string(), "288230376151782731");
+/// assert_eq!(format!("{serial:x}"), "40000000001154b");
+/// assert_eq!(format!("{:#X}", Asn1Integer::from(-255)), "-0xFF");
+/// assert_eq!(Asn1Integer::from(-256).to_string(), "-256");
+/// assert_eq!(format!("{} {:x}", Asn1Integer::from(0), Asn1Integer::from(0)), "0 0");
+/// assert_eq!(format!("{:>6}|{:04x}", Asn1Integer::from(42), Asn1Integer::from(42)), "    42|002a");
+/// ```
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct Asn1Integer {
     value: Vec<u8>,
@@ -72,6 +89,69 @@ impl Asn1Integer {
             .fold(0_u128, |acc, b| (acc << 8) | u128::from(*b)))
     }
 
+    /// The absolute value, big-endian without leading zeros; empty for zero.
+    fn magnitude(&self) -> Vec<u8> {
+        let mut magnitude = self.value.clone();
+        if self.is_negative() {
+            // two's complement: invert, then add one from the low end
+            let mut carry = true;
+            for byte in magnitude.iter_mut().rev() {
+                *byte = !*byte;
+                if carry {
+                    let (sum, overflow) = byte.overflowing_add(1);
+                    *byte = sum;
+                    carry = overflow;
+                }
+            }
+        }
+        let start = magnitude
+            .iter()
+            .position(|b| *b != 0)
+            .unwrap_or(magnitude.len());
+        magnitude.drain(..start);
+        magnitude
+    }
+
+    /// The magnitude in decimal, by long division; `"0"` for zero.
+    fn decimal_digits(&self) -> String {
+        let mut magnitude = self.magnitude();
+        let mut digits = Vec::new();
+        while !magnitude.is_empty() {
+            let mut remainder = 0u16;
+            for byte in &mut magnitude {
+                let current = (remainder << 8) | u16::from(*byte);
+                *byte = (current / 10) as u8;
+                remainder = current % 10;
+            }
+            digits.push(b'0' + remainder as u8);
+            if magnitude[0] == 0 {
+                magnitude.remove(0);
+            }
+        }
+        if digits.is_empty() {
+            digits.push(b'0');
+        }
+        digits.reverse();
+        String::from_utf8(digits).expect("ASCII digits")
+    }
+
+    /// The magnitude in hex without a leading zero digit; `"0"` for zero.
+    fn hex_digits(&self, upper: bool) -> String {
+        let magnitude = self.magnitude();
+        let mut digits = String::with_capacity(magnitude.len() * 2);
+        for (i, byte) in magnitude.iter().enumerate() {
+            let (high, low) = (byte >> 4, byte & 0x0F);
+            if i > 0 || high != 0 {
+                digits.push(hex_digit(high, upper));
+            }
+            digits.push(hex_digit(low, upper));
+        }
+        if digits.is_empty() {
+            digits.push('0');
+        }
+        digits
+    }
+
     /// 有號解讀，放不進 `i128` 回 [`Asn1Error::LengthOverflow`]。
     fn to_i128(&self) -> Result<i128, Asn1Error> {
         if self.value.len() > 16 {
@@ -82,6 +162,37 @@ impl Asn1Integer {
             .value
             .iter()
             .fold(sign, |acc, b| (acc << 8) | i128::from(*b)))
+    }
+}
+
+fn hex_digit(nibble: u8, upper: bool) -> char {
+    let digit = match nibble {
+        0..=9 => b'0' + nibble,
+        _ if upper => b'A' + nibble - 10,
+        _ => b'a' + nibble - 10,
+    };
+    char::from(digit)
+}
+
+/// Decimal, with a leading `-` when negative. Width, fill and `+` are
+/// honoured as for the primitive integers.
+impl fmt::Display for Asn1Integer {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.pad_integral(!self.is_negative(), "", &self.decimal_digits())
+    }
+}
+
+/// The magnitude in lowercase hex, `-` first when negative, `0x` with `#`.
+impl fmt::LowerHex for Asn1Integer {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.pad_integral(!self.is_negative(), "0x", &self.hex_digits(false))
+    }
+}
+
+/// The magnitude in uppercase hex, `-` first when negative, `0x` with `#`.
+impl fmt::UpperHex for Asn1Integer {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.pad_integral(!self.is_negative(), "0x", &self.hex_digits(true))
     }
 }
 
