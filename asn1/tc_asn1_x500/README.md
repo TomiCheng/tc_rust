@@ -1,19 +1,27 @@
 # tc_asn1_x500
 
-X.500 目錄系列的具名 ASN.1 結構：X.501 的 `Name`／`RelativeDistinguishedName`／
-`AttributeTypeAndValue`，與 X.520 的 `DirectoryString` 及屬性型別 OID。
-X.509 憑證只是借用這些型別當 subject／issuer，所以它們獨立於憑證 crate。
-本 crate 使用 `no_std` + `alloc`，只負責線路表示、解碼與編碼；DN 的語意比較
-與字串正規化另屬上層。
+Named ASN.1 structures of the X.500 directory series: `Name`,
+`RelativeDistinguishedName` and `AttributeTypeAndValue` from X.501, and
+`DirectoryString` with the attribute type OIDs from X.520. X.509 certificates
+only borrow these for subject and issuer, so they live apart from the
+certificate crate. The crate is `no_std` + `alloc`.
 
-BC 對照：[`crypto/src/asn1/x500/`](https://github.com/bcgit/bc-csharp/tree/7fa86379/crypto/src/asn1/x500)。
+Bouncy Castle counterpart:
+[`crypto/src/asn1/x500/`](https://github.com/bcgit/bc-csharp/tree/7fa86379/crypto/src/asn1/x500)
+plus the wire part of `x509/X509Name.cs`.
 
-## 狀態
+## Status
 
-| 項目 | 狀態 |
+| Item | Status |
 | --- | --- |
-| `AttributeType`（OID 與短名表） | 已完成 |
-| `DirectoryString` | 已完成 |
-| `AttributeTypeAndValue` | 已完成 |
-| `RelativeDistinguishedName` | 已完成 |
-| `Name` | 已完成 |
+| `AttributeType`: OIDs with RFC 4514/4519 short names, lookup both ways | done |
+| `DirectoryString` | done |
+| `AttributeTypeAndValue`, `AttributeValue` | done |
+| `RelativeDistinguishedName` | done |
+| `Name` | done |
+| RFC 4514 text: `Display` and `FromStr` on `Name` | done |
+| Relaxed comparison (`equivalent`, RFC 5280 §7.1) | done, with RFC 4518 approximated by lowercasing and whitespace collapsing |
+| Name constraints matching (prefix of RDNs) | not started; waits for the x509 extension |
+
+`==` on every type is the strict, DER-level comparison; `equivalent` is the
+relaxed one certificate path validation needs.
