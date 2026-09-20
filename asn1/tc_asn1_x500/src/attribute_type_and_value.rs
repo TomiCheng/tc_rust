@@ -20,6 +20,7 @@ use tc_asn1::{
 };
 
 use crate::DirectoryString;
+use crate::directory_string::canonical_text;
 
 /// The value of an attribute, classified by its identifier.
 #[non_exhaustive]
@@ -32,6 +33,22 @@ pub enum AttributeValue {
     Ia5String(Asn1Ia5String),
     /// Any other identifier, as an [`Asn1Object`].
     Other(Asn1Object),
+}
+
+impl AttributeValue {
+    /// RFC 5280 §7.1 relaxed comparison: strings by [`DirectoryString::equivalent`],
+    /// IA5Strings ignoring case and extra whitespace, anything else by DER.
+    /// Alternatives of different kinds never match. Variable time; for public values.
+    pub fn equivalent(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::DirectoryString(a), Self::DirectoryString(b)) => a.equivalent(b),
+            (Self::Ia5String(a), Self::Ia5String(b)) => {
+                canonical_text(a.as_str()) == canonical_text(b.as_str())
+            }
+            (Self::Other(a), Self::Other(b)) => a == b,
+            _ => false,
+        }
+    }
 }
 
 impl From<DirectoryString> for AttributeValue {
@@ -161,6 +178,11 @@ impl AttributeTypeAndValue {
 
     pub fn value(&self) -> &AttributeValue {
         &self.value
+    }
+
+    /// The same type and an [`AttributeValue::equivalent`] value.
+    pub fn equivalent(&self, other: &Self) -> bool {
+        self.attribute_type == other.attribute_type && self.value.equivalent(&other.value)
     }
 }
 
@@ -313,6 +335,22 @@ mod tests {
             ),
             atv
         );
+    }
+
+    #[test]
+    fn equivalence_needs_the_same_type_and_matching_values_of_the_same_kind() {
+        let atv = |wire| AttributeTypeAndValue::decode(wire, &options()).unwrap().1;
+        let cn = atv(CN);
+        assert!(cn.equivalent(&atv(b"\x30\x0e\x06\x03\x55\x04\x03\x0c\x07EXAMPLE")));
+        assert!(!cn.equivalent(&atv(b"\x30\x0e\x06\x03\x55\x04\x0a\x13\x07Example"))); // O=
+        assert!(!cn.equivalent(&atv(b"\x30\x0e\x06\x03\x55\x04\x03\x16\x07Example"))); // IA5
+        let dc = atv(DC);
+        assert!(dc.equivalent(&atv(
+            b"\x30\x15\x06\x0a\x09\x92\x26\x89\x93\xf2\x2c\x64\x01\x19\x16\x07EXAMPLE"
+        )));
+        let other = atv(b"\x30\x08\x06\x03\x2a\x03\x04\x02\x01\x2a");
+        assert!(other.equivalent(&other.clone()));
+        assert!(!other.equivalent(&atv(b"\x30\x08\x06\x03\x2a\x03\x04\x02\x01\x2b")));
     }
 
     #[test]

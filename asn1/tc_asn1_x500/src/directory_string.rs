@@ -15,6 +15,7 @@
 //! octets because its character set (T.61 with escape sequences) is not
 //! reliably decodable, and in practice such fields often hold Latin-1 anyway.
 
+use alloc::string::String;
 use core::fmt;
 
 use tc_asn1::{
@@ -59,6 +60,18 @@ impl DirectoryString {
         }
     }
 
+    /// Whether the two hold the same text under RFC 5280 §7.1's relaxed
+    /// rules: the string type is ignored and the text is compared after
+    /// [`canonical_text`]. TeletexStrings have no text and are compared as
+    /// octets, so a TeletexString never matches another alternative.
+    /// Variable time; for public values.
+    pub fn equivalent(&self, other: &Self) -> bool {
+        match (self.as_str(), other.as_str()) {
+            (Some(a), Some(b)) => canonical_text(a) == canonical_text(b),
+            _ => self == other,
+        }
+    }
+
     fn non_empty<T>(value: T, len: usize) -> Result<T, Asn1Error> {
         if len == 0 {
             Err(Asn1Error::MalformedValue)
@@ -66,6 +79,21 @@ impl DirectoryString {
             Ok(value)
         }
     }
+}
+
+/// The text lowercased with leading, trailing and repeated whitespace
+/// removed: an approximation of the RFC 4518 string preparation that
+/// RFC 5280 §7.1 asks for when comparing names. Unicode case folding and
+/// normalization beyond `str::to_lowercase` are not applied.
+pub(crate) fn canonical_text(text: &str) -> String {
+    let mut out = String::new();
+    for word in text.split_whitespace() {
+        if !out.is_empty() {
+            out.push(' ');
+        }
+        out.push_str(&word.to_lowercase());
+    }
+    out
 }
 
 /// The text, or the TeletexString octets as `\xNN` escapes.
@@ -235,6 +263,23 @@ mod tests {
             assert_eq!(s.as_str(), text);
             assert_eq!(s.encode_to_vec(&der()).unwrap(), bytes);
         }
+    }
+
+    #[test]
+    fn equivalence_ignores_the_string_type_case_and_extra_whitespace() {
+        let printable = |s| DirectoryString::decode(s, &options()).unwrap().1;
+        let a = printable(b"\x13\x07Root CA");
+        let b = printable(b"\x0c\x0a  root  CA ");
+        let c = printable(b"\x1e\x0e\x00R\x00o\x00o\x00t\x00 \x00C\x00A");
+        assert_ne!(a, b);
+        assert!(a.equivalent(&b));
+        assert!(a.equivalent(&c));
+        assert!(!a.equivalent(&printable(b"\x13\x06RootCA")));
+        // Teletex compares as octets only
+        let teletex = printable(b"\x14\x07Root CA");
+        assert!(teletex.equivalent(&printable(b"\x14\x07Root CA")));
+        assert!(!teletex.equivalent(&a));
+        assert!(!teletex.equivalent(&printable(b"\x14\x07root ca")));
     }
 
     #[test]

@@ -10,7 +10,6 @@
 //! sorted by their encodings. X.501 also wants the attribute types within
 //! one RDN to be distinct; that is a profile check and is not enforced here.
 
-use alloc::string::ToString;
 use alloc::vec::Vec;
 use core::fmt;
 
@@ -73,12 +72,20 @@ impl RelativeDistinguishedName {
     pub fn is_multi_valued(&self) -> bool {
         self.attributes.members().len() > 1
     }
+
+    /// The same attributes under [`AttributeTypeAndValue::equivalent`], in
+    /// any order. Variable time; for public values.
+    pub fn equivalent(&self, other: &Self) -> bool {
+        let (a, b) = (self.attributes(), other.attributes());
+        a.len() == b.len() && a.iter().all(|x| b.iter().any(|y| x.equivalent(y)))
+    }
 }
 
 /// `type=value` pairs joined with `+`, in stored order, as in RFC 4514. A
 /// type is written by its short name when [`AttributeType`] knows it and as
-/// a dotted OID otherwise; string values are escaped as in §2.4 and any
-/// other value is written as `#` followed by the hex of its DER.
+/// a dotted OID otherwise; text values are escaped as in §2.4 and any other
+/// value, TeletexString included, is written as `#` followed by the hex of
+/// its DER. [`Name`](crate::Name) parses this form back.
 impl fmt::Display for RelativeDistinguishedName {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for (i, attribute) in self.attributes().iter().enumerate() {
@@ -90,22 +97,27 @@ impl fmt::Display for RelativeDistinguishedName {
                 None => write!(f, "{}=", attribute.attribute_type())?,
             }
             match attribute.value() {
-                AttributeValue::DirectoryString(s) => write_escaped(f, &s.to_string()),
+                AttributeValue::DirectoryString(s) => match s.as_str() {
+                    Some(text) => write_escaped(f, text),
+                    None => write_hex(f, s),
+                },
                 AttributeValue::Ia5String(s) => write_escaped(f, s.as_str()),
-                AttributeValue::Other(object) => {
-                    f.write_str("#")?;
-                    let der = object
-                        .encode_to_vec(&EncodingOptions::new(EncodingType::Der))
-                        .map_err(|_| fmt::Error)?;
-                    for byte in der {
-                        write!(f, "{byte:02x}")?;
-                    }
-                    Ok(())
-                }
+                AttributeValue::Other(object) => write_hex(f, object),
             }?;
         }
         Ok(())
     }
+}
+
+fn write_hex(f: &mut fmt::Formatter<'_>, value: &impl Encode) -> fmt::Result {
+    f.write_str("#")?;
+    let der = value
+        .encode_to_vec(&EncodingOptions::new(EncodingType::Der))
+        .map_err(|_| fmt::Error)?;
+    for byte in der {
+        write!(f, "{byte:02x}")?;
+    }
+    Ok(())
 }
 
 /// RFC 4514 §2.4: `"`, `+`, `,`, `;`, `<`, `>` and `\` are escaped anywhere,
@@ -235,6 +247,23 @@ mod tests {
         assert_eq!(decoded, a);
         assert_eq!(decoded.attributes()[0], serial_number("123")); // wire order is kept
         assert_eq!(decoded.to_string(), "serialNumber=123+CN=Alice");
+    }
+
+    #[test]
+    fn equivalence_ignores_order_and_string_type() {
+        let a =
+            RelativeDistinguishedName::new(Vec::from([cn("Alice"), serial_number("123")])).unwrap();
+        let b =
+            RelativeDistinguishedName::new(Vec::from([serial_number("123"), cn("ALICE")])).unwrap();
+        assert_ne!(a, b);
+        assert!(a.equivalent(&b));
+        assert!(!a.equivalent(&RelativeDistinguishedName::single(cn("Alice"))));
+        assert!(
+            !a.equivalent(
+                &RelativeDistinguishedName::new(Vec::from([cn("Alice"), serial_number("124")]))
+                    .unwrap()
+            )
+        );
     }
 
     #[test]

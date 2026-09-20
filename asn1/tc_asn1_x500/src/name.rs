@@ -27,28 +27,49 @@ use tc_asn1::{
 
 use crate::RelativeDistinguishedName;
 
-/// A distinguished name as a sequence of RDNs, root first.
+mod from_str;
+
+/// A distinguished name as a sequence of RDNs, root first. Parses from and
+/// prints as its RFC 4514 string form.
 ///
 /// # Examples
 ///
 /// ```
 /// use tc_asn1::{Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
-/// use tc_asn1_x500::{AttributeTypeAndValue, DirectoryString, Name, RelativeDistinguishedName};
-///
-/// // Build C=TW, O=Example, CN=Alice, one single-valued RDN per level.
-/// let rdn = |oid: &str, text: &str| -> Result<RelativeDistinguishedName, tc_asn1::Asn1Error> {
-///     Ok(RelativeDistinguishedName::single(AttributeTypeAndValue::new(
-///         oid.parse()?,
-///         DirectoryString::new(text)?,
-///     )))
+/// use tc_asn1_x500::{
+///     AttributeType, AttributeTypeAndValue, DirectoryString, Name, RelativeDistinguishedName,
 /// };
-/// let name = Name::new(vec![rdn("2.5.4.6", "TW")?, rdn("2.5.4.10", "Example")?, rdn("2.5.4.3", "Alice")?]);
+///
+/// // The RFC 4514 text form is the easy way to build one ...
+/// let name: Name = "CN=Alice,O=Example,C=TW".parse()?;
+/// assert_eq!(name.rdns().len(), 3);   // root first: C, O, CN
+///
+/// // ... and the structured way when the values come from elsewhere.
+/// let same = Name::new(vec![
+///     RelativeDistinguishedName::single(AttributeTypeAndValue::new(
+///         AttributeType::COUNTRY_NAME.oid(),
+///         DirectoryString::new("TW")?,
+///     )),
+///     RelativeDistinguishedName::single(AttributeTypeAndValue::new(
+///         AttributeType::ORGANIZATION_NAME.oid(),
+///         DirectoryString::new("Example")?,
+///     )),
+///     RelativeDistinguishedName::single(AttributeTypeAndValue::new(
+///         AttributeType::COMMON_NAME.oid(),
+///         DirectoryString::new("Alice")?,
+///     )),
+/// ]);
+/// assert_eq!(same, name);
 ///
 /// // Encode it as DER and read it back.
 /// let der = name.encode_to_vec(&EncodingOptions::new(EncodingType::Der))?;
 /// let (_, decoded) = Name::decode(&der, &DecodingOptions::default())?;
-/// assert_eq!(decoded.rdns().len(), 3);
 /// println!("{decoded}");   // CN=Alice,O=Example,C=TW
+///
+/// // `==` compares the DER; `equivalent` applies RFC 5280's relaxed matching.
+/// let other: Name = "cn=ALICE, o=example, c=tw".parse()?;
+/// assert_ne!(other, name);
+/// assert!(other.equivalent(&name));
 /// # Ok::<(), tc_asn1::Asn1Error>(())
 /// ```
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
@@ -71,6 +92,15 @@ impl Name {
 
     pub fn is_empty(&self) -> bool {
         self.rdns.elements().is_empty()
+    }
+
+    /// RFC 5280 §7.1 relaxed comparison: the same number of RDNs, each
+    /// [`RelativeDistinguishedName::equivalent`] to the one at the same
+    /// position. Use `==` for the strict, DER-level comparison that §7.1
+    /// allows first. Variable time; for public values.
+    pub fn equivalent(&self, other: &Self) -> bool {
+        let (a, b) = (self.rdns(), other.rdns());
+        a.len() == b.len() && a.iter().zip(b).all(|(x, y)| x.equivalent(y))
     }
 }
 
@@ -186,6 +216,19 @@ mod tests {
         let (_, name) = Name::decode(NAME, &options()).unwrap();
         assert_eq!(name.to_string(), "CN=Alice,O=Example,C=TW");
         assert_eq!(Name::new(Vec::new()).to_string(), "");
+    }
+
+    #[test]
+    fn equivalence_keeps_the_order_but_relaxes_the_values() {
+        let (_, name) = Name::decode(NAME, &options()).unwrap();
+        let relaxed: Name = "cn=ALICE, o=example, c=TW".parse().unwrap();
+        assert_ne!(relaxed, name);
+        assert!(relaxed.equivalent(&name));
+        let reordered: Name = "C=TW,O=Example,CN=Alice".parse().unwrap();
+        assert!(!reordered.equivalent(&name));
+        let shorter: Name = "CN=Alice,O=Example".parse().unwrap();
+        assert!(!shorter.equivalent(&name));
+        assert!(Name::new(Vec::new()).equivalent(&Name::new(Vec::new())));
     }
 
     #[test]
