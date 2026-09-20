@@ -224,12 +224,13 @@ mod tests {
         assert!(a.is_multi_valued());
         assert_eq!(a.encode_to_vec(&der()).unwrap(), MULTI);
         assert_eq!(b.encode_to_vec(&der()).unwrap(), MULTI);
-        assert_ne!(a, b); // stored order is kept
+        assert_eq!(a, b); // the same SET, whatever the stored order
         let ber = EncodingOptions::new(EncodingType::Ber(LengthForm::Definite));
-        assert_ne!(a.encode_to_vec(&ber).unwrap(), MULTI);
+        assert_ne!(a.encode_to_vec(&ber).unwrap(), MULTI); // BER writes the stored order
 
         let (_, decoded) = RelativeDistinguishedName::decode(MULTI, &options()).unwrap();
-        assert_eq!(decoded, b);
+        assert_eq!(decoded, a);
+        assert_eq!(decoded.attributes()[0], serial_number("123")); // wire order is kept
         assert_eq!(decoded.to_string(), "2.5.4.5=123+2.5.4.3=Alice");
     }
 

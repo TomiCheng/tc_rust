@@ -1,20 +1,46 @@
 //! SET OF: an [`Asn1Constructed`] under tag 31 whose CER and DER output is sorted.
 
 use alloc::vec::Vec;
+use core::hash::{Hash, Hasher};
 
 use super::cer_common::constructed_tag;
 use crate::traits::encode::{default_encode, default_encoded_len};
 use crate::{
     Asn1Constructed, Asn1Error, Decode, DecodeInner, DecodingContext, Encode, EncodeContent,
-    EncodeTagged, EncodingOptions, Tagged,
+    EncodeTagged, EncodingOptions, EncodingType, Tagged,
 };
+
+const DER: EncodingOptions = EncodingOptions::new(EncodingType::Der);
 
 /// A homogeneous SET OF. Construction and decoding keep the given order; CER
 /// and DER write the members sorted by their encodings (X.690 §11.6), BER
 /// writes them as stored.
-#[derive(Clone, Debug, Eq, PartialEq, Hash)]
+#[derive(Clone, Debug)]
 pub struct Asn1SetOf<T> {
     members: Asn1Constructed<T>,
+}
+
+/// Two sets are equal when their DER encodings are, so the stored order does
+/// not matter. Should encoding fail, which a valid value never does under DER,
+/// the sets compare unequal, even to themselves.
+impl<T: Encode> PartialEq for Asn1SetOf<T> {
+    fn eq(&self, other: &Self) -> bool {
+        matches!(
+            (self.encode_to_vec(&DER), other.encode_to_vec(&DER)),
+            (Ok(a), Ok(b)) if a == b
+        )
+    }
+}
+
+impl<T: Encode> Eq for Asn1SetOf<T> {}
+
+/// Hashes the DER encoding, matching [`PartialEq`].
+impl<T: Encode> Hash for Asn1SetOf<T> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        if let Ok(der) = self.encode_to_vec(&DER) {
+            der.hash(state);
+        }
+    }
 }
 
 impl<T> Asn1SetOf<T> {
