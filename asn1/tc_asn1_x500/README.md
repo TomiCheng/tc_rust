@@ -12,6 +12,7 @@ BC 對照：[`crypto/src/asn1/x500/`](https://github.com/bcgit/bc-csharp/tree/7f
 
 | 項目 | 狀態 |
 | --- | --- |
+| `AttributeType`（OID 與短名表） | 已完成 |
 | `DirectoryString` | 已完成 |
 | `AttributeTypeAndValue` | 已完成 |
 | `RelativeDistinguishedName` | 已完成 |

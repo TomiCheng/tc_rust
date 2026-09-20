@@ -19,7 +19,7 @@ use tc_asn1::{
     EncodeTagged, EncodingOptions, EncodingType, Tagged,
 };
 
-use crate::{AttributeTypeAndValue, AttributeValue};
+use crate::{AttributeType, AttributeTypeAndValue, AttributeValue};
 
 /// A non-empty set of attributes making up one level of a name.
 ///
@@ -39,7 +39,7 @@ use crate::{AttributeTypeAndValue, AttributeValue};
 /// let der = rdn.encode_to_vec(&EncodingOptions::new(EncodingType::Der))?;
 /// let (_, decoded) = RelativeDistinguishedName::decode(&der, &DecodingOptions::default())?;
 /// assert!(!decoded.is_multi_valued());
-/// println!("{decoded}");   // 2.5.4.3=Alice
+/// println!("{decoded}");   // CN=Alice
 /// # Ok::<(), tc_asn1::Asn1Error>(())
 /// ```
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
@@ -75,17 +75,20 @@ impl RelativeDistinguishedName {
     }
 }
 
-/// `type=value` pairs joined with `+`, in stored order. Types are printed as
-/// dotted OIDs; string values are escaped as in RFC 4514 §2.4 and any other
-/// value is written as `#` followed by the hex of its DER. Meant for reading,
-/// not as a parseable RFC 4514 string, which would need the attribute names.
+/// `type=value` pairs joined with `+`, in stored order, as in RFC 4514. A
+/// type is written by its short name when [`AttributeType`] knows it and as
+/// a dotted OID otherwise; string values are escaped as in §2.4 and any
+/// other value is written as `#` followed by the hex of its DER.
 impl fmt::Display for RelativeDistinguishedName {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for (i, attribute) in self.attributes().iter().enumerate() {
             if i > 0 {
                 f.write_str("+")?;
             }
-            write!(f, "{}=", attribute.attribute_type())?;
+            match AttributeType::from_oid(attribute.attribute_type()) {
+                Some(known) => write!(f, "{known}=")?,
+                None => write!(f, "{}=", attribute.attribute_type())?,
+            }
             match attribute.value() {
                 AttributeValue::DirectoryString(s) => write_escaped(f, &s.to_string()),
                 AttributeValue::Ia5String(s) => write_escaped(f, s.as_str()),
@@ -212,7 +215,7 @@ mod tests {
         let (used, decoded) = RelativeDistinguishedName::decode(SINGLE, &options()).unwrap();
         assert_eq!((used, &decoded), (SINGLE.len(), &rdn));
         assert_eq!(decoded.attributes().len(), 1);
-        assert_eq!(decoded.to_string(), "2.5.4.3=Alice");
+        assert_eq!(decoded.to_string(), "CN=Alice");
     }
 
     #[test]
@@ -231,7 +234,7 @@ mod tests {
         let (_, decoded) = RelativeDistinguishedName::decode(MULTI, &options()).unwrap();
         assert_eq!(decoded, a);
         assert_eq!(decoded.attributes()[0], serial_number("123")); // wire order is kept
-        assert_eq!(decoded.to_string(), "2.5.4.5=123+2.5.4.3=Alice");
+        assert_eq!(decoded.to_string(), "serialNumber=123+CN=Alice");
     }
 
     #[test]
@@ -257,11 +260,11 @@ mod tests {
     }
 
     #[test]
-    fn display_escapes_special_characters_and_hex_encodes_other_values() {
+    fn display_uses_short_names_escapes_special_characters_and_hex_encodes_other_values() {
         let rdn = RelativeDistinguishedName::single(cn(" a,b+c\\d# "));
-        assert_eq!(rdn.to_string(), "2.5.4.3=\\ a\\,b\\+c\\\\d#\\ ");
+        assert_eq!(rdn.to_string(), "CN=\\ a\\,b\\+c\\\\d#\\ ");
         let rdn = RelativeDistinguishedName::single(cn("#x"));
-        assert_eq!(rdn.to_string(), "2.5.4.3=\\#x");
+        assert_eq!(rdn.to_string(), "CN=\\#x");
         let rdn = RelativeDistinguishedName::single(AttributeTypeAndValue::new(
             "1.2.3.4".parse().unwrap(),
             Asn1Object::from(Asn1Integer::from(42)),

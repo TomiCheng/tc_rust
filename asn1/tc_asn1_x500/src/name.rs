@@ -48,7 +48,7 @@ use crate::RelativeDistinguishedName;
 /// let der = name.encode_to_vec(&EncodingOptions::new(EncodingType::Der))?;
 /// let (_, decoded) = Name::decode(&der, &DecodingOptions::default())?;
 /// assert_eq!(decoded.rdns().len(), 3);
-/// println!("{decoded}");   // 2.5.4.3=Alice,2.5.4.10=Example,2.5.4.6=TW
+/// println!("{decoded}");   // CN=Alice,O=Example,C=TW
 /// # Ok::<(), tc_asn1::Asn1Error>(())
 /// ```
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
@@ -184,10 +184,7 @@ mod tests {
     #[test]
     fn display_lists_the_rdns_most_specific_first() {
         let (_, name) = Name::decode(NAME, &options()).unwrap();
-        assert_eq!(
-            name.to_string(),
-            "2.5.4.3=Alice,2.5.4.10=Example,2.5.4.6=TW"
-        );
+        assert_eq!(name.to_string(), "CN=Alice,O=Example,C=TW");
         assert_eq!(Name::new(Vec::new()).to_string(), "");
     }
 
