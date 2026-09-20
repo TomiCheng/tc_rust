@@ -14,5 +14,5 @@ BC 對照：[`crypto/src/asn1/x500/`](https://github.com/bcgit/bc-csharp/tree/7f
 | --- | --- |
 | `DirectoryString` | 已完成 |
 | `AttributeTypeAndValue` | 已完成 |
-| `RelativeDistinguishedName` | 待做 |
+| `RelativeDistinguishedName` | 已完成 |
 | `Name` | 待做 |
