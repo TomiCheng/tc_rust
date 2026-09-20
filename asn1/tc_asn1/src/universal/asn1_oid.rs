@@ -2,7 +2,7 @@ use alloc::vec::Vec;
 use core::fmt;
 use core::str::FromStr;
 
-use super::base128::{push_base128, validate_base128};
+use super::base128::{is_base128, push_base128, validate_base128};
 use crate::{
     Asn1Error, Decode, DecodeContent, DecodeInner, DecodingContext, Encode, EncodeContent,
     EncodeTagged, EncodingOptions, Tagged,
@@ -101,6 +101,115 @@ impl Iterator for Arcs<'_> {
         } else {
             Some(value)
         }
+    }
+}
+
+/// An OID fixed at compile time, with its dotted form and a name: the
+/// building block of constant tables such as attribute types or key
+/// purposes. Comparing one against a decoded [`Asn1Oid`] works on the DER
+/// content octets and allocates nothing.
+///
+/// # Examples
+///
+/// ```
+/// use tc_asn1::{Asn1Oid, NamedOid};
+///
+/// struct KeyPurpose;
+/// impl KeyPurpose {
+///     pub const SERVER_AUTH: NamedOid =
+///         NamedOid::new(&[0x2b, 0x06, 0x01, 0x05, 0x05, 0x07, 0x03, 0x01], "1.3.6.1.5.5.7.3.1", "serverAuth");
+///     pub const CLIENT_AUTH: NamedOid =
+///         NamedOid::new(&[0x2b, 0x06, 0x01, 0x05, 0x05, 0x07, 0x03, 0x02], "1.3.6.1.5.5.7.3.2", "clientAuth");
+///     pub const ALL: &[NamedOid] = &[Self::SERVER_AUTH, Self::CLIENT_AUTH];
+/// }
+///
+/// let decoded: Asn1Oid = "1.3.6.1.5.5.7.3.2".parse()?;
+/// assert_eq!(NamedOid::find(KeyPurpose::ALL, &decoded), Some(KeyPurpose::CLIENT_AUTH));
+/// assert!(KeyPurpose::CLIENT_AUTH == decoded);
+/// assert_eq!(KeyPurpose::CLIENT_AUTH.to_string(), "clientAuth");
+/// assert_eq!(KeyPurpose::SERVER_AUTH.oid().to_string(), "1.3.6.1.5.5.7.3.1");
+/// # Ok::<(), tc_asn1::Asn1Error>(())
+/// ```
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+pub struct NamedOid {
+    der: &'static [u8],
+    dotted: &'static str,
+    name: &'static str,
+}
+
+impl NamedOid {
+    /// `der` is the content octets of the OBJECT IDENTIFIER. Panics if they
+    /// are not a valid encoding, which in a `const` is a compile error.
+    /// The dotted form is not checked against them.
+    pub const fn new(der: &'static [u8], dotted: &'static str, name: &'static str) -> Self {
+        assert!(
+            is_base128(der),
+            "NamedOid: not the content octets of an OBJECT IDENTIFIER"
+        );
+        Self { der, dotted, name }
+    }
+
+    pub fn oid(&self) -> Asn1Oid {
+        Asn1Oid {
+            bytes: self.der.to_vec(),
+        }
+    }
+
+    /// The DER content octets.
+    pub const fn as_der(&self) -> &'static [u8] {
+        self.der
+    }
+
+    /// The OID in dotted form.
+    pub const fn dotted(&self) -> &'static str {
+        self.dotted
+    }
+
+    pub const fn name(&self) -> &'static str {
+        self.name
+    }
+
+    /// The entry of `table` with this OID, if any.
+    /// Variable time; for public values.
+    pub fn find(table: &[Self], oid: &Asn1Oid) -> Option<Self> {
+        table
+            .iter()
+            .copied()
+            .find(|entry| entry.der == oid.as_bytes())
+    }
+
+    /// The entry of `table` with this name, ASCII case ignored.
+    /// Variable time; for public values.
+    pub fn find_by_name(table: &[Self], name: &str) -> Option<Self> {
+        table
+            .iter()
+            .copied()
+            .find(|entry| entry.name.eq_ignore_ascii_case(name))
+    }
+}
+
+impl PartialEq<Asn1Oid> for NamedOid {
+    fn eq(&self, other: &Asn1Oid) -> bool {
+        self.der == other.as_bytes()
+    }
+}
+
+impl PartialEq<NamedOid> for Asn1Oid {
+    fn eq(&self, other: &NamedOid) -> bool {
+        other == self
+    }
+}
+
+impl From<NamedOid> for Asn1Oid {
+    fn from(value: NamedOid) -> Self {
+        value.oid()
+    }
+}
+
+/// The name.
+impl fmt::Display for NamedOid {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.name)
     }
 }
 

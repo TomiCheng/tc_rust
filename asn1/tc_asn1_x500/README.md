@@ -34,7 +34,7 @@ assert_eq!(decoded, name);
 for rdn in decoded.rdns() {
     for attribute in rdn.attributes() {
         let label = match AttributeType::from_oid(attribute.attribute_type()) {
-            Some(known) => known.short_name(),
+            Some(known) => known.name(),
             None => "?",
         };
         if let AttributeValue::DirectoryString(text) = attribute.value() {

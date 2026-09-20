@@ -201,7 +201,7 @@ mod tests {
     use alloc::string::ToString;
     use alloc::vec::Vec;
 
-    use tc_asn1::{Asn1Error, Asn1Ia5String, Asn1Integer, Asn1Object};
+    use tc_asn1::{Asn1Error, Asn1Ia5String, Asn1Integer, Asn1Object, NamedOid};
 
     use crate::{
         AttributeType, AttributeTypeAndValue, AttributeValue, DirectoryString, Name,
@@ -209,7 +209,7 @@ mod tests {
     };
 
     fn single(
-        attribute_type: AttributeType,
+        attribute_type: NamedOid,
         value: impl Into<AttributeValue>,
     ) -> RelativeDistinguishedName {
         RelativeDistinguishedName::single(AttributeTypeAndValue::new(attribute_type.oid(), value))

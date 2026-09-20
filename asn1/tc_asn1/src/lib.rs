@@ -37,5 +37,5 @@ pub use universal::{
     Asn1Enumerated, Asn1GeneralizedTime, Asn1Ia5String, Asn1Integer, Asn1Null, Asn1NumericString,
     Asn1OctetString, Asn1Oid, Asn1OidIri, Asn1PrintableString, Asn1Real, Asn1RelativeOid,
     Asn1RelativeOidIri, Asn1SequenceOf, Asn1SetOf, Asn1Time, Asn1TimeOfDay, Asn1UniversalString,
-    Asn1UtcTime, Asn1Utf8String, Asn1VisibleString,
+    Asn1UtcTime, Asn1Utf8String, Asn1VisibleString, NamedOid,
 };

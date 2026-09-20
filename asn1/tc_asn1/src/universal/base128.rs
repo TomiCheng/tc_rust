@@ -4,6 +4,37 @@ use alloc::vec::Vec;
 
 use crate::Asn1Error;
 
+/// [`validate_base128`] without the error detail, usable in `const`
+/// contexts so a table of OID constants is checked when it is compiled.
+/// Variable time: branches only on the encoding structure.
+pub(crate) const fn is_base128(bytes: &[u8]) -> bool {
+    if bytes.is_empty() {
+        return false;
+    }
+    let mut at_start = true;
+    let mut value: u64 = 0;
+    let mut i = 0;
+    while i < bytes.len() {
+        let byte = bytes[i];
+        if at_start && byte == 0x80 {
+            return false;
+        }
+        value = match value.checked_mul(128) {
+            Some(v) => match v.checked_add((byte & 0x7F) as u64) {
+                Some(v) => v,
+                None => return false,
+            },
+            None => return false,
+        };
+        at_start = byte & 0x80 == 0;
+        if at_start {
+            value = 0;
+        }
+        i += 1;
+    }
+    at_start
+}
+
 /// Checks that the contents are a non-empty run of complete, shortest-form
 /// subidentifiers that each fit in `u64`.
 /// Variable time: branches only on the encoding structure.

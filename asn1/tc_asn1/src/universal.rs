@@ -39,7 +39,7 @@ pub use asn1_integer::Asn1Integer;
 pub use asn1_null::Asn1Null;
 pub use asn1_numeric_string::Asn1NumericString;
 pub use asn1_octet_string::Asn1OctetString;
-pub use asn1_oid::{Arcs, Asn1Oid};
+pub use asn1_oid::{Arcs, Asn1Oid, NamedOid};
 pub use asn1_oid_iri::{Asn1OidIri, Asn1RelativeOidIri};
 pub use asn1_printable_string::Asn1PrintableString;
 pub use asn1_real::Asn1Real;
