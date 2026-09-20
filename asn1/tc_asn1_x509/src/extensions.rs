@@ -30,13 +30,10 @@ use crate::{BasicConstraints, ExtendedKeyUsage, Extension, ExtensionId, KeyUsage
 /// use tc_asn1_x509::{BasicConstraints, Extension, ExtensionId, Extensions, KeyUsage};
 ///
 /// // A CA certificate's extensions: both critical, as RFC 5280 recommends.
-/// let mut extensions = Extensions::single(Extension::with_value(
-///     ExtensionId::BASIC_CONSTRAINTS,
-///     true,
-///     &BasicConstraints::ca(None),
-/// )?);
-/// extensions.set_key_usage(KeyUsage::KEY_CERT_SIGN | KeyUsage::CRL_SIGN, true)?;
-/// let der = extensions.encode_to_vec(&EncodingOptions::new(EncodingType::Der))?;
+/// let extensions = Extensions::new(vec![
+///     Extension::with_value(ExtensionId::BASIC_CONSTRAINTS, true, &BasicConstraints::ca(None))?,
+///     Extension::with_value(ExtensionId::KEY_USAGE, true, &(KeyUsage::KEY_CERT_SIGN | KeyUsage::CRL_SIGN))?,
+/// ])?;
 ///
 /// // The known extensions have typed accessors ...
 /// let mut context = DecodingContext::new(DecodingOptions::default());
@@ -61,66 +58,6 @@ impl Extensions {
         Ok(Self {
             extensions: Asn1SequenceOf::new(extensions),
         })
-    }
-
-    /// A list of one; grow it with [`set`](Self::set).
-    pub fn single(extension: Extension) -> Self {
-        Self {
-            extensions: Asn1SequenceOf::new(Vec::from([extension])),
-        }
-    }
-
-    /// Adds the extension, replacing the one with the same OID in place if
-    /// there is one, appending otherwise.
-    pub fn set(&mut self, extension: Extension) {
-        let mut extensions =
-            core::mem::replace(&mut self.extensions, Asn1SequenceOf::new(Vec::new()))
-                .into_elements();
-        match extensions
-            .iter_mut()
-            .find(|existing| existing.extn_id() == extension.extn_id())
-        {
-            Some(existing) => *existing = extension,
-            None => extensions.push(extension),
-        }
-        self.extensions = Asn1SequenceOf::new(extensions);
-    }
-
-    /// [`set`](Self::set) with the value DER-encoded, as
-    /// [`Extension::with_value`] does.
-    pub fn set_value(
-        &mut self,
-        extn_id: impl Into<Asn1Oid>,
-        critical: bool,
-        value: &impl Encode,
-    ) -> Result<(), Asn1Error> {
-        self.set(Extension::with_value(extn_id, critical, value)?);
-        Ok(())
-    }
-
-    /// [`set_value`](Self::set_value) for keyUsage; RFC 5280 says it SHOULD
-    /// be critical.
-    pub fn set_key_usage(&mut self, usage: KeyUsage, critical: bool) -> Result<(), Asn1Error> {
-        self.set_value(ExtensionId::KEY_USAGE, critical, &usage)
-    }
-
-    /// [`set_value`](Self::set_value) for basicConstraints; RFC 5280 says it
-    /// MUST be critical in a CA certificate.
-    pub fn set_basic_constraints(
-        &mut self,
-        constraints: BasicConstraints,
-        critical: bool,
-    ) -> Result<(), Asn1Error> {
-        self.set_value(ExtensionId::BASIC_CONSTRAINTS, critical, &constraints)
-    }
-
-    /// [`set_value`](Self::set_value) for extKeyUsage.
-    pub fn set_extended_key_usage(
-        &mut self,
-        usage: &ExtendedKeyUsage,
-        critical: bool,
-    ) -> Result<(), Asn1Error> {
-        self.set_value(ExtensionId::EXT_KEY_USAGE, critical, usage)
     }
 
     fn check(extensions: &[Extension]) -> Result<(), Asn1Error> {
@@ -342,47 +279,6 @@ mod tests {
         assert_eq!(
             extensions.get_extended_key_usage(&mut context).unwrap(),
             None
-        );
-    }
-
-    #[test]
-    fn set_appends_new_oids_and_replaces_existing_ones_in_place() {
-        let mut extensions = Extensions::single(
-            Extension::with_value(
-                ExtensionId::BASIC_CONSTRAINTS,
-                true,
-                &BasicConstraints::ca(Some(0)),
-            )
-            .unwrap(),
-        );
-        extensions
-            .set_key_usage(KeyUsage::KEY_CERT_SIGN | KeyUsage::CRL_SIGN, true)
-            .unwrap();
-        assert_eq!(extensions, ca_extensions());
-        assert_eq!(extensions.encode_to_vec(&der()).unwrap(), CA);
-
-        // replacing keeps the position and the count
-        extensions
-            .set_basic_constraints(BasicConstraints::ca(None), true)
-            .unwrap();
-        assert_eq!(extensions.extensions().len(), 2);
-        assert_eq!(
-            extensions.extensions()[0].extn_id(),
-            &ExtensionId::BASIC_CONSTRAINTS.oid()
-        );
-        let mut context = DecodingContext::new(options());
-        assert_eq!(
-            extensions.get_basic_constraints(&mut context).unwrap(),
-            Some(BasicConstraints::ca(None))
-        );
-
-        let eku = ExtendedKeyUsage::new(Vec::from([KeyPurposeId::SERVER_AUTH.oid()])).unwrap();
-        extensions.set_extended_key_usage(&eku, false).unwrap();
-        assert_eq!(extensions.extensions().len(), 3);
-        assert!(!extensions.extensions()[2].critical());
-        assert_eq!(
-            extensions.get_extended_key_usage(&mut context).unwrap(),
-            Some(eku)
         );
     }
 
