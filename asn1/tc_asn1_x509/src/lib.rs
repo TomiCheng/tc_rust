@@ -3,6 +3,7 @@
 extern crate alloc;
 
 mod algorithm_identifier;
+mod basic_constraints;
 mod digest_info;
 mod extension;
 mod key_usage;
@@ -11,6 +12,7 @@ mod time;
 mod validity;
 //
 pub use algorithm_identifier::AlgorithmIdentifier;
+pub use basic_constraints::BasicConstraints;
 pub use digest_info::DigestInfo;
 pub use extension::Extension;
 pub use key_usage::KeyUsage;
