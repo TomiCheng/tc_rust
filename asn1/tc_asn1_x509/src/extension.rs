@@ -24,10 +24,10 @@ use tc_asn1::{
 ///
 /// ```
 /// use tc_asn1::{Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
-/// use tc_asn1_x509::Extension;
+/// use tc_asn1_x509::{BasicConstraints, Extension};
 ///
 /// // basicConstraints, critical, with value SEQUENCE { cA TRUE }
-/// let ext = Extension::new("2.5.29.19".parse()?, true, &[0x30, 0x03, 0x01, 0x01, 0xFF]);
+/// let ext = Extension::new(BasicConstraints::OID, true, &[0x30, 0x03, 0x01, 0x01, 0xFF]);
 /// let out = ext.encode_to_vec(&EncodingOptions::new(EncodingType::Der))?;
 /// assert_eq!(
 ///     out,
@@ -47,9 +47,9 @@ pub struct Extension {
 
 impl Extension {
     /// `extn_value` is the extension's **already encoded** inner DER value.
-    pub fn new(extn_id: Asn1Oid, critical: bool, extn_value: &[u8]) -> Self {
+    pub fn new(extn_id: impl Into<Asn1Oid>, critical: bool, extn_value: &[u8]) -> Self {
         Self {
-            extn_id,
+            extn_id: extn_id.into(),
             critical: critical.into(),
             extn_value: Asn1OctetString::new(extn_value),
         }
@@ -68,9 +68,6 @@ impl Extension {
         self.extn_value.as_bytes()
     }
 
-    /// Decodes `extnValue` as `T`. RFC 5280 §4.1 requires the inner value to be
-    /// DER, so the DER decoder is used and the value must fill the octets exactly.
-    /// Variable time: branches only on the encoding structure.
     /// Decodes `extnValue` as `T`. RFC 5280 §4.1 requires the inner value to be
     /// DER, so the DER rules apply and the value must fill the octets exactly.
     /// Variable time: branches only on the encoding structure.
@@ -160,8 +157,8 @@ mod tests {
     use alloc::vec::Vec;
 
     use tc_asn1::{
-        Asn1BitString, Asn1Error, Asn1Object, Decode, DecodingContext, DecodingOptions, Encode,
-        EncodingOptions, EncodingType,
+        Asn1BitString, Asn1Error, Asn1Object, Asn1Oid, Decode, DecodingContext, DecodingOptions,
+        Encode, EncodingOptions, EncodingType,
     };
 
     use super::Extension;
@@ -194,7 +191,7 @@ mod tests {
         assert_eq!(ext.encode_to_vec(&der()).unwrap(), CRITICAL);
         assert_eq!(
             Extension::new(
-                "2.5.29.19".parse().unwrap(),
+                "2.5.29.19".parse::<Asn1Oid>().unwrap(),
                 true,
                 &[0x30, 0x03, 0x01, 0x01, 0xFF]
             ),
@@ -250,7 +247,7 @@ mod tests {
         assert_eq!((bits.as_bytes(), bits.unused_bits()), (&[0xA0][..], 5));
 
         let padded = Extension::new(
-            "2.5.29.15".parse().unwrap(),
+            "2.5.29.15".parse::<Asn1Oid>().unwrap(),
             false,
             &[0x03, 0x02, 0x05, 0xA0, 0x00],
         );
@@ -259,7 +256,7 @@ mod tests {
             Err(Asn1Error::TrailingData)
         ));
         let ber_inner = Extension::new(
-            "2.5.29.15".parse().unwrap(),
+            "2.5.29.15".parse::<Asn1Oid>().unwrap(),
             false,
             &[0x03, 0x80, 0x03, 0x02, 0x05, 0xA0, 0x00, 0x00],
         );

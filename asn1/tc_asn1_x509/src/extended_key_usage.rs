@@ -16,7 +16,7 @@ use core::fmt;
 
 use tc_asn1::{
     Asn1Error, Asn1Oid, Asn1SequenceOf, Decode, DecodeInner, DecodingContext, Encode,
-    EncodeContent, EncodeTagged, EncodingOptions, Tagged,
+    EncodeContent, EncodeTagged, EncodingOptions, NamedOid, Tagged,
 };
 
 use crate::KeyPurposeId;
@@ -59,10 +59,8 @@ impl ExtendedKeyUsage {
         })
     }
 
-    /// The extension's OID, 2.5.29.37.
-    pub fn oid() -> Asn1Oid {
-        Asn1Oid::from_der_bytes(&[0x55, 0x1D, 0x25]).expect("a valid encoding")
-    }
+    /// The extension's OID, id-ce-extKeyUsage 2.5.29.37.
+    pub const OID: NamedOid = NamedOid::new(&[0x55, 0x1d, 0x25], "2.5.29.37", "extKeyUsage");
 
     /// The purposes in order, never empty.
     pub fn purposes(&self) -> &[Asn1Oid] {
@@ -228,7 +226,7 @@ mod tests {
     fn it_travels_inside_an_extension() {
         let eku = ExtendedKeyUsage::new(Vec::from([KeyPurposeId::OCSP_SIGNING.oid()])).unwrap();
         let extension = Extension::new(
-            ExtendedKeyUsage::oid(),
+            ExtendedKeyUsage::OID,
             false,
             &eku.encode_to_vec(&der()).unwrap(),
         );

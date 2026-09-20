@@ -14,8 +14,8 @@
 use core::fmt;
 
 use tc_asn1::{
-    Asn1Boolean, Asn1Error, Asn1Integer, Asn1Oid, Asn1Ref, Decode, DecodeInner, DecodingContext,
-    Encode, EncodeContent, EncodeTagged, EncodingOptions, Tagged, tag,
+    Asn1Boolean, Asn1Error, Asn1Integer, Asn1Ref, Decode, DecodeInner, DecodingContext, Encode,
+    EncodeContent, EncodeTagged, EncodingOptions, NamedOid, Tagged, tag,
 };
 
 /// CA or end entity, with the optional path length limit.
@@ -65,10 +65,8 @@ impl BasicConstraints {
         }
     }
 
-    /// The extension's OID, 2.5.29.19.
-    pub fn oid() -> Asn1Oid {
-        Asn1Oid::from_der_bytes(&[0x55, 0x1D, 0x13]).expect("a valid encoding")
-    }
+    /// The extension's OID, id-ce-basicConstraints 2.5.29.19.
+    pub const OID: NamedOid = NamedOid::new(&[0x55, 0x1d, 0x13], "2.5.29.19", "basicConstraints");
 
     pub fn is_ca(&self) -> bool {
         self.ca
@@ -264,7 +262,7 @@ mod tests {
     fn it_travels_inside_a_critical_extension() {
         let bc = BasicConstraints::ca(Some(1));
         let extension = Extension::new(
-            BasicConstraints::oid(),
+            BasicConstraints::OID,
             true,
             &bc.encode_to_vec(&der()).unwrap(),
         );

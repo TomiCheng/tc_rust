@@ -16,8 +16,8 @@ use core::fmt;
 use core::ops::{BitOr, BitOrAssign};
 
 use tc_asn1::{
-    Asn1BitString, Asn1Error, Asn1Oid, Decode, DecodeInner, DecodingContext, Encode, EncodeContent,
-    EncodeTagged, EncodingOptions, Tagged,
+    Asn1BitString, Asn1Error, Decode, DecodeInner, DecodingContext, Encode, EncodeContent,
+    EncodeTagged, EncodingOptions, NamedOid, Tagged,
 };
 
 /// The set of purposes a key may be used for. Combine flags with `|`.
@@ -75,10 +75,8 @@ impl KeyUsage {
     ];
     const DEFINED: u32 = 0xFF80_0000;
 
-    /// The extension's OID, 2.5.29.15.
-    pub fn oid() -> Asn1Oid {
-        Asn1Oid::from_der_bytes(&[0x55, 0x1D, 0x0F]).expect("a valid encoding")
-    }
+    /// The extension's OID, id-ce-keyUsage 2.5.29.15.
+    pub const OID: NamedOid = NamedOid::new(&[0x55, 0x1d, 0x0f], "2.5.29.15", "keyUsage");
 
     /// From the raw bits, `1 << (31 - i)` for bit `i`. No bit set or an
     /// undefined bit set is `MalformedValue`.
@@ -304,8 +302,7 @@ mod tests {
     #[test]
     fn it_travels_inside_a_critical_extension() {
         let usage = KeyUsage::KEY_CERT_SIGN | KeyUsage::CRL_SIGN;
-        let extension =
-            Extension::new(KeyUsage::oid(), true, &usage.encode_to_vec(&der()).unwrap());
+        let extension = Extension::new(KeyUsage::OID, true, &usage.encode_to_vec(&der()).unwrap());
         assert_eq!(extension.extn_id().to_string(), "2.5.29.15");
         let wire = extension.encode_to_vec(&der()).unwrap();
         assert_eq!(
