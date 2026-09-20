@@ -19,7 +19,7 @@ use tc_asn1::{
     EncodeContent, EncodeTagged, EncodingOptions, Tagged,
 };
 
-use crate::Extension;
+use crate::{BasicConstraints, ExtendedKeyUsage, Extension, ExtensionId, KeyUsage};
 
 /// A non-empty list of extensions with unique OIDs.
 ///
@@ -29,18 +29,24 @@ use crate::Extension;
 /// use tc_asn1::{Decode, DecodingContext, DecodingOptions, Encode, EncodingOptions, EncodingType};
 /// use tc_asn1_x509::{BasicConstraints, Extension, ExtensionId, Extensions, KeyUsage};
 ///
-/// let der = EncodingOptions::new(EncodingType::Der);
 /// // A CA certificate's extensions: both critical, as RFC 5280 recommends.
-/// let extensions = Extensions::new(vec![
-///     Extension::new(ExtensionId::BASIC_CONSTRAINTS, true, &BasicConstraints::ca(None).encode_to_vec(&der)?),
-///     Extension::new(ExtensionId::KEY_USAGE, true, &(KeyUsage::KEY_CERT_SIGN | KeyUsage::CRL_SIGN).encode_to_vec(&der)?),
-/// ])?;
+/// let mut extensions = Extensions::single(Extension::with_value(
+///     ExtensionId::BASIC_CONSTRAINTS,
+///     true,
+///     &BasicConstraints::ca(None),
+/// )?);
+/// extensions.set_key_usage(KeyUsage::KEY_CERT_SIGN | KeyUsage::CRL_SIGN, true)?;
+/// let der = extensions.encode_to_vec(&EncodingOptions::new(EncodingType::Der))?;
 ///
-/// // Look one up by OID and decode its value in one step.
+/// // The known extensions have typed accessors ...
 /// let mut context = DecodingContext::new(DecodingOptions::default());
-/// let usage: Option<KeyUsage> = extensions.get_as(ExtensionId::KEY_USAGE, &mut context)?;
-/// assert!(usage.unwrap().contains(KeyUsage::KEY_CERT_SIGN));
-/// assert!(extensions.get(ExtensionId::EXT_KEY_USAGE).is_none());
+/// let usage = extensions.get_key_usage(&mut context)?.unwrap();
+/// assert!(usage.contains(KeyUsage::KEY_CERT_SIGN));
+/// assert!(extensions.get_extended_key_usage(&mut context)?.is_none());
+///
+/// // ... and anything can be looked up by OID.
+/// let raw = extensions.get(ExtensionId::BASIC_CONSTRAINTS).unwrap();
+/// assert!(raw.critical());
 /// # Ok::<(), tc_asn1::Asn1Error>(())
 /// ```
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
@@ -55,6 +61,66 @@ impl Extensions {
         Ok(Self {
             extensions: Asn1SequenceOf::new(extensions),
         })
+    }
+
+    /// A list of one; grow it with [`set`](Self::set).
+    pub fn single(extension: Extension) -> Self {
+        Self {
+            extensions: Asn1SequenceOf::new(Vec::from([extension])),
+        }
+    }
+
+    /// Adds the extension, replacing the one with the same OID in place if
+    /// there is one, appending otherwise.
+    pub fn set(&mut self, extension: Extension) {
+        let mut extensions =
+            core::mem::replace(&mut self.extensions, Asn1SequenceOf::new(Vec::new()))
+                .into_elements();
+        match extensions
+            .iter_mut()
+            .find(|existing| existing.extn_id() == extension.extn_id())
+        {
+            Some(existing) => *existing = extension,
+            None => extensions.push(extension),
+        }
+        self.extensions = Asn1SequenceOf::new(extensions);
+    }
+
+    /// [`set`](Self::set) with the value DER-encoded, as
+    /// [`Extension::with_value`] does.
+    pub fn set_value(
+        &mut self,
+        extn_id: impl Into<Asn1Oid>,
+        critical: bool,
+        value: &impl Encode,
+    ) -> Result<(), Asn1Error> {
+        self.set(Extension::with_value(extn_id, critical, value)?);
+        Ok(())
+    }
+
+    /// [`set_value`](Self::set_value) for keyUsage; RFC 5280 says it SHOULD
+    /// be critical.
+    pub fn set_key_usage(&mut self, usage: KeyUsage, critical: bool) -> Result<(), Asn1Error> {
+        self.set_value(ExtensionId::KEY_USAGE, critical, &usage)
+    }
+
+    /// [`set_value`](Self::set_value) for basicConstraints; RFC 5280 says it
+    /// MUST be critical in a CA certificate.
+    pub fn set_basic_constraints(
+        &mut self,
+        constraints: BasicConstraints,
+        critical: bool,
+    ) -> Result<(), Asn1Error> {
+        self.set_value(ExtensionId::BASIC_CONSTRAINTS, critical, &constraints)
+    }
+
+    /// [`set_value`](Self::set_value) for extKeyUsage.
+    pub fn set_extended_key_usage(
+        &mut self,
+        usage: &ExtendedKeyUsage,
+        critical: bool,
+    ) -> Result<(), Asn1Error> {
+        self.set_value(ExtensionId::EXT_KEY_USAGE, critical, usage)
     }
 
     fn check(extensions: &[Extension]) -> Result<(), Asn1Error> {
@@ -97,6 +163,30 @@ impl Extensions {
         self.get(extn_id)
             .map(|extension| extension.extn_value_as(context))
             .transpose()
+    }
+
+    /// [`get_as`](Self::get_as) for the keyUsage extension.
+    pub fn get_key_usage(
+        &self,
+        context: &mut DecodingContext,
+    ) -> Result<Option<KeyUsage>, Asn1Error> {
+        self.get_as(ExtensionId::KEY_USAGE, context)
+    }
+
+    /// [`get_as`](Self::get_as) for the basicConstraints extension.
+    pub fn get_basic_constraints(
+        &self,
+        context: &mut DecodingContext,
+    ) -> Result<Option<BasicConstraints>, Asn1Error> {
+        self.get_as(ExtensionId::BASIC_CONSTRAINTS, context)
+    }
+
+    /// [`get_as`](Self::get_as) for the extKeyUsage extension.
+    pub fn get_extended_key_usage(
+        &self,
+        context: &mut DecodingContext,
+    ) -> Result<Option<ExtendedKeyUsage>, Asn1Error> {
+        self.get_as(ExtensionId::EXT_KEY_USAGE, context)
     }
 }
 
@@ -150,7 +240,9 @@ mod tests {
     };
 
     use super::Extensions;
-    use crate::{BasicConstraints, ExtendedKeyUsage, Extension, ExtensionId, KeyUsage};
+    use crate::{
+        BasicConstraints, ExtendedKeyUsage, Extension, ExtensionId, KeyPurposeId, KeyUsage,
+    };
 
     fn der() -> EncodingOptions {
         EncodingOptions::new(EncodingType::Der)
@@ -232,6 +324,65 @@ mod tests {
             extensions
                 .get_as::<KeyUsage>(ExtensionId::BASIC_CONSTRAINTS, &mut context)
                 .is_err()
+        );
+    }
+
+    #[test]
+    fn the_typed_accessors_return_the_present_extensions_and_none_for_absent_ones() {
+        let (_, extensions) = Extensions::decode(CA, &options()).unwrap();
+        let mut context = DecodingContext::new(options());
+        assert_eq!(
+            extensions.get_key_usage(&mut context).unwrap(),
+            Some(KeyUsage::KEY_CERT_SIGN | KeyUsage::CRL_SIGN)
+        );
+        assert_eq!(
+            extensions.get_basic_constraints(&mut context).unwrap(),
+            Some(BasicConstraints::ca(Some(0)))
+        );
+        assert_eq!(
+            extensions.get_extended_key_usage(&mut context).unwrap(),
+            None
+        );
+    }
+
+    #[test]
+    fn set_appends_new_oids_and_replaces_existing_ones_in_place() {
+        let mut extensions = Extensions::single(
+            Extension::with_value(
+                ExtensionId::BASIC_CONSTRAINTS,
+                true,
+                &BasicConstraints::ca(Some(0)),
+            )
+            .unwrap(),
+        );
+        extensions
+            .set_key_usage(KeyUsage::KEY_CERT_SIGN | KeyUsage::CRL_SIGN, true)
+            .unwrap();
+        assert_eq!(extensions, ca_extensions());
+        assert_eq!(extensions.encode_to_vec(&der()).unwrap(), CA);
+
+        // replacing keeps the position and the count
+        extensions
+            .set_basic_constraints(BasicConstraints::ca(None), true)
+            .unwrap();
+        assert_eq!(extensions.extensions().len(), 2);
+        assert_eq!(
+            extensions.extensions()[0].extn_id(),
+            &ExtensionId::BASIC_CONSTRAINTS.oid()
+        );
+        let mut context = DecodingContext::new(options());
+        assert_eq!(
+            extensions.get_basic_constraints(&mut context).unwrap(),
+            Some(BasicConstraints::ca(None))
+        );
+
+        let eku = ExtendedKeyUsage::new(Vec::from([KeyPurposeId::SERVER_AUTH.oid()])).unwrap();
+        extensions.set_extended_key_usage(&eku, false).unwrap();
+        assert_eq!(extensions.extensions().len(), 3);
+        assert!(!extensions.extensions()[2].critical());
+        assert_eq!(
+            extensions.get_extended_key_usage(&mut context).unwrap(),
+            Some(eku)
         );
     }
 

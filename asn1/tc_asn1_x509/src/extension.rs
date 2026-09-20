@@ -14,7 +14,8 @@
 
 use tc_asn1::{
     Asn1Boolean, Asn1Error, Asn1OctetString, Asn1Oid, Asn1Ref, Decode, DecodeInner,
-    DecodingContext, Encode, EncodeContent, EncodeTagged, EncodingOptions, Tagged, tag,
+    DecodingContext, Encode, EncodeContent, EncodeTagged, EncodingOptions, EncodingType, Tagged,
+    tag,
 };
 
 /// One certificate extension. `critical` is kept as the ASN.1 value so the
@@ -53,6 +54,17 @@ impl Extension {
             critical: critical.into(),
             extn_value: Asn1OctetString::new(extn_value),
         }
+    }
+
+    /// `new` with the value DER-encoded here, for values this crate has a
+    /// type for.
+    pub fn with_value(
+        extn_id: impl Into<Asn1Oid>,
+        critical: bool,
+        value: &impl Encode,
+    ) -> Result<Self, Asn1Error> {
+        let der = value.encode_to_vec(&EncodingOptions::new(EncodingType::Der))?;
+        Ok(Self::new(extn_id, critical, &der))
     }
 
     pub fn extn_id(&self) -> &Asn1Oid {
