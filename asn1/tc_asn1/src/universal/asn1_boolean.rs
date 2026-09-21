@@ -1,7 +1,35 @@
+//! X.690 §8.2 BOOLEAN, universal tag 1.
+//!
+//! One contents octet: `00` is FALSE and anything else is TRUE. DER (§11.1)
+//! writes TRUE as `FF` only; this crate always writes `FF`, and rejects the
+//! other nonzero octets when the DER rules are on.
+
 use crate::{
     Asn1Error, Decode, DecodeContent, DecodeInner, DecodingContext, Encode, EncodingOptions, Tagged,
 };
 
+/// A `bool` with the BOOLEAN encoding.
+///
+/// # Examples
+///
+/// ```
+/// use tc_asn1::{Asn1Boolean, Asn1Error, Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+///
+/// let der = EncodingOptions::new(EncodingType::Der);
+/// let options = DecodingOptions::default();
+///
+/// assert_eq!(Asn1Boolean::from(true).encode_to_vec(&der)?, [0x01, 0x01, 0xFF]);
+/// assert_eq!(Asn1Boolean::from(false).encode_to_vec(&der)?, [0x01, 0x01, 0x00]);
+///
+/// // BER takes any nonzero octet as TRUE; DER insists on FF.
+/// let (_, lenient) = Asn1Boolean::decode(&[0x01, 0x01, 0x01], &options)?;
+/// assert!(lenient.is_true());
+/// assert!(matches!(
+///     Asn1Boolean::decode_der(&[0x01, 0x01, 0x01], &options),
+///     Err(Asn1Error::NotDer)
+/// ));
+/// # Ok::<(), Asn1Error>(())
+/// ```
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 pub struct Asn1Boolean(bool);
 
@@ -23,6 +51,7 @@ impl From<bool> for Asn1Boolean {
     }
 }
 
+/// `true` or `false`.
 impl core::fmt::Display for Asn1Boolean {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         core::fmt::Display::fmt(&self.0, f)
@@ -49,6 +78,9 @@ impl Tagged for Asn1Boolean {
 }
 
 impl DecodeContent for Asn1Boolean {
+    /// Anything but exactly one octet is `MalformedValue`; a nonzero octet
+    /// other than `FF` is `NotDer` under DER. Variable time: branches on
+    /// the octet, which is a public value.
     fn decode_content(value: &[u8], context: &mut DecodingContext) -> Result<Self, Asn1Error> {
         context.options().check_content_len(value.len())?;
         match value {
@@ -70,6 +102,7 @@ impl crate::EncodeContent for Asn1Boolean {
         1
     }
 
+    /// `FF` or `00` under every rule set. Constant time in the value.
     fn encode_content(&self, _: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         let octet = out.first_mut().ok_or(Asn1Error::BufferTooSmall)?;
         *octet = u8::from(self.0).wrapping_neg();
@@ -86,5 +119,94 @@ impl Encode for Asn1Boolean {
 
     fn encode(&self, rules: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         crate::EncodeTagged::encode_tagged(self, Self::TAG, rules, out)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use alloc::string::ToString;
+
+    use super::Asn1Boolean;
+    use crate::{
+        Asn1Error, Decode, DecodingOptions, Encode, EncodingOptions, EncodingType, LengthForm,
+    };
+
+    fn options() -> DecodingOptions {
+        DecodingOptions::default()
+    }
+
+    #[test]
+    fn true_is_ff_and_false_is_00_under_every_rule_set() {
+        for rules in [
+            EncodingType::Ber(LengthForm::Definite),
+            EncodingType::Ber(LengthForm::Indefinite),
+            EncodingType::Cer,
+            EncodingType::Der,
+        ] {
+            let rules = EncodingOptions::new(rules);
+            assert_eq!(
+                Asn1Boolean::from(true).encode_to_vec(&rules).unwrap(),
+                [0x01, 0x01, 0xFF]
+            );
+            assert_eq!(
+                Asn1Boolean::from(false).encode_to_vec(&rules).unwrap(),
+                [0x01, 0x01, 0x00]
+            );
+        }
+    }
+
+    #[test]
+    fn any_nonzero_octet_is_true_under_ber_but_only_ff_under_der() {
+        for octet in [0x01, 0x7F, 0x80, 0xFF] {
+            let wire = [0x01, 0x01, octet];
+            let (used, value) = Asn1Boolean::decode(&wire, &options()).unwrap();
+            assert_eq!((used, value.is_true()), (3, true));
+            let strict = Asn1Boolean::decode_der(&wire, &options());
+            if octet == 0xFF {
+                assert!(strict.unwrap().1.is_true());
+            } else {
+                assert!(matches!(strict, Err(Asn1Error::NotDer)));
+            }
+        }
+        let (_, value) = Asn1Boolean::decode_der(&[0x01, 0x01, 0x00], &options()).unwrap();
+        assert!(value.is_false());
+    }
+
+    #[test]
+    fn a_lenient_true_re_encodes_as_ff() {
+        let (_, value) = Asn1Boolean::decode(&[0x01, 0x01, 0x01], &options()).unwrap();
+        assert_eq!(
+            value
+                .encode_to_vec(&EncodingOptions::new(EncodingType::Der))
+                .unwrap(),
+            [0x01, 0x01, 0xFF]
+        );
+    }
+
+    #[test]
+    fn a_contents_length_other_than_one_is_malformed() {
+        for wire in [&[0x01, 0x00][..], &[0x01, 0x02, 0x00, 0x00]] {
+            assert!(matches!(
+                Asn1Boolean::decode(wire, &options()),
+                Err(Asn1Error::MalformedValue)
+            ));
+        }
+    }
+
+    #[test]
+    fn another_tag_is_unexpected() {
+        assert!(matches!(
+            Asn1Boolean::decode(&[0x02, 0x01, 0x01], &options()),
+            Err(Asn1Error::UnexpectedTag)
+        ));
+    }
+
+    #[test]
+    fn it_converts_from_bool_and_displays_like_one() {
+        let value = Asn1Boolean::from(true);
+        assert!(value.is_true());
+        assert!(!value.is_false());
+        assert_eq!(value.to_string(), "true");
+        assert_eq!(Asn1Boolean::from(false).to_string(), "false");
     }
 }

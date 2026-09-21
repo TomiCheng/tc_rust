@@ -13,7 +13,6 @@ mod encoding_options;
 mod encoding_type;
 mod error;
 mod tagging;
-// mod segments;
 mod traits;
 mod universal;
 
