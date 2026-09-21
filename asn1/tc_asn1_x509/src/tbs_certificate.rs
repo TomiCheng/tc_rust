@@ -313,6 +313,9 @@ mod tests {
         AlgorithmIdentifier, ExtensionId, Extensions, KeyUsage, SubjectPublicKeyInfo, Validity,
     };
 
+    /// RFC 8410's example certificate; see `tests/data/README.md`.
+    const RFC_8410: &[u8] = include_bytes!("../tests/data/rfc8410.der");
+
     fn der() -> EncodingOptions {
         EncodingOptions::new(EncodingType::Der)
     }
@@ -321,38 +324,9 @@ mod tests {
         DecodingOptions::default()
     }
 
-    fn hex(text: &str) -> Vec<u8> {
-        (0..text.len())
-            .step_by(2)
-            .map(|i| u8::from_str_radix(&text[i..i + 2], 16).unwrap())
-            .collect()
-    }
-
-    /// RFC 8410 §10.2: a self-issued X25519 certificate signed with Ed25519,
-    /// CN=IETF Test Demo, valid 2016-08-01 to 2040-12-31, with critical
-    /// basicConstraints (cA FALSE, written out), keyUsage keyAgreement and a
-    /// subjectKeyIdentifier. The example is BER rather than DER: two
-    /// extensions write `critical FALSE` and basicConstraints writes its
-    /// DEFAULT, which the tests below rely on.
-    fn certificate() -> Vec<u8> {
-        hex(concat!(
-            "3082012c3081dfa00302010202085601474a2a8dc330300506032b657030",
-            "193117301506035504030c0e4945544620546573742044656d6f301e170d",
-            "3136303830313132313932345a170d3430313233313233353935395a3019",
-            "3117301506035504030c0e4945544620546573742044656d6f302a300506",
-            "032b656e0321008520f0098930a754748b7ddcb43ef75a0dbf3a0d26381a",
-            "f4eba4a98eaa9b4e6aa3453043300f0603551d130101ff04053003010100",
-            "300e0603551d0f01010004040302030830200603551d0e01010004160414",
-            "9b1f5eeded043385e4f7bc623c5975b90bc8bb3b300506032b6570034100",
-            "af2301feddc9e6ffc1cca73d74d648a4398082cddb69b14e4d06ecf81a25",
-            "ce50d4c2c3eb746c4edd8346856ec86f3dce1a1865c57ac27b50a0c35007",
-            "f5e7d907",
-        ))
-    }
-
     /// The TBSCertificate: the outer SEQUENCE's first element.
     fn tbs_bytes() -> Vec<u8> {
-        certificate()[4..230].to_vec()
+        RFC_8410.to_vec()[4..230].to_vec()
     }
 
     fn v1_from(v3: &TbsCertificate) -> TbsCertificate {
@@ -498,7 +472,7 @@ mod tests {
 
     #[test]
     fn the_parts_can_be_decoded_on_their_own() {
-        let certificate = certificate();
+        let certificate = RFC_8410.to_vec();
         let (_, validity) = Validity::decode(&certificate[56..88], &options()).unwrap();
         assert_eq!(validity.not_after().to_string(), "2040-12-31T23:59:59Z");
         let (_, spki) = SubjectPublicKeyInfo::decode(&certificate[115..159], &options()).unwrap();

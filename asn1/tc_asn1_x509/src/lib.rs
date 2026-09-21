@@ -4,6 +4,7 @@ extern crate alloc;
 
 mod algorithm_identifier;
 mod basic_constraints;
+mod certificate;
 mod digest_info;
 mod extended_key_usage;
 mod extension;
@@ -18,6 +19,7 @@ mod validity;
 //
 pub use algorithm_identifier::AlgorithmIdentifier;
 pub use basic_constraints::BasicConstraints;
+pub use certificate::Certificate;
 pub use digest_info::DigestInfo;
 pub use extended_key_usage::ExtendedKeyUsage;
 pub use extension::Extension;
