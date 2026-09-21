@@ -1,4 +1,13 @@
-//! ASN.1 `VisibleString`: printable ASCII including space (X.680 §41.4).
+//! X.680 §41 `VisibleString`, universal tag 26.
+//!
+//! The printable characters of ISO 646, `0x20` to `0x7E` (X.680 §41.4):
+//! IA5String without the control characters.
+//!
+//! One octet per character, so the contents are ASCII and the type is a
+//! subset of [`Asn1Ia5String`](crate::Asn1Ia5String) in what it accepts.
+//! Every rule set writes it the same way; the constructed form BER allows
+//! and CER requires over 1000 octets is
+//! [`Asn1Constructed`](crate::Asn1Constructed) with tag `0x3A`.
 
 use alloc::string::String;
 
@@ -14,6 +23,24 @@ fn is_visible(byte: u8) -> bool {
     (0x20..=0x7E).contains(&byte)
 }
 
+/// Printable ASCII, space included.
+///
+/// # Examples
+///
+/// ```
+/// use tc_asn1::{Asn1Error, Asn1VisibleString, Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+///
+/// let text = Asn1VisibleString::new("Hello, World!")?;
+/// let der = text.encode_to_vec(&EncodingOptions::new(EncodingType::Der))?;
+/// assert_eq!(der[..2], [0x1A, 13]);
+/// assert_eq!(&der[2..], "Hello, World!".as_bytes());
+/// let (_, back) = Asn1VisibleString::decode(&der, &DecodingOptions::default())?;
+/// assert_eq!(back.as_str(), "Hello, World!");
+///
+/// // A control character is not visible.
+/// assert!(matches!(Asn1VisibleString::new("line\n"), Err(Asn1Error::MalformedValue)));
+/// # Ok::<(), Asn1Error>(())
+/// ```
 #[derive(Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct Asn1VisibleString {
     text: String,
@@ -47,7 +74,7 @@ impl DecodeInner for Asn1VisibleString {
         buff: &[u8],
         context: &mut DecodingContext,
     ) -> Result<(usize, Self), Asn1Error> {
-        // Only the primitive form; the constructed form is Asn1VisibleStringConstructed.
+        // Only the primitive form; the constructed form is Asn1Constructed with tag 0x3A.
         let element = crate::Asn1Ref::parse(buff, context)?;
         if element.tag() != Self::TAG {
             return Err(Asn1Error::UnexpectedTag);
@@ -111,5 +138,78 @@ impl Encode for Asn1VisibleString {
 
     fn encode(&self, rules: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         self.encode_tagged(Self::TAG, rules, out)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use alloc::string::{String, ToString};
+
+    use super::Asn1VisibleString;
+    use crate::{Asn1Error, Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+
+    fn options() -> DecodingOptions {
+        DecodingOptions::default()
+    }
+
+    #[test]
+    fn only_the_character_set_is_accepted_when_built_or_decoded() {
+        for text in ["Hello, World!", "~", " ", ""] {
+            assert!(Asn1VisibleString::new(text).is_ok(), "{text:?}");
+        }
+        for text in ["tab\t", "nl\n", "\u{7f}", "café"] {
+            assert!(
+                matches!(Asn1VisibleString::new(text), Err(Asn1Error::MalformedValue)),
+                "{text:?}"
+            );
+            let mut wire = alloc::vec![0x1A, text.len() as u8];
+            wire.extend_from_slice(text.as_bytes());
+            assert!(
+                matches!(
+                    Asn1VisibleString::decode(&wire, &options()),
+                    Err(Asn1Error::MalformedValue)
+                ),
+                "{text:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn the_wire_form_is_one_octet_per_character() {
+        let der = EncodingOptions::new(EncodingType::Der);
+        let value = Asn1VisibleString::new("Hello, World!").unwrap();
+        let wire = value.encode_to_vec(&der).unwrap();
+        assert_eq!(wire[..2], [0x1A, 13]);
+        assert_eq!(&wire[2..], "Hello, World!".as_bytes());
+        let (used, back) = Asn1VisibleString::decode(&wire, &options()).unwrap();
+        assert_eq!((used, &back), (wire.len(), &value));
+        assert_eq!(back.to_string(), "Hello, World!");
+        assert_eq!(
+            Asn1VisibleString::decode_der(&wire, &options()).unwrap().1,
+            value
+        );
+        assert_eq!(Asn1VisibleString::default().as_str(), "");
+    }
+
+    #[test]
+    fn the_constructed_form_and_other_tags_are_unexpected_and_cer_limits_the_length() {
+        assert!(matches!(
+            Asn1VisibleString::decode(&[0x3A, 0x02, 0x1A, 0x00], &options()),
+            Err(Asn1Error::UnexpectedTag)
+        ));
+        assert!(matches!(
+            Asn1VisibleString::decode(&[0x04, 0x01, 0x31], &options()),
+            Err(Asn1Error::UnexpectedTag)
+        ));
+        let long =
+            Asn1VisibleString::new(&String::from_utf8(alloc::vec![b'1'; 1001]).unwrap()).unwrap();
+        assert!(matches!(
+            long.encode_to_vec(&EncodingOptions::new(EncodingType::Cer)),
+            Err(Asn1Error::PrimitiveTooLong)
+        ));
+        assert!(
+            long.encode_to_vec(&EncodingOptions::new(EncodingType::Der))
+                .is_ok()
+        );
     }
 }

@@ -1,4 +1,12 @@
-//! ASN.1 `UniversalString`: UCS-4 big-endian, four octets per Unicode scalar value.
+//! X.680 §41 `UniversalString`, universal tag 28: UCS-4, four big-endian
+//! octets per character.
+//!
+//! Every Unicode scalar value fits, characters outside the BMP as a single
+//! code point; a Rust string already excludes surrogates and values above
+//! `U+10FFFF`, so building never fails and decoding checks each code
+//! point. Rare in practice, UTF8String having taken its place. The
+//! constructed form BER allows and CER requires over 1000 octets is
+//! [`Asn1Constructed`](crate::Asn1Constructed) with tag `0x3C`.
 
 use alloc::string::String;
 
@@ -9,10 +17,20 @@ use crate::{
     EncodeTagged, EncodingOptions, Tagged,
 };
 
-/// Holds Unicode scalar values as a Rust string; on the wire each is four
-/// big-endian octets. A Rust string already excludes surrogates and values
-/// above `U+10FFFF`, so building never fails; decoding validates each code
-/// point. Characters outside the BMP take a single code point, no surrogates.
+/// Any Unicode text, written as UCS-4.
+///
+/// # Examples
+///
+/// ```
+/// use tc_asn1::{Asn1Error, Asn1UniversalString, Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+///
+/// let text = Asn1UniversalString::new("A\u{1F600}");
+/// let der = text.encode_to_vec(&EncodingOptions::new(EncodingType::Der))?;
+/// assert_eq!(der, [0x1C, 0x08, 0x00, 0x00, 0x00, 0x41, 0x00, 0x01, 0xF6, 0x00]);
+/// let (_, back) = Asn1UniversalString::decode(&der, &DecodingOptions::default())?;
+/// assert_eq!(back.as_str(), "A\u{1F600}");
+/// # Ok::<(), Asn1Error>(())
+/// ```
 #[derive(Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct Asn1UniversalString {
     text: String,
@@ -54,7 +72,7 @@ impl DecodeInner for Asn1UniversalString {
         buff: &[u8],
         context: &mut DecodingContext,
     ) -> Result<(usize, Self), Asn1Error> {
-        // Only the primitive form; the constructed form is Asn1UniversalStringConstructed.
+        // Only the primitive form; the constructed form is Asn1Constructed with tag 0x3C.
         let element = crate::Asn1Ref::parse(buff, context)?;
         if element.tag() != Self::TAG {
             return Err(Asn1Error::UnexpectedTag);
@@ -122,5 +140,73 @@ impl Encode for Asn1UniversalString {
 
     fn encode(&self, rules: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         self.encode_tagged(Self::TAG, rules, out)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use alloc::string::{String, ToString};
+
+    use super::Asn1UniversalString;
+    use crate::{Asn1Error, Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+
+    fn options() -> DecodingOptions {
+        DecodingOptions::default()
+    }
+
+    #[test]
+    fn each_character_is_four_big_endian_octets() {
+        let der = EncodingOptions::new(EncodingType::Der);
+        for (text, wire) in [
+            ("", &[0x1C, 0x00][..]),
+            ("A", &[0x1C, 0x04, 0x00, 0x00, 0x00, 0x41]),
+            ("\u{53f0}", &[0x1C, 0x04, 0x00, 0x00, 0x53, 0xF0]),
+            ("\u{1F600}", &[0x1C, 0x04, 0x00, 0x01, 0xF6, 0x00]),
+        ] {
+            let value = Asn1UniversalString::new(text);
+            assert_eq!(value.encode_to_vec(&der).unwrap(), wire, "{text:?}");
+            let (used, back) = Asn1UniversalString::decode(wire, &options()).unwrap();
+            assert_eq!((used, back.as_str()), (wire.len(), text));
+            assert_eq!(back.to_string(), text);
+        }
+        assert_eq!(
+            Asn1UniversalString::from(String::from("x")),
+            Asn1UniversalString::new("x")
+        );
+    }
+
+    #[test]
+    fn surrogates_values_past_unicode_and_partial_code_points_are_rejected() {
+        for wire in [
+            &[0x1C, 0x04, 0x00, 0x00, 0xD8, 0x00][..], // a surrogate
+            &[0x1C, 0x04, 0x00, 0x11, 0x00, 0x00],     // U+110000
+            &[0x1C, 0x03, 0x00, 0x00, 0x41],           // three octets
+        ] {
+            assert!(
+                matches!(
+                    Asn1UniversalString::decode(wire, &options()),
+                    Err(Asn1Error::MalformedValue)
+                ),
+                "{wire:02X?}"
+            );
+        }
+        assert!(matches!(
+            Asn1UniversalString::decode(&[0x3C, 0x02, 0x1C, 0x00], &options()),
+            Err(Asn1Error::UnexpectedTag)
+        ));
+    }
+
+    #[test]
+    fn cer_counts_wire_octets() {
+        let cer = EncodingOptions::new(EncodingType::Cer);
+        assert!(
+            Asn1UniversalString::new(&"a".repeat(250))
+                .encode_to_vec(&cer)
+                .is_ok()
+        );
+        assert!(matches!(
+            Asn1UniversalString::new(&"a".repeat(251)).encode_to_vec(&cer),
+            Err(Asn1Error::PrimitiveTooLong)
+        ));
     }
 }
