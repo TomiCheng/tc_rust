@@ -125,3 +125,78 @@ impl Encode for Implicit<'_> {
         self.encode_tagged(self.tag, rules, out)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use alloc::vec;
+
+    use super::{Explicit, Implicit};
+    use crate::{
+        Asn1Error, Asn1Integer, Asn1OctetString, Asn1SequenceOf, Asn1SetOf, Encode,
+        EncodingOptions, EncodingType, LengthForm,
+    };
+
+    fn rules(encoding: EncodingType) -> EncodingOptions {
+        EncodingOptions::new(encoding)
+    }
+
+    #[test]
+    fn explicit_wraps_the_whole_tlv_and_follows_the_length_form() {
+        let list = Asn1SequenceOf::new(vec![Asn1Integer::from(1)]);
+        let wrapped = Explicit::new(&[0xA3], &list);
+        assert_eq!(wrapped.encoded_len(&rules(EncodingType::Der)), 7);
+        assert_eq!(
+            wrapped.encode_to_vec(&rules(EncodingType::Der)).unwrap(),
+            [0xA3, 0x05, 0x30, 0x03, 0x02, 0x01, 0x01]
+        );
+        assert_eq!(
+            wrapped.encode_to_vec(&rules(EncodingType::Cer)).unwrap(),
+            [
+                0xA3, 0x80, 0x30, 0x80, 0x02, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00
+            ]
+        );
+        let mut short = [0u8; 6];
+        assert!(matches!(
+            wrapped.encode(&rules(EncodingType::Der), &mut short),
+            Err(Asn1Error::BufferTooSmall)
+        ));
+    }
+
+    #[test]
+    fn implicit_replaces_the_tag_and_leaves_the_inner_rules_in_force() {
+        let set = Asn1SetOf::new(vec![Asn1Integer::from(2), Asn1Integer::from(1)]);
+        let retagged = Implicit::new(&[0xA1], &set);
+        assert_eq!(
+            retagged.encode_to_vec(&rules(EncodingType::Der)).unwrap(),
+            [0xA1, 0x06, 0x02, 0x01, 0x01, 0x02, 0x01, 0x02] // sorted, as a SET OF is
+        );
+        assert_eq!(
+            retagged
+                .encode_to_vec(&rules(EncodingType::Ber(LengthForm::Definite)))
+                .unwrap(),
+            [0xA1, 0x06, 0x02, 0x01, 0x02, 0x02, 0x01, 0x01]
+        );
+        // a primitive keeps its contents under the new tag
+        let octets = Asn1OctetString::new(&[0xAA, 0xBB]);
+        assert_eq!(
+            Implicit::new(&[0x84], &octets)
+                .encode_to_vec(&rules(EncodingType::Der))
+                .unwrap(),
+            [0x84, 0x02, 0xAA, 0xBB]
+        );
+        // the constructed bit is forced on for a constructed inner value
+        assert_eq!(
+            Implicit::new(&[0x81], &set)
+                .encode_to_vec(&rules(EncodingType::Der))
+                .unwrap()[0],
+            0xA1
+        );
+    }
+
+    #[cfg(debug_assertions)]
+    #[test]
+    #[should_panic(expected = "must be constructed")]
+    fn an_explicit_tag_without_the_constructed_bit_is_a_programming_error() {
+        Explicit::new(&[0x80], &Asn1Integer::from(1));
+    }
+}

@@ -1,3 +1,5 @@
+//! A decoded tree for encodings without a schema.
+
 use alloc::vec::Vec;
 
 use crate::universal::*;
@@ -8,6 +10,36 @@ use crate::{
 
 mod dump;
 
+/// Any BER value as a tree: each universal type as its own variant, a
+/// constructed value under any other tag as [`Constructed`](Self::Constructed)
+/// and an uninterpreted primitive as [`Unknown`](Self::Unknown).
+///
+/// For looking at an encoding whose schema is not known or not implemented,
+/// dumping it with `Display`, or building one by hand; a known structure
+/// decodes straight into its own type instead. `From` is implemented for
+/// every variant's type.
+///
+/// # Examples
+///
+/// ```
+/// use tc_asn1::{Asn1Error, Asn1Null, Asn1Object, Asn1Oid, Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+///
+/// // AlgorithmIdentifier { rsaEncryption, NULL } read without its schema.
+/// let der = [0x30, 0x0D, 0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x01, 0x01, 0x05, 0x00];
+/// let (_, tree) = Asn1Object::decode(&der, &DecodingOptions::default())?;
+/// let Asn1Object::SequenceOf(fields) = &tree else { panic!() };
+/// let Asn1Object::Oid(oid) = &fields.elements()[0] else { panic!() };
+/// assert_eq!(oid.to_string(), "1.2.840.113549.1.1.1");
+/// assert_eq!(tree.to_string(), "SEQUENCE\n  OBJECT IDENTIFIER 1.2.840.113549.1.1.1\n  NULL\n");
+///
+/// // The same tree built by hand encodes identically.
+/// let built = Asn1Object::sequence(vec![
+///     "1.2.840.113549.1.1.1".parse::<Asn1Oid>()?.into(),
+///     Asn1Null.into(),
+/// ]);
+/// assert_eq!(built.encode_to_vec(&EncodingOptions::new(EncodingType::Der))?, der);
+/// # Ok::<(), Asn1Error>(())
+/// ```
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Asn1Object {
     Boolean(Asn1Boolean),
@@ -39,7 +71,11 @@ pub enum Asn1Object {
     SequenceOf(Asn1SequenceOf<Asn1Object>),
     /// A universal SET (31): sorted under CER and DER like a SET OF.
     SetOf(Asn1SetOf<Asn1Object>),
+    /// A constructed value under any tag but SEQUENCE and SET, its
+    /// elements decoded.
     Constructed(Asn1Constructed<Asn1Object>),
+    /// A primitive value whose tag this crate does not interpret, kept as
+    /// its octets.
     Unknown(Asn1Any),
 }
 
@@ -410,5 +446,96 @@ impl Encode for Asn1Object {
             Self::Constructed(inner) => inner.encode(rules, out),
             Self::Unknown(inner) => inner.encode(rules, out),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use alloc::string::ToString;
+    use alloc::vec;
+
+    use super::Asn1Object;
+    use crate::{
+        Asn1Any, Asn1Boolean, Asn1Error, Asn1Integer, Asn1Utf8String, Decode, DecodingOptions,
+        Encode, EncodingOptions, EncodingType,
+    };
+
+    fn der() -> EncodingOptions {
+        EncodingOptions::new(EncodingType::Der)
+    }
+
+    fn options() -> DecodingOptions {
+        DecodingOptions::default()
+    }
+
+    #[test]
+    fn every_element_lands_in_the_variant_of_its_tag() {
+        // SEQUENCE { UTF8String "abc", [0] { INTEGER 5 }, TeletexString "x", SET { INTEGER 2, INTEGER 1 } }
+        let wire = [
+            0x30, 0x15, 0x0C, 0x03, 0x61, 0x62, 0x63, 0xA0, 0x03, 0x02, 0x01, 0x05, 0x14, 0x01,
+            0x78, 0x31, 0x06, 0x02, 0x01, 0x02, 0x02, 0x01, 0x01,
+        ];
+        let (used, tree) = Asn1Object::decode(&wire, &options()).unwrap();
+        assert_eq!(used, wire.len());
+        let Asn1Object::SequenceOf(fields) = &tree else {
+            panic!("not a SEQUENCE")
+        };
+        let [text, tagged, unknown, set] = fields.elements() else {
+            panic!("four elements")
+        };
+        assert_eq!(text, &Asn1Object::from(Asn1Utf8String::new("abc")));
+        let Asn1Object::Constructed(tagged) = tagged else {
+            panic!("not constructed")
+        };
+        assert_eq!(tagged.tag(), [0xA0]);
+        assert_eq!(tagged.items(), [Asn1Object::from(Asn1Integer::from(5))]);
+        assert_eq!(
+            unknown,
+            &Asn1Object::from(Asn1Any::primitive(&[0x14], b"x"))
+        );
+        let Asn1Object::SetOf(set) = set else {
+            panic!("not a SET")
+        };
+        assert_eq!(set.members().len(), 2);
+
+        assert_eq!(
+            tree.to_string(),
+            "SEQUENCE\n  UTF8String \"abc\"\n  [CONTEXT 0]\n    INTEGER 5\n  [UNIVERSAL 20] (1 bytes) 78\n  SET\n    INTEGER 2\n    INTEGER 1\n"
+        );
+    }
+
+    #[test]
+    fn re_encoding_under_der_sorts_the_sets_and_keeps_everything_else() {
+        let (_, tree) = Asn1Object::decode(
+            &[0x31, 0x06, 0x02, 0x01, 0x02, 0x02, 0x01, 0x01],
+            &options(),
+        )
+        .unwrap();
+        assert_eq!(
+            tree.encode_to_vec(&der()).unwrap(),
+            [0x31, 0x06, 0x02, 0x01, 0x01, 0x02, 0x01, 0x02]
+        );
+        let built = Asn1Object::set(vec![
+            Asn1Integer::from(2).into(),
+            Asn1Integer::from(1).into(),
+        ]);
+        assert_eq!(built, tree);
+    }
+
+    #[test]
+    fn the_contents_rules_of_each_type_apply_under_der() {
+        let lenient_true = [0x01, 0x01, 0x01];
+        assert_eq!(
+            Asn1Object::decode(&lenient_true, &options()).unwrap().1,
+            Asn1Object::from(Asn1Boolean::from(true))
+        );
+        assert!(matches!(
+            Asn1Object::decode_der(&lenient_true, &options()),
+            Err(Asn1Error::NotDer)
+        ));
+        assert!(matches!(
+            Asn1Object::decode(&[0x02, 0x00], &options()),
+            Err(Asn1Error::MalformedValue)
+        ));
     }
 }

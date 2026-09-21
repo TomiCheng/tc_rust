@@ -1,3 +1,5 @@
+//! A constructed encoding of any tag holding elements of one type.
+
 use alloc::vec::Vec;
 
 use crate::traits::encode::{default_encode, default_encoded_len};
@@ -15,6 +17,22 @@ use crate::{
 /// `A0` for `[0] IMPLICIT`, ...); decoding accepts any constructed identifier
 /// and keeps it, so checking that it is the expected one is the caller's job.
 /// With `T = Asn1Any` the elements are kept as raw TLVs.
+///
+/// # Examples
+///
+/// ```
+/// use tc_asn1::{Asn1Constructed, Asn1Error, Asn1Integer, Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+///
+/// // `[1] IMPLICIT SEQUENCE OF INTEGER` holding one value.
+/// let field = Asn1Constructed::new(&[0xA1], vec![Asn1Integer::from(5)]);
+/// let der = field.encode_to_vec(&EncodingOptions::new(EncodingType::Der))?;
+/// assert_eq!(der, [0xA1, 0x03, 0x02, 0x01, 0x05]);
+///
+/// let (_, back) = Asn1Constructed::<Asn1Integer>::decode(&der, &DecodingOptions::default())?;
+/// assert_eq!(back.tag(), [0xA1]);   // kept, not checked
+/// assert_eq!(back.items(), [Asn1Integer::from(5)]);
+/// # Ok::<(), Asn1Error>(())
+/// ```
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct Asn1Constructed<T> {
     tag: Vec<u8>,
@@ -31,10 +49,12 @@ impl<T> Asn1Constructed<T> {
         Self { tag, items }
     }
 
+    /// The identifier, constructed bit set.
     pub fn tag(&self) -> &[u8] {
         &self.tag
     }
 
+    /// The elements in the stored order.
     pub fn items(&self) -> &[T] {
         &self.items
     }
@@ -116,5 +136,78 @@ impl<T: Encode> Encode for Asn1Constructed<T> {
 
     fn encode(&self, rules: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         self.encode_tagged(&self.tag, rules, out)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use alloc::vec;
+
+    use super::Asn1Constructed;
+    use crate::{
+        Asn1Any, Asn1Error, Asn1Integer, Decode, DecodingOptions, Encode, EncodingOptions,
+        EncodingType,
+    };
+
+    fn options() -> DecodingOptions {
+        DecodingOptions::default()
+    }
+
+    #[test]
+    fn the_constructed_bit_is_forced_on_when_building() {
+        let value = Asn1Constructed::new(&[0x80], vec![Asn1Integer::from(5)]);
+        assert_eq!(value.tag(), [0xA0]);
+        assert_eq!(
+            value
+                .encode_to_vec(&EncodingOptions::new(EncodingType::Der))
+                .unwrap(),
+            [0xA0, 0x03, 0x02, 0x01, 0x05]
+        );
+        assert_eq!(
+            value
+                .encode_to_vec(&EncodingOptions::new(EncodingType::Cer))
+                .unwrap(),
+            [0xA0, 0x80, 0x02, 0x01, 0x05, 0x00, 0x00]
+        );
+        assert_eq!(value.into_items(), vec![Asn1Integer::from(5)]);
+    }
+
+    #[test]
+    fn any_constructed_identifier_is_accepted_and_a_primitive_one_is_not() {
+        for wire in [
+            &[0xA1, 0x03, 0x02, 0x01, 0x05][..],
+            &[0x30, 0x03, 0x02, 0x01, 0x05],
+            &[0x7F, 0x81, 0x00, 0x03, 0x02, 0x01, 0x05], // APPLICATION 128, constructed
+        ] {
+            let (used, value) = Asn1Constructed::<Asn1Integer>::decode(wire, &options()).unwrap();
+            assert_eq!(
+                (used, value.items()),
+                (wire.len(), &[Asn1Integer::from(5)][..])
+            );
+            assert_eq!(value.tag(), &wire[..wire.len() - 3 - 2 + 1]);
+        }
+        assert!(matches!(
+            Asn1Constructed::<Asn1Integer>::decode(&[0x81, 0x01, 0x05], &options()),
+            Err(Asn1Error::UnexpectedTag)
+        ));
+        assert!(matches!(
+            Asn1Constructed::<Asn1Integer>::decode(&[0xA1, 0x02, 0x05, 0x00], &options()),
+            Err(Asn1Error::UnexpectedTag)
+        ));
+    }
+
+    #[test]
+    fn with_any_elements_the_children_stay_raw() {
+        let wire = [0x30, 0x05, 0x02, 0x01, 0x01, 0x05, 0x00];
+        let (_, value) = Asn1Constructed::<Asn1Any>::decode(&wire, &options()).unwrap();
+        assert_eq!(value.items().len(), 2);
+        assert_eq!(value.items()[0].raw(), [0x02, 0x01, 0x01]);
+        assert_eq!(value.items()[1].raw(), [0x05, 0x00]);
+        assert_eq!(
+            value
+                .encode_to_vec(&EncodingOptions::new(EncodingType::Der))
+                .unwrap(),
+            wire
+        );
     }
 }

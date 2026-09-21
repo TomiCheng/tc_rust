@@ -1,9 +1,18 @@
+//! The TLV structure of an encoding, read without interpreting it.
+//!
+//! [`Asn1Ref`] is one element borrowed from the input: its identifier,
+//! contents and, for an indefinite length, the end-of-contents octets.
+//! [`Children`] walks the elements inside a constructed one and is how a
+//! SEQUENCE reads its fields. Both check only the structure: X.690 §8.1 for
+//! everything, §10.1 and §10.2 when the context is DER.
+
 use crate::decoding_context::DepthScope;
 use crate::error::Asn1Error;
 use crate::traits::DecodeInner;
 use crate::traits::encode::len_octets;
 use crate::{DecodeContent, DecodingContext, DecodingOptions, Tagged};
 
+/// The class bits of an identifier octet (X.690 §8.1.2.2).
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub enum Asn1Class {
     Universal,
@@ -23,6 +32,31 @@ impl Asn1Class {
     }
 }
 
+/// One TLV borrowed from its buffer: the identifier, the contents and
+/// the end-of-contents octets if any.
+///
+/// # Examples
+///
+/// ```
+/// use tc_asn1::{Asn1Class, Asn1Error, Asn1Integer, Asn1Ref, DecodingContext, DecodingOptions};
+///
+/// let mut context = DecodingContext::new(DecodingOptions::default());
+/// // SEQUENCE { INTEGER 1, INTEGER 2 }, followed by an octet that is not part of it
+/// let wire = [0x30, 0x06, 0x02, 0x01, 0x01, 0x02, 0x01, 0x02, 0xFF];
+/// let element = Asn1Ref::parse(&wire, &mut context)?;
+/// assert_eq!((element.tag(), element.class()), (&[0x30][..], Asn1Class::Universal));
+/// assert!(element.is_constructed());
+/// assert_eq!(element.total_len(), 8);
+/// assert_eq!(element.value(), &wire[2..8]);
+///
+/// // The fields are read one by one, in order, then the end is asserted.
+/// let mut fields = element.children(&mut context)?;
+/// let first: Asn1Integer = fields.get()?;
+/// let second: Asn1Integer = fields.get()?;
+/// fields.end()?;
+/// assert_eq!((first, second), (Asn1Integer::from(1), Asn1Integer::from(2)));
+/// # Ok::<(), Asn1Error>(())
+/// ```
 #[derive(Clone, Copy, Debug)]
 pub struct Asn1Ref<'a> {
     raw: &'a [u8],
@@ -106,10 +140,13 @@ impl<'a> Asn1Ref<'a> {
         }
     }
 
+    /// The whole TLV, end-of-contents octets included: what a signature
+    /// covers.
     pub fn raw(&self) -> &'a [u8] {
         self.raw
     }
 
+    /// The identifier octets, one for tag numbers up to 30.
     pub fn tag(&self) -> &'a [u8] {
         self.tag
     }
@@ -122,18 +159,24 @@ impl<'a> Asn1Ref<'a> {
         self.tag[0] & 0x20 != 0
     }
 
+    /// The contents octets, without the end-of-contents octets.
     pub fn value(&self) -> &'a [u8] {
         self.value
     }
 
+    /// The length of [`raw`](Self::raw): what to skip to reach the next
+    /// element.
     pub fn total_len(&self) -> usize {
         self.raw().len()
     }
 
+    /// `00 00` after an indefinite length, empty otherwise.
     pub fn eoc(&self) -> &'a [u8] {
         self.eoc
     }
 
+    /// The elements inside a constructed value, one level deeper in the
+    /// context; empty for a primitive value. `DepthExceeded` at the limit.
     pub fn children<'b>(
         &self,
         context: &'b mut DecodingContext,
@@ -149,6 +192,7 @@ impl<'a> Asn1Ref<'a> {
         ))
     }
 
+    /// This element as a `T`, which must take all of it.
     pub fn decode_as<T: DecodeInner>(&self, context: &mut DecodingContext) -> Result<T, Asn1Error> {
         let (used, value) = T::decode_inner(self.raw, context)?;
         if used != self.total_len() {
@@ -157,6 +201,8 @@ impl<'a> Asn1Ref<'a> {
         Ok(value)
     }
 
+    /// `UnexpectedTag` unless the identifier is `tag`; for chaining after
+    /// [`parse`](Self::parse).
     pub fn assert_tag(self, tag: &[u8]) -> Result<Self, Asn1Error> {
         if self.tag != tag {
             Err(Asn1Error::UnexpectedTag)
@@ -167,6 +213,14 @@ impl<'a> Asn1Ref<'a> {
 }
 
 /// The elements of a constructed value, one level deeper in the context.
+///
+/// An iterator over the raw elements, plus the typed reads a SEQUENCE
+/// needs: [`get`](Self::get) for a required field, [`get_opt`](Self::get_opt)
+/// and [`get_default`](Self::get_default) for OPTIONAL and DEFAULT ones,
+/// the `get_explicit_*` and `get_implicit_*` methods for tagged ones, and
+/// [`end`](Self::end) to reject anything left over. The optional reads look
+/// at the next element without consuming it, so a mismatch leaves it for
+/// the next field.
 pub struct Children<'a, 'b> {
     cursor: ChildCursor<'a>,
     scope: DepthScope<'b>,
@@ -183,10 +237,12 @@ impl<'a, 'b> Children<'a, 'b> {
         }
     }
 
+    /// The context at this depth, for decoding an element by hand.
     pub fn context(&mut self) -> &mut DecodingContext {
         self.scope.context()
     }
 
+    /// The next element without consuming it; `None` at the end.
     pub fn peek(&mut self) -> Option<Result<Asn1Ref<'a>, Asn1Error>> {
         if self.lookahead.is_none() {
             self.lookahead = self.cursor.next(&mut self.scope);
@@ -194,12 +250,16 @@ impl<'a, 'b> Children<'a, 'b> {
         self.lookahead
     }
 
+    /// A required field: the next element as a `T`, `Truncated` when there
+    /// is none.
     pub fn get<T: DecodeInner>(&mut self) -> Result<T, Asn1Error> {
         self.next()
             .ok_or(Asn1Error::Truncated)??
             .decode_as::<T>(self.context())
     }
 
+    /// An OPTIONAL field: the next element as a `T` when it carries
+    /// `T::TAG`, `None` otherwise, leaving the element for the next field.
     pub fn get_opt<T: DecodeInner + Tagged>(&mut self) -> Result<Option<T>, Asn1Error> {
         match self.peek() {
             Some(Ok(child)) if child.tag() == T::TAG => self.get().map(Some),
@@ -226,6 +286,9 @@ impl<'a, 'b> Children<'a, 'b> {
         }
     }
 
+    /// The next element as a `T` whatever its tag, `None` at the end: for
+    /// a trailing OPTIONAL field of a type without a single tag, such as a
+    /// CHOICE.
     pub fn get_any_opt<T: DecodeInner>(&mut self) -> Result<Option<T>, Asn1Error> {
         match self.peek() {
             Some(Ok(_)) => self.get().map(Some),
@@ -289,6 +352,7 @@ impl<'a, 'b> Children<'a, 'b> {
         }
     }
 
+    /// Asserts that every element has been read: `TrailingData` otherwise.
     pub fn end(mut self) -> Result<(), Asn1Error> {
         match self.next() {
             None => Ok(()),
@@ -390,5 +454,204 @@ fn parse_len(buff: &[u8]) -> Result<(usize, Option<usize>), Asn1Error> {
             }
             Ok((1 + count, Some(length)))
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use alloc::vec::Vec;
+
+    use super::{Asn1Class, Asn1Ref};
+    use crate::{
+        Asn1Any, Asn1Boolean, Asn1Error, Asn1Integer, Asn1Null, Asn1OctetString, DecodingContext,
+        DecodingOptions,
+    };
+
+    fn ber() -> DecodingContext {
+        DecodingContext::new(DecodingOptions::default())
+    }
+
+    fn der() -> DecodingContext {
+        DecodingContext::new_der(DecodingOptions::default())
+    }
+
+    #[test]
+    fn a_definite_length_element_is_split_into_tag_and_contents() {
+        let wire = [0x30, 0x06, 0x02, 0x01, 0x01, 0x02, 0x01, 0x02, 0xFF];
+        let element = Asn1Ref::parse(&wire, &mut ber()).unwrap();
+        assert_eq!(element.raw(), &wire[..8]);
+        assert_eq!(element.tag(), [0x30]);
+        assert_eq!(element.value(), &wire[2..8]);
+        assert_eq!(element.eoc(), &[] as &[u8]);
+        assert_eq!(element.total_len(), 8);
+        assert!(element.is_constructed());
+
+        let mut long = Vec::from([0x04, 0x82, 0x01, 0x00]);
+        long.extend_from_slice(&[0xAA; 256]);
+        let element = Asn1Ref::parse(&long, &mut der()).unwrap();
+        assert_eq!((element.value().len(), element.total_len()), (256, 260));
+        assert!(!element.is_constructed());
+    }
+
+    #[test]
+    fn the_class_comes_from_the_top_two_bits() {
+        for (first, class) in [
+            (0x30, Asn1Class::Universal),
+            (0x41, Asn1Class::Application),
+            (0xA0, Asn1Class::ContextSpecific),
+            (0xC1, Asn1Class::Private),
+        ] {
+            let wire = [first, 0x00];
+            assert_eq!(Asn1Ref::parse(&wire, &mut ber()).unwrap().class(), class);
+        }
+    }
+
+    #[test]
+    fn an_indefinite_length_runs_to_the_end_of_contents_octets() {
+        let wire = [0x30, 0x80, 0x02, 0x01, 0x01, 0x00, 0x00, 0xFF];
+        let element = Asn1Ref::parse(&wire, &mut ber()).unwrap();
+        assert_eq!(element.value(), [0x02, 0x01, 0x01]);
+        assert_eq!(element.eoc(), [0x00, 0x00]);
+        assert_eq!(element.total_len(), 7);
+        assert!(matches!(
+            Asn1Ref::parse(&wire, &mut der()),
+            Err(Asn1Error::NotDer)
+        ));
+        // a primitive value cannot be indefinite; a missing EOC is truncation
+        assert!(matches!(
+            Asn1Ref::parse(&[0x04, 0x80, 0x00, 0x00], &mut ber()),
+            Err(Asn1Error::MalformedValue)
+        ));
+        for wire in [
+            &[0x30, 0x80, 0x02, 0x01, 0x01][..],
+            &[0x30, 0x80],
+            &[0x30, 0x80, 0x00],
+        ] {
+            assert!(matches!(
+                Asn1Ref::parse(wire, &mut ber()),
+                Err(Asn1Error::Truncated)
+            ));
+        }
+    }
+
+    #[test]
+    fn identifier_and_length_octets_are_checked() {
+        assert_eq!(
+            Asn1Ref::parse(&[0x1F, 0x81, 0x00, 0x00], &mut ber())
+                .unwrap()
+                .tag(),
+            [0x1F, 0x81, 0x00] // tag number 128
+        );
+        for wire in [&[0x1F, 0x05, 0x00][..], &[0x1F, 0x80, 0x01, 0x00]] {
+            assert!(matches!(
+                Asn1Ref::parse(wire, &mut ber()),
+                Err(Asn1Error::NonMinimalTag)
+            ));
+        }
+        assert!(matches!(
+            Asn1Ref::parse(&[0x04, 0xFF], &mut ber()),
+            Err(Asn1Error::MalformedValue)
+        ));
+        let mut huge = Vec::from([0x04, 0x89, 0x01]);
+        huge.extend_from_slice(&[0x00; 8]);
+        assert!(matches!(
+            Asn1Ref::parse(&huge, &mut ber()),
+            Err(Asn1Error::LengthOverflow)
+        ));
+        for wire in [&[][..], &[0x04], &[0x04, 0x05, 0x01, 0x02], &[0x1F, 0x81]] {
+            assert!(matches!(
+                Asn1Ref::parse(wire, &mut ber()),
+                Err(Asn1Error::Truncated)
+            ));
+        }
+        // a non-minimal length is BER but not DER
+        let padded = [0x02, 0x81, 0x01, 0x01];
+        assert!(Asn1Ref::parse(&padded, &mut ber()).is_ok());
+        assert!(matches!(
+            Asn1Ref::parse(&padded, &mut der()),
+            Err(Asn1Error::NotDer)
+        ));
+    }
+
+    #[test]
+    fn children_are_read_in_order_with_lookahead_for_the_optional_ones() {
+        // SEQUENCE { INTEGER 1, OCTET STRING AA, NULL }
+        let wire = [0x30, 0x08, 0x02, 0x01, 0x01, 0x04, 0x01, 0xAA, 0x05, 0x00];
+        let mut context = ber();
+        let element = Asn1Ref::parse(&wire, &mut context).unwrap();
+        let mut children = element.children(&mut context).unwrap();
+        assert_eq!(children.context().depth(), 1);
+        assert_eq!(children.peek().unwrap().unwrap().tag(), [0x02]);
+        assert_eq!(children.next().unwrap().unwrap().tag(), [0x02]); // the peeked one
+        assert!(children.get_opt::<Asn1Integer>().unwrap().is_none()); // next is 04, left in place
+        assert_eq!(
+            children.get_opt::<Asn1OctetString>().unwrap(),
+            Some(Asn1OctetString::new(&[0xAA]))
+        );
+        assert_eq!(children.get::<Asn1Null>().unwrap(), Asn1Null);
+        assert!(children.get_any_opt::<Asn1Any>().unwrap().is_none());
+        assert!(matches!(
+            children.get::<Asn1Null>(),
+            Err(Asn1Error::Truncated)
+        ));
+        children.end().unwrap();
+        assert_eq!(context.depth(), 0);
+
+        let mut children = element.children(&mut context).unwrap();
+        children.get::<Asn1Integer>().unwrap();
+        assert!(matches!(children.end(), Err(Asn1Error::TrailingData)));
+        assert!(
+            Asn1Ref::parse(&[0x02, 0x01, 0x01], &mut context)
+                .unwrap()
+                .children(&mut context)
+                .unwrap()
+                .next()
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn a_default_written_out_is_ber_only() {
+        let written = [0x30, 0x03, 0x01, 0x01, 0x00];
+        let mut context = ber();
+        let element = Asn1Ref::parse(&written, &mut context).unwrap();
+        let mut children = element.children(&mut context).unwrap();
+        assert_eq!(
+            children.get_default(Asn1Boolean::from(false)).unwrap(),
+            Asn1Boolean::from(false)
+        );
+        let mut context = der();
+        let element = Asn1Ref::parse(&written, &mut context).unwrap();
+        let mut children = element.children(&mut context).unwrap();
+        assert!(matches!(
+            children.get_default(Asn1Boolean::from(false)),
+            Err(Asn1Error::NotDer)
+        ));
+        let mut context = der();
+        let element = Asn1Ref::parse(&[0x30, 0x00], &mut context).unwrap();
+        let mut children = element.children(&mut context).unwrap();
+        assert_eq!(
+            children.get_default(Asn1Boolean::from(false)).unwrap(),
+            Asn1Boolean::from(false)
+        );
+    }
+
+    #[test]
+    fn decode_as_and_assert_tag_check_the_type() {
+        let mut context = ber();
+        let element = Asn1Ref::parse(&[0x02, 0x01, 0x07], &mut context).unwrap();
+        assert_eq!(
+            element.decode_as::<Asn1Integer>(&mut context).unwrap(),
+            Asn1Integer::from(7)
+        );
+        assert!(matches!(
+            element.decode_as::<Asn1Null>(&mut context),
+            Err(Asn1Error::UnexpectedTag)
+        ));
+        assert!(element.assert_tag(&[0x02]).is_ok());
+        assert!(matches!(
+            element.assert_tag(&[0x04]),
+            Err(Asn1Error::UnexpectedTag)
+        ));
     }
 }
