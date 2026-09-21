@@ -51,10 +51,10 @@ impl From<bool> for Asn1Boolean {
     }
 }
 
-/// `true` or `false`.
+/// `TRUE` or `FALSE`, as ASN.1 writes them.
 impl core::fmt::Display for Asn1Boolean {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        core::fmt::Display::fmt(&self.0, f)
+        f.pad(if self.0 { "TRUE" } else { "FALSE" })
     }
 }
 
@@ -200,11 +200,12 @@ mod tests {
     }
 
     #[test]
-    fn it_converts_from_bool_and_displays_like_one() {
+    fn it_converts_from_bool_and_displays_in_asn1_notation() {
         let value = Asn1Boolean::from(true);
         assert!(value.is_true());
         assert!(!value.is_false());
-        assert_eq!(value.to_string(), "true");
-        assert_eq!(Asn1Boolean::from(false).to_string(), "false");
+        assert_eq!(value.to_string(), "TRUE");
+        assert_eq!(Asn1Boolean::from(false).to_string(), "FALSE");
+        assert_eq!(alloc::format!("{value:>6}|"), "  TRUE|");
     }
 }

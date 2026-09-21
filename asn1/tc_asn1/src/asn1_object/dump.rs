@@ -94,7 +94,7 @@ fn dump(obj: &Asn1Object, level: usize, f: &mut fmt::Formatter<'_>) -> fmt::Resu
     use Asn1Object::*;
     indent(level, f)?;
     match obj {
-        Boolean(value) => writeln!(f, "BOOLEAN {}", value.is_true()),
+        Boolean(value) => writeln!(f, "BOOLEAN {value}"),
         Integer(value) => {
             f.write_str("INTEGER")?;
             integer(value, f)?;

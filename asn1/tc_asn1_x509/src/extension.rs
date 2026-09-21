@@ -252,7 +252,7 @@ mod tests {
         let mut context = DecodingContext::new(options());
         let (_, ext) = Extension::decode(&CRITICAL, &options()).unwrap();
         let tree: Asn1Object = ext.extn_value_as(&mut context).unwrap();
-        assert_eq!(tree.to_string(), "SEQUENCE\n  BOOLEAN true\n");
+        assert_eq!(tree.to_string(), "SEQUENCE\n  BOOLEAN TRUE\n");
         let (_, ext) = Extension::decode(&PLAIN, &options()).unwrap();
         let bits: Asn1BitString = ext.extn_value_as(&mut context).unwrap();
         assert_eq!((bits.as_bytes(), bits.unused_bits()), (&[0xA0][..], 5));
