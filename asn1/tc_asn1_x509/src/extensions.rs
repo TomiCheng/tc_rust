@@ -19,7 +19,9 @@ use tc_asn1::{
     EncodeContent, EncodeTagged, EncodingOptions, Tagged,
 };
 
-use crate::{BasicConstraints, ExtendedKeyUsage, Extension, ExtensionId, KeyUsage};
+use crate::{
+    BasicConstraints, ExtendedKeyUsage, Extension, ExtensionId, KeyUsage, SubjectKeyIdentifier,
+};
 
 /// A non-empty list of extensions with unique OIDs.
 ///
@@ -124,6 +126,14 @@ impl Extensions {
         context: &mut DecodingContext,
     ) -> Result<Option<ExtendedKeyUsage>, Asn1Error> {
         self.get_as(ExtensionId::EXT_KEY_USAGE, context)
+    }
+
+    /// [`get_as`](Self::get_as) for the subjectKeyIdentifier extension.
+    pub fn get_subject_key_identifier(
+        &self,
+        context: &mut DecodingContext,
+    ) -> Result<Option<SubjectKeyIdentifier>, Asn1Error> {
+        self.get_as(ExtensionId::SUBJECT_KEY_IDENTIFIER, context)
     }
 }
 
