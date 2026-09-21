@@ -177,9 +177,7 @@ mod tests {
     };
 
     use super::Extensions;
-    use crate::{
-        BasicConstraints, ExtendedKeyUsage, Extension, ExtensionId, KeyPurposeId, KeyUsage,
-    };
+    use crate::{BasicConstraints, ExtendedKeyUsage, Extension, ExtensionId, KeyUsage};
 
     fn der() -> EncodingOptions {
         EncodingOptions::new(EncodingType::Der)

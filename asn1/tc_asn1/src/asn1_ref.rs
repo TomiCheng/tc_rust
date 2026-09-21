@@ -2,7 +2,7 @@ use crate::decoding_context::DepthScope;
 use crate::error::Asn1Error;
 use crate::traits::DecodeInner;
 use crate::traits::encode::len_octets;
-use crate::{DecodingContext, DecodingOptions, Tagged};
+use crate::{DecodeContent, DecodingContext, DecodingOptions, Tagged};
 
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub enum Asn1Class {
@@ -166,14 +166,6 @@ impl<'a> Asn1Ref<'a> {
     }
 }
 
-pub(crate) fn is_constructed_form(tag: &[u8], primitive_tag: &[u8]) -> bool {
-    !primitive_tag.is_empty()
-        && tag.len() == primitive_tag.len()
-        && primitive_tag[0] & 0x20 == 0
-        && tag[0] == primitive_tag[0] | 0x20
-        && tag[1..] == primitive_tag[1..]
-}
-
 /// The elements of a constructed value, one level deeper in the context.
 pub struct Children<'a, 'b> {
     cursor: ChildCursor<'a>,
@@ -239,6 +231,61 @@ impl<'a, 'b> Children<'a, 'b> {
             Some(Ok(_)) => self.get().map(Some),
             Some(Err(e)) => Err(e),
             None => Ok(None),
+        }
+    }
+
+    /// A `[n] EXPLICIT T OPTIONAL` field, `tag` being the wrapper's
+    /// identifier octets (`[0xA0]` for `[0]`): the value inside when the
+    /// next element carries that tag, `None` otherwise, leaving the element
+    /// for the next field. The wrapper must hold exactly one element.
+    /// Variable time: branches only on the encoding structure.
+    pub fn get_explicit_opt<T: DecodeInner>(
+        &mut self,
+        tag: impl AsRef<[u8]>,
+    ) -> Result<Option<T>, Asn1Error> {
+        match self.peek() {
+            Some(Ok(child)) if child.tag() == tag.as_ref() => {
+                self.next(); // the wrapper itself
+                let mut inner = child.children(self.context())?;
+                let value = inner.get::<T>()?;
+                inner.end()?;
+                Ok(Some(value))
+            }
+            _ => Ok(None),
+        }
+    }
+
+    /// [`get_explicit_opt`](Self::get_explicit_opt) for a field with a
+    /// DEFAULT: `default` when the wrapper is absent. Under DER a written
+    /// value equal to the default is `NotDer` (X.690 §11.5).
+    /// Variable time: branches only on the encoding structure.
+    pub fn get_explicit_default<T: DecodeInner + PartialEq>(
+        &mut self,
+        tag: impl AsRef<[u8]>,
+        default: T,
+    ) -> Result<T, Asn1Error> {
+        match self.get_explicit_opt::<T>(tag)? {
+            Some(value) if value == default && self.context().is_der() => Err(Asn1Error::NotDer),
+            Some(value) => Ok(value),
+            None => Ok(default),
+        }
+    }
+
+    /// A `[n] IMPLICIT T OPTIONAL` field, `tag` being the identifier octets
+    /// that replace `T`'s own (`[0x81]` for `[1]` on a primitive type): the
+    /// contents decoded as `T` when the next element carries that tag,
+    /// `None` otherwise, leaving the element for the next field.
+    /// Variable time: branches only on the encoding structure.
+    pub fn get_implicit_opt<T: DecodeContent>(
+        &mut self,
+        tag: impl AsRef<[u8]>,
+    ) -> Result<Option<T>, Asn1Error> {
+        match self.peek() {
+            Some(Ok(child)) if child.tag() == tag.as_ref() => {
+                self.next();
+                Ok(Some(T::decode_content(child.value(), self.context())?))
+            }
+            _ => Ok(None),
         }
     }
 

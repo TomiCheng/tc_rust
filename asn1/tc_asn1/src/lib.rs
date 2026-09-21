@@ -12,7 +12,7 @@ mod decoding_options;
 mod encoding_options;
 mod encoding_type;
 mod error;
-mod schema;
+mod tagging;
 // mod segments;
 mod traits;
 mod universal;
@@ -27,6 +27,7 @@ pub use encoding_options::EncodingOptions;
 pub use encoding_type::{EncodingType, LengthForm};
 pub use error::Asn1Error;
 
+pub use tagging::{Explicit, Implicit};
 pub use traits::{
     Decode, DecodeConstructed, DecodeContent, DecodeInner, Encode, EncodeContent, EncodeTagged,
     Tagged,
