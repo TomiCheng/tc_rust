@@ -28,10 +28,7 @@ pub use encoding_type::{EncodingType, LengthForm};
 pub use error::Asn1Error;
 
 pub use tagging::{Explicit, Implicit};
-pub use traits::{
-    Decode, DecodeConstructed, DecodeContent, DecodeInner, Encode, EncodeContent, EncodeTagged,
-    Tagged,
-};
+pub use traits::{Decode, DecodeContent, DecodeInner, Encode, EncodeContent, EncodeTagged, Tagged};
 pub use universal::tag;
 pub use universal::{
     Arcs, Asn1BitString, Asn1BmpString, Asn1Boolean, Asn1Date, Asn1DateTime, Asn1Duration,
