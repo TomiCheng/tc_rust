@@ -296,3 +296,217 @@ impl Encode for TbsCertificate {
         self.encode_tagged(Self::TAG, rules, out)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use alloc::format;
+    use alloc::string::ToString;
+    use alloc::vec::Vec;
+
+    use tc_asn1::{
+        Asn1BitString, Asn1Error, Decode, DecodingContext, DecodingOptions, Encode,
+        EncodingOptions, EncodingType,
+    };
+
+    use super::{TbsCertificate, Version};
+    use crate::{
+        AlgorithmIdentifier, ExtensionId, Extensions, KeyUsage, SubjectPublicKeyInfo, Validity,
+    };
+
+    fn der() -> EncodingOptions {
+        EncodingOptions::new(EncodingType::Der)
+    }
+
+    fn options() -> DecodingOptions {
+        DecodingOptions::default()
+    }
+
+    fn hex(text: &str) -> Vec<u8> {
+        (0..text.len())
+            .step_by(2)
+            .map(|i| u8::from_str_radix(&text[i..i + 2], 16).unwrap())
+            .collect()
+    }
+
+    /// RFC 8410 §10.2: a self-issued X25519 certificate signed with Ed25519,
+    /// CN=IETF Test Demo, valid 2016-08-01 to 2040-12-31, with critical
+    /// basicConstraints (cA FALSE, written out), keyUsage keyAgreement and a
+    /// subjectKeyIdentifier. The example is BER rather than DER: two
+    /// extensions write `critical FALSE` and basicConstraints writes its
+    /// DEFAULT, which the tests below rely on.
+    fn certificate() -> Vec<u8> {
+        hex(concat!(
+            "3082012c3081dfa00302010202085601474a2a8dc330300506032b657030",
+            "193117301506035504030c0e4945544620546573742044656d6f301e170d",
+            "3136303830313132313932345a170d3430313233313233353935395a3019",
+            "3117301506035504030c0e4945544620546573742044656d6f302a300506",
+            "032b656e0321008520f0098930a754748b7ddcb43ef75a0dbf3a0d26381a",
+            "f4eba4a98eaa9b4e6aa3453043300f0603551d130101ff04053003010100",
+            "300e0603551d0f01010004040302030830200603551d0e01010004160414",
+            "9b1f5eeded043385e4f7bc623c5975b90bc8bb3b300506032b6570034100",
+            "af2301feddc9e6ffc1cca73d74d648a4398082cddb69b14e4d06ecf81a25",
+            "ce50d4c2c3eb746c4edd8346856ec86f3dce1a1865c57ac27b50a0c35007",
+            "f5e7d907",
+        ))
+    }
+
+    /// The TBSCertificate: the outer SEQUENCE's first element.
+    fn tbs_bytes() -> Vec<u8> {
+        certificate()[4..230].to_vec()
+    }
+
+    fn v1_from(v3: &TbsCertificate) -> TbsCertificate {
+        TbsCertificate::new(
+            Version::V1,
+            v3.serial_number().clone(),
+            v3.signature().clone(),
+            v3.issuer().clone(),
+            *v3.validity(),
+            v3.subject().clone(),
+            v3.subject_public_key_info().clone(),
+        )
+    }
+
+    #[test]
+    fn the_rfc_8410_certificate_decodes_field_by_field() {
+        let bytes = tbs_bytes();
+        let (used, tbs) = TbsCertificate::decode(&bytes, &options()).unwrap();
+        assert_eq!(used, bytes.len());
+        assert_eq!(tbs.version(), Version::V3);
+        assert_eq!(format!("{:x}", tbs.serial_number()), "5601474a2a8dc330");
+        assert_eq!(tbs.signature().to_string(), "1.3.101.112");
+        assert_eq!(tbs.issuer().to_string(), "CN=IETF Test Demo");
+        assert_eq!(tbs.subject(), tbs.issuer());
+        assert_eq!(
+            tbs.validity().not_before().to_string(),
+            "2016-08-01T12:19:24Z"
+        );
+        assert_eq!(tbs.validity().not_after().year(), 2040);
+        assert_eq!(
+            tbs.subject_public_key_info().algorithm().to_string(),
+            "1.3.101.110"
+        );
+        assert_eq!(
+            tbs.subject_public_key_info()
+                .subject_public_key()
+                .as_bytes()
+                .len(),
+            32
+        );
+        assert!(tbs.issuer_unique_id().is_none());
+        assert!(tbs.subject_unique_id().is_none());
+
+        let extensions = tbs.extensions().unwrap();
+        assert_eq!(extensions.extensions().len(), 3);
+        let mut context = DecodingContext::new(options());
+        assert_eq!(
+            extensions.get_key_usage(&mut context).unwrap(),
+            Some(KeyUsage::KEY_AGREEMENT)
+        );
+        // basicConstraints is critical and its value writes cA FALSE, which
+        // DER forbids: the extension is there, its value is not DER.
+        assert!(
+            extensions
+                .get(ExtensionId::BASIC_CONSTRAINTS)
+                .unwrap()
+                .critical()
+        );
+        assert!(matches!(
+            extensions.get_basic_constraints(&mut context),
+            Err(Asn1Error::NotDer)
+        ));
+        assert_eq!(
+            extensions
+                .get(ExtensionId::SUBJECT_KEY_IDENTIFIER)
+                .unwrap()
+                .extn_value()[..2],
+            [0x04, 0x14]
+        );
+    }
+
+    #[test]
+    fn the_example_is_ber_and_re_encodes_shorter_under_der() {
+        let bytes = tbs_bytes();
+        assert!(matches!(
+            TbsCertificate::decode_der(&bytes, &options()),
+            Err(Asn1Error::NotDer)
+        ));
+        let (_, tbs) = TbsCertificate::decode(&bytes, &options()).unwrap();
+        let canonical = tbs.encode_to_vec(&der()).unwrap();
+        // two `critical FALSE` of three octets each are dropped
+        assert_eq!(canonical.len(), bytes.len() - 6);
+        assert_ne!(canonical, bytes);
+        let (_, again) = TbsCertificate::decode_der(&canonical, &options()).unwrap();
+        assert_eq!(again, tbs);
+    }
+
+    #[test]
+    fn a_v1_certificate_writes_neither_version_nor_extensions() {
+        let (_, v3) = TbsCertificate::decode(&tbs_bytes(), &options()).unwrap();
+        let v1 = v1_from(&v3);
+        let out = v1.encode_to_vec(&der()).unwrap();
+        assert_eq!(out[..4], [0x30, 0x81, 0x93, 0x02]); // straight to the serial number
+        let (_, back) = TbsCertificate::decode_der(&out, &options()).unwrap();
+        assert_eq!(back, v1);
+        assert_eq!(back.version(), Version::V1);
+        assert!(back.extensions().is_none());
+
+        assert!(matches!(
+            v1.clone().with_extensions(v3.extensions().unwrap().clone()),
+            Err(Asn1Error::MalformedValue)
+        ));
+        assert!(matches!(
+            v1.with_unique_ids(Some(Asn1BitString::from_bytes(&[1])), None),
+            Err(Asn1Error::MalformedValue)
+        ));
+    }
+
+    #[test]
+    fn the_version_field_is_checked_against_the_contents() {
+        // extensions in what claims to be v1: drop `A0 03 02 01 02`, fix the length
+        let bytes = tbs_bytes();
+        let mut v1_with_extensions = Vec::from(&bytes[..3]);
+        v1_with_extensions.extend_from_slice(&bytes[8..]);
+        v1_with_extensions[2] -= 5;
+        assert!(matches!(
+            TbsCertificate::decode(&v1_with_extensions, &options()),
+            Err(Asn1Error::MalformedValue)
+        ));
+
+        // an unknown version number
+        let mut v4 = bytes.clone();
+        v4[7] = 0x03;
+        assert!(matches!(
+            TbsCertificate::decode(&v4, &options()),
+            Err(Asn1Error::MalformedValue)
+        ));
+
+        // v1 written out, no extensions: BER accepts it, DER does not
+        let (_, v3) = TbsCertificate::decode(&bytes, &options()).unwrap();
+        let plain = v1_from(&v3).encode_to_vec(&der()).unwrap();
+        let mut explicit_v1 = Vec::from(&plain[..3]);
+        explicit_v1.extend_from_slice(&[0xA0, 0x03, 0x02, 0x01, 0x00]);
+        explicit_v1.extend_from_slice(&plain[3..]);
+        explicit_v1[2] += 5;
+        let (_, back) = TbsCertificate::decode(&explicit_v1, &options()).unwrap();
+        assert_eq!(back.version(), Version::V1);
+        assert!(matches!(
+            TbsCertificate::decode_der(&explicit_v1, &options()),
+            Err(Asn1Error::NotDer)
+        ));
+    }
+
+    #[test]
+    fn the_parts_can_be_decoded_on_their_own() {
+        let certificate = certificate();
+        let (_, validity) = Validity::decode(&certificate[56..88], &options()).unwrap();
+        assert_eq!(validity.not_after().to_string(), "2040-12-31T23:59:59Z");
+        let (_, spki) = SubjectPublicKeyInfo::decode(&certificate[115..159], &options()).unwrap();
+        assert_eq!(
+            spki.algorithm(),
+            &AlgorithmIdentifier::new("1.3.101.110".parse().unwrap())
+        );
+        let (_, extensions) = Extensions::decode(&certificate[161..230], &options()).unwrap();
+        assert_eq!(extensions.extensions().len(), 3);
+    }
+}
