@@ -24,7 +24,7 @@ use crate::AlgorithmIdentifier;
 /// # Examples
 ///
 /// ```
-/// use tc_asn1::{Asn1BitString, Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+/// use tc_asn1::{Asn1BitString, Decode, DecodingOptions, Encode, EncodingOptions};
 /// use tc_asn1_x509::{AlgorithmIdentifier, SubjectPublicKeyInfo};
 ///
 /// // Ed25519 (RFC 8410): no parameters, the key is the 32 raw octets
@@ -32,7 +32,7 @@ use crate::AlgorithmIdentifier;
 ///     AlgorithmIdentifier::new("1.3.101.112".parse()?),
 ///     Asn1BitString::from_bytes(&[0x11; 32]),
 /// );
-/// let out = spki.encode_to_vec(&EncodingOptions::new(EncodingType::Der))?;
+/// let out = spki.encode_to_vec(&EncodingOptions::DER)?;
 /// assert_eq!(&out[..12], [0x30, 0x2A, 0x30, 0x05, 0x06, 0x03, 0x2B, 0x65, 0x70, 0x03, 0x21, 0x00]);
 /// assert_eq!(&out[12..], [0x11; 32]);
 /// let (_, back) = SubjectPublicKeyInfo::decode(&out, &DecodingOptions::default())?;
@@ -119,14 +119,13 @@ mod tests {
 
     use tc_asn1::{
         Asn1BitString, Asn1Error, Asn1Object, Decode, DecodingOptions, Encode, EncodingOptions,
-        EncodingType,
     };
 
     use super::SubjectPublicKeyInfo;
     use crate::AlgorithmIdentifier;
 
     fn der() -> EncodingOptions {
-        EncodingOptions::new(EncodingType::Der)
+        EncodingOptions::DER
     }
 
     fn options() -> DecodingOptions {

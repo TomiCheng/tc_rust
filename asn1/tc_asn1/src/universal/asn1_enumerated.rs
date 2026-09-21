@@ -20,11 +20,11 @@ use crate::{
 /// # Examples
 ///
 /// ```
-/// use tc_asn1::{Asn1Enumerated, Asn1Error, Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+/// use tc_asn1::{Asn1Enumerated, Asn1Error, Decode, DecodingOptions, Encode, EncodingOptions};
 ///
 /// // CRLReason keyCompromise(1), as an extension would carry it.
 /// let reason = Asn1Enumerated::from(1u64);
-/// let der = reason.encode_to_vec(&EncodingOptions::new(EncodingType::Der))?;
+/// let der = reason.encode_to_vec(&EncodingOptions::DER)?;
 /// assert_eq!(der, [0x0A, 0x01, 0x01]);
 ///
 /// let (_, back) = Asn1Enumerated::decode(&der, &DecodingOptions::default())?;
@@ -176,10 +176,10 @@ impl Encode for Asn1Enumerated {
 #[cfg(test)]
 mod tests {
     use super::Asn1Enumerated;
-    use crate::{Asn1Error, Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+    use crate::{Asn1Error, Decode, DecodingOptions, Encode, EncodingOptions};
 
     fn der() -> EncodingOptions {
-        EncodingOptions::new(EncodingType::Der)
+        EncodingOptions::DER
     }
 
     fn options() -> DecodingOptions {

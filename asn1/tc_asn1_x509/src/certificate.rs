@@ -18,7 +18,7 @@ use alloc::vec::Vec;
 
 use tc_asn1::{
     Asn1BitString, Asn1Error, Asn1Ref, Decode, DecodeInner, DecodingContext, Encode, EncodeContent,
-    EncodeTagged, EncodingOptions, EncodingType, Tagged, tag,
+    EncodeTagged, EncodingOptions, Tagged, tag,
 };
 use tc_asn1_x500::Name;
 
@@ -29,7 +29,7 @@ use crate::{AlgorithmIdentifier, Extensions, SubjectPublicKeyInfo, TbsCertificat
 /// # Examples
 ///
 /// ```
-/// use tc_asn1::{Asn1BitString, Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+/// use tc_asn1::{Asn1BitString, Decode, DecodingOptions, Encode, EncodingOptions};
 /// use tc_asn1_x509::{
 ///     AlgorithmIdentifier, Certificate, SubjectPublicKeyInfo, TbsCertificate, Time, Validity, Version,
 /// };
@@ -51,7 +51,7 @@ use crate::{AlgorithmIdentifier, Extensions, SubjectPublicKeyInfo, TbsCertificat
 /// let certificate = Certificate::new(tbs, signature)?;
 ///
 /// // ... and the result decodes back with the signed octets intact.
-/// let der = certificate.encode_to_vec(&EncodingOptions::new(EncodingType::Der))?;
+/// let der = certificate.encode_to_vec(&EncodingOptions::DER)?;
 /// let (_, back) = Certificate::decode(&der, &DecodingOptions::default())?;
 /// assert_eq!(back, certificate);
 /// println!("{} issued by {}", back.subject(), back.issuer());
@@ -75,7 +75,7 @@ impl Certificate {
     /// becomes the octets this certificate carries. The signature algorithm
     /// is the one the TBS names.
     pub fn new(tbs: TbsCertificate, signature_value: Asn1BitString) -> Result<Self, Asn1Error> {
-        let tbs_raw = tbs.encode_to_vec(&EncodingOptions::new(EncodingType::Der))?;
+        let tbs_raw = tbs.encode_to_vec(&EncodingOptions::DER)?;
         Ok(Self {
             signature_algorithm: tbs.signature().clone(),
             tbs,
@@ -209,7 +209,7 @@ mod tests {
     use alloc::string::ToString;
     use alloc::vec::Vec;
 
-    use tc_asn1::{Asn1Error, Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+    use tc_asn1::{Asn1Error, Decode, DecodingOptions, Encode, EncodingOptions};
 
     use super::Certificate;
     use crate::{TbsCertificate, Version};
@@ -218,7 +218,7 @@ mod tests {
     const RFC_8410: &[u8] = include_bytes!("../tests/data/rfc8410.der");
 
     fn der() -> EncodingOptions {
-        EncodingOptions::new(EncodingType::Der)
+        EncodingOptions::DER
     }
 
     fn options() -> DecodingOptions {

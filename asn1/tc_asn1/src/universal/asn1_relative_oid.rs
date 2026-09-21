@@ -18,10 +18,10 @@ use crate::{
 /// # Examples
 ///
 /// ```
-/// use tc_asn1::{Asn1Error, Asn1RelativeOid, Encode, EncodingOptions, EncodingType};
+/// use tc_asn1::{Asn1Error, Asn1RelativeOid, Encode, EncodingOptions};
 ///
 /// let relative: Asn1RelativeOid = "8571.3.2".parse()?;
-/// let der = relative.encode_to_vec(&EncodingOptions::new(EncodingType::Der))?;
+/// let der = relative.encode_to_vec(&EncodingOptions::DER)?;
 /// assert_eq!(der, [0x0D, 0x04, 0xC2, 0x7B, 0x03, 0x02]);
 /// assert_eq!(relative.arcs().collect::<Vec<_>>(), [8571, 3, 2]);
 /// # Ok::<(), Asn1Error>(())
@@ -154,7 +154,7 @@ mod tests {
     use alloc::string::ToString;
 
     use super::Asn1RelativeOid;
-    use crate::{Asn1Error, Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+    use crate::{Asn1Error, Decode, DecodingOptions, Encode, EncodingOptions};
 
     fn options() -> DecodingOptions {
         DecodingOptions::default()
@@ -180,12 +180,7 @@ mod tests {
         let wire = [0x0D, 0x04, 0x01, 0x02, 0x87, 0x67];
         let (used, relative) = Asn1RelativeOid::decode(&wire, &options()).unwrap();
         assert_eq!((used, relative.to_string().as_str()), (6, "1.2.999"));
-        assert_eq!(
-            relative
-                .encode_to_vec(&EncodingOptions::new(EncodingType::Der))
-                .unwrap(),
-            wire
-        );
+        assert_eq!(relative.encode_to_vec(&EncodingOptions::DER).unwrap(), wire);
         for wire in [&[0x0D, 0x00][..], &[0x0D, 0x01, 0x80], &[0x0D, 0x01, 0x87]] {
             assert!(matches!(
                 Asn1RelativeOid::decode(wire, &options()),

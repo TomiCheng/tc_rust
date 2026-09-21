@@ -15,7 +15,7 @@ use core::fmt;
 
 use tc_asn1::{
     Asn1Error, Asn1SetOf, Decode, DecodeInner, DecodingContext, Encode, EncodeContent,
-    EncodeTagged, EncodingOptions, EncodingType, Tagged,
+    EncodeTagged, EncodingOptions, Tagged,
 };
 
 use crate::{AttributeType, AttributeTypeAndValue, AttributeValue};
@@ -25,7 +25,7 @@ use crate::{AttributeType, AttributeTypeAndValue, AttributeValue};
 /// # Examples
 ///
 /// ```
-/// use tc_asn1::{Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+/// use tc_asn1::{Decode, DecodingOptions, Encode, EncodingOptions};
 /// use tc_asn1_x500::{AttributeTypeAndValue, DirectoryString, RelativeDistinguishedName};
 ///
 /// // The usual single-valued RDN, CN=Alice.
@@ -35,7 +35,7 @@ use crate::{AttributeType, AttributeTypeAndValue, AttributeValue};
 /// ));
 ///
 /// // Encode it as DER and read it back.
-/// let der = rdn.encode_to_vec(&EncodingOptions::new(EncodingType::Der))?;
+/// let der = rdn.encode_to_vec(&EncodingOptions::DER)?;
 /// let (_, decoded) = RelativeDistinguishedName::decode(&der, &DecodingOptions::default())?;
 /// assert!(!decoded.is_multi_valued());
 /// println!("{decoded}");   // CN=Alice
@@ -112,7 +112,7 @@ impl fmt::Display for RelativeDistinguishedName {
 fn write_hex(f: &mut fmt::Formatter<'_>, value: &impl Encode) -> fmt::Result {
     f.write_str("#")?;
     let der = value
-        .encode_to_vec(&EncodingOptions::new(EncodingType::Der))
+        .encode_to_vec(&EncodingOptions::DER)
         .map_err(|_| fmt::Error)?;
     for byte in der {
         write!(f, "{byte:02x}")?;
@@ -185,14 +185,13 @@ mod tests {
 
     use tc_asn1::{
         Asn1Error, Asn1Integer, Asn1Object, Decode, DecodingOptions, Encode, EncodingOptions,
-        EncodingType, LengthForm,
     };
 
     use super::RelativeDistinguishedName;
     use crate::{AttributeTypeAndValue, DirectoryString};
 
     fn der() -> EncodingOptions {
-        EncodingOptions::new(EncodingType::Der)
+        EncodingOptions::DER
     }
 
     fn options() -> DecodingOptions {
@@ -240,7 +239,7 @@ mod tests {
         assert_eq!(a.encode_to_vec(&der()).unwrap(), MULTI);
         assert_eq!(b.encode_to_vec(&der()).unwrap(), MULTI);
         assert_eq!(a, b); // the same SET, whatever the stored order
-        let ber = EncodingOptions::new(EncodingType::Ber(LengthForm::Definite));
+        let ber = EncodingOptions::BER;
         assert_ne!(a.encode_to_vec(&ber).unwrap(), MULTI); // BER writes the stored order
 
         let (_, decoded) = RelativeDistinguishedName::decode(MULTI, &options()).unwrap();

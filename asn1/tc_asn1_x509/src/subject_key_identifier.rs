@@ -25,7 +25,7 @@ use tc_asn1::{
 /// # Examples
 ///
 /// ```
-/// use tc_asn1::{Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+/// use tc_asn1::{Decode, DecodingOptions, Encode, EncodingOptions};
 /// use tc_asn1_x509::SubjectKeyIdentifier;
 ///
 /// // The identifier is whatever the issuer chose; here a truncated hash.
@@ -33,7 +33,7 @@ use tc_asn1::{
 /// assert_eq!(ski.key_identifier().len(), 8);
 /// println!("{ski}");   // 9b1f5eeded043385
 ///
-/// let der = ski.encode_to_vec(&EncodingOptions::new(EncodingType::Der))?;
+/// let der = ski.encode_to_vec(&EncodingOptions::DER)?;
 /// assert_eq!(der[..2], [0x04, 0x08]);
 /// let (_, back) = SubjectKeyIdentifier::decode(&der, &DecodingOptions::default())?;
 /// assert_eq!(back, ski);
@@ -121,9 +121,7 @@ mod tests {
     use alloc::string::ToString;
     use alloc::vec::Vec;
 
-    use tc_asn1::{
-        Asn1Error, Decode, DecodingContext, DecodingOptions, Encode, EncodingOptions, EncodingType,
-    };
+    use tc_asn1::{Asn1Error, Decode, DecodingContext, DecodingOptions, Encode, EncodingOptions};
 
     use super::SubjectKeyIdentifier;
     use crate::{ExtensionId, Extensions};
@@ -137,7 +135,7 @@ mod tests {
     ];
 
     fn der() -> EncodingOptions {
-        EncodingOptions::new(EncodingType::Der)
+        EncodingOptions::DER
     }
 
     fn options() -> DecodingOptions {

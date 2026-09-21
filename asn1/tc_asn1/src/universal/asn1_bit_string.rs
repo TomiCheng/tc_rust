@@ -31,7 +31,7 @@ use crate::{
 /// # Examples
 ///
 /// ```
-/// use tc_asn1::{Asn1BitString, Asn1Error, Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+/// use tc_asn1::{Asn1BitString, Asn1Error, Decode, DecodingOptions, Encode, EncodingOptions};
 ///
 /// // Three bits, 101: one data octet with five unused bits.
 /// let flags = Asn1BitString::from_bits(&[0b1010_0000], 3);
@@ -39,7 +39,7 @@ use crate::{
 /// assert!(flags.bit(0) && !flags.bit(1) && flags.bit(2));
 /// assert!(!flags.bit(3));   // past the end is never set
 ///
-/// let der = flags.encode_to_vec(&EncodingOptions::new(EncodingType::Der))?;
+/// let der = flags.encode_to_vec(&EncodingOptions::DER)?;
 /// assert_eq!(der, [0x03, 0x02, 0x05, 0xA0]);
 /// let (_, back) = Asn1BitString::decode(&der, &DecodingOptions::default())?;
 /// assert_eq!(back, flags);
@@ -199,10 +199,10 @@ mod tests {
     use alloc::vec;
 
     use super::Asn1BitString;
-    use crate::{Asn1Error, Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+    use crate::{Asn1Error, Decode, DecodingOptions, Encode, EncodingOptions};
 
     fn der() -> EncodingOptions {
-        EncodingOptions::new(EncodingType::Der)
+        EncodingOptions::DER
     }
 
     fn options() -> DecodingOptions {
@@ -315,7 +315,7 @@ mod tests {
 
     #[test]
     fn cer_counts_the_unused_bit_octet_towards_the_1000_octet_limit() {
-        let cer = EncodingOptions::new(EncodingType::Cer);
+        let cer = EncodingOptions::CER;
         assert!(
             Asn1BitString::from_bytes(&vec![0; 999])
                 .encode_to_vec(&cer)

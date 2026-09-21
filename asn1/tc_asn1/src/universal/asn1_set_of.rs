@@ -14,10 +14,8 @@ use super::cer_common::constructed_tag;
 use crate::traits::encode::{default_encode, default_encoded_len};
 use crate::{
     Asn1Constructed, Asn1Error, Decode, DecodeInner, DecodingContext, Encode, EncodeContent,
-    EncodeTagged, EncodingOptions, EncodingType, Tagged,
+    EncodeTagged, EncodingOptions, Tagged,
 };
-
-const DER: EncodingOptions = EncodingOptions::new(EncodingType::Der);
 
 /// A homogeneous SET OF. Construction and decoding keep the given order; CER
 /// and DER write the members sorted by their encodings (X.690 §11.6), BER
@@ -26,14 +24,14 @@ const DER: EncodingOptions = EncodingOptions::new(EncodingType::Der);
 /// # Examples
 ///
 /// ```
-/// use tc_asn1::{Asn1Error, Asn1Integer, Asn1SetOf, Encode, EncodingOptions, EncodingType, LengthForm};
+/// use tc_asn1::{Asn1Error, Asn1Integer, Asn1SetOf, Encode, EncodingOptions};
 ///
 /// let set = Asn1SetOf::new(vec![Asn1Integer::from(2), Asn1Integer::from(1)]);
 ///
 /// // DER sorts by encoding; BER writes the members as given.
-/// let der = set.encode_to_vec(&EncodingOptions::new(EncodingType::Der))?;
+/// let der = set.encode_to_vec(&EncodingOptions::DER)?;
 /// assert_eq!(der, [0x31, 0x06, 0x02, 0x01, 0x01, 0x02, 0x01, 0x02]);
-/// let ber = set.encode_to_vec(&EncodingOptions::new(EncodingType::Ber(LengthForm::Definite)))?;
+/// let ber = set.encode_to_vec(&EncodingOptions::BER)?;
 /// assert_eq!(ber, [0x31, 0x06, 0x02, 0x01, 0x02, 0x02, 0x01, 0x01]);
 ///
 /// // The order is not part of the value.
@@ -51,7 +49,7 @@ pub struct Asn1SetOf<T> {
 impl<T: Encode> PartialEq for Asn1SetOf<T> {
     fn eq(&self, other: &Self) -> bool {
         matches!(
-            (self.encode_to_vec(&DER), other.encode_to_vec(&DER)),
+            (self.encode_to_vec(&EncodingOptions::DER), other.encode_to_vec(&EncodingOptions::DER)),
             (Ok(a), Ok(b)) if a == b
         )
     }
@@ -62,7 +60,7 @@ impl<T: Encode> Eq for Asn1SetOf<T> {}
 /// Hashes the DER encoding, matching [`PartialEq`].
 impl<T: Encode> Hash for Asn1SetOf<T> {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        if let Ok(der) = self.encode_to_vec(&DER) {
+        if let Ok(der) = self.encode_to_vec(&EncodingOptions::DER) {
             der.hash(state);
         }
     }

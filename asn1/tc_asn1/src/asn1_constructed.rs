@@ -21,11 +21,11 @@ use crate::{
 /// # Examples
 ///
 /// ```
-/// use tc_asn1::{Asn1Constructed, Asn1Error, Asn1Integer, Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+/// use tc_asn1::{Asn1Constructed, Asn1Error, Asn1Integer, Decode, DecodingOptions, Encode, EncodingOptions};
 ///
 /// // `[1] IMPLICIT SEQUENCE OF INTEGER` holding one value.
 /// let field = Asn1Constructed::new(&[0xA1], vec![Asn1Integer::from(5)]);
-/// let der = field.encode_to_vec(&EncodingOptions::new(EncodingType::Der))?;
+/// let der = field.encode_to_vec(&EncodingOptions::DER)?;
 /// assert_eq!(der, [0xA1, 0x03, 0x02, 0x01, 0x05]);
 ///
 /// let (_, back) = Asn1Constructed::<Asn1Integer>::decode(&der, &DecodingOptions::default())?;
@@ -146,7 +146,6 @@ mod tests {
     use super::Asn1Constructed;
     use crate::{
         Asn1Any, Asn1Error, Asn1Integer, Decode, DecodingOptions, Encode, EncodingOptions,
-        EncodingType,
     };
 
     fn options() -> DecodingOptions {
@@ -158,15 +157,11 @@ mod tests {
         let value = Asn1Constructed::new(&[0x80], vec![Asn1Integer::from(5)]);
         assert_eq!(value.tag(), [0xA0]);
         assert_eq!(
-            value
-                .encode_to_vec(&EncodingOptions::new(EncodingType::Der))
-                .unwrap(),
+            value.encode_to_vec(&EncodingOptions::DER).unwrap(),
             [0xA0, 0x03, 0x02, 0x01, 0x05]
         );
         assert_eq!(
-            value
-                .encode_to_vec(&EncodingOptions::new(EncodingType::Cer))
-                .unwrap(),
+            value.encode_to_vec(&EncodingOptions::CER).unwrap(),
             [0xA0, 0x80, 0x02, 0x01, 0x05, 0x00, 0x00]
         );
         assert_eq!(value.into_items(), vec![Asn1Integer::from(5)]);
@@ -203,11 +198,6 @@ mod tests {
         assert_eq!(value.items().len(), 2);
         assert_eq!(value.items()[0].raw(), [0x02, 0x01, 0x01]);
         assert_eq!(value.items()[1].raw(), [0x05, 0x00]);
-        assert_eq!(
-            value
-                .encode_to_vec(&EncodingOptions::new(EncodingType::Der))
-                .unwrap(),
-            wire
-        );
+        assert_eq!(value.encode_to_vec(&EncodingOptions::DER).unwrap(), wire);
     }
 }

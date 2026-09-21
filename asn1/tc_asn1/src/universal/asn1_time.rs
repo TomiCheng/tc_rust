@@ -216,10 +216,10 @@ time_type!(
 # Examples
 
 ```
-use tc_asn1::{Asn1Date, Encode, EncodingOptions, EncodingType};
+use tc_asn1::{Asn1Date, Encode, EncodingOptions};
 let date = Asn1Date::new("2024-02-29").unwrap();
 let mut out = [0; 11];
-date.encode(&EncodingOptions::new(EncodingType::Der), &mut out).unwrap();
+date.encode(&EncodingOptions::DER, &mut out).unwrap();
 assert_eq!(&out[..3], &[0x1f, 0x1f, 8]);
 assert_eq!(&out[3..], b"20240229");
 assert!(Asn1Date::new("2023-02-29").is_err());
@@ -277,10 +277,10 @@ assert_ne!(duration, Asn1Duration::new("P2M").unwrap());
 #[cfg(test)]
 mod tests {
     use super::{Asn1Date, Asn1DateTime, Asn1Duration, Asn1Time, Asn1TimeOfDay};
-    use crate::{Asn1Error, Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+    use crate::{Asn1Error, Decode, DecodingOptions, Encode, EncodingOptions};
 
     fn der() -> EncodingOptions {
-        EncodingOptions::new(EncodingType::Der)
+        EncodingOptions::DER
     }
 
     fn options() -> DecodingOptions {

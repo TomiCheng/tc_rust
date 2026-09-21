@@ -156,13 +156,13 @@ iri!(
 # Examples
 
 ```
-use tc_asn1::{Asn1Error, Asn1OidIri, Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+use tc_asn1::{Asn1Error, Asn1OidIri, Decode, DecodingOptions, Encode, EncodingOptions};
 
 let oid = Asn1OidIri::new("/ISO/Registration_Authority/19785.CBEFF")?;
 assert!(oid.as_str().starts_with("/ISO/"));
 
 // The contents are the UTF-8 text itself; a tag over 30 takes two octets.
-let der = oid.encode_to_vec(&EncodingOptions::new(EncodingType::Der))?;
+let der = oid.encode_to_vec(&EncodingOptions::DER)?;
 assert_eq!(&der[..4], &[0x1F, 0x23, 0x27, b'/']);
 let (_, back) = Asn1OidIri::decode(&der, &DecodingOptions::default())?;
 assert_eq!(back, oid);
@@ -182,11 +182,11 @@ iri!(
 # Examples
 
 ```
-use tc_asn1::{Asn1Error, Asn1RelativeOidIri, Encode, EncodingOptions, EncodingType};
+use tc_asn1::{Asn1Error, Asn1RelativeOidIri, Encode, EncodingOptions};
 
 let oid = Asn1RelativeOidIri::new("\u{53F0}\u{5317}/0/TLV-encoded")?;
 assert_eq!(oid.as_str(), "\u{53F0}\u{5317}/0/TLV-encoded");
-let der = oid.encode_to_vec(&EncodingOptions::new(EncodingType::Der))?;
+let der = oid.encode_to_vec(&EncodingOptions::DER)?;
 assert_eq!(der[..2], [0x1F, 0x24]);
 
 // A leading `/` would make it absolute.
@@ -200,7 +200,7 @@ mod tests {
     use alloc::string::ToString;
 
     use super::{Asn1OidIri, Asn1RelativeOidIri, valid_label};
-    use crate::{Asn1Error, Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+    use crate::{Asn1Error, Decode, DecodingOptions, Encode, EncodingOptions};
 
     fn options() -> DecodingOptions {
         DecodingOptions::default()
@@ -249,7 +249,7 @@ mod tests {
 
     #[test]
     fn the_wire_form_is_the_utf8_text_under_the_two_octet_tags() {
-        let der = EncodingOptions::new(EncodingType::Der);
+        let der = EncodingOptions::DER;
         let absolute = Asn1OidIri::new("/ISO/1").unwrap();
         let wire = absolute.encode_to_vec(&der).unwrap();
         assert_eq!(wire, b"\x1F\x23\x06/ISO/1");

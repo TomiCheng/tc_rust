@@ -23,7 +23,7 @@ use tc_asn1::{
 /// # Examples
 ///
 /// ```
-/// use tc_asn1::{Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+/// use tc_asn1::{Decode, DecodingOptions, Encode, EncodingOptions};
 /// use tc_asn1_x509::BasicConstraints;
 ///
 /// // An intermediate CA that may only issue end-entity certificates.
@@ -31,13 +31,13 @@ use tc_asn1::{
 /// assert!(bc.is_ca());
 /// println!("{bc}");   // CA, pathLenConstraint 0
 ///
-/// let der = bc.encode_to_vec(&EncodingOptions::new(EncodingType::Der))?;
+/// let der = bc.encode_to_vec(&EncodingOptions::DER)?;
 /// assert_eq!(der, [0x30, 0x06, 0x01, 0x01, 0xFF, 0x02, 0x01, 0x00]);
 /// let (_, back) = BasicConstraints::decode(&der, &DecodingOptions::default())?;
 /// assert_eq!(back.path_len_constraint(), Some(0));
 ///
 /// // An end entity encodes as an empty SEQUENCE, the DEFAULT being omitted.
-/// let der = BasicConstraints::end_entity().encode_to_vec(&EncodingOptions::new(EncodingType::Der))?;
+/// let der = BasicConstraints::end_entity().encode_to_vec(&EncodingOptions::DER)?;
 /// assert_eq!(der, [0x30, 0x00]);
 /// # Ok::<(), tc_asn1::Asn1Error>(())
 /// ```
@@ -167,15 +167,13 @@ impl Encode for BasicConstraints {
 mod tests {
     use alloc::string::ToString;
 
-    use tc_asn1::{
-        Asn1Error, Decode, DecodingContext, DecodingOptions, Encode, EncodingOptions, EncodingType,
-    };
+    use tc_asn1::{Asn1Error, Decode, DecodingContext, DecodingOptions, Encode, EncodingOptions};
 
     use super::BasicConstraints;
     use crate::{Extension, ExtensionId};
 
     fn der() -> EncodingOptions {
-        EncodingOptions::new(EncodingType::Der)
+        EncodingOptions::DER
     }
 
     fn options() -> DecodingOptions {

@@ -162,12 +162,12 @@ impl Encode for Time {
 mod tests {
     use alloc::string::ToString;
 
-    use tc_asn1::{Asn1Error, Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+    use tc_asn1::{Asn1Error, Decode, DecodingOptions, Encode, EncodingOptions};
 
     use super::Time;
 
     fn der() -> EncodingOptions {
-        EncodingOptions::new(EncodingType::Der)
+        EncodingOptions::DER
     }
 
     #[test]

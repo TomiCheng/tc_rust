@@ -22,10 +22,10 @@ use crate::{
 /// # Examples
 ///
 /// ```
-/// use tc_asn1::{Asn1Error, Asn1UniversalString, Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+/// use tc_asn1::{Asn1Error, Asn1UniversalString, Decode, DecodingOptions, Encode, EncodingOptions};
 ///
 /// let text = Asn1UniversalString::new("A\u{1F600}");
-/// let der = text.encode_to_vec(&EncodingOptions::new(EncodingType::Der))?;
+/// let der = text.encode_to_vec(&EncodingOptions::DER)?;
 /// assert_eq!(der, [0x1C, 0x08, 0x00, 0x00, 0x00, 0x41, 0x00, 0x01, 0xF6, 0x00]);
 /// let (_, back) = Asn1UniversalString::decode(&der, &DecodingOptions::default())?;
 /// assert_eq!(back.as_str(), "A\u{1F600}");
@@ -148,7 +148,7 @@ mod tests {
     use alloc::string::{String, ToString};
 
     use super::Asn1UniversalString;
-    use crate::{Asn1Error, Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+    use crate::{Asn1Error, Decode, DecodingOptions, Encode, EncodingOptions};
 
     fn options() -> DecodingOptions {
         DecodingOptions::default()
@@ -156,7 +156,7 @@ mod tests {
 
     #[test]
     fn each_character_is_four_big_endian_octets() {
-        let der = EncodingOptions::new(EncodingType::Der);
+        let der = EncodingOptions::DER;
         for (text, wire) in [
             ("", &[0x1C, 0x00][..]),
             ("A", &[0x1C, 0x04, 0x00, 0x00, 0x00, 0x41]),
@@ -198,7 +198,7 @@ mod tests {
 
     #[test]
     fn cer_counts_wire_octets() {
-        let cer = EncodingOptions::new(EncodingType::Cer);
+        let cer = EncodingOptions::CER;
         assert!(
             Asn1UniversalString::new(&"a".repeat(250))
                 .encode_to_vec(&cer)

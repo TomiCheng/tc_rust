@@ -29,9 +29,9 @@ use crate::{
 /// # Examples
 ///
 /// ```
-/// use tc_asn1::{Asn1Error, Asn1Integer, Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+/// use tc_asn1::{Asn1Error, Asn1Integer, Decode, DecodingOptions, Encode, EncodingOptions};
 ///
-/// let der = EncodingOptions::new(EncodingType::Der);
+/// let der = EncodingOptions::DER;
 ///
 /// // Small values take the fewest octets; the sign bit decides how many.
 /// assert_eq!(Asn1Integer::from(127).encode_to_vec(&der)?, [0x02, 0x01, 0x7F]);
@@ -341,10 +341,10 @@ mod tests {
     use alloc::vec;
 
     use super::Asn1Integer;
-    use crate::{Asn1Error, Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+    use crate::{Asn1Error, Decode, DecodingOptions, Encode, EncodingOptions};
 
     fn der() -> EncodingOptions {
-        EncodingOptions::new(EncodingType::Der)
+        EncodingOptions::DER
     }
 
     fn options() -> DecodingOptions {

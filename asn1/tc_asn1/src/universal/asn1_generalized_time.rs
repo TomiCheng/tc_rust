@@ -26,10 +26,10 @@ const LEN: usize = 15;
 /// # Examples
 ///
 /// ```
-/// use tc_asn1::{Asn1Error, Asn1GeneralizedTime, Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+/// use tc_asn1::{Asn1Error, Asn1GeneralizedTime, Decode, DecodingOptions, Encode, EncodingOptions};
 ///
 /// let not_after = Asn1GeneralizedTime::new(2050, 1, 1, 0, 0, 0)?;
-/// let der = not_after.encode_to_vec(&EncodingOptions::new(EncodingType::Der))?;
+/// let der = not_after.encode_to_vec(&EncodingOptions::DER)?;
 /// assert_eq!(der, b"\x18\x0F20500101000000Z");
 /// let (_, back) = Asn1GeneralizedTime::decode(&der, &DecodingOptions::default())?;
 /// assert_eq!(back.to_string(), "2050-01-01T00:00:00Z");
@@ -163,7 +163,7 @@ mod tests {
     use alloc::string::ToString;
 
     use super::Asn1GeneralizedTime;
-    use crate::{Asn1Error, Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+    use crate::{Asn1Error, Decode, DecodingOptions, Encode, EncodingOptions};
 
     fn options() -> DecodingOptions {
         DecodingOptions::default()
@@ -171,7 +171,7 @@ mod tests {
 
     #[test]
     fn the_four_digit_year_covers_0_to_9999() {
-        let der = EncodingOptions::new(EncodingType::Der);
+        let der = EncodingOptions::DER;
         for (fields, wire, text) in [
             (
                 (0, 1, 1, 0, 0, 0),

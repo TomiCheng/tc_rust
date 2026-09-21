@@ -25,12 +25,12 @@ use tc_asn1::{
 /// # Examples
 ///
 /// ```
-/// use tc_asn1::{Asn1Object, Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+/// use tc_asn1::{Asn1Object, Decode, DecodingOptions, Encode, EncodingOptions};
 /// use tc_asn1_x509::AlgorithmIdentifier;
 ///
 /// // sha256WithRSAEncryption: RFC 3279 wants an explicit NULL.
 /// let rsa = AlgorithmIdentifier::with_null("1.2.840.113549.1.1.11".parse()?);
-/// let der = rsa.encode_to_vec(&EncodingOptions::new(EncodingType::Der))?;
+/// let der = rsa.encode_to_vec(&EncodingOptions::DER)?;
 /// let (_, back) = AlgorithmIdentifier::decode(&der, &DecodingOptions::default())?;
 /// assert_eq!(back, rsa);
 /// assert!(matches!(back.parameters(), Some(Asn1Object::Null(_))));
@@ -169,13 +169,12 @@ mod tests {
 
     use tc_asn1::{
         Asn1Error, Asn1Object, Asn1Oid, Decode, DecodingOptions, Encode, EncodingOptions,
-        EncodingType,
     };
 
     use super::AlgorithmIdentifier;
 
     fn der() -> EncodingOptions {
-        EncodingOptions::new(EncodingType::Der)
+        EncodingOptions::DER
     }
 
     fn options() -> DecodingOptions {

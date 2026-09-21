@@ -97,7 +97,7 @@ impl Encode for DigestInfo {
 mod tests {
     use alloc::{string::ToString, vec, vec::Vec};
 
-    use tc_asn1::{Asn1Error, Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+    use tc_asn1::{Asn1Error, Decode, DecodingOptions, Encode, EncodingOptions};
 
     use super::DigestInfo;
     use crate::AlgorithmIdentifier;
@@ -116,7 +116,7 @@ mod tests {
     }
 
     fn der() -> EncodingOptions {
-        EncodingOptions::new(EncodingType::Der)
+        EncodingOptions::DER
     }
 
     #[test]

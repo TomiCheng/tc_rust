@@ -20,10 +20,10 @@ use crate::{
 /// # Examples
 ///
 /// ```
-/// use tc_asn1::{Asn1Error, Asn1OctetString, Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+/// use tc_asn1::{Asn1Error, Asn1OctetString, Decode, DecodingOptions, Encode, EncodingOptions};
 ///
 /// let value = Asn1OctetString::new(&[0xDE, 0xAD, 0xBE, 0xEF]);
-/// let der = value.encode_to_vec(&EncodingOptions::new(EncodingType::Der))?;
+/// let der = value.encode_to_vec(&EncodingOptions::DER)?;
 /// assert_eq!(der, [0x04, 0x04, 0xDE, 0xAD, 0xBE, 0xEF]);
 ///
 /// let (_, back) = Asn1OctetString::decode(&der, &DecodingOptions::default())?;
@@ -135,10 +135,10 @@ mod tests {
     use alloc::vec::Vec;
 
     use super::Asn1OctetString;
-    use crate::{Asn1Error, Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+    use crate::{Asn1Error, Decode, DecodingOptions, Encode, EncodingOptions};
 
     fn der() -> EncodingOptions {
-        EncodingOptions::new(EncodingType::Der)
+        EncodingOptions::DER
     }
 
     fn options() -> DecodingOptions {
@@ -185,7 +185,7 @@ mod tests {
 
     #[test]
     fn cer_refuses_the_primitive_form_over_1000_octets() {
-        let cer = EncodingOptions::new(EncodingType::Cer);
+        let cer = EncodingOptions::CER;
         assert!(
             Asn1OctetString::from(vec![0; 1000])
                 .encode_to_vec(&cer)

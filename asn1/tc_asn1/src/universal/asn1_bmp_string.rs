@@ -21,10 +21,10 @@ use crate::{
 /// # Examples
 ///
 /// ```
-/// use tc_asn1::{Asn1Error, Asn1BmpString, Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+/// use tc_asn1::{Asn1Error, Asn1BmpString, Decode, DecodingOptions, Encode, EncodingOptions};
 ///
 /// let text = Asn1BmpString::new("\u{53f0}\u{5317}")?;
-/// let der = text.encode_to_vec(&EncodingOptions::new(EncodingType::Der))?;
+/// let der = text.encode_to_vec(&EncodingOptions::DER)?;
 /// assert_eq!(der, [0x1E, 0x04, 0x53, 0xF0, 0x53, 0x17]);
 /// let (_, back) = Asn1BmpString::decode(&der, &DecodingOptions::default())?;
 /// assert_eq!(back.as_str(), "\u{53f0}\u{5317}");
@@ -151,7 +151,7 @@ mod tests {
     use alloc::string::ToString;
 
     use super::Asn1BmpString;
-    use crate::{Asn1Error, Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+    use crate::{Asn1Error, Decode, DecodingOptions, Encode, EncodingOptions};
 
     fn options() -> DecodingOptions {
         DecodingOptions::default()
@@ -159,7 +159,7 @@ mod tests {
 
     #[test]
     fn each_character_is_two_big_endian_octets() {
-        let der = EncodingOptions::new(EncodingType::Der);
+        let der = EncodingOptions::DER;
         for (text, wire) in [
             ("", &[0x1E, 0x00][..]),
             ("A", &[0x1E, 0x02, 0x00, 0x41]),
@@ -201,7 +201,7 @@ mod tests {
 
     #[test]
     fn cer_counts_wire_octets() {
-        let cer = EncodingOptions::new(EncodingType::Cer);
+        let cer = EncodingOptions::CER;
         assert!(
             Asn1BmpString::new(&"a".repeat(500))
                 .unwrap()

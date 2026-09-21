@@ -48,7 +48,7 @@
 //!
 //! // A SEQUENCE OF INTEGER, written under DER and read back.
 //! let list = Asn1SequenceOf::new(vec![Asn1Integer::from(1), Asn1Integer::from(-1)]);
-//! let der = list.encode_to_vec(&EncodingOptions::new(EncodingType::Der))?;
+//! let der = list.encode_to_vec(&EncodingOptions::DER)?;
 //! assert_eq!(der, [0x30, 0x06, 0x02, 0x01, 0x01, 0x02, 0x01, 0xFF]);
 //! let (used, back) = Asn1SequenceOf::<Asn1Integer>::decode(&der, &DecodingOptions::default())?;
 //! assert_eq!((used, back), (8, list));

@@ -15,9 +15,9 @@ use crate::{
 /// # Examples
 ///
 /// ```
-/// use tc_asn1::{Asn1Error, Asn1Null, Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+/// use tc_asn1::{Asn1Error, Asn1Null, Decode, DecodingOptions, Encode, EncodingOptions};
 ///
-/// let der = Asn1Null.encode_to_vec(&EncodingOptions::new(EncodingType::Der))?;
+/// let der = Asn1Null.encode_to_vec(&EncodingOptions::DER)?;
 /// assert_eq!(der, [0x05, 0x00]);
 /// let (used, _) = Asn1Null::decode(&der, &DecodingOptions::default())?;
 /// assert_eq!(used, 2);
@@ -94,7 +94,7 @@ mod tests {
     use alloc::string::ToString;
 
     use super::Asn1Null;
-    use crate::{Asn1Error, Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+    use crate::{Asn1Error, Decode, DecodingOptions, Encode, EncodingOptions};
 
     fn options() -> DecodingOptions {
         DecodingOptions::default()
@@ -102,7 +102,7 @@ mod tests {
 
     #[test]
     fn null_is_the_two_octets_05_00() {
-        let der = EncodingOptions::new(EncodingType::Der);
+        let der = EncodingOptions::DER;
         assert_eq!(Asn1Null.encoded_len(&der), 2);
         assert_eq!(Asn1Null.encode_to_vec(&der).unwrap(), [0x05, 0x00]);
         let (used, value) = Asn1Null::decode(&[0x05, 0x00, 0xAA], &options()).unwrap();

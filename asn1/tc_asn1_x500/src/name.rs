@@ -35,7 +35,7 @@ mod from_str;
 /// # Examples
 ///
 /// ```
-/// use tc_asn1::{Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+/// use tc_asn1::{Decode, DecodingOptions, Encode, EncodingOptions};
 /// use tc_asn1_x500::{
 ///     AttributeType, AttributeTypeAndValue, DirectoryString, Name, RelativeDistinguishedName,
 /// };
@@ -62,7 +62,7 @@ mod from_str;
 /// assert_eq!(same, name);
 ///
 /// // Encode it as DER and read it back.
-/// let der = name.encode_to_vec(&EncodingOptions::new(EncodingType::Der))?;
+/// let der = name.encode_to_vec(&EncodingOptions::DER)?;
 /// let (_, decoded) = Name::decode(&der, &DecodingOptions::default())?;
 /// println!("{decoded}");   // CN=Alice,O=Example,C=TW
 ///
@@ -162,13 +162,13 @@ mod tests {
     use alloc::string::ToString;
     use alloc::vec::Vec;
 
-    use tc_asn1::{Asn1Error, Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+    use tc_asn1::{Asn1Error, Decode, DecodingOptions, Encode, EncodingOptions};
 
     use super::Name;
     use crate::{AttributeTypeAndValue, DirectoryString, RelativeDistinguishedName};
 
     fn der() -> EncodingOptions {
-        EncodingOptions::new(EncodingType::Der)
+        EncodingOptions::DER
     }
 
     fn options() -> DecodingOptions {

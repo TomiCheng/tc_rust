@@ -26,7 +26,7 @@ use crate::KeyPurposeId;
 /// # Examples
 ///
 /// ```
-/// use tc_asn1::{Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+/// use tc_asn1::{Decode, DecodingOptions, Encode, EncodingOptions};
 /// use tc_asn1_x509::{ExtendedKeyUsage, KeyPurposeId};
 ///
 /// // A TLS certificate usable on both ends.
@@ -38,7 +38,7 @@ use crate::KeyPurposeId;
 /// assert!(!eku.contains(KeyPurposeId::CODE_SIGNING));
 /// println!("{eku}");   // serverAuth, clientAuth
 ///
-/// let der = eku.encode_to_vec(&EncodingOptions::new(EncodingType::Der))?;
+/// let der = eku.encode_to_vec(&EncodingOptions::DER)?;
 /// let (_, back) = ExtendedKeyUsage::decode(&der, &DecodingOptions::default())?;
 /// assert_eq!(back, eku);
 /// # Ok::<(), tc_asn1::Asn1Error>(())
@@ -139,14 +139,13 @@ mod tests {
 
     use tc_asn1::{
         Asn1Error, Asn1Oid, Decode, DecodingContext, DecodingOptions, Encode, EncodingOptions,
-        EncodingType,
     };
 
     use super::ExtendedKeyUsage;
     use crate::{Extension, ExtensionId, KeyPurposeId};
 
     fn der() -> EncodingOptions {
-        EncodingOptions::new(EncodingType::Der)
+        EncodingOptions::DER
     }
 
     fn options() -> DecodingOptions {

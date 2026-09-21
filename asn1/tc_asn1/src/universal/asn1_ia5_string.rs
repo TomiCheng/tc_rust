@@ -24,10 +24,10 @@ use crate::{
 /// # Examples
 ///
 /// ```
-/// use tc_asn1::{Asn1Error, Asn1Ia5String, Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+/// use tc_asn1::{Asn1Error, Asn1Ia5String, Decode, DecodingOptions, Encode, EncodingOptions};
 ///
 /// let text = Asn1Ia5String::new("user@example.com")?;
-/// let der = text.encode_to_vec(&EncodingOptions::new(EncodingType::Der))?;
+/// let der = text.encode_to_vec(&EncodingOptions::DER)?;
 /// assert_eq!(der[..2], [0x16, 16]);
 /// assert_eq!(&der[2..], "user@example.com".as_bytes());
 /// let (_, back) = Asn1Ia5String::decode(&der, &DecodingOptions::default())?;
@@ -143,7 +143,7 @@ mod tests {
     use alloc::string::{String, ToString};
 
     use super::Asn1Ia5String;
-    use crate::{Asn1Error, Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+    use crate::{Asn1Error, Decode, DecodingOptions, Encode, EncodingOptions};
 
     fn options() -> DecodingOptions {
         DecodingOptions::default()
@@ -173,7 +173,7 @@ mod tests {
 
     #[test]
     fn the_wire_form_is_one_octet_per_character() {
-        let der = EncodingOptions::new(EncodingType::Der);
+        let der = EncodingOptions::DER;
         let value = Asn1Ia5String::new("user@example.com").unwrap();
         let wire = value.encode_to_vec(&der).unwrap();
         assert_eq!(wire[..2], [0x16, 16]);
@@ -201,12 +201,9 @@ mod tests {
         let long =
             Asn1Ia5String::new(&String::from_utf8(alloc::vec![b'1'; 1001]).unwrap()).unwrap();
         assert!(matches!(
-            long.encode_to_vec(&EncodingOptions::new(EncodingType::Cer)),
+            long.encode_to_vec(&EncodingOptions::CER),
             Err(Asn1Error::PrimitiveTooLong)
         ));
-        assert!(
-            long.encode_to_vec(&EncodingOptions::new(EncodingType::Der))
-                .is_ok()
-        );
+        assert!(long.encode_to_vec(&EncodingOptions::DER).is_ok());
     }
 }

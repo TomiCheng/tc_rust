@@ -28,7 +28,7 @@ use crate::{
 /// # Examples
 ///
 /// ```
-/// use tc_asn1::{Decode, DecodingContext, DecodingOptions, Encode, EncodingOptions, EncodingType};
+/// use tc_asn1::{Decode, DecodingContext, DecodingOptions, Encode, EncodingOptions};
 /// use tc_asn1_x509::{BasicConstraints, Extension, ExtensionId, Extensions, KeyUsage};
 ///
 /// // A CA certificate's extensions: both critical, as RFC 5280 recommends.
@@ -182,15 +182,13 @@ impl Encode for Extensions {
 mod tests {
     use alloc::vec::Vec;
 
-    use tc_asn1::{
-        Asn1Error, Decode, DecodingContext, DecodingOptions, Encode, EncodingOptions, EncodingType,
-    };
+    use tc_asn1::{Asn1Error, Decode, DecodingContext, DecodingOptions, Encode, EncodingOptions};
 
     use super::Extensions;
     use crate::{BasicConstraints, ExtendedKeyUsage, Extension, ExtensionId, KeyUsage};
 
     fn der() -> EncodingOptions {
-        EncodingOptions::new(EncodingType::Der)
+        EncodingOptions::DER
     }
 
     fn options() -> DecodingOptions {

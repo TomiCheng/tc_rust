@@ -12,10 +12,10 @@ use crate::{Asn1Error, Encode, EncodeContent, EncodeTagged, EncodingOptions};
 /// # Examples
 ///
 /// ```
-/// use tc_asn1::{Asn1Integer, Encode, EncodingOptions, EncodingType, Explicit};
+/// use tc_asn1::{Asn1Integer, Encode, EncodingOptions, Explicit};
 ///
 /// let version = Asn1Integer::from(2);
-/// let out = Explicit::new(&[0xA0], &version).encode_to_vec(&EncodingOptions::new(EncodingType::Der))?;
+/// let out = Explicit::new(&[0xA0], &version).encode_to_vec(&EncodingOptions::DER)?;
 /// assert_eq!(out, [0xA0, 0x03, 0x02, 0x01, 0x02]);
 /// # Ok::<(), tc_asn1::Asn1Error>(())
 /// ```
@@ -66,10 +66,10 @@ impl Encode for Explicit<'_> {
 /// # Examples
 ///
 /// ```
-/// use tc_asn1::{Asn1BitString, Encode, EncodingOptions, EncodingType, Implicit};
+/// use tc_asn1::{Asn1BitString, Encode, EncodingOptions, Implicit};
 ///
 /// let id = Asn1BitString::from_bits(&[0xA0], 3);
-/// let out = Implicit::new(&[0x81], &id).encode_to_vec(&EncodingOptions::new(EncodingType::Der))?;
+/// let out = Implicit::new(&[0x81], &id).encode_to_vec(&EncodingOptions::DER)?;
 /// assert_eq!(out, [0x81, 0x02, 0x05, 0xA0]);
 /// # Ok::<(), tc_asn1::Asn1Error>(())
 /// ```

@@ -14,8 +14,7 @@
 
 use tc_asn1::{
     Asn1Boolean, Asn1Error, Asn1OctetString, Asn1Oid, Asn1Ref, Decode, DecodeInner,
-    DecodingContext, Encode, EncodeContent, EncodeTagged, EncodingOptions, EncodingType, Tagged,
-    tag,
+    DecodingContext, Encode, EncodeContent, EncodeTagged, EncodingOptions, Tagged, tag,
 };
 
 /// One certificate extension. `critical` is kept as the ASN.1 value so the
@@ -24,12 +23,12 @@ use tc_asn1::{
 /// # Examples
 ///
 /// ```
-/// use tc_asn1::{Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+/// use tc_asn1::{Decode, DecodingOptions, Encode, EncodingOptions};
 /// use tc_asn1_x509::{Extension, ExtensionId};
 ///
 /// // basicConstraints, critical, with value SEQUENCE { cA TRUE }
 /// let ext = Extension::new(ExtensionId::BASIC_CONSTRAINTS, true, &[0x30, 0x03, 0x01, 0x01, 0xFF]);
-/// let out = ext.encode_to_vec(&EncodingOptions::new(EncodingType::Der))?;
+/// let out = ext.encode_to_vec(&EncodingOptions::DER)?;
 /// assert_eq!(
 ///     out,
 ///     [0x30, 0x0F, 0x06, 0x03, 0x55, 0x1D, 0x13, 0x01, 0x01, 0xFF, 0x04, 0x05, 0x30, 0x03, 0x01, 0x01, 0xFF],
@@ -63,7 +62,7 @@ impl Extension {
         critical: bool,
         value: &impl Encode,
     ) -> Result<Self, Asn1Error> {
-        let der = value.encode_to_vec(&EncodingOptions::new(EncodingType::Der))?;
+        let der = value.encode_to_vec(&EncodingOptions::DER)?;
         Ok(Self::new(extn_id, critical, &der))
     }
 
@@ -170,7 +169,7 @@ mod tests {
 
     use tc_asn1::{
         Asn1BitString, Asn1Error, Asn1Object, Asn1Oid, Decode, DecodingContext, DecodingOptions,
-        Encode, EncodingOptions, EncodingType,
+        Encode, EncodingOptions,
     };
 
     use super::Extension;
@@ -186,7 +185,7 @@ mod tests {
     ];
 
     fn der() -> EncodingOptions {
-        EncodingOptions::new(EncodingType::Der)
+        EncodingOptions::DER
     }
 
     fn options() -> DecodingOptions {

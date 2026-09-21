@@ -142,14 +142,14 @@ impl Encode for AttributeValue {
 /// # Examples
 ///
 /// ```
-/// use tc_asn1::{Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+/// use tc_asn1::{Decode, DecodingOptions, Encode, EncodingOptions};
 /// use tc_asn1_x500::{AttributeTypeAndValue, AttributeValue, DirectoryString};
 ///
 /// // Build CN=Example: the commonName OID with a DirectoryString value.
 /// let cn = AttributeTypeAndValue::new("2.5.4.3".parse()?, DirectoryString::new("Example")?);
 ///
 /// // Encode it as DER ...
-/// let der = cn.encode_to_vec(&EncodingOptions::new(EncodingType::Der))?;
+/// let der = cn.encode_to_vec(&EncodingOptions::DER)?;
 ///
 /// // ... and read it back. The value is classified by its string type.
 /// let (_, decoded) = AttributeTypeAndValue::decode(&der, &DecodingOptions::default())?;
@@ -243,14 +243,14 @@ mod tests {
 
     use tc_asn1::{
         Asn1Error, Asn1Ia5String, Asn1Integer, Asn1Object, Decode, DecodingOptions, Encode,
-        EncodingOptions, EncodingType,
+        EncodingOptions,
     };
 
     use super::{AttributeTypeAndValue, AttributeValue};
     use crate::DirectoryString;
 
     fn der() -> EncodingOptions {
-        EncodingOptions::new(EncodingType::Der)
+        EncodingOptions::DER
     }
 
     fn options() -> DecodingOptions {

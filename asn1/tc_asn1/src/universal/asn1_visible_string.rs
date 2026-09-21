@@ -28,10 +28,10 @@ fn is_visible(byte: u8) -> bool {
 /// # Examples
 ///
 /// ```
-/// use tc_asn1::{Asn1Error, Asn1VisibleString, Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+/// use tc_asn1::{Asn1Error, Asn1VisibleString, Decode, DecodingOptions, Encode, EncodingOptions};
 ///
 /// let text = Asn1VisibleString::new("Hello, World!")?;
-/// let der = text.encode_to_vec(&EncodingOptions::new(EncodingType::Der))?;
+/// let der = text.encode_to_vec(&EncodingOptions::DER)?;
 /// assert_eq!(der[..2], [0x1A, 13]);
 /// assert_eq!(&der[2..], "Hello, World!".as_bytes());
 /// let (_, back) = Asn1VisibleString::decode(&der, &DecodingOptions::default())?;
@@ -146,7 +146,7 @@ mod tests {
     use alloc::string::{String, ToString};
 
     use super::Asn1VisibleString;
-    use crate::{Asn1Error, Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+    use crate::{Asn1Error, Decode, DecodingOptions, Encode, EncodingOptions};
 
     fn options() -> DecodingOptions {
         DecodingOptions::default()
@@ -176,7 +176,7 @@ mod tests {
 
     #[test]
     fn the_wire_form_is_one_octet_per_character() {
-        let der = EncodingOptions::new(EncodingType::Der);
+        let der = EncodingOptions::DER;
         let value = Asn1VisibleString::new("Hello, World!").unwrap();
         let wire = value.encode_to_vec(&der).unwrap();
         assert_eq!(wire[..2], [0x1A, 13]);
@@ -204,12 +204,9 @@ mod tests {
         let long =
             Asn1VisibleString::new(&String::from_utf8(alloc::vec![b'1'; 1001]).unwrap()).unwrap();
         assert!(matches!(
-            long.encode_to_vec(&EncodingOptions::new(EncodingType::Cer)),
+            long.encode_to_vec(&EncodingOptions::CER),
             Err(Asn1Error::PrimitiveTooLong)
         ));
-        assert!(
-            long.encode_to_vec(&EncodingOptions::new(EncodingType::Der))
-                .is_ok()
-        );
+        assert!(long.encode_to_vec(&EncodingOptions::DER).is_ok());
     }
 }

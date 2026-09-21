@@ -26,7 +26,7 @@ assert_eq!(name.to_string(), "CN=Alice,O=Example,C=TW");
 assert_eq!(name.rdns().len(), 3);
 
 // DER out, DER (or BER) in.
-let der = name.encode_to_vec(&EncodingOptions::new(EncodingType::Der))?;
+let der = name.encode_to_vec(&EncodingOptions::DER)?;
 let (_, decoded) = Name::decode(&der, &DecodingOptions::default())?;
 assert_eq!(decoded, name);
 

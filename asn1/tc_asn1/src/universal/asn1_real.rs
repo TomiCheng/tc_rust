@@ -34,9 +34,9 @@ use crate::{
 /// # Examples
 ///
 /// ```
-/// use tc_asn1::{Asn1Error, Asn1Real, Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+/// use tc_asn1::{Asn1Error, Asn1Real, Decode, DecodingOptions, Encode, EncodingOptions};
 ///
-/// let der = EncodingOptions::new(EncodingType::Der);
+/// let der = EncodingOptions::DER;
 ///
 /// // 10.0 is 5 × 2^1: sign and base in the first octet, then exponent, then mantissa.
 /// assert_eq!(Asn1Real::from(10.0).encode_to_vec(&der)?, [0x09, 0x03, 0x80, 0x01, 0x05]);
@@ -449,10 +449,10 @@ impl Encode for Asn1Real {
 #[cfg(test)]
 mod tests {
     use super::Asn1Real;
-    use crate::{Asn1Error, Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+    use crate::{Asn1Error, Decode, DecodingOptions, Encode, EncodingOptions};
 
     fn der() -> EncodingOptions {
-        EncodingOptions::new(EncodingType::Der)
+        EncodingOptions::DER
     }
 
     fn options() -> DecodingOptions {

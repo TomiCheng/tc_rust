@@ -22,7 +22,7 @@ mod dump;
 /// # Examples
 ///
 /// ```
-/// use tc_asn1::{Asn1Error, Asn1Null, Asn1Object, Asn1Oid, Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+/// use tc_asn1::{Asn1Error, Asn1Null, Asn1Object, Asn1Oid, Decode, DecodingOptions, Encode, EncodingOptions};
 ///
 /// // AlgorithmIdentifier { rsaEncryption, NULL } read without its schema.
 /// let der = [0x30, 0x0D, 0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x01, 0x01, 0x05, 0x00];
@@ -37,7 +37,7 @@ mod dump;
 ///     "1.2.840.113549.1.1.1".parse::<Asn1Oid>()?.into(),
 ///     Asn1Null.into(),
 /// ]);
-/// assert_eq!(built.encode_to_vec(&EncodingOptions::new(EncodingType::Der))?, der);
+/// assert_eq!(built.encode_to_vec(&EncodingOptions::DER)?, der);
 /// # Ok::<(), Asn1Error>(())
 /// ```
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -457,11 +457,11 @@ mod tests {
     use super::Asn1Object;
     use crate::{
         Asn1Any, Asn1Boolean, Asn1Error, Asn1Integer, Asn1Utf8String, Decode, DecodingOptions,
-        Encode, EncodingOptions, EncodingType,
+        Encode, EncodingOptions,
     };
 
     fn der() -> EncodingOptions {
-        EncodingOptions::new(EncodingType::Der)
+        EncodingOptions::DER
     }
 
     fn options() -> DecodingOptions {

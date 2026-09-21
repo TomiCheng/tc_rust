@@ -21,10 +21,10 @@ use crate::{
 /// # Examples
 ///
 /// ```
-/// use tc_asn1::{Asn1Error, Asn1Utf8String, Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+/// use tc_asn1::{Asn1Error, Asn1Utf8String, Decode, DecodingOptions, Encode, EncodingOptions};
 ///
 /// let text = Asn1Utf8String::new("caf\u{e9}");
-/// let der = text.encode_to_vec(&EncodingOptions::new(EncodingType::Der))?;
+/// let der = text.encode_to_vec(&EncodingOptions::DER)?;
 /// assert_eq!(der, [0x0C, 0x05, b'c', b'a', b'f', 0xC3, 0xA9]);
 /// let (_, back) = Asn1Utf8String::decode(&der, &DecodingOptions::default())?;
 /// assert_eq!(back.as_str(), "caf\u{e9}");
@@ -138,7 +138,7 @@ mod tests {
     use alloc::string::{String, ToString};
 
     use super::Asn1Utf8String;
-    use crate::{Asn1Error, Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+    use crate::{Asn1Error, Decode, DecodingOptions, Encode, EncodingOptions};
 
     fn options() -> DecodingOptions {
         DecodingOptions::default()
@@ -146,7 +146,7 @@ mod tests {
 
     #[test]
     fn the_wire_form_is_the_utf8_octets() {
-        let der = EncodingOptions::new(EncodingType::Der);
+        let der = EncodingOptions::DER;
         for (text, wire) in [
             ("", &[0x0C, 0x00][..]),
             ("abc", &[0x0C, 0x03, b'a', b'b', b'c']),
@@ -189,7 +189,7 @@ mod tests {
 
     #[test]
     fn cer_counts_octets_not_characters() {
-        let cer = EncodingOptions::new(EncodingType::Cer);
+        let cer = EncodingOptions::CER;
         let just_fits = Asn1Utf8String::new(&"\u{53f0}".repeat(333)); // 999 octets
         assert!(just_fits.encode_to_vec(&cer).is_ok());
         let too_long = Asn1Utf8String::new(&"\u{53f0}".repeat(334)); // 1002 octets

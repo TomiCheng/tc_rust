@@ -20,13 +20,13 @@ use crate::{
 /// # Examples
 ///
 /// ```
-/// use tc_asn1::{Asn1Any, Asn1Error, Asn1Integer, Decode, DecodingContext, DecodingOptions, Encode, EncodingOptions, EncodingType};
+/// use tc_asn1::{Asn1Any, Asn1Error, Asn1Integer, Decode, DecodingContext, DecodingOptions, Encode, EncodingOptions};
 ///
 /// // An indefinite-length SEQUENCE, kept as found and written back as found.
 /// let ber = [0x30, 0x80, 0x02, 0x01, 0x01, 0x00, 0x00];
 /// let (used, any) = Asn1Any::decode(&ber, &DecodingOptions::default())?;
 /// assert_eq!((used, any.raw()), (7, &ber[..]));
-/// assert_eq!(any.encode_to_vec(&EncodingOptions::new(EncodingType::Der))?, ber);
+/// assert_eq!(any.encode_to_vec(&EncodingOptions::DER)?, ber);
 ///
 /// // The structure is still there to be read.
 /// let mut context = DecodingContext::new(DecodingOptions::default());
@@ -169,7 +169,7 @@ mod tests {
     };
 
     fn der() -> EncodingOptions {
-        EncodingOptions::new(EncodingType::Der)
+        EncodingOptions::DER
     }
 
     fn options() -> DecodingOptions {

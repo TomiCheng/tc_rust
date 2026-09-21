@@ -87,13 +87,13 @@ impl Encode for Validity {
 
 #[cfg(test)]
 mod tests {
-    use tc_asn1::{Asn1Error, Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+    use tc_asn1::{Asn1Error, Decode, DecodingOptions, Encode, EncodingOptions};
 
     use super::Validity;
     use crate::Time;
 
     fn der() -> EncodingOptions {
-        EncodingOptions::new(EncodingType::Der)
+        EncodingOptions::DER
     }
 
     #[test]

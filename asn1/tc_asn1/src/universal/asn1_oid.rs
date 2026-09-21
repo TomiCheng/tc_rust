@@ -23,10 +23,10 @@ use crate::{
 /// # Examples
 ///
 /// ```
-/// use tc_asn1::{Asn1Error, Asn1Oid, Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+/// use tc_asn1::{Asn1Error, Asn1Oid, Decode, DecodingOptions, Encode, EncodingOptions};
 ///
 /// let oid: Asn1Oid = "1.2.840.113549.1.1.1".parse()?;   // rsaEncryption
-/// let der = oid.encode_to_vec(&EncodingOptions::new(EncodingType::Der))?;
+/// let der = oid.encode_to_vec(&EncodingOptions::DER)?;
 /// assert_eq!(der, [0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x01, 0x01]);
 ///
 /// let (_, back) = Asn1Oid::decode(&der, &DecodingOptions::default())?;
@@ -329,7 +329,7 @@ mod tests {
     use alloc::vec::Vec;
 
     use super::{Asn1Oid, NamedOid};
-    use crate::{Asn1Error, Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+    use crate::{Asn1Error, Decode, DecodingOptions, Encode, EncodingOptions};
 
     fn options() -> DecodingOptions {
         DecodingOptions::default()
@@ -390,11 +390,7 @@ mod tests {
         let wire = [0x06, 0x03, 0x55, 0x04, 0x03];
         let (used, oid) = Asn1Oid::decode(&wire, &options()).unwrap();
         assert_eq!((used, oid.to_string().as_str()), (5, "2.5.4.3"));
-        assert_eq!(
-            oid.encode_to_vec(&EncodingOptions::new(EncodingType::Der))
-                .unwrap(),
-            wire
-        );
+        assert_eq!(oid.encode_to_vec(&EncodingOptions::DER).unwrap(), wire);
         for wire in [
             &[0x06, 0x00][..],         // no arcs
             &[0x06, 0x02, 0x80, 0x01], // a subidentifier starting with 80

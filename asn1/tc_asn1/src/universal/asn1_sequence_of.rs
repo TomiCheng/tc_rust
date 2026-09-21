@@ -21,10 +21,10 @@ use crate::{
 /// # Examples
 ///
 /// ```
-/// use tc_asn1::{Asn1Error, Asn1Integer, Asn1SequenceOf, Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+/// use tc_asn1::{Asn1Error, Asn1Integer, Asn1SequenceOf, Decode, DecodingOptions, Encode, EncodingOptions};
 ///
 /// let list = Asn1SequenceOf::new(vec![Asn1Integer::from(2), Asn1Integer::from(1)]);
-/// let der = list.encode_to_vec(&EncodingOptions::new(EncodingType::Der))?;
+/// let der = list.encode_to_vec(&EncodingOptions::DER)?;
 /// assert_eq!(der, [0x30, 0x06, 0x02, 0x01, 0x02, 0x02, 0x01, 0x01]);   // 2 then 1, as given
 ///
 /// let (_, back) = Asn1SequenceOf::<Asn1Integer>::decode(&der, &DecodingOptions::default())?;
@@ -124,7 +124,7 @@ mod tests {
     };
 
     fn der() -> EncodingOptions {
-        EncodingOptions::new(EncodingType::Der)
+        EncodingOptions::DER
     }
 
     fn options() -> DecodingOptions {

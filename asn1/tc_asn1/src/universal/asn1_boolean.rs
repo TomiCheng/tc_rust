@@ -13,9 +13,9 @@ use crate::{
 /// # Examples
 ///
 /// ```
-/// use tc_asn1::{Asn1Boolean, Asn1Error, Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+/// use tc_asn1::{Asn1Boolean, Asn1Error, Decode, DecodingOptions, Encode, EncodingOptions};
 ///
-/// let der = EncodingOptions::new(EncodingType::Der);
+/// let der = EncodingOptions::DER;
 /// let options = DecodingOptions::default();
 ///
 /// assert_eq!(Asn1Boolean::from(true).encode_to_vec(&der)?, [0x01, 0x01, 0xFF]);
@@ -176,9 +176,7 @@ mod tests {
     fn a_lenient_true_re_encodes_as_ff() {
         let (_, value) = Asn1Boolean::decode(&[0x01, 0x01, 0x01], &options()).unwrap();
         assert_eq!(
-            value
-                .encode_to_vec(&EncodingOptions::new(EncodingType::Der))
-                .unwrap(),
+            value.encode_to_vec(&EncodingOptions::DER).unwrap(),
             [0x01, 0x01, 0xFF]
         );
     }

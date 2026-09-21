@@ -25,7 +25,7 @@ use tc_asn1::{
 /// # Examples
 ///
 /// ```
-/// use tc_asn1::{Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+/// use tc_asn1::{Decode, DecodingOptions, Encode, EncodingOptions};
 /// use tc_asn1_x509::KeyUsage;
 ///
 /// // A CA key: signs certificates and CRLs.
@@ -35,7 +35,7 @@ use tc_asn1::{
 /// println!("{usage}");   // keyCertSign, cRLSign
 ///
 /// // DER drops the trailing zero bits: two octets, one unused bit.
-/// let der = usage.encode_to_vec(&EncodingOptions::new(EncodingType::Der))?;
+/// let der = usage.encode_to_vec(&EncodingOptions::DER)?;
 /// assert_eq!(der, [0x03, 0x02, 0x01, 0x06]);
 /// let (_, back) = KeyUsage::decode(&der, &DecodingOptions::default())?;
 /// assert_eq!(back, usage);
@@ -192,15 +192,13 @@ impl Encode for KeyUsage {
 mod tests {
     use alloc::string::ToString;
 
-    use tc_asn1::{
-        Asn1Error, Decode, DecodingContext, DecodingOptions, Encode, EncodingOptions, EncodingType,
-    };
+    use tc_asn1::{Asn1Error, Decode, DecodingContext, DecodingOptions, Encode, EncodingOptions};
 
     use super::KeyUsage;
     use crate::{Extension, ExtensionId};
 
     fn der() -> EncodingOptions {
-        EncodingOptions::new(EncodingType::Der)
+        EncodingOptions::DER
     }
 
     fn options() -> DecodingOptions {

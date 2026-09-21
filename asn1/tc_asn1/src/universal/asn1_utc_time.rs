@@ -29,10 +29,10 @@ const LEN: usize = 13;
 /// # Examples
 ///
 /// ```
-/// use tc_asn1::{Asn1Error, Asn1UtcTime, Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+/// use tc_asn1::{Asn1Error, Asn1UtcTime, Decode, DecodingOptions, Encode, EncodingOptions};
 ///
 /// let not_before = Asn1UtcTime::new(2016, 8, 1, 12, 19, 24)?;
-/// let der = not_before.encode_to_vec(&EncodingOptions::new(EncodingType::Der))?;
+/// let der = not_before.encode_to_vec(&EncodingOptions::DER)?;
 /// assert_eq!(der, b"\x17\x0D160801121924Z");
 /// let (_, back) = Asn1UtcTime::decode(&der, &DecodingOptions::default())?;
 /// assert_eq!(back.to_string(), "2016-08-01T12:19:24Z");
@@ -168,7 +168,7 @@ mod tests {
     use alloc::string::ToString;
 
     use super::Asn1UtcTime;
-    use crate::{Asn1Error, Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+    use crate::{Asn1Error, Decode, DecodingOptions, Encode, EncodingOptions};
 
     fn options() -> DecodingOptions {
         DecodingOptions::default()
@@ -176,7 +176,7 @@ mod tests {
 
     #[test]
     fn the_two_digit_year_pivots_at_50() {
-        let der = EncodingOptions::new(EncodingType::Der);
+        let der = EncodingOptions::DER;
         for (fields, wire, text) in [
             (
                 (1950, 1, 1, 0, 0, 0),

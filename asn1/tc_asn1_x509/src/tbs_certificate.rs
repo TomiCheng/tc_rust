@@ -304,8 +304,7 @@ mod tests {
     use alloc::vec::Vec;
 
     use tc_asn1::{
-        Asn1BitString, Asn1Error, Decode, DecodingContext, DecodingOptions, Encode,
-        EncodingOptions, EncodingType,
+        Asn1BitString, Asn1Error, Decode, DecodingContext, DecodingOptions, Encode, EncodingOptions,
     };
 
     use super::{TbsCertificate, Version};
@@ -317,7 +316,7 @@ mod tests {
     const RFC_8410: &[u8] = include_bytes!("../tests/data/rfc8410.der");
 
     fn der() -> EncodingOptions {
-        EncodingOptions::new(EncodingType::Der)
+        EncodingOptions::DER
     }
 
     fn options() -> DecodingOptions {
