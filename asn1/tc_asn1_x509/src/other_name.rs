@@ -160,7 +160,6 @@ impl OtherName {
     pub fn value(&self) -> &OtherNameValue {
         &self.value
     }
-
 }
 
 /// `oid:text` for a string value, the OID alone for anything else.

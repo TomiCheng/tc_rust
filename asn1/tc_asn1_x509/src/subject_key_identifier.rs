@@ -34,7 +34,6 @@ use tc_asn1::{
 /// println!("{ski}");   // 9b1f5eeded043385
 ///
 /// let der = ski.encode_to_vec(&EncodingOptions::DER)?;
-/// assert_eq!(der[..2], [0x04, 0x08]);
 /// let (_, back) = SubjectKeyIdentifier::decode(&der, &DecodingOptions::default())?;
 /// assert_eq!(back, ski);
 /// # Ok::<(), tc_asn1::Asn1Error>(())

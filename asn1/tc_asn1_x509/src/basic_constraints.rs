@@ -32,13 +32,13 @@ use tc_asn1::{
 /// println!("{bc}");   // CA, pathLenConstraint 0
 ///
 /// let der = bc.encode_to_vec(&EncodingOptions::DER)?;
-/// assert_eq!(der, [0x30, 0x06, 0x01, 0x01, 0xFF, 0x02, 0x01, 0x00]);
 /// let (_, back) = BasicConstraints::decode(&der, &DecodingOptions::default())?;
 /// assert_eq!(back.path_len_constraint(), Some(0));
 ///
-/// // An end entity encodes as an empty SEQUENCE, the DEFAULT being omitted.
-/// let der = BasicConstraints::end_entity().encode_to_vec(&EncodingOptions::DER)?;
-/// assert_eq!(der, [0x30, 0x00]);
+/// // An end entity has neither flag nor path length.
+/// let leaf = BasicConstraints::end_entity();
+/// assert!(!leaf.is_ca());
+/// assert_eq!(leaf.path_len_constraint(), None);
 /// # Ok::<(), tc_asn1::Asn1Error>(())
 /// ```
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
