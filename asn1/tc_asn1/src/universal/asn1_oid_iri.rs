@@ -1,4 +1,7 @@
-//! The UTF-8 wire form of OID-IRI and RELATIVE-OID-IRI.
+//! X.690 §8.21 OID-IRI (universal tag 35, written `1F 23`) and §8.22
+//! RELATIVE-OID-IRI (tag 36, `1F 24`): an object identifier as a path of
+//! Unicode labels, such as `/ISO/Registration_Authority/19785.CBEFF`, in
+//! UTF-8.
 //!
 //! Labels are checked for character set and hyphen placement per X.660
 //! §7.3-7.5; no registry is consulted. Equality compares the raw string; the
@@ -153,10 +156,21 @@ iri!(
 # Examples
 
 ```
-use tc_asn1::Asn1OidIri;
-let oid = Asn1OidIri::new("/ISO/Registration_Authority/19785.CBEFF").unwrap();
+use tc_asn1::{Asn1Error, Asn1OidIri, Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+
+let oid = Asn1OidIri::new("/ISO/Registration_Authority/19785.CBEFF")?;
 assert!(oid.as_str().starts_with("/ISO/"));
+
+// The contents are the UTF-8 text itself; a tag over 30 takes two octets.
+let der = oid.encode_to_vec(&EncodingOptions::new(EncodingType::Der))?;
+assert_eq!(&der[..4], &[0x1F, 0x23, 0x27, b'/']);
+let (_, back) = Asn1OidIri::decode(&der, &DecodingOptions::default())?;
+assert_eq!(back, oid);
+
+// An integer label may not have a leading zero, and the path must be absolute.
 assert!(Asn1OidIri::new("/ISO/01").is_err());
+assert!(Asn1OidIri::new("ISO/1").is_err());
+# Ok::<(), Asn1Error>(())
 ```"#
 );
 iri!(
@@ -168,9 +182,114 @@ iri!(
 # Examples
 
 ```
-use tc_asn1::Asn1RelativeOidIri;
-let oid = Asn1RelativeOidIri::new("\u{53F0}\u{5317}/0/TLV-encoded").unwrap();
+use tc_asn1::{Asn1Error, Asn1RelativeOidIri, Encode, EncodingOptions, EncodingType};
+
+let oid = Asn1RelativeOidIri::new("\u{53F0}\u{5317}/0/TLV-encoded")?;
 assert_eq!(oid.as_str(), "\u{53F0}\u{5317}/0/TLV-encoded");
+let der = oid.encode_to_vec(&EncodingOptions::new(EncodingType::Der))?;
+assert_eq!(der[..2], [0x1F, 0x24]);
+
+// A leading `/` would make it absolute.
 assert!(Asn1RelativeOidIri::new("/\u{53F0}\u{5317}").is_err());
+# Ok::<(), Asn1Error>(())
 ```"#
 );
+
+#[cfg(test)]
+mod tests {
+    use alloc::string::ToString;
+
+    use super::{Asn1OidIri, Asn1RelativeOidIri, valid_label};
+    use crate::{Asn1Error, Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+
+    fn options() -> DecodingOptions {
+        DecodingOptions::default()
+    }
+
+    #[test]
+    fn labels_follow_x660_section_7_5() {
+        for label in [
+            "ISO",
+            "0",
+            "19785.CBEFF",
+            "a-b",
+            "x_y~z",
+            "\u{53F0}\u{5317}",
+            "abc--d",
+        ] {
+            assert!(valid_label(label), "{label:?}");
+        }
+        // `--` in the third and fourth position is reserved (the IDNA prefix)
+        for label in ["", "01", "-a", "a-", "ab--cd", "a b", "a/b", "\u{FFFE}"] {
+            assert!(!valid_label(label), "{label:?}");
+        }
+    }
+
+    #[test]
+    fn the_absolute_form_needs_the_leading_slash_and_the_relative_form_forbids_it() {
+        assert!(Asn1OidIri::new("/ISO/1").is_ok());
+        assert!(matches!(
+            Asn1OidIri::new("ISO/1"),
+            Err(Asn1Error::MalformedValue)
+        ));
+        assert!(matches!(
+            Asn1OidIri::new("/"),
+            Err(Asn1Error::MalformedValue)
+        ));
+        assert!(Asn1RelativeOidIri::new("ISO/1").is_ok());
+        assert!(matches!(
+            Asn1RelativeOidIri::new("/ISO/1"),
+            Err(Asn1Error::MalformedValue)
+        ));
+        assert!(matches!(
+            Asn1RelativeOidIri::new(""),
+            Err(Asn1Error::MalformedValue)
+        ));
+    }
+
+    #[test]
+    fn the_wire_form_is_the_utf8_text_under_the_two_octet_tags() {
+        let der = EncodingOptions::new(EncodingType::Der);
+        let absolute = Asn1OidIri::new("/ISO/1").unwrap();
+        let wire = absolute.encode_to_vec(&der).unwrap();
+        assert_eq!(wire, b"\x1F\x23\x06/ISO/1");
+        let (used, back) = Asn1OidIri::decode(&wire, &options()).unwrap();
+        assert_eq!((used, &back), (wire.len(), &absolute));
+        assert_eq!(back.to_string(), "/ISO/1");
+
+        let relative = Asn1RelativeOidIri::new("\u{53F0}\u{5317}/0").unwrap();
+        let wire = relative.encode_to_vec(&der).unwrap();
+        assert_eq!(wire, b"\x1F\x24\x08\xE5\x8F\xB0\xE5\x8C\x97/0");
+        assert_eq!(
+            Asn1RelativeOidIri::decode(&wire, &options()).unwrap().1,
+            relative
+        );
+    }
+
+    #[test]
+    fn bad_utf8_bad_labels_and_the_other_tag_are_rejected_on_decode() {
+        for wire in [
+            &b"\x1F\x23\x02/\xFF"[..],
+            b"\x1F\x23\x03/01",
+            b"\x1F\x24\x02-a",
+        ] {
+            let result = if wire[1] == 0x23 {
+                Asn1OidIri::decode(wire, &options()).map(|_| ())
+            } else {
+                Asn1RelativeOidIri::decode(wire, &options()).map(|_| ())
+            };
+            assert!(
+                matches!(result, Err(Asn1Error::MalformedValue)),
+                "{wire:02X?}"
+            );
+        }
+        assert!(matches!(
+            Asn1OidIri::decode(b"\x1F\x24\x01a", &options()),
+            Err(Asn1Error::UnexpectedTag)
+        ));
+        assert!(matches!(
+            Asn1RelativeOidIri::decode(b"\x1F\x23\x02/a", &options()),
+            Err(Asn1Error::UnexpectedTag)
+        ));
+    }
+}
