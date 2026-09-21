@@ -1,3 +1,9 @@
+//! X.690 §8.20 RELATIVE-OID, universal tag 13.
+//!
+//! The arcs of an OBJECT IDENTIFIER relative to some base, in the same
+//! base-128 form but without the merging of the first two: every arc is
+//! its own subidentifier and one arc is enough.
+
 use alloc::vec::Vec;
 use core::{fmt, str::FromStr};
 
@@ -7,6 +13,19 @@ use crate::{
     EncodeTagged, EncodingOptions, Tagged,
 };
 
+/// A RELATIVE-OID, kept as its content octets.
+///
+/// # Examples
+///
+/// ```
+/// use tc_asn1::{Asn1Error, Asn1RelativeOid, Encode, EncodingOptions, EncodingType};
+///
+/// let relative: Asn1RelativeOid = "8571.3.2".parse()?;
+/// let der = relative.encode_to_vec(&EncodingOptions::new(EncodingType::Der))?;
+/// assert_eq!(der, [0x0D, 0x04, 0xC2, 0x7B, 0x03, 0x02]);
+/// assert_eq!(relative.arcs().collect::<Vec<_>>(), [8571, 3, 2]);
+/// # Ok::<(), Asn1Error>(())
+/// ```
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct Asn1RelativeOid {
     bytes: Vec<u8>,
@@ -15,6 +34,7 @@ pub struct Asn1RelativeOid {
 impl Asn1RelativeOid {
     pub const TAG: &'static [u8] = super::tag::RELATIVE_OID;
 
+    /// From content octets, checked as for an OBJECT IDENTIFIER.
     pub fn from_der_bytes(bytes: &[u8]) -> Result<Self, Asn1Error> {
         validate_base128(bytes)?;
         Ok(Self {
@@ -22,6 +42,7 @@ impl Asn1RelativeOid {
         })
     }
 
+    /// From arcs, at least one; none is `MalformedValue`.
     pub fn from_arcs(arcs: &[u64]) -> Result<Self, Asn1Error> {
         if arcs.is_empty() {
             return Err(Asn1Error::MalformedValue);
@@ -50,6 +71,8 @@ impl Asn1RelativeOid {
 impl FromStr for Asn1RelativeOid {
     type Err = Asn1Error;
 
+    /// The dotted form: an empty or non-decimal part is `MalformedValue`,
+    /// an arc over `u64` is `LengthOverflow`.
     fn from_str(text: &str) -> Result<Self, Self::Err> {
         let arcs = text
             .split('.')
@@ -63,6 +86,7 @@ impl FromStr for Asn1RelativeOid {
         Self::from_arcs(&arcs)
     }
 }
+/// The dotted form.
 impl fmt::Display for Asn1RelativeOid {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for (i, arc) in self.arcs().enumerate() {
@@ -122,5 +146,76 @@ impl Encode for Asn1RelativeOid {
 
     fn encode(&self, rules: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         self.encode_tagged(Self::TAG, rules, out)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use alloc::string::ToString;
+
+    use super::Asn1RelativeOid;
+    use crate::{Asn1Error, Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+
+    fn options() -> DecodingOptions {
+        DecodingOptions::default()
+    }
+
+    #[test]
+    fn every_arc_is_its_own_subidentifier_and_one_is_enough() {
+        for (text, contents) in [
+            ("0", &[0x00][..]),
+            ("999", &[0x87, 0x67]),
+            ("1.2.999", &[0x01, 0x02, 0x87, 0x67]),
+            ("8571.3.2", &[0xC2, 0x7B, 0x03, 0x02]),
+        ] {
+            let relative: Asn1RelativeOid = text.parse().unwrap();
+            assert_eq!(relative.as_bytes(), contents, "{text}");
+            assert_eq!(relative.to_string(), text);
+            assert_eq!(Asn1RelativeOid::from_der_bytes(contents).unwrap(), relative);
+        }
+    }
+
+    #[test]
+    fn it_round_trips_under_tag_0d_and_rejects_bad_contents() {
+        let wire = [0x0D, 0x04, 0x01, 0x02, 0x87, 0x67];
+        let (used, relative) = Asn1RelativeOid::decode(&wire, &options()).unwrap();
+        assert_eq!((used, relative.to_string().as_str()), (6, "1.2.999"));
+        assert_eq!(
+            relative
+                .encode_to_vec(&EncodingOptions::new(EncodingType::Der))
+                .unwrap(),
+            wire
+        );
+        for wire in [&[0x0D, 0x00][..], &[0x0D, 0x01, 0x80], &[0x0D, 0x01, 0x87]] {
+            assert!(matches!(
+                Asn1RelativeOid::decode(wire, &options()),
+                Err(Asn1Error::MalformedValue)
+            ));
+        }
+        assert!(matches!(
+            Asn1RelativeOid::decode(&[0x06, 0x01, 0x01], &options()),
+            Err(Asn1Error::UnexpectedTag)
+        ));
+    }
+
+    #[test]
+    fn the_text_form_needs_at_least_one_decimal_arc() {
+        assert!(matches!(
+            Asn1RelativeOid::from_arcs(&[]),
+            Err(Asn1Error::MalformedValue)
+        ));
+        for text in ["", "1..2", "1.", "a"] {
+            assert!(
+                matches!(
+                    text.parse::<Asn1RelativeOid>(),
+                    Err(Asn1Error::MalformedValue)
+                ),
+                "{text:?}"
+            );
+        }
+        assert!(matches!(
+            "99999999999999999999".parse::<Asn1RelativeOid>(),
+            Err(Asn1Error::LengthOverflow)
+        ));
     }
 }
