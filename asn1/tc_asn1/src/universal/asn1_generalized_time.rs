@@ -1,4 +1,5 @@
-//! ASN.1 `GeneralizedTime`: a time string with a four-digit year.
+//! X.680 §46 `GeneralizedTime`, universal tag 24: a time string with a
+//! four-digit year, `YYYYMMDDhhmmssZ`.
 //!
 //! Only `YYYYMMDDhhmmssZ` is accepted. X.690 §11.7 lets DER carry non-zero
 //! fractional seconds, but RFC 5280 §4.1.2.5.2 forbids them in certificates, so
@@ -16,7 +17,30 @@ use crate::{
 /// Length of `YYYYMMDDhhmmssZ`.
 const LEN: usize = 15;
 
-/// Four-digit year, any of 0-9999. RFC 5280 requires it from 2050 on.
+/// A UTC instant to the second, year 0-9999.
+///
+/// RFC 5280 requires this type from 2050 on and
+/// [`Asn1UtcTime`](super::Asn1UtcTime) before; a certificate's `notAfter`
+/// of `99991231235959Z` means no expiry. Ordering is chronological.
+///
+/// # Examples
+///
+/// ```
+/// use tc_asn1::{Asn1Error, Asn1GeneralizedTime, Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+///
+/// let not_after = Asn1GeneralizedTime::new(2050, 1, 1, 0, 0, 0)?;
+/// let der = not_after.encode_to_vec(&EncodingOptions::new(EncodingType::Der))?;
+/// assert_eq!(der, b"\x18\x0F20500101000000Z");
+/// let (_, back) = Asn1GeneralizedTime::decode(&der, &DecodingOptions::default())?;
+/// assert_eq!(back.to_string(), "2050-01-01T00:00:00Z");
+///
+/// // Fractional seconds are DER but not PKIX, and are refused.
+/// assert!(matches!(
+///     Asn1GeneralizedTime::decode(b"\x18\x1120500101000000.5Z", &DecodingOptions::default()),
+///     Err(Asn1Error::MalformedValue)
+/// ));
+/// # Ok::<(), Asn1Error>(())
+/// ```
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct Asn1GeneralizedTime(DateTime);
 
@@ -58,6 +82,7 @@ impl Asn1GeneralizedTime {
     }
 }
 
+/// ISO 8601, `2050-01-01T00:00:00Z`.
 impl fmt::Display for Asn1GeneralizedTime {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.0.fmt(f)
@@ -130,5 +155,97 @@ impl Encode for Asn1GeneralizedTime {
 
     fn encode(&self, rules: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         self.encode_tagged(Self::TAG, rules, out)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use alloc::string::ToString;
+
+    use super::Asn1GeneralizedTime;
+    use crate::{Asn1Error, Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+
+    fn options() -> DecodingOptions {
+        DecodingOptions::default()
+    }
+
+    #[test]
+    fn the_four_digit_year_covers_0_to_9999() {
+        let der = EncodingOptions::new(EncodingType::Der);
+        for (fields, wire, text) in [
+            (
+                (0, 1, 1, 0, 0, 0),
+                &b"\x18\x0F00000101000000Z"[..],
+                "0000-01-01T00:00:00Z",
+            ),
+            (
+                (2040, 12, 31, 23, 59, 59),
+                b"\x18\x0F20401231235959Z",
+                "2040-12-31T23:59:59Z",
+            ),
+            (
+                (9999, 12, 31, 23, 59, 59),
+                b"\x18\x0F99991231235959Z",
+                "9999-12-31T23:59:59Z",
+            ),
+        ] {
+            let (y, mo, d, h, mi, s) = fields;
+            let value = Asn1GeneralizedTime::new(y, mo, d, h, mi, s).unwrap();
+            assert_eq!(value.encode_to_vec(&der).unwrap(), wire, "{text}");
+            let (used, back) = Asn1GeneralizedTime::decode(wire, &options()).unwrap();
+            assert_eq!((used, back), (wire.len(), value));
+            assert_eq!(back.to_string(), text);
+            assert_eq!(
+                Asn1GeneralizedTime::decode_der(wire, &options()).unwrap().1,
+                value
+            );
+            assert_eq!(
+                (
+                    back.year(),
+                    back.month(),
+                    back.day(),
+                    back.hour(),
+                    back.minute(),
+                    back.second()
+                ),
+                fields
+            );
+        }
+        assert!(matches!(
+            Asn1GeneralizedTime::new(10000, 1, 1, 0, 0, 0),
+            Err(Asn1Error::MalformedValue)
+        ));
+    }
+
+    #[test]
+    fn fractions_offsets_and_short_forms_are_rejected() {
+        for wire in [
+            &b"\x18\x1120401231235959.5Z"[..], // fractional seconds
+            b"\x18\x1320401231235959+0800",    // an offset
+            b"\x18\x0E20401231235959",         // no Z
+            b"\x18\x0D204012312359Z",          // no seconds
+            b"\x18\x0D401231235959Z",          // a two-digit year
+            b"\x18\x0F20230229000000Z",        // not a leap year
+        ] {
+            assert!(
+                matches!(
+                    Asn1GeneralizedTime::decode(wire, &options()),
+                    Err(Asn1Error::MalformedValue)
+                ),
+                "{wire:02X?}"
+            );
+        }
+        assert!(Asn1GeneralizedTime::decode(b"\x18\x0F20240229000000Z", &options()).is_ok());
+    }
+
+    #[test]
+    fn ordering_is_chronological_and_the_utctime_tag_is_unexpected() {
+        let earlier = Asn1GeneralizedTime::new(2049, 12, 31, 23, 59, 59).unwrap();
+        let later = Asn1GeneralizedTime::new(2050, 1, 1, 0, 0, 0).unwrap();
+        assert!(earlier < later);
+        assert!(matches!(
+            Asn1GeneralizedTime::decode(b"\x17\x0D160801121924Z", &options()),
+            Err(Asn1Error::UnexpectedTag)
+        ));
     }
 }

@@ -1,4 +1,6 @@
-//! X.680 §38: TIME and the four useful time types.
+//! X.680 §38: TIME (universal tag 14) and the four useful time types DATE
+//! (31), TIME-OF-DAY (32), DATE-TIME (33) and DURATION (34), the last four
+//! with two-octet identifiers `1F 1F` to `1F 22`.
 //!
 //! Constructors take the value notation with separators; `as_str` returns the
 //! normalized notation. X.690 §8.26 strips the separators from DATE,
@@ -271,3 +273,102 @@ assert_eq!(duration.as_str(), "P2MT0.00S");
 assert_ne!(duration, Asn1Duration::new("P2M").unwrap());
 ```"#
 );
+
+#[cfg(test)]
+mod tests {
+    use super::{Asn1Date, Asn1DateTime, Asn1Duration, Asn1Time, Asn1TimeOfDay};
+    use crate::{Asn1Error, Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+
+    fn der() -> EncodingOptions {
+        EncodingOptions::new(EncodingType::Der)
+    }
+
+    fn options() -> DecodingOptions {
+        DecodingOptions::default()
+    }
+
+    #[test]
+    fn the_useful_types_drop_their_separators_on_the_wire() {
+        let date = Asn1Date::new("2024-02-29").unwrap();
+        let wire = date.encode_to_vec(&der()).unwrap();
+        assert_eq!(wire, b"\x1F\x1F\x0820240229");
+        assert_eq!(Asn1Date::decode_der(&wire, &options()).unwrap().1, date);
+
+        let clock = Asn1TimeOfDay::new("24:00:00").unwrap();
+        let wire = clock.encode_to_vec(&der()).unwrap();
+        assert_eq!(wire, b"\x1F\x20\x06240000");
+        assert_eq!(
+            Asn1TimeOfDay::decode_der(&wire, &options()).unwrap().1,
+            clock
+        );
+
+        let date_time = Asn1DateTime::new("2024-02-29T12:30:00").unwrap();
+        let wire = date_time.encode_to_vec(&der()).unwrap();
+        assert_eq!(wire, b"\x1F\x21\x0E20240229123000");
+        let (used, back) = Asn1DateTime::decode(&wire, &options()).unwrap();
+        assert_eq!((used, back.as_str()), (wire.len(), "2024-02-29T12:30:00"));
+    }
+
+    #[test]
+    fn duration_drops_the_p_and_time_is_written_as_is() {
+        let duration = Asn1Duration::new("P1Y2M3DT4H5M6S").unwrap();
+        let wire = duration.encode_to_vec(&der()).unwrap();
+        assert_eq!(wire, b"\x1F\x22\x0D1Y2M3DT4H5M6S");
+        assert_eq!(
+            Asn1Duration::decode_der(&wire, &options()).unwrap().1,
+            duration
+        );
+
+        let time = Asn1Time::new("2024-01-01T12:30Z").unwrap();
+        let wire = time.encode_to_vec(&der()).unwrap();
+        assert_eq!(wire, b"\x0E\x112024-01-01T12:30Z");
+        assert_eq!(Asn1Time::decode_der(&wire, &options()).unwrap().1, time);
+    }
+
+    #[test]
+    fn a_non_canonical_form_is_normalized_under_ber_and_not_der() {
+        let wire = b"\x1F\x22\x0A0Y2MT0,00S";
+        let (_, value) = Asn1Duration::decode(wire, &options()).unwrap();
+        assert_eq!(value.as_str(), "P2MT0.00S");
+        assert_eq!(
+            value.encode_to_vec(&der()).unwrap(),
+            b"\x1F\x22\x082MT0.00S"
+        );
+        assert!(matches!(
+            Asn1Duration::decode_der(wire, &options()),
+            Err(Asn1Error::NotDer)
+        ));
+
+        let wire = b"\x0E\x162024-01-01T12:30+08:00";
+        let (_, value) = Asn1Time::decode(wire, &options()).unwrap();
+        assert_eq!(value.as_str(), "2024-01-01T12:30+08");
+        assert!(matches!(
+            Asn1Time::decode_der(wire, &options()),
+            Err(Asn1Error::NotDer)
+        ));
+    }
+
+    #[test]
+    fn invalid_values_and_the_wrong_tags_are_rejected() {
+        assert!(matches!(
+            Asn1Date::decode(b"\x1F\x1F\x0820230229", &options()),
+            Err(Asn1Error::MalformedValue)
+        ));
+        assert!(matches!(
+            Asn1Date::decode(b"\x1F\x1F\x0A2024-02-29", &options()),
+            Err(Asn1Error::MalformedValue)
+        ));
+        assert!(matches!(
+            Asn1TimeOfDay::decode(b"\x1F\x20\x06240001", &options()),
+            Err(Asn1Error::MalformedValue)
+        ));
+        assert!(matches!(
+            Asn1Date::decode(b"\x1F\x20\x06120000", &options()),
+            Err(Asn1Error::UnexpectedTag)
+        ));
+        assert!(matches!(
+            Asn1Time::decode(b"\x1F\x1F\x0820240229", &options()),
+            Err(Asn1Error::UnexpectedTag)
+        ));
+    }
+}

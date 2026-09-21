@@ -1,4 +1,5 @@
-//! ASN.1 `UTCTime`: a time string with a two-digit year.
+//! X.680 §47 `UTCTime`, universal tag 23: a time string with a two-digit
+//! year, `YYMMDDhhmmssZ`.
 //!
 //! Only the DER form `YYMMDDhhmmssZ` is accepted (X.690 §11.8: seconds present,
 //! `Z` only). The BER options of omitting the seconds or using a UTC offset are
@@ -18,9 +19,28 @@ use crate::{
 /// Length of the DER form `YYMMDDhhmmssZ`.
 const LEN: usize = 13;
 
+/// A UTC instant to the second, year 1950-2049.
+///
 /// The year is expanded per RFC 5280 §4.1.2.5.1: `YY >= 50` is 19YY, otherwise
 /// 20YY, so the representable range is 1950-2049. Later dates need
-/// [`Asn1GeneralizedTime`](super::Asn1GeneralizedTime).
+/// [`Asn1GeneralizedTime`](super::Asn1GeneralizedTime). Ordering is
+/// chronological.
+///
+/// # Examples
+///
+/// ```
+/// use tc_asn1::{Asn1Error, Asn1UtcTime, Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+///
+/// let not_before = Asn1UtcTime::new(2016, 8, 1, 12, 19, 24)?;
+/// let der = not_before.encode_to_vec(&EncodingOptions::new(EncodingType::Der))?;
+/// assert_eq!(der, b"\x17\x0D160801121924Z");
+/// let (_, back) = Asn1UtcTime::decode(&der, &DecodingOptions::default())?;
+/// assert_eq!(back.to_string(), "2016-08-01T12:19:24Z");
+///
+/// // 2050 does not fit two digits under the RFC 5280 rule.
+/// assert!(matches!(Asn1UtcTime::new(2050, 1, 1, 0, 0, 0), Err(Asn1Error::MalformedValue)));
+/// # Ok::<(), Asn1Error>(())
+/// ```
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct Asn1UtcTime(DateTime);
 
@@ -62,6 +82,7 @@ impl Asn1UtcTime {
     }
 }
 
+/// ISO 8601, `2016-08-01T12:19:24Z`.
 impl fmt::Display for Asn1UtcTime {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.0.fmt(f)
@@ -139,5 +160,122 @@ impl Encode for Asn1UtcTime {
 
     fn encode(&self, rules: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         self.encode_tagged(Self::TAG, rules, out)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use alloc::string::ToString;
+
+    use super::Asn1UtcTime;
+    use crate::{Asn1Error, Decode, DecodingOptions, Encode, EncodingOptions, EncodingType};
+
+    fn options() -> DecodingOptions {
+        DecodingOptions::default()
+    }
+
+    #[test]
+    fn the_two_digit_year_pivots_at_50() {
+        let der = EncodingOptions::new(EncodingType::Der);
+        for (fields, wire, text) in [
+            (
+                (1950, 1, 1, 0, 0, 0),
+                &b"\x17\x0D500101000000Z"[..],
+                "1950-01-01T00:00:00Z",
+            ),
+            (
+                (1999, 12, 31, 23, 59, 59),
+                b"\x17\x0D991231235959Z",
+                "1999-12-31T23:59:59Z",
+            ),
+            (
+                (2000, 2, 29, 12, 0, 0),
+                b"\x17\x0D000229120000Z",
+                "2000-02-29T12:00:00Z",
+            ),
+            (
+                (2049, 12, 31, 23, 59, 59),
+                b"\x17\x0D491231235959Z",
+                "2049-12-31T23:59:59Z",
+            ),
+        ] {
+            let (y, mo, d, h, mi, s) = fields;
+            let value = Asn1UtcTime::new(y, mo, d, h, mi, s).unwrap();
+            assert_eq!(value.encode_to_vec(&der).unwrap(), wire, "{text}");
+            let (used, back) = Asn1UtcTime::decode(wire, &options()).unwrap();
+            assert_eq!((used, back), (wire.len(), value));
+            assert_eq!(back.to_string(), text);
+            assert_eq!(Asn1UtcTime::decode_der(wire, &options()).unwrap().1, value);
+            assert_eq!(
+                (
+                    back.year(),
+                    back.month(),
+                    back.day(),
+                    back.hour(),
+                    back.minute(),
+                    back.second()
+                ),
+                fields
+            );
+        }
+        for year in [1949, 2050] {
+            assert!(matches!(
+                Asn1UtcTime::new(year, 1, 1, 0, 0, 0),
+                Err(Asn1Error::MalformedValue)
+            ));
+        }
+    }
+
+    #[test]
+    fn only_the_der_form_with_seconds_and_z_is_accepted() {
+        for wire in [
+            &b"\x17\x0B1608011219Z"[..],  // no seconds
+            b"\x17\x11160801121924+0800", // an offset instead of Z
+            b"\x17\x0C160801121924",      // no Z
+            b"\x17\x0D160801121924z",     // lowercase z
+            b"\x17\x0D16O801121924Z",     // a letter among the digits
+            b"\x17\x0F20160801121924Z",   // a four-digit year
+        ] {
+            assert!(
+                matches!(
+                    Asn1UtcTime::decode(wire, &options()),
+                    Err(Asn1Error::MalformedValue)
+                ),
+                "{wire:02X?}"
+            );
+        }
+    }
+
+    #[test]
+    fn the_calendar_is_checked_when_built_and_decoded() {
+        assert!(Asn1UtcTime::new(2024, 2, 29, 0, 0, 0).is_ok());
+        for (y, mo, d, h, mi, s) in [
+            (2023, 2, 29, 0, 0, 0),
+            (2024, 13, 1, 0, 0, 0),
+            (2024, 4, 31, 0, 0, 0),
+            (2024, 1, 1, 24, 0, 0),
+            (2024, 1, 1, 0, 60, 0),
+            (2024, 1, 1, 0, 0, 60),
+        ] {
+            assert!(matches!(
+                Asn1UtcTime::new(y, mo, d, h, mi, s),
+                Err(Asn1Error::MalformedValue)
+            ));
+        }
+        assert!(matches!(
+            Asn1UtcTime::decode(b"\x17\x0D230229000000Z", &options()),
+            Err(Asn1Error::MalformedValue)
+        ));
+    }
+
+    #[test]
+    fn ordering_is_chronological_and_another_tag_is_unexpected() {
+        let earlier = Asn1UtcTime::new(1999, 12, 31, 23, 59, 59).unwrap();
+        let later = Asn1UtcTime::new(2000, 1, 1, 0, 0, 0).unwrap();
+        assert!(earlier < later);
+        assert!(matches!(
+            Asn1UtcTime::decode(b"\x18\x0F20160801121924Z", &options()),
+            Err(Asn1Error::UnexpectedTag)
+        ));
     }
 }
