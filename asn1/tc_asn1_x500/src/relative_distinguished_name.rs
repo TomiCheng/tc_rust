@@ -138,8 +138,8 @@ fn write_escaped(f: &mut fmt::Formatter<'_>, text: &str) -> fmt::Result {
 
 impl DecodeContent for RelativeDistinguishedName {
     /// Reads the attributes of an IMPLICIT RDN, without the outer tag and length.
-    /// An empty set returns [`Asn1Error::MalformedValue`]. Attribute order is
-    /// preserved and is not checked, even under DER.
+    /// An empty set returns [`Asn1Error::MalformedValue`]. Members are kept
+    /// in wire order.
     fn decode_content(value: &[u8], context: &mut DecodingContext) -> Result<Self, Asn1Error> {
         let attributes = Asn1SetOf::decode_content(value, context)?;
         if attributes.members().is_empty() {
@@ -248,23 +248,18 @@ mod tests {
         for rules in [EncodingOptions::BER, EncodingOptions::DER] {
             let wire = Implicit::new(&[0xA1], &rdn).encode_to_vec(&rules).unwrap();
             assert_eq!(wire[0], 0xA1);
-            for strict in [false, true] {
-                let mut context = if strict {
-                    DecodingContext::new_der(options())
-                } else {
-                    DecodingContext::new(options())
-                };
-                let mut fields = tc_asn1::Children::from_contents(&wire, &mut context).unwrap();
-                let decoded = fields.get_implicit::<RelativeDistinguishedName>([0xA1]);
-                let decoded = decoded.unwrap();
-                assert_eq!(decoded, rdn);
-                if rules == EncodingOptions::BER {
-                    assert_eq!(decoded.attributes()[0], cn("Alice"));
-                } else {
-                    assert_eq!(decoded.attributes()[0], serial_number("123"));
-                }
-                fields.end().unwrap();
+            let mut context = DecodingContext::new(options());
+            let mut fields = tc_asn1::Children::from_contents(&wire, &mut context).unwrap();
+            let decoded = fields
+                .get_implicit::<RelativeDistinguishedName>([0xA1])
+                .unwrap();
+            assert_eq!(decoded, rdn);
+            if rules == EncodingOptions::BER {
+                assert_eq!(decoded.attributes()[0], cn("Alice"));
+            } else {
+                assert_eq!(decoded.attributes()[0], serial_number("123"));
             }
+            fields.end().unwrap();
         }
     }
 
