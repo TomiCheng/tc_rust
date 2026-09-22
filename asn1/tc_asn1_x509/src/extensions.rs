@@ -20,8 +20,8 @@ use tc_asn1::{
 };
 
 use crate::{
-    AuthorityKeyIdentifier, BasicConstraints, ExtendedKeyUsage, Extension, ExtensionId,
-    GeneralNames, InformationAccess, KeyUsage, NameConstraints, SubjectKeyIdentifier,
+    AuthorityKeyIdentifier, BasicConstraints, CrlDistributionPoints, ExtendedKeyUsage, Extension,
+    ExtensionId, GeneralNames, InformationAccess, KeyUsage, NameConstraints, SubjectKeyIdentifier,
 };
 
 /// A non-empty list of extensions with unique OIDs.
@@ -84,7 +84,7 @@ impl Extensions {
     }
 
     /// The extension with this OID, if present; takes a `NamedOid` constant
-    /// such as [`ExtensionId::KEY_USAGE`](crate::ExtensionId::KEY_USAGE) or an `Asn1Oid`.
+    /// such as [`ExtensionId::KEY_USAGE`](ExtensionId::KEY_USAGE) or an `Asn1Oid`.
     /// Variable time; for public values.
     pub fn get(&self, extn_id: impl PartialEq<Asn1Oid>) -> Option<&Extension> {
         self.extensions()
@@ -184,6 +184,22 @@ impl Extensions {
         context: &mut DecodingContext,
     ) -> Result<Option<InformationAccess>, Asn1Error> {
         self.get_as(ExtensionId::SUBJECT_INFO_ACCESS, context)
+    }
+
+    /// [`get_as`](Self::get_as) for the cRLDistributionPoints extension.
+    pub fn get_crl_distribution_points(
+        &self,
+        context: &mut DecodingContext,
+    ) -> Result<Option<CrlDistributionPoints>, Asn1Error> {
+        self.get_as(ExtensionId::CRL_DISTRIBUTION_POINTS, context)
+    }
+
+    /// [`get_as`](Self::get_as) for the freshestCRL extension's delta CRL locations.
+    pub fn get_freshest_crl(
+        &self,
+        context: &mut DecodingContext,
+    ) -> Result<Option<CrlDistributionPoints>, Asn1Error> {
+        self.get_as(ExtensionId::FRESHEST_CRL, context)
     }
 }
 
@@ -455,5 +471,61 @@ mod tests {
             Extensions::decode(b"\x30\x03\x02\x01\x01", &options()),
             Err(Asn1Error::UnexpectedTag)
         ));
+    }
+    #[test]
+    fn the_extension_accessors_select_their_own_oid_and_report_absence() {
+        use crate::{CrlDistributionPoints, DistributionPoint};
+
+        let point = |dns: &str| {
+            DistributionPoint::new(
+                Some(
+                    GeneralNames::new(Vec::from([GeneralName::dns_name(dns).unwrap()]))
+                        .unwrap()
+                        .into(),
+                ),
+                None,
+                None,
+            )
+            .unwrap()
+        };
+        let base = CrlDistributionPoints::new(Vec::from([point("base")])).unwrap();
+        let delta = CrlDistributionPoints::new(Vec::from([point("delta")])).unwrap();
+        let mut context = DecodingContext::new(DecodingOptions::default());
+        let extensions = Extensions::new(Vec::from([
+            Extension::with_value(ExtensionId::CRL_DISTRIBUTION_POINTS, false, &base).unwrap(),
+            Extension::with_value(ExtensionId::FRESHEST_CRL, false, &delta).unwrap(),
+        ]))
+        .unwrap();
+        assert_eq!(
+            extensions
+                .get_crl_distribution_points(&mut context)
+                .unwrap(),
+            Some(base.clone())
+        );
+        assert_eq!(
+            extensions.get_freshest_crl(&mut context).unwrap(),
+            Some(delta.clone())
+        );
+        let base_only = Extensions::new(Vec::from([Extension::with_value(
+            ExtensionId::CRL_DISTRIBUTION_POINTS,
+            false,
+            &base,
+        )
+        .unwrap()]))
+        .unwrap();
+        assert_eq!(base_only.get_freshest_crl(&mut context).unwrap(), None);
+        let delta_only = Extensions::new(Vec::from([Extension::with_value(
+            ExtensionId::FRESHEST_CRL,
+            false,
+            &delta,
+        )
+        .unwrap()]))
+        .unwrap();
+        assert_eq!(
+            delta_only
+                .get_crl_distribution_points(&mut context)
+                .unwrap(),
+            None
+        );
     }
 }
