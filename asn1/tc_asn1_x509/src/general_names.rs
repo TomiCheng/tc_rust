@@ -12,8 +12,8 @@ use alloc::vec::Vec;
 use core::fmt;
 
 use tc_asn1::{
-    Asn1Error, Asn1SequenceOf, Decode, DecodeInner, DecodingContext, Encode, EncodeContent,
-    EncodeTagged, EncodingOptions, Tagged,
+    Asn1Constructed, Asn1Error, Asn1Ref, Asn1SequenceOf, Decode, DecodeInner, DecodingContext,
+    Encode, EncodeContent, EncodeTagged, EncodingOptions, Tagged,
 };
 
 use crate::GeneralName;
@@ -58,6 +58,17 @@ impl GeneralNames {
     /// The names in wire order, never empty.
     pub fn names(&self) -> &[GeneralName] {
         self.names.elements()
+    }
+
+    /// The elements of a SEQUENCE-shaped element, whatever its tag: `30`
+    /// on its own, a context tag when IMPLICIT, as in
+    /// authorityKeyIdentifier's `[1]`.
+    pub(crate) fn from_element(
+        element: &Asn1Ref<'_>,
+        context: &mut DecodingContext,
+    ) -> Result<Self, Asn1Error> {
+        let (_, names) = Asn1Constructed::<GeneralName>::decode_inner(element.raw(), context)?;
+        Self::new(names.into_items())
     }
 }
 

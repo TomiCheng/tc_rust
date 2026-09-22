@@ -20,8 +20,8 @@ use tc_asn1::{
 };
 
 use crate::{
-    BasicConstraints, ExtendedKeyUsage, Extension, ExtensionId, GeneralNames, KeyUsage,
-    SubjectKeyIdentifier,
+    AuthorityKeyIdentifier, BasicConstraints, ExtendedKeyUsage, Extension, ExtensionId,
+    GeneralNames, KeyUsage, SubjectKeyIdentifier,
 };
 
 /// A non-empty list of extensions with unique OIDs.
@@ -135,6 +135,14 @@ impl Extensions {
         context: &mut DecodingContext,
     ) -> Result<Option<SubjectKeyIdentifier>, Asn1Error> {
         self.get_as(ExtensionId::SUBJECT_KEY_IDENTIFIER, context)
+    }
+
+    /// [`get_as`](Self::get_as) for the authorityKeyIdentifier extension.
+    pub fn get_authority_key_identifier(
+        &self,
+        context: &mut DecodingContext,
+    ) -> Result<Option<AuthorityKeyIdentifier>, Asn1Error> {
+        self.get_as(ExtensionId::AUTHORITY_KEY_IDENTIFIER, context)
     }
 
     /// [`get_as`](Self::get_as) for the subjectAltName extension, whose
