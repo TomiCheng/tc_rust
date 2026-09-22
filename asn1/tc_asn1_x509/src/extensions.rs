@@ -21,7 +21,7 @@ use tc_asn1::{
 
 use crate::{
     AuthorityKeyIdentifier, BasicConstraints, ExtendedKeyUsage, Extension, ExtensionId,
-    GeneralNames, KeyUsage, NameConstraints, SubjectKeyIdentifier,
+    GeneralNames, InformationAccess, KeyUsage, NameConstraints, SubjectKeyIdentifier,
 };
 
 /// A non-empty list of extensions with unique OIDs.
@@ -169,6 +169,22 @@ impl Extensions {
     ) -> Result<Option<NameConstraints>, Asn1Error> {
         self.get_as(ExtensionId::NAME_CONSTRAINTS, context)
     }
+
+    /// [`get_as`](Self::get_as) for the authorityInfoAccess extension.
+    pub fn get_authority_info_access(
+        &self,
+        context: &mut DecodingContext,
+    ) -> Result<Option<InformationAccess>, Asn1Error> {
+        self.get_as(ExtensionId::AUTHORITY_INFO_ACCESS, context)
+    }
+
+    /// [`get_as`](Self::get_as) for the subjectInfoAccess extension.
+    pub fn get_subject_info_access(
+        &self,
+        context: &mut DecodingContext,
+    ) -> Result<Option<InformationAccess>, Asn1Error> {
+        self.get_as(ExtensionId::SUBJECT_INFO_ACCESS, context)
+    }
 }
 
 impl DecodeInner for Extensions {
@@ -220,8 +236,9 @@ mod tests {
 
     use super::Extensions;
     use crate::{
-        BasicConstraints, ExtendedKeyUsage, Extension, ExtensionId, GeneralName, GeneralNames,
-        GeneralSubtree, GeneralSubtrees, KeyUsage, NameConstraints,
+        AccessDescription, AccessMethod, BasicConstraints, ExtendedKeyUsage, Extension,
+        ExtensionId, GeneralName, GeneralNames, GeneralSubtree, GeneralSubtrees, InformationAccess,
+        KeyUsage, NameConstraints,
     };
 
     fn der() -> EncodingOptions {
@@ -367,6 +384,34 @@ mod tests {
         assert_eq!(
             extensions.get_name_constraints(&mut context).unwrap(),
             Some(constraints)
+        );
+    }
+
+    #[test]
+    fn the_information_accessors_return_their_typed_values() {
+        let aia = InformationAccess::new(Vec::from([AccessDescription::new(
+            AccessMethod::OCSP,
+            GeneralName::uri("http://ocsp.x.tw").unwrap(),
+        )]))
+        .unwrap();
+        let sia = InformationAccess::new(Vec::from([AccessDescription::new(
+            AccessMethod::CA_REPOSITORY,
+            GeneralName::uri("http://repo.x.tw").unwrap(),
+        )]))
+        .unwrap();
+        let extensions = Extensions::new(Vec::from([
+            Extension::with_value(ExtensionId::AUTHORITY_INFO_ACCESS, false, &aia).unwrap(),
+            Extension::with_value(ExtensionId::SUBJECT_INFO_ACCESS, false, &sia).unwrap(),
+        ]))
+        .unwrap();
+        let mut context = DecodingContext::new(options());
+        assert_eq!(
+            extensions.get_authority_info_access(&mut context).unwrap(),
+            Some(aia)
+        );
+        assert_eq!(
+            extensions.get_subject_info_access(&mut context).unwrap(),
+            Some(sia)
         );
     }
 
