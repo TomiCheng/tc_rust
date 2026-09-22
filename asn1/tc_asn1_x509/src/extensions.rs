@@ -20,7 +20,8 @@ use tc_asn1::{
 };
 
 use crate::{
-    BasicConstraints, ExtendedKeyUsage, Extension, ExtensionId, KeyUsage, SubjectKeyIdentifier,
+    BasicConstraints, ExtendedKeyUsage, Extension, ExtensionId, GeneralNames, KeyUsage,
+    SubjectKeyIdentifier,
 };
 
 /// A non-empty list of extensions with unique OIDs.
@@ -135,6 +136,23 @@ impl Extensions {
     ) -> Result<Option<SubjectKeyIdentifier>, Asn1Error> {
         self.get_as(ExtensionId::SUBJECT_KEY_IDENTIFIER, context)
     }
+
+    /// [`get_as`](Self::get_as) for the subjectAltName extension, whose
+    /// value is a plain `GeneralNames`.
+    pub fn get_subject_alt_name(
+        &self,
+        context: &mut DecodingContext,
+    ) -> Result<Option<GeneralNames>, Asn1Error> {
+        self.get_as(ExtensionId::SUBJECT_ALT_NAME, context)
+    }
+
+    /// [`get_as`](Self::get_as) for the issuerAltName extension.
+    pub fn get_issuer_alt_name(
+        &self,
+        context: &mut DecodingContext,
+    ) -> Result<Option<GeneralNames>, Asn1Error> {
+        self.get_as(ExtensionId::ISSUER_ALT_NAME, context)
+    }
 }
 
 impl DecodeInner for Extensions {
@@ -185,7 +203,10 @@ mod tests {
     use tc_asn1::{Asn1Error, Decode, DecodingContext, DecodingOptions, Encode, EncodingOptions};
 
     use super::Extensions;
-    use crate::{BasicConstraints, ExtendedKeyUsage, Extension, ExtensionId, KeyUsage};
+    use crate::{
+        BasicConstraints, ExtendedKeyUsage, Extension, ExtensionId, GeneralName, GeneralNames,
+        KeyUsage,
+    };
 
     fn der() -> EncodingOptions {
         EncodingOptions::DER
@@ -286,6 +307,28 @@ mod tests {
             extensions.get_extended_key_usage(&mut context).unwrap(),
             None
         );
+    }
+
+    #[test]
+    fn the_alt_name_accessors_return_general_names() {
+        let san = GeneralNames::new(Vec::from([
+            GeneralName::dns_name("x.tw").unwrap(),
+            GeneralName::rfc822_name("a@x.tw").unwrap(),
+        ]))
+        .unwrap();
+        let extensions = Extensions::new(Vec::from([Extension::with_value(
+            ExtensionId::SUBJECT_ALT_NAME,
+            false,
+            &san,
+        )
+        .unwrap()]))
+        .unwrap();
+        let mut context = DecodingContext::new(options());
+        assert_eq!(
+            extensions.get_subject_alt_name(&mut context).unwrap(),
+            Some(san)
+        );
+        assert_eq!(extensions.get_issuer_alt_name(&mut context).unwrap(), None);
     }
 
     #[test]
