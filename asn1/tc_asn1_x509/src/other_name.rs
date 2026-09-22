@@ -17,11 +17,10 @@
 use core::fmt;
 
 use tc_asn1::{
-    Asn1Error, Asn1Ia5String, Asn1Object, Asn1Oid, Asn1Ref, Asn1Utf8String, Decode, DecodeInner,
-    DecodingContext, Encode, EncodeContent, EncodeTagged, EncodingOptions, Explicit, Tagged, tag,
+    Asn1Error, Asn1Ia5String, Asn1Object, Asn1Oid, Asn1Ref, Asn1Utf8String, Children, Decode,
+    DecodeContent, DecodeInner, DecodingContext, Encode, EncodeContent, EncodeTagged,
+    EncodingOptions, Explicit, Tagged, tag,
 };
-
-use crate::children_ext::ChildrenExt;
 
 /// The value of an [`OtherName`], classified by its identifier.
 #[non_exhaustive]
@@ -160,19 +159,6 @@ impl OtherName {
     pub fn value(&self) -> &OtherNameValue {
         &self.value
     }
-
-    /// The fields of a SEQUENCE-shaped element, whatever its tag: `30` on
-    /// its own, `A0` inside a GeneralName.
-    pub(crate) fn from_element(
-        element: &Asn1Ref<'_>,
-        context: &mut DecodingContext,
-    ) -> Result<Self, Asn1Error> {
-        let mut fields = element.children(context)?;
-        let type_id = fields.get()?;
-        let value = fields.get_explicit(&[0xA0])?;
-        fields.end()?;
-        Ok(Self { type_id, value })
-    }
 }
 
 /// `oid:text` for a string value, the OID alone for anything else.
@@ -187,13 +173,25 @@ impl fmt::Display for OtherName {
     }
 }
 
+impl DecodeContent for OtherName {
+    /// The two fields, as under `30` on its own or `A0` inside a
+    /// GeneralName.
+    fn decode_content(value: &[u8], context: &mut DecodingContext) -> Result<Self, Asn1Error> {
+        let mut fields = Children::from_contents(value, context)?;
+        let type_id = fields.get()?;
+        let value = fields.get_explicit([0xA0])?;
+        fields.end()?;
+        Ok(Self { type_id, value })
+    }
+}
+
 impl DecodeInner for OtherName {
     fn decode_inner(
         buff: &[u8],
         context: &mut DecodingContext,
     ) -> Result<(usize, Self), Asn1Error> {
         let element = Asn1Ref::parse(buff, context)?.assert_tag(Self::TAG)?;
-        let value = Self::from_element(&element, context)?;
+        let value = Self::decode_content(element.value(), context)?;
         Ok((element.total_len(), value))
     }
 }

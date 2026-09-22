@@ -181,7 +181,7 @@ impl fmt::Display for GeneralName {
 impl DecodeInner for GeneralName {
     /// The context tag picks the alternative: the implicit ones read the
     /// contents as their type, `[4]` reads the whole Name inside the
-    /// wrapper, `[0]` and `[5]` read their fields, `[3]` is kept as a tree.
+    /// wrapper, `[3]` is kept as a tree.
     /// Any other identifier, a universal one included, is `UnexpectedTag`.
     /// Variable time: branches only on the encoding structure.
     fn decode_inner(
@@ -190,7 +190,7 @@ impl DecodeInner for GeneralName {
     ) -> Result<(usize, Self), Asn1Error> {
         let element = Asn1Ref::parse(buff, context)?;
         let value = match element.tag() {
-            [0xA0] => Self::OtherName(OtherName::from_element(&element, context)?),
+            [0xA0] => Self::OtherName(OtherName::decode_content(element.value(), context)?),
             [0x81] => Self::Rfc822Name(Asn1Ia5String::decode_content(element.value(), context)?),
             [0x82] => Self::DnsName(Asn1Ia5String::decode_content(element.value(), context)?),
             [0xA3] => Self::X400Address(element.decode_as(context)?),
@@ -200,7 +200,7 @@ impl DecodeInner for GeneralName {
                 inner.end()?;
                 Self::DirectoryName(name)
             }
-            [0xA5] => Self::EdiPartyName(EdiPartyName::from_element(&element, context)?),
+            [0xA5] => Self::EdiPartyName(EdiPartyName::decode_content(element.value(), context)?),
             [0x86] => Self::Uri(Asn1Ia5String::decode_content(element.value(), context)?),
             [0x87] => Self::IpAddress(Asn1OctetString::decode_content(element.value(), context)?),
             [0x88] => Self::RegisteredId(Asn1Oid::decode_content(element.value(), context)?),

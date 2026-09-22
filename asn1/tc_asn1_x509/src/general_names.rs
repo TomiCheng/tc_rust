@@ -12,7 +12,7 @@ use alloc::vec::Vec;
 use core::fmt;
 
 use tc_asn1::{
-    Asn1Constructed, Asn1Error, Asn1Ref, Asn1SequenceOf, Decode, DecodeInner, DecodingContext,
+    Asn1Error, Asn1Ref, Asn1SequenceOf, Decode, DecodeContent, DecodeInner, DecodingContext,
     Encode, EncodeContent, EncodeTagged, EncodingOptions, Tagged,
 };
 
@@ -59,17 +59,6 @@ impl GeneralNames {
     pub fn names(&self) -> &[GeneralName] {
         self.names.elements()
     }
-
-    /// The elements of a SEQUENCE-shaped element, whatever its tag: `30`
-    /// on its own, a context tag when IMPLICIT, as in
-    /// authorityKeyIdentifier's `[1]`.
-    pub(crate) fn from_element(
-        element: &Asn1Ref<'_>,
-        context: &mut DecodingContext,
-    ) -> Result<Self, Asn1Error> {
-        let (_, names) = Asn1Constructed::<GeneralName>::decode_inner(element.raw(), context)?;
-        Self::new(names.into_items())
-    }
 }
 
 /// The names joined with `, `, each as [`GeneralName`] prints it.
@@ -85,6 +74,15 @@ impl fmt::Display for GeneralNames {
     }
 }
 
+impl DecodeContent for GeneralNames {
+    /// The names back to back, as under an IMPLICIT tag such as
+    /// authorityKeyIdentifier's `[1]`; none is `MalformedValue`.
+    fn decode_content(value: &[u8], context: &mut DecodingContext) -> Result<Self, Asn1Error> {
+        let names = Asn1SequenceOf::<GeneralName>::decode_content(value, context)?;
+        Self::new(names.into_elements())
+    }
+}
+
 impl DecodeInner for GeneralNames {
     /// An empty SEQUENCE is `MalformedValue`. Variable time: branches only
     /// on the encoding structure.
@@ -92,11 +90,9 @@ impl DecodeInner for GeneralNames {
         buff: &[u8],
         context: &mut DecodingContext,
     ) -> Result<(usize, Self), Asn1Error> {
-        let (used, names) = Asn1SequenceOf::<GeneralName>::decode_inner(buff, context)?;
-        if names.elements().is_empty() {
-            return Err(Asn1Error::MalformedValue);
-        }
-        Ok((used, Self { names }))
+        let element = Asn1Ref::parse(buff, context)?.assert_tag(Self::TAG)?;
+        let value = Self::decode_content(element.value(), context)?;
+        Ok((element.total_len(), value))
     }
 }
 

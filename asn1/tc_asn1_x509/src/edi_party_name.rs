@@ -16,12 +16,10 @@
 use core::fmt;
 
 use tc_asn1::{
-    Asn1Error, Asn1Ref, Decode, DecodeInner, DecodingContext, Encode, EncodeContent, EncodeTagged,
-    EncodingOptions, Explicit, Tagged, tag,
+    Asn1Error, Asn1Ref, Children, Decode, DecodeContent, DecodeInner, DecodingContext, Encode,
+    EncodeContent, EncodeTagged, EncodingOptions, Explicit, Tagged, tag,
 };
 use tc_asn1_x500::DirectoryString;
-
-use crate::children_ext::ChildrenExt;
 
 const NAME_ASSIGNER: &[u8] = &[0xA0];
 const PARTY_NAME: &[u8] = &[0xA1];
@@ -70,22 +68,6 @@ impl EdiPartyName {
     pub fn party_name(&self) -> &DirectoryString {
         &self.party_name
     }
-
-    /// The fields of a SEQUENCE-shaped element, whatever its tag: `30` on
-    /// its own, `A5` inside a GeneralName.
-    pub(crate) fn from_element(
-        element: &Asn1Ref<'_>,
-        context: &mut DecodingContext,
-    ) -> Result<Self, Asn1Error> {
-        let mut fields = element.children(context)?;
-        let name_assigner = fields.get_explicit_opt(NAME_ASSIGNER)?;
-        let party_name = fields.get_explicit(PARTY_NAME)?;
-        fields.end()?;
-        Ok(Self {
-            name_assigner,
-            party_name,
-        })
-    }
 }
 
 /// `assigner/party`, or the party name alone.
@@ -98,13 +80,28 @@ impl fmt::Display for EdiPartyName {
     }
 }
 
+impl DecodeContent for EdiPartyName {
+    /// The two fields, as under `30` on its own or `A5` inside a
+    /// GeneralName.
+    fn decode_content(value: &[u8], context: &mut DecodingContext) -> Result<Self, Asn1Error> {
+        let mut fields = Children::from_contents(value, context)?;
+        let name_assigner = fields.get_explicit_opt(NAME_ASSIGNER)?;
+        let party_name = fields.get_explicit(PARTY_NAME)?;
+        fields.end()?;
+        Ok(Self {
+            name_assigner,
+            party_name,
+        })
+    }
+}
+
 impl DecodeInner for EdiPartyName {
     fn decode_inner(
         buff: &[u8],
         context: &mut DecodingContext,
     ) -> Result<(usize, Self), Asn1Error> {
         let element = Asn1Ref::parse(buff, context)?.assert_tag(Self::TAG)?;
-        let value = Self::from_element(&element, context)?;
+        let value = Self::decode_content(element.value(), context)?;
         Ok((element.total_len(), value))
     }
 }

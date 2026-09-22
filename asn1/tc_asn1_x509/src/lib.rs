@@ -6,7 +6,6 @@ mod algorithm_identifier;
 mod authority_key_identifier;
 mod basic_constraints;
 mod certificate;
-mod children_ext;
 mod digest_info;
 mod edi_party_name;
 mod extended_key_usage;

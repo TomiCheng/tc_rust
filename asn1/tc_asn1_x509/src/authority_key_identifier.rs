@@ -144,14 +144,8 @@ impl DecodeInner for AuthorityKeyIdentifier {
         let element = Asn1Ref::parse(buff, context)?.assert_tag(Self::TAG)?;
         let mut fields = element.children(context)?;
         let key_identifier = fields.get_implicit_opt::<Asn1OctetString>(KEY_IDENTIFIER)?;
-        // [1] IMPLICIT SEQUENCE OF: the retagged element's children are the names
-        let authority_cert_issuer = match fields.peek() {
-            Some(Ok(child)) if child.tag() == AUTHORITY_CERT_ISSUER => {
-                fields.next();
-                Some(GeneralNames::from_element(&child, fields.context())?)
-            }
-            _ => None,
-        };
+        let authority_cert_issuer =
+            fields.get_implicit_opt::<GeneralNames>(AUTHORITY_CERT_ISSUER)?;
         let authority_cert_serial_number =
             fields.get_implicit_opt::<Asn1Integer>(AUTHORITY_CERT_SERIAL_NUMBER)?;
         fields.end()?;
