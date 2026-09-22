@@ -160,6 +160,19 @@ impl OtherName {
     pub fn value(&self) -> &OtherNameValue {
         &self.value
     }
+
+    /// The fields of a SEQUENCE-shaped element, whatever its tag: `30` on
+    /// its own, `A0` inside a GeneralName.
+    pub(crate) fn from_element(
+        element: &Asn1Ref<'_>,
+        context: &mut DecodingContext,
+    ) -> Result<Self, Asn1Error> {
+        let mut fields = element.children(context)?;
+        let type_id = fields.get()?;
+        let value = fields.get_explicit(&[0xA0])?;
+        fields.end()?;
+        Ok(Self { type_id, value })
+    }
 }
 
 /// `oid:text` for a string value, the OID alone for anything else.
@@ -180,11 +193,7 @@ impl DecodeInner for OtherName {
         context: &mut DecodingContext,
     ) -> Result<(usize, Self), Asn1Error> {
         let element = Asn1Ref::parse(buff, context)?.assert_tag(Self::TAG)?;
-        let mut fields = element.children(context)?;
-        let type_id = fields.get()?;
-        let value = fields.get_explicit(&[0xA0])?;
-        fields.end()?;
-        let value = Self { type_id, value };
+        let value = Self::from_element(&element, context)?;
         Ok((element.total_len(), value))
     }
 }

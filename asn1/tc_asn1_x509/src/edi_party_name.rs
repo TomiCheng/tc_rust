@@ -70,6 +70,22 @@ impl EdiPartyName {
     pub fn party_name(&self) -> &DirectoryString {
         &self.party_name
     }
+
+    /// The fields of a SEQUENCE-shaped element, whatever its tag: `30` on
+    /// its own, `A5` inside a GeneralName.
+    pub(crate) fn from_element(
+        element: &Asn1Ref<'_>,
+        context: &mut DecodingContext,
+    ) -> Result<Self, Asn1Error> {
+        let mut fields = element.children(context)?;
+        let name_assigner = fields.get_explicit_opt(NAME_ASSIGNER)?;
+        let party_name = fields.get_explicit(PARTY_NAME)?;
+        fields.end()?;
+        Ok(Self {
+            name_assigner,
+            party_name,
+        })
+    }
 }
 
 /// `assigner/party`, or the party name alone.
@@ -88,14 +104,7 @@ impl DecodeInner for EdiPartyName {
         context: &mut DecodingContext,
     ) -> Result<(usize, Self), Asn1Error> {
         let element = Asn1Ref::parse(buff, context)?.assert_tag(Self::TAG)?;
-        let mut fields = element.children(context)?;
-        let name_assigner = fields.get_explicit_opt(NAME_ASSIGNER)?;
-        let party_name = fields.get_explicit(PARTY_NAME)?;
-        fields.end()?;
-        let value = Self {
-            name_assigner,
-            party_name,
-        };
+        let value = Self::from_element(&element, context)?;
         Ok((element.total_len(), value))
     }
 }
