@@ -20,10 +20,11 @@ use tc_asn1::{
 };
 
 use crate::{
-    AuthorityKeyIdentifier, BasicConstraints, CertificatePolicies, CrlDistributionPoints,
-    CrlReason, ExtendedKeyUsage, Extension, ExtensionId, GeneralNames, InformationAccess,
-    InhibitAnyPolicy, IssuingDistributionPoint, KeyUsage, NameConstraints, PolicyConstraints,
-    PolicyMappings, PrivateKeyUsagePeriod, SubjectDirectoryAttributes, SubjectKeyIdentifier,
+    AltSignatureAlgorithm, AltSignatureValue, AuthorityKeyIdentifier, BasicConstraints,
+    CertificatePolicies, CrlDistributionPoints, CrlReason, ExtendedKeyUsage, Extension,
+    ExtensionId, GeneralNames, InformationAccess, InhibitAnyPolicy, IssuingDistributionPoint,
+    KeyUsage, NameConstraints, PolicyConstraints, PolicyMappings, PrivateKeyUsagePeriod,
+    SubjectAltPublicKeyInfo, SubjectDirectoryAttributes, SubjectKeyIdentifier,
 };
 
 /// A non-empty list of extensions with unique OIDs.
@@ -228,6 +229,30 @@ impl Extensions {
         self.get_as(ExtensionId::SUBJECT_DIRECTORY_ATTRIBUTES, context)
     }
 
+    /// [`get_as`](Self::get_as) for the X.509 (2019) `SubjectAltPublicKeyInfo` extension.
+    pub fn get_subject_alt_public_key_info(
+        &self,
+        context: &mut DecodingContext,
+    ) -> Result<Option<SubjectAltPublicKeyInfo>, Asn1Error> {
+        self.get_as(ExtensionId::SUBJECT_ALT_PUBLIC_KEY_INFO, context)
+    }
+
+    /// [`get_as`](Self::get_as) for the X.509 (2019) `AltSignatureAlgorithm` extension.
+    pub fn get_alt_signature_algorithm(
+        &self,
+        context: &mut DecodingContext,
+    ) -> Result<Option<AltSignatureAlgorithm>, Asn1Error> {
+        self.get_as(ExtensionId::ALT_SIGNATURE_ALGORITHM, context)
+    }
+
+    /// [`get_as`](Self::get_as) for the X.509 (2019) `AltSignatureValue` extension.
+    pub fn get_alt_signature_value(
+        &self,
+        context: &mut DecodingContext,
+    ) -> Result<Option<AltSignatureValue>, Asn1Error> {
+        self.get_as(ExtensionId::ALT_SIGNATURE_VALUE, context)
+    }
+
     /// [`get_as`](Self::get_as) for the CRL entry reasonCode extension.
     pub fn get_crl_reason(
         &self,
@@ -370,6 +395,125 @@ mod tests {
         );
         assert_eq!(
             malformed.get_issuing_distribution_point(&mut context),
+            Err(Asn1Error::UnexpectedTag)
+        );
+    }
+
+    #[test]
+    fn the_subject_alt_public_key_info_accessor_selects_its_oid_and_propagates_decode_errors() {
+        use crate::SubjectAltPublicKeyInfo;
+
+        let expected = SubjectAltPublicKeyInfo::decode_der(
+            b"\x30\x0b\x30\x05\x06\x03\x2b\x65\x70\x03\x02\x00\xaa",
+            &options(),
+        )
+        .unwrap()
+        .1;
+        let extensions = Extensions::new(Vec::from([Extension::with_value(
+            ExtensionId::SUBJECT_ALT_PUBLIC_KEY_INFO,
+            false,
+            &expected,
+        )
+        .unwrap()]))
+        .unwrap();
+        let mut context = DecodingContext::new(options());
+        assert_eq!(
+            extensions
+                .get_subject_alt_public_key_info(&mut context)
+                .unwrap(),
+            Some(expected)
+        );
+        assert_eq!(
+            ca_extensions()
+                .get_subject_alt_public_key_info(&mut context)
+                .unwrap(),
+            None
+        );
+        let malformed = Extensions::new(Vec::from([Extension::new(
+            ExtensionId::SUBJECT_ALT_PUBLIC_KEY_INFO,
+            false,
+            b"\x05\x00",
+        )]))
+        .unwrap();
+        assert_eq!(
+            malformed.get_subject_alt_public_key_info(&mut context),
+            Err(Asn1Error::UnexpectedTag)
+        );
+    }
+
+    #[test]
+    fn the_alt_signature_algorithm_accessor_selects_its_oid_and_propagates_decode_errors() {
+        use crate::AltSignatureAlgorithm;
+
+        let expected =
+            AltSignatureAlgorithm::decode_der(b"\x30\x07\x06\x03\x2b\x65\x70\x05\x00", &options())
+                .unwrap()
+                .1;
+        let extensions = Extensions::new(Vec::from([Extension::with_value(
+            ExtensionId::ALT_SIGNATURE_ALGORITHM,
+            false,
+            &expected,
+        )
+        .unwrap()]))
+        .unwrap();
+        let mut context = DecodingContext::new(options());
+        assert_eq!(
+            extensions
+                .get_alt_signature_algorithm(&mut context)
+                .unwrap(),
+            Some(expected)
+        );
+        assert_eq!(
+            ca_extensions()
+                .get_alt_signature_algorithm(&mut context)
+                .unwrap(),
+            None
+        );
+        let malformed = Extensions::new(Vec::from([Extension::new(
+            ExtensionId::ALT_SIGNATURE_ALGORITHM,
+            false,
+            b"\x05\x00",
+        )]))
+        .unwrap();
+        assert_eq!(
+            malformed.get_alt_signature_algorithm(&mut context),
+            Err(Asn1Error::UnexpectedTag)
+        );
+    }
+
+    #[test]
+    fn the_alt_signature_value_accessor_selects_its_oid_and_propagates_decode_errors() {
+        use crate::AltSignatureValue;
+
+        let expected = AltSignatureValue::decode_der(b"\x03\x02\x00\xaa", &options())
+            .unwrap()
+            .1;
+        let extensions = Extensions::new(Vec::from([Extension::with_value(
+            ExtensionId::ALT_SIGNATURE_VALUE,
+            false,
+            &expected,
+        )
+        .unwrap()]))
+        .unwrap();
+        let mut context = DecodingContext::new(options());
+        assert_eq!(
+            extensions.get_alt_signature_value(&mut context).unwrap(),
+            Some(expected)
+        );
+        assert_eq!(
+            ca_extensions()
+                .get_alt_signature_value(&mut context)
+                .unwrap(),
+            None
+        );
+        let malformed = Extensions::new(Vec::from([Extension::new(
+            ExtensionId::ALT_SIGNATURE_VALUE,
+            false,
+            b"\x05\x00",
+        )]))
+        .unwrap();
+        assert_eq!(
+            malformed.get_alt_signature_value(&mut context),
             Err(Asn1Error::UnexpectedTag)
         );
     }
