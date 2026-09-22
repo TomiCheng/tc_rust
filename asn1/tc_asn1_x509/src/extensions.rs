@@ -21,7 +21,7 @@ use tc_asn1::{
 
 use crate::{
     AuthorityKeyIdentifier, BasicConstraints, ExtendedKeyUsage, Extension, ExtensionId,
-    GeneralNames, KeyUsage, SubjectKeyIdentifier,
+    GeneralNames, KeyUsage, NameConstraints, SubjectKeyIdentifier,
 };
 
 /// A non-empty list of extensions with unique OIDs.
@@ -161,6 +161,14 @@ impl Extensions {
     ) -> Result<Option<GeneralNames>, Asn1Error> {
         self.get_as(ExtensionId::ISSUER_ALT_NAME, context)
     }
+
+    /// [`get_as`](Self::get_as) for the nameConstraints extension.
+    pub fn get_name_constraints(
+        &self,
+        context: &mut DecodingContext,
+    ) -> Result<Option<NameConstraints>, Asn1Error> {
+        self.get_as(ExtensionId::NAME_CONSTRAINTS, context)
+    }
 }
 
 impl DecodeInner for Extensions {
@@ -213,7 +221,7 @@ mod tests {
     use super::Extensions;
     use crate::{
         BasicConstraints, ExtendedKeyUsage, Extension, ExtensionId, GeneralName, GeneralNames,
-        KeyUsage,
+        GeneralSubtree, GeneralSubtrees, KeyUsage, NameConstraints,
     };
 
     fn der() -> EncodingOptions {
@@ -337,6 +345,29 @@ mod tests {
             Some(san)
         );
         assert_eq!(extensions.get_issuer_alt_name(&mut context).unwrap(), None);
+    }
+
+    #[test]
+    fn the_name_constraints_accessor_returns_the_typed_value() {
+        let constraints = NameConstraints::permitted(
+            GeneralSubtrees::new(Vec::from([GeneralSubtree::new(
+                GeneralName::dns_name("x.tw").unwrap(),
+            )
+            .unwrap()]))
+            .unwrap(),
+        );
+        let extensions = Extensions::new(Vec::from([Extension::with_value(
+            ExtensionId::NAME_CONSTRAINTS,
+            true,
+            &constraints,
+        )
+        .unwrap()]))
+        .unwrap();
+        let mut context = DecodingContext::new(options());
+        assert_eq!(
+            extensions.get_name_constraints(&mut context).unwrap(),
+            Some(constraints)
+        );
     }
 
     #[test]
