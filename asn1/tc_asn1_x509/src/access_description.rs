@@ -19,7 +19,7 @@ use tc_asn1::{
     EncodeTagged, EncodingOptions, Tagged, tag,
 };
 
-use crate::GeneralName;
+use crate::{AccessMethod, GeneralName};
 
 /// An access method and the location at which it is available.
 ///
@@ -33,7 +33,7 @@ use crate::GeneralName;
 ///     AccessMethod::OCSP,
 ///     GeneralName::uri("http://ocsp.example.com")?,
 /// );
-/// assert_eq!(description.to_string(), "1.3.6.1.5.5.7.48.1: URI:http://ocsp.example.com");
+/// assert_eq!(description.to_string(), "OCSP: URI:http://ocsp.example.com");
 ///
 /// let der = description.encode_to_vec(&EncodingOptions::DER)?;
 /// let (_, back) = AccessDescription::decode(&der, &DecodingOptions::default())?;
@@ -65,10 +65,14 @@ impl AccessDescription {
     }
 }
 
-/// The method OID followed by the location as [`GeneralName`] prints it.
+/// The method by name where [`AccessMethod`] knows it, as a dotted OID
+/// otherwise, followed by the location as [`GeneralName`] prints it.
 impl fmt::Display for AccessDescription {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}: {}", self.access_method, self.access_location)
+        match AccessMethod::from_oid(&self.access_method) {
+            Some(known) => write!(f, "{known}: {}", self.access_location),
+            None => write!(f, "{}: {}", self.access_method, self.access_location),
+        }
     }
 }
 
@@ -158,7 +162,7 @@ mod tests {
             AccessDescription::decode_der(&der, &options()).unwrap().1,
             description
         );
-        assert_eq!(back.to_string(), "1.3.6.1.5.5.7.48.1: URI:http://ocsp.x.tw");
+        assert_eq!(back.to_string(), "OCSP: URI:http://ocsp.x.tw");
     }
 
     #[test]
@@ -172,6 +176,7 @@ mod tests {
             back.access_location(),
             &GeneralName::dns_name("repo.x.tw").unwrap()
         );
+        assert_eq!(back.to_string(), "1.2.3.4: DNS:repo.x.tw");
     }
 
     #[test]
