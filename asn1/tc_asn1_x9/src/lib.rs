@@ -5,7 +5,9 @@
 extern crate alloc;
 
 mod characteristic_two;
+mod curve;
 mod field_id;
 
 pub use characteristic_two::{Basis, CharacteristicTwo, Pentanomial, UnknownBasis};
+pub use curve::Curve;
 pub use field_id::{FieldId, UnknownField};
