@@ -20,8 +20,9 @@ use tc_asn1::{
 };
 
 use crate::{
-    AuthorityKeyIdentifier, BasicConstraints, CrlDistributionPoints, ExtendedKeyUsage, Extension,
-    ExtensionId, GeneralNames, InformationAccess, KeyUsage, NameConstraints, SubjectKeyIdentifier,
+    AuthorityKeyIdentifier, BasicConstraints, CertificatePolicies, CrlDistributionPoints,
+    ExtendedKeyUsage, Extension, ExtensionId, GeneralNames, InformationAccess, KeyUsage,
+    NameConstraints, SubjectKeyIdentifier,
 };
 
 /// A non-empty list of extensions with unique OIDs.
@@ -184,6 +185,14 @@ impl Extensions {
         context: &mut DecodingContext,
     ) -> Result<Option<InformationAccess>, Asn1Error> {
         self.get_as(ExtensionId::SUBJECT_INFO_ACCESS, context)
+    }
+
+    /// [`get_as`](Self::get_as) for the certificatePolicies extension.
+    pub fn get_certificate_policies(
+        &self,
+        context: &mut DecodingContext,
+    ) -> Result<Option<CertificatePolicies>, Asn1Error> {
+        self.get_as(ExtensionId::CERTIFICATE_POLICIES, context)
     }
 
     /// [`get_as`](Self::get_as) for the cRLDistributionPoints extension.
@@ -472,6 +481,46 @@ mod tests {
             Err(Asn1Error::UnexpectedTag)
         ));
     }
+
+    #[test]
+    fn the_certificate_policies_accessor_decodes_and_reports_absence() {
+        use crate::{CertificatePolicies, PolicyInformation};
+
+        let policies = CertificatePolicies::new(Vec::from([PolicyInformation::new(
+            PolicyInformation::ANY_POLICY,
+        )]))
+        .unwrap();
+        let extensions = Extensions::new(Vec::from([Extension::with_value(
+            ExtensionId::CERTIFICATE_POLICIES,
+            false,
+            &policies,
+        )
+        .unwrap()]))
+        .unwrap();
+        let mut context = DecodingContext::new(options());
+        assert_eq!(
+            extensions.get_certificate_policies(&mut context).unwrap(),
+            Some(policies)
+        );
+        let absent = Extensions::new(Vec::from([Extension::new(
+            ExtensionId::KEY_USAGE,
+            false,
+            b"\x03\x02\x07\x80",
+        )]))
+        .unwrap();
+        assert_eq!(absent.get_certificate_policies(&mut context).unwrap(), None);
+        let malformed = Extensions::new(Vec::from([Extension::new(
+            ExtensionId::CERTIFICATE_POLICIES,
+            false,
+            b"\x30\x00",
+        )]))
+        .unwrap();
+        assert!(matches!(
+            malformed.get_certificate_policies(&mut context),
+            Err(Asn1Error::MalformedValue)
+        ));
+    }
+
     #[test]
     fn the_extension_accessors_select_their_own_oid_and_report_absence() {
         use crate::{CrlDistributionPoints, DistributionPoint};
