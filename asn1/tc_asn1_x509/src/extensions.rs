@@ -21,8 +21,9 @@ use tc_asn1::{
 
 use crate::{
     AuthorityKeyIdentifier, BasicConstraints, CertificatePolicies, CrlDistributionPoints,
-    ExtendedKeyUsage, Extension, ExtensionId, GeneralNames, InformationAccess, KeyUsage,
-    NameConstraints, SubjectKeyIdentifier,
+    ExtendedKeyUsage, Extension, ExtensionId, GeneralNames, InformationAccess, InhibitAnyPolicy,
+    KeyUsage, NameConstraints, PolicyConstraints, PolicyMappings, PrivateKeyUsagePeriod,
+    SubjectDirectoryAttributes, SubjectKeyIdentifier,
 };
 
 /// A non-empty list of extensions with unique OIDs.
@@ -187,6 +188,46 @@ impl Extensions {
         self.get_as(ExtensionId::SUBJECT_INFO_ACCESS, context)
     }
 
+    /// [`get_as`](Self::get_as) for the PolicyMappings extension.
+    pub fn get_policy_mappings(
+        &self,
+        context: &mut DecodingContext,
+    ) -> Result<Option<PolicyMappings>, Asn1Error> {
+        self.get_as(ExtensionId::POLICY_MAPPINGS, context)
+    }
+
+    /// [`get_as`](Self::get_as) for the PolicyConstraints extension.
+    pub fn get_policy_constraints(
+        &self,
+        context: &mut DecodingContext,
+    ) -> Result<Option<PolicyConstraints>, Asn1Error> {
+        self.get_as(ExtensionId::POLICY_CONSTRAINTS, context)
+    }
+
+    /// [`get_as`](Self::get_as) for the InhibitAnyPolicy extension.
+    pub fn get_inhibit_any_policy(
+        &self,
+        context: &mut DecodingContext,
+    ) -> Result<Option<InhibitAnyPolicy>, Asn1Error> {
+        self.get_as(ExtensionId::INHIBIT_ANY_POLICY, context)
+    }
+
+    /// [`get_as`](Self::get_as) for the PrivateKeyUsagePeriod extension.
+    pub fn get_private_key_usage_period(
+        &self,
+        context: &mut DecodingContext,
+    ) -> Result<Option<PrivateKeyUsagePeriod>, Asn1Error> {
+        self.get_as(ExtensionId::PRIVATE_KEY_USAGE_PERIOD, context)
+    }
+
+    /// [`get_as`](Self::get_as) for the SubjectDirectoryAttributes extension.
+    pub fn get_subject_directory_attributes(
+        &self,
+        context: &mut DecodingContext,
+    ) -> Result<Option<SubjectDirectoryAttributes>, Asn1Error> {
+        self.get_as(ExtensionId::SUBJECT_DIRECTORY_ATTRIBUTES, context)
+    }
+
     /// [`get_as`](Self::get_as) for the certificatePolicies extension.
     pub fn get_certificate_policies(
         &self,
@@ -296,6 +337,198 @@ mod tests {
     const CA: &[u8] = b"\x30\x24\
         \x30\x12\x06\x03\x55\x1d\x13\x01\x01\xff\x04\x08\x30\x06\x01\x01\xff\x02\x01\x00\
         \x30\x0e\x06\x03\x55\x1d\x0f\x01\x01\xff\x04\x04\x03\x02\x01\x06";
+
+    #[test]
+    fn the_policy_mappings_accessor_decodes_and_reports_absence() {
+        let wire = b"\x30\x0a\x30\x08\x06\x02\x2a\x03\x06\x02\x2a\x04";
+        let expected = crate::PolicyMappings::decode_der(wire, &options())
+            .unwrap()
+            .1;
+        let extensions = Extensions::new(Vec::from([Extension::new(
+            ExtensionId::POLICY_MAPPINGS,
+            false,
+            wire,
+        )]))
+        .unwrap();
+        let mut context = DecodingContext::new(options());
+        assert_eq!(
+            extensions.get_policy_mappings(&mut context).unwrap(),
+            Some(expected)
+        );
+        let absent = Extensions::new(Vec::from([Extension::new(
+            ExtensionId::KEY_USAGE,
+            false,
+            b"\x03\x02\x07\x80",
+        )]))
+        .unwrap();
+        assert_eq!(absent.get_policy_mappings(&mut context).unwrap(), None);
+        let malformed = Extensions::new(Vec::from([Extension::new(
+            ExtensionId::POLICY_MAPPINGS,
+            false,
+            b"\x05\x00",
+        )]))
+        .unwrap();
+        assert!(matches!(
+            malformed.get_policy_mappings(&mut context),
+            Err(Asn1Error::UnexpectedTag)
+        ));
+    }
+
+    #[test]
+    fn the_policy_constraints_accessor_decodes_and_reports_absence() {
+        let wire = b"\x30\x03\x80\x01\x00";
+        let expected = crate::PolicyConstraints::decode_der(wire, &options())
+            .unwrap()
+            .1;
+        let extensions = Extensions::new(Vec::from([Extension::new(
+            ExtensionId::POLICY_CONSTRAINTS,
+            false,
+            wire,
+        )]))
+        .unwrap();
+        let mut context = DecodingContext::new(options());
+        assert_eq!(
+            extensions.get_policy_constraints(&mut context).unwrap(),
+            Some(expected)
+        );
+        let absent = Extensions::new(Vec::from([Extension::new(
+            ExtensionId::KEY_USAGE,
+            false,
+            b"\x03\x02\x07\x80",
+        )]))
+        .unwrap();
+        assert_eq!(absent.get_policy_constraints(&mut context).unwrap(), None);
+        let malformed = Extensions::new(Vec::from([Extension::new(
+            ExtensionId::POLICY_CONSTRAINTS,
+            false,
+            b"\x05\x00",
+        )]))
+        .unwrap();
+        assert!(matches!(
+            malformed.get_policy_constraints(&mut context),
+            Err(Asn1Error::UnexpectedTag)
+        ));
+    }
+
+    #[test]
+    fn the_inhibit_any_policy_accessor_decodes_and_reports_absence() {
+        let wire = b"\x02\x01\x00";
+        let expected = crate::InhibitAnyPolicy::decode_der(wire, &options())
+            .unwrap()
+            .1;
+        let extensions = Extensions::new(Vec::from([Extension::new(
+            ExtensionId::INHIBIT_ANY_POLICY,
+            false,
+            wire,
+        )]))
+        .unwrap();
+        let mut context = DecodingContext::new(options());
+        assert_eq!(
+            extensions.get_inhibit_any_policy(&mut context).unwrap(),
+            Some(expected)
+        );
+        let absent = Extensions::new(Vec::from([Extension::new(
+            ExtensionId::KEY_USAGE,
+            false,
+            b"\x03\x02\x07\x80",
+        )]))
+        .unwrap();
+        assert_eq!(absent.get_inhibit_any_policy(&mut context).unwrap(), None);
+        let malformed = Extensions::new(Vec::from([Extension::new(
+            ExtensionId::INHIBIT_ANY_POLICY,
+            false,
+            b"\x05\x00",
+        )]))
+        .unwrap();
+        assert!(matches!(
+            malformed.get_inhibit_any_policy(&mut context),
+            Err(Asn1Error::UnexpectedTag)
+        ));
+    }
+
+    #[test]
+    fn the_private_key_usage_period_accessor_decodes_and_reports_absence() {
+        let wire = b"\x30\x11\x80\x0f20300101000000Z";
+        let expected = crate::PrivateKeyUsagePeriod::decode_der(wire, &options())
+            .unwrap()
+            .1;
+        let extensions = Extensions::new(Vec::from([Extension::new(
+            ExtensionId::PRIVATE_KEY_USAGE_PERIOD,
+            false,
+            wire,
+        )]))
+        .unwrap();
+        let mut context = DecodingContext::new(options());
+        assert_eq!(
+            extensions
+                .get_private_key_usage_period(&mut context)
+                .unwrap(),
+            Some(expected)
+        );
+        let absent = Extensions::new(Vec::from([Extension::new(
+            ExtensionId::KEY_USAGE,
+            false,
+            b"\x03\x02\x07\x80",
+        )]))
+        .unwrap();
+        assert_eq!(
+            absent.get_private_key_usage_period(&mut context).unwrap(),
+            None
+        );
+        let malformed = Extensions::new(Vec::from([Extension::new(
+            ExtensionId::PRIVATE_KEY_USAGE_PERIOD,
+            false,
+            b"\x05\x00",
+        )]))
+        .unwrap();
+        assert!(matches!(
+            malformed.get_private_key_usage_period(&mut context),
+            Err(Asn1Error::UnexpectedTag)
+        ));
+    }
+
+    #[test]
+    fn the_subject_directory_attributes_accessor_decodes_and_reports_absence() {
+        let wire = b"\x30\x0b\x30\x09\x06\x02\x2a\x03\x31\x03\x02\x01\x01";
+        let expected = crate::SubjectDirectoryAttributes::decode_der(wire, &options())
+            .unwrap()
+            .1;
+        let extensions = Extensions::new(Vec::from([Extension::new(
+            ExtensionId::SUBJECT_DIRECTORY_ATTRIBUTES,
+            false,
+            wire,
+        )]))
+        .unwrap();
+        let mut context = DecodingContext::new(options());
+        assert_eq!(
+            extensions
+                .get_subject_directory_attributes(&mut context)
+                .unwrap(),
+            Some(expected)
+        );
+        let absent = Extensions::new(Vec::from([Extension::new(
+            ExtensionId::KEY_USAGE,
+            false,
+            b"\x03\x02\x07\x80",
+        )]))
+        .unwrap();
+        assert_eq!(
+            absent
+                .get_subject_directory_attributes(&mut context)
+                .unwrap(),
+            None
+        );
+        let malformed = Extensions::new(Vec::from([Extension::new(
+            ExtensionId::SUBJECT_DIRECTORY_ATTRIBUTES,
+            false,
+            b"\x05\x00",
+        )]))
+        .unwrap();
+        assert!(matches!(
+            malformed.get_subject_directory_attributes(&mut context),
+            Err(Asn1Error::UnexpectedTag)
+        ));
+    }
 
     #[test]
     fn extensions_round_trip_in_order() {
