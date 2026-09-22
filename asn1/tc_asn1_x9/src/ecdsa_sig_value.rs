@@ -56,12 +56,14 @@ impl EcdsaSigValue {
 }
 
 impl fmt::Display for EcdsaSigValue {
+    /// Variable time: branches only on the encoding structure.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}, {}", self.r, self.s)
     }
 }
 
 impl DecodeInner for EcdsaSigValue {
+    /// Variable time: branches only on the encoding structure.
     fn decode_inner(
         buff: &[u8],
         context: &mut DecodingContext,
@@ -76,10 +78,12 @@ impl DecodeInner for EcdsaSigValue {
 }
 
 impl EncodeContent for EcdsaSigValue {
+    /// Variable time: branches only on the encoding structure.
     fn content_len(&self, rules: &EncodingOptions) -> usize {
         self.r.encoded_len(rules) + self.s.encoded_len(rules)
     }
 
+    /// Variable time: branches only on the encoding structure.
     fn encode_content(&self, rules: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         let at = self.r.encode(rules, out)?;
         Ok(at + self.s.encode(rules, &mut out[at..])?)

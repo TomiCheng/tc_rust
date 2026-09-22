@@ -9,6 +9,7 @@ mod curve;
 mod ec_named_curve;
 mod ec_private_key;
 mod ecdsa_sig_value;
+mod encoding;
 mod field_id;
 mod x962_parameters;
 mod x9_ec_parameters;

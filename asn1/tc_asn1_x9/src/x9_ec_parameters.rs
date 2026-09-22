@@ -64,8 +64,16 @@ impl X9EcParameters {
         let bytes = base.as_bytes();
         let expected = match bytes.first() {
             Some(0) => Some(1),
-            Some(2 | 3) => width.and_then(|n| n.checked_add(1)),
-            Some(4 | 6 | 7) => width.and_then(|n| n.checked_mul(2)?.checked_add(1)),
+            Some(2 | 3) => width
+                .map(|n| n.checked_add(1).ok_or(Asn1Error::LengthOverflow))
+                .transpose()?,
+            Some(4 | 6 | 7) => width
+                .map(|n| {
+                    n.checked_mul(2)
+                        .and_then(|n| n.checked_add(1))
+                        .ok_or(Asn1Error::LengthOverflow)
+                })
+                .transpose()?,
             _ => return Err(Asn1Error::MalformedValue),
         };
         if expected.is_some_and(|n| n != bytes.len()) || !positive(&order) {
@@ -126,12 +134,14 @@ fn positive(value: &Asn1Integer) -> bool {
 }
 
 impl fmt::Display for X9EcParameters {
+    /// Variable time: branches only on the encoding structure.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}, order {}", self.field_id, self.order)
     }
 }
 
 impl DecodeInner for X9EcParameters {
+    /// Variable time: branches only on the encoding structure.
     fn decode_inner(
         buff: &[u8],
         context: &mut DecodingContext,
@@ -156,6 +166,7 @@ impl DecodeInner for X9EcParameters {
 }
 
 impl EncodeContent for X9EcParameters {
+    /// Variable time: branches only on the encoding structure.
     fn content_len(&self, rules: &EncodingOptions) -> usize {
         3 + self.field_id.encoded_len(rules)
             + self.curve.encoded_len(rules)
@@ -164,6 +175,7 @@ impl EncodeContent for X9EcParameters {
             + self.cofactor.as_ref().map_or(0, |v| v.encoded_len(rules))
     }
 
+    /// Variable time: branches only on the encoding structure.
     fn encode_content(&self, rules: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         out.get_mut(..3)
             .ok_or(Asn1Error::BufferTooSmall)?
@@ -368,6 +380,27 @@ mod tests {
                 Err(Asn1Error::MalformedValue)
             );
         }
+    }
+
+    #[test]
+    fn explicit_parameters_require_all_mandatory_fields_and_no_trailing_object() {
+        assert_eq!(
+            X9EcParameters::decode_der(b"\x30\x03\x02\x01\x01", &DecodingOptions::default()),
+            Err(Asn1Error::Truncated)
+        );
+        let mut wrong = unchecked_wire(&curve(&[1], &[2]), &[0], 1);
+        wrong[5] = 0x31;
+        assert_eq!(
+            X9EcParameters::decode_der(&wrong, &DecodingOptions::default()),
+            Err(Asn1Error::UnexpectedTag)
+        );
+        let mut extra = unchecked_wire(&curve(&[1], &[2]), &[0], 1);
+        extra.extend_from_slice(&[5, 0]);
+        extra[1] += 2;
+        assert_eq!(
+            X9EcParameters::decode_der(&extra, &DecodingOptions::default()),
+            Err(Asn1Error::TrailingData)
+        );
     }
 
     #[test]

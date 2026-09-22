@@ -16,6 +16,8 @@ use tc_asn1::{
     DecodingContext, Encode, EncodeContent, EncodeTagged, EncodingOptions, NamedOid, Tagged, tag,
 };
 
+use crate::encoding::{Exponent, OidRef};
+
 /// Three increasing positive exponents.
 ///
 /// ```
@@ -64,12 +66,14 @@ impl Pentanomial {
 }
 
 impl fmt::Display for Pentanomial {
+    /// Variable time: branches only on the encoding structure.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}, {}, {}", self.k1, self.k2, self.k3)
     }
 }
 
 impl DecodeInner for Pentanomial {
+    /// Variable time: branches only on the encoding structure.
     fn decode_inner(
         buff: &[u8],
         context: &mut DecodingContext,
@@ -85,17 +89,19 @@ impl DecodeInner for Pentanomial {
 }
 
 impl EncodeContent for Pentanomial {
+    /// Variable time: branches only on the encoding structure.
     fn content_len(&self, rules: &EncodingOptions) -> usize {
         [self.k1, self.k2, self.k3]
             .iter()
-            .map(|v| Asn1Integer::from(*v).encoded_len(rules))
+            .map(|v| Exponent(*v).encoded_len(rules))
             .sum()
     }
 
+    /// Variable time: branches only on the encoding structure.
     fn encode_content(&self, rules: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         let mut at = 0;
         for value in [self.k1, self.k2, self.k3] {
-            at += Asn1Integer::from(value).encode(rules, &mut out[at..])?;
+            at += Exponent(value).encode(rules, &mut out[at..])?;
         }
         Ok(at)
     }
@@ -217,10 +223,19 @@ impl Basis {
         }
     }
 
+    fn oid_ref(&self) -> OidRef<'_> {
+        OidRef(match self {
+            Self::Gaussian => Self::GN_BASIS.as_der(),
+            Self::Trinomial(_) => Self::TP_BASIS.as_der(),
+            Self::Pentanomial(_) => Self::PP_BASIS.as_der(),
+            Self::Other(v) => v.basis.as_bytes(),
+        })
+    }
+
     fn parameter_len(&self, rules: &EncodingOptions) -> usize {
         match self {
             Self::Gaussian => Asn1Null.encoded_len(rules),
-            Self::Trinomial(k) => Asn1Integer::from(*k).encoded_len(rules),
+            Self::Trinomial(k) => Exponent(*k).encoded_len(rules),
             Self::Pentanomial(v) => v.encoded_len(rules),
             Self::Other(v) => v.parameters.encoded_len(rules),
         }
@@ -233,7 +248,7 @@ impl Basis {
     ) -> Result<usize, Asn1Error> {
         match self {
             Self::Gaussian => Asn1Null.encode(rules, out),
-            Self::Trinomial(k) => Asn1Integer::from(*k).encode(rules, out),
+            Self::Trinomial(k) => Exponent(*k).encode(rules, out),
             Self::Pentanomial(v) => v.encode(rules, out),
             Self::Other(v) => v.parameters.encode(rules, out),
         }
@@ -241,6 +256,7 @@ impl Basis {
 }
 
 impl fmt::Display for Basis {
+    /// Variable time: branches only on the encoding structure.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Gaussian => f.write_str("gnBasis"),
@@ -298,6 +314,7 @@ impl CharacteristicTwo {
 }
 
 impl fmt::Display for CharacteristicTwo {
+    /// Variable time: branches only on the encoding structure.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "2^{}, {}", self.m, self.basis)
     }
@@ -308,6 +325,7 @@ fn exponent(value: Asn1Integer) -> Result<u32, Asn1Error> {
 }
 
 impl DecodeInner for CharacteristicTwo {
+    /// Variable time: branches only on the encoding structure.
     fn decode_inner(
         buff: &[u8],
         context: &mut DecodingContext,
@@ -332,15 +350,17 @@ impl DecodeInner for CharacteristicTwo {
 }
 
 impl EncodeContent for CharacteristicTwo {
+    /// Variable time: branches only on the encoding structure.
     fn content_len(&self, rules: &EncodingOptions) -> usize {
-        Asn1Integer::from(self.m).encoded_len(rules)
-            + self.basis.basis().encoded_len(rules)
+        Exponent(self.m).encoded_len(rules)
+            + self.basis.oid_ref().encoded_len(rules)
             + self.basis.parameter_len(rules)
     }
 
+    /// Variable time: branches only on the encoding structure.
     fn encode_content(&self, rules: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
-        let mut at = Asn1Integer::from(self.m).encode(rules, out)?;
-        at += self.basis.basis().encode(rules, &mut out[at..])?;
+        let mut at = Exponent(self.m).encode(rules, out)?;
+        at += self.basis.oid_ref().encode(rules, &mut out[at..])?;
         at += self.basis.encode_parameter(rules, &mut out[at..])?;
         Ok(at)
     }
@@ -375,13 +395,34 @@ mod tests {
     #[test]
     fn each_known_basis_has_the_expected_parameter_tag_and_round_trips() {
         for (basis, wire) in [
-            (Basis::Gaussian, &b"\x30\x10\x02\x01\x05\x06\x09\x2a\x86\x48\xce\x3d\x01\x02\x03\x01\x05\x00"[..]),
-            (Basis::Trinomial(2), &b"\x30\x11\x02\x01\x05\x06\x09\x2a\x86\x48\xce\x3d\x01\x02\x03\x02\x02\x01\x02"[..]),
-            (Basis::Pentanomial(Pentanomial::new(1,2,3).unwrap()), &b"\x30\x19\x02\x01\x05\x06\x09\x2a\x86\x48\xce\x3d\x01\x02\x03\x03\x30\x09\x02\x01\x01\x02\x01\x02\x02\x01\x03"[..]),
+            (
+                Basis::Gaussian,
+                &[
+                    0x30, 16, 2, 1, 5, 6, 9, 0x2a, 0x86, 0x48, 0xce, 0x3d, 1, 2, 3, 1, 5, 0,
+                ][..],
+            ),
+            (
+                Basis::Trinomial(2),
+                &[
+                    0x30, 17, 2, 1, 5, 6, 9, 0x2a, 0x86, 0x48, 0xce, 0x3d, 1, 2, 3, 2, 2, 1, 2,
+                ][..],
+            ),
+            (
+                Basis::Pentanomial(Pentanomial::new(1, 2, 3).unwrap()),
+                &[
+                    0x30, 25, 2, 1, 5, 6, 9, 0x2a, 0x86, 0x48, 0xce, 0x3d, 1, 2, 3, 3, 0x30, 9, 2,
+                    1, 1, 2, 1, 2, 2, 1, 3,
+                ][..],
+            ),
         ] {
             let value = CharacteristicTwo::new(5, basis).unwrap();
             assert_eq!(value.encode_to_vec(&EncodingOptions::DER).unwrap(), wire);
-            assert_eq!(CharacteristicTwo::decode_der(wire, &DecodingOptions::default()).unwrap().1, value);
+            assert_eq!(
+                CharacteristicTwo::decode_der(wire, &DecodingOptions::default())
+                    .unwrap()
+                    .1,
+                value
+            );
         }
     }
 
@@ -417,6 +458,47 @@ mod tests {
             CharacteristicTwo::new(3, Basis::Pentanomial(Pentanomial::new(1, 2, 3).unwrap())),
             Err(Asn1Error::MalformedValue)
         );
+    }
+
+    #[test]
+    fn decoded_pentanomial_exponents_must_be_below_m_and_fit_u32() {
+        let equal = [
+            0x30, 25, 2, 1, 3, 6, 9, 0x2a, 0x86, 0x48, 0xce, 0x3d, 1, 2, 3, 3, 0x30, 9, 2, 1, 1, 2,
+            1, 2, 2, 1, 3,
+        ];
+        assert_eq!(
+            CharacteristicTwo::decode_der(&equal, &DecodingOptions::default()),
+            Err(Asn1Error::MalformedValue)
+        );
+        let huge = [0x30, 13, 2, 1, 1, 2, 1, 2, 2, 5, 1, 0, 0, 0, 0];
+        assert_eq!(
+            Pentanomial::decode_der(&huge, &DecodingOptions::default()),
+            Err(Asn1Error::MalformedValue)
+        );
+        let negative = [0x30, 9, 2, 1, 0xff, 2, 1, 2, 2, 1, 3];
+        assert_eq!(
+            Pentanomial::decode_der(&negative, &DecodingOptions::default()),
+            Err(Asn1Error::MalformedValue)
+        );
+    }
+
+    #[test]
+    fn binary_fields_require_parameters_and_reject_a_fourth_field() {
+        for (wire, error) in [
+            (
+                &b"\x30\x07\x02\x01\x05\x06\x02\x2a\x03"[..],
+                Asn1Error::Truncated,
+            ),
+            (
+                &b"\x30\x0b\x02\x01\x05\x06\x02\x2a\x03\x05\x00\x05\x00"[..],
+                Asn1Error::TrailingData,
+            ),
+        ] {
+            assert_eq!(
+                CharacteristicTwo::decode_der(wire, &DecodingOptions::default()),
+                Err(error)
+            );
+        }
     }
 
     #[test]

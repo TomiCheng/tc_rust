@@ -68,6 +68,7 @@ impl X962Parameters {
 }
 
 impl fmt::Display for X962Parameters {
+    /// Variable time: branches only on the encoding structure.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::EcParameters(_) => f.write_str("ecParameters"),
@@ -81,6 +82,7 @@ impl fmt::Display for X962Parameters {
 }
 
 impl DecodeInner for X962Parameters {
+    /// Variable time: branches only on the encoding structure.
     fn decode_inner(
         buff: &[u8],
         context: &mut DecodingContext,
@@ -100,6 +102,7 @@ impl DecodeInner for X962Parameters {
 impl Decode for X962Parameters {}
 
 impl EncodeContent for X962Parameters {
+    /// Variable time: branches only on the encoding structure.
     fn content_len(&self, rules: &EncodingOptions) -> usize {
         match self {
             Self::EcParameters(v) => v.content_len(rules),
@@ -108,6 +111,7 @@ impl EncodeContent for X962Parameters {
         }
     }
 
+    /// Variable time: branches only on the encoding structure.
     fn encode_content(&self, rules: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         match self {
             Self::EcParameters(v) => v.encode_content(rules, out),
@@ -120,10 +124,12 @@ impl EncodeContent for X962Parameters {
 impl EncodeTagged for X962Parameters {}
 
 impl Encode for X962Parameters {
+    /// Variable time: branches only on the encoding structure.
     fn encoded_len(&self, rules: &EncodingOptions) -> usize {
         self.encoded_len_tagged(self.tag(), rules)
     }
 
+    /// Variable time: branches only on the encoding structure.
     fn encode(&self, rules: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         self.encode_tagged(self.tag(), rules, out)
     }

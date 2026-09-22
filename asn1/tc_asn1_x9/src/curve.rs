@@ -66,6 +66,7 @@ impl Curve {
 }
 
 impl fmt::Display for Curve {
+    /// Variable time: branches only on the encoding structure.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
@@ -77,6 +78,7 @@ impl fmt::Display for Curve {
 }
 
 impl DecodeInner for Curve {
+    /// Variable time: branches only on the encoding structure.
     fn decode_inner(
         buff: &[u8],
         context: &mut DecodingContext,
@@ -94,12 +96,14 @@ impl DecodeInner for Curve {
 }
 
 impl EncodeContent for Curve {
+    /// Variable time: branches only on the encoding structure.
     fn content_len(&self, rules: &EncodingOptions) -> usize {
         self.a.encoded_len(rules)
             + self.b.encoded_len(rules)
             + self.seed.as_ref().map_or(0, |v| v.encoded_len(rules))
     }
 
+    /// Variable time: branches only on the encoding structure.
     fn encode_content(&self, rules: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         let mut at = self.a.encode(rules, out)?;
         at += self.b.encode(rules, &mut out[at..])?;

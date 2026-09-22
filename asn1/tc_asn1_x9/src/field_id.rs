@@ -17,6 +17,7 @@ use tc_asn1::{
 };
 
 use crate::CharacteristicTwo;
+use crate::encoding::OidRef;
 
 /// An unrecognized field identifier and its parameters. Use [`FieldId::other`].
 ///
@@ -124,6 +125,14 @@ impl FieldId {
         }
     }
 
+    fn oid_ref(&self) -> OidRef<'_> {
+        OidRef(match self {
+            Self::PrimeField(_) => Self::PRIME_FIELD.as_der(),
+            Self::CharacteristicTwoField(_) => Self::CHARACTERISTIC_TWO_FIELD.as_der(),
+            Self::Other(v) => v.field_type.as_bytes(),
+        })
+    }
+
     /// Returns the field element width, or `None` for unknown or invalid fields.
     /// Variable time: branches only on the encoding structure.
     pub fn field_size_bytes(&self) -> Option<usize> {
@@ -148,6 +157,7 @@ impl FieldId {
 }
 
 impl fmt::Display for FieldId {
+    /// Variable time: branches only on the encoding structure.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::PrimeField(p) => write!(f, "prime-field: {p}"),
@@ -158,6 +168,7 @@ impl fmt::Display for FieldId {
 }
 
 impl DecodeInner for FieldId {
+    /// Variable time: branches only on the encoding structure.
     fn decode_inner(
         buff: &[u8],
         context: &mut DecodingContext,
@@ -178,8 +189,9 @@ impl DecodeInner for FieldId {
 }
 
 impl EncodeContent for FieldId {
+    /// Variable time: branches only on the encoding structure.
     fn content_len(&self, rules: &EncodingOptions) -> usize {
-        self.field_type().encoded_len(rules)
+        self.oid_ref().encoded_len(rules)
             + match self {
                 Self::PrimeField(v) => v.encoded_len(rules),
                 Self::CharacteristicTwoField(v) => v.encoded_len(rules),
@@ -187,9 +199,10 @@ impl EncodeContent for FieldId {
             }
     }
 
+    /// Variable time: branches only on the encoding structure.
     fn encode_content(&self, rules: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         self.validate()?;
-        let at = self.field_type().encode(rules, out)?;
+        let at = self.oid_ref().encode(rules, out)?;
         let n = match self {
             Self::PrimeField(v) => v.encode(rules, &mut out[at..])?,
             Self::CharacteristicTwoField(v) => v.encode(rules, &mut out[at..])?,

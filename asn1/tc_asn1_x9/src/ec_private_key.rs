@@ -51,7 +51,7 @@ pub struct EcPrivateKey {
 impl EcPrivateKey {
     /// Requires non-empty private key octets; no scalar range check is performed.
     /// Variable time: branches only on the encoding structure.
-    /// Private key octets are copied without branching on their values, only their public length.
+    /// Control flow does not depend on private-key octet values.
     pub fn new(private_key: Asn1OctetString) -> Result<Self, Asn1Error> {
         if private_key.as_bytes().is_empty() {
             return Err(Asn1Error::MalformedValue);
@@ -65,7 +65,7 @@ impl EcPrivateKey {
 
     /// Attaches parameters without checking their relationship to the key.
     /// Variable time: branches only on the encoding structure.
-    /// Private key octets are copied without branching on their values, only their public length.
+    /// Control flow does not depend on private-key octet values.
     pub fn with_parameters(mut self, parameters: X962Parameters) -> Self {
         self.parameters = Some(parameters);
         self
@@ -73,7 +73,7 @@ impl EcPrivateKey {
 
     /// Attaches public key bits without checking their relationship to the private key.
     /// Variable time: branches only on the encoding structure.
-    /// Private key octets are copied without branching on their values, only their public length.
+    /// Control flow does not depend on private-key octet values.
     pub fn with_public_key(mut self, public_key: Asn1BitString) -> Self {
         self.public_key = Some(public_key);
         self
@@ -81,28 +81,28 @@ impl EcPrivateKey {
 
     /// Borrows the private key octets; the caller must protect them.
     /// Variable time: branches only on the encoding structure.
-    /// Private key octets are copied without branching on their values, only their public length.
+    /// Control flow does not depend on private-key octet values.
     pub fn private_key(&self) -> &Asn1OctetString {
         &self.private_key
     }
 
     /// Moves the private key octets out without cloning them.
     /// Variable time: branches only on the encoding structure.
-    /// Private key octets are copied without branching on their values, only their public length.
+    /// Control flow does not depend on private-key octet values.
     pub fn into_private_key(self) -> Asn1OctetString {
         self.private_key
     }
 
     /// Returns the optional domain parameters.
     /// Variable time: branches only on the encoding structure.
-    /// Private key octets are copied without branching on their values, only their public length.
+    /// Control flow does not depend on private-key octet values.
     pub fn parameters(&self) -> Option<&X962Parameters> {
         self.parameters.as_ref()
     }
 
     /// Returns the optional public key.
     /// Variable time: branches only on the encoding structure.
-    /// Private key octets are copied without branching on their values, only their public length.
+    /// Control flow does not depend on private-key octet values.
     pub fn public_key(&self) -> Option<&Asn1BitString> {
         self.public_key.as_ref()
     }
@@ -111,12 +111,14 @@ impl EcPrivateKey {
 struct RedactedKeyLength(usize);
 
 impl fmt::Debug for RedactedKeyLength {
+    /// Variable time: branches only on the encoding structure.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "<redacted, {} octets>", self.0)
     }
 }
 
 impl fmt::Debug for EcPrivateKey {
+    /// Variable time: branches only on the encoding structure.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("EcPrivateKey")
             .field(
@@ -130,6 +132,7 @@ impl fmt::Debug for EcPrivateKey {
 }
 
 impl DecodeInner for EcPrivateKey {
+    /// Variable time: branches only on the encoding structure.
     fn decode_inner(
         buff: &[u8],
         context: &mut DecodingContext,
@@ -151,6 +154,7 @@ impl DecodeInner for EcPrivateKey {
 }
 
 impl EncodeContent for EcPrivateKey {
+    /// Variable time: branches only on the encoding structure.
     fn content_len(&self, rules: &EncodingOptions) -> usize {
         3 + self.private_key.encoded_len(rules)
             + self
@@ -163,6 +167,7 @@ impl EncodeContent for EcPrivateKey {
                 .map_or(0, |v| Explicit::new(&[0xa1], v).encoded_len(rules))
     }
 
+    /// Variable time: branches only on the encoding structure.
     fn encode_content(&self, rules: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         out.get_mut(..3)
             .ok_or(Asn1Error::BufferTooSmall)?
@@ -296,6 +301,20 @@ mod tests {
             assert_eq!(
                 EcPrivateKey::decode_der(wire, &DecodingOptions::default()),
                 Err(error)
+            );
+        }
+    }
+
+    #[test]
+    fn large_private_octet_strings_round_trip_under_ber_and_der() {
+        let value = EcPrivateKey::new(Asn1OctetString::new(&[0xaa; 1001])).unwrap();
+        for rules in [EncodingOptions::BER, EncodingOptions::DER] {
+            let wire = value.encode_to_vec(&rules).unwrap();
+            assert_eq!(
+                EcPrivateKey::decode(&wire, &DecodingOptions::default())
+                    .unwrap()
+                    .1,
+                value,
             );
         }
     }
