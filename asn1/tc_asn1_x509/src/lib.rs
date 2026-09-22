@@ -2,6 +2,8 @@
 
 extern crate alloc;
 
+mod access_description;
+mod access_method;
 mod algorithm_identifier;
 mod authority_key_identifier;
 mod basic_constraints;
@@ -26,6 +28,8 @@ mod tbs_certificate;
 mod time;
 mod validity;
 //
+pub use access_description::AccessDescription;
+pub use access_method::AccessMethod;
 pub use algorithm_identifier::AlgorithmIdentifier;
 pub use authority_key_identifier::AuthorityKeyIdentifier;
 pub use basic_constraints::BasicConstraints;
