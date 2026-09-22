@@ -14,8 +14,8 @@ use alloc::vec::Vec;
 use core::fmt;
 
 use tc_asn1::{
-    Asn1Error, Asn1SetOf, Decode, DecodeInner, DecodingContext, Encode, EncodeContent,
-    EncodeTagged, EncodingOptions, Tagged,
+    Asn1Error, Asn1Ref, Asn1SetOf, Decode, DecodeContent, DecodeInner, DecodingContext, Encode,
+    EncodeContent, EncodeTagged, EncodingOptions, Tagged,
 };
 
 use crate::{AttributeType, AttributeTypeAndValue, AttributeValue};
@@ -136,17 +136,28 @@ fn write_escaped(f: &mut fmt::Formatter<'_>, text: &str) -> fmt::Result {
     Ok(())
 }
 
+impl DecodeContent for RelativeDistinguishedName {
+    /// Reads the attributes of an IMPLICIT RDN, without the outer tag and length.
+    /// An empty set returns [`Asn1Error::MalformedValue`]. Attribute order is
+    /// preserved and is not checked, even under DER.
+    fn decode_content(value: &[u8], context: &mut DecodingContext) -> Result<Self, Asn1Error> {
+        let attributes = Asn1SetOf::decode_content(value, context)?;
+        if attributes.members().is_empty() {
+            return Err(Asn1Error::MalformedValue);
+        }
+        Ok(Self { attributes })
+    }
+}
+
 impl DecodeInner for RelativeDistinguishedName {
     /// An empty SET is `MalformedValue`. Variable time: branches only on the structure.
     fn decode_inner(
         buff: &[u8],
         context: &mut DecodingContext,
     ) -> Result<(usize, Self), Asn1Error> {
-        let (used, attributes) = Asn1SetOf::decode_inner(buff, context)?;
-        if attributes.members().is_empty() {
-            return Err(Asn1Error::MalformedValue);
-        }
-        Ok((used, Self { attributes }))
+        let element = Asn1Ref::parse(buff, context)?.assert_tag(Self::TAG)?;
+        let value = Self::decode_content(element.value(), context)?;
+        Ok((element.total_len(), value))
     }
 }
 
@@ -184,7 +195,8 @@ mod tests {
     use alloc::vec::Vec;
 
     use tc_asn1::{
-        Asn1Error, Asn1Integer, Asn1Object, Decode, DecodingOptions, Encode, EncodingOptions,
+        Asn1Error, Asn1Integer, Asn1Object, Asn1Ref, Decode, DecodingContext, DecodingOptions,
+        Encode, EncodingOptions, Implicit,
     };
 
     use super::RelativeDistinguishedName;
@@ -227,6 +239,44 @@ mod tests {
         assert_eq!((used, &decoded), (SINGLE.len(), &rdn));
         assert_eq!(decoded.attributes().len(), 1);
         assert_eq!(decoded.to_string(), "CN=Alice");
+    }
+
+    #[test]
+    fn an_implicit_rdn_preserves_attributes_in_wire_order() {
+        let rdn =
+            RelativeDistinguishedName::new(Vec::from([cn("Alice"), serial_number("123")])).unwrap();
+        for rules in [EncodingOptions::BER, EncodingOptions::DER] {
+            let wire = Implicit::new(&[0xA1], &rdn).encode_to_vec(&rules).unwrap();
+            assert_eq!(wire[0], 0xA1);
+            for strict in [false, true] {
+                let mut context = if strict {
+                    DecodingContext::new_der(options())
+                } else {
+                    DecodingContext::new(options())
+                };
+                let mut fields = tc_asn1::Children::from_contents(&wire, &mut context).unwrap();
+                let decoded = fields.get_implicit::<RelativeDistinguishedName>([0xA1]);
+                let decoded = decoded.unwrap();
+                assert_eq!(decoded, rdn);
+                if rules == EncodingOptions::BER {
+                    assert_eq!(decoded.attributes()[0], cn("Alice"));
+                } else {
+                    assert_eq!(decoded.attributes()[0], serial_number("123"));
+                }
+                fields.end().unwrap();
+            }
+        }
+    }
+
+    #[test]
+    fn an_empty_implicit_rdn_is_rejected() {
+        let mut context = DecodingContext::new(options());
+        let sequence = Asn1Ref::parse(b"\x30\x02\xa1\x00", &mut context).unwrap();
+        let mut fields = sequence.children(&mut context).unwrap();
+        assert!(matches!(
+            fields.get_implicit::<RelativeDistinguishedName>([0xA1]),
+            Err(Asn1Error::MalformedValue)
+        ));
     }
 
     #[test]

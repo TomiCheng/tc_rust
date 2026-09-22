@@ -60,10 +60,11 @@ impl DirectoryString {
         }
     }
 
-    /// Whether the two hold the same text under RFC 5280 §7.1's relaxed
-    /// rules: the string type is ignored and the text is compared after
-    /// [`canonical_text`]. TeletexStrings have no text and are compared as
-    /// octets, so a TeletexString never matches another alternative.
+    /// Compares text regardless of string type, after lowercasing, trimming
+    /// leading and trailing whitespace, and collapsing internal whitespace
+    /// to single spaces. This approximates the name comparison in RFC 5280
+    /// §7.1; full Unicode case folding and normalization are not applied.
+    /// TeletexStrings are compared as octets and never match another alternative.
     /// Variable time; for public values.
     pub fn equivalent(&self, other: &Self) -> bool {
         match (self.as_str(), other.as_str()) {
