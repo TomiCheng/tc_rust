@@ -74,10 +74,25 @@ impl RelativeDistinguishedName {
     }
 
     /// The same attributes under [`AttributeTypeAndValue::equivalent`], in
-    /// any order. Variable time; for public values.
+    /// any order, each paired with a different member of `other`. Variable
+    /// time; for public values.
     pub fn equivalent(&self, other: &Self) -> bool {
         let (a, b) = (self.attributes(), other.attributes());
-        a.len() == b.len() && a.iter().all(|x| b.iter().any(|y| x.equivalent(y)))
+        if a.len() != b.len() {
+            return false;
+        }
+        // Each member of `a` takes its match out of play. The first match
+        // will do: `equivalent` is an equivalence relation, so no other
+        // choice could leave a better pairing for the rest.
+        let mut unmatched: Vec<&AttributeTypeAndValue> = b.iter().collect();
+        a.iter()
+            .all(|x| match unmatched.iter().position(|y| x.equivalent(y)) {
+                Some(i) => {
+                    unmatched.swap_remove(i);
+                    true
+                }
+                None => false,
+            })
     }
 }
 
@@ -308,6 +323,20 @@ mod tests {
                     .unwrap()
             )
         );
+    }
+
+    #[test]
+    fn equivalence_pairs_each_attribute_with_a_different_one_on_the_other_side() {
+        // Both of `a`'s members match `b`'s CN; that must not cover for
+        // `b`'s serialNumber, which nothing in `a` matches.
+        let a = RelativeDistinguishedName::new(Vec::from([cn("alice"), cn("ALICE")])).unwrap();
+        let b =
+            RelativeDistinguishedName::new(Vec::from([cn("Alice"), serial_number("123")])).unwrap();
+        assert!(!a.equivalent(&b));
+        assert!(!b.equivalent(&a));
+        let c = RelativeDistinguishedName::new(Vec::from([cn("Alice"), cn("alice")])).unwrap();
+        assert!(a.equivalent(&c));
+        assert!(c.equivalent(&a));
     }
 
     #[test]
