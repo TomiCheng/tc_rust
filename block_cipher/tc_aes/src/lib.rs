@@ -1,16 +1,18 @@
 #![no_std]
 
 mod common;
-mod light_engine;
 #[cfg(feature = "rustcrypto")]
 mod rustcrypto_engine;
+mod engine;
+mod light_engine;
 mod table_engine;
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 mod x86_engine;
 
-pub use light_engine::AesLightEngine;
 #[cfg(feature = "rustcrypto")]
 pub use rustcrypto_engine::AesRustCryptoEngine;
+pub use engine::AesEngine;
+pub use light_engine::AesLightEngine;
 pub use table_engine::AesTableEngine;
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 pub use x86_engine::AesX86Engine;
