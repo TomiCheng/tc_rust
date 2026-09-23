@@ -627,6 +627,7 @@ name = "tc_aes"
 version = "0.1.0"
 dependencies = [
  "aes",
+ "criterion",
  "tc_block_cipher",
  "tc_runtime",
  "tc_zeroize",
