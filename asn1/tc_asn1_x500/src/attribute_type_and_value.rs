@@ -352,12 +352,14 @@ mod tests {
     }
 
     #[test]
-    fn an_empty_directory_string_value_is_rejected() {
+    fn an_empty_directory_string_value_is_decoded_and_round_trips() {
         let empty_cn = b"\x30\x07\x06\x03\x55\x04\x03\x13\x00";
+        let (_, atv) = AttributeTypeAndValue::decode(empty_cn, &options()).unwrap();
         assert!(matches!(
-            AttributeTypeAndValue::decode(empty_cn, &options()),
-            Err(Asn1Error::MalformedValue)
+            atv.value(),
+            AttributeValue::DirectoryString(s) if s.as_str() == Some("")
         ));
+        assert_eq!(atv.encode_to_vec(&der()).unwrap(), empty_cn);
     }
 
     #[test]

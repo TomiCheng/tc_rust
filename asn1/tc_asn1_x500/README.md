@@ -70,7 +70,7 @@ assert_eq!(name.to_string(), "CN=Alice");
 | `RelativeDistinguishedName` | `SET SIZE (1..MAX) OF AttributeTypeAndValue` | Usually one attribute. DER/CER sort the members; `==` is order-independent. `equivalent` matches members in any order. |
 | `AttributeTypeAndValue` | `SEQUENCE { type OID, value ANY }` | `equivalent` needs the same OID and equivalent values. |
 | `AttributeValue` | the `ANY` | Classified by identifier when decoding: `DirectoryString`, `Ia5String` (DC, emailAddress) or `Other(Asn1Object)`. The OID is not consulted. |
-| `DirectoryString` | `CHOICE` of PrintableString, UTF8String, TeletexString, BMPString, UniversalString | `new` picks PrintableString when the text allows, else UTF8String. Non-empty. TeletexString is kept as octets. `equivalent` compares text after RFC 4518 string preparation, less NFKC and full case folding. |
+| `DirectoryString` | `CHOICE` of PrintableString, UTF8String, TeletexString, BMPString, UniversalString | `new` picks PrintableString when the text allows, else UTF8String, and refuses an empty string; decoding accepts one, as some certificates carry them. TeletexString is kept as octets. `equivalent` compares text after RFC 4518 string preparation, less NFKC and full case folding. |
 | `AttributeType` | – | The table below: OID, dotted form and short name, with lookup both ways. |
 
 Not here: name constraints matching (prefix of RDNs), which waits for the

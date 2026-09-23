@@ -99,8 +99,9 @@ impl RelativeDistinguishedName {
 /// `type=value` pairs joined with `+`, in stored order, as in RFC 4514. A
 /// type is written by its short name when [`AttributeType`] knows it and as
 /// a dotted OID otherwise; text values are escaped as in §2.4 and any other
-/// value, TeletexString included, is written as `#` followed by the hex of
-/// its DER. [`Name`](crate::Name) parses this form back.
+/// value, TeletexString and empty DirectoryString included, is written as
+/// `#` followed by the hex of its DER. [`Name`](crate::Name) parses this form
+/// back.
 impl fmt::Display for RelativeDistinguishedName {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for (i, attribute) in self.attributes().iter().enumerate() {
@@ -113,8 +114,10 @@ impl fmt::Display for RelativeDistinguishedName {
             }
             match attribute.value() {
                 AttributeValue::DirectoryString(s) => match s.as_str() {
-                    Some(text) => write_escaped(f, text),
-                    None => write_hex(f, s),
+                    Some(text) if !text.is_empty() => write_escaped(f, text),
+                    // A TeletexString has no text form, and an empty text
+                    // would not parse back as a DirectoryString.
+                    _ => write_hex(f, s),
                 },
                 AttributeValue::Ia5String(s) => write_escaped(f, s.as_str()),
                 AttributeValue::Other(object) => write_hex(f, object),

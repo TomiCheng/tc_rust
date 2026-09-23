@@ -11,7 +11,9 @@
 //! ```
 //!
 //! New certificates MUST use PrintableString or UTF8String; the other three
-//! alternatives exist to read older ones. TeletexString is kept as raw
+//! alternatives exist to read older ones. The `SIZE (1..MAX)` constraint is
+//! kept when building a value but not when decoding one, since some
+//! certificates carry empty values. TeletexString is kept as raw
 //! octets because its character set (T.61 with escape sequences) is not
 //! reliably decodable, and in practice such fields often hold Latin-1 anyway.
 
@@ -25,7 +27,8 @@ use tc_asn1::{
 
 use crate::string_prep::text_equivalent;
 
-/// The string CHOICE used for most `Name` attribute values.
+/// The string CHOICE used for most `Name` attribute values. Never empty
+/// when built with [`new`](Self::new); may be empty when decoded.
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub enum DirectoryString {
     PrintableString(Asn1PrintableString),
@@ -76,14 +79,6 @@ impl DirectoryString {
             _ => self == other,
         }
     }
-
-    fn non_empty<T>(value: T, len: usize) -> Result<T, Asn1Error> {
-        if len == 0 {
-            Err(Asn1Error::MalformedValue)
-        } else {
-            Ok(value)
-        }
-    }
 }
 
 /// The text, or the TeletexString octets as `\xNN` escapes.
@@ -109,8 +104,10 @@ impl fmt::Display for DirectoryString {
 }
 
 impl DecodeInner for DirectoryString {
-    /// The identifier selects the alternative; an empty value is
-    /// `MalformedValue`. Variable time: branches only on the encoding structure.
+    /// The identifier selects the alternative. An empty value is accepted,
+    /// though X.520 forbids it: some certificates carry one, and refusing it
+    /// would make the whole certificate unreadable. [`new`](Self::new) still
+    /// refuses one. Variable time: branches only on the encoding structure.
     fn decode_inner(
         buff: &[u8],
         context: &mut DecodingContext,
@@ -119,36 +116,21 @@ impl DecodeInner for DirectoryString {
         let tag = element.tag();
         let (used, value) = if tag == Asn1PrintableString::TAG {
             let (n, s) = Asn1PrintableString::decode_inner(buff, context)?;
-            (
-                n,
-                Self::non_empty(Self::PrintableString(s), element.value().len())?,
-            )
+            (n, Self::PrintableString(s))
         } else if tag == Asn1Utf8String::TAG {
             let (n, s) = Asn1Utf8String::decode_inner(buff, context)?;
-            (
-                n,
-                Self::non_empty(Self::Utf8String(s), element.value().len())?,
-            )
+            (n, Self::Utf8String(s))
         } else if tag == tag::TELETEX_STRING {
             (
                 element.total_len(),
-                Self::non_empty(
-                    Self::TeletexString(Asn1Any::from(&element)),
-                    element.value().len(),
-                )?,
+                Self::TeletexString(Asn1Any::from(&element)),
             )
         } else if tag == Asn1BmpString::TAG {
             let (n, s) = Asn1BmpString::decode_inner(buff, context)?;
-            (
-                n,
-                Self::non_empty(Self::BmpString(s), element.value().len())?,
-            )
+            (n, Self::BmpString(s))
         } else if tag == Asn1UniversalString::TAG {
             let (n, s) = Asn1UniversalString::decode_inner(buff, context)?;
-            (
-                n,
-                Self::non_empty(Self::UniversalString(s), element.value().len())?,
-            )
+            (n, Self::UniversalString(s))
         } else {
             return Err(Asn1Error::UnexpectedTag);
         };
@@ -280,11 +262,15 @@ mod tests {
     }
 
     #[test]
-    fn other_string_types_and_empty_values_are_rejected() {
+    fn other_string_types_are_rejected() {
         assert!(matches!(
             DirectoryString::decode(b"\x16\x02TW", &options()), // IA5String is not in the CHOICE
             Err(Asn1Error::UnexpectedTag)
         ));
+    }
+
+    #[test]
+    fn empty_values_are_decoded_but_never_built() {
         for bytes in [
             &b"\x13\x00"[..],
             b"\x0c\x00",
@@ -292,10 +278,13 @@ mod tests {
             b"\x1e\x00",
             b"\x1c\x00",
         ] {
-            assert!(matches!(
-                DirectoryString::decode(bytes, &options()),
-                Err(Asn1Error::MalformedValue)
-            ));
+            let (_, s) = DirectoryString::decode(bytes, &options()).unwrap();
+            assert!(s.as_str().is_none_or(str::is_empty), "{bytes:02x?}");
+            assert_eq!(s.encode_to_vec(&der()).unwrap(), bytes);
         }
+        assert!(matches!(
+            DirectoryString::new(""),
+            Err(Asn1Error::MalformedValue)
+        ));
     }
 }

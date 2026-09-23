@@ -187,7 +187,6 @@ mod tests {
             (&b"\x30\x00"[..], Asn1Error::Truncated),
             (b"\x30\x06\xa0\x04\x13\x02Ab", Asn1Error::Truncated), // assigner only
             (b"\x30\x04\x13\x02Ab", Asn1Error::UnexpectedTag),     // no wrapper
-            (b"\x30\x04\xa1\x02\x13\x00", Asn1Error::MalformedValue), // empty string
         ] {
             assert_eq!(
                 EdiPartyName::decode(wire, &options()).unwrap_err(),
