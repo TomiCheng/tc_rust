@@ -233,7 +233,7 @@ mod tests {
     }
 
     #[test]
-    fn new_prefers_printablestring_and_falls_back_to_utf8string() {
+    fn new_prefers_printable_string_and_falls_back_to_utf8string() {
         let s = DirectoryString::new("Example Inc").unwrap();
         assert!(matches!(s, DirectoryString::PrintableString(_)));
         assert_eq!(s.encode_to_vec(&der()).unwrap(), b"\x13\x0bExample Inc");
@@ -284,7 +284,7 @@ mod tests {
     }
 
     #[test]
-    fn a_teletexstring_displays_its_octets() {
+    fn a_teletex_string_displays_its_octets() {
         let (_, s) = DirectoryString::decode(b"\x14\x03T\xe9W", &options()).unwrap();
         assert_eq!(s.to_string(), "T\\xe9W");
         assert_eq!(DirectoryString::new("TW").unwrap().to_string(), "TW");

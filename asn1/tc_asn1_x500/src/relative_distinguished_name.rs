@@ -5,7 +5,7 @@
 //! ```
 //!
 //! One level of a distinguished name. Nearly always a single attribute; a
-//! multi-valued RDN groups several attributes that identify the entry only
+//! multivalued RDN groups several attributes that identify the entry only
 //! together. Order carries no meaning, so DER and CER write the members
 //! sorted by their encodings. X.501 also wants the attribute types within
 //! one RDN to be distinct; that is a profile check and is not enforced here.
