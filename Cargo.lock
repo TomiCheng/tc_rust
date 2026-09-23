@@ -621,6 +621,8 @@ dependencies = [
 [[package]]
 name = "tc_asn1_x500"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3f3222046fe614c601332a30f24bd9cd1f7c010b1b0362c2963fbcef0e780002"
 dependencies = [
  "tc_asn1",
 ]
