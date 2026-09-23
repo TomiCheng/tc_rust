@@ -1,0 +1,12 @@
+[package]
+name = "tc_block_cipher"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[features]
+alloc = ["tc_zeroize/alloc"]
+
+[dependencies]
+tc_zeroize = "0.1.0"

@@ -11,7 +11,7 @@ members = [
     "crypto/macs/*",
     "crypto/paddings/*",
     "crypto/stream_cipher/*",
-    "math/*",
+    "math/*", "block_cipher/tc_block_cipher",
 ]
 
 [workspace.package]
