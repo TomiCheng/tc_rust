@@ -9,16 +9,26 @@
 //! ```
 //!
 //! Beyond RFC 4514 this accepts, as RFC 2253 did, whitespace around the
-//! separators and a value in double quotes. A text value becomes an
-//! IA5String for `DC` and `emailAddress` and a [`DirectoryString`] for every
-//! other type; a `#` value is decoded as DER and classified like a decoded
-//! one. Every syntax error is `MalformedValue`.
+//! separators and a value in double quotes. A text value takes the syntax
+//! its type declares: an IA5String for `DC` and `emailAddress`; a
+//! PrintableString for `C`, `serialNumber`, `dnQualifier`,
+//! `telephoneNumber`, `gender`, `countryOfCitizenship`, `countryOfResidence`
+//! and `jurisdictionCountryName`; a GeneralizedTime, `YYYYMMDDhhmmssZ`, for
+//! `dateOfBirth`; and a [`DirectoryString`] for every other type.
+//! `x500UniqueIdentifier` (a BIT STRING) and `postalAddress` (a SEQUENCE OF)
+//! have no text form here and take only the `#` form. Size constraints, such
+//! as a country code being two letters, are not checked. A `#` value is
+//! decoded as DER and classified like a decoded one. Every syntax error is
+//! `MalformedValue`.
 
 use alloc::string::String;
 use alloc::vec::Vec;
 use core::str::FromStr;
 
-use tc_asn1::{Asn1Error, Asn1Ia5String, Asn1Oid, Decode, DecodingOptions};
+use tc_asn1::{
+    Asn1Error, Asn1GeneralizedTime, Asn1Ia5String, Asn1Object, Asn1Oid, Decode, DecodeContent,
+    DecodingContext, DecodingOptions,
+};
 
 use crate::{
     AttributeType, AttributeTypeAndValue, AttributeValue, DirectoryString, Name,
@@ -69,18 +79,46 @@ fn parse_attribute(text: &str) -> Result<(AttributeTypeAndValue, Option<char>, &
             }
             value
         }
-        Raw::Text(text) => match AttributeType::from_oid(&attribute_type) {
-            Some(AttributeType::DOMAIN_COMPONENT | AttributeType::EMAIL_ADDRESS) => {
-                Asn1Ia5String::new(&text)?.into()
-            }
-            _ => DirectoryString::new(&text)?.into(),
-        },
+        Raw::Text(text) => text_value(&attribute_type, &text)?,
     };
     Ok((
         AttributeTypeAndValue::new(attribute_type, value),
         separator,
         rest,
     ))
+}
+
+/// A text value in the syntax its type declares.
+fn text_value(attribute_type: &Asn1Oid, text: &str) -> Result<AttributeValue, Asn1Error> {
+    Ok(match AttributeType::from_oid(attribute_type) {
+        Some(AttributeType::DOMAIN_COMPONENT | AttributeType::EMAIL_ADDRESS) => {
+            Asn1Ia5String::new(text)?.into()
+        }
+        Some(
+            AttributeType::COUNTRY_NAME
+            | AttributeType::SERIAL_NUMBER
+            | AttributeType::DN_QUALIFIER
+            | AttributeType::TELEPHONE_NUMBER
+            | AttributeType::GENDER
+            | AttributeType::COUNTRY_OF_CITIZENSHIP
+            | AttributeType::COUNTRY_OF_RESIDENCE
+            | AttributeType::JURISDICTION_COUNTRY_NAME,
+        ) => match DirectoryString::new(text)? {
+            // `new` falls back to UTF8String, which these types do not allow.
+            printable @ DirectoryString::PrintableString(_) => printable.into(),
+            _ => return Err(Asn1Error::MalformedValue),
+        },
+        Some(AttributeType::DATE_OF_BIRTH) => {
+            // The contents octets of a GeneralizedTime are its text.
+            let mut context = DecodingContext::new(DecodingOptions::default());
+            let time = Asn1GeneralizedTime::decode_content(text.as_bytes(), &mut context)?;
+            Asn1Object::from(time).into()
+        }
+        Some(AttributeType::X500_UNIQUE_IDENTIFIER | AttributeType::POSTAL_ADDRESS) => {
+            return Err(Asn1Error::MalformedValue);
+        }
+        _ => DirectoryString::new(text)?.into(),
+    })
 }
 
 fn parse_type(text: &str) -> Result<Asn1Oid, Asn1Error> {
@@ -201,7 +239,9 @@ mod tests {
     use alloc::string::ToString;
     use alloc::vec::Vec;
 
-    use tc_asn1::{Asn1Error, Asn1Ia5String, Asn1Integer, Asn1Object, NamedOid};
+    use tc_asn1::{
+        Asn1Error, Asn1GeneralizedTime, Asn1Ia5String, Asn1Integer, Asn1Object, NamedOid,
+    };
 
     use crate::{
         AttributeType, AttributeTypeAndValue, AttributeValue, DirectoryString, Name,
@@ -313,6 +353,72 @@ mod tests {
             parse("CN=Caf\u{e9}").rdns()[0].attributes()[0].value(),
             AttributeValue::DirectoryString(DirectoryString::Utf8String(_))
         ));
+    }
+
+    #[test]
+    fn printable_string_types_take_printable_text_and_refuse_the_rest() {
+        for s in [
+            "C=TW",
+            "serialNumber=A123",
+            "dnQualifier=x",
+            r"telephoneNumber=\+886 2 1234 5678",
+            "gender=F",
+            "countryOfCitizenship=TW",
+            "countryOfResidence=TW",
+            "jurisdictionCountryName=TW",
+        ] {
+            assert!(
+                matches!(
+                    parse(s).rdns()[0].attributes()[0].value(),
+                    AttributeValue::DirectoryString(DirectoryString::PrintableString(_))
+                ),
+                "{s}"
+            );
+        }
+        // A DirectoryString type falls back to UTF8String; these do not.
+        for s in ["C=T\u{e9}", "serialNumber=a@b", "gender="] {
+            assert!(
+                matches!(s.parse::<Name>(), Err(Asn1Error::MalformedValue)),
+                "{s}"
+            );
+        }
+    }
+
+    #[test]
+    fn date_of_birth_text_becomes_a_generalized_time() {
+        let name = parse("dateOfBirth=19800101120000Z");
+        let time = Asn1GeneralizedTime::new(1980, 1, 1, 12, 0, 0).unwrap();
+        assert_eq!(
+            name.rdns()[0],
+            single(AttributeType::DATE_OF_BIRTH, Asn1Object::from(time))
+        );
+        // No text form on output: it prints as the hex of its DER, which
+        // parses back to the same name.
+        let printed = name.to_string();
+        assert_eq!(printed, "dateOfBirth=#180f31393830303130313132303030305a");
+        assert_eq!(parse(&printed), name);
+        for s in ["dateOfBirth=1980-01-01", "dateOfBirth=19800101"] {
+            assert!(
+                matches!(s.parse::<Name>(), Err(Asn1Error::MalformedValue)),
+                "{s}"
+            );
+        }
+    }
+
+    #[test]
+    fn types_without_a_text_form_accept_only_the_hash_form() {
+        for s in ["x500UniqueIdentifier=abc", "postalAddress=1 Main St"] {
+            assert!(
+                matches!(s.parse::<Name>(), Err(Asn1Error::MalformedValue)),
+                "{s}"
+            );
+        }
+        let name = parse("x500UniqueIdentifier=#030200ff");
+        assert!(matches!(
+            name.rdns()[0].attributes()[0].value(),
+            AttributeValue::Other(_)
+        ));
+        assert_eq!(name.to_string(), "x500UniqueIdentifier=#030200ff");
     }
 
     #[test]
