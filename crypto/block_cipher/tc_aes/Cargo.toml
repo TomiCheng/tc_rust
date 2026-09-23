@@ -1,5 +1,5 @@
 [package]
-name = "tc_aes"
+name = "tc_aes_old"
 description = "AES block cipher implementation for the tc_rust workspace."
 version = "0.1.0"
 edition.workspace = true

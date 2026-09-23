@@ -8,7 +8,7 @@
 //! engines compute the same function.
 //!
 //! ```
-//! use tc_aes::{AesEngine, BLOCK_BYTES};
+//! use tc_aes_old::{AesEngine, BLOCK_BYTES};
 //! use tc_cipher::{BlockCipher, BlockCipherInit, CipherDirection};
 //! use tc_params::KeyRef;
 //!

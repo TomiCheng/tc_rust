@@ -18,4 +18,4 @@ tc_macs = { version = "0.1", path = "../../tc_macs" }
 tc_params = { version = "0.1", path = "../../tc_params" }
 
 [dev-dependencies]
-tc_aes = { version = "0.1", path = "../../block_cipher/tc_aes" }
+tc_aes = { package = "tc_aes_old", version = "0.1", path = "../../block_cipher/tc_aes" }

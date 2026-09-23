@@ -1,4 +1,4 @@
-use tc_aes::{AesEngine, AesLightEngine, BLOCK_BYTES, KEY_BYTES};
+use tc_aes_old::{AesEngine, AesLightEngine, BLOCK_BYTES, KEY_BYTES};
 use tc_cipher::{BlockCipher, BlockCipherInit, BlockError, CipherDirection, InitError};
 use tc_crypto::AlgorithmName;
 use tc_params::KeyRef;

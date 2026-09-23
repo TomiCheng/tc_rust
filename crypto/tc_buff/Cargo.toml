@@ -12,7 +12,7 @@ tc_crypto = { version = "0.1", path = "../tc_crypto" }
 tc_ecb = { version = "0.1", path = "../block_modes/tc_ecb" }
 
 [dev-dependencies]
-tc_aes = { version = "0.1", path = "../block_cipher/tc_aes" }
+tc_aes = { package = "tc_aes_old", version = "0.1", path = "../block_cipher/tc_aes" }
 tc_ascon_aead = { version = "0.1", path = "../aead_cipher/tc_ascon_aead" }
 tc_ccm = { version = "0.1", path = "../aead_cipher/tc_ccm" }
 tc_cfb = { version = "0.1", path = "../block_modes/tc_cfb" }

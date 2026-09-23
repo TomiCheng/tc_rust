@@ -36,7 +36,7 @@ them with compatible crates.io versions.
 
 ```toml
 [dependencies]
-tc_aes = { version = "0.1", path = "crypto/block_cipher/tc_aes" }
+tc_aes = { package = "tc_aes_old", version = "0.1", path = "crypto/block_cipher/tc_aes" }
 tc_cipher = { version = "0.1", path = "crypto/tc_cipher" }
 tc_params = { version = "0.1", path = "crypto/tc_params" }
 ```
@@ -168,8 +168,8 @@ rerun the benchmark on the target system before making a performance decision.
 Build or test an individual algorithm crate:
 
 ```bash
-cargo build -p tc_aes --locked
-cargo test -p tc_aes --locked
+cargo build -p tc_aes_old --locked
+cargo test -p tc_aes_old --locked
 ```
 
 Validate all block cipher crates through the workspace:
@@ -183,15 +183,15 @@ Tests link the Rust standard test harness, but the libraries remain `no_std`.
 Additional validation for a selected crate:
 
 ```bash
-cargo clippy -p tc_aes --all-targets --locked -- -D warnings
-cargo rustdoc -p tc_aes --locked -- -D warnings
+cargo clippy -p tc_aes_old --all-targets --locked -- -D warnings
+cargo rustdoc -p tc_aes_old --locked -- -D warnings
 ```
 
 Run the AES benchmarks with:
 
 ```bash
-cargo bench -p tc_aes --bench aes --locked
-cargo bench -p tc_aes --bench aes --features force-portable-aes --locked
+cargo bench -p tc_aes_old --bench aes --locked
+cargo bench -p tc_aes_old --bench aes --features force-portable-aes --locked
 ```
 
 The first command measures the automatically selected `AesEngine` backend;

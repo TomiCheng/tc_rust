@@ -623,7 +623,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "tc_aes"
+name = "tc_aes_old"
 version = "0.1.0"
 dependencies = [
  "criterion",
@@ -760,7 +760,7 @@ dependencies = [
 name = "tc_buff"
 version = "0.1.0"
 dependencies = [
- "tc_aes",
+ "tc_aes_old",
  "tc_ascon_aead",
  "tc_ccm",
  "tc_cfb",
@@ -793,7 +793,7 @@ dependencies = [
 name = "tc_cbc"
 version = "0.1.0"
 dependencies = [
- "tc_aes",
+ "tc_aes_old",
  "tc_cipher",
  "tc_crypto",
  "tc_des",
@@ -818,7 +818,7 @@ dependencies = [
 name = "tc_ccm"
 version = "0.1.0"
 dependencies = [
- "tc_aes",
+ "tc_aes_old",
  "tc_cipher",
  "tc_constant_time",
  "tc_crypto",
@@ -829,7 +829,7 @@ dependencies = [
 name = "tc_cfb"
 version = "0.1.0"
 dependencies = [
- "tc_aes",
+ "tc_aes_old",
  "tc_cipher",
  "tc_crypto",
  "tc_params",
@@ -877,7 +877,7 @@ version = "0.1.0"
 name = "tc_cmac"
 version = "0.1.0"
 dependencies = [
- "tc_aes",
+ "tc_aes_old",
  "tc_cipher",
  "tc_crypto",
  "tc_des",
@@ -901,7 +901,7 @@ version = "0.1.0"
 name = "tc_ctr"
 version = "0.1.0"
 dependencies = [
- "tc_aes",
+ "tc_aes_old",
  "tc_cipher",
  "tc_crypto",
  "tc_dstu7624",
@@ -948,7 +948,7 @@ name = "tc_drbg"
 version = "0.1.0"
 dependencies = [
  "rand_core",
- "tc_aes",
+ "tc_aes_old",
  "tc_cipher",
  "tc_digest",
  "tc_hmac",
@@ -1000,7 +1000,7 @@ dependencies = [
 name = "tc_eax"
 version = "0.1.0"
 dependencies = [
- "tc_aes",
+ "tc_aes_old",
  "tc_cipher",
  "tc_constant_time",
  "tc_crypto",
@@ -1018,7 +1018,7 @@ dependencies = [
 name = "tc_ecb"
 version = "0.1.0"
 dependencies = [
- "tc_aes",
+ "tc_aes_old",
  "tc_cipher",
  "tc_crypto",
  "tc_params",
@@ -1126,7 +1126,7 @@ dependencies = [
 name = "tc_gcm"
 version = "0.1.0"
 dependencies = [
- "tc_aes",
+ "tc_aes_old",
  "tc_cipher",
  "tc_constant_time",
  "tc_crypto",
@@ -1137,7 +1137,7 @@ dependencies = [
 name = "tc_gcm_siv"
 version = "0.1.0"
 dependencies = [
- "tc_aes",
+ "tc_aes_old",
  "tc_cipher",
  "tc_constant_time",
  "tc_crypto",
@@ -1148,7 +1148,7 @@ dependencies = [
 name = "tc_gmac"
 version = "0.1.0"
 dependencies = [
- "tc_aes",
+ "tc_aes_old",
  "tc_cipher",
  "tc_crypto",
  "tc_gcm",
@@ -1328,7 +1328,7 @@ dependencies = [
 name = "tc_ocb"
 version = "0.1.0"
 dependencies = [
- "tc_aes",
+ "tc_aes_old",
  "tc_cipher",
  "tc_constant_time",
  "tc_crypto",
@@ -1339,7 +1339,7 @@ dependencies = [
 name = "tc_ofb"
 version = "0.1.0"
 dependencies = [
- "tc_aes",
+ "tc_aes_old",
  "tc_cipher",
  "tc_crypto",
  "tc_gost28147",
@@ -1444,7 +1444,7 @@ name = "tc_rfc3211"
 version = "0.1.0"
 dependencies = [
  "rand_core",
- "tc_aes",
+ "tc_aes_old",
  "tc_aria",
  "tc_cipher",
  "tc_crypto",
@@ -1456,7 +1456,7 @@ dependencies = [
 name = "tc_rfc3394"
 version = "0.1.0"
 dependencies = [
- "tc_aes",
+ "tc_aes_old",
  "tc_cipher",
  "tc_constant_time",
  "tc_crypto",
@@ -1467,7 +1467,7 @@ dependencies = [
 name = "tc_rfc5649"
 version = "0.1.0"
 dependencies = [
- "tc_aes",
+ "tc_aes_old",
  "tc_aria",
  "tc_cipher",
  "tc_constant_time",
