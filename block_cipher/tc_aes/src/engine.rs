@@ -42,6 +42,14 @@ pub struct AesEngine {
     inner: Inner,
 }
 
+impl core::fmt::Display for AesEngine {
+    /// Writes the algorithm name without inspecting key material.
+    /// Constant time with respect to the key; output timing depends on the formatter.
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.write_str(crate::ALGO_NAME)
+    }
+}
+
 impl AesEngine {
     /// Picks the engine once, from the feature and the processor. Branches
     /// only on those public facts.

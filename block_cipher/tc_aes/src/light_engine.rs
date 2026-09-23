@@ -199,6 +199,14 @@ pub struct AesLightEngine {
     initialised: bool,
 }
 
+impl core::fmt::Display for AesLightEngine {
+    /// Writes the algorithm name without inspecting key material.
+    /// Constant time with respect to the key; output timing depends on the formatter.
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.write_str(crate::ALGO_NAME)
+    }
+}
+
 impl AesLightEngine {
     /// An engine without a key; `init` must come before `process_block`.
     /// Constant time.

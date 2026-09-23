@@ -162,6 +162,14 @@ pub struct AesX86Engine {
     initialised: bool,
 }
 
+impl core::fmt::Display for AesX86Engine {
+    /// Writes the algorithm name without inspecting key material.
+    /// Constant time with respect to the key; output timing depends on the formatter.
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.write_str(crate::ALGO_NAME)
+    }
+}
+
 impl AesX86Engine {
     /// An engine without a key, or `None` when the processor lacks AES-NI or
     /// `tc_runtime` has it disabled; `init` must come before `process_block`.

@@ -17,6 +17,8 @@ pub use table_engine::AesTableEngine;
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 pub use x86_engine::AesX86Engine;
 
+
+pub const ALGO_NAME: &str = "AES";
 /// AES block length in bytes (128 bits).
 pub const BLOCK_BYTES: usize = 16;
 /// Accepted key lengths in bytes (128, 192, and 256 bits).
