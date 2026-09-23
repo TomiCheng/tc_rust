@@ -1,47 +1,45 @@
-//! AES on the x86 AES-NI instructions.
+//! AES on the x86 AES-NI instructions. Only x86 and x86_64 targets have this
+//! engine.
 
 #[cfg(target_arch = "x86")]
 use core::arch::x86::{
-    __cpuid, __get_cpuid_max, __m128i, _mm_aesdec_si128, _mm_aesdeclast_si128, _mm_aesenc_si128,
-    _mm_aesenclast_si128, _mm_aesimc_si128, _mm_loadu_si128, _mm_storeu_si128, _mm_xor_si128,
+    __m128i, _mm_aesdec_si128, _mm_aesdeclast_si128, _mm_aesenc_si128, _mm_aesenclast_si128,
+    _mm_aesimc_si128, _mm_loadu_si128, _mm_storeu_si128, _mm_xor_si128,
 };
 #[cfg(target_arch = "x86_64")]
 use core::arch::x86_64::{
-    __cpuid, __get_cpuid_max, __m128i, _mm_aesdec_si128, _mm_aesdeclast_si128, _mm_aesenc_si128,
-    _mm_aesenclast_si128, _mm_aesimc_si128, _mm_loadu_si128, _mm_storeu_si128, _mm_xor_si128,
+    __m128i, _mm_aesdec_si128, _mm_aesdeclast_si128, _mm_aesenc_si128, _mm_aesenclast_si128,
+    _mm_aesimc_si128, _mm_loadu_si128, _mm_storeu_si128, _mm_xor_si128,
 };
 
 use tc_block_cipher::{
     BlockCipher, BlockCipherInit, BlockError, CipherDirection, InitError, KeyParams,
 };
+use tc_runtime::intrinsics::x86::{Aes, Sse2};
 use tc_zeroize::Zeroize;
 
 use crate::BLOCK_BYTES;
 use crate::common::{MAX_ROUND_KEYS, RoundKeys, expand_key, rounds_for};
 
-/// Proof that this processor has AES-NI and SSE2.
+/// Proof, from `tc_runtime`, that AES-NI and SSE2 are available and not
+/// disabled.
 ///
 /// Only [`AesNi::detect`] makes one, so code holding a token has established
 /// support and may call the intrinsics below; the `unsafe` stays in this file.
 #[derive(Clone, Copy)]
-struct AesNi(());
+struct AesNi {
+    _aes: Aes,
+    _sse2: Sse2,
+}
 
 impl AesNi {
-    /// Reads CPUID directly: `is_x86_feature_detected!` needs `std`, while the
-    /// CPUID intrinsics are in `core`. Branches only on the processor's
-    /// capabilities.
-    #[allow(unused_unsafe)] // The CPUID intrinsics are unsafe on the Rust 1.85 MSRV.
+    /// Branches only on the processor's capabilities, which `tc_runtime`
+    /// caches.
     fn detect() -> Option<Self> {
-        // SAFETY: CPUID exists on every x86 target Rust supports, and the
-        // maximum-leaf check guards leaf 1. The queries touch no memory.
-        let supported = unsafe {
-            __get_cpuid_max(0).0 >= 1 && {
-                let leaf1 = __cpuid(1);
-                // Leaf 1: ECX bit 25 is AES-NI, EDX bit 26 is SSE2.
-                leaf1.ecx & (1 << 25) != 0 && leaf1.edx & (1 << 26) != 0
-            }
-        };
-        supported.then_some(Self(()))
+        Some(Self {
+            _aes: Aes::detect()?,
+            _sse2: Sse2::detect()?,
+        })
     }
 
     fn prepare_decryption_keys(self, round_keys: &mut RoundKeys, rounds: usize) {
@@ -144,12 +142,18 @@ unsafe fn decrypt_block(
     }
 }
 
-/// AES on the AES-NI instructions, available where the processor has them.
+/// AES on the AES-NI instructions, where the processor has them.
 ///
 /// Constant time: the rounds are single instructions whose timing does not
 /// depend on their operands, and the key schedule computes the S-box rather
 /// than looking it up. The round keys are wiped on drop, but copies left in
 /// registers or on the stack are not.
+///
+/// Detection goes through `tc_runtime`, so its `disable-x86-aes-ni` and
+/// `disable-x86-sse2` features, or with its `std` feature the matching
+/// `TC_DISABLE_X86_*` environment variables, make [`new`](Self::new) return
+/// `None`. Those features apply to the whole build once any crate turns them
+/// on.
 pub struct AesX86Engine {
     token: AesNi,
     round_keys: RoundKeys,
@@ -159,9 +163,9 @@ pub struct AesX86Engine {
 }
 
 impl AesX86Engine {
-    /// An engine without a key, or `None` when the processor lacks AES-NI;
-    /// `init` must come before `process_block`. Branches only on the
-    /// processor's capabilities.
+    /// An engine without a key, or `None` when the processor lacks AES-NI or
+    /// `tc_runtime` has it disabled; `init` must come before `process_block`.
+    /// Branches only on those public facts.
     pub fn new() -> Option<Self> {
         AesNi::detect().map(|token| Self {
             token,
@@ -172,8 +176,7 @@ impl AesX86Engine {
         })
     }
 
-    /// Whether this processor has AES-NI, that is, whether [`new`](Self::new)
-    /// returns an engine.
+    /// Whether [`new`](Self::new) returns an engine.
     pub fn is_supported() -> bool {
         AesNi::detect().is_some()
     }

@@ -33,6 +33,11 @@ enum Inner {
 ///
 /// The type and its API are the same under every configuration; only the
 /// engine inside changes.
+///
+/// Without the feature the choice also depends on `tc_runtime`: its
+/// `disable-x86-aes-ni` and `disable-x86-sse2` features, which any crate in
+/// the build can turn on for all of it, send `AesEngine` to the table
+/// engine as well.
 pub struct AesEngine {
     inner: Inner,
 }

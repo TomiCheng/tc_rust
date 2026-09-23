@@ -13,3 +13,6 @@ rustcrypto = ["dep:aes", "aes/zeroize"]
 tc_block_cipher = { path = "../tc_block_cipher" }
 tc_zeroize = "0.1.0"
 aes = { version = "0.9", optional = true }
+
+[target.'cfg(any(target_arch = "x86", target_arch = "x86_64"))'.dependencies]
+tc_runtime = "0.1.0"
