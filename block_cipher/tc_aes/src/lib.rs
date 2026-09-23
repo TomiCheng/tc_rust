@@ -4,10 +4,12 @@ mod common;
 mod light_engine;
 #[cfg(feature = "rustcrypto")]
 mod rustcrypto_engine;
+mod table_engine;
 
 pub use light_engine::AesLightEngine;
 #[cfg(feature = "rustcrypto")]
 pub use rustcrypto_engine::AesRustCryptoEngine;
+pub use table_engine::AesTableEngine;
 
 /// AES block length in bytes (128 bits).
 pub const BLOCK_BYTES: usize = 16;

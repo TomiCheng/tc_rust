@@ -285,27 +285,27 @@ mod tests {
 
     #[test]
     fn fips_197_vectors_encrypt_and_decrypt_under_every_key_size() {
-        support::check_fips_197::<AesLightEngine>();
+        support::check_fips_197(AesLightEngine::new);
     }
 
     #[test]
     fn processing_before_init_is_rejected() {
-        support::check_uninitialised::<AesLightEngine>();
+        support::check_uninitialised(AesLightEngine::new);
     }
 
     #[test]
     fn short_buffers_are_rejected_and_longer_ones_get_exactly_one_block() {
-        support::check_buffers::<AesLightEngine>();
+        support::check_buffers(AesLightEngine::new);
     }
 
     #[test]
     fn a_rejected_key_length_keeps_the_previous_key() {
-        support::check_rejected_key::<AesLightEngine>();
+        support::check_rejected_key(AesLightEngine::new);
     }
 
     #[cfg(feature = "rustcrypto")]
     #[test]
     fn the_light_engine_agrees_with_rustcrypto_on_pseudorandom_keys_and_blocks() {
-        support::check_against_rustcrypto::<AesLightEngine>();
+        support::check_against_rustcrypto(AesLightEngine::new);
     }
 }

@@ -101,21 +101,21 @@ mod tests {
 
     #[test]
     fn fips_197_vectors_encrypt_and_decrypt_under_every_key_size() {
-        support::check_fips_197::<AesRustCryptoEngine>();
+        support::check_fips_197(AesRustCryptoEngine::new);
     }
 
     #[test]
     fn processing_before_init_is_rejected() {
-        support::check_uninitialised::<AesRustCryptoEngine>();
+        support::check_uninitialised(AesRustCryptoEngine::new);
     }
 
     #[test]
     fn short_buffers_are_rejected_and_longer_ones_get_exactly_one_block() {
-        support::check_buffers::<AesRustCryptoEngine>();
+        support::check_buffers(AesRustCryptoEngine::new);
     }
 
     #[test]
     fn a_rejected_key_length_keeps_the_previous_key() {
-        support::check_rejected_key::<AesRustCryptoEngine>();
+        support::check_rejected_key(AesRustCryptoEngine::new);
     }
 }
