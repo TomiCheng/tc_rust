@@ -34,10 +34,22 @@ enum Inner {
 /// The type and its API are the same under every configuration; only the
 /// engine inside changes.
 ///
-/// Without the feature the choice also depends on `tc_runtime`: its
-/// `disable-x86-aes-ni` and `disable-x86-sse2` features, which any crate in
-/// the build can turn on for all of it, send `AesEngine` to the table
-/// engine as well.
+/// # Example
+///
+/// Call `init` again to install a new key or change direction.
+///
+/// ```
+/// use tc_aes::AesEngine;
+/// use tc_block_cipher::{BlockCipher, BlockCipherInit, CipherDirection, KeyRef};
+///
+/// let mut engine = AesEngine::new();
+/// let key = [0x42; 32];
+/// engine.init(CipherDirection::Encrypt, &KeyRef::new(&key))?;
+/// let mut output = [0; 16];
+/// assert_eq!(engine.process_block(&[0; 16], &mut output)?, 16);
+/// assert_eq!(engine.to_string(), "AES");
+/// # Ok::<(), Box<dyn core::error::Error>>(())
+/// ```
 pub struct AesEngine {
     inner: Inner,
 }

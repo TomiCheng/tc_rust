@@ -7,7 +7,7 @@
 //! Setup benchmarks reinitialise an existing engine, including replacement
 //! of its old schedule; construction and final drop are outside the timing.
 //! Block benchmarks exclude key setup and report bytes per second. Backend
-//! labels follow the library's feature and tc_runtime detection, not raw CPUID.
+//! labels follow the library's backend selection and availability checks.
 //! These are performance measurements, not constant-time verification.
 
 use std::{hint::black_box, time::Duration};

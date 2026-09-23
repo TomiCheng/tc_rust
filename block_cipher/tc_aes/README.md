@@ -42,7 +42,7 @@ backend; this benchmark does not report that internal selection.
 - `AesTableEngine` and `AesLightEngine` use secret-dependent table lookups and
   are variable time. Light trades smaller lookup tables for lower speed here.
 - `AesEngine` chooses RustCrypto when the `rustcrypto` feature is enabled.
-  Otherwise it chooses AES-NI when available and enabled through `tc_runtime`,
+  Otherwise it chooses AES-NI when available,
   falling back to Table. Its default configuration therefore does not guarantee
   constant-time processing on every host.
 

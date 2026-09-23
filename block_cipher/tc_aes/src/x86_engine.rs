@@ -149,11 +149,28 @@ unsafe fn decrypt_block(
 /// than looking it up. The round keys are wiped on drop, but copies left in
 /// registers or on the stack are not.
 ///
-/// Detection goes through `tc_runtime`, so its `disable-x86-aes-ni` and
-/// `disable-x86-sse2` features, or with its `std` feature the matching
-/// `TC_DISABLE_X86_*` environment variables, make [`new`](Self::new) return
-/// `None`. Those features apply to the whole build once any crate turns them
-/// on.
+/// Use [`new`](Self::new) to check availability and construct an engine.
+/// It returns `None` when this backend is unavailable.
+///
+/// # Example
+///
+/// Handle unavailable or disabled AES-NI explicitly.
+///
+/// ```
+/// use tc_aes::AesX86Engine;
+/// use tc_block_cipher::{BlockCipher, BlockCipherInit, CipherDirection, KeyRef};
+///
+/// let Some(mut engine) = AesX86Engine::new() else {
+///     // Let the caller choose a fallback or report unsupported hardware.
+///     return Ok(());
+/// };
+/// let key = [0x42; 32];
+/// engine.init(CipherDirection::Encrypt, &KeyRef::new(&key))?;
+/// let mut output = [0; 16];
+/// assert_eq!(engine.process_block(&[0; 16], &mut output)?, 16);
+/// assert_eq!(engine.to_string(), "AES");
+/// # Ok::<(), Box<dyn core::error::Error>>(())
+/// ```
 pub struct AesX86Engine {
     token: AesNi,
     round_keys: RoundKeys,
@@ -171,8 +188,8 @@ impl core::fmt::Display for AesX86Engine {
 }
 
 impl AesX86Engine {
-    /// An engine without a key, or `None` when the processor lacks AES-NI or
-    /// `tc_runtime` has it disabled; `init` must come before `process_block`.
+    /// An engine without a key, or `None` when this backend is unavailable;
+    /// `init` must come before `process_block`.
     /// Branches only on those public facts.
     pub fn new() -> Option<Self> {
         AesNi::detect().map(|token| Self {

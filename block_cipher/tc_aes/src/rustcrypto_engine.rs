@@ -18,6 +18,23 @@ enum Cipher {
 /// ARMv8 at runtime and otherwise a bitsliced software implementation with
 /// no table lookups. Constant time on every backend; its round keys are wiped
 /// on drop.
+///
+/// # Example
+///
+/// Requires the `rustcrypto` Cargo feature; bypasses the automatic dispatcher.
+///
+/// ```
+/// use tc_aes::AesRustCryptoEngine;
+/// use tc_block_cipher::{BlockCipher, BlockCipherInit, CipherDirection, KeyRef};
+///
+/// let mut engine = AesRustCryptoEngine::new();
+/// let key = [0x42; 32];
+/// engine.init(CipherDirection::Encrypt, &KeyRef::new(&key))?;
+/// let mut output = [0; 16];
+/// assert_eq!(engine.process_block(&[0; 16], &mut output)?, 16);
+/// assert_eq!(engine.to_string(), "AES");
+/// # Ok::<(), Box<dyn core::error::Error>>(())
+/// ```
 pub struct AesRustCryptoEngine {
     cipher: Option<Cipher>,
     direction: CipherDirection,

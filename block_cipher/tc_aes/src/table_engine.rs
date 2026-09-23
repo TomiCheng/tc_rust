@@ -198,6 +198,23 @@ fn decrypt_block(
 /// `AesRustCryptoEngine` and `AesX86Engine` are constant time. The key
 /// schedule itself is constant time. The round keys are wiped on drop, but
 /// copies left in registers or on the stack are not.
+///
+/// # Example
+///
+/// Choose this engine only when its cache-timing leakage is acceptable.
+///
+/// ```
+/// use tc_aes::AesTableEngine;
+/// use tc_block_cipher::{BlockCipher, BlockCipherInit, CipherDirection, KeyRef};
+///
+/// let mut engine = AesTableEngine::new();
+/// let key = [0x42; 32];
+/// engine.init(CipherDirection::Encrypt, &KeyRef::new(&key))?;
+/// let mut output = [0; 16];
+/// assert_eq!(engine.process_block(&[0; 16], &mut output)?, 16);
+/// assert_eq!(engine.to_string(), "AES");
+/// # Ok::<(), Box<dyn core::error::Error>>(())
+/// ```
 pub struct AesTableEngine {
     round_keys: RoundKeys,
     rounds: usize,

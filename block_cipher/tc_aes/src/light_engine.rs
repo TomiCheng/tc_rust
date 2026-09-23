@@ -192,6 +192,23 @@ fn decrypt_block(
 /// that side channel is out of scope; `AesRustCryptoEngine` and
 /// `AesX86Engine` are constant time. The working key is wiped on drop, but
 /// copies left on the stack while it is built are not.
+///
+/// # Example
+///
+/// Choose this engine for its smaller lookup tables, not constant-time processing.
+///
+/// ```
+/// use tc_aes::AesLightEngine;
+/// use tc_block_cipher::{BlockCipher, BlockCipherInit, CipherDirection, KeyRef};
+///
+/// let mut engine = AesLightEngine::new();
+/// let key = [0x42; 32];
+/// engine.init(CipherDirection::Encrypt, &KeyRef::new(&key))?;
+/// let mut output = [0; 16];
+/// assert_eq!(engine.process_block(&[0; 16], &mut output)?, 16);
+/// assert_eq!(engine.to_string(), "AES");
+/// # Ok::<(), Box<dyn core::error::Error>>(())
+/// ```
 pub struct AesLightEngine {
     working_key: WorkingKey,
     rounds: usize,
