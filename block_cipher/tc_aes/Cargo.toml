@@ -12,4 +12,4 @@ rustcrypto = ["dep:aes", "aes/zeroize"]
 [dependencies]
 tc_block_cipher = { path = "../tc_block_cipher" }
 tc_zeroize = "0.1.0"
-aes = { version = "0.9.3", optional = true }
+aes = { version = "0.9", optional = true }
