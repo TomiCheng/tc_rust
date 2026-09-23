@@ -623,6 +623,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_aes"
+version = "0.1.0"
+dependencies = [
+ "aes",
+ "tc_block_cipher",
+ "tc_zeroize",
+]
+
+[[package]]
 name = "tc_aes_old"
 version = "0.1.0"
 dependencies = [
@@ -630,15 +639,6 @@ dependencies = [
  "tc_cipher",
  "tc_crypto",
  "tc_params",
-]
-
-[[package]]
-name = "tc_aes_v2"
-version = "0.1.0"
-dependencies = [
- "aes",
- "tc_block_cipher",
- "tc_zeroize",
 ]
 
 [[package]]
