@@ -15,7 +15,6 @@
 //! octets because its character set (T.61 with escape sequences) is not
 //! reliably decodable, and in practice such fields often hold Latin-1 anyway.
 
-use alloc::string::String;
 use core::fmt;
 
 use tc_asn1::{
@@ -23,6 +22,8 @@ use tc_asn1::{
     Asn1Utf8String, Decode, DecodeInner, DecodingContext, Encode, EncodeContent, EncodeTagged,
     EncodingOptions, tag,
 };
+
+use crate::string_prep::text_equivalent;
 
 /// The string CHOICE used for most `Name` attribute values.
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
@@ -60,15 +61,18 @@ impl DirectoryString {
         }
     }
 
-    /// Compares text regardless of string type, after lowercasing, trimming
-    /// leading and trailing whitespace, and collapsing internal whitespace
-    /// to single spaces. This approximates the name comparison in RFC 5280
-    /// §7.1; full Unicode case folding and normalization are not applied.
-    /// TeletexStrings are compared as octets and never match another alternative.
+    /// Compares text regardless of string type after the RFC 4518 string
+    /// preparation that RFC 5280 §7.1 asks for: case is ignored, invisible
+    /// characters are dropped, and runs of whitespace count as one space,
+    /// none at either end. NFKC normalization and full Unicode case folding
+    /// are not applied, so a precomposed and a decomposed accent differ.
+    /// Text with a code point the preparation prohibits (private use,
+    /// noncharacters, U+FFFD) matches only identical text. TeletexStrings
+    /// are compared as octets and never match another alternative.
     /// Variable time; for public values.
     pub fn equivalent(&self, other: &Self) -> bool {
         match (self.as_str(), other.as_str()) {
-            (Some(a), Some(b)) => canonical_text(a) == canonical_text(b),
+            (Some(a), Some(b)) => text_equivalent(a, b),
             _ => self == other,
         }
     }
@@ -80,21 +84,6 @@ impl DirectoryString {
             Ok(value)
         }
     }
-}
-
-/// The text lowercased with leading, trailing and repeated whitespace
-/// removed: an approximation of the RFC 4518 string preparation that
-/// RFC 5280 §7.1 asks for when comparing names. Unicode case folding and
-/// normalization beyond `str::to_lowercase` are not applied.
-pub(crate) fn canonical_text(text: &str) -> String {
-    let mut out = String::new();
-    for word in text.split_whitespace() {
-        if !out.is_empty() {
-            out.push(' ');
-        }
-        out.push_str(&word.to_lowercase());
-    }
-    out
 }
 
 /// The text, or the TeletexString octets as `\xNN` escapes.

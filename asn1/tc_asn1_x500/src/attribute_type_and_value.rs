@@ -20,7 +20,7 @@ use tc_asn1::{
 };
 
 use crate::DirectoryString;
-use crate::directory_string::canonical_text;
+use crate::string_prep::text_equivalent;
 
 /// The value of an attribute, classified by its identifier.
 #[non_exhaustive]
@@ -37,14 +37,12 @@ pub enum AttributeValue {
 
 impl AttributeValue {
     /// RFC 5280 §7.1 relaxed comparison: strings by [`DirectoryString::equivalent`],
-    /// IA5Strings ignoring case and extra whitespace, anything else by DER.
+    /// IA5Strings under the same string preparation, anything else by DER.
     /// Alternatives of different kinds never match. Variable time; for public values.
     pub fn equivalent(&self, other: &Self) -> bool {
         match (self, other) {
             (Self::DirectoryString(a), Self::DirectoryString(b)) => a.equivalent(b),
-            (Self::Ia5String(a), Self::Ia5String(b)) => {
-                canonical_text(a.as_str()) == canonical_text(b.as_str())
-            }
+            (Self::Ia5String(a), Self::Ia5String(b)) => text_equivalent(a.as_str(), b.as_str()),
             (Self::Other(a), Self::Other(b)) => a == b,
             _ => false,
         }

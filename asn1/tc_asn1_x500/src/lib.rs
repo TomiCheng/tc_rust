@@ -8,6 +8,7 @@ mod attribute_type_and_value;
 mod directory_string;
 mod name;
 mod relative_distinguished_name;
+mod string_prep;
 
 pub use attribute::Attribute;
 pub use attribute_type::AttributeType;
