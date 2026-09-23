@@ -1,0 +1,13 @@
+[package]
+name = "tc_aes_v2"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[features]
+rustcrypto = ["dep:aes", "aes/zeroize"]
+
+[dependencies]
+tc_block_cipher = { path = "../tc_block_cipher" }
+aes = { version = "0.9.3", optional = true }
