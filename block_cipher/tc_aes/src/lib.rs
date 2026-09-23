@@ -1,8 +1,11 @@
 #![no_std]
 
+mod common;
+mod light_engine;
 #[cfg(feature = "rustcrypto")]
 mod rustcrypto_engine;
 
+pub use light_engine::AesLightEngine;
 #[cfg(feature = "rustcrypto")]
 pub use rustcrypto_engine::AesRustCryptoEngine;
 
