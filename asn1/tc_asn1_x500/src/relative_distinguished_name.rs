@@ -97,10 +97,11 @@ impl RelativeDistinguishedName {
 }
 
 /// `type=value` pairs joined with `+`, in stored order, as in RFC 4514. A
-/// type is written by its short name when [`AttributeType`] knows it and as
-/// a dotted OID otherwise; text values are escaped as in §2.4 and any other
-/// value, TeletexString and empty DirectoryString included, is written as
-/// `#` followed by the hex of its DER. [`Name`](crate::Name) parses this form
+/// type [`AttributeType`] knows is written by its short name and a text
+/// value escaped as in §2.4. Anything else is written as `#` followed by the
+/// hex of the value's DER, as §2.4 requires or allows: every value of a type
+/// written as a dotted OID, a TeletexString, an empty DirectoryString, and
+/// any value that is not a string. [`Name`](crate::Name) parses this form
 /// back.
 impl fmt::Display for RelativeDistinguishedName {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -108,10 +109,13 @@ impl fmt::Display for RelativeDistinguishedName {
             if i > 0 {
                 f.write_str("+")?;
             }
-            match AttributeType::from_oid(attribute.attribute_type()) {
-                Some(known) => write!(f, "{known}=")?,
-                None => write!(f, "{}=", attribute.attribute_type())?,
-            }
+            let Some(known) = AttributeType::from_oid(attribute.attribute_type()) else {
+                // §2.4: a type in dotted form always takes the `#` form.
+                write!(f, "{}=", attribute.attribute_type())?;
+                write_hex(f, attribute.value())?;
+                continue;
+            };
+            write!(f, "{known}=")?;
             match attribute.value() {
                 AttributeValue::DirectoryString(s) => match s.as_str() {
                     Some(text) if !text.is_empty() => write_escaped(f, text),
@@ -375,5 +379,29 @@ mod tests {
             Asn1Object::from(Asn1Integer::from(42)),
         ));
         assert_eq!(rdn.to_string(), "1.2.3.4=#02012a");
+    }
+
+    #[test]
+    fn display_hex_encodes_every_value_of_an_unknown_type_and_empty_strings() {
+        use tc_asn1::Asn1Utf8String;
+
+        use crate::Name;
+
+        let unknown = RelativeDistinguishedName::single(AttributeTypeAndValue::new(
+            "1.2.3.4".parse().unwrap(),
+            DirectoryString::Utf8String(Asn1Utf8String::new("foo")),
+        ));
+        let (_, empty) = RelativeDistinguishedName::decode(
+            b"\x31\x09\x30\x07\x06\x03\x55\x04\x03\x13\x00",
+            &options(),
+        )
+        .unwrap();
+        for (rdn, text) in [(unknown, "1.2.3.4=#0c03666f6f"), (empty, "CN=#1300")] {
+            assert_eq!(rdn.to_string(), text);
+            // The # form keeps the string type, so the text parses back to
+            // the same DER.
+            let name: Name = text.parse().unwrap();
+            assert_eq!(name.rdns(), [rdn]);
+        }
     }
 }
