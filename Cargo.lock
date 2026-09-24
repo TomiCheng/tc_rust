@@ -670,6 +670,7 @@ name = "tc_aria"
 version = "0.1.0"
 dependencies = [
  "aria",
+ "criterion",
  "tc_block_cipher",
  "tc_zeroize",
 ]

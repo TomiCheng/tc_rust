@@ -13,3 +13,10 @@ rustcrypto = ["dep:aria", "aria/zeroize"]
 tc_block_cipher = { path = "../tc_block_cipher" }
 tc_zeroize = "0.1.0"
 aria = { version = "0.2", optional = true }
+
+[dev-dependencies]
+criterion.workspace = true
+
+[[bench]]
+name = "aria"
+harness = false
