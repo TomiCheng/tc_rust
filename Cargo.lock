@@ -146,8 +146,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "65c35e4b699c7e15ccbe7ee35c005e4fc0a278d22238a2857e6ce2dadeda1b06"
 dependencies = [
  "cfg-if",
+ "cipher",
  "cpufeatures",
  "rand_core",
+ "zeroize",
 ]
 
 [[package]]
@@ -1011,6 +1013,15 @@ dependencies = [
  "tc_macs",
  "tc_params",
  "tc_poly1305",
+]
+
+[[package]]
+name = "tc_chacha_v2"
+version = "0.1.0"
+dependencies = [
+ "chacha20",
+ "cipher",
+ "tc_stream_cipher",
 ]
 
 [[package]]
