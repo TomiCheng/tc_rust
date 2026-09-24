@@ -10,7 +10,8 @@ use crate::CipherDirection;
 /// Implementations with the same [`Error`](StreamCipher::Error) type can be
 /// stored together behind `dyn StreamCipher<Error = E>` after initialization.
 pub trait StreamCipher {
-    /// The failure type returned by initialization and stream processing.
+    /// The failure type returned by stream processing; initialization reports
+    /// through [`StreamCipherInit::Error`].
     type Error: core::error::Error;
 
     /// Encrypts or decrypts one byte and advances the keystream.

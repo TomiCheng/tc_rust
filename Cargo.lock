@@ -1894,6 +1894,9 @@ dependencies = [
 [[package]]
 name = "tc_stream_cipher"
 version = "0.1.0"
+dependencies = [
+ "tc_zeroize",
+]
 
 [[package]]
 name = "tc_tbc_pad"
