@@ -1,0 +1,15 @@
+[package]
+name = "tc_threefish_v2"
+description = "Threefish tweakable block ciphers for three block widths"
+version.workspace = true
+edition.workspace = true
+rust-version = "1.85"
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+tc_block_cipher = { path = "../tc_block_cipher" }
+tc_zeroize = "0.1.0"
+
+[dev-dependencies]
+threefish = "0.6"

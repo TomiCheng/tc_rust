@@ -1881,6 +1881,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_threefish_v2"
+version = "0.1.0"
+dependencies = [
+ "tc_block_cipher",
+ "tc_zeroize",
+ "threefish",
+]
+
+[[package]]
 name = "tc_tiger"
 version = "0.1.0"
 dependencies = [
@@ -1966,6 +1975,15 @@ name = "tc_zeroize"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9f496e361f9d75bd7cd0408dc585e9f334182314595ce27ea4852ab9c3858af1"
+
+[[package]]
+name = "threefish"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d01bb3253ac4d5c6c7dbb6f4f66a8178a24deefe0067357ace6482db2f3ccc6e"
+dependencies = [
+ "cipher",
+]
 
 [[package]]
 name = "tinytemplate"
