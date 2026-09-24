@@ -1782,6 +1782,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_tea_v2"
+version = "0.1.0"
+dependencies = [
+ "tc_block_cipher",
+ "tc_zeroize",
+ "xtea",
+]
+
+[[package]]
 name = "tc_threefish"
 version = "0.1.0"
 dependencies = [
@@ -2017,6 +2026,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ae137229bcbd6cdf0f7b80a31df61766145077ddf49416a728b02cb3921ff3fc"
 dependencies = [
  "windows-link",
+]
+
+[[package]]
+name = "xtea"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8f6d155751793947b57642656b5578b150f3f417696ce3cd8e9eaf62cb0d0362"
+dependencies = [
+ "cipher",
 ]
 
 [[package]]
