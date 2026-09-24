@@ -13,7 +13,6 @@ members = [
     "crypto/stream_cipher/*",
     "math/*",
     "block_cipher/*",
-    "stream_cipher/*",
 ]
 
 [workspace.package]
