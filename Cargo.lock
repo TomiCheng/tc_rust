@@ -1634,6 +1634,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_skipjack_v2"
+version = "0.1.0"
+dependencies = [
+ "tc_block_cipher",
+ "tc_zeroize",
+]
+
+[[package]]
 name = "tc_sm3"
 version = "0.1.0"
 dependencies = [

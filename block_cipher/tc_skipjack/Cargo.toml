@@ -1,0 +1,12 @@
+[package]
+name = "tc_skipjack_v2"
+description = "SKIPJACK single-block encryption with 80-bit keys."
+version.workspace = true
+edition.workspace = true
+rust-version = "1.85"
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+tc_block_cipher = { path = "../tc_block_cipher" }
+tc_zeroize = "0.1.0"
