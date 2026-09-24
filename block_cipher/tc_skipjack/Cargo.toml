@@ -8,5 +8,5 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
-tc_block_cipher = { path = "../tc_block_cipher" }
+tc_block_cipher = "0.1.0"
 tc_zeroize = "0.1.0"

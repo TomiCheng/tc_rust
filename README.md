@@ -165,7 +165,7 @@ cargo build -p tc_crypto -p tc_cipher -p tc_params -p tc_digest -p tc_macs --loc
 cargo build -p tc_chacha -p tc_hc -p tc_isaac -p tc_rc4 -p tc_salsa20 -p tc_vmpc --locked
 
 # Representative block-cipher crate (all family crates are no_std)
-cargo build -p tc_aes --locked
+cargo build -p tc_aria --locked
 
 # Block modes without alloc (fixed-size variants)
 cargo build -p tc_ecb --locked
@@ -188,7 +188,7 @@ configuration.
 Benchmarks are available in the algorithm crates:
 
 ```bash
-cargo bench -p tc_aes --bench aes
+cargo bench -p tc_aria --bench aria
 cargo bench -p tc_blake2
 cargo bench -p tc_bigint --bench integer_types
 ```
