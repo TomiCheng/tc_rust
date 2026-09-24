@@ -1675,6 +1675,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_rijndael_v2"
+version = "0.1.0"
+dependencies = [
+ "aes",
+ "tc_block_cipher",
+ "tc_zeroize",
+]
+
+[[package]]
 name = "tc_ripemd"
 version = "0.1.0"
 dependencies = [
