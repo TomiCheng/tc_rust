@@ -1352,6 +1352,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_gost28147_v2"
+version = "0.1.0"
+dependencies = [
+ "tc_block_cipher",
+ "tc_zeroize",
+]
+
+[[package]]
 name = "tc_gost3411"
 version = "0.1.0"
 dependencies = [

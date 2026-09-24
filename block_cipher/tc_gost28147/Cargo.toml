@@ -1,0 +1,12 @@
+[package]
+name = "tc_gost28147_v2"
+description = "GOST 28147-89 block cipher with configurable S-boxes"
+version.workspace = true
+edition.workspace = true
+rust-version = "1.85"
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+tc_block_cipher = { path = "../tc_block_cipher" }
+tc_zeroize = "0.1.0"
