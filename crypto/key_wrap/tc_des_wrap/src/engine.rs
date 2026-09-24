@@ -1,9 +1,8 @@
 //! CMS Triple-DES key-wrap engine.
 
 use rand_core::CryptoRng;
-use tc_cipher::{
-    BlockCipher, BlockCipherInit, CipherDirection, KeyWrap, KeyWrapInit, WrapDirection,
-};
+use tc_block_cipher::{BlockCipher, BlockCipherInit, CipherDirection, KeyRef};
+use tc_cipher::{KeyWrap, KeyWrapInit, WrapDirection};
 use tc_constant_time::fixed_time_eq;
 use tc_crypto::AlgorithmName;
 use tc_des::DesEdeEngine;
@@ -236,7 +235,7 @@ where
             }
         };
         self.cipher
-            .init(cipher_direction, params)
+            .init(cipher_direction, &KeyRef::new(params.key()))
             .map_err(DesEdeWrapInitError::Cipher)?;
         self.direction = Some(direction);
         Ok(())
