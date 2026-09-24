@@ -1,0 +1,8 @@
+[package]
+name = "tc_block_modes"
+description = "Block cipher modes of operation: ECB, CBC, CFB, OFB and CTR."
+version.workspace = true
+edition.workspace = true
+rust-version = "1.85"
+license.workspace = true
+repository.workspace = true
