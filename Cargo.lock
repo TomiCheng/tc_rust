@@ -1124,6 +1124,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_dstu7624_v2"
+version = "0.1.0"
+dependencies = [
+ "tc_block_cipher",
+ "tc_zeroize",
+]
+
+[[package]]
 name = "tc_dstu7624_wrap"
 version = "0.1.0"
 dependencies = [
