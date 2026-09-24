@@ -1771,6 +1771,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_twofish_v2"
+version = "0.1.0"
+dependencies = [
+ "tc_block_cipher",
+ "tc_zeroize",
+ "twofish",
+]
+
+[[package]]
 name = "tc_vmpc"
 version = "0.1.0"
 dependencies = [
@@ -1840,6 +1849,15 @@ checksum = "be4d6b5f19ff7664e8c98d03e2139cb510db9b0a60b55f8e8709b689d939b6bc"
 dependencies = [
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "twofish"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0218ef702a91e18ba84dd516edf8df33a9f9fb4431d6ada13e6f9502c3bcb6fc"
+dependencies = [
+ "cipher",
 ]
 
 [[package]]
