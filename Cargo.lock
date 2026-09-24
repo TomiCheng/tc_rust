@@ -585,6 +585,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "rc2"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ceda21af1ae61033b63175653a1af86cae399d79cd03ca80ba347eb3a6c4a7fe"
+dependencies = [
+ "cipher",
+]
+
+[[package]]
 name = "rc6"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1571,6 +1580,15 @@ dependencies = [
  "tc_cipher",
  "tc_crypto",
  "tc_params",
+]
+
+[[package]]
+name = "tc_rc2_v2"
+version = "0.1.0"
+dependencies = [
+ "rc2",
+ "tc_block_cipher",
+ "tc_zeroize",
 ]
 
 [[package]]

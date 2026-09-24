@@ -1,0 +1,15 @@
+[package]
+name = "tc_rc2_v2"
+description = "RC2 block cipher with configurable effective key size"
+version.workspace = true
+edition.workspace = true
+rust-version = "1.85"
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+tc_block_cipher = { path = "../tc_block_cipher" }
+tc_zeroize = "0.1.0"
+
+[dev-dependencies]
+rc2 = "0.9"
