@@ -1021,6 +1021,7 @@ version = "0.1.0"
 dependencies = [
  "chacha20",
  "cipher",
+ "criterion",
  "tc_stream_cipher",
  "tc_zeroize",
 ]
