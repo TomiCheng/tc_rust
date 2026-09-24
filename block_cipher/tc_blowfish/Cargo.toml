@@ -1,0 +1,15 @@
+[package]
+name = "tc_blowfish_v2"
+description = "Blowfish single-block encryption with 32- to 448-bit keys."
+version.workspace = true
+edition.workspace = true
+rust-version = "1.85"
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+tc_block_cipher = { path = "../tc_block_cipher" }
+tc_zeroize = "0.1.0"
+
+[dev-dependencies]
+blowfish = "0.10"
