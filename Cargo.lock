@@ -332,6 +332,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "idea"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "00a418f3a2a1cb2065869bf620a2fab8d8a9d931ce7c06003e1faf0f2e4f0227"
+dependencies = [
+ "cipher",
+]
+
+[[package]]
 name = "inout"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1262,6 +1271,15 @@ dependencies = [
  "tc_cipher",
  "tc_crypto",
  "tc_params",
+]
+
+[[package]]
+name = "tc_idea_v2"
+version = "0.1.0"
+dependencies = [
+ "idea",
+ "tc_block_cipher",
+ "tc_zeroize",
 ]
 
 [[package]]
