@@ -305,15 +305,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "des"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "916a94e407b54f9034d71dd748234cd1e516ced6284009906ae246f177eafe5a"
-dependencies = [
- "cipher",
-]
-
-[[package]]
 name = "either"
 version = "1.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1064,15 +1055,6 @@ dependencies = [
  "tc_cipher",
  "tc_crypto",
  "tc_params",
-]
-
-[[package]]
-name = "tc_des_v2"
-version = "0.1.0"
-dependencies = [
- "des",
- "tc_block_cipher",
- "tc_zeroize",
 ]
 
 [[package]]
