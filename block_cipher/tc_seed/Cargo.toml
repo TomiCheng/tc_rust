@@ -1,0 +1,12 @@
+[package]
+name = "tc_seed_v2"
+description = "SEED single-block encryption with 128-bit keys."
+version.workspace = true
+edition.workspace = true
+rust-version = "1.85"
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+tc_block_cipher = { path = "../tc_block_cipher" }
+tc_zeroize = "0.1.0"
