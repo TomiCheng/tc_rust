@@ -1,0 +1,15 @@
+[package]
+name = "tc_camellia_v2"
+description = "Camellia block ciphers with standard and small-footprint engines"
+version.workspace = true
+edition.workspace = true
+rust-version = "1.85"
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+tc_block_cipher = { path = "../tc_block_cipher" }
+tc_zeroize = "0.1.0"
+
+[dev-dependencies]
+camellia = "0.2"
