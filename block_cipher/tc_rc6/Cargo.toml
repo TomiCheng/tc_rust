@@ -12,4 +12,5 @@ tc_block_cipher = { path = "../tc_block_cipher" }
 tc_zeroize = "0.1.0"
 
 [dev-dependencies]
+cipher = "0.5"
 rc6 = "0.1"
