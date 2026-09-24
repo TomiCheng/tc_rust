@@ -4,7 +4,10 @@ use core::convert::Infallible;
 
 use rand_core::{TryCryptoRng, TryRng};
 use tc_aes::AesEngine;
-use tc_aria::AriaEngine;
+#[path = "support/aria.rs"]
+mod aria;
+
+use aria::AriaEngine;
 use tc_cipher::{KeyWrap, KeyWrapInit, WrapDirection};
 use tc_crypto::AlgorithmName;
 use tc_des::{DesEdeEngine, DesEngine};

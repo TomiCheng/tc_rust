@@ -1,6 +1,11 @@
 //! Portable ARIA key schedule and round functions.
 
-use crate::{BLOCK_BYTES, RoundKeys};
+use tc_zeroize::Zeroize;
+
+use crate::BLOCK_BYTES;
+
+pub(crate) const MAX_ROUND_KEYS: usize = 17;
+pub(crate) type RoundKeys = [[u8; BLOCK_BYTES]; MAX_ROUND_KEYS];
 
 const C: [[u8; BLOCK_BYTES]; 3] = [
     [
@@ -120,7 +125,7 @@ pub(super) fn key_schedule(for_encryption: bool, key: &[u8]) -> (RoundKeys, usiz
     xor(&mut w3, &w1);
 
     let rounds = 12 + key_len_index * 2;
-    let mut round_keys = [[0u8; BLOCK_BYTES]; 17];
+    let mut round_keys = [[0u8; BLOCK_BYTES]; MAX_ROUND_KEYS];
 
     round_keys[0] = key_schedule_round(&w0, &w1, 19);
     round_keys[1] = key_schedule_round(&w1, &w2, 19);
@@ -154,6 +159,10 @@ pub(super) fn key_schedule(for_encryption: bool, key: &[u8]) -> (RoundKeys, usiz
         }
     }
 
+    w0.zeroize();
+    w1.zeroize();
+    w2.zeroize();
+    w3.zeroize();
     (round_keys, rounds)
 }
 
@@ -181,6 +190,7 @@ pub(super) fn process_block(
     xor(&mut state, &round_keys[round]);
 
     *output = state;
+    state.zeroize();
 }
 
 fn key_schedule_round(

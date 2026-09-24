@@ -1,7 +1,10 @@
 //! RFC 5649 and independent ARIA known-answer tests.
 
 use tc_aes::AesEngine;
-use tc_aria::AriaEngine;
+#[path = "support/aria.rs"]
+mod aria;
+
+use aria::AriaEngine;
 use tc_cipher::{KeyWrap, KeyWrapInit, WrapDirection};
 use tc_params::{KeyParams, KeyWithIvRef, OptionalIvParams};
 use tc_rfc5649::{Rfc5649Error, Rfc5649WrapEngine};

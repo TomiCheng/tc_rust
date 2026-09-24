@@ -3,16 +3,19 @@
 mod common;
 
 use common::unhex;
-use tc_aria::{AriaEngine, BLOCK_BYTES};
-use tc_cipher::{BlockCipher, BlockCipherInit, CipherDirection};
-use tc_params::KeyRef;
+use tc_aria::{AriaEngine, AriaTableEngine, BLOCK_BYTES};
+use tc_block_cipher::{
+    BlockCipher, BlockCipherInit, BlockError, CipherDirection, InitError, KeyRef,
+};
 
-fn run_vector(key: &str, plaintext: &str, ciphertext: &str) {
+fn run_vector_with<E>(mut engine: E, key: &str, plaintext: &str, ciphertext: &str)
+where
+    E: BlockCipher<Error = BlockError> + for<'a> BlockCipherInit<KeyRef<'a>, Error = InitError>,
+{
     let key = unhex(key);
     let plaintext = unhex(plaintext);
     let ciphertext = unhex(ciphertext);
     let params = KeyRef::new(&key);
-    let mut engine = AriaEngine::new();
 
     engine.init(CipherDirection::Encrypt, &params).unwrap();
     let mut encrypted = [0u8; BLOCK_BYTES];
@@ -28,8 +31,20 @@ fn run_vector(key: &str, plaintext: &str, ciphertext: &str) {
     assert_eq!(recovered.as_slice(), plaintext);
 }
 
+fn run_vector(key: &str, plaintext: &str, ciphertext: &str) {
+    run_vector_with(AriaEngine::new(), key, plaintext, ciphertext);
+    run_vector_with(AriaTableEngine::new(), key, plaintext, ciphertext);
+    #[cfg(feature = "rustcrypto")]
+    run_vector_with(
+        tc_aria::AriaRustCryptoEngine::new(),
+        key,
+        plaintext,
+        ciphertext,
+    );
+}
+
 #[test]
-fn rfc_5794_all_key_sizes() {
+fn rfc_5794_vectors_encrypt_and_decrypt_under_all_three_key_sizes() {
     const PLAINTEXT: &str = "00112233445566778899aabbccddeeff";
     run_vector(
         "000102030405060708090a0b0c0d0e0f",

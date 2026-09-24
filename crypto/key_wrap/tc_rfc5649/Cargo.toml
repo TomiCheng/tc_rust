@@ -15,4 +15,5 @@ tc_rfc3394 = { version = "0.1", path = "../tc_rfc3394" }
 
 [dev-dependencies]
 tc_aes = { package = "tc_aes_old", version = "0.1", path = "../../block_cipher/tc_aes" }
-tc_aria = { version = "0.1", path = "../../block_cipher/tc_aria" }
+tc_aria = { version = "0.1", path = "../../../block_cipher/tc_aria" }
+tc_block_cipher = { path = "../../../block_cipher/tc_block_cipher" }
