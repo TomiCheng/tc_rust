@@ -1,0 +1,15 @@
+[package]
+name = "tc_rc6_v2"
+description = "RC6 single-block encryption with 1- to 255-byte keys."
+version.workspace = true
+edition.workspace = true
+rust-version = "1.85"
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+tc_block_cipher = { path = "../tc_block_cipher" }
+tc_zeroize = "0.1.0"
+
+[dev-dependencies]
+rc6 = "0.1"
