@@ -18,6 +18,7 @@ rustcrypto = [
 
 [dependencies]
 tc_stream_cipher = { path = "../tc_stream_cipher" }
+tc_zeroize = "0.1.0"
 chacha20 = { version = "0.10", optional = true }
 # Not used directly: its `zeroize` feature wipes the keystream bytes that
 # chacha20's stream wrapper buffers, which `chacha20/zeroize` alone leaves.
