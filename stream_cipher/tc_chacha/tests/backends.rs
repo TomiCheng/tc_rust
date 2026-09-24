@@ -5,12 +5,12 @@
 
 mod common;
 
-use common::{Engine, KeyIv};
+use common::Engine;
 use tc_chacha_v2::{
     ChaCha7539PortableEngine, ChaCha7539RustCryptoEngine, ChaChaPortableEngine,
     ChaChaRustCryptoEngine, XChaCha20PortableEngine, XChaCha20RustCryptoEngine,
 };
-use tc_stream_cipher::CipherDirection;
+use tc_stream_cipher::{CipherDirection, KeyWithIvRef};
 
 struct XorShift(u64);
 
@@ -33,7 +33,7 @@ fn agree<P: Engine, R: Engine, const IV: usize>(portable: fn() -> P, rustcrypto:
     for _ in 0..64 {
         let key: [u8; 32] = random.bytes();
         let iv: [u8; IV] = random.bytes();
-        let params = KeyIv { key: &key, iv: &iv };
+        let params = KeyWithIvRef::new(&key, &iv);
         let input: Vec<u8> = (0..random.next() % 400)
             .map(|_| random.next() as u8)
             .collect();

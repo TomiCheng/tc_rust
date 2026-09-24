@@ -267,32 +267,14 @@ forwarding_engine! {
 
 #[cfg(test)]
 mod tests {
-    use tc_stream_cipher::{CipherDirection, IvParams, KeyParams, StreamCipherInit};
+    use tc_stream_cipher::{CipherDirection, KeyWithIvRef, StreamCipherInit};
 
     use super::{ChaChaBackend, ChaChaEngine};
 
-    struct KeyIv<'a>(&'a [u8], &'a [u8]);
-
-    impl KeyParams for KeyIv<'_> {
-        fn key(&self) -> &[u8] {
-            self.0
-        }
-    }
-
-    impl IvParams for KeyIv<'_> {
-        fn iv(&self) -> &[u8] {
-            self.1
-        }
-    }
-
     /// Whether `engine` ran on RustCrypto after keying it with `key_bytes`.
     fn on_rustcrypto(mut engine: ChaChaEngine, key_bytes: usize) -> bool {
-        engine
-            .init(
-                CipherDirection::Encrypt,
-                &KeyIv(&[0; 32][..key_bytes], &[0; 8]),
-            )
-            .unwrap();
+        let params = KeyWithIvRef::new(&[0; 32][..key_bytes], &[0; 8]);
+        engine.init(CipherDirection::Encrypt, &params).unwrap();
         !matches!(engine.backend, ChaChaBackend::Portable(_))
     }
 

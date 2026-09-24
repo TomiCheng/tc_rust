@@ -4,39 +4,21 @@
 #![allow(dead_code)]
 
 use tc_stream_cipher::{
-    CipherDirection, InitError, IvParams, KeyParams, StreamCipher, StreamCipherInit, StreamError,
+    CipherDirection, InitError, KeyWithIvRef, StreamCipher, StreamCipherInit, StreamError,
 };
-
-/// Borrowed key and IV; `tc_stream_cipher` has no container yet.
-pub struct KeyIv<'a> {
-    pub key: &'a [u8],
-    pub iv: &'a [u8],
-}
-
-impl KeyParams for KeyIv<'_> {
-    fn key(&self) -> &[u8] {
-        self.key
-    }
-}
-
-impl IvParams for KeyIv<'_> {
-    fn iv(&self) -> &[u8] {
-        self.iv
-    }
-}
 
 /// Everything the tests need from an engine.
 pub trait Engine:
     core::fmt::Display
     + StreamCipher<Error = StreamError>
-    + for<'a> StreamCipherInit<KeyIv<'a>, Error = InitError>
+    + for<'a> StreamCipherInit<KeyWithIvRef<'a>, Error = InitError>
 {
 }
 
 impl<E> Engine for E where
     E: core::fmt::Display
         + StreamCipher<Error = StreamError>
-        + for<'a> StreamCipherInit<KeyIv<'a>, Error = InitError>
+        + for<'a> StreamCipherInit<KeyWithIvRef<'a>, Error = InitError>
 {
 }
 
@@ -52,7 +34,7 @@ pub fn unhex(value: &str) -> Vec<u8> {
 /// The first `length` keystream bytes for `key` and `iv`.
 pub fn keystream<E: Engine>(mut engine: E, key: &[u8], iv: &[u8], length: usize) -> Vec<u8> {
     engine
-        .init(CipherDirection::Encrypt, &KeyIv { key, iv })
+        .init(CipherDirection::Encrypt, &KeyWithIvRef::new(key, iv))
         .unwrap();
     let mut output = vec![0u8; length];
     engine

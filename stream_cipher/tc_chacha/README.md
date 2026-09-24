@@ -20,14 +20,11 @@ stack copies are not.
 
 ```rust
 use tc_chacha_v2::ChaCha7539Engine;
-use tc_stream_cipher::{CipherDirection, IvParams, KeyParams, StreamCipher, StreamCipherInit};
+use tc_stream_cipher::{CipherDirection, KeyWithIvRef, StreamCipher, StreamCipherInit};
 
-struct Params<'a>(&'a [u8], &'a [u8]);
-impl KeyParams for Params<'_> { fn key(&self) -> &[u8] { self.0 } }
-impl IvParams for Params<'_> { fn iv(&self) -> &[u8] { self.1 } }
-
+let (key, nonce) = ([0u8; 32], [0u8; 12]);
 let mut engine = ChaCha7539Engine::new();
-engine.init(CipherDirection::Encrypt, &Params(&[0u8; 32], &[0u8; 12])).unwrap();
+engine.init(CipherDirection::Encrypt, &KeyWithIvRef::new(&key, &nonce)).unwrap();
 let mut ciphertext = [0u8; 5];
 engine.process_bytes(b"hello", &mut ciphertext).unwrap();
 ```

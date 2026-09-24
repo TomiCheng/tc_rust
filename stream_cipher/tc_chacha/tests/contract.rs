@@ -4,12 +4,14 @@
 
 mod common;
 
-use common::{Engine, KeyIv};
+use common::Engine;
 use tc_chacha_v2::{
     ChaCha7539Engine, ChaCha7539PortableEngine, ChaChaEngine, ChaChaPortableEngine,
     XChaCha20Engine, XChaCha20PortableEngine,
 };
-use tc_stream_cipher::{CipherDirection, InitError, StreamCipher, StreamCipherInit, StreamError};
+use tc_stream_cipher::{
+    CipherDirection, InitError, KeyWithIvRef, StreamCipher, StreamCipherInit, StreamError,
+};
 
 /// Runs the contract on an engine that accepts `key_lengths` and
 /// `iv_bytes`-byte IVs and displays `algo_name`.
@@ -21,10 +23,7 @@ fn check_contract<E: Engine + 'static>(
 ) {
     let key = [0x11; 32];
     let iv = [0x22; 24];
-    let params = KeyIv {
-        key: &key,
-        iv: &iv[..iv_bytes],
-    };
+    let params = KeyWithIvRef::new(&key, &iv[..iv_bytes]);
     let input = [0x5a; 193];
 
     assert_eq!(engine.to_string(), algo_name);
@@ -37,10 +36,7 @@ fn check_contract<E: Engine + 'static>(
     assert_eq!(untouched, [0x55; 4]);
 
     for &length in key_lengths {
-        let params = KeyIv {
-            key: &key[..length],
-            iv: &iv[..iv_bytes],
-        };
+        let params = KeyWithIvRef::new(&key[..length], &iv[..iv_bytes]);
         assert_eq!(engine.init(CipherDirection::Encrypt, &params), Ok(()));
     }
 
@@ -83,20 +79,14 @@ fn check_contract<E: Engine + 'static>(
     let mut first = [0u8; 13];
     engine.process_bytes(&input[..13], &mut first).unwrap();
     for length in (0..=33).filter(|length| !key_lengths.contains(length)) {
-        let bad = KeyIv {
-            key: &[0; 33][..length],
-            iv: &iv[..iv_bytes],
-        };
+        let bad = KeyWithIvRef::new(&[0; 33][..length], &iv[..iv_bytes]);
         assert_eq!(
             engine.init(CipherDirection::Encrypt, &bad),
             Err(InitError::InvalidKeyLength(length))
         );
     }
     for length in (0..=25).filter(|&length| length != iv_bytes) {
-        let bad = KeyIv {
-            key: &key,
-            iv: &[0; 25][..length],
-        };
+        let bad = KeyWithIvRef::new(&key, &[0; 25][..length]);
         assert_eq!(
             engine.init(CipherDirection::Encrypt, &bad),
             Err(InitError::InvalidIvLength(length))
@@ -141,7 +131,7 @@ fn chacha_engine_matches_the_portable_engine_across_backend_switches() {
     let input = [0x5a; 150];
     let mut selecting = ChaChaEngine::new();
     for key in [&[0x44; 32][..], &[0x44; 16], &[0x44; 32], &[0x55; 32]] {
-        let params = KeyIv { key, iv: &iv };
+        let params = KeyWithIvRef::new(key, &iv);
         let mut portable = ChaChaPortableEngine::new();
         portable.init(CipherDirection::Encrypt, &params).unwrap();
         selecting.init(CipherDirection::Encrypt, &params).unwrap();

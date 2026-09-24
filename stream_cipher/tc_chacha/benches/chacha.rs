@@ -23,36 +23,20 @@ use tc_chacha_v2::{ChaCha7539PortableEngine, ChaChaPortableEngine, XChaCha20Port
 #[cfg(feature = "rustcrypto")]
 use tc_chacha_v2::{ChaCha7539RustCryptoEngine, ChaChaRustCryptoEngine, XChaCha20RustCryptoEngine};
 use tc_stream_cipher::{
-    CipherDirection, InitError, IvParams, KeyParams, StreamCipher, StreamCipherInit, StreamError,
+    CipherDirection, InitError, KeyWithIvRef, StreamCipher, StreamCipherInit, StreamError,
 };
 
 /// Message sizes for the process benchmarks: one block, a packet, a buffer.
 const SIZES: [usize; 3] = [64, 1024, 16 * 1024];
 
-struct KeyIv<'a> {
-    key: &'a [u8],
-    iv: &'a [u8],
-}
-
-impl KeyParams for KeyIv<'_> {
-    fn key(&self) -> &[u8] {
-        self.key
-    }
-}
-
-impl IvParams for KeyIv<'_> {
-    fn iv(&self) -> &[u8] {
-        self.iv
-    }
-}
-
 trait Engine:
-    StreamCipher<Error = StreamError> + for<'a> StreamCipherInit<KeyIv<'a>, Error = InitError>
+    StreamCipher<Error = StreamError> + for<'a> StreamCipherInit<KeyWithIvRef<'a>, Error = InitError>
 {
 }
 
 impl<E> Engine for E where
-    E: StreamCipher<Error = StreamError> + for<'a> StreamCipherInit<KeyIv<'a>, Error = InitError>
+    E: StreamCipher<Error = StreamError>
+        + for<'a> StreamCipherInit<KeyWithIvRef<'a>, Error = InitError>
 {
 }
 
@@ -65,10 +49,7 @@ fn add_setup<E: Engine>(
     iv_bytes: usize,
     create: fn() -> E,
 ) {
-    let params = KeyIv {
-        key: &KEY,
-        iv: &IV[..iv_bytes],
-    };
+    let params = KeyWithIvRef::new(&KEY, &IV[..iv_bytes]);
     let mut engine = create();
     group.bench_function(backend, |b| {
         b.iter(|| {
@@ -88,10 +69,7 @@ fn add_process<E: Engine>(
 ) {
     for size in SIZES {
         let mut engine = create();
-        let params = KeyIv {
-            key: &KEY,
-            iv: &IV[..iv_bytes],
-        };
+        let params = KeyWithIvRef::new(&KEY, &IV[..iv_bytes]);
         engine.init(CipherDirection::Encrypt, &params).unwrap();
         let input = vec![0x5a; size];
         let mut output = vec![0; size];
