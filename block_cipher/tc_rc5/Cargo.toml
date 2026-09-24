@@ -1,0 +1,16 @@
+[package]
+name = "tc_rc5_v2"
+description = "RC5 block ciphers with 32-bit and 64-bit words"
+version.workspace = true
+edition.workspace = true
+rust-version = "1.85"
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+tc_block_cipher = { path = "../tc_block_cipher" }
+tc_zeroize = "0.1.0"
+
+[dev-dependencies]
+cipher = "0.5"
+rc5 = "0.1"
