@@ -17,6 +17,9 @@ pub use cbc::FixedCbcBlockCipher;
 pub use ecb::EcbBlockCipher;
 pub use error::BlockModeError;
 pub use error::BlockModeInitError;
+#[cfg(feature = "alloc")]
+pub use params::KeyWithIvOwned;
+pub use params::{KeyWithIvFixed, KeyWithIvRef};
 pub use traits::BlockCipherMode;
 pub use traits::IvOptParams;
 pub use traits::IvParams;

@@ -2,7 +2,7 @@
 
 use core::fmt::Display;
 use tc_block_cipher::{BlockCipher, BlockCipherInit, CipherDirection};
-use crate::{BlockCipherMode, BlockModeError, BlockModeInitError, IvOptParams};
+use crate::{BlockCipherMode, BlockModeError, BlockModeInitError, IvParams};
 
 /// Allocation-free Cipher Block Chaining mode with an `N`-byte block.
 ///
@@ -85,7 +85,7 @@ impl<C: BlockCipher, const N: usize> BlockCipher for FixedCbcBlockCipher<C, N> {
 impl<C, P, const N: usize> BlockCipherInit<P> for FixedCbcBlockCipher<C, N>
 where
     C: BlockCipher + BlockCipherInit<P>,
-    P: IvOptParams + ?Sized,
+    P: IvParams + ?Sized,
 {
     type Error = BlockModeInitError<<C as BlockCipherInit<P>>::Error>;
 
@@ -102,8 +102,8 @@ where
             });
         }
 
-        let iv = params.optional_iv();
-        if let Some(iv) = iv.filter(|iv| iv.len() != N) {
+        let iv = params.iv();
+        if iv.len() != N {
             return Err(BlockModeInitError::InvalidIvLength(iv.len()));
         }
 
@@ -111,10 +111,7 @@ where
             .init(direction, params)
             .map_err(BlockModeInitError::Cipher)?;
 
-        match iv {
-            Some(iv) => self.iv.copy_from_slice(iv),
-            None => self.iv.fill(0),
-        }
+        self.iv.copy_from_slice(iv);
         self.direction = Some(direction);
         self.reset();
         Ok(())

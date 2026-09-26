@@ -102,7 +102,7 @@ where
         params: &P,
     ) -> Result<(), <Self as BlockCipherInit<P>>::Error> {
         let block_size = self.cipher.block_size();
-        let iv = params.optional_iv();
+        let iv = params.iv_opt();
         if let Some(iv) = iv.filter(|iv| iv.len() != block_size) {
             return Err(BlockModeInitError::InvalidIvLength(iv.len()));
         }

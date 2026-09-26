@@ -16,11 +16,11 @@ pub trait IvParams {
 /// trait and return `Some`.
 pub trait IvOptParams {
     /// Returns the initialization-vector bytes when supplied.
-    fn optional_iv(&self) -> Option<&[u8]>;
+    fn iv_opt(&self) -> Option<&[u8]>;
 }
 
 impl<T: IvParams + ?Sized> IvOptParams for T {
-    fn optional_iv(&self) -> Option<&[u8]> {
+    fn iv_opt(&self) -> Option<&[u8]> {
         Some(self.iv())
     }
 }
@@ -54,7 +54,7 @@ mod tests {
         let params = Params { iv: &iv };
         let params: &dyn IvOptParams = &params;
 
-        assert_eq!(params.optional_iv(), Some(iv.as_slice()));
+        assert_eq!(params.iv_opt(), Some(iv.as_slice()));
     }
 
     #[test]
@@ -62,12 +62,12 @@ mod tests {
         struct NoIv;
 
         impl IvOptParams for NoIv {
-            fn optional_iv(&self) -> Option<&[u8]> {
+            fn iv_opt(&self) -> Option<&[u8]> {
                 None
             }
         }
 
         let params: &dyn IvOptParams = &NoIv;
-        assert_eq!(params.optional_iv(), None);
+        assert_eq!(params.iv_opt(), None);
     }
 }
