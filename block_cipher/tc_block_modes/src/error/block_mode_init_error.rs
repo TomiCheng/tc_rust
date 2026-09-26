@@ -24,6 +24,9 @@ pub enum BlockModeInitError<E> {
 }
 
 impl<E: core::error::Error> fmt::Display for BlockModeInitError<E> {
+    /// Writes a description, including the engine's error for `Cipher`.
+    /// Constant time: errors carry no secret data; output timing depends on
+    /// the formatter.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::InvalidIvLength(bytes) => {

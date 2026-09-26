@@ -14,12 +14,14 @@ pub type FixedCtrBlockCipher<C, const N: usize> = FixedSicBlockCipher<C, N>;
 #[cfg(feature = "alloc")]
 pub type CtrBlockCipher<C> = SicBlockCipher<C>;
 
-/// 把整個區塊當大端序整數加一，溢位時繞回。計數器是公開值，提早跳出不構成側通道。
+/// Adds one to the whole block as a big-endian integer, wrapping on overflow.
+///
+/// Constant time: the carry runs through every byte without branching.
 fn increment_be(counter: &mut [u8]) {
+    let mut carry = 1_u16;
     for byte in counter.iter_mut().rev() {
-        *byte = byte.wrapping_add(1);
-        if *byte != 0 {
-            break;
-        }
+        let sum = u16::from(*byte) + carry;
+        *byte = sum as u8;
+        carry = sum >> 8;
     }
 }

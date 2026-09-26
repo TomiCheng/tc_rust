@@ -6,8 +6,38 @@ use crate::{BlockCipherMode, BlockModeError, BlockModeInitError, IvParams};
 
 /// Allocation-free Cipher Block Chaining mode with an `N`-byte block.
 ///
-/// Initialization rejects an underlying cipher whose runtime block size is not
-/// `N`. The IV and both chaining buffers are stored inline as `[u8; N]`.
+/// Each plaintext block is XORed with the previous ciphertext block, the first
+/// with the IV, before encryption. The IV is required and must be exactly `N`
+/// bytes; use a fresh, unpredictable one for every message. Initialization
+/// rejects an engine whose block size is not `N`. The IV and chaining state
+/// are stored inline as `[u8; N]` and are not wiped on drop.
+///
+/// Constant time exactly when the engine is: the mode adds only XORs and
+/// copies.
+///
+/// # Example
+///
+/// ```
+/// use tc_aes::AesEngine;
+/// use tc_block_cipher::{BlockCipher, BlockCipherInit, CipherDirection};
+/// use tc_block_modes::{BlockCipherMode, FixedCbcBlockCipher, KeyWithIvFixed};
+///
+/// let params = KeyWithIvFixed::new([0x42; 16], [0x24; 16]);
+/// let mut mode = FixedCbcBlockCipher::<_, 16>::new(AesEngine::new());
+/// mode.init(CipherDirection::Encrypt, &params)?;
+///
+/// let mut first = [0; 16];
+/// mode.process_block(b"the same block!!", &mut first)?;
+/// let mut second = [0; 16];
+/// mode.process_block(b"the same block!!", &mut second)?;
+/// assert_ne!(first, second, "chaining hides repeated blocks");
+///
+/// mode.reset();
+/// let mut again = [0; 16];
+/// mode.process_block(b"the same block!!", &mut again)?;
+/// assert_eq!(again, first, "reset restarts from the IV");
+/// # Ok::<(), Box<dyn core::error::Error>>(())
+/// ```
 pub struct FixedCbcBlockCipher<C, const N: usize> {
     cipher: C,
     iv: [u8; N],
@@ -17,7 +47,7 @@ pub struct FixedCbcBlockCipher<C, const N: usize> {
 }
 
 impl<C, const N: usize> FixedCbcBlockCipher<C, N> {
-    /// Wraps `cipher` without allocating.
+    /// Wraps `cipher` without allocating. Constant time: nothing is inspected.
     pub const fn new(cipher: C) -> Self {
         Self {
             cipher,
@@ -28,13 +58,16 @@ impl<C, const N: usize> FixedCbcBlockCipher<C, N> {
         }
     }
 
-    /// Consumes the mode and returns its underlying cipher.
+    /// Consumes the mode and returns its underlying cipher. Constant time.
     pub fn into_inner(self) -> C {
         self.cipher
     }
 }
 
 impl<C: Display, const N: usize> Display for FixedCbcBlockCipher<C, N> {
+    /// Writes the engine's name followed by `/CBC`.
+    /// Constant time with respect to the key when the engine's `Display` is;
+    /// output timing depends on the formatter.
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> Result<(), core::fmt::Error> {
         self.cipher.fmt(f)?;
         f.write_str("/CBC")
@@ -44,10 +77,17 @@ impl<C: Display, const N: usize> Display for FixedCbcBlockCipher<C, N> {
 impl<C: BlockCipher, const N: usize> BlockCipher for FixedCbcBlockCipher<C, N> {
     type Error = BlockModeError<C::Error>;
 
+    /// Returns `N`. Constant time.
     fn block_size(&self) -> usize {
         N
     }
 
+    /// Encrypts or decrypts the first `N` bytes and returns the engine's count.
+    ///
+    /// Returns `NotInitialised` before a successful `init` and
+    /// `BufferTooShort` when either buffer is shorter than `N`, leaving the
+    /// chaining state unchanged. Constant time exactly when the engine's
+    /// `process_block` is.
     fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
         let direction = self.direction.ok_or(BlockModeError::NotInitialised)?;
         if input.len() < N || output.len() < N {
@@ -89,6 +129,14 @@ where
 {
     type Error = BlockModeInitError<<C as BlockCipherInit<P>>::Error>;
 
+    /// Checks the block size and IV, initializes the engine, then installs the
+    /// IV and restarts the chain.
+    ///
+    /// Returns `UnsupportedBlockSize` for an engine whose block is not `N`,
+    /// `InvalidIvLength` for an IV that is not `N` bytes, or the engine's
+    /// error; each leaves the previous IV and chaining state in place.
+    /// Constant time exactly when the engine's `init` is: the mode only checks
+    /// public lengths and copies the IV.
     fn init(
         &mut self,
         direction: CipherDirection,
@@ -121,14 +169,18 @@ where
 impl<C: BlockCipher, const N: usize> BlockCipherMode for FixedCbcBlockCipher<C, N> {
     type Cipher = C;
 
+    /// Returns the wrapped engine. Constant time.
     fn underlying_cipher(&self) -> &Self::Cipher {
         &self.cipher
     }
 
+    /// Returns `false`: CBC processes whole blocks only. Constant time.
     fn is_partial_block_okay(&self) -> bool {
         false
     }
 
+    /// Restarts the chain from the IV installed by the last `init`.
+    /// Constant time.
     fn reset(&mut self) {
         self.chain.copy_from_slice(&self.iv);
         self.next.fill(0);

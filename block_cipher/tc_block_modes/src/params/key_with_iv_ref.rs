@@ -6,8 +6,31 @@ use crate::IvParams;
 
 /// Borrowed key and initialization-vector parameters.
 ///
-/// This wrapper does not validate either value. The consuming algorithm owns
-/// all key- and IV-length policy.
+/// No allocation or copying. The caller owns the bytes and is responsible for
+/// wiping the key; dropping this view modifies neither slice. The mode and the
+/// engine validate both lengths when initialized. `Debug` prints only the
+/// lengths.
+///
+/// Constant time: no method inspects the key or IV contents.
+///
+/// # Example
+///
+/// ```
+/// use tc_aes::AesEngine;
+/// use tc_block_cipher::{BlockCipherInit, CipherDirection};
+/// use tc_block_modes::{BlockModeInitError, FixedCbcBlockCipher, KeyWithIvRef};
+///
+/// let (key, iv) = ([0x42; 16], [0x24; 16]);
+/// let mut mode = FixedCbcBlockCipher::<_, 16>::new(AesEngine::new());
+/// mode.init(CipherDirection::Encrypt, &KeyWithIvRef::new(&key, &iv))?;
+///
+/// // Lengths are checked by the mode, not by the container.
+/// assert_eq!(
+///     mode.init(CipherDirection::Encrypt, &KeyWithIvRef::new(&key, &iv[..8])),
+///     Err(BlockModeInitError::InvalidIvLength(8))
+/// );
+/// # Ok::<(), Box<dyn core::error::Error>>(())
+/// ```
 pub struct KeyWithIvRef<'a> {
     key: &'a [u8],
     iv: &'a [u8],
@@ -15,24 +38,32 @@ pub struct KeyWithIvRef<'a> {
 
 impl<'a> KeyWithIvRef<'a> {
     /// Borrows `key` and `iv` without copying or validating them.
+    /// Constant time: does not inspect the bytes.
     pub const fn new(key: &'a [u8], iv: &'a [u8]) -> Self {
         Self { key, iv }
     }
 }
 
 impl KeyParams for KeyWithIvRef<'_> {
+    /// Returns the borrowed key bytes.
+    /// Constant time: does not inspect key contents.
     fn key(&self) -> &[u8] {
         self.key
     }
 }
 
 impl IvParams for KeyWithIvRef<'_> {
+    /// Returns the borrowed IV bytes.
+    /// Constant time: does not inspect the IV.
     fn iv(&self) -> &[u8] {
         self.iv
     }
 }
 
 impl fmt::Debug for KeyWithIvRef<'_> {
+    /// Writes the key and IV lengths, never their bytes.
+    /// Constant time with respect to their contents; output timing depends on
+    /// the formatter.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("KeyWithIvRef")
             .field("key_len", &self.key.len())
