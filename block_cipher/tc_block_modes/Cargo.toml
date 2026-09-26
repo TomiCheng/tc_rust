@@ -6,3 +6,10 @@ edition.workspace = true
 rust-version = "1.85"
 license.workspace = true
 repository.workspace = true
+
+[features]
+default = []
+alloc = []
+
+[dependencies]
+tc_block_cipher = "0.1.0"
