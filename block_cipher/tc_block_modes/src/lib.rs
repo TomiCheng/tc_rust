@@ -51,8 +51,7 @@
 //!   unpredictable for every message.
 //! - [`FixedOfbBlockCipher`] and `OfbBlockCipher`: OFB. The IV must never
 //!   repeat under one key.
-//! - [`FixedSicBlockCipher`] and `SicBlockCipher`, also named
-//!   [`FixedCtrBlockCipher`] and `CtrBlockCipher`: CTR. A counter block must
+//! - [`FixedCtrBlockCipher`] and `CtrBlockCipher`: CTR. A counter block must
 //!   never repeat under one key.
 //!
 //! The `Fixed*` forms take the block size `N` (and, for CFB and OFB, the
@@ -150,8 +149,8 @@ pub use cbc::FixedCbcBlockCipher;
 pub use cfb::CfbBlockCipher;
 pub use cfb::FixedCfbBlockCipher;
 #[cfg(feature = "alloc")]
-pub use ctr::{CtrBlockCipher, SicBlockCipher};
-pub use ctr::{FixedCtrBlockCipher, FixedSicBlockCipher};
+pub use ctr::CtrBlockCipher;
+pub use ctr::FixedCtrBlockCipher;
 pub use ecb::EcbBlockCipher;
 pub use error::BlockModeError;
 pub use error::BlockModeInitError;

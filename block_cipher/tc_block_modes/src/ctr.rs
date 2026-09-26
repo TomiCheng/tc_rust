@@ -2,17 +2,9 @@ mod fixed_mode;
 #[cfg(feature = "alloc")]
 mod mode;
 
-pub use fixed_mode::FixedSicBlockCipher;
+pub use fixed_mode::FixedCtrBlockCipher;
 #[cfg(feature = "alloc")]
-pub use mode::SicBlockCipher;
-
-/// Allocation-free CTR mode with an `N`-byte block; the same type as
-/// [`FixedSicBlockCipher`].
-pub type FixedCtrBlockCipher<C, const N: usize> = FixedSicBlockCipher<C, N>;
-
-/// Runtime-sized CTR mode; the same type as [`SicBlockCipher`].
-#[cfg(feature = "alloc")]
-pub type CtrBlockCipher<C> = SicBlockCipher<C>;
+pub use mode::CtrBlockCipher;
 
 /// Adds one to the whole block as a big-endian integer, wrapping on overflow.
 ///

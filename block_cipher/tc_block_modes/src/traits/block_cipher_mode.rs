@@ -14,7 +14,7 @@ use tc_block_cipher::BlockCipher;
 /// ```
 /// use tc_aes::AesEngine;
 /// use tc_block_cipher::{BlockCipher, BlockCipherInit, CipherDirection};
-/// use tc_block_modes::{BlockCipherMode, FixedSicBlockCipher, KeyWithIvRef};
+/// use tc_block_modes::{BlockCipherMode, FixedCtrBlockCipher, KeyWithIvRef};
 ///
 /// fn first_block_twice<M: BlockCipherMode>(mode: &mut M) -> Result<bool, M::Error> {
 ///     let (mut first, mut again) = ([0; 16], [0; 16]);
@@ -25,7 +25,7 @@ use tc_block_cipher::BlockCipher;
 /// }
 ///
 /// let (key, nonce) = ([0x42; 16], [0x24; 12]);
-/// let mut mode = FixedSicBlockCipher::<_, 16>::new(AesEngine::new());
+/// let mut mode = FixedCtrBlockCipher::<_, 16>::new(AesEngine::new());
 /// mode.init(CipherDirection::Encrypt, &KeyWithIvRef::new(&key, &nonce))?;
 /// assert!(first_block_twice(&mut mode)?);
 /// assert!(mode.is_partial_block_okay());

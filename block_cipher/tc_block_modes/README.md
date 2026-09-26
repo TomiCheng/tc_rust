@@ -22,9 +22,9 @@ later (edition 2024).
   (CFB8) up to one block, and an unpredictable IV.
 - `FixedOfbBlockCipher`, `OfbBlockCipher`: OFB. The IV must never repeat under
   one key.
-- `FixedSicBlockCipher`, `SicBlockCipher`, also named `FixedCtrBlockCipher`
-  and `CtrBlockCipher`: CTR. The IV fills the start of the counter block, and
-  a counter block must never repeat under one key.
+- `FixedCtrBlockCipher`, `CtrBlockCipher`: CTR, which Bouncy Castle calls SIC
+  (`SicBlockCipher`). The IV fills the start of the counter block, and a
+  counter block must never repeat under one key.
 
 The `Fixed*` forms take the block size, and the CFB or OFB segment size, as
 const generics and keep their state inline. The other forms size their state

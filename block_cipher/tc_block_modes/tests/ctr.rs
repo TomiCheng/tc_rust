@@ -1,4 +1,4 @@
-//! CTR（SIC）：NIST SP 800-38A F.5 的 AES-128 向量，以及計數器、IV 長度與錯誤處理。
+//! CTR：NIST SP 800-38A F.5 的 AES-128 向量，以及計數器、IV 長度與錯誤處理。
 
 mod common;
 
@@ -9,7 +9,7 @@ use common::{
 use tc_aes::AesEngine;
 use tc_block_cipher::{BlockCipher, BlockCipherInit, BlockError, CipherDirection, InitError};
 use tc_block_modes::{
-    BlockCipherMode, BlockModeError, BlockModeInitError, FixedCtrBlockCipher, FixedSicBlockCipher,
+    BlockCipherMode, BlockModeError, BlockModeInitError, FixedCtrBlockCipher,
     KeyWithIvRef,
 };
 
@@ -23,7 +23,7 @@ const CIPHERTEXT: &str = concat!(
     "1e031dda2fbe03d1792170a0f3009cee",
 );
 
-type FixedAesCtr = FixedSicBlockCipher<AesEngine, 16>;
+type FixedAesCtr = FixedCtrBlockCipher<AesEngine, 16>;
 
 #[test]
 fn ctr_matches_the_nist_sp800_38a_aes128_vectors() {
@@ -31,15 +31,14 @@ fn ctr_matches_the_nist_sp800_38a_aes128_vectors() {
     let params = KeyWithIvRef::new(&key, &counter);
     let (plaintext, ciphertext) = (unhex(PLAINTEXT), unhex(CIPHERTEXT));
 
-    // 別名與原型別是同一個型別。
-    let mut aliased: FixedAesCtr = FixedCtrBlockCipher::new(AesEngine::new());
-    assert_vectors(&mut aliased, &params, &plaintext, &ciphertext);
+    assert_vectors(&mut FixedAesCtr::new(AesEngine::new()), &params, &plaintext, &ciphertext);
     #[cfg(feature = "alloc")]
-    {
-        let mut aliased: tc_block_modes::SicBlockCipher<AesEngine> =
-            tc_block_modes::CtrBlockCipher::new(AesEngine::new());
-        assert_vectors(&mut aliased, &params, &plaintext, &ciphertext);
-    }
+    assert_vectors(
+        &mut tc_block_modes::CtrBlockCipher::new(AesEngine::new()),
+        &params,
+        &plaintext,
+        &ciphertext,
+    );
 }
 
 #[test]
@@ -59,7 +58,7 @@ fn the_requested_direction_does_not_change_the_ctr_output() {
 
     check(FixedAesCtr::new(AesEngine::new()));
     #[cfg(feature = "alloc")]
-    check(tc_block_modes::SicBlockCipher::new(AesEngine::new()));
+    check(tc_block_modes::CtrBlockCipher::new(AesEngine::new()));
 }
 
 #[test]
@@ -86,7 +85,7 @@ fn a_short_iv_fills_the_leading_bytes_and_the_counter_starts_at_zero() {
 
     check(FixedAesCtr::new(AesEngine::new()));
     #[cfg(feature = "alloc")]
-    check(tc_block_modes::SicBlockCipher::new(AesEngine::new()));
+    check(tc_block_modes::CtrBlockCipher::new(AesEngine::new()));
 }
 
 #[test]
@@ -109,7 +108,7 @@ fn the_counter_carries_across_the_whole_block_and_wraps_to_zero() {
 
     check(FixedAesCtr::new(AesEngine::new()));
     #[cfg(feature = "alloc")]
-    check(tc_block_modes::SicBlockCipher::new(AesEngine::new()));
+    check(tc_block_modes::CtrBlockCipher::new(AesEngine::new()));
 }
 
 #[test]
@@ -126,7 +125,7 @@ fn the_iv_must_leave_at_most_eight_bytes_of_counter_and_fit_in_the_block() {
         );
         #[cfg(feature = "alloc")]
         assert_eq!(
-            tc_block_modes::SicBlockCipher::new(AesEngine::new())
+            tc_block_modes::CtrBlockCipher::new(AesEngine::new())
                 .init(CipherDirection::Encrypt, &params),
             expected
         );
@@ -141,7 +140,7 @@ fn the_iv_must_leave_at_most_eight_bytes_of_counter_and_fit_in_the_block() {
         );
         #[cfg(feature = "alloc")]
         assert_eq!(
-            tc_block_modes::SicBlockCipher::new(AesEngine::new())
+            tc_block_modes::CtrBlockCipher::new(AesEngine::new())
                 .init(CipherDirection::Encrypt, &params),
             Ok(())
         );
@@ -170,7 +169,7 @@ fn reset_restarts_the_counter_from_the_iv() {
 
     check(FixedAesCtr::new(AesEngine::new()));
     #[cfg(feature = "alloc")]
-    check(tc_block_modes::SicBlockCipher::new(AesEngine::new()));
+    check(tc_block_modes::CtrBlockCipher::new(AesEngine::new()));
 }
 
 #[test]
@@ -202,7 +201,7 @@ fn a_rejected_initialization_leaves_the_counter_untouched() {
 
     check(FixedAesCtr::new(AesEngine::new()));
     #[cfg(feature = "alloc")]
-    check(tc_block_modes::SicBlockCipher::new(AesEngine::new()));
+    check(tc_block_modes::CtrBlockCipher::new(AesEngine::new()));
 }
 
 #[test]
@@ -233,20 +232,20 @@ fn processing_fails_before_initialization_and_on_short_buffers() {
 
     check(FixedAesCtr::new(AesEngine::new()));
     #[cfg(feature = "alloc")]
-    check(tc_block_modes::SicBlockCipher::new(AesEngine::new()));
+    check(tc_block_modes::CtrBlockCipher::new(AesEngine::new()));
 }
 
 #[test]
-fn ctr_reports_the_sic_name_and_accepts_partial_blocks() {
+fn ctr_reports_its_name_and_accepts_partial_blocks() {
     let mode = FixedAesCtr::new(AesEngine::new());
-    assert_eq!(mode.to_string(), "AES/SIC");
+    assert_eq!(mode.to_string(), "AES/CTR");
     assert_eq!(mode.block_size(), 16);
     assert!(mode.is_partial_block_okay());
 
     #[cfg(feature = "alloc")]
     {
-        let mode = tc_block_modes::SicBlockCipher::new(AesEngine::new());
-        assert_eq!(mode.to_string(), "AES/SIC");
+        let mode = tc_block_modes::CtrBlockCipher::new(AesEngine::new());
+        assert_eq!(mode.to_string(), "AES/CTR");
         assert_eq!(mode.block_size(), 16);
         assert!(mode.is_partial_block_okay());
     }

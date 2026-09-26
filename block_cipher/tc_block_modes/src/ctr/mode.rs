@@ -1,4 +1,4 @@
-//! Runtime-sized CTR/SIC mode.
+//! Runtime-sized CTR mode.
 
 use alloc::vec;
 use alloc::vec::Vec;
@@ -8,8 +8,8 @@ use tc_zeroize::Zeroize;
 use super::increment_be;
 use crate::{BlockCipherMode, BlockModeError, BlockModeInitError, IvParams};
 
-/// Segmented Integer Counter (CTR) mode over the block cipher `C`, sized at
-/// runtime.
+/// Counter (CTR) mode over the block cipher `C`, sized at runtime; called SIC
+/// (Segmented Integer Counter) in Bouncy Castle.
 ///
 /// Available with the `alloc` feature. The engine encrypts successive counter
 /// blocks to produce a keystream, and each block is XORed with it. Encryption
@@ -49,7 +49,7 @@ use crate::{BlockCipherMode, BlockModeError, BlockModeInitError, IvParams};
 /// assert_eq!(&recovered, b"one single block");
 /// # Ok::<(), Box<dyn core::error::Error>>(())
 /// ```
-pub struct SicBlockCipher<C> {
+pub struct CtrBlockCipher<C> {
     cipher: C,
     iv: Vec<u8>,
     counter: Vec<u8>,
@@ -57,7 +57,7 @@ pub struct SicBlockCipher<C> {
     initialised: bool,
 }
 
-impl<C: BlockCipher> SicBlockCipher<C> {
+impl<C: BlockCipher> CtrBlockCipher<C> {
     /// Wraps `cipher` and allocates three blocks of counter state.
     /// Constant time: only the engine's block size is read.
     pub fn new(cipher: C) -> Self {
@@ -72,7 +72,7 @@ impl<C: BlockCipher> SicBlockCipher<C> {
     }
 }
 
-impl<C> Drop for SicBlockCipher<C> {
+impl<C> Drop for CtrBlockCipher<C> {
     /// Wipes the IV and the chaining or keystream state; the engine wipes
     /// its own key schedule. Constant time.
     fn drop(&mut self) {
@@ -82,17 +82,17 @@ impl<C> Drop for SicBlockCipher<C> {
     }
 }
 
-impl<C: Display> Display for SicBlockCipher<C> {
-    /// Writes the engine's name followed by `/SIC`, Bouncy Castle's name for
-    /// CTR. Constant time with respect to the key when the engine's `Display`
-    /// is; output timing depends on the formatter.
+impl<C: Display> Display for CtrBlockCipher<C> {
+    /// Writes the engine's name followed by `/CTR`.
+    /// Constant time with respect to the key when the engine's `Display` is;
+    /// output timing depends on the formatter.
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         self.cipher.fmt(f)?;
-        f.write_str("/SIC")
+        f.write_str("/CTR")
     }
 }
 
-impl<C: BlockCipher> BlockCipher for SicBlockCipher<C> {
+impl<C: BlockCipher> BlockCipher for CtrBlockCipher<C> {
     type Error = BlockModeError<C::Error>;
 
     /// Returns the engine's block size. Constant time when the engine's is.
@@ -131,7 +131,7 @@ impl<C: BlockCipher> BlockCipher for SicBlockCipher<C> {
     }
 }
 
-impl<C, P> BlockCipherInit<P> for SicBlockCipher<C>
+impl<C, P> BlockCipherInit<P> for CtrBlockCipher<C>
 where
     C: BlockCipher + BlockCipherInit<P>,
     P: IvParams + ?Sized,
@@ -174,7 +174,7 @@ where
     }
 }
 
-impl<C: BlockCipher> BlockCipherMode for SicBlockCipher<C> {
+impl<C: BlockCipher> BlockCipherMode for CtrBlockCipher<C> {
     type Cipher = C;
 
     /// Returns the wrapped engine. Constant time.

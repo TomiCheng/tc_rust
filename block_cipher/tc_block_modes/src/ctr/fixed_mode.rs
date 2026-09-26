@@ -1,4 +1,4 @@
-//! Allocation-free CTR/SIC mode.
+//! Allocation-free CTR mode.
 
 use core::fmt::{Display, Formatter};
 use tc_block_cipher::{BlockCipher, BlockCipherInit, CipherDirection};
@@ -6,8 +6,8 @@ use tc_zeroize::Zeroize;
 use super::increment_be;
 use crate::{BlockCipherMode, BlockModeError, BlockModeInitError, IvParams};
 
-/// Allocation-free Segmented Integer Counter (CTR) mode over an `N`-byte block
-/// cipher.
+/// Allocation-free Counter (CTR) mode over an `N`-byte block cipher, called
+/// SIC (Segmented Integer Counter) in Bouncy Castle.
 ///
 /// The engine encrypts successive counter blocks to produce a keystream, and
 /// each block is XORed with it. Encryption and decryption are the same
@@ -61,10 +61,10 @@ use crate::{BlockCipherMode, BlockModeError, BlockModeInitError, IvParams};
 /// mode.reset();
 /// apply(&mut mode, &mut data)?;
 /// assert_eq!(&data, b"twenty byte message!");
-/// assert_eq!(mode.to_string(), "AES/SIC");
+/// assert_eq!(mode.to_string(), "AES/CTR");
 /// # Ok::<(), Box<dyn core::error::Error>>(())
 /// ```
-pub struct FixedSicBlockCipher<C, const N: usize> {
+pub struct FixedCtrBlockCipher<C, const N: usize> {
     cipher: C,
     iv: [u8; N],
     counter: [u8; N],
@@ -72,7 +72,7 @@ pub struct FixedSicBlockCipher<C, const N: usize> {
     initialised: bool,
 }
 
-impl<C, const N: usize> FixedSicBlockCipher<C, N> {
+impl<C, const N: usize> FixedCtrBlockCipher<C, N> {
     /// Wraps `cipher` without allocating. Constant time: nothing is inspected.
     pub const fn new(cipher: C) -> Self {
         Self {
@@ -85,7 +85,7 @@ impl<C, const N: usize> FixedSicBlockCipher<C, N> {
     }
 }
 
-impl<C, const N: usize> Drop for FixedSicBlockCipher<C, N> {
+impl<C, const N: usize> Drop for FixedCtrBlockCipher<C, N> {
     /// Wipes the IV and the chaining or keystream state; the engine wipes
     /// its own key schedule. Constant time.
     fn drop(&mut self) {
@@ -95,17 +95,17 @@ impl<C, const N: usize> Drop for FixedSicBlockCipher<C, N> {
     }
 }
 
-impl<C: Display, const N: usize> Display for FixedSicBlockCipher<C, N> {
-    /// Writes the engine's name followed by `/SIC`, Bouncy Castle's name for
-    /// CTR. Constant time with respect to the key when the engine's `Display`
-    /// is; output timing depends on the formatter.
+impl<C: Display, const N: usize> Display for FixedCtrBlockCipher<C, N> {
+    /// Writes the engine's name followed by `/CTR`.
+    /// Constant time with respect to the key when the engine's `Display` is;
+    /// output timing depends on the formatter.
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         self.cipher.fmt(f)?;
-        f.write_str("/SIC")
+        f.write_str("/CTR")
     }
 }
 
-impl<C: BlockCipher, const N: usize> BlockCipher for FixedSicBlockCipher<C, N> {
+impl<C: BlockCipher, const N: usize> BlockCipher for FixedCtrBlockCipher<C, N> {
     type Error = BlockModeError<C::Error>;
 
     /// Returns `N`. Constant time.
@@ -139,7 +139,7 @@ impl<C: BlockCipher, const N: usize> BlockCipher for FixedSicBlockCipher<C, N> {
     }
 }
 
-impl<C, P, const N: usize> BlockCipherInit<P> for FixedSicBlockCipher<C, N>
+impl<C, P, const N: usize> BlockCipherInit<P> for FixedCtrBlockCipher<C, N>
 where
     C: BlockCipher + BlockCipherInit<P>,
     P: IvParams + ?Sized,
@@ -187,7 +187,7 @@ where
     }
 }
 
-impl<C: BlockCipher, const N: usize> BlockCipherMode for FixedSicBlockCipher<C, N> {
+impl<C: BlockCipher, const N: usize> BlockCipherMode for FixedCtrBlockCipher<C, N> {
     type Cipher = C;
 
     /// Returns the wrapped engine. Constant time.
