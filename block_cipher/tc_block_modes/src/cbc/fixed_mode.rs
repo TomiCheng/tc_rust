@@ -2,6 +2,7 @@
 
 use core::fmt::Display;
 use tc_block_cipher::{BlockCipher, BlockCipherInit, CipherDirection};
+use tc_zeroize::Zeroize;
 use crate::{BlockCipherMode, BlockModeError, BlockModeInitError, IvParams};
 
 /// Allocation-free Cipher Block Chaining mode with an `N`-byte block.
@@ -10,7 +11,7 @@ use crate::{BlockCipherMode, BlockModeError, BlockModeInitError, IvParams};
 /// with the IV, before encryption. The IV is required and must be exactly `N`
 /// bytes; use a fresh, unpredictable one for every message. Initialization
 /// rejects an engine whose block size is not `N`. The IV and chaining state
-/// are stored inline as `[u8; N]` and are not wiped on drop.
+/// are stored inline as `[u8; N]` and are wiped on drop.
 ///
 /// Constant time exactly when the engine is: the mode adds only XORs and
 /// copies.
@@ -57,10 +58,15 @@ impl<C, const N: usize> FixedCbcBlockCipher<C, N> {
             direction: None,
         }
     }
+}
 
-    /// Consumes the mode and returns its underlying cipher. Constant time.
-    pub fn into_inner(self) -> C {
-        self.cipher
+impl<C, const N: usize> Drop for FixedCbcBlockCipher<C, N> {
+    /// Wipes the IV and the chaining or keystream state; the engine wipes
+    /// its own key schedule. Constant time.
+    fn drop(&mut self) {
+        self.iv.zeroize();
+        self.chain.zeroize();
+        self.next.zeroize();
     }
 }
 

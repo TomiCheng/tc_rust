@@ -119,10 +119,10 @@
 //! `tc_aes::AesEngine`, for example, is constant time with AES-NI or its
 //! `rustcrypto` feature and variable time otherwise.
 //!
-//! The modes do not wipe their own state on drop: the IV, the feedback
-//! register or counter, and the last chaining or keystream block remain in
-//! memory. A leftover keystream block can decrypt the ciphertext segment it
-//! produced. The engine wipes its key schedule as its documentation states.
+//! Each mode wipes its IV, its feedback register or counter, and its last
+//! chaining or keystream block on drop; the engine wipes its key schedule as
+//! its documentation states. Neither erases the caller's buffers or temporary
+//! copies left in registers or on the stack.
 //!
 //! # Features
 //!

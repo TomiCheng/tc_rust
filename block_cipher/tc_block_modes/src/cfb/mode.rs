@@ -4,6 +4,7 @@ use alloc::vec;
 use alloc::vec::Vec;
 use core::fmt::{Display, Formatter};
 use tc_block_cipher::{BlockCipher, BlockCipherInit, CipherDirection};
+use tc_zeroize::Zeroize;
 use crate::{BlockCipherMode, BlockModeError, BlockModeInitError, IvOptParams};
 
 /// Cipher Feedback mode over the block cipher `C`, sized at runtime.
@@ -14,7 +15,7 @@ use crate::{BlockCipherMode, BlockModeError, BlockModeInitError, IvOptParams};
 /// multiple of 8 no larger than the engine block; `init` checks it. The engine
 /// is always initialized for encryption. The IV may be at most one block: a
 /// shorter one is right-aligned over zeros and an omitted one is all zeros.
-/// Use a fresh, unpredictable IV for every message. The state is not wiped on
+/// Use a fresh, unpredictable IV for every message. The state is wiped on
 /// drop.
 ///
 /// Constant time exactly when the engine is: the mode adds only XORs and
@@ -84,10 +85,15 @@ impl<C: BlockCipher> CfbBlockCipher<C> {
             direction: None,
         }
     }
+}
 
-    /// Consumes the mode and returns its underlying cipher. Constant time.
-    pub fn into_inner(self) -> C {
-        self.cipher
+impl<C> Drop for CfbBlockCipher<C> {
+    /// Wipes the IV and the chaining or keystream state; the engine wipes
+    /// its own key schedule. Constant time.
+    fn drop(&mut self) {
+        self.iv.zeroize();
+        self.register.zeroize();
+        self.keystream.zeroize();
     }
 }
 

@@ -4,6 +4,7 @@ use alloc::vec;
 use alloc::vec::Vec;
 use core::fmt::{Display, Formatter};
 use tc_block_cipher::{BlockCipher, BlockCipherInit, CipherDirection};
+use tc_zeroize::Zeroize;
 use crate::{BlockCipherMode, BlockModeError, BlockModeInitError, IvOptParams};
 
 /// Output Feedback mode over the block cipher `C`, sized at runtime.
@@ -15,7 +16,7 @@ use crate::{BlockCipherMode, BlockModeError, BlockModeInitError, IvOptParams};
 /// decryption are the same operation, so the requested direction is ignored
 /// and the engine is always initialized for encryption. The IV may be at most
 /// one block: a shorter one is right-aligned over zeros and an omitted one is
-/// all zeros. The IV must never repeat under one key. The state is not wiped
+/// all zeros. The IV must never repeat under one key. The state is wiped
 /// on drop.
 ///
 /// Constant time exactly when the engine is: the mode adds only XORs and
@@ -70,10 +71,15 @@ impl<C: BlockCipher> OfbBlockCipher<C> {
             initialised: false,
         }
     }
+}
 
-    /// Consumes the mode and returns its underlying cipher. Constant time.
-    pub fn into_inner(self) -> C {
-        self.cipher
+impl<C> Drop for OfbBlockCipher<C> {
+    /// Wipes the IV and the chaining or keystream state; the engine wipes
+    /// its own key schedule. Constant time.
+    fn drop(&mut self) {
+        self.iv.zeroize();
+        self.register.zeroize();
+        self.keystream.zeroize();
     }
 }
 

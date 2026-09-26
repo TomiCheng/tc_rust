@@ -42,11 +42,6 @@ impl<C> EcbBlockCipher<C> {
     pub const fn new(cipher: C) -> Self {
         Self { cipher }
     }
-
-    /// Consumes the mode and returns its underlying cipher. Constant time.
-    pub fn into_inner(self) -> C {
-        self.cipher
-    }
 }
 
 impl<C: Display> Display for EcbBlockCipher<C> {

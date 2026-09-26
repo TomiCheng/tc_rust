@@ -2,6 +2,7 @@
 
 use core::fmt::{Display, Formatter};
 use tc_block_cipher::{BlockCipher, BlockCipherInit, CipherDirection};
+use tc_zeroize::Zeroize;
 use crate::{BlockCipherMode, BlockModeError, BlockModeInitError, IvOptParams};
 
 /// Allocation-free Output Feedback mode with an `N`-byte cipher block and an
@@ -16,7 +17,7 @@ use crate::{BlockCipherMode, BlockModeError, BlockModeInitError, IvOptParams};
 /// keystream and reveals the XOR of the two plaintexts.
 ///
 /// Initialization rejects an engine whose block size is not `N` and a segment
-/// size outside `1..=N`. The state is stored inline and not wiped on drop.
+/// size outside `1..=N`. The state is stored inline and wiped on drop.
 ///
 /// Constant time exactly when the engine is: the mode adds only XORs and
 /// copies.
@@ -63,10 +64,15 @@ impl<C, const N: usize, const S: usize> FixedOfbBlockCipher<C, N, S> {
             initialised: false,
         }
     }
+}
 
-    /// Consumes the mode and returns its underlying cipher. Constant time.
-    pub fn into_inner(self) -> C {
-        self.cipher
+impl<C, const N: usize, const S: usize> Drop for FixedOfbBlockCipher<C, N, S> {
+    /// Wipes the IV and the chaining or keystream state; the engine wipes
+    /// its own key schedule. Constant time.
+    fn drop(&mut self) {
+        self.iv.zeroize();
+        self.register.zeroize();
+        self.keystream.zeroize();
     }
 }
 

@@ -4,6 +4,7 @@ use alloc::vec;
 use alloc::vec::Vec;
 use core::fmt::{Display, Formatter};
 use tc_block_cipher::{BlockCipher, BlockCipherInit, CipherDirection};
+use tc_zeroize::Zeroize;
 use crate::{BlockCipherMode, BlockModeError, BlockModeInitError, IvOptParams};
 
 /// Cipher Block Chaining mode over the block cipher `C`, sized at runtime.
@@ -12,7 +13,7 @@ use crate::{BlockCipherMode, BlockModeError, BlockModeInitError, IvOptParams};
 /// previous ciphertext block, the first with the IV, before encryption. The IV
 /// must be exactly one block; an omitted IV is all zeros, which exists only
 /// for compatibility. Use a fresh, unpredictable IV for every message. The IV
-/// and chaining state live in vectors sized from the engine and are not wiped
+/// and chaining state live in vectors sized from the engine and are wiped
 /// on drop.
 ///
 /// Constant time exactly when the engine is: the mode adds only XORs and
@@ -59,10 +60,15 @@ impl<C: BlockCipher> CbcBlockCipher<C> {
             direction: None,
         }
     }
+}
 
-    /// Consumes the mode and returns its underlying cipher. Constant time.
-    pub fn into_inner(self) -> C {
-        self.cipher
+impl<C> Drop for CbcBlockCipher<C> {
+    /// Wipes the IV and the chaining or keystream state; the engine wipes
+    /// its own key schedule. Constant time.
+    fn drop(&mut self) {
+        self.iv.zeroize();
+        self.chain.zeroize();
+        self.next.zeroize();
     }
 }
 
