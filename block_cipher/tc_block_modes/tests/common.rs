@@ -4,8 +4,7 @@
 #![allow(dead_code)]
 
 use tc_aes::AesEngine;
-use tc_block_cipher::{BlockCipher, BlockCipherInit, CipherDirection, KeyParams, KeyRef};
-use tc_block_modes::IvOptParams;
+use tc_block_cipher::{BlockCipher, BlockCipherInit, CipherDirection, KeyRef};
 
 /// NIST SP 800-38A 附錄 F 各 mode 共用的 AES-128 金鑰。
 pub const KEY: &str = "2b7e151628aed2a6abf7158809cf4f3c";
@@ -24,21 +23,6 @@ pub fn unhex(value: &str) -> Vec<u8> {
         .step_by(2)
         .map(|index| u8::from_str_radix(&value[index..index + 2], 16).unwrap())
         .collect()
-}
-
-/// 只帶金鑰、省略 IV 的參數。
-pub struct KeyOnly<'a>(pub &'a [u8]);
-
-impl KeyParams for KeyOnly<'_> {
-    fn key(&self) -> &[u8] {
-        self.0
-    }
-}
-
-impl IvOptParams for KeyOnly<'_> {
-    fn iv_opt(&self) -> Option<&[u8]> {
-        None
-    }
 }
 
 /// 以 `direction` 初始化後逐段處理 `input`，回傳串接的輸出。

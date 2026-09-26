@@ -58,22 +58,6 @@ fn every_key_with_iv_container_initializes_the_same_cbc_state() {
     }
 }
 
-#[cfg(feature = "alloc")]
-#[test]
-fn the_runtime_sized_cbc_treats_an_omitted_iv_as_all_zero() {
-    use common::KeyOnly;
-
-    let key = unhex(KEY);
-    let plaintext = unhex(PLAINTEXT);
-    let mut mode = tc_block_modes::CbcBlockCipher::new(AesEngine::new());
-
-    let omitted = process(&mut mode, CipherDirection::Encrypt, &KeyOnly(&key), &plaintext);
-    let zero = process(&mut mode, CipherDirection::Encrypt, &KeyWithIvRef::new(&key, &[0; 16]), &plaintext);
-    assert_eq!(omitted, zero);
-    // 零 IV 的第一個區塊等於 ECB（F.1.1）。
-    assert_eq!(omitted[..16], unhex("3ad77bb40d7a3660a89ecaf32466ef97"));
-}
-
 #[test]
 fn reset_restores_the_iv_installed_by_the_last_initialization() {
     fn check<M>(mut mode: M)

@@ -5,16 +5,15 @@ use alloc::vec::Vec;
 use core::fmt::{Display, Formatter};
 use tc_block_cipher::{BlockCipher, BlockCipherInit, CipherDirection};
 use tc_zeroize::Zeroize;
-use crate::{BlockCipherMode, BlockModeError, BlockModeInitError, IvOptParams};
+use crate::{BlockCipherMode, BlockModeError, BlockModeInitError, IvParams};
 
 /// Cipher Block Chaining mode over the block cipher `C`, sized at runtime.
 ///
 /// Available with the `alloc` feature. Each plaintext block is XORed with the
 /// previous ciphertext block, the first with the IV, before encryption. The IV
-/// must be exactly one block; an omitted IV is all zeros, which exists only
-/// for compatibility. Use a fresh, unpredictable IV for every message. The IV
-/// and chaining state live in vectors sized from the engine and are wiped
-/// on drop.
+/// is required and must be exactly one block; use a fresh, unpredictable one
+/// for every message. The IV and chaining state live in vectors sized from the
+/// engine and are wiped on drop.
 ///
 /// Constant time exactly when the engine is: the mode adds only XORs and
 /// copies.
@@ -140,7 +139,7 @@ where
 impl<C, P> BlockCipherInit<P> for CbcBlockCipher<C>
 where
     C: BlockCipher + BlockCipherInit<P>,
-    P: IvOptParams + ?Sized,
+    P: IvParams + ?Sized,
 {
     type Error = BlockModeInitError<<C as BlockCipherInit<P>>::Error>;
 
@@ -157,8 +156,8 @@ where
         params: &P,
     ) -> Result<(), <Self as BlockCipherInit<P>>::Error> {
         let block_size = self.cipher.block_size();
-        let iv = params.iv_opt();
-        if let Some(iv) = iv.filter(|iv| iv.len() != block_size) {
+        let iv = params.iv();
+        if iv.len() != block_size {
             return Err(BlockModeInitError::InvalidIvLength(iv.len()));
         }
 
@@ -170,10 +169,7 @@ where
         self.iv.resize(block_size, 0);
         self.chain.resize(block_size, 0);
         self.next.resize(block_size, 0);
-        match iv {
-            Some(iv) => self.iv.copy_from_slice(iv),
-            None => self.iv.fill(0),
-        }
+        self.iv.copy_from_slice(iv);
         self.direction = Some(direction);
         self.reset();
         Ok(())

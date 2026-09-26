@@ -16,7 +16,6 @@ const DECLARATIONS: &[&str] = &[
     "fn reset(",
     "fn key(",
     "fn iv(",
-    "fn iv_opt(",
     "fn zeroize(",
     "fn increment_be(",
 ];
@@ -70,7 +69,7 @@ fn init() {}
 fn process_block() {}
 /// Constant time when the engine's is.
 fn reset() {}
-fn iv_opt() {}
+fn zeroize() {}
 impl Trait for Type {
     fn drop() {}
 }
@@ -87,7 +86,7 @@ mod tests {
             "pub struct Undocumented {}",
             "fn init() {}",
             "fn process_block() {}",
-            "fn iv_opt() {}",
+            "fn zeroize() {}",
         ]
     );
 }

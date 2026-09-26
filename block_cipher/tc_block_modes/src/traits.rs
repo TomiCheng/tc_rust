@@ -4,5 +4,4 @@ mod block_cipher_mode;
 mod iv;
 
 pub use iv::IvParams;
-pub use iv::IvOptParams;
 pub use block_cipher_mode::BlockCipherMode;

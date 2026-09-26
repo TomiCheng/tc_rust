@@ -5,7 +5,7 @@ use alloc::vec::Vec;
 use core::fmt::{Display, Formatter};
 use tc_block_cipher::{BlockCipher, BlockCipherInit, CipherDirection};
 use tc_zeroize::Zeroize;
-use crate::{BlockCipherMode, BlockModeError, BlockModeInitError, IvOptParams};
+use crate::{BlockCipherMode, BlockModeError, BlockModeInitError, IvParams};
 
 /// Cipher Feedback mode over the block cipher `C`, sized at runtime.
 ///
@@ -14,7 +14,7 @@ use crate::{BlockCipherMode, BlockModeError, BlockModeInitError, IvOptParams};
 /// shifted into the register. The feedback size, in bits, must be a nonzero
 /// multiple of 8 no larger than the engine block; `init` checks it. The engine
 /// is always initialized for encryption. The IV may be at most one block: a
-/// shorter one is right-aligned over zeros and an omitted one is all zeros.
+/// shorter one is right-aligned over zeros, so an empty one is all zeros.
 /// Use a fresh, unpredictable IV for every message. The state is wiped on
 /// drop.
 ///
@@ -153,7 +153,7 @@ impl<C: BlockCipher> BlockCipher for CfbBlockCipher<C> {
 impl<C, P> BlockCipherInit<P> for CfbBlockCipher<C>
 where
     C: BlockCipher + BlockCipherInit<P>,
-    P: IvOptParams + ?Sized,
+    P: IvParams + ?Sized,
 {
     type Error = BlockModeInitError<<C as BlockCipherInit<P>>::Error>;
 
@@ -176,8 +176,8 @@ where
             return Err(BlockModeInitError::InvalidFeedbackSize(bits));
         }
 
-        let iv = params.iv_opt();
-        if let Some(iv) = iv.filter(|iv| iv.len() > block_size) {
+        let iv = params.iv();
+        if iv.len() > block_size {
             return Err(BlockModeInitError::InvalidIvLength(iv.len()));
         }
 
@@ -189,8 +189,7 @@ where
         self.iv.resize(block_size, 0);
         self.register.resize(block_size, 0);
         self.keystream.resize(block_size, 0);
-        // 短 IV 靠右放、左補零（FIPS 81）；省略 IV 等同全零。
-        let iv = iv.unwrap_or(&[]);
+        // 短 IV 靠右放、左補零（FIPS 81），所以空 IV 就是全零。
         let offset = block_size - iv.len();
         self.iv[..offset].fill(0);
         self.iv[offset..].copy_from_slice(iv);

@@ -64,8 +64,7 @@
 //! # Parameters
 //!
 //! A mode accepts any parameter type that the engine accepts and that also
-//! provides the IV through [`IvParams`], or through [`IvOptParams`] where the
-//! mode allows the IV to be omitted. The mode checks the IV and passes the
+//! provides the IV through [`IvParams`]. The mode checks the IV and passes the
 //! same value on to the engine's `init`.
 //!
 //! - [`KeyWithIvRef`] borrows a key and an IV without copying or wiping them.
@@ -75,18 +74,16 @@
 //!
 //! IV rules depend on the mode:
 //!
-//! - CBC: exactly one block. `CbcBlockCipher` treats an omitted IV as all
-//!   zeros; [`FixedCbcBlockCipher`] requires one.
+//! - CBC: exactly one block.
 //! - CFB and OFB: at most one block. A shorter IV is right-aligned over zeros,
-//!   as in FIPS 81, and an omitted IV is all zeros.
+//!   as in FIPS 81, so an empty IV is all zeros.
 //! - CTR: required. The IV fills the leading bytes of the counter block and
 //!   the rest start at zero; it may leave at most `min(8, block / 2)` bytes of
 //!   counter, so AES needs 8 to 16 bytes. The counter spans the whole block
 //!   and carries into the IV bytes, so keep each message below
 //!   `2^(8 * counter bytes)` blocks: 64 GiB for AES with a 12-byte IV.
 //!
-//! A fixed or all-zero IV defeats the confidentiality of every mode here;
-//! omitted IVs exist for compatibility.
+//! A fixed or all-zero IV defeats the confidentiality of every mode here.
 //!
 //! # Processing
 //!
@@ -165,5 +162,4 @@ pub use ofb::FixedOfbBlockCipher;
 pub use params::KeyWithIvOwned;
 pub use params::{KeyWithIvFixed, KeyWithIvRef};
 pub use traits::BlockCipherMode;
-pub use traits::IvOptParams;
 pub use traits::IvParams;

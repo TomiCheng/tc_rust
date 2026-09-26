@@ -3,7 +3,7 @@
 use core::fmt::{Display, Formatter};
 use tc_block_cipher::{BlockCipher, BlockCipherInit, CipherDirection};
 use tc_zeroize::Zeroize;
-use crate::{BlockCipherMode, BlockModeError, BlockModeInitError, IvOptParams};
+use crate::{BlockCipherMode, BlockModeError, BlockModeInitError, IvParams};
 
 /// Allocation-free Cipher Feedback mode with an `N`-byte cipher block and an
 /// `S`-byte segment.
@@ -12,7 +12,7 @@ use crate::{BlockCipherMode, BlockModeError, BlockModeInitError, IvOptParams};
 /// register, and the ciphertext segment is shifted into the register. `S = 1`
 /// gives CFB8, which handles any message length; `S = N` gives full-block
 /// CFB. The engine is always initialized for encryption. The IV may be at most
-/// `N` bytes: a shorter one is right-aligned over zeros and an omitted one is
+/// `N` bytes: a shorter one is right-aligned over zeros, so an empty one is
 /// all zeros. Use a fresh, unpredictable IV for every message.
 ///
 /// Initialization rejects an engine whose block size is not `N` and a segment
@@ -131,7 +131,7 @@ impl<C: BlockCipher, const N: usize, const S: usize> BlockCipher for FixedCfbBlo
 impl<C, P, const N: usize, const S: usize> BlockCipherInit<P> for FixedCfbBlockCipher<C, N, S>
 where
     C: BlockCipher + BlockCipherInit<P>,
-    P: IvOptParams + ?Sized,
+    P: IvParams + ?Sized,
 {
     type Error = BlockModeInitError<<C as BlockCipherInit<P>>::Error>;
 
@@ -160,8 +160,8 @@ where
             return Err(BlockModeInitError::InvalidFeedbackSize(S * 8));
         }
 
-        let iv = params.iv_opt();
-        if let Some(iv) = iv.filter(|iv| iv.len() > N) {
+        let iv = params.iv();
+        if iv.len() > N {
             return Err(BlockModeInitError::InvalidIvLength(iv.len()));
         }
 
@@ -169,8 +169,7 @@ where
             .init(CipherDirection::Encrypt, params)
             .map_err(BlockModeInitError::Cipher)?;
 
-        // 短 IV 靠右放、左補零（FIPS 81）；省略 IV 等同全零。
-        let iv = iv.unwrap_or(&[]);
+        // 短 IV 靠右放、左補零（FIPS 81），所以空 IV 就是全零。
         let offset = N - iv.len();
         self.iv[..offset].fill(0);
         self.iv[offset..].copy_from_slice(iv);

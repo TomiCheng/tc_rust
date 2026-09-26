@@ -3,7 +3,7 @@
 mod common;
 
 use common::{
-    IV, KEY, KeyOnly, PLAINTEXT, assert_only_the_first_segment_is_written, assert_vectors,
+    IV, KEY, PLAINTEXT, assert_only_the_first_segment_is_written, assert_vectors,
     process, unhex,
 };
 use tc_aes::AesEngine;
@@ -66,12 +66,10 @@ fn cfb8_matches_the_nist_sp800_38a_aes128_vectors() {
 }
 
 #[test]
-fn a_short_iv_is_right_aligned_over_zeros_and_an_omitted_iv_is_all_zero() {
+fn a_short_iv_is_right_aligned_over_zeros_so_an_empty_iv_is_all_zero() {
     fn check<M>(mut mode: M)
     where
-        M: BlockCipher
-            + for<'a> BlockCipherInit<KeyWithIvRef<'a>>
-            + for<'a> BlockCipherInit<KeyOnly<'a>>,
+        M: BlockCipher + for<'a> BlockCipherInit<KeyWithIvRef<'a>>,
     {
         let key = unhex(KEY);
         let plaintext = unhex(PLAINTEXT);
@@ -83,9 +81,9 @@ fn a_short_iv_is_right_aligned_over_zeros_and_an_omitted_iv_is_all_zero() {
         let full = process(&mut mode, encrypt, &KeyWithIvRef::new(&key, &padded), &plaintext);
         assert_eq!(short, full);
 
-        let omitted = process(&mut mode, encrypt, &KeyOnly(&key), &plaintext);
+        let empty = process(&mut mode, encrypt, &KeyWithIvRef::new(&key, &[]), &plaintext);
         let zero = process(&mut mode, encrypt, &KeyWithIvRef::new(&key, &[0; 16]), &plaintext);
-        assert_eq!(omitted, zero);
+        assert_eq!(empty, zero);
     }
 
     check(FixedCfbBlockCipher::<_, 16, 16>::new(AesEngine::new()));
