@@ -741,6 +741,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_aes"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5c719c5aa9931f8585f573c59c38901f3b7090de11979a9b48cf587039a5ae4d"
+dependencies = [
+ "tc_block_cipher",
+ "tc_runtime",
+ "tc_zeroize",
+]
+
+[[package]]
 name = "tc_aes_old"
 version = "0.1.0"
 dependencies = [
@@ -863,6 +874,7 @@ dependencies = [
 name = "tc_block_modes"
 version = "0.1.0"
 dependencies = [
+ "tc_aes",
  "tc_block_cipher",
  "tc_zeroize",
 ]
