@@ -7,3 +7,4 @@ repository.workspace = true
 
 [dependencies]
 tc_asym_cipher = { version = "0.1.0", path = "../tc_asym_cipher" }
+tc_zeroize = "0.1.0"
