@@ -930,6 +930,13 @@ version = "0.1.0"
 [[package]]
 name = "tc_asym_encoding"
 version = "0.1.0"
+dependencies = [
+ "rand_core",
+ "tc_asym_cipher",
+ "tc_digest 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tc_rsa_v2",
+ "tc_sha 0.1.1",
+]
 
 [[package]]
 name = "tc_bigint"

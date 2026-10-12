@@ -7,3 +7,10 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
+rand_core = "0.10.1"
+tc_digest = "0.1.0"
+tc_asym_cipher = { version = "0.1.0", path = "../tc_asym_cipher" }
+
+[dev-dependencies]
+tc_rsa_v2 = { version = "0.1.0", path = "../tc_rsa" }
+tc_sha = "0.1.1"
