@@ -9,6 +9,7 @@ repository.workspace = true
 alloc = ["dep:rand_core", "tc_bigint/alloc", "tc_modular/alloc", "tc_prime/alloc"]
 
 [dependencies]
+num-traits = { version = "0.2.19", default-features = false }
 rand_core = { version = "0.10.1", default-features = false, optional = true }
 tc_asym_cipher = { version = "0.1.0", path = "../tc_asym_cipher" }
 tc_zeroize = "0.1.0"

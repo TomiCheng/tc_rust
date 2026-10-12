@@ -5,6 +5,7 @@ extern crate alloc;
 
 mod error;
 mod params;
+mod rsa_core_engine;
 #[cfg(feature = "alloc")]
 mod rsa_key_pair_generator;
 mod traits;
@@ -16,6 +17,7 @@ pub use params::RsaKeyGenerationParamsOwned;
 pub use params::RsaKeyGenerationParamsRef;
 pub use params::RsaKeyOwned;
 pub use params::RsaPrivateCrtKeyOwned;
+pub use rsa_core_engine::RsaCoreEngine;
 #[cfg(feature = "alloc")]
 pub use rsa_key_pair_generator::RsaKeyPairGenerator;
 #[cfg(feature = "alloc")]
