@@ -114,6 +114,15 @@ impl Default for RsaCrtCoreEngineRustCrypto {
     }
 }
 
+/// Writes [`ALGO_NAME`](crate::ALGO_NAME) without inspecting key material.
+/// Constant time with respect to the key; output timing depends on the
+/// formatter.
+impl core::fmt::Display for RsaCrtCoreEngineRustCrypto {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.write_str(crate::ALGO_NAME)
+    }
+}
+
 /// Builds the `rsa` key of the modulus, the exponents and the primes
 /// through `RsaPrivateKey::from_components`, which checks the key and works
 /// out its CRT values, once [`validate`](crate::RsaKeyParams::validate)

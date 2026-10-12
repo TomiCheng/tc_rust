@@ -83,6 +83,15 @@ impl Default for RsaCoreEngineRustCrypto {
     }
 }
 
+/// Writes [`ALGO_NAME`](crate::ALGO_NAME) without inspecting key material.
+/// Constant time with respect to the key; output timing depends on the
+/// formatter.
+impl core::fmt::Display for RsaCoreEngineRustCrypto {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.write_str(crate::ALGO_NAME)
+    }
+}
+
 /// Builds the `rsa` key of the modulus and the public exponent, once
 /// [`validate`](RsaKeyParams::validate) passes the key and `rsa` takes it,
 /// and fails with `InvalidKey` otherwise, or for a private key. Variable

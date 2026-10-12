@@ -3,6 +3,7 @@
 #[cfg(feature = "alloc")]
 extern crate alloc;
 
+mod algorithm;
 mod blinded_engine;
 mod block;
 mod core_engine;
@@ -16,6 +17,7 @@ mod testing;
 mod traits;
 mod validation;
 
+pub use algorithm::ALGO_NAME;
 pub use blinded_engine::RsaBlindedEngine;
 pub use core_engine::FixedRsaCoreEngine;
 #[cfg(feature = "alloc")]

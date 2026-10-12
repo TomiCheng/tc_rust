@@ -107,6 +107,15 @@ impl<const N: usize> Default for FixedRsaCoreEngine<N> {
     }
 }
 
+/// Writes [`ALGO_NAME`](crate::ALGO_NAME) without inspecting key material.
+/// Constant time with respect to the key; output timing depends on the
+/// formatter.
+impl<const N: usize> core::fmt::Display for FixedRsaCoreEngine<N> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.write_str(crate::ALGO_NAME)
+    }
+}
+
 /// Copies the key in, once [`validate`](crate::RsaKeyParams::validate)
 /// passes it, as Bouncy Castle checks a key when its `RsaKeyParameters` is
 /// built, and works out the Montgomery parameters of the modulus; fails

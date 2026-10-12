@@ -115,6 +115,15 @@ impl Default for PaddedRsaCrtCoreEngine {
     }
 }
 
+/// Writes [`ALGO_NAME`](crate::ALGO_NAME) without inspecting key material.
+/// Constant time with respect to the key; output timing depends on the
+/// formatter.
+impl core::fmt::Display for PaddedRsaCrtCoreEngine {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.write_str(crate::ALGO_NAME)
+    }
+}
+
 /// Copies the key in, once [`validate`](crate::RsaKeyParams::validate)
 /// passes it, and fails with `InvalidKey` otherwise. The public exponent is
 /// kept at the width of its own bits, so that the check of a result costs
