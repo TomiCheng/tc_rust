@@ -54,6 +54,51 @@ impl<const N: usize, const H: usize> Drop for CrtKey<N, H> {
 /// copied in at initialization, and nothing is allocated. The blocks are as
 /// those of [`FixedRsaCoreEngine`](crate::FixedRsaCoreEngine): the output always
 /// takes the full length of the modulus, leading zeros kept.
+///
+/// From a new key to a block encrypted with the public key and decrypted
+/// through the CRT; key generation takes the `alloc` feature, while the
+/// engines do not:
+///
+/// ```
+/// # #[cfg(feature = "alloc")] {
+/// use tc_asym_cipher::{
+///     AsymmetricBlockCipher, AsymmetricBlockCipherInit, CipherDirection, KeyPairGenerator,
+///     KeyPairGeneratorInit,
+/// };
+/// use tc_bigint::{FixedBigUint, Word};
+/// use tc_rsa_v2::{
+///     FixedRsaCoreEngine, FixedRsaCrtCoreEngine, RsaKeyGenerationParamsOwned, RsaKeyPairGenerator,
+/// };
+///
+/// // A 2048-bit modulus, with its primes at half that width, which is what
+/// // makes the CRT fast; the widths follow from the limbs.
+/// type U2048 = FixedBigUint<{ 2048 / Word::BITS as usize }>;
+/// type U1024 = FixedBigUint<{ 1024 / Word::BITS as usize }>;
+///
+/// // 1. Generate a key pair, its primes and CRT values at 1024 bits.
+/// let mut generator = RsaKeyPairGenerator::<U2048, U1024>::new();
+/// generator.init(RsaKeyGenerationParamsOwned::new(rand::rng()))?;
+/// let (public, private) = generator.generate_key_pair()?;
+///
+/// // 2. Encrypt a block with the public key, which has no CRT. Raw RSA is
+/// //    shown here; a real message goes through a padding, such as OAEP,
+/// //    first.
+/// let message = b"a block of at most 255 bytes";
+/// let mut encrypt = FixedRsaCoreEngine::new();
+/// encrypt.init(CipherDirection::Encrypt, &public)?;
+/// let mut ciphertext = [0; 256];
+/// encrypt.process_block(message, &mut ciphertext)?;
+///
+/// // 3. Decrypt it through the CRT with the private key. A result that a
+/// //    fault spoils fails with `FaultyDecryptionOrSigning` instead.
+/// let mut decrypt = FixedRsaCrtCoreEngine::new();
+/// decrypt.init(CipherDirection::Decrypt, &private)?;
+/// let mut plaintext = [0; 256];
+/// decrypt.process_block(&ciphertext, &mut plaintext)?;
+/// let recovered = &plaintext[256 - message.len()..];
+/// # }
+/// # Ok::<(), tc_rsa_v2::RsaError>(())
+/// ```
 pub struct FixedRsaCrtCoreEngine<const N: usize, const H: usize> {
     key: Option<CrtKey<N, H>>,
 }

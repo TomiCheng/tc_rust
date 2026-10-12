@@ -7,7 +7,7 @@ use tc_bigint::BitOps;
 use tc_prime::Primality;
 use tc_zeroize::{Zeroize, ZeroizeOnDrop};
 
-use crate::validation::key_passes;
+use crate::validation::crt_key_passes;
 use crate::{RsaKeyParams, RsaPrivateCrtKeyParams};
 
 /// An RSA private key with the values of the Chinese Remainder Theorem,
@@ -116,9 +116,12 @@ where
             return true;
         }
         let crt = [&self.p, &self.q, &self.dp, &self.dq, &self.q_inv];
-        let passes = key_passes(true, &self.modulus, &self.private_exponent)
-            && !self.public_exponent.is_zero()
-            && !crt.iter().any(|value| value.is_zero());
+        let passes = crt_key_passes(
+            &self.modulus,
+            &self.public_exponent,
+            &self.private_exponent,
+            crt,
+        );
         self.validated.store(passes, Ordering::Relaxed);
         passes
     }

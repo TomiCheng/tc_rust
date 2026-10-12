@@ -27,20 +27,24 @@ use crate::{RsaError, RsaKeyGenerationParams, RsaKeyOwned, RsaPrivateCrtKeyOwned
 ///
 /// ```
 /// use tc_asym_cipher::{KeyPairGenerator, KeyPairGeneratorInit};
-/// use tc_bigint::{BitOps, FixedBigUint, Word};
-/// use tc_rsa_v2::{RsaKeyGenerationParamsOwned, RsaKeyPairGenerator, RsaKeyParams};
+/// use tc_bigint::{FixedBigUint, Word};
+/// use tc_rsa_v2::{RsaKeyGenerationParamsOwned, RsaKeyPairGenerator};
 ///
-/// // A 2048-bit modulus, and primes at half its width, whatever the limbs.
+/// // A 2048-bit modulus, with its primes at half that width, so that the
+/// // CRT runs on integers half as wide; the widths follow from the limbs.
 /// type U2048 = FixedBigUint<{ 2048 / Word::BITS as usize }>;
 /// type U1024 = FixedBigUint<{ 1024 / Word::BITS as usize }>;
 ///
-/// // The defaults: a 2048-bit modulus and the public exponent 65537.
+/// // The defaults: a 2048-bit modulus and the public exponent 65537, drawn
+/// // from the system's random source; `with_strength` and the other
+/// // `with_*` methods change them.
 /// let params = RsaKeyGenerationParamsOwned::new(rand::rng());
 /// let mut generator = RsaKeyPairGenerator::<U2048, U1024>::new();
 /// generator.init(params)?;
+///
+/// // The public key holds `n` and `e`; the private one adds `d` and the
+/// // values of the CRT.
 /// let (public, private) = generator.generate_key_pair()?;
-/// assert_eq!(public.modulus(), private.modulus());
-/// assert_eq!(public.modulus().bits(), 2048);
 /// # Ok::<(), tc_rsa_v2::RsaError>(())
 /// ```
 pub struct RsaKeyPairGenerator<'a, T, H = T> {

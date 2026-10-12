@@ -7,9 +7,9 @@ mod block;
 mod core_engine;
 mod crt_engine;
 mod error;
-mod params;
 #[cfg(feature = "alloc")]
 mod key_pair_generator;
+mod params;
 #[cfg(test)]
 mod testing;
 mod traits;
@@ -23,13 +23,15 @@ pub use crt_engine::FixedRsaCrtCoreEngine;
 pub use crt_engine::PaddedRsaCrtCoreEngine;
 pub use error::RsaError;
 #[cfg(feature = "alloc")]
+pub use key_pair_generator::RsaKeyPairGenerator;
+#[cfg(feature = "alloc")]
 pub use params::RsaKeyGenerationParamsOwned;
 #[cfg(feature = "alloc")]
 pub use params::RsaKeyGenerationParamsRef;
 pub use params::RsaKeyOwned;
+pub use params::RsaKeyRef;
 pub use params::RsaPrivateCrtKeyOwned;
-#[cfg(feature = "alloc")]
-pub use key_pair_generator::RsaKeyPairGenerator;
+pub use params::RsaPrivateCrtKeyRef;
 #[cfg(feature = "alloc")]
 pub use traits::RsaKeyGenerationParams;
 pub use traits::RsaKeyParams;

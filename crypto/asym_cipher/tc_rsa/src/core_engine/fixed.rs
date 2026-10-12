@@ -45,26 +45,43 @@ impl<const N: usize> Drop for Key<N> {
 /// the padding, once it has checked the block. The output block is one
 /// byte longer than Bouncy Castle's when decrypting.
 ///
+/// From a new key to a block encrypted and decrypted; key generation takes
+/// the `alloc` feature, while the engine does not:
+///
 /// ```
-/// use tc_asym_cipher::{AsymmetricBlockCipher, AsymmetricBlockCipherInit, CipherDirection};
-/// use tc_bigint::FixedBigUint;
-/// use tc_rsa_v2::{FixedRsaCoreEngine, RsaKeyOwned};
+/// # #[cfg(feature = "alloc")] {
+/// use tc_asym_cipher::{
+///     AsymmetricBlockCipher, AsymmetricBlockCipherInit, CipherDirection, KeyPairGenerator,
+///     KeyPairGeneratorInit,
+/// };
+/// use tc_bigint::{FixedBigUint, Word};
+/// use tc_rsa_v2::{FixedRsaCoreEngine, RsaKeyGenerationParamsOwned, RsaKeyPairGenerator};
 ///
-/// // A toy key, p = 1009 and q = 1013, far too small for any real use.
-/// let n = FixedBigUint::<1>::from(1_022_117u32);
-/// let public = RsaKeyOwned::new(false, n.clone(), FixedBigUint::from(17u32));
-/// let private = RsaKeyOwned::new(true, n, FixedBigUint::from(180_017u32));
+/// // Integers of 2048 bits, whatever the width of a limb.
+/// type U2048 = FixedBigUint<{ 2048 / Word::BITS as usize }>;
 ///
+/// // 1. Generate a key pair: by default a 2048-bit modulus and the public
+/// //    exponent 65537, drawn from the system's random source.
+/// let mut generator = RsaKeyPairGenerator::<U2048>::new();
+/// generator.init(RsaKeyGenerationParamsOwned::new(rand::rng()))?;
+/// let (public, private) = generator.generate_key_pair()?;
+///
+/// // 2. Encrypt a block with the public key. Raw RSA is shown here; a real
+/// //    message goes through a padding, such as OAEP, first.
+/// let message = b"a block of at most 255 bytes";
 /// let mut engine = FixedRsaCoreEngine::new();
 /// engine.init(CipherDirection::Encrypt, &public)?;
-/// let mut ciphertext = [0; 3];
-/// engine.process_block(&[65], &mut ciphertext)?;
-/// assert_eq!(ciphertext, [0x02, 0xb3, 0xcd]); // 177101
+/// let mut ciphertext = [0; 256];
+/// engine.process_block(message, &mut ciphertext)?;
 ///
+/// // 3. Decrypt it with the private key. The output takes the full 256
+/// //    bytes of the modulus: the message comes back at the end, after
+/// //    leading zeros, for the padding to take apart.
 /// engine.init(CipherDirection::Decrypt, &private)?;
-/// let mut plaintext = [0; 3];
+/// let mut plaintext = [0; 256];
 /// engine.process_block(&ciphertext, &mut plaintext)?;
-/// assert_eq!(plaintext, [0, 0, 65]); // the leading zeros are kept
+/// let recovered = &plaintext[256 - message.len()..];
+/// # }
 /// # Ok::<(), tc_rsa_v2::RsaError>(())
 /// ```
 pub struct FixedRsaCoreEngine<const N: usize> {

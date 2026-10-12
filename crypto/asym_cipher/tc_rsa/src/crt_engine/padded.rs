@@ -51,6 +51,45 @@ impl Drop for CrtKey {
 /// at initialization. The blocks are as those of
 /// [`PaddedRsaCoreEngine`](crate::PaddedRsaCoreEngine): the output always takes the
 /// full length of the modulus, leading zeros kept.
+///
+/// From a new key to a block encrypted with the public key and decrypted
+/// through the CRT:
+///
+/// ```
+/// use tc_asym_cipher::{
+///     AsymmetricBlockCipher, AsymmetricBlockCipherInit, CipherDirection, KeyPairGenerator,
+///     KeyPairGeneratorInit,
+/// };
+/// use tc_bigint::PaddedBigUint;
+/// use tc_rsa_v2::{
+///     PaddedRsaCoreEngine, PaddedRsaCrtCoreEngine, RsaKeyGenerationParamsOwned,
+///     RsaKeyPairGenerator,
+/// };
+///
+/// // 1. Generate a key pair: a 2048-bit modulus and the public exponent
+/// //    65537; the primes and the CRT values come at half the width.
+/// let mut generator = RsaKeyPairGenerator::<PaddedBigUint>::new();
+/// generator.init(RsaKeyGenerationParamsOwned::new(rand::rng()))?;
+/// let (public, private) = generator.generate_key_pair()?;
+///
+/// // 2. Encrypt a block with the public key, which has no CRT. Raw RSA is
+/// //    shown here; a real message goes through a padding, such as OAEP,
+/// //    first.
+/// let message = b"a block shorter than the modulus";
+/// let mut encrypt = PaddedRsaCoreEngine::new();
+/// encrypt.init(CipherDirection::Encrypt, &public)?;
+/// let mut ciphertext = vec![0; encrypt.output_block_size()];
+/// encrypt.process_block(message, &mut ciphertext)?;
+///
+/// // 3. Decrypt it through the CRT with the private key. A result that a
+/// //    fault spoils fails with `FaultyDecryptionOrSigning` instead.
+/// let mut decrypt = PaddedRsaCrtCoreEngine::new();
+/// decrypt.init(CipherDirection::Decrypt, &private)?;
+/// let mut plaintext = vec![0; decrypt.output_block_size()];
+/// decrypt.process_block(&ciphertext, &mut plaintext)?;
+/// let recovered = &plaintext[plaintext.len() - message.len()..];
+/// # Ok::<(), tc_rsa_v2::RsaError>(())
+/// ```
 pub struct PaddedRsaCrtCoreEngine {
     key: Option<CrtKey>,
 }

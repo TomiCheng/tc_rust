@@ -31,6 +31,26 @@ where
         && modulus_passes(modulus)
 }
 
+/// Whether a CRT key passes the checks of Bouncy Castle's
+/// `RsaPrivateCrtKeyParameters`: those of [`key_passes`] on the modulus and
+/// `d`, and a public exponent, primes and CRT values none of which is zero.
+/// Variable time: only for public values, as the modulus is; the other
+/// values are only read for zero.
+pub(crate) fn crt_key_passes<T, H>(
+    modulus: &T,
+    public_exponent: &T,
+    private_exponent: &T,
+    crt: [&H; 5],
+) -> bool
+where
+    T: Zero + BitOps + Primality + From<u8>,
+    H: Zero,
+{
+    key_passes(true, modulus, private_exponent)
+        && !public_exponent.is_zero()
+        && !crt.iter().any(|value| value.is_zero())
+}
+
 /// Whether an odd modulus passes the checks of Bouncy Castle: at most
 /// 16384 bits, no prime factor below 212, and proved composite by
 /// Miller-Rabin, in as many rounds as Bouncy Castle runs for half its size.
