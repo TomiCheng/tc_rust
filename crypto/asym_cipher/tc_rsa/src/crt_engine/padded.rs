@@ -49,7 +49,7 @@ impl Drop for CrtKey {
 /// by raising the result back to `e`, which turns down a result a fault
 /// has spoiled, as Lenstra's attack on the CRT needs. The key is copied in
 /// at initialization. The blocks are as those of
-/// [`RsaCoreEngine`](crate::RsaCoreEngine): the output always takes the
+/// [`PaddedRsaCoreEngine`](crate::PaddedRsaCoreEngine): the output always takes the
 /// full length of the modulus, leading zeros kept.
 pub struct PaddedRsaCrtCoreEngine {
     key: Option<CrtKey>,
@@ -212,8 +212,8 @@ mod tests {
     use super::PaddedRsaCrtCoreEngine;
     use crate::testing::{D, DP, DQ, N, P, Q, Q_INV};
     use crate::{
-        RsaCoreEngine, RsaError, RsaKeyGenerationParamsOwned, RsaKeyOwned, RsaKeyPairGenerator,
-        RsaKeyParams, RsaPrivateCrtKeyOwned, RsaPrivateCrtKeyParams,
+        PaddedRsaCoreEngine, RsaError, RsaKeyGenerationParamsOwned, RsaKeyOwned,
+        RsaKeyPairGenerator, RsaKeyParams, RsaPrivateCrtKeyOwned, RsaPrivateCrtKeyParams,
     };
 
     fn int(text: &str) -> PaddedBigUint {
@@ -255,7 +255,7 @@ mod tests {
         let mut crt = PaddedRsaCrtCoreEngine::new();
         crt.init(CipherDirection::Decrypt, &key).unwrap();
         let plain_key = RsaKeyOwned::new(true, key.modulus().clone(), key.exponent().clone());
-        let mut plain = RsaCoreEngine::new();
+        let mut plain = PaddedRsaCoreEngine::new();
         plain.init(CipherDirection::Decrypt, &plain_key).unwrap();
         for fill in [0x02u8, 0x5a, 0xb3] {
             let input = [fill; 255];
@@ -271,7 +271,7 @@ mod tests {
     fn a_message_encrypted_with_the_public_key_comes_back() {
         let key = wycheproof(int(DP));
         let public = RsaKeyOwned::new(false, key.modulus().clone(), key.public_exponent().clone());
-        let mut encrypt = RsaCoreEngine::new();
+        let mut encrypt = PaddedRsaCoreEngine::new();
         encrypt.init(CipherDirection::Encrypt, &public).unwrap();
         let mut message = [0x42; 255];
         message[0] = 0x01;
@@ -315,7 +315,7 @@ mod tests {
         let mut signature = [0; 128];
         sign.process_block(&message, &mut signature).unwrap();
 
-        let mut verify = RsaCoreEngine::new();
+        let mut verify = PaddedRsaCoreEngine::new();
         verify.init(CipherDirection::Decrypt, &public).unwrap();
         let mut recovered = [0; 128];
         verify.process_block(&signature, &mut recovered).unwrap();

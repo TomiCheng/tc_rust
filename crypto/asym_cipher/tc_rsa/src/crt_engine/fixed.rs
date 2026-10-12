@@ -52,7 +52,7 @@ impl<const N: usize, const H: usize> Drop for CrtKey<N, H> {
 /// turns down a result a fault has spoiled, as Lenstra's attack on the CRT
 /// needs. `H` must be at most `N`, which the build checks. The key is
 /// copied in at initialization, and nothing is allocated. The blocks are as
-/// those of [`RsaCoreEngine`](crate::RsaCoreEngine): the output always
+/// those of [`FixedRsaCoreEngine`](crate::FixedRsaCoreEngine): the output always
 /// takes the full length of the modulus, leading zeros kept.
 pub struct FixedRsaCrtCoreEngine<const N: usize, const H: usize> {
     key: Option<CrtKey<N, H>>,
@@ -212,7 +212,7 @@ mod tests {
 
     use super::FixedRsaCrtCoreEngine;
     use crate::testing::{D, DP, DQ, N, P, Q, Q_INV, hex};
-    use crate::{RsaCoreEngine, RsaError, RsaKeyOwned, RsaPrivateCrtKeyOwned};
+    use crate::{FixedRsaCoreEngine, RsaError, RsaKeyOwned, RsaPrivateCrtKeyOwned};
 
     const WIDE: usize = 2048 / Word::BITS as usize;
     const HALF: usize = 1024 / Word::BITS as usize;
@@ -260,7 +260,7 @@ mod tests {
     #[test]
     fn the_crt_agrees_with_the_plain_power_of_d() {
         let mut crt = engine(&wycheproof(half(P), half(DP)));
-        let mut plain = RsaCoreEngine::new();
+        let mut plain = FixedRsaCoreEngine::new();
         plain
             .init(
                 CipherDirection::Decrypt,
@@ -279,7 +279,7 @@ mod tests {
 
     #[test]
     fn a_message_encrypted_with_the_public_key_comes_back() {
-        let mut encrypt = RsaCoreEngine::new();
+        let mut encrypt = FixedRsaCoreEngine::new();
         encrypt
             .init(
                 CipherDirection::Encrypt,

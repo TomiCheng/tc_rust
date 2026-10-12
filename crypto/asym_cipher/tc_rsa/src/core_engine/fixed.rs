@@ -1,42 +1,42 @@
 //! The RSA operation without the CRT, as Bouncy Castle's `RsaCoreEngine`
-//! runs it for a key that is not a CRT key.
+//! runs it for a key that is not a CRT key, over `FixedBigUint`.
 
-use core::ops::Sub;
-
-use num_traits::Zero;
 use tc_asym_cipher::{AsymmetricBlockCipher, AsymmetricBlockCipherInit, CipherDirection};
-use tc_bigint::{ArrayEncoding, BitOps};
-use tc_modular::{ModPow, NonZero};
+use tc_bigint::{ArrayEncoding, FixedBigUint};
+use tc_modular::{FixedMontyForm, FixedMontyParams, Odd};
 use tc_zeroize::{Zeroize, Zeroizing};
 
 use crate::block::{input_block_size, output_block_size, write_be};
 use crate::{RsaError, RsaKeyParams};
 
-/// What an engine keeps from its initialization: the key, `n - 1` for the
-/// range check of the input, the size of the modulus in bits, and the
-/// direction. The exponent and `n - 1` are wiped on drop; the modulus is
-/// public.
-struct Key<T: Zeroize> {
-    modulus: NonZero<T>,
-    modulus_less_one: T,
-    exponent: T,
+/// What an engine keeps from its initialization: `n - 1` for the range
+/// check of the input, the exponent and whether it is private, the
+/// Montgomery parameters of the modulus, the size of the modulus in bits,
+/// and the direction. The exponent, `n - 1` and the parameters are wiped on
+/// drop.
+struct Key<const N: usize> {
+    modulus_less_one: FixedBigUint<N>,
+    exponent: FixedBigUint<N>,
+    is_private: bool,
+    params: FixedMontyParams<N>,
     bits: u32,
     direction: CipherDirection,
 }
 
-/// Wipes the exponent, which is `d` for a private key, and `n - 1`.
-/// Constant time, as the `Zeroize` of `T` is.
-impl<T: Zeroize> Drop for Key<T> {
+/// Wipes the exponent, which is `d` for a private key, `n - 1` and the
+/// parameters. Constant time.
+impl<const N: usize> Drop for Key<N> {
     fn drop(&mut self) {
         self.exponent.zeroize();
         self.modulus_less_one.zeroize();
+        self.params.zeroize();
     }
 }
 
-/// The RSA operation without the CRT, `x^e mod n` for a public key and
-/// `x^d mod n` for a private one, on integers of type `T`, as Bouncy
-/// Castle's `RsaCoreEngine` runs it for a key that is not a CRT key. The
-/// key is copied in at initialization, so the engine does not borrow it.
+/// The RSA operation without the CRT over [`FixedBigUint`] at `N` limbs,
+/// `x^e mod n` for a public key and `x^d mod n` for a private one, as
+/// Bouncy Castle's `RsaCoreEngine` runs it for a key that is not a CRT key.
+/// The key is copied in at initialization, and nothing is allocated.
 ///
 /// The output always takes the full length of the modulus, `(bits + 7) / 8`
 /// bytes, leading zeros kept, in both directions. Bouncy Castle trims them
@@ -48,14 +48,14 @@ impl<T: Zeroize> Drop for Key<T> {
 /// ```
 /// use tc_asym_cipher::{AsymmetricBlockCipher, AsymmetricBlockCipherInit, CipherDirection};
 /// use tc_bigint::FixedBigUint;
-/// use tc_rsa_v2::{RsaCoreEngine, RsaKeyOwned};
+/// use tc_rsa_v2::{FixedRsaCoreEngine, RsaKeyOwned};
 ///
 /// // A toy key, p = 1009 and q = 1013, far too small for any real use.
 /// let n = FixedBigUint::<1>::from(1_022_117u32);
 /// let public = RsaKeyOwned::new(false, n.clone(), FixedBigUint::from(17u32));
 /// let private = RsaKeyOwned::new(true, n, FixedBigUint::from(180_017u32));
 ///
-/// let mut engine = RsaCoreEngine::new();
+/// let mut engine = FixedRsaCoreEngine::new();
 /// engine.init(CipherDirection::Encrypt, &public)?;
 /// let mut ciphertext = [0; 3];
 /// engine.process_block(&[65], &mut ciphertext)?;
@@ -67,39 +67,39 @@ impl<T: Zeroize> Drop for Key<T> {
 /// assert_eq!(plaintext, [0, 0, 65]); // the leading zeros are kept
 /// # Ok::<(), tc_rsa_v2::RsaError>(())
 /// ```
-pub struct RsaCoreEngine<T: Zeroize> {
-    key: Option<Key<T>>,
+pub struct FixedRsaCoreEngine<const N: usize> {
+    key: Option<Key<N>>,
 }
 
-impl<T: Zeroize> RsaCoreEngine<T> {
+impl<const N: usize> FixedRsaCoreEngine<N> {
     /// An engine to be initialized before it processes. Constant time.
     pub const fn new() -> Self {
         Self { key: None }
     }
 
     /// The key, once the engine is initialized. Constant time.
-    fn key(&self) -> Result<&Key<T>, RsaError> {
+    fn key(&self) -> Result<&Key<N>, RsaError> {
         self.key.as_ref().ok_or(RsaError::NotInitialized)
     }
 }
 
-/// Through [`new`](RsaCoreEngine::new). Constant time.
-impl<T: Zeroize> Default for RsaCoreEngine<T> {
+/// Through [`new`](FixedRsaCoreEngine::new). Constant time.
+impl<const N: usize> Default for FixedRsaCoreEngine<N> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-/// Copies the key in, once [`validate`](RsaKeyParams::validate) passes it,
-/// as Bouncy Castle checks a key when its `RsaKeyParameters` is built, and
-/// fails with `InvalidKey` otherwise; the keys of this crate are checked
-/// once, however often they are given.
-/// Variable time: only for public values, as the modulus and the outcome
-/// of the checks are; the exponent is only read for zero and its parity.
-impl<T, P> AsymmetricBlockCipherInit<P> for RsaCoreEngine<T>
+/// Copies the key in, once [`validate`](crate::RsaKeyParams::validate)
+/// passes it, as Bouncy Castle checks a key when its `RsaKeyParameters` is
+/// built, and works out the Montgomery parameters of the modulus; fails
+/// with `InvalidKey` when the key does not pass, or when the modulus is
+/// even, which a Montgomery form cannot take. The keys of this crate are
+/// checked once, however often they are given. Variable time: only for
+/// public values, as the modulus and the outcome of the checks are.
+impl<P, const N: usize> AsymmetricBlockCipherInit<P> for FixedRsaCoreEngine<N>
 where
-    T: Clone + Zero + BitOps + Zeroize + Sub<u32, Output = T>,
-    P: RsaKeyParams<T>,
+    P: RsaKeyParams<FixedBigUint<N>>,
 {
     type Error = RsaError;
 
@@ -107,30 +107,28 @@ where
         if !params.validate() {
             return Err(RsaError::InvalidKey);
         }
-        let (modulus, exponent) = (params.modulus(), params.exponent());
-        let modulus = NonZero::new(modulus.clone()).expect("a valid modulus is odd");
+        let modulus = params.modulus();
+        let odd = Odd::new(modulus.clone()).ok_or(RsaError::InvalidKey)?;
         self.key = Some(Key {
-            modulus_less_one: (*modulus).clone() - 1u32,
-            exponent: exponent.clone(),
+            modulus_less_one: modulus.clone() - 1u32,
+            exponent: params.exponent().clone(),
+            is_private: params.is_private_key(),
+            params: FixedMontyParams::new(odd),
             bits: modulus.bits(),
             direction,
-            modulus,
         });
         Ok(())
     }
 }
 
 /// Reads the input as a big-endian integer `x` with `1 < x < n - 1`, as
-/// Bouncy Castle does, raises it to the exponent mod `n`, and writes the
-/// result over the full length of the modulus. As constant time as the
-/// `ModPow` of `T` is, apart from the outcome of the range check, which the
-/// error shows: constant time for the fixed-width and padded integers,
-/// while the arbitrary-precision ones are only for public keys, as their
-/// power shows the exponent.
-impl<T> AsymmetricBlockCipher for RsaCoreEngine<T>
-where
-    T: Ord + BitOps + ArrayEncoding<u8> + ModPow<Output = T> + Zeroize,
-{
+/// Bouncy Castle does, raises it to the exponent mod `n` in Montgomery
+/// form, and writes the result over the full length of the modulus. A
+/// private exponent is raised to in constant time, over every bit of its
+/// width; a public one from its top bit only, in variable time, as `e` is
+/// public, so that encryption and verification cost the few squarings of
+/// `e`. The outcome of the range check shows in the error.
+impl<const N: usize> AsymmetricBlockCipher for FixedRsaCoreEngine<N> {
     type Error = RsaError;
 
     /// `(bits - 1) / 8` bytes when encrypting, so that any input is below
@@ -159,100 +157,96 @@ where
         if output.len() < length {
             return Err(RsaError::OutputTooShort);
         }
-        let value = Zeroizing::new(T::from_be(input).map_err(|_| RsaError::InputTooLarge)?);
-        if value.bits() <= 1 {
+        let x =
+            Zeroizing::new(FixedBigUint::<N>::from_be(input).map_err(|_| RsaError::InputTooLarge)?);
+        if x.bits() <= 1 {
             return Err(RsaError::InputTooSmall);
         }
-        if *value >= key.modulus_less_one {
+        if *x >= key.modulus_less_one {
             return Err(RsaError::InputTooLarge);
         }
-        let result = Zeroizing::new(value.mod_pow(&key.exponent, &key.modulus));
+        let form = Zeroizing::new(FixedMontyForm::new(&x, key.params.clone()));
+        let power = Zeroizing::new(match key.is_private {
+            true => form.pow(&key.exponent),
+            false => form.pow_vartime(&key.exponent),
+        });
+        let result = Zeroizing::new(power.retrieve());
         write_be(&*result, &mut output[..length]);
         Ok(length)
     }
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use tc_asym_cipher::{AsymmetricBlockCipher, AsymmetricBlockCipherInit, CipherDirection};
-    use tc_bigint::{ArrayEncoding, BitOps, FixedBigUint, Word};
-    use tc_modular::ModPow;
-    use tc_zeroize::Zeroize;
+    use tc_bigint::{ArrayEncoding, FixedBigUint, Word};
 
-    use super::RsaCoreEngine;
+    use super::FixedRsaCoreEngine;
     use crate::testing::{D, N, hex};
     use crate::{RsaError, RsaKeyOwned};
 
-    fn process<T>(engine: &mut RsaCoreEngine<T>, input: &[u8]) -> Result<[u8; 256], RsaError>
-    where
-        T: Ord + BitOps + ArrayEncoding<u8> + ModPow<Output = T> + Zeroize,
-    {
+    const WIDE: usize = 2048 / Word::BITS as usize;
+    type U2048 = FixedBigUint<WIDE>;
+
+    fn process(
+        engine: &mut impl AsymmetricBlockCipher<Error = RsaError>,
+        input: &[u8],
+    ) -> Result<[u8; 256], RsaError> {
         let mut output = [0; 256];
         assert_eq!(engine.process_block(input, &mut output)?, 256);
         Ok(output)
     }
 
     /// Encrypts a message of the full input block with the public key and
-    /// decrypts it with the private one, over integers of type `T`, and
-    /// gives back the ciphertext.
-    fn round_trip<T>(int: impl Fn(&[u8]) -> T) -> [u8; 256]
-    where
-        T: Clone
-            + num_traits::Zero
-            + BitOps
-            + Ord
-            + ArrayEncoding<u8>
-            + ModPow<Output = T>
-            + Zeroize
-            + core::ops::Sub<u32, Output = T>
-            + tc_prime::Primality
-            + From<u8>,
-    {
-        let (n, d) = (hex::<256>(N), hex::<256>(D));
-        let public = RsaKeyOwned::new(false, int(&n), int(&[1, 0, 1]));
-        let private = RsaKeyOwned::new(true, int(&n), int(&d));
+    /// decrypts it with the private one, and gives back the ciphertext.
+    pub(crate) fn round_trip(
+        encrypt: &mut impl AsymmetricBlockCipher<Error = RsaError>,
+        decrypt: &mut impl AsymmetricBlockCipher<Error = RsaError>,
+    ) -> [u8; 256] {
         let mut message = [0x5a; 255];
         message[0] = 0x01;
-
-        let mut engine = RsaCoreEngine::new();
-        engine.init(CipherDirection::Encrypt, &public).unwrap();
         assert_eq!(
-            (engine.input_block_size(), engine.output_block_size()),
+            (encrypt.input_block_size(), encrypt.output_block_size()),
             (255, 256)
         );
-        let ciphertext = process(&mut engine, &message).unwrap();
+        let ciphertext = process(encrypt, &message).unwrap();
         assert_ne!(&ciphertext[1..], &message[..]);
-
-        engine.init(CipherDirection::Decrypt, &private).unwrap();
         assert_eq!(
-            (engine.input_block_size(), engine.output_block_size()),
+            (decrypt.input_block_size(), decrypt.output_block_size()),
             (256, 256)
         );
-        let plaintext = process(&mut engine, &ciphertext).unwrap();
+        let plaintext = process(decrypt, &ciphertext).unwrap();
         assert_eq!(plaintext[0], 0);
         assert_eq!(&plaintext[1..], &message[..]);
         ciphertext
     }
 
-    type U2048 = FixedBigUint<{ 2048 / Word::BITS as usize }>;
-
-    #[test]
-    fn a_2048_bit_message_round_trips_over_fixed_width_integers() {
-        round_trip(|bytes| U2048::from_be(bytes).unwrap());
+    /// The engines of the Wycheproof key, its public key to encrypt and its
+    /// private one to decrypt.
+    pub(crate) fn wycheproof() -> (FixedRsaCoreEngine<WIDE>, FixedRsaCoreEngine<WIDE>) {
+        let int = |bytes: &[u8]| U2048::from_be(bytes).unwrap();
+        let n = int(&hex::<256>(N));
+        let mut encrypt = FixedRsaCoreEngine::new();
+        encrypt
+            .init(
+                CipherDirection::Encrypt,
+                &RsaKeyOwned::new(false, n.clone(), int(&[1, 0, 1])),
+            )
+            .unwrap();
+        let mut decrypt = FixedRsaCoreEngine::new();
+        decrypt
+            .init(
+                CipherDirection::Decrypt,
+                &RsaKeyOwned::new(true, n, int(&hex::<256>(D))),
+            )
+            .unwrap();
+        (encrypt, decrypt)
     }
 
-    #[cfg(feature = "alloc")]
     #[test]
-    fn the_padded_and_arbitrary_precision_integers_agree_with_the_fixed_width_ones() {
-        let fixed = round_trip(|bytes| U2048::from_be(bytes).unwrap());
-        assert_eq!(
-            round_trip(|bytes| tc_bigint::PaddedBigUint::from_be(bytes).unwrap()),
-            fixed
-        );
-        assert_eq!(
-            round_trip(|bytes| tc_bigint::BigUint::from_be(bytes).unwrap()),
-            fixed
-        );
+    fn a_2048_bit_message_round_trips() {
+        let (mut encrypt, mut decrypt) = wycheproof();
+        round_trip(&mut encrypt, &mut decrypt);
     }
 
     /// The textbook key, p = 61 and q = 53, marked as checked, as its
@@ -269,7 +263,7 @@ mod tests {
 
     #[test]
     fn the_textbook_key_encrypts_65_to_2790_and_back() {
-        let mut engine = RsaCoreEngine::new();
+        let mut engine = FixedRsaCoreEngine::new();
         let mut output = [0; 2];
         engine
             .init(CipherDirection::Encrypt, &textbook(false))
@@ -285,7 +279,7 @@ mod tests {
 
     #[test]
     fn inputs_outside_two_to_n_less_two_are_turned_down() {
-        let mut engine = RsaCoreEngine::new();
+        let mut engine = FixedRsaCoreEngine::new();
         engine
             .init(CipherDirection::Decrypt, &textbook(true))
             .unwrap();
@@ -321,7 +315,7 @@ mod tests {
 
     #[test]
     fn encryption_takes_no_more_than_the_input_block() {
-        let mut engine = RsaCoreEngine::new();
+        let mut engine = FixedRsaCoreEngine::new();
         engine
             .init(CipherDirection::Encrypt, &textbook(false))
             .unwrap();
@@ -336,7 +330,7 @@ mod tests {
     fn init_turns_down_a_key_that_fails_its_checks() {
         let key =
             |n: u32| RsaKeyOwned::new(false, FixedBigUint::<1>::from(n), FixedBigUint::from(17u32));
-        let mut engine = RsaCoreEngine::new();
+        let mut engine = FixedRsaCoreEngine::new();
         assert_eq!(
             engine.init(CipherDirection::Encrypt, &key(1_022_117)),
             Ok(())
@@ -352,7 +346,7 @@ mod tests {
 
     #[test]
     fn a_key_marked_as_passed_skips_the_checks_of_its_modulus() {
-        let mut engine = RsaCoreEngine::new();
+        let mut engine = FixedRsaCoreEngine::new();
         assert_eq!(
             engine.init(CipherDirection::Encrypt, &textbook(false)),
             Ok(())
@@ -361,7 +355,7 @@ mod tests {
 
     #[test]
     fn an_engine_not_yet_initialized_processes_nothing() {
-        let mut engine = RsaCoreEngine::<FixedBigUint<1>>::new();
+        let mut engine = FixedRsaCoreEngine::<1>::new();
         assert_eq!(
             (engine.input_block_size(), engine.output_block_size()),
             (0, 0)
