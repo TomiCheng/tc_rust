@@ -9,7 +9,7 @@ mod crt_engine;
 mod error;
 mod params;
 #[cfg(feature = "alloc")]
-mod rsa_key_pair_generator;
+mod key_pair_generator;
 #[cfg(test)]
 mod testing;
 mod traits;
@@ -29,7 +29,7 @@ pub use params::RsaKeyGenerationParamsRef;
 pub use params::RsaKeyOwned;
 pub use params::RsaPrivateCrtKeyOwned;
 #[cfg(feature = "alloc")]
-pub use rsa_key_pair_generator::RsaKeyPairGenerator;
+pub use key_pair_generator::RsaKeyPairGenerator;
 #[cfg(feature = "alloc")]
 pub use traits::RsaKeyGenerationParams;
 pub use traits::RsaKeyParams;
