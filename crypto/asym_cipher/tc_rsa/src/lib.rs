@@ -3,7 +3,10 @@
 #[cfg(feature = "alloc")]
 extern crate alloc;
 
+mod block;
 mod error;
+#[cfg(feature = "alloc")]
+mod padded_rsa_crt_core_engine;
 mod params;
 mod rsa_core_engine;
 #[cfg(feature = "alloc")]
@@ -12,6 +15,8 @@ mod traits;
 mod validation;
 
 pub use error::RsaError;
+#[cfg(feature = "alloc")]
+pub use padded_rsa_crt_core_engine::PaddedRsaCrtCoreEngine;
 #[cfg(feature = "alloc")]
 pub use params::RsaKeyGenerationParamsOwned;
 #[cfg(feature = "alloc")]

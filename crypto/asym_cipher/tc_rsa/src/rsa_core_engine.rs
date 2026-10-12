@@ -9,6 +9,7 @@ use tc_bigint::{ArrayEncoding, BitOps};
 use tc_modular::{ModPow, NonZero};
 use tc_zeroize::{Zeroize, Zeroizing};
 
+use crate::block::{input_block_size, output_block_size, write_be};
 use crate::{RsaError, RsaKeyParams};
 
 /// What an engine keeps from its initialization: the key, `n - 1` for the
@@ -136,10 +137,9 @@ where
     /// the modulus, and `(bits + 7) / 8` when decrypting; zero before
     /// initialization. Constant time.
     fn input_block_size(&self) -> usize {
-        self.key.as_ref().map_or(0, |key| match key.direction {
-            CipherDirection::Encrypt => (key.bits as usize - 1) / 8,
-            CipherDirection::Decrypt => (key.bits as usize).div_ceil(8),
-        })
+        self.key
+            .as_ref()
+            .map_or(0, |key| input_block_size(key.bits, key.direction))
     }
 
     /// `(bits + 7) / 8` bytes in both directions; zero before
@@ -147,7 +147,7 @@ where
     fn output_block_size(&self) -> usize {
         self.key
             .as_ref()
-            .map_or(0, |key| (key.bits as usize).div_ceil(8))
+            .map_or(0, |key| output_block_size(key.bits))
     }
 
     fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, RsaError> {
@@ -169,19 +169,6 @@ where
         let result = Zeroizing::new(value.mod_pow(&key.exponent, &key.modulus));
         write_be(&*result, &mut output[..length]);
         Ok(length)
-    }
-}
-
-/// `value` big-endian over all of `output`, which holds it, bit by bit, so
-/// that no buffer is needed whatever the width of `T`. As constant time as
-/// the `bit` of `T` is: the bits read follow the length of `output`.
-fn write_be<T: BitOps>(value: &T, output: &mut [u8]) {
-    let length = output.len();
-    for (index, byte) in output.iter_mut().enumerate() {
-        let low = 8 * (length - 1 - index) as u32;
-        *byte = (0..8).fold(0, |byte, bit| {
-            byte | (u8::from(value.bit(low + bit)) << bit)
-        });
     }
 }
 

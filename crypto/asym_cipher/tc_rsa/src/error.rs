@@ -20,6 +20,9 @@ pub enum RsaError {
     InputTooLarge,
     /// The output is shorter than the output block.
     OutputTooShort,
+    /// The result of a CRT operation does not raise back to its input, as a
+    /// fault, or a key whose values do not agree, makes it.
+    FaultyDecryptionOrSigning,
 }
 
 /// The message of each error. Constant time.
@@ -34,6 +37,7 @@ impl core::fmt::Display for RsaError {
             Self::InputTooSmall => "input too small for RSA cipher",
             Self::InputTooLarge => "input too large for RSA cipher",
             Self::OutputTooShort => "output buffer too short for RSA cipher",
+            Self::FaultyDecryptionOrSigning => "RSA engine faulty decryption/signing detected",
         })
     }
 }
