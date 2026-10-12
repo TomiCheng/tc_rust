@@ -5,10 +5,13 @@
 mod common;
 
 use common::{BLOCK, D, DP, DQ, N, P, Q, Q_INV, bytes};
+use rand::SeedableRng;
+use rand::rngs::StdRng;
 use tc_asym_cipher::{AsymmetricBlockCipher, AsymmetricBlockCipherInit, CipherDirection};
 use tc_bigint::{ArrayEncoding, FixedBigUint, Word};
 use tc_rsa_v2::{
-    FixedRsaCoreEngine, FixedRsaCrtCoreEngine, RsaError, RsaKeyRef, RsaPrivateCrtKeyRef,
+    FixedRsaCoreEngine, FixedRsaCrtCoreEngine, RsaBlindedEngine, RsaError, RsaKeyRef,
+    RsaPrivateCrtKeyRef,
 };
 
 const WIDE: usize = 2048 / Word::BITS as usize;
@@ -99,10 +102,16 @@ fn private_engines() -> Vec<(&'static str, Engine)> {
         &fixed_q_inv,
     );
     crt.init(CipherDirection::Decrypt, &key).unwrap();
+    let mut blinded =
+        RsaBlindedEngine::<FixedRsaCrtCoreEngine<WIDE, HALF>, _>::new(StdRng::seed_from_u64(1));
+    blinded.init(CipherDirection::Decrypt, &key).unwrap();
     // Only the fixed-width engines, without `alloc`.
     #[cfg_attr(not(feature = "alloc"), allow(unused_mut))]
-    let mut engines: Vec<(&str, Engine)> =
-        vec![("fixed", Box::new(plain)), ("fixed crt", Box::new(crt))];
+    let mut engines: Vec<(&str, Engine)> = vec![
+        ("fixed", Box::new(plain)),
+        ("fixed crt", Box::new(crt)),
+        ("fixed blinded", Box::new(blinded)),
+    ];
 
     #[cfg(feature = "alloc")]
     {
@@ -130,8 +139,12 @@ fn private_engines() -> Vec<(&'static str, Engine)> {
             padded(&q_inv),
         );
         crt.init(CipherDirection::Decrypt, &key).unwrap();
+        let mut blinded =
+            RsaBlindedEngine::<PaddedRsaCrtCoreEngine, _>::new(StdRng::seed_from_u64(2));
+        blinded.init(CipherDirection::Decrypt, &key).unwrap();
         engines.push(("padded", Box::new(plain)));
         engines.push(("padded crt", Box::new(crt)));
+        engines.push(("padded blinded", Box::new(blinded)));
     }
 
     #[cfg(feature = "rustcrypto")]
@@ -145,13 +158,15 @@ fn private_engines() -> Vec<(&'static str, Engine)> {
             vec![boxed(&p), boxed(&q)],
         )
         .unwrap();
+        let key = tc_rsa_v2::RsaPrivateCrtKeyRustCrypto::new(key).unwrap();
         let mut crt = tc_rsa_v2::RsaCrtCoreEngineRustCrypto::new();
-        crt.init(
-            CipherDirection::Decrypt,
-            &tc_rsa_v2::RsaPrivateCrtKeyRustCrypto::new(key).unwrap(),
-        )
-        .unwrap();
+        crt.init(CipherDirection::Decrypt, &key).unwrap();
+        let mut blinded = RsaBlindedEngine::<tc_rsa_v2::RsaCrtCoreEngineRustCrypto, _>::new(
+            StdRng::seed_from_u64(3),
+        );
+        blinded.init(CipherDirection::Decrypt, &key).unwrap();
         engines.push(("rustcrypto crt", Box::new(crt)));
+        engines.push(("rustcrypto blinded", Box::new(blinded)));
     }
     engines
 }

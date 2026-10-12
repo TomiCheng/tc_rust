@@ -4,7 +4,7 @@
 use alloc::vec;
 use core::convert::Infallible;
 
-use rand_core::{TryCryptoRng, TryRng};
+use rand_core::{CryptoRng, TryCryptoRng, TryRng};
 use rsa::hazmat::rsa_decrypt_and_check;
 use rsa::{BoxedUint, RsaPrivateKey};
 use tc_asym_cipher::{AsymmetricBlockCipher, AsymmetricBlockCipherInit, CipherDirection};
@@ -12,7 +12,7 @@ use zeroize::Zeroizing;
 
 use crate::block::{input_block_size, output_block_size};
 use crate::core_engine::rustcrypto::{read_be, write_be};
-use crate::{RsaError, RsaPrivateCrtKeyParams};
+use crate::{RsaBlinding, RsaError, RsaPrivateCrtKeyParams};
 
 /// What an engine keeps from its initialization: the key as `rsa` holds
 /// it, `n - 1` for the range check of the input, the size of the modulus
@@ -177,6 +177,36 @@ impl AsymmetricBlockCipher for RsaCrtCoreEngineRustCrypto {
     }
 
     fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, RsaError> {
+        self.run(input, output, None::<&mut NoRng>)
+    }
+}
+
+/// Hands the random source to `rsa_decrypt_and_check`, which blinds with
+/// it as Bouncy Castle's `RsaBlindedEngine` does: `x · r^e` goes through
+/// the CRT, and `r` is taken away from the result. As constant time as
+/// `rsa` and `crypto-bigint` make the blinding and the powers.
+impl RsaBlinding for RsaCrtCoreEngineRustCrypto {
+    fn process_block_blinded<R: CryptoRng + ?Sized>(
+        &mut self,
+        input: &[u8],
+        output: &mut [u8],
+        rng: &mut R,
+    ) -> Result<usize, RsaError> {
+        self.run(input, output, Some(rng))
+    }
+}
+
+impl RsaCrtCoreEngineRustCrypto {
+    /// Checks the blocks, reads the input as a big-endian integer `x` with
+    /// `1 < x < n - 1`, computes `x^d mod n` through `rsa_decrypt_and_check`,
+    /// blinded when `rng` is given, and writes the result over the full
+    /// length of the modulus. Timing as the impls that call it state.
+    fn run<R: TryCryptoRng + ?Sized>(
+        &self,
+        input: &[u8],
+        output: &mut [u8],
+        rng: Option<&mut R>,
+    ) -> Result<usize, RsaError> {
         let key = self.key()?;
         if input.len() > self.input_block_size() {
             return Err(RsaError::InputTooLarge);
@@ -186,8 +216,9 @@ impl AsymmetricBlockCipher for RsaCrtCoreEngineRustCrypto {
             return Err(RsaError::OutputTooShort);
         }
         let x = read_be(input, &key.modulus_less_one)?;
-        // The input lies below the modulus, so `rsa` only fails the check.
-        let m = rsa_decrypt_and_check(&key.key, None::<&mut NoRng>, &x)
+        // The input lies below the modulus, so `rsa` only fails the check,
+        // or a blinding factor it cannot invert.
+        let m = rsa_decrypt_and_check(&key.key, rng, &x)
             .map_err(|_| RsaError::FaultyDecryptionOrSigning)?;
         let m = Zeroizing::new(m);
         write_be(&m, &mut output[..length]);
@@ -235,6 +266,24 @@ mod tests {
             decrypt.process_block(&[1], &mut plaintext),
             Err(RsaError::InputTooSmall)
         );
+    }
+
+    #[test]
+    fn a_blinded_block_comes_out_as_the_unblinded_one() {
+        let mut generator = RsaKeyPairGeneratorRustCrypto::new();
+        generator
+            .init(RsaKeyGenerationParamsOwned::new(StdRng::seed_from_u64(4)).with_strength(1024))
+            .unwrap();
+        let (_, private) = generator.generate_key_pair().unwrap();
+        let mut plain = RsaCrtCoreEngineRustCrypto::new();
+        plain.init(CipherDirection::Encrypt, &private).unwrap();
+        let mut blinded =
+            crate::RsaBlindedEngine::<RsaCrtCoreEngineRustCrypto, _>::new(StdRng::seed_from_u64(5));
+        blinded.init(CipherDirection::Encrypt, &private).unwrap();
+        let (mut expected, mut output) = ([0; 128], [0; 128]);
+        plain.process_block(&[0x29; 127], &mut expected).unwrap();
+        blinded.process_block(&[0x29; 127], &mut output).unwrap();
+        assert_eq!(output, expected);
     }
 
     #[test]

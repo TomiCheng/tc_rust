@@ -2,13 +2,15 @@
 //! it for a CRT key, over `FixedBigUint`, the modulus at `N` limbs and the
 //! primes at `H`.
 
+use num_traits::One;
+use rand_core::CryptoRng;
 use tc_asym_cipher::{AsymmetricBlockCipher, AsymmetricBlockCipherInit, CipherDirection};
-use tc_bigint::{ArrayEncoding, FixedBigUint, Limb, LimbArray};
+use tc_bigint::{ArrayEncoding, FixedBigUint, Limb, LimbArray, RandomRange};
 use tc_modular::{FixedMontyForm, FixedMontyParams, Odd};
 use tc_zeroize::{Zeroize, Zeroizing};
 
 use crate::block::{input_block_size, output_block_size, write_be};
-use crate::{RsaError, RsaPrivateCrtKeyParams};
+use crate::{RsaBlinding, RsaError, RsaPrivateCrtKeyParams};
 
 /// What an engine keeps from its initialization: the modulus and `n - 1`
 /// for the range check of the input, the public exponent and the
@@ -193,12 +195,64 @@ impl<const N: usize, const H: usize> AsymmetricBlockCipher for FixedRsaCrtCoreEn
     }
 
     fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, RsaError> {
+        let (key, x, length) = self.read(input, output.len())?;
+        let m = crt(key, &x)?;
+        write_be(&*m, &mut output[..length]);
+        Ok(length)
+    }
+}
+
+/// Blinds the block with an `r` drawn uniformly from `[1, n)`, as Bouncy
+/// Castle's `RsaBlindedEngine` does: `x · r^e mod n` goes through the CRT,
+/// checked as without blinding, and the result is multiplied by
+/// `r⁻¹ mod n`. Constant time in the secret values, `r` among them, as the
+/// operation without blinding is; `r^e` raises to the public `e` from its
+/// top bit only. An `r` that shares a factor with `n`, which only a
+/// factoring of `n` would give, fails with `FaultyDecryptionOrSigning`.
+impl<const N: usize, const H: usize> RsaBlinding for FixedRsaCrtCoreEngine<N, H> {
+    fn process_block_blinded<R: CryptoRng + ?Sized>(
+        &mut self,
+        input: &[u8],
+        output: &mut [u8],
+        rng: &mut R,
+    ) -> Result<usize, RsaError> {
+        let (key, x, length) = self.read(input, output.len())?;
+        let params = &key.params_n;
+        let r = Zeroizing::new(FixedBigUint::random_range(
+            rng,
+            &FixedBigUint::one(),
+            params.modulus(),
+        ));
+        let r = Zeroizing::new(FixedMontyForm::new(&r, params.clone()));
+        let unblind = Zeroizing::new(r.invert().ok_or(RsaError::FaultyDecryptionOrSigning)?);
+        let blind = Zeroizing::new(r.pow_vartime(&key.public_exponent));
+        let x = Zeroizing::new(FixedMontyForm::new(&x, params.clone()));
+        let blinded = Zeroizing::new((&*x * &*blind).retrieve());
+        let m = crt(key, &blinded)?;
+        let m = Zeroizing::new(FixedMontyForm::new(&m, params.clone()));
+        let m = Zeroizing::new((&*m * &*unblind).retrieve());
+        write_be(&*m, &mut output[..length]);
+        Ok(length)
+    }
+}
+
+impl<const N: usize, const H: usize> FixedRsaCrtCoreEngine<N, H> {
+    /// The key, the input as a big-endian integer `x` with `1 < x < n - 1`,
+    /// as Bouncy Castle asks, and the length of the output, once the
+    /// engine is initialized and the blocks fit. Constant time, apart from
+    /// the outcome of the checks, which the error shows.
+    #[allow(clippy::type_complexity)]
+    fn read(
+        &self,
+        input: &[u8],
+        output: usize,
+    ) -> Result<(&CrtKey<N, H>, Zeroizing<FixedBigUint<N>>, usize), RsaError> {
         let key = self.key()?;
         if input.len() > self.input_block_size() {
             return Err(RsaError::InputTooLarge);
         }
         let length = self.output_block_size();
-        if output.len() < length {
+        if output < length {
             return Err(RsaError::OutputTooShort);
         }
         let x =
@@ -209,23 +263,32 @@ impl<const N: usize, const H: usize> AsymmetricBlockCipher for FixedRsaCrtCoreEn
         if *x >= key.modulus_less_one {
             return Err(RsaError::InputTooLarge);
         }
-
-        let m_p = Zeroizing::new(power(&x, &key.wide_p, &key.params_p, &key.dp));
-        let m_q = Zeroizing::new(power(&x, &key.wide_q, &key.params_q, &key.dq));
-        let m_q_in_p = Zeroizing::new(FixedMontyForm::new(&m_q.retrieve(), key.params_p.clone()));
-        let q_inv = Zeroizing::new(FixedMontyForm::new(&key.q_inv, key.params_p.clone()));
-        let h = Zeroizing::new(&(&*m_p - &*m_q_in_p) * &*q_inv);
-        let mut m = Zeroizing::new(resized::<H, N>(&h.retrieve()));
-        *m *= &key.wide_q;
-        *m += &resized::<H, N>(&m_q.retrieve());
-
-        let check = FixedMontyForm::new(&m, key.params_n.clone()).pow_vartime(&key.public_exponent);
-        if check.retrieve() != *x {
-            return Err(RsaError::FaultyDecryptionOrSigning);
-        }
-        write_be(&*m, &mut output[..length]);
-        Ok(length)
+        Ok((key, x, length))
     }
+}
+
+/// `x^d mod n` through the CRT, checked by raising it back to `e`: fails
+/// with `FaultyDecryptionOrSigning` when it does not give `x` again.
+/// Constant time in the secret values; the check raises to the public `e`
+/// from its top bit only.
+fn crt<const N: usize, const H: usize>(
+    key: &CrtKey<N, H>,
+    x: &FixedBigUint<N>,
+) -> Result<Zeroizing<FixedBigUint<N>>, RsaError> {
+    let m_p = Zeroizing::new(power(x, &key.wide_p, &key.params_p, &key.dp));
+    let m_q = Zeroizing::new(power(x, &key.wide_q, &key.params_q, &key.dq));
+    let m_q_in_p = Zeroizing::new(FixedMontyForm::new(&m_q.retrieve(), key.params_p.clone()));
+    let q_inv = Zeroizing::new(FixedMontyForm::new(&key.q_inv, key.params_p.clone()));
+    let h = Zeroizing::new(&(&*m_p - &*m_q_in_p) * &*q_inv);
+    let mut m = Zeroizing::new(resized::<H, N>(&h.retrieve()));
+    *m *= &key.wide_q;
+    *m += &resized::<H, N>(&m_q.retrieve());
+
+    let check = FixedMontyForm::new(&m, key.params_n.clone()).pow_vartime(&key.public_exponent);
+    if check.retrieve() != *x {
+        return Err(RsaError::FaultyDecryptionOrSigning);
+    }
+    Ok(m)
 }
 
 /// `(x mod prime)^exponent mod prime`, in Montgomery form at the `H` limbs

@@ -3,6 +3,7 @@
 #[cfg(feature = "alloc")]
 extern crate alloc;
 
+mod blinded_engine;
 mod block;
 mod core_engine;
 mod crt_engine;
@@ -15,6 +16,7 @@ mod testing;
 mod traits;
 mod validation;
 
+pub use blinded_engine::RsaBlindedEngine;
 pub use core_engine::FixedRsaCoreEngine;
 #[cfg(feature = "alloc")]
 pub use core_engine::PaddedRsaCoreEngine;
@@ -42,6 +44,7 @@ pub use params::RsaPrivateCrtKeyOwned;
 pub use params::RsaPrivateCrtKeyRef;
 #[cfg(feature = "rustcrypto")]
 pub use params::RsaPrivateCrtKeyRustCrypto;
+pub use traits::RsaBlinding;
 #[cfg(feature = "alloc")]
 pub use traits::RsaKeyGenerationParams;
 pub use traits::RsaKeyParams;

@@ -3,13 +3,14 @@
 
 use alloc::vec;
 
+use rand_core::CryptoRng;
 use tc_asym_cipher::{AsymmetricBlockCipher, AsymmetricBlockCipherInit, CipherDirection};
-use tc_bigint::{ArrayEncoding, Limb, PaddedBigUint};
-use tc_modular::{ModMul, ModPow, ModSub, NonZero};
+use tc_bigint::{ArrayEncoding, Limb, PaddedBigUint, RandomRange};
+use tc_modular::{ModMul, ModPow, ModSub, NonZero, Odd, PaddedMontyForm, PaddedMontyParams};
 use tc_zeroize::{Zeroize, Zeroizing};
 
 use crate::block::{input_block_size, output_block_size, write_be};
-use crate::{RsaError, RsaPrivateCrtKeyParams};
+use crate::{RsaBlinding, RsaError, RsaPrivateCrtKeyParams};
 
 /// What an engine keeps from its initialization: the modulus and `n - 1`
 /// for the range check of the input, the public exponent at its own width
@@ -20,6 +21,7 @@ struct CrtKey {
     modulus: NonZero<PaddedBigUint>,
     modulus_less_one: PaddedBigUint,
     public_exponent: PaddedBigUint,
+    params_n: PaddedMontyParams,
     p: NonZero<PaddedBigUint>,
     q: NonZero<PaddedBigUint>,
     dp: PaddedBigUint,
@@ -137,6 +139,9 @@ where
         self.key = Some(CrtKey {
             modulus_less_one: &*modulus - 1u32,
             public_exponent: with_width(e, e.bits().div_ceil(tc_bigint::Word::BITS) as usize),
+            params_n: PaddedMontyParams::new(
+                Odd::new((*modulus).clone()).ok_or(RsaError::InvalidKey)?,
+            ),
             p: nonzero(params.p())?,
             q: nonzero(params.q())?,
             dp: params.dp().clone(),
@@ -182,12 +187,60 @@ impl AsymmetricBlockCipher for PaddedRsaCrtCoreEngine {
     }
 
     fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, RsaError> {
+        let (key, x, length) = self.read(input, output.len())?;
+        let m = crt(key, &x)?;
+        write_be(&*m, &mut output[..length]);
+        Ok(length)
+    }
+}
+
+/// Blinds the block with an `r` drawn uniformly from `[1, n)`, as Bouncy
+/// Castle's `RsaBlindedEngine` does: `x · r^e mod n` goes through the CRT,
+/// checked as without blinding, and the result is multiplied by
+/// `r⁻¹ mod n`. Constant time in the secret values, `r` among them, as the
+/// operation without blinding is; `r^e` raises to the public `e` from its
+/// top bit only. An `r` that shares a factor with `n`, which only a
+/// factoring of `n` would give, fails with `FaultyDecryptionOrSigning`.
+impl RsaBlinding for PaddedRsaCrtCoreEngine {
+    fn process_block_blinded<R: CryptoRng + ?Sized>(
+        &mut self,
+        input: &[u8],
+        output: &mut [u8],
+        rng: &mut R,
+    ) -> Result<usize, RsaError> {
+        let (key, x, length) = self.read(input, output.len())?;
+        let params = &key.params_n;
+        let one = PaddedBigUint::from(1u8);
+        let r = Zeroizing::new(PaddedBigUint::random_range(rng, &one, &key.modulus));
+        let r = Zeroizing::new(PaddedMontyForm::new(&r, params));
+        let unblind = Zeroizing::new(r.invert().ok_or(RsaError::FaultyDecryptionOrSigning)?);
+        let blind = Zeroizing::new(r.pow_vartime(&key.public_exponent));
+        let x = Zeroizing::new(PaddedMontyForm::new(&x, params));
+        let blinded = Zeroizing::new((&*x * &*blind).retrieve());
+        let m = crt(key, &blinded)?;
+        let m = Zeroizing::new(PaddedMontyForm::new(&m, params));
+        let m = Zeroizing::new((&*m * &*unblind).retrieve());
+        write_be(&*m, &mut output[..length]);
+        Ok(length)
+    }
+}
+
+impl PaddedRsaCrtCoreEngine {
+    /// The key, the input as a big-endian integer `x` with `1 < x < n - 1`,
+    /// as Bouncy Castle asks, and the length of the output, once the
+    /// engine is initialized and the blocks fit. Constant time, apart from
+    /// the outcome of the checks, which the error shows.
+    fn read(
+        &self,
+        input: &[u8],
+        output: usize,
+    ) -> Result<(&CrtKey, Zeroizing<PaddedBigUint>, usize), RsaError> {
         let key = self.key()?;
         if input.len() > self.input_block_size() {
             return Err(RsaError::InputTooLarge);
         }
         let length = self.output_block_size();
-        if output.len() < length {
+        if output < length {
             return Err(RsaError::OutputTooShort);
         }
         let Ok(x) = PaddedBigUint::from_be(input);
@@ -198,21 +251,26 @@ impl AsymmetricBlockCipher for PaddedRsaCrtCoreEngine {
         if *x >= key.modulus_less_one {
             return Err(RsaError::InputTooLarge);
         }
-
-        let m_p = Zeroizing::new(power_mod_prime(&x, &key.dp, &key.p));
-        let m_q = Zeroizing::new(power_mod_prime(&x, &key.dq, &key.q));
-        let difference = Zeroizing::new(m_p.mod_sub(&m_q, &key.p));
-        let h = Zeroizing::new(difference.mod_mul(&key.q_inv, &key.p));
-        let mut m = Zeroizing::new(with_width(&h, key.modulus.as_limbs().len()));
-        *m *= &*key.q;
-        *m += &*m_q;
-
-        if m.mod_pow(&key.public_exponent, &key.modulus) != *x {
-            return Err(RsaError::FaultyDecryptionOrSigning);
-        }
-        write_be(&*m, &mut output[..length]);
-        Ok(length)
+        Ok((key, x, length))
     }
+}
+
+/// `x^d mod n` through the CRT, checked by raising it back to `e`: fails
+/// with `FaultyDecryptionOrSigning` when it does not give `x` again.
+/// Constant time, as the arithmetic of `PaddedBigUint` and `tc_modular` is.
+fn crt(key: &CrtKey, x: &PaddedBigUint) -> Result<Zeroizing<PaddedBigUint>, RsaError> {
+    let m_p = Zeroizing::new(power_mod_prime(x, &key.dp, &key.p));
+    let m_q = Zeroizing::new(power_mod_prime(x, &key.dq, &key.q));
+    let difference = Zeroizing::new(m_p.mod_sub(&m_q, &key.p));
+    let h = Zeroizing::new(difference.mod_mul(&key.q_inv, &key.p));
+    let mut m = Zeroizing::new(with_width(&h, key.modulus.as_limbs().len()));
+    *m *= &*key.q;
+    *m += &*m_q;
+
+    if m.mod_pow(&key.public_exponent, &key.modulus) != *x {
+        return Err(RsaError::FaultyDecryptionOrSigning);
+    }
+    Ok(m)
 }
 
 /// `(x mod prime)^exponent mod prime`, with the residue cut to the width of
@@ -392,6 +450,22 @@ mod tests {
             engine.init(CipherDirection::Decrypt, &key),
             Err(RsaError::InvalidKey)
         );
+    }
+
+    #[test]
+    fn a_blinded_block_comes_out_as_the_unblinded_one() {
+        use rand::SeedableRng;
+        use rand::rngs::StdRng;
+
+        let key = wycheproof(int(DP));
+        let mut plain = PaddedRsaCrtCoreEngine::new();
+        plain.init(CipherDirection::Decrypt, &key).unwrap();
+        let expected = process(&mut plain, &[0x5a; 255]);
+        let mut blinded =
+            crate::RsaBlindedEngine::<PaddedRsaCrtCoreEngine, _>::new(StdRng::seed_from_u64(2));
+        blinded.init(CipherDirection::Decrypt, &key).unwrap();
+        assert_eq!(process(&mut blinded, &[0x5a; 255]), expected);
+        assert_eq!(process(&mut blinded, &[0x5a; 255]), expected);
     }
 
     #[test]
