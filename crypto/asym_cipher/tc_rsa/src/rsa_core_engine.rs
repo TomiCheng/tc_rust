@@ -180,38 +180,8 @@ mod tests {
     use tc_zeroize::Zeroize;
 
     use super::RsaCoreEngine;
+    use crate::testing::{D, N, hex};
     use crate::{RsaError, RsaKeyOwned};
-
-    /// The first key of Wycheproof's `rsa_pkcs1_2048_test.json`, from C2SP:
-    /// its modulus and private exponent; the public exponent is 65537.
-    const N: &str = concat!(
-        "b3510a2bcd4ce644c5b594ae5059e12b2f054b658d5da5959a2fdf1871b808bc",
-        "3df3e628d2792e51aad5c124b43bda453dca5cde4bcf28e7bd4effba0cb4b742",
-        "bbb6d5a013cb63d1aa3a89e02627ef5398b52c0cfd97d208abeb8d7c9bce0bbe",
-        "b019a86ddb589beb29a5b74bf861075c677c81d430f030c265247af9d3c9140c",
-        "cb65309d07e0adc1efd15cf17e7b055d7da3868e4648cc3a180f0ee7f8e1e7b1",
-        "8098a3391b4ce7161e98d57af8a947e201a463e2d6bbca8059e5706e9dfed8f4",
-        "856465ffa712ed1aa18e888d12dc6aa09ce95ecfca83cc5b0b15db09c8647f5d",
-        "524c0f2e7620a3416b9623cadc0f097af573261c98c8400aa12af38e43cad84d",
-    );
-    const D: &str = concat!(
-        "1a502d0eea6c7b69e21d5839101f705456ed0ef852fb47fe21071f54c5f33c8c",
-        "eb066c62d727e32d26c58137329f89d3195325b795264c195d85472f7507dbd0",
-        "961d2951f935a26b34f0ac24d15490e1128a9b7138915bc7dbfa8fe396357131",
-        "c543ae9c98507368d9ceb08c1c6198a3eda7aea185a0e976cd42c22d00f003d9",
-        "f19d96ea4c9afcbfe1441ccc802cfb0689f59d804c6a4e4f404c15174745ed6c",
-        "b8bc88ef0b33ba0d2a80e35e43bc90f350052e72016e75b00d357a381c9c0d46",
-        "7069ca660887c987766349fcc43460b4aa516bce079edd87ba164307b752c277",
-        "ed9528ad3ba0bf1877349ed3b7966a6c240110409bf4d0fade0c68fdadd847fd",
-    );
-
-    fn hex(text: &str) -> [u8; 256] {
-        let mut bytes = [0; 256];
-        for (byte, pair) in bytes.iter_mut().zip(text.as_bytes().chunks(2)) {
-            *byte = u8::from_str_radix(core::str::from_utf8(pair).unwrap(), 16).unwrap();
-        }
-        bytes
-    }
 
     fn process<T>(engine: &mut RsaCoreEngine<T>, input: &[u8]) -> Result<[u8; 256], RsaError>
     where
@@ -238,7 +208,7 @@ mod tests {
             + tc_prime::Primality
             + From<u8>,
     {
-        let (n, d) = (hex(N), hex(D));
+        let (n, d) = (hex::<256>(N), hex::<256>(D));
         let public = RsaKeyOwned::new(false, int(&n), int(&[1, 0, 1]));
         let private = RsaKeyOwned::new(true, int(&n), int(&d));
         let mut message = [0x5a; 255];
