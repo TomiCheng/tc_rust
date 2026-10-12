@@ -2,6 +2,7 @@
 
 use rsa::traits::PublicKeyParts;
 use rsa::{BoxedUint, RsaPublicKey};
+use tc_asym_cipher::AsymmetricKeyParams;
 
 use crate::RsaKeyParams;
 
@@ -19,15 +20,18 @@ impl RsaKeyRustCrypto {
     }
 }
 
+/// Whether the key is private. Constant time.
+impl AsymmetricKeyParams for RsaKeyRustCrypto {
+    fn is_private_key(&self) -> bool {
+        false
+    }
+}
+
 /// The modulus and the public exponent of the `rsa` key. Constant time.
 /// `validate` passes every key, as `rsa` checks one when it builds it
 /// through `RsaPublicKey::new`, which a key built through its unchecked
 /// constructors skips.
 impl RsaKeyParams<BoxedUint> for RsaKeyRustCrypto {
-    fn is_private_key(&self) -> bool {
-        false
-    }
-
     fn modulus(&self) -> &BoxedUint {
         self.key.n().as_ref()
     }

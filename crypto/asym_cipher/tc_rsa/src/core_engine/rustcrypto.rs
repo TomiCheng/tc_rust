@@ -232,11 +232,13 @@ mod tests {
         d: BoxedUint,
     }
 
-    impl RsaKeyParams<BoxedUint> for Private {
+    impl tc_asym_cipher::AsymmetricKeyParams for Private {
         fn is_private_key(&self) -> bool {
             true
         }
+    }
 
+    impl RsaKeyParams<BoxedUint> for Private {
         fn modulus(&self) -> &BoxedUint {
             &self.n
         }

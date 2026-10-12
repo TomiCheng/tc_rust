@@ -1,6 +1,7 @@
 //! An RSA key held by value.
 
 use core::sync::atomic::{AtomicBool, Ordering};
+use tc_asym_cipher::AsymmetricKeyParams;
 
 use num_traits::Zero;
 use tc_bigint::BitOps;
@@ -60,6 +61,13 @@ impl<T: Zeroize + Clone> Clone for RsaKeyOwned<T> {
     }
 }
 
+/// Whether the key is private. Constant time.
+impl<T: Zeroize> AsymmetricKeyParams for RsaKeyOwned<T> {
+    fn is_private_key(&self) -> bool {
+        self.is_private
+    }
+}
+
 /// The fields as they are held, and the check of [`RsaKeyParams`], once:
 /// a key that passed is not checked again. Constant time, but for
 /// `validate`, which is variable time: only for public values, as the
@@ -68,10 +76,6 @@ impl<T> RsaKeyParams<T> for RsaKeyOwned<T>
 where
     T: Zeroize + Zero + BitOps + Primality + From<u8>,
 {
-    fn is_private_key(&self) -> bool {
-        self.is_private
-    }
-
     fn modulus(&self) -> &T {
         &self.modulus
     }

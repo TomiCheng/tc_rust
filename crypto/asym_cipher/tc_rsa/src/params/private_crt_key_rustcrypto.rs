@@ -2,6 +2,7 @@
 
 use rsa::traits::{PrivateKeyParts, PublicKeyParts};
 use rsa::{BoxedUint, RsaPrivateKey};
+use tc_asym_cipher::AsymmetricKeyParams;
 use zeroize::Zeroize;
 
 use crate::{RsaError, RsaKeyParams, RsaPrivateCrtKeyParams};
@@ -38,14 +39,17 @@ impl Drop for RsaPrivateCrtKeyRustCrypto {
     }
 }
 
+/// Whether the key is private. Constant time.
+impl AsymmetricKeyParams for RsaPrivateCrtKeyRustCrypto {
+    fn is_private_key(&self) -> bool {
+        true
+    }
+}
+
 /// A private key, whose exponent is `d`. Constant time. `validate` passes
 /// every key, as `rsa` checks one when it builds it, which a key built
 /// through its unchecked constructors skips.
 impl RsaKeyParams<BoxedUint> for RsaPrivateCrtKeyRustCrypto {
-    fn is_private_key(&self) -> bool {
-        true
-    }
-
     fn modulus(&self) -> &BoxedUint {
         self.key.n().as_ref()
     }
@@ -93,6 +97,7 @@ mod tests {
     use rand::rngs::StdRng;
     use rsa::RsaPrivateKey;
     use rsa::traits::{PrivateKeyParts, PublicKeyParts};
+    use tc_asym_cipher::AsymmetricKeyParams;
 
     use super::RsaPrivateCrtKeyRustCrypto;
     use crate::{RsaKeyParams, RsaPrivateCrtKeyParams};

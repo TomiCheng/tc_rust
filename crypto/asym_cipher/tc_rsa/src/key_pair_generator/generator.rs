@@ -148,6 +148,7 @@ where
 mod tests {
     use rand::SeedableRng;
     use rand::rngs::StdRng;
+    use tc_asym_cipher::AsymmetricKeyParams;
     use tc_asym_cipher::{KeyPairGenerator, KeyPairGeneratorInit};
     use tc_bigint::{BigUint, FixedBigUint, PaddedBigUint};
     use tc_modular::{ModPow, NonZero};

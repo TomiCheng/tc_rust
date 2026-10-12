@@ -1,6 +1,7 @@
 //! An RSA private key with its CRT values, borrowed from the caller.
 
 use core::sync::atomic::{AtomicBool, Ordering};
+use tc_asym_cipher::AsymmetricKeyParams;
 
 use num_traits::Zero;
 use tc_bigint::BitOps;
@@ -80,6 +81,13 @@ impl<T, H> Clone for RsaPrivateCrtKeyRef<'_, T, H> {
     }
 }
 
+/// Whether the key is private. Constant time.
+impl<T, H> AsymmetricKeyParams for RsaPrivateCrtKeyRef<'_, T, H> {
+    fn is_private_key(&self) -> bool {
+        true
+    }
+}
+
 /// A private key, whose exponent is `d`, and the check of
 /// [`RsaKeyParams`], once, with that of its CRT values, none of which may
 /// be zero, as Bouncy Castle's `RsaPrivateCrtKeyParameters` checks them: a
@@ -91,10 +99,6 @@ where
     T: Zero + BitOps + Primality + From<u8>,
     H: Zero,
 {
-    fn is_private_key(&self) -> bool {
-        true
-    }
-
     fn modulus(&self) -> &T {
         self.modulus
     }

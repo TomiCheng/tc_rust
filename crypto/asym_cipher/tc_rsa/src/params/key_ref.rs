@@ -1,6 +1,7 @@
 //! An RSA key borrowed from the caller.
 
 use core::sync::atomic::{AtomicBool, Ordering};
+use tc_asym_cipher::AsymmetricKeyParams;
 
 use num_traits::Zero;
 use tc_bigint::BitOps;
@@ -50,6 +51,13 @@ impl<T> Clone for RsaKeyRef<'_, T> {
     }
 }
 
+/// Whether the key is private. Constant time.
+impl<T> AsymmetricKeyParams for RsaKeyRef<'_, T> {
+    fn is_private_key(&self) -> bool {
+        self.is_private
+    }
+}
+
 /// The borrowed values, and the check of [`RsaKeyParams`], once: a key that
 /// passed is not checked again. Constant time, but for `validate`, which is
 /// variable time: only for public values, as the modulus is.
@@ -57,10 +65,6 @@ impl<T> RsaKeyParams<T> for RsaKeyRef<'_, T>
 where
     T: Zero + BitOps + Primality + From<u8>,
 {
-    fn is_private_key(&self) -> bool {
-        self.is_private
-    }
-
     fn modulus(&self) -> &T {
         self.modulus
     }
