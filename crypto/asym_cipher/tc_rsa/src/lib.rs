@@ -18,5 +18,7 @@ pub use params::RsaKeyOwned;
 pub use params::RsaPrivateCrtKeyOwned;
 #[cfg(feature = "alloc")]
 pub use rsa_key_pair_generator::RsaKeyPairGenerator;
+#[cfg(feature = "alloc")]
+pub use traits::RsaKeyGenerationParams;
 pub use traits::RsaKeyParams;
 pub use traits::RsaPrivateCrtKeyParams;

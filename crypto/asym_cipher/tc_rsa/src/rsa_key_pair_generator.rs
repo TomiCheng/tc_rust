@@ -2,63 +2,49 @@
 
 mod generation;
 
+use alloc::boxed::Box;
 use core::marker::PhantomData;
 
-use rand_core::CryptoRng;
 use tc_asym_cipher::{KeyPairGenerator, KeyPairGeneratorInit};
 use tc_bigint::PaddedBigUint;
 use tc_zeroize::Zeroize;
 
 use self::generation::{check, generate};
-use crate::{
-    RsaError, RsaKeyGenerationParamsOwned, RsaKeyGenerationParamsRef, RsaKeyOwned,
-    RsaPrivateCrtKeyOwned,
-};
-
-/// The parameters a generator was initialized with, of either kind.
-enum Params<'a> {
-    Borrowed(RsaKeyGenerationParamsRef<'a>),
-    Owned(RsaKeyGenerationParamsOwned),
-}
-
-impl Params<'_> {
-    /// The public exponent, the size of the modulus and the certainty.
-    /// Constant time.
-    fn values(&self) -> (u32, u32, u32) {
-        match self {
-            Self::Borrowed(params) => (
-                params.public_exponent(),
-                params.strength(),
-                params.certainty(),
-            ),
-            Self::Owned(params) => (
-                params.public_exponent(),
-                params.strength(),
-                params.certainty(),
-            ),
-        }
-    }
-
-    /// The random source to draw from. Constant time.
-    fn rng(&mut self) -> &mut dyn CryptoRng {
-        match self {
-            Self::Borrowed(params) => params.rng(),
-            Self::Owned(params) => params.rng(),
-        }
-    }
-}
+use crate::{RsaError, RsaKeyGenerationParams, RsaKeyOwned, RsaPrivateCrtKeyOwned};
 
 /// Generates RSA key pairs as Bouncy Castle's `RsaKeyPairGenerator` does,
 /// the modulus and the exponents as integers of type `T`, the primes and
 /// the values modulo them as integers of type `H`. It works in
 /// `PaddedBigUint`, which takes `alloc`, and converts the key into `T` and
 /// `H` at the end. It draws from the random source of the parameters it is
-/// initialized with, which it borrows for `'a` from
-/// [`RsaKeyGenerationParamsRef`], or owns from
-/// [`RsaKeyGenerationParamsOwned`]; `'a` is inferred, and is `'static` for
-/// the owned parameters.
+/// initialized with, of any kind that implements
+/// [`RsaKeyGenerationParams`], which it keeps behind `dyn` for as long as
+/// `'a`: that of the source that
+/// [`RsaKeyGenerationParamsRef`](crate::RsaKeyGenerationParamsRef)
+/// borrows, or `'static` for
+/// [`RsaKeyGenerationParamsOwned`](crate::RsaKeyGenerationParamsOwned).
+/// `'a` is inferred.
+///
+/// ```
+/// use tc_asym_cipher::{KeyPairGenerator, KeyPairGeneratorInit};
+/// use tc_bigint::{BitOps, FixedBigUint, Word};
+/// use tc_rsa_v2::{RsaKeyGenerationParamsOwned, RsaKeyPairGenerator, RsaKeyParams};
+///
+/// // A 2048-bit modulus, and primes at half its width, whatever the limbs.
+/// type U2048 = FixedBigUint<{ 2048 / Word::BITS as usize }>;
+/// type U1024 = FixedBigUint<{ 1024 / Word::BITS as usize }>;
+///
+/// // The defaults: a 2048-bit modulus and the public exponent 65537.
+/// let params = RsaKeyGenerationParamsOwned::new(rand::rng());
+/// let mut generator = RsaKeyPairGenerator::<U2048, U1024>::new();
+/// generator.init(params)?;
+/// let (public, private) = generator.generate_key_pair()?;
+/// assert_eq!(public.modulus(), private.modulus());
+/// assert_eq!(public.modulus().bits(), 2048);
+/// # Ok::<(), tc_rsa_v2::RsaError>(())
+/// ```
 pub struct RsaKeyPairGenerator<'a, T, H = T> {
-    params: Option<Params<'a>>,
+    params: Option<Box<dyn RsaKeyGenerationParams + 'a>>,
     integers: PhantomData<(T, H)>,
 }
 
@@ -79,46 +65,25 @@ impl<T, H> Default for RsaKeyPairGenerator<'_, T, H> {
     }
 }
 
-/// Keeps the parameters, with the random source they borrow, once they are
-/// checked: an odd public exponent of at least three, a certainty of at
-/// least one, and a modulus of at least 16 bits that `T` holds, with
-/// primes `H` holds. Variable time: only for public values, as the
-/// parameters are.
-impl<'a, T, H> KeyPairGeneratorInit<RsaKeyGenerationParamsRef<'a>> for RsaKeyPairGenerator<'a, T, H>
+/// Keeps the parameters, of any kind, once they are checked: an odd
+/// public exponent of at least three, a certainty of at least one, and a
+/// modulus of at least 16 bits that `T` holds, with primes `H` holds.
+/// Variable time: only for public values, as the parameters are.
+impl<'a, T, H, P> KeyPairGeneratorInit<P> for RsaKeyPairGenerator<'a, T, H>
 where
     T: TryFrom<PaddedBigUint>,
     H: TryFrom<PaddedBigUint>,
+    P: RsaKeyGenerationParams + 'a,
 {
     type Error = RsaError;
 
-    fn init(&mut self, params: RsaKeyGenerationParamsRef<'a>) -> Result<(), RsaError> {
+    fn init(&mut self, params: P) -> Result<(), RsaError> {
         check::<T, H>(
             params.public_exponent(),
             params.strength(),
             params.certainty(),
         )?;
-        self.params = Some(Params::Borrowed(params));
-        Ok(())
-    }
-}
-
-/// Keeps the parameters, with the random source they own, once they are
-/// checked as those that borrow theirs are. Variable time: only for public
-/// values, as the parameters are.
-impl<T, H> KeyPairGeneratorInit<RsaKeyGenerationParamsOwned> for RsaKeyPairGenerator<'_, T, H>
-where
-    T: TryFrom<PaddedBigUint>,
-    H: TryFrom<PaddedBigUint>,
-{
-    type Error = RsaError;
-
-    fn init(&mut self, params: RsaKeyGenerationParamsOwned) -> Result<(), RsaError> {
-        check::<T, H>(
-            params.public_exponent(),
-            params.strength(),
-            params.certainty(),
-        )?;
-        self.params = Some(Params::Owned(params));
+        self.params = Some(Box::new(params));
         Ok(())
     }
 }
@@ -143,8 +108,12 @@ where
     fn generate_key_pair(
         &mut self,
     ) -> Result<(RsaKeyOwned<T>, RsaPrivateCrtKeyOwned<T, H>), RsaError> {
-        let params = self.params.as_mut().ok_or(RsaError::NotInitialized)?;
-        let (public_exponent, strength, certainty) = params.values();
+        let params = self.params.as_deref_mut().ok_or(RsaError::NotInitialized)?;
+        let (public_exponent, strength, certainty) = (
+            params.public_exponent(),
+            params.strength(),
+            params.certainty(),
+        );
         let key = generate(params.rng(), public_exponent, strength, certainty);
 
         // The parameters were checked to fit `T` and `H`.
@@ -178,8 +147,8 @@ mod tests {
     use tc_modular::{ModPow, NonZero};
 
     use crate::{
-        RsaError, RsaKeyGenerationParamsOwned, RsaKeyGenerationParamsRef, RsaKeyPairGenerator,
-        RsaKeyParams, RsaPrivateCrtKeyParams,
+        RsaError, RsaKeyGenerationParams, RsaKeyGenerationParamsOwned, RsaKeyGenerationParamsRef,
+        RsaKeyPairGenerator, RsaKeyParams, RsaPrivateCrtKeyParams,
     };
 
     /// Checks a private key, in `BigUint`, whose products need no width:
@@ -300,6 +269,36 @@ mod tests {
         let mut generator = RsaKeyPairGenerator::<FixedBigUint<8>, FixedBigUint<1>>::new();
         let params = RsaKeyGenerationParamsOwned::new(StdRng::seed_from_u64(6)).with_strength(256);
         assert_eq!(generator.init(params), Err(RsaError::InvalidStrength));
+    }
+
+    /// Parameters of a kind the crate does not know, as a caller writes them.
+    struct OwnKind(StdRng);
+
+    impl RsaKeyGenerationParams for OwnKind {
+        fn public_exponent(&self) -> u32 {
+            3
+        }
+
+        fn strength(&self) -> u32 {
+            128
+        }
+
+        fn certainty(&self) -> u32 {
+            40
+        }
+
+        fn rng(&mut self) -> &mut dyn rand_core::CryptoRng {
+            &mut self.0
+        }
+    }
+
+    #[test]
+    fn a_generator_takes_parameters_of_a_kind_of_the_caller_s_own() {
+        let mut generator = RsaKeyPairGenerator::<PaddedBigUint>::new();
+        generator.init(OwnKind(StdRng::seed_from_u64(7))).unwrap();
+        let (_, private) = generator.generate_key_pair().unwrap();
+        assert_valid(&private, 128);
+        assert_eq!(private.public_exponent(), &PaddedBigUint::from(3u8));
     }
 
     #[test]

@@ -2,6 +2,8 @@
 
 use rand_core::CryptoRng;
 
+use crate::RsaKeyGenerationParams;
+
 /// What an RSA key pair is generated to, as Bouncy Castle's
 /// `RsaKeyGenerationParameters` holds it: the random source, the public
 /// exponent, the size of the modulus in bits, and the certainty the primes
@@ -55,25 +57,23 @@ impl<'a> RsaKeyGenerationParamsRef<'a> {
         self.certainty = certainty;
         self
     }
+}
 
-    /// The public exponent `e`. Constant time.
-    pub const fn public_exponent(&self) -> u32 {
+/// The fields as they are held. Constant time.
+impl RsaKeyGenerationParams for RsaKeyGenerationParamsRef<'_> {
+    fn public_exponent(&self) -> u32 {
         self.public_exponent
     }
 
-    /// The size of the modulus in bits. Constant time.
-    pub const fn strength(&self) -> u32 {
+    fn strength(&self) -> u32 {
         self.strength
     }
 
-    /// The certainty the primes are tested to: a composite passes with a
-    /// probability of at most `2^-certainty`. Constant time.
-    pub const fn certainty(&self) -> u32 {
+    fn certainty(&self) -> u32 {
         self.certainty
     }
 
-    /// The random source, for the generator to draw from. Constant time.
-    pub(crate) fn rng(&mut self) -> &mut dyn CryptoRng {
+    fn rng(&mut self) -> &mut dyn CryptoRng {
         self.rng
     }
 }
@@ -84,6 +84,7 @@ mod tests {
     use rand::rngs::StdRng;
 
     use super::RsaKeyGenerationParamsRef;
+    use crate::RsaKeyGenerationParams;
 
     #[test]
     fn the_defaults_are_those_of_bouncy_castle() {
