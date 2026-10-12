@@ -1623,6 +1623,7 @@ dependencies = [
 name = "tc_rsa_v2"
 version = "0.1.0"
 dependencies = [
+ "criterion",
  "num-traits",
  "rand",
  "rand_core",

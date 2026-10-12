@@ -21,4 +21,10 @@ tc_prime = "0.1.0"
 zeroize = { version = "1.8", default-features = false, optional = true }
 
 [dev-dependencies]
+criterion = "0.8.2"
 rand = "0.10.3"
+
+[[bench]]
+name = "rsa2048"
+harness = false
+required-features = ["rustcrypto"]
