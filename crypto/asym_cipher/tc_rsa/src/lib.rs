@@ -4,10 +4,8 @@
 extern crate alloc;
 
 mod block;
+mod crt_engine;
 mod error;
-mod fixed_rsa_crt_core_engine;
-#[cfg(feature = "alloc")]
-mod padded_rsa_crt_core_engine;
 mod params;
 mod rsa_core_engine;
 #[cfg(feature = "alloc")]
@@ -17,10 +15,10 @@ mod testing;
 mod traits;
 mod validation;
 
-pub use error::RsaError;
-pub use fixed_rsa_crt_core_engine::FixedRsaCrtCoreEngine;
+pub use crt_engine::FixedRsaCrtCoreEngine;
 #[cfg(feature = "alloc")]
-pub use padded_rsa_crt_core_engine::PaddedRsaCrtCoreEngine;
+pub use crt_engine::PaddedRsaCrtCoreEngine;
+pub use error::RsaError;
 #[cfg(feature = "alloc")]
 pub use params::RsaKeyGenerationParamsOwned;
 #[cfg(feature = "alloc")]
