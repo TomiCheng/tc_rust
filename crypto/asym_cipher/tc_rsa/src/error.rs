@@ -12,20 +12,8 @@ pub enum RsaError {
     InvalidStrength,
     /// The certainty to test the primes to is zero.
     InvalidCertainty,
-    /// The modulus of the key is zero.
-    InvalidModulus,
-    /// The modulus of the key is even.
-    EvenModulus,
-    /// The modulus of the key is longer than 16384 bits.
-    ModulusOutOfRange,
-    /// The modulus of the key has a prime factor below 212.
-    ModulusHasSmallFactor,
-    /// The modulus of the key is not proved composite, as a prime is not.
-    ModulusNotComposite,
-    /// The exponent of the key is zero.
-    InvalidExponent,
-    /// The exponent of a public key is even.
-    EvenPublicExponent,
+    /// The key fails its [`validate`](crate::RsaKeyParams::validate).
+    InvalidKey,
     /// The input is zero or one.
     InputTooSmall,
     /// The input is longer than the input block, or not below `n - 1`.
@@ -42,13 +30,7 @@ impl core::fmt::Display for RsaError {
             Self::InvalidPublicExponent => "RSA public exponent must be odd and at least 3",
             Self::InvalidStrength => "RSA key size too small or too large for the integer types",
             Self::InvalidCertainty => "RSA prime certainty must be at least 1",
-            Self::InvalidModulus => "not a valid RSA modulus",
-            Self::EvenModulus => "RSA modulus is even",
-            Self::ModulusOutOfRange => "RSA modulus out of range",
-            Self::ModulusHasSmallFactor => "RSA modulus has a small prime factor",
-            Self::ModulusNotComposite => "RSA modulus is not composite",
-            Self::InvalidExponent => "not a valid RSA exponent",
-            Self::EvenPublicExponent => "RSA public exponent is even",
+            Self::InvalidKey => "not a valid RSA key",
             Self::InputTooSmall => "input too small for RSA cipher",
             Self::InputTooLarge => "input too large for RSA cipher",
             Self::OutputTooShort => "output buffer too short for RSA cipher",

@@ -7,8 +7,8 @@ use tc_bigint::BitOps;
 use tc_prime::Primality;
 use tc_zeroize::{Zeroize, ZeroizeOnDrop};
 
-use crate::validation::validate_key;
-use crate::{RsaError, RsaKeyParams};
+use crate::RsaKeyParams;
+use crate::validation::key_passes;
 
 /// An RSA key held by value: a modulus and one exponent, as integers of
 /// type `T`. It is a container only: nothing is checked when it is built,
@@ -64,7 +64,10 @@ impl<T: Zeroize + Clone> Clone for RsaKeyOwned<T> {
 /// a key that passed is not checked again. Constant time, but for
 /// `validate`, which is variable time: only for public values, as the
 /// modulus is.
-impl<T: Zeroize> RsaKeyParams<T> for RsaKeyOwned<T> {
+impl<T> RsaKeyParams<T> for RsaKeyOwned<T>
+where
+    T: Zeroize + Zero + BitOps + Primality + From<u8>,
+{
     fn is_private_key(&self) -> bool {
         self.is_private
     }
@@ -77,16 +80,13 @@ impl<T: Zeroize> RsaKeyParams<T> for RsaKeyOwned<T> {
         &self.exponent
     }
 
-    fn validate(&self) -> Result<(), RsaError>
-    where
-        T: Zero + BitOps + Primality + From<u8>,
-    {
+    fn validate(&self) -> bool {
         if self.validated.load(Ordering::Relaxed) {
-            return Ok(());
+            return true;
         }
-        validate_key(self.is_private, &self.modulus, &self.exponent)?;
-        self.validated.store(true, Ordering::Relaxed);
-        Ok(())
+        let passes = key_passes(self.is_private, &self.modulus, &self.exponent);
+        self.validated.store(passes, Ordering::Relaxed);
+        passes
     }
 }
 
@@ -108,7 +108,7 @@ mod tests {
     use tc_bigint::FixedBigUint;
 
     use super::RsaKeyOwned;
-    use crate::{RsaError, RsaKeyParams};
+    use crate::RsaKeyParams;
 
     fn key(modulus: u32) -> RsaKeyOwned<FixedBigUint<1>> {
         RsaKeyOwned::new(
@@ -122,22 +122,22 @@ mod tests {
     fn a_key_that_passes_is_not_checked_again() {
         let key = key(1009 * 1013);
         assert!(!key.validated.load(Ordering::Relaxed));
-        assert_eq!(key.validate(), Ok(()));
+        assert!(key.validate());
         assert!(key.validated.load(Ordering::Relaxed));
-        assert_eq!(key.validate(), Ok(()));
+        assert!(key.validate());
         assert!(key.clone().validated.load(Ordering::Relaxed));
     }
 
     #[test]
     fn a_key_that_fails_is_checked_again_and_fails_again() {
         let key = key(3233);
-        assert_eq!(key.validate(), Err(RsaError::ModulusHasSmallFactor));
+        assert!(!key.validate());
         assert!(!key.validated.load(Ordering::Relaxed));
-        assert_eq!(key.validate(), Err(RsaError::ModulusHasSmallFactor));
+        assert!(!key.validate());
     }
 
     #[test]
     fn a_key_marked_as_passed_is_not_checked() {
-        assert_eq!(key(3233).into_validated().validate(), Ok(()));
+        assert!(key(3233).into_validated().validate());
     }
 }

@@ -7,8 +7,8 @@ use tc_bigint::BitOps;
 use tc_prime::Primality;
 use tc_zeroize::{Zeroize, ZeroizeOnDrop};
 
-use crate::validation::validate_key;
-use crate::{RsaError, RsaKeyParams, RsaPrivateCrtKeyParams};
+use crate::validation::key_passes;
+use crate::{RsaKeyParams, RsaPrivateCrtKeyParams};
 
 /// An RSA private key with the values of the Chinese Remainder Theorem,
 /// held by value: the modulus and the exponents as integers of type `T`,
@@ -89,10 +89,16 @@ impl<T: Zeroize + Clone, H: Zeroize + Clone> Clone for RsaPrivateCrtKeyOwned<T, 
 }
 
 /// A private key, whose exponent is `d`, and the check of
-/// [`RsaKeyParams`], once: a key that passed is not checked again.
-/// Constant time, but for `validate`, which is variable time: only for
-/// public values, as the modulus is.
-impl<T: Zeroize, H: Zeroize> RsaKeyParams<T> for RsaPrivateCrtKeyOwned<T, H> {
+/// [`RsaKeyParams`], once, with that of its CRT values, none of which may
+/// be zero, as Bouncy Castle's `RsaPrivateCrtKeyParameters` checks them: a
+/// key that passed is not checked again. Constant time, but for
+/// `validate`, which is variable time: only for public values, as the
+/// modulus is; the other values are only read for zero.
+impl<T, H> RsaKeyParams<T> for RsaPrivateCrtKeyOwned<T, H>
+where
+    T: Zeroize + Zero + BitOps + Primality + From<u8>,
+    H: Zeroize + Zero,
+{
     fn is_private_key(&self) -> bool {
         true
     }
@@ -105,21 +111,25 @@ impl<T: Zeroize, H: Zeroize> RsaKeyParams<T> for RsaPrivateCrtKeyOwned<T, H> {
         &self.private_exponent
     }
 
-    fn validate(&self) -> Result<(), RsaError>
-    where
-        T: Zero + BitOps + Primality + From<u8>,
-    {
+    fn validate(&self) -> bool {
         if self.validated.load(Ordering::Relaxed) {
-            return Ok(());
+            return true;
         }
-        validate_key(true, &self.modulus, &self.private_exponent)?;
-        self.validated.store(true, Ordering::Relaxed);
-        Ok(())
+        let crt = [&self.p, &self.q, &self.dp, &self.dq, &self.q_inv];
+        let passes = key_passes(true, &self.modulus, &self.private_exponent)
+            && !self.public_exponent.is_zero()
+            && !crt.iter().any(|value| value.is_zero());
+        self.validated.store(passes, Ordering::Relaxed);
+        passes
     }
 }
 
 /// The fields as they are held. Constant time.
-impl<T: Zeroize, H: Zeroize> RsaPrivateCrtKeyParams<T, H> for RsaPrivateCrtKeyOwned<T, H> {
+impl<T, H> RsaPrivateCrtKeyParams<T, H> for RsaPrivateCrtKeyOwned<T, H>
+where
+    T: Zeroize + Zero + BitOps + Primality + From<u8>,
+    H: Zeroize + Zero,
+{
     fn public_exponent(&self) -> &T {
         &self.public_exponent
     }
@@ -160,3 +170,52 @@ impl<T: Zeroize, H: Zeroize> Drop for RsaPrivateCrtKeyOwned<T, H> {
 }
 
 impl<T: Zeroize, H: Zeroize> ZeroizeOnDrop for RsaPrivateCrtKeyOwned<T, H> {}
+
+#[cfg(test)]
+mod tests {
+    use core::sync::atomic::Ordering;
+
+    use tc_bigint::FixedBigUint;
+
+    use super::RsaPrivateCrtKeyOwned;
+    use crate::RsaKeyParams;
+
+    type Int = FixedBigUint<1>;
+
+    /// The toy key p = 1013 and q = 1009, with `e = 17`, or with one of its
+    /// CRT values, counted from `p`, set to zero.
+    fn key(zero: Option<usize>) -> RsaPrivateCrtKeyOwned<Int> {
+        let mut crt = [1013u32, 1009, 893, 593, 253];
+        if let Some(index) = zero {
+            crt[index] = 0;
+        }
+        let [p, q, dp, dq, q_inv] = crt.map(Int::from);
+        RsaPrivateCrtKeyOwned::new(
+            Int::from(1_022_117u32),
+            Int::from(17u32),
+            Int::from(180_017u32),
+            p,
+            q,
+            dp,
+            dq,
+            q_inv,
+        )
+    }
+
+    #[test]
+    fn a_key_that_passes_is_not_checked_again() {
+        let key = key(None);
+        assert!(key.validate());
+        assert!(key.validated.load(Ordering::Relaxed));
+        assert!(key.clone().validated.load(Ordering::Relaxed));
+    }
+
+    #[test]
+    fn a_crt_value_of_zero_fails() {
+        for index in 0..5 {
+            let key = key(Some(index));
+            assert!(!key.validate(), "{index}");
+            assert!(!key.validated.load(Ordering::Relaxed));
+        }
+    }
+}
