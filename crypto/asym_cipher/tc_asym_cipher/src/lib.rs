@@ -1,3 +1,5 @@
+#![no_std]
+
 mod cipher_direction;
 mod traits;
 
