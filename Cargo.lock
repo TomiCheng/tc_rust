@@ -843,6 +843,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_bigint"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6cb990fb0c0fd64e1007c824362db57d1c7ea53245ae12861f7569f93e6c142d"
+dependencies = [
+ "num-traits",
+ "rand_core",
+ "tc_constant_time",
+ "tc_zeroize",
+]
+
+[[package]]
 name = "tc_binpoly"
 version = "0.1.0"
 dependencies = [
@@ -1111,7 +1123,7 @@ dependencies = [
 name = "tc_ecdh"
 version = "0.1.0"
 dependencies = [
- "tc_bigint",
+ "tc_bigint 0.1.0",
  "tc_ec_core",
  "tc_f2m_custom",
  "tc_fp_curve",
@@ -1123,7 +1135,7 @@ name = "tc_ecdsa"
 version = "0.1.0"
 dependencies = [
  "rand_core",
- "tc_bigint",
+ "tc_bigint 0.1.0",
  "tc_digest 0.1.0",
  "tc_ec_core",
  "tc_f2m_custom",
@@ -1168,7 +1180,7 @@ dependencies = [
 name = "tc_f2m_curve"
 version = "0.1.0"
 dependencies = [
- "tc_bigint",
+ "tc_bigint 0.1.0",
  "tc_binpoly",
  "tc_ec_core",
 ]
@@ -1177,7 +1189,7 @@ dependencies = [
 name = "tc_f2m_custom"
 version = "0.1.0"
 dependencies = [
- "tc_bigint",
+ "tc_bigint 0.1.0",
  "tc_binpoly",
  "tc_ec_core",
  "tc_f2m_curve",
@@ -1189,7 +1201,7 @@ version = "0.1.0"
 dependencies = [
  "criterion",
  "rand_core",
- "tc_bigint",
+ "tc_bigint 0.1.0",
  "tc_ec_core",
 ]
 
@@ -1198,7 +1210,7 @@ name = "tc_fp_custom"
 version = "0.1.0"
 dependencies = [
  "criterion",
- "tc_bigint",
+ "tc_bigint 0.1.0",
  "tc_constant_time",
  "tc_ec_core",
  "tc_f2m_custom",
@@ -1367,6 +1379,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_modular"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "68d59abc2d37ce5a8c7ef18eccb18ed62505c4d9c795d8fe7d5c10418f24081c"
+dependencies = [
+ "num-traits",
+ "tc_bigint 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tc_constant_time",
+ "tc_zeroize",
+]
+
+[[package]]
 name = "tc_noekeon"
 version = "0.1.0"
 dependencies = [
@@ -1415,9 +1439,21 @@ version = "0.1.0"
 dependencies = [
  "rand",
  "rand_core",
- "tc_bigint",
+ "tc_bigint 0.1.0",
  "tc_digest 0.1.0",
  "tc_sha 0.1.0",
+]
+
+[[package]]
+name = "tc_prime"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "419e1857f48b50a9393eee195541d740fbcf63d124fec48df85cdcca5d6f508f"
+dependencies = [
+ "num-traits",
+ "rand_core",
+ "tc_bigint 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tc_modular",
 ]
 
 [[package]]
@@ -1446,7 +1482,7 @@ version = "0.1.0"
 dependencies = [
  "criterion",
  "rand_core",
- "tc_bigint",
+ "tc_bigint 0.1.0",
  "tc_constant_time",
  "tc_runtime",
 ]
@@ -1482,7 +1518,7 @@ version = "0.1.0"
 dependencies = [
  "criterion",
  "rand_core",
- "tc_bigint",
+ "tc_bigint 0.1.0",
  "tc_cipher",
  "tc_constant_time",
 ]
@@ -1494,6 +1530,9 @@ dependencies = [
  "rand",
  "rand_core",
  "tc_asym_cipher",
+ "tc_bigint 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tc_modular",
+ "tc_prime 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tc_zeroize",
 ]
 

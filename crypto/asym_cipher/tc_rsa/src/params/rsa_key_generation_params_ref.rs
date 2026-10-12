@@ -6,9 +6,10 @@ use rand_core::CryptoRng;
 /// `RsaKeyGenerationParameters` holds it: the random source, the public
 /// exponent, the size of the modulus in bits, and the certainty the primes
 /// are tested to. The random source is borrowed, behind `dyn`, so the
-/// caller keeps it and its state, as a DRBG needs, and no `alloc` is
-/// needed; `RsaKeyGenerationParamsOwned`, behind the `alloc` feature,
-/// owns its source instead.
+/// caller keeps it and its state, as a DRBG needs;
+/// [`RsaKeyGenerationParamsOwned`](crate::RsaKeyGenerationParamsOwned)
+/// owns its source instead. Key generation takes `alloc`, as it works in
+/// `PaddedBigUint`.
 ///
 /// The exponent is a `u32`, where Bouncy Castle takes any integer: it is
 /// 65537 all but always, and keys from elsewhere, whose exponent may be
@@ -72,7 +73,6 @@ impl<'a> RsaKeyGenerationParamsRef<'a> {
     }
 
     /// The random source, for the generator to draw from. Constant time.
-    #[expect(dead_code, reason = "used once generation is written")]
     pub(crate) fn rng(&mut self) -> &mut dyn CryptoRng {
         self.rng
     }

@@ -74,7 +74,6 @@ impl RsaKeyGenerationParamsOwned {
     }
 
     /// The random source, for the generator to draw from. Constant time.
-    #[expect(dead_code, reason = "used once generation is written")]
     pub(crate) fn rng(&mut self) -> &mut dyn CryptoRng {
         &mut *self.rng
     }
