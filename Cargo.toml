@@ -9,7 +9,7 @@ members = [
     "crypto/macs/*",
     "crypto/stream_cipher/*",
     "math/*",
-    "block_cipher/*", "crypto/asym_cipher/tc_asym_cipher", "crypto/asym_cipher/tc_rsa",
+    "block_cipher/*", "crypto/asym_cipher/tc_asym_cipher", "crypto/asym_cipher/tc_asym_encoding", "crypto/asym_cipher/tc_rsa",
 ]
 
 [workspace.package]
