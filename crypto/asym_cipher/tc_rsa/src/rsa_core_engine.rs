@@ -7,6 +7,7 @@ use num_traits::Zero;
 use tc_asym_cipher::{AsymmetricBlockCipher, AsymmetricBlockCipherInit, CipherDirection};
 use tc_bigint::{ArrayEncoding, BitOps};
 use tc_modular::{ModPow, NonZero};
+use tc_prime::Primality;
 use tc_zeroize::{Zeroize, Zeroizing};
 
 use crate::{RsaError, RsaKeyParams};
@@ -49,20 +50,21 @@ impl<T: Zeroize> Drop for Key<T> {
 /// use tc_bigint::FixedBigUint;
 /// use tc_rsa_v2::{RsaCoreEngine, RsaKeyOwned};
 ///
-/// // A textbook key, p = 61 and q = 53, far too small for any real use.
-/// let public = RsaKeyOwned::new(false, FixedBigUint::<1>::from(3233u32), FixedBigUint::from(17u32));
-/// let private = RsaKeyOwned::new(true, FixedBigUint::<1>::from(3233u32), FixedBigUint::from(2753u32));
+/// // A toy key, p = 1009 and q = 1013, far too small for any real use.
+/// let n = FixedBigUint::<1>::from(1_022_117u32);
+/// let public = RsaKeyOwned::new(false, n.clone(), FixedBigUint::from(17u32));
+/// let private = RsaKeyOwned::new(true, n, FixedBigUint::from(180_017u32));
 ///
 /// let mut engine = RsaCoreEngine::new();
 /// engine.init(CipherDirection::Encrypt, &public)?;
-/// let mut ciphertext = [0; 2];
+/// let mut ciphertext = [0; 3];
 /// engine.process_block(&[65], &mut ciphertext)?;
-/// assert_eq!(ciphertext, [0x0a, 0xe6]); // 2790
+/// assert_eq!(ciphertext, [0x02, 0xb3, 0xcd]); // 177101
 ///
 /// engine.init(CipherDirection::Decrypt, &private)?;
-/// let mut plaintext = [0; 2];
+/// let mut plaintext = [0; 3];
 /// engine.process_block(&ciphertext, &mut plaintext)?;
-/// assert_eq!(plaintext, [0, 65]); // the leading zero is kept
+/// assert_eq!(plaintext, [0, 0, 65]); // the leading zeros are kept
 /// # Ok::<(), tc_rsa_v2::RsaError>(())
 /// ```
 pub struct RsaCoreEngine<T: Zeroize> {
@@ -88,34 +90,22 @@ impl<T: Zeroize> Default for RsaCoreEngine<T> {
     }
 }
 
-/// Copies the key in, once it is checked: a modulus that is odd, and so not
-/// zero, and an exponent that is not zero, and odd for a public key, as
-/// Bouncy Castle's `RsaKeyParameters` checks them. Bouncy Castle also turns
-/// down a modulus with a small factor, or one a Miller-Rabin test does not
-/// prove composite; that is not done here. Constant time, apart from the
-/// outcome of the checks, which the error shows.
+/// Copies the key in, once [`validate`](RsaKeyParams::validate) passes it,
+/// as Bouncy Castle checks a key when its `RsaKeyParameters` is built; the
+/// keys of this crate are checked once, however often they are given.
+/// Variable time: only for public values, as the modulus and the outcome
+/// of the checks are; the exponent is only read for zero and its parity.
 impl<T, P> AsymmetricBlockCipherInit<P> for RsaCoreEngine<T>
 where
-    T: Clone + Zero + BitOps + Zeroize + Sub<u32, Output = T>,
+    T: Clone + Zero + BitOps + Zeroize + Sub<u32, Output = T> + Primality + From<u8>,
     P: RsaKeyParams<T>,
 {
     type Error = RsaError;
 
     fn init(&mut self, direction: CipherDirection, params: &P) -> Result<(), RsaError> {
+        params.validate()?;
         let (modulus, exponent) = (params.modulus(), params.exponent());
-        if modulus.is_zero() {
-            return Err(RsaError::InvalidModulus);
-        }
-        if !modulus.bit(0) {
-            return Err(RsaError::EvenModulus);
-        }
-        if exponent.is_zero() {
-            return Err(RsaError::InvalidExponent);
-        }
-        if !params.is_private_key() && !exponent.bit(0) {
-            return Err(RsaError::EvenPublicExponent);
-        }
-        let modulus = NonZero::new(modulus.clone()).expect("an odd modulus is not zero");
+        let modulus = NonZero::new(modulus.clone()).expect("a valid modulus is odd");
         self.key = Some(Key {
             modulus_less_one: (*modulus).clone() - 1u32,
             exponent: exponent.clone(),
@@ -255,7 +245,9 @@ mod tests {
             + ArrayEncoding<u8>
             + ModPow<Output = T>
             + Zeroize
-            + core::ops::Sub<u32, Output = T>,
+            + core::ops::Sub<u32, Output = T>
+            + tc_prime::Primality
+            + From<u8>,
     {
         let (n, d) = (hex(N), hex(D));
         let public = RsaKeyOwned::new(false, int(&n), int(&[1, 0, 1]));
@@ -304,6 +296,8 @@ mod tests {
         );
     }
 
+    /// The textbook key, p = 61 and q = 53, marked as checked, as its
+    /// modulus has small factors.
     fn textbook(private: bool) -> RsaKeyOwned<FixedBigUint<1>> {
         let exponent = if private { 2753u32 } else { 17 };
         RsaKeyOwned::new(
@@ -311,6 +305,7 @@ mod tests {
             FixedBigUint::from(3233u32),
             FixedBigUint::from(exponent),
         )
+        .into_validated()
     }
 
     #[test]
@@ -386,14 +381,37 @@ mod tests {
         let mut engine = RsaCoreEngine::new();
         let mut init = |key| engine.init(CipherDirection::Encrypt, &key);
         assert_eq!(init(key(false, 0, 17)), Err(RsaError::InvalidModulus));
-        assert_eq!(init(key(false, 3234, 17)), Err(RsaError::EvenModulus));
-        assert_eq!(init(key(false, 3233, 0)), Err(RsaError::InvalidExponent));
-        assert_eq!(init(key(true, 3233, 0)), Err(RsaError::InvalidExponent));
+        assert_eq!(init(key(false, 1_022_118, 17)), Err(RsaError::EvenModulus));
         assert_eq!(
-            init(key(false, 3233, 16)),
+            init(key(false, 1_022_117, 0)),
+            Err(RsaError::InvalidExponent)
+        );
+        assert_eq!(
+            init(key(true, 1_022_117, 0)),
+            Err(RsaError::InvalidExponent)
+        );
+        assert_eq!(
+            init(key(false, 1_022_117, 16)),
             Err(RsaError::EvenPublicExponent)
         );
-        assert_eq!(init(key(true, 3233, 16)), Ok(()));
+        assert_eq!(init(key(true, 1_022_117, 16)), Ok(()));
+        assert_eq!(
+            init(key(false, 3233, 17)),
+            Err(RsaError::ModulusHasSmallFactor)
+        );
+        assert_eq!(
+            init(key(false, 1_000_003, 17)),
+            Err(RsaError::ModulusNotComposite)
+        );
+    }
+
+    #[test]
+    fn a_key_marked_as_passed_skips_the_checks_of_its_modulus() {
+        let mut engine = RsaCoreEngine::new();
+        assert_eq!(
+            engine.init(CipherDirection::Encrypt, &textbook(false)),
+            Ok(())
+        );
     }
 
     #[test]

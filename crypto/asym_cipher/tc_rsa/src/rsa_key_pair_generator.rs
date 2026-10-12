@@ -123,7 +123,9 @@ where
         let half = |value: &PaddedBigUint| {
             H::try_from(value.clone()).map_err(|_| RsaError::InvalidStrength)
         };
-        let public = RsaKeyOwned::new(false, wide(&key.n)?, wide(&key.e)?);
+        // The modulus is the product of two primes it drew, so the keys are
+        // marked as checked.
+        let public = RsaKeyOwned::new(false, wide(&key.n)?, wide(&key.e)?).into_validated();
         let private = RsaPrivateCrtKeyOwned::new(
             wide(&key.n)?,
             wide(&key.e)?,
@@ -133,7 +135,8 @@ where
             half(&key.dp)?,
             half(&key.dq)?,
             half(&key.q_inv)?,
-        );
+        )
+        .into_validated();
         Ok((public, private))
     }
 }

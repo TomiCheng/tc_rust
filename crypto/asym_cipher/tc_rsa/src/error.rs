@@ -16,6 +16,12 @@ pub enum RsaError {
     InvalidModulus,
     /// The modulus of the key is even.
     EvenModulus,
+    /// The modulus of the key is longer than 16384 bits.
+    ModulusOutOfRange,
+    /// The modulus of the key has a prime factor below 212.
+    ModulusHasSmallFactor,
+    /// The modulus of the key is not proved composite, as a prime is not.
+    ModulusNotComposite,
     /// The exponent of the key is zero.
     InvalidExponent,
     /// The exponent of a public key is even.
@@ -38,6 +44,9 @@ impl core::fmt::Display for RsaError {
             Self::InvalidCertainty => "RSA prime certainty must be at least 1",
             Self::InvalidModulus => "not a valid RSA modulus",
             Self::EvenModulus => "RSA modulus is even",
+            Self::ModulusOutOfRange => "RSA modulus out of range",
+            Self::ModulusHasSmallFactor => "RSA modulus has a small prime factor",
+            Self::ModulusNotComposite => "RSA modulus is not composite",
             Self::InvalidExponent => "not a valid RSA exponent",
             Self::EvenPublicExponent => "RSA public exponent is even",
             Self::InputTooSmall => "input too small for RSA cipher",

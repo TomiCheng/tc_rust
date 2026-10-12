@@ -9,6 +9,7 @@ mod rsa_core_engine;
 #[cfg(feature = "alloc")]
 mod rsa_key_pair_generator;
 mod traits;
+mod validation;
 
 pub use error::RsaError;
 #[cfg(feature = "alloc")]
