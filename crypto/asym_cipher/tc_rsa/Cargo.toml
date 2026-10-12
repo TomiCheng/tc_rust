@@ -6,10 +6,10 @@ license.workspace = true
 repository.workspace = true
 
 [features]
-alloc = ["dep:rand_core"]
+alloc = []
 
 [dependencies]
-rand_core = { version = "0.10.1", default-features = false, optional = true }
+rand_core = { version = "0.10.1", default-features = false }
 tc_asym_cipher = { version = "0.1.0", path = "../tc_asym_cipher" }
 tc_zeroize = "0.1.0"
 
