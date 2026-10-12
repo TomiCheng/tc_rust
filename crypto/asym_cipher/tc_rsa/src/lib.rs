@@ -18,9 +18,13 @@ mod validation;
 pub use core_engine::FixedRsaCoreEngine;
 #[cfg(feature = "alloc")]
 pub use core_engine::PaddedRsaCoreEngine;
+#[cfg(feature = "rustcrypto")]
+pub use core_engine::RsaCoreEngineRustCrypto;
 pub use crt_engine::FixedRsaCrtCoreEngine;
 #[cfg(feature = "alloc")]
 pub use crt_engine::PaddedRsaCrtCoreEngine;
+#[cfg(feature = "rustcrypto")]
+pub use crt_engine::RsaCrtCoreEngineRustCrypto;
 pub use error::RsaError;
 #[cfg(feature = "alloc")]
 pub use key_pair_generator::RsaKeyPairGenerator;

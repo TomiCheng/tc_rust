@@ -5,7 +5,11 @@
 pub(crate) mod fixed;
 #[cfg(feature = "alloc")]
 mod padded;
+#[cfg(feature = "rustcrypto")]
+pub(crate) mod rustcrypto;
 
 pub use fixed::FixedRsaCoreEngine;
 #[cfg(feature = "alloc")]
 pub use padded::PaddedRsaCoreEngine;
+#[cfg(feature = "rustcrypto")]
+pub use rustcrypto::RsaCoreEngineRustCrypto;
