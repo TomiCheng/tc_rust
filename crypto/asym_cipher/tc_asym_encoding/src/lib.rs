@@ -3,3 +3,14 @@
 //! engine as an asymmetric block cipher of its own.
 
 #![no_std]
+
+#[cfg(feature = "alloc")]
+extern crate alloc;
+
+mod error;
+mod pkcs1_encoding;
+
+pub use error::EncodingError;
+pub use pkcs1_encoding::FixedPkcs1Encoding;
+#[cfg(feature = "alloc")]
+pub use pkcs1_encoding::Pkcs1Encoding;
