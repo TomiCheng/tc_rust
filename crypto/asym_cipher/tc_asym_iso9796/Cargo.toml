@@ -1,0 +1,9 @@
+[package]
+name = "tc_asym_iso9796"
+description = "ISO/IEC 9796 digital signatures with message recovery, after Bouncy Castle's ISO9796d1Encoding and Iso9796d2Signer."
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
