@@ -2,7 +2,6 @@
 
 use tc_rc_cipher::{RC6_MAX_KEY_BYTES, Rc6Engine};
 
-use super::random_key;
 use super::specs::{AlgorithmSpec, Lengths};
 use crate::cipher::Algorithm;
 use crate::cipher::any_engine::AnyEngine;
@@ -14,7 +13,5 @@ pub(super) const RC6: AlgorithmSpec = AlgorithmSpec {
     block_size: 16,
     key: Lengths::new(1, RC6_MAX_KEY_BYTES, 1, 32),
     engine: || AnyEngine::new(Rc6Engine::new()),
-    generate_key: random_key,
-    extra_params: |_, params| Ok(params),
     oids: &[],
 };

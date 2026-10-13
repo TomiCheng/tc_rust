@@ -2,8 +2,8 @@
 
 #![cfg(feature = "aria")]
 
-use tc_block_cipher::KeyParams;
 use tc_security::cipher;
+use tc_security::params::AnyParams;
 use tc_security::wrap;
 
 fn hex(text: &str) -> Vec<u8> {
@@ -16,7 +16,7 @@ fn hex(text: &str) -> Vec<u8> {
 /// RFC 3394 第 2.2.1 節的 wrap，以 `cipher_name` 的 ECB 加密一個 16 bytes 區塊當作 W 的內層函式。
 fn rfc3394_wrap(cipher_name: &str, kek: &[u8], key: &[u8]) -> Vec<u8> {
     let entry = cipher::get_by_name(cipher_name).unwrap();
-    let params = entry.builder().with_key(kek).build().unwrap();
+    let params = AnyParams::new(kek.to_vec());
     let mut ecb = entry.cipher();
 
     let mut a = [0xa6; 8];
@@ -73,7 +73,7 @@ fn ariawrap_matches_rfc_3394_computed_with_aria_ecb() {
             "00112233445566778899AABBCCDDEEFF000102030405060708090A0B0C0D0E0F",
         ),
     ] {
-        let params = entry.builder().with_key(&hex(kek)).build().unwrap();
+        let params = AnyParams::new(hex(kek));
         let mut wrapper = entry.wrapper();
         let wrapped = wrap::wrap(&mut wrapper, &params, &hex(key)).unwrap();
         assert_eq!(
@@ -106,19 +106,9 @@ fn names_aliases_and_bc_oids_find_ariawrap() {
 }
 
 #[test]
-fn the_ariawrap_kek_defaults_to_256_bits_as_in_bc() {
-    let params = wrap::get_by_name("ARIAWRAP")
-        .unwrap()
-        .builder()
-        .build()
-        .unwrap();
-    assert_eq!(KeyParams::key(&params).len(), 32);
-}
-
-#[test]
 fn a_tampered_aria_wrapped_key_fails_the_integrity_check() {
     let entry = wrap::get_by_name("ARIAWRAP").unwrap();
-    let params = entry.builder().build().unwrap();
+    let params = AnyParams::new(vec![7; 32]);
     let mut wrapper = entry.wrapper();
     let mut wrapped = wrap::wrap(&mut wrapper, &params, &[0x24; 24]).unwrap();
     wrapped[10] ^= 1;

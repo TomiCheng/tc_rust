@@ -4,7 +4,6 @@
 use tc_ascon_aead::{AsconAead128Engine, AsconLegacyEngine, AsconLegacyVariant};
 use tc_buffered_cipher::BufferedAeadCipher;
 
-use super::random_key;
 use super::specs::{Lengths, StandaloneSpec};
 use crate::cipher::{Algorithm, AnyCipher};
 
@@ -13,10 +12,7 @@ pub(super) const ASCON_AEAD128: StandaloneSpec = StandaloneSpec {
     algorithm: Algorithm::AsconAead128,
     names: &["ASCON-AEAD128"],
     key: Lengths::exact(16),
-    iv: Lengths::exact(16),
-    mac: Some(Lengths::new(4, 16, 1, 16)),
     cipher: || AnyCipher::new(BufferedAeadCipher::new(AsconAead128Engine::new())),
-    generate_key: random_key,
     oids: &[],
 };
 
@@ -25,14 +21,11 @@ pub(super) const ASCON128: StandaloneSpec = StandaloneSpec {
     algorithm: Algorithm::Ascon128,
     names: &["ASCON-128"],
     key: Lengths::exact(16),
-    iv: Lengths::exact(16),
-    mac: Some(Lengths::exact(16)),
     cipher: || {
         AnyCipher::new(BufferedAeadCipher::new(AsconLegacyEngine::new(
             AsconLegacyVariant::Ascon128,
         )))
     },
-    generate_key: random_key,
     oids: &[],
 };
 
@@ -41,14 +34,11 @@ pub(super) const ASCON128A: StandaloneSpec = StandaloneSpec {
     algorithm: Algorithm::Ascon128a,
     names: &["ASCON-128A"],
     key: Lengths::exact(16),
-    iv: Lengths::exact(16),
-    mac: Some(Lengths::exact(16)),
     cipher: || {
         AnyCipher::new(BufferedAeadCipher::new(AsconLegacyEngine::new(
             AsconLegacyVariant::Ascon128a,
         )))
     },
-    generate_key: random_key,
     oids: &[],
 };
 
@@ -57,13 +47,10 @@ pub(super) const ASCON80PQ: StandaloneSpec = StandaloneSpec {
     algorithm: Algorithm::Ascon80pq,
     names: &["ASCON-80PQ"],
     key: Lengths::exact(20),
-    iv: Lengths::exact(16),
-    mac: Some(Lengths::exact(16)),
     cipher: || {
         AnyCipher::new(BufferedAeadCipher::new(AsconLegacyEngine::new(
             AsconLegacyVariant::Ascon80pq,
         )))
     },
-    generate_key: random_key,
     oids: &[],
 };

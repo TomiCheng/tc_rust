@@ -1,10 +1,10 @@
-//! cipher 工廠的 ARIA：RFC 5794 的已知答案、BC 的 NSRI OID 與預設金鑰長度。
+//! cipher 工廠的 ARIA：RFC 5794 的已知答案與 BC 的 NSRI OID。
 
 #![cfg(feature = "aria")]
 
-use tc_block_cipher::KeyParams;
 use tc_security::SecurityError;
 use tc_security::cipher;
+use tc_security::params::AnyParams;
 
 fn hex(text: &str) -> Vec<u8> {
     (0..text.len())
@@ -36,7 +36,7 @@ fn aria_matches_the_rfc_5794_vectors() {
             "f92bd7c79fb72e2f2b8f80c1972d24fc",
         ),
     ] {
-        let params = entry.builder().with_key(&hex(key)).build().unwrap();
+        let params = AnyParams::new(hex(key));
         assert_eq!(
             cipher::encrypt(&mut entry.cipher(), &params, &plaintext).unwrap(),
             hex(expected),
@@ -63,14 +63,4 @@ fn every_bc_aria_oid_maps_to_its_combination() {
             assert_eq!(name_of(&dotted), Ok(expected.into()), "{dotted}");
         }
     }
-}
-
-#[test]
-fn aria_keys_default_to_256_bits_as_in_bc() {
-    let params = cipher::get_by_name("ARIA/CBC")
-        .unwrap()
-        .builder()
-        .build()
-        .unwrap();
-    assert_eq!(KeyParams::key(&params).len(), 32);
 }

@@ -1,12 +1,10 @@
-//! cipher 工廠的 AES：已知答案、名稱與 OID 查詢、builder 的長度驗證。
+//! cipher 工廠的 AES：已知答案、名稱與 OID 查詢，以及 `init` 對參數的檢查。
 
 #![cfg(feature = "aes")]
 
-use tc_aead_cipher::{MacSizeParams, NonceParams};
-use tc_block_cipher::KeyParams;
-use tc_block_modes::IvParams;
 use tc_security::SecurityError;
 use tc_security::cipher::{self, Algorithm, Mode, Padding};
+use tc_security::params::AnyParams;
 
 fn hex(text: &str) -> Vec<u8> {
     (0..text.len())
@@ -37,9 +35,11 @@ fn aes_matches_the_nist_sp_800_38a_vectors() {
         ),
     ] {
         let entry = cipher::get_by_name(name).unwrap();
-        let mut builder = entry.builder();
-        builder.with_key(&key).with_iv(&hex(iv));
-        let params = builder.build().unwrap();
+        let params = if iv.is_empty() {
+            AnyParams::new(key.clone())
+        } else {
+            AnyParams::new(key.clone()).with_iv(hex(iv))
+        };
         assert_eq!(
             cipher::encrypt(&mut entry.cipher(), &params, &plaintext).unwrap(),
             hex(expected),
@@ -53,24 +53,19 @@ fn aes_gcm_matches_the_gcm_specification_test_cases() {
     let entry = cipher::get_by_name("AES/GCM/NOPADDING").unwrap();
 
     // 測試案例 2：全零的金鑰、nonce 與明文
-    let params = entry
-        .builder()
-        .with_key(&[0; 16])
-        .with_nonce(&[0; 12])
-        .build()
-        .unwrap();
+    let params = AnyParams::aead(vec![0; 16], 128, vec![0; 12], Vec::new());
     assert_eq!(
         cipher::encrypt(&mut entry.cipher(), &params, &[0; 16]).unwrap(),
         hex("0388dace60b6a392f328c2b971b2fe78ab6e47d42cec13bdf53a67b21257bddf")
     );
 
     // 測試案例 3
-    let params = entry
-        .builder()
-        .with_key(&hex("feffe9928665731c6d6a8f9467308308"))
-        .with_nonce(&hex("cafebabefacedbaddecaf888"))
-        .build()
-        .unwrap();
+    let params = AnyParams::aead(
+        hex("feffe9928665731c6d6a8f9467308308"),
+        128,
+        hex("cafebabefacedbaddecaf888"),
+        Vec::new(),
+    );
     let plaintext = hex(
         "d9313225f88406e5a55909c5aff5269a86a7a9531534f7da2e4c303d8a318a72\
          1c3c0c95956809532fcf0e2449a6b525b16aedf5aa0de657ba637b391aafd255",
@@ -83,17 +78,37 @@ fn aes_gcm_matches_the_gcm_specification_test_cases() {
              4d5c2af327cd64a62cf35abd2ba6fab4"
         )
     );
+
+    // 測試案例 4：有 AAD
+    let params = AnyParams::aead(
+        hex("feffe9928665731c6d6a8f9467308308"),
+        128,
+        hex("cafebabefacedbaddecaf888"),
+        hex("feedfacedeadbeeffeedfacedeadbeefabaddad2"),
+    );
+    let plaintext = hex(
+        "d9313225f88406e5a55909c5aff5269a86a7a9531534f7da2e4c303d8a318a72\
+         1c3c0c95956809532fcf0e2449a6b525b16aedf5aa0de657ba637b39",
+    );
+    assert_eq!(
+        cipher::encrypt(&mut entry.cipher(), &params, &plaintext).unwrap(),
+        hex(
+            "42831ec2217774244b7221b784d0d49ce3aa212f2c02a4e035c17e2329aca12e\
+             21d514b25466931c7d8f6a5aac84aa051ba30b396a0aac973d58e091\
+             5bc94fbc3221a5db94fae95ae7121a47"
+        )
+    );
 }
 
 #[test]
 fn aes_ocb_matches_the_rfc_7253_sample_without_associated_data() {
     let entry = cipher::get_by_name("AES/OCB/NOPADDING").unwrap();
-    let params = entry
-        .builder()
-        .with_key(&hex("000102030405060708090a0b0c0d0e0f"))
-        .with_nonce(&hex("bbaa99887766554433221100"))
-        .build()
-        .unwrap();
+    let params = AnyParams::aead(
+        hex("000102030405060708090a0b0c0d0e0f"),
+        128,
+        hex("bbaa99887766554433221100"),
+        Vec::new(),
+    );
     // 空的明文只輸出 tag
     assert_eq!(
         cipher::encrypt(&mut entry.cipher(), &params, &[]).unwrap(),
@@ -105,7 +120,7 @@ fn aes_ocb_matches_the_rfc_7253_sample_without_associated_data() {
 fn a_tampered_aead_ciphertext_fails_to_decrypt() {
     for name in ["AES/CCM", "AES/EAX", "AES/GCM", "AES/OCB"] {
         let entry = cipher::get_by_name(name).unwrap();
-        let params = entry.builder().build().unwrap();
+        let params = AnyParams::aead(vec![7; 16], 128, vec![9; 12], Vec::new());
         let mut aes = entry.cipher();
         let mut sealed = cipher::encrypt(&mut aes, &params, b"attack at dawn").unwrap();
         sealed[0] ^= 1;
@@ -212,124 +227,73 @@ fn an_entry_displays_its_name_followed_by_its_oid_names() {
 }
 
 #[test]
-fn the_builder_generates_a_default_key_iv_and_tag_size() {
-    let cbc = cipher::get_by_name("AES/CBC/PKCS7PADDING")
-        .unwrap()
-        .builder()
-        .build()
-        .unwrap();
-    assert_eq!(KeyParams::key(&cbc).len(), 24);
-    assert_eq!(IvParams::iv(&cbc).len(), 16);
-
-    let gcm = cipher::get_by_name("AES/GCM")
-        .unwrap()
-        .builder()
-        .build()
-        .unwrap();
-    assert_eq!(gcm.nonce().len(), 12);
-    assert_eq!(gcm.mac_size(), 16);
-
-    let ccm = cipher::get_by_name("AES/CCM")
-        .unwrap()
-        .builder()
-        .build()
-        .unwrap();
-    assert_eq!(ccm.nonce().len(), 12);
-}
-
-#[test]
-fn each_build_draws_a_fresh_key_and_iv() {
-    let entry = cipher::get_by_name("AES/CBC/PKCS7PADDING").unwrap();
-    let first = entry.builder().build().unwrap();
-    let second = entry.builder().build().unwrap();
-    assert_ne!(KeyParams::key(&first), KeyParams::key(&second));
-    assert_ne!(IvParams::iv(&first), IvParams::iv(&second));
-}
-
-#[test]
-fn a_given_key_takes_priority_over_the_key_size() {
-    let entry = cipher::get_by_name("AES/CBC/PKCS7PADDING").unwrap();
-    let sized = entry.builder().with_key_size(32).build().unwrap();
-    assert_eq!(KeyParams::key(&sized).len(), 32);
-
-    let params = entry
-        .builder()
-        .with_key_size(32)
-        .with_key(&[7; 16])
-        .build()
-        .unwrap();
-    assert_eq!(KeyParams::key(&params), [7; 16]);
-}
-
-#[test]
-fn the_builder_rejects_lengths_the_combination_cannot_use() {
-    let cbc = cipher::get_by_name("AES/CBC/PKCS7PADDING").unwrap();
-    assert_eq!(
-        cbc.builder().with_key(&[0; 20]).build().err(),
-        Some(SecurityError::InvalidKeyLength)
-    );
-    assert_eq!(
-        cbc.builder().with_key_size(20).build().err(),
-        Some(SecurityError::InvalidKeyLength)
-    );
-    assert_eq!(
-        cbc.builder().with_iv(&[0; 12]).build().err(),
-        Some(SecurityError::InvalidIvLength)
-    );
-
-    let ccm = cipher::get_by_name("AES/CCM").unwrap();
-    assert_eq!(
-        ccm.builder().with_nonce(&[0; 14]).build().err(),
-        Some(SecurityError::InvalidIvLength)
-    );
-    assert_eq!(
-        ccm.builder().with_mac_size(5).build().err(),
-        Some(SecurityError::InvalidMacSize)
-    );
-    assert!(ccm.builder().with_mac_size(8).build().is_ok());
-
-    let gcm = cipher::get_by_name("AES/GCM").unwrap();
-    assert_eq!(
-        gcm.builder().with_mac_size(17).build().err(),
-        Some(SecurityError::InvalidMacSize)
-    );
-
-    let ocb = cipher::get_by_name("AES/OCB").unwrap();
-    assert_eq!(
-        ocb.builder().with_nonce(&[0; 16]).build().err(),
-        Some(SecurityError::InvalidIvLength)
-    );
-}
-
-#[test]
-fn parameters_a_combination_does_not_use_are_ignored() {
-    // ECB 不用 IV，CBC 不是 AEAD，給了也不會出錯
-    let ecb = cipher::get_by_name("AES/ECB/PKCS7PADDING").unwrap();
-    let params = ecb.builder().with_iv(&[0; 5]).build().unwrap();
-    assert!(IvParams::iv(&params).is_empty());
-
-    let cbc = cipher::get_by_name("AES/CBC/PKCS7PADDING").unwrap();
-    assert!(cbc.builder().with_mac_size(3).build().is_ok());
-
-    // 別的演算法的專屬參數也忽略
-    let mut builder = cbc.builder();
-    builder.with_rc2_effective_key_bits(0).with_rc5_rounds(999);
-    assert!(builder.build().is_ok());
+fn init_rejects_lengths_the_combination_cannot_use() {
+    let rejects = |name: &str, params: AnyParams| {
+        let entry = cipher::get_by_name(name).unwrap();
+        cipher::encrypt(&mut entry.cipher(), &params, &[0; 16]).is_err()
+    };
+    let key = || vec![0; 16];
+    assert!(rejects(
+        "AES/CBC/PKCS7PADDING",
+        AnyParams::new(vec![0; 20]).with_iv(vec![0; 16])
+    ));
+    assert!(rejects(
+        "AES/CBC/PKCS7PADDING",
+        AnyParams::new(key()).with_iv(vec![0; 12])
+    ));
+    // CBC 要 IV：只給金鑰不夠
+    assert!(rejects("AES/CBC/PKCS7PADDING", AnyParams::new(key())));
+    assert!(rejects(
+        "AES/CCM",
+        AnyParams::aead(key(), 128, vec![0; 14], Vec::new())
+    ));
+    // tag 長度以 bit 計：CCM 不接受 40 bits，接受 64 bits
+    assert!(rejects(
+        "AES/CCM",
+        AnyParams::aead(key(), 40, vec![0; 12], Vec::new())
+    ));
+    assert!(!rejects(
+        "AES/CCM",
+        AnyParams::aead(key(), 64, vec![0; 12], Vec::new())
+    ));
+    assert!(rejects(
+        "AES/GCM",
+        AnyParams::aead(key(), 136, vec![0; 12], Vec::new())
+    ));
+    assert!(rejects(
+        "AES/OCB",
+        AnyParams::aead(key(), 128, vec![0; 16], Vec::new())
+    ));
 }
 
 #[test]
 fn decrypting_with_a_wrong_key_fails_the_padding_check_or_the_tag() {
-    for name in ["AES/CBC/PKCS7PADDING", "AES/GCM"] {
+    let cbc = |key| AnyParams::new(key).with_iv(vec![9; 16]);
+    let gcm = |key| AnyParams::aead(key, 128, vec![9; 12], Vec::new());
+    for (name, params) in [
+        ("AES/CBC/PKCS7PADDING", cbc as fn(Vec<u8>) -> AnyParams),
+        ("AES/GCM", gcm),
+    ] {
         let entry = cipher::get_by_name(name).unwrap();
-        let params = entry.builder().with_key(&[1; 16]).build().unwrap();
         let mut aes = entry.cipher();
-        let sealed = cipher::encrypt(&mut aes, &params, &[0x5a; 16]).unwrap();
+        let sealed = cipher::encrypt(&mut aes, &params(vec![1; 16]), &[0x5a; 16]).unwrap();
 
-        let mut builder = entry.builder();
-        builder.with_key(&[2; 16]).with_iv(IvParams::iv(&params));
-        let wrong = builder.build().unwrap();
+        let wrong = params(vec![2; 16]);
         // CBC 有 1/256 左右的機率剛好解出合法的 padding，所以只比較結果不等於原文
         let opened = cipher::decrypt(&mut aes, &wrong, &sealed);
         assert!(opened.map_or(true, |plain| plain != [0x5a; 16]), "{name}");
+    }
+}
+
+#[test]
+fn an_aead_mode_rejects_a_key_and_iv_without_a_tag_size() {
+    // 沒給 tag 長度就要靠預設值，而各模式、各函式庫的預設不同：一律要求 AEAD 的參數
+    for name in ["AES/CCM", "AES/EAX", "AES/GCM", "AES/OCB"] {
+        let entry = cipher::get_by_name(name).unwrap();
+        let params = AnyParams::new(vec![7; 16]).with_iv(vec![9; 12]);
+        assert!(
+            cipher::encrypt(&mut entry.cipher(), &params, b"attack at dawn").is_err(),
+            "{name}"
+        );
     }
 }

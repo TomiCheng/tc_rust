@@ -12,16 +12,6 @@ pub enum SecurityError {
     UnknownWrapper,
     /// MAC 的名稱或 OID 不認得。
     UnknownMac,
-    /// 金鑰長度不是這個演算法接受的。
-    InvalidKeyLength,
-    /// IV 長度不是這個模式要的。
-    InvalidIvLength,
-    /// tag 長度不是這個 AEAD 模式接受的。
-    InvalidMacSize,
-    /// RC2 的有效金鑰位元數超出範圍。
-    InvalidEffectiveKeyBits,
-    /// RC5 的輪數超出範圍。
-    InvalidRounds,
 }
 
 impl Display for SecurityError {
@@ -31,11 +21,6 @@ impl Display for SecurityError {
             Self::UnknownCipher => f.write_str("cipher not recognised"),
             Self::UnknownWrapper => f.write_str("wrapper not recognised"),
             Self::UnknownMac => f.write_str("MAC not recognised"),
-            Self::InvalidKeyLength => f.write_str("invalid key length"),
-            Self::InvalidIvLength => f.write_str("invalid IV length"),
-            Self::InvalidMacSize => f.write_str("invalid MAC size"),
-            Self::InvalidEffectiveKeyBits => f.write_str("invalid RC2 effective key bits"),
-            Self::InvalidRounds => f.write_str("invalid RC5 rounds"),
         }
     }
 }

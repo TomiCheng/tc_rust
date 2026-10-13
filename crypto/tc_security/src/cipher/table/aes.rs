@@ -1,7 +1,6 @@
 use tc_aes::AesEngine;
 use tc_asn1::NamedOid;
 
-use super::random_key;
 use super::specs::{AlgorithmSpec, Lengths};
 use crate::cipher::any_engine::AnyEngine;
 use crate::cipher::{Algorithm, Mode, Padding};
@@ -25,8 +24,6 @@ pub(super) const AES: AlgorithmSpec = AlgorithmSpec {
     block_size: 16,
     key: Lengths::new(16, 32, 8, 24),
     engine: || AnyEngine::new(AesEngine::new()),
-    generate_key: random_key,
-    extra_params: |_, params| Ok(params),
     oids: &[
         (
             Mode::Ecb,

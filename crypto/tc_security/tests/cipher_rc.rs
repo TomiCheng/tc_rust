@@ -2,15 +2,12 @@
 
 #![cfg(any(feature = "rc2", feature = "rc5", feature = "rc6"))]
 
-#[cfg(all(feature = "rc2", feature = "rc5", feature = "rc6"))]
-use tc_block_cipher::KeyParams;
 #[cfg(feature = "rc2")]
 use tc_rc_cipher::Rc2Params;
 #[cfg(all(feature = "rc2", feature = "rc5", feature = "rc6"))]
-use tc_rc_cipher::Rc5Params;
-#[cfg(all(feature = "rc2", feature = "rc5"))]
 use tc_security::SecurityError;
 use tc_security::cipher;
+use tc_security::params::AnyParams;
 
 fn hex(text: &str) -> Vec<u8> {
     (0..text.len())
@@ -61,11 +58,7 @@ fn rc2_matches_the_bc_vectors_including_the_effective_key_bits() {
             "5b78d3a43dfff1f1",
         ),
     ] {
-        let mut builder = entry.builder();
-        builder
-            .with_key(&hex(key))
-            .with_rc2_effective_key_bits(bits);
-        let params = builder.build().unwrap();
+        let params = AnyParams::rc2(hex(key), bits);
         assert_eq!(
             cipher::encrypt(&mut entry.cipher(), &params, &hex(plaintext)).unwrap(),
             hex(expected),
@@ -77,13 +70,9 @@ fn rc2_matches_the_bc_vectors_including_the_effective_key_bits() {
 #[cfg(feature = "rc2")]
 #[test]
 fn rc2_without_effective_key_bits_uses_the_whole_key() {
-    // 同上面 16 bytes 金鑰、128 位元的向量
+    // 同上面 16 bytes 金鑰、128 位元的向量；只給金鑰同 BC 的 `RC2Parameters(key)`
     let entry = cipher::get_by_name("RC2/ECB/NOPADDING").unwrap();
-    let params = entry
-        .builder()
-        .with_key(&hex("88bca90e90875a7f0f79c384627bafb2"))
-        .build()
-        .unwrap();
+    let params = AnyParams::new(hex("88bca90e90875a7f0f79c384627bafb2"));
     assert_eq!(Rc2Params::effective_key_bits(&params), 128);
     assert_eq!(
         cipher::encrypt(&mut entry.cipher(), &params, &[0; 8]).unwrap(),
@@ -126,12 +115,12 @@ fn rc5_matches_the_bc_cbc_vectors_and_defaults_to_twelve_rounds() {
         ),
     ] {
         let entry = cipher::get_by_name(name).unwrap();
-        let mut builder = entry.builder();
-        builder.with_key(&hex("00")).with_iv(&hex(iv));
-        if let Some(rounds) = rounds {
-            builder.with_rc5_rounds(rounds);
-        }
-        let params = builder.build().unwrap();
+        let params = rounds
+            .map_or_else(
+                || AnyParams::new(hex("00")),
+                |rounds| AnyParams::rc5(hex("00"), rounds),
+            )
+            .with_iv(hex(iv));
         assert_eq!(
             cipher::encrypt(&mut entry.cipher(), &params, &hex(plaintext)).unwrap(),
             hex(expected),
@@ -161,7 +150,7 @@ fn rc6_matches_the_bc_vectors() {
             "11395d4bfe4c8258979ee2bf2d24dff4",
         ),
     ] {
-        let params = entry.builder().with_key(&hex(key)).build().unwrap();
+        let params = AnyParams::new(hex(key));
         assert_eq!(
             cipher::encrypt(&mut entry.cipher(), &params, &hex(plaintext)).unwrap(),
             hex(expected),
@@ -188,51 +177,47 @@ fn rc_names_oids_and_block_sizes_follow_bc() {
 
 #[cfg(all(feature = "rc2", feature = "rc5", feature = "rc6"))]
 #[test]
-fn rc_keys_default_to_the_bc_sizes() {
-    for (name, expected) in [("RC2", 16), ("RC5", 16), ("RC5-64", 32), ("RC6", 32)] {
-        let params = cipher::get_by_name(name)
-            .unwrap()
-            .builder()
-            .build()
-            .unwrap();
-        assert_eq!(KeyParams::key(&params).len(), expected, "{name}");
-    }
-    let rc5 = cipher::get_by_name("RC5")
-        .unwrap()
-        .builder()
-        .build()
-        .unwrap();
-    assert_eq!(Rc5Params::rounds(&rc5), 12);
-}
-
-#[cfg(all(feature = "rc2", feature = "rc5"))]
-#[test]
-fn rc_parameters_out_of_range_are_rejected() {
-    let rc2 = cipher::get_by_name("RC2/CBC").unwrap();
+fn init_rejects_rc_parameters_out_of_range() {
+    let rejects = |name: &str, params: AnyParams, block: usize| {
+        let entry = cipher::get_by_name(name).unwrap();
+        cipher::encrypt(&mut entry.cipher(), &params, &vec![0; block]).is_err()
+    };
     for bits in [0, 1025] {
-        assert_eq!(
-            rc2.builder()
-                .with_rc2_effective_key_bits(bits)
-                .build()
-                .err(),
-            Some(SecurityError::InvalidEffectiveKeyBits),
+        assert!(
+            rejects("RC2/ECB/NOPADDING", AnyParams::rc2(vec![0; 16], bits), 8),
             "{bits}"
         );
     }
-    assert!(
-        rc2.builder()
-            .with_rc2_effective_key_bits(1024)
-            .build()
-            .is_ok()
-    );
+    assert!(!rejects(
+        "RC2/ECB/NOPADDING",
+        AnyParams::rc2(vec![0; 16], 1024),
+        8
+    ));
 
-    for name in ["RC5/CBC", "RC5-64/CBC"] {
-        let rc5 = cipher::get_by_name(name).unwrap();
-        assert_eq!(
-            rc5.builder().with_rc5_rounds(256).build().err(),
-            Some(SecurityError::InvalidRounds),
+    for (name, block) in [("RC5/ECB/NOPADDING", 8), ("RC5-64/ECB/NOPADDING", 16)] {
+        assert!(
+            rejects(name, AnyParams::rc5(vec![0; 16], 256), block),
             "{name}"
         );
-        assert!(rc5.builder().with_rc5_rounds(255).build().is_ok(), "{name}");
+        assert!(
+            !rejects(name, AnyParams::rc5(vec![0; 16], 255), block),
+            "{name}"
+        );
     }
+}
+
+#[cfg(feature = "rc2")]
+#[test]
+fn eax_over_an_eight_byte_block_takes_a_tag_up_to_one_block() {
+    let entry = cipher::get_by_name("RC2/EAX").unwrap();
+    let mut rc2 = entry.cipher();
+    let params = AnyParams::aead(vec![7; 16], 64, vec![9; 8], Vec::new());
+    let sealed = cipher::encrypt(&mut rc2, &params, b"attack at dawn").unwrap();
+    assert_eq!(sealed.len(), 14 + 8);
+    assert_eq!(
+        cipher::decrypt(&mut rc2, &params, &sealed).unwrap(),
+        b"attack at dawn"
+    );
+    let too_long = AnyParams::aead(vec![7; 16], 128, vec![9; 8], Vec::new());
+    assert!(cipher::encrypt(&mut rc2, &too_long, b"attack at dawn").is_err());
 }

@@ -3,7 +3,6 @@
 use tc_buffered_cipher::BufferedStreamCipher;
 use tc_chacha::{ChaCha7539Engine, ChaChaEngine, XChaCha20Engine};
 
-use super::random_key;
 use super::specs::{Lengths, StandaloneSpec};
 use crate::cipher::{Algorithm, AnyCipher};
 
@@ -12,10 +11,7 @@ pub(super) const CHACHA: StandaloneSpec = StandaloneSpec {
     algorithm: Algorithm::ChaCha,
     names: &["CHACHA"],
     key: Lengths::new(16, 32, 16, 16),
-    iv: Lengths::exact(8),
-    mac: None,
     cipher: || AnyCipher::new(BufferedStreamCipher::new(ChaChaEngine::new())),
-    generate_key: random_key,
     oids: &[],
 };
 
@@ -24,10 +20,7 @@ pub(super) const CHACHA7539: StandaloneSpec = StandaloneSpec {
     algorithm: Algorithm::ChaCha7539,
     names: &["CHACHA7539", "CHACHA20"],
     key: Lengths::exact(32),
-    iv: Lengths::exact(12),
-    mac: None,
     cipher: || AnyCipher::new(BufferedStreamCipher::new(ChaCha7539Engine::new())),
-    generate_key: random_key,
     oids: &[],
 };
 
@@ -36,9 +29,6 @@ pub(super) const XCHACHA20: StandaloneSpec = StandaloneSpec {
     algorithm: Algorithm::XChaCha20,
     names: &["XCHACHA20"],
     key: Lengths::exact(32),
-    iv: Lengths::exact(24),
-    mac: None,
     cipher: || AnyCipher::new(BufferedStreamCipher::new(XChaCha20Engine::new())),
-    generate_key: random_key,
     oids: &[],
 };

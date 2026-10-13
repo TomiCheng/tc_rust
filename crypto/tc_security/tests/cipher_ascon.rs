@@ -1,10 +1,10 @@
-//! cipher 工廠的 Ascon AEAD（預設不開的 `ascon` feature）：官方 KAT、名稱規則與 builder 的長度。
+//! cipher 工廠的 Ascon AEAD（預設不開的 `ascon` feature）：官方 KAT、名稱規則與 `init` 對參數的檢查。
 
 #![cfg(feature = "ascon")]
 
-use tc_aead_cipher::MacSizeParams;
 use tc_security::SecurityError;
 use tc_security::cipher::{self, Algorithm, Mode};
+use tc_security::params::AnyParams;
 
 fn hex(text: &str) -> Vec<u8> {
     (0..text.len())
@@ -15,12 +15,7 @@ fn hex(text: &str) -> Vec<u8> {
 
 fn encrypt(name: &str, key: &str, nonce: &str, plaintext: &str) -> Vec<u8> {
     let entry = cipher::get_by_name(name).unwrap();
-    let params = entry
-        .builder()
-        .with_key(&hex(key))
-        .with_nonce(&hex(nonce))
-        .build()
-        .unwrap();
+    let params = AnyParams::aead(hex(key), 128, hex(nonce), Vec::new());
     cipher::encrypt(&mut entry.cipher(), &params, &hex(plaintext)).unwrap()
 }
 
@@ -61,7 +56,8 @@ fn the_ascon_v1_2_variants_match_their_empty_message_kats() {
 fn a_tampered_ascon_ciphertext_fails_to_decrypt() {
     for name in ["ASCON-AEAD128", "ASCON-128", "ASCON-128A", "ASCON-80PQ"] {
         let entry = cipher::get_by_name(name).unwrap();
-        let params = entry.builder().build().unwrap();
+        let key = if name == "ASCON-80PQ" { 20 } else { 16 };
+        let params = AnyParams::aead(vec![7; key], 128, vec![9; 16], Vec::new());
         let mut ascon = entry.cipher();
         let mut sealed = cipher::encrypt(&mut ascon, &params, b"attack at dawn").unwrap();
         sealed[0] ^= 1;
@@ -91,48 +87,41 @@ fn ascon_is_named_without_a_mode_or_padding() {
 }
 
 #[test]
-fn the_builder_checks_the_ascon_tag_size() {
-    let aead128 = cipher::get_by_name("ASCON-AEAD128").unwrap();
-    assert_eq!(aead128.builder().build().unwrap().mac_size(), 16);
-    assert_eq!(
-        aead128
-            .builder()
-            .with_mac_size(4)
-            .build()
-            .unwrap()
-            .mac_size(),
-        4
-    );
-    assert_eq!(
-        aead128.builder().with_mac_size(3).build().err(),
-        Some(SecurityError::InvalidMacSize)
-    );
-
+fn init_checks_the_ascon_key_and_tag_size() {
+    let rejects = |name: &str, params: AnyParams| {
+        let entry = cipher::get_by_name(name).unwrap();
+        cipher::encrypt(&mut entry.cipher(), &params, b"message").is_err()
+    };
+    // Ascon-AEAD128 的 tag 可以截短到 4 bytes（32 bits），再短就不行
+    assert!(!rejects(
+        "ASCON-AEAD128",
+        AnyParams::aead(vec![0; 16], 32, vec![0; 16], Vec::new())
+    ));
+    assert!(rejects(
+        "ASCON-AEAD128",
+        AnyParams::aead(vec![0; 16], 24, vec![0; 16], Vec::new())
+    ));
     // v1.2 的 tag 固定 16 bytes
-    let legacy = cipher::get_by_name("ASCON-128").unwrap();
-    assert_eq!(
-        legacy.builder().with_mac_size(8).build().err(),
-        Some(SecurityError::InvalidMacSize)
-    );
-    let pq = cipher::get_by_name("ASCON-80PQ").unwrap();
-    assert_eq!(
-        pq.builder().with_key(&[0; 16]).build().err(),
-        Some(SecurityError::InvalidKeyLength)
-    );
+    assert!(rejects(
+        "ASCON-128",
+        AnyParams::aead(vec![0; 16], 64, vec![0; 16], Vec::new())
+    ));
+    assert!(rejects(
+        "ASCON-80PQ",
+        AnyParams::aead(vec![0; 16], 128, vec![0; 16], Vec::new())
+    ));
 }
 
 #[test]
-fn each_build_gives_a_new_nonce_so_one_cipher_can_seal_again() {
-    // 引擎拒絕同一組金鑰與 nonce 再加密；同一把金鑰每則訊息重新 build 就有新的 nonce
+fn an_ascon_engine_refuses_to_seal_twice_under_one_nonce() {
+    // 引擎拒絕同一組金鑰與 nonce 再加密；每則訊息要換新的 nonce
     let entry = cipher::get_by_name("ASCON-AEAD128").unwrap();
-    let mut builder = entry.builder();
-    builder.with_key(&[7; 16]);
     let mut ascon = entry.cipher();
 
-    let first = builder.build().unwrap();
+    let first = AnyParams::aead(vec![7; 16], 128, vec![1; 16], Vec::new());
     cipher::encrypt(&mut ascon, &first, b"one").unwrap();
     assert!(cipher::encrypt(&mut ascon, &first, b"two").is_err());
 
-    let second = builder.build().unwrap();
+    let second = AnyParams::aead(vec![7; 16], 128, vec![2; 16], Vec::new());
     assert!(cipher::encrypt(&mut ascon, &second, b"two").is_ok());
 }

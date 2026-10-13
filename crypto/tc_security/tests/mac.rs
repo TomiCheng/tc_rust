@@ -1,10 +1,10 @@
-//! MAC 工廠：RFC 4231 的 HMAC-SHA224 已知答案、名稱與 OID 查詢、builder 的金鑰長度。
+//! MAC 工廠：RFC 4231 的 HMAC-SHA224 已知答案、名稱與 OID 查詢。
 
 #![cfg(feature = "sha224")]
 
-use tc_block_cipher::KeyParams;
 use tc_security::SecurityError;
 use tc_security::mac;
+use tc_security::params::AnyParams;
 
 fn hex(text: &str) -> Vec<u8> {
     (0..text.len())
@@ -36,7 +36,7 @@ fn hmac_sha224_matches_the_rfc_4231_vectors() {
             "95e9a0db962095adaebe9b2d6f0dbce2d499f112f2d2b7273fa6870e",
         ),
     ] {
-        let params = entry.builder().with_key(&key).build().unwrap();
+        let params = AnyParams::new(key);
         assert_eq!(
             mac::calculate(&mut entry.mac(), &params, &data).unwrap(),
             hex(expected)
@@ -73,21 +73,21 @@ fn an_entry_displays_its_name_followed_by_its_oid_name() {
 }
 
 #[test]
-fn the_builder_generates_a_key_as_long_as_the_digest_and_takes_any_other_length() {
+fn hmac_takes_a_key_longer_than_its_block() {
     let entry = mac::get_by_name("HMAC-SHA224").unwrap();
-    let params = entry.builder().build().unwrap();
-    assert_eq!(KeyParams::key(&params).len(), 28);
-    assert!(entry.builder().with_key(&[1; 200]).build().is_ok());
+    let params = AnyParams::new(vec![1; 200]);
     assert_eq!(
-        entry.builder().with_key(&[]).build().err(),
-        Some(SecurityError::InvalidKeyLength)
+        mac::calculate(&mut entry.mac(), &params, b"message")
+            .unwrap()
+            .len(),
+        28
     );
 }
 
 #[test]
 fn one_mac_can_be_reused_after_each_calculation() {
     let entry = mac::get_by_name("HMAC-SHA224").unwrap();
-    let params = entry.builder().with_key(b"Jefe").build().unwrap();
+    let params = AnyParams::new(b"Jefe".to_vec());
     let mut hmac = entry.mac();
     let first = mac::calculate(&mut hmac, &params, b"one").unwrap();
     let again = mac::calculate(&mut hmac, &params, b"one").unwrap();

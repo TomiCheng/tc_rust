@@ -1,6 +1,4 @@
-use tc_buffered_cipher::{
-    BufferedCipher, BufferedCipherInit, CipherDirection,
-};
+use tc_buffered_cipher::{BufferedCipher, BufferedCipherInit, CipherDirection};
 
 use crate::AnyError;
 use crate::params::AnyParams;

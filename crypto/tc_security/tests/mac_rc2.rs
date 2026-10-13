@@ -2,9 +2,7 @@
 
 #![cfg(feature = "rc2")]
 
-use tc_block_cipher::KeyParams;
-use tc_block_modes::IvParams;
-use tc_security::SecurityError;
+use tc_security::params::AnyParams;
 use tc_security::{cipher, mac};
 
 /// BC 的 CbcBlockCipherMac（不補位）：最後不滿一塊時補零、空的訊息補成一整塊零，
@@ -15,12 +13,7 @@ fn reference_cbc_mac(key: &[u8], message: &[u8]) -> Vec<u8> {
     padded.resize(blocks * 8, 0);
 
     let entry = cipher::get_by_name("RC2/CBC/NOPADDING").unwrap();
-    let params = entry
-        .builder()
-        .with_key(key)
-        .with_iv(&[0; 8])
-        .build()
-        .unwrap();
+    let params = AnyParams::new(key.to_vec()).with_iv(vec![0; 8]);
     let sealed = cipher::encrypt(&mut entry.cipher(), &params, &padded).unwrap();
     sealed[sealed.len() - 8..sealed.len() - 4].to_vec()
 }
@@ -29,7 +22,7 @@ fn reference_cbc_mac(key: &[u8], message: &[u8]) -> Vec<u8> {
 fn rc2mac_matches_cbc_mac_computed_with_rc2_cbc() {
     let entry = mac::get_by_name("RC2MAC").unwrap();
     let key: Vec<u8> = (1..=16).collect();
-    let params = entry.builder().with_key(&key).build().unwrap();
+    let params = AnyParams::new(key.clone());
     let mut rc2mac = entry.mac();
     // 空的、不滿一塊、剛好兩塊、兩塊多一點
     for len in [0, 5, 16, 21] {
@@ -41,27 +34,22 @@ fn rc2mac_matches_cbc_mac_computed_with_rc2_cbc() {
 }
 
 #[test]
-fn the_builder_uses_a_zero_iv_unless_one_is_given() {
+fn a_key_alone_uses_a_zero_iv_as_in_bc_and_a_given_iv_is_used_as_is() {
     let entry = mac::get_by_name("RC2MAC").unwrap();
-    let params = entry.builder().build().unwrap();
-    assert_eq!(IvParams::iv(&params), [0; 8]);
-    assert_eq!(KeyParams::key(&params).len(), 16);
-
-    assert_eq!(
-        entry.builder().with_iv(&[0; 16]).build().err(),
-        Some(SecurityError::InvalidIvLength)
-    );
-    // 自訂 IV 會改變 tag
-    let key = [7; 16];
-    let zero_iv = entry.builder().with_key(&key).build().unwrap();
-    let mut builder = entry.builder();
-    builder.with_key(&key).with_iv(&[1; 8]);
-    let other_iv = builder.build().unwrap();
     let mut rc2mac = entry.mac();
-    assert_ne!(
-        mac::calculate(&mut rc2mac, &zero_iv, b"message").unwrap(),
-        mac::calculate(&mut rc2mac, &other_iv, b"message").unwrap()
+    let mut tag = |params: AnyParams| mac::calculate(&mut rc2mac, &params, b"message");
+
+    let key_alone = tag(AnyParams::new(vec![7; 16])).unwrap();
+    assert_eq!(
+        tag(AnyParams::new(vec![7; 16]).with_iv(vec![0; 8])).unwrap(),
+        key_alone
     );
+    // 自訂 IV 會改變 tag；長度不是一個區塊的 IV 由 init 拒絕
+    assert_ne!(
+        tag(AnyParams::new(vec![7; 16]).with_iv(vec![1; 8])).unwrap(),
+        key_alone
+    );
+    assert!(tag(AnyParams::new(vec![7; 16]).with_iv(vec![0; 16])).is_err());
 }
 
 #[test]

@@ -1,12 +1,11 @@
 use tc_asn1::NamedOid;
 
-use crate::SecurityError;
 use crate::cipher::any_engine::AnyEngine;
 use crate::cipher::{Algorithm, AnyCipher, Mode, Padding};
-use crate::params::{AnyParams, AnyParamsBuilder};
 
-/// 可接受的長度（bytes）：`min..=max` 中每隔 `step` 一個，沒給時產生 `default`。
+/// 可接受的金鑰長度（bytes）：`min..=max` 中每隔 `step` 一個，產生金鑰時用 `default`。
 #[derive(Clone, Copy, Debug)]
+#[allow(dead_code, reason = "產生金鑰的 generator 模組會讀")]
 pub(in crate::cipher) struct Lengths {
     min: usize,
     max: usize,
@@ -14,6 +13,10 @@ pub(in crate::cipher) struct Lengths {
     default: usize,
 }
 
+#[allow(
+    dead_code,
+    reason = "產生金鑰的 generator 模組會用；所有演算法的 feature 都關掉時表是空的"
+)]
 impl Lengths {
     pub(super) const fn new(min: usize, max: usize, step: usize, default: usize) -> Self {
         Self {
@@ -43,40 +46,30 @@ pub(super) struct AlgorithmSpec {
     // 第一個是正式名稱，其餘是別名
     pub(super) names: &'static [&'static str],
     pub(super) block_size: usize,
+    #[allow(dead_code, reason = "產生金鑰的 generator 模組會讀")]
     pub(super) key: Lengths,
     pub(super) engine: fn() -> AnyEngine,
-    // 之後 DES/3DES 在這裡調 parity、避開弱金鑰
-    pub(super) generate_key: fn(&AnyParamsBuilder, usize) -> Vec<u8>,
-    // 演算法專屬的參數（RC2 的有效位元數、RC5 的輪數）：驗證後放進 AnyParams。
-    // 沒有專屬參數的演算法原樣傳回，給了別的演算法的專屬參數也默默忽略
-    pub(super) extra_params: fn(&AnyParamsBuilder, AnyParams) -> Result<AnyParams, SecurityError>,
     pub(super) oids: &'static [(Mode, Padding, &'static [NamedOid])],
 }
 
-/// 沒有模式與 padding 的 cipher 一列（stream cipher 與獨立的 AEAD）：
-/// 金鑰、nonce 與 tag 的長度都由演算法決定。
+/// 沒有模式與 padding 的 cipher 一列（stream cipher 與獨立的 AEAD）。
 pub(super) struct StandaloneSpec {
     pub(super) algorithm: Algorithm,
     // 第一個是正式名稱，其餘是別名
     pub(super) names: &'static [&'static str],
+    #[allow(dead_code, reason = "產生金鑰的 generator 模組會讀")]
     pub(super) key: Lengths,
-    pub(super) iv: Lengths,
-    // AEAD 的 tag 長度；None 表示 stream cipher
-    pub(super) mac: Option<Lengths>,
     pub(super) cipher: fn() -> AnyCipher,
-    pub(super) generate_key: fn(&AnyParamsBuilder, usize) -> Vec<u8>,
     pub(super) oids: &'static [NamedOid],
 }
 
-/// 模式一列：IV 與 tag 的長度規則，以及能搭配哪些演算法。
+/// 模式一列：能搭配哪些演算法，以及沒寫 padding 時補不補位。
 pub(super) struct ModeSpec {
     pub(super) mode: Mode,
     // 第一個是正式名稱，其餘是別名
     pub(super) names: &'static [&'static str],
-    // 依區塊大小決定；None 表示不用 IV
-    pub(super) iv: fn(usize) -> Option<Lengths>,
-    // 依區塊大小決定 tag 長度；None 表示不是 AEAD
-    pub(super) mac: Option<fn(usize) -> Lengths>,
+    // AEAD 模式只搭 NoPadding
+    pub(super) aead: bool,
     // 只接受這些區塊大小；空的表示不限
     pub(super) block_sizes: &'static [usize],
     // 可以處理不滿一個區塊的最後一段（CFB、OFB、CTR）：沒寫 padding 時不補位
@@ -85,7 +78,7 @@ pub(super) struct ModeSpec {
 
 impl ModeSpec {
     pub(super) const fn is_aead(&self) -> bool {
-        self.mac.is_some()
+        self.aead
     }
 
     pub(super) fn supports(&self, algorithm: &AlgorithmSpec) -> bool {

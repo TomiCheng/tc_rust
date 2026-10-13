@@ -1,14 +1,11 @@
 //! RC2：只為了和既有格式相容，新設計應改用有驗證的 cipher。BC 產生金鑰時直接取亂數，沒有 weak key 要避開。
 
 use tc_asn1::NamedOid;
-use tc_rc_cipher::{RC2_MAX_EFFECTIVE_KEY_BITS, RC2_MAX_KEY_BYTES, Rc2Engine};
+use tc_rc_cipher::{RC2_MAX_KEY_BYTES, Rc2Engine};
 
-use super::random_key;
 use super::specs::{AlgorithmSpec, Lengths};
-use crate::SecurityError;
 use crate::cipher::any_engine::AnyEngine;
 use crate::cipher::{Algorithm, Mode, Padding};
-use crate::params::{AnyParams, AnyParamsBuilder};
 
 /// 區塊 8 bytes；金鑰 1 到 128 bytes，沒給時產生 16 bytes（同 BC 的 128 bits）。
 /// OID 照 BC 只有 RC2-CBC，對到 `RC2/CBC`（補 PKCS7）。
@@ -18,8 +15,6 @@ pub(super) const RC2: AlgorithmSpec = AlgorithmSpec {
     block_size: 8,
     key: Lengths::new(1, RC2_MAX_KEY_BYTES, 1, 16),
     engine: || AnyEngine::new(Rc2Engine::new()),
-    generate_key: random_key,
-    extra_params: rc2_params,
     oids: &[(
         Mode::Cbc,
         Padding::Pkcs7,
@@ -30,14 +25,3 @@ pub(super) const RC2: AlgorithmSpec = AlgorithmSpec {
         )],
     )],
 };
-
-// 有效位元數 1 到 1024；沒給時由 AnyParams 依金鑰長度決定
-fn rc2_params(builder: &AnyParamsBuilder, params: AnyParams) -> Result<AnyParams, SecurityError> {
-    match builder.rc2_effective_key_bits {
-        Some(bits) if (1..=RC2_MAX_EFFECTIVE_KEY_BITS).contains(&bits) => {
-            Ok(params.with_rc2_effective_key_bits(bits))
-        }
-        Some(_) => Err(SecurityError::InvalidEffectiveKeyBits),
-        None => Ok(params),
-    }
-}

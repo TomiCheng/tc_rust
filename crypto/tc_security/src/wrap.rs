@@ -4,8 +4,10 @@
 //! # #[cfg(feature = "aes")] {
 //! use tc_security::wrap;
 //!
+//! use tc_security::params::AnyParams;
+//!
 //! let entry = wrap::get_by_name("AESKW")?;
-//! let params = entry.builder().with_key(&[0x42; 16]).build()?;
+//! let params = AnyParams::new(vec![0x42; 16]);
 //! let mut wrapper = entry.wrapper();
 //!
 //! let wrapped = wrap::wrap(&mut wrapper, &params, &[0x24; 16])?;

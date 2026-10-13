@@ -1,10 +1,10 @@
-//! cipher 工廠的 ChaCha 系列 stream cipher：已知答案、名稱規則與 builder 的長度。
+//! cipher 工廠的 ChaCha 系列 stream cipher：已知答案、名稱規則與 `init` 對參數的檢查。
 
 #![cfg(feature = "chacha")]
 
 use tc_security::SecurityError;
 use tc_security::cipher::{self, Algorithm, Mode};
-use tc_stream_cipher::{IvParams, KeyParams};
+use tc_security::params::AnyParams;
 
 fn hex(text: &str) -> Vec<u8> {
     let text: String = text.split_whitespace().collect();
@@ -25,12 +25,7 @@ const ZERO_KEYSTREAM: &str = "76b8e0ada0f13d90405d6ae55386bd28bdd219b8a08ded1aa8
 #[test]
 fn chacha7539_matches_the_rfc_8439_appendix_a1_keystream() {
     let entry = cipher::get_by_name("CHACHA7539").unwrap();
-    let params = entry
-        .builder()
-        .with_key(&[0; 32])
-        .with_nonce(&[0; 12])
-        .build()
-        .unwrap();
+    let params = AnyParams::new(vec![0; 32]).with_iv(vec![0; 12]);
     assert_eq!(
         cipher::encrypt(&mut entry.cipher(), &params, &[0; 64]).unwrap(),
         hex(ZERO_KEYSTREAM)
@@ -41,12 +36,7 @@ fn chacha7539_matches_the_rfc_8439_appendix_a1_keystream() {
 fn the_original_chacha_gives_the_same_first_block_for_a_zero_key_and_nonce() {
     // 計數器與 nonce 全為零時，原版與 RFC 8439 的初始狀態相同
     let entry = cipher::get_by_name("CHACHA").unwrap();
-    let params = entry
-        .builder()
-        .with_key(&[0; 32])
-        .with_nonce(&[0; 8])
-        .build()
-        .unwrap();
+    let params = AnyParams::new(vec![0; 32]).with_iv(vec![0; 8]);
     assert_eq!(
         cipher::encrypt(&mut entry.cipher(), &params, &[0; 64]).unwrap(),
         hex(ZERO_KEYSTREAM)
@@ -57,14 +47,10 @@ fn the_original_chacha_gives_the_same_first_block_for_a_zero_key_and_nonce() {
 fn xchacha20_matches_the_draft_encryption_example() {
     // 草案的範例從第 1 個區塊開始加密，所以前面墊一個區塊的零再丟掉
     let entry = cipher::get_by_name("XCHACHA20").unwrap();
-    let params = entry
-        .builder()
-        .with_key(&hex(
-            "808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9f",
-        ))
-        .with_nonce(&hex("404142434445464748494a4b4c4d4e4f5051525354555657"))
-        .build()
-        .unwrap();
+    let params = AnyParams::new(hex(
+        "808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9f",
+    ))
+    .with_iv(hex("404142434445464748494a4b4c4d4e4f5051525354555657"));
     let mut input = vec![0; 64];
     input.extend(hex(
         "4c616469657320616e642047656e746c656d656e206f662074686520636c6173
@@ -113,40 +99,26 @@ fn a_stream_cipher_rejects_any_mode_or_padding() {
 }
 
 #[test]
-fn the_builder_generates_each_variant_s_key_and_nonce() {
+fn init_rejects_lengths_the_variant_cannot_use() {
+    let rejects = |name: &str, key: usize, nonce: usize| {
+        let entry = cipher::get_by_name(name).unwrap();
+        let params = AnyParams::new(vec![0; key]).with_iv(vec![0; nonce]);
+        cipher::encrypt(&mut entry.cipher(), &params, &[0; 8]).is_err()
+    };
     for (name, key, nonce) in [
         ("CHACHA", 16, 8),
+        ("CHACHA", 32, 8),
         ("CHACHA7539", 32, 12),
         ("XCHACHA20", 32, 24),
     ] {
-        let params = cipher::get_by_name(name)
-            .unwrap()
-            .builder()
-            .build()
-            .unwrap();
-        assert_eq!(KeyParams::key(&params).len(), key, "{name}");
-        assert_eq!(IvParams::iv(&params).len(), nonce, "{name}");
+        assert!(!rejects(name, key, nonce), "{name}/{key}/{nonce}");
     }
-}
-
-#[test]
-fn the_builder_rejects_lengths_the_variant_cannot_use() {
-    let chacha = cipher::get_by_name("CHACHA").unwrap();
-    assert_eq!(
-        chacha.builder().with_key(&[0; 24]).build().err(),
-        Some(SecurityError::InvalidKeyLength)
-    );
-    assert_eq!(
-        chacha.builder().with_nonce(&[0; 12]).build().err(),
-        Some(SecurityError::InvalidIvLength)
-    );
-    assert!(chacha.builder().with_key(&[0; 32]).build().is_ok());
-
-    let chacha7539 = cipher::get_by_name("CHACHA7539").unwrap();
-    assert_eq!(
-        chacha7539.builder().with_key(&[0; 16]).build().err(),
-        Some(SecurityError::InvalidKeyLength)
-    );
-    // stream cipher 不是 AEAD，tag 長度默默忽略
-    assert!(chacha7539.builder().with_mac_size(3).build().is_ok());
+    for (name, key, nonce) in [
+        ("CHACHA", 24, 8),
+        ("CHACHA", 32, 12),
+        ("CHACHA7539", 16, 12),
+        ("XCHACHA20", 32, 12),
+    ] {
+        assert!(rejects(name, key, nonce), "{name}/{key}/{nonce}");
+    }
 }

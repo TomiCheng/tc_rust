@@ -1,9 +1,7 @@
 use std::fmt::{self, Display, Formatter};
 
-use crate::SecurityError;
-use crate::cipher::table::{build_params, create_cipher};
+use crate::cipher::table::create_cipher;
 use crate::cipher::{Algorithm, AnyCipher, Mode, Padding};
-use crate::params::{AnyParams, AnyParamsBuilder, ParamsRule};
 use tc_asn1::NamedOid;
 
 /// 一個合法的「演算法/模式/padding」組合，在第一次查詢時由三張小表展開。
@@ -50,17 +48,8 @@ impl CipherEntry {
     pub fn oids(&self) -> &'static [NamedOid] {
         self.oids
     }
-    pub fn builder(&'static self) -> AnyParamsBuilder {
-        AnyParamsBuilder::new(self)
-    }
     pub fn cipher(&self) -> AnyCipher {
         create_cipher(self.algo, self.mode, self.padding)
-    }
-}
-
-impl ParamsRule for CipherEntry {
-    fn build_params(&self, builder: &AnyParamsBuilder) -> Result<AnyParams, SecurityError> {
-        build_params(self.algo, self.mode, builder)
     }
 }
 

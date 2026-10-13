@@ -27,9 +27,8 @@ use paddings::PADDINGS;
 use specs::{AlgorithmSpec, ModeSpec, PaddingSpec, StandaloneSpec};
 
 use crate::cipher::{Algorithm, CipherEntry, Mode, Padding};
-use crate::params::AnyParamsBuilder;
 
-pub(super) use compose::{build_params, create_cipher};
+pub(super) use compose::create_cipher;
 
 /// 每個演算法一列；各自的 feature 關掉時，這個演算法的組合就不會展開。
 const ALGORITHMS: &[AlgorithmSpec] = &[
@@ -192,10 +191,4 @@ fn mode_spec(mode: Mode) -> &'static ModeSpec {
         .iter()
         .find(|spec| spec.mode == mode)
         .expect("every mode has a spec")
-}
-
-// 沒有額外規則的金鑰：直接從 builder 的亂數來源取
-#[allow(dead_code, reason = "所有 cipher 演算法的 feature 都關掉時，沒有人產生金鑰")]
-fn random_key(builder: &AnyParamsBuilder, len: usize) -> Vec<u8> {
-    builder.random_bytes(len)
 }

@@ -8,7 +8,7 @@ use super::WrapEntry;
 /// 每種 wrapper 一列；新增時在這裡加一列。
 pub(super) const WRAPPERS: &[WrapEntry] = &[
     // RFC 3394。OID 照 BC：三種金鑰長度的 OID 都對到這一列，不限制 KEK 長度；
-    // KEK 沒給時產生 24 bytes（同 AES 的預設）。自訂 IV 是 8 bytes，沒給時用規格的 A6A6…
+    // KEK 產生時 24 bytes（同 AES 的預設）。參數沒帶 IV 時用規格的 A6A6…
     #[cfg(feature = "aes")]
     WrapEntry::new(
         &["AESWRAP", "AESKW"],
@@ -31,10 +31,9 @@ pub(super) const WRAPPERS: &[WrapEntry] = &[
         ],
         &[16, 24, 32],
         24,
-        8,
         || AnyWrapper::new(tc_key_wrap::Rfc3394WrapEngine::new(tc_aes::AesEngine::new())),
     ),
-    // RFC 3394 換成 ARIA。OID 照 BC 對到這一列；KEK 沒給時產生 32 bytes（同 ARIA 的預設 256 bits）
+    // RFC 3394 換成 ARIA。OID 照 BC 對到這一列；KEK 產生時 32 bytes（同 ARIA 的預設 256 bits）
     #[cfg(feature = "aria")]
     WrapEntry::new(
         &["ARIAWRAP", "ARIAKW"],
@@ -57,7 +56,6 @@ pub(super) const WRAPPERS: &[WrapEntry] = &[
         ],
         &[16, 24, 32],
         32,
-        8,
         || {
             AnyWrapper::new(tc_key_wrap::Rfc3394WrapEngine::new(
                 tc_aria::AriaEngine::new(),
