@@ -21,6 +21,9 @@ const DECLARATIONS: &[&str] = &[
     "fn find_separator(",
     "fn mgf1(",
     "fn hash(",
+    "fn shadow(",
+    "fn subtract_from(",
+    "fn to_be_bytes",
 ];
 
 fn missing_timing_docs(source: &str) -> (usize, Vec<String>) {
@@ -98,6 +101,10 @@ mod tests {
 fn every_public_api_and_secret_path_has_an_unambiguous_timing_doc() {
     for (name, source) in [
         ("error.rs", include_str!("../src/error.rs")),
+        (
+            "iso9796d1_encoding.rs",
+            include_str!("../src/iso9796d1_encoding.rs"),
+        ),
         ("oaep_encoding.rs", include_str!("../src/oaep_encoding.rs")),
         (
             "pkcs1_encoding.rs",
