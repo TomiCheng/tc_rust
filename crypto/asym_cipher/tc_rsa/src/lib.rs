@@ -35,6 +35,8 @@ pub use key_pair_generator::RsaKeyPairGenerator;
 #[cfg(feature = "rustcrypto")]
 pub use key_pair_generator::RsaKeyPairGeneratorRustCrypto;
 #[cfg(feature = "alloc")]
+pub use params::RsaKey;
+#[cfg(feature = "alloc")]
 pub use params::RsaKeyGenerationParamsOwned;
 #[cfg(feature = "alloc")]
 pub use params::RsaKeyGenerationParamsRef;

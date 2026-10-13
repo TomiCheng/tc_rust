@@ -1,4 +1,6 @@
 #[cfg(feature = "alloc")]
+mod key;
+#[cfg(feature = "alloc")]
 mod key_generation_params_owned;
 #[cfg(feature = "alloc")]
 mod key_generation_params_ref;
@@ -11,6 +13,8 @@ mod private_crt_key_ref;
 #[cfg(feature = "rustcrypto")]
 mod private_crt_key_rustcrypto;
 
+#[cfg(feature = "alloc")]
+pub use key::RsaKey;
 #[cfg(feature = "alloc")]
 pub use key_generation_params_owned::RsaKeyGenerationParamsOwned;
 #[cfg(feature = "alloc")]
