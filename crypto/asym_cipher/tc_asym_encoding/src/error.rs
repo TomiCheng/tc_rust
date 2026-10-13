@@ -12,14 +12,6 @@ pub enum EncodingError<E> {
     Cipher(E),
     /// The encoding processed before it was initialized.
     NotInitialized,
-    /// The block the engine takes or gives is longer than the buffer of the
-    /// encoding.
-    BlockTooLarge {
-        /// The block of the engine, in bytes.
-        actual: usize,
-        /// The buffer of the encoding, in bytes.
-        capacity: usize,
-    },
     /// The plaintext length to decrypt to is longer than the output block.
     InvalidPlaintextLength,
     /// The input is longer than the input block.
@@ -38,10 +30,6 @@ impl<E: fmt::Display> fmt::Display for EncodingError<E> {
         match self {
             Self::Cipher(error) => error.fmt(f),
             Self::NotInitialized => f.write_str("encoding not initialized"),
-            Self::BlockTooLarge { actual, capacity } => write!(
-                f,
-                "engine block of {actual} bytes exceeds the {capacity}-byte encoding buffer"
-            ),
             Self::InvalidPlaintextLength => {
                 f.write_str("plaintext length exceeds the output block")
             }

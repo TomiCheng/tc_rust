@@ -6,8 +6,6 @@ const DECLARATIONS: &[&str] = &[
     "pub struct ",
     "pub fn ",
     "pub const fn ",
-    "pub(super) fn ",
-    "pub(super) const fn ",
     "fn init(",
     "fn input_block_size(",
     "fn output_block_size(",
@@ -96,16 +94,8 @@ fn every_public_api_and_secret_path_has_an_unambiguous_timing_doc() {
     for (name, source) in [
         ("error.rs", include_str!("../src/error.rs")),
         (
-            "pkcs1_encoding/encoder.rs",
-            include_str!("../src/pkcs1_encoding/encoder.rs"),
-        ),
-        (
-            "pkcs1_encoding/fixed.rs",
-            include_str!("../src/pkcs1_encoding/fixed.rs"),
-        ),
-        (
-            "pkcs1_encoding/heap.rs",
-            include_str!("../src/pkcs1_encoding/heap.rs"),
+            "pkcs1_encoding.rs",
+            include_str!("../src/pkcs1_encoding.rs"),
         ),
     ] {
         let (checked, missing) = missing_timing_docs(source);
