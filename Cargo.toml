@@ -9,6 +9,7 @@ members = [
     "crypto/macs/*",
     "crypto/stream_cipher/*",
     "math/*",
+    "signer/*",
     "block_cipher/*", "crypto/asym_cipher/tc_asym_cipher", "crypto/asym_cipher/tc_asym_encoding", "crypto/asym_cipher/tc_asym_iso9796", "crypto/asym_cipher/tc_rsa",
 ]
 

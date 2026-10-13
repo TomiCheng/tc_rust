@@ -1,0 +1,9 @@
+[package]
+name = "tc_signer"
+description = "Signature contracts, after Bouncy Castle's ISigner."
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
