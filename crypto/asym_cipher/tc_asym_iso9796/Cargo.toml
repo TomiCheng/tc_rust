@@ -6,7 +6,11 @@ edition.workspace = true
 license.workspace = true
 repository.workspace = true
 
+[features]
+rustcrypto = ["dep:rsa", "tc_rsa_v2/rustcrypto"]
+
 [dependencies]
+rsa = { version = "=0.10.0-rc.19", default-features = false, optional = true }
 tc_asym_cipher = { version = "0.1.0", path = "../tc_asym_cipher" }
 tc_bigint = "0.1.0"
 tc_rsa_v2 = { version = "0.1.0", path = "../tc_rsa" }
