@@ -19,24 +19,18 @@ use crate::{RsaBlinding, RsaError};
 ///     AsymmetricBlockCipher, AsymmetricBlockCipherInit, CipherDirection, KeyPairGenerator,
 ///     KeyPairGeneratorInit,
 /// };
-/// use tc_bigint::{FixedBigUint, Word};
-/// use tc_rsa_v2::{
-///     FixedRsaCoreEngine, FixedRsaCrtCoreEngine, RsaBlindedEngine, RsaKeyGenerationParamsOwned,
-///     RsaKeyPairGenerator,
-/// };
+/// use tc_rsa_v2::{RsaBlindedEngine, RsaEngine, RsaKeyGenerationParamsOwned, RsaKeyGenerator};
 ///
-/// type U2048 = FixedBigUint<{ 2048 / Word::BITS as usize }>;
-/// type U1024 = FixedBigUint<{ 1024 / Word::BITS as usize }>;
-///
-/// // 1. Generate a key pair, its primes at half the width of the modulus.
-/// let mut generator = RsaKeyPairGenerator::<U2048, U1024>::new();
+/// // 1. Generate a 2048-bit key pair: the public key, and the private one
+/// //    with its CRT values.
+/// let mut generator = RsaKeyGenerator::new();
 /// generator.init(RsaKeyGenerationParamsOwned::new(rand::rng()))?;
 /// let (public, private) = generator.generate_key_pair()?;
 ///
 /// // 2. Encrypt a block with the public key. Raw RSA is shown here; a real
 /// //    message goes through a padding, such as OAEP, first.
 /// let message = b"a block of at most 255 bytes";
-/// let mut encrypt = FixedRsaCoreEngine::new();
+/// let mut encrypt = RsaEngine::new();
 /// encrypt.init(CipherDirection::Encrypt, &public)?;
 /// let mut ciphertext = [0; 256];
 /// encrypt.process_block(message, &mut ciphertext)?;
@@ -44,7 +38,7 @@ use crate::{RsaBlinding, RsaError};
 /// // 3. Decrypt it through the CRT, blinded with the system's random
 /// //    source: the result is the same, but the power never sees the
 /// //    ciphertext itself.
-/// let mut decrypt = RsaBlindedEngine::from_parts(FixedRsaCrtCoreEngine::new(), rand::rng());
+/// let mut decrypt = RsaBlindedEngine::from_parts(RsaEngine::new(), rand::rng());
 /// decrypt.init(CipherDirection::Decrypt, &private)?;
 /// let mut plaintext = [0; 256];
 /// decrypt.process_block(&ciphertext, &mut plaintext)?;

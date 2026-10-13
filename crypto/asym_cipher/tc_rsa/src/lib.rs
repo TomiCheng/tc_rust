@@ -1,3 +1,49 @@
+//! RSA after Bouncy Castle: key pair generation and the RSA operation, as
+//! an asymmetric block cipher that the encodings, such as OAEP, wrap.
+//!
+//! With the `alloc` feature, which is on by default, `RsaEngine` runs an
+//! `RsaKey`, whose values are all of one integer type, on the engine the
+//! key and the features suit best, and `RsaKeyGenerator` generates the
+//! keys. The engines it picks from, of fixed width, padded and of the
+//! RustCrypto `rsa` crate, are there to take directly; the fixed-width
+//! ones are all that is left with `default-features = false`, for a target
+//! without an allocator.
+//!
+//! ```
+//! # #[cfg(feature = "alloc")] {
+//! use tc_asym_cipher::{
+//!     AsymmetricBlockCipher, AsymmetricBlockCipherInit, CipherDirection, KeyPairGenerator,
+//!     KeyPairGeneratorInit,
+//! };
+//! use tc_rsa_v2::{RsaBlindedEngine, RsaEngine, RsaKeyGenerationParamsOwned, RsaKeyGenerator};
+//!
+//! // 1. Generate a 2048-bit key pair: the public key, and the private one
+//! //    with its CRT values.
+//! let mut generator = RsaKeyGenerator::new();
+//! generator.init(RsaKeyGenerationParamsOwned::new(rand::rng()))?;
+//! let (public, private) = generator.generate_key_pair()?;
+//!
+//! // 2. Encrypt a block with the public key. Raw RSA is shown here; a real
+//! //    message goes through a padding, such as OAEP, first.
+//! let message = b"a block of at most 255 bytes";
+//! let mut engine = RsaEngine::new();
+//! engine.init(CipherDirection::Encrypt, &public)?;
+//! let mut ciphertext = [0; 256];
+//! engine.process_block(message, &mut ciphertext)?;
+//!
+//! // 3. Decrypt it with the private key, blinded with the system's random
+//! //    source, so that the private power never sees the ciphertext
+//! //    itself. The output takes the full 256 bytes of the modulus.
+//! let mut engine = RsaBlindedEngine::from_parts(RsaEngine::new(), rand::rng());
+//! engine.init(CipherDirection::Decrypt, &private)?;
+//! let mut plaintext = [0; 256];
+//! engine.process_block(&ciphertext, &mut plaintext)?;
+//! let recovered = &plaintext[256 - message.len()..];
+//! # assert_eq!(recovered, message);
+//! # }
+//! # Ok::<(), tc_rsa_v2::RsaError>(())
+//! ```
+
 #![no_std]
 
 #[cfg(feature = "alloc")]
