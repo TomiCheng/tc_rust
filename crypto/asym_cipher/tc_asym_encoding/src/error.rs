@@ -18,7 +18,8 @@ pub enum EncodingError<E> {
     InputTooLarge,
     /// The output is shorter than the output block.
     OutputTooShort,
-    /// The decrypted block is not an encoding of the type the key expects.
+    /// The decrypted block is not a valid encoding: for PKCS#1 v1.5, not
+    /// of the type the key expects.
     InvalidBlock,
 }
 

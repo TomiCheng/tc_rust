@@ -7,7 +7,9 @@
 extern crate alloc;
 
 mod error;
+mod oaep_encoding;
 mod pkcs1_encoding;
 
 pub use error::EncodingError;
+pub use oaep_encoding::OaepEncoding;
 pub use pkcs1_encoding::Pkcs1Encoding;

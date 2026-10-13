@@ -18,6 +18,9 @@ const DECLARATIONS: &[&str] = &[
     "fn fill_non_zero(",
     "fn check(",
     "fn check_of_length(",
+    "fn find_separator(",
+    "fn mgf1(",
+    "fn hash(",
 ];
 
 fn missing_timing_docs(source: &str) -> (usize, Vec<String>) {
@@ -31,8 +34,9 @@ fn missing_timing_docs(source: &str) -> (usize, Vec<String>) {
             break;
         }
         if let Some(comment) = line.strip_prefix("///") {
-            docs.push_str(comment);
-            docs.push('\n');
+            // Lines join with a space, so that a classification may wrap.
+            docs.push_str(comment.trim());
+            docs.push(' ');
             continue;
         }
         if line.starts_with("#[") || attribute_depth > 0 {
@@ -67,7 +71,8 @@ pub fn accepted() {}
 /// Constant time and variable time.
 fn check() {}
 fn decode_whole<X>() {}
-/// Constant time.
+/// Wrapped, constant
+/// time.
 fn fmt() {}
 impl Trait for Type {
     fn drop() {}
@@ -93,6 +98,7 @@ mod tests {
 fn every_public_api_and_secret_path_has_an_unambiguous_timing_doc() {
     for (name, source) in [
         ("error.rs", include_str!("../src/error.rs")),
+        ("oaep_encoding.rs", include_str!("../src/oaep_encoding.rs")),
         (
             "pkcs1_encoding.rs",
             include_str!("../src/pkcs1_encoding.rs"),
