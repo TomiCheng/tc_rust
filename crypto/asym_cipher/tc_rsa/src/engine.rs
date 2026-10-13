@@ -11,6 +11,7 @@ use tc_asym_cipher::{
 use tc_bigint::{ArrayEncoding, FixedBigUint, PaddedBigUint, Word};
 use tc_zeroize::Zeroize;
 
+use crate::block::input_block_size;
 use crate::{
     FixedRsaCoreEngine, FixedRsaCrtCoreEngine, PaddedRsaCoreEngine, PaddedRsaCrtCoreEngine,
     RsaBlinding, RsaError, RsaKey, RsaKeyOwned, RsaKeyParams, RsaPrivateCrtKeyOwned,
@@ -89,8 +90,24 @@ macro_rules! each {
 /// its values are copied into the integers of the engine picked, at
 /// their whole width, and wiped from the copies the conversion makes. The
 /// type and its API are the same whichever engine runs; every engine
-/// writes the whole of its output block, leading zeros kept. It
-/// implements [`RsaBlinding`], so that
+/// writes the whole of its output block, leading zeros kept.
+///
+/// When encrypting, it takes an input up to the whole length of the
+/// modulus, so long as it is below `n - 1`, as Bouncy Castle's
+/// `RsaCoreEngine` does, past the input block, which stays the length any
+/// input fits: the engine inside is initialized to decrypt whichever the
+/// direction, as RSA raises to the power of the key either way, and the
+/// direction only sets the input block. ISO 9796-1 needs it, as its block
+/// takes the whole length of the modulus, below it.
+///
+/// This is an exception to the contract of
+/// [`AsymmetricBlockCipher::process_block`], which turns down an input
+/// longer than the input block: this engine turns down only an input
+/// longer than the modulus, or not below `n - 1`. Code that sizes its
+/// input by [`input_block_size`](AsymmetricBlockCipher::input_block_size)
+/// is not affected.
+///
+/// It implements [`RsaBlinding`], so that
 /// [`RsaBlindedEngine`](crate::RsaBlindedEngine) blinds a key with its CRT
 /// values; as in Bouncy Castle, a key without them is not blinded.
 ///
@@ -124,12 +141,18 @@ macro_rules! each {
 /// ```
 pub struct RsaEngine {
     inner: Option<Inner>,
+    direction: CipherDirection,
+    bits: u32,
 }
 
 impl RsaEngine {
     /// An engine to be initialized before it processes. Constant time.
     pub const fn new() -> Self {
-        Self { inner: None }
+        Self {
+            inner: None,
+            direction: CipherDirection::Encrypt,
+            bits: 0,
+        }
     }
 
     /// The engine inside, once the engine is initialized. Constant time.
@@ -177,7 +200,8 @@ impl core::fmt::Display for RsaEngine {
 }
 
 /// Checks the key once, picks the engine it suits, copies the key into
-/// the integers of that engine and initializes it; fails with
+/// the integers of that engine and initializes it to decrypt, whichever
+/// the direction, which the engine keeps for its input block; fails with
 /// `InvalidKey` when the key does not pass, or when the engine picked
 /// turns it down. A failed `init` leaves the engine uninitialized.
 /// Variable time: only for public values, as the modulus, the public
@@ -192,10 +216,12 @@ impl AsymmetricBlockCipherInit<RsaKey> for RsaEngine {
             return Err(RsaError::InvalidKey);
         }
         let inner = match key {
-            RsaKey::Core(key) => core(direction, key)?,
-            RsaKey::Crt(key) => crt(direction, key)?,
+            RsaKey::Core(key) => core(CipherDirection::Decrypt, key)?,
+            RsaKey::Crt(key) => crt(CipherDirection::Decrypt, key)?,
         };
         self.inner = Some(inner);
+        self.direction = direction;
+        self.bits = key.modulus().bits();
         Ok(())
     }
 }
@@ -206,13 +232,13 @@ impl AsymmetricBlockCipherInit<RsaKey> for RsaEngine {
 impl AsymmetricBlockCipher for RsaEngine {
     type Error = RsaError;
 
-    /// The input block of the engine picked: `(bits - 1) / 8` bytes when
-    /// encrypting and `(bits + 7) / 8` when decrypting; zero before
-    /// initialization. Constant time.
+    /// `(bits - 1) / 8` bytes when encrypting, the length any input fits,
+    /// and `(bits + 7) / 8` when decrypting; zero before initialization.
+    /// Constant time.
     fn input_block_size(&self) -> usize {
         self.inner
             .as_ref()
-            .map_or(0, |inner| each!(inner, engine => engine.input_block_size()))
+            .map_or(0, |_| input_block_size(self.bits, self.direction))
     }
 
     /// The output block of the engine picked, `(bits + 7) / 8` bytes;
@@ -224,8 +250,11 @@ impl AsymmetricBlockCipher for RsaEngine {
         )
     }
 
-    /// Processes the block on the engine picked, as it does. Constant time
-    /// where that engine is.
+    /// Processes the block on the engine picked, as it does, taking up to
+    /// the whole length of the modulus in either direction, below
+    /// `n - 1`: when encrypting, past the input block, an exception to the
+    /// contract of the trait, as the engine tells. Constant time where
+    /// that engine is.
     fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, RsaError> {
         each!(self.inner()?, engine => engine.process_block(input, output))
     }
@@ -744,6 +773,31 @@ mod tests {
             engine.process_block(&[2], &mut [0; 2]),
             Err(RsaError::NotInitialized)
         );
+    }
+
+    #[test]
+    fn encrypting_takes_an_input_of_the_whole_modulus_below_n_less_one() {
+        let mut engine = RsaEngine::new();
+        engine
+            .init(CipherDirection::Encrypt, &textbook(false))
+            .unwrap();
+        // The input block stays the length any input fits.
+        assert_eq!(
+            (engine.input_block_size(), engine.output_block_size()),
+            (1, 2)
+        );
+        let mut output = [0; 2];
+        assert_eq!(
+            engine.process_block(&3231u16.to_be_bytes(), &mut output),
+            Ok(2)
+        );
+        for input in [&3232u16.to_be_bytes()[..], &[0, 0, 2]] {
+            assert_eq!(
+                engine.process_block(input, &mut output),
+                Err(RsaError::InputTooLarge),
+                "{input:?}"
+            );
+        }
     }
 
     #[test]
