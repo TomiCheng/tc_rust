@@ -23,6 +23,9 @@ pub enum RsaError {
     /// The result of a CRT operation does not raise back to its input, as a
     /// fault, or a key whose values do not agree, makes it.
     FaultyDecryptionOrSigning,
+    /// The blinding factor of a blind signature is below 2, or has no
+    /// inverse modulo `n`.
+    InvalidBlindingFactor,
 }
 
 /// The message of each error. Constant time.
@@ -38,6 +41,7 @@ impl core::fmt::Display for RsaError {
             Self::InputTooLarge => "input too large for RSA cipher",
             Self::OutputTooShort => "output buffer too short for RSA cipher",
             Self::FaultyDecryptionOrSigning => "RSA engine faulty decryption/signing detected",
+            Self::InvalidBlindingFactor => "RSA blinding factor below 2 or not invertible",
         })
     }
 }

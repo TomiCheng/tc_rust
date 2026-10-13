@@ -51,6 +51,10 @@ extern crate alloc;
 
 mod algorithm;
 mod blinded_engine;
+#[cfg(feature = "alloc")]
+mod blinding_engine;
+#[cfg(feature = "alloc")]
+mod blinding_factor_generator;
 mod block;
 mod core_engine;
 mod crt_engine;
@@ -67,6 +71,10 @@ mod validation;
 
 pub use algorithm::ALGO_NAME;
 pub use blinded_engine::RsaBlindedEngine;
+#[cfg(feature = "alloc")]
+pub use blinding_engine::RsaBlindingEngine;
+#[cfg(feature = "alloc")]
+pub use blinding_factor_generator::RsaBlindingFactorGenerator;
 pub use core_engine::FixedRsaCoreEngine;
 #[cfg(feature = "alloc")]
 pub use core_engine::PaddedRsaCoreEngine;
@@ -86,6 +94,8 @@ pub use key_pair_generator::RsaKeyGenerator;
 pub use key_pair_generator::RsaKeyPairGenerator;
 #[cfg(feature = "rustcrypto")]
 pub use key_pair_generator::RsaKeyPairGeneratorRustCrypto;
+#[cfg(feature = "alloc")]
+pub use params::RsaBlindingParams;
 #[cfg(feature = "alloc")]
 pub use params::RsaKey;
 #[cfg(feature = "alloc")]

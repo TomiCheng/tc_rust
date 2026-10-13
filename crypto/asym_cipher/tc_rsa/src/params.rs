@@ -1,4 +1,6 @@
 #[cfg(feature = "alloc")]
+mod blinding_params;
+#[cfg(feature = "alloc")]
 mod key;
 #[cfg(feature = "alloc")]
 mod key_generation_params_owned;
@@ -13,6 +15,8 @@ mod private_crt_key_ref;
 #[cfg(feature = "rustcrypto")]
 mod private_crt_key_rustcrypto;
 
+#[cfg(feature = "alloc")]
+pub use blinding_params::RsaBlindingParams;
 #[cfg(feature = "alloc")]
 pub use key::RsaKey;
 #[cfg(feature = "alloc")]
