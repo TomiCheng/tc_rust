@@ -1,7 +1,5 @@
 //! ISO 9796-1 over RSA, with the vectors of Bouncy Castle's `ISO9796Test`.
 
-#![cfg(feature = "iso9796")]
-
 mod common;
 
 use common::{Engine, Key, U1024, hex, key, key_of, raw};
@@ -11,11 +9,11 @@ use tc_asym_cipher::{
     AsymmetricBlockCipher, AsymmetricBlockCipherInit, CipherDirection, KeyPairGenerator,
     KeyPairGeneratorInit,
 };
-use tc_asym_encoding::{EncodingError, Iso9796d1Encoding};
+use tc_asym_iso9796::{Iso9796Error, Iso9796d1Encoding};
 use tc_rsa_v2::{RsaError, RsaKeyGenerationParamsOwned, RsaKeyPairGenerator};
 
 type Encoding = Iso9796d1Encoding<Engine, U1024>;
-type Error = EncodingError<RsaError>;
+type Error = Iso9796Error<RsaError>;
 
 /// The 513-bit key of `ISO9796Test`; the public exponent is 3.
 const MOD1: &str = concat!(
@@ -220,12 +218,12 @@ fn moduli_of_each_size_taken_round_trip_and_the_others_are_turned_down() {
         if (3..=9).contains(&(bits % 16)) {
             assert_eq!(
                 encoding.init(CipherDirection::Encrypt, &private),
-                Err(EncodingError::UnsupportedKeySize),
+                Err(Iso9796Error::UnsupportedKeySize),
                 "{bits}"
             );
             assert_eq!(
                 encoding.process_block(&[1], &mut [0; 128]),
-                Err(EncodingError::NotInitialized),
+                Err(Iso9796Error::NotInitialized),
                 "{bits}"
             );
             continue;
@@ -252,16 +250,16 @@ fn an_empty_or_too_long_message_or_too_many_pad_bits_are_turned_down() {
     let mut output = [0; 128];
     assert_eq!(
         encoding.process_block(&[], &mut output),
-        Err(EncodingError::InputTooShort)
+        Err(Iso9796Error::InputTooShort)
     );
     assert_eq!(
         encoding.process_block(&[1; 65], &mut output),
-        Err(EncodingError::InputTooLarge)
+        Err(Iso9796Error::InputTooLarge)
     );
     encoding.set_pad_bits(8);
     assert_eq!(
         encoding.process_block(&[1], &mut output),
-        Err(EncodingError::InvalidPadBits)
+        Err(Iso9796Error::InvalidPadBits)
     );
     encoding.set_pad_bits(7);
     assert_eq!(encoding.process_block(&[1], &mut output), Ok(128));
@@ -275,7 +273,7 @@ fn a_block_that_ends_in_six_neither_way_fails_verification() {
     let signature = raw(&key(true), &block);
     assert_eq!(
         verify(&mut encoding(), &key(false), &signature),
-        Err(EncodingError::InvalidBlock)
+        Err(Iso9796Error::InvalidBlock)
     );
 }
 
@@ -288,7 +286,7 @@ fn a_block_with_a_second_shadow_off_fails_verification() {
     let forged = raw(&case.key(true), &block);
     assert_eq!(
         verify(&mut encoding(), &case.key(false), &forged),
-        Err(EncodingError::InvalidBlock)
+        Err(Iso9796Error::InvalidBlock)
     );
 }
 
@@ -301,7 +299,7 @@ fn a_block_too_short_for_its_pairs_fails_verification() {
     let signature = raw(&key(true), &block);
     assert_eq!(
         verify(&mut encoding(), &key(false), &signature),
-        Err(EncodingError::InvalidBlock)
+        Err(Iso9796Error::InvalidBlock)
     );
 }
 
@@ -314,7 +312,7 @@ fn an_encoding_not_yet_initialized_processes_nothing() {
     );
     assert_eq!(
         encoding.process_block(&[1], &mut [0; 128]),
-        Err(EncodingError::NotInitialized)
+        Err(Iso9796Error::NotInitialized)
     );
 }
 
@@ -324,7 +322,7 @@ fn an_output_shorter_than_the_output_block_is_turned_down() {
     encoding.init(CipherDirection::Encrypt, &key(true)).unwrap();
     assert_eq!(
         encoding.process_block(&[1], &mut [0; 127]),
-        Err(EncodingError::OutputTooShort)
+        Err(Iso9796Error::OutputTooShort)
     );
     let signature = sign(&mut encoding, &key(true), &[1]).unwrap();
     encoding
@@ -332,7 +330,7 @@ fn an_output_shorter_than_the_output_block_is_turned_down() {
         .unwrap();
     assert_eq!(
         encoding.process_block(&signature, &mut [0; 63]),
-        Err(EncodingError::OutputTooShort)
+        Err(Iso9796Error::OutputTooShort)
     );
     assert_eq!(encoding.process_block(&signature, &mut [0; 64]), Ok(1));
 }

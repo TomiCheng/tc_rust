@@ -9,7 +9,7 @@ use tc_asym_cipher::{AsymmetricBlockCipher, AsymmetricBlockCipherInit, CipherDir
 use tc_bigint::BitOps;
 use tc_rsa_v2::RsaKeyParams;
 
-use crate::EncodingError;
+use crate::Iso9796Error;
 
 /// The shadow of each nibble, as ISO 9796-1 and Bouncy Castle's `Shadows`.
 const SHADOWS: [u8; 16] = [14, 3, 5, 8, 9, 4, 2, 15, 0, 13, 11, 6, 7, 10, 12, 1];
@@ -35,8 +35,7 @@ struct State {
 /// ISO 9796-1 padding over the RSA engine `E`, with keys of the integers
 /// `T`, as Bouncy Castle's `ISO9796d1Encoding`: a signature with message
 /// recovery, signed by encrypting with a private key and verified by
-/// decrypting with the public one, which gives the message back. Available
-/// with the `iso9796` feature.
+/// decrypting with the public one, which gives the message back.
 ///
 /// The message is repeated over half the modulus and interleaved with its
 /// shadows, its end marked with the pad bits plus one, and the block forced
@@ -73,7 +72,7 @@ struct State {
 ///     AsymmetricBlockCipher, AsymmetricBlockCipherInit, CipherDirection, KeyPairGenerator,
 ///     KeyPairGeneratorInit,
 /// };
-/// use tc_asym_encoding::Iso9796d1Encoding;
+/// use tc_asym_iso9796::Iso9796d1Encoding;
 /// use tc_bigint::{FixedBigUint, Word};
 /// use tc_rsa_v2::{FixedRsaCoreEngine, RsaKeyGenerationParamsOwned, RsaKeyPairGenerator};
 ///
@@ -161,7 +160,7 @@ where
     P: RsaKeyParams<T>,
     T: BitOps,
 {
-    type Error = EncodingError<<E as AsymmetricBlockCipherInit<P>>::Error>;
+    type Error = Iso9796Error<<E as AsymmetricBlockCipherInit<P>>::Error>;
 
     /// Initializes the engine with `params`, to decrypt whichever the
     /// direction, and reads the modulus of the key, as Bouncy Castle does.
@@ -173,11 +172,11 @@ where
         self.state = None;
         self.engine
             .init(CipherDirection::Decrypt, params)
-            .map_err(EncodingError::Cipher)?;
+            .map_err(Iso9796Error::Cipher)?;
         let modulus = params.modulus();
         let bits = modulus.bits();
         if bits < 16 || (3..=9).contains(&(bits % 16)) {
-            return Err(EncodingError::UnsupportedKeySize);
+            return Err(Iso9796Error::UnsupportedKeySize);
         }
         self.state = Some(State {
             direction,
@@ -189,7 +188,7 @@ where
 }
 
 impl<E: AsymmetricBlockCipher, T> AsymmetricBlockCipher for Iso9796d1Encoding<E, T> {
-    type Error = EncodingError<E::Error>;
+    type Error = Iso9796Error<E::Error>;
 
     /// Half the block a modulus of `bits` bits encrypts, `(bits - 1) / 8`
     /// bytes, rounded up, when signing, as Bouncy Castle has it, and the
@@ -229,7 +228,7 @@ impl<E: AsymmetricBlockCipher, T> AsymmetricBlockCipher for Iso9796d1Encoding<E,
     /// public values, as a signature and the hash it signs are.
     fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
         let state = self.state.as_ref();
-        match state.ok_or(EncodingError::NotInitialized)?.direction {
+        match state.ok_or(Iso9796Error::NotInitialized)?.direction {
             CipherDirection::Encrypt => self.encode(input, output),
             CipherDirection::Decrypt => self.decode(input, output),
         }
@@ -242,25 +241,21 @@ impl<E: AsymmetricBlockCipher, T> Iso9796d1Encoding<E, T> {
     /// the ends of the block, and signs it, as Bouncy Castle's
     /// `EncodeBlock`. Variable time: only for public values, as the hash
     /// to sign is; its shadows are looked up in a table.
-    fn encode(
-        &mut self,
-        input: &[u8],
-        output: &mut [u8],
-    ) -> Result<usize, EncodingError<E::Error>> {
+    fn encode(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Iso9796Error<E::Error>> {
         let Some(State { bits, .. }) = self.state else {
-            return Err(EncodingError::NotInitialized);
+            return Err(Iso9796Error::NotInitialized);
         };
         if input.is_empty() {
-            return Err(EncodingError::InputTooShort);
+            return Err(Iso9796Error::InputTooShort);
         }
         if input.len() > self.input_block_size() {
-            return Err(EncodingError::InputTooLarge);
+            return Err(Iso9796Error::InputTooLarge);
         }
         if self.pad_bits > MAX_PAD_BITS {
-            return Err(EncodingError::InvalidPadBits);
+            return Err(Iso9796Error::InvalidPadBits);
         }
         if output.len() < self.engine.output_block_size() {
-            return Err(EncodingError::OutputTooShort);
+            return Err(Iso9796Error::OutputTooShort);
         }
         let length = bits.div_ceil(8) as usize;
         let half = (bits as usize + 13) / 16;
@@ -298,7 +293,7 @@ impl<E: AsymmetricBlockCipher, T> Iso9796d1Encoding<E, T> {
         };
         self.engine
             .process_block(&block[offset..], output)
-            .map_err(EncodingError::Cipher)
+            .map_err(Iso9796Error::Cipher)
     }
 
     /// Verifies `input`: raises it to the public exponent, takes it or the
@@ -307,30 +302,26 @@ impl<E: AsymmetricBlockCipher, T> Iso9796d1Encoding<E, T> {
     /// does not match, as Bouncy Castle's `DecodeBlock`, and writes the
     /// message back. Variable time: only for public values, as a signature
     /// and the key that verifies it are.
-    fn decode(
-        &mut self,
-        input: &[u8],
-        output: &mut [u8],
-    ) -> Result<usize, EncodingError<E::Error>> {
+    fn decode(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Iso9796Error<E::Error>> {
         let Some(State { bits, modulus, .. }) = &self.state else {
-            return Err(EncodingError::NotInitialized);
+            return Err(Iso9796Error::NotInitialized);
         };
         let length = self.engine.output_block_size();
         if output.len() < length.div_ceil(2) {
-            return Err(EncodingError::OutputTooShort);
+            return Err(Iso9796Error::OutputTooShort);
         }
         let mut block = vec![0; length];
         let written = self
             .engine
             .process_block(input, &mut block)
-            .map_err(EncodingError::Cipher)?;
+            .map_err(Iso9796Error::Cipher)?;
         if written != length || modulus.len() != length {
-            return Err(EncodingError::InvalidBlock);
+            return Err(Iso9796Error::InvalidBlock);
         }
         if block[length - 1] & 0x0f != FORCING {
             subtract_from(modulus, &mut block);
             if block[length - 1] & 0x0f != FORCING {
-                return Err(EncodingError::InvalidBlock);
+                return Err(Iso9796Error::InvalidBlock);
             }
         }
         let half = (*bits as usize + 13) / 16;
@@ -338,7 +329,7 @@ impl<E: AsymmetricBlockCipher, T> Iso9796d1Encoding<E, T> {
         let block = &mut block[first..];
         let length = block.len();
         if length < 2 * half {
-            return Err(EncodingError::InvalidBlock);
+            return Err(Iso9796Error::InvalidBlock);
         }
         block[length - 1] =
             (block[length - 1] >> 4) | (INVERSE[usize::from(block[length - 2] >> 4)] << 4);
@@ -349,7 +340,7 @@ impl<E: AsymmetricBlockCipher, T> Iso9796d1Encoding<E, T> {
             let tsum = shadow(block[index]) ^ block[index - 1];
             if tsum != 0 {
                 if boundary.is_some() {
-                    return Err(EncodingError::InvalidBlock);
+                    return Err(Iso9796Error::InvalidBlock);
                 }
                 boundary = Some(index - 1);
                 mark = tsum;
