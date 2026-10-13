@@ -36,7 +36,7 @@ engines respectively; both provide streaming, clone, and reset behavior.
 | --- | --- | --- |
 | [`tc_crypto`](crypto/tc_crypto) | Shared algorithm metadata contracts | Core-only `no_std` |
 | [`tc_cipher`](crypto/tc_cipher) | Shared cipher, mode, and key-wrapping traits and errors | Core-only `no_std` |
-| [`tc_rsa`](crypto/tc_rsa) | RSA implementation placeholder | Core-only `no_std` |
+| [`tc_asym_cipher`](https://crates.io/crates/tc_asym_cipher), [`tc_rsa`](https://crates.io/crates/tc_rsa), [`tc_asym_encoding`](https://crates.io/crates/tc_asym_encoding), [`tc_asym_iso9796`](https://crates.io/crates/tc_asym_iso9796) | Asymmetric block-cipher contracts; RSA engines, blinding and key generation; PKCS#1 v1.5 and OAEP encodings; ISO 9796-1 (external dependencies) | `no_std`; RSA's default `alloc` adds `RsaEngine`, `RsaKey` and key generation |
 | [`tc_params`](crypto/tc_params) | Shared object-safe cryptographic parameter traits and convenience types | Core-only `no_std` |
 | [`tc_macs`](https://crates.io/crates/tc_macs) | Shared message-authentication-code traits and errors, plus CBC-MAC, CFB-MAC, CMAC, GMAC and HMAC behind features (external dependency) | Core-only `no_std`; optional `alloc` adds runtime-sized MACs |
 | [Block-cipher family crates](crypto/block_cipher) | Independent block-cipher implementations built on `tc_cipher` and `tc_params` | Core-only `no_std`; AES can select AES-NI at runtime |
