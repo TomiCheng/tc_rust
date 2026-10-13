@@ -8,6 +8,8 @@ mod blinded_engine;
 mod block;
 mod core_engine;
 mod crt_engine;
+#[cfg(feature = "alloc")]
+mod engine;
 mod error;
 #[cfg(feature = "alloc")]
 mod key_pair_generator;
@@ -29,6 +31,8 @@ pub use crt_engine::FixedRsaCrtCoreEngine;
 pub use crt_engine::PaddedRsaCrtCoreEngine;
 #[cfg(feature = "rustcrypto")]
 pub use crt_engine::RsaCrtCoreEngineRustCrypto;
+#[cfg(feature = "alloc")]
+pub use engine::RsaEngine;
 pub use error::RsaError;
 #[cfg(feature = "alloc")]
 pub use key_pair_generator::RsaKeyGenerator;
