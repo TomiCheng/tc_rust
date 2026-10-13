@@ -6,6 +6,7 @@ license.workspace = true
 repository.workspace = true
 
 [features]
+default = ["alloc"]
 alloc = ["tc_bigint/alloc", "tc_modular/alloc", "tc_prime/alloc"]
 rustcrypto = ["alloc", "dep:rsa", "dep:zeroize"]
 
