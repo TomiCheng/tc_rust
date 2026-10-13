@@ -22,10 +22,10 @@ const HEADER_LENGTH: usize = 10;
 /// or later.
 const DECRYPTED_HEADER_LENGTH: usize = HEADER_LENGTH + 1;
 
-/// The block type of an encoding with a private key, padded with `ff`.
+/// The block type of encoding with a private key, padded with `ff`.
 const PRIVATE_BLOCK_TYPE: u8 = 0x01;
 
-/// The block type of an encoding with a public key, padded at random.
+/// The block type of encoding with a public key, padded at random.
 const PUBLIC_BLOCK_TYPE: u8 = 0x02;
 
 /// The direction and the kind of key the encoding was initialized with.
@@ -244,7 +244,7 @@ where
 
     /// Pads and encrypts `input`, or decrypts it and takes the padding
     /// off, writing the message at the start of `output`, and gives the
-    /// number of bytes written; the block is wiped afterwards, whatever
+    /// number of bytes written; the block is wiped afterward, whatever
     /// the outcome. Fails with `NotInitialized`, `InputTooLarge`,
     /// `OutputTooShort`, the engine's error, or, when decrypting without a
     /// plaintext length, `InvalidBlock`. Constant time in the message and
