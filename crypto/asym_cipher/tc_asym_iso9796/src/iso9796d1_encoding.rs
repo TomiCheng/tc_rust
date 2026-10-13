@@ -3,11 +3,11 @@
 use alloc::vec;
 use alloc::vec::Vec;
 use core::fmt;
-use core::marker::PhantomData;
 
+use rand_core::CryptoRng;
 use tc_asym_cipher::{AsymmetricBlockCipher, AsymmetricBlockCipherInit, CipherDirection};
-use tc_bigint::BitOps;
-use tc_rsa_v2::RsaKeyParams;
+use tc_bigint::{ArrayEncoding, PaddedBigUint};
+use tc_rsa_v2::{RsaBlindedEngine, RsaEngine, RsaKey, RsaKeyParams};
 
 use crate::Iso9796Error;
 
@@ -32,10 +32,13 @@ struct State {
     modulus: Vec<u8>,
 }
 
-/// ISO 9796-1 padding over the RSA engine `E`, with keys of the integers
-/// `T`, as Bouncy Castle's `ISO9796d1Encoding`: a signature with message
-/// recovery, signed by encrypting with a private key and verified by
-/// decrypting with the public one, which gives the message back.
+/// ISO 9796-1 padding over [`RsaEngine`], blinded with the random source
+/// `R` it holds, as Bouncy Castle's `ISO9796d1Encoding` over its
+/// `RsaBlindedEngine`: a signature with message recovery, signed by
+/// encrypting with a private key and verified by decrypting with the
+/// public one, which gives the message back. A key with its CRT values is
+/// blinded when it signs; a public key needs no blinding. `R` can be a
+/// `&mut` borrow, so the caller keeps the source and its state.
 ///
 /// The message is repeated over half the modulus and interleaved with its
 /// shadows, its end marked with the pad bits plus one, and the block forced
@@ -52,10 +55,8 @@ struct State {
 /// keys, as Bouncy Castle warns.
 ///
 /// The block takes the whole length of the modulus, below it as its top
-/// bit is forced, as Bouncy Castle's engine takes any input below the
-/// modulus; the engine is therefore always initialized to decrypt, the
-/// direction whose input block is the whole modulus, as RSA raises to the
-/// power of the key either way. Moduli whose size in bits leaves 3 to 9
+/// bit is forced, which the engine takes when encrypting, as Bouncy
+/// Castle's does. Moduli whose size in bits leaves 3 to 9
 /// over a multiple of 16, as 1027 bits does, are turned down at `init`:
 /// Bouncy Castle reads past the start of its block on them. A message
 /// longer than the input block, which Bouncy Castle cuts short, an empty
@@ -73,19 +74,17 @@ struct State {
 ///     KeyPairGeneratorInit,
 /// };
 /// use tc_asym_iso9796::Iso9796d1Encoding;
-/// use tc_bigint::{FixedBigUint, Word};
-/// use tc_rsa_v2::{FixedRsaCoreEngine, RsaKeyGenerationParamsOwned, RsaKeyPairGenerator};
-///
-/// type U2048 = FixedBigUint<{ 2048 / Word::BITS as usize }>;
+/// use tc_rsa_v2::{RsaKeyGenerationParamsOwned, RsaKeyGenerator};
 ///
 /// // 1. Generate a 2048-bit key pair.
-/// let mut generator = RsaKeyPairGenerator::<U2048>::new();
+/// let mut generator = RsaKeyGenerator::new();
 /// generator.init(RsaKeyGenerationParamsOwned::new(rand::rng()))?;
 /// let (public, private) = generator.generate_key_pair()?;
 ///
-/// // 2. Sign a hash, of at most 128 bytes, with the private key.
+/// // 2. Sign a hash, of at most 128 bytes, with the private key, blinded
+/// //    with the system's random source.
 /// let hash = [0x5a; 32];
-/// let mut encoding = Iso9796d1Encoding::new(FixedRsaCoreEngine::new());
+/// let mut encoding = Iso9796d1Encoding::new(rand::rng());
 /// encoding.init(CipherDirection::Encrypt, &private)?;
 /// let mut signature = vec![0; encoding.output_block_size()];
 /// encoding.process_block(&hash, &mut signature)?;
@@ -99,22 +98,20 @@ struct State {
 /// # assert_eq!(recovered, hash);
 /// # Ok::<(), Box<dyn core::error::Error>>(())
 /// ```
-pub struct Iso9796d1Encoding<E, T> {
-    engine: E,
+pub struct Iso9796d1Encoding<R> {
+    engine: RsaBlindedEngine<RsaEngine, R>,
     pad_bits: u8,
     state: Option<State>,
-    key: PhantomData<fn() -> T>,
 }
 
-impl<E, T> Iso9796d1Encoding<E, T> {
-    /// `engine`, to be initialized through the encoding, with no pad bits.
-    /// Constant time.
-    pub const fn new(engine: E) -> Self {
+impl<R> Iso9796d1Encoding<R> {
+    /// An encoding to be initialized, blinding with `rng`, with no pad
+    /// bits. Constant time.
+    pub fn new(rng: R) -> Self {
         Self {
-            engine,
+            engine: RsaBlindedEngine::new(rng),
             pad_bits: 0,
             state: None,
-            key: PhantomData,
         }
     }
 
@@ -132,18 +129,19 @@ impl<E, T> Iso9796d1Encoding<E, T> {
         self.pad_bits
     }
 
-    /// The engine, as Bouncy Castle's `UnderlyingCipher`. Constant time.
-    pub fn underlying_cipher(&self) -> &E {
+    /// The blinded engine, as Bouncy Castle's `UnderlyingCipher`.
+    /// Constant time.
+    pub fn underlying_cipher(&self) -> &RsaBlindedEngine<RsaEngine, R> {
         &self.engine
     }
 
-    /// The engine back. Constant time.
-    pub fn into_inner(self) -> E {
-        self.engine
+    /// The engine and the random source back. Constant time.
+    pub fn into_parts(self) -> (RsaEngine, R) {
+        self.engine.into_parts()
     }
 }
 
-impl<E: fmt::Display, T> fmt::Display for Iso9796d1Encoding<E, T> {
+impl<R> fmt::Display for Iso9796d1Encoding<R> {
     /// Writes the name of the engine and `/ISO9796-1Padding`, as Bouncy
     /// Castle's `AlgorithmName`, as `RSA/ISO9796-1Padding`. Constant time
     /// when the engine's `Display` is; output timing depends on the
@@ -154,24 +152,19 @@ impl<E: fmt::Display, T> fmt::Display for Iso9796d1Encoding<E, T> {
     }
 }
 
-impl<E, T, P> AsymmetricBlockCipherInit<P> for Iso9796d1Encoding<E, T>
-where
-    E: AsymmetricBlockCipher + AsymmetricBlockCipherInit<P>,
-    P: RsaKeyParams<T>,
-    T: BitOps,
-{
-    type Error = Iso9796Error<<E as AsymmetricBlockCipherInit<P>>::Error>;
+impl<R> AsymmetricBlockCipherInit<RsaKey> for Iso9796d1Encoding<R> {
+    type Error = Iso9796Error;
 
-    /// Initializes the engine with `params`, to decrypt whichever the
-    /// direction, and reads the modulus of the key, as Bouncy Castle does.
+    /// Initializes the engine with `params` and reads the modulus of the
+    /// key, as Bouncy Castle does.
     /// Fails with the engine's error, or with `UnsupportedKeySize` for a
     /// modulus whose size in bits leaves 3 to 9 over a multiple of 16, or
     /// is below 16; a failed `init` leaves the encoding uninitialized.
     /// Variable time: only for public values, as the modulus is.
-    fn init(&mut self, direction: CipherDirection, params: &P) -> Result<(), Self::Error> {
+    fn init(&mut self, direction: CipherDirection, params: &RsaKey) -> Result<(), Self::Error> {
         self.state = None;
         self.engine
-            .init(CipherDirection::Decrypt, params)
+            .init(direction, params)
             .map_err(Iso9796Error::Cipher)?;
         let modulus = params.modulus();
         let bits = modulus.bits();
@@ -181,14 +174,14 @@ where
         self.state = Some(State {
             direction,
             bits,
-            modulus: to_be_bytes(modulus, bits.div_ceil(8) as usize),
+            modulus: modulus_bytes(modulus, bits.div_ceil(8) as usize),
         });
         Ok(())
     }
 }
 
-impl<E: AsymmetricBlockCipher, T> AsymmetricBlockCipher for Iso9796d1Encoding<E, T> {
-    type Error = Iso9796Error<E::Error>;
+impl<R: CryptoRng> AsymmetricBlockCipher for Iso9796d1Encoding<R> {
+    type Error = Iso9796Error;
 
     /// Half the block a modulus of `bits` bits encrypts, `(bits - 1) / 8`
     /// bytes, rounded up, when signing, as Bouncy Castle has it, and the
@@ -235,13 +228,13 @@ impl<E: AsymmetricBlockCipher, T> AsymmetricBlockCipher for Iso9796d1Encoding<E,
     }
 }
 
-impl<E: AsymmetricBlockCipher, T> Iso9796d1Encoding<E, T> {
+impl<R: CryptoRng> Iso9796d1Encoding<R> {
     /// Repeats `input` over half the block, interleaves it with its
     /// shadows, marks where it starts with the pad bits plus one, forces
     /// the ends of the block, and signs it, as Bouncy Castle's
     /// `EncodeBlock`. Variable time: only for public values, as the hash
     /// to sign is; its shadows are looked up in a table.
-    fn encode(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Iso9796Error<E::Error>> {
+    fn encode(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Iso9796Error> {
         let Some(State { bits, .. }) = self.state else {
             return Err(Iso9796Error::NotInitialized);
         };
@@ -302,7 +295,7 @@ impl<E: AsymmetricBlockCipher, T> Iso9796d1Encoding<E, T> {
     /// does not match, as Bouncy Castle's `DecodeBlock`, and writes the
     /// message back. Variable time: only for public values, as a signature
     /// and the key that verifies it are.
-    fn decode(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Iso9796Error<E::Error>> {
+    fn decode(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Iso9796Error> {
         let Some(State { bits, modulus, .. }) = &self.state else {
             return Err(Iso9796Error::NotInitialized);
         };
@@ -376,17 +369,12 @@ fn subtract_from(modulus: &[u8], value: &mut [u8]) {
     }
 }
 
-/// `value`, big-endian over `length` bytes, bit by bit, whatever the width
-/// of `T`. Variable time: only for public values, as the modulus is.
-fn to_be_bytes<T: BitOps>(value: &T, length: usize) -> Vec<u8> {
-    (0..length)
-        .map(|index| {
-            let low = 8 * (length - 1 - index) as u32;
-            (0..8).fold(0, |byte, bit| {
-                byte | (u8::from(value.bit(low + bit)) << bit)
-            })
-        })
-        .collect()
+/// `modulus`, big-endian over its last `length` bytes, which hold it:
+/// those before them are zero. Variable time: only for public values, as
+/// the modulus is.
+fn modulus_bytes(modulus: &PaddedBigUint, length: usize) -> Vec<u8> {
+    let bytes = <PaddedBigUint as ArrayEncoding<u8>>::to_be(modulus);
+    bytes[bytes.len() - length..].to_vec()
 }
 
 #[cfg(test)]

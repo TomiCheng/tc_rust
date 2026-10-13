@@ -2,7 +2,7 @@
 
 mod common;
 
-use common::{Engine, Key, U1024, hex, key, key_of, raw};
+use common::{hex, key, key_of, raw};
 use rand::SeedableRng;
 use rand::rngs::StdRng;
 use tc_asym_cipher::{
@@ -10,10 +10,11 @@ use tc_asym_cipher::{
     KeyPairGeneratorInit,
 };
 use tc_asym_iso9796::{Iso9796Error, Iso9796d1Encoding};
-use tc_rsa_v2::{RsaError, RsaKeyGenerationParamsOwned, RsaKeyPairGenerator};
+use tc_bigint::PaddedBigUint;
+use tc_rsa_v2::{RsaKey, RsaKeyGenerationParamsOwned, RsaKeyPairGenerator};
 
-type Encoding = Iso9796d1Encoding<Engine, U1024>;
-type Error = Iso9796Error<RsaError>;
+type Encoding = Iso9796d1Encoding<StdRng>;
+type Error = Iso9796Error;
 
 /// The 513-bit key of `ISO9796Test`; the public exponent is 3.
 const MOD1: &str = concat!(
@@ -97,21 +98,18 @@ const CASES: [Case; 3] = [
 ];
 
 impl Case {
-    fn key(&self, private: bool) -> Key {
+    fn key(&self, private: bool) -> RsaKey {
         let exponent = if private { self.private_exponent } else { "03" };
         key_of(private, self.modulus, exponent)
     }
 }
 
-fn process<P>(
+fn process(
     encoding: &mut Encoding,
     direction: CipherDirection,
-    key: &P,
+    key: &RsaKey,
     input: &[u8],
-) -> Result<Vec<u8>, Error>
-where
-    Encoding: AsymmetricBlockCipherInit<P, Error = Error>,
-{
+) -> Result<Vec<u8>, Error> {
     encoding.init(direction, key)?;
     let mut output = vec![0; encoding.output_block_size()];
     let length = encoding.process_block(input, &mut output)?;
@@ -119,22 +117,16 @@ where
     Ok(output)
 }
 
-fn sign<P>(encoding: &mut Encoding, key: &P, message: &[u8]) -> Result<Vec<u8>, Error>
-where
-    Encoding: AsymmetricBlockCipherInit<P, Error = Error>,
-{
+fn sign(encoding: &mut Encoding, key: &RsaKey, message: &[u8]) -> Result<Vec<u8>, Error> {
     process(encoding, CipherDirection::Encrypt, key, message)
 }
 
-fn verify<P>(encoding: &mut Encoding, key: &P, signature: &[u8]) -> Result<Vec<u8>, Error>
-where
-    Encoding: AsymmetricBlockCipherInit<P, Error = Error>,
-{
+fn verify(encoding: &mut Encoding, key: &RsaKey, signature: &[u8]) -> Result<Vec<u8>, Error> {
     process(encoding, CipherDirection::Decrypt, key, signature)
 }
 
 fn encoding() -> Encoding {
-    Iso9796d1Encoding::new(Engine::new())
+    Iso9796d1Encoding::new(StdRng::seed_from_u64(0))
 }
 
 #[test]
@@ -209,11 +201,13 @@ fn messages_of_every_length_round_trip_with_their_pad_bits() {
 fn moduli_of_each_size_taken_round_trip_and_the_others_are_turned_down() {
     for bits in 512..528 {
         let rng = StdRng::seed_from_u64(u64::from(bits));
-        let mut generator = RsaKeyPairGenerator::<U1024>::new();
+        // Generated in this crate, as rsa takes no modulus below 1024 bits.
+        let mut generator = RsaKeyPairGenerator::<PaddedBigUint>::new();
         generator
             .init(RsaKeyGenerationParamsOwned::new(rng).with_strength(bits))
             .unwrap();
         let (public, private) = generator.generate_key_pair().unwrap();
+        let (public, private) = (RsaKey::from(public), RsaKey::from(private));
         let mut encoding = encoding();
         if (3..=9).contains(&(bits % 16)) {
             assert_eq!(
@@ -341,10 +335,12 @@ fn the_encoding_is_named_after_its_engine() {
 }
 
 #[test]
-fn the_engine_comes_back_out_of_the_encoding() {
+fn the_engine_and_the_source_come_back_out_of_the_encoding() {
     let mut encoding = encoding();
     encoding.init(CipherDirection::Encrypt, &key(true)).unwrap();
-    // The engine decrypts, whose input block is the whole modulus.
-    assert_eq!(encoding.underlying_cipher().input_block_size(), 128);
-    assert_eq!(encoding.into_inner().output_block_size(), 128);
+    // The input block of the engine stays the length any input fits; the
+    // engine takes the whole modulus all the same.
+    assert_eq!(encoding.underlying_cipher().input_block_size(), 127);
+    let (engine, _rng): (_, StdRng) = encoding.into_parts();
+    assert_eq!(engine.output_block_size(), 128);
 }

@@ -4,13 +4,8 @@
 #![allow(dead_code)]
 
 use tc_asym_cipher::{AsymmetricBlockCipher, AsymmetricBlockCipherInit, CipherDirection};
-use tc_bigint::{ArrayEncoding, FixedBigUint, Word};
-use tc_rsa_v2::{FixedRsaCoreEngine, RsaKeyOwned};
-
-pub const LIMBS: usize = 1024 / Word::BITS as usize;
-pub type U1024 = FixedBigUint<LIMBS>;
-pub type Engine = FixedRsaCoreEngine<LIMBS>;
-pub type Key = RsaKeyOwned<U1024>;
+use tc_bigint::{ArrayEncoding, PaddedBigUint};
+use tc_rsa_v2::{RsaEngine, RsaKey, RsaKeyOwned};
 
 /// The 1024-bit key of Bouncy Castle's `RsaTest`; the public exponent is 17.
 pub const MODULUS: &str = concat!(
@@ -26,9 +21,6 @@ pub const PRIVATE_EXPONENT: &str = concat!(
     "87de8bd6d924972408ebb58af71e76fd7b012a8d0e165f3ae2e5077a8648e619",
 );
 
-/// The message of Bouncy Castle's `RsaTest`.
-pub const INPUT: &[u8] = b"Now is the time for all good men";
-
 pub fn hex(text: &str) -> Vec<u8> {
     (0..text.len())
         .step_by(2)
@@ -36,22 +28,27 @@ pub fn hex(text: &str) -> Vec<u8> {
         .collect()
 }
 
-/// A key of `modulus` and `exponent`, in hexadecimal, of `LIMBS` limbs.
-pub fn key_of(private: bool, modulus: &str, exponent: &str) -> Key {
-    let int = |text: &str| U1024::from_be(&hex(text)).unwrap();
-    RsaKeyOwned::new(private, int(modulus), int(exponent))
+/// `text`, in hexadecimal, as an integer.
+pub fn int(text: &str) -> PaddedBigUint {
+    let Ok(value) = PaddedBigUint::from_be(&hex(text));
+    value
+}
+
+/// A key of `modulus` and `exponent`, in hexadecimal.
+pub fn key_of(private: bool, modulus: &str, exponent: &str) -> RsaKey {
+    RsaKey::from(RsaKeyOwned::new(private, int(modulus), int(exponent)))
 }
 
 /// The key of `RsaTest`, private or public.
-pub fn key(private: bool) -> Key {
+pub fn key(private: bool) -> RsaKey {
     let exponent = if private { PRIVATE_EXPONENT } else { "11" };
     key_of(private, MODULUS, exponent)
 }
 
 /// `block` raised to the exponent of `key` by the engine alone, without
 /// padding, for a key of the other kind to decrypt.
-pub fn raw(key: &Key, block: &[u8]) -> Vec<u8> {
-    let mut engine = Engine::new();
+pub fn raw(key: &RsaKey, block: &[u8]) -> Vec<u8> {
+    let mut engine = RsaEngine::new();
     engine.init(CipherDirection::Decrypt, key).unwrap();
     let mut output = vec![0; engine.output_block_size()];
     let written = engine.process_block(block, &mut output).unwrap();

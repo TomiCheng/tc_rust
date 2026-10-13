@@ -946,7 +946,7 @@ name = "tc_asym_iso9796"
 version = "0.1.0"
 dependencies = [
  "rand",
- "rsa",
+ "rand_core",
  "tc_asym_cipher",
  "tc_bigint 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tc_rsa_v2",

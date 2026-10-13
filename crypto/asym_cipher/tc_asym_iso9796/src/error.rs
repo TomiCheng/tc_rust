@@ -2,14 +2,14 @@
 
 use core::fmt;
 
-/// What can go wrong in ISO 9796. `E` is the error of the engine: that of
-/// its initialization from `init`, and that of its processing from
-/// `process_block`.
+use tc_rsa_v2::RsaError;
+
+/// What can go wrong in ISO 9796.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[non_exhaustive]
-pub enum Iso9796Error<E> {
-    /// The engine failed.
-    Cipher(E),
+pub enum Iso9796Error {
+    /// The RSA engine failed.
+    Cipher(RsaError),
     /// The encoding processed before it was initialized.
     NotInitialized,
     /// The modulus is of a size the encoding does not take.
@@ -26,7 +26,7 @@ pub enum Iso9796Error<E> {
     InvalidBlock,
 }
 
-impl<E: fmt::Display> fmt::Display for Iso9796Error<E> {
+impl fmt::Display for Iso9796Error {
     /// Writes the message of the error, the engine's own for `Cipher`.
     /// Constant time: errors carry no secret data; output timing depends
     /// on the formatter.
@@ -44,4 +44,4 @@ impl<E: fmt::Display> fmt::Display for Iso9796Error<E> {
     }
 }
 
-impl<E: core::error::Error> core::error::Error for Iso9796Error<E> {}
+impl core::error::Error for Iso9796Error {}
