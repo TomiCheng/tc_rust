@@ -31,6 +31,8 @@ pub use crt_engine::PaddedRsaCrtCoreEngine;
 pub use crt_engine::RsaCrtCoreEngineRustCrypto;
 pub use error::RsaError;
 #[cfg(feature = "alloc")]
+pub use key_pair_generator::RsaKeyGenerator;
+#[cfg(feature = "alloc")]
 pub use key_pair_generator::RsaKeyPairGenerator;
 #[cfg(feature = "rustcrypto")]
 pub use key_pair_generator::RsaKeyPairGeneratorRustCrypto;
