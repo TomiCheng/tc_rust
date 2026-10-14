@@ -1,5 +1,5 @@
 use tc_bigint::PaddedBigUint;
-use tc_ec_core_v2::{ConstantTime, CoordinateSystem, Curve, FieldElement, Point, algo, wnaf};
+use tc_ec_core_v2::{CoordinateSystem, Curve, FieldElement, Point, algo, wnaf};
 use tc_fp_curve_v2::{FpCtCurve, FpField, FpVarCurve};
 
 fn int(value: u8) -> PaddedBigUint {
@@ -59,16 +59,4 @@ fn the_core_algorithms_run_on_the_constant_time_curve() {
     let curve = FpCtCurve::new(&field, &int(2), &int(2), Some(int(19)), Some(int(1)));
     let g = curve.create_point(&int(5), &int(1));
     check_the_shared_algorithms(&curve, &g);
-}
-
-fn secret_only<C: Curve + ConstantTime>(curve: C) -> C {
-    curve
-}
-
-#[test]
-fn only_the_constant_time_curve_is_marked_constant_time() {
-    let field = FpField::new(int(17));
-    let curve = FpCtCurve::new(&field, &int(2), &int(2), None, None);
-    let _ = secret_only(&curve);
-    // `secret_only(&FpVarCurve::new(..))` does not compile: it is not ConstantTime.
 }

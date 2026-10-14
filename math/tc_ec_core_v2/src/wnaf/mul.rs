@@ -2,7 +2,7 @@ use alloc::vec::Vec;
 
 use super::{WNafTable, generate_jsf, generate_window_naf, get_window_size};
 use crate::algo::{AlgorithmError, import_point, validate_point};
-use crate::{Curve, Point};
+use crate::{Curve, Point, Scalar};
 
 /// Computes `aP + bQ` with joint sparse form. Variable time; public scalars only.
 pub fn shamirs_trick<C: Curve>(
@@ -59,7 +59,7 @@ pub fn sum_of_multiplies<C: Curve>(
     for (point, scalar) in points.iter().zip(scalars) {
         let point = import_point(points[0].curve(), point)?;
         validate_point(&point)?;
-        let width = get_window_size(C::scalar_bit_length(scalar)).min(8);
+        let width = get_window_size(scalar.bit_length()).min(8);
         tables.push(WNafTable::new(&point, width, true));
         digits.push(generate_window_naf::<C>(width, scalar));
     }

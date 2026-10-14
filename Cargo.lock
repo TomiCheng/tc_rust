@@ -1235,6 +1235,9 @@ dependencies = [
 [[package]]
 name = "tc_ec_core_v2"
 version = "0.1.0"
+dependencies = [
+ "tc_bigint 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
 
 [[package]]
 name = "tc_ecb"

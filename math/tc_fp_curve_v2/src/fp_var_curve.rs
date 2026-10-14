@@ -3,7 +3,7 @@ use core::fmt;
 use tc_bigint::PaddedBigUint;
 use tc_ec_core_v2::{CoordinateSystem, Curve, PointDecodeError};
 
-use crate::{FpField, FpFieldElement, FpVarPoint, scalar, sec1};
+use crate::{FpField, FpFieldElement, FpVarPoint, sec1};
 
 pub struct FpVarCurve<'a> {
     field: &'a FpField,
@@ -157,34 +157,6 @@ impl<'a> Curve for &'a FpVarCurve<'a> {
 
     fn coordinate_system(&self) -> CoordinateSystem {
         self.coordinate_system
-    }
-
-    fn scalar_bit_length(scalar: &PaddedBigUint) -> usize {
-        scalar::bit_length(scalar)
-    }
-
-    fn scalar_test_bit(scalar: &PaddedBigUint, index: usize) -> bool {
-        scalar::test_bit(scalar, index)
-    }
-
-    fn scalar_is_zero(scalar: &PaddedBigUint) -> bool {
-        scalar::is_zero(scalar)
-    }
-
-    fn scalar_shr1(scalar: &PaddedBigUint) -> PaddedBigUint {
-        scalar::shr(scalar, 1)
-    }
-
-    fn scalar_shr(scalar: &PaddedBigUint, count: usize) -> PaddedBigUint {
-        scalar::shr(scalar, count)
-    }
-
-    fn scalar_low_bits(scalar: &PaddedBigUint, width: usize) -> u32 {
-        scalar::low_bits(scalar, width)
-    }
-
-    fn scalar_sub_digit(scalar: &PaddedBigUint, digit: i32) -> PaddedBigUint {
-        scalar::sub_digit(scalar, digit)
     }
 
     /// wNAF. Variable time; only for public scalars.

@@ -9,7 +9,6 @@ mod fp_field;
 mod fp_field_element;
 mod fp_var_curve;
 mod fp_var_point;
-mod scalar;
 mod sec1;
 
 pub use fp_ct_curve::FpCtCurve;

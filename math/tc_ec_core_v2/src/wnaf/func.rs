@@ -1,5 +1,5 @@
 use alloc::vec::Vec;
-use crate::{Curve, Point};
+use crate::{Curve, Point, Scalar};
 
 use super::{WNafTable, DEFAULT_WINDOW_SIZE_CUTOFFS, MAX_COMPACT_WIDTH, MAX_DENSE_WIDTH};
 
@@ -10,10 +10,10 @@ pub fn generate_jsf<C: Curve>(a: &C::Scalar, b: &C::Scalar) -> Vec<[i8; 2]> {
     let mut values = [a.clone(), b.clone()];
     let mut carry = [0_i32; 2];
     let mut result = Vec::new();
-    while carry != [0, 0] || values.iter().any(|v| !C::scalar_is_zero(v)) {
+    while carry != [0, 0] || values.iter().any(|v| !v.is_zero()) {
         let n = [
-            (C::scalar_low_bits(&values[0], 3) as i32 + carry[0]) & 7,
-            (C::scalar_low_bits(&values[1], 3) as i32 + carry[1]) & 7,
+            (values[0].low_bits(3) as i32 + carry[0]) & 7,
+            (values[1].low_bits(3) as i32 + carry[1]) & 7,
         ];
         let mut digit = [0_i8; 2];
         for i in 0..2 {
@@ -28,7 +28,7 @@ pub fn generate_jsf<C: Curve>(a: &C::Scalar, b: &C::Scalar) -> Vec<[i8; 2]> {
                 carry[i] ^= 1;
             }
             digit[i] = u as i8;
-            values[i] = C::scalar_shr1(&values[i]);
+            values[i] = values[i].shr(1);
         }
         result.push(digit);
     }
@@ -58,28 +58,28 @@ pub fn generate_window_naf<C: Curve>(width: usize, scalar: &C::Scalar) -> Vec<i8
         "wNAF width must be in the range 2..=8"
     );
 
-    if C::scalar_is_zero(scalar) {
+    if scalar.is_zero() {
         return Vec::new();
     }
 
     // BC 以 carry 表示負 digit 帶來的進位，避免真的建立 `k + |digit|`。
     // 後者對全寬固定整數（例如 U256::MAX 的 NAF）會需要第 257 位。
     let mut value = scalar.clone();
-    let mut digits = Vec::with_capacity(C::scalar_bit_length(scalar).saturating_add(1));
+    let mut digits = Vec::with_capacity(scalar.bit_length().saturating_add(1));
     let modulus = 1_i32 << width;
     let sign = modulus >> 1;
     let mut carry = false;
     let mut length = 0_usize;
     let mut position = 0_usize;
 
-    while position <= C::scalar_bit_length(&value) {
-        if C::scalar_test_bit(&value, position) == carry {
+    while position <= value.bit_length() {
+        if value.test_bit(position) == carry {
             position += 1;
             continue;
         }
 
-        value = C::scalar_shr(&value, position);
-        let mut digit = C::scalar_low_bits(&value, width) as i32;
+        value = value.shr(position);
+        let mut digit = value.low_bits(width) as i32;
         if carry {
             digit += 1;
         }
@@ -107,10 +107,10 @@ pub fn generate_compact_window_naf<C: Curve>(width: usize, scalar: &C::Scalar) -
         (2..=MAX_COMPACT_WIDTH).contains(&width),
         "compact wNAF width must be in the range 2..=16"
     );
-    let bits = C::scalar_bit_length(scalar);
+    let bits = scalar.bit_length();
     assert!(bits < (1 << 16), "scalar bit length must be below 2^16");
 
-    if C::scalar_is_zero(scalar) {
+    if scalar.is_zero() {
         return Vec::new();
     }
 
@@ -121,14 +121,14 @@ pub fn generate_compact_window_naf<C: Curve>(width: usize, scalar: &C::Scalar) -
     let mut carry = false;
     let mut position = 0_usize;
 
-    while position <= C::scalar_bit_length(&value) {
-        if C::scalar_test_bit(&value, position) == carry {
+    while position <= value.bit_length() {
+        if value.test_bit(position) == carry {
             position += 1;
             continue;
         }
 
-        value = C::scalar_shr(&value, position);
-        let mut digit = C::scalar_low_bits(&value, width) as i32;
+        value = value.shr(position);
+        let mut digit = value.low_bits(width) as i32;
         if carry {
             digit += 1;
         }
@@ -210,7 +210,7 @@ pub fn wnaf_mul<C: Curve>(table: &WNafTable<C::Point>, scalar: &C::Scalar) -> C:
 /// 重複乘同一個點時應改用 [`WNafTable`] 與 [`wnaf_mul`] 保存預算成本。
 /// 此函式是變動時間實作，只能用於公開標量。
 pub fn wnaf_mul_point<C: Curve>(point: &C::Point, scalar: &C::Scalar) -> C::Point {
-    let width = get_window_size(C::scalar_bit_length(scalar));
+    let width = get_window_size(scalar.bit_length());
     let table = WNafTable::new(point, width, true);
     wnaf_mul::<C>(&table, scalar)
 }

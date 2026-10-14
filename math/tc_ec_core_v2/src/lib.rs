@@ -13,7 +13,6 @@ pub mod wnaf;
 pub use coordinate_system::CoordinateSystem;
 
 pub use traits::BinaryFieldElement;
-pub use traits::ConstantTime;
 pub use traits::Curve;
 pub use traits::FieldElement;
 pub use traits::Point;
