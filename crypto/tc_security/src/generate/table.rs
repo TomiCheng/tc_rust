@@ -2,6 +2,8 @@
 
 #[cfg(feature = "aes")]
 mod aes;
+#[cfg(feature = "ascon")]
+mod ascon;
 #[cfg(feature = "chacha")]
 mod chacha;
 #[cfg(feature = "rc2")]
@@ -13,14 +15,20 @@ mod rsa;
 
 use super::GeneratorEntry;
 
-#[cfg(any(feature = "aes", feature = "chacha", feature = "rc2", feature = "rc5"))]
+#[cfg(any(
+    feature = "aes",
+    feature = "ascon",
+    feature = "chacha",
+    feature = "rc2",
+    feature = "rc5"
+))]
 fn random_key(strength: usize, rng: &mut dyn rand::CryptoRng) -> Vec<u8> {
     let mut key = vec![0; strength.div_ceil(8)];
     rng.fill_bytes(&mut key);
     key
 }
 
-#[cfg(any(feature = "aes", feature = "chacha"))]
+#[cfg(any(feature = "aes", feature = "ascon", feature = "chacha"))]
 fn plain_key(
     params: &super::KeyGenParams,
     rng: &mut dyn rand::CryptoRng,
@@ -39,7 +47,13 @@ fn no_key(
     Err(crate::SecurityError::WrongGenerator)
 }
 
-#[cfg(any(feature = "aes", feature = "chacha", feature = "rc2", feature = "rc5"))]
+#[cfg(any(
+    feature = "aes",
+    feature = "ascon",
+    feature = "chacha",
+    feature = "rc2",
+    feature = "rc5"
+))]
 fn no_key_pair(
     _: &super::KeyGenParams,
     _: &mut dyn rand::CryptoRng,
@@ -56,6 +70,14 @@ pub(super) const GENERATORS: &[GeneratorEntry] = &[
     aes::AES192,
     #[cfg(feature = "aes")]
     aes::AES256,
+    #[cfg(feature = "ascon")]
+    ascon::ASCON_AEAD128,
+    #[cfg(feature = "ascon")]
+    ascon::ASCON128,
+    #[cfg(feature = "ascon")]
+    ascon::ASCON128A,
+    #[cfg(feature = "ascon")]
+    ascon::ASCON80PQ,
     #[cfg(feature = "chacha")]
     chacha::CHACHA,
     #[cfg(feature = "chacha")]

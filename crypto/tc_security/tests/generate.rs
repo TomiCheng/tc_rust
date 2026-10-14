@@ -329,3 +329,29 @@ fn chacha_keys_follow_the_bc_names_and_sizes() {
         Err(SecurityError::InvalidKeyGenParams)
     );
 }
+
+#[cfg(feature = "ascon")]
+#[test]
+fn ascon_keys_have_the_fixed_size_of_each_variant() {
+    use tc_block_cipher::KeyParams;
+    use tc_security::generate::KeyGenParams;
+
+    for (name, bytes) in [
+        ("ascon-aead128", 16),
+        ("ASCON-128", 16),
+        ("ASCON-128A", 16),
+        ("ASCON-80PQ", 20),
+    ] {
+        let mut generator = generate::get_by_name(name).unwrap().generator();
+        assert_eq!(
+            KeyParams::key(&generator.generate_key().unwrap()).len(),
+            bytes,
+            "{name}"
+        );
+        assert_eq!(
+            generator.init(&KeyGenParams::Basic { strength: 256 }),
+            Err(SecurityError::InvalidKeyGenParams),
+            "{name}"
+        );
+    }
+}
