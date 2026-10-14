@@ -1,7 +1,6 @@
 use alloc::vec;
 use alloc::vec::Vec;
 use core::fmt;
-use core::ops::{Add, Mul, Neg, Sub};
 
 use tc_bigint::{PaddedBigUint, Word};
 use tc_constant_time::{Choice, ConditionallySelectable, ConstantTimeEq};
@@ -62,7 +61,7 @@ impl<'a> FpCtPoint<'a> {
     /// time apart from whether this is infinity.
     pub fn affine(&self) -> Option<(FpFieldElement<'a>, FpFieldElement<'a>)> {
         let inverse = self.z.invert()?;
-        Some((&self.x * &inverse, &self.y * &inverse))
+        Some((self.x.multiply(&inverse), self.y.multiply(&inverse)))
     }
 
     /// The affine x. Constant time apart from whether this is infinity.
@@ -81,9 +80,12 @@ impl<'a> FpCtPoint<'a> {
     pub fn is_on_curve(&self) -> bool {
         let (x, y, z) = (&self.x, &self.y, &self.z);
         let z2 = z.square();
-        let lhs = &y.square() * z;
-        let rhs =
-            &(&(&x.square() * x) + &(&(self.curve.a() * x) * &z2)) + &(self.curve.b() * &(&z2 * z));
+        let lhs = y.square().multiply(z);
+        let rhs = x
+            .square()
+            .multiply(x)
+            .add(&self.curve.a().multiply(x).multiply(&z2))
+            .add(&self.curve.b().multiply(&z2.multiply(z)));
         lhs == rhs
     }
 
@@ -93,7 +95,10 @@ impl<'a> FpCtPoint<'a> {
         let one = PaddedBigUint::from(1u8);
         self.is_on_curve()
             && (self.curve.cofactor().is_some_and(|h| *h == one)
-                || self.curve.order().is_none_or(|n| (self * n).is_infinity()))
+                || self
+                    .curve
+                    .order()
+                    .is_none_or(|n| self.multiply(n).is_infinity()))
     }
 
     /// `2P`, by Algorithm 3 of Renes, Costello and Batina. Constant time.
@@ -103,57 +108,68 @@ impl<'a> FpCtPoint<'a> {
         let t0 = x.square();
         let t1 = y.square();
         let t2 = z.square();
-        let t3 = (x * y).double();
-        let z3 = (x * z).double();
-        let x3 = a * &z3;
-        let y3 = &x3 + &(b3 * &t2);
-        let x3 = &t1 - &y3;
-        let y3 = &t1 + &y3;
-        let y3 = &x3 * &y3;
-        let x3 = &t3 * &x3;
-        let z3 = b3 * &z3;
-        let t2 = a * &t2;
-        let t3 = &(a * &(&t0 - &t2)) + &z3;
-        let t0 = &(&t0.double() + &t0) + &t2;
-        let y3 = &y3 + &(&t0 * &t3);
-        let t2 = (y * z).double();
-        let x3 = &x3 - &(&t2 * &t3);
-        let z3 = (&t2 * &t1).double().double();
+        let t3 = x.multiply(y).double();
+        let z3 = x.multiply(z).double();
+        let x3 = a.multiply(&z3);
+        let y3 = x3.add(&b3.multiply(&t2));
+        let x3 = t1.subtract(&y3);
+        let y3 = t1.add(&y3);
+        let y3 = x3.multiply(&y3);
+        let x3 = t3.multiply(&x3);
+        let z3 = b3.multiply(&z3);
+        let t2 = a.multiply(&t2);
+        let t3 = a.multiply(&t0.subtract(&t2)).add(&z3);
+        let t0 = t0.double().add(&t0).add(&t2);
+        let y3 = y3.add(&t0.multiply(&t3));
+        let t2 = y.multiply(z).double();
+        let x3 = x3.subtract(&t2.multiply(&t3));
+        let z3 = t2.multiply(&t1).double().double();
         self.with(x3, y3, z3)
     }
 
-    /// `P + Q`, by Algorithm 1 of Renes, Costello and Batina. Constant time.
-    fn add_point(&self, rhs: &Self) -> Self {
+    /// `P + Q`, by Algorithm 1 of Renes, Costello and Batina. Constant time. Panics when
+    /// the curves differ.
+    pub fn add(&self, rhs: &Self) -> Self {
         self.assert_same_curve(rhs);
         let (a, b3) = (self.curve.a(), self.curve.b3());
         let (x1, y1, z1) = (&self.x, &self.y, &self.z);
         let (x2, y2, z2) = (&rhs.x, &rhs.y, &rhs.z);
-        let t0 = x1 * x2;
-        let t1 = y1 * y2;
-        let t2 = z1 * z2;
-        let t3 = &(&(x1 + y1) * &(x2 + y2)) - &(&t0 + &t1);
-        let t4 = &(&(x1 + z1) * &(x2 + z2)) - &(&t0 + &t2);
-        let t5 = &(&(y1 + z1) * &(y2 + z2)) - &(&t1 + &t2);
-        let z3 = &(a * &t4) + &(b3 * &t2);
-        let x3 = &t1 - &z3;
-        let z3 = &t1 + &z3;
-        let y3 = &x3 * &z3;
-        let t1 = &(&t0.double() + &t0) + &(a * &t2);
-        let t2 = a * &(&t0 - &(a * &t2));
-        let t4 = &(b3 * &t4) + &t2;
-        let y3 = &y3 + &(&t1 * &t4);
-        let x3 = &(&t3 * &x3) - &(&t5 * &t4);
-        let z3 = &(&t5 * &z3) + &(&t3 * &t1);
+        let t0 = x1.multiply(x2);
+        let t1 = y1.multiply(y2);
+        let t2 = z1.multiply(z2);
+        let t3 = x1.add(y1).multiply(&x2.add(y2)).subtract(&t0.add(&t1));
+        let t4 = x1.add(z1).multiply(&x2.add(z2)).subtract(&t0.add(&t2));
+        let t5 = y1.add(z1).multiply(&y2.add(z2)).subtract(&t1.add(&t2));
+        let z3 = a.multiply(&t4).add(&b3.multiply(&t2));
+        let x3 = t1.subtract(&z3);
+        let z3 = t1.add(&z3);
+        let y3 = x3.multiply(&z3);
+        let t1 = t0.double().add(&t0).add(&a.multiply(&t2));
+        let t2 = a.multiply(&t0.subtract(&a.multiply(&t2)));
+        let t4 = b3.multiply(&t4).add(&t2);
+        let y3 = y3.add(&t1.multiply(&t4));
+        let x3 = t3.multiply(&x3).subtract(&t5.multiply(&t4));
+        let z3 = t5.multiply(&z3).add(&t3.multiply(&t1));
         self.with(x3, y3, z3)
+    }
+
+    /// `P - Q`. Constant time. Panics when the curves differ.
+    pub fn subtract(&self, rhs: &Self) -> Self {
+        self.add(&rhs.negate())
+    }
+
+    /// `-P`. Constant time.
+    pub fn negate(&self) -> Self {
+        self.with(self.x.clone(), self.y.negate(), self.z.clone())
     }
 
     /// `kP` over every window of the width of `scalar`, which is public, with a lookup
     /// that reads the whole table. Constant time in the point and the scalar.
-    fn multiply(&self, scalar: &PaddedBigUint) -> Self {
+    pub fn multiply(&self, scalar: &PaddedBigUint) -> Self {
         let mut table = Vec::with_capacity(1 << WINDOW);
         table.push(Self::infinity(self.curve));
         for i in 1..1 << WINDOW {
-            let next = table[i - 1].add_point(self);
+            let next = table[i - 1].add(self);
             table.push(next);
         }
 
@@ -167,7 +183,7 @@ impl<'a> FpCtPoint<'a> {
             for bit in (0..WINDOW).rev() {
                 index = (index << 1) | u8::from(scalar.bit(window * WINDOW + bit));
             }
-            result = result.add_point(&lookup(&table, index));
+            result = result.add(&lookup(&table, index));
         }
         result
     }
@@ -230,42 +246,6 @@ fn lookup<'a>(table: &[FpCtPoint<'a>], index: u8) -> FpCtPoint<'a> {
     selected
 }
 
-/// `P + Q`. Constant time. Panics when the curves differ.
-impl<'a> Add for &FpCtPoint<'a> {
-    type Output = FpCtPoint<'a>;
-
-    fn add(self, rhs: Self) -> FpCtPoint<'a> {
-        self.add_point(rhs)
-    }
-}
-
-/// `P - Q`. Constant time. Panics when the curves differ.
-impl<'a> Sub for &FpCtPoint<'a> {
-    type Output = FpCtPoint<'a>;
-
-    fn sub(self, rhs: Self) -> FpCtPoint<'a> {
-        self.add_point(&-rhs)
-    }
-}
-
-/// `-P`. Constant time.
-impl<'a> Neg for &FpCtPoint<'a> {
-    type Output = FpCtPoint<'a>;
-
-    fn neg(self) -> FpCtPoint<'a> {
-        self.with(self.x.clone(), -&self.y, self.z.clone())
-    }
-}
-
-/// `kP`. Constant time in the point and the scalar; the width of the scalar is public.
-impl<'a> Mul<&PaddedBigUint> for &FpCtPoint<'a> {
-    type Output = FpCtPoint<'a>;
-
-    fn mul(self, scalar: &PaddedBigUint) -> FpCtPoint<'a> {
-        self.multiply(scalar)
-    }
-}
-
 /// `a` or `b`, as the choice says. Constant time. Panics when the curves differ.
 impl ConditionallySelectable for FpCtPoint<'_> {
     fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
@@ -283,8 +263,8 @@ impl ConditionallySelectable for FpCtPoint<'_> {
 impl ConstantTimeEq for FpCtPoint<'_> {
     fn ct_eq(&self, rhs: &Self) -> Choice {
         self.assert_same_curve(rhs);
-        (&self.x * &rhs.z).ct_eq(&(&rhs.x * &self.z))
-            & (&self.y * &rhs.z).ct_eq(&(&rhs.y * &self.z))
+        self.x.multiply(&rhs.z).ct_eq(&rhs.x.multiply(&self.z))
+            & self.y.multiply(&rhs.z).ct_eq(&rhs.y.multiply(&self.z))
     }
 }
 
@@ -344,11 +324,11 @@ mod tests {
         let g = ct_curve.create_point(&int(5), &int(1));
         let h = var_curve.create_point(&int(5), &int(1));
         for k in 0..40 {
-            let p = &g * &int(k);
-            assert_eq!(ct(&p), var(&(&h * &int(k))), "k = {k}");
+            let p = g.multiply(&int(k));
+            assert_eq!(ct(&p), var(&h.multiply(&int(k))), "k = {k}");
             assert!(p.is_on_curve() && p.is_valid(), "k = {k}");
-            assert_eq!(&p + &g, &g * &int(k + 1), "k = {k}");
-            assert_eq!(p.twice(), &g * &int(2 * k), "k = {k}");
+            assert_eq!(p.add(&g), g.multiply(&int(k + 1)), "k = {k}");
+            assert_eq!(p.twice(), g.multiply(&int(2 * k)), "k = {k}");
         }
     }
 
@@ -358,12 +338,12 @@ mod tests {
         let curve = FpCtCurve::new(&field, &int(2), &int(2), Some(int(19)), Some(int(1)));
         let g = curve.create_point(&int(5), &int(1));
         let o = curve.infinity();
-        assert_eq!(&g + &g, g.twice());
-        assert!((&g + &-&g).is_infinity());
-        assert!((&g - &g).is_infinity());
-        assert_eq!(&o + &g, g);
-        assert_eq!(&g + &o, g);
-        assert!((&o + &o).is_infinity() && o.twice().is_infinity());
+        assert_eq!(g.add(&g), g.twice());
+        assert!(g.add(&g.negate()).is_infinity());
+        assert!(g.subtract(&g).is_infinity());
+        assert_eq!(o.add(&g), g);
+        assert_eq!(g.add(&o), g);
+        assert!(o.add(&o).is_infinity() && o.twice().is_infinity());
         assert!(o.is_on_curve() && o.affine().is_none());
         assert_ne!(g, o);
     }
@@ -382,7 +362,7 @@ mod tests {
             FpCtPoint::conditional_select(&g, &two_g, Choice::from_lsb(1)),
             two_g
         );
-        assert_eq!(&(&g + &two_g) - &two_g, g);
+        assert_eq!(g.add(&two_g).subtract(&two_g), g);
     }
 
     #[test]
@@ -405,12 +385,12 @@ mod tests {
 
         assert!(g.is_on_curve());
         assert_eq!(ct(&g.twice()), Some((hex(x2), hex(y2))));
-        assert!((&g * &hex(n)).is_infinity());
-        assert_eq!(ct(&(&g * &hex(k))), var(&(&h * &hex(k))));
+        assert!(g.multiply(&hex(n)).is_infinity());
+        assert_eq!(ct(&g.multiply(&hex(k))), var(&h.multiply(&hex(k))));
 
-        let encoded = (&g * &hex(k)).encode(true);
+        let encoded = g.multiply(&hex(k)).encode(true);
         assert_eq!(encoded.len(), 33);
-        assert_eq!(curve.decode_point(&encoded), Ok(&g * &hex(k)));
-        assert_eq!(encoded, (&h * &hex(k)).encode(true));
+        assert_eq!(curve.decode_point(&encoded), Ok(g.multiply(&hex(k))));
+        assert_eq!(encoded, h.multiply(&hex(k)).encode(true));
     }
 }

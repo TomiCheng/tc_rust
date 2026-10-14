@@ -14,8 +14,8 @@ use crate::CoordinateSystem;
 use super::FieldElement;
 use super::Point;
 
-/// 橢圓曲線的靜態型別介面；實作在曲線的參照這類可複製的 handle 上。
-pub trait Curve: Copy {
+/// 橢圓曲線的靜態型別介面；實作在曲線的 handle 上，例如 `&Curve` 或 `Arc<Curve>`。
+pub trait Curve: Clone {
     /// 曲線所屬體域的元素型別。
     type Field: FieldElement;
 

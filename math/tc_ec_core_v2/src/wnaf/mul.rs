@@ -65,7 +65,7 @@ pub fn sum_of_multiplies<C: Curve>(
     }
     let mut result = points[0].identity();
     for bit in (0..digits.iter().map(Vec::len).max().unwrap()).rev() {
-        result = result.double();
+        result = result.twice();
         for (table, naf) in tables.iter().zip(&digits) {
             let digit = naf.get(bit).copied().unwrap_or(0);
             if digit != 0 {

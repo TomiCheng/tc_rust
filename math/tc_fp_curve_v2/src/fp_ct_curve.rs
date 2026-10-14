@@ -31,7 +31,7 @@ impl<'a> FpCtCurve<'a> {
         Self {
             field,
             a: field.element(a),
-            b3: &b.double() + &b,
+            b3: b.double().add(&b),
             b,
             order,
             cofactor,

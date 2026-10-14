@@ -20,7 +20,7 @@ pub(crate) fn on_curve(
     x: &FpFieldElement<'_>,
     y: &FpFieldElement<'_>,
 ) -> bool {
-    y.square() == &(&(&x.square() + a) * x) + b
+    y.square() == x.square().add(a).multiply(x).add(b)
 }
 
 pub(crate) fn decompress<'a>(
@@ -34,11 +34,11 @@ pub(crate) fn decompress<'a>(
         return None;
     }
     let x = field.element(x);
-    let y = (&(&(&x.square() + a) * &x) + b).sqrt()?;
+    let y = x.square().add(a).multiply(&x).add(b).sqrt()?;
     let y = if y.to_big_uint().bit(0) == (y_tilde == 1) {
         y
     } else {
-        -&y
+        y.negate()
     };
     Some((x, y))
 }

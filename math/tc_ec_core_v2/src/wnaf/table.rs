@@ -19,7 +19,7 @@ impl<P: Point> WNafTable<P> {
             "wNAF table width must be in the range 2..=16"
         );
         let count = 1_usize << (width - 2);
-        let twice = point.double();
+        let twice = point.twice();
         let mut precomputed = Vec::with_capacity(count);
         let mut current = point.clone();
         precomputed.push(current.clone());

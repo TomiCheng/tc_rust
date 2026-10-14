@@ -22,10 +22,10 @@ pub trait FieldElement: Clone + Eq {
     fn add(&self, rhs: &Self) -> Self;
 
     /// 體域減法。
-    fn sub(&self, rhs: &Self) -> Self;
+    fn subtract(&self, rhs: &Self) -> Self;
 
     /// 體域乘法。
-    fn mul(&self, rhs: &Self) -> Self;
+    fn multiply(&self, rhs: &Self) -> Self;
 
     /// 體域平方。
     fn square(&self) -> Self;

@@ -52,17 +52,17 @@ pub fn montgomery_trick<F: FieldElement>(
     let mut products = Vec::with_capacity(elements.len());
     products.push(first.clone());
     for element in &elements[1..] {
-        products.push(products.last().unwrap().mul(element));
+        products.push(products.last().unwrap().multiply(element));
     }
     let mut product = products.last().unwrap().clone();
     if let Some(scale) = scale {
-        product = product.mul(scale);
+        product = product.multiply(scale);
     }
     let mut inverse = product.invert().ok_or(AlgorithmError::NotInvertible)?;
     for i in (1..elements.len()).rev() {
         let original = elements[i].clone();
-        elements[i] = products[i - 1].mul(&inverse);
-        inverse = inverse.mul(&original);
+        elements[i] = products[i - 1].multiply(&inverse);
+        inverse = inverse.multiply(&original);
     }
     elements[0] = inverse;
     Ok(())

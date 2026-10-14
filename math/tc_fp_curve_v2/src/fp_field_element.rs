@@ -1,5 +1,4 @@
 use core::fmt;
-use core::ops::{Add, Mul, Neg, Sub};
 
 use tc_bigint::PaddedBigUint;
 use tc_constant_time::{Choice, ConditionallySelectable, ConstantTimeEq};
@@ -28,6 +27,26 @@ impl<'a> FpFieldElement<'a> {
     /// Whether this is one. Constant time; only the answer is revealed.
     pub fn is_one(&self) -> bool {
         self.value == PaddedMontyForm::one(self.value.params())
+    }
+
+    /// `x + y`. Constant time. Panics when the fields differ.
+    pub fn add(&self, rhs: &Self) -> Self {
+        Self::new(&self.value + &rhs.value)
+    }
+
+    /// `x - y`. Constant time. Panics when the fields differ.
+    pub fn subtract(&self, rhs: &Self) -> Self {
+        Self::new(&self.value - &rhs.value)
+    }
+
+    /// `x · y`. Constant time. Panics when the fields differ.
+    pub fn multiply(&self, rhs: &Self) -> Self {
+        Self::new(&self.value * &rhs.value)
+    }
+
+    /// `-x`. Constant time.
+    pub fn negate(&self) -> Self {
+        Self::new(-&self.value)
     }
 
     /// `2x`. Constant time.
@@ -68,14 +87,14 @@ impl<'a> FpFieldElement<'a> {
         }
         if q.bit(2) {
             let t1 = self.pow_vartime(&(q >> 3));
-            let t2 = &t1 * self;
-            if (&t2 * &t1).is_one() {
+            let t2 = t1.multiply(self);
+            if t2.multiply(&t1).is_one() {
                 return self.check_sqrt(t2);
             }
             let t4 = self
                 .sibling(&PaddedBigUint::from(2u8))
                 .pow_vartime(&(q >> 2));
-            return self.check_sqrt(&t2 * &t4);
+            return self.check_sqrt(t2.multiply(&t4));
         }
 
         let legendre = q >> 1;
@@ -84,14 +103,14 @@ impl<'a> FpFieldElement<'a> {
         }
         let four_x = self.double().double();
         let k = &legendre + 1u32;
-        let minus_one = -&self.sibling(&PaddedBigUint::from(1u8));
+        let minus_one = self.sibling(&PaddedBigUint::from(1u8)).negate();
         let mut p_value = PaddedBigUint::from(1u8);
         loop {
             if &p_value >= q {
                 return None;
             }
             let p = self.sibling(&p_value);
-            let discriminant = &p.square() - &four_x;
+            let discriminant = p.square().subtract(&four_x);
             if discriminant.pow_vartime(&legendre) == minus_one {
                 let (u, v) = self.lucas_sequence(&p, &k);
                 if v.square() == four_x {
@@ -135,69 +154,33 @@ impl<'a> FpFieldElement<'a> {
 
         let mut j = n - 1;
         while j > s {
-            ql = &ql * &qh;
+            ql = ql.multiply(&qh);
             if k.bit(j) {
-                qh = &ql * self;
-                uh = &uh * &vh;
-                vl = &(&vh * &vl) - &(p * &ql);
-                vh = &vh.square() - &qh.double();
+                qh = ql.multiply(self);
+                uh = uh.multiply(&vh);
+                vl = vh.multiply(&vl).subtract(&p.multiply(&ql));
+                vh = vh.square().subtract(&qh.double());
             } else {
                 qh = ql.clone();
-                uh = &(&uh * &vl) - &ql;
-                vh = &(&vh * &vl) - &(p * &ql);
-                vl = &vl.square() - &ql.double();
+                uh = uh.multiply(&vl).subtract(&ql);
+                vh = vh.multiply(&vl).subtract(&p.multiply(&ql));
+                vl = vl.square().subtract(&ql.double());
             }
             j -= 1;
         }
 
-        ql = &ql * &qh;
-        qh = &ql * self;
-        uh = &(&uh * &vl) - &ql;
-        vl = &(&vh * &vl) - &(p * &ql);
-        ql = &ql * &qh;
+        ql = ql.multiply(&qh);
+        qh = ql.multiply(self);
+        uh = uh.multiply(&vl).subtract(&ql);
+        vl = vh.multiply(&vl).subtract(&p.multiply(&ql));
+        ql = ql.multiply(&qh);
 
         for _ in 0..s {
-            uh = &uh * &vl;
-            vl = &vl.square() - &ql.double();
+            uh = uh.multiply(&vl);
+            vl = vl.square().subtract(&ql.double());
             ql = ql.square();
         }
         (uh, vl)
-    }
-}
-
-/// `x + y`. Constant time. Panics when the fields differ.
-impl<'a> Add for &FpFieldElement<'a> {
-    type Output = FpFieldElement<'a>;
-
-    fn add(self, rhs: Self) -> FpFieldElement<'a> {
-        FpFieldElement::new(&self.value + &rhs.value)
-    }
-}
-
-/// `x - y`. Constant time. Panics when the fields differ.
-impl<'a> Sub for &FpFieldElement<'a> {
-    type Output = FpFieldElement<'a>;
-
-    fn sub(self, rhs: Self) -> FpFieldElement<'a> {
-        FpFieldElement::new(&self.value - &rhs.value)
-    }
-}
-
-/// `x · y`. Constant time. Panics when the fields differ.
-impl<'a> Mul for &FpFieldElement<'a> {
-    type Output = FpFieldElement<'a>;
-
-    fn mul(self, rhs: Self) -> FpFieldElement<'a> {
-        FpFieldElement::new(&self.value * &rhs.value)
-    }
-}
-
-/// `-x`. Constant time.
-impl<'a> Neg for &FpFieldElement<'a> {
-    type Output = FpFieldElement<'a>;
-
-    fn neg(self) -> FpFieldElement<'a> {
-        FpFieldElement::new(-&self.value)
     }
 }
 
@@ -241,10 +224,10 @@ mod tests {
         let field = FpField::new(int(17));
         let x = field.element(&int(5));
         let y = field.element(&int(9));
-        assert_eq!((&x + &y).to_big_uint(), int(14));
-        assert_eq!((&x - &y).to_big_uint(), int(13));
-        assert_eq!((&x * &y).to_big_uint(), int(11));
-        assert_eq!((-&x).to_big_uint(), int(12));
+        assert_eq!(x.add(&y).to_big_uint(), int(14));
+        assert_eq!(x.subtract(&y).to_big_uint(), int(13));
+        assert_eq!(x.multiply(&y).to_big_uint(), int(11));
+        assert_eq!(x.negate().to_big_uint(), int(12));
         assert_eq!(x.double().to_big_uint(), int(10));
         assert_eq!(x.square().to_big_uint(), int(8));
     }
@@ -253,7 +236,7 @@ mod tests {
     fn an_element_times_its_inverse_is_one_and_zero_has_none() {
         let field = FpField::new(int(17));
         let x = field.element(&int(5));
-        assert!((&x * &x.invert().unwrap()).is_one());
+        assert!(x.multiply(&x.invert().unwrap()).is_one());
         assert!(field.element(&int(0)).invert().is_none());
     }
 

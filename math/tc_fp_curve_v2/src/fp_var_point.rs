@@ -1,7 +1,6 @@
 use alloc::vec;
 use alloc::vec::Vec;
 use core::fmt;
-use core::ops::{Add, Mul, Neg, Sub};
 
 use tc_bigint::PaddedBigUint;
 use tc_ec_core_v2::{CoordinateSystem, PointEncodeError};
@@ -182,11 +181,11 @@ impl<'a> FpVarPoint<'a> {
     pub(crate) fn normalize_with_inverse(&self, inverse: &FpFieldElement<'a>) -> Self {
         let (x, y) = match &self.coords {
             None | Some(Coords::Affine { .. }) => return self.clone(),
-            Some(Coords::Homogeneous { x, y, .. }) => (x * inverse, y * inverse),
+            Some(Coords::Homogeneous { x, y, .. }) => (x.multiply(inverse), y.multiply(inverse)),
             Some(Coords::Jacobian { x, y, .. } | Coords::JacobianModified { x, y, .. }) => {
                 let inverse2 = inverse.square();
-                let inverse3 = &inverse2 * inverse;
-                (x * &inverse2, y * &inverse3)
+                let inverse3 = inverse2.multiply(inverse);
+                (x.multiply(&inverse2), y.multiply(&inverse3))
             }
         };
         Self::new(self.curve, x, y)
@@ -205,19 +204,19 @@ impl<'a> FpVarPoint<'a> {
         match coords {
             Coords::Homogeneous { z, .. } if !z.is_one() => {
                 let z2 = z.square();
-                lhs = &lhs * z;
-                a = &a * &z2;
-                b = &b * &(&z2 * z);
+                lhs = lhs.multiply(z);
+                a = a.multiply(&z2);
+                b = b.multiply(&z2.multiply(z));
             }
             Coords::Jacobian { z, .. } | Coords::JacobianModified { z, .. } if !z.is_one() => {
                 let z2 = z.square();
                 let z4 = z2.square();
-                a = &a * &z4;
-                b = &b * &(&z2 * &z4);
+                a = a.multiply(&z4);
+                b = b.multiply(&z2.multiply(&z4));
             }
             _ => {}
         }
-        lhs == &(&(&x.square() + &a) * x) + &b
+        lhs == x.square().add(&a).multiply(x).add(&b)
     }
 
     /// On the curve and, when the cofactor is not one and the order is known, `nP = O`.
@@ -234,7 +233,9 @@ impl<'a> FpVarPoint<'a> {
         {
             return true;
         }
-        self.curve.order().is_none_or(|n| (self * n).is_infinity())
+        self.curve
+            .order()
+            .is_none_or(|n| self.multiply(n).is_infinity())
     }
 
     /// `2P`.
@@ -254,10 +255,10 @@ impl<'a> FpVarPoint<'a> {
     }
 
     fn twice_affine(&self, x: &FpFieldElement<'a>, y: &FpFieldElement<'a>) -> Self {
-        let numerator = &three(&x.square()) + self.curve.a();
-        let gamma = &numerator * &y.double().invert().expect("2y is not zero");
-        let x3 = &gamma.square() - &x.double();
-        let y3 = &(&gamma * &(x - &x3)) - y;
+        let numerator = three(&x.square()).add(self.curve.a());
+        let gamma = numerator.multiply(&y.double().invert().expect("2y is not zero"));
+        let x3 = gamma.square().subtract(&x.double());
+        let y3 = gamma.multiply(&x.subtract(&x3)).subtract(y);
         Self::new(self.curve, x3, y3)
     }
 
@@ -270,25 +271,28 @@ impl<'a> FpVarPoint<'a> {
         let z_is_one = z.is_one();
         let mut w = self.curve.a().clone();
         if !w.is_zero() && !z_is_one {
-            w = &w * &z.square();
+            w = w.multiply(&z.square());
         }
-        w = &w + &three(&x.square());
+        w = w.add(&three(&x.square()));
 
-        let s = if z_is_one { y.clone() } else { y * z };
-        let t = if z_is_one { y.square() } else { &s * y };
-        let b = x * &t;
+        let s = if z_is_one { y.clone() } else { y.multiply(z) };
+        let t = if z_is_one { y.square() } else { s.multiply(y) };
+        let b = x.multiply(&t);
         let four_b = four(&b);
-        let h = &w.square() - &four_b.double();
+        let h = w.square().subtract(&four_b.double());
         let two_s = s.double();
-        let x3 = &h * &two_s;
+        let x3 = h.multiply(&two_s);
         let two_t = t.double();
-        let y3 = &(&(&four_b - &h) * &w) - &two_t.square().double();
+        let y3 = four_b
+            .subtract(&h)
+            .multiply(&w)
+            .subtract(&two_t.square().double());
         let four_s_squared = if z_is_one {
             two_t.double()
         } else {
             two_s.square()
         };
-        let z3 = &four_s_squared.double() * &s;
+        let z3 = four_s_squared.double().multiply(&s);
         self.with_coords(Coords::Homogeneous {
             x: x3,
             y: y3,
@@ -306,27 +310,27 @@ impl<'a> FpVarPoint<'a> {
         let y_squared = y.square();
         let t = y_squared.square();
         let a = self.curve.a();
-        let a_is_minus_three = -a == three(&self.curve.field().one());
+        let a_is_minus_three = a.negate() == three(&self.curve.field().one());
 
         let (m, s) = if a_is_minus_three {
             let z_squared = if z_is_one { z.clone() } else { z.square() };
-            let product = &(x + &z_squared) * &(x - &z_squared);
-            (three(&product), four(&(&y_squared * x)))
+            let product = x.add(&z_squared).multiply(&x.subtract(&z_squared));
+            (three(&product), four(&y_squared.multiply(x)))
         } else {
             let mut m = three(&x.square());
             if z_is_one {
-                m = &m + a;
+                m = m.add(a);
             } else if !a.is_zero() {
-                m = &m + &(&z.square().square() * a);
+                m = m.add(&z.square().square().multiply(a));
             }
-            (m, four(&(x * &y_squared)))
+            (m, four(&x.multiply(&y_squared)))
         };
 
-        let x3 = &m.square() - &s.double();
-        let y3 = &(&(&s - &x3) * &m) - &four(&t).double();
+        let x3 = m.square().subtract(&s.double());
+        let y3 = s.subtract(&x3).multiply(&m).subtract(&four(&t).double());
         let mut z3 = y.double();
         if !z_is_one {
-            z3 = &z3 * z;
+            z3 = z3.multiply(z);
         }
         self.jacobian_point(x3, y3, z3, None)
     }
@@ -336,15 +340,15 @@ impl<'a> FpVarPoint<'a> {
             unreachable!("only called on finite modified Jacobian points")
         };
         let az4 = self.jacobian_modified_w();
-        let m = &three(&x.square()) + &az4;
+        let m = three(&x.square()).add(&az4);
         let two_y = y.double();
-        let two_y_squared = &two_y * y;
-        let s = (x * &two_y_squared).double();
-        let x3 = &m.square() - &s.double();
+        let two_y_squared = two_y.multiply(y);
+        let s = x.multiply(&two_y_squared).double();
+        let x3 = m.square().subtract(&s.double());
         let eight_t = two_y_squared.square().double();
-        let y3 = &(&m * &(&s - &x3)) - &eight_t;
-        let az4_3 = calculate_w.then(|| (&eight_t * &az4).double());
-        let z3 = if z.is_one() { two_y } else { &two_y * z };
+        let y3 = m.multiply(&s.subtract(&x3)).subtract(&eight_t);
+        let az4_3 = calculate_w.then(|| eight_t.multiply(&az4).double());
+        let z3 = if z.is_one() { two_y } else { two_y.multiply(z) };
         self.with_coords(Coords::JacobianModified {
             x: x3,
             y: y3,
@@ -370,8 +374,8 @@ impl<'a> FpVarPoint<'a> {
         }
         match coords {
             Coords::Affine { x, y } => self.twice_plus_affine(x, y, rhs),
-            Coords::JacobianModified { .. } => &self.twice_jacobian_modified(false) + rhs,
-            _ => &self.twice() + rhs,
+            Coords::JacobianModified { .. } => self.twice_jacobian_modified(false).add(rhs),
+            _ => self.twice().add(rhs),
         }
     }
 
@@ -383,8 +387,8 @@ impl<'a> FpVarPoint<'a> {
     ) -> Self {
         let x2 = rhs.raw_x().expect("finite point");
         let y2 = rhs.raw_y().expect("finite point");
-        let dx = x2 - x1;
-        let dy = y2 - y1;
+        let dx = x2.subtract(x1);
+        let dy = y2.subtract(y1);
         if dx.is_zero() {
             return if dy.is_zero() {
                 self.three_times()
@@ -394,15 +398,23 @@ impl<'a> FpVarPoint<'a> {
         }
         let x = dx.square();
         let y = dy.square();
-        let d = &(&x * &(&x1.double() + x2)) - &y;
+        let d = x.multiply(&x1.double().add(x2)).subtract(&y);
         if d.is_zero() {
             return Self::infinity(self.curve);
         }
-        let inverse = (&d * &dx).invert().expect("the denominator is not zero");
-        let l1 = &(&d * &inverse) * &dy;
-        let l2 = &(&(&(&y1.double() * &x) * &dx) * &inverse) - &l1;
-        let x4 = &(&(&l2 - &l1) * &(&l1 + &l2)) + x2;
-        let y4 = &(&l2 * &(x1 - &x4)) - y1;
+        let inverse = d
+            .multiply(&dx)
+            .invert()
+            .expect("the denominator is not zero");
+        let l1 = d.multiply(&inverse).multiply(&dy);
+        let l2 = y1
+            .double()
+            .multiply(&x)
+            .multiply(&dx)
+            .multiply(&inverse)
+            .subtract(&l1);
+        let x4 = l2.subtract(&l1).multiply(&l1.add(&l2)).add(x2);
+        let y4 = l2.multiply(&x1.subtract(&x4)).subtract(y1);
         Self::new(self.curve, x4, y4)
     }
 
@@ -416,25 +428,28 @@ impl<'a> FpVarPoint<'a> {
         }
         match coords {
             Coords::Affine { x, y } => self.three_times_affine(x, y),
-            Coords::JacobianModified { .. } => &self.twice_jacobian_modified(false) + self,
-            _ => &self.twice() + self,
+            Coords::JacobianModified { .. } => self.twice_jacobian_modified(false).add(self),
+            _ => self.twice().add(self),
         }
     }
 
     fn three_times_affine(&self, x1: &FpFieldElement<'a>, y1: &FpFieldElement<'a>) -> Self {
         let two_y = y1.double();
         let x = two_y.square();
-        let z = &three(&x1.square()) + self.curve.a();
+        let z = three(&x1.square()).add(self.curve.a());
         let y = z.square();
-        let d = &(&three(x1) * &x) - &y;
+        let d = three(x1).multiply(&x).subtract(&y);
         if d.is_zero() {
             return Self::infinity(self.curve);
         }
-        let inverse = (&d * &two_y).invert().expect("the denominator is not zero");
-        let l1 = &(&d * &inverse) * &z;
-        let l2 = &(&x.square() * &inverse) - &l1;
-        let x4 = &(&(&l2 - &l1) * &(&l1 + &l2)) + x1;
-        let y4 = &(&l2 * &(x1 - &x4)) - y1;
+        let inverse = d
+            .multiply(&two_y)
+            .invert()
+            .expect("the denominator is not zero");
+        let l1 = d.multiply(&inverse).multiply(&z);
+        let l2 = x.square().multiply(&inverse).subtract(&l1);
+        let x4 = l2.subtract(&l1).multiply(&l1.add(&l2)).add(x1);
+        let y4 = l2.multiply(&x1.subtract(&x4)).subtract(y1);
         Self::new(self.curve, x4, y4)
     }
 
@@ -463,8 +478,8 @@ impl<'a> FpVarPoint<'a> {
             match coords {
                 Coords::Homogeneous { .. } => {
                     let z_squared = z.square();
-                    x = &x * &z;
-                    y = &y * &z_squared;
+                    x = x.multiply(&z);
+                    y = y.multiply(&z_squared);
                     w = self.calculate_jacobian_modified_w(&z, Some(&z_squared));
                 }
                 Coords::Jacobian { .. } => w = self.calculate_jacobian_modified_w(&z, None),
@@ -479,28 +494,32 @@ impl<'a> FpVarPoint<'a> {
             }
             let mut m = three(&x.square());
             let two_y = y.double();
-            let two_y_squared = &two_y * &y;
-            let s = (&x * &two_y_squared).double();
+            let two_y_squared = two_y.multiply(&y);
+            let s = x.multiply(&two_y_squared).double();
             let eight_t = two_y_squared.square().double();
             if !w.is_zero() {
-                m = &m + &w;
-                w = (&eight_t * &w).double();
+                m = m.add(&w);
+                w = eight_t.multiply(&w).double();
             }
-            x = &m.square() - &s.double();
-            y = &(&m * &(&s - &x)) - &eight_t;
-            z = if z.is_one() { two_y } else { &two_y * &z };
+            x = m.square().subtract(&s.double());
+            y = m.multiply(&s.subtract(&x)).subtract(&eight_t);
+            z = if z.is_one() {
+                two_y
+            } else {
+                two_y.multiply(&z)
+            };
         }
 
         match coords {
             Coords::Affine { .. } => {
                 let inverse = z.invert().expect("a finite point has a nonzero Z");
                 let inverse2 = inverse.square();
-                let inverse3 = &inverse2 * &inverse;
-                Self::new(self.curve, &x * &inverse2, &y * &inverse3)
+                let inverse3 = inverse2.multiply(&inverse);
+                Self::new(self.curve, x.multiply(&inverse2), y.multiply(&inverse3))
             }
             Coords::Homogeneous { .. } => {
-                let x = &x * &z;
-                let z = &z * &z.square();
+                let x = x.multiply(&z);
+                let z = z.multiply(&z.square());
                 self.with_coords(Coords::Homogeneous { x, y, z })
             }
             Coords::Jacobian { .. } => self.jacobian_point(x, y, z, None),
@@ -545,7 +564,8 @@ impl<'a> FpVarPoint<'a> {
         output
     }
 
-    fn add_point(&self, rhs: &Self) -> Self {
+    /// `P + Q`. Panics when the curves or coordinate systems differ.
+    pub fn add(&self, rhs: &Self) -> Self {
         self.assert_same_curve(rhs);
         let (Some(left), Some(right)) = (&self.coords, &rhs.coords) else {
             return if self.is_infinity() {
@@ -574,6 +594,53 @@ impl<'a> FpVarPoint<'a> {
         }
     }
 
+    /// `P - Q`. Panics when the curves or coordinate systems differ.
+    pub fn subtract(&self, rhs: &Self) -> Self {
+        self.add(&rhs.negate())
+    }
+
+    /// `-P`.
+    pub fn negate(&self) -> Self {
+        let Some(coords) = &self.coords else {
+            return self.clone();
+        };
+        let coords = match coords {
+            Coords::Affine { x, y } => Coords::Affine {
+                x: x.clone(),
+                y: y.negate(),
+            },
+            Coords::Homogeneous { x, y, z } => Coords::Homogeneous {
+                x: x.clone(),
+                y: y.negate(),
+                z: z.clone(),
+            },
+            Coords::Jacobian { x, y, z } => Coords::Jacobian {
+                x: x.clone(),
+                y: y.negate(),
+                z: z.clone(),
+            },
+            Coords::JacobianModified { x, y, z, az4 } => Coords::JacobianModified {
+                x: x.clone(),
+                y: y.negate(),
+                z: z.clone(),
+                az4: az4.clone(),
+            },
+        };
+        self.with_coords(coords)
+    }
+
+    /// `kP` by double-and-add from the top bit. Only for a public scalar.
+    pub fn multiply(&self, scalar: &PaddedBigUint) -> Self {
+        let mut result = Self::infinity(self.curve);
+        for bit in (0..scalar.bits()).rev() {
+            result = result.twice();
+            if scalar.bit(bit) {
+                result = result.add(self);
+            }
+        }
+        result
+    }
+
     fn add_affine(
         &self,
         x1: &FpFieldElement<'a>,
@@ -581,8 +648,8 @@ impl<'a> FpVarPoint<'a> {
         x2: &FpFieldElement<'a>,
         y2: &FpFieldElement<'a>,
     ) -> Self {
-        let dx = x2 - x1;
-        let dy = y2 - y1;
+        let dx = x2.subtract(x1);
+        let dy = y2.subtract(y1);
         if dx.is_zero() {
             return if dy.is_zero() {
                 self.twice()
@@ -590,9 +657,9 @@ impl<'a> FpVarPoint<'a> {
                 Self::infinity(self.curve)
             };
         }
-        let gamma = &dy * &dx.invert().expect("dx is not zero");
-        let x3 = &(&gamma.square() - x1) - x2;
-        let y3 = &(&gamma * &(x1 - &x3)) - y1;
+        let gamma = dy.multiply(&dx.invert().expect("dx is not zero"));
+        let x3 = gamma.square().subtract(x1).subtract(x2);
+        let y3 = gamma.multiply(&x1.subtract(&x3)).subtract(y1);
         Self::new(self.curve, x3, y3)
     }
 
@@ -603,12 +670,28 @@ impl<'a> FpVarPoint<'a> {
     ) -> Self {
         let z1_is_one = z1.is_one();
         let z2_is_one = z2.is_one();
-        let u1 = if z1_is_one { y2.clone() } else { y2 * z1 };
-        let u2 = if z2_is_one { y1.clone() } else { y1 * z2 };
-        let u = &u1 - &u2;
-        let v1 = if z1_is_one { x2.clone() } else { x2 * z1 };
-        let v2 = if z2_is_one { x1.clone() } else { x1 * z2 };
-        let v = &v1 - &v2;
+        let u1 = if z1_is_one {
+            y2.clone()
+        } else {
+            y2.multiply(z1)
+        };
+        let u2 = if z2_is_one {
+            y1.clone()
+        } else {
+            y1.multiply(z2)
+        };
+        let u = u1.subtract(&u2);
+        let v1 = if z1_is_one {
+            x2.clone()
+        } else {
+            x2.multiply(z1)
+        };
+        let v2 = if z2_is_one {
+            x1.clone()
+        } else {
+            x1.multiply(z2)
+        };
+        let v = v1.subtract(&v2);
         if v.is_zero() {
             return if u.is_zero() {
                 self.twice()
@@ -621,15 +704,22 @@ impl<'a> FpVarPoint<'a> {
         } else if z2_is_one {
             z1.clone()
         } else {
-            z1 * z2
+            z1.multiply(z2)
         };
         let v_squared = v.square();
-        let v_cubed = &v_squared * &v;
-        let v_squared_v2 = &v_squared * &v2;
-        let a = &(&(&u.square() * &w) - &v_cubed) - &v_squared_v2.double();
-        let x3 = &v * &a;
-        let y3 = &(&(&v_squared_v2 - &a) * &u) - &(&u2 * &v_cubed);
-        let z3 = &v_cubed * &w;
+        let v_cubed = v_squared.multiply(&v);
+        let v_squared_v2 = v_squared.multiply(&v2);
+        let a = u
+            .square()
+            .multiply(&w)
+            .subtract(&v_cubed)
+            .subtract(&v_squared_v2.double());
+        let x3 = v.multiply(&a);
+        let y3 = v_squared_v2
+            .subtract(&a)
+            .multiply(&u)
+            .subtract(&u2.multiply(&v_cubed));
+        let z3 = v_cubed.multiply(&w);
         self.with_coords(Coords::Homogeneous {
             x: x3,
             y: y3,
@@ -651,8 +741,8 @@ impl<'a> FpVarPoint<'a> {
         let z1_is_one = z1.is_one();
 
         if !z1_is_one && z1 == z2 {
-            let dx = x1 - x2;
-            let dy = y1 - y2;
+            let dx = x1.subtract(x2);
+            let dy = y1.subtract(y2);
             if dx.is_zero() {
                 return if dy.is_zero() {
                     self.twice()
@@ -661,12 +751,12 @@ impl<'a> FpVarPoint<'a> {
                 };
             }
             let c = dx.square();
-            let w1 = x1 * &c;
-            let w2 = x2 * &c;
-            let a1 = &(&w1 - &w2) * y1;
-            let x3 = &(&dy.square() - &w1) - &w2;
-            let y3 = &(&(&w1 - &x3) * &dy) - &a1;
-            let z3 = &dx * z1;
+            let w1 = x1.multiply(&c);
+            let w2 = x2.multiply(&c);
+            let a1 = w1.subtract(&w2).multiply(y1);
+            let x3 = dy.square().subtract(&w1).subtract(&w2);
+            let y3 = w1.subtract(&x3).multiply(&dy).subtract(&a1);
+            let z3 = dx.multiply(z1);
             return self.jacobian_point(x3, y3, z3, None);
         }
 
@@ -674,19 +764,19 @@ impl<'a> FpVarPoint<'a> {
             (x2.clone(), y2.clone())
         } else {
             let z1_squared = z1.square();
-            let z1_cubed = &z1_squared * z1;
-            (&z1_squared * x2, &z1_cubed * y2)
+            let z1_cubed = z1_squared.multiply(z1);
+            (z1_squared.multiply(x2), z1_cubed.multiply(y2))
         };
         let z2_is_one = z2.is_one();
         let (u1, s1) = if z2_is_one {
             (x1.clone(), y1.clone())
         } else {
             let z2_squared = z2.square();
-            let z2_cubed = &z2_squared * z2;
-            (&z2_squared * x1, &z2_cubed * y1)
+            let z2_cubed = z2_squared.multiply(z2);
+            (z2_squared.multiply(x1), z2_cubed.multiply(y1))
         };
-        let h = &u1 - &u2;
-        let r = &s1 - &s2;
+        let h = u1.subtract(&u2);
+        let r = s1.subtract(&s2);
         if h.is_zero() {
             return if r.is_zero() {
                 self.twice()
@@ -695,16 +785,16 @@ impl<'a> FpVarPoint<'a> {
             };
         }
         let h_squared = h.square();
-        let g = &h_squared * &h;
-        let v = &h_squared * &u1;
-        let x3 = &(&r.square() + &g) - &v.double();
-        let y3 = &(&(&v - &x3) * &r) - &(&g * &s1);
+        let g = h_squared.multiply(&h);
+        let v = h_squared.multiply(&u1);
+        let x3 = r.square().add(&g).subtract(&v.double());
+        let y3 = v.subtract(&x3).multiply(&r).subtract(&g.multiply(&s1));
         let mut z3 = h;
         if !z1_is_one {
-            z3 = &z3 * z1;
+            z3 = z3.multiply(z1);
         }
         if !z2_is_one {
-            z3 = &z3 * z2;
+            z3 = z3.multiply(z2);
         }
         let z3_squared = (z1_is_one && z2_is_one).then_some(h_squared);
         self.jacobian_point(x3, y3, z3, z3_squared.as_ref())
@@ -738,7 +828,7 @@ impl<'a> FpVarPoint<'a> {
             return a.clone();
         }
         let z_squared = z_squared.cloned().unwrap_or_else(|| z.square());
-        a * &z_squared.square()
+        a.multiply(&z_squared.square())
     }
 
     fn jacobian_modified_w(&self) -> FpFieldElement<'a> {
@@ -759,7 +849,7 @@ impl<'a> FpVarPoint<'a> {
 }
 
 fn three<'a>(value: &FpFieldElement<'a>) -> FpFieldElement<'a> {
-    &value.double() + value
+    value.double().add(value)
 }
 
 fn four<'a>(value: &FpFieldElement<'a>) -> FpFieldElement<'a> {
@@ -776,79 +866,11 @@ fn scale_by_z<'a>(
             let scale = match power {
                 1 => z.clone(),
                 2 => z.square(),
-                _ => &z.square() * z,
+                _ => z.square().multiply(z),
             };
-            value * &scale
+            value.multiply(&scale)
         }
         _ => value.clone(),
-    }
-}
-
-/// `P + Q`. Panics when the curves or coordinate systems differ.
-impl<'a> Add for &FpVarPoint<'a> {
-    type Output = FpVarPoint<'a>;
-
-    fn add(self, rhs: Self) -> FpVarPoint<'a> {
-        self.add_point(rhs)
-    }
-}
-
-/// `P - Q`. Panics when the curves or coordinate systems differ.
-impl<'a> Sub for &FpVarPoint<'a> {
-    type Output = FpVarPoint<'a>;
-
-    fn sub(self, rhs: Self) -> FpVarPoint<'a> {
-        self.add_point(&-rhs)
-    }
-}
-
-/// `-P`.
-impl<'a> Neg for &FpVarPoint<'a> {
-    type Output = FpVarPoint<'a>;
-
-    fn neg(self) -> FpVarPoint<'a> {
-        let Some(coords) = &self.coords else {
-            return self.clone();
-        };
-        let coords = match coords {
-            Coords::Affine { x, y } => Coords::Affine {
-                x: x.clone(),
-                y: -y,
-            },
-            Coords::Homogeneous { x, y, z } => Coords::Homogeneous {
-                x: x.clone(),
-                y: -y,
-                z: z.clone(),
-            },
-            Coords::Jacobian { x, y, z } => Coords::Jacobian {
-                x: x.clone(),
-                y: -y,
-                z: z.clone(),
-            },
-            Coords::JacobianModified { x, y, z, az4 } => Coords::JacobianModified {
-                x: x.clone(),
-                y: -y,
-                z: z.clone(),
-                az4: az4.clone(),
-            },
-        };
-        self.with_coords(coords)
-    }
-}
-
-/// `kP` by double-and-add from the top bit. Variable time; only for a public scalar.
-impl<'a> Mul<&PaddedBigUint> for &FpVarPoint<'a> {
-    type Output = FpVarPoint<'a>;
-
-    fn mul(self, scalar: &PaddedBigUint) -> FpVarPoint<'a> {
-        let mut result = FpVarPoint::infinity(self.curve);
-        for bit in (0..scalar.bits()).rev() {
-            result = result.twice();
-            if scalar.bit(bit) {
-                result = result.add_point(self);
-            }
-        }
-        result
     }
 }
 
@@ -918,7 +940,7 @@ mod tests {
         let curve = FpVarCurve::new(&field, &int(1), &int(1), None, None);
         let p = curve.create_point(&int(3), &int(10));
         let q = curve.create_point(&int(9), &int(7));
-        assert_eq!(coordinates(&(&p + &q)), (int(17), int(20)));
+        assert_eq!(coordinates(&p.add(&q)), (int(17), int(20)));
         assert_eq!(coordinates(&p.twice()), (int(7), int(12)));
     }
 
@@ -930,16 +952,20 @@ mod tests {
             let g = curve.create_point(&int(5), &int(1));
             assert_eq!(coordinates(&g.twice()), (int(6), int(3)), "{system:?}");
             assert_eq!(
-                coordinates(&(&g + &g.twice())),
+                coordinates(&g.add(&g.twice())),
                 (int(10), int(6)),
                 "{system:?}"
             );
-            assert_eq!(g.three_times(), &g + &g.twice(), "{system:?}");
-            assert_eq!(g.twice_plus(&g.twice()), &g * &int(4), "{system:?}");
-            assert_eq!(g.times_pow2(3), &g * &int(8), "{system:?}");
-            assert_eq!(&(&g * &int(7)) - &g, &g * &int(6), "{system:?}");
-            assert!((&g * &int(19)).is_infinity(), "{system:?}");
-            assert!((&g + &-&g).is_infinity(), "{system:?}");
+            assert_eq!(g.three_times(), g.add(&g.twice()), "{system:?}");
+            assert_eq!(g.twice_plus(&g.twice()), g.multiply(&int(4)), "{system:?}");
+            assert_eq!(g.times_pow2(3), g.multiply(&int(8)), "{system:?}");
+            assert_eq!(
+                g.multiply(&int(7)).subtract(&g),
+                g.multiply(&int(6)),
+                "{system:?}"
+            );
+            assert!(g.multiply(&int(19)).is_infinity(), "{system:?}");
+            assert!(g.add(&g.negate()).is_infinity(), "{system:?}");
         }
     }
 
@@ -950,7 +976,7 @@ mod tests {
             let curve = curve17(&field, system);
             let g = curve.create_point(&int(5), &int(1));
             for k in 0..19 {
-                let p = &g * &int(k);
+                let p = g.multiply(&int(k));
                 assert!(p.is_on_curve() && p.is_valid(), "{system:?}, k = {k}");
                 assert!(p.normalize().is_normalized(), "{system:?}, k = {k}");
             }
@@ -968,7 +994,7 @@ mod tests {
             let curve = curve17(&field, system);
             let g = curve.create_point(&int(5), &int(1));
             for k in 0..19 {
-                let p = &g * &int(k);
+                let p = g.multiply(&int(k));
                 for compressed in [false, true] {
                     let encoded = p.encode(compressed);
                     assert_eq!(encoded.len(), p.encoded_length(compressed));
@@ -1047,7 +1073,7 @@ mod tests {
             let g = curve.create_point(&hex(gx), &hex(gy));
             assert!(g.is_on_curve(), "{system:?}");
             assert_eq!(coordinates(&g.twice()), (hex(x2), hex(y2)), "{system:?}");
-            assert!((&g * &hex(n)).is_infinity(), "{system:?}");
+            assert!(g.multiply(&hex(n)).is_infinity(), "{system:?}");
 
             let encoded = g.twice().encode(true);
             assert_eq!(encoded.len(), 33);

@@ -40,23 +40,23 @@ pub trait Point: Clone + Eq {
     fn add(&self, rhs: &Self) -> Self;
 
     /// 點倍乘二。
-    fn double(&self) -> Self;
+    fn twice(&self) -> Self;
 
     /// 計算 `2P + Q`；具體座標系可覆寫此通用退路。
     fn twice_plus(&self, rhs: &Self) -> Self {
-        self.double().add(rhs)
+        self.twice().add(rhs)
     }
 
     /// 計算 `3P`；具體座標系可覆寫此通用退路。
     fn three_times(&self) -> Self {
-        self.double().add(self)
+        self.twice().add(self)
     }
 
     /// 計算 `P * 2^exponent`；具體座標系可覆寫此通用退路。
     fn times_pow2(&self, exponent: usize) -> Self {
         let mut result = self.clone();
         for _ in 0..exponent {
-            result = result.double();
+            result = result.twice();
         }
         result
     }
