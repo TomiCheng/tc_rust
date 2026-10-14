@@ -2,6 +2,8 @@
 
 #[cfg(feature = "aes")]
 mod aes;
+#[cfg(feature = "rc2")]
+mod rc2;
 #[cfg(feature = "rsa")]
 mod rsa;
 
@@ -16,6 +18,8 @@ pub(super) const GENERATORS: &[GeneratorEntry] = &[
     aes::AES192,
     #[cfg(feature = "aes")]
     aes::AES256,
+    #[cfg(feature = "rc2")]
+    rc2::RC2,
     #[cfg(feature = "rsa")]
     rsa::RSA,
 ];

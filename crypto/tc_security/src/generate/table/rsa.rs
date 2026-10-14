@@ -5,7 +5,7 @@ use crate::generate::{GeneratorEntry, KeyGenParams};
 
 // 同 tc_rsa 與 BC 的預設
 const PUBLIC_EXPONENT: u32 = 65537;
-const STRENGTH: u32 = 2048;
+const STRENGTH: usize = 2048;
 const CERTAINTY: u32 = 100;
 
 // 只給長度時，公開指數與 certainty 用預設值，同 BC 的 RsaKeyPairGenerator 收到 KeyGenerationParameters；
@@ -14,10 +14,12 @@ fn check_params(params: &KeyGenParams) -> Result<KeyGenParams, SecurityError> {
     match *params {
         KeyGenParams::Basic { strength } => Ok(KeyGenParams::Rsa {
             public_exponent: PUBLIC_EXPONENT,
-            strength: u32::try_from(strength).map_err(|_| SecurityError::InvalidKeyGenParams)?,
+            strength,
             certainty: CERTAINTY,
         }),
         KeyGenParams::Rsa { .. } => Ok(*params),
+        #[cfg(feature = "rc2")]
+        KeyGenParams::Rc2 { .. } => Err(SecurityError::InvalidKeyGenParams),
     }
 }
 

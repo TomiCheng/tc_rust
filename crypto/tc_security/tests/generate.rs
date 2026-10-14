@@ -200,3 +200,61 @@ fn rsa_makes_a_public_and_a_private_key_but_no_symmetric_key() {
         Some(SecurityError::WrongGenerator)
     );
 }
+
+#[cfg(feature = "rc2")]
+#[test]
+fn rc2_keys_default_to_128_bits_and_take_any_length_up_to_1024_bits() {
+    use tc_block_cipher::KeyParams;
+    use tc_security::generate::KeyGenParams;
+
+    assert_eq!(name_of("1.2.840.113549.3.2"), Ok("RC2"));
+    assert_eq!(name_of("1.2.840.113549.1.9.16.3.7"), Ok("RC2"));
+
+    let mut generator = generate::get_by_name("RC2").unwrap().generator();
+    assert_eq!(KeyParams::key(&generator.generate_key().unwrap()).len(), 16);
+
+    generator
+        .init(&KeyGenParams::Basic { strength: 40 })
+        .unwrap();
+    assert_eq!(KeyParams::key(&generator.generate_key().unwrap()).len(), 5);
+
+    for strength in [0, 1025] {
+        assert_eq!(
+            generator.init(&KeyGenParams::Basic { strength }),
+            Err(SecurityError::InvalidKeyGenParams),
+            "{strength}"
+        );
+    }
+}
+
+#[cfg(feature = "rc2")]
+#[test]
+fn rc2_init_can_set_the_effective_key_bits_of_the_key() {
+    use tc_block_cipher::KeyParams;
+    use tc_rc_cipher::Rc2Params;
+    use tc_security::generate::KeyGenParams;
+    use tc_security::params::AnyParams;
+
+    let mut generator = generate::get_by_name("RC2").unwrap().generator();
+    generator
+        .init(&KeyGenParams::Rc2 {
+            strength: 128,
+            effective_key_bits: 40,
+        })
+        .unwrap();
+    let key = generator.generate_key().unwrap();
+    assert!(matches!(key, AnyParams::Rc2 { .. }));
+    assert_eq!(KeyParams::key(&key).len(), 16);
+    assert_eq!(key.effective_key_bits(), 40);
+
+    for effective_key_bits in [0, 1025] {
+        assert_eq!(
+            generator.init(&KeyGenParams::Rc2 {
+                strength: 128,
+                effective_key_bits,
+            }),
+            Err(SecurityError::InvalidKeyGenParams),
+            "{effective_key_bits}"
+        );
+    }
+}

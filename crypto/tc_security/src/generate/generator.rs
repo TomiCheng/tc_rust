@@ -42,17 +42,25 @@ impl Generator {
     /// 產生一把對稱金鑰，同 BC 的 `GenerateKeyParameter`：長度取 `strength` bits 進位到整數個 byte，
     /// 全部取自亂數來源。金鑰對的產生器（例如 RSA）回傳 `WrongGenerator`。
     pub fn generate_key(&mut self) -> Result<AnyParams, SecurityError> {
-        let strength = match self.params {
-            KeyGenParams::Basic { strength } => strength,
+        match self.params {
+            KeyGenParams::Basic { strength } => Ok(AnyParams::new(self.random_bytes(strength))),
+            #[cfg(feature = "rc2")]
+            KeyGenParams::Rc2 {
+                strength,
+                effective_key_bits,
+            } => Ok(AnyParams::rc2(
+                self.random_bytes(strength),
+                effective_key_bits,
+            )),
             #[cfg(feature = "rsa")]
-            KeyGenParams::Rsa { .. } => return Err(SecurityError::WrongGenerator),
-        };
-        // 金鑰先交給 AnyParams：drop 時會清除
-        let mut key = AnyParams::new(vec![0; strength.div_ceil(8)]);
-        if let AnyParams::Key { key } = &mut key {
-            self.rng.fill_bytes(key);
+            KeyGenParams::Rsa { .. } => Err(SecurityError::WrongGenerator),
         }
-        Ok(key)
+    }
+
+    fn random_bytes(&mut self, strength: usize) -> Vec<u8> {
+        let mut bytes = vec![0; strength.div_ceil(8)];
+        self.rng.fill_bytes(&mut bytes);
+        bytes
     }
 
     /// 產生一組金鑰對（公鑰, 私鑰），同 BC 的 `GenerateKeyPair`；兩個都是 `AnyParams`，例如 `AnyParams::Rsa`。
@@ -68,6 +76,8 @@ impl Generator {
                 use tc_asym_cipher::{KeyPairGenerator, KeyPairGeneratorInit};
                 use tc_rsa::{RsaKeyGenerationParamsRef, RsaKeyGenerator};
 
+                let strength = u32::try_from(strength)
+                    .map_err(|_| AnyError::new(SecurityError::InvalidKeyGenParams))?;
                 let params = RsaKeyGenerationParamsRef::new(&mut *self.rng)
                     .with_public_exponent(public_exponent)
                     .with_strength(strength)
@@ -78,6 +88,8 @@ impl Generator {
                 Ok((AnyParams::rsa(public), AnyParams::rsa(private)))
             }
             KeyGenParams::Basic { .. } => Err(AnyError::new(SecurityError::WrongGenerator)),
+            #[cfg(feature = "rc2")]
+            KeyGenParams::Rc2 { .. } => Err(AnyError::new(SecurityError::WrongGenerator)),
         }
     }
 }
