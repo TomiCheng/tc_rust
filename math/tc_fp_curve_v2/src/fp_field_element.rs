@@ -4,3 +4,9 @@ use tc_modular::PaddedMontyForm;
 pub struct FpFieldElement<'a> {
     value: PaddedMontyForm<'a>,
 }
+
+impl<'a> FpFieldElement<'a> {
+    pub fn new(value: PaddedMontyForm<'a>) -> Self {
+        Self { value }
+    }
+}
