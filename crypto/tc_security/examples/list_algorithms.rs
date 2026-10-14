@@ -1,0 +1,36 @@
+use tc_asn1::NamedOid;
+use tc_security::{cipher, digest, generate, mac, wrap};
+
+fn oids(oids: &[NamedOid]) -> String {
+    oids.iter()
+        .map(NamedOid::name)
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
+fn main() {
+    println!("# cipher");
+    for entry in cipher::algorithms() {
+        println!("{entry}");
+    }
+
+    println!("\n# generate");
+    for entry in generate::algorithms() {
+        println!("{:<14} {}", entry.name(), oids(entry.oids()));
+    }
+
+    println!("\n# mac");
+    for entry in mac::algorithms() {
+        println!("{entry}");
+    }
+
+    println!("\n# wrap");
+    for entry in wrap::algorithms() {
+        println!("{entry}");
+    }
+
+    println!("\n# digest");
+    for entry in digest::algorithms() {
+        println!("{}", entry.create());
+    }
+}
