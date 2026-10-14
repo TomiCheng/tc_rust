@@ -91,6 +91,11 @@ const STANDALONE: &[StandaloneSpec] = &[
         algorithm: Algorithm::Ascon80pq,
         generate: |key, _, rng| aead(key, 16, 128, rng),
     },
+    #[cfg(feature = "rsa")]
+    StandaloneSpec {
+        algorithm: Algorithm::Rsa,
+        generate: |key, _, _| key.clone(),
+    },
 ];
 
 pub(super) fn for_mode(mode: Mode) -> Option<Generate> {

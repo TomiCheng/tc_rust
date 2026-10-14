@@ -18,6 +18,8 @@ pub enum SecurityError {
     InvalidKeyGenParams,
     /// 產生器不產生這種金鑰：對稱金鑰的產生器呼叫了 `generate_key_pair`，或反過來。
     WrongGenerator,
+    /// 參數不是這個 cipher 收的種類，例如 RSA 收到對稱金鑰。
+    WrongParams,
 }
 
 impl Display for SecurityError {
@@ -30,6 +32,7 @@ impl Display for SecurityError {
             Self::UnknownGenerator => f.write_str("generator not recognised"),
             Self::InvalidKeyGenParams => f.write_str("invalid key generation parameters"),
             Self::WrongGenerator => f.write_str("generator does not produce this kind of key"),
+            Self::WrongParams => f.write_str("parameters do not fit this cipher"),
         }
     }
 }

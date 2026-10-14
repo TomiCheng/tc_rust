@@ -20,6 +20,10 @@ pub(in crate::cipher) fn create_cipher(
     if let Some(standalone) = standalone_spec(algorithm) {
         return (standalone.cipher)();
     }
+    #[cfg(feature = "rsa")]
+    if algorithm == Algorithm::Rsa {
+        return super::rsa::create(padding.expect("RSA entries always have a padding"));
+    }
     let (Some(mode), Some(padding)) = (mode, padding) else {
         unreachable!("block cipher entries always have a mode and a padding");
     };
@@ -74,5 +78,7 @@ fn padded(mode: AnyMode, padding: Padding) -> AnyCipher {
             mode,
             ZeroBytePadding::new(),
         )),
+        #[cfg(feature = "rsa")]
+        _ => unreachable!("block cipher entries never use an RSA padding"),
     }
 }

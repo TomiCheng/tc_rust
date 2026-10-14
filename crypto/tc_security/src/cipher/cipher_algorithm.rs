@@ -27,4 +27,6 @@ pub enum Algorithm {
     Ascon128a,
     #[cfg(feature = "ascon")]
     Ascon80pq,
+    #[cfg(feature = "rsa")]
+    Rsa,
 }

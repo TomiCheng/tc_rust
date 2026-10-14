@@ -18,6 +18,8 @@ mod rc2;
 mod rc5;
 #[cfg(feature = "rc6")]
 mod rc6;
+#[cfg(feature = "rsa")]
+mod rsa;
 mod specs;
 
 use std::sync::LazyLock;
@@ -101,6 +103,16 @@ pub(super) static CIPHERS: LazyLock<Vec<CipherEntry>> = LazyLock::new(|| {
             standalone.oids,
         ));
     }
+    #[cfg(feature = "rsa")]
+    for padding in rsa::PADDINGS {
+        entries.push(CipherEntry::new(
+            Algorithm::Rsa,
+            None,
+            Some(padding.padding),
+            format!("{}//{}", rsa::NAME, padding.names[0]),
+            rsa::oids(padding.padding),
+        ));
+    }
     entries
 });
 
@@ -112,6 +124,10 @@ pub(super) fn resolve(
 ) -> Option<(Option<Mode>, Option<Padding>)> {
     if standalone_spec(algorithm).is_some() {
         return (mode.is_none() && padding.is_none()).then_some((None, None));
+    }
+    #[cfg(feature = "rsa")]
+    if algorithm == Algorithm::Rsa {
+        return rsa::resolve(mode, padding);
     }
     let mode = mode.unwrap_or(Mode::Ecb);
     let padding = padding.unwrap_or_else(|| mode_spec(mode).default_padding());
@@ -134,6 +150,10 @@ pub(super) fn parse(name: &str) -> Option<(Algorithm, Option<Mode>, Option<Paddi
     let padding = parts.next().filter(|part| !part.is_empty());
     if parts.next().is_some() {
         return None;
+    }
+    #[cfg(feature = "rsa")]
+    if same_name(rsa::NAME, algorithm) {
+        return rsa::parse(mode, padding);
     }
 
     let algorithm = ALGORITHMS

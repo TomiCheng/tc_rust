@@ -38,6 +38,10 @@ fn key_for(entry: &CipherEntry) -> AnyParams {
 #[test]
 fn every_combination_encrypts_and_decrypts_with_generated_parameters() {
     for entry in cipher::algorithms() {
+        #[cfg(feature = "rsa")]
+        if entry.algo() == Algorithm::Rsa {
+            continue;
+        }
         let params = params::get_by_name(entry.name())
             .unwrap()
             .generator(key_for(entry))

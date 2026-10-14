@@ -930,6 +930,30 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "728e908bd7a2ec354a667a7520c0be5b12fc7f51731e5aea2bf5010e59ad127c"
 
 [[package]]
+name = "tc_asym_encoding"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3257e241c63ff4172997dfd376909b46997ce046487095002ce0db69ab0a652b"
+dependencies = [
+ "rand_core",
+ "tc_asym_cipher",
+ "tc_digest 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tc_zeroize",
+]
+
+[[package]]
+name = "tc_asym_iso9796"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4f596ba11d870ff412175067b855c1f96a10ce1aea50b7e63d9da5e656c2d488"
+dependencies = [
+ "rand_core",
+ "tc_asym_cipher",
+ "tc_bigint 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tc_rsa",
+]
+
+[[package]]
 name = "tc_bigint"
 version = "0.1.0"
 dependencies = [
@@ -1023,11 +1047,12 @@ dependencies = [
 
 [[package]]
 name = "tc_buffered_cipher"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c2ca8ece191a0114e6c5348b1dd7ea69b011606597bf4a26bc453625c12ae4b6"
+checksum = "3af3483315b3962f5b7810d9749a2e5c48d1a85b86d6ca784f12ccce7106b1fb"
 dependencies = [
  "tc_aead_cipher",
+ "tc_asym_cipher",
  "tc_block_cipher",
  "tc_block_modes",
  "tc_block_padding",
@@ -1653,6 +1678,8 @@ dependencies = [
  "tc_ascon_aead",
  "tc_asn1",
  "tc_asym_cipher",
+ "tc_asym_encoding",
+ "tc_asym_iso9796",
  "tc_block_cipher",
  "tc_block_modes",
  "tc_block_padding",
