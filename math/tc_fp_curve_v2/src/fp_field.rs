@@ -24,6 +24,10 @@ impl FpField {
         let value = PaddedMontyForm::new(value, &self.params);
         FpFieldElement::new(value)
     }
+
+    pub(crate) fn one(&self) -> FpFieldElement<'_> {
+        FpFieldElement::new(PaddedMontyForm::one(&self.params))
+    }
 }
 
 impl PartialEq for FpField {
