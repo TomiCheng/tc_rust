@@ -12,6 +12,12 @@ pub enum SecurityError {
     UnknownWrapper,
     /// MAC 的名稱或 OID 不認得。
     UnknownMac,
+    /// 產生器的名稱或 OID 不認得。
+    UnknownGenerator,
+    /// 產生金鑰的參數不屬於這個演算法，或數值不是它接受的。
+    InvalidKeyGenParams,
+    /// 產生器不產生這種金鑰：對稱金鑰的產生器呼叫了 `generate_key_pair`，或反過來。
+    WrongGenerator,
 }
 
 impl Display for SecurityError {
@@ -21,6 +27,9 @@ impl Display for SecurityError {
             Self::UnknownCipher => f.write_str("cipher not recognised"),
             Self::UnknownWrapper => f.write_str("wrapper not recognised"),
             Self::UnknownMac => f.write_str("MAC not recognised"),
+            Self::UnknownGenerator => f.write_str("generator not recognised"),
+            Self::InvalidKeyGenParams => f.write_str("invalid key generation parameters"),
+            Self::WrongGenerator => f.write_str("generator does not produce this kind of key"),
         }
     }
 }

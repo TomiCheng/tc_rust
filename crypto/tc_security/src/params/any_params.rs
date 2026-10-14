@@ -4,7 +4,7 @@ use tc_zeroize::Zeroize;
 ///
 /// 只是 DTO，不驗證內容：長度與組合合不合用，由收到參數的 cipher 在 `init` 判定。
 /// 各引擎的參數 trait 依 variant 取值，這個 variant 沒有的值回傳空的或預設值，留給 `init` 拒絕。
-/// drop 時清除金鑰、IV、nonce 與 AAD。
+/// drop 時清除金鑰、IV、nonce 與 AAD；RSA 金鑰由它自己的 drop 清除。
 #[derive(Clone)]
 pub enum AnyParams {
     /// 只有金鑰，對應 BC 的 `KeyParameter`。
@@ -28,6 +28,9 @@ pub enum AnyParams {
     },
     /// RC5 的金鑰與輪數，對應 BC 的 `RC5Parameters`。
     Rc5 { key: Vec<u8>, rounds: usize },
+    /// RSA 的公鑰或私鑰，對應 BC 的 `RsaKeyParameters` 與 `RsaPrivateCrtKeyParameters`。
+    #[cfg(feature = "rsa")]
+    Rsa { key: tc_rsa::RsaKey },
 }
 
 impl AnyParams {
@@ -67,6 +70,12 @@ impl AnyParams {
         Self::Rc5 { key, rounds }
     }
 
+    /// RSA 的公鑰或私鑰，同 BC 的 `RsaKeyParameters`。
+    #[cfg(feature = "rsa")]
+    pub fn rsa(key: tc_rsa::RsaKey) -> Self {
+        Self::Rsa { key }
+    }
+
     // 金鑰在最內層：WithIv 往內找
     fn key_bytes(&self) -> &[u8] {
         match self {
@@ -75,6 +84,9 @@ impl AnyParams {
             | Self::Rc2 { key, .. }
             | Self::Rc5 { key, .. } => key,
             Self::WithIv { parameters, .. } => parameters.key_bytes(),
+            // RSA 金鑰不是對稱金鑰的 bytes
+            #[cfg(feature = "rsa")]
+            Self::Rsa { .. } => &[],
         }
     }
 
@@ -103,6 +115,8 @@ impl Drop for AnyParams {
                 nonce.zeroize();
                 associated_text.zeroize();
             }
+            #[cfg(feature = "rsa")]
+            Self::Rsa { .. } => {}
         }
     }
 }
