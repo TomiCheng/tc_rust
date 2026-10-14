@@ -1,4 +1,3 @@
-use alloc::sync::Arc;
 use alloc::vec::Vec;
 use crate::algo::AlgorithmError;
 use crate::{Curve, FieldElement, Point};
@@ -6,7 +5,7 @@ use crate::{Curve, FieldElement, Point};
 /// Imports affine coordinates into an equivalent curve, including its coordinate system.
 /// As in BC, equivalence concerns the field and equation, not subgroup metadata.
 pub fn import_point<C: Curve>(
-    curve: &Arc<C>,
+    curve: C,
     point: &C::Point,
 ) -> Result<C::Point, AlgorithmError> {
     let source = point.curve();
@@ -33,7 +32,7 @@ pub fn validate_point<P: Point>(point: &P) -> Result<&P, AlgorithmError> {
 }
 
 /// Rebuilds a point from affine coordinates on the target curve and validates it.
-pub fn clean_point<C: Curve>(curve: &Arc<C>, point: &C::Point) -> Result<C::Point, AlgorithmError> {
+pub fn clean_point<C: Curve>(curve: C, point: &C::Point) -> Result<C::Point, AlgorithmError> {
     let point = import_point(curve, point)?;
     validate_point(&point)?;
     Ok(point)

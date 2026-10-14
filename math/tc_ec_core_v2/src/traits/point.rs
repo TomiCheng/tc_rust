@@ -18,7 +18,7 @@ pub trait Point: Clone + Eq {
     type Curve: Curve<Point = Self>;
 
     /// Returns the curve that owns this point.
-    fn curve(&self) -> &alloc::sync::Arc<Self::Curve>;
+    fn curve(&self) -> Self::Curve;
 
     /// Checks the curve equation and, when known, subgroup membership.
     /// The identity is valid; protocols must reject it separately when required.

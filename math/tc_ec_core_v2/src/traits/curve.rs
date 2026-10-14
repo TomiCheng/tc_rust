@@ -10,14 +10,12 @@
 //! 讓未來 BC `custom/sec` 形式的每曲線特化型別不必配合多餘界限。此介面仍在
 //! 拆分期，請勿視為穩定 API。
 
-use alloc::sync::Arc;
-
 use crate::CoordinateSystem;
 use super::FieldElement;
 use super::Point;
 
-/// 橢圓曲線的靜態型別介面。
-pub trait Curve {
+/// 橢圓曲線的靜態型別介面；實作在曲線的參照這類可複製的 handle 上。
+pub trait Curve: Copy {
     /// 曲線所屬體域的元素型別。
     type Field: FieldElement;
 
@@ -49,10 +47,10 @@ pub trait Curve {
     fn one(&self) -> Self::Field;
 
     /// 建立本曲線的群單位點。
-    fn identity(self: &Arc<Self>) -> Self::Point;
+    fn identity(&self) -> Self::Point;
 
     /// 由已屬於本曲線體域的 affine 座標建立點。
-    fn create_point(self: &Arc<Self>, x: Self::Field, y: Self::Field) -> Self::Point;
+    fn create_point(&self, x: Self::Field, y: Self::Field) -> Self::Point;
 
     /// 曲線使用的點座標系。
     fn coordinate_system(&self) -> CoordinateSystem;
