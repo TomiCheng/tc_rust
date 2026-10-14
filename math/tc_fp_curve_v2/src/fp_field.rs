@@ -7,7 +7,8 @@ pub struct FpField {
 }
 
 impl FpField {
-    pub(crate) fn new(q: PaddedBigUint) -> Self {
+    /// The field of integers modulo the prime `q`, at the width of `q`. Panics when `q` is even.
+    pub fn new(q: PaddedBigUint) -> Self {
         let modulus = Odd::new(q).expect("curve prime is odd");
         Self {
             params: PaddedMontyParams::new(modulus),
