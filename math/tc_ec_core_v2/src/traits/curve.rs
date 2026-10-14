@@ -99,7 +99,6 @@ pub trait Curve {
     where
         Self: Sized,
     {
-        //crate::wnaf_mul_point::<Self>(point, scalar)
-        todo!()
+        crate::wnaf::wnaf_mul_point::<Self>(point, scalar)
     }
 }

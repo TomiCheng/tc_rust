@@ -1,7 +1,7 @@
 use alloc::vec::Vec;
-use crate::Curve;
+use crate::{Curve, Point};
 
-use super::{DEFAULT_WINDOW_SIZE_CUTOFFS, MAX_COMPACT_WIDTH, MAX_DENSE_WIDTH};
+use super::{WNafTable, DEFAULT_WINDOW_SIZE_CUTOFFS, MAX_COMPACT_WIDTH, MAX_DENSE_WIDTH};
 
 /// Joint sparse form of two unsigned scalars, least significant pair first.
 /// Digits are in `-1..=1`. Carry bits avoid overflowing fixed-width scalars.
@@ -165,4 +165,56 @@ pub fn get_naf_weight<C: Curve>(scalar: &C::Scalar) -> usize {
         .into_iter()
         .filter(|digit| *digit != 0)
         .count()
+}
+
+/// 使用顯式預算表執行 BC 形式的左到右 wNAF 乘法。
+///
+/// 此函式是變動時間實作，只能用於公開標量。
+pub fn wnaf_mul<C: Curve>(table: &WNafTable<C::Point>, scalar: &C::Scalar) -> C::Point {
+    let compact = generate_compact_window_naf::<C>(table.width(), scalar);
+    let mut result = table.precomputed()[0].identity();
+    let mut index = compact.len();
+
+    if index > 1 {
+        index -= 1;
+        let (digit, mut zeroes) = unpack(compact[index]);
+        let absolute = digit.unsigned_abs() as usize;
+        if (absolute << 2) < (1_usize << table.width()) {
+            let highest = usize::BITS as usize - absolute.leading_zeros() as usize;
+            let scale = table.width() - highest;
+            let low_bits = absolute ^ (1_usize << (highest - 1));
+            let first = (1_usize << (table.width() - 1)) - 1;
+            let second = (low_bits << scale) + 1;
+            let sign = digit.signum();
+            result = table
+                .select(sign * first as i32)
+                .add(&table.select(sign * second as i32));
+            zeroes -= scale;
+        } else {
+            result = table.select(digit);
+        }
+        result = result.times_pow2(zeroes);
+    }
+
+    while index > 0 {
+        index -= 1;
+        let (digit, zeroes) = unpack(compact[index]);
+        result = result.twice_plus(&table.select(digit));
+        result = result.times_pow2(zeroes);
+    }
+    result
+}
+
+/// 建立一次性預算表並執行 wNAF 乘法。
+///
+/// 重複乘同一個點時應改用 [`WNafTable`] 與 [`wnaf_mul`] 保存預算成本。
+/// 此函式是變動時間實作，只能用於公開標量。
+pub fn wnaf_mul_point<C: Curve>(point: &C::Point, scalar: &C::Scalar) -> C::Point {
+    let width = get_window_size(C::scalar_bit_length(scalar));
+    let table = WNafTable::new(point, width, true);
+    wnaf_mul::<C>(&table, scalar)
+}
+
+fn unpack(compact: i32) -> (i32, usize) {
+    (compact >> 16, (compact & 0xFFFF) as usize)
 }
