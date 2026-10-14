@@ -25,10 +25,10 @@ pub trait Point: Clone + Eq {
     fn is_valid(&self) -> bool;
 
     /// 產生同一條曲線上的群單位點。
-    fn identity(&self) -> Self;
+    fn infinity(&self) -> Self;
 
     /// 是否為群單位點。
-    fn is_identity(&self) -> bool;
+    fn is_infinity(&self) -> bool;
 
     /// 正規化後的 affine X 座標；單位點回傳 `None`。
     fn x(&self) -> Option<<Self::Curve as Curve>::Field>;

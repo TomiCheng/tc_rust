@@ -12,8 +12,8 @@ pub fn import_point<C: Curve>(
     if curve.a() != source.a() || curve.b() != source.b() || curve.zero() != source.zero() {
         return Err(AlgorithmError::CurveMismatch);
     }
-    if point.is_identity() {
-        return Ok(curve.identity());
+    if point.is_infinity() {
+        return Ok(curve.infinity());
     }
     let normalized = point.normalize();
     Ok(curve.create_point(

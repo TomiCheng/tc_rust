@@ -3,7 +3,7 @@ use alloc::vec::Vec;
 use core::fmt;
 
 use tc_bigint::PaddedBigUint;
-use tc_ec_core_v2::{CoordinateSystem, PointEncodeError};
+use tc_ec_core_v2::{CoordinateSystem, FieldElement, Point, PointEncodeError};
 
 use crate::{FpFieldElement, FpVarCurve, sec1};
 
@@ -118,14 +118,6 @@ impl<'a> FpVarPoint<'a> {
         }
     }
 
-    pub fn curve(&self) -> &'a FpVarCurve<'a> {
-        self.curve
-    }
-
-    pub fn is_infinity(&self) -> bool {
-        self.coords.is_none()
-    }
-
     /// X as stored, which is not the affine x under a projective system; see [`x`](Self::x).
     pub fn raw_x(&self) -> Option<&FpFieldElement<'a>> {
         self.coords.as_ref().map(Coords::x)
@@ -150,45 +142,11 @@ impl<'a> FpVarPoint<'a> {
         }
     }
 
-    /// The affine x, normalizing first.
-    pub fn x(&self) -> Option<FpFieldElement<'a>> {
-        self.normalize().raw_x().cloned()
-    }
-
-    /// The affine y, normalizing first.
-    pub fn y(&self) -> Option<FpFieldElement<'a>> {
-        self.normalize().raw_y().cloned()
-    }
-
     /// Whether the point is affine, infinity, or projective with `Z = 1`.
     pub fn is_normalized(&self) -> bool {
         self.coords
             .as_ref()
             .is_none_or(|coords| coords.z().is_none_or(FpFieldElement::is_one))
-    }
-
-    /// The same point with `Z = 1`, at the cost of one inversion.
-    pub fn normalize(&self) -> Self {
-        match self.coords.as_ref().and_then(Coords::z) {
-            Some(z) if !z.is_one() => {
-                let inverse = z.invert().expect("a finite point has a nonzero Z");
-                self.normalize_with_inverse(&inverse)
-            }
-            _ => self.clone(),
-        }
-    }
-
-    pub(crate) fn normalize_with_inverse(&self, inverse: &FpFieldElement<'a>) -> Self {
-        let (x, y) = match &self.coords {
-            None | Some(Coords::Affine { .. }) => return self.clone(),
-            Some(Coords::Homogeneous { x, y, .. }) => (x.multiply(inverse), y.multiply(inverse)),
-            Some(Coords::Jacobian { x, y, .. } | Coords::JacobianModified { x, y, .. }) => {
-                let inverse2 = inverse.square();
-                let inverse3 = inverse2.multiply(inverse);
-                (x.multiply(&inverse2), y.multiply(&inverse3))
-            }
-        };
-        Self::new(self.curve, x, y)
     }
 
     /// Whether `y² = x³ + ax + b`; infinity counts as on the curve. The subgroup is
@@ -219,11 +177,6 @@ impl<'a> FpVarPoint<'a> {
         lhs == x.square().add(&a).multiply(x).add(&b)
     }
 
-    /// On the curve and, when the cofactor is not one and the order is known, `nP = O`.
-    pub fn is_valid(&self) -> bool {
-        self.is_on_curve() && self.satisfies_order()
-    }
-
     fn satisfies_order(&self) -> bool {
         if self.is_infinity()
             || self
@@ -236,22 +189,6 @@ impl<'a> FpVarPoint<'a> {
         self.curve
             .order()
             .is_none_or(|n| self.multiply(n).is_infinity())
-    }
-
-    /// `2P`.
-    pub fn twice(&self) -> Self {
-        let Some(coords) = &self.coords else {
-            return self.clone();
-        };
-        if coords.y().is_zero() {
-            return Self::infinity(self.curve);
-        }
-        match coords {
-            Coords::Affine { x, y } => self.twice_affine(x, y),
-            Coords::Homogeneous { x, y, z } => self.twice_homogeneous(x, y, z),
-            Coords::Jacobian { x, y, z } => self.twice_jacobian(x, y, z),
-            Coords::JacobianModified { .. } => self.twice_jacobian_modified(true),
-        }
     }
 
     fn twice_affine(&self, x: &FpFieldElement<'a>, y: &FpFieldElement<'a>) -> Self {
@@ -357,28 +294,6 @@ impl<'a> FpVarPoint<'a> {
         })
     }
 
-    /// `2P + Q`. Panics when the curves differ.
-    pub fn twice_plus(&self, rhs: &Self) -> Self {
-        self.assert_same_curve(rhs);
-        if self == rhs {
-            return self.three_times();
-        }
-        let Some(coords) = &self.coords else {
-            return rhs.clone();
-        };
-        if rhs.is_infinity() {
-            return self.twice();
-        }
-        if coords.y().is_zero() {
-            return rhs.clone();
-        }
-        match coords {
-            Coords::Affine { x, y } => self.twice_plus_affine(x, y, rhs),
-            Coords::JacobianModified { .. } => self.twice_jacobian_modified(false).add(rhs),
-            _ => self.twice().add(rhs),
-        }
-    }
-
     fn twice_plus_affine(
         &self,
         x1: &FpFieldElement<'a>,
@@ -418,21 +333,6 @@ impl<'a> FpVarPoint<'a> {
         Self::new(self.curve, x4, y4)
     }
 
-    /// `3P`.
-    pub fn three_times(&self) -> Self {
-        let Some(coords) = &self.coords else {
-            return self.clone();
-        };
-        if coords.y().is_zero() {
-            return self.clone();
-        }
-        match coords {
-            Coords::Affine { x, y } => self.three_times_affine(x, y),
-            Coords::JacobianModified { .. } => self.twice_jacobian_modified(false).add(self),
-            _ => self.twice().add(self),
-        }
-    }
-
     fn three_times_affine(&self, x1: &FpFieldElement<'a>, y1: &FpFieldElement<'a>) -> Self {
         let two_y = y1.double();
         let x = two_y.square();
@@ -451,85 +351,6 @@ impl<'a> FpVarPoint<'a> {
         let x4 = l2.subtract(&l1).multiply(&l1.add(&l2)).add(x1);
         let y4 = l2.multiply(&x1.subtract(&x4)).subtract(y1);
         Self::new(self.curve, x4, y4)
-    }
-
-    /// `2^exponent · P`, in BC's shared modified-Jacobian loop.
-    pub fn times_pow2(&self, exponent: usize) -> Self {
-        let Some(coords) = &self.coords else {
-            return self.clone();
-        };
-        match exponent {
-            0 => return self.clone(),
-            1 => return self.twice(),
-            _ => {}
-        }
-        if coords.y().is_zero() {
-            return Self::infinity(self.curve);
-        }
-
-        let mut x = coords.x().clone();
-        let mut y = coords.y().clone();
-        let mut z = coords
-            .z()
-            .cloned()
-            .unwrap_or_else(|| self.curve.field().one());
-        let mut w = self.curve.a().clone();
-        if !z.is_one() {
-            match coords {
-                Coords::Homogeneous { .. } => {
-                    let z_squared = z.square();
-                    x = x.multiply(&z);
-                    y = y.multiply(&z_squared);
-                    w = self.calculate_jacobian_modified_w(&z, Some(&z_squared));
-                }
-                Coords::Jacobian { .. } => w = self.calculate_jacobian_modified_w(&z, None),
-                Coords::JacobianModified { .. } => w = self.jacobian_modified_w(),
-                Coords::Affine { .. } => unreachable!("affine Z is one"),
-            }
-        }
-
-        for _ in 0..exponent {
-            if y.is_zero() {
-                return Self::infinity(self.curve);
-            }
-            let mut m = three(&x.square());
-            let two_y = y.double();
-            let two_y_squared = two_y.multiply(&y);
-            let s = x.multiply(&two_y_squared).double();
-            let eight_t = two_y_squared.square().double();
-            if !w.is_zero() {
-                m = m.add(&w);
-                w = eight_t.multiply(&w).double();
-            }
-            x = m.square().subtract(&s.double());
-            y = m.multiply(&s.subtract(&x)).subtract(&eight_t);
-            z = if z.is_one() {
-                two_y
-            } else {
-                two_y.multiply(&z)
-            };
-        }
-
-        match coords {
-            Coords::Affine { .. } => {
-                let inverse = z.invert().expect("a finite point has a nonzero Z");
-                let inverse2 = inverse.square();
-                let inverse3 = inverse2.multiply(&inverse);
-                Self::new(self.curve, x.multiply(&inverse2), y.multiply(&inverse3))
-            }
-            Coords::Homogeneous { .. } => {
-                let x = x.multiply(&z);
-                let z = z.multiply(&z.square());
-                self.with_coords(Coords::Homogeneous { x, y, z })
-            }
-            Coords::Jacobian { .. } => self.jacobian_point(x, y, z, None),
-            Coords::JacobianModified { .. } => self.with_coords(Coords::JacobianModified {
-                x,
-                y,
-                z,
-                az4: Some(w),
-            }),
-        }
     }
 
     /// The exact length of the SEC 1 encoding.
@@ -564,69 +385,9 @@ impl<'a> FpVarPoint<'a> {
         output
     }
 
-    /// `P + Q`. Panics when the curves or coordinate systems differ.
-    pub fn add(&self, rhs: &Self) -> Self {
-        self.assert_same_curve(rhs);
-        let (Some(left), Some(right)) = (&self.coords, &rhs.coords) else {
-            return if self.is_infinity() {
-                rhs.clone()
-            } else {
-                self.clone()
-            };
-        };
-        match (left, right) {
-            (Coords::Affine { x: x1, y: y1 }, Coords::Affine { x: x2, y: y2 }) => {
-                self.add_affine(x1, y1, x2, y2)
-            }
-            (
-                Coords::Homogeneous {
-                    x: x1,
-                    y: y1,
-                    z: z1,
-                },
-                Coords::Homogeneous {
-                    x: x2,
-                    y: y2,
-                    z: z2,
-                },
-            ) => self.add_homogeneous([x1, y1, z1], [x2, y2, z2]),
-            _ => self.add_jacobian(left, right),
-        }
-    }
-
     /// `P - Q`. Panics when the curves or coordinate systems differ.
     pub fn subtract(&self, rhs: &Self) -> Self {
         self.add(&rhs.negate())
-    }
-
-    /// `-P`.
-    pub fn negate(&self) -> Self {
-        let Some(coords) = &self.coords else {
-            return self.clone();
-        };
-        let coords = match coords {
-            Coords::Affine { x, y } => Coords::Affine {
-                x: x.clone(),
-                y: y.negate(),
-            },
-            Coords::Homogeneous { x, y, z } => Coords::Homogeneous {
-                x: x.clone(),
-                y: y.negate(),
-                z: z.clone(),
-            },
-            Coords::Jacobian { x, y, z } => Coords::Jacobian {
-                x: x.clone(),
-                y: y.negate(),
-                z: z.clone(),
-            },
-            Coords::JacobianModified { x, y, z, az4 } => Coords::JacobianModified {
-                x: x.clone(),
-                y: y.negate(),
-                z: z.clone(),
-                az4: az4.clone(),
-            },
-        };
-        self.with_coords(coords)
     }
 
     /// `kP` by double-and-add from the top bit. Only for a public scalar.
@@ -874,6 +635,258 @@ fn scale_by_z<'a>(
     }
 }
 
+/// Variable time; only for public points.
+impl<'a> Point for FpVarPoint<'a> {
+    type Curve = &'a FpVarCurve<'a>;
+
+    fn curve(&self) -> &'a FpVarCurve<'a> {
+        self.curve
+    }
+
+    /// On the curve and, when the cofactor is not one and the order is known, `nP = O`.
+    fn is_valid(&self) -> bool {
+        self.is_on_curve() && self.satisfies_order()
+    }
+
+    fn infinity(&self) -> Self {
+        Self::infinity(self.curve)
+    }
+
+    fn is_infinity(&self) -> bool {
+        self.coords.is_none()
+    }
+
+    /// The affine x, normalizing first.
+    fn x(&self) -> Option<FpFieldElement<'a>> {
+        self.normalize().raw_x().cloned()
+    }
+
+    /// The affine y, normalizing first.
+    fn y(&self) -> Option<FpFieldElement<'a>> {
+        self.normalize().raw_y().cloned()
+    }
+
+    /// `P + Q`. Panics when the curves or coordinate systems differ.
+    fn add(&self, rhs: &Self) -> Self {
+        self.assert_same_curve(rhs);
+        let (Some(left), Some(right)) = (&self.coords, &rhs.coords) else {
+            return if self.is_infinity() {
+                rhs.clone()
+            } else {
+                self.clone()
+            };
+        };
+        match (left, right) {
+            (Coords::Affine { x: x1, y: y1 }, Coords::Affine { x: x2, y: y2 }) => {
+                self.add_affine(x1, y1, x2, y2)
+            }
+            (
+                Coords::Homogeneous {
+                    x: x1,
+                    y: y1,
+                    z: z1,
+                },
+                Coords::Homogeneous {
+                    x: x2,
+                    y: y2,
+                    z: z2,
+                },
+            ) => self.add_homogeneous([x1, y1, z1], [x2, y2, z2]),
+            _ => self.add_jacobian(left, right),
+        }
+    }
+
+    /// `2P`.
+    fn twice(&self) -> Self {
+        let Some(coords) = &self.coords else {
+            return self.clone();
+        };
+        if coords.y().is_zero() {
+            return Self::infinity(self.curve);
+        }
+        match coords {
+            Coords::Affine { x, y } => self.twice_affine(x, y),
+            Coords::Homogeneous { x, y, z } => self.twice_homogeneous(x, y, z),
+            Coords::Jacobian { x, y, z } => self.twice_jacobian(x, y, z),
+            Coords::JacobianModified { .. } => self.twice_jacobian_modified(true),
+        }
+    }
+
+    /// `2P + Q`. Panics when the curves differ.
+    fn twice_plus(&self, rhs: &Self) -> Self {
+        self.assert_same_curve(rhs);
+        if self == rhs {
+            return self.three_times();
+        }
+        let Some(coords) = &self.coords else {
+            return rhs.clone();
+        };
+        if rhs.is_infinity() {
+            return self.twice();
+        }
+        if coords.y().is_zero() {
+            return rhs.clone();
+        }
+        match coords {
+            Coords::Affine { x, y } => self.twice_plus_affine(x, y, rhs),
+            Coords::JacobianModified { .. } => self.twice_jacobian_modified(false).add(rhs),
+            _ => self.twice().add(rhs),
+        }
+    }
+
+    /// `3P`.
+    fn three_times(&self) -> Self {
+        let Some(coords) = &self.coords else {
+            return self.clone();
+        };
+        if coords.y().is_zero() {
+            return self.clone();
+        }
+        match coords {
+            Coords::Affine { x, y } => self.three_times_affine(x, y),
+            Coords::JacobianModified { .. } => self.twice_jacobian_modified(false).add(self),
+            _ => self.twice().add(self),
+        }
+    }
+
+    /// `2^exponent · P`, in BC's shared modified-Jacobian loop.
+    fn times_pow2(&self, exponent: usize) -> Self {
+        let Some(coords) = &self.coords else {
+            return self.clone();
+        };
+        match exponent {
+            0 => return self.clone(),
+            1 => return self.twice(),
+            _ => {}
+        }
+        if coords.y().is_zero() {
+            return Self::infinity(self.curve);
+        }
+
+        let mut x = coords.x().clone();
+        let mut y = coords.y().clone();
+        let mut z = coords
+            .z()
+            .cloned()
+            .unwrap_or_else(|| self.curve.field().one());
+        let mut w = self.curve.a().clone();
+        if !z.is_one() {
+            match coords {
+                Coords::Homogeneous { .. } => {
+                    let z_squared = z.square();
+                    x = x.multiply(&z);
+                    y = y.multiply(&z_squared);
+                    w = self.calculate_jacobian_modified_w(&z, Some(&z_squared));
+                }
+                Coords::Jacobian { .. } => w = self.calculate_jacobian_modified_w(&z, None),
+                Coords::JacobianModified { .. } => w = self.jacobian_modified_w(),
+                Coords::Affine { .. } => unreachable!("affine Z is one"),
+            }
+        }
+
+        for _ in 0..exponent {
+            if y.is_zero() {
+                return Self::infinity(self.curve);
+            }
+            let mut m = three(&x.square());
+            let two_y = y.double();
+            let two_y_squared = two_y.multiply(&y);
+            let s = x.multiply(&two_y_squared).double();
+            let eight_t = two_y_squared.square().double();
+            if !w.is_zero() {
+                m = m.add(&w);
+                w = eight_t.multiply(&w).double();
+            }
+            x = m.square().subtract(&s.double());
+            y = m.multiply(&s.subtract(&x)).subtract(&eight_t);
+            z = if z.is_one() {
+                two_y
+            } else {
+                two_y.multiply(&z)
+            };
+        }
+
+        match coords {
+            Coords::Affine { .. } => {
+                let inverse = z.invert().expect("a finite point has a nonzero Z");
+                let inverse2 = inverse.square();
+                let inverse3 = inverse2.multiply(&inverse);
+                Self::new(self.curve, x.multiply(&inverse2), y.multiply(&inverse3))
+            }
+            Coords::Homogeneous { .. } => {
+                let x = x.multiply(&z);
+                let z = z.multiply(&z.square());
+                self.with_coords(Coords::Homogeneous { x, y, z })
+            }
+            Coords::Jacobian { .. } => self.jacobian_point(x, y, z, None),
+            Coords::JacobianModified { .. } => self.with_coords(Coords::JacobianModified {
+                x,
+                y,
+                z,
+                az4: Some(w),
+            }),
+        }
+    }
+
+    /// `-P`.
+    fn negate(&self) -> Self {
+        let Some(coords) = &self.coords else {
+            return self.clone();
+        };
+        let coords = match coords {
+            Coords::Affine { x, y } => Coords::Affine {
+                x: x.clone(),
+                y: y.negate(),
+            },
+            Coords::Homogeneous { x, y, z } => Coords::Homogeneous {
+                x: x.clone(),
+                y: y.negate(),
+                z: z.clone(),
+            },
+            Coords::Jacobian { x, y, z } => Coords::Jacobian {
+                x: x.clone(),
+                y: y.negate(),
+                z: z.clone(),
+            },
+            Coords::JacobianModified { x, y, z, az4 } => Coords::JacobianModified {
+                x: x.clone(),
+                y: y.negate(),
+                z: z.clone(),
+                az4: az4.clone(),
+            },
+        };
+        self.with_coords(coords)
+    }
+
+    /// The same point with `Z = 1`, at the cost of one inversion.
+    fn normalize(&self) -> Self {
+        match self.coords.as_ref().and_then(Coords::z) {
+            Some(z) if !z.is_one() => {
+                let inverse = z.invert().expect("a finite point has a nonzero Z");
+                self.normalize_with_inverse(&inverse)
+            }
+            _ => self.clone(),
+        }
+    }
+
+    fn projective_z(&self) -> Option<FpFieldElement<'a>> {
+        self.z_coord(0)
+    }
+
+    fn normalize_with_inverse(&self, inverse: &FpFieldElement<'a>) -> Self {
+        let (x, y) = match &self.coords {
+            None | Some(Coords::Affine { .. }) => return self.clone(),
+            Some(Coords::Homogeneous { x, y, .. }) => (x.multiply(inverse), y.multiply(inverse)),
+            Some(Coords::Jacobian { x, y, .. } | Coords::JacobianModified { x, y, .. }) => {
+                let inverse2 = inverse.square();
+                let inverse3 = inverse2.multiply(inverse);
+                (x.multiply(&inverse2), y.multiply(&inverse3))
+            }
+        };
+        Self::new(self.curve, x, y)
+    }
+}
+
 /// The same point on the same curve, whatever the projective scale.
 impl PartialEq for FpVarPoint<'_> {
     fn eq(&self, other: &Self) -> bool {
@@ -906,7 +919,7 @@ impl fmt::Debug for FpVarPoint<'_> {
 #[cfg(test)]
 mod tests {
     use tc_bigint::PaddedBigUint;
-    use tc_ec_core_v2::{CoordinateSystem, PointDecodeError, PointEncodeError};
+    use tc_ec_core_v2::{CoordinateSystem, Point, PointDecodeError, PointEncodeError};
 
     use crate::{FpField, FpVarCurve, FpVarPoint};
 

@@ -21,13 +21,13 @@ pub fn shamirs_trick<C: Curve>(
         p.negate(),
         minus.negate(),
         q.negate(),
-        p.identity(),
+        p.infinity(),
         q,
         minus,
         p.clone(),
         plus,
     ];
-    let mut result = p.identity();
+    let mut result = p.infinity();
     for [u, v] in generate_jsf::<C>(a, b).into_iter().rev() {
         result = result.twice_plus(&table[(4 + 3 * u as i32 + v as i32) as usize]);
     }
@@ -63,7 +63,7 @@ pub fn sum_of_multiplies<C: Curve>(
         tables.push(WNafTable::new(&point, width, true));
         digits.push(generate_window_naf::<C>(width, scalar));
     }
-    let mut result = points[0].identity();
+    let mut result = points[0].infinity();
     for bit in (0..digits.iter().map(Vec::len).max().unwrap()).rev() {
         result = result.twice();
         for (table, naf) in tables.iter().zip(&digits) {

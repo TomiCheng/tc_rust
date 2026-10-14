@@ -172,7 +172,7 @@ pub fn get_naf_weight<C: Curve>(scalar: &C::Scalar) -> usize {
 /// 此函式是變動時間實作，只能用於公開標量。
 pub fn wnaf_mul<C: Curve>(table: &WNafTable<C::Point>, scalar: &C::Scalar) -> C::Point {
     let compact = generate_compact_window_naf::<C>(table.width(), scalar);
-    let mut result = table.precomputed()[0].identity();
+    let mut result = table.precomputed()[0].infinity();
     let mut index = compact.len();
 
     if index > 1 {

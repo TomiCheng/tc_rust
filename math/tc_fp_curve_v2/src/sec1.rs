@@ -1,5 +1,5 @@
 use tc_bigint::{ArrayEncoding, PaddedBigUint};
-use tc_ec_core_v2::{PointDecodeError, PointEncodeError};
+use tc_ec_core_v2::{FieldElement, PointDecodeError, PointEncodeError};
 
 use crate::{FpField, FpFieldElement};
 

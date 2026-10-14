@@ -47,7 +47,7 @@ pub trait Curve: Clone {
     fn one(&self) -> Self::Field;
 
     /// 建立本曲線的群單位點。
-    fn identity(&self) -> Self::Point;
+    fn infinity(&self) -> Self::Point;
 
     /// 由已屬於本曲線體域的 affine 座標建立點。
     fn create_point(&self, x: Self::Field, y: Self::Field) -> Self::Point;
@@ -90,13 +90,9 @@ pub trait Curve: Clone {
     /// 時，本函式必須回傳 `scalar + 3`。
     fn scalar_sub_digit(scalar: &Self::Scalar, digit: i32) -> Self::Scalar;
 
-    /// 使用預設的變動時間 wNAF 乘法器計算 `scalar * point`。
-    ///
-    /// 此方法只適合公開標量；秘密標量需要另行實作常數時間乘法器。
+    /// 計算 `scalar * point`。沒有預設實作，乘法器由每條曲線自己選；實作
+    /// [`ConstantTime`](super::ConstantTime) 的曲線必須用常數時間乘法器。
     fn multiply(point: &Self::Point, scalar: &Self::Scalar) -> Self::Point
     where
-        Self: Sized,
-    {
-        crate::wnaf::wnaf_mul_point::<Self>(point, scalar)
-    }
+        Self: Sized;
 }

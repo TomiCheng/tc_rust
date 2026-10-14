@@ -1,9 +1,9 @@
 use core::fmt;
 
 use tc_bigint::PaddedBigUint;
-use tc_ec_core_v2::PointDecodeError;
+use tc_ec_core_v2::{ConstantTime, CoordinateSystem, Curve, FieldElement, PointDecodeError};
 
-use crate::{FpCtPoint, FpField, FpFieldElement, sec1};
+use crate::{FpCtPoint, FpField, FpFieldElement, scalar, sec1};
 
 /// `y² = x³ + ax + b` over a prime field, whose points take only constant-time
 /// formulas: the complete formulas of Renes, Costello and Batina (2016) in homogeneous
@@ -92,6 +92,84 @@ impl<'a> FpCtCurve<'a> {
         })
     }
 }
+
+impl<'a> Curve for &'a FpCtCurve<'a> {
+    type Field = FpFieldElement<'a>;
+    type Point = FpCtPoint<'a>;
+    type Scalar = PaddedBigUint;
+
+    fn a(&self) -> &FpFieldElement<'a> {
+        &self.a
+    }
+
+    fn b(&self) -> &FpFieldElement<'a> {
+        &self.b
+    }
+
+    fn order(&self) -> Option<&PaddedBigUint> {
+        self.order.as_ref()
+    }
+
+    fn cofactor(&self) -> Option<&PaddedBigUint> {
+        self.cofactor.as_ref()
+    }
+
+    fn zero(&self) -> FpFieldElement<'a> {
+        self.field.zero()
+    }
+
+    fn one(&self) -> FpFieldElement<'a> {
+        self.field.one()
+    }
+
+    fn infinity(&self) -> FpCtPoint<'a> {
+        FpCtPoint::infinity(self)
+    }
+
+    fn create_point(&self, x: FpFieldElement<'a>, y: FpFieldElement<'a>) -> FpCtPoint<'a> {
+        FpCtPoint::new(self, x, y)
+    }
+
+    fn coordinate_system(&self) -> CoordinateSystem {
+        CoordinateSystem::Homogeneous
+    }
+
+    fn scalar_bit_length(scalar: &PaddedBigUint) -> usize {
+        scalar::bit_length(scalar)
+    }
+
+    fn scalar_test_bit(scalar: &PaddedBigUint, index: usize) -> bool {
+        scalar::test_bit(scalar, index)
+    }
+
+    fn scalar_is_zero(scalar: &PaddedBigUint) -> bool {
+        scalar::is_zero(scalar)
+    }
+
+    fn scalar_shr1(scalar: &PaddedBigUint) -> PaddedBigUint {
+        scalar::shr(scalar, 1)
+    }
+
+    fn scalar_shr(scalar: &PaddedBigUint, count: usize) -> PaddedBigUint {
+        scalar::shr(scalar, count)
+    }
+
+    fn scalar_low_bits(scalar: &PaddedBigUint, width: usize) -> u32 {
+        scalar::low_bits(scalar, width)
+    }
+
+    fn scalar_sub_digit(scalar: &PaddedBigUint, digit: i32) -> PaddedBigUint {
+        scalar::sub_digit(scalar, digit)
+    }
+
+    /// The fixed-window multiplication of [`FpCtPoint::multiply`]. Constant time.
+    fn multiply(point: &FpCtPoint<'a>, scalar: &PaddedBigUint) -> FpCtPoint<'a> {
+        point.multiply(scalar)
+    }
+}
+
+/// Every operation on the curve and its points is constant time.
+impl<'a> ConstantTime for &'a FpCtCurve<'a> {}
 
 /// Same field and coefficients, as in BC; the order and cofactor are left out.
 impl PartialEq for FpCtCurve<'_> {

@@ -1,9 +1,9 @@
 use core::fmt;
 
 use tc_bigint::PaddedBigUint;
-use tc_ec_core_v2::{CoordinateSystem, PointDecodeError};
+use tc_ec_core_v2::{CoordinateSystem, Curve, PointDecodeError};
 
-use crate::{FpField, FpFieldElement, FpVarPoint, sec1};
+use crate::{FpField, FpFieldElement, FpVarPoint, scalar, sec1};
 
 pub struct FpVarCurve<'a> {
     field: &'a FpField,
@@ -115,6 +115,81 @@ impl<'a> FpVarCurve<'a> {
             None => self.infinity(),
             Some((x, y)) => FpVarPoint::new(self, x, y),
         })
+    }
+}
+
+impl<'a> Curve for &'a FpVarCurve<'a> {
+    type Field = FpFieldElement<'a>;
+    type Point = FpVarPoint<'a>;
+    type Scalar = PaddedBigUint;
+
+    fn a(&self) -> &FpFieldElement<'a> {
+        &self.a
+    }
+
+    fn b(&self) -> &FpFieldElement<'a> {
+        &self.b
+    }
+
+    fn order(&self) -> Option<&PaddedBigUint> {
+        self.order.as_ref()
+    }
+
+    fn cofactor(&self) -> Option<&PaddedBigUint> {
+        self.cofactor.as_ref()
+    }
+
+    fn zero(&self) -> FpFieldElement<'a> {
+        self.field.zero()
+    }
+
+    fn one(&self) -> FpFieldElement<'a> {
+        self.field.one()
+    }
+
+    fn infinity(&self) -> FpVarPoint<'a> {
+        FpVarPoint::infinity(self)
+    }
+
+    fn create_point(&self, x: FpFieldElement<'a>, y: FpFieldElement<'a>) -> FpVarPoint<'a> {
+        FpVarPoint::new(self, x, y)
+    }
+
+    fn coordinate_system(&self) -> CoordinateSystem {
+        self.coordinate_system
+    }
+
+    fn scalar_bit_length(scalar: &PaddedBigUint) -> usize {
+        scalar::bit_length(scalar)
+    }
+
+    fn scalar_test_bit(scalar: &PaddedBigUint, index: usize) -> bool {
+        scalar::test_bit(scalar, index)
+    }
+
+    fn scalar_is_zero(scalar: &PaddedBigUint) -> bool {
+        scalar::is_zero(scalar)
+    }
+
+    fn scalar_shr1(scalar: &PaddedBigUint) -> PaddedBigUint {
+        scalar::shr(scalar, 1)
+    }
+
+    fn scalar_shr(scalar: &PaddedBigUint, count: usize) -> PaddedBigUint {
+        scalar::shr(scalar, count)
+    }
+
+    fn scalar_low_bits(scalar: &PaddedBigUint, width: usize) -> u32 {
+        scalar::low_bits(scalar, width)
+    }
+
+    fn scalar_sub_digit(scalar: &PaddedBigUint, digit: i32) -> PaddedBigUint {
+        scalar::sub_digit(scalar, digit)
+    }
+
+    /// wNAF. Variable time; only for public scalars.
+    fn multiply(point: &FpVarPoint<'a>, scalar: &PaddedBigUint) -> FpVarPoint<'a> {
+        tc_ec_core_v2::wnaf::wnaf_mul_point::<Self>(point, scalar)
     }
 }
 
