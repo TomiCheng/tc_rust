@@ -5,7 +5,6 @@ mod any_params;
 mod param_gen_params;
 mod params_entry;
 mod params_generator;
-#[allow(dead_code, reason = "get_by_name 實作後會用")]
 mod table;
 
 pub use algorithms::{algorithms, get_by_name, get_by_oid};

@@ -72,3 +72,21 @@ fn an_rsa_key_carries_no_symmetric_key_or_iv() {
     assert!(KeyParams::key(&params).is_empty());
     assert!(IvParams::iv(&params).is_empty());
 }
+
+#[cfg(feature = "aes")]
+#[test]
+fn parameter_generators_are_found_by_cipher_name_or_oid() {
+    use tc_security::SecurityError;
+    use tc_security::params;
+
+    let name_of = |name: &str| params::get_by_name(name).map(|entry| entry.name());
+    assert_eq!(name_of("aes/cbc/pkcs7padding"), Ok("AES/CBC/PKCS7PADDING"));
+    assert_eq!(name_of("AES"), Ok("AES/ECB/PKCS7PADDING"));
+    assert_eq!(name_of("AES/GCM"), Ok("AES/GCM/NOPADDING"));
+    assert_eq!(name_of("2.16.840.1.101.3.4.1.46"), Ok("AES/GCM/NOPADDING"));
+    assert_eq!(
+        params::get_by_oid(&"2.16.840.1.101.3.4.1.2".parse().unwrap()).map(|entry| entry.name()),
+        Ok("AES/CBC/PKCS7PADDING")
+    );
+    assert_eq!(name_of("AES/XYZ"), Err(SecurityError::UnknownCipher));
+}

@@ -2,53 +2,110 @@ use rand::CryptoRng;
 use tc_block_cipher::KeyParams;
 
 use super::AnyParams;
-use crate::cipher::Mode;
+use crate::cipher::{Algorithm, Mode};
 
-type Generate = fn(&AnyParams, usize, &mut dyn CryptoRng) -> AnyParams;
+pub(super) type Generate = fn(&AnyParams, usize, &mut dyn CryptoRng) -> AnyParams;
 
-pub(super) struct ParamsSpec {
-    pub(super) mode: Mode,
-    pub(super) generate: Generate,
+struct ModeSpec {
+    mode: Mode,
+    generate: Generate,
 }
 
-pub(super) const MODES: &[ParamsSpec] = &[
-    ParamsSpec {
+struct StandaloneSpec {
+    algorithm: Algorithm,
+    generate: Generate,
+}
+
+const MODES: &[ModeSpec] = &[
+    ModeSpec {
         mode: Mode::Ecb,
-        generate: key_only,
+        generate: |key, _, _| key.clone(),
     },
-    ParamsSpec {
+    ModeSpec {
         mode: Mode::Cbc,
-        generate: block_iv,
+        generate: |key, block_size, rng| iv(key, block_size, rng),
     },
-    ParamsSpec {
+    ModeSpec {
         mode: Mode::Cfb,
-        generate: block_iv,
+        generate: |key, block_size, rng| iv(key, block_size, rng),
     },
-    ParamsSpec {
+    ModeSpec {
         mode: Mode::Ofb,
-        generate: block_iv,
+        generate: |key, block_size, rng| iv(key, block_size, rng),
     },
-    ParamsSpec {
+    ModeSpec {
         mode: Mode::Ctr,
-        generate: block_iv,
+        generate: |key, block_size, rng| iv(key, block_size, rng),
     },
-    ParamsSpec {
+    ModeSpec {
         mode: Mode::Ccm,
-        generate: nonce_12,
+        generate: |key, _, rng| aead(key, 12, 128, rng),
     },
-    ParamsSpec {
+    ModeSpec {
         mode: Mode::Eax,
-        generate: eax,
+        generate: |key, block_size, rng| aead(key, block_size, block_size * 4, rng),
     },
-    ParamsSpec {
+    ModeSpec {
         mode: Mode::Gcm,
-        generate: nonce_12,
+        generate: |key, _, rng| aead(key, 12, 128, rng),
     },
-    ParamsSpec {
+    ModeSpec {
         mode: Mode::Ocb,
-        generate: nonce_12,
+        generate: |key, _, rng| aead(key, 12, 128, rng),
     },
 ];
+
+const STANDALONE: &[StandaloneSpec] = &[
+    #[cfg(feature = "chacha")]
+    StandaloneSpec {
+        algorithm: Algorithm::ChaCha,
+        generate: |key, _, rng| iv(key, 8, rng),
+    },
+    #[cfg(feature = "chacha")]
+    StandaloneSpec {
+        algorithm: Algorithm::ChaCha7539,
+        generate: |key, _, rng| iv(key, 12, rng),
+    },
+    #[cfg(feature = "chacha")]
+    StandaloneSpec {
+        algorithm: Algorithm::XChaCha20,
+        generate: |key, _, rng| iv(key, 24, rng),
+    },
+    #[cfg(feature = "ascon")]
+    StandaloneSpec {
+        algorithm: Algorithm::AsconAead128,
+        generate: |key, _, rng| aead(key, 16, 128, rng),
+    },
+    #[cfg(feature = "ascon")]
+    StandaloneSpec {
+        algorithm: Algorithm::Ascon128,
+        generate: |key, _, rng| aead(key, 16, 128, rng),
+    },
+    #[cfg(feature = "ascon")]
+    StandaloneSpec {
+        algorithm: Algorithm::Ascon128a,
+        generate: |key, _, rng| aead(key, 16, 128, rng),
+    },
+    #[cfg(feature = "ascon")]
+    StandaloneSpec {
+        algorithm: Algorithm::Ascon80pq,
+        generate: |key, _, rng| aead(key, 16, 128, rng),
+    },
+];
+
+pub(super) fn for_mode(mode: Mode) -> Option<Generate> {
+    MODES
+        .iter()
+        .find(|spec| spec.mode == mode)
+        .map(|spec| spec.generate)
+}
+
+pub(super) fn for_algorithm(algorithm: Algorithm) -> Option<Generate> {
+    STANDALONE
+        .iter()
+        .find(|spec| spec.algorithm == algorithm)
+        .map(|spec| spec.generate)
+}
 
 fn random(len: usize, rng: &mut dyn CryptoRng) -> Vec<u8> {
     let mut bytes = vec![0; len];
@@ -56,28 +113,15 @@ fn random(len: usize, rng: &mut dyn CryptoRng) -> Vec<u8> {
     bytes
 }
 
-fn key_only(key: &AnyParams, _: usize, _: &mut dyn CryptoRng) -> AnyParams {
-    key.clone()
+fn iv(key: &AnyParams, len: usize, rng: &mut dyn CryptoRng) -> AnyParams {
+    key.clone().with_iv(random(len, rng))
 }
 
-fn block_iv(key: &AnyParams, block_size: usize, rng: &mut dyn CryptoRng) -> AnyParams {
-    key.clone().with_iv(random(block_size, rng))
-}
-
-fn nonce_12(key: &AnyParams, _: usize, rng: &mut dyn CryptoRng) -> AnyParams {
+fn aead(key: &AnyParams, nonce_len: usize, mac_size: usize, rng: &mut dyn CryptoRng) -> AnyParams {
     AnyParams::aead(
         KeyParams::key(key).to_vec(),
-        128,
-        random(12, rng),
-        Vec::new(),
-    )
-}
-
-fn eax(key: &AnyParams, block_size: usize, rng: &mut dyn CryptoRng) -> AnyParams {
-    AnyParams::aead(
-        KeyParams::key(key).to_vec(),
-        block_size * 4,
-        random(block_size, rng),
+        mac_size,
+        random(nonce_len, rng),
         Vec::new(),
     )
 }

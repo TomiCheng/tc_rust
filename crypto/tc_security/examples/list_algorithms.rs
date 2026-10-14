@@ -1,5 +1,5 @@
 use tc_asn1::NamedOid;
-use tc_security::{cipher, digest, generate, mac, wrap};
+use tc_security::{cipher, digest, generate, mac, params, wrap};
 
 fn oids(oids: &[NamedOid]) -> String {
     oids.iter()
@@ -17,6 +17,11 @@ fn main() {
     println!("\n# generate");
     for entry in generate::algorithms() {
         println!("{:<14} {}", entry.name(), oids(entry.oids()));
+    }
+
+    println!("\n# params");
+    for entry in params::algorithms() {
+        println!("{entry}");
     }
 
     println!("\n# mac");
