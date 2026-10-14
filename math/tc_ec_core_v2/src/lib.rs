@@ -6,6 +6,7 @@ extern crate alloc;
 
 mod coordinate_system;
 mod traits;
+mod errors;
 
 pub use coordinate_system::CoordinateSystem;
 
@@ -15,3 +16,6 @@ pub use traits::FieldElement;
 pub use traits::Point;
 pub use traits::PrimeFieldElement;
 pub use traits::Scalar;
+
+pub use errors::PointDecodeError;
+pub use errors::PointEncodeError;
