@@ -1233,6 +1233,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_ec_core_v2"
+version = "0.1.0"
+
+[[package]]
 name = "tc_ecb"
 version = "0.1.0"
 dependencies = [
