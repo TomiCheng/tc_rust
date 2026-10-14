@@ -11,3 +11,4 @@ repository.workspace = true
 tc_ec_core_v2 = { version = "0.1.0" , path = "../tc_ec_core_v2" }
 tc_bigint = { version = "0.1.0", features = ["alloc"] }
 tc_modular = { version = "0.1.0", features = ["alloc"] }
+tc_constant_time = "0.1.0"

@@ -2,6 +2,7 @@ use core::fmt;
 use core::ops::{Add, Mul, Neg, Sub};
 
 use tc_bigint::PaddedBigUint;
+use tc_constant_time::{Choice, ConditionallySelectable, ConstantTimeEq};
 use tc_modular::PaddedMontyForm;
 
 #[derive(Clone, PartialEq, Eq)]
@@ -197,6 +198,22 @@ impl<'a> Neg for &FpFieldElement<'a> {
 
     fn neg(self) -> FpFieldElement<'a> {
         FpFieldElement::new(-&self.value)
+    }
+}
+
+/// `a` or `b`, as the choice says. Constant time. Panics when the fields differ.
+impl ConditionallySelectable for FpFieldElement<'_> {
+    fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
+        Self::new(PaddedMontyForm::conditional_select(
+            &a.value, &b.value, choice,
+        ))
+    }
+}
+
+/// Constant time.
+impl ConstantTimeEq for FpFieldElement<'_> {
+    fn ct_eq(&self, rhs: &Self) -> Choice {
+        self.value.ct_eq(&rhs.value)
     }
 }
 

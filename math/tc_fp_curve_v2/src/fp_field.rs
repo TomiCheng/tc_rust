@@ -25,6 +25,10 @@ impl FpField {
         FpFieldElement::new(value)
     }
 
+    pub(crate) fn zero(&self) -> FpFieldElement<'_> {
+        FpFieldElement::new(PaddedMontyForm::zero(&self.params))
+    }
+
     pub(crate) fn one(&self) -> FpFieldElement<'_> {
         FpFieldElement::new(PaddedMontyForm::one(&self.params))
     }

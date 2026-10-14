@@ -3,10 +3,10 @@ use alloc::vec::Vec;
 use core::fmt;
 use core::ops::{Add, Mul, Neg, Sub};
 
-use tc_bigint::{ArrayEncoding, PaddedBigUint};
+use tc_bigint::PaddedBigUint;
 use tc_ec_core_v2::{CoordinateSystem, PointEncodeError};
 
-use crate::{FpCurve, FpFieldElement};
+use crate::{FpFieldElement, FpVarCurve, sec1};
 
 #[derive(Clone)]
 enum Coords<'a> {
@@ -70,19 +70,19 @@ impl<'a> Coords<'a> {
     }
 }
 
-/// A point on an [`FpCurve`], in the coordinate system of the curve; `None` is infinity.
+/// A point on an [`FpVarCurve`], in the coordinate system of the curve; `None` is infinity.
 ///
 /// The formulas are BC's, and branch on the coordinates and invert; every
 /// method is variable time and only for public points.
 #[derive(Clone)]
-pub struct FpPoint<'a> {
-    curve: &'a FpCurve<'a>,
+pub struct FpVarPoint<'a> {
+    curve: &'a FpVarCurve<'a>,
     coords: Option<Coords<'a>>,
 }
 
-impl<'a> FpPoint<'a> {
+impl<'a> FpVarPoint<'a> {
     pub(crate) fn new(
-        curve: &'a FpCurve<'a>,
+        curve: &'a FpVarCurve<'a>,
         x: FpFieldElement<'a>,
         y: FpFieldElement<'a>,
     ) -> Self {
@@ -97,7 +97,7 @@ impl<'a> FpPoint<'a> {
                 z: one,
                 az4: Some(curve.a().clone()),
             },
-            _ => unreachable!("FpCurve rejects unsupported coordinate systems"),
+            _ => unreachable!("FpVarCurve rejects unsupported coordinate systems"),
         };
         Self {
             curve,
@@ -105,7 +105,7 @@ impl<'a> FpPoint<'a> {
         }
     }
 
-    pub(crate) fn infinity(curve: &'a FpCurve<'a>) -> Self {
+    pub(crate) fn infinity(curve: &'a FpVarCurve<'a>) -> Self {
         Self {
             curve,
             coords: None,
@@ -119,7 +119,7 @@ impl<'a> FpPoint<'a> {
         }
     }
 
-    pub fn curve(&self) -> &'a FpCurve<'a> {
+    pub fn curve(&self) -> &'a FpVarCurve<'a> {
         self.curve
     }
 
@@ -529,29 +529,12 @@ impl<'a> FpPoint<'a> {
         compressed: bool,
         output: &mut [u8],
     ) -> Result<usize, PointEncodeError> {
-        let required = self.encoded_length(compressed);
-        if output.len() < required {
-            return Err(PointEncodeError::OutputTooShort {
-                required,
-                available: output.len(),
-            });
-        }
-        let output = &mut output[..required];
         let normalized = self.normalize();
-        let (Some(x), Some(y)) = (normalized.raw_x(), normalized.raw_y()) else {
-            output[0] = 0x00;
-            return Ok(1);
-        };
-        let len = self.curve.field_element_encoding_length();
-        if compressed {
-            output[0] = if y.to_big_uint().bit(0) { 0x03 } else { 0x02 };
-            write_field_element(x, &mut output[1..]);
-        } else {
-            output[0] = 0x04;
-            write_field_element(x, &mut output[1..1 + len]);
-            write_field_element(y, &mut output[1 + len..]);
-        }
-        Ok(required)
+        let affine = normalized
+            .coords
+            .as_ref()
+            .map(|coords| (coords.x().clone(), coords.y().clone()));
+        sec1::encode(self.curve.field(), affine.as_ref(), compressed, output)
     }
 
     /// The SEC 1 encoding.
@@ -801,36 +784,29 @@ fn scale_by_z<'a>(
     }
 }
 
-fn write_field_element(value: &FpFieldElement<'_>, output: &mut [u8]) {
-    let bytes = ArrayEncoding::<u8>::to_be(&value.to_big_uint());
-    let (padding, digits) = bytes.split_at(bytes.len() - output.len());
-    debug_assert!(padding.iter().all(|&byte| byte == 0));
-    output.copy_from_slice(digits);
-}
-
 /// `P + Q`. Panics when the curves or coordinate systems differ.
-impl<'a> Add for &FpPoint<'a> {
-    type Output = FpPoint<'a>;
+impl<'a> Add for &FpVarPoint<'a> {
+    type Output = FpVarPoint<'a>;
 
-    fn add(self, rhs: Self) -> FpPoint<'a> {
+    fn add(self, rhs: Self) -> FpVarPoint<'a> {
         self.add_point(rhs)
     }
 }
 
 /// `P - Q`. Panics when the curves or coordinate systems differ.
-impl<'a> Sub for &FpPoint<'a> {
-    type Output = FpPoint<'a>;
+impl<'a> Sub for &FpVarPoint<'a> {
+    type Output = FpVarPoint<'a>;
 
-    fn sub(self, rhs: Self) -> FpPoint<'a> {
+    fn sub(self, rhs: Self) -> FpVarPoint<'a> {
         self.add_point(&-rhs)
     }
 }
 
 /// `-P`.
-impl<'a> Neg for &FpPoint<'a> {
-    type Output = FpPoint<'a>;
+impl<'a> Neg for &FpVarPoint<'a> {
+    type Output = FpVarPoint<'a>;
 
-    fn neg(self) -> FpPoint<'a> {
+    fn neg(self) -> FpVarPoint<'a> {
         let Some(coords) = &self.coords else {
             return self.clone();
         };
@@ -861,11 +837,11 @@ impl<'a> Neg for &FpPoint<'a> {
 }
 
 /// `kP` by double-and-add from the top bit. Variable time; only for a public scalar.
-impl<'a> Mul<&PaddedBigUint> for &FpPoint<'a> {
-    type Output = FpPoint<'a>;
+impl<'a> Mul<&PaddedBigUint> for &FpVarPoint<'a> {
+    type Output = FpVarPoint<'a>;
 
-    fn mul(self, scalar: &PaddedBigUint) -> FpPoint<'a> {
-        let mut result = FpPoint::infinity(self.curve);
+    fn mul(self, scalar: &PaddedBigUint) -> FpVarPoint<'a> {
+        let mut result = FpVarPoint::infinity(self.curve);
         for bit in (0..scalar.bits()).rev() {
             result = result.twice();
             if scalar.bit(bit) {
@@ -877,7 +853,7 @@ impl<'a> Mul<&PaddedBigUint> for &FpPoint<'a> {
 }
 
 /// The same point on the same curve, whatever the projective scale.
-impl PartialEq for FpPoint<'_> {
+impl PartialEq for FpVarPoint<'_> {
     fn eq(&self, other: &Self) -> bool {
         if !(core::ptr::eq(self.curve, other.curve) || self.curve == other.curve) {
             return false;
@@ -894,12 +870,12 @@ impl PartialEq for FpPoint<'_> {
     }
 }
 
-impl Eq for FpPoint<'_> {}
+impl Eq for FpVarPoint<'_> {}
 
 /// Prints only whether the point is at infinity, never the coordinates.
-impl fmt::Debug for FpPoint<'_> {
+impl fmt::Debug for FpVarPoint<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("FpPoint")
+        f.debug_struct("FpVarPoint")
             .field("infinity", &self.is_infinity())
             .finish_non_exhaustive()
     }
@@ -910,7 +886,7 @@ mod tests {
     use tc_bigint::PaddedBigUint;
     use tc_ec_core_v2::{CoordinateSystem, PointDecodeError, PointEncodeError};
 
-    use crate::{FpCurve, FpField, FpPoint};
+    use crate::{FpField, FpVarCurve, FpVarPoint};
 
     const SYSTEMS: [CoordinateSystem; 4] = [
         CoordinateSystem::Affine,
@@ -924,12 +900,12 @@ mod tests {
     }
 
     // y² = x³ + 2x + 2 over F17, of prime order 19, generated by (5, 1).
-    fn curve17(field: &FpField, system: CoordinateSystem) -> FpCurve<'_> {
-        FpCurve::new(field, &int(2), &int(2), Some(int(19)), Some(int(1)))
+    fn curve17(field: &FpField, system: CoordinateSystem) -> FpVarCurve<'_> {
+        FpVarCurve::new(field, &int(2), &int(2), Some(int(19)), Some(int(1)))
             .with_coordinate_system(system)
     }
 
-    fn coordinates(point: &FpPoint<'_>) -> (PaddedBigUint, PaddedBigUint) {
+    fn coordinates(point: &FpVarPoint<'_>) -> (PaddedBigUint, PaddedBigUint) {
         (
             point.x().unwrap().to_big_uint(),
             point.y().unwrap().to_big_uint(),
@@ -939,7 +915,7 @@ mod tests {
     #[test]
     fn sums_and_doubles_match_the_textbook_curve_over_f23() {
         let field = FpField::new(int(23));
-        let curve = FpCurve::new(&field, &int(1), &int(1), None, None);
+        let curve = FpVarCurve::new(&field, &int(1), &int(1), None, None);
         let p = curve.create_point(&int(3), &int(10));
         let q = curve.create_point(&int(9), &int(7));
         assert_eq!(coordinates(&(&p + &q)), (int(17), int(20)));
@@ -1066,7 +1042,7 @@ mod tests {
 
         let field = FpField::new(hex(p));
         for system in SYSTEMS {
-            let curve = FpCurve::new(&field, &hex(a), &hex(b), Some(hex(n)), Some(int(1)))
+            let curve = FpVarCurve::new(&field, &hex(a), &hex(b), Some(hex(n)), Some(int(1)))
                 .with_coordinate_system(system);
             let g = curve.create_point(&hex(gx), &hex(gy));
             assert!(g.is_on_curve(), "{system:?}");
