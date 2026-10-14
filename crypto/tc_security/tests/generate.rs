@@ -355,3 +355,192 @@ fn ascon_keys_have_the_fixed_size_of_each_variant() {
         );
     }
 }
+
+#[test]
+fn every_generator_makes_its_kind_of_key_and_a_fresh_one_each_time() {
+    use tc_block_cipher::KeyParams;
+    use tc_security::generate::KeyGenParams;
+
+    for entry in generate::algorithms() {
+        let name = entry.name();
+        let mut generator = entry.generator();
+        match generator.generate_key() {
+            Ok(first) => {
+                let second = generator.generate_key().unwrap();
+                assert!(!KeyParams::key(&first).is_empty(), "{name}");
+                assert_ne!(KeyParams::key(&first), KeyParams::key(&second), "{name}");
+                assert!(generator.generate_key_pair().is_err(), "{name}");
+            }
+            Err(error) => {
+                assert_eq!(error, SecurityError::WrongGenerator, "{name}");
+                generator
+                    .init(&KeyGenParams::Basic { strength: 1024 })
+                    .unwrap();
+                assert!(generator.generate_key_pair().is_ok(), "{name}");
+            }
+        }
+    }
+}
+
+#[cfg(feature = "aes")]
+#[test]
+fn a_rejected_init_keeps_the_previous_parameters() {
+    use tc_block_cipher::KeyParams;
+    use tc_security::generate::KeyGenParams;
+
+    let mut generator = generate::get_by_name("AES").unwrap().generator();
+    generator
+        .init(&KeyGenParams::Basic { strength: 128 })
+        .unwrap();
+    assert!(
+        generator
+            .init(&KeyGenParams::Basic { strength: 100 })
+            .is_err()
+    );
+    assert_eq!(KeyParams::key(&generator.generate_key().unwrap()).len(), 16);
+}
+
+#[cfg(feature = "aes")]
+#[test]
+fn a_generated_aes_key_works_with_the_cipher_factory() {
+    use tc_block_cipher::KeyParams;
+    use tc_security::cipher;
+    use tc_security::params::AnyParams;
+
+    let key = generate::get_by_name("AES256")
+        .unwrap()
+        .generator()
+        .generate_key()
+        .unwrap();
+    let message = b"attack at dawn";
+
+    let cbc = key.clone().with_iv(vec![9; 16]);
+    let mut aes = cipher::get_by_name("AES/CBC/PKCS7PADDING")
+        .unwrap()
+        .cipher();
+    let sealed = cipher::encrypt(&mut aes, &cbc, message).unwrap();
+    assert_eq!(cipher::decrypt(&mut aes, &cbc, &sealed).unwrap(), message);
+
+    let gcm = AnyParams::aead(KeyParams::key(&key).to_vec(), 128, vec![9; 12], Vec::new());
+    let mut aes = cipher::get_by_name("AES/GCM").unwrap().cipher();
+    let sealed = cipher::encrypt(&mut aes, &gcm, message).unwrap();
+    assert_eq!(cipher::decrypt(&mut aes, &gcm, &sealed).unwrap(), message);
+}
+
+#[cfg(feature = "rc2")]
+#[test]
+fn a_generated_rc2_key_keeps_its_effective_key_bits_in_the_cipher() {
+    use tc_block_cipher::KeyParams;
+    use tc_security::cipher;
+    use tc_security::generate::KeyGenParams;
+    use tc_security::params::AnyParams;
+
+    let mut generator = generate::get_by_name("RC2").unwrap().generator();
+    generator
+        .init(&KeyGenParams::Rc2 {
+            strength: 128,
+            effective_key_bits: 40,
+        })
+        .unwrap();
+    let key = generator.generate_key().unwrap();
+    let bytes = KeyParams::key(&key).to_vec();
+
+    let entry = cipher::get_by_name("RC2/ECB/NOPADDING").unwrap();
+    let sealed = cipher::encrypt(&mut entry.cipher(), &key, &[0; 8]).unwrap();
+    assert_eq!(
+        cipher::encrypt(
+            &mut entry.cipher(),
+            &AnyParams::rc2(bytes.clone(), 40),
+            &[0; 8]
+        )
+        .unwrap(),
+        sealed
+    );
+    assert_ne!(
+        cipher::encrypt(&mut entry.cipher(), &AnyParams::new(bytes), &[0; 8]).unwrap(),
+        sealed
+    );
+}
+
+#[cfg(feature = "rc5")]
+#[test]
+fn a_generated_rc5_key_keeps_its_rounds_in_the_cipher() {
+    use tc_block_cipher::KeyParams;
+    use tc_security::cipher;
+    use tc_security::generate::KeyGenParams;
+    use tc_security::params::AnyParams;
+
+    let mut generator = generate::get_by_name("RC5").unwrap().generator();
+    generator
+        .init(&KeyGenParams::Rc5 {
+            strength: 128,
+            rounds: 8,
+        })
+        .unwrap();
+    let key = generator.generate_key().unwrap();
+    let bytes = KeyParams::key(&key).to_vec();
+
+    let entry = cipher::get_by_name("RC5/ECB/NOPADDING").unwrap();
+    let sealed = cipher::encrypt(&mut entry.cipher(), &key, &[0; 8]).unwrap();
+    assert_eq!(
+        cipher::encrypt(
+            &mut entry.cipher(),
+            &AnyParams::rc5(bytes.clone(), 8),
+            &[0; 8]
+        )
+        .unwrap(),
+        sealed
+    );
+    assert_ne!(
+        cipher::encrypt(&mut entry.cipher(), &AnyParams::new(bytes), &[0; 8]).unwrap(),
+        sealed
+    );
+}
+
+#[cfg(feature = "chacha")]
+#[test]
+fn a_generated_chacha_key_works_with_the_cipher_factory() {
+    use tc_security::cipher;
+
+    let message = b"attack at dawn";
+    for (name, nonce) in [("CHACHA", 8), ("CHACHA7539", 12), ("XCHACHA20", 24)] {
+        let key = generate::get_by_name(name)
+            .unwrap()
+            .generator()
+            .generate_key()
+            .unwrap();
+        let params = key.with_iv(vec![9; nonce]);
+        let mut chacha = cipher::get_by_name(name).unwrap().cipher();
+        let sealed = cipher::encrypt(&mut chacha, &params, message).unwrap();
+        assert_eq!(
+            cipher::decrypt(&mut chacha, &params, &sealed).unwrap(),
+            message,
+            "{name}"
+        );
+    }
+}
+
+#[cfg(feature = "ascon")]
+#[test]
+fn a_generated_ascon_key_works_with_the_cipher_factory() {
+    use tc_block_cipher::KeyParams;
+    use tc_security::cipher;
+    use tc_security::params::AnyParams;
+
+    let message = b"attack at dawn";
+    for name in ["ASCON-AEAD128", "ASCON-128", "ASCON-128A", "ASCON-80PQ"] {
+        let key = generate::get_by_name(name)
+            .unwrap()
+            .generator()
+            .generate_key()
+            .unwrap();
+        let params = AnyParams::aead(KeyParams::key(&key).to_vec(), 128, vec![9; 16], Vec::new());
+        let mut ascon = cipher::get_by_name(name).unwrap().cipher();
+        let sealed = cipher::encrypt(&mut ascon, &params, message).unwrap();
+        assert_eq!(
+            cipher::decrypt(&mut ascon, &params, &sealed).unwrap(),
+            message,
+            "{name}"
+        );
+    }
+}
