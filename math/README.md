@@ -11,7 +11,6 @@ Depend on the crate that provides the abstraction you need; there is no umbrella
 | --- | --- | --- |
 | [`tc_bigint`](tc_bigint/README.md) | Compile-time fixed-width, runtime fixed-width, and arbitrary-precision signed/unsigned integers, encoding, numeric traits, modular and Montgomery arithmetic, and general-purpose probable-prime operations | `no_std`; compile-time fixed-width arithmetic needs no allocator; runtime fixed-width and dynamic integers require `alloc`; `rand_core` enables random operations |
 | [`tc_binpoly`](tc_binpoly/README.md) | Polynomial arithmetic over `GF(2)`, including carryless multiplication, squaring, reduction, and inversion; fixed and dynamic representations | `no_std`; fixed storage and core arithmetic work without allocation; defaults enable `alloc`, `std`, and optional x86 acceleration |
-| [`tc_prime`](tc_prime/README.md) | FIPS 186-4 small-factor screening, Miller-Rabin tests, enhanced Miller-Rabin results, and optional Shawe-Taylor provable-prime generation | `no_std`; fixed-width testing works without allocation; `alloc` is enabled by default; `digest` enables Shawe-Taylor and requires `alloc` |
 | [`tc_ec_core`](tc_ec_core/README.md) | Shared field, curve, and point traits; scalar and multi-scalar algorithms, batch normalization, precomputation, GLV interfaces, and separate secret-scalar APIs | `no_std` with `alloc` |
 | [`tc_fp_curve`](tc_fp_curve) | Generic prime-field short-Weierstrass curves using Montgomery arithmetic, with `FpCurve`, `FpFieldElement`, `FpPoint`, and named-curve constructors | `no_std` with `alloc` |
 | [`tc_fp_custom`](tc_fp_custom) | Specialized SEC and SM2 prime-field curves, fixed-width field kernels and point formulas, and secp256k1 GLV support | `no_std` with `alloc`; field kernels use fixed-width storage |
@@ -45,9 +44,8 @@ internal `LimbArray<N>` storage. Sign interpretation belongs to `FixedBigInt`;
 
 Use `tc_binpoly` for polynomial arithmetic over `GF(2)`. Its bits represent
 polynomial coefficients, so its arithmetic is distinct from integer arithmetic.
-Use `tc_prime` for the FIPS/Bouncy Castle prime-testing and generation interfaces;
-it builds on `tc_bigint` and accepts both fixed and dynamic integer types where
-the selected features permit them.
+For prime testing and generation, use the published
+[`tc_prime`](https://crates.io/crates/tc_prime).
 
 For short-Weierstrass curves, `tc_ec_core` defines the shared contracts and
 algorithms. `tc_fp_curve` and `tc_f2m_curve` supply generic prime-field and
@@ -69,8 +67,6 @@ under `crypto/`; they are not signature APIs of `tc_rfc7748`.
 - `tc_binpoly` and `tc_rfc7748` optionally use the published `tc_runtime` crate
   for x86 feature detection. Their scalar configurations are available with
   default features disabled.
-- `tc_prime` optionally depends on `crypto/tc_digest` for Shawe-Taylor generation.
-  Callers supply the digest implementation and random source where required.
 
 Ordinary arithmetic is not automatically constant-time because it uses a crate
 that also provides constant-time primitives. Consult the individual API contracts,
@@ -83,7 +79,7 @@ Run Cargo commands from the workspace root and select the crate being changed:
 
 ```text
 cargo test -p tc_bigint --target i686-pc-windows-msvc --locked
-cargo doc -p tc_prime --all-features --no-deps --locked
+cargo doc -p tc_binpoly --all-features --no-deps --locked
 ```
 
 The crate READMEs describe their feature combinations and validation commands.
