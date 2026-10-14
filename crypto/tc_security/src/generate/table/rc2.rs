@@ -1,9 +1,8 @@
 use rand::CryptoRng;
 use tc_asn1::NamedOid;
 
-use super::random_key;
+use super::{no_key_pair, random_key};
 use crate::SecurityError;
-use crate::generate::generator_entry::Generate;
 use crate::generate::{GeneratorEntry, KeyGenParams};
 use crate::params::AnyParams;
 
@@ -18,14 +17,17 @@ fn check_params(params: &KeyGenParams) -> Result<(), SecurityError> {
     }
 }
 
-fn generate_key(params: &KeyGenParams, rng: &mut dyn CryptoRng) -> AnyParams {
-    match *params {
+fn generate_key(
+    params: &KeyGenParams,
+    rng: &mut dyn CryptoRng,
+) -> Result<AnyParams, SecurityError> {
+    Ok(match *params {
         KeyGenParams::Rc2 {
             strength,
             effective_key_bits,
         } => AnyParams::rc2(random_key(strength, rng), effective_key_bits),
         _ => AnyParams::new(random_key(params.strength(), rng)),
-    }
+    })
 }
 
 pub(super) const RC2: GeneratorEntry = GeneratorEntry::new(
@@ -46,5 +48,6 @@ pub(super) const RC2: GeneratorEntry = GeneratorEntry::new(
     ],
     KeyGenParams::Basic { strength: 128 },
     check_params,
-    Generate::Key(generate_key),
+    generate_key,
+    no_key_pair,
 );

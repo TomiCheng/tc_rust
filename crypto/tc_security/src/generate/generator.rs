@@ -2,7 +2,6 @@ use rand::CryptoRng;
 use rand::rand_core::UnwrapErr;
 use rand::rngs::SysRng;
 
-use super::generator_entry::Generate;
 use super::{GeneratorEntry, KeyGenParams};
 use crate::params::AnyParams;
 use crate::{AnyError, SecurityError};
@@ -39,18 +38,12 @@ impl Generator {
 
     /// 產生一把對稱金鑰，同 BC 的 `GenerateKeyParameter`。金鑰對的產生器（例如 RSA）回傳 `WrongGenerator`。
     pub fn generate_key(&mut self) -> Result<AnyParams, SecurityError> {
-        match self.entry.generate() {
-            Generate::Key(generate) => Ok(generate(&self.params, &mut *self.rng)),
-            Generate::KeyPair(_) => Err(SecurityError::WrongGenerator),
-        }
+        self.entry.generate_key(&self.params, &mut *self.rng)
     }
 
     /// 產生一組金鑰對（公鑰, 私鑰），同 BC 的 `GenerateKeyPair`。對稱金鑰的產生器回傳 `WrongGenerator`；
     /// 底層的產生器失敗時，錯誤包成 `AnyError`。
     pub fn generate_key_pair(&mut self) -> Result<(AnyParams, AnyParams), AnyError> {
-        match self.entry.generate() {
-            Generate::KeyPair(generate) => generate(&self.params, &mut *self.rng),
-            Generate::Key(_) => Err(AnyError::new(SecurityError::WrongGenerator)),
-        }
+        self.entry.generate_key_pair(&self.params, &mut *self.rng)
     }
 }

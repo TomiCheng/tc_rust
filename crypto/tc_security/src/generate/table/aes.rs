@@ -1,9 +1,8 @@
 use rand::CryptoRng;
 use tc_asn1::NamedOid;
 
-use super::random_key;
+use super::{no_key_pair, random_key};
 use crate::SecurityError;
-use crate::generate::generator_entry::Generate;
 use crate::generate::{GeneratorEntry, KeyGenParams};
 use crate::params::AnyParams;
 
@@ -27,8 +26,11 @@ fn check_params(params: &KeyGenParams) -> Result<(), SecurityError> {
     }
 }
 
-fn generate_key(params: &KeyGenParams, rng: &mut dyn CryptoRng) -> AnyParams {
-    AnyParams::new(random_key(params.strength(), rng))
+fn generate_key(
+    params: &KeyGenParams,
+    rng: &mut dyn CryptoRng,
+) -> Result<AnyParams, SecurityError> {
+    Ok(AnyParams::new(random_key(params.strength(), rng)))
 }
 
 /// 沒寫長度時產生 192 bits，同 BC；BC 的 `AESWRAP` 也對到這一列。
@@ -37,7 +39,8 @@ pub(super) const AES: GeneratorEntry = GeneratorEntry::new(
     &[],
     KeyGenParams::Basic { strength: 192 },
     check_params,
-    Generate::Key(generate_key),
+    generate_key,
+    no_key_pair,
 );
 
 /// 128 bits。OID 照 BC：這個長度的各個模式與 key wrap 都對到這一列。
@@ -55,7 +58,8 @@ pub(super) const AES128: GeneratorEntry = GeneratorEntry::new(
     ],
     KeyGenParams::Basic { strength: 128 },
     check_params,
-    Generate::Key(generate_key),
+    generate_key,
+    no_key_pair,
 );
 
 /// 192 bits。
@@ -73,7 +77,8 @@ pub(super) const AES192: GeneratorEntry = GeneratorEntry::new(
     ],
     KeyGenParams::Basic { strength: 192 },
     check_params,
-    Generate::Key(generate_key),
+    generate_key,
+    no_key_pair,
 );
 
 /// 256 bits。
@@ -91,5 +96,6 @@ pub(super) const AES256: GeneratorEntry = GeneratorEntry::new(
     ],
     KeyGenParams::Basic { strength: 256 },
     check_params,
-    Generate::Key(generate_key),
+    generate_key,
+    no_key_pair,
 );

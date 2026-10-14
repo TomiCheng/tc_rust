@@ -3,7 +3,7 @@ use tc_asn1::NamedOid;
 use tc_asym_cipher::{KeyPairGenerator, KeyPairGeneratorInit};
 use tc_rsa::{RsaKeyGenerationParamsRef, RsaKeyGenerator};
 
-use crate::generate::generator_entry::Generate;
+use super::no_key;
 use crate::generate::{GeneratorEntry, KeyGenParams};
 use crate::params::AnyParams;
 use crate::{AnyError, SecurityError};
@@ -60,5 +60,6 @@ pub(super) const RSA: GeneratorEntry = GeneratorEntry::new(
         certainty: CERTAINTY,
     },
     check_params,
-    Generate::KeyPair(generate_key_pair),
+    no_key,
+    generate_key_pair,
 );

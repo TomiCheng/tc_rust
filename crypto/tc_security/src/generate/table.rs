@@ -18,6 +18,22 @@ fn random_key(strength: usize, rng: &mut dyn rand::CryptoRng) -> Vec<u8> {
     key
 }
 
+#[cfg(feature = "rsa")]
+fn no_key(
+    _: &super::KeyGenParams,
+    _: &mut dyn rand::CryptoRng,
+) -> Result<crate::params::AnyParams, crate::SecurityError> {
+    Err(crate::SecurityError::WrongGenerator)
+}
+
+#[cfg(any(feature = "aes", feature = "rc2", feature = "rc5"))]
+fn no_key_pair(
+    _: &super::KeyGenParams,
+    _: &mut dyn rand::CryptoRng,
+) -> Result<(crate::params::AnyParams, crate::params::AnyParams), crate::AnyError> {
+    Err(crate::AnyError::new(crate::SecurityError::WrongGenerator))
+}
+
 pub(super) const GENERATORS: &[GeneratorEntry] = &[
     #[cfg(feature = "aes")]
     aes::AES,

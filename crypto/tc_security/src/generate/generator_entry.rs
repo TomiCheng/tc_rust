@@ -5,25 +5,20 @@ use super::{Generator, KeyGenParams};
 use crate::params::AnyParams;
 use crate::{AnyError, SecurityError};
 
-type GenerateKey = fn(&KeyGenParams, &mut dyn CryptoRng) -> AnyParams;
+type CheckParams = fn(&KeyGenParams) -> Result<(), SecurityError>;
+type GenerateKey = fn(&KeyGenParams, &mut dyn CryptoRng) -> Result<AnyParams, SecurityError>;
 type GenerateKeyPair =
     fn(&KeyGenParams, &mut dyn CryptoRng) -> Result<(AnyParams, AnyParams), AnyError>;
 
-#[derive(Clone, Copy, Debug)]
-#[allow(dead_code, reason = "只開對稱或只開非對稱演算法時，另一種用不到")]
-pub(super) enum Generate {
-    Key(GenerateKey),
-    KeyPair(GenerateKeyPair),
-}
-
-/// 產生器表的一列：名稱、別名、OID、預設參數與產生方式，由它建立 [`Generator`]。
+/// 產生器表的一列：名稱、別名、OID、預設參數與產生函式，由它建立 [`Generator`]。
 #[derive(Clone, Copy, Debug)]
 pub struct GeneratorEntry {
     names: &'static [&'static str],
     oids: &'static [NamedOid],
     default_params: KeyGenParams,
-    check_params: fn(&KeyGenParams) -> Result<(), SecurityError>,
-    generate: Generate,
+    check_params: CheckParams,
+    generate_key: GenerateKey,
+    generate_key_pair: GenerateKeyPair,
 }
 
 impl GeneratorEntry {
@@ -32,15 +27,17 @@ impl GeneratorEntry {
         names: &'static [&'static str],
         oids: &'static [NamedOid],
         default_params: KeyGenParams,
-        check_params: fn(&KeyGenParams) -> Result<(), SecurityError>,
-        generate: Generate,
+        check_params: CheckParams,
+        generate_key: GenerateKey,
+        generate_key_pair: GenerateKeyPair,
     ) -> Self {
         Self {
             names,
             oids,
             default_params,
             check_params,
-            generate,
+            generate_key,
+            generate_key_pair,
         }
     }
 
@@ -61,8 +58,20 @@ impl GeneratorEntry {
         (self.check_params)(params)
     }
 
-    pub(super) fn generate(&self) -> Generate {
-        self.generate
+    pub(super) fn generate_key(
+        &self,
+        params: &KeyGenParams,
+        rng: &mut dyn CryptoRng,
+    ) -> Result<AnyParams, SecurityError> {
+        (self.generate_key)(params, rng)
+    }
+
+    pub(super) fn generate_key_pair(
+        &self,
+        params: &KeyGenParams,
+        rng: &mut dyn CryptoRng,
+    ) -> Result<(AnyParams, AnyParams), AnyError> {
+        (self.generate_key_pair)(params, rng)
     }
 
     /// 建立一個新的產生器，還沒呼叫 `init` 時用這一列的預設參數。

@@ -1,9 +1,8 @@
 use rand::CryptoRng;
 use tc_rc_cipher::{RC5_MAX_KEY_BYTES, RC5_MAX_ROUNDS};
 
-use super::random_key;
+use super::{no_key_pair, random_key};
 use crate::SecurityError;
-use crate::generate::generator_entry::Generate;
 use crate::generate::{GeneratorEntry, KeyGenParams};
 use crate::params::AnyParams;
 
@@ -22,11 +21,14 @@ fn check_params(params: &KeyGenParams) -> Result<(), SecurityError> {
     }
 }
 
-fn generate_key(params: &KeyGenParams, rng: &mut dyn CryptoRng) -> AnyParams {
-    match *params {
+fn generate_key(
+    params: &KeyGenParams,
+    rng: &mut dyn CryptoRng,
+) -> Result<AnyParams, SecurityError> {
+    Ok(match *params {
         KeyGenParams::Rc5 { strength, rounds } => AnyParams::rc5(random_key(strength, rng), rounds),
         _ => AnyParams::new(random_key(params.strength(), rng)),
-    }
+    })
 }
 
 pub(super) const RC5: GeneratorEntry = GeneratorEntry::new(
@@ -34,7 +36,8 @@ pub(super) const RC5: GeneratorEntry = GeneratorEntry::new(
     &[],
     KeyGenParams::Basic { strength: 128 },
     check_params,
-    Generate::Key(generate_key),
+    generate_key,
+    no_key_pair,
 );
 
 pub(super) const RC5_64: GeneratorEntry = GeneratorEntry::new(
@@ -42,5 +45,6 @@ pub(super) const RC5_64: GeneratorEntry = GeneratorEntry::new(
     &[],
     KeyGenParams::Basic { strength: 256 },
     check_params,
-    Generate::Key(generate_key),
+    generate_key,
+    no_key_pair,
 );
