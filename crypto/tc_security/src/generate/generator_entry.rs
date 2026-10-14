@@ -1,18 +1,29 @@
+use rand::CryptoRng;
 use tc_asn1::NamedOid;
 
 use super::{Generator, KeyGenParams};
-use crate::SecurityError;
+use crate::params::AnyParams;
+use crate::{AnyError, SecurityError};
 
-/// 產生器表的一列：名稱、別名、OID 與預設參數，由它建立 [`Generator`]。
+type GenerateKey = fn(&KeyGenParams, &mut dyn CryptoRng) -> AnyParams;
+type GenerateKeyPair =
+    fn(&KeyGenParams, &mut dyn CryptoRng) -> Result<(AnyParams, AnyParams), AnyError>;
+
+#[derive(Clone, Copy, Debug)]
+#[allow(dead_code, reason = "只開對稱或只開非對稱演算法時，另一種用不到")]
+pub(super) enum Generate {
+    Key(GenerateKey),
+    KeyPair(GenerateKeyPair),
+}
+
+/// 產生器表的一列：名稱、別名、OID、預設參數與產生方式，由它建立 [`Generator`]。
 #[derive(Clone, Copy, Debug)]
 pub struct GeneratorEntry {
-    // 第一個是正式名稱，其餘是別名
     names: &'static [&'static str],
     oids: &'static [NamedOid],
-    // 沒呼叫 init 時用的參數
     default_params: KeyGenParams,
-    // init 收到的參數：檢查是不是這個演算法接受的，必要時換成它自己的 variant
-    check_params: fn(&KeyGenParams) -> Result<KeyGenParams, SecurityError>,
+    check_params: fn(&KeyGenParams) -> Result<(), SecurityError>,
+    generate: Generate,
 }
 
 impl GeneratorEntry {
@@ -21,13 +32,15 @@ impl GeneratorEntry {
         names: &'static [&'static str],
         oids: &'static [NamedOid],
         default_params: KeyGenParams,
-        check_params: fn(&KeyGenParams) -> Result<KeyGenParams, SecurityError>,
+        check_params: fn(&KeyGenParams) -> Result<(), SecurityError>,
+        generate: Generate,
     ) -> Self {
         Self {
             names,
             oids,
             default_params,
             check_params,
+            generate,
         }
     }
 
@@ -44,11 +57,12 @@ impl GeneratorEntry {
         self.oids
     }
 
-    pub(super) fn check_params(
-        &self,
-        params: &KeyGenParams,
-    ) -> Result<KeyGenParams, SecurityError> {
+    pub(super) fn check_params(&self, params: &KeyGenParams) -> Result<(), SecurityError> {
         (self.check_params)(params)
+    }
+
+    pub(super) fn generate(&self) -> Generate {
+        self.generate
     }
 
     /// 建立一個新的產生器，還沒呼叫 `init` 時用這一列的預設參數。

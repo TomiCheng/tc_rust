@@ -258,3 +258,42 @@ fn rc2_init_can_set_the_effective_key_bits_of_the_key() {
         );
     }
 }
+
+#[cfg(feature = "rc5")]
+#[test]
+fn rc5_keys_follow_bc_defaults_and_init_can_set_the_rounds() {
+    use tc_block_cipher::KeyParams;
+    use tc_rc_cipher::Rc5Params;
+    use tc_security::generate::KeyGenParams;
+    use tc_security::params::AnyParams;
+
+    assert_eq!(name_of("RC5-32"), Ok("RC5"));
+    for (name, bytes) in [("RC5", 16), ("RC5-64", 32)] {
+        let key = generate::get_by_name(name)
+            .unwrap()
+            .generator()
+            .generate_key()
+            .unwrap();
+        assert_eq!(KeyParams::key(&key).len(), bytes, "{name}");
+    }
+
+    let mut generator = generate::get_by_name("RC5").unwrap().generator();
+    generator
+        .init(&KeyGenParams::Rc5 {
+            strength: 64,
+            rounds: 8,
+        })
+        .unwrap();
+    let key = generator.generate_key().unwrap();
+    assert!(matches!(key, AnyParams::Rc5 { .. }));
+    assert_eq!(KeyParams::key(&key).len(), 8);
+    assert_eq!(key.rounds(), 8);
+
+    for (strength, rounds) in [(0, 12), (2048, 12), (128, 256)] {
+        assert_eq!(
+            generator.init(&KeyGenParams::Rc5 { strength, rounds }),
+            Err(SecurityError::InvalidKeyGenParams),
+            "{strength}/{rounds}"
+        );
+    }
+}

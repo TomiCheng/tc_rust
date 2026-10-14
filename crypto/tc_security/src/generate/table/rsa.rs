@@ -1,30 +1,52 @@
+use rand::CryptoRng;
 use tc_asn1::NamedOid;
+use tc_asym_cipher::{KeyPairGenerator, KeyPairGeneratorInit};
+use tc_rsa::{RsaKeyGenerationParamsRef, RsaKeyGenerator};
 
-use crate::SecurityError;
+use crate::generate::generator_entry::Generate;
 use crate::generate::{GeneratorEntry, KeyGenParams};
+use crate::params::AnyParams;
+use crate::{AnyError, SecurityError};
 
-// 同 tc_rsa 與 BC 的預設
 const PUBLIC_EXPONENT: u32 = 65537;
 const STRENGTH: usize = 2048;
 const CERTAINTY: u32 = 100;
 
-// 只給長度時，公開指數與 certainty 用預設值，同 BC 的 RsaKeyPairGenerator 收到 KeyGenerationParameters；
-// 長度與指數合不合用由 tc_rsa 在產生時判定
-fn check_params(params: &KeyGenParams) -> Result<KeyGenParams, SecurityError> {
-    match *params {
-        KeyGenParams::Basic { strength } => Ok(KeyGenParams::Rsa {
-            public_exponent: PUBLIC_EXPONENT,
-            strength,
-            certainty: CERTAINTY,
-        }),
-        KeyGenParams::Rsa { .. } => Ok(*params),
-        #[cfg(feature = "rc2")]
-        KeyGenParams::Rc2 { .. } => Err(SecurityError::InvalidKeyGenParams),
+fn check_params(params: &KeyGenParams) -> Result<(), SecurityError> {
+    if matches!(
+        params,
+        KeyGenParams::Basic { .. } | KeyGenParams::Rsa { .. }
+    ) {
+        Ok(())
+    } else {
+        Err(SecurityError::InvalidKeyGenParams)
     }
 }
 
-/// RSA 金鑰對：沒呼叫 init 時產生 2048 bits 的模數，公開指數 65537，同 tc_rsa 與 BC 的預設。
-/// OID 照 BC 只有 rsaEncryption。
+fn generate_key_pair(
+    params: &KeyGenParams,
+    rng: &mut dyn CryptoRng,
+) -> Result<(AnyParams, AnyParams), AnyError> {
+    let (public_exponent, certainty) = match *params {
+        KeyGenParams::Rsa {
+            public_exponent,
+            certainty,
+            ..
+        } => (public_exponent, certainty),
+        _ => (PUBLIC_EXPONENT, CERTAINTY),
+    };
+    let strength = u32::try_from(params.strength())
+        .map_err(|_| AnyError::new(SecurityError::InvalidKeyGenParams))?;
+    let rsa_params = RsaKeyGenerationParamsRef::new(rng)
+        .with_public_exponent(public_exponent)
+        .with_strength(strength)
+        .with_certainty(certainty);
+    let mut generator = RsaKeyGenerator::new();
+    generator.init(rsa_params).map_err(AnyError::new)?;
+    let (public, private) = generator.generate_key_pair().map_err(AnyError::new)?;
+    Ok((AnyParams::rsa(public), AnyParams::rsa(private)))
+}
+
 pub(super) const RSA: GeneratorEntry = GeneratorEntry::new(
     &["RSA"],
     &[NamedOid::new(
@@ -38,4 +60,5 @@ pub(super) const RSA: GeneratorEntry = GeneratorEntry::new(
         certainty: CERTAINTY,
     },
     check_params,
+    Generate::KeyPair(generate_key_pair),
 );
