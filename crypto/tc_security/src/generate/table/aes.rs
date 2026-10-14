@@ -1,10 +1,8 @@
-use rand::CryptoRng;
 use tc_asn1::NamedOid;
 
-use super::{no_key_pair, random_key};
+use super::{no_key_pair, plain_key};
 use crate::SecurityError;
 use crate::generate::{GeneratorEntry, KeyGenParams};
-use crate::params::AnyParams;
 
 // NIST 的 AES OID 都在 2.16.840.1.101.3.4.1 底下，只差最後一個 arc
 macro_rules! nist_aes {
@@ -26,20 +24,13 @@ fn check_params(params: &KeyGenParams) -> Result<(), SecurityError> {
     }
 }
 
-fn generate_key(
-    params: &KeyGenParams,
-    rng: &mut dyn CryptoRng,
-) -> Result<AnyParams, SecurityError> {
-    Ok(AnyParams::new(random_key(params.strength(), rng)))
-}
-
 /// 沒寫長度時產生 192 bits，同 BC；BC 的 `AESWRAP` 也對到這一列。
 pub(super) const AES: GeneratorEntry = GeneratorEntry::new(
     &["AES", "AESWRAP"],
     &[],
     KeyGenParams::Basic { strength: 192 },
     check_params,
-    generate_key,
+    plain_key,
     no_key_pair,
 );
 
@@ -58,7 +49,7 @@ pub(super) const AES128: GeneratorEntry = GeneratorEntry::new(
     ],
     KeyGenParams::Basic { strength: 128 },
     check_params,
-    generate_key,
+    plain_key,
     no_key_pair,
 );
 
@@ -77,7 +68,7 @@ pub(super) const AES192: GeneratorEntry = GeneratorEntry::new(
     ],
     KeyGenParams::Basic { strength: 192 },
     check_params,
-    generate_key,
+    plain_key,
     no_key_pair,
 );
 
@@ -96,6 +87,6 @@ pub(super) const AES256: GeneratorEntry = GeneratorEntry::new(
     ],
     KeyGenParams::Basic { strength: 256 },
     check_params,
-    generate_key,
+    plain_key,
     no_key_pair,
 );

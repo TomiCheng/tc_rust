@@ -17,6 +17,7 @@ use tc_security::cipher::{self, Algorithm, CipherEntry, Mode, Padding};
 use tc_security::params::AnyParams;
 
 /// 組合能用的參數：金鑰取演算法接受的長度，IV 或 nonce 依模式與區塊大小決定。
+#[allow(unreachable_code, reason = "只開沒有模式的 cipher 時，每個演算法都提前回傳")]
 fn params_for(entry: &CipherEntry) -> AnyParams {
     let key = |len| vec![7; len];
     let iv = |len| vec![9; len];

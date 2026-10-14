@@ -297,3 +297,35 @@ fn rc5_keys_follow_bc_defaults_and_init_can_set_the_rounds() {
         );
     }
 }
+
+#[cfg(feature = "chacha")]
+#[test]
+fn chacha_keys_follow_the_bc_names_and_sizes() {
+    use tc_block_cipher::KeyParams;
+    use tc_security::generate::KeyGenParams;
+
+    for (name, expected) in [
+        ("CHACHA20", "CHACHA7539"),
+        ("chacha20-poly1305", "CHACHA7539"),
+        ("1.2.840.113549.1.9.16.3.18", "CHACHA7539"),
+        ("XCHACHA20-POLY1305", "XCHACHA20"),
+    ] {
+        assert_eq!(name_of(name), Ok(expected), "{name}");
+    }
+    for (name, bytes) in [("CHACHA", 16), ("CHACHA7539", 32), ("XCHACHA20", 32)] {
+        let key = generate::get_by_name(name)
+            .unwrap()
+            .generator()
+            .generate_key()
+            .unwrap();
+        assert_eq!(KeyParams::key(&key).len(), bytes, "{name}");
+    }
+
+    let mut chacha = generate::get_by_name("CHACHA").unwrap().generator();
+    assert_eq!(chacha.init(&KeyGenParams::Basic { strength: 256 }), Ok(()));
+    let mut chacha7539 = generate::get_by_name("CHACHA7539").unwrap().generator();
+    assert_eq!(
+        chacha7539.init(&KeyGenParams::Basic { strength: 128 }),
+        Err(SecurityError::InvalidKeyGenParams)
+    );
+}

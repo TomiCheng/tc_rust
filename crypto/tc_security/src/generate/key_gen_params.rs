@@ -23,7 +23,13 @@ pub enum KeyGenParams {
 }
 
 impl KeyGenParams {
-    #[cfg(any(feature = "aes", feature = "rc2", feature = "rc5", feature = "rsa"))]
+    #[cfg(any(
+        feature = "aes",
+        feature = "chacha",
+        feature = "rc2",
+        feature = "rc5",
+        feature = "rsa"
+    ))]
     pub(crate) fn strength(&self) -> usize {
         match *self {
             Self::Basic { strength } => strength,
