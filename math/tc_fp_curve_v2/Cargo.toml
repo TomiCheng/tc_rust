@@ -1,0 +1,8 @@
+[package]
+name = "tc_fp_curve_v2"
+description = "Prime-field short-Weierstrass elliptic curves backed by Montgomery arithmetic."
+version.workspace = true
+edition.workspace = true
+rust-version = "1.85"
+license.workspace = true
+repository.workspace = true
