@@ -11,6 +11,8 @@ mod fp_var_curve;
 mod fp_var_point;
 mod sec1;
 
+pub mod named_curves;
+
 pub use fp_ct_curve::FpCtCurve;
 pub use fp_ct_point::FpCtPoint;
 pub use fp_field::FpField;

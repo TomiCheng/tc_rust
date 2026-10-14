@@ -7,6 +7,10 @@ rust-version = "1.85"
 license.workspace = true
 repository.workspace = true
 
+[features]
+# secp112r1, secp112r2 and secp128r2: weak, for interoperability only.
+small-curves = []
+
 [dependencies]
 tc_ec_core_v2 = { version = "0.1.0" , path = "../tc_ec_core_v2" }
 tc_bigint = { version = "0.1.0", features = ["alloc"] }
