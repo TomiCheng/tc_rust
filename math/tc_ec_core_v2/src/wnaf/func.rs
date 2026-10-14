@@ -6,6 +6,10 @@ use super::{WNafTable, DEFAULT_WINDOW_SIZE_CUTOFFS, MAX_COMPACT_WIDTH, MAX_DENSE
 /// Joint sparse form of two unsigned scalars, least significant pair first.
 /// Digits are in `-1..=1`. Carry bits avoid overflowing fixed-width scalars.
 /// Variable time; suitable only for public scalars.
+///
+/// Solinas' algorithm: a digit flips sign when its residue mod 8 is 3 or 5 and
+/// the other residue is 2 mod 4. BC tests `n + u == 4` there, which never holds,
+/// so its output is a pair of plain NAFs rather than the joint sparse form.
 pub fn generate_jsf<C: Curve>(a: &C::Scalar, b: &C::Scalar) -> Vec<[i8; 2]> {
     let mut values = [a.clone(), b.clone()];
     let mut carry = [0_i32; 2];
@@ -20,7 +24,7 @@ pub fn generate_jsf<C: Curve>(a: &C::Scalar, b: &C::Scalar) -> Vec<[i8; 2]> {
             let mut u = n[i] & 1;
             if u != 0 {
                 u -= n[i] & 2;
-                if n[i] + u == 4 && n[1 - i] & 3 == 2 {
+                if matches!(n[i], 3 | 5) && n[1 - i] & 3 == 2 {
                     u = -u;
                 }
             }
