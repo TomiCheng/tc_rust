@@ -2,7 +2,7 @@ use core::fmt;
 
 use tc_bigint::PaddedBigUint;
 use tc_constant_time::{Choice, ConditionallySelectable, ConstantTimeEq};
-use tc_ec_core_v2::FieldElement;
+use tc_ec_core_v2::{FieldElement, PrimeFieldElement};
 use tc_modular::PaddedMontyForm;
 
 #[derive(Clone, PartialEq, Eq)]
@@ -13,11 +13,6 @@ pub struct FpFieldElement<'a> {
 impl<'a> FpFieldElement<'a> {
     pub fn new(value: PaddedMontyForm<'a>) -> Self {
         Self { value }
-    }
-
-    /// The value in `[0, q)`, at the width of `q`. Constant time.
-    pub fn to_big_uint(&self) -> PaddedBigUint {
-        self.value.retrieve()
     }
 
     /// `2x`. Constant time.
@@ -204,6 +199,20 @@ impl FieldElement for FpFieldElement<'_> {
     }
 }
 
+impl PrimeFieldElement for FpFieldElement<'_> {
+    type BigUint = PaddedBigUint;
+
+    /// An element of the same field; a value of `q` or more is reduced. Constant time.
+    fn element_from_big_uint(&self, value: &PaddedBigUint) -> Self {
+        self.sibling(value)
+    }
+
+    /// The value in `[0, q)`, at the width of `q`. Constant time.
+    fn to_big_uint(&self) -> PaddedBigUint {
+        self.value.retrieve()
+    }
+}
+
 /// Prints only the width, never the value, which may be secret.
 impl fmt::Debug for FpFieldElement<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -216,7 +225,7 @@ impl fmt::Debug for FpFieldElement<'_> {
 #[cfg(test)]
 mod tests {
     use tc_bigint::PaddedBigUint;
-    use tc_ec_core_v2::FieldElement;
+    use tc_ec_core_v2::{FieldElement, PrimeFieldElement};
 
     use crate::FpField;
 
@@ -243,6 +252,20 @@ mod tests {
         let x = field.element(&int(5));
         assert!(x.multiply(&x.invert().unwrap()).is_one());
         assert!(field.element(&int(0)).invert().is_none());
+    }
+
+    #[test]
+    fn integers_round_trip_through_the_field_and_larger_ones_are_reduced() {
+        let field = FpField::new(int(17));
+        let x = field.element(&int(5));
+        for value in 0..17 {
+            assert_eq!(
+                x.element_from_big_uint(&int(value)).to_big_uint(),
+                int(value)
+            );
+        }
+        assert_eq!(x.element_from_big_uint(&int(20)).to_big_uint(), int(3));
+        assert_eq!(x.to_big_uint().as_limbs().len(), int(17).as_limbs().len());
     }
 
     #[test]

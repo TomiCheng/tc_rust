@@ -319,7 +319,7 @@ impl fmt::Debug for FpCtPoint<'_> {
 mod tests {
     use tc_bigint::PaddedBigUint;
     use tc_constant_time::{Choice, ConditionallySelectable};
-    use tc_ec_core_v2::Point;
+    use tc_ec_core_v2::{Point, PrimeFieldElement};
 
     use crate::{FpCtCurve, FpCtPoint, FpField, FpVarCurve, FpVarPoint};
 

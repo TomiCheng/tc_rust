@@ -1,5 +1,5 @@
 use tc_bigint::PaddedBigUint;
-use tc_ec_core_v2::Point;
+use tc_ec_core_v2::{Point, PrimeFieldElement};
 
 use super::hex::hex;
 use super::named_curve::int;

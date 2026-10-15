@@ -919,7 +919,9 @@ impl fmt::Debug for FpVarPoint<'_> {
 #[cfg(test)]
 mod tests {
     use tc_bigint::PaddedBigUint;
-    use tc_ec_core_v2::{CoordinateSystem, Point, PointDecodeError, PointEncodeError};
+    use tc_ec_core_v2::{
+        CoordinateSystem, Point, PointDecodeError, PointEncodeError, PrimeFieldElement,
+    };
 
     use crate::{FpField, FpVarCurve, FpVarPoint};
 

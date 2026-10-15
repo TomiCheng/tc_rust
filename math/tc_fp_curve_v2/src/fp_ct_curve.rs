@@ -1,7 +1,7 @@
 use core::fmt;
 
 use tc_bigint::PaddedBigUint;
-use tc_ec_core_v2::{CoordinateSystem, Curve, FieldElement, PointDecodeError};
+use tc_ec_core_v2::{CoordinateSystem, Curve, FieldElement, PointDecodeError, PrimeFieldElement};
 
 use crate::{FpCtPoint, FpField, FpFieldElement, sec1};
 
