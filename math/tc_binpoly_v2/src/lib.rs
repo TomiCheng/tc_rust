@@ -9,6 +9,8 @@ mod padded_bin_poly;
 
 mod errors;
 mod traits;
+mod reduce;
+mod invert;
 
 pub use bin_field::BinField;
 pub use fixed_bin_poly::FixedBinPoly;
