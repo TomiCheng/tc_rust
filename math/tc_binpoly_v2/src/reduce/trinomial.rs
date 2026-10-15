@@ -1,3 +1,5 @@
+use tc_zeroize::Zeroize;
+
 use super::bits::{bit_value, debug_assert_product_slack, mask_top, size, xor_bit_value};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -154,6 +156,7 @@ fn reduce_a_const<const N: usize, const SLACK: bool>(
     }
     z.copy_from_slice(&words[..N]);
     z[N - 1] &= (1_u64 << s_n) - 1;
+    local.zeroize();
 }
 
 fn reduce_b(n: usize, k: usize, tt: &mut [u64], z: &mut [u64]) {
@@ -220,6 +223,7 @@ fn reduce_c_const<const N: usize, const SLACK: bool>(
     }
     z.copy_from_slice(&words[..N]);
     z[N - 1] &= (1_u64 << s_n) - 1;
+    local.zeroize();
 }
 
 fn reduce_e(n: usize, k: usize, tt: &mut [u64], z: &mut [u64]) {

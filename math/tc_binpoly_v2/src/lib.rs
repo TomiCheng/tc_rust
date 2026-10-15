@@ -16,3 +16,4 @@ pub use bin_field::BinField;
 pub use fixed_bin_poly::FixedBinPoly;
 pub use padded_bin_poly::PaddedBinPoly;
 pub use errors::BinPolyError;
+pub(crate) use reduce::Reducer;
