@@ -1344,6 +1344,7 @@ dependencies = [
  "tc_constant_time",
  "tc_ec_core_v2",
  "tc_modular",
+ "tc_zeroize",
 ]
 
 [[package]]

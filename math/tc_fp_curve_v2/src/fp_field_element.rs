@@ -4,6 +4,7 @@ use tc_bigint::PaddedBigUint;
 use tc_constant_time::{Choice, ConditionallySelectable, ConstantTimeEq};
 use tc_ec_core_v2::{FieldElement, PrimeFieldElement};
 use tc_modular::PaddedMontyForm;
+use tc_zeroize::Zeroize;
 
 #[derive(Clone, PartialEq, Eq)]
 pub struct FpFieldElement<'a> {
@@ -103,6 +104,14 @@ impl ConditionallySelectable for FpFieldElement<'_> {
 impl ConstantTimeEq for FpFieldElement<'_> {
     fn ct_eq(&self, rhs: &Self) -> Choice {
         self.value.ct_eq(&rhs.value)
+    }
+}
+
+/// Wipes the value, which may be secret, so that it does not stay in freed memory; this
+/// covers every temporary of the point formulas and every coordinate. Constant time.
+impl Drop for FpFieldElement<'_> {
+    fn drop(&mut self) {
+        self.value.zeroize();
     }
 }
 
