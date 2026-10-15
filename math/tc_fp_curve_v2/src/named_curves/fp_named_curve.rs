@@ -17,7 +17,7 @@ use crate::{FpCtCurve, FpCtPoint, FpField, FpVarCurve, FpVarPoint};
 /// # fn private_key() -> tc_bigint::PaddedBigUint { tc_bigint::PaddedBigUint::from(7u8) }
 /// assert!(public_key.is_valid());
 /// ```
-pub struct NamedCurve<const N: usize> {
+pub struct FpNamedCurve<const N: usize> {
     pub(super) p: [u8; N],
     pub(super) a: [u8; N],
     pub(super) b: [u8; N],
@@ -27,7 +27,7 @@ pub struct NamedCurve<const N: usize> {
     pub(super) gy: [u8; N],
 }
 
-impl<const N: usize> NamedCurve<N> {
+impl<const N: usize> FpNamedCurve<N> {
     pub fn field(&self) -> FpField {
         FpField::new(int(&self.p)).expect("a named curve has an odd prime")
     }

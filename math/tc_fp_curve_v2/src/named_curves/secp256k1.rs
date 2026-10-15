@@ -1,8 +1,8 @@
-use super::NamedCurve;
+use super::FpNamedCurve;
 use super::hex::hex;
 
 /// SEC 2 secp256k1.
-pub const SECP256K1: NamedCurve<32> = NamedCurve {
+pub const SECP256K1: FpNamedCurve<32> = FpNamedCurve {
     p: hex("fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f"),
     a: hex("0000000000000000000000000000000000000000000000000000000000000000"),
     b: hex("0000000000000000000000000000000000000000000000000000000000000007"),

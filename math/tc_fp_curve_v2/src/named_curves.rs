@@ -1,5 +1,5 @@
+mod fp_named_curve;
 mod hex;
-mod named_curve;
 #[cfg(feature = "small-curves")]
 mod secp112r1;
 #[cfg(feature = "small-curves")]
@@ -11,7 +11,7 @@ mod secp256r1;
 #[cfg(test)]
 mod tests;
 
-pub use named_curve::NamedCurve;
+pub use fp_named_curve::FpNamedCurve;
 #[cfg(feature = "small-curves")]
 pub use secp112r1::SECP112R1;
 #[cfg(feature = "small-curves")]

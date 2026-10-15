@@ -1,9 +1,9 @@
-use super::NamedCurve;
+use super::FpNamedCurve;
 use super::hex::hex;
 
 /// SEC 2 secp128r2, weak. The cofactor is 4, so the complete formulas of [`FpCtCurve`]
 /// hold only in the subgroup of `G`: a point outside it may give a wrong result.
-pub const SECP128R2: NamedCurve<16> = NamedCurve {
+pub const SECP128R2: FpNamedCurve<16> = FpNamedCurve {
     p: hex("fffffffdffffffffffffffffffffffff"),
     a: hex("d6031998d1b3bbfebf59cc9bbff9aee1"),
     b: hex("5eeefca380d02919dc2c6558bb6d8a5d"),

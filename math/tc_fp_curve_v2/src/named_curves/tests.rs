@@ -1,11 +1,11 @@
 use tc_bigint::PaddedBigUint;
 use tc_ec_core_v2::{Point, PrimeFieldElement};
 
+use super::fp_named_curve::int;
 use super::hex::hex;
-use super::named_curve::int;
-use super::{NamedCurve, SECP256K1, SECP256R1};
+use super::{FpNamedCurve, SECP256K1, SECP256R1};
 
-fn check(named: &NamedCurve<32>, twice_x: &str, twice_y: &str) {
+fn check(named: &FpNamedCurve<32>, twice_x: &str, twice_y: &str) {
     let field = named.field();
     let ct_curve = named.ct_curve(&field);
     let var_curve = named.var_curve(&field);
@@ -43,7 +43,7 @@ fn secp256r1_generates_its_published_doubling_on_both_curves() {
 }
 
 #[cfg(feature = "small-curves")]
-fn agree_in_the_subgroup<const N: usize>(named: &NamedCurve<N>) {
+fn agree_in_the_subgroup<const N: usize>(named: &FpNamedCurve<N>) {
     let field = named.field();
     let ct_curve = named.ct_curve(&field);
     let var_curve = named.var_curve(&field);

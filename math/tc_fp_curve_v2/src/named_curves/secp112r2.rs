@@ -1,10 +1,10 @@
-use super::NamedCurve;
+use super::FpNamedCurve;
 use super::hex::hex;
 
 /// SEC 2 secp112r2, broken. The cofactor is 4, so the group has points of order 2 and
 /// the complete formulas of [`FpCtCurve`] hold only in the subgroup of `G`: a point
 /// outside it may give a wrong result.
-pub const SECP112R2: NamedCurve<14> = NamedCurve {
+pub const SECP112R2: FpNamedCurve<14> = FpNamedCurve {
     p: hex("db7c2abf62e35e668076bead208b"),
     a: hex("6127c24c05f38a0aaaf65c0ef02c"),
     b: hex("51def1815db5ed74fcc34c85d709"),
