@@ -215,10 +215,11 @@ fn window_size_follows_the_bc_thresholds() {
 
 #[test]
 fn a_table_holds_the_odd_multiples_and_their_negations() {
-    let field = FpField::new(int(17));
+    let field = FpField::new(int(17)).unwrap();
     let curve = FpVarCurve::new(&field, &int(2), &int(2), Some(int(19)), Some(int(1)))
+        .unwrap()
         .with_coordinate_system(CoordinateSystem::Jacobian);
-    let g = curve.create_point(&int(5), &int(1));
+    let g = curve.create_point(&int(5), &int(1)).unwrap();
     for width in 2..=6 {
         let table = WNafTable::new(&g, width, true);
         assert_eq!(table.width(), width);
@@ -243,9 +244,9 @@ fn a_table_holds_the_odd_multiples_and_their_negations() {
 #[test]
 #[should_panic(expected = "wNAF table width must be in the range 2..=16")]
 fn a_table_rejects_a_width_below_two() {
-    let field = FpField::new(int(17));
-    let curve = FpVarCurve::new(&field, &int(2), &int(2), None, None);
-    WNafTable::new(&curve.create_point(&int(5), &int(1)), 1, true);
+    let field = FpField::new(int(17)).unwrap();
+    let curve = FpVarCurve::new(&field, &int(2), &int(2), None, None).unwrap();
+    WNafTable::new(&curve.create_point(&int(5), &int(1)).unwrap(), 1, true);
 }
 
 #[test]
@@ -345,7 +346,7 @@ fn the_sums_reject_mismatched_lengths_curves_and_invalid_points() {
         AlgorithmError::InvalidLength
     );
 
-    let off_curve = curve.create_point(&hex(LARGE[0]), &hex(LARGE[1]));
+    let off_curve = curve.create_point(&hex(LARGE[0]), &hex(LARGE[1])).unwrap();
     assert_eq!(
         sum_of_two_multiplies::<Var<'_>>(&g, &k, &off_curve, &k).unwrap_err(),
         AlgorithmError::InvalidPoint
@@ -355,7 +356,7 @@ fn the_sums_reject_mismatched_lengths_curves_and_invalid_points() {
         AlgorithmError::InvalidPoint
     );
 
-    let elsewhere = FpVarCurve::new(&field, &int(1), &int(1), None, None);
+    let elsewhere = FpVarCurve::new(&field, &int(1), &int(1), None, None).unwrap();
     let stranger = elsewhere.infinity();
     assert_eq!(
         shamirs_trick::<Var<'_>>(&g, &k, &stranger, &k).unwrap_err(),

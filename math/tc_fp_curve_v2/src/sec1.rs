@@ -33,7 +33,7 @@ pub(crate) fn decompress<'a>(
     if y_tilde > 1 || x >= field.q() {
         return None;
     }
-    let x = field.element(x);
+    let x = field.element(x).ok()?;
     let y = x.square().add(a).multiply(&x).add(b).sqrt()?;
     let y = if y.to_big_uint().bit(0) == (y_tilde == 1) {
         y
@@ -73,7 +73,8 @@ pub(crate) fn decode<'a>(
             if tag != 0x04 && y.bit(0) != (tag == 0x07) {
                 return Err(PointDecodeError::InconsistentHybridY);
             }
-            let (x, y) = (field.element(&x), field.element(&y));
+            let x = field.element(&x).expect("checked below q");
+            let y = field.element(&y).expect("checked below q");
             if !on_curve(a, b, &x, &y) {
                 return Err(PointDecodeError::NotOnCurve);
             }

@@ -235,9 +235,9 @@ mod tests {
 
     #[test]
     fn arithmetic_stays_below_the_prime() {
-        let field = FpField::new(int(17));
-        let x = field.element(&int(5));
-        let y = field.element(&int(9));
+        let field = FpField::new(int(17)).unwrap();
+        let x = field.element(&int(5)).unwrap();
+        let y = field.element(&int(9)).unwrap();
         assert_eq!(x.add(&y).to_big_uint(), int(14));
         assert_eq!(x.subtract(&y).to_big_uint(), int(13));
         assert_eq!(x.multiply(&y).to_big_uint(), int(11));
@@ -248,16 +248,16 @@ mod tests {
 
     #[test]
     fn an_element_times_its_inverse_is_one_and_zero_has_none() {
-        let field = FpField::new(int(17));
-        let x = field.element(&int(5));
+        let field = FpField::new(int(17)).unwrap();
+        let x = field.element(&int(5)).unwrap();
         assert!(x.multiply(&x.invert().unwrap()).is_one());
-        assert!(field.element(&int(0)).invert().is_none());
+        assert!(field.element(&int(0)).unwrap().invert().is_none());
     }
 
     #[test]
     fn integers_round_trip_through_the_field_and_larger_ones_are_reduced() {
-        let field = FpField::new(int(17));
-        let x = field.element(&int(5));
+        let field = FpField::new(int(17)).unwrap();
+        let x = field.element(&int(5)).unwrap();
         for value in 0..17 {
             assert_eq!(
                 x.element_from_big_uint(&int(value)).to_big_uint(),
@@ -270,20 +270,20 @@ mod tests {
 
     #[test]
     fn both_powers_agree() {
-        let field = FpField::new(int(17));
-        let x = field.element(&int(3));
+        let field = FpField::new(int(17)).unwrap();
+        let x = field.element(&int(3)).unwrap();
         assert_eq!(x.pow(&int(16)), x.pow_vartime(&int(16)));
         assert!(x.pow(&int(16)).is_one());
-        assert!(field.element(&int(0)).is_zero());
+        assert!(field.element(&int(0)).unwrap().is_zero());
     }
 
     #[test]
     fn square_roots_exist_exactly_for_the_squares_in_every_branch() {
         for q in [11u8, 13, 17, 41, 73, 97, 113] {
-            let field = FpField::new(int(q));
+            let field = FpField::new(int(q)).unwrap();
             for value in 0..q {
-                let x = field.element(&int(value));
-                let is_square = (0..q).any(|r| field.element(&int(r)).square() == x);
+                let x = field.element(&int(value)).unwrap();
+                let is_square = (0..q).any(|r| field.element(&int(r)).unwrap().square() == x);
                 match x.sqrt() {
                     Some(root) => assert_eq!(root.square(), x, "q = {q}, x = {value}"),
                     None => assert!(!is_square, "q = {q}, x = {value}"),

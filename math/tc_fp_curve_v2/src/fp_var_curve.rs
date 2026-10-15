@@ -3,7 +3,7 @@ use core::fmt;
 use tc_bigint::PaddedBigUint;
 use tc_ec_core_v2::{CoordinateSystem, Curve, PointDecodeError, PrimeFieldElement};
 
-use crate::{FpField, FpFieldElement, FpVarPoint, sec1};
+use crate::{FpError, FpField, FpFieldElement, FpVarPoint, sec1};
 
 pub struct FpVarCurve<'a> {
     field: &'a FpField,
@@ -15,23 +15,23 @@ pub struct FpVarCurve<'a> {
 }
 
 impl<'a> FpVarCurve<'a> {
-    /// `y² = x³ + ax + b` over `field`, in affine coordinates. Panics when `a` or `b`
-    /// is not below `q`.
+    /// `y² = x³ + ax + b` over `field`, in affine coordinates. Fails when `a` or `b` is not
+    /// below `q`.
     pub fn new(
         field: &'a FpField,
         a: &PaddedBigUint,
         b: &PaddedBigUint,
         order: Option<PaddedBigUint>,
         cofactor: Option<PaddedBigUint>,
-    ) -> Self {
-        Self {
+    ) -> Result<Self, FpError> {
+        Ok(Self {
             field,
-            a: field.element(a),
-            b: field.element(b),
+            a: field.element(a)?,
+            b: field.element(b)?,
             order,
             cofactor,
             coordinate_system: CoordinateSystem::Affine,
-        }
+        })
     }
 
     /// The same curve with its points in `coordinate_system`. Panics when it is not one
@@ -85,9 +85,17 @@ impl<'a> FpVarCurve<'a> {
     }
 
     /// The point `(x, y)`, which is not checked against the curve; see [`FpVarPoint::is_valid`].
-    /// Panics when a coordinate is not below `q`.
-    pub fn create_point(&'a self, x: &PaddedBigUint, y: &PaddedBigUint) -> FpVarPoint<'a> {
-        FpVarPoint::new(self, self.field.element(x), self.field.element(y))
+    /// Fails when a coordinate is not below `q`.
+    pub fn create_point(
+        &'a self,
+        x: &PaddedBigUint,
+        y: &PaddedBigUint,
+    ) -> Result<FpVarPoint<'a>, FpError> {
+        Ok(FpVarPoint::new(
+            self,
+            self.field.element(x)?,
+            self.field.element(y)?,
+        ))
     }
 
     /// The bytes of one coordinate in the SEC 1 encoding.

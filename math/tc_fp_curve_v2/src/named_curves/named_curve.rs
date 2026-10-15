@@ -29,7 +29,7 @@ pub struct NamedCurve<const N: usize> {
 
 impl<const N: usize> NamedCurve<N> {
     pub fn field(&self) -> FpField {
-        FpField::new(int(&self.p))
+        FpField::new(int(&self.p)).expect("a named curve has an odd prime")
     }
 
     pub fn ct_curve<'a>(&self, field: &'a FpField) -> FpCtCurve<'a> {
@@ -40,6 +40,7 @@ impl<const N: usize> NamedCurve<N> {
             Some(int(&self.order)),
             Some(PaddedBigUint::from(self.cofactor)),
         )
+        .expect("named-curve coefficients lie below q")
     }
 
     pub fn var_curve<'a>(&self, field: &'a FpField) -> FpVarCurve<'a> {
@@ -50,14 +51,19 @@ impl<const N: usize> NamedCurve<N> {
             Some(int(&self.order)),
             Some(PaddedBigUint::from(self.cofactor)),
         )
+        .expect("named-curve coefficients lie below q")
     }
 
     pub fn ct_generator<'a>(&self, curve: &'a FpCtCurve<'a>) -> FpCtPoint<'a> {
-        curve.create_point(&int(&self.gx), &int(&self.gy))
+        curve
+            .create_point(&int(&self.gx), &int(&self.gy))
+            .expect("a named generator lies below q")
     }
 
     pub fn var_generator<'a>(&self, curve: &'a FpVarCurve<'a>) -> FpVarPoint<'a> {
-        curve.create_point(&int(&self.gx), &int(&self.gy))
+        curve
+            .create_point(&int(&self.gx), &int(&self.gy))
+            .expect("a named generator lies below q")
     }
 }
 

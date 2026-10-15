@@ -3,7 +3,7 @@ use core::fmt;
 use tc_bigint::PaddedBigUint;
 use tc_ec_core_v2::{CoordinateSystem, Curve, FieldElement, PointDecodeError, PrimeFieldElement};
 
-use crate::{FpCtPoint, FpField, FpFieldElement, sec1};
+use crate::{FpCtPoint, FpError, FpField, FpFieldElement, sec1};
 
 /// `y² = x³ + ax + b` over a prime field, whose points take only constant-time
 /// formulas: the complete formulas of Renes, Costello and Batina (2016) in homogeneous
@@ -19,23 +19,23 @@ pub struct FpCtCurve<'a> {
 }
 
 impl<'a> FpCtCurve<'a> {
-    /// The curve over `field`. Panics when `a` or `b` is not below `q`.
+    /// The curve over `field`. Fails when `a` or `b` is not below `q`.
     pub fn new(
         field: &'a FpField,
         a: &PaddedBigUint,
         b: &PaddedBigUint,
         order: Option<PaddedBigUint>,
         cofactor: Option<PaddedBigUint>,
-    ) -> Self {
-        let b = field.element(b);
-        Self {
+    ) -> Result<Self, FpError> {
+        let b = field.element(b)?;
+        Ok(Self {
             field,
-            a: field.element(a),
+            a: field.element(a)?,
             b3: b.double().add(&b),
             b,
             order,
             cofactor,
-        }
+        })
     }
 
     pub fn field(&self) -> &'a FpField {
@@ -67,9 +67,17 @@ impl<'a> FpCtCurve<'a> {
     }
 
     /// The point `(x, y)`, which is not checked against the curve; see [`FpCtPoint::is_valid`].
-    /// Panics when a coordinate is not below `q`.
-    pub fn create_point(&'a self, x: &PaddedBigUint, y: &PaddedBigUint) -> FpCtPoint<'a> {
-        FpCtPoint::new(self, self.field.element(x), self.field.element(y))
+    /// Fails when a coordinate is not below `q`.
+    pub fn create_point(
+        &'a self,
+        x: &PaddedBigUint,
+        y: &PaddedBigUint,
+    ) -> Result<FpCtPoint<'a>, FpError> {
+        Ok(FpCtPoint::new(
+            self,
+            self.field.element(x)?,
+            self.field.element(y)?,
+        ))
     }
 
     /// The bytes of one coordinate in the SEC 1 encoding.

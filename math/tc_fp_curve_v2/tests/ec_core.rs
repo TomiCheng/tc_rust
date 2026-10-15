@@ -39,7 +39,7 @@ fn check_the_shared_algorithms<C: Curve<Scalar = PaddedBigUint>>(curve: C, g: &C
 
 #[test]
 fn the_core_algorithms_run_on_every_variable_time_coordinate_system() {
-    let field = FpField::new(int(17));
+    let field = FpField::new(int(17)).unwrap();
     for system in [
         CoordinateSystem::Affine,
         CoordinateSystem::Homogeneous,
@@ -47,16 +47,17 @@ fn the_core_algorithms_run_on_every_variable_time_coordinate_system() {
         CoordinateSystem::JacobianModified,
     ] {
         let curve = FpVarCurve::new(&field, &int(2), &int(2), Some(int(19)), Some(int(1)))
+            .unwrap()
             .with_coordinate_system(system);
-        let g = curve.create_point(&int(5), &int(1));
+        let g = curve.create_point(&int(5), &int(1)).unwrap();
         check_the_shared_algorithms(&curve, &g);
     }
 }
 
 #[test]
 fn the_core_algorithms_run_on_the_constant_time_curve() {
-    let field = FpField::new(int(17));
-    let curve = FpCtCurve::new(&field, &int(2), &int(2), Some(int(19)), Some(int(1)));
-    let g = curve.create_point(&int(5), &int(1));
+    let field = FpField::new(int(17)).unwrap();
+    let curve = FpCtCurve::new(&field, &int(2), &int(2), Some(int(19)), Some(int(1))).unwrap();
+    let g = curve.create_point(&int(5), &int(1)).unwrap();
     check_the_shared_algorithms(&curve, &g);
 }
