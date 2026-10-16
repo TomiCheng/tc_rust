@@ -4,10 +4,10 @@
 
 #![no_std]
 
-mod ec_domain;
-mod ec_private_key;
-mod ec_public_key;
+mod error;
+mod key_pair_generator;
+mod params;
 
-pub use ec_domain::EcDomain;
-pub use ec_private_key::EcPrivateKey;
-pub use ec_public_key::EcPublicKey;
+pub use error::EcError;
+pub use key_pair_generator::EcKeyPairGenerator;
+pub use params::{EcDomain, EcKeyGenerationParams, EcPrivateKey, EcPublicKey};

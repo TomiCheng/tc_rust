@@ -1243,6 +1243,8 @@ dependencies = [
 name = "tc_ec"
 version = "0.1.0"
 dependencies = [
+ "rand_core",
+ "tc_asym_cipher",
  "tc_ec_core_v2",
 ]
 

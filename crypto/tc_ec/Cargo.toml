@@ -8,4 +8,6 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
+rand_core = { workspace = true }
+tc_asym_cipher = "0.1.0"
 tc_ec_core_v2 = { version = "0.1.0", path = "../../math/tc_ec_core_v2" }
