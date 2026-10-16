@@ -8,10 +8,17 @@ pub(crate) const MAX_N: u32 = 1 << 20;
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct BinField {
     reducer: Reducer,
-    //multiplier: Multiplier,
+    multiplier: Multiplier,
 }
 
 impl BinField {
+    fn new(reducer: Reducer) -> Self {
+        Self {
+            reducer,
+            multiplier: Multiplier::new(size(reducer.n() as usize)),
+        }
+    }
+
     /// `x^n + x^k + 1`, `0 < k < n`, for `3 <= n <= 2^20`. The polynomial is not checked
     /// to be irreducible.
     pub fn trinomial(n: u32, k: u32) -> Result<Self, BinPolyError> {
@@ -22,9 +29,7 @@ impl BinField {
                 k: k as usize,
             });
         }
-        Ok(Self {
-            reducer: Reducer::trinomial(n, k),
-        })
+        Ok(Self::new(Reducer::trinomial(n, k)))
     }
 
     /// `x^n + x^k3 + x^k2 + x^k1 + 1`, `0 < k1 < k2 < k3 < n`, for `5 <= n <= 2^20`. The
@@ -39,18 +44,14 @@ impl BinField {
                 k3: k3 as usize,
             });
         }
-        Ok(Self {
-            reducer: Reducer::pentanomial(n, k1, k2, k3),
-        })
+        Ok(Self::new(Reducer::pentanomial(n, k1, k2, k3)))
     }
 
     /// `x^n + 1`, for `1 <= n <= 2^20`: a ring, not a field.
     #[cfg_attr(not(test), expect(dead_code))]
     pub(crate) fn binomial(n: u32) -> Result<Self, BinPolyError> {
         check_degree(n, 1)?;
-        Ok(Self {
-            reducer: Reducer::binomial(n),
-        })
+        Ok(Self::new(Reducer::binomial(n)))
     }
 
     /// The degree `n` of the modulus.
@@ -103,6 +104,7 @@ fn check_degree(n: u32, minimum: u32) -> Result<(), BinPolyError> {
 mod tests {
     use super::{BinField, MAX_N};
     use crate::BinPolyError;
+    use crate::multiply::Multiplier;
 
     #[test]
     fn the_sec_moduli_are_accepted() {
@@ -167,6 +169,18 @@ mod tests {
             let field = field.unwrap();
             assert_eq!((field.n(), field.size()), (n, size), "n = {n}");
         }
+    }
+
+    #[test]
+    fn the_scalar_multiplier_turns_to_karatsuba_from_eight_limbs() {
+        assert_eq!(
+            BinField::trinomial(448, 1).unwrap().multiplier,
+            Multiplier::ScalarMedium
+        );
+        assert_eq!(
+            BinField::trinomial(449, 1).unwrap().multiplier,
+            Multiplier::ScalarLarge
+        );
     }
 
     #[test]
