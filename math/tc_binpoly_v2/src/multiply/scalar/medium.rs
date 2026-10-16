@@ -8,9 +8,10 @@ use tc_zeroize::Zeroize;
 pub(crate) fn multiply(reducer: &Reducer, x: &[u64], y: &[u64], z: &mut [u64]) {
     let size = x.len();
     debug_assert!(size < KARATSUBA_CUTOFF);
-    let mut tt = [0_u64; 2 * (KARATSUBA_CUTOFF - 1)];
-    impl_mul(x, y, &mut tt[..2 * size]);
-    reducer.reduce(&mut tt[..2 * size], z);
+    let mut buffer = [0_u64; 2 * (KARATSUBA_CUTOFF - 1)];
+    let tt = &mut buffer[..2 * size];
+    impl_mul(x, y, tt);
+    reducer.reduce(tt, z);
     tt.zeroize();
 }
 

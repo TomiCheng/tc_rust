@@ -40,8 +40,9 @@ impl Squarer {
         debug_assert!(count >= 1);
         let ext = 2 * x.len();
         if ext <= STACK_CUTOFF {
-            let mut tt = [0_u64; STACK_CUTOFF];
-            self.square_n_with(reducer, x, count, &mut tt[..ext], z);
+            let mut buffer = [0_u64; STACK_CUTOFF];
+            let tt = &mut buffer[..ext];
+            self.square_n_with(reducer, x, count, tt, z);
             tt.zeroize();
         } else {
             let mut tt = vec![0_u64; ext];
