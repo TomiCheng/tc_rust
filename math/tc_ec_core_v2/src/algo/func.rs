@@ -84,9 +84,7 @@ pub fn normalize_all<P: Point>(points: &mut [P]) -> Result<(), AlgorithmError> {
         {
             return Err(AlgorithmError::CurveMismatch);
         }
-        if let Some(z) = point.projective_z()
-            && !z.is_one()
-        {
+        if let Some(z) = point.projective_z().filter(|z| !z.is_one()) {
             indices.push(index);
             scales.push(z);
         }
