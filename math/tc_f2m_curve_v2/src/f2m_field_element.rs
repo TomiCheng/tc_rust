@@ -30,6 +30,20 @@ impl F2mFieldElement {
             .map_or(0, |i| 64 * i + 64 - limbs[i].leading_zeros() as usize)
     }
 
+    /// BC's `TestBitZero`: the constant coefficient. Constant time.
+    pub(crate) fn low_bit(&self) -> u8 {
+        (self.value.limbs()[0] & 1) as u8
+    }
+
+    /// The big-endian octet string SEC 1 uses, into `output` of `⌈m / 8⌉` bytes. Constant
+    /// time.
+    pub(crate) fn write_be(&self, output: &mut [u8]) {
+        let limbs = self.value.limbs();
+        for (i, byte) in output.iter_mut().rev().enumerate() {
+            *byte = (limbs[i / 8] >> (8 * (i % 8))) as u8;
+        }
+    }
+
     /// `x⁻¹`, and `0` for `0`, without revealing which. As constant time as the multiplier.
     pub(crate) fn invert_or_zero(&self) -> Self {
         Self::new(self.value.invert())

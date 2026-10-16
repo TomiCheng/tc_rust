@@ -1,7 +1,7 @@
-use crate::{F2mCtPoint, F2mError, F2mField, F2mFieldElement};
+use crate::{F2mCtPoint, F2mError, F2mField, F2mFieldElement, sec1};
 use core::fmt;
 use tc_bigint::PaddedBigUint;
-use tc_ec_core_v2::{CoordinateSystem, Curve};
+use tc_ec_core_v2::{CoordinateSystem, Curve, PointDecodeError};
 
 /// `y² + xy = x³ + ax² + b` over a binary field, whose scalar multiplication is a
 /// constant-time Montgomery ladder. The other group operations have no complete formulas
@@ -64,6 +64,28 @@ impl F2mCtCurve {
             self.field.element(x)?,
             self.field.element(y)?,
         ))
+    }
+
+    /// The bytes of one coordinate in the SEC 1 encoding, `⌈m / 8⌉`.
+    pub fn field_element_encoding_length(&self) -> usize {
+        sec1::coordinate_length(&self.field)
+    }
+
+    /// The bytes of the SEC 1 encoding of a finite point.
+    pub fn affine_point_encoding_length(&self, compressed: bool) -> usize {
+        sec1::point_length(&self.field, compressed)
+    }
+
+    /// Decodes the SEC 1 infinity, compressed, uncompressed and hybrid forms, and checks
+    /// that the point is on the curve; the subgroup is not checked, as in BC. An encoding
+    /// is public: this is variable time in it, as decompression takes a half-trace.
+    pub fn decode_point(&self, encoded: &[u8]) -> Result<F2mCtPoint<'_>, PointDecodeError> {
+        Ok(
+            match sec1::decode(&self.field, &self.a, &self.b, encoded)? {
+                None => self.infinity(),
+                Some((x, y)) => F2mCtPoint::new(self, x, y),
+            },
+        )
     }
 }
 

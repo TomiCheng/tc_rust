@@ -10,6 +10,7 @@ mod f2m_field;
 mod f2m_field_element;
 mod f2m_var_curve;
 mod f2m_var_point;
+mod sec1;
 
 pub use f2m_ct_curve::F2mCtCurve;
 pub use f2m_ct_point::F2mCtPoint;

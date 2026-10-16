@@ -1,7 +1,7 @@
-use crate::{F2mError, F2mField, F2mFieldElement, F2mVarPoint};
+use crate::{F2mError, F2mField, F2mFieldElement, F2mVarPoint, sec1};
 use core::fmt;
 use tc_bigint::PaddedBigUint;
-use tc_ec_core_v2::{CoordinateSystem, Curve};
+use tc_ec_core_v2::{CoordinateSystem, Curve, PointDecodeError};
 
 pub struct F2mVarCurve {
     field: F2mField,
@@ -89,6 +89,35 @@ impl F2mVarCurve {
             self.field.element(x)?,
             self.field.element(y)?,
         ))
+    }
+
+    /// The bytes of one coordinate in the SEC 1 encoding, `⌈m / 8⌉`.
+    pub fn field_element_encoding_length(&self) -> usize {
+        sec1::coordinate_length(&self.field)
+    }
+
+    /// The bytes of the SEC 1 encoding of a finite point.
+    pub fn affine_point_encoding_length(&self, compressed: bool) -> usize {
+        sec1::point_length(&self.field, compressed)
+    }
+
+    /// The point with the SEC 1 octet string `x` whose compression bit is `y_tilde`, or
+    /// `None` when there is none. Variable time; only for public points.
+    pub fn decompress_point(&self, y_tilde: u8, x: &[u8]) -> Option<F2mVarPoint<'_>> {
+        let (x, y) = sec1::decompress(&self.field, &self.a, &self.b, y_tilde, x)?;
+        Some(F2mVarPoint::new(self, x, y))
+    }
+
+    /// Decodes the SEC 1 infinity, compressed, uncompressed and hybrid forms, and checks
+    /// that the point is on the curve; the subgroup is not checked, as in BC. Variable
+    /// time; only for public points.
+    pub fn decode_point(&self, encoded: &[u8]) -> Result<F2mVarPoint<'_>, PointDecodeError> {
+        Ok(
+            match sec1::decode(&self.field, &self.a, &self.b, encoded)? {
+                None => self.infinity(),
+                Some((x, y)) => F2mVarPoint::new(self, x, y),
+            },
+        )
     }
 }
 

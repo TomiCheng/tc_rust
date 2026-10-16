@@ -1,7 +1,11 @@
-use crate::{F2mFieldElement, F2mVarCurve};
+use crate::{F2mFieldElement, F2mVarCurve, sec1};
+use alloc::vec;
+use alloc::vec::Vec;
 use core::fmt;
 use tc_bigint::PaddedBigUint;
-use tc_ec_core_v2::{BinaryFieldElement, CoordinateSystem, Curve, FieldElement, Point};
+use tc_ec_core_v2::{
+    BinaryFieldElement, CoordinateSystem, Curve, FieldElement, Point, PointEncodeError,
+};
 
 // The three systems BC's F2mCurve supports. The lambda form keeps `l = x + y / x` in place
 // of `y`, except at `x = 0`, where it keeps `y` itself.
@@ -156,6 +160,32 @@ impl<'a> F2mVarPoint<'a> {
 
     pub fn subtract(&self, rhs: &Self) -> Self {
         self.add(&rhs.negate())
+    }
+
+    pub fn encoded_length(&self, compressed: bool) -> usize {
+        if self.is_infinity() {
+            1
+        } else {
+            self.curve.affine_point_encoding_length(compressed)
+        }
+    }
+
+    /// Writes the SEC 1 encoding of the normalized point into `output`; nothing is written
+    /// when `output` is too short.
+    pub fn encode_to(
+        &self,
+        compressed: bool,
+        output: &mut [u8],
+    ) -> Result<usize, PointEncodeError> {
+        let affine = self.x().zip(self.y());
+        sec1::encode(self.curve.field(), affine.as_ref(), compressed, output)
+    }
+
+    pub fn encode(&self, compressed: bool) -> Vec<u8> {
+        let mut output = vec![0; self.encoded_length(compressed)];
+        self.encode_to(compressed, &mut output)
+            .expect("the buffer has the exact length");
+        output
     }
 
     fn add_affine(&self, [x1, y1]: [&F2mFieldElement; 2], [x2, y2]: [&F2mFieldElement; 2]) -> Self {
