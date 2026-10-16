@@ -9,3 +9,4 @@ repository.workspace = true
 
 [dependencies]
 tc_agreement = { version = "0.1.0", path = "../tc_agreement" }
+tc_ec_core_v2 = { version = "0.1.0", path = "../../../math/tc_ec_core_v2" }

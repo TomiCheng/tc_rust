@@ -1240,6 +1240,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_ec"
+version = "0.1.0"
+
+[[package]]
 name = "tc_ec_core"
 version = "0.1.0"
 dependencies = [
@@ -1279,6 +1283,7 @@ name = "tc_ecdh_v2"
 version = "0.1.0"
 dependencies = [
  "tc_agreement",
+ "tc_ec_core_v2",
 ]
 
 [[package]]
