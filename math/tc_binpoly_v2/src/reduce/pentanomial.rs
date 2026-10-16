@@ -60,6 +60,22 @@ impl PentanomialReducer {
         Self::C(p)
     }
 
+    pub(crate) fn n(&self) -> u32 {
+        match *self {
+            Self::A(p)
+            | Self::A3(p)
+            | Self::A4(p)
+            | Self::A5(p)
+            | Self::A6(p)
+            | Self::A7(p)
+            | Self::A8(p)
+            | Self::B(p)
+            | Self::C(p)
+            | Self::D(p)
+            | Self::E(p) => p.n,
+        }
+    }
+
     /// Reduces the product `tt`, of `2 * size(n)` words, into `z`, of `size(n)` words.
     /// `tt` is scratch and is left changed.
     pub(crate) fn reduce(&self, tt: &mut [u64], z: &mut [u64]) {

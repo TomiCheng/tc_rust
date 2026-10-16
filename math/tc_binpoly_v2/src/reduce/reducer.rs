@@ -24,6 +24,14 @@ impl Reducer {
         Self::Pentanomial(PentanomialReducer::new(n, k1, k2, k3))
     }
 
+    pub(crate) fn n(&self) -> u32 {
+        match self {
+            Self::Binomial(reducer) => reducer.n(),
+            Self::Trinomial(reducer) => reducer.n(),
+            Self::Pentanomial(reducer) => reducer.n(),
+        }
+    }
+
     /// Reduces the product `tt`, of `2 * size(n)` words, into `z`, of `size(n)` words.
     /// `tt` is scratch and is left changed.
     pub(crate) fn reduce(&self, tt: &mut [u64], z: &mut [u64]) {

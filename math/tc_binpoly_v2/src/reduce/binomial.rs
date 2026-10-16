@@ -18,12 +18,16 @@ impl BinomialReducer {
         }
     }
 
+    pub(crate) fn n(&self) -> u32 {
+        match *self {
+            Self::Unaligned { n } | Self::Aligned { n } => n,
+        }
+    }
+
     /// Reduces the product `tt`, of `2 * size(n)` words, into `z`, of `size(n)` words.
     /// `tt` is scratch and is left changed.
     pub(crate) fn reduce(&self, tt: &mut [u64], z: &mut [u64]) {
-        let n = match *self {
-            Self::Unaligned { n } | Self::Aligned { n } => n as usize,
-        };
+        let n = self.n() as usize;
         let words = size(n);
         assert_eq!(z.len(), words, "invalid reduced output length");
         assert!(tt.len() >= words * 2, "invalid extended input length");

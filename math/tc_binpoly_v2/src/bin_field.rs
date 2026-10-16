@@ -1,5 +1,5 @@
 use crate::BinPolyError;
-use crate::reduce::Reducer;
+use crate::reduce::{Reducer, size};
 
 /// The largest degree, as in BC's `BinPolys.Mul`.
 pub(crate) const MAX_N: u32 = 1 << 20;
@@ -49,6 +49,16 @@ impl BinField {
         Ok(Self {
             reducer: Reducer::binomial(n),
         })
+    }
+
+    /// The degree `n` of the modulus.
+    pub fn n(&self) -> u32 {
+        self.reducer.n()
+    }
+
+    /// The limbs of a reduced polynomial, `⌈n / 64⌉`.
+    pub fn size(&self) -> usize {
+        size(self.n() as usize)
     }
 }
 
@@ -120,6 +130,22 @@ mod tests {
         );
         assert!(BinField::trinomial(MAX_N, 1).is_ok());
         assert!(BinField::binomial(0).is_err() && BinField::binomial(1).is_ok());
+    }
+
+    #[test]
+    fn the_size_is_the_degree_rounded_up_to_whole_limbs() {
+        for (field, n, size) in [
+            (BinField::trinomial(63, 1), 63, 1),
+            (BinField::trinomial(64, 1), 64, 1),
+            (BinField::trinomial(233, 74), 233, 4),
+            (BinField::pentanomial(163, 3, 6, 7), 163, 3),
+            (BinField::pentanomial(571, 2, 5, 10), 571, 9),
+            (BinField::binomial(128), 128, 2),
+            (BinField::binomial(129), 129, 3),
+        ] {
+            let field = field.unwrap();
+            assert_eq!((field.n(), field.size()), (n, size), "n = {n}");
+        }
     }
 
     #[test]
