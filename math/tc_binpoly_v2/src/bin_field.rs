@@ -1,4 +1,5 @@
 use crate::BinPolyError;
+use crate::multiply::Multiplier;
 use crate::reduce::{Reducer, size};
 
 /// The largest degree, as in BC's `BinPolys.Mul`.
@@ -7,6 +8,7 @@ pub(crate) const MAX_N: u32 = 1 << 20;
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct BinField {
     reducer: Reducer,
+    //multiplier: Multiplier,
 }
 
 impl BinField {
