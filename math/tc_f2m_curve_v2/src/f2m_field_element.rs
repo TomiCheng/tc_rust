@@ -1,5 +1,5 @@
 use tc_binpoly_v2::PaddedBinPoly;
-use tc_constant_time::{Choice, ConditionallySelectable};
+use tc_constant_time::{Choice, ConditionallySelectable, ConstantTimeEq};
 use tc_ec_core_v2::{BinaryFieldElement, FieldElement};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -30,6 +30,11 @@ impl F2mFieldElement {
             .map_or(0, |i| 64 * i + 64 - limbs[i].leading_zeros() as usize)
     }
 
+    /// `x⁻¹`, and `0` for `0`, without revealing which. As constant time as the multiplier.
+    pub(crate) fn invert_or_zero(&self) -> Self {
+        Self::new(self.value.invert())
+    }
+
     // OR of every limb, with the low bit of the first flipped when `one` is set.
     fn fold(&self, one: bool) -> u64 {
         let limbs = self.value.limbs();
@@ -52,6 +57,13 @@ impl ConditionallySelectable for F2mFieldElement {
 
     fn conditional_swap(a: &mut Self, b: &mut Self, choice: Choice) {
         PaddedBinPoly::conditional_swap(&mut a.value, &mut b.value, choice);
+    }
+}
+
+/// Constant time; the fields are public.
+impl ConstantTimeEq for F2mFieldElement {
+    fn ct_eq(&self, rhs: &Self) -> Choice {
+        self.value.ct_eq(&rhs.value)
     }
 }
 
