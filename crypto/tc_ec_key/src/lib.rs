@@ -5,7 +5,7 @@
 //!
 //! ```
 //! use tc_asym_cipher::{KeyPairGenerator, KeyPairGeneratorInit};
-//! use tc_ec::{EcKeyGenerationParams, EcKeyPairGenerator};
+//! use tc_ec_key::{EcKeyGenerationParams, EcKeyPairGenerator};
 //! use tc_fp_curve_v2::FpCtCurve;
 //! use tc_fp_curve_v2::named_curves::SECP256R1;
 //!
@@ -19,7 +19,7 @@
 //! generator.init(EcKeyGenerationParams::new(g, &mut rng))?;
 //! // Q goes to the other party; d stays here and is wiped when dropped.
 //! let (public_key, private_key) = generator.generate_key_pair()?;
-//! # Ok::<(), tc_ec::EcError>(())
+//! # Ok::<(), tc_ec_key::EcError>(())
 //! ```
 
 #![no_std]
