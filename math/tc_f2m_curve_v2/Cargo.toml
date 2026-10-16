@@ -7,6 +7,10 @@ rust-version = "1.85"
 license.workspace = true
 repository.workspace = true
 
+[features]
+# sect113r1, sect113r2, sect131r1 and sect131r2: weak, for interoperability only.
+small-curves = []
+
 [dependencies]
 tc_bigint = { version = "0.1.0", features = ["alloc"] }
 tc_binpoly_v2 = { version = "0.1.0", path = "../tc_binpoly_v2" }

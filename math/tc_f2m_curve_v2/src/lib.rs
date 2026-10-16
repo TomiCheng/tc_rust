@@ -12,6 +12,8 @@ mod f2m_var_curve;
 mod f2m_var_point;
 mod sec1;
 
+pub mod named_curves;
+
 pub use f2m_ct_curve::F2mCtCurve;
 pub use f2m_ct_point::F2mCtPoint;
 pub use f2m_error::F2mError;
