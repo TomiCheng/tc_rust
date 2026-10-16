@@ -22,7 +22,7 @@ impl Multiplier {
     pub(crate) fn multiply(&self, reducer: &Reducer, x: &[u64], y: &[u64], z: &mut [u64]) {
         match self {
             Self::ScalarMedium => scalar::medium::multiply(reducer, x, y, z),
-            Self::ScalarLarge => todo!("scalar Karatsuba multiplier"),
+            Self::ScalarLarge => scalar::large::multiply(reducer, x, y, z),
         }
     }
 }

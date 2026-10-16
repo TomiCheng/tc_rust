@@ -100,6 +100,15 @@ pub(super) fn words(len: usize, state: &mut u64) -> alloc::vec::Vec<u64> {
 }
 
 #[cfg(test)]
+pub(super) fn reduced(n: u32, state: &mut u64) -> alloc::vec::Vec<u64> {
+    let mut value = words(crate::reduce::size(n as usize), state);
+    if n & 63 != 0 {
+        *value.last_mut().unwrap() &= (1 << (n & 63)) - 1;
+    }
+    value
+}
+
+#[cfg(test)]
 mod tests {
     use super::{impl_mul, schoolbook, words};
 

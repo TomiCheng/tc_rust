@@ -16,17 +16,9 @@ pub(crate) fn multiply(reducer: &Reducer, x: &[u64], y: &[u64], z: &mut [u64]) {
 
 #[cfg(test)]
 mod tests {
-    use super::super::kernels::{schoolbook, words};
+    use super::super::kernels::{reduced, schoolbook};
     use super::multiply;
-    use crate::reduce::{Reducer, size};
-
-    fn reduced(n: u32, state: &mut u64) -> alloc::vec::Vec<u64> {
-        let mut value = words(size(n as usize), state);
-        if n & 63 != 0 {
-            *value.last_mut().unwrap() &= (1 << (n & 63)) - 1;
-        }
-        value
-    }
+    use crate::reduce::Reducer;
 
     #[test]
     fn the_product_is_the_schoolbook_product_reduced() {
