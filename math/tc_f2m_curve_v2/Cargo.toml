@@ -1,0 +1,8 @@
+[package]
+name = "tc_f2m_curve_v2"
+description = "Binary-field short-Weierstrass elliptic curves over GF(2^m)."
+version.workspace = true
+edition.workspace = true
+rust-version = "1.85"
+license.workspace = true
+repository.workspace = true

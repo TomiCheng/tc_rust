@@ -1326,6 +1326,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_f2m_curve_v2"
+version = "0.1.0"
+
+[[package]]
 name = "tc_f2m_custom"
 version = "0.1.0"
 dependencies = [
