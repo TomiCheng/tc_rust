@@ -31,25 +31,47 @@ impl Squarer {
     /// BC's `BinPolyMulBase.Square`: `z = x² mod f`. Squaring over GF(2) only spreads the
     /// bits of `x` to the even positions, so there is no product to compute.
     pub(crate) fn square(&self, reducer: &Reducer, x: &[u64], z: &mut [u64]) {
+        self.square_n(reducer, x, 1, z);
+    }
+
+    /// BC's `BinPolyMulBase.SquareN`: `z = x^(2^count) mod f`, `count >= 1`, reusing one
+    /// product buffer.
+    pub(crate) fn square_n(&self, reducer: &Reducer, x: &[u64], count: usize, z: &mut [u64]) {
+        debug_assert!(count >= 1);
         let ext = 2 * x.len();
         if ext <= STACK_CUTOFF {
             let mut tt = [0_u64; STACK_CUTOFF];
-            self.expand_and_reduce(reducer, x, &mut tt[..ext], z);
+            self.square_n_with(reducer, x, count, &mut tt[..ext], z);
             tt.zeroize();
         } else {
             let mut tt = vec![0_u64; ext];
-            self.expand_and_reduce(reducer, x, &mut tt, z);
+            self.square_n_with(reducer, x, count, &mut tt, z);
             tt[..].zeroize();
         }
     }
 
-    fn expand_and_reduce(&self, reducer: &Reducer, x: &[u64], tt: &mut [u64], z: &mut [u64]) {
+    fn square_n_with(
+        &self,
+        reducer: &Reducer,
+        x: &[u64],
+        count: usize,
+        tt: &mut [u64],
+        z: &mut [u64],
+    ) {
+        self.expand(x, tt);
+        reducer.reduce(tt, z);
+        for _ in 1..count {
+            self.expand(z, tt);
+            reducer.reduce(tt, z);
+        }
+    }
+
+    fn expand(&self, x: &[u64], tt: &mut [u64]) {
         match *self {
             Self::Portable => interleave::expand(x, tt),
             #[cfg(target_arch = "x86_64")]
             Self::Bmi2(proof) => x86::expand(proof, x, tt),
         }
-        reducer.reduce(tt, z);
     }
 }
 
@@ -100,6 +122,22 @@ mod tests {
                 let mut z = alloc::vec![0; size];
                 squarer.square(&reducer, &x, &mut z);
                 assert_eq!(z, expected, "n = {n}, {squarer:?}");
+            }
+        }
+    }
+
+    #[test]
+    fn squaring_n_times_is_squaring_once_n_times() {
+        let reducer = Reducer::pentanomial(163, 3, 6, 7);
+        let x = [0x0123_4567_89AB_CDEF, 0xFEDC_BA98_7654_3210, 0x7_FFFF_FFFF];
+        for squarer in squarers() {
+            let mut expected = x;
+            for count in 1..=5 {
+                let previous = expected;
+                squarer.square(&reducer, &previous, &mut expected);
+                let mut z = [0; 3];
+                squarer.square_n(&reducer, &x, count, &mut z);
+                assert_eq!(z, expected, "count = {count}, {squarer:?}");
             }
         }
     }

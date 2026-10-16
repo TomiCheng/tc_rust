@@ -1,3 +1,4 @@
+use crate::invert::invert;
 use crate::{BinField, BinPolyError};
 use alloc::boxed::Box;
 use alloc::vec;
@@ -63,6 +64,21 @@ impl PaddedBinPoly {
     pub fn square(&self) -> Self {
         let mut limbs = vec![0; self.limbs.len()].into_boxed_slice();
         self.field.square(&self.limbs, &mut limbs);
+        Self {
+            limbs,
+            field: self.field,
+        }
+    }
+
+    /// `x⁻¹`, and `0` for `0`, by Itoh–Tsujii. Meaningful only when the modulus is
+    /// irreducible, which is not checked. As constant time as [`Self::multiply`]: the chain
+    /// depends on the degree alone.
+    pub fn invert(&self) -> Self {
+        let size = self.limbs.len();
+        let mut limbs = vec![0; size].into_boxed_slice();
+        let mut scratch = vec![0; 2 * size];
+        let (b, t) = scratch.split_at_mut(size);
+        invert(&self.field, &self.limbs, &mut limbs, b, t);
         Self {
             limbs,
             field: self.field,
@@ -147,6 +163,17 @@ mod tests {
         let field = BinField::pentanomial(163, 3, 6, 7).unwrap();
         let x = PaddedBinPoly::from_limbs(field, Box::new([u64::MAX, 7, (1 << 35) - 1])).unwrap();
         assert_eq!(x.square().limbs(), x.multiply(&x).limbs());
+    }
+
+    #[test]
+    fn invert_gives_the_aes_inverse_and_a_value_times_its_inverse_is_one() {
+        let aes = BinField::pentanomial(8, 1, 3, 4).unwrap();
+        let x = PaddedBinPoly::from_limbs(aes, Box::new([0x53])).unwrap();
+        assert_eq!(x.invert().limbs(), [0xCA]);
+
+        let field = BinField::pentanomial(163, 3, 6, 7).unwrap();
+        let y = PaddedBinPoly::from_limbs(field, Box::new([u64::MAX, 7, (1 << 35) - 1])).unwrap();
+        assert_eq!(y.multiply(&y.invert()).limbs(), [1, 0, 0]);
     }
 
     #[test]
