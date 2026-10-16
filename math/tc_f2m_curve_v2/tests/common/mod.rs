@@ -6,8 +6,11 @@ use tc_f2m_curve_v2::{F2mCtCurve, F2mField, F2mVarCurve, F2mVarPoint};
 
 pub type Var<'a> = &'a F2mVarCurve;
 
-pub const SYSTEMS: [CoordinateSystem; 2] =
-    [CoordinateSystem::Affine, CoordinateSystem::LambdaProjective];
+pub const SYSTEMS: [CoordinateSystem; 3] = [
+    CoordinateSystem::Affine,
+    CoordinateSystem::Homogeneous,
+    CoordinateSystem::LambdaProjective,
+];
 
 // SEC 2 sect163r2: y² + xy = x³ + x² + b over x^163 + x^7 + x^6 + x^3 + 1, h = 2.
 pub const ONE: &str = "000000000000000000000000000000000000000001";

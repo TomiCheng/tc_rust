@@ -2,7 +2,7 @@ mod common;
 
 use common::{GX, GY, SYSTEMS, bytes, int, sect163r2, sect163r2_ct};
 use tc_bigint::PaddedBigUint;
-use tc_ec_core_v2::{Curve, FieldElement, Point, algo, wnaf};
+use tc_ec_core_v2::{CoordinateSystem, Curve, FieldElement, Point, algo, wnaf};
 use tc_f2m_curve_v2::{F2mCtCurve, F2mVarCurve};
 
 fn check_the_shared_algorithms<C: Curve<Scalar = PaddedBigUint>>(curve: C, g: &C::Point) {
@@ -56,7 +56,10 @@ fn the_core_algorithms_run_on_the_constant_time_curve() {
 
 #[test]
 fn both_sets_reach_the_same_affine_multiples() {
-    let (var, ct) = (sect163r2(SYSTEMS[1]), sect163r2_ct());
+    let (var, ct) = (
+        sect163r2(CoordinateSystem::LambdaProjective),
+        sect163r2_ct(),
+    );
     let g = var.create_point(&bytes(GX), &bytes(GY)).unwrap();
     let h = ct.create_point(&bytes(GX), &bytes(GY)).unwrap();
     for k in [int(5), int(1 << 40), common::integer(common::LARGE[2])] {

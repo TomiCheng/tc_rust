@@ -43,11 +43,13 @@ impl F2mVarCurve {
         self
     }
 
-    /// Affine and lambda-projective, BC's default; BC's other two are still to come.
+    /// Affine, homogeneous and lambda-projective, BC's default, as BC's `F2mCurve` supports.
     pub const fn supports_coordinate_system(coordinate_system: CoordinateSystem) -> bool {
         matches!(
             coordinate_system,
-            CoordinateSystem::Affine | CoordinateSystem::LambdaProjective
+            CoordinateSystem::Affine
+                | CoordinateSystem::Homogeneous
+                | CoordinateSystem::LambdaProjective
         )
     }
 

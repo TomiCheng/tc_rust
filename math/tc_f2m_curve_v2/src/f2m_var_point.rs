@@ -3,24 +3,18 @@ use core::fmt;
 use tc_bigint::PaddedBigUint;
 use tc_ec_core_v2::{BinaryFieldElement, CoordinateSystem, Curve, FieldElement, Point};
 
-// BC's F2m coordinate systems. The lambda forms keep `l = x + y / x` in place of `y`, except
-// at `x = 0`, where they keep `y` itself.
+// The three systems BC's F2mCurve supports. The lambda form keeps `l = x + y / x` in place
+// of `y`, except at `x = 0`, where it keeps `y` itself.
 #[derive(Clone)]
 enum Coords {
     Affine {
         x: F2mFieldElement,
         y: F2mFieldElement,
     },
-    #[expect(dead_code)]
     Homogeneous {
         x: F2mFieldElement,
         y: F2mFieldElement,
         z: F2mFieldElement,
-    },
-    #[expect(dead_code)]
-    LambdaAffine {
-        x: F2mFieldElement,
-        l: F2mFieldElement,
     },
     LambdaProjective {
         x: F2mFieldElement,
@@ -41,6 +35,11 @@ impl<'a> F2mVarPoint<'a> {
     pub(crate) fn new(curve: &'a F2mVarCurve, x: F2mFieldElement, y: F2mFieldElement) -> Self {
         let coords = match curve.coordinate_system() {
             CoordinateSystem::Affine => Coords::Affine { x, y },
+            CoordinateSystem::Homogeneous => Coords::Homogeneous {
+                x,
+                y,
+                z: curve.field().one(),
+            },
             CoordinateSystem::LambdaProjective => {
                 let l = if x.is_zero() {
                     y
@@ -62,6 +61,13 @@ impl<'a> F2mVarPoint<'a> {
         Self {
             curve,
             coords: None,
+        }
+    }
+
+    fn homogeneous(&self, x: F2mFieldElement, y: F2mFieldElement, z: F2mFieldElement) -> Self {
+        Self {
+            curve: self.curve,
+            coords: Some(Coords::Homogeneous { x, y, z }),
         }
     }
 
@@ -96,6 +102,17 @@ impl<'a> F2mVarPoint<'a> {
             Some(Coords::Affine { x, y }) => {
                 y.add(x).multiply(y) == x.add(a).multiply(&x.square()).add(b)
             }
+            Some(Coords::Homogeneous { x, y, z }) => {
+                let mut lhs = y.add(x).multiply(y);
+                let (mut a, mut b) = (a.clone(), b.clone());
+                if !z.is_one() {
+                    let z3 = z.multiply(&z.square());
+                    lhs = lhs.multiply(z);
+                    a = a.multiply(z);
+                    b = b.multiply(&z3);
+                }
+                lhs == x.add(&a).multiply(&x.square()).add(&b)
+            }
             Some(Coords::LambdaProjective { x, l, z }) => {
                 let z_is_one = z.is_one();
                 if x.is_zero() {
@@ -119,7 +136,6 @@ impl<'a> F2mVarPoint<'a> {
                 };
                 lhs.multiply(&x2) == rhs
             }
-            Some(_) => unreachable!("F2mVarCurve rejects unsupported coordinate systems"),
         }
     }
 
@@ -156,6 +172,58 @@ impl<'a> F2mVarPoint<'a> {
         let x3 = l.square().add(&l).add(&dx).add(self.curve.a());
         let y3 = l.multiply(&x1.add(&x3)).add(&x3).add(y1);
         Self::new(self.curve, x3, y3)
+    }
+
+    fn add_homogeneous(
+        &self,
+        [x1, y1, z1]: [&F2mFieldElement; 3],
+        [x2, y2, z2]: [&F2mFieldElement; 3],
+    ) -> Self {
+        let z1_is_one = z1.is_one();
+        let (u1, v1) = if z1_is_one {
+            (y2.clone(), x2.clone())
+        } else {
+            (y2.multiply(z1), x2.multiply(z1))
+        };
+        let z2_is_one = z2.is_one();
+        let (u2, v2) = if z2_is_one {
+            (y1.clone(), x1.clone())
+        } else {
+            (y1.multiply(z2), x1.multiply(z2))
+        };
+        let u = u1.add(&u2);
+        let v = v1.add(&v2);
+        if v.is_zero() {
+            return if u.is_zero() {
+                self.twice()
+            } else {
+                Self::infinity(self.curve)
+            };
+        }
+
+        let v_sq = v.square();
+        let v_cu = v_sq.multiply(&v);
+        let w = if z1_is_one {
+            z2.clone()
+        } else if z2_is_one {
+            z1.clone()
+        } else {
+            z1.multiply(z2)
+        };
+        let uv = u.add(&v);
+        let big_a = multiply_plus_product(&uv, &u, &v_sq, self.curve.a())
+            .multiply(&w)
+            .add(&v_cu);
+        let x3 = v.multiply(&big_a);
+        let v_sq_z2 = if z2_is_one { v_sq } else { v_sq.multiply(z2) };
+        let y3 = multiply_plus_product(
+            &multiply_plus_product(&u, x1, &v, y1),
+            &v_sq_z2,
+            &uv,
+            &big_a,
+        );
+        let z3 = v_cu.multiply(&w);
+        self.homogeneous(x3, y3, z3)
     }
 
     fn add_lambda_projective(
@@ -233,6 +301,35 @@ impl<'a> F2mVarPoint<'a> {
         let x3 = l1.square().add(&l1).add(self.curve.a());
         let y3 = square_plus_product(x1, &x3, &l1.add(&self.curve.field().one()));
         Self::new(self.curve, x3, y3)
+    }
+
+    fn twice_homogeneous(
+        &self,
+        x1: &F2mFieldElement,
+        y1: &F2mFieldElement,
+        z1: &F2mFieldElement,
+    ) -> Self {
+        let z1_is_one = z1.is_one();
+        let x1z1 = if z1_is_one {
+            x1.clone()
+        } else {
+            x1.multiply(z1)
+        };
+        let y1z1 = if z1_is_one {
+            y1.clone()
+        } else {
+            y1.multiply(z1)
+        };
+        let x1_sq = x1.square();
+        let s = x1_sq.add(&y1z1);
+        let v = x1z1;
+        let v_sq = v.square();
+        let sv = s.add(&v);
+        let h = multiply_plus_product(&sv, &s, &v_sq, self.curve.a());
+        let x3 = v.multiply(&h);
+        let y3 = multiply_plus_product(&x1_sq.square(), &v, &h, &sv);
+        let z3 = v.multiply(&v_sq);
+        self.homogeneous(x3, y3, z3)
     }
 
     fn twice_lambda_projective(
@@ -346,7 +443,6 @@ impl<'a> F2mVarPoint<'a> {
         match self.coords.as_ref()? {
             Coords::Affine { x, .. }
             | Coords::Homogeneous { x, .. }
-            | Coords::LambdaAffine { x, .. }
             | Coords::LambdaProjective { x, .. } => Some(x),
         }
     }
@@ -409,10 +505,9 @@ impl<'a> Point for F2mVarPoint<'a> {
     /// The affine `y`, recovered from `l` in the lambda form.
     fn y(&self) -> Option<F2mFieldElement> {
         match self.normalize().coords? {
-            Coords::Affine { y, .. } => Some(y),
+            Coords::Affine { y, .. } | Coords::Homogeneous { y, .. } => Some(y),
             Coords::LambdaProjective { x, l, .. } if x.is_zero() => Some(l),
             Coords::LambdaProjective { x, l, .. } => Some(l.add(&x).multiply(&x)),
-            _ => unreachable!("F2mVarCurve rejects unsupported coordinate systems"),
         }
     }
 
@@ -429,6 +524,18 @@ impl<'a> Point for F2mVarPoint<'a> {
             (Coords::Affine { x: x1, y: y1 }, Coords::Affine { x: x2, y: y2 }) => {
                 self.add_affine([x1, y1], [x2, y2])
             }
+            (
+                Coords::Homogeneous {
+                    x: x1,
+                    y: y1,
+                    z: z1,
+                },
+                Coords::Homogeneous {
+                    x: x2,
+                    y: y2,
+                    z: z2,
+                },
+            ) => self.add_homogeneous([x1, y1, z1], [x2, y2, z2]),
             (
                 Coords::LambdaProjective {
                     x: x1,
@@ -455,8 +562,8 @@ impl<'a> Point for F2mVarPoint<'a> {
         }
         match self.coords.as_ref().expect("a finite point") {
             Coords::Affine { x, y } => self.twice_affine(x, y),
+            Coords::Homogeneous { x, y, z } => self.twice_homogeneous(x, y, z),
             Coords::LambdaProjective { x, l, z } => self.twice_lambda_projective(x, l, z),
-            _ => unreachable!("F2mVarCurve rejects unsupported coordinate systems"),
         }
     }
 
@@ -484,19 +591,27 @@ impl<'a> Point for F2mVarPoint<'a> {
             return self.clone();
         };
         let coords = match coords {
-            Coords::Affine { x, .. } | Coords::LambdaProjective { x, .. } if x.is_zero() => {
+            Coords::Affine { x, .. }
+            | Coords::Homogeneous { x, .. }
+            | Coords::LambdaProjective { x, .. }
+                if x.is_zero() =>
+            {
                 return self.clone();
             }
             Coords::Affine { x, y } => Coords::Affine {
                 x: x.clone(),
                 y: y.add(x),
             },
+            Coords::Homogeneous { x, y, z } => Coords::Homogeneous {
+                x: x.clone(),
+                y: y.add(x),
+                z: z.clone(),
+            },
             Coords::LambdaProjective { x, l, z } => Coords::LambdaProjective {
                 x: x.clone(),
                 l: l.add(z),
                 z: z.clone(),
             },
-            _ => unreachable!("F2mVarCurve rejects unsupported coordinate systems"),
         };
         Self {
             curve: self.curve,
@@ -521,9 +636,14 @@ impl<'a> Point for F2mVarPoint<'a> {
         }
     }
 
-    /// BC scales both `x` and `l` by `1/z` and leaves `z = 1`.
+    /// BC scales `x` and `y`, or `x` and `l`, by `1/z` and leaves `z = 1`.
     fn normalize_with_inverse(&self, inverse: &F2mFieldElement) -> Self {
         match &self.coords {
+            Some(Coords::Homogeneous { x, y, .. }) => self.homogeneous(
+                x.multiply(inverse),
+                y.multiply(inverse),
+                self.curve.field().one(),
+            ),
             Some(Coords::LambdaProjective { x, l, .. }) => self.lambda_projective(
                 x.multiply(inverse),
                 l.multiply(inverse),
@@ -546,16 +666,30 @@ impl PartialEq for F2mVarPoint<'_> {
                 x1 == x2 && y1 == y2
             }
             (
-                Some(Coords::LambdaProjective {
-                    x: x1,
-                    l: l1,
-                    z: z1,
-                }),
-                Some(Coords::LambdaProjective {
-                    x: x2,
-                    l: l2,
-                    z: z2,
-                }),
+                Some(
+                    Coords::Homogeneous {
+                        x: x1,
+                        y: l1,
+                        z: z1,
+                    }
+                    | Coords::LambdaProjective {
+                        x: x1,
+                        l: l1,
+                        z: z1,
+                    },
+                ),
+                Some(
+                    Coords::Homogeneous {
+                        x: x2,
+                        y: l2,
+                        z: z2,
+                    }
+                    | Coords::LambdaProjective {
+                        x: x2,
+                        l: l2,
+                        z: z2,
+                    },
+                ),
             ) => x1.multiply(z2) == x2.multiply(z1) && l1.multiply(z2) == l2.multiply(z1),
             _ => false,
         }
@@ -580,8 +714,11 @@ mod tests {
     use tc_bigint::{ArrayEncoding, PaddedBigUint};
     use tc_ec_core_v2::{CoordinateSystem, Curve, FieldElement, Point};
 
-    const SYSTEMS: [CoordinateSystem; 2] =
-        [CoordinateSystem::Affine, CoordinateSystem::LambdaProjective];
+    const SYSTEMS: [CoordinateSystem; 3] = [
+        CoordinateSystem::Affine,
+        CoordinateSystem::Homogeneous,
+        CoordinateSystem::LambdaProjective,
+    ];
 
     fn bytes(text: &str) -> Vec<u8> {
         (0..text.len())
@@ -664,19 +801,23 @@ mod tests {
     }
 
     #[test]
-    fn affine_and_lambda_projective_reach_the_same_affine_point() {
+    fn every_coordinate_system_reaches_the_same_affine_point() {
         let k = integer("0123456789ABCDEF0123456789ABCDEF01234567");
         let curves = curves();
-        for pair in curves.chunks(2) {
-            let [(affine, g1), (lambda, g2)] = pair else {
-                unreachable!()
-            };
+        for group in curves.chunks(SYSTEMS.len()) {
+            let (affine, g1) = &group[0];
             let p = <&F2mVarCurve as Curve>::multiply(&generator(affine, g1), &k);
-            let q = <&F2mVarCurve as Curve>::multiply(&generator(lambda, g2), &k);
-            assert!(q.is_on_curve());
-            assert_eq!(p.x(), q.x());
-            assert_eq!(p.y(), q.y());
             assert!(!p.x().unwrap().is_zero());
+            for (curve, g) in &group[1..] {
+                let q = <&F2mVarCurve as Curve>::multiply(&generator(curve, g), &k);
+                assert!(q.is_on_curve(), "{:?}", curve.coordinate_system());
+                assert_eq!(
+                    (p.x(), p.y()),
+                    (q.x(), q.y()),
+                    "{:?}",
+                    curve.coordinate_system()
+                );
+            }
         }
     }
 }
