@@ -855,6 +855,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_agreement"
+version = "0.1.0"
+
+[[package]]
 name = "tc_aria"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1268,6 +1272,13 @@ dependencies = [
  "tc_f2m_custom",
  "tc_fp_curve",
  "tc_fp_custom",
+]
+
+[[package]]
+name = "tc_ecdh_v2"
+version = "0.1.0"
+dependencies = [
+ "tc_agreement",
 ]
 
 [[package]]

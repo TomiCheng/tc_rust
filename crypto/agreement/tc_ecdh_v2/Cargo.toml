@@ -1,0 +1,11 @@
+[package]
+name = "tc_ecdh_v2"
+description = "ECDH key agreement over short-Weierstrass curves, ported from Bouncy Castle C#."
+version.workspace = true
+edition.workspace = true
+rust-version = "1.85"
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+tc_agreement = { version = "0.1.0", path = "../tc_agreement" }
