@@ -1,0 +1,8 @@
+[package]
+name = "tc_ec"
+description = "Elliptic-curve domain parameters and keys, ported from Bouncy Castle C#."
+version.workspace = true
+edition.workspace = true
+rust-version = "1.85"
+license.workspace = true
+repository.workspace = true
