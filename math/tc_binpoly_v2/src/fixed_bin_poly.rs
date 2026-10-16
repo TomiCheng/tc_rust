@@ -8,12 +8,7 @@ pub struct FixedBinPoly<const N: usize> {
 impl<const N: usize> FixedBinPoly<N> {
     /// Fails unless `N` is `field.size()`.
     pub fn zero(field: BinField) -> Result<Self, BinPolyError> {
-        if N != field.size() {
-            return Err(BinPolyError::InvalidLength {
-                expected: field.size(),
-                actual: N,
-            });
-        }
+        field.check_size(N)?;
         Ok(Self {
             limbs: [0; N],
             field,
@@ -26,6 +21,17 @@ impl<const N: usize> FixedBinPoly<N> {
         value.limbs[0] = 1;
         Ok(value)
     }
+
+    /// Little-endian limbs. Fails unless `N` is `field.size()` and no bit at or above
+    /// `field.n()` is set.
+    pub fn from_limbs(field: BinField, limbs: [u64; N]) -> Result<Self, BinPolyError> {
+        field.check_reduced(&limbs)?;
+        Ok(Self { limbs, field })
+    }
+
+    pub fn limbs(&self) -> &[u64; N] {
+        &self.limbs
+    }
 }
 
 #[cfg(test)]
@@ -36,8 +42,8 @@ mod tests {
     #[test]
     fn zero_and_one_need_n_to_match_the_field_size() {
         let field = BinField::pentanomial(163, 3, 6, 7).unwrap();
-        assert_eq!(FixedBinPoly::<3>::zero(field).unwrap().limbs, [0, 0, 0]);
-        assert_eq!(FixedBinPoly::<3>::one(field).unwrap().limbs, [1, 0, 0]);
+        assert_eq!(FixedBinPoly::<3>::zero(field).unwrap().limbs(), &[0, 0, 0]);
+        assert_eq!(FixedBinPoly::<3>::one(field).unwrap().limbs(), &[1, 0, 0]);
         assert_eq!(
             FixedBinPoly::<4>::zero(field).err(),
             Some(BinPolyError::InvalidLength {
@@ -46,5 +52,21 @@ mod tests {
             })
         );
         assert!(FixedBinPoly::<2>::one(field).is_err());
+    }
+
+    #[test]
+    fn from_limbs_refuses_bits_at_or_above_the_degree() {
+        let field = BinField::pentanomial(163, 3, 6, 7).unwrap();
+        let top = (1 << 35) - 1;
+        let value = FixedBinPoly::from_limbs(field, [u64::MAX, 2, top]).unwrap();
+        assert_eq!(value.limbs(), &[u64::MAX, 2, top]);
+        assert_eq!(
+            FixedBinPoly::from_limbs(field, [0, 0, 1 << 35]).err(),
+            Some(BinPolyError::UnreducedValue)
+        );
+        assert!(FixedBinPoly::from_limbs(field, [0; 4]).is_err());
+
+        let aligned = BinField::trinomial(128, 7).unwrap();
+        assert!(FixedBinPoly::from_limbs(aligned, [u64::MAX; 2]).is_ok());
     }
 }

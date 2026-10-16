@@ -60,6 +60,25 @@ impl BinField {
     pub fn size(&self) -> usize {
         size(self.n() as usize)
     }
+
+    pub(crate) fn check_size(&self, len: usize) -> Result<(), BinPolyError> {
+        if len != self.size() {
+            return Err(BinPolyError::InvalidLength {
+                expected: self.size(),
+                actual: len,
+            });
+        }
+        Ok(())
+    }
+
+    pub(crate) fn check_reduced(&self, limbs: &[u64]) -> Result<(), BinPolyError> {
+        self.check_size(limbs.len())?;
+        let top = self.n() & 63;
+        if top != 0 && limbs[limbs.len() - 1] >> top != 0 {
+            return Err(BinPolyError::UnreducedValue);
+        }
+        Ok(())
+    }
 }
 
 fn check_degree(n: u32, minimum: u32) -> Result<(), BinPolyError> {
