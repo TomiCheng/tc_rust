@@ -1,5 +1,3 @@
 mod kernels;
-mod large;
-mod medium;
-
-pub(super) use large::KARATSUBA_CUTOFF;
+pub(super) mod large;
+pub(super) mod medium;

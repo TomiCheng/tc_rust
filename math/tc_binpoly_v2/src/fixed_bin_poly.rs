@@ -42,6 +42,18 @@ impl<const N: usize> FixedBinPoly<N> {
             field: self.field,
         }
     }
+
+    /// `x · y`. Not constant time on the scalar backend: its table lookups are indexed by
+    /// bits of the operands, a cache-timing side channel. Panics when the fields differ.
+    pub fn multiply(&self, rhs: &Self) -> Self {
+        assert_eq!(self.field, rhs.field, "polynomials of different fields");
+        let mut limbs = [0; N];
+        self.field.multiply(&self.limbs, &rhs.limbs, &mut limbs);
+        Self {
+            limbs,
+            field: self.field,
+        }
+    }
 }
 
 /// Leaves zero in the same field. Not done on drop: the caller knows if the value is secret.
@@ -103,6 +115,26 @@ mod tests {
         let x = FixedBinPoly::<3>::one(BinField::pentanomial(163, 3, 6, 7).unwrap()).unwrap();
         let y = FixedBinPoly::<3>::one(BinField::trinomial(163, 7).unwrap()).unwrap();
         x.add(&y);
+    }
+
+    #[test]
+    fn multiply_folds_x_to_the_n_onto_the_lower_terms_and_keeps_one_as_identity() {
+        let field = BinField::pentanomial(163, 3, 6, 7).unwrap();
+        let top = FixedBinPoly::from_limbs(field, [0, 0, 1 << 34]).unwrap();
+        let x = FixedBinPoly::from_limbs(field, [0b10, 0, 0]).unwrap();
+        assert_eq!(top.multiply(&x).limbs(), &[0b1100_1001, 0, 0]);
+
+        let y = FixedBinPoly::from_limbs(field, [u64::MAX, 7, (1 << 35) - 1]).unwrap();
+        let one = FixedBinPoly::one(field).unwrap();
+        assert_eq!(y.multiply(&one).limbs(), y.limbs());
+    }
+
+    #[test]
+    #[should_panic(expected = "polynomials of different fields")]
+    fn multiplying_polynomials_of_different_fields_panics() {
+        let x = FixedBinPoly::<3>::one(BinField::pentanomial(163, 3, 6, 7).unwrap()).unwrap();
+        let y = FixedBinPoly::<3>::one(BinField::trinomial(163, 7).unwrap()).unwrap();
+        x.multiply(&y);
     }
 
     #[test]
