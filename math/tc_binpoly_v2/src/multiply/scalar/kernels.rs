@@ -69,7 +69,7 @@ fn mul_word(u: &mut [u64; 16], x: u64, y: u64) -> (u64, u64) {
 }
 
 #[cfg(test)]
-pub(super) fn schoolbook(x: &[u64], y: &[u64]) -> alloc::vec::Vec<u64> {
+pub(crate) fn schoolbook(x: &[u64], y: &[u64]) -> alloc::vec::Vec<u64> {
     let mut zz = alloc::vec![0_u64; x.len() * 2];
     for (i, &x_i) in x.iter().enumerate() {
         for bit in 0..64 {
@@ -88,7 +88,7 @@ pub(super) fn schoolbook(x: &[u64], y: &[u64]) -> alloc::vec::Vec<u64> {
 }
 
 #[cfg(test)]
-pub(super) fn words(len: usize, state: &mut u64) -> alloc::vec::Vec<u64> {
+pub(crate) fn words(len: usize, state: &mut u64) -> alloc::vec::Vec<u64> {
     (0..len)
         .map(|_| {
             *state ^= *state << 13;
@@ -100,7 +100,7 @@ pub(super) fn words(len: usize, state: &mut u64) -> alloc::vec::Vec<u64> {
 }
 
 #[cfg(test)]
-pub(super) fn reduced(n: u32, state: &mut u64) -> alloc::vec::Vec<u64> {
+pub(crate) fn reduced(n: u32, state: &mut u64) -> alloc::vec::Vec<u64> {
     let mut value = words(crate::reduce::size(n as usize), state);
     if n & 63 != 0 {
         *value.last_mut().unwrap() &= (1 << (n & 63)) - 1;

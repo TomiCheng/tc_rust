@@ -176,15 +176,14 @@ mod tests {
     }
 
     #[test]
-    fn the_scalar_multiplier_turns_to_karatsuba_from_eight_limbs() {
-        assert_eq!(
-            BinField::trinomial(448, 1).unwrap().multiplier,
-            Multiplier::ScalarMedium
-        );
-        assert_eq!(
-            BinField::trinomial(449, 1).unwrap().multiplier,
-            Multiplier::ScalarLarge
-        );
+    fn the_multiplier_is_picked_by_the_limb_count() {
+        for (n, size) in [(448, 7), (449, 8), (1984, 31), (1985, 32)] {
+            assert_eq!(
+                BinField::trinomial(n, 1).unwrap().multiplier,
+                Multiplier::new(size),
+                "n = {n}"
+            );
+        }
     }
 
     #[test]
