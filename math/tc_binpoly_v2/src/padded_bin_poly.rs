@@ -1,6 +1,7 @@
 use crate::{BinField, BinPolyError};
 use alloc::boxed::Box;
 use alloc::vec;
+use tc_zeroize::Zeroize;
 
 pub struct PaddedBinPoly {
     limbs: Box<[u64]>,
@@ -33,11 +34,19 @@ impl PaddedBinPoly {
     }
 }
 
+/// Leaves zero in the same field. Not done on drop: the caller knows if the value is secret.
+impl Zeroize for PaddedBinPoly {
+    fn zeroize(&mut self) {
+        self.limbs.zeroize();
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::PaddedBinPoly;
     use crate::{BinField, BinPolyError};
     use alloc::boxed::Box;
+    use tc_zeroize::Zeroize;
 
     #[test]
     fn zero_and_one_take_their_length_from_the_field() {
@@ -66,5 +75,14 @@ mod tests {
 
         let aligned = BinField::trinomial(128, 7).unwrap();
         assert!(PaddedBinPoly::from_limbs(aligned, Box::new([u64::MAX; 2])).is_ok());
+    }
+
+    #[test]
+    fn zeroize_leaves_zero_in_the_same_field() {
+        let field = BinField::pentanomial(163, 3, 6, 7).unwrap();
+        let mut value = PaddedBinPoly::from_limbs(field, Box::new([u64::MAX, 2, 3])).unwrap();
+        value.zeroize();
+        assert_eq!(value.limbs(), [0, 0, 0]);
+        assert_eq!(value.field, field);
     }
 }

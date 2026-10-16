@@ -1,4 +1,5 @@
 use crate::{BinField, BinPolyError};
+use tc_zeroize::Zeroize;
 
 pub struct FixedBinPoly<const N: usize> {
     limbs: [u64; N],
@@ -34,10 +35,18 @@ impl<const N: usize> FixedBinPoly<N> {
     }
 }
 
+/// Leaves zero in the same field. Not done on drop: the caller knows if the value is secret.
+impl<const N: usize> Zeroize for FixedBinPoly<N> {
+    fn zeroize(&mut self) {
+        self.limbs.zeroize();
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::FixedBinPoly;
     use crate::{BinField, BinPolyError};
+    use tc_zeroize::Zeroize;
 
     #[test]
     fn zero_and_one_need_n_to_match_the_field_size() {
@@ -68,5 +77,14 @@ mod tests {
 
         let aligned = BinField::trinomial(128, 7).unwrap();
         assert!(FixedBinPoly::from_limbs(aligned, [u64::MAX; 2]).is_ok());
+    }
+
+    #[test]
+    fn zeroize_leaves_zero_in_the_same_field() {
+        let field = BinField::pentanomial(163, 3, 6, 7).unwrap();
+        let mut value = FixedBinPoly::from_limbs(field, [u64::MAX, 2, 3]).unwrap();
+        value.zeroize();
+        assert_eq!(value.limbs(), &[0, 0, 0]);
+        assert_eq!(value.field, field);
     }
 }
