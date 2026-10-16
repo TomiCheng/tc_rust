@@ -1,7 +1,7 @@
 use crate::invert::invert;
 use crate::{BinField, BinPolyError};
 use core::fmt;
-use tc_constant_time::{Choice, ConstantTimeEq};
+use tc_constant_time::{Choice, ConditionallySelectable, ConstantTimeEq};
 use tc_zeroize::Zeroize;
 
 #[derive(Clone)]
@@ -107,6 +107,27 @@ impl<const N: usize> ConstantTimeEq for FixedBinPoly<N> {
     }
 }
 
+/// Constant time in the limbs and the choice. Panics when the fields differ.
+impl<const N: usize> ConditionallySelectable for FixedBinPoly<N> {
+    fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
+        assert_eq!(a.field, b.field, "polynomials of different fields");
+        Self {
+            limbs: <[u64; N]>::conditional_select(&a.limbs, &b.limbs, choice),
+            field: a.field,
+        }
+    }
+
+    fn conditional_assign(&mut self, other: &Self, choice: Choice) {
+        assert_eq!(self.field, other.field, "polynomials of different fields");
+        self.limbs.conditional_assign(&other.limbs, choice);
+    }
+
+    fn conditional_swap(a: &mut Self, b: &mut Self, choice: Choice) {
+        assert_eq!(a.field, b.field, "polynomials of different fields");
+        <[u64; N]>::conditional_swap(&mut a.limbs, &mut b.limbs, choice);
+    }
+}
+
 /// [`ConstantTimeEq::ct_eq`], revealing only the answer.
 impl<const N: usize> PartialEq for FixedBinPoly<N> {
     fn eq(&self, other: &Self) -> bool {
@@ -136,7 +157,7 @@ impl<const N: usize> Zeroize for FixedBinPoly<N> {
 mod tests {
     use super::FixedBinPoly;
     use crate::{BinField, BinPolyError};
-    use tc_constant_time::ConstantTimeEq;
+    use tc_constant_time::{Choice, ConditionallySelectable, ConstantTimeEq};
     use tc_zeroize::Zeroize;
 
     #[test]
@@ -231,6 +252,28 @@ mod tests {
         let x = FixedBinPoly::<3>::one(BinField::pentanomial(163, 3, 6, 7).unwrap()).unwrap();
         let y = FixedBinPoly::<3>::one(BinField::trinomial(163, 7).unwrap()).unwrap();
         x.multiply(&y);
+    }
+
+    #[test]
+    fn select_assign_and_swap_follow_the_choice() {
+        let field = BinField::pentanomial(163, 3, 6, 7).unwrap();
+        let x = FixedBinPoly::from_limbs(field, [1, 2, 3]).unwrap();
+        let y = FixedBinPoly::from_limbs(field, [4, 5, 6]).unwrap();
+        let (no, yes) = (Choice::from_lsb(0), Choice::from_lsb(1));
+        assert_eq!(FixedBinPoly::conditional_select(&x, &y, no), x);
+        assert_eq!(FixedBinPoly::conditional_select(&x, &y, yes), y);
+
+        let mut z = x.clone();
+        z.conditional_assign(&y, no);
+        assert_eq!(z, x);
+        z.conditional_assign(&y, yes);
+        assert_eq!(z, y);
+
+        let (mut a, mut b) = (x.clone(), y.clone());
+        FixedBinPoly::conditional_swap(&mut a, &mut b, no);
+        assert_eq!((&a, &b), (&x, &y));
+        FixedBinPoly::conditional_swap(&mut a, &mut b, yes);
+        assert_eq!((&a, &b), (&y, &x));
     }
 
     #[test]
