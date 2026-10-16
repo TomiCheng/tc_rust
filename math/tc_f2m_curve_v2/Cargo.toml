@@ -10,4 +10,5 @@ repository.workspace = true
 [dependencies]
 tc_bigint = { version = "0.1.0", features = ["alloc"] }
 tc_binpoly_v2 = { version = "0.1.0", path = "../tc_binpoly_v2" }
+tc_constant_time = "0.1.0"
 tc_ec_core_v2 = { version = "0.1.0", path = "../tc_ec_core_v2" }

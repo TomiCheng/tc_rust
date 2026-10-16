@@ -1,4 +1,5 @@
 use tc_binpoly_v2::PaddedBinPoly;
+use tc_constant_time::{Choice, ConditionallySelectable};
 use tc_ec_core_v2::{BinaryFieldElement, FieldElement};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -34,6 +35,23 @@ impl F2mFieldElement {
         let limbs = self.value.limbs();
         let first = limbs[0] ^ u64::from(one);
         limbs[1..].iter().fold(first, |acc, &limb| acc | limb)
+    }
+}
+
+/// Constant time in the value and the choice. Panics when the fields differ.
+impl ConditionallySelectable for F2mFieldElement {
+    fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
+        Self::new(PaddedBinPoly::conditional_select(
+            &a.value, &b.value, choice,
+        ))
+    }
+
+    fn conditional_assign(&mut self, other: &Self, choice: Choice) {
+        self.value.conditional_assign(&other.value, choice);
+    }
+
+    fn conditional_swap(a: &mut Self, b: &mut Self, choice: Choice) {
+        PaddedBinPoly::conditional_swap(&mut a.value, &mut b.value, choice);
     }
 }
 
@@ -134,6 +152,7 @@ impl BinaryFieldElement for F2mFieldElement {
 mod tests {
     use super::F2mFieldElement;
     use crate::F2mField;
+    use tc_constant_time::{Choice, ConditionallySelectable};
     use tc_ec_core_v2::{BinaryFieldElement, FieldElement};
 
     fn sect163() -> F2mField {
@@ -204,6 +223,26 @@ mod tests {
             assert_eq!(x.square().trace(), x.trace());
             assert_eq!(x.add(y).trace(), x.trace() ^ y.trace());
         }
+    }
+
+    #[test]
+    fn select_assign_and_swap_follow_the_choice() {
+        let field = sect163();
+        let v = values(&field);
+        let (x, y) = (&v[0], &v[1]);
+        let (no, yes) = (Choice::from_lsb(0), Choice::from_lsb(1));
+        assert_eq!(&F2mFieldElement::conditional_select(x, y, no), x);
+        assert_eq!(&F2mFieldElement::conditional_select(x, y, yes), y);
+
+        let mut z = x.clone();
+        z.conditional_assign(y, yes);
+        assert_eq!(&z, y);
+
+        let (mut a, mut b) = (x.clone(), y.clone());
+        F2mFieldElement::conditional_swap(&mut a, &mut b, yes);
+        assert_eq!((&a, &b), (y, x));
+        F2mFieldElement::conditional_swap(&mut a, &mut b, no);
+        assert_eq!((&a, &b), (y, x));
     }
 
     #[test]
