@@ -58,6 +58,16 @@ impl PaddedBinPoly {
             field: self.field,
         }
     }
+
+    /// `x²`. Constant time.
+    pub fn square(&self) -> Self {
+        let mut limbs = vec![0; self.limbs.len()].into_boxed_slice();
+        self.field.square(&self.limbs, &mut limbs);
+        Self {
+            limbs,
+            field: self.field,
+        }
+    }
 }
 
 /// Leaves zero in the same field. Not done on drop: the caller knows if the value is secret.
@@ -130,6 +140,13 @@ mod tests {
         let y = PaddedBinPoly::from_limbs(field, Box::new([u64::MAX, 7, (1 << 35) - 1])).unwrap();
         let one = PaddedBinPoly::one(field);
         assert_eq!(y.multiply(&one).limbs(), y.limbs());
+    }
+
+    #[test]
+    fn squaring_is_multiplying_by_itself() {
+        let field = BinField::pentanomial(163, 3, 6, 7).unwrap();
+        let x = PaddedBinPoly::from_limbs(field, Box::new([u64::MAX, 7, (1 << 35) - 1])).unwrap();
+        assert_eq!(x.square().limbs(), x.multiply(&x).limbs());
     }
 
     #[test]

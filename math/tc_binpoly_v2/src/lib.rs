@@ -11,6 +11,7 @@ mod errors;
 mod reduce;
 mod invert;
 mod multiply;
+mod square;
 
 pub use bin_field::BinField;
 pub use fixed_bin_poly::FixedBinPoly;

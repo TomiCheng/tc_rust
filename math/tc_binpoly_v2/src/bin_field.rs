@@ -68,6 +68,10 @@ impl BinField {
         self.multiplier.multiply(&self.reducer, x, y, z);
     }
 
+    pub(crate) fn square(&self, x: &[u64], z: &mut [u64]) {
+        crate::square::square(&self.reducer, x, z);
+    }
+
     pub(crate) fn check_size(&self, len: usize) -> Result<(), BinPolyError> {
         if len != self.size() {
             return Err(BinPolyError::InvalidLength {
