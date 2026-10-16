@@ -38,4 +38,12 @@ pub trait FieldElement: Clone + Eq {
 
     /// 乘法反元素；零沒有反元素。
     fn invert(&self) -> Option<Self>;
+
+    /// SEC 1 FE2OSP 的長度，即 BC 的 `GetEncodedLength`：`⌈體域位元數 / 8⌉` 位元組。
+    fn encoded_length(&self) -> usize;
+
+    /// SEC 1 FE2OSP，即 BC 的 `EncodeTo`：以 big-endian 寫入恰為
+    /// [`encoded_length`](Self::encoded_length) 位元組的 `output`；長度不符時 panic。
+    /// ECDH 的共享秘密與 ECDSA 的 r 都由此取得 x 座標。
+    fn encode_to(&self, output: &mut [u8]);
 }

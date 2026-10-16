@@ -1,6 +1,6 @@
 use core::fmt;
 
-use tc_bigint::PaddedBigUint;
+use tc_bigint::{ArrayEncoding, PaddedBigUint};
 use tc_constant_time::{Choice, ConditionallySelectable, ConstantTimeEq};
 use tc_ec_core_v2::{FieldElement, PrimeFieldElement};
 use tc_modular::PaddedMontyForm;
@@ -205,6 +205,27 @@ impl FieldElement for FpFieldElement<'_> {
     /// `x⁻¹`, or `None` for zero. Constant time apart from whether there is an inverse.
     fn invert(&self) -> Option<Self> {
         self.value.invert().map(Self::new)
+    }
+
+    /// `⌈bits of q / 8⌉`.
+    fn encoded_length(&self) -> usize {
+        (self.value.params().modulus().bits() as usize).div_ceil(8)
+    }
+
+    /// The integer below q, big-endian. Constant time; the integer and its bytes are wiped.
+    fn encode_to(&self, output: &mut [u8]) {
+        assert_eq!(
+            output.len(),
+            self.encoded_length(),
+            "the output is not the encoded length"
+        );
+        let mut value = self.to_big_uint();
+        let mut bytes = ArrayEncoding::<u8>::to_be(&value);
+        let (padding, digits) = bytes.split_at(bytes.len() - output.len());
+        debug_assert!(padding.iter().all(|&byte| byte == 0));
+        output.copy_from_slice(digits);
+        bytes[..].zeroize();
+        value.zeroize();
     }
 }
 

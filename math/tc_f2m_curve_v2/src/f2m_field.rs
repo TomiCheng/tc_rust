@@ -1,5 +1,4 @@
 use crate::{F2mError, F2mFieldElement};
-use alloc::vec;
 use tc_binpoly_v2::{BinField, PaddedBinPoly};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -36,12 +35,7 @@ impl F2mField {
                 actual: bytes.len(),
             });
         }
-        let mut limbs = vec![0_u64; self.field.size()].into_boxed_slice();
-        for (i, &byte) in bytes.iter().rev().enumerate() {
-            limbs[i / 8] |= u64::from(byte) << (8 * (i % 8));
-        }
-        let value =
-            PaddedBinPoly::from_limbs(self.field, limbs).map_err(|_| F2mError::NotReduced)?;
+        let value = PaddedBinPoly::from_be(self.field, bytes).map_err(|_| F2mError::NotReduced)?;
         Ok(F2mFieldElement::new(value))
     }
 

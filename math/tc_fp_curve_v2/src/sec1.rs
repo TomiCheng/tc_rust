@@ -118,18 +118,11 @@ pub(crate) fn encode(
     let len = coordinate_length(field);
     if compressed {
         output[0] = 0x02 | u8::from(y.to_big_uint().bit(0));
-        write_coordinate(x, &mut output[1..]);
+        x.encode_to(&mut output[1..]);
     } else {
         output[0] = 0x04;
-        write_coordinate(x, &mut output[1..1 + len]);
-        write_coordinate(y, &mut output[1 + len..]);
+        x.encode_to(&mut output[1..1 + len]);
+        y.encode_to(&mut output[1 + len..]);
     }
     Ok(required)
-}
-
-fn write_coordinate(value: &FpFieldElement<'_>, output: &mut [u8]) {
-    let bytes = ArrayEncoding::<u8>::to_be(&value.to_big_uint());
-    let (padding, digits) = bytes.split_at(bytes.len() - output.len());
-    debug_assert!(padding.iter().all(|&byte| byte == 0));
-    output.copy_from_slice(digits);
 }

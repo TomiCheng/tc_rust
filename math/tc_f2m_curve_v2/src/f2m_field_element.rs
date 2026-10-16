@@ -35,15 +35,6 @@ impl F2mFieldElement {
         (self.value.limbs()[0] & 1) as u8
     }
 
-    /// The big-endian octet string SEC 1 uses, into `output` of `⌈m / 8⌉` bytes. Constant
-    /// time.
-    pub(crate) fn write_be(&self, output: &mut [u8]) {
-        let limbs = self.value.limbs();
-        for (i, byte) in output.iter_mut().rev().enumerate() {
-            *byte = (limbs[i / 8] >> (8 * (i % 8))) as u8;
-        }
-    }
-
     /// `x⁻¹`, and `0` for `0`, without revealing which. As constant time as the multiplier.
     pub(crate) fn invert_or_zero(&self) -> Self {
         Self::new(self.value.invert())
@@ -129,6 +120,23 @@ impl FieldElement for F2mFieldElement {
     /// revealed.
     fn invert(&self) -> Option<Self> {
         (!self.is_zero()).then(|| Self::new(self.value.invert()))
+    }
+
+    /// `⌈m / 8⌉`.
+    fn encoded_length(&self) -> usize {
+        self.m().div_ceil(8)
+    }
+
+    /// The coefficients as a big-endian bit string, the top one first. Constant time.
+    fn encode_to(&self, output: &mut [u8]) {
+        assert_eq!(
+            output.len(),
+            self.encoded_length(),
+            "the output is not the encoded length"
+        );
+        self.value
+            .write_be(output)
+            .expect("the output has the length");
     }
 }
 

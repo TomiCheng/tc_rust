@@ -161,11 +161,11 @@ pub(crate) fn encode(
     let len = coordinate_length(field);
     if compressed {
         output[0] = 0x02 | y_tilde(x, y);
-        x.write_be(&mut output[1..]);
+        x.encode_to(&mut output[1..]);
     } else {
         output[0] = 0x04;
-        x.write_be(&mut output[1..1 + len]);
-        y.write_be(&mut output[1 + len..]);
+        x.encode_to(&mut output[1..1 + len]);
+        y.encode_to(&mut output[1 + len..]);
     }
     Ok(required)
 }
