@@ -51,9 +51,11 @@ mod tests {
     use super::super::trinomial::TrinomialReducer;
     use super::Reducer;
 
+    type Reduce = fn(&mut [u64], &mut [u64]);
+
     #[test]
     fn each_kind_reduces_as_its_own_reducer_does() {
-        let cases: [(usize, Reducer, fn(&mut [u64], &mut [u64])); 3] = [
+        let cases: [(usize, Reducer, Reduce); 3] = [
             (
                 163,
                 Reducer::binomial(163),

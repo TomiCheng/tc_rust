@@ -8,12 +8,12 @@ mod fixed_bin_poly;
 mod padded_bin_poly;
 
 mod errors;
-mod reduce;
 mod invert;
 mod multiply;
+mod reduce;
 mod square;
 
 pub use bin_field::BinField;
+pub use errors::BinPolyError;
 pub use fixed_bin_poly::FixedBinPoly;
 pub use padded_bin_poly::PaddedBinPoly;
-pub use errors::BinPolyError;

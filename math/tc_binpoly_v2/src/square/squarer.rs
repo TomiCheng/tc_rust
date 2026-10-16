@@ -82,6 +82,7 @@ mod tests {
     use crate::reduce::Reducer;
 
     fn squarers() -> alloc::vec::Vec<Squarer> {
+        #[cfg_attr(not(target_arch = "x86_64"), allow(unused_mut))]
         let mut squarers = alloc::vec![Squarer::Portable];
         #[cfg(target_arch = "x86_64")]
         if let Some(proof) = tc_runtime::intrinsics::x86::Bmi2X64::detect() {

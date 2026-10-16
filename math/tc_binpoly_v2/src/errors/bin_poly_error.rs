@@ -5,7 +5,7 @@ use core::fmt;
 pub enum BinPolyError {
     /// The polynomial degree is below the minimum for this modulus shape.
     DegreeTooSmall { minimum: usize, actual: usize },
-    /// The polynomial degree exceeds [`crate::MAX_N`].
+    /// The polynomial degree exceeds `2^20`.
     DegreeTooLarge { maximum: usize, actual: usize },
     /// A trinomial tap did not satisfy `0 < k < n`.
     InvalidTrinomialTap { n: usize, k: usize },
@@ -20,12 +20,6 @@ pub enum BinPolyError {
     InvalidLength { expected: usize, actual: usize },
     /// Bits at positions greater than or equal to the configured degree were set.
     UnreducedValue,
-    /// Both values must use the same reduction polynomial.
-    MismatchedModulus,
-    /// Inversion is unavailable for the reducible binomial modulus `x^n + 1`.
-    BinomialInversion,
-    /// At least one squaring was required.
-    InvalidSquareCount,
 }
 
 impl fmt::Display for BinPolyError {
@@ -50,11 +44,6 @@ impl fmt::Display for BinPolyError {
             Self::UnreducedValue => {
                 f.write_str("value has coefficients at or above the modulus degree")
             }
-            Self::MismatchedModulus => f.write_str("binary polynomials use different moduli"),
-            Self::BinomialInversion => {
-                f.write_str("x^n + 1 is reducible and cannot be used for field inversion")
-            }
-            Self::InvalidSquareCount => f.write_str("square count must be positive"),
         }
     }
 }

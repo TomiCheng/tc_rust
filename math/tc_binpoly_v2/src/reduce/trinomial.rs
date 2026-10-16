@@ -268,9 +268,11 @@ mod tests {
     use super::super::bits::product;
     use super::TrinomialReducer;
 
+    type IsPicked = fn(TrinomialReducer) -> bool;
+
     #[test]
     fn each_shape_of_trinomial_gets_the_reducer_bc_picks() {
-        let cases: [(u32, u32, fn(TrinomialReducer) -> bool); 17] = [
+        let cases: [(u32, u32, IsPicked); 17] = [
             (257, 1, |r| matches!(r, TrinomialReducer::A(_))),
             (65, 1, |r| matches!(r, TrinomialReducer::A3(_))),
             (97, 1, |r| matches!(r, TrinomialReducer::A4(_))),
