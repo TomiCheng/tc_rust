@@ -1,6 +1,7 @@
 use crate::BinPolyError;
 use crate::multiply::Multiplier;
 use crate::reduce::{Reducer, size};
+use crate::square::Squarer;
 
 /// The largest degree, as in BC's `BinPolys.Mul`.
 pub(crate) const MAX_N: u32 = 1 << 20;
@@ -9,6 +10,7 @@ pub(crate) const MAX_N: u32 = 1 << 20;
 pub struct BinField {
     reducer: Reducer,
     multiplier: Multiplier,
+    squarer: Squarer,
 }
 
 impl BinField {
@@ -16,6 +18,7 @@ impl BinField {
         Self {
             reducer,
             multiplier: Multiplier::new(size(reducer.n() as usize)),
+            squarer: Squarer::new(),
         }
     }
 
@@ -69,7 +72,7 @@ impl BinField {
     }
 
     pub(crate) fn square(&self, x: &[u64], z: &mut [u64]) {
-        crate::square::square(&self.reducer, x, z);
+        self.squarer.square(&self.reducer, x, z);
     }
 
     pub(crate) fn check_size(&self, len: usize) -> Result<(), BinPolyError> {
