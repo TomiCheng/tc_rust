@@ -1,7 +1,39 @@
-use crate::EcDomain;
-use tc_ec_core_v2::Curve;
+use crate::EcError;
+use tc_bigint::PaddedBigUint;
+use tc_ec_core_v2::{Curve, Point};
+use tc_zeroize::Zeroize;
 
-pub struct EcPrivateKey<C: Curve> {
-    domain: EcDomain<C>,
-    d: C::Scalar,
+/// BC's `ECPrivateKeyParameters`: the scalar d, with the generator G standing for the
+/// domain, since a point carries its curve and the curve its order and cofactor. d is
+/// wiped when the key is dropped.
+pub struct EcPrivateKey<C: Curve<Scalar = PaddedBigUint>> {
+    g: C::Point,
+    d: PaddedBigUint,
+}
+
+impl<C: Curve<Scalar = PaddedBigUint>> EcPrivateKey<C> {
+    /// BC's `ValidatePrivateScalar`: d must lie in `[1, n - 1]`. Constant time in d; only
+    /// whether it does is revealed.
+    pub fn new(g: C::Point, d: PaddedBigUint) -> Result<Self, EcError> {
+        let curve = g.curve();
+        let n = curve.order().ok_or(EcError::MissingOrder)?;
+        if d < PaddedBigUint::from(1u8) || d >= *n {
+            return Err(EcError::InvalidPrivateScalar);
+        }
+        Ok(Self { g, d })
+    }
+
+    pub fn g(&self) -> &C::Point {
+        &self.g
+    }
+
+    pub fn d(&self) -> &PaddedBigUint {
+        &self.d
+    }
+}
+
+impl<C: Curve<Scalar = PaddedBigUint>> Drop for EcPrivateKey<C> {
+    fn drop(&mut self) {
+        self.d.zeroize();
+    }
 }
