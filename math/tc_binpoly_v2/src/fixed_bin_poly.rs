@@ -69,6 +69,20 @@ impl<const N: usize> FixedBinPoly<N> {
         }
     }
 
+    /// `x^(2^count)`: `count` squarings over one product buffer, `x` itself for `0`.
+    /// Constant time; the work grows with `count`, which is public.
+    pub fn square_n(&self, count: usize) -> Self {
+        if count == 0 {
+            return self.clone();
+        }
+        let mut limbs = [0; N];
+        self.field.square_n(&self.limbs, count, &mut limbs);
+        Self {
+            limbs,
+            field: self.field,
+        }
+    }
+
     /// `x⁻¹`, and `0` for `0`, by Itoh–Tsujii. Meaningful only when the modulus is
     /// irreducible, which is not checked. As constant time as [`Self::multiply`]: the chain
     /// depends on the degree alone.
@@ -186,6 +200,14 @@ mod tests {
         let field = BinField::pentanomial(163, 3, 6, 7).unwrap();
         let x = FixedBinPoly::from_limbs(field, [u64::MAX, 7, (1 << 35) - 1]).unwrap();
         assert_eq!(x.square().limbs(), x.multiply(&x).limbs());
+    }
+
+    #[test]
+    fn square_n_is_squaring_n_times_and_zero_times_is_the_value() {
+        let field = BinField::pentanomial(163, 3, 6, 7).unwrap();
+        let x = FixedBinPoly::from_limbs(field, [u64::MAX, 7, (1 << 35) - 1]).unwrap();
+        assert_eq!(x.square_n(0), x);
+        assert_eq!(x.square_n(3), x.square().square().square());
     }
 
     #[test]
