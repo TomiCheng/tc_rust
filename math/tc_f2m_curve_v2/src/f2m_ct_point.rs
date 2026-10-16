@@ -1,9 +1,12 @@
 use crate::{F2mCtCurve, F2mFieldElement};
+use core::fmt;
 use tc_bigint::{PaddedBigUint, Word};
 use tc_constant_time::{Choice, ConditionallySelectable, ConstantTimeEq};
-use tc_ec_core_v2::FieldElement;
+use tc_ec_core_v2::{BinaryFieldElement, FieldElement, Point};
 
-/// A point on an [`F2mCtCurve`] in affine coordinates, `None` for infinity.
+/// A point on an [`F2mCtCurve`] in affine coordinates, `None` for infinity. Only
+/// [`multiply`](Self::multiply) is constant time; the group operations of [`Point`] are
+/// BC's affine formulas, variable time and only for public points.
 #[derive(Clone)]
 pub struct F2mCtPoint<'a> {
     curve: &'a F2mCtCurve,
@@ -23,6 +26,41 @@ impl<'a> F2mCtPoint<'a> {
             curve,
             coords: None,
         }
+    }
+
+    /// `y² + xy = x³ + ax² + b`; infinity counts as on the curve. Constant time; only the
+    /// answer is revealed.
+    pub fn is_on_curve(&self) -> bool {
+        let Some((x, y)) = &self.coords else {
+            return true;
+        };
+        let (a, b) = (self.curve.a(), self.curve.b());
+        y.add(x).multiply(y) == x.add(a).multiply(&x.square()).add(b)
+    }
+
+    // As on the Var curve: with cofactor 2, a point of odd order has Tr(x) = 1.
+    fn satisfies_order(&self) -> bool {
+        let cofactor = self.curve.cofactor();
+        if self.is_infinity() || cofactor.is_some_and(|h| *h == PaddedBigUint::from(1u8)) {
+            return true;
+        }
+        if cofactor.is_some_and(|h| *h == PaddedBigUint::from(2u8)) {
+            return self.x().expect("a finite point").trace() != 0;
+        }
+        self.curve
+            .order()
+            .is_none_or(|n| self.multiply(n).is_infinity())
+    }
+
+    pub fn subtract(&self, rhs: &Self) -> Self {
+        self.add(&rhs.negate())
+    }
+
+    fn assert_same_curve(&self, rhs: &Self) {
+        assert!(
+            core::ptr::eq(self.curve, rhs.curve) || self.curve == rhs.curve,
+            "points on different curves"
+        );
     }
 
     /// `kP` by the Montgomery ladder of López and Dahab (1999) over the public width of
@@ -92,6 +130,118 @@ impl<'a> F2mCtPoint<'a> {
         } else {
             Self::new(self.curve, xk, yk)
         }
+    }
+}
+
+fn divide(x: &F2mFieldElement, y: &F2mFieldElement) -> F2mFieldElement {
+    x.multiply(&y.invert().expect("the divisor is not zero"))
+}
+
+impl<'a> Point for F2mCtPoint<'a> {
+    type Curve = &'a F2mCtCurve;
+
+    fn curve(&self) -> &'a F2mCtCurve {
+        self.curve
+    }
+
+    fn is_valid(&self) -> bool {
+        self.is_on_curve() && self.satisfies_order()
+    }
+
+    fn infinity(&self) -> Self {
+        Self::infinity(self.curve)
+    }
+
+    fn is_infinity(&self) -> bool {
+        self.coords.is_none()
+    }
+
+    fn x(&self) -> Option<F2mFieldElement> {
+        self.coords.as_ref().map(|(x, _)| x.clone())
+    }
+
+    fn y(&self) -> Option<F2mFieldElement> {
+        self.coords.as_ref().map(|(_, y)| y.clone())
+    }
+
+    /// BC's affine `F2mPoint.Add`. Variable time.
+    fn add(&self, rhs: &Self) -> Self {
+        self.assert_same_curve(rhs);
+        let (Some((x1, y1)), Some((x2, y2))) = (&self.coords, &rhs.coords) else {
+            return if self.is_infinity() {
+                rhs.clone()
+            } else {
+                self.clone()
+            };
+        };
+        let dx = x1.add(x2);
+        let dy = y1.add(y2);
+        if dx.is_zero() {
+            return if dy.is_zero() {
+                self.twice()
+            } else {
+                Self::infinity(self.curve)
+            };
+        }
+        let l = divide(&dy, &dx);
+        let x3 = l.square().add(&l).add(&dx).add(self.curve.a());
+        let y3 = l.multiply(&x1.add(&x3)).add(&x3).add(y1);
+        Self::new(self.curve, x3, y3)
+    }
+
+    /// BC's affine `F2mPoint.Twice`. Variable time.
+    fn twice(&self) -> Self {
+        let Some((x1, y1)) = &self.coords else {
+            return self.clone();
+        };
+        if x1.is_zero() {
+            // A point with x = 0 is its own negative.
+            return Self::infinity(self.curve);
+        }
+        let l1 = divide(y1, x1).add(x1);
+        let x3 = l1.square().add(&l1).add(self.curve.a());
+        let one = self.curve.field().one();
+        let y3 = x1.square().add(&x3.multiply(&l1.add(&one)));
+        Self::new(self.curve, x3, y3)
+    }
+
+    /// `(x, x + y)`. Constant time apart from whether this is infinity.
+    fn negate(&self) -> Self {
+        let Some((x, y)) = &self.coords else {
+            return self.clone();
+        };
+        Self::new(self.curve, x.clone(), y.add(x))
+    }
+
+    fn normalize(&self) -> Self {
+        self.clone()
+    }
+
+    fn projective_z(&self) -> Option<F2mFieldElement> {
+        None
+    }
+
+    fn normalize_with_inverse(&self, _inverse: &F2mFieldElement) -> Self {
+        self.clone()
+    }
+}
+
+/// The same point on the same curve. Constant time in the coordinates.
+impl PartialEq for F2mCtPoint<'_> {
+    fn eq(&self, other: &Self) -> bool {
+        (core::ptr::eq(self.curve, other.curve) || self.curve == other.curve)
+            && self.coords == other.coords
+    }
+}
+
+impl Eq for F2mCtPoint<'_> {}
+
+/// Prints only whether the point is at infinity, never the coordinates.
+impl fmt::Debug for F2mCtPoint<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("F2mCtPoint")
+            .field("infinity", &self.is_infinity())
+            .finish_non_exhaustive()
     }
 }
 

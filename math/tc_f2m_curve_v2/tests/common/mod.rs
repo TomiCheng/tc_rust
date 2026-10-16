@@ -2,7 +2,7 @@
 
 use tc_bigint::{ArrayEncoding, PaddedBigUint};
 use tc_ec_core_v2::{CoordinateSystem, Point, Scalar};
-use tc_f2m_curve_v2::{F2mField, F2mVarCurve, F2mVarPoint};
+use tc_f2m_curve_v2::{F2mCtCurve, F2mField, F2mVarCurve, F2mVarPoint};
 
 pub type Var<'a> = &'a F2mVarCurve;
 
@@ -68,4 +68,15 @@ pub fn double_and_add<'a>(point: &F2mVarPoint<'a>, k: &PaddedBigUint) -> F2mVarP
         }
     }
     result
+}
+
+pub fn sect163r2_ct() -> F2mCtCurve {
+    F2mCtCurve::new(
+        field(),
+        &bytes(ONE),
+        &bytes(B),
+        Some(integer(N)),
+        Some(int(2)),
+    )
+    .unwrap()
 }

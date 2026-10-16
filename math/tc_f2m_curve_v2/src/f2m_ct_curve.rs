@@ -1,6 +1,7 @@
 use crate::{F2mCtPoint, F2mError, F2mField, F2mFieldElement};
 use core::fmt;
 use tc_bigint::PaddedBigUint;
+use tc_ec_core_v2::{CoordinateSystem, Curve};
 
 /// `y² + xy = x³ + ax² + b` over a binary field, whose scalar multiplication is a
 /// constant-time Montgomery ladder. The other group operations have no complete formulas
@@ -63,6 +64,53 @@ impl F2mCtCurve {
             self.field.element(x)?,
             self.field.element(y)?,
         ))
+    }
+}
+
+impl<'a> Curve for &'a F2mCtCurve {
+    type Field = F2mFieldElement;
+    type Point = F2mCtPoint<'a>;
+    type Scalar = PaddedBigUint;
+
+    fn a(&self) -> &F2mFieldElement {
+        &self.a
+    }
+
+    fn b(&self) -> &F2mFieldElement {
+        &self.b
+    }
+
+    fn order(&self) -> Option<&PaddedBigUint> {
+        self.order.as_ref()
+    }
+
+    fn cofactor(&self) -> Option<&PaddedBigUint> {
+        self.cofactor.as_ref()
+    }
+
+    fn zero(&self) -> F2mFieldElement {
+        self.field.zero()
+    }
+
+    fn one(&self) -> F2mFieldElement {
+        self.field.one()
+    }
+
+    fn infinity(&self) -> F2mCtPoint<'a> {
+        F2mCtPoint::infinity(self)
+    }
+
+    fn create_point(&self, x: F2mFieldElement, y: F2mFieldElement) -> F2mCtPoint<'a> {
+        F2mCtPoint::new(self, x, y)
+    }
+
+    fn coordinate_system(&self) -> CoordinateSystem {
+        CoordinateSystem::Affine
+    }
+
+    /// The Montgomery ladder of [`F2mCtPoint::multiply`]. Constant time.
+    fn multiply(point: &F2mCtPoint<'a>, scalar: &PaddedBigUint) -> F2mCtPoint<'a> {
+        point.multiply(scalar)
     }
 }
 
