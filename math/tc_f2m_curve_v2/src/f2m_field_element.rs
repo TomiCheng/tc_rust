@@ -20,6 +20,15 @@ impl F2mFieldElement {
         self.value.field().n() as usize
     }
 
+    /// The degree plus one, `0` for zero. Variable time; only for public values.
+    pub(crate) fn bit_length(&self) -> usize {
+        let limbs = self.value.limbs();
+        limbs
+            .iter()
+            .rposition(|&limb| limb != 0)
+            .map_or(0, |i| 64 * i + 64 - limbs[i].leading_zeros() as usize)
+    }
+
     // OR of every limb, with the low bit of the first flipped when `one` is set.
     fn fold(&self, one: bool) -> u64 {
         let limbs = self.value.limbs();
