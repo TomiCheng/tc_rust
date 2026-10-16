@@ -38,6 +38,10 @@ impl<const N: usize> FixedBinPoly<N> {
         &self.limbs
     }
 
+    pub fn field(&self) -> BinField {
+        self.field
+    }
+
     /// `x + y`, a coefficient-wise XOR. Constant time. Panics when the fields differ.
     pub fn add(&self, rhs: &Self) -> Self {
         assert_eq!(self.field, rhs.field, "polynomials of different fields");
