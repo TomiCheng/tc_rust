@@ -32,6 +32,20 @@ impl PaddedBinPoly {
     pub fn limbs(&self) -> &[u64] {
         &self.limbs
     }
+
+    /// `x + y`, a coefficient-wise XOR. Constant time. Panics when the fields differ.
+    pub fn add(&self, rhs: &Self) -> Self {
+        assert_eq!(self.field, rhs.field, "polynomials of different fields");
+        Self {
+            limbs: self
+                .limbs
+                .iter()
+                .zip(&rhs.limbs)
+                .map(|(x, y)| x ^ y)
+                .collect(),
+            field: self.field,
+        }
+    }
 }
 
 /// Leaves zero in the same field. Not done on drop: the caller knows if the value is secret.
@@ -75,6 +89,23 @@ mod tests {
 
         let aligned = BinField::trinomial(128, 7).unwrap();
         assert!(PaddedBinPoly::from_limbs(aligned, Box::new([u64::MAX; 2])).is_ok());
+    }
+
+    #[test]
+    fn add_is_a_coefficient_wise_xor_and_every_value_is_its_own_negative() {
+        let field = BinField::pentanomial(163, 3, 6, 7).unwrap();
+        let x = PaddedBinPoly::from_limbs(field, Box::new([0b1100, 1, 3])).unwrap();
+        let y = PaddedBinPoly::from_limbs(field, Box::new([0b1010, 1, 5])).unwrap();
+        assert_eq!(x.add(&y).limbs(), [0b0110, 0, 6]);
+        assert_eq!(x.add(&x).limbs(), [0, 0, 0]);
+    }
+
+    #[test]
+    #[should_panic(expected = "polynomials of different fields")]
+    fn adding_polynomials_of_different_fields_panics() {
+        let x = PaddedBinPoly::one(BinField::pentanomial(163, 3, 6, 7).unwrap());
+        let y = PaddedBinPoly::one(BinField::trinomial(163, 7).unwrap());
+        x.add(&y);
     }
 
     #[test]
