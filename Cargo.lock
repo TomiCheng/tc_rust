@@ -988,6 +988,7 @@ dependencies = [
 name = "tc_binpoly_v2"
 version = "0.1.0"
 dependencies = [
+ "criterion",
  "tc_constant_time",
  "tc_runtime",
  "tc_zeroize",
