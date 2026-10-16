@@ -1,5 +1,8 @@
+use crate::encoding;
 use crate::invert::invert;
 use crate::{BinField, BinPolyError};
+use alloc::vec;
+use alloc::vec::Vec;
 use core::fmt;
 use tc_constant_time::{Choice, ConditionallySelectable, ConstantTimeEq};
 use tc_zeroize::Zeroize;
@@ -40,6 +43,55 @@ impl<const N: usize> FixedBinPoly<N> {
 
     pub fn field(&self) -> BinField {
         self.field
+    }
+
+    /// From little-endian bytes, the constant coefficient in the low bit of the first, as
+    /// tc_bigint's `ArrayEncoding::from_le`. A longer input may carry zeros past the
+    /// polynomial. Fails unless `N` is `field.size()` and no bit at or above `field.n()` is
+    /// set.
+    pub fn from_le(field: BinField, input: &[u8]) -> Result<Self, BinPolyError> {
+        let mut limbs = [0; N];
+        encoding::read_le(input, &mut limbs)?;
+        Self::from_limbs(field, limbs)
+    }
+
+    /// From big-endian bytes, as SEC 1 encodes an element of GF(2^m); otherwise as
+    /// [`from_le`](Self::from_le).
+    pub fn from_be(field: BinField, input: &[u8]) -> Result<Self, BinPolyError> {
+        let mut limbs = [0; N];
+        encoding::read_be(input, &mut limbs)?;
+        Self::from_limbs(field, limbs)
+    }
+
+    /// The exact output length of the writes, `⌈n / 8⌉` bytes.
+    pub fn length(&self) -> usize {
+        (self.field.n() as usize).div_ceil(8)
+    }
+
+    /// Writes [`length`](Self::length) little-endian bytes to the front of `output` and
+    /// returns how many. Constant time.
+    pub fn write_le(&self, output: &mut [u8]) -> Result<usize, BinPolyError> {
+        encoding::write_le(&self.limbs, self.length(), output)
+    }
+
+    /// Writes [`length`](Self::length) big-endian bytes to the front of `output` and returns
+    /// how many. Constant time.
+    pub fn write_be(&self, output: &mut [u8]) -> Result<usize, BinPolyError> {
+        encoding::write_be(&self.limbs, self.length(), output)
+    }
+
+    pub fn to_le(&self) -> Vec<u8> {
+        let mut output = vec![0; self.length()];
+        self.write_le(&mut output)
+            .expect("the output has the length");
+        output
+    }
+
+    pub fn to_be(&self) -> Vec<u8> {
+        let mut output = vec![0; self.length()];
+        self.write_be(&mut output)
+            .expect("the output has the length");
+        output
     }
 
     /// `x + y`, a coefficient-wise XOR. Constant time. Panics when the fields differ.
@@ -274,6 +326,29 @@ mod tests {
         assert_eq!((&a, &b), (&x, &y));
         FixedBinPoly::conditional_swap(&mut a, &mut b, yes);
         assert_eq!((&a, &b), (&y, &x));
+    }
+
+    #[test]
+    fn bytes_round_trip_both_ways_round_and_n_must_fit_the_field() {
+        let field = BinField::pentanomial(163, 3, 6, 7).unwrap();
+        let x = FixedBinPoly::from_limbs(field, [1, 1, 1 << 34]).unwrap();
+        let mut be = [0; 21];
+        be[0] = 0x04;
+        be[12] = 0x01;
+        be[20] = 0x01;
+        let mut le = be;
+        le.reverse();
+        assert_eq!(x.to_be(), be);
+        assert_eq!(x.to_le(), le);
+        assert_eq!(FixedBinPoly::from_be(field, &be), Ok(x.clone()));
+        assert_eq!(FixedBinPoly::from_le(field, &le), Ok(x));
+        assert_eq!(
+            FixedBinPoly::<4>::from_be(field, &be).err(),
+            Some(BinPolyError::InvalidLength {
+                expected: 3,
+                actual: 4
+            })
+        );
     }
 
     #[test]

@@ -20,6 +20,8 @@ pub enum BinPolyError {
     InvalidLength { expected: usize, actual: usize },
     /// Bits at positions greater than or equal to the configured degree were set.
     UnreducedValue,
+    /// The output buffer is shorter than the encoding.
+    BufferTooSmall,
 }
 
 impl fmt::Display for BinPolyError {
@@ -44,6 +46,7 @@ impl fmt::Display for BinPolyError {
             Self::UnreducedValue => {
                 f.write_str("value has coefficients at or above the modulus degree")
             }
+            Self::BufferTooSmall => f.write_str("the output buffer is too small"),
         }
     }
 }

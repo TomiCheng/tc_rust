@@ -7,6 +7,7 @@ mod bin_field;
 mod fixed_bin_poly;
 mod padded_bin_poly;
 
+mod encoding;
 mod errors;
 mod invert;
 mod multiply;
