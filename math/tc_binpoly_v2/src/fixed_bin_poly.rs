@@ -1,7 +1,10 @@
 use crate::invert::invert;
 use crate::{BinField, BinPolyError};
+use core::fmt;
+use tc_constant_time::{Choice, ConstantTimeEq};
 use tc_zeroize::Zeroize;
 
+#[derive(Clone)]
 pub struct FixedBinPoly<const N: usize> {
     limbs: [u64; N],
     field: BinField,
@@ -79,6 +82,31 @@ impl<const N: usize> FixedBinPoly<N> {
     }
 }
 
+/// Constant time in the limbs; the fields are public.
+impl<const N: usize> ConstantTimeEq for FixedBinPoly<N> {
+    fn ct_eq(&self, rhs: &Self) -> Choice {
+        Choice::from_lsb(u8::from(self.field == rhs.field)) & self.limbs.ct_eq(&rhs.limbs)
+    }
+}
+
+/// [`ConstantTimeEq::ct_eq`], revealing only the answer.
+impl<const N: usize> PartialEq for FixedBinPoly<N> {
+    fn eq(&self, other: &Self) -> bool {
+        self.ct_eq(other).unwrap_u8() == 1
+    }
+}
+
+impl<const N: usize> Eq for FixedBinPoly<N> {}
+
+/// Shows the field only: the value may be secret.
+impl<const N: usize> fmt::Debug for FixedBinPoly<N> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("FixedBinPoly")
+            .field("field", &self.field)
+            .finish_non_exhaustive()
+    }
+}
+
 /// Leaves zero in the same field. Not done on drop: the caller knows if the value is secret.
 impl<const N: usize> Zeroize for FixedBinPoly<N> {
     fn zeroize(&mut self) {
@@ -90,6 +118,7 @@ impl<const N: usize> Zeroize for FixedBinPoly<N> {
 mod tests {
     use super::FixedBinPoly;
     use crate::{BinField, BinPolyError};
+    use tc_constant_time::ConstantTimeEq;
     use tc_zeroize::Zeroize;
 
     #[test]
@@ -176,6 +205,33 @@ mod tests {
         let x = FixedBinPoly::<3>::one(BinField::pentanomial(163, 3, 6, 7).unwrap()).unwrap();
         let y = FixedBinPoly::<3>::one(BinField::trinomial(163, 7).unwrap()).unwrap();
         x.multiply(&y);
+    }
+
+    #[test]
+    fn equality_needs_every_limb_and_the_field_to_match() {
+        let field = BinField::pentanomial(163, 3, 6, 7).unwrap();
+        let other = BinField::trinomial(163, 7).unwrap();
+        let x = FixedBinPoly::from_limbs(field, [1, 2, 3]).unwrap();
+        let y = FixedBinPoly::from_limbs(field, [1, 2, 2]).unwrap();
+        let z = FixedBinPoly::from_limbs(other, [1, 2, 3]).unwrap();
+        assert_eq!(x.clone(), x);
+        assert_ne!(y, x);
+        assert_ne!(z, x);
+        assert_eq!(
+            [x.clone(), y, z].map(|v| v.ct_eq(&x).unwrap_u8()),
+            [1, 0, 0]
+        );
+    }
+
+    #[test]
+    fn debug_shows_the_field_but_not_the_value() {
+        let field = BinField::pentanomial(163, 3, 6, 7).unwrap();
+        let x = FixedBinPoly::from_limbs(field, [0xDEAD_BEEF, 0, 0]).unwrap();
+        let shown = alloc::format!("{x:?}");
+        assert!(shown.starts_with("FixedBinPoly { field: BinField"));
+        assert!(
+            !shown.contains("limbs") && !shown.contains(&alloc::format!("{}", 0xDEAD_BEEF_u64))
+        );
     }
 
     #[test]

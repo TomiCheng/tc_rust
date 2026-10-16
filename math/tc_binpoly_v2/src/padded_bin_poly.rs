@@ -2,8 +2,11 @@ use crate::invert::invert;
 use crate::{BinField, BinPolyError};
 use alloc::boxed::Box;
 use alloc::vec;
+use core::fmt;
+use tc_constant_time::{Choice, ConstantTimeEq};
 use tc_zeroize::Zeroize;
 
+#[derive(Clone)]
 pub struct PaddedBinPoly {
     limbs: Box<[u64]>,
     field: BinField,
@@ -86,6 +89,31 @@ impl PaddedBinPoly {
     }
 }
 
+/// Constant time in the limbs; the fields, and so the lengths, are public.
+impl ConstantTimeEq for PaddedBinPoly {
+    fn ct_eq(&self, rhs: &Self) -> Choice {
+        Choice::from_lsb(u8::from(self.field == rhs.field)) & self.limbs[..].ct_eq(&rhs.limbs[..])
+    }
+}
+
+/// [`ConstantTimeEq::ct_eq`], revealing only the answer.
+impl PartialEq for PaddedBinPoly {
+    fn eq(&self, other: &Self) -> bool {
+        self.ct_eq(other).unwrap_u8() == 1
+    }
+}
+
+impl Eq for PaddedBinPoly {}
+
+/// Shows the field only: the value may be secret.
+impl fmt::Debug for PaddedBinPoly {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("PaddedBinPoly")
+            .field("field", &self.field)
+            .finish_non_exhaustive()
+    }
+}
+
 /// Leaves zero in the same field. Not done on drop: the caller knows if the value is secret.
 impl Zeroize for PaddedBinPoly {
     fn zeroize(&mut self) {
@@ -98,6 +126,7 @@ mod tests {
     use super::PaddedBinPoly;
     use crate::{BinField, BinPolyError};
     use alloc::boxed::Box;
+    use tc_constant_time::ConstantTimeEq;
     use tc_zeroize::Zeroize;
 
     #[test]
@@ -182,6 +211,33 @@ mod tests {
         let x = PaddedBinPoly::one(BinField::pentanomial(163, 3, 6, 7).unwrap());
         let y = PaddedBinPoly::one(BinField::trinomial(163, 7).unwrap());
         x.multiply(&y);
+    }
+
+    #[test]
+    fn equality_needs_every_limb_and_the_field_to_match() {
+        let field = BinField::pentanomial(163, 3, 6, 7).unwrap();
+        let other = BinField::trinomial(163, 7).unwrap();
+        let x = PaddedBinPoly::from_limbs(field, Box::new([1, 2, 3])).unwrap();
+        let y = PaddedBinPoly::from_limbs(field, Box::new([1, 2, 2])).unwrap();
+        let z = PaddedBinPoly::from_limbs(other, Box::new([1, 2, 3])).unwrap();
+        assert_eq!(x.clone(), x);
+        assert_ne!(y, x);
+        assert_ne!(z, x);
+        assert_eq!(
+            [x.clone(), y, z].map(|v| v.ct_eq(&x).unwrap_u8()),
+            [1, 0, 0]
+        );
+    }
+
+    #[test]
+    fn debug_shows_the_field_but_not_the_value() {
+        let field = BinField::pentanomial(163, 3, 6, 7).unwrap();
+        let x = PaddedBinPoly::from_limbs(field, Box::new([0xDEAD_BEEF, 0, 0])).unwrap();
+        let shown = alloc::format!("{x:?}");
+        assert!(shown.starts_with("PaddedBinPoly { field: BinField"));
+        assert!(
+            !shown.contains("limbs") && !shown.contains(&alloc::format!("{}", 0xDEAD_BEEF_u64))
+        );
     }
 
     #[test]
