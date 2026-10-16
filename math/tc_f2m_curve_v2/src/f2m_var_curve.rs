@@ -1,6 +1,6 @@
 use crate::{F2mField, F2mFieldElement};
 
-pub struct F2mCurve {
+pub struct F2mVarCurve {
     field: F2mField,
     a: F2mFieldElement,
     b: F2mFieldElement,
