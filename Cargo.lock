@@ -1292,8 +1292,16 @@ dependencies = [
 name = "tc_ecdh_v2"
 version = "0.1.0"
 dependencies = [
+ "rand",
  "tc_agreement",
+ "tc_asym_cipher",
+ "tc_bigint 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tc_ec_core_v2",
+ "tc_ec_key",
+ "tc_f2m_curve_v2",
+ "tc_fp_curve_v2",
+ "tc_modular",
+ "tc_zeroize",
 ]
 
 [[package]]
