@@ -6,6 +6,7 @@ use tc_zeroize::Zeroize;
 /// BC's `ECPrivateKeyParameters`: the scalar d, with the generator G standing for the
 /// domain, since a point carries its curve and the curve its order and cofactor. d is
 /// wiped when the key is dropped.
+#[derive(Clone)]
 pub struct EcPrivateKey<C: Curve<Scalar = PaddedBigUint>> {
     g: C::Point,
     d: PaddedBigUint,

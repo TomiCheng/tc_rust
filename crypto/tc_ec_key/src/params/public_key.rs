@@ -4,6 +4,7 @@ use tc_ec_core_v2::{Curve, Point};
 
 /// BC's `ECPublicKeyParameters`: the point Q, with the generator G standing for the
 /// domain.
+#[derive(Clone)]
 pub struct EcPublicKey<C: Curve> {
     g: C::Point,
     q: C::Point,
