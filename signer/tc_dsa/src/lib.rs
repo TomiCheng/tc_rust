@@ -5,4 +5,4 @@
 
 mod traits;
 
-pub use traits::{Dsa, DsaInit};
+pub use traits::{Dsa, DsaInit, DsaKCalculator};
