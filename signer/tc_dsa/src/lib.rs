@@ -3,8 +3,10 @@
 
 #![no_std]
 
+extern crate alloc;
+
 mod k_calculator;
 mod traits;
 
-pub use k_calculator::RandomDsaKCalculator;
+pub use k_calculator::{HMacDsaKCalculator, RandomDsaKCalculator};
 pub use traits::{Dsa, DsaInit, DsaKCalculator};
