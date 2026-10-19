@@ -2,3 +2,7 @@
 //! message as a pair of integers (r, s), and verifies such a pair.
 
 #![no_std]
+
+mod traits;
+
+pub use traits::{Dsa, DsaInit};
