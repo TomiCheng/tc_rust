@@ -1,0 +1,10 @@
+[package]
+name = "tc_ecdsa_v2"
+description = "ECDSA over short-Weierstrass curves, ported from Bouncy Castle C#."
+version.workspace = true
+edition.workspace = true
+rust-version = "1.85"
+license.workspace = true
+repository.workspace = true
+
+[dependencies]

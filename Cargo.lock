@@ -1211,6 +1211,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_dsa"
+version = "0.1.0"
+
+[[package]]
 name = "tc_dstu7564"
 version = "0.1.0"
 dependencies = [
@@ -1320,6 +1324,10 @@ dependencies = [
  "tc_params",
  "tc_sha 0.1.0",
 ]
+
+[[package]]
+name = "tc_ecdsa_v2"
+version = "0.1.0"
 
 [[package]]
 name = "tc_ed25519"
