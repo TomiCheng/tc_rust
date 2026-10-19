@@ -68,15 +68,23 @@ impl FieldElement for SecT163FieldElement {
     }
 
     fn sqrt(&self) -> Option<Self> {
-        todo!()
+        Some(Self {
+            value: sect163_field::sqrt(&self.value),
+        })
     }
 
     fn negate(&self) -> Self {
         self.clone()
     }
 
+    /// `None` for zero, which is all the running time tells.
     fn invert(&self) -> Option<Self> {
-        todo!()
+        if self.is_zero() {
+            return None;
+        }
+        Some(Self {
+            value: sect163_field::invert(&self.value),
+        })
     }
 
     fn encoded_length(&self) -> usize {
@@ -97,7 +105,9 @@ impl BinaryFieldElement for SecT163FieldElement {
     }
 
     fn half_trace(&self) -> Self {
-        todo!()
+        Self {
+            value: sect163_field::half_trace(&self.value),
+        }
     }
 }
 
@@ -192,6 +202,23 @@ mod tests {
             assert!(sum.is_zero() || sum.is_one());
             assert_eq!(x.trace(), u8::from(sum.is_one()));
         }
+    }
+
+    #[test]
+    fn roots_inverses_and_half_traces_undo_what_they_should() {
+        let one = SecT163FieldElement::one();
+        let mut state = 0x5157;
+        for _ in 0..50 {
+            let x = SecT163FieldElement::from_be(&element(&mut state)).unwrap();
+            assert!(x.sqrt().unwrap().square() == x);
+            if !x.is_zero() {
+                assert!(x.invert().unwrap().multiply(&x) == one);
+            }
+            let h = x.half_trace();
+            let trace = [SecT163FieldElement::zero(), one.clone()][usize::from(x.trace())].clone();
+            assert!(h.square().add(&h) == x.add(&trace));
+        }
+        assert!(SecT163FieldElement::zero().invert().is_none());
     }
 
     #[test]

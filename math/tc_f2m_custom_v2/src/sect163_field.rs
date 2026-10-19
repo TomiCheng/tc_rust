@@ -1,13 +1,52 @@
 // BC's `SecT163Field`: GF(2^163) modulo x^163 + x^7 + x^6 + x^3 + 1, on three limbs.
 
-use crate::interleave::expand64_to128;
+use crate::interleave::{expand64_to128, unshuffle, unshuffle_pair};
 use tc_zeroize::Zeroize;
 
 const M35: u64 = u64::MAX >> 29;
 const M55: u64 = u64::MAX >> 9;
+const ROOT_Z: [u64; 3] = [0xB6DB_6DB6_DB6D_B6B0, 0x4924_9249_2492_DB6D, 0x4_9249_2492];
 
 pub(crate) fn add(x: &[u64; 3], y: &[u64; 3]) -> [u64; 3] {
     [x[0] ^ y[0], x[1] ^ y[1], x[2] ^ y[2]]
+}
+
+// x^(2^162 + ... + 2) by Itoh–Tsujii, on the bases { 2, 3 } of 162 = 2·3^4; zero for zero.
+pub(crate) fn invert(x: &[u64; 3]) -> [u64; 3] {
+    let mut t0 = square(x);
+    let mut t1;
+    for n in [1, 3, 9, 27] {
+        t1 = square_n(&t0, n);
+        t0 = multiply(&t0, &t1);
+        t1 = square_n(&t1, n);
+        t0 = multiply(&t0, &t1);
+    }
+    t1 = square_n(&t0, 81);
+    let z = multiply(&t0, &t1);
+    t0.zeroize();
+    t1.zeroize();
+    z
+}
+
+// x = E(z)^2 + z·O(z)^2 for E and O made of its even and odd bits, so sqrt(x) = E + sqrt(z)·O.
+pub(crate) fn sqrt(x: &[u64; 3]) -> [u64; 3] {
+    let [o0, e0] = unshuffle_pair(x[0], x[1]);
+    let [o1, e1] = unshuffle(x[2]);
+    let mut odd = [o0, o1, 0];
+    let mut z = multiply(&odd, &ROOT_Z);
+    z[0] ^= e0;
+    z[1] ^= e1;
+    odd.zeroize();
+    z
+}
+
+// x + x^4 + x^16 + ... + x^(4^81), which m = 163 being odd allows.
+pub(crate) fn half_trace(x: &[u64; 3]) -> [u64; 3] {
+    let mut z = *x;
+    for _ in (1..163).step_by(2) {
+        z = add(&square(&square(&z)), x);
+    }
+    z
 }
 
 pub(crate) fn multiply(x: &[u64; 3], y: &[u64; 3]) -> [u64; 3] {
@@ -22,6 +61,15 @@ pub(crate) fn square(x: &[u64; 3]) -> [u64; 3] {
     let mut tt = impl_square(x);
     let z = reduce(&tt);
     tt.zeroize();
+    z
+}
+
+pub(crate) fn square_n(x: &[u64; 3], n: usize) -> [u64; 3] {
+    debug_assert!(n > 0);
+    let mut z = square(x);
+    for _ in 1..n {
+        z = square(&z);
+    }
     z
 }
 
