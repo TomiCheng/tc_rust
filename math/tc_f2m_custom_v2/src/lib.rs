@@ -3,6 +3,8 @@
 
 #![no_std]
 
+mod interleave;
+mod sect163_field;
 mod sect163_field_element;
 mod sect233_field_element;
 mod sect_ct_curve;
