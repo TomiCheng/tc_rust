@@ -3,6 +3,8 @@
 
 #![no_std]
 
+mod k_calculator;
 mod traits;
 
+pub use k_calculator::RandomDsaKCalculator;
 pub use traits::{Dsa, DsaInit, DsaKCalculator};
