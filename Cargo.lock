@@ -1346,6 +1346,7 @@ dependencies = [
  "tc_ec_core_v2",
  "tc_ec_key",
  "tc_f2m_curve_v2",
+ "tc_f2m_custom_v2",
  "tc_fp_curve_v2",
  "tc_modular",
  "tc_sha 0.1.1",
