@@ -1,9 +1,12 @@
 use crate::SecTCtCurve;
+use crate::sec1;
 use crate::sect_element::SecTElement;
+use alloc::vec;
+use alloc::vec::Vec;
 use core::fmt;
 use tc_bigint::{PaddedBigUint, Word};
 use tc_constant_time::Choice;
-use tc_ec_core_v2::{Curve, Point};
+use tc_ec_core_v2::{Curve, Point, PointEncodeError};
 
 /// A point of a [`SecTCtCurve`] in affine coordinates, `None` for infinity. Only
 /// [`multiply`](Self::multiply) is constant time; the group operations of [`Point`] are BC's
@@ -51,6 +54,34 @@ impl<'a, F: SecTElement> SecTCtPoint<'a, F> {
 
     pub fn subtract(&self, rhs: &Self) -> Self {
         self.add(&rhs.negate())
+    }
+
+    pub fn encoded_length(&self, compressed: bool) -> usize {
+        if self.is_infinity() {
+            1
+        } else {
+            sec1::point_length::<F>(compressed)
+        }
+    }
+
+    /// Writes the SEC 1 encoding into `output`; nothing is written when `output` is
+    /// too short. Constant time apart from whether
+    /// this is infinity.
+    pub fn encode_to(
+        &self,
+        compressed: bool,
+        output: &mut [u8],
+    ) -> Result<usize, PointEncodeError> {
+        sec1::encode(self.xy.as_ref(), compressed, output)
+    }
+
+    /// The SEC 1 encoding. Constant time apart from whether
+    /// this is infinity.
+    pub fn encode(&self, compressed: bool) -> Vec<u8> {
+        let mut output = vec![0; self.encoded_length(compressed)];
+        self.encode_to(compressed, &mut output)
+            .expect("the buffer has the exact length");
+        output
     }
 
     fn assert_same_curve(&self, rhs: &Self) {

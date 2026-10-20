@@ -1,8 +1,9 @@
 use crate::SecTCtPoint;
 use crate::sect_element::SecTElement;
+use crate::{SecTError, sec1};
 use core::fmt;
 use tc_bigint::PaddedBigUint;
-use tc_ec_core_v2::{CoordinateSystem, Curve};
+use tc_ec_core_v2::{CoordinateSystem, Curve, PointDecodeError};
 
 /// A SEC binary curve over the field of `F`, whose multiplication is constant time.
 pub struct SecTCtCurve<F> {
@@ -20,6 +21,35 @@ impl<F: SecTElement> SecTCtCurve<F> {
             order,
             cofactor,
         }
+    }
+
+    pub fn infinity(&self) -> SecTCtPoint<'_, F> {
+        SecTCtPoint::infinity(self)
+    }
+
+    /// The point `(x, y)` from SEC 1 octet strings, which is not checked against the curve.
+    pub fn create_point(&self, x: &[u8], y: &[u8]) -> Result<SecTCtPoint<'_, F>, SecTError> {
+        Ok(SecTCtPoint::new(self, sec1::element(x)?, sec1::element(y)?))
+    }
+
+    /// The bytes of one coordinate in the SEC 1 encoding, `⌈m / 8⌉`.
+    pub fn field_element_encoding_length(&self) -> usize {
+        sec1::coordinate_length::<F>()
+    }
+
+    /// The bytes of the SEC 1 encoding of a finite point.
+    pub fn affine_point_encoding_length(&self, compressed: bool) -> usize {
+        sec1::point_length::<F>(compressed)
+    }
+
+    /// Decodes the SEC 1 infinity, compressed, uncompressed and hybrid forms, and checks
+    /// that the point is on the curve; the subgroup is not checked, as in BC. An encoding
+    /// is public: this is variable time in it, as decompression takes a half-trace.
+    pub fn decode_point(&self, encoded: &[u8]) -> Result<SecTCtPoint<'_, F>, PointDecodeError> {
+        Ok(match sec1::decode(&self.a, &self.b, encoded)? {
+            None => self.infinity(),
+            Some((x, y)) => SecTCtPoint::new(self, x, y),
+        })
     }
 }
 

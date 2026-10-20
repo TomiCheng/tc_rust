@@ -26,6 +26,10 @@ impl SecTElement for SecT233FieldElement {
     fn invert_or_zero(&self) -> Self {
         todo!()
     }
+
+    fn low_bit(&self) -> u8 {
+        todo!()
+    }
 }
 
 impl FieldElement for SecT233FieldElement {

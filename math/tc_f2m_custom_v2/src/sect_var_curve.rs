@@ -1,8 +1,9 @@
 use crate::SecTVarPoint;
 use crate::sect_element::SecTElement;
+use crate::{SecTError, sec1};
 use core::fmt;
 use tc_bigint::PaddedBigUint;
-use tc_ec_core_v2::{CoordinateSystem, Curve};
+use tc_ec_core_v2::{CoordinateSystem, Curve, PointDecodeError};
 
 /// A SEC binary curve over the field of `F`, in lambda-projective coordinates as BC's
 /// `SecT*Curve`s are; variable time, only for public values.
@@ -29,6 +30,46 @@ impl<F: SecTElement> SecTVarCurve<F> {
     // Whether b has fewer bits than half the field, which picks BC's doubling formula.
     pub(crate) fn small_b(&self) -> bool {
         self.small_b
+    }
+
+    pub fn infinity(&self) -> SecTVarPoint<'_, F> {
+        SecTVarPoint::infinity(self)
+    }
+
+    /// The point `(x, y)` from SEC 1 octet strings, which is not checked against the curve.
+    pub fn create_point(&self, x: &[u8], y: &[u8]) -> Result<SecTVarPoint<'_, F>, SecTError> {
+        Ok(SecTVarPoint::new(
+            self,
+            sec1::element(x)?,
+            sec1::element(y)?,
+        ))
+    }
+
+    /// The bytes of one coordinate in the SEC 1 encoding, `⌈m / 8⌉`.
+    pub fn field_element_encoding_length(&self) -> usize {
+        sec1::coordinate_length::<F>()
+    }
+
+    /// The bytes of the SEC 1 encoding of a finite point.
+    pub fn affine_point_encoding_length(&self, compressed: bool) -> usize {
+        sec1::point_length::<F>(compressed)
+    }
+
+    /// The point with the SEC 1 octet string `x` whose compression bit is `y_tilde`, or
+    /// `None` when there is none. Variable time; only for public points.
+    pub fn decompress_point(&self, y_tilde: u8, x: &[u8]) -> Option<SecTVarPoint<'_, F>> {
+        let (x, y) = sec1::decompress(&self.a, &self.b, y_tilde, x)?;
+        Some(SecTVarPoint::new(self, x, y))
+    }
+
+    /// Decodes the SEC 1 infinity, compressed, uncompressed and hybrid forms, and checks
+    /// that the point is on the curve; the subgroup is not checked, as in BC. An encoding
+    /// is public: this is variable time in it, as decompression takes a half-trace.
+    pub fn decode_point(&self, encoded: &[u8]) -> Result<SecTVarPoint<'_, F>, PointDecodeError> {
+        Ok(match sec1::decode(&self.a, &self.b, encoded)? {
+            None => self.infinity(),
+            Some((x, y)) => SecTVarPoint::new(self, x, y),
+        })
     }
 }
 

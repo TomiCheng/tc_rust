@@ -39,6 +39,10 @@ impl SecTElement for SecT163FieldElement {
             value: sect163_field::invert(&self.value),
         }
     }
+
+    fn low_bit(&self) -> u8 {
+        (self.value[0] & 1) as u8
+    }
 }
 
 /// Constant time on a CPU with PCLMULQDQ; without it the multiplication indexes a table by

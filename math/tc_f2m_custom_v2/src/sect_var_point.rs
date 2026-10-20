@@ -1,8 +1,11 @@
 use crate::SecTVarCurve;
+use crate::sec1;
 use crate::sect_element::SecTElement;
+use alloc::vec;
+use alloc::vec::Vec;
 use core::fmt;
 use tc_bigint::PaddedBigUint;
-use tc_ec_core_v2::{Curve, Point};
+use tc_ec_core_v2::{Curve, Point, PointEncodeError};
 
 /// A point of a [`SecTVarCurve`] in lambda-projective coordinates (X, L, Z), `None` for
 /// infinity: `x = X/Z` and `L/Z = x + y/x`, or `y` itself where `x = 0`. Every method is
@@ -92,6 +95,33 @@ impl<'a, F: SecTElement> SecTVarPoint<'a, F> {
 
     pub fn subtract(&self, rhs: &Self) -> Self {
         self.add(&rhs.negate())
+    }
+
+    pub fn encoded_length(&self, compressed: bool) -> usize {
+        if self.is_infinity() {
+            1
+        } else {
+            sec1::point_length::<F>(compressed)
+        }
+    }
+
+    /// Writes the SEC 1 encoding of the normalized point into `output`; nothing is written when `output` is
+    /// too short.
+    pub fn encode_to(
+        &self,
+        compressed: bool,
+        output: &mut [u8],
+    ) -> Result<usize, PointEncodeError> {
+        let affine = self.x().zip(self.y());
+        sec1::encode(affine.as_ref(), compressed, output)
+    }
+
+    /// The SEC 1 encoding.
+    pub fn encode(&self, compressed: bool) -> Vec<u8> {
+        let mut output = vec![0; self.encoded_length(compressed)];
+        self.encode_to(compressed, &mut output)
+            .expect("the buffer has the exact length");
+        output
     }
 
     fn add_lambda_projective(

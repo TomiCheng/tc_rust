@@ -16,4 +16,7 @@ pub trait SecTElement: BinaryFieldElement + ConditionallySelectable + ConstantTi
 
     /// The inverse, or zero for zero, in constant time.
     fn invert_or_zero(&self) -> Self;
+
+    /// The constant coefficient, in constant time.
+    fn low_bit(&self) -> u8;
 }
