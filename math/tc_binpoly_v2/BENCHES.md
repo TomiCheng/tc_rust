@@ -34,12 +34,38 @@ both central estimates are given.
   a change must beat that to be told from noise. Compare by alternating the
   two builds in one sitting, more than once each.
 - The specialized kernels mainly save a few PCLMULQDQ per product; a gain of
-  20 to 30% at small sizes would sit at the edge of that noise. They are not
-  ported for now.
+  20 to 30% at small sizes would sit at the edge of that noise. The table above
+  predates them; see below.
 - `square` is cheaper than `multiply` at every size, as it should be: it only
   interleaves zeros before the reduction.
 - `invert` is dominated by its n − 1 squarings: the Itoh–Tsujii chain adds only
   a handful of multiplications, nine for sect163.
+
+## The size kernels
+
+BC's `Size1` to `Size10` are now ported as one module, the x86 multiplier
+taking them for 1 to 10 limbs, which covers every SEC field. Each is checked
+against a bit-by-bit schoolbook product. Whether they are faster on this host
+is not settled:
+
+- A first try with only the three-limb kernel, alternated with the general one
+  on 2026-10-20, put sect163 at 36.3 / 43.0 ns against 60.4 / 58.0 ns.
+- With all ten, `multiply` ran in the order new, old, new the same day:
+
+| Field | Limbs | New | Old | New again |
+| --- | ---: | ---: | ---: | ---: |
+| sect113 | 2 | 40.1 ns | 37.3 ns | 41.0 ns |
+| sect163 | 3 | 63.6 ns | 50.9 ns | 47.7 ns |
+| sect233 | 4 | 61.8 ns | 58.4 ns | 53.3 ns |
+| sect283 | 5 | 82.8 ns | 73.2 ns | 70.0 ns |
+| sect409 | 7 | 93.4 ns | 93.2 ns | 89.1 ns |
+| sect571 | 9 | 163.8 ns | 142.1 ns | 122.8 ns |
+
+The two runs of the same new code differ by up to a third, more than the gap
+they are meant to show, so this run says nothing either way. Whether the
+general dispatch over ten sizes costs what the single three-limb kernel saved
+is also open. Settling it needs the two kernels timed interleaved in one
+binary, or instruction counts, as under Valgrind, rather than wall time.
 
 ## Reproducing
 

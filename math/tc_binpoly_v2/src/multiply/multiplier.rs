@@ -11,6 +11,8 @@ pub(crate) enum Multiplier {
     ScalarMedium,
     ScalarLarge,
     #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+    X86Small(Pclmulqdq),
+    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
     X86Medium(Pclmulqdq),
     #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
     X86Large(Pclmulqdq),
@@ -36,7 +38,9 @@ impl Multiplier {
 
     #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
     fn pick_x86(size: usize, proof: Pclmulqdq) -> Self {
-        if size < x86::large::KARATSUBA_CUTOFF {
+        if size <= x86::small::MAX_SIZE {
+            Self::X86Small(proof)
+        } else if size < x86::large::KARATSUBA_CUTOFF {
             Self::X86Medium(proof)
         } else {
             Self::X86Large(proof)
@@ -48,6 +52,8 @@ impl Multiplier {
         match *self {
             Self::ScalarMedium => scalar::medium::multiply(reducer, x, y, z),
             Self::ScalarLarge => scalar::large::multiply(reducer, x, y, z),
+            #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+            Self::X86Small(proof) => x86::small::multiply(proof, reducer, x, y, z),
             #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
             Self::X86Medium(proof) => x86::medium::multiply(proof, reducer, x, y, z),
             #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
@@ -67,12 +73,17 @@ mod tests {
 
         #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
         if let Some(proof) = tc_runtime::intrinsics::x86::Pclmulqdq::detect() {
+            assert_eq!(Multiplier::pick_x86(10, proof), Multiplier::X86Small(proof));
+            assert_eq!(
+                Multiplier::pick_x86(11, proof),
+                Multiplier::X86Medium(proof)
+            );
             assert_eq!(
                 Multiplier::pick_x86(31, proof),
                 Multiplier::X86Medium(proof)
             );
             assert_eq!(Multiplier::pick_x86(32, proof), Multiplier::X86Large(proof));
-            assert_eq!(Multiplier::new(1), Multiplier::X86Medium(proof));
+            assert_eq!(Multiplier::new(1), Multiplier::X86Small(proof));
         }
     }
 }

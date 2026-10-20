@@ -35,7 +35,7 @@ pub(crate) fn impl_mul(_proof: Pclmulqdq, x: &[u64], y: &[u64], zz: &mut [u64]) 
 // BC's `Mul2x2`: two limbs by two in three CLMULs.
 #[inline]
 #[target_feature(enable = "pclmulqdq,sse2")]
-unsafe fn mul2x2(x: __m128i, y: __m128i) -> (__m128i, __m128i) {
+pub(super) unsafe fn mul2x2(x: __m128i, y: __m128i) -> (__m128i, __m128i) {
     unsafe {
         let sums = _mm_xor_si128(_mm_unpacklo_epi64(x, y), _mm_unpackhi_epi64(x, y));
         let a = _mm_clmulepi64_si128::<0x00>(x, y);
@@ -153,7 +153,7 @@ unsafe fn lane_of(low: u64) -> __m128i {
 
 #[inline]
 #[target_feature(enable = "pclmulqdq,sse2")]
-unsafe fn load(words: &[u64], lane: usize) -> __m128i {
+pub(super) unsafe fn load(words: &[u64], lane: usize) -> __m128i {
     let words = &words[2 * lane..2 * lane + 2];
     // SAFETY: the slice above holds the 16 bytes read, unaligned.
     unsafe { _mm_loadu_si128(words.as_ptr().cast()) }
@@ -161,7 +161,7 @@ unsafe fn load(words: &[u64], lane: usize) -> __m128i {
 
 #[inline]
 #[target_feature(enable = "pclmulqdq,sse2")]
-unsafe fn store(words: &mut [u64], lane: usize, value: __m128i) {
+pub(super) unsafe fn store(words: &mut [u64], lane: usize, value: __m128i) {
     let words = &mut words[2 * lane..2 * lane + 2];
     // SAFETY: the slice above holds the 16 bytes written, unaligned.
     unsafe { _mm_storeu_si128(words.as_mut_ptr().cast(), value) }
