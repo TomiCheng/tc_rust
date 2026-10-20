@@ -1,8 +1,8 @@
 use tc_bigint::PaddedBigUint;
 use tc_ec_core_v2::{Curve, FieldElement, Point, PointDecodeError, PointEncodeError};
 use tc_f2m_curve_v2::named_curves as generic;
-use tc_f2m_custom_v2::named_curves::{SECT163K1, SECT163R1, SECT163R2};
-use tc_f2m_custom_v2::{SecT163FieldElement, SecTError, SecTVarCurve};
+use tc_f2m_custom_v2::named_curves::{SECT163K1, SECT163R1, SECT163R2, SECT233K1, SECT233R1};
+use tc_f2m_custom_v2::{SecT163FieldElement, SecT233FieldElement, SecTError, SecTVarCurve};
 
 const GX: &str = "03f0eba16286a2d57ea0991168d4994637e8343e36";
 const GY: &str = "00d51fbc6c71a0094fa2cdd545b11c5c0c797324f1";
@@ -75,6 +75,34 @@ fn encodings_match_the_generic_curves_and_decode_back() {
                 var.decode_point(&hybrid).unwrap_err(),
                 PointDecodeError::InconsistentHybridY
             );
+        }
+    }
+}
+
+// The same on the four-limb field of sect233k1 and sect233r1.
+#[test]
+fn encodings_on_sect233_match_the_generic_curves_and_decode_back() {
+    type Var233<'a> = &'a SecTVarCurve<SecT233FieldElement>;
+    for (custom, generic) in [
+        (SECT233K1, generic::SECT233K1),
+        (SECT233R1, generic::SECT233R1),
+    ] {
+        let (var, ct) = (custom.var_curve(), custom.ct_curve());
+        let g = custom.var_generator(&var);
+        let reference = generic.var_curve();
+        let h = generic.var_generator(&reference);
+        for k in 1..24u8 {
+            let k = PaddedBigUint::from(k);
+            let p = Var233::multiply(&g, &k);
+            let q = <&tc_f2m_curve_v2::F2mVarCurve>::multiply(&h, &k);
+            for compressed in [false, true] {
+                let encoded = p.encode(compressed);
+                assert_eq!(encoded, q.encode(compressed));
+                assert!(var.decode_point(&encoded).unwrap() == p);
+                let r = ct.decode_point(&encoded).unwrap();
+                assert!(r.x() == p.x() && r.y() == p.y());
+                assert_eq!(r.encode(compressed), encoded);
+            }
         }
     }
 }

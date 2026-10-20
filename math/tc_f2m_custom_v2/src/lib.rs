@@ -9,6 +9,7 @@ mod interleave;
 mod sec1;
 mod sect163_field;
 mod sect163_field_element;
+mod sect233_field;
 mod sect233_field_element;
 mod sect_ct_curve;
 mod sect_ct_point;

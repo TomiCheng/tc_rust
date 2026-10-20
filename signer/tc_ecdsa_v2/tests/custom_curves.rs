@@ -6,12 +6,14 @@ use tc_ec_key::{EcPrivateKey, EcPublicKey};
 use tc_ecdsa_v2::EcdsaSigner;
 use tc_f2m_curve_v2::F2mCtCurve;
 use tc_f2m_curve_v2::named_curves as generic;
-use tc_f2m_custom_v2::named_curves::{SECT163K1, SECT163R2};
-use tc_f2m_custom_v2::{SecT163FieldElement, SecTCtCurve, SecTVarCurve};
+use tc_f2m_custom_v2::named_curves::{SECT163K1, SECT163R2, SECT233K1};
+use tc_f2m_custom_v2::{SecT163FieldElement, SecT233FieldElement, SecTCtCurve, SecTVarCurve};
 use tc_sha::Sha256Digest;
 
 type Ct<'a> = &'a SecTCtCurve<SecT163FieldElement>;
 type Var<'a> = &'a SecTVarCurve<SecT163FieldElement>;
+type Ct233<'a> = &'a SecTCtCurve<SecT233FieldElement>;
+type Var233<'a> = &'a SecTVarCurve<SecT233FieldElement>;
 
 fn integer(text: &str) -> PaddedBigUint {
     let text = format!("{}{text}", "0".repeat(text.len() % 2));
@@ -105,6 +107,29 @@ fn b_163_signs_as_the_generic_curve_does() {
     ));
     assert!(verify::<&F2mCtCurve>(
         generic::SECT163R2.ct_generator(&reference),
+        &d,
+        &hash,
+        &signature
+    ));
+}
+
+// RFC 6979 A.2.9: K-233, SHA-256, "sample"; a cofactor of 4 and a four-limb field.
+#[test]
+fn k_233_signs_as_rfc_6979_does_on_the_specialized_curve() {
+    let (ct, var) = (SECT233K1.ct_curve(), SECT233K1.var_curve());
+    let d = integer("103B2142BDC2A3C3B55080D09DF1808F79336DA2399F5CA7171D1BE9B0");
+    let hash = sha256(b"sample");
+
+    let signature = sign::<Ct233<'_>>(SECT233K1.ct_generator(&ct), &d, &hash);
+    assert_eq!(
+        signature,
+        (
+            integer("38AD9C1D2CB29906E7D63C24601AC55736B438FB14F4093D6C32F63A10"),
+            integer("647AAD2599C21B6EE89BE7FF957D98F684B7921DE1FD3CC82C079624F4"),
+        )
+    );
+    assert!(verify::<Var233<'_>>(
+        SECT233K1.var_generator(&var),
         &d,
         &hash,
         &signature
