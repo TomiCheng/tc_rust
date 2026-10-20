@@ -18,3 +18,4 @@ tc_runtime = "0.1.0"
 
 [dev-dependencies]
 tc_binpoly_v2 = { path = "../tc_binpoly_v2" }
+tc_f2m_curve_v2 = { path = "../tc_f2m_curve_v2" }

@@ -31,6 +31,12 @@ impl SecTElement for SecT163FieldElement {
         }
         Some(Self { value })
     }
+
+    fn invert_or_zero(&self) -> Self {
+        Self {
+            value: sect163_field::invert(&self.value),
+        }
+    }
 }
 
 /// Constant time on a CPU with PCLMULQDQ; without it the multiplication indexes a table by

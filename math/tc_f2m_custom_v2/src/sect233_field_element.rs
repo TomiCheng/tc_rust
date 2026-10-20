@@ -20,6 +20,10 @@ impl SecTElement for SecT233FieldElement {
     fn from_be(_bytes: &[u8]) -> Option<Self> {
         todo!()
     }
+
+    fn invert_or_zero(&self) -> Self {
+        todo!()
+    }
 }
 
 impl FieldElement for SecT233FieldElement {
