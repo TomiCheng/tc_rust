@@ -1,11 +1,22 @@
 // BC's `SecT163Field`: GF(2^163) modulo x^163 + x^7 + x^6 + x^3 + 1, on three limbs.
 
+#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+mod x86;
+
 use crate::interleave::{expand64_to128, unshuffle, unshuffle_pair};
+#[cfg(target_arch = "x86_64")]
+use tc_runtime::intrinsics::x86::Bmi2X64;
+#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+use tc_runtime::intrinsics::x86::Pclmulqdq;
 use tc_zeroize::Zeroize;
 
 const M35: u64 = u64::MAX >> 29;
 const M55: u64 = u64::MAX >> 9;
-const ROOT_Z: [u64; 3] = [0xB6DB_6DB6_DB6D_B6B0, 0x4924_9249_2492_DB6D, 0x4_9249_2492];
+const ROOT_Z: [u64; 3] = [
+    0xB6DB_6DB6_DB6D_B6B0,
+    0x4924_9249_2492_DB6D,
+    0x0004_9249_2492,
+];
 
 pub(crate) fn add(x: &[u64; 3], y: &[u64; 3]) -> [u64; 3] {
     [x[0] ^ y[0], x[1] ^ y[1], x[2] ^ y[2]]
@@ -50,8 +61,7 @@ pub(crate) fn half_trace(x: &[u64; 3]) -> [u64; 3] {
 }
 
 pub(crate) fn multiply(x: &[u64; 3], y: &[u64; 3]) -> [u64; 3] {
-    let mut tt = [0; 6];
-    impl_multiply(x, y, &mut tt);
+    let mut tt = impl_multiply(x, y);
     let z = reduce(&tt);
     tt.zeroize();
     z
@@ -94,8 +104,20 @@ fn reduce(xx: &[u64; 6]) -> [u64; 3] {
     [x0 ^ t ^ (t << 3) ^ (t << 6) ^ (t << 7), x1, x2 & M35]
 }
 
+// The unreduced product: by PCLMULQDQ where the CPU has it, which is constant time, else by
+// the scalar path below.
+fn impl_multiply(x: &[u64; 3], y: &[u64; 3]) -> [u64; 6] {
+    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+    if let Some(proof) = Pclmulqdq::detect() {
+        return x86::impl_multiply(proof, x, y);
+    }
+    let mut zz = [0; 6];
+    impl_multiply_scalar(x, y, &mut zz);
+    zz
+}
+
 // The "five-way recursion" of Bernstein's "Batch binary Edwards", on 55-bit pieces.
-fn impl_multiply(x: &[u64; 3], y: &[u64; 3], zz: &mut [u64; 6]) {
+fn impl_multiply_scalar(x: &[u64; 3], y: &[u64; 3], zz: &mut [u64; 6]) {
     let f2 = (x[1] >> 46) ^ (x[2] << 18);
     let f1 = ((x[0] >> 55) ^ (x[1] << 9)) & M55;
     let f0 = x[0] & M55;
@@ -219,9 +241,43 @@ fn impl_compact_ext(zz: &mut [u64; 6]) {
     ];
 }
 
+// Bit i to bit 2i: by PDEP where the CPU has BMI2, else by the scalar Interleave steps.
 fn impl_square(x: &[u64; 3]) -> [u64; 6] {
-    let [z0, z1] = expand64_to128(x[0]);
-    let [z2, z3] = expand64_to128(x[1]);
-    let [z4, z5] = expand64_to128(x[2]);
-    [z0, z1, z2, z3, z4, z5]
+    let mut zz = [0; 6];
+    #[cfg(target_arch = "x86_64")]
+    if let Some(proof) = Bmi2X64::detect() {
+        crate::interleave::x86::expand(proof, x, &mut zz);
+        return zz;
+    }
+    for (i, &word) in x.iter().enumerate() {
+        [zz[2 * i], zz[2 * i + 1]] = expand64_to128(word);
+    }
+    zz
+}
+
+#[cfg(all(test, any(target_arch = "x86", target_arch = "x86_64")))]
+mod tests {
+    use super::{impl_multiply_scalar, x86};
+    use tc_runtime::intrinsics::x86::Pclmulqdq;
+
+    #[test]
+    fn the_clmul_product_is_the_scalar_one() {
+        let Some(proof) = Pclmulqdq::detect() else {
+            return;
+        };
+        let mut state = 0x0001_63C1_u64;
+        let mut next = || {
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            state
+        };
+        for _ in 0..200 {
+            let x = [next(), next(), next() >> 29];
+            let y = [next(), next(), next() >> 29];
+            let mut expected = [0; 6];
+            impl_multiply_scalar(&x, &y, &mut expected);
+            assert_eq!(x86::impl_multiply(proof, &x, &y), expected);
+        }
+    }
 }

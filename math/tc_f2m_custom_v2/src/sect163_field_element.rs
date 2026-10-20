@@ -33,7 +33,8 @@ impl SecTElement for SecT163FieldElement {
     }
 }
 
-/// Constant time, apart from the multiplication, whose table is indexed by operand bits.
+/// Constant time on a CPU with PCLMULQDQ; without it the multiplication indexes a table by
+/// operand bits, a cache-timing side channel.
 impl FieldElement for SecT163FieldElement {
     fn is_zero(&self) -> bool {
         let [x0, x1, x2] = self.value;

@@ -1418,6 +1418,7 @@ dependencies = [
  "tc_binpoly_v2",
  "tc_constant_time",
  "tc_ec_core_v2",
+ "tc_runtime",
  "tc_zeroize",
 ]
 

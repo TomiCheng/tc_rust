@@ -1,3 +1,9 @@
+#[cfg(target_arch = "x86_64")]
+pub(crate) mod x86;
+
+#[cfg(target_arch = "x86_64")]
+use tc_runtime::intrinsics::x86::Bmi2X64;
+
 // BC's `Interleave.Expand64To128`: bit i of `x` becomes bit 2i of the 128-bit result.
 pub(crate) fn expand64_to128(mut x: u64) -> [u64; 2] {
     const M64: u64 = 0x5555_5555_5555_5555;
@@ -9,14 +15,24 @@ pub(crate) fn expand64_to128(mut x: u64) -> [u64; 2] {
     [x & M64, (x >> 1) & M64]
 }
 
-// BC's `Interleave.Unshuffle(x, out even)`: the odd and the even bits of `x`, 32 each.
+// BC's `Interleave.Unshuffle(x, out even)`: the odd and the even bits of `x`, 32 each; by
+// PEXT where the CPU has BMI2, as BC's does.
 pub(crate) fn unshuffle(x: u64) -> [u64; 2] {
+    #[cfg(target_arch = "x86_64")]
+    if let Some(proof) = Bmi2X64::detect() {
+        return x86::unshuffle(proof, x);
+    }
     let u = unshuffle_word(x);
     [u >> 32, u & 0xFFFF_FFFF]
 }
 
-// BC's `Interleave.Unshuffle(x0, x1, out even)`: the odd and the even bits of `x1:x0`.
+// BC's `Interleave.Unshuffle(x0, x1, out even)`: the odd and the even bits of `x1:x0`; by
+// PEXT where the CPU has BMI2.
 pub(crate) fn unshuffle_pair(x0: u64, x1: u64) -> [u64; 2] {
+    #[cfg(target_arch = "x86_64")]
+    if let Some(proof) = Bmi2X64::detect() {
+        return x86::unshuffle_pair(proof, x0, x1);
+    }
     let (u0, u1) = (unshuffle_word(x0), unshuffle_word(x1));
     [
         (u0 >> 32) | (u1 & 0xFFFF_FFFF_0000_0000),
