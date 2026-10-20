@@ -1,4 +1,4 @@
-use tc_binpoly_v2::PaddedBinPoly;
+use tc_binpoly::PaddedBinPoly;
 use tc_constant_time::{Choice, ConditionallySelectable, ConstantTimeEq};
 use tc_ec_core_v2::{BinaryFieldElement, FieldElement};
 
@@ -72,7 +72,7 @@ impl ConstantTimeEq for F2mFieldElement {
     }
 }
 
-/// Constant time on the x86 backend; tc_binpoly_v2's scalar multiplier, used without
+/// Constant time on the x86 backend; tc_binpoly's scalar multiplier, used without
 /// PCLMULQDQ, indexes a table by operand bits.
 impl FieldElement for F2mFieldElement {
     /// Whether this is zero. Constant time; only the answer is revealed.

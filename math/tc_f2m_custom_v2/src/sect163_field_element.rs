@@ -156,7 +156,7 @@ impl Drop for SecT163FieldElement {
 mod tests {
     use super::{LENGTH, SecT163FieldElement};
     use crate::sect_element::SecTElement;
-    use tc_binpoly_v2::{BinField, PaddedBinPoly};
+    use tc_binpoly::{BinField, PaddedBinPoly};
     use tc_ec_core_v2::{BinaryFieldElement, FieldElement};
 
     // splitmix64, for inputs that differ run to run of the loop but not of the test.

@@ -30,12 +30,12 @@ scalar has 162 bits. Both Var curves use lambda-projective coordinates.
 ## Reading
 
 - The generic element sits on `PaddedBinPoly`, which allocates for every
-  result. tc_binpoly_v2's own benchmarks put a sect163 product on
+  result. tc_binpoly's own benchmarks put a sect163 product on
   `FixedBinPoly`, without that allocation, near 47 ns: roughly half the gap is
   the allocation, the rest the written-out reduction and the three-limb CLMUL.
 - `invert` is dominated by its 162 squarings: 162 × 19.4 ns plus nine products
   comes to the measured 3.3 µs. The generic inversion runs its chain on limbs
-  inside tc_binpoly_v2, free of the allocation, so it gains least here. Each
+  inside tc_binpoly, free of the allocation, so it gains least here. Each
   specialized squaring still wipes its six-limb product; a chain that kept one
   buffer and wiped it once, as BC's `SquareN` keeps one, may save some of it,
   which is not measured.

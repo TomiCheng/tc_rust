@@ -18,7 +18,7 @@ tc_runtime = "0.1.0"
 
 [dev-dependencies]
 criterion = { workspace = true }
-tc_binpoly_v2 = { path = "../tc_binpoly_v2" }
+tc_binpoly = { version = "0.1.0", features = ["alloc"] }
 tc_f2m_curve_v2 = { path = "../tc_f2m_curve_v2" }
 
 [[bench]]

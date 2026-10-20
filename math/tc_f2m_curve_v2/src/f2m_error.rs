@@ -1,5 +1,5 @@
 use core::fmt;
-use tc_binpoly_v2::BinPolyError;
+use tc_binpoly::BinPolyError;
 
 /// A parameter that a binary-field curve cannot take.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

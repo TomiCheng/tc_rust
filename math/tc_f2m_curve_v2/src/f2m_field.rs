@@ -1,5 +1,5 @@
 use crate::{F2mError, F2mFieldElement};
-use tc_binpoly_v2::{BinField, PaddedBinPoly};
+use tc_binpoly::{BinField, PaddedBinPoly};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct F2mField {
@@ -52,7 +52,7 @@ impl F2mField {
 mod tests {
     use super::F2mField;
     use crate::F2mError;
-    use tc_binpoly_v2::BinPolyError;
+    use tc_binpoly::BinPolyError;
 
     fn sect163() -> F2mField {
         F2mField::pentanomial(163, 3, 6, 7).unwrap()
