@@ -1,0 +1,15 @@
+use super::SecTNamedCurve;
+use super::hex::hex;
+use crate::SecT239FieldElement;
+use core::marker::PhantomData;
+
+/// SEC 2 sect239k1.
+pub const SECT239K1: SecTNamedCurve<SecT239FieldElement, 30> = SecTNamedCurve {
+    a: hex("000000000000000000000000000000000000000000000000000000000000"),
+    b: hex("000000000000000000000000000000000000000000000000000000000001"),
+    order: hex("2000000000000000000000000000005a79fec67cb6e91f1c1da800e478a5"),
+    cofactor: 4,
+    gx: hex("29a0b6a887a983e9730988a68727a8b2d126c44cc2cc7b2a6555193035dc"),
+    gy: hex("76310804f12e549bdb011c103089e73510acb275fc312a5dc6b76553f0ca"),
+    field: PhantomData,
+};

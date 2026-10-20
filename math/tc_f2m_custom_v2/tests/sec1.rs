@@ -1,8 +1,8 @@
 use tc_bigint::PaddedBigUint;
 use tc_ec_core_v2::{Curve, FieldElement, Point, PointDecodeError, PointEncodeError};
 use tc_f2m_curve_v2::named_curves as generic;
-use tc_f2m_custom_v2::named_curves::{SECT163K1, SECT163R1, SECT163R2, SECT233K1, SECT233R1};
-use tc_f2m_custom_v2::{SecT163FieldElement, SecT233FieldElement, SecTError, SecTVarCurve};
+use tc_f2m_custom_v2::named_curves::*;
+use tc_f2m_custom_v2::*;
 
 const GX: &str = "03f0eba16286a2d57ea0991168d4994637e8343e36";
 const GY: &str = "00d51fbc6c71a0094fa2cdd545b11c5c0c797324f1";
@@ -79,32 +79,254 @@ fn encodings_match_the_generic_curves_and_decode_back() {
     }
 }
 
-// The same on the four-limb field of sect233k1 and sect233r1.
-#[test]
-fn encodings_on_sect233_match_the_generic_curves_and_decode_back() {
-    type Var233<'a> = &'a SecTVarCurve<SecT233FieldElement>;
-    for (custom, generic) in [
-        (SECT233K1, generic::SECT233K1),
-        (SECT233R1, generic::SECT233R1),
-    ] {
-        let (var, ct) = (custom.var_curve(), custom.ct_curve());
-        let g = custom.var_generator(&var);
-        let reference = generic.var_curve();
-        let h = generic.var_generator(&reference);
-        for k in 1..24u8 {
-            let k = PaddedBigUint::from(k);
-            let p = Var233::multiply(&g, &k);
-            let q = <&tc_f2m_curve_v2::F2mVarCurve>::multiply(&h, &k);
-            for compressed in [false, true] {
-                let encoded = p.encode(compressed);
-                assert_eq!(encoded, q.encode(compressed));
-                assert!(var.decode_point(&encoded).unwrap() == p);
-                let r = ct.decode_point(&encoded).unwrap();
-                assert!(r.x() == p.x() && r.y() == p.y());
-                assert_eq!(r.encode(compressed), encoded);
-            }
+// Same point, same bytes on every curve: the specialized encoding is the generic curve's, and
+// both specialized sets decode it back.
+fn encodings_match<P: Point, Q: Point>(
+    g: &P,
+    h: &tc_f2m_curve_v2::F2mVarPoint<'_>,
+    multiply: impl Fn(&P, &PaddedBigUint) -> P,
+    encode: impl Fn(&P, bool) -> Vec<u8>,
+    decode: impl Fn(&[u8]) -> (P, Q),
+) where
+    Q::Curve: Curve<Field = <P::Curve as Curve>::Field>,
+{
+    for k in 1..12u8 {
+        let k = PaddedBigUint::from(k);
+        let p = multiply(g, &k);
+        let q = <&tc_f2m_curve_v2::F2mVarCurve>::multiply(h, &k);
+        for compressed in [false, true] {
+            let encoded = encode(&p, compressed);
+            assert_eq!(encoded, q.encode(compressed));
+            let (var, ct) = decode(&encoded);
+            assert!(var == p);
+            assert!(ct.x() == p.x() && ct.y() == p.y());
         }
     }
+}
+
+#[test]
+fn every_curve_encodes_as_the_generic_one_does() {
+    let (var, ct, reference) = (
+        SECT163K1.var_curve(),
+        SECT163K1.ct_curve(),
+        generic::SECT163K1.var_curve(),
+    );
+    encodings_match(
+        &SECT163K1.var_generator(&var),
+        &generic::SECT163K1.var_generator(&reference),
+        <&SecTVarCurve<SecT163FieldElement>>::multiply,
+        |p, compressed| p.encode(compressed),
+        |e| (var.decode_point(e).unwrap(), ct.decode_point(e).unwrap()),
+    );
+    let (var, ct, reference) = (
+        SECT163R1.var_curve(),
+        SECT163R1.ct_curve(),
+        generic::SECT163R1.var_curve(),
+    );
+    encodings_match(
+        &SECT163R1.var_generator(&var),
+        &generic::SECT163R1.var_generator(&reference),
+        <&SecTVarCurve<SecT163FieldElement>>::multiply,
+        |p, compressed| p.encode(compressed),
+        |e| (var.decode_point(e).unwrap(), ct.decode_point(e).unwrap()),
+    );
+    let (var, ct, reference) = (
+        SECT163R2.var_curve(),
+        SECT163R2.ct_curve(),
+        generic::SECT163R2.var_curve(),
+    );
+    encodings_match(
+        &SECT163R2.var_generator(&var),
+        &generic::SECT163R2.var_generator(&reference),
+        <&SecTVarCurve<SecT163FieldElement>>::multiply,
+        |p, compressed| p.encode(compressed),
+        |e| (var.decode_point(e).unwrap(), ct.decode_point(e).unwrap()),
+    );
+    let (var, ct, reference) = (
+        SECT193R1.var_curve(),
+        SECT193R1.ct_curve(),
+        generic::SECT193R1.var_curve(),
+    );
+    encodings_match(
+        &SECT193R1.var_generator(&var),
+        &generic::SECT193R1.var_generator(&reference),
+        <&SecTVarCurve<SecT193FieldElement>>::multiply,
+        |p, compressed| p.encode(compressed),
+        |e| (var.decode_point(e).unwrap(), ct.decode_point(e).unwrap()),
+    );
+    let (var, ct, reference) = (
+        SECT193R2.var_curve(),
+        SECT193R2.ct_curve(),
+        generic::SECT193R2.var_curve(),
+    );
+    encodings_match(
+        &SECT193R2.var_generator(&var),
+        &generic::SECT193R2.var_generator(&reference),
+        <&SecTVarCurve<SecT193FieldElement>>::multiply,
+        |p, compressed| p.encode(compressed),
+        |e| (var.decode_point(e).unwrap(), ct.decode_point(e).unwrap()),
+    );
+    let (var, ct, reference) = (
+        SECT233K1.var_curve(),
+        SECT233K1.ct_curve(),
+        generic::SECT233K1.var_curve(),
+    );
+    encodings_match(
+        &SECT233K1.var_generator(&var),
+        &generic::SECT233K1.var_generator(&reference),
+        <&SecTVarCurve<SecT233FieldElement>>::multiply,
+        |p, compressed| p.encode(compressed),
+        |e| (var.decode_point(e).unwrap(), ct.decode_point(e).unwrap()),
+    );
+    let (var, ct, reference) = (
+        SECT233R1.var_curve(),
+        SECT233R1.ct_curve(),
+        generic::SECT233R1.var_curve(),
+    );
+    encodings_match(
+        &SECT233R1.var_generator(&var),
+        &generic::SECT233R1.var_generator(&reference),
+        <&SecTVarCurve<SecT233FieldElement>>::multiply,
+        |p, compressed| p.encode(compressed),
+        |e| (var.decode_point(e).unwrap(), ct.decode_point(e).unwrap()),
+    );
+    let (var, ct, reference) = (
+        SECT239K1.var_curve(),
+        SECT239K1.ct_curve(),
+        generic::SECT239K1.var_curve(),
+    );
+    encodings_match(
+        &SECT239K1.var_generator(&var),
+        &generic::SECT239K1.var_generator(&reference),
+        <&SecTVarCurve<SecT239FieldElement>>::multiply,
+        |p, compressed| p.encode(compressed),
+        |e| (var.decode_point(e).unwrap(), ct.decode_point(e).unwrap()),
+    );
+    let (var, ct, reference) = (
+        SECT283K1.var_curve(),
+        SECT283K1.ct_curve(),
+        generic::SECT283K1.var_curve(),
+    );
+    encodings_match(
+        &SECT283K1.var_generator(&var),
+        &generic::SECT283K1.var_generator(&reference),
+        <&SecTVarCurve<SecT283FieldElement>>::multiply,
+        |p, compressed| p.encode(compressed),
+        |e| (var.decode_point(e).unwrap(), ct.decode_point(e).unwrap()),
+    );
+    let (var, ct, reference) = (
+        SECT283R1.var_curve(),
+        SECT283R1.ct_curve(),
+        generic::SECT283R1.var_curve(),
+    );
+    encodings_match(
+        &SECT283R1.var_generator(&var),
+        &generic::SECT283R1.var_generator(&reference),
+        <&SecTVarCurve<SecT283FieldElement>>::multiply,
+        |p, compressed| p.encode(compressed),
+        |e| (var.decode_point(e).unwrap(), ct.decode_point(e).unwrap()),
+    );
+    let (var, ct, reference) = (
+        SECT409K1.var_curve(),
+        SECT409K1.ct_curve(),
+        generic::SECT409K1.var_curve(),
+    );
+    encodings_match(
+        &SECT409K1.var_generator(&var),
+        &generic::SECT409K1.var_generator(&reference),
+        <&SecTVarCurve<SecT409FieldElement>>::multiply,
+        |p, compressed| p.encode(compressed),
+        |e| (var.decode_point(e).unwrap(), ct.decode_point(e).unwrap()),
+    );
+    let (var, ct, reference) = (
+        SECT409R1.var_curve(),
+        SECT409R1.ct_curve(),
+        generic::SECT409R1.var_curve(),
+    );
+    encodings_match(
+        &SECT409R1.var_generator(&var),
+        &generic::SECT409R1.var_generator(&reference),
+        <&SecTVarCurve<SecT409FieldElement>>::multiply,
+        |p, compressed| p.encode(compressed),
+        |e| (var.decode_point(e).unwrap(), ct.decode_point(e).unwrap()),
+    );
+    let (var, ct, reference) = (
+        SECT571K1.var_curve(),
+        SECT571K1.ct_curve(),
+        generic::SECT571K1.var_curve(),
+    );
+    encodings_match(
+        &SECT571K1.var_generator(&var),
+        &generic::SECT571K1.var_generator(&reference),
+        <&SecTVarCurve<SecT571FieldElement>>::multiply,
+        |p, compressed| p.encode(compressed),
+        |e| (var.decode_point(e).unwrap(), ct.decode_point(e).unwrap()),
+    );
+    let (var, ct, reference) = (
+        SECT571R1.var_curve(),
+        SECT571R1.ct_curve(),
+        generic::SECT571R1.var_curve(),
+    );
+    encodings_match(
+        &SECT571R1.var_generator(&var),
+        &generic::SECT571R1.var_generator(&reference),
+        <&SecTVarCurve<SecT571FieldElement>>::multiply,
+        |p, compressed| p.encode(compressed),
+        |e| (var.decode_point(e).unwrap(), ct.decode_point(e).unwrap()),
+    );
+}
+
+#[cfg(feature = "small-curves")]
+#[test]
+fn every_small_curve_encodes_as_the_generic_one_does() {
+    let (var, ct, reference) = (
+        SECT113R1.var_curve(),
+        SECT113R1.ct_curve(),
+        generic::SECT113R1.var_curve(),
+    );
+    encodings_match(
+        &SECT113R1.var_generator(&var),
+        &generic::SECT113R1.var_generator(&reference),
+        <&SecTVarCurve<SecT113FieldElement>>::multiply,
+        |p, compressed| p.encode(compressed),
+        |e| (var.decode_point(e).unwrap(), ct.decode_point(e).unwrap()),
+    );
+    let (var, ct, reference) = (
+        SECT113R2.var_curve(),
+        SECT113R2.ct_curve(),
+        generic::SECT113R2.var_curve(),
+    );
+    encodings_match(
+        &SECT113R2.var_generator(&var),
+        &generic::SECT113R2.var_generator(&reference),
+        <&SecTVarCurve<SecT113FieldElement>>::multiply,
+        |p, compressed| p.encode(compressed),
+        |e| (var.decode_point(e).unwrap(), ct.decode_point(e).unwrap()),
+    );
+    let (var, ct, reference) = (
+        SECT131R1.var_curve(),
+        SECT131R1.ct_curve(),
+        generic::SECT131R1.var_curve(),
+    );
+    encodings_match(
+        &SECT131R1.var_generator(&var),
+        &generic::SECT131R1.var_generator(&reference),
+        <&SecTVarCurve<SecT131FieldElement>>::multiply,
+        |p, compressed| p.encode(compressed),
+        |e| (var.decode_point(e).unwrap(), ct.decode_point(e).unwrap()),
+    );
+    let (var, ct, reference) = (
+        SECT131R2.var_curve(),
+        SECT131R2.ct_curve(),
+        generic::SECT131R2.var_curve(),
+    );
+    encodings_match(
+        &SECT131R2.var_generator(&var),
+        &generic::SECT131R2.var_generator(&reference),
+        <&SecTVarCurve<SecT131FieldElement>>::multiply,
+        |p, compressed| p.encode(compressed),
+        |e| (var.decode_point(e).unwrap(), ct.decode_point(e).unwrap()),
+    );
 }
 
 #[test]
