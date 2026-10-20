@@ -23,15 +23,16 @@ impl<F: SecTElement, const N: usize> SecTNamedCurve<F, N> {
     }
 
     pub fn var_curve(&self) -> SecTVarCurve<F> {
-        todo!()
+        let [a, b] = [&self.a, &self.b].map(|bytes| element(bytes));
+        SecTVarCurve::new(a, b, self.order(), PaddedBigUint::from(self.cofactor))
     }
 
     pub fn ct_generator<'a>(&self, curve: &'a SecTCtCurve<F>) -> SecTCtPoint<'a, F> {
         curve.create_point(element(&self.gx), element(&self.gy))
     }
 
-    pub fn var_generator<'a>(&self, _curve: &'a SecTVarCurve<F>) -> SecTVarPoint<'a, F> {
-        todo!()
+    pub fn var_generator<'a>(&self, curve: &'a SecTVarCurve<F>) -> SecTVarPoint<'a, F> {
+        curve.create_point(element(&self.gx), element(&self.gy))
     }
 
     fn order(&self) -> PaddedBigUint {

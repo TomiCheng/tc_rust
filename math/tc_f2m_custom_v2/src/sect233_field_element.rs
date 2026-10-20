@@ -9,6 +9,8 @@ pub struct SecT233FieldElement {
 }
 
 impl SecTElement for SecT233FieldElement {
+    const M: usize = 233;
+
     fn zero() -> Self {
         todo!()
     }

@@ -13,6 +13,8 @@ pub struct SecT163FieldElement {
 }
 
 impl SecTElement for SecT163FieldElement {
+    const M: usize = 163;
+
     fn zero() -> Self {
         Self { value: [0; 3] }
     }
