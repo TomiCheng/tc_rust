@@ -11,5 +11,6 @@ pub const SM2P256V1: SecPNamedCurve<SM2P256V1FieldElement, 32> = SecPNamedCurve 
     cofactor: 1,
     gx: hex("32c4ae2c1f1981195f9904466a39c9948fe30bbff2660be1715a4589334c74c7"),
     gy: hex("bc3736a2f4f6779c59bdcee36b692153d0a9877cc62a474002df32e52139f0a0"),
+    glv: None,
     field: PhantomData,
 };

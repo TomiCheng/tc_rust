@@ -3,7 +3,8 @@ use crate::secp_element::SecPElement;
 use crate::{SecPError, sec1};
 use core::fmt;
 use tc_bigint::PaddedBigUint;
-use tc_ec_core_v2::{CoordinateSystem, Curve, PointDecodeError};
+use tc_ec_core_v2::glv::ScalarSplit;
+use tc_ec_core_v2::{CoordinateSystem, Curve, Point, PointDecodeError, glv, wnaf};
 
 /// A SEC prime curve over the field of `F`, in Jacobian coordinates as BC's `SecP*Curve`s
 /// are; variable time, only for public values.
@@ -13,6 +14,8 @@ pub struct SecPVarCurve<F> {
     a_is_minus_three: bool,
     order: PaddedBigUint,
     cofactor: PaddedBigUint,
+    // BC's `GlvTypeBEndomorphism`: β of φ(x, y) = (βx, y), and the split of its λ.
+    glv: Option<(F, ScalarSplit)>,
 }
 
 impl<F: SecPElement> SecPVarCurve<F> {
@@ -24,7 +27,14 @@ impl<F: SecPElement> SecPVarCurve<F> {
             b,
             order,
             cofactor,
+            glv: None,
         }
+    }
+
+    // BC's `ConfigureCurveGlv`, for the curves whose points are all of order n.
+    pub(crate) fn with_glv(mut self, beta: F, split: ScalarSplit) -> Self {
+        self.glv = Some((beta, split));
+        self
     }
 
     // Whether a = -3, as on the NIST curves, for the doubling of BC's `SecP*R1Point`.
@@ -113,9 +123,15 @@ impl<'a, F: SecPElement> Curve for &'a SecPVarCurve<F> {
         CoordinateSystem::Jacobian
     }
 
-    /// The core's wNAF multiplication. Variable time; only for a public scalar.
+    /// BC's GLV split on the k1 curves, as BC's `CustomNamedCurves` configures them, and the
+    /// core's wNAF otherwise. Variable time; only for a public scalar.
     fn multiply(point: &SecPVarPoint<'a, F>, scalar: &PaddedBigUint) -> SecPVarPoint<'a, F> {
-        tc_ec_core_v2::wnaf::wnaf_mul_point::<Self>(point, scalar)
+        match &point.curve().glv {
+            Some((beta, split)) => {
+                glv::glv_mul_point::<Self>(point, scalar, split, |p| p.scale_x(beta))
+            }
+            None => wnaf::wnaf_mul_point::<Self>(point, scalar),
+        }
     }
 }
 

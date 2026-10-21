@@ -1,7 +1,9 @@
 use core::fmt;
 
 use tc_bigint::PaddedBigUint;
-use tc_ec_core_v2::{CoordinateSystem, Curve, PointDecodeError, PrimeFieldElement};
+use tc_ec_core_v2::{
+    CoordinateSystem, Curve, Point, PointDecodeError, PrimeFieldElement, glv, wnaf,
+};
 
 use crate::{FpError, FpField, FpFieldElement, FpVarPoint, sec1};
 
@@ -12,6 +14,13 @@ pub struct FpVarCurve<'a> {
     order: Option<PaddedBigUint>,
     cofactor: Option<PaddedBigUint>,
     coordinate_system: CoordinateSystem,
+    glv: Option<Glv<'a>>,
+}
+
+// BC's `GlvTypeBEndomorphism`: φ(x, y) = (βx, y), and the split of its λ.
+struct Glv<'a> {
+    beta: FpFieldElement<'a>,
+    split: glv::ScalarSplit,
 }
 
 impl<'a> FpVarCurve<'a> {
@@ -31,7 +40,26 @@ impl<'a> FpVarCurve<'a> {
             order,
             cofactor,
             coordinate_system: CoordinateSystem::Affine,
+            glv: None,
         })
+    }
+
+    /// The same curve multiplying by BC's GLV split, as BC's `ConfigureCurveGlv` sets it up:
+    /// φ(x, y) = (βx, y) for `beta` a cube root of one is multiplication by some λ on the
+    /// subgroup of order n, and `split` holds the parameters of that λ. Multiples then hold,
+    /// as in BC, only for points of that subgroup. Fails when `beta` is not below `q`; panics
+    /// on a curve without an order.
+    pub fn with_glv(
+        mut self,
+        beta: &PaddedBigUint,
+        split: glv::ScalarSplit,
+    ) -> Result<Self, FpError> {
+        assert!(self.order.is_some(), "GLV needs the order");
+        self.glv = Some(Glv {
+            beta: self.field.element(beta)?,
+            split,
+        });
+        Ok(self)
     }
 
     /// The same curve with its points in `coordinate_system`. Panics when it is not one
@@ -167,9 +195,15 @@ impl<'a> Curve for &'a FpVarCurve<'a> {
         self.coordinate_system
     }
 
-    /// wNAF. Variable time; only for public scalars.
+    /// BC's GLV split on a curve given one by [`FpVarCurve::with_glv`], and the wNAF
+    /// otherwise. Variable time; only for public scalars.
     fn multiply(point: &FpVarPoint<'a>, scalar: &PaddedBigUint) -> FpVarPoint<'a> {
-        tc_ec_core_v2::wnaf::wnaf_mul_point::<Self>(point, scalar)
+        match &point.curve().glv {
+            Some(params) => glv::glv_mul_point::<Self>(point, scalar, &params.split, |p| {
+                p.scale_x(&params.beta)
+            }),
+            None => wnaf::wnaf_mul_point::<Self>(point, scalar),
+        }
     }
 }
 

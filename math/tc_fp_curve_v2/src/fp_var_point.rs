@@ -118,6 +118,37 @@ impl<'a> FpVarPoint<'a> {
         }
     }
 
+    // BC's `ScaleXPointMap`, through `ECPoint.ScaleX`: the raw X times `scale`, the other
+    // coordinates as they are.
+    pub(crate) fn scale_x(&self, scale: &FpFieldElement<'a>) -> Self {
+        let Some(coords) = &self.coords else {
+            return self.clone();
+        };
+        let coords = match coords {
+            Coords::Affine { x, y } => Coords::Affine {
+                x: x.multiply(scale),
+                y: y.clone(),
+            },
+            Coords::Homogeneous { x, y, z } => Coords::Homogeneous {
+                x: x.multiply(scale),
+                y: y.clone(),
+                z: z.clone(),
+            },
+            Coords::Jacobian { x, y, z } => Coords::Jacobian {
+                x: x.multiply(scale),
+                y: y.clone(),
+                z: z.clone(),
+            },
+            Coords::JacobianModified { x, y, z, az4 } => Coords::JacobianModified {
+                x: x.multiply(scale),
+                y: y.clone(),
+                z: z.clone(),
+                az4: az4.clone(),
+            },
+        };
+        self.with_coords(coords)
+    }
+
     /// X as stored, which is not the affine x under a projective system; see [`x`](Self::x).
     pub fn raw_x(&self) -> Option<&FpFieldElement<'a>> {
         self.coords.as_ref().map(Coords::x)

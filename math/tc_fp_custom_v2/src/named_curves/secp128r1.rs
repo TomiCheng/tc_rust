@@ -11,5 +11,6 @@ pub const SECP128R1: SecPNamedCurve<SecP128R1FieldElement, 16> = SecPNamedCurve 
     cofactor: 1,
     gx: hex("161ff7528b899b2d0c28607ca52c5b86"),
     gy: hex("cf5ac8395bafeb13c02da292dded7a83"),
+    glv: None,
     field: PhantomData,
 };

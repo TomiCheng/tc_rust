@@ -4,7 +4,7 @@ use alloc::vec;
 use alloc::vec::Vec;
 use core::fmt;
 use tc_bigint::PaddedBigUint;
-use tc_ec_core_v2::{Curve, Point, PointEncodeError};
+use tc_ec_core_v2::{Curve, Point, PointEncodeError, wnaf};
 
 /// A point of a [`SecPVarCurve`], in Jacobian coordinates (X, Y, Z) for the affine
 /// (X / Z², Y / Z³). Variable time; only for public points.
@@ -80,6 +80,14 @@ impl<'a, F: SecPElement> SecPVarPoint<'a, F> {
         self.encode_to(compressed, &mut output)
             .expect("the buffer has the exact length");
         output
+    }
+
+    // BC's `ScaleXPointMap`, through `ECPoint.ScaleX`: X times `scale`, Y and Z as they are.
+    pub(crate) fn scale_x(&self, scale: &F) -> Self {
+        match &self.xyz {
+            None => self.clone(),
+            Some((x, y, z)) => self.with(x.multiply(scale), y.clone(), z.clone()),
+        }
     }
 
     fn assert_same_curve(&self, rhs: &Self) {
@@ -213,7 +221,7 @@ impl<'a, F: SecPElement> Point for SecPVarPoint<'a, F> {
             && (self.is_infinity()
                 || *curve.cofactor().expect("a SEC curve has a cofactor")
                     == PaddedBigUint::from(1u8)
-                || <&SecPVarCurve<F>>::multiply(
+                || wnaf::wnaf_mul_point::<&SecPVarCurve<F>>(
                     self,
                     curve.order().expect("a SEC curve has an order"),
                 )

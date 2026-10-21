@@ -11,4 +11,5 @@ pub const SECP128R2: FpNamedCurve<16> = FpNamedCurve {
     cofactor: 4,
     gx: hex("7b6aa5d85e572983e6fb32a7cdebc140"),
     gy: hex("27b6916a894d3aee7106fe805fc34b44"),
+    glv: None,
 };

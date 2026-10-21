@@ -99,3 +99,38 @@ fn the_glv_split_multiplies_as_the_wnaf_does_on_secp256k1() {
         }
     }
 }
+
+// The named secp256k1 Var curve now multiplies by the split, as BC's custom curve does: the
+// multiples are the wNAF's and those of the Ct curve's fixed window.
+#[test]
+fn the_named_secp256k1_var_curve_multiplies_by_the_split() {
+    let field = SECP256K1.field();
+    let curve = SECP256K1.var_curve(&field);
+    let g = SECP256K1.var_generator(&curve);
+    let ct = SECP256K1.ct_curve(&field);
+    let h = SECP256K1.ct_generator(&ct);
+    let mut state = 0x0256_0002;
+    for _ in 0..6 {
+        let k = scalar(&mut state, 32);
+        let p = Var::multiply(&g, &k);
+        assert!(p == wnaf::wnaf_mul_point::<Var<'_>>(&g, &k));
+        assert!(p.x() == h.multiply(&k).x());
+    }
+}
+
+#[test]
+fn a_beta_not_below_q_is_refused() {
+    let field = SECP256K1.field();
+    let q = int("fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f");
+    let curve = tc_fp_curve_v2::FpVarCurve::new(
+        &field,
+        &PaddedBigUint::from(0u8),
+        &PaddedBigUint::from(7u8),
+        Some(int(
+            "fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141",
+        )),
+        Some(PaddedBigUint::from(1u8)),
+    )
+    .unwrap();
+    assert!(curve.with_glv(&q, split()).is_err());
+}
