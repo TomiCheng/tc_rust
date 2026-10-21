@@ -10,7 +10,10 @@ use tc_fp_curve_v2::FpCtCurve;
 use tc_fp_curve_v2::named_curves::{SECP256K1, SECP256R1};
 use tc_fp_custom_v2::named_curves as custom;
 use tc_fp_custom_v2::{
-    SecP256K1FieldElement, SecP256R1FieldElement, SecP384R1FieldElement, SecPCtCurve,
+    SM2P256V1FieldElement, SecP128R1FieldElement, SecP160R1FieldElement, SecP160R2FieldElement,
+    SecP192K1FieldElement, SecP192R1FieldElement, SecP224K1FieldElement, SecP224R1FieldElement,
+    SecP256K1FieldElement, SecP256R1FieldElement, SecP384R1FieldElement, SecP521R1FieldElement,
+    SecPCtCurve,
 };
 
 fn integer(text: &str) -> PaddedBigUint {
@@ -173,5 +176,59 @@ fn the_specialized_p_256_gives_the_shared_secret_of_rfc_5903() {
     assert_eq!(
         agree(&private_key, &public_key).unwrap(),
         bytes("D6840F6B42F6EDAFD13116E0E12565202FEF8E9ECE7DCE03812464D04B9442DE")
+    );
+}
+
+// And on the other specialized prime curves, the small ones included.
+#[test]
+fn two_parties_agree_on_the_other_specialized_prime_curves() {
+    let curve = custom::SECP128R1.ct_curve();
+    two_parties_agree::<&SecPCtCurve<SecP128R1FieldElement>>(
+        custom::SECP128R1.ct_generator(&curve),
+    );
+
+    let curve = custom::SECP160K1.ct_curve();
+    two_parties_agree::<&SecPCtCurve<SecP160R2FieldElement>>(
+        custom::SECP160K1.ct_generator(&curve),
+    );
+
+    let curve = custom::SECP160R1.ct_curve();
+    two_parties_agree::<&SecPCtCurve<SecP160R1FieldElement>>(
+        custom::SECP160R1.ct_generator(&curve),
+    );
+
+    let curve = custom::SECP160R2.ct_curve();
+    two_parties_agree::<&SecPCtCurve<SecP160R2FieldElement>>(
+        custom::SECP160R2.ct_generator(&curve),
+    );
+
+    let curve = custom::SECP192K1.ct_curve();
+    two_parties_agree::<&SecPCtCurve<SecP192K1FieldElement>>(
+        custom::SECP192K1.ct_generator(&curve),
+    );
+
+    let curve = custom::SECP192R1.ct_curve();
+    two_parties_agree::<&SecPCtCurve<SecP192R1FieldElement>>(
+        custom::SECP192R1.ct_generator(&curve),
+    );
+
+    let curve = custom::SECP224K1.ct_curve();
+    two_parties_agree::<&SecPCtCurve<SecP224K1FieldElement>>(
+        custom::SECP224K1.ct_generator(&curve),
+    );
+
+    let curve = custom::SECP224R1.ct_curve();
+    two_parties_agree::<&SecPCtCurve<SecP224R1FieldElement>>(
+        custom::SECP224R1.ct_generator(&curve),
+    );
+
+    let curve = custom::SECP521R1.ct_curve();
+    two_parties_agree::<&SecPCtCurve<SecP521R1FieldElement>>(
+        custom::SECP521R1.ct_generator(&curve),
+    );
+
+    let curve = custom::SM2P256V1.ct_curve();
+    two_parties_agree::<&SecPCtCurve<SM2P256V1FieldElement>>(
+        custom::SM2P256V1.ct_generator(&curve),
     );
 }
