@@ -1,7 +1,7 @@
 use crate::{F2mError, F2mField, F2mFieldElement, F2mVarPoint, sec1};
 use core::fmt;
 use tc_bigint::PaddedBigUint;
-use tc_ec_core_v2::{CoordinateSystem, Curve, PointDecodeError};
+use tc_ec_core_v2::{CoordinateSystem, Curve, Point, PointDecodeError, tnaf, wnaf};
 
 pub struct F2mVarCurve {
     field: F2mField,
@@ -162,9 +162,16 @@ impl<'a> Curve for &'a F2mVarCurve {
         self.coordinate_system
     }
 
-    /// wNAF. Variable time; only for public scalars.
+    /// The window τ-adic NAF on a Koblitz curve and the wNAF elsewhere, as BC's
+    /// `CreateDefaultMultiplier` picks. On a Koblitz curve the result holds, as in BC, only
+    /// for points of the subgroup of order n. Variable time; only for public scalars.
     fn multiply(point: &F2mVarPoint<'a>, scalar: &PaddedBigUint) -> F2mVarPoint<'a> {
-        tc_ec_core_v2::wnaf::wnaf_mul_point::<Self>(point, scalar)
+        let curve = point.curve();
+        if tnaf::is_koblitz(&curve) {
+            tnaf::wtnaf_mul_point::<Self>(point, scalar, curve.field().m(), F2mVarPoint::tau)
+        } else {
+            wnaf::wnaf_mul_point::<Self>(point, scalar)
+        }
     }
 }
 

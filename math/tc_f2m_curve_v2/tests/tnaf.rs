@@ -1,9 +1,9 @@
 use tc_bigint::{ArrayEncoding, PaddedBigUint};
-use tc_ec_core_v2::{Curve, FieldElement, Point, tnaf};
+use tc_ec_core_v2::{Curve, FieldElement, Point, tnaf, wnaf};
 use tc_f2m_curve_v2::named_curves::{
     F2mNamedCurve, SECT163K1, SECT163R2, SECT233K1, SECT283K1, SECT409K1, SECT571K1,
 };
-use tc_f2m_curve_v2::{F2mVarCurve, F2mVarPoint};
+use tc_f2m_curve_v2::{F2mCtCurve, F2mVarCurve, F2mVarPoint};
 
 type Var<'a> = &'a F2mVarCurve;
 
@@ -29,7 +29,8 @@ fn scalar(state: &mut u64, bytes: usize) -> PaddedBigUint {
     k
 }
 
-// On the subgroup of order n, the τ-adic window NAF gives the multiples the wNAF does.
+// On the subgroup of order n, the τ-adic window NAF gives the multiples the wNAF does, and
+// the Var curve's own multiply, now the τ-adic NAF, those of the Ct curve's ladder.
 fn check<const N: usize>(named: &F2mNamedCurve<N>, m: u32) {
     let curve = named.var_curve();
     let g = named.var_generator(&curve);
@@ -43,8 +44,12 @@ fn check<const N: usize>(named: &F2mNamedCurve<N>, m: u32) {
         .collect();
     scalars.push(n.clone());
     scalars.extend((0..6).map(|_| scalar(&mut state, (m as usize).div_ceil(8) - 1)));
+    let ct = named.ct_curve();
+    let h = named.ct_generator(&ct);
     for k in &scalars {
-        let expected = Var::multiply(&g, k);
+        let expected = wnaf::wnaf_mul_point::<Var<'_>>(&g, k);
+        let ladder = <&F2mCtCurve>::multiply(&h, k);
+        assert_eq!(Var::multiply(&g, k).x(), ladder.x(), "m = {m}");
         assert!(tnaf::wtnaf_mul(&table, k, tau) == expected, "m = {m}");
         assert!(
             tnaf::wtnaf_mul_point::<Var<'_>>(&g, k, m, tau) == expected,
@@ -54,7 +59,8 @@ fn check<const N: usize>(named: &F2mNamedCurve<N>, m: u32) {
     let five_g = Var::multiply(&g, &PaddedBigUint::from(5u8));
     let k = scalar(&mut state, 16);
     assert!(
-        tnaf::wtnaf_mul_point::<Var<'_>>(&five_g, &k, m, tau) == Var::multiply(&five_g, &k),
+        tnaf::wtnaf_mul_point::<Var<'_>>(&five_g, &k, m, tau)
+            == wnaf::wnaf_mul_point::<Var<'_>>(&five_g, &k),
         "m = {m}"
     );
 }

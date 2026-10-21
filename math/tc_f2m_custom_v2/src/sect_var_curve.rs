@@ -3,7 +3,7 @@ use crate::sect_element::SecTElement;
 use crate::{SecTError, sec1};
 use core::fmt;
 use tc_bigint::PaddedBigUint;
-use tc_ec_core_v2::{CoordinateSystem, Curve, PointDecodeError};
+use tc_ec_core_v2::{CoordinateSystem, Curve, Point, PointDecodeError, tnaf, wnaf};
 
 /// A SEC binary curve over the field of `F`, in lambda-projective coordinates as BC's
 /// `SecT*Curve`s are; variable time, only for public values.
@@ -124,9 +124,15 @@ impl<'a, F: SecTElement> Curve for &'a SecTVarCurve<F> {
         CoordinateSystem::LambdaProjective
     }
 
-    /// wNAF. Variable time; only for public scalars.
+    /// The window τ-adic NAF on a Koblitz curve and the wNAF elsewhere, as BC's
+    /// `CreateDefaultMultiplier` picks. On a Koblitz curve the result holds, as in BC, only
+    /// for points of the subgroup of order n. Variable time; only for public scalars.
     fn multiply(point: &SecTVarPoint<'a, F>, scalar: &PaddedBigUint) -> SecTVarPoint<'a, F> {
-        tc_ec_core_v2::wnaf::wnaf_mul_point::<Self>(point, scalar)
+        if tnaf::is_koblitz(&point.curve()) {
+            tnaf::wtnaf_mul_point::<Self>(point, scalar, F::M as u32, SecTVarPoint::tau)
+        } else {
+            wnaf::wnaf_mul_point::<Self>(point, scalar)
+        }
     }
 }
 

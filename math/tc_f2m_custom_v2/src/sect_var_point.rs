@@ -5,7 +5,7 @@ use alloc::vec;
 use alloc::vec::Vec;
 use core::fmt;
 use tc_bigint::PaddedBigUint;
-use tc_ec_core_v2::{Curve, Point, PointEncodeError};
+use tc_ec_core_v2::{Curve, Point, PointEncodeError, wnaf};
 
 /// A point of a [`SecTVarCurve`] in lambda-projective coordinates (X, L, Z), `None` for
 /// infinity: `x = X/Z` and `L/Z = x + y/x`, or `y` itself where `x = 0`. Every method is
@@ -89,8 +89,21 @@ impl<'a, F: SecTElement> SecTVarPoint<'a, F> {
         if *cofactor == PaddedBigUint::from(2u8) {
             return self.x().expect("a finite point").trace() != 0;
         }
+        // BC's `ReferenceMultiply`, not the curve's multiplier: on a Koblitz curve that is the
+        // τ-adic NAF, which holds only inside the subgroup.
         let n = self.curve.order().expect("a SEC curve has an order");
-        <&SecTVarCurve<F> as Curve>::multiply(self, n).is_infinity()
+        wnaf::wnaf_mul_point::<&SecTVarCurve<F>>(self, n).is_infinity()
+    }
+
+    // BC's `AbstractF2mPoint.Tau`: the Frobenius map, every coordinate squared.
+    pub(crate) fn tau(&self) -> Self {
+        Self {
+            curve: self.curve,
+            xlz: self
+                .xlz
+                .as_ref()
+                .map(|(x, l, z)| (x.square(), l.square(), z.square())),
+        }
     }
 
     pub fn subtract(&self, rhs: &Self) -> Self {

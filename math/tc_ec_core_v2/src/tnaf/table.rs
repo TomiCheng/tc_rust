@@ -10,13 +10,15 @@ use crate::{Curve, FieldElement, Point, Scalar};
 const ALPHA0_TNAF: [&[i8]; 4] = [&[1], &[-1, 0, 1], &[1, 0, 1], &[-1, 0, 0, 1]];
 const ALPHA1_TNAF: [&[i8]; 4] = [&[1], &[-1, 0, 1], &[1, 0, 1], &[-1, 0, 0, -1]];
 
-/// BC `AbstractF2mCurve.IsKoblitz`: b = 1, a = 0 or 1, and an order and a cofactor. Variable
-/// time: only for public values.
-pub fn is_koblitz<C: Curve>(curve: &C) -> bool {
+/// BC `AbstractF2mCurve.IsKoblitz`: b = 1, a = 0 or 1, and an order; and a cofactor of 2 or
+/// 4, which BC's `GetShiftsForCofactor` requires later. Variable time: only for public values.
+pub fn is_koblitz<C: Curve<Scalar = PaddedBigUint>>(curve: &C) -> bool {
     curve.b().is_one()
         && (curve.a().is_zero() || curve.a().is_one())
         && curve.order().is_some()
-        && curve.cofactor().is_some()
+        && curve
+            .cofactor()
+            .is_some_and(|h| *h == PaddedBigUint::from(2u8) || *h == PaddedBigUint::from(4u8))
 }
 
 /// 呼叫端持有的 WTNAF 預算表：BC `Tnaf.GetPreComp` 的 α_1P、α_3P、α_5P、α_7P，已正規化，

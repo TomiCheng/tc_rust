@@ -4,7 +4,7 @@ use alloc::vec::Vec;
 use core::fmt;
 use tc_bigint::PaddedBigUint;
 use tc_ec_core_v2::{
-    BinaryFieldElement, CoordinateSystem, Curve, FieldElement, Point, PointEncodeError,
+    BinaryFieldElement, CoordinateSystem, FieldElement, Point, PointEncodeError, wnaf,
 };
 
 // The three systems BC's F2mCurve supports. The lambda form keeps `l = x + y / x` in place
@@ -153,9 +153,35 @@ impl<'a> F2mVarPoint<'a> {
         if cofactor.is_some_and(|h| *h == PaddedBigUint::from(2u8)) {
             return self.x().expect("a finite point").trace() != 0;
         }
+        // BC's `ReferenceMultiply`, not the curve's multiplier: on a Koblitz curve that is the
+        // τ-adic NAF, which holds only inside the subgroup.
         self.curve
             .order()
-            .is_none_or(|n| <&F2mVarCurve as Curve>::multiply(self, n).is_infinity())
+            .is_none_or(|n| wnaf::wnaf_mul_point::<&F2mVarCurve>(self, n).is_infinity())
+    }
+
+    // BC's `AbstractF2mPoint.Tau`: the Frobenius map, every coordinate squared.
+    pub(crate) fn tau(&self) -> Self {
+        let coords = self.coords.as_ref().map(|coords| match coords {
+            Coords::Affine { x, y } => Coords::Affine {
+                x: x.square(),
+                y: y.square(),
+            },
+            Coords::Homogeneous { x, y, z } => Coords::Homogeneous {
+                x: x.square(),
+                y: y.square(),
+                z: z.square(),
+            },
+            Coords::LambdaProjective { x, l, z } => Coords::LambdaProjective {
+                x: x.square(),
+                l: l.square(),
+                z: z.square(),
+            },
+        });
+        Self {
+            curve: self.curve,
+            coords,
+        }
     }
 
     pub fn subtract(&self, rhs: &Self) -> Self {
