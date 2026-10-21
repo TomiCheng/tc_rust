@@ -258,6 +258,44 @@ pub(crate) fn fold<const N: usize>(
     reduce_once(&out, cc as u32, p)
 }
 
+// BC's `Mul33Add` and `Mul33DWordAdd`, for p = 2^(32N) - 2^32 - w: H·2^(32N) + L folds to
+// L + H·(2^32 + w), twice, the second time for the few bits the first leaves above 2^(32N),
+// then one masked subtraction where BC branches.
+pub(crate) fn reduce33<const N: usize, const M: usize>(
+    xx: &[u32; M],
+    w: u64,
+    p: &[u32; N],
+) -> [u32; N] {
+    const { assert!(M == 2 * N && N >= 3) };
+    let mut z = [0; N];
+    let mut c = 0u64;
+    for i in 0..N {
+        let shifted = if i == 0 { 0 } else { u64::from(xx[N - 1 + i]) };
+        c += u64::from(xx[i]) + u64::from(xx[N + i]) * w + shifted;
+        z[i] = c as u32;
+        c >>= 32;
+    }
+    let t = c + u64::from(xx[M - 1]);
+
+    let low = t * w;
+    let mut cc = u64::from(z[0]) + (low & 0xFFFF_FFFF);
+    z[0] = cc as u32;
+    cc >>= 32;
+    cc += u64::from(z[1]) + (low >> 32) + (t & 0xFFFF_FFFF);
+    z[1] = cc as u32;
+    cc >>= 32;
+    cc += u64::from(z[2]) + (t >> 32);
+    z[2] = cc as u32;
+    cc >>= 32;
+    for limb in &mut z[3..] {
+        cc += u64::from(*limb);
+        *limb = cc as u32;
+        cc >>= 32;
+    }
+    debug_assert!(cc == 0 || cc == 1);
+    reduce_once(&z, cc as u32, p)
+}
+
 pub(crate) fn add_mod<const N: usize>(x: &[u32; N], y: &[u32; N], p: &[u32; N]) -> [u32; N] {
     let (z, carry) = add(x, y);
     reduce_once(&z, carry, p)

@@ -108,3 +108,139 @@ fn the_constant_and_variable_time_curves_agree() {
             .is_valid()
     );
 }
+
+#[cfg(feature = "small-curves")]
+#[test]
+fn secp128r1_adds_and_doubles_as_the_generic_curve_does() {
+    let curve = SECP128R1.var_curve();
+    let field = field(&R128);
+    let generic = generic_var(&field, &R128);
+    let h = generic.create_point(&int(R128.gx), &int(R128.gy)).unwrap();
+    check::<&SecPVarCurve<SecP128R1FieldElement>, &FpVarCurve<'_>>(
+        SECP128R1.var_generator(&curve),
+        h,
+        &R128,
+    );
+}
+
+#[cfg(feature = "small-curves")]
+#[test]
+fn secp160k1_adds_and_doubles_as_the_generic_curve_does() {
+    let curve = SECP160K1.var_curve();
+    let field = field(&K160);
+    let generic = generic_var(&field, &K160);
+    let h = generic.create_point(&int(K160.gx), &int(K160.gy)).unwrap();
+    check::<&SecPVarCurve<SecP160R2FieldElement>, &FpVarCurve<'_>>(
+        SECP160K1.var_generator(&curve),
+        h,
+        &K160,
+    );
+}
+
+#[cfg(feature = "small-curves")]
+#[test]
+fn secp160r1_adds_and_doubles_as_the_generic_curve_does() {
+    let curve = SECP160R1.var_curve();
+    let field = field(&R160);
+    let generic = generic_var(&field, &R160);
+    let h = generic.create_point(&int(R160.gx), &int(R160.gy)).unwrap();
+    check::<&SecPVarCurve<SecP160R1FieldElement>, &FpVarCurve<'_>>(
+        SECP160R1.var_generator(&curve),
+        h,
+        &R160,
+    );
+}
+
+#[cfg(feature = "small-curves")]
+#[test]
+fn secp160r2_adds_and_doubles_as_the_generic_curve_does() {
+    let curve = SECP160R2.var_curve();
+    let field = field(&R160_2);
+    let generic = generic_var(&field, &R160_2);
+    let h = generic
+        .create_point(&int(R160_2.gx), &int(R160_2.gy))
+        .unwrap();
+    check::<&SecPVarCurve<SecP160R2FieldElement>, &FpVarCurve<'_>>(
+        SECP160R2.var_generator(&curve),
+        h,
+        &R160_2,
+    );
+}
+
+#[test]
+fn secp192k1_adds_and_doubles_as_the_generic_curve_does() {
+    let curve = SECP192K1.var_curve();
+    let field = field(&K192);
+    let generic = generic_var(&field, &K192);
+    let h = generic.create_point(&int(K192.gx), &int(K192.gy)).unwrap();
+    check::<&SecPVarCurve<SecP192K1FieldElement>, &FpVarCurve<'_>>(
+        SECP192K1.var_generator(&curve),
+        h,
+        &K192,
+    );
+}
+
+#[test]
+fn secp192r1_adds_and_doubles_as_the_generic_curve_does() {
+    let curve = SECP192R1.var_curve();
+    let field = field(&P192);
+    let generic = generic_var(&field, &P192);
+    let h = generic.create_point(&int(P192.gx), &int(P192.gy)).unwrap();
+    check::<&SecPVarCurve<SecP192R1FieldElement>, &FpVarCurve<'_>>(
+        SECP192R1.var_generator(&curve),
+        h,
+        &P192,
+    );
+}
+
+#[test]
+fn secp224k1_adds_and_doubles_as_the_generic_curve_does() {
+    let curve = SECP224K1.var_curve();
+    let field = field(&K224);
+    let generic = generic_var(&field, &K224);
+    let h = generic.create_point(&int(K224.gx), &int(K224.gy)).unwrap();
+    check::<&SecPVarCurve<SecP224K1FieldElement>, &FpVarCurve<'_>>(
+        SECP224K1.var_generator(&curve),
+        h,
+        &K224,
+    );
+}
+
+#[test]
+fn secp224r1_adds_and_doubles_as_the_generic_curve_does() {
+    let curve = SECP224R1.var_curve();
+    let field = field(&P224);
+    let generic = generic_var(&field, &P224);
+    let h = generic.create_point(&int(P224.gx), &int(P224.gy)).unwrap();
+    check::<&SecPVarCurve<SecP224R1FieldElement>, &FpVarCurve<'_>>(
+        SECP224R1.var_generator(&curve),
+        h,
+        &P224,
+    );
+}
+
+#[test]
+fn secp521r1_adds_and_doubles_as_the_generic_curve_does() {
+    let curve = SECP521R1.var_curve();
+    let field = field(&P521);
+    let generic = generic_var(&field, &P521);
+    let h = generic.create_point(&int(P521.gx), &int(P521.gy)).unwrap();
+    check::<&SecPVarCurve<SecP521R1FieldElement>, &FpVarCurve<'_>>(
+        SECP521R1.var_generator(&curve),
+        h,
+        &P521,
+    );
+}
+
+#[test]
+fn sm2p256v1_adds_and_doubles_as_the_generic_curve_does() {
+    let curve = SM2P256V1.var_curve();
+    let field = field(&SM2);
+    let generic = generic_var(&field, &SM2);
+    let h = generic.create_point(&int(SM2.gx), &int(SM2.gy)).unwrap();
+    check::<&SecPVarCurve<SM2P256V1FieldElement>, &FpVarCurve<'_>>(
+        SM2P256V1.var_generator(&curve),
+        h,
+        &SM2,
+    );
+}

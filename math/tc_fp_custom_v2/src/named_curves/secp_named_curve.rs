@@ -3,19 +3,20 @@ use crate::{SecPCtCurve, SecPCtPoint, SecPVarCurve, SecPVarPoint};
 use core::marker::PhantomData;
 use tc_bigint::{ArrayEncoding, PaddedBigUint};
 
-/// The domain parameters of a named curve over the field of `F`, `N` bytes each; the same
-/// methods as `tc_fp_curve_v2`'s `FpNamedCurve`, without its field.
-pub struct SecPNamedCurve<F, const N: usize> {
+/// The domain parameters of a named curve over the field of `F`, `N` bytes each and `O` for
+/// the order, which takes a byte more on the 160-bit curves; the same methods as
+/// `tc_fp_curve_v2`'s `FpNamedCurve`, without its field.
+pub struct SecPNamedCurve<F, const N: usize, const O: usize = N> {
     pub(super) a: [u8; N],
     pub(super) b: [u8; N],
-    pub(super) order: [u8; N],
+    pub(super) order: [u8; O],
     pub(super) cofactor: u32,
     pub(super) gx: [u8; N],
     pub(super) gy: [u8; N],
     pub(super) field: PhantomData<fn() -> F>,
 }
 
-impl<F: SecPElement, const N: usize> SecPNamedCurve<F, N> {
+impl<F: SecPElement, const N: usize, const O: usize> SecPNamedCurve<F, N, O> {
     pub fn ct_curve(&self) -> SecPCtCurve<F> {
         let [a, b] = [&self.a, &self.b].map(|bytes| element(bytes));
         SecPCtCurve::new(a, b, self.order(), PaddedBigUint::from(self.cofactor))

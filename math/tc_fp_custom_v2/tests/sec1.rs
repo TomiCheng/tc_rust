@@ -211,3 +211,339 @@ fn a_short_buffer_is_turned_down_and_left_alone() {
     assert_eq!(curve.infinity().encode(true), [0]);
     assert_eq!(curve.affine_point_encoding_length(false), 65);
 }
+
+#[cfg(feature = "small-curves")]
+#[test]
+fn secp128r1_points_encode_and_decode_as_the_generic_curves_do() {
+    let field = field(&R128);
+    let generic = generic_var(&field, &R128);
+    let reference = generic.create_point(&int(R128.gx), &int(R128.gy)).unwrap();
+    let (ct, var) = (SECP128R1.ct_curve(), SECP128R1.var_curve());
+    let (g, h) = (SECP128R1.ct_generator(&ct), SECP128R1.var_generator(&var));
+    let custom = Custom {
+        len: ct.field_element_encoding_length(),
+        multiply: &|k| {
+            let (p, q) = (g.multiply(k), <&SecPVarCurve<_>>::multiply(&h, k));
+            [
+                p.encode(true),
+                p.encode(false),
+                q.encode(true),
+                q.encode(false),
+            ]
+        },
+        decode: &|bytes| {
+            [
+                ct.decode_point(bytes).map(|p| p.encode(false)),
+                var.decode_point(bytes).map(|p| p.encode(false)),
+            ]
+        },
+        decompress: &|y_tilde, x| var.decompress_point(y_tilde, x).map(|p| p.encode(false)),
+        create: &|x, y| [ct.create_point(x, y).err(), var.create_point(x, y).err()],
+    };
+    check(&R128, custom, |k| {
+        let p = <&FpVarCurve>::multiply(&reference, k);
+        [p.encode(true), p.encode(false)]
+    });
+}
+
+#[cfg(feature = "small-curves")]
+#[test]
+fn secp160k1_points_encode_and_decode_as_the_generic_curves_do() {
+    let field = field(&K160);
+    let generic = generic_var(&field, &K160);
+    let reference = generic.create_point(&int(K160.gx), &int(K160.gy)).unwrap();
+    let (ct, var) = (SECP160K1.ct_curve(), SECP160K1.var_curve());
+    let (g, h) = (SECP160K1.ct_generator(&ct), SECP160K1.var_generator(&var));
+    let custom = Custom {
+        len: ct.field_element_encoding_length(),
+        multiply: &|k| {
+            let (p, q) = (g.multiply(k), <&SecPVarCurve<_>>::multiply(&h, k));
+            [
+                p.encode(true),
+                p.encode(false),
+                q.encode(true),
+                q.encode(false),
+            ]
+        },
+        decode: &|bytes| {
+            [
+                ct.decode_point(bytes).map(|p| p.encode(false)),
+                var.decode_point(bytes).map(|p| p.encode(false)),
+            ]
+        },
+        decompress: &|y_tilde, x| var.decompress_point(y_tilde, x).map(|p| p.encode(false)),
+        create: &|x, y| [ct.create_point(x, y).err(), var.create_point(x, y).err()],
+    };
+    check(&K160, custom, |k| {
+        let p = <&FpVarCurve>::multiply(&reference, k);
+        [p.encode(true), p.encode(false)]
+    });
+}
+
+#[cfg(feature = "small-curves")]
+#[test]
+fn secp160r1_points_encode_and_decode_as_the_generic_curves_do() {
+    let field = field(&R160);
+    let generic = generic_var(&field, &R160);
+    let reference = generic.create_point(&int(R160.gx), &int(R160.gy)).unwrap();
+    let (ct, var) = (SECP160R1.ct_curve(), SECP160R1.var_curve());
+    let (g, h) = (SECP160R1.ct_generator(&ct), SECP160R1.var_generator(&var));
+    let custom = Custom {
+        len: ct.field_element_encoding_length(),
+        multiply: &|k| {
+            let (p, q) = (g.multiply(k), <&SecPVarCurve<_>>::multiply(&h, k));
+            [
+                p.encode(true),
+                p.encode(false),
+                q.encode(true),
+                q.encode(false),
+            ]
+        },
+        decode: &|bytes| {
+            [
+                ct.decode_point(bytes).map(|p| p.encode(false)),
+                var.decode_point(bytes).map(|p| p.encode(false)),
+            ]
+        },
+        decompress: &|y_tilde, x| var.decompress_point(y_tilde, x).map(|p| p.encode(false)),
+        create: &|x, y| [ct.create_point(x, y).err(), var.create_point(x, y).err()],
+    };
+    check(&R160, custom, |k| {
+        let p = <&FpVarCurve>::multiply(&reference, k);
+        [p.encode(true), p.encode(false)]
+    });
+}
+
+#[cfg(feature = "small-curves")]
+#[test]
+fn secp160r2_points_encode_and_decode_as_the_generic_curves_do() {
+    let field = field(&R160_2);
+    let generic = generic_var(&field, &R160_2);
+    let reference = generic
+        .create_point(&int(R160_2.gx), &int(R160_2.gy))
+        .unwrap();
+    let (ct, var) = (SECP160R2.ct_curve(), SECP160R2.var_curve());
+    let (g, h) = (SECP160R2.ct_generator(&ct), SECP160R2.var_generator(&var));
+    let custom = Custom {
+        len: ct.field_element_encoding_length(),
+        multiply: &|k| {
+            let (p, q) = (g.multiply(k), <&SecPVarCurve<_>>::multiply(&h, k));
+            [
+                p.encode(true),
+                p.encode(false),
+                q.encode(true),
+                q.encode(false),
+            ]
+        },
+        decode: &|bytes| {
+            [
+                ct.decode_point(bytes).map(|p| p.encode(false)),
+                var.decode_point(bytes).map(|p| p.encode(false)),
+            ]
+        },
+        decompress: &|y_tilde, x| var.decompress_point(y_tilde, x).map(|p| p.encode(false)),
+        create: &|x, y| [ct.create_point(x, y).err(), var.create_point(x, y).err()],
+    };
+    check(&R160_2, custom, |k| {
+        let p = <&FpVarCurve>::multiply(&reference, k);
+        [p.encode(true), p.encode(false)]
+    });
+}
+
+#[test]
+fn secp192k1_points_encode_and_decode_as_the_generic_curves_do() {
+    let field = field(&K192);
+    let generic = generic_var(&field, &K192);
+    let reference = generic.create_point(&int(K192.gx), &int(K192.gy)).unwrap();
+    let (ct, var) = (SECP192K1.ct_curve(), SECP192K1.var_curve());
+    let (g, h) = (SECP192K1.ct_generator(&ct), SECP192K1.var_generator(&var));
+    let custom = Custom {
+        len: ct.field_element_encoding_length(),
+        multiply: &|k| {
+            let (p, q) = (g.multiply(k), <&SecPVarCurve<_>>::multiply(&h, k));
+            [
+                p.encode(true),
+                p.encode(false),
+                q.encode(true),
+                q.encode(false),
+            ]
+        },
+        decode: &|bytes| {
+            [
+                ct.decode_point(bytes).map(|p| p.encode(false)),
+                var.decode_point(bytes).map(|p| p.encode(false)),
+            ]
+        },
+        decompress: &|y_tilde, x| var.decompress_point(y_tilde, x).map(|p| p.encode(false)),
+        create: &|x, y| [ct.create_point(x, y).err(), var.create_point(x, y).err()],
+    };
+    check(&K192, custom, |k| {
+        let p = <&FpVarCurve>::multiply(&reference, k);
+        [p.encode(true), p.encode(false)]
+    });
+}
+
+#[test]
+fn secp192r1_points_encode_and_decode_as_the_generic_curves_do() {
+    let field = field(&P192);
+    let generic = generic_var(&field, &P192);
+    let reference = generic.create_point(&int(P192.gx), &int(P192.gy)).unwrap();
+    let (ct, var) = (SECP192R1.ct_curve(), SECP192R1.var_curve());
+    let (g, h) = (SECP192R1.ct_generator(&ct), SECP192R1.var_generator(&var));
+    let custom = Custom {
+        len: ct.field_element_encoding_length(),
+        multiply: &|k| {
+            let (p, q) = (g.multiply(k), <&SecPVarCurve<_>>::multiply(&h, k));
+            [
+                p.encode(true),
+                p.encode(false),
+                q.encode(true),
+                q.encode(false),
+            ]
+        },
+        decode: &|bytes| {
+            [
+                ct.decode_point(bytes).map(|p| p.encode(false)),
+                var.decode_point(bytes).map(|p| p.encode(false)),
+            ]
+        },
+        decompress: &|y_tilde, x| var.decompress_point(y_tilde, x).map(|p| p.encode(false)),
+        create: &|x, y| [ct.create_point(x, y).err(), var.create_point(x, y).err()],
+    };
+    check(&P192, custom, |k| {
+        let p = <&FpVarCurve>::multiply(&reference, k);
+        [p.encode(true), p.encode(false)]
+    });
+}
+
+#[test]
+fn secp224k1_points_encode_and_decode_as_the_generic_curves_do() {
+    let field = field(&K224);
+    let generic = generic_var(&field, &K224);
+    let reference = generic.create_point(&int(K224.gx), &int(K224.gy)).unwrap();
+    let (ct, var) = (SECP224K1.ct_curve(), SECP224K1.var_curve());
+    let (g, h) = (SECP224K1.ct_generator(&ct), SECP224K1.var_generator(&var));
+    let custom = Custom {
+        len: ct.field_element_encoding_length(),
+        multiply: &|k| {
+            let (p, q) = (g.multiply(k), <&SecPVarCurve<_>>::multiply(&h, k));
+            [
+                p.encode(true),
+                p.encode(false),
+                q.encode(true),
+                q.encode(false),
+            ]
+        },
+        decode: &|bytes| {
+            [
+                ct.decode_point(bytes).map(|p| p.encode(false)),
+                var.decode_point(bytes).map(|p| p.encode(false)),
+            ]
+        },
+        decompress: &|y_tilde, x| var.decompress_point(y_tilde, x).map(|p| p.encode(false)),
+        create: &|x, y| [ct.create_point(x, y).err(), var.create_point(x, y).err()],
+    };
+    check(&K224, custom, |k| {
+        let p = <&FpVarCurve>::multiply(&reference, k);
+        [p.encode(true), p.encode(false)]
+    });
+}
+
+#[test]
+fn secp224r1_points_encode_and_decode_as_the_generic_curves_do() {
+    let field = field(&P224);
+    let generic = generic_var(&field, &P224);
+    let reference = generic.create_point(&int(P224.gx), &int(P224.gy)).unwrap();
+    let (ct, var) = (SECP224R1.ct_curve(), SECP224R1.var_curve());
+    let (g, h) = (SECP224R1.ct_generator(&ct), SECP224R1.var_generator(&var));
+    let custom = Custom {
+        len: ct.field_element_encoding_length(),
+        multiply: &|k| {
+            let (p, q) = (g.multiply(k), <&SecPVarCurve<_>>::multiply(&h, k));
+            [
+                p.encode(true),
+                p.encode(false),
+                q.encode(true),
+                q.encode(false),
+            ]
+        },
+        decode: &|bytes| {
+            [
+                ct.decode_point(bytes).map(|p| p.encode(false)),
+                var.decode_point(bytes).map(|p| p.encode(false)),
+            ]
+        },
+        decompress: &|y_tilde, x| var.decompress_point(y_tilde, x).map(|p| p.encode(false)),
+        create: &|x, y| [ct.create_point(x, y).err(), var.create_point(x, y).err()],
+    };
+    check(&P224, custom, |k| {
+        let p = <&FpVarCurve>::multiply(&reference, k);
+        [p.encode(true), p.encode(false)]
+    });
+}
+
+#[test]
+fn secp521r1_points_encode_and_decode_as_the_generic_curves_do() {
+    let field = field(&P521);
+    let generic = generic_var(&field, &P521);
+    let reference = generic.create_point(&int(P521.gx), &int(P521.gy)).unwrap();
+    let (ct, var) = (SECP521R1.ct_curve(), SECP521R1.var_curve());
+    let (g, h) = (SECP521R1.ct_generator(&ct), SECP521R1.var_generator(&var));
+    let custom = Custom {
+        len: ct.field_element_encoding_length(),
+        multiply: &|k| {
+            let (p, q) = (g.multiply(k), <&SecPVarCurve<_>>::multiply(&h, k));
+            [
+                p.encode(true),
+                p.encode(false),
+                q.encode(true),
+                q.encode(false),
+            ]
+        },
+        decode: &|bytes| {
+            [
+                ct.decode_point(bytes).map(|p| p.encode(false)),
+                var.decode_point(bytes).map(|p| p.encode(false)),
+            ]
+        },
+        decompress: &|y_tilde, x| var.decompress_point(y_tilde, x).map(|p| p.encode(false)),
+        create: &|x, y| [ct.create_point(x, y).err(), var.create_point(x, y).err()],
+    };
+    check(&P521, custom, |k| {
+        let p = <&FpVarCurve>::multiply(&reference, k);
+        [p.encode(true), p.encode(false)]
+    });
+}
+
+#[test]
+fn sm2p256v1_points_encode_and_decode_as_the_generic_curves_do() {
+    let field = field(&SM2);
+    let generic = generic_var(&field, &SM2);
+    let reference = generic.create_point(&int(SM2.gx), &int(SM2.gy)).unwrap();
+    let (ct, var) = (SM2P256V1.ct_curve(), SM2P256V1.var_curve());
+    let (g, h) = (SM2P256V1.ct_generator(&ct), SM2P256V1.var_generator(&var));
+    let custom = Custom {
+        len: ct.field_element_encoding_length(),
+        multiply: &|k| {
+            let (p, q) = (g.multiply(k), <&SecPVarCurve<_>>::multiply(&h, k));
+            [
+                p.encode(true),
+                p.encode(false),
+                q.encode(true),
+                q.encode(false),
+            ]
+        },
+        decode: &|bytes| {
+            [
+                ct.decode_point(bytes).map(|p| p.encode(false)),
+                var.decode_point(bytes).map(|p| p.encode(false)),
+            ]
+        },
+        decompress: &|y_tilde, x| var.decompress_point(y_tilde, x).map(|p| p.encode(false)),
+        create: &|x, y| [ct.create_point(x, y).err(), var.create_point(x, y).err()],
+    };
+    check(&SM2, custom, |k| {
+        let p = <&FpVarCurve>::multiply(&reference, k);
+        [p.encode(true), p.encode(false)]
+    });
+}

@@ -73,34 +73,7 @@ pub(crate) fn sqrt(x1: &[u32; 8]) -> [u32; 8] {
     t1
 }
 
-// BC's `Reduce`: H·2^256 + L = L + H·(2^32 + 977), twice, the second time for the few bits
-// the first leaves above 2^256.
+// BC's `Reduce`, by `Mul33Add` and `Mul33DWordAdd`.
 fn reduce(xx: &[u32; 16]) -> [u32; 8] {
-    let mut z = [0; 8];
-    let mut c = 0u64;
-    for i in 0..8 {
-        let shifted = if i == 0 { 0 } else { u64::from(xx[7 + i]) };
-        c += u64::from(xx[i]) + u64::from(xx[8 + i]) * P_INV_33 + shifted;
-        z[i] = c as u32;
-        c >>= 32;
-    }
-    let t = c + u64::from(xx[15]);
-
-    let low = t * P_INV_33;
-    let mut cc = u64::from(z[0]) + (low & 0xFFFF_FFFF);
-    z[0] = cc as u32;
-    cc >>= 32;
-    cc += u64::from(z[1]) + (low >> 32) + (t & 0xFFFF_FFFF);
-    z[1] = cc as u32;
-    cc >>= 32;
-    cc += u64::from(z[2]) + (t >> 32);
-    z[2] = cc as u32;
-    cc >>= 32;
-    for limb in &mut z[3..] {
-        cc += u64::from(*limb);
-        *limb = cc as u32;
-        cc >>= 32;
-    }
-    debug_assert!(cc == 0 || cc == 1);
-    nat::reduce_once(&z, cc as u32, &P)
+    nat::reduce33(xx, P_INV_33, &P)
 }
