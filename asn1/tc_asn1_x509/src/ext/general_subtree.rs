@@ -65,9 +65,11 @@ impl GeneralSubtree {
     /// An iPAddress base without a mask (any length but 8 or 32) is
     /// `MalformedValue`; every other kind is taken as given.
     pub fn new(base: GeneralName) -> Result<Self, Asn1Error> {
-        if let GeneralName::IpAddress(octets) = &base
-            && !matches!(octets.as_bytes().len(), 8 | 32)
-        {
+        let unmasked = matches!(
+            &base,
+            GeneralName::IpAddress(octets) if !matches!(octets.as_bytes().len(), 8 | 32)
+        );
+        if unmasked {
             return Err(Asn1Error::MalformedValue);
         }
         Ok(Self { base })
