@@ -1772,6 +1772,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_rsa_signer"
+version = "0.1.0"
+dependencies = [
+ "num-traits",
+ "rand",
+ "rand_core",
+ "tc_asn1",
+ "tc_asn1_pkcs",
+ "tc_asn1_x509",
+ "tc_asym_cipher",
+ "tc_asym_encoding",
+ "tc_bigint 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tc_constant_time",
+ "tc_digest 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tc_rsa",
+ "tc_sha 0.1.1",
+ "tc_signer",
+]
+
+[[package]]
 name = "tc_runtime"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

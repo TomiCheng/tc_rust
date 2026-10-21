@@ -1,0 +1,26 @@
+[package]
+name = "tc_rsa_signer"
+description = "RSA signatures, ported from Bouncy Castle C#."
+version.workspace = true
+edition.workspace = true
+rust-version = "1.85"
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+rand_core = { workspace = true }
+tc_asn1 = "0.1.1"
+tc_asn1_x509 = { version = "0.1.0", path = "../../asn1/tc_asn1_x509" }
+tc_asym_cipher = "0.1.0"
+tc_asym_encoding = "0.1.0"
+tc_constant_time = "0.1.0"
+tc_digest = "0.1.0"
+tc_signer = { version = "0.1.0", path = "../tc_signer" }
+
+[dev-dependencies]
+num-traits = { version = "0.2.19", default-features = false }
+rand = { workspace = true }
+tc_asn1_pkcs = { version = "0.1.0", path = "../../asn1/tc_asn1_pkcs" }
+tc_bigint = { version = "0.1.0", features = ["alloc"] }
+tc_rsa = "0.1.0"
+tc_sha = "0.1.1"
