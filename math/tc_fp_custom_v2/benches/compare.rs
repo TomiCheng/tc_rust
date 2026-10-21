@@ -3,11 +3,12 @@ use core::time::Duration;
 
 use criterion::{BenchmarkId, Criterion};
 use tc_bigint::{ArrayEncoding, PaddedBigUint};
-use tc_ec_core_v2::{CoordinateSystem, Curve, FieldElement, Point};
+use tc_ec_core_v2::{CoordinateSystem, Curve, FieldElement, Point, wnaf};
 use tc_fp_curve_v2::{FpCtCurve, FpField, FpVarCurve};
-use tc_fp_custom_v2::named_curves::{SECP256R1, SECP384R1, SECP521R1};
+use tc_fp_custom_v2::named_curves::{SECP256K1, SECP256R1, SECP384R1, SECP521R1};
 use tc_fp_custom_v2::{
-    SecP256R1FieldElement, SecP384R1FieldElement, SecP521R1FieldElement, SecPCtCurve, SecPVarCurve,
+    SecP256K1FieldElement, SecP256R1FieldElement, SecP384R1FieldElement, SecP521R1FieldElement,
+    SecPCtCurve, SecPVarCurve,
 };
 
 // p, a, b, n, gx and gy of a named curve, for the generic curves.
@@ -78,6 +79,12 @@ fn field<F: FieldElement>(criterion: &mut Criterion, name: &str, x: F, y: F) {
         b.iter(|| black_box(&x).invert())
     });
     group.finish();
+
+    let mut group = criterion.benchmark_group("p256_sqrt");
+    group.bench_with_input(BenchmarkId::from_parameter(name), &(), |b, _| {
+        b.iter(|| black_box(&x).sqrt())
+    });
+    group.finish();
 }
 
 fn multiply<C: Curve<Scalar = PaddedBigUint>>(
@@ -90,6 +97,15 @@ fn multiply<C: Curve<Scalar = PaddedBigUint>>(
     let mut group = criterion.benchmark_group(group);
     group.bench_with_input(BenchmarkId::from_parameter(name), &(), |b, _| {
         b.iter(|| C::multiply(black_box(g), black_box(k)))
+    });
+    group.finish();
+}
+
+// The plain wNAF, which the Var curve leaves for the GLV split on the k1 curves.
+fn wnaf_multiply<C: Curve>(criterion: &mut Criterion, group: &str, g: &C::Point, k: &C::Scalar) {
+    let mut group = criterion.benchmark_group(group);
+    group.bench_with_input(BenchmarkId::from_parameter("wnaf"), &(), |b, _| {
+        b.iter(|| wnaf::wnaf_mul_point::<C>(black_box(g), black_box(k)))
     });
     group.finish();
 }
@@ -243,6 +259,16 @@ fn main() {
             .unwrap(),
         &k,
     );
+
+    // secp256k1: the Var curve's GLV split against the plain wNAF.
+    let k = scalar(
+        32,
+        "fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141",
+    );
+    let var_k256 = SECP256K1.var_curve();
+    let g = SECP256K1.var_generator(&var_k256);
+    multiply::<&SecPVarCurve<SecP256K1FieldElement>>(c, "k256_var_multiply", "glv", &g, &k);
+    wnaf_multiply::<&SecPVarCurve<SecP256K1FieldElement>>(c, "k256_var_multiply", &g, &k);
 
     criterion.final_summary();
 }

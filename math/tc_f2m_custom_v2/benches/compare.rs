@@ -3,11 +3,11 @@ use core::time::Duration;
 
 use criterion::{BenchmarkId, Criterion};
 use tc_bigint::{ArrayEncoding, PaddedBigUint};
-use tc_ec_core_v2::{CoordinateSystem, Curve, FieldElement, Point};
+use tc_ec_core_v2::{CoordinateSystem, Curve, FieldElement, Point, wnaf};
 use tc_f2m_curve_v2::named_curves as generic;
 use tc_f2m_curve_v2::{F2mCtCurve, F2mVarCurve};
-use tc_f2m_custom_v2::named_curves::SECT163R2;
-use tc_f2m_custom_v2::{SecT163FieldElement, SecTCtCurve, SecTVarCurve};
+use tc_f2m_custom_v2::named_curves::{SECT163K1, SECT163R2, SECT571K1};
+use tc_f2m_custom_v2::{SecT163FieldElement, SecT571FieldElement, SecTCtCurve, SecTVarCurve};
 
 type Ct<'a> = &'a SecTCtCurve<SecT163FieldElement>;
 type Var<'a> = &'a SecTVarCurve<SecT163FieldElement>;
@@ -44,6 +44,31 @@ fn multiply<C: Curve<Scalar = PaddedBigUint>>(
         b.iter(|| C::multiply(black_box(g), black_box(k)))
     });
     group.finish();
+}
+
+// The Var curve's τNAF on a Koblitz curve, against the plain wNAF it replaces.
+fn koblitz<C: Curve<Scalar = PaddedBigUint>>(
+    criterion: &mut Criterion,
+    group: &str,
+    g: &C::Point,
+    k: &PaddedBigUint,
+) {
+    let mut group = criterion.benchmark_group(group);
+    group.bench_with_input(BenchmarkId::from_parameter("tnaf"), &(), |b, _| {
+        b.iter(|| C::multiply(black_box(g), black_box(k)))
+    });
+    group.bench_with_input(BenchmarkId::from_parameter("wnaf"), &(), |b, _| {
+        b.iter(|| wnaf::wnaf_mul_point::<C>(black_box(g), black_box(k)))
+    });
+    group.finish();
+}
+
+// A scalar of `bytes` bytes, its top byte `top`.
+fn scalar(bytes: usize, top: u8) -> PaddedBigUint {
+    let mut bytes: Vec<u8> = (0..bytes).map(|i| ((i * 37 + 11) % 256) as u8).collect();
+    bytes[0] = top;
+    let Ok(k) = <PaddedBigUint as ArrayEncoding<u8>>::from_be(&bytes);
+    k
 }
 
 fn main() {
@@ -86,6 +111,22 @@ fn main() {
         "generic",
         &generic::SECT163R2.var_generator(&generic_var),
         &k,
+    );
+
+    // sect163k1 and sect571k1, each scalar below the order.
+    let k163 = SECT163K1.var_curve();
+    koblitz::<Var<'_>>(
+        c,
+        "k163_var_multiply",
+        &SECT163K1.var_generator(&k163),
+        &scalar(21, 0x03),
+    );
+    let k571 = SECT571K1.var_curve();
+    koblitz::<&SecTVarCurve<SecT571FieldElement>>(
+        c,
+        "k571_var_multiply",
+        &SECT571K1.var_generator(&k571),
+        &scalar(72, 0x01),
     );
 
     criterion.final_summary();

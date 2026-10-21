@@ -9,7 +9,7 @@ curve.
 
 ## Results
 
-Measured on 2026-10-21 on the local Windows x86-64 host, an 11th Gen Intel
+Measured on 2026-10-22 on the local Windows x86-64 host, an 11th Gen Intel
 Core i7-1185G7 at 3.00 GHz, using Rust 1.98.0 and Cargo's optimized bench
 profile. Both sides of each pair follow the same contract. The Ct pair is
 constant time, and both of its sides use the complete formulas with a 4-bit
@@ -23,35 +23,53 @@ Each scalar is as wide as its curve's order.
 
 | Case | Specialized | Generic | Ratio |
 | --- | ---: | ---: | ---: |
-| P-256 field `multiply` | 83.0 ns | 200.2 ns | 2.4× |
-| P-256 field `square` | 85.1 ns | 194.1 ns | 2.3× |
-| P-256 field `invert` | 2.75 µs | 3.03 µs | 1.10× |
-| P-256 Ct point multiplication | 573.6 µs | 1.64 ms | 2.9× |
-| P-256 Var point multiplication | 295.5 µs | 869.7 µs | 2.9× |
-| P-384 Ct point multiplication | 2.31 ms | 3.30 ms | 1.43× |
-| P-384 Var point multiplication | 1.27 ms | 1.65 ms | 1.31× |
-| P-521 Ct point multiplication | 6.24 ms | 5.78 ms | 0.93× |
-| P-521 Var point multiplication | 2.44 ms | 2.55 ms | 1.04× |
+| P-256 field `multiply` | 82.6 ns | 272.8 ns | 3.3× |
+| P-256 field `square` | 79.2 ns | 270.8 ns | 3.4× |
+| P-256 field `invert` | 3.50 µs | 3.90 µs | 1.11× |
+| P-256 field `sqrt` | 21.5 µs | 73.4 µs | 3.4× |
+| P-256 Ct point multiplication | 886.7 µs | 2.58 ms | 2.9× |
+| P-256 Var point multiplication | 459.8 µs | 1.39 ms | 3.0× |
+| P-384 Ct point multiplication | 3.30 ms | 4.28 ms | 1.30× |
+| P-384 Var point multiplication | 1.71 ms | 2.38 ms | 1.39× |
+| P-521 Ct point multiplication | 2.39 ms | 9.16 ms | 3.8× |
+| P-521 Var point multiplication | 1.11 ms | 3.96 ms | 3.6× |
+
+The Var curve multiplies by the GLV split on the k1 curves, where BC's custom
+curves do. This pair compares it with the plain wNAF on the same specialized
+secp256k1 curve, with a 256-bit scalar.
+
+| Case | GLV | wNAF | Ratio |
+| --- | ---: | ---: | ---: |
+| secp256k1 Var point multiplication | 228.7 µs | 353.8 µs | 1.55× |
 
 ## Reading
 
-- The fields follow BC and sit on 32-bit limbs, while tc_bigint's Montgomery
-  form uses 64-bit words on this host. Each generic word product therefore
-  covers four times the bits of a specialized one.
+- This run was slower overall than the one on 2026-10-21. The generic P-256
+  product, whose code did not change, went from 200 to 273 ns. Compare the
+  ratios within this run, not absolute times across dates. On this host two
+  runs of unchanged code differ by up to about 30%.
+- The fields follow BC and sit on 32-bit limbs, except P-521. tc_bigint's
+  Montgomery form uses 64-bit words on this host.
   - At 256 bits, the Solinas reduction and the absence of allocation still
-    win by nearly three times.
-  - The lead shrinks as the field grows.
-  - On P-521 the 17 limbs, even with Nat512's Karatsuba step, cost about as
-    much as the generic 9-word Montgomery product. The Ct multiplication there
-    is slightly slower than the generic one.
-  - 64-bit limbs would change this, but they would leave BC's layout. That
+    win by about three times.
+  - P-384 keeps 12 limbs with Nat384's Karatsuba step, and its lead is only
+    1.3 to 1.4 times. It is now slower than P-521. Putting it on 64-bit limbs
     has not been tried.
-- `square` is no faster than `multiply`. BC's `Nat256.Square` is written out
-  word by word, and the generic loop of `nat::square` does not get that
-  benefit.
+  - P-521 now sits on nine 64-bit limbs instead of BC's seventeen 32-bit ones.
+    Its point multiplications went from slightly slower than the generic
+    curve to nearly four times faster. In isolated runs the Ct one went from
+    5.89 to 1.80 ms.
+- `square` was no faster than `multiply`, because the indexed loop of BC's
+  `Nat.SquareWordAddTo` kept its bounds checks. Iterating slices removed them.
+  In isolated runs P-256 squaring went from 80 to 62 ns, against 70 ns for a
+  product. In this run the two come out closer.
+- `sqrt` is mostly its 253 squarings. They now share one product buffer
+  across each `square_n`, as BC's `SquareN` keeps one, and wipe it once. That
+  moved the P-256 root within noise.
 - `invert` is safegcd on both sides, so its small gain comes from the digit
   arithmetic alone.
-- The point multiplications follow the field products.
+- GLV splits the scalar in two halves of about 128 bits and runs them
+  together, so it halves the doublings. That saves about a third of the time.
 
 ## Reproducing
 
