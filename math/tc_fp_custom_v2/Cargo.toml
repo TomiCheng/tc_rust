@@ -1,0 +1,10 @@
+[package]
+name = "tc_fp_custom_v2"
+description = "SEC and SM2 prime elliptic curves with per-field specialized arithmetic, ported from Bouncy Castle C#."
+version.workspace = true
+edition.workspace = true
+rust-version = "1.85"
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
