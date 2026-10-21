@@ -113,6 +113,7 @@ mod tests {
     use crate::{EcError, EcKeyGenerationParams, EcPrivateKey, EcPublicKey};
     use tc_asym_cipher::{KeyPairGenerator, KeyPairGeneratorInit};
     use tc_bigint::{PaddedBigUint, RandomBits};
+    use tc_ec_core_v2::multiplier::{BaseMultiplier, CombCt, PerCall};
     use tc_ec_core_v2::wnaf::get_naf_weight;
     use tc_ec_core_v2::{Curve, Point};
     use tc_f2m_curve_v2::F2mCtCurve;
@@ -132,9 +133,9 @@ mod tests {
         }
     }
 
-    fn check<C: Curve<Scalar = PaddedBigUint>>(g: C::Point) {
+    fn check<C: Curve<Scalar = PaddedBigUint>, M: BaseMultiplier<C>>(g: C::Point) {
         let mut rng = rand::rng();
-        let mut generator = EcKeyPairGenerator::<C>::new();
+        let mut generator = EcKeyPairGenerator::<C, M>::with_multiplier();
         generator
             .init(EcKeyGenerationParams::new(g.clone(), &mut rng))
             .unwrap();
@@ -151,10 +152,11 @@ mod tests {
     fn generated_keys_have_d_below_n_and_q_equal_to_d_times_g() {
         let field = SECP256R1.field();
         let curve = SECP256R1.ct_curve(&field);
-        check::<&FpCtCurve<'_>>(SECP256R1.ct_generator(&curve));
+        check::<&FpCtCurve<'_>, PerCall<_>>(SECP256R1.ct_generator(&curve));
+        check::<&FpCtCurve<'_>, CombCt<_>>(SECP256R1.ct_generator(&curve));
 
         let curve = SECT283K1.ct_curve();
-        check::<&F2mCtCurve>(SECT283K1.ct_generator(&curve));
+        check::<&F2mCtCurve, PerCall<_>>(SECT283K1.ct_generator(&curve));
     }
 
     #[test]

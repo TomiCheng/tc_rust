@@ -9,3 +9,4 @@ repository.workspace = true
 
 [dependencies]
 tc_bigint = { version = "0.1.0", features = ["alloc"] }
+tc_constant_time = "0.1.0"

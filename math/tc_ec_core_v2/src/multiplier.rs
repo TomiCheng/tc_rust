@@ -3,7 +3,11 @@
 //! 基點常在 init 時才隨金鑰到來，所以由使用者（例如簽章器）以 [`BaseMultiplier::new`]
 //! 建立，消費端只指定型別。
 
+mod comb;
+
 use crate::Curve;
+
+pub use comb::{CombCt, CombVar};
 
 /// 固定基點的純量乘法。常數時間與否依實作而定，見各實作的說明。
 pub trait BaseMultiplier<C: Curve> {
