@@ -31,10 +31,13 @@ pub(crate) fn square(x: &[u32; 5]) -> [u32; 5] {
 // BC's `SquareN`: x^(2^n), for n of at least one.
 pub(crate) fn square_n(x: &[u32; 5], n: usize) -> [u32; 5] {
     debug_assert!(n > 0);
-    let mut z = square(x);
+    let mut tt = nat::square::<5, 10>(x);
+    let mut z = reduce(&tt);
     for _ in 1..n {
-        z = square(&z);
+        tt = nat::square::<5, 10>(&z);
+        z = reduce(&tt);
     }
+    tt.zeroize();
     z
 }
 

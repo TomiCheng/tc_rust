@@ -88,10 +88,13 @@ pub(crate) fn square(x: &[u64; 5]) -> [u64; 5] {
 
 pub(crate) fn square_n(x: &[u64; 5], n: usize) -> [u64; 5] {
     debug_assert!(n > 0);
-    let mut z = square(x);
+    let mut tt = impl_square(x);
+    let mut z = reduce(&tt);
     for _ in 1..n {
-        z = square(&z);
+        tt = impl_square(&z);
+        z = reduce(&tt);
     }
+    tt.zeroize();
     z
 }
 
