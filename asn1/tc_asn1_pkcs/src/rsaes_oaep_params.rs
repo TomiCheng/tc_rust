@@ -18,7 +18,7 @@ use tc_asn1::{
     Asn1Error, Asn1Ref, Decode, DecodeInner, DecodingContext, Encode, EncodeContent, EncodeTagged,
     EncodingOptions, Explicit, Tagged, tag,
 };
-use tc_asn1_x509::AlgorithmIdentifier;
+use tc_asn1_x509::alg::AlgorithmIdentifier;
 
 use crate::rsa_defaults;
 
@@ -198,7 +198,7 @@ mod tests {
         Asn1Error, Asn1Null, Asn1Object, Asn1OctetString, Decode, DecodingOptions, Encode,
         EncodeContent, EncodingOptions, Explicit,
     };
-    use tc_asn1_x509::AlgorithmIdentifier;
+    use tc_asn1_x509::alg::AlgorithmIdentifier;
 
     use crate::Pkcs1Algorithm;
 

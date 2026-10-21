@@ -27,7 +27,7 @@ use tc_asn1::{
     Tagged, tag,
 };
 use tc_asn1_x500::Attribute;
-use tc_asn1_x509::AlgorithmIdentifier;
+use tc_asn1_x509::alg::AlgorithmIdentifier;
 
 /// An opaque private key, its algorithm and optional attributes and public key.
 ///
@@ -39,7 +39,7 @@ use tc_asn1_x509::AlgorithmIdentifier;
 /// ```
 /// use tc_asn1::Asn1OctetString;
 /// use tc_asn1_pkcs::PrivateKeyInfo;
-/// use tc_asn1_x509::AlgorithmIdentifier;
+/// use tc_asn1_x509::alg::AlgorithmIdentifier;
 ///
 /// let info = PrivateKeyInfo::new(
 ///     AlgorithmIdentifier::new("1.3.101.112".parse()?),
@@ -227,7 +227,7 @@ mod tests {
         EncodeContent, EncodingOptions,
     };
     use tc_asn1_x500::{Attribute, DirectoryString};
-    use tc_asn1_x509::AlgorithmIdentifier;
+    use tc_asn1_x509::alg::AlgorithmIdentifier;
 
     use super::PrivateKeyInfo;
 

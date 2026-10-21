@@ -15,14 +15,14 @@ use tc_asn1::{
     Asn1Error, Asn1OctetString, Asn1Ref, Decode, DecodeInner, DecodingContext, Encode,
     EncodeContent, EncodeTagged, EncodingOptions, Tagged, tag,
 };
-use tc_asn1_x509::AlgorithmIdentifier;
+use tc_asn1_x509::alg::AlgorithmIdentifier;
 
 /// An encryption algorithm and its uninterpreted ciphertext.
 ///
 /// ```
 /// use tc_asn1::Asn1OctetString;
 /// use tc_asn1_pkcs::EncryptedPrivateKeyInfo;
-/// use tc_asn1_x509::AlgorithmIdentifier;
+/// use tc_asn1_x509::alg::AlgorithmIdentifier;
 ///
 /// let info = EncryptedPrivateKeyInfo::new(
 ///     AlgorithmIdentifier::new("1.2.840.113549.1.5.13".parse()?),
@@ -127,7 +127,7 @@ mod tests {
     use alloc::string::ToString;
 
     use tc_asn1::{Asn1Error, Asn1OctetString, Decode, DecodingOptions, Encode, EncodingOptions};
-    use tc_asn1_x509::AlgorithmIdentifier;
+    use tc_asn1_x509::alg::AlgorithmIdentifier;
 
     use super::EncryptedPrivateKeyInfo;
 

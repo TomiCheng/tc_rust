@@ -32,8 +32,8 @@ BC 對照基準：`bc-csharp` 的 `7fa86379`，`crypto/src/asn1/x509/` 共 **91 
 | `Extension` | 單一 extension，含 DEFAULT FALSE 與內層資料解碼入口；尚無 `Extensions` 集合 |
 | 四種結構採用 schema helper | 本 crate 的三種結構，以及底層的 `Asn1External`；工單 F 已完成 |
 
-實作入口：[AlgorithmIdentifier](src/algorithm_identifier.rs)、
-[DigestInfo](src/digest_info.rs)、[Extension](src/extension.rs)。
+實作入口：[AlgorithmIdentifier](src/alg/algorithm_identifier.rs)、
+[DigestInfo](src/alg/digest_info.rs)、[Extension](src/ext/extension.rs)。
 `src/lib.rs` 檔頭提到的 `Name`、`Validity`、`SubjectPublicKeyInfo` 是定位描述，
 **目前沒有這三個型別的實作**。
 

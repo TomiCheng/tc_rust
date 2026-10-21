@@ -21,4 +21,4 @@ pub use rsa_private_key::{OtherPrimeInfo, RsaPrivateKey};
 pub use rsa_public_key::RsaPublicKey;
 pub use rsaes_oaep_params::RsaesOaepParams;
 pub use rsassa_pss_params::RsassaPssParams;
-pub use tc_asn1_x509::DigestInfo;
+pub use tc_asn1_x509::alg::DigestInfo;

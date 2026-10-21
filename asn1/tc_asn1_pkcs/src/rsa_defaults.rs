@@ -3,7 +3,7 @@
 use alloc::vec;
 
 use tc_asn1::{Asn1Null, Asn1Object, Asn1OctetString};
-use tc_asn1_x509::AlgorithmIdentifier;
+use tc_asn1_x509::alg::AlgorithmIdentifier;
 
 use crate::Pkcs1Algorithm;
 
