@@ -5,6 +5,7 @@
 
 extern crate alloc;
 
+mod mod_inverse;
 mod nat;
 mod sec1;
 mod secp256k1_field;

@@ -1,6 +1,6 @@
 // BC's `SecP256R1Field`: p = 2^256 - 2^224 + 2^192 + 2^96 - 1 on eight limbs.
 
-use crate::nat;
+use crate::{mod_inverse, nat};
 use tc_zeroize::Zeroize;
 
 pub(crate) const P: [u32; 8] = [
@@ -14,29 +14,6 @@ pub(crate) const P: [u32; 8] = [
     0xFFFF_FFFF,
 ];
 
-const P_MINUS_2: [u32; 8] = [
-    0xFFFF_FFFD,
-    0xFFFF_FFFF,
-    0xFFFF_FFFF,
-    0x0000_0000,
-    0x0000_0000,
-    0x0000_0000,
-    0x0000_0001,
-    0xFFFF_FFFF,
-];
-
-// (p + 1) / 4, as p = 3 mod 4.
-const SQRT_EXPONENT: [u32; 8] = [
-    0x0000_0000,
-    0x0000_0000,
-    0x4000_0000,
-    0x0000_0000,
-    0x0000_0000,
-    0x4000_0000,
-    0xC000_0000,
-    0x3FFF_FFFF,
-];
-
 // 2^256 mod p = 2^224 - 2^192 - 2^96 + 1.
 const FOLD: [i64; 8] = [1, 0, 0, -1, 0, 0, -1, 1];
 
@@ -48,17 +25,40 @@ pub(crate) fn multiply(x: &[u32; 8], y: &[u32; 8]) -> [u32; 8] {
 }
 
 pub(crate) fn square(x: &[u32; 8]) -> [u32; 8] {
-    multiply(x, x)
+    let mut tt = nat::square::<8, 16>(x);
+    let z = reduce(&tt);
+    tt.zeroize();
+    z
 }
 
-// x^(p - 2), zero for zero.
+// BC's `SquareN`: x^(2^n), for n of at least one.
+pub(crate) fn square_n(x: &[u32; 8], n: usize) -> [u32; 8] {
+    debug_assert!(n > 0);
+    let mut z = square(x);
+    for _ in 1..n {
+        z = square(&z);
+    }
+    z
+}
+
+// BC's `Inv`, through `Mod.ModOddInverse`; zero for zero.
 pub(crate) fn invert(x: &[u32; 8]) -> [u32; 8] {
-    nat::pow(x, &P_MINUS_2, multiply)
+    mod_inverse::mod_odd_inverse::<8, 9>(&P, x).0
 }
 
-// x^((p + 1) / 4), the square root when there is one.
-pub(crate) fn sqrt_candidate(x: &[u32; 8]) -> [u32; 8] {
-    nat::pow(x, &SQRT_EXPONENT, multiply)
+// BC's `SecP256R1FieldElement.Sqrt`: x^((p + 1) / 4) = x^(2^254 - 2^222 + 2^190 + 2^94) by
+// its addition chain, the square root when there is one.
+pub(crate) fn sqrt(x1: &[u32; 8]) -> [u32; 8] {
+    let mut t1 = multiply(&square(x1), x1);
+    let mut t2 = multiply(&square_n(&t1, 2), &t1);
+    t1 = multiply(&square_n(&t2, 4), &t2);
+    t2 = multiply(&square_n(&t1, 8), &t1);
+    t1 = multiply(&square_n(&t2, 16), &t2);
+    t1 = multiply(&square_n(&t1, 32), x1);
+    t1 = multiply(&square_n(&t1, 96), x1);
+    t1 = square_n(&t1, 94);
+    t2.zeroize();
+    t1
 }
 
 // BC's `Reduce`: the Solinas reduction of a product below p^2, by signed sums of its

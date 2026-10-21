@@ -77,7 +77,7 @@ impl FieldElement for SecP256R1FieldElement {
 
     fn sqrt(&self) -> Option<Self> {
         let root = Self {
-            value: secp256r1_field::sqrt_candidate(&self.value),
+            value: secp256r1_field::sqrt(&self.value),
         };
         (root.square() == *self).then_some(root)
     }
