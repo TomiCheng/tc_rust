@@ -13,6 +13,12 @@ use tc_f2m_custom_v2::{
     SecT163FieldElement, SecT193FieldElement, SecT233FieldElement, SecT239FieldElement,
     SecT283FieldElement, SecT409FieldElement, SecT571FieldElement, SecTCtCurve, SecTVarCurve,
 };
+use tc_fp_curve_v2::FpCtCurve;
+use tc_fp_curve_v2::named_curves as generic_prime;
+use tc_fp_custom_v2::named_curves::{SECP256K1, SECP256R1, SECP384R1};
+use tc_fp_custom_v2::{
+    SecP256K1FieldElement, SecP256R1FieldElement, SecP384R1FieldElement, SecPCtCurve, SecPVarCurve,
+};
 use tc_sha::Sha256Digest;
 
 type Ct<'a> = &'a SecTCtCurve<SecT163FieldElement>;
@@ -216,5 +222,90 @@ fn the_other_fields_sign_as_the_generic_curves_do() {
     let g = SECT571K1.var_generator(&var);
     assert!(verify::<&SecTVarCurve<SecT571FieldElement>>(
         g, &d, &hash, &signature
+    ));
+}
+
+// RFC 6979 A.2.5: P-256, SHA-256, "sample". Signed on the specialized constant-time curve and
+// verified on the variable-time one.
+#[test]
+fn p_256_signs_as_rfc_6979_does_on_the_specialized_curve() {
+    let (ct, var) = (SECP256R1.ct_curve(), SECP256R1.var_curve());
+    let d = integer("C9AFA9D845BA75166B5C215767B1D6934E50C3DB36E89B127B8A622B120F6721");
+    let hash = sha256(b"sample");
+
+    let signature =
+        sign::<&SecPCtCurve<SecP256R1FieldElement>>(SECP256R1.ct_generator(&ct), &d, &hash);
+    assert_eq!(
+        signature,
+        (
+            integer("EFD48B2AACB6A8FD1140DD9CD45E81D69D2C877B56AAF991C34D0EA84EAF3716"),
+            integer("F7CB1C942D657C41D436C7A1B6E29F65F3E900DBB9AFF4064DC4AB2F843ACDA8"),
+        )
+    );
+    let g = SECP256R1.var_generator(&var);
+    assert!(verify::<&SecPVarCurve<SecP256R1FieldElement>>(
+        g.clone(),
+        &d,
+        &hash,
+        &signature
+    ));
+    assert!(!verify::<&SecPVarCurve<SecP256R1FieldElement>>(
+        g,
+        &d,
+        &sha256(b"test"),
+        &signature
+    ));
+}
+
+// RFC 6979 A.2.6: P-384 with SHA-256, "sample"; a twelve-limb field.
+#[test]
+fn p_384_signs_as_rfc_6979_does_on_the_specialized_curve() {
+    let (ct, var) = (SECP384R1.ct_curve(), SECP384R1.var_curve());
+    let d = integer(
+        "6B9D3DAD2E1B8C1C05B19875B6659F4DE23C3B667BF297BA9AA47740787137D896D5724E4C70A825F872C9EA60D2EDF5",
+    );
+    let hash = sha256(b"sample");
+
+    let signature =
+        sign::<&SecPCtCurve<SecP384R1FieldElement>>(SECP384R1.ct_generator(&ct), &d, &hash);
+    assert_eq!(
+        signature,
+        (
+            integer(
+                "21B13D1E013C7FA1392D03C5F99AF8B30C570C6F98D4EA8E354B63A21D3DAA33BDE1E888E63355D92FA2B3C36D8FB2CD",
+            ),
+            integer(
+                "F3AA443FB107745BF4BD77CB3891674632068A10CA67E3D45DB2266FA7D1FEEBEFDC63ECCD1AC42EC0CB8668A4FA0AB0",
+            ),
+        )
+    );
+    assert!(verify::<&SecPVarCurve<SecP384R1FieldElement>>(
+        SECP384R1.var_generator(&var),
+        &d,
+        &hash,
+        &signature
+    ));
+}
+
+// secp256k1, which RFC 6979 does not list: the same key, message and deterministic k give
+// the generic curve's signature, which the specialized Var curve verifies.
+#[test]
+fn secp256k1_signs_as_the_generic_curve_does() {
+    let (ct, var) = (SECP256K1.ct_curve(), SECP256K1.var_curve());
+    let field = generic_prime::SECP256K1.field();
+    let reference = generic_prime::SECP256K1.ct_curve(&field);
+    let d = integer("0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF");
+    let hash = sha256(b"sample");
+
+    let signature =
+        sign::<&SecPCtCurve<SecP256K1FieldElement>>(SECP256K1.ct_generator(&ct), &d, &hash);
+    let expected =
+        sign::<&FpCtCurve<'_>>(generic_prime::SECP256K1.ct_generator(&reference), &d, &hash);
+    assert_eq!(signature, expected);
+    assert!(verify::<&SecPVarCurve<SecP256K1FieldElement>>(
+        SECP256K1.var_generator(&var),
+        &d,
+        &hash,
+        &signature
     ));
 }

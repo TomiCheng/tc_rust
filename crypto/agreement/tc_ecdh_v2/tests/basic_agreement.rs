@@ -8,6 +8,10 @@ use tc_f2m_curve_v2::F2mCtCurve;
 use tc_f2m_curve_v2::named_curves::{SECT163R2, SECT283K1};
 use tc_fp_curve_v2::FpCtCurve;
 use tc_fp_curve_v2::named_curves::{SECP256K1, SECP256R1};
+use tc_fp_custom_v2::named_curves as custom;
+use tc_fp_custom_v2::{
+    SecP256K1FieldElement, SecP256R1FieldElement, SecP384R1FieldElement, SecPCtCurve,
+};
 
 fn integer(text: &str) -> PaddedBigUint {
     let bytes: Vec<u8> = (0..text.len())
@@ -126,5 +130,48 @@ fn an_agreement_refuses_to_run_uninitialized_on_another_domain_or_into_a_short_b
     assert_eq!(
         agreement.calculate_agreement(&stranger, &mut [0; 32]),
         Err(EcdhError::WrongDomain)
+    );
+}
+
+// The specialized prime curves reach the x coordinate of d_A·d_B·G too.
+#[test]
+fn two_parties_agree_on_the_specialized_prime_curves() {
+    let curve = custom::SECP256R1.ct_curve();
+    two_parties_agree::<&SecPCtCurve<SecP256R1FieldElement>>(
+        custom::SECP256R1.ct_generator(&curve),
+    );
+
+    let curve = custom::SECP256K1.ct_curve();
+    two_parties_agree::<&SecPCtCurve<SecP256K1FieldElement>>(
+        custom::SECP256K1.ct_generator(&curve),
+    );
+
+    let curve = custom::SECP384R1.ct_curve();
+    two_parties_agree::<&SecPCtCurve<SecP384R1FieldElement>>(
+        custom::SECP384R1.ct_generator(&curve),
+    );
+}
+
+// RFC 5903, 8.1, on the specialized P-256.
+#[test]
+fn the_specialized_p_256_gives_the_shared_secret_of_rfc_5903() {
+    let curve = custom::SECP256R1.ct_curve();
+    let g = custom::SECP256R1.ct_generator(&curve);
+    type Ct<'a> = &'a SecPCtCurve<SecP256R1FieldElement>;
+    let bytes = |text: &str| ArrayEncoding::<u8>::to_be(&integer(text));
+
+    let i = integer("C88F01F510D9AC3F70A292DAA2316DE544E9AAB8AFE84049C62A9C57862D1433");
+    let gr = curve
+        .create_point(
+            &bytes("D12DFB5289C8D4F81208B70270398C342296970A0BCCB74C736FC7554494BF63"),
+            &bytes("56FBF3CA366CC23E8157854C13C58D6AAC23F046ADA30F8353E74F33039872AB"),
+        )
+        .unwrap();
+    let private_key = EcPrivateKey::<Ct<'_>>::new(g.clone(), i).unwrap();
+    let public_key = EcPublicKey::<Ct<'_>>::new(g, &gr).unwrap();
+
+    assert_eq!(
+        agree(&private_key, &public_key).unwrap(),
+        bytes("D6840F6B42F6EDAFD13116E0E12565202FEF8E9ECE7DCE03812464D04B9442DE")
     );
 }

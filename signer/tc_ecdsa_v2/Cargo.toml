@@ -22,4 +22,5 @@ tc_digest = "0.1.0"
 tc_f2m_curve_v2 = { version = "0.1.0", path = "../../math/tc_f2m_curve_v2" }
 tc_f2m_custom_v2 = { version = "0.1.0", path = "../../math/tc_f2m_custom_v2" }
 tc_fp_curve_v2 = { version = "0.1.0", path = "../../math/tc_fp_curve_v2" }
+tc_fp_custom_v2 = { version = "0.1.0", path = "../../math/tc_fp_custom_v2" }
 tc_sha = "0.1.1"
