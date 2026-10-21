@@ -1,6 +1,5 @@
-use crate::nat;
 use crate::secp_element::SecPElement;
-use crate::secp521r1_field::{self, P};
+use crate::secp521r1_field;
 use tc_bigint::{ArrayEncoding, PaddedBigUint};
 use tc_constant_time::{Choice, ConditionallySelectable, ConstantTimeEq};
 use tc_ec_core_v2::{FieldElement, PrimeFieldElement};
@@ -8,22 +7,22 @@ use tc_zeroize::Zeroize;
 
 const LENGTH: usize = 66;
 
-/// BC's `SecP521R1FieldElement`: GF(p) for p = 2^521 - 1, on seventeen
-/// 32-bit limbs. Wiped on drop.
+/// BC's `SecP521R1FieldElement`: GF(p) for p = 2^521 - 1, on nine 64-bit
+/// limbs where BC takes seventeen of 32 bits. Wiped on drop.
 #[derive(Clone)]
 pub struct SecP521R1FieldElement {
-    value: [u32; 17],
+    value: [u64; 9],
 }
 
 impl SecPElement for SecP521R1FieldElement {
     const LENGTH: usize = LENGTH;
 
     fn zero() -> Self {
-        Self { value: [0; 17] }
+        Self { value: [0; 9] }
     }
 
     fn one() -> Self {
-        let mut value = [0; 17];
+        let mut value = [0; 9];
         value[0] = 1;
         Self { value }
     }
@@ -32,8 +31,8 @@ impl SecPElement for SecP521R1FieldElement {
         if bytes.len() != LENGTH {
             return None;
         }
-        let value = nat::from_be(bytes);
-        (nat::sub(&value, &P).1 == 1).then_some(Self { value })
+        let value = secp521r1_field::from_be(bytes);
+        (secp521r1_field::is_below_p(&value) == 1).then_some(Self { value })
     }
 
     fn low_bit(&self) -> u8 {
@@ -44,7 +43,7 @@ impl SecPElement for SecP521R1FieldElement {
 /// Constant time, apart from the `bool` and `Option` answers.
 impl FieldElement for SecP521R1FieldElement {
     fn is_zero(&self) -> bool {
-        nat::is_zero(&self.value) == 1
+        self.value.ct_eq(&[0; 9]).unwrap_u8() == 1
     }
 
     fn is_one(&self) -> bool {
@@ -53,13 +52,13 @@ impl FieldElement for SecP521R1FieldElement {
 
     fn add(&self, rhs: &Self) -> Self {
         Self {
-            value: nat::add_mod(&self.value, &rhs.value, &P),
+            value: secp521r1_field::add(&self.value, &rhs.value),
         }
     }
 
     fn subtract(&self, rhs: &Self) -> Self {
         Self {
-            value: nat::sub_mod(&self.value, &rhs.value, &P),
+            value: secp521r1_field::subtract(&self.value, &rhs.value),
         }
     }
 
@@ -84,7 +83,7 @@ impl FieldElement for SecP521R1FieldElement {
 
     fn negate(&self) -> Self {
         Self {
-            value: nat::sub_mod(&[0; 17], &self.value, &P),
+            value: secp521r1_field::subtract(&[0; 9], &self.value),
         }
     }
 
@@ -100,7 +99,7 @@ impl FieldElement for SecP521R1FieldElement {
 
     fn encode_to(&self, output: &mut [u8]) {
         assert_eq!(output.len(), LENGTH, "a field element takes 66 bytes");
-        nat::to_be(&self.value, output);
+        secp521r1_field::to_be(&self.value, output);
     }
 }
 
@@ -110,7 +109,7 @@ impl PrimeFieldElement for SecP521R1FieldElement {
 
     fn element_from_big_uint(&self, value: &PaddedBigUint) -> Self {
         let mut bytes = ArrayEncoding::<u8>::to_be(value);
-        let value = nat::reduce_be(&bytes, &P, secp521r1_field::multiply);
+        let value = secp521r1_field::reduce_be(&bytes);
         bytes.zeroize();
         Self { value }
     }
@@ -128,7 +127,7 @@ impl PrimeFieldElement for SecP521R1FieldElement {
 impl ConditionallySelectable for SecP521R1FieldElement {
     fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
         Self {
-            value: <[u32; 17]>::conditional_select(&a.value, &b.value, choice),
+            value: <[u64; 9]>::conditional_select(&a.value, &b.value, choice),
         }
     }
 }
