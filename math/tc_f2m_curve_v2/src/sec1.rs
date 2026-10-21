@@ -32,7 +32,7 @@ fn y_tilde(x: &F2mFieldElement, y: &F2mFieldElement) -> u8 {
 // or `None` when Tr(beta) = 1. For odd m the half-trace is one; for even m BC draws t at
 // random until the chain gives a root, and here t runs through x^0, x^1, ..., of which some
 // has trace 1 and so gives one.
-fn solve_quadratic(field: &F2mField, beta: &F2mFieldElement) -> Option<F2mFieldElement> {
+pub(crate) fn solve_quadratic(field: &F2mField, beta: &F2mFieldElement) -> Option<F2mFieldElement> {
     let m = field.m() as usize;
     if m & 1 == 1 {
         let z = beta.half_trace();

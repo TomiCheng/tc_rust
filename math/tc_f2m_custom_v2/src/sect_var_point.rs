@@ -79,8 +79,9 @@ impl<'a, F: SecTElement> SecTVarPoint<'a, F> {
         lhs.multiply(&x2) == rhs
     }
 
-    // BC's `AbstractF2mPoint.SatisfiesOrder`: with cofactor 2, a point of odd order has
-    // Tr(x) = 1.
+    // BC's `AbstractF2mPoint.SatisfiesOrder`. With cofactor 2, a point of odd order has
+    // Tr(x) = 1. With cofactor 4, it is four times a point: L² + L = x + a has a root, which
+    // halves it, and the half halves again when Tr(xL + y) = 0.
     fn satisfies_order(&self) -> bool {
         if self.is_infinity() {
             return true;
@@ -88,6 +89,17 @@ impl<'a, F: SecTElement> SecTVarPoint<'a, F> {
         let cofactor = self.curve.cofactor().expect("a SEC curve has a cofactor");
         if *cofactor == PaddedBigUint::from(2u8) {
             return self.x().expect("a finite point").trace() != 0;
+        }
+        if *cofactor == PaddedBigUint::from(4u8) {
+            let affine = self.normalize();
+            let (x, y) = (
+                affine.x().expect("a finite point"),
+                affine.y().expect("a finite point"),
+            );
+            let Some(l) = sec1::solve_quadratic(&x.add(self.curve.a())) else {
+                return false;
+            };
+            return x.multiply(&l).add(&y).trace() == 0;
         }
         // BC's `ReferenceMultiply`, not the curve's multiplier: on a Koblitz curve that is the
         // τ-adic NAF, which holds only inside the subgroup.

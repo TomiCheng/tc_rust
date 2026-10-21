@@ -143,8 +143,10 @@ impl<'a> F2mVarPoint<'a> {
         }
     }
 
-    // BC's `AbstractF2mPoint.SatisfiesOrder`: with cofactor 2, a point of odd order is a
-    // double, which holds when Tr(x + a) = 0, and Tr(a) = 1 on those curves.
+    // BC's `AbstractF2mPoint.SatisfiesOrder`. With cofactor 2, a point of odd order is a
+    // double, which holds when Tr(x + a) = 0, and Tr(a) = 1 on those curves. With cofactor 4,
+    // it is four times a point: L² + L = x + a has a root, which halves it, and the half
+    // halves again when Tr(xL + y) = 0, as Tr(a) = 0 on those curves.
     fn satisfies_order(&self) -> bool {
         let cofactor = self.curve.cofactor();
         if self.is_infinity() || cofactor.is_some_and(|h| *h == PaddedBigUint::from(1u8)) {
@@ -152,6 +154,17 @@ impl<'a> F2mVarPoint<'a> {
         }
         if cofactor.is_some_and(|h| *h == PaddedBigUint::from(2u8)) {
             return self.x().expect("a finite point").trace() != 0;
+        }
+        if cofactor.is_some_and(|h| *h == PaddedBigUint::from(4u8)) {
+            let affine = self.normalize();
+            let (x, y) = (
+                affine.x().expect("a finite point"),
+                affine.y().expect("a finite point"),
+            );
+            let Some(l) = sec1::solve_quadratic(self.curve.field(), &x.add(self.curve.a())) else {
+                return false;
+            };
+            return x.multiply(&l).add(&y).trace() == 0;
         }
         // BC's `ReferenceMultiply`, not the curve's multiplier: on a Koblitz curve that is the
         // τ-adic NAF, which holds only inside the subgroup.

@@ -36,7 +36,7 @@ fn y_tilde<F: SecTElement>(x: &F, y: &F) -> u8 {
 
 // BC's `SolveQuadraticEquation`, X9.62 D.1.6: a z with z² + z = beta, the other being z + 1,
 // or `None` when Tr(beta) = 1. Every SEC field has an odd m, where the half-trace is one.
-fn solve_quadratic<F: SecTElement>(beta: &F) -> Option<F> {
+pub(crate) fn solve_quadratic<F: SecTElement>(beta: &F) -> Option<F> {
     debug_assert!(F::M % 2 == 1);
     let z = beta.half_trace();
     (z.square().add(&z) == *beta).then_some(z)
