@@ -1,0 +1,13 @@
+[package]
+name = "tc_x509"
+description = "X.509 certificates, ported from Bouncy Castle C#."
+version.workspace = true
+edition.workspace = true
+rust-version = "1.85"
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+tc_asn1 = "0.1.1"
+tc_asn1_x500 = "0.1.0"
+tc_asn1_x509 = { version = "0.1.0", path = "../../asn1/tc_asn1_x509" }
