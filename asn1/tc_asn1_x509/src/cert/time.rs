@@ -12,6 +12,8 @@
 
 use core::{cmp::Ordering, fmt};
 
+#[cfg(feature = "chrono")]
+use chrono::{DateTime, Datelike, NaiveDate, Timelike, Utc};
 use tc_asn1::{
     Asn1Error, Asn1GeneralizedTime, Asn1Ref, Asn1UtcTime, Decode, DecodeInner, DecodingContext,
     Encode, EncodeContent, EncodeTagged, EncodingOptions,
@@ -123,6 +125,64 @@ impl From<Asn1UtcTime> for Time {
 impl From<Asn1GeneralizedTime> for Time {
     fn from(value: Asn1GeneralizedTime) -> Self {
         Self::GeneralizedTime(value)
+    }
+}
+
+#[cfg(feature = "chrono")]
+impl From<Time> for DateTime<Utc> {
+    /// The same instant. Variable time: branches on the fields, which are public.
+    fn from(value: Time) -> Self {
+        NaiveDate::from_ymd_opt(
+            i32::from(value.year()),
+            u32::from(value.month()),
+            u32::from(value.day()),
+        )
+        .and_then(|date| {
+            date.and_hms_opt(
+                u32::from(value.hour()),
+                u32::from(value.minute()),
+                u32::from(value.second()),
+            )
+        })
+        .expect("Time holds a valid Gregorian date and time")
+        .and_utc()
+    }
+}
+
+#[cfg(feature = "chrono")]
+impl TryFrom<DateTime<Utc>> for Time {
+    type Error = Asn1Error;
+
+    /// Truncates to the second, the precision `Time` carries, and picks the
+    /// alternative as [`Time::new`] does. A leap second becomes `:59`. Years
+    /// outside 1950-9999 return `MalformedValue`. Variable time: branches on
+    /// the fields, which are public.
+    ///
+    /// ```
+    /// use chrono::{DateTime, TimeZone, Utc};
+    /// use tc_asn1_x509::cert::{Time, Validity};
+    ///
+    /// let not_before = Time::new(2026, 1, 1, 0, 0, 0)?;
+    /// let not_after = Time::new(2027, 1, 1, 0, 0, 0)?;
+    /// let validity = Validity::new(not_before, not_after)?;
+    ///
+    /// let now = Time::try_from(Utc.with_ymd_and_hms(2026, 10, 21, 8, 0, 0).unwrap())?;
+    /// assert!(validity.not_before() <= now && now <= validity.not_after());
+    ///
+    /// let expiry: DateTime<Utc> = validity.not_after().into();
+    /// assert_eq!(expiry, Utc.with_ymd_and_hms(2027, 1, 1, 0, 0, 0).unwrap());
+    /// # Ok::<(), tc_asn1::Asn1Error>(())
+    /// ```
+    fn try_from(value: DateTime<Utc>) -> Result<Self, Asn1Error> {
+        let year = u16::try_from(value.year()).map_err(|_| Asn1Error::MalformedValue)?;
+        Self::new(
+            year,
+            value.month() as u8,
+            value.day() as u8,
+            value.hour() as u8,
+            value.minute() as u8,
+            value.second() as u8,
+        )
     }
 }
 
@@ -250,5 +310,79 @@ mod tests {
         let general = Time::GeneralizedTime(Asn1GeneralizedTime::new(2026, 1, 1, 0, 0, 0).unwrap());
         assert_ne!(utc, general);
         assert_eq!(utc.cmp(&general), Ordering::Less);
+    }
+
+    #[cfg(feature = "chrono")]
+    mod chrono_conversion {
+        use chrono::{DateTime, NaiveDate, TimeZone, Utc};
+        use tc_asn1::{Asn1Error, Asn1GeneralizedTime};
+
+        use crate::cert::Time;
+
+        fn utc(
+            year: i32,
+            month: u32,
+            day: u32,
+            hour: u32,
+            minute: u32,
+            second: u32,
+        ) -> DateTime<Utc> {
+            Utc.with_ymd_and_hms(year, month, day, hour, minute, second)
+                .unwrap()
+        }
+
+        #[test]
+        fn instants_round_trip_and_pick_the_alternative_at_2050() {
+            for instant in [utc(1950, 1, 1, 0, 0, 0), utc(2049, 12, 31, 23, 59, 59)] {
+                let time = Time::try_from(instant).unwrap();
+                assert!(matches!(time, Time::UtcTime(_)));
+                assert_eq!(DateTime::<Utc>::from(time), instant);
+            }
+            for instant in [utc(2050, 1, 1, 0, 0, 0), utc(9999, 12, 31, 23, 59, 59)] {
+                let time = Time::try_from(instant).unwrap();
+                assert!(matches!(time, Time::GeneralizedTime(_)));
+                assert_eq!(DateTime::<Utc>::from(time), instant);
+            }
+        }
+
+        #[test]
+        fn a_generalizedtime_before_2050_converts_to_its_own_instant() {
+            let time =
+                Time::GeneralizedTime(Asn1GeneralizedTime::new(1949, 6, 1, 12, 0, 0).unwrap());
+            assert_eq!(DateTime::<Utc>::from(time), utc(1949, 6, 1, 12, 0, 0));
+        }
+
+        #[test]
+        fn fractions_are_truncated_and_a_leap_second_becomes_59() {
+            let fraction = NaiveDate::from_ymd_opt(2026, 10, 21)
+                .unwrap()
+                .and_hms_milli_opt(8, 0, 0, 999)
+                .unwrap()
+                .and_utc();
+            assert_eq!(
+                Time::try_from(fraction).unwrap(),
+                Time::new(2026, 10, 21, 8, 0, 0).unwrap()
+            );
+            let leap = NaiveDate::from_ymd_opt(2016, 12, 31)
+                .unwrap()
+                .and_hms_milli_opt(23, 59, 59, 1_500)
+                .unwrap()
+                .and_utc();
+            assert_eq!(
+                Time::try_from(leap).unwrap(),
+                Time::new(2016, 12, 31, 23, 59, 59).unwrap()
+            );
+        }
+
+        #[test]
+        fn years_outside_1950_to_9999_are_rejected() {
+            for instant in [
+                utc(1949, 12, 31, 23, 59, 59),
+                utc(10000, 1, 1, 0, 0, 0),
+                utc(-1, 1, 1, 0, 0, 0),
+            ] {
+                assert_eq!(Time::try_from(instant), Err(Asn1Error::MalformedValue));
+            }
+        }
     }
 }
