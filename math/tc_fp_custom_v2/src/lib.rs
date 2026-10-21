@@ -5,6 +5,7 @@
 
 mod secp256k1_field_element;
 mod secp256r1_field_element;
+mod secp384r1_field_element;
 mod secp_ct_curve;
 mod secp_ct_point;
 mod secp_element;
@@ -19,3 +20,4 @@ pub use secp_var_curve::SecPVarCurve;
 pub use secp_var_point::SecPVarPoint;
 pub use secp256k1_field_element::SecP256K1FieldElement;
 pub use secp256r1_field_element::SecP256R1FieldElement;
+pub use secp384r1_field_element::SecP384R1FieldElement;
