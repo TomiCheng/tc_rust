@@ -31,6 +31,7 @@ mod sect_element;
 mod sect_error;
 mod sect_var_curve;
 mod sect_var_point;
+mod sect_var_precomputed;
 
 pub mod named_curves;
 
@@ -39,6 +40,7 @@ pub use sect_ct_point::SecTCtPoint;
 pub use sect_error::SecTError;
 pub use sect_var_curve::SecTVarCurve;
 pub use sect_var_point::SecTVarPoint;
+pub use sect_var_precomputed::SecTVarPrecomputed;
 pub use sect113_field_element::SecT113FieldElement;
 pub use sect131_field_element::SecT131FieldElement;
 pub use sect163_field_element::SecT163FieldElement;

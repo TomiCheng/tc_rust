@@ -2,6 +2,7 @@ use crate::EcdsaError;
 use alloc::vec;
 use tc_bigint::{ArrayEncoding, PaddedBigUint};
 use tc_dsa::{Dsa, DsaInit, DsaKCalculator};
+use tc_ec_core_v2::multiplier::{BaseMultiplier, PerCall};
 use tc_ec_core_v2::{Curve, FieldElement, Point};
 use tc_ec_key::{EcPrivateKey, EcPublicKey};
 use tc_modular::{Odd, PaddedMontyForm, PaddedMontyParams};
@@ -9,66 +10,95 @@ use tc_zeroize::Zeroizing;
 
 /// BC's `ECDsaSigner`, drawing each signature's k from the calculator `K`. Initialize it with
 /// a key on a Ct curve to keep d and k secret.
-pub struct EcdsaSigner<C: Curve<Scalar = PaddedBigUint>, K> {
+///
+/// Each `init` builds an `M` for G, and for Q when verifying, so signing or verifying many
+/// times under one key reuses their tables. `M` defaults to [`PerCall`], which multiplies as
+/// the curve does.
+pub struct EcdsaSigner<C: Curve<Scalar = PaddedBigUint>, K, M = PerCall<C>> {
     k_calculator: K,
-    state: Option<State<C>>,
+    state: Option<State<C, M>>,
 }
 
-struct State<C: Curve<Scalar = PaddedBigUint>> {
-    key: Key<C>,
+struct State<C: Curve<Scalar = PaddedBigUint>, M> {
+    key: Key<C, M>,
     params: PaddedMontyParams,
 }
 
-enum Key<C: Curve<Scalar = PaddedBigUint>> {
-    Signing(EcPrivateKey<C>),
-    Verifying(EcPublicKey<C>),
+enum Key<C: Curve<Scalar = PaddedBigUint>, M> {
+    Signing { key: EcPrivateKey<C>, g: M },
+    Verifying { g: M, q: M },
 }
 
 impl<C: Curve<Scalar = PaddedBigUint>, K> EcdsaSigner<C, K> {
-    /// A signer drawing k from `k_calculator`, to be initialized. Constant time.
+    /// A signer drawing k from `k_calculator` and multiplying as the curve does, to be
+    /// initialized. Constant time.
     pub const fn new(k_calculator: K) -> Self {
+        Self::with_multiplier(k_calculator)
+    }
+}
+
+impl<C: Curve<Scalar = PaddedBigUint>, K, M: BaseMultiplier<C>> EcdsaSigner<C, K, M> {
+    /// A signer drawing k from `k_calculator` and multiplying by `M`, to be initialized.
+    /// Constant time.
+    pub const fn with_multiplier(k_calculator: K) -> Self {
         Self {
             k_calculator,
             state: None,
         }
     }
 
-    fn init_key(&mut self, g: &C::Point, key: Key<C>) -> Result<(), EcdsaError> {
+    fn init_key(
+        &mut self,
+        g: &C::Point,
+        key: impl FnOnce() -> Key<C, M>,
+    ) -> Result<(), EcdsaError> {
         self.state = None;
         let n = g.curve().order().cloned().ok_or(EcdsaError::MissingOrder)?;
         let n = Odd::new(n).ok_or(EcdsaError::MissingOrder)?;
         self.state = Some(State {
-            key,
+            key: key(),
             params: PaddedMontyParams::new(n),
         });
         Ok(())
     }
 }
 
-/// Keeps a copy of the key to sign with, whose d is wiped when the signer is dropped. Fails
-/// for a curve without an odd order. Variable time: only for public values, as n is.
-impl<C: Curve<Scalar = PaddedBigUint>, K> DsaInit<EcPrivateKey<C>> for EcdsaSigner<C, K> {
+/// Keeps a copy of the key to sign with, whose d is wiped when the signer is dropped, and builds
+/// an `M` for G. Fails for a curve without an odd order. Variable time: only for public values,
+/// as n and G are.
+impl<C: Curve<Scalar = PaddedBigUint>, K, M: BaseMultiplier<C>> DsaInit<EcPrivateKey<C>>
+    for EcdsaSigner<C, K, M>
+{
     type Error = EcdsaError;
 
     fn init(&mut self, key: &EcPrivateKey<C>) -> Result<(), EcdsaError> {
-        self.init_key(key.g(), Key::Signing(key.clone()))
+        self.init_key(key.g(), || Key::Signing {
+            key: key.clone(),
+            g: M::new(key.g().clone()),
+        })
     }
 }
 
-/// Keeps a copy of the key to verify with. Fails for a curve without an odd order. Variable
-/// time: only for public values, as the key is.
-impl<C: Curve<Scalar = PaddedBigUint>, K> DsaInit<EcPublicKey<C>> for EcdsaSigner<C, K> {
+/// Builds an `M` for G and one for Q. Fails for a curve without an odd order. Variable time:
+/// only for public values, as the key is.
+impl<C: Curve<Scalar = PaddedBigUint>, K, M: BaseMultiplier<C>> DsaInit<EcPublicKey<C>>
+    for EcdsaSigner<C, K, M>
+{
     type Error = EcdsaError;
 
     fn init(&mut self, key: &EcPublicKey<C>) -> Result<(), EcdsaError> {
-        self.init_key(key.g(), Key::Verifying(key.clone()))
+        self.init_key(key.g(), || Key::Verifying {
+            g: M::new(key.g().clone()),
+            q: M::new(key.q().clone()),
+        })
     }
 }
 
-impl<C, K> Dsa for EcdsaSigner<C, K>
+impl<C, K, M> Dsa for EcdsaSigner<C, K, M>
 where
     C: Curve<Scalar = PaddedBigUint>,
     K: DsaKCalculator<PaddedBigUint>,
+    M: BaseMultiplier<C>,
 {
     type Integer = PaddedBigUint;
     type Error = EcdsaError;
@@ -80,14 +110,14 @@ where
     }
 
     /// X9.62 5.3: r = (k·G).x mod n and s = k⁻¹(e + d·r) mod n, drawing k again while either
-    /// is zero. As constant time in d and k as the curve's multiplication; the modular steps
-    /// are constant time.
+    /// is zero. As constant time in d and k as `M`'s multiplication; the modular steps are
+    /// constant time.
     fn generate_signature(
         &mut self,
         message: &[u8],
     ) -> Result<(PaddedBigUint, PaddedBigUint), EcdsaError> {
         let state = self.state.as_ref().ok_or(EcdsaError::NotInitialized)?;
-        let Key::Signing(key) = &state.key else {
+        let Key::Signing { key, g } = &state.key else {
             return Err(EcdsaError::NotForSigning);
         };
         let params = &state.params;
@@ -99,7 +129,8 @@ where
         self.k_calculator.init(n, key.d(), message);
         loop {
             let k = Zeroizing::new(self.k_calculator.next_k());
-            let x = C::multiply(key.g(), &k)
+            let x = g
+                .multiply(&k)
                 .x()
                 .expect("k·G is finite for k in [1, n − 1]");
             let r = field_to_integer(&x) % n;
@@ -133,7 +164,7 @@ where
         s: &PaddedBigUint,
     ) -> Result<bool, EcdsaError> {
         let state = self.state.as_ref().ok_or(EcdsaError::NotInitialized)?;
-        let Key::Verifying(key) = &state.key else {
+        let Key::Verifying { g, q } = &state.key else {
             return Err(EcdsaError::NotForVerifying);
         };
         let params = &state.params;
@@ -148,7 +179,7 @@ where
         };
         let u1 = (PaddedMontyForm::new(&calculate_e(n, message), params) * &c).retrieve();
         let u2 = (PaddedMontyForm::new(r, params) * &c).retrieve();
-        let point = C::multiply(key.g(), &u1).add(&C::multiply(key.q(), &u2));
+        let point = g.multiply(&u1).add(&q.multiply(&u2));
         let Some(x) = point.x() else {
             return Ok(false);
         };

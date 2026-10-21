@@ -78,15 +78,24 @@ impl<'a> FpCtPoint<'a> {
     /// `kP` over every window of the width of `scalar`, which is public, with a lookup
     /// that reads the whole table. Constant time in the point and the scalar.
     pub fn multiply(&self, scalar: &PaddedBigUint) -> Self {
+        Self::multiply_window(&self.window_table(), scalar)
+    }
+
+    // 0P to 15P, the table of the fixed window. Constant time.
+    pub(crate) fn window_table(&self) -> Vec<Self> {
         let mut table = Vec::with_capacity(1 << WINDOW);
         table.push(Self::infinity(self.curve));
         for i in 1..1 << WINDOW {
             let next = table[i - 1].add(self);
             table.push(next);
         }
+        table
+    }
 
+    // kP over every window of the width of `scalar` on P's `window_table`. Constant time.
+    pub(crate) fn multiply_window(table: &[Self], scalar: &PaddedBigUint) -> Self {
         let width = scalar.as_limbs().len() as u32 * Word::BITS;
-        let mut result = Self::infinity(self.curve);
+        let mut result = table[0].clone();
         for window in (0..width / WINDOW).rev() {
             for _ in 0..WINDOW {
                 result = result.twice();
@@ -95,7 +104,7 @@ impl<'a> FpCtPoint<'a> {
             for bit in (0..WINDOW).rev() {
                 index = (index << 1) | u8::from(scalar.bit(window * WINDOW + bit));
             }
-            result = result.add(&lookup(&table, index));
+            result = result.add(&lookup(table, index));
         }
         result
     }

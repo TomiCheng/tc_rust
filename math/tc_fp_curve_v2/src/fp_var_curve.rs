@@ -88,6 +88,11 @@ impl<'a> FpVarCurve<'a> {
         self.coordinate_system
     }
 
+    // β and the split, on a curve given them by `with_glv`.
+    pub(crate) fn glv(&self) -> Option<(&FpFieldElement<'a>, &glv::ScalarSplit)> {
+        self.glv.as_ref().map(|glv| (&glv.beta, &glv.split))
+    }
+
     pub fn field(&self) -> &'a FpField {
         self.field
     }

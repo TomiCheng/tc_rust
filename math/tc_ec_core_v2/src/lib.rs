@@ -9,6 +9,7 @@ mod traits;
 mod errors;
 pub mod algo;
 pub mod glv;
+pub mod multiplier;
 pub mod tnaf;
 pub mod wnaf;
 

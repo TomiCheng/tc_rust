@@ -2,6 +2,7 @@ use tc_bigint::{ArrayEncoding, PaddedBigUint};
 use tc_digest::Digest;
 use tc_dsa::{Dsa, DsaInit, HMacDsaKCalculator, RandomDsaKCalculator};
 use tc_ec_core_v2::Curve;
+use tc_ec_core_v2::multiplier::CombCt;
 use tc_ec_key::{EcPrivateKey, EcPublicKey};
 use tc_ecdsa_v2::{EcdsaError, EcdsaSigner};
 use tc_f2m_curve_v2::F2mCtCurve;
@@ -64,6 +65,35 @@ fn p_256_signs_as_rfc_6979_does() {
         "EFD48B2AACB6A8FD1140DD9CD45E81D69D2C877B56AAF991C34D0EA84EAF3716",
         "F7CB1C942D657C41D436C7A1B6E29F65F3E900DBB9AFF4064DC4AB2F843ACDA8",
     );
+}
+
+// RFC 6979 A.2.5 again, on the Ct comb: G and Q multiply through their own tables.
+#[test]
+fn a_signer_on_the_comb_signs_as_rfc_6979_does() {
+    let field = SECP256R1.field();
+    let curve = SECP256R1.ct_curve(&field);
+    let (private_key, public_key) = keys::<&FpCtCurve<'_>>(
+        SECP256R1.ct_generator(&curve),
+        integer("C9AFA9D845BA75166B5C215767B1D6934E50C3DB36E89B127B8A622B120F6721"),
+    );
+    let hash = sha256(b"sample");
+
+    let mut signer = EcdsaSigner::<_, _, CombCt<&FpCtCurve<'_>>>::with_multiplier(
+        HMacDsaKCalculator::new(Sha256Digest::new()),
+    );
+    signer.init(&private_key).unwrap();
+    let (r, s) = signer.generate_signature(&hash).unwrap();
+    assert_eq!(
+        (&r, &s),
+        (
+            &integer("EFD48B2AACB6A8FD1140DD9CD45E81D69D2C877B56AAF991C34D0EA84EAF3716"),
+            &integer("F7CB1C942D657C41D436C7A1B6E29F65F3E900DBB9AFF4064DC4AB2F843ACDA8"),
+        )
+    );
+
+    signer.init(&public_key).unwrap();
+    assert!(signer.verify_signature(&hash, &r, &s).unwrap());
+    assert!(!signer.verify_signature(&sha256(b"test"), &r, &s).unwrap());
 }
 
 // RFC 6979 A.2.9: a binary curve, with cofactor 4.

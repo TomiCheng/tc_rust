@@ -7,5 +7,7 @@
 mod mul;
 mod split;
 
+pub use mul::GlvTable;
+pub use mul::glv_mul;
 pub use mul::glv_mul_point;
 pub use split::ScalarSplit;
