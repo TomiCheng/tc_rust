@@ -1473,6 +1473,10 @@ dependencies = [
 [[package]]
 name = "tc_fp_custom_v2"
 version = "0.1.0"
+dependencies = [
+ "tc_bigint 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tc_ec_core_v2",
+]
 
 [[package]]
 name = "tc_gost28147"
