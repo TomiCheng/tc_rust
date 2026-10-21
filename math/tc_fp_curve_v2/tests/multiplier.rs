@@ -2,7 +2,7 @@ use tc_bigint::{ArrayEncoding, PaddedBigUint};
 use tc_ec_core_v2::Curve;
 use tc_ec_core_v2::multiplier::{BaseMultiplier, CombCt, CombVar};
 use tc_fp_curve_v2::named_curves::{FpNamedCurve, SECP256K1, SECP256R1};
-use tc_fp_curve_v2::{FpCtCurve, FpVarCurve};
+use tc_fp_curve_v2::{FpCtCurve, FpCtPrecomputed, FpVarCurve, FpVarPrecomputed};
 
 type Ct<'a> = &'a FpCtCurve<'a>;
 type Var<'a> = &'a FpVarCurve<'a>;
@@ -37,34 +37,41 @@ fn scalars(n: &PaddedBigUint, seed: u64) -> Vec<PaddedBigUint> {
     scalars
 }
 
-// The comb gives the curve's own multiples on the Ct and the Var curve.
+// A multiplier built for `g` gives the curve's own multiples of it.
+fn agrees<C: Curve<Scalar = PaddedBigUint>, M: BaseMultiplier<C>>(
+    g: &C::Point,
+    scalars: &[PaddedBigUint],
+) {
+    let multiplier = M::new(g.clone());
+    for k in scalars {
+        assert!(multiplier.multiply(k) == C::multiply(g, k));
+    }
+}
+
 fn check<const N: usize>(named: &FpNamedCurve<N>, seed: u64) {
     let field = named.field();
     let ct = named.ct_curve(&field);
     let g = named.ct_generator(&ct);
-    let comb = CombCt::<Ct<'_>>::new(g.clone());
-    let n = ct.order().unwrap().clone();
-    for k in scalars(&n, seed) {
-        assert!(comb.multiply(&k) == Ct::multiply(&g, &k));
-    }
+    let scalars = scalars(ct.order().unwrap(), seed);
+    agrees::<Ct<'_>, CombCt<_>>(&g, &scalars);
+    agrees::<Ct<'_>, FpCtPrecomputed<'_>>(&g, &scalars);
 
     let var = named.var_curve(&field);
     let h = named.var_generator(&var);
-    let comb = CombVar::<Var<'_>>::new(h.clone());
-    for k in scalars(&n, seed + 1) {
-        assert!(comb.multiply(&k) == Var::multiply(&h, &k));
-    }
+    agrees::<Var<'_>, CombVar<_>>(&h, &scalars);
+    agrees::<Var<'_>, FpVarPrecomputed<'_>>(&h, &scalars);
 }
 
+// P-256 takes the wNAF and secp256k1 the GLV split; both combs have six rows.
 #[test]
-fn the_comb_multiplies_as_the_curve_does_with_six_rows() {
+fn every_multiplier_gives_the_curves_own_multiples() {
     check(&SECP256R1, 0xC0B0_0256);
     check(&SECP256K1, 0xC0B0_0257);
 }
 
 #[cfg(feature = "small-curves")]
 #[test]
-fn the_comb_multiplies_as_the_curve_does_with_five_rows() {
+fn every_multiplier_gives_the_curves_own_multiples_with_a_five_row_comb() {
     check(&tc_fp_curve_v2::named_curves::SECP112R1, 0xC0B0_0112);
 }
 

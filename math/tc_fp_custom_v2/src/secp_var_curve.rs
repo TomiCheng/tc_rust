@@ -37,6 +37,11 @@ impl<F: SecPElement> SecPVarCurve<F> {
         self
     }
 
+    // β and the split, on the curves given them by `with_glv`.
+    pub(crate) fn glv(&self) -> Option<(&F, &ScalarSplit)> {
+        self.glv.as_ref().map(|(beta, split)| (beta, split))
+    }
+
     // Whether a = -3, as on the NIST curves, for the doubling of BC's `SecP*R1Point`.
     pub(crate) fn a_is_minus_three(&self) -> bool {
         self.a_is_minus_three
