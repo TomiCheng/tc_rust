@@ -8,6 +8,7 @@ mod coordinate_system;
 mod traits;
 mod errors;
 pub mod algo;
+pub mod tnaf;
 pub mod wnaf;
 
 pub use coordinate_system::CoordinateSystem;
