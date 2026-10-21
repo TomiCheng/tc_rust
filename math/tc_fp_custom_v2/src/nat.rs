@@ -31,11 +31,12 @@ pub(crate) fn sub<const N: usize>(x: &[u32; N], y: &[u32; N]) -> ([u32; N], u32)
 pub(crate) fn mul<const N: usize, const M: usize>(x: &[u32; N], y: &[u32; N]) -> [u32; M] {
     const { assert!(M == 2 * N) };
     let mut zz = [0; M];
-    for i in 0..N {
+    for (i, &xi) in x.iter().enumerate() {
+        let xi = u64::from(xi);
         let mut c = 0u64;
-        for j in 0..N {
-            c += u64::from(x[i]) * u64::from(y[j]) + u64::from(zz[i + j]);
-            zz[i + j] = c as u32;
+        for (zj, &yj) in zz[i..i + N].iter_mut().zip(y) {
+            c += xi * u64::from(yj) + u64::from(*zj);
+            *zj = c as u32;
             c >>= 32;
         }
         zz[i + N] = c as u32;
@@ -78,9 +79,9 @@ fn square_word_add_to<const N: usize, const M: usize>(
 ) -> u32 {
     let x_val = u64::from(x[pos]);
     let mut c = 0u64;
-    for i in 0..pos {
-        c += x_val * u64::from(x[i]) + u64::from(z[pos + i]);
-        z[pos + i] = c as u32;
+    for (zi, &xi) in z[pos..2 * pos].iter_mut().zip(&x[..pos]) {
+        c += x_val * u64::from(xi) + u64::from(*zi);
+        *zi = c as u32;
         c >>= 32;
     }
     c as u32
