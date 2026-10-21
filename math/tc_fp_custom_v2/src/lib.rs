@@ -7,6 +7,7 @@ extern crate alloc;
 
 mod mod_inverse;
 mod nat;
+mod nat64;
 mod sec1;
 mod secp128r1_field;
 mod secp128r1_field_element;

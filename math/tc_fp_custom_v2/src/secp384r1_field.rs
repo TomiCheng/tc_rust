@@ -1,6 +1,7 @@
-// BC's `SecP384R1Field`: p = 2^384 - 2^128 - 2^96 + 2^32 - 1 on twelve limbs.
+// BC's `SecP384R1Field`: p = 2^384 - 2^128 - 2^96 + 2^32 - 1 on twelve limbs, multiplied on
+// six 64-bit ones.
 
-use crate::{mod_inverse, nat};
+use crate::{mod_inverse, nat, nat64};
 use tc_zeroize::Zeroize;
 
 pub(crate) const P: [u32; 12] = [
@@ -22,14 +23,14 @@ pub(crate) const P: [u32; 12] = [
 const FOLD: [i64; 12] = [1, -1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0];
 
 pub(crate) fn multiply(x: &[u32; 12], y: &[u32; 12]) -> [u32; 12] {
-    let mut tt = nat::karatsuba_mul::<6, 12, 24>(x, y);
+    let mut tt = impl_multiply(x, y);
     let z = reduce(&tt);
     tt.zeroize();
     z
 }
 
 pub(crate) fn square(x: &[u32; 12]) -> [u32; 12] {
-    let mut tt = nat::karatsuba_square::<6, 12, 24>(x);
+    let mut tt = impl_square(x);
     let z = reduce(&tt);
     tt.zeroize();
     z
@@ -38,10 +39,10 @@ pub(crate) fn square(x: &[u32; 12]) -> [u32; 12] {
 // BC's `SquareN`: x^(2^n), for n of at least one.
 pub(crate) fn square_n(x: &[u32; 12], n: usize) -> [u32; 12] {
     debug_assert!(n > 0);
-    let mut tt = nat::karatsuba_square::<6, 12, 24>(x);
+    let mut tt = impl_square(x);
     let mut z = reduce(&tt);
     for _ in 1..n {
-        tt = nat::karatsuba_square::<6, 12, 24>(&z);
+        tt = impl_square(&z);
         z = reduce(&tt);
     }
     tt.zeroize();
@@ -78,10 +79,28 @@ pub(crate) fn sqrt(x1: &[u32; 12]) -> [u32; 12] {
     root
 }
 
+// The product on six 64-bit limbs, where BC's `Nat384.Mul` takes a Karatsuba step on twelve
+// 32-bit ones.
+fn impl_multiply(x: &[u32; 12], y: &[u32; 12]) -> [u64; 12] {
+    let mut x64 = nat64::from_u32::<12, 6>(x);
+    let mut y64 = nat64::from_u32::<12, 6>(y);
+    let tt = nat64::mul::<6, 12>(&x64, &y64);
+    x64.zeroize();
+    y64.zeroize();
+    tt
+}
+
+fn impl_square(x: &[u32; 12]) -> [u64; 12] {
+    let mut x64 = nat64::from_u32::<12, 6>(x);
+    let tt = nat64::square::<6, 12>(&x64);
+    x64.zeroize();
+    tt
+}
+
 // BC's `Reduce`: the Solinas reduction of a product below p^2, by signed sums of its
 // 32-bit words, offset by n to keep the running carry from going below zero.
-fn reduce(xx: &[u32; 24]) -> [u32; 12] {
-    let w = |i: usize| i64::from(xx[i]);
+fn reduce(xx: &[u64; 12]) -> [u32; 12] {
+    let w = |i: usize| i64::from((xx[i / 2] >> (32 * (i % 2))) as u32);
     const N: i64 = 1;
 
     let (xx16, xx17, xx18, xx19) = (w(16), w(17), w(18), w(19));
