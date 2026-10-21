@@ -2,40 +2,53 @@ use crate::{EcError, EcKeyGenerationParams, EcPrivateKey, EcPublicKey};
 use rand_core::CryptoRng;
 use tc_asym_cipher::{KeyPairGenerator, KeyPairGeneratorInit};
 use tc_bigint::{ArrayEncoding, PaddedBigUint, RandomBits};
+use tc_ec_core_v2::multiplier::{BaseMultiplier, PerCall};
 use tc_ec_core_v2::{Curve, Point};
 use tc_zeroize::Zeroize;
 
 /// BC's `ECKeyPairGenerator`. Pass the generator of a Ct curve to have d·G computed in
 /// constant time.
-pub struct EcKeyPairGenerator<'a, C: Curve> {
-    params: Option<EcKeyGenerationParams<'a, C>>,
+///
+/// `init` builds an `M` for G, so the key pairs it generates reuse its table. `M` defaults to
+/// [`PerCall`], which multiplies as the curve does.
+pub struct EcKeyPairGenerator<'a, C: Curve, M = PerCall<C>> {
+    state: Option<(EcKeyGenerationParams<'a, C>, M)>,
 }
 
 impl<C: Curve> EcKeyPairGenerator<'_, C> {
+    /// A generator multiplying as the curve does, to be initialized. Constant time.
     pub fn new() -> Self {
-        Self { params: None }
+        Self::with_multiplier()
     }
 }
 
-impl<C: Curve> Default for EcKeyPairGenerator<'_, C> {
+impl<C: Curve, M: BaseMultiplier<C>> EcKeyPairGenerator<'_, C, M> {
+    /// A generator multiplying by `M`, to be initialized. Constant time.
+    pub fn with_multiplier() -> Self {
+        Self { state: None }
+    }
+}
+
+impl<C: Curve, M: BaseMultiplier<C>> Default for EcKeyPairGenerator<'_, C, M> {
     fn default() -> Self {
-        Self::new()
+        Self::with_multiplier()
     }
 }
 
-/// X9.62 5.2.1, as BC's `GenerateKeyPair`: d from [`private_scalar`], then Q = d·G by the
-/// curve's own multiplication.
-impl<C: Curve<Scalar = PaddedBigUint>> KeyPairGenerator for EcKeyPairGenerator<'_, C> {
+/// X9.62 5.2.1, as BC's `GenerateKeyPair`: d from `private_scalar`, then Q = d·G by `M`.
+impl<C: Curve<Scalar = PaddedBigUint>, M: BaseMultiplier<C>> KeyPairGenerator
+    for EcKeyPairGenerator<'_, C, M>
+{
     type PublicKey = EcPublicKey<C>;
     type PrivateKey = EcPrivateKey<C>;
     type Error = EcError;
 
     fn generate_key_pair(&mut self) -> Result<(EcPublicKey<C>, EcPrivateKey<C>), EcError> {
-        let params = self.params.as_mut().ok_or(EcError::NotInitialized)?;
+        let (params, multiplier) = self.state.as_mut().ok_or(EcError::NotInitialized)?;
         let curve = params.g.curve();
         let n = curve.order().ok_or(EcError::MissingOrder)?;
         let d = private_scalar(n, params.rng);
-        let q = C::multiply(&params.g, &d);
+        let q = multiplier.multiply(&d);
         let private_key = EcPrivateKey::new(params.g.clone(), d)?;
         let public_key = EcPublicKey::new(params.g.clone(), &q)?;
         Ok((public_key, private_key))
@@ -43,9 +56,9 @@ impl<C: Curve<Scalar = PaddedBigUint>> KeyPairGenerator for EcKeyPairGenerator<'
 }
 
 /// Checks G as BC's `ECDomainParameters` does: its curve must know n, and G must not be
-/// infinity and must pass `is_valid`. Variable time; G is public.
-impl<'a, C: Curve<Scalar = PaddedBigUint>> KeyPairGeneratorInit<EcKeyGenerationParams<'a, C>>
-    for EcKeyPairGenerator<'a, C>
+/// infinity and must pass `is_valid`; then builds an `M` for G. Variable time; G is public.
+impl<'a, C: Curve<Scalar = PaddedBigUint>, M: BaseMultiplier<C>>
+    KeyPairGeneratorInit<EcKeyGenerationParams<'a, C>> for EcKeyPairGenerator<'a, C, M>
 {
     type Error = EcError;
 
@@ -56,7 +69,8 @@ impl<'a, C: Curve<Scalar = PaddedBigUint>> KeyPairGeneratorInit<EcKeyGenerationP
         if params.g.is_infinity() || !params.g.is_valid() {
             return Err(EcError::InvalidGenerator);
         }
-        self.params = Some(params);
+        let multiplier = M::new(params.g.clone());
+        self.state = Some((params, multiplier));
         Ok(())
     }
 }
