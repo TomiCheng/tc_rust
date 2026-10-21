@@ -3,8 +3,14 @@
 
 #![no_std]
 
+extern crate alloc;
+
+mod nat;
+mod secp256k1_field;
 mod secp256k1_field_element;
+mod secp256r1_field;
 mod secp256r1_field_element;
+mod secp384r1_field;
 mod secp384r1_field_element;
 mod secp_ct_curve;
 mod secp_ct_point;
