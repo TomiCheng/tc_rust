@@ -3,11 +3,14 @@ use core::time::Duration;
 
 use criterion::{BenchmarkId, Criterion};
 use tc_bigint::{ArrayEncoding, PaddedBigUint};
+use tc_ec_core_v2::multiplier::{BaseMultiplier, CombVar, PerCall};
 use tc_ec_core_v2::{CoordinateSystem, Curve, FieldElement, Point, wnaf};
 use tc_f2m_curve_v2::named_curves as generic;
 use tc_f2m_curve_v2::{F2mCtCurve, F2mVarCurve};
 use tc_f2m_custom_v2::named_curves::{SECT163K1, SECT163R2, SECT571K1};
-use tc_f2m_custom_v2::{SecT163FieldElement, SecT571FieldElement, SecTCtCurve, SecTVarCurve};
+use tc_f2m_custom_v2::{
+    SecT163FieldElement, SecT571FieldElement, SecTCtCurve, SecTVarCurve, SecTVarPrecomputed,
+};
 
 type Ct<'a> = &'a SecTCtCurve<SecT163FieldElement>;
 type Var<'a> = &'a SecTVarCurve<SecT163FieldElement>;
@@ -61,6 +64,28 @@ fn koblitz<C: Curve<Scalar = PaddedBigUint>>(
         b.iter(|| wnaf::wnaf_mul_point::<C>(black_box(g), black_box(k)))
     });
     group.finish();
+}
+
+// A fixed-base multiplier built once, then multiplying; and the cost of building it.
+fn base<C: Curve, M: BaseMultiplier<C>>(
+    criterion: &mut Criterion,
+    group: &str,
+    name: &str,
+    g: &C::Point,
+    k: &C::Scalar,
+) {
+    let multiplier = M::new(g.clone());
+    let mut bench = criterion.benchmark_group(group);
+    bench.bench_with_input(BenchmarkId::from_parameter(name), &(), |b, _| {
+        b.iter(|| multiplier.multiply(black_box(k)))
+    });
+    bench.finish();
+
+    let mut bench = criterion.benchmark_group(format!("{group}_build"));
+    bench.bench_with_input(BenchmarkId::from_parameter(name), &(), |b, _| {
+        b.iter(|| M::new(black_box(g).clone()))
+    });
+    bench.finish();
 }
 
 // A scalar of `bytes` bytes, its top byte `top`.
@@ -128,6 +153,20 @@ fn main() {
         &SECT571K1.var_generator(&k571),
         &scalar(72, 0x01),
     );
+
+    // The same Koblitz curves: the τ-adic table kept, and the comb, against a multiplication
+    // per call.
+    let g = SECT163K1.var_generator(&k163);
+    let k = scalar(21, 0x03);
+    base::<Var<'_>, PerCall<_>>(c, "k163_var_base", "per_call", &g, &k);
+    base::<Var<'_>, SecTVarPrecomputed<'_, _>>(c, "k163_var_base", "precomputed", &g, &k);
+    base::<Var<'_>, CombVar<_>>(c, "k163_var_base", "comb", &g, &k);
+    type Var571<'a> = &'a SecTVarCurve<SecT571FieldElement>;
+    let g = SECT571K1.var_generator(&k571);
+    let k = scalar(72, 0x01);
+    base::<Var571<'_>, PerCall<_>>(c, "k571_var_base", "per_call", &g, &k);
+    base::<Var571<'_>, SecTVarPrecomputed<'_, _>>(c, "k571_var_base", "precomputed", &g, &k);
+    base::<Var571<'_>, CombVar<_>>(c, "k571_var_base", "comb", &g, &k);
 
     criterion.final_summary();
 }

@@ -3,12 +3,13 @@ use core::time::Duration;
 
 use criterion::{BenchmarkId, Criterion};
 use tc_bigint::{ArrayEncoding, PaddedBigUint};
+use tc_ec_core_v2::multiplier::{BaseMultiplier, CombCt, CombVar, PerCall};
 use tc_ec_core_v2::{CoordinateSystem, Curve, FieldElement, Point, wnaf};
 use tc_fp_curve_v2::{FpCtCurve, FpField, FpVarCurve};
 use tc_fp_custom_v2::named_curves::{SECP256K1, SECP256R1, SECP384R1, SECP521R1};
 use tc_fp_custom_v2::{
     SecP256K1FieldElement, SecP256R1FieldElement, SecP384R1FieldElement, SecP521R1FieldElement,
-    SecPCtCurve, SecPVarCurve,
+    SecPCtCurve, SecPCtPrecomputed, SecPVarCurve, SecPVarPrecomputed,
 };
 
 // p, a, b, n, gx and gy of a named curve, for the generic curves.
@@ -108,6 +109,28 @@ fn wnaf_multiply<C: Curve>(criterion: &mut Criterion, group: &str, g: &C::Point,
         b.iter(|| wnaf::wnaf_mul_point::<C>(black_box(g), black_box(k)))
     });
     group.finish();
+}
+
+// A fixed-base multiplier built once, then multiplying; and the cost of building it.
+fn base<C: Curve, M: BaseMultiplier<C>>(
+    criterion: &mut Criterion,
+    group: &str,
+    name: &str,
+    g: &C::Point,
+    k: &C::Scalar,
+) {
+    let multiplier = M::new(g.clone());
+    let mut bench = criterion.benchmark_group(group);
+    bench.bench_with_input(BenchmarkId::from_parameter(name), &(), |b, _| {
+        b.iter(|| multiplier.multiply(black_box(k)))
+    });
+    bench.finish();
+
+    let mut bench = criterion.benchmark_group(format!("{group}_build"));
+    bench.bench_with_input(BenchmarkId::from_parameter(name), &(), |b, _| {
+        b.iter(|| M::new(black_box(g).clone()))
+    });
+    bench.finish();
 }
 
 fn generic_field(params: &Params) -> FpField {
@@ -260,6 +283,22 @@ fn main() {
         &k,
     );
 
+    // P-256 on the specialized curves: the curve's own table kept, and the comb, against a
+    // multiplication per call.
+    let k = scalar(32, P256[3]);
+    let ct_256 = SECP256R1.ct_curve();
+    let g = SECP256R1.ct_generator(&ct_256);
+    type Ct256<'a> = &'a SecPCtCurve<SecP256R1FieldElement>;
+    base::<Ct256<'_>, PerCall<_>>(c, "p256_ct_base", "per_call", &g, &k);
+    base::<Ct256<'_>, SecPCtPrecomputed<'_, _>>(c, "p256_ct_base", "precomputed", &g, &k);
+    base::<Ct256<'_>, CombCt<_>>(c, "p256_ct_base", "comb", &g, &k);
+    let var_256 = SECP256R1.var_curve();
+    let g = SECP256R1.var_generator(&var_256);
+    type Var256<'a> = &'a SecPVarCurve<SecP256R1FieldElement>;
+    base::<Var256<'_>, PerCall<_>>(c, "p256_var_base", "per_call", &g, &k);
+    base::<Var256<'_>, SecPVarPrecomputed<'_, _>>(c, "p256_var_base", "precomputed", &g, &k);
+    base::<Var256<'_>, CombVar<_>>(c, "p256_var_base", "comb", &g, &k);
+
     // secp256k1: the Var curve's GLV split against the plain wNAF.
     let k = scalar(
         32,
@@ -269,6 +308,10 @@ fn main() {
     let g = SECP256K1.var_generator(&var_k256);
     multiply::<&SecPVarCurve<SecP256K1FieldElement>>(c, "k256_var_multiply", "glv", &g, &k);
     wnaf_multiply::<&SecPVarCurve<SecP256K1FieldElement>>(c, "k256_var_multiply", &g, &k);
+    type VarK256<'a> = &'a SecPVarCurve<SecP256K1FieldElement>;
+    base::<VarK256<'_>, PerCall<_>>(c, "k256_var_base", "per_call", &g, &k);
+    base::<VarK256<'_>, SecPVarPrecomputed<'_, _>>(c, "k256_var_base", "precomputed", &g, &k);
+    base::<VarK256<'_>, CombVar<_>>(c, "k256_var_base", "comb", &g, &k);
 
     criterion.final_summary();
 }
