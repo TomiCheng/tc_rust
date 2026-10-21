@@ -8,6 +8,7 @@ mod coordinate_system;
 mod traits;
 mod errors;
 pub mod algo;
+pub mod glv;
 pub mod tnaf;
 pub mod wnaf;
 
