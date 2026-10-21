@@ -125,6 +125,18 @@ mod tests {
     }
 
     #[test]
+    fn a_generalizedtime_start_before_2050_is_compared_by_instant() {
+        let forward = b"\x30\x20\x18\x0f20200101000000Z\x17\x0d300101000000Z";
+        let (_, validity) = Validity::decode(forward, &DecodingOptions::default()).unwrap();
+        assert_eq!(validity.not_before().year(), 2020);
+        let backwards = b"\x30\x20\x17\x0d400101000000Z\x18\x0f20300101000000Z";
+        assert!(matches!(
+            Validity::decode(backwards, &DecodingOptions::default()),
+            Err(Asn1Error::MalformedValue)
+        ));
+    }
+
+    #[test]
     fn a_missing_or_extra_time_is_rejected() {
         assert!(matches!(
             Validity::decode(

@@ -10,7 +10,7 @@
 //! Dates through 2049 MUST use UTCTime and dates from 2050 on MUST use
 //! GeneralizedTime; [`Time::new`] picks the alternative by year.
 
-use core::fmt;
+use core::{cmp::Ordering, fmt};
 
 use tc_asn1::{
     Asn1Error, Asn1GeneralizedTime, Asn1Ref, Asn1UtcTime, Decode, DecodeInner, DecodingContext,
@@ -18,7 +18,8 @@ use tc_asn1::{
 };
 
 /// A CHOICE between the two time types, so it has no single identifier.
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+/// Ordering is chronological whichever alternative carries the instant.
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 pub enum Time {
     UtcTime(Asn1UtcTime),
     GeneralizedTime(Asn1GeneralizedTime),
@@ -78,6 +79,38 @@ impl Time {
             Self::UtcTime(t) => t.second(),
             Self::GeneralizedTime(t) => t.second(),
         }
+    }
+
+    fn sort_key(&self) -> (u16, u8, u8, u8, u8, u8, u8) {
+        let alternative = match self {
+            Self::UtcTime(_) => 0,
+            Self::GeneralizedTime(_) => 1,
+        };
+        (
+            self.year(),
+            self.month(),
+            self.day(),
+            self.hour(),
+            self.minute(),
+            self.second(),
+            alternative,
+        )
+    }
+}
+
+impl Ord for Time {
+    /// Compares the instants, so a GeneralizedTime before 2050 still sorts
+    /// before a later UTCTime. The same instant in the two alternatives puts
+    /// UTCTime first, keeping the order consistent with `Eq`. Variable time:
+    /// branches on the fields, which are public.
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.sort_key().cmp(&other.sort_key())
+    }
+}
+
+impl PartialOrd for Time {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
     }
 }
 
@@ -161,8 +194,11 @@ impl Encode for Time {
 #[cfg(test)]
 mod tests {
     use alloc::string::ToString;
+    use core::cmp::Ordering;
 
-    use tc_asn1::{Asn1Error, Decode, DecodingOptions, Encode, EncodingOptions};
+    use tc_asn1::{
+        Asn1Error, Asn1GeneralizedTime, Decode, DecodingOptions, Encode, EncodingOptions,
+    };
 
     use super::Time;
 
@@ -198,5 +234,21 @@ mod tests {
         assert!(
             Time::new(2049, 12, 31, 23, 59, 59).unwrap() < Time::new(2050, 1, 1, 0, 0, 0).unwrap()
         );
+    }
+
+    #[test]
+    fn a_generalizedtime_before_2050_orders_by_its_instant_not_its_alternative() {
+        let early = Time::GeneralizedTime(Asn1GeneralizedTime::new(2020, 1, 1, 0, 0, 0).unwrap());
+        let late = Time::new(2030, 1, 1, 0, 0, 0).unwrap();
+        assert!(early < late);
+        assert!(late > early);
+    }
+
+    #[test]
+    fn the_same_instant_in_both_alternatives_differs_and_puts_utctime_first() {
+        let utc = Time::new(2026, 1, 1, 0, 0, 0).unwrap();
+        let general = Time::GeneralizedTime(Asn1GeneralizedTime::new(2026, 1, 1, 0, 0, 0).unwrap());
+        assert_ne!(utc, general);
+        assert_eq!(utc.cmp(&general), Ordering::Less);
     }
 }
