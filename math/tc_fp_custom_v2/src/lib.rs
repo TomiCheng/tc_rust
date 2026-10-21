@@ -6,6 +6,7 @@
 extern crate alloc;
 
 mod nat;
+mod sec1;
 mod secp256k1_field;
 mod secp256k1_field_element;
 mod secp256r1_field;
@@ -15,6 +16,7 @@ mod secp384r1_field_element;
 mod secp_ct_curve;
 mod secp_ct_point;
 mod secp_element;
+mod secp_error;
 mod secp_var_curve;
 mod secp_var_point;
 
@@ -22,6 +24,7 @@ pub mod named_curves;
 
 pub use secp_ct_curve::SecPCtCurve;
 pub use secp_ct_point::SecPCtPoint;
+pub use secp_error::SecPError;
 pub use secp_var_curve::SecPVarCurve;
 pub use secp_var_point::SecPVarPoint;
 pub use secp256k1_field_element::SecP256K1FieldElement;
