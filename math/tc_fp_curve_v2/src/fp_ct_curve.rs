@@ -66,8 +66,9 @@ impl<'a> FpCtCurve<'a> {
         FpCtPoint::infinity(self)
     }
 
-    /// The point `(x, y)`, which is not checked against the curve; see [`FpCtPoint::is_valid`].
-    /// Fails when a coordinate is not below `q`.
+    /// The point `(x, y)`, which is not checked against the curve; see
+    /// [`FpCtPoint::is_valid`](tc_ec_core_v2::Point::is_valid). Fails when a coordinate is not
+    /// below `q`.
     pub fn create_point(
         &'a self,
         x: &PaddedBigUint,
