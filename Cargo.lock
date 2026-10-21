@@ -1412,6 +1412,7 @@ dependencies = [
  "tc_binpoly 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tc_constant_time",
  "tc_ec_core_v2",
+ "tc_zeroize",
 ]
 
 [[package]]

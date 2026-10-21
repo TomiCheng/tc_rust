@@ -1,7 +1,9 @@
 use tc_binpoly::PaddedBinPoly;
 use tc_constant_time::{Choice, ConditionallySelectable, ConstantTimeEq};
 use tc_ec_core_v2::{BinaryFieldElement, FieldElement};
+use tc_zeroize::Zeroize;
 
+/// An element of GF(2^m), wiped on drop.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct F2mFieldElement {
     value: PaddedBinPoly,
@@ -45,6 +47,12 @@ impl F2mFieldElement {
         let limbs = self.value.limbs();
         let first = limbs[0] ^ u64::from(one);
         limbs[1..].iter().fold(first, |acc, &limb| acc | limb)
+    }
+}
+
+impl Drop for F2mFieldElement {
+    fn drop(&mut self) {
+        self.value.zeroize();
     }
 }
 
