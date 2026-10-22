@@ -4,11 +4,15 @@
 #![no_std]
 
 extern crate alloc;
+#[cfg(test)]
+extern crate std;
 
 mod agreement;
+mod edwards;
 mod error;
 mod generator;
 mod params;
+mod rfc7748;
 mod signer;
 
 #[cfg(feature = "x448")]
