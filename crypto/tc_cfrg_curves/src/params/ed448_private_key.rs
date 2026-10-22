@@ -1,4 +1,5 @@
 use crate::Ed448PublicKey;
+use crate::rfc8032::ed448::ExpandedKey;
 use tc_zeroize::Zeroize;
 
 #[derive(Clone)]
@@ -18,7 +19,7 @@ impl Ed448PrivateKey {
     }
 
     pub fn generate_public_key(&self) -> Ed448PublicKey {
-        todo!()
+        Ed448PublicKey::new(*ExpandedKey::new(&self.k).public_key())
     }
 }
 

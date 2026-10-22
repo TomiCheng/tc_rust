@@ -1,3 +1,4 @@
+use crate::rfc8032::ed448;
 use crate::{CfrgError, Ed448PrivateKey, Ed448PublicKey, KeyGenerationParams};
 use tc_asym_cipher::{KeyPairGenerator, KeyPairGeneratorInit};
 
@@ -21,7 +22,8 @@ impl<'a> KeyPairGeneratorInit<KeyGenerationParams<'a>> for Ed448KeyPairGenerator
     type Error = CfrgError;
 
     fn init(&mut self, params: KeyGenerationParams<'a>) -> Result<(), CfrgError> {
-        todo!()
+        self.params = Some(params);
+        Ok(())
     }
 }
 
@@ -31,6 +33,9 @@ impl KeyPairGenerator for Ed448KeyPairGenerator<'_> {
     type Error = CfrgError;
 
     fn generate_key_pair(&mut self) -> Result<(Ed448PublicKey, Ed448PrivateKey), CfrgError> {
-        todo!()
+        let params = self.params.as_mut().ok_or(CfrgError::NotInitialized)?;
+        let private_key = Ed448PrivateKey::new(ed448::generate_private_key(params.rng));
+        let public_key = private_key.generate_public_key();
+        Ok((public_key, private_key))
     }
 }
