@@ -4,6 +4,13 @@
 mod aes;
 #[cfg(feature = "ascon")]
 mod ascon;
+#[cfg(any(
+    feature = "x25519",
+    feature = "x448",
+    feature = "ed25519",
+    feature = "ed448"
+))]
+mod cfrg;
 #[cfg(feature = "chacha")]
 mod chacha;
 #[cfg(feature = "rc2")]
@@ -39,7 +46,13 @@ fn plain_key(
     )))
 }
 
-#[cfg(feature = "rsa")]
+#[cfg(any(
+    feature = "rsa",
+    feature = "x25519",
+    feature = "x448",
+    feature = "ed25519",
+    feature = "ed448"
+))]
 fn no_key(
     _: &super::KeyGenParams,
     _: &mut dyn rand::CryptoRng,
@@ -92,4 +105,12 @@ pub(super) const GENERATORS: &[GeneratorEntry] = &[
     rc5::RC5_64,
     #[cfg(feature = "rsa")]
     rsa::RSA,
+    #[cfg(feature = "x25519")]
+    cfrg::X25519,
+    #[cfg(feature = "x448")]
+    cfrg::X448,
+    #[cfg(feature = "ed25519")]
+    cfrg::ED25519,
+    #[cfg(feature = "ed448")]
+    cfrg::ED448,
 ];

@@ -4,7 +4,7 @@ use tc_zeroize::Zeroize;
 ///
 /// 只是 DTO，不驗證內容：長度與組合合不合用，由收到參數的 cipher 在 `init` 判定。
 /// 各引擎的參數 trait 依 variant 取值，這個 variant 沒有的值回傳空的或預設值，留給 `init` 拒絕。
-/// drop 時清除金鑰、IV、nonce 與 AAD；RSA 金鑰由它自己的 drop 清除。
+/// drop 時清除金鑰、IV、nonce 與 AAD；RSA 與 CFRG 曲線的金鑰由它們自己的 drop 清除。
 #[derive(Clone)]
 pub enum AnyParams {
     /// 只有金鑰，對應 BC 的 `KeyParameter`。
@@ -31,6 +31,40 @@ pub enum AnyParams {
     /// RSA 的公鑰或私鑰，對應 BC 的 `RsaKeyParameters` 與 `RsaPrivateCrtKeyParameters`。
     #[cfg(feature = "rsa")]
     Rsa { key: tc_rsa::RsaKey },
+    /// X25519 的私鑰，對應 BC 的 `X25519PrivateKeyParameters`。
+    #[cfg(feature = "x25519")]
+    X25519Private {
+        key: tc_cfrg_curves::X25519PrivateKey,
+    },
+    /// X25519 的公鑰，對應 BC 的 `X25519PublicKeyParameters`。
+    #[cfg(feature = "x25519")]
+    X25519Public {
+        key: tc_cfrg_curves::X25519PublicKey,
+    },
+    /// X448 的私鑰，對應 BC 的 `X448PrivateKeyParameters`。
+    #[cfg(feature = "x448")]
+    X448Private { key: tc_cfrg_curves::X448PrivateKey },
+    /// X448 的公鑰，對應 BC 的 `X448PublicKeyParameters`。
+    #[cfg(feature = "x448")]
+    X448Public { key: tc_cfrg_curves::X448PublicKey },
+    /// Ed25519 的私鑰，對應 BC 的 `Ed25519PrivateKeyParameters`。
+    #[cfg(feature = "ed25519")]
+    Ed25519Private {
+        key: tc_cfrg_curves::Ed25519PrivateKey,
+    },
+    /// Ed25519 的公鑰，對應 BC 的 `Ed25519PublicKeyParameters`。
+    #[cfg(feature = "ed25519")]
+    Ed25519Public {
+        key: tc_cfrg_curves::Ed25519PublicKey,
+    },
+    /// Ed448 的私鑰，對應 BC 的 `Ed448PrivateKeyParameters`。
+    #[cfg(feature = "ed448")]
+    Ed448Private {
+        key: tc_cfrg_curves::Ed448PrivateKey,
+    },
+    /// Ed448 的公鑰，對應 BC 的 `Ed448PublicKeyParameters`。
+    #[cfg(feature = "ed448")]
+    Ed448Public { key: tc_cfrg_curves::Ed448PublicKey },
 }
 
 impl AnyParams {
@@ -84,9 +118,17 @@ impl AnyParams {
             | Self::Rc2 { key, .. }
             | Self::Rc5 { key, .. } => key,
             Self::WithIv { parameters, .. } => parameters.key_bytes(),
-            // RSA 金鑰不是對稱金鑰的 bytes
+            // 非對稱金鑰不是對稱金鑰的 bytes
             #[cfg(feature = "rsa")]
             Self::Rsa { .. } => &[],
+            #[cfg(feature = "x25519")]
+            Self::X25519Private { .. } | Self::X25519Public { .. } => &[],
+            #[cfg(feature = "x448")]
+            Self::X448Private { .. } | Self::X448Public { .. } => &[],
+            #[cfg(feature = "ed25519")]
+            Self::Ed25519Private { .. } | Self::Ed25519Public { .. } => &[],
+            #[cfg(feature = "ed448")]
+            Self::Ed448Private { .. } | Self::Ed448Public { .. } => &[],
         }
     }
 
@@ -117,6 +159,14 @@ impl Drop for AnyParams {
             }
             #[cfg(feature = "rsa")]
             Self::Rsa { .. } => {}
+            #[cfg(feature = "x25519")]
+            Self::X25519Private { .. } | Self::X25519Public { .. } => {}
+            #[cfg(feature = "x448")]
+            Self::X448Private { .. } | Self::X448Public { .. } => {}
+            #[cfg(feature = "ed25519")]
+            Self::Ed25519Private { .. } | Self::Ed25519Public { .. } => {}
+            #[cfg(feature = "ed448")]
+            Self::Ed448Private { .. } | Self::Ed448Public { .. } => {}
         }
     }
 }

@@ -544,3 +544,102 @@ fn a_generated_ascon_key_works_with_the_cipher_factory() {
         );
     }
 }
+
+#[cfg(all(
+    feature = "x25519",
+    feature = "x448",
+    feature = "ed25519",
+    feature = "ed448"
+))]
+#[test]
+fn cfrg_curves_are_found_by_name_alias_and_rfc_8410_oid() {
+    for (name, expected) in [
+        ("x25519", "X25519"),
+        ("1.3.101.110", "X25519"),
+        ("x448", "X448"),
+        ("1.3.101.111", "X448"),
+        ("ed25519ctx", "Ed25519"),
+        ("Ed25519ph", "Ed25519"),
+        ("1.3.101.112", "Ed25519"),
+        ("ED448PH", "Ed448"),
+        ("1.3.101.113", "Ed448"),
+    ] {
+        assert_eq!(name_of(name), Ok(expected), "{name}");
+    }
+}
+
+#[cfg(all(
+    feature = "x25519",
+    feature = "x448",
+    feature = "ed25519",
+    feature = "ed448"
+))]
+#[test]
+fn each_cfrg_curve_makes_a_key_pair_whose_public_key_comes_from_the_private_key() {
+    use tc_security::params::AnyParams;
+
+    for name in ["X25519", "X448", "Ed25519", "Ed448"] {
+        let mut generator = generate::get_by_name(name).unwrap().generator();
+        let (public, private) = generator.generate_key_pair().unwrap();
+        let derived = match (&public, &private) {
+            (
+                AnyParams::X25519Public { key: public },
+                AnyParams::X25519Private { key: private },
+            ) => *public == private.generate_public_key(),
+            (AnyParams::X448Public { key: public }, AnyParams::X448Private { key: private }) => {
+                *public == private.generate_public_key()
+            }
+            (
+                AnyParams::Ed25519Public { key: public },
+                AnyParams::Ed25519Private { key: private },
+            ) => *public == private.generate_public_key(),
+            (AnyParams::Ed448Public { key: public }, AnyParams::Ed448Private { key: private }) => {
+                *public == private.generate_public_key()
+            }
+            _ => false,
+        };
+        assert!(derived, "{name}");
+        assert_eq!(
+            generator.generate_key().err(),
+            Some(SecurityError::WrongGenerator),
+            "{name}"
+        );
+    }
+}
+
+#[cfg(all(feature = "x25519", feature = "rsa"))]
+#[test]
+fn a_cfrg_curve_ignores_the_strength_but_rejects_other_parameters() {
+    use tc_security::generate::KeyGenParams;
+
+    let mut generator = generate::get_by_name("X25519").unwrap().generator();
+    assert_eq!(generator.init(&KeyGenParams::Basic { strength: 1 }), Ok(()));
+    assert_eq!(
+        generator.init(&KeyGenParams::Rsa {
+            public_exponent: 65537,
+            strength: 2048,
+            certainty: 100,
+        }),
+        Err(SecurityError::InvalidKeyGenParams)
+    );
+}
+
+#[cfg(feature = "x25519")]
+#[test]
+fn cfrg_key_pairs_come_from_the_given_rng() {
+    use rand::SeedableRng;
+    use rand::rngs::StdRng;
+    use tc_security::params::AnyParams;
+
+    let public = |seed| {
+        let mut generator = generate::get_by_name("X25519").unwrap().generator();
+        generator.with_rng(StdRng::seed_from_u64(seed));
+        let (public, _) = generator.generate_key_pair().unwrap();
+        let AnyParams::X25519Public { key } = &public else {
+            panic!("X25519 generates X25519 keys");
+        };
+        key.clone()
+    };
+    assert_eq!(public(1), public(1));
+    assert_ne!(public(1), public(2));
+}
