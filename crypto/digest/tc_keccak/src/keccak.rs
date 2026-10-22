@@ -29,145 +29,90 @@ const RC: [u64; 24] = [
 
 /// The Keccak-f[1600] permutation over a 25-lane (`u64`) state (bc
 /// `KeccakPermutation`). 24 rounds of θ, ρ, π, χ, ι.
+///
+/// 用 lane complementing(XKCP 的 "bebigokimisa"):進入時把 Abe、Abi、Ago、Aki、Ami、Asa
+/// 六個 lane 取補數,χ 改用 AND/OR 的組合維持這個補數模式,每輪的 NOT 從 25 個降到 5 個;
+/// 離開時再補回來。
 pub(crate) fn keccak_f1600(a: &mut [u64; 25]) {
-    let (mut a00, mut a01, mut a02, mut a03, mut a04) = (a[0], a[1], a[2], a[3], a[4]);
-    let (mut a05, mut a06, mut a07, mut a08, mut a09) = (a[5], a[6], a[7], a[8], a[9]);
-    let (mut a10, mut a11, mut a12, mut a13, mut a14) = (a[10], a[11], a[12], a[13], a[14]);
-    let (mut a15, mut a16, mut a17, mut a18, mut a19) = (a[15], a[16], a[17], a[18], a[19]);
-    let (mut a20, mut a21, mut a22, mut a23, mut a24) = (a[20], a[21], a[22], a[23], a[24]);
+    let (mut a00, mut a01, mut a02, mut a03, mut a04) = (a[0], !a[1], !a[2], a[3], a[4]);
+    let (mut a05, mut a06, mut a07, mut a08, mut a09) = (a[5], a[6], a[7], !a[8], a[9]);
+    let (mut a10, mut a11, mut a12, mut a13, mut a14) = (a[10], a[11], !a[12], a[13], a[14]);
+    let (mut a15, mut a16, mut a17, mut a18, mut a19) = (a[15], a[16], !a[17], a[18], a[19]);
+    let (mut a20, mut a21, mut a22, mut a23, mut a24) = (!a[20], a[21], a[22], a[23], a[24]);
 
     for &rc in RC.iter() {
-        // θ:直行校驗 + 回饋。
-        let c0 = a00 ^ a05 ^ a10 ^ a15 ^ a20;
-        let c1 = a01 ^ a06 ^ a11 ^ a16 ^ a21;
-        let c2 = a02 ^ a07 ^ a12 ^ a17 ^ a22;
-        let c3 = a03 ^ a08 ^ a13 ^ a18 ^ a23;
-        let c4 = a04 ^ a09 ^ a14 ^ a19 ^ a24;
+        let ca = a00 ^ a05 ^ a10 ^ a15 ^ a20;
+        let ce = a01 ^ a06 ^ a11 ^ a16 ^ a21;
+        let ci = a02 ^ a07 ^ a12 ^ a17 ^ a22;
+        let co = a03 ^ a08 ^ a13 ^ a18 ^ a23;
+        let cu = a04 ^ a09 ^ a14 ^ a19 ^ a24;
+        let da = cu ^ ce.rotate_left(1);
+        let de = ca ^ ci.rotate_left(1);
+        let di = ce ^ co.rotate_left(1);
+        let d_o = ci ^ cu.rotate_left(1);
+        let du = co ^ ca.rotate_left(1);
 
-        let d1 = c1.rotate_left(1) ^ c4;
-        let d2 = c2.rotate_left(1) ^ c0;
-        let d3 = c3.rotate_left(1) ^ c1;
-        let d4 = c4.rotate_left(1) ^ c2;
-        let d0 = c0.rotate_left(1) ^ c3;
+        let bba = a00 ^ da;
+        let bbe = (a06 ^ de).rotate_left(44);
+        let bbi = (a12 ^ di).rotate_left(43);
+        let bbo = (a18 ^ d_o).rotate_left(21);
+        let bbu = (a24 ^ du).rotate_left(14);
+        let bga = (a03 ^ d_o).rotate_left(28);
+        let bge = (a09 ^ du).rotate_left(20);
+        let bgi = (a10 ^ da).rotate_left(3);
+        let bgo = (a16 ^ de).rotate_left(45);
+        let bgu = (a22 ^ di).rotate_left(61);
+        let bka = (a01 ^ de).rotate_left(1);
+        let bke = (a07 ^ di).rotate_left(6);
+        let bki = (a13 ^ d_o).rotate_left(25);
+        let bko = (a19 ^ du).rotate_left(8);
+        let bku = (a20 ^ da).rotate_left(18);
+        let bma = (a04 ^ du).rotate_left(27);
+        let bme = (a05 ^ da).rotate_left(36);
+        let bmi = (a11 ^ de).rotate_left(10);
+        let bmo = (a17 ^ di).rotate_left(15);
+        let bmu = (a23 ^ d_o).rotate_left(56);
+        let bsa = (a02 ^ di).rotate_left(62);
+        let bse = (a08 ^ d_o).rotate_left(55);
+        let bsi = (a14 ^ du).rotate_left(39);
+        let bso = (a15 ^ da).rotate_left(41);
+        let bsu = (a21 ^ de).rotate_left(2);
 
-        a00 ^= d1;
-        a05 ^= d1;
-        a10 ^= d1;
-        a15 ^= d1;
-        a20 ^= d1;
-        a01 ^= d2;
-        a06 ^= d2;
-        a11 ^= d2;
-        a16 ^= d2;
-        a21 ^= d2;
-        a02 ^= d3;
-        a07 ^= d3;
-        a12 ^= d3;
-        a17 ^= d3;
-        a22 ^= d3;
-        a03 ^= d4;
-        a08 ^= d4;
-        a13 ^= d4;
-        a18 ^= d4;
-        a23 ^= d4;
-        a04 ^= d0;
-        a09 ^= d0;
-        a14 ^= d0;
-        a19 ^= d0;
-        a24 ^= d0;
+        a00 = bba ^ (bbe | bbi) ^ rc;
+        a01 = bbe ^ (!bbi | bbo);
+        a02 = bbi ^ (bbo & bbu);
+        a03 = bbo ^ (bbu | bba);
+        a04 = bbu ^ (bba & bbe);
 
-        // ρ + π:固定量左旋並重排 lane。
-        let t = a01.rotate_left(1);
-        a01 = a06.rotate_left(44);
-        a06 = a09.rotate_left(20);
-        a09 = a22.rotate_left(61);
-        a22 = a14.rotate_left(39);
-        a14 = a20.rotate_left(18);
-        a20 = a02.rotate_left(62);
-        a02 = a12.rotate_left(43);
-        a12 = a13.rotate_left(25);
-        a13 = a19.rotate_left(8);
-        a19 = a23.rotate_left(56);
-        a23 = a15.rotate_left(41);
-        a15 = a04.rotate_left(27);
-        a04 = a24.rotate_left(14);
-        a24 = a21.rotate_left(2);
-        a21 = a08.rotate_left(55);
-        a08 = a16.rotate_left(45);
-        a16 = a05.rotate_left(36);
-        a05 = a03.rotate_left(28);
-        a03 = a18.rotate_left(21);
-        a18 = a17.rotate_left(15);
-        a17 = a11.rotate_left(10);
-        a11 = a07.rotate_left(6);
-        a07 = a10.rotate_left(3);
-        a10 = t;
+        a05 = bga ^ (bge | bgi);
+        a06 = bge ^ (bgi & bgo);
+        a07 = bgi ^ (bgo | !bgu);
+        a08 = bgo ^ (bgu | bga);
+        a09 = bgu ^ (bga & bge);
 
-        // χ:每列唯一的非線性步。
-        let (b0, b1) = (a00 ^ (!a01 & a02), a01 ^ (!a02 & a03));
-        a02 ^= !a03 & a04;
-        a03 ^= !a04 & a00;
-        a04 ^= !a00 & a01;
-        a00 = b0;
-        a01 = b1;
+        a10 = bka ^ (bke | bki);
+        a11 = bke ^ (bki & bko);
+        a12 = bki ^ (!bko & bku);
+        a13 = !bko ^ (bku | bka);
+        a14 = bku ^ (bka & bke);
 
-        let (b0, b1) = (a05 ^ (!a06 & a07), a06 ^ (!a07 & a08));
-        a07 ^= !a08 & a09;
-        a08 ^= !a09 & a05;
-        a09 ^= !a05 & a06;
-        a05 = b0;
-        a06 = b1;
+        a15 = bma ^ (bme & bmi);
+        a16 = bme ^ (bmi | bmo);
+        a17 = bmi ^ (!bmo | bmu);
+        a18 = !bmo ^ (bmu & bma);
+        a19 = bmu ^ (bma | bme);
 
-        let (b0, b1) = (a10 ^ (!a11 & a12), a11 ^ (!a12 & a13));
-        a12 ^= !a13 & a14;
-        a13 ^= !a14 & a10;
-        a14 ^= !a10 & a11;
-        a10 = b0;
-        a11 = b1;
-
-        let (b0, b1) = (a15 ^ (!a16 & a17), a16 ^ (!a17 & a18));
-        a17 ^= !a18 & a19;
-        a18 ^= !a19 & a15;
-        a19 ^= !a15 & a16;
-        a15 = b0;
-        a16 = b1;
-
-        let (b0, b1) = (a20 ^ (!a21 & a22), a21 ^ (!a22 & a23));
-        a22 ^= !a23 & a24;
-        a23 ^= !a24 & a20;
-        a24 ^= !a20 & a21;
-        a20 = b0;
-        a21 = b1;
-
-        // ι
-        a00 ^= rc;
+        a20 = bsa ^ (!bse & bsi);
+        a21 = !bse ^ (bsi | bso);
+        a22 = bsi ^ (bso & bsu);
+        a23 = bso ^ (bsu | bsa);
+        a24 = bsu ^ (bsa & bse);
     }
 
-    a[0] = a00;
-    a[1] = a01;
-    a[2] = a02;
-    a[3] = a03;
-    a[4] = a04;
-    a[5] = a05;
-    a[6] = a06;
-    a[7] = a07;
-    a[8] = a08;
-    a[9] = a09;
-    a[10] = a10;
-    a[11] = a11;
-    a[12] = a12;
-    a[13] = a13;
-    a[14] = a14;
-    a[15] = a15;
-    a[16] = a16;
-    a[17] = a17;
-    a[18] = a18;
-    a[19] = a19;
-    a[20] = a20;
-    a[21] = a21;
-    a[22] = a22;
-    a[23] = a23;
-    a[24] = a24;
+    *a = [
+        a00, !a01, !a02, a03, a04, a05, a06, a07, !a08, a09, a10, a11, !a12, a13, a14, a15, a16,
+        !a17, a18, a19, !a20, a21, a22, a23, a24,
+    ];
 }
 
 /// A Keccak sponge digest with fixed output length.
