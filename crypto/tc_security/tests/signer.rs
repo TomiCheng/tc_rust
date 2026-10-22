@@ -49,6 +49,31 @@ fn rsa_signers_are_found_by_bc_names_aliases_and_pkcs1_oids() {
     }
 }
 
+#[cfg(all(feature = "rsa", feature = "sha3-256", feature = "sha3-512"))]
+#[test]
+fn rsa_sha3_signers_are_found_by_bc_names_and_nist_oids() {
+    for (name, expected) in [
+        ("sha3-256withrsa", "SHA3-256withRSA"),
+        ("SHA3-256WITHRSAENCRYPTION", "SHA3-256withRSA"),
+        ("2.16.840.1.101.3.4.3.14", "SHA3-256withRSA"),
+        ("2.16.840.1.101.3.4.3.16", "SHA3-512withRSA"),
+    ] {
+        assert_eq!(name_of(name), Ok(expected), "{name}");
+    }
+}
+
+// SHA3 的 DigestInfo 帶的是 id-sha3 的 OID，所以跟同長度的 SHA-2 簽章互不相通
+#[cfg(all(feature = "rsa", feature = "sha256", feature = "sha3-256"))]
+#[test]
+fn an_rsa_sha3_signature_does_not_verify_as_sha2() {
+    let (public, private) = rsa_pair();
+    let mut sha3 = signer::get_by_name("SHA3-256withRSA").unwrap().signer();
+    let mut sha2 = signer::get_by_name("SHA-256withRSA").unwrap().signer();
+    let signature = signer::sign(&mut sha3, &private, b"message").unwrap();
+    assert!(signer::verify(&mut sha3, &public, b"message", &signature).unwrap());
+    assert!(!signer::verify(&mut sha2, &public, b"message", &signature).unwrap());
+}
+
 #[cfg(feature = "rsa")]
 fn rsa_pair() -> (
     tc_security::params::AnyParams,

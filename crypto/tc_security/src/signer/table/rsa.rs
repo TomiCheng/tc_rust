@@ -207,3 +207,47 @@ pub(super) const SHA512_256: SignerEntry = SignerEntry::new(
     )],
     || signer(Algorithm::Sha512_256),
 );
+
+// NIST 的 id-rsassa-pkcs1-v1_5-with-sha3-*，BC 也對到這幾列
+#[cfg(feature = "sha3-224")]
+pub(super) const SHA3_224: SignerEntry = SignerEntry::new(
+    &["SHA3-224withRSA", "SHA3-224withRSAEncryption"],
+    &[NamedOid::new(
+        &[0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x03, 0x0d],
+        "2.16.840.1.101.3.4.3.13",
+        "id-rsassa-pkcs1-v1_5-with-sha3-224",
+    )],
+    || signer(Algorithm::Sha3_224),
+);
+#[cfg(feature = "sha3-256")]
+pub(super) const SHA3_256: SignerEntry = SignerEntry::new(
+    &["SHA3-256withRSA", "SHA3-256withRSAEncryption"],
+    &[NamedOid::new(
+        &[0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x03, 0x0e],
+        "2.16.840.1.101.3.4.3.14",
+        "id-rsassa-pkcs1-v1_5-with-sha3-256",
+    )],
+    || signer(Algorithm::Sha3_256),
+);
+
+#[cfg(feature = "sha3-384")]
+pub(super) const SHA3_384: SignerEntry = SignerEntry::new(
+    &["SHA3-384withRSA", "SHA3-384withRSAEncryption"],
+    &[NamedOid::new(
+        &[0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x03, 0x0f],
+        "2.16.840.1.101.3.4.3.15",
+        "id-rsassa-pkcs1-v1_5-with-sha3-384",
+    )],
+    || signer(Algorithm::Sha3_384),
+);
+
+#[cfg(feature = "sha3-512")]
+pub(super) const SHA3_512: SignerEntry = SignerEntry::new(
+    &["SHA3-512withRSA", "SHA3-512withRSAEncryption"],
+    &[NamedOid::new(
+        &[0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x03, 0x10],
+        "2.16.840.1.101.3.4.3.16",
+        "id-rsassa-pkcs1-v1_5-with-sha3-512",
+    )],
+    || signer(Algorithm::Sha3_512),
+);

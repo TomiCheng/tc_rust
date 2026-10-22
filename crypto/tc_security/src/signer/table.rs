@@ -15,7 +15,11 @@ mod cfrg;
         feature = "sha384",
         feature = "sha512",
         feature = "sha512-224",
-        feature = "sha512-256"
+        feature = "sha512-256",
+        feature = "sha3-224",
+        feature = "sha3-256",
+        feature = "sha3-384",
+        feature = "sha3-512"
     )
 ))]
 mod rsa;
@@ -43,6 +47,14 @@ pub(super) const SIGNERS: &[SignerEntry] = &[
     rsa::SHA512_224,
     #[cfg(all(feature = "rsa", feature = "sha512-256"))]
     rsa::SHA512_256,
+    #[cfg(all(feature = "rsa", feature = "sha3-224"))]
+    rsa::SHA3_224,
+    #[cfg(all(feature = "rsa", feature = "sha3-256"))]
+    rsa::SHA3_256,
+    #[cfg(all(feature = "rsa", feature = "sha3-384"))]
+    rsa::SHA3_384,
+    #[cfg(all(feature = "rsa", feature = "sha3-512"))]
+    rsa::SHA3_512,
     #[cfg(feature = "ed25519")]
     cfrg::ED25519,
     #[cfg(feature = "ed25519")]
