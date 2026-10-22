@@ -9,8 +9,6 @@ repository.workspace = true
 
 [features]
 default = []
-std = ["tc_runtime?/std"]
-x86 = ["dep:tc_runtime"]
 x448 = []
 ed448 = []
 
@@ -25,7 +23,7 @@ tc_sha = "0.1.0"
 tc_signer = { version = "0.1.0", path = "../../signer/tc_signer" }
 
 [target.'cfg(any(target_arch = "x86", target_arch = "x86_64"))'.dependencies]
-tc_runtime = { version = "0.1.0", optional = true }
+tc_runtime = "0.1.0"
 
 [dev-dependencies]
 criterion = { workspace = true }
