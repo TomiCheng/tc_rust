@@ -1,3 +1,4 @@
+use crate::rfc7748::x448;
 use crate::{CfrgError, KeyGenerationParams, X448PrivateKey, X448PublicKey};
 use tc_asym_cipher::{KeyPairGenerator, KeyPairGeneratorInit};
 
@@ -21,7 +22,8 @@ impl<'a> KeyPairGeneratorInit<KeyGenerationParams<'a>> for X448KeyPairGenerator<
     type Error = CfrgError;
 
     fn init(&mut self, params: KeyGenerationParams<'a>) -> Result<(), CfrgError> {
-        todo!()
+        self.params = Some(params);
+        Ok(())
     }
 }
 
@@ -31,6 +33,9 @@ impl KeyPairGenerator for X448KeyPairGenerator<'_> {
     type Error = CfrgError;
 
     fn generate_key_pair(&mut self) -> Result<(X448PublicKey, X448PrivateKey), CfrgError> {
-        todo!()
+        let params = self.params.as_mut().ok_or(CfrgError::NotInitialized)?;
+        let private_key = X448PrivateKey::new(x448::generate_private_key(params.rng));
+        let public_key = private_key.generate_public_key();
+        Ok((public_key, private_key))
     }
 }

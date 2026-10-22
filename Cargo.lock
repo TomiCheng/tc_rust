@@ -1141,6 +1141,7 @@ name = "tc_cfrg_curves"
 version = "0.1.0"
 dependencies = [
  "criterion",
+ "rand",
  "rand_core",
  "tc_agreement",
  "tc_asym_cipher",

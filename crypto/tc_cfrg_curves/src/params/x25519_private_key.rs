@@ -1,4 +1,5 @@
 use crate::X25519PublicKey;
+use crate::rfc7748::x25519;
 use tc_zeroize::Zeroize;
 
 #[derive(Clone)]
@@ -18,7 +19,7 @@ impl X25519PrivateKey {
     }
 
     pub fn generate_public_key(&self) -> X25519PublicKey {
-        todo!()
+        X25519PublicKey::new(x25519::generate_public_key(&self.k))
     }
 }
 

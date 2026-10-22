@@ -1,4 +1,5 @@
 use crate::X448PublicKey;
+use crate::rfc7748::x448;
 use tc_zeroize::Zeroize;
 
 #[derive(Clone)]
@@ -18,7 +19,7 @@ impl X448PrivateKey {
     }
 
     pub fn generate_public_key(&self) -> X448PublicKey {
-        todo!()
+        X448PublicKey::new(x448::generate_public_key(&self.k))
     }
 }
 

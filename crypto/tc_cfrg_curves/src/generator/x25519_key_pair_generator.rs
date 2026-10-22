@@ -1,3 +1,4 @@
+use crate::rfc7748::x25519;
 use crate::{CfrgError, KeyGenerationParams, X25519PrivateKey, X25519PublicKey};
 use tc_asym_cipher::{KeyPairGenerator, KeyPairGeneratorInit};
 
@@ -21,7 +22,8 @@ impl<'a> KeyPairGeneratorInit<KeyGenerationParams<'a>> for X25519KeyPairGenerato
     type Error = CfrgError;
 
     fn init(&mut self, params: KeyGenerationParams<'a>) -> Result<(), CfrgError> {
-        todo!()
+        self.params = Some(params);
+        Ok(())
     }
 }
 
@@ -31,6 +33,9 @@ impl KeyPairGenerator for X25519KeyPairGenerator<'_> {
     type Error = CfrgError;
 
     fn generate_key_pair(&mut self) -> Result<(X25519PublicKey, X25519PrivateKey), CfrgError> {
-        todo!()
+        let params = self.params.as_mut().ok_or(CfrgError::NotInitialized)?;
+        let private_key = X25519PrivateKey::new(x25519::generate_private_key(params.rng));
+        let public_key = private_key.generate_public_key();
+        Ok((public_key, private_key))
     }
 }
