@@ -219,14 +219,25 @@ impl KeccakDigest {
         }
     }
 
-    /// 把一個位元組 XOR 進狀態(LE lane 內);湊滿 rate 就置換。
-    #[inline]
-    fn absorb_byte(&mut self, b: u8) {
-        self.state[self.pos / 8] ^= (b as u64) << ((self.pos % 8) * 8);
-        self.pos += 1;
-        if self.pos == self.rate_bytes {
-            keccak_f1600(&mut self.state);
-            self.pos = 0;
+    /// 把輸入 XOR 進狀態;湊滿 rate 就置換。在 lane 邊界上一次 XOR 一個 8-byte LE lane,
+    /// 不在邊界上才逐 byte。rate 都是 8 的倍數,所以 lane 不會跨過區塊邊界。
+    fn absorb(&mut self, input: &[u8]) {
+        let mut i = 0;
+        while i < input.len() {
+            if self.pos % 8 == 0 && input.len() - i >= 8 {
+                let lane = u64::from_le_bytes(input[i..i + 8].try_into().expect("an 8-byte lane"));
+                self.state[self.pos / 8] ^= lane;
+                self.pos += 8;
+                i += 8;
+            } else {
+                self.state[self.pos / 8] ^= (input[i] as u64) << ((self.pos % 8) * 8);
+                self.pos += 1;
+                i += 1;
+            }
+            if self.pos == self.rate_bytes {
+                keccak_f1600(&mut self.state);
+                self.pos = 0;
+            }
         }
     }
 
@@ -245,14 +256,24 @@ impl KeccakDigest {
     ///
     /// 擠出位置沿用 `pos`(此階段語意為「當前 rate 區塊已讀位元組」),故可跨多次
     /// 呼叫連續擠出(XOF 用)。
+    ///
+    /// 同吸收,在 lane 邊界上一次讀出一個 lane,不在邊界上才逐 byte。
     fn squeeze(&mut self, output: &mut [u8]) {
-        for out in output.iter_mut() {
+        let mut i = 0;
+        while i < output.len() {
             if self.pos == self.rate_bytes {
                 keccak_f1600(&mut self.state);
                 self.pos = 0;
             }
-            *out = (self.state[self.pos / 8] >> ((self.pos % 8) * 8)) as u8;
-            self.pos += 1;
+            if self.pos % 8 == 0 && output.len() - i >= 8 {
+                output[i..i + 8].copy_from_slice(&self.state[self.pos / 8].to_le_bytes());
+                self.pos += 8;
+                i += 8;
+            } else {
+                output[i] = (self.state[self.pos / 8] >> ((self.pos % 8) * 8)) as u8;
+                self.pos += 1;
+                i += 1;
+            }
         }
     }
 
@@ -290,9 +311,7 @@ impl TryDigest for KeccakDigest {
 
     fn try_update(&mut self, input: &[u8]) -> Result<(), Self::Error> {
         assert!(!self.squeezing, "Keccak: attempt to absorb while squeezing");
-        for &b in input {
-            self.absorb_byte(b);
-        }
+        self.absorb(input);
         Ok(())
     }
 

@@ -1,9 +1,59 @@
 //! do_final 先檢查輸出長度、再動狀態：太短的緩衝區會 panic，digest 留在原狀態仍可用。
+//! 輸入或輸出怎麼切段，都不影響結果。
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
-use tc_digest::Digest;
+use tc_digest::{Digest, TryDigest, Xof};
 use tc_keccak::{CShakeDigest, KeccakDigest, ParallelHash, Sha3Digest, ShakeDigest, TupleHash};
+
+// 逐 byte 餵入一定走單 byte 的路徑，當作對照
+#[test]
+fn absorbing_in_any_chunks_matches_absorbing_byte_by_byte() {
+    let message: Vec<u8> = (0..1000u32).map(|i| (i * 7 + 3) as u8).collect();
+    for bits in [224, 256, 384, 512] {
+        let mut reference = Sha3Digest::new(bits);
+        for byte in &message {
+            reference.update(core::slice::from_ref(byte));
+        }
+        let mut want = vec![0; reference.digest_size()];
+        reference.do_final(&mut want);
+
+        for chunk in 1..=17 {
+            let mut digest = Sha3Digest::new(bits);
+            for piece in message.chunks(chunk) {
+                digest.update(piece);
+            }
+            let mut got = vec![0; digest.digest_size()];
+            digest.do_final(&mut got);
+            assert_eq!(got, want, "SHA3-{bits} in {chunk}-byte chunks");
+        }
+    }
+}
+
+#[test]
+fn squeezing_in_any_chunks_matches_squeezing_byte_by_byte() {
+    for bits in [128, 256] {
+        let mut reference = ShakeDigest::new(bits);
+        reference.update(b"abc");
+        let want: Vec<u8> = (0..600)
+            .map(|_| {
+                let mut byte = [0];
+                reference.output(&mut byte);
+                byte[0]
+            })
+            .collect();
+
+        for chunk in 1..=17 {
+            let mut shake = ShakeDigest::new(bits);
+            shake.update(b"abc");
+            let mut got = vec![0; want.len()];
+            for piece in got.chunks_mut(chunk) {
+                shake.output(piece);
+            }
+            assert_eq!(got, want, "SHAKE{bits} in {chunk}-byte chunks");
+        }
+    }
+}
 
 fn short_output_panics_without_changing_state<D: Digest>(name: &str, make: impl Fn() -> D) {
     let mut expected = make();

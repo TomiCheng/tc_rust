@@ -3,6 +3,7 @@ name = "tc_keccak"
 description = "Keccak, SHA-3, SHAKE, cSHAKE, ParallelHash, and TupleHash for the tc_rust workspace."
 version = "0.1.0"
 edition.workspace = true
+rust-version = "1.85"
 license.workspace = true
 repository.workspace = true
 
