@@ -1,31 +1,32 @@
-//! SP 800-185 §2.3 encoding helpers (`left_encode` / `right_encode` /
-//! `encode_string`), ported from Bouncy Castle's `XofUtils`.
-//!
-//! These length-prefix helpers underlie the SHA-3 derived functions cSHAKE,
-//! TupleHash, ParallelHash and KMAC. All lengths are in **bits** unless a name
+//! The encodings of NIST SP 800-185 §2.3, `left_encode`, `right_encode` and
+//! `encode_string`, ported from Bouncy Castle's `XofUtils`. They underlie
+//! cSHAKE, TupleHash, ParallelHash and KMAC. Lengths are in bits unless a name
 //! says otherwise.
 
 use tc_digest::Digest;
 
-/// 編碼結果放在固定長度的陣列裡：u64 最多 8 bytes，加上 1 byte 的長度。
+/// An encoding in a fixed array: a `u64` takes at most eight bytes, plus one
+/// for its length.
 pub(crate) struct Encoded {
     bytes: [u8; 9],
     len: usize,
 }
 
 impl Encoded {
+    /// The encoded bytes. Constant time.
     pub(crate) fn as_slice(&self) -> &[u8] {
         &self.bytes[..self.len]
     }
 }
 
-// x 的大端序 bytes 數，至少 1
+// The number of big-endian bytes of `value`, at least one.
 fn byte_count(value: u64) -> usize {
     (64 - value.leading_zeros() as usize).div_ceil(8).max(1)
 }
 
-/// `left_encode(x)` = `[n, x_big_endian…]`, where `n` is the byte length of `x`
-/// (at least 1). The length byte comes **first**.
+/// `left_encode(x)`: the byte length `n` of `x`, at least one, then `x` big
+/// endian. Constant time: `value` is always a public length, and the running
+/// time depends only on its byte length.
 pub(crate) fn left_encode(value: u64) -> Encoded {
     let n = byte_count(value);
     let mut bytes = [0; 9];
@@ -34,8 +35,9 @@ pub(crate) fn left_encode(value: u64) -> Encoded {
     Encoded { bytes, len: n + 1 }
 }
 
-/// `right_encode(x)` = `[x_big_endian…, n]`, where `n` is the byte length of `x`.
-/// The length byte comes **last**.
+/// `right_encode(x)`: `x` big endian, then its byte length `n`, at least one.
+/// Constant time: `value` is always a public length, and the running time
+/// depends only on its byte length.
 pub(crate) fn right_encode(value: u64) -> Encoded {
     let n = byte_count(value);
     let mut bytes = [0; 9];
@@ -44,8 +46,9 @@ pub(crate) fn right_encode(value: u64) -> Encoded {
     Encoded { bytes, len: n + 1 }
 }
 
-/// 吸收 `encode_string(s)` = `left_encode(bitlen(s)) || s`：長度前綴與字串分兩次餵入，
-/// 不另外串接。空字串就是 `left_encode(0)`。
+/// Absorbs `encode_string(s)`, `left_encode(bitlen(s)) || s`, as two updates
+/// instead of joining them; the empty string is `left_encode(0)`.
+/// Constant time with respect to the contents of `s`.
 pub(crate) fn absorb_encoded_string(digest: &mut impl Digest, s: &[u8]) {
     digest.update(left_encode(s.len() as u64 * 8).as_slice());
     digest.update(s);

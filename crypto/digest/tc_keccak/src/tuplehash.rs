@@ -1,15 +1,14 @@
-//! TupleHash — hash of a *tuple* of byte strings (NIST SP 800-185), ported from
-//! Bouncy Castle's `TupleHash`.
+//! TupleHash of NIST SP 800-185, ported from Bouncy Castle's `TupleHash`.
 //!
-//! TupleHash unambiguously hashes an ordered tuple of inputs: **each call to
-//! [`update`](tc_digest::Digest::update) contributes one tuple element**,
-//! length-prefixed with `encode_string`, so `(a, b)` and `(ab,)` produce
-//! different digests. It is a cSHAKE with function name `"TupleHash"`; before the
-//! first output it absorbs `right_encode(L)` — `L` = requested output length in
-//! bits for the fixed digest, or `0` in XOF mode — which makes the fixed-length
-//! and arbitrary-length ([`tc_digest::Xof`]) outputs distinct.
+//! TupleHash hashes an ordered tuple of byte strings unambiguously: each call
+//! to [`update`](tc_digest::Digest::update) is one element, absorbed with its
+//! length as `encode_string`, so `(a, b)` and `(ab,)` differ. It is cSHAKE
+//! with the function name `"TupleHash"`; before the first output it absorbs
+//! `right_encode(L)`, with `L` the output length in bits for a fixed-length
+//! output or 0 for an extendable one, so the two never coincide.
 
 use core::convert::Infallible;
+use core::fmt;
 
 use tc_digest::{Digest, TryDigest, TryXof};
 
@@ -18,31 +17,36 @@ use crate::xof_utils::{absorb_encoded_string, right_encode};
 
 const N_TUPLE_HASH: &[u8] = b"TupleHash";
 
-/// A TupleHash128 / TupleHash256 tuple hash (SP 800-185).
+/// TupleHash128 or TupleHash256 of SP 800-185. Constant time with respect to
+/// the elements; the running time depends on their number and lengths.
 #[derive(Clone)]
 pub struct TupleHash {
     cshake: CShakeDigest,
-    /// 預設輸出位元組數。
+    // The default output length in bytes.
     output_length: usize,
-    /// 是否尚未擠出(擠出前需吸收 `right_encode`,僅一次)。
+    // Whether nothing has been read yet, so right_encode(L) is still to come.
     first_output: bool,
 }
 
 impl TupleHash {
-    /// Creates TupleHash-`bit_length` with customization `s` and the default
-    /// output size (`2 × bit_length` bits: 32 bytes for 128, 64 for 256).
+    /// TupleHash with a `bit_length` security strength, 128 or 256, the
+    /// customization `s` and twice the strength of output: 32 bytes for 128,
+    /// 64 for 256. Constant time with respect to the contents of `s`.
     ///
-    /// `bit_length` must be 128 or 256.
+    /// # Panics
+    ///
+    /// Panics for any other strength, as Bouncy Castle throws.
     pub fn new(bit_length: usize, s: &[u8]) -> Self {
         Self::with_output_size(bit_length, s, bit_length * 2)
     }
 
-    /// Creates TupleHash-`bit_length` with customization `s` and an explicit
-    /// output size in **bits** (rounded up to whole bytes).
+    /// TupleHash with a `bit_length` security strength, 128 or 256, the
+    /// customization `s` and `output_size_bits` bits of output, rounded up to
+    /// whole bytes. Constant time with respect to the contents of `s`.
     ///
     /// # Panics
     ///
-    /// Panics (mirroring bc) if `bit_length` is not 128 or 256.
+    /// Panics for any other strength, as Bouncy Castle throws.
     pub fn with_output_size(bit_length: usize, s: &[u8], output_size_bits: usize) -> Self {
         TupleHash {
             cshake: CShakeDigest::new(bit_length, N_TUPLE_HASH, s),
@@ -51,11 +55,22 @@ impl TupleHash {
         }
     }
 
-    /// 擠出前收尾:吸收 `right_encode(output_bits)`(固定模式為輸出位元、XOF 模式為 0)。
+    /// Absorbs `right_encode(L)` before the first output: `L` is the output
+    /// length in bits for a fixed-length output, 0 for an extendable one.
+    /// Constant time.
     fn wrap_up(&mut self, output_bytes: usize) {
         self.cshake
             .update(right_encode(output_bytes as u64 * 8).as_slice());
         self.first_output = false;
+    }
+}
+
+impl fmt::Display for TupleHash {
+    /// Writes `TupleHash` and the security strength, such as `TupleHash128`,
+    /// without inspecting the state. Constant time with respect to the
+    /// message; output timing depends on the formatter.
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "TupleHash{}", self.cshake.bit_length())
     }
 }
 
@@ -70,8 +85,8 @@ impl TryDigest for TupleHash {
         self.cshake.byte_length()
     }
 
+    // Each update is one element of the tuple.
     fn try_update(&mut self, input: &[u8]) -> Result<(), Self::Error> {
-        // 每次 update = 一個元組元素,以 encode_string 長度前綴後餵入 cSHAKE。
         absorb_encoded_string(&mut self.cshake, input);
         Ok(())
     }
@@ -93,16 +108,16 @@ impl TryDigest for TupleHash {
 }
 
 impl TryXof for TupleHash {
+    // An extendable output, right_encode(0).
     fn try_output(&mut self, output: &mut [u8]) -> Result<usize, Self::Error> {
-        // XOF 模式:right_encode(0),表任意長度輸出。
         if self.first_output {
             self.wrap_up(0);
         }
         self.cshake.try_output(output)
     }
 
+    // A fixed-length output, right_encode of its length in bits.
     fn try_output_final(&mut self, output: &mut [u8]) -> Result<usize, Self::Error> {
-        // 固定模式:right_encode(輸出位元數)。
         if self.first_output {
             self.wrap_up(output.len());
         }
@@ -141,6 +156,7 @@ mod tests {
     fn accessors() {
         let t = TupleHash::new(128, b"");
         assert_eq!(t.digest_size(), 32);
+        assert_eq!(alloc::format!("{t}"), "TupleHash128");
         assert_eq!(t.byte_length(), 168);
 
         let t = TupleHash::new(256, b"");
@@ -148,24 +164,24 @@ mod tests {
         assert_eq!(t.byte_length(), 136);
     }
 
-    // NIST SP 800-185 TupleHash 官方樣本(KMAC_samples.pdf)。
+    // NIST's SP 800-185 TupleHash samples.
     #[test]
     fn nist_samples_128() {
         let e1: &[u8] = &unhex("000102");
         let e2: &[u8] = &unhex("101112131415");
         let e3: &[u8] = &unhex("202122232425262728");
 
-        // #1:無自訂化,元組 (e1, e2)。
+        // #1: no customization, the tuple (e1, e2).
         assert_eq!(
             tuple_final(128, b"", &[e1, e2]),
             unhex("c5d8786c1afb9b82111ab34b65b2c0048fa64e6d48e263264ce1707d3ffc8ed1")
         );
-        // #2:自訂化 "My Tuple App",元組 (e1, e2)。
+        // #2: customized as "My Tuple App", the tuple (e1, e2).
         assert_eq!(
             tuple_final(128, b"My Tuple App", &[e1, e2]),
             unhex("75cdb20ff4db1154e841d758e24160c54bae86eb8c13e7f5f40eb35588e96dfb")
         );
-        // #3:自訂化,元組 (e1, e2, e3)。
+        // #3: customized, the tuple (e1, e2, e3).
         assert_eq!(
             tuple_final(128, b"My Tuple App", &[e1, e2, e3]),
             unhex("e60f202c89a2631eda8d4c588ca5fd07f39e5151998deccf973adb3804bb6e84")
@@ -201,14 +217,14 @@ mod tests {
         );
     }
 
-    // XOF 模式(right_encode(0))與固定模式(right_encode(L))結果不同。
+    // An extendable output, right_encode(0), differs from a fixed one, right_encode(L).
     #[test]
     fn xof_mode_differs_from_fixed() {
         let e1: &[u8] = &unhex("000102");
         let e2: &[u8] = &unhex("101112131415");
         let e3: &[u8] = &unhex("202122232425262728");
 
-        // TupleHash128 XOF。
+        // TupleHash128 as an XOF.
         let mut t = TupleHash::new(128, b"My Tuple App");
         t.update(e1);
         t.update(e2);
@@ -224,7 +240,7 @@ mod tests {
             unhex("900fe16cad098d28e74d632ed852f99daab7f7df4d99e775657885b4bf76d6f8")
         );
 
-        // TupleHash256 XOF。
+        // TupleHash256 as an XOF.
         let mut t = TupleHash::new(256, b"My Tuple App");
         t.update(e1);
         t.update(e2);
@@ -240,7 +256,7 @@ mod tests {
         );
     }
 
-    // do_final 後應重置:重算同一元組回到同一結果。
+    // do_final resets, so the same tuple gives the same digest again.
     #[test]
     fn do_final_resets() {
         let e1: &[u8] = &unhex("000102");
@@ -250,7 +266,7 @@ mod tests {
         assert_eq!(first, second);
     }
 
-    // 元組邊界有意義:(a,b) ≠ (ab,)。
+    // Element boundaries count: (a, b) is not (ab,).
     #[test]
     fn tuple_boundaries_matter() {
         let ab = tuple_final(128, b"", &[b"ab"]);

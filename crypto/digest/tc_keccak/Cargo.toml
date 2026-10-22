@@ -1,6 +1,6 @@
 [package]
 name = "tc_keccak"
-description = "Keccak, SHA-3, SHAKE, cSHAKE, ParallelHash, and TupleHash for the tc_rust workspace."
+description = "Keccak, SHA-3, SHAKE, cSHAKE, TupleHash and ParallelHash (FIPS 202, SP 800-185), ported from Bouncy Castle."
 version = "0.1.0"
 edition.workspace = true
 rust-version = "1.85"

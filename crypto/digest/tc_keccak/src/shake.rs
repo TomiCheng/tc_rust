@@ -1,42 +1,40 @@
-//! SHAKE extendable-output functions (FIPS 202), ported from Bouncy Castle's
-//! `ShakeDigest`.
+//! SHAKE128 and SHAKE256 of FIPS 202, ported from Bouncy Castle's
+//! `ShakeDigest`: the Keccak sponge with the domain pad `0x1f`, read as an
+//! extendable-output function through [`tc_digest::Xof`].
 //!
-//! SHAKE128 and SHAKE256 are the Keccak sponge run as a XOF: the same
-//! [`KeccakDigest`] engine with the `0x1f` domain pad, but instead of a fixed
-//! digest length the caller squeezes arbitrarily many bytes via the
-//! [`tc_digest::Xof`] trait. Used as a plain [`tc_digest::Digest`], each produces
-//! its "default" output — twice the security parameter (SHAKE128 → 32 bytes,
-//! SHAKE256 → 64 bytes), matching bc's `GetDigestSize`.
+//! Used as a plain [`tc_digest::Digest`], each writes twice its security
+//! strength, 32 bytes for SHAKE128 and 64 for SHAKE256, as Bouncy Castle's
+//! `GetDigestSize`.
 
 use core::convert::Infallible;
+use core::fmt;
 
 use tc_digest::{TryDigest, TryXof};
 
 use crate::keccak::KeccakDigest;
 
-/// A SHAKE128 / SHAKE256 XOF (FIPS 202).
+/// SHAKE128 or SHAKE256 of FIPS 202. Constant time.
 #[derive(Clone)]
 pub struct ShakeDigest {
     sponge: KeccakDigest,
-    /// 安全參數位元數(128 或 256),決定名稱與預設輸出長度。
+    // The security strength in bits, 128 or 256, which sets the name and the
+    // default output length.
     bit_length: usize,
 }
 
 impl Default for ShakeDigest {
-    /// Creates SHAKE128, matching Bouncy Castle's default constructor.
+    /// SHAKE128, as Bouncy Castle's default constructor. Constant time.
     fn default() -> Self {
         Self::new(128)
     }
 }
 
 impl ShakeDigest {
-    /// Creates SHAKE-`bit_length`.
-    ///
-    /// `bit_length` must be 128 or 256.
+    /// SHAKE with a `bit_length` security strength: 128 or 256. Constant time.
     ///
     /// # Panics
     ///
-    /// Panics (mirroring bc's `ArgumentException`) for an unsupported parameter.
+    /// Panics for any other strength, as Bouncy Castle throws.
     pub fn new(bit_length: usize) -> Self {
         assert!(
             matches!(bit_length, 128 | 256),
@@ -49,11 +47,21 @@ impl ShakeDigest {
     }
 }
 
+impl fmt::Display for ShakeDigest {
+    /// Writes `SHAKE` and the security strength, such as `SHAKE128`, without
+    /// inspecting the state. Constant time with respect to the message; output
+    /// timing depends on the formatter.
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "SHAKE{}", self.bit_length)
+    }
+}
+
 impl TryDigest for ShakeDigest {
     type Error = Infallible;
 
+    // Twice the security strength in bytes, as Bouncy Castle's
+    // fixedOutputLength >> 2.
     fn digest_size(&self) -> usize {
-        // bc:fixedOutputLength >> 2,即安全參數的兩倍位元組(128→32、256→64)。
         self.bit_length / 4
     }
 
@@ -111,14 +119,16 @@ mod tests {
     fn accessors() {
         let d = ShakeDigest::new(128);
         assert_eq!(d.digest_size(), 32);
-        assert_eq!(d.byte_length(), 168); // rate = 1344 bit
+        assert_eq!(d.byte_length(), 168); // a 1344-bit rate
+        assert_eq!(format!("{d}"), "SHAKE128");
 
         let d = ShakeDigest::new(256);
         assert_eq!(d.digest_size(), 64);
-        assert_eq!(d.byte_length(), 136); // rate = 1088 bit
+        assert_eq!(d.byte_length(), 136); // a 1088-bit rate
+        assert_eq!(format!("{d}"), "SHAKE256");
     }
 
-    // FIPS 202 SHAKE128("") 前 32 位元組。
+    // The first 32 bytes of FIPS 202's SHAKE128 of the empty message.
     #[test]
     fn shake128_empty_default() {
         let mut d = ShakeDigest::new(128);
@@ -130,7 +140,8 @@ mod tests {
         );
     }
 
-    // FIPS 202 SHAKE256("") 前 64 位元組(預設輸出長度)。
+    // The first 64 bytes, the default output, of FIPS 202's SHAKE256 of the
+    // empty message.
     #[test]
     fn shake256_empty_default() {
         let mut d = ShakeDigest::new(256);
@@ -143,7 +154,7 @@ mod tests {
         );
     }
 
-    // do_final 後應 reset:第二次算空字串仍正確。
+    // do_final resets, so the second call hashes the empty message.
     #[test]
     fn do_final_resets() {
         let mut d = ShakeDigest::new(128);
@@ -157,7 +168,7 @@ mod tests {
         );
     }
 
-    // 分段擠出應等同一次擠出(串流連續性,跨越 rate 邊界)。
+    // Reading in pieces across the rate gives the stream read at once.
     #[test]
     fn streamed_output_matches_single() {
         let mut a = ShakeDigest::new(256);
@@ -177,7 +188,7 @@ mod tests {
         assert_eq!(whole, streamed);
     }
 
-    // 擠出後再吸收應 panic(bc 拋 "attempt to absorb while squeezing")。
+    // Absorbing after squeezing panics, where Bouncy Castle throws.
     #[test]
     #[should_panic(expected = "attempt to absorb while squeezing")]
     fn absorb_after_squeeze_panics() {

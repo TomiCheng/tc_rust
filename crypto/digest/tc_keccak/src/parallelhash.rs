@@ -1,19 +1,19 @@
-//! ParallelHash — parallelizable hash of long strings (NIST SP 800-185), ported
-//! from Bouncy Castle's `ParallelHash`.
+//! ParallelHash of NIST SP 800-185, ported from Bouncy Castle's
+//! `ParallelHash`.
 //!
-//! ParallelHash splits the message into fixed `B`-byte blocks, hashes each block
-//! independently with a plain SHAKE `compressor` into a `2·bit_length`-bit chaining
-//! value, and feeds those chaining values into an outer cSHAKE (`N = "ParallelHash"`)
-//! prefixed with `left_encode(B)`. Before the first output it absorbs
-//! `right_encode(block_count) || right_encode(L)` — `L` = output length in bits for
-//! the fixed digest, or `0` in XOF mode ([`tc_digest::Xof`]) — so the two
-//! output modes stay distinct.
+//! ParallelHash splits the message into `B`-byte blocks, hashes each block with
+//! a plain SHAKE into a chaining value of twice the security strength, and
+//! absorbs those values into an outer cSHAKE with the function name
+//! `"ParallelHash"`, after `left_encode(B)`. Before the first output it absorbs
+//! `right_encode(n) || right_encode(L)`, with `n` the number of blocks and `L`
+//! the output length in bits, or 0 for an extendable output.
 //!
-//! The per-block independence is what lets a caller parallelize the compressor
-//! stage; this port keeps the (sequential) bit-exact behaviour of bc, feeding
-//! each block into the compressor as it arrives instead of buffering it.
+//! The blocks are independent, which is what would let a caller hash them in
+//! parallel; this port runs them in sequence, as Bouncy Castle does, feeding
+//! each block to the compressor as it arrives instead of buffering it.
 
 use core::convert::Infallible;
+use core::fmt;
 
 use tc_digest::{Digest, TryDigest, TryXof, Xof};
 use tc_zeroize::Zeroize;
@@ -23,41 +23,48 @@ use crate::xof_utils::{left_encode, right_encode};
 
 const N_PARALLEL_HASH: &[u8] = b"ParallelHash";
 
-/// A ParallelHash128 / ParallelHash256 hash (SP 800-185).
+/// ParallelHash128 or ParallelHash256 of SP 800-185. Constant time.
 #[derive(Clone)]
 pub struct ParallelHash {
-    /// 外層彙整雜湊(N = "ParallelHash",客製化 S)。
+    // The outer cSHAKE, function name "ParallelHash" and the caller's
+    // customization.
     cshake: CShakeDigest,
-    /// 逐 block 壓縮器(純 SHAKE,無客製化)。
+    // The per-block compressor, a plain SHAKE.
     compressor: CShakeDigest,
-    /// 預設輸出位元組數。
+    // The default output length in bytes.
     output_length: usize,
-    /// 區塊大小 B(位元組)。
+    // The block size B in bytes.
     block_size: usize,
-    /// 壓縮鏈值長度 = `2·bit_length/8`(32 或 64)。
+    // The length of a chaining value, 32 or 64 bytes.
     compressor_len: usize,
-    /// 目前區塊已餵進 compressor 的位元組數。
+    // The bytes of the current block fed to the compressor.
     in_block: usize,
-    /// 已壓縮區塊數。
+    // The number of blocks absorbed.
     n_count: u64,
-    /// 是否尚未擠出(擠出前需收尾,僅一次)。
+    // Whether nothing has been read yet, so the closing encodings are still to come.
     first_output: bool,
 }
 
 impl ParallelHash {
-    /// Creates ParallelHash-`bit_length` with customization `s`, block size `b`
-    /// (bytes) and the default output size (`2 × bit_length` bits).
+    /// ParallelHash with a `bit_length` security strength, 128 or 256, the
+    /// customization `s`, `b`-byte blocks and twice the strength of output.
+    /// Constant time with respect to the contents of `s`.
     ///
-    /// `bit_length` must be 128 or 256; `b` must be greater than 0.
+    /// # Panics
+    ///
+    /// Panics for any other strength or for `b` of 0, as Bouncy Castle throws.
     pub fn new(bit_length: usize, s: &[u8], b: usize) -> Self {
         Self::with_output_size(bit_length, s, b, bit_length * 2)
     }
 
-    /// Creates ParallelHash-`bit_length` with an explicit output size in bits.
+    /// ParallelHash with a `bit_length` security strength, 128 or 256, the
+    /// customization `s`, `b`-byte blocks and `output_size_bits` bits of
+    /// output, rounded up to whole bytes. Constant time with respect to the
+    /// contents of `s`.
     ///
     /// # Panics
     ///
-    /// Panics (mirroring bc) if `bit_length` is not 128/256 or `b` is 0.
+    /// Panics for any other strength or for `b` of 0, as Bouncy Castle throws.
     pub fn with_output_size(
         bit_length: usize,
         s: &[u8],
@@ -79,10 +86,10 @@ impl ParallelHash {
         h
     }
 
-    /// Reset 的共同初始化:重置 cSHAKE 並吸收 `left_encode(B)` 標頭。
+    /// Resets both cSHAKEs, since the compressor may hold half a block, and
+    /// absorbs `left_encode(B)`. Constant time.
     fn init(&mut self) {
         self.cshake.reset();
-        // 目前區塊可能只餵了一半
         self.compressor.reset();
         self.cshake
             .update(left_encode(self.block_size as u64).as_slice());
@@ -91,7 +98,8 @@ impl ParallelHash {
         self.first_output = true;
     }
 
-    /// 收尾一個 block:compressor 擠出鏈值 → 餵入外層 cSHAKE;`output_final` 會重置 compressor。
+    /// Finishes a block: squeezes its chaining value from the compressor, which
+    /// `output_final` resets, into the outer cSHAKE. Constant time.
     fn finish_block(&mut self) {
         let clen = self.compressor_len;
         let mut cb = [0u8; 64];
@@ -101,7 +109,8 @@ impl ParallelHash {
         self.in_block = 0;
     }
 
-    /// 擠出前收尾:必要時收尾殘留的 block,吸收 `right_encode(nCount) || right_encode(L_bits)`。
+    /// Before the first output, finishes any partial block and absorbs
+    /// `right_encode(n) || right_encode(L)`. Constant time.
     fn wrap_up(&mut self, output_bits: u64) {
         if self.in_block != 0 {
             self.finish_block();
@@ -112,8 +121,18 @@ impl ParallelHash {
     }
 }
 
+impl fmt::Display for ParallelHash {
+    /// Writes `ParallelHash` and the security strength, such as
+    /// `ParallelHash128`, without inspecting the state. Constant time with
+    /// respect to the message; output timing depends on the formatter.
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "ParallelHash{}", self.cshake.bit_length())
+    }
+}
+
 impl Drop for ParallelHash {
-    /// 清除由訊息長度決定的計數;兩個 cSHAKE 各自清除。常數時間。
+    /// Wipes the counts the message length sets; both cSHAKEs wipe themselves.
+    /// Constant time.
     fn drop(&mut self) {
         self.in_block.zeroize();
         self.n_count.zeroize();
@@ -131,7 +150,8 @@ impl TryDigest for ParallelHash {
         self.cshake.byte_length()
     }
 
-    // 邊收邊餵給 compressor,滿 B 位元組就收尾一個 block;SHAKE 分段餵與一次餵結果相同
+    // Feeds the compressor as the input arrives, finishing a block at each B
+    // bytes; SHAKE gives the same value however its input is split.
     fn try_update(&mut self, mut input: &[u8]) -> Result<(), Self::Error> {
         while !input.is_empty() {
             let take = (self.block_size - self.in_block).min(input.len());
@@ -161,16 +181,16 @@ impl TryDigest for ParallelHash {
 }
 
 impl TryXof for ParallelHash {
+    // An extendable output, right_encode(0).
     fn try_output(&mut self, output: &mut [u8]) -> Result<usize, Self::Error> {
-        // XOF 模式:right_encode(0)。
         if self.first_output {
             self.wrap_up(0);
         }
         self.cshake.try_output(output)
     }
 
+    // A fixed-length output, right_encode of the configured length in bits.
     fn try_output_final(&mut self, output: &mut [u8]) -> Result<usize, Self::Error> {
-        // 固定模式:right_encode(輸出位元數 = 設定的摘要長度)。
         if self.first_output {
             self.wrap_up(self.output_length as u64 * 8);
         }
@@ -193,7 +213,7 @@ mod tests {
             .collect()
     }
 
-    // 官方樣本用的兩段訊息。
+    // The two messages of NIST's samples.
     fn data24() -> Vec<u8> {
         unhex("000102030405060710111213141516172021222324252627")
     }
@@ -217,6 +237,7 @@ mod tests {
     fn accessors() {
         let h = ParallelHash::new(128, b"", 8);
         assert_eq!(h.digest_size(), 32);
+        assert_eq!(alloc::format!("{h}"), "ParallelHash128");
         assert_eq!(h.byte_length(), 168);
 
         let h = ParallelHash::new(256, b"", 8);
@@ -224,7 +245,7 @@ mod tests {
         assert_eq!(h.byte_length(), 136);
     }
 
-    // NIST SP 800-185 ParallelHash 官方樣本(固定摘要模式)。
+    // NIST's SP 800-185 ParallelHash samples, with fixed-length outputs.
     #[test]
     fn nist_samples_fixed() {
         assert_eq!(
@@ -262,7 +283,7 @@ mod tests {
         );
     }
 
-    // XOF 模式(right_encode(0))與固定模式結果不同。
+    // An extendable output, right_encode(0), differs from a fixed one.
     #[test]
     fn xof_mode() {
         let mut h = ParallelHash::new(128, b"Parallel Data", 12);
@@ -291,7 +312,7 @@ mod tests {
         );
     }
 
-    // 空訊息 + 大 B(62)+ 特殊客製化字串(bc ImplTestEmpty)。
+    // An empty message, a large B of 62 and an odd customization, Bouncy Castle's ImplTestEmpty.
     #[test]
     fn empty_message_large_block() {
         let s = b"Ny0LL2tUmt<+kuN5:Z7pZ_7]R; l/i:%pWbo4}";
@@ -302,7 +323,7 @@ mod tests {
         assert_eq!(o.to_vec(), unhex("13c4"));
     }
 
-    // 分段輸入(跨 block 邊界)應與一次輸入相同。
+    // Input split across block boundaries gives the digest of the whole.
     #[test]
     fn chunked_matches_whole() {
         let msg = data72();
@@ -323,7 +344,7 @@ mod tests {
         assert_eq!(out, whole);
     }
 
-    // do_final 後重置:重算同一輸入回到同一結果。
+    // do_final resets, so the same input gives the same digest again.
     #[test]
     fn do_final_resets() {
         let a = ph_final(128, b"", 8, &data24());
@@ -331,7 +352,7 @@ mod tests {
         assert_eq!(a, b);
     }
 
-    // reset 丟掉只餵了一半的 block,不留在 compressor 裡。
+    // Reset discards a half-fed block instead of leaving it in the compressor.
     #[test]
     fn reset_discards_a_partial_block() {
         let mut h = ParallelHash::new(128, b"Parallel Data", 12);

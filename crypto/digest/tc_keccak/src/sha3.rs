@@ -1,38 +1,33 @@
-//! SHA-3 message digest (FIPS 202), ported from Bouncy Castle's `Sha3Digest`.
-//!
-//! SHA-3 uses the Keccak-f\[1600\] sponge from [`KeccakDigest`], but separates
-//! its domain from
-//! raw Keccak with the `0x06` suffix. The four standardized fixed output sizes
-//! are supported: SHA3-224, SHA3-256, SHA3-384, and SHA3-512.
+//! SHA-3 of FIPS 202, ported from Bouncy Castle's `Sha3Digest`: the Keccak
+//! sponge with the domain pad `0x06`, at the four standardized output sizes.
 
 use core::convert::Infallible;
+use core::fmt;
 
 use tc_digest::TryDigest;
 
 use crate::keccak::KeccakDigest;
 
-/// A standardized SHA-3 fixed-output digest (FIPS 202).
+/// SHA3-224, SHA3-256, SHA3-384 or SHA3-512 of FIPS 202. Constant time.
 #[derive(Clone)]
 pub struct Sha3Digest {
     sponge: KeccakDigest,
 }
 
 impl Default for Sha3Digest {
-    /// Creates SHA3-256, matching Bouncy Castle's default constructor.
+    /// SHA3-256, as Bouncy Castle's default constructor. Constant time.
     fn default() -> Self {
         Self::new(256)
     }
 }
 
 impl Sha3Digest {
-    /// Creates SHA3-`bit_length`.
-    ///
-    /// `bit_length` must be one of 224, 256, 384, or 512.
+    /// SHA3 with `bit_length` bits of output: 224, 256, 384 or 512.
+    /// Constant time.
     ///
     /// # Panics
     ///
-    /// Panics (mirroring bc's `ArgumentException`) for an unsupported output
-    /// length.
+    /// Panics for any other length, as Bouncy Castle throws.
     pub fn new(bit_length: usize) -> Self {
         assert!(
             matches!(bit_length, 224 | 256 | 384 | 512),
@@ -42,6 +37,15 @@ impl Sha3Digest {
         Sha3Digest {
             sponge: KeccakDigest::with_domain(bit_length, 0x06),
         }
+    }
+}
+
+impl fmt::Display for Sha3Digest {
+    /// Writes `SHA3-` and the output length in bits, such as `SHA3-256`,
+    /// without inspecting the state. Constant time with respect to the
+    /// message; output timing depends on the formatter.
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "SHA3-{}", self.sponge.digest_size() * 8)
     }
 }
 
@@ -151,6 +155,7 @@ mod tests {
             let digest = Sha3Digest::new(bits);
             assert_eq!(digest.digest_size(), digest_size);
             assert_eq!(digest.byte_length(), byte_length);
+            assert_eq!(format!("{digest}"), format!("SHA3-{bits}"));
         }
     }
 

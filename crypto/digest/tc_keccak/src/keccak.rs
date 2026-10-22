@@ -1,23 +1,19 @@
-//! Keccak sponge and the Keccak-f\[1600\] permutation, ported from Bouncy Castle's
-//! `KeccakDigest`.
+//! The Keccak-f\[1600\] permutation and the sponge every digest here is built
+//! on, ported from Bouncy Castle's `KeccakDigest`.
 //!
-//! Unlike Merkle–Damgård digests built on a block accumulator,
-//! Keccak is a **sponge**: input is XORed rate-bytes at a time into a 1600-bit state
-//! (25 × `u64`) with a permutation between blocks (absorb), then output is read back
-//! the same way (squeeze). The permutation is pure XOR/AND/NOT/rotate — no integer
-//! addition anywhere.
-//!
-//! [`KeccakDigest`] here is **raw Keccak** (the NIST-competition version, domain pad
-//! `0x01`). SHA-3 and SHAKE are the same sponge with a different domain pad
-//! (`0x06` / `0x1f`) and reuse the private permutation and sponge machinery;
-//! SHAKE additionally drives the sponge as a XOF.
+//! A sponge XORs its input into a 1600-bit state, 25 `u64` lanes, one rate of
+//! bytes at a time with a permutation between blocks (absorbing), then reads
+//! its output back the same way (squeezing). [`KeccakDigest`] is raw Keccak,
+//! the version submitted to the SHA-3 competition, with the domain pad `0x01`;
+//! SHA-3, SHAKE and cSHAKE reuse the same sponge with their own pads.
 
 use core::convert::Infallible;
+use core::fmt;
 
 use tc_digest::TryDigest;
 use tc_zeroize::Zeroize;
 
-/// Keccak-f[1600] 的 24 個輪常數(ι 步用)。
+/// The 24 round constants of the ι step.
 #[rustfmt::skip]
 const RC: [u64; 24] = [
     0x0000000000000001, 0x0000000000008082, 0x800000000000808a, 0x8000000080008000,
@@ -28,12 +24,14 @@ const RC: [u64; 24] = [
     0x8000000080008081, 0x8000000000008080, 0x0000000080000001, 0x8000000080008008,
 ];
 
-/// The Keccak-f[1600] permutation over a 25-lane (`u64`) state (bc
-/// `KeccakPermutation`). 24 rounds of θ, ρ, π, χ, ι.
+/// The Keccak-f\[1600\] permutation: 24 rounds of θ, ρ, π, χ and ι over 25
+/// lanes, as Bouncy Castle's `KeccakPermutation`. Constant time: only XOR,
+/// AND, OR, NOT and fixed rotations.
 ///
-/// 用 lane complementing(XKCP 的 "bebigokimisa"):進入時把 Abe、Abi、Ago、Aki、Ami、Asa
-/// 六個 lane 取補數,χ 改用 AND/OR 的組合維持這個補數模式,每輪的 NOT 從 25 個降到 5 個;
-/// 離開時再補回來。
+/// It uses lane complementing, XKCP's "bebigokimisa": the lanes Abe, Abi, Ago,
+/// Aki, Ami and Asa are complemented on entry, χ is written with the ANDs and
+/// ORs that keep that pattern, which cuts its NOTs from 25 to 5 a round, and
+/// the six lanes are complemented again on exit.
 pub(crate) fn keccak_f1600(a: &mut [u64; 25]) {
     let (mut a00, mut a01, mut a02, mut a03, mut a04) = (a[0], !a[1], !a[2], a[3], a[4]);
     let (mut a05, mut a06, mut a07, mut a08, mut a09) = (a[5], a[6], a[7], !a[8], a[9]);
@@ -42,6 +40,7 @@ pub(crate) fn keccak_f1600(a: &mut [u64; 25]) {
     let (mut a20, mut a21, mut a22, mut a23, mut a24) = (!a[20], a[21], a[22], a[23], a[24]);
 
     for &rc in RC.iter() {
+        // θ: the column parities, each fed back into the neighbouring columns.
         let ca = a00 ^ a05 ^ a10 ^ a15 ^ a20;
         let ce = a01 ^ a06 ^ a11 ^ a16 ^ a21;
         let ci = a02 ^ a07 ^ a12 ^ a17 ^ a22;
@@ -53,6 +52,7 @@ pub(crate) fn keccak_f1600(a: &mut [u64; 25]) {
         let d_o = ci ^ cu.rotate_left(1);
         let du = co ^ ca.rotate_left(1);
 
+        // ρ and π: each lane rotated by its fixed offset into its new position.
         let bba = a00 ^ da;
         let bbe = (a06 ^ de).rotate_left(44);
         let bbi = (a12 ^ di).rotate_left(43);
@@ -79,6 +79,7 @@ pub(crate) fn keccak_f1600(a: &mut [u64; 25]) {
         let bso = (a15 ^ da).rotate_left(41);
         let bsu = (a21 ^ de).rotate_left(2);
 
+        // χ, with ι on the first lane, in the complemented form.
         a00 = bba ^ (bbe | bbi) ^ rc;
         a01 = bbe ^ (!bbi | bbo);
         a02 = bbi ^ (bbo & bbu);
@@ -116,39 +117,40 @@ pub(crate) fn keccak_f1600(a: &mut [u64; 25]) {
     ];
 }
 
-/// A Keccak sponge digest with fixed output length.
+/// Raw Keccak, the SHA-3 competition version with the domain pad `0x01`, as
+/// Bouncy Castle's `KeccakDigest`. Constant time.
 ///
-/// The public constructor builds **raw Keccak** (domain pad `0x01`); SHA-3 and
-/// SHAKE reuse the same engine through an internal domain constructor.
+/// This is the sponge the other digests in the crate are built on, each with
+/// its own domain pad.
 #[derive(Clone)]
 pub struct KeccakDigest {
-    /// 1600-bit 狀態(25 lane)。
+    // The 1600-bit state as 25 lanes.
     state: [u64; 25],
-    /// rate(位元組):每次吸收/擠出的區塊大小 = (1600 − 2·輸出bit) / 8。
+    // The bytes absorbed or squeezed per permutation: (1600 - 2 x output bits) / 8.
     rate_bytes: usize,
-    /// 當前區塊已吸收/擠出的位元組位置。
+    // The position within the current block, while absorbing or squeezing.
     pos: usize,
-    /// 固定輸出位元組數。
+    // The fixed output length in bytes.
     out_len: usize,
-    /// domain separation pad(raw Keccak = 0x01)。
+    // The domain separation bits padded on before the final permutation.
     domain: u8,
-    /// 是否已進入擠出階段(pad 之後不得再吸收)。
+    // Whether the sponge is squeezing; it absorbs no more until reset.
     squeezing: bool,
 }
 
 impl KeccakDigest {
-    /// Creates a raw Keccak digest of the given output bit length (one of 128,
-    /// 224, 256, 288, 384, 512).
+    /// Raw Keccak with `bit_length` bits of output: 128, 224, 256, 288, 384 or
+    /// 512. Constant time.
     ///
     /// # Panics
     ///
-    /// Panics (mirroring bc's `ArgumentException`) on an unsupported bit length.
+    /// Panics for any other length, as Bouncy Castle throws.
     pub fn new(bit_length: usize) -> Self {
         Self::with_domain(bit_length, 0x01)
     }
 
-    /// Builds a sponge digest with a caller-chosen domain pad —
-    /// used by SHA-3 (`0x06`) and, once ported, SHAKE (`0x1f`). Not for general use.
+    /// A sponge with `bit_length` bits of output and the domain pad `domain`,
+    /// for SHA-3 (`0x06`), SHAKE (`0x1f`) and cSHAKE (`0x04`). Constant time.
     pub(crate) fn with_domain(bit_length: usize, domain: u8) -> Self {
         assert!(
             matches!(bit_length, 128 | 224 | 256 | 288 | 384 | 512),
@@ -165,8 +167,11 @@ impl KeccakDigest {
         }
     }
 
-    /// 把輸入 XOR 進狀態;湊滿 rate 就置換。在 lane 邊界上一次 XOR 一個 8-byte LE lane,
-    /// 不在邊界上才逐 byte。rate 都是 8 的倍數,所以 lane 不會跨過區塊邊界。
+    /// XORs `input` into the state, permuting at each full block. On a lane
+    /// boundary it takes a whole eight-byte little-endian lane, and goes byte by
+    /// byte only off one; every rate is a multiple of eight, so a lane never
+    /// crosses a block. Constant time: the work depends only on the input
+    /// length and the position.
     fn absorb(&mut self, input: &[u8]) {
         let mut i = 0;
         while i < input.len() {
@@ -187,9 +192,9 @@ impl KeccakDigest {
         }
     }
 
-    /// 補 pad10*1(domain 開頭 + 尾端最高位),置換一次並切換到擠出階段。
+    /// Pads with pad10*1, the domain bits at the position and the closing bit
+    /// at the end of the block, permutes and starts squeezing. Constant time.
     fn pad_and_switch(&mut self) {
-        // domain pad 位於當前位置;pad10*1 的收尾 1 位在 rate 的最後一位元。
         self.state[self.pos / 8] ^= (self.domain as u64) << ((self.pos % 8) * 8);
         let last = self.rate_bytes - 1;
         self.state[last / 8] ^= 0x80u64 << ((last % 8) * 8);
@@ -198,12 +203,10 @@ impl KeccakDigest {
         self.squeezing = true;
     }
 
-    /// 從狀態連續讀出位元組;每讀滿一個 rate 區塊就再置換一次。
-    ///
-    /// 擠出位置沿用 `pos`(此階段語意為「當前 rate 區塊已讀位元組」),故可跨多次
-    /// 呼叫連續擠出(XOF 用)。
-    ///
-    /// 同吸收,在 lane 邊界上一次讀出一個 lane,不在邊界上才逐 byte。
+    /// Reads `output` from the state, permuting before each new block; the
+    /// position carries over, so successive calls continue one output stream.
+    /// Like absorbing, it reads whole lanes on lane boundaries. Constant time:
+    /// the work depends only on the output length and the position.
     fn squeeze(&mut self, output: &mut [u8]) {
         let mut i = 0;
         while i < output.len() {
@@ -223,8 +226,10 @@ impl KeccakDigest {
         }
     }
 
-    /// SP 800-185 `bytepad` 的補零：補到區塊邊界。XOR 零不改變狀態，所以只要在區塊中途時
-    /// 置換一次；剛好在邊界上時，吸收時已經置換過了。
+    /// The zero padding of SP 800-185's `bytepad`, up to the next block
+    /// boundary. XORing zeros changes nothing, so it only permutes when the
+    /// position is inside a block; on a boundary absorbing has already
+    /// permuted. Constant time.
     pub(crate) fn pad_to_block(&mut self) {
         if self.pos != 0 {
             keccak_f1600(&mut self.state);
@@ -232,15 +237,23 @@ impl KeccakDigest {
         }
     }
 
-    /// XOF 擠出:首次呼叫先補 pad 切換,之後每次續擠(供 SHAKE 等 XOF 使用)。
-    ///
-    /// 呼叫後不 reset,可反覆呼叫取任意長度輸出;固定輸出的收尾走
-    /// [`TryDigest::try_do_final`]。
+    /// Squeezes `output` as an extendable-output function: the first call pads
+    /// and switches to squeezing, later calls continue the stream. It does not
+    /// reset. Constant time.
     pub(crate) fn xof_output(&mut self, output: &mut [u8]) {
         if !self.squeezing {
             self.pad_and_switch();
         }
         self.squeeze(output);
+    }
+}
+
+impl fmt::Display for KeccakDigest {
+    /// Writes `Keccak-` and the output length in bits, such as `Keccak-256`,
+    /// without inspecting the state. Constant time with respect to the
+    /// message; output timing depends on the formatter.
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Keccak-{}", self.out_len * 8)
     }
 }
 
@@ -273,7 +286,7 @@ impl TryDigest for KeccakDigest {
         Ok(len)
     }
 
-    // 換成新的 digest,舊的在 drop 時清除
+    // A fresh digest replaces this one, which the drop wipes.
     fn try_reset(&mut self) -> Result<(), Self::Error> {
         *self = Self::with_domain(self.out_len * 8, self.domain);
         Ok(())
@@ -281,7 +294,8 @@ impl TryDigest for KeccakDigest {
 }
 
 impl Drop for KeccakDigest {
-    /// 清除狀態與位置;包住它的 digest 都經由這裡清除。常數時間。
+    /// Wipes the state and the position; every digest that holds a sponge is
+    /// wiped through here. Constant time.
     fn drop(&mut self) {
         self.state.zeroize();
         self.pos.zeroize();
@@ -307,7 +321,7 @@ mod tests {
         s
     }
 
-    // 原始 Keccak(非 SHA-3)已知向量。
+    // Raw Keccak, not SHA-3.
     #[test]
     fn keccak256_vectors() {
         assert_eq!(
@@ -337,11 +351,11 @@ mod tests {
     fn accessors_and_reset() {
         let mut d = KeccakDigest::new(256);
         assert_eq!(d.digest_size(), 32);
-        assert_eq!(d.byte_length(), 136); // rate = 1088 bit
+        assert_eq!(d.byte_length(), 136); // a 1088-bit rate
         d.update(b"abc");
         let mut o = [0u8; 32];
         d.do_final(&mut o);
-        // do_final 後應 reset,再算空字串。
+        // do_final reset the digest, so this is the empty message.
         d.do_final(&mut o);
         let s: String = o.iter().map(|b| format!("{b:02x}")).collect();
         assert_eq!(
@@ -364,5 +378,11 @@ mod tests {
         let mut ob = [0u8; 32];
         b.do_final(&mut ob);
         assert_eq!(oa, ob);
+    }
+
+    #[test]
+    fn display_names_the_output_length() {
+        assert_eq!(format!("{}", KeccakDigest::new(256)), "Keccak-256");
+        assert_eq!(format!("{}", KeccakDigest::new(288)), "Keccak-288");
     }
 }

@@ -7,7 +7,7 @@ use tc_digest::{Digest, Xof};
 use tc_keccak::ShakeDigest;
 
 fn unhex(s: &str) -> Vec<u8> {
-    // 向量字面值以 `\n` + 縮排分行,先濾出十六進位字元再兩兩配對。
+    // The literals wrap with `\n` and indentation, so keep only the hex digits.
     let digits: Vec<char> = s.chars().filter(|c| c.is_ascii_hexdigit()).collect();
     digits
         .chunks(2)
@@ -47,13 +47,13 @@ const VECTORS: &[(usize, &[u8], &str)] = &[
 fn official_shake_kat() {
     for &(bits, message, expected_hex) in VECTORS {
         let expected = unhex(expected_hex);
-        // 一次擠出。
+        // Read at once.
         let mut d = ShakeDigest::new(bits);
         d.update(message);
         let mut out = vec![0u8; expected.len()];
         d.output_final(&mut out);
         assert_eq!(out, expected, "SHAKE{bits} single-shot");
-        // 分段擠出應相同。
+        // Read in two pieces, the same stream.
         let mut d = ShakeDigest::new(bits);
         d.update(message);
         let mut out = vec![0u8; expected.len()];

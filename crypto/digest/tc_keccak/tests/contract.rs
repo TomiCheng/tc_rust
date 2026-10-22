@@ -1,12 +1,13 @@
-//! do_final 先檢查輸出長度、再動狀態：太短的緩衝區會 panic，digest 留在原狀態仍可用。
-//! 輸入或輸出怎麼切段，都不影響結果。
+//! Contract tests: how the input or the output is split never changes the
+//! bytes, a short output buffer panics before any state changes, and every
+//! digest wipes itself on drop.
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use tc_digest::{Digest, TryDigest, Xof};
 use tc_keccak::{CShakeDigest, KeccakDigest, ParallelHash, Sha3Digest, ShakeDigest, TupleHash};
 
-// 逐 byte 餵入一定走單 byte 的路徑，當作對照
+// Feeding one byte at a time always takes the byte path, the reference.
 #[test]
 fn absorbing_in_any_chunks_matches_absorbing_byte_by_byte() {
     let message: Vec<u8> = (0..1000u32).map(|i| (i * 7 + 3) as u8).collect();
@@ -86,7 +87,8 @@ fn every_digest_checks_the_output_length_before_finishing() {
     });
 }
 
-// 清除本身不用 unsafe 看不到；這裡至少確保每個 digest 在 drop 時有事可做
+// The wipe itself cannot be observed without unsafe code; this guards
+// that every digest runs a destructor.
 #[test]
 fn every_digest_wipes_itself_on_drop() {
     assert!(std::mem::needs_drop::<KeccakDigest>());
