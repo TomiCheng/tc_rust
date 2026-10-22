@@ -1142,12 +1142,15 @@ version = "0.1.0"
 dependencies = [
  "criterion",
  "rand_core",
+ "tc_agreement",
+ "tc_asym_cipher",
  "tc_bigint 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tc_constant_time",
  "tc_digest 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tc_modular",
  "tc_runtime",
  "tc_sha 0.1.1",
+ "tc_signer",
 ]
 
 [[package]]

@@ -11,17 +11,20 @@ repository.workspace = true
 default = []
 std = ["tc_runtime?/std"]
 x86 = ["dep:tc_runtime"]
-x25519 = []
-x448 = []
-ed25519 = ["dep:tc_digest", "dep:tc_sha"]
-ed448 = ["dep:tc_digest"]
+x25519 = ["dep:tc_agreement", "dep:tc_asym_cipher"]
+x448 = ["dep:tc_agreement", "dep:tc_asym_cipher"]
+ed25519 = ["dep:tc_asym_cipher", "dep:tc_digest", "dep:tc_sha", "dep:tc_signer"]
+ed448 = ["dep:tc_asym_cipher", "dep:tc_digest", "dep:tc_signer"]
 
 [dependencies]
 rand_core = { workspace = true }
+tc_agreement = { version = "0.1.0", path = "../agreement/tc_agreement", optional = true }
+tc_asym_cipher = { version = "0.1.0", optional = true }
 tc_constant_time = "0.1.0"
 tc_digest = { version = "0.1.0", optional = true }
 # tc_keccak = { version = "0.1.0", path = "../digest/tc_keccak", optional = true }
 tc_sha = { version = "0.1.0", optional = true }
+tc_signer = { version = "0.1.0", path = "../../signer/tc_signer", optional = true }
 
 [target.'cfg(any(target_arch = "x86", target_arch = "x86_64"))'.dependencies]
 tc_runtime = { version = "0.1.0", optional = true }
