@@ -250,14 +250,5 @@ impl<F: EdwardsField> EdwardsPoint<F> {
 }
 
 /// Contexts in RFC 8032 are limited to 255 bytes.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct ContextTooLong;
-impl core::fmt::Display for ContextTooLong {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        f.write_str("EdDSA context exceeds 255 bytes")
-    }
-}
-impl core::error::Error for ContextTooLong {}
-
 #[cfg(test)]
 mod tests;

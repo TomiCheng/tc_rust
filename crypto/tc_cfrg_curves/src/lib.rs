@@ -28,6 +28,32 @@
 //! assert_eq!(alice_secret, bob_secret);
 //! # Ok::<(), tc_cfrg_curves::CfrgError>(())
 //! ```
+//!
+//! Ed25519 簽章：Alice 用私鑰簽章，Bob 用她的公鑰驗章。
+//!
+//! ```
+//! use tc_asym_cipher::{KeyPairGenerator, KeyPairGeneratorInit};
+//! use tc_cfrg_curves::{Ed25519KeyPairGenerator, Ed25519Signer, KeyGenerationParams};
+//! use tc_signer::{Signer, SignerInit};
+//!
+//! let mut rng = rand::rng();
+//! let mut generator = Ed25519KeyPairGenerator::new();
+//! generator.init(KeyGenerationParams::new(&mut rng))?;
+//! let (public_key, private_key) = generator.generate_key_pair()?;
+//!
+//! let mut signer = Ed25519Signer::new();
+//! signer.init(&private_key)?;
+//! signer.update(b"attack at dawn")?;
+//! let mut signature = [0; 64];
+//! signer.generate_signature(&mut signature)?;
+//!
+//! // Bob 拿到訊息、簽章與 Alice 的公鑰。
+//! let mut verifier = Ed25519Signer::new();
+//! verifier.init(&public_key)?;
+//! verifier.update(b"attack at dawn")?;
+//! assert!(verifier.verify_signature(&signature)?);
+//! # Ok::<(), tc_cfrg_curves::CfrgError>(())
+//! ```
 
 #![no_std]
 
@@ -41,6 +67,7 @@ mod error;
 mod generator;
 mod params;
 mod rfc7748;
+mod rfc8032;
 mod signer;
 
 #[cfg(feature = "x448")]
