@@ -5,19 +5,21 @@
 
 extern crate alloc;
 
-mod ed25519;
-#[cfg(feature = "ed448")]
-mod ed448;
+mod agreement;
 mod error;
+mod generator;
 mod params;
-mod x25519;
-#[cfg(feature = "x448")]
-mod x448;
+mod signer;
 
-#[cfg(feature = "ed448")]
-pub use ed448::{Ed448KeyPairGenerator, Ed448PhSigner, Ed448Signer};
-pub use ed25519::{Ed25519CtxSigner, Ed25519KeyPairGenerator, Ed25519PhSigner, Ed25519Signer};
+#[cfg(feature = "x448")]
+pub use agreement::X448Agreement;
+pub use agreement::X25519Agreement;
 pub use error::CfrgError;
+#[cfg(feature = "ed448")]
+pub use generator::Ed448KeyPairGenerator;
+#[cfg(feature = "x448")]
+pub use generator::X448KeyPairGenerator;
+pub use generator::{Ed25519KeyPairGenerator, X25519KeyPairGenerator};
 #[cfg(feature = "ed448")]
 pub use params::{Ed448PrivateKey, Ed448PublicKey};
 pub use params::{
@@ -25,6 +27,6 @@ pub use params::{
 };
 #[cfg(feature = "x448")]
 pub use params::{X448PrivateKey, X448PublicKey};
-#[cfg(feature = "x448")]
-pub use x448::{X448Agreement, X448KeyPairGenerator};
-pub use x25519::{X25519Agreement, X25519KeyPairGenerator};
+#[cfg(feature = "ed448")]
+pub use signer::{Ed448PhSigner, Ed448Signer};
+pub use signer::{Ed25519CtxSigner, Ed25519PhSigner, Ed25519Signer};
