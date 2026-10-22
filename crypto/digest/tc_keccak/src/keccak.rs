@@ -15,6 +15,7 @@
 use core::convert::Infallible;
 
 use tc_digest::TryDigest;
+use tc_zeroize::Zeroize;
 
 /// Keccak-f[1600] 的 24 個輪常數(ι 步用)。
 #[rustfmt::skip]
@@ -272,11 +273,18 @@ impl TryDigest for KeccakDigest {
         Ok(len)
     }
 
+    // 換成新的 digest,舊的在 drop 時清除
     fn try_reset(&mut self) -> Result<(), Self::Error> {
-        self.state = [0; 25];
-        self.pos = 0;
-        self.squeezing = false;
+        *self = Self::with_domain(self.out_len * 8, self.domain);
         Ok(())
+    }
+}
+
+impl Drop for KeccakDigest {
+    /// 清除狀態與位置;包住它的 digest 都經由這裡清除。常數時間。
+    fn drop(&mut self) {
+        self.state.zeroize();
+        self.pos.zeroize();
     }
 }
 

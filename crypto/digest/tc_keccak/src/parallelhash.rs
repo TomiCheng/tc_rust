@@ -16,6 +16,7 @@
 use core::convert::Infallible;
 
 use tc_digest::{Digest, TryDigest, TryXof, Xof};
+use tc_zeroize::Zeroize;
 
 use crate::cshake::CShakeDigest;
 use crate::xof_utils::{left_encode, right_encode};
@@ -108,6 +109,14 @@ impl ParallelHash {
         self.cshake.update(right_encode(self.n_count).as_slice());
         self.cshake.update(right_encode(output_bits).as_slice());
         self.first_output = false;
+    }
+}
+
+impl Drop for ParallelHash {
+    /// 清除由訊息長度決定的計數;兩個 cSHAKE 各自清除。常數時間。
+    fn drop(&mut self) {
+        self.in_block.zeroize();
+        self.n_count.zeroize();
     }
 }
 

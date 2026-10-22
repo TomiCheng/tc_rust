@@ -85,3 +85,14 @@ fn every_digest_checks_the_output_length_before_finishing() {
         ParallelHash::new(128, b"", 8)
     });
 }
+
+// 清除本身不用 unsafe 看不到；這裡至少確保每個 digest 在 drop 時有事可做
+#[test]
+fn every_digest_wipes_itself_on_drop() {
+    assert!(std::mem::needs_drop::<KeccakDigest>());
+    assert!(std::mem::needs_drop::<Sha3Digest>());
+    assert!(std::mem::needs_drop::<ShakeDigest>());
+    assert!(std::mem::needs_drop::<CShakeDigest>());
+    assert!(std::mem::needs_drop::<TupleHash>());
+    assert!(std::mem::needs_drop::<ParallelHash>());
+}
