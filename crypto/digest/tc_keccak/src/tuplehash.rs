@@ -78,6 +78,10 @@ impl TryDigest for TupleHash {
 
     fn try_do_final(&mut self, output: &mut [u8]) -> Result<usize, Self::Error> {
         let len = self.output_length;
+        assert!(
+            output.len() >= len,
+            "output buffer shorter than the {len}-byte digest"
+        );
         self.try_output_final(&mut output[..len])
     }
 
