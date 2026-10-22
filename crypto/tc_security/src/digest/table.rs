@@ -117,4 +117,91 @@ pub(super) const DIGESTS: &[DigestEntry] = &[
         )),
         || Box::new(tc_sha::Sha512tDigest::new(256)),
     ),
+    // FIPS 202；原始 Keccak 沒有 OID。SHAKE 當固定長度的 digest，名稱與長度同 BC
+    #[cfg(feature = "sha3-224")]
+    DigestEntry::new(
+        Algorithm::Sha3_224,
+        "SHA3-224",
+        Some(NamedOid::new(
+            &[0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x07],
+            "2.16.840.1.101.3.4.2.7",
+            "id-sha3-224",
+        )),
+        || Box::new(tc_keccak::Sha3Digest::new(224)),
+    ),
+    #[cfg(feature = "sha3-256")]
+    DigestEntry::new(
+        Algorithm::Sha3_256,
+        "SHA3-256",
+        Some(NamedOid::new(
+            &[0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x08],
+            "2.16.840.1.101.3.4.2.8",
+            "id-sha3-256",
+        )),
+        || Box::new(tc_keccak::Sha3Digest::new(256)),
+    ),
+    #[cfg(feature = "sha3-384")]
+    DigestEntry::new(
+        Algorithm::Sha3_384,
+        "SHA3-384",
+        Some(NamedOid::new(
+            &[0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x09],
+            "2.16.840.1.101.3.4.2.9",
+            "id-sha3-384",
+        )),
+        || Box::new(tc_keccak::Sha3Digest::new(384)),
+    ),
+    #[cfg(feature = "sha3-512")]
+    DigestEntry::new(
+        Algorithm::Sha3_512,
+        "SHA3-512",
+        Some(NamedOid::new(
+            &[0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x0a],
+            "2.16.840.1.101.3.4.2.10",
+            "id-sha3-512",
+        )),
+        || Box::new(tc_keccak::Sha3Digest::new(512)),
+    ),
+    #[cfg(feature = "keccak-224")]
+    DigestEntry::new(Algorithm::Keccak224, "KECCAK-224", None, || {
+        Box::new(tc_keccak::KeccakDigest::new(224))
+    }),
+    #[cfg(feature = "keccak-256")]
+    DigestEntry::new(Algorithm::Keccak256, "KECCAK-256", None, || {
+        Box::new(tc_keccak::KeccakDigest::new(256))
+    }),
+    #[cfg(feature = "keccak-288")]
+    DigestEntry::new(Algorithm::Keccak288, "KECCAK-288", None, || {
+        Box::new(tc_keccak::KeccakDigest::new(288))
+    }),
+    #[cfg(feature = "keccak-384")]
+    DigestEntry::new(Algorithm::Keccak384, "KECCAK-384", None, || {
+        Box::new(tc_keccak::KeccakDigest::new(384))
+    }),
+    #[cfg(feature = "keccak-512")]
+    DigestEntry::new(Algorithm::Keccak512, "KECCAK-512", None, || {
+        Box::new(tc_keccak::KeccakDigest::new(512))
+    }),
+    #[cfg(feature = "shake128")]
+    DigestEntry::new(
+        Algorithm::Shake128,
+        "SHAKE128-256",
+        Some(NamedOid::new(
+            &[0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x0b],
+            "2.16.840.1.101.3.4.2.11",
+            "id-shake128",
+        )),
+        || Box::new(tc_keccak::ShakeDigest::new(128)),
+    ),
+    #[cfg(feature = "shake256")]
+    DigestEntry::new(
+        Algorithm::Shake256,
+        "SHAKE256-512",
+        Some(NamedOid::new(
+            &[0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x0c],
+            "2.16.840.1.101.3.4.2.12",
+            "id-shake256",
+        )),
+        || Box::new(tc_keccak::ShakeDigest::new(256)),
+    ),
 ];

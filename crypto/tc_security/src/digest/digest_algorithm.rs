@@ -24,6 +24,28 @@ pub enum Algorithm {
     Sha512_224,
     #[cfg(feature = "sha512-256")]
     Sha512_256,
+    #[cfg(feature = "sha3-224")]
+    Sha3_224,
+    #[cfg(feature = "sha3-256")]
+    Sha3_256,
+    #[cfg(feature = "sha3-384")]
+    Sha3_384,
+    #[cfg(feature = "sha3-512")]
+    Sha3_512,
+    #[cfg(feature = "keccak-224")]
+    Keccak224,
+    #[cfg(feature = "keccak-256")]
+    Keccak256,
+    #[cfg(feature = "keccak-288")]
+    Keccak288,
+    #[cfg(feature = "keccak-384")]
+    Keccak384,
+    #[cfg(feature = "keccak-512")]
+    Keccak512,
+    #[cfg(feature = "shake128")]
+    Shake128,
+    #[cfg(feature = "shake256")]
+    Shake256,
 }
 
 impl Algorithm {

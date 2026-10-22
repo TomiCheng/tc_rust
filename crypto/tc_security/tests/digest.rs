@@ -8,7 +8,8 @@ fn hex(bytes: &[u8]) -> String {
     bytes.iter().map(|byte| format!("{byte:02x}")).collect()
 }
 
-// RFC 1319、1320、1321 與 FIPS 180-4 的 "abc" 範例
+// RFC 1319、1320、1321、FIPS 180-4 與 FIPS 202 的 "abc" 範例；SHAKE 由 Python hashlib（OpenSSL）算出，
+// 原始 Keccak 由先以 hashlib 的 SHA-3 驗證過的 Python 參考實作算出
 const ABC: &[(Algorithm, &str)] = &[
     #[cfg(feature = "md2")]
     (Algorithm::Md2, "da853b0d3f88d99b30283a69e6ded6bb"),
@@ -49,6 +50,67 @@ const ABC: &[(Algorithm, &str)] = &[
     (
         Algorithm::Sha512_256,
         "53048e2681941ef99b2e29b76b4c7dabe4c2d0c634fc6d46e0e2f13107e7af23",
+    ),
+    #[cfg(feature = "sha3-224")]
+    (
+        Algorithm::Sha3_224,
+        "e642824c3f8cf24ad09234ee7d3c766fc9a3a5168d0c94ad73b46fdf",
+    ),
+    #[cfg(feature = "sha3-256")]
+    (
+        Algorithm::Sha3_256,
+        "3a985da74fe225b2045c172d6bd390bd855f086e3e9d525b46bfe24511431532",
+    ),
+    #[cfg(feature = "sha3-384")]
+    (
+        Algorithm::Sha3_384,
+        "ec01498288516fc926459f58e2c6ad8df9b473cb0fc08c2596da7cf0e49be4b2\
+         98d88cea927ac7f539f1edf228376d25",
+    ),
+    #[cfg(feature = "sha3-512")]
+    (
+        Algorithm::Sha3_512,
+        "b751850b1a57168a5693cd924b6b096e08f621827444f70d884f5d0240d2712e\
+         10e116e9192af3c91a7ec57647e3934057340b4cf408d5a56592f8274eec53f0",
+    ),
+    #[cfg(feature = "keccak-224")]
+    (
+        Algorithm::Keccak224,
+        "c30411768506ebe1c2871b1ee2e87d38df342317300a9b97a95ec6a8",
+    ),
+    #[cfg(feature = "keccak-256")]
+    (
+        Algorithm::Keccak256,
+        "4e03657aea45a94fc7d47ba826c8d667c0d1e6e33a64a036ec44f58fa12d6c45",
+    ),
+    #[cfg(feature = "keccak-288")]
+    (
+        Algorithm::Keccak288,
+        "20ff13d217d5789fa7fc9e0e9a2ee627363ec28171d0b6c52bbd2f240554dbc9\
+         4289f4d6",
+    ),
+    #[cfg(feature = "keccak-384")]
+    (
+        Algorithm::Keccak384,
+        "f7df1165f033337be098e7d288ad6a2f74409d7a60b49c36642218de161b1f99\
+         f8c681e4afaf31a34db29fb763e3c28e",
+    ),
+    #[cfg(feature = "keccak-512")]
+    (
+        Algorithm::Keccak512,
+        "18587dc2ea106b9a1563e32b3312421ca164c7f1f07bc922a9c83d77cea3a1e5\
+         d0c69910739025372dc14ac9642629379540c17e2a65b19d77aa511a9d00bb96",
+    ),
+    #[cfg(feature = "shake128")]
+    (
+        Algorithm::Shake128,
+        "5881092dd818bf5cf8a3ddb793fbcba74097d5c526a6d35f97b83351940f2cc8",
+    ),
+    #[cfg(feature = "shake256")]
+    (
+        Algorithm::Shake256,
+        "483366601360a8771c6863080cc4114d8db44530f8f1e1ee4f94ea37e78b5739\
+         d5a15bef186a5386c75744c0527e1faa9f8726e462a12a4feb06bd8801e751e4",
     ),
 ];
 
@@ -118,7 +180,7 @@ fn every_listed_oid_is_found_again_as_an_oid_and_as_dotted_text() {
 #[test]
 fn unknown_names_and_oids_are_rejected() {
     assert_eq!(
-        digest::get_by_name("SHA3-256").err(),
+        digest::get_by_name("SHA3-1024").err(),
         Some(SecurityError::UnknownDigest)
     );
     assert_eq!(
