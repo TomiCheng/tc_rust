@@ -1538,8 +1538,9 @@ dependencies = [
 [[package]]
 name = "tc_keccak"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4da36e75d0057ac4f32d3fcc071c16da00fd9a23cbdaefaa8a58b2394fb5dab6"
 dependencies = [
- "criterion",
  "tc_digest 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tc_zeroize",
 ]

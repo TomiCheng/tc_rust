@@ -93,7 +93,7 @@ in the family crates.
 | Family | Public types and variants | Notes |
 |--------|---------------------------|-------|
 | SHA-1 / SHA-2 | `Sha1Digest`, `Sha224Digest`, `Sha256Digest`, `Sha384Digest`, `Sha512Digest`, `Sha512tDigest` | SHA-512/224 and SHA-512/256 supported through SHA-512/t |
-| SHA-3 / Keccak | `Sha3Digest`, `KeccakDigest` | SHA3-224/256/384/512; raw Keccak-128/224/256/288/384/512 |
+| SHA-3 / Keccak | `Sha3Digest`, `KeccakDigest` | SHA3-224/256/384/512; raw Keccak-128/224/256/288/384/512. Published as `tc_keccak` on crates.io from TomiCheng/tc_digest |
 | RIPEMD | `RipeMD128Digest`, `RipeMD160Digest`, `RipeMD256Digest`, `RipeMD320Digest` | All four Bouncy Castle variants |
 | BLAKE | `Blake2bDigest`, `Blake2sDigest`, `Blake3Digest` | Keyed and variable-output BLAKE2 modes; BLAKE3 also implements `Xof` |
 | Ascon | `AsconHash256` | Current NIST SP 800-232 hash |
@@ -153,7 +153,7 @@ use. Local development can specify both `version` and `path`:
 [dependencies]
 tc_digest = { version = "0.1", path = "crypto/tc_digest" }
 tc_sha = { version = "0.1", path = "crypto/digest/tc_sha" }
-tc_keccak = { version = "0.1", path = "crypto/digest/tc_keccak" }
+tc_keccak = "0.1"  # published from TomiCheng/tc_digest
 tc_gost3411 = { version = "0.1", path = "crypto/digest/tc_gost3411" }
 tc_skein = { version = "0.1", path = "crypto/digest/tc_skein" }
 ```
@@ -182,10 +182,10 @@ Additional validation commands:
 cargo test --workspace --no-run
 
 # Lint an individual family.
-cargo clippy -p tc_keccak --all-targets -- -D warnings
+cargo clippy -p tc_blake2 --all-targets -- -D warnings
 
 # Build the documentation.
-cargo doc -p tc_keccak --no-deps
+cargo doc -p tc_blake2 --no-deps
 
 # Full PHOTON-Beetle KAT; intentionally ignored in normal debug tests.
 cargo test -p tc_photon_beetle --release --test photon_beetle_kat -- --ignored
