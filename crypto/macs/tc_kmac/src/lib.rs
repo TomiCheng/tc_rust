@@ -160,14 +160,6 @@ impl<P: KeyParams + ?Sized> MacInit<P> for KMac {
 impl TryDigest for KMac {
     type Error = MacError;
 
-    fn algorithm_name(&self) -> &str {
-        if self.bit_length == 128 {
-            "KMAC128"
-        } else {
-            "KMAC256"
-        }
-    }
-
     fn digest_size(&self) -> usize {
         self.output_length
     }

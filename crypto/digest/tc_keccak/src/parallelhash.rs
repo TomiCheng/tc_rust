@@ -30,8 +30,6 @@ pub struct ParallelHash {
     cshake: CShakeDigest,
     /// 逐 block 壓縮器(純 SHAKE,無客製化)。
     compressor: CShakeDigest,
-    /// 安全參數位元數(128 或 256)。
-    bit_length: usize,
     /// 預設輸出位元組數。
     output_length: usize,
     /// 區塊大小 B(位元組)。
@@ -72,7 +70,6 @@ impl ParallelHash {
         let mut h = ParallelHash {
             cshake: CShakeDigest::new(bit_length, N_PARALLEL_HASH, s),
             compressor: CShakeDigest::new(bit_length, b"", b""),
-            bit_length,
             output_length: output_size_bits.div_ceil(8),
             block_size: b,
             compressor_len: bit_length * 2 / 8,
@@ -129,13 +126,6 @@ impl ParallelHash {
 
 impl TryDigest for ParallelHash {
     type Error = Infallible;
-
-    fn algorithm_name(&self) -> &str {
-        match self.bit_length {
-            128 => "ParallelHash128",
-            _ => "ParallelHash256",
-        }
-    }
 
     fn digest_size(&self) -> usize {
         self.output_length
@@ -245,12 +235,10 @@ mod tests {
     #[test]
     fn accessors() {
         let h = ParallelHash::new(128, b"", 8);
-        assert_eq!(h.algorithm_name(), "ParallelHash128");
         assert_eq!(h.digest_size(), 32);
         assert_eq!(h.byte_length(), 168);
 
         let h = ParallelHash::new(256, b"", 8);
-        assert_eq!(h.algorithm_name(), "ParallelHash256");
         assert_eq!(h.digest_size(), 64);
         assert_eq!(h.byte_length(), 136);
     }

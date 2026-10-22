@@ -43,7 +43,7 @@ impl ShakeDigest {
             "SHAKE: bit length must be 128 or 256"
         );
         ShakeDigest {
-            sponge: KeccakDigest::with_domain(bit_length, 0x1f, "SHAKE"),
+            sponge: KeccakDigest::with_domain(bit_length, 0x1f),
             bit_length,
         }
     }
@@ -51,14 +51,6 @@ impl ShakeDigest {
 
 impl TryDigest for ShakeDigest {
     type Error = Infallible;
-
-    fn algorithm_name(&self) -> &str {
-        // 名稱不含連字號(SHAKE128 / SHAKE256),異於基底的 "SHAKE-128"。
-        match self.bit_length {
-            128 => "SHAKE128",
-            _ => "SHAKE256",
-        }
-    }
 
     fn digest_size(&self) -> usize {
         // bc:fixedOutputLength >> 2,即安全參數的兩倍位元組(128→32、256→64)。
@@ -114,12 +106,10 @@ mod tests {
     #[test]
     fn accessors() {
         let d = ShakeDigest::new(128);
-        assert_eq!(d.algorithm_name(), "SHAKE128");
         assert_eq!(d.digest_size(), 32);
         assert_eq!(d.byte_length(), 168); // rate = 1344 bit
 
         let d = ShakeDigest::new(256);
-        assert_eq!(d.algorithm_name(), "SHAKE256");
         assert_eq!(d.digest_size(), 64);
         assert_eq!(d.byte_length(), 136); // rate = 1088 bit
     }

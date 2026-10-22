@@ -40,17 +40,13 @@ impl Sha3Digest {
         );
 
         Sha3Digest {
-            sponge: KeccakDigest::with_domain(bit_length, 0x06, "SHA3"),
+            sponge: KeccakDigest::with_domain(bit_length, 0x06),
         }
     }
 }
 
 impl TryDigest for Sha3Digest {
     type Error = Infallible;
-
-    fn algorithm_name(&self) -> &str {
-        self.sponge.algorithm_name()
-    }
 
     fn digest_size(&self) -> usize {
         self.sponge.digest_size()
@@ -142,7 +138,6 @@ mod tests {
     #[test]
     fn accessors_and_default() {
         let digest = Sha3Digest::default();
-        assert_eq!(digest.algorithm_name(), "SHA3-256");
         assert_eq!(digest.digest_size(), 32);
         assert_eq!(digest.byte_length(), 136);
 
@@ -154,7 +149,6 @@ mod tests {
         ];
         for (bits, digest_size, byte_length) in expected {
             let digest = Sha3Digest::new(bits);
-            assert_eq!(digest.algorithm_name(), format!("SHA3-{bits}"));
             assert_eq!(digest.digest_size(), digest_size);
             assert_eq!(digest.byte_length(), byte_length);
         }

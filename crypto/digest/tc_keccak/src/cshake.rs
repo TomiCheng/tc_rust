@@ -46,7 +46,7 @@ impl CShakeDigest {
         if n.is_empty() && s.is_empty() {
             // N/S 皆空:與 SHAKE 完全相同(domain 0x1f)。
             return CShakeDigest {
-                sponge: KeccakDigest::with_domain(bit_length, 0x1f, "CSHAKE"),
+                sponge: KeccakDigest::with_domain(bit_length, 0x1f),
                 bit_length,
                 diff: None,
             };
@@ -58,7 +58,7 @@ impl CShakeDigest {
         diff.extend(encode_string(s));
 
         let mut d = CShakeDigest {
-            sponge: KeccakDigest::with_domain(bit_length, 0x04, "CSHAKE"),
+            sponge: KeccakDigest::with_domain(bit_length, 0x04),
             bit_length,
             diff: Some(diff),
         };
@@ -87,13 +87,6 @@ impl CShakeDigest {
 
 impl TryDigest for CShakeDigest {
     type Error = Infallible;
-
-    fn algorithm_name(&self) -> &str {
-        match self.bit_length {
-            128 => "CSHAKE128",
-            _ => "CSHAKE256",
-        }
-    }
 
     fn digest_size(&self) -> usize {
         // 同 SHAKE:安全參數的兩倍位元組(128→32、256→64)。
@@ -152,12 +145,10 @@ mod tests {
     #[test]
     fn accessors() {
         let d = CShakeDigest::new(128, b"", b"Email Signature");
-        assert_eq!(d.algorithm_name(), "CSHAKE128");
         assert_eq!(d.digest_size(), 32);
         assert_eq!(d.byte_length(), 168);
 
         let d = CShakeDigest::new(256, b"", b"Email Signature");
-        assert_eq!(d.algorithm_name(), "CSHAKE256");
         assert_eq!(d.digest_size(), 64);
         assert_eq!(d.byte_length(), 136);
     }

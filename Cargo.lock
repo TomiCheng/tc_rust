@@ -1361,7 +1361,7 @@ name = "tc_ed448"
 version = "0.1.0"
 dependencies = [
  "rand_core",
- "tc_digest 0.1.0",
+ "tc_digest 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tc_edwards",
  "tc_keccak",
 ]
@@ -1538,7 +1538,7 @@ dependencies = [
 name = "tc_keccak"
 version = "0.1.0"
 dependencies = [
- "tc_digest 0.1.0",
+ "tc_digest 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -1557,7 +1557,7 @@ name = "tc_kmac"
 version = "0.1.0"
 dependencies = [
  "tc_crypto",
- "tc_digest 0.1.0",
+ "tc_digest 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tc_keccak",
  "tc_macs",
  "tc_params",

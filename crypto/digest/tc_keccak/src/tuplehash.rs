@@ -22,8 +22,6 @@ const N_TUPLE_HASH: &[u8] = b"TupleHash";
 #[derive(Clone)]
 pub struct TupleHash {
     cshake: CShakeDigest,
-    /// 安全參數位元數(128 或 256)。
-    bit_length: usize,
     /// 預設輸出位元組數。
     output_length: usize,
     /// 是否尚未擠出(擠出前需吸收 `right_encode`,僅一次)。
@@ -48,7 +46,6 @@ impl TupleHash {
     pub fn with_output_size(bit_length: usize, s: &[u8], output_size_bits: usize) -> Self {
         TupleHash {
             cshake: CShakeDigest::new(bit_length, N_TUPLE_HASH, s),
-            bit_length,
             output_length: output_size_bits.div_ceil(8),
             first_output: true,
         }
@@ -64,13 +61,6 @@ impl TupleHash {
 
 impl TryDigest for TupleHash {
     type Error = Infallible;
-
-    fn algorithm_name(&self) -> &str {
-        match self.bit_length {
-            128 => "TupleHash128",
-            _ => "TupleHash256",
-        }
-    }
 
     fn digest_size(&self) -> usize {
         self.output_length
@@ -146,12 +136,10 @@ mod tests {
     #[test]
     fn accessors() {
         let t = TupleHash::new(128, b"");
-        assert_eq!(t.algorithm_name(), "TupleHash128");
         assert_eq!(t.digest_size(), 32);
         assert_eq!(t.byte_length(), 168);
 
         let t = TupleHash::new(256, b"");
-        assert_eq!(t.algorithm_name(), "TupleHash256");
         assert_eq!(t.digest_size(), 64);
         assert_eq!(t.byte_length(), 136);
     }

@@ -12,8 +12,6 @@
 //! (`0x06` / `0x1f`) and reuse the private permutation and sponge machinery;
 //! SHAKE additionally drives the sponge as a XOF.
 
-use alloc::format;
-use alloc::string::String;
 use core::convert::Infallible;
 
 use tc_digest::TryDigest;
@@ -190,8 +188,6 @@ pub struct KeccakDigest {
     domain: u8,
     /// 是否已進入擠出階段(pad 之後不得再吸收)。
     squeezing: bool,
-    /// 演算法名稱。
-    name: String,
 }
 
 impl KeccakDigest {
@@ -202,12 +198,12 @@ impl KeccakDigest {
     ///
     /// Panics (mirroring bc's `ArgumentException`) on an unsupported bit length.
     pub fn new(bit_length: usize) -> Self {
-        Self::with_domain(bit_length, 0x01, "Keccak")
+        Self::with_domain(bit_length, 0x01)
     }
 
-    /// Builds a sponge digest with a caller-chosen domain pad and name prefix —
+    /// Builds a sponge digest with a caller-chosen domain pad —
     /// used by SHA-3 (`0x06`) and, once ported, SHAKE (`0x1f`). Not for general use.
-    pub(crate) fn with_domain(bit_length: usize, domain: u8, name_prefix: &str) -> Self {
+    pub(crate) fn with_domain(bit_length: usize, domain: u8) -> Self {
         assert!(
             matches!(bit_length, 128 | 224 | 256 | 288 | 384 | 512),
             "Keccak: bit length must be one of 128, 224, 256, 288, 384, 512"
@@ -220,7 +216,6 @@ impl KeccakDigest {
             out_len: bit_length / 8,
             domain,
             squeezing: false,
-            name: format!("{name_prefix}-{bit_length}"),
         }
     }
 
@@ -275,10 +270,6 @@ impl KeccakDigest {
 
 impl TryDigest for KeccakDigest {
     type Error = Infallible;
-
-    fn algorithm_name(&self) -> &str {
-        &self.name
-    }
 
     fn digest_size(&self) -> usize {
         self.out_len
@@ -360,7 +351,6 @@ mod tests {
     #[test]
     fn accessors_and_reset() {
         let mut d = KeccakDigest::new(256);
-        assert_eq!(d.algorithm_name(), "Keccak-256");
         assert_eq!(d.digest_size(), 32);
         assert_eq!(d.byte_length(), 136); // rate = 1088 bit
         d.update(b"abc");
