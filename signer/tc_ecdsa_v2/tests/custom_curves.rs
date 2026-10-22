@@ -1,25 +1,25 @@
 use tc_bigint::{ArrayEncoding, PaddedBigUint};
 use tc_digest::Digest;
 use tc_dsa::{Dsa, DsaInit, HMacDsaKCalculator};
-use tc_ec_core_v2::Curve;
+use tc_ec_core::Curve;
 use tc_ec_key::{EcPrivateKey, EcPublicKey};
 use tc_ecdsa_v2::EcdsaSigner;
-use tc_f2m_curve_v2::F2mCtCurve;
-use tc_f2m_curve_v2::named_curves as generic;
-use tc_f2m_custom_v2::named_curves::{
+use tc_f2m_curve::F2mCtCurve;
+use tc_f2m_curve::named_curves as generic;
+use tc_f2m_custom::named_curves::{
     SECT163K1, SECT163R2, SECT193R1, SECT233K1, SECT239K1, SECT283K1, SECT409R1, SECT571K1,
 };
-use tc_f2m_custom_v2::{
+use tc_f2m_custom::{
     SecT163FieldElement, SecT193FieldElement, SecT233FieldElement, SecT239FieldElement,
     SecT283FieldElement, SecT409FieldElement, SecT571FieldElement, SecTCtCurve, SecTVarCurve,
 };
-use tc_fp_curve_v2::named_curves as generic_prime;
-use tc_fp_curve_v2::{FpCtCurve, FpField};
-use tc_fp_custom_v2::named_curves::{
+use tc_fp_curve::named_curves as generic_prime;
+use tc_fp_curve::{FpCtCurve, FpField};
+use tc_fp_custom::named_curves::{
     SECP128R1, SECP160K1, SECP160R1, SECP160R2, SECP192K1, SECP192R1, SECP224K1, SECP224R1,
     SECP256K1, SECP256R1, SECP384R1, SECP521R1, SM2P256V1,
 };
-use tc_fp_custom_v2::{
+use tc_fp_custom::{
     SM2P256V1FieldElement, SecP128R1FieldElement, SecP160R1FieldElement, SecP160R2FieldElement,
     SecP192K1FieldElement, SecP192R1FieldElement, SecP224K1FieldElement, SecP224R1FieldElement,
     SecP256K1FieldElement, SecP256R1FieldElement, SecP384R1FieldElement, SecP521R1FieldElement,

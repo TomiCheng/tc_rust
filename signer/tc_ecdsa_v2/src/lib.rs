@@ -1,4 +1,4 @@
-//! ECDSA; a rewrite of `tc_ecdsa` on `tc_ec_core_v2`.
+//! ECDSA; a rewrite of `tc_ecdsa` on `tc_ec_core`.
 //!
 //! Alice signs a message with her private key, and anyone with her public key can check it:
 //!
@@ -8,8 +8,8 @@
 //! use tc_dsa::{Dsa, DsaInit, HMacDsaKCalculator};
 //! use tc_ec_key::{EcKeyGenerationParams, EcKeyPairGenerator};
 //! use tc_ecdsa_v2::EcdsaSigner;
-//! use tc_fp_curve_v2::FpCtCurve;
-//! use tc_fp_curve_v2::named_curves::SECP256R1;
+//! use tc_fp_curve::FpCtCurve;
+//! use tc_fp_curve::named_curves::SECP256R1;
 //! use tc_sha::Sha256Digest;
 //!
 //! // Alice makes a key pair on a constant-time curve.

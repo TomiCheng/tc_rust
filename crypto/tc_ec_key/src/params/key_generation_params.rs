@@ -1,5 +1,5 @@
 use rand_core::CryptoRng;
-use tc_ec_core_v2::Curve;
+use tc_ec_core::Curve;
 
 /// BC's `ECKeyGenerationParameters`: the generator G, which carries its curve and so the
 /// whole domain, and the random source.

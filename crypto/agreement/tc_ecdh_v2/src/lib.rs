@@ -1,4 +1,4 @@
-//! ECDH key agreement; a rewrite of `tc_ecdh` on `tc_ec_core_v2`.
+//! ECDH key agreement; a rewrite of `tc_ecdh` on `tc_ec_core`.
 //!
 //! Alice and Bob agree on a secret over an open channel, sending each other only their
 //! public keys:
@@ -8,8 +8,8 @@
 //! use tc_asym_cipher::{KeyPairGenerator, KeyPairGeneratorInit};
 //! use tc_ec_key::{EcKeyGenerationParams, EcKeyPairGenerator};
 //! use tc_ecdh_v2::EcdhBasicAgreement;
-//! use tc_fp_curve_v2::FpCtCurve;
-//! use tc_fp_curve_v2::named_curves::SECP256R1;
+//! use tc_fp_curve::FpCtCurve;
+//! use tc_fp_curve::named_curves::SECP256R1;
 //!
 //! // Both use the same constant-time curve and its generator G.
 //! let field = SECP256R1.field();

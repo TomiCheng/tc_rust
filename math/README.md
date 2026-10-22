@@ -10,18 +10,16 @@ Depend on the crate that provides the abstraction you need; there is no umbrella
 | Crate | Functionality | Runtime and allocation |
 | --- | --- | --- |
 | [`tc_bigint`](tc_bigint/README.md) | Compile-time fixed-width, runtime fixed-width, and arbitrary-precision signed/unsigned integers, encoding, numeric traits, modular and Montgomery arithmetic, and general-purpose probable-prime operations | `no_std`; compile-time fixed-width arithmetic needs no allocator; runtime fixed-width and dynamic integers require `alloc`; `rand_core` enables random operations |
-| [`tc_binpoly`](tc_binpoly/README.md) | Polynomial arithmetic over `GF(2)`, including carryless multiplication, squaring, reduction, and inversion; fixed and dynamic representations | `no_std`; fixed storage and core arithmetic work without allocation; defaults enable `alloc`, `std`, and optional x86 acceleration |
-| [`tc_ec_core`](tc_ec_core/README.md) | Shared field, curve, and point traits; scalar and multi-scalar algorithms, batch normalization, precomputation, GLV interfaces, and separate secret-scalar APIs | `no_std` with `alloc` |
-| [`tc_fp_curve`](tc_fp_curve) | Generic prime-field short-Weierstrass curves using Montgomery arithmetic, with `FpCurve`, `FpFieldElement`, `FpPoint`, and named-curve constructors | `no_std` with `alloc` |
-| [`tc_fp_custom`](tc_fp_custom) | Specialized SEC and SM2 prime-field curves, fixed-width field kernels and point formulas, and secp256k1 GLV support | `no_std` with `alloc`; field kernels use fixed-width storage |
-| [`tc_f2m_curve`](tc_f2m_curve) | Generic binary-field short-Weierstrass curves, trinomial/pentanomial fields, named curves, and tau-adic multiplication for Koblitz curves | `no_std` with `alloc` |
-| [`tc_f2m_custom`](tc_f2m_custom) | Specialized SEC binary fields and named curves, reusing the generic binary-curve point formulas | `no_std` with `alloc`; field elements use fixed-width storage |
 | [`tc_rfc7748`](tc_rfc7748) | X25519 and X448 key generation, public-key derivation, and Diffie-Hellman agreement, plus shared internal Edwards field/base-point arithmetic | Allocation-free `no_std` arithmetic; defaults enable `std` and optional x86 dispatch |
 
-`no_std` does not necessarily mean allocation-free. The curve crates use `alloc`
-for their supporting structures even when individual field elements have fixed
-storage. Cargo features are additive, so another dependency can enable features
-that a crate disables in its own dependency declaration.
+`tc_binpoly` and the elliptic-curve crates `tc_ec_core`, `tc_fp_curve`,
+`tc_f2m_curve`, `tc_fp_custom` and `tc_f2m_custom` have graduated to
+[TomiCheng/tc_math](https://github.com/TomiCheng/tc_math); this workspace uses
+them from crates.io.
+
+`no_std` does not necessarily mean allocation-free. Cargo features are additive,
+so another dependency can enable features that a crate disables in its own
+dependency declaration.
 
 ## Choosing a layer
 
@@ -42,17 +40,12 @@ internal `LimbArray<N>` storage. Sign interpretation belongs to `FixedBigInt`;
 曲線的場寬則是曲線定義的一部分，在編譯期已知，使用 `FixedBigUint<N>`／
 `FixedBigInt<N>` 即可；是否需要 CT 並不是選擇 Padded 型別的唯一條件。
 
-Use `tc_binpoly` for polynomial arithmetic over `GF(2)`. Its bits represent
-polynomial coefficients, so its arithmetic is distinct from integer arithmetic.
-For prime testing and generation, use the published
-[`tc_prime`](https://crates.io/crates/tc_prime).
-
-For short-Weierstrass curves, `tc_ec_core` defines the shared contracts and
-algorithms. `tc_fp_curve` and `tc_f2m_curve` supply generic prime-field and
-binary-field implementations. Their `*_custom` counterparts provide specialized
-named fields and curves while retaining the common traits. `tc_fp_custom` has
-its own field and point kernels; `tc_f2m_custom` supplies specialized fields to
-the point machinery in `tc_f2m_curve`.
+For polynomial arithmetic over `GF(2)`, use the published
+[`tc_binpoly`](https://crates.io/crates/tc_binpoly); for prime testing and
+generation, [`tc_prime`](https://crates.io/crates/tc_prime). For
+short-Weierstrass curves, use the published
+[`tc_ec_core`](https://crates.io/crates/tc_ec_core) and the curve crates built on
+it.
 
 Use `tc_rfc7748` directly for X25519 or X448. It uses dedicated Montgomery-curve
 arithmetic rather than the short-Weierstrass traits in `tc_ec_core`. The
@@ -62,16 +55,12 @@ under `crypto/`; they are not signature APIs of `tc_rfc7748`.
 ## Dependency and feature boundaries
 
 - `tc_bigint` depends on `tc_constant_time`.
-- `tc_ec_core` depends on `tc_constant_time` without choosing an integer or field
-  backend. Concrete curve crates supply those implementations.
-- `tc_binpoly` and `tc_rfc7748` optionally use the published `tc_runtime` crate
-  for x86 feature detection. Their scalar configurations are available with
-  default features disabled.
+- `tc_rfc7748` optionally uses the published `tc_runtime` crate for x86 feature
+  detection. Its scalar configuration is available with default features
+  disabled.
 
 Ordinary arithmetic is not automatically constant-time because it uses a crate
-that also provides constant-time primitives. Consult the individual API contracts,
-especially the distinction between public-scalar algorithms and the `Secret*`
-interfaces in `tc_ec_core`.
+that also provides constant-time primitives. Consult the individual API contracts.
 
 ## Development
 
@@ -79,7 +68,7 @@ Run Cargo commands from the workspace root and select the crate being changed:
 
 ```text
 cargo test -p tc_bigint --target i686-pc-windows-msvc --locked
-cargo doc -p tc_binpoly --all-features --no-deps --locked
+cargo doc -p tc_rfc7748 --all-features --no-deps --locked
 ```
 
 The crate READMEs describe their feature combinations and validation commands.

@@ -1,14 +1,14 @@
 use tc_bigint::{ArrayEncoding, PaddedBigUint};
 use tc_digest::Digest;
 use tc_dsa::{Dsa, DsaInit, HMacDsaKCalculator, RandomDsaKCalculator};
-use tc_ec_core_v2::Curve;
-use tc_ec_core_v2::multiplier::CombCt;
+use tc_ec_core::Curve;
+use tc_ec_core::multiplier::CombCt;
 use tc_ec_key::{EcPrivateKey, EcPublicKey};
 use tc_ecdsa_v2::{EcdsaError, EcdsaSigner};
-use tc_f2m_curve_v2::F2mCtCurve;
-use tc_f2m_curve_v2::named_curves::{SECT163R2, SECT233K1};
-use tc_fp_curve_v2::FpCtCurve;
-use tc_fp_curve_v2::named_curves::SECP256R1;
+use tc_f2m_curve::F2mCtCurve;
+use tc_f2m_curve::named_curves::{SECT163R2, SECT233K1};
+use tc_fp_curve::FpCtCurve;
+use tc_fp_curve::named_curves::SECP256R1;
 use tc_sha::Sha256Digest;
 
 fn integer(text: &str) -> PaddedBigUint {

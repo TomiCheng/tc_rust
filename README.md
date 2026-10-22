@@ -47,9 +47,9 @@ engines respectively; both provide streaming, clone, and reset behavior.
 | [`tc_bigint`](math/tc_bigint) | Compile-time fixed-width, runtime fixed-width, and arbitrary-precision signed/unsigned integers and number-theory operations | Compile-time fixed-width types are core-only; runtime fixed-width and dynamic types require `alloc` |
 | [`tc_constant_time`](https://crates.io/crates/tc_constant_time) | Shared masked selection, comparison, and conditional arithmetic primitives (external dependency) | Core-only `no_std` |
 | [`tc_zeroize`](https://crates.io/crates/tc_zeroize) | Explicit memory erasure with volatile writes and opt-in scope guards (external dependency) | Core-only `no_std`; optional `alloc` adds `Vec` and `Box` support |
-| [`tc_ec_core`](math/tc_ec_core) | Curve traits, multi-scalar algorithms, comb/GLV interfaces and secret fixed-window arithmetic | `no_std + alloc` |
-| [`tc_fp_curve`](math/tc_fp_curve), [`tc_f2m_curve`](math/tc_f2m_curve) | Generic prime/binary curves | `no_std + alloc` |
-| [`tc_fp_custom`](math/tc_fp_custom), [`tc_f2m_custom`](math/tc_f2m_custom) | Specialized SEC/SM2 curve backends | `no_std + alloc` |
+| [`tc_ec_core`](https://crates.io/crates/tc_ec_core) | Curve traits, wNAF, GLV, τ-adic NAF and fixed-base multipliers with the comb (external dependency) | `no_std + alloc` |
+| [`tc_fp_curve`](https://crates.io/crates/tc_fp_curve), [`tc_f2m_curve`](https://crates.io/crates/tc_f2m_curve) | Generic prime/binary curves, each in a constant-time and a variable-time set (external dependency) | `no_std + alloc` |
+| [`tc_fp_custom`](https://crates.io/crates/tc_fp_custom), [`tc_f2m_custom`](https://crates.io/crates/tc_f2m_custom) | Specialized SEC/SM2 curve backends (external dependency) | `no_std + alloc` |
 | [`tc_rfc7748`](math/tc_rfc7748) | X25519/X448 and shared Edwards field arithmetic | `no_std`; optional x86 dispatch |
 | [`tc_ed25519`](crypto/tc_ed25519), [`tc_ed448`](crypto/tc_ed448) | RFC 8032 signatures using [`tc_edwards`](crypto/tc_edwards) arithmetic | `no_std` |
 
@@ -133,15 +133,18 @@ repository:
 - Signed arbitrary-precision `BigInt`
 - Arithmetic, bitwise operations, shifts, conversions, and arbitrary-radix text
 - GCD, modular inverse, modular exponentiation, and probable-prime operations
-- Binary-polynomial and elliptic-curve field arithmetic
-- X25519/X448, named SEC curves and SM2P256V1
-- Interleaved wNAF, JSF, batch inversion/normalization, fixed-base comb and secp256k1 GLV
-- Fixed-window secret scalar multiplication with complete masked exceptional cases
+- X25519/X448
 
-Ordinary point multiplication and wNAF remain variable time. Secret scalar APIs
-use separate `SecretField` operations and fixed-length scalar bytes; dynamic
-`BigUint` Fp fields do not implement that contract. See the
-[EC developer guide](math/tc_ec_core/README.md) for boundaries and validation.
+The binary polynomials and the elliptic curves graduated to
+[tc_math](https://github.com/TomiCheng/tc_math) and are published as
+[`tc_binpoly`](https://crates.io/crates/tc_binpoly),
+[`tc_ec_core`](https://crates.io/crates/tc_ec_core),
+[`tc_fp_curve`](https://crates.io/crates/tc_fp_curve),
+[`tc_f2m_curve`](https://crates.io/crates/tc_f2m_curve),
+[`tc_fp_custom`](https://crates.io/crates/tc_fp_custom) and
+[`tc_f2m_custom`](https://crates.io/crates/tc_f2m_custom): the named SEC curves
+and SM2P256V1, each as a constant-time and a variable-time set, with wNAF, GLV,
+the τ-adic NAF and the fixed-base comb.
 
 ## Feature model
 

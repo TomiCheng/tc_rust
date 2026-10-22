@@ -993,14 +993,6 @@ dependencies = [
 [[package]]
 name = "tc_binpoly"
 version = "0.1.0"
-dependencies = [
- "criterion",
- "tc_runtime",
-]
-
-[[package]]
-name = "tc_binpoly"
-version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "88f622b1b82f070cfb18b7405d05fa9ddcd4d22c2d02c3b9b8715c6e2b322001"
 dependencies = [
@@ -1266,13 +1258,8 @@ dependencies = [
 [[package]]
 name = "tc_ec_core"
 version = "0.1.0"
-dependencies = [
- "tc_constant_time",
-]
-
-[[package]]
-name = "tc_ec_core_v2"
-version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e08e2ada75e70c99a940d37dd48ff23d2361052c9e7315966928dad6798303a3"
 dependencies = [
  "tc_bigint 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tc_constant_time",
@@ -1286,9 +1273,9 @@ dependencies = [
  "rand_core",
  "tc_asym_cipher",
  "tc_bigint 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "tc_ec_core_v2",
- "tc_f2m_curve_v2",
- "tc_fp_curve_v2",
+ "tc_ec_core",
+ "tc_f2m_curve",
+ "tc_fp_curve",
  "tc_zeroize",
 ]
 
@@ -1303,17 +1290,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tc_ecdh"
-version = "0.1.0"
-dependencies = [
- "tc_bigint 0.1.0",
- "tc_ec_core",
- "tc_f2m_custom",
- "tc_fp_curve",
- "tc_fp_custom",
-]
-
-[[package]]
 name = "tc_ecdh_v2"
 version = "0.1.0"
 dependencies = [
@@ -1321,30 +1297,13 @@ dependencies = [
  "tc_agreement",
  "tc_asym_cipher",
  "tc_bigint 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "tc_ec_core_v2",
- "tc_ec_key",
- "tc_f2m_curve_v2",
- "tc_fp_curve_v2",
- "tc_fp_custom_v2",
- "tc_modular",
- "tc_zeroize",
-]
-
-[[package]]
-name = "tc_ecdsa"
-version = "0.1.0"
-dependencies = [
- "rand_core",
- "tc_bigint 0.1.0",
- "tc_digest 0.1.0",
  "tc_ec_core",
- "tc_f2m_custom",
+ "tc_ec_key",
+ "tc_f2m_curve",
  "tc_fp_curve",
  "tc_fp_custom",
- "tc_hmac",
- "tc_macs",
- "tc_params",
- "tc_sha 0.1.0",
+ "tc_modular",
+ "tc_zeroize",
 ]
 
 [[package]]
@@ -1356,12 +1315,12 @@ dependencies = [
  "tc_bigint 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tc_digest 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tc_dsa",
- "tc_ec_core_v2",
+ "tc_ec_core",
  "tc_ec_key",
- "tc_f2m_curve_v2",
- "tc_f2m_custom_v2",
- "tc_fp_curve_v2",
- "tc_fp_custom_v2",
+ "tc_f2m_curve",
+ "tc_f2m_custom",
+ "tc_fp_curve",
+ "tc_fp_custom",
  "tc_modular",
  "tc_sha 0.1.1",
  "tc_zeroize",
@@ -1399,43 +1358,25 @@ dependencies = [
 [[package]]
 name = "tc_f2m_curve"
 version = "0.1.0"
-dependencies = [
- "tc_bigint 0.1.0",
- "tc_binpoly 0.1.0",
- "tc_ec_core",
-]
-
-[[package]]
-name = "tc_f2m_curve_v2"
-version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f08702ec50b0b55b6024b54208f4972087bf04ca9a786ef70ce1afae5073316d"
 dependencies = [
  "tc_bigint 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "tc_binpoly 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tc_binpoly",
  "tc_constant_time",
- "tc_ec_core_v2",
+ "tc_ec_core",
  "tc_zeroize",
 ]
 
 [[package]]
 name = "tc_f2m_custom"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f37ce709f95cb0a2d8008fe5179637787fcaa6ceb46417f0bdfb29636fc72340"
 dependencies = [
- "tc_bigint 0.1.0",
- "tc_binpoly 0.1.0",
- "tc_ec_core",
- "tc_f2m_curve",
-]
-
-[[package]]
-name = "tc_f2m_custom_v2"
-version = "0.1.0"
-dependencies = [
- "criterion",
  "tc_bigint 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "tc_binpoly 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tc_constant_time",
- "tc_ec_core_v2",
- "tc_f2m_curve_v2",
+ "tc_ec_core",
  "tc_runtime",
  "tc_zeroize",
 ]
@@ -1443,21 +1384,12 @@ dependencies = [
 [[package]]
 name = "tc_fp_curve"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e5b14d5ded09bcc388765c79ca566c1080518b89a8c0fddbc1e5a806efcddf1d"
 dependencies = [
- "criterion",
- "rand_core",
- "tc_bigint 0.1.0",
- "tc_ec_core",
-]
-
-[[package]]
-name = "tc_fp_curve_v2"
-version = "0.1.0"
-dependencies = [
- "criterion",
  "tc_bigint 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tc_constant_time",
- "tc_ec_core_v2",
+ "tc_ec_core",
  "tc_modular",
  "tc_zeroize",
 ]
@@ -1465,24 +1397,12 @@ dependencies = [
 [[package]]
 name = "tc_fp_custom"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1bf518e9e61bfc672b999e8379c0d13b144e35b0729181875016311aa0b314e9"
 dependencies = [
- "criterion",
- "tc_bigint 0.1.0",
- "tc_constant_time",
- "tc_ec_core",
- "tc_f2m_custom",
- "tc_fp_curve",
-]
-
-[[package]]
-name = "tc_fp_custom_v2"
-version = "0.1.0"
-dependencies = [
- "criterion",
  "tc_bigint 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tc_constant_time",
- "tc_ec_core_v2",
- "tc_fp_curve_v2",
+ "tc_ec_core",
  "tc_zeroize",
 ]
 

@@ -1,6 +1,6 @@
 use crate::EcError;
 use tc_bigint::PaddedBigUint;
-use tc_ec_core_v2::{Curve, Point};
+use tc_ec_core::{Curve, Point};
 use tc_zeroize::Zeroize;
 
 /// BC's `ECPrivateKeyParameters`: the scalar d, with the generator G standing for the

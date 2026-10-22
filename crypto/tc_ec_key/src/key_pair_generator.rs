@@ -2,8 +2,8 @@ use crate::{EcError, EcKeyGenerationParams, EcPrivateKey, EcPublicKey};
 use rand_core::CryptoRng;
 use tc_asym_cipher::{KeyPairGenerator, KeyPairGeneratorInit};
 use tc_bigint::{ArrayEncoding, PaddedBigUint, RandomBits};
-use tc_ec_core_v2::multiplier::{BaseMultiplier, PerCall};
-use tc_ec_core_v2::{Curve, Point};
+use tc_ec_core::multiplier::{BaseMultiplier, PerCall};
+use tc_ec_core::{Curve, Point};
 use tc_zeroize::Zeroize;
 
 /// BC's `ECKeyPairGenerator`. Pass the generator of a Ct curve to have d·G computed in
@@ -113,13 +113,13 @@ mod tests {
     use crate::{EcError, EcKeyGenerationParams, EcPrivateKey, EcPublicKey};
     use tc_asym_cipher::{KeyPairGenerator, KeyPairGeneratorInit};
     use tc_bigint::{PaddedBigUint, RandomBits};
-    use tc_ec_core_v2::multiplier::{BaseMultiplier, CombCt, PerCall};
-    use tc_ec_core_v2::wnaf::get_naf_weight;
-    use tc_ec_core_v2::{Curve, Point};
-    use tc_f2m_curve_v2::F2mCtCurve;
-    use tc_f2m_curve_v2::named_curves::SECT283K1;
-    use tc_fp_curve_v2::FpCtCurve;
-    use tc_fp_curve_v2::named_curves::SECP256R1;
+    use tc_ec_core::multiplier::{BaseMultiplier, CombCt, PerCall};
+    use tc_ec_core::wnaf::get_naf_weight;
+    use tc_ec_core::{Curve, Point};
+    use tc_f2m_curve::F2mCtCurve;
+    use tc_f2m_curve::named_curves::SECT283K1;
+    use tc_fp_curve::FpCtCurve;
+    use tc_fp_curve::named_curves::SECP256R1;
 
     #[test]
     fn the_constant_time_naf_weight_is_the_one_core_counts() {

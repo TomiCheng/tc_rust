@@ -1,8 +1,8 @@
 use crate::EcdhError;
 use tc_agreement::{Agreement, AgreementInit};
 use tc_bigint::PaddedBigUint;
-use tc_ec_core_v2::algo::clean_point;
-use tc_ec_core_v2::{Curve, FieldElement, Point};
+use tc_ec_core::algo::clean_point;
+use tc_ec_core::{Curve, FieldElement, Point};
 use tc_ec_key::{EcPrivateKey, EcPublicKey};
 use tc_modular::{Odd, PaddedMontyForm, PaddedMontyParams};
 use tc_zeroize::{Zeroize, Zeroizing};

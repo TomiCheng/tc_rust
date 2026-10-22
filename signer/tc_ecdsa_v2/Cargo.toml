@@ -10,7 +10,7 @@ repository.workspace = true
 [dependencies]
 tc_bigint = { version = "0.1.0", features = ["alloc"] }
 tc_dsa = { version = "0.1.0", path = "../tc_dsa" }
-tc_ec_core_v2 = { version = "0.1.0", path = "../../math/tc_ec_core_v2" }
+tc_ec_core = "0.1.0"
 tc_ec_key = { version = "0.1.0", path = "../../crypto/tc_ec_key" }
 tc_modular = { version = "0.1.0", features = ["alloc"] }
 tc_zeroize = "0.1.0"
@@ -19,8 +19,8 @@ tc_zeroize = "0.1.0"
 rand = { workspace = true }
 tc_asym_cipher = "0.1.0"
 tc_digest = "0.1.0"
-tc_f2m_curve_v2 = { version = "0.1.0", path = "../../math/tc_f2m_curve_v2" }
-tc_f2m_custom_v2 = { version = "0.1.0", path = "../../math/tc_f2m_custom_v2" }
-tc_fp_curve_v2 = { version = "0.1.0", path = "../../math/tc_fp_curve_v2" }
-tc_fp_custom_v2 = { version = "0.1.0", path = "../../math/tc_fp_custom_v2", features = ["small-curves"] }
+tc_f2m_curve = "0.1.0"
+tc_f2m_custom = "0.1.0"
+tc_fp_curve = "0.1.0"
+tc_fp_custom = { version = "0.1.0", features = ["small-curves"] }
 tc_sha = "0.1.1"

@@ -1,6 +1,6 @@
 use crate::EcError;
-use tc_ec_core_v2::algo::import_point;
-use tc_ec_core_v2::{Curve, Point};
+use tc_ec_core::algo::import_point;
+use tc_ec_core::{Curve, Point};
 
 /// BC's `ECPublicKeyParameters`: the point Q, with the generator G standing for the
 /// domain.

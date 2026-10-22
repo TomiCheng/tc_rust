@@ -1,15 +1,15 @@
 use tc_agreement::{Agreement, AgreementInit};
 use tc_asym_cipher::{KeyPairGenerator, KeyPairGeneratorInit};
 use tc_bigint::{ArrayEncoding, PaddedBigUint};
-use tc_ec_core_v2::{Curve, FieldElement, Point};
+use tc_ec_core::{Curve, FieldElement, Point};
 use tc_ec_key::{EcKeyGenerationParams, EcKeyPairGenerator, EcPrivateKey, EcPublicKey};
 use tc_ecdh_v2::{EcdhBasicAgreement, EcdhError};
-use tc_f2m_curve_v2::F2mCtCurve;
-use tc_f2m_curve_v2::named_curves::{SECT163R2, SECT283K1};
-use tc_fp_curve_v2::FpCtCurve;
-use tc_fp_curve_v2::named_curves::{SECP256K1, SECP256R1};
-use tc_fp_custom_v2::named_curves as custom;
-use tc_fp_custom_v2::{
+use tc_f2m_curve::F2mCtCurve;
+use tc_f2m_curve::named_curves::{SECT163R2, SECT283K1};
+use tc_fp_curve::FpCtCurve;
+use tc_fp_curve::named_curves::{SECP256K1, SECP256R1};
+use tc_fp_custom::named_curves as custom;
+use tc_fp_custom::{
     SM2P256V1FieldElement, SecP128R1FieldElement, SecP160R1FieldElement, SecP160R2FieldElement,
     SecP192K1FieldElement, SecP192R1FieldElement, SecP224K1FieldElement, SecP224R1FieldElement,
     SecP256K1FieldElement, SecP256R1FieldElement, SecP384R1FieldElement, SecP521R1FieldElement,
