@@ -75,6 +75,7 @@ tc_block_cipher = "0.1.0"
 tc_block_modes = { version = "0.1.0", features = ["alloc"] }
 tc_buffered_cipher = { version = "0.1.1", features = ["alloc"] }
 tc_block_padding = { version = "0.1.0", features = ["rand_core"] }
+tc_agreement = { version = "0.1.0", path = "../agreement/tc_agreement" }
 tc_asn1 = "0.1.1"
 tc_digest = "0.1.0"
 tc_key_wrap = { version = "0.1.0", features = ["rfc3394"] }

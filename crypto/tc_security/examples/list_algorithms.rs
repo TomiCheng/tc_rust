@@ -1,5 +1,5 @@
 use tc_asn1::NamedOid;
-use tc_security::{cipher, digest, generate, mac, params, wrap};
+use tc_security::{agreement, cipher, digest, generate, mac, params, wrap};
 
 fn oids(oids: &[NamedOid]) -> String {
     oids.iter()
@@ -31,6 +31,11 @@ fn main() {
 
     println!("\n# wrap");
     for entry in wrap::algorithms() {
+        println!("{entry}");
+    }
+
+    println!("\n# agreement");
+    for entry in agreement::algorithms() {
         println!("{entry}");
     }
 

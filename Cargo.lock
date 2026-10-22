@@ -1769,6 +1769,7 @@ dependencies = [
  "rand",
  "tc_aead_cipher",
  "tc_aes",
+ "tc_agreement",
  "tc_aria",
  "tc_ascon_aead",
  "tc_asn1",
