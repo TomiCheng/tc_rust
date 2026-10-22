@@ -62,7 +62,7 @@ pub fn generate_private_key<R: CryptoRng + ?Sized>(rng: &mut R) -> [u8; SCALAR_S
 ///
 /// 以 signed radix-16 固定視窗與完整 Edwards 點公式運算；
 /// 每個視窗掃完整列公開預算表，以遮罩選擇，沒有秘密索引。
-/// 最後把 `Y:Z` 轉回 Montgomery u 座標，最後以固定加法鏈的 `invert` 求反元素，不走變動時間的 `inv_var`。
+/// 最後把 `Y:Z` 轉回 Montgomery u 座標，最後以固定加法鏈的 `invert` 求反元素。
 pub fn generate_public_key(private_key: &[u8; SCALAR_SIZE]) -> [u8; POINT_SIZE] {
     scalar_mult_base(private_key)
 }
@@ -73,7 +73,7 @@ pub fn generate_public_key(private_key: &[u8; SCALAR_SIZE]) -> [u8; POINT_SIZE] 
 /// agreement。全零檢查會掃過完整輸出，不會在第一個非零 byte 提前結束。
 ///
 /// [`scalar_mult`] 的 ladder 圈數固定，交換使用 `cswap` 遮罩。
-/// 最後以固定加法鏈的 `invert` 求反元素，不走變動時間的 `inv_var`。
+/// 最後以固定加法鏈的 `invert` 求反元素。
 ///
 /// 末端的 `Some`／`None` 會揭露全零判定，這是本 API 刻意回報的拒絕條件。
 /// 呼叫端收到 `None` 必須拒絕協議，不能用 `unwrap_or_default()` 把它換成全零秘密。
@@ -125,7 +125,7 @@ fn decode_scalar(k: &[u8; SCALAR_SIZE]) -> [u32; 8] {
 ///
 /// 純量在解碼時自動依 RFC 7748 夾制；呼叫端不必先呼叫 [`clamp_private_key`]。
 /// ladder 圈數固定，條件交換由 `cswap` 遮罩完成，秘密位元不決定分支或索引。
-/// 最後以固定加法鏈的 `invert` 求反元素，不走變動時間的 `inv_var`。
+/// 最後以固定加法鏈的 `invert` 求反元素。
 ///
 /// 這是原語入口，不拒絕全零輸出；金鑰協議請用 [`calculate_agreement`]。
 pub fn scalar_mult(k: &[u8; SCALAR_SIZE], u: &[u8; POINT_SIZE]) -> [u8; POINT_SIZE] {
@@ -191,20 +191,11 @@ pub fn scalar_mult(k: &[u8; SCALAR_SIZE], u: &[u8; POINT_SIZE]) -> [u8; POINT_SI
 ///
 /// 以 signed radix-16 固定視窗與完整 Edwards 點公式運算；
 /// 每個視窗掃完整列公開預算表，以遮罩選擇，沒有秘密索引。
-/// 最後把 `Y:Z` 轉回 Montgomery u 座標，最後以固定加法鏈的 `invert` 求反元素，不走變動時間的 `inv_var`。
+/// 最後把 `Y:Z` 轉回 Montgomery u 座標，最後以固定加法鏈的 `invert` 求反元素。
 pub fn scalar_mult_base(k: &[u8; SCALAR_SIZE]) -> [u8; POINT_SIZE] {
     let (y, z) = ed25519_base::scalar_mult_base_yz(k);
     let (numerator, denominator) = z.apm(y);
     numerator.mul(denominator.invert()).normalize().encode()
-}
-
-/// 常數時間：保留與 Bouncy Castle 對等的預算入口，不涉及秘密。
-///
-/// 目前不建表、不加鎖，也不初始化 CPU 偵測；只將編譯期公開表的參考
-/// 交給 `black_box`，不保證預讀整張表或暖機快取。Bouncy Castle 的對應入口
-/// 會延遲建表並加鎖，這裡的表已靜態嵌入，因此不需要那個初始化流程。
-pub fn precompute() {
-    ed25519_base::precompute();
 }
 
 #[cfg(test)]
@@ -393,7 +384,6 @@ mod tests {
 
     #[test]
     fn scalar_mult_base_matches_the_generic_base_point_ladder() {
-        precompute();
         let mut state = 0x6C8E_9CF5_71D2_A4B3_u64;
         for _ in 0..32 {
             let mut private_key = [0_u8; SCALAR_SIZE];

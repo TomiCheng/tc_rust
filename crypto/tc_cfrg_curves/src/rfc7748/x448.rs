@@ -180,13 +180,6 @@ pub fn scalar_mult_base(scalar: &[u8; SCALAR_SIZE]) -> [u8; POINT_SIZE] {
     scalar_mult(scalar, &BASE_POINT)
 }
 
-/// 常數時間：保留與 Bouncy Castle 對等的預算入口，不涉及秘密。
-///
-/// 這是空的 `const fn`，不初始化任何狀態。保留它是為了對齊 Bouncy Castle
-/// 的 API 形狀；該實作會透過 Edwards 核心延遲建表並加鎖，
-/// 目前這裡的 X448 固定基點直接走 ladder，沒有需要建立的表。
-pub const fn precompute() {}
-
 #[cfg(test)]
 mod tests {
     use super::*;

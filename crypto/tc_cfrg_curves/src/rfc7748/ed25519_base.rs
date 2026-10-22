@@ -108,11 +108,6 @@ fn unpack(words: [u64; 4]) -> Fe {
     Fe::decode(&bytes)
 }
 
-/// 編譯期固定表已經完成預算；保留這個入口以對齊 bc 與未來完整 RFC 8032 API。
-pub(crate) fn precompute() {
-    core::hint::black_box(&BASE_TABLE);
-}
-
 /// 以 signed radix-16 固定視窗計算 Ed25519 基點倍數，回傳 projective `Y`、`Z`。
 ///
 /// 表的第 `i` 列保存 `1..=8` 倍的 `256^i B`。先累加奇數 nibble、固定倍點

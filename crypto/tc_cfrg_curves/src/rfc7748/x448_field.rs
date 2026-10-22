@@ -37,12 +37,14 @@ pub struct Fe448([u32; SIZE]);
 #[allow(clippy::should_implement_trait)]
 impl Fe448 {
     /// Selects `a` for zero and `b` for one, with a fixed limb scan.
+    #[cfg(feature = "ed448")]
     pub fn cmov(choice: Choice, mut a: Self, b: Self) -> Self {
         a.0.conditional_assign(&b.0, choice);
         a
     }
 
     /// Returns a square root of `u/v`, if it exists. Public-input decoding only.
+    #[cfg(feature = "ed448")]
     pub fn sqrt_ratio_var(u: Self, v: Self) -> Option<Self> {
         let ratio = u.mul(v.invert());
         let mut root = Self::one();
@@ -65,11 +67,6 @@ impl Fe448 {
         let mut limbs = [0; SIZE];
         limbs[0] = 1;
         Self(limbs)
-    }
-
-    /// 對應 bc `Copy` 的值型別入口。
-    pub const fn copy(self) -> Self {
-        self
     }
 
     /// 欄位加法。
@@ -100,11 +97,13 @@ impl Fe448 {
     }
 
     /// 欄位負值。
+    #[cfg(feature = "ed448")]
     pub fn negate(self) -> Self {
         Self::zero().sub(self)
     }
 
     /// 同時計算 `(self + rhs, self - rhs)`。
+    #[cfg(feature = "x448")]
     pub fn apm(self, rhs: Self) -> (Self, Self) {
         (self.add(rhs), self.sub(rhs))
     }
@@ -147,15 +146,6 @@ impl Fe448 {
         Self::reduce_wide(product)
     }
 
-    /// 重複平方 `n` 次。
-    pub fn sqr_n(self, n: usize) -> Self {
-        let mut result = self;
-        for _ in 0..n {
-            result = result.sqr();
-        }
-        result
-    }
-
     /// 固定 exponent `p - 2` 的反元素；`0` 會映到 `0`。
     pub fn invert(self) -> Self {
         let mut result = Self::one();
@@ -170,18 +160,10 @@ impl Fe448 {
     }
 
     /// Swaps the values for a one choice and retains their order for zero.
+    #[cfg(feature = "x448")]
     pub fn cswap(swap: Choice, mut a: Self, mut b: Self) -> (Self, Self) {
         <[u32; SIZE]>::conditional_swap(&mut a.0, &mut b.0, swap);
         (a, b)
-    }
-
-    /// 判斷 canonical 值是否為零，完整掃過所有 limb。
-    pub fn is_zero(self) -> bool {
-        let mut difference = 0_u32;
-        for limb in self.0 {
-            difference |= limb;
-        }
-        difference == 0
     }
 
     /// 將 56-byte little-endian 編碼約簡進欄位。
