@@ -1779,6 +1779,7 @@ dependencies = [
  "tc_block_modes",
  "tc_block_padding",
  "tc_buffered_cipher",
+ "tc_cfrg_curves",
  "tc_chacha",
  "tc_digest 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tc_key_wrap",

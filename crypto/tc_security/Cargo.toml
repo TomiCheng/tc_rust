@@ -22,6 +22,10 @@ default = [
     "rc6",
     "chacha",
     "rsa",
+    "x25519",
+    "x448",
+    "ed25519",
+    "ed448",
 ]
 md = ["md2", "md4", "md5"]
 md2 = ["dep:tc_md"]
@@ -49,6 +53,11 @@ ascon = ["dep:tc_ascon_aead"]
 # RSA 的金鑰參數，之後接上 RSA 的 cipher 與金鑰對產生器
 rsa = ["dep:tc_rsa", "dep:tc_asym_cipher", "dep:tc_asym_encoding"]
 iso9796 = ["rsa", "dep:tc_asym_iso9796"]
+# CFRG 曲線的金鑰對，之後接上 agreement 與 signer
+x25519 = ["dep:tc_cfrg_curves", "dep:tc_asym_cipher"]
+x448 = ["dep:tc_cfrg_curves", "tc_cfrg_curves/x448", "dep:tc_asym_cipher"]
+ed25519 = ["dep:tc_cfrg_curves", "dep:tc_asym_cipher"]
+ed448 = ["dep:tc_cfrg_curves", "tc_cfrg_curves/ed448", "dep:tc_asym_cipher"]
 # 引擎改用 RustCrypto 的實作：AES 沒有 AES-NI 時也是常數時間，ARIA 改走 RustCrypto，RC 系列只影響 RC2。
 # 只作用在已開啟的演算法，不會連帶開啟它們。
 rustcrypto = [
@@ -81,6 +90,7 @@ tc_rsa = { version = "0.1.0", optional = true }
 tc_asym_cipher = { version = "0.1.0", optional = true }
 tc_asym_encoding = { version = "0.1.0", optional = true }
 tc_asym_iso9796 = { version = "0.1.0", optional = true }
+tc_cfrg_curves = { version = "0.1.0", path = "../tc_cfrg_curves", optional = true }
 tc_stream_cipher = "0.1.0"
 tc_zeroize = "0.1.0"
 rand = { workspace = true }
