@@ -10,7 +10,7 @@ repository.workspace = true
 # 已被攻破或不建議使用的不在預設裡，要用時明確開啟：MD2、MD4、MD5、SHA-1（碰撞已可實作）、
 # RC2 與 RC5（8 bytes 區塊，RC2 有 related-key 攻擊，RC5-32/12 可被差分分析）、
 # 二元體的 EC 曲線（NIST SP 800-186 已列為 legacy）與強度不足的 EC 小曲線。
-# 家族 feature（md、sha、rc）照樣包含它們。
+# 家族 feature（md、sha、sha3、keccak、shake、rc）照樣包含它們。
 default = [
     "sha224",
     "sha256",
@@ -18,6 +18,17 @@ default = [
     "sha512",
     "sha512-224",
     "sha512-256",
+    "sha3-224",
+    "sha3-256",
+    "sha3-384",
+    "sha3-512",
+    "keccak-224",
+    "keccak-256",
+    "keccak-288",
+    "keccak-384",
+    "keccak-512",
+    "shake128",
+    "shake256",
     "aes",
     "aria",
     "rc6",
@@ -41,6 +52,23 @@ sha384 = ["dep:tc_sha"]
 sha512 = ["dep:tc_sha"]
 sha512-224 = ["dep:tc_sha"]
 sha512-256 = ["dep:tc_sha"]
+# FIPS 202 的 SHA-3
+sha3 = ["sha3-224", "sha3-256", "sha3-384", "sha3-512"]
+sha3-224 = ["dep:tc_keccak"]
+sha3-256 = ["dep:tc_keccak"]
+sha3-384 = ["dep:tc_keccak"]
+sha3-512 = ["dep:tc_keccak"]
+# 原始 Keccak，SHA-3 標準化前的版本（Ethereum 用的 Keccak-256 就是它）
+keccak = ["keccak-224", "keccak-256", "keccak-288", "keccak-384", "keccak-512"]
+keccak-224 = ["dep:tc_keccak"]
+keccak-256 = ["dep:tc_keccak"]
+keccak-288 = ["dep:tc_keccak"]
+keccak-384 = ["dep:tc_keccak"]
+keccak-512 = ["dep:tc_keccak"]
+# SHAKE 當固定長度的 digest：SHAKE128 輸出 256 bits、SHAKE256 輸出 512 bits，同 BC
+shake = ["shake128", "shake256"]
+shake128 = ["dep:tc_keccak"]
+shake256 = ["dep:tc_keccak"]
 aes = ["dep:tc_aes"]
 aria = ["dep:tc_aria"]
 rc = ["rc2", "rc5", "rc6"]
@@ -111,6 +139,7 @@ tc_asn1_x509 = { version = "0.1.0", path = "../../asn1/tc_asn1_x509", optional =
 tc_digest = "0.1.0"
 tc_key_wrap = { version = "0.1.0", features = ["rfc3394"] }
 tc_macs = { version = "0.1.0", features = ["hmac", "cbc-mac", "alloc"] }
+tc_keccak = { version = "0.1.0", optional = true }
 tc_md = { version = "0.1.1", optional = true }
 tc_rc_cipher = { version = "0.1.0", optional = true }
 tc_sha = { version = "0.1.1", optional = true }
