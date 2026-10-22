@@ -1,40 +1,6 @@
-use crate::{CfrgError, KeyGenerationParams};
+use crate::{CfrgError, KeyGenerationParams, X448PrivateKey, X448PublicKey};
 use tc_agreement::{Agreement, AgreementInit};
 use tc_asym_cipher::{KeyPairGenerator, KeyPairGeneratorInit};
-
-#[derive(Clone)]
-pub struct X448PrivateKey([u8; 56]);
-
-impl X448PrivateKey {
-    pub const SIZE: usize = 56;
-
-    pub fn new(bytes: [u8; 56]) -> Self {
-        Self(bytes)
-    }
-
-    pub fn to_bytes(&self) -> [u8; 56] {
-        self.0
-    }
-
-    pub fn generate_public_key(&self) -> X448PublicKey {
-        todo!()
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct X448PublicKey([u8; 56]);
-
-impl X448PublicKey {
-    pub const SIZE: usize = 56;
-
-    pub fn new(bytes: [u8; 56]) -> Self {
-        Self(bytes)
-    }
-
-    pub fn to_bytes(&self) -> [u8; 56] {
-        self.0
-    }
-}
 
 pub struct X448KeyPairGenerator<'a> {
     params: Option<KeyGenerationParams<'a>>,

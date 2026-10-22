@@ -21,6 +21,7 @@ tc_digest = "0.1.0"
 # tc_keccak = { version = "0.1.0", path = "../digest/tc_keccak", optional = true }
 tc_sha = "0.1.0"
 tc_signer = { version = "0.1.0", path = "../../signer/tc_signer" }
+tc_zeroize = "0.1.0"
 
 [target.'cfg(any(target_arch = "x86", target_arch = "x86_64"))'.dependencies]
 tc_runtime = "0.1.0"

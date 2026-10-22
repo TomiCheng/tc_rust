@@ -1,42 +1,8 @@
-use crate::{CfrgError, KeyGenerationParams};
+use crate::{CfrgError, Ed25519PrivateKey, Ed25519PublicKey, KeyGenerationParams};
 use alloc::vec::Vec;
 use tc_asym_cipher::{KeyPairGenerator, KeyPairGeneratorInit};
 use tc_sha::Sha512Digest;
 use tc_signer::{Signer, SignerInit};
-
-#[derive(Clone)]
-pub struct Ed25519PrivateKey([u8; 32]);
-
-impl Ed25519PrivateKey {
-    pub const SIZE: usize = 32;
-
-    pub fn new(bytes: [u8; 32]) -> Self {
-        Self(bytes)
-    }
-
-    pub fn to_bytes(&self) -> [u8; 32] {
-        self.0
-    }
-
-    pub fn generate_public_key(&self) -> Ed25519PublicKey {
-        todo!()
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Ed25519PublicKey([u8; 32]);
-
-impl Ed25519PublicKey {
-    pub const SIZE: usize = 32;
-
-    pub fn new(bytes: [u8; 32]) -> Self {
-        Self(bytes)
-    }
-
-    pub fn to_bytes(&self) -> [u8; 32] {
-        self.0
-    }
-}
 
 pub struct Ed25519KeyPairGenerator<'a> {
     params: Option<KeyGenerationParams<'a>>,

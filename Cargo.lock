@@ -1151,6 +1151,7 @@ dependencies = [
  "tc_runtime",
  "tc_sha 0.1.1",
  "tc_signer",
+ "tc_zeroize",
 ]
 
 [[package]]

@@ -1,41 +1,7 @@
-use crate::{CfrgError, KeyGenerationParams};
+use crate::{CfrgError, Ed448PrivateKey, Ed448PublicKey, KeyGenerationParams};
 use alloc::vec::Vec;
 use tc_asym_cipher::{KeyPairGenerator, KeyPairGeneratorInit};
 use tc_signer::{Signer, SignerInit};
-
-#[derive(Clone)]
-pub struct Ed448PrivateKey([u8; 57]);
-
-impl Ed448PrivateKey {
-    pub const SIZE: usize = 57;
-
-    pub fn new(bytes: [u8; 57]) -> Self {
-        Self(bytes)
-    }
-
-    pub fn to_bytes(&self) -> [u8; 57] {
-        self.0
-    }
-
-    pub fn generate_public_key(&self) -> Ed448PublicKey {
-        todo!()
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Ed448PublicKey([u8; 57]);
-
-impl Ed448PublicKey {
-    pub const SIZE: usize = 57;
-
-    pub fn new(bytes: [u8; 57]) -> Self {
-        Self(bytes)
-    }
-
-    pub fn to_bytes(&self) -> [u8; 57] {
-        self.0
-    }
-}
 
 pub struct Ed448KeyPairGenerator<'a> {
     params: Option<KeyGenerationParams<'a>>,
