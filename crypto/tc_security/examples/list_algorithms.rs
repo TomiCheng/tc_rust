@@ -46,6 +46,6 @@ fn main() {
 
     println!("\n# digest");
     for entry in digest::algorithms() {
-        println!("{}", entry.create());
+        println!("{entry}");
     }
 }

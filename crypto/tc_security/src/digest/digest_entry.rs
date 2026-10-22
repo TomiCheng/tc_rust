@@ -1,3 +1,4 @@
+use core::fmt::{self, Display, Formatter};
 use core::hash::{Hash, Hasher};
 
 use tc_asn1::NamedOid;
@@ -74,5 +75,20 @@ impl Eq for DigestEntry {}
 impl Hash for DigestEntry {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.algorithm.hash(state);
+    }
+}
+
+/// 正式名稱，有 OID 時接在後面，例如 `SHA-256  [id-sha256, id-hmacWithSHA256]`。
+impl Display for DigestEntry {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.write_str(self.name())?;
+        if let Some((first, rest)) = self.oids.split_first() {
+            write!(f, "  [{}", first.name())?;
+            for oid in rest {
+                write!(f, ", {}", oid.name())?;
+            }
+            f.write_str("]")?;
+        }
+        Ok(())
     }
 }

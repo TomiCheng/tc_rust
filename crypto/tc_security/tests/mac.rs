@@ -59,7 +59,7 @@ fn names_aliases_and_the_pkcs_oid_find_hmac_sha224() {
         );
     }
     assert_eq!(
-        mac::get_by_name("HMAC-SHA3-224").err(),
+        mac::get_by_name("HMAC-SHA3-1024").err(),
         Some(SecurityError::UnknownMac)
     );
 }
