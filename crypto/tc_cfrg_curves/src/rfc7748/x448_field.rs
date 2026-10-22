@@ -259,19 +259,26 @@ impl Fe448 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::rfc7748::oracle::{BigUint, Oracle};
+    use tc_bigint::{ArrayEncoding, BigUint};
+    use tc_modular::{ModInverse, ModSub, NonZero};
+
+    fn decode(bytes: &[u8]) -> BigUint {
+        let Ok(value) = <BigUint as ArrayEncoding<u8>>::from_le(bytes);
+        value
+    }
 
     fn modulus() -> BigUint {
         &(&BigUint::from(1_u8) << 448) - &(&BigUint::from(1_u8) << 224) - BigUint::from(1_u8)
     }
 
     fn value(element: Fe448) -> BigUint {
-        BigUint::from_le_bytes(&element.encode())
+        decode(&element.encode())
     }
 
     #[test]
     fn arithmetic_matches_biguint_mod_p() {
         let modulus = modulus();
+        let m = NonZero::new(modulus.clone()).unwrap();
         let mut state = 0x9482_53A7_01D4_C6EB_u64;
         let mut random = || {
             let mut bytes = [0_u8; 56];
@@ -289,12 +296,12 @@ mod tests {
             let b = Fe448::decode(&random());
             let av = value(a);
             let bv = value(b);
-            assert_eq!(value(a.add(b)), (&av + &bv).rem_euclid(&modulus));
-            assert_eq!(value(a.sub(b)), av.mod_sub(&bv, &modulus));
-            assert_eq!(value(a.mul(b)), (&av * &bv).rem_euclid(&modulus));
-            assert_eq!(value(a.sqr()), (&av * &av).rem_euclid(&modulus));
-            if !av.is_zero() {
-                assert_eq!(value(a.invert()), av.mod_inverse(&modulus).unwrap());
+            assert_eq!(value(a.add(b)), &(&av + &bv) % &modulus);
+            assert_eq!(value(a.sub(b)), av.mod_sub(&bv, &m));
+            assert_eq!(value(a.mul(b)), &(&av * &bv) % &modulus);
+            assert_eq!(value(a.sqr()), &(&av * &av) % &modulus);
+            if av != BigUint::from(0_u8) {
+                assert_eq!(value(a.invert()), av.mod_inverse(&m).unwrap());
                 assert_eq!(a.mul(a.invert()), Fe448::one());
             }
         }
@@ -303,7 +310,7 @@ mod tests {
     #[test]
     fn noncanonical_modulus_decodes_as_zero() {
         let mut bytes = [0_u8; 56];
-        bytes.copy_from_slice(&modulus().to_le_bytes());
+        bytes.copy_from_slice(&ArrayEncoding::<u8>::to_le(&modulus()));
         assert_eq!(Fe448::decode(&bytes), Fe448::zero());
     }
 }

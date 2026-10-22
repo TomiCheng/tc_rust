@@ -212,7 +212,13 @@ mod tests {
     use super::*;
     use core::convert::Infallible;
     use rand_core::{TryCryptoRng, TryRng};
-    use crate::rfc7748::oracle::{BigUint, Oracle};
+    use tc_bigint::{ArrayEncoding, BigUint};
+    use tc_modular::{ModInverse, ModSub, NonZero};
+
+    fn decode(bytes: &[u8]) -> BigUint {
+        let Ok(value) = <BigUint as ArrayEncoding<u8>>::from_le(bytes);
+        value
+    }
 
     struct SequenceRng(u8);
 
@@ -246,12 +252,13 @@ mod tests {
         &(&BigUint::from(1_u8) << 255) - &BigUint::from(19_u8)
     }
     fn val(f: Fe) -> BigUint {
-        BigUint::from_le_bytes(&f.normalize().encode())
+        decode(&f.normalize().encode())
     }
 
     #[test]
     fn point_double_matches_montgomery_formula() {
         let p = p();
+        let m = NonZero::new(p.clone()).unwrap();
         let one = BigUint::from(1_u8);
         let a = BigUint::from(C_A as u32); // 486662
         let u = Fe::decode(&[
@@ -266,12 +273,12 @@ mod tests {
 
         // 參考:u' = (u²−1)² / (4u(u²+Au+1)) mod p
         let uv = val(u);
-        let u2 = (&uv * &uv).rem_euclid(&p);
-        let num0 = u2.mod_sub(&one, &p);
-        let num = (&num0 * &num0).rem_euclid(&p); // (u²−1)²
-        let inner = (&(&u2 + &(&a * &uv)) + &one).rem_euclid(&p); // u²+Au+1
-        let den = (&(&BigUint::from(4_u8) * &uv) * &inner).rem_euclid(&p); // 4u(...)
-        let expected = (&num * &den.mod_inverse(&p).unwrap()).rem_euclid(&p);
+        let u2 = &(&uv * &uv) % &p;
+        let num0 = u2.mod_sub(&one, &m);
+        let num = &(&num0 * &num0) % &p; // (u²−1)²
+        let inner = &(&(&u2 + &(&a * &uv)) + &one) % &p; // u²+Au+1
+        let den = &(&(&BigUint::from(4_u8) * &uv) * &inner) % &p; // 4u(...)
+        let expected = &(&num * &den.mod_inverse(&m).unwrap()) % &p;
 
         assert_eq!(got, expected);
     }

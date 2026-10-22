@@ -94,10 +94,7 @@ impl Fe {
         ])
     }
     /// 取得內部 limb，僅供同 crate 的常數時間後端選擇使用。
-    #[cfg(any(
-        test,
-        any(target_arch = "x86", target_arch = "x86_64")
-    ))]
+    #[cfg(any(test, any(target_arch = "x86", target_arch = "x86_64")))]
     pub(crate) const fn raw_limbs(self) -> [i32; SIZE] {
         self.0
     }
@@ -997,7 +994,13 @@ fn sub_mod(left: &mut [u32; 8], right: &[u32; 8], modulus: &[u32; 8]) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::rfc7748::oracle::{BigUint, Oracle};
+    use tc_bigint::{ArrayEncoding, BigUint};
+    use tc_modular::{ModInverse, ModPow, ModSub, NonZero};
+
+    fn decode(bytes: &[u8]) -> BigUint {
+        let Ok(value) = <BigUint as ArrayEncoding<u8>>::from_le(bytes);
+        value
+    }
 
     fn p() -> BigUint {
         // p = 2²⁵⁵ − 19
@@ -1006,19 +1009,20 @@ mod tests {
 
     // 一個 Fe 的真值:normalize → encode → 讀成 BigUint。
     fn fe_val(fe: Fe) -> BigUint {
-        BigUint::from_le_bytes(&fe.normalize().encode())
+        decode(&fe.normalize().encode())
     }
 
     // 一組 bytes 代表的值(decode 會丟 bit 255,故先清)。
     fn bytes_val(bytes: &[u8; 32]) -> BigUint {
         let mut b = *bytes;
         b[31] &= 0x7F;
-        BigUint::from_le_bytes(&b)
+        decode(&b)
     }
 
     #[test]
     fn field_ops_match_bigint_mod_p() {
         let p = p();
+        let m = NonZero::new(p.clone()).unwrap();
         let mut s = 0x00C0_FFEE_1234_5678_u64;
         let mut rand = || {
             let mut b = [0u8; 32];
@@ -1034,47 +1038,40 @@ mod tests {
             let (ba, bb) = (rand(), rand());
             let a = Fe::decode(&ba);
             let b = Fe::decode(&bb);
-            let av = bytes_val(&ba).rem_euclid(&p);
-            let bv = bytes_val(&bb).rem_euclid(&p);
+            let av = &bytes_val(&ba) % &p;
+            let bv = &bytes_val(&bb) % &p;
 
             // decode + normalize + encode 對照 (bytes mod p)
             assert_eq!(fe_val(a), av);
             assert_eq!(fe_val(b), bv);
             // add / sub / mul 對照真值
-            assert_eq!(fe_val(a.add(b)), (&av + &bv).rem_euclid(&p));
-            assert_eq!(fe_val(a.sub(b)), av.mod_sub(&bv, &p));
-            assert_eq!(fe_val(a.mul(b)), (&av * &bv).rem_euclid(&p));
+            assert_eq!(fe_val(a.add(b)), &(&av + &bv) % &p);
+            assert_eq!(fe_val(a.sub(b)), av.mod_sub(&bv, &m));
+            assert_eq!(fe_val(a.mul(b)), &(&av * &bv) % &p);
             // sqr(a) == a² mod p == a·a
-            assert_eq!(fe_val(a.sqr()), (&av * &av).rem_euclid(&p));
+            assert_eq!(fe_val(a.sqr()), &(&av * &av) % &p);
             assert_eq!(fe_val(a.sqr()), fe_val(a.mul(a)));
             // mul_i32（ladder 用 A24 = 121666）
             for &y in &[1i32, 19, 121665, 121666] {
                 let yv = BigUint::from(y as u32);
-                assert_eq!(
-                    fe_val(a.mul_i32(y)),
-                    (&av * &yv).rem_euclid(&p),
-                    "mul_i32 y={y}"
-                );
+                assert_eq!(fe_val(a.mul_i32(y)), &(&av * &yv) % &p, "mul_i32 y={y}");
             }
             // invert：a⁻¹ = a^(p−2)，且 a·a⁻¹ = 1（a ≠ 0）
-            if !av.is_zero() {
-                assert_eq!(fe_val(a.invert()), av.mod_inverse(&p).unwrap());
+            if av != BigUint::from(0_u8) {
+                assert_eq!(fe_val(a.invert()), av.mod_inverse(&m).unwrap());
                 assert_eq!(fe_val(a.mul(a.invert())), BigUint::from(1_u8));
-                assert_eq!(fe_val(a.inv_var()), av.mod_inverse(&p).unwrap());
+                assert_eq!(fe_val(a.inv_var()), av.mod_inverse(&m).unwrap());
                 assert_eq!(fe_val(a.mul(a.inv_var())), BigUint::from(1_u8));
             }
             // negate / cnegate / add_one / apm 對照真值
-            let negative_av = BigUint::from(0_u8).mod_sub(&av, &p);
+            let negative_av = BigUint::from(0_u8).mod_sub(&av, &m);
             assert_eq!(fe_val(a.negate()), negative_av);
             assert_eq!(fe_val(a.cnegate(Choice::from_lsb(0))), av);
             assert_eq!(fe_val(a.cnegate(Choice::from_lsb(1))), negative_av);
-            assert_eq!(
-                fe_val(a.add_one()),
-                (&av + &BigUint::from(1_u8)).rem_euclid(&p)
-            );
+            assert_eq!(fe_val(a.add_one()), &(&av + &BigUint::from(1_u8)) % &p);
             let (sp, sm) = a.apm(b);
-            assert_eq!(fe_val(sp), (&av + &bv).rem_euclid(&p));
-            assert_eq!(fe_val(sm), av.mod_sub(&bv, &p));
+            assert_eq!(fe_val(sp), &(&av + &bv) % &p);
+            assert_eq!(fe_val(sm), av.mod_sub(&bv, &m));
         }
     }
 
@@ -1110,13 +1107,14 @@ mod tests {
     #[test]
     fn ed25519_support_helpers_match_independent_properties() {
         let p = p();
+        let m = NonZero::new(p.clone()).unwrap();
         let bytes = [
             0x91, 0x28, 0x57, 0xCA, 0x11, 0xE4, 0x73, 0x05, 0x8A, 0x34, 0x72, 0xB1, 0xC9, 0xE0,
             0x4F, 0x6D, 0xAA, 0x1C, 0x98, 0x22, 0xD7, 0x45, 0x19, 0xB0, 0x63, 0x31, 0xF5, 0x87,
             0x02, 0x6A, 0x4D, 0x39,
         ];
         let value = Fe::decode_255(&bytes);
-        let integer = bytes_val(&bytes).rem_euclid(&p);
+        let integer = &bytes_val(&bytes) % &p;
 
         assert_eq!(value.copy().raw_limbs(), value.raw_limbs());
         assert!(Fe::are_equal(value, Fe::decode(&bytes)));
@@ -1126,20 +1124,17 @@ mod tests {
         assert!(Fe::one().is_one_var());
         assert_eq!(
             fe_val(value.sub_one()),
-            integer.mod_sub(&BigUint::from(1_u8), &p)
+            integer.mod_sub(&BigUint::from(1_u8), &m)
         );
 
         let inverse = value.inv_var();
-        assert_eq!(fe_val(inverse), integer.mod_inverse(&p).unwrap());
+        assert_eq!(fe_val(inverse), integer.mod_inverse(&m).unwrap());
         assert_eq!(fe_val(value.mul(inverse)), BigUint::from(1_u8));
 
         let (cube, pm5d8) = value.pow_pm5d8();
-        assert_eq!(
-            fe_val(cube),
-            (&(&integer * &integer) * &integer).rem_euclid(&p)
-        );
+        assert_eq!(fe_val(cube), &(&(&integer * &integer) * &integer) % &p);
         let exponent = (&p - BigUint::from(5_u8)) >> 3;
-        assert_eq!(fe_val(pm5d8), integer.mod_pow(&exponent, &p));
+        assert_eq!(fe_val(pm5d8), integer.mod_pow(&exponent, &m));
 
         let word = 0xA5C3_197E_u32;
         assert_eq!(Fe::decode_32(&Fe::encode_32(word)), word);
