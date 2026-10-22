@@ -13,6 +13,8 @@ mod ascon;
 mod cfrg;
 #[cfg(feature = "chacha")]
 mod chacha;
+#[cfg(feature = "ec")]
+mod ec;
 #[cfg(feature = "rc2")]
 mod rc2;
 #[cfg(feature = "rc5")]
@@ -51,7 +53,8 @@ fn plain_key(
     feature = "x25519",
     feature = "x448",
     feature = "ed25519",
-    feature = "ed448"
+    feature = "ed448",
+    feature = "ec"
 ))]
 fn no_key(
     _: &super::KeyGenParams,
@@ -113,4 +116,6 @@ pub(super) const GENERATORS: &[GeneratorEntry] = &[
     cfrg::ED25519,
     #[cfg(feature = "ed448")]
     cfrg::ED448,
+    #[cfg(feature = "ec")]
+    ec::EC,
 ];

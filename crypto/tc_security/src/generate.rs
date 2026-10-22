@@ -41,6 +41,27 @@
 //! # }
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
+//!
+//! # A key pair on a named curve: EC
+//!
+//! ```
+//! # #[cfg(feature = "ec")] {
+//! use tc_security::generate::{self, KeyGenParams};
+//! use tc_security::params::{AnyParams, EcCurve};
+//!
+//! // 1. EC has no default: init must name the curve, since several curves share a size.
+//! let mut generator = generate::get_by_name("EC")?.generator();
+//! generator.init(&KeyGenParams::Ec { curve: EcCurve::Secp256r1 })?;
+//!
+//! // 2. Generate the pair, both on P-256.
+//! let (public, private) = generator.generate_key_pair()?;
+//! if let (AnyParams::EcPublic { key: public }, AnyParams::EcPrivate { key: private }) = (&public, &private) {
+//!     assert_eq!(public.curve(), EcCurve::Secp256r1);
+//!     assert_eq!(private.curve(), EcCurve::Secp256r1);
+//! }
+//! # }
+//! # Ok::<(), Box<dyn std::error::Error>>(())
+//! ```
 
 mod algorithms;
 mod generator;

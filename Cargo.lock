@@ -1776,6 +1776,7 @@ dependencies = [
  "tc_asym_cipher",
  "tc_asym_encoding",
  "tc_asym_iso9796",
+ "tc_bigint 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tc_block_cipher",
  "tc_block_modes",
  "tc_block_padding",

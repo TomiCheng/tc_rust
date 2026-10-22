@@ -4,7 +4,7 @@ use tc_zeroize::Zeroize;
 ///
 /// 只是 DTO，不驗證內容：長度與組合合不合用，由收到參數的 cipher 在 `init` 判定。
 /// 各引擎的參數 trait 依 variant 取值，這個 variant 沒有的值回傳空的或預設值，留給 `init` 拒絕。
-/// drop 時清除金鑰、IV、nonce 與 AAD；RSA 與 CFRG 曲線的金鑰由它們自己的 drop 清除。
+/// drop 時清除金鑰、IV、nonce 與 AAD；RSA、CFRG 曲線與 EC 的金鑰由它們自己的 drop 清除。
 #[derive(Clone)]
 pub enum AnyParams {
     /// 只有金鑰，對應 BC 的 `KeyParameter`。
@@ -65,6 +65,12 @@ pub enum AnyParams {
     /// Ed448 的公鑰，對應 BC 的 `Ed448PublicKeyParameters`。
     #[cfg(feature = "ed448")]
     Ed448Public { key: tc_cfrg_curves::Ed448PublicKey },
+    /// EC 的私鑰，對應 BC 的 `ECPrivateKeyParameters`。
+    #[cfg(feature = "ec")]
+    EcPrivate { key: super::AnyEcPrivateKey },
+    /// EC 的公鑰，對應 BC 的 `ECPublicKeyParameters`。
+    #[cfg(feature = "ec")]
+    EcPublic { key: super::AnyEcPublicKey },
 }
 
 impl AnyParams {
@@ -129,6 +135,8 @@ impl AnyParams {
             Self::Ed25519Private { .. } | Self::Ed25519Public { .. } => &[],
             #[cfg(feature = "ed448")]
             Self::Ed448Private { .. } | Self::Ed448Public { .. } => &[],
+            #[cfg(feature = "ec")]
+            Self::EcPrivate { .. } | Self::EcPublic { .. } => &[],
         }
     }
 
@@ -167,6 +175,8 @@ impl Drop for AnyParams {
             Self::Ed25519Private { .. } | Self::Ed25519Public { .. } => {}
             #[cfg(feature = "ed448")]
             Self::Ed448Private { .. } | Self::Ed448Public { .. } => {}
+            #[cfg(feature = "ec")]
+            Self::EcPrivate { .. } | Self::EcPublic { .. } => {}
         }
     }
 }

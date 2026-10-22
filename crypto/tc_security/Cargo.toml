@@ -9,7 +9,7 @@ repository.workspace = true
 [features]
 # 已被攻破或不建議使用的不在預設裡，要用時明確開啟：MD2、MD4、MD5、SHA-1（碰撞已可實作）、
 # RC2 與 RC5（8 bytes 區塊，RC2 有 related-key 攻擊，RC5-32/12 可被差分分析）、
-# 二元體的 EC 曲線（NIST SP 800-186 已列為 legacy）與強度不足的小曲線。
+# 二元體的 EC 曲線（NIST SP 800-186 已列為 legacy）與強度不足的 EC 小曲線。
 # 家族 feature（md、sha、rc）照樣包含它們。
 default = [
     "sha224",
@@ -66,13 +66,14 @@ ec = [
     "dep:tc_ec_key",
     "dep:tc_ec_core",
     "dep:tc_fp_custom",
+    "dep:tc_bigint",
     "dep:tc_asym_cipher",
 ]
-# 二元體的 SEC 2 曲線：sect163k1 到 sect571r1
+# 二元體的 SEC 2 曲線：sect233k1 到 sect571r1
 ec-f2m = ["ec", "dep:tc_f2m_custom"]
 # 強度不足的小曲線，只為互通：secp112r1、secp112r2、secp128r1、secp128r2、secp160k1、secp160r1、
 # secp160r2、secp192k1、secp192r1（NIST 已不准新系統使用 192 bits）；
-# 開了 ec-f2m 時再加 sect113r1、sect113r2、sect131r1、sect131r2
+# 開了 ec-f2m 時再加 sect113r1 到 sect193r2（同樣不到 112 bits）
 ec-small-curves = [
     "ec",
     "dep:tc_fp_curve",
@@ -113,6 +114,7 @@ tc_rsa = { version = "0.1.0", optional = true }
 tc_asym_cipher = { version = "0.1.0", optional = true }
 tc_asym_encoding = { version = "0.1.0", optional = true }
 tc_asym_iso9796 = { version = "0.1.0", optional = true }
+tc_bigint = { version = "0.1.0", optional = true }
 tc_cfrg_curves = { version = "0.1.0", path = "../tc_cfrg_curves", optional = true }
 tc_ec_core = { version = "0.1.0", optional = true }
 tc_ec_key = { version = "0.1.0", path = "../tc_ec_key", optional = true }

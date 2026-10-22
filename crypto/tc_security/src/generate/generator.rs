@@ -6,15 +6,15 @@ use super::{GeneratorEntry, KeyGenParams};
 use crate::params::AnyParams;
 use crate::{AnyError, SecurityError};
 
-/// 依名稱取得的產生器；`init` 可以不呼叫，沒呼叫時用預設值。
+/// 依名稱取得的產生器；有預設值的 `init` 可以不呼叫，沒呼叫時用預設值。
 pub struct Generator {
     entry: &'static GeneratorEntry,
-    params: KeyGenParams,
+    params: Option<KeyGenParams>,
     rng: Box<dyn CryptoRng + Send>,
 }
 
 impl Generator {
-    pub(super) fn new(entry: &'static GeneratorEntry, params: KeyGenParams) -> Self {
+    pub(super) fn new(entry: &'static GeneratorEntry, params: Option<KeyGenParams>) -> Self {
         Self {
             entry,
             params,
@@ -32,18 +32,23 @@ impl Generator {
     /// 回傳 `InvalidKeyGenParams`，目前的參數不變。
     pub fn init(&mut self, params: &KeyGenParams) -> Result<(), SecurityError> {
         self.entry.check_params(params)?;
-        self.params = *params;
+        self.params = Some(*params);
         Ok(())
     }
 
-    /// 產生一把對稱金鑰，同 BC 的 `GenerateKeyParameter`。金鑰對的產生器（例如 RSA）回傳 `WrongGenerator`。
+    /// 產生一把對稱金鑰，同 BC 的 `GenerateKeyParameter`。金鑰對的產生器（例如 RSA）回傳 `WrongGenerator`；
+    /// 沒有預設參數又還沒 `init` 時回傳 `MissingKeyGenParams`。
     pub fn generate_key(&mut self) -> Result<AnyParams, SecurityError> {
-        self.entry.generate_key(&self.params, &mut *self.rng)
+        let params = self.params.ok_or(SecurityError::MissingKeyGenParams)?;
+        self.entry.generate_key(&params, &mut *self.rng)
     }
 
     /// 產生一組金鑰對（公鑰, 私鑰），同 BC 的 `GenerateKeyPair`。對稱金鑰的產生器回傳 `WrongGenerator`；
-    /// 底層的產生器失敗時，錯誤包成 `AnyError`。
+    /// 沒有預設參數又還沒 `init` 時是 `MissingKeyGenParams`；底層的產生器失敗時，錯誤包成 `AnyError`。
     pub fn generate_key_pair(&mut self) -> Result<(AnyParams, AnyParams), AnyError> {
-        self.entry.generate_key_pair(&self.params, &mut *self.rng)
+        let params = self
+            .params
+            .ok_or_else(|| AnyError::new(SecurityError::MissingKeyGenParams))?;
+        self.entry.generate_key_pair(&params, &mut *self.rng)
     }
 }

@@ -363,6 +363,10 @@ fn every_generator_makes_its_kind_of_key_and_a_fresh_one_each_time() {
 
     for entry in generate::algorithms() {
         let name = entry.name();
+        // EC 沒有預設參數，下面另外測
+        if name == "EC" {
+            continue;
+        }
         let mut generator = entry.generator();
         match generator.generate_key() {
             Ok(first) => {
@@ -642,4 +646,158 @@ fn cfrg_key_pairs_come_from_the_given_rng() {
     };
     assert_eq!(public(1), public(1));
     assert_ne!(public(1), public(2));
+}
+
+#[cfg(feature = "ec")]
+#[test]
+fn ec_has_no_default_and_takes_only_a_named_curve() {
+    use tc_security::generate::KeyGenParams;
+    use tc_security::params::EcCurve;
+
+    for name in ["ec", "ECDH", "ECIES", "ECDSA"] {
+        assert_eq!(name_of(name), Ok("EC"), "{name}");
+    }
+
+    let mut generator = generate::get_by_name("EC").unwrap().generator();
+    let error = generator.generate_key_pair().err().unwrap();
+    assert_eq!(
+        std::error::Error::source(&error)
+            .unwrap()
+            .downcast_ref::<SecurityError>(),
+        Some(&SecurityError::MissingKeyGenParams)
+    );
+
+    assert_eq!(
+        generator.init(&KeyGenParams::Basic { strength: 256 }),
+        Err(SecurityError::InvalidKeyGenParams)
+    );
+    generator
+        .init(&KeyGenParams::Ec {
+            curve: EcCurve::Secp256r1,
+        })
+        .unwrap();
+    assert_eq!(
+        generator.generate_key().err(),
+        Some(SecurityError::WrongGenerator)
+    );
+}
+
+#[cfg(feature = "ec")]
+#[test]
+fn every_ec_curve_makes_a_key_pair_on_that_curve() {
+    use tc_security::generate::KeyGenParams;
+    use tc_security::params::{AnyParams, EcCurve};
+
+    let curves = [
+        #[cfg(feature = "ec-small-curves")]
+        EcCurve::Secp112r1,
+        #[cfg(feature = "ec-small-curves")]
+        EcCurve::Secp112r2,
+        #[cfg(feature = "ec-small-curves")]
+        EcCurve::Secp128r1,
+        #[cfg(feature = "ec-small-curves")]
+        EcCurve::Secp128r2,
+        #[cfg(feature = "ec-small-curves")]
+        EcCurve::Secp160k1,
+        #[cfg(feature = "ec-small-curves")]
+        EcCurve::Secp160r1,
+        #[cfg(feature = "ec-small-curves")]
+        EcCurve::Secp160r2,
+        #[cfg(feature = "ec-small-curves")]
+        EcCurve::Secp192k1,
+        #[cfg(feature = "ec-small-curves")]
+        EcCurve::Secp192r1,
+        EcCurve::Secp224k1,
+        EcCurve::Secp224r1,
+        EcCurve::Secp256k1,
+        EcCurve::Secp256r1,
+        EcCurve::Secp384r1,
+        EcCurve::Secp521r1,
+        EcCurve::Sm2p256v1,
+        #[cfg(all(feature = "ec-f2m", feature = "ec-small-curves"))]
+        EcCurve::Sect113r1,
+        #[cfg(all(feature = "ec-f2m", feature = "ec-small-curves"))]
+        EcCurve::Sect113r2,
+        #[cfg(all(feature = "ec-f2m", feature = "ec-small-curves"))]
+        EcCurve::Sect131r1,
+        #[cfg(all(feature = "ec-f2m", feature = "ec-small-curves"))]
+        EcCurve::Sect131r2,
+        #[cfg(all(feature = "ec-f2m", feature = "ec-small-curves"))]
+        EcCurve::Sect163k1,
+        #[cfg(all(feature = "ec-f2m", feature = "ec-small-curves"))]
+        EcCurve::Sect163r1,
+        #[cfg(all(feature = "ec-f2m", feature = "ec-small-curves"))]
+        EcCurve::Sect163r2,
+        #[cfg(all(feature = "ec-f2m", feature = "ec-small-curves"))]
+        EcCurve::Sect193r1,
+        #[cfg(all(feature = "ec-f2m", feature = "ec-small-curves"))]
+        EcCurve::Sect193r2,
+        #[cfg(feature = "ec-f2m")]
+        EcCurve::Sect233k1,
+        #[cfg(feature = "ec-f2m")]
+        EcCurve::Sect233r1,
+        #[cfg(feature = "ec-f2m")]
+        EcCurve::Sect239k1,
+        #[cfg(feature = "ec-f2m")]
+        EcCurve::Sect283k1,
+        #[cfg(feature = "ec-f2m")]
+        EcCurve::Sect283r1,
+        #[cfg(feature = "ec-f2m")]
+        EcCurve::Sect409k1,
+        #[cfg(feature = "ec-f2m")]
+        EcCurve::Sect409r1,
+        #[cfg(feature = "ec-f2m")]
+        EcCurve::Sect571k1,
+        #[cfg(feature = "ec-f2m")]
+        EcCurve::Sect571r1,
+    ];
+    for curve in curves {
+        let mut generator = generate::get_by_name("EC").unwrap().generator();
+        generator.init(&KeyGenParams::Ec { curve }).unwrap();
+        let (public, private) = generator.generate_key_pair().unwrap();
+        let (AnyParams::EcPublic { key: public }, AnyParams::EcPrivate { key: private }) =
+            (&public, &private)
+        else {
+            panic!("EC generates EC keys");
+        };
+        assert_eq!(public.curve(), curve, "{curve:?}");
+        assert_eq!(private.curve(), curve, "{curve:?}");
+    }
+}
+
+// 每次的 d 都不同，公鑰是 d·G，兩把金鑰在同一個 G 上
+#[cfg(feature = "ec")]
+#[test]
+fn an_ec_public_key_is_a_fresh_private_scalar_times_the_generator() {
+    use tc_ec_core::Curve;
+    use tc_fp_custom::{SecP256R1FieldElement, SecPCtCurve};
+    use tc_security::generate::KeyGenParams;
+    use tc_security::params::{AnyEcPrivateKey, AnyEcPublicKey, AnyParams, EcCurve};
+
+    let mut generator = generate::get_by_name("EC").unwrap().generator();
+    generator
+        .init(&KeyGenParams::Ec {
+            curve: EcCurve::Secp256r1,
+        })
+        .unwrap();
+    let mut scalars = Vec::new();
+    for _ in 0..2 {
+        let (public, private) = generator.generate_key_pair().unwrap();
+        let (
+            AnyParams::EcPublic {
+                key: AnyEcPublicKey::Secp256r1(public),
+            },
+            AnyParams::EcPrivate {
+                key: AnyEcPrivateKey::Secp256r1(private),
+            },
+        ) = (&public, &private)
+        else {
+            panic!("P-256 generates P-256 keys");
+        };
+        assert!(public.g() == private.g());
+        let q = <&SecPCtCurve<SecP256R1FieldElement> as Curve>::multiply(private.g(), private.d());
+        assert!(q == *public.q());
+        scalars.push(private.d().clone());
+    }
+    assert!(scalars[0] != scalars[1]);
 }

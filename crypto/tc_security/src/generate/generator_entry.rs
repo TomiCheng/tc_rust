@@ -15,7 +15,7 @@ type GenerateKeyPair =
 pub struct GeneratorEntry {
     names: &'static [&'static str],
     oids: &'static [NamedOid],
-    default_params: KeyGenParams,
+    default_params: Option<KeyGenParams>,
     check_params: CheckParams,
     generate_key: GenerateKey,
     generate_key_pair: GenerateKeyPair,
@@ -34,7 +34,26 @@ impl GeneratorEntry {
         Self {
             names,
             oids,
-            default_params,
+            default_params: Some(default_params),
+            check_params,
+            generate_key,
+            generate_key_pair,
+        }
+    }
+
+    /// 沒有預設參數的產生器：一定要先呼叫 `init`，例如 EC 要指定曲線。
+    #[allow(dead_code, reason = "ec 的 feature 關掉時沒用到")]
+    pub(super) const fn without_default(
+        names: &'static [&'static str],
+        oids: &'static [NamedOid],
+        check_params: CheckParams,
+        generate_key: GenerateKey,
+        generate_key_pair: GenerateKeyPair,
+    ) -> Self {
+        Self {
+            names,
+            oids,
+            default_params: None,
             check_params,
             generate_key,
             generate_key_pair,
@@ -74,7 +93,7 @@ impl GeneratorEntry {
         (self.generate_key_pair)(params, rng)
     }
 
-    /// 建立一個新的產生器，還沒呼叫 `init` 時用這一列的預設參數。
+    /// 建立一個新的產生器，還沒呼叫 `init` 時用這一列的預設參數；沒有預設參數的要先 `init`。
     pub fn generator(&'static self) -> Generator {
         Generator::new(self, self.default_params)
     }

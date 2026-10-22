@@ -20,6 +20,9 @@ pub enum KeyGenParams {
         strength: usize,
         certainty: u32,
     },
+    /// EC 的曲線，對應 BC 的 `ECKeyGenerationParameters`。EC 只收這個：曲線一定要明確指定。
+    #[cfg(feature = "ec")]
+    Ec { curve: crate::params::EcCurve },
 }
 
 impl KeyGenParams {
@@ -40,6 +43,9 @@ impl KeyGenParams {
             Self::Rc5 { strength, .. } => strength,
             #[cfg(feature = "rsa")]
             Self::Rsa { strength, .. } => strength,
+            // 用長度的產生器在 check_params 就拒絕了 Ec，走不到這裡
+            #[cfg(feature = "ec")]
+            Self::Ec { .. } => 0,
         }
     }
 }
