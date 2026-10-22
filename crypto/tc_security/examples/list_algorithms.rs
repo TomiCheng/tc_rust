@@ -1,5 +1,5 @@
 use tc_asn1::NamedOid;
-use tc_security::{agreement, cipher, digest, generate, mac, params, wrap};
+use tc_security::{agreement, cipher, digest, generate, mac, params, signer, wrap};
 
 fn oids(oids: &[NamedOid]) -> String {
     oids.iter()
@@ -36,6 +36,11 @@ fn main() {
 
     println!("\n# agreement");
     for entry in agreement::algorithms() {
+        println!("{entry}");
+    }
+
+    println!("\n# signer");
+    for entry in signer::algorithms() {
         println!("{entry}");
     }
 

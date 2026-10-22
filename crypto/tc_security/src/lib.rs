@@ -8,6 +8,7 @@ pub mod generate;
 pub mod mac;
 pub mod params;
 mod security_error;
+pub mod signer;
 pub mod wrap;
 
 pub use any_error::AnyError;
