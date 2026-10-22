@@ -8,8 +8,10 @@ use super::{Algorithm, AnyDigest};
 #[derive(Clone, Copy, Debug)]
 pub struct DigestEntry {
     algorithm: Algorithm,
-    name: &'static str,
-    oid: Option<NamedOid>,
+    // 第一個是正式名稱，其餘是別名
+    names: &'static [&'static str],
+    // 第一個是 digest 本身的 OID，其餘照 BC 也對到這一列
+    oids: &'static [NamedOid],
     constructor: fn() -> Box<dyn Digest>,
 }
 
@@ -17,14 +19,14 @@ impl DigestEntry {
     #[allow(dead_code, reason = "所有 digest 的 feature 都關掉時，表是空的")]
     pub(super) const fn new(
         algorithm: Algorithm,
-        name: &'static str,
-        oid: Option<NamedOid>,
+        names: &'static [&'static str],
+        oids: &'static [NamedOid],
         constructor: fn() -> Box<dyn Digest>,
     ) -> Self {
         Self {
             algorithm,
-            name,
-            oid,
+            names,
+            oids,
             constructor,
         }
     }
@@ -33,12 +35,23 @@ impl DigestEntry {
         self.algorithm
     }
 
+    /// 正式名稱，例如 `"SHA-256"`。
     pub const fn name(&self) -> &'static str {
-        self.name
+        self.names[0]
     }
 
-    pub const fn oid(&self) -> Option<NamedOid> {
-        self.oid
+    pub(super) const fn names(&self) -> &'static [&'static str] {
+        self.names
+    }
+
+    /// digest 本身的 OID，DigestInfo 用的就是它；原始 Keccak 沒有。
+    pub fn oid(&self) -> Option<NamedOid> {
+        self.oids.first().copied()
+    }
+
+    /// 對到這一列的所有 OID，第一個是 digest 本身的。
+    pub const fn oids(&self) -> &'static [NamedOid] {
+        self.oids
     }
 
     pub fn create(&'static self) -> AnyDigest {

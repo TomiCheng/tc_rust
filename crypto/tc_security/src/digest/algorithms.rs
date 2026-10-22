@@ -30,14 +30,19 @@ pub fn get_by_oid(oid: &Asn1Oid) -> Result<AnyDigest, SecurityError> {
 fn find(name: &str) -> Option<&'static DigestEntry> {
     DIGESTS
         .iter()
-        .find(|entry| entry.name().eq_ignore_ascii_case(name))
+        .find(|entry| {
+            entry
+                .names()
+                .iter()
+                .any(|known| known.eq_ignore_ascii_case(name))
+        })
         .or_else(|| find_by_oid(&name.parse().ok()?))
 }
 
 fn find_by_oid(oid: &Asn1Oid) -> Option<&'static DigestEntry> {
     DIGESTS
         .iter()
-        .find(|entry| entry.oid().is_some_and(|known| known == *oid))
+        .find(|entry| entry.oids().iter().any(|known| *known == *oid))
 }
 
 /// 弱點揭露後、修補前的緊急開關：列在這裡的 digest 不出現在清單，但仍可直接建立。

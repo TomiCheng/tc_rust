@@ -165,16 +165,62 @@ fn every_listed_digest_is_found_again_by_its_name_in_any_case() {
 #[test]
 fn every_listed_oid_is_found_again_as_an_oid_and_as_dotted_text() {
     for entry in digest::algorithms() {
-        let Some(oid) = entry.oid() else { continue };
+        assert_eq!(entry.oid(), entry.oids().first().copied());
+        for oid in entry.oids() {
+            assert_eq!(
+                digest::get_by_oid(&oid.oid()).map(|found| found.algorithm()),
+                Ok(entry.algorithm())
+            );
+            assert_eq!(
+                digest::get_by_name(oid.dotted()).map(|found| found.algorithm()),
+                Ok(entry.algorithm())
+            );
+        }
+    }
+}
+
+#[test]
+fn no_oid_belongs_to_two_digests() {
+    let mut seen = std::collections::HashSet::new();
+    for entry in digest::algorithms() {
+        for oid in entry.oids() {
+            assert!(seen.insert(oid.dotted()), "{}", oid.dotted());
+        }
+    }
+}
+
+// BC 的 DigestUtilities 認得的別名與額外的 OID，包括 HMAC 的 OID
+#[cfg(all(
+    feature = "sha256",
+    feature = "sha512-256",
+    feature = "sha3-256",
+    feature = "keccak-256",
+    feature = "shake128"
+))]
+#[test]
+fn bc_aliases_and_hmac_oids_find_their_digest() {
+    for (name, expected) in [
+        ("SHA256", Algorithm::Sha256),
+        ("sha512(256)", Algorithm::Sha512_256),
+        ("SHA-512(256)", Algorithm::Sha512_256),
+        ("SHA512-256", Algorithm::Sha512_256),
+        ("KECCAK256", Algorithm::Keccak256),
+        ("shake-128", Algorithm::Shake128),
+        ("SHAKE128", Algorithm::Shake128),
+        ("1.2.840.113549.2.9", Algorithm::Sha256),
+        ("2.16.840.1.101.3.4.2.14", Algorithm::Sha3_256),
+    ] {
         assert_eq!(
-            digest::get_by_oid(&oid.oid()).map(|found| found.algorithm()),
-            Ok(entry.algorithm())
-        );
-        assert_eq!(
-            digest::get_by_name(oid.dotted()).map(|found| found.algorithm()),
-            Ok(entry.algorithm())
+            digest::get_by_name(name).map(|found| found.algorithm()),
+            Ok(expected),
+            "{name}"
         );
     }
+    // 名稱照樣顯示正式名稱
+    assert_eq!(
+        digest::get_by_name("SHA256").unwrap().to_string(),
+        "SHA-256"
+    );
 }
 
 #[test]
