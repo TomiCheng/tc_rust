@@ -10,22 +10,21 @@
 //! `bytepad` / `left_encode` / `encode_string` follow SP 800-185 §2.3 and reuse
 //! the [`KeccakDigest`] sponge (with its `xof_output` incremental squeeze).
 
-use alloc::vec::Vec;
 use core::convert::Infallible;
 
-use tc_digest::{TryDigest, TryXof};
+use tc_digest::{Digest, TryDigest, TryXof};
 
 use crate::keccak::KeccakDigest;
-use crate::xof_utils::{encode_string, left_encode};
+use crate::xof_utils::{absorb_encoded_string, left_encode};
 
 /// A cSHAKE128 / cSHAKE256 customizable XOF (SP 800-185).
 #[derive(Clone)]
 pub struct CShakeDigest {
     sponge: KeccakDigest,
+    /// 吸收完 bytepad 前綴後的狀態，reset 時還原；N/S 皆空時就是空的 SHAKE。
+    initial: KeccakDigest,
     /// 安全參數位元數(128 或 256),決定名稱與預設輸出長度。
     bit_length: usize,
-    /// bytepad 前綴;`None` 表示 N/S 皆空 → 退化為純 SHAKE。
-    diff: Option<Vec<u8>>,
 }
 
 impl CShakeDigest {
@@ -43,44 +42,23 @@ impl CShakeDigest {
             "cSHAKE: bit length must be 128 or 256"
         );
 
-        if n.is_empty() && s.is_empty() {
+        let initial = if n.is_empty() && s.is_empty() {
             // N/S 皆空:與 SHAKE 完全相同(domain 0x1f)。
-            return CShakeDigest {
-                sponge: KeccakDigest::with_domain(bit_length, 0x1f),
-                bit_length,
-                diff: None,
-            };
-        }
-
-        let rate_bytes = (1600 - (bit_length << 1)) / 8;
-        let mut diff = left_encode(rate_bytes as u64);
-        diff.extend(encode_string(n));
-        diff.extend(encode_string(s));
-
-        let mut d = CShakeDigest {
-            sponge: KeccakDigest::with_domain(bit_length, 0x04),
+            KeccakDigest::with_domain(bit_length, 0x1f)
+        } else {
+            // SP 800-185 `bytepad(encode_string(N) || encode_string(S), rate)`
+            let mut sponge = KeccakDigest::with_domain(bit_length, 0x04);
+            let rate_bytes = sponge.byte_length() as u64;
+            sponge.update(left_encode(rate_bytes).as_slice());
+            absorb_encoded_string(&mut sponge, n);
+            absorb_encoded_string(&mut sponge, s);
+            sponge.pad_to_block();
+            sponge
+        };
+        CShakeDigest {
+            sponge: initial.clone(),
+            initial,
             bit_length,
-            diff: Some(diff),
-        };
-        d.diff_pad_and_absorb();
-        d
-    }
-
-    /// SP 800-185 `bytepad`:吸收 `diff`,再補零至 rate 的整數倍(令訊息從區塊邊界開始)。
-    fn diff_pad_and_absorb(&mut self) {
-        // 分別借用 sponge / diff 兩個欄位(避免整體 &self 與 &mut self 衝突)。
-        let Self { sponge, diff, .. } = self;
-        let Some(diff) = diff.as_ref() else {
-            return;
-        };
-        let block_size = sponge.byte_length();
-        let _ = sponge.try_update(diff);
-
-        let delta = diff.len() % block_size;
-        if delta != 0 {
-            // pad < block_size ≤ 168,單次補零即足。
-            let zeros = [0u8; 168];
-            let _ = sponge.try_update(&zeros[..block_size - delta]);
         }
     }
 }
@@ -107,9 +85,7 @@ impl TryDigest for CShakeDigest {
     }
 
     fn try_reset(&mut self) -> Result<(), Self::Error> {
-        self.sponge.try_reset()?;
-        // 自訂化時 reset 需重新注入 bytepad 前綴。
-        self.diff_pad_and_absorb();
+        self.sponge = self.initial.clone();
         Ok(())
     }
 }
@@ -131,6 +107,7 @@ impl TryXof for CShakeDigest {
 #[cfg(test)]
 mod tests {
     use alloc::vec;
+    use alloc::vec::Vec;
 
     use super::*;
     use tc_digest::{Digest, Xof};

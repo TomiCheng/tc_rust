@@ -10,10 +10,9 @@
 //! output modes stay distinct.
 //!
 //! The per-block independence is what lets a caller parallelize the compressor
-//! stage; this port keeps the (sequential) bit-exact behaviour of bc.
+//! stage; this port keeps the (sequential) bit-exact behaviour of bc, feeding
+//! each block into the compressor as it arrives instead of buffering it.
 
-use alloc::vec;
-use alloc::vec::Vec;
 use core::convert::Infallible;
 
 use tc_digest::{Digest, TryDigest, TryXof, Xof};
@@ -36,10 +35,8 @@ pub struct ParallelHash {
     block_size: usize,
     /// 壓縮鏈值長度 = `2·bit_length/8`(32 或 64)。
     compressor_len: usize,
-    /// B 位元組累積緩衝。
-    buffer: Vec<u8>,
-    /// 緩衝已填位元組。
-    buf_off: usize,
+    /// 目前區塊已餵進 compressor 的位元組數。
+    in_block: usize,
     /// 已壓縮區塊數。
     n_count: u64,
     /// 是否尚未擠出(擠出前需收尾,僅一次)。
@@ -73,8 +70,7 @@ impl ParallelHash {
             output_length: output_size_bits.div_ceil(8),
             block_size: b,
             compressor_len: bit_length * 2 / 8,
-            buffer: vec![0u8; b],
-            buf_off: 0,
+            in_block: 0,
             n_count: 0,
             first_output: true,
         };
@@ -85,41 +81,32 @@ impl ParallelHash {
     /// Reset 的共同初始化:重置 cSHAKE 並吸收 `left_encode(B)` 標頭。
     fn init(&mut self) {
         self.cshake.reset();
-        self.buffer.iter_mut().for_each(|b| *b = 0);
-        let hdr = left_encode(self.block_size as u64);
-        self.cshake.update(&hdr);
+        // 目前區塊可能只餵了一半
+        self.compressor.reset();
+        self.cshake
+            .update(left_encode(self.block_size as u64).as_slice());
         self.n_count = 0;
-        self.buf_off = 0;
+        self.in_block = 0;
         self.first_output = true;
     }
 
-    /// 壓縮一個 block:純 SHAKE(compressor)→ 鏈值 → 餵入外層 cSHAKE。
-    fn compress_slice(&mut self, block: &[u8]) {
-        self.compressor.update(block);
+    /// 收尾一個 block:compressor 擠出鏈值 → 餵入外層 cSHAKE;`output_final` 會重置 compressor。
+    fn finish_block(&mut self) {
         let clen = self.compressor_len;
         let mut cb = [0u8; 64];
         self.compressor.output_final(&mut cb[..clen]);
         self.cshake.update(&cb[..clen]);
         self.n_count += 1;
+        self.in_block = 0;
     }
 
-    /// 壓縮緩衝內的殘留 block(`mem::take` 暫借出以避開整體 `&mut self` 借用衝突)。
-    fn compress_pending(&mut self) {
-        let buf = core::mem::take(&mut self.buffer);
-        self.compress_slice(&buf[..self.buf_off]);
-        self.buffer = buf;
-        self.buf_off = 0;
-    }
-
-    /// 擠出前收尾:必要時壓縮殘留,吸收 `right_encode(nCount) || right_encode(L_bits)`。
+    /// 擠出前收尾:必要時收尾殘留的 block,吸收 `right_encode(nCount) || right_encode(L_bits)`。
     fn wrap_up(&mut self, output_bits: u64) {
-        if self.buf_off != 0 {
-            self.compress_pending();
+        if self.in_block != 0 {
+            self.finish_block();
         }
-        let n_enc = right_encode(self.n_count);
-        let out_enc = right_encode(output_bits);
-        self.cshake.update(&n_enc);
-        self.cshake.update(&out_enc);
+        self.cshake.update(right_encode(self.n_count).as_slice());
+        self.cshake.update(right_encode(output_bits).as_slice());
         self.first_output = false;
     }
 }
@@ -135,35 +122,15 @@ impl TryDigest for ParallelHash {
         self.cshake.byte_length()
     }
 
-    fn try_update(&mut self, input: &[u8]) -> Result<(), Self::Error> {
-        let len = input.len();
-        let mut i = 0;
-
-        // 先補滿當前部分 block。
-        if self.buf_off != 0 {
-            while i < len && self.buf_off != self.block_size {
-                self.buffer[self.buf_off] = input[i];
-                self.buf_off += 1;
-                i += 1;
-            }
-            if self.buf_off == self.block_size {
-                self.compress_pending();
-            }
-        }
-
-        // 整段的完整 block 直接自輸入壓縮(免複製、可平行化的核心)。
-        while len - i >= self.block_size {
-            self.compress_slice(&input[i..i + self.block_size]);
-            i += self.block_size;
-        }
-
-        // 殘餘進緩衝。
-        while i < len {
-            self.buffer[self.buf_off] = input[i];
-            self.buf_off += 1;
-            i += 1;
-            if self.buf_off == self.block_size {
-                self.compress_pending();
+    // 邊收邊餵給 compressor,滿 B 位元組就收尾一個 block;SHAKE 分段餵與一次餵結果相同
+    fn try_update(&mut self, mut input: &[u8]) -> Result<(), Self::Error> {
+        while !input.is_empty() {
+            let take = (self.block_size - self.in_block).min(input.len());
+            self.compressor.update(&input[..take]);
+            self.in_block += take;
+            input = &input[take..];
+            if self.in_block == self.block_size {
+                self.finish_block();
             }
         }
         Ok(())
@@ -204,6 +171,7 @@ impl TryXof for ParallelHash {
 mod tests {
     use super::*;
     use alloc::vec;
+    use alloc::vec::Vec;
 
     fn unhex(s: &str) -> Vec<u8> {
         let d: Vec<char> = s.chars().filter(|c| c.is_ascii_hexdigit()).collect();
@@ -348,5 +316,17 @@ mod tests {
         let a = ph_final(128, b"", 8, &data24());
         let b = ph_final(128, b"", 8, &data24());
         assert_eq!(a, b);
+    }
+
+    // reset 丟掉只餵了一半的 block,不留在 compressor 裡。
+    #[test]
+    fn reset_discards_a_partial_block() {
+        let mut h = ParallelHash::new(128, b"Parallel Data", 12);
+        h.update(&data72()[..17]);
+        h.reset();
+        h.update(&data72());
+        let mut out = vec![0u8; h.digest_size()];
+        h.do_final(&mut out);
+        assert_eq!(out, ph_final(128, b"Parallel Data", 12, &data72()));
     }
 }

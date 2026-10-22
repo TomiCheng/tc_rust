@@ -256,6 +256,15 @@ impl KeccakDigest {
         }
     }
 
+    /// SP 800-185 `bytepad` 的補零：補到區塊邊界。XOR 零不改變狀態，所以只要在區塊中途時
+    /// 置換一次；剛好在邊界上時，吸收時已經置換過了。
+    pub(crate) fn pad_to_block(&mut self) {
+        if self.pos != 0 {
+            keccak_f1600(&mut self.state);
+            self.pos = 0;
+        }
+    }
+
     /// XOF 擠出:首次呼叫先補 pad 切換,之後每次續擠(供 SHAKE 等 XOF 使用)。
     ///
     /// 呼叫後不 reset,可反覆呼叫取任意長度輸出;固定輸出的收尾走

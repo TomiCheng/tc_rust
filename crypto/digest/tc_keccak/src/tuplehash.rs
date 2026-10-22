@@ -11,10 +11,10 @@
 
 use core::convert::Infallible;
 
-use tc_digest::{TryDigest, TryXof};
+use tc_digest::{Digest, TryDigest, TryXof};
 
 use crate::cshake::CShakeDigest;
-use crate::xof_utils::{encode_string, right_encode};
+use crate::xof_utils::{absorb_encoded_string, right_encode};
 
 const N_TUPLE_HASH: &[u8] = b"TupleHash";
 
@@ -53,8 +53,8 @@ impl TupleHash {
 
     /// 擠出前收尾:吸收 `right_encode(output_bits)`(固定模式為輸出位元、XOF 模式為 0)。
     fn wrap_up(&mut self, output_bytes: usize) {
-        let enc = right_encode(output_bytes as u64 * 8);
-        let _ = self.cshake.try_update(&enc);
+        self.cshake
+            .update(right_encode(output_bytes as u64 * 8).as_slice());
         self.first_output = false;
     }
 }
@@ -72,8 +72,8 @@ impl TryDigest for TupleHash {
 
     fn try_update(&mut self, input: &[u8]) -> Result<(), Self::Error> {
         // 每次 update = 一個元組元素,以 encode_string 長度前綴後餵入 cSHAKE。
-        let enc = encode_string(input);
-        self.cshake.try_update(&enc)
+        absorb_encoded_string(&mut self.cshake, input);
+        Ok(())
     }
 
     fn try_do_final(&mut self, output: &mut [u8]) -> Result<usize, Self::Error> {
