@@ -52,10 +52,16 @@ rc6 = ["dep:tc_rc_cipher"]
 chacha = ["dep:tc_chacha"]
 # Ascon-AEAD128 與 Ascon v1.2 的 AEAD。BC 的工廠沒有，名稱是自訂的，所以預設不開
 ascon = ["dep:tc_ascon_aead"]
-# RSA 的金鑰參數，之後接上 RSA 的 cipher 與金鑰對產生器
-rsa = ["dep:tc_rsa", "dep:tc_asym_cipher", "dep:tc_asym_encoding"]
+# RSA：cipher、金鑰對，與 PKCS#1 v1.5 簽章（SHA-256withRSA 這類，digest 依各自的 feature）
+rsa = [
+    "dep:tc_rsa",
+    "dep:tc_asym_cipher",
+    "dep:tc_asym_encoding",
+    "dep:tc_rsa_signer",
+    "dep:tc_asn1_x509",
+]
 iso9796 = ["rsa", "dep:tc_asym_iso9796"]
-# CFRG 曲線的金鑰對，之後接上 agreement 與 signer
+# CFRG 曲線：x25519、x448 有金鑰對與 agreement，ed25519、ed448 有金鑰對與 signer
 x25519 = ["dep:tc_cfrg_curves", "dep:tc_asym_cipher"]
 x448 = ["dep:tc_cfrg_curves", "tc_cfrg_curves/x448", "dep:tc_asym_cipher"]
 ed25519 = ["dep:tc_cfrg_curves", "dep:tc_asym_cipher"]
@@ -101,6 +107,7 @@ tc_buffered_cipher = { version = "0.1.1", features = ["alloc"] }
 tc_block_padding = { version = "0.1.0", features = ["rand_core"] }
 tc_agreement = { version = "0.1.0", path = "../agreement/tc_agreement" }
 tc_asn1 = "0.1.1"
+tc_asn1_x509 = { version = "0.1.0", path = "../../asn1/tc_asn1_x509", optional = true }
 tc_digest = "0.1.0"
 tc_key_wrap = { version = "0.1.0", features = ["rfc3394"] }
 tc_macs = { version = "0.1.0", features = ["hmac", "cbc-mac", "alloc"] }
@@ -123,6 +130,8 @@ tc_ecdh_v2 = { version = "0.1.0", path = "../agreement/tc_ecdh_v2", optional = t
 tc_f2m_custom = { version = "0.1.0", optional = true }
 tc_fp_curve = { version = "0.1.0", optional = true }
 tc_fp_custom = { version = "0.1.0", optional = true }
+tc_rsa_signer = { version = "0.1.0", path = "../../signer/tc_rsa_signer", optional = true }
+tc_signer = { version = "0.1.0", path = "../../signer/tc_signer" }
 tc_stream_cipher = "0.1.0"
 tc_zeroize = "0.1.0"
 rand = { workspace = true }

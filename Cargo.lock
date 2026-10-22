@@ -1773,6 +1773,7 @@ dependencies = [
  "tc_aria",
  "tc_ascon_aead",
  "tc_asn1",
+ "tc_asn1_x509",
  "tc_asym_cipher",
  "tc_asym_encoding",
  "tc_asym_iso9796",
@@ -1795,7 +1796,9 @@ dependencies = [
  "tc_md",
  "tc_rc_cipher",
  "tc_rsa",
+ "tc_rsa_signer",
  "tc_sha 0.1.1",
+ "tc_signer",
  "tc_stream_cipher",
  "tc_zeroize",
 ]
