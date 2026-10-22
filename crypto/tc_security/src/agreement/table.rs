@@ -18,6 +18,11 @@ use crate::params::AnyParams;
 
 /// 每種 agreement 一列；新增時在這裡加一列。
 pub(super) const AGREEMENTS: &[AgreementEntry] = &[
+    // BC 的 ECDHBasicAgreement，IEEE P1363 的 ECSVDP-DH：dQ 的 x 座標。曲線由私鑰決定
+    #[cfg(feature = "ec")]
+    AgreementEntry::new(&["ECDH"], &[], || {
+        AnyAgreement::from_any(super::ecdh::EcdhAgreement::new())
+    }),
     // RFC 7748；OID 照 RFC 8410
     #[cfg(feature = "x25519")]
     AgreementEntry::new(

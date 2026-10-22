@@ -97,6 +97,19 @@ impl AnyAgreement {
     }
 }
 
+impl AnyAgreement {
+    // 給表用：已經收 AnyParams、回傳 AnyError 的 agreement，例如依曲線分派的 ECDH
+    #[allow(dead_code, reason = "ec 的 feature 關掉時沒用到")]
+    pub(super) fn from_any<T>(agreement: T) -> Self
+    where
+        T: Agreement<PublicKey = AnyParams, Error = AnyError>
+            + AgreementInit<AnyParams, Error = AnyError>
+            + 'static,
+    {
+        Self(Box::new(agreement))
+    }
+}
+
 impl AgreementInit<AnyParams> for AnyAgreement {
     type Error = AnyError;
 

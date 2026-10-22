@@ -1,4 +1,5 @@
-//! 依名稱或 OID 建立 key agreement，對應 BC 的 `AgreementUtilities.GetRawAgreement`。
+//! 依名稱或 OID 建立 key agreement，對應 BC 的 `AgreementUtilities`；共享秘密一律寫成固定長度的 bytes，
+//! 同 BC 的 `GetRawAgreement`。
 //!
 //! ```
 //! # #[cfg(feature = "x25519")] {
@@ -23,6 +24,8 @@
 mod agreement_entry;
 mod algorithms;
 mod any_agreement;
+#[cfg(feature = "ec")]
+mod ecdh;
 mod helpers;
 mod table;
 

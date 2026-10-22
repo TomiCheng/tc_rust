@@ -61,9 +61,10 @@ x448 = ["dep:tc_cfrg_curves", "tc_cfrg_curves/x448", "dep:tc_asym_cipher"]
 ed25519 = ["dep:tc_cfrg_curves", "dep:tc_asym_cipher"]
 ed448 = ["dep:tc_cfrg_curves", "tc_cfrg_curves/ed448", "dep:tc_asym_cipher"]
 # 質數體的 SEC 2 曲線與 SM2：secp224k1 到 secp521r1、sm2p256v1。曲線一定要在 init 明確指定。
-# 之後接上 ECDH 與 ECDSA
+# 金鑰產生與 ECDH；之後接上 ECDSA
 ec = [
     "dep:tc_ec_key",
+    "dep:tc_ecdh_v2",
     "dep:tc_ec_core",
     "dep:tc_fp_custom",
     "dep:tc_bigint",
@@ -118,6 +119,7 @@ tc_bigint = { version = "0.1.0", optional = true }
 tc_cfrg_curves = { version = "0.1.0", path = "../tc_cfrg_curves", optional = true }
 tc_ec_core = { version = "0.1.0", optional = true }
 tc_ec_key = { version = "0.1.0", path = "../tc_ec_key", optional = true }
+tc_ecdh_v2 = { version = "0.1.0", path = "../agreement/tc_ecdh_v2", optional = true }
 tc_f2m_custom = { version = "0.1.0", optional = true }
 tc_fp_curve = { version = "0.1.0", optional = true }
 tc_fp_custom = { version = "0.1.0", optional = true }
