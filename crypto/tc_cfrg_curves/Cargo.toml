@@ -1,0 +1,10 @@
+[package]
+name = "tc_cfrg_curves"
+description = "The CFRG curves: X25519 and X448 key agreement and Ed25519 and Ed448 signatures, ported from Bouncy Castle C#."
+version.workspace = true
+edition.workspace = true
+rust-version = "1.85"
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
