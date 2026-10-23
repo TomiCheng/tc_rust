@@ -7,4 +7,18 @@ rust-version = "1.85"
 license.workspace = true
 repository.workspace = true
 
+[features]
+default = []
+# BC 的第二個建構式與 IesWithCipherParameters：以分組加密取代 XOR，K1 加上可選的 IV 交給 cipher
+cipher = ["dep:tc_buffered_cipher", "dep:tc_block_cipher", "dep:tc_block_modes"]
+
 [dependencies]
+tc_agreement = { version = "0.1.0", path = "../../crypto/agreement/tc_agreement" }
+tc_kdf = { version = "0.1.0", path = "../../kdf/tc_kdf" }
+tc_macs = "0.1.0"
+# 共享秘密 Z 與衍生的 K1、K2 用完即清除
+tc_zeroize = { version = "0.1.0", features = ["alloc"] }
+tc_buffered_cipher = { version = "0.1.1", features = ["alloc"], optional = true }
+# cipher 的 init 參數：沒有 IV 時 KeyRef，有 IV 時 KeyWithIvRef
+tc_block_cipher = { version = "0.1.0", optional = true }
+tc_block_modes = { version = "0.1.0", optional = true }

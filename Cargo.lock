@@ -1523,6 +1523,15 @@ dependencies = [
 [[package]]
 name = "tc_ies"
 version = "0.1.0"
+dependencies = [
+ "tc_agreement",
+ "tc_block_cipher",
+ "tc_block_modes",
+ "tc_buffered_cipher",
+ "tc_kdf",
+ "tc_macs",
+ "tc_zeroize",
+]
 
 [[package]]
 name = "tc_isaac"
