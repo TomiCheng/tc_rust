@@ -160,9 +160,8 @@ and the crates that remain here depend on the published version.
 - The earlier generation on the legacy `tc_crypto`, `tc_cipher` and
   `tc_params` traits: [`crypto/block_cipher`](crypto/block_cipher),
   [`crypto/block_modes`](crypto/block_modes),
-  [`crypto/stream_cipher`](crypto/stream_cipher), `crypto/tc_digest`,
-  `crypto/tc_pad` and `math/tc_bigint`. They stay while other incubator crates
-  still depend on them.
+  [`crypto/stream_cipher`](crypto/stream_cipher), `crypto/tc_digest` and
+  `crypto/tc_pad`. They stay while other incubator crates still depend on them.
 
 ## Implemented algorithms
 
@@ -272,9 +271,6 @@ cargo build -p tc_cbc -p tc_cfb -p tc_ofb -p tc_ctr --locked
 
 # Portable digest backends without std
 cargo build -p tc_blake2 -p tc_haraka --no-default-features --locked
-
-# Other crates that require alloc but not std
-cargo build -p tc_bigint --no-default-features --locked
 ```
 
 `cargo test` always uses Rust's standard-library test harness. Use `cargo build`
@@ -286,7 +282,6 @@ Benchmarks are available in the algorithm crates:
 ```bash
 cargo bench -p tc_aes_old --bench aes
 cargo bench -p tc_blake2
-cargo bench -p tc_bigint --bench integer_types
 ```
 
 ## Reference and license
