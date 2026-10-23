@@ -28,6 +28,7 @@ pub enum KeyGenParams {
 impl KeyGenParams {
     #[cfg(any(
         feature = "aes",
+        feature = "aria",
         feature = "ascon",
         feature = "camellia",
         feature = "chacha",

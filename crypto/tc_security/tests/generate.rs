@@ -59,6 +59,53 @@ fn each_aes_oid_finds_the_generator_of_its_key_size() {
     }
 }
 
+#[cfg(feature = "aria")]
+#[test]
+fn each_aria_oid_finds_the_generator_of_its_key_size() {
+    // 1.2.410.200046.1.1 底下：ECB 到 CTR、OCB2、GCM、CCM、KW、KWP 依 128、192、256 bits 排在一起
+    for (arcs, expected) in [
+        ([1, 2, 3, 4, 5, 31, 34, 37, 40, 43], "ARIA128"),
+        ([6, 7, 8, 9, 10, 32, 35, 38, 41, 44], "ARIA192"),
+        ([11, 12, 13, 14, 15, 33, 36, 39, 42, 45], "ARIA256"),
+    ] {
+        for arc in arcs {
+            let dotted = format!("1.2.410.200046.1.1.{arc}");
+            assert_eq!(name_of(&dotted), Ok(expected), "{dotted}");
+        }
+    }
+}
+
+#[cfg(feature = "aria")]
+#[test]
+fn aria_keys_default_to_256_bits_and_take_the_three_key_sizes() {
+    use tc_block_cipher::KeyParams;
+    use tc_security::generate::KeyGenParams;
+
+    for (name, bytes) in [
+        ("ARIA", 32),
+        ("ARIA128", 16),
+        ("ARIA192", 24),
+        ("ARIA256", 32),
+    ] {
+        let key = generate::get_by_name(name)
+            .unwrap()
+            .generator()
+            .generate_key()
+            .unwrap();
+        assert_eq!(KeyParams::key(&key).len(), bytes, "{name}");
+    }
+
+    let mut generator = generate::get_by_name("ARIA").unwrap().generator();
+    generator
+        .init(&KeyGenParams::Basic { strength: 192 })
+        .unwrap();
+    assert_eq!(KeyParams::key(&generator.generate_key().unwrap()).len(), 24);
+    assert_eq!(
+        generator.init(&KeyGenParams::Basic { strength: 64 }),
+        Err(SecurityError::InvalidKeyGenParams)
+    );
+}
+
 #[cfg(feature = "rsa")]
 #[test]
 fn rsa_is_found_by_name_and_by_rsa_encryption() {
