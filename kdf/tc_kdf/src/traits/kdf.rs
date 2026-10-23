@@ -2,7 +2,8 @@
 /// length from the secret given to [`KdfInit`].
 ///
 /// As in BC, whether a second call continues the output or starts it over depends on the
-/// function: KDF1 and KDF2 start over, HKDF and the SP 800-108 functions continue.
+/// function: KDF1, KDF2 and the concatenation KDF start over, HKDF and the SP 800-108
+/// functions continue.
 pub trait Kdf {
     /// The failure type, such as asking for more bytes than the function can derive.
     type Error: core::error::Error;
