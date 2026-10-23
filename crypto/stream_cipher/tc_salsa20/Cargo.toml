@@ -7,6 +7,21 @@ rust-version = "1.85"
 license.workspace = true
 repository.workspace = true
 
+[features]
+default = []
+# 32 bytes 金鑰、20 回合的 Salsa20 與 XSalsa20 改走 RustCrypto 的 salsa20；其餘長度與回合數留在 portable
+rustcrypto = ["dep:salsa20", "dep:cipher", "salsa20/zeroize"]
+
 [dependencies]
 tc_stream_cipher = "0.1.0"
 tc_zeroize = "0.1.0"
+salsa20 = { version = "0.11", optional = true }
+# 不直接使用：它的 zeroize feature 會清除 salsa20 串流包裝暫存的 keystream，salsa20/zeroize 單獨清不到
+cipher = { version = "0.5", optional = true, features = ["zeroize"] }
+
+[dev-dependencies]
+criterion = { workspace = true }
+
+[[bench]]
+name = "salsa20"
+harness = false
