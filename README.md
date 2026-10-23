@@ -10,64 +10,164 @@ learning project for studying Rust, cryptographic algorithms, and API design.
 > still under development, its APIs are unstable, and it has not been audited.
 > **Do not use it in production or for real-world security.**
 
-## Current status
+This workspace is an incubator. When a crate matures, it moves to a repository
+of its own and is published on crates.io; the incubator copy is then retired,
+and the crates that remain here depend on the published version.
 
-The low-level block-cipher and stream-cipher engine inventories are implemented.
-Digest support has reached the current target, key wrapping has graduated to
-its own published crates, and the higher-level elliptic-curve work still has
-known gaps.
+## Graduated repositories
 
-| Area | Current progress | Remaining work |
-| --- | --- | --- |
-| Block ciphers | 28 public engines with known-answer tests | The current raw-engine inventory is complete |
-| Stream ciphers | 11 engines; the current inventory is complete | Higher-level protocols and authenticated encryption are outside this crate |
-| Block modes | 8 mode families | Padding, buffering, and ciphertext stealing are not provided |
-| Digests and XOFs | 45 exported digest, XOF, and wrapper types | The current Bouncy Castle digest inventory is complete |
-| Key wrapping | RFC 3394, RFC 5649, RFC 3211, CMS Triple-DES and RC2, and DSTU 7624, published as separate crates | Maintained outside this workspace |
-| Mathematics | Big integers, binary fields, SEC and SM2 curves, public multi-scalar algorithms, secret fixed-window multiplication, X25519 and X448 | Target-specific timing review and further performance tuning |
-| Edwards signatures | Ed25519, Ed25519ctx, Ed25519ph, Ed448 and Ed448ph; BC-compatible and explicit strict verification | Canonical encodings; no ZIP-215 mode |
+### [tc_core](https://github.com/TomiCheng/tc_core)
 
-GOST 34.11-94 and Skein 1.3 reuse the workspace's GOST 28147 and Threefish
-engines respectively; both provide streaming, clone, and reset behavior.
+- [`tc_constant_time`](https://crates.io/crates/tc_constant_time) — constant-time
+  selection, comparison and conditional arithmetic primitives
+- [`tc_runtime`](https://crates.io/crates/tc_runtime) — `no_std` CPU feature
+  detection and capability proof tokens for x86 and AArch64
+- [`tc_zeroize`](https://crates.io/crates/tc_zeroize) — explicit memory erasure
+  with volatile writes and opt-in scope guards
 
-## Workspace crates
+### [tc_math](https://github.com/TomiCheng/tc_math)
 
-| Crate | Purpose | Runtime support |
-| --- | --- | --- |
-| [`tc_crypto`](crypto/tc_crypto) | Shared algorithm metadata contracts | Core-only `no_std` |
-| [`tc_cipher`](crypto/tc_cipher) | Shared cipher, mode, and key-wrapping traits and errors | Core-only `no_std` |
-| [`tc_asym_cipher`](https://crates.io/crates/tc_asym_cipher), [`tc_rsa`](https://crates.io/crates/tc_rsa), [`tc_asym_encoding`](https://crates.io/crates/tc_asym_encoding), [`tc_asym_iso9796`](https://crates.io/crates/tc_asym_iso9796) | Asymmetric block-cipher contracts; RSA engines, blinding and key generation; PKCS#1 v1.5 and OAEP encodings; ISO 9796-1 (external dependencies) | `no_std`; RSA's default `alloc` adds `RsaEngine`, `RsaKey` and key generation |
-| [`tc_params`](crypto/tc_params) | Shared object-safe cryptographic parameter traits and convenience types | Core-only `no_std` |
-| [`tc_macs`](https://crates.io/crates/tc_macs) | Shared message-authentication-code traits and errors, plus CBC-MAC, CFB-MAC, CMAC, GMAC and HMAC behind features (external dependency) | Core-only `no_std`; optional `alloc` adds runtime-sized MACs |
-| [Block-cipher family crates](crypto/block_cipher) | Independent block-cipher implementations built on `tc_cipher` and `tc_params` | Core-only `no_std`; AES can select AES-NI at runtime |
-| [`tc_hc`](crypto/stream_cipher/tc_hc), [`tc_isaac`](crypto/stream_cipher/tc_isaac), [`tc_rc4`](crypto/stream_cipher/tc_rc4), [`tc_salsa20`](crypto/stream_cipher/tc_salsa20), [`tc_vmpc`](crypto/stream_cipher/tc_vmpc) | Independent stream-cipher implementation crates built on `tc_cipher` | Core-only `no_std` |
-| [`tc_ecb`](crypto/block_modes/tc_ecb), [`tc_cbc`](crypto/block_modes/tc_cbc), [`tc_cfb`](crypto/block_modes/tc_cfb), [`tc_ofb`](crypto/block_modes/tc_ofb), [`tc_ctr`](crypto/block_modes/tc_ctr) | Independent ECB, CBC, CFB/OpenPGP CFB, OFB/GCTR, and CTR/KCTR crates built on `tc_cipher` | Core-only `no_std`; `alloc` enables runtime-sized variants where needed |
-| [`tc_digest`](crypto/tc_digest) | Shared message-digest and XOF traits | Core-only `no_std` |
-| [Digest family crates](crypto/digest) | Independent message-digest, XOF, and digest-adapter implementations | `no_std`; allocation and optional CPU acceleration vary by family |
-| [`tc_bigint`](math/tc_bigint) | Compile-time fixed-width, runtime fixed-width, and arbitrary-precision signed/unsigned integers and number-theory operations | Compile-time fixed-width types are core-only; runtime fixed-width and dynamic types require `alloc` |
-| [`tc_constant_time`](https://crates.io/crates/tc_constant_time) | Shared masked selection, comparison, and conditional arithmetic primitives (external dependency) | Core-only `no_std` |
-| [`tc_zeroize`](https://crates.io/crates/tc_zeroize) | Explicit memory erasure with volatile writes and opt-in scope guards (external dependency) | Core-only `no_std`; optional `alloc` adds `Vec` and `Box` support |
-| [`tc_ec_core`](https://crates.io/crates/tc_ec_core) | Curve traits, wNAF, GLV, τ-adic NAF and fixed-base multipliers with the comb (external dependency) | `no_std + alloc` |
-| [`tc_fp_curve`](https://crates.io/crates/tc_fp_curve), [`tc_f2m_curve`](https://crates.io/crates/tc_f2m_curve) | Generic prime/binary curves, each in a constant-time and a variable-time set (external dependency) | `no_std + alloc` |
-| [`tc_fp_custom`](https://crates.io/crates/tc_fp_custom), [`tc_f2m_custom`](https://crates.io/crates/tc_f2m_custom) | Specialized SEC/SM2 curve backends (external dependency) | `no_std + alloc` |
-| [`tc_rfc7748`](math/tc_rfc7748) | X25519/X448 and shared Edwards field arithmetic | `no_std`; optional x86 dispatch |
-| [`tc_ed25519`](crypto/tc_ed25519), [`tc_ed448`](crypto/tc_ed448) | RFC 8032 signatures using [`tc_edwards`](crypto/tc_edwards) arithmetic | `no_std` |
+- [`tc_bigint`](https://crates.io/crates/tc_bigint) — fixed-width, padded and
+  arbitrary-precision big integers, constant time in the fixed-width and padded
+  forms
+- [`tc_modular`](https://crates.io/crates/tc_modular) — modular arithmetic and
+  Montgomery forms over `tc_bigint`
+- [`tc_prime`](https://crates.io/crates/tc_prime) — trial division,
+  Miller-Rabin and Shawe-Taylor provable primes
+- [`tc_binpoly`](https://crates.io/crates/tc_binpoly) — binary-polynomial
+  arithmetic over GF(2^n), constant time with PCLMULQDQ
+- [`tc_ec_core`](https://crates.io/crates/tc_ec_core) — curve, point and
+  field-element traits; wNAF, GLV, τ-adic NAF and fixed-base comb
+  multiplication
+- [`tc_fp_curve`](https://crates.io/crates/tc_fp_curve) and
+  [`tc_f2m_curve`](https://crates.io/crates/tc_f2m_curve) — generic prime- and
+  binary-field curves, each as a constant-time and a variable-time set, with
+  the SEC named curves
+- [`tc_fp_custom`](https://crates.io/crates/tc_fp_custom) and
+  [`tc_f2m_custom`](https://crates.io/crates/tc_f2m_custom) — the SEC and SM2
+  curves with per-field specialized arithmetic
 
-The rewritten big integers, modular arithmetic and primes are published as
-[`tc_bigint`](https://crates.io/crates/tc_bigint),
-[`tc_modular`](https://crates.io/crates/tc_modular) and
-[`tc_prime`](https://crates.io/crates/tc_prime) from the
-[tc_math](https://github.com/TomiCheng/tc_math) repository; the `tc_bigint` here
-is the earlier version.
+### [tc_asn1](https://github.com/TomiCheng/tc_asn1)
 
-`tc_constant_time` provides compiler/timing primitives rather than mathematical
-operations. Both `crypto/` and `math/` crates use its published crates.io package.
+- [`tc_asn1`](https://crates.io/crates/tc_asn1) — BER, CER and DER codecs for
+  the ASN.1 universal types
+- [`tc_asn1_x500`](https://crates.io/crates/tc_asn1_x500) — X.501 names and
+  X.520 attribute types
 
-The core trait crates do not depend on algorithm implementations. Concrete
-algorithm crates depend on the appropriate core crate, which keeps the
-dependency graph acyclic and lets applications select only the layers they use.
+### [tc_digest](https://github.com/TomiCheng/tc_digest)
+
+- [`tc_digest`](https://crates.io/crates/tc_digest) — streaming digest and XOF
+  traits, fallible and infallible
+- [`tc_md`](https://crates.io/crates/tc_md) — MD2, MD4 and MD5 for legacy
+  interoperability
+- [`tc_sha`](https://crates.io/crates/tc_sha) — SHA-1 and SHA-2, including
+  SHA-512/t
+- [`tc_keccak`](https://crates.io/crates/tc_keccak) — Keccak, SHA-3, SHAKE,
+  cSHAKE, TupleHash and ParallelHash
+
+### [tc_block_cipher](https://github.com/TomiCheng/tc_block_cipher)
+
+- [`tc_block_cipher`](https://crates.io/crates/tc_block_cipher) — block-cipher
+  traits, errors and wiping key containers
+- [`tc_aes`](https://crates.io/crates/tc_aes) — AES with AES-NI, RustCrypto,
+  table and small-footprint engines
+- [`tc_aria`](https://crates.io/crates/tc_aria) — ARIA (RFC 5794)
+- [`tc_camellia`](https://crates.io/crates/tc_camellia) — Camellia (RFC 3713)
+- [`tc_des`](https://crates.io/crates/tc_des) — DES and Triple DES, with
+  weak-key and parity helpers for key generation
+- [`tc_dstu7624`](https://crates.io/crates/tc_dstu7624) — DSTU 7624:2014
+  (Kalyna) with 128-, 256- and 512-bit blocks
+- [`tc_rc_cipher`](https://crates.io/crates/tc_rc_cipher) — RC2, RC5 and RC6
+- [`tc_block_modes`](https://crates.io/crates/tc_block_modes) — ECB, CBC, CFB,
+  OFB and CTR
+- [`tc_block_padding`](https://crates.io/crates/tc_block_padding) — PKCS#7,
+  ISO 7816-4, ANSI X9.23, TBC, zero-byte and ISO 10126 padding
+
+### [tc_stream_cipher](https://github.com/TomiCheng/tc_stream_cipher)
+
+- [`tc_stream_cipher`](https://crates.io/crates/tc_stream_cipher) —
+  stream-cipher traits, errors and wiping key and IV containers
+- [`tc_chacha`](https://crates.io/crates/tc_chacha) — ChaCha, ChaCha20
+  (RFC 8439) and XChaCha20
+
+### [tc_aead_cipher](https://github.com/TomiCheng/tc_aead_cipher)
+
+- [`tc_aead_cipher`](https://crates.io/crates/tc_aead_cipher) — AEAD contracts
+  and the GCM, GCM-SIV, CCM, KCCM, EAX and OCB modes over any block cipher
+- [`tc_ascon_aead`](https://crates.io/crates/tc_ascon_aead) — Ascon-AEAD128
+  and the Ascon v1.2 AEAD variants
+- [`tc_chacha_aead`](https://crates.io/crates/tc_chacha_aead) —
+  ChaCha20-Poly1305 and XChaCha20-Poly1305
+- [`tc_grain128_aead`](https://crates.io/crates/tc_grain128_aead) —
+  Grain-128AEAD
+- [`tc_sparkle_aead`](https://crates.io/crates/tc_sparkle_aead) — SCHWAEMM on
+  the SPARKLE permutation
+
+### [tc_macs](https://github.com/TomiCheng/tc_macs)
+
+- [`tc_macs`](https://crates.io/crates/tc_macs) — MAC traits plus CBC-MAC,
+  CFB-MAC, CMAC, GMAC and HMAC
+- [`tc_poly1305`](https://crates.io/crates/tc_poly1305) — Poly1305 (RFC 8439)
+
+### [tc_key_wrap](https://github.com/TomiCheng/tc_key_wrap)
+
+- [`tc_key_wrap`](https://crates.io/crates/tc_key_wrap) — key-wrap traits and
+  the RFC 3394, RFC 5649 and RFC 3211 wrappers
+- [`tc_des_wrap`](https://crates.io/crates/tc_des_wrap) and
+  [`tc_rc2_wrap`](https://crates.io/crates/tc_rc2_wrap) — CMS Triple-DES and
+  RC2 key wrapping (RFC 3217)
+- [`tc_dstu7624_wrap`](https://crates.io/crates/tc_dstu7624_wrap) — DSTU 7624
+  (Kalyna) key wrapping
+
+### [tc_crypto](https://github.com/TomiCheng/tc_crypto)
+
+- [`tc_buffered_cipher`](https://crates.io/crates/tc_buffered_cipher) — one
+  buffered interface over block modes, stream ciphers, AEADs and asymmetric
+  block ciphers, after Bouncy Castle's `IBufferedCipher`
+
+### [tc_asym_cipher](https://github.com/TomiCheng/tc_asym_cipher)
+
+- [`tc_asym_cipher`](https://crates.io/crates/tc_asym_cipher) — asymmetric
+  block-cipher and key-pair-generator contracts
+- [`tc_rsa`](https://crates.io/crates/tc_rsa) — RSA key generation, blinding
+  and the RSA operation over fixed-width, padded and RustCrypto engines
+- [`tc_asym_encoding`](https://crates.io/crates/tc_asym_encoding) — PKCS#1 v1.5
+  and OAEP
+- [`tc_asym_iso9796`](https://crates.io/crates/tc_asym_iso9796) — ISO/IEC
+  9796-1 signatures with message recovery
+
+## Incubating in this workspace
+
+- [`crypto/tc_security`](crypto/tc_security) — name- and OID-based factories
+  after Bouncy Castle's `Org.BouncyCastle.Security`: digests, ciphers, MACs,
+  key wrap, key and parameter generation, key agreement and signers, wired to
+  the published crates above
+- [`crypto/tc_cfrg_curves`](crypto/tc_cfrg_curves) — X25519, X448, Ed25519 and
+  Ed448 in one crate; it replaces `tc_x25519`, `tc_edwards`, `tc_ed25519`,
+  `tc_ed448` and `math/tc_rfc7748`, which remain until they are retired
+- [`crypto/tc_ec_key`](crypto/tc_ec_key),
+  [`crypto/agreement`](crypto/agreement) and [`signer`](signer) — EC keys,
+  key agreement (ECDH) and signers (RSA, DSA, ECDSA)
+- [`crypto/tc_drbg`](crypto/tc_drbg) — deterministic random bit generators
+- [`asn1`](asn1) — PKCS, X.509 and X9 structures over the published
+  `tc_asn1`; [`x509`](x509) has started on certificates over them
+- [`block_cipher`](block_cipher) — rewrites of Blowfish, CAST5/CAST6,
+  GOST 28147-89, IDEA, Noekeon, Rijndael, SEED, Serpent, Skipjack, SM4,
+  TEA/XTEA, Threefish and Twofish on the `tc_block_cipher` traits, waiting to
+  graduate
+- [`crypto/digest`](crypto/digest) and [`crypto/macs`](crypto/macs) — digest
+  and MAC families not yet graduated, such as BLAKE2, BLAKE3, RIPEMD,
+  Whirlpool, SipHash and KMAC
+- The earlier generation on the legacy `tc_crypto`, `tc_cipher` and
+  `tc_params` traits: [`crypto/block_cipher`](crypto/block_cipher),
+  [`crypto/block_modes`](crypto/block_modes),
+  [`crypto/stream_cipher`](crypto/stream_cipher), `crypto/tc_digest`,
+  `crypto/tc_pad` and `math/tc_bigint`. They stay while other incubator crates
+  still depend on them.
 
 ## Implemented algorithms
+
+The lists below cover this workspace and the graduated repositories together.
 
 ### Block ciphers
 
@@ -109,42 +209,22 @@ add padding, authentication, or message framing.
 - BLAKE2b, BLAKE2s, BLAKE2xs, and BLAKE3
 - Ascon-Hash256, Ascon-XOF128, Ascon-CXOF128, and legacy Ascon v1.2 variants
 - GOST 34.11-2012, DSTU 7564, SM3, Tiger, and Whirlpool
+- GOST 34.11-94 and Skein 1.3, on the workspace's GOST 28147 and Threefish
+  engines
 - ISAP Hash, Photon-Beetle Hash, Xoodyak Hash, and Haraka-256/512
 - TupleHash, ParallelHash, `ShortenedDigest`, `Prehash`, and `NullDigest`
 
 See the [digest crate guide](crypto/digest/README.md) for variant-level
 details and usage examples.
 
-### Key wrapping
-
-Key wrapping graduated from this workspace and is published from its own
-repository:
-
-- [`tc_key_wrap`](https://crates.io/crates/tc_key_wrap): the shared key-wrap
-  traits and the RFC 3394, RFC 5649 and RFC 3211 wrappers
-- [`tc_des_wrap`](https://crates.io/crates/tc_des_wrap) and
-  [`tc_rc2_wrap`](https://crates.io/crates/tc_rc2_wrap): CMS Triple-DES and
-  RC2 key wrapping (RFC 3217)
-- [`tc_dstu7624_wrap`](https://crates.io/crates/tc_dstu7624_wrap): DSTU 7624
-  (Kalyna) key wrapping
-
 ### Mathematics
 
 - Signed arbitrary-precision `BigInt`
 - Arithmetic, bitwise operations, shifts, conversions, and arbitrary-radix text
 - GCD, modular inverse, modular exponentiation, and probable-prime operations
+- The SEC named curves and SM2P256V1, each as a constant-time and a
+  variable-time set, with wNAF, GLV, the τ-adic NAF and the fixed-base comb
 - X25519/X448
-
-The binary polynomials and the elliptic curves graduated to
-[tc_math](https://github.com/TomiCheng/tc_math) and are published as
-[`tc_binpoly`](https://crates.io/crates/tc_binpoly),
-[`tc_ec_core`](https://crates.io/crates/tc_ec_core),
-[`tc_fp_curve`](https://crates.io/crates/tc_fp_curve),
-[`tc_f2m_curve`](https://crates.io/crates/tc_f2m_curve),
-[`tc_fp_custom`](https://crates.io/crates/tc_fp_custom) and
-[`tc_f2m_custom`](https://crates.io/crates/tc_f2m_custom): the named SEC curves
-and SM2P256V1, each as a constant-time and a variable-time set, with wNAF, GLV,
-the τ-adic NAF and the fixed-base comb.
 
 ## Feature model
 
@@ -182,7 +262,7 @@ cargo build -p tc_crypto -p tc_cipher -p tc_params -p tc_digest --locked
 cargo build -p tc_hc -p tc_isaac -p tc_rc4 -p tc_salsa20 -p tc_vmpc --locked
 
 # Representative block-cipher crate (all family crates are no_std)
-cargo build -p tc_aria --locked
+cargo build -p tc_blowfish --locked
 
 # Block modes without alloc (fixed-size variants)
 cargo build -p tc_ecb --locked
@@ -195,7 +275,7 @@ cargo build -p tc_cbc -p tc_cfb -p tc_ofb -p tc_ctr --locked
 cargo build -p tc_blake2 -p tc_haraka --no-default-features --locked
 
 # Other crates that require alloc but not std
-cargo build -p tc_bigint -p tc_ec --no-default-features --locked
+cargo build -p tc_bigint --no-default-features --locked
 ```
 
 `cargo test` always uses Rust's standard-library test harness. Use `cargo build`
@@ -205,7 +285,7 @@ configuration.
 Benchmarks are available in the algorithm crates:
 
 ```bash
-cargo bench -p tc_aria --bench aria
+cargo bench -p tc_aes_old --bench aes
 cargo bench -p tc_blake2
 cargo bench -p tc_bigint --bench integer_types
 ```
