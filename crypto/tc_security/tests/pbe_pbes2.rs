@@ -172,3 +172,89 @@ fn an_unknown_kdf_and_a_scheme_without_an_iv_are_refused() {
         Some(&SecurityError::UnknownCipher)
     );
 }
+
+/// `openssl pkcs8 -topk8 -v2 rc2-cbc -v2prf hmacWithSHA256 -iter 2048 -provider legacy`：keyLength
+/// 16，版本 58（128 bits）。
+#[cfg(feature = "rc2")]
+const RC2_128: &str = concat!(
+    "3081f3305e06092a864886f70d01050d3051303406092a864886f70d01050c30270410dde3d6595d2fb5ff4c204a0c94",
+    "ab8de802020800020110300c06082a864886f70d02090500301906082a864886f70d0302300d02013a04080b1b75218e",
+    "e5c728048190afb20581aabc26beae2b97b591284944b50069eb5a95aa0386241948ceca0145070a1bcaf49be946c523",
+    "1bc4d70344d8ce360b2ac501592aecc0b764041f70cb818997824158e40ac904f718fec6f0d4b14f27a5a52e9d92fa04",
+    "8a7fe65734a4cce2d500412ab933edf4ef46f6f4881e86e70b01424fcb08e1a183a41beebddbfc122a0d2d23ea2ab59b",
+    "2cc8a5fc873c",
+);
+
+/// `-v2 rc2-40-cbc`：keyLength 5，版本 160（40 bits）。
+#[cfg(feature = "rc2")]
+const RC2_40: &str = concat!(
+    "3081f4305f06092a864886f70d01050d3052303406092a864886f70d01050c3027041055110a87247e722cc5fda679d3",
+    "75455902020800020105300c06082a864886f70d02090500301a06082a864886f70d0302300e020200a004085594678d",
+    "2ca2d1250481904b498cfdffe49395eea224c1f250a80a6e55b5cd66782957b2f0e56df8c814e2e4d8c5aac908683ee2",
+    "018a053fe88a536910c39f7438f37821e4bbe2ecaf1dab2d7037ff75f3ce4bf65849de12acf3e67e712a86f5b4c2b98e",
+    "3289dfbfd30887ddd23c90d407d2d4c9170ce0611aca9bdbbaf78dea39e41f1983835e2d581c019f958e229c7c63cb41",
+    "61eed4aa2d5455",
+);
+
+/// `-v2 rc2-64-cbc`：keyLength 8，版本 120（64 bits）。
+#[cfg(feature = "rc2")]
+const RC2_64: &str = concat!(
+    "3081f3305e06092a864886f70d01050d3051303406092a864886f70d01050c3027041043a146ce983c857aef50c958da",
+    "7e0db802020800020108300c06082a864886f70d02090500301906082a864886f70d0302300d020178040827b96529ed",
+    "39237e04819093cb592da3e859f973e7b46d9f84ac043e3e426abe0147ea712003f72789cd2271c7f6a86254b0f9af40",
+    "b0346d9b9e7714d9674085d74286b249d892fd5b48bc5e3a4ffe39995d27ef6d281982432f873b5d6279ce61ede9ad9e",
+    "f6d72b023cfb31ad0edf2f3c14273b73615515586bb9a8d4407e339ab677f1c6154ce4df66eb41250d2fe9c27c507e0a",
+    "0552f194e343",
+);
+
+#[cfg(feature = "rc2")]
+#[test]
+fn openssl_rc2_cbc_keys_decrypt_with_their_effective_key_bits() {
+    for encrypted in [RC2_128, RC2_40, RC2_64] {
+        let info = EncryptedPrivateKeyInfo::decode(&hex(encrypted), &DecodingOptions::default())
+            .unwrap()
+            .1;
+        let pbes2 = Pbes2::from_params(&pbes2_params(&info)).unwrap();
+        let params = pbes2.generate_cipher_params("password").unwrap();
+        let mut cipher = pbes2.cipher();
+        let plain =
+            cipher::decrypt(&mut cipher, &params, info.encrypted_data().as_bytes()).unwrap();
+        assert_eq!(plain, hex(PLAIN));
+    }
+}
+
+/// RC2-CBC 的有效金鑰位元數等於預設的 128 bits，寫成版本 58。
+#[cfg(feature = "rc2")]
+#[test]
+fn generated_rc2_cbc_parameters_carry_the_version_of_128_bits() {
+    use tc_asn1::Asn1Object;
+    use tc_asn1_pkcs::Rc2CbcParameter;
+
+    let pbes2 = Pbes2::generate(
+        &"1.2.840.113549.3.2".parse().unwrap(),
+        &Pkcs5Algorithm::HMAC_WITH_SHA256.oid(),
+        &[7; 16],
+        2048,
+        &mut UnwrapErr(SysRng),
+    )
+    .unwrap();
+    let scheme = pbes2
+        .params()
+        .encryption_scheme()
+        .parameters()
+        .map(|object: &Asn1Object| object.encode_to_vec(&EncodingOptions::DER).unwrap())
+        .unwrap();
+    let parameter = Rc2CbcParameter::decode(&scheme, &DecodingOptions::default())
+        .unwrap()
+        .1;
+    assert_eq!(parameter.version().unwrap().as_bytes(), [58]);
+    assert_eq!(parameter.iv().as_bytes().len(), 8);
+
+    let mut cipher = pbes2.cipher();
+    let params = pbes2.generate_cipher_params("password").unwrap();
+    let sealed = cipher::encrypt(&mut cipher, &params, b"secret key").unwrap();
+    assert_eq!(
+        cipher::decrypt(&mut cipher, &params, &sealed).unwrap(),
+        b"secret key"
+    );
+}

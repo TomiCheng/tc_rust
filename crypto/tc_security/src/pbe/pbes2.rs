@@ -2,12 +2,16 @@ use rand::CryptoRng;
 use tc_asn1::{
     Asn1Object, Asn1OctetString, Asn1Oid, Decode, DecodingOptions, Encode, EncodingOptions,
 };
+#[cfg(feature = "rc2")]
+use tc_asn1_pkcs::Rc2CbcParameter;
 use tc_asn1_pkcs::{Pbes2Params, Pbkdf2Params, Pkcs5Algorithm};
 use tc_asn1_x509::alg::AlgorithmIdentifier;
 use tc_buffered_cipher::BufferedCipher;
 use tc_pbe::{PbeGenerator, PbeGeneratorInit, PbeParamsRef, Pkcs5S2, pkcs5_password_to_utf8_bytes};
 use tc_zeroize::Zeroizing;
 
+#[cfg(feature = "rc2")]
+use super::rc2_cbc;
 use crate::cipher::{self, AnyCipher, CipherEntry};
 use crate::params::AnyParams;
 use crate::{AnyError, SecurityError, digest, generate};
@@ -16,8 +20,11 @@ use crate::{AnyError, SecurityError, digest, generate};
 /// IV，對應 BC `PbeUtilities` 處理 `id-PBES2` 的部分。
 ///
 /// PRF 依 OID 從 digest 工廠取得，hmacWithSHA… 的 OID 對到 digest 本身，同 BC 的 `DigestUtilities`；
-/// 加密方案依 OID 從 cipher 工廠取得，參數是 IV，所以 RC2 的 `RC2-CBC-Parameter` 還不支援。金鑰長度
-/// 是 PBKDF2 參數的 keyLength，沒寫時是 cipher OID 的預設長度，同 BC 的 `GetDefaultKeySize`。
+/// 加密方案依 OID 從 cipher 工廠取得，參數是 IV。金鑰長度是 PBKDF2 參數的 keyLength，沒寫時是
+/// cipher OID 的預設長度，同 BC 的 `GetDefaultKeySize`。
+///
+/// RC2-CBC 的參數是 `RC2-CBC-Parameter`：版本換成有效金鑰位元數，同 BC CMS 的 `CipherFactory`。BC 的
+/// `PbeUtilities` 只取 IV、有效位元數一律等於金鑰長度，遇到兩者不同的參數會解錯。
 ///
 /// 密碼編成 UTF-8，同 RFC 8018 的建議與 OpenSSL；BC C# 取每個字元的低位元組，兩者只有 ASCII 的密碼
 /// 一致。
@@ -30,6 +37,8 @@ pub struct Pbes2 {
     iteration_count: usize,
     key_bytes: usize,
     iv: Vec<u8>,
+    // RC2-CBC 的有效金鑰位元數，其他 cipher 是 None
+    effective_key_bits: Option<usize>,
 }
 
 impl Pbes2 {
@@ -53,16 +62,10 @@ impl Pbes2 {
 
         let scheme = params.encryption_scheme();
         let cipher = cipher::get_by_oid(scheme.algorithm()).map_err(AnyError::new)?;
-        let Some(Asn1Object::OctetString(iv)) = scheme.parameters() else {
-            return Err(invalid());
-        };
+        let (iv, effective_key_bits) = scheme_iv(scheme)?;
         let key_bytes = match pbkdf2.key_length() {
             Some(length) => to_usize(length)?,
-            None => generate::get_by_oid(scheme.algorithm())
-                .ok()
-                .and_then(|entry| entry.default_strength())
-                .map(|bits| bits / 8)
-                .ok_or_else(invalid)?,
+            None => default_key_bytes(scheme.algorithm())?,
         };
 
         Ok(Self {
@@ -72,13 +75,15 @@ impl Pbes2 {
             salt: pbkdf2.salt().as_bytes().to_vec(),
             iteration_count: to_usize(pbkdf2.iteration_count())?,
             key_bytes,
-            iv: iv.as_bytes().to_vec(),
+            iv,
+            effective_key_bits,
         })
     }
 
     /// 為加密產生參數，同 BC 的 `GenerateAlgorithmParameters(cipherOid, prfOid, salt,
     /// iterationCount, random)`：IV 是 cipher 一個區塊長的亂數，PRF 寫成 `prf` 加 NULL 參數，不寫
-    /// keyLength。BC 只收 AES 的 CBC 與 CFB；這裡收 cipher 工廠認得、有預設金鑰長度的 OID。
+    /// keyLength。BC 只收 AES 的 CBC 與 CFB；這裡收 cipher 工廠認得、有預設金鑰長度的 OID，RC2-CBC 的
+    /// 有效金鑰位元數等於預設的金鑰長度。
     pub fn generate(
         cipher: &Asn1Oid,
         prf: &Asn1Oid,
@@ -94,7 +99,7 @@ impl Pbes2 {
             .with_prf(AlgorithmIdentifier::with_null(prf.clone()));
         let params = Pbes2Params::new(
             AlgorithmIdentifier::with_parameters(Pkcs5Algorithm::PBKDF2.oid(), to_object(&pbkdf2)?),
-            AlgorithmIdentifier::with_parameters(cipher.clone(), Asn1OctetString::new(&iv)),
+            AlgorithmIdentifier::with_parameters(cipher.clone(), scheme_parameters(cipher, &iv)?),
         );
         Self::from_params(&params)
     }
@@ -122,8 +127,51 @@ impl Pbes2 {
             .map_err(AnyError::new)?;
         let mut key = Zeroizing::new(vec![0; self.key_bytes]);
         generator.derive_key(&mut key).map_err(AnyError::new)?;
-        Ok(AnyParams::new(std::mem::take(&mut *key)).with_iv(self.iv.clone()))
+        let key = std::mem::take(&mut *key);
+        let params = match self.effective_key_bits {
+            #[cfg(feature = "rc2")]
+            Some(bits) => AnyParams::rc2(key, bits),
+            _ => AnyParams::new(key),
+        };
+        Ok(params.with_iv(self.iv.clone()))
     }
+}
+
+/// 加密方案參數裡的 IV；RC2-CBC 另有有效金鑰位元數。
+fn scheme_iv(scheme: &AlgorithmIdentifier) -> Result<(Vec<u8>, Option<usize>), AnyError> {
+    #[cfg(feature = "rc2")]
+    if *scheme.algorithm() == rc2_cbc::RC2_CBC {
+        let parameter: Rc2CbcParameter = reparse(scheme.parameters())?;
+        let bits = rc2_cbc::effective_key_bits(parameter.version()).ok_or_else(invalid)?;
+        return Ok((parameter.iv().as_bytes().to_vec(), Some(bits)));
+    }
+    match scheme.parameters() {
+        Some(Asn1Object::OctetString(iv)) => Ok((iv.as_bytes().to_vec(), None)),
+        _ => Err(invalid()),
+    }
+}
+
+/// 寫進加密方案的參數：IV，RC2-CBC 則是帶版本的 `RC2-CBC-Parameter`。
+#[cfg_attr(not(feature = "rc2"), allow(unused_variables))]
+fn scheme_parameters(cipher: &Asn1Oid, iv: &[u8]) -> Result<Asn1Object, AnyError> {
+    #[cfg(feature = "rc2")]
+    if *cipher == rc2_cbc::RC2_CBC {
+        let version = rc2_cbc::parameter_version(default_key_bytes(cipher)? * 8);
+        let parameter =
+            Rc2CbcParameter::new(Some((version as u64).into()), Asn1OctetString::new(iv))
+                .map_err(AnyError::new)?;
+        return to_object(&parameter);
+    }
+    Ok(Asn1OctetString::new(iv).into())
+}
+
+/// cipher OID 的預設金鑰長度（bytes），同 BC 的 `GeneratorUtilities.GetDefaultKeySize`。
+fn default_key_bytes(cipher: &Asn1Oid) -> Result<usize, AnyError> {
+    generate::get_by_oid(cipher)
+        .ok()
+        .and_then(|entry| entry.default_strength())
+        .map(|bits| bits / 8)
+        .ok_or_else(invalid)
 }
 
 fn invalid() -> AnyError {

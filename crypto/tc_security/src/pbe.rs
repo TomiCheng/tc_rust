@@ -20,6 +20,8 @@
 mod algorithms;
 mod pbe_entry;
 mod pbes2;
+#[cfg(feature = "rc2")]
+mod rc2_cbc;
 mod table;
 
 pub use algorithms::{algorithms, get_by_name, get_by_oid};
