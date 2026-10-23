@@ -1481,15 +1481,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tc_isaac"
-version = "0.1.0"
-dependencies = [
- "tc_cipher",
- "tc_crypto",
- "tc_params",
-]
-
-[[package]]
 name = "tc_isap"
 version = "0.1.0"
 dependencies = [
@@ -1653,12 +1644,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "tc_rc4"
+name = "tc_rc4_family"
 version = "0.1.0"
 dependencies = [
- "tc_cipher",
- "tc_crypto",
- "tc_params",
+ "tc_stream_cipher",
+ "tc_zeroize",
 ]
 
 [[package]]
@@ -1989,15 +1979,6 @@ dependencies = [
  "tc_block_cipher",
  "tc_zeroize",
  "twofish",
-]
-
-[[package]]
-name = "tc_vmpc"
-version = "0.1.0"
-dependencies = [
- "tc_cipher",
- "tc_crypto",
- "tc_params",
 ]
 
 [[package]]

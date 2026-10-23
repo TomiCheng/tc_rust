@@ -1,7 +1,9 @@
-use tc_cipher::{CipherDirection, InitError, StreamCipher, StreamCipherInit, StreamError};
-use tc_crypto::AlgorithmName;
-use tc_isaac::{IsaacEngine, MAX_KEY_BYTES};
-use tc_params::KeyRef;
+use tc_rc4_family::IsaacEngine;
+use tc_stream_cipher::{
+    CipherDirection, InitError, KeyRef, StreamCipher, StreamCipherInit, StreamError,
+};
+
+const MAX_KEY_BYTES: usize = IsaacEngine::MAX_KEY_BYTES;
 
 fn unhex(value: &str) -> Vec<u8> {
     let value: String = value
@@ -109,9 +111,7 @@ fn reset_chunking_and_directions_match() {
 #[test]
 fn validates_key_and_runtime_state() {
     let mut engine = IsaacEngine::new();
-    let mut name = String::new();
-    engine.write_algo_name(&mut name).unwrap();
-    assert_eq!(name, "ISAAC");
+    assert_eq!(engine.to_string(), "ISAAC");
     assert_eq!(engine.return_byte(0), Err(StreamError::NotInitialised));
     assert_eq!(
         engine.init(

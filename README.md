@@ -257,7 +257,7 @@ Representative `no_std` builds:
 ```bash
 # Core-only crates
 cargo build -p tc_crypto -p tc_cipher -p tc_params -p tc_digest --locked
-cargo build -p tc_hc -p tc_isaac -p tc_rc4 -p tc_salsa20 -p tc_vmpc --locked
+cargo build -p tc_hc -p tc_rc4_family -p tc_salsa20 --locked
 
 # Representative block-cipher crate (all family crates are no_std)
 cargo build -p tc_blowfish --locked

@@ -1,9 +1,12 @@
-use tc_cipher::{CipherDirection, InitError, StreamCipher, StreamCipherInit, StreamError};
-use tc_crypto::AlgorithmName;
-use tc_params::KeyWithIvRef;
-use tc_vmpc::{
-    MAX_IV_BYTES, MAX_KEY_BYTES, MIN_IV_BYTES, MIN_KEY_BYTES, VmpcEngine, VmpcKsa3Engine,
+use tc_rc4_family::{VmpcEngine, VmpcKsa3Engine};
+use tc_stream_cipher::{
+    CipherDirection, InitError, KeyWithIvRef, StreamCipher, StreamCipherInit, StreamError,
 };
+
+const MIN_KEY_BYTES: usize = VmpcKsa3Engine::MIN_KEY_BYTES;
+const MAX_KEY_BYTES: usize = VmpcKsa3Engine::MAX_KEY_BYTES;
+const MIN_IV_BYTES: usize = VmpcKsa3Engine::MIN_IV_BYTES;
+const MAX_IV_BYTES: usize = VmpcKsa3Engine::MAX_IV_BYTES;
 
 fn unhex(value: &str) -> Vec<u8> {
     (0..value.len())
@@ -127,12 +130,8 @@ fn chunking_single_bytes_and_directions_match() {
 #[test]
 fn validates_parameters_and_runtime_state() {
     let mut engine = VmpcKsa3Engine::new();
-    let mut name = String::new();
-    engine.write_algo_name(&mut name).unwrap();
-    assert_eq!(name, "VMPC-KSA3");
-    name.clear();
-    VmpcEngine::new().write_algo_name(&mut name).unwrap();
-    assert_eq!(name, "VMPC");
+    assert_eq!(engine.to_string(), "VMPC-KSA3");
+    assert_eq!(VmpcEngine::new().to_string(), "VMPC");
     assert_eq!(engine.return_byte(0), Err(StreamError::NotInitialised));
     for length in [MIN_KEY_BYTES - 1, MAX_KEY_BYTES + 1] {
         let key = vec![0; length];

@@ -27,19 +27,16 @@ so that `reset` can reproduce the original keystream.
 |-------|----------------------|
 | [`tc_chacha`](https://crates.io/crates/tc_chacha) | `ChaChaEngine`, `ChaCha7539Engine`, `XChaCha20Engine`; published on `tc_stream_cipher` and no longer in this workspace |
 | `tc_hc` | `Hc128Engine`, `Hc256Engine`; moved to the published `tc_stream_cipher` traits |
-| `tc_isaac` | `IsaacEngine` |
-| `tc_rc4` | `Rc4Engine` |
+| `tc_rc4_family` | `Rc4Engine`, `VmpcEngine`, `VmpcKsa3Engine`, `IsaacEngine`: RC4 and the two designs derived from it, on the published `tc_stream_cipher` traits |
 | `tc_salsa20` | `Salsa20Engine`, `Xsalsa20Engine` |
-| `tc_vmpc` | `VmpcEngine`, `VmpcKsa3Engine` |
 
 Applications depend only on the implementation crates they use, plus the
 shared API crates:
 
 ```toml
 [dependencies]
-tc_cipher = { version = "0.1", path = "../tc_rust/crypto/tc_cipher" }
-tc_params = { version = "0.1", path = "../tc_rust/crypto/tc_params" }
-tc_rc4 = { version = "0.1", path = "../tc_rust/crypto/stream_cipher/tc_rc4" }
+tc_stream_cipher = "0.1"
+tc_rc4_family = { version = "0.1", path = "../tc_rust/crypto/stream_cipher/tc_rc4_family" }
 ```
 
 Adjust the paths for the application's location. Keeping both `version` and
@@ -63,9 +60,8 @@ rules during `init` and returns `InitError` for invalid parameters.
 ### Key-only example
 
 ```rust
-use tc_cipher::{CipherDirection, StreamCipher, StreamCipherInit};
-use tc_params::KeyRef;
-use tc_rc4::Rc4Engine;
+use tc_rc4_family::Rc4Engine;
+use tc_stream_cipher::{CipherDirection, KeyRef, StreamCipher, StreamCipherInit};
 
 let params = KeyRef::new(b"Key");
 let plaintext = b"Plaintext";
@@ -121,17 +117,17 @@ engine types in six families. All 11 have a v2 crate implementation.
 
 | Family | Engine | Key size | IV size | V2 crate |
 |--------|--------|----------|---------|----------|
-| RC4 | `Rc4Engine` | 1-256 bytes | None | `tc_rc4` |
+| RC4 | `Rc4Engine` | 1-256 bytes | None | `tc_rc4_family` |
 | HC | `Hc128Engine` | 16 bytes | 16 bytes | `tc_hc` |
 | HC | `Hc256Engine` | 16 or 32 bytes | At least 16 bytes | `tc_hc` |
-| ISAAC | `IsaacEngine` | 0-1024 bytes | None | `tc_isaac` |
+| ISAAC | `IsaacEngine` | 0-1024 bytes | None | `tc_rc4_family` |
 | Salsa | `Salsa20Engine` | 16 or 32 bytes | 8 bytes | `tc_salsa20` |
 | Salsa | `Xsalsa20Engine` | 32 bytes | 24 bytes | `tc_salsa20` |
 | ChaCha | `ChaChaEngine` | 16 or 32 bytes | 8 bytes | `tc_chacha` (published) |
 | ChaCha | `ChaCha7539Engine` | 32 bytes | 12 bytes | `tc_chacha` (published) |
 | ChaCha | `XChaCha20Engine` | 32 bytes | 24 bytes | `tc_chacha` (published) |
-| VMPC | `VmpcEngine` | 16-64 bytes | 16-64 bytes | `tc_vmpc` |
-| VMPC | `VmpcKsa3Engine` | 16-64 bytes | 16-64 bytes | `tc_vmpc` |
+| VMPC | `VmpcEngine` | 16-64 bytes | 16-64 bytes | `tc_rc4_family` |
+| VMPC | `VmpcKsa3Engine` | 16-64 bytes | 16-64 bytes | `tc_rc4_family` |
 
 The inventory deliberately excludes:
 
@@ -190,23 +186,21 @@ compatibility, study, and data migration.
 Run every v2 stream-cipher test suite from the workspace root:
 
 ```bash
-cargo test -p tc_hc -p tc_isaac -p tc_rc4 -p tc_salsa20 -p tc_vmpc --locked
+cargo test -p tc_hc -p tc_rc4_family -p tc_salsa20 --locked
 ```
 
 Run Clippy for all library and test targets:
 
 ```bash
-cargo clippy -p tc_hc -p tc_isaac -p tc_rc4 -p tc_salsa20 -p tc_vmpc --all-targets --locked -- -D warnings
+cargo clippy -p tc_hc -p tc_rc4_family -p tc_salsa20 --all-targets --locked -- -D warnings
 ```
 
 Rustdoc accepts one package at a time:
 
 ```bash
 cargo rustdoc -p tc_hc --locked -- -D warnings
-cargo rustdoc -p tc_isaac --locked -- -D warnings
-cargo rustdoc -p tc_rc4 --locked -- -D warnings
+cargo rustdoc -p tc_rc4_family --locked -- -D warnings
 cargo rustdoc -p tc_salsa20 --locked -- -D warnings
-cargo rustdoc -p tc_vmpc --locked -- -D warnings
 ```
 
 The tests use Rust's standard test harness, but each library remains `no_std`

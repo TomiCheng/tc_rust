@@ -2,9 +2,8 @@
 
 mod common;
 
-use tc_cipher::{CipherDirection, StreamCipher, StreamCipherInit};
-use tc_params::KeyRef;
-use tc_rc4::Rc4Engine;
+use tc_rc4_family::Rc4Engine;
+use tc_stream_cipher::{CipherDirection, KeyRef, StreamCipher, StreamCipherInit};
 
 use common::unhex;
 

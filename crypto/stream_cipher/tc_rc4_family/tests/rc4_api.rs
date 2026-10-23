@@ -1,14 +1,11 @@
-use tc_cipher::{CipherDirection, InitError, StreamCipher, StreamCipherInit, StreamError};
-use tc_crypto::AlgorithmName;
-use tc_params::{KeyParams, KeyRef};
-use tc_rc4::{MAX_KEY_BYTES, Rc4Engine};
+use tc_rc4_family::Rc4Engine;
+use tc_stream_cipher::{
+    CipherDirection, InitError, KeyParams, KeyRef, StreamCipher, StreamCipherInit, StreamError,
+};
 
 #[test]
-fn writes_algorithm_name() {
-    let mut name = String::new();
-    let algorithm: &dyn AlgorithmName = &Rc4Engine::new();
-    algorithm.write_algo_name(&mut name).unwrap();
-    assert_eq!(name, "RC4");
+fn displays_the_algorithm_name() {
+    assert_eq!(Rc4Engine::new().to_string(), "RC4");
 }
 
 #[test]
@@ -37,7 +34,7 @@ fn validates_state_key_length_and_output() {
         Err(StreamError::NotInitialised)
     );
 
-    for length in [0, MAX_KEY_BYTES + 1] {
+    for length in [0, Rc4Engine::MAX_KEY_BYTES + 1] {
         let key = vec![0u8; length];
         assert_eq!(
             engine.init(CipherDirection::Encrypt, &KeyRef::new(&key)),
@@ -56,7 +53,7 @@ fn validates_state_key_length_and_output() {
 
 #[test]
 fn accepts_maximum_key_length() {
-    let key = [0xa5; MAX_KEY_BYTES];
+    let key = [0xa5; Rc4Engine::MAX_KEY_BYTES];
     assert!(
         Rc4Engine::new()
             .init(CipherDirection::Encrypt, &KeyRef::new(&key))

@@ -1,18 +1,19 @@
-//! ISAAC engine.
+use core::fmt;
 
-use ::core::fmt;
-
-use tc_cipher::{CipherDirection, InitError, StreamCipher, StreamCipherInit, StreamError};
-use tc_crypto::AlgorithmName;
-use tc_params::KeyParams;
-
-use crate::MAX_KEY_BYTES;
+use tc_stream_cipher::{
+    CipherDirection, InitError, KeyParams, StreamCipher, StreamCipherInit, StreamError,
+};
+use tc_zeroize::Zeroize;
 
 const MIX_WORDS: usize = 8;
 const STATE_WORDS: usize = 256;
 const KEYSTREAM_BYTES: usize = STATE_WORDS * 4;
 
-/// ISAAC stream cipher engine.
+/// ISAAC（Jenkins, 1996），同 BC 的 `IsaacEngine`：0 到 1024 bytes 的金鑰，沒有 IV。本來是亂數產生器，
+/// BC 拿來當串流 cipher；以 RC4 為起點，狀態改成 256 個 32 位元字組。
+///
+/// **變動時間（cache-timing）：** 每一步以狀態的值當索引間接取表，查表位置依秘密狀態而定；只為相容
+/// 保留。狀態、已產生的 keystream 與金鑰在 drop 時清除。
 pub struct IsaacEngine {
     state: [u32; STATE_WORDS],
     a: u32,
@@ -20,13 +21,16 @@ pub struct IsaacEngine {
     c: u32,
     key_stream: [u8; KEYSTREAM_BYTES],
     key_stream_pos: usize,
-    working_key: [u8; MAX_KEY_BYTES],
+    working_key: [u8; Self::MAX_KEY_BYTES],
     key_len: usize,
     initialised: bool,
 }
 
 impl IsaacEngine {
-    /// Creates an uninitialised ISAAC engine.
+    /// 最長的金鑰長度（bytes），也就是 256 個字組的狀態。
+    pub const MAX_KEY_BYTES: usize = 1024;
+
+    /// 還沒有金鑰的引擎；處理前要先 `init`。常數時間。
     pub const fn new() -> Self {
         Self {
             state: [0; STATE_WORDS],
@@ -35,7 +39,7 @@ impl IsaacEngine {
             c: 0,
             key_stream: [0; KEYSTREAM_BYTES],
             key_stream_pos: 0,
-            working_key: [0; MAX_KEY_BYTES],
+            working_key: [0; Self::MAX_KEY_BYTES],
             key_len: 0,
             initialised: false,
         }
@@ -66,17 +70,18 @@ impl IsaacEngine {
     }
 
     fn initialize_state(&mut self) {
-        self.state.fill(0);
+        self.state.zeroize();
         self.a = 0;
         self.b = 0;
         self.c = 0;
-        self.key_stream.fill(0);
+        self.key_stream.zeroize();
         self.key_stream_pos = 0;
 
         let key = &self.working_key[..self.key_len];
-        let (chunks, remainder) = key.as_chunks::<4>();
+        let chunks = key.chunks_exact(4);
+        let remainder = chunks.remainder();
         for (destination, bytes) in self.state.iter_mut().zip(chunks) {
-            *destination = u32::from_le_bytes(*bytes);
+            *destination = u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);
         }
         if !remainder.is_empty() {
             let mut word = [0; 4];
@@ -100,7 +105,7 @@ impl IsaacEngine {
                 self.state[offset..offset + MIX_WORDS].copy_from_slice(&mix_state);
             }
         }
-        mix_state.fill(0);
+        mix_state.zeroize();
 
         // BC generates once during setup, then again for the first visible block.
         self.generate_key_stream();
@@ -161,23 +166,28 @@ impl Default for IsaacEngine {
     }
 }
 
-impl AlgorithmName for IsaacEngine {
-    fn write_algo_name(&self, output: &mut dyn fmt::Write) -> fmt::Result {
-        output.write_str("ISAAC")
+impl fmt::Display for IsaacEngine {
+    /// 寫出 `ISAAC`，不碰金鑰。常數時間。
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("ISAAC")
     }
 }
 
 impl StreamCipher for IsaacEngine {
     type Error = StreamError;
 
-    fn return_byte(&mut self, input: u8) -> Result<u8, Self::Error> {
+    /// `input` XOR 下一個 keystream byte；`init` 之前回傳 `NotInitialised`。變動時間（查表）。
+    fn return_byte(&mut self, input: u8) -> Result<u8, StreamError> {
         if !self.initialised {
             return Err(StreamError::NotInitialised);
         }
         Ok(input ^ self.next_byte())
     }
 
-    fn process_bytes(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, Self::Error> {
+    /// `input` XOR keystream 寫進 `output` 開頭，回傳 `input.len()`；`init` 之前回傳
+    /// `NotInitialised`，`output` 比 `input` 短時回傳 `BufferTooShort`，兩者都不改變位置。變動時間
+    /// （查表）。
+    fn process_bytes(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, StreamError> {
         if !self.initialised {
             return Err(StreamError::NotInitialised);
         }
@@ -200,6 +210,7 @@ impl StreamCipher for IsaacEngine {
         Ok(input.len())
     }
 
+    /// 回到目前金鑰的 keystream 開頭。變動時間（重建狀態時查表）。
     fn reset(&mut self) {
         if self.initialised {
             self.initialize_state();
@@ -210,16 +221,26 @@ impl StreamCipher for IsaacEngine {
 impl<P: KeyParams + ?Sized> StreamCipherInit<P> for IsaacEngine {
     type Error = InitError;
 
-    fn init(&mut self, _direction: CipherDirection, params: &P) -> Result<(), Self::Error> {
+    /// 裝入 0 到 1024 bytes 的金鑰；方向不影響，兩個方向用同一條 keystream。太長時保留原本的金鑰與
+    /// 位置。變動時間（建立狀態時查表）。
+    fn init(&mut self, _direction: CipherDirection, params: &P) -> Result<(), InitError> {
         let key = params.key();
-        if key.len() > MAX_KEY_BYTES {
+        if key.len() > Self::MAX_KEY_BYTES {
             return Err(InitError::InvalidKeyLength(key.len()));
         }
-        self.working_key.fill(0);
+        self.working_key.zeroize();
         self.working_key[..key.len()].copy_from_slice(key);
         self.key_len = key.len();
         self.initialize_state();
         self.initialised = true;
         Ok(())
+    }
+}
+
+impl Drop for IsaacEngine {
+    fn drop(&mut self) {
+        self.state.zeroize();
+        self.key_stream.zeroize();
+        self.working_key.zeroize();
     }
 }
