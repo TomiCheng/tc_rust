@@ -3,3 +3,13 @@
 //! encrypted and tagged with them.
 
 #![no_std]
+
+mod params;
+mod traits;
+
+#[cfg(feature = "cipher")]
+pub use params::IesCipherParamsRef;
+pub use params::IesParamsRef;
+#[cfg(feature = "cipher")]
+pub use traits::IesCipherParams;
+pub use traits::IesParams;
