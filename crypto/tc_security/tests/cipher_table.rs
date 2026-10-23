@@ -78,6 +78,10 @@ fn every_listed_combination_encrypts_and_decrypts_a_message() {
         if entry.algo() == Algorithm::Rsa {
             continue;
         }
+        #[cfg(feature = "ecies")]
+        if entry.algo() == Algorithm::Ecies {
+            continue;
+        }
         let params = params_for(entry);
         let mut aes = entry.cipher();
         // 不補位的 ECB、CBC 只能處理整數個區塊

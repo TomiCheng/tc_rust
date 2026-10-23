@@ -51,6 +51,10 @@ fn every_combination_encrypts_and_decrypts_with_generated_parameters() {
         if entry.algo() == Algorithm::Rsa {
             continue;
         }
+        #[cfg(feature = "ecies")]
+        if entry.algo() == Algorithm::Ecies {
+            continue;
+        }
         let params = params::get_by_name(entry.name())
             .unwrap()
             .generator(key_for(entry))

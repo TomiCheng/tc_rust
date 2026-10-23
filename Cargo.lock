@@ -1840,6 +1840,8 @@ dependencies = [
  "tc_f2m_custom",
  "tc_fp_curve",
  "tc_fp_custom",
+ "tc_ies",
+ "tc_kdf",
  "tc_keccak",
  "tc_key_wrap",
  "tc_macs",

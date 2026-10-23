@@ -35,4 +35,6 @@ pub enum Algorithm {
     Ascon80pq,
     #[cfg(feature = "rsa")]
     Rsa,
+    #[cfg(feature = "ecies")]
+    Ecies,
 }

@@ -71,6 +71,17 @@ pub enum AnyParams {
     /// EC 的公鑰，對應 BC 的 `ECPublicKeyParameters`。
     #[cfg(feature = "ec")]
     EcPublic { key: super::AnyEcPublicKey },
+    /// IES 的參數：自己的私鑰、對方的公鑰，加上 BC `IesParameters` 的 derivation V、encoding V 與
+    /// MAC 金鑰長度（bits）。BC 沒有對應的類別：它的 `BufferedIesCipher` 還沒實作 `Init`，
+    /// IES 只能直接用 `IesEngine.Init(forEncryption, priv, pub, params)`，這裡把四個值收成一組。
+    #[cfg(feature = "ecies")]
+    Ies {
+        private_key: Box<AnyParams>,
+        public_key: Box<AnyParams>,
+        derivation_v: Vec<u8>,
+        encoding_v: Vec<u8>,
+        mac_key_bits: usize,
+    },
 }
 
 impl AnyParams {
@@ -110,6 +121,25 @@ impl AnyParams {
         Self::Rc5 { key, rounds }
     }
 
+    /// IES 的參數：`private_key` 與 `public_key` 是金鑰的 variant（例如 `EcPrivate`、`EcPublic`），
+    /// 其餘同 BC 的 `new IesParameters(derivation, encoding, macKeySize)`。
+    #[cfg(feature = "ecies")]
+    pub fn ies(
+        private_key: AnyParams,
+        public_key: AnyParams,
+        derivation_v: Vec<u8>,
+        encoding_v: Vec<u8>,
+        mac_key_bits: usize,
+    ) -> Self {
+        Self::Ies {
+            private_key: Box::new(private_key),
+            public_key: Box::new(public_key),
+            derivation_v,
+            encoding_v,
+            mac_key_bits,
+        }
+    }
+
     /// RSA 的公鑰或私鑰，同 BC 的 `RsaKeyParameters`。
     #[cfg(feature = "rsa")]
     pub fn rsa(key: tc_rsa::RsaKey) -> Self {
@@ -137,6 +167,8 @@ impl AnyParams {
             Self::Ed448Private { .. } | Self::Ed448Public { .. } => &[],
             #[cfg(feature = "ec")]
             Self::EcPrivate { .. } | Self::EcPublic { .. } => &[],
+            #[cfg(feature = "ecies")]
+            Self::Ies { .. } => &[],
         }
     }
 
@@ -177,6 +209,9 @@ impl Drop for AnyParams {
             Self::Ed448Private { .. } | Self::Ed448Public { .. } => {}
             #[cfg(feature = "ec")]
             Self::EcPrivate { .. } | Self::EcPublic { .. } => {}
+            // 金鑰在自己 drop 時清除；V 與長度不是秘密
+            #[cfg(feature = "ecies")]
+            Self::Ies { .. } => {}
         }
     }
 }

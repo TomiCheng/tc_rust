@@ -14,6 +14,8 @@ mod chacha;
 mod compose;
 #[cfg(any(feature = "des", feature = "desede"))]
 mod des;
+#[cfg(feature = "ecies")]
+mod ecies;
 mod modes;
 mod paddings;
 #[cfg(feature = "rc2")]
@@ -74,6 +76,8 @@ const STANDALONE: &[StandaloneSpec] = &[
     ascon::ASCON128A,
     #[cfg(feature = "ascon")]
     ascon::ASCON80PQ,
+    #[cfg(feature = "ecies")]
+    ecies::ECIES,
 ];
 
 /// 每個合法組合一列：AEAD 模式只搭 NoPadding，模式要求的區塊大小要符合；沒有模式的 cipher 接在後面。
