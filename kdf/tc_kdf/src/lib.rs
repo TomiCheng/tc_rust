@@ -4,6 +4,8 @@
 
 #![no_std]
 
+mod params;
 mod traits;
 
-pub use traits::{Kdf, KdfInit};
+pub use params::KdfParamsRef;
+pub use traits::{Kdf, KdfInit, KdfParams};
