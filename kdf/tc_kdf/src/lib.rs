@@ -4,10 +4,14 @@
 
 #![no_std]
 
+extern crate alloc;
+
+mod base_kdf;
 mod errors;
 mod params;
 mod traits;
 
+pub use base_kdf::{BaseKdf, Kdf1, Kdf2};
 pub use errors::KdfError;
 pub use params::KdfParamsRef;
 pub use traits::{Kdf, KdfInit, KdfParams};
