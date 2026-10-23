@@ -10,6 +10,8 @@ mod ascon;
 #[cfg(feature = "chacha")]
 mod chacha;
 mod compose;
+#[cfg(any(feature = "des", feature = "desede"))]
+mod des;
 mod modes;
 mod paddings;
 #[cfg(feature = "rc2")]
@@ -38,6 +40,10 @@ const ALGORITHMS: &[AlgorithmSpec] = &[
     aes::AES,
     #[cfg(feature = "aria")]
     aria::ARIA,
+    #[cfg(feature = "des")]
+    des::DES,
+    #[cfg(feature = "desede")]
+    des::DESEDE,
     #[cfg(feature = "rc2")]
     rc2::RC2,
     #[cfg(feature = "rc5")]

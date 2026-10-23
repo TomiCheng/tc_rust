@@ -359,6 +359,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "des"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "916a94e407b54f9034d71dd748234cd1e516ced6284009906ae246f177eafe5a"
+dependencies = [
+ "cipher",
+]
+
+[[package]]
 name = "digest"
 version = "0.11.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1094,7 +1103,7 @@ dependencies = [
  "tc_aes_old",
  "tc_cipher",
  "tc_crypto",
- "tc_des",
+ "tc_des 0.1.0",
  "tc_ecb",
  "tc_params",
 ]
@@ -1173,6 +1182,17 @@ dependencies = [
  "tc_cipher",
  "tc_crypto",
  "tc_params",
+]
+
+[[package]]
+name = "tc_des"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7a530667b733101c83f309d6dcf382407e594c2d204f4a0f34ab2d350edb8430"
+dependencies = [
+ "des",
+ "tc_block_cipher",
+ "tc_zeroize",
 ]
 
 [[package]]
@@ -1502,7 +1522,7 @@ version = "0.1.0"
 dependencies = [
  "tc_cipher",
  "tc_crypto",
- "tc_des",
+ "tc_des 0.1.0",
  "tc_macs",
  "tc_pad",
  "tc_params",
@@ -1760,6 +1780,7 @@ dependencies = [
  "tc_buffered_cipher",
  "tc_cfrg_curves",
  "tc_chacha",
+ "tc_des 0.1.1",
  "tc_digest 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tc_ec_core",
  "tc_ec_key",

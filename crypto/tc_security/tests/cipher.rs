@@ -196,7 +196,7 @@ fn invalid_or_unknown_names_are_rejected() {
     for name in [
         "AES/GCM/PKCS7PADDING",
         "AES/CCM/ZEROBYTEPADDING",
-        "DES/CBC/PKCS7PADDING",
+        "BLOWFISH/CBC/PKCS7PADDING",
         "AES/XTS/NOPADDING",
         "AES/CBC/OAEP",
         "AES/CBC/PKCS7PADDING/EXTRA",

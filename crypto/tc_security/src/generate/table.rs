@@ -13,6 +13,8 @@ mod ascon;
 mod cfrg;
 #[cfg(feature = "chacha")]
 mod chacha;
+#[cfg(any(feature = "des", feature = "desede"))]
+mod des;
 #[cfg(feature = "ec")]
 mod ec;
 #[cfg(feature = "rc2")]
@@ -67,6 +69,8 @@ fn no_key(
     feature = "aes",
     feature = "ascon",
     feature = "chacha",
+    feature = "des",
+    feature = "desede",
     feature = "rc2",
     feature = "rc5"
 ))]
@@ -100,6 +104,12 @@ pub(super) const GENERATORS: &[GeneratorEntry] = &[
     chacha::CHACHA7539,
     #[cfg(feature = "chacha")]
     chacha::XCHACHA20,
+    #[cfg(feature = "des")]
+    des::DES,
+    #[cfg(feature = "desede")]
+    des::DESEDE,
+    #[cfg(feature = "desede")]
+    des::DESEDE3,
     #[cfg(feature = "rc2")]
     rc2::RC2,
     #[cfg(feature = "rc5")]

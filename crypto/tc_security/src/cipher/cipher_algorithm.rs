@@ -5,6 +5,10 @@ pub enum Algorithm {
     Aes,
     #[cfg(feature = "aria")]
     Aria,
+    #[cfg(feature = "des")]
+    Des,
+    #[cfg(feature = "desede")]
+    DesEde,
     #[cfg(feature = "rc2")]
     Rc2,
     #[cfg(feature = "rc5")]

@@ -9,6 +9,7 @@ repository.workspace = true
 [features]
 # 已被攻破或不建議使用的不在預設裡，要用時明確開啟：MD2、MD4、MD5、SHA-1（碰撞已可實作）、
 # RC2 與 RC5（8 bytes 區塊，RC2 有 related-key 攻擊，RC5-32/12 可被差分分析）、
+# DES（56 bits 金鑰可暴力破解）與 Triple DES（8 bytes 區塊，NIST 已不准用來加密）、
 # 二元體的 EC 曲線（NIST SP 800-186 已列為 legacy）與強度不足的 EC 小曲線。
 # 家族 feature（md、sha、sha3、keccak、shake、rc）照樣包含它們。
 default = [
@@ -76,6 +77,9 @@ rc2 = ["dep:tc_rc_cipher"]
 # RC5-32 與 RC5-64
 rc5 = ["dep:tc_rc_cipher"]
 rc6 = ["dep:tc_rc_cipher"]
+# DES 與 Triple DES（DESede），產生金鑰時同 BC 設 odd parity、避開弱金鑰與重複的分段
+des = ["dep:tc_des"]
+desede = ["dep:tc_des"]
 # ChaCha、ChaCha7539（RFC 8439）與 XChaCha20
 chacha = ["dep:tc_chacha"]
 # Ascon-AEAD128 與 Ascon v1.2 的 AEAD。BC 的工廠沒有，名稱是自訂的，所以預設不開
@@ -116,11 +120,13 @@ ec-small-curves = [
     "tc_fp_custom/small-curves",
     "tc_f2m_custom?/small-curves",
 ]
-# 引擎改用 RustCrypto 的實作：AES 沒有 AES-NI 時也是常數時間，ARIA 改走 RustCrypto，RC 系列只影響 RC2。
+# 引擎改用 RustCrypto 的實作：AES 沒有 AES-NI 時也是常數時間，ARIA 改走 RustCrypto，RC 系列只影響 RC2，
+# DES 與 Triple DES 改用 S-box 較小、key schedule 無分支的引擎。
 # 只作用在已開啟的演算法，不會連帶開啟它們。
 rustcrypto = [
     "tc_aes?/rustcrypto",
     "tc_aria?/rustcrypto",
+    "tc_des?/rustcrypto",
     "tc_rc_cipher?/rustcrypto",
     "tc_chacha?/rustcrypto",
     "tc_rsa?/rustcrypto",
@@ -145,6 +151,7 @@ tc_rc_cipher = { version = "0.1.0", optional = true }
 tc_sha = { version = "0.1.1", optional = true }
 tc_aes = { version = "0.1.0", optional = true }
 tc_aria = { version = "0.1.0", optional = true }
+tc_des = { version = "0.1.1", optional = true }
 tc_ascon_aead = { version = "0.1.0", optional = true }
 tc_chacha = { version = "0.1.0", optional = true }
 tc_rsa = { version = "0.1.0", optional = true }
