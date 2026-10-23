@@ -1857,6 +1857,7 @@ dependencies = [
  "tc_key_wrap",
  "tc_macs",
  "tc_md",
+ "tc_pbe",
  "tc_rc_cipher",
  "tc_rsa",
  "tc_rsa_signer",

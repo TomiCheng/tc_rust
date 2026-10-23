@@ -113,6 +113,9 @@ ec = [
 # ECIES：BC CipherUtilities 的組合，ECDH 加 KDF2(SHA-1) 與 HMAC(SHA-1)，XOR 加密；雙方都是靜態金鑰。
 # 用到 SHA-1，所以跟 sha1 一樣不在預設裡
 ecies = ["ec", "sha1", "dep:tc_ies", "dep:tc_kdf"]
+# 以密碼加密，同 BC 的 PbeUtilities：PKCS#5 v1、PKCS#12 與 OpenSSL 的方案。各方案另外要它的 digest 與
+# cipher 的 feature 都開了才會出現；方案都是舊的組合，所以不在預設裡
+pbe = ["dep:tc_pbe"]
 # 二元體的 SEC 2 曲線：sect233k1 到 sect571r1
 ec-f2m = ["ec", "dep:tc_f2m_custom"]
 # 強度不足的小曲線，只為互通：secp112r1、secp112r2、secp128r1、secp128r2、secp160k1、secp160r1、
@@ -177,6 +180,7 @@ tc_rsa_signer = { version = "0.1.0", path = "../../signer/tc_rsa_signer", option
 tc_signer = { version = "0.1.0", path = "../../signer/tc_signer" }
 tc_ies = { version = "0.1.0", path = "../../ies/tc_ies", optional = true }
 tc_kdf = { version = "0.1.0", path = "../../kdf/tc_kdf", optional = true }
+tc_pbe = { version = "0.1.0", path = "../../kdf/tc_pbe", optional = true }
 tc_stream_cipher = "0.1.0"
 tc_zeroize = "0.1.0"
 rand = { workspace = true }

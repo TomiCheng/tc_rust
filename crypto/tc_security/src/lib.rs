@@ -7,6 +7,8 @@ pub mod digest;
 pub mod generate;
 pub mod mac;
 pub mod params;
+#[cfg(feature = "pbe")]
+pub mod pbe;
 mod security_error;
 pub mod signer;
 pub mod wrap;
