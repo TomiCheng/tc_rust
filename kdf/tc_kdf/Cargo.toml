@@ -1,0 +1,10 @@
+[package]
+name = "tc_kdf"
+description = "Key derivation functions, after Bouncy Castle's IDerivationFunction."
+version = "0.1.0"
+edition.workspace = true
+rust-version = "1.85"
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
