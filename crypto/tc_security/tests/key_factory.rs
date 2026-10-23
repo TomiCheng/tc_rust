@@ -1,4 +1,4 @@
-//! 金鑰與 DER 互轉：格式錯誤、結尾多出的 bytes、不認得的演算法、不是金鑰的參數，以及 CFRG 曲線的金鑰。
+//! 金鑰與 DER 互轉：格式錯誤、結尾多出的 bytes、不認得的演算法、不是金鑰的參數，以及 RSA 與 CFRG 曲線的金鑰。
 
 #![cfg(feature = "key-factory")]
 
@@ -11,6 +11,10 @@ use tc_asn1_pkcs::PrivateKeyInfo;
 use tc_asn1_x509::alg::AlgorithmIdentifier;
 #[cfg(feature = "ed25519")]
 use tc_asn1_x509::cert::SubjectPublicKeyInfo;
+#[cfg(feature = "rsa")]
+use tc_security::cipher;
+#[cfg(feature = "rsa")]
+use tc_security::generate::{self, KeyGenParams};
 use tc_security::params::AnyParams;
 use tc_security::{AnyError, SecurityError, key_factory};
 
@@ -26,7 +30,7 @@ fn source<E: Error + 'static>(error: &AnyError) -> Option<&E> {
     None
 }
 
-#[cfg(any(feature = "x25519", feature = "ed25519"))]
+#[cfg(any(feature = "x25519", feature = "ed25519", feature = "rsa"))]
 fn hex(text: &str) -> Vec<u8> {
     (0..text.len())
         .step_by(2)
@@ -267,4 +271,162 @@ fn wrong_key_lengths_and_unused_bits_are_refused() {
             Some(&SecurityError::InvalidKeyEncoding)
         );
     }
+}
+
+/// OpenSSL 3.5 產生的 1024 位元金鑰：`openssl genpkey` 寫出的 PKCS#1 `RSAPrivateKey`，與
+/// `openssl pkey -pubout` 寫出的 `SubjectPublicKeyInfo`。
+#[cfg(feature = "rsa")]
+const RSA_PKCS1: &str = concat!(
+    "3082025c02010002818100e302d65ecab1d90d9980153f789e093ea0944f2249634f990d851ca6caf4c60b401236da07",
+    "5019fa73257202339a70558bd4ea22e4ba649b9ab9c8a1d7d87393b5726aa06a85a9a038dea2109f98ee0446aabff37d",
+    "cc31d6b46e9e23be28c9539b4309d50e407b8a2bff29d9157de6795db9a73ddd7551b91d6555696f0cad470203010001",
+    "0281802f9a95b7950bcc77649c0e589c038feeb91fc0a470fd4960d00bfce12128492b6cc925057d8917998471f2c171",
+    "6ece65b207f8fd4e37a407595fe229c62896bb9aa7540110e4a5e0c50c8655682a3edbfd22ecfb42c3f3a06453819d6c",
+    "5b360c4f65523fd9931f31c5be1e6abf385e0c9b70743b7cfc1b7481c35ea85a308a91024100f872d16dfe085011ecd9",
+    "f34462be05b4e62ccbb5d616db77bc9b96644c309cb4da7a1470744a6bcee818a6f8eb99b48b1e9ac5e4316c8050fa1d",
+    "a35c4e0baa09024100e9e936df707ffb0802efbcf987e995ea60b795fb3bcb59158eac4df02cfab80051069f6c5108ce",
+    "2078737b8067d384acdab7641e18c0c6d099025b0266f8b0cf0241009a796955e658eccff8601b2d2de7d04c85c0dc78",
+    "16c0e77c2f3cdde946a603093fbe1fef3b9efa210f96245b28c1cccba31fc062fd87e4d07472f11b773b316102407354",
+    "6a9ac684438892b213b1d0c26a0952c091f17a6cebb286530c668436e62c39c71329bbd6a4933bf06c8f4621f343aadf",
+    "4b3ccfa595215a9fdfb19285c1df024062bf31040a1242d64c1c1acd5d9726d9f423194607a9b28e92c82e652148f385",
+    "3c9996e7bc1d672827589a89b01b5345a9f0e61bda5c575d8d52e9b19eb11e48",
+);
+#[cfg(feature = "rsa")]
+const RSA_SPKI: &str = concat!(
+    "30819f300d06092a864886f70d010101050003818d0030818902818100e302d65ecab1d90d9980153f789e093ea0944f",
+    "2249634f990d851ca6caf4c60b401236da075019fa73257202339a70558bd4ea22e4ba649b9ab9c8a1d7d87393b5726a",
+    "a06a85a9a038dea2109f98ee0446aabff37dcc31d6b46e9e23be28c9539b4309d50e407b8a2bff29d9157de6795db9a7",
+    "3ddd7551b91d6555696f0cad470203010001",
+);
+
+/// `openssl pkcs8 -topk8 -nocrypt` 包成的 PKCS#8：rsaEncryption 加 NULL 參數。
+#[cfg(feature = "rsa")]
+fn rsa_pkcs8() -> Vec<u8> {
+    [
+        hex("30820276020100300d06092a864886f70d010101050004820260"),
+        hex(RSA_PKCS1),
+    ]
+    .concat()
+}
+
+#[cfg(feature = "rsa")]
+fn wrong_params(result: Result<Vec<u8>, AnyError>) -> bool {
+    result.is_err_and(|error| source::<SecurityError>(&error) == Some(&SecurityError::WrongParams))
+}
+
+#[cfg(feature = "rsa")]
+#[test]
+fn an_openssl_rsa_key_pair_is_rewritten_byte_for_byte_and_still_encrypts() {
+    let private = key_factory::private_key_from_der(&rsa_pkcs8()).unwrap();
+    let public = key_factory::public_key_from_der(&hex(RSA_SPKI)).unwrap();
+    assert_eq!(
+        key_factory::private_key_to_der(&private).unwrap()[..],
+        rsa_pkcs8()[..]
+    );
+    assert_eq!(
+        key_factory::public_key_to_der(&public).unwrap(),
+        hex(RSA_SPKI)
+    );
+
+    let mut rsa = cipher::get_by_name("RSA//PKCS1PADDING").unwrap().cipher();
+    let sealed = cipher::encrypt(&mut rsa, &public, b"attack at dawn").unwrap();
+    assert_eq!(
+        cipher::decrypt(&mut rsa, &private, &sealed).unwrap(),
+        b"attack at dawn"
+    );
+}
+
+#[cfg(feature = "rsa")]
+#[test]
+fn a_generated_rsa_key_pair_survives_a_round_trip_through_der() {
+    let mut generator = generate::get_by_name("RSA").unwrap().generator();
+    generator
+        .init(&KeyGenParams::Basic { strength: 1024 })
+        .unwrap();
+    let (public, private) = generator.generate_key_pair().unwrap();
+
+    let der = key_factory::private_key_to_der(&private).unwrap();
+    let back = key_factory::private_key_from_der(&der).unwrap();
+    assert_eq!(key_factory::private_key_to_der(&back).unwrap()[..], der[..]);
+    let der = key_factory::public_key_to_der(&public).unwrap();
+    let back = key_factory::public_key_from_der(&der).unwrap();
+    assert_eq!(key_factory::public_key_to_der(&back).unwrap(), der);
+}
+
+/// 同 BC 也收 RSASSA-PSS、RSAES-OAEP 與 id-ea-rsa 的 OID。
+#[cfg(feature = "rsa")]
+#[test]
+fn rsa_keys_under_the_other_oids_bc_tolerates_are_accepted() {
+    let pkcs1 = hex(RSA_PKCS1);
+    for oid in ["1.2.840.113549.1.1.10", "1.2.840.113549.1.1.7", "2.5.8.1.1"] {
+        let info = PrivateKeyInfo::new(
+            AlgorithmIdentifier::new(oid.parse().unwrap()),
+            Asn1OctetString::new(&pkcs1),
+        );
+        assert!(
+            matches!(
+                key_factory::private_key_from_info(&info),
+                Ok(AnyParams::Rsa { .. })
+            ),
+            "{oid}"
+        );
+    }
+}
+
+/// PKCS#1 的 `RSAPrivateKey` 每個欄位都要有值，所以沒有 CRT 值的私鑰寫不出來；公私鑰也不能互換。
+#[cfg(feature = "rsa")]
+#[test]
+fn rsa_keys_pkcs1_cannot_hold_are_refused() {
+    use tc_bigint::PaddedBigUint;
+    use tc_rsa::{RsaKey, RsaKeyOwned};
+
+    let public = key_factory::public_key_from_der(&hex(RSA_SPKI)).unwrap();
+    let private = key_factory::private_key_from_der(&rsa_pkcs8()).unwrap();
+    let core = AnyParams::rsa(RsaKey::Core(RsaKeyOwned::new(
+        true,
+        PaddedBigUint::from(323u32),
+        PaddedBigUint::from(173u32),
+    )));
+    assert!(wrong_params(
+        key_factory::private_key_to_der(&public).map(|der| der.to_vec())
+    ));
+    assert!(wrong_params(
+        key_factory::private_key_to_der(&core).map(|der| der.to_vec())
+    ));
+    assert!(wrong_params(key_factory::public_key_to_der(&private)));
+    assert!(wrong_params(key_factory::public_key_to_der(&core)));
+}
+
+/// 同 BC 只收兩個質數的金鑰（version 0）。
+#[cfg(feature = "rsa")]
+#[test]
+fn a_multi_prime_rsa_key_is_refused() {
+    use tc_asn1_pkcs::{OtherPrimeInfo, RsaPrivateKey};
+
+    let multi = RsaPrivateKey::new(
+        323.into(),
+        5.into(),
+        173.into(),
+        17.into(),
+        19.into(),
+        13.into(),
+        11.into(),
+        9.into(),
+    )
+    .unwrap()
+    .with_other_prime_infos(vec![
+        OtherPrimeInfo::new(23.into(), 3.into(), 5.into()).unwrap(),
+    ])
+    .unwrap();
+    let info = PrivateKeyInfo::new(
+        AlgorithmIdentifier::new("1.2.840.113549.1.1.1".parse().unwrap()),
+        Asn1OctetString::new(&multi.encode_to_vec(&EncodingOptions::DER).unwrap()),
+    );
+    let Err(error) = key_factory::private_key_from_info(&info) else {
+        panic!("a multi-prime key is refused");
+    };
+    assert_eq!(
+        source::<SecurityError>(&error),
+        Some(&SecurityError::InvalidKeyEncoding)
+    );
 }

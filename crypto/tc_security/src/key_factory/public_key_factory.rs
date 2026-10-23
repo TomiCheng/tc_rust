@@ -8,6 +8,8 @@ use tc_asn1_x509::cert::SubjectPublicKeyInfo;
     feature = "ed448"
 ))]
 use super::cfrg;
+#[cfg(feature = "rsa")]
+use super::rsa;
 use crate::params::AnyParams;
 use crate::{AnyError, SecurityError};
 
@@ -27,6 +29,10 @@ pub fn public_key_from_der(der: &[u8]) -> Result<AnyParams, AnyError> {
 pub fn public_key_from_info(info: &SubjectPublicKeyInfo) -> Result<AnyParams, AnyError> {
     #[allow(clippy::match_single_binding, reason = "沒開任何演算法時只剩 `_`")]
     match info.algorithm().algorithm() {
+        #[cfg(feature = "rsa")]
+        oid if rsa::is_rsa(oid) => Ok(AnyParams::Rsa {
+            key: rsa::public_key(info)?,
+        }),
         #[cfg(feature = "x25519")]
         oid if *oid == cfrg::X25519 || *oid == cfrg::CRYPTLIB_X25519 => {
             let key = tc_cfrg_curves::X25519PublicKey::new(cfrg::public_key(info)?);

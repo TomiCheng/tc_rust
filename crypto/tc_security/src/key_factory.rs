@@ -16,6 +16,8 @@ mod cfrg;
 mod private_key_factory;
 mod private_key_info_factory;
 mod public_key_factory;
+#[cfg(feature = "rsa")]
+mod rsa;
 mod subject_public_key_info_factory;
 
 pub use private_key_factory::{private_key_from_der, private_key_from_info};

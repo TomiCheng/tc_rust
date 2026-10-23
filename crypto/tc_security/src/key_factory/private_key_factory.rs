@@ -8,6 +8,8 @@ use tc_asn1_pkcs::PrivateKeyInfo;
     feature = "ed448"
 ))]
 use super::cfrg;
+#[cfg(feature = "rsa")]
+use super::rsa;
 use crate::params::AnyParams;
 use crate::{AnyError, SecurityError};
 
@@ -26,6 +28,10 @@ pub fn private_key_from_der(der: &[u8]) -> Result<AnyParams, AnyError> {
 pub fn private_key_from_info(info: &PrivateKeyInfo) -> Result<AnyParams, AnyError> {
     #[allow(clippy::match_single_binding, reason = "沒開任何演算法時只剩 `_`")]
     match info.algorithm().algorithm() {
+        #[cfg(feature = "rsa")]
+        oid if rsa::is_rsa(oid) => Ok(AnyParams::Rsa {
+            key: rsa::private_key(info)?,
+        }),
         #[cfg(feature = "x25519")]
         oid if *oid == cfrg::X25519 || *oid == cfrg::CRYPTLIB_X25519 => {
             let k = cfrg::private_key(info, true)?;

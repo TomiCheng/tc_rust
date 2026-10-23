@@ -9,14 +9,21 @@ use tc_zeroize::Zeroizing;
     feature = "ed448"
 ))]
 use super::cfrg;
+#[cfg(feature = "rsa")]
+use super::rsa;
 use crate::params::AnyParams;
 use crate::{AnyError, SecurityError};
 
 /// 私鑰轉成 `PrivateKeyInfo`，同 BC 的 `PrivateKeyInfoFactory.CreatePrivateKeyInfo`；不是私鑰的參數回傳
-/// `WrongParams`。
+/// `WrongParams`。沒有 CRT 值的 RSA 私鑰也是 `WrongParams`：PKCS#1 的 `RSAPrivateKey` 每個欄位都要有值，
+/// BC 在這裡填 0，寫出的不是合法的 PKCS#1。
 pub fn private_key_info(key: &AnyParams) -> Result<PrivateKeyInfo, AnyError> {
     #[allow(clippy::match_single_binding, reason = "沒開任何演算法時只剩 `_`")]
     match key {
+        #[cfg(feature = "rsa")]
+        AnyParams::Rsa {
+            key: tc_rsa::RsaKey::Crt(key),
+        } => rsa::private_key_info(key),
         #[cfg(feature = "x25519")]
         AnyParams::X25519Private { key } => {
             cfrg::private_key_info(cfrg::X25519, key.k(), key.generate_public_key().u())

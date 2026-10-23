@@ -89,6 +89,7 @@ ascon = ["dep:tc_ascon_aead"]
 # RSA：cipher、金鑰對，與 PKCS#1 v1.5 簽章（SHA-256withRSA 這類，digest 依各自的 feature）
 rsa = [
     "dep:tc_rsa",
+    "dep:tc_bigint",
     "dep:tc_asym_cipher",
     "dep:tc_asym_encoding",
     "dep:tc_rsa_signer",

@@ -8,6 +8,8 @@ use tc_asn1_x509::cert::SubjectPublicKeyInfo;
     feature = "ed448"
 ))]
 use super::cfrg;
+#[cfg(feature = "rsa")]
+use super::rsa;
 use crate::params::AnyParams;
 use crate::{AnyError, SecurityError};
 
@@ -16,6 +18,12 @@ use crate::{AnyError, SecurityError};
 pub fn subject_public_key_info(key: &AnyParams) -> Result<SubjectPublicKeyInfo, AnyError> {
     #[allow(clippy::match_single_binding, reason = "沒開任何演算法時只剩 `_`")]
     match key {
+        #[cfg(feature = "rsa")]
+        AnyParams::Rsa {
+            key: tc_rsa::RsaKey::Core(key),
+        } if !tc_asym_cipher::AsymmetricKeyParams::is_private_key(key) => {
+            rsa::subject_public_key_info(key)
+        }
         #[cfg(feature = "x25519")]
         AnyParams::X25519Public { key } => Ok(cfrg::subject_public_key_info(cfrg::X25519, key.u())),
         #[cfg(feature = "x448")]
