@@ -1,16 +1,20 @@
-# Stream ciphers (v2)
+# Stream ciphers
 
 ## 1. Overview
 
-The v2 stream-cipher implementations are independent crates under
+The stream-cipher implementations are independent crates under
 `crypto/stream_cipher`. They are pure-Rust ports of the Bouncy Castle C#
-engine package and implement the shared `StreamCipher` and `StreamCipherInit`
-traits from `tc_cipher`.
+engine package and implement the `StreamCipher` and `StreamCipherInit` traits
+of the published [`tc_stream_cipher`](https://crates.io/crates/tc_stream_cipher).
 
 A stream cipher generates a keystream and XORs it with the input. Encryption
-and decryption therefore use the same transformation. The shared v2 API still
-requires an explicit `CipherDirection`; current stream-cipher engines accept
-the value but generate the same keystream in both directions.
+and decryption therefore use the same transformation. The API still requires
+an explicit `CipherDirection`; the engines accept the value but generate the
+same keystream in both directions.
+
+Salsa20 and XSalsa20 are constant time. HC, RC4, VMPC and ISAAC index tables
+with secret state, so they are variable time and exposed to cache-timing
+attacks; each engine documents this.
 
 Every implementation crate is unconditionally `no_std` and does not require
 `alloc`. Engines keep the required initialization state in fixed-size storage
@@ -26,12 +30,12 @@ so that `reset` can reproduce the original keystream.
 | Crate | Algorithms / engines |
 |-------|----------------------|
 | [`tc_chacha`](https://crates.io/crates/tc_chacha) | `ChaChaEngine`, `ChaCha7539Engine`, `XChaCha20Engine`; published on `tc_stream_cipher` and no longer in this workspace |
-| `tc_hc` | `Hc128Engine`, `Hc256Engine`; moved to the published `tc_stream_cipher` traits |
-| `tc_rc4_family` | `Rc4Engine`, `VmpcEngine`, `VmpcKsa3Engine`, `IsaacEngine`: RC4 and the two designs derived from it, on the published `tc_stream_cipher` traits |
+| `tc_hc` | `Hc128Engine`, `Hc256Engine` |
+| `tc_rc4_family` | `Rc4Engine`, `VmpcEngine`, `VmpcKsa3Engine`, `IsaacEngine`: RC4 and the two designs derived from it |
 | `tc_salsa20` | `Salsa20Engine`, `Xsalsa20Engine` |
 
-Applications depend only on the implementation crates they use, plus the
-shared API crates:
+Applications depend only on the implementation crates they use, plus
+`tc_stream_cipher` for the traits and parameter containers:
 
 ```toml
 [dependencies]
@@ -45,13 +49,15 @@ published dependency can later omit `path`.
 
 ## 3. Parameters and usage
 
-Initialization parameters are shared through object-safe traits from
-`tc_params`:
+Initialization parameters are shared through the `KeyParams` and `IvParams`
+traits of `tc_stream_cipher`:
 
-- Algorithms that need only a key accept `dyn KeyParams`.
+- Algorithms that need only a key accept any `KeyParams`.
 - Algorithms that need a key and IV require both `KeyParams` and `IvParams`.
 - `KeyRef` and `KeyWithIvRef` borrow caller-owned bytes without allocation.
-- `KeyOwned<N>` and `KeyWithIvOwned<K, I>` own fixed-size arrays.
+- `KeyFixed` and `KeyWithIvFixed` own fixed-size arrays; `KeyOwned` and
+  `KeyWithIvOwned` own heap buffers with the `alloc` feature. The owning
+  containers wipe their bytes on drop.
 - Applications may implement either parameter trait on their own types.
 
 The wrappers do not validate lengths. Each engine applies its own key and IV
@@ -83,12 +89,11 @@ assert_eq!(&recovered, plaintext);
 ### Key-and-IV example
 
 ```rust
-use tc_cipher::{CipherDirection, StreamCipher, StreamCipherInit};
-use tc_params::KeyWithIvRef;
 use tc_salsa20::Salsa20Engine;
+use tc_stream_cipher::{CipherDirection, KeyWithIvRef, StreamCipher, StreamCipherInit};
 
 let key = [0u8; 32];
-let iv = [0u8; tc_salsa20::IV_BYTES];
+let iv = [0u8; Salsa20Engine::IV_BYTES];
 let params = KeyWithIvRef::new(&key, &iv);
 let mut cipher = Salsa20Engine::new();
 
@@ -113,9 +118,9 @@ between plaintexts even when the cipher itself is implemented correctly.
 ## 4. Algorithm inventory
 
 The Bouncy Castle C# `engines` directory contains 11 public stream-cipher
-engine types in six families. All 11 have a v2 crate implementation.
+engine types in six families. All 11 are implemented.
 
-| Family | Engine | Key size | IV size | V2 crate |
+| Family | Engine | Key size | IV size | Crate |
 |--------|--------|----------|---------|----------|
 | RC4 | `Rc4Engine` | 1-256 bytes | None | `tc_rc4_family` |
 | HC | `Hc128Engine` | 16 bytes | 16 bytes | `tc_hc` |
@@ -183,7 +188,7 @@ compatibility, study, and data migration.
 
 ## 6. Building and testing
 
-Run every v2 stream-cipher test suite from the workspace root:
+Run every stream-cipher test suite from the workspace root:
 
 ```bash
 cargo test -p tc_hc -p tc_rc4_family -p tc_salsa20 --locked
@@ -204,4 +209,4 @@ cargo rustdoc -p tc_salsa20 --locked -- -D warnings
 ```
 
 The tests use Rust's standard test harness, but each library remains `no_std`
-and has no `alloc` feature or dependency.
+and needs no allocator.

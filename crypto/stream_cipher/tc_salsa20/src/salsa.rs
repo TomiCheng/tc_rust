@@ -1,14 +1,17 @@
-//! Salsa20 state and block function.
-
-use tc_cipher::StreamError;
-
-use crate::BLOCK_BYTES;
+use tc_stream_cipher::StreamError;
+use tc_zeroize::Zeroize;
 
 pub(crate) const STATE_WORDS: usize = 16;
+pub(crate) const BLOCK_BYTES: usize = 64;
+pub(crate) const DEFAULT_ROUNDS: usize = 20;
+/// BC 的回合數上限。
+pub(crate) const MAX_ROUNDS: usize = i32::MAX as usize - 1;
 
 const TAU: [u32; 4] = [0x6170_7865, 0x3120_646e, 0x7962_2d36, 0x6b20_6574];
 const SIGMA: [u32; 4] = [0x6170_7865, 0x3320_646e, 0x7962_2d32, 0x6b20_6574];
 
+/// Salsa20 與 XSalsa20 共用的狀態：16 個字組、目前的 keystream 區塊與 BC 的 2^70 bytes 上限計數。
+/// 字組與 keystream 在 drop 時清除。
 pub(crate) struct State {
     rounds: usize,
     pub(crate) words: [u32; STATE_WORDS],
@@ -35,7 +38,7 @@ impl State {
     }
 
     pub(crate) fn init(&mut self, key: &[u8], iv: &[u8]) {
-        self.words.fill(0);
+        self.words.zeroize();
         set_key(&mut self.words, key, iv);
         self.finish_initialization();
     }
@@ -87,16 +90,11 @@ impl State {
 
     fn next_byte(&mut self) -> u8 {
         if self.index == 0 {
-            let output = block(self.rounds, &self.words);
-            for (bytes, word) in self
-                .key_stream
-                .as_chunks_mut::<4>()
-                .0
-                .iter_mut()
-                .zip(output)
-            {
+            let mut output = block(self.rounds, &self.words);
+            for (bytes, word) in self.key_stream.chunks_exact_mut(4).zip(&output) {
                 bytes.copy_from_slice(&word.to_le_bytes());
             }
+            output.zeroize();
             self.words[8] = self.words[8].wrapping_add(1);
             if self.words[8] == 0 {
                 self.words[9] = self.words[9].wrapping_add(1);
@@ -124,6 +122,18 @@ impl State {
     }
 }
 
+impl Drop for State {
+    fn drop(&mut self) {
+        self.words.zeroize();
+        self.key_stream.zeroize();
+    }
+}
+
+fn le_word(bytes: &[u8]) -> u32 {
+    u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]])
+}
+
+/// 寫入常數、16 或 32 bytes 的金鑰與 8 bytes 的 IV；16 bytes 的金鑰兩半相同。
 pub(crate) fn set_key(state: &mut [u32; STATE_WORDS], key: &[u8], iv: &[u8]) {
     let constants = if key.len() == 16 { TAU } else { SIGMA };
     state[0] = constants[0];
@@ -131,14 +141,17 @@ pub(crate) fn set_key(state: &mut [u32; STATE_WORDS], key: &[u8], iv: &[u8]) {
     state[10] = constants[2];
     state[15] = constants[3];
 
-    for (index, bytes) in key[..16].as_chunks::<4>().0.iter().enumerate() {
-        state[1 + index] = u32::from_le_bytes(*bytes);
+    for (word, bytes) in state[1..5].iter_mut().zip(key[..16].chunks_exact(4)) {
+        *word = le_word(bytes);
     }
-    for (index, bytes) in key[key.len() - 16..].as_chunks::<4>().0.iter().enumerate() {
-        state[11 + index] = u32::from_le_bytes(*bytes);
+    for (word, bytes) in state[11..15]
+        .iter_mut()
+        .zip(key[key.len() - 16..].chunks_exact(4))
+    {
+        *word = le_word(bytes);
     }
-    for (index, bytes) in iv[..8].as_chunks::<4>().0.iter().enumerate() {
-        state[6 + index] = u32::from_le_bytes(*bytes);
+    for (word, bytes) in state[6..8].iter_mut().zip(iv[..8].chunks_exact(4)) {
+        *word = le_word(bytes);
     }
 }
 

@@ -1,12 +1,12 @@
 [package]
 name = "tc_salsa20"
-description = "Salsa20 stream cipher implementations for the tc_rust workspace."
+description = "The Salsa20 and XSalsa20 stream ciphers, ported from Bouncy Castle C#."
 version = "0.1.0"
 edition.workspace = true
+rust-version = "1.85"
 license.workspace = true
 repository.workspace = true
 
 [dependencies]
-tc_cipher = { version = "0.1", path = "../../tc_cipher" }
-tc_crypto = { version = "0.1", path = "../../tc_crypto" }
-tc_params = { version = "0.1", path = "../../tc_params" }
+tc_stream_cipher = "0.1.0"
+tc_zeroize = "0.1.0"

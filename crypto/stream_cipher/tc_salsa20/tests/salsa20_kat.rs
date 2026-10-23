@@ -1,9 +1,9 @@
 mod common;
 
-use tc_cipher::{CipherDirection, InitError, StreamCipher, StreamCipherInit, StreamError};
-use tc_crypto::AlgorithmName;
-use tc_params::KeyWithIvRef;
-use tc_salsa20::{Salsa20Engine, Xsalsa20Engine, xsalsa20};
+use tc_salsa20::{Salsa20Engine, Xsalsa20Engine};
+use tc_stream_cipher::{
+    CipherDirection, InitError, KeyWithIvRef, StreamCipher, StreamCipherInit, StreamError,
+};
 
 use common::unhex;
 
@@ -152,15 +152,11 @@ fn validates_configuration_and_runtime_state() {
         Some(InitError::InvalidRounds(7))
     );
     let mut engine = Salsa20Engine::new();
-    let mut name = String::new();
-    engine.write_algo_name(&mut name).unwrap();
-    assert_eq!(name, "Salsa20");
-    name.clear();
-    Salsa20Engine::with_rounds(12)
-        .unwrap()
-        .write_algo_name(&mut name)
-        .unwrap();
-    assert_eq!(name, "Salsa20/12");
+    assert_eq!(engine.to_string(), "Salsa20");
+    assert_eq!(
+        Salsa20Engine::with_rounds(12).unwrap().to_string(),
+        "Salsa20/12"
+    );
     assert_eq!(engine.return_byte(0), Err(StreamError::NotInitialised));
     assert_eq!(
         engine.init(
@@ -178,14 +174,37 @@ fn validates_configuration_and_runtime_state() {
     );
 
     let mut extended = Xsalsa20Engine::new();
-    name.clear();
-    extended.write_algo_name(&mut name).unwrap();
-    assert_eq!(name, "XSalsa20");
+    assert_eq!(extended.to_string(), "XSalsa20");
     assert_eq!(
         extended.init(
             CipherDirection::Encrypt,
-            &KeyWithIvRef::new(&[0; 16], &[0; xsalsa20::IV_BYTES]),
+            &KeyWithIvRef::new(&[0; 16], &[0; Xsalsa20Engine::IV_BYTES]),
         ),
         Err(InitError::InvalidKeyLength(16))
     );
+}
+
+#[test]
+fn a_rejected_init_keeps_the_previous_key_and_position() {
+    let params = KeyWithIvRef::new(&[0x11; 32], &[0x22; 8]);
+    let mut expected = [0; 100];
+    let mut engine = Salsa20Engine::new();
+    engine.init(CipherDirection::Encrypt, &params).unwrap();
+    engine.process_bytes(&[0; 100], &mut expected).unwrap();
+
+    let mut engine = Salsa20Engine::new();
+    engine.init(CipherDirection::Encrypt, &params).unwrap();
+    let mut first = [0; 70];
+    engine.process_bytes(&[0; 70], &mut first).unwrap();
+    assert!(
+        engine
+            .init(
+                CipherDirection::Encrypt,
+                &KeyWithIvRef::new(&[0; 32], &[0; 7])
+            )
+            .is_err()
+    );
+    let mut rest = [0; 30];
+    engine.process_bytes(&[0; 30], &mut rest).unwrap();
+    assert_eq!([&first[..], &rest[..]].concat(), expected);
 }

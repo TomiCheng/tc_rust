@@ -157,10 +157,12 @@ and the crates that remain here depend on the published version.
 - [`crypto/digest`](crypto/digest) and [`crypto/macs`](crypto/macs) — digest
   and MAC families not yet graduated, such as BLAKE2, BLAKE3, RIPEMD,
   Whirlpool, SipHash and KMAC
+- [`crypto/stream_cipher`](crypto/stream_cipher) — HC-128/256, Salsa20 and
+  XSalsa20, and RC4 with VMPC and ISAAC on the `tc_stream_cipher` traits,
+  waiting to graduate
 - The earlier generation on the legacy `tc_crypto`, `tc_cipher` and
   `tc_params` traits: [`crypto/block_cipher`](crypto/block_cipher),
-  [`crypto/block_modes`](crypto/block_modes),
-  [`crypto/stream_cipher`](crypto/stream_cipher), `crypto/tc_digest` and
+  [`crypto/block_modes`](crypto/block_modes), `crypto/tc_digest` and
   `crypto/tc_pad`. They stay while other incubator crates still depend on them.
 
 ## Implemented algorithms
