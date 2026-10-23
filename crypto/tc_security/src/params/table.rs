@@ -71,6 +71,37 @@ const STANDALONE: &[StandaloneSpec] = &[
         algorithm: Algorithm::XChaCha20,
         generate: |key, _, rng| iv(key, 24, rng),
     },
+    #[cfg(feature = "salsa20")]
+    StandaloneSpec {
+        algorithm: Algorithm::Salsa20,
+        generate: |key, _, rng| iv(key, 8, rng),
+    },
+    // BC 的 ParameterUtilities 沒有下面這幾個的 IV 長度；照各引擎的 IV 補上，RC4 沒有 IV
+    #[cfg(feature = "rc4")]
+    StandaloneSpec {
+        algorithm: Algorithm::Rc4,
+        generate: |key, _, _| key.clone(),
+    },
+    #[cfg(feature = "vmpc")]
+    StandaloneSpec {
+        algorithm: Algorithm::Vmpc,
+        generate: |key, _, rng| iv(key, 16, rng),
+    },
+    #[cfg(feature = "vmpc")]
+    StandaloneSpec {
+        algorithm: Algorithm::VmpcKsa3,
+        generate: |key, _, rng| iv(key, 16, rng),
+    },
+    #[cfg(feature = "hc")]
+    StandaloneSpec {
+        algorithm: Algorithm::Hc128,
+        generate: |key, _, rng| iv(key, 16, rng),
+    },
+    #[cfg(feature = "hc")]
+    StandaloneSpec {
+        algorithm: Algorithm::Hc256,
+        generate: |key, _, rng| iv(key, 32, rng),
+    },
     #[cfg(feature = "ascon")]
     StandaloneSpec {
         algorithm: Algorithm::AsconAead128,

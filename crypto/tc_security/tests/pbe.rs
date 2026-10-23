@@ -40,11 +40,12 @@ fn source<E: Error + 'static>(error: &AnyError) -> Option<&E> {
 
 #[test]
 fn an_unknown_scheme_is_refused() {
-    // RC4 的方案要等 RC4 接上 cipher 工廠
+    // IDEA 與 Twofish 的方案要等它們接上 cipher 工廠
     for name in [
-        "PBEWITHSHAAND128BITRC4",
+        "PBEWITHSHAANDIDEA-CBC",
+        "PBEWITHSHAANDTWOFISH-CBC",
         "PBEWITHSHA1ANDDES-ECB",
-        "1.2.840.113549.1.12.1.1",
+        "1.2.3.4",
         "",
     ] {
         assert_eq!(

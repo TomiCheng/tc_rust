@@ -139,7 +139,7 @@ impl PbeEntry {
     }
 
     /// 由密碼、salt 與迭代次數產生參數，同 BC 的 `GenerateCipherParameters`：cipher 的方案是金鑰與
-    /// IV，MAC 的方案是與 digest 一樣長的金鑰。密碼依方案編碼；迭代次數 0 除了 OpenSSL 的方案都會
+    /// IV（RC4 只有金鑰），MAC 的方案是與 digest 一樣長的金鑰。密碼依方案編碼；迭代次數 0 除了 OpenSSL 的方案都會
     /// 被拒絕。
     pub fn generate_cipher_params(
         &self,
@@ -172,7 +172,13 @@ impl PbeEntry {
                 }
                 #[cfg(not(any(feature = "des", feature = "desede")))]
                 let _ = des_parity;
-                Ok(AnyParams::new(std::mem::take(&mut *key)).with_iv(iv))
+                let params = AnyParams::new(std::mem::take(&mut *key));
+                // RC4 這類沒有 IV 的 cipher 只拿金鑰，同 BC 的 `GenerateDerivedParameters("RC4", …)`
+                Ok(if iv_bytes == 0 {
+                    params
+                } else {
+                    params.with_iv(iv)
+                })
             }
             Purpose::Mac { .. } => {
                 let mut key = Zeroizing::new(vec![0; digest::get(self.digest).digest_size()]);

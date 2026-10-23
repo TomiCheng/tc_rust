@@ -53,6 +53,14 @@ fn params_for(entry: &CipherEntry) -> AnyParams {
         Algorithm::ChaCha7539 => return AnyParams::new(key(32)).with_iv(iv(12)),
         #[cfg(feature = "chacha")]
         Algorithm::XChaCha20 => return AnyParams::new(key(32)).with_iv(iv(24)),
+        #[cfg(feature = "salsa20")]
+        Algorithm::Salsa20 => return AnyParams::new(key(32)).with_iv(iv(8)),
+        #[cfg(feature = "rc4")]
+        Algorithm::Rc4 => return AnyParams::new(key(16)),
+        #[cfg(feature = "vmpc")]
+        Algorithm::Vmpc | Algorithm::VmpcKsa3 => return AnyParams::new(key(16)).with_iv(iv(16)),
+        #[cfg(feature = "hc")]
+        Algorithm::Hc128 | Algorithm::Hc256 => return AnyParams::new(key(16)).with_iv(iv(16)),
         #[cfg(feature = "ascon")]
         Algorithm::AsconAead128 | Algorithm::Ascon128 | Algorithm::Ascon128a => {
             return AnyParams::aead(key(16), 128, iv(16), Vec::new());

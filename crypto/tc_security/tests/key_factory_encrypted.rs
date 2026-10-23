@@ -141,3 +141,49 @@ fn schemes_that_cannot_encrypt_a_key_are_refused() {
         );
     }
 }
+
+/// `-v1 PBE-SHA1-RC4-128 -iter 2048 -provider legacy`，PKCS#12 的 128 bits RC4 方案。
+#[cfg(feature = "rc4")]
+const SHA1_RC4_128: &str = concat!(
+    "3081ab301c060a2a864886f70d010c0101300e04084f3de0e4522741ff0202080004818aa740dd40e6fb70dcc6e476ea",
+    "925ab5230bf472d613dd2c7961f2a23856a6a387fba93d72d4e20cc83b90882189c44d28dd7f7d0725133a5553b1f846",
+    "4f092596d84288362ff3fb08bf6522c8295410a0802996ca0a6f9c81b66dfe658e0b04f570c93c4db9bfce429f09fe3d",
+    "a948d35dc4b677683f46d18a9d1d645d152396ce27c7d78b761cc396e9f8",
+);
+
+/// `-v1 PBE-SHA1-RC4-40 -iter 2048 -provider legacy`，PKCS#12 的 40 bits RC4 方案。
+#[cfg(feature = "rc4")]
+const SHA1_RC4_40: &str = concat!(
+    "3081ab301c060a2a864886f70d010c0102300e0408378d2e2566c2d10a0202080004818a03920ff3da172fefdc485246",
+    "f59310483bd8656f0e885413811c6f0020f4dd9741fbf0f7c29d2ac03ac562b52117cd60159f89902bd1cd52d5f3c8b1",
+    "227919047cfd08513d70601e5369c0136ffaa5cdf431c2808d5741e3daeebdabf2b1086f8125be2297861d354dcc85d9",
+    "0cb6312d09074e6bed72db71ce75c64a79ff3ba8e8ec9af4d334f737554b",
+);
+
+/// RC4 沒有 IV，方案只產生金鑰，同 BC。
+#[cfg(feature = "rc4")]
+#[test]
+fn openssl_rc4_encrypted_keys_decrypt_and_rc4_schemes_encrypt_back() {
+    for encrypted in [SHA1_RC4_128, SHA1_RC4_40] {
+        let key = key_factory::private_key_from_encrypted_der("password", &hex(encrypted)).unwrap();
+        assert_eq!(
+            key_factory::private_key_to_der(&key).unwrap()[..],
+            plain_key_der()[..]
+        );
+    }
+
+    let key = key_factory::private_key_from_der(&hex(PLAIN)).unwrap();
+    for name in ["PBEWITHSHAAND128BITRC4", "PBEWITHSHAAND40BITRC4"] {
+        let encryption = KeyEncryption::Scheme {
+            entry: pbe::get_by_name(name).unwrap(),
+            salt: &[9; 8],
+            iteration_count: 2048,
+        };
+        let der = key_factory::private_key_to_encrypted_der(&key, "password", &encryption).unwrap();
+        let back = key_factory::private_key_from_encrypted_der("password", &der).unwrap();
+        assert_eq!(
+            key_factory::private_key_to_der(&back).unwrap()[..],
+            plain_key_der()[..]
+        );
+    }
+}

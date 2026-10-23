@@ -34,7 +34,11 @@ impl KeyGenParams {
         feature = "chacha",
         feature = "rc2",
         feature = "rc5",
-        feature = "rsa"
+        feature = "rsa",
+        feature = "salsa20",
+        feature = "rc4",
+        feature = "vmpc",
+        feature = "hc"
     ))]
     pub(crate) fn strength(&self) -> usize {
         match *self {

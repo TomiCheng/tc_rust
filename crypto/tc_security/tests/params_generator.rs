@@ -8,7 +8,11 @@
     feature = "rc5",
     feature = "rc6",
     feature = "chacha",
-    feature = "ascon"
+    feature = "ascon",
+    feature = "salsa20",
+    feature = "rc4",
+    feature = "vmpc",
+    feature = "hc"
 ))]
 
 use tc_security::cipher::{self, Algorithm, CipherEntry, Mode, Padding};
@@ -35,6 +39,14 @@ fn key_for(entry: &CipherEntry) -> AnyParams {
         Algorithm::Rc6 => 16,
         #[cfg(feature = "chacha")]
         Algorithm::ChaCha | Algorithm::ChaCha7539 | Algorithm::XChaCha20 => 32,
+        #[cfg(feature = "salsa20")]
+        Algorithm::Salsa20 => 32,
+        #[cfg(feature = "rc4")]
+        Algorithm::Rc4 => 16,
+        #[cfg(feature = "vmpc")]
+        Algorithm::Vmpc | Algorithm::VmpcKsa3 => 16,
+        #[cfg(feature = "hc")]
+        Algorithm::Hc128 | Algorithm::Hc256 => 16,
         #[cfg(feature = "ascon")]
         Algorithm::AsconAead128 | Algorithm::Ascon128 | Algorithm::Ascon128a => 16,
         #[cfg(feature = "ascon")]

@@ -1,5 +1,4 @@
-//! BC `PbeUtilities` 的方案，只列出 cipher 已經接上的：缺 RC4（`PBEWITHSHAAND128BITRC4`、
-//! `PBEWITHSHAAND40BITRC4`）、IDEA 與 Twofish 的方案，以及 RIPEMD 與 Tiger 的
+//! BC `PbeUtilities` 的方案，只列出 cipher 已經接上的：缺 IDEA 與 Twofish 的方案，以及 RIPEMD 與 Tiger 的
 //! `PBEWITHHMAC…`。金鑰與 IV 的長度照 BC 的 `GenerateCipherParameters`；DES 與 DESede 的金鑰另外設
 //! odd parity。`PBEWITHHMAC…` 的 OID 是 digest 本身的 OID，同 BC。
 
@@ -111,6 +110,44 @@ pub(super) const SCHEMES: &[PbeEntry] = &[
         "RC2/CBC/PKCS7PADDING",
         8,
         8,
+        false,
+    ),
+    #[cfg(all(feature = "sha1", feature = "rc4"))]
+    PbeEntry::new_cipher(
+        &[
+            "PBEWITHSHAAND128BITRC4",
+            "PBEWITHSHA1AND128BITRC4",
+            "PBEWITHSHA-1AND128BITRC4",
+        ],
+        &[NamedOid::new(
+            &[0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x0c, 0x01, 0x01],
+            "1.2.840.113549.1.12.1.1",
+            "pbeWithSHAAnd128BitRC4",
+        )],
+        Scheme::Pkcs12,
+        Algorithm::Sha1,
+        "ARC4",
+        16,
+        0,
+        false,
+    ),
+    #[cfg(all(feature = "sha1", feature = "rc4"))]
+    PbeEntry::new_cipher(
+        &[
+            "PBEWITHSHAAND40BITRC4",
+            "PBEWITHSHA1AND40BITRC4",
+            "PBEWITHSHA-1AND40BITRC4",
+        ],
+        &[NamedOid::new(
+            &[0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x0c, 0x01, 0x02],
+            "1.2.840.113549.1.12.1.2",
+            "pbeWithSHAAnd40BitRC4",
+        )],
+        Scheme::Pkcs12,
+        Algorithm::Sha1,
+        "ARC4",
+        5,
+        0,
         false,
     ),
     #[cfg(all(feature = "sha1", feature = "desede"))]

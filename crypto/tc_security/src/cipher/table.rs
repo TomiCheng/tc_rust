@@ -16,16 +16,22 @@ mod compose;
 mod des;
 #[cfg(feature = "ecies")]
 mod ecies;
+#[cfg(feature = "hc")]
+mod hc;
 mod modes;
 mod paddings;
 #[cfg(feature = "rc2")]
 mod rc2;
+#[cfg(any(feature = "rc4", feature = "vmpc"))]
+mod rc4_family;
 #[cfg(feature = "rc5")]
 mod rc5;
 #[cfg(feature = "rc6")]
 mod rc6;
 #[cfg(feature = "rsa")]
 mod rsa;
+#[cfg(feature = "salsa20")]
+mod salsa20;
 mod specs;
 
 use std::sync::LazyLock;
@@ -68,6 +74,18 @@ const STANDALONE: &[StandaloneSpec] = &[
     chacha::CHACHA7539,
     #[cfg(feature = "chacha")]
     chacha::XCHACHA20,
+    #[cfg(feature = "salsa20")]
+    salsa20::SALSA20,
+    #[cfg(feature = "rc4")]
+    rc4_family::ARC4,
+    #[cfg(feature = "vmpc")]
+    rc4_family::VMPC,
+    #[cfg(feature = "vmpc")]
+    rc4_family::VMPC_KSA3,
+    #[cfg(feature = "hc")]
+    hc::HC128,
+    #[cfg(feature = "hc")]
+    hc::HC256,
     #[cfg(feature = "ascon")]
     ascon::ASCON_AEAD128,
     #[cfg(feature = "ascon")]

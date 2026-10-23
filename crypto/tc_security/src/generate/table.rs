@@ -27,6 +27,8 @@ mod rc2;
 mod rc5;
 #[cfg(feature = "rsa")]
 mod rsa;
+#[cfg(any(feature = "salsa20", feature = "rc4", feature = "vmpc", feature = "hc"))]
+mod stream;
 
 use super::GeneratorEntry;
 
@@ -37,7 +39,11 @@ use super::GeneratorEntry;
     feature = "camellia",
     feature = "chacha",
     feature = "rc2",
-    feature = "rc5"
+    feature = "rc5",
+    feature = "salsa20",
+    feature = "rc4",
+    feature = "vmpc",
+    feature = "hc"
 ))]
 fn random_key(strength: usize, rng: &mut dyn rand::CryptoRng) -> Vec<u8> {
     let mut key = vec![0; strength.div_ceil(8)];
@@ -50,7 +56,11 @@ fn random_key(strength: usize, rng: &mut dyn rand::CryptoRng) -> Vec<u8> {
     feature = "aria",
     feature = "ascon",
     feature = "camellia",
-    feature = "chacha"
+    feature = "chacha",
+    feature = "salsa20",
+    feature = "rc4",
+    feature = "vmpc",
+    feature = "hc"
 ))]
 fn plain_key(
     params: &super::KeyGenParams,
@@ -86,7 +96,11 @@ fn no_key(
     feature = "des",
     feature = "desede",
     feature = "rc2",
-    feature = "rc5"
+    feature = "rc5",
+    feature = "salsa20",
+    feature = "rc4",
+    feature = "vmpc",
+    feature = "hc"
 ))]
 fn no_key_pair(
     _: &super::KeyGenParams,
@@ -134,6 +148,18 @@ pub(super) const GENERATORS: &[GeneratorEntry] = &[
     chacha::CHACHA7539,
     #[cfg(feature = "chacha")]
     chacha::XCHACHA20,
+    #[cfg(feature = "salsa20")]
+    stream::SALSA20,
+    #[cfg(feature = "rc4")]
+    stream::RC4,
+    #[cfg(feature = "vmpc")]
+    stream::VMPC,
+    #[cfg(feature = "vmpc")]
+    stream::VMPC_KSA3,
+    #[cfg(feature = "hc")]
+    stream::HC128,
+    #[cfg(feature = "hc")]
+    stream::HC256,
     #[cfg(feature = "des")]
     des::DES,
     #[cfg(feature = "desede")]

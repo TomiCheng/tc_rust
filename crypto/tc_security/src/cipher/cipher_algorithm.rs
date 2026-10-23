@@ -25,6 +25,19 @@ pub enum Algorithm {
     ChaCha7539,
     #[cfg(feature = "chacha")]
     XChaCha20,
+    #[cfg(feature = "salsa20")]
+    Salsa20,
+    /// RC4，BC 的名稱是 ARC4。
+    #[cfg(feature = "rc4")]
+    Rc4,
+    #[cfg(feature = "vmpc")]
+    Vmpc,
+    #[cfg(feature = "vmpc")]
+    VmpcKsa3,
+    #[cfg(feature = "hc")]
+    Hc128,
+    #[cfg(feature = "hc")]
+    Hc256,
     #[cfg(feature = "ascon")]
     AsconAead128,
     #[cfg(feature = "ascon")]

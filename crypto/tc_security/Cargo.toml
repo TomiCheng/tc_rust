@@ -9,6 +9,7 @@ repository.workspace = true
 [features]
 # 已被攻破或不建議使用的不在預設裡，要用時明確開啟：MD2、MD4、MD5、SHA-1（碰撞已可實作）、
 # RC2 與 RC5（8 bytes 區塊，RC2 有 related-key 攻擊，RC5-32/12 可被差分分析）、
+# RC4（keystream 有偏差）、VMPC 與 HC（以秘密狀態查表，有 cache-timing 側通道）、
 # DES（56 bits 金鑰可暴力破解）與 Triple DES（8 bytes 區塊，NIST 已不准用來加密）、
 # 二元體的 EC 曲線（NIST SP 800-186 已列為 legacy）與強度不足的 EC 小曲線。
 # 家族 feature（md、sha、sha3、keccak、shake、rc）照樣包含它們。
@@ -35,6 +36,7 @@ default = [
     "camellia",
     "rc6",
     "chacha",
+    "salsa20",
     "rsa",
     "x25519",
     "x448",
@@ -84,6 +86,14 @@ des = ["dep:tc_des"]
 desede = ["dep:tc_des"]
 # ChaCha、ChaCha7539（RFC 8439）與 XChaCha20
 chacha = ["dep:tc_chacha"]
+# Salsa20
+salsa20 = ["dep:tc_salsa20"]
+# RC4，BC 的名稱是 ARC4
+rc4 = ["dep:tc_rc4_family"]
+# VMPC 與 VMPC-KSA3
+vmpc = ["dep:tc_rc4_family"]
+# HC-128 與 HC-256
+hc = ["dep:tc_hc"]
 # Ascon-AEAD128 與 Ascon v1.2 的 AEAD。BC 的工廠沒有，名稱是自訂的，所以預設不開
 ascon = ["dep:tc_ascon_aead"]
 # RSA：cipher、金鑰對，與 PKCS#1 v1.5 簽章（SHA-256withRSA 這類，digest 依各自的 feature）
@@ -134,6 +144,7 @@ ec-small-curves = [
     "tc_f2m_custom?/small-curves",
 ]
 # 引擎改用 RustCrypto 的實作：AES 沒有 AES-NI 時也是常數時間，ARIA 與 Camellia 改走 RustCrypto，RC 系列只影響 RC2，
+# ChaCha、Salsa20 與 RC4 在 RustCrypto 涵蓋的長度上改走它，
 # DES 與 Triple DES 改用 S-box 較小、key schedule 無分支的引擎。
 # 只作用在已開啟的演算法，不會連帶開啟它們。
 rustcrypto = [
@@ -143,6 +154,8 @@ rustcrypto = [
     "tc_des?/rustcrypto",
     "tc_rc_cipher?/rustcrypto",
     "tc_chacha?/rustcrypto",
+    "tc_salsa20?/rustcrypto",
+    "tc_rc4_family?/rustcrypto",
     "tc_rsa?/rustcrypto",
     "tc_asym_iso9796?/rustcrypto",
 ]
@@ -171,6 +184,9 @@ tc_camellia = { version = "0.1.0", optional = true }
 tc_des = { version = "0.1.1", optional = true }
 tc_ascon_aead = { version = "0.1.0", optional = true }
 tc_chacha = { version = "0.1.0", optional = true }
+tc_hc = { version = "0.1.0", path = "../stream_cipher/tc_hc", optional = true }
+tc_rc4_family = { version = "0.1.0", path = "../stream_cipher/tc_rc4_family", optional = true }
+tc_salsa20 = { version = "0.1.0", path = "../stream_cipher/tc_salsa20", optional = true }
 tc_rsa = { version = "0.1.0", optional = true }
 tc_asym_cipher = { version = "0.1.0", optional = true }
 tc_asym_encoding = { version = "0.1.0", optional = true }
