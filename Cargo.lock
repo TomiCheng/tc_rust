@@ -1445,6 +1445,8 @@ dependencies = [
 [[package]]
 name = "tc_hc"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "886cb21817424d3519982f286c4961b1164283668debc304346831a5e6f31ac3"
 dependencies = [
  "tc_stream_cipher",
  "tc_zeroize",
@@ -1665,8 +1667,9 @@ dependencies = [
 [[package]]
 name = "tc_rc4_family"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c3ee99b3300aa44c45d53f8d87707d7dc527f60060fd7e87459a0d2eeaac2825"
 dependencies = [
- "criterion",
  "rc4",
  "tc_stream_cipher",
  "tc_zeroize",
@@ -1754,9 +1757,10 @@ checksum = "5d9f70ee51cf053b9ba11bb992cb141769d0968ac50e4f92f00e2546ca4faae3"
 [[package]]
 name = "tc_salsa20"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9cfab7f0f0f82f598df7daf3a81f8c15d3dca1bc9baccb3cd5b97665422bf30f"
 dependencies = [
  "cipher",
- "criterion",
  "salsa20",
  "tc_stream_cipher",
  "tc_zeroize",

@@ -89,6 +89,10 @@ and the crates that remain here depend on the published version.
   stream-cipher traits, errors and wiping key and IV containers
 - [`tc_chacha`](https://crates.io/crates/tc_chacha) — ChaCha, ChaCha20
   (RFC 8439) and XChaCha20
+- [`tc_salsa20`](https://crates.io/crates/tc_salsa20) — Salsa20 and XSalsa20
+- [`tc_hc`](https://crates.io/crates/tc_hc) — HC-128 and HC-256
+- [`tc_rc4_family`](https://crates.io/crates/tc_rc4_family) — RC4, VMPC,
+  VMPC-KSA3 and ISAAC
 
 ### [tc_aead_cipher](https://github.com/TomiCheng/tc_aead_cipher)
 
@@ -157,9 +161,6 @@ and the crates that remain here depend on the published version.
 - [`crypto/digest`](crypto/digest) and [`crypto/macs`](crypto/macs) — digest
   and MAC families not yet graduated, such as BLAKE2, BLAKE3, RIPEMD,
   Whirlpool, SipHash and KMAC
-- [`crypto/stream_cipher`](crypto/stream_cipher) — HC-128/256, Salsa20 and
-  XSalsa20, and RC4 with VMPC and ISAAC on the `tc_stream_cipher` traits,
-  waiting to graduate
 - The earlier generation on the legacy `tc_crypto`, `tc_cipher` and
   `tc_params` traits: [`crypto/block_cipher`](crypto/block_cipher),
   [`crypto/block_modes`](crypto/block_modes), `crypto/tc_digest` and
@@ -259,7 +260,6 @@ Representative `no_std` builds:
 ```bash
 # Core-only crates
 cargo build -p tc_crypto -p tc_cipher -p tc_params -p tc_digest --locked
-cargo build -p tc_hc -p tc_rc4_family -p tc_salsa20 --locked
 
 # Representative block-cipher crate (all family crates are no_std)
 cargo build -p tc_blowfish --locked

@@ -8,7 +8,6 @@ members = [
     "crypto/block_modes/*",
     "crypto/digest/*",
     "crypto/macs/*",
-    "crypto/stream_cipher/*",
     "ies/*",
     "kdf/*",
     "signer/*",
