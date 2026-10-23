@@ -4,8 +4,10 @@
 
 #![no_std]
 
+mod errors;
 mod params;
 mod traits;
 
+pub use errors::KdfError;
 pub use params::KdfParamsRef;
 pub use traits::{Kdf, KdfInit, KdfParams};
