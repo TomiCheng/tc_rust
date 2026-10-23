@@ -9,6 +9,8 @@ use tc_zeroize::Zeroizing;
     feature = "ed448"
 ))]
 use super::cfrg;
+#[cfg(feature = "ec")]
+use super::ec;
 #[cfg(feature = "rsa")]
 use super::rsa;
 use crate::params::AnyParams;
@@ -20,6 +22,8 @@ use crate::{AnyError, SecurityError};
 pub fn private_key_info(key: &AnyParams) -> Result<PrivateKeyInfo, AnyError> {
     #[allow(clippy::match_single_binding, reason = "沒開任何演算法時只剩 `_`")]
     match key {
+        #[cfg(feature = "ec")]
+        AnyParams::EcPrivate { key } => ec::private_key_info(key),
         #[cfg(feature = "rsa")]
         AnyParams::Rsa {
             key: tc_rsa::RsaKey::Crt(key),

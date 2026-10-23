@@ -5,8 +5,7 @@
 //! tc_asn1 的 INTEGER 與 OCTET STRING 不會清除內容，所以途中的結構留有私鑰的複本。
 
 use tc_asn1::{
-    Asn1BitString, Asn1Error, Asn1Integer, Asn1OctetString, Asn1Oid, Decode, DecodingOptions,
-    Encode, EncodingOptions, NamedOid,
+    Asn1BitString, Asn1Integer, Asn1OctetString, Asn1Oid, Encode, EncodingOptions, NamedOid,
 };
 use tc_asn1_pkcs::{Pkcs1Algorithm, PrivateKeyInfo, RsaPrivateKey, RsaPublicKey};
 use tc_asn1_x509::alg::AlgorithmIdentifier;
@@ -15,6 +14,7 @@ use tc_bigint::{ArrayEncoding, PaddedBigUint};
 use tc_rsa::{RsaKey, RsaKeyOwned, RsaKeyParams, RsaPrivateCrtKeyOwned, RsaPrivateCrtKeyParams};
 use tc_zeroize::Zeroizing;
 
+use super::decode::decode_all;
 use crate::{AnyError, SecurityError};
 
 /// X.509 的 id-ea-rsa，BC 解碼時也收。
@@ -102,14 +102,6 @@ pub(super) fn subject_public_key_info(
 /// 同 BC 寫 rsaEncryption 加 NULL 參數。
 fn algorithm() -> AlgorithmIdentifier {
     AlgorithmIdentifier::with_null(Pkcs1Algorithm::RSA_ENCRYPTION.oid())
-}
-
-fn decode_all<T: Decode>(bytes: &[u8]) -> Result<T, AnyError> {
-    let (consumed, value) = T::decode(bytes, &DecodingOptions::default()).map_err(AnyError::new)?;
-    if consumed != bytes.len() {
-        return Err(AnyError::new(Asn1Error::TrailingData));
-    }
-    Ok(value)
 }
 
 fn width(value: &Asn1Integer) -> Result<usize, AnyError> {

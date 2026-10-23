@@ -1,4 +1,3 @@
-use tc_asn1::{Asn1Error, Decode, DecodingOptions};
 use tc_asn1_x509::cert::SubjectPublicKeyInfo;
 
 #[cfg(any(
@@ -8,6 +7,9 @@ use tc_asn1_x509::cert::SubjectPublicKeyInfo;
     feature = "ed448"
 ))]
 use super::cfrg;
+use super::decode::decode_all;
+#[cfg(feature = "ec")]
+use super::ec;
 #[cfg(feature = "rsa")]
 use super::rsa;
 use crate::params::AnyParams;
@@ -16,12 +18,7 @@ use crate::{AnyError, SecurityError};
 /// `SubjectPublicKeyInfo` 的 DER 轉成公鑰，同 BC 的 `PublicKeyFactory.CreateKey(byte[])`；結尾多出的
 /// bytes 視為錯誤。
 pub fn public_key_from_der(der: &[u8]) -> Result<AnyParams, AnyError> {
-    let (consumed, info) =
-        SubjectPublicKeyInfo::decode(der, &DecodingOptions::default()).map_err(AnyError::new)?;
-    if consumed != der.len() {
-        return Err(AnyError::new(Asn1Error::TrailingData));
-    }
-    public_key_from_info(&info)
+    public_key_from_info(&decode_all(der)?)
 }
 
 /// `SubjectPublicKeyInfo` 轉成公鑰，同 BC 的 `PublicKeyFactory.CreateKey(SubjectPublicKeyInfo)`：依演算法
@@ -29,6 +26,10 @@ pub fn public_key_from_der(der: &[u8]) -> Result<AnyParams, AnyError> {
 pub fn public_key_from_info(info: &SubjectPublicKeyInfo) -> Result<AnyParams, AnyError> {
     #[allow(clippy::match_single_binding, reason = "沒開任何演算法時只剩 `_`")]
     match info.algorithm().algorithm() {
+        #[cfg(feature = "ec")]
+        oid if *oid == ec::ID_EC_PUBLIC_KEY => Ok(AnyParams::EcPublic {
+            key: ec::public_key(info)?,
+        }),
         #[cfg(feature = "rsa")]
         oid if rsa::is_rsa(oid) => Ok(AnyParams::Rsa {
             key: rsa::public_key(info)?,

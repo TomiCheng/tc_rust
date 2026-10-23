@@ -3,15 +3,13 @@
 //!
 //! tc_asn1 的 OCTET STRING 不會清除內容，所以解碼與編碼途中的 `PrivateKeyInfo` 留有私鑰的複本。
 
-use tc_asn1::{
-    Asn1BitString, Asn1Error, Asn1OctetString, Decode, DecodingOptions, Encode, EncodingOptions,
-    NamedOid,
-};
+use tc_asn1::{Asn1BitString, Asn1OctetString, Encode, EncodingOptions, NamedOid};
 use tc_asn1_pkcs::PrivateKeyInfo;
 use tc_asn1_x509::alg::AlgorithmIdentifier;
 use tc_asn1_x509::cert::SubjectPublicKeyInfo;
 use tc_zeroize::Zeroizing;
 
+use super::decode::decode_all;
 use crate::{AnyError, SecurityError};
 
 #[cfg(feature = "x25519")]
@@ -47,11 +45,7 @@ pub(super) fn private_key<const N: usize>(
     if bare && octets.len() == N {
         return to_array(octets).map(Zeroizing::new);
     }
-    let (consumed, inner) =
-        Asn1OctetString::decode(octets, &DecodingOptions::default()).map_err(AnyError::new)?;
-    if consumed != octets.len() {
-        return Err(AnyError::new(Asn1Error::TrailingData));
-    }
+    let inner: Asn1OctetString = decode_all(octets)?;
     to_array(inner.as_bytes()).map(Zeroizing::new)
 }
 

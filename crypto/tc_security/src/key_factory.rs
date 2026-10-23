@@ -13,6 +13,9 @@
     feature = "ed448"
 ))]
 mod cfrg;
+mod decode;
+#[cfg(feature = "ec")]
+mod ec;
 mod private_key_factory;
 mod private_key_info_factory;
 mod public_key_factory;
