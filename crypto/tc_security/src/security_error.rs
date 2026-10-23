@@ -20,6 +20,8 @@ pub enum SecurityError {
     UnknownSigner,
     /// PBE 方案的名稱或 OID 不認得。
     UnknownPbe,
+    /// PBE 的參數不合用，例如 PBES2 的加密方案沒有 IV，或 cipher 沒有預設的金鑰長度。
+    InvalidPbeParams,
     /// 金鑰演算法的 OID 不認得，或對應的 feature 沒開。
     UnknownKeyAlgorithm,
     /// 金鑰的編碼不對，例如長度不是這個演算法的金鑰長度。
@@ -45,6 +47,7 @@ impl Display for SecurityError {
             Self::UnknownAgreement => f.write_str("agreement not recognised"),
             Self::UnknownSigner => f.write_str("signer not recognised"),
             Self::UnknownPbe => f.write_str("PBE scheme not recognised"),
+            Self::InvalidPbeParams => f.write_str("invalid PBE parameters"),
             Self::UnknownKeyAlgorithm => f.write_str("key algorithm not recognised"),
             Self::InvalidKeyEncoding => f.write_str("invalid key encoding"),
             Self::InvalidKeyGenParams => f.write_str("invalid key generation parameters"),

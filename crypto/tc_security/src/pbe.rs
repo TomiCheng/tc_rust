@@ -1,8 +1,8 @@
 //! 以密碼加密的方案，對應 BC 的 `PbeUtilities`：依名稱或 OID 找到方案，由密碼、salt 與迭代次數產生
 //! cipher 的金鑰與 IV 再交給方案的 cipher，或為 `PBEWITHHMAC…` 產生 MAC 的金鑰再交給方案的 MAC。
 //!
-//! 參數是 salt 與迭代次數本身，不是 BC 的 ASN.1 `PbeParameter`／`Pkcs12PbeParams`；PBES2 的 KDF 與
-//! cipher 寫在 ASN.1 裡，還沒有接上。
+//! 參數是 salt 與迭代次數本身，不是 BC 的 ASN.1 `PbeParameter`／`Pkcs12PbeParams`。PBES2 的 KDF 與
+//! cipher 寫在 ASN.1 的參數裡，所以不在方案表中，由 [`Pbes2`] 解讀。
 //!
 //! ```
 //! # #[cfg(all(feature = "sha1", feature = "desede"))] {
@@ -19,7 +19,9 @@
 
 mod algorithms;
 mod pbe_entry;
+mod pbes2;
 mod table;
 
 pub use algorithms::{algorithms, get_by_name, get_by_oid};
 pub use pbe_entry::PbeEntry;
+pub use pbes2::Pbes2;

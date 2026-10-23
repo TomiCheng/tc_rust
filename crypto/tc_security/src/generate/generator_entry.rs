@@ -93,6 +93,16 @@ impl GeneratorEntry {
         (self.generate_key_pair)(params, rng)
     }
 
+    /// 預設的金鑰長度（bits），同 BC 的 `GeneratorUtilities.GetDefaultKeySize`；沒有預設參數或不是
+    /// 只有長度的參數時回傳 `None`。
+    #[cfg(feature = "pbe")]
+    pub(crate) fn default_strength(&self) -> Option<usize> {
+        match self.default_params {
+            Some(KeyGenParams::Basic { strength }) => Some(strength),
+            _ => None,
+        }
+    }
+
     /// 建立一個新的產生器，還沒呼叫 `init` 時用這一列的預設參數；沒有預設參數的要先 `init`。
     pub fn generator(&'static self) -> Generator {
         Generator::new(self, self.default_params)

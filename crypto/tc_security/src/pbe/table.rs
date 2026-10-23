@@ -1,5 +1,5 @@
 //! BC `PbeUtilities` 的方案，只列出 cipher 已經接上的：缺 RC4（`PBEWITHSHAAND128BITRC4`、
-//! `PBEWITHSHAAND40BITRC4`）、IDEA 與 Twofish 的方案、PBES2，以及 RIPEMD 與 Tiger 的
+//! `PBEWITHSHAAND40BITRC4`）、IDEA 與 Twofish 的方案，以及 RIPEMD 與 Tiger 的
 //! `PBEWITHHMAC…`。金鑰與 IV 的長度照 BC 的 `GenerateCipherParameters`；DES 與 DESede 的金鑰另外設
 //! odd parity。`PBEWITHHMAC…` 的 OID 是 digest 本身的 OID，同 BC。
 
