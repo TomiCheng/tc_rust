@@ -26,7 +26,7 @@ so that `reset` can reproduce the original keystream.
 | Crate | Algorithms / engines |
 |-------|----------------------|
 | [`tc_chacha`](https://crates.io/crates/tc_chacha) | `ChaChaEngine`, `ChaCha7539Engine`, `XChaCha20Engine`; published on `tc_stream_cipher` and no longer in this workspace |
-| `tc_hc` | `Hc128Engine`, `Hc256Engine` |
+| `tc_hc` | `Hc128Engine`, `Hc256Engine`; moved to the published `tc_stream_cipher` traits |
 | `tc_isaac` | `IsaacEngine` |
 | `tc_rc4` | `Rc4Engine` |
 | `tc_salsa20` | `Salsa20Engine`, `Xsalsa20Engine` |

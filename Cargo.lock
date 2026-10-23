@@ -1427,9 +1427,8 @@ dependencies = [
 name = "tc_hc"
 version = "0.1.0"
 dependencies = [
- "tc_cipher",
- "tc_crypto",
- "tc_params",
+ "tc_stream_cipher",
+ "tc_zeroize",
 ]
 
 [[package]]

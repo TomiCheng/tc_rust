@@ -1,9 +1,9 @@
 mod common;
 
-use tc_cipher::{CipherDirection, InitError, StreamCipher, StreamCipherInit, StreamError};
-use tc_crypto::AlgorithmName;
-use tc_hc::{Hc128Engine, Hc256Engine, hc128, hc256};
-use tc_params::KeyWithIvRef;
+use tc_hc::{Hc128Engine, Hc256Engine};
+use tc_stream_cipher::{
+    CipherDirection, InitError, KeyWithIvRef, StreamCipher, StreamCipherInit, StreamError,
+};
 
 use common::unhex;
 
@@ -136,42 +136,63 @@ fn reset_chunking_and_directions_match() {
 #[test]
 fn validates_parameters_and_runtime_state() {
     let mut hc128 = Hc128Engine::new();
-    let mut name = String::new();
-    hc128.write_algo_name(&mut name).unwrap();
-    assert_eq!(name, "HC-128");
+    assert_eq!(hc128.to_string(), "HC-128");
     assert_eq!(hc128.return_byte(0), Err(StreamError::NotInitialised));
     assert_eq!(
         hc128.init(
             CipherDirection::Encrypt,
-            &KeyWithIvRef::new(&[0; 15], &[0; hc128::IV_BYTES]),
+            &KeyWithIvRef::new(&[0; 15], &[0; Hc128Engine::IV_BYTES]),
         ),
         Err(InitError::InvalidKeyLength(15))
     );
     assert_eq!(
         hc128.init(
             CipherDirection::Encrypt,
-            &KeyWithIvRef::new(&[0; hc128::KEY_BYTES], &[0; 15]),
+            &KeyWithIvRef::new(&[0; Hc128Engine::KEY_BYTES], &[0; 15]),
         ),
         Err(InitError::InvalidIvLength(15))
     );
 
     let mut hc256 = Hc256Engine::new();
-    name.clear();
-    hc256.write_algo_name(&mut name).unwrap();
-    assert_eq!(name, "HC-256");
+    assert_eq!(hc256.to_string(), "HC-256");
     assert_eq!(hc256.return_byte(0), Err(StreamError::NotInitialised));
     assert_eq!(
         hc256.init(
             CipherDirection::Encrypt,
-            &KeyWithIvRef::new(&[0; 15], &[0; hc256::MIN_IV_BYTES]),
+            &KeyWithIvRef::new(&[0; 15], &[0; Hc256Engine::MIN_IV_BYTES]),
         ),
         Err(InitError::InvalidKeyLength(15))
     );
     assert_eq!(
         hc256.init(
             CipherDirection::Encrypt,
-            &KeyWithIvRef::new(&[0; hc256::MIN_KEY_BYTES], &[0; 15]),
+            &KeyWithIvRef::new(&[0; 16], &[0; 15]),
         ),
         Err(InitError::InvalidIvLength(15))
     );
+}
+
+#[test]
+fn a_rejected_init_keeps_the_previous_key_and_position() {
+    let params = KeyWithIvRef::new(&[0x11; 16], &[0x22; 16]);
+    let mut expected = [0; 40];
+    let mut engine = Hc128Engine::new();
+    engine.init(CipherDirection::Encrypt, &params).unwrap();
+    engine.process_bytes(&[0; 40], &mut expected).unwrap();
+
+    let mut engine = Hc128Engine::new();
+    engine.init(CipherDirection::Encrypt, &params).unwrap();
+    let mut first = [0; 13];
+    engine.process_bytes(&[0; 13], &mut first).unwrap();
+    assert!(
+        engine
+            .init(
+                CipherDirection::Encrypt,
+                &KeyWithIvRef::new(&[0; 15], &[0; 16])
+            )
+            .is_err()
+    );
+    let mut rest = [0; 27];
+    engine.process_bytes(&[0; 27], &mut rest).unwrap();
+    assert_eq!([&first[..], &rest[..]].concat(), expected);
 }
