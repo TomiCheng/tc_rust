@@ -9,6 +9,7 @@ extern crate alloc;
 mod errors;
 mod params;
 mod password;
+mod pkcs12;
 mod pkcs5_s1;
 #[cfg(feature = "pbkdf2")]
 mod pkcs5_s2;
@@ -23,4 +24,5 @@ pub use password::{
 pub use pkcs5_s1::Pkcs5S1;
 #[cfg(feature = "pbkdf2")]
 pub use pkcs5_s2::Pkcs5S2;
+pub use pkcs12::Pkcs12;
 pub use traits::{PbeGenerator, PbeGeneratorInit, PbeParams};
