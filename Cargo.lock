@@ -647,6 +647,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "rc4"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "840038b674daa9f7a7957440d937951d15c0143c056e631e529141fd780e0c92"
+dependencies = [
+ "cipher",
+]
+
+[[package]]
 name = "regex"
 version = "1.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1657,6 +1666,8 @@ dependencies = [
 name = "tc_rc4_family"
 version = "0.1.0"
 dependencies = [
+ "criterion",
+ "rc4",
  "tc_stream_cipher",
  "tc_zeroize",
 ]

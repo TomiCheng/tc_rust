@@ -7,11 +7,11 @@ use tc_zeroize::Zeroize;
 
 const STATE_BYTES: usize = 256;
 
-/// RC4（Rivest, 1987），同 BC 的 `RC4Engine`：1 到 256 bytes 的金鑰，沒有 IV。
+/// RC4（Rivest, 1987）的 portable 實作，同 BC 的 `RC4Engine`：1 到 256 bytes 的金鑰，沒有 IV。
 ///
 /// **變動時間（cache-timing）：** 以置換表的值當索引交換與輸出，查表位置依秘密狀態而定。RC4 的
 /// keystream 有已知偏差，已被攻破；只為相容保留。置換表與金鑰在 drop 時清除。
-pub struct Rc4Engine {
+pub struct Rc4PortableEngine {
     state: [u8; STATE_BYTES],
     x: usize,
     y: usize,
@@ -20,7 +20,7 @@ pub struct Rc4Engine {
     initialised: bool,
 }
 
-impl Rc4Engine {
+impl Rc4PortableEngine {
     /// 最短的金鑰長度（bytes）。
     pub const MIN_KEY_BYTES: usize = 1;
     /// 最長的金鑰長度（bytes）。
@@ -65,20 +65,20 @@ impl Rc4Engine {
     }
 }
 
-impl Default for Rc4Engine {
+impl Default for Rc4PortableEngine {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl fmt::Display for Rc4Engine {
+impl fmt::Display for Rc4PortableEngine {
     /// 寫出 `RC4`，不碰金鑰。常數時間。
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str("RC4")
     }
 }
 
-impl StreamCipher for Rc4Engine {
+impl StreamCipher for Rc4PortableEngine {
     type Error = StreamError;
 
     /// `input` XOR 下一個 keystream byte；`init` 之前回傳 `NotInitialised`。變動時間（查表）。
@@ -113,7 +113,7 @@ impl StreamCipher for Rc4Engine {
     }
 }
 
-impl<P: KeyParams + ?Sized> StreamCipherInit<P> for Rc4Engine {
+impl<P: KeyParams + ?Sized> StreamCipherInit<P> for Rc4PortableEngine {
     type Error = InitError;
 
     /// 裝入 1 到 256 bytes 的金鑰；方向不影響，兩個方向用同一條 keystream。長度不對時保留原本的
@@ -132,7 +132,7 @@ impl<P: KeyParams + ?Sized> StreamCipherInit<P> for Rc4Engine {
     }
 }
 
-impl Drop for Rc4Engine {
+impl Drop for Rc4PortableEngine {
     fn drop(&mut self) {
         self.state.zeroize();
         self.working_key.zeroize();

@@ -7,6 +7,19 @@ rust-version = "1.85"
 license.workspace = true
 repository.workspace = true
 
+[features]
+default = []
+# RC4 改走 RustCrypto 的 rc4；VMPC 與 ISAAC 在 RustCrypto 沒有對應，不受影響
+rustcrypto = ["dep:rc4", "rc4/zeroize"]
+
 [dependencies]
 tc_stream_cipher = "0.1.0"
 tc_zeroize = "0.1.0"
+rc4 = { version = "0.2", optional = true }
+
+[dev-dependencies]
+criterion = { workspace = true }
+
+[[bench]]
+name = "rc4"
+harness = false

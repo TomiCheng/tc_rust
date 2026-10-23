@@ -76,3 +76,42 @@ fn initialized_engine_supports_dynamic_dispatch() {
         [0xbb, 0xf3, 0x16, 0xe8, 0xd9, 0x40, 0xaf, 0x0a, 0xd3]
     );
 }
+
+/// 開了 rustcrypto 時，兩個後端對同一把金鑰產生相同的 keystream，分段處理與重設後也一樣。
+#[cfg(feature = "rustcrypto")]
+#[test]
+fn the_rustcrypto_and_portable_backends_agree() {
+    use tc_rc4_family::{Rc4PortableEngine, Rc4RustCryptoEngine};
+
+    fn stream<
+        E: StreamCipher<Error = StreamError> + for<'a> StreamCipherInit<KeyRef<'a>, Error = InitError>,
+    >(
+        mut engine: E,
+        key: &[u8],
+    ) -> Vec<u8> {
+        engine
+            .init(CipherDirection::Encrypt, &KeyRef::new(key))
+            .unwrap();
+        let mut output = vec![0; 1000];
+        engine.process_bytes(&[0; 333], &mut output[..333]).unwrap();
+        engine.process_bytes(&[0; 667], &mut output[333..]).unwrap();
+        engine.reset();
+        let mut again = vec![0; 1000];
+        engine.process_bytes(&[0; 1000], &mut again).unwrap();
+        assert_eq!(again, output);
+        output
+    }
+
+    for key in [&[0x01][..], &[0x6b; 16], &[0xa5; 256]] {
+        assert_eq!(
+            stream(Rc4RustCryptoEngine::new(), key),
+            stream(Rc4PortableEngine::new(), key)
+        );
+    }
+    let mut engine = Rc4RustCryptoEngine::new();
+    assert_eq!(
+        engine.init(CipherDirection::Encrypt, &KeyRef::new(&[])),
+        Err(InitError::InvalidKeyLength(0))
+    );
+    assert_eq!(engine.return_byte(0), Err(StreamError::NotInitialised));
+}

@@ -34,6 +34,12 @@ so that `reset` can reproduce the original keystream.
 | `tc_rc4_family` | `Rc4Engine`, `VmpcEngine`, `VmpcKsa3Engine`, `IsaacEngine`: RC4 and the two designs derived from it |
 | `tc_salsa20` | `Salsa20Engine`, `Xsalsa20Engine` |
 
+`tc_salsa20` and `tc_rc4_family` have an optional `rustcrypto` feature, as
+`tc_chacha` does: `Salsa20Engine`, `Xsalsa20Engine` and `Rc4Engine` then run on
+RustCrypto's `salsa20` and `rc4` where those cover the request, and on the
+portable engines otherwise, so the accepted keys and IVs never change. The
+`*PortableEngine` and `*RustCryptoEngine` types can also be used directly.
+
 Applications depend only on the implementation crates they use, plus
 `tc_stream_cipher` for the traits and parameter containers:
 

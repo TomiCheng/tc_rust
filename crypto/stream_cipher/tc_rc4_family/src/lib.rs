@@ -4,6 +4,9 @@
 //! 環境下可能洩漏。RC4 已被攻破，VMPC 與 ISAAC 也少有使用；這裡只為與 BC 相容保留，新的協定請用
 //! ChaCha。
 //!
+//! 開了 `rustcrypto` 時，[`Rc4Engine`] 改跑在 RustCrypto 的 `rc4` 上；VMPC 與 ISAAC 在 RustCrypto 沒有
+//! 對應，不受影響。
+//!
 //! ```
 //! use tc_rc4_family::Rc4Engine;
 //! use tc_stream_cipher::{CipherDirection, KeyRef, StreamCipher, StreamCipherInit};
@@ -21,11 +24,17 @@
 
 mod isaac_engine;
 mod rc4_engine;
+mod rc4_portable_engine;
+#[cfg(feature = "rustcrypto")]
+mod rc4_rustcrypto_engine;
 mod vmpc_engine;
 mod vmpc_ksa3_engine;
 mod vmpc_state;
 
 pub use isaac_engine::IsaacEngine;
 pub use rc4_engine::Rc4Engine;
+pub use rc4_portable_engine::Rc4PortableEngine;
+#[cfg(feature = "rustcrypto")]
+pub use rc4_rustcrypto_engine::Rc4RustCryptoEngine;
 pub use vmpc_engine::VmpcEngine;
 pub use vmpc_ksa3_engine::VmpcKsa3Engine;
