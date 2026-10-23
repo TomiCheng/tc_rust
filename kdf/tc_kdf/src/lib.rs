@@ -3,3 +3,7 @@
 //! as the caller asks for.
 
 #![no_std]
+
+mod traits;
+
+pub use traits::{Kdf, KdfInit};
