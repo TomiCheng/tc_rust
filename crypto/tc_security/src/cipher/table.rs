@@ -7,6 +7,8 @@ mod aes;
 mod aria;
 #[cfg(feature = "ascon")]
 mod ascon;
+#[cfg(feature = "camellia")]
+mod camellia;
 #[cfg(feature = "chacha")]
 mod chacha;
 mod compose;
@@ -40,6 +42,8 @@ const ALGORITHMS: &[AlgorithmSpec] = &[
     aes::AES,
     #[cfg(feature = "aria")]
     aria::ARIA,
+    #[cfg(feature = "camellia")]
+    camellia::CAMELLIA,
     #[cfg(feature = "des")]
     des::DES,
     #[cfg(feature = "desede")]

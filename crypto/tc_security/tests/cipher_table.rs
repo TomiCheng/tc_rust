@@ -4,6 +4,7 @@
 #![cfg(any(
     feature = "aes",
     feature = "aria",
+    feature = "camellia",
     feature = "des",
     feature = "desede",
     feature = "rc2",
@@ -32,6 +33,8 @@ fn params_for(entry: &CipherEntry) -> AnyParams {
         Algorithm::Aes => (key(16), 16),
         #[cfg(feature = "aria")]
         Algorithm::Aria => (key(16), 16),
+        #[cfg(feature = "camellia")]
+        Algorithm::Camellia => (key(16), 16),
         #[cfg(feature = "des")]
         Algorithm::Des => (key(8), 8),
         #[cfg(feature = "desede")]

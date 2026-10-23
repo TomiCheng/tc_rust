@@ -62,4 +62,39 @@ pub(super) const WRAPPERS: &[WrapEntry] = &[
             ))
         },
     ),
+    // RFC 3657：RFC 3394 換成 Camellia。OID 照 BC 對到這一列；KEK 產生時 32 bytes（同 Camellia 的預設 256 bits）
+    #[cfg(feature = "camellia")]
+    WrapEntry::new(
+        &["CAMELLIAWRAP"],
+        &[
+            NamedOid::new(
+                &[
+                    0x2a, 0x83, 0x08, 0x8c, 0x9a, 0x4b, 0x3d, 0x01, 0x01, 0x03, 0x02,
+                ],
+                "1.2.392.200011.61.1.1.3.2",
+                "id-camellia128-wrap",
+            ),
+            NamedOid::new(
+                &[
+                    0x2a, 0x83, 0x08, 0x8c, 0x9a, 0x4b, 0x3d, 0x01, 0x01, 0x03, 0x03,
+                ],
+                "1.2.392.200011.61.1.1.3.3",
+                "id-camellia192-wrap",
+            ),
+            NamedOid::new(
+                &[
+                    0x2a, 0x83, 0x08, 0x8c, 0x9a, 0x4b, 0x3d, 0x01, 0x01, 0x03, 0x04,
+                ],
+                "1.2.392.200011.61.1.1.3.4",
+                "id-camellia256-wrap",
+            ),
+        ],
+        &[16, 24, 32],
+        32,
+        || {
+            AnyWrapper::new(tc_key_wrap::Rfc3394WrapEngine::new(
+                tc_camellia::CamelliaEngine::new(),
+            ))
+        },
+    ),
 ];

@@ -4,6 +4,8 @@
 mod aes;
 #[cfg(feature = "ascon")]
 mod ascon;
+#[cfg(feature = "camellia")]
+mod camellia;
 #[cfg(any(
     feature = "x25519",
     feature = "x448",
@@ -29,6 +31,7 @@ use super::GeneratorEntry;
 #[cfg(any(
     feature = "aes",
     feature = "ascon",
+    feature = "camellia",
     feature = "chacha",
     feature = "rc2",
     feature = "rc5"
@@ -39,7 +42,12 @@ fn random_key(strength: usize, rng: &mut dyn rand::CryptoRng) -> Vec<u8> {
     key
 }
 
-#[cfg(any(feature = "aes", feature = "ascon", feature = "chacha"))]
+#[cfg(any(
+    feature = "aes",
+    feature = "ascon",
+    feature = "camellia",
+    feature = "chacha"
+))]
 fn plain_key(
     params: &super::KeyGenParams,
     rng: &mut dyn rand::CryptoRng,
@@ -68,6 +76,7 @@ fn no_key(
 #[cfg(any(
     feature = "aes",
     feature = "ascon",
+    feature = "camellia",
     feature = "chacha",
     feature = "des",
     feature = "desede",
@@ -98,6 +107,14 @@ pub(super) const GENERATORS: &[GeneratorEntry] = &[
     ascon::ASCON128A,
     #[cfg(feature = "ascon")]
     ascon::ASCON80PQ,
+    #[cfg(feature = "camellia")]
+    camellia::CAMELLIA,
+    #[cfg(feature = "camellia")]
+    camellia::CAMELLIA128,
+    #[cfg(feature = "camellia")]
+    camellia::CAMELLIA192,
+    #[cfg(feature = "camellia")]
+    camellia::CAMELLIA256,
     #[cfg(feature = "chacha")]
     chacha::CHACHA,
     #[cfg(feature = "chacha")]

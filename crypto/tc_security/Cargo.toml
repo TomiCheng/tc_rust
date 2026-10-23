@@ -32,6 +32,7 @@ default = [
     "shake256",
     "aes",
     "aria",
+    "camellia",
     "rc6",
     "chacha",
     "rsa",
@@ -72,6 +73,7 @@ shake128 = ["dep:tc_keccak"]
 shake256 = ["dep:tc_keccak"]
 aes = ["dep:tc_aes"]
 aria = ["dep:tc_aria"]
+camellia = ["dep:tc_camellia"]
 rc = ["rc2", "rc5", "rc6"]
 rc2 = ["dep:tc_rc_cipher"]
 # RC5-32 與 RC5-64
@@ -120,12 +122,13 @@ ec-small-curves = [
     "tc_fp_custom/small-curves",
     "tc_f2m_custom?/small-curves",
 ]
-# 引擎改用 RustCrypto 的實作：AES 沒有 AES-NI 時也是常數時間，ARIA 改走 RustCrypto，RC 系列只影響 RC2，
+# 引擎改用 RustCrypto 的實作：AES 沒有 AES-NI 時也是常數時間，ARIA 與 Camellia 改走 RustCrypto，RC 系列只影響 RC2，
 # DES 與 Triple DES 改用 S-box 較小、key schedule 無分支的引擎。
 # 只作用在已開啟的演算法，不會連帶開啟它們。
 rustcrypto = [
     "tc_aes?/rustcrypto",
     "tc_aria?/rustcrypto",
+    "tc_camellia?/rustcrypto",
     "tc_des?/rustcrypto",
     "tc_rc_cipher?/rustcrypto",
     "tc_chacha?/rustcrypto",
@@ -151,6 +154,7 @@ tc_rc_cipher = { version = "0.1.0", optional = true }
 tc_sha = { version = "0.1.1", optional = true }
 tc_aes = { version = "0.1.0", optional = true }
 tc_aria = { version = "0.1.0", optional = true }
+tc_camellia = { version = "0.1.0", optional = true }
 tc_des = { version = "0.1.1", optional = true }
 tc_ascon_aead = { version = "0.1.0", optional = true }
 tc_chacha = { version = "0.1.0", optional = true }
