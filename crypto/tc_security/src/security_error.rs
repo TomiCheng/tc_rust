@@ -22,6 +22,8 @@ pub enum SecurityError {
     UnknownPbe,
     /// 金鑰演算法的 OID 不認得，或對應的 feature 沒開。
     UnknownKeyAlgorithm,
+    /// 金鑰的編碼不對，例如長度不是這個演算法的金鑰長度。
+    InvalidKeyEncoding,
     /// 產生金鑰的參數不屬於這個演算法，或數值不是它接受的。
     InvalidKeyGenParams,
     /// 產生器沒有預設參數，要先呼叫 `init`，例如 EC 要指定曲線。
@@ -44,6 +46,7 @@ impl Display for SecurityError {
             Self::UnknownSigner => f.write_str("signer not recognised"),
             Self::UnknownPbe => f.write_str("PBE scheme not recognised"),
             Self::UnknownKeyAlgorithm => f.write_str("key algorithm not recognised"),
+            Self::InvalidKeyEncoding => f.write_str("invalid key encoding"),
             Self::InvalidKeyGenParams => f.write_str("invalid key generation parameters"),
             Self::MissingKeyGenParams => f.write_str("key generation parameters required"),
             Self::WrongGenerator => f.write_str("generator does not produce this kind of key"),

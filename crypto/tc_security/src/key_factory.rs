@@ -6,6 +6,13 @@
 //! OID 回傳 [`SecurityError::UnknownKeyAlgorithm`](crate::SecurityError::UnknownKeyAlgorithm)，
 //! 參數不是私鑰（或公鑰）時回傳 [`SecurityError::WrongParams`](crate::SecurityError::WrongParams)。
 
+#[cfg(any(
+    feature = "x25519",
+    feature = "x448",
+    feature = "ed25519",
+    feature = "ed448"
+))]
+mod cfrg;
 mod private_key_factory;
 mod private_key_info_factory;
 mod public_key_factory;
