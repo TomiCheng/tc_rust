@@ -5,6 +5,8 @@ mod any_error;
 pub mod cipher;
 pub mod digest;
 pub mod generate;
+#[cfg(feature = "key-factory")]
+pub mod key_factory;
 pub mod mac;
 pub mod params;
 #[cfg(feature = "pbe")]
