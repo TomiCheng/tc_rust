@@ -1,0 +1,10 @@
+[package]
+name = "tc_pbe"
+description = "Password-based key derivation for PBE, after Bouncy Castle's PbeParametersGenerator."
+version = "0.1.0"
+edition.workspace = true
+rust-version = "1.85"
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
