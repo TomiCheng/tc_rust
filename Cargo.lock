@@ -1360,35 +1360,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tc_ed25519"
-version = "0.1.0"
-dependencies = [
- "rand_core",
- "tc_digest 0.1.0",
- "tc_edwards",
- "tc_rfc7748",
- "tc_sha 0.1.0",
-]
-
-[[package]]
-name = "tc_ed448"
-version = "0.1.0"
-dependencies = [
- "rand_core",
- "tc_digest 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "tc_edwards",
- "tc_keccak",
-]
-
-[[package]]
-name = "tc_edwards"
-version = "0.1.0"
-dependencies = [
- "tc_constant_time",
- "tc_rfc7748",
-]
-
-[[package]]
 name = "tc_f2m_curve"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1733,17 +1704,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tc_rfc7748"
-version = "0.1.0"
-dependencies = [
- "criterion",
- "rand_core",
- "tc_bigint 0.1.0",
- "tc_constant_time",
- "tc_runtime",
-]
-
-[[package]]
 name = "tc_rijndael"
 version = "0.1.0"
 dependencies = [
@@ -2085,14 +2045,6 @@ name = "tc_whirlpool"
 version = "0.1.0"
 dependencies = [
  "tc_digest 0.1.0",
-]
-
-[[package]]
-name = "tc_x25519"
-version = "0.1.0"
-dependencies = [
- "rand_core",
- "tc_rfc7748",
 ]
 
 [[package]]

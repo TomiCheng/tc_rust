@@ -10,7 +10,6 @@ Depend on the crate that provides the abstraction you need; there is no umbrella
 | Crate | Functionality | Runtime and allocation |
 | --- | --- | --- |
 | [`tc_bigint`](tc_bigint/README.md) | Compile-time fixed-width, runtime fixed-width, and arbitrary-precision signed/unsigned integers, encoding, numeric traits, modular and Montgomery arithmetic, and general-purpose probable-prime operations | `no_std`; compile-time fixed-width arithmetic needs no allocator; runtime fixed-width and dynamic integers require `alloc`; `rand_core` enables random operations |
-| [`tc_rfc7748`](tc_rfc7748) | X25519 and X448 key generation, public-key derivation, and Diffie-Hellman agreement, plus shared internal Edwards field/base-point arithmetic | Allocation-free `no_std` arithmetic; defaults enable `std` and optional x86 dispatch |
 
 `tc_binpoly` and the elliptic-curve crates `tc_ec_core`, `tc_fp_curve`,
 `tc_f2m_curve`, `tc_fp_custom` and `tc_f2m_custom` have graduated to
@@ -47,17 +46,13 @@ short-Weierstrass curves, use the published
 [`tc_ec_core`](https://crates.io/crates/tc_ec_core) and the curve crates built on
 it.
 
-Use `tc_rfc7748` directly for X25519 or X448. It uses dedicated Montgomery-curve
-arithmetic rather than the short-Weierstrass traits in `tc_ec_core`. The
-[Ed25519](../crypto/tc_ed25519) and [Ed448](../crypto/tc_ed448) signature APIs live
-under `crypto/`; they are not signature APIs of `tc_rfc7748`.
+X25519, X448, Ed25519 and Ed448 live in
+[`tc_cfrg_curves`](../crypto/tc_cfrg_curves), with their own Montgomery and
+Edwards arithmetic rather than the short-Weierstrass traits in `tc_ec_core`.
 
 ## Dependency and feature boundaries
 
 - `tc_bigint` depends on `tc_constant_time`.
-- `tc_rfc7748` optionally uses the published `tc_runtime` crate for x86 feature
-  detection. Its scalar configuration is available with default features
-  disabled.
 
 Ordinary arithmetic is not automatically constant-time because it uses a crate
 that also provides constant-time primitives. Consult the individual API contracts.
@@ -68,7 +63,6 @@ Run Cargo commands from the workspace root and select the crate being changed:
 
 ```text
 cargo test -p tc_bigint --target i686-pc-windows-msvc --locked
-cargo doc -p tc_rfc7748 --all-features --no-deps --locked
 ```
 
 The crate READMEs describe their feature combinations and validation commands.

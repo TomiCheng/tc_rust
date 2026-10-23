@@ -143,8 +143,7 @@ and the crates that remain here depend on the published version.
   key wrap, key and parameter generation, key agreement and signers, wired to
   the published crates above
 - [`crypto/tc_cfrg_curves`](crypto/tc_cfrg_curves) — X25519, X448, Ed25519 and
-  Ed448 in one crate; it replaces `tc_x25519`, `tc_edwards`, `tc_ed25519`,
-  `tc_ed448` and `math/tc_rfc7748`, which remain until they are retired
+  Ed448 in one crate
 - [`crypto/tc_ec_key`](crypto/tc_ec_key),
   [`crypto/agreement`](crypto/agreement) and [`signer`](signer) — EC keys,
   key agreement (ECDH) and signers (RSA, DSA, ECDSA)
