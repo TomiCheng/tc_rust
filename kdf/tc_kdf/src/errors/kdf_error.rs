@@ -4,8 +4,8 @@ use core::fmt;
 
 /// A failure while deriving bytes.
 ///
-/// `E` is the error of the MAC underneath, for the SP 800-108 functions; a function over a
-/// digest keeps the default `Infallible`.
+/// `E` is the error of the MAC underneath, for HKDF and the SP 800-108 functions; a function
+/// over a digest keeps the default `Infallible`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum KdfError<E = Infallible> {
