@@ -4,6 +4,8 @@
 
 #![no_std]
 
+mod params;
 mod traits;
 
-pub use traits::{PbeGenerator, PbeGeneratorInit};
+pub use params::PbeParamsRef;
+pub use traits::{PbeGenerator, PbeGeneratorInit, PbeParams};
