@@ -7,7 +7,7 @@ use std::error::Error;
 use tc_block_cipher::KeyParams;
 use tc_block_modes::IvParams;
 use tc_security::params::AnyParams;
-use tc_security::{AnyError, SecurityError, cipher, pbe};
+use tc_security::{AnyError, SecurityError, cipher, mac, pbe};
 
 #[allow(dead_code, reason = "沒開對應的 digest 與 cipher 時沒有測試用到")]
 fn hex(text: &str) -> Vec<u8> {
@@ -93,7 +93,7 @@ fn pbe_with_sha1_and_des_decrypts_what_bcs_pbe_test_encrypts() {
         .cipher();
     let sealed = cipher::encrypt(&mut des, &raw, &input).unwrap();
     assert_eq!(
-        cipher::decrypt(&mut entry.cipher(), &params, &sealed).unwrap(),
+        cipher::decrypt(&mut entry.cipher().unwrap(), &params, &sealed).unwrap(),
         input
     );
 }
@@ -137,9 +137,10 @@ fn the_openssl_scheme_gives_the_key_and_iv_of_openssl_enc() {
 }
 
 #[test]
-fn every_scheme_decrypts_what_it_encrypts_and_names_and_oids_are_unique() {
+fn every_scheme_works_with_its_cipher_or_mac_and_names_and_oids_are_unique() {
     let mut names = std::collections::HashSet::new();
     let mut oids = std::collections::HashSet::new();
+    let message = b"attack at dawn, bring the battery staple";
     for entry in pbe::algorithms() {
         assert!(names.insert(entry.name()), "{entry}");
         for oid in entry.oids() {
@@ -148,14 +149,38 @@ fn every_scheme_decrypts_what_it_encrypts_and_names_and_oids_are_unique() {
         let params = entry
             .generate_cipher_params("correct horse", b"saltsalt", 100)
             .unwrap();
-        let message = b"attack at dawn, bring the battery staple";
-        let sealed = cipher::encrypt(&mut entry.cipher(), &params, message).unwrap();
-        assert_eq!(
-            cipher::decrypt(&mut entry.cipher(), &params, &sealed).unwrap(),
-            message,
-            "{entry}"
-        );
+        match (entry.cipher(), entry.mac()) {
+            (Some(mut scheme_cipher), None) => {
+                let sealed = cipher::encrypt(&mut scheme_cipher, &params, message).unwrap();
+                assert_eq!(
+                    cipher::decrypt(&mut scheme_cipher, &params, &sealed).unwrap(),
+                    message,
+                    "{entry}"
+                );
+            }
+            (None, Some(mut scheme_mac)) => {
+                let tag = mac::calculate(&mut scheme_mac, &params, message).unwrap();
+                assert_eq!(KeyParams::key(&params).len(), tag.len(), "{entry}");
+            }
+            _ => panic!("{entry} has exactly one of a cipher and a MAC"),
+        }
     }
+}
+
+// BC Pkcs12Test 的 Run3："smeg"、一次迭代的 160 bits MAC 金鑰，也就是 PBEWithHmacSHA1 的金鑰
+#[cfg(feature = "sha1")]
+#[test]
+fn pbe_with_hmac_sha1_gives_the_mac_key_of_bcs_pkcs12_test() {
+    let entry = pbe::get_by_name("1.3.14.3.2.26").unwrap();
+    assert_eq!(entry.name(), "PBEWITHHMACSHA1");
+    assert!(entry.cipher().is_none());
+    let params = entry
+        .generate_cipher_params("smeg", &hex("3D83C0E4546AC140"), 1)
+        .unwrap();
+    assert_eq!(
+        KeyParams::key(&params),
+        hex("8D967D88F6CAA9D714800AB3D48051D63F73A312")
+    );
 }
 
 #[cfg(all(feature = "md5", feature = "des"))]

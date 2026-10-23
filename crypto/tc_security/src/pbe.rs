@@ -1,5 +1,5 @@
 //! 以密碼加密的方案，對應 BC 的 `PbeUtilities`：依名稱或 OID 找到方案，由密碼、salt 與迭代次數產生
-//! cipher 的金鑰與 IV，再交給方案的 cipher。
+//! cipher 的金鑰與 IV 再交給方案的 cipher，或為 `PBEWITHHMAC…` 產生 MAC 的金鑰再交給方案的 MAC。
 //!
 //! 參數是 salt 與迭代次數本身，不是 BC 的 ASN.1 `PbeParameter`／`Pkcs12PbeParams`；PBES2 的 KDF 與
 //! cipher 寫在 ASN.1 裡，還沒有接上。
@@ -10,8 +10,9 @@
 //!
 //! let entry = pbe::get_by_name("PBEWithSHAAnd3-KeyTripleDES-CBC")?;
 //! let params = entry.generate_cipher_params("password", &[1, 2, 3, 4, 5, 6, 7, 8], 2048)?;
-//! let sealed = cipher::encrypt(&mut entry.cipher(), &params, b"secret message")?;
-//! assert_eq!(cipher::decrypt(&mut entry.cipher(), &params, &sealed)?, b"secret message");
+//! let mut des = entry.cipher().expect("a cipher scheme");
+//! let sealed = cipher::encrypt(&mut des, &params, b"secret message")?;
+//! assert_eq!(cipher::decrypt(&mut des, &params, &sealed)?, b"secret message");
 //! # }
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
