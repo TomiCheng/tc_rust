@@ -3,3 +3,7 @@
 //! MAC key.
 
 #![no_std]
+
+mod traits;
+
+pub use traits::{PbeGenerator, PbeGeneratorInit};
