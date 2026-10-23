@@ -4,13 +4,8 @@ use alloc::vec::Vec;
 use tc_digest::Digest;
 use tc_zeroize::Zeroizing;
 
+use crate::state::PbeState;
 use crate::{PbeError, PbeGenerator, PbeGeneratorInit, PbeParams};
-
-struct State {
-    password: Zeroizing<Vec<u8>>,
-    salt: Vec<u8>,
-    iteration_count: usize,
-}
 
 /// PKCS#5 scheme 1, PBKDF1 of RFC 8018, BC's `Pkcs5S1ParametersGenerator`: `T1 = H(P || S)`,
 /// then `Ti = H(T(i - 1))` up to the iteration count, and the key, IV or MAC key are cut from
@@ -19,7 +14,7 @@ struct State {
 /// The password copied at `init` is wiped when replaced and on drop, and so is every `T`.
 pub struct Pkcs5S1<D> {
     digest: D,
-    state: Option<State>,
+    state: Option<PbeState>,
 }
 
 impl<D> Pkcs5S1<D> {
@@ -59,15 +54,7 @@ impl<D, P: PbeParams + ?Sized> PbeGeneratorInit<P> for Pkcs5S1<D> {
     /// Copies the password and salt. An iteration count of 0, which BC runs as 1, is refused
     /// before anything changes. Constant time with respect to the password and salt.
     fn init(&mut self, params: &P) -> Result<(), PbeError> {
-        let iteration_count = params.iteration_count();
-        if iteration_count == 0 {
-            return Err(PbeError::InvalidIterationCount(0));
-        }
-        self.state = Some(State {
-            password: Zeroizing::new(params.password().to_vec()),
-            salt: params.salt().to_vec(),
-            iteration_count,
-        });
+        self.state = Some(PbeState::copy(params)?);
         Ok(())
     }
 }
