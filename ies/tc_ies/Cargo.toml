@@ -1,0 +1,10 @@
+[package]
+name = "tc_ies"
+description = "The Integrated Encryption Scheme, after Bouncy Castle's IesEngine."
+version = "0.1.0"
+edition.workspace = true
+rust-version = "1.85"
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
