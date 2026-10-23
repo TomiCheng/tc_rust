@@ -7,6 +7,7 @@
 extern crate alloc;
 
 mod errors;
+mod openssl_pbe;
 mod params;
 mod password;
 mod pkcs12;
@@ -17,6 +18,7 @@ mod state;
 mod traits;
 
 pub use errors::PbeError;
+pub use openssl_pbe::OpenSslPbe;
 pub use params::PbeParamsRef;
 pub use password::{
     pkcs5_password_to_bytes, pkcs5_password_to_utf8_bytes, pkcs12_password_to_bytes,
