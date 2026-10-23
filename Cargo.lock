@@ -1525,11 +1525,18 @@ name = "tc_ies"
 version = "0.1.0"
 dependencies = [
  "tc_agreement",
+ "tc_bigint 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tc_block_cipher",
  "tc_block_modes",
  "tc_buffered_cipher",
+ "tc_constant_time",
+ "tc_ec_key",
+ "tc_ecdh_v2",
+ "tc_fp_custom",
  "tc_kdf",
  "tc_macs",
+ "tc_sha 0.1.1",
+ "tc_twofish_v2",
  "tc_zeroize",
 ]
 

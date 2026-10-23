@@ -17,7 +17,8 @@ pub trait IesCipherParams: IesParams {
     /// The length of the cipher key `K1` in bits, BC's `CipherKeySize`.
     fn cipher_key_bits(&self) -> usize;
 
-    /// The IV given to the cipher with `K1`; empty when there is none, which gives the cipher
-    /// `K1` alone.
+    /// The IV given to the cipher with `K1`; empty when there is none. A mode that needs an IV,
+    /// such as CBC, refuses an empty one, where BC's CBC falls back to zeros: give it a zero IV
+    /// to match BC.
     fn iv(&self) -> &[u8];
 }
