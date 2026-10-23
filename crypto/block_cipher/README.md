@@ -99,7 +99,6 @@ include specification, Monte Carlo, or backend-equivalence tests.
 | ✅ | [`tc_aes`](tc_aes) | `AesEngine`, `AesLightEngine` | 128-bit block; 128/192/256-bit keys; AES-NI where available |
 | ✅ | [`tc_aria`](tc_aria) | `AriaEngine` | 128-bit block; 128/192/256-bit keys |
 | ✅ | [`tc_blowfish`](tc_blowfish) | `BlowfishEngine` | 64-bit block; 32-448-bit keys |
-| ✅ | [`tc_camellia`](tc_camellia) | `CamelliaEngine`, `CamelliaLightEngine` | 128-bit block; 128/192/256-bit keys |
 | ✅ | [`tc_cast`](tc_cast) | `Cast5Engine`, `Cast6Engine` | CAST5: 64-bit block, 40-128-bit keys; CAST6: 128-bit block, 128-256-bit keys |
 | ✅ | [`tc_des`](tc_des) | `DesEngine`, `DesEdeEngine` | 64-bit block; 8-byte DES or 16/24-byte EDE keys |
 | ✅ | [`tc_dstu7624`](tc_dstu7624) | `Engine128`, `Engine256`, `Engine512` | 128/256/512-bit blocks; same-size or double-size keys where defined |
@@ -119,6 +118,8 @@ Legend: ✅ migrated and tested, ⬜ TODO.
 
 RC2, RC5 and RC6 have moved to the published
 [`tc_rc_cipher`](https://crates.io/crates/tc_rc_cipher) crate.
+Camellia has moved to the published
+[`tc_camellia`](https://crates.io/crates/tc_camellia) crate.
 
 DES, Triple DES, Blowfish, IDEA, RC2, RC5, SKIPJACK, TEA, XTEA, and other
 older designs are provided for compatibility and study, not as recommendations
