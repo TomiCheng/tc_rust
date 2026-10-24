@@ -105,13 +105,6 @@ impl AsconXof {
 impl TryDigest for AsconXof {
     type Error = Infallible;
 
-    fn algorithm_name(&self) -> &str {
-        match self.parameters {
-            AsconXofParameters::AsconXof => "Ascon-Xof",
-            AsconXofParameters::AsconXofA => "Ascon-XofA",
-        }
-    }
-
     fn digest_size(&self) -> usize {
         DIGEST_LENGTH
     }
@@ -227,20 +220,32 @@ impl TryXof for AsconXof {
     }
 }
 
+impl core::fmt::Display for AsconXof {
+    /// Writes the algorithm name without inspecting key material.
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.write_str(match self.parameters {
+            AsconXofParameters::AsconXof => "Ascon-Xof",
+            AsconXofParameters::AsconXofA => "Ascon-XofA",
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use alloc::string::ToString;
+
     use super::*;
     use tc_digest::{Digest, Xof};
 
     #[test]
     fn accessors() {
         let d = AsconXof::new(AsconXofParameters::AsconXof);
-        assert_eq!(d.algorithm_name(), "Ascon-Xof");
+        assert_eq!(d.to_string(), "Ascon-Xof");
         assert_eq!(d.digest_size(), 32);
         assert_eq!(d.byte_length(), 8);
 
         let a = AsconXof::new(AsconXofParameters::AsconXofA);
-        assert_eq!(a.algorithm_name(), "Ascon-XofA");
+        assert_eq!(a.to_string(), "Ascon-XofA");
     }
 
     // 兩變體(尤其 XofA 的 pb=8)首塊 P12、後續 pb —— 串流分段須與一次擠出相同。

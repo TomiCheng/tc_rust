@@ -89,13 +89,6 @@ impl AsconDigest {
 impl TryDigest for AsconDigest {
     type Error = Infallible;
 
-    fn algorithm_name(&self) -> &str {
-        match self.parameters {
-            AsconParameters::AsconHash => "Ascon-Hash",
-            AsconParameters::AsconHashA => "Ascon-HashA",
-        }
-    }
-
     fn digest_size(&self) -> usize {
         DIGEST_LENGTH
     }
@@ -140,12 +133,7 @@ impl TryDigest for AsconDigest {
         self.state[0] ^= u64::from_be_bytes(final_block);
         p12(&mut self.state);
 
-        for (index, chunk) in output[..DIGEST_LENGTH]
-            .as_chunks_mut::<RATE>()
-            .0
-            .iter_mut()
-            .enumerate()
-        {
+        for (index, chunk) in output[..DIGEST_LENGTH].chunks_exact_mut(RATE).enumerate() {
             if index != 0 {
                 self.intermediate_permutation();
             }
@@ -171,8 +159,20 @@ const fn initial_state(parameters: AsconParameters) -> [u64; 5] {
     }
 }
 
+impl core::fmt::Display for AsconDigest {
+    /// Writes the algorithm name without inspecting key material.
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.write_str(match self.parameters {
+            AsconParameters::AsconHash => "Ascon-Hash",
+            AsconParameters::AsconHashA => "Ascon-HashA",
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use alloc::string::ToString;
+
     use alloc::{format, string::String, vec::Vec};
 
     use super::*;
@@ -332,7 +332,7 @@ mod tests {
             assert_eq!(digest.digest_size(), 32);
             assert_eq!(digest.byte_length(), 8);
             assert_eq!(
-                digest.algorithm_name(),
+                digest.to_string(),
                 match parameters {
                     AsconParameters::AsconHash => "Ascon-Hash",
                     AsconParameters::AsconHashA => "Ascon-HashA",

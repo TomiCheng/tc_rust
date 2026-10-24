@@ -1,7 +1,7 @@
 //! Official BLAKE2xs known-answer tests (BLAKE2/BLAKE2 `blake2-kat.json`, 512
 //! keyed XOF vectors: [input, key, expected]).
 
-use tc_blake2::Blake2xsDigest;
+use tc_blake::Blake2xsDigest;
 use tc_digest::{Digest, Xof};
 
 fn unhex(s: &str) -> Vec<u8> {

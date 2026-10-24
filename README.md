@@ -272,7 +272,8 @@ cargo build -p tc_cbc -p tc_cfb -p tc_ofb -p tc_ctr --no-default-features --lock
 cargo build -p tc_cbc -p tc_cfb -p tc_ofb -p tc_ctr --locked
 
 # Portable digest backends without std
-cargo build -p tc_blake2 -p tc_haraka --no-default-features --locked
+cargo build -p tc_blake --locked
+cargo build -p tc_haraka --no-default-features --locked
 ```
 
 `cargo test` always uses Rust's standard-library test harness. Use `cargo build`
@@ -283,7 +284,7 @@ Benchmarks are available in the algorithm crates:
 
 ```bash
 cargo bench -p tc_aes_old --bench aes
-cargo bench -p tc_blake2
+cargo bench -p tc_blake
 ```
 
 ## Reference and license

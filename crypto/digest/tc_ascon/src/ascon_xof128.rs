@@ -68,10 +68,6 @@ impl AsconXof128 {
 impl TryDigest for AsconXof128 {
     type Error = Infallible;
 
-    fn algorithm_name(&self) -> &str {
-        "Ascon-XOF128"
-    }
-
     fn digest_size(&self) -> usize {
         DIGEST_LENGTH
     }
@@ -175,15 +171,24 @@ impl TryXof for AsconXof128 {
     }
 }
 
+impl core::fmt::Display for AsconXof128 {
+    /// Writes the algorithm name without inspecting key material.
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.write_str("Ascon-XOF128")
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use alloc::string::ToString;
+
     use super::*;
     use tc_digest::{Digest, Xof};
 
     #[test]
     fn accessors() {
         let d = AsconXof128::new();
-        assert_eq!(d.algorithm_name(), "Ascon-XOF128");
+        assert_eq!(d.to_string(), "Ascon-XOF128");
         assert_eq!(d.digest_size(), 32);
         assert_eq!(d.byte_length(), 8);
     }

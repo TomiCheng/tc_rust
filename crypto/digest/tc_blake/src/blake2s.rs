@@ -1,26 +1,26 @@
-//! BLAKE2b message digest, ported from Bouncy Castle's `Blake2bDigest`.
+//! BLAKE2s message digest, ported from Bouncy Castle's `Blake2sDigest`.
 //!
-//! The portable compression function is always available. With the default
-//! `std` feature on x86/x86-64, AVX2 is selected at runtime when supported;
-//! `no_std` builds use only the portable path.
+//! The portable compression function is always available. On x86 and x86-64,
+//! SSE2 is detected at run time through `tc_runtime`, without needing `std`,
+//! and used when present; other targets use the portable path.
 
 use core::convert::Infallible;
 
 use tc_digest::TryDigest;
 
-const BLOCK_LENGTH: usize = 128;
-const DEFAULT_DIGEST_LENGTH: usize = 64;
-const ROUNDS: usize = 12;
+const BLOCK_LENGTH: usize = 64;
+const DEFAULT_DIGEST_LENGTH: usize = 32;
+const ROUNDS: usize = 10;
 
-const IV: [u64; 8] = [
-    0x6a09_e667_f3bc_c908,
-    0xbb67_ae85_84ca_a73b,
-    0x3c6e_f372_fe94_f82b,
-    0xa54f_f53a_5f1d_36f1,
-    0x510e_527f_ade6_82d1,
-    0x9b05_688c_2b3e_6c1f,
-    0x1f83_d9ab_fb41_bd6b,
-    0x5be0_cd19_137e_2179,
+const IV: [u32; 8] = [
+    0x6a09_e667,
+    0xbb67_ae85,
+    0x3c6e_f372,
+    0xa54f_f53a,
+    0x510e_527f,
+    0x9b05_688c,
+    0x1f83_d9ab,
+    0x5be0_cd19,
 ];
 
 const SIGMA: [[usize; 16]; ROUNDS] = [
@@ -34,25 +34,23 @@ const SIGMA: [[usize; 16]; ROUNDS] = [
     [13, 11, 7, 14, 12, 1, 3, 9, 5, 0, 15, 4, 8, 6, 2, 10],
     [6, 15, 14, 9, 11, 3, 0, 8, 12, 2, 13, 7, 1, 4, 10, 5],
     [10, 2, 8, 4, 7, 6, 1, 5, 15, 11, 9, 14, 3, 12, 13, 0],
-    [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-    [14, 10, 4, 8, 9, 15, 13, 6, 1, 12, 0, 2, 11, 7, 5, 3],
 ];
 
 #[inline(always)]
-fn mix(state: &mut [u64; 16], a: usize, b: usize, c: usize, d: usize, x: u64, y: u64) {
+fn mix(state: &mut [u32; 16], a: usize, b: usize, c: usize, d: usize, x: u32, y: u32) {
     let mut va = state[a];
     let mut vb = state[b];
     let mut vc = state[c];
     let mut vd = state[d];
 
     va = va.wrapping_add(vb).wrapping_add(x);
-    vd = (vd ^ va).rotate_right(32);
-    vc = vc.wrapping_add(vd);
-    vb = (vb ^ vc).rotate_right(24);
-    va = va.wrapping_add(vb).wrapping_add(y);
     vd = (vd ^ va).rotate_right(16);
     vc = vc.wrapping_add(vd);
-    vb = (vb ^ vc).rotate_right(63);
+    vb = (vb ^ vc).rotate_right(12);
+    va = va.wrapping_add(vb).wrapping_add(y);
+    vd = (vd ^ va).rotate_right(8);
+    vc = vc.wrapping_add(vd);
+    vb = (vb ^ vc).rotate_right(7);
 
     state[a] = va;
     state[b] = vb;
@@ -61,18 +59,18 @@ fn mix(state: &mut [u64; 16], a: usize, b: usize, c: usize, d: usize, x: u64, y:
 }
 
 fn compress_portable(
-    chain: &mut [u64; 8],
-    counter_low: u64,
-    counter_high: u64,
-    final_flag: u64,
+    chain: &mut [u32; 8],
+    counter_low: u32,
+    counter_high: u32,
+    final_flag: u32,
     block: &[u8; BLOCK_LENGTH],
 ) {
-    let mut message = [0u64; 16];
-    for (word, bytes) in message.iter_mut().zip(block.as_chunks::<8>().0.iter()) {
-        *word = u64::from_le_bytes(*bytes);
+    let mut message = [0u32; 16];
+    for (word, bytes) in message.iter_mut().zip(block.chunks_exact(4)) {
+        *word = u32::from_le_bytes(bytes.try_into().unwrap());
     }
 
-    let mut state = [0u64; 16];
+    let mut state = [0u32; 16];
     state[..8].copy_from_slice(chain);
     state[8..].copy_from_slice(&IV);
     state[12] ^= counter_low;
@@ -159,8 +157,8 @@ fn compress_portable(
     }
 }
 
-#[cfg(all(feature = "std", any(target_arch = "x86", target_arch = "x86_64")))]
-mod avx2 {
+#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+mod sse2 {
     #[cfg(target_arch = "x86")]
     use core::arch::x86::*;
     #[cfg(target_arch = "x86_64")]
@@ -168,61 +166,69 @@ mod avx2 {
 
     use super::{BLOCK_LENGTH, IV, SIGMA};
 
-    #[target_feature(enable = "avx2")]
-    unsafe fn set4(a: u64, b: u64, c: u64, d: u64) -> __m256i {
-        _mm256_set_epi64x(d as i64, c as i64, b as i64, a as i64)
+    // Rust 1.85 still treats these intrinsics as unsafe inside target_feature
+    // functions; newer compilers consider the block unnecessary.
+    #[allow(unused_unsafe)]
+    #[target_feature(enable = "sse2")]
+    unsafe fn set4(a: u32, b: u32, c: u32, d: u32) -> __m128i {
+        // SAFETY: the function itself requires SSE2.
+        unsafe { _mm_set_epi32(d as i32, c as i32, b as i32, a as i32) }
     }
 
-    #[target_feature(enable = "avx2")]
-    unsafe fn rotate_right<const RIGHT: i32, const LEFT: i32>(value: __m256i) -> __m256i {
-        _mm256_or_si256(
-            _mm256_srli_epi64::<RIGHT>(value),
-            _mm256_slli_epi64::<LEFT>(value),
-        )
-    }
-
-    #[target_feature(enable = "avx2")]
-    unsafe fn mix(
-        a: &mut __m256i,
-        b: &mut __m256i,
-        c: &mut __m256i,
-        d: &mut __m256i,
-        x: __m256i,
-        y: __m256i,
-    ) {
-        // SAFETY: the function itself requires AVX2 and all values are vector
-        // registers without additional memory requirements.
+    #[allow(unused_unsafe)]
+    #[target_feature(enable = "sse2")]
+    unsafe fn rotate_right<const RIGHT: i32, const LEFT: i32>(value: __m128i) -> __m128i {
+        // SAFETY: the function itself requires SSE2.
         unsafe {
-            *a = _mm256_add_epi64(_mm256_add_epi64(*a, *b), x);
-            *d = _mm256_shuffle_epi32::<0xb1>(_mm256_xor_si256(*d, *a));
-            *c = _mm256_add_epi64(*c, *d);
-            *b = rotate_right::<24, 40>(_mm256_xor_si256(*b, *c));
-            *a = _mm256_add_epi64(_mm256_add_epi64(*a, *b), y);
-            *d = rotate_right::<16, 48>(_mm256_xor_si256(*d, *a));
-            *c = _mm256_add_epi64(*c, *d);
-            *b = rotate_right::<63, 1>(_mm256_xor_si256(*b, *c));
+            _mm_or_si128(
+                _mm_srli_epi32::<RIGHT>(value),
+                _mm_slli_epi32::<LEFT>(value),
+            )
         }
     }
 
-    /// Compresses one block with four parallel G functions in each AVX2 vector.
+    #[target_feature(enable = "sse2")]
+    unsafe fn mix(
+        a: &mut __m128i,
+        b: &mut __m128i,
+        c: &mut __m128i,
+        d: &mut __m128i,
+        x: __m128i,
+        y: __m128i,
+    ) {
+        // SAFETY: the function itself requires SSE2 and operates only on
+        // vector registers.
+        unsafe {
+            *a = _mm_add_epi32(_mm_add_epi32(*a, *b), x);
+            *d = rotate_right::<16, 16>(_mm_xor_si128(*d, *a));
+            *c = _mm_add_epi32(*c, *d);
+            *b = rotate_right::<12, 20>(_mm_xor_si128(*b, *c));
+            *a = _mm_add_epi32(_mm_add_epi32(*a, *b), y);
+            *d = rotate_right::<8, 24>(_mm_xor_si128(*d, *a));
+            *c = _mm_add_epi32(*c, *d);
+            *b = rotate_right::<7, 25>(_mm_xor_si128(*b, *c));
+        }
+    }
+
+    /// Compresses one block with four parallel G functions in each SSE2 vector.
     ///
     /// # Safety
     ///
-    /// The caller must establish that the current CPU and OS support AVX2.
-    #[target_feature(enable = "avx2")]
+    /// The caller must establish that the current CPU and OS support SSE2.
+    #[target_feature(enable = "sse2")]
     pub(super) unsafe fn compress(
-        chain: &mut [u64; 8],
-        counter_low: u64,
-        counter_high: u64,
-        final_flag: u64,
+        chain: &mut [u32; 8],
+        counter_low: u32,
+        counter_high: u32,
+        final_flag: u32,
         block: &[u8; BLOCK_LENGTH],
     ) {
-        // SAFETY: this entire block is guarded by the function's AVX2 target
-        // feature, and all pointers refer to properly sized local arrays.
+        // SAFETY: this block is guarded by the function's SSE2 target feature,
+        // and all pointers refer to properly sized local arrays.
         unsafe {
-            let mut message = [0u64; 16];
-            for (word, bytes) in message.iter_mut().zip(block.as_chunks::<8>().0.iter()) {
-                *word = u64::from_le_bytes(*bytes);
+            let mut message = [0u32; 16];
+            for (word, bytes) in message.iter_mut().zip(block.chunks_exact(4)) {
+                *word = u32::from_le_bytes(bytes.try_into().unwrap());
             }
 
             let original_low = set4(chain[0], chain[1], chain[2], chain[3]);
@@ -252,9 +258,9 @@ mod avx2 {
                 );
                 mix(&mut row1, &mut row2, &mut row3, &mut row4, x, y);
 
-                row2 = _mm256_permute4x64_epi64::<0x39>(row2);
-                row3 = _mm256_permute4x64_epi64::<0x4e>(row3);
-                row4 = _mm256_permute4x64_epi64::<0x93>(row4);
+                row2 = _mm_shuffle_epi32::<0x39>(row2);
+                row3 = _mm_shuffle_epi32::<0x4e>(row3);
+                row4 = _mm_shuffle_epi32::<0x93>(row4);
 
                 let x = set4(
                     message[permutation[8]],
@@ -270,33 +276,33 @@ mod avx2 {
                 );
                 mix(&mut row1, &mut row2, &mut row3, &mut row4, x, y);
 
-                row2 = _mm256_permute4x64_epi64::<0x93>(row2);
-                row3 = _mm256_permute4x64_epi64::<0x4e>(row3);
-                row4 = _mm256_permute4x64_epi64::<0x39>(row4);
+                row2 = _mm_shuffle_epi32::<0x93>(row2);
+                row3 = _mm_shuffle_epi32::<0x4e>(row3);
+                row4 = _mm_shuffle_epi32::<0x39>(row4);
             }
 
-            let low = _mm256_xor_si256(original_low, _mm256_xor_si256(row1, row3));
-            let high = _mm256_xor_si256(original_high, _mm256_xor_si256(row2, row4));
-            _mm256_storeu_si256(chain.as_mut_ptr().cast(), low);
-            _mm256_storeu_si256(chain.as_mut_ptr().add(4).cast(), high);
+            let low = _mm_xor_si128(original_low, _mm_xor_si128(row1, row3));
+            let high = _mm_xor_si128(original_high, _mm_xor_si128(row2, row4));
+            _mm_storeu_si128(chain.as_mut_ptr().cast(), low);
+            _mm_storeu_si128(chain.as_mut_ptr().add(4).cast(), high);
         }
     }
 }
 
 #[inline]
 fn compress(
-    chain: &mut [u64; 8],
-    counter_low: u64,
-    counter_high: u64,
-    final_flag: u64,
+    chain: &mut [u32; 8],
+    counter_low: u32,
+    counter_high: u32,
+    final_flag: u32,
     block: &[u8; BLOCK_LENGTH],
 ) {
-    #[cfg(all(feature = "std", any(target_arch = "x86", target_arch = "x86_64")))]
-    if std::is_x86_feature_detected!("avx2") {
-        // SAFETY: runtime feature detection includes the required CPU and OS
-        // support for executing AVX2 instructions.
+    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+    if tc_runtime::intrinsics::x86::Sse2::detect().is_some() {
+        // SAFETY: the detected token proves the current CPU and OS support
+        // SSE2.
         unsafe {
-            avx2::compress(chain, counter_low, counter_high, final_flag, block);
+            sse2::compress(chain, counter_low, counter_high, final_flag, block);
         }
         return;
     }
@@ -304,52 +310,59 @@ fn compress(
     compress_portable(chain, counter_low, counter_high, final_flag, block);
 }
 
-/// The BLAKE2b message digest with optional key, salt, and personalization.
+/// The BLAKE2s message digest with optional key, salt, and personalization.
 #[derive(Clone)]
-pub struct Blake2bDigest {
-    chain: [u64; 8],
+pub struct Blake2sDigest {
+    chain: [u32; 8],
     buffer: [u8; BLOCK_LENGTH],
     buffer_position: usize,
-    counter_low: u64,
-    counter_high: u64,
-    final_flag: u64,
+    counter_low: u32,
+    counter_high: u32,
+    final_flag: u32,
     digest_length: usize,
-    key: [u8; 64],
+    key: [u8; 32],
     key_length: usize,
-    salt: [u8; 16],
-    personalization: [u8; 16],
+    salt: [u8; 8],
+    personalization: [u8; 8],
+    // 樹/XOF 參數;序列模式為 fanout=1, depth=1,其餘 0(見 reset_state)。
+    fanout: u8,
+    depth: u8,
+    leaf_length: u32,
+    node_offset: u64,
+    node_depth: u8,
+    inner_length: u8,
 }
 
-impl Default for Blake2bDigest {
+impl Default for Blake2sDigest {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl Blake2bDigest {
-    /// Creates an unkeyed BLAKE2b-512 digest.
+impl Blake2sDigest {
+    /// Creates an unkeyed BLAKE2s-256 digest.
     pub fn new() -> Self {
         Self::with_parameters(None, DEFAULT_DIGEST_LENGTH, None, None)
     }
 
-    /// Creates an unkeyed BLAKE2b digest with an output size from 8 to 512 bits.
+    /// Creates an unkeyed BLAKE2s digest with an output size from 8 to 256 bits.
     pub fn with_digest_size(digest_bits: usize) -> Self {
         assert!(
-            (8..=512).contains(&digest_bits) && digest_bits.is_multiple_of(8),
-            "BLAKE2b digest bit length must be a multiple of 8 and not greater than 512"
+            (8..=256).contains(&digest_bits) && digest_bits % 8 == 0,
+            "BLAKE2s digest bit length must be a multiple of 8 and not greater than 256"
         );
         Self::with_parameters(None, digest_bits / 8, None, None)
     }
 
-    /// Creates keyed BLAKE2b-512. An empty key selects unkeyed hashing.
+    /// Creates keyed BLAKE2s-256. An empty key selects unkeyed hashing.
     pub fn with_key(key: &[u8]) -> Self {
         Self::with_parameters(Some(key), DEFAULT_DIGEST_LENGTH, None, None)
     }
 
-    /// Creates BLAKE2b with its full sequential-mode parameter set.
+    /// Creates BLAKE2s with its full sequential-mode parameter set.
     ///
-    /// `digest_length` is measured in bytes (1..=64), `key` may contain at
-    /// most 64 bytes, and salt/personalization must each contain exactly 16
+    /// `digest_length` is measured in bytes (1..=32), `key` may contain at
+    /// most 32 bytes, and salt/personalization must each contain exactly 8
     /// bytes when present.
     pub fn with_parameters(
         key: Option<&[u8]>,
@@ -358,23 +371,23 @@ impl Blake2bDigest {
         personalization: Option<&[u8]>,
     ) -> Self {
         assert!(
-            (1..=64).contains(&digest_length),
-            "BLAKE2b digest length must be between 1 and 64 bytes"
+            (1..=32).contains(&digest_length),
+            "BLAKE2s digest length must be between 1 and 32 bytes"
         );
         let key = key.unwrap_or_default();
-        assert!(key.len() <= 64, "BLAKE2b keys must not exceed 64 bytes");
+        assert!(key.len() <= 32, "BLAKE2s keys must not exceed 32 bytes");
         if let Some(salt) = salt {
-            assert_eq!(salt.len(), 16, "BLAKE2b salt must be exactly 16 bytes");
+            assert_eq!(salt.len(), 8, "BLAKE2s salt must be exactly 8 bytes");
         }
         if let Some(personalization) = personalization {
             assert_eq!(
                 personalization.len(),
-                16,
-                "BLAKE2b personalization must be exactly 16 bytes"
+                8,
+                "BLAKE2s personalization must be exactly 8 bytes"
             );
         }
 
-        let mut digest = Blake2bDigest {
+        let mut digest = Blake2sDigest {
             chain: [0; 8],
             buffer: [0; BLOCK_LENGTH],
             buffer_position: 0,
@@ -382,10 +395,16 @@ impl Blake2bDigest {
             counter_high: 0,
             final_flag: 0,
             digest_length,
-            key: [0; 64],
+            key: [0; 32],
             key_length: key.len(),
-            salt: [0; 16],
-            personalization: [0; 16],
+            salt: [0; 8],
+            personalization: [0; 8],
+            fanout: 1,
+            depth: 1,
+            leaf_length: 0,
+            node_offset: 0,
+            node_depth: 0,
+            inner_length: 0,
         };
         digest.key[..key.len()].copy_from_slice(key);
         if let Some(salt) = salt {
@@ -398,20 +417,95 @@ impl Blake2bDigest {
         digest
     }
 
+    /// BLAKE2xs 根雜湊建構子:序列參數(fanout=1, depth=1),但 `node_offset` 的高
+    /// 32 位攜帶 XOF 輸出長度。
+    pub(crate) fn xof_root(
+        digest_length: usize,
+        key: Option<&[u8]>,
+        salt: Option<&[u8]>,
+        personalization: Option<&[u8]>,
+        node_offset: u64,
+    ) -> Self {
+        let key = key.unwrap_or_default();
+        let mut digest = Blake2sDigest {
+            chain: [0; 8],
+            buffer: [0; BLOCK_LENGTH],
+            buffer_position: 0,
+            counter_low: 0,
+            counter_high: 0,
+            final_flag: 0,
+            digest_length,
+            key: [0; 32],
+            key_length: key.len(),
+            salt: [0; 8],
+            personalization: [0; 8],
+            fanout: 1,
+            depth: 1,
+            leaf_length: 0,
+            node_offset,
+            node_depth: 0,
+            inner_length: 0,
+        };
+        digest.key[..key.len()].copy_from_slice(key);
+        if let Some(salt) = salt {
+            digest.salt.copy_from_slice(salt);
+        }
+        if let Some(personalization) = personalization {
+            digest.personalization.copy_from_slice(personalization);
+        }
+        digest.reset_state();
+        digest
+    }
+
+    /// BLAKE2xs 中間節點建構子:fanout=depth=0、leaf/inner = `inner_length`、帶
+    /// `node_offset`(高位 XOF 長度 + 低位區塊索引),無 key/salt/personalization。
+    pub(crate) fn xof_node(digest_length: usize, inner_length: u8, node_offset: u64) -> Self {
+        let mut digest = Blake2sDigest {
+            chain: [0; 8],
+            buffer: [0; BLOCK_LENGTH],
+            buffer_position: 0,
+            counter_low: 0,
+            counter_high: 0,
+            final_flag: 0,
+            digest_length,
+            key: [0; 32],
+            key_length: 0,
+            salt: [0; 8],
+            personalization: [0; 8],
+            fanout: 0,
+            depth: 0,
+            leaf_length: inner_length as u32,
+            node_offset,
+            node_depth: 0,
+            inner_length,
+        };
+        digest.reset_state();
+        digest
+    }
+
     fn reset_state(&mut self) {
         self.chain = IV;
-        self.chain[0] ^= self.digest_length as u64 | ((self.key_length as u64) << 8) | 0x0101_0000;
-        self.chain[4] ^= u64::from_le_bytes(self.salt[..8].try_into().expect("8-byte salt"));
-        self.chain[5] ^= u64::from_le_bytes(self.salt[8..].try_into().expect("8-byte salt"));
-        self.chain[6] ^= u64::from_le_bytes(
-            self.personalization[..8]
+        // 完整 BLAKE2s 參數區塊(序列模式:fanout=1, depth=1,其餘 0 → 與舊行為一致)。
+        self.chain[0] ^= self.digest_length as u32
+            | ((self.key_length as u32) << 8)
+            | ((self.fanout as u32) << 16)
+            | ((self.depth as u32) << 24);
+        self.chain[1] ^= self.leaf_length;
+        self.chain[2] ^= self.node_offset as u32;
+        self.chain[3] ^= ((self.node_offset >> 32) as u32)
+            | ((self.node_depth as u32) << 16)
+            | ((self.inner_length as u32) << 24);
+        self.chain[4] ^= u32::from_le_bytes(self.salt[..4].try_into().expect("4-byte salt"));
+        self.chain[5] ^= u32::from_le_bytes(self.salt[4..].try_into().expect("4-byte salt"));
+        self.chain[6] ^= u32::from_le_bytes(
+            self.personalization[..4]
                 .try_into()
-                .expect("8-byte personalization"),
+                .expect("4-byte personalization"),
         );
-        self.chain[7] ^= u64::from_le_bytes(
-            self.personalization[8..]
+        self.chain[7] ^= u32::from_le_bytes(
+            self.personalization[4..]
                 .try_into()
-                .expect("8-byte personalization"),
+                .expect("4-byte personalization"),
         );
 
         self.buffer = [0; BLOCK_LENGTH];
@@ -426,8 +520,9 @@ impl Blake2bDigest {
     }
 
     fn increment_counter(&mut self, increment: usize) {
+        let increment = increment as u32;
         let previous = self.counter_low;
-        self.counter_low = self.counter_low.wrapping_add(increment as u64);
+        self.counter_low = self.counter_low.wrapping_add(increment);
         if self.counter_low < previous {
             self.counter_high = self.counter_high.wrapping_add(1);
         }
@@ -457,12 +552,8 @@ impl Blake2bDigest {
     }
 }
 
-impl TryDigest for Blake2bDigest {
+impl TryDigest for Blake2sDigest {
     type Error = Infallible;
-
-    fn algorithm_name(&self) -> &str {
-        "BLAKE2b"
-    }
 
     fn digest_size(&self) -> usize {
         self.digest_length
@@ -496,7 +587,7 @@ impl TryDigest for Blake2bDigest {
         while input.len() > BLOCK_LENGTH {
             let block: &[u8; BLOCK_LENGTH] = input[..BLOCK_LENGTH]
                 .try_into()
-                .expect("128-byte BLAKE2b block");
+                .expect("64-byte BLAKE2s block");
             self.increment_counter(BLOCK_LENGTH);
             compress(
                 &mut self.chain,
@@ -514,7 +605,7 @@ impl TryDigest for Blake2bDigest {
     }
 
     fn try_do_final(&mut self, output: &mut [u8]) -> Result<usize, Self::Error> {
-        self.final_flag = u64::MAX;
+        self.final_flag = u32::MAX;
         self.increment_counter(self.buffer_position);
         self.buffer[self.buffer_position..].fill(0);
         self.compress_buffer();
@@ -522,7 +613,7 @@ impl TryDigest for Blake2bDigest {
         for (word, output) in self
             .chain
             .iter()
-            .zip(output[..self.digest_length].chunks_mut(8))
+            .zip(output[..self.digest_length].chunks_mut(4))
         {
             let bytes = word.to_le_bytes();
             output.copy_from_slice(&bytes[..output.len()]);
@@ -536,6 +627,13 @@ impl TryDigest for Blake2bDigest {
     fn try_reset(&mut self) -> Result<(), Self::Error> {
         self.reset_state();
         Ok(())
+    }
+}
+
+impl core::fmt::Display for Blake2sDigest {
+    /// Writes the algorithm name without inspecting key material.
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.write_str("BLAKE2s")
     }
 }
 
@@ -554,9 +652,9 @@ mod tests {
         encoded
     }
 
-    fn digest_hex(digest: &mut Blake2bDigest, input: &[u8]) -> String {
+    fn digest_hex(digest: &mut Blake2sDigest, input: &[u8]) -> String {
         digest.update(input);
-        let mut output = [0u8; 64];
+        let mut output = [0u8; 32];
         let size = digest.do_final(&mut output);
         hex(&output[..size])
     }
@@ -566,56 +664,98 @@ mod tests {
         let vectors: &[(&[u8], &str)] = &[
             (
                 b"",
-                "786a02f742015903c6c6fd852552d272912f4740e15847618a86e217f71f5419d25e1031afee585313896444934eb04b903a685b1448b755d56f701afe9be2ce",
+                "69217a3079908094e11121d042354a7c1f55b6482ca1a51e1b250dfd1ed0eef9",
             ),
             (
                 b"abc",
-                "ba80a53f981c4d0d6a2797b69f12f6e94c212f14685ac4b74b12bb6fdbffa2d17d87c5392aab792dc252d5de4533cc9518d38aa8dbf1925ab92386edd4009923",
+                "508c5e8c327c14e2e1a72ba34eeb452f37458b209ed63a294d999b4c86675982",
             ),
             (
                 b"The quick brown fox jumps over the lazy dog",
-                "a8add4bdddfd93e4877d2746e62817b116364a1fa7bc148d95090bc7333b3673f82401cf7aa2e4cb1ecd90296e3f14cb5413f8ed77be73045b13914cdcd6a918",
+                "606beeec743ccbeff6cbcdf5d5302aa855c256c29b88c8ed331ea1a6bf3c8812",
             ),
         ];
         for &(message, expected) in vectors {
-            assert_eq!(digest_hex(&mut Blake2bDigest::new(), message), expected);
+            assert_eq!(digest_hex(&mut Blake2sDigest::new(), message), expected);
         }
     }
 
     #[test]
     fn bc_keyed_vectors() {
-        let key: Vec<u8> = (0..64).collect();
+        let key: Vec<u8> = (0..32).collect();
         let vectors: &[(&[u8], &str)] = &[
             (
                 b"",
-                "10ebb67700b1868efb4417987acf4690ae9d972fb7a590c2f02871799aaa4786b5e996e8f0f4eb981fc214b005f42d2ff4233499391653df7aefcbc13fc51568",
+                "48a8997da407876b3d79c0d92325ad3b89cbb754d86ab71aee047ad345fd2c49",
             ),
             (
                 &[0x00],
-                "961f6dd1e4dd30f63901690c512e78e4b45e4742ed197c3c5e45c549fd25f2e4187b0bc9fe30492b16b0d0bc4ef9b0f34c7003fac09a5ef1532e69430234cebd",
+                "40d15fee7c328830166ac3f918650f807e7e01e177258cdc0a39b11f598066f1",
             ),
             (
                 &[0x00, 0x01],
-                "da2cfbe2d8409a0f38026113884f84b50156371ae304c4430173d08a99d9fb1b983164a3770706d537f49e0c916d9f32b95cc37a95b99d857436f0232c88a965",
+                "6bb71300644cd3991b26ccd4d274acd1adeab8b1d7914546c1198bbe9fc9d803",
             ),
         ];
-        let mut digest = Blake2bDigest::with_key(&key);
+        let mut digest = Blake2sDigest::with_key(&key);
         for &(message, expected) in vectors {
             assert_eq!(digest_hex(&mut digest, message), expected);
         }
     }
 
+    fn self_test_sequence(length: usize, seed: u32) -> Vec<u8> {
+        let mut a = 0xdead_4badu32.wrapping_mul(seed);
+        let mut b = 1u32;
+        let mut output = Vec::with_capacity(length);
+        for _ in 0..length {
+            let t = a.wrapping_add(b);
+            a = b;
+            b = t;
+            output.push((t >> 24) as u8);
+        }
+        output
+    }
+
+    #[test]
+    fn rfc_self_test() {
+        let mut test_digest = Blake2sDigest::new();
+        let mut intermediate = [0u8; 32];
+
+        for output_length in [16, 20, 28, 32] {
+            for input_length in [0, 3, 64, 65, 255, 1024] {
+                let input = self_test_sequence(input_length, input_length as u32);
+
+                let mut unkeyed = Blake2sDigest::with_digest_size(output_length * 8);
+                unkeyed.update(&input);
+                unkeyed.do_final(&mut intermediate);
+                test_digest.update(&intermediate[..output_length]);
+
+                let key = self_test_sequence(output_length, output_length as u32);
+                let mut keyed =
+                    Blake2sDigest::with_parameters(Some(&key), output_length, None, None);
+                keyed.update(&input);
+                keyed.do_final(&mut intermediate);
+                test_digest.update(&intermediate[..output_length]);
+            }
+        }
+
+        assert_eq!(
+            digest_hex(&mut test_digest, b""),
+            "6a411f08ce25adcdfb02aba641451cec53c598b24f4fc787fbdc88797f4c1dfe"
+        );
+    }
+
     #[test]
     fn parameters_output_length_clone_chunking_and_reset() {
-        let key: Vec<u8> = (0..64).collect();
-        let salt: Vec<u8> = (0..16).collect();
-        let personalization: Vec<u8> = (16..32).collect();
+        let key: Vec<u8> = (0..32).collect();
+        let salt: Vec<u8> = (0..8).collect();
+        let personalization: Vec<u8> = (8..16).collect();
         let message: Vec<u8> = (0..78).collect();
         let mut digest =
-            Blake2bDigest::with_parameters(Some(&key), 16, Some(&salt), Some(&personalization));
-        assert_eq!(digest.algorithm_name(), "BLAKE2b");
+            Blake2sDigest::with_parameters(Some(&key), 16, Some(&salt), Some(&personalization));
+        assert_eq!(digest.to_string(), "BLAKE2s");
         assert_eq!(digest.digest_size(), 16);
-        assert_eq!(digest.byte_length(), 128);
+        assert_eq!(digest.byte_length(), 64);
         digest.update(&message);
 
         let mut cloned = digest.clone();
@@ -624,10 +764,9 @@ mod tests {
         digest.do_final(&mut expected);
         cloned.do_final(&mut cloned_output);
         assert_eq!(expected, cloned_output);
-        assert_eq!(hex(&expected), "b6d48ed5771b17414c4e08bd8d8a3bc4");
 
         let mut chunked =
-            Blake2bDigest::with_parameters(Some(&key), 16, Some(&salt), Some(&personalization));
+            Blake2sDigest::with_parameters(Some(&key), 16, Some(&salt), Some(&personalization));
         for chunk in message.chunks(7) {
             chunked.update(chunk);
         }
@@ -646,24 +785,24 @@ mod tests {
     #[test]
     fn every_output_size_and_block_boundaries() {
         let message: Vec<u8> = (0..=255).collect();
-        for bytes in 1..=64 {
-            let mut a = Blake2bDigest::with_digest_size(bytes * 8);
-            let mut b = Blake2bDigest::with_parameters(None, bytes, None, None);
+        for bytes in 1..=32 {
+            let mut a = Blake2sDigest::with_digest_size(bytes * 8);
+            let mut b = Blake2sDigest::with_parameters(None, bytes, None, None);
             a.update(&message);
-            for chunk in message.chunks(127) {
+            for chunk in message.chunks(63) {
                 b.update(chunk);
             }
-            let mut left = [0u8; 64];
-            let mut right = [0u8; 64];
+            let mut left = [0u8; 32];
+            let mut right = [0u8; 32];
             assert_eq!(a.do_final(&mut left), bytes);
             assert_eq!(b.do_final(&mut right), bytes);
             assert_eq!(&left[..bytes], &right[..bytes]);
         }
 
-        for length in [0, 1, 127, 128, 129, 255, 256] {
+        for length in [0, 1, 63, 64, 65, 127, 128, 255, 256] {
             let input = &message[..length];
-            let expected = digest_hex(&mut Blake2bDigest::new(), input);
-            let mut bytewise = Blake2bDigest::new();
+            let expected = digest_hex(&mut Blake2sDigest::new(), input);
+            let mut bytewise = Blake2sDigest::new();
             for byte in input {
                 bytewise.update(core::slice::from_ref(byte));
             }
@@ -671,25 +810,25 @@ mod tests {
         }
     }
 
-    #[cfg(all(feature = "std", any(target_arch = "x86", target_arch = "x86_64")))]
+    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
     #[test]
-    fn avx2_matches_portable() {
-        if !std::is_x86_feature_detected!("avx2") {
+    fn sse2_matches_portable() {
+        if tc_runtime::intrinsics::x86::Sse2::detect().is_none() {
             return;
         }
 
-        for case in 0..32u64 {
+        for case in 0..32u32 {
             let block = core::array::from_fn(|i| (i as u8).wrapping_mul(17) ^ case as u8);
-            let chain = core::array::from_fn(|i| IV[i] ^ case.wrapping_mul((i + 1) as u64));
+            let chain = core::array::from_fn(|i| IV[i] ^ case.wrapping_mul((i + 1) as u32));
             for &(counter_low, counter_high, final_flag) in
-                &[(0, 0, 0), (127, 0, u64::MAX), (u64::MAX - 3, case, 0)]
+                &[(0, 0, 0), (63, 0, u32::MAX), (u32::MAX - 3, case, 0)]
             {
                 let mut portable = chain;
                 let mut accelerated = chain;
                 compress_portable(&mut portable, counter_low, counter_high, final_flag, &block);
-                // SAFETY: guarded by runtime AVX2 detection above.
+                // SAFETY: guarded by runtime SSE2 detection above.
                 unsafe {
-                    avx2::compress(
+                    sse2::compress(
                         &mut accelerated,
                         counter_low,
                         counter_high,

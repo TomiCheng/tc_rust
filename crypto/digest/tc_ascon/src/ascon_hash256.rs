@@ -54,10 +54,6 @@ impl AsconHash256 {
 impl TryDigest for AsconHash256 {
     type Error = Infallible;
 
-    fn algorithm_name(&self) -> &str {
-        "Ascon-Hash256"
-    }
-
     fn digest_size(&self) -> usize {
         DIGEST_LENGTH
     }
@@ -108,12 +104,7 @@ impl TryDigest for AsconHash256 {
         self.state[0] ^= u64::from_le_bytes(final_block);
         p12(&mut self.state);
 
-        for (index, chunk) in output[..DIGEST_LENGTH]
-            .as_chunks_mut::<RATE>()
-            .0
-            .iter_mut()
-            .enumerate()
-        {
+        for (index, chunk) in output[..DIGEST_LENGTH].chunks_exact_mut(RATE).enumerate() {
             if index != 0 {
                 p12(&mut self.state);
             }
@@ -132,8 +123,17 @@ impl TryDigest for AsconHash256 {
     }
 }
 
+impl core::fmt::Display for AsconHash256 {
+    /// Writes the algorithm name without inspecting key material.
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.write_str("Ascon-Hash256")
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use alloc::string::ToString;
+
     use alloc::{format, string::String, vec::Vec};
 
     use super::*;
@@ -269,7 +269,7 @@ mod tests {
         let expected = digest_hex(&mut AsconHash256::new(), &message);
 
         let mut digest = AsconHash256::new();
-        assert_eq!(digest.algorithm_name(), "Ascon-Hash256");
+        assert_eq!(digest.to_string(), "Ascon-Hash256");
         assert_eq!(digest.digest_size(), 32);
         assert_eq!(digest.byte_length(), 8);
 

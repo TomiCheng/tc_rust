@@ -362,10 +362,6 @@ impl Blake3Digest {
 impl TryDigest for Blake3Digest {
     type Error = Infallible;
 
-    fn algorithm_name(&self) -> &str {
-        "BLAKE3"
-    }
-
     fn digest_size(&self) -> usize {
         self.digest_len
     }
@@ -410,8 +406,15 @@ impl TryXof for Blake3Digest {
 
 /// 從位元組讀 LE u32 字填入 `words`。
 fn load_words_le(bytes: &[u8], words: &mut [u32]) {
-    for (word, chunk) in words.iter_mut().zip(bytes.as_chunks::<4>().0.iter()) {
-        *word = u32::from_le_bytes(*chunk);
+    for (word, chunk) in words.iter_mut().zip(bytes.chunks_exact(4)) {
+        *word = u32::from_le_bytes(chunk.try_into().unwrap());
+    }
+}
+
+impl core::fmt::Display for Blake3Digest {
+    /// Writes the algorithm name without inspecting key material.
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.write_str("BLAKE3")
     }
 }
 
@@ -455,7 +458,7 @@ mod tests {
     #[test]
     fn accessors() {
         let d = Blake3Digest::new();
-        assert_eq!(d.algorithm_name(), "BLAKE3");
+        assert_eq!(d.to_string(), "BLAKE3");
         assert_eq!(d.digest_size(), 32);
         assert_eq!(d.byte_length(), 64);
     }

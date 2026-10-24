@@ -12,15 +12,22 @@ remain in [`tc_digest`](../tc_digest):
 - `TryXof` extends `TryDigest` with variable-length output.
 - `Xof` is the infallible XOF convenience interface.
 
+`tc_blake` (BLAKE2 and BLAKE3) and `tc_ascon` (the Ascon hashes and XOFs, with
+ISAP, whose hash runs on the Ascon permutation) already implement the published
+[`tc_digest`](https://crates.io/crates/tc_digest), whose types name themselves
+through `Display` instead of `algorithm_name`; the other crates here still use
+the local one.
+
 Most algorithms are streaming: call `update` one or more times, then finalize
 into a caller-provided output buffer. Successful finalization resets the object
 so it can be reused. XOFs can instead squeeze as much output as the caller
 needs.
 
 Every implementation supports `no_std`. Crates that retain owned buffers or
-runtime-generated names use `alloc`. The `std` features in `tc_blake2` and
-`tc_haraka` enable runtime CPU-feature detection; disabling their default
-features selects the portable backends.
+runtime-generated names use `alloc`. `tc_blake` detects AVX2 and SSE2 at run
+time through `tc_runtime` without `std`; the `std` feature of `tc_haraka`
+enables its runtime CPU-feature detection, and disabling its default features
+selects the portable backend.
 
 All algorithms from the former monolithic digest crate are available in the
 focused crates below.
@@ -133,7 +140,7 @@ is outside the current digest API.
 On x86 and x86-64, the default `std` features select accelerated backends when
 the CPU reports support:
 
-- `tc_blake2`: AVX2 for BLAKE2b and SSE2 for BLAKE2s.
+- `tc_blake`: AVX2 for BLAKE2b and SSE2 for BLAKE2s.
 - `tc_haraka`: AES-NI for Haraka-256/512.
 
 Disabling default features selects the portable implementations. Digest results
@@ -170,8 +177,7 @@ cargo test -p tc_sha
 Check the portable backends explicitly:
 
 ```bash
-cargo build -p tc_blake2 --no-default-features
-cargo test -p tc_blake2 --no-default-features
+cargo test -p tc_blake --features tc_runtime/disable-x86-avx2,tc_runtime/disable-x86-sse2
 cargo build -p tc_haraka --no-default-features
 ```
 
@@ -182,17 +188,17 @@ Additional validation commands:
 cargo test --workspace --no-run
 
 # Lint an individual family.
-cargo clippy -p tc_blake2 --all-targets -- -D warnings
+cargo clippy -p tc_blake --all-targets -- -D warnings
 
 # Build the documentation.
-cargo doc -p tc_blake2 --no-deps
+cargo doc -p tc_blake --no-deps
 
 # Full PHOTON-Beetle KAT; intentionally ignored in normal debug tests.
 cargo test -p tc_photon_beetle --release --test photon_beetle_kat -- --ignored
 
 # BLAKE2 throughput benchmarks.
-cargo bench -p tc_blake2 --bench blake2b
-cargo bench -p tc_blake2 --bench blake2s
-cargo bench -p tc_blake2 --bench blake2b --no-default-features
-cargo bench -p tc_blake2 --bench blake2s --no-default-features
+cargo bench -p tc_blake --bench blake2b
+cargo bench -p tc_blake --bench blake2s
+cargo bench -p tc_blake --bench blake2b --no-default-features
+cargo bench -p tc_blake --bench blake2s --no-default-features
 ```

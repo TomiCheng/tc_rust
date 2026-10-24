@@ -6,7 +6,7 @@
 mod blake3_vectors;
 
 use blake3_vectors::TEST_VECTORS;
-use tc_blake3::Blake3Digest;
+use tc_blake::Blake3Digest;
 use tc_digest::{Digest, Xof};
 
 const KEY: &[u8] = b"whats the Elvish word for friend";

@@ -1,34 +1,26 @@
 //! BLAKE2s end-to-end throughput benchmarks.
 //!
-//! Run the runtime-dispatched std backend:
-//! `cargo bench -p tc_blake2 --bench blake2s`
+//! Run the runtime-dispatched backend:
+//! `cargo bench -p tc_blake --bench blake2s`
 //!
-//! Run the portable backend with `tc_digest` compiled as `no_std`:
-//! `cargo bench -p tc_blake2 --bench blake2s --no-default-features`
+//! Run the portable backend by disabling the SIMD path in `tc_runtime`:
+//! `cargo bench -p tc_blake --bench blake2s --features tc_runtime/disable-x86-sse2`
 
 use std::hint::black_box;
 
 use criterion::{BenchmarkId, Criterion, Throughput, criterion_group, criterion_main};
-use tc_blake2::Blake2sDigest;
+use tc_blake::Blake2sDigest;
 use tc_digest::Digest;
 
 const INPUT_SIZES: [usize; 5] = [64, 128, 1024, 64 * 1024, 1024 * 1024];
 
 fn backend_name() -> &'static str {
-    #[cfg(all(feature = "std", any(target_arch = "x86", target_arch = "x86_64")))]
-    if std::is_x86_feature_detected!("sse2") {
+    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+    if tc_runtime::intrinsics::x86::Sse2::detect().is_some() {
         return "sse2";
     }
 
-    #[cfg(feature = "std")]
-    {
-        "std-portable"
-    }
-
-    #[cfg(not(feature = "std"))]
-    {
-        "no_std-portable"
-    }
+    "portable"
 }
 
 fn input(size: usize) -> Vec<u8> {

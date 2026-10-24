@@ -54,10 +54,6 @@ impl IsapDigest {
 impl TryDigest for IsapDigest {
     type Error = Infallible;
 
-    fn algorithm_name(&self) -> &str {
-        "ISAP Hash"
-    }
-
     fn digest_size(&self) -> usize {
         DIGEST_LENGTH
     }
@@ -107,7 +103,7 @@ impl TryDigest for IsapDigest {
         final_block[self.buffer_position] = 0x80;
         self.state[0] ^= u64::from_be_bytes(final_block);
 
-        for chunk in output[..DIGEST_LENGTH].as_chunks_mut::<BYTE_LENGTH>().0 {
+        for chunk in output[..DIGEST_LENGTH].chunks_exact_mut(BYTE_LENGTH) {
             p12(&mut self.state);
             chunk.copy_from_slice(&self.state[0].to_be_bytes());
         }
@@ -124,8 +120,17 @@ impl TryDigest for IsapDigest {
     }
 }
 
+impl core::fmt::Display for IsapDigest {
+    /// Writes the algorithm name without inspecting key material.
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.write_str("ISAP Hash")
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use alloc::string::ToString;
+
     use alloc::{format, string::String, vec::Vec};
 
     use super::*;
@@ -237,7 +242,7 @@ mod tests {
         let expected = digest_hex(&mut IsapDigest::new(), &message);
 
         let mut digest = IsapDigest::new();
-        assert_eq!(digest.algorithm_name(), "ISAP Hash");
+        assert_eq!(digest.to_string(), "ISAP Hash");
         assert_eq!(digest.digest_size(), 32);
         assert_eq!(digest.byte_length(), 8);
 

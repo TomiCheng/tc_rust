@@ -891,7 +891,7 @@ dependencies = [
 name = "tc_ascon"
 version = "0.1.0"
 dependencies = [
- "tc_digest 0.1.0",
+ "tc_digest 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -1000,18 +1000,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "tc_blake2"
+name = "tc_blake"
 version = "0.1.0"
 dependencies = [
  "criterion",
- "tc_digest 0.1.0",
-]
-
-[[package]]
-name = "tc_blake3"
-version = "0.1.0"
-dependencies = [
- "tc_digest 0.1.0",
+ "tc_digest 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tc_runtime",
 ]
 
 [[package]]
@@ -1499,13 +1493,6 @@ dependencies = [
  "tc_sha 0.1.1",
  "tc_twofish_v2",
  "tc_zeroize",
-]
-
-[[package]]
-name = "tc_isap"
-version = "0.1.0"
-dependencies = [
- "tc_digest 0.1.0",
 ]
 
 [[package]]

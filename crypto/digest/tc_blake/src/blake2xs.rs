@@ -15,7 +15,7 @@ use tc_digest::{Digest, TryDigest, TryXof};
 use crate::blake2s::Blake2sDigest;
 
 /// Magic value selecting unknown output length (max 2^32 × 32 bytes).
-pub const UNKNOWN_DIGEST_LENGTH: usize = 65535;
+const UNKNOWN_DIGEST_LENGTH: usize = 65535;
 
 const INNER: usize = 32;
 const MAX_BLOCKS: u64 = 1 << 32;
@@ -48,6 +48,9 @@ impl Default for Blake2xsDigest {
 }
 
 impl Blake2xsDigest {
+    /// Magic value selecting unknown output length (max 2^32 × 32 bytes).
+    pub const UNKNOWN_DIGEST_LENGTH: usize = UNKNOWN_DIGEST_LENGTH;
+
     /// Creates a BLAKE2xs XOF with unknown output length.
     pub fn new() -> Self {
         Self::with_parameters(UNKNOWN_DIGEST_LENGTH, None, None, None)
@@ -102,10 +105,6 @@ impl Blake2xsDigest {
 
 impl TryDigest for Blake2xsDigest {
     type Error = Infallible;
-
-    fn algorithm_name(&self) -> &str {
-        "BLAKE2xs"
-    }
 
     fn digest_size(&self) -> usize {
         self.digest_length
@@ -182,6 +181,13 @@ impl TryXof for Blake2xsDigest {
     }
 }
 
+impl core::fmt::Display for Blake2xsDigest {
+    /// Writes the algorithm name without inspecting key material.
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.write_str("BLAKE2xs")
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use alloc::{format, string::String, vec};
@@ -200,7 +206,7 @@ mod tests {
     #[test]
     fn accessors() {
         let d = Blake2xsDigest::with_digest_size(64);
-        assert_eq!(d.algorithm_name(), "BLAKE2xs");
+        assert_eq!(d.to_string(), "BLAKE2xs");
         assert_eq!(d.digest_size(), 64);
         assert_eq!(d.byte_length(), 64);
     }

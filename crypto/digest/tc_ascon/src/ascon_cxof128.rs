@@ -83,9 +83,10 @@ impl AsconCXof128 {
             state[0] ^= (z.len() as u64) << 3;
             p12(&mut state);
 
-            let (chunks, rem) = z.as_chunks::<RATE>();
+            let chunks = z.chunks_exact(RATE);
+            let rem = chunks.remainder();
             for block in chunks {
-                state[0] ^= u64::from_le_bytes(*block);
+                state[0] ^= u64::from_le_bytes(block.try_into().unwrap());
                 p12(&mut state);
             }
             let mut last = [0u8; RATE];
@@ -123,10 +124,6 @@ impl AsconCXof128 {
 
 impl TryDigest for AsconCXof128 {
     type Error = Infallible;
-
-    fn algorithm_name(&self) -> &str {
-        "Ascon-CXOF128"
-    }
 
     fn digest_size(&self) -> usize {
         DIGEST_LENGTH
@@ -235,8 +232,17 @@ impl TryXof for AsconCXof128 {
     }
 }
 
+impl core::fmt::Display for AsconCXof128 {
+    /// Writes the algorithm name without inspecting key material.
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.write_str("Ascon-CXOF128")
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use alloc::string::ToString;
+
     use alloc::{format, string::String, vec, vec::Vec};
 
     use super::*;
@@ -317,7 +323,7 @@ mod tests {
     #[test]
     fn accessors() {
         let d = AsconCXof128::new();
-        assert_eq!(d.algorithm_name(), "Ascon-CXOF128");
+        assert_eq!(d.to_string(), "Ascon-CXOF128");
         assert_eq!(d.digest_size(), 32);
         assert_eq!(d.byte_length(), 8);
     }
