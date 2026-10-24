@@ -8,8 +8,15 @@ mod blake2b;
 mod blake2s;
 mod blake2xs;
 mod blake3;
+mod blake3_portable;
+#[cfg(feature = "blake3")]
+mod blake3_upstream;
 
 pub use blake2b::Blake2bDigest;
 pub use blake2s::Blake2sDigest;
 pub use blake2xs::Blake2xsDigest;
-pub use blake3::Blake3Digest;
+// `self::` 避開與 `blake3` crate 同名的歧義。
+pub use self::blake3::Blake3Digest;
+pub use blake3_portable::Blake3PortableDigest;
+#[cfg(feature = "blake3")]
+pub use blake3_upstream::Blake3UpstreamDigest;

@@ -137,14 +137,19 @@ is outside the current digest API.
 
 ## 5. Features and allocation
 
-On x86 and x86-64, the default `std` features select accelerated backends when
-the CPU reports support:
+On x86 and x86-64, accelerated backends are selected when the CPU reports
+support:
 
-- `tc_blake`: AVX2 for BLAKE2b and SSE2 for BLAKE2s.
-- `tc_haraka`: AES-NI for Haraka-256/512.
+- `tc_blake`: AVX2 for BLAKE2b and SSE2 for BLAKE2s, detected through
+  `tc_runtime` without `std`.
+- `tc_haraka`: AES-NI for Haraka-256/512, with the default `std` feature.
 
-Disabling default features selects the portable implementations. Digest results
-are identical in both configurations.
+The optional `blake3` feature of `tc_blake` runs `Blake3Digest` on the BLAKE3
+team's `blake3` crate, which hashes several chunks in parallel with SIMD.
+`Blake3PortableDigest` stays available either way. On aarch64 that crate builds
+its NEON code with a C compiler; enable `blake3/pure` where none is available.
+
+Digest results are identical in every configuration.
 
 The crates containing `NullDigest`, `Prehash`, `ShortenedDigest`, cSHAKE,
 BLAKE3, TupleHash, ParallelHash, Skein, or runtime-generated SHA-512/t names use
@@ -178,6 +183,7 @@ Check the portable backends explicitly:
 
 ```bash
 cargo test -p tc_blake --features tc_runtime/disable-x86-avx2,tc_runtime/disable-x86-sse2
+cargo test -p tc_blake --features blake3
 cargo build -p tc_haraka --no-default-features
 ```
 
@@ -196,9 +202,10 @@ cargo doc -p tc_blake --no-deps
 # Full PHOTON-Beetle KAT; intentionally ignored in normal debug tests.
 cargo test -p tc_photon_beetle --release --test photon_beetle_kat -- --ignored
 
-# BLAKE2 throughput benchmarks.
+# BLAKE2 and BLAKE3 throughput benchmarks.
 cargo bench -p tc_blake --bench blake2b
 cargo bench -p tc_blake --bench blake2s
-cargo bench -p tc_blake --bench blake2b --no-default-features
-cargo bench -p tc_blake --bench blake2s --no-default-features
+cargo bench -p tc_blake --bench blake2b --features tc_runtime/disable-x86-avx2
+cargo bench -p tc_blake --bench blake2s --features tc_runtime/disable-x86-sse2
+cargo bench -p tc_blake --bench blake3 --features blake3
 ```

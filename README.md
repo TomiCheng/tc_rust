@@ -237,9 +237,9 @@ The workspace uses three runtime levels:
 | `no_std + alloc` | No standard library, but owned buffers and dynamically sized state are available. Required by digests, modes, wrappers, math, and some block ciphers. |
 | `std` | The default where offered. It preserves the same algorithms and adds conveniences such as lazy caches or runtime CPU-feature detection. |
 
-Notable `std` acceleration currently includes AES-NI for AES, AVX2 for BLAKE2b,
-SSE2 for BLAKE2s, and AES-NI for Haraka. Portable implementations remain
-available when `std` is disabled.
+Notable `std` acceleration currently includes AES-NI for AES and Haraka.
+BLAKE2b (AVX2) and BLAKE2s (SSE2) detect their SIMD paths without `std`.
+Portable implementations remain available when `std` is disabled.
 
 ## Building and testing
 
