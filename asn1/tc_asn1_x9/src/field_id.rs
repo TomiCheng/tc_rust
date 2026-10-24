@@ -147,10 +147,10 @@ impl FieldId {
     }
 
     pub(crate) fn validate(&self) -> Result<(), Asn1Error> {
-        if let Self::PrimeField(p) = self
-            && (p.is_negative() || p.as_bytes().last().is_none_or(|b| b & 1 == 0))
-        {
-            return Err(Asn1Error::MalformedValue);
+        if let Self::PrimeField(p) = self {
+            if p.is_negative() || p.as_bytes().last().is_none_or(|b| b & 1 == 0) {
+                return Err(Asn1Error::MalformedValue);
+            }
         }
         Ok(())
     }
