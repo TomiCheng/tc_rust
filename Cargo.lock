@@ -1235,6 +1235,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_dh_kek"
+version = "0.1.0"
+dependencies = [
+ "tc_asn1",
+ "tc_asn1_x9",
+ "tc_digest 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tc_kdf",
+ "tc_sha 0.1.1",
+ "tc_zeroize",
+]
+
+[[package]]
 name = "tc_digest"
 version = "0.1.0"
 

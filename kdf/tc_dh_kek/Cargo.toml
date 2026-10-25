@@ -1,0 +1,19 @@
+[package]
+name = "tc_dh_kek"
+description = "The RFC 2631 Diffie-Hellman KEK derivation, after Bouncy Castle's DHKekGenerator."
+version = "0.1.0"
+edition.workspace = true
+rust-version = "1.85"
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+tc_asn1 = "0.1.2"
+tc_asn1_x9 = { version = "0.1.0", path = "../../asn1/tc_asn1_x9" }
+tc_digest = "0.1.0"
+tc_kdf = { version = "0.1.0", path = "../tc_kdf" }
+# init 時複製 ZZ 與 extraInfo，drop 或重新 init 時清除
+tc_zeroize = { version = "0.1.0", features = ["alloc"] }
+
+[dev-dependencies]
+tc_sha = "0.1.1"
