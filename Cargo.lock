@@ -937,9 +937,12 @@ dependencies = [
 
 [[package]]
 name = "tc_asn1"
-version = "0.1.1"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "90efe93493d0e3abf7ca5c03d1cfec0244a0c273386e0e37c99cb887d83cb068"
+checksum = "f47eeaa19506c517e2eb20c70e0e2ce05e1c30ce620e5b0a1c5f99509291dfae"
+dependencies = [
+ "tc_zeroize",
+]
 
 [[package]]
 name = "tc_asn1_pkcs"
@@ -948,6 +951,7 @@ dependencies = [
  "tc_asn1",
  "tc_asn1_x500",
  "tc_asn1_x509",
+ "tc_zeroize",
 ]
 
 [[package]]
@@ -973,6 +977,7 @@ name = "tc_asn1_x9"
 version = "0.1.0"
 dependencies = [
  "tc_asn1",
+ "tc_zeroize",
 ]
 
 [[package]]

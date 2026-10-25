@@ -25,13 +25,16 @@ use tc_asn1::{
     EncodeContent, EncodeTagged, EncodingOptions, Tagged, tag,
 };
 
+use tc_zeroize::{Zeroize, ZeroizeOnDrop};
+
 use crate::RsaPublicKey;
 
 /// One additional prime and its CRT exponent and coefficient.
 ///
-/// This type does not verify that the values form a key. Secret octets are not
-/// wiped; the caller owns their lifetime. Debug redaction is a convenience,
-/// not a security boundary. Equality and hashing are not constant time.
+/// This type does not verify that the values form a key. All three integers
+/// are wiped when the value is dropped, including when decoding or `new` fails
+/// after reading them. Debug redaction is a convenience, not a security
+/// boundary. Equality and hashing are not constant time.
 ///
 /// ```
 /// use tc_asn1_pkcs::OtherPrimeInfo;
@@ -55,17 +58,25 @@ impl OtherPrimeInfo {
         exponent: Asn1Integer,
         coefficient: Asn1Integer,
     ) -> Result<Self, Asn1Error> {
-        if [&prime, &exponent, &coefficient]
-            .iter()
-            .any(|v| v.is_negative() || v.as_bytes() == [0])
-        {
-            return Err(Asn1Error::MalformedValue);
-        }
-        Ok(Self {
+        // Built before checking, so a rejected value is still dropped and wiped.
+        let value = Self {
             prime,
             exponent,
             coefficient,
-        })
+        };
+        value.check()?;
+        Ok(value)
+    }
+
+    /// Rejects any zero or negative integer.
+    fn check(&self) -> Result<(), Asn1Error> {
+        if [&self.prime, &self.exponent, &self.coefficient]
+            .into_iter()
+            .any(not_positive)
+        {
+            return Err(Asn1Error::MalformedValue);
+        }
+        Ok(())
     }
 
     /// Returns the prime.
@@ -87,6 +98,25 @@ impl OtherPrimeInfo {
     }
 }
 
+impl Zeroize for OtherPrimeInfo {
+    /// Wipes all three integers, leaving zero.
+    /// Constant time with respect to the values: the work depends only on the capacities.
+    fn zeroize(&mut self) {
+        self.prime.zeroize();
+        self.exponent.zeroize();
+        self.coefficient.zeroize();
+    }
+}
+
+impl Drop for OtherPrimeInfo {
+    /// Constant time with respect to the values: the work depends only on the capacities.
+    fn drop(&mut self) {
+        self.zeroize();
+    }
+}
+
+impl ZeroizeOnDrop for OtherPrimeInfo {}
+
 impl fmt::Debug for OtherPrimeInfo {
     /// Variable time: branches only on the encoding structure.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -104,11 +134,17 @@ impl DecodeInner for OtherPrimeInfo {
     ) -> Result<(usize, Self), Asn1Error> {
         let element = Asn1Ref::parse(buff, context)?.assert_tag(Self::TAG)?;
         let mut fields = element.children(context)?;
-        let prime = fields.get()?;
-        let exponent = fields.get()?;
-        let coefficient = fields.get()?;
+        // Each integer goes straight into the container, so an error after
+        // reading one drops and wipes it.
+        let mut value = Self {
+            prime: fields.get()?,
+            exponent: Asn1Integer::from(0),
+            coefficient: Asn1Integer::from(0),
+        };
+        value.exponent = fields.get()?;
+        value.coefficient = fields.get()?;
         fields.end()?;
-        let value = Self::new(prime, exponent, coefficient)?;
+        value.check()?;
         Ok((element.total_len(), value))
     }
 }
@@ -153,9 +189,13 @@ impl Encode for OtherPrimeInfo {
 
 /// An RSA private key with a derived two-prime or multi-prime version.
 ///
-/// This type does not verify that the values form a key. Secret octets are not
-/// wiped; the caller owns their lifetime. Debug redaction is a convenience,
-/// not a security boundary. Equality and hashing are not constant time.
+/// This type does not verify that the values form a key. The private exponent,
+/// the primes, the CRT exponents, the coefficient and any additional primes are
+/// wiped when the value is dropped, including when decoding or `new` fails after
+/// reading them; the modulus and public exponent are public. Other copies are
+/// the caller's to protect: the input and encoded output buffers, and clones
+/// until they are dropped. Debug redaction is a convenience, not a security
+/// boundary. Equality and hashing are not constant time.
 ///
 /// ```
 /// use tc_asn1_pkcs::RsaPrivateKey;
@@ -194,22 +234,8 @@ impl RsaPrivateKey {
         exponent2: Asn1Integer,
         coefficient: Asn1Integer,
     ) -> Result<Self, Asn1Error> {
-        if [
-            &modulus,
-            &public_exponent,
-            &private_exponent,
-            &prime1,
-            &prime2,
-            &exponent1,
-            &exponent2,
-            &coefficient,
-        ]
-        .iter()
-        .any(|v| v.is_negative() || v.as_bytes() == [0])
-        {
-            return Err(Asn1Error::MalformedValue);
-        }
-        Ok(Self {
+        // Built before checking, so a rejected key is still dropped and wiped.
+        let value = Self {
             modulus,
             public_exponent,
             private_exponent,
@@ -219,7 +245,29 @@ impl RsaPrivateKey {
             exponent2,
             coefficient,
             other_prime_infos: Asn1SequenceOf::new(Vec::new()),
-        })
+        };
+        value.check()?;
+        Ok(value)
+    }
+
+    /// Rejects any zero or negative integer among the eight mandatory fields.
+    fn check(&self) -> Result<(), Asn1Error> {
+        if [
+            &self.modulus,
+            &self.public_exponent,
+            &self.private_exponent,
+            &self.prime1,
+            &self.prime2,
+            &self.exponent1,
+            &self.exponent2,
+            &self.coefficient,
+        ]
+        .into_iter()
+        .any(not_positive)
+        {
+            return Err(Asn1Error::MalformedValue);
+        }
+        Ok(())
     }
 
     /// Returns the modulus.
@@ -301,6 +349,30 @@ impl RsaPrivateKey {
     }
 }
 
+impl Zeroize for RsaPrivateKey {
+    /// Wipes every secret field, leaving zero and no additional primes; the
+    /// modulus and public exponent are public.
+    /// Constant time with respect to the values: the work depends only on the capacities.
+    fn zeroize(&mut self) {
+        self.private_exponent.zeroize();
+        self.prime1.zeroize();
+        self.prime2.zeroize();
+        self.exponent1.zeroize();
+        self.exponent2.zeroize();
+        self.coefficient.zeroize();
+        self.other_prime_infos.zeroize();
+    }
+}
+
+impl Drop for RsaPrivateKey {
+    /// Constant time with respect to the values: the work depends only on the capacities.
+    fn drop(&mut self) {
+        self.zeroize();
+    }
+}
+
+impl ZeroizeOnDrop for RsaPrivateKey {}
+
 impl fmt::Debug for RsaPrivateKey {
     /// Variable time: branches only on the encoding structure.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -326,26 +398,28 @@ impl DecodeInner for RsaPrivateKey {
         let element = Asn1Ref::parse(buff, context)?.assert_tag(Self::TAG)?;
         let mut fields = element.children(context)?;
         let version: Asn1Integer = fields.get()?;
-        let modulus = fields.get()?;
-        let public_exponent = fields.get()?;
-        let private_exponent = fields.get()?;
-        let prime1 = fields.get()?;
-        let prime2 = fields.get()?;
-        let exponent1 = fields.get()?;
-        let exponent2 = fields.get()?;
-        let coefficient = fields.get()?;
+        // The secret fields go straight into the container, so an error after
+        // reading one drops and wipes it.
+        let mut value = Self {
+            modulus: fields.get()?,
+            public_exponent: fields.get()?,
+            private_exponent: Asn1Integer::from(0),
+            prime1: Asn1Integer::from(0),
+            prime2: Asn1Integer::from(0),
+            exponent1: Asn1Integer::from(0),
+            exponent2: Asn1Integer::from(0),
+            coefficient: Asn1Integer::from(0),
+            other_prime_infos: Asn1SequenceOf::new(Vec::new()),
+        };
+        value.private_exponent = fields.get()?;
+        value.prime1 = fields.get()?;
+        value.prime2 = fields.get()?;
+        value.exponent1 = fields.get()?;
+        value.exponent2 = fields.get()?;
+        value.coefficient = fields.get()?;
         let infos = fields.get_opt::<Asn1SequenceOf<OtherPrimeInfo>>()?;
         fields.end()?;
-        let mut value = Self::new(
-            modulus,
-            public_exponent,
-            private_exponent,
-            prime1,
-            prime2,
-            exponent1,
-            exponent2,
-            coefficient,
-        )?;
+        value.check()?;
         if let Some(infos) = infos {
             value = value.with_other_prime_infos(infos.into_elements())?;
         }
@@ -413,6 +487,11 @@ impl Encode for RsaPrivateKey {
     fn encode(&self, rules: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         self.encode_tagged(Self::TAG, rules, out)
     }
+}
+
+/// Zero and negative values are not valid RSA components.
+fn not_positive(value: &Asn1Integer) -> bool {
+    value.is_negative() || value.as_bytes() == [0]
 }
 
 #[cfg(test)]
@@ -597,6 +676,38 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn zeroizing_clears_every_secret_component_and_keeps_the_public_key() {
+        use tc_zeroize::Zeroize;
+        let mut key = sample()
+            .with_other_prime_infos(vec![
+                OtherPrimeInfo::new(23.into(), 3.into(), 5.into()).unwrap(),
+            ])
+            .unwrap();
+        key.zeroize();
+        let zero = Asn1Integer::from(0);
+        for secret in [
+            key.private_exponent(),
+            key.prime1(),
+            key.prime2(),
+            key.exponent1(),
+            key.exponent2(),
+            key.coefficient(),
+        ] {
+            assert_eq!(secret, &zero);
+        }
+        assert!(key.other_prime_infos().is_empty());
+        assert_eq!(key.modulus(), &Asn1Integer::from(323));
+        assert_eq!(key.public_exponent(), &Asn1Integer::from(5));
+
+        let mut prime = OtherPrimeInfo::new(23.into(), 3.into(), 5.into()).unwrap();
+        prime.zeroize();
+        assert_eq!(
+            [prime.prime(), prime.exponent(), prime.coefficient()],
+            [&zero, &zero, &zero]
+        );
     }
 
     #[test]

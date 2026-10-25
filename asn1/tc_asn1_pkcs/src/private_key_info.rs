@@ -28,12 +28,14 @@ use tc_asn1::{
 };
 use tc_asn1_x500::Attribute;
 use tc_asn1_x509::alg::AlgorithmIdentifier;
+use tc_zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
 
 /// An opaque private key, its algorithm and optional attributes and public key.
 ///
-/// Secret octets are not wiped; the caller owns their lifetime, including input
-/// and encoded output buffers. Debug redaction is a convenience, not a security
-/// boundary. Equality and hashing are not constant time. The private key is not
+/// The private key octets are wiped when the value is dropped, including when
+/// decoding fails after reading them. Other copies are the caller's to protect:
+/// the input and encoded output buffers, and clones until they are dropped.
+/// Debug redaction is a convenience, not a security boundary. Equality and hashing are not constant time. The private key is not
 /// parsed or checked against the algorithm or public key.
 ///
 /// ```
@@ -102,10 +104,10 @@ impl PrivateKeyInfo {
         &self.private_key
     }
 
-    /// Moves out the private key octets without cloning or wiping them.
+    /// Moves out the private key octets without cloning them, still wiped on drop.
     /// Variable time: branches only on the encoding structure.
-    pub fn into_private_key(self) -> Asn1OctetString {
-        self.private_key
+    pub fn into_private_key(mut self) -> Zeroizing<Asn1OctetString> {
+        Zeroizing::new(core::mem::take(&mut self.private_key))
     }
 
     /// Returns the attributes in construction or wire order; empty means absent.
@@ -120,6 +122,24 @@ impl PrivateKeyInfo {
         self.public_key.as_ref()
     }
 }
+
+impl Zeroize for PrivateKeyInfo {
+    /// Wipes the private key octets; the algorithm, attributes and public key
+    /// are public. Constant time with respect to the octets: the work depends
+    /// only on the capacity.
+    fn zeroize(&mut self) {
+        self.private_key.zeroize();
+    }
+}
+
+impl Drop for PrivateKeyInfo {
+    /// Constant time with respect to the octets: the work depends only on the capacity.
+    fn drop(&mut self) {
+        self.zeroize();
+    }
+}
+
+impl ZeroizeOnDrop for PrivateKeyInfo {}
 
 impl fmt::Debug for PrivateKeyInfo {
     /// Variable time: branches only on the encoding structure.
@@ -143,11 +163,12 @@ impl DecodeInner for PrivateKeyInfo {
         let mut fields = element.children(context)?;
         let version: Asn1Integer = fields.get()?;
         let algorithm = fields.get()?;
-        let private_key = fields.get()?;
+        // The key lives in the container from here on, so an error below drops
+        // and wipes it.
+        let mut value = Self::new(algorithm, fields.get()?);
         let attributes = fields.get_implicit_opt::<Asn1SetOf<Attribute>>([0xa0])?;
         let public_key = fields.get_implicit_opt::<Asn1BitString>([0x81])?;
         fields.end()?;
-        let mut value = Self::new(algorithm, private_key);
         if let Some(attributes) = attributes {
             if attributes.members().is_empty() {
                 return Err(Asn1Error::MalformedValue);
@@ -289,6 +310,18 @@ mod tests {
         assert_eq!(octets.as_bytes().as_ptr(), pointer);
         assert_eq!(&octets.as_bytes()[..2], &[4, 32]);
         assert_eq!(&octets.as_bytes()[2..], &[0x11; 32]);
+    }
+
+    #[test]
+    fn zeroizing_empties_the_private_key_and_keeps_the_algorithm() {
+        use tc_zeroize::Zeroize;
+        let mut info = sample();
+        info.zeroize();
+        assert!(info.private_key().as_bytes().is_empty());
+        assert_eq!(
+            info.algorithm().algorithm(),
+            &"1.3.101.112".parse::<Asn1Oid>().unwrap()
+        );
     }
 
     #[test]

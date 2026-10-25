@@ -17,14 +17,17 @@ use tc_asn1::{
     Asn1BitString, Asn1Error, Asn1Integer, Asn1OctetString, Asn1Ref, Decode, DecodeInner,
     DecodingContext, Encode, EncodeContent, EncodeTagged, EncodingOptions, Explicit, Tagged, tag,
 };
+use tc_zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
 
 use crate::X962Parameters;
 
-/// A private-key encoding container, not protected secret storage.
+/// A private-key encoding container.
 ///
-/// Octets are not wiped; the caller owns their lifetime, including input and
-/// encoded output buffers. Debug redaction is a logging convenience, not a
-/// security boundary. Equality and hashing are not constant-time operations.
+/// The private key octets are wiped when the value is dropped, including when
+/// decoding fails after reading them. Other copies are the caller's to protect:
+/// the input and encoded output buffers, and clones until they are dropped.
+/// Debug redaction is a logging convenience, not a security boundary. Equality
+/// and hashing are not constant-time operations.
 /// Private key octets are copied without branching on their values; only their
 /// public length affects construction and encoding control flow.
 ///
@@ -86,11 +89,11 @@ impl EcPrivateKey {
         &self.private_key
     }
 
-    /// Moves the private key octets out without cloning them.
+    /// Moves the private key octets out without cloning them, still wiped on drop.
     /// Variable time: branches only on the encoding structure.
     /// Control flow does not depend on private-key octet values.
-    pub fn into_private_key(self) -> Asn1OctetString {
-        self.private_key
+    pub fn into_private_key(mut self) -> Zeroizing<Asn1OctetString> {
+        Zeroizing::new(core::mem::take(&mut self.private_key))
     }
 
     /// Returns the optional domain parameters.
@@ -107,6 +110,23 @@ impl EcPrivateKey {
         self.public_key.as_ref()
     }
 }
+
+impl Zeroize for EcPrivateKey {
+    /// Wipes the private key octets; the parameters and public key are public.
+    /// Constant time with respect to the octets: the work depends only on the capacity.
+    fn zeroize(&mut self) {
+        self.private_key.zeroize();
+    }
+}
+
+impl Drop for EcPrivateKey {
+    /// Constant time with respect to the octets: the work depends only on the capacity.
+    fn drop(&mut self) {
+        self.zeroize();
+    }
+}
+
+impl ZeroizeOnDrop for EcPrivateKey {}
 
 struct RedactedKeyLength(usize);
 
@@ -142,13 +162,12 @@ impl DecodeInner for EcPrivateKey {
         if fields.get::<Asn1Integer>()?.as_bytes() != [1] {
             return Err(Asn1Error::MalformedValue);
         }
-        let private_key = fields.get()?;
-        let parameters = fields.get_explicit_opt::<X962Parameters>([0xa0])?;
-        let public_key = fields.get_explicit_opt::<Asn1BitString>([0xa1])?;
+        // The key lives in the container from here on, so an error below drops
+        // and wipes it.
+        let mut value = Self::new(fields.get()?)?;
+        value.parameters = fields.get_explicit_opt::<X962Parameters>([0xa0])?;
+        value.public_key = fields.get_explicit_opt::<Asn1BitString>([0xa1])?;
         fields.end()?;
-        let mut value = Self::new(private_key)?;
-        value.parameters = parameters;
-        value.public_key = public_key;
         Ok((element.total_len(), value))
     }
 }
@@ -317,6 +336,19 @@ mod tests {
                 value,
             );
         }
+    }
+
+    #[test]
+    fn zeroizing_empties_the_private_key_and_keeps_the_public_fields() {
+        use tc_zeroize::Zeroize;
+        let mut value = EcPrivateKey::new(Asn1OctetString::new(&[0x11; 32]))
+            .unwrap()
+            .with_parameters(EcNamedCurve::PRIME256V1.oid().into())
+            .with_public_key(Asn1BitString::from_bytes(&[4, 1, 2]));
+        value.zeroize();
+        assert!(value.private_key().as_bytes().is_empty());
+        assert!(value.parameters().is_some());
+        assert!(value.public_key().is_some());
     }
 
     #[test]
