@@ -19,7 +19,7 @@ use tc_asn1::{
 ///
 /// ```
 /// use tc_asn1::{Decode, DecodingOptions, Encode, EncodingOptions};
-/// use tc_asn1_x9::EcdsaSigValue;
+/// use tc_asn1_x9::ec::EcdsaSigValue;
 ///
 /// let signature = EcdsaSigValue::new(128.into(), 1.into())?;
 /// let der = signature.encode_to_vec(&EncodingOptions::DER)?;

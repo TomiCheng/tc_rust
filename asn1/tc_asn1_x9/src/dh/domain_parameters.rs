@@ -17,13 +17,13 @@ use tc_asn1::{
     EncodeTagged, EncodingOptions, Tagged, tag,
 };
 
-use crate::ValidationParams;
+use crate::dh::ValidationParams;
 
 /// X9.42 Diffie-Hellman group parameters, without group arithmetic.
 ///
 /// ```
 /// use tc_asn1::{Decode, DecodingOptions, Encode, EncodingOptions};
-/// use tc_asn1_x9::DomainParameters;
+/// use tc_asn1_x9::dh::DomainParameters;
 ///
 /// let params = DomainParameters::new(23.into(), 4.into(), 11.into()).with_j(2.into());
 /// let der = params.encode_to_vec(&EncodingOptions::DER)?;
@@ -171,7 +171,7 @@ mod tests {
     use tc_asn1::{Asn1BitString, Asn1Error, Decode, DecodingOptions, Encode, EncodingOptions};
 
     use super::DomainParameters;
-    use crate::ValidationParams;
+    use crate::dh::ValidationParams;
 
     fn base() -> DomainParameters {
         DomainParameters::new(23.into(), 4.into(), 11.into())

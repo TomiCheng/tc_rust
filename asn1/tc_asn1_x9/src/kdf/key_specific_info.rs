@@ -21,7 +21,7 @@ use tc_asn1::{
 ///
 /// ```
 /// use tc_asn1::{Asn1Oid, Decode, DecodingOptions, Encode, EncodingOptions};
-/// use tc_asn1_x9::KeySpecificInfo;
+/// use tc_asn1_x9::kdf::KeySpecificInfo;
 ///
 /// let cms3deswrap: Asn1Oid = "1.2.840.113549.1.9.16.3.6".parse()?;
 /// let info = KeySpecificInfo::new(cms3deswrap, 1);

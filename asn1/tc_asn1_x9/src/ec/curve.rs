@@ -18,7 +18,7 @@ use tc_asn1::{
 ///
 /// ```
 /// use tc_asn1::{Asn1OctetString, Decode, DecodingOptions, Encode, EncodingOptions};
-/// use tc_asn1_x9::Curve;
+/// use tc_asn1_x9::ec::Curve;
 ///
 /// let curve = Curve::new(Asn1OctetString::new(&[1]), Asn1OctetString::new(&[2]));
 /// let der = curve.encode_to_vec(&EncodingOptions::DER)?;

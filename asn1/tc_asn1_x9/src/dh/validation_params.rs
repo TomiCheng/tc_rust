@@ -18,7 +18,7 @@ use tc_asn1::{
 ///
 /// ```
 /// use tc_asn1::{Asn1BitString, Decode, DecodingOptions, Encode, EncodingOptions};
-/// use tc_asn1_x9::ValidationParams;
+/// use tc_asn1_x9::dh::ValidationParams;
 ///
 /// let params = ValidationParams::new(Asn1BitString::from_bytes(&[0x5a; 20]), 42.into());
 /// let der = params.encode_to_vec(&EncodingOptions::DER)?;

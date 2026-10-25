@@ -19,13 +19,13 @@ use tc_asn1::{
     EncodeContent, EncodeTagged, EncodingOptions, Tagged, tag,
 };
 
-use crate::{Curve, FieldId};
+use crate::ec::{Curve, FieldId};
 
 /// Explicit domain parameters with version one and structurally consistent widths.
 ///
 /// ```
 /// use tc_asn1::{Asn1OctetString, Decode, DecodingOptions, Encode, EncodingOptions};
-/// use tc_asn1_x9::{Curve, FieldId, X9EcParameters};
+/// use tc_asn1_x9::ec::{Curve, FieldId, X9EcParameters};
 ///
 /// let value = X9EcParameters::new(
 ///     FieldId::prime_field(251)?,
@@ -222,7 +222,7 @@ mod tests {
     };
 
     use super::X9EcParameters;
-    use crate::{Curve, FieldId};
+    use crate::ec::{Curve, FieldId};
 
     fn curve(a: &[u8], b: &[u8]) -> Curve {
         Curve::new(Asn1OctetString::new(a), Asn1OctetString::new(b))

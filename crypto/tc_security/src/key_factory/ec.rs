@@ -10,7 +10,7 @@ use tc_asn1::{
     Asn1BitString, Asn1Object, Asn1OctetString, Asn1Oid, Encode, EncodingOptions, NamedOid,
 };
 use tc_asn1_pkcs::PrivateKeyInfo;
-use tc_asn1_x9::{EcNamedCurve, EcPrivateKey as EcPrivateKeyStructure, X962Parameters};
+use tc_asn1_x9::ec::{EcNamedCurve, EcPrivateKey as EcPrivateKeyStructure, X962Parameters};
 use tc_asn1_x509::alg::AlgorithmIdentifier;
 use tc_asn1_x509::cert::SubjectPublicKeyInfo;
 use tc_bigint::{ArrayEncoding, PaddedBigUint};

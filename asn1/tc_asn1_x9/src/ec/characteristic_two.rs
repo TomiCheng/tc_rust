@@ -16,13 +16,13 @@ use tc_asn1::{
     DecodingContext, Encode, EncodeContent, EncodeTagged, EncodingOptions, NamedOid, Tagged, tag,
 };
 
-use crate::encoding::{Exponent, OidRef};
+use crate::ec::encoding::{Exponent, OidRef};
 
 /// Three increasing positive exponents.
 ///
 /// ```
 /// use tc_asn1::{Decode, DecodingOptions, Encode, EncodingOptions};
-/// use tc_asn1_x9::Pentanomial;
+/// use tc_asn1_x9::ec::Pentanomial;
 ///
 /// let value = Pentanomial::new(1, 2, 3)?;
 /// let der = value.encode_to_vec(&EncodingOptions::DER)?;
@@ -131,7 +131,7 @@ impl Encode for Pentanomial {
 ///
 /// ```
 /// use tc_asn1::{Asn1Null, Decode, DecodingOptions, Encode, EncodingOptions};
-/// use tc_asn1_x9::{Basis, CharacteristicTwo};
+/// use tc_asn1_x9::ec::{Basis, CharacteristicTwo};
 ///
 /// let value = CharacteristicTwo::new(5, Basis::other("1.2.3".parse()?, Asn1Null.into())?)?;
 /// let der = value.encode_to_vec(&EncodingOptions::DER)?;
@@ -163,7 +163,7 @@ impl UnknownBasis {
 ///
 /// ```
 /// use tc_asn1::{Decode, DecodingOptions, Encode, EncodingOptions};
-/// use tc_asn1_x9::{Basis, CharacteristicTwo};
+/// use tc_asn1_x9::ec::{Basis, CharacteristicTwo};
 ///
 /// let value = CharacteristicTwo::new(5, Basis::Trinomial(2))?;
 /// let der = value.encode_to_vec(&EncodingOptions::DER)?;
@@ -271,7 +271,7 @@ impl fmt::Display for Basis {
 ///
 /// ```
 /// use tc_asn1::{Decode, DecodingOptions, Encode, EncodingOptions};
-/// use tc_asn1_x9::{Basis, CharacteristicTwo};
+/// use tc_asn1_x9::ec::{Basis, CharacteristicTwo};
 ///
 /// let field = CharacteristicTwo::new(163, Basis::Trinomial(7))?;
 /// let der = field.encode_to_vec(&EncodingOptions::DER)?;

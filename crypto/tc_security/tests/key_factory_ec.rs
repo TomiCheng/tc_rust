@@ -6,7 +6,7 @@ use std::error::Error;
 
 use tc_asn1::{Asn1OctetString, Asn1Oid, Encode, EncodingOptions};
 use tc_asn1_pkcs::PrivateKeyInfo;
-use tc_asn1_x9::EcPrivateKey as EcPrivateKeyStructure;
+use tc_asn1_x9::ec::EcPrivateKey as EcPrivateKeyStructure;
 use tc_asn1_x509::alg::AlgorithmIdentifier;
 use tc_security::generate::{self, KeyGenParams};
 use tc_security::params::{AnyParams, EcCurve};

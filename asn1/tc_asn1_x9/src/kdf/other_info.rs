@@ -16,13 +16,13 @@ use tc_asn1::{
     EncodeContent, EncodeTagged, EncodingOptions, Explicit, Tagged, tag,
 };
 
-use crate::KeySpecificInfo;
+use crate::kdf::KeySpecificInfo;
 
 /// The DER-encoded context of one X9.42 KEK derivation block.
 ///
 /// ```
 /// use tc_asn1::{Asn1OctetString, Decode, DecodingOptions, Encode, EncodingOptions};
-/// use tc_asn1_x9::{KeySpecificInfo, OtherInfo};
+/// use tc_asn1_x9::kdf::{KeySpecificInfo, OtherInfo};
 ///
 /// let key_info = KeySpecificInfo::new("1.2.840.113549.1.9.16.3.6".parse()?, 1);
 /// let info = OtherInfo::new(key_info, Asn1OctetString::new(&192u32.to_be_bytes()));
@@ -141,7 +141,7 @@ mod tests {
     use tc_asn1::{Asn1Error, Asn1OctetString, Decode, DecodingOptions, Encode, EncodingOptions};
 
     use super::OtherInfo;
-    use crate::KeySpecificInfo;
+    use crate::kdf::KeySpecificInfo;
 
     fn key_info(arc: u8) -> KeySpecificInfo {
         let oid = alloc::format!("1.2.840.113549.1.9.16.3.{arc}");

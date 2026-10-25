@@ -16,13 +16,13 @@ use tc_asn1::{
     EncodeContent, EncodeTagged, EncodingOptions, tag,
 };
 
-use crate::{EcNamedCurve, X9EcParameters};
+use crate::ec::{EcNamedCurve, X9EcParameters};
 
 /// Curve parameters selected by their ASN.1 tag.
 ///
 /// ```
 /// use tc_asn1::{Decode, DecodingOptions, Encode, EncodingOptions};
-/// use tc_asn1_x9::{EcNamedCurve, X962Parameters};
+/// use tc_asn1_x9::ec::{EcNamedCurve, X962Parameters};
 ///
 /// let value = X962Parameters::from(EcNamedCurve::PRIME256V1.oid());
 /// let der = value.encode_to_vec(&EncodingOptions::DER)?;

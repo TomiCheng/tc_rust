@@ -15,7 +15,7 @@ use tc_asn1::{Asn1Oid, NamedOid};
 ///
 /// ```
 /// use tc_asn1::{Asn1Oid, Decode, DecodingOptions, Encode, EncodingOptions};
-/// use tc_asn1_x9::EcNamedCurve;
+/// use tc_asn1_x9::ec::EcNamedCurve;
 ///
 /// let oid = EcNamedCurve::SECP256K1.oid();
 /// let der = oid.encode_to_vec(&EncodingOptions::DER)?;

@@ -16,7 +16,7 @@ use tc_asn1::{
 ///
 /// ```
 /// use tc_asn1::{Decode, DecodingOptions, Encode, EncodingOptions};
-/// use tc_asn1_x9::DhPublicKey;
+/// use tc_asn1_x9::dh::DhPublicKey;
 ///
 /// let key = DhPublicKey::new(0x1234.into());
 /// let der = key.encode_to_vec(&EncodingOptions::DER)?;

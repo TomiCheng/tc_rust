@@ -1,8 +1,8 @@
 //! X9 algorithm and scheme object identifiers: X9.62 EC keys and ECDSA,
 //! X9.57 DSA, X9.42 Diffie-Hellman and X9.63 key-agreement schemes.
 //!
-//! Field, basis and named-curve identifiers stay with [`crate::FieldId`],
-//! [`crate::CharacteristicTwo`] and [`crate::EcNamedCurve`].
+//! Field, basis and named-curve identifiers stay with [`crate::ec::FieldId`],
+//! [`crate::ec::CharacteristicTwo`] and [`crate::ec::EcNamedCurve`].
 
 use tc_asn1::{Asn1Oid, NamedOid};
 
@@ -78,7 +78,7 @@ impl X9Algorithm {
     );
 
     /// The X9.42 Diffie-Hellman public key type, whose parameters are
-    /// [`DomainParameters`](crate::DomainParameters).
+    /// [`DomainParameters`](crate::dh::DomainParameters).
     pub const DH_PUBLIC_NUMBER: NamedOid = NamedOid::new(
         &[0x2a, 0x86, 0x48, 0xce, 0x3e, 0x02, 0x01],
         "1.2.840.10046.2.1",

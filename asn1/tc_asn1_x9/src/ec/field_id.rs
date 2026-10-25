@@ -16,14 +16,14 @@ use tc_asn1::{
     Encode, EncodeContent, EncodeTagged, EncodingOptions, NamedOid, Tagged, tag,
 };
 
-use crate::CharacteristicTwo;
-use crate::encoding::OidRef;
+use crate::ec::CharacteristicTwo;
+use crate::ec::encoding::OidRef;
 
 /// An unrecognized field identifier and its parameters. Use [`FieldId::other`].
 ///
 /// ```
 /// use tc_asn1::{Asn1Null, Decode, DecodingOptions, Encode, EncodingOptions};
-/// use tc_asn1_x9::FieldId;
+/// use tc_asn1_x9::ec::FieldId;
 ///
 /// let field = FieldId::other("1.2.3".parse()?, Asn1Null.into())?;
 /// let der = field.encode_to_vec(&EncodingOptions::DER)?;
@@ -55,7 +55,7 @@ impl UnknownField {
 ///
 /// ```
 /// use tc_asn1::{Decode, DecodingOptions, Encode, EncodingOptions};
-/// use tc_asn1_x9::FieldId;
+/// use tc_asn1_x9::ec::FieldId;
 ///
 /// let field = FieldId::prime_field(251)?;
 /// assert_eq!(field.field_size_bytes(), Some(1));
@@ -237,7 +237,7 @@ mod tests {
     use tc_asn1::{Asn1Error, Asn1Null, Decode, DecodingOptions, Encode, EncodingOptions};
 
     use super::FieldId;
-    use crate::{Basis, CharacteristicTwo};
+    use crate::ec::{Basis, CharacteristicTwo};
 
     #[test]
     fn a_251_modulus_has_a_sign_octet_but_one_octet_field_elements() {

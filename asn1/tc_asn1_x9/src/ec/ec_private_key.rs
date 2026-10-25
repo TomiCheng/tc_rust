@@ -19,7 +19,7 @@ use tc_asn1::{
 };
 use tc_zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
 
-use crate::X962Parameters;
+use crate::ec::X962Parameters;
 
 /// A private-key encoding container.
 ///
@@ -33,7 +33,7 @@ use crate::X962Parameters;
 ///
 /// ```
 /// use tc_asn1::{Asn1OctetString, Decode, DecodingOptions, Encode, EncodingOptions};
-/// use tc_asn1_x9::{EcNamedCurve, EcPrivateKey};
+/// use tc_asn1_x9::ec::{EcNamedCurve, EcPrivateKey};
 ///
 /// let key = EcPrivateKey::new(Asn1OctetString::new(&[0x11; 32]))?
 ///     .with_parameters(EcNamedCurve::PRIME256V1.oid().into());
@@ -232,7 +232,7 @@ mod tests {
     };
 
     use super::EcPrivateKey;
-    use crate::{EcNamedCurve, X962Parameters};
+    use crate::ec::{EcNamedCurve, X962Parameters};
 
     #[test]
     fn the_rfc_5915_shaped_fixture_round_trips_with_explicit_optional_fields() {
