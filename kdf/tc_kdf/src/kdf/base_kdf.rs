@@ -5,7 +5,8 @@ use core::convert::Infallible;
 use tc_digest::Digest;
 use tc_zeroize::Zeroize;
 
-use crate::{Kdf, KdfError, KdfInit, KdfParams};
+use crate::kdf::KdfParams;
+use crate::{Kdf, KdfError, KdfInit};
 
 /// KDF1 (ISO 18033-2): the counter starts at 0.
 pub type Kdf1<D> = BaseKdf<D, 0>;

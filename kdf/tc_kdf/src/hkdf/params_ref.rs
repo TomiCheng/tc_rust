@@ -1,4 +1,4 @@
-use crate::HkdfParams;
+use crate::hkdf::HkdfParams;
 
 /// Borrowed [`HkdfParams`]. The caller owns the bytes and wipes them; nothing is checked here.
 #[derive(Clone, Copy)]

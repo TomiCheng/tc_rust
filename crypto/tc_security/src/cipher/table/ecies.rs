@@ -6,7 +6,7 @@ use std::convert::Infallible;
 
 use tc_buffered_cipher::{BufferedCipher, BufferedCipherInit, BufferedError, CipherDirection};
 use tc_ies::{IesEngine, IesParamsRef};
-use tc_kdf::Kdf2;
+use tc_kdf::kdf::Kdf2;
 use tc_macs::{Hmac, Mac};
 use tc_zeroize::Zeroize;
 

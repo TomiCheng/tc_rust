@@ -1,5 +1,6 @@
 use tc_digest::Digest;
-use tc_kdf::{ConcatenationKdf, Kdf, KdfError, KdfInit, KdfParamsRef};
+use tc_kdf::kdf::{ConcatenationKdf, KdfParamsRef};
+use tc_kdf::{Kdf, KdfError, KdfInit};
 use tc_sha::{Sha1Digest, Sha256Digest, Sha512Digest};
 
 fn hex(text: &str) -> Vec<u8> {

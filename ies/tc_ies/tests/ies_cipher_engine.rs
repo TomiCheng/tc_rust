@@ -11,7 +11,7 @@ use tc_ecdh_v2::EcdhBasicAgreement;
 use tc_fp_custom::named_curves::SECP192R1;
 use tc_fp_custom::{SecP192R1FieldElement, SecPCtCurve};
 use tc_ies::{IesCipherEngine, IesCipherParamsRef, IesError};
-use tc_kdf::Kdf2;
+use tc_kdf::kdf::Kdf2;
 use tc_macs::Hmac;
 use tc_sha::Sha1Digest;
 use tc_twofish_v2::TwofishEngine;

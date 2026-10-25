@@ -7,7 +7,8 @@ use core::error::Error;
 
 use tc_agreement::{Agreement, AgreementInit};
 use tc_block_cipher::KeyRef;
-use tc_kdf::{Kdf, KdfInit, KdfParamsRef};
+use tc_kdf::kdf::KdfParamsRef;
+use tc_kdf::{Kdf, KdfInit};
 use tc_macs::{Mac, MacInit};
 use tc_zeroize::Zeroizing;
 

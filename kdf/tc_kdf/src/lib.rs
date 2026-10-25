@@ -2,11 +2,20 @@
 //! a KDF turns a shared secret and optional context into as many key bytes
 //! as the caller asks for.
 //!
+//! - [`kdf`]: KDF1, KDF2 and the concatenation KDF, over a digest.
+//! - [`hkdf`]: HKDF, over HMAC.
+//! - [`sp800_108`]: the SP 800-108 counter, feedback and double-pipeline
+//!   KDFs, over any MAC.
+//!
+//! [`Kdf`] and [`KdfInit`] are what every function implements, and
+//! [`KdfError`] what they all report.
+//!
 //! A shared secret from a key agreement, turned into an AES-128 key with KDF2
 //! over SHA-256:
 //!
 //! ```
-//! use tc_kdf::{Kdf, Kdf2, KdfInit, KdfParamsRef};
+//! use tc_kdf::kdf::{Kdf2, KdfParamsRef};
+//! use tc_kdf::{Kdf, KdfInit};
 //! use tc_sha::Sha256Digest;
 //!
 //! // The shared secret, and the context the protocol specifies.
@@ -26,32 +35,11 @@
 
 extern crate alloc;
 
-mod base_kdf;
-mod concatenation_kdf;
 mod errors;
-#[cfg(feature = "hkdf")]
-mod hkdf;
-mod params;
-#[cfg(feature = "sp800-108")]
-mod sp800_108;
+pub mod hkdf;
+pub mod kdf;
+pub mod sp800_108;
 mod traits;
 
-pub use base_kdf::{BaseKdf, Kdf1, Kdf2};
-pub use concatenation_kdf::ConcatenationKdf;
 pub use errors::KdfError;
-#[cfg(feature = "sp800-108")]
-pub use errors::KdfInitError;
-#[cfg(feature = "hkdf")]
-pub use hkdf::Hkdf;
-#[cfg(feature = "hkdf")]
-pub use params::HkdfParamsRef;
-pub use params::KdfParamsRef;
-#[cfg(feature = "sp800-108")]
-pub use params::{KdfCounterParamsRef, KdfDoublePipelineParamsRef, KdfFeedbackParamsRef};
-#[cfg(feature = "sp800-108")]
-pub use sp800_108::{KdfCounter, KdfDoublePipeline, KdfFeedback};
-#[cfg(feature = "hkdf")]
-pub use traits::HkdfParams;
-pub use traits::{Kdf, KdfInit, KdfParams};
-#[cfg(feature = "sp800-108")]
-pub use traits::{KdfCounterParams, KdfDoublePipelineParams, KdfFeedbackParams};
+pub use traits::{Kdf, KdfInit};

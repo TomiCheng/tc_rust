@@ -1,7 +1,8 @@
 use core::convert::Infallible;
 
 use tc_digest::{Digest, TryDigest};
-use tc_kdf::{Kdf, Kdf1, Kdf2, KdfError, KdfInit, KdfParamsRef};
+use tc_kdf::kdf::{Kdf1, Kdf2, KdfParamsRef};
+use tc_kdf::{Kdf, KdfError, KdfInit};
 use tc_sha::{Sha1Digest, Sha256Digest};
 
 fn hex(text: &str) -> Vec<u8> {

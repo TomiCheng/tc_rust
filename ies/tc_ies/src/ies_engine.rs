@@ -4,7 +4,8 @@ use core::error::Error;
 use tc_agreement::{Agreement, AgreementInit};
 use tc_block_cipher::{CipherDirection, KeyRef};
 use tc_constant_time::fixed_time_eq;
-use tc_kdf::{Kdf, KdfInit, KdfParamsRef};
+use tc_kdf::kdf::KdfParamsRef;
+use tc_kdf::{Kdf, KdfInit};
 use tc_macs::{Mac, MacInit};
 use tc_zeroize::Zeroizing;
 

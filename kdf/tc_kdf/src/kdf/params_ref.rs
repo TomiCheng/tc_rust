@@ -1,4 +1,4 @@
-use crate::KdfParams;
+use crate::kdf::KdfParams;
 
 /// Borrowed [`KdfParams`]. The caller owns the bytes and wipes them; nothing is checked here,
 /// each function checks its parameters in `init`.

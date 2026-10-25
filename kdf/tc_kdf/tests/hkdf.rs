@@ -1,7 +1,6 @@
-#![cfg(feature = "hkdf")]
-
 use tc_digest::Digest;
-use tc_kdf::{Hkdf, HkdfParamsRef, Kdf, KdfError, KdfInit};
+use tc_kdf::hkdf::{Hkdf, HkdfParamsRef};
+use tc_kdf::{Kdf, KdfError, KdfInit};
 use tc_sha::{Sha1Digest, Sha256Digest};
 
 fn hex(text: &str) -> Vec<u8> {

@@ -1,4 +1,4 @@
-use crate::{KdfCounterParams, KdfDoublePipelineParams, KdfFeedbackParams};
+use crate::sp800_108::{KdfCounterParams, KdfDoublePipelineParams, KdfFeedbackParams};
 
 /// Borrowed [`KdfCounterParams`]. The caller owns the bytes and wipes them; nothing is checked
 /// here, the counter length included.

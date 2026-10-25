@@ -7,17 +7,10 @@ rust-version = "1.85"
 license.workspace = true
 repository.workspace = true
 
-[features]
-# KDF1、KDF2 與 ConcatenationKDF 只用 tc_digest，一定有；用到 MAC 的各自一個 feature
-default = []
-# RFC 5869，內部用 tc_macs 的 Hmac
-hkdf = ["dep:tc_macs", "tc_macs/hmac", "tc_macs/alloc"]
-# SP 800-108 的 counter、feedback 與 double-pipeline，對任何 tc_macs 的 Mac 泛型
-sp800-108 = ["dep:tc_macs"]
-
 [dependencies]
 tc_digest = "0.1.0"
-tc_macs = { version = "0.1.0", optional = true }
+# HKDF 用 Hmac；SP 800-108 對任何 Mac 泛型
+tc_macs = { version = "0.1.0", features = ["hmac", "alloc"] }
 # init 時複製一份秘密，drop 時清除
 tc_zeroize = { version = "0.1.0", features = ["alloc"] }
 

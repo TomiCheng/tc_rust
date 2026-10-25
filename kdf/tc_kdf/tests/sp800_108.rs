@@ -1,13 +1,12 @@
-#![cfg(feature = "sp800-108")]
-
 //! SP 800-108 against the NIST CAVP vectors that BC's tests read: the first vector of each
 //! counter length and counter location, over HMAC-SHA256 and CMAC-AES128.
 
 use tc_aes::AesEngine;
-use tc_kdf::{
-    Kdf, KdfCounter, KdfCounterParamsRef, KdfDoublePipeline, KdfDoublePipelineParamsRef, KdfError,
-    KdfFeedback, KdfFeedbackParamsRef, KdfInit, KdfInitError,
+use tc_kdf::sp800_108::{
+    KdfCounter, KdfCounterParamsRef, KdfDoublePipeline, KdfDoublePipelineParamsRef, KdfFeedback,
+    KdfFeedbackParamsRef, KdfInitError,
 };
+use tc_kdf::{Kdf, KdfError, KdfInit};
 use tc_macs::{Cmac, Hmac};
 use tc_sha::Sha256Digest;
 

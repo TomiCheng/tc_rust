@@ -5,7 +5,8 @@ use tc_macs::{KeyRef, Mac, MacInit};
 use tc_zeroize::Zeroize;
 
 use super::counter_field::{CounterField, max_output};
-use crate::{Kdf, KdfError, KdfFeedbackParams, KdfInit, KdfInitError};
+use crate::sp800_108::{KdfFeedbackParams, KdfInitError};
+use crate::{Kdf, KdfError, KdfInit};
 
 /// The SP 800-108 feedback mode over the MAC `M`, BC's `KdfFeedbackBytesGenerator`. Available
 /// with the `sp800-108` feature.

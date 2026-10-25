@@ -5,7 +5,8 @@ use tc_macs::{KeyRef, Mac, MacInit};
 use tc_zeroize::Zeroize;
 
 use super::counter_field::{CounterField, max_output};
-use crate::{Kdf, KdfCounterParams, KdfError, KdfInit, KdfInitError};
+use crate::sp800_108::{KdfCounterParams, KdfInitError};
+use crate::{Kdf, KdfError, KdfInit};
 
 /// The SP 800-108 counter mode over the MAC `M`, BC's `KdfCounterBytesGenerator`. Available
 /// with the `sp800-108` feature.

@@ -5,7 +5,8 @@ use core::convert::Infallible;
 use tc_digest::Digest;
 use tc_zeroize::Zeroize;
 
-use crate::{Kdf, KdfError, KdfInit, KdfParams};
+use crate::kdf::KdfParams;
+use crate::{Kdf, KdfError, KdfInit};
 
 /// The concatenation KDF of NIST SP 800-56A section 5.8.1, BC's `ConcatenationKdfGenerator`:
 /// block `i` is `Hash(counter || Z || OtherInfo)` with a 32-bit big-endian counter starting
