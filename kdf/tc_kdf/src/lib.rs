@@ -10,24 +10,26 @@
 //! [`Kdf`] and [`KdfInit`] are what every function implements, and
 //! [`KdfError`] what they all report.
 //!
-//! A shared secret from a key agreement, turned into an AES-128 key with KDF2
-//! over SHA-256:
+//! The common case: an ECDH shared secret turned into an AES-256-GCM key with
+//! HKDF-SHA256.
 //!
 //! ```
-//! use tc_kdf::kdf::{Kdf2, KdfParamsRef};
+//! use tc_kdf::hkdf::{Hkdf, HkdfParamsRef};
 //! use tc_kdf::{Kdf, KdfInit};
 //! use tc_sha::Sha256Digest;
 //!
-//! // The shared secret, and the context the protocol specifies.
+//! // The shared secret, a salt both sides know, and the label the protocol
+//! // gives this key.
 //! let shared_secret = [0x5a; 32];
-//! let context = b"tc_kdf example";
+//! let salt = [0xa5; 32];
+//! let info = b"example protocol v1: encryption key";
 //!
-//! let mut kdf = Kdf2::new(Sha256Digest::new());
-//! kdf.init(&KdfParamsRef::with_iv(&shared_secret, context))?;
+//! let mut hkdf = Hkdf::new(Sha256Digest::new());
+//! hkdf.init(&HkdfParamsRef::new(&shared_secret, &salt, info))?;
 //!
 //! // The output length is the key length the cipher needs.
-//! let mut key = [0u8; 16];
-//! kdf.generate_bytes(&mut key)?;
+//! let mut key = [0u8; 32];
+//! hkdf.generate_bytes(&mut key)?;
 //! # Ok::<(), Box<dyn core::error::Error>>(())
 //! ```
 

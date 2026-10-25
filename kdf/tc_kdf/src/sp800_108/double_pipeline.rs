@@ -9,7 +9,7 @@ use crate::sp800_108::{KdfDoublePipelineParams, KdfInitError};
 use crate::{Kdf, KdfError, KdfInit};
 
 /// The SP 800-108 double-pipeline iteration mode over the MAC `M`, BC's
-/// `KdfDoublePipelineIterationBytesGenerator`. Available with the `sp800-108` feature.
+/// `KdfDoublePipelineIterationBytesGenerator`.
 ///
 /// The first pipeline is `A(i) = PRF(Ki, A(i - 1))` with `A(0)` the fixed input, and block `i`
 /// is `K(i) = PRF(Ki, A(i) || [i] || fixed input)`, the counter `[i]` left out when the

@@ -8,8 +8,7 @@ use tc_zeroize::{Zeroize, Zeroizing};
 use crate::hkdf::HkdfParams;
 use crate::{Kdf, KdfError, KdfInit};
 
-/// HKDF (RFC 5869) over HMAC with the digest `D`, BC's `HkdfBytesGenerator`. Available with the
-/// `hkdf` feature.
+/// HKDF (RFC 5869) over HMAC with the digest `D`, BC's `HkdfBytesGenerator`.
 ///
 /// `init` runs the extract step, unless the parameters skip it, and `generate_bytes` the
 /// expand step. As in BC, each call continues where the last one stopped, up to

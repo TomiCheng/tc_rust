@@ -8,8 +8,7 @@ use super::counter_field::{CounterField, max_output};
 use crate::sp800_108::{KdfCounterParams, KdfInitError};
 use crate::{Kdf, KdfError, KdfInit};
 
-/// The SP 800-108 counter mode over the MAC `M`, BC's `KdfCounterBytesGenerator`. Available
-/// with the `sp800-108` feature.
+/// The SP 800-108 counter mode over the MAC `M`, BC's `KdfCounterBytesGenerator`.
 ///
 /// Block `i` is `PRF(Ki, prefix || [i] || suffix)` with an `r`-bit counter starting at 1. As in
 /// BC, each call continues where the last one stopped. Unlike BC, which lets the last counter

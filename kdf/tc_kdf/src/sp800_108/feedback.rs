@@ -8,8 +8,7 @@ use super::counter_field::{CounterField, max_output};
 use crate::sp800_108::{KdfFeedbackParams, KdfInitError};
 use crate::{Kdf, KdfError, KdfInit};
 
-/// The SP 800-108 feedback mode over the MAC `M`, BC's `KdfFeedbackBytesGenerator`. Available
-/// with the `sp800-108` feature.
+/// The SP 800-108 feedback mode over the MAC `M`, BC's `KdfFeedbackBytesGenerator`.
 ///
 /// Block `i` is `K(i) = PRF(Ki, K(i - 1) || [i] || fixed input)` with `K(0)` the IV, and the
 /// counter `[i]` left out when the parameters have none. As in BC, each call continues where
