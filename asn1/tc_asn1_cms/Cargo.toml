@@ -1,0 +1,12 @@
+[package]
+name = "tc_asn1_cms"
+description = "CMS (RFC 5652) and CMS ECC (RFC 5753) structures on top of tc_asn1."
+version = "0.1.0"
+edition.workspace = true
+rust-version = "1.85"
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+tc_asn1 = "0.1.2"
+tc_asn1_x509 = { version = "0.1.0", path = "../tc_asn1_x509" }
