@@ -29,8 +29,6 @@ extern crate alloc;
 
 mod dh_kek;
 mod params;
-mod params_ref;
 
 pub use dh_kek::DhKek;
-pub use params::DhKekParams;
-pub use params_ref::DhKekParamsRef;
+pub use params::{DhKekParams, DhKekParamsRef};
