@@ -3,6 +3,7 @@
 //!
 //! Each scheme is a feature and a module of its own:
 //!
+//! - [`argon2`] (`argon2`): Argon2d, Argon2i and Argon2id of RFC 9106, memory-hard.
 //! - [`bcrypt`] (`bcrypt`): bcrypt, raw and as OpenBSD's `$2y$` hash strings.
 //! - [`scrypt`] (`scrypt`): scrypt of RFC 7914, memory-hard.
 
@@ -10,6 +11,8 @@
 
 extern crate alloc;
 
+#[cfg(feature = "argon2")]
+pub mod argon2;
 #[cfg(feature = "bcrypt")]
 pub mod bcrypt;
 #[cfg(feature = "scrypt")]

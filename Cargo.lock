@@ -1724,7 +1724,9 @@ dependencies = [
 name = "tc_pwhash"
 version = "0.1.0"
 dependencies = [
+ "tc_blake",
  "tc_constant_time",
+ "tc_digest 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tc_pbe",
  "tc_sha 0.1.1",
  "tc_zeroize",
