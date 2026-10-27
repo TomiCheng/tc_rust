@@ -12,5 +12,7 @@ extern crate alloc;
 
 pub mod content;
 pub mod ecc;
+#[cfg(test)]
+mod fixtures;
 pub mod recipient;
 pub mod signed;

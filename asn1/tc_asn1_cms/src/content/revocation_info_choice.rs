@@ -104,34 +104,12 @@ impl Encode for RevocationInfoChoice {
 }
 
 #[cfg(test)]
-pub(crate) mod tests {
-    use tc_asn1::{
-        Asn1Any, Asn1BitString, Asn1Error, Decode, DecodingOptions, Encode, EncodingOptions, tag,
-    };
-    use tc_asn1_x509::alg::AlgorithmIdentifier;
-    use tc_asn1_x509::cert::{Time, Version};
-    use tc_asn1_x509::crl::{CertificateList, TbsCertList};
+mod tests {
+    use tc_asn1::{Asn1Any, Asn1Error, Decode, DecodingOptions, Encode, EncodingOptions, tag};
 
     use super::RevocationInfoChoice;
     use crate::content::OtherRevocationInfoFormat;
-
-    /// An empty v1 CRL with an Ed25519 signature algorithm, as tc_asn1_x509 tests it.
-    pub(crate) const CRL: &[u8] = &[
-        0x30, 0x25, 0x30, 0x18, 0x30, 5, 6, 3, 0x2b, 0x65, 0x70, 0x30, 0, 0x17, 13, b'2', b'6',
-        b'0', b'1', b'0', b'1', b'0', b'0', b'0', b'0', b'0', b'0', b'Z', 0x30, 5, 6, 3, 0x2b,
-        0x65, 0x70, 3, 2, 0, 0xaa,
-    ];
-
-    pub(crate) fn crl() -> CertificateList {
-        let tbs = TbsCertList::new(
-            Version::V1,
-            AlgorithmIdentifier::new("1.3.101.112".parse().unwrap()),
-            "".parse().unwrap(),
-            Time::new(2026, 1, 1, 0, 0, 0).unwrap(),
-        )
-        .unwrap();
-        CertificateList::new(tbs, Asn1BitString::from_bytes(&[0xaa])).unwrap()
-    }
+    use crate::fixtures::{CRL, crl};
 
     #[test]
     fn a_crl_is_the_untagged_alternative() {

@@ -150,10 +150,8 @@ mod tests {
     use tc_asn1_x509::cert::Certificate;
 
     use super::OriginatorInfo;
-    use crate::content::revocation_info_choice::tests::{CRL, crl};
     use crate::content::{CertificateChoices, RevocationInfoChoice};
-
-    const RFC_8410: &[u8] = include_bytes!("../../tests/data/rfc8410.der");
+    use crate::fixtures::{CRL, RFC_8410, crl};
 
     #[test]
     fn an_empty_originator_info_is_an_empty_sequence() {

@@ -16,8 +16,9 @@
 use core::fmt;
 
 use tc_asn1::{
-    Asn1Error, Asn1Null, Asn1Object, Asn1Oid, Asn1Ref, Decode, DecodeInner, DecodingContext,
-    Encode, EncodeContent, EncodeTagged, EncodingOptions, Tagged, tag,
+    Asn1Error, Asn1Null, Asn1Object, Asn1Oid, Asn1Ref, Children, Decode, DecodeContent,
+    DecodeInner, DecodingContext, Encode, EncodeContent, EncodeTagged, EncodingOptions, Tagged,
+    tag,
 };
 
 /// An algorithm OID with its optional parameters.
@@ -105,26 +106,31 @@ impl fmt::Display for AlgorithmIdentifier {
     }
 }
 
+impl DecodeContent for AlgorithmIdentifier {
+    /// Whatever follows the OID, if anything, is the parameters; as under
+    /// `30` on its own or under an IMPLICIT tag. Variable time: branches only
+    /// on the encoding structure.
+    fn decode_content(value: &[u8], context: &mut DecodingContext) -> Result<Self, Asn1Error> {
+        let mut children = Children::from_contents(value, context)?;
+        let algorithm: Asn1Oid = children.get()?;
+        let parameters = children.get_any_opt()?;
+        children.end()?;
+        Ok(Self {
+            algorithm,
+            parameters,
+        })
+    }
+}
+
 impl DecodeInner for AlgorithmIdentifier {
-    /// Whatever follows the OID, if anything, is the parameters. Variable
-    /// time: branches only on the encoding structure.
+    /// Variable time: branches only on the encoding structure.
     fn decode_inner(
         buff: &[u8],
         context: &mut DecodingContext,
     ) -> Result<(usize, Self), Asn1Error> {
         let element = Asn1Ref::parse(buff, context)?.assert_tag(tag::SEQUENCE)?;
-        let mut children = element.children(context)?;
-        let algorithm: Asn1Oid = children.get()?;
-        let parameters = children.get_any_opt()?;
-        children.end()?;
-
-        Ok((
-            element.total_len(),
-            Self {
-                algorithm,
-                parameters,
-            },
-        ))
+        let value = Self::decode_content(element.value(), context)?;
+        Ok((element.total_len(), value))
     }
 }
 

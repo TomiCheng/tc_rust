@@ -16,8 +16,8 @@ use alloc::vec::Vec;
 use core::fmt;
 
 use tc_asn1::{
-    Asn1Error, Asn1OctetString, Decode, DecodeInner, DecodingContext, Encode, EncodeContent,
-    EncodeTagged, EncodingOptions, Tagged,
+    Asn1Error, Asn1OctetString, Decode, DecodeContent, DecodeInner, DecodingContext, Encode,
+    EncodeContent, EncodeTagged, EncodingOptions, Tagged,
 };
 
 /// A non-empty key identifier.
@@ -84,6 +84,19 @@ impl DecodeInner for SubjectKeyIdentifier {
             return Err(Asn1Error::MalformedValue);
         }
         Ok((used, Self { key_identifier }))
+    }
+}
+
+impl DecodeContent for SubjectKeyIdentifier {
+    /// The OCTET STRING contents, as under an IMPLICIT tag such as CMS's
+    /// `[0]` subjectKeyIdentifier; empty is `MalformedValue`. Variable time:
+    /// branches only on the encoding structure.
+    fn decode_content(value: &[u8], context: &mut DecodingContext) -> Result<Self, Asn1Error> {
+        let key_identifier = Asn1OctetString::decode_content(value, context)?;
+        if key_identifier.as_bytes().is_empty() {
+            return Err(Asn1Error::MalformedValue);
+        }
+        Ok(Self { key_identifier })
     }
 }
 
