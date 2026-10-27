@@ -15,6 +15,7 @@ mod originator_info;
 mod other_certificate_format;
 mod other_revocation_info_format;
 mod revocation_info_choice;
+mod scvp_req_res;
 mod signed_data;
 
 pub use auth_enveloped_data::AuthEnvelopedData;
@@ -31,4 +32,5 @@ pub use originator_info::OriginatorInfo;
 pub use other_certificate_format::OtherCertificateFormat;
 pub use other_revocation_info_format::OtherRevocationInfoFormat;
 pub use revocation_info_choice::RevocationInfoChoice;
+pub use scvp_req_res::ScvpReqRes;
 pub use signed_data::SignedData;

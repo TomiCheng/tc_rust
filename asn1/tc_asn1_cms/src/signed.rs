@@ -1,11 +1,13 @@
 //! RFC 5652 signers: who signed, how, and the attributes they signed.
 
+mod binary_time;
 mod cms_algorithm_protection;
 mod cms_attribute;
 mod issuer_and_serial_number;
 mod signer_identifier;
 mod signer_info;
 
+pub use binary_time::BinaryTime;
 pub use cms_algorithm_protection::CmsAlgorithmProtection;
 pub use cms_attribute::CmsAttribute;
 pub use issuer_and_serial_number::IssuerAndSerialNumber;

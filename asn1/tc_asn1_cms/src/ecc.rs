@@ -22,5 +22,7 @@
 //! ```
 
 mod ecc_cms_shared_info;
+mod mqv_user_keying_material;
 
 pub use ecc_cms_shared_info::EccCmsSharedInfo;
+pub use mqv_user_keying_material::MqvUserKeyingMaterial;
