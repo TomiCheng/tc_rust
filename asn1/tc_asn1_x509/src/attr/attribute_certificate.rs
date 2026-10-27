@@ -15,8 +15,8 @@
 use alloc::vec::Vec;
 
 use tc_asn1::{
-    Asn1BitString, Asn1Error, Asn1Integer, Asn1Ref, Decode, DecodeInner, DecodingContext, Encode,
-    EncodeContent, EncodeTagged, EncodingOptions, Tagged, tag,
+    Asn1BitString, Asn1Error, Asn1Integer, Asn1Ref, Children, Decode, DecodeContent, DecodeInner,
+    DecodingContext, Encode, EncodeContent, EncodeTagged, EncodingOptions, Tagged, tag,
 };
 use tc_asn1_x500::Attribute;
 
@@ -134,13 +134,11 @@ impl AttributeCertificate {
     }
 }
 
-impl DecodeInner for AttributeCertificate {
-    fn decode_inner(
-        buff: &[u8],
-        context: &mut DecodingContext,
-    ) -> Result<(usize, Self), Asn1Error> {
-        let element = Asn1Ref::parse(buff, context)?.assert_tag(Self::TAG)?;
-        let mut fields = element.children(context)?;
+impl DecodeContent for AttributeCertificate {
+    /// The three fields, as under `30` on its own or under an IMPLICIT tag
+    /// such as CMS's `[2]` v2AttrCert.
+    fn decode_content(value: &[u8], context: &mut DecodingContext) -> Result<Self, Asn1Error> {
+        let mut fields = Children::from_contents(value, context)?;
         let acinfo_raw = match fields.peek() {
             Some(Ok(value)) => value.raw().to_vec(),
             Some(Err(error)) => return Err(error),
@@ -153,15 +151,23 @@ impl DecodeInner for AttributeCertificate {
         if signature_algorithm != *acinfo.signature() {
             return Err(Asn1Error::MalformedValue);
         }
-        Ok((
-            element.total_len(),
-            Self {
-                acinfo,
-                acinfo_raw,
-                signature_algorithm,
-                signature_value,
-            },
-        ))
+        Ok(Self {
+            acinfo,
+            acinfo_raw,
+            signature_algorithm,
+            signature_value,
+        })
+    }
+}
+
+impl DecodeInner for AttributeCertificate {
+    fn decode_inner(
+        buff: &[u8],
+        context: &mut DecodingContext,
+    ) -> Result<(usize, Self), Asn1Error> {
+        let element = Asn1Ref::parse(buff, context)?.assert_tag(Self::TAG)?;
+        let value = Self::decode_content(element.value(), context)?;
+        Ok((element.total_len(), value))
     }
 }
 
