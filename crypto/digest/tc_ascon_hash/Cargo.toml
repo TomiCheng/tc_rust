@@ -14,7 +14,7 @@ include = ["src/**", "tests/**", "README.md", "CHANGELOG.md", "LICENSE-MIT", "LI
 
 [features]
 default = []
-# The deprecated Ascon v1.2 hashes and XOFs, kept to read hashes made before the standard.
+# The pre-standard digests: the deprecated Ascon v1.2 hashes and XOFs, and ISAP Hash.
 legacy = []
 
 [dependencies]

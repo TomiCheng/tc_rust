@@ -6,9 +6,9 @@
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
-use tc_ascon_hash::{AsconCXof128, AsconHash256, AsconXof128, IsapDigest};
+use tc_ascon_hash::{AsconCXof128, AsconHash256, AsconXof128};
 #[cfg(feature = "legacy")]
-use tc_ascon_hash::{AsconDigest, AsconParameters, AsconXof, AsconXofParameters};
+use tc_ascon_hash::{AsconDigest, AsconParameters, AsconXof, AsconXofParameters, IsapDigest};
 use tc_digest::{Digest, Xof};
 
 fn message() -> Vec<u8> {
@@ -59,6 +59,7 @@ fn absorbing_in_any_chunks_matches_absorbing_byte_by_byte() {
     absorbing_in_chunks_matches_byte_by_byte("Ascon-XofA", || {
         AsconXof::new(AsconXofParameters::AsconXofA)
     });
+    #[cfg(feature = "legacy")]
     absorbing_in_chunks_matches_byte_by_byte("ISAP Hash", IsapDigest::new);
 }
 
@@ -132,6 +133,7 @@ fn every_digest_checks_the_output_length_before_finishing() {
     short_output_panics_without_changing_state("Ascon-Xof", || {
         AsconXof::new(AsconXofParameters::AsconXof)
     });
+    #[cfg(feature = "legacy")]
     short_output_panics_without_changing_state("ISAP Hash", IsapDigest::new);
 }
 
@@ -146,5 +148,6 @@ fn every_digest_wipes_itself_on_drop() {
     assert!(std::mem::needs_drop::<AsconDigest>());
     #[cfg(feature = "legacy")]
     assert!(std::mem::needs_drop::<AsconXof>());
+    #[cfg(feature = "legacy")]
     assert!(std::mem::needs_drop::<IsapDigest>());
 }

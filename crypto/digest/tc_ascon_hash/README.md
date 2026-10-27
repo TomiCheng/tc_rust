@@ -29,7 +29,8 @@ Requires Rust 1.85 or later (edition 2024).
   the `legacy` feature.
 - `AsconXof` — the Ascon v1.2 Ascon-Xof or Ascon-XofA, deprecated, with the
   `legacy` feature.
-- `IsapDigest` — ISAP Hash, whose outputs equal the Ascon v1.2 hash.
+- `IsapDigest` — ISAP Hash, whose outputs equal the Ascon v1.2 hash, with the
+  `legacy` feature.
 
 Each implements `TryDigest` with `core::convert::Infallible` as its error type,
 and so `Digest` as well, and implements `Clone`, so a digest can be forked
@@ -38,10 +39,12 @@ implement `TryXof` and so `Xof`, which reads any amount of output; read as a
 plain digest they write 32 bytes. `Display` writes Bouncy Castle's name, such
 as `Ascon-Hash256` or `Ascon-CXOF128`.
 
-The Ascon v1.2 types are behind the `legacy` feature, off by default, and are
-kept only to read hashes made before the standard; they do not interoperate
-with the SP 800-232 types. `AsconParameters` and
-`AsconXofParameters` choose their variant.
+The pre-standard types are behind the `legacy` feature, off by default. The
+Ascon v1.2 types are kept only to read hashes made before the standard; they do
+not interoperate with the SP 800-232 types, and `AsconParameters` and
+`AsconXofParameters` choose their variant. ISAP Hash comes from ISAP, a
+candidate of NIST's lightweight cryptography project that was not
+standardized.
 
 `do_final` writes the digest to the start of the output buffer, returns its
 length and resets; it panics if the buffer is shorter than `digest_size`,

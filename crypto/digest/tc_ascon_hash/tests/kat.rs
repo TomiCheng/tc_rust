@@ -4,15 +4,16 @@
 
 #![allow(deprecated)]
 
+use tc_ascon_hash::AsconHash256;
 #[cfg(feature = "legacy")]
-use tc_ascon_hash::{AsconDigest, AsconParameters};
-use tc_ascon_hash::{AsconHash256, IsapDigest};
+use tc_ascon_hash::{AsconDigest, AsconParameters, IsapDigest};
 use tc_digest::Digest;
 
 fn hex(bytes: &[u8]) -> String {
     bytes.iter().map(|b| format!("{b:02x}")).collect()
 }
 
+#[cfg(feature = "legacy")]
 fn unhex(text: &str) -> Vec<u8> {
     let text = text.trim();
     (0..text.len())
@@ -22,6 +23,7 @@ fn unhex(text: &str) -> Vec<u8> {
 }
 
 /// The `(Msg, MD)` records of a KAT file.
+#[cfg(feature = "legacy")]
 fn records(data: &str) -> Vec<(Vec<u8>, Vec<u8>)> {
     let mut out = Vec::new();
     let mut message = None;
@@ -37,6 +39,7 @@ fn records(data: &str) -> Vec<(Vec<u8>, Vec<u8>)> {
 
 /// Hashes each message at once and in 5-byte pieces with the same digest,
 /// which `do_final` resets between messages.
+#[cfg(feature = "legacy")]
 fn check_file<D: Digest>(name: &str, digest: &mut D, data: &str) {
     let records = records(data);
     assert_eq!(records.len(), 1025, "{name}: records in the file");
@@ -186,6 +189,7 @@ fn ascon_v1_2_hash_a_matches_bouncy_castle_kat() {
 }
 
 // ISAP Hash is the Ascon v1.2 hash, so the same file checks it.
+#[cfg(feature = "legacy")]
 #[test]
 fn isap_hash_matches_the_ascon_v1_2_hash_kat() {
     check_file(

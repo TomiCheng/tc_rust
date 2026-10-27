@@ -6,9 +6,10 @@
 //! type, so the [`Digest`](tc_digest::Digest) methods are available directly;
 //! the XOFs also implement [`Xof`](tc_digest::Xof).
 //!
-//! The deprecated Ascon v1.2 hashes and XOFs, `AsconDigest` and `AsconXof`,
-//! are behind the `legacy` feature, off by default; they are kept only to read
-//! hashes made before the standard.
+//! The pre-standard digests are behind the `legacy` feature, off by default:
+//! the deprecated Ascon v1.2 hashes and XOFs, `AsconDigest` and `AsconXof`,
+//! kept only to read hashes made before the standard, and ISAP Hash,
+//! `IsapDigest`, whose outputs equal the Ascon v1.2 hash.
 //!
 //! # Timing
 //!
@@ -59,6 +60,7 @@ mod ascon_legacy;
 mod ascon_xof128;
 #[cfg(feature = "legacy")]
 mod ascon_xof_legacy;
+#[cfg(feature = "legacy")]
 mod isap;
 
 pub use ascon_cxof128::AsconCXof128;
@@ -70,4 +72,5 @@ pub use ascon_legacy::{AsconDigest, AsconParameters};
 #[allow(deprecated)]
 pub use ascon_xof_legacy::{AsconXof, AsconXofParameters};
 pub use ascon_xof128::AsconXof128;
+#[cfg(feature = "legacy")]
 pub use isap::IsapDigest;

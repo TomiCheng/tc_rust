@@ -13,7 +13,7 @@ Initial release.
 - `AsconDigest` and `AsconXof`, the Ascon v1.2 hashes and XOFs, deprecated and
   kept to read hashes made before the standard, behind the `legacy` feature,
   off by default.
-- `IsapDigest`, ISAP Hash.
+- `IsapDigest`, ISAP Hash, behind the `legacy` feature as well.
 - `Display` writes Bouncy Castle's name for every digest, such as
   `Ascon-Hash256` or `Ascon-CXOF128`.
 - Every digest is constant time and wipes its state on drop and on reset with
