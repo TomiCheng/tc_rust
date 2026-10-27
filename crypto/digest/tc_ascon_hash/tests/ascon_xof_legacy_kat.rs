@@ -3,7 +3,7 @@
 
 #![allow(deprecated)]
 
-use tc_ascon::{AsconXof, AsconXofParameters};
+use tc_ascon_hash::{AsconXof, AsconXofParameters};
 use tc_digest::{Digest, Xof};
 
 fn unhex(s: &str) -> Vec<u8> {

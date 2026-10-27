@@ -12,7 +12,7 @@ remain in [`tc_digest`](../tc_digest):
 - `TryXof` extends `TryDigest` with variable-length output.
 - `Xof` is the infallible XOF convenience interface.
 
-`tc_blake` (BLAKE2 and BLAKE3) and `tc_ascon` (the Ascon hashes and XOFs, with
+`tc_blake` (BLAKE2 and BLAKE3) and `tc_ascon_hash` (the Ascon hashes and XOFs, with
 ISAP, whose hash runs on the Ascon permutation) already implement the published
 [`tc_digest`](https://crates.io/crates/tc_digest), whose types name themselves
 through `Display` instead of `algorithm_name`; the other crates here still use

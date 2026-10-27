@@ -917,13 +917,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tc_ascon"
-version = "0.1.0"
-dependencies = [
- "tc_digest 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
 name = "tc_ascon_aead"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -933,6 +926,13 @@ dependencies = [
  "tc_block_cipher",
  "tc_constant_time",
  "tc_zeroize",
+]
+
+[[package]]
+name = "tc_ascon_hash"
+version = "0.1.0"
+dependencies = [
+ "tc_digest 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]

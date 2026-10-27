@@ -1,8 +1,8 @@
-//! Official Ascon-XOF128 known-answer tests (NIST SP 800-232 / ascon-c
-//! `LWC_XOF_KAT_128_512.txt`, 1025 vectors). Each record gives a message `Msg`
-//! and the 64-byte output `MD` (no customization string).
+//! Official Ascon-CXOF128 known-answer tests (NIST SP 800-232 / ascon-c
+//! `LWC_CXOF_KAT_128_512.txt`, 1089 vectors). Each record gives a message `Msg`,
+//! a customization string `Z`, and the 64-byte output `MD`.
 
-use tc_ascon::AsconXof128;
+use tc_ascon_hash::AsconCXof128;
 use tc_digest::{Digest, Xof};
 
 fn unhex(s: &str) -> Vec<u8> {
@@ -14,32 +14,34 @@ fn unhex(s: &str) -> Vec<u8> {
 }
 
 #[test]
-fn official_xof128_kat_vectors() {
-    let data = include_str!("data/ascon_xof128_kat.txt");
+fn official_cxof128_kat_vectors() {
+    let data = include_str!("data/ascon_cxof128_kat.txt");
 
-    let (mut msg, mut md, mut count) = (None, None, 0usize);
+    let (mut msg, mut z, mut md, mut count) = (None, None, None, 0usize);
     let mut checked = 0usize;
 
     for line in data.lines() {
         let line = line.trim();
         if let Some(v) = line.strip_prefix("Msg =") {
             msg = Some(unhex(v));
+        } else if let Some(v) = line.strip_prefix("Z =") {
+            z = Some(unhex(v));
         } else if let Some(v) = line.strip_prefix("MD =") {
             md = Some(unhex(v));
         } else if let Some(v) = line.strip_prefix("Count =") {
             count = v.trim().parse().unwrap();
         }
 
-        if let (Some(m), Some(expected)) = (&msg, &md) {
+        if let (Some(m), Some(zz), Some(expected)) = (&msg, &z, &md) {
             // 單次吸收 + 一次擠出。
-            let mut x = AsconXof128::new();
+            let mut x = AsconCXof128::with_customization(zz);
             x.update(m);
             let mut out = vec![0u8; expected.len()];
             x.output_final(&mut out);
             assert_eq!(&out, expected, "Count {count}: single-shot");
 
-            // 分段吸收 + 不對齊分段擠出(串流連續性)。
-            let mut x = AsconXof128::new();
+            // 分段吸收 + 分段擠出(驗串流連續性)。
+            let mut x = AsconCXof128::with_customization(zz);
             for chunk in m.chunks(3) {
                 x.update(chunk);
             }
@@ -60,9 +62,9 @@ fn official_xof128_kat_vectors() {
             assert_eq!(&out, expected, "Count {count}: streamed");
 
             checked += 1;
-            (msg, md) = (None, None);
+            (msg, z, md) = (None, None, None);
         }
     }
 
-    assert_eq!(checked, 1025, "expected 1025 KAT vectors");
+    assert_eq!(checked, 1089, "expected 1089 KAT vectors");
 }
