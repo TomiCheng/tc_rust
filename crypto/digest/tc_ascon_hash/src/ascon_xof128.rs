@@ -1,8 +1,8 @@
 //! Ascon-XOF128 from NIST SP 800-232, ported from Bouncy Castle's `AsconXof128`.
 //!
-//! The non-customizable sibling of [`AsconCXof128`](crate::ascon_cxof128): the same
-//! Ascon-p\[12] sponge XOF with an 8-byte rate, but a fixed initial state and no
-//! customization string.
+//! The non-customizable sibling of [`AsconCXof128`](crate::AsconCXof128): the
+//! same Ascon-p\[12\] sponge XOF with an 8-byte rate, but a fixed initial state
+//! and no customization string.
 
 use core::convert::Infallible;
 
@@ -14,7 +14,7 @@ use crate::ascon_core::p12;
 const DIGEST_LENGTH: usize = 32;
 const RATE: usize = 8;
 
-// 初始狀態(bc 快取值 = P12(seed 0x0000080000cc0003))。
+// Bouncy Castle's precomputed initial state, p12 of the seed 0x0000080000cc0003.
 const IV: [u64; 5] = [
     0xda82_ce76_8d94_47eb,
     0xcc7c_e6c7_5f1e_f969,
@@ -23,13 +23,15 @@ const IV: [u64; 5] = [
     0xe054_7524_db6f_0bde,
 ];
 
-/// The 256-bit Ascon XOF (Ascon-XOF128) from NIST SP 800-232.
+/// The Ascon extendable-output function (Ascon-XOF128) from NIST SP 800-232.
+/// Read as a plain digest it writes 32 bytes. Constant time.
 #[derive(Clone)]
 pub struct AsconXof128 {
     state: [u64; 5],
-    /// 吸收階段為輸入緩衝;擠出階段為當前輸出區塊。
+    /// The input buffer while absorbing; the current output block while squeezing.
     buffer: [u8; RATE],
-    /// 吸收階段 = 已填位元組;擠出階段 = 當前輸出區塊已消耗位元組(8 = 需再置換)。
+    /// Bytes buffered while absorbing; bytes of the output block already read
+    /// while squeezing, where `RATE` means the next read permutes first.
     buffer_position: usize,
     squeezing: bool,
 }
@@ -41,7 +43,7 @@ impl Default for AsconXof128 {
 }
 
 impl AsconXof128 {
-    /// Creates a new Ascon-XOF128.
+    /// Creates a new Ascon-XOF128. Constant time.
     pub fn new() -> Self {
         AsconXof128 {
             state: IV,
@@ -51,19 +53,20 @@ impl AsconXof128 {
         }
     }
 
+    /// XORs one block into the rate and permutes. Constant time.
     #[inline]
     fn absorb_block(&mut self, block: &[u8; RATE]) {
         self.state[0] ^= u64::from_le_bytes(*block);
         p12(&mut self.state);
     }
 
-    /// 吸收收尾:殘留緩衝 + `0x01` pad XOR 進 S0(不置換)。
+    /// XORs the buffered bytes and the `0x01` padding into the rate, without
+    /// permuting. Constant time.
     fn pad(&mut self) {
         let mut last = [0u8; RATE];
         last[..self.buffer_position].copy_from_slice(&self.buffer[..self.buffer_position]);
         last[self.buffer_position] = 0x01;
         self.state[0] ^= u64::from_le_bytes(last);
-        last.zeroize();
     }
 }
 
@@ -96,9 +99,8 @@ impl TryDigest for AsconXof128 {
             input = &input[copied..];
 
             if self.buffer_position == RATE {
-                let mut block = self.buffer;
+                let block = self.buffer;
                 self.absorb_block(&block);
-                block.zeroize();
                 self.buffer_position = 0;
             } else {
                 return Ok(());
@@ -117,14 +119,16 @@ impl TryDigest for AsconXof128 {
     }
 
     fn try_do_final(&mut self, output: &mut [u8]) -> Result<usize, Self::Error> {
+        assert!(
+            output.len() >= DIGEST_LENGTH,
+            "output buffer shorter than the {DIGEST_LENGTH}-byte digest"
+        );
         self.try_output_final(&mut output[..DIGEST_LENGTH])
     }
 
+    // A fresh digest replaces this one, which the drop wipes.
     fn try_reset(&mut self) -> Result<(), Self::Error> {
-        self.state = IV;
-        self.buffer = [0; RATE];
-        self.buffer_position = 0;
-        self.squeezing = false;
+        *self = Self::new();
         Ok(())
     }
 }
@@ -184,7 +188,8 @@ impl Drop for AsconXof128 {
 }
 
 impl core::fmt::Display for AsconXof128 {
-    /// Writes the algorithm name without inspecting key material.
+    /// Writes `Ascon-XOF128` without inspecting the state. Constant time with
+    /// respect to the message; output timing depends on the formatter.
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.write_str("Ascon-XOF128")
     }
@@ -205,7 +210,7 @@ mod tests {
         assert_eq!(d.byte_length(), 8);
     }
 
-    // 自洽驗證:IV == P12(seed 0x0000080000cc0003)(bc 註解記載的初始化)。
+    // The initial state is p12 of the seed, as Bouncy Castle's comment records.
     #[test]
     fn iv_matches_seed_derivation() {
         let mut s = [0x0000_0800_00cc_0003u64, 0, 0, 0, 0];

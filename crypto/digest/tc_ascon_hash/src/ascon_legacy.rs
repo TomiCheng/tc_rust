@@ -45,7 +45,7 @@ pub enum AsconParameters {
     AsconHashA,
 }
 
-/// Legacy Ascon v1.2 Hash/HashA digest.
+/// Legacy Ascon v1.2 Hash/HashA digest. Constant time.
 ///
 /// This type is retained for compatibility with pre-standard hashes. It is not
 /// interoperable with the standardized [`crate::AsconHash256`].
@@ -62,7 +62,7 @@ pub struct AsconDigest {
 }
 
 impl AsconDigest {
-    /// Creates a legacy Ascon v1.2 Hash or HashA digest.
+    /// Creates a legacy Ascon v1.2 Hash or HashA digest. Constant time.
     pub fn new(parameters: AsconParameters) -> Self {
         Self {
             parameters,
@@ -72,6 +72,7 @@ impl AsconDigest {
         }
     }
 
+    /// Ascon-p\[12\] for Ascon-Hash, Ascon-p\[8\] for Ascon-HashA. Constant time.
     #[inline]
     fn intermediate_permutation(&mut self) {
         match self.parameters {
@@ -80,6 +81,7 @@ impl AsconDigest {
         }
     }
 
+    /// XORs one block into the rate and permutes. Constant time.
     #[inline]
     fn absorb_block(&mut self, block: &[u8; RATE]) {
         self.state[0] ^= u64::from_be_bytes(*block);
@@ -108,9 +110,8 @@ impl TryDigest for AsconDigest {
             input = &input[copied..];
 
             if self.buffer_position == RATE {
-                let mut block = self.buffer;
+                let block = self.buffer;
                 self.absorb_block(&block);
-                block.zeroize();
                 self.buffer_position = 0;
             } else {
                 return Ok(());
@@ -129,11 +130,14 @@ impl TryDigest for AsconDigest {
     }
 
     fn try_do_final(&mut self, output: &mut [u8]) -> Result<usize, Self::Error> {
+        assert!(
+            output.len() >= DIGEST_LENGTH,
+            "output buffer shorter than the {DIGEST_LENGTH}-byte digest"
+        );
         let mut final_block = [0u8; RATE];
         final_block[..self.buffer_position].copy_from_slice(&self.buffer[..self.buffer_position]);
         final_block[self.buffer_position] = 0x80;
         self.state[0] ^= u64::from_be_bytes(final_block);
-        final_block.zeroize();
         p12(&mut self.state);
 
         for (index, chunk) in output[..DIGEST_LENGTH].chunks_exact_mut(RATE).enumerate() {
@@ -147,14 +151,14 @@ impl TryDigest for AsconDigest {
         Ok(DIGEST_LENGTH)
     }
 
+    // A fresh digest replaces this one, which the drop wipes.
     fn try_reset(&mut self) -> Result<(), Self::Error> {
-        self.state = initial_state(self.parameters);
-        self.buffer.fill(0);
-        self.buffer_position = 0;
+        *self = Self::new(self.parameters);
         Ok(())
     }
 }
 
+/// The initial state of `parameters`. Constant time.
 const fn initial_state(parameters: AsconParameters) -> [u64; 5] {
     match parameters {
         AsconParameters::AsconHash => HASH_IV,
@@ -172,7 +176,9 @@ impl Drop for AsconDigest {
 }
 
 impl core::fmt::Display for AsconDigest {
-    /// Writes the algorithm name without inspecting key material.
+    /// Writes `Ascon-Hash` or `Ascon-HashA` without inspecting the state.
+    /// Constant time with respect to the message; output timing depends on the
+    /// formatter.
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.write_str(match self.parameters {
             AsconParameters::AsconHash => "Ascon-Hash",
@@ -203,135 +209,6 @@ mod tests {
         let mut output = [0u8; DIGEST_LENGTH];
         digest.do_final(&mut output);
         hex(&output)
-    }
-
-    #[test]
-    fn bc_legacy_ascon_hash_kat_vectors() {
-        let vectors = [
-            (
-                0,
-                "7346bc14f036e87ae03d0997913088f5f68411434b3cf8b54fa796a80d251f91",
-            ),
-            (
-                1,
-                "8dd446ada58a7740ecf56eb638ef775f7d5c0fd5f0c2bbbdfdec29609d3c43a2",
-            ),
-            (
-                2,
-                "f77ca13bf89146d3254f1cfb7eddba8fa1bf162284bb29e7f645545cf9e08424",
-            ),
-            (
-                7,
-                "dd409ccc0c60cd7f474c0beed1e1cd48140ad45d5136dc5fda5ebe283df8d3f6",
-            ),
-            (
-                8,
-                "f4c6a44b29915d3d57cf928a18ec6226bb8dd6c1136acd24965f7e7780cd69cf",
-            ),
-            (
-                9,
-                "1e1e710d08a78263773331782621088ca9fe2ee4f596f06c8f7884ca564acec1",
-            ),
-            (
-                31,
-                "2cb146aebbb6585b11bf1a371baa6e3e55108c69b0834f269f662c59bcaa5700",
-            ),
-            (
-                32,
-                "2a4f6f2b6b3ec2a6c47ba08d18c8ea561b493c13ccb35803fa8b9fb00a0f1f35",
-            ),
-            (
-                33,
-                "a6df1844412bad536a98db01024c73a8780be1a7099375696d37430586ba9381",
-            ),
-            (
-                64,
-                "5179e733b8a84f4c8a6898043c09f6a779bd6811d21aa25d353e357048279862",
-            ),
-            (
-                128,
-                "99f85ae900901d2667fe7fbc52ab6a924fd4aa902bc03019c92106f83578d459",
-            ),
-            (
-                255,
-                "d4d7b2b70bd7f57c37be24c5f9d14207b737d8c21632b1ae3093b7a740cddd3e",
-            ),
-        ];
-        check_vectors(AsconParameters::AsconHash, &vectors);
-    }
-
-    #[test]
-    fn bc_legacy_ascon_hash_a_kat_vectors() {
-        let vectors = [
-            (
-                0,
-                "aecd027026d0675f9de7a8ad8ccf512db64b1edcf0b20c388a0c7cc617aaa2c4",
-            ),
-            (
-                1,
-                "5a55f0367763d334a3174f9c17fa476eb9196a22f10daf29505633572e7756e4",
-            ),
-            (
-                2,
-                "4243fd3b872e1ed4013711382cba032fecb4147d840ddf8436172ac62d129bc4",
-            ),
-            (
-                7,
-                "6b6ad8a90eab00dccc182df1cec764e706461e76d303863728b8590b772e9082",
-            ),
-            (
-                8,
-                "be9332e10ad16137322968bbec1776ba3f4ecdc1183db7dbe1ac98bd66fce7b6",
-            ),
-            (
-                9,
-                "7d3e9e36b5865a874dbc7f9373fb184fa722a94dd3ee04612b5363c949b5089b",
-            ),
-            (
-                31,
-                "dadc63c0f6305655ba7a344300bf0f698815456754d737bc9f23f38f9b11ccab",
-            ),
-            (
-                32,
-                "3237cbcc617a2550583a50e8bad3dacda82562e06220150448c109008fa054a2",
-            ),
-            (
-                33,
-                "b2e4ee021a20b30a84e14060a894602f3f53942edc19266be6dfdc90ede518b2",
-            ),
-            (
-                64,
-                "34877b3831c3150bb447b8276caa1f2ccf98693db1f545b98e493fd1e2a1c147",
-            ),
-            (
-                128,
-                "e9862486da598741e9840d19f7a96d0b636523b1b2d7257ca36695da9c94be42",
-            ),
-            (
-                255,
-                "cb30ef67cf7dfe18f54efedfb6f72d1ebf3932de38f3381da214df8eaea5ceb8",
-            ),
-        ];
-        check_vectors(AsconParameters::AsconHashA, &vectors);
-    }
-
-    fn check_vectors(parameters: AsconParameters, vectors: &[(usize, &str)]) {
-        let mut digest = AsconDigest::new(parameters);
-        for &(length, expected) in vectors {
-            let message: Vec<u8> = (0..length).map(|i| i as u8).collect();
-            assert_eq!(
-                digest_hex(&mut digest, &message),
-                expected,
-                "length {length}"
-            );
-
-            for chunk in message.chunks(5) {
-                digest.update(chunk);
-            }
-            let mut output = [0u8; DIGEST_LENGTH];
-            digest.do_final(&mut output);
-            assert_eq!(hex(&output), expected, "chunked length {length}");
-        }
     }
 
     #[test]

@@ -3,8 +3,8 @@
 //!
 //! **Deprecated.** These are the pre-standardization Ascon v1.2 extendable-output
 //! functions, kept only for interoperability with legacy data. For new designs use
-//! the NIST SP 800-232 [`AsconXof128`](crate::ascon_xof128::AsconXof128) or
-//! [`AsconCXof128`](crate::ascon_cxof128::AsconCXof128).
+//! the NIST SP 800-232 [`AsconXof128`](crate::AsconXof128) or
+//! [`AsconCXof128`](crate::AsconCXof128).
 //!
 //! Unlike the SP 800-232 variants (little-endian, `0x01` pad, `p12` throughout),
 //! the v1.2 XOF is **big-endian** with an `0x80` pad and a variant-dependent number
@@ -49,6 +49,7 @@ const XOFA_IV: [u64; 5] = [
     12162917349548726079,
 ];
 
+/// The initial state of `parameters`. Constant time.
 const fn initial_state(parameters: AsconXofParameters) -> [u64; 5] {
     match parameters {
         AsconXofParameters::AsconXof => XOF_IV,
@@ -56,7 +57,8 @@ const fn initial_state(parameters: AsconXofParameters) -> [u64; 5] {
     }
 }
 
-/// The deprecated Ascon v1.2 extendable-output function.
+/// The deprecated Ascon v1.2 extendable-output function. Read as a plain
+/// digest it writes 32 bytes. Constant time.
 #[deprecated(note = "Ascon v1.2 is superseded by NIST SP 800-232; use AsconXof128 / AsconCXof128")]
 #[derive(Clone)]
 pub struct AsconXof {
@@ -68,7 +70,7 @@ pub struct AsconXof {
 }
 
 impl AsconXof {
-    /// Creates a new Ascon v1.2 XOF of the given variant.
+    /// Creates a new Ascon v1.2 XOF of the given variant. Constant time.
     pub fn new(parameters: AsconXofParameters) -> Self {
         AsconXof {
             parameters,
@@ -79,7 +81,8 @@ impl AsconXof {
         }
     }
 
-    /// `p_b`:absorb 與後續 squeeze 用的置換(AsconXof=p12、AsconXofA=p8)。
+    /// `p_b`, the permutation for absorbing and for every squeeze after the
+    /// first: Ascon-p\[12\] for AsconXof, Ascon-p\[8\] for AsconXofA. Constant time.
     #[inline]
     fn pb_permute(&mut self) {
         match self.parameters {
@@ -88,19 +91,20 @@ impl AsconXof {
         }
     }
 
+    /// XORs one block into the rate and permutes. Constant time.
     #[inline]
     fn absorb_block(&mut self, block: &[u8; RATE]) {
         self.state[0] ^= u64::from_be_bytes(*block);
         self.pb_permute();
     }
 
-    /// 吸收收尾:big-endian、`0x80` pad(不置換)。
+    /// XORs the buffered bytes and the big-endian `0x80` padding into the
+    /// rate, without permuting. Constant time.
     fn pad(&mut self) {
         let mut last = [0u8; RATE];
         last[..self.buffer_position].copy_from_slice(&self.buffer[..self.buffer_position]);
         last[self.buffer_position] = 0x80;
         self.state[0] ^= u64::from_be_bytes(last);
-        last.zeroize();
     }
 }
 
@@ -133,9 +137,8 @@ impl TryDigest for AsconXof {
             input = &input[copied..];
 
             if self.buffer_position == RATE {
-                let mut block = self.buffer;
+                let block = self.buffer;
                 self.absorb_block(&block);
-                block.zeroize();
                 self.buffer_position = 0;
             } else {
                 return Ok(());
@@ -154,14 +157,16 @@ impl TryDigest for AsconXof {
     }
 
     fn try_do_final(&mut self, output: &mut [u8]) -> Result<usize, Self::Error> {
+        assert!(
+            output.len() >= DIGEST_LENGTH,
+            "output buffer shorter than the {DIGEST_LENGTH}-byte digest"
+        );
         self.try_output_final(&mut output[..DIGEST_LENGTH])
     }
 
+    // A fresh XOF replaces this one, which the drop wipes.
     fn try_reset(&mut self) -> Result<(), Self::Error> {
-        self.state = initial_state(self.parameters);
-        self.buffer = [0; RATE];
-        self.buffer_position = 0;
-        self.squeezing = false;
+        *self = Self::new(self.parameters);
         Ok(())
     }
 }
@@ -173,7 +178,7 @@ impl TryXof for AsconXof {
         if !self.squeezing {
             self.pad();
             self.squeezing = true;
-            // 首次 squeeze 恆為完整 p12(即使 pb = p8)。
+            // The first squeeze is always the full p12, even when p_b is p8.
             p12(&mut self.state);
             if output.len() < RATE {
                 self.buffer = self.state[0].to_be_bytes();
@@ -198,7 +203,7 @@ impl TryXof for AsconXof {
             self.buffer_position = RATE;
         }
 
-        // 後續整區塊:p_b 置換後寫出 S0(big-endian)。
+        // Later whole blocks: p_b, then the rate written out big-endian.
         while output.len() >= RATE {
             self.pb_permute();
             output[..RATE].copy_from_slice(&self.state[0].to_be_bytes());
@@ -233,7 +238,9 @@ impl Drop for AsconXof {
 }
 
 impl core::fmt::Display for AsconXof {
-    /// Writes the algorithm name without inspecting key material.
+    /// Writes `Ascon-Xof` or `Ascon-XofA` without inspecting the state.
+    /// Constant time with respect to the message; output timing depends on the
+    /// formatter.
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.write_str(match self.parameters {
             AsconXofParameters::AsconXof => "Ascon-Xof",
@@ -260,7 +267,8 @@ mod tests {
         assert_eq!(a.to_string(), "Ascon-XofA");
     }
 
-    // 兩變體(尤其 XofA 的 pb=8)首塊 P12、後續 pb —— 串流分段須與一次擠出相同。
+    // Both variants, XofA especially with its p8 p_b after the p12 first
+    // block, give the same bytes read in pieces as read at once.
     #[test]
     fn streamed_output_matches_single() {
         for p in [AsconXofParameters::AsconXof, AsconXofParameters::AsconXofA] {

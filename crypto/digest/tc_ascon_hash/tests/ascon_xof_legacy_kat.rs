@@ -1,6 +1,7 @@
 //! Official Ascon v1.2 XOF known-answer tests (`AsconXof` / `AsconXofA`),
-//! 1025 vectors each (Msg → 32-byte MD).
+//! 1025 vectors each (Msg to a 32-byte MD).
 
+#![cfg(feature = "legacy")]
 #![allow(deprecated)]
 
 use tc_ascon_hash::{AsconXof, AsconXofParameters};
@@ -29,14 +30,14 @@ fn run_kat(data: &str, parameters: AsconXofParameters) {
         }
 
         if let (Some(m), Some(expected)) = (&msg, &md) {
-            // 單次吸收 + 一次擠出。
+            // One absorb, one read.
             let mut x = AsconXof::new(parameters);
             x.update(m);
             let mut out = vec![0u8; expected.len()];
             x.output_final(&mut out);
             assert_eq!(&out, expected, "{parameters:?} Count {count}: single-shot");
 
-            // 分段吸收 + 不對齊分段擠出。
+            // Absorbing and reading in pieces off the rate gives the same bytes.
             let mut x = AsconXof::new(parameters);
             for chunk in m.chunks(3) {
                 x.update(chunk);

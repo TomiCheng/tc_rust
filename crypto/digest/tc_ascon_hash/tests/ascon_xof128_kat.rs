@@ -31,14 +31,14 @@ fn official_xof128_kat_vectors() {
         }
 
         if let (Some(m), Some(expected)) = (&msg, &md) {
-            // 單次吸收 + 一次擠出。
+            // One absorb, one read.
             let mut x = AsconXof128::new();
             x.update(m);
             let mut out = vec![0u8; expected.len()];
             x.output_final(&mut out);
             assert_eq!(&out, expected, "Count {count}: single-shot");
 
-            // 分段吸收 + 不對齊分段擠出(串流連續性)。
+            // Absorbing and reading in pieces off the rate gives the same bytes.
             let mut x = AsconXof128::new();
             for chunk in m.chunks(3) {
                 x.update(chunk);

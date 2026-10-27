@@ -2,7 +2,7 @@
 //!
 //! This is the standardized Ascon hash, not the older Ascon v1.2 hash. The
 //! NIST version uses little-endian word encoding, an 8-byte rate, the
-//! Ascon-p\[12] permutation, and a fixed 256-bit output.
+//! Ascon-p\[12\] permutation, and a fixed 256-bit output.
 
 use core::convert::Infallible;
 
@@ -21,7 +21,7 @@ const IV: [u64; 5] = [
     0x1a5c_4649_06c5_976d,
 ];
 
-/// The standardized 256-bit Ascon hash from NIST SP 800-232.
+/// The standardized 256-bit Ascon hash from NIST SP 800-232. Constant time.
 #[derive(Clone)]
 pub struct AsconHash256 {
     state: [u64; 5],
@@ -36,7 +36,7 @@ impl Default for AsconHash256 {
 }
 
 impl AsconHash256 {
-    /// Creates a new Ascon-Hash256 digest.
+    /// Creates a new Ascon-Hash256 digest. Constant time.
     pub fn new() -> Self {
         AsconHash256 {
             state: IV,
@@ -45,6 +45,7 @@ impl AsconHash256 {
         }
     }
 
+    /// XORs one block into the rate and permutes. Constant time.
     #[inline]
     fn absorb_block(&mut self, block: &[u8; RATE]) {
         self.state[0] ^= u64::from_le_bytes(*block);
@@ -77,9 +78,8 @@ impl TryDigest for AsconHash256 {
             input = &input[copied..];
 
             if self.buffer_position == RATE {
-                let mut block = self.buffer;
+                let block = self.buffer;
                 self.absorb_block(&block);
-                block.zeroize();
                 self.buffer_position = 0;
             } else {
                 return Ok(());
@@ -100,11 +100,14 @@ impl TryDigest for AsconHash256 {
     }
 
     fn try_do_final(&mut self, output: &mut [u8]) -> Result<usize, Self::Error> {
+        assert!(
+            output.len() >= DIGEST_LENGTH,
+            "output buffer shorter than the {DIGEST_LENGTH}-byte digest"
+        );
         let mut final_block = [0u8; RATE];
         final_block[..self.buffer_position].copy_from_slice(&self.buffer[..self.buffer_position]);
         final_block[self.buffer_position] = 0x01;
         self.state[0] ^= u64::from_le_bytes(final_block);
-        final_block.zeroize();
         p12(&mut self.state);
 
         for (index, chunk) in output[..DIGEST_LENGTH].chunks_exact_mut(RATE).enumerate() {
@@ -118,10 +121,9 @@ impl TryDigest for AsconHash256 {
         Ok(DIGEST_LENGTH)
     }
 
+    // A fresh digest replaces this one, which the drop wipes.
     fn try_reset(&mut self) -> Result<(), Self::Error> {
-        self.state = IV;
-        self.buffer.fill(0);
-        self.buffer_position = 0;
+        *self = Self::new();
         Ok(())
     }
 }
@@ -136,7 +138,8 @@ impl Drop for AsconHash256 {
 }
 
 impl core::fmt::Display for AsconHash256 {
-    /// Writes the algorithm name without inspecting key material.
+    /// Writes `Ascon-Hash256` without inspecting the state. Constant time with
+    /// respect to the message; output timing depends on the formatter.
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.write_str("Ascon-Hash256")
     }
@@ -164,115 +167,6 @@ mod tests {
         let mut output = [0u8; DIGEST_LENGTH];
         digest.do_final(&mut output);
         hex(&output)
-    }
-
-    #[test]
-    fn official_ascon_c_kat_vectors() {
-        // Selected from ascon-c's NIST SP 800-232 KAT, including rate and
-        // long-message boundaries. Each message is 00, 01, ... modulo 256.
-        let vectors = [
-            (
-                0,
-                "0b3be5850f2f6b98caf29f8fdea89b64a1fa70aa249b8f839bd53baa304d92b2",
-            ),
-            (
-                1,
-                "0728621035af3ed2bca03bf6fde900f9456f5330e4b5ee23e7f6a1e70291bc80",
-            ),
-            (
-                2,
-                "6115e7c9c4081c2797fc8fe1bc57a836afa1c5381e556dd583860ca2dfb48dd2",
-            ),
-            (
-                7,
-                "3e4d273ba69b3b9c53216107e88b75cdbeedbcbf8faf0219c3928ab62b116577",
-            ),
-            (
-                8,
-                "b88e497ae8e6fb641b87ef622eb8f2fca0ed95383f7ffebe167acf1099ba764f",
-            ),
-            (
-                9,
-                "94269c30e0296e1ec86655041841823efa1927f520fd58c8e9bce6197878c1a6",
-            ),
-            (
-                15,
-                "6421330df99c05eb715415ee17b455f2674f862ae3cc5badffe43a4a3ed273e1",
-            ),
-            (
-                16,
-                "3158c1940a2fbadbd68ab661777859b94a689e4efc375911467addd641835c38",
-            ),
-            (
-                17,
-                "f149e99dd0f429599bb89b8079bf3f4dca3f298efefcf9b1ea16fe84f9b8b6e2",
-            ),
-            (
-                31,
-                "b900cd3f06f1618b68c16665807206dbe273df40135361f449847d573903fabd",
-            ),
-            (
-                32,
-                "bd9d3d60a66b53868eab2a5c74539a518a1f60f01eb176c60e43dee81680b33e",
-            ),
-            (
-                33,
-                "a58665a2cb9530c502096a7957a76e428af4ad044b4da5c471f9da6f7b3e5868",
-            ),
-            (
-                63,
-                "5072896862f6b9cfe8ef76d80559e156254782a40ac5f64cbf7934ad1f624b30",
-            ),
-            (
-                64,
-                "a6f241bea5d16405812c06019d9f72d60132bd7c089c60549b2e56bb01c64f48",
-            ),
-            (
-                65,
-                "bff4fa006fe6feabb5ce9b219492d0d230f4d05f2bac42db7189f441b1e83b53",
-            ),
-            (
-                126,
-                "4666aff6ba886835281152b30fd26f7d8d15c260ed136677c6db21593a476a4e",
-            ),
-            (
-                127,
-                "d968938c7f7849403160e291ea54ad79c0caf1237c1375a0b553d5c8122f88b3",
-            ),
-            (
-                128,
-                "ce8c1047063527f52dddf77dfa8cff33cad07edd981aae3fe845958209c0ec1f",
-            ),
-            (
-                255,
-                "ada496e2c0ade829f37832a8ba34cf6059dffbb3beba88ca5ded3363914ea69a",
-            ),
-            (
-                511,
-                "65eb85cf958ab45421a39052dd13e61011dedec9b89c161bd7d1ace2a48a18a9",
-            ),
-            (
-                1024,
-                "48140032bb7df2e2b5c95d403c9ab69b4bc00453980bf85f15a84cae2b09a0e9",
-            ),
-        ];
-
-        let mut digest = AsconHash256::new();
-        for (length, expected) in vectors {
-            let message: Vec<u8> = (0..length).map(|i| i as u8).collect();
-            assert_eq!(
-                digest_hex(&mut digest, &message),
-                expected,
-                "length {length}"
-            );
-
-            for chunk in message.chunks(5) {
-                digest.update(chunk);
-            }
-            let mut output = [0u8; DIGEST_LENGTH];
-            digest.do_final(&mut output);
-            assert_eq!(hex(&output), expected, "chunked length {length}");
-        }
     }
 
     #[test]

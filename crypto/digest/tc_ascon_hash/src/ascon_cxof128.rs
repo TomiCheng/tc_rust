@@ -1,9 +1,8 @@
 //! Ascon-CXOF128 from NIST SP 800-232, ported from Bouncy Castle's `AsconCXof128`.
 //!
-//! A customizable extendable-output function (XOF) over the Ascon-p\[12]
-//! permutation with an 8-byte rate. This is the crate's first user of the
-//! [`tc_digest::TryXof`] / [`tc_digest::Xof`] traits, so it
-//! doubles as a fitness check on that API.
+//! A customizable extendable-output function (XOF) over the Ascon-p\[12\]
+//! permutation with an 8-byte rate: the customization string is absorbed at
+//! construction, and every reset returns to that state.
 
 use core::convert::Infallible;
 
@@ -16,7 +15,7 @@ const DIGEST_LENGTH: usize = 32;
 const RATE: usize = 8;
 const MAX_CUSTOMIZATION: usize = 256;
 
-// 空 customization 的預算初始狀態(bc 快取值)。
+// Bouncy Castle's precomputed state for an empty customization string.
 const IV_EMPTY: [u64; 5] = [
     0x500c_ccc8_94e3_c9e8,
     0x5bed_06f2_8f71_248d,
@@ -25,7 +24,7 @@ const IV_EMPTY: [u64; 5] = [
     0x00c8_3563_40a3_47f0,
 ];
 
-// 非空 customization 起始 IV(吸收 z 前)。
+// The initial state before a non-empty customization string is absorbed.
 const IV_CUSTOM: [u64; 5] = [
     0x6755_27c2_a0e8_de03,
     0x43d1_2d7d_c037_7bbc,
@@ -34,15 +33,17 @@ const IV_CUSTOM: [u64; 5] = [
     0x8f3f_1d02_d432_bc46,
 ];
 
-/// The customizable 256-bit Ascon XOF (Ascon-CXOF128) from NIST SP 800-232.
+/// The customizable Ascon extendable-output function (Ascon-CXOF128) from
+/// NIST SP 800-232. Read as a plain digest it writes 32 bytes. Constant time.
 #[derive(Clone)]
 pub struct AsconCXof128 {
     state: [u64; 5],
-    /// 吸收完 customization 後的狀態,`reset` 時還原。
+    /// The state after the customization string, restored on reset.
     initial: [u64; 5],
-    /// 吸收階段為輸入緩衝;擠出階段為當前輸出區塊。
+    /// The input buffer while absorbing; the current output block while squeezing.
     buffer: [u8; RATE],
-    /// 吸收階段 = buffer 已填位元組;擠出階段 = 當前輸出區塊已消耗位元組(8 = 需再置換)。
+    /// Bytes buffered while absorbing; bytes of the output block already read
+    /// while squeezing, where `RATE` means the next read permutes first.
     buffer_position: usize,
     squeezing: bool,
 }
@@ -54,23 +55,17 @@ impl Default for AsconCXof128 {
 }
 
 impl AsconCXof128 {
-    /// Creates an Ascon-CXOF128 with an empty customization string.
+    /// Creates an Ascon-CXOF128 with an empty customization string. Constant time.
     pub fn new() -> Self {
-        AsconCXof128 {
-            state: IV_EMPTY,
-            initial: IV_EMPTY,
-            buffer: [0; RATE],
-            buffer_position: 0,
-            squeezing: false,
-        }
+        Self::from_initial(IV_EMPTY)
     }
 
-    /// Creates an Ascon-CXOF128 with the given customization string `z`.
+    /// Creates an Ascon-CXOF128 with the customization string `z`.
+    /// Constant time with respect to the contents of `z`; its length is public.
     ///
     /// # Panics
     ///
-    /// Panics (mirroring bc's `ArgumentOutOfRangeException`) if `z` is longer than
-    /// 256 bytes.
+    /// Panics if `z` is longer than 256 bytes, as Bouncy Castle throws.
     pub fn with_customization(z: &[u8]) -> Self {
         assert!(
             z.len() <= MAX_CUSTOMIZATION,
@@ -99,28 +94,34 @@ impl AsconCXof128 {
             state
         };
 
+        Self::from_initial(state)
+    }
+
+    /// A fresh XOF starting from `initial`. Constant time.
+    fn from_initial(initial: [u64; 5]) -> Self {
         AsconCXof128 {
-            state,
-            initial: state,
+            state: initial,
+            initial,
             buffer: [0; RATE],
             buffer_position: 0,
             squeezing: false,
         }
     }
 
+    /// XORs one block into the rate and permutes. Constant time.
     #[inline]
     fn absorb_block(&mut self, block: &[u8; RATE]) {
         self.state[0] ^= u64::from_le_bytes(*block);
         p12(&mut self.state);
     }
 
-    /// 吸收收尾:把殘留緩衝 + `0x01` pad XOR 進 S0(不置換 —— 由呼叫端後續處理)。
+    /// XORs the buffered bytes and the `0x01` padding into the rate, without
+    /// permuting. Constant time.
     fn pad(&mut self) {
         let mut last = [0u8; RATE];
         last[..self.buffer_position].copy_from_slice(&self.buffer[..self.buffer_position]);
         last[self.buffer_position] = 0x01;
         self.state[0] ^= u64::from_le_bytes(last);
-        last.zeroize();
     }
 }
 
@@ -153,9 +154,8 @@ impl TryDigest for AsconCXof128 {
             input = &input[copied..];
 
             if self.buffer_position == RATE {
-                let mut block = self.buffer;
+                let block = self.buffer;
                 self.absorb_block(&block);
-                block.zeroize();
                 self.buffer_position = 0;
             } else {
                 return Ok(());
@@ -174,14 +174,16 @@ impl TryDigest for AsconCXof128 {
     }
 
     fn try_do_final(&mut self, output: &mut [u8]) -> Result<usize, Self::Error> {
+        assert!(
+            output.len() >= DIGEST_LENGTH,
+            "output buffer shorter than the {DIGEST_LENGTH}-byte digest"
+        );
         self.try_output_final(&mut output[..DIGEST_LENGTH])
     }
 
+    // A fresh XOF replaces this one, which the drop wipes.
     fn try_reset(&mut self) -> Result<(), Self::Error> {
-        self.state = self.initial;
-        self.buffer = [0; RATE];
-        self.buffer_position = 0;
-        self.squeezing = false;
+        *self = Self::from_initial(self.initial);
         Ok(())
     }
 }
@@ -191,12 +193,12 @@ impl TryXof for AsconCXof128 {
         let total = output.len();
 
         if !self.squeezing {
-            // 收尾吸收後進入擠出;buffer_position = RATE 表示尚無已擠出的區塊。
+            // Finish absorbing; `RATE` marks that no output block is buffered yet.
             self.pad();
             self.squeezing = true;
             self.buffer_position = RATE;
         } else if self.buffer_position < RATE {
-            // 先把上一個輸出區塊的剩餘位元組排出。
+            // Hand out what is left of the previous output block first.
             let available = RATE - self.buffer_position;
             if output.len() <= available {
                 let end = self.buffer_position + output.len();
@@ -209,14 +211,14 @@ impl TryXof for AsconCXof128 {
             self.buffer_position = RATE;
         }
 
-        // 整區塊:置換後直接寫出 S0。
+        // Whole blocks: permute and write the rate straight out.
         while output.len() >= RATE {
             p12(&mut self.state);
             output[..RATE].copy_from_slice(&self.state[0].to_le_bytes());
             output = &mut output[RATE..];
         }
 
-        // 尾段:置換一次、緩衝一個區塊、寫出所需並記錄消耗量。
+        // A partial block: permute once, buffer the block and record how much was read.
         if !output.is_empty() {
             p12(&mut self.state);
             self.buffer = self.state[0].to_le_bytes();
@@ -236,7 +238,8 @@ impl TryXof for AsconCXof128 {
 }
 
 impl Drop for AsconCXof128 {
-    /// Wipes the state, the customized initial state and the buffered bytes. Constant time.
+    /// Wipes the state, the customized initial state and the buffered bytes.
+    /// Constant time.
     fn drop(&mut self) {
         self.state.zeroize();
         self.initial.zeroize();
@@ -246,7 +249,8 @@ impl Drop for AsconCXof128 {
 }
 
 impl core::fmt::Display for AsconCXof128 {
-    /// Writes the algorithm name without inspecting key material.
+    /// Writes `Ascon-CXOF128` without inspecting the state. Constant time with
+    /// respect to the message; output timing depends on the formatter.
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.write_str("Ascon-CXOF128")
     }
@@ -256,20 +260,12 @@ impl core::fmt::Display for AsconCXof128 {
 mod tests {
     use alloc::string::ToString;
 
-    use alloc::{format, string::String, vec, vec::Vec};
+    use alloc::{vec, vec::Vec};
 
     use super::*;
     use tc_digest::{Digest, Xof};
 
-    fn hex(bytes: &[u8]) -> String {
-        let mut s = String::with_capacity(bytes.len() * 2);
-        for b in bytes {
-            s.push_str(&format!("{b:02x}"));
-        }
-        s
-    }
-
-    // 一次擠出 N bytes 與分段擠出應完全相同(串流連續性)。
+    // Reading in pieces that do not line up with the rate gives the same bytes.
     #[test]
     fn streamed_output_matches_single() {
         let mut a = AsconCXof128::new();
@@ -280,7 +276,6 @@ mod tests {
         let mut b = AsconCXof128::new();
         b.update(b"the quick brown fox");
         let mut streamed = [0u8; 100];
-        // 以不對齊 rate 的切段擠出。
         let (mut off, sizes) = (0usize, [1usize, 7, 8, 9, 3, 40, 32]);
         for s in sizes {
             b.output(&mut streamed[off..off + s]);
@@ -289,21 +284,19 @@ mod tests {
         assert_eq!(whole, streamed);
     }
 
-    // output_final 擠出後應 reset,可立即吸收新訊息。
+    // output_final resets, so the XOF takes a new message straight away.
     #[test]
     fn output_final_resets() {
         let mut a = AsconCXof128::new();
         a.update(b"first");
         let mut o1 = [0u8; 32];
         a.output_final(&mut o1);
-        // reset 後重算應與全新實例相同。
         a.update(b"first");
         let mut o2 = [0u8; 32];
         a.output_final(&mut o2);
         assert_eq!(o1, o2);
     }
 
-    // do_final(Digest 介面)= 32-byte output_final。
     #[test]
     fn do_final_is_32_byte_output_final() {
         let mut a = AsconCXof128::new();
@@ -318,7 +311,6 @@ mod tests {
         assert_eq!(viafinal, viaxof);
     }
 
-    // customization string 應改變輸出。
     #[test]
     fn customization_changes_output() {
         let mut a = AsconCXof128::new();
@@ -341,20 +333,18 @@ mod tests {
         assert_eq!(d.byte_length(), 8);
     }
 
-    // 自洽驗證:空 customization = 非空路徑套用 z=empty,即
-    //   IV_CUSTOM → P12 → pad(S0 ^= 0x01) → P12 == IV_EMPTY。
-    // 這驗證兩個 IV 常數彼此一致,且與 `with_customization` 的吸收/pad/置換邏輯
-    // 及 P12 對上 NIST SP 800-232 的初始化。
+    // The empty customization string run through the general path, that is
+    // IV_CUSTOM, p12, the 0x01 padding and p12 again, must give IV_EMPTY: the
+    // two constants agree with each other and with NIST SP 800-232.
     #[test]
     fn init_constants_match_ascon_derivation() {
         let mut s = IV_CUSTOM;
-        p12(&mut s); // S0 ^= (0 << 3) 為 no-op
-        s[0] ^= 0x01; // PadAndAbsorb,空緩衝
+        p12(&mut s);
+        s[0] ^= 0x01;
         p12(&mut s);
         assert_eq!(s, IV_EMPTY);
     }
 
-    // 分段吸收與一次吸收相同。
     #[test]
     fn chunked_absorb_matches_whole() {
         let msg: Vec<u8> = (0..200).map(|i| i as u8).collect();
@@ -370,6 +360,22 @@ mod tests {
         let mut ob = vec![0u8; 48];
         b.output_final(&mut ob);
         assert_eq!(oa, ob);
-        let _ = hex(&oa);
+    }
+
+    // A reset returns to the customized state, not to the empty one.
+    #[test]
+    fn reset_keeps_the_customization() {
+        let mut fresh = AsconCXof128::with_customization(b"ctx");
+        fresh.update(b"msg");
+        let mut want = [0u8; 32];
+        fresh.output_final(&mut want);
+
+        let mut reused = AsconCXof128::with_customization(b"ctx");
+        reused.update(b"discarded");
+        reused.reset();
+        reused.update(b"msg");
+        let mut got = [0u8; 32];
+        reused.output_final(&mut got);
+        assert_eq!(got, want);
     }
 }
