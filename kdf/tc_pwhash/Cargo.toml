@@ -14,6 +14,6 @@ tc_blake = { version = "0.1.0", path = "../../crypto/digest/tc_blake" }
 tc_constant_time = "0.1.0"
 tc_digest = "0.1.0"
 # scrypt 前後兩次 PBKDF2-HMAC-SHA256
-tc_pbe = { version = "0.1.0", path = "../tc_pbe", features = ["pbkdf2"] }
+tc_pbe = { version = "0.1.0", path = "../tc_pbe" }
 tc_sha = "0.1.1"
 tc_zeroize = { version = "0.1.0", features = ["alloc"] }

@@ -12,9 +12,7 @@ pub enum PbeError {
     /// The request goes past the most bytes the scheme can derive, such as one digest for
     /// PKCS#5 scheme 1.
     OutputTooLong,
-    /// The HMAC under PBKDF2 failed; [`source`](Error::source) returns its error. Available
-    /// with the `pbkdf2` feature.
-    #[cfg(feature = "pbkdf2")]
+    /// The HMAC under PBKDF2 failed; [`source`](Error::source) returns its error.
     Mac(tc_macs::MacError),
 }
 
@@ -27,7 +25,6 @@ impl fmt::Display for PbeError {
                 write!(f, "PBE iteration count {count} is not accepted")
             }
             Self::OutputTooLong => f.write_str("PBE output exceeds the scheme's length limit"),
-            #[cfg(feature = "pbkdf2")]
             Self::Mac(_) => f.write_str("PBE HMAC failed"),
         }
     }
@@ -37,7 +34,6 @@ impl Error for PbeError {
     /// Returns the HMAC's error for `Mac`, and `None` otherwise. Constant time.
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
-            #[cfg(feature = "pbkdf2")]
             Self::Mac(error) => Some(error),
             _ => None,
         }

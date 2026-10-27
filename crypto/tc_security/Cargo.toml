@@ -126,7 +126,7 @@ ec = [
 ecies = ["ec", "sha1", "dep:tc_ies", "dep:tc_kdf"]
 # 以密碼加密，同 BC 的 PbeUtilities：PKCS#5 v1、PKCS#12 與 OpenSSL 的方案。各方案另外要它的 digest 與
 # cipher 的 feature 都開了才會出現；方案都是舊的組合，所以不在預設裡
-pbe = ["dep:tc_pbe", "tc_pbe/pbkdf2", "dep:tc_asn1_pkcs", "dep:tc_asn1_x509"]
+pbe = ["dep:tc_pbe", "dep:tc_asn1_pkcs", "dep:tc_asn1_x509"]
 # 金鑰與 DER 互轉，同 BC 的 PrivateKeyFactory、PublicKeyFactory、PrivateKeyInfoFactory 與
 # SubjectPublicKeyInfoFactory：私鑰是 PKCS#8 的 PrivateKeyInfo，公鑰是 X.509 的 SubjectPublicKeyInfo。
 # 只轉換已開啟的演算法（rsa、x25519、x448、ed25519、ed448、ec）的金鑰

@@ -9,7 +9,7 @@ use crate::state::PbeState;
 use crate::{PbeError, PbeGenerator, PbeGeneratorInit, PbeParams};
 
 /// PKCS#5 scheme 2, PBKDF2 of RFC 8018 over HMAC with the digest `D`, BC's
-/// `Pkcs5S2ParametersGenerator`. Available with the `pbkdf2` feature.
+/// `Pkcs5S2ParametersGenerator`.
 ///
 /// Block `i` is `U1 xor U2 xor ... xor Uc`, with `U1 = HMAC(P, S || INT(i))` and
 /// `Uj = HMAC(P, U(j - 1))`. The key and IV are taken in turn from one output, so together they

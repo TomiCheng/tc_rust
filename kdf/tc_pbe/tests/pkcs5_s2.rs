@@ -1,5 +1,3 @@
-#![cfg(feature = "pbkdf2")]
-
 use tc_digest::Digest;
 use tc_pbe::{PbeError, PbeGenerator, PbeGeneratorInit, PbeParamsRef, Pkcs5S2};
 use tc_sha::{Sha1Digest, Sha256Digest};
