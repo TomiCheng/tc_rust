@@ -1,7 +1,5 @@
 //! Bouncy Castle's `OpenBsdBCryptTest` vectors, and reading malformed hash strings.
 
-#![cfg(feature = "bcrypt")]
-
 use tc_pwhash::bcrypt::{BcryptError, BcryptVersion, OpenBsdBcrypt};
 
 fn check(hash: &str, password: &str) -> bool {

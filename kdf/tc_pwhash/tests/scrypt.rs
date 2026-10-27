@@ -1,7 +1,5 @@
 //! The RFC 7914 vectors Bouncy Castle's `SCryptTest` runs, and its parameter limits.
 
-#![cfg(feature = "scrypt")]
-
 use tc_pwhash::scrypt::{Scrypt, ScryptError};
 
 fn hex(text: &str) -> Vec<u8> {

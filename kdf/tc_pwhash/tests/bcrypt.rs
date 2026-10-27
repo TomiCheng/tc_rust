@@ -1,7 +1,5 @@
 //! Bouncy Castle's `BCryptTest` vectors for the raw function, and its limits.
 
-#![cfg(feature = "bcrypt")]
-
 use tc_pwhash::bcrypt::{Bcrypt, BcryptError};
 
 fn hex(text: &str) -> Vec<u8> {

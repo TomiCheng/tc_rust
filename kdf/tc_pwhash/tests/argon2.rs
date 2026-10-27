@@ -1,8 +1,6 @@
 //! Bouncy Castle's `Argon2Test` vectors: the RFC 9106 and reference KATs, Argon2i hashes of both
 //! versions, and the parameter checks.
 
-#![cfg(feature = "argon2")]
-
 use tc_pwhash::argon2::{Argon2, Argon2Error, Argon2ParamsRef, Argon2Type, Argon2Version};
 
 fn hex(text: &str) -> Vec<u8> {
