@@ -4,10 +4,10 @@ use tc_zeroize::Zeroizing;
 
 use crate::{PbeError, PbeParams};
 
-/// 產生器在 init 時複製的參數；密碼在替換與 drop 時清除，salt 與次數不是秘密。
+/// 產生器在 init 時複製的參數；密碼與 salt 在替換與 drop 時清除（scrypt 拿秘密當 salt）。
 pub(crate) struct PbeState {
     pub(crate) password: Zeroizing<Vec<u8>>,
-    pub(crate) salt: Vec<u8>,
+    pub(crate) salt: Zeroizing<Vec<u8>>,
     pub(crate) iteration_count: usize,
 }
 
@@ -20,7 +20,7 @@ impl PbeState {
         }
         Ok(Self {
             password: Zeroizing::new(params.password().to_vec()),
-            salt: params.salt().to_vec(),
+            salt: Zeroizing::new(params.salt().to_vec()),
             iteration_count,
         })
     }

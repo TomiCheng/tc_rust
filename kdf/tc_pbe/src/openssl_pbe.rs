@@ -12,8 +12,8 @@ use crate::{PbeError, PbeGenerator, PbeGeneratorInit, PbeParams};
 ///
 /// As in BC, the iteration count is ignored and taken as 1, which is what `openssl enc` uses
 /// without `-iter`; BC's default digest is MD5. The key and IV are taken in turn from one output,
-/// and the MAC key is the same bytes as the cipher key. The password copied at `init` is wiped
-/// when replaced and on drop, and so is every `D`.
+/// and the MAC key is the same bytes as the cipher key. The password and salt copied at `init` are
+/// wiped when replaced and on drop, and so is every `D`.
 pub struct OpenSslPbe<D> {
     digest: D,
     state: Option<PbeState>,
@@ -57,7 +57,7 @@ impl<D, P: PbeParams + ?Sized> PbeGeneratorInit<P> for OpenSslPbe<D> {
     fn init(&mut self, params: &P) -> Result<(), PbeError> {
         self.state = Some(PbeState {
             password: Zeroizing::new(params.password().to_vec()),
-            salt: params.salt().to_vec(),
+            salt: Zeroizing::new(params.salt().to_vec()),
             iteration_count: 1,
         });
         Ok(())

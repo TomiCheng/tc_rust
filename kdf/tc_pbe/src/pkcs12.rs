@@ -18,8 +18,8 @@ const MAC_MATERIAL: u8 = 3;
 /// and password each repeated to a whole number of digest blocks, then gets each block raised
 /// by the last hash plus one.
 ///
-/// The password copied at `init` is wiped when replaced and on drop, and so are `I` and every
-/// hash.
+/// The password and salt copied at `init` are wiped when replaced and on drop, and so are `I`
+/// and every hash.
 pub struct Pkcs12<D> {
     digest: D,
     state: Option<PbeState>,

@@ -11,7 +11,8 @@ use crate::{PbeError, PbeGenerator, PbeGeneratorInit, PbeParams};
 /// then `Ti = H(T(i - 1))` up to the iteration count, and the key, IV or MAC key are cut from
 /// the front of the last `T`, so together they take at most one digest.
 ///
-/// The password copied at `init` is wiped when replaced and on drop, and so is every `T`.
+/// The password and salt copied at `init` are wiped when replaced and on drop, and so is every
+/// `T`.
 pub struct Pkcs5S1<D> {
     digest: D,
     state: Option<PbeState>,

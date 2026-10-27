@@ -15,8 +15,8 @@ use crate::{PbeError, PbeGenerator, PbeGeneratorInit, PbeParams};
 /// `Uj = HMAC(P, U(j - 1))`. The key and IV are taken in turn from one output, so together they
 /// may run to `(2^32 - 1)` blocks. The MAC key is the same bytes as the cipher key, as in BC.
 ///
-/// The password copied at `init` is wiped when replaced and on drop, and so is every block; the
-/// HMAC wipes its own keyed pads.
+/// The password and salt copied at `init` are wiped when replaced and on drop, and so is every
+/// block; the HMAC wipes its own keyed pads. scrypt passes a secret as the salt.
 pub struct Pkcs5S2<D> {
     hmac: Hmac<D>,
     state: Option<PbeState>,
