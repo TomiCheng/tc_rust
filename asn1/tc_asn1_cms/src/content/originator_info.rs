@@ -72,6 +72,28 @@ impl OriginatorInfo {
     pub fn crls(&self) -> Option<&[RevocationInfoChoice]> {
         self.crls.as_ref().map(Asn1SetOf::members)
     }
+
+    /// Whether any certificate or revocation information is in another format,
+    /// the first test of the version rules of RFC 5652 §6.1 and §9.1.
+    pub(crate) fn has_other_formats(&self) -> bool {
+        self.certificates()
+            .unwrap_or_default()
+            .iter()
+            .any(|c| matches!(c, CertificateChoices::Other(_)))
+            || self
+                .crls()
+                .unwrap_or_default()
+                .iter()
+                .any(|c| matches!(c, RevocationInfoChoice::Other(_)))
+    }
+
+    /// Whether any certificate is a version 2 attribute certificate.
+    pub(crate) fn has_v2_attribute_certificates(&self) -> bool {
+        self.certificates()
+            .unwrap_or_default()
+            .iter()
+            .any(|c| matches!(c, CertificateChoices::V2AttrCert(_)))
+    }
 }
 
 impl DecodeContent for OriginatorInfo {
