@@ -1363,6 +1363,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_ecdh_kek"
+version = "0.1.0"
+dependencies = [
+ "tc_asn1",
+ "tc_asn1_cms",
+ "tc_asn1_x509",
+ "tc_digest 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tc_kdf",
+ "tc_sha 0.1.1",
+]
+
+[[package]]
 name = "tc_ecdh_v2"
 version = "0.1.0"
 dependencies = [
