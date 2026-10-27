@@ -8,6 +8,7 @@
 use core::convert::Infallible;
 
 use tc_digest::{TryDigest, TryXof};
+use tc_zeroize::Zeroize;
 
 use crate::ascon_core::p12;
 
@@ -119,6 +120,7 @@ impl AsconCXof128 {
         last[..self.buffer_position].copy_from_slice(&self.buffer[..self.buffer_position]);
         last[self.buffer_position] = 0x01;
         self.state[0] ^= u64::from_le_bytes(last);
+        last.zeroize();
     }
 }
 
@@ -151,8 +153,9 @@ impl TryDigest for AsconCXof128 {
             input = &input[copied..];
 
             if self.buffer_position == RATE {
-                let block = self.buffer;
+                let mut block = self.buffer;
                 self.absorb_block(&block);
+                block.zeroize();
                 self.buffer_position = 0;
             } else {
                 return Ok(());
@@ -229,6 +232,16 @@ impl TryXof for AsconCXof128 {
         let written = self.try_output(output)?;
         self.try_reset()?;
         Ok(written)
+    }
+}
+
+impl Drop for AsconCXof128 {
+    /// Wipes the state, the customized initial state and the buffered bytes. Constant time.
+    fn drop(&mut self) {
+        self.state.zeroize();
+        self.initial.zeroize();
+        self.buffer.zeroize();
+        self.buffer_position.zeroize();
     }
 }
 

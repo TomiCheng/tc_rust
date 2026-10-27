@@ -7,6 +7,7 @@
 use core::convert::Infallible;
 
 use tc_digest::TryDigest;
+use tc_zeroize::Zeroize;
 
 use crate::ascon_core::p12;
 
@@ -76,8 +77,9 @@ impl TryDigest for IsapDigest {
             input = &input[copied..];
 
             if self.buffer_position == BYTE_LENGTH {
-                let block = self.buffer;
+                let mut block = self.buffer;
                 self.absorb_block(&block);
+                block.zeroize();
                 self.buffer_position = 0;
             } else {
                 return Ok(());
@@ -102,6 +104,7 @@ impl TryDigest for IsapDigest {
         final_block[..self.buffer_position].copy_from_slice(&self.buffer[..self.buffer_position]);
         final_block[self.buffer_position] = 0x80;
         self.state[0] ^= u64::from_be_bytes(final_block);
+        final_block.zeroize();
 
         for chunk in output[..DIGEST_LENGTH].chunks_exact_mut(BYTE_LENGTH) {
             p12(&mut self.state);
@@ -117,6 +120,15 @@ impl TryDigest for IsapDigest {
         self.buffer.fill(0);
         self.buffer_position = 0;
         Ok(())
+    }
+}
+
+impl Drop for IsapDigest {
+    /// Wipes the state and the buffered bytes. Constant time.
+    fn drop(&mut self) {
+        self.state.zeroize();
+        self.buffer.zeroize();
+        self.buffer_position.zeroize();
     }
 }
 

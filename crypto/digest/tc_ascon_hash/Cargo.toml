@@ -9,3 +9,5 @@ repository.workspace = true
 
 [dependencies]
 tc_digest = "0.1.0"
+# drop 時清除狀態與緩衝
+tc_zeroize = "0.1.0"
