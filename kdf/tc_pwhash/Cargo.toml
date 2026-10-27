@@ -1,0 +1,17 @@
+[package]
+name = "tc_pwhash"
+description = "Password hashing schemes, after Bouncy Castle: bcrypt and its OpenBSD hash strings."
+version = "0.1.0"
+edition.workspace = true
+rust-version = "1.85"
+license.workspace = true
+repository.workspace = true
+
+[features]
+default = []
+# bcrypt 與 OpenBSD 的 $2y$ 雜湊字串
+bcrypt = ["dep:tc_constant_time", "dep:tc_zeroize"]
+
+[dependencies]
+tc_constant_time = { version = "0.1.0", optional = true }
+tc_zeroize = { version = "0.1.0", optional = true }

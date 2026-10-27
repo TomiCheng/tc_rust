@@ -1721,6 +1721,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_pwhash"
+version = "0.1.0"
+dependencies = [
+ "tc_constant_time",
+ "tc_zeroize",
+]
+
+[[package]]
 name = "tc_rc4_family"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
