@@ -1725,6 +1725,8 @@ name = "tc_pwhash"
 version = "0.1.0"
 dependencies = [
  "tc_constant_time",
+ "tc_pbe",
+ "tc_sha 0.1.1",
  "tc_zeroize",
 ]
 

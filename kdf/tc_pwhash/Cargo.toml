@@ -1,6 +1,6 @@
 [package]
 name = "tc_pwhash"
-description = "Password hashing schemes, after Bouncy Castle: bcrypt and its OpenBSD hash strings."
+description = "Password hashing schemes, after Bouncy Castle: bcrypt with its OpenBSD hash strings, and scrypt."
 version = "0.1.0"
 edition.workspace = true
 rust-version = "1.85"
@@ -11,7 +11,11 @@ repository.workspace = true
 default = []
 # bcrypt 與 OpenBSD 的 $2y$ 雜湊字串
 bcrypt = ["dep:tc_constant_time", "dep:tc_zeroize"]
+# scrypt（RFC 7914），前後兩次 PBKDF2-HMAC-SHA256
+scrypt = ["dep:tc_pbe", "tc_pbe/pbkdf2", "dep:tc_sha", "dep:tc_zeroize", "tc_zeroize/alloc"]
 
 [dependencies]
 tc_constant_time = { version = "0.1.0", optional = true }
+tc_pbe = { version = "0.1.0", path = "../tc_pbe", optional = true }
+tc_sha = { version = "0.1.1", optional = true }
 tc_zeroize = { version = "0.1.0", optional = true }
