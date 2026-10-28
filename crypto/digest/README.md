@@ -12,10 +12,11 @@ remain in [`tc_digest`](../tc_digest):
 - `TryXof` extends `TryDigest` with variable-length output.
 - `Xof` is the infallible XOF convenience interface.
 
-`tc_blake` (BLAKE2 and BLAKE3) already implements the published
+The crates here use the local `tc_digest`. BLAKE2 and BLAKE3 graduated as the
+published `tc_blake`, and the Ascon hashes as the published `tc_ascon_hash`;
+both implement the published
 [`tc_digest`](https://crates.io/crates/tc_digest), whose types name themselves
-through `Display` instead of `algorithm_name`; the other crates here still use
-the local one. The Ascon hashes graduated as the published `tc_ascon_hash`.
+through `Display` instead of `algorithm_name`.
 
 Most algorithms are streaming: call `update` one or more times, then finalize
 into a caller-provided output buffer. Successful finalization resets the object
@@ -23,10 +24,9 @@ so it can be reused. XOFs can instead squeeze as much output as the caller
 needs.
 
 Every implementation supports `no_std`. Crates that retain owned buffers or
-runtime-generated names use `alloc`. `tc_blake` detects AVX2 and SSE2 at run
-time through `tc_runtime` without `std`; the `std` feature of `tc_haraka`
-enables its runtime CPU-feature detection, and disabling its default features
-selects the portable backend.
+runtime-generated names use `alloc`. The `std` feature of `tc_haraka` enables
+its runtime CPU-feature detection, and disabling its default features selects
+the portable backend.
 
 All algorithms from the former monolithic digest crate are available in the
 focused crates below.
@@ -136,22 +136,13 @@ is outside the current digest API.
 
 ## 5. Features and allocation
 
-On x86 and x86-64, accelerated backends are selected when the CPU reports
-support:
-
-- `tc_blake`: AVX2 for BLAKE2b and SSE2 for BLAKE2s, detected through
-  `tc_runtime` without `std`.
-- `tc_haraka`: AES-NI for Haraka-256/512, with the default `std` feature.
-
-The optional `blake3` feature of `tc_blake` runs `Blake3Digest` on the BLAKE3
-team's `blake3` crate, which hashes several chunks in parallel with SIMD.
-`Blake3PortableDigest` stays available either way. On aarch64 that crate builds
-its NEON code with a C compiler; enable `blake3/pure` where none is available.
+On x86 and x86-64, `tc_haraka` selects AES-NI for Haraka-256/512 when the CPU
+reports support, with the default `std` feature.
 
 Digest results are identical in every configuration.
 
 The crates containing `NullDigest`, `Prehash`, `ShortenedDigest`, cSHAKE,
-BLAKE3, TupleHash, ParallelHash, Skein, or runtime-generated SHA-512/t names use
+TupleHash, ParallelHash, Skein, or runtime-generated SHA-512/t names use
 `alloc`. Fixed-state algorithms that do not retain dynamic data remain
 allocation-free.
 
@@ -178,11 +169,9 @@ cargo build -p tc_sha
 cargo test -p tc_sha
 ```
 
-Check the portable backends explicitly:
+Check the portable backend explicitly:
 
 ```bash
-cargo test -p tc_blake --features tc_runtime/disable-x86-avx2,tc_runtime/disable-x86-sse2
-cargo test -p tc_blake --features blake3
 cargo build -p tc_haraka --no-default-features
 ```
 
@@ -193,18 +182,11 @@ Additional validation commands:
 cargo test --workspace --no-run
 
 # Lint an individual family.
-cargo clippy -p tc_blake --all-targets -- -D warnings
+cargo clippy -p tc_sha --all-targets -- -D warnings
 
 # Build the documentation.
-cargo doc -p tc_blake --no-deps
+cargo doc -p tc_sha --no-deps
 
 # Full PHOTON-Beetle KAT; intentionally ignored in normal debug tests.
 cargo test -p tc_photon_beetle --release --test photon_beetle_kat -- --ignored
-
-# BLAKE2 and BLAKE3 throughput benchmarks.
-cargo bench -p tc_blake --bench blake2b
-cargo bench -p tc_blake --bench blake2s
-cargo bench -p tc_blake --bench blake2b --features tc_runtime/disable-x86-avx2
-cargo bench -p tc_blake --bench blake2s --features tc_runtime/disable-x86-sse2
-cargo bench -p tc_blake --bench blake3 --features blake3
 ```

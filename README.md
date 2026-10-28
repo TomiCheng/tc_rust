@@ -271,8 +271,7 @@ cargo build -p tc_cbc -p tc_cfb -p tc_ofb -p tc_ctr --no-default-features --lock
 # Runtime-sized block-mode variants (alloc, but not std)
 cargo build -p tc_cbc -p tc_cfb -p tc_ofb -p tc_ctr --locked
 
-# Portable digest backends without std
-cargo build -p tc_blake --locked
+# Portable digest backend without std
 cargo build -p tc_haraka --no-default-features --locked
 ```
 
@@ -284,7 +283,6 @@ Benchmarks are available in the algorithm crates:
 
 ```bash
 cargo bench -p tc_aes_old --bench aes
-cargo bench -p tc_blake
 ```
 
 ## Reference and license

@@ -9,7 +9,7 @@ repository.workspace = true
 
 [dependencies]
 # Argon2 的 H0 與 H'
-tc_blake = { version = "0.1.0", path = "../../crypto/digest/tc_blake" }
+tc_blake = "0.1.0"
 # bcrypt 字串以常數時間比對
 tc_constant_time = "0.1.0"
 tc_digest = "0.1.0"
