@@ -1230,14 +1230,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1c37ed9f10c96ccd2c46a9a2b872070772c6385621665f4ba076b6d779e6be6f"
 
 [[package]]
-name = "tc_digest_utils"
-version = "0.1.0"
-dependencies = [
- "tc_digest 0.1.0",
- "tc_sha 0.1.0",
-]
-
-[[package]]
 name = "tc_drbg"
 version = "0.1.0"
 dependencies = [

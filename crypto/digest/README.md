@@ -16,7 +16,9 @@ The crates here use the local `tc_digest`. BLAKE2 and BLAKE3 graduated as the
 published `tc_blake`, and the Ascon hashes as the published `tc_ascon_hash`;
 both implement the published
 [`tc_digest`](https://crates.io/crates/tc_digest), whose types name themselves
-through `Display` instead of `algorithm_name`.
+through `Display` instead of `algorithm_name`. The `NullDigest`, `Prehash` and
+`ShortenedDigest` adapters moved into that crate itself, as `tc_digest::util`
+under its `alloc` feature, from 0.1.1.
 
 Most algorithms are streaming: call `update` one or more times, then finalize
 into a caller-provided output buffer. Successful finalization resets the object
@@ -59,9 +61,9 @@ digest.update(b"another message");
 digest.do_final(&mut output);
 ```
 
-Algorithms whose input contract can fail, notably `Prehash`,
-`Haraka256Digest`, and `Haraka512Digest`, expose `TryDigest` methods returning
-`Result` instead of the infallible `Digest` methods.
+Algorithms whose input contract can fail, notably `Haraka256Digest` and
+`Haraka512Digest`, expose `TryDigest` methods returning `Result` instead of
+the infallible `Digest` methods.
 
 ### Extendable-output function
 
@@ -109,7 +111,6 @@ in the family crates.
 | Other classic hashes | `Sm3Digest`, `TigerDigest`, `WhirlpoolDigest` | Standard and Bouncy Castle vectors |
 | Lightweight hashes | `IsapDigest`, `PhotonBeetleDigest`, `SparkleDigest`, `XoodyakDigest` | NIST LWC known-answer vectors; `SparkleDigest` provides ESCH-256 and ESCH-384 |
 | Haraka | `Haraka256Digest`, `Haraka512Digest` | Fixed 32/64-byte input, 32-byte output; fallible input contract |
-| Adapters | `ShortenedDigest<D>`, `Prehash`, `NullDigest` | Truncation, fixed-length prehash pass-through, and arbitrary pass-through |
 
 ### XOFs and variable-length constructions
 
@@ -141,9 +142,8 @@ reports support, with the default `std` feature.
 
 Digest results are identical in every configuration.
 
-The crates containing `NullDigest`, `Prehash`, `ShortenedDigest`, cSHAKE,
-TupleHash, ParallelHash, Skein, or runtime-generated SHA-512/t names use
-`alloc`. Fixed-state algorithms that do not retain dynamic data remain
+The crates containing cSHAKE, TupleHash, ParallelHash, Skein, or
+runtime-generated SHA-512/t names use `alloc`. Fixed-state algorithms that do not retain dynamic data remain
 allocation-free.
 
 ## 6. Dependencies
