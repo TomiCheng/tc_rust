@@ -57,13 +57,20 @@ and the crates that remain here depend on the published version.
 ### [tc_digest](https://github.com/TomiCheng/tc_digest)
 
 - [`tc_digest`](https://crates.io/crates/tc_digest) — streaming digest and XOF
-  traits, fallible and infallible
+  traits, fallible and infallible; with the `alloc` feature, the
+  `NullDigest`, `Prehash` and `ShortenedDigest` adapters
 - [`tc_md`](https://crates.io/crates/tc_md) — MD2, MD4 and MD5 for legacy
   interoperability
 - [`tc_sha`](https://crates.io/crates/tc_sha) — SHA-1 and SHA-2, including
   SHA-512/t
 - [`tc_keccak`](https://crates.io/crates/tc_keccak) — Keccak, SHA-3, SHAKE,
   cSHAKE, TupleHash and ParallelHash
+- [`tc_blake`](https://crates.io/crates/tc_blake) — BLAKE2b, BLAKE2s,
+  BLAKE2xs and BLAKE3, with AVX2 and SSE2 code for BLAKE2 and an optional
+  backend on the `blake3` crate
+- [`tc_ascon_hash`](https://crates.io/crates/tc_ascon_hash) — Ascon-Hash256,
+  Ascon-XOF128 and Ascon-CXOF128 (NIST SP 800-232); the Ascon v1.2 hashes
+  and ISAP Hash with the `legacy` feature
 
 ### [tc_block_cipher](https://github.com/TomiCheng/tc_block_cipher)
 
@@ -152,15 +159,21 @@ and the crates that remain here depend on the published version.
   [`crypto/agreement`](crypto/agreement) and [`signer`](signer) — EC keys,
   key agreement (ECDH) and signers (RSA, DSA, ECDSA)
 - [`crypto/tc_drbg`](crypto/tc_drbg) — deterministic random bit generators
-- [`asn1`](asn1) — PKCS, X.509 and X9 structures over the published
+- [`asn1`](asn1) — PKCS, X.509, X9 and CMS structures over the published
   `tc_asn1`; [`x509`](x509) has started on certificates over them
+- [`kdf`](kdf) — key derivation (KDF1/2, the concatenation KDF, HKDF and
+  SP 800-108), the DH and ECDH key-encryption-key derivations of CMS,
+  password-based generators (PKCS#5, PKCS#12 and OpenSSL) and password
+  hashing (bcrypt, scrypt and Argon2)
+- [`ies`](ies) — the Integrated Encryption Scheme over a key agreement, a
+  KDF and a MAC
 - [`block_cipher`](block_cipher) — rewrites of Blowfish, CAST5/CAST6,
   GOST 28147-89, IDEA, Noekeon, Rijndael, SEED, Serpent, Skipjack, SM4,
   TEA/XTEA, Threefish and Twofish on the `tc_block_cipher` traits, waiting to
   graduate
 - [`crypto/digest`](crypto/digest) and [`crypto/macs`](crypto/macs) — digest
-  and MAC families not yet graduated, such as BLAKE2, BLAKE3, RIPEMD,
-  Whirlpool, SipHash and KMAC
+  and MAC families not yet graduated, such as RIPEMD, Whirlpool, GOST 34.11,
+  SM3, Skein, SipHash and KMAC
 - The earlier generation on the legacy `tc_crypto`, `tc_cipher` and
   `tc_params` traits: [`crypto/block_cipher`](crypto/block_cipher),
   [`crypto/block_modes`](crypto/block_modes), `crypto/tc_digest` and
@@ -218,6 +231,17 @@ add padding, authentication, or message framing.
 See the [digest crate guide](crypto/digest/README.md) for variant-level
 details and usage examples.
 
+### Key derivation and password hashing
+
+- KDF1, KDF2 and the concatenation KDF (NIST SP 800-56A) over any digest
+- HKDF (RFC 5869)
+- SP 800-108 counter, feedback and double-pipeline KDFs over any MAC
+- The DH KEK of RFC 2631 and the ECDH KEK of RFC 5753
+- PKCS#5 PBKDF1 and PBKDF2, PKCS#12 key derivation, and OpenSSL
+  `EVP_BytesToKey`
+- bcrypt with OpenBSD hash strings, scrypt (RFC 7914), and Argon2d, Argon2i
+  and Argon2id (RFC 9106)
+
 ### Mathematics
 
 - Signed arbitrary-precision `BigInt`
@@ -238,7 +262,8 @@ The workspace uses three runtime levels:
 | `std` | The default where offered. It preserves the same algorithms and adds conveniences such as lazy caches or runtime CPU-feature detection. |
 
 Notable `std` acceleration currently includes AES-NI for AES and Haraka.
-BLAKE2b (AVX2) and BLAKE2s (SSE2) detect their SIMD paths without `std`.
+The published `tc_blake` detects AVX2 for BLAKE2b and SSE2 for BLAKE2s
+without `std`.
 Portable implementations remain available when `std` is disabled.
 
 ## Building and testing
