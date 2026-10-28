@@ -16,21 +16,24 @@ type Backend = crate::Blake3UpstreamDigest;
 /// Runs on [`Blake3PortableDigest`](crate::Blake3PortableDigest), or with the
 /// `blake3` feature on `Blake3UpstreamDigest`. Both accept the same keys and
 /// contexts and produce the same output, so the feature only changes speed.
+/// Constant time.
 #[derive(Clone, Default)]
 pub struct Blake3Digest(Backend);
 
 impl Blake3Digest {
-    /// Creates an unkeyed BLAKE3 with the default 32-byte digest.
+    /// Creates an unkeyed BLAKE3 with the default 32-byte digest. Constant time.
     pub fn new() -> Self {
         Self(Backend::new())
     }
 
     /// Creates an unkeyed BLAKE3 with a default output size in bits.
+    /// Constant time.
     pub fn with_digest_size(digest_bits: usize) -> Self {
         Self(Backend::with_digest_size(digest_bits))
     }
 
     /// Creates a keyed BLAKE3 (keyed-hash mode) with a 32-byte key.
+    /// Constant time.
     ///
     /// # Panics
     ///
@@ -39,7 +42,8 @@ impl Blake3Digest {
         Self(Backend::with_key(digest_bits, key))
     }
 
-    /// Creates a BLAKE3 in derive-key mode from a context string.
+    /// Creates a BLAKE3 in derive-key mode from a context string. Constant
+    /// time with respect to the contents of `context`; its length is public.
     pub fn with_derive_key(digest_bits: usize, context: &[u8]) -> Self {
         Self(Backend::with_derive_key(digest_bits, context))
     }
@@ -80,7 +84,8 @@ impl TryXof for Blake3Digest {
 }
 
 impl fmt::Display for Blake3Digest {
-    /// Writes the algorithm name without inspecting key material.
+    /// Writes `BLAKE3` without inspecting the state. Constant time with respect
+    /// to the message; output timing depends on the formatter.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Display::fmt(&self.0, f)
     }

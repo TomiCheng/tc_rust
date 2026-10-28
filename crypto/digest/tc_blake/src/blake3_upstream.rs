@@ -17,10 +17,11 @@ const BLOCK_LEN: usize = 64;
 const KEY_LEN: usize = 32;
 
 /// The BLAKE3 hash / extendable-output function on the `blake3` crate.
+/// Constant time, as the `blake3` crate is.
 #[derive(Clone)]
 pub struct Blake3UpstreamDigest {
     hasher: Hasher,
-    /// 第一次擠出時才建立；`None` 表示仍在吸收階段。
+    /// Created on the first read; `None` while absorbing.
     reader: Option<OutputReader>,
     digest_len: usize,
 }
@@ -32,17 +33,19 @@ impl Default for Blake3UpstreamDigest {
 }
 
 impl Blake3UpstreamDigest {
-    /// Creates an unkeyed BLAKE3 with the default 32-byte digest.
+    /// Creates an unkeyed BLAKE3 with the default 32-byte digest. Constant time.
     pub fn new() -> Self {
         Self::with_digest_size(256)
     }
 
     /// Creates an unkeyed BLAKE3 with a default output size in bits.
+    /// Constant time.
     pub fn with_digest_size(digest_bits: usize) -> Self {
         Self::build(Hasher::new(), digest_bits)
     }
 
     /// Creates a keyed BLAKE3 (keyed-hash mode) with a 32-byte key.
+    /// Constant time.
     ///
     /// # Panics
     ///
@@ -52,14 +55,17 @@ impl Blake3UpstreamDigest {
         Self::build(Hasher::new_keyed(key.try_into().unwrap()), digest_bits)
     }
 
-    /// Creates a BLAKE3 in derive-key mode from a context string.
+    /// Creates a BLAKE3 in derive-key mode from a context string. Constant
+    /// time with respect to the contents of `context`; its length is public.
     pub fn with_derive_key(digest_bits: usize, context: &[u8]) -> Self {
-        // `blake3` 只收 &str 的 context；改由 portable 雜湊任意位元組的 context，
-        // 再交給 hazmat 的 context-key 建構子，兩者算的是同一個值。
+        // `blake3` takes the context only as &str, so the portable digest hashes
+        // any bytes into the context key, which the hazmat constructor takes;
+        // both compute the same value.
         let context_key = derive_context_key(context);
         Self::build(Hasher::new_from_context_key(&context_key), digest_bits)
     }
 
+    /// Wraps `hasher` with a default output of `digest_bits`. Constant time.
     fn build(hasher: Hasher, digest_bits: usize) -> Self {
         Self {
             hasher,
@@ -91,6 +97,10 @@ impl TryDigest for Blake3UpstreamDigest {
 
     fn try_do_final(&mut self, output: &mut [u8]) -> Result<usize, Self::Error> {
         let len = self.digest_len;
+        assert!(
+            output.len() >= len,
+            "output buffer shorter than the {len}-byte digest"
+        );
         self.try_output_final(&mut output[..len])
     }
 
@@ -117,6 +127,8 @@ impl TryXof for Blake3UpstreamDigest {
 }
 
 impl Drop for Blake3UpstreamDigest {
+    /// Wipes the hasher and the output reader through the `zeroize` crate.
+    /// Constant time.
     fn drop(&mut self) {
         self.hasher.zeroize();
         self.reader.zeroize();
@@ -124,7 +136,8 @@ impl Drop for Blake3UpstreamDigest {
 }
 
 impl core::fmt::Display for Blake3UpstreamDigest {
-    /// Writes the algorithm name without inspecting key material.
+    /// Writes `BLAKE3` without inspecting the state. Constant time with respect
+    /// to the message; output timing depends on the formatter.
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.write_str("BLAKE3")
     }
@@ -140,7 +153,7 @@ mod tests {
     use tc_digest::{Digest, Xof};
 
     const KEY: &[u8; 32] = b"whats the Elvish word for friend";
-    // 刻意用非 UTF-8 的 context，`blake3::Hasher::new_derive_key` 收不下。
+    // A context that is not UTF-8, which `blake3::Hasher::new_derive_key` cannot take.
     const CONTEXT: &[u8] = b"\xff tc_blake upstream context \xfe";
     const LENGTHS: [usize; 14] = [
         0, 1, 63, 64, 65, 1023, 1024, 1025, 2047, 2048, 2049, 3072, 8193, 31745,

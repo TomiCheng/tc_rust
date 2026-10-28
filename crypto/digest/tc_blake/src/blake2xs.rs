@@ -11,33 +11,34 @@
 use core::convert::Infallible;
 
 use tc_digest::{Digest, TryDigest, TryXof};
+use tc_zeroize::Zeroize;
 
 use crate::blake2s::Blake2sDigest;
 
-/// Magic value selecting unknown output length (max 2^32 × 32 bytes).
+/// Magic value selecting unknown output length (at most 2^32 blocks of 32 bytes).
 const UNKNOWN_DIGEST_LENGTH: usize = 65535;
 
 const INNER: usize = 32;
 const MAX_BLOCKS: u64 = 1 << 32;
 
-/// The BLAKE2xs XOF.
+/// The BLAKE2xs XOF. Constant time.
 #[derive(Clone)]
 pub struct Blake2xsDigest {
-    /// 期望輸出位元組數(可為 `UNKNOWN_DIGEST_LENGTH`)。
+    /// The requested output length in bytes, or `UNKNOWN_DIGEST_LENGTH`.
     digest_length: usize,
-    /// 根雜湊(接收 update)。
+    /// The root hash, which takes the message.
     hash: Blake2sDigest,
-    /// 根摘要 h0,首次擠出時算出。
+    /// The root digest `h0`, computed on the first read.
     h0: Option<[u8; INNER]>,
-    /// 當前 32-byte 輸出區塊。
+    /// The current 32-byte output block.
     buf: [u8; INNER],
-    /// buf 已消耗位元組(INNER = 需算下一區塊)。
+    /// Bytes of `buf` already read; `INNER` means the next block is due.
     buf_pos: usize,
-    /// 已輸出總位元組數。
+    /// Bytes read so far.
     digest_pos: usize,
-    /// 每區塊 +1 的 node offset(高位 XOF 長度、低位區塊索引)。
+    /// The node offset: the XOF length high, the block index low.
     node_offset: u64,
-    /// 區塊計數(未知長度時偵測 2^32 上限)。
+    /// Blocks produced, to enforce the 2^32-block limit of an unknown length.
     block_pos: u64,
 }
 
@@ -48,23 +49,27 @@ impl Default for Blake2xsDigest {
 }
 
 impl Blake2xsDigest {
-    /// Magic value selecting unknown output length (max 2^32 × 32 bytes).
+    /// Magic value selecting unknown output length (at most 2^32 blocks of 32 bytes).
     pub const UNKNOWN_DIGEST_LENGTH: usize = UNKNOWN_DIGEST_LENGTH;
 
-    /// Creates a BLAKE2xs XOF with unknown output length.
+    /// Creates a BLAKE2xs XOF with unknown output length. Constant time.
     pub fn new() -> Self {
         Self::with_parameters(UNKNOWN_DIGEST_LENGTH, None, None, None)
     }
 
     /// Creates a BLAKE2xs XOF with a fixed output length in bytes (1..=2^16-2).
+    /// Constant time.
     pub fn with_digest_size(digest_bytes: usize) -> Self {
         Self::with_parameters(digest_bytes, None, None, None)
     }
 
     /// Creates a BLAKE2xs XOF with a key, output length, salt and personalization.
+    /// Constant time with respect to the key, salt and personalization; their
+    /// lengths are public.
     ///
     /// `digest_bytes` is 1..=2^16-1 (`UNKNOWN_DIGEST_LENGTH` selects unknown
-    /// length); `key` ≤ 32 bytes; salt/personalization 8 bytes when present.
+    /// length); `key` is at most 32 bytes; salt and personalization are 8 bytes
+    /// when present.
     ///
     /// # Panics
     ///
@@ -93,7 +98,8 @@ impl Blake2xsDigest {
         }
     }
 
-    /// 下一區塊要取的長度(未知長度恆為 32,否則 min(32, 剩餘))。
+    /// The length of the next block: 32 for an unknown length, otherwise what
+    /// is left, at most 32. Constant time.
     fn step_length(&self) -> usize {
         if self.digest_length == UNKNOWN_DIGEST_LENGTH {
             INNER
@@ -120,12 +126,17 @@ impl TryDigest for Blake2xsDigest {
 
     fn try_do_final(&mut self, output: &mut [u8]) -> Result<usize, Self::Error> {
         let len = self.digest_length;
+        assert!(
+            output.len() >= len,
+            "output buffer shorter than the {len}-byte digest"
+        );
         self.try_output_final(&mut output[..len])
     }
 
     fn try_reset(&mut self) -> Result<(), Self::Error> {
         self.hash.try_reset()?;
-        self.h0 = None;
+        self.h0.zeroize();
+        self.buf.zeroize();
         self.buf_pos = INNER;
         self.digest_pos = 0;
         self.block_pos = 0;
@@ -136,7 +147,7 @@ impl TryDigest for Blake2xsDigest {
 
 impl TryXof for Blake2xsDigest {
     fn try_output(&mut self, output: &mut [u8]) -> Result<usize, Self::Error> {
-        // 首次擠出:算出根摘要 h0。
+        // The first read computes the root digest h0.
         if self.h0.is_none() {
             let mut h = [0u8; INNER];
             self.hash.do_final(&mut h);
@@ -181,8 +192,18 @@ impl TryXof for Blake2xsDigest {
     }
 }
 
+impl Drop for Blake2xsDigest {
+    /// Wipes the root digest and the current output block; the root hash
+    /// wipes itself. Constant time.
+    fn drop(&mut self) {
+        self.h0.zeroize();
+        self.buf.zeroize();
+    }
+}
+
 impl core::fmt::Display for Blake2xsDigest {
-    /// Writes the algorithm name without inspecting key material.
+    /// Writes `BLAKE2xs` without inspecting the state. Constant time with
+    /// respect to the message; output timing depends on the formatter.
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.write_str("BLAKE2xs")
     }
@@ -190,28 +211,20 @@ impl core::fmt::Display for Blake2xsDigest {
 
 #[cfg(test)]
 mod tests {
-    use alloc::{format, string::String, vec};
+    use alloc::vec;
 
     use super::*;
     use tc_digest::Xof;
 
-    fn hex(bytes: &[u8]) -> String {
-        let mut s = String::with_capacity(bytes.len() * 2);
-        for b in bytes {
-            s.push_str(&format!("{b:02x}"));
-        }
-        s
-    }
-
     #[test]
     fn accessors() {
         let d = Blake2xsDigest::with_digest_size(64);
-        assert_eq!(d.to_string(), "BLAKE2xs");
+        assert_eq!(alloc::string::ToString::to_string(&d), "BLAKE2xs");
         assert_eq!(d.digest_size(), 64);
         assert_eq!(d.byte_length(), 64);
     }
 
-    // 分段擠出應與一次擠出相同(串流連續性)。
+    // Reading in pieces gives the same bytes as reading at once.
     #[test]
     fn streamed_output_matches_single() {
         let mut a = Blake2xsDigest::with_digest_size(100);
@@ -231,7 +244,8 @@ mod tests {
         assert_eq!(whole, streamed);
     }
 
-    // 不同輸出長度是不同函式:長度 L 的輸出 ≠ 長度 2L 的前 L 個位元組。
+    // The output length is part of the function: L bytes are not the first L
+    // bytes of a 2L-byte output.
     #[test]
     fn output_length_is_part_of_the_function() {
         let mut a = Blake2xsDigest::with_digest_size(32);
@@ -256,6 +270,5 @@ mod tests {
         let mut o2 = vec![0u8; 40];
         a.output_final(&mut o2);
         assert_eq!(o1, o2);
-        let _ = hex(&o1);
     }
 }

@@ -1,5 +1,6 @@
-// 官方 BLAKE3 test_vectors.json（BLAKE3-team/BLAKE3),透過 bc Blake3Test.cs。
-// 每筆:(輸入長度, unkeyed hash, keyed hash, derive-key hash),輸入 = i % 251。
+// The official BLAKE3 test_vectors.json (BLAKE3-team/BLAKE3), via Bouncy
+// Castle's Blake3Test.cs. Each entry: (input length, unkeyed hash, keyed
+// hash, derive-key hash), the input being i % 251.
 pub const TEST_VECTORS: &[(usize, &str, &str, &str)] = &[
     (
         0,

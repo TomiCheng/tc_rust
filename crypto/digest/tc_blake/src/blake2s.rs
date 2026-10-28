@@ -7,6 +7,7 @@
 use core::convert::Infallible;
 
 use tc_digest::TryDigest;
+use tc_zeroize::Zeroize;
 
 const BLOCK_LENGTH: usize = 64;
 const DEFAULT_DIGEST_LENGTH: usize = 32;
@@ -36,6 +37,7 @@ const SIGMA: [[usize; 16]; ROUNDS] = [
     [10, 2, 8, 4, 7, 6, 1, 5, 15, 11, 9, 14, 3, 12, 13, 0],
 ];
 
+/// The G function on four state words. Constant time.
 #[inline(always)]
 fn mix(state: &mut [u32; 16], a: usize, b: usize, c: usize, d: usize, x: u32, y: u32) {
     let mut va = state[a];
@@ -58,6 +60,8 @@ fn mix(state: &mut [u32; 16], a: usize, b: usize, c: usize, d: usize, x: u32, y:
     state[d] = vd;
 }
 
+/// Compresses one block in plain Rust. Constant time: the message words are
+/// picked by the public SIGMA permutation.
 fn compress_portable(
     chain: &mut [u32; 8],
     counter_low: u32,
@@ -158,6 +162,7 @@ fn compress_portable(
 }
 
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+#[allow(unsafe_code)]
 mod sse2 {
     #[cfg(target_arch = "x86")]
     use core::arch::x86::*;
@@ -168,6 +173,7 @@ mod sse2 {
 
     // Rust 1.85 still treats these intrinsics as unsafe inside target_feature
     // functions; newer compilers consider the block unnecessary.
+    /// Four words in one vector, the first in the lowest lane. Constant time.
     #[allow(unused_unsafe)]
     #[target_feature(enable = "sse2")]
     unsafe fn set4(a: u32, b: u32, c: u32, d: u32) -> __m128i {
@@ -175,6 +181,7 @@ mod sse2 {
         unsafe { _mm_set_epi32(d as i32, c as i32, b as i32, a as i32) }
     }
 
+    /// Rotates every lane right by `RIGHT` bits. Constant time.
     #[allow(unused_unsafe)]
     #[target_feature(enable = "sse2")]
     unsafe fn rotate_right<const RIGHT: i32, const LEFT: i32>(value: __m128i) -> __m128i {
@@ -187,6 +194,7 @@ mod sse2 {
         }
     }
 
+    /// The G function on four columns or diagonals at once. Constant time.
     #[target_feature(enable = "sse2")]
     unsafe fn mix(
         a: &mut __m128i,
@@ -211,6 +219,7 @@ mod sse2 {
     }
 
     /// Compresses one block with four parallel G functions in each SSE2 vector.
+    /// Constant time.
     ///
     /// # Safety
     ///
@@ -289,6 +298,9 @@ mod sse2 {
     }
 }
 
+/// Compresses one block with SSE2 when the CPU has it, in plain Rust otherwise.
+/// Constant time: the CPU, not the data, picks the path.
+#[allow(unsafe_code)]
 #[inline]
 fn compress(
     chain: &mut [u32; 8],
@@ -311,6 +323,7 @@ fn compress(
 }
 
 /// The BLAKE2s message digest with optional key, salt, and personalization.
+/// Constant time.
 #[derive(Clone)]
 pub struct Blake2sDigest {
     chain: [u32; 8],
@@ -324,7 +337,7 @@ pub struct Blake2sDigest {
     key_length: usize,
     salt: [u8; 8],
     personalization: [u8; 8],
-    // 樹/XOF 參數;序列模式為 fanout=1, depth=1,其餘 0(見 reset_state)。
+    // Tree and XOF parameters; sequential mode is fanout 1, depth 1 and zeros.
     fanout: u8,
     depth: u8,
     leaf_length: u32,
@@ -340,12 +353,13 @@ impl Default for Blake2sDigest {
 }
 
 impl Blake2sDigest {
-    /// Creates an unkeyed BLAKE2s-256 digest.
+    /// Creates an unkeyed BLAKE2s-256 digest. Constant time.
     pub fn new() -> Self {
         Self::with_parameters(None, DEFAULT_DIGEST_LENGTH, None, None)
     }
 
     /// Creates an unkeyed BLAKE2s digest with an output size from 8 to 256 bits.
+    /// Constant time.
     pub fn with_digest_size(digest_bits: usize) -> Self {
         assert!(
             (8..=256).contains(&digest_bits) && digest_bits % 8 == 0,
@@ -355,11 +369,13 @@ impl Blake2sDigest {
     }
 
     /// Creates keyed BLAKE2s-256. An empty key selects unkeyed hashing.
+    /// Constant time with respect to the key; its length is public.
     pub fn with_key(key: &[u8]) -> Self {
         Self::with_parameters(Some(key), DEFAULT_DIGEST_LENGTH, None, None)
     }
 
-    /// Creates BLAKE2s with its full sequential-mode parameter set.
+    /// Creates BLAKE2s with its full sequential-mode parameter set. Constant time
+    /// with respect to the key, salt and personalization; their lengths are public.
     ///
     /// `digest_length` is measured in bytes (1..=32), `key` may contain at
     /// most 32 bytes, and salt/personalization must each contain exactly 8
@@ -417,8 +433,9 @@ impl Blake2sDigest {
         digest
     }
 
-    /// BLAKE2xs 根雜湊建構子:序列參數(fanout=1, depth=1),但 `node_offset` 的高
-    /// 32 位攜帶 XOF 輸出長度。
+    /// The BLAKE2xs root hash: sequential parameters, with the XOF output length
+    /// in the high 32 bits of `node_offset`. Constant time with respect to the
+    /// key, salt and personalization; their lengths are public.
     pub(crate) fn xof_root(
         digest_length: usize,
         key: Option<&[u8]>,
@@ -457,8 +474,9 @@ impl Blake2sDigest {
         digest
     }
 
-    /// BLAKE2xs 中間節點建構子:fanout=depth=0、leaf/inner = `inner_length`、帶
-    /// `node_offset`(高位 XOF 長度 + 低位區塊索引),無 key/salt/personalization。
+    /// A BLAKE2xs output node: fanout and depth 0, leaf and inner length
+    /// `inner_length`, `node_offset` holding the XOF length high and the block
+    /// index low, and no key, salt or personalization. Constant time.
     pub(crate) fn xof_node(digest_length: usize, inner_length: u8, node_offset: u64) -> Self {
         let mut digest = Blake2sDigest {
             chain: [0; 8],
@@ -483,9 +501,12 @@ impl Blake2sDigest {
         digest
     }
 
+    /// Restarts from the parameter block, with the key as the first block when
+    /// there is one. Constant time.
     fn reset_state(&mut self) {
         self.chain = IV;
-        // 完整 BLAKE2s 參數區塊(序列模式:fanout=1, depth=1,其餘 0 → 與舊行為一致)。
+        // The whole BLAKE2s parameter block; sequential mode is fanout 1,
+        // depth 1 and zeros.
         self.chain[0] ^= self.digest_length as u32
             | ((self.key_length as u32) << 8)
             | ((self.fanout as u32) << 16)
@@ -519,6 +540,8 @@ impl Blake2sDigest {
         }
     }
 
+    /// Adds `increment` bytes to the block counter. Constant time with respect
+    /// to the message; the count is public.
     fn increment_counter(&mut self, increment: usize) {
         let increment = increment as u32;
         let previous = self.counter_low;
@@ -528,6 +551,7 @@ impl Blake2sDigest {
         }
     }
 
+    /// Compresses the buffered block. Constant time.
     fn compress_buffer(&mut self) {
         compress(
             &mut self.chain,
@@ -538,17 +562,17 @@ impl Blake2sDigest {
         );
     }
 
-    /// Clears the retained key and the current input buffer.
+    /// Wipes the retained key and the current input buffer. Constant time.
     pub fn clear_key(&mut self) {
-        self.key.fill(0);
+        self.key.zeroize();
         self.key_length = 0;
-        self.buffer.fill(0);
+        self.buffer.zeroize();
     }
 
     /// Clears the retained salt. Call [`reset`](tc_digest::Digest::reset)
-    /// before starting a new computation with the cleared parameter.
+    /// before starting a new computation with the cleared parameter. Constant time.
     pub fn clear_salt(&mut self) {
-        self.salt.fill(0);
+        self.salt.zeroize();
     }
 }
 
@@ -605,6 +629,11 @@ impl TryDigest for Blake2sDigest {
     }
 
     fn try_do_final(&mut self, output: &mut [u8]) -> Result<usize, Self::Error> {
+        let len = self.digest_length;
+        assert!(
+            output.len() >= len,
+            "output buffer shorter than the {len}-byte digest"
+        );
         self.final_flag = u32::MAX;
         self.increment_counter(self.buffer_position);
         self.buffer[self.buffer_position..].fill(0);
@@ -630,8 +659,25 @@ impl TryDigest for Blake2sDigest {
     }
 }
 
+impl Drop for Blake2sDigest {
+    /// Wipes the chaining value, the buffer, the counters, the key, the salt
+    /// and the personalization. Constant time.
+    fn drop(&mut self) {
+        self.chain.zeroize();
+        self.buffer.zeroize();
+        self.buffer_position.zeroize();
+        self.counter_low.zeroize();
+        self.counter_high.zeroize();
+        self.key.zeroize();
+        self.key_length.zeroize();
+        self.salt.zeroize();
+        self.personalization.zeroize();
+    }
+}
+
 impl core::fmt::Display for Blake2sDigest {
-    /// Writes the algorithm name without inspecting key material.
+    /// Writes `BLAKE2s` without inspecting the state. Constant time with respect
+    /// to the message; output timing depends on the formatter.
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.write_str("BLAKE2s")
     }
@@ -639,7 +685,11 @@ impl core::fmt::Display for Blake2sDigest {
 
 #[cfg(test)]
 mod tests {
-    use alloc::{format, string::String, vec::Vec};
+    use alloc::{
+        format,
+        string::{String, ToString},
+        vec::Vec,
+    };
 
     use super::*;
     use tc_digest::Digest;
@@ -811,6 +861,7 @@ mod tests {
     }
 
     #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+    #[allow(unsafe_code)]
     #[test]
     fn sse2_matches_portable() {
         if tc_runtime::intrinsics::x86::Sse2::detect().is_none() {

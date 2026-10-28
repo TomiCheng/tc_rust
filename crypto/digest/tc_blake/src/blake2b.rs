@@ -7,6 +7,7 @@
 use core::convert::Infallible;
 
 use tc_digest::TryDigest;
+use tc_zeroize::Zeroize;
 
 const BLOCK_LENGTH: usize = 128;
 const DEFAULT_DIGEST_LENGTH: usize = 64;
@@ -38,6 +39,7 @@ const SIGMA: [[usize; 16]; ROUNDS] = [
     [14, 10, 4, 8, 9, 15, 13, 6, 1, 12, 0, 2, 11, 7, 5, 3],
 ];
 
+/// The G function on four state words. Constant time.
 #[inline(always)]
 fn mix(state: &mut [u64; 16], a: usize, b: usize, c: usize, d: usize, x: u64, y: u64) {
     let mut va = state[a];
@@ -60,6 +62,8 @@ fn mix(state: &mut [u64; 16], a: usize, b: usize, c: usize, d: usize, x: u64, y:
     state[d] = vd;
 }
 
+/// Compresses one block in plain Rust. Constant time: the message words are
+/// picked by the public SIGMA permutation.
 fn compress_portable(
     chain: &mut [u64; 8],
     counter_low: u64,
@@ -160,6 +164,7 @@ fn compress_portable(
 }
 
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+#[allow(unsafe_code)]
 mod avx2 {
     #[cfg(target_arch = "x86")]
     use core::arch::x86::*;
@@ -170,6 +175,7 @@ mod avx2 {
 
     // Rust 1.85 still treats these intrinsics as unsafe inside target_feature
     // functions; newer compilers consider the block unnecessary.
+    /// Four words in one vector, the first in the lowest lane. Constant time.
     #[allow(unused_unsafe)]
     #[target_feature(enable = "avx2")]
     unsafe fn set4(a: u64, b: u64, c: u64, d: u64) -> __m256i {
@@ -177,6 +183,7 @@ mod avx2 {
         unsafe { _mm256_set_epi64x(d as i64, c as i64, b as i64, a as i64) }
     }
 
+    /// Rotates every lane right by `RIGHT` bits. Constant time.
     #[allow(unused_unsafe)]
     #[target_feature(enable = "avx2")]
     unsafe fn rotate_right<const RIGHT: i32, const LEFT: i32>(value: __m256i) -> __m256i {
@@ -189,6 +196,7 @@ mod avx2 {
         }
     }
 
+    /// The G function on four columns or diagonals at once. Constant time.
     #[target_feature(enable = "avx2")]
     unsafe fn mix(
         a: &mut __m256i,
@@ -213,6 +221,7 @@ mod avx2 {
     }
 
     /// Compresses one block with four parallel G functions in each AVX2 vector.
+    /// Constant time.
     ///
     /// # Safety
     ///
@@ -291,6 +300,9 @@ mod avx2 {
     }
 }
 
+/// Compresses one block with AVX2 when the CPU has it, in plain Rust otherwise.
+/// Constant time: the CPU, not the data, picks the path.
+#[allow(unsafe_code)]
 #[inline]
 fn compress(
     chain: &mut [u64; 8],
@@ -313,6 +325,7 @@ fn compress(
 }
 
 /// The BLAKE2b message digest with optional key, salt, and personalization.
+/// Constant time.
 #[derive(Clone)]
 pub struct Blake2bDigest {
     chain: [u64; 8],
@@ -335,12 +348,13 @@ impl Default for Blake2bDigest {
 }
 
 impl Blake2bDigest {
-    /// Creates an unkeyed BLAKE2b-512 digest.
+    /// Creates an unkeyed BLAKE2b-512 digest. Constant time.
     pub fn new() -> Self {
         Self::with_parameters(None, DEFAULT_DIGEST_LENGTH, None, None)
     }
 
     /// Creates an unkeyed BLAKE2b digest with an output size from 8 to 512 bits.
+    /// Constant time.
     pub fn with_digest_size(digest_bits: usize) -> Self {
         assert!(
             (8..=512).contains(&digest_bits) && digest_bits % 8 == 0,
@@ -350,11 +364,13 @@ impl Blake2bDigest {
     }
 
     /// Creates keyed BLAKE2b-512. An empty key selects unkeyed hashing.
+    /// Constant time with respect to the key; its length is public.
     pub fn with_key(key: &[u8]) -> Self {
         Self::with_parameters(Some(key), DEFAULT_DIGEST_LENGTH, None, None)
     }
 
-    /// Creates BLAKE2b with its full sequential-mode parameter set.
+    /// Creates BLAKE2b with its full sequential-mode parameter set. Constant time
+    /// with respect to the key, salt and personalization; their lengths are public.
     ///
     /// `digest_length` is measured in bytes (1..=64), `key` may contain at
     /// most 64 bytes, and salt/personalization must each contain exactly 16
@@ -406,6 +422,8 @@ impl Blake2bDigest {
         digest
     }
 
+    /// Restarts from the parameter block, with the key as the first block when
+    /// there is one. Constant time.
     fn reset_state(&mut self) {
         self.chain = IV;
         self.chain[0] ^= self.digest_length as u64 | ((self.key_length as u64) << 8) | 0x0101_0000;
@@ -433,6 +451,8 @@ impl Blake2bDigest {
         }
     }
 
+    /// Adds `increment` bytes to the block counter. Constant time with respect
+    /// to the message; the count is public.
     fn increment_counter(&mut self, increment: usize) {
         let previous = self.counter_low;
         self.counter_low = self.counter_low.wrapping_add(increment as u64);
@@ -441,6 +461,7 @@ impl Blake2bDigest {
         }
     }
 
+    /// Compresses the buffered block. Constant time.
     fn compress_buffer(&mut self) {
         compress(
             &mut self.chain,
@@ -451,17 +472,17 @@ impl Blake2bDigest {
         );
     }
 
-    /// Clears the retained key and the current input buffer.
+    /// Wipes the retained key and the current input buffer. Constant time.
     pub fn clear_key(&mut self) {
-        self.key.fill(0);
+        self.key.zeroize();
         self.key_length = 0;
-        self.buffer.fill(0);
+        self.buffer.zeroize();
     }
 
     /// Clears the retained salt. Call [`reset`](tc_digest::Digest::reset)
-    /// before starting a new computation with the cleared parameter.
+    /// before starting a new computation with the cleared parameter. Constant time.
     pub fn clear_salt(&mut self) {
-        self.salt.fill(0);
+        self.salt.zeroize();
     }
 }
 
@@ -518,6 +539,11 @@ impl TryDigest for Blake2bDigest {
     }
 
     fn try_do_final(&mut self, output: &mut [u8]) -> Result<usize, Self::Error> {
+        let len = self.digest_length;
+        assert!(
+            output.len() >= len,
+            "output buffer shorter than the {len}-byte digest"
+        );
         self.final_flag = u64::MAX;
         self.increment_counter(self.buffer_position);
         self.buffer[self.buffer_position..].fill(0);
@@ -543,8 +569,25 @@ impl TryDigest for Blake2bDigest {
     }
 }
 
+impl Drop for Blake2bDigest {
+    /// Wipes the chaining value, the buffer, the counters, the key, the salt
+    /// and the personalization. Constant time.
+    fn drop(&mut self) {
+        self.chain.zeroize();
+        self.buffer.zeroize();
+        self.buffer_position.zeroize();
+        self.counter_low.zeroize();
+        self.counter_high.zeroize();
+        self.key.zeroize();
+        self.key_length.zeroize();
+        self.salt.zeroize();
+        self.personalization.zeroize();
+    }
+}
+
 impl core::fmt::Display for Blake2bDigest {
-    /// Writes the algorithm name without inspecting key material.
+    /// Writes `BLAKE2b` without inspecting the state. Constant time with respect
+    /// to the message; output timing depends on the formatter.
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.write_str("BLAKE2b")
     }
@@ -552,7 +595,11 @@ impl core::fmt::Display for Blake2bDigest {
 
 #[cfg(test)]
 mod tests {
-    use alloc::{format, string::String, vec::Vec};
+    use alloc::{
+        format,
+        string::{String, ToString},
+        vec::Vec,
+    };
 
     use super::*;
     use tc_digest::Digest;
@@ -683,6 +730,7 @@ mod tests {
     }
 
     #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+    #[allow(unsafe_code)]
     #[test]
     fn avx2_matches_portable() {
         if tc_runtime::intrinsics::x86::Avx2::detect().is_none() {

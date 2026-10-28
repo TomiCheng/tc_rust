@@ -7,16 +7,20 @@
 //! becomes an extendable-output function ([`TryXof`]). Supports the unkeyed,
 //! keyed-hash, and derive-key modes.
 
-use alloc::vec::Vec;
 use core::convert::Infallible;
 
 use tc_digest::{Digest, TryDigest, TryXof};
+use tc_zeroize::Zeroize;
 
 const BLOCK_LEN: usize = 64;
 const CHUNK_LEN: usize = 1024;
 const ROUNDS: usize = 7;
 
-// Flags。
+// A 64-bit chunk counter merges at most 54 subtrees before the root, so the
+// stack never holds more chaining values.
+const MAX_DEPTH: usize = 54;
+
+// Flags.
 const CHUNK_START: u32 = 1;
 const CHUNK_END: u32 = 2;
 const PARENT: u32 = 4;
@@ -25,7 +29,7 @@ const KEYED_HASH: u32 = 16;
 const DERIVE_CONTEXT: u32 = 32;
 const DERIVE_KEY: u32 = 64;
 
-// V 狀態的索引。
+// Indices into the state V.
 const COUNT0: usize = 12;
 const COUNT1: usize = 13;
 const DATALEN: usize = 14;
@@ -45,35 +49,37 @@ const IV: [u32; 8] = [
 ];
 
 /// The portable BLAKE3 hash / extendable-output function, one 64-byte block at
-/// a time.
+/// a time. Constant time.
 #[derive(Clone)]
 pub struct Blake3PortableDigest {
-    /// 64-byte 輸入/輸出緩衝。
+    /// The 64-byte input buffer while absorbing, the output block while squeezing.
     buffer: [u8; BLOCK_LEN],
-    /// 金鑰字(unkeyed = IV)。
+    /// The key words, the IV when unkeyed.
     k: [u32; 8],
-    /// 當前鏈結值。
+    /// The current chaining value.
     chaining: [u32; 8],
-    /// 16-word 狀態。
+    /// The 16-word state.
     v: [u32; 16],
-    /// 16-word 訊息字。
+    /// The 16 message words.
     m: [u32; 16],
-    /// 鏈結值堆疊(二元樹合併)。
-    stack: Vec<[u32; 8]>,
-    /// 預設輸出位元組數。
+    /// The chaining values of the subtrees still to be merged.
+    stack: [[u32; 8]; MAX_DEPTH],
+    /// How many entries of `stack` are in use.
+    stack_len: usize,
+    /// The default output length in bytes.
     digest_len: usize,
-    /// 是否已進入擠出階段。
+    /// Whether output has started.
     outputting: bool,
-    /// 目前模式(0 / KEYED_HASH / DERIVE_CONTEXT / DERIVE_KEY)。
+    /// The mode: 0, `KEYED_HASH`, `DERIVE_CONTEXT` or `DERIVE_KEY`.
     mode: u32,
-    /// 擠出時的 flags 與 dataLen。
+    /// The flags and data length of the root node, for every output block.
     output_mode: u32,
     output_data_len: u32,
-    /// 區塊計數器。
+    /// The chunk counter, or the output block counter while squeezing.
     counter: u64,
-    /// 當前 chunk 已處理位元組數。
+    /// Bytes of the current chunk already compressed.
     curr_bytes: usize,
-    /// 緩衝中下一位元組位置。
+    /// The next position in `buffer`.
     pos: usize,
 }
 
@@ -84,17 +90,19 @@ impl Default for Blake3PortableDigest {
 }
 
 impl Blake3PortableDigest {
-    /// Creates an unkeyed BLAKE3 with the default 32-byte digest.
+    /// Creates an unkeyed BLAKE3 with the default 32-byte digest. Constant time.
     pub fn new() -> Self {
         Self::with_digest_size(256)
     }
 
     /// Creates an unkeyed BLAKE3 with a default output size in bits.
+    /// Constant time.
     pub fn with_digest_size(digest_bits: usize) -> Self {
         Self::init(digest_bits / 8, 0, IV)
     }
 
     /// Creates a keyed BLAKE3 (keyed-hash mode) with a 32-byte key.
+    /// Constant time.
     ///
     /// # Panics
     ///
@@ -106,13 +114,15 @@ impl Blake3PortableDigest {
         Self::init(digest_bits / 8, KEYED_HASH, k)
     }
 
-    /// Creates a BLAKE3 in derive-key mode from a context string.
+    /// Creates a BLAKE3 in derive-key mode from a context string. Constant
+    /// time with respect to the contents of `context`; its length is public.
     pub fn with_derive_key(digest_bits: usize, context: &[u8]) -> Self {
         let mut k = [0u32; 8];
         load_words_le(&derive_context_key(context), &mut k);
         Self::init(digest_bits / 8, DERIVE_KEY, k)
     }
 
+    /// A fresh digest with the key words `k` in `mode`. Constant time.
     fn init(digest_len: usize, mode: u32, k: [u32; 8]) -> Self {
         Blake3PortableDigest {
             buffer: [0; BLOCK_LEN],
@@ -120,7 +130,8 @@ impl Blake3PortableDigest {
             chaining: [0; 8],
             v: [0; 16],
             m: [0; 16],
-            stack: Vec::new(),
+            stack: [[0; 8]; MAX_DEPTH],
+            stack_len: 0,
             digest_len,
             outputting: false,
             mode,
@@ -132,8 +143,10 @@ impl Blake3PortableDigest {
         }
     }
 
-    // ---- 壓縮 ----
+    // ---- Compression ----
 
+    /// The G function; the message words are picked by the public
+    /// permutation `idx`. Constant time.
     fn mix_g(&mut self, idx: &[u8; 16], msg_idx: usize, a: usize, b: usize, c: usize, d: usize) {
         let m0 = self.m[idx[msg_idx * 2] as usize];
         let m1 = self.m[idx[msg_idx * 2 + 1] as usize];
@@ -147,6 +160,7 @@ impl Blake3PortableDigest {
         self.v[b] = (self.v[b] ^ self.v[c]).rotate_right(7);
     }
 
+    /// One round: G on the columns, then on the diagonals. Constant time.
     fn perform_round(&mut self, idx: &[u8; 16]) {
         self.mix_g(idx, 0, 0, 4, 8, 12);
         self.mix_g(idx, 1, 1, 5, 9, 13);
@@ -158,6 +172,7 @@ impl Blake3PortableDigest {
         self.mix_g(idx, 7, 3, 4, 9, 14);
     }
 
+    /// The seven rounds and the output of the compression. Constant time.
     fn compress(&mut self) {
         let mut idx: [u8; 16] = core::array::from_fn(|i| i as u8);
         for _ in 0..ROUNDS - 1 {
@@ -170,6 +185,8 @@ impl Blake3PortableDigest {
         self.adjust_chaining();
     }
 
+    /// Takes the compression output: the next chaining value while absorbing,
+    /// a whole output block while squeezing. Constant time.
     fn adjust_chaining(&mut self) {
         if self.outputting {
             for i in 0..8 {
@@ -187,8 +204,10 @@ impl Blake3PortableDigest {
         }
     }
 
-    // ---- 區塊 / 樹 ----
+    // ---- Blocks and the tree ----
 
+    /// Sets up the state for a chunk block of `data_len` bytes. Constant time
+    /// with respect to the message; lengths and positions are public.
     fn init_chunk_block(&mut self, data_len: usize, final_block: bool) {
         let src = if self.curr_bytes == 0 {
             &self.k
@@ -211,11 +230,12 @@ impl Blake3PortableDigest {
             self.v[FLAGS] |= CHUNK_END;
         }
 
-        if final_block && self.stack.is_empty() {
+        if final_block && self.stack_len == 0 {
             self.set_root();
         }
     }
 
+    /// Sets up the state for a parent node. Constant time.
     fn init_parent_block(&mut self) {
         self.v[..8].copy_from_slice(&self.k);
         self.v[8..12].copy_from_slice(&IV[..4]);
@@ -225,6 +245,8 @@ impl Blake3PortableDigest {
         self.v[FLAGS] = self.mode | PARENT;
     }
 
+    /// Flags the node being set up as the root and switches to output.
+    /// Constant time.
     fn set_root(&mut self) {
         self.v[FLAGS] |= ROOT;
         self.output_mode = self.v[FLAGS];
@@ -235,12 +257,14 @@ impl Blake3PortableDigest {
         self.chaining.copy_from_slice(head);
     }
 
+    /// Loads a block as little-endian message words. Constant time.
     fn init_m(&mut self, block: &[u8; BLOCK_LEN]) {
         for i in 0..16 {
             self.m[i] = u32::from_le_bytes(block[i * 4..i * 4 + 4].try_into().unwrap());
         }
     }
 
+    /// Compresses a block that is not the last of the message. Constant time.
     fn compress_block(&mut self, block: &[u8; BLOCK_LEN]) {
         self.init_chunk_block(BLOCK_LEN, false);
         self.init_m(block);
@@ -250,22 +274,39 @@ impl Blake3PortableDigest {
         }
     }
 
+    /// Merges the finished chunk into the stack, once for each trailing zero
+    /// bit of the chunk count. Constant time with respect to the message; the
+    /// count is public.
     fn adjust_stack(&mut self) {
         let mut count = self.counter;
         while count > 0 {
             if count & 1 == 1 {
                 break;
             }
-            let left = self.stack.pop().expect("stack not empty when merging");
+            let left = self.pop().expect("stack not empty when merging");
             self.m[..8].copy_from_slice(&left);
             self.m[8..16].copy_from_slice(&self.chaining);
             self.init_parent_block();
             self.compress();
             count >>= 1;
         }
-        self.stack.push(self.chaining);
+        self.push();
     }
 
+    /// Pushes the chaining value on the stack. Constant time.
+    fn push(&mut self) {
+        self.stack[self.stack_len] = self.chaining;
+        self.stack_len += 1;
+    }
+
+    /// Pops the most recent stacked chaining value. Constant time.
+    fn pop(&mut self) -> Option<[u32; 8]> {
+        self.stack_len = self.stack_len.checked_sub(1)?;
+        Some(self.stack[self.stack_len])
+    }
+
+    /// Compresses the last block, `data_len` bytes, and merges the stack up to
+    /// the root. Constant time with respect to the message; lengths are public.
     fn compress_final_block(&mut self, data_len: usize) {
         self.init_chunk_block(data_len, true);
         let block = self.buffer;
@@ -274,18 +315,21 @@ impl Blake3PortableDigest {
         self.process_stack();
     }
 
+    /// Merges every stacked chaining value, the last merge being the root.
+    /// Constant time with respect to the message; the stack depth is public.
     fn process_stack(&mut self) {
-        while let Some(left) = self.stack.pop() {
+        while let Some(left) = self.pop() {
             self.m[..8].copy_from_slice(&left);
             self.m[8..16].copy_from_slice(&self.chaining);
             self.init_parent_block();
-            if self.stack.is_empty() {
+            if self.stack_len == 0 {
                 self.set_root();
             }
             self.compress();
         }
     }
 
+    /// Computes the next 64-byte output block from the root. Constant time.
     fn next_output_block(&mut self) {
         self.counter += 1;
         self.v[..8].copy_from_slice(&self.chaining);
@@ -297,6 +341,8 @@ impl Blake3PortableDigest {
         self.compress();
     }
 
+    /// Absorbs `input`, keeping the last block for finalization. Constant time
+    /// with respect to the message; its length is public.
     fn update_bytes(&mut self, mut input: &[u8]) {
         assert!(!self.outputting, "BLAKE3: cannot absorb while outputting");
         if input.is_empty() {
@@ -318,7 +364,7 @@ impl Blake3PortableDigest {
             input = &input[remaining..];
         }
 
-        // 壓縮除了最後一塊以外的所有整塊(最後塊留到收尾)。
+        // Compress every whole block but the last, which finalization needs.
         while input.len() > BLOCK_LEN {
             let block: &[u8; BLOCK_LEN] = input[..BLOCK_LEN].try_into().unwrap();
             self.compress_block(block);
@@ -329,6 +375,9 @@ impl Blake3PortableDigest {
         self.pos = input.len();
     }
 
+    /// Writes the next `output.len()` output bytes, finishing the message on
+    /// the first read. Constant time with respect to the message; lengths are
+    /// public.
     fn output_bytes(&mut self, output: &mut [u8]) {
         if !self.outputting {
             self.compress_final_block(self.pos);
@@ -373,16 +422,24 @@ impl TryDigest for Blake3PortableDigest {
 
     fn try_do_final(&mut self, output: &mut [u8]) -> Result<usize, Self::Error> {
         let len = self.digest_len;
+        assert!(
+            output.len() >= len,
+            "output buffer shorter than the {len}-byte digest"
+        );
         self.try_output_final(&mut output[..len])
     }
 
     fn try_reset(&mut self) -> Result<(), Self::Error> {
+        self.chaining.zeroize();
+        self.v.zeroize();
+        self.m.zeroize();
+        self.stack[..self.stack_len].zeroize();
+        self.stack_len = 0;
+        self.buffer.zeroize();
         self.counter = 0;
         self.curr_bytes = 0;
         self.pos = 0;
         self.outputting = false;
-        self.buffer = [0; BLOCK_LEN];
-        self.stack.clear();
         Ok(())
     }
 }
@@ -400,7 +457,22 @@ impl TryXof for Blake3PortableDigest {
     }
 }
 
-/// 以 derive-context 模式雜湊 context，取前 32 bytes 當 derive-key 模式的金鑰。
+impl Drop for Blake3PortableDigest {
+    /// Wipes the key words, the chaining values, the state, the message words
+    /// and the buffer. Constant time.
+    fn drop(&mut self) {
+        self.k.zeroize();
+        self.chaining.zeroize();
+        self.v.zeroize();
+        self.m.zeroize();
+        self.stack.zeroize();
+        self.buffer.zeroize();
+    }
+}
+
+/// Hashes `context` in derive-context mode; the first 32 bytes are the key of
+/// derive-key mode. Constant time with respect to the contents of `context`;
+/// its length is public.
 pub(crate) fn derive_context_key(context: &[u8]) -> [u8; 32] {
     let mut ctx = Blake3PortableDigest::init(32, DERIVE_CONTEXT, IV);
     ctx.update(context);
@@ -409,7 +481,7 @@ pub(crate) fn derive_context_key(context: &[u8]) -> [u8; 32] {
     key
 }
 
-/// 從位元組讀 LE u32 字填入 `words`。
+/// Reads little-endian `u32` words from `bytes` into `words`. Constant time.
 fn load_words_le(bytes: &[u8], words: &mut [u32]) {
     for (word, chunk) in words.iter_mut().zip(bytes.chunks_exact(4)) {
         *word = u32::from_le_bytes(chunk.try_into().unwrap());
@@ -417,7 +489,8 @@ fn load_words_le(bytes: &[u8], words: &mut [u32]) {
 }
 
 impl core::fmt::Display for Blake3PortableDigest {
-    /// Writes the algorithm name without inspecting key material.
+    /// Writes `BLAKE3` without inspecting the state. Constant time with respect
+    /// to the message; output timing depends on the formatter.
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.write_str("BLAKE3")
     }
@@ -446,7 +519,8 @@ mod tests {
         hex(&out)
     }
 
-    // 官方 BLAKE3 空訊息向量:32-byte 與 64-byte(後者同時驗 XOF 續塊)。
+    // The official empty-message vector, 32 and 64 bytes; the second also
+    // checks the next XOF block.
     #[test]
     fn empty_vector_and_xof() {
         assert_eq!(
@@ -463,12 +537,13 @@ mod tests {
     #[test]
     fn accessors() {
         let d = Blake3PortableDigest::new();
-        assert_eq!(d.to_string(), "BLAKE3");
+        assert_eq!(alloc::string::ToString::to_string(&d), "BLAKE3");
         assert_eq!(d.digest_size(), 32);
         assert_eq!(d.byte_length(), 64);
     }
 
-    // 多 chunk(3000 bytes > 2×1024)分段餵 vs 一次餵應相同,走到樹堆疊合併。
+    // Several chunks (3000 bytes, over two of 1024) fed in pieces or at once
+    // give the same hash, through the stack merges.
     #[test]
     fn multi_chunk_chunked_matches_whole() {
         let msg: Vec<u8> = (0..3000).map(|i| (i % 251) as u8).collect();
