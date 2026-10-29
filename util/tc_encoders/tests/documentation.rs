@@ -1,4 +1,4 @@
-const METHODS: [&str; 10] = [
+const METHODS: [&str; 13] = [
     "encoded_len",
     "decoded_len",
     "encode",
@@ -9,6 +9,9 @@ const METHODS: [&str; 10] = [
     "decode_to",
     "encode_from",
     "decode_from",
+    "write",
+    "flush",
+    "drop",
 ];
 
 fn checked(line: &str) -> bool {
@@ -63,6 +66,11 @@ fn every_public_method_states_constant_or_variable_time() {
             1,
         ),
         ("hex/encoder.rs", include_str!("../src/hex/encoder.rs"), 5),
+        (
+            "io/encoder_writer.rs",
+            include_str!("../src/io/encoder_writer.rs"),
+            6,
+        ),
         (
             "base64/encoder.rs",
             include_str!("../src/base64/encoder.rs"),

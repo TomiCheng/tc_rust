@@ -8,7 +8,8 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
+tc_zeroize = { version = "0.1.0", optional = true }
 
 [features]
 alloc = []
-std = ["alloc"]
+std = ["alloc", "dep:tc_zeroize"]

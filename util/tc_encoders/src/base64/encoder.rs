@@ -259,6 +259,7 @@ fn triple(sextets: [i16; 4]) -> [u8; 3] {
     ]
 }
 
+/// 常數時間：只依長度分支。
 fn write(out: &mut [u8], at: usize, bytes: &[u8]) -> Result<usize, EncoderError> {
     out.get_mut(at..at + bytes.len())
         .ok_or(EncoderError::BufferTooSmall)?
