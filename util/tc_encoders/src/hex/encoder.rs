@@ -1,6 +1,7 @@
 //! 編碼與解碼都以算術取代查表，不依位元組的值分支；解碼照 BC 略過空白
 //! （`\n`、`\r`、`\t`、空格），大小寫都收。
 
+use crate::whitespace::is_whitespace;
 use crate::{Encoder, EncoderError};
 
 /// 十六進位編碼，預設輸出小寫。
@@ -71,10 +72,6 @@ fn decode_nibble(c: u8) -> i16 {
     value
 }
 
-fn is_whitespace(c: u8) -> bool {
-    matches!(c, b'\n' | b'\r' | b'\t' | b' ')
-}
-
 impl Encoder for Hex {
     const DECODED_BLOCK_SIZE: usize = 1;
     const ENCODED_BLOCK_SIZE: usize = 2;
@@ -131,6 +128,12 @@ impl Encoder for Hex {
             return Err(EncoderError::InvalidLength);
         }
         Ok(written)
+    }
+
+    /// 同 [`decode_strict`](Hex::decode_strict)：不收空白，長度須為偶數。
+    /// 常數時間：不依字元值分支或查表；只依長度分支。
+    fn decode_blocks(&self, data: &[u8], out: &mut [u8]) -> Result<usize, EncoderError> {
+        self.decode_strict(data, out)
     }
 }
 

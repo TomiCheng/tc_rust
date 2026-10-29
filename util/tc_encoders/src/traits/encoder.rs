@@ -34,6 +34,12 @@ pub trait Encoder {
     /// 常數時間：不依字元值分支或查表；只依空白、填充與長度等公開結構分支。
     fn decode(&self, data: &[u8], out: &mut [u8]) -> Result<usize, EncoderError>;
 
+    /// 解碼不是最後一段的完整區塊：`data` 不含空白，長度是
+    /// [`ENCODED_BLOCK_SIZE`](Self::ENCODED_BLOCK_SIZE) 的倍數，不得有填充。串流
+    /// 解碼時，最後一段之前的資料都經過這裡，最後一段才交給 [`decode`](Self::decode)。
+    /// 常數時間：不依字元值分支或查表；只依長度分支。
+    fn decode_blocks(&self, data: &[u8], out: &mut [u8]) -> Result<usize, EncoderError>;
+
     /// 編碼成新的 `Vec`。
     /// 常數時間：同 [`encode`](Self::encode)。
     #[cfg(feature = "alloc")]

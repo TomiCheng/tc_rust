@@ -52,14 +52,15 @@
 //! ```
 //!
 //! 資料分段到達時，`std` 下的 `EncoderWriter` 本身就是 `Write`，邊寫邊編碼，
-//! `finish` 時補上最後一組與填充：
+//! `finish` 時補上最後一組與填充；反方向的 `DecoderReader` 本身就是 `Read`，邊讀
+//! 邊解碼：
 //!
 //! ```
 //! # #[cfg(feature = "std")]
 //! # fn main() -> std::io::Result<()> {
-//! use std::io::Write;
+//! use std::io::{Read, Write};
 //!
-//! use tc_encoders::{EncoderWriter, base64};
+//! use tc_encoders::{DecoderReader, EncoderWriter, base64};
 //!
 //! let mut writer = EncoderWriter::new(base64::DEFAULT, Vec::new());
 //! for part in [&b"Many "[..], b"hands ", b"make light work."] {
@@ -67,6 +68,11 @@
 //! }
 //! let text = writer.finish()?;
 //! assert_eq!(text, b"TWFueSBoYW5kcyBtYWtlIGxpZ2h0IHdvcmsu");
+//!
+//! let mut reader = DecoderReader::new(base64::DEFAULT, &text[..]);
+//! let mut back = String::new();
+//! reader.read_to_string(&mut back)?;
+//! assert_eq!(back, "Many hands make light work.");
 //! # Ok(())
 //! # }
 //! # #[cfg(not(feature = "std"))]
@@ -86,8 +92,9 @@ pub mod hex;
 #[cfg(feature = "std")]
 mod io;
 mod traits;
+mod whitespace;
 
 pub use errors::EncoderError;
 #[cfg(feature = "std")]
-pub use io::EncoderWriter;
+pub use io::{DecoderReader, EncoderWriter};
 pub use traits::Encoder;

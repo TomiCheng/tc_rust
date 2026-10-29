@@ -6,6 +6,7 @@
 //! 各種變形都是以另一張字元表或另一個填充設定建出的 `Base64`。逐一比對讓每個
 //! 字元要走 64 次，比依字元範圍計算慢，換來任意字元表都是常數時間。
 
+use crate::whitespace::is_whitespace;
 use crate::{Encoder, EncoderError};
 
 /// 以 64 個編碼字元與可有可無的填充字元編碼的 Base64。
@@ -127,10 +128,6 @@ fn decode_sextet(c: u8, symbols: &[u8; 64]) -> i16 {
         value += i16::from(eq_mask(c, symbol) as i8) & (index + 1);
     }
     value
-}
-
-const fn is_whitespace(c: u8) -> bool {
-    matches!(c, b'\n' | b'\r' | b'\t' | b' ')
 }
 
 /// 變動時間：只依長度分支，長度是公開值。
@@ -292,6 +289,32 @@ impl Encoder for Base64 {
     /// 常數時間：不依字元值分支或查表；只依空白的位置、最後一組的填充與長度分支。
     fn decode(&self, data: &[u8], out: &mut [u8]) -> Result<usize, EncoderError> {
         decode(data, out, self.symbols, self.padding)
+    }
+
+    /// 長度不是 4 的倍數回 `InvalidLength`；填充字元與空白都回 `InvalidCharacter`。
+    /// 常數時間：不依字元值分支或查表；只依長度分支。
+    fn decode_blocks(&self, data: &[u8], out: &mut [u8]) -> Result<usize, EncoderError> {
+        if data.len() % 4 != 0 {
+            return Err(EncoderError::InvalidLength);
+        }
+        let mut invalid = 0;
+        let out = out
+            .get_mut(..data.len() / 4 * 3)
+            .ok_or(EncoderError::BufferTooSmall)?;
+        for (bytes, group) in out.chunks_exact_mut(3).zip(data.chunks_exact(4)) {
+            let sextets = [
+                decode_sextet(group[0], self.symbols),
+                decode_sextet(group[1], self.symbols),
+                decode_sextet(group[2], self.symbols),
+                decode_sextet(group[3], self.symbols),
+            ];
+            invalid |= sextets[0] | sextets[1] | sextets[2] | sextets[3];
+            bytes.copy_from_slice(&triple(sextets));
+        }
+        if invalid < 0 {
+            return Err(EncoderError::InvalidCharacter);
+        }
+        Ok(out.len())
     }
 }
 
