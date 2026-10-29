@@ -80,23 +80,21 @@ fn ipv6(address: &[u8]) -> bool {
         return false;
     }
 
-    let mut temp = address.to_vec();
-    temp.push(b':');
+    // BC 在 `address` 後面補一個 `:` 再切段；這裡把 `address.len()` 當成那個冒號。
+    let len = address.len();
     let mut segment_count = 0;
     let mut double_colon_found = false;
 
     let mut pos = 0;
-    while pos < temp.len() {
-        let Some(end) = index_of(&temp, b':', pos) else {
-            break;
-        };
+    while pos <= len {
+        let end = index_of(address, b':', pos).unwrap_or(len);
         if segment_count == 8 {
             return false;
         }
 
         if pos != end {
-            let value = &temp[pos..end];
-            if end == temp.len() - 1 && index_of(value, b'.', 0).is_some_and(|i| i > 0) {
+            let value = &address[pos..end];
+            if end == len && index_of(value, b'.', 0).is_some_and(|i| i > 0) {
                 // 結尾的 IPv4 佔兩段。
                 segment_count += 1;
                 if segment_count == 8 {
@@ -109,7 +107,7 @@ fn ipv6(address: &[u8]) -> bool {
                 return false;
             }
         } else {
-            if end != 1 && end != temp.len() - 1 && double_colon_found {
+            if end != 1 && end != len && double_colon_found {
                 return false;
             }
             double_colon_found = true;

@@ -7,4 +7,6 @@
 //! assert!(ip_address::is_valid_with_netmask("2001:db8::/32"));
 //! ```
 
+#![no_std]
+
 pub mod ip_address;
