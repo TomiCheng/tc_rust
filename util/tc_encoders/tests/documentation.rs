@@ -66,7 +66,7 @@ fn every_public_method_states_constant_or_variable_time() {
         (
             "base64/encoder.rs",
             include_str!("../src/base64/encoder.rs"),
-            4,
+            5,
         ),
     ] {
         let (count, missing) = missing_timing_docs(source);
