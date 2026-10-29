@@ -1,0 +1,14 @@
+[package]
+name = "tc_encoders"
+description = "Hex, Base64 and UrlBase64 encoders, after Bouncy Castle's Utilities.Encoders."
+version = "0.1.0"
+edition.workspace = true
+rust-version = "1.85"
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+
+[features]
+alloc = []
+std = ["alloc"]

@@ -13,6 +13,7 @@ members = [
     "signer/*",
     "block_cipher/*",
     "x509/*",
+    "util/*",
 ]
 
 [workspace.package]

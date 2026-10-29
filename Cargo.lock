@@ -1458,6 +1458,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_encoders"
+version = "0.1.0"
+
+[[package]]
 name = "tc_f2m_curve"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
