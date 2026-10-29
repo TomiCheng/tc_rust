@@ -1169,6 +1169,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_bzip2"
+version = "0.1.0"
+
+[[package]]
 name = "tc_camellia"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2151,6 +2155,10 @@ name = "tc_zeroize"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9f496e361f9d75bd7cd0408dc585e9f334182314595ce27ea4852ab9c3858af1"
+
+[[package]]
+name = "tc_zlib"
+version = "0.1.0"
 
 [[package]]
 name = "threefish"
