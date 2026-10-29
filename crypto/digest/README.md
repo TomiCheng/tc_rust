@@ -100,17 +100,18 @@ in the family crates.
 
 | Family | Public types and variants | Notes |
 |--------|---------------------------|-------|
-| SHA-1 / SHA-2 | `Sha1Digest`, `Sha224Digest`, `Sha256Digest`, `Sha384Digest`, `Sha512Digest`, `Sha512tDigest` | SHA-512/224 and SHA-512/256 supported through SHA-512/t |
+| SHA-1 / SHA-2 | `Sha1Digest`, `Sha224Digest`, `Sha256Digest`, `Sha384Digest`, `Sha512Digest`, `Sha512tDigest` | SHA-512/224 and SHA-512/256 supported through SHA-512/t. Published as `tc_sha` on crates.io from TomiCheng/tc_digest |
 | SHA-3 / Keccak | `Sha3Digest`, `KeccakDigest` | SHA3-224/256/384/512; raw Keccak-128/224/256/288/384/512. Published as `tc_keccak` on crates.io from TomiCheng/tc_digest |
 | RIPEMD | `RipeMD128Digest`, `RipeMD160Digest`, `RipeMD256Digest`, `RipeMD320Digest` | All four Bouncy Castle variants |
-| BLAKE | `Blake2bDigest`, `Blake2sDigest`, `Blake3Digest` | Keyed and variable-output BLAKE2 modes; BLAKE3 also implements `Xof` |
-| Ascon | `AsconHash256` | Current NIST SP 800-232 hash |
-| Ascon legacy | `AsconDigest`, `AsconParameters` | Deprecated Ascon v1.2 Hash / HashA compatibility API |
+| BLAKE | `Blake2bDigest`, `Blake2sDigest`, `Blake3Digest` | Keyed and variable-output BLAKE2 modes; BLAKE3 also implements `Xof`. Published as `tc_blake` on crates.io from TomiCheng/tc_digest |
+| Ascon | `AsconHash256` | Current NIST SP 800-232 hash. Published as `tc_ascon_hash` on crates.io from TomiCheng/tc_digest |
+| Ascon legacy | `AsconDigest`, `AsconParameters` | Deprecated Ascon v1.2 Hash / HashA compatibility API. Published in `tc_ascon_hash` with the `legacy` feature |
 | GOST / DSTU | `Gost3411Digest`, `Gost3411_2012_256Digest`, `Gost3411_2012_512Digest`, `Dstu7564Digest` | GOST 34.11-94, Streebog-256/512, and DSTU 7564-256/384/512 |
 | Skein | `SkeinDigest`, `SkeinEngine` | Skein-256/512/1024 with any positive byte-aligned output size |
 | Other classic hashes | `Sm3Digest`, `TigerDigest`, `WhirlpoolDigest` | Standard and Bouncy Castle vectors |
-| Lightweight hashes | `IsapDigest`, `PhotonBeetleDigest`, `SparkleDigest`, `XoodyakDigest` | NIST LWC known-answer vectors; `SparkleDigest` provides ESCH-256 and ESCH-384 |
+| Lightweight hashes | `IsapDigest`, `PhotonBeetleDigest`, `SparkleDigest`, `XoodyakDigest` | NIST LWC known-answer vectors; `SparkleDigest` provides ESCH-256 and ESCH-384. `IsapDigest` is published in `tc_ascon_hash` with the `legacy` feature |
 | Haraka | `Haraka256Digest`, `Haraka512Digest` | Fixed 32/64-byte input, 32-byte output; fallible input contract |
+| Adapters | `ShortenedDigest<D>`, `Prehash`, `NullDigest` | Truncation, fixed-length prehash pass-through, and arbitrary pass-through. Published in `tc_digest` 0.1.1 as `tc_digest::util`, with the `alloc` feature |
 
 ### XOFs and variable-length constructions
 
@@ -118,9 +119,9 @@ in the family crates.
 |--------|---------------------------|-------|
 | SHAKE | `ShakeDigest` | SHAKE128 and SHAKE256 |
 | cSHAKE | `CShakeDigest` | cSHAKE128 and cSHAKE256 with function-name/customization strings |
-| BLAKE | `Blake2xsDigest`, `Blake3Digest` | BLAKE2xs and BLAKE3 streaming output |
-| Ascon | `AsconXof128`, `AsconCXof128` | NIST SP 800-232 XOF and customizable XOF |
-| Ascon legacy | `AsconXof`, `AsconXofParameters` | Deprecated Ascon v1.2 Xof / XofA compatibility API |
+| BLAKE | `Blake2xsDigest`, `Blake3Digest` | BLAKE2xs and BLAKE3 streaming output. Published as `tc_blake` on crates.io from TomiCheng/tc_digest |
+| Ascon | `AsconXof128`, `AsconCXof128` | NIST SP 800-232 XOF and customizable XOF. Published as `tc_ascon_hash` on crates.io from TomiCheng/tc_digest |
+| Ascon legacy | `AsconXof`, `AsconXofParameters` | Deprecated Ascon v1.2 Xof / XofA compatibility API. Published in `tc_ascon_hash` with the `legacy` feature |
 | SP 800-185 | `TupleHash`, `ParallelHash` | 128-bit and 256-bit security variants; fixed and XOF modes |
 
 The implementations are validated with specification vectors, Bouncy Castle
@@ -154,7 +155,7 @@ use. Local development can specify both `version` and `path`:
 ```toml
 [dependencies]
 tc_digest = { version = "0.1", path = "crypto/tc_digest" }
-tc_sha = { version = "0.1", path = "crypto/digest/tc_sha" }
+tc_sha = "0.1"  # published from TomiCheng/tc_digest
 tc_keccak = "0.1"  # published from TomiCheng/tc_digest
 tc_gost3411 = { version = "0.1", path = "crypto/digest/tc_gost3411" }
 tc_skein = { version = "0.1", path = "crypto/digest/tc_skein" }
@@ -165,8 +166,8 @@ tc_skein = { version = "0.1", path = "crypto/digest/tc_skein" }
 Build or test one family independently:
 
 ```bash
-cargo build -p tc_sha
-cargo test -p tc_sha
+cargo build -p tc_ripemd
+cargo test -p tc_ripemd
 ```
 
 Check the portable backend explicitly:
@@ -182,10 +183,10 @@ Additional validation commands:
 cargo test --workspace --no-run
 
 # Lint an individual family.
-cargo clippy -p tc_sha --all-targets -- -D warnings
+cargo clippy -p tc_ripemd --all-targets -- -D warnings
 
 # Build the documentation.
-cargo doc -p tc_sha --no-deps
+cargo doc -p tc_ripemd --no-deps
 
 # Full PHOTON-Beetle KAT; intentionally ignored in normal debug tests.
 cargo test -p tc_photon_beetle --release --test photon_beetle_kat -- --ignored
