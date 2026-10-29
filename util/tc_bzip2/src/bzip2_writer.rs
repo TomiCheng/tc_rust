@@ -73,11 +73,12 @@ const DEPTH_THRESH: i32 = 10;
 /// BZip2 compression writer.
 ///
 /// Wraps an inner [`Write`] and compresses data into the bzip2 format.
-/// Call [`BZip2Writer::finish`] when done to flush all remaining data and
-/// write the end-of-stream marker. Dropping without calling `finish` will
-/// attempt a best-effort flush but any I/O errors will be silently ignored.
+/// Call [`BZip2Writer::finish`] when done to flush all remaining data,
+/// write the end-of-stream marker and get the inner writer back. Dropping
+/// without calling `finish` will attempt a best-effort flush but any I/O
+/// errors will be silently ignored.
 pub struct BZip2Writer<W: Write> {
-    inner: W,
+    inner: Option<W>,
     finished: bool,
 
     // --- Block state ---
@@ -161,7 +162,7 @@ impl<W: Write> BZip2Writer<W> {
         inner.write_all(&[b'B', b'Z', b'h', b'0' + block_size_100k as u8])?;
 
         let mut writer = Self {
-            inner,
+            inner: Some(inner),
             finished: false,
             count: 0,
             orig_ptr: 0,
@@ -201,13 +202,31 @@ impl<W: Write> BZip2Writer<W> {
         self.in_use = [false; 256];
     }
 
-    /// Flush all remaining data and write the end-of-stream marker.
+    /// Flush all remaining data, write the end-of-stream marker and return
+    /// the inner writer.
     ///
     /// Must be called explicitly to ensure the compressed output is complete.
     /// Dropping the writer will attempt this automatically, but any I/O errors
     /// will be silently ignored.
     /// 變動時間：依資料內容分支，只能用於公開值。
-    pub fn finish(&mut self) -> io::Result<()> {
+    pub fn finish(mut self) -> io::Result<W> {
+        self.finish_stream()?;
+        Ok(self.inner.take().expect("present until finish"))
+    }
+
+    /// 回傳底下的 `W`。
+    /// 變動時間：不讀任何資料。
+    pub fn get_ref(&self) -> &W {
+        self.inner.as_ref().expect("present until finish")
+    }
+
+    fn inner_mut(&mut self) -> &mut W {
+        self.inner.as_mut().expect("present until finish")
+    }
+
+    /// 寫出剩下的資料與結尾標記；`finish` 與 `Drop` 共用，只做一次。
+    /// 變動時間：依資料內容分支，只能用於公開值。
+    fn finish_stream(&mut self) -> io::Result<()> {
         if self.finished {
             return Ok(());
         }
@@ -220,7 +239,7 @@ impl<W: Write> BZip2Writer<W> {
         }
         self.end_compression()?;
         self.finished = true;
-        self.inner.flush()
+        self.inner_mut().flush()
     }
 
     fn write_byte_internal(&mut self, value: u8) -> io::Result<()> {
@@ -863,7 +882,8 @@ impl<W: Write> BZip2Writer<W> {
         self.bs_live_pos -= n;
         self.bs_buff |= v << self.bs_live_pos;
         while self.bs_live_pos <= 24 {
-            self.inner.write_all(&[(self.bs_buff >> 24) as u8])?;
+            let byte = (self.bs_buff >> 24) as u8;
+            self.inner_mut().write_all(&[byte])?;
             self.bs_buff <<= 8;
             self.bs_live_pos += 8;
         }
@@ -877,7 +897,8 @@ impl<W: Write> BZip2Writer<W> {
         self.bs_live_pos -= n;
         self.bs_buff |= v << self.bs_live_pos;
         if self.bs_live_pos <= 24 {
-            self.inner.write_all(&[(self.bs_buff >> 24) as u8])?;
+            let byte = (self.bs_buff >> 24) as u8;
+            self.inner_mut().write_all(&[byte])?;
             self.bs_buff <<= 8;
             self.bs_live_pos += 8;
         }
@@ -1379,7 +1400,8 @@ impl<W: Write> BZip2Writer<W> {
         // bs_live_pos counts *free* positions in the 32-bit buffer, starting
         // at 32. Any value < 32 means at least one bit is waiting.
         while self.bs_live_pos < 32 {
-            self.inner.write_all(&[(self.bs_buff >> 24) as u8])?;
+            let byte = (self.bs_buff >> 24) as u8;
+            self.inner_mut().write_all(&[byte])?;
             self.bs_buff <<= 8;
             self.bs_live_pos += 8;
         }
@@ -1411,7 +1433,7 @@ impl<W: Write> Write for BZip2Writer<W> {
 
     /// 變動時間：依資料內容分支，只能用於公開值。
     fn flush(&mut self) -> io::Result<()> {
-        self.inner.flush()
+        self.inner_mut().flush()
     }
 }
 
@@ -1419,7 +1441,7 @@ impl<W: Write> Drop for BZip2Writer<W> {
     /// 變動時間：依資料內容分支，只能用於公開值。
     fn drop(&mut self) {
         if !self.finished {
-            let _ = self.finish();
+            let _ = self.finish_stream();
         }
     }
 }
@@ -1502,25 +1524,23 @@ mod tests {
         }
     }
 
-    /// Calling finish() twice must produce the same output as calling it once
+    /// Finishing explicitly and letting Drop finish must give the same stream.
     /// (second call is a no-op).
     #[test]
-    fn finish_idempotent() {
-        // single finish via explicit call + Drop
-        let mut once = Vec::new();
+    fn finish_and_drop_write_the_same_stream_once() {
+        let finished = BZip2Writer::new(Vec::new())
+            .and_then(|mut w| {
+                w.write_all(b"abc")?;
+                w.finish()
+            })
+            .unwrap();
+
+        let mut dropped = Vec::new();
         {
-            let mut w = BZip2Writer::new(&mut once).unwrap();
-            w.finish().unwrap();
+            let mut w = BZip2Writer::new(&mut dropped).unwrap();
+            w.write_all(b"abc").unwrap();
         }
 
-        // two explicit finish() calls before Drop
-        let mut twice = Vec::new();
-        {
-            let mut w = BZip2Writer::new(&mut twice).unwrap();
-            w.finish().unwrap();
-            w.finish().unwrap();
-        }
-
-        assert_eq!(once, twice);
+        assert_eq!(finished, dropped);
     }
 }

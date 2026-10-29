@@ -230,6 +230,18 @@ impl<R: Read> BZip2Reader<R> {
             output_count: 0,
         })
     }
+
+    /// 回傳底下的 `R`。
+    /// 變動時間：不讀任何資料。
+    pub fn get_ref(&self) -> &R {
+        &self.inner
+    }
+
+    /// 交回底下的 `R`；已讀進但還沒解出的資料就此丟棄。
+    /// 變動時間：不讀任何資料。
+    pub fn into_inner(self) -> R {
+        self.inner
+    }
 }
 
 impl<R: Read> BZip2Reader<R> {
