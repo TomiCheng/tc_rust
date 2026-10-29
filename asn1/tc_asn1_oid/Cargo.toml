@@ -1,0 +1,11 @@
+[package]
+name = "tc_asn1_oid"
+description = "Object identifier tables (NIST, SEC, Brainpool, GM, EdEC and more) on top of tc_asn1, after Bouncy Castle's OID-only Asn1 folders."
+version = "0.1.0"
+edition.workspace = true
+rust-version = "1.85"
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+tc_asn1 = "0.1.2"
