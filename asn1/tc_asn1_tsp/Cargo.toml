@@ -1,6 +1,6 @@
 [package]
 name = "tc_asn1_tsp"
-description = "Time-stamp protocol (RFC 3161) structures on top of tc_asn1, after Bouncy Castle's Asn1.Tsp."
+description = "Time-stamp protocol (RFC 3161) and evidence record (RFC 4998) structures on top of tc_asn1, after Bouncy Castle's Asn1.Tsp."
 version = "0.1.0"
 edition.workspace = true
 rust-version = "1.85"
@@ -8,3 +8,8 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
+tc_asn1 = "0.1.2"
+tc_asn1_x500 = "0.1.0"
+tc_asn1_cmp = { version = "0.1.0", path = "../tc_asn1_cmp" }
+tc_asn1_cms = { version = "0.1.0", path = "../tc_asn1_cms" }
+tc_asn1_x509 = { version = "0.1.0", path = "../tc_asn1_x509" }

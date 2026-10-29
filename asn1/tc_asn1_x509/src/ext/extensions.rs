@@ -15,8 +15,8 @@
 use alloc::vec::Vec;
 
 use tc_asn1::{
-    Asn1Error, Asn1Oid, Asn1SequenceOf, Decode, DecodeInner, DecodingContext, Encode,
-    EncodeContent, EncodeTagged, EncodingOptions, Tagged,
+    Asn1Error, Asn1Oid, Asn1SequenceOf, Decode, DecodeContent, DecodeInner, DecodingContext,
+    Encode, EncodeContent, EncodeTagged, EncodingOptions, Tagged,
 };
 
 use crate::{
@@ -295,6 +295,17 @@ impl Extensions {
         context: &mut DecodingContext,
     ) -> Result<Option<CrlDistributionPoints>, Asn1Error> {
         self.get_as(ExtensionId::FRESHEST_CRL, context)
+    }
+}
+
+impl DecodeContent for Extensions {
+    /// The contents alone, for an `[n] IMPLICIT Extensions` field. An empty
+    /// SEQUENCE or a repeated OID is `MalformedValue`. Variable time: branches
+    /// only on the encoding structure.
+    fn decode_content(value: &[u8], context: &mut DecodingContext) -> Result<Self, Asn1Error> {
+        let extensions = Asn1SequenceOf::<Extension>::decode_content(value, context)?;
+        Self::check(extensions.elements())?;
+        Ok(Self { extensions })
     }
 }
 
