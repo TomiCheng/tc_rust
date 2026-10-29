@@ -7,6 +7,7 @@ extern crate alloc;
 #[cfg(feature = "std")]
 extern crate std;
 
+pub mod base64;
 mod errors;
 pub mod hex;
 mod traits;

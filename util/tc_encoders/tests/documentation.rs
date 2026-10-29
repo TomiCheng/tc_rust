@@ -63,6 +63,11 @@ fn every_public_method_states_constant_or_variable_time() {
             1,
         ),
         ("hex/encoder.rs", include_str!("../src/hex/encoder.rs"), 5),
+        (
+            "base64/encoder.rs",
+            include_str!("../src/base64/encoder.rs"),
+            4,
+        ),
     ] {
         let (count, missing) = missing_timing_docs(source);
         assert!(count >= minimum, "only {count} methods scanned in {name}");
