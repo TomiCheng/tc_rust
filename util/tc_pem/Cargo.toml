@@ -1,0 +1,10 @@
+[package]
+name = "tc_pem"
+description = "PEM encoding and decoding, after Bouncy Castle's Utilities.IO.Pem."
+version = "0.1.0"
+edition.workspace = true
+rust-version = "1.85"
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
