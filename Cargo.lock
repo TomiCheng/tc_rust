@@ -965,6 +965,10 @@ dependencies = [
 [[package]]
 name = "tc_asn1_icao"
 version = "0.1.0"
+dependencies = [
+ "tc_asn1",
+ "tc_asn1_x509",
+]
 
 [[package]]
 name = "tc_asn1_isismtt"
