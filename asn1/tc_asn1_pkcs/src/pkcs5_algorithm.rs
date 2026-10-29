@@ -32,6 +32,20 @@ impl Pkcs5Algorithm {
         "id-PBES2",
     );
 
+    /// The id-PBMAC1 identifier, a password-based MAC.
+    pub const PBMAC1: NamedOid = NamedOid::new(
+        &[0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x05, 0x0e],
+        "1.2.840.113549.1.5.14",
+        "id-PBMAC1",
+    );
+
+    /// The id-scrypt identifier of RFC 7914, a PBES2 key derivation.
+    pub const SCRYPT: NamedOid = NamedOid::new(
+        &[0x2b, 0x06, 0x01, 0x04, 0x01, 0xda, 0x47, 0x04, 0x0b],
+        "1.3.6.1.4.1.11591.4.11",
+        "id-scrypt",
+    );
+
     /// The id-hmacWithSHA1 identifier, the default PBKDF2 PRF.
     pub const HMAC_WITH_SHA1: NamedOid = NamedOid::new(
         &[0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x02, 0x07],
@@ -85,6 +99,8 @@ impl Pkcs5Algorithm {
     pub const ALL: &'static [NamedOid] = &[
         Self::PBKDF2,
         Self::PBES2,
+        Self::PBMAC1,
+        Self::SCRYPT,
         Self::HMAC_WITH_SHA1,
         Self::HMAC_WITH_SHA224,
         Self::HMAC_WITH_SHA256,
