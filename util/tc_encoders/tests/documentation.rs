@@ -75,6 +75,16 @@ fn every_public_method_states_constant_or_variable_time() {
         ),
         ("whitespace.rs", include_str!("../src/whitespace.rs"), 0),
         (
+            "io/encoder_reader.rs",
+            include_str!("../src/io/encoder_reader.rs"),
+            5,
+        ),
+        (
+            "io/decoder_writer.rs",
+            include_str!("../src/io/decoder_writer.rs"),
+            6,
+        ),
+        (
             "io/encoder_writer.rs",
             include_str!("../src/io/encoder_writer.rs"),
             6,

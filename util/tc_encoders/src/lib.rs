@@ -53,7 +53,8 @@
 //!
 //! 資料分段到達時，`std` 下的 `EncoderWriter` 本身就是 `Write`，邊寫邊編碼，
 //! `finish` 時補上最後一組與填充；反方向的 `DecoderReader` 本身就是 `Read`，邊讀
-//! 邊解碼：
+//! 邊解碼。另外兩個方向是 `EncoderReader`（讀原始資料、讀出編碼文字）與
+//! `DecoderWriter`（寫進編碼文字、寫出解碼結果）：
 //!
 //! ```
 //! # #[cfg(feature = "std")]
@@ -96,5 +97,5 @@ mod whitespace;
 
 pub use errors::EncoderError;
 #[cfg(feature = "std")]
-pub use io::{DecoderReader, EncoderWriter};
+pub use io::{DecoderReader, DecoderWriter, EncoderReader, EncoderWriter};
 pub use traits::Encoder;
