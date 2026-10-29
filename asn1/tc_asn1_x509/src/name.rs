@@ -3,6 +3,7 @@
 mod edi_party_name;
 mod general_name;
 mod general_names;
+mod ip_text;
 mod other_name;
 
 pub use edi_party_name::EdiPartyName;

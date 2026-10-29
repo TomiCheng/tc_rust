@@ -13,3 +13,4 @@ chrono = ["dep:chrono"]
 chrono = { version = "0.4.38", default-features = false, optional = true }
 tc_asn1 = "0.1.1"
 tc_asn1_x500 = "0.1.0"
+tc_net = { version = "0.1.0", path = "../../util/tc_net" }

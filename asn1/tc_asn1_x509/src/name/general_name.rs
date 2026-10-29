@@ -34,7 +34,7 @@ use tc_asn1::{
 };
 use tc_asn1_x500::Name;
 
-use crate::name::{EdiPartyName, OtherName};
+use crate::name::{EdiPartyName, OtherName, ip_text};
 
 /// A name as it appears in subjectAltName, issuerAltName,
 /// authorityKeyIdentifier, cRLDistributionPoints and nameConstraints.
@@ -102,6 +102,17 @@ impl GeneralName {
     /// an address and mask.
     pub fn ip_address(octets: &[u8]) -> Self {
         Self::IpAddress(Asn1OctetString::new(octets))
+    }
+
+    /// An iPAddress from text, as Bouncy Castle's
+    /// `GeneralName(IPAddress, string)` reads it: an IPv4 or IPv6 address,
+    /// optionally followed by `/` and a mask written as an address or a
+    /// prefix length. Anything else is `MalformedValue`.
+    /// Variable time: branches on the text, which is public.
+    pub fn ip_address_from_str(text: &str) -> Result<Self, Asn1Error> {
+        ip_text::to_octets(text)
+            .map(|octets| Self::ip_address(&octets))
+            .ok_or(Asn1Error::MalformedValue)
     }
 
     /// The context tag this variant is written under.
@@ -386,6 +397,94 @@ mod tests {
             (&[1, 2, 3], "IP:010203"),
         ] {
             assert_eq!(GeneralName::ip_address(octets).to_string(), text);
+        }
+    }
+
+    fn hex(text: &str) -> Vec<u8> {
+        (0..text.len())
+            .step_by(2)
+            .map(|i| u8::from_str_radix(&text[i..i + 2], 16).unwrap())
+            .collect()
+    }
+
+    /// The vectors of Bouncy Castle's `GeneralNameTest.IPv4` and `IPv6`.
+    #[test]
+    fn ip_addresses_written_as_text_encode_like_bouncy_castle() {
+        for (text, der) in [
+            ("10.9.8.0", "87040a090800"),
+            ("10.9.8.0/255.255.255.0", "87080a090800ffffff00"),
+            ("10.9.8.0/24", "87080a090800ffffff00"),
+            ("10.9.8.0/255.255.128.0", "87080a090800ffff8000"),
+            ("10.9.8.0/17", "87080a090800ffff8000"),
+            ("10.9.8.0/255.255.192.0", "87080a090800ffffc000"),
+            ("10.9.8.0/18", "87080a090800ffffc000"),
+            (
+                "2001:0db8:85a3:08d3:1319:8a2e:0370:7334",
+                "871020010db885a308d313198a2e03707334",
+            ),
+            (
+                "2001:0db8:85a3::1319:8a2e:0370:7334",
+                "871020010db885a3000013198a2e03707334",
+            ),
+            ("::1", "871000000000000000000000000000000001"),
+            (
+                "2001:0db8:85a3::8a2e:0370:7334",
+                "871020010db885a3000000008a2e03707334",
+            ),
+            (
+                "2001:0db8:85a3::8a2e:10.9.8.0",
+                "871020010db885a3000000008a2e0a090800",
+            ),
+            (
+                "2001:0db8:85a3::8a2e:10.9.8.0/ffff:ffff:ffff::0000",
+                "872020010db885a3000000008a2e0a090800ffffffffffff00000000000000000000",
+            ),
+            (
+                "2001:0db8:85a3::8a2e:10.9.8.0/128",
+                "872020010db885a3000000008a2e0a090800ffffffffffffffffffffffffffffffff",
+            ),
+            (
+                "2001:0db8:85a3::/48",
+                "872020010db885a300000000000000000000ffffffffffff00000000000000000000",
+            ),
+            (
+                "2001:0db8:85a3::/47",
+                "872020010db885a300000000000000000000fffffffffffe00000000000000000000",
+            ),
+            (
+                "2001:0db8:85a3::/49",
+                "872020010db885a300000000000000000000ffffffffffff80000000000000000000",
+            ),
+        ] {
+            let name = GeneralName::ip_address_from_str(text).unwrap();
+            assert_eq!(round_trip(&name), hex(der), "{text}");
+        }
+    }
+
+    #[test]
+    fn ip_address_text_round_trips_through_display_and_rejects_anything_else() {
+        for text in ["10.0.0.0/255.0.0.0", "2001:db8:0:0:0:0:0:1"] {
+            let name = GeneralName::ip_address_from_str(text).unwrap();
+            assert_eq!(name.to_string(), alloc::format!("IP:{text}"));
+        }
+        // BC reads a mask of "::" as a prefix length and throws; it is mask zero here.
+        let name = GeneralName::ip_address_from_str("2001:db8::/::").unwrap();
+        let mut octets = [0u8; 32];
+        octets[..4].copy_from_slice(&[0x20, 0x01, 0x0d, 0xb8]);
+        assert_eq!(name, GeneralName::ip_address(&octets));
+        for invalid in [
+            "",
+            "10.9.8",
+            "10.9.8.0/33",
+            "www.example.com",
+            "1::2::3",
+            "g::1",
+        ] {
+            assert_eq!(
+                GeneralName::ip_address_from_str(invalid),
+                Err(Asn1Error::MalformedValue),
+                "{invalid}"
+            );
         }
     }
 

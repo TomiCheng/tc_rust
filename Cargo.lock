@@ -1033,6 +1033,7 @@ dependencies = [
  "chrono",
  "tc_asn1",
  "tc_asn1_x500",
+ "tc_net",
 ]
 
 [[package]]
