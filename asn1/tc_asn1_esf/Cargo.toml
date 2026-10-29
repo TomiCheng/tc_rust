@@ -1,0 +1,10 @@
+[package]
+name = "tc_asn1_esf"
+description = "CMS advanced electronic signature (CAdES, RFC 5126) structures, after Bouncy Castle's Asn1.Esf."
+version = "0.1.0"
+edition.workspace = true
+rust-version = "1.85"
+license.workspace = true
+repository.workspace = true
+
+[dependencies]

@@ -909,6 +909,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_asn1_cmp"
+version = "0.1.0"
+
+[[package]]
 name = "tc_asn1_cms"
 version = "0.1.0"
 dependencies = [
@@ -916,6 +920,34 @@ dependencies = [
  "tc_asn1_x500",
  "tc_asn1_x509",
 ]
+
+[[package]]
+name = "tc_asn1_dstu"
+version = "0.1.0"
+
+[[package]]
+name = "tc_asn1_esf"
+version = "0.1.0"
+
+[[package]]
+name = "tc_asn1_ess"
+version = "0.1.0"
+
+[[package]]
+name = "tc_asn1_gost"
+version = "0.1.0"
+
+[[package]]
+name = "tc_asn1_icao"
+version = "0.1.0"
+
+[[package]]
+name = "tc_asn1_isismtt"
+version = "0.1.0"
+
+[[package]]
+name = "tc_asn1_ocsp"
+version = "0.1.0"
 
 [[package]]
 name = "tc_asn1_pkcs"
@@ -926,6 +958,10 @@ dependencies = [
  "tc_asn1_x509",
  "tc_zeroize",
 ]
+
+[[package]]
+name = "tc_asn1_tsp"
+version = "0.1.0"
 
 [[package]]
 name = "tc_asn1_x500"

@@ -1,0 +1,10 @@
+[package]
+name = "tc_asn1_gost"
+description = "GOST R 34.10 and GOST 28147-89 parameter structures, after Bouncy Castle's Asn1.CryptoPro and Asn1.Rosstandart."
+version = "0.1.0"
+edition.workspace = true
+rust-version = "1.85"
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
