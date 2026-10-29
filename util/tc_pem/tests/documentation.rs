@@ -1,4 +1,4 @@
-const METHODS: [&str; 5] = ["fmt", "drop", "read", "write", "flush"];
+const METHODS: [&str; 6] = ["fmt", "drop", "read", "write", "flush", "generate"];
 
 fn checked(line: &str) -> bool {
     if line.starts_with("pub fn ") {
@@ -46,7 +46,14 @@ fn missing_timing_docs(source: &str) -> (usize, Vec<String>) {
 fn every_public_method_states_constant_or_variable_time() {
     for (name, source, minimum) in [
         ("pem_header.rs", include_str!("../src/pem_header.rs"), 4),
-        ("pem_object.rs", include_str!("../src/pem_object.rs"), 7),
+        ("pem_object.rs", include_str!("../src/pem_object.rs"), 8),
+        ("pem_reader.rs", include_str!("../src/pem_reader.rs"), 4),
+        ("pem_writer.rs", include_str!("../src/pem_writer.rs"), 5),
+        (
+            "errors/pem_generation_error.rs",
+            include_str!("../src/errors/pem_generation_error.rs"),
+            4,
+        ),
     ] {
         let (count, missing) = missing_timing_docs(source);
         assert!(count >= minimum, "only {count} methods scanned in {name}");

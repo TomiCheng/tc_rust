@@ -8,4 +8,5 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
+tc_encoders = { version = "0.1.0", path = "../tc_encoders" }
 tc_zeroize = { version = "0.1.0", features = ["alloc"] }

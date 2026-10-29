@@ -1751,6 +1751,7 @@ dependencies = [
 name = "tc_pem"
 version = "0.1.0"
 dependencies = [
+ "tc_encoders",
  "tc_zeroize",
 ]
 

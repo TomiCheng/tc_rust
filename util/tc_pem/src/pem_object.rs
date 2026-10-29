@@ -2,7 +2,7 @@ use std::fmt;
 
 use tc_zeroize::Zeroize;
 
-use crate::PemHeader;
+use crate::{PemGenerationError, PemHeader, PemObjectGenerator};
 
 /// 一個 PEM 物件：型別（`BEGIN` 後面的名稱）、標頭與解碼後的內容。
 ///
@@ -45,6 +45,14 @@ impl PemObject {
     /// 常數時間。
     pub fn content(&self) -> &[u8] {
         &self.content
+    }
+}
+
+impl PemObjectGenerator for PemObject {
+    /// 回傳自己的複本，對應 BC 的 `Generate() => this`。
+    /// 常數時間：只複製欄位。
+    fn generate(&self) -> Result<PemObject, PemGenerationError> {
+        Ok(self.clone())
     }
 }
 
