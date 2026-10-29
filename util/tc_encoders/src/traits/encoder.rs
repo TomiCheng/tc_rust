@@ -1,4 +1,5 @@
-//! 對應 BC 的 `IEncoder`（輸出寫進 `Stream`）與 `ITranslator`（區塊大小）。
+//! 對應 BC 的 `IEncoder`（輸出寫進 `Stream`）與 `ITranslator`（區塊大小）；
+//! `std` 下另可從 `Read` 讀入，BC 沒有這一邊。
 
 #[cfg(feature = "alloc")]
 use alloc::vec::Vec;
@@ -74,5 +75,32 @@ pub trait Encoder {
             .map_err(|error| std::io::Error::new(std::io::ErrorKind::InvalidData, error))?;
         out.write_all(&decoded)?;
         Ok(decoded.len())
+    }
+
+    /// 從 `input` 讀到結尾，編碼後寫進 `out`，回傳寫入的長度。
+    /// 常數時間：同 [`encode`](Self::encode)；讀寫本身的時間由 `input`、`out` 決定。
+    #[cfg(feature = "std")]
+    fn encode_from(
+        &self,
+        input: &mut dyn std::io::Read,
+        out: &mut dyn std::io::Write,
+    ) -> std::io::Result<usize> {
+        let mut data = Vec::new();
+        input.read_to_end(&mut data)?;
+        self.encode_to(&data, out)
+    }
+
+    /// 從 `input` 讀到結尾，解碼後寫進 `out`，回傳寫入的長度。
+    /// 錯誤以 `InvalidData` 回報。
+    /// 常數時間：同 [`decode`](Self::decode)；讀寫本身的時間由 `input`、`out` 決定。
+    #[cfg(feature = "std")]
+    fn decode_from(
+        &self,
+        input: &mut dyn std::io::Read,
+        out: &mut dyn std::io::Write,
+    ) -> std::io::Result<usize> {
+        let mut data = Vec::new();
+        input.read_to_end(&mut data)?;
+        self.decode_to(&data, out)
     }
 }
