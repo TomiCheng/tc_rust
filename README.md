@@ -85,6 +85,7 @@ and the crates that remain here depend on the published version.
 - [`tc_dstu7624`](https://crates.io/crates/tc_dstu7624) — DSTU 7624:2014
   (Kalyna) with 128-, 256- and 512-bit blocks
 - [`tc_rc_cipher`](https://crates.io/crates/tc_rc_cipher) — RC2, RC5 and RC6
+- [`tc_sm4`](https://crates.io/crates/tc_sm4) — SM4 (GB/T 32907-2016)
 - [`tc_block_modes`](https://crates.io/crates/tc_block_modes) — ECB, CBC, CFB,
   OFB and CTR
 - [`tc_block_padding`](https://crates.io/crates/tc_block_padding) — PKCS#7,
@@ -168,7 +169,7 @@ and the crates that remain here depend on the published version.
 - [`ies`](ies) — the Integrated Encryption Scheme over a key agreement, a
   KDF and a MAC
 - [`block_cipher`](block_cipher) — rewrites of Blowfish, CAST5/CAST6,
-  GOST 28147-89, IDEA, Noekeon, Rijndael, SEED, Serpent, Skipjack, SM4,
+  GOST 28147-89, IDEA, Noekeon, Rijndael, SEED, Serpent, Skipjack,
   TEA/XTEA, Threefish and Twofish on the `tc_block_cipher` traits, waiting to
   graduate
 - [`crypto/digest`](crypto/digest) and [`crypto/macs`](crypto/macs) — digest

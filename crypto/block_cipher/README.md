@@ -109,7 +109,6 @@ include specification, Monte Carlo, or backend-equivalence tests.
 | ✅ | [`tc_seed`](tc_seed) | `SeedEngine` | 128-bit block and key |
 | ✅ | [`tc_serpent`](tc_serpent) | `SerpentEngine`, `TnepresEngine` | 128-bit block; 4-32-byte keys in 4-byte steps |
 | ✅ | [`tc_skipjack`](tc_skipjack) | `SkipjackEngine` | 64-bit block; 80-bit key |
-| ✅ | [`tc_sm4`](tc_sm4) | `Sm4Engine` | 128-bit block and key |
 | ✅ | [`tc_tea`](tc_tea) | `TeaEngine`, `XteaEngine` | 64-bit block; 128-bit key |
 | ✅ | [`tc_threefish`](tc_threefish) | `Threefish256Engine`, `Threefish512Engine`, `Threefish1024Engine` | 256/512/1024-bit block and matching key; optional 128-bit tweak |
 | ✅ | [`tc_twofish`](tc_twofish) | `TwofishEngine` | 128-bit block; 128/192/256-bit keys |
@@ -120,6 +119,8 @@ RC2, RC5 and RC6 have moved to the published
 [`tc_rc_cipher`](https://crates.io/crates/tc_rc_cipher) crate.
 Camellia has moved to the published
 [`tc_camellia`](https://crates.io/crates/tc_camellia) crate.
+SM4 has moved to the published [`tc_sm4`](https://crates.io/crates/tc_sm4)
+crate.
 
 DES, Triple DES, Blowfish, IDEA, RC2, RC5, SKIPJACK, TEA, XTEA, and other
 older designs are provided for compatibility and study, not as recommendations
