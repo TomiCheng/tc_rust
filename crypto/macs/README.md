@@ -30,7 +30,7 @@ type.
 | ✅ Done | `Dstu7624Mac` | [`tc_dstu_macs::Dstu7624Mac`](tc_dstu_macs) | Allocation-free 128-, 256-, and 512-bit-block variants; BC vectors cover 128- and 512-bit blocks. |
 | ✅ Done | `GMac` | [`tc_macs::Gmac`](https://crates.io/crates/tc_macs) | Published in `tc_macs` over the published `tc_aead_cipher` GCM, checked against bc-csharp's GMacTest vectors; GCM refuses a repeated key and nonce. |
 | ✅ Done | `GOST28147Mac` | [`tc_gost28147_mac::Gost28147Mac`](tc_gost28147_mac) | Allocation-free 16-round GOST MAC core with caller-selected S-box and optional IV. |
-| ✅ Done | `HMac` | [`tc_hmac::HMac`](tc_hmac) | Generic HMAC over the infallible `Digest` API, with BC/RFC vectors, long-key handling, retained keyed state, and non-`Clone` digest support. |
+| ✅ Done | `HMac` | [`tc_macs::FixedHmac`](https://crates.io/crates/tc_macs) | Published in `tc_macs` with the `hmac` feature: `FixedHmac`, and with `alloc` `Hmac`, over any digest on the published `tc_digest` traits, checked against the RFC 4231 vectors. |
 | ✅ Done | `ISO9797Alg3Mac` | [`tc_iso9797_mac::Iso9797Alg3Mac`](tc_iso9797_mac) | Allocation-free two-/three-key DES Retail MAC, with optional IV, tag truncation, and padding. |
 | ✅ Done | `KMac` | [`tc_kmac::KMac`](tc_kmac) | KMAC128/KMAC256 fixed tags and XOF output over cSHAKE; requires `alloc`. |
 | ✅ Raw mode | `Poly1305` | [`tc_poly1305`](https://crates.io/crates/tc_poly1305) | Published from the tc_macs repository: raw Poly1305 with a caller-supplied 32-byte one-time key. The optional 128-bit block-cipher construction is not implemented. |
@@ -61,6 +61,6 @@ Run the tests for all currently implemented MAC crates from the workspace root:
 
 ```bash
 cargo test \
-  -p tc_dstu_macs -p tc_gost28147_mac -p tc_hmac -p tc_iso9797_mac \
+  -p tc_dstu_macs -p tc_gost28147_mac -p tc_iso9797_mac \
   -p tc_kmac -p tc_siphash -p tc_vmpc_mac --locked
 ```
