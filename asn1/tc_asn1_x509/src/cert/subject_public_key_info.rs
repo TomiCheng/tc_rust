@@ -13,8 +13,8 @@
 //! is kept as is; interpreting it is the key type's job.
 
 use tc_asn1::{
-    Asn1BitString, Asn1Error, Asn1Ref, Decode, DecodeInner, DecodingContext, Encode, EncodeContent,
-    EncodeTagged, EncodingOptions, Tagged, tag,
+    Asn1BitString, Asn1Error, Asn1Ref, Children, Decode, DecodeContent, DecodeInner,
+    DecodingContext, Encode, EncodeContent, EncodeTagged, EncodingOptions, Tagged, tag,
 };
 
 use crate::alg::AlgorithmIdentifier;
@@ -62,23 +62,28 @@ impl SubjectPublicKeyInfo {
     }
 }
 
+impl DecodeContent for SubjectPublicKeyInfo {
+    /// The contents alone, for an `[n] IMPLICIT SubjectPublicKeyInfo` field.
+    fn decode_content(value: &[u8], context: &mut DecodingContext) -> Result<Self, Asn1Error> {
+        let mut children = Children::from_contents(value, context)?;
+        let algorithm: AlgorithmIdentifier = children.get()?;
+        let subject_public_key: Asn1BitString = children.get()?;
+        children.end()?;
+        Ok(Self {
+            algorithm,
+            subject_public_key,
+        })
+    }
+}
+
 impl DecodeInner for SubjectPublicKeyInfo {
     fn decode_inner(
         buff: &[u8],
         context: &mut DecodingContext,
     ) -> Result<(usize, Self), Asn1Error> {
         let element = Asn1Ref::parse(buff, context)?.assert_tag(tag::SEQUENCE)?;
-        let mut children = element.children(context)?;
-        let algorithm: AlgorithmIdentifier = children.get()?;
-        let subject_public_key: Asn1BitString = children.get()?;
-        children.end()?;
-        Ok((
-            element.total_len(),
-            Self {
-                algorithm,
-                subject_public_key,
-            },
-        ))
+        let value = Self::decode_content(element.value(), context)?;
+        Ok((element.total_len(), value))
     }
 }
 

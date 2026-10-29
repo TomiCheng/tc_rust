@@ -913,6 +913,10 @@ name = "tc_asn1_cmp"
 version = "0.1.0"
 dependencies = [
  "tc_asn1",
+ "tc_asn1_cms",
+ "tc_asn1_pkcs",
+ "tc_asn1_x500",
+ "tc_asn1_x509",
 ]
 
 [[package]]
