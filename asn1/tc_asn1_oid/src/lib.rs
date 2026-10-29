@@ -1,7 +1,7 @@
-//! Object identifier tables from the Bouncy Castle `Asn1` folders that hold
-//! nothing else: standards bodies, national schemes and vendors. Named curve
-//! parameters live with the curve factories; structures live in their own
-//! crates.
+//! Object identifier tables from the Bouncy Castle `Asn1` folders: standards
+//! bodies, national schemes and vendors. Named curve parameters live with the
+//! curve factories, and the few structures in these folders live with their
+//! users, such as the Netscape extensions in tc_asn1_x509.
 
 #![no_std]
 
@@ -16,6 +16,8 @@ mod gsma_id;
 mod iana_id;
 mod isara_id;
 mod kisa_id;
+mod microsoft_id;
+mod misc_id;
 mod nist_id;
 mod nsri_id;
 mod ntt_id;
@@ -34,6 +36,8 @@ pub use gsma_id::GsmaId;
 pub use iana_id::IanaId;
 pub use isara_id::IsaraId;
 pub use kisa_id::KisaId;
+pub use microsoft_id::MicrosoftId;
+pub use misc_id::MiscId;
 pub use nist_id::NistId;
 pub use nsri_id::NsriId;
 pub use ntt_id::NttId;

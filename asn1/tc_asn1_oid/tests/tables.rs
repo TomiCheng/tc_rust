@@ -3,12 +3,12 @@ use std::collections::HashSet;
 use tc_asn1::NamedOid;
 use tc_asn1_oid::{
     AnssiId, BsiId, CryptlibId, EacId, EdecId, GmId, GnuId, GsmaId, IanaId, IsaraId, KisaId,
-    NistId, NsriId, NttId, OiwId, SecId, TeletrustId,
+    MicrosoftId, MiscId, NistId, NsriId, NttId, OiwId, SecId, TeletrustId,
 };
 
 type Lookup = fn(&tc_asn1::Asn1Oid) -> Option<NamedOid>;
 
-fn tables() -> [(&'static str, &'static [NamedOid], Lookup); 17] {
+fn tables() -> [(&'static str, &'static [NamedOid], Lookup); 19] {
     [
         ("anssi", AnssiId::ALL, AnssiId::from_oid),
         ("bsi", BsiId::ALL, BsiId::from_oid),
@@ -21,6 +21,8 @@ fn tables() -> [(&'static str, &'static [NamedOid], Lookup); 17] {
         ("iana", IanaId::ALL, IanaId::from_oid),
         ("isara", IsaraId::ALL, IsaraId::from_oid),
         ("kisa", KisaId::ALL, KisaId::from_oid),
+        ("microsoft", MicrosoftId::ALL, MicrosoftId::from_oid),
+        ("misc", MiscId::ALL, MiscId::from_oid),
         ("nist", NistId::ALL, NistId::from_oid),
         ("nsri", NsriId::ALL, NsriId::from_oid),
         ("ntt", NttId::ALL, NttId::from_oid),
@@ -65,6 +67,13 @@ fn well_known_identifiers_have_their_registered_values() {
         (AnssiId::FRP256V1, "1.2.250.1.223.101.256.1"),
         (NttId::ID_CAMELLIA128_CBC, "1.2.392.200011.61.1.1.1.2"),
         (NsriId::ID_ARIA128_GCM, "1.2.410.200046.1.1.34"),
+        (
+            MicrosoftId::MICROSOFT_CERT_TEMPLATE_V2,
+            "1.3.6.1.4.1.311.21.7",
+        ),
+        (MiscId::ID_BLAKE2B256, "1.3.6.1.4.1.1722.12.2.1.8"),
+        (MiscId::ID_SCRYPT, "1.3.6.1.4.1.11591.4.11"),
+        (MiscId::NETSCAPE_CERT_TYPE, "2.16.840.1.113730.1.1"),
     ] {
         assert_eq!(entry.dotted(), dotted);
     }
