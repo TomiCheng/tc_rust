@@ -931,6 +931,9 @@ dependencies = [
 [[package]]
 name = "tc_asn1_dstu"
 version = "0.1.0"
+dependencies = [
+ "tc_asn1",
+]
 
 [[package]]
 name = "tc_asn1_esf"
