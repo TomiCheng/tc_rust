@@ -8,6 +8,7 @@ extern crate alloc;
 extern crate std;
 
 mod errors;
+pub mod hex;
 mod traits;
 
 pub use errors::EncoderError;
