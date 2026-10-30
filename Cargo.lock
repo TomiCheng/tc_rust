@@ -1228,6 +1228,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_dh_key"
+version = "0.1.0"
+dependencies = [
+ "rand",
+ "rand_core",
+ "tc_asym_cipher",
+ "tc_bigint",
+ "tc_modular",
+ "tc_prime",
+ "tc_zeroize",
+]
+
+[[package]]
 name = "tc_digest"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
