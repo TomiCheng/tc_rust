@@ -15,11 +15,9 @@ extern crate alloc;
 use alloc::vec::Vec;
 use core::{convert::Infallible, fmt};
 
-use tc_crypto::AlgorithmName;
 use tc_digest::{Digest, TryDigest, TryXof, Xof};
 use tc_keccak::CShakeDigest;
-use tc_macs::{Mac, MacError, MacInit};
-use tc_params::KeyParams;
+use tc_macs::{KeyParams, Mac, MacError, MacInit};
 
 const FUNCTION_NAME: &[u8] = b"KMAC";
 
@@ -105,9 +103,9 @@ impl KMac {
     }
 }
 
-impl AlgorithmName for KMac {
-    fn write_algo_name(&self, output: &mut dyn fmt::Write) -> fmt::Result {
-        write!(output, "KMAC{}", self.bit_length)
+impl fmt::Display for KMac {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "KMAC{}", self.bit_length)
     }
 }
 

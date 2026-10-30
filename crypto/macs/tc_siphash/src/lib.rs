@@ -3,8 +3,7 @@
 //! The default [`SipHash`] is SipHash-2-4 and produces an 8-byte tag.
 //!
 //! ```
-//! use tc_macs::{Mac, MacInit};
-//! use tc_params::KeyRef;
+//! use tc_macs::{KeyRef, Mac, MacInit};
 //! use tc_siphash::SipHash;
 //!
 //! let key = core::array::from_fn::<_, 16, _>(|index| index as u8);
@@ -22,9 +21,7 @@
 
 use core::fmt;
 
-use tc_crypto::AlgorithmName;
-use tc_macs::{InitError, Mac, MacError, MacInit};
-use tc_params::KeyParams;
+use tc_macs::{InitError, KeyParams, Mac, MacError, MacInit};
 
 /// SipHash key length in bytes.
 pub const KEY_BYTES: usize = 16;
@@ -109,10 +106,10 @@ impl Default for SipHash {
     }
 }
 
-impl AlgorithmName for SipHash {
-    fn write_algo_name(&self, output: &mut dyn fmt::Write) -> fmt::Result {
+impl fmt::Display for SipHash {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
-            output,
+            f,
             "SipHash-{}-{}",
             self.compression_rounds, self.finalization_rounds
         )

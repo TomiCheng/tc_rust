@@ -1199,18 +1199,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "tc_cipher"
-version = "0.1.0"
-
-[[package]]
 name = "tc_constant_time"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0bcfe3e4732defe64408b706121575a0fdbd7011a3647566cd0a353daf64c165"
-
-[[package]]
-name = "tc_crypto"
-version = "0.1.0"
 
 [[package]]
 name = "tc_des"
@@ -1440,10 +1432,10 @@ dependencies = [
 name = "tc_gost28147_mac"
 version = "0.1.0"
 dependencies = [
- "tc_crypto",
+ "tc_block_cipher",
+ "tc_block_modes",
  "tc_gost28147",
  "tc_macs",
- "tc_params",
 ]
 
 [[package]]
@@ -1532,11 +1524,9 @@ dependencies = [
 name = "tc_kmac"
 version = "0.1.0"
 dependencies = [
- "tc_crypto",
  "tc_digest",
  "tc_keccak",
  "tc_macs",
- "tc_params",
 ]
 
 [[package]]
@@ -1610,14 +1600,6 @@ dependencies = [
  "tc_security",
  "tc_signer",
 ]
-
-[[package]]
-name = "tc_pad"
-version = "0.1.0"
-
-[[package]]
-name = "tc_params"
-version = "0.1.0"
 
 [[package]]
 name = "tc_pbe"
@@ -1833,9 +1815,7 @@ version = "0.1.0"
 name = "tc_siphash"
 version = "0.1.0"
 dependencies = [
- "tc_crypto",
  "tc_macs",
- "tc_params",
 ]
 
 [[package]]
@@ -1886,9 +1866,8 @@ dependencies = [
 name = "tc_vmpc_mac"
 version = "0.1.0"
 dependencies = [
- "tc_crypto",
+ "tc_block_modes",
  "tc_macs",
- "tc_params",
 ]
 
 [[package]]

@@ -1,5 +1,5 @@
+use tc_block_modes::KeyWithIvRef;
 use tc_macs::{Mac, MacInit};
-use tc_params::KeyWithIvRef;
 use tc_vmpc_mac::VmpcMac;
 
 #[test]

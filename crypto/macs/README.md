@@ -9,11 +9,13 @@ All implementations use the shared [`tc_macs`](https://crates.io/crates/tc_macs)
 - `Mac` provides streaming input, finalization, and reset.
 - `MacInit<P>` initializes a MAC from caller-selected parameter traits.
 
-Parameter requirements should be expressed with the small traits in
-[`tc_params`](../tc_params), such as `KeyParams`, `IvParams`,
-`IvOptParams`, `MacSizeParams`, and `SBoxParams`. Callers may therefore
-use a convenience parameter type or implement the required traits on their own
-type.
+Parameters come through the same published traits as `tc_macs` uses:
+`KeyParams` from `tc_block_cipher`, `IvParams` from `tc_block_modes`, and an
+algorithm's own trait where it needs more, such as `Gost28147Params` from
+`tc_gost28147`. An IV is always given, all zero where Bouncy Castle takes none.
+Callers may use a convenience parameter type, such as `KeyRef` or
+`KeyWithIvRef`, or implement the required traits on their own type. Every MAC
+names itself through `Display`.
 
 > These crates are learning ports and have not received an independent
 > security audit. Do not use them as replacements for audited cryptographic
@@ -29,7 +31,7 @@ type.
 | ✅ Done | `Dstu7564Mac` | `tc_dstu_macs::Dstu7564Mac` | Bouncy Castle vectors for 256-, 384-, and 512-bit tags, including the 1023-/1024-byte boundary cases. |
 | ✅ Done | `Dstu7624Mac` | [`tc_dstu_macs::Dstu7624Mac`](tc_dstu_macs) | Allocation-free 128-, 256-, and 512-bit-block variants; BC vectors cover 128- and 512-bit blocks. |
 | ✅ Done | `GMac` | [`tc_macs::Gmac`](https://crates.io/crates/tc_macs) | Published in `tc_macs` over the published `tc_aead_cipher` GCM, checked against bc-csharp's GMacTest vectors; GCM refuses a repeated key and nonce. |
-| ✅ Done | `GOST28147Mac` | [`tc_gost28147_mac::Gost28147Mac`](tc_gost28147_mac) | Allocation-free 16-round GOST MAC core with caller-selected S-box and optional IV. |
+| ✅ Done | `GOST28147Mac` | [`tc_gost28147_mac::Gost28147Mac`](tc_gost28147_mac) | Allocation-free 16-round GOST MAC core with a caller-selected S-box, E-A by default, and an 8-byte IV; as in Bouncy Castle, a message of one block ignores the IV. |
 | ✅ Done | `HMac` | [`tc_macs::FixedHmac`](https://crates.io/crates/tc_macs) | Published in `tc_macs` with the `hmac` feature: `FixedHmac`, and with `alloc` `Hmac`, over any digest on the published `tc_digest` traits, checked against the RFC 4231 vectors. |
 | ✅ Done | `ISO9797Alg3Mac` | [`tc_iso9797_mac::Iso9797Alg3Mac`](tc_iso9797_mac) | Allocation-free two-/three-key DES Retail MAC, with tag truncation and padding, on the published `tc_des`, `tc_block_padding` and `tc_macs` traits. The IV is required and must be 8 bytes; pass zeros for Bouncy Castle's key-only form. |
 | ✅ Done | `KMac` | [`tc_kmac::KMac`](tc_kmac) | KMAC128/KMAC256 fixed tags and XOF output over cSHAKE; requires `alloc`. |

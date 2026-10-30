@@ -6,7 +6,8 @@
 - **孵化池（新架構）**：在 tc_rust，已經接在新的 trait 上（`tc_block_cipher`、crates.io 的
   `tc_digest`、`tc_signer` 等）。
 - **孵化池（舊 trait）**：在 tc_rust，還依賴舊的 `tc_cipher`、`tc_crypto`、`tc_params` 或
-  `tc_pad`。
+  `tc_pad`。2026-10-30 最後幾個 MAC 改用新 trait 後，這四個舊 crate 都已刪除，這一欄
+  目前全空，保留作為歷史對照。
 - **BC 有、還沒做**：bc-csharp 有，這裡還沒有任何對應。
 
 | 類別 | 已發行 | 孵化池（新架構） | 孵化池（舊 trait） | BC 有、還沒做 |
@@ -16,7 +17,7 @@
 | 串流加密 | chacha、salsa20、hc、rc4_family | — | — | — |
 | AEAD 專用演算法 | ascon_aead、grain128_aead、sparkle_aead、chacha_aead | — | — | — |
 | 雜湊 | sha、md、keccak、blake、ascon_hash | crypto/digest 的 dstu7564、gost3411、ripemd、skein、sm3，以及 misc_digest（haraka、photon_beetle、sparkle、tiger、whirlpool、xoodyak） | — | — |
-| MAC | macs、poly1305 | crypto/macs 的 dstu_macs、iso9797_mac | crypto/macs 4 個：gost28147_mac、kmac、siphash、vmpc_mac（依賴 tc_crypto） | — |
+| MAC | macs、poly1305 | crypto/macs 的 dstu_macs、gost28147_mac、iso9797_mac、kmac、siphash、vmpc_mac | — | — |
 | Key wrap | key_wrap、des_wrap、dstu7624_wrap、rc2_wrap | — | — | — |
 | 非對稱加密 | rsa、asym_encoding、asym_iso9796 | cfrg_curves（X25519、Ed25519、X448、Ed448）、ec_key | — | ElGamal、Naccache-Stern、SM2 加密 |
 | 簽章 | — | signer、rsa_signer、dsa、ecdsa_v2 | — | PSS、X9.31、ISO 9796-2、GOST 3410、ECGOST 3410、DSTU 4145、SM2、ECNR |
@@ -30,8 +31,8 @@ macs、asym_cipher、key_wrap、zeroize、runtime、constant_time 已發行；si
 
 ## 觀察
 
-1. 對稱演算法幾乎都已發行。剩下的是孵化池的 10 個區塊加密等畢業，以及 MAC 4 個
-   要先從舊 trait 遷到新的。
+1. 對稱演算法幾乎都已發行。剩下的是孵化池的 10 個區塊加密、crypto/digest 的雜湊與
+   crypto/macs 的 MAC 等畢業；它們都已接在新的 trait 上。
 2. 非對稱是空洞最大的一側：簽章、金鑰協商都還沒發行，而且缺不少演算法。tc_security
    驗不了 ECDSA，原因之一是 ecdsa_v2 還沒接上 tc_signer。
 3. 後量子演算法完全沒做，見下一節。

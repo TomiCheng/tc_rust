@@ -179,9 +179,6 @@ and the crates that remain here depend on the published version.
 - [`crypto/digest`](crypto/digest) and [`crypto/macs`](crypto/macs) — digest
   and MAC families not yet graduated, such as RIPEMD, Whirlpool, GOST 34.11,
   SM3, Skein, SipHash and KMAC
-- The earlier generation of shared traits: `crypto/tc_crypto` and
-  `crypto/tc_params`, which four MACs in `crypto/macs` still use, and
-  `crypto/tc_cipher` and `crypto/tc_pad`, which nothing uses any more.
 
 ## Implemented algorithms
 
@@ -287,9 +284,6 @@ cargo doc --workspace --no-deps --locked
 Representative `no_std` builds:
 
 ```bash
-# Core-only crates
-cargo build -p tc_crypto -p tc_cipher -p tc_params --locked
-
 # Representative block-cipher crate (all family crates are no_std)
 cargo build -p tc_blowfish_v2 --locked
 

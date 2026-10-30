@@ -1,5 +1,5 @@
+use tc_macs::KeyRef;
 use tc_macs::{Mac, MacInit};
-use tc_params::KeyRef;
 use tc_siphash::SipHash;
 
 #[test]

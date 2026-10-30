@@ -4,9 +4,8 @@
 
 use core::fmt;
 
-use tc_crypto::AlgorithmName;
-use tc_macs::{InitError, Mac, MacError, MacInit};
-use tc_params::{IvParams, KeyParams};
+use tc_block_modes::IvParams;
+use tc_macs::{InitError, KeyParams, Mac, MacError, MacInit};
 
 const STATE_BYTES: usize = 256;
 const TABLE_BYTES: usize = 32;
@@ -119,9 +118,9 @@ impl Default for VmpcMac {
     }
 }
 
-impl AlgorithmName for VmpcMac {
-    fn write_algo_name(&self, output: &mut dyn fmt::Write) -> fmt::Result {
-        output.write_str("VMPC-MAC")
+impl fmt::Display for VmpcMac {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("VMPC-MAC")
     }
 }
 

@@ -1,6 +1,6 @@
 use tc_kmac::KMac;
+use tc_macs::KeyRef;
 use tc_macs::{Mac, MacInit};
-use tc_params::KeyRef;
 
 fn decode(hex: &str) -> Vec<u8> {
     let filtered: Vec<_> = hex.bytes().filter(u8::is_ascii_hexdigit).collect();

@@ -1,37 +1,39 @@
 //! GOST 28147-89 message authentication code.
 //!
-//! The convenience [`Params`] uses the CryptoPro E-A S-box, matching Bouncy
-//! Castle's `Gost28147Mac` default. Caller-owned parameter types may implement
-//! [`KeyParams`], [`SBoxParams`], and [`OptionalIvParams`] directly.
+//! The convenience [`Gost28147MacParamsRef`] uses the CryptoPro E-A S-box,
+//! matching Bouncy Castle's `Gost28147Mac` default. Caller-owned parameter
+//! types may implement [`Gost28147Params`] and [`IvParams`] directly.
 
 #![no_std]
 
 use core::fmt;
 
-use tc_crypto::AlgorithmName;
-use tc_gost28147::{KEY_BYTES, s_box};
+use tc_block_cipher::KeyParams;
+use tc_block_modes::IvParams;
+use tc_gost28147::{Gost28147Params, KEY_BYTES, s_box};
 use tc_macs::{InitError, Mac, MacError, MacInit};
-use tc_params::{KeyParams, OptionalIvParams, SBoxParams};
 
 const BLOCK_BYTES: usize = 8;
 const TAG_BYTES: usize = 4;
 const SUBKEYS: usize = KEY_BYTES / 4;
 
-/// Borrowed GOST 28147 MAC parameters.
+/// Borrowed GOST 28147 MAC parameters: a key, an S-box and an 8-byte IV.
+///
+/// An all-zero IV gives Bouncy Castle's form keyed without one.
 #[derive(Clone, Copy, Debug)]
-pub struct Params<'a> {
+pub struct Gost28147MacParamsRef<'a> {
     key: &'a [u8],
     s_box: &'a [u8],
-    iv: Option<&'a [u8]>,
+    iv: &'a [u8],
 }
 
-impl<'a> Params<'a> {
-    /// Uses the CryptoPro E-A S-box without an IV.
-    pub const fn new(key: &'a [u8]) -> Self {
+impl<'a> Gost28147MacParamsRef<'a> {
+    /// Uses the CryptoPro E-A S-box.
+    pub const fn new(key: &'a [u8], iv: &'a [u8]) -> Self {
         Self {
             key,
             s_box: &s_box::E_A,
-            iv: None,
+            iv,
         }
     }
 
@@ -40,28 +42,22 @@ impl<'a> Params<'a> {
         self.s_box = s_box;
         self
     }
-
-    /// Selects an optional initial chaining value.
-    pub const fn with_iv(mut self, iv: &'a [u8]) -> Self {
-        self.iv = Some(iv);
-        self
-    }
 }
 
-impl KeyParams for Params<'_> {
+impl KeyParams for Gost28147MacParamsRef<'_> {
     fn key(&self) -> &[u8] {
         self.key
     }
 }
 
-impl SBoxParams for Params<'_> {
+impl Gost28147Params for Gost28147MacParamsRef<'_> {
     fn s_box(&self) -> &[u8] {
         self.s_box
     }
 }
 
-impl OptionalIvParams for Params<'_> {
-    fn optional_iv(&self) -> Option<&[u8]> {
+impl IvParams for Gost28147MacParamsRef<'_> {
+    fn iv(&self) -> &[u8] {
         self.iv
     }
 }
@@ -74,7 +70,6 @@ pub struct Gost28147Mac {
     buffer: [u8; BLOCK_BYTES],
     buffer_offset: usize,
     iv: [u8; BLOCK_BYTES],
-    has_iv: bool,
     first_step: bool,
     initialized: bool,
 }
@@ -89,7 +84,6 @@ impl Gost28147Mac {
             buffer: [0; BLOCK_BYTES],
             buffer_offset: 0,
             iv: [0; BLOCK_BYTES],
-            has_iv: false,
             first_step: true,
             initialized: false,
         }
@@ -126,10 +120,8 @@ impl Gost28147Mac {
         let mut sum = self.buffer;
         if self.first_step {
             self.first_step = false;
-            if self.has_iv {
-                for (byte, &iv) in sum.iter_mut().zip(&self.iv) {
-                    *byte ^= iv;
-                }
+            for (byte, &iv) in sum.iter_mut().zip(&self.iv) {
+                *byte ^= iv;
             }
         } else {
             for (byte, &mac) in sum.iter_mut().zip(&self.mac) {
@@ -155,9 +147,9 @@ impl Default for Gost28147Mac {
     }
 }
 
-impl AlgorithmName for Gost28147Mac {
-    fn write_algo_name(&self, output: &mut dyn fmt::Write) -> fmt::Result {
-        output.write_str("Gost28147Mac")
+impl fmt::Display for Gost28147Mac {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("Gost28147Mac")
     }
 }
 
@@ -224,7 +216,7 @@ impl Mac for Gost28147Mac {
 
 impl<P> MacInit<P> for Gost28147Mac
 where
-    P: KeyParams + SBoxParams + OptionalIvParams + ?Sized,
+    P: Gost28147Params + IvParams + ?Sized,
 {
     type Error = InitError;
 
@@ -233,7 +225,6 @@ where
         self.clear_message();
         self.subkeys.fill(0);
         self.iv.fill(0);
-        self.has_iv = false;
 
         let key = params.key();
         if key.len() != KEY_BYTES {
@@ -243,14 +234,12 @@ where
         if table.len() != s_box::BYTES {
             return Err(InitError::InvalidSBoxLength(table.len()));
         }
-        if let Some(iv) = params.optional_iv() {
-            if iv.len() != BLOCK_BYTES {
-                return Err(InitError::InvalidIvLength(iv.len()));
-            }
-            self.iv.copy_from_slice(iv);
-            self.mac.copy_from_slice(iv);
-            self.has_iv = true;
+        let iv = params.iv();
+        if iv.len() != BLOCK_BYTES {
+            return Err(InitError::InvalidIvLength(iv.len()));
         }
+        self.iv.copy_from_slice(iv);
+        self.mac.copy_from_slice(iv);
 
         for (word, bytes) in self.subkeys.iter_mut().zip(key.as_chunks::<4>().0) {
             *word = u32::from_le_bytes(*bytes);
