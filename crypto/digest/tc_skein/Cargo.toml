@@ -7,6 +7,6 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
-tc_cipher = { version = "0.1", path = "../../tc_cipher" }
-tc_digest = { version = "0.1", path = "../../tc_digest" }
-tc_threefish = { version = "0.1", path = "../../block_cipher/tc_threefish" }
+tc_block_cipher = "0.1.0"
+tc_digest = "0.1.0"
+tc_threefish = "0.1.0"

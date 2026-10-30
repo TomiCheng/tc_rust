@@ -1,7 +1,7 @@
 //! Skein's Unique Block Iteration engine.
 
-use tc_cipher::{BlockCipher, BlockCipherInit, CipherDirection};
-use tc_threefish::{Params, ThreefishEngine};
+use tc_block_cipher::{BlockCipher, BlockCipherInit, CipherDirection};
+use tc_threefish::{ThreefishParamsRef, ThreefishPortableEngine};
 
 use crate::{SKEIN_256, SKEIN_512, SKEIN_1024};
 
@@ -207,7 +207,7 @@ impl SkeinEngine {
         let mut tweak_bytes = [0u8; 16];
         tweak_bytes[..8].copy_from_slice(&tweak.0[0].to_le_bytes());
         tweak_bytes[8..].copy_from_slice(&tweak.0[1].to_le_bytes());
-        let params = Params::with_tweak(&key[..block_size], &tweak_bytes);
+        let params = ThreefishParamsRef::with_tweak(&key[..block_size], &tweak_bytes);
         let mut encrypted = [0u8; MAX_BLOCK_BYTES];
 
         match self.words {
@@ -228,11 +228,11 @@ impl SkeinEngine {
 }
 
 fn process_threefish<const WORDS: usize>(
-    params: &Params<'_>,
+    params: &ThreefishParamsRef<'_>,
     input: &[u8; MAX_BLOCK_BYTES],
     output: &mut [u8; MAX_BLOCK_BYTES],
 ) {
-    let mut cipher = ThreefishEngine::<WORDS>::new();
+    let mut cipher = ThreefishPortableEngine::<WORDS>::new();
     cipher
         .init(CipherDirection::Encrypt, params)
         .expect("Skein always supplies a full Threefish key and tweak");

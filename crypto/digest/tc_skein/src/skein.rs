@@ -1,7 +1,7 @@
 //! `Digest` adapter for the Skein UBI engine.
 
-use alloc::{format, string::String};
 use core::convert::Infallible;
+use core::fmt;
 
 use tc_digest::TryDigest;
 
@@ -11,7 +11,6 @@ use crate::SkeinEngine;
 #[derive(Clone)]
 pub struct SkeinDigest {
     engine: SkeinEngine,
-    algorithm_name: String,
 }
 
 impl SkeinDigest {
@@ -19,17 +18,23 @@ impl SkeinDigest {
     pub fn new(state_size_bits: usize, digest_size_bits: usize) -> Self {
         Self {
             engine: SkeinEngine::new(state_size_bits, digest_size_bits),
-            algorithm_name: format!("Skein-{state_size_bits}-{digest_size_bits}"),
         }
+    }
+}
+
+impl fmt::Display for SkeinDigest {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "Skein-{}-{}",
+            self.engine.block_size() * 8,
+            self.engine.output_size() * 8
+        )
     }
 }
 
 impl TryDigest for SkeinDigest {
     type Error = Infallible;
-
-    fn algorithm_name(&self) -> &str {
-        &self.algorithm_name
-    }
 
     fn digest_size(&self) -> usize {
         self.engine.output_size()
@@ -58,6 +63,9 @@ impl TryDigest for SkeinDigest {
 mod tests {
     extern crate std;
 
+    use std::format;
+    use std::string::ToString;
+
     use tc_digest::Digest;
 
     use super::*;
@@ -81,7 +89,7 @@ mod tests {
         let message = decode(message);
         let mut digest = SkeinDigest::new(state_bits, output_bits);
         assert_eq!(
-            digest.algorithm_name(),
+            digest.to_string(),
             format!("Skein-{state_bits}-{output_bits}")
         );
         assert_eq!(digest.byte_length(), state_bits / 8);

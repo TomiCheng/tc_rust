@@ -1998,8 +1998,8 @@ dependencies = [
 name = "tc_skein"
 version = "0.1.0"
 dependencies = [
- "tc_cipher",
- "tc_digest 0.1.0",
+ "tc_block_cipher",
+ "tc_digest 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tc_threefish",
 ]
 
@@ -2047,19 +2047,11 @@ dependencies = [
 [[package]]
 name = "tc_threefish"
 version = "0.1.0"
-dependencies = [
- "tc_cipher",
- "tc_crypto",
- "tc_params",
-]
-
-[[package]]
-name = "tc_threefish_v2"
-version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "134aebe1b38efcf95d28fc876e667f917c4625ab50a68df010a14d832a392977"
 dependencies = [
  "tc_block_cipher",
  "tc_zeroize",
- "threefish",
 ]
 
 [[package]]
@@ -2128,15 +2120,6 @@ checksum = "9f496e361f9d75bd7cd0408dc585e9f334182314595ce27ea4852ab9c3858af1"
 [[package]]
 name = "tc_zlib"
 version = "0.1.0"
-
-[[package]]
-name = "threefish"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d01bb3253ac4d5c6c7dbb6f4f66a8178a24deefe0067357ace6482db2f3ccc6e"
-dependencies = [
- "cipher",
-]
 
 [[package]]
 name = "tinytemplate"

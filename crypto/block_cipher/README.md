@@ -79,9 +79,7 @@ principal exceptions are:
 
 - `Gost28147Engine` requires both `KeyParams` and `SBoxParams`;
   `tc_gost28147::KeyWithSBox` selects the default, named, or custom S-box.
-- `ThreefishEngine` requires both `KeyParams` and `TweakParams`;
-  `tc_threefish::Params` supplies the key and optional 16-byte tweak.
-- DSTU 7624, Rijndael, and Threefish use engine types or const parameters to
+- DSTU 7624 and Rijndael use engine types or const parameters to
   select the block size. Key size remains an initialization parameter wherever
   the algorithm permits more than one key size for that block.
 
@@ -110,7 +108,6 @@ include specification, Monte Carlo, or backend-equivalence tests.
 | ✅ | [`tc_serpent`](tc_serpent) | `SerpentEngine`, `TnepresEngine` | 128-bit block; 4-32-byte keys in 4-byte steps |
 | ✅ | [`tc_skipjack`](tc_skipjack) | `SkipjackEngine` | 64-bit block; 80-bit key |
 | ✅ | [`tc_tea`](tc_tea) | `TeaEngine`, `XteaEngine` | 64-bit block; 128-bit key |
-| ✅ | [`tc_threefish`](tc_threefish) | `Threefish256Engine`, `Threefish512Engine`, `Threefish1024Engine` | 256/512/1024-bit block and matching key; optional 128-bit tweak |
 | ✅ | [`tc_twofish`](tc_twofish) | `TwofishEngine` | 128-bit block; 128/192/256-bit keys |
 
 Legend: ✅ migrated and tested, ⬜ TODO.
@@ -121,6 +118,8 @@ Camellia has moved to the published
 [`tc_camellia`](https://crates.io/crates/tc_camellia) crate.
 SM4 has moved to the published [`tc_sm4`](https://crates.io/crates/tc_sm4)
 crate.
+Threefish has moved to the published
+[`tc_threefish`](https://crates.io/crates/tc_threefish) crate.
 
 DES, Triple DES, Blowfish, IDEA, RC2, RC5, SKIPJACK, TEA, XTEA, and other
 older designs are provided for compatibility and study, not as recommendations

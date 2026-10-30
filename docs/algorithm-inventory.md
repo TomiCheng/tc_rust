@@ -11,11 +11,11 @@
 
 | 類別 | 已發行 | 孵化池（新架構） | 孵化池（舊 trait） | BC 有、還沒做 |
 |---|---|---|---|---|
-| 區塊加密 | aes、des、aria、camellia、dstu7624、rc_cipher、sm4 | blowfish、cast、gost28147、seed、serpent、threefish、twofish，以及 misc_block_cipher（idea、noekeon、rijndael、skipjack、tea） | crypto/block_cipher 15 個 | — |
+| 區塊加密 | aes、des、aria、camellia、dstu7624、rc_cipher、sm4、threefish | blowfish、cast、gost28147、seed、serpent、twofish，以及 misc_block_cipher（idea、noekeon、rijndael、skipjack、tea） | crypto/block_cipher 14 個 | — |
 | 模式／padding | block_modes（ECB、CBC、CFB、OFB、CTR）、block_padding、aead_cipher（GCM、CCM、EAX、OCB） | — | crypto/block_modes 5 個 | CTS、GCM-SIV、GOFB、KCCM、KCTR、OpenPGP CFB |
 | 串流加密 | chacha、salsa20、hc、rc4_family | — | — | — |
 | AEAD 專用演算法 | ascon_aead、grain128_aead、sparkle_aead、chacha_aead | — | — | — |
-| 雜湊 | sha、md、keccak、blake、ascon_hash | — | crypto/digest 11 個：dstu7564、gost3411、haraka、photon_beetle、ripemd、skein、sm3、sparkle、tiger、whirlpool、xoodyak | — |
+| 雜湊 | sha、md、keccak、blake、ascon_hash | skein（crypto/digest） | crypto/digest 10 個：dstu7564、gost3411、haraka、photon_beetle、ripemd、sm3、sparkle、tiger、whirlpool、xoodyak | — |
 | MAC | macs、poly1305 | — | crypto/macs 6 個：dstu_macs、gost28147_mac、iso9797_mac、kmac、siphash、vmpc_mac（依賴 tc_crypto） | — |
 | Key wrap | key_wrap、des_wrap、dstu7624_wrap、rc2_wrap | — | — | — |
 | 非對稱加密 | rsa、asym_encoding、asym_iso9796 | cfrg_curves（X25519、Ed25519、X448、Ed448）、ec_key | — | ElGamal、Naccache-Stern、SM2 加密 |
@@ -30,7 +30,7 @@ macs、asym_cipher、key_wrap、zeroize、runtime、constant_time 已發行；si
 
 ## 觀察
 
-1. 對稱演算法幾乎都已發行。剩下的是孵化池的 12 個區塊加密等畢業，以及雜湊 11 個、
+1. 對稱演算法幾乎都已發行。剩下的是孵化池的 11 個區塊加密等畢業，以及雜湊 10 個、
    MAC 6 個要先從舊 trait 遷到新的。
 2. 非對稱是空洞最大的一側：簽章、金鑰協商都還沒發行，而且缺不少演算法。tc_security
    驗不了 ECDSA，原因之一是 ecdsa_v2 還沒接上 tc_signer。
@@ -38,29 +38,29 @@ macs、asym_cipher、key_wrap、zeroize、runtime、constant_time 已發行；si
 
 ## 區塊加密的畢業順序
 
-孵化池 `block_cipher/` 的 8 個，先排能解鎖其他 crate 的，再依使用程度。不常用的 IDEA、
+孵化池 `block_cipher/` 的 7 個，先排能解鎖其他 crate 的，再依使用程度。不常用的 IDEA、
 Rijndael、Noekeon、SKIPJACK、TEA／XTEA 已在 2026-10-30 合併成 `tc_misc_block_cipher`，
-每個演算法一個 feature，也順便避開 crates.io 上 `tc_tea` 被佔用的問題。tc_sm4 已在
-2026-10-30 發行，流程照它走。
+每個演算法一個 feature，也順便避開 crates.io 上 `tc_tea` 被佔用的問題。tc_sm4 與
+tc_threefish 已在 2026-10-30 發行，流程照它們走。
 
 | # | crate | 理由 |
 |---|---|---|
-| 1 | threefish | Skein 雜湊的核心，畢業後 crypto/digest 的 Skein 能改用發行版；ARX，本身常數時間 |
-| 2 | gost28147 | 解鎖 GOST 3411 雜湊與 GOST 28147 MAC；俄羅斯標準，Magma 的前身 |
-| 3 | seed | 韓國標準，TLS 與 CMS 會用到 |
-| 4 | cast | CAST5 與 CAST6；CAST5 是 OpenPGP 的舊預設，CMS 也有 OID |
-| 5 | blowfish | 舊系統很常見 |
-| 6 | twofish | VeraCrypt、KeePass |
-| 7 | serpent | 含 Tnepres；VeraCrypt |
-| 8 | misc_block_cipher | IDEA（舊 OpenPGP）、Rijndael（非 128 位元區塊）、Noekeon、SKIPJACK、TEA／XTEA |
+| 1 | gost28147 | 解鎖 GOST 3411 雜湊與 GOST 28147 MAC；俄羅斯標準，Magma 的前身 |
+| 2 | seed | 韓國標準，TLS 與 CMS 會用到 |
+| 3 | cast | CAST5 與 CAST6；CAST5 是 OpenPGP 的舊預設，CMS 也有 OID |
+| 4 | blowfish | 舊系統很常見 |
+| 5 | twofish | VeraCrypt、KeePass |
+| 6 | serpent | 含 Tnepres；VeraCrypt |
+| 7 | misc_block_cipher | IDEA（舊 OpenPGP）、Rijndael（非 128 位元區塊）、Noekeon、SKIPJACK、TEA／XTEA |
 
 每個 crate 畢業時都要決定要不要加 `rustcrypto` feature。原則照 SM4：RustCrypto 版本洩漏
 較少，或速度差很多時才加。
 
 ## 雜湊的遷移與畢業順序
 
-crypto/digest 的 11 個都依賴本地舊的 `tc_digest`。其中 `tc_skein` 與 `tc_gost3411` 另外經由
-`tc_cipher` 依賴舊的 `tc_threefish`、`tc_gost28147`，要等這兩個區塊加密畢業。
+crypto/digest 的 11 個中，`tc_skein` 已改用 crates.io 的 `tc_digest` 與 `tc_threefish`
+（`ThreefishPortableEngine`），其他 10 個都依賴本地舊的 `tc_digest`。`tc_gost3411` 另外經由
+`tc_cipher` 依賴舊的 `tc_gost28147`，要等它畢業。
 
 | # | crate | 理由 |
 |---|---|---|
@@ -70,7 +70,7 @@ crypto/digest 的 11 個都依賴本地舊的 `tc_digest`。其中 `tc_skein` �
 | 4 | whirlpool | ISO 標準，VeraCrypt |
 | 5 | tiger | 舊系統（Tiger Tree Hash） |
 | 6 | gost3411 | 要等 gost28147 畢業 |
-| 7 | skein | 要等 threefish 畢業 |
+| 7 | skein | 已遷到新 trait 與發行版 tc_threefish，可直接搬去發行 |
 | 8 | sparkle（Esch） | NIST 輕量密碼決賽，未入選 |
 | 9 | xoodyak | 同上 |
 | 10 | photon_beetle | 同上 |
