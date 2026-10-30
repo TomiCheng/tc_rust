@@ -1377,6 +1377,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_elgamal"
+version = "0.1.0"
+dependencies = [
+ "rand",
+ "rand_core",
+ "tc_asym_cipher",
+ "tc_asym_encoding",
+ "tc_bigint",
+ "tc_dh_key",
+ "tc_modular",
+ "tc_zeroize",
+]
+
+[[package]]
 name = "tc_encoders"
 version = "0.1.0"
 dependencies = [
