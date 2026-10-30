@@ -21,6 +21,16 @@ pub enum Sm2Error {
     InvalidPoint,
     /// C3 不符：密文被竄改或金鑰不對。
     InvalidCiphertext,
+    /// 金鑰交換的金鑰不在同一個網域。
+    DomainMismatch,
+    /// 使用者 ID 不短於 8192 位元組，放不進 16 位元的 ENTL。
+    InvalidUserId,
+    /// 共享點 U 是無窮遠點。
+    InvalidAgreement,
+    /// 發起方確認時沒有給回應方的標籤。
+    MissingConfirmationTag,
+    /// 回應方的確認標籤不符。
+    ConfirmationMismatch,
 }
 
 impl fmt::Display for Sm2Error {
@@ -38,6 +48,11 @@ impl fmt::Display for Sm2Error {
             Self::CiphertextTooShort => "data too short",
             Self::InvalidPoint => "[h]C1 at infinity or not on the curve",
             Self::InvalidCiphertext => "invalid cipher text",
+            Self::DomainMismatch => "the keys have different domain parameters",
+            Self::InvalidUserId => "SM2 user ID must be less than 2^16 bits long",
+            Self::InvalidAgreement => "the shared point U is infinity",
+            Self::MissingConfirmationTag => "if initiating, confirmationTag must be set",
+            Self::ConfirmationMismatch => "confirmation tag mismatch",
         })
     }
 }

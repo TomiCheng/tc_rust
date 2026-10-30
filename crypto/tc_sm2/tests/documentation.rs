@@ -1,4 +1,4 @@
-const METHODS: [&str; 11] = [
+const METHODS: [&str; 16] = [
     "fmt",
     "init",
     "decode_point",
@@ -10,6 +10,11 @@ const METHODS: [&str; 11] = [
     "kdf",
     "field_length",
     "g",
+    "shared",
+    "z",
+    "tag",
+    "coordinate",
+    "reduce",
 ];
 
 fn checked(line: &str) -> bool {
@@ -60,6 +65,16 @@ fn every_public_method_and_helper_states_constant_or_variable_time() {
         ("curve.rs", include_str!("../src/curve.rs"), 3),
         ("engine.rs", include_str!("../src/engine.rs"), 14),
         ("error.rs", include_str!("../src/error.rs"), 1),
+        (
+            "key_exchange.rs",
+            include_str!("../src/key_exchange.rs"),
+            10,
+        ),
+        (
+            "key_exchange_params.rs",
+            include_str!("../src/key_exchange_params.rs"),
+            10,
+        ),
     ] {
         let (count, missing) = missing_timing_docs(source);
         assert!(count >= minimum, "only {count} methods scanned in {name}");
