@@ -291,7 +291,7 @@ Representative `no_std` builds:
 cargo build -p tc_crypto -p tc_cipher -p tc_params --locked
 
 # Representative block-cipher crate (all family crates are no_std)
-cargo build -p tc_blowfish --locked
+cargo build -p tc_blowfish_v2 --locked
 
 # Portable digest backend without std
 cargo build -p tc_misc_digest --features haraka --locked

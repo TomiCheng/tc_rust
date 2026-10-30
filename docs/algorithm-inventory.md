@@ -11,7 +11,7 @@
 
 | 類別 | 已發行 | 孵化池（新架構） | 孵化池（舊 trait） | BC 有、還沒做 |
 |---|---|---|---|---|
-| 區塊加密 | aes、des、aria、camellia、dstu7624、rc_cipher、sm4、threefish、gost28147 | blowfish、cast、seed、serpent、twofish，以及 misc_block_cipher（idea、noekeon、rijndael、skipjack、tea） | crypto/block_cipher 12 個 | — |
+| 區塊加密 | aes、des、aria、camellia、dstu7624、rc_cipher、sm4、threefish、gost28147 | blowfish、cast、seed、serpent、twofish，以及 misc_block_cipher（idea、noekeon、rijndael、skipjack、tea） | crypto/block_cipher 2 個：des、dstu7624（只為 MAC 保留） | — |
 | 模式／padding | block_modes（ECB、CBC、CFB、OFB、CTR、OpenPGP CFB、GOFB、KCTR）、block_padding、aead_cipher（GCM、CCM、EAX、OCB） | — | — | CTS、GCM-SIV、KCCM |
 | 串流加密 | chacha、salsa20、hc、rc4_family | — | — | — |
 | AEAD 專用演算法 | ascon_aead、grain128_aead、sparkle_aead、chacha_aead | — | — | — |
@@ -43,8 +43,9 @@ Rijndael、Noekeon、SKIPJACK、TEA／XTEA 已在 2026-10-30 合併成 `tc_misc_
 每個演算法一個 feature，也順便避開 crates.io 上 `tc_tea` 被佔用的問題。tc_sm4、
 tc_threefish 與 tc_gost28147 已在 2026-10-30 發行，流程照它們走。同日 tc_block_modes
 0.1.1 補上 OpenPGP CFB、GOFB、KCTR，`crypto/block_modes` 與舊的 `tc_aes`、`tc_gost28147`
-隨之刪除。`crypto/block_cipher` 剩下的 12 個裡，舊的 `tc_des`、`tc_dstu7624` 還被
-`tc_iso9797_mac`、`tc_dstu_macs` 使用，其他 10 個已沒有使用者。
+隨之刪除；沒有使用者的另外 10 個舊版也已刪除，它們的新版都在 `block_cipher/`。
+`crypto/block_cipher` 只剩舊的 `tc_des`、`tc_dstu7624`，因為 `tc_iso9797_mac`、
+`tc_dstu_macs` 還在用。
 
 | # | crate | 理由 |
 |---|---|---|

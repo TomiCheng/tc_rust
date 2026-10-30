@@ -1118,15 +1118,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tc_blowfish"
-version = "0.1.0"
-dependencies = [
- "tc_cipher",
- "tc_crypto",
- "tc_params",
-]
-
-[[package]]
 name = "tc_blowfish_v2"
 version = "0.1.0"
 dependencies = [
@@ -1163,15 +1154,6 @@ dependencies = [
  "camellia",
  "tc_block_cipher",
  "tc_zeroize",
-]
-
-[[package]]
-name = "tc_cast"
-version = "0.1.0"
-dependencies = [
- "tc_cipher",
- "tc_crypto",
- "tc_params",
 ]
 
 [[package]]
@@ -1494,15 +1476,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tc_idea"
-version = "0.1.0"
-dependencies = [
- "tc_cipher",
- "tc_crypto",
- "tc_params",
-]
-
-[[package]]
 name = "tc_ies"
 version = "0.1.0"
 dependencies = [
@@ -1635,15 +1608,6 @@ name = "tc_net"
 version = "0.1.0"
 
 [[package]]
-name = "tc_noekeon"
-version = "0.1.0"
-dependencies = [
- "tc_cipher",
- "tc_crypto",
- "tc_params",
-]
-
-[[package]]
 name = "tc_operator"
 version = "0.1.0"
 dependencies = [
@@ -1729,15 +1693,6 @@ dependencies = [
  "rc2",
  "tc_block_cipher",
  "tc_zeroize",
-]
-
-[[package]]
-name = "tc_rijndael"
-version = "0.1.0"
-dependencies = [
- "tc_cipher",
- "tc_crypto",
- "tc_params",
 ]
 
 [[package]]
@@ -1855,29 +1810,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "tc_seed"
-version = "0.1.0"
-dependencies = [
- "tc_cipher",
- "tc_crypto",
- "tc_params",
-]
-
-[[package]]
 name = "tc_seed_v2"
 version = "0.1.0"
 dependencies = [
  "tc_block_cipher",
  "tc_zeroize",
-]
-
-[[package]]
-name = "tc_serpent"
-version = "0.1.0"
-dependencies = [
- "tc_cipher",
- "tc_crypto",
- "tc_params",
 ]
 
 [[package]]
@@ -1922,15 +1859,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tc_skipjack"
-version = "0.1.0"
-dependencies = [
- "tc_cipher",
- "tc_crypto",
- "tc_params",
-]
-
-[[package]]
 name = "tc_sm3"
 version = "0.1.0"
 dependencies = [
@@ -1947,15 +1875,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tc_tea"
-version = "0.1.0"
-dependencies = [
- "tc_cipher",
- "tc_crypto",
- "tc_params",
-]
-
-[[package]]
 name = "tc_threefish"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1963,15 +1882,6 @@ checksum = "134aebe1b38efcf95d28fc876e667f917c4625ab50a68df010a14d832a392977"
 dependencies = [
  "tc_block_cipher",
  "tc_zeroize",
-]
-
-[[package]]
-name = "tc_twofish"
-version = "0.1.0"
-dependencies = [
- "tc_cipher",
- "tc_crypto",
- "tc_params",
 ]
 
 [[package]]

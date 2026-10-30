@@ -63,12 +63,10 @@ fn main() -> Result<(), Box<dyn core::error::Error>> {
 slices must contain at least `block_size()` bytes. Calling it before `init`
 returns `BlockError`; invalid initialization parameters return `InitError`.
 
-Most engines accept `dyn KeyParams`, so `KeyRef::new(key)` is sufficient. The
-principal exceptions are:
-
-- DSTU 7624 and Rijndael use engine types or const parameters to
-  select the block size. Key size remains an initialization parameter wherever
-  the algorithm permits more than one key size for that block.
+Both engines accept `dyn KeyParams`, so `KeyRef::new(key)` is sufficient. DSTU
+7624 selects its block size through its engine type; the key size remains an
+initialization parameter where the algorithm permits more than one for that
+block.
 
 Because initialization uses object-safe parameter traits, an application can
 keep its key material in its own type instead of converting it to an
@@ -81,18 +79,8 @@ include specification, Monte Carlo, or backend-equivalence tests.
 
 | Status | Crate | Public engines | Key and block support |
 |:------:|-------|----------------|-----------------------|
-| ✅ | [`tc_blowfish`](tc_blowfish) | `BlowfishEngine` | 64-bit block; 32-448-bit keys |
-| ✅ | [`tc_cast`](tc_cast) | `Cast5Engine`, `Cast6Engine` | CAST5: 64-bit block, 40-128-bit keys; CAST6: 128-bit block, 128-256-bit keys |
 | ✅ | [`tc_des`](tc_des) | `DesEngine`, `DesEdeEngine` | 64-bit block; 8-byte DES or 16/24-byte EDE keys |
 | ✅ | [`tc_dstu7624`](tc_dstu7624) | `Engine128`, `Engine256`, `Engine512` | 128/256/512-bit blocks; same-size or double-size keys where defined |
-| ✅ | [`tc_idea`](tc_idea) | `IdeaEngine` | 64-bit block; 128-bit key |
-| ✅ | [`tc_noekeon`](tc_noekeon) | `NoekeonEngine` | 128-bit block and key |
-| ✅ | [`tc_rijndael`](tc_rijndael) | `Rijndael128Engine` through `Rijndael256Engine` | 128/160/192/224/256-bit blocks and keys in any combination |
-| ✅ | [`tc_seed`](tc_seed) | `SeedEngine` | 128-bit block and key |
-| ✅ | [`tc_serpent`](tc_serpent) | `SerpentEngine`, `TnepresEngine` | 128-bit block; 4-32-byte keys in 4-byte steps |
-| ✅ | [`tc_skipjack`](tc_skipjack) | `SkipjackEngine` | 64-bit block; 80-bit key |
-| ✅ | [`tc_tea`](tc_tea) | `TeaEngine`, `XteaEngine` | 64-bit block; 128-bit key |
-| ✅ | [`tc_twofish`](tc_twofish) | `TwofishEngine` | 128-bit block; 128/192/256-bit keys |
 
 Legend: ✅ migrated and tested, ⬜ TODO.
 
@@ -110,13 +98,16 @@ Threefish has moved to the published
 GOST 28147-89 has moved to the published
 [`tc_gost28147`](https://crates.io/crates/tc_gost28147) crate.
 
-The copies of DES and DSTU 7624 here stay while `crypto/macs/tc_iso9797_mac`
-and `crypto/macs/tc_dstu_macs` use them; the rest have their successors in the
-top-level `block_cipher` directory.
+DES and DSTU 7624 are published too, as
+[`tc_des`](https://crates.io/crates/tc_des) and
+[`tc_dstu7624`](https://crates.io/crates/tc_dstu7624); the legacy copies here
+stay only while `crypto/macs/tc_iso9797_mac` and `crypto/macs/tc_dstu_macs`
+use them. Blowfish, CAST5/CAST6, IDEA, Noekeon, Rijndael, SEED, Serpent,
+SKIPJACK, TEA/XTEA and Twofish continue in the top-level `block_cipher`
+directory on the `tc_block_cipher` traits.
 
-DES, Triple DES, Blowfish, IDEA, RC2, RC5, SKIPJACK, TEA, XTEA, and other
-older designs are provided for compatibility and study, not as recommendations
-for new protocols.
+DES and Triple DES are provided for compatibility, not as recommendations for
+new protocols.
 
 ## Building and testing
 
