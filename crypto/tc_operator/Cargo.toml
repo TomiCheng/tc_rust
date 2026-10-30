@@ -9,3 +9,4 @@ repository.workspace = true
 
 [dependencies]
 tc_asn1_x509 = { version = "0.1.0", path = "../../asn1/tc_asn1_x509" }
+tc_signer = { version = "0.1.0", path = "../../signer/tc_signer" }
