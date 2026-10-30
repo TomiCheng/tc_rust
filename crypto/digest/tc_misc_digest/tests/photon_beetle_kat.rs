@@ -1,8 +1,10 @@
+#![cfg(feature = "photon-beetle")]
+
 //! Official PHOTON-Beetle-Hash known-answer tests (NIST LWC
 //! `LWC_HASH_KAT_256.txt`, 1025 vectors: Msg → 32-byte MD).
 
 use tc_digest::Digest;
-use tc_photon_beetle::PhotonBeetleDigest;
+use tc_misc_digest::photon_beetle::PhotonBeetleDigest;
 
 fn unhex(s: &str) -> Vec<u8> {
     let s = s.trim();
@@ -14,7 +16,7 @@ fn unhex(s: &str) -> Vec<u8> {
 
 // PHOTON-Beetle 的 rate-4 nibble 置換在 debug 下很慢(全 1025 條約 1.5 分),
 // 故標 ignore;預設由 src 的 known_vectors 快速驗證。用
-// `cargo test -p tc_digest --test photon_beetle_kat -- --ignored`(建議加 --release)跑完整。
+// `cargo test -p tc_misc_digest --features photon-beetle --test photon_beetle_kat -- --ignored`(建議加 --release)跑完整。
 #[test]
 #[ignore = "slow in debug; run explicitly, ideally with --release"]
 fn official_photon_beetle_hash_kat() {

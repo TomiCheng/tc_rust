@@ -1,0 +1,21 @@
+[package]
+name = "tc_misc_digest"
+description = "Less common message digests: Haraka, PHOTON-Beetle, ESCH, Tiger, Whirlpool and Xoodyak, one feature each."
+version.workspace = true
+edition.workspace = true
+rust-version = "1.85"
+license.workspace = true
+repository.workspace = true
+
+[features]
+default = []
+std = []
+haraka = []
+photon-beetle = []
+sparkle = []
+tiger = []
+whirlpool = []
+xoodyak = []
+
+[dependencies]
+tc_digest = "0.1.0"

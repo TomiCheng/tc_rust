@@ -332,7 +332,7 @@ fn haraka256_portable(input: &[u8; 32], output: &mut [u8; DIGEST_LENGTH]) {
 
 fn haraka512_portable(input: &[u8; 64], output: &mut [u8; DIGEST_LENGTH]) {
     let mut state = [[0u8; 16]; 4];
-    for (block, bytes) in state.iter_mut().zip(input.as_chunks::<16>().0.iter()) {
+    for (block, bytes) in state.iter_mut().zip(input.chunks_exact(16)) {
         block.copy_from_slice(bytes);
     }
 
@@ -576,6 +576,10 @@ define_haraka_digest!(Haraka512Digest, 64, "Haraka-512", haraka512);
 
 #[cfg(test)]
 mod tests {
+    extern crate std;
+
+    use std::format;
+
     use super::*;
 
     fn decode_hex<const N: usize>(hex: &str) -> [u8; N] {

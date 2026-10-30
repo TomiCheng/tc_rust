@@ -46,6 +46,7 @@ impl<const N: usize> MdBuffer<N> {
     }
 
     /// 目前為止吃進的訊息位元組數(供呼叫端計算位元長度)。
+    #[cfg_attr(not(feature = "tiger"), allow(dead_code))]
     pub(crate) fn byte_count(&self) -> u64 {
         self.byte_count
     }
@@ -90,7 +91,7 @@ impl<const N: usize> MdBuffer<N> {
     /// 8、16 或 32 bytes)。長度須小於 `N`。
     ///
     /// 此方法**不** reset —— 由呼叫端在寫出摘要後自行 reset(對齊 bc `DoFinal`)。
-    #[allow(dead_code)]
+    #[cfg_attr(not(feature = "whirlpool"), allow(dead_code))]
     pub(crate) fn finish(&mut self, length_field: &[u8], mut compress: impl FnMut(&[u8; N])) {
         self.finish_with_pad(0x80, length_field, &mut compress);
     }

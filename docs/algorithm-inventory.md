@@ -15,7 +15,7 @@
 | 模式／padding | block_modes（ECB、CBC、CFB、OFB、CTR）、block_padding、aead_cipher（GCM、CCM、EAX、OCB） | — | crypto/block_modes 5 個 | CTS、GCM-SIV、GOFB、KCCM、KCTR、OpenPGP CFB |
 | 串流加密 | chacha、salsa20、hc、rc4_family | — | — | — |
 | AEAD 專用演算法 | ascon_aead、grain128_aead、sparkle_aead、chacha_aead | — | — | — |
-| 雜湊 | sha、md、keccak、blake、ascon_hash | crypto/digest 10 個：dstu7564、haraka、photon_beetle、ripemd、skein、sm3、sparkle、tiger、whirlpool、xoodyak | gost3411（經 tc_cipher 用舊的 gost28147） | — |
+| 雜湊 | sha、md、keccak、blake、ascon_hash crypto/digest 的 dstu7564、ripemd、skein、sm3，以及 misc_digest（haraka、photon_beetle、sparkle、tiger、whirlpool、xoodyak） | gost3411（經 tc_cipher 用舊的 gost28147） | — |
 | MAC | macs、poly1305 | — | crypto/macs 6 個：dstu_macs、gost28147_mac、iso9797_mac、kmac、siphash、vmpc_mac（依賴 tc_crypto） | — |
 | Key wrap | key_wrap、des_wrap、dstu7624_wrap、rc2_wrap | — | — | — |
 | 非對稱加密 | rsa、asym_encoding、asym_iso9796 | cfrg_curves（X25519、Ed25519、X448、Ed448）、ec_key | — | ElGamal、Naccache-Stern、SM2 加密 |
@@ -58,26 +58,22 @@ tc_threefish 已在 2026-10-30 發行，流程照它們走。
 
 ## 雜湊的遷移與畢業順序
 
-crypto/digest 的 11 個都已改用 crates.io 的 `tc_digest`，名稱改由 `Display` 提供，本地的
+crypto/digest 都已改用 crates.io 的 `tc_digest`，名稱改由 `Display` 提供，本地的
 `tc_digest` 已刪除。`tc_skein` 另外改用發行版 `tc_threefish`（`ThreefishPortableEngine`）。
-`tc_gost3411` 仍經由 `tc_cipher` 依賴舊的 `tc_gost28147`，要等它畢業。
+`tc_gost3411` 仍經由 `tc_cipher` 依賴舊的 `tc_gost28147`，要等它畢業。不常用的 Haraka、
+PHOTON-Beetle、ESCH、Tiger、Whirlpool、Xoodyak 已在 2026-10-30 合併成 `tc_misc_digest`，
+每個演算法一個 feature；國家標準與常用的維持獨立。
 
 | # | crate | 理由 |
 |---|---|---|
 | 1 | sm3 | 中國標準，SM2 簽章與金鑰交換都要用；TLS 1.3（RFC 8998）；沒有阻擋 |
 | 2 | ripemd | RIPEMD-160 很常見（Bitcoin、OpenPGP、舊憑證）；沒有阻擋 |
 | 3 | dstu7564 | Kupyna，烏克蘭標準，與 DSTU 7624、4145 配套 |
-| 4 | whirlpool | ISO 標準，VeraCrypt |
-| 5 | tiger | 舊系統（Tiger Tree Hash） |
-| 6 | gost3411 | 要等 gost28147 畢業 |
-| 7 | skein | 已遷到新 trait 與發行版 tc_threefish，可直接搬去發行 |
-| 8 | sparkle（Esch） | NIST 輕量密碼決賽，未入選 |
-| 9 | xoodyak | 同上 |
-| 10 | photon_beetle | 同上 |
-| 11 | haraka | 給標準化前 SPHINCS+ 的短輸入雜湊，用途最窄 |
+| 4 | gost3411 | 要等 gost28147 畢業 |
+| 5 | skein | 已遷到新 trait 與發行版 tc_threefish，可直接搬去發行 |
+| 6 | misc_digest | Whirlpool（ISO、VeraCrypt）、Tiger（舊系統）、ESCH／Xoodyak／PHOTON-Beetle（NIST 輕量密碼決賽，未入選）、Haraka（標準化前的 SPHINCS+） |
 
-trait 遷移已完成，除了 gost3411 都可以直接搬到 TomiCheng/tc_digest 發行。8–10 可以考慮合成一個 crate 發行；
-tc_ascon_hash 是入選者，維持獨立。
+除了 gost3411 都可以直接搬到 TomiCheng/tc_digest 發行。tc_ascon_hash 是入選者，維持獨立。
 
 ## 後量子
 

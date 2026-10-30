@@ -25,9 +25,10 @@ so it can be reused. XOFs can instead squeeze as much output as the caller
 needs.
 
 Every implementation supports `no_std`. Crates that retain owned buffers or
-runtime-generated names use `alloc`. The `std` feature of `tc_haraka` enables
-its runtime CPU-feature detection, and disabling its default features selects
-the portable backend.
+runtime-generated names use `alloc`. Haraka, PHOTON-Beetle, ESCH, Tiger,
+Whirlpool and Xoodyak are rarely used, so they share `tc_misc_digest`, one
+feature each, all off by default. Its `std` feature enables Haraka's runtime
+CPU-feature detection; without it, Haraka uses the portable backend.
 
 All algorithms from the former monolithic digest crate are available in the
 focused crates below.
@@ -137,8 +138,8 @@ is outside the current digest API.
 
 ## 5. Features and allocation
 
-On x86 and x86-64, `tc_haraka` selects AES-NI for Haraka-256/512 when the CPU
-reports support, with the default `std` feature.
+On x86 and x86-64, `tc_misc_digest` selects AES-NI for Haraka-256/512 when the
+CPU reports support, with its `std` feature.
 
 Digest results are identical in every configuration.
 
@@ -158,6 +159,7 @@ tc_sha = "0.1"  # published from TomiCheng/tc_digest
 tc_keccak = "0.1"  # published from TomiCheng/tc_digest
 tc_gost3411 = { version = "0.1", path = "crypto/digest/tc_gost3411" }
 tc_skein = { version = "0.1", path = "crypto/digest/tc_skein" }
+tc_misc_digest = { version = "0.1", path = "crypto/digest/tc_misc_digest", features = ["whirlpool"] }
 ```
 
 ## 7. Building and testing
@@ -172,7 +174,7 @@ cargo test -p tc_ripemd
 Check the portable backend explicitly:
 
 ```bash
-cargo build -p tc_haraka --no-default-features
+cargo build -p tc_misc_digest --features haraka
 ```
 
 Additional validation commands:
@@ -188,5 +190,5 @@ cargo clippy -p tc_ripemd --all-targets -- -D warnings
 cargo doc -p tc_ripemd --no-deps
 
 # Full PHOTON-Beetle KAT; intentionally ignored in normal debug tests.
-cargo test -p tc_photon_beetle --release --test photon_beetle_kat -- --ignored
+cargo test -p tc_misc_digest --features photon-beetle --release --test photon_beetle_kat -- --ignored
 ```

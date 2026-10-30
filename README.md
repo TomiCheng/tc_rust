@@ -299,7 +299,7 @@ cargo build -p tc_cbc -p tc_cfb -p tc_ofb -p tc_ctr --no-default-features --lock
 cargo build -p tc_cbc -p tc_cfb -p tc_ofb -p tc_ctr --locked
 
 # Portable digest backend without std
-cargo build -p tc_haraka --no-default-features --locked
+cargo build -p tc_misc_digest --features haraka --locked
 ```
 
 `cargo test` always uses Rust's standard-library test harness. Use `cargo build`

@@ -113,7 +113,7 @@ impl SparkleDigest {
     fn write_rate(&self, output: &mut [u8]) {
         for (word, chunk) in self.state[..RATE_WORDS]
             .iter()
-            .zip(output[..RATE_BYTES].as_chunks_mut::<4>().0.iter_mut())
+            .zip(output[..RATE_BYTES].chunks_exact_mut(4))
         {
             chunk.copy_from_slice(&word.to_le_bytes());
         }
