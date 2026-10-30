@@ -34,4 +34,37 @@ macs、asym_cipher、key_wrap、zeroize、runtime、constant_time 已發行；si
    MAC 6 個要先從舊 trait 遷到新的。
 2. 非對稱是空洞最大的一側：簽章、金鑰協商都還沒發行，而且缺不少演算法。tc_security
    驗不了 ECDSA，原因之一是 ecdsa_v2 還沒接上 tc_signer。
-3. 後量子演算法完全沒做。
+3. 後量子演算法完全沒做，見下一節。
+
+## 後量子
+
+bc-csharp 的後量子程式分在兩處。行數為約略值。
+
+### 已成為 FIPS 標準，在 BC 主程式（`crypto/`）
+
+| 演算法 | 標準 | 行數 |
+|---|---|---:|
+| ML-KEM | FIPS 203 | 1,800 |
+| ML-DSA | FIPS 204 | 1,600 |
+| SLH-DSA | FIPS 205 | 1,200 |
+
+加上 `crypto/parameters`、`crypto/generators` 裡的對應類別，三者合計約 5,000 行。
+
+### `pqc/` 子專案（約 76,000 行）
+
+| 狀態 | 演算法 | 行數 |
+|---|---|---:|
+| 已標準化或即將標準化 | LMS／HSS（SP 800-208，有狀態的雜湊簽章） | 4,700 |
+| | Falcon（FN-DSA，FIPS 206 草案） | 9,100 |
+| | HQC（2025 年 NIST 選定，標準未定） | 1,600 |
+| 標準化前的舊版本 | crystals（舊 Kyber／Dilithium）、sphincsplus（舊 SPHINCS+） | 6,000 |
+| 競賽候選，多數未入選 | Classic McEliece、FrodoKEM、NTRU、NTRU Prime、Saber、BIKE | 10,000 |
+| 已淘汰 | Picnic | 42,000（大多是常數表） |
+
+### 建議順序
+
+1. ML-KEM → ML-DSA → SLH-DSA：都是正式標準，總量不大。ML-KEM 已有規劃：先純軟體，
+   量出瓶頸後再做 AVX2 四路平行的 Keccak。SHAKE 由已發行的 tc_keccak 提供。
+2. KEM 的契約 crate（BC 的 `IKemEncapsulator`、`IKemDecapsulator`），目前沒有。
+3. LMS；Falcon 與 HQC 等標準定案。
+4. 舊版本與落選候選不做，除非要和舊系統互通。
