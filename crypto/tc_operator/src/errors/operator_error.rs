@@ -1,3 +1,4 @@
+use std::convert::Infallible;
 use std::error::Error;
 use std::fmt;
 use std::io;
@@ -40,6 +41,12 @@ impl From<SecurityError> for OperatorError {
 impl From<AnyError> for OperatorError {
     fn from(error: AnyError) -> Self {
         Self::Signer(error)
+    }
+}
+
+impl From<Infallible> for OperatorError {
+    fn from(error: Infallible) -> Self {
+        match error {}
     }
 }
 

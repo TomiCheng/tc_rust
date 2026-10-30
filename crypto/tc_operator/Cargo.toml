@@ -12,3 +12,5 @@ tc_asn1_x509 = { version = "0.1.0", path = "../../asn1/tc_asn1_x509" }
 tc_signer = { version = "0.1.0", path = "../../signer/tc_signer" }
 tc_security = { version = "0.1.0", path = "../tc_security" }
 tc_asn1 = "0.1.1"
+tc_digest = "0.1.0"
+tc_macs = "0.1.0"
