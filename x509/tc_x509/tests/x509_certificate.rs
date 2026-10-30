@@ -1,6 +1,6 @@
 use tc_asn1::Asn1Error;
 use tc_asn1_x509::cert::{Time, Version};
-use tc_x509::X509Certificate;
+use tc_x509::cert::X509Certificate;
 
 const RFC_8410: &[u8] = include_bytes!("data/rfc8410.der");
 
