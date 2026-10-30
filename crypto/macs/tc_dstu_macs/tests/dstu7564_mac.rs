@@ -135,7 +135,7 @@ fn trait_objects_names_and_errors_work() {
 }
 
 #[test]
-#[should_panic(expected = "DSTU7564: bit length must be one of 256, 384, 512")]
+#[should_panic(expected = "DSTU 7564 bit length must be 256, 384 or 512")]
 fn rejects_unsupported_mac_size() {
     let _ = Dstu7564Mac::new(128);
 }

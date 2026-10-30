@@ -8,7 +8,7 @@ repository.workspace = true
 
 [dependencies]
 tc_block_cipher = "0.1.0"
-tc_dstu7564 = { version = "0.1", path = "../../digest/tc_dstu7564" }
+tc_dstu7564 = "0.1.0"
 tc_dstu7624 = "0.1.0"
 tc_digest = "0.1.0"
 tc_macs = "0.1.0"

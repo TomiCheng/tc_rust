@@ -1262,8 +1262,11 @@ dependencies = [
 [[package]]
 name = "tc_dstu7564"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "be12c1faf1286d2ec5eb954faadab86c2bd92d10d1717046f4b209e79074655f"
 dependencies = [
  "tc_digest",
+ "tc_zeroize",
 ]
 
 [[package]]
@@ -1439,15 +1442,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tc_gost3411"
-version = "0.1.0"
-dependencies = [
- "tc_block_cipher",
- "tc_digest",
- "tc_gost28147",
-]
-
-[[package]]
 name = "tc_hc"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1564,13 +1558,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tc_misc_digest"
-version = "0.1.0"
-dependencies = [
- "tc_digest",
-]
-
-[[package]]
 name = "tc_modular"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1664,13 +1651,6 @@ dependencies = [
  "rc2",
  "tc_block_cipher",
  "tc_zeroize",
-]
-
-[[package]]
-name = "tc_ripemd"
-version = "0.1.0"
-dependencies = [
- "tc_digest",
 ]
 
 [[package]]
@@ -1819,37 +1799,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "tc_skein"
-version = "0.1.0"
-dependencies = [
- "tc_block_cipher",
- "tc_digest",
- "tc_threefish",
-]
-
-[[package]]
-name = "tc_sm3"
-version = "0.1.0"
-dependencies = [
- "tc_digest",
-]
-
-[[package]]
 name = "tc_stream_cipher"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9a460a4a240dee7ffd827185d8e3e966e20a3e9fb4a9fb9377fc93b33045723b"
 dependencies = [
- "tc_zeroize",
-]
-
-[[package]]
-name = "tc_threefish"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "134aebe1b38efcf95d28fc876e667f917c4625ab50a68df010a14d832a392977"
-dependencies = [
- "tc_block_cipher",
  "tc_zeroize",
 ]
 

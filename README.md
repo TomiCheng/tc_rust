@@ -176,9 +176,8 @@ and the crates that remain here depend on the published version.
   IDEA, Noekeon, Rijndael, SEED, Serpent, Skipjack,
   TEA/XTEA and Twofish on the `tc_block_cipher` traits, waiting to
   graduate
-- [`crypto/digest`](crypto/digest) and [`crypto/macs`](crypto/macs) — digest
-  and MAC families not yet graduated, such as RIPEMD, Whirlpool, GOST 34.11,
-  SM3, Skein, SipHash and KMAC
+- [`crypto/macs`](crypto/macs) — MAC families not yet graduated, such as
+  SipHash and KMAC
 
 ## Implemented algorithms
 
@@ -229,8 +228,8 @@ add padding, authentication, or message framing.
 - ISAP Hash, Photon-Beetle Hash, Xoodyak Hash, and Haraka-256/512
 - TupleHash, ParallelHash, `ShortenedDigest`, `Prehash`, and `NullDigest`
 
-See the [digest crate guide](crypto/digest/README.md) for variant-level
-details and usage examples.
+See the [tc_digest repository](https://github.com/TomiCheng/tc_digest) for
+variant-level details and usage examples.
 
 ### Key derivation and password hashing
 
