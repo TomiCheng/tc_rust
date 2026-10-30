@@ -1,5 +1,7 @@
 mod digest_calculator;
 mod digest_factory;
+mod key_unwrapper;
+mod key_wrapper;
 mod mac_calculator;
 mod mac_factory;
 mod signature_calculator;
@@ -10,6 +12,8 @@ mod verifier_factory_provider;
 
 pub use digest_calculator::DigestCalculator;
 pub use digest_factory::DigestFactory;
+pub use key_unwrapper::KeyUnwrapper;
+pub use key_wrapper::KeyWrapper;
 pub use mac_calculator::MacCalculator;
 pub use mac_factory::MacFactory;
 pub use signature_calculator::SignatureCalculator;

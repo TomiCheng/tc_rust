@@ -14,3 +14,4 @@ tc_security = { version = "0.1.0", path = "../tc_security" }
 tc_asn1 = "0.1.1"
 tc_digest = "0.1.0"
 tc_macs = "0.1.0"
+tc_asn1_pkcs = { version = "0.1.0", path = "../../asn1/tc_asn1_pkcs" }
