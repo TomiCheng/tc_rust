@@ -1,3 +1,5 @@
 mod default_signature_calculator;
+mod default_verifier_calculator;
 
 pub use default_signature_calculator::DefaultSignatureCalculator;
+pub use default_verifier_calculator::DefaultVerifierCalculator;
