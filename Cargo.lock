@@ -1517,30 +1517,32 @@ dependencies = [
 ]
 
 [[package]]
-name = "tc_gost28147_mac"
+name = "tc_gost28147"
 version = "0.1.0"
-dependencies = [
- "tc_crypto",
- "tc_gost28147",
- "tc_macs",
- "tc_params",
-]
-
-[[package]]
-name = "tc_gost28147_v2"
-version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b54d4f875d196c123ca065208bbceeb75812e5ad27fbd52b7f6012a48d061fb2"
 dependencies = [
  "tc_block_cipher",
  "tc_zeroize",
 ]
 
 [[package]]
+name = "tc_gost28147_mac"
+version = "0.1.0"
+dependencies = [
+ "tc_crypto",
+ "tc_gost28147 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tc_macs",
+ "tc_params",
+]
+
+[[package]]
 name = "tc_gost3411"
 version = "0.1.0"
 dependencies = [
- "tc_cipher",
+ "tc_block_cipher",
  "tc_digest",
- "tc_gost28147",
+ "tc_gost28147 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -1710,7 +1712,7 @@ dependencies = [
  "tc_aes_old",
  "tc_cipher",
  "tc_crypto",
- "tc_gost28147",
+ "tc_gost28147 0.1.0",
  "tc_params",
 ]
 

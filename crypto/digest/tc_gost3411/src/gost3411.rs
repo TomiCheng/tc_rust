@@ -3,9 +3,9 @@
 use core::convert::Infallible;
 use core::fmt;
 
-use tc_cipher::{BlockCipher, BlockCipherInit, CipherDirection};
+use tc_block_cipher::{BlockCipher, BlockCipherInit, CipherDirection};
 use tc_digest::TryDigest;
-use tc_gost28147::{Gost28147Engine, KeyWithSBox, s_box};
+use tc_gost28147::{Gost28147Engine, Gost28147ParamsRef, s_box};
 
 const DIGEST_LENGTH: usize = 32;
 const BYTE_LENGTH: usize = 32;
@@ -61,7 +61,7 @@ impl Gost3411Digest {
 
     fn encrypt(&self, key: &[u8; 32], input: &[u8], output: &mut [u8]) {
         let mut cipher = Gost28147Engine::new();
-        let params = KeyWithSBox::with_s_box(key, &self.s_box);
+        let params = Gost28147ParamsRef::with_s_box(key, &self.s_box);
         cipher
             .init(CipherDirection::Encrypt, &params)
             .expect("GOST3411 always supplies a 256-bit key and valid S-box");

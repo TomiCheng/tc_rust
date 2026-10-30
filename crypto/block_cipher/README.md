@@ -120,6 +120,10 @@ SM4 has moved to the published [`tc_sm4`](https://crates.io/crates/tc_sm4)
 crate.
 Threefish has moved to the published
 [`tc_threefish`](https://crates.io/crates/tc_threefish) crate.
+GOST 28147-89 is published as
+[`tc_gost28147`](https://crates.io/crates/tc_gost28147); the copy here stays
+only for the GOFB tests of `crypto/block_modes/tc_ofb`, until GOFB moves to the
+new traits.
 
 DES, Triple DES, Blowfish, IDEA, RC2, RC5, SKIPJACK, TEA, XTEA, and other
 older designs are provided for compatibility and study, not as recommendations

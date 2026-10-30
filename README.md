@@ -88,6 +88,8 @@ and the crates that remain here depend on the published version.
 - [`tc_sm4`](https://crates.io/crates/tc_sm4) — SM4 (GB/T 32907-2016)
 - [`tc_threefish`](https://crates.io/crates/tc_threefish) — Threefish-256,
   Threefish-512 and Threefish-1024
+- [`tc_gost28147`](https://crates.io/crates/tc_gost28147) — GOST 28147-89 with
+  the standard and caller-supplied S-boxes
 - [`tc_block_modes`](https://crates.io/crates/tc_block_modes) — ECB, CBC, CFB,
   OFB and CTR
 - [`tc_block_padding`](https://crates.io/crates/tc_block_padding) — PKCS#7,
@@ -171,7 +173,7 @@ and the crates that remain here depend on the published version.
 - [`ies`](ies) — the Integrated Encryption Scheme over a key agreement, a
   KDF and a MAC
 - [`block_cipher`](block_cipher) — rewrites of Blowfish, CAST5/CAST6,
-  GOST 28147-89, IDEA, Noekeon, Rijndael, SEED, Serpent, Skipjack,
+  IDEA, Noekeon, Rijndael, SEED, Serpent, Skipjack,
   TEA/XTEA and Twofish on the `tc_block_cipher` traits, waiting to
   graduate
 - [`crypto/digest`](crypto/digest) and [`crypto/macs`](crypto/macs) — digest
@@ -225,8 +227,8 @@ add padding, authentication, or message framing.
 - BLAKE2b, BLAKE2s, BLAKE2xs, and BLAKE3
 - Ascon-Hash256, Ascon-XOF128, Ascon-CXOF128, and legacy Ascon v1.2 variants
 - GOST 34.11-2012, DSTU 7564, SM3, Tiger, and Whirlpool
-- GOST 34.11-94 on the workspace's GOST 28147 engine, and Skein 1.3 on the
-  published Threefish engine
+- GOST 34.11-94 and Skein 1.3, on the published GOST 28147 and Threefish
+  engines
 - ISAP Hash, Photon-Beetle Hash, Xoodyak Hash, and Haraka-256/512
 - TupleHash, ParallelHash, `ShortenedDigest`, `Prehash`, and `NullDigest`
 
