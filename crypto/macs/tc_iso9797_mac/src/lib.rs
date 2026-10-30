@@ -4,12 +4,13 @@
 
 use core::{convert::Infallible, fmt};
 
-use tc_cipher::{BlockCipher, BlockCipherInit, BlockError, CipherDirection};
-use tc_crypto::AlgorithmName;
+use tc_block_cipher::{
+    BlockCipher, BlockCipherInit, BlockError, CipherDirection, KeyParams, KeyRef,
+};
+use tc_block_modes::IvParams;
+use tc_block_padding::BlockCipherPadding;
 use tc_des::{BLOCK_BYTES, DesEngine};
 use tc_macs::{Mac, MacInit};
-use tc_pad::BlockCipherPadding;
-use tc_params::{KeyParams, KeyRef, OptionalIvParams};
 
 const DOUBLE_KEY_BYTES: usize = 16;
 const TRIPLE_KEY_BYTES: usize = 24;
@@ -35,7 +36,7 @@ impl core::error::Error for CreateError {}
 pub enum InitError {
     InvalidKeyLength(usize),
     InvalidIvLength(usize),
-    Cipher(tc_cipher::InitError),
+    Cipher(tc_block_cipher::InitError),
 }
 
 impl fmt::Display for InitError {
@@ -60,7 +61,7 @@ pub enum Error<P> {
     NotInitialised,
     OutputTooShort { required: usize, available: usize },
     Cipher(BlockError),
-    CipherInit(tc_cipher::InitError),
+    CipherInit(tc_block_cipher::InitError),
     Padding(P),
 }
 
@@ -85,35 +86,6 @@ impl<P: fmt::Display> fmt::Display for Error<P> {
 }
 
 impl<P: core::error::Error> core::error::Error for Error<P> {}
-
-#[derive(Clone, Copy, Debug)]
-pub struct Params<'a> {
-    key: &'a [u8],
-    iv: Option<&'a [u8]>,
-}
-
-impl<'a> Params<'a> {
-    pub const fn new(key: &'a [u8]) -> Self {
-        Self { key, iv: None }
-    }
-
-    pub const fn with_iv(mut self, iv: &'a [u8]) -> Self {
-        self.iv = Some(iv);
-        self
-    }
-}
-
-impl KeyParams for Params<'_> {
-    fn key(&self) -> &[u8] {
-        self.key
-    }
-}
-
-impl OptionalIvParams for Params<'_> {
-    fn optional_iv(&self) -> Option<&[u8]> {
-        self.iv
-    }
-}
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct NoPadding;
@@ -236,9 +208,9 @@ impl<D: Iso9797Padding> Iso9797Alg3Mac<D> {
     }
 }
 
-impl<D> AlgorithmName for Iso9797Alg3Mac<D> {
-    fn write_algo_name(&self, output: &mut dyn fmt::Write) -> fmt::Result {
-        output.write_str("ISO9797Alg3")
+impl<D> fmt::Display for Iso9797Alg3Mac<D> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("ISO9797Alg3")
     }
 }
 
@@ -319,7 +291,7 @@ impl<D: Iso9797Padding> Mac for Iso9797Alg3Mac<D> {
 
 impl<D, P> MacInit<P> for Iso9797Alg3Mac<D>
 where
-    P: KeyParams + OptionalIvParams + ?Sized,
+    P: KeyParams + IvParams + ?Sized,
 {
     type Error = InitError;
 
@@ -329,13 +301,11 @@ where
         if key.len() != DOUBLE_KEY_BYTES && key.len() != TRIPLE_KEY_BYTES {
             return Err(InitError::InvalidKeyLength(key.len()));
         }
-        self.iv.fill(0);
-        if let Some(iv) = params.optional_iv() {
-            if iv.len() != BLOCK_BYTES {
-                return Err(InitError::InvalidIvLength(iv.len()));
-            }
-            self.iv.copy_from_slice(iv);
+        let iv = params.iv();
+        if iv.len() != BLOCK_BYTES {
+            return Err(InitError::InvalidIvLength(iv.len()));
         }
+        self.iv.copy_from_slice(iv);
         self.key1.copy_from_slice(&key[..8]);
         self.key2.copy_from_slice(&key[8..16]);
         if key.len() == TRIPLE_KEY_BYTES {

@@ -1214,15 +1214,6 @@ version = "0.1.0"
 
 [[package]]
 name = "tc_des"
-version = "0.1.0"
-dependencies = [
- "tc_cipher",
- "tc_crypto",
- "tc_params",
-]
-
-[[package]]
-name = "tc_des"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7a530667b733101c83f309d6dcf382407e594c2d204f4a0f34ab2d350edb8430"
@@ -1499,12 +1490,11 @@ dependencies = [
 name = "tc_iso9797_mac"
 version = "0.1.0"
 dependencies = [
- "tc_cipher",
- "tc_crypto",
- "tc_des 0.1.0",
+ "tc_block_cipher",
+ "tc_block_modes",
+ "tc_block_padding",
+ "tc_des",
  "tc_macs",
- "tc_pad",
- "tc_params",
 ]
 
 [[package]]
@@ -1782,7 +1772,7 @@ dependencies = [
  "tc_camellia",
  "tc_cfrg_curves",
  "tc_chacha",
- "tc_des 0.1.1",
+ "tc_des",
  "tc_digest",
  "tc_ec_core",
  "tc_ec_key",

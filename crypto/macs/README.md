@@ -31,7 +31,7 @@ type.
 | ✅ Done | `GMac` | [`tc_macs::Gmac`](https://crates.io/crates/tc_macs) | Published in `tc_macs` over the published `tc_aead_cipher` GCM, checked against bc-csharp's GMacTest vectors; GCM refuses a repeated key and nonce. |
 | ✅ Done | `GOST28147Mac` | [`tc_gost28147_mac::Gost28147Mac`](tc_gost28147_mac) | Allocation-free 16-round GOST MAC core with caller-selected S-box and optional IV. |
 | ✅ Done | `HMac` | [`tc_macs::FixedHmac`](https://crates.io/crates/tc_macs) | Published in `tc_macs` with the `hmac` feature: `FixedHmac`, and with `alloc` `Hmac`, over any digest on the published `tc_digest` traits, checked against the RFC 4231 vectors. |
-| ✅ Done | `ISO9797Alg3Mac` | [`tc_iso9797_mac::Iso9797Alg3Mac`](tc_iso9797_mac) | Allocation-free two-/three-key DES Retail MAC, with optional IV, tag truncation, and padding. |
+| ✅ Done | `ISO9797Alg3Mac` | [`tc_iso9797_mac::Iso9797Alg3Mac`](tc_iso9797_mac) | Allocation-free two-/three-key DES Retail MAC, with tag truncation and padding, on the published `tc_des`, `tc_block_padding` and `tc_macs` traits. The IV is required and must be 8 bytes; pass zeros for Bouncy Castle's key-only form. |
 | ✅ Done | `KMac` | [`tc_kmac::KMac`](tc_kmac) | KMAC128/KMAC256 fixed tags and XOF output over cSHAKE; requires `alloc`. |
 | ✅ Raw mode | `Poly1305` | [`tc_poly1305`](https://crates.io/crates/tc_poly1305) | Published from the tc_macs repository: raw Poly1305 with a caller-supplied 32-byte one-time key. The optional 128-bit block-cipher construction is not implemented. |
 | ✅ Done | `SipHash` | [`tc_siphash::SipHash`](tc_siphash) | Allocation-free SipHash-c-d; all 64 official SipHash-2-4 vectors pass. |
