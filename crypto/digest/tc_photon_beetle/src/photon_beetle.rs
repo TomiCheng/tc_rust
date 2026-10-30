@@ -7,6 +7,7 @@
 //! and a 16-byte squeeze rate for the two-block 32-byte tag. Fixed 32-byte output.
 
 use core::convert::Infallible;
+use core::fmt;
 
 use tc_digest::TryDigest;
 
@@ -181,12 +182,14 @@ impl PhotonBeetleDigest {
     }
 }
 
+impl fmt::Display for PhotonBeetleDigest {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("Photon-Beetle Hash")
+    }
+}
+
 impl TryDigest for PhotonBeetleDigest {
     type Error = Infallible;
-
-    fn algorithm_name(&self) -> &str {
-        "Photon-Beetle Hash"
-    }
 
     fn digest_size(&self) -> usize {
         DIGEST_LENGTH
@@ -271,7 +274,7 @@ mod tests {
     #[test]
     fn accessors() {
         let d = PhotonBeetleDigest::new();
-        assert_eq!(d.algorithm_name(), "Photon-Beetle Hash");
+        assert_eq!(format!("{d}"), "Photon-Beetle Hash");
         assert_eq!(d.digest_size(), 32);
     }
 

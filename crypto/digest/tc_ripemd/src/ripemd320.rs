@@ -5,6 +5,7 @@
 //! concatenated (40 bytes), with the `e`/`ee` registers cross-added at the end.
 
 use core::convert::Infallible;
+use core::fmt;
 use core::mem::swap;
 
 use tc_digest::TryDigest;
@@ -127,12 +128,14 @@ impl RipeMD320Digest {
     }
 }
 
+impl fmt::Display for RipeMD320Digest {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("RIPEMD320")
+    }
+}
+
 impl TryDigest for RipeMD320Digest {
     type Error = Infallible;
-
-    fn algorithm_name(&self) -> &str {
-        "RIPEMD320"
-    }
 
     fn digest_size(&self) -> usize {
         DIGEST_LENGTH
@@ -213,7 +216,7 @@ mod tests {
     #[test]
     fn accessors() {
         let d = RipeMD320Digest::new();
-        assert_eq!(d.algorithm_name(), "RIPEMD320");
+        assert_eq!(format!("{d}"), "RIPEMD320");
         assert_eq!(d.digest_size(), 40);
     }
 

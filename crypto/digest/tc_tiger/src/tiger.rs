@@ -6,6 +6,7 @@
 //! first padding byte is `0x01` (Tiger2 uses `0x80`).
 
 use core::convert::Infallible;
+use core::fmt;
 
 use tc_digest::TryDigest;
 
@@ -121,12 +122,14 @@ fn compress(state: &mut [u64; 3], block: &[u8; 64]) {
     state[2] = c.wrapping_add(cc);
 }
 
+impl fmt::Display for TigerDigest {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("Tiger")
+    }
+}
+
 impl TryDigest for TigerDigest {
     type Error = Infallible;
-
-    fn algorithm_name(&self) -> &str {
-        "Tiger"
-    }
 
     fn digest_size(&self) -> usize {
         DIGEST_LENGTH
@@ -506,7 +509,7 @@ mod tests {
     #[test]
     fn accessors_clone_chunking_and_reset() {
         let mut whole = TigerDigest::new();
-        assert_eq!(whole.algorithm_name(), "Tiger");
+        assert_eq!(format!("{whole}"), "Tiger");
         assert_eq!(whole.digest_size(), 24);
         assert_eq!(whole.byte_length(), 64);
 

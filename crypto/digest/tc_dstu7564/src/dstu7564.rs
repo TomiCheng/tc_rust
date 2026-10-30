@@ -6,6 +6,7 @@
 //! related permutations as `H <- H ^ P(H ^ M) ^ Q(M)`.
 
 use core::convert::Infallible;
+use core::fmt;
 
 use tc_digest::TryDigest;
 
@@ -312,12 +313,14 @@ impl Dstu7564Digest {
     }
 }
 
+impl fmt::Display for Dstu7564Digest {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("DSTU7564")
+    }
+}
+
 impl TryDigest for Dstu7564Digest {
     type Error = Infallible;
-
-    fn algorithm_name(&self) -> &str {
-        "DSTU7564"
-    }
 
     fn digest_size(&self) -> usize {
         self.output_len
@@ -498,7 +501,7 @@ mod tests {
         for bits in [256, 384, 512] {
             let input: Vec<u8> = (0..300).map(|i| i as u8).collect();
             let mut whole = Dstu7564Digest::new(bits);
-            assert_eq!(whole.algorithm_name(), "DSTU7564");
+            assert_eq!(format!("{whole}"), "DSTU7564");
             assert_eq!(whole.digest_size(), bits / 8);
             assert_eq!(whole.byte_length(), if bits == 256 { 64 } else { 128 });
             whole.update(&input);

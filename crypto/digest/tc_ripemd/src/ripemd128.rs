@@ -6,6 +6,7 @@
 //! the family via the private `ripemd_common` module.
 
 use core::convert::Infallible;
+use core::fmt;
 
 use tc_digest::TryDigest;
 
@@ -84,12 +85,14 @@ impl RipeMD128Digest {
     }
 }
 
+impl fmt::Display for RipeMD128Digest {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("RIPEMD128")
+    }
+}
+
 impl TryDigest for RipeMD128Digest {
     type Error = Infallible;
-
-    fn algorithm_name(&self) -> &str {
-        "RIPEMD128"
-    }
 
     fn digest_size(&self) -> usize {
         DIGEST_LENGTH
@@ -162,7 +165,7 @@ mod tests {
     #[test]
     fn accessors() {
         let d = RipeMD128Digest::new();
-        assert_eq!(d.algorithm_name(), "RIPEMD128");
+        assert_eq!(format!("{d}"), "RIPEMD128");
         assert_eq!(d.digest_size(), 16);
     }
 

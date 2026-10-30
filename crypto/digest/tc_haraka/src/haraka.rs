@@ -509,12 +509,14 @@ macro_rules! define_haraka_digest {
             }
         }
 
+        impl fmt::Display for $name {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                f.write_str($algorithm_name)
+            }
+        }
+
         impl TryDigest for $name {
             type Error = HarakaError;
-
-            fn algorithm_name(&self) -> &str {
-                $algorithm_name
-            }
 
             fn digest_size(&self) -> usize {
                 DIGEST_LENGTH
@@ -705,7 +707,7 @@ mod tests {
         chunked.try_update(&input[..7]).unwrap();
         chunked.try_update(&input[7..]).unwrap();
         let mut cloned = chunked.clone();
-        assert_eq!(chunked.algorithm_name(), "Haraka-512");
+        assert_eq!(format!("{chunked}"), "Haraka-512");
         assert_eq!(chunked.digest_size(), 32);
         assert_eq!(chunked.byte_length(), 64);
 

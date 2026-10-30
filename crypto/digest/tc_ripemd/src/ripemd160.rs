@@ -5,6 +5,7 @@
 //! (message-order and rotation tables verified against bc's unrolled code).
 
 use core::convert::Infallible;
+use core::fmt;
 
 use tc_digest::TryDigest;
 
@@ -107,12 +108,14 @@ impl RipeMD160Digest {
     }
 }
 
+impl fmt::Display for RipeMD160Digest {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("RIPEMD160")
+    }
+}
+
 impl TryDigest for RipeMD160Digest {
     type Error = Infallible;
-
-    fn algorithm_name(&self) -> &str {
-        "RIPEMD160"
-    }
 
     fn digest_size(&self) -> usize {
         DIGEST_LENGTH
@@ -189,7 +192,7 @@ mod tests {
     #[test]
     fn accessors() {
         let d = RipeMD160Digest::new();
-        assert_eq!(d.algorithm_name(), "RIPEMD160");
+        assert_eq!(format!("{d}"), "RIPEMD160");
         assert_eq!(d.digest_size(), 20);
         assert_eq!(d.byte_length(), 64);
     }

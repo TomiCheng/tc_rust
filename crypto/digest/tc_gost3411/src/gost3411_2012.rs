@@ -6,6 +6,7 @@
 //! the 512-bit variant uses an all-zero IV and returns the entire state.
 
 use core::convert::Infallible;
+use core::fmt;
 
 use tc_digest::TryDigest;
 
@@ -382,12 +383,14 @@ impl Gost3411_2012_256Digest {
     }
 }
 
+impl fmt::Display for Gost3411_2012_256Digest {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("GOST3411-2012-256")
+    }
+}
+
 impl TryDigest for Gost3411_2012_256Digest {
     type Error = Infallible;
-
-    fn algorithm_name(&self) -> &str {
-        "GOST3411-2012-256"
-    }
 
     fn digest_size(&self) -> usize {
         32
@@ -436,12 +439,14 @@ impl Gost3411_2012_512Digest {
     }
 }
 
+impl fmt::Display for Gost3411_2012_512Digest {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("GOST3411-2012-512")
+    }
+}
+
 impl TryDigest for Gost3411_2012_512Digest {
     type Error = Infallible;
-
-    fn algorithm_name(&self) -> &str {
-        "GOST3411-2012-512"
-    }
 
     fn digest_size(&self) -> usize {
         64
@@ -567,7 +572,7 @@ mod tests {
         let message: Vec<u8> = (0..257).map(|i| i as u8).collect();
 
         let mut whole = Gost3411_2012_512Digest::new();
-        assert_eq!(whole.algorithm_name(), "GOST3411-2012-512");
+        assert_eq!(format!("{whole}"), "GOST3411-2012-512");
         assert_eq!(whole.digest_size(), 64);
         assert_eq!(whole.byte_length(), 64);
         whole.update(&message);
@@ -592,7 +597,7 @@ mod tests {
         assert_eq!(empty_after_reset, fresh_empty);
 
         let digest_256 = Gost3411_2012_256Digest::new();
-        assert_eq!(digest_256.algorithm_name(), "GOST3411-2012-256");
+        assert_eq!(format!("{digest_256}"), "GOST3411-2012-256");
         assert_eq!(digest_256.digest_size(), 32);
         assert_eq!(digest_256.byte_length(), 64);
     }

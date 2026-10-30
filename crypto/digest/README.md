@@ -5,20 +5,17 @@
 The crates in this directory provide message-digest and extendable-output
 function (XOF) implementations ported from the Bouncy Castle C# digest package.
 Related algorithms are grouped into focused crates, while the shared contracts
-remain in [`tc_digest`](../tc_digest):
+come from the published [`tc_digest`](https://crates.io/crates/tc_digest):
 
 - `TryDigest` is the fallible streaming digest interface.
 - `Digest` is the infallible convenience interface.
 - `TryXof` extends `TryDigest` with variable-length output.
 - `Xof` is the infallible XOF convenience interface.
 
-The crates here use the local `tc_digest`, except `tc_skein`, which already
-implements the published one and names itself through `Display`. BLAKE2 and
-BLAKE3 graduated as the
-published `tc_blake`, and the Ascon hashes as the published `tc_ascon_hash`;
-both implement the published
-[`tc_digest`](https://crates.io/crates/tc_digest), whose types name themselves
-through `Display` instead of `algorithm_name`. The `NullDigest`, `Prehash` and
+Every crate here implements those traits and names its types through
+`Display`, since the published trait has no `algorithm_name`. BLAKE2 and
+BLAKE3 graduated as the published `tc_blake`, and the Ascon hashes as the
+published `tc_ascon_hash`. The `NullDigest`, `Prehash` and
 `ShortenedDigest` adapters moved into that crate itself, as `tc_digest::util`
 under its `alloc` feature, from 0.1.1.
 
@@ -156,7 +153,7 @@ use. Local development can specify both `version` and `path`:
 
 ```toml
 [dependencies]
-tc_digest = { version = "0.1", path = "crypto/tc_digest" }
+tc_digest = "0.1"
 tc_sha = "0.1"  # published from TomiCheng/tc_digest
 tc_keccak = "0.1"  # published from TomiCheng/tc_digest
 tc_gost3411 = { version = "0.1", path = "crypto/digest/tc_gost3411" }

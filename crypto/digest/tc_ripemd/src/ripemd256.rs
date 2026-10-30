@@ -6,6 +6,7 @@
 //! the private `ripemd_common` module.
 
 use core::convert::Infallible;
+use core::fmt;
 use core::mem::swap;
 
 use tc_digest::TryDigest;
@@ -107,12 +108,14 @@ impl RipeMD256Digest {
     }
 }
 
+impl fmt::Display for RipeMD256Digest {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("RIPEMD256")
+    }
+}
+
 impl TryDigest for RipeMD256Digest {
     type Error = Infallible;
-
-    fn algorithm_name(&self) -> &str {
-        "RIPEMD256"
-    }
 
     fn digest_size(&self) -> usize {
         DIGEST_LENGTH
@@ -197,7 +200,7 @@ mod tests {
     #[test]
     fn accessors() {
         let d = RipeMD256Digest::new();
-        assert_eq!(d.algorithm_name(), "RIPEMD256");
+        assert_eq!(format!("{d}"), "RIPEMD256");
         assert_eq!(d.digest_size(), 32);
     }
 

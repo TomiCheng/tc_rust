@@ -11,4 +11,4 @@ default = ["std"]
 std = []
 
 [dependencies]
-tc_digest = { version = "0.1", path = "../../tc_digest" }
+tc_digest = "0.1.0"

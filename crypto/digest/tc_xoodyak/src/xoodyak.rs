@@ -4,6 +4,7 @@
 //! absorbs at a 16-byte rate and returns a fixed 256-bit digest.
 
 use core::convert::Infallible;
+use core::fmt;
 
 use tc_digest::TryDigest;
 
@@ -179,12 +180,14 @@ impl XoodyakDigest {
     }
 }
 
+impl fmt::Display for XoodyakDigest {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("Xoodyak Hash")
+    }
+}
+
 impl TryDigest for XoodyakDigest {
     type Error = Infallible;
-
-    fn algorithm_name(&self) -> &str {
-        "Xoodyak Hash"
-    }
 
     fn digest_size(&self) -> usize {
         DIGEST_LENGTH
@@ -371,7 +374,7 @@ mod tests {
         let expected = digest_hex(&mut XoodyakDigest::new(), &message);
 
         let mut digest = XoodyakDigest::new();
-        assert_eq!(digest.algorithm_name(), "Xoodyak Hash");
+        assert_eq!(format!("{digest}"), "Xoodyak Hash");
         assert_eq!(digest.digest_size(), 32);
         assert_eq!(digest.byte_length(), 16);
 

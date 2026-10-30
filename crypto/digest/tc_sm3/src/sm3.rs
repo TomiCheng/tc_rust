@@ -5,6 +5,7 @@
 //! `P0`/`P1` permutations and two pairs of boolean functions.
 
 use core::convert::Infallible;
+use core::fmt;
 
 use tc_digest::TryDigest;
 
@@ -110,12 +111,14 @@ impl Sm3Digest {
     }
 }
 
+impl fmt::Display for Sm3Digest {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("SM3")
+    }
+}
+
 impl TryDigest for Sm3Digest {
     type Error = Infallible;
-
-    fn algorithm_name(&self) -> &str {
-        "SM3"
-    }
 
     fn digest_size(&self) -> usize {
         DIGEST_LENGTH
@@ -221,7 +224,7 @@ mod tests {
     fn accessors_clone_chunking_and_reset() {
         let message: Vec<u8> = (0..200).map(|i| i as u8).collect();
         let mut whole = Sm3Digest::new();
-        assert_eq!(whole.algorithm_name(), "SM3");
+        assert_eq!(format!("{whole}"), "SM3");
         assert_eq!(whole.digest_size(), 32);
         assert_eq!(whole.byte_length(), 64);
         whole.update(&message);

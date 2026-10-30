@@ -6,6 +6,7 @@
 //! field.
 
 use core::convert::Infallible;
+use core::fmt;
 
 use tc_digest::TryDigest;
 
@@ -161,12 +162,14 @@ impl WhirlpoolDigest {
     }
 }
 
+impl fmt::Display for WhirlpoolDigest {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("Whirlpool")
+    }
+}
+
 impl TryDigest for WhirlpoolDigest {
     type Error = Infallible;
-
-    fn algorithm_name(&self) -> &str {
-        "Whirlpool"
-    }
 
     fn digest_size(&self) -> usize {
         DIGEST_LENGTH
@@ -298,7 +301,7 @@ mod tests {
     fn accessors_clone_chunking_and_reset() {
         let message: Vec<u8> = (0..200).map(|i| i as u8).collect();
         let mut whole = WhirlpoolDigest::new();
-        assert_eq!(whole.algorithm_name(), "Whirlpool");
+        assert_eq!(format!("{whole}"), "Whirlpool");
         assert_eq!(whole.digest_size(), 64);
         assert_eq!(whole.byte_length(), 64);
         whole.update(&message);

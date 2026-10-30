@@ -4,6 +4,7 @@
 //! this module. This crate does not depend on the SCHWAEMM AEAD engine.
 
 use core::convert::Infallible;
+use core::fmt;
 
 use tc_digest::TryDigest;
 
@@ -125,15 +126,17 @@ impl SparkleDigest {
     }
 }
 
-impl TryDigest for SparkleDigest {
-    type Error = Infallible;
-
-    fn algorithm_name(&self) -> &str {
-        match self.parameters {
+impl fmt::Display for SparkleDigest {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(match self.parameters {
             SparkleParameters::Esch256 => "ESCH-256",
             SparkleParameters::Esch384 => "ESCH-384",
-        }
+        })
     }
+}
+
+impl TryDigest for SparkleDigest {
+    type Error = Infallible;
 
     fn digest_size(&self) -> usize {
         self.parameters.digest_bytes()
@@ -307,6 +310,10 @@ fn sparkle_opt16(state: &mut [u32; 16], steps: usize) {
 
 #[cfg(test)]
 mod tests {
+    extern crate std;
+
+    use std::format;
+
     use super::*;
     use tc_digest::Digest;
 
@@ -475,7 +482,7 @@ mod tests {
     fn accessors_clone_bytewise_and_reset() {
         let message = message();
         let mut digest = SparkleDigest::new(SparkleParameters::Esch256);
-        assert_eq!(digest.algorithm_name(), "ESCH-256");
+        assert_eq!(format!("{digest}"), "ESCH-256");
         assert_eq!(digest.digest_size(), 32);
         assert_eq!(digest.byte_length(), RATE_BYTES);
 
@@ -502,7 +509,7 @@ mod tests {
         assert_eq!(output, cloned_output);
 
         let digest = SparkleDigest::new(SparkleParameters::Esch384);
-        assert_eq!(digest.algorithm_name(), "ESCH-384");
+        assert_eq!(format!("{digest}"), "ESCH-384");
         assert_eq!(digest.digest_size(), 48);
     }
 }

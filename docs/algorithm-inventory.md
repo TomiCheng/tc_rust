@@ -5,8 +5,8 @@
 - **已發行**：在 crates.io 上，套件名省略 `tc_` 前綴。
 - **孵化池（新架構）**：在 tc_rust，已經接在新的 trait 上（`tc_block_cipher`、crates.io 的
   `tc_digest`、`tc_signer` 等）。
-- **孵化池（舊 trait）**：在 tc_rust，還依賴舊的 `tc_cipher`、`tc_crypto`、`tc_params`、
-  `tc_pad` 或本地的 `tc_digest`。
+- **孵化池（舊 trait）**：在 tc_rust，還依賴舊的 `tc_cipher`、`tc_crypto`、`tc_params` 或
+  `tc_pad`。
 - **BC 有、還沒做**：bc-csharp 有，這裡還沒有任何對應。
 
 | 類別 | 已發行 | 孵化池（新架構） | 孵化池（舊 trait） | BC 有、還沒做 |
@@ -15,7 +15,7 @@
 | 模式／padding | block_modes（ECB、CBC、CFB、OFB、CTR）、block_padding、aead_cipher（GCM、CCM、EAX、OCB） | — | crypto/block_modes 5 個 | CTS、GCM-SIV、GOFB、KCCM、KCTR、OpenPGP CFB |
 | 串流加密 | chacha、salsa20、hc、rc4_family | — | — | — |
 | AEAD 專用演算法 | ascon_aead、grain128_aead、sparkle_aead、chacha_aead | — | — | — |
-| 雜湊 | sha、md、keccak、blake、ascon_hash | skein（crypto/digest） | crypto/digest 10 個：dstu7564、gost3411、haraka、photon_beetle、ripemd、sm3、sparkle、tiger、whirlpool、xoodyak | — |
+| 雜湊 | sha、md、keccak、blake、ascon_hash | crypto/digest 10 個：dstu7564、haraka、photon_beetle、ripemd、skein、sm3、sparkle、tiger、whirlpool、xoodyak | gost3411（經 tc_cipher 用舊的 gost28147） | — |
 | MAC | macs、poly1305 | — | crypto/macs 6 個：dstu_macs、gost28147_mac、iso9797_mac、kmac、siphash、vmpc_mac（依賴 tc_crypto） | — |
 | Key wrap | key_wrap、des_wrap、dstu7624_wrap、rc2_wrap | — | — | — |
 | 非對稱加密 | rsa、asym_encoding、asym_iso9796 | cfrg_curves（X25519、Ed25519、X448、Ed448）、ec_key | — | ElGamal、Naccache-Stern、SM2 加密 |
@@ -30,8 +30,8 @@ macs、asym_cipher、key_wrap、zeroize、runtime、constant_time 已發行；si
 
 ## 觀察
 
-1. 對稱演算法幾乎都已發行。剩下的是孵化池的 11 個區塊加密等畢業，以及雜湊 10 個、
-   MAC 6 個要先從舊 trait 遷到新的。
+1. 對稱演算法幾乎都已發行。剩下的是孵化池的 11 個區塊加密等畢業，以及雜湊
+   gost3411、MAC 6 個要先從舊 trait 遷到新的。
 2. 非對稱是空洞最大的一側：簽章、金鑰協商都還沒發行，而且缺不少演算法。tc_security
    驗不了 ECDSA，原因之一是 ecdsa_v2 還沒接上 tc_signer。
 3. 後量子演算法完全沒做，見下一節。
@@ -58,9 +58,9 @@ tc_threefish 已在 2026-10-30 發行，流程照它們走。
 
 ## 雜湊的遷移與畢業順序
 
-crypto/digest 的 11 個中，`tc_skein` 已改用 crates.io 的 `tc_digest` 與 `tc_threefish`
-（`ThreefishPortableEngine`），其他 10 個都依賴本地舊的 `tc_digest`。`tc_gost3411` 另外經由
-`tc_cipher` 依賴舊的 `tc_gost28147`，要等它畢業。
+crypto/digest 的 11 個都已改用 crates.io 的 `tc_digest`，名稱改由 `Display` 提供，本地的
+`tc_digest` 已刪除。`tc_skein` 另外改用發行版 `tc_threefish`（`ThreefishPortableEngine`）。
+`tc_gost3411` 仍經由 `tc_cipher` 依賴舊的 `tc_gost28147`，要等它畢業。
 
 | # | crate | 理由 |
 |---|---|---|
@@ -76,8 +76,7 @@ crypto/digest 的 11 個中，`tc_skein` 已改用 crates.io 的 `tc_digest` 與
 | 10 | photon_beetle | 同上 |
 | 11 | haraka | 給標準化前 SPHINCS+ 的短輸入雜湊，用途最窄 |
 
-每個要做的事相同：改依賴 crates.io 的 `tc_digest`，刪掉 `algorithm_name()` 改實作
-`Display`，搬到 TomiCheng/tc_digest 發行。8–10 可以考慮合成一個 crate 發行；
+trait 遷移已完成，除了 gost3411 都可以直接搬到 TomiCheng/tc_digest 發行。8–10 可以考慮合成一個 crate 發行；
 tc_ascon_hash 是入選者，維持獨立。
 
 ## 後量子

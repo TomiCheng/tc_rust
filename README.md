@@ -179,8 +179,7 @@ and the crates that remain here depend on the published version.
   SM3, Skein, SipHash and KMAC
 - The earlier generation on the legacy `tc_crypto`, `tc_cipher` and
   `tc_params` traits: [`crypto/block_cipher`](crypto/block_cipher),
-  [`crypto/block_modes`](crypto/block_modes), `crypto/tc_digest` and
-  `crypto/tc_pad`. They stay while other incubator crates still depend on them.
+  [`crypto/block_modes`](crypto/block_modes) and `crypto/tc_pad`. They stay while other incubator crates still depend on them.
 
 ## Implemented algorithms
 
@@ -287,7 +286,7 @@ Representative `no_std` builds:
 
 ```bash
 # Core-only crates
-cargo build -p tc_crypto -p tc_cipher -p tc_params -p tc_digest --locked
+cargo build -p tc_crypto -p tc_cipher -p tc_params --locked
 
 # Representative block-cipher crate (all family crates are no_std)
 cargo build -p tc_blowfish --locked

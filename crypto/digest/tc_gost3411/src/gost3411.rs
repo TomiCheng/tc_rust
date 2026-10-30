@@ -1,6 +1,7 @@
 //! GOST R 34.11-94 message digest.
 
 use core::convert::Infallible;
+use core::fmt;
 
 use tc_cipher::{BlockCipher, BlockCipherInit, CipherDirection};
 use tc_digest::TryDigest;
@@ -182,12 +183,14 @@ fn transform_fw(value: &mut [u8; 32]) {
     }
 }
 
+impl fmt::Display for Gost3411Digest {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("Gost3411")
+    }
+}
+
 impl TryDigest for Gost3411Digest {
     type Error = Infallible;
-
-    fn algorithm_name(&self) -> &str {
-        "Gost3411"
-    }
 
     fn digest_size(&self) -> usize {
         DIGEST_LENGTH
