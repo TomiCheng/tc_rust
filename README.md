@@ -91,7 +91,7 @@ and the crates that remain here depend on the published version.
 - [`tc_gost28147`](https://crates.io/crates/tc_gost28147) — GOST 28147-89 with
   the standard and caller-supplied S-boxes
 - [`tc_block_modes`](https://crates.io/crates/tc_block_modes) — ECB, CBC, CFB,
-  OFB and CTR
+  OFB and CTR, and OpenPGP CFB, GOST 28147 GCTR (GOFB) and DSTU 7624 KCTR
 - [`tc_block_padding`](https://crates.io/crates/tc_block_padding) — PKCS#7,
   ISO 7816-4, ANSI X9.23, TBC, zero-byte and ISO 10126 padding
 
@@ -180,8 +180,8 @@ and the crates that remain here depend on the published version.
   and MAC families not yet graduated, such as RIPEMD, Whirlpool, GOST 34.11,
   SM3, Skein, SipHash and KMAC
 - The earlier generation on the legacy `tc_crypto`, `tc_cipher` and
-  `tc_params` traits: [`crypto/block_cipher`](crypto/block_cipher),
-  [`crypto/block_modes`](crypto/block_modes) and `crypto/tc_pad`. They stay while other incubator crates still depend on them.
+  `tc_params` traits: [`crypto/block_cipher`](crypto/block_cipher) and
+  `crypto/tc_pad`. They stay while other incubator crates still depend on them.
 
 ## Implemented algorithms
 
@@ -293,13 +293,6 @@ cargo build -p tc_crypto -p tc_cipher -p tc_params --locked
 # Representative block-cipher crate (all family crates are no_std)
 cargo build -p tc_blowfish --locked
 
-# Block modes without alloc (fixed-size variants)
-cargo build -p tc_ecb --locked
-cargo build -p tc_cbc -p tc_cfb -p tc_ofb -p tc_ctr --no-default-features --locked
-
-# Runtime-sized block-mode variants (alloc, but not std)
-cargo build -p tc_cbc -p tc_cfb -p tc_ofb -p tc_ctr --locked
-
 # Portable digest backend without std
 cargo build -p tc_misc_digest --features haraka --locked
 ```
@@ -311,7 +304,7 @@ configuration.
 Benchmarks are available in the algorithm crates:
 
 ```bash
-cargo bench -p tc_aes_old --bench aes
+cargo bench -p tc_cfrg_curves --bench agreement
 ```
 
 ## Reference and license

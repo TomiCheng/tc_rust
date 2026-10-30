@@ -11,8 +11,8 @@
 
 | 類別 | 已發行 | 孵化池（新架構） | 孵化池（舊 trait） | BC 有、還沒做 |
 |---|---|---|---|---|
-| 區塊加密 | aes、des、aria、camellia、dstu7624、rc_cipher、sm4、threefish、gost28147 | blowfish、cast、seed、serpent、twofish，以及 misc_block_cipher（idea、noekeon、rijndael、skipjack、tea） | crypto/block_cipher 14 個 | — |
-| 模式／padding | block_modes（ECB、CBC、CFB、OFB、CTR）、block_padding、aead_cipher（GCM、CCM、EAX、OCB） | — | crypto/block_modes 5 個 | CTS、GCM-SIV、GOFB、KCCM、KCTR、OpenPGP CFB |
+| 區塊加密 | aes、des、aria、camellia、dstu7624、rc_cipher、sm4、threefish、gost28147 | blowfish、cast、seed、serpent、twofish，以及 misc_block_cipher（idea、noekeon、rijndael、skipjack、tea） | crypto/block_cipher 12 個 | — |
+| 模式／padding | block_modes（ECB、CBC、CFB、OFB、CTR、OpenPGP CFB、GOFB、KCTR）、block_padding、aead_cipher（GCM、CCM、EAX、OCB） | — | — | CTS、GCM-SIV、KCCM |
 | 串流加密 | chacha、salsa20、hc、rc4_family | — | — | — |
 | AEAD 專用演算法 | ascon_aead、grain128_aead、sparkle_aead、chacha_aead | — | — | — |
 | 雜湊 | sha、md、keccak、blake、ascon_hash | crypto/digest 的 dstu7564、gost3411、ripemd、skein、sm3，以及 misc_digest（haraka、photon_beetle、sparkle、tiger、whirlpool、xoodyak） | — | — |
@@ -41,9 +41,10 @@ macs、asym_cipher、key_wrap、zeroize、runtime、constant_time 已發行；si
 孵化池 `block_cipher/` 的 6 個，先排能解鎖其他 crate 的，再依使用程度。不常用的 IDEA、
 Rijndael、Noekeon、SKIPJACK、TEA／XTEA 已在 2026-10-30 合併成 `tc_misc_block_cipher`，
 每個演算法一個 feature，也順便避開 crates.io 上 `tc_tea` 被佔用的問題。tc_sm4、
-tc_threefish 與 tc_gost28147 已在 2026-10-30 發行，流程照它們走。舊的
-`crypto/block_cipher/tc_gost28147` 暫留，只剩 `tc_ofb` 的 GOFB 測試在用；GOFB 移植到
-新架構後再刪。
+tc_threefish 與 tc_gost28147 已在 2026-10-30 發行，流程照它們走。同日 tc_block_modes
+0.1.1 補上 OpenPGP CFB、GOFB、KCTR，`crypto/block_modes` 與舊的 `tc_aes`、`tc_gost28147`
+隨之刪除。`crypto/block_cipher` 剩下的 12 個裡，舊的 `tc_des`、`tc_dstu7624` 還被
+`tc_iso9797_mac`、`tc_dstu_macs` 使用，其他 10 個已沒有使用者。
 
 | # | crate | 理由 |
 |---|---|---|

@@ -13,17 +13,6 @@ allocator. Initialization takes borrowed, object-safe parameter traits from
 `tc_params`; callers can use the provided convenience types or implement the
 parameter traits on their own types.
 
-`AesEngine` selects an AES-NI backend on x86 and x86-64 processors that report
-AES and SSE2 support. It reads CPUID through `core::arch`, while the
-`force-portable-aes` feature removes the accelerated backend. `AesLightEngine`
-is always portable and uses less static table storage.
-
-On hosted targets such as Windows and Linux, the operating system manages the
-XMM state required by AES-NI. On bare-metal x86, CPUID cannot confirm that the
-platform enabled XMM/SSE execution or preserves that state across context
-switches. Use `force-portable-aes` unless the platform provides those
-guarantees.
-
 > These crates are learning ports and have not received an independent
 > security audit. Do not use them as replacements for audited cryptographic
 > libraries.
@@ -36,7 +25,7 @@ them with compatible crates.io versions.
 
 ```toml
 [dependencies]
-tc_aes = { package = "tc_aes_old", version = "0.1", path = "crypto/block_cipher/tc_aes" }
+tc_des = { version = "0.1", path = "crypto/block_cipher/tc_des" }
 tc_cipher = { version = "0.1", path = "crypto/tc_cipher" }
 tc_params = { version = "0.1", path = "crypto/tc_params" }
 ```
@@ -45,15 +34,15 @@ Import `BlockCipherInit` to initialize an engine and `BlockCipher` to process a
 block. `CipherDirection` explicitly selects encryption or decryption.
 
 ```rust
-use tc_aes::{AesEngine, BLOCK_BYTES};
 use tc_cipher::{BlockCipher, BlockCipherInit, CipherDirection};
+use tc_des::{BLOCK_BYTES, DesEngine, KEY_BYTES};
 use tc_params::KeyRef;
 
 fn main() -> Result<(), Box<dyn core::error::Error>> {
-    let key = [0x11u8; 16];
+    let key = [0x11u8; KEY_BYTES];
     let plaintext = [0x22u8; BLOCK_BYTES];
 
-    let mut cipher = AesEngine::new();
+    let mut cipher = DesEngine::new();
     cipher.init(CipherDirection::Encrypt, &KeyRef::new(&key))?;
 
     let mut ciphertext = [0u8; BLOCK_BYTES];
@@ -77,8 +66,6 @@ returns `BlockError`; invalid initialization parameters return `InitError`.
 Most engines accept `dyn KeyParams`, so `KeyRef::new(key)` is sufficient. The
 principal exceptions are:
 
-- `Gost28147Engine` requires both `KeyParams` and `SBoxParams`;
-  `tc_gost28147::KeyWithSBox` selects the default, named, or custom S-box.
 - DSTU 7624 and Rijndael use engine types or const parameters to
   select the block size. Key size remains an initialization parameter wherever
   the algorithm permits more than one key size for that block.
@@ -94,13 +81,10 @@ include specification, Monte Carlo, or backend-equivalence tests.
 
 | Status | Crate | Public engines | Key and block support |
 |:------:|-------|----------------|-----------------------|
-| ✅ | [`tc_aes`](tc_aes) | `AesEngine`, `AesLightEngine` | 128-bit block; 128/192/256-bit keys; AES-NI where available |
-| ✅ | [`tc_aria`](tc_aria) | `AriaEngine` | 128-bit block; 128/192/256-bit keys |
 | ✅ | [`tc_blowfish`](tc_blowfish) | `BlowfishEngine` | 64-bit block; 32-448-bit keys |
 | ✅ | [`tc_cast`](tc_cast) | `Cast5Engine`, `Cast6Engine` | CAST5: 64-bit block, 40-128-bit keys; CAST6: 128-bit block, 128-256-bit keys |
 | ✅ | [`tc_des`](tc_des) | `DesEngine`, `DesEdeEngine` | 64-bit block; 8-byte DES or 16/24-byte EDE keys |
 | ✅ | [`tc_dstu7624`](tc_dstu7624) | `Engine128`, `Engine256`, `Engine512` | 128/256/512-bit blocks; same-size or double-size keys where defined |
-| ✅ | [`tc_gost28147`](tc_gost28147) | `Gost28147Engine` | 64-bit block; 256-bit key; named and custom S-boxes |
 | ✅ | [`tc_idea`](tc_idea) | `IdeaEngine` | 64-bit block; 128-bit key |
 | ✅ | [`tc_noekeon`](tc_noekeon) | `NoekeonEngine` | 128-bit block and key |
 | ✅ | [`tc_rijndael`](tc_rijndael) | `Rijndael128Engine` through `Rijndael256Engine` | 128/160/192/224/256-bit blocks and keys in any combination |
@@ -112,6 +96,9 @@ include specification, Monte Carlo, or backend-equivalence tests.
 
 Legend: ✅ migrated and tested, ⬜ TODO.
 
+AES and ARIA have moved to the published
+[`tc_aes`](https://crates.io/crates/tc_aes) and
+[`tc_aria`](https://crates.io/crates/tc_aria) crates.
 RC2, RC5 and RC6 have moved to the published
 [`tc_rc_cipher`](https://crates.io/crates/tc_rc_cipher) crate.
 Camellia has moved to the published
@@ -120,57 +107,24 @@ SM4 has moved to the published [`tc_sm4`](https://crates.io/crates/tc_sm4)
 crate.
 Threefish has moved to the published
 [`tc_threefish`](https://crates.io/crates/tc_threefish) crate.
-GOST 28147-89 is published as
-[`tc_gost28147`](https://crates.io/crates/tc_gost28147); the copy here stays
-only for the GOFB tests of `crypto/block_modes/tc_ofb`, until GOFB moves to the
-new traits.
+GOST 28147-89 has moved to the published
+[`tc_gost28147`](https://crates.io/crates/tc_gost28147) crate.
+
+The copies of DES and DSTU 7624 here stay while `crypto/macs/tc_iso9797_mac`
+and `crypto/macs/tc_dstu_macs` use them; the rest have their successors in the
+top-level `block_cipher` directory.
 
 DES, Triple DES, Blowfish, IDEA, RC2, RC5, SKIPJACK, TEA, XTEA, and other
 older designs are provided for compatibility and study, not as recommendations
 for new protocols.
-
-## AES performance
-
-AES has three execution strategies:
-
-- `AesEngine` uses AES-NI when an x86/x86-64 processor reports AES and SSE2.
-- The same `AesEngine` uses a portable T-table implementation elsewhere.
-- `AesLightEngine` uses a smaller portable table representation when static
-  footprint matters more than throughput.
-
-The following Criterion point estimates were measured on 2026-08-27 using an
-Intel Core i7-1185G7, Rust 1.97.1, and `x86_64-pc-windows-msvc`. Each iteration
-processed one 16-byte block; initialization and key expansion were outside the
-timed loop. Lower latency is better.
-
-Encryption latency:
-
-| Backend | AES-128 | AES-192 | AES-256 |
-|---------|--------:|--------:|--------:|
-| AES-NI | 12.8 ns | 14.7 ns | 14.7 ns |
-| Portable T-table | 65.4 ns | 77.1 ns | 94.4 ns |
-| `AesLightEngine` | 104.5 ns | 125.6 ns | 142.9 ns |
-
-Decryption latency:
-
-| Backend | AES-128 | AES-192 | AES-256 |
-|---------|--------:|--------:|--------:|
-| AES-NI | 12.0 ns | 11.6 ns | 12.7 ns |
-| Portable T-table | 68.3 ns | 81.1 ns | 92.2 ns |
-| `AesLightEngine` | 157.9 ns | 187.4 ns | 224.2 ns |
-
-On that system, AES-NI was approximately 5.1-6.4x faster than the portable
-T-table backend for encryption and 5.7-7.3x faster for decryption. Absolute
-values depend on the processor, compiler, power state, and operating system;
-rerun the benchmark on the target system before making a performance decision.
 
 ## Building and testing
 
 Build or test an individual algorithm crate:
 
 ```bash
-cargo build -p tc_aes_old --locked
-cargo test -p tc_aes_old --locked
+cargo build -p tc_des --locked
+cargo test -p tc_des --locked
 ```
 
 Validate all block cipher crates through the workspace:
@@ -184,17 +138,6 @@ Tests link the Rust standard test harness, but the libraries remain `no_std`.
 Additional validation for a selected crate:
 
 ```bash
-cargo clippy -p tc_aes_old --all-targets --locked -- -D warnings
-cargo rustdoc -p tc_aes_old --locked -- -D warnings
+cargo clippy -p tc_des --all-targets --locked -- -D warnings
+cargo rustdoc -p tc_des --locked -- -D warnings
 ```
-
-Run the AES benchmarks with:
-
-```bash
-cargo bench -p tc_aes_old --bench aes --locked
-cargo bench -p tc_aes_old --bench aes --features force-portable-aes --locked
-```
-
-The first command measures the automatically selected `AesEngine` backend;
-the second forces its portable T-table backend. Both also measure the
-always-portable `AesLightEngine`.

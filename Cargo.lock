@@ -854,16 +854,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tc_aes_old"
-version = "0.1.0"
-dependencies = [
- "criterion",
- "tc_cipher",
- "tc_crypto",
- "tc_params",
-]
-
-[[package]]
 name = "tc_agreement"
 version = "0.1.0"
 
@@ -1195,28 +1185,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tc_cbc"
-version = "0.1.0"
-dependencies = [
- "tc_aes_old",
- "tc_cipher",
- "tc_crypto",
- "tc_des 0.1.0",
- "tc_ecb",
- "tc_params",
-]
-
-[[package]]
-name = "tc_cfb"
-version = "0.1.0"
-dependencies = [
- "tc_aes_old",
- "tc_cipher",
- "tc_crypto",
- "tc_params",
-]
-
-[[package]]
 name = "tc_cfrg_curves"
 version = "0.1.0"
 dependencies = [
@@ -1261,17 +1229,6 @@ checksum = "0bcfe3e4732defe64408b706121575a0fdbd7011a3647566cd0a353daf64c165"
 [[package]]
 name = "tc_crypto"
 version = "0.1.0"
-
-[[package]]
-name = "tc_ctr"
-version = "0.1.0"
-dependencies = [
- "tc_aes_old",
- "tc_cipher",
- "tc_crypto",
- "tc_dstu7624",
- "tc_params",
-]
 
 [[package]]
 name = "tc_des"
@@ -1391,16 +1348,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tc_ecb"
-version = "0.1.0"
-dependencies = [
- "tc_aes_old",
- "tc_cipher",
- "tc_crypto",
- "tc_params",
-]
-
-[[package]]
 name = "tc_ecdh_kek"
 version = "0.1.0"
 dependencies = [
@@ -1510,15 +1457,6 @@ dependencies = [
 [[package]]
 name = "tc_gost28147"
 version = "0.1.0"
-dependencies = [
- "tc_cipher",
- "tc_crypto",
- "tc_params",
-]
-
-[[package]]
-name = "tc_gost28147"
-version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b54d4f875d196c123ca065208bbceeb75812e5ad27fbd52b7f6012a48d061fb2"
 dependencies = [
@@ -1531,7 +1469,7 @@ name = "tc_gost28147_mac"
 version = "0.1.0"
 dependencies = [
  "tc_crypto",
- "tc_gost28147 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tc_gost28147",
  "tc_macs",
  "tc_params",
 ]
@@ -1542,7 +1480,7 @@ version = "0.1.0"
 dependencies = [
  "tc_block_cipher",
  "tc_digest",
- "tc_gost28147 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tc_gost28147",
 ]
 
 [[package]]
@@ -1702,17 +1640,6 @@ version = "0.1.0"
 dependencies = [
  "tc_cipher",
  "tc_crypto",
- "tc_params",
-]
-
-[[package]]
-name = "tc_ofb"
-version = "0.1.0"
-dependencies = [
- "tc_aes_old",
- "tc_cipher",
- "tc_crypto",
- "tc_gost28147 0.1.0",
  "tc_params",
 ]
 

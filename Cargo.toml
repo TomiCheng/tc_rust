@@ -5,7 +5,6 @@ members = [
     "crypto/tc_*",
     "crypto/agreement/*",
     "crypto/block_cipher/*",
-    "crypto/block_modes/*",
     "crypto/digest/*",
     "crypto/macs/*",
     "ies/*",
