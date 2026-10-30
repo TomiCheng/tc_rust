@@ -1,0 +1,10 @@
+[package]
+name = "tc_operator"
+description = "Signature and verifier factories over AlgorithmIdentifier, after Bouncy Castle's Crypto.Operators."
+version.workspace = true
+edition.workspace = true
+rust-version = "1.85"
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
