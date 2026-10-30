@@ -1277,23 +1277,22 @@ dependencies = [
 [[package]]
 name = "tc_dstu7624"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c26e5319b34a61d3cef6d5d4d0e93fdbff40f69b5b2d967c51d5f6ac1576b366"
 dependencies = [
- "tc_cipher",
- "tc_crypto",
- "tc_params",
+ "tc_block_cipher",
+ "tc_zeroize",
 ]
 
 [[package]]
 name = "tc_dstu_macs"
 version = "0.1.0"
 dependencies = [
- "tc_cipher",
- "tc_crypto",
+ "tc_block_cipher",
  "tc_digest",
  "tc_dstu7564",
  "tc_dstu7624",
  "tc_macs",
- "tc_params",
 ]
 
 [[package]]

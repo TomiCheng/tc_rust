@@ -1,7 +1,5 @@
-use tc_crypto::AlgorithmName;
 use tc_dstu_macs::Dstu7564Mac;
-use tc_macs::{InitError, Mac, MacError, MacInit};
-use tc_params::{KeyParams, KeyRef};
+use tc_macs::{InitError, KeyParams, KeyRef, Mac, MacError, MacInit};
 
 fn hex(input: &str) -> Vec<u8> {
     let (pairs, remainder) = input.as_bytes().as_chunks::<2>();
@@ -119,9 +117,7 @@ fn trait_objects_names_and_errors_work() {
     assert_eq!(mac.update(&[]), Err(MacError::NotInitialised));
     mac.init(params).unwrap();
 
-    let mut name = String::new();
-    mac.write_algo_name(&mut name).unwrap();
-    assert_eq!(name, "DSTU7564Mac");
+    assert_eq!(mac.to_string(), "DSTU7564Mac");
 
     let mac: &mut dyn Mac<Error = MacError> = &mut mac;
     mac.update(&message).unwrap();

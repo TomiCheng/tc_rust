@@ -4,7 +4,6 @@ members = [
     "asn1/*",
     "crypto/tc_*",
     "crypto/agreement/*",
-    "crypto/block_cipher/*",
     "crypto/digest/*",
     "crypto/macs/*",
     "ies/*",

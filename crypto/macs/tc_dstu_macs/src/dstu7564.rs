@@ -3,11 +3,9 @@
 use alloc::{vec, vec::Vec};
 use core::fmt;
 
-use tc_crypto::AlgorithmName;
 use tc_digest::{Digest, TryDigest};
 use tc_dstu7564::Dstu7564Digest;
-use tc_macs::{InitError, Mac, MacError, MacInit};
-use tc_params::KeyParams;
+use tc_macs::{InitError, KeyParams, Mac, MacError, MacInit};
 
 /// DSTU 7564 message authentication code.
 pub struct Dstu7564Mac {
@@ -74,9 +72,9 @@ impl Dstu7564Mac {
     }
 }
 
-impl AlgorithmName for Dstu7564Mac {
-    fn write_algo_name(&self, output: &mut dyn fmt::Write) -> fmt::Result {
-        output.write_str("DSTU7564Mac")
+impl fmt::Display for Dstu7564Mac {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("DSTU7564Mac")
     }
 }
 

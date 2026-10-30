@@ -11,12 +11,12 @@
 
 | 類別 | 已發行 | 孵化池（新架構） | 孵化池（舊 trait） | BC 有、還沒做 |
 |---|---|---|---|---|
-| 區塊加密 | aes、des、aria、camellia、dstu7624、rc_cipher、sm4、threefish、gost28147 | blowfish、cast、seed、serpent、twofish，以及 misc_block_cipher（idea、noekeon、rijndael、skipjack、tea） | crypto/block_cipher 1 個：dstu7624（只為 dstu_macs 保留） | — |
+| 區塊加密 | aes、des、aria、camellia、dstu7624、rc_cipher、sm4、threefish、gost28147 | blowfish、cast、seed、serpent、twofish，以及 misc_block_cipher（idea、noekeon、rijndael、skipjack、tea） | — | — |
 | 模式／padding | block_modes（ECB、CBC、CFB、OFB、CTR、OpenPGP CFB、GOFB、KCTR）、block_padding、aead_cipher（GCM、CCM、EAX、OCB） | — | — | CTS、GCM-SIV、KCCM |
 | 串流加密 | chacha、salsa20、hc、rc4_family | — | — | — |
 | AEAD 專用演算法 | ascon_aead、grain128_aead、sparkle_aead、chacha_aead | — | — | — |
 | 雜湊 | sha、md、keccak、blake、ascon_hash | crypto/digest 的 dstu7564、gost3411、ripemd、skein、sm3，以及 misc_digest（haraka、photon_beetle、sparkle、tiger、whirlpool、xoodyak） | — | — |
-| MAC | macs、poly1305 | iso9797_mac（crypto/macs） | crypto/macs 5 個：dstu_macs、gost28147_mac、kmac、siphash、vmpc_mac（依賴 tc_crypto） | — |
+| MAC | macs、poly1305 | crypto/macs 的 dstu_macs、iso9797_mac | crypto/macs 4 個：gost28147_mac、kmac、siphash、vmpc_mac（依賴 tc_crypto） | — |
 | Key wrap | key_wrap、des_wrap、dstu7624_wrap、rc2_wrap | — | — | — |
 | 非對稱加密 | rsa、asym_encoding、asym_iso9796 | cfrg_curves（X25519、Ed25519、X448、Ed448）、ec_key | — | ElGamal、Naccache-Stern、SM2 加密 |
 | 簽章 | — | signer、rsa_signer、dsa、ecdsa_v2 | — | PSS、X9.31、ISO 9796-2、GOST 3410、ECGOST 3410、DSTU 4145、SM2、ECNR |
@@ -30,7 +30,7 @@ macs、asym_cipher、key_wrap、zeroize、runtime、constant_time 已發行；si
 
 ## 觀察
 
-1. 對稱演算法幾乎都已發行。剩下的是孵化池的 10 個區塊加密等畢業，以及 MAC 5 個
+1. 對稱演算法幾乎都已發行。剩下的是孵化池的 10 個區塊加密等畢業，以及 MAC 4 個
    要先從舊 trait 遷到新的。
 2. 非對稱是空洞最大的一側：簽章、金鑰協商都還沒發行，而且缺不少演算法。tc_security
    驗不了 ECDSA，原因之一是 ecdsa_v2 還沒接上 tc_signer。
@@ -44,8 +44,8 @@ Rijndael、Noekeon、SKIPJACK、TEA／XTEA 已在 2026-10-30 合併成 `tc_misc_
 tc_threefish 與 tc_gost28147 已在 2026-10-30 發行，流程照它們走。同日 tc_block_modes
 0.1.1 補上 OpenPGP CFB、GOFB、KCTR，`crypto/block_modes` 與舊的 `tc_aes`、`tc_gost28147`
 隨之刪除；沒有使用者的另外 10 個舊版也已刪除，它們的新版都在 `block_cipher/`。
-`tc_iso9797_mac` 改用發行版 `tc_des` 與新 trait 後，舊的 `tc_des` 也已刪除；
-`crypto/block_cipher` 只剩舊的 `tc_dstu7624`，因為 `tc_dstu_macs` 還在用。
+`tc_iso9797_mac` 與 `tc_dstu_macs` 改用發行版 `tc_des`、`tc_dstu7624` 與新 trait 後，
+最後兩個舊版也已刪除，`crypto/block_cipher` 整個移除。
 
 | # | crate | 理由 |
 |---|---|---|

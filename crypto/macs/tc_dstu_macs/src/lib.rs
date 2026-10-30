@@ -7,7 +7,7 @@
 //! ```
 //! use tc_dstu_macs::Dstu7564Mac;
 //! use tc_macs::{Mac, MacInit};
-//! use tc_params::KeyRef;
+//! use tc_macs::KeyRef;
 //!
 //! # fn main() -> Result<(), Box<dyn core::error::Error>> {
 //! let key = core::array::from_fn::<_, 32, _>(|index| (31 - index) as u8);

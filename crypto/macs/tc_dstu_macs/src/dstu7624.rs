@@ -2,11 +2,9 @@
 
 use core::fmt;
 
-use tc_cipher::{BlockCipher, BlockCipherInit, BlockError, CipherDirection, InitError};
-use tc_crypto::AlgorithmName;
-use tc_dstu7624::Engine;
-use tc_macs::{Mac, MacInit};
-use tc_params::KeyParams;
+use tc_block_cipher::{BlockCipher, BlockCipherInit, BlockError, CipherDirection, KeyParams};
+use tc_dstu7624::Dstu7624Engine as Engine;
+use tc_macs::{InitError, Mac, MacInit};
 
 const MAX_BLOCK_BYTES: usize = 64;
 
@@ -167,9 +165,9 @@ where
     }
 }
 
-impl<const BLOCK_WORDS: usize> AlgorithmName for Dstu7624Mac<BLOCK_WORDS> {
-    fn write_algo_name(&self, output: &mut dyn fmt::Write) -> fmt::Result {
-        output.write_str("DSTU7624Mac")
+impl<const BLOCK_WORDS: usize> fmt::Display for Dstu7624Mac<BLOCK_WORDS> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("DSTU7624Mac")
     }
 }
 
@@ -246,15 +244,18 @@ where
 impl<P, const BLOCK_WORDS: usize> MacInit<P> for Dstu7624Mac<BLOCK_WORDS>
 where
     P: KeyParams + ?Sized,
-    Engine<BLOCK_WORDS>: BlockCipher<Error = BlockError> + BlockCipherInit<P, Error = InitError>,
+    Engine<BLOCK_WORDS>:
+        BlockCipher<Error = BlockError> + BlockCipherInit<P, Error = tc_block_cipher::InitError>,
 {
-    type Error = InitError;
+    type Error = InitError<tc_block_cipher::InitError>;
 
     fn init(&mut self, params: &P) -> Result<(), Self::Error> {
         self.initialized = false;
         self.clear_message();
         self.delta.fill(0);
-        self.cipher.init(CipherDirection::Encrypt, params)?;
+        self.cipher
+            .init(CipherDirection::Encrypt, params)
+            .map_err(InitError::Cipher)?;
         let zeroes = [0_u8; MAX_BLOCK_BYTES];
         self.cipher
             .process_block(

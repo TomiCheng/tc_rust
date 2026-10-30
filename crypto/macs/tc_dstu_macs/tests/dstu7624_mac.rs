@@ -1,6 +1,5 @@
 use tc_dstu_macs::{Dstu7624Mac128, Dstu7624Mac512, Dstu7624MacError};
-use tc_macs::{Mac, MacInit};
-use tc_params::KeyRef;
+use tc_macs::{KeyRef, Mac, MacInit};
 
 #[test]
 fn matches_the_bouncy_castle_128_bit_block_vector() {

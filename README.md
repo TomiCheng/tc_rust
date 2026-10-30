@@ -179,9 +179,9 @@ and the crates that remain here depend on the published version.
 - [`crypto/digest`](crypto/digest) and [`crypto/macs`](crypto/macs) — digest
   and MAC families not yet graduated, such as RIPEMD, Whirlpool, GOST 34.11,
   SM3, Skein, SipHash and KMAC
-- The earlier generation on the legacy `tc_crypto`, `tc_cipher` and
-  `tc_params` traits: [`crypto/block_cipher`](crypto/block_cipher) and
-  `crypto/tc_pad`. They stay while other incubator crates still depend on them.
+- The earlier generation of shared traits: `crypto/tc_crypto` and
+  `crypto/tc_params`, which four MACs in `crypto/macs` still use, and
+  `crypto/tc_cipher` and `crypto/tc_pad`, which nothing uses any more.
 
 ## Implemented algorithms
 
