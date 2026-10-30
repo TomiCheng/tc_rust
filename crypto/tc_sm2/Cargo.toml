@@ -1,0 +1,26 @@
+[package]
+name = "tc_sm2"
+description = "SM2 public-key cryptography (GM/T 0003), ported from Bouncy Castle C#."
+version.workspace = true
+edition.workspace = true
+rust-version = "1.85"
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+rand_core = { workspace = true }
+tc_asym_cipher = "0.1.0"
+tc_bigint = { version = "0.1.0", features = ["alloc", "rand_core"] }
+tc_digest = "0.1.0"
+tc_ec_core = "0.1.0"
+tc_ec_key = { version = "0.1.0", path = "../tc_ec_key" }
+tc_f2m_curve = "0.1.0"
+tc_fp_curve = "0.1.0"
+tc_fp_custom = "0.1.0"
+tc_sm3 = "0.1.0"
+tc_zeroize = "0.1.0"
+
+[dev-dependencies]
+rand = { workspace = true }
+tc_digest = "0.1.0"
+tc_sha = "0.1.1"

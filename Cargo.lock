@@ -1826,6 +1826,35 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_sm2"
+version = "0.1.0"
+dependencies = [
+ "rand",
+ "rand_core",
+ "tc_asym_cipher",
+ "tc_bigint",
+ "tc_digest",
+ "tc_ec_core",
+ "tc_ec_key",
+ "tc_f2m_curve",
+ "tc_fp_curve",
+ "tc_fp_custom",
+ "tc_sha",
+ "tc_sm3",
+ "tc_zeroize",
+]
+
+[[package]]
+name = "tc_sm3"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ae65052ce36b96ec17da5daee91eec86992a57219a9eedbe40b76a8b4bc7e07d"
+dependencies = [
+ "tc_digest",
+ "tc_zeroize",
+]
+
+[[package]]
 name = "tc_stream_cipher"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
