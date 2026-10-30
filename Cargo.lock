@@ -1574,15 +1574,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tc_idea_v2"
-version = "0.1.0"
-dependencies = [
- "idea",
- "tc_block_cipher",
- "tc_zeroize",
-]
-
-[[package]]
 name = "tc_ies"
 version = "0.1.0"
 dependencies = [
@@ -1681,6 +1672,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_misc_block_cipher"
+version = "0.1.0"
+dependencies = [
+ "aes",
+ "idea",
+ "tc_block_cipher",
+ "tc_zeroize",
+ "xtea",
+]
+
+[[package]]
 name = "tc_modular"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1703,14 +1705,6 @@ dependencies = [
  "tc_cipher",
  "tc_crypto",
  "tc_params",
-]
-
-[[package]]
-name = "tc_noekeon_v2"
-version = "0.1.0"
-dependencies = [
- "tc_block_cipher",
- "tc_zeroize",
 ]
 
 [[package]]
@@ -1826,15 +1820,6 @@ dependencies = [
  "tc_cipher",
  "tc_crypto",
  "tc_params",
-]
-
-[[package]]
-name = "tc_rijndael_v2"
-version = "0.1.0"
-dependencies = [
- "aes",
- "tc_block_cipher",
- "tc_zeroize",
 ]
 
 [[package]]
@@ -2028,14 +2013,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tc_skipjack_v2"
-version = "0.1.0"
-dependencies = [
- "tc_block_cipher",
- "tc_zeroize",
-]
-
-[[package]]
 name = "tc_sm3"
 version = "0.1.0"
 dependencies = [
@@ -2065,15 +2042,6 @@ dependencies = [
  "tc_cipher",
  "tc_crypto",
  "tc_params",
-]
-
-[[package]]
-name = "tc_tea_v2"
-version = "0.1.0"
-dependencies = [
- "tc_block_cipher",
- "tc_zeroize",
- "xtea",
 ]
 
 [[package]]

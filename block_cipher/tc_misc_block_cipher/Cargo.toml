@@ -1,0 +1,25 @@
+[package]
+name = "tc_misc_block_cipher"
+description = "Less common block ciphers: IDEA, Noekeon, Rijndael, SKIPJACK and TEA/XTEA, one feature each."
+version.workspace = true
+edition.workspace = true
+rust-version = "1.85"
+license.workspace = true
+repository.workspace = true
+
+[features]
+default = []
+idea = []
+noekeon = []
+rijndael = []
+skipjack = []
+tea = []
+
+[dependencies]
+tc_block_cipher = "0.1.0"
+tc_zeroize = "0.1.0"
+
+[dev-dependencies]
+aes = "0.9"
+idea = "0.6"
+xtea = "0.1"

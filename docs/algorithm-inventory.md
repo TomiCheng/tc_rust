@@ -11,7 +11,7 @@
 
 | 類別 | 已發行 | 孵化池（新架構） | 孵化池（舊 trait） | BC 有、還沒做 |
 |---|---|---|---|---|
-| 區塊加密 | aes、des、aria、camellia、dstu7624、rc_cipher、sm4 | 12 個：blowfish、cast、gost28147、idea、noekeon、rijndael、seed、serpent、skipjack、tea、threefish、twofish | crypto/block_cipher 15 個 | — |
+| 區塊加密 | aes、des、aria、camellia、dstu7624、rc_cipher、sm4 | blowfish、cast、gost28147、seed、serpent、threefish、twofish，以及 misc_block_cipher（idea、noekeon、rijndael、skipjack、tea） | crypto/block_cipher 15 個 | — |
 | 模式／padding | block_modes（ECB、CBC、CFB、OFB、CTR）、block_padding、aead_cipher（GCM、CCM、EAX、OCB） | — | crypto/block_modes 5 個 | CTS、GCM-SIV、GOFB、KCCM、KCTR、OpenPGP CFB |
 | 串流加密 | chacha、salsa20、hc、rc4_family | — | — | — |
 | AEAD 專用演算法 | ascon_aead、grain128_aead、sparkle_aead、chacha_aead | — | — | — |
@@ -38,7 +38,9 @@ macs、asym_cipher、key_wrap、zeroize、runtime、constant_time 已發行；si
 
 ## 區塊加密的畢業順序
 
-孵化池 `block_cipher/` 的 12 個，先排能解鎖其他 crate 的，再依使用程度。tc_sm4 已在
+孵化池 `block_cipher/` 的 8 個，先排能解鎖其他 crate 的，再依使用程度。不常用的 IDEA、
+Rijndael、Noekeon、SKIPJACK、TEA／XTEA 已在 2026-10-30 合併成 `tc_misc_block_cipher`，
+每個演算法一個 feature，也順便避開 crates.io 上 `tc_tea` 被佔用的問題。tc_sm4 已在
 2026-10-30 發行，流程照它走。
 
 | # | crate | 理由 |
@@ -50,11 +52,7 @@ macs、asym_cipher、key_wrap、zeroize、runtime、constant_time 已發行；si
 | 5 | blowfish | 舊系統很常見 |
 | 6 | twofish | VeraCrypt、KeePass |
 | 7 | serpent | 含 Tnepres；VeraCrypt |
-| 8 | idea | 只剩舊 OpenPGP |
-| 9 | rijndael | 只在需要非 128 位元區塊時用 |
-| 10 | noekeon | 很少用 |
-| 11 | skipjack | 主要是歷史意義 |
-| 12 | tea | 含 XTEA；crates.io 上的 `tc_tea` 已被別人佔用，要先決定新名稱 |
+| 8 | misc_block_cipher | IDEA（舊 OpenPGP）、Rijndael（非 128 位元區塊）、Noekeon、SKIPJACK、TEA／XTEA |
 
 每個 crate 畢業時都要決定要不要加 `rustcrypto` feature。原則照 SM4：RustCrypto 版本洩漏
 較少，或速度差很多時才加。
