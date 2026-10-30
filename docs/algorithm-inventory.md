@@ -36,6 +36,52 @@ macs、asym_cipher、key_wrap、zeroize、runtime、constant_time 已發行；si
    驗不了 ECDSA，原因之一是 ecdsa_v2 還沒接上 tc_signer。
 3. 後量子演算法完全沒做，見下一節。
 
+## 區塊加密的畢業順序
+
+孵化池 `block_cipher/` 的 12 個，先排能解鎖其他 crate 的，再依使用程度。tc_sm4 已在
+2026-10-30 發行，流程照它走。
+
+| # | crate | 理由 |
+|---|---|---|
+| 1 | threefish | Skein 雜湊的核心，畢業後 crypto/digest 的 Skein 能改用發行版；ARX，本身常數時間 |
+| 2 | gost28147 | 解鎖 GOST 3411 雜湊與 GOST 28147 MAC；俄羅斯標準，Magma 的前身 |
+| 3 | seed | 韓國標準，TLS 與 CMS 會用到 |
+| 4 | cast | CAST5 與 CAST6；CAST5 是 OpenPGP 的舊預設，CMS 也有 OID |
+| 5 | blowfish | 舊系統很常見 |
+| 6 | twofish | VeraCrypt、KeePass |
+| 7 | serpent | 含 Tnepres；VeraCrypt |
+| 8 | idea | 只剩舊 OpenPGP |
+| 9 | rijndael | 只在需要非 128 位元區塊時用 |
+| 10 | noekeon | 很少用 |
+| 11 | skipjack | 主要是歷史意義 |
+| 12 | tea | 含 XTEA；crates.io 上的 `tc_tea` 已被別人佔用，要先決定新名稱 |
+
+每個 crate 畢業時都要決定要不要加 `rustcrypto` feature。原則照 SM4：RustCrypto 版本洩漏
+較少，或速度差很多時才加。
+
+## 雜湊的遷移與畢業順序
+
+crypto/digest 的 11 個都依賴本地舊的 `tc_digest`。其中 `tc_skein` 與 `tc_gost3411` 另外經由
+`tc_cipher` 依賴舊的 `tc_threefish`、`tc_gost28147`，要等這兩個區塊加密畢業。
+
+| # | crate | 理由 |
+|---|---|---|
+| 1 | sm3 | 中國標準，SM2 簽章與金鑰交換都要用；TLS 1.3（RFC 8998）；沒有阻擋 |
+| 2 | ripemd | RIPEMD-160 很常見（Bitcoin、OpenPGP、舊憑證）；沒有阻擋 |
+| 3 | dstu7564 | Kupyna，烏克蘭標準，與 DSTU 7624、4145 配套 |
+| 4 | whirlpool | ISO 標準，VeraCrypt |
+| 5 | tiger | 舊系統（Tiger Tree Hash） |
+| 6 | gost3411 | 要等 gost28147 畢業 |
+| 7 | skein | 要等 threefish 畢業 |
+| 8 | sparkle（Esch） | NIST 輕量密碼決賽，未入選 |
+| 9 | xoodyak | 同上 |
+| 10 | photon_beetle | 同上 |
+| 11 | haraka | 給標準化前 SPHINCS+ 的短輸入雜湊，用途最窄 |
+
+每個要做的事相同：改依賴 crates.io 的 `tc_digest`，刪掉 `algorithm_name()` 改實作
+`Display`，搬到 TomiCheng/tc_digest 發行。8–10 可以考慮合成一個 crate 發行；
+tc_ascon_hash 是入選者，維持獨立。
+
 ## 後量子
 
 bc-csharp 的後量子程式分在兩處。行數為約略值。
