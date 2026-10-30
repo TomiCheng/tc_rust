@@ -1727,6 +1727,9 @@ dependencies = [
 [[package]]
 name = "tc_operator"
 version = "0.1.0"
+dependencies = [
+ "tc_asn1_x509",
+]
 
 [[package]]
 name = "tc_pad"

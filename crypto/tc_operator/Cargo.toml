@@ -8,3 +8,4 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
+tc_asn1_x509 = { version = "0.1.0", path = "../../asn1/tc_asn1_x509" }
