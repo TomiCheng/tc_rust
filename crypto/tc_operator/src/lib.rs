@@ -29,7 +29,7 @@ mod traits;
 pub use errors::OperatorError;
 
 pub use traits::{
-    DigestCalculator, DigestFactory, KeyUnwrapper, KeyWrapper, MacCalculator, MacFactory,
-    SignatureCalculator, SignatureFactory, VerifierCalculator, VerifierFactory,
-    VerifierFactoryProvider,
+    CipherBuilder, CipherBuilderWithKey, CipherWriter, DigestCalculator, DigestFactory,
+    KeyUnwrapper, KeyWrapper, MacCalculator, MacFactory, SignatureCalculator, SignatureFactory,
+    VerifierCalculator, VerifierFactory, VerifierFactoryProvider,
 };

@@ -1,3 +1,4 @@
+mod asn1_cipher_builder_with_key;
 mod asn1_digest_factory;
 mod asn1_key_unwrapper;
 mod asn1_key_wrapper;
@@ -5,9 +6,12 @@ mod asn1_mac_factory;
 mod asn1_signature_factory;
 mod asn1_verifier_factory;
 mod asn1_verifier_factory_provider;
+mod cms_content_encryptor_builder;
+mod der;
 mod rsa_key_wrap;
 mod sig_alg_id;
 
+pub use asn1_cipher_builder_with_key::Asn1CipherBuilderWithKey;
 pub use asn1_digest_factory::Asn1DigestFactory;
 pub use asn1_key_unwrapper::Asn1KeyUnwrapper;
 pub use asn1_key_wrapper::Asn1KeyWrapper;
@@ -15,3 +19,4 @@ pub use asn1_mac_factory::Asn1MacFactory;
 pub use asn1_signature_factory::Asn1SignatureFactory;
 pub use asn1_verifier_factory::Asn1VerifierFactory;
 pub use asn1_verifier_factory_provider::Asn1VerifierFactoryProvider;
+pub use cms_content_encryptor_builder::CmsContentEncryptorBuilder;

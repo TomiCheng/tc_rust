@@ -1,3 +1,6 @@
+mod cipher_builder;
+mod cipher_builder_with_key;
+mod cipher_writer;
 mod digest_calculator;
 mod digest_factory;
 mod key_unwrapper;
@@ -10,6 +13,9 @@ mod verifier_calculator;
 mod verifier_factory;
 mod verifier_factory_provider;
 
+pub use cipher_builder::CipherBuilder;
+pub use cipher_builder_with_key::CipherBuilderWithKey;
+pub use cipher_writer::CipherWriter;
 pub use digest_calculator::DigestCalculator;
 pub use digest_factory::DigestFactory;
 pub use key_unwrapper::KeyUnwrapper;

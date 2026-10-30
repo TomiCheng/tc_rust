@@ -1,8 +1,8 @@
-use tc_asn1::{Asn1Object, Decode, DecodingOptions, Encode, EncodingOptions};
 use tc_asn1_pkcs::RsaesOaepParams;
 use tc_asn1_x509::alg::AlgorithmIdentifier;
 use tc_security::SecurityError;
 
+use super::der::{reparse, to_object};
 use crate::OperatorError;
 
 const RSA_ENCRYPTION: &str = "1.2.840.113549.1.1.1";
@@ -123,14 +123,4 @@ impl RsaKeyWrap {
             cipher,
         })
     }
-}
-
-fn reparse<T: Decode>(parameters: &Asn1Object) -> Result<T, OperatorError> {
-    let der = parameters.encode_to_vec(&EncodingOptions::DER)?;
-    Ok(T::decode(&der, &DecodingOptions::default())?.1)
-}
-
-fn to_object<T: Encode>(value: &T) -> Result<Asn1Object, OperatorError> {
-    let der = value.encode_to_vec(&EncodingOptions::DER)?;
-    Ok(Asn1Object::decode(&der, &DecodingOptions::default())?.1)
 }

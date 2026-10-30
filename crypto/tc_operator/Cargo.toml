@@ -15,3 +15,5 @@ tc_asn1 = "0.1.1"
 tc_digest = "0.1.0"
 tc_macs = "0.1.0"
 tc_asn1_pkcs = { version = "0.1.0", path = "../../asn1/tc_asn1_pkcs" }
+tc_asn1_cms = { version = "0.1.0", path = "../../asn1/tc_asn1_cms" }
+tc_buffered_cipher = { version = "0.1.1", features = ["alloc"] }

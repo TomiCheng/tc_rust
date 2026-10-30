@@ -1729,8 +1729,10 @@ name = "tc_operator"
 version = "0.1.0"
 dependencies = [
  "tc_asn1",
+ "tc_asn1_cms",
  "tc_asn1_pkcs",
  "tc_asn1_x509",
+ "tc_buffered_cipher",
  "tc_digest 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tc_macs",
  "tc_security",
