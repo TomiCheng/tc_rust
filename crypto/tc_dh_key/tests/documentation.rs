@@ -1,4 +1,4 @@
-const METHODS: [&str; 9] = [
+const METHODS: [&str; 10] = [
     "fmt",
     "drop",
     "eq",
@@ -8,6 +8,7 @@ const METHODS: [&str; 9] = [
     "public_value",
     "has_any_small_factors_safe",
     "rounds",
+    "safe_prime_gen2",
 ];
 
 fn checked(line: &str) -> bool {
@@ -76,6 +77,11 @@ fn every_public_method_and_helper_states_constant_or_variable_time() {
             "params/parameters.rs",
             include_str!("../src/params/parameters.rs"),
             14,
+        ),
+        (
+            "standard_groups.rs",
+            include_str!("../src/standard_groups.rs"),
+            18,
         ),
         (
             "params/private_key.rs",

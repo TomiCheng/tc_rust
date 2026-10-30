@@ -1,6 +1,7 @@
 //! Diffie-Hellman 的網域參數與金鑰，移植自 Bouncy Castle 的 `DHParameters`、
 //! `DHPublicKeyParameters`、`DHPrivateKeyParameters`、`DHKeyPairGenerator` 與
-//! `DHParametersGenerator`。DH 協商與 ElGamal 共用這一層。
+//! `DHParametersGenerator`。DH 協商與 ElGamal 共用這一層。[`standard_groups`] 是 BC 的
+//! `DHStandardGroups`：RFC 2409、3526、7919 公布的群組。
 //!
 //! ```
 //! use tc_asym_cipher::{KeyPairGenerator, KeyPairGeneratorInit};
@@ -31,6 +32,7 @@ mod math;
 mod parameters_generator;
 mod params;
 mod small_primes;
+pub mod standard_groups;
 
 pub use error::DhError;
 pub use key_pair_generator::DhKeyPairGenerator;
