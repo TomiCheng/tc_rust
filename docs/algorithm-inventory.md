@@ -19,7 +19,7 @@
 | 雜湊 | sha、md、keccak、blake、ascon_hash、dstu7564、gost3411、ripemd、skein、sm3、misc_digest（haraka、photon_beetle、sparkle、tiger、whirlpool、xoodyak） | — | — | — |
 | MAC | macs、poly1305 | crypto/macs 的 dstu_macs、gost28147_mac、iso9797_mac、kmac、siphash、vmpc_mac | — | — |
 | Key wrap | key_wrap、des_wrap、dstu7624_wrap、rc2_wrap | — | — | — |
-| 非對稱加密 | rsa、asym_encoding、asym_iso9796 | cfrg_curves（X25519、Ed25519、X448、Ed448）、ec_key | — | ElGamal、Naccache-Stern、SM2 加密 |
+| 非對稱加密 | rsa、asym_encoding、asym_iso9796 | cfrg_curves（X25519、Ed25519、X448、Ed448）、ec_key、dh_key、elgamal、naccache_stern、sm2（加密） | — | — |
 | 簽章 | — | signer、rsa_signer、dsa、ecdsa_v2 | — | PSS、X9.31、ISO 9796-2、GOST 3410、ECGOST 3410、DSTU 4145、SM2、ECNR |
 | 金鑰協商 | — | agreement、ecdh_v2 | — | DH、ECMQV、ECVKO、SM2 金鑰交換、J-PAKE、SRP6 |
 | KDF／PBE／亂數 | — | kdf、pbe、pwhash、dh_kek、ecdh_kek、drbg | — | — |
