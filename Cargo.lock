@@ -1216,6 +1216,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_dh"
+version = "0.1.0"
+dependencies = [
+ "rand",
+ "tc_agreement",
+ "tc_asym_cipher",
+ "tc_bigint",
+ "tc_constant_time",
+ "tc_dh_key",
+ "tc_modular",
+ "tc_zeroize",
+]
+
+[[package]]
 name = "tc_dh_kek"
 version = "0.1.0"
 dependencies = [
