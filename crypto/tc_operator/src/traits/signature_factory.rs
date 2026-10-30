@@ -5,8 +5,13 @@ use tc_asn1_x509::alg::AlgorithmIdentifier;
 use crate::SignatureCalculator;
 
 pub trait SignatureFactory {
-    type Calculator: SignatureCalculator<Error = Self::Error>;
-    type Error: core::error::Error + From<io::Error> + Send + Sync + 'static;
+    type Calculator: SignatureCalculator;
+    type Error: core::error::Error
+        + From<io::Error>
+        + From<<Self::Calculator as SignatureCalculator>::Error>
+        + Send
+        + Sync
+        + 'static;
 
     fn algorithm(&self) -> &AlgorithmIdentifier;
 
@@ -15,6 +20,6 @@ pub trait SignatureFactory {
     fn sign(&self, data: &[u8]) -> Result<Vec<u8>, Self::Error> {
         let mut calculator = self.create_calculator()?;
         calculator.write_all(data)?;
-        calculator.finish()
+        Ok(calculator.finish()?)
     }
 }

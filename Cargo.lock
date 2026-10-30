@@ -1728,7 +1728,9 @@ dependencies = [
 name = "tc_operator"
 version = "0.1.0"
 dependencies = [
+ "tc_asn1",
  "tc_asn1_x509",
+ "tc_security",
  "tc_signer",
 ]
 
