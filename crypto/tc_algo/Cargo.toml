@@ -154,6 +154,7 @@ elgamal = ["dep:tc_elgamal"]
 naccache-stern = ["dep:tc_naccache_stern"]
 
 [dependencies]
+rand_core = "0.10.1"
 tc_asn1 = "0.1.2"
 tc_blake = { version = "0.1.0", optional = true }
 tc_cfrg_curves = { version = "0.1.0", path = "../tc_cfrg_curves", optional = true }

@@ -37,12 +37,16 @@ impl Error for AlgoError {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum ErrorKind {
     UnknownDigest,
+    UnknownGenerator,
+    InvalidKeyGenParams,
 }
 
 impl fmt::Display for ErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             ErrorKind::UnknownDigest => f.write_str("unknown digest algorithm"),
+            ErrorKind::UnknownGenerator => f.write_str("unknown key generator"),
+            ErrorKind::InvalidKeyGenParams => f.write_str("invalid key generation parameters"),
         }
     }
 }

@@ -882,6 +882,7 @@ dependencies = [
 name = "tc_algo"
 version = "0.1.0"
 dependencies = [
+ "rand_core",
  "tc_asn1",
  "tc_bigint",
  "tc_blake",
