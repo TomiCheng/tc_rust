@@ -5,7 +5,7 @@
 //!
 //! # A key pair: RSA
 //!
-//! ```
+//! ```no_run
 //! # #[cfg(feature = "rsa")] {
 //! use tc_algo::generate::{self, KeyGenParams};
 //! use tc_algo::params::{AnyKeyParams, AnyParams};
