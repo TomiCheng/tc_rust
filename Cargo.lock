@@ -1317,10 +1317,18 @@ version = "0.1.0"
 dependencies = [
  "rand",
  "rand_core",
+ "tc_asn1",
+ "tc_asym_cipher",
  "tc_bigint",
  "tc_digest",
+ "tc_ec_core",
+ "tc_ec_key",
+ "tc_ecdsa_v2",
+ "tc_fp_curve",
+ "tc_fp_custom",
  "tc_macs",
  "tc_sha",
+ "tc_signer",
  "tc_zeroize",
 ]
 

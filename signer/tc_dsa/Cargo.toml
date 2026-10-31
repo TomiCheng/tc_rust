@@ -9,11 +9,19 @@ repository.workspace = true
 
 [dependencies]
 rand_core = { workspace = true }
+tc_asn1 = "0.1.2"
+tc_asym_cipher = "0.1.0"
 tc_bigint = { version = "0.1.0", features = ["alloc", "rand_core"] }
 tc_digest = "0.1.0"
 tc_macs = { version = "0.1.0", features = ["hmac", "alloc"] }
+tc_signer = { version = "0.1.0", path = "../tc_signer" }
 tc_zeroize = "0.1.0"
 
 [dev-dependencies]
 rand = { workspace = true }
+tc_ec_core = "0.1.0"
+tc_ec_key = { version = "0.1.0", path = "../../crypto/tc_ec_key" }
+tc_ecdsa_v2 = { version = "0.1.0", path = "../tc_ecdsa_v2" }
+tc_fp_curve = "0.1.0"
+tc_fp_custom = "0.1.0"
 tc_sha = "0.1.1"
