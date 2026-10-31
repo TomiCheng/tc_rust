@@ -1,4 +1,5 @@
 use crate::EcError;
+use tc_asym_cipher::AsymmetricKeyParams;
 use tc_bigint::PaddedBigUint;
 use tc_ec_core::{Curve, Point};
 use tc_zeroize::Zeroize;
@@ -30,6 +31,13 @@ impl<C: Curve<Scalar = PaddedBigUint>> EcPrivateKey<C> {
 
     pub fn d(&self) -> &PaddedBigUint {
         &self.d
+    }
+}
+
+/// BC's `IsPrivate`: always. Constant time.
+impl<C: Curve<Scalar = PaddedBigUint>> AsymmetricKeyParams for EcPrivateKey<C> {
+    fn is_private_key(&self) -> bool {
+        true
     }
 }
 

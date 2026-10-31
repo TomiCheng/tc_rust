@@ -1,4 +1,5 @@
 use crate::EcError;
+use tc_asym_cipher::AsymmetricKeyParams;
 use tc_ec_core::algo::import_point;
 use tc_ec_core::{Curve, Point};
 
@@ -28,5 +29,12 @@ impl<C: Curve> EcPublicKey<C> {
 
     pub fn q(&self) -> &C::Point {
         &self.q
+    }
+}
+
+/// BC's `IsPrivate`: never. Constant time.
+impl<C: Curve> AsymmetricKeyParams for EcPublicKey<C> {
+    fn is_private_key(&self) -> bool {
+        false
     }
 }
