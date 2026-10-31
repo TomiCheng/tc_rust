@@ -11,9 +11,10 @@ repository.workspace = true
 # Every algorithm is in the default except the weak ones and those kept only for legacy use. For
 # digests those are MD2, MD4, MD5, SHA-1, RIPEMD-128, RIPEMD-256 (no stronger than RIPEMD-128,
 # only longer) and GOST R 34.11-94; for EC keys, the curves below 112 bits (ec-small-curves) and
-# the binary curves (ec-f2m), which NIST SP 800-186 keeps for legacy use only. NONE stays out too:
-# it is not a hash, so a stray "NONE" must not silently stop hashing. The family features still
-# include all of them.
+# the binary curves (ec-f2m), which NIST SP 800-186 keeps for legacy use only; for other keys,
+# DSA, GOST R 34.10-94 and ElGamal. NONE stays out too: it is not a hash, so a stray "NONE" must
+# not silently stop hashing. So does Naccache-Stern, too niche to pull in for everyone. The
+# family features still include all of them.
 default = [
     "sha224",
     "sha256",
@@ -55,6 +56,10 @@ default = [
     "ec",
     "x25519",
     "x448",
+    "ed25519",
+    "ed448",
+    "dh",
+    "ml-kem",
 ]
 md = ["md2", "md4", "md5"]
 md2 = ["dep:tc_md"]
@@ -132,21 +137,42 @@ ec-small-curves = [
 # X25519 and X448 keys (RFC 7748)
 x25519 = ["dep:tc_cfrg_curves"]
 x448 = ["dep:tc_cfrg_curves", "tc_cfrg_curves/x448"]
+# Ed25519 and Ed448 keys (RFC 8032)
+ed25519 = ["dep:tc_cfrg_curves"]
+ed448 = ["dep:tc_cfrg_curves", "tc_cfrg_curves/ed448"]
+# Finite-field Diffie-Hellman keys
+dh = ["dep:tc_dh_key"]
+# ML-KEM keys (FIPS 203)
+ml-kem = ["dep:tc_ml_kem"]
+# DSA keys. FIPS 186-5 keeps DSA only for verifying old signatures, so it is not in the default
+dsa = ["dep:tc_dsa_key"]
+# GOST R 34.10-94 keys, replaced by the EC versions of 2001 and 2012, so not in the default
+gost3410 = ["dep:tc_gost3410_key"]
+# ElGamal keys, kept for old OpenPGP data, so not in the default
+elgamal = ["dep:tc_elgamal"]
+# Naccache-Stern keys: an unstandardized homomorphic scheme, too niche for the default
+naccache-stern = ["dep:tc_naccache_stern"]
 
 [dependencies]
 tc_asn1 = "0.1.2"
 tc_blake = { version = "0.1.0", optional = true }
 tc_cfrg_curves = { version = "0.1.0", path = "../tc_cfrg_curves", optional = true }
+tc_dh_key = { version = "0.1.0", path = "../tc_dh_key", optional = true }
 tc_digest = "0.1.1"
+tc_dsa_key = { version = "0.1.0", path = "../tc_dsa_key", optional = true }
 tc_dstu7564 = { version = "0.1.0", optional = true }
 tc_ec_key = { version = "0.1.0", path = "../tc_ec_key", optional = true }
+tc_elgamal = { version = "0.1.0", path = "../tc_elgamal", optional = true }
 tc_f2m_custom = { version = "0.1.0", optional = true }
 tc_fp_curve = { version = "0.1.0", optional = true }
 tc_fp_custom = { version = "0.1.0", optional = true }
+tc_gost3410_key = { version = "0.1.0", path = "../tc_gost3410_key", optional = true }
 tc_gost3411 = { version = "0.1.0", optional = true }
 tc_keccak = { version = "0.1.0", optional = true }
 tc_md = { version = "0.1.1", optional = true }
 tc_misc_digest = { version = "0.1.0", optional = true }
+tc_ml_kem = { version = "0.1.0", path = "../tc_ml_kem", optional = true }
+tc_naccache_stern = { version = "0.1.0", path = "../tc_naccache_stern", optional = true }
 tc_ripemd = { version = "0.1.0", optional = true }
 tc_rsa = { version = "0.1.0", optional = true }
 tc_sha = { version = "0.1.1", optional = true }
