@@ -1,8 +1,9 @@
-const METHODS: [&str; 5] = [
+const METHODS: [&str; 6] = [
     "fmt",
     "init",
     "agreement_size",
     "calculate_agreement",
+    "calculate_message",
     "write_be",
 ];
 
@@ -56,6 +57,7 @@ fn every_public_method_and_helper_states_constant_or_variable_time() {
             include_str!("../src/basic_agreement.rs"),
             5,
         ),
+        ("agreement.rs", include_str!("../src/agreement.rs"), 5),
         ("error.rs", include_str!("../src/error.rs"), 1),
     ] {
         let (count, missing) = missing_timing_docs(source);

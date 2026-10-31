@@ -90,7 +90,7 @@ impl Agreement for DhBasicAgreement {
 
 /// `value` 以大端序寫滿 `output`，前面補零；value 必須放得下。對值是常數時間：只依寬度
 /// 決定讀寫的位置。
-fn write_be(value: &PaddedBigUint, output: &mut [u8]) {
+pub(crate) fn write_be(value: &PaddedBigUint, output: &mut [u8]) {
     let mut bytes = ArrayEncoding::<u8>::to_be(value);
     let length = output.len().min(bytes.len());
     output.fill(0);

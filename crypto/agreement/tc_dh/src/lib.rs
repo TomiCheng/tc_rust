@@ -1,5 +1,6 @@
-//! Diffie-Hellman 金鑰協商，移植自 Bouncy Castle 的 `DHBasicAgreement`，實作
-//! `tc_agreement` 的 trait。參數與金鑰來自 `tc_dh_key`。
+//! Diffie-Hellman 金鑰協商，移植自 Bouncy Castle：`DHBasicAgreement` 實作 `tc_agreement`
+//! 的 trait；兩階段的 MTI/A0 協商 `DHAgreement` 見 [`DhAgreement`]。參數與金鑰來自
+//! `tc_dh_key`。
 //!
 //! Alice 與 Bob 在公開的通道上只交換公鑰，就協商出同一個秘密：
 //!
@@ -39,8 +40,10 @@
 
 extern crate alloc;
 
+mod agreement;
 mod basic_agreement;
 mod error;
 
+pub use agreement::DhAgreement;
 pub use basic_agreement::DhBasicAgreement;
 pub use error::DhAgreementError;

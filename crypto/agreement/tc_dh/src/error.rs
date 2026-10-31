@@ -12,6 +12,10 @@ pub enum DhAgreementError {
     WrongParameters,
     /// 對方公鑰不合格：不在 `[2, p - 2]`、不在 q 階子群，或 p 太大。
     InvalidPublicKey(DhError),
+    /// 對方的一次性訊息不合格，條件同公鑰。
+    InvalidMessage(DhError),
+    /// 在 `calculate_message` 之前就要求兩階段協商。
+    MessageNotCalculated,
     /// 共享秘密是 1。
     InvalidAgreement,
     /// 輸出緩衝區短於協商結果。
@@ -30,6 +34,10 @@ impl fmt::Display for DhAgreementError {
             Self::InvalidPublicKey(error) => {
                 write!(f, "Diffie-Hellman public key is weak: {error}")
             }
+            Self::InvalidMessage(error) => {
+                write!(f, "Diffie-Hellman message is weak: {error}")
+            }
+            Self::MessageNotCalculated => f.write_str("the message has not been calculated"),
             Self::InvalidAgreement => f.write_str("Shared key can't be 1"),
             Self::BufferTooSmall => f.write_str("the output buffer is too small"),
         }
