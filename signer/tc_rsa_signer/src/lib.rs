@@ -38,7 +38,13 @@
 extern crate alloc;
 
 mod error;
+mod mask_generator;
+mod pss_error;
+mod pss_signer;
 mod rsa_digest_signer;
 
 pub use error::RsaDigestSignerError;
+pub use mask_generator::{MaskGenerator, Mgf1, XofMgf};
+pub use pss_error::PssSignerError;
+pub use pss_signer::{PssSigner, TRAILER_IMPLICIT};
 pub use rsa_digest_signer::RsaDigestSigner;

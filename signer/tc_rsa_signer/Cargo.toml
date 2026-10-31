@@ -13,14 +13,16 @@ tc_asn1 = "0.1.1"
 tc_asn1_x509 = { version = "0.1.0", path = "../../asn1/tc_asn1_x509" }
 tc_asym_cipher = "0.1.0"
 tc_asym_encoding = "0.1.0"
+tc_bigint = { version = "0.1.0", features = ["alloc"] }
 tc_constant_time = "0.1.0"
-tc_digest = "0.1.0"
+tc_digest = { version = "0.1.1", features = ["alloc"] }
+tc_rsa = "0.1.0"
 tc_signer = { version = "0.1.0", path = "../tc_signer" }
+tc_zeroize = { version = "0.1.0", features = ["alloc"] }
 
 [dev-dependencies]
 num-traits = { version = "0.2.19", default-features = false }
 rand = { workspace = true }
 tc_asn1_pkcs = { version = "0.1.0", path = "../../asn1/tc_asn1_pkcs" }
-tc_bigint = { version = "0.1.0", features = ["alloc"] }
-tc_rsa = "0.1.0"
+tc_keccak = "0.1.0"
 tc_sha = "0.1.1"

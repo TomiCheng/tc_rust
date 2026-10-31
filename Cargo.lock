@@ -1291,9 +1291,12 @@ dependencies = [
 
 [[package]]
 name = "tc_digest"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1c37ed9f10c96ccd2c46a9a2b872070772c6385621665f4ba076b6d779e6be6f"
+checksum = "bf0a02b57924ef895bdedcc8f9d703e57caf831f578eeda6e97ed246e0fb59c6"
+dependencies = [
+ "tc_zeroize",
+]
 
 [[package]]
 name = "tc_drbg"
@@ -1837,9 +1840,11 @@ dependencies = [
  "tc_bigint",
  "tc_constant_time",
  "tc_digest",
+ "tc_keccak",
  "tc_rsa",
  "tc_sha",
  "tc_signer",
+ "tc_zeroize",
 ]
 
 [[package]]
