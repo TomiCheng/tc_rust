@@ -8,8 +8,10 @@ license.workspace = true
 repository.workspace = true
 
 [features]
-# Broken or discouraged digests stay out of the default: MD2, MD4, MD5 and SHA-1. The family
-# features still include them.
+# Every digest is in the default except the weak ones: MD2, MD4, MD5, SHA-1, RIPEMD-128,
+# RIPEMD-256 (no stronger than RIPEMD-128, only longer) and GOST R 34.11-94. NONE stays out too:
+# it is not a hash, so a stray "NONE" must not silently stop hashing. The family features still
+# include all of them.
 default = [
     "sha224",
     "sha256",
@@ -28,6 +30,25 @@ default = [
     "keccak-512",
     "shake128",
     "shake256",
+    "blake2b-160",
+    "blake2b-256",
+    "blake2b-384",
+    "blake2b-512",
+    "blake2s-128",
+    "blake2s-160",
+    "blake2s-224",
+    "blake2s-256",
+    "blake3-256",
+    "dstu7564-256",
+    "dstu7564-384",
+    "dstu7564-512",
+    "gost3411-2012-256",
+    "gost3411-2012-512",
+    "ripemd160",
+    "ripemd320",
+    "sm3",
+    "tiger",
+    "whirlpool",
 ]
 md = ["md2", "md4", "md5"]
 md2 = ["dep:tc_md"]
