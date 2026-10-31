@@ -1333,6 +1333,37 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_dsa_key"
+version = "0.1.0"
+dependencies = [
+ "rand",
+ "rand_core",
+ "tc_asym_cipher",
+ "tc_bigint",
+ "tc_digest",
+ "tc_modular",
+ "tc_prime",
+ "tc_sha",
+ "tc_zeroize",
+]
+
+[[package]]
+name = "tc_dsa_signer"
+version = "0.1.0"
+dependencies = [
+ "rand",
+ "tc_asym_cipher",
+ "tc_bigint",
+ "tc_digest",
+ "tc_dsa",
+ "tc_dsa_key",
+ "tc_modular",
+ "tc_sha",
+ "tc_signer",
+ "tc_zeroize",
+]
+
+[[package]]
 name = "tc_dstu4145"
 version = "0.1.0"
 dependencies = [

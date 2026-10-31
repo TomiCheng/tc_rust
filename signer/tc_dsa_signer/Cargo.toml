@@ -1,0 +1,22 @@
+[package]
+name = "tc_dsa_signer"
+description = "The DSA signer (FIPS 186), ported from Bouncy Castle C#."
+version.workspace = true
+edition.workspace = true
+rust-version = "1.85"
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+tc_bigint = { version = "0.1.0", features = ["alloc"] }
+tc_dsa = { version = "0.1.0", path = "../tc_dsa" }
+tc_dsa_key = { version = "0.1.0", path = "../../crypto/tc_dsa_key" }
+tc_modular = { version = "0.1.0", features = ["alloc"] }
+tc_zeroize = "0.1.0"
+
+[dev-dependencies]
+rand = { workspace = true }
+tc_asym_cipher = "0.1.0"
+tc_digest = "0.1.0"
+tc_sha = "0.1.1"
+tc_signer = { version = "0.1.0", path = "../tc_signer" }
