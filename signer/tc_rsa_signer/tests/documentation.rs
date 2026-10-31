@@ -1,4 +1,4 @@
-const METHODS: [&str; 8] = [
+const METHODS: [&str; 10] = [
     "fmt",
     "init",
     "max_signature_size",
@@ -7,6 +7,8 @@ const METHODS: [&str; 8] = [
     "verify_signature",
     "reset",
     "generate",
+    "signature_block",
+    "write_be",
 ];
 
 fn checked(line: &str) -> bool {
@@ -51,7 +53,7 @@ fn missing_timing_docs(source: &str) -> (usize, Vec<String>) {
     (count, missing)
 }
 
-/// 只掃描 PSS 的檔案；`RsaDigestSigner` 早於這個慣例，doc 是英文。
+/// 只掃描 PSS 與 X9.31 的檔案；`RsaDigestSigner` 早於這個慣例，doc 是英文。
 #[test]
 fn every_public_method_and_helper_states_constant_or_variable_time() {
     for (name, source, minimum) in [
@@ -62,6 +64,9 @@ fn every_public_method_and_helper_states_constant_or_variable_time() {
             4,
         ),
         ("pss_error.rs", include_str!("../src/pss_error.rs"), 1),
+        ("x931_signer.rs", include_str!("../src/x931_signer.rs"), 10),
+        ("x931_error.rs", include_str!("../src/x931_error.rs"), 1),
+        ("iso_trailers.rs", include_str!("../src/iso_trailers.rs"), 1),
     ] {
         let (count, missing) = missing_timing_docs(source);
         assert!(count >= minimum, "only {count} methods scanned in {name}");

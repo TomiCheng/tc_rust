@@ -1,3 +1,4 @@
+use crate::iso_trailers::TRAILER_IMPLICIT;
 use crate::{MaskGenerator, Mgf1, PssSignerError};
 use alloc::vec;
 use alloc::vec::Vec;
@@ -11,9 +12,6 @@ use tc_digest::{Digest, TryDigest};
 use tc_rsa::RsaKeyParams;
 use tc_signer::{Signer, SignerInit};
 use tc_zeroize::Zeroizing;
-
-/// PSS 預設的結尾位元組，BC 的 `TrailerImplicit`。
-pub const TRAILER_IMPLICIT: u8 = 0xBC;
 
 /// BC 的 `PssSigner`：RFC 8017 8.1 的 RSASSA-PSS。訊息以 `C` 雜湊（通常與 `D` 相同；
 /// [`raw`](PssSigner::raw) 時是呼叫端算好的雜湊），M' = 0x00 × 8 ‖ mHash ‖ salt 以 `D`
@@ -78,7 +76,7 @@ impl<E, D: Digest + Clone, R> PssSigner<E, D, Mgf1<D>, R> {
             digest,
             rng,
             salt: None,
-            trailer: TRAILER_IMPLICIT,
+            trailer: TRAILER_IMPLICIT as u8,
             state: None,
         }
     }
@@ -97,7 +95,7 @@ impl<E, D: Digest + Clone + Display, R> PssSigner<E, D, Mgf1<D>, R, Prehash> {
             digest,
             rng,
             salt: None,
-            trailer: TRAILER_IMPLICIT,
+            trailer: TRAILER_IMPLICIT as u8,
             state: None,
         }
     }
