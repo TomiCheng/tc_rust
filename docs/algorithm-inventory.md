@@ -24,10 +24,10 @@
 | 金鑰協商 | — | agreement、ecdh_v2（ECDH、ECDHC）、dh（基本與 MTI/A0）、ecmqv、ecvko、sm2（金鑰交換）、srp6、jpake、agreement_kdf（WithKdf） | — | — |
 | KDF／PBE／亂數 | — | kdf、pbe、pwhash、dh_kek、ecdh_kek、drbg | — | — |
 | 數學 | bigint、modular、prime、binpoly、ec_core、fp_curve、fp_custom、f2m_curve、f2m_custom | — | — | — |
-| 後量子 | — | — | — | ML-KEM、ML-DSA、SLH-DSA、Falcon、LMS 等，BC 的 `pqc` 整包 |
+| 後量子 | — | ml_kem | — | ML-DSA、SLH-DSA、Falcon、LMS 等，BC 的 `pqc` 整包 |
 
 契約與基礎 crate 另計：block_cipher、buffered_cipher、stream_cipher、aead_cipher、digest、
-macs、asym_cipher、key_wrap、zeroize、runtime、constant_time 已發行；signer、agreement 在孵化池。
+macs、asym_cipher、key_wrap、zeroize、runtime、constant_time 已發行；signer、agreement、kem 在孵化池。
 
 ## 觀察
 
@@ -35,7 +35,7 @@ macs、asym_cipher、key_wrap、zeroize、runtime、constant_time 已發行；si
    等畢業；它們都已接在新的 trait 上。
 2. 非對稱是空洞最大的一側：簽章、金鑰協商都還沒發行，但兩者的演算法都已齊全。ecdsa_v2
    現在可經 DsaDigestSigner 當成 tc_signer 的簽章器，但 tc_security 的工廠還沒接上。
-3. 後量子演算法完全沒做，見下一節。
+3. 後量子只做了 ML-KEM（純軟體），見下一節。
 
 ## 區塊加密的畢業順序
 
@@ -95,8 +95,8 @@ bc-csharp 的後量子程式分在兩處。行數為約略值。
 
 ### 建議順序
 
-1. ML-KEM → ML-DSA → SLH-DSA：都是正式標準，總量不大。ML-KEM 已有規劃：先純軟體，
-   量出瓶頸後再做 AVX2 四路平行的 Keccak。SHAKE 由已發行的 tc_keccak 提供。
-2. KEM 的契約 crate（BC 的 `IKemEncapsulator`、`IKemDecapsulator`），目前沒有。
+1. ML-KEM → ML-DSA → SLH-DSA：都是正式標準，總量不大。ML-KEM 的純軟體版已在孵化池，
+   接著量出瓶頸，再決定是否做 AVX2 四路平行的 Keccak。SHAKE 由已發行的 tc_keccak 提供。
+2. KEM 的契約 crate 已在孵化池：tc_kem（BC 的 `IKemEncapsulator`、`IKemDecapsulator`）。
 3. LMS；Falcon 與 HQC 等標準定案。
 4. 舊版本與落選候選不做，除非要和舊系統互通。
