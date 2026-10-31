@@ -1,7 +1,7 @@
 #![cfg(feature = "aes")]
 
 use tc_algo::ErrorKind;
-use tc_algo::cipher::{self, CipherDirection};
+use tc_algo::cipher::{self, CipherDirection, CipherEntry};
 use tc_algo::params::{AnyKeyParams, AnyParams, SecretKey};
 
 fn hex(text: &str) -> Vec<u8> {
@@ -9,6 +9,11 @@ fn hex(text: &str) -> Vec<u8> {
         .step_by(2)
         .map(|i| u8::from_str_radix(&text[i..i + 2], 16).unwrap())
         .collect()
+}
+
+// The other block ciphers' rows are there too when their features are on
+fn aes_entries() -> impl Iterator<Item = &'static CipherEntry> {
+    cipher::algorithms().filter(|entry| entry.name().starts_with("AES/"))
 }
 
 fn params(key: &str, iv: Option<&str>) -> AnyParams {
@@ -85,7 +90,7 @@ fn gcm_gives_the_ciphertext_and_tag_of_the_gcm_specification() {
 #[test]
 fn every_combination_decrypts_what_it_encrypts() {
     let message: Vec<u8> = (1..=37).collect();
-    for entry in cipher::algorithms() {
+    for entry in aes_entries() {
         let mut parts = entry.name().split('/');
         let (mode, padding) = (parts.nth(1).unwrap(), parts.next().unwrap());
         let key = "000102030405060708090a0b0c0d0e0f";
@@ -197,7 +202,7 @@ fn a_name_outside_the_table_is_an_unknown_cipher() {
 #[test]
 fn every_oid_finds_the_combination_it_names() {
     let mut count = 0;
-    for entry in cipher::algorithms() {
+    for entry in aes_entries() {
         for oid in entry.oids() {
             let cipher = cipher::get_by_oid(&oid.oid()).unwrap();
             assert_eq!(cipher.entry().name(), entry.name(), "{}", oid.dotted());
@@ -313,7 +318,7 @@ fn a_wrong_padding_and_a_wrong_tag_fail_alike() {
 
 #[test]
 fn the_table_has_every_mode_and_padding_but_aead_only_without_padding() {
-    assert_eq!(cipher::algorithms().count(), 5 * 7 + 4);
+    assert_eq!(aes_entries().count(), 5 * 7 + 4);
     let entry = cipher::get_by_name("AES/CBC").unwrap();
     assert_eq!(
         entry.entry().to_string(),

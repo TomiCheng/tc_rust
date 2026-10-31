@@ -895,6 +895,7 @@ dependencies = [
  "tc_block_padding",
  "tc_buffered_cipher",
  "tc_cfrg_curves",
+ "tc_des",
  "tc_dh_key",
  "tc_digest",
  "tc_dsa_key",

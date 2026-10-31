@@ -4,6 +4,8 @@
 #[cfg(feature = "aes")]
 mod aes;
 mod compose;
+#[cfg(feature = "des")]
+mod des;
 mod modes;
 mod paddings;
 pub(in crate::cipher) mod specs;
@@ -23,6 +25,8 @@ pub(super) use compose::create;
 static ALGORITHMS: &[AlgorithmSpec] = &[
     #[cfg(feature = "aes")]
     aes::AES,
+    #[cfg(feature = "des")]
+    des::DES,
 ];
 
 // One entry per valid combination: an AEAD mode only with NoPadding, a mode only on the block

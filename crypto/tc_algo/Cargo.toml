@@ -12,9 +12,9 @@ repository.workspace = true
 # digests those are MD2, MD4, MD5, SHA-1, RIPEMD-128, RIPEMD-256 (no stronger than RIPEMD-128,
 # only longer) and GOST R 34.11-94; for EC keys, the curves below 112 bits (ec-small-curves) and
 # the binary curves (ec-f2m), which NIST SP 800-186 keeps for legacy use only; for other keys,
-# DSA, GOST R 34.10-94 and ElGamal. NONE stays out too: it is not a hash, so a stray "NONE" must
-# not silently stop hashing. So does Naccache-Stern, too niche to pull in for everyone. The
-# family features still include all of them.
+# DSA, GOST R 34.10-94 and ElGamal; for ciphers, DES. NONE stays out too: it is not a hash, so a
+# stray "NONE" must not silently stop hashing. So does Naccache-Stern, too niche to pull in for
+# everyone. The family features still include all of them.
 default = [
     "sha224",
     "sha256",
@@ -122,6 +122,8 @@ whirlpool = ["dep:tc_misc_digest", "tc_misc_digest/whirlpool"]
 null-digest = ["tc_digest/alloc"]
 # AES: its key generator and its ciphers in every mode the table pairs it with
 aes = ["dep:tc_aes"]
+# DES: its ciphers in every mode the table pairs it with
+des = ["dep:tc_des"]
 # RSA keys
 rsa = ["dep:tc_rsa", "dep:tc_asym_cipher"]
 # EC keys on the prime curves secp224k1 to secp521r1 and sm2p256v1
@@ -169,6 +171,7 @@ tc_block_modes = { version = "0.1.1", features = ["alloc"] }
 tc_block_padding = { version = "0.1.0", features = ["rand_core"] }
 tc_buffered_cipher = { version = "0.1.1", features = ["alloc"] }
 tc_cfrg_curves = { version = "0.1.0", path = "../tc_cfrg_curves", optional = true }
+tc_des = { version = "0.1.1", optional = true }
 tc_dh_key = { version = "0.1.0", path = "../tc_dh_key", optional = true }
 tc_digest = "0.1.1"
 tc_dsa_key = { version = "0.1.0", path = "../tc_dsa_key", optional = true }
