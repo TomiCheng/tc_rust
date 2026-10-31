@@ -160,7 +160,34 @@ fn the_pkcs_1_oids_find_pkcs1_and_oaep_with_sha_1() {
 
 #[test]
 fn the_table_has_rsa_with_each_of_its_paddings() {
-    assert_eq!(rsa_entries().count(), 8);
+    let iso9796 = usize::from(cfg!(feature = "rsa-iso9796"));
+    let md5 = usize::from(cfg!(feature = "md5"));
+    assert_eq!(rsa_entries().count(), 8 + iso9796 + md5);
+}
+
+#[cfg(feature = "rsa-iso9796")]
+#[test]
+fn iso_9796_1_finds_its_names_and_refuses_a_changed_ciphertext() {
+    for name in ["RSA//ISO9796-1", "rsa/ecb/iso9796-1padding"] {
+        let cipher = cipher::get_by_name(name).unwrap();
+        assert_eq!(cipher.entry().name(), "RSA/NONE/ISO9796-1PADDING", "{name}");
+    }
+    let name = "RSA/NONE/ISO9796-1PADDING";
+    let mut ciphertext = cipher::encrypt(name, &public(), b"message").unwrap();
+    ciphertext[100] ^= 1;
+    let error = cipher::decrypt(name, &private(), &ciphertext).unwrap_err();
+    assert_eq!(error.kind(), ErrorKind::InvalidCiphertext);
+}
+
+#[cfg(feature = "md5")]
+#[test]
+fn oaep_with_md5_comes_with_the_md5_feature() {
+    let name = "RSA/NONE/OAEPWITHMD5ANDMGF1PADDING";
+    let ciphertext = cipher::encrypt(name, &public(), b"attack at dawn").unwrap();
+    assert_eq!(
+        cipher::decrypt(name, &private(), &ciphertext).unwrap(),
+        b"attack at dawn"
+    );
 }
 
 #[test]

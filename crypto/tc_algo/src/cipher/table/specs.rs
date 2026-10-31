@@ -2,9 +2,19 @@ use tc_asn1::NamedOid;
 
 use crate::cipher::dyn_cipher::DynCipher;
 use crate::cipher::engine::AnyEngine;
-#[cfg(feature = "rsa")]
+#[cfg(any(
+    feature = "rsa",
+    feature = "elgamal",
+    feature = "naccache-stern",
+    feature = "sm2"
+))]
 use crate::cipher::init_params::InitParams;
-#[cfg(feature = "rsa")]
+#[cfg(any(
+    feature = "rsa",
+    feature = "elgamal",
+    feature = "naccache-stern",
+    feature = "sm2"
+))]
 use crate::params::AnyKeyParams;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -119,11 +129,31 @@ pub(in crate::cipher) struct StreamSpec {
     pub(in crate::cipher) oids: &'static [NamedOid],
 }
 
-// One asymmetric cipher: it takes every padding of the asymmetric table and no mode
-#[cfg(feature = "rsa")]
+// An asymmetric cipher that encrypts a whole message of any length, not one block, as SM2 does.
+// Its modes are its own, and it takes no padding
+#[cfg(feature = "sm2")]
+pub(in crate::cipher) struct MessageSpec {
+    // The first is the canonical name, the rest are aliases
+    pub(in crate::cipher) names: &'static [&'static str],
+    // The first is what a name without a mode gives
+    pub(in crate::cipher) modes: &'static [MessageModeSpec],
+    // The key of the params, if it is one this cipher takes
+    pub(in crate::cipher) key: fn(&AnyKeyParams) -> Option<InitParams>,
+}
+
+#[cfg(feature = "sm2")]
+pub(in crate::cipher) struct MessageModeSpec {
+    pub(in crate::cipher) name: &'static str,
+    pub(in crate::cipher) create: fn() -> Box<dyn DynCipher>,
+}
+
+// One asymmetric cipher: it takes the paddings it lists, and no mode
+#[cfg(any(feature = "rsa", feature = "elgamal", feature = "naccache-stern"))]
 pub(in crate::cipher) struct AsymmetricSpec {
     // The first is the canonical name, the rest are aliases
     pub(in crate::cipher) names: &'static [&'static str],
+    pub(in crate::cipher) paddings: &'static [AsymmetricPaddingKind],
+    // Called only with one of its paddings
     pub(in crate::cipher) create: fn(AsymmetricPaddingKind) -> Box<dyn DynCipher>,
     // The key of the params, if it is one of this algorithm's
     pub(in crate::cipher) key: fn(&AnyKeyParams) -> Option<InitParams>,
@@ -131,11 +161,15 @@ pub(in crate::cipher) struct AsymmetricSpec {
 }
 
 // The OAEP variants are those of Bouncy Castle: the hash of the label first, then that of MGF1
-#[cfg(feature = "rsa")]
+#[cfg(any(feature = "rsa", feature = "elgamal", feature = "naccache-stern"))]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(in crate::cipher) enum AsymmetricPaddingKind {
     NoPadding,
     Pkcs1,
+    #[cfg(feature = "rsa-iso9796")]
+    Iso9796d1,
+    #[cfg(feature = "md5")]
+    OaepMd5,
     OaepSha1,
     OaepSha224,
     OaepSha256,
@@ -144,7 +178,7 @@ pub(in crate::cipher) enum AsymmetricPaddingKind {
     OaepSha512,
 }
 
-#[cfg(feature = "rsa")]
+#[cfg(any(feature = "rsa", feature = "elgamal", feature = "naccache-stern"))]
 pub(in crate::cipher) struct AsymmetricPaddingSpec {
     pub(in crate::cipher) kind: AsymmetricPaddingKind,
     // The first is the canonical name, the rest are aliases

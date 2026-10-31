@@ -12,10 +12,11 @@ repository.workspace = true
 # digests those are MD2, MD4, MD5, SHA-1, RIPEMD-128, RIPEMD-256 (no stronger than RIPEMD-128,
 # only longer) and GOST R 34.11-94; for EC keys, the curves below 112 bits (ec-small-curves) and
 # the binary curves (ec-f2m), which NIST SP 800-186 keeps for legacy use only; for other keys,
-# DSA, GOST R 34.10-94 and ElGamal; for ciphers, DES, RC4 and VMPC. NONE stays out too: it is not
-# a hash, so a stray "NONE" must not silently stop hashing. So do Naccache-Stern, too niche to
-# pull in for everyone, and HC-128 and HC-256, kept for Bouncy Castle's sake, whose lookups into
-# secret tables are not constant time. The family features still include all of them.
+# DSA, GOST R 34.10-94 and ElGamal; for ciphers, DES, RC4, VMPC and RSA with ISO 9796-1, a
+# withdrawn standard. NONE stays out too: it is not a hash, so a stray "NONE" must not silently
+# stop hashing. So do Naccache-Stern, too niche to pull in for everyone, HC-128 and HC-256, kept
+# for Bouncy Castle's sake, whose lookups into secret tables are not constant time, and SM2
+# encryption, whose names are this crate's own. The family features still include all of them.
 default = [
     "sha224",
     "sha256",
@@ -139,6 +140,8 @@ vmpc = ["dep:tc_rc4_family"]
 hc = ["dep:tc_hc"]
 # RSA: its keys, its key pair generator and its ciphers with each padding the table pairs it with
 rsa = ["dep:tc_rsa", "dep:tc_asym_cipher", "dep:tc_asym_encoding", "dep:tc_sha"]
+# RSA with ISO 9796-1 padding: the standard is withdrawn, and the encoding is not constant time
+rsa-iso9796 = ["rsa", "dep:tc_asym_iso9796"]
 # EC keys on the prime curves secp224k1 to secp521r1 and sm2p256v1
 ec = ["dep:tc_ec_key", "dep:tc_fp_custom"]
 # The binary SEC 2 curves sect233k1 to sect571r1
@@ -166,10 +169,13 @@ ml-kem = ["dep:tc_ml_kem"]
 dsa = ["dep:tc_dsa_key"]
 # GOST R 34.10-94 keys, replaced by the EC versions of 2001 and 2012, so not in the default
 gost3410 = ["dep:tc_gost3410_key"]
-# ElGamal keys, kept for old OpenPGP data, so not in the default
-elgamal = ["dep:tc_elgamal"]
-# Naccache-Stern keys: an unstandardized homomorphic scheme, too niche for the default
-naccache-stern = ["dep:tc_naccache_stern"]
+# SM2 encryption (GM/T 0003) on sm2p256v1. Bouncy Castle's factory has no name for it, so the
+# names are this crate's own and it is not in the default
+sm2 = ["ec", "dep:tc_sm2", "dep:tc_asym_cipher"]
+# ElGamal keys and ciphers, kept for old OpenPGP data, so not in the default
+elgamal = ["dep:tc_elgamal", "dep:tc_asym_cipher", "dep:tc_asym_encoding", "dep:tc_sha"]
+# Naccache-Stern keys and cipher: an unstandardized homomorphic scheme, too niche for the default
+naccache-stern = ["dep:tc_naccache_stern", "dep:tc_asym_cipher"]
 
 [dependencies]
 rand = "0.10.3"
@@ -179,6 +185,7 @@ tc_aead_cipher = { version = "0.1.0", features = ["alloc"] }
 tc_aes = { version = "0.1.0", optional = true }
 tc_asym_cipher = { version = "0.1.0", optional = true }
 tc_asym_encoding = { version = "0.1.0", optional = true }
+tc_asym_iso9796 = { version = "0.1.0", optional = true }
 tc_blake = { version = "0.1.0", optional = true }
 tc_block_cipher = "0.1.0"
 tc_block_modes = { version = "0.1.1", features = ["alloc"] }
@@ -209,6 +216,7 @@ tc_ripemd = { version = "0.1.0", optional = true }
 tc_rsa = { version = "0.1.0", optional = true }
 tc_salsa20 = { version = "0.1.0", optional = true }
 tc_sha = { version = "0.1.1", optional = true }
+tc_sm2 = { version = "0.1.0", path = "../tc_sm2", optional = true }
 tc_sm3 = { version = "0.1.0", optional = true }
 tc_stream_cipher = "0.1.0"
 tc_zeroize = { version = "0.1.0", features = ["alloc"] }

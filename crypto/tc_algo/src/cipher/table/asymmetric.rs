@@ -5,7 +5,8 @@ use super::specs::{AsymmetricPaddingKind, AsymmetricPaddingSpec};
 pub(super) const ASYMMETRIC_MODE_NAMES: &[&str] = &["NONE", "ECB"];
 
 // The names of Bouncy Castle, matched without regard to ASCII case and with '-' and '_' the same.
-// OAEPPADDING is OAEP with SHA-1, as id-RSAES-OAEP has it by default
+// OAEPPADDING is OAEP with SHA-1, as id-RSAES-OAEP has it by default. NoPadding comes first: it
+// is what a name without a padding gives
 pub(super) static ASYMMETRIC_PADDINGS: &[AsymmetricPaddingSpec] = &[
     AsymmetricPaddingSpec {
         kind: AsymmetricPaddingKind::NoPadding,
@@ -14,6 +15,16 @@ pub(super) static ASYMMETRIC_PADDINGS: &[AsymmetricPaddingSpec] = &[
     AsymmetricPaddingSpec {
         kind: AsymmetricPaddingKind::Pkcs1,
         names: &["PKCS1PADDING", "PKCS1"],
+    },
+    #[cfg(feature = "rsa-iso9796")]
+    AsymmetricPaddingSpec {
+        kind: AsymmetricPaddingKind::Iso9796d1,
+        names: &["ISO9796-1PADDING", "ISO9796-1"],
+    },
+    #[cfg(feature = "md5")]
+    AsymmetricPaddingSpec {
+        kind: AsymmetricPaddingKind::OaepMd5,
+        names: &["OAEPWITHMD5ANDMGF1PADDING"],
     },
     AsymmetricPaddingSpec {
         kind: AsymmetricPaddingKind::OaepSha1,

@@ -4,16 +4,20 @@
 
 #[cfg(feature = "aes")]
 mod aes;
-#[cfg(feature = "rsa")]
+#[cfg(any(feature = "rsa", feature = "elgamal", feature = "naccache-stern"))]
 mod asymmetric;
 #[cfg(feature = "chacha")]
 mod chacha;
 mod compose;
 #[cfg(feature = "des")]
 mod des;
+#[cfg(feature = "elgamal")]
+mod elgamal;
 #[cfg(feature = "hc")]
 mod hc;
 mod modes;
+#[cfg(feature = "naccache-stern")]
+mod naccache_stern;
 mod paddings;
 #[cfg(any(feature = "rc4", feature = "vmpc"))]
 mod rc4_family;
@@ -21,17 +25,21 @@ mod rc4_family;
 mod rsa;
 #[cfg(feature = "salsa20")]
 mod salsa20;
+#[cfg(feature = "sm2")]
+mod sm2;
 pub(in crate::cipher) mod specs;
 
 use core::ptr;
 use std::sync::LazyLock;
 
-#[cfg(feature = "rsa")]
+#[cfg(any(feature = "rsa", feature = "elgamal", feature = "naccache-stern"))]
 use asymmetric::{ASYMMETRIC_MODE_NAMES, ASYMMETRIC_PADDINGS};
 use modes::MODES;
 use paddings::PADDINGS;
-#[cfg(feature = "rsa")]
+#[cfg(any(feature = "rsa", feature = "elgamal", feature = "naccache-stern"))]
 use specs::AsymmetricSpec;
+#[cfg(feature = "sm2")]
+use specs::MessageSpec;
 use specs::{AlgorithmSpec, PaddingKind, StreamSpec};
 
 use super::CipherEntry;
@@ -70,8 +78,18 @@ static STREAMS: &[StreamSpec] = &[
     chacha::XCHACHA20,
 ];
 
-#[cfg(feature = "rsa")]
-static ASYMMETRIC: &[AsymmetricSpec] = &[rsa::RSA];
+#[cfg(feature = "sm2")]
+static MESSAGES: &[MessageSpec] = &[sm2::SM2];
+
+#[cfg(any(feature = "rsa", feature = "elgamal", feature = "naccache-stern"))]
+static ASYMMETRIC: &[AsymmetricSpec] = &[
+    #[cfg(feature = "elgamal")]
+    elgamal::ELGAMAL,
+    #[cfg(feature = "naccache-stern")]
+    naccache_stern::NACCACHE_STERN,
+    #[cfg(feature = "rsa")]
+    rsa::RSA,
+];
 
 // One entry per valid combination: an AEAD mode only with NoPadding, a mode only on the block
 // sizes it takes, a stream cipher alone, and an asymmetric cipher with each of its paddings
@@ -100,9 +118,12 @@ pub(super) static CIPHERS: LazyLock<Vec<CipherEntry>> = LazyLock::new(|| {
     for algorithm in STREAMS {
         entries.push(CipherEntry::new(Kind::Stream { algorithm }, algorithm.oids));
     }
-    #[cfg(feature = "rsa")]
+    #[cfg(any(feature = "rsa", feature = "elgamal", feature = "naccache-stern"))]
     for algorithm in ASYMMETRIC {
-        for padding in ASYMMETRIC_PADDINGS {
+        let paddings = ASYMMETRIC_PADDINGS
+            .iter()
+            .filter(|padding| algorithm.paddings.contains(&padding.kind));
+        for padding in paddings {
             let oids = algorithm
                 .oids
                 .iter()
@@ -114,6 +135,12 @@ pub(super) static CIPHERS: LazyLock<Vec<CipherEntry>> = LazyLock::new(|| {
                 padding,
             };
             entries.push(CipherEntry::new(kind, oids));
+        }
+    }
+    #[cfg(feature = "sm2")]
+    for algorithm in MESSAGES {
+        for mode in algorithm.modes {
+            entries.push(CipherEntry::new(Kind::Message { algorithm, mode }, &[]));
         }
     }
     entries
@@ -136,9 +163,13 @@ pub(super) fn find(name: &str) -> Option<&'static CipherEntry> {
     if let Some(algorithm) = STREAMS.iter().find(|spec| known(spec.names, algorithm)) {
         return find_stream(algorithm, name);
     }
-    #[cfg(feature = "rsa")]
+    #[cfg(any(feature = "rsa", feature = "elgamal", feature = "naccache-stern"))]
     if let Some(algorithm) = ASYMMETRIC.iter().find(|spec| known(spec.names, algorithm)) {
         return find_asymmetric(algorithm, mode, padding);
+    }
+    #[cfg(feature = "sm2")]
+    if let Some(algorithm) = MESSAGES.iter().find(|spec| known(spec.names, algorithm)) {
+        return find_message(algorithm, name, mode);
     }
     None
 }
@@ -182,7 +213,7 @@ fn find_stream(algorithm: &'static StreamSpec, name: &str) -> Option<&'static Ci
 }
 
 // No mode, ECB or NONE; no padding is raw RSA, as in Bouncy Castle
-#[cfg(feature = "rsa")]
+#[cfg(any(feature = "rsa", feature = "elgamal", feature = "naccache-stern"))]
 fn find_asymmetric(
     algorithm: &'static AsymmetricSpec,
     mode: Option<&str>,
@@ -202,6 +233,31 @@ fn find_asymmetric(
             entry.kind(),
             Kind::Asymmetric { algorithm: a, padding: p, .. }
                 if ptr::eq(*a, algorithm) && ptr::eq(*p, padding)
+        )
+    })
+}
+
+// No mode is the first one; a padding is refused, not even an empty one
+#[cfg(feature = "sm2")]
+fn find_message(
+    algorithm: &'static MessageSpec,
+    name: &str,
+    mode: Option<&str>,
+) -> Option<&'static CipherEntry> {
+    if name.matches('/').count() > 1 {
+        return None;
+    }
+    let mode = match mode {
+        Some(mode) => algorithm
+            .modes
+            .iter()
+            .find(|spec| same_name(spec.name, mode))?,
+        None => &algorithm.modes[0],
+    };
+    CIPHERS.iter().find(|entry| {
+        matches!(
+            entry.kind(),
+            Kind::Message { algorithm: a, mode: m } if ptr::eq(*a, algorithm) && ptr::eq(*m, mode)
         )
     })
 }

@@ -45,6 +45,12 @@ fn create(padding: AsymmetricPaddingKind) -> Box<dyn DynCipher> {
         AsymmetricPaddingKind::Pkcs1 => boxed(BufferedAsymmetricBlockCipher::new(
             Pkcs1Encoding::from_parts(engine(), UnwrapErr(SysRng)),
         )),
+        #[cfg(feature = "rsa-iso9796")]
+        AsymmetricPaddingKind::Iso9796d1 => boxed(BufferedAsymmetricBlockCipher::new(
+            tc_asym_iso9796::Iso9796d1Encoding::new(UnwrapErr(SysRng)),
+        )),
+        #[cfg(feature = "md5")]
+        AsymmetricPaddingKind::OaepMd5 => oaep::<tc_md::Md5Digest>(),
         AsymmetricPaddingKind::OaepSha1 => oaep::<Sha1Digest>(),
         AsymmetricPaddingKind::OaepSha224 => oaep::<Sha224Digest>(),
         AsymmetricPaddingKind::OaepSha256 => oaep::<Sha256Digest>(),
@@ -86,6 +92,20 @@ macro_rules! pkcs1_oid {
 // SHA-1, the default of its parameters
 pub(super) const RSA: AsymmetricSpec = AsymmetricSpec {
     names: &["RSA"],
+    paddings: &[
+        AsymmetricPaddingKind::NoPadding,
+        AsymmetricPaddingKind::Pkcs1,
+        #[cfg(feature = "rsa-iso9796")]
+        AsymmetricPaddingKind::Iso9796d1,
+        #[cfg(feature = "md5")]
+        AsymmetricPaddingKind::OaepMd5,
+        AsymmetricPaddingKind::OaepSha1,
+        AsymmetricPaddingKind::OaepSha224,
+        AsymmetricPaddingKind::OaepSha256,
+        AsymmetricPaddingKind::OaepSha256Mgf1Sha1,
+        AsymmetricPaddingKind::OaepSha384,
+        AsymmetricPaddingKind::OaepSha512,
+    ],
     create,
     key,
     oids: &[

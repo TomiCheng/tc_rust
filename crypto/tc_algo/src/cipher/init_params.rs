@@ -7,6 +7,12 @@ pub(super) enum InitParams {
     // A copy of the key, which the engine reads at init
     #[cfg(feature = "rsa")]
     Rsa(tc_rsa::RsaKey),
+    #[cfg(feature = "elgamal")]
+    ElGamal(ElGamalKey),
+    #[cfg(feature = "naccache-stern")]
+    NaccacheStern(NaccacheSternKey),
+    #[cfg(feature = "sm2")]
+    Sm2(Sm2Key),
 }
 
 // The part of InitParams one kind of cipher takes; None for another kind's, which the entry never
@@ -33,6 +39,73 @@ impl InitPart for SymmetricParams {
 impl InitPart for tc_rsa::RsaKey {
     fn part(params: &InitParams) -> Option<&Self> {
         if let InitParams::Rsa(key) = params {
+            Some(key)
+        } else {
+            None
+        }
+    }
+}
+
+// ElGamal takes a public key to encrypt and a private key to decrypt, each a type of its own;
+// this puts the two behind one type, which the paddings wrapping the engine can pass on
+#[cfg(feature = "elgamal")]
+pub(super) enum ElGamalKey {
+    Public(tc_elgamal::ElGamalPublicKey),
+    Private(tc_elgamal::ElGamalPrivateKey),
+}
+
+#[cfg(feature = "elgamal")]
+impl tc_asym_cipher::AsymmetricKeyParams for ElGamalKey {
+    fn is_private_key(&self) -> bool {
+        matches!(self, Self::Private(_))
+    }
+}
+
+#[cfg(feature = "elgamal")]
+impl InitPart for ElGamalKey {
+    fn part(params: &InitParams) -> Option<&Self> {
+        if let InitParams::ElGamal(key) = params {
+            Some(key)
+        } else {
+            None
+        }
+    }
+}
+
+// Naccache-Stern also has a type for each key: the public key encrypts, the private key encrypts
+// or decrypts
+#[cfg(feature = "naccache-stern")]
+pub(super) enum NaccacheSternKey {
+    Public(tc_naccache_stern::NaccacheSternPublicKey),
+    Private(tc_naccache_stern::NaccacheSternPrivateKey),
+}
+
+#[cfg(feature = "naccache-stern")]
+impl InitPart for NaccacheSternKey {
+    fn part(params: &InitParams) -> Option<&Self> {
+        if let InitParams::NaccacheStern(key) = params {
+            Some(key)
+        } else {
+            None
+        }
+    }
+}
+
+// The curve SM2 runs on, the type of the Sm2p256v1 variant of the EC keys
+#[cfg(feature = "sm2")]
+pub(super) type Sm2p256v1 = &'static tc_fp_custom::SecPCtCurve<tc_fp_custom::SM2P256V1FieldElement>;
+
+// Like ElGamal, SM2 encrypts with the public key and decrypts with the private key
+#[cfg(feature = "sm2")]
+pub(super) enum Sm2Key {
+    Public(Box<tc_ec_key::EcPublicKey<Sm2p256v1>>),
+    Private(Box<tc_ec_key::EcPrivateKey<Sm2p256v1>>),
+}
+
+#[cfg(feature = "sm2")]
+impl InitPart for Sm2Key {
+    fn part(params: &InitParams) -> Option<&Self> {
+        if let InitParams::Sm2(key) = params {
             Some(key)
         } else {
             None

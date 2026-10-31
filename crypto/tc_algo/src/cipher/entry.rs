@@ -6,8 +6,10 @@ use tc_zeroize::Zeroizing;
 use super::AnyCipher;
 use super::init_params::{InitParams, SymmetricParams};
 use super::table::specs::{AlgorithmSpec, ModeSpec, Need, PaddingSpec, StreamSpec};
-#[cfg(feature = "rsa")]
+#[cfg(any(feature = "rsa", feature = "elgamal", feature = "naccache-stern"))]
 use super::table::specs::{AsymmetricPaddingSpec, AsymmetricSpec};
+#[cfg(feature = "sm2")]
+use super::table::specs::{MessageModeSpec, MessageSpec};
 use crate::params::{AnyKeyParams, AnyParams};
 use crate::{AlgoError, ErrorKind};
 
@@ -29,11 +31,16 @@ pub(super) enum Kind {
     Stream {
         algorithm: &'static StreamSpec,
     },
-    #[cfg(feature = "rsa")]
+    #[cfg(any(feature = "rsa", feature = "elgamal", feature = "naccache-stern"))]
     Asymmetric {
         algorithm: &'static AsymmetricSpec,
         mode: &'static str,
         padding: &'static AsymmetricPaddingSpec,
+    },
+    #[cfg(feature = "sm2")]
+    Message {
+        algorithm: &'static MessageSpec,
+        mode: &'static MessageModeSpec,
     },
 }
 
@@ -49,12 +56,14 @@ impl CipherEntry {
                 "{}/{}/{}",
                 algorithm.names[0], mode.names[0], padding.names[0]
             ),
-            #[cfg(feature = "rsa")]
+            #[cfg(any(feature = "rsa", feature = "elgamal", feature = "naccache-stern"))]
             Kind::Asymmetric {
                 algorithm,
                 mode,
                 padding,
             } => format!("{}/{}/{}", algorithm.names[0], mode, padding.names[0]),
+            #[cfg(feature = "sm2")]
+            Kind::Message { algorithm, mode } => format!("{}/{}", algorithm.names[0], mode.name),
         };
         Self { name, kind, oids }
     }
@@ -95,8 +104,15 @@ impl CipherEntry {
                 symmetric(params)
             }
             // A key of the algorithm, and no operation field at all
-            #[cfg(feature = "rsa")]
+            #[cfg(any(feature = "rsa", feature = "elgamal", feature = "naccache-stern"))]
             Kind::Asymmetric { algorithm, .. } => {
+                check(Need::Forbidden, op.iv.is_some())?;
+                check(Need::Forbidden, op.tag_len.is_some())?;
+                check(Need::Forbidden, op.aad.is_some())?;
+                (algorithm.key)(&params.key).ok_or(AlgoError::new(ErrorKind::InvalidParams))
+            }
+            #[cfg(feature = "sm2")]
+            Kind::Message { algorithm, .. } => {
                 check(Need::Forbidden, op.iv.is_some())?;
                 check(Need::Forbidden, op.tag_len.is_some())?;
                 check(Need::Forbidden, op.aad.is_some())?;

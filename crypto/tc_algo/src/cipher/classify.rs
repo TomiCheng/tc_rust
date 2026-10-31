@@ -114,7 +114,7 @@ impl<E: Classify> Classify for AeadInitError<E> {
     }
 }
 
-#[cfg(feature = "rsa")]
+#[cfg(any(feature = "rsa", feature = "elgamal"))]
 impl<E: Classify> Classify for tc_asym_encoding::EncodingError<E> {
     fn kind(&self) -> ErrorKind {
         use tc_asym_encoding::EncodingError;
@@ -125,6 +125,73 @@ impl<E: Classify> Classify for tc_asym_encoding::EncodingError<E> {
             EncodingError::InvalidBlock => ErrorKind::InvalidCiphertext,
             EncodingError::InvalidPlaintextLength => ErrorKind::InvalidParams,
             _ => ErrorKind::DataLength,
+        }
+    }
+}
+
+#[cfg(feature = "rsa-iso9796")]
+impl Classify for tc_asym_iso9796::Iso9796Error {
+    fn kind(&self) -> ErrorKind {
+        use tc_asym_iso9796::Iso9796Error;
+        match self {
+            Iso9796Error::Cipher(error) => error.kind(),
+            Iso9796Error::NotInitialized => ErrorKind::NotInitialized,
+            Iso9796Error::InvalidBlock => ErrorKind::InvalidCiphertext,
+            // A modulus of a size it does not take
+            Iso9796Error::UnsupportedKeySize => ErrorKind::InvalidParams,
+            _ => ErrorKind::DataLength,
+        }
+    }
+}
+
+#[cfg(feature = "elgamal")]
+impl Classify for tc_elgamal::ElGamalError {
+    fn kind(&self) -> ErrorKind {
+        use tc_elgamal::ElGamalError;
+        match self {
+            ElGamalError::NotInitialized => ErrorKind::NotInitialized,
+            // Parameters or a key that fail their checks, or a key for the other direction
+            ElGamalError::InvalidParameters(_)
+            | ElGamalError::InvalidKey
+            | ElGamalError::WrongKeyForDirection => ErrorKind::InvalidParams,
+            // A gamma or phi outside [2, p - 2]
+            ElGamalError::WeakCiphertext => ErrorKind::InvalidCiphertext,
+            _ => ErrorKind::DataLength,
+        }
+    }
+}
+
+#[cfg(feature = "sm2")]
+impl Classify for tc_sm2::Sm2Error {
+    fn kind(&self) -> ErrorKind {
+        use tc_sm2::Sm2Error;
+        match self {
+            Sm2Error::NotInitialized => ErrorKind::NotInitialized,
+            // An empty message, too short a ciphertext or too short an output
+            Sm2Error::EmptyInput | Sm2Error::CiphertextTooShort | Sm2Error::OutputTooShort => {
+                ErrorKind::DataLength
+            }
+            // C1 not on the curve, or C3 not the hash of what C2 decrypts to
+            Sm2Error::InvalidPoint | Sm2Error::InvalidCiphertext => ErrorKind::InvalidCiphertext,
+            // A key for the other direction, or one that fails its checks
+            _ => ErrorKind::InvalidParams,
+        }
+    }
+}
+
+#[cfg(feature = "naccache-stern")]
+impl Classify for tc_naccache_stern::NaccacheSternError {
+    fn kind(&self) -> ErrorKind {
+        use tc_naccache_stern::NaccacheSternError;
+        match self {
+            NaccacheSternError::NotInitialized => ErrorKind::NotInitialized,
+            // A ciphertext whose residues are not in the tables of the small primes
+            NaccacheSternError::LookupFailed => ErrorKind::InvalidCiphertext,
+            NaccacheSternError::InputTooLarge
+            | NaccacheSternError::InvalidCiphertextLength
+            | NaccacheSternError::OutputTooShort => ErrorKind::DataLength,
+            // A key that fails its checks, or a public key to decrypt with
+            _ => ErrorKind::InvalidParams,
         }
     }
 }
