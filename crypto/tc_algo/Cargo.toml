@@ -1,0 +1,10 @@
+[package]
+name = "tc_algo"
+description = "Name- and OID-based factories for digests, MACs, ciphers, signers and more, after Bouncy Castle C#'s Org.BouncyCastle.Security."
+version.workspace = true
+edition.workspace = true
+rust-version = "1.85"
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
