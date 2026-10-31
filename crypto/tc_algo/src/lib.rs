@@ -14,4 +14,4 @@ pub mod signer;
 pub mod wrap;
 pub mod xof;
 
-pub use error::AlgoError;
+pub use error::{AlgoError, ErrorKind};
