@@ -53,6 +53,8 @@ default = [
     "whirlpool",
     "rsa",
     "ec",
+    "x25519",
+    "x448",
 ]
 md = ["md2", "md4", "md5"]
 md2 = ["dep:tc_md"]
@@ -127,10 +129,14 @@ ec-small-curves = [
     "tc_fp_custom/small-curves",
     "tc_f2m_custom?/small-curves",
 ]
+# X25519 and X448 keys (RFC 7748)
+x25519 = ["dep:tc_cfrg_curves"]
+x448 = ["dep:tc_cfrg_curves", "tc_cfrg_curves/x448"]
 
 [dependencies]
 tc_asn1 = "0.1.2"
 tc_blake = { version = "0.1.0", optional = true }
+tc_cfrg_curves = { version = "0.1.0", path = "../tc_cfrg_curves", optional = true }
 tc_digest = "0.1.1"
 tc_dstu7564 = { version = "0.1.0", optional = true }
 tc_ec_key = { version = "0.1.0", path = "../tc_ec_key", optional = true }

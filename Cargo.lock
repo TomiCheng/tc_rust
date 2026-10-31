@@ -885,6 +885,7 @@ dependencies = [
  "tc_asn1",
  "tc_bigint",
  "tc_blake",
+ "tc_cfrg_curves",
  "tc_digest",
  "tc_dstu7564",
  "tc_ec_key",
