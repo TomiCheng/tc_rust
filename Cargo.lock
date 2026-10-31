@@ -883,8 +883,16 @@ name = "tc_algo"
 version = "0.1.0"
 dependencies = [
  "tc_asn1",
+ "tc_blake",
  "tc_digest",
+ "tc_dstu7564",
+ "tc_gost3411",
+ "tc_keccak",
+ "tc_md",
+ "tc_misc_digest",
+ "tc_ripemd",
  "tc_sha",
+ "tc_sm3",
 ]
 
 [[package]]
@@ -1831,6 +1839,16 @@ dependencies = [
  "tc_block_cipher",
  "tc_zeroize",
  "xtea",
+]
+
+[[package]]
+name = "tc_misc_digest"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "350158e9e7be62563e0b0ac5e15efbca861485c6e382dec47710a059ca97200e"
+dependencies = [
+ "tc_digest",
+ "tc_zeroize",
 ]
 
 [[package]]

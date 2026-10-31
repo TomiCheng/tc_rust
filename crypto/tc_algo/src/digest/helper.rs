@@ -48,11 +48,12 @@ fn finish(mut digest: AnyDigest, input: &[u8]) -> Vec<u8> {
 }
 
 fn finish_into(mut digest: AnyDigest, input: &[u8], output: &mut [u8]) -> usize {
-    // Check first, so the panic message does not depend on each digest's implementation
+    // Checked here so the panic message does not depend on each digest's implementation, and
+    // after the input because NONE's size is the number of bytes it has taken
+    digest.update(input);
     assert!(
         output.len() >= digest.digest_size(),
         "output is shorter than the digest"
     );
-    digest.update(input);
     Digest::do_final(&mut digest, output)
 }

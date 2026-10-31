@@ -30,34 +30,73 @@ default = [
     "shake256",
 ]
 md = ["md2", "md4", "md5"]
-md2 = []
-md4 = []
-md5 = []
+md2 = ["dep:tc_md"]
+md4 = ["dep:tc_md"]
+md5 = ["dep:tc_md"]
 sha = ["sha1", "sha224", "sha256", "sha384", "sha512", "sha512-224", "sha512-256"]
-sha1 = []
-sha224 = []
+sha1 = ["dep:tc_sha"]
+sha224 = ["dep:tc_sha"]
 sha256 = ["dep:tc_sha"]
-sha384 = []
-sha512 = []
-sha512-224 = []
-sha512-256 = []
+sha384 = ["dep:tc_sha"]
+sha512 = ["dep:tc_sha"]
+sha512-224 = ["dep:tc_sha"]
+sha512-256 = ["dep:tc_sha"]
 sha3 = ["sha3-224", "sha3-256", "sha3-384", "sha3-512"]
-sha3-224 = []
-sha3-256 = []
-sha3-384 = []
-sha3-512 = []
+sha3-224 = ["dep:tc_keccak"]
+sha3-256 = ["dep:tc_keccak"]
+sha3-384 = ["dep:tc_keccak"]
+sha3-512 = ["dep:tc_keccak"]
 keccak = ["keccak-224", "keccak-256", "keccak-288", "keccak-384", "keccak-512"]
-keccak-224 = []
-keccak-256 = []
-keccak-288 = []
-keccak-384 = []
-keccak-512 = []
+keccak-224 = ["dep:tc_keccak"]
+keccak-256 = ["dep:tc_keccak"]
+keccak-288 = ["dep:tc_keccak"]
+keccak-384 = ["dep:tc_keccak"]
+keccak-512 = ["dep:tc_keccak"]
 # SHAKE as a fixed-length digest: SHAKE128 gives 256 bits and SHAKE256 512 bits, as in Bouncy Castle
 shake = ["shake128", "shake256"]
-shake128 = []
-shake256 = []
+shake128 = ["dep:tc_keccak"]
+shake256 = ["dep:tc_keccak"]
+blake2b = ["blake2b-160", "blake2b-256", "blake2b-384", "blake2b-512"]
+blake2b-160 = ["dep:tc_blake"]
+blake2b-256 = ["dep:tc_blake"]
+blake2b-384 = ["dep:tc_blake"]
+blake2b-512 = ["dep:tc_blake"]
+blake2s = ["blake2s-128", "blake2s-160", "blake2s-224", "blake2s-256"]
+blake2s-128 = ["dep:tc_blake"]
+blake2s-160 = ["dep:tc_blake"]
+blake2s-224 = ["dep:tc_blake"]
+blake2s-256 = ["dep:tc_blake"]
+blake3-256 = ["dep:tc_blake"]
+dstu7564 = ["dstu7564-256", "dstu7564-384", "dstu7564-512"]
+dstu7564-256 = ["dep:tc_dstu7564"]
+dstu7564-384 = ["dep:tc_dstu7564"]
+dstu7564-512 = ["dep:tc_dstu7564"]
+# GOST R 34.11-94
+gost3411 = ["dep:tc_gost3411"]
+# GOST R 34.11-2012 (Streebog)
+gost3411-2012 = ["gost3411-2012-256", "gost3411-2012-512"]
+gost3411-2012-256 = ["dep:tc_gost3411"]
+gost3411-2012-512 = ["dep:tc_gost3411"]
+ripemd = ["ripemd128", "ripemd160", "ripemd256", "ripemd320"]
+ripemd128 = ["dep:tc_ripemd"]
+ripemd160 = ["dep:tc_ripemd"]
+ripemd256 = ["dep:tc_ripemd"]
+ripemd320 = ["dep:tc_ripemd"]
+sm3 = ["dep:tc_sm3"]
+tiger = ["dep:tc_misc_digest", "tc_misc_digest/tiger"]
+whirlpool = ["dep:tc_misc_digest", "tc_misc_digest/whirlpool"]
+# Bouncy Castle's NONE: passes the message through unchanged, for signers that sign it as is
+null-digest = ["tc_digest/alloc"]
 
 [dependencies]
 tc_asn1 = "0.1.2"
+tc_blake = { version = "0.1.0", optional = true }
 tc_digest = "0.1.1"
+tc_dstu7564 = { version = "0.1.0", optional = true }
+tc_gost3411 = { version = "0.1.0", optional = true }
+tc_keccak = { version = "0.1.0", optional = true }
+tc_md = { version = "0.1.1", optional = true }
+tc_misc_digest = { version = "0.1.0", optional = true }
+tc_ripemd = { version = "0.1.0", optional = true }
 tc_sha = { version = "0.1.1", optional = true }
+tc_sm3 = { version = "0.1.0", optional = true }

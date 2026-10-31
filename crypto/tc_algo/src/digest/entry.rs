@@ -47,7 +47,7 @@ impl DigestEntry {
         self.names
     }
 
-    // Raw Keccak has no OID
+    // Raw Keccak, RIPEMD-320, Tiger, Whirlpool and NONE have no OID, as in Bouncy Castle
     pub fn oid(&self) -> Option<NamedOid> {
         self.oids.first().copied()
     }

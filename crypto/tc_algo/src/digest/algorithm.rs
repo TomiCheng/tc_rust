@@ -46,6 +46,52 @@ pub enum Algorithm {
     Shake128,
     #[cfg(feature = "shake256")]
     Shake256,
+    #[cfg(feature = "blake2b-160")]
+    Blake2b160,
+    #[cfg(feature = "blake2b-256")]
+    Blake2b256,
+    #[cfg(feature = "blake2b-384")]
+    Blake2b384,
+    #[cfg(feature = "blake2b-512")]
+    Blake2b512,
+    #[cfg(feature = "blake2s-128")]
+    Blake2s128,
+    #[cfg(feature = "blake2s-160")]
+    Blake2s160,
+    #[cfg(feature = "blake2s-224")]
+    Blake2s224,
+    #[cfg(feature = "blake2s-256")]
+    Blake2s256,
+    #[cfg(feature = "blake3-256")]
+    Blake3_256,
+    #[cfg(feature = "dstu7564-256")]
+    Dstu7564_256,
+    #[cfg(feature = "dstu7564-384")]
+    Dstu7564_384,
+    #[cfg(feature = "dstu7564-512")]
+    Dstu7564_512,
+    #[cfg(feature = "gost3411")]
+    Gost3411,
+    #[cfg(feature = "gost3411-2012-256")]
+    Gost3411_2012_256,
+    #[cfg(feature = "gost3411-2012-512")]
+    Gost3411_2012_512,
+    #[cfg(feature = "ripemd128")]
+    Ripemd128,
+    #[cfg(feature = "ripemd160")]
+    Ripemd160,
+    #[cfg(feature = "ripemd256")]
+    Ripemd256,
+    #[cfg(feature = "ripemd320")]
+    Ripemd320,
+    #[cfg(feature = "sm3")]
+    Sm3,
+    #[cfg(feature = "tiger")]
+    Tiger,
+    #[cfg(feature = "whirlpool")]
+    Whirlpool,
+    #[cfg(feature = "null-digest")]
+    Null,
 }
 
 impl Algorithm {
