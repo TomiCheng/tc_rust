@@ -55,6 +55,7 @@ pub enum ErrorKind {
     InvalidParams,
     DataLength,
     InvalidCiphertext,
+    NotInitialized,
 }
 
 impl fmt::Display for ErrorKind {
@@ -67,6 +68,7 @@ impl fmt::Display for ErrorKind {
             ErrorKind::InvalidParams => f.write_str("invalid parameters for this algorithm"),
             ErrorKind::DataLength => f.write_str("input of the wrong length for this cipher"),
             ErrorKind::InvalidCiphertext => f.write_str("invalid ciphertext"),
+            ErrorKind::NotInitialized => f.write_str("used before a successful init"),
         }
     }
 }

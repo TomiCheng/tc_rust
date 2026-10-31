@@ -884,10 +884,15 @@ version = "0.1.0"
 dependencies = [
  "rand",
  "rand_core",
+ "tc_aead_cipher",
+ "tc_aes",
  "tc_asn1",
  "tc_asym_cipher",
  "tc_bigint",
  "tc_blake",
+ "tc_block_cipher",
+ "tc_block_modes",
+ "tc_block_padding",
  "tc_buffered_cipher",
  "tc_cfrg_curves",
  "tc_dh_key",
@@ -1156,9 +1161,9 @@ dependencies = [
 
 [[package]]
 name = "tc_block_modes"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "54991856e04d5c47fa180d0a86d70137cc52ae9959556cdec10911c2397a246c"
+checksum = "5f110f48772d055a3586982a3fdc77bc5f6486a4b5ce833980e2188846a9d07c"
 dependencies = [
  "tc_block_cipher",
  "tc_zeroize",

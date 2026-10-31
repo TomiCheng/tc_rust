@@ -120,8 +120,8 @@ tiger = ["dep:tc_misc_digest", "tc_misc_digest/tiger"]
 whirlpool = ["dep:tc_misc_digest", "tc_misc_digest/whirlpool"]
 # Bouncy Castle's NONE: passes the message through unchanged, for signers that sign it as is
 null-digest = ["tc_digest/alloc"]
-# AES. Only its key generator so far: the cipher comes with the cipher factory
-aes = []
+# AES: its key generator and its ciphers in every mode the table pairs it with
+aes = ["dep:tc_aes"]
 # RSA keys
 rsa = ["dep:tc_rsa", "dep:tc_asym_cipher"]
 # EC keys on the prime curves secp224k1 to secp521r1 and sm2p256v1
@@ -160,9 +160,14 @@ naccache-stern = ["dep:tc_naccache_stern"]
 rand = "0.10.3"
 rand_core = "0.10.1"
 tc_asn1 = "0.1.2"
+tc_aead_cipher = { version = "0.1.0", features = ["alloc"] }
+tc_aes = { version = "0.1.0", optional = true }
 tc_asym_cipher = { version = "0.1.0", optional = true }
 tc_blake = { version = "0.1.0", optional = true }
-tc_buffered_cipher = "0.1.1"
+tc_block_cipher = "0.1.0"
+tc_block_modes = { version = "0.1.1", features = ["alloc"] }
+tc_block_padding = { version = "0.1.0", features = ["rand_core"] }
+tc_buffered_cipher = { version = "0.1.1", features = ["alloc"] }
 tc_cfrg_curves = { version = "0.1.0", path = "../tc_cfrg_curves", optional = true }
 tc_dh_key = { version = "0.1.0", path = "../tc_dh_key", optional = true }
 tc_digest = "0.1.1"
