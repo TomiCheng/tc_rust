@@ -1,0 +1,23 @@
+[package]
+name = "tc_cts_modes"
+description = "Cipher text stealing over ECB and CBC, ported from Bouncy Castle C#."
+version.workspace = true
+edition.workspace = true
+rust-version = "1.85"
+license.workspace = true
+repository.workspace = true
+
+[features]
+default = []
+alloc = ["tc_zeroize/alloc"]
+
+[dependencies]
+tc_block_cipher = "0.1.0"
+tc_block_modes = "0.1.0"
+tc_buffered_cipher = "0.1.1"
+tc_zeroize = "0.1.0"
+
+[dev-dependencies]
+tc_aes = "0.1.0"
+tc_des = "0.1.1"
+tc_misc_block_cipher = { version = "0.1.0", path = "../../block_cipher/tc_misc_block_cipher", features = ["skipjack"] }
