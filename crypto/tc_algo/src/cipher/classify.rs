@@ -97,6 +97,37 @@ impl<E: Classify> Classify for AeadInitError<E> {
     }
 }
 
+#[cfg(feature = "rsa")]
+impl<E: Classify> Classify for tc_asym_encoding::EncodingError<E> {
+    fn kind(&self) -> ErrorKind {
+        use tc_asym_encoding::EncodingError;
+        match self {
+            EncodingError::Cipher(error) => error.kind(),
+            EncodingError::NotInitialized => ErrorKind::NotInitialized,
+            // A block that is not a valid PKCS#1 or OAEP encoding
+            EncodingError::InvalidBlock => ErrorKind::InvalidCiphertext,
+            EncodingError::InvalidPlaintextLength => ErrorKind::InvalidParams,
+            _ => ErrorKind::DataLength,
+        }
+    }
+}
+
+#[cfg(feature = "rsa")]
+impl Classify for tc_rsa::RsaError {
+    fn kind(&self) -> ErrorKind {
+        use tc_rsa::RsaError;
+        match self {
+            RsaError::NotInitialized => ErrorKind::NotInitialized,
+            // An input of 0 or 1, or not below n - 1, or too short an output
+            RsaError::InputTooSmall | RsaError::InputTooLarge | RsaError::OutputTooShort => {
+                ErrorKind::DataLength
+            }
+            // A key that fails its checks, or whose CRT values do not agree
+            _ => ErrorKind::InvalidParams,
+        }
+    }
+}
+
 // The AlgoError of an error from underneath: its kind, with the error itself as the source
 pub(super) fn to_algo_error<E>(error: E) -> AlgoError
 where

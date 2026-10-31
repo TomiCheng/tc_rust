@@ -124,8 +124,8 @@ null-digest = ["tc_digest/alloc"]
 aes = ["dep:tc_aes"]
 # DES: its ciphers in every mode the table pairs it with
 des = ["dep:tc_des"]
-# RSA keys
-rsa = ["dep:tc_rsa", "dep:tc_asym_cipher"]
+# RSA: its keys, its key pair generator and its ciphers with each padding the table pairs it with
+rsa = ["dep:tc_rsa", "dep:tc_asym_cipher", "dep:tc_asym_encoding", "dep:tc_sha"]
 # EC keys on the prime curves secp224k1 to secp521r1 and sm2p256v1
 ec = ["dep:tc_ec_key", "dep:tc_fp_custom"]
 # The binary SEC 2 curves sect233k1 to sect571r1
@@ -165,6 +165,7 @@ tc_asn1 = "0.1.2"
 tc_aead_cipher = { version = "0.1.0", features = ["alloc"] }
 tc_aes = { version = "0.1.0", optional = true }
 tc_asym_cipher = { version = "0.1.0", optional = true }
+tc_asym_encoding = { version = "0.1.0", optional = true }
 tc_blake = { version = "0.1.0", optional = true }
 tc_block_cipher = "0.1.0"
 tc_block_modes = { version = "0.1.1", features = ["alloc"] }

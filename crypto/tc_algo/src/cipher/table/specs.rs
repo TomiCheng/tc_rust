@@ -1,6 +1,12 @@
 use tc_asn1::NamedOid;
 
+#[cfg(feature = "rsa")]
+use crate::cipher::dyn_cipher::DynCipher;
 use crate::cipher::engine::AnyEngine;
+#[cfg(feature = "rsa")]
+use crate::cipher::init_params::InitParams;
+#[cfg(feature = "rsa")]
+use crate::params::AnyKeyParams;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(in crate::cipher) enum ModeKind {
@@ -100,6 +106,38 @@ impl ModeSpec {
 
 pub(in crate::cipher) struct PaddingSpec {
     pub(in crate::cipher) kind: PaddingKind,
+    // The first is the canonical name, the rest are aliases
+    pub(in crate::cipher) names: &'static [&'static str],
+}
+
+// One asymmetric cipher: it takes every padding of the asymmetric table and no mode
+#[cfg(feature = "rsa")]
+pub(in crate::cipher) struct AsymmetricSpec {
+    // The first is the canonical name, the rest are aliases
+    pub(in crate::cipher) names: &'static [&'static str],
+    pub(in crate::cipher) create: fn(AsymmetricPaddingKind) -> Box<dyn DynCipher>,
+    // The key of the params, if it is one of this algorithm's
+    pub(in crate::cipher) key: fn(&AnyKeyParams) -> Option<InitParams>,
+    pub(in crate::cipher) oids: &'static [(AsymmetricPaddingKind, &'static [NamedOid])],
+}
+
+// The OAEP variants are those of Bouncy Castle: the hash of the label first, then that of MGF1
+#[cfg(feature = "rsa")]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(in crate::cipher) enum AsymmetricPaddingKind {
+    NoPadding,
+    Pkcs1,
+    OaepSha1,
+    OaepSha224,
+    OaepSha256,
+    OaepSha256Mgf1Sha1,
+    OaepSha384,
+    OaepSha512,
+}
+
+#[cfg(feature = "rsa")]
+pub(in crate::cipher) struct AsymmetricPaddingSpec {
+    pub(in crate::cipher) kind: AsymmetricPaddingKind,
     // The first is the canonical name, the rest are aliases
     pub(in crate::cipher) names: &'static [&'static str],
 }

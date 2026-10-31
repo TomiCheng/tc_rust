@@ -1,8 +1,10 @@
+use core::marker::PhantomData;
+
 use tc_buffered_cipher::{BufferedCipher, BufferedCipherInit, CipherDirection};
 
 use super::classify::{Classify, to_algo_error};
-use super::init_params::InitParams;
-use crate::AlgoError;
+use super::init_params::{InitParams, InitPart};
+use crate::{AlgoError, ErrorKind};
 
 // For type erasure: every cipher of the table, with its errors turned into AlgoError, takes the
 // InitParams its entry built, and is Send so AnyCipher can move between threads
@@ -16,10 +18,17 @@ impl<T> DynCipher for T where
 {
 }
 
-// A concrete buffered cipher with its errors turned into AlgoError
-pub(super) struct Mapped<T>(pub(super) T);
+// A concrete buffered cipher that takes the part P of InitParams, with its errors turned into
+// AlgoError
+pub(super) struct Mapped<T, P: ?Sized>(T, PhantomData<fn(&P)>);
 
-impl<T> BufferedCipher for Mapped<T>
+impl<T, P: ?Sized> Mapped<T, P> {
+    pub(super) fn new(cipher: T) -> Self {
+        Self(cipher, PhantomData)
+    }
+}
+
+impl<T, P: ?Sized> BufferedCipher for Mapped<T, P>
 where
     T: BufferedCipher,
     T::Error: Classify + core::error::Error + Send + Sync + 'static,
@@ -51,14 +60,16 @@ where
     }
 }
 
-impl<T> BufferedCipherInit<InitParams> for Mapped<T>
+impl<T, P> BufferedCipherInit<InitParams> for Mapped<T, P>
 where
-    T: BufferedCipherInit<InitParams>,
+    T: BufferedCipherInit<P>,
     T::Error: Classify + core::error::Error + Send + Sync + 'static,
+    P: InitPart + ?Sized,
 {
     type Error = AlgoError;
 
     fn init(&mut self, direction: CipherDirection, params: &InitParams) -> Result<(), AlgoError> {
+        let params = P::part(params).ok_or(AlgoError::new(ErrorKind::InvalidParams))?;
         self.0.init(direction, params).map_err(to_algo_error)
     }
 }

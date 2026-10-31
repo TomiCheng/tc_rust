@@ -1,27 +1,38 @@
-// Three small tables, block ciphers, modes and paddings, expand on first use into every valid
-// combination, each with a canonical name such as AES/CBC/PKCS7PADDING
+// Small tables, block ciphers, modes and paddings, and asymmetric ciphers and their paddings,
+// expand on first use into every valid combination, each with a canonical name such as
+// AES/CBC/PKCS7PADDING
 
 #[cfg(feature = "aes")]
 mod aes;
+#[cfg(feature = "rsa")]
+mod asymmetric;
 mod compose;
 #[cfg(feature = "des")]
 mod des;
 mod modes;
 mod paddings;
+#[cfg(feature = "rsa")]
+mod rsa;
 pub(in crate::cipher) mod specs;
 
+use core::ptr;
 use std::sync::LazyLock;
 
+#[cfg(feature = "rsa")]
+use asymmetric::{ASYMMETRIC_MODE_NAMES, ASYMMETRIC_PADDINGS};
 use modes::MODES;
 use paddings::PADDINGS;
+#[cfg(feature = "rsa")]
+use specs::AsymmetricSpec;
 use specs::{AlgorithmSpec, PaddingKind};
 
 use super::CipherEntry;
+use super::entry::Kind;
 
 pub(super) use compose::create;
 
-// Statics rather than consts, here and in modes and paddings: entries point into them and are
-// matched by address, which a const does not keep
+// Statics rather than consts, here and in the tables they draw on: entries point into them and
+// are matched by address, which a const does not keep
 static ALGORITHMS: &[AlgorithmSpec] = &[
     #[cfg(feature = "aes")]
     aes::AES,
@@ -29,8 +40,11 @@ static ALGORITHMS: &[AlgorithmSpec] = &[
     des::DES,
 ];
 
+#[cfg(feature = "rsa")]
+static ASYMMETRIC: &[AsymmetricSpec] = &[rsa::RSA];
+
 // One entry per valid combination: an AEAD mode only with NoPadding, a mode only on the block
-// sizes it takes
+// sizes it takes, and an asymmetric cipher with each of its paddings
 pub(super) static CIPHERS: LazyLock<Vec<CipherEntry>> = LazyLock::new(|| {
     let mut entries = Vec::new();
     for algorithm in ALGORITHMS {
@@ -44,8 +58,29 @@ pub(super) static CIPHERS: LazyLock<Vec<CipherEntry>> = LazyLock::new(|| {
                     .iter()
                     .find(|(m, p, _)| *m == mode.kind && *p == padding.kind)
                     .map_or(&[][..], |(_, _, oids)| oids);
-                entries.push(CipherEntry::new(algorithm, mode, padding, oids));
+                let kind = Kind::Block {
+                    algorithm,
+                    mode,
+                    padding,
+                };
+                entries.push(CipherEntry::new(kind, oids));
             }
+        }
+    }
+    #[cfg(feature = "rsa")]
+    for algorithm in ASYMMETRIC {
+        for padding in ASYMMETRIC_PADDINGS {
+            let oids = algorithm
+                .oids
+                .iter()
+                .find(|(p, _)| *p == padding.kind)
+                .map_or(&[][..], |(_, oids)| oids);
+            let kind = Kind::Asymmetric {
+                algorithm,
+                mode: ASYMMETRIC_MODE_NAMES[0],
+                padding,
+            };
+            entries.push(CipherEntry::new(kind, oids));
         }
     }
     entries
@@ -62,26 +97,67 @@ pub(super) fn find(name: &str) -> Option<&'static CipherEntry> {
     if parts.next().is_some() {
         return None;
     }
-    let algorithm = ALGORITHMS
-        .iter()
-        .find(|spec| spec.names.iter().any(|known| same_name(known, algorithm)))?;
+    if let Some(algorithm) = ALGORITHMS.iter().find(|spec| known(spec.names, algorithm)) {
+        return find_block(algorithm, mode, padding);
+    }
+    #[cfg(feature = "rsa")]
+    if let Some(algorithm) = ASYMMETRIC.iter().find(|spec| known(spec.names, algorithm)) {
+        return find_asymmetric(algorithm, mode, padding);
+    }
+    None
+}
+
+fn find_block(
+    algorithm: &'static AlgorithmSpec,
+    mode: Option<&str>,
+    padding: Option<&str>,
+) -> Option<&'static CipherEntry> {
     let mode = match mode {
-        Some(mode) => MODES
-            .iter()
-            .find(|spec| spec.names.iter().any(|known| same_name(known, mode)))?,
+        Some(mode) => MODES.iter().find(|spec| known(spec.names, mode))?,
         None => &MODES[0],
     };
     let padding = match padding {
-        Some(padding) => PADDINGS
-            .iter()
-            .find(|spec| spec.names.iter().any(|known| same_name(known, padding)))?,
+        Some(padding) => PADDINGS.iter().find(|spec| known(spec.names, padding))?,
         None => PADDINGS
             .iter()
             .find(|spec| spec.kind == mode.default_padding())?,
     };
-    CIPHERS
-        .iter()
-        .find(|entry| entry.is(algorithm, mode, padding))
+    CIPHERS.iter().find(|entry| {
+        matches!(
+            entry.kind(),
+            Kind::Block { algorithm: a, mode: m, padding: p }
+                if ptr::eq(*a, algorithm) && ptr::eq(*m, mode) && ptr::eq(*p, padding)
+        )
+    })
+}
+
+// No mode, ECB or NONE; no padding is raw RSA, as in Bouncy Castle
+#[cfg(feature = "rsa")]
+fn find_asymmetric(
+    algorithm: &'static AsymmetricSpec,
+    mode: Option<&str>,
+    padding: Option<&str>,
+) -> Option<&'static CipherEntry> {
+    if mode.is_some_and(|mode| !known(ASYMMETRIC_MODE_NAMES, mode)) {
+        return None;
+    }
+    let padding = match padding {
+        Some(padding) => ASYMMETRIC_PADDINGS
+            .iter()
+            .find(|spec| known(spec.names, padding))?,
+        None => &ASYMMETRIC_PADDINGS[0],
+    };
+    CIPHERS.iter().find(|entry| {
+        matches!(
+            entry.kind(),
+            Kind::Asymmetric { algorithm: a, padding: p, .. }
+                if ptr::eq(*a, algorithm) && ptr::eq(*p, padding)
+        )
+    })
+}
+
+fn known(names: &[&str], name: &str) -> bool {
+    names.iter().any(|known| same_name(known, name))
 }
 
 fn same_name(known: &str, name: &str) -> bool {

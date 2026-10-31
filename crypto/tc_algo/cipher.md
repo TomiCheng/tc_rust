@@ -5,9 +5,9 @@
 
 ## Enabling ciphers
 
-Each block cipher has its own Cargo feature, listed in the [table](#algorithms) below.
-AES is in the default features; DES is weak, so it is opt-in. Modes and paddings need
-no feature: every block cipher comes with all of them.
+Each cipher has its own Cargo feature, listed in the [table](#algorithms) below. AES
+and RSA are in the default features; DES is weak, so it is opt-in. Modes and paddings
+need no feature: every cipher comes with all of its own.
 
 ```toml
 [dependencies]
@@ -93,6 +93,30 @@ fn main() -> Result<(), AlgoError> {
 `init` refuses a field the mode has no use for, such as an IV for ECB or a tag
 length for CBC, and a missing field the mode needs, both with `InvalidParams`.
 
+### With RSA
+
+RSA takes an RSA key, public or private, and no other field. It encrypts one block:
+the message must fit in the modulus less what the padding takes, and the ciphertext
+is as long as the modulus.
+
+```rust
+use tc_algo::AlgoError;
+use tc_algo::cipher;
+use tc_algo::generate;
+use tc_algo::params::{AnyKeyParams, AnyParams};
+
+fn main() -> Result<(), AlgoError> {
+    let keys = generate::generate_key_pair("RSA")?;
+    let public = AnyParams::new(AnyKeyParams::Public(keys.public));
+    let private = AnyParams::new(AnyKeyParams::Private(keys.private));
+
+    let name = "RSA/NONE/OAEPWITHSHA256ANDMGF1PADDING";
+    let ciphertext = cipher::encrypt(name, &public, b"hello, world")?;
+    let plaintext = cipher::decrypt(name, &private, &ciphertext)?;
+    Ok(())
+}
+```
+
 ### By name or OID
 
 A name is the whole transformation, `ALGORITHM/MODE/PADDING`. As in Bouncy Castle,
@@ -168,16 +192,27 @@ the canonical name.
 | DES | 64 | CFB | 1.3.14.3.2.9 | `des` | NOPADDING |
 | DES | 64 | OFB | 1.3.14.3.2.8 | `des` | NOPADDING |
 | DES | 64 | CTR, EAX | | `des` | NOPADDING |
+| RSA | any | NONE | 1.2.840.113549.1.1.1 | `rsa` | PKCS1PADDING |
+| RSA | any | NONE | 1.2.840.113549.1.1.7 | `rsa` | OAEPWITHSHA1ANDMGF1PADDING |
+| RSA | any | NONE | | `rsa` | NOPADDING |
 
-Key is in bits. Padding is the mode's default, the one a name without a padding and an
-OID both give. ECB, CBC, CFB, OFB and CTR take every padding by name: NOPADDING,
-PKCS7PADDING, ISO10126PADDING, ISO7816-4PADDING, X923PADDING, TBCPADDING and
-ZEROBYTEPADDING. The AEAD modes take only NOPADDING. EAX runs on 64- and 128-bit
-blocks, but CCM, GCM and OCB only on 128-bit blocks, so DES has EAX alone.
+Key is in bits. Padding is the one the row's OID gives; on a row without an OID, it is
+the default, the one a name without a padding gives.
+
+ECB, CBC, CFB, OFB and CTR take every padding by name: NOPADDING, PKCS7PADDING,
+ISO10126PADDING, ISO7816-4PADDING, X923PADDING, TBCPADDING and ZEROBYTEPADDING. The
+AEAD modes take only NOPADDING. EAX runs on 64- and 128-bit blocks, but CCM, GCM and
+OCB only on 128-bit blocks, so DES has EAX alone.
+
+RSA has no mode, written NONE, and takes these paddings by name: NOPADDING,
+PKCS1PADDING, OAEPWITHSHA1ANDMGF1PADDING, OAEPWITHSHA224ANDMGF1PADDING,
+OAEPWITHSHA256ANDMGF1PADDING, OAEPWITHSHA256ANDMGF1WITHSHA1PADDING,
+OAEPWITHSHA384ANDMGF1PADDING and OAEPWITHSHA512ANDMGF1PADDING. The first hash of an
+OAEP name hashes the label, the second, if any, is that of MGF1.
 
 The key size in an AES OID is not checked: each of the three finds the same cipher,
-such as AES/CBC/PKCS7PADDING, which takes a key of any AES size. The modes on the last
-row of each algorithm have no OID in Bouncy Castle either.
+such as AES/CBC/PKCS7PADDING, which takes a key of any AES size. The rows without an
+OID have none in Bouncy Castle either.
 
 ### Notes
 
@@ -186,7 +221,18 @@ row of each algorithm have no OID in Bouncy Castle either.
   ciphertext, so name the mode.
 - **Aliases**: SIC for CTR; PKCS7, PKCS5PADDING and PKCS5 for PKCS7PADDING;
   ISO10126D2PADDING and ISO10126-2PADDING for ISO10126PADDING; ISO9797-1PADDING for
-  ISO7816-4PADDING.
+  ISO7816-4PADDING. For RSA, ECB or no mode at all for NONE; PKCS1 for PKCS1PADDING;
+  OAEPPADDING and OAEP for OAEPWITHSHA1ANDMGF1PADDING; and SHA-1, SHA-256 and so on
+  for SHA1, SHA256 in the OAEP names.
+- **RSA without a padding** is raw RSA, which is deterministic and malleable. `"RSA"`
+  alone is RSA/NONE/NOPADDING, as in Bouncy Castle, so name the padding.
+- **PKCS1PADDING** decryption tells whether the padding was good, which Bleichenbacher's
+  attack turns into decryption. Where an attacker can send ciphertexts, use OAEP.
+- **OAEP with SHA-1** is still sound, as OAEP does not rest on collisions, so it comes
+  with `rsa` rather than with the `sha1` digest feature.
+- **RSA keys** work in either direction, as in Bouncy Castle: PKCS1PADDING with the
+  private key gives a block of type 1. The private key is blinded, so that its power
+  never works on the ciphertext itself.
 - **CBC without an IV** is refused, unlike Bouncy Castle, which runs it with a zero IV.
 - **CFB and OFB** feed back a whole block: CFB-128 and OFB-128 for AES, CFB-64 and
   OFB-64 for DES.

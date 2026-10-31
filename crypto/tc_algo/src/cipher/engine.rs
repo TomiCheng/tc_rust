@@ -1,18 +1,18 @@
 use tc_block_cipher::{BlockCipher, BlockCipherInit, CipherDirection};
 
 use super::classify::{Classify, to_algo_error};
-use super::init_params::InitParams;
+use super::init_params::SymmetricParams;
 use crate::AlgoError;
 
 // For type erasure: a block cipher engine whose errors are already AlgoError, so the modes are
 // built over one engine type whichever algorithm sits underneath
 trait DynEngine:
-    BlockCipher<Error = AlgoError> + BlockCipherInit<InitParams, Error = AlgoError> + Send
+    BlockCipher<Error = AlgoError> + BlockCipherInit<SymmetricParams, Error = AlgoError> + Send
 {
 }
 
 impl<T> DynEngine for T where
-    T: BlockCipher<Error = AlgoError> + BlockCipherInit<InitParams, Error = AlgoError> + Send
+    T: BlockCipher<Error = AlgoError> + BlockCipherInit<SymmetricParams, Error = AlgoError> + Send
 {
 }
 
@@ -35,14 +35,18 @@ where
     }
 }
 
-impl<T> BlockCipherInit<InitParams> for Mapped<T>
+impl<T> BlockCipherInit<SymmetricParams> for Mapped<T>
 where
-    T: BlockCipherInit<InitParams>,
+    T: BlockCipherInit<SymmetricParams>,
     T::Error: Classify + core::error::Error + Send + Sync + 'static,
 {
     type Error = AlgoError;
 
-    fn init(&mut self, direction: CipherDirection, params: &InitParams) -> Result<(), AlgoError> {
+    fn init(
+        &mut self,
+        direction: CipherDirection,
+        params: &SymmetricParams,
+    ) -> Result<(), AlgoError> {
         self.0.init(direction, params).map_err(to_algo_error)
     }
 }
@@ -53,9 +57,9 @@ impl AnyEngine {
     #[allow(dead_code, reason = "unused when every block cipher feature is off")]
     pub(super) fn new<T>(engine: T) -> Self
     where
-        T: BlockCipher + BlockCipherInit<InitParams> + Send + 'static,
+        T: BlockCipher + BlockCipherInit<SymmetricParams> + Send + 'static,
         <T as BlockCipher>::Error: Classify + core::error::Error + Send + Sync + 'static,
-        <T as BlockCipherInit<InitParams>>::Error:
+        <T as BlockCipherInit<SymmetricParams>>::Error:
             Classify + core::error::Error + Send + Sync + 'static,
     {
         Self(Box::new(Mapped(engine)))
@@ -74,10 +78,14 @@ impl BlockCipher for AnyEngine {
     }
 }
 
-impl BlockCipherInit<InitParams> for AnyEngine {
+impl BlockCipherInit<SymmetricParams> for AnyEngine {
     type Error = AlgoError;
 
-    fn init(&mut self, direction: CipherDirection, params: &InitParams) -> Result<(), AlgoError> {
+    fn init(
+        &mut self,
+        direction: CipherDirection,
+        params: &SymmetricParams,
+    ) -> Result<(), AlgoError> {
         self.0.init(direction, params)
     }
 }

@@ -4,37 +4,54 @@ use tc_asn1::NamedOid;
 use tc_zeroize::Zeroizing;
 
 use super::AnyCipher;
-use super::init_params::InitParams;
+use super::init_params::{InitParams, SymmetricParams};
 use super::table::specs::{AlgorithmSpec, ModeSpec, Need, PaddingSpec};
+#[cfg(feature = "rsa")]
+use super::table::specs::{AsymmetricPaddingSpec, AsymmetricSpec};
 use crate::params::{AnyKeyParams, AnyParams};
 use crate::{AlgoError, ErrorKind};
 
 pub struct CipherEntry {
     // The canonical name, such as AES/CBC/PKCS7PADDING
     name: String,
-    algorithm: &'static AlgorithmSpec,
-    mode: &'static ModeSpec,
-    padding: &'static PaddingSpec,
+    kind: Kind,
     oids: &'static [NamedOid],
 }
 
-impl CipherEntry {
-    pub(super) fn new(
+// What the entry is made of, one variant per kind of cipher
+pub(super) enum Kind {
+    Block {
         algorithm: &'static AlgorithmSpec,
         mode: &'static ModeSpec,
         padding: &'static PaddingSpec,
-        oids: &'static [NamedOid],
-    ) -> Self {
-        Self {
-            name: format!(
+    },
+    #[cfg(feature = "rsa")]
+    Asymmetric {
+        algorithm: &'static AsymmetricSpec,
+        mode: &'static str,
+        padding: &'static AsymmetricPaddingSpec,
+    },
+}
+
+impl CipherEntry {
+    pub(super) fn new(kind: Kind, oids: &'static [NamedOid]) -> Self {
+        let name = match &kind {
+            Kind::Block {
+                algorithm,
+                mode,
+                padding,
+            } => format!(
                 "{}/{}/{}",
                 algorithm.names[0], mode.names[0], padding.names[0]
             ),
-            algorithm,
-            mode,
-            padding,
-            oids,
-        }
+            #[cfg(feature = "rsa")]
+            Kind::Asymmetric {
+                algorithm,
+                mode,
+                padding,
+            } => format!("{}/{}/{}", algorithm.names[0], mode, padding.names[0]),
+        };
+        Self { name, kind, oids }
     }
 
     pub fn name(&self) -> &str {
@@ -49,45 +66,39 @@ impl CipherEntry {
         AnyCipher::new(self)
     }
 
-    pub(super) fn algorithm(&self) -> &'static AlgorithmSpec {
-        self.algorithm
+    pub(super) fn kind(&self) -> &Kind {
+        &self.kind
     }
 
-    pub(super) fn mode(&self) -> &'static ModeSpec {
-        self.mode
-    }
-
-    pub(super) fn padding(&self) -> &'static PaddingSpec {
-        self.padding
-    }
-
-    pub(super) fn is(
-        &self,
-        algorithm: &AlgorithmSpec,
-        mode: &ModeSpec,
-        padding: &PaddingSpec,
-    ) -> bool {
-        core::ptr::eq(self.algorithm, algorithm)
-            && core::ptr::eq(self.mode, mode)
-            && core::ptr::eq(self.padding, padding)
-    }
-
-    // Checks the params against what this entry's mode needs and builds what the layers
-    // underneath take: a secret key, and each operation field required, allowed or refused
+    // Checks the params against what this entry needs and builds what the layers underneath
+    // take, so that nothing is filled in or dropped silently
     pub(super) fn init_params(&self, params: &AnyParams) -> Result<InitParams, AlgoError> {
-        let AnyKeyParams::Secret(secret) = &params.key else {
-            return Err(AlgoError::new(ErrorKind::InvalidParams));
-        };
         let op = &params.op;
-        check(self.mode.iv(), op.iv.is_some())?;
-        check(self.mode.tag_len(), op.tag_len.is_some())?;
-        check(self.mode.aad(), op.aad.is_some())?;
-        Ok(InitParams {
-            key: Zeroizing::new(secret.key.clone()),
-            iv: op.iv.clone(),
-            tag_len: op.tag_len,
-            aad: op.aad.clone().unwrap_or_default(),
-        })
+        match &self.kind {
+            // A secret key, and each operation field required, allowed or refused by the mode
+            Kind::Block { mode, .. } => {
+                let AnyKeyParams::Secret(secret) = &params.key else {
+                    return Err(AlgoError::new(ErrorKind::InvalidParams));
+                };
+                check(mode.iv(), op.iv.is_some())?;
+                check(mode.tag_len(), op.tag_len.is_some())?;
+                check(mode.aad(), op.aad.is_some())?;
+                Ok(InitParams::Symmetric(SymmetricParams {
+                    key: Zeroizing::new(secret.key.clone()),
+                    iv: op.iv.clone(),
+                    tag_len: op.tag_len,
+                    aad: op.aad.clone().unwrap_or_default(),
+                }))
+            }
+            // A key of the algorithm, and no operation field at all
+            #[cfg(feature = "rsa")]
+            Kind::Asymmetric { algorithm, .. } => {
+                check(Need::Forbidden, op.iv.is_some())?;
+                check(Need::Forbidden, op.tag_len.is_some())?;
+                check(Need::Forbidden, op.aad.is_some())?;
+                (algorithm.key)(&params.key).ok_or(AlgoError::new(ErrorKind::InvalidParams))
+            }
+        }
     }
 }
 

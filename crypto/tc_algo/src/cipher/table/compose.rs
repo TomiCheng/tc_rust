@@ -12,20 +12,21 @@ use tc_buffered_cipher::{
     PaddedBufferedBlockCipher,
 };
 
-use super::specs::{ModeKind, PaddingKind};
+use super::specs::{AlgorithmSpec, ModeKind, PaddingKind};
 use crate::cipher::CipherEntry;
 use crate::cipher::classify::Classify;
 use crate::cipher::dyn_cipher::{DynCipher, Mapped};
-use crate::cipher::init_params::InitParams;
+use crate::cipher::entry::Kind;
+use crate::cipher::init_params::SymmetricParams;
 
 fn boxed<T>(cipher: T) -> Box<dyn DynCipher>
 where
-    T: BufferedCipher + BufferedCipherInit<InitParams> + Send + 'static,
+    T: BufferedCipher + BufferedCipherInit<SymmetricParams> + Send + 'static,
     <T as BufferedCipher>::Error: Classify + core::error::Error + Send + Sync + 'static,
-    <T as BufferedCipherInit<InitParams>>::Error:
+    <T as BufferedCipherInit<SymmetricParams>>::Error:
         Classify + core::error::Error + Send + Sync + 'static,
 {
-    Box::new(Mapped(cipher))
+    Box::new(Mapped::<T, SymmetricParams>::new(cipher))
 }
 
 // A mode with the padding layer on top; a macro, so each concrete type is checked on its own
@@ -61,13 +62,25 @@ macro_rules! padded {
     };
 }
 
-// Builds the entry's cipher layer by layer: engine, mode, then padding and buffering
 pub(in crate::cipher) fn create(entry: &CipherEntry) -> Box<dyn DynCipher> {
-    let algorithm = entry.algorithm();
+    match entry.kind() {
+        Kind::Block {
+            algorithm,
+            mode,
+            padding,
+        } => block(algorithm, mode.kind, padding.kind),
+        #[cfg(feature = "rsa")]
+        Kind::Asymmetric {
+            algorithm, padding, ..
+        } => (algorithm.create)(padding.kind),
+    }
+}
+
+// Builds a block cipher layer by layer: engine, mode, then padding and buffering
+fn block(algorithm: &AlgorithmSpec, mode: ModeKind, padding: PaddingKind) -> Box<dyn DynCipher> {
     let engine = algorithm.engine;
     let feedback_bits = algorithm.block_size * 8;
-    let padding = entry.padding().kind;
-    match entry.mode().kind {
+    match mode {
         ModeKind::Ecb => padded!(EcbBlockCipher::new(engine()), padding),
         ModeKind::Cbc => padded!(CbcBlockCipher::new(engine()), padding),
         ModeKind::Cfb => padded!(CfbBlockCipher::new(engine(), feedback_bits), padding),
