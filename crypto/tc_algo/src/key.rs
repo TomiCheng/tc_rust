@@ -1,1 +1,1 @@
-//! 各工廠共用的金鑰：對稱金鑰、不透明的私鑰與公鑰。
+//! The keys every factory shares: secret keys and opaque private and public keys.

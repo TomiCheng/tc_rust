@@ -1,1 +1,1 @@
-//! IES 混合式加密。
+//! IES hybrid encryption.

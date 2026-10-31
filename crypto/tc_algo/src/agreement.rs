@@ -1,1 +1,1 @@
-//! 依名稱或 OID 建立金鑰協商，對應 BC 的 `AgreementUtilities`。
+//! Key agreements by name or OID, after Bouncy Castle's `AgreementUtilities`.

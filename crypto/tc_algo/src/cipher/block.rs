@@ -1,1 +1,1 @@
-//! 區塊加密，搭配模式與 padding。
+//! Block ciphers with a mode and padding.

@@ -1,4 +1,5 @@
 use super::DigestEntry;
+use super::table::DIGESTS;
 
 #[non_exhaustive]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -48,7 +49,15 @@ pub enum Algorithm {
 }
 
 impl Algorithm {
+    // Every enabled algorithm has a table row; a missing one means the table is incomplete
+    #[allow(
+        unreachable_code,
+        reason = "Algorithm has no values when every digest feature is off"
+    )]
     pub fn entry(self) -> &'static DigestEntry {
-        todo!()
+        DIGESTS
+            .iter()
+            .find(|entry| entry.algorithm() == self)
+            .expect("every enabled digest has a table entry")
     }
 }

@@ -1,1 +1,1 @@
-//! AEAD：區塊加密的 AEAD 模式與 AEAD 專用演算法。
+//! AEAD: the AEAD modes of block ciphers and dedicated AEAD algorithms.

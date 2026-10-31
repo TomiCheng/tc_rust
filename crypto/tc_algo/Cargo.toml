@@ -8,7 +8,8 @@ license.workspace = true
 repository.workspace = true
 
 [features]
-# 已被攻破或不建議使用的不在預設裡：MD2、MD4、MD5、SHA-1。家族 feature 照樣包含它們。
+# Broken or discouraged digests stay out of the default: MD2, MD4, MD5 and SHA-1. The family
+# features still include them.
 default = [
     "sha224",
     "sha256",
@@ -35,7 +36,7 @@ md5 = []
 sha = ["sha1", "sha224", "sha256", "sha384", "sha512", "sha512-224", "sha512-256"]
 sha1 = []
 sha224 = []
-sha256 = []
+sha256 = ["dep:tc_sha"]
 sha384 = []
 sha512 = []
 sha512-224 = []
@@ -51,7 +52,7 @@ keccak-256 = []
 keccak-288 = []
 keccak-384 = []
 keccak-512 = []
-# SHAKE 當固定長度的 digest：SHAKE128 輸出 256 bits、SHAKE256 輸出 512 bits，同 BC
+# SHAKE as a fixed-length digest: SHAKE128 gives 256 bits and SHAKE256 512 bits, as in Bouncy Castle
 shake = ["shake128", "shake256"]
 shake128 = []
 shake256 = []
@@ -59,3 +60,4 @@ shake256 = []
 [dependencies]
 tc_asn1 = "0.1.2"
 tc_digest = "0.1.1"
+tc_sha = { version = "0.1.1", optional = true }

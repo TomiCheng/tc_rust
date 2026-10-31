@@ -1,7 +1,8 @@
 use core::error::Error;
 use core::fmt;
 
-// 照 std::io::Error：種類與底層錯誤分開，日後加種類或帶上底層錯誤都不破壞相容性
+// After std::io::Error: the kind and the underlying error are kept apart, so new kinds and
+// underlying errors can be added without breaking compatibility
 #[derive(Debug)]
 pub struct AlgoError {
     kind: ErrorKind,
@@ -9,12 +10,17 @@ pub struct AlgoError {
 }
 
 impl AlgoError {
+    pub(crate) const fn new(kind: ErrorKind) -> Self {
+        Self { kind, source: None }
+    }
+
     pub fn kind(&self) -> ErrorKind {
         self.kind
     }
 }
 
-// Display 只寫種類；底層錯誤由 source() 交出，不重複寫進訊息
+// Display writes only the kind; the underlying error comes from source(), so error chains do not
+// print it twice
 impl fmt::Display for AlgoError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Display::fmt(&self.kind, f)

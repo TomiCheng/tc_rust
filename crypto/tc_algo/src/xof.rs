@@ -1,1 +1,1 @@
-//! 依名稱或 OID 建立 XOF；BC 沒有對應的工廠。
+//! Extendable-output functions by name or OID; Bouncy Castle has no matching factory.

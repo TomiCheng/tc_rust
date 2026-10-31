@@ -1,1 +1,1 @@
-//! 串流加密。
+//! Stream ciphers.

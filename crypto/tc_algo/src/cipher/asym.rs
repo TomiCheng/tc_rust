@@ -1,1 +1,1 @@
-//! 非對稱加密。
+//! Asymmetric encryption.

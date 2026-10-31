@@ -1,39 +1,58 @@
 use tc_asn1::Asn1Oid;
+use tc_digest::{Digest, TryDigest};
 
-use super::Algorithm;
+use super::{Algorithm, AnyDigest, get, get_by_name, get_by_oid};
 use crate::AlgoError;
 
 pub fn calculate(algorithm: Algorithm, input: &[u8]) -> Vec<u8> {
-    todo!()
+    finish(get(algorithm), input)
 }
 
 pub fn calculate_by_name(name: &str, input: &[u8]) -> Result<Vec<u8>, AlgoError> {
-    todo!()
+    Ok(finish(get_by_name(name)?, input))
 }
 
 pub fn calculate_by_oid(oid: &Asn1Oid, input: &[u8]) -> Result<Vec<u8>, AlgoError> {
-    todo!()
+    Ok(finish(get_by_oid(oid)?, input))
 }
 
-/// 寫到 `output` 的開頭並回傳寫了幾個 byte；`output` 比 digest 短時 panic。
+/// Writes the hash to the front of `output` and returns its length; panics if `output` is
+/// shorter than the digest.
 pub fn calculate_into(algorithm: Algorithm, input: &[u8], output: &mut [u8]) -> usize {
-    todo!()
+    finish_into(get(algorithm), input, output)
 }
 
-/// 寫到 `output` 的開頭並回傳寫了幾個 byte；`output` 比 digest 短時 panic。
+/// Writes the hash to the front of `output` and returns its length; panics if `output` is
+/// shorter than the digest.
 pub fn calculate_by_name_into(
     name: &str,
     input: &[u8],
     output: &mut [u8],
 ) -> Result<usize, AlgoError> {
-    todo!()
+    Ok(finish_into(get_by_name(name)?, input, output))
 }
 
-/// 寫到 `output` 的開頭並回傳寫了幾個 byte；`output` 比 digest 短時 panic。
+/// Writes the hash to the front of `output` and returns its length; panics if `output` is
+/// shorter than the digest.
 pub fn calculate_by_oid_into(
     oid: &Asn1Oid,
     input: &[u8],
     output: &mut [u8],
 ) -> Result<usize, AlgoError> {
-    todo!()
+    Ok(finish_into(get_by_oid(oid)?, input, output))
+}
+
+fn finish(mut digest: AnyDigest, input: &[u8]) -> Vec<u8> {
+    digest.update(input);
+    digest.finalize()
+}
+
+fn finish_into(mut digest: AnyDigest, input: &[u8], output: &mut [u8]) -> usize {
+    // Check first, so the panic message does not depend on each digest's implementation
+    assert!(
+        output.len() >= digest.digest_size(),
+        "output is shorter than the digest"
+    );
+    digest.update(input);
+    Digest::do_final(&mut digest, output)
 }

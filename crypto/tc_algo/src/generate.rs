@@ -1,1 +1,1 @@
-//! 產生金鑰與運算參數，對應 BC 的 `GeneratorUtilities` 與 `ParameterUtilities.GenerateParameters`。
+//! Key and operation-parameter generation, after Bouncy Castle's `GeneratorUtilities` and `ParameterUtilities.GenerateParameters`.

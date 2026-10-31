@@ -9,38 +9,66 @@ use super::{Algorithm, AnyDigest};
 #[derive(Clone, Copy, Debug)]
 pub struct DigestEntry {
     algorithm: Algorithm,
-    // 第一個是正式名稱，其餘是別名
+    // The first is the canonical name, the rest are aliases
     names: &'static [&'static str],
-    // 第一個是 digest 本身的 OID，其餘照 BC 也對到這一列
+    // The first is the digest's own OID; the rest map to this row as in Bouncy Castle
     oids: &'static [NamedOid],
     constructor: fn() -> Box<dyn DynDigest>,
 }
 
 impl DigestEntry {
+    #[allow(
+        dead_code,
+        reason = "the table is empty when every digest feature is off"
+    )]
+    pub(super) const fn new(
+        algorithm: Algorithm,
+        names: &'static [&'static str],
+        oids: &'static [NamedOid],
+        constructor: fn() -> Box<dyn DynDigest>,
+    ) -> Self {
+        Self {
+            algorithm,
+            names,
+            oids,
+            constructor,
+        }
+    }
+
     pub fn algorithm(&self) -> Algorithm {
-        todo!()
+        self.algorithm
     }
 
     pub fn name(&self) -> &'static str {
-        todo!()
+        self.names[0]
     }
 
+    pub(super) fn names(&self) -> &'static [&'static str] {
+        self.names
+    }
+
+    // Raw Keccak has no OID
     pub fn oid(&self) -> Option<NamedOid> {
-        todo!()
+        self.oids.first().copied()
     }
 
     pub fn oids(&self) -> &'static [NamedOid] {
-        todo!()
+        self.oids
     }
 
     pub fn create(&'static self) -> AnyDigest {
-        todo!()
+        AnyDigest {
+            entry: self,
+            digest: (self.constructor)(),
+        }
     }
 }
 
+// Each algorithm has one row, so only the algorithm is compared; comparing function pointers is
+// unreliable
 impl PartialEq for DigestEntry {
     fn eq(&self, other: &Self) -> bool {
-        todo!()
+        self.algorithm == other.algorithm
     }
 }
 
@@ -48,12 +76,22 @@ impl Eq for DigestEntry {}
 
 impl Hash for DigestEntry {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        todo!()
+        self.algorithm.hash(state);
     }
 }
 
+// The canonical name, followed by the OIDs when there are any, e.g.
+// `SHA-256  [id-sha256, id-hmacWithSHA256]`
 impl fmt::Display for DigestEntry {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        todo!()
+        f.write_str(self.name())?;
+        if let Some((first, rest)) = self.oids.split_first() {
+            write!(f, "  [{}", first.name())?;
+            for oid in rest {
+                write!(f, ", {}", oid.name())?;
+            }
+            f.write_str("]")?;
+        }
+        Ok(())
     }
 }
