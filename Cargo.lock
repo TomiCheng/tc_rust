@@ -886,6 +886,7 @@ dependencies = [
  "rand_core",
  "tc_aead_cipher",
  "tc_aes",
+ "tc_aria",
  "tc_asn1",
  "tc_asym_cipher",
  "tc_asym_encoding",
@@ -895,7 +896,10 @@ dependencies = [
  "tc_block_cipher",
  "tc_block_modes",
  "tc_block_padding",
+ "tc_blowfish_v2",
  "tc_buffered_cipher",
+ "tc_camellia",
+ "tc_cast_v2",
  "tc_cfrg_curves",
  "tc_chacha",
  "tc_des",
@@ -908,22 +912,30 @@ dependencies = [
  "tc_f2m_custom",
  "tc_fp_curve",
  "tc_fp_custom",
+ "tc_gost28147",
  "tc_gost3410_key",
  "tc_gost3411",
  "tc_hc",
  "tc_keccak",
  "tc_md",
+ "tc_misc_block_cipher",
  "tc_misc_digest",
  "tc_ml_kem",
  "tc_naccache_stern",
  "tc_rc4_family",
+ "tc_rc_cipher",
  "tc_ripemd",
  "tc_rsa",
  "tc_salsa20",
+ "tc_seed_v2",
+ "tc_serpent_v2",
  "tc_sha",
  "tc_sm2",
  "tc_sm3",
+ "tc_sm4",
  "tc_stream_cipher",
+ "tc_threefish",
+ "tc_twofish_v2",
  "tc_zeroize",
 ]
 
@@ -2200,6 +2212,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_sm4"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "959d33ac80f2e25ba7130fa1bf4d613354535e13c406184a1345a294cefaddcd"
+dependencies = [
+ "tc_block_cipher",
+ "tc_zeroize",
+]
+
+[[package]]
 name = "tc_srp6"
 version = "0.1.0"
 dependencies = [
@@ -2221,6 +2243,16 @@ version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9a460a4a240dee7ffd827185d8e3e966e20a3e9fb4a9fb9377fc93b33045723b"
 dependencies = [
+ "tc_zeroize",
+]
+
+[[package]]
+name = "tc_threefish"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "134aebe1b38efcf95d28fc876e667f917c4625ab50a68df010a14d832a392977"
+dependencies = [
+ "tc_block_cipher",
  "tc_zeroize",
 ]
 

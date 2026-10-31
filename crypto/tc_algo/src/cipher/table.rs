@@ -4,30 +4,63 @@
 
 #[cfg(feature = "aes")]
 mod aes;
+#[cfg(feature = "aria")]
+mod aria;
 #[cfg(any(feature = "rsa", feature = "elgamal", feature = "naccache-stern"))]
 mod asymmetric;
+#[cfg(feature = "blowfish")]
+mod blowfish;
+#[cfg(feature = "camellia")]
+mod camellia;
+#[cfg(any(feature = "cast5", feature = "cast6"))]
+mod cast;
 #[cfg(feature = "chacha")]
 mod chacha;
 mod compose;
 #[cfg(feature = "des")]
 mod des;
+#[cfg(feature = "desede")]
+mod desede;
 #[cfg(feature = "elgamal")]
 mod elgamal;
+#[cfg(feature = "gost28147")]
+mod gost28147;
 #[cfg(feature = "hc")]
 mod hc;
+#[cfg(any(
+    feature = "idea",
+    feature = "noekeon",
+    feature = "rijndael",
+    feature = "skipjack",
+    feature = "tea",
+    feature = "xtea"
+))]
+mod misc;
 mod modes;
 #[cfg(feature = "naccache-stern")]
 mod naccache_stern;
 mod paddings;
+#[cfg(any(feature = "rc2", feature = "rc5", feature = "rc5-64", feature = "rc6"))]
+mod rc;
 #[cfg(any(feature = "rc4", feature = "vmpc"))]
 mod rc4_family;
 #[cfg(feature = "rsa")]
 mod rsa;
 #[cfg(feature = "salsa20")]
 mod salsa20;
+#[cfg(feature = "seed")]
+mod seed;
+#[cfg(any(feature = "serpent", feature = "tnepres"))]
+mod serpent;
 #[cfg(feature = "sm2")]
 mod sm2;
+#[cfg(feature = "sm4")]
+mod sm4;
 pub(in crate::cipher) mod specs;
+#[cfg(feature = "threefish")]
+mod threefish;
+#[cfg(feature = "twofish")]
+mod twofish;
 
 use core::ptr;
 use std::sync::LazyLock;
@@ -48,12 +81,62 @@ use super::entry::Kind;
 pub(super) use compose::create;
 
 // Statics rather than consts, here and in the tables they draw on: entries point into them and
-// are matched by address, which a const does not keep
+// are matched by address, which a const does not keep. In the order of Bouncy Castle's names
 static ALGORITHMS: &[AlgorithmSpec] = &[
     #[cfg(feature = "aes")]
     aes::AES,
+    #[cfg(feature = "aria")]
+    aria::ARIA,
+    #[cfg(feature = "blowfish")]
+    blowfish::BLOWFISH,
+    #[cfg(feature = "camellia")]
+    camellia::CAMELLIA,
+    #[cfg(feature = "cast5")]
+    cast::CAST5,
+    #[cfg(feature = "cast6")]
+    cast::CAST6,
     #[cfg(feature = "des")]
     des::DES,
+    #[cfg(feature = "desede")]
+    desede::DESEDE,
+    #[cfg(feature = "gost28147")]
+    gost28147::GOST28147,
+    #[cfg(feature = "idea")]
+    misc::IDEA,
+    #[cfg(feature = "noekeon")]
+    misc::NOEKEON,
+    #[cfg(feature = "rc2")]
+    rc::RC2,
+    #[cfg(feature = "rc5")]
+    rc::RC5,
+    #[cfg(feature = "rc5-64")]
+    rc::RC5_64,
+    #[cfg(feature = "rc6")]
+    rc::RC6,
+    #[cfg(feature = "rijndael")]
+    misc::RIJNDAEL,
+    #[cfg(feature = "seed")]
+    seed::SEED,
+    #[cfg(feature = "serpent")]
+    serpent::SERPENT,
+    #[cfg(feature = "skipjack")]
+    misc::SKIPJACK,
+    #[cfg(feature = "sm4")]
+    sm4::SM4,
+    #[cfg(feature = "tea")]
+    misc::TEA,
+    #[cfg(feature = "threefish")]
+    threefish::THREEFISH_256,
+    #[cfg(feature = "threefish")]
+    threefish::THREEFISH_512,
+    #[cfg(feature = "threefish")]
+    threefish::THREEFISH_1024,
+    #[cfg(feature = "tnepres")]
+    serpent::TNEPRES,
+    #[cfg(feature = "twofish")]
+    twofish::TWOFISH,
+    #[cfg(feature = "xtea")]
+    misc::XTEA,
 ];
 
 // In the order of Bouncy Castle's names

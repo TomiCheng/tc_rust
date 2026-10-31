@@ -137,6 +137,37 @@ impl tc_block_modes::IvParams for SymmetricParams {
     }
 }
 
+// The parameters some block ciphers take beyond the key, at the values Bouncy Castle gives a bare
+// key
+#[cfg(feature = "rc2")]
+impl tc_rc_cipher::Rc2Params for SymmetricParams {
+    fn effective_key_bits(&self) -> usize {
+        self.key.len() * 8
+    }
+}
+
+#[cfg(any(feature = "rc5", feature = "rc5-64"))]
+impl tc_rc_cipher::Rc5Params for SymmetricParams {
+    fn rounds(&self) -> usize {
+        tc_rc_cipher::RC5_DEFAULT_ROUNDS
+    }
+}
+
+// A zero tweak
+#[cfg(feature = "threefish")]
+impl tc_threefish::ThreefishParams for SymmetricParams {
+    fn tweak(&self) -> Option<&[u8]> {
+        None
+    }
+}
+
+#[cfg(feature = "gost28147")]
+impl tc_gost28147::Gost28147Params for SymmetricParams {
+    fn s_box(&self) -> &[u8] {
+        &tc_gost28147::s_box::DEFAULT
+    }
+}
+
 impl tc_stream_cipher::KeyParams for SymmetricParams {
     fn key(&self) -> &[u8] {
         &self.key
