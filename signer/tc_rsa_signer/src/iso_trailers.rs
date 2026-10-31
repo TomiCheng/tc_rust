@@ -42,3 +42,21 @@ pub fn trailer(name: &str) -> Option<u16> {
     .find(|(known, _)| known.eq_ignore_ascii_case(name))
     .map(|(_, trailer)| trailer)
 }
+
+/// 讀出簽章區塊結尾的長度：0xBC 為 1，否則是標明雜湊的 2 位元組，必須等於
+/// `digest_trailer`。變動時間：只能用於公開值，用於公開的簽章區塊。
+pub(crate) fn trailer_length<E>(
+    block: &[u8],
+    digest_trailer: Option<u16>,
+) -> Result<usize, crate::Iso9796d2Error<E>> {
+    let last = block[block.len() - 1];
+    if last == TRAILER_IMPLICIT as u8 {
+        return Ok(1);
+    }
+    let found = u16::from_be_bytes([block[block.len() - 2], last]);
+    match digest_trailer {
+        None => Err(crate::Iso9796d2Error::UnrecognisedTrailer),
+        Some(trailer) if trailer != found => Err(crate::Iso9796d2Error::TrailerMismatch(found)),
+        Some(_) => Ok(2),
+    }
+}

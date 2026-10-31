@@ -1809,6 +1809,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_ripemd"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0d520cd727e0df072203dc181fd0c282a1ca12b034cf89065f4394032b7932e1"
+dependencies = [
+ "tc_digest",
+ "tc_zeroize",
+]
+
+[[package]]
 name = "tc_rsa"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1841,6 +1851,7 @@ dependencies = [
  "tc_constant_time",
  "tc_digest",
  "tc_keccak",
+ "tc_ripemd",
  "tc_rsa",
  "tc_sha",
  "tc_signer",

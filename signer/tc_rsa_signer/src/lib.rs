@@ -38,6 +38,9 @@
 extern crate alloc;
 
 mod error;
+mod iso9796d2_error;
+mod iso9796d2_pss_signer;
+mod iso9796d2_signer;
 pub mod iso_trailers;
 mod mask_generator;
 mod pss_error;
@@ -47,6 +50,9 @@ mod x931_error;
 mod x931_signer;
 
 pub use error::RsaDigestSignerError;
+pub use iso9796d2_error::Iso9796d2Error;
+pub use iso9796d2_pss_signer::Iso9796d2PssSigner;
+pub use iso9796d2_signer::Iso9796d2Signer;
 pub use mask_generator::{MaskGenerator, Mgf1, XofMgf};
 pub use pss_error::PssSignerError;
 pub use pss_signer::PssSigner;
