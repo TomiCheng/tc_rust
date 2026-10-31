@@ -1,4 +1,4 @@
-use super::KeyPair;
+use super::{KeyPair, get_key_pair_generator};
 use crate::AlgoError;
 use crate::params::SecretKey;
 
@@ -9,5 +9,5 @@ pub fn generate_key(name: &str) -> Result<SecretKey, AlgoError> {
 }
 
 pub fn generate_key_pair(name: &str) -> Result<KeyPair, AlgoError> {
-    todo!()
+    get_key_pair_generator(name)?.generate()
 }

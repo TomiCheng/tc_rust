@@ -8,16 +8,25 @@ pub enum KeyGenParams {
     Strength {
         bits: usize,
     },
-    // Bouncy Castle's RsaKeyGenerationParameters
     #[cfg(feature = "rsa")]
-    Rsa {
-        public_exponent: u32,
-        bits: usize,
-        certainty: u32,
-    },
+    Rsa(super::RsaKeyGenParams),
     // Bouncy Castle's ECKeyGenerationParameters: the curve is always named
     #[cfg(feature = "ec")]
     Ec {
         curve: crate::params::EcCurve,
     },
+}
+
+impl KeyGenParams {
+    // Bouncy Castle's defaults: exponent 65537, 2048 bits and certainty 100. Each with_ method of
+    // the result changes one of them, and init takes the result as it is
+    #[cfg(feature = "rsa")]
+    pub const fn rsa() -> super::RsaKeyGenParams {
+        super::RsaKeyGenParams::DEFAULT
+    }
+
+    #[cfg(feature = "ec")]
+    pub const fn ec(curve: crate::params::EcCurve) -> Self {
+        Self::Ec { curve }
+    }
 }

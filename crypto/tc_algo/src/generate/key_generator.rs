@@ -23,7 +23,7 @@ impl KeyGenerator {
         todo!()
     }
 
-    pub fn init(&mut self, params: &KeyGenParams) -> Result<(), AlgoError> {
+    pub fn init(&mut self, params: impl Into<KeyGenParams>) -> Result<(), AlgoError> {
         todo!()
     }
 

@@ -14,6 +14,18 @@ impl AlgoError {
         Self { kind, source: None }
     }
 
+    // Carries the error of the algorithm crate underneath, for source() to hand out
+    #[allow(
+        dead_code,
+        reason = "unused when no algorithm that can fail is enabled"
+    )]
+    pub(crate) fn with_source(kind: ErrorKind, source: impl Error + Send + Sync + 'static) -> Self {
+        Self {
+            kind,
+            source: Some(Box::new(source)),
+        }
+    }
+
     pub fn kind(&self) -> ErrorKind {
         self.kind
     }
