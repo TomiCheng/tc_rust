@@ -1,4 +1,5 @@
 use core::fmt;
+use tc_dsa::DsaEncodingError;
 
 /// SM2 的金鑰、密文或緩衝區錯誤。
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -31,6 +32,12 @@ pub enum Sm2Error {
     MissingConfirmationTag,
     /// 回應方的確認標籤不符。
     ConfirmationMismatch,
+    /// 簽章要私鑰、驗證要公鑰，給錯了。
+    WrongKeyForSigning,
+    /// 簽章的私鑰不在 `[1, n - 2]`，1 + d 沒有反元素。
+    PrivateKeyOutOfRange,
+    /// 簽章無法編碼，例如輸出緩衝區太短。
+    Encoding(DsaEncodingError),
 }
 
 impl fmt::Display for Sm2Error {
@@ -53,6 +60,11 @@ impl fmt::Display for Sm2Error {
             Self::InvalidAgreement => "the shared point U is infinity",
             Self::MissingConfirmationTag => "if initiating, confirmationTag must be set",
             Self::ConfirmationMismatch => "confirmation tag mismatch",
+            Self::WrongKeyForSigning => {
+                "SM2 needs a private key for signing and a public key for verification"
+            }
+            Self::PrivateKeyOutOfRange => "SM2 private key out of range",
+            Self::Encoding(error) => return write!(f, "unable to encode signature: {error}"),
         })
     }
 }

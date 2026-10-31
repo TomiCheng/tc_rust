@@ -1,5 +1,5 @@
-//! SM2 公鑰密碼（GM/T 0003），移植自 Bouncy Castle。目前有加密引擎 `SM2Engine` 與金鑰交換
-//! `SM2KeyExchange`；簽章之後加入。
+//! SM2 公鑰密碼（GM/T 0003），移植自 Bouncy Castle：加密引擎 `SM2Engine`、金鑰交換
+//! `SM2KeyExchange` 與簽章 `SM2Signer`。
 //!
 //! SM2 沒有自己的金鑰型別：它用 `tc_ec_key` 的 EC 金鑰，曲線通常是 sm2p256v1。
 //!
@@ -41,9 +41,14 @@ mod engine;
 mod error;
 mod key_exchange;
 mod key_exchange_params;
+mod signer;
+mod signer_params;
+mod user_id;
 
 pub use curve::Sm2Curve;
 pub use engine::{Sm2Engine, Sm2Mode};
 pub use error::Sm2Error;
 pub use key_exchange::{Sm2Confirmation, Sm2KeyExchange};
 pub use key_exchange_params::{Sm2KeyExchangePrivateParams, Sm2KeyExchangePublicParams};
+pub use signer::Sm2Signer;
+pub use signer_params::Sm2SignerParams;

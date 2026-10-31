@@ -1,3 +1,4 @@
+use crate::user_id::{MAX_USER_ID_LENGTH, coordinate, z};
 use crate::{Sm2Curve, Sm2Error, Sm2KeyExchangePrivateParams, Sm2KeyExchangePublicParams};
 use alloc::vec;
 use alloc::vec::Vec;
@@ -9,9 +10,6 @@ use tc_ec_key::EcPrivateKey;
 use tc_modular::{ModAdd, ModMul, NonZero};
 use tc_sm3::Sm3Digest;
 use tc_zeroize::Zeroizing;
-
-// BC 的 `CheckUserID`：ID 的位元數要放得進 16 位元的 ENTL。
-const MAX_USER_ID_LENGTH: usize = 8192;
 
 /// 金鑰確認的標籤，BC 的 `CalculateKeyWithConfirmation` 回傳的後半段。
 ///
@@ -201,8 +199,20 @@ impl<C: Sm2Curve, D: Digest + Clone> Sm2KeyExchange<C, D> {
             return Err(Sm2Error::InvalidAgreement);
         }
 
-        let own_z = self.z(&state.user_id, g, &state.static_point, field_length);
-        let other_z = self.z(public.user_id(), g, &other_static, field_length);
+        let own_z = z::<C, D>(
+            &self.digest,
+            &state.user_id,
+            g,
+            &state.static_point,
+            field_length,
+        );
+        let other_z = z::<C, D>(
+            &self.digest,
+            public.user_id(),
+            g,
+            &other_static,
+            field_length,
+        );
         let (z_initiator, z_responder) = if state.initiator {
             (own_z, other_z)
         } else {
@@ -214,29 +224,6 @@ impl<C: Sm2Curve, D: Digest + Clone> Sm2KeyExchange<C, D> {
             z_initiator,
             z_responder,
         })
-    }
-
-    /// BC 的 `GetZ`：H(ENTL ‖ ID ‖ a ‖ b ‖ x_G ‖ y_G ‖ x_P ‖ y_P)，ENTL 是 ID 的位元數的兩個
-    /// 大端序位元組。變動時間：只處理公開的值。
-    fn z(&self, user_id: &[u8], g: &C::Point, point: &C::Point, field_length: usize) -> Vec<u8> {
-        let curve = point.curve();
-        let mut digest = self.digest.clone();
-        digest.reset();
-        let bits = (user_id.len() * 8) as u16;
-        digest.update(&bits.to_be_bytes());
-        digest.update(user_id);
-        for element in [curve.a(), curve.b()] {
-            let mut bytes = vec![0u8; field_length];
-            element.encode_to(&mut bytes);
-            digest.update(&bytes);
-        }
-        for p in [g, point] {
-            digest.update(&coordinate(p.x(), field_length));
-            digest.update(&coordinate(p.y(), field_length));
-        }
-        let mut z = vec![0u8; self.digest.digest_size()];
-        digest.do_final(&mut z);
-        z
     }
 
     /// BC 的 `Kdf`：H(x_U ‖ y_U ‖ Z_A ‖ Z_B ‖ ct)，ct 從 1 起算的大端序 32 位元計數，串接到
@@ -276,13 +263,6 @@ struct Shared {
     y: Zeroizing<Vec<u8>>,
     z_initiator: Vec<u8>,
     z_responder: Vec<u8>,
-}
-
-/// 有限點的一個座標，編成 `field_length` 位元組。對座標是常數時間。
-fn coordinate<F: FieldElement>(element: Option<F>, field_length: usize) -> Zeroizing<Vec<u8>> {
-    let mut bytes = Zeroizing::new(vec![0u8; field_length]);
-    element.expect("the point is finite").encode_to(&mut bytes);
-    bytes
 }
 
 /// BC 的 `Reduce`：x̄ = 2^w + (x mod 2^w)，x 是點的 x 座標。變動時間：只用於公開的臨時

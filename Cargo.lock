@@ -1333,6 +1333,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_dstu4145"
+version = "0.1.0"
+dependencies = [
+ "rand",
+ "rand_core",
+ "tc_asym_cipher",
+ "tc_bigint",
+ "tc_digest",
+ "tc_dsa",
+ "tc_ec_core",
+ "tc_ec_key",
+ "tc_f2m_curve",
+ "tc_modular",
+ "tc_sha",
+ "tc_signer",
+ "tc_zeroize",
+]
+
+[[package]]
 name = "tc_dstu7564"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1437,6 +1456,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_ecgost3410"
+version = "0.1.0"
+dependencies = [
+ "num-traits",
+ "rand",
+ "tc_asym_cipher",
+ "tc_bigint",
+ "tc_digest",
+ "tc_dsa",
+ "tc_ec_core",
+ "tc_ec_key",
+ "tc_fp_curve",
+ "tc_gost3411",
+ "tc_modular",
+ "tc_signer",
+ "tc_zeroize",
+]
+
+[[package]]
 name = "tc_ecmqv"
 version = "0.1.0"
 dependencies = [
@@ -1450,6 +1488,23 @@ dependencies = [
  "tc_fp_curve",
  "tc_fp_custom",
  "tc_modular",
+ "tc_zeroize",
+]
+
+[[package]]
+name = "tc_ecnr"
+version = "0.1.0"
+dependencies = [
+ "rand",
+ "tc_asym_cipher",
+ "tc_bigint",
+ "tc_dsa",
+ "tc_ec_core",
+ "tc_ec_key",
+ "tc_fp_curve",
+ "tc_modular",
+ "tc_sha",
+ "tc_signer",
  "tc_zeroize",
 ]
 
@@ -1560,6 +1615,34 @@ dependencies = [
  "tc_block_modes",
  "tc_gost28147",
  "tc_macs",
+]
+
+[[package]]
+name = "tc_gost3410"
+version = "0.1.0"
+dependencies = [
+ "rand",
+ "rand_core",
+ "tc_asym_cipher",
+ "tc_bigint",
+ "tc_dsa",
+ "tc_gost3410_key",
+ "tc_gost3411",
+ "tc_modular",
+ "tc_signer",
+ "tc_zeroize",
+]
+
+[[package]]
+name = "tc_gost3410_key"
+version = "0.1.0"
+dependencies = [
+ "rand",
+ "rand_core",
+ "tc_asym_cipher",
+ "tc_bigint",
+ "tc_modular",
+ "tc_zeroize",
 ]
 
 [[package]]
@@ -1984,6 +2067,7 @@ dependencies = [
  "tc_bigint",
  "tc_constant_time",
  "tc_digest",
+ "tc_dsa",
  "tc_ec_core",
  "tc_ec_key",
  "tc_f2m_curve",
@@ -1991,6 +2075,7 @@ dependencies = [
  "tc_fp_custom",
  "tc_modular",
  "tc_sha",
+ "tc_signer",
  "tc_sm3",
  "tc_zeroize",
 ]
