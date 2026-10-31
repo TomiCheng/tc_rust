@@ -1,5 +1,8 @@
 //! ECDH key agreement; a rewrite of `tc_ecdh` on `tc_ec_core`.
 //!
+//! [`EcdhcBasicAgreement`] is the cofactor variant, ECDHC; it differs from ECDH only on curves
+//! whose cofactor is not one.
+//!
 //! Alice and Bob agree on a secret over an open channel, sending each other only their
 //! public keys:
 //!
@@ -42,7 +45,9 @@
 #![no_std]
 
 mod basic_agreement;
+mod cofactor_agreement;
 mod error;
 
 pub use basic_agreement::EcdhBasicAgreement;
+pub use cofactor_agreement::EcdhcBasicAgreement;
 pub use error::EcdhError;
