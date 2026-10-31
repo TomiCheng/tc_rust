@@ -6,4 +6,4 @@
 
 mod traits;
 
-pub use traits::{Signer, SignerInit};
+pub use traits::{Signer, SignerInit, SignerWithRecovery};
