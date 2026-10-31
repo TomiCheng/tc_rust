@@ -13,7 +13,7 @@
 | 類別 | 已發行 | 孵化池（新架構） | 孵化池（舊 trait） | BC 有、還沒做 |
 |---|---|---|---|---|
 | 區塊加密 | aes、des、aria、camellia、dstu7624、rc_cipher、sm4、threefish、gost28147 | blowfish、cast、seed、serpent、twofish，以及 misc_block_cipher（idea、noekeon、rijndael、skipjack、tea） | — | — |
-| 模式／padding | block_modes（ECB、CBC、CFB、OFB、CTR、OpenPGP CFB、GOFB、KCTR）、block_padding、aead_cipher（GCM、CCM、EAX、OCB） | — | — | CTS、GCM-SIV、KCCM |
+| 模式／padding | block_modes（ECB、CBC、CFB、OFB、CTR、OpenPGP CFB、GOFB、KCTR）、block_padding、aead_cipher（GCM、CCM、EAX、OCB、GCM-SIV、KCCM） | cts_modes（ECB、CBC 的 CTS） | — | — |
 | 串流加密 | chacha、salsa20、hc、rc4_family | — | — | — |
 | AEAD 專用演算法 | ascon_aead、grain128_aead、sparkle_aead、chacha_aead | — | — | — |
 | 雜湊 | sha、md、keccak、blake、ascon_hash、dstu7564、gost3411、ripemd、skein、sm3、misc_digest（haraka、photon_beetle、sparkle、tiger、whirlpool、xoodyak） | — | — | — |
