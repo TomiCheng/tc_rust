@@ -1,4 +1,10 @@
-// The secret, private, public and IES key variants come with the algorithms that use them
+use super::{AnyPrivateKey, AnyPublicKey, SecretKey};
+
+// The IES variant comes with the algorithm that uses it
 #[derive(Clone, Debug)]
 #[non_exhaustive]
-pub enum AnyKeyParams {}
+pub enum AnyKeyParams {
+    Secret(SecretKey),
+    Private(AnyPrivateKey),
+    Public(AnyPublicKey),
+}

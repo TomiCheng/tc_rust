@@ -4,7 +4,13 @@
 mod any_key_params;
 mod any_op_params;
 mod any_params;
+mod any_private_key;
+mod any_public_key;
+mod secret_key;
 
 pub use any_key_params::AnyKeyParams;
 pub use any_op_params::AnyOpParams;
 pub use any_params::AnyParams;
+pub use any_private_key::AnyPrivateKey;
+pub use any_public_key::AnyPublicKey;
+pub use secret_key::SecretKey;

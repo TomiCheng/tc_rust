@@ -1,0 +1,22 @@
+use core::fmt;
+
+// One variant per algorithm, each holding the key type of the crate that implements it
+#[derive(Clone)]
+#[non_exhaustive]
+pub enum AnyPublicKey {
+    // A key whose exponent is e
+    #[cfg(feature = "rsa")]
+    Rsa(tc_rsa::RsaKey),
+}
+
+// tc_rsa's key has no Debug, as one type holds both public and private keys, so this shows only
+// the algorithm
+impl fmt::Debug for AnyPublicKey {
+    #[allow(unused_variables, reason = "f is unused when every key feature is off")]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match *self {
+            #[cfg(feature = "rsa")]
+            Self::Rsa(_) => f.debug_tuple("Rsa").finish_non_exhaustive(),
+        }
+    }
+}

@@ -883,6 +883,7 @@ name = "tc_algo"
 version = "0.1.0"
 dependencies = [
  "tc_asn1",
+ "tc_bigint",
  "tc_blake",
  "tc_digest",
  "tc_dstu7564",
@@ -891,8 +892,10 @@ dependencies = [
  "tc_md",
  "tc_misc_digest",
  "tc_ripemd",
+ "tc_rsa",
  "tc_sha",
  "tc_sm3",
+ "tc_zeroize",
 ]
 
 [[package]]
