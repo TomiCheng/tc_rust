@@ -858,6 +858,27 @@ name = "tc_agreement"
 version = "0.1.0"
 
 [[package]]
+name = "tc_agreement_kdf"
+version = "0.1.0"
+dependencies = [
+ "rand",
+ "tc_agreement",
+ "tc_asn1_x509",
+ "tc_asym_cipher",
+ "tc_bigint",
+ "tc_ec_core",
+ "tc_ec_key",
+ "tc_ecdh_kek",
+ "tc_ecdh_v2",
+ "tc_ecmqv",
+ "tc_f2m_curve",
+ "tc_fp_curve",
+ "tc_kdf",
+ "tc_sha",
+ "tc_zeroize",
+]
+
+[[package]]
 name = "tc_aria"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
