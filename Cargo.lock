@@ -1767,6 +1767,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_kem"
+version = "0.1.0"
+
+[[package]]
 name = "tc_key_wrap"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1818,6 +1822,20 @@ dependencies = [
  "tc_block_cipher",
  "tc_zeroize",
  "xtea",
+]
+
+[[package]]
+name = "tc_ml_kem"
+version = "0.1.0"
+dependencies = [
+ "rand",
+ "rand_core",
+ "tc_asym_cipher",
+ "tc_constant_time",
+ "tc_digest",
+ "tc_keccak",
+ "tc_kem",
+ "tc_zeroize",
 ]
 
 [[package]]

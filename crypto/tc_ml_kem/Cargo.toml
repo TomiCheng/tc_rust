@@ -1,0 +1,21 @@
+[package]
+name = "tc_ml_kem"
+description = "ML-KEM (FIPS 203) key encapsulation, ported from Bouncy Castle C#."
+version.workspace = true
+edition.workspace = true
+rust-version = "1.85"
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+rand_core = { workspace = true }
+tc_asym_cipher = "0.1.0"
+tc_constant_time = "0.1.0"
+tc_digest = "0.1.0"
+tc_kem = { version = "0.1.0", path = "../tc_kem" }
+tc_keccak = "0.1.0"
+tc_zeroize = { version = "0.1.0", features = ["alloc"] }
+
+[dev-dependencies]
+rand = { workspace = true }
+rand_core = { workspace = true }
