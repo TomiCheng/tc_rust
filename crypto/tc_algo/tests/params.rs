@@ -38,7 +38,7 @@ fn debug_shows_the_algorithm_but_no_key_values() {
     let shown = format!("{private:?}");
     assert_eq!(
         shown,
-        "AnyParams { key: Private(Rsa(..)), op: AnyOpParams }"
+        "AnyParams { key: Private(Rsa(..)), op: AnyOpParams { iv: None, tag_len: None, aad: None } }"
     );
     assert!(!shown.contains("173"));
 }

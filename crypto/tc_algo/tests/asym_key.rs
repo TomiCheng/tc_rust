@@ -18,7 +18,7 @@ fn ed25519_keys_go_into_the_params_and_show_only_the_algorithm() {
     let public = AnyPublicKey::Ed25519(public_key);
     assert_eq!(
         format!("{private:?}"),
-        "AnyParams { key: Private(Ed25519(..)), op: AnyOpParams }"
+        "AnyParams { key: Private(Ed25519(..)), op: AnyOpParams { iv: None, tag_len: None, aad: None } }"
     );
     assert_eq!(format!("{public:?}"), "Ed25519(..)");
 }

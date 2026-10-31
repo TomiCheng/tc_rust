@@ -36,7 +36,7 @@ fn debug_shows_the_length_but_no_key_bytes() {
     let shown = format!("{params:?}");
     assert_eq!(
         shown,
-        "AnyParams { key: Secret(SecretKey { len: 16, .. }), op: AnyOpParams }"
+        "AnyParams { key: Secret(SecretKey { len: 16, .. }), op: AnyOpParams { iv: None, tag_len: None, aad: None } }"
     );
     assert!(!shown.contains("171"));
 }

@@ -51,6 +51,10 @@ pub enum ErrorKind {
     UnknownDigest,
     UnknownGenerator,
     InvalidKeyGenParams,
+    UnknownCipher,
+    InvalidParams,
+    DataLength,
+    InvalidCiphertext,
 }
 
 impl fmt::Display for ErrorKind {
@@ -59,6 +63,10 @@ impl fmt::Display for ErrorKind {
             ErrorKind::UnknownDigest => f.write_str("unknown digest algorithm"),
             ErrorKind::UnknownGenerator => f.write_str("unknown key generator"),
             ErrorKind::InvalidKeyGenParams => f.write_str("invalid key generation parameters"),
+            ErrorKind::UnknownCipher => f.write_str("unknown cipher"),
+            ErrorKind::InvalidParams => f.write_str("invalid parameters for this algorithm"),
+            ErrorKind::DataLength => f.write_str("input of the wrong length for this cipher"),
+            ErrorKind::InvalidCiphertext => f.write_str("invalid ciphertext"),
         }
     }
 }

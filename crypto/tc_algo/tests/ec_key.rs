@@ -61,7 +61,7 @@ fn debug_shows_the_curve_but_no_key_values() {
     let params = AnyParams::new(AnyKeyParams::Private(AnyPrivateKey::Ec(private_key())));
     assert_eq!(
         format!("{params:?}"),
-        "AnyParams { key: Private(Ec(..)), op: AnyOpParams }"
+        "AnyParams { key: Private(Ec(..)), op: AnyOpParams { iv: None, tag_len: None, aad: None } }"
     );
 }
 

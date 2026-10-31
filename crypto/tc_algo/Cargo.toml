@@ -162,6 +162,7 @@ rand_core = "0.10.1"
 tc_asn1 = "0.1.2"
 tc_asym_cipher = { version = "0.1.0", optional = true }
 tc_blake = { version = "0.1.0", optional = true }
+tc_buffered_cipher = "0.1.1"
 tc_cfrg_curves = { version = "0.1.0", path = "../tc_cfrg_curves", optional = true }
 tc_dh_key = { version = "0.1.0", path = "../tc_dh_key", optional = true }
 tc_digest = "0.1.1"
