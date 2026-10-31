@@ -8,10 +8,12 @@ license.workspace = true
 repository.workspace = true
 
 [features]
-# Every algorithm is in the default except the weak ones. For digests those are MD2, MD4, MD5,
-# SHA-1, RIPEMD-128, RIPEMD-256 (no stronger than RIPEMD-128, only longer) and GOST R 34.11-94.
-# NONE stays out too: it is not a hash, so a stray "NONE" must not silently stop hashing. The
-# family features still include all of them.
+# Every algorithm is in the default except the weak ones and those kept only for legacy use. For
+# digests those are MD2, MD4, MD5, SHA-1, RIPEMD-128, RIPEMD-256 (no stronger than RIPEMD-128,
+# only longer) and GOST R 34.11-94; for EC keys, the curves below 112 bits (ec-small-curves) and
+# the binary curves (ec-f2m), which NIST SP 800-186 keeps for legacy use only. NONE stays out too:
+# it is not a hash, so a stray "NONE" must not silently stop hashing. The family features still
+# include all of them.
 default = [
     "sha224",
     "sha256",
@@ -50,6 +52,7 @@ default = [
     "tiger",
     "whirlpool",
     "rsa",
+    "ec",
 ]
 md = ["md2", "md4", "md5"]
 md2 = ["dep:tc_md"]
@@ -111,12 +114,29 @@ whirlpool = ["dep:tc_misc_digest", "tc_misc_digest/whirlpool"]
 null-digest = ["tc_digest/alloc"]
 # RSA keys
 rsa = ["dep:tc_rsa"]
+# EC keys on the prime curves secp224k1 to secp521r1 and sm2p256v1
+ec = ["dep:tc_ec_key", "dep:tc_fp_custom"]
+# The binary SEC 2 curves sect233k1 to sect571r1
+ec-f2m = ["ec", "dep:tc_f2m_custom"]
+# The weak curves, kept only for interoperability: secp112r1 to secp192r1, and with ec-f2m sect113r1
+# to sect193r2, all below 112 bits of security
+ec-small-curves = [
+    "ec",
+    "dep:tc_fp_curve",
+    "tc_fp_curve/small-curves",
+    "tc_fp_custom/small-curves",
+    "tc_f2m_custom?/small-curves",
+]
 
 [dependencies]
 tc_asn1 = "0.1.2"
 tc_blake = { version = "0.1.0", optional = true }
 tc_digest = "0.1.1"
 tc_dstu7564 = { version = "0.1.0", optional = true }
+tc_ec_key = { version = "0.1.0", path = "../tc_ec_key", optional = true }
+tc_f2m_custom = { version = "0.1.0", optional = true }
+tc_fp_curve = { version = "0.1.0", optional = true }
+tc_fp_custom = { version = "0.1.0", optional = true }
 tc_gost3411 = { version = "0.1.0", optional = true }
 tc_keccak = { version = "0.1.0", optional = true }
 tc_md = { version = "0.1.1", optional = true }

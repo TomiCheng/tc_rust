@@ -7,6 +7,8 @@ pub enum AnyPublicKey {
     // A key whose exponent is e
     #[cfg(feature = "rsa")]
     Rsa(tc_rsa::RsaKey),
+    #[cfg(feature = "ec")]
+    Ec(super::AnyEcPublicKey),
 }
 
 // tc_rsa's key has no Debug, as one type holds both public and private keys, so this shows only
@@ -17,6 +19,8 @@ impl fmt::Debug for AnyPublicKey {
         match *self {
             #[cfg(feature = "rsa")]
             Self::Rsa(_) => f.debug_tuple("Rsa").finish_non_exhaustive(),
+            #[cfg(feature = "ec")]
+            Self::Ec(_) => f.debug_tuple("Ec").finish_non_exhaustive(),
         }
     }
 }
