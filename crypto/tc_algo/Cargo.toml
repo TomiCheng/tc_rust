@@ -52,6 +52,7 @@ default = [
     "sm3",
     "tiger",
     "whirlpool",
+    "aes",
     "rsa",
     "ec",
     "x25519",
@@ -119,6 +120,8 @@ tiger = ["dep:tc_misc_digest", "tc_misc_digest/tiger"]
 whirlpool = ["dep:tc_misc_digest", "tc_misc_digest/whirlpool"]
 # Bouncy Castle's NONE: passes the message through unchanged, for signers that sign it as is
 null-digest = ["tc_digest/alloc"]
+# AES. Only its key generator so far: the cipher comes with the cipher factory
+aes = []
 # RSA keys
 rsa = ["dep:tc_rsa", "dep:tc_asym_cipher"]
 # EC keys on the prime curves secp224k1 to secp521r1 and sm2p256v1

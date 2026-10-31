@@ -28,13 +28,6 @@
 //! [`generate_key_pair`] does the same in one step with the defaults:
 //! `generate::generate_key_pair("RSA")?`.
 
-#![allow(
-    unused_variables,
-    dead_code,
-    unreachable_code,
-    reason = "the interface comes first; the bodies are still todo"
-)]
-
 mod functions;
 mod helper;
 mod key_gen_params;
