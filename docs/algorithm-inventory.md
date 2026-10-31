@@ -20,7 +20,7 @@
 | MAC | macs、poly1305 | crypto/macs 的 dstu_macs、gost28147_mac、iso9797_mac、kmac、siphash、vmpc_mac | — | — |
 | Key wrap | key_wrap、des_wrap、dstu7624_wrap、rc2_wrap | — | — | — |
 | 非對稱加密 | rsa、asym_encoding、asym_iso9796 | cfrg_curves（X25519、Ed25519、X448、Ed448）、ec_key、dh_key、elgamal、naccache_stern、sm2（加密） | — | — |
-| 簽章 | — | signer、rsa_signer（PKCS#1 v1.5、PSS、X9.31、ISO 9796-2）、dsa（trait、k 計算器、DsaDigestSigner、DER 與 Plain 編碼）、ecdsa_v2 | — | DSA、GOST 3410、ECGOST 3410、DSTU 4145、SM2、ECNR |
+| 簽章 | — | signer、rsa_signer（PKCS#1 v1.5、PSS、X9.31、ISO 9796-2）、dsa（trait、k 計算器、DsaDigestSigner、Gost3410DigestSigner、DER 與 Plain 編碼）、ecdsa_v2、ecnr、ecgost3410、gost3410_key、gost3410、dstu4145、sm2（簽章） | — | DSA |
 | 金鑰協商 | — | agreement、ecdh_v2（ECDH、ECDHC）、dh（基本與 MTI/A0）、ecmqv、ecvko、sm2（金鑰交換）、srp6、jpake、agreement_kdf（WithKdf） | — | — |
 | KDF／PBE／亂數 | — | kdf、pbe、pwhash、dh_kek、ecdh_kek、drbg | — | — |
 | 數學 | bigint、modular、prime、binpoly、ec_core、fp_curve、fp_custom、f2m_curve、f2m_custom | — | — | — |
@@ -33,7 +33,7 @@ macs、asym_cipher、key_wrap、zeroize、runtime、constant_time 已發行；si
 
 1. 對稱演算法幾乎都已發行。剩下的是孵化池的 10 個區塊加密與 crypto/macs 的 MAC
    等畢業；它們都已接在新的 trait 上。
-2. 非對稱是空洞最大的一側：簽章、金鑰協商都還沒發行；金鑰協商的演算法已齊全，簽章還缺不少。ecdsa_v2
+2. 非對稱是空洞最大的一側：簽章、金鑰協商都還沒發行；金鑰協商的演算法已齊全，簽章只剩傳統 DSA。ecdsa_v2
    現在可經 DsaDigestSigner 當成 tc_signer 的簽章器，但 tc_security 的工廠還沒接上。
 3. 後量子演算法完全沒做，見下一節。
 
