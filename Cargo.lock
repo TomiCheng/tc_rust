@@ -1835,6 +1835,7 @@ dependencies = [
  "tc_digest",
  "tc_keccak",
  "tc_kem",
+ "tc_sha",
  "tc_zeroize",
 ]
 

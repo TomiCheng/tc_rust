@@ -1,5 +1,6 @@
-//! ML-KEM：以 Bouncy Castle 由固定 seed 與 m 算出的向量（三組參數各兩組）比對金鑰、密文、
-//! 共享秘密與隱式拒絕；隨機往返；金鑰檢查；以及錯誤。
+//! ML-KEM：以 Bouncy Castle 由固定 seed 與 m 算出的向量（三組參數各四組；後兩組的 seed 使矩陣 A
+//! 有一格要多擠一個 SHAKE128 區塊）比對金鑰、密文、共享秘密與隱式拒絕；隨機往返；金鑰檢查；
+//! 以及錯誤。
 
 use core::convert::Infallible;
 use rand_core::{TryCryptoRng, TryRng};

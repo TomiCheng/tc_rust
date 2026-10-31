@@ -19,3 +19,4 @@ tc_zeroize = { version = "0.1.0", features = ["alloc"] }
 [dev-dependencies]
 rand = { workspace = true }
 rand_core = { workspace = true }
+tc_sha = "0.1.1"
