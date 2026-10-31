@@ -40,9 +40,9 @@ impl InitPart for tc_rsa::RsaKey {
     }
 }
 
-// The key and operation fields of a block cipher. Each trait returns a value that is really
-// there: a field the mode does not use is never asked for, so the expects below cannot fire
-// unless the table and the modes disagree. The key is a copy, wiped on drop
+// The key and operation fields of a block or stream cipher. Each trait returns a value that is
+// really there: a field the cipher does not use is never asked for, so the expects below cannot
+// fire unless the table and the ciphers disagree. The key is a copy, wiped on drop
 pub(super) struct SymmetricParams {
     pub(super) key: Zeroizing<Vec<u8>>,
     pub(super) iv: Option<Vec<u8>>,
@@ -61,6 +61,20 @@ impl tc_block_modes::IvParams for SymmetricParams {
         self.iv
             .as_deref()
             .expect("the entry requires an IV for every mode that reads one")
+    }
+}
+
+impl tc_stream_cipher::KeyParams for SymmetricParams {
+    fn key(&self) -> &[u8] {
+        &self.key
+    }
+}
+
+impl tc_stream_cipher::IvParams for SymmetricParams {
+    fn iv(&self) -> &[u8] {
+        self.iv
+            .as_deref()
+            .expect("the entry requires an IV for every stream cipher that reads one")
     }
 }
 

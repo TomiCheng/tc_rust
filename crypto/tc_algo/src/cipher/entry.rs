@@ -5,7 +5,7 @@ use tc_zeroize::Zeroizing;
 
 use super::AnyCipher;
 use super::init_params::{InitParams, SymmetricParams};
-use super::table::specs::{AlgorithmSpec, ModeSpec, Need, PaddingSpec};
+use super::table::specs::{AlgorithmSpec, ModeSpec, Need, PaddingSpec, StreamSpec};
 #[cfg(feature = "rsa")]
 use super::table::specs::{AsymmetricPaddingSpec, AsymmetricSpec};
 use crate::params::{AnyKeyParams, AnyParams};
@@ -25,6 +25,10 @@ pub(super) enum Kind {
         mode: &'static ModeSpec,
         padding: &'static PaddingSpec,
     },
+    // The name is the algorithm alone, as in Bouncy Castle
+    Stream {
+        algorithm: &'static StreamSpec,
+    },
     #[cfg(feature = "rsa")]
     Asymmetric {
         algorithm: &'static AsymmetricSpec,
@@ -36,6 +40,7 @@ pub(super) enum Kind {
 impl CipherEntry {
     pub(super) fn new(kind: Kind, oids: &'static [NamedOid]) -> Self {
         let name = match &kind {
+            Kind::Stream { algorithm } => algorithm.names[0].to_string(),
             Kind::Block {
                 algorithm,
                 mode,
@@ -77,18 +82,17 @@ impl CipherEntry {
         match &self.kind {
             // A secret key, and each operation field required, allowed or refused by the mode
             Kind::Block { mode, .. } => {
-                let AnyKeyParams::Secret(secret) = &params.key else {
-                    return Err(AlgoError::new(ErrorKind::InvalidParams));
-                };
                 check(mode.iv(), op.iv.is_some())?;
                 check(mode.tag_len(), op.tag_len.is_some())?;
                 check(mode.aad(), op.aad.is_some())?;
-                Ok(InitParams::Symmetric(SymmetricParams {
-                    key: Zeroizing::new(secret.key.clone()),
-                    iv: op.iv.clone(),
-                    tag_len: op.tag_len,
-                    aad: op.aad.clone().unwrap_or_default(),
-                }))
+                symmetric(params)
+            }
+            // A secret key, the IV if the cipher has one, and nothing else
+            Kind::Stream { algorithm } => {
+                check(algorithm.iv, op.iv.is_some())?;
+                check(Need::Forbidden, op.tag_len.is_some())?;
+                check(Need::Forbidden, op.aad.is_some())?;
+                symmetric(params)
             }
             // A key of the algorithm, and no operation field at all
             #[cfg(feature = "rsa")]
@@ -100,6 +104,19 @@ impl CipherEntry {
             }
         }
     }
+}
+
+fn symmetric(params: &AnyParams) -> Result<InitParams, AlgoError> {
+    let AnyKeyParams::Secret(secret) = &params.key else {
+        return Err(AlgoError::new(ErrorKind::InvalidParams));
+    };
+    let op = &params.op;
+    Ok(InitParams::Symmetric(SymmetricParams {
+        key: Zeroizing::new(secret.key.clone()),
+        iv: op.iv.clone(),
+        tag_len: op.tag_len,
+        aad: op.aad.clone().unwrap_or_default(),
+    }))
 }
 
 fn check(need: Need, present: bool) -> Result<(), AlgoError> {

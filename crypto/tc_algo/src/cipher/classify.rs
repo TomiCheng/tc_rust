@@ -60,6 +60,23 @@ impl<E: Classify> Classify for BlockModeInitError<E> {
     }
 }
 
+impl Classify for tc_stream_cipher::StreamError {
+    fn kind(&self) -> ErrorKind {
+        match self {
+            tc_stream_cipher::StreamError::NotInitialised => ErrorKind::NotInitialized,
+            // Too short an output, or more than the keystream of one key and IV
+            _ => ErrorKind::DataLength,
+        }
+    }
+}
+
+// A key or IV of a length the stream cipher does not take
+impl Classify for tc_stream_cipher::InitError {
+    fn kind(&self) -> ErrorKind {
+        ErrorKind::InvalidParams
+    }
+}
+
 impl<E: Classify> Classify for BufferedError<E> {
     fn kind(&self) -> ErrorKind {
         match self {

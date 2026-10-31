@@ -1,6 +1,5 @@
 use tc_asn1::NamedOid;
 
-#[cfg(feature = "rsa")]
 use crate::cipher::dyn_cipher::DynCipher;
 use crate::cipher::engine::AnyEngine;
 #[cfg(feature = "rsa")]
@@ -108,6 +107,16 @@ pub(in crate::cipher) struct PaddingSpec {
     pub(in crate::cipher) kind: PaddingKind,
     // The first is the canonical name, the rest are aliases
     pub(in crate::cipher) names: &'static [&'static str],
+}
+
+// One stream cipher: it takes a secret key, an IV if it has one, and neither a mode nor a padding
+pub(in crate::cipher) struct StreamSpec {
+    // The first is the canonical name, the rest are aliases
+    pub(in crate::cipher) names: &'static [&'static str],
+    // Required for all but RC4, which has no IV
+    pub(in crate::cipher) iv: Need,
+    pub(in crate::cipher) create: fn() -> Box<dyn DynCipher>,
+    pub(in crate::cipher) oids: &'static [NamedOid],
 }
 
 // One asymmetric cipher: it takes every padding of the asymmetric table and no mode

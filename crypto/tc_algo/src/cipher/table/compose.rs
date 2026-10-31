@@ -19,7 +19,7 @@ use crate::cipher::dyn_cipher::{DynCipher, Mapped};
 use crate::cipher::entry::Kind;
 use crate::cipher::init_params::SymmetricParams;
 
-fn boxed<T>(cipher: T) -> Box<dyn DynCipher>
+pub(super) fn boxed<T>(cipher: T) -> Box<dyn DynCipher>
 where
     T: BufferedCipher + BufferedCipherInit<SymmetricParams> + Send + 'static,
     <T as BufferedCipher>::Error: Classify + core::error::Error + Send + Sync + 'static,
@@ -69,6 +69,7 @@ pub(in crate::cipher) fn create(entry: &CipherEntry) -> Box<dyn DynCipher> {
             mode,
             padding,
         } => block(algorithm, mode.kind, padding.kind),
+        Kind::Stream { algorithm } => (algorithm.create)(),
         #[cfg(feature = "rsa")]
         Kind::Asymmetric {
             algorithm, padding, ..

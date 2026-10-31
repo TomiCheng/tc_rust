@@ -1,18 +1,26 @@
-// Small tables, block ciphers, modes and paddings, and asymmetric ciphers and their paddings,
-// expand on first use into every valid combination, each with a canonical name such as
-// AES/CBC/PKCS7PADDING
+// Small tables, block ciphers, modes and paddings, stream ciphers, and asymmetric ciphers and
+// their paddings, expand on first use into every valid combination, each with a canonical name
+// such as AES/CBC/PKCS7PADDING
 
 #[cfg(feature = "aes")]
 mod aes;
 #[cfg(feature = "rsa")]
 mod asymmetric;
+#[cfg(feature = "chacha")]
+mod chacha;
 mod compose;
 #[cfg(feature = "des")]
 mod des;
+#[cfg(feature = "hc")]
+mod hc;
 mod modes;
 mod paddings;
+#[cfg(any(feature = "rc4", feature = "vmpc"))]
+mod rc4_family;
 #[cfg(feature = "rsa")]
 mod rsa;
+#[cfg(feature = "salsa20")]
+mod salsa20;
 pub(in crate::cipher) mod specs;
 
 use core::ptr;
@@ -24,7 +32,7 @@ use modes::MODES;
 use paddings::PADDINGS;
 #[cfg(feature = "rsa")]
 use specs::AsymmetricSpec;
-use specs::{AlgorithmSpec, PaddingKind};
+use specs::{AlgorithmSpec, PaddingKind, StreamSpec};
 
 use super::CipherEntry;
 use super::entry::Kind;
@@ -40,11 +48,33 @@ static ALGORITHMS: &[AlgorithmSpec] = &[
     des::DES,
 ];
 
+// In the order of Bouncy Castle's names
+static STREAMS: &[StreamSpec] = &[
+    #[cfg(feature = "rc4")]
+    rc4_family::ARC4,
+    #[cfg(feature = "chacha")]
+    chacha::CHACHA,
+    #[cfg(feature = "chacha")]
+    chacha::CHACHA7539,
+    #[cfg(feature = "hc")]
+    hc::HC128,
+    #[cfg(feature = "hc")]
+    hc::HC256,
+    #[cfg(feature = "salsa20")]
+    salsa20::SALSA20,
+    #[cfg(feature = "vmpc")]
+    rc4_family::VMPC,
+    #[cfg(feature = "vmpc")]
+    rc4_family::VMPC_KSA3,
+    #[cfg(feature = "chacha")]
+    chacha::XCHACHA20,
+];
+
 #[cfg(feature = "rsa")]
 static ASYMMETRIC: &[AsymmetricSpec] = &[rsa::RSA];
 
 // One entry per valid combination: an AEAD mode only with NoPadding, a mode only on the block
-// sizes it takes, and an asymmetric cipher with each of its paddings
+// sizes it takes, a stream cipher alone, and an asymmetric cipher with each of its paddings
 pub(super) static CIPHERS: LazyLock<Vec<CipherEntry>> = LazyLock::new(|| {
     let mut entries = Vec::new();
     for algorithm in ALGORITHMS {
@@ -67,6 +97,9 @@ pub(super) static CIPHERS: LazyLock<Vec<CipherEntry>> = LazyLock::new(|| {
             }
         }
     }
+    for algorithm in STREAMS {
+        entries.push(CipherEntry::new(Kind::Stream { algorithm }, algorithm.oids));
+    }
     #[cfg(feature = "rsa")]
     for algorithm in ASYMMETRIC {
         for padding in ASYMMETRIC_PADDINGS {
@@ -87,8 +120,8 @@ pub(super) static CIPHERS: LazyLock<Vec<CipherEntry>> = LazyLock::new(|| {
 });
 
 // Splits a name such as AES/CBC/PKCS7PADDING into its three parts, as Bouncy Castle does: ASCII
-// case does not matter, '-' and '_' are the same, a missing mode is ECB, and a missing padding is
-// the mode's default
+// case does not matter, '-' and '_' are the same, and what a missing mode or padding gives
+// depends on the kind of cipher
 pub(super) fn find(name: &str) -> Option<&'static CipherEntry> {
     let mut parts = name.split('/');
     let algorithm = parts.next()?;
@@ -100,6 +133,9 @@ pub(super) fn find(name: &str) -> Option<&'static CipherEntry> {
     if let Some(algorithm) = ALGORITHMS.iter().find(|spec| known(spec.names, algorithm)) {
         return find_block(algorithm, mode, padding);
     }
+    if let Some(algorithm) = STREAMS.iter().find(|spec| known(spec.names, algorithm)) {
+        return find_stream(algorithm, name);
+    }
     #[cfg(feature = "rsa")]
     if let Some(algorithm) = ASYMMETRIC.iter().find(|spec| known(spec.names, algorithm)) {
         return find_asymmetric(algorithm, mode, padding);
@@ -107,6 +143,7 @@ pub(super) fn find(name: &str) -> Option<&'static CipherEntry> {
     None
 }
 
+// A missing mode is ECB, and a missing padding is the mode's default
 fn find_block(
     algorithm: &'static AlgorithmSpec,
     mode: Option<&str>,
@@ -127,6 +164,19 @@ fn find_block(
             entry.kind(),
             Kind::Block { algorithm: a, mode: m, padding: p }
                 if ptr::eq(*a, algorithm) && ptr::eq(*m, mode) && ptr::eq(*p, padding)
+        )
+    })
+}
+
+// Neither a mode nor a padding, not even an empty one, as in Bouncy Castle
+fn find_stream(algorithm: &'static StreamSpec, name: &str) -> Option<&'static CipherEntry> {
+    if name.contains('/') {
+        return None;
+    }
+    CIPHERS.iter().find(|entry| {
+        matches!(
+            entry.kind(),
+            Kind::Stream { algorithm: a } if ptr::eq(*a, algorithm)
         )
     })
 }
