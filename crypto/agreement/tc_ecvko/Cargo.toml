@@ -1,0 +1,23 @@
+[package]
+name = "tc_ecvko"
+description = "GOST VKO key agreement (RFC 7836), ported from Bouncy Castle C#."
+version.workspace = true
+edition.workspace = true
+rust-version = "1.85"
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+tc_agreement = { version = "0.1.0", path = "../tc_agreement" }
+tc_bigint = { version = "0.1.0", features = ["alloc"] }
+tc_digest = "0.1.0"
+tc_ec_core = "0.1.0"
+tc_ec_key = { version = "0.1.0", path = "../../tc_ec_key" }
+tc_modular = { version = "0.1.0", features = ["alloc"] }
+tc_zeroize = "0.1.0"
+
+[dev-dependencies]
+rand = { workspace = true }
+tc_asym_cipher = "0.1.0"
+tc_fp_curve = "0.1.0"
+tc_gost3411 = "0.1.0"
