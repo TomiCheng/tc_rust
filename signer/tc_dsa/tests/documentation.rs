@@ -1,4 +1,4 @@
-const METHODS: [&str; 15] = [
+const METHODS: [&str; 16] = [
     "fmt",
     "init",
     "max_signature_size",
@@ -14,6 +14,7 @@ const METHODS: [&str; 15] = [
     "der",
     "encoded_length",
     "value",
+    "write_be",
 ];
 
 fn checked(line: &str) -> bool {
@@ -58,7 +59,7 @@ fn missing_timing_docs(source: &str) -> (usize, Vec<String>) {
     (count, missing)
 }
 
-/// 只掃描 `DsaDigestSigner` 與編碼的檔案；trait 與 k 計算器早於這個慣例，doc 是英文。
+/// 只掃描 `DsaDigestSigner`、`Gost3410DigestSigner` 與編碼的檔案；trait 與 k 計算器早於這個慣例，doc 是英文。
 #[test]
 fn every_public_method_and_helper_states_constant_or_variable_time() {
     for (name, source, minimum) in [
@@ -73,6 +74,11 @@ fn every_public_method_and_helper_states_constant_or_variable_time() {
             1,
         ),
         ("encoding.rs", include_str!("../src/encoding.rs"), 2),
+        (
+            "gost3410_digest_signer.rs",
+            include_str!("../src/gost3410_digest_signer.rs"),
+            8,
+        ),
         (
             "encoding/plain.rs",
             include_str!("../src/encoding/plain.rs"),

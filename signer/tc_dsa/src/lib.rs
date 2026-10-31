@@ -9,6 +9,7 @@ mod digest_signer;
 mod digest_signer_error;
 mod encoding;
 mod encoding_error;
+mod gost3410_digest_signer;
 mod k_calculator;
 mod traits;
 
@@ -16,5 +17,6 @@ pub use digest_signer::DsaDigestSigner;
 pub use digest_signer_error::DsaDigestSignerError;
 pub use encoding::{PlainDsaEncoding, StandardDsaEncoding};
 pub use encoding_error::DsaEncodingError;
+pub use gost3410_digest_signer::Gost3410DigestSigner;
 pub use k_calculator::{HMacDsaKCalculator, RandomDsaKCalculator};
 pub use traits::{Dsa, DsaEncoding, DsaInit, DsaKCalculator};
