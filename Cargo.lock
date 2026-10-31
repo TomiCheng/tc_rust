@@ -1220,6 +1220,7 @@ name = "tc_dh"
 version = "0.1.0"
 dependencies = [
  "rand",
+ "rand_core",
  "tc_agreement",
  "tc_asym_cipher",
  "tc_bigint",
@@ -1391,6 +1392,40 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_ecmqv"
+version = "0.1.0"
+dependencies = [
+ "rand",
+ "tc_agreement",
+ "tc_asym_cipher",
+ "tc_bigint",
+ "tc_ec_core",
+ "tc_ec_key",
+ "tc_f2m_curve",
+ "tc_fp_curve",
+ "tc_fp_custom",
+ "tc_modular",
+ "tc_zeroize",
+]
+
+[[package]]
+name = "tc_ecvko"
+version = "0.1.0"
+dependencies = [
+ "rand",
+ "tc_agreement",
+ "tc_asym_cipher",
+ "tc_bigint",
+ "tc_digest",
+ "tc_ec_core",
+ "tc_ec_key",
+ "tc_fp_curve",
+ "tc_gost3411",
+ "tc_modular",
+ "tc_zeroize",
+]
+
+[[package]]
 name = "tc_elgamal"
 version = "0.1.0"
 dependencies = [
@@ -1483,6 +1518,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_gost3411"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "79c9a851d7af022cb9a4c65d3437baaa71b00d7278876c4c5fbbe6d3e3e9177a"
+dependencies = [
+ "tc_block_cipher",
+ "tc_digest",
+ "tc_gost28147",
+ "tc_zeroize",
+]
+
+[[package]]
 name = "tc_hc"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1521,6 +1568,22 @@ dependencies = [
  "tc_block_padding",
  "tc_des",
  "tc_macs",
+]
+
+[[package]]
+name = "tc_jpake"
+version = "0.1.0"
+dependencies = [
+ "rand",
+ "rand_core",
+ "tc_bigint",
+ "tc_constant_time",
+ "tc_digest",
+ "tc_macs",
+ "tc_modular",
+ "tc_prime",
+ "tc_sha",
+ "tc_zeroize",
 ]
 
 [[package]]
@@ -1881,6 +1944,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ae65052ce36b96ec17da5daee91eec86992a57219a9eedbe40b76a8b4bc7e07d"
 dependencies = [
  "tc_digest",
+ "tc_zeroize",
+]
+
+[[package]]
+name = "tc_srp6"
+version = "0.1.0"
+dependencies = [
+ "rand",
+ "rand_core",
+ "tc_asym_cipher",
+ "tc_bigint",
+ "tc_constant_time",
+ "tc_dh_key",
+ "tc_digest",
+ "tc_modular",
+ "tc_sha",
  "tc_zeroize",
 ]
 
