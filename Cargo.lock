@@ -881,6 +881,10 @@ dependencies = [
 [[package]]
 name = "tc_algo"
 version = "0.1.0"
+dependencies = [
+ "tc_asn1",
+ "tc_digest",
+]
 
 [[package]]
 name = "tc_aria"

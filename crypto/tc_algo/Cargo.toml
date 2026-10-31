@@ -7,4 +7,55 @@ rust-version = "1.85"
 license.workspace = true
 repository.workspace = true
 
+[features]
+# 已被攻破或不建議使用的不在預設裡：MD2、MD4、MD5、SHA-1。家族 feature 照樣包含它們。
+default = [
+    "sha224",
+    "sha256",
+    "sha384",
+    "sha512",
+    "sha512-224",
+    "sha512-256",
+    "sha3-224",
+    "sha3-256",
+    "sha3-384",
+    "sha3-512",
+    "keccak-224",
+    "keccak-256",
+    "keccak-288",
+    "keccak-384",
+    "keccak-512",
+    "shake128",
+    "shake256",
+]
+md = ["md2", "md4", "md5"]
+md2 = []
+md4 = []
+md5 = []
+sha = ["sha1", "sha224", "sha256", "sha384", "sha512", "sha512-224", "sha512-256"]
+sha1 = []
+sha224 = []
+sha256 = []
+sha384 = []
+sha512 = []
+sha512-224 = []
+sha512-256 = []
+sha3 = ["sha3-224", "sha3-256", "sha3-384", "sha3-512"]
+sha3-224 = []
+sha3-256 = []
+sha3-384 = []
+sha3-512 = []
+keccak = ["keccak-224", "keccak-256", "keccak-288", "keccak-384", "keccak-512"]
+keccak-224 = []
+keccak-256 = []
+keccak-288 = []
+keccak-384 = []
+keccak-512 = []
+# SHAKE 當固定長度的 digest：SHAKE128 輸出 256 bits、SHAKE256 輸出 512 bits，同 BC
+shake = ["shake128", "shake256"]
+shake128 = []
+shake256 = []
+
 [dependencies]
+tc_asn1 = "0.1.2"
+tc_digest = "0.1.1"
