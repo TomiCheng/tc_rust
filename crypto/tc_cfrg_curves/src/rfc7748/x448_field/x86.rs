@@ -17,11 +17,14 @@ pub(super) fn multiply(a: Fe448, b: Fe448, _proof: Avx2) -> Fe448 {
 unsafe fn convolution(a: [u32; 16], b: [u32; 16]) -> [u64; 32] {
     let mut product = [0_u64; 32];
     for (i, word) in a.iter().enumerate() {
-        let left = _mm256_set1_epi64x(*word as i64);
-        for j in [0, 4, 8, 12] {
-            // SAFETY: the b load covers j..j+4 within 16 u32s. Product
-            // load/store covers i+j..i+j+4 within 32 u64s. Unaligned allowed.
-            unsafe {
+        // SAFETY: the b load covers j..j+4 within 16 u32s. Product
+        // load/store covers i+j..i+j+4 within 32 u64s. Unaligned allowed.
+        // The broadcast sits inside too: before Rust 1.86 it is unsafe even
+        // in an AVX2 function, and the block's pointer accesses keep newer
+        // compilers from calling the block unused.
+        unsafe {
+            let left = _mm256_set1_epi64x(*word as i64);
+            for j in [0, 4, 8, 12] {
                 let right = _mm256_cvtepu32_epi64(_mm_loadu_si128(b.as_ptr().add(j).cast()));
                 let previous = _mm256_loadu_si256(product.as_ptr().add(i + j).cast());
                 let next = _mm256_add_epi64(previous, _mm256_mul_epu32(left, right));
