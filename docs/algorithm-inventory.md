@@ -20,7 +20,7 @@
 | MAC | macs、poly1305 | crypto/macs 的 dstu_macs、gost28147_mac、iso9797_mac、kmac、siphash、vmpc_mac | — | — |
 | Key wrap | key_wrap、des_wrap、dstu7624_wrap、rc2_wrap | — | — | — |
 | 非對稱加密 | rsa、asym_encoding、asym_iso9796 | cfrg_curves（X25519、Ed25519、X448、Ed448）、ec_key、dh_key、elgamal、naccache_stern、sm2（加密） | — | — |
-| 簽章 | — | signer、rsa_signer（PKCS#1 v1.5、PSS、X9.31）、dsa（trait 與 k 計算器）、ecdsa_v2 | — | DSA、ISO 9796-2、GOST 3410、ECGOST 3410、DSTU 4145、SM2、ECNR、DsaDigestSigner 與 DSA 編碼 |
+| 簽章 | — | signer、rsa_signer（PKCS#1 v1.5、PSS、X9.31、ISO 9796-2）、dsa（trait 與 k 計算器）、ecdsa_v2 | — | DSA、GOST 3410、ECGOST 3410、DSTU 4145、SM2、ECNR、DsaDigestSigner 與 DSA 編碼 |
 | 金鑰協商 | — | agreement、ecdh_v2（ECDH、ECDHC）、dh（基本與 MTI/A0）、ecmqv、ecvko、sm2（金鑰交換）、srp6、jpake、agreement_kdf（WithKdf） | — | — |
 | KDF／PBE／亂數 | — | kdf、pbe、pwhash、dh_kek、ecdh_kek、drbg | — | — |
 | 數學 | bigint、modular、prime、binpoly、ec_core、fp_curve、fp_custom、f2m_curve、f2m_custom | — | — | — |
