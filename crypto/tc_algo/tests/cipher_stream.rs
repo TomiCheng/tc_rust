@@ -158,9 +158,21 @@ fn each_stream_cipher_decrypts_what_it_encrypts_whatever_the_pieces() {
 
 #[test]
 fn the_table_has_each_stream_cipher_of_the_enabled_features() {
+    // The stream ciphers of Bouncy Castle; the AEAD ciphers of their own have bare names too
+    const STREAMS: [&str; 9] = [
+        "ARC4",
+        "CHACHA",
+        "CHACHA7539",
+        "HC128",
+        "HC256",
+        "SALSA20",
+        "VMPC",
+        "VMPC-KSA3",
+        "XCHACHA20",
+    ];
     let mut listed: Vec<&str> = cipher::algorithms()
         .map(|entry| entry.name())
-        .filter(|name| !name.contains('/'))
+        .filter(|name| STREAMS.contains(name))
         .collect();
     listed.sort_unstable();
     let mut expected: Vec<&str> = cases().into_iter().map(|case| case.0).collect();

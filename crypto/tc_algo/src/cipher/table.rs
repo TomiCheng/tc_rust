@@ -6,6 +6,8 @@
 mod aes;
 #[cfg(feature = "aria")]
 mod aria;
+#[cfg(any(feature = "ascon-aead128", feature = "ascon-legacy"))]
+mod ascon;
 #[cfg(any(feature = "rsa", feature = "elgamal", feature = "naccache-stern"))]
 mod asymmetric;
 #[cfg(feature = "blowfish")]
@@ -16,6 +18,8 @@ mod camellia;
 mod cast;
 #[cfg(feature = "chacha")]
 mod chacha;
+#[cfg(any(feature = "chacha20-poly1305", feature = "xchacha20-poly1305"))]
+mod chacha_aead;
 mod compose;
 #[cfg(feature = "des")]
 mod des;
@@ -25,6 +29,8 @@ mod desede;
 mod elgamal;
 #[cfg(feature = "gost28147")]
 mod gost28147;
+#[cfg(feature = "grain128-aead")]
+mod grain128;
 #[cfg(feature = "hc")]
 mod hc;
 #[cfg(any(
@@ -56,6 +62,8 @@ mod serpent;
 mod sm2;
 #[cfg(feature = "sm4")]
 mod sm4;
+#[cfg(feature = "sparkle")]
+mod sparkle;
 pub(in crate::cipher) mod specs;
 #[cfg(feature = "threefish")]
 mod threefish;
@@ -73,7 +81,7 @@ use paddings::PADDINGS;
 use specs::AsymmetricSpec;
 #[cfg(feature = "sm2")]
 use specs::MessageSpec;
-use specs::{AlgorithmSpec, PaddingKind, StreamSpec};
+use specs::{AeadSpec, AlgorithmSpec, PaddingKind, StreamSpec};
 
 use super::CipherEntry;
 use super::entry::Kind;
@@ -161,6 +169,32 @@ static STREAMS: &[StreamSpec] = &[
     chacha::XCHACHA20,
 ];
 
+// Bouncy Castle's two first, then those it has no names for
+static AEADS: &[AeadSpec] = &[
+    #[cfg(feature = "chacha20-poly1305")]
+    chacha_aead::CHACHA20_POLY1305,
+    #[cfg(feature = "xchacha20-poly1305")]
+    chacha_aead::XCHACHA20_POLY1305,
+    #[cfg(feature = "ascon-aead128")]
+    ascon::ASCON_AEAD128,
+    #[cfg(feature = "ascon-legacy")]
+    ascon::ASCON_128,
+    #[cfg(feature = "ascon-legacy")]
+    ascon::ASCON_128A,
+    #[cfg(feature = "ascon-legacy")]
+    ascon::ASCON_80PQ,
+    #[cfg(feature = "grain128-aead")]
+    grain128::GRAIN_128AEAD,
+    #[cfg(feature = "sparkle")]
+    sparkle::SCHWAEMM128_128,
+    #[cfg(feature = "sparkle")]
+    sparkle::SCHWAEMM256_128,
+    #[cfg(feature = "sparkle")]
+    sparkle::SCHWAEMM192_192,
+    #[cfg(feature = "sparkle")]
+    sparkle::SCHWAEMM256_256,
+];
+
 #[cfg(feature = "sm2")]
 static MESSAGES: &[MessageSpec] = &[sm2::SM2];
 
@@ -200,6 +234,9 @@ pub(super) static CIPHERS: LazyLock<Vec<CipherEntry>> = LazyLock::new(|| {
     }
     for algorithm in STREAMS {
         entries.push(CipherEntry::new(Kind::Stream { algorithm }, algorithm.oids));
+    }
+    for algorithm in AEADS {
+        entries.push(CipherEntry::new(Kind::Aead { algorithm }, algorithm.oids));
     }
     #[cfg(any(feature = "rsa", feature = "elgamal", feature = "naccache-stern"))]
     for algorithm in ASYMMETRIC {
@@ -246,6 +283,9 @@ pub(super) fn find(name: &str) -> Option<&'static CipherEntry> {
     if let Some(algorithm) = STREAMS.iter().find(|spec| known(spec.names, algorithm)) {
         return find_stream(algorithm, name);
     }
+    if let Some(algorithm) = AEADS.iter().find(|spec| known(spec.names, algorithm)) {
+        return find_aead(algorithm, name);
+    }
     #[cfg(any(feature = "rsa", feature = "elgamal", feature = "naccache-stern"))]
     if let Some(algorithm) = ASYMMETRIC.iter().find(|spec| known(spec.names, algorithm)) {
         return find_asymmetric(algorithm, mode, padding);
@@ -291,6 +331,19 @@ fn find_stream(algorithm: &'static StreamSpec, name: &str) -> Option<&'static Ci
         matches!(
             entry.kind(),
             Kind::Stream { algorithm: a } if ptr::eq(*a, algorithm)
+        )
+    })
+}
+
+// Neither a mode nor a padding either, as in Bouncy Castle
+fn find_aead(algorithm: &'static AeadSpec, name: &str) -> Option<&'static CipherEntry> {
+    if name.contains('/') {
+        return None;
+    }
+    CIPHERS.iter().find(|entry| {
+        matches!(
+            entry.kind(),
+            Kind::Aead { algorithm: a } if ptr::eq(*a, algorithm)
         )
     })
 }

@@ -129,6 +129,16 @@ pub(in crate::cipher) struct StreamSpec {
     pub(in crate::cipher) oids: &'static [NamedOid],
 }
 
+// One AEAD cipher of its own, not a block cipher in an AEAD mode: like a stream cipher, it takes
+// neither a mode nor a padding, and like an AEAD mode, a nonce, a tag length and optionally
+// associated data
+pub(in crate::cipher) struct AeadSpec {
+    // The first is the canonical name, the rest are aliases
+    pub(in crate::cipher) names: &'static [&'static str],
+    pub(in crate::cipher) create: fn() -> Box<dyn DynCipher>,
+    pub(in crate::cipher) oids: &'static [NamedOid],
+}
+
 // An asymmetric cipher that encrypts a whole message of any length, not one block, as SM2 does.
 // Its modes are its own, and it takes no padding
 #[cfg(feature = "sm2")]

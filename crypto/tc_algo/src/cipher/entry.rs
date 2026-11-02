@@ -5,7 +5,7 @@ use tc_zeroize::Zeroizing;
 
 use super::AnyCipher;
 use super::init_params::{InitParams, SymmetricParams};
-use super::table::specs::{AlgorithmSpec, ModeSpec, Need, PaddingSpec, StreamSpec};
+use super::table::specs::{AeadSpec, AlgorithmSpec, ModeSpec, Need, PaddingSpec, StreamSpec};
 #[cfg(any(feature = "rsa", feature = "elgamal", feature = "naccache-stern"))]
 use super::table::specs::{AsymmetricPaddingSpec, AsymmetricSpec};
 #[cfg(feature = "sm2")]
@@ -31,6 +31,10 @@ pub(super) enum Kind {
     Stream {
         algorithm: &'static StreamSpec,
     },
+    // So is that of an AEAD cipher of its own
+    Aead {
+        algorithm: &'static AeadSpec,
+    },
     #[cfg(any(feature = "rsa", feature = "elgamal", feature = "naccache-stern"))]
     Asymmetric {
         algorithm: &'static AsymmetricSpec,
@@ -48,6 +52,7 @@ impl CipherEntry {
     pub(super) fn new(kind: Kind, oids: &'static [NamedOid]) -> Self {
         let name = match &kind {
             Kind::Stream { algorithm } => algorithm.names[0].to_string(),
+            Kind::Aead { algorithm } => algorithm.names[0].to_string(),
             Kind::Block {
                 algorithm,
                 mode,
@@ -101,6 +106,12 @@ impl CipherEntry {
                 check(algorithm.iv, op.iv.is_some())?;
                 check(Need::Forbidden, op.tag_len.is_some())?;
                 check(Need::Forbidden, op.aad.is_some())?;
+                symmetric(params)
+            }
+            // A secret key, the nonce and the tag length, and associated data if any
+            Kind::Aead { .. } => {
+                check(Need::Required, op.iv.is_some())?;
+                check(Need::Required, op.tag_len.is_some())?;
                 symmetric(params)
             }
             // A key of the algorithm, and no operation field at all

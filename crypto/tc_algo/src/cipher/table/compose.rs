@@ -70,6 +70,7 @@ pub(in crate::cipher) fn create(entry: &CipherEntry) -> Box<dyn DynCipher> {
             padding,
         } => block(algorithm, mode.kind, padding.kind),
         Kind::Stream { algorithm } => (algorithm.create)(),
+        Kind::Aead { algorithm } => (algorithm.create)(),
         #[cfg(any(feature = "rsa", feature = "elgamal", feature = "naccache-stern"))]
         Kind::Asymmetric {
             algorithm, padding, ..
