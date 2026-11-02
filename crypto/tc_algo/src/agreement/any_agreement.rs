@@ -3,8 +3,8 @@ use core::fmt;
 use tc_agreement::{Agreement, AgreementInit};
 
 use super::dyn_agreement::DynAgreement;
-use super::{AgreementEntry, AnyAgreementParams};
-use crate::params::{AnyKeyParams, SecretKey};
+use super::{AgreementEntry, AgreementPeer, AnyAgreementParams};
+use crate::params::SecretKey;
 use crate::{AlgoError, ErrorKind};
 
 pub struct AnyAgreement {
@@ -32,15 +32,15 @@ impl AnyAgreement {
         self.agreement.init(params)
     }
 
-    // The shared secret with the other party's public key, as many bytes as agreement_size gives,
-    // with leading zeros. It is the raw secret: put it through a KDF before using it as a key
-    pub fn calculate(&self, public_key: &AnyKeyParams) -> Result<SecretKey, AlgoError> {
+    // The shared secret with the other party, as many bytes as agreement_size gives, with leading
+    // zeros. It is the raw secret: put it through a KDF before using it as a key
+    pub fn calculate(&self, peer: &AgreementPeer) -> Result<SecretKey, AlgoError> {
         let size = self
             .agreement
             .agreement_size()
             .ok_or(AlgoError::new(ErrorKind::NotInitialized))?;
         let mut secret = SecretKey::new(vec![0; size]);
-        Agreement::calculate_agreement(self, public_key, &mut secret.key)?;
+        Agreement::calculate_agreement(self, peer, &mut secret.key)?;
         Ok(secret)
     }
 }
@@ -61,9 +61,9 @@ impl fmt::Display for AnyAgreement {
 }
 
 impl Agreement for AnyAgreement {
-    // A key params rather than a public key: ECMQV takes two public keys of the other party, a
-    // static one and an ephemeral one
-    type PublicKey = AnyKeyParams;
+    // A peer rather than a public key: ECMQV takes two public keys of the other party, a static
+    // one and an ephemeral one
+    type PublicKey = AgreementPeer;
     type Error = AlgoError;
 
     // Panics before a successful init, as the agreements underneath do
@@ -75,13 +75,11 @@ impl Agreement for AnyAgreement {
 
     fn calculate_agreement(
         &self,
-        public_key: &AnyKeyParams,
+        peer: &AgreementPeer,
         output: &mut [u8],
     ) -> Result<(), Self::Error> {
-        let AnyKeyParams::Public(public_key) = public_key else {
-            return Err(AlgoError::new(ErrorKind::InvalidParams));
-        };
-        self.agreement.calculate_agreement(public_key, output)
+        self.entry.check_peer(peer)?;
+        self.agreement.calculate_agreement(peer, output)
     }
 }
 

@@ -1,7 +1,9 @@
 //! Key agreements by name or OID, after Bouncy Castle's `AgreementUtilities`. An agreement is
 //! found by name, such as `DH`, initialized with an [`AnyAgreementParams`] that holds one party's
-//! private key, then given the other party's public key for their shared secret.
+//! private key, then given an [`AgreementPeer`] that holds the other party's public key for their
+//! shared secret.
 
+mod agreement_peer;
 mod any_agreement;
 mod any_agreement_params;
 mod dyn_agreement;
@@ -10,6 +12,7 @@ mod functions;
 mod helper;
 mod table;
 
+pub use agreement_peer::AgreementPeer;
 pub use any_agreement::AnyAgreement;
 pub use any_agreement_params::AnyAgreementParams;
 pub use entry::AgreementEntry;

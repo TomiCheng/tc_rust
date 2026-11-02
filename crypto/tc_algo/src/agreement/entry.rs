@@ -3,7 +3,7 @@ use core::fmt;
 use tc_asn1::NamedOid;
 
 use super::dyn_agreement::DynAgreement;
-use super::{AnyAgreement, AnyAgreementParams};
+use super::{AgreementPeer, AnyAgreement, AnyAgreementParams};
 use crate::AlgoError;
 use crate::need::Need;
 
@@ -14,6 +14,7 @@ pub struct AgreementEntry {
     names: &'static [&'static str],
     oids: &'static [NamedOid],
     ukm: Need,
+    ephemeral: Need,
     create: CreateAgreement,
 }
 
@@ -26,12 +27,14 @@ impl AgreementEntry {
         names: &'static [&'static str],
         oids: &'static [NamedOid],
         ukm: Need,
+        ephemeral: Need,
         create: CreateAgreement,
     ) -> Self {
         Self {
             names,
             oids,
             ukm,
+            ephemeral,
             create,
         }
     }
@@ -59,6 +62,11 @@ impl AgreementEntry {
     // The operation fields against what this agreement takes, so that none is dropped silently
     pub(super) fn check(&self, params: &AnyAgreementParams) -> Result<(), AlgoError> {
         self.ukm.check(params.ukm().is_some())
+    }
+
+    // The other party's keys against what this agreement takes, likewise
+    pub(super) fn check_peer(&self, peer: &AgreementPeer) -> Result<(), AlgoError> {
+        self.ephemeral.check(peer.ephemeral().is_some())
     }
 }
 

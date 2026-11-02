@@ -2,17 +2,20 @@ use tc_agreement::{Agreement, AgreementInit};
 use tc_dh::{DhAgreementError, DhBasicAgreement};
 
 use crate::agreement::dyn_agreement::DynAgreement;
-use crate::agreement::{AgreementEntry, AnyAgreementParams};
+use crate::agreement::{AgreementEntry, AgreementPeer, AnyAgreementParams};
 use crate::need::Need;
 use crate::params::{AnyPrivateKey, AnyPublicKey};
 use crate::{AlgoError, ErrorKind};
 
 // Bouncy Castle's DHBasicAgreement, which it gives no OID. DIFFIEHELLMAN is its alias. It takes
-// the private key alone
-pub(super) const DH: AgreementEntry =
-    AgreementEntry::new(&["DH", "DIFFIEHELLMAN"], &[], Need::Forbidden, || {
-        Box::new(Dh::default())
-    });
+// the private key alone, and the other party's public key alone
+pub(super) const DH: AgreementEntry = AgreementEntry::new(
+    &["DH", "DIFFIEHELLMAN"],
+    &[],
+    Need::Forbidden,
+    Need::Forbidden,
+    || Box::new(Dh::default()),
+);
 
 #[derive(Default)]
 struct Dh {
@@ -40,10 +43,10 @@ impl DynAgreement for Dh {
 
     fn calculate_agreement(
         &self,
-        public_key: &AnyPublicKey,
+        peer: &AgreementPeer,
         output: &mut [u8],
     ) -> Result<(), AlgoError> {
-        let public_key = match public_key {
+        let public_key = match peer.key() {
             AnyPublicKey::Dh(key) => key,
             #[allow(unreachable_patterns, reason = "every other variant may be off")]
             _ => return Err(AlgoError::new(ErrorKind::InvalidParams)),

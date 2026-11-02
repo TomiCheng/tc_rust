@@ -50,8 +50,10 @@ fn the_oid_of_a_dh_key_is_an_unknown_agreement() {
 #[cfg(feature = "dh")]
 mod with_dh {
     use tc_algo::ErrorKind;
-    use tc_algo::agreement::{self, Agreement, AgreementInit, AnyAgreement, AnyAgreementParams};
-    use tc_algo::params::{AnyKeyParams, AnyPrivateKey, AnyPublicKey, SecretKey};
+    use tc_algo::agreement::{
+        self, Agreement, AgreementInit, AgreementPeer, AnyAgreement, AnyAgreementParams,
+    };
+    use tc_algo::params::{AnyPrivateKey, AnyPublicKey};
     use tc_asym_cipher::{KeyPairGenerator, KeyPairGeneratorInit};
     use tc_bigint::PaddedBigUint;
     use tc_dh_key::standard_groups::{rfc2409_1024, rfc3526_2048};
@@ -79,9 +81,9 @@ mod with_dh {
         AnyAgreementParams::new(AnyPrivateKey::Dh(key))
     }
 
-    fn toy_public(y: u8) -> AnyKeyParams {
+    fn toy_public(y: u8) -> AgreementPeer {
         let key = DhPublicKey::new(PaddedBigUint::from(y), toy());
-        AnyKeyParams::Public(AnyPublicKey::Dh(key))
+        AgreementPeer::new(AnyPublicKey::Dh(key))
     }
 
     fn initialized(params: &AnyAgreementParams) -> AnyAgreement {
@@ -95,11 +97,11 @@ mod with_dh {
         let (alice_public, alice_private) = key_pair(rfc3526_2048());
         let (bob_public, bob_private) = key_pair(rfc3526_2048());
         let alice = initialized(&AnyAgreementParams::new(alice_private));
-        let alice_secret = alice.calculate(&AnyKeyParams::Public(bob_public)).unwrap();
+        let alice_secret = alice.calculate(&bob_public.into()).unwrap();
         let bob_secret = agreement::calculate(
             "DH",
             &AnyAgreementParams::new(bob_private),
-            &AnyKeyParams::Public(alice_public),
+            &alice_public.into(),
         )
         .unwrap();
         assert_eq!(alice_secret.key.len(), 256);
@@ -139,16 +141,20 @@ mod with_dh {
     }
 
     #[test]
-    fn the_other_party_gives_a_public_key_and_nothing_else() {
+    fn dh_refuses_an_ephemeral_key_of_the_other_party() {
         let dh = initialized(&toy_private(4));
-        let private = DhPrivateKey::new(PaddedBigUint::from(3u8), toy());
-        for other in [
-            AnyKeyParams::Secret(SecretKey::new(vec![10])),
-            AnyKeyParams::Private(AnyPrivateKey::Dh(private)),
-        ] {
-            let error = dh.calculate(&other).unwrap_err();
-            assert_eq!(error.kind(), ErrorKind::InvalidParams);
-        }
+        let ephemeral = DhPublicKey::new(PaddedBigUint::from(4u8), toy());
+        let peer = toy_public(10).with_ephemeral(AnyPublicKey::Dh(ephemeral));
+        let error = dh.calculate(&peer).unwrap_err();
+        assert_eq!(error.kind(), ErrorKind::InvalidParams);
+    }
+
+    #[test]
+    fn a_public_key_alone_makes_a_peer_without_an_ephemeral_key() {
+        let key = DhPublicKey::new(PaddedBigUint::from(10u8), toy());
+        let peer = AgreementPeer::from(AnyPublicKey::Dh(key));
+        assert!(matches!(peer.key(), AnyPublicKey::Dh(_)));
+        assert!(peer.ephemeral().is_none());
     }
 
     #[test]
@@ -158,7 +164,7 @@ mod with_dh {
         let one = DhPublicKey::new(PaddedBigUint::from(1u8), rfc3526_2048());
         let dh = initialized(&AnyAgreementParams::new(private));
         for public_key in [other_group, AnyPublicKey::Dh(one)] {
-            let error = dh.calculate(&AnyKeyParams::Public(public_key)).unwrap_err();
+            let error = dh.calculate(&public_key.into()).unwrap_err();
             assert_eq!(error.kind(), ErrorKind::InvalidParams);
         }
     }
