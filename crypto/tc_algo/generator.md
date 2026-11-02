@@ -7,12 +7,12 @@ and like the other factories of `tc_algo`, with `get_by_name`, `get_by_oid`,
 
 - `generate::key` makes a `SecretKey`, for the algorithms that take one, such as AES.
 - `generate::key_pair` makes a `KeyPair`, an `AnyPublicKey` and an `AnyPrivateKey`,
-  such as for RSA or DH.
+  such as for RSA, DH or X25519.
 
 ## Enabling generators
 
 Each generator comes with the feature of its algorithm, listed in the
-[tables](#algorithms) below. AES, RSA and DH are all in the default features.
+[tables](#algorithms) below. AES, RSA, DH and X25519 are all in the default features.
 
 ```toml
 [dependencies]
@@ -189,6 +189,7 @@ wipes its bytes on drop; `AnyPrivateKey` shows only its algorithm.
 |---|---|---|---|---|
 | DH | none: `init` is required | | `Dh` | `dh` |
 | RSA | 2048 bits, exponent 65537, certainty 100 | 1.2.840.113549.1.1.1 | `Strength`, `Rsa` | `rsa` |
+| X25519 | 255 bits | 1.3.101.110 | `Strength` of 255 | `x25519` |
 
 Bits and Defaults are what the generator makes without `init`. Params are the
 `KeyGenParams` variants its `init` takes.
@@ -204,6 +205,9 @@ GCM, CCM and key wrap with padding, as in Bouncy Castle.
   256-bit key.
 - **DH** has DIFFIEHELLMAN as its alias and, as in Bouncy Castle, no OID: the OIDs
   of DH keys name the key in a certificate, not a generator.
+- **X25519** has one size, so `init` is never needed: it takes `Strength` of 255 bits,
+  Bouncy Castle's strength for X25519, and refuses any other. Its OID is id-X25519 of
+  RFC 8410, as in Bouncy Castle.
 - **Certainty** is that of Bouncy Castle: the chance that a prime factor is in fact
   composite is at most 2^-certainty.
 - **An IV or nonce** does not come from here. Fill it with random bytes of the size
