@@ -9,6 +9,7 @@ use crate::cipher::engine::AnyEngine;
     feature = "sm2"
 ))]
 use crate::cipher::init_params::InitParams;
+pub(in crate::cipher) use crate::need::Need;
 #[cfg(any(
     feature = "rsa",
     feature = "elgamal",
@@ -39,15 +40,6 @@ pub(in crate::cipher) enum PaddingKind {
     X923,
     Tbc,
     ZeroByte,
-}
-
-// Whether a mode needs an operation field: init refuses a required one that is missing and a
-// forbidden one that is there, so nothing is filled in silently or dropped silently
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(in crate::cipher) enum Need {
-    Forbidden,
-    Optional,
-    Required,
 }
 
 // One block cipher: its engine, its block size, and the combinations Bouncy Castle gives OIDs

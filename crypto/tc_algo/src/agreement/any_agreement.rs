@@ -2,31 +2,46 @@ use core::fmt;
 
 use tc_agreement::{Agreement, AgreementInit};
 
+use super::dyn_agreement::DynAgreement;
 use super::{AgreementEntry, AnyAgreementParams};
-use crate::AlgoError;
 use crate::params::{AnyKeyParams, SecretKey};
+use crate::{AlgoError, ErrorKind};
 
 pub struct AnyAgreement {
     entry: &'static AgreementEntry,
+    agreement: Box<dyn DynAgreement>,
 }
 
 impl AnyAgreement {
     pub(super) fn new(entry: &'static AgreementEntry) -> Self {
-        Self { entry }
+        Self {
+            entry,
+            agreement: entry.create(),
+        }
     }
 
     pub fn entry(&self) -> &'static AgreementEntry {
         self.entry
     }
 
+    // Starts from a new agreement each time, so a failed init leaves none of an earlier key
+    // behind. An operation field the agreement has no use for is refused, not ignored
     pub fn init(&mut self, params: &AnyAgreementParams) -> Result<(), AlgoError> {
-        todo!()
+        self.agreement = self.entry.create();
+        self.entry.check(params)?;
+        self.agreement.init(params)
     }
 
     // The shared secret with the other party's public key, as many bytes as agreement_size gives,
     // with leading zeros. It is the raw secret: put it through a KDF before using it as a key
     pub fn calculate(&self, public_key: &AnyKeyParams) -> Result<SecretKey, AlgoError> {
-        todo!()
+        let size = self
+            .agreement
+            .agreement_size()
+            .ok_or(AlgoError::new(ErrorKind::NotInitialized))?;
+        let mut secret = SecretKey::new(vec![0; size]);
+        Agreement::calculate_agreement(self, public_key, &mut secret.key)?;
+        Ok(secret)
     }
 }
 
@@ -51,8 +66,11 @@ impl Agreement for AnyAgreement {
     type PublicKey = AnyKeyParams;
     type Error = AlgoError;
 
+    // Panics before a successful init, as the agreements underneath do
     fn agreement_size(&self) -> usize {
-        todo!()
+        self.agreement
+            .agreement_size()
+            .expect("the agreement is initialized")
     }
 
     fn calculate_agreement(
@@ -60,7 +78,10 @@ impl Agreement for AnyAgreement {
         public_key: &AnyKeyParams,
         output: &mut [u8],
     ) -> Result<(), Self::Error> {
-        todo!()
+        let AnyKeyParams::Public(public_key) = public_key else {
+            return Err(AlgoError::new(ErrorKind::InvalidParams));
+        };
+        self.agreement.calculate_agreement(public_key, output)
     }
 }
 

@@ -11,18 +11,19 @@ pub struct AnyAgreementParams {
 
 impl AnyAgreementParams {
     pub fn new(key: AnyPrivateKey) -> Self {
-        todo!()
+        Self { key, ukm: None }
     }
 
-    pub fn with_ukm(self, ukm: Vec<u8>) -> Self {
-        todo!()
+    pub fn with_ukm(mut self, ukm: Vec<u8>) -> Self {
+        self.ukm = Some(ukm);
+        self
     }
 
     pub fn key(&self) -> &AnyPrivateKey {
-        todo!()
+        &self.key
     }
 
     pub fn ukm(&self) -> Option<&[u8]> {
-        todo!()
+        self.ukm.as_deref()
     }
 }

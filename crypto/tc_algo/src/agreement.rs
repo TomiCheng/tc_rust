@@ -4,9 +4,11 @@
 
 mod any_agreement;
 mod any_agreement_params;
+mod dyn_agreement;
 mod entry;
 mod functions;
 mod helper;
+mod table;
 
 pub use any_agreement::AnyAgreement;
 pub use any_agreement_params::AnyAgreementParams;

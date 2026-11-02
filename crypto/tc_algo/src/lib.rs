@@ -8,6 +8,7 @@ mod error;
 pub mod generate;
 pub mod kem;
 pub mod mac;
+mod need;
 pub mod params;
 pub mod pbe;
 pub mod signer;

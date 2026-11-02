@@ -96,37 +96,37 @@ impl CipherEntry {
         match &self.kind {
             // A secret key, and each operation field required, allowed or refused by the mode
             Kind::Block { mode, .. } => {
-                check(mode.iv(), op.iv.is_some())?;
-                check(mode.tag_len(), op.tag_len.is_some())?;
-                check(mode.aad(), op.aad.is_some())?;
+                mode.iv().check(op.iv.is_some())?;
+                mode.tag_len().check(op.tag_len.is_some())?;
+                mode.aad().check(op.aad.is_some())?;
                 symmetric(params)
             }
             // A secret key, the IV if the cipher has one, and nothing else
             Kind::Stream { algorithm } => {
-                check(algorithm.iv, op.iv.is_some())?;
-                check(Need::Forbidden, op.tag_len.is_some())?;
-                check(Need::Forbidden, op.aad.is_some())?;
+                algorithm.iv.check(op.iv.is_some())?;
+                Need::Forbidden.check(op.tag_len.is_some())?;
+                Need::Forbidden.check(op.aad.is_some())?;
                 symmetric(params)
             }
             // A secret key, the nonce and the tag length, and associated data if any
             Kind::Aead { .. } => {
-                check(Need::Required, op.iv.is_some())?;
-                check(Need::Required, op.tag_len.is_some())?;
+                Need::Required.check(op.iv.is_some())?;
+                Need::Required.check(op.tag_len.is_some())?;
                 symmetric(params)
             }
             // A key of the algorithm, and no operation field at all
             #[cfg(any(feature = "rsa", feature = "elgamal", feature = "naccache-stern"))]
             Kind::Asymmetric { algorithm, .. } => {
-                check(Need::Forbidden, op.iv.is_some())?;
-                check(Need::Forbidden, op.tag_len.is_some())?;
-                check(Need::Forbidden, op.aad.is_some())?;
+                Need::Forbidden.check(op.iv.is_some())?;
+                Need::Forbidden.check(op.tag_len.is_some())?;
+                Need::Forbidden.check(op.aad.is_some())?;
                 (algorithm.key)(&params.key).ok_or(AlgoError::new(ErrorKind::InvalidParams))
             }
             #[cfg(feature = "sm2")]
             Kind::Message { algorithm, .. } => {
-                check(Need::Forbidden, op.iv.is_some())?;
-                check(Need::Forbidden, op.tag_len.is_some())?;
-                check(Need::Forbidden, op.aad.is_some())?;
+                Need::Forbidden.check(op.iv.is_some())?;
+                Need::Forbidden.check(op.tag_len.is_some())?;
+                Need::Forbidden.check(op.aad.is_some())?;
                 (algorithm.key)(&params.key).ok_or(AlgoError::new(ErrorKind::InvalidParams))
             }
         }
@@ -144,15 +144,6 @@ fn symmetric(params: &AnyParams) -> Result<InitParams, AlgoError> {
         tag_len: op.tag_len,
         aad: op.aad.clone().unwrap_or_default(),
     }))
-}
-
-fn check(need: Need, present: bool) -> Result<(), AlgoError> {
-    match (need, present) {
-        (Need::Required, false) | (Need::Forbidden, true) => {
-            Err(AlgoError::new(ErrorKind::InvalidParams))
-        }
-        _ => Ok(()),
-    }
 }
 
 impl fmt::Debug for CipherEntry {

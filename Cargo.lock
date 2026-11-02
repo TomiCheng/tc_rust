@@ -906,6 +906,7 @@ dependencies = [
  "tc_chacha",
  "tc_chacha_aead",
  "tc_des",
+ "tc_dh",
  "tc_dh_key",
  "tc_digest",
  "tc_dsa_key",
