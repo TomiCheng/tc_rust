@@ -1,6 +1,6 @@
 // What a generator is to make, as plain data: the generator checks it in init. One variant per
-// kind of Bouncy Castle KeyGenerationParameters; the DH, DSA, ElGamal, GOST and ML-KEM ones come
-// with their generators
+// kind of Bouncy Castle KeyGenerationParameters; the DSA, ElGamal, GOST and ML-KEM ones come with
+// their generators
 #[derive(Clone, Debug)]
 #[non_exhaustive]
 pub enum KeyGenParams {
@@ -15,6 +15,10 @@ pub enum KeyGenParams {
     Ec {
         curve: crate::params::EcCurve,
     },
+    // Bouncy Castle's DHKeyGenerationParameters: the group, which both parties share, such as one
+    // of tc_dh_key::standard_groups or that of the other party's public key
+    #[cfg(feature = "dh")]
+    Dh(tc_dh_key::DhParameters),
 }
 
 impl KeyGenParams {
@@ -28,5 +32,12 @@ impl KeyGenParams {
     #[cfg(feature = "ec")]
     pub const fn ec(curve: crate::params::EcCurve) -> Self {
         Self::Ec { curve }
+    }
+}
+
+#[cfg(feature = "dh")]
+impl From<tc_dh_key::DhParameters> for KeyGenParams {
+    fn from(params: tc_dh_key::DhParameters) -> Self {
+        Self::Dh(params)
     }
 }

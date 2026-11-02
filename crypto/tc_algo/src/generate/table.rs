@@ -2,6 +2,8 @@
 
 #[cfg(feature = "aes")]
 mod aes;
+#[cfg(feature = "dh")]
+mod dh;
 #[cfg(feature = "rsa")]
 mod rsa;
 
@@ -30,6 +32,8 @@ pub(super) const KEY_GENERATORS: &[KeyGeneratorEntry] = &[
 ];
 
 pub(super) const KEY_PAIR_GENERATORS: &[KeyPairGeneratorEntry] = &[
+    #[cfg(feature = "dh")]
+    dh::DH,
     #[cfg(feature = "rsa")]
     rsa::RSA,
 ];

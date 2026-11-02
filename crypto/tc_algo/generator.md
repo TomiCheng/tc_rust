@@ -7,7 +7,7 @@ a key pair generator makes a `KeyPair`, an `AnyPublicKey` and an `AnyPrivateKey`
 ## Enabling generators
 
 Each generator comes with the feature of its algorithm, listed in the
-[tables](#algorithms) below. AES and RSA are both in the default features.
+[tables](#algorithms) below. AES, RSA and DH are all in the default features.
 
 ```toml
 [dependencies]
@@ -83,6 +83,34 @@ the ones it had. The values RSA checks itself, such as a size too small or an ev
 exponent, fail in `generate` instead, with the same kind and the RSA error as the
 source.
 
+### With a DH group
+
+A DH generator has no default: `init` takes the group both parties share, a
+`DhParameters` of `tc_dh_key`, the crate whose keys `AnyPrivateKey::Dh` holds, such
+as one of its `standard_groups`. A size alone names no group, so `Strength` is
+refused, as in Bouncy Castle, and `generate_key_pair("DH")` fails for want of a group.
+
+```rust
+use tc_algo::AlgoError;
+use tc_algo::agreement::AnyAgreementParams;
+use tc_algo::generate;
+use tc_dh_key::standard_groups::rfc7919_ffdhe2048;
+
+fn main() -> Result<(), AlgoError> {
+    let mut generator = generate::get_key_pair_generator("DH")?;
+    generator.init(rfc7919_ffdhe2048())?;
+    let pair = generator.generate()?;
+
+    // The private key for this party's agreement, the public key for the other party
+    let params = AnyAgreementParams::new(pair.private);
+    let public = pair.public;
+    Ok(())
+}
+```
+
+The group is checked in `generate`, as RSA's values are: a bad one fails with
+`InvalidKeyGenParams` and the DH error as the source.
+
 ### With randomness of your own
 
 `with_rng` takes any `CryptoRng + Send` in place of the operating system's. A seeded
@@ -154,6 +182,7 @@ wipes its bytes on drop; `AnyPrivateKey` shows only its algorithm.
 
 | Name | Defaults | OID | Params | Feature |
 |---|---|---|---|---|
+| DH | none: `init` is required | | `Dh` | `dh` |
 | RSA | 2048 bits, exponent 65537, certainty 100 | 1.2.840.113549.1.1.1 | `Strength`, `Rsa` | `rsa` |
 
 Bits and Defaults are what the generator makes without `init`. Params are the
@@ -168,6 +197,8 @@ GCM, CCM and key wrap with padding, as in Bouncy Castle.
   give it to `init`. AESWRAP is the same generator.
 - **Every AES row takes every AES size**: AES128 initialized with 256 bits makes a
   256-bit key.
+- **DH** has DIFFIEHELLMAN as its alias and, as in Bouncy Castle, no OID: the OIDs
+  of DH keys name the key in a certificate, not a generator.
 - **Certainty** is that of Bouncy Castle: the chance that a prime factor is in fact
   composite is at most 2^-certainty.
 - **An IV or nonce** does not come from here. Fill it with random bytes of the size

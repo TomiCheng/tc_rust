@@ -220,8 +220,8 @@ x448 = ["dep:tc_cfrg_curves", "tc_cfrg_curves/x448"]
 # Ed25519 and Ed448 keys (RFC 8032)
 ed25519 = ["dep:tc_cfrg_curves"]
 ed448 = ["dep:tc_cfrg_curves", "tc_cfrg_curves/ed448"]
-# Finite-field Diffie-Hellman keys and their agreement
-dh = ["dep:tc_dh_key", "dep:tc_dh"]
+# Finite-field Diffie-Hellman keys, their generator and their agreement
+dh = ["dep:tc_dh_key", "dep:tc_dh", "dep:tc_asym_cipher"]
 # ML-KEM keys (FIPS 203)
 ml-kem = ["dep:tc_ml_kem"]
 # DSA keys. FIPS 186-5 keeps DSA only for verifying old signatures, so it is not in the default
@@ -299,7 +299,5 @@ tc_twofish_v2 = { version = "0.1.0", path = "../../block_cipher/tc_twofish", opt
 tc_zeroize = { version = "0.1.0", features = ["alloc"] }
 
 [dev-dependencies]
-# Generates the DH keys in the tests
-tc_asym_cipher = "0.1.0"
 # Builds the integers of the RSA keys in the tests
 tc_bigint = "0.1.0"

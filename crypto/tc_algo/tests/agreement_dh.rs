@@ -53,22 +53,17 @@ mod with_dh {
     use tc_algo::agreement::{
         self, Agreement, AgreementInit, AgreementPeer, AnyAgreement, AnyAgreementParams,
     };
+    use tc_algo::generate;
     use tc_algo::params::{AnyPrivateKey, AnyPublicKey};
-    use tc_asym_cipher::{KeyPairGenerator, KeyPairGeneratorInit};
     use tc_bigint::PaddedBigUint;
     use tc_dh_key::standard_groups::{rfc2409_1024, rfc3526_2048};
-    use tc_dh_key::{
-        DhKeyGenerationParams, DhKeyPairGenerator, DhParameters, DhPrivateKey, DhPublicKey,
-    };
+    use tc_dh_key::{DhParameters, DhPrivateKey, DhPublicKey};
 
-    fn key_pair(params: DhParameters) -> (AnyPublicKey, AnyPrivateKey) {
-        let mut rng = rand::rng();
-        let mut generator = DhKeyPairGenerator::new();
-        generator
-            .init(DhKeyGenerationParams::new(params, &mut rng))
-            .unwrap();
-        let (public, private) = generator.generate_key_pair().unwrap();
-        (AnyPublicKey::Dh(public), AnyPrivateKey::Dh(private))
+    fn key_pair(group: DhParameters) -> (AnyPublicKey, AnyPrivateKey) {
+        let mut generator = generate::get_key_pair_generator("DH").unwrap();
+        generator.init(group).unwrap();
+        let pair = generator.generate().unwrap();
+        (pair.public, pair.private)
     }
 
     // p = 23 and g = 5: 5^4 = 4 and 5^3 = 10 mod 23, and 10^4 = 4^3 = 18 mod 23
