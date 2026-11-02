@@ -50,7 +50,7 @@ fn main() -> Result<(), AlgoError> {
     agreement.init(&bob.private.into())?;
     let bob_secret = agreement.calculate(&alice.public.into())?;
 
-    assert_eq!(alice_secret.key, bob_secret.key);
+    assert_eq!(alice_secret.as_bytes(), bob_secret.as_bytes());
     Ok(())
 }
 ```
@@ -118,8 +118,12 @@ fn main() -> Result<(), AlgoError> {
 
 The secret is `g^(xy) mod p`, as many bytes as p has, with leading zeros. Its bytes are
 not uniformly random, so do not use them as a key: derive the key from them with a
-KDF, such as HKDF, and give the KDF what both parties agree to bind the key to. The
-secret is a `SecretKey`, whose bytes are wiped when it is dropped.
+KDF, such as HKDF, and give the KDF what both parties agree to bind the key to.
+
+So the secret is a `SharedSecret`, not a `SecretKey`, and cannot go to a cipher as
+it is. `as_bytes` gives its bytes to the KDF, and they are wiped when it is dropped.
+It cannot be cloned, which keeps one copy of it, nor compared with `==`, which would
+take time that depends on its bytes.
 
 ### Into a buffer of your own
 
@@ -248,4 +252,4 @@ agreement or a generator.
 - **The secret is p bytes long**, leading zeros included. Bouncy Castle returns it as
   an integer, which drops them; pad it back to compare with Bouncy Castle.
 - **No key is printed**: the `Debug` output of a key pair, an agreement or a
-  `SecretKey` shows the algorithm or the length, never the key.
+  `SharedSecret` shows the algorithm or the length, never the key or the secret.

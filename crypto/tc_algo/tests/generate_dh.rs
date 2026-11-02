@@ -44,7 +44,7 @@ fn two_generated_key_pairs_agree_on_one_secret() {
     let alice_secret =
         agreement::calculate("DH", &alice.private.into(), &bob.public.into()).unwrap();
     let bob_secret = agreement::calculate("DH", &bob.private.into(), &alice.public.into()).unwrap();
-    assert_eq!(alice_secret.key, bob_secret.key);
+    assert_eq!(alice_secret.as_bytes(), bob_secret.as_bytes());
 }
 
 #[test]

@@ -95,16 +95,16 @@ mod with_dh {
         let alice_secret = alice.calculate(&bob_public.into()).unwrap();
         let bob_secret =
             agreement::calculate("DH", &bob_private.into(), &alice_public.into()).unwrap();
-        assert_eq!(alice_secret.key.len(), 256);
-        assert_eq!(alice_secret.key, bob_secret.key);
+        assert_eq!(alice_secret.as_bytes().len(), 256);
+        assert_eq!(alice_secret.as_bytes(), bob_secret.as_bytes());
     }
 
     #[test]
     fn the_secret_in_a_toy_group_is_y_to_the_x_mod_p() {
         let alice = agreement::calculate("DH", &toy_private(4), &toy_public(10)).unwrap();
         let bob = agreement::calculate("DH", &toy_private(3), &toy_public(4)).unwrap();
-        assert_eq!(alice.key, [18]);
-        assert_eq!(bob.key, [18]);
+        assert_eq!(alice.as_bytes(), [18]);
+        assert_eq!(bob.as_bytes(), [18]);
     }
 
     #[test]
@@ -199,7 +199,7 @@ mod with_dh {
         let dh = initialized(&toy_private(4));
         assert_eq!(format!("{dh:?}"), "AnyAgreement { name: \"DH\", .. }");
         let secret = dh.calculate(&toy_public(10)).unwrap();
-        assert_eq!(format!("{secret:?}"), "SecretKey { len: 1, .. }");
+        assert_eq!(format!("{secret:?}"), "SharedSecret { len: 1, .. }");
     }
 
     #[test]

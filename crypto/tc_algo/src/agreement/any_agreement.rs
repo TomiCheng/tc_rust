@@ -3,8 +3,7 @@ use core::fmt;
 use tc_agreement::{Agreement, AgreementInit};
 
 use super::dyn_agreement::DynAgreement;
-use super::{AgreementEntry, AgreementPeer, AnyAgreementParams};
-use crate::params::SecretKey;
+use super::{AgreementEntry, AgreementPeer, AnyAgreementParams, SharedSecret};
 use crate::{AlgoError, ErrorKind};
 
 pub struct AnyAgreement {
@@ -34,13 +33,13 @@ impl AnyAgreement {
 
     // The shared secret with the other party, as many bytes as agreement_size gives, with leading
     // zeros. It is the raw secret: put it through a KDF before using it as a key
-    pub fn calculate(&self, peer: &AgreementPeer) -> Result<SecretKey, AlgoError> {
+    pub fn calculate(&self, peer: &AgreementPeer) -> Result<SharedSecret, AlgoError> {
         let size = self
             .agreement
             .agreement_size()
             .ok_or(AlgoError::new(ErrorKind::NotInitialized))?;
-        let mut secret = SecretKey::new(vec![0; size]);
-        Agreement::calculate_agreement(self, peer, &mut secret.key)?;
+        let mut secret = SharedSecret::zeroed(size);
+        Agreement::calculate_agreement(self, peer, secret.as_mut_bytes())?;
         Ok(secret)
     }
 }
