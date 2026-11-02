@@ -13,4 +13,4 @@ of its own, which gives one type for all of its algorithms, such as `AnyCipher` 
   `CipherUtilities`.
 - [Key generators](generator.md): secret keys and key pairs, after
   `GeneratorUtilities`.
-- [Key agreements](agreement.md): DH and X25519, after `AgreementUtilities`.
+- [Key agreements](agreement.md): DH, ECDH and X25519, after `AgreementUtilities`.

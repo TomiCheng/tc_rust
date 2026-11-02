@@ -7,12 +7,13 @@ and like the other factories of `tc_algo`, with `get_by_name`, `get_by_oid`,
 
 - `generate::key` makes a `SecretKey`, for the algorithms that take one, such as AES.
 - `generate::key_pair` makes a `KeyPair`, an `AnyPublicKey` and an `AnyPrivateKey`,
-  such as for RSA, DH or X25519.
+  such as for RSA, EC, DH or X25519.
 
 ## Enabling generators
 
 Each generator comes with the feature of its algorithm, listed in the
-[tables](#algorithms) below. AES, RSA, DH and X25519 are all in the default features.
+[tables](#algorithms) below. AES, RSA, EC on the prime curves, DH and X25519 are all
+in the default features.
 
 ```toml
 [dependencies]
@@ -116,6 +117,33 @@ fn main() -> Result<(), AlgoError> {
 The group is checked in `generate`, as RSA's values are: a bad one fails with
 `InvalidKeyGenParams` and the DH error as the source.
 
+### With an EC curve
+
+An EC generator has no default curve either: `init` takes an `EcCurve`, or a size
+alone, which takes the curve Bouncy Castle takes for it: P-224, P-256, P-384 or P-521
+for 224, 256, 384 or 521 bits.
+
+```rust
+use tc_algo::AlgoError;
+use tc_algo::generate::{self, KeyGenParams};
+use tc_algo::params::EcCurve;
+
+fn main() -> Result<(), AlgoError> {
+    let mut generator = generate::key_pair::get_by_name("EC")?;
+    generator.init(EcCurve::Secp256r1)?;
+    let pair = generator.generate()?;
+
+    // The same curve by its size
+    generator.init(KeyGenParams::Strength { bits: 256 })?;
+    let pair = generator.generate()?;
+    Ok(())
+}
+```
+
+`init` refuses a size that names none of the curves with `InvalidKeyGenParams`, such
+as 239 bits, which names Bouncy Castle's prime239v1. The curves each feature enables
+are listed in [ecdh.md](agreement/ecdh.md#curves).
+
 ### With randomness of your own
 
 `with_rng` takes any `CryptoRng + Send` in place of the operating system's. A seeded
@@ -188,6 +216,7 @@ wipes its bytes on drop; `AnyPrivateKey` shows only its algorithm.
 | Name | Defaults | OID | Params | Feature |
 |---|---|---|---|---|
 | DH | none: `init` is required | | `Dh` | `dh` |
+| EC | none: `init` is required | 1.3.133.16.840.63.0.2 and .3, 1.3.132.1.11.0 to .3, 1.3.132.1.14.0 to .3 | `Strength`, `Ec` | `ec` |
 | RSA | 2048 bits, exponent 65537, certainty 100 | 1.2.840.113549.1.1.1 | `Strength`, `Rsa` | `rsa` |
 | X25519 | 255 bits | 1.3.101.110 | `Strength` of 255 | `x25519` |
 
@@ -205,6 +234,10 @@ GCM, CCM and key wrap with padding, as in Bouncy Castle.
   256-bit key.
 - **DH** has DIFFIEHELLMAN as its alias and, as in Bouncy Castle, no OID: the OIDs
   of DH keys name the key in a certificate, not a generator.
+- **EC** has ECDH, ECIES and ECDHC as its aliases. Bouncy Castle has a generator for
+  each of EC, ECDH and ECDHC, whose keys differ only in the algorithm name they carry;
+  the keys here carry none, so one generator serves. Its OIDs are those of Bouncy
+  Castle's EC generator: the ECDH schemes with a KDF of X9.63 and SEC 1.
 - **X25519** has one size, so `init` is never needed: it takes `Strength` of 255 bits,
   Bouncy Castle's strength for X25519, and refuses any other. Its OID is id-X25519 of
   RFC 8410, as in Bouncy Castle.

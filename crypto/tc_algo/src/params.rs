@@ -13,6 +13,8 @@ mod any_public_key;
 #[cfg(feature = "ec")]
 mod ec_curve;
 #[cfg(feature = "ec")]
+pub(crate) mod ec_curves;
+#[cfg(feature = "ec")]
 mod ec_domains;
 mod secret_key;
 

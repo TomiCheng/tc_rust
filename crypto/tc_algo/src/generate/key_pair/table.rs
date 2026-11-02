@@ -2,6 +2,8 @@
 
 #[cfg(feature = "dh")]
 mod dh;
+#[cfg(feature = "ec")]
+mod ec;
 #[cfg(feature = "rsa")]
 mod rsa;
 #[cfg(feature = "x25519")]
@@ -12,6 +14,8 @@ use super::KeyPairGeneratorEntry;
 pub(super) const KEY_PAIR_GENERATORS: &[KeyPairGeneratorEntry] = &[
     #[cfg(feature = "dh")]
     dh::DH,
+    #[cfg(feature = "ec")]
+    ec::EC,
     #[cfg(feature = "rsa")]
     rsa::RSA,
     #[cfg(feature = "x25519")]

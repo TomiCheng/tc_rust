@@ -35,6 +35,13 @@ impl KeyGenParams {
     }
 }
 
+#[cfg(feature = "ec")]
+impl From<crate::params::EcCurve> for KeyGenParams {
+    fn from(curve: crate::params::EcCurve) -> Self {
+        Self::Ec { curve }
+    }
+}
+
 #[cfg(feature = "dh")]
 impl From<tc_dh_key::DhParameters> for KeyGenParams {
     fn from(params: tc_dh_key::DhParameters) -> Self {

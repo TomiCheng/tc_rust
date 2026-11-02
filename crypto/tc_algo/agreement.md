@@ -8,12 +8,14 @@ for the same secret.
 Each agreement has a guide of its own, which is all you need to use it:
 
 - [DH](agreement/dh.md): finite-field Diffie-Hellman, in a group both parties share.
+- [ECDH](agreement/ecdh.md): ECDH and ECDHC, Diffie-Hellman on a named elliptic curve
+  both parties share.
 - [X25519](agreement/x25519.md): Diffie-Hellman on Curve25519, of RFC 7748.
 
 ## Enabling agreements
 
 Each agreement comes with the feature of its algorithm, listed in the
-[table](#algorithms) below, which also enables its keys and their generator. Both
+[table](#algorithms) below, which also enables its keys and their generator. All
 are in the default features.
 
 ```toml
@@ -24,7 +26,8 @@ tc_algo = { version = "0.1", default-features = false, features = ["x25519"] }
 
 ## Usage
 
-Every agreement takes the same steps; only the name and, for DH, the group differ.
+Every agreement takes the same steps; only the name and, for DH and ECDH, the group
+or the curve differ.
 
 ```rust
 use tc_algo::AlgoError;
@@ -83,6 +86,9 @@ for entry in agreement::algorithms() {
 | Name | Aliases | OID | Secret | Feature | Default |
 |---|---|---|---:|---|:---:|
 | DH | DIFFIEHELLMAN | | bytes of p | `dh` | ✓ |
+| ECDH | | | bytes of a coordinate | `ecdh` | ✓ |
+| ECDHC | ECCDH | | bytes of a coordinate | `ecdh` | ✓ |
 | X25519 | | 1.3.101.110 | 32 bytes | `x25519` | ✓ |
 
-The generator of each has the same name and OID; see [generator.md](generator.md).
+Each name finds the generator of its keys as well, EC for ECDH and ECDHC; see
+[generator.md](generator.md).

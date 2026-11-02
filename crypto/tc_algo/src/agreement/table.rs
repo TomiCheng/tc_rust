@@ -2,6 +2,8 @@
 
 #[cfg(feature = "dh")]
 mod dh;
+#[cfg(feature = "ecdh")]
+mod ecdh;
 #[cfg(feature = "x25519")]
 mod x25519;
 
@@ -11,6 +13,10 @@ use super::AgreementEntry;
 pub(super) const AGREEMENTS: &[AgreementEntry] = &[
     #[cfg(feature = "dh")]
     dh::DH,
+    #[cfg(feature = "ecdh")]
+    ecdh::ECDH,
+    #[cfg(feature = "ecdh")]
+    ecdh::ECDHC,
     #[cfg(feature = "x25519")]
     x25519::X25519,
 ];

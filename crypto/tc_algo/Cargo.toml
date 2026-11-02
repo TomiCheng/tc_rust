@@ -76,6 +76,7 @@ default = [
     "xchacha20-poly1305",
     "rsa",
     "ec",
+    "ecdh",
     "x25519",
     "x448",
     "ed25519",
@@ -201,8 +202,16 @@ hc = ["dep:tc_hc"]
 rsa = ["dep:tc_rsa", "dep:tc_asym_cipher", "dep:tc_asym_encoding", "dep:tc_sha"]
 # RSA with ISO 9796-1 padding: the standard is withdrawn, and the encoding is not constant time
 rsa-iso9796 = ["rsa", "dep:tc_asym_iso9796"]
-# EC keys on the prime curves secp224k1 to secp521r1 and sm2p256v1
-ec = ["dep:tc_ec_key", "dep:tc_fp_custom"]
+# EC keys on the prime curves secp224k1 to secp521r1 and sm2p256v1, and their generator
+ec = [
+    "dep:tc_ec_key",
+    "dep:tc_ec_core",
+    "dep:tc_fp_custom",
+    "dep:tc_bigint",
+    "dep:tc_asym_cipher",
+]
+# ECDH and ECDHC, the agreements of IEEE P1363 on the EC keys
+ecdh = ["ec", "dep:tc_ecdh_v2"]
 # The binary SEC 2 curves sect233k1 to sect571r1
 ec-f2m = ["ec", "dep:tc_f2m_custom"]
 # The weak curves, kept only for interoperability: secp112r1 to secp192r1, and with ec-f2m sect113r1
@@ -217,7 +226,7 @@ ec-small-curves = [
 # X25519 keys, their generator and their agreement (RFC 7748)
 x25519 = ["dep:tc_cfrg_curves", "dep:tc_asym_cipher"]
 # X448 keys (RFC 7748)
-x448 =["dep:tc_cfrg_curves", "tc_cfrg_curves/x448"]
+x448 = ["dep:tc_cfrg_curves", "tc_cfrg_curves/x448"]
 # Ed25519 and Ed448 keys (RFC 8032)
 ed25519 = ["dep:tc_cfrg_curves"]
 ed448 = ["dep:tc_cfrg_curves", "tc_cfrg_curves/ed448"]
@@ -249,7 +258,8 @@ tc_asym_encoding = { version = "0.1.0", optional = true }
 tc_aria = { version = "0.1.0", optional = true }
 tc_ascon_aead = { version = "0.1.0", optional = true }
 tc_asym_iso9796 = { version = "0.1.0", optional = true }
-tc_blake = { version = "0.1.0", optional = true }
+tc_bigint = { version = "0.1.0", optional = true }
+tc_blake ={ version = "0.1.0", optional = true }
 tc_block_cipher = "0.1.0"
 tc_block_modes = { version = "0.1.1", features = ["alloc"] }
 tc_block_padding = { version = "0.1.0", features = ["rand_core"] }
@@ -266,7 +276,9 @@ tc_dh_key = { version = "0.1.0", path = "../tc_dh_key", optional = true }
 tc_digest = "0.1.1"
 tc_dsa_key = { version = "0.1.0", path = "../tc_dsa_key", optional = true }
 tc_dstu7564 = { version = "0.1.0", optional = true }
+tc_ec_core = { version = "0.1.0", optional = true }
 tc_ec_key = { version = "0.1.0", path = "../tc_ec_key", optional = true }
+tc_ecdh_v2 = { version = "0.1.0", path = "../agreement/tc_ecdh_v2", optional = true }
 tc_elgamal = { version = "0.1.0", path = "../tc_elgamal", optional = true }
 tc_f2m_custom = { version = "0.1.0", optional = true }
 tc_fp_curve = { version = "0.1.0", optional = true }
