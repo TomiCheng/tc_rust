@@ -59,8 +59,10 @@ impl AgreementEntry {
         (self.create)()
     }
 
-    // The operation fields against what this agreement takes, so that none is dropped silently
+    // The operation fields against what this agreement takes, so that none is dropped silently.
+    // An agreement that takes ephemeral keys takes them from both parties
     pub(super) fn check(&self, params: &AnyAgreementParams) -> Result<(), AlgoError> {
+        self.ephemeral.check(params.ephemeral().is_some())?;
         self.ukm.check(params.ukm().is_some())
     }
 

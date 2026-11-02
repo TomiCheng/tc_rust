@@ -174,9 +174,9 @@ the error of the ECDH layer underneath, where there is one.
 | `ErrorKind` | When |
 |---|---|
 | `UnknownAgreement` | The name is not ECDH, ECDHC or ECCDH, or the `ecdh` feature is off |
-| `UnknownGenerator` | The name is not EC, ECDH, ECIES or ECDHC, or the `ec` feature is off |
+| `UnknownGenerator` | The name is not EC, ECDH, ECIES, ECDHC or ECMQV, or the `ec` feature is off |
 | `InvalidKeyGenParams` | The generator has no curve: `generate` without `init`, `key_pair::generate("EC")`, or `init` with a size that names none of the curves |
-| `InvalidParams` | `init` with a key that is not EC, or with user keying material. `calculate` with an ephemeral key, a public key that is not EC or is on another curve, or one that gives a shared point at infinity |
+| `InvalidParams` | `init` with a key that is not EC, with an ephemeral key, or with user keying material. `calculate` with an ephemeral key, a public key that is not EC or is on another curve, or one that gives a shared point at infinity |
 | `NotInitialized` | `calculate` before a successful `init` |
 | `DataLength` | `calculate_agreement` with a buffer shorter than `agreement_size` |
 
@@ -237,15 +237,15 @@ data too.
 |---|---|---|---|---|:---:|
 | `agreement` | ECDH | | | `ecdh` | ✓ |
 | `agreement` | ECDHC | ECCDH | | `ecdh` | ✓ |
-| `generate::key_pair` | EC | ECDH, ECIES, ECDHC | 10 of the ECDH schemes with a KDF | `ec` | ✓ |
+| `generate::key_pair` | EC | ECDH, ECIES, ECDHC, ECMQV | 15 of the ECDH and ECMQV schemes with a KDF | `ec` | ✓ |
 
 Names match without regard to ASCII case, and a dotted OID works wherever a name does.
 The agreements have no OID, as in Bouncy Castle: the OIDs of ECDH, such as
 dhSinglePass-stdDH-sha256kdf-scheme (1.3.132.1.11.1), name ECDH followed by a KDF.
 Bouncy Castle finds its EC generator by those OIDs, and so does this one. Bouncy
-Castle also has a generator for each of the names EC, ECDH and ECDHC; their keys
-differ there only in the algorithm name they carry, which the keys here do not, so one
-generator serves under all of them.
+Castle also has a generator for each of the names EC, ECDH, ECDHC and ECMQV; their
+keys differ there only in the algorithm name they carry, which the keys here do not,
+so one generator serves under all of them.
 
 ## Notes
 

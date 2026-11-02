@@ -216,7 +216,7 @@ wipes its bytes on drop; `AnyPrivateKey` shows only its algorithm.
 | Name | Defaults | OID | Params | Feature |
 |---|---|---|---|---|
 | DH | none: `init` is required | | `Dh` | `dh` |
-| EC | none: `init` is required | 1.3.133.16.840.63.0.2 and .3, 1.3.132.1.11.0 to .3, 1.3.132.1.14.0 to .3 | `Strength`, `Ec` | `ec` |
+| EC | none: `init` is required | 1.3.133.16.840.63.0.2, .3 and .16, 1.3.132.1.11.0 to .3, 1.3.132.1.14.0 to .3, 1.3.132.1.15.0 to .3 | `Strength`, `Ec` | `ec` |
 | RSA | 2048 bits, exponent 65537, certainty 100 | 1.2.840.113549.1.1.1 | `Strength`, `Rsa` | `rsa` |
 | X25519 | 255 bits | 1.3.101.110 | `Strength` of 255 | `x25519` |
 
@@ -234,10 +234,11 @@ GCM, CCM and key wrap with padding, as in Bouncy Castle.
   256-bit key.
 - **DH** has DIFFIEHELLMAN as its alias and, as in Bouncy Castle, no OID: the OIDs
   of DH keys name the key in a certificate, not a generator.
-- **EC** has ECDH, ECIES and ECDHC as its aliases. Bouncy Castle has a generator for
-  each of EC, ECDH and ECDHC, whose keys differ only in the algorithm name they carry;
-  the keys here carry none, so one generator serves. Its OIDs are those of Bouncy
-  Castle's EC generator: the ECDH schemes with a KDF of X9.63 and SEC 1.
+- **EC** has ECDH, ECIES, ECDHC and ECMQV as its aliases. Bouncy Castle has a
+  generator for each of EC, ECDH, ECDHC and ECMQV, whose keys differ only in the
+  algorithm name they carry; the keys here carry none, so one generator serves. Its
+  OIDs are those of Bouncy Castle's EC and ECMQV generators: the ECDH and ECMQV
+  schemes with a KDF of X9.63 and SEC 1.
 - **X25519** has one size, so `init` is never needed: it takes `Strength` of 255 bits,
   Bouncy Castle's strength for X25519, and refuses any other. Its OID is id-X25519 of
   RFC 8410, as in Bouncy Castle.

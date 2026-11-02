@@ -163,7 +163,7 @@ the error of the DH layer underneath, where there is one.
 | `UnknownAgreement` | The name is not DH or DIFFIEHELLMAN, or the `dh` feature is off |
 | `UnknownGenerator` | Likewise for the generator |
 | `InvalidKeyGenParams` | The generator has no group: `generate` without `init`, `key_pair::generate("DH")`, or `init` with a size alone. Or the group is bad, such as an even p |
-| `InvalidParams` | `init` with a key that is not DH, or with user keying material. `calculate` with an ephemeral key, a public key that is not DH, of another group or weak, or a secret of 1 |
+| `InvalidParams` | `init` with a key that is not DH, with an ephemeral key, or with user keying material. `calculate` with an ephemeral key, a public key that is not DH, of another group or weak, or a secret of 1 |
 | `NotInitialized` | `calculate` before a successful `init` |
 | `DataLength` | `calculate_agreement` with a buffer shorter than `agreement_size` |
 

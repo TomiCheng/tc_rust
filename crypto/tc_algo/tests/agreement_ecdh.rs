@@ -184,10 +184,14 @@ fn a_key_that_is_not_ec_is_refused_on_either_side() {
 }
 
 #[test]
-fn ecdh_refuses_user_keying_material_and_an_ephemeral_key() {
+fn ecdh_refuses_user_keying_material_and_an_ephemeral_key_of_either_party() {
     let (i, gr) = rfc_5903_keys();
     let mut ecdh = agreement::get_by_name("ECDH").unwrap();
     let error = ecdh.init(&i.clone().with_ukm(vec![1, 2, 3])).unwrap_err();
+    assert_eq!(error.kind(), ErrorKind::InvalidParams);
+    let error = ecdh
+        .init(&i.clone().with_ephemeral(i.key().clone()))
+        .unwrap_err();
     assert_eq!(error.kind(), ErrorKind::InvalidParams);
 
     let (_, ephemeral) = rfc_5903_keys();

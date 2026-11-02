@@ -77,6 +77,7 @@ default = [
     "rsa",
     "ec",
     "ecdh",
+    "ecmqv",
     "x25519",
     "x448",
     "ed25519",
@@ -212,6 +213,8 @@ ec = [
 ]
 # ECDH and ECDHC, the agreements of IEEE P1363 on the EC keys
 ecdh = ["ec", "dep:tc_ecdh_v2"]
+# ECMQV of SEC 1 on the EC keys
+ecmqv = ["ec", "dep:tc_ecmqv"]
 # The binary SEC 2 curves sect233k1 to sect571r1
 ec-f2m = ["ec", "dep:tc_f2m_custom"]
 # The weak curves, kept only for interoperability: secp112r1 to secp192r1, and with ec-f2m sect113r1
@@ -279,6 +282,7 @@ tc_dstu7564 = { version = "0.1.0", optional = true }
 tc_ec_core = { version = "0.1.0", optional = true }
 tc_ec_key = { version = "0.1.0", path = "../tc_ec_key", optional = true }
 tc_ecdh_v2 = { version = "0.1.0", path = "../agreement/tc_ecdh_v2", optional = true }
+tc_ecmqv = { version = "0.1.0", path = "../agreement/tc_ecmqv", optional = true }
 tc_elgamal = { version = "0.1.0", path = "../tc_elgamal", optional = true }
 tc_f2m_custom = { version = "0.1.0", optional = true }
 tc_fp_curve = { version = "0.1.0", optional = true }

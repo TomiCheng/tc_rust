@@ -10,6 +10,8 @@ Each agreement has a guide of its own, which is all you need to use it:
 - [DH](agreement/dh.md): finite-field Diffie-Hellman, in a group both parties share.
 - [ECDH](agreement/ecdh.md): ECDH and ECDHC, Diffie-Hellman on a named elliptic curve
   both parties share.
+- [ECMQV](agreement/ecmqv.md): MQV on a named elliptic curve, with a static and an
+  ephemeral key of each party.
 - [X25519](agreement/x25519.md): Diffie-Hellman on Curve25519, of RFC 7748.
 
 ## Enabling agreements
@@ -26,8 +28,9 @@ tc_algo = { version = "0.1", default-features = false, features = ["x25519"] }
 
 ## Usage
 
-Every agreement takes the same steps; only the name and, for DH and ECDH, the group
-or the curve differ.
+Every agreement takes the same steps; only the name and, for DH and the EC
+agreements, the group or the curve differ. ECMQV also takes an ephemeral key of each
+party.
 
 ```rust
 use tc_algo::AlgoError;
@@ -47,7 +50,8 @@ fn main() -> Result<(), AlgoError> {
 
 `init` takes this party's private key in an `AnyAgreementParams` and `calculate` the
 other party's public key in an `AgreementPeer`; `.into()` makes either from the key
-alone. `agreement::calculate` does all three steps at once.
+alone, and their `with_ephemeral` adds the ephemeral key ECMQV takes.
+`agreement::calculate` does all three steps at once.
 
 The result is a `SharedSecret`, the raw secret of the agreement. It is not yet a key:
 derive the key from it with a KDF. Its bytes are wiped when it is dropped.
@@ -88,7 +92,8 @@ for entry in agreement::algorithms() {
 | DH | DIFFIEHELLMAN | | bytes of p | `dh` | ✓ |
 | ECDH | | | bytes of a coordinate | `ecdh` | ✓ |
 | ECDHC | ECCDH | | bytes of a coordinate | `ecdh` | ✓ |
+| ECMQV | | | bytes of a coordinate | `ecmqv` | ✓ |
 | X25519 | | 1.3.101.110 | 32 bytes | `x25519` | ✓ |
 
-Each name finds the generator of its keys as well, EC for ECDH and ECDHC; see
+Each name finds the generator of its keys as well, EC for ECDH, ECDHC and ECMQV; see
 [generator.md](generator.md).

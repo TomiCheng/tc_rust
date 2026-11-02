@@ -105,19 +105,19 @@ fn the_same_seed_gives_the_same_key_pair() {
 
 #[test]
 fn the_generator_is_found_by_its_bouncy_castle_names_in_any_case() {
-    for name in ["EC", "ec", "ECDH", "ECIES", "ECDHC", "ecdhc"] {
+    for name in ["EC", "ec", "ECDH", "ECIES", "ECDHC", "ecdhc", "ECMQV"] {
         let generator = generate::key_pair::get_by_name(name).unwrap();
         assert_eq!(generator.entry().name(), "EC", "{name}");
     }
 }
 
-// The ECDH schemes with a KDF of X9.63 and SEC 1, as Bouncy Castle maps them
+// The ECDH and ECMQV schemes with a KDF of X9.63 and SEC 1, as Bouncy Castle maps them
 #[test]
-fn the_generator_is_found_by_the_oids_of_the_ecdh_kdf_schemes() {
+fn the_generator_is_found_by_the_oids_of_the_ecdh_and_ecmqv_kdf_schemes() {
     let entry = generate::key_pair::algorithms()
         .find(|entry| entry.name() == "EC")
         .unwrap();
-    assert_eq!(entry.oids().len(), 10);
+    assert_eq!(entry.oids().len(), 15);
     for dotted in [
         "1.3.133.16.840.63.0.2",
         "1.3.133.16.840.63.0.3",
@@ -125,6 +125,9 @@ fn the_generator_is_found_by_the_oids_of_the_ecdh_kdf_schemes() {
         "1.3.132.1.11.3",
         "1.3.132.1.14.0",
         "1.3.132.1.14.3",
+        "1.3.133.16.840.63.0.16",
+        "1.3.132.1.15.0",
+        "1.3.132.1.15.3",
     ] {
         let oid: Asn1Oid = dotted.parse().unwrap();
         let generator = generate::key_pair::get_by_oid(&oid).unwrap();

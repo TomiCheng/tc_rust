@@ -82,7 +82,8 @@ fn key_pair<C: Curve<Scalar = PaddedBigUint>>(
     })
 }
 
-// X9.63 and SEC 1 name the ECDH schemes with a KDF; Bouncy Castle finds this generator by them
+// X9.63 and SEC 1 name the ECDH and ECMQV schemes with a KDF; Bouncy Castle finds this generator
+// by them
 macro_rules! x963_scheme {
     ($arc:literal, $dotted:literal, $name:literal) => {
         NamedOid::new(
@@ -99,12 +100,12 @@ macro_rules! secg_scheme {
     };
 }
 
-// Bouncy Castle's ECKeyPairGenerator under the names of its EC, ECDH and ECDHC rows, with ECIES
-// as the alias of ECDH. The keys are the same for all of them, as they carry no algorithm name
-// here, so one row serves. The OIDs are those of the EC row. There is no default curve, so init
-// is required
+// Bouncy Castle's ECKeyPairGenerator under the names of its EC, ECDH, ECDHC and ECMQV rows, with
+// ECIES as the alias of ECDH. The keys are the same for all of them, as they carry no algorithm
+// name here, so one row serves. The OIDs are those of the EC and ECMQV rows. There is no default
+// curve, so init is required
 pub(super) const EC: KeyPairGeneratorEntry = KeyPairGeneratorEntry::new(
-    &["EC", "ECDH", "ECIES", "ECDHC"],
+    &["EC", "ECDH", "ECIES", "ECDHC", "ECMQV"],
     &[
         x963_scheme!(
             0x02,
@@ -163,6 +164,35 @@ pub(super) const EC: KeyPairGeneratorEntry = KeyPairGeneratorEntry::new(
             0x03,
             "1.3.132.1.14.3",
             "dhSinglePass-cofactorDH-sha512kdf-scheme"
+        ),
+        x963_scheme!(
+            0x10,
+            "1.3.133.16.840.63.0.16",
+            "mqvSinglePass-sha1kdf-scheme"
+        ),
+        secg_scheme!(
+            0x0f,
+            0x00,
+            "1.3.132.1.15.0",
+            "mqvSinglePass-sha224kdf-scheme"
+        ),
+        secg_scheme!(
+            0x0f,
+            0x01,
+            "1.3.132.1.15.1",
+            "mqvSinglePass-sha256kdf-scheme"
+        ),
+        secg_scheme!(
+            0x0f,
+            0x02,
+            "1.3.132.1.15.2",
+            "mqvSinglePass-sha384kdf-scheme"
+        ),
+        secg_scheme!(
+            0x0f,
+            0x03,
+            "1.3.132.1.15.3",
+            "mqvSinglePass-sha512kdf-scheme"
         ),
     ],
     None,
