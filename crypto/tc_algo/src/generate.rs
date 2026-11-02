@@ -1,7 +1,7 @@
-//! Key and key pair generators by name or OID, after Bouncy Castle's `GeneratorUtilities`. A key
-//! generator makes a [`SecretKey`](crate::params::SecretKey); a key pair generator makes a
-//! [`KeyPair`] of a public and a private key. The operation parameters, such as an IV, come from
-//! the factory of the algorithm that uses them.
+//! Key and key pair generators by name or OID, after Bouncy Castle's `GeneratorUtilities`, in
+//! two factories that work alike: [`key`] makes a [`SecretKey`](crate::params::SecretKey) and
+//! [`key_pair`] a [`KeyPair`](key_pair::KeyPair) of a public and a private key. The operation
+//! parameters, such as an IV, come from the factory of the algorithm that uses them.
 //!
 //! # A key pair: RSA
 //!
@@ -11,7 +11,7 @@
 //! use tc_algo::params::{AnyKeyParams, AnyParams};
 //!
 //! // Find the generator by name; without init it makes 2048-bit keys with exponent 65537
-//! let mut generator = generate::get_key_pair_generator("RSA")?;
+//! let mut generator = generate::key_pair::get_by_name("RSA")?;
 //!
 //! // init changes the parameters: rsa() starts at the defaults, and each with_ changes one
 //! generator.init(KeyGenParams::rsa().with_bits(2048))?;
@@ -25,31 +25,15 @@
 //! # Ok::<(), tc_algo::AlgoError>(())
 //! ```
 //!
-//! [`generate_key_pair`] does the same in one step with the defaults:
-//! `generate::generate_key_pair("RSA")?`.
+//! [`key_pair::generate`] does the same in one step with the defaults:
+//! `generate::key_pair::generate("RSA")?`.
 
-mod functions;
-mod helper;
+pub mod key;
 mod key_gen_params;
-mod key_generator;
-mod key_generator_entry;
-mod key_pair;
-mod key_pair_generator;
-mod key_pair_generator_entry;
+pub mod key_pair;
 #[cfg(feature = "rsa")]
 mod rsa_key_gen_params;
-mod table;
 
-pub use functions::{
-    get_key_generator, get_key_generator_by_oid, get_key_pair_generator,
-    get_key_pair_generator_by_oid, key_generators, key_pair_generators,
-};
-pub use helper::{generate_key, generate_key_pair};
 pub use key_gen_params::KeyGenParams;
-pub use key_generator::KeyGenerator;
-pub use key_generator_entry::KeyGeneratorEntry;
-pub use key_pair::KeyPair;
-pub use key_pair_generator::KeyPairGenerator;
-pub use key_pair_generator_entry::KeyPairGeneratorEntry;
 #[cfg(feature = "rsa")]
 pub use rsa_key_gen_params::RsaKeyGenParams;

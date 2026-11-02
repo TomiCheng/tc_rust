@@ -3,19 +3,21 @@ use core::fmt;
 use rand::rngs::SysRng;
 use rand_core::{CryptoRng, UnwrapErr};
 
-use super::{KeyGenParams, KeyPair, KeyPairGeneratorEntry};
+use super::KeyGeneratorEntry;
+use crate::generate::KeyGenParams;
+use crate::params::SecretKey;
 use crate::{AlgoError, ErrorKind};
 
 // Calling init is optional: without it the generator uses the defaults of its entry, as in
 // Bouncy Castle. The randomness is the operating system's unless with_rng supplies another
-pub struct KeyPairGenerator {
-    entry: &'static KeyPairGeneratorEntry,
+pub struct KeyGenerator {
+    entry: &'static KeyGeneratorEntry,
     params: Option<KeyGenParams>,
     rng: Box<dyn CryptoRng + Send>,
 }
 
-impl KeyPairGenerator {
-    pub(super) fn new(entry: &'static KeyPairGeneratorEntry) -> Self {
+impl KeyGenerator {
+    pub(super) fn new(entry: &'static KeyGeneratorEntry) -> Self {
         Self {
             entry,
             params: entry.default_params().cloned(),
@@ -23,7 +25,7 @@ impl KeyPairGenerator {
         }
     }
 
-    pub fn entry(&self) -> &'static KeyPairGeneratorEntry {
+    pub fn entry(&self) -> &'static KeyGeneratorEntry {
         self.entry
     }
 
@@ -41,7 +43,7 @@ impl KeyPairGenerator {
         Ok(())
     }
 
-    pub fn generate(&mut self) -> Result<KeyPair, AlgoError> {
+    pub fn generate(&mut self) -> Result<SecretKey, AlgoError> {
         let params = self
             .params
             .as_ref()
@@ -51,9 +53,9 @@ impl KeyPairGenerator {
 }
 
 // Shows the generator's name, never its randomness
-impl fmt::Debug for KeyPairGenerator {
+impl fmt::Debug for KeyGenerator {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("KeyPairGenerator")
+        f.debug_struct("KeyGenerator")
             .field("name", &self.entry.name())
             .field("params", &self.params)
             .finish_non_exhaustive()

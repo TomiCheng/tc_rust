@@ -2,7 +2,8 @@ use rand_core::CryptoRng;
 use tc_asn1::NamedOid;
 
 use super::random_key;
-use crate::generate::{KeyGenParams, KeyGeneratorEntry};
+use crate::generate::KeyGenParams;
+use crate::generate::key::KeyGeneratorEntry;
 use crate::params::SecretKey;
 use crate::{AlgoError, ErrorKind};
 

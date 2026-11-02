@@ -27,3 +27,10 @@ impl AnyAgreementParams {
         self.ukm.as_deref()
     }
 }
+
+// The private key alone, as every agreement but ECVKO takes
+impl From<AnyPrivateKey> for AnyAgreementParams {
+    fn from(key: AnyPrivateKey) -> Self {
+        Self::new(key)
+    }
+}

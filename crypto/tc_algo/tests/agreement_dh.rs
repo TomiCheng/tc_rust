@@ -60,7 +60,7 @@ mod with_dh {
     use tc_dh_key::{DhParameters, DhPrivateKey, DhPublicKey};
 
     fn key_pair(group: DhParameters) -> (AnyPublicKey, AnyPrivateKey) {
-        let mut generator = generate::get_key_pair_generator("DH").unwrap();
+        let mut generator = generate::key_pair::get_by_name("DH").unwrap();
         generator.init(group).unwrap();
         let pair = generator.generate().unwrap();
         (pair.public, pair.private)
@@ -91,14 +91,10 @@ mod with_dh {
     fn both_parties_reach_the_same_secret_as_long_as_p() {
         let (alice_public, alice_private) = key_pair(rfc3526_2048());
         let (bob_public, bob_private) = key_pair(rfc3526_2048());
-        let alice = initialized(&AnyAgreementParams::new(alice_private));
+        let alice = initialized(&alice_private.into());
         let alice_secret = alice.calculate(&bob_public.into()).unwrap();
-        let bob_secret = agreement::calculate(
-            "DH",
-            &AnyAgreementParams::new(bob_private),
-            &alice_public.into(),
-        )
-        .unwrap();
+        let bob_secret =
+            agreement::calculate("DH", &bob_private.into(), &alice_public.into()).unwrap();
         assert_eq!(alice_secret.key.len(), 256);
         assert_eq!(alice_secret.key, bob_secret.key);
     }
@@ -142,6 +138,14 @@ mod with_dh {
         let peer = toy_public(10).with_ephemeral(AnyPublicKey::Dh(ephemeral));
         let error = dh.calculate(&peer).unwrap_err();
         assert_eq!(error.kind(), ErrorKind::InvalidParams);
+    }
+
+    #[test]
+    fn a_private_key_alone_makes_params_without_user_keying_material() {
+        let key = DhPrivateKey::new(PaddedBigUint::from(4u8), toy());
+        let params = AnyAgreementParams::from(AnyPrivateKey::Dh(key));
+        assert!(matches!(params.key(), AnyPrivateKey::Dh(_)));
+        assert!(params.ukm().is_none());
     }
 
     #[test]

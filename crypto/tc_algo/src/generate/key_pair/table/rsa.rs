@@ -3,7 +3,8 @@ use tc_asn1::NamedOid;
 use tc_asym_cipher::{KeyPairGenerator, KeyPairGeneratorInit};
 use tc_rsa::{RsaKeyGenerationParamsRef, RsaKeyGenerator};
 
-use crate::generate::{KeyGenParams, KeyPair, KeyPairGeneratorEntry};
+use crate::generate::KeyGenParams;
+use crate::generate::key_pair::{KeyPair, KeyPairGeneratorEntry};
 use crate::params::{AnyPrivateKey, AnyPublicKey};
 use crate::{AlgoError, ErrorKind};
 

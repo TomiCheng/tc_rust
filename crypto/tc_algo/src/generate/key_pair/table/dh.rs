@@ -2,7 +2,8 @@ use rand_core::CryptoRng;
 use tc_asym_cipher::{KeyPairGenerator, KeyPairGeneratorInit};
 use tc_dh_key::{DhKeyGenerationParams, DhKeyPairGenerator};
 
-use crate::generate::{KeyGenParams, KeyPair, KeyPairGeneratorEntry};
+use crate::generate::KeyGenParams;
+use crate::generate::key_pair::{KeyPair, KeyPairGeneratorEntry};
 use crate::params::{AnyPrivateKey, AnyPublicKey};
 use crate::{AlgoError, ErrorKind};
 

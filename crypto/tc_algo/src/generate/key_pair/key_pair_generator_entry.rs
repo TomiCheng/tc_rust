@@ -3,8 +3,9 @@ use core::fmt;
 use rand_core::CryptoRng;
 use tc_asn1::NamedOid;
 
-use super::{KeyGenParams, KeyPair, KeyPairGenerator};
+use super::{KeyPair, KeyPairGenerator};
 use crate::AlgoError;
+use crate::generate::KeyGenParams;
 
 pub(super) type CheckParams = fn(&KeyGenParams) -> Result<(), AlgoError>;
 pub(super) type GenerateKeyPair =

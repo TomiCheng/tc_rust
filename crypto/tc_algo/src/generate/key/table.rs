@@ -2,10 +2,6 @@
 
 #[cfg(feature = "aes")]
 mod aes;
-#[cfg(feature = "dh")]
-mod dh;
-#[cfg(feature = "rsa")]
-mod rsa;
 
 #[allow(
     unused_imports,
@@ -13,7 +9,7 @@ mod rsa;
 )]
 use rand_core::{CryptoRng, Rng};
 
-use super::{KeyGeneratorEntry, KeyPairGeneratorEntry};
+use super::KeyGeneratorEntry;
 #[allow(
     unused_imports,
     reason = "unused when every symmetric key feature is off"
@@ -29,13 +25,6 @@ pub(super) const KEY_GENERATORS: &[KeyGeneratorEntry] = &[
     aes::AES192,
     #[cfg(feature = "aes")]
     aes::AES256,
-];
-
-pub(super) const KEY_PAIR_GENERATORS: &[KeyPairGeneratorEntry] = &[
-    #[cfg(feature = "dh")]
-    dh::DH,
-    #[cfg(feature = "rsa")]
-    rsa::RSA,
 ];
 
 // A key of uniformly random bytes, as Bouncy Castle's CipherKeyGenerator makes for most ciphers

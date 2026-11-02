@@ -4,14 +4,15 @@ use std::sync::LazyLock;
 
 use tc_algo::ErrorKind;
 use tc_algo::cipher::{self, CipherDirection, CipherEntry};
-use tc_algo::generate::{self, KeyGenParams, KeyPair};
+use tc_algo::generate::key_pair::KeyPair;
+use tc_algo::generate::{self, KeyGenParams};
 use tc_algo::params::{AnyKeyParams, AnyParams, AnyPrivateKey, AnyPublicKey, SecretKey};
 use tc_asym_cipher::{AsymmetricBlockCipher, AsymmetricBlockCipherInit};
 use tc_rsa::{RsaEngine, RsaKey};
 
 // One key pair for every test: 1536 bits is the smallest round size that holds OAEP with SHA-512
 static KEYS: LazyLock<KeyPair> = LazyLock::new(|| {
-    let mut generator = generate::get_key_pair_generator("RSA").unwrap();
+    let mut generator = generate::key_pair::get_by_name("RSA").unwrap();
     generator
         .init(KeyGenParams::rsa().with_bits(1536).with_certainty(20))
         .unwrap();
