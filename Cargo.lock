@@ -915,6 +915,7 @@ dependencies = [
  "tc_ec_key",
  "tc_ecdh_v2",
  "tc_ecmqv",
+ "tc_ecvko",
  "tc_elgamal",
  "tc_f2m_custom",
  "tc_fp_curve",

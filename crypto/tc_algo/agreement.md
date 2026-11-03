@@ -14,6 +14,8 @@ Each agreement has a guide of its own, which is all you need to use it:
   ephemeral key of each party.
 - [X25519](agreement/x25519.md): Diffie-Hellman on Curve25519, of RFC 7748.
 - [X448](agreement/x448.md): Diffie-Hellman on Curve448, of RFC 7748.
+- [GOST VKO](agreement/ecvko.md): ECGOST3410 and its 2012 versions, on the GOST
+  curves with a UKM both parties know.
 
 ## Enabling agreements
 
@@ -31,7 +33,7 @@ tc_algo = { version = "0.1", default-features = false, features = ["x25519"] }
 
 Every agreement takes the same steps; only the name and, for DH and the EC
 agreements, the group or the curve differ. ECMQV also takes an ephemeral key of each
-party.
+party, and GOST VKO a UKM.
 
 ```rust
 use tc_algo::AlgoError;
@@ -51,8 +53,8 @@ fn main() -> Result<(), AlgoError> {
 
 `init` takes this party's private key in an `AnyAgreementParams` and `calculate` the
 other party's public key in an `AgreementPeer`; `.into()` makes either from the key
-alone, and their `with_ephemeral` adds the ephemeral key ECMQV takes.
-`agreement::calculate` does all three steps at once.
+alone, their `with_ephemeral` adds the ephemeral key ECMQV takes, and the params'
+`with_ukm` the UKM VKO takes. `agreement::calculate` does all three steps at once.
 
 The result is a `SharedSecret`, the raw secret of the agreement. It is not yet a key:
 derive the key from it with a KDF. Its bytes are wiped when it is dropped.
@@ -96,6 +98,9 @@ for entry in agreement::algorithms() {
 | ECMQV | | | bytes of a coordinate | `ecmqv` | ✓ |
 | X25519 | | 1.3.101.110 | 32 bytes | `x25519` | ✓ |
 | X448 | | 1.3.101.111 | 56 bytes | `x448` | ✓ |
+| ECGOST3410-2012-256 | | 1.2.643.7.1.1.6.1, 1.2.643.7.1.1.1.1 | 32 bytes | `ecvko` | ✓ |
+| ECGOST3410-2012-512 | | 1.2.643.7.1.1.6.2, 1.2.643.7.1.1.1.2 | 64 bytes | `ecvko` | ✓ |
+| ECGOST3410 | GOST-3410-2001 | 1.2.643.2.2.19, 1.2.643.2.2.96 | 32 bytes | `ecvko`, `gost3411` | |
 
-Each name finds the generator of its keys as well, EC for ECDH, ECDHC and ECMQV; see
-[generator.md](generator.md).
+Each name but the VKO ones finds the generator of its keys as well, EC for ECDH, ECDHC
+and ECMQV; the VKO keys come from EC on a GOST curve. See [generator.md](generator.md).
