@@ -6,9 +6,9 @@ the other's public key by its own private key. Both reach the same point, and it
 coordinate is their shared secret; someone who saw only the public keys does not.
 
 There are two agreements. **ECDH** takes the point as it is; **ECDHC** multiplies by
-the cofactor of the curve as well. On the prime curves the cofactor is 1 and the two
-give the same secret; on the binary curves they do not, so both parties must use the
-same one.
+the cofactor of the curve as well. On a curve whose cofactor is 1, as most prime curves
+have, the two give the same secret; on the binary curves and two of the GOST curves
+they do not, so both parties must use the same one.
 
 In `tc_algo` this takes two factories: `generate::key_pair` makes the key pairs and
 `agreement` calculates the secret, after Bouncy Castle's `GeneratorUtilities` and
@@ -17,8 +17,9 @@ In `tc_algo` this takes two factories: `generate::key_pair` makes the key pairs 
 ## Enabling ECDH
 
 ECDH and ECDHC come with the `ecdh` feature, which is in the default features. It
-enables `ec`, the EC keys and their generator on the prime curves. `ec-f2m` adds the
-binary curves and `ec-small-curves` the weak ones, both opt-in.
+enables `ec`, the EC keys and their generator on the prime curves. `ec-gost` adds the
+GOST curves and is in the default features too; `ec-f2m` adds the binary curves and
+`ec-small-curves` the weak ones, both opt-in.
 
 ```toml
 [dependencies]
@@ -120,9 +121,9 @@ fn answer(theirs: AnyPublicKey) -> Result<(AnyPublicKey, SharedSecret), AlgoErro
 ### ECDH or ECDHC
 
 ECDHC is `"ECDHC"`, or `"ECCDH"` as Bouncy Castle also calls it, and takes the same
-keys and the same steps. On a curve whose cofactor is 1, as every prime curve in the
-[table](#curves) is, it gives what ECDH gives. On the binary curves, whose cofactor is 2 or 4, its secret is
-another, so take the one the protocol names. Either way, a public key with a part
+keys and the same steps. On a curve whose cofactor is 1 it gives what ECDH gives. On
+a curve whose cofactor is 2 or 4, as the [table](#curves) shows for the binary curves
+and two GOST curves, its secret is another, so take the one the protocol names. Either way, a public key with a part
 outside the curve's main subgroup cannot pull bits of the private key out: ECDH clears
 that part too, as Bouncy Castle does, at no change to its secret.
 
@@ -216,6 +217,13 @@ one.
 | `Secp384r1` | P-384 | 48 | 1 | `ec` |
 | `Secp521r1` | P-521 | 66 | 1 | `ec` |
 | `Sm2p256v1` | the SM2 curve | 32 | 1 | `ec` |
+| `GostCryptoProA` | GostR3410-2001-CryptoPro-A, CryptoPro-XchA, TC26 256 paramSetB | 32 | 1 | `ec-gost` |
+| `GostCryptoProB` | GostR3410-2001-CryptoPro-B, TC26 256 paramSetC | 32 | 1 | `ec-gost` |
+| `GostCryptoProC` | GostR3410-2001-CryptoPro-C, CryptoPro-XchB, TC26 256 paramSetD | 32 | 1 | `ec-gost` |
+| `GostTc26ParamSet256A` | TC26 256 paramSetA | 32 | 4 | `ec-gost` |
+| `GostTc26ParamSet512A` | TC26 512 paramSetA | 64 | 1 | `ec-gost` |
+| `GostTc26ParamSet512B` | TC26 512 paramSetB | 64 | 1 | `ec-gost` |
+| `GostTc26ParamSet512C` | TC26 512 paramSetC | 64 | 4 | `ec-gost` |
 | `Sect233k1` | K-233 | 30 | 4 | `ec-f2m` |
 | `Sect233r1` | B-233 | 30 | 2 | `ec-f2m` |
 | `Sect239k1` | | 30 | 4 | `ec-f2m` |
@@ -226,7 +234,9 @@ one.
 | `Sect571k1` | K-571 | 72 | 4 | `ec-f2m` |
 | `Sect571r1` | B-571 | 72 | 2 | `ec-f2m` |
 
-For a new system, take P-256 or larger. `ec-small-curves` adds `Secp112r1` to
+For a new system, take P-256 or larger. The GOST curves are those of GOST R 34.10, of
+RFC 4357 and RFC 7836, for the Russian standards; the twelve names Bouncy Castle has
+for them come to these seven. `ec-small-curves` adds `Secp112r1` to
 `Secp192r1` and, with `ec-f2m`, `Sect113r1` to `Sect193r2`: all are below 112 bits of
 security, so keep them for old data. NIST SP 800-186 keeps the binary curves for old
 data too.

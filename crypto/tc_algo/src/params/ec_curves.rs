@@ -17,8 +17,8 @@ macro_rules! secp {
     };
 }
 
-// A small curve of tc_fp_curve, whose curve borrows its field
-#[cfg(feature = "ec-small-curves")]
+// A curve of tc_fp_curve, a small one or a GOST one, whose curve borrows its field
+#[cfg(any(feature = "ec-small-curves", feature = "ec-gost"))]
 macro_rules! fp {
     ($name:ident, $named:ident) => {
         pub(crate) fn $name() -> tc_fp_curve::FpCtPoint<'static> {
@@ -64,6 +64,20 @@ secp!(secp256r1, SECP256R1, SecP256R1FieldElement);
 secp!(secp384r1, SECP384R1, SecP384R1FieldElement);
 secp!(secp521r1, SECP521R1, SecP521R1FieldElement);
 secp!(sm2p256v1, SM2P256V1, SM2P256V1FieldElement);
+#[cfg(feature = "ec-gost")]
+fp!(gost_cryptopro_a, GOSTR3410_2001_CRYPTOPRO_A);
+#[cfg(feature = "ec-gost")]
+fp!(gost_cryptopro_b, GOSTR3410_2001_CRYPTOPRO_B);
+#[cfg(feature = "ec-gost")]
+fp!(gost_cryptopro_c, GOSTR3410_2001_CRYPTOPRO_C);
+#[cfg(feature = "ec-gost")]
+fp!(gost_tc26_param_set_256_a, TC26_GOST_3410_12_256_PARAMSETA);
+#[cfg(feature = "ec-gost")]
+fp!(gost_tc26_param_set_512_a, TC26_GOST_3410_12_512_PARAMSETA);
+#[cfg(feature = "ec-gost")]
+fp!(gost_tc26_param_set_512_b, TC26_GOST_3410_12_512_PARAMSETB);
+#[cfg(feature = "ec-gost")]
+fp!(gost_tc26_param_set_512_c, TC26_GOST_3410_12_512_PARAMSETC);
 #[cfg(feature = "ec-f2m")]
 sect!(#[cfg(feature = "ec-small-curves")] sect113r1, SECT113R1, SecT113FieldElement);
 #[cfg(feature = "ec-f2m")]
@@ -123,6 +137,13 @@ macro_rules! with_ec_curves {
             Secp384r1 => secp384r1,
             Secp521r1 => secp521r1,
             Sm2p256v1 => sm2p256v1,
+            #[cfg(feature = "ec-gost")] GostCryptoProA => gost_cryptopro_a,
+            #[cfg(feature = "ec-gost")] GostCryptoProB => gost_cryptopro_b,
+            #[cfg(feature = "ec-gost")] GostCryptoProC => gost_cryptopro_c,
+            #[cfg(feature = "ec-gost")] GostTc26ParamSet256A => gost_tc26_param_set_256_a,
+            #[cfg(feature = "ec-gost")] GostTc26ParamSet512A => gost_tc26_param_set_512_a,
+            #[cfg(feature = "ec-gost")] GostTc26ParamSet512B => gost_tc26_param_set_512_b,
+            #[cfg(feature = "ec-gost")] GostTc26ParamSet512C => gost_tc26_param_set_512_c,
             #[cfg(all(feature = "ec-f2m", feature = "ec-small-curves"))] Sect113r1 => sect113r1,
             #[cfg(all(feature = "ec-f2m", feature = "ec-small-curves"))] Sect113r2 => sect113r2,
             #[cfg(all(feature = "ec-f2m", feature = "ec-small-curves"))] Sect131r1 => sect131r1,

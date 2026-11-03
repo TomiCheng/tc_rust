@@ -78,6 +78,7 @@ default = [
     "ec",
     "ecdh",
     "ecmqv",
+    "ec-gost",
     "x25519",
     "x448",
     "ed25519",
@@ -215,6 +216,8 @@ ec = [
 ecdh = ["ec", "dep:tc_ecdh_v2"]
 # ECMQV of SEC 1 on the EC keys
 ecmqv = ["ec", "dep:tc_ecmqv"]
+# The GOST R 34.10 curves of CryptoPro (RFC 4357) and TC26 (RFC 7836)
+ec-gost = ["ec", "dep:tc_fp_curve"]
 # The binary SEC 2 curves sect233k1 to sect571r1
 ec-f2m = ["ec", "dep:tc_f2m_custom"]
 # The weak curves, kept only for interoperability: secp112r1 to secp192r1, and with ec-f2m sect113r1
@@ -285,7 +288,7 @@ tc_ecdh_v2 = { version = "0.1.0", path = "../agreement/tc_ecdh_v2", optional = t
 tc_ecmqv = { version = "0.1.0", path = "../agreement/tc_ecmqv", optional = true }
 tc_elgamal = { version = "0.1.0", path = "../tc_elgamal", optional = true }
 tc_f2m_custom = { version = "0.1.0", optional = true }
-tc_fp_curve = { version = "0.1.0", optional = true }
+tc_fp_curve = { version = "0.1.1", optional = true }
 tc_fp_custom = { version = "0.1.0", optional = true }
 tc_gost28147 = { version = "0.1.0", optional = true }
 tc_gost3410_key = { version = "0.1.0", path = "../tc_gost3410_key", optional = true }

@@ -42,6 +42,20 @@ fn a_key_pair_is_on_the_curve_asked_for() {
         EcCurve::Sect233k1,
         #[cfg(feature = "ec-f2m")]
         EcCurve::Sect571r1,
+        #[cfg(feature = "ec-gost")]
+        EcCurve::GostCryptoProA,
+        #[cfg(feature = "ec-gost")]
+        EcCurve::GostCryptoProB,
+        #[cfg(feature = "ec-gost")]
+        EcCurve::GostCryptoProC,
+        #[cfg(feature = "ec-gost")]
+        EcCurve::GostTc26ParamSet256A,
+        #[cfg(feature = "ec-gost")]
+        EcCurve::GostTc26ParamSet512A,
+        #[cfg(feature = "ec-gost")]
+        EcCurve::GostTc26ParamSet512B,
+        #[cfg(feature = "ec-gost")]
+        EcCurve::GostTc26ParamSet512C,
     ] {
         assert_eq!(curves(&generate_on(curve)), (curve, curve));
     }

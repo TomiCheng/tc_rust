@@ -143,6 +143,33 @@ fn with_another_cofactor_ecdhc_agrees_on_a_secret_of_its_own() {
     assert_ne!(alice.as_bytes(), ecdh.as_bytes());
 }
 
+// The GOST curves serve ECDH too, as any curve does in Bouncy Castle; two of them have a cofactor
+// of 4, where ECDHC agrees on a secret of its own
+#[cfg(feature = "ec-gost")]
+#[test]
+fn both_parties_agree_by_ecdh_and_ecdhc_on_every_gost_curve() {
+    for (curve, size) in [
+        (EcCurve::GostCryptoProA, 32),
+        (EcCurve::GostCryptoProB, 32),
+        (EcCurve::GostCryptoProC, 32),
+        (EcCurve::GostTc26ParamSet256A, 32),
+        (EcCurve::GostTc26ParamSet512A, 64),
+        (EcCurve::GostTc26ParamSet512B, 64),
+        (EcCurve::GostTc26ParamSet512C, 64),
+    ] {
+        for name in ["ECDH", "ECDHC"] {
+            let (alice_public, alice_private) = key_pair(curve);
+            let (bob_public, bob_private) = key_pair(curve);
+            let alice =
+                agreement::calculate(name, &alice_private.into(), &bob_public.into()).unwrap();
+            let bob =
+                agreement::calculate(name, &bob_private.into(), &alice_public.into()).unwrap();
+            assert_eq!(alice.as_bytes().len(), size, "{name} {curve:?}");
+            assert_eq!(alice.as_bytes(), bob.as_bytes(), "{name} {curve:?}");
+        }
+    }
+}
+
 #[test]
 fn the_trait_writes_the_secret_into_a_buffer_of_agreement_size() {
     let (i, gr) = rfc_5903_keys();

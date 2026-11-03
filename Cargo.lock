@@ -1665,9 +1665,9 @@ dependencies = [
 
 [[package]]
 name = "tc_f2m_curve"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f08702ec50b0b55b6024b54208f4972087bf04ca9a786ef70ce1afae5073316d"
+checksum = "f2775b77bcf4ae1c67b84da805bab015500772f5be93b1c53b0331a6d4cf55a1"
 dependencies = [
  "tc_bigint",
  "tc_binpoly",
@@ -1691,9 +1691,9 @@ dependencies = [
 
 [[package]]
 name = "tc_fp_curve"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e5b14d5ded09bcc388765c79ca566c1080518b89a8c0fddbc1e5a806efcddf1d"
+checksum = "dc42c34acb0422e9d5a0ab1355556d6579579768413905fdb55988d4e6aade20"
 dependencies = [
  "tc_bigint",
  "tc_constant_time",

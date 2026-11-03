@@ -1,5 +1,5 @@
-// The named EC curves. `ec` has secp224k1 to secp521r1 and sm2p256v1; `ec-f2m` adds sect233k1
-// to sect571r1; `ec-small-curves` adds the weak curves kept only for interoperability, and with
+// The named EC curves. `ec` has secp224k1 to secp521r1 and sm2p256v1; `ec-gost` adds the seven
+// GOST R 34.10 parameter sets of CryptoPro and TC26; `ec-f2m` adds sect233k1 to sect571r1; `ec-small-curves` adds the weak curves kept only for interoperability, and with
 // `ec-f2m` the binary curves below 233 bits
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[non_exhaustive]
@@ -35,6 +35,27 @@ pub enum EcCurve {
     Secp521r1,
     /// The SM2 curve of GM/T 0003
     Sm2p256v1,
+    /// GostR3410-2001-CryptoPro-A of RFC 4357, which is also CryptoPro-XchA and TC26's 256-bit paramSetB
+    #[cfg(feature = "ec-gost")]
+    GostCryptoProA,
+    /// GostR3410-2001-CryptoPro-B of RFC 4357, which is also TC26's 256-bit paramSetC
+    #[cfg(feature = "ec-gost")]
+    GostCryptoProB,
+    /// GostR3410-2001-CryptoPro-C of RFC 4357, which is also CryptoPro-XchB and TC26's 256-bit paramSetD
+    #[cfg(feature = "ec-gost")]
+    GostCryptoProC,
+    /// id-tc26-gost-3410-12-256-paramSetA of RFC 7836, whose cofactor is 4
+    #[cfg(feature = "ec-gost")]
+    GostTc26ParamSet256A,
+    /// id-tc26-gost-3410-12-512-paramSetA of RFC 7836
+    #[cfg(feature = "ec-gost")]
+    GostTc26ParamSet512A,
+    /// id-tc26-gost-3410-12-512-paramSetB of RFC 7836
+    #[cfg(feature = "ec-gost")]
+    GostTc26ParamSet512B,
+    /// id-tc26-gost-3410-12-512-paramSetC of RFC 7836, whose cofactor is 4
+    #[cfg(feature = "ec-gost")]
+    GostTc26ParamSet512C,
     #[cfg(all(feature = "ec-f2m", feature = "ec-small-curves"))]
     Sect113r1,
     #[cfg(all(feature = "ec-f2m", feature = "ec-small-curves"))]

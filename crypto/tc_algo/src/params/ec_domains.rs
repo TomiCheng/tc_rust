@@ -42,6 +42,27 @@ pub(super) type Secp521r1 = &'static tc_fp_custom::SecPCtCurve<tc_fp_custom::Sec
 
 pub(super) type Sm2p256v1 = &'static tc_fp_custom::SecPCtCurve<tc_fp_custom::SM2P256V1FieldElement>;
 
+#[cfg(feature = "ec-gost")]
+pub(super) type GostCryptoProA = &'static tc_fp_curve::FpCtCurve<'static>;
+
+#[cfg(feature = "ec-gost")]
+pub(super) type GostCryptoProB = &'static tc_fp_curve::FpCtCurve<'static>;
+
+#[cfg(feature = "ec-gost")]
+pub(super) type GostCryptoProC = &'static tc_fp_curve::FpCtCurve<'static>;
+
+#[cfg(feature = "ec-gost")]
+pub(super) type GostTc26ParamSet256A = &'static tc_fp_curve::FpCtCurve<'static>;
+
+#[cfg(feature = "ec-gost")]
+pub(super) type GostTc26ParamSet512A = &'static tc_fp_curve::FpCtCurve<'static>;
+
+#[cfg(feature = "ec-gost")]
+pub(super) type GostTc26ParamSet512B = &'static tc_fp_curve::FpCtCurve<'static>;
+
+#[cfg(feature = "ec-gost")]
+pub(super) type GostTc26ParamSet512C = &'static tc_fp_curve::FpCtCurve<'static>;
+
 #[cfg(all(feature = "ec-f2m", feature = "ec-small-curves"))]
 pub(super) type Sect113r1 = &'static tc_f2m_custom::SecTCtCurve<tc_f2m_custom::SecT113FieldElement>;
 

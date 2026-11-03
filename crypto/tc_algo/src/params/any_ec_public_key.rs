@@ -35,6 +35,20 @@ pub enum AnyEcPublicKey {
     Secp384r1(Box<EcPublicKey<domain::Secp384r1>>),
     Secp521r1(Box<EcPublicKey<domain::Secp521r1>>),
     Sm2p256v1(Box<EcPublicKey<domain::Sm2p256v1>>),
+    #[cfg(feature = "ec-gost")]
+    GostCryptoProA(Box<EcPublicKey<domain::GostCryptoProA>>),
+    #[cfg(feature = "ec-gost")]
+    GostCryptoProB(Box<EcPublicKey<domain::GostCryptoProB>>),
+    #[cfg(feature = "ec-gost")]
+    GostCryptoProC(Box<EcPublicKey<domain::GostCryptoProC>>),
+    #[cfg(feature = "ec-gost")]
+    GostTc26ParamSet256A(Box<EcPublicKey<domain::GostTc26ParamSet256A>>),
+    #[cfg(feature = "ec-gost")]
+    GostTc26ParamSet512A(Box<EcPublicKey<domain::GostTc26ParamSet512A>>),
+    #[cfg(feature = "ec-gost")]
+    GostTc26ParamSet512B(Box<EcPublicKey<domain::GostTc26ParamSet512B>>),
+    #[cfg(feature = "ec-gost")]
+    GostTc26ParamSet512C(Box<EcPublicKey<domain::GostTc26ParamSet512C>>),
     #[cfg(all(feature = "ec-f2m", feature = "ec-small-curves"))]
     Sect113r1(Box<EcPublicKey<domain::Sect113r1>>),
     #[cfg(all(feature = "ec-f2m", feature = "ec-small-curves"))]
@@ -102,6 +116,20 @@ impl AnyEcPublicKey {
             Self::Secp384r1(_) => EcCurve::Secp384r1,
             Self::Secp521r1(_) => EcCurve::Secp521r1,
             Self::Sm2p256v1(_) => EcCurve::Sm2p256v1,
+            #[cfg(feature = "ec-gost")]
+            Self::GostCryptoProA(_) => EcCurve::GostCryptoProA,
+            #[cfg(feature = "ec-gost")]
+            Self::GostCryptoProB(_) => EcCurve::GostCryptoProB,
+            #[cfg(feature = "ec-gost")]
+            Self::GostCryptoProC(_) => EcCurve::GostCryptoProC,
+            #[cfg(feature = "ec-gost")]
+            Self::GostTc26ParamSet256A(_) => EcCurve::GostTc26ParamSet256A,
+            #[cfg(feature = "ec-gost")]
+            Self::GostTc26ParamSet512A(_) => EcCurve::GostTc26ParamSet512A,
+            #[cfg(feature = "ec-gost")]
+            Self::GostTc26ParamSet512B(_) => EcCurve::GostTc26ParamSet512B,
+            #[cfg(feature = "ec-gost")]
+            Self::GostTc26ParamSet512C(_) => EcCurve::GostTc26ParamSet512C,
             #[cfg(all(feature = "ec-f2m", feature = "ec-small-curves"))]
             Self::Sect113r1(_) => EcCurve::Sect113r1,
             #[cfg(all(feature = "ec-f2m", feature = "ec-small-curves"))]
