@@ -11,6 +11,7 @@ members = [
     "block_cipher/*",
     "x509/*",
     "util/*",
+    "tc_math/*",
 ]
 
 [workspace.package]

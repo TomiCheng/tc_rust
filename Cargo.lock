@@ -1775,6 +1775,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_gost_curves"
+version = "0.1.0"
+dependencies = [
+ "tc_bigint",
+ "tc_ec_core",
+ "tc_fp_curve",
+]
+
+[[package]]
 name = "tc_grain128_aead"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
