@@ -10,7 +10,7 @@ use crate::cipher::engine::AnyEngine;
 pub(super) const CAST5: AlgorithmSpec = AlgorithmSpec {
     names: &["CAST5"],
     block_size: 8,
-    engine: || AnyEngine::new(tc_cast_v2::Cast5Engine::new()),
+    engine: || AnyEngine::new(tc_cast::Cast5Engine::new()),
     oids: &[(
         ModeKind::Cbc,
         PaddingKind::Pkcs7,
@@ -26,6 +26,6 @@ pub(super) const CAST5: AlgorithmSpec = AlgorithmSpec {
 pub(super) const CAST6: AlgorithmSpec = AlgorithmSpec {
     names: &["CAST6"],
     block_size: 16,
-    engine: || AnyEngine::new(tc_cast_v2::Cast6Engine::new()),
+    engine: || AnyEngine::new(tc_cast::Cast6Engine::new()),
     oids: &[],
 };

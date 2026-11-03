@@ -113,24 +113,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "37b2a672a2cb129a2e41c10b1224bb368f9f37a2b16b612598138befd7b37eb5"
 
 [[package]]
-name = "cast5"
-version = "0.12.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1ed80521f830bbce4d3a4857d6f2b91a8339bf0b65711fe189ab6f8d7a2f629e"
-dependencies = [
- "cipher",
-]
-
-[[package]]
-name = "cast6"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6196963fa0e98083ddfd59354a17a640dc2dd2b1cbf1af945a728c8d1460e209"
-dependencies = [
- "cipher",
-]
-
-[[package]]
 name = "cc"
 version = "1.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -901,7 +883,7 @@ dependencies = [
  "tc_blowfish_v2",
  "tc_buffered_cipher",
  "tc_camellia",
- "tc_cast_v2",
+ "tc_cast",
  "tc_cfrg_curves",
  "tc_chacha",
  "tc_chacha_aead",
@@ -936,7 +918,7 @@ dependencies = [
  "tc_ripemd",
  "tc_rsa",
  "tc_salsa20",
- "tc_seed_v2",
+ "tc_seed",
  "tc_serpent_v2",
  "tc_sha",
  "tc_sm2",
@@ -1249,11 +1231,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "tc_cast_v2"
+name = "tc_cast"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "efa3220294bc838abb87ab6645b0b2624890bc872e9f2c880324fd460f069433"
 dependencies = [
- "cast5",
- "cast6",
  "tc_block_cipher",
  "tc_zeroize",
 ]
@@ -2189,8 +2171,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "tc_seed_v2"
+name = "tc_seed"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a9c4a577ac3bf0e2e5944a951f56c0d974e4155e15f393a951c9476bdcf2ba38"
 dependencies = [
  "tc_block_cipher",
  "tc_zeroize",

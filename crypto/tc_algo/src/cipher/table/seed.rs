@@ -1,5 +1,5 @@
 use tc_asn1::NamedOid;
-use tc_seed_v2::SeedEngine;
+use tc_seed::SeedEngine;
 
 use super::specs::{AlgorithmSpec, ModeKind, PaddingKind};
 use crate::cipher::engine::AnyEngine;
