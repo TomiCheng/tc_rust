@@ -1,0 +1,15 @@
+[package]
+name = "tc_wapi_curves"
+description = "The wapip192v1 named elliptic curve of China's WAPI, after Bouncy Castle C#'s GMNamedCurves."
+version.workspace = true
+edition.workspace = true
+rust-version = "1.85"
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+tc_bigint = { version = "0.1.0", features = ["alloc"] }
+tc_fp_curve = "0.1.0"
+
+[dev-dependencies]
+tc_ec_core = "0.1.0"

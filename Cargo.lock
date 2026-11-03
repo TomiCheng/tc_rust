@@ -2370,6 +2370,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_wapi_curves"
+version = "0.1.0"
+dependencies = [
+ "tc_bigint",
+ "tc_ec_core",
+ "tc_fp_curve",
+]
+
+[[package]]
 name = "tc_x509"
 version = "0.1.0"
 dependencies = [
