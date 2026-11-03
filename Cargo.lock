@@ -949,6 +949,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_anssi_curves"
+version = "0.1.0"
+dependencies = [
+ "tc_bigint",
+ "tc_ec_core",
+ "tc_fp_curve",
+]
+
+[[package]]
 name = "tc_aria"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1218,6 +1227,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_brainpool_curves"
+version = "0.1.0"
+dependencies = [
+ "tc_bigint",
+ "tc_ec_core",
+ "tc_fp_curve",
+]
+
+[[package]]
 name = "tc_buffered_cipher"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1466,6 +1484,15 @@ dependencies = [
  "tc_sha",
  "tc_signer",
  "tc_zeroize",
+]
+
+[[package]]
+name = "tc_dstu4145_curves"
+version = "0.1.0"
+dependencies = [
+ "tc_bigint",
+ "tc_ec_core",
+ "tc_f2m_curve",
 ]
 
 [[package]]
@@ -2349,6 +2376,16 @@ dependencies = [
  "tc_asn1",
  "tc_asn1_x500",
  "tc_asn1_x509",
+]
+
+[[package]]
+name = "tc_x962_curves"
+version = "0.1.0"
+dependencies = [
+ "tc_bigint",
+ "tc_ec_core",
+ "tc_f2m_curve",
+ "tc_fp_curve",
 ]
 
 [[package]]

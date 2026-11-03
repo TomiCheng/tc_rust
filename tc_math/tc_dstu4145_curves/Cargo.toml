@@ -1,0 +1,15 @@
+[package]
+name = "tc_dstu4145_curves"
+description = "The DSTU 4145-2002 named elliptic curves of Ukraine, after Bouncy Castle C#'s Dstu4145NamedCurves."
+version.workspace = true
+edition.workspace = true
+rust-version = "1.85"
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+tc_bigint = { version = "0.1.0", features = ["alloc"] }
+tc_f2m_curve = "0.1.0"
+
+[dev-dependencies]
+tc_ec_core = "0.1.0"

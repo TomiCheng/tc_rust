@@ -1,0 +1,16 @@
+[package]
+name = "tc_x962_curves"
+description = "The X9.62 named elliptic curves that SEC 2 lacks, prime and binary, after Bouncy Castle C#'s X962NamedCurves."
+version.workspace = true
+edition.workspace = true
+rust-version = "1.85"
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+tc_bigint = { version = "0.1.0", features = ["alloc"] }
+tc_f2m_curve = "0.1.0"
+tc_fp_curve = "0.1.0"
+
+[dev-dependencies]
+tc_ec_core = "0.1.0"
