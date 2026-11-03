@@ -8,6 +8,8 @@ mod ecdh;
 mod ecmqv;
 #[cfg(feature = "x25519")]
 mod x25519;
+#[cfg(feature = "x448")]
+mod x448;
 
 use super::AgreementEntry;
 
@@ -23,4 +25,6 @@ pub(super) const AGREEMENTS: &[AgreementEntry] = &[
     ecmqv::ECMQV,
     #[cfg(feature = "x25519")]
     x25519::X25519,
+    #[cfg(feature = "x448")]
+    x448::X448,
 ];

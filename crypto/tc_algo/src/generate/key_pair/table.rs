@@ -8,6 +8,8 @@ mod ec;
 mod rsa;
 #[cfg(feature = "x25519")]
 mod x25519;
+#[cfg(feature = "x448")]
+mod x448;
 
 use super::KeyPairGeneratorEntry;
 
@@ -20,4 +22,6 @@ pub(super) const KEY_PAIR_GENERATORS: &[KeyPairGeneratorEntry] = &[
     rsa::RSA,
     #[cfg(feature = "x25519")]
     x25519::X25519,
+    #[cfg(feature = "x448")]
+    x448::X448,
 ];

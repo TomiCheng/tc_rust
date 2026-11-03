@@ -7,13 +7,13 @@ and like the other factories of `tc_algo`, with `get_by_name`, `get_by_oid`,
 
 - `generate::key` makes a `SecretKey`, for the algorithms that take one, such as AES.
 - `generate::key_pair` makes a `KeyPair`, an `AnyPublicKey` and an `AnyPrivateKey`,
-  such as for RSA, EC, DH or X25519.
+  such as for RSA, EC, DH, X25519 or X448.
 
 ## Enabling generators
 
 Each generator comes with the feature of its algorithm, listed in the
-[tables](#algorithms) below. AES, RSA, EC on the prime curves, DH and X25519 are all
-in the default features.
+[tables](#algorithms) below. AES, RSA, EC on the prime curves, DH, X25519 and X448
+are all in the default features.
 
 ```toml
 [dependencies]
@@ -219,6 +219,7 @@ wipes its bytes on drop; `AnyPrivateKey` shows only its algorithm.
 | EC | none: `init` is required | 1.3.133.16.840.63.0.2, .3 and .16, 1.3.132.1.11.0 to .3, 1.3.132.1.14.0 to .3, 1.3.132.1.15.0 to .3 | `Strength`, `Ec` | `ec` |
 | RSA | 2048 bits, exponent 65537, certainty 100 | 1.2.840.113549.1.1.1 | `Strength`, `Rsa` | `rsa` |
 | X25519 | 255 bits | 1.3.101.110 | `Strength` of 255 | `x25519` |
+| X448 | 448 bits | 1.3.101.111 | `Strength` of 448 | `x448` |
 
 Bits and Defaults are what the generator makes without `init`. Params are the
 `KeyGenParams` variants its `init` takes.
@@ -239,9 +240,9 @@ GCM, CCM and key wrap with padding, as in Bouncy Castle.
   algorithm name they carry; the keys here carry none, so one generator serves. Its
   OIDs are those of Bouncy Castle's EC and ECMQV generators: the ECDH and ECMQV
   schemes with a KDF of X9.63 and SEC 1.
-- **X25519** has one size, so `init` is never needed: it takes `Strength` of 255 bits,
-  Bouncy Castle's strength for X25519, and refuses any other. Its OID is id-X25519 of
-  RFC 8410, as in Bouncy Castle.
+- **X25519 and X448** have one size each, so `init` is never needed: it takes
+  `Strength` of 255 or 448 bits, Bouncy Castle's strength for each, and refuses any
+  other. Their OIDs are id-X25519 and id-X448 of RFC 8410, as in Bouncy Castle.
 - **Certainty** is that of Bouncy Castle: the chance that a prime factor is in fact
   composite is at most 2^-certainty.
 - **An IV or nonce** does not come from here. Fill it with random bytes of the size

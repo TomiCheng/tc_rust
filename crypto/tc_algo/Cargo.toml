@@ -228,8 +228,8 @@ ec-small-curves = [
 ]
 # X25519 keys, their generator and their agreement (RFC 7748)
 x25519 = ["dep:tc_cfrg_curves", "dep:tc_asym_cipher"]
-# X448 keys (RFC 7748)
-x448 = ["dep:tc_cfrg_curves", "tc_cfrg_curves/x448"]
+# X448 keys, their generator and their agreement (RFC 7748)
+x448 = ["dep:tc_cfrg_curves", "tc_cfrg_curves/x448", "dep:tc_asym_cipher"]
 # Ed25519 and Ed448 keys (RFC 8032)
 ed25519 = ["dep:tc_cfrg_curves"]
 ed448 = ["dep:tc_cfrg_curves", "tc_cfrg_curves/ed448"]

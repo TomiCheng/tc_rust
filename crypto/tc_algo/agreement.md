@@ -13,6 +13,7 @@ Each agreement has a guide of its own, which is all you need to use it:
 - [ECMQV](agreement/ecmqv.md): MQV on a named elliptic curve, with a static and an
   ephemeral key of each party.
 - [X25519](agreement/x25519.md): Diffie-Hellman on Curve25519, of RFC 7748.
+- [X448](agreement/x448.md): Diffie-Hellman on Curve448, of RFC 7748.
 
 ## Enabling agreements
 
@@ -94,6 +95,7 @@ for entry in agreement::algorithms() {
 | ECDHC | ECCDH | | bytes of a coordinate | `ecdh` | ✓ |
 | ECMQV | | | bytes of a coordinate | `ecmqv` | ✓ |
 | X25519 | | 1.3.101.110 | 32 bytes | `x25519` | ✓ |
+| X448 | | 1.3.101.111 | 56 bytes | `x448` | ✓ |
 
 Each name finds the generator of its keys as well, EC for ECDH, ECDHC and ECMQV; see
 [generator.md](generator.md).
