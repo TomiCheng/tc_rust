@@ -285,6 +285,7 @@ tc_cast = { version = "0.1.0", optional = true }
 tc_cfrg_curves = { version = "0.1.0", path = "../tc_cfrg_curves", optional = true }
 tc_chacha = { version = "0.1.0", optional = true }
 tc_chacha_aead = { version = "0.1.0", optional = true }
+tc_constant_time = "0.1.0"
 tc_des = { version = "0.1.1", optional = true }
 tc_dh = { version = "0.1.0", path = "../agreement/tc_dh", optional = true }
 tc_dh_key = { version = "0.1.0", path = "../tc_dh_key", optional = true }
@@ -306,6 +307,7 @@ tc_gost3411 = { version = "0.1.0", optional = true }
 tc_grain128_aead = { version = "0.1.0", optional = true }
 tc_hc = { version = "0.1.0", optional = true }
 tc_keccak = { version = "0.1.0", optional = true }
+tc_macs = "0.1.1"
 tc_md = { version = "0.1.1", optional = true }
 tc_misc_block_cipher = { version = "0.1.0", optional = true }
 tc_misc_digest = { version = "0.1.0", optional = true }

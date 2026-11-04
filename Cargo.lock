@@ -853,6 +853,7 @@ dependencies = [
  "tc_cfrg_curves",
  "tc_chacha",
  "tc_chacha_aead",
+ "tc_constant_time",
  "tc_des",
  "tc_dh",
  "tc_dh_key",
@@ -874,6 +875,7 @@ dependencies = [
  "tc_grain128_aead",
  "tc_hc",
  "tc_keccak",
+ "tc_macs",
  "tc_md",
  "tc_misc_block_cipher",
  "tc_misc_digest",
@@ -1840,9 +1842,9 @@ dependencies = [
 
 [[package]]
 name = "tc_macs"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "75aef4d37c566c4106b935e79e1edae5a17f8d74bb4fe852e58b1693e1bbed4e"
+checksum = "c2cdad045880de68459b3cdd2654abf07f4faf336398bbe55c5d08ac906f122f"
 dependencies = [
  "tc_block_cipher",
  "tc_block_modes",
