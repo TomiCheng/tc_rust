@@ -170,14 +170,14 @@ rc6 = ["dep:tc_rc_cipher"]
 # Rijndael of 128-bit blocks, as Bouncy Castle's factory has it
 rijndael = ["dep:tc_misc_block_cipher", "tc_misc_block_cipher/rijndael"]
 seed = ["dep:tc_seed"]
-serpent = ["dep:tc_serpent_v2"]
+serpent = ["dep:tc_serpent"]
 skipjack = ["dep:tc_misc_block_cipher", "tc_misc_block_cipher/skipjack"]
 sm4 = ["dep:tc_sm4"]
 tea = ["dep:tc_misc_block_cipher", "tc_misc_block_cipher/tea"]
 # Threefish of 256, 512 and 1024 bits
 threefish = ["dep:tc_threefish"]
 # Serpent with the byte order of an old Bouncy Castle, kept for its data
-tnepres = ["dep:tc_serpent_v2"]
+tnepres = ["dep:tc_serpent"]
 twofish = ["dep:tc_twofish"]
 xtea = ["dep:tc_misc_block_cipher", "tc_misc_block_cipher/tea"]
 # ChaCha: Bernstein's original, ChaCha7539 (RFC 8439) and XChaCha20
@@ -307,7 +307,7 @@ tc_grain128_aead = { version = "0.1.0", optional = true }
 tc_hc = { version = "0.1.0", optional = true }
 tc_keccak = { version = "0.1.0", optional = true }
 tc_md = { version = "0.1.1", optional = true }
-tc_misc_block_cipher = { version = "0.1.0", path = "../../block_cipher/tc_misc_block_cipher", optional = true }
+tc_misc_block_cipher = { version = "0.1.0", optional = true }
 tc_misc_digest = { version = "0.1.0", optional = true }
 tc_ml_kem = { version = "0.1.0", path = "../tc_ml_kem", optional = true }
 tc_naccache_stern = { version = "0.1.0", path = "../tc_naccache_stern", optional = true }
@@ -317,7 +317,7 @@ tc_ripemd = { version = "0.1.0", optional = true }
 tc_rsa = { version = "0.1.0", optional = true }
 tc_salsa20 = { version = "0.1.0", optional = true }
 tc_seed = { version = "0.1.0", optional = true }
-tc_serpent_v2 = { version = "0.1.0", path = "../../block_cipher/tc_serpent", optional = true }
+tc_serpent = { version = "0.1.0", optional = true }
 tc_sha = { version = "0.1.1", optional = true }
 tc_sm2 = { version = "0.1.0", path = "../tc_sm2", optional = true }
 tc_sm3 = { version = "0.1.0", optional = true }

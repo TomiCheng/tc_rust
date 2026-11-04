@@ -8,7 +8,6 @@ members = [
     "ies/*",
     "kdf/*",
     "signer/*",
-    "block_cipher/*",
     "x509/*",
     "util/*",
 ]

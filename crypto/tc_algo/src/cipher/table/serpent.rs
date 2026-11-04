@@ -5,7 +5,7 @@ use crate::cipher::engine::AnyEngine;
 pub(super) const SERPENT: AlgorithmSpec = AlgorithmSpec {
     names: &["SERPENT"],
     block_size: 16,
-    engine: || AnyEngine::new(tc_serpent_v2::SerpentEngine::new()),
+    engine: || AnyEngine::new(tc_serpent::SerpentEngine::new()),
     oids: &[],
 };
 
@@ -14,6 +14,6 @@ pub(super) const SERPENT: AlgorithmSpec = AlgorithmSpec {
 pub(super) const TNEPRES: AlgorithmSpec = AlgorithmSpec {
     names: &["TNEPRES"],
     block_size: 16,
-    engine: || AnyEngine::new(tc_serpent_v2::TnepresEngine::new()),
+    engine: || AnyEngine::new(tc_serpent::TnepresEngine::new()),
     oids: &[],
 };
