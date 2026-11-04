@@ -912,6 +912,7 @@ dependencies = [
 name = "tc_algo_v2"
 version = "0.1.0"
 dependencies = [
+ "tc_asn1",
  "tc_constant_time",
 ]
 

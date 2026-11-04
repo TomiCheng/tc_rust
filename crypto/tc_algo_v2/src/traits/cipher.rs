@@ -1,6 +1,5 @@
-use core::error::Error;
-
 use super::Params;
+use crate::AlgoError;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum CipherDirection {
@@ -9,13 +8,11 @@ pub enum CipherDirection {
 }
 
 pub trait Cipher {
-    type Error: Error;
-
-    fn init(&mut self, direction: CipherDirection, params: &dyn Params) -> Result<(), Self::Error>;
+    fn init(&mut self, direction: CipherDirection, params: &dyn Params) -> Result<(), AlgoError>;
 
     // Returns what this input completes; a block cipher keeps a partial block for later
-    fn update(&mut self, input: &[u8]) -> Result<Vec<u8>, Self::Error>;
+    fn update(&mut self, input: &[u8]) -> Result<Vec<u8>, AlgoError>;
 
     // Returns the rest, with the padding or the tag
-    fn finalize(&mut self) -> Result<Vec<u8>, Self::Error>;
+    fn finalize(&mut self) -> Result<Vec<u8>, AlgoError>;
 }
