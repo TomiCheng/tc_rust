@@ -15,3 +15,4 @@ of its own, which gives one type for all of its algorithms, such as `AnyCipher` 
   `GeneratorUtilities`.
 - [Key agreements](agreement.md): DH, ECDH, ECMQV, X25519, X448 and GOST VKO, after
   `AgreementUtilities`.
+- [MACs](mac.md): HMAC over every digest, after `MacUtilities`.

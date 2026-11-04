@@ -43,7 +43,7 @@ impl DigestEntry {
         self.names[0]
     }
 
-    pub(super) fn names(&self) -> &'static [&'static str] {
+    pub(crate) fn names(&self) -> &'static [&'static str] {
         self.names
     }
 
