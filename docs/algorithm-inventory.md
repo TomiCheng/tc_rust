@@ -12,7 +12,7 @@
 
 | 類別 | 已發行 | 孵化池（新架構） | 孵化池（舊 trait） | BC 有、還沒做 |
 |---|---|---|---|---|
-| 區塊加密 | aes、des、aria、camellia、dstu7624、rc_cipher、sm4、threefish、gost28147、seed、cast | blowfish、serpent、twofish，以及 misc_block_cipher（idea、noekeon、rijndael、skipjack、tea） | — | — |
+| 區塊加密 | aes、des、aria、camellia、dstu7624、rc_cipher、sm4、threefish、gost28147、seed、cast、blowfish、twofish | serpent，以及 misc_block_cipher（idea、noekeon、rijndael、skipjack、tea） | — | — |
 | 模式／padding | block_modes（ECB、CBC、CFB、OFB、CTR、OpenPGP CFB、GOFB、KCTR）、block_padding、aead_cipher（GCM、CCM、EAX、OCB、GCM-SIV、KCCM） | cts_modes（ECB、CBC 的 CTS） | — | — |
 | 串流加密 | chacha、salsa20、hc、rc4_family | — | — | — |
 | AEAD 專用演算法 | ascon_aead、grain128_aead、sparkle_aead、chacha_aead | — | — | — |
@@ -52,8 +52,8 @@ tc_threefish 與 tc_gost28147 已在 2026-10-30 發行，流程照它們走。�
 |---|---|---|
 | 1 | ~~seed~~ | 韓國標準，TLS 與 CMS 會用到。2026-11-03 發行 0.1.0 |
 | 2 | ~~cast~~ | CAST5 與 CAST6；CAST5 是 OpenPGP 的舊預設，CMS 也有 OID。2026-11-03 發行 0.1.0 |
-| 3 | blowfish | 舊系統很常見 |
-| 4 | twofish | VeraCrypt、KeePass |
+| 3 | ~~blowfish~~ | 舊系統很常見。2026-11-04 發行 0.1.0 |
+| 4 | ~~twofish~~ | VeraCrypt、KeePass。2026-11-04 發行 0.1.0 |
 | 5 | serpent | 含 Tnepres；VeraCrypt |
 | 6 | misc_block_cipher | IDEA（舊 OpenPGP）、Rijndael（非 128 位元區塊）、Noekeon、SKIPJACK、TEA／XTEA |
 

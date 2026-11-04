@@ -1,4 +1,4 @@
-use tc_twofish_v2::TwofishEngine;
+use tc_twofish::TwofishEngine;
 
 use super::specs::AlgorithmSpec;
 use crate::cipher::engine::AnyEngine;

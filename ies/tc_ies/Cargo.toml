@@ -35,4 +35,4 @@ tc_ecdh_v2 = { version = "0.1.0", path = "../../crypto/agreement/tc_ecdh_v2" }
 tc_fp_custom = { version = "0.1.0", features = ["small-curves"] }
 tc_macs = { version = "0.1.0", features = ["hmac", "alloc"] }
 tc_sha = "0.1.1"
-tc_twofish_v2 = { version = "0.1.0", path = "../../block_cipher/tc_twofish" }
+tc_twofish = "0.1.0"

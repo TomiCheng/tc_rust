@@ -284,7 +284,7 @@ Representative `no_std` builds:
 
 ```bash
 # Representative block-cipher crate (all family crates are no_std)
-cargo build -p tc_blowfish_v2 --locked
+cargo build -p tc_serpent_v2 --locked
 
 # Portable digest backend without std
 cargo build -p tc_misc_digest --features haraka --locked

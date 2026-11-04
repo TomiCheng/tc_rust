@@ -14,7 +14,7 @@ use tc_ies::{IesCipherEngine, IesCipherParamsRef, IesError};
 use tc_kdf::kdf::Kdf2;
 use tc_macs::Hmac;
 use tc_sha::Sha1Digest;
-use tc_twofish_v2::TwofishEngine;
+use tc_twofish::TwofishEngine;
 
 type Curve<'a> = &'a SecPCtCurve<SecP192R1FieldElement>;
 type Engine<'a> = IesCipherEngine<

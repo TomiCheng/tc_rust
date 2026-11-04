@@ -1,5 +1,5 @@
 use tc_asn1::NamedOid;
-use tc_blowfish_v2::BlowfishEngine;
+use tc_blowfish::BlowfishEngine;
 
 use super::specs::{AlgorithmSpec, ModeKind, PaddingKind};
 use crate::cipher::engine::AnyEngine;

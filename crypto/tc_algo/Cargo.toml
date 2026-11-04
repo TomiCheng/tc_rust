@@ -153,7 +153,7 @@ des = ["dep:tc_des"]
 # it with. Those of 64-bit blocks, open to birthday attacks after a few gigabytes under one key,
 # and those of short keys are not in the default
 aria = ["dep:tc_aria"]
-blowfish = ["dep:tc_blowfish_v2"]
+blowfish = ["dep:tc_blowfish"]
 camellia = ["dep:tc_camellia"]
 cast5 = ["dep:tc_cast"]
 cast6 = ["dep:tc_cast"]
@@ -178,7 +178,7 @@ tea = ["dep:tc_misc_block_cipher", "tc_misc_block_cipher/tea"]
 threefish = ["dep:tc_threefish"]
 # Serpent with the byte order of an old Bouncy Castle, kept for its data
 tnepres = ["dep:tc_serpent_v2"]
-twofish = ["dep:tc_twofish_v2"]
+twofish = ["dep:tc_twofish"]
 xtea = ["dep:tc_misc_block_cipher", "tc_misc_block_cipher/tea"]
 # ChaCha: Bernstein's original, ChaCha7539 (RFC 8439) and XChaCha20
 chacha = ["dep:tc_chacha"]
@@ -278,7 +278,7 @@ tc_blake ={ version = "0.1.0", optional = true }
 tc_block_cipher = "0.1.0"
 tc_block_modes = { version = "0.1.1", features = ["alloc"] }
 tc_block_padding = { version = "0.1.0", features = ["rand_core"] }
-tc_blowfish_v2 = { version = "0.1.0", path = "../../block_cipher/tc_blowfish", optional = true }
+tc_blowfish = { version = "0.1.0", optional = true }
 tc_buffered_cipher = { version = "0.1.1", features = ["alloc"] }
 tc_camellia = { version = "0.1.0", optional = true }
 tc_cast = { version = "0.1.0", optional = true }
@@ -325,7 +325,7 @@ tc_sm4 = { version = "0.1.0", optional = true }
 tc_sparkle_aead = { version = "0.1.0", optional = true }
 tc_stream_cipher = "0.1.0"
 tc_threefish = { version = "0.1.0", optional = true }
-tc_twofish_v2 = { version = "0.1.0", path = "../../block_cipher/tc_twofish", optional = true }
+tc_twofish = { version = "0.1.0", optional = true }
 tc_zeroize = { version = "0.1.0", features = ["alloc"] }
 
 [dev-dependencies]

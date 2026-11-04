@@ -76,26 +76,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "blowfish"
-version = "0.10.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "62ce3946557b35e71d1bbe07ec385073ce9eda05043f95de134eb578fcf1a298"
-dependencies = [
- "byteorder",
- "cipher",
-]
-
-[[package]]
 name = "bumpalo"
 version = "3.20.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "72f5acc6cb2ba439de613abc23857ec3d78374d8ed5ac84e9d11336e87da8649"
-
-[[package]]
-name = "byteorder"
-version = "1.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1fd0f2584146f6f2ef48085050886acf353beff7305ebd1ae69500e27c67f64b"
 
 [[package]]
 name = "camellia"
@@ -880,7 +864,7 @@ dependencies = [
  "tc_block_cipher",
  "tc_block_modes",
  "tc_block_padding",
- "tc_blowfish_v2",
+ "tc_blowfish",
  "tc_buffered_cipher",
  "tc_camellia",
  "tc_cast",
@@ -927,7 +911,7 @@ dependencies = [
  "tc_sparkle_aead",
  "tc_stream_cipher",
  "tc_threefish",
- "tc_twofish_v2",
+ "tc_twofish",
  "tc_zeroize",
 ]
 
@@ -1192,10 +1176,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "tc_blowfish_v2"
+name = "tc_blowfish"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "918a96d66f7d1a9222f99749051b85d46406a3627823f6e1ed0f3459aa247ddb"
 dependencies = [
- "blowfish",
  "tc_block_cipher",
  "tc_zeroize",
 ]
@@ -1795,7 +1780,7 @@ dependencies = [
  "tc_kdf",
  "tc_macs",
  "tc_sha",
- "tc_twofish_v2",
+ "tc_twofish",
  "tc_zeroize",
 ]
 
@@ -2302,12 +2287,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "tc_twofish_v2"
+name = "tc_twofish"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d69e84706ae566e96e14cc3bce060c857b88879b181a7389ba40fa7951f00fc8"
 dependencies = [
  "tc_block_cipher",
  "tc_zeroize",
- "twofish",
 ]
 
 [[package]]
@@ -2345,15 +2331,6 @@ checksum = "be4d6b5f19ff7664e8c98d03e2139cb510db9b0a60b55f8e8709b689d939b6bc"
 dependencies = [
  "serde",
  "serde_json",
-]
-
-[[package]]
-name = "twofish"
-version = "0.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0218ef702a91e18ba84dd516edf8df33a9f9fb4431d6ada13e6f9502c3bcb6fc"
-dependencies = [
- "cipher",
 ]
 
 [[package]]
