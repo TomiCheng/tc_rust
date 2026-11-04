@@ -36,9 +36,9 @@ names itself through `Display`.
 | ✅ Done | `ISO9797Alg3Mac` | [`tc_iso9797_mac::Iso9797Alg3Mac`](tc_iso9797_mac) | Allocation-free two-/three-key DES Retail MAC, with tag truncation and padding, on the published `tc_des`, `tc_block_padding` and `tc_macs` traits. The IV is required and must be 8 bytes; pass zeros for Bouncy Castle's key-only form. |
 | ✅ Done | `KMac` | [`tc_kmac::KMac`](tc_kmac) | KMAC128/KMAC256 fixed tags and XOF output over cSHAKE; requires `alloc`. |
 | ✅ Raw mode | `Poly1305` | [`tc_poly1305`](https://crates.io/crates/tc_poly1305) | Published from the tc_macs repository: raw Poly1305 with a caller-supplied 32-byte one-time key. The optional 128-bit block-cipher construction is not implemented. |
-| ✅ Done | `SipHash` | [`tc_siphash::SipHash`](tc_siphash) | Allocation-free SipHash-c-d; all 64 official SipHash-2-4 vectors pass. |
+| ✅ Done | `SipHash` | [`tc_macs::SipHash`](https://crates.io/crates/tc_macs) | Published in `tc_macs` 0.1.1 with the `siphash` feature; all 64 SipHash-2-4 vectors of the reference implementation pass. |
 | ✅ Done | `SkeinMac` | [`tc_skein_mac::SkeinMac`](tc_skein_mac) | Skein-MAC over the published `tc_skein`, with the key and the other parameters through `SkeinParams`; passes every vector of Bouncy Castle's `SkeinMacTest`. |
-| ✅ Done | `VMPCMac` | [`tc_vmpc_mac::VmpcMac`](tc_vmpc_mac) | Allocation-free VMPC-MAC with 16–64-byte key and IV validation. |
+| ✅ Done | `VMPCMac` | [`tc_macs::VmpcMac`](https://crates.io/crates/tc_macs) | Published in `tc_macs` 0.1.1 with the `vmpc-mac` feature: VMPC-MAC with 16–64-byte key and IV validation. |
 
 Legend:
 
@@ -62,5 +62,5 @@ Run the tests for all currently implemented MAC crates from the workspace root:
 ```bash
 cargo test \
   -p tc_dstu_macs -p tc_gost28147_mac -p tc_iso9797_mac \
-  -p tc_kmac -p tc_siphash -p tc_skein_mac -p tc_vmpc_mac --locked
+  -p tc_kmac -p tc_skein_mac --locked
 ```

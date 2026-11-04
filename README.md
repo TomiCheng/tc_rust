@@ -172,12 +172,8 @@ and the crates that remain here depend on the published version.
   hashing (bcrypt, scrypt and Argon2)
 - [`ies`](ies) — the Integrated Encryption Scheme over a key agreement, a
   KDF and a MAC
-- [`block_cipher`](block_cipher) — rewrites of Blowfish, CAST5/CAST6,
-  IDEA, Noekeon, Rijndael, SEED, Serpent, Skipjack,
-  TEA/XTEA and Twofish on the `tc_block_cipher` traits, waiting to
-  graduate
 - [`crypto/macs`](crypto/macs) — MAC families not yet graduated, such as
-  SipHash and KMAC
+  KMAC and the DSTU MACs
 
 ## Implemented algorithms
 

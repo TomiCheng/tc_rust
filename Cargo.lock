@@ -2183,13 +2183,6 @@ name = "tc_signer"
 version = "0.1.0"
 
 [[package]]
-name = "tc_siphash"
-version = "0.1.0"
-dependencies = [
- "tc_macs",
-]
-
-[[package]]
 name = "tc_skein"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2308,14 +2301,6 @@ checksum = "d69e84706ae566e96e14cc3bce060c857b88879b181a7389ba40fa7951f00fc8"
 dependencies = [
  "tc_block_cipher",
  "tc_zeroize",
-]
-
-[[package]]
-name = "tc_vmpc_mac"
-version = "0.1.0"
-dependencies = [
- "tc_block_modes",
- "tc_macs",
 ]
 
 [[package]]
