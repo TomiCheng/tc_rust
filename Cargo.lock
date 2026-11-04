@@ -879,6 +879,7 @@ dependencies = [
  "tc_hc",
  "tc_iso9797_mac",
  "tc_keccak",
+ "tc_key_wrap",
  "tc_kmac",
  "tc_macs",
  "tc_md",
@@ -1844,6 +1845,7 @@ version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9e85f9d8eda74441aeca5b2f0fb2ca035c4faba955bd73ae53748f24883360ab"
 dependencies = [
+ "rand_core",
  "tc_block_cipher",
  "tc_constant_time",
  "tc_zeroize",

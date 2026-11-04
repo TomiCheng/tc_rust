@@ -12,6 +12,7 @@ of its own, which gives one type for all of its algorithms, such as `AnyCipher` 
 - [XOFs](docs/xof.md): hashes of a message into as many bytes as you ask for.
 - [Ciphers](cipher.md): block, stream, AEAD and asymmetric ciphers, after
   `CipherUtilities`.
+- [Key wrap](docs/wrap.md): keys protected under another key, after `WrapperUtilities`.
 - [Key generators](generator.md): secret keys and key pairs, after
   `GeneratorUtilities`.
 - [Key agreements](agreement.md): DH, ECDH, ECMQV, X25519, X448 and GOST VKO, after

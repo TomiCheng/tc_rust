@@ -275,6 +275,15 @@ dsa = ["dep:tc_dsa_key"]
 # GOST R 34.10-94 keys, replaced by the EC versions of 2001 and 2012
 gost3410 = ["dep:tc_gost3410_key"]
 
+# Key wrap
+# A wrapper's row needs the feature of its kind of wrap and that of its cipher, such as aes
+# RFC 3394 over AES, ARIA, Camellia and SEED
+rfc3394-wrap = ["tc_key_wrap/rfc3394"]
+# RFC 5649 over AES and ARIA, which takes a key of any length
+rfc5649-wrap = ["tc_key_wrap/rfc5649"]
+# RFC 3211 over AES, ARIA, Camellia, DES and DESede
+rfc3211-wrap = ["tc_key_wrap/rfc3211"]
+
 # Agreement
 # ECDH and ECDHC, the agreements of IEEE P1363 on the EC keys
 ecdh = ["ec", "dep:tc_ecdh_v2"]
@@ -345,6 +354,7 @@ tc_grain128_aead = { version = "0.1.0", optional = true }
 tc_hc = { version = "0.1.0", optional = true }
 tc_iso9797_mac = { version = "0.1.0", path = "../macs/tc_iso9797_mac", optional = true }
 tc_keccak = { version = "0.1.0", optional = true }
+tc_key_wrap = "0.1.0"
 tc_kmac = { version = "0.1.0", path = "../macs/tc_kmac", optional = true }
 tc_macs = "0.1.1"
 tc_md = { version = "0.1.1", optional = true }
