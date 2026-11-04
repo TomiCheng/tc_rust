@@ -5,6 +5,8 @@ mod digest;
 mod digest_entry;
 mod digest_provider;
 mod mac;
+mod mac_entry;
+mod mac_provider;
 mod params;
 
 pub use algo::Algo;
@@ -14,4 +16,6 @@ pub use digest::Digest;
 pub use digest_entry::DigestEntry;
 pub use digest_provider::DigestProvider;
 pub use mac::Mac;
+pub use mac_entry::MacEntry;
+pub use mac_provider::MacProvider;
 pub use params::Params;
