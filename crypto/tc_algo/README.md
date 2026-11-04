@@ -15,4 +15,5 @@ of its own, which gives one type for all of its algorithms, such as `AnyCipher` 
   `GeneratorUtilities`.
 - [Key agreements](agreement.md): DH, ECDH, ECMQV, X25519, X448 and GOST VKO, after
   `AgreementUtilities`.
-- [MACs](mac.md): HMAC over every digest, after `MacUtilities`.
+- [MACs](mac.md): tags, made with a secret key, that show a message came from someone
+  who holds the key and was not changed.

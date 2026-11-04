@@ -19,7 +19,8 @@ repository.workspace = true
 # silently stop hashing. So do Naccache-Stern, too niche to pull in for everyone, HC-128 and
 # HC-256, kept for Bouncy Castle's sake, whose lookups into secret tables are not constant time,
 # and SM2 encryption, whose names are this crate's own. The MACs over DES and GOST 28147-89 and
-# VMPC-MAC stay out as the ciphers they rest on do. The family features still include all
+# VMPC-MAC stay out as the ciphers they rest on do, and those missing from Bouncy Castle's
+# MacUtilities because their names are this crate's own. The family features still include all
 # of them.
 default = [
     "hmac",
@@ -166,6 +167,17 @@ gost28147-mac = ["dep:tc_gost28147_mac", "dep:tc_gost28147"]
 vmpc-mac = ["tc_macs/vmpc-mac"]
 # SipHash-2-4, whose 8-byte tag suits hash tables rather than general use
 siphash = ["tc_macs/siphash"]
+# GMAC over AES, whose nonce must never repeat under one key
+gmac = ["tc_macs/gmac", "tc_macs/alloc"]
+# Raw Poly1305, whose key is good for one message
+poly1305 = ["dep:tc_poly1305"]
+# KMAC128 and KMAC256, with an empty customization string
+kmac = ["dep:tc_kmac"]
+# The Ukrainian MACs, over the DSTU 7564 digest and the DSTU 7624 cipher
+dstu7564-mac = ["dep:tc_dstu_macs"]
+dstu7624-mac = ["dep:tc_dstu_macs"]
+# Skein-MAC, in the sizes of Bouncy Castle's precomputed states
+skein-mac = ["dep:tc_skein_mac"]
 # AES: its key generator and its ciphers in every mode the table pairs it with
 aes = ["dep:tc_aes"]
 # DES: its ciphers in every mode the table pairs it with
@@ -313,6 +325,7 @@ tc_dh_key = { version = "0.1.0", path = "../tc_dh_key", optional = true }
 tc_digest = "0.1.1"
 tc_dsa_key = { version = "0.1.0", path = "../tc_dsa_key", optional = true }
 tc_dstu7564 = { version = "0.1.0", optional = true }
+tc_dstu_macs = { version = "0.1.0", path = "../macs/tc_dstu_macs", optional = true }
 tc_ec_core = { version = "0.1.0", optional = true }
 tc_ec_key = { version = "0.1.0", path = "../tc_ec_key", optional = true }
 tc_ecdh_v2 = { version = "0.1.0", path = "../agreement/tc_ecdh_v2", optional = true }
@@ -330,12 +343,14 @@ tc_grain128_aead = { version = "0.1.0", optional = true }
 tc_hc = { version = "0.1.0", optional = true }
 tc_iso9797_mac = { version = "0.1.0", path = "../macs/tc_iso9797_mac", optional = true }
 tc_keccak = { version = "0.1.0", optional = true }
+tc_kmac = { version = "0.1.0", path = "../macs/tc_kmac", optional = true }
 tc_macs = "0.1.1"
 tc_md = { version = "0.1.1", optional = true }
 tc_misc_block_cipher = { version = "0.1.0", optional = true }
 tc_misc_digest = { version = "0.1.0", optional = true }
 tc_ml_kem = { version = "0.1.0", path = "../tc_ml_kem", optional = true }
 tc_naccache_stern = { version = "0.1.0", path = "../tc_naccache_stern", optional = true }
+tc_poly1305 = { version = "0.1.0", optional = true }
 tc_rc_cipher = { version = "0.1.0", optional = true }
 tc_rc4_family = { version = "0.1.0", optional = true }
 tc_ripemd = { version = "0.1.0", optional = true }
@@ -344,6 +359,7 @@ tc_salsa20 = { version = "0.1.0", optional = true }
 tc_seed = { version = "0.1.0", optional = true }
 tc_serpent = { version = "0.1.0", optional = true }
 tc_sha = { version = "0.1.1", optional = true }
+tc_skein_mac = { version = "0.1.0", path = "../macs/tc_skein_mac", optional = true }
 tc_sm2 = { version = "0.1.0", path = "../tc_sm2", optional = true }
 tc_sm3 = { version = "0.1.0", optional = true }
 tc_sm4 = { version = "0.1.0", optional = true }

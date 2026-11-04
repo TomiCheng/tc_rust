@@ -1,4 +1,9 @@
-#[cfg(any(feature = "cmac", feature = "cbc-mac", feature = "cfb-mac"))]
+#[cfg(any(
+    feature = "cmac",
+    feature = "cbc-mac",
+    feature = "cfb-mac",
+    feature = "gmac"
+))]
 mod block;
 #[cfg(feature = "hmac")]
 mod hmac;
@@ -13,7 +18,12 @@ pub(super) static MACS: LazyLock<Vec<MacEntry>> = LazyLock::new(|| {
     let mut rows = Vec::new();
     #[cfg(feature = "hmac")]
     rows.extend(hmac::rows());
-    #[cfg(any(feature = "cmac", feature = "cbc-mac", feature = "cfb-mac"))]
+    #[cfg(any(
+        feature = "cmac",
+        feature = "cbc-mac",
+        feature = "cfb-mac",
+        feature = "gmac"
+    ))]
     rows.extend(block::rows());
     rows.extend(standalone::rows());
     rows

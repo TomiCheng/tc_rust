@@ -116,7 +116,7 @@ impl<const BLOCK_WORDS: usize> Dstu7624Mac<BLOCK_WORDS> {
                 block_size_bits,
             ));
         }
-        if mac_size_bits == 0 || !mac_size_bits.is_multiple_of(8) || mac_size_bits > block_size_bits
+        if mac_size_bits == 0 || mac_size_bits % 8 != 0 || mac_size_bits > block_size_bits
         {
             return Err(Dstu7624MacCreateError::InvalidMacSize {
                 requested_bits: mac_size_bits,

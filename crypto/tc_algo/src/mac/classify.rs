@@ -43,3 +43,17 @@ impl<P> Classify for tc_iso9797_mac::Error<P> {
         }
     }
 }
+
+// tc_dstu_macs has an error of its own for DSTU 7624
+#[cfg(feature = "dstu7624-mac")]
+impl Classify for tc_dstu_macs::Dstu7624MacError {
+    fn kind(&self) -> ErrorKind {
+        use tc_dstu_macs::Dstu7624MacError;
+        match self {
+            Dstu7624MacError::NotInitialised => ErrorKind::NotInitialized,
+            Dstu7624MacError::OutputTooShort { .. }
+            | Dstu7624MacError::InputNotBlockAligned { .. } => ErrorKind::DataLength,
+            _ => ErrorKind::InvalidParams,
+        }
+    }
+}

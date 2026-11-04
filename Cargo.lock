@@ -860,6 +860,7 @@ dependencies = [
  "tc_digest",
  "tc_dsa_key",
  "tc_dstu7564",
+ "tc_dstu_macs",
  "tc_ec_core",
  "tc_ec_key",
  "tc_ecdh_v2",
@@ -877,12 +878,14 @@ dependencies = [
  "tc_hc",
  "tc_iso9797_mac",
  "tc_keccak",
+ "tc_kmac",
  "tc_macs",
  "tc_md",
  "tc_misc_block_cipher",
  "tc_misc_digest",
  "tc_ml_kem",
  "tc_naccache_stern",
+ "tc_poly1305",
  "tc_rc4_family",
  "tc_rc_cipher",
  "tc_ripemd",
@@ -891,6 +894,7 @@ dependencies = [
  "tc_seed",
  "tc_serpent",
  "tc_sha",
+ "tc_skein_mac",
  "tc_sm2",
  "tc_sm3",
  "tc_sm4",
@@ -1848,6 +1852,7 @@ version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2cdad045880de68459b3cdd2654abf07f4faf336398bbe55c5d08ac906f122f"
 dependencies = [
+ "tc_aead_cipher",
  "tc_block_cipher",
  "tc_block_modes",
  "tc_block_padding",

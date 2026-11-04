@@ -24,11 +24,14 @@ impl AnyMac {
         self.entry
     }
 
-    // Starts from a new MAC each time, so a failed init leaves none of an earlier key behind. An
-    // operation field the MAC has no use for is refused, not ignored
+    // An operation field the MAC has no use for is refused, not ignored. A MAC refused here goes
+    // back to a new one, so that it never goes on under an earlier key; otherwise it stays, since
+    // GMAC remembers its last key and nonce in order to refuse them again
     pub fn init(&mut self, params: &AnyMacParams) -> Result<(), AlgoError> {
-        self.mac = self.entry.create();
-        self.entry.check(params)?;
+        if let Err(error) = self.entry.check(params) {
+            self.mac = self.entry.create();
+            return Err(error);
+        }
         self.mac.init(params)
     }
 
@@ -40,7 +43,8 @@ impl AnyMac {
         self.mac.update(input)
     }
 
-    // The tag, after which the MAC starts the next message under the same key
+    // The tag, after which the MAC starts the next message under the same key. GMAC and Poly1305
+    // must not use theirs twice, so they stay uninitialized until the next init
     pub fn finalize(&mut self) -> Result<Vec<u8>, AlgoError> {
         let mut tag = vec![0; self.mac.mac_size()];
         let written = self.mac.do_final(&mut tag)?;
@@ -50,7 +54,7 @@ impl AnyMac {
 
     // Whether `tag` is the message's tag, compared in constant time, since comparing with `==`
     // stops at the first difference and tells an attacker how much of a forged tag is right. Then
-    // starts the next message, as finalize does
+    // goes on as finalize does
     pub fn verify(&mut self, tag: &[u8]) -> Result<bool, AlgoError> {
         Ok(fixed_time_eq(&self.finalize()?, tag))
     }

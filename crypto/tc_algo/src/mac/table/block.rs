@@ -40,6 +40,14 @@ fn cmac<C: Engine>(row: &[&str], engine: fn() -> C) -> MacEntry {
     })
 }
 
+// GCM's nonce is the IV, which a MAC here must be given and must never repeat under one key
+#[cfg(feature = "gmac")]
+fn gmac<C: Engine>(row: &[&str], engine: fn() -> C) -> MacEntry {
+    MacEntry::new(names(row), &[], Need::Required, move || {
+        Box::new(Mapped::key_only(tc_macs::Gmac::new(engine())))
+    })
+}
+
 // A tag of half a block, as Bouncy Castle's CbcBlockCipherMac has by default
 #[cfg(feature = "cbc-mac")]
 fn cbc<C: Engine>(row: &[&str], engine: fn() -> C) -> MacEntry {
@@ -98,6 +106,8 @@ pub(super) fn rows() -> Vec<MacEntry> {
     vec![
         #[cfg(all(feature = "cmac", feature = "aes"))]
         cmac(&["AESCMAC"], tc_aes::AesEngine::new),
+        #[cfg(all(feature = "gmac", feature = "aes"))]
+        gmac(&["AES-GMAC"], tc_aes::AesEngine::new),
         #[cfg(all(feature = "cbc-mac", feature = "des"))]
         cbc(&["DESMAC", "DES"], tc_des::DesEngine::new),
         #[cfg(all(feature = "cfb-mac", feature = "des"))]
