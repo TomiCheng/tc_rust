@@ -909,6 +909,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_algo_v2"
+version = "0.1.0"
+dependencies = [
+ "tc_constant_time",
+]
+
+[[package]]
 name = "tc_aria"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
