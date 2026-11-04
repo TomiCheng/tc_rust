@@ -1927,6 +1927,18 @@ name = "tc_net"
 version = "0.1.0"
 
 [[package]]
+name = "tc_openpgp"
+version = "0.1.0"
+dependencies = [
+ "tc_algo",
+ "tc_openpgp_packet",
+]
+
+[[package]]
+name = "tc_openpgp_packet"
+version = "0.1.0"
+
+[[package]]
 name = "tc_operator"
 version = "0.1.0"
 dependencies = [
