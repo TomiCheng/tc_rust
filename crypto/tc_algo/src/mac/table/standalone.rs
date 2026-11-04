@@ -1,6 +1,6 @@
 // The MACs that name their algorithm rather than take one. Those of Bouncy Castle's MacUtilities
 // have its names and aliases; the rest are not in its table, so their names follow the classes'
-// AlgorithmName, with the size added where one class gives several rows
+// AlgorithmName, in upper case, with the size added where one class gives several rows
 #[allow(
     unused_imports,
     reason = "unused when every OID row of this file is off"
@@ -256,7 +256,7 @@ pub(super) fn rows() -> Vec<MacEntry> {
     #[cfg(feature = "skein-mac")]
     rows.extend(SKEIN_SIZES.map(|(state, output)| {
         MacEntry::new(
-            vec![format!("Skein-MAC-{state}-{output}")],
+            vec![format!("SKEIN-MAC-{state}-{output}")],
             &[],
             Need::Forbidden,
             move || Box::new(Mapped::key_only(tc_skein_mac::SkeinMac::new(state, output))),

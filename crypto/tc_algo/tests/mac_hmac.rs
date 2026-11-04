@@ -181,10 +181,16 @@ fn every_row_is_rfc_2104_over_its_digest_with_short_and_long_keys() {
 }
 
 #[test]
-fn there_is_a_row_for_every_digest_but_none_and_nothing_else() {
+fn there_is_a_row_for_every_digest_hmac_can_run_over_and_nothing_else() {
     let digests: Vec<String> = digest::algorithms()
+        .filter(|entry| {
+            let created = entry.create();
+            let block = TryDigest::byte_length(&created);
+            block >= 16
+                && TryDigest::digest_size(&created) <= block
+                && !entry.name().starts_with("HARAKA-")
+        })
         .map(|entry| entry.name().to_string())
-        .filter(|name| name != "NONE")
         .collect();
     let rows: Vec<String> = mac::algorithms()
         .filter_map(|entry| entry.name().strip_prefix("HMAC-"))

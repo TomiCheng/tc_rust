@@ -111,7 +111,7 @@ fn the_2012_agreements_are_found_by_their_names_and_oids() {
     assert_eq!(agreement.entry().name(), "ECGOST3410-2012-512");
 }
 
-// GOST R 34.11-94 is not in the default, and ECGOST3410 hashes with it
+// ECGOST3410 hashes with GOST R 34.11-94, which ecvko does not turn on
 #[cfg(feature = "gost3411")]
 #[test]
 fn the_2001_agreement_is_found_by_its_name_alias_and_oids() {

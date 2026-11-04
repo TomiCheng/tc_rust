@@ -6,7 +6,7 @@ use crate::mac::MacEntry;
 use crate::mac::dyn_mac::Mapped;
 use crate::need::Need;
 
-// tc_macs refuses a shorter block, which leaves out only NONE, which is not a hash
+// tc_macs refuses a shorter block, and a digest longer than its block
 const MIN_BLOCK_BYTES: usize = 16;
 
 // As in Bouncy Castle: HMAC-SHA256, HMAC/SHA256 and HMACSHA256, over any name of the digest
@@ -151,10 +151,18 @@ const OIDS: &[(&str, &[NamedOid])] = &[
     ),
 ];
 
-// One row per digest enabled, as Bouncy Castle builds an HMAC over whatever digest the name gives
+// One row per digest enabled that HMAC can run over, as Bouncy Castle builds an HMAC over whatever
+// digest the name gives. That leaves out NONE, which is not a hash, the sponges with a short rate
+// and Haraka, which takes an input of one exact length, where HMAC gives it a block and more
 pub(super) fn rows() -> impl Iterator<Item = MacEntry> {
     digest::algorithms()
-        .filter(|digest| TryDigest::byte_length(&digest.create()) >= MIN_BLOCK_BYTES)
+        .filter(|digest| {
+            let created = digest.create();
+            let block = TryDigest::byte_length(&created);
+            block >= MIN_BLOCK_BYTES
+                && TryDigest::digest_size(&created) <= block
+                && !digest.name().starts_with("HARAKA-")
+        })
         .map(row)
 }
 

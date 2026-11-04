@@ -11,13 +11,13 @@ and `agreement` calculates the secret, after Bouncy Castle's `GeneratorUtilities
 
 ## Enabling DH
 
-DH comes with the `dh` feature, which is in the default features. The groups come
+DH comes with the `dh` feature. The groups come
 from `tc_dh_key`, the crate that holds the DH keys of `tc_algo`, so add it as well,
 at the version `tc_algo` uses.
 
 ```toml
 [dependencies]
-tc_algo = "0.1"
+tc_algo = { version = "0.1", features = ["dh"] }
 tc_dh_key = "0.1"
 ```
 
@@ -226,9 +226,9 @@ costs nothing.
 
 ## Names
 
-| Name | Aliases | OID | Feature | Default |
-|---|---|---|---|:---:|
-| DH | DIFFIEHELLMAN | | `dh` | ✓ |
+| Name | Aliases | OID | Feature |
+|---|---|---|---|
+| DH | DIFFIEHELLMAN | | `dh` |
 
 Names match without regard to ASCII case. DH has no OID, in either factory, as in
 Bouncy Castle: the OIDs of DH, such as PKCS #3's dhKeyAgreement, name a key, not an

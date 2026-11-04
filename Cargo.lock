@@ -837,6 +837,7 @@ dependencies = [
  "tc_agreement",
  "tc_aria",
  "tc_ascon_aead",
+ "tc_ascon_hash",
  "tc_asn1",
  "tc_asym_cipher",
  "tc_asym_encoding",
@@ -894,6 +895,7 @@ dependencies = [
  "tc_seed",
  "tc_serpent",
  "tc_sha",
+ "tc_skein",
  "tc_skein_mac",
  "tc_sm2",
  "tc_sm3",
@@ -925,6 +927,16 @@ dependencies = [
  "tc_aead_cipher",
  "tc_block_cipher",
  "tc_constant_time",
+ "tc_zeroize",
+]
+
+[[package]]
+name = "tc_ascon_hash"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ac894568f681b006b82c130069d119620823abc5c95a628c5892b4431a610a76"
+dependencies = [
+ "tc_digest",
  "tc_zeroize",
 ]
 
@@ -1887,6 +1899,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "350158e9e7be62563e0b0ac5e15efbca861485c6e382dec47710a059ca97200e"
 dependencies = [
  "tc_digest",
+ "tc_runtime",
  "tc_zeroize",
 ]
 

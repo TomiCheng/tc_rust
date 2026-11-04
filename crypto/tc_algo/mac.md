@@ -5,17 +5,12 @@ creates is an `AnyMac`.
 
 ## Enabling MACs
 
-A MAC appears when every feature in its row of [the table](#algorithms) is on. The default
-features include `hmac`, `cmac`, `cbc-mac`, `cfb-mac` and `siphash`, but not the weak digests
-and ciphers, so they give HMAC-SHA-256 and AESCMAC but not HMAC-MD5 or DESMAC.
+Nothing is on by default. A MAC appears when every feature in its row of
+[the table](#algorithms) is on, so HMAC-SHA-256 needs both `hmac` and `sha256`.
 
 ```toml
 [dependencies]
-# HMAC-MD5 and DESMAC for compatibility with old data
-tc_algo = { version = "0.1", features = ["md5", "des"] }
-
-# Or keep only what you use
-tc_algo = { version = "0.1", default-features = false, features = ["hmac", "sha256"] }
+tc_algo = { version = "0.1", features = ["hmac", "sha256"] }
 ```
 
 ## Usage
@@ -192,6 +187,19 @@ A failed `init` leaves the MAC uninitialized, so it never goes on under an earli
 | HMAC-SM3 | — | 32 | — | `hmac`, `sm3` |
 | HMAC-TIGER | `1.3.6.1.5.5.8.1.3` | 24 | — | `hmac`, `tiger` |
 | HMAC-WHIRLPOOL | — | 64 | — | `hmac`, `whirlpool` |
+| HMAC-SKEIN-256-128 | — | 16 | — | `hmac`, `skein-256-128` |
+| HMAC-SKEIN-256-160 | — | 20 | — | `hmac`, `skein-256-160` |
+| HMAC-SKEIN-256-224 | — | 28 | — | `hmac`, `skein-256-224` |
+| HMAC-SKEIN-256-256 | — | 32 | — | `hmac`, `skein-256-256` |
+| HMAC-SKEIN-512-128 | — | 16 | — | `hmac`, `skein-512-128` |
+| HMAC-SKEIN-512-160 | — | 20 | — | `hmac`, `skein-512-160` |
+| HMAC-SKEIN-512-224 | — | 28 | — | `hmac`, `skein-512-224` |
+| HMAC-SKEIN-512-256 | — | 32 | — | `hmac`, `skein-512-256` |
+| HMAC-SKEIN-512-384 | — | 48 | — | `hmac`, `skein-512-384` |
+| HMAC-SKEIN-512-512 | — | 64 | — | `hmac`, `skein-512-512` |
+| HMAC-SKEIN-1024-384 | — | 48 | — | `hmac`, `skein-1024-384` |
+| HMAC-SKEIN-1024-512 | — | 64 | — | `hmac`, `skein-1024-512` |
+| HMAC-SKEIN-1024-1024 | — | 128 | — | `hmac`, `skein-1024-1024` |
 | AESCMAC | — | 16 | — | `cmac`, `aes` |
 | AES-GMAC | — | 16 | 1 or more, required | `gmac`, `aes` |
 | DESMAC | — | 4 | 8, optional | `cbc-mac`, `des` |
@@ -224,19 +232,19 @@ A failed `init` leaves the MAC uninitialized, so it never goes on under an earli
 | DSTU7624MAC-128 | `1.2.804.2.1.1.1.1.3.4.1` | 16 | — | `dstu7624-mac` |
 | DSTU7624MAC-256 | `1.2.804.2.1.1.1.1.3.4.2` | 32 | — | `dstu7624-mac` |
 | DSTU7624MAC-512 | `1.2.804.2.1.1.1.1.3.4.3` | 64 | — | `dstu7624-mac` |
-| Skein-MAC-256-128 | — | 16 | — | `skein-mac` |
-| Skein-MAC-256-160 | — | 20 | — | `skein-mac` |
-| Skein-MAC-256-224 | — | 28 | — | `skein-mac` |
-| Skein-MAC-256-256 | — | 32 | — | `skein-mac` |
-| Skein-MAC-512-128 | — | 16 | — | `skein-mac` |
-| Skein-MAC-512-160 | — | 20 | — | `skein-mac` |
-| Skein-MAC-512-224 | — | 28 | — | `skein-mac` |
-| Skein-MAC-512-256 | — | 32 | — | `skein-mac` |
-| Skein-MAC-512-384 | — | 48 | — | `skein-mac` |
-| Skein-MAC-512-512 | — | 64 | — | `skein-mac` |
-| Skein-MAC-1024-384 | — | 48 | — | `skein-mac` |
-| Skein-MAC-1024-512 | — | 64 | — | `skein-mac` |
-| Skein-MAC-1024-1024 | — | 128 | — | `skein-mac` |
+| SKEIN-MAC-256-128 | — | 16 | — | `skein-mac` |
+| SKEIN-MAC-256-160 | — | 20 | — | `skein-mac` |
+| SKEIN-MAC-256-224 | — | 28 | — | `skein-mac` |
+| SKEIN-MAC-256-256 | — | 32 | — | `skein-mac` |
+| SKEIN-MAC-512-128 | — | 16 | — | `skein-mac` |
+| SKEIN-MAC-512-160 | — | 20 | — | `skein-mac` |
+| SKEIN-MAC-512-224 | — | 28 | — | `skein-mac` |
+| SKEIN-MAC-512-256 | — | 32 | — | `skein-mac` |
+| SKEIN-MAC-512-384 | — | 48 | — | `skein-mac` |
+| SKEIN-MAC-512-512 | — | 64 | — | `skein-mac` |
+| SKEIN-MAC-1024-384 | — | 48 | — | `skein-mac` |
+| SKEIN-MAC-1024-512 | — | 64 | — | `skein-mac` |
+| SKEIN-MAC-1024-1024 | — | 128 | — | `skein-mac` |
 
 ### Names
 

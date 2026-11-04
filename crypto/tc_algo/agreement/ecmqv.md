@@ -17,13 +17,12 @@ In `tc_algo` this takes two factories: `generate::key_pair` makes the key pairs 
 
 ## Enabling ECMQV
 
-ECMQV comes with the `ecmqv` feature, which is in the default features. It enables
-`ec`, the EC keys and their generator on the prime curves. `ec-f2m` adds the binary
-curves and `ec-small-curves` the weak ones, both opt-in.
+ECMQV comes with the `ecmqv` feature. It enables `ec`, the EC keys and their generator on the
+prime curves. `ec-f2m` adds the binary curves and `ec-small-curves` the weak ones.
 
 ```toml
 [dependencies]
-tc_algo = "0.1"
+tc_algo = { version = "0.1", features = ["ecmqv"] }
 ```
 
 ## Usage
@@ -183,10 +182,10 @@ feature of each in [ecdh.md](ecdh.md#curves). For a new system, take P-256 or la
 
 ## Names
 
-| Factory | Name | Aliases | OID | Feature | Default |
-|---|---|---|---|---|:---:|
-| `agreement` | ECMQV | | | `ecmqv` | ✓ |
-| `generate::key_pair` | EC | ECDH, ECIES, ECDHC, ECMQV | 15 of the ECDH and ECMQV schemes with a KDF | `ec` | ✓ |
+| Factory | Name | Aliases | OID | Feature |
+|---|---|---|---|---|
+| `agreement` | ECMQV | | | `ecmqv` |
+| `generate::key_pair` | EC | ECDH, ECIES, ECDHC, ECMQV | 15 of the ECDH and ECMQV schemes with a KDF | `ec` |
 
 Names match without regard to ASCII case, and a dotted OID works wherever a name does.
 The agreement has no OID, as in Bouncy Castle: the OIDs of MQV, such as

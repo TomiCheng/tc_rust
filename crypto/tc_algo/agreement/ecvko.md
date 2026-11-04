@@ -19,14 +19,12 @@ In `tc_algo` this takes two factories: `generate::key_pair` makes the key pairs 
 
 ## Enabling VKO
 
-The 2012 agreements come with the `ecvko` feature, which is in the default features.
-It enables `ec-gost`, the GOST curves, and both GOST R 34.11-2012 hashes. ECGOST3410
-needs the `gost3411` feature as well, which is not in the default, as GOST R 34.11-94
-is kept for old data only.
+The 2012 agreements come with the `ecvko` feature. It enables `ec-gost`, the GOST curves, and
+both GOST R 34.11-2012 hashes. ECGOST3410 needs the `gost3411` feature as well.
 
 ```toml
 [dependencies]
-tc_algo = "0.1"
+tc_algo = { version = "0.1", features = ["ecvko"] }
 
 # Or with ECGOST3410 of 2001 too
 tc_algo = { version = "0.1", features = ["gost3411"] }
@@ -181,11 +179,11 @@ protocols name GOST curves.
 
 ## Names
 
-| Name | Aliases | OIDs | Secret | Feature | Default |
-|---|---|---|---:|---|:---:|
-| ECGOST3410-2012-256 | | 1.2.643.7.1.1.6.1 (id-tc26-agreement-gost-3410-12-256), 1.2.643.7.1.1.1.1 (id-tc26-gost3410-12-256) | 32 bytes | `ecvko` | ✓ |
-| ECGOST3410-2012-512 | | 1.2.643.7.1.1.6.2 (id-tc26-agreement-gost-3410-12-512), 1.2.643.7.1.1.1.2 (id-tc26-gost3410-12-512) | 64 bytes | `ecvko` | ✓ |
-| ECGOST3410 | GOST-3410-2001 | 1.2.643.2.2.19 (id-GostR3410-2001), 1.2.643.2.2.96 (id-GostR3410-2001-CryptoPro-ESDH) | 32 bytes | `ecvko` and `gost3411` | |
+| Name | Aliases | OIDs | Secret | Feature |
+|---|---|---|---:|---|
+| ECGOST3410-2012-256 | | 1.2.643.7.1.1.6.1 (id-tc26-agreement-gost-3410-12-256), 1.2.643.7.1.1.1.1 (id-tc26-gost3410-12-256) | 32 bytes | `ecvko` |
+| ECGOST3410-2012-512 | | 1.2.643.7.1.1.6.2 (id-tc26-agreement-gost-3410-12-512), 1.2.643.7.1.1.1.2 (id-tc26-gost3410-12-512) | 64 bytes | `ecvko` |
+| ECGOST3410 | GOST-3410-2001 | 1.2.643.2.2.19 (id-GostR3410-2001), 1.2.643.2.2.96 (id-GostR3410-2001-CryptoPro-ESDH) | 32 bytes | `ecvko` and `gost3411` |
 
 Names match without regard to ASCII case, and a dotted OID works wherever a name does.
 As in Bouncy Castle, each agreement goes by the OID of its agreement and by that of its

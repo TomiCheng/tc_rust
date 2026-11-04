@@ -3,8 +3,8 @@ use core::fmt;
 
 use tc_digest::TryDigest;
 
+use super::DigestEntry;
 use super::dyn_digest::DynDigest;
-use super::{Algorithm, DigestEntry};
 
 pub struct AnyDigest {
     pub(super) entry: &'static DigestEntry,
@@ -12,10 +12,6 @@ pub struct AnyDigest {
 }
 
 impl AnyDigest {
-    pub fn algorithm(&self) -> Algorithm {
-        self.entry.algorithm()
-    }
-
     pub fn entry(&self) -> &'static DigestEntry {
         self.entry
     }
@@ -41,15 +37,11 @@ impl Clone for AnyDigest {
     }
 }
 
-// Shows only the algorithm, never the digest's internal state
+// Shows only the digest's name, never its internal state
 impl fmt::Debug for AnyDigest {
-    #[allow(
-        unreachable_code,
-        reason = "Algorithm has no values when every digest feature is off"
-    )]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("AnyDigest")
-            .field("algorithm", &self.entry.algorithm())
+            .field("name", &self.entry.name())
             .finish_non_exhaustive()
     }
 }

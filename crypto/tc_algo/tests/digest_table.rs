@@ -1,6 +1,8 @@
+#![allow(deprecated, reason = "the legacy Ascon digests have rows too")]
+
 use std::collections::HashSet;
 
-use tc_algo::digest::{self, Algorithm};
+use tc_algo::digest;
 #[allow(unused_imports, reason = "unused when every digest feature is off")]
 use tc_algo::digest::{Digest, TryDigest};
 
@@ -25,7 +27,6 @@ fn hash_with<D: Digest>(mut digest: D) -> Vec<u8> {
 }
 
 struct Case {
-    algorithm: Algorithm,
     name: &'static str,
     size: usize,
     expected: Vec<u8>,
@@ -37,9 +38,8 @@ fn cases() -> Vec<Case> {
     let mut cases = Vec::new();
     #[allow(unused_macros, reason = "unused when every digest feature is off")]
     macro_rules! case {
-        ($algorithm:ident, $name:literal, $size:literal, $digest:expr) => {
+        ($name:literal, $size:literal, $digest:expr) => {
             cases.push(Case {
-                algorithm: Algorithm::$algorithm,
                 name: $name,
                 size: $size,
                 expected: hash_with($digest),
@@ -47,242 +47,212 @@ fn cases() -> Vec<Case> {
         };
     }
     #[cfg(feature = "md2")]
-    case!(Md2, "MD2", 16, tc_md::Md2Digest::new());
+    case!("MD2", 16, tc_md::Md2Digest::new());
     #[cfg(feature = "md4")]
-    case!(Md4, "MD4", 16, tc_md::Md4Digest::new());
+    case!("MD4", 16, tc_md::Md4Digest::new());
     #[cfg(feature = "md5")]
-    case!(Md5, "MD5", 16, tc_md::Md5Digest::new());
+    case!("MD5", 16, tc_md::Md5Digest::new());
     #[cfg(feature = "sha1")]
-    case!(Sha1, "SHA-1", 20, tc_sha::Sha1Digest::new());
+    case!("SHA-1", 20, tc_sha::Sha1Digest::new());
     #[cfg(feature = "sha224")]
-    case!(Sha224, "SHA-224", 28, tc_sha::Sha224Digest::new());
+    case!("SHA-224", 28, tc_sha::Sha224Digest::new());
     #[cfg(feature = "sha256")]
-    case!(Sha256, "SHA-256", 32, tc_sha::Sha256Digest::new());
+    case!("SHA-256", 32, tc_sha::Sha256Digest::new());
     #[cfg(feature = "sha384")]
-    case!(Sha384, "SHA-384", 48, tc_sha::Sha384Digest::new());
+    case!("SHA-384", 48, tc_sha::Sha384Digest::new());
     #[cfg(feature = "sha512")]
-    case!(Sha512, "SHA-512", 64, tc_sha::Sha512Digest::new());
+    case!("SHA-512", 64, tc_sha::Sha512Digest::new());
     #[cfg(feature = "sha512-224")]
-    case!(
-        Sha512_224,
-        "SHA-512/224",
-        28,
-        tc_sha::Sha512tDigest::new(224)
-    );
+    case!("SHA-512/224", 28, tc_sha::Sha512tDigest::new(224));
     #[cfg(feature = "sha512-256")]
-    case!(
-        Sha512_256,
-        "SHA-512/256",
-        32,
-        tc_sha::Sha512tDigest::new(256)
-    );
+    case!("SHA-512/256", 32, tc_sha::Sha512tDigest::new(256));
     #[cfg(feature = "sha3-224")]
-    case!(Sha3_224, "SHA3-224", 28, tc_keccak::Sha3Digest::new(224));
+    case!("SHA3-224", 28, tc_keccak::Sha3Digest::new(224));
     #[cfg(feature = "sha3-256")]
-    case!(Sha3_256, "SHA3-256", 32, tc_keccak::Sha3Digest::new(256));
+    case!("SHA3-256", 32, tc_keccak::Sha3Digest::new(256));
     #[cfg(feature = "sha3-384")]
-    case!(Sha3_384, "SHA3-384", 48, tc_keccak::Sha3Digest::new(384));
+    case!("SHA3-384", 48, tc_keccak::Sha3Digest::new(384));
     #[cfg(feature = "sha3-512")]
-    case!(Sha3_512, "SHA3-512", 64, tc_keccak::Sha3Digest::new(512));
+    case!("SHA3-512", 64, tc_keccak::Sha3Digest::new(512));
     #[cfg(feature = "keccak-224")]
-    case!(
-        Keccak224,
-        "KECCAK-224",
-        28,
-        tc_keccak::KeccakDigest::new(224)
-    );
+    case!("KECCAK-224", 28, tc_keccak::KeccakDigest::new(224));
     #[cfg(feature = "keccak-256")]
-    case!(
-        Keccak256,
-        "KECCAK-256",
-        32,
-        tc_keccak::KeccakDigest::new(256)
-    );
+    case!("KECCAK-256", 32, tc_keccak::KeccakDigest::new(256));
     #[cfg(feature = "keccak-288")]
-    case!(
-        Keccak288,
-        "KECCAK-288",
-        36,
-        tc_keccak::KeccakDigest::new(288)
-    );
+    case!("KECCAK-288", 36, tc_keccak::KeccakDigest::new(288));
     #[cfg(feature = "keccak-384")]
-    case!(
-        Keccak384,
-        "KECCAK-384",
-        48,
-        tc_keccak::KeccakDigest::new(384)
-    );
+    case!("KECCAK-384", 48, tc_keccak::KeccakDigest::new(384));
     #[cfg(feature = "keccak-512")]
-    case!(
-        Keccak512,
-        "KECCAK-512",
-        64,
-        tc_keccak::KeccakDigest::new(512)
-    );
+    case!("KECCAK-512", 64, tc_keccak::KeccakDigest::new(512));
     #[cfg(feature = "shake128")]
-    case!(
-        Shake128,
-        "SHAKE128-256",
-        32,
-        tc_keccak::ShakeDigest::new(128)
-    );
+    case!("SHAKE128-256", 32, tc_keccak::ShakeDigest::new(128));
     #[cfg(feature = "shake256")]
-    case!(
-        Shake256,
-        "SHAKE256-512",
-        64,
-        tc_keccak::ShakeDigest::new(256)
-    );
+    case!("SHAKE256-512", 64, tc_keccak::ShakeDigest::new(256));
     #[cfg(feature = "blake2b-160")]
     case!(
-        Blake2b160,
         "BLAKE2B-160",
         20,
         tc_blake::Blake2bDigest::with_digest_size(160)
     );
     #[cfg(feature = "blake2b-256")]
     case!(
-        Blake2b256,
         "BLAKE2B-256",
         32,
         tc_blake::Blake2bDigest::with_digest_size(256)
     );
     #[cfg(feature = "blake2b-384")]
     case!(
-        Blake2b384,
         "BLAKE2B-384",
         48,
         tc_blake::Blake2bDigest::with_digest_size(384)
     );
     #[cfg(feature = "blake2b-512")]
     case!(
-        Blake2b512,
         "BLAKE2B-512",
         64,
         tc_blake::Blake2bDigest::with_digest_size(512)
     );
     #[cfg(feature = "blake2s-128")]
     case!(
-        Blake2s128,
         "BLAKE2S-128",
         16,
         tc_blake::Blake2sDigest::with_digest_size(128)
     );
     #[cfg(feature = "blake2s-160")]
     case!(
-        Blake2s160,
         "BLAKE2S-160",
         20,
         tc_blake::Blake2sDigest::with_digest_size(160)
     );
     #[cfg(feature = "blake2s-224")]
     case!(
-        Blake2s224,
         "BLAKE2S-224",
         28,
         tc_blake::Blake2sDigest::with_digest_size(224)
     );
     #[cfg(feature = "blake2s-256")]
     case!(
-        Blake2s256,
         "BLAKE2S-256",
         32,
         tc_blake::Blake2sDigest::with_digest_size(256)
     );
     #[cfg(feature = "blake3-256")]
     case!(
-        Blake3_256,
         "BLAKE3-256",
         32,
         tc_blake::Blake3Digest::with_digest_size(256)
     );
     #[cfg(feature = "dstu7564-256")]
-    case!(
-        Dstu7564_256,
-        "DSTU7564-256",
-        32,
-        tc_dstu7564::Dstu7564Digest::new(256)
-    );
+    case!("DSTU7564-256", 32, tc_dstu7564::Dstu7564Digest::new(256));
     #[cfg(feature = "dstu7564-384")]
-    case!(
-        Dstu7564_384,
-        "DSTU7564-384",
-        48,
-        tc_dstu7564::Dstu7564Digest::new(384)
-    );
+    case!("DSTU7564-384", 48, tc_dstu7564::Dstu7564Digest::new(384));
     #[cfg(feature = "dstu7564-512")]
-    case!(
-        Dstu7564_512,
-        "DSTU7564-512",
-        64,
-        tc_dstu7564::Dstu7564Digest::new(512)
-    );
+    case!("DSTU7564-512", 64, tc_dstu7564::Dstu7564Digest::new(512));
     #[cfg(feature = "gost3411")]
-    case!(Gost3411, "GOST3411", 32, tc_gost3411::Gost3411Digest::new());
+    case!("GOST3411", 32, tc_gost3411::Gost3411Digest::new());
     #[cfg(feature = "gost3411-2012-256")]
     case!(
-        Gost3411_2012_256,
         "GOST3411-2012-256",
         32,
         tc_gost3411::Gost3411_2012_256Digest::new()
     );
     #[cfg(feature = "gost3411-2012-512")]
     case!(
-        Gost3411_2012_512,
         "GOST3411-2012-512",
         64,
         tc_gost3411::Gost3411_2012_512Digest::new()
     );
     #[cfg(feature = "ripemd128")]
-    case!(
-        Ripemd128,
-        "RIPEMD128",
-        16,
-        tc_ripemd::RipeMd128Digest::new()
-    );
+    case!("RIPEMD128", 16, tc_ripemd::RipeMd128Digest::new());
     #[cfg(feature = "ripemd160")]
-    case!(
-        Ripemd160,
-        "RIPEMD160",
-        20,
-        tc_ripemd::RipeMd160Digest::new()
-    );
+    case!("RIPEMD160", 20, tc_ripemd::RipeMd160Digest::new());
     #[cfg(feature = "ripemd256")]
-    case!(
-        Ripemd256,
-        "RIPEMD256",
-        32,
-        tc_ripemd::RipeMd256Digest::new()
-    );
+    case!("RIPEMD256", 32, tc_ripemd::RipeMd256Digest::new());
     #[cfg(feature = "ripemd320")]
-    case!(
-        Ripemd320,
-        "RIPEMD320",
-        40,
-        tc_ripemd::RipeMd320Digest::new()
-    );
+    case!("RIPEMD320", 40, tc_ripemd::RipeMd320Digest::new());
     #[cfg(feature = "sm3")]
-    case!(Sm3, "SM3", 32, tc_sm3::Sm3Digest::new());
+    case!("SM3", 32, tc_sm3::Sm3Digest::new());
     #[cfg(feature = "tiger")]
-    case!(Tiger, "TIGER", 24, tc_misc_digest::TigerDigest::new());
+    case!("TIGER", 24, tc_misc_digest::TigerDigest::new());
     #[cfg(feature = "whirlpool")]
-    case!(
-        Whirlpool,
-        "WHIRLPOOL",
-        64,
-        tc_misc_digest::WhirlpoolDigest::new()
-    );
+    case!("WHIRLPOOL", 64, tc_misc_digest::WhirlpoolDigest::new());
     // NONE's size is the number of bytes taken so far, so a fresh one reports 0
+    #[cfg(feature = "skein-256-128")]
+    case!("SKEIN-256-128", 16, tc_skein::SkeinDigest::new(256, 128));
+    #[cfg(feature = "skein-256-160")]
+    case!("SKEIN-256-160", 20, tc_skein::SkeinDigest::new(256, 160));
+    #[cfg(feature = "skein-256-224")]
+    case!("SKEIN-256-224", 28, tc_skein::SkeinDigest::new(256, 224));
+    #[cfg(feature = "skein-256-256")]
+    case!("SKEIN-256-256", 32, tc_skein::SkeinDigest::new(256, 256));
+    #[cfg(feature = "skein-512-128")]
+    case!("SKEIN-512-128", 16, tc_skein::SkeinDigest::new(512, 128));
+    #[cfg(feature = "skein-512-160")]
+    case!("SKEIN-512-160", 20, tc_skein::SkeinDigest::new(512, 160));
+    #[cfg(feature = "skein-512-224")]
+    case!("SKEIN-512-224", 28, tc_skein::SkeinDigest::new(512, 224));
+    #[cfg(feature = "skein-512-256")]
+    case!("SKEIN-512-256", 32, tc_skein::SkeinDigest::new(512, 256));
+    #[cfg(feature = "skein-512-384")]
+    case!("SKEIN-512-384", 48, tc_skein::SkeinDigest::new(512, 384));
+    #[cfg(feature = "skein-512-512")]
+    case!("SKEIN-512-512", 64, tc_skein::SkeinDigest::new(512, 512));
+    #[cfg(feature = "skein-1024-384")]
+    case!("SKEIN-1024-384", 48, tc_skein::SkeinDigest::new(1024, 384));
+    #[cfg(feature = "skein-1024-512")]
+    case!("SKEIN-1024-512", 64, tc_skein::SkeinDigest::new(1024, 512));
+    #[cfg(feature = "skein-1024-1024")]
+    case!(
+        "SKEIN-1024-1024",
+        128,
+        tc_skein::SkeinDigest::new(1024, 1024)
+    );
+    #[cfg(feature = "esch-256")]
+    case!(
+        "ESCH-256",
+        32,
+        tc_misc_digest::SparkleDigest::new(tc_misc_digest::SparkleParameters::Esch256)
+    );
+    #[cfg(feature = "esch-384")]
+    case!(
+        "ESCH-384",
+        48,
+        tc_misc_digest::SparkleDigest::new(tc_misc_digest::SparkleParameters::Esch384)
+    );
+    #[cfg(feature = "xoodyak")]
+    case!("XOODYAK", 32, tc_misc_digest::XoodyakDigest::new());
+    #[cfg(feature = "photon-beetle")]
+    case!(
+        "PHOTON-BEETLE",
+        32,
+        tc_misc_digest::PhotonBeetleDigest::new()
+    );
+    #[cfg(feature = "ascon-hash256")]
+    case!("ASCON-HASH256", 32, tc_ascon_hash::AsconHash256::new());
+    #[cfg(feature = "ascon-hash-legacy")]
+    case!(
+        "ASCON-HASH",
+        32,
+        tc_ascon_hash::AsconDigest::new(tc_ascon_hash::AsconParameters::AsconHash)
+    );
+    #[cfg(feature = "ascon-hash-legacy")]
+    case!(
+        "ASCON-HASHA",
+        32,
+        tc_ascon_hash::AsconDigest::new(tc_ascon_hash::AsconParameters::AsconHashA)
+    );
+    #[cfg(feature = "isap")]
+    case!("ISAP", 32, tc_ascon_hash::IsapDigest::new());
     #[cfg(feature = "null-digest")]
-    case!(Null, "NONE", 0, tc_digest::util::NullDigest::new());
+    case!("NONE", 0, tc_digest::util::NullDigest::new());
     cases
 }
 
 #[test]
 fn every_enabled_digest_has_its_canonical_name_size_and_output() {
     for case in cases() {
-        assert_eq!(case.algorithm.entry().name(), case.name);
-        let mut digest = digest::get(case.algorithm);
+        let mut digest = digest::get_by_name(case.name).unwrap();
+        assert_eq!(digest.entry().name(), case.name);
         assert_eq!(digest.digest_size(), case.size, "{}", case.name);
         digest.update(&INPUT);
         assert_eq!(digest.finalize(), case.expected, "{}", case.name);
@@ -291,12 +261,12 @@ fn every_enabled_digest_has_its_canonical_name_size_and_output() {
 
 #[test]
 fn the_table_lists_every_enabled_digest_exactly_once() {
-    let listed: Vec<Algorithm> = digest::algorithms()
-        .map(|entry| entry.algorithm())
-        .collect();
-    let unique: HashSet<Algorithm> = listed.iter().copied().collect();
+    let listed: Vec<&str> = digest::algorithms().map(|entry| entry.name()).collect();
+    let unique: HashSet<&str> = listed.iter().copied().collect();
     assert_eq!(listed.len(), unique.len());
-    assert_eq!(listed.len(), cases().len());
+    // Haraka takes an input of its own, so it has its tests elsewhere
+    let haraka = listed.iter().filter(|name| name.starts_with("HARAKA-"));
+    assert_eq!(listed.len() - haraka.count(), cases().len());
 }
 
 #[test]
@@ -319,10 +289,10 @@ fn no_two_entries_share_a_name_or_an_oid() {
 fn every_name_and_oid_of_an_entry_finds_that_entry() {
     for entry in digest::algorithms() {
         let by_name = digest::get_by_name(entry.name()).unwrap();
-        assert_eq!(by_name.algorithm(), entry.algorithm());
+        assert_eq!(by_name.entry(), entry);
         for oid in entry.oids() {
             let by_oid = digest::get_by_oid(&oid.oid()).unwrap();
-            assert_eq!(by_oid.algorithm(), entry.algorithm(), "{}", oid.dotted());
+            assert_eq!(by_oid.entry(), entry, "{}", oid.dotted());
         }
     }
 }
@@ -331,8 +301,19 @@ fn every_name_and_oid_of_an_entry_finds_that_entry() {
 fn only_the_digests_bouncy_castle_gives_no_oid_lack_one() {
     for entry in digest::algorithms() {
         let name = entry.name();
-        let without_oid = name.starts_with("KECCAK-")
-            || ["RIPEMD320", "TIGER", "WHIRLPOOL", "NONE"].contains(&name);
+        let without_oid = ["KECCAK-", "SKEIN-", "ESCH-", "ASCON-", "HARAKA-"]
+            .iter()
+            .any(|prefix| name.starts_with(prefix))
+            || [
+                "RIPEMD320",
+                "TIGER",
+                "WHIRLPOOL",
+                "NONE",
+                "XOODYAK",
+                "PHOTON-BEETLE",
+                "ISAP",
+            ]
+            .contains(&name);
         assert_eq!(entry.oid().is_none(), without_oid, "{name}");
     }
 }
@@ -347,7 +328,7 @@ fn the_ripemd_aliases_with_a_hyphen_find_the_same_digests() {
     ] {
         if let Ok(by_canonical) = digest::get_by_name(canonical) {
             let by_alias = digest::get_by_name(alias).unwrap();
-            assert_eq!(by_alias.algorithm(), by_canonical.algorithm(), "{alias}");
+            assert_eq!(by_alias.entry(), by_canonical.entry(), "{alias}");
         }
     }
 }
@@ -355,10 +336,10 @@ fn the_ripemd_aliases_with_a_hyphen_find_the_same_digests() {
 #[cfg(feature = "null-digest")]
 #[test]
 fn none_passes_the_message_through_unchanged() {
-    assert_eq!(digest::calculate(Algorithm::Null, b"abc"), b"abc");
+    assert_eq!(digest::calculate_by_name("NONE", b"abc").unwrap(), b"abc");
     let mut output = [0; 3];
     assert_eq!(
-        digest::calculate_into(Algorithm::Null, b"abc", &mut output),
+        digest::calculate_by_name_into("NONE", b"abc", &mut output).unwrap(),
         3
     );
     assert_eq!(&output, b"abc");
@@ -368,5 +349,5 @@ fn none_passes_the_message_through_unchanged() {
 #[test]
 #[should_panic(expected = "output is shorter than the digest")]
 fn calculate_into_with_none_panics_when_the_output_is_shorter_than_the_message() {
-    digest::calculate_into(Algorithm::Null, b"abc", &mut [0; 2]);
+    digest::calculate_by_name_into("NONE", b"abc", &mut [0; 2]).unwrap();
 }

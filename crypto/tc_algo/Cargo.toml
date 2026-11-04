@@ -8,92 +8,16 @@ license.workspace = true
 repository.workspace = true
 
 [features]
-# Every algorithm is in the default except the weak ones and those kept only for legacy use. For
-# digests those are MD2, MD4, MD5, SHA-1, RIPEMD-128, RIPEMD-256 (no stronger than RIPEMD-128,
-# only longer) and GOST R 34.11-94; for EC keys, the curves below 112 bits (ec-small-curves) and
-# the binary curves (ec-f2m), which NIST SP 800-186 keeps for legacy use only; for other keys,
-# DSA, GOST R 34.10-94 and ElGamal; for ciphers, RC4, VMPC, RSA with ISO 9796-1, a withdrawn
-# standard, Tnepres, Serpent as an old Bouncy Castle had it, and the block ciphers of 64-bit
-# blocks or short keys: DES, DESede, Blowfish, CAST5, IDEA, GOST 28147-89, RC2, RC5-32,
-# Skipjack, TEA and XTEA. NONE stays out too: it is not a hash, so a stray "NONE" must not
-# silently stop hashing. So do Naccache-Stern, too niche to pull in for everyone, HC-128 and
-# HC-256, kept for Bouncy Castle's sake, whose lookups into secret tables are not constant time,
-# and SM2 encryption, whose names are this crate's own. The MACs over DES and GOST 28147-89 and
-# VMPC-MAC stay out as the ciphers they rest on do, and those missing from Bouncy Castle's
-# MacUtilities because their names are this crate's own. The family features still include all
-# of them.
-default = [
-    "hmac",
-    "cmac",
-    "cbc-mac",
-    "cfb-mac",
-    "siphash",
-    "sha224",
-    "sha256",
-    "sha384",
-    "sha512",
-    "sha512-224",
-    "sha512-256",
-    "sha3-224",
-    "sha3-256",
-    "sha3-384",
-    "sha3-512",
-    "keccak-224",
-    "keccak-256",
-    "keccak-288",
-    "keccak-384",
-    "keccak-512",
-    "shake128",
-    "shake256",
-    "blake2b-160",
-    "blake2b-256",
-    "blake2b-384",
-    "blake2b-512",
-    "blake2s-128",
-    "blake2s-160",
-    "blake2s-224",
-    "blake2s-256",
-    "blake3-256",
-    "dstu7564-256",
-    "dstu7564-384",
-    "dstu7564-512",
-    "gost3411-2012-256",
-    "gost3411-2012-512",
-    "ripemd160",
-    "ripemd320",
-    "sm3",
-    "tiger",
-    "whirlpool",
-    "aes",
-    "aria",
-    "camellia",
-    "cast6",
-    "noekeon",
-    "rc5-64",
-    "rc6",
-    "rijndael",
-    "seed",
-    "serpent",
-    "sm4",
-    "threefish",
-    "twofish",
-    "chacha",
-    "salsa20",
-    "chacha20-poly1305",
-    "xchacha20-poly1305",
-    "rsa",
-    "ec",
-    "ecdh",
-    "ecmqv",
-    "ec-gost",
-    "ecvko",
-    "x25519",
-    "x448",
-    "ed25519",
-    "ed448",
-    "dh",
-    "ml-kem",
-]
+# Nothing is on by default: a caller names the algorithms it uses, one by one or through a
+# family feature, so that a weak one never arrives unasked and an unused one costs nothing.
+default = []
+
+# Func
+tls12 = []
+tls13 = []
+openpgp = []
+
+# Digest
 md = ["md2", "md4", "md5"]
 md2 = ["dep:tc_md"]
 md4 = ["dep:tc_md"]
@@ -150,8 +74,54 @@ ripemd320 = ["dep:tc_ripemd"]
 sm3 = ["dep:tc_sm3"]
 tiger = ["dep:tc_misc_digest", "tc_misc_digest/tiger"]
 whirlpool = ["dep:tc_misc_digest", "tc_misc_digest/whirlpool"]
+# Skein 1.3, in the sizes of Bouncy Castle's precomputed states
+skein = [
+    "skein-256-128",
+    "skein-256-160",
+    "skein-256-224",
+    "skein-256-256",
+    "skein-512-128",
+    "skein-512-160",
+    "skein-512-224",
+    "skein-512-256",
+    "skein-512-384",
+    "skein-512-512",
+    "skein-1024-384",
+    "skein-1024-512",
+    "skein-1024-1024",
+]
+skein-256-128 = ["dep:tc_skein"]
+skein-256-160 = ["dep:tc_skein"]
+skein-256-224 = ["dep:tc_skein"]
+skein-256-256 = ["dep:tc_skein"]
+skein-512-128 = ["dep:tc_skein"]
+skein-512-160 = ["dep:tc_skein"]
+skein-512-224 = ["dep:tc_skein"]
+skein-512-256 = ["dep:tc_skein"]
+skein-512-384 = ["dep:tc_skein"]
+skein-512-512 = ["dep:tc_skein"]
+skein-1024-384 = ["dep:tc_skein"]
+skein-1024-512 = ["dep:tc_skein"]
+skein-1024-1024 = ["dep:tc_skein"]
+# ESCH, the hash of the SPARKLE permutations
+esch = ["esch-256", "esch-384"]
+esch-256 = ["dep:tc_misc_digest", "tc_misc_digest/sparkle"]
+esch-384 = ["dep:tc_misc_digest", "tc_misc_digest/sparkle"]
+# Xoodyak Hash on the Xoodoo permutation
+xoodyak = ["dep:tc_misc_digest", "tc_misc_digest/xoodyak"]
+# PHOTON-Beetle-Hash
+photon-beetle = ["dep:tc_misc_digest", "tc_misc_digest/photon-beetle"]
+# Ascon-Hash256 of NIST SP 800-232, and the Ascon-Hash and Ascon-HashA from before it
+ascon-hash256 = ["dep:tc_ascon_hash"]
+ascon-hash-legacy = ["dep:tc_ascon_hash", "tc_ascon_hash/legacy"]
+# ISAP Hash
+isap = ["dep:tc_ascon_hash", "tc_ascon_hash/legacy"]
+# Haraka-256 and Haraka-512, which take an input of exactly 32 or 64 bytes
+haraka = ["dep:tc_misc_digest", "tc_misc_digest/haraka"]
 # Bouncy Castle's NONE: passes the message through unchanged, for signers that sign it as is
 null-digest = ["tc_digest/alloc"]
+
+# Mac
 # HMAC over every digest enabled, whose feature decides whether its row is there
 hmac = ["tc_macs/hmac", "tc_macs/alloc"]
 # CMAC, CBC-MAC and CFB-MAC over every block cipher of Bouncy Castle's MacUtilities that is enabled,
@@ -178,13 +148,14 @@ dstu7564-mac = ["dep:tc_dstu_macs"]
 dstu7624-mac = ["dep:tc_dstu_macs"]
 # Skein-MAC, in the sizes of Bouncy Castle's precomputed states
 skein-mac = ["dep:tc_skein_mac"]
+
+# Block cipher
 # AES: its key generator and its ciphers in every mode the table pairs it with
 aes = ["dep:tc_aes"]
 # DES: its ciphers in every mode the table pairs it with
 des = ["dep:tc_des"]
 # The other block ciphers of Bouncy Castle, each with its ciphers in every mode the table pairs
-# it with. Those of 64-bit blocks, open to birthday attacks after a few gigabytes under one key,
-# and those of short keys are not in the default
+# it with. Those of 64-bit blocks are open to birthday attacks after a few gigabytes under one key
 aria = ["dep:tc_aria"]
 blowfish = ["dep:tc_blowfish"]
 camellia = ["dep:tc_camellia"]
@@ -213,31 +184,45 @@ threefish = ["dep:tc_threefish"]
 tnepres = ["dep:tc_serpent"]
 twofish = ["dep:tc_twofish"]
 xtea = ["dep:tc_misc_block_cipher", "tc_misc_block_cipher/tea"]
+
+# Stream cipher
 # ChaCha: Bernstein's original, ChaCha7539 (RFC 8439) and XChaCha20
 chacha = ["dep:tc_chacha"]
 # Salsa20
 salsa20 = ["dep:tc_salsa20"]
+# RC4, which Bouncy Castle calls ARC4. Broken
+rc4 = ["dep:tc_rc4_family"]
+# VMPC and VMPC-KSA3: built like RC4, with a known distinguisher
+vmpc = ["dep:tc_rc4_family"]
+# HC-128 and HC-256: their lookups into secret tables are not constant time
+hc = ["dep:tc_hc"]
+
+# AEAD cipher
 # ChaCha20-Poly1305 (RFC 8439) and XChaCha20-Poly1305, AEAD ciphers of their own
 chacha20-poly1305 = ["dep:tc_chacha_aead"]
 xchacha20-poly1305 = ["dep:tc_chacha_aead"]
 # The AEAD ciphers Bouncy Castle has engines for but no names in its factory, so the names are
-# this crate's own and they are not in the default: Ascon-AEAD128 (NIST SP 800-232), the Ascon
-# v1.2 it replaced (Ascon-128, Ascon-128a and Ascon-80pq), Grain-128AEAD and the four Schwaemm of
-# Sparkle
+# this crate's own: Ascon-AEAD128 (NIST SP 800-232), the Ascon v1.2 it replaced (Ascon-128,
+# Ascon-128a and Ascon-80pq), Grain-128AEAD and the four Schwaemm of Sparkle
 ascon-aead128 = ["dep:tc_ascon_aead"]
 ascon-legacy = ["dep:tc_ascon_aead"]
 grain128-aead = ["dep:tc_grain128_aead", "tc_grain128_aead/alloc"]
 sparkle = ["dep:tc_sparkle_aead"]
-# RC4, which Bouncy Castle calls ARC4. Broken, so not in the default
-rc4 = ["dep:tc_rc4_family"]
-# VMPC and VMPC-KSA3: built like RC4, with a known distinguisher, so not in the default
-vmpc = ["dep:tc_rc4_family"]
-# HC-128 and HC-256: their lookups into secret tables are not constant time, so not in the default
-hc = ["dep:tc_hc"]
+
+# Asymmetric cipher
 # RSA: its keys, its key pair generator and its ciphers with each padding the table pairs it with
 rsa = ["dep:tc_rsa", "dep:tc_asym_cipher", "dep:tc_asym_encoding", "dep:tc_sha"]
 # RSA with ISO 9796-1 padding: the standard is withdrawn, and the encoding is not constant time
 rsa-iso9796 = ["rsa", "dep:tc_asym_iso9796"]
+# SM2 encryption (GM/T 0003) on sm2p256v1. Bouncy Castle's factory has no name for it, so the
+# names are this crate's own
+sm2 = ["ec", "dep:tc_sm2", "dep:tc_asym_cipher"]
+# ElGamal keys and ciphers, kept for old OpenPGP data
+elgamal = ["dep:tc_elgamal", "dep:tc_asym_cipher", "dep:tc_asym_encoding", "dep:tc_sha"]
+# Naccache-Stern keys and cipher: an unstandardized homomorphic scheme
+naccache-stern = ["dep:tc_naccache_stern", "dep:tc_asym_cipher"]
+
+# Key
 # EC keys on the prime curves secp224k1 to secp521r1 and sm2p256v1, and their generator
 ec = [
     "dep:tc_ec_key",
@@ -246,20 +231,8 @@ ec = [
     "dep:tc_bigint",
     "dep:tc_asym_cipher",
 ]
-# ECDH and ECDHC, the agreements of IEEE P1363 on the EC keys
-ecdh = ["ec", "dep:tc_ecdh_v2"]
-# ECMQV of SEC 1 on the EC keys
-ecmqv = ["ec", "dep:tc_ecmqv"]
 # The GOST R 34.10 curves of CryptoPro (RFC 4357) and TC26 (RFC 7836)
 ec-gost = ["ec", "dep:tc_fp_curve"]
-# GOST VKO (RFC 7836) on the GOST curves: the 2012 agreements, and ECGOST3410 of 2001 with
-# gost3411, which is not in the default
-ecvko = [
-    "ec-gost",
-    "dep:tc_ecvko",
-    "gost3411-2012-256",
-    "gost3411-2012-512",
-]
 # The binary SEC 2 curves sect233k1 to sect571r1
 ec-f2m = ["ec", "dep:tc_f2m_custom"]
 # The weak curves, kept only for interoperability: secp112r1 to secp192r1, and with ec-f2m sect113r1
@@ -271,43 +244,51 @@ ec-small-curves = [
     "tc_fp_custom/small-curves",
     "tc_f2m_custom?/small-curves",
 ]
+# Ed25519 and Ed448 keys (RFC 8032)
+ed25519 = ["dep:tc_cfrg_curves"]
+ed448 = ["dep:tc_cfrg_curves", "tc_cfrg_curves/ed448"]
+# ML-KEM keys (FIPS 203)
+ml-kem = ["dep:tc_ml_kem"]
+# DSA keys. FIPS 186-5 keeps DSA only for verifying old signatures
+dsa = ["dep:tc_dsa_key"]
+# GOST R 34.10-94 keys, replaced by the EC versions of 2001 and 2012
+gost3410 = ["dep:tc_gost3410_key"]
+
+# Agreement
+# ECDH and ECDHC, the agreements of IEEE P1363 on the EC keys
+ecdh = ["ec", "dep:tc_ecdh_v2"]
+# ECMQV of SEC 1 on the EC keys
+ecmqv = ["ec", "dep:tc_ecmqv"]
+# GOST VKO (RFC 7836) on the GOST curves: the 2012 agreements, and with the gost3411 feature
+# ECGOST3410 of 2001
+ecvko = [
+    "ec-gost",
+    "dep:tc_ecvko",
+    "gost3411-2012-256",
+    "gost3411-2012-512",
+]
 # X25519 keys, their generator and their agreement (RFC 7748)
 x25519 = ["dep:tc_cfrg_curves", "dep:tc_asym_cipher"]
 # X448 keys, their generator and their agreement (RFC 7748)
 x448 = ["dep:tc_cfrg_curves", "tc_cfrg_curves/x448", "dep:tc_asym_cipher"]
-# Ed25519 and Ed448 keys (RFC 8032)
-ed25519 = ["dep:tc_cfrg_curves"]
-ed448 = ["dep:tc_cfrg_curves", "tc_cfrg_curves/ed448"]
 # Finite-field Diffie-Hellman keys, their generator and their agreement
 dh = ["dep:tc_dh_key", "dep:tc_dh", "dep:tc_asym_cipher"]
-# ML-KEM keys (FIPS 203)
-ml-kem = ["dep:tc_ml_kem"]
-# DSA keys. FIPS 186-5 keeps DSA only for verifying old signatures, so it is not in the default
-dsa = ["dep:tc_dsa_key"]
-# GOST R 34.10-94 keys, replaced by the EC versions of 2001 and 2012, so not in the default
-gost3410 = ["dep:tc_gost3410_key"]
-# SM2 encryption (GM/T 0003) on sm2p256v1. Bouncy Castle's factory has no name for it, so the
-# names are this crate's own and it is not in the default
-sm2 = ["ec", "dep:tc_sm2", "dep:tc_asym_cipher"]
-# ElGamal keys and ciphers, kept for old OpenPGP data, so not in the default
-elgamal = ["dep:tc_elgamal", "dep:tc_asym_cipher", "dep:tc_asym_encoding", "dep:tc_sha"]
-# Naccache-Stern keys and cipher: an unstandardized homomorphic scheme, too niche for the default
-naccache-stern = ["dep:tc_naccache_stern", "dep:tc_asym_cipher"]
 
 [dependencies]
 rand = "0.10.3"
 rand_core = "0.10.1"
-tc_asn1 = "0.1.2"
 tc_aead_cipher = { version = "0.1.0", features = ["alloc"] }
 tc_aes = { version = "0.1.0", optional = true }
 tc_agreement = { version = "0.1.0", path = "../agreement/tc_agreement" }
-tc_asym_cipher = { version = "0.1.0", optional = true }
-tc_asym_encoding = { version = "0.1.0", optional = true }
 tc_aria = { version = "0.1.0", optional = true }
 tc_ascon_aead = { version = "0.1.0", optional = true }
+tc_ascon_hash = { version = "0.1.0", optional = true }
+tc_asn1 = "0.1.2"
+tc_asym_cipher = { version = "0.1.0", optional = true }
+tc_asym_encoding = { version = "0.1.0", optional = true }
 tc_asym_iso9796 = { version = "0.1.0", optional = true }
 tc_bigint = { version = "0.1.0", optional = true }
-tc_blake ={ version = "0.1.0", optional = true }
+tc_blake = { version = "0.1.0", optional = true }
 tc_block_cipher = "0.1.0"
 tc_block_modes = { version = "0.1.1", features = ["alloc"] }
 tc_block_padding = { version = "0.1.0", features = ["rand_core"] }
@@ -359,6 +340,7 @@ tc_salsa20 = { version = "0.1.0", optional = true }
 tc_seed = { version = "0.1.0", optional = true }
 tc_serpent = { version = "0.1.0", optional = true }
 tc_sha = { version = "0.1.1", optional = true }
+tc_skein = { version = "0.1.0", optional = true }
 tc_skein_mac = { version = "0.1.0", path = "../macs/tc_skein_mac", optional = true }
 tc_sm2 = { version = "0.1.0", path = "../tc_sm2", optional = true }
 tc_sm3 = { version = "0.1.0", optional = true }

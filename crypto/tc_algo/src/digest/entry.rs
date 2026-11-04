@@ -3,12 +3,11 @@ use core::hash::{Hash, Hasher};
 
 use tc_asn1::NamedOid;
 
+use super::AnyDigest;
 use super::dyn_digest::DynDigest;
-use super::{Algorithm, AnyDigest};
 
 #[derive(Clone, Copy, Debug)]
 pub struct DigestEntry {
-    algorithm: Algorithm,
     // The first is the canonical name, the rest are aliases
     names: &'static [&'static str],
     // The first is the digest's own OID; the rest map to this row as in Bouncy Castle
@@ -22,21 +21,15 @@ impl DigestEntry {
         reason = "the table is empty when every digest feature is off"
     )]
     pub(super) const fn new(
-        algorithm: Algorithm,
         names: &'static [&'static str],
         oids: &'static [NamedOid],
         constructor: fn() -> Box<dyn DynDigest>,
     ) -> Self {
         Self {
-            algorithm,
             names,
             oids,
             constructor,
         }
-    }
-
-    pub fn algorithm(&self) -> Algorithm {
-        self.algorithm
     }
 
     pub fn name(&self) -> &'static str {
@@ -64,11 +57,11 @@ impl DigestEntry {
     }
 }
 
-// Each algorithm has one row, so only the algorithm is compared; comparing function pointers is
+// Each digest has one row, so only the canonical name is compared; comparing function pointers is
 // unreliable
 impl PartialEq for DigestEntry {
     fn eq(&self, other: &Self) -> bool {
-        self.algorithm == other.algorithm
+        self.name() == other.name()
     }
 }
 
@@ -76,7 +69,7 @@ impl Eq for DigestEntry {}
 
 impl Hash for DigestEntry {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        self.algorithm.hash(state);
+        self.name().hash(state);
     }
 }
 

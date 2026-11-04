@@ -58,7 +58,7 @@ fn every_tag_is_the_one_bouncy_castle_gave() {
 fn every_row_has_a_vector() {
     for entry in mac::algorithms() {
         let name = entry.name();
-        let outside = ["AES-GMAC", "POLY1305", "KMAC", "DSTU", "Skein-MAC"]
+        let outside = ["AES-GMAC", "POLY1305", "KMAC", "DSTU", "SKEIN-MAC"]
             .iter()
             .any(|prefix| name.starts_with(prefix));
         if outside {
@@ -138,7 +138,7 @@ fn the_others_start_the_next_message_under_the_same_key() {
         ("KMAC256", 16, &b"message"[..]),
         ("DSTU7564MAC-256", 16, &b"message"[..]),
         ("DSTU7624MAC-128", 16, &[7; 16][..]),
-        ("Skein-MAC-512-256", 16, &b"message"[..]),
+        ("SKEIN-MAC-512-256", 16, &b"message"[..]),
     ] {
         let mut mac = mac::get_by_name(name).unwrap();
         mac.init(&params(key_len)).unwrap();
@@ -156,7 +156,7 @@ fn poly1305_and_skein_refuse_a_key_of_the_wrong_length() {
         poly.init(&params(31)).unwrap_err().kind(),
         ErrorKind::InvalidParams
     );
-    let mut skein = mac::get_by_name("Skein-MAC-512-256").unwrap();
+    let mut skein = mac::get_by_name("SKEIN-MAC-512-256").unwrap();
     assert_eq!(
         skein.init(&params(15)).unwrap_err().kind(),
         ErrorKind::InvalidParams
@@ -170,7 +170,7 @@ fn the_keyed_macs_outside_the_table_refuse_an_iv() {
         "KMAC128",
         "DSTU7564MAC-256",
         "DSTU7624MAC-128",
-        "Skein-MAC-512-256",
+        "SKEIN-MAC-512-256",
     ] {
         let mut mac = mac::get_by_name(name).unwrap();
         assert_eq!(
@@ -216,10 +216,10 @@ fn names_match_without_regard_to_case() {
         "AES-GMAC"
     );
     assert_eq!(
-        mac::get_by_name("SKEIN-MAC-512-256")
+        mac::get_by_name("skein-mac-512-256")
             .unwrap()
             .entry()
             .name(),
-        "Skein-MAC-512-256"
+        "SKEIN-MAC-512-256"
     );
 }

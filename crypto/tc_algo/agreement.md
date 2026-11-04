@@ -19,14 +19,12 @@ Each agreement has a guide of its own, which is all you need to use it:
 
 ## Enabling agreements
 
-Each agreement comes with the feature of its algorithm, listed in the
-[table](#algorithms) below, which also enables its keys and their generator. All
-are in the default features.
+Nothing is on by default. Each agreement comes with the feature of its algorithm, listed in
+the [table](#algorithms) below, which also enables its keys and their generator.
 
 ```toml
 [dependencies]
-# Keep only what you use
-tc_algo = { version = "0.1", default-features = false, features = ["x25519"] }
+tc_algo = { version = "0.1", features = ["x25519"] }
 ```
 
 ## Usage
@@ -90,17 +88,17 @@ for entry in agreement::algorithms() {
 
 ## Algorithms
 
-| Name | Aliases | OID | Secret | Feature | Default |
-|---|---|---|---:|---|:---:|
-| DH | DIFFIEHELLMAN | | bytes of p | `dh` | ✓ |
-| ECDH | | | bytes of a coordinate | `ecdh` | ✓ |
-| ECDHC | ECCDH | | bytes of a coordinate | `ecdh` | ✓ |
-| ECMQV | | | bytes of a coordinate | `ecmqv` | ✓ |
-| X25519 | | 1.3.101.110 | 32 bytes | `x25519` | ✓ |
-| X448 | | 1.3.101.111 | 56 bytes | `x448` | ✓ |
-| ECGOST3410-2012-256 | | 1.2.643.7.1.1.6.1, 1.2.643.7.1.1.1.1 | 32 bytes | `ecvko` | ✓ |
-| ECGOST3410-2012-512 | | 1.2.643.7.1.1.6.2, 1.2.643.7.1.1.1.2 | 64 bytes | `ecvko` | ✓ |
-| ECGOST3410 | GOST-3410-2001 | 1.2.643.2.2.19, 1.2.643.2.2.96 | 32 bytes | `ecvko`, `gost3411` | |
+| Name | Aliases | OID | Secret | Feature |
+|---|---|---|---:|---|
+| DH | DIFFIEHELLMAN | | bytes of p | `dh` |
+| ECDH | | | bytes of a coordinate | `ecdh` |
+| ECDHC | ECCDH | | bytes of a coordinate | `ecdh` |
+| ECMQV | | | bytes of a coordinate | `ecmqv` |
+| X25519 | | 1.3.101.110 | 32 bytes | `x25519` |
+| X448 | | 1.3.101.111 | 56 bytes | `x448` |
+| ECGOST3410-2012-256 | | 1.2.643.7.1.1.6.1, 1.2.643.7.1.1.1.1 | 32 bytes | `ecvko` |
+| ECGOST3410-2012-512 | | 1.2.643.7.1.1.6.2, 1.2.643.7.1.1.1.2 | 64 bytes | `ecvko` |
+| ECGOST3410 | GOST-3410-2001 | 1.2.643.2.2.19, 1.2.643.2.2.96 | 32 bytes | `ecvko`, `gost3411` |
 
 Each name but the VKO ones finds the generator of its keys as well, EC for ECDH, ECDHC
 and ECMQV; the VKO keys come from EC on a GOST curve. See [generator.md](generator.md).

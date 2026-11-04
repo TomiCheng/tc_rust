@@ -4,20 +4,35 @@
 )]
 use tc_asn1::NamedOid;
 
-#[allow(
-    unused_imports,
-    reason = "the table is empty when every digest feature is off"
-)]
-use super::Algorithm;
 use super::DigestEntry;
+#[cfg(feature = "ascon-hash-legacy")]
+use super::dyn_digest::DynDigest;
+
+// The two digests from before NIST standardized Ascon, deprecated in their crate; they are here for
+// old data
+#[cfg(feature = "ascon-hash-legacy")]
+#[allow(deprecated, reason = "this row exists for old data")]
+fn ascon_hash() -> Box<dyn DynDigest> {
+    Box::new(tc_ascon_hash::AsconDigest::new(
+        tc_ascon_hash::AsconParameters::AsconHash,
+    ))
+}
+
+#[cfg(feature = "ascon-hash-legacy")]
+#[allow(deprecated, reason = "this row exists for old data")]
+fn ascon_hasha() -> Box<dyn DynDigest> {
+    Box::new(tc_ascon_hash::AsconDigest::new(
+        tc_ascon_hash::AsconParameters::AsconHashA,
+    ))
+}
 
 // One row per digest. Names, aliases and OIDs follow Bouncy Castle's DigestUtilities: the first
 // name is the canonical one, the first OID is the digest's own (DigestInfo uses it), and the rest
-// map to the same row as in Bouncy Castle, HMAC OIDs included
+// map to the same row as in Bouncy Castle, HMAC OIDs included. The digests its table leaves out are
+// here too, named as their classes name themselves but in upper case, as the rest of the table is
 pub(super) const DIGESTS: &[DigestEntry] = &[
     #[cfg(feature = "md2")]
     DigestEntry::new(
-        Algorithm::Md2,
         &["MD2"],
         &[NamedOid::new(
             &[0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x02, 0x02],
@@ -28,7 +43,6 @@ pub(super) const DIGESTS: &[DigestEntry] = &[
     ),
     #[cfg(feature = "md4")]
     DigestEntry::new(
-        Algorithm::Md4,
         &["MD4"],
         &[NamedOid::new(
             &[0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x02, 0x04],
@@ -39,7 +53,6 @@ pub(super) const DIGESTS: &[DigestEntry] = &[
     ),
     #[cfg(feature = "md5")]
     DigestEntry::new(
-        Algorithm::Md5,
         &["MD5"],
         &[NamedOid::new(
             &[0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x02, 0x05],
@@ -50,7 +63,6 @@ pub(super) const DIGESTS: &[DigestEntry] = &[
     ),
     #[cfg(feature = "sha1")]
     DigestEntry::new(
-        Algorithm::Sha1,
         &["SHA-1", "SHA1"],
         &[
             NamedOid::new(&[0x2b, 0x0e, 0x03, 0x02, 0x1a], "1.3.14.3.2.26", "id-sha1"),
@@ -69,7 +81,6 @@ pub(super) const DIGESTS: &[DigestEntry] = &[
     ),
     #[cfg(feature = "sha224")]
     DigestEntry::new(
-        Algorithm::Sha224,
         &["SHA-224", "SHA224"],
         &[
             NamedOid::new(
@@ -87,7 +98,6 @@ pub(super) const DIGESTS: &[DigestEntry] = &[
     ),
     #[cfg(feature = "sha256")]
     DigestEntry::new(
-        Algorithm::Sha256,
         &["SHA-256", "SHA256"],
         &[
             NamedOid::new(
@@ -105,7 +115,6 @@ pub(super) const DIGESTS: &[DigestEntry] = &[
     ),
     #[cfg(feature = "sha384")]
     DigestEntry::new(
-        Algorithm::Sha384,
         &["SHA-384", "SHA384"],
         &[
             NamedOid::new(
@@ -123,7 +132,6 @@ pub(super) const DIGESTS: &[DigestEntry] = &[
     ),
     #[cfg(feature = "sha512")]
     DigestEntry::new(
-        Algorithm::Sha512,
         &["SHA-512", "SHA512"],
         &[
             NamedOid::new(
@@ -141,7 +149,6 @@ pub(super) const DIGESTS: &[DigestEntry] = &[
     ),
     #[cfg(feature = "sha512-224")]
     DigestEntry::new(
-        Algorithm::Sha512_224,
         &[
             "SHA-512/224",
             "SHA512/224",
@@ -165,7 +172,6 @@ pub(super) const DIGESTS: &[DigestEntry] = &[
     ),
     #[cfg(feature = "sha512-256")]
     DigestEntry::new(
-        Algorithm::Sha512_256,
         &[
             "SHA-512/256",
             "SHA512/256",
@@ -189,7 +195,6 @@ pub(super) const DIGESTS: &[DigestEntry] = &[
     ),
     #[cfg(feature = "sha3-224")]
     DigestEntry::new(
-        Algorithm::Sha3_224,
         &["SHA3-224"],
         &[
             NamedOid::new(
@@ -207,7 +212,6 @@ pub(super) const DIGESTS: &[DigestEntry] = &[
     ),
     #[cfg(feature = "sha3-256")]
     DigestEntry::new(
-        Algorithm::Sha3_256,
         &["SHA3-256"],
         &[
             NamedOid::new(
@@ -225,7 +229,6 @@ pub(super) const DIGESTS: &[DigestEntry] = &[
     ),
     #[cfg(feature = "sha3-384")]
     DigestEntry::new(
-        Algorithm::Sha3_384,
         &["SHA3-384"],
         &[
             NamedOid::new(
@@ -243,7 +246,6 @@ pub(super) const DIGESTS: &[DigestEntry] = &[
     ),
     #[cfg(feature = "sha3-512")]
     DigestEntry::new(
-        Algorithm::Sha3_512,
         &["SHA3-512"],
         &[
             NamedOid::new(
@@ -260,43 +262,27 @@ pub(super) const DIGESTS: &[DigestEntry] = &[
         || Box::new(tc_keccak::Sha3Digest::new(512)),
     ),
     #[cfg(feature = "keccak-224")]
-    DigestEntry::new(
-        Algorithm::Keccak224,
-        &["KECCAK-224", "KECCAK224"],
-        &[],
-        || Box::new(tc_keccak::KeccakDigest::new(224)),
-    ),
+    DigestEntry::new(&["KECCAK-224", "KECCAK224"], &[], || {
+        Box::new(tc_keccak::KeccakDigest::new(224))
+    }),
     #[cfg(feature = "keccak-256")]
-    DigestEntry::new(
-        Algorithm::Keccak256,
-        &["KECCAK-256", "KECCAK256"],
-        &[],
-        || Box::new(tc_keccak::KeccakDigest::new(256)),
-    ),
+    DigestEntry::new(&["KECCAK-256", "KECCAK256"], &[], || {
+        Box::new(tc_keccak::KeccakDigest::new(256))
+    }),
     #[cfg(feature = "keccak-288")]
-    DigestEntry::new(
-        Algorithm::Keccak288,
-        &["KECCAK-288", "KECCAK288"],
-        &[],
-        || Box::new(tc_keccak::KeccakDigest::new(288)),
-    ),
+    DigestEntry::new(&["KECCAK-288", "KECCAK288"], &[], || {
+        Box::new(tc_keccak::KeccakDigest::new(288))
+    }),
     #[cfg(feature = "keccak-384")]
-    DigestEntry::new(
-        Algorithm::Keccak384,
-        &["KECCAK-384", "KECCAK384"],
-        &[],
-        || Box::new(tc_keccak::KeccakDigest::new(384)),
-    ),
+    DigestEntry::new(&["KECCAK-384", "KECCAK384"], &[], || {
+        Box::new(tc_keccak::KeccakDigest::new(384))
+    }),
     #[cfg(feature = "keccak-512")]
-    DigestEntry::new(
-        Algorithm::Keccak512,
-        &["KECCAK-512", "KECCAK512"],
-        &[],
-        || Box::new(tc_keccak::KeccakDigest::new(512)),
-    ),
+    DigestEntry::new(&["KECCAK-512", "KECCAK512"], &[], || {
+        Box::new(tc_keccak::KeccakDigest::new(512))
+    }),
     #[cfg(feature = "shake128")]
     DigestEntry::new(
-        Algorithm::Shake128,
         &["SHAKE128-256", "SHAKE128", "SHAKE-128"],
         &[NamedOid::new(
             &[0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x0b],
@@ -307,7 +293,6 @@ pub(super) const DIGESTS: &[DigestEntry] = &[
     ),
     #[cfg(feature = "shake256")]
     DigestEntry::new(
-        Algorithm::Shake256,
         &["SHAKE256-512", "SHAKE256", "SHAKE-256"],
         &[NamedOid::new(
             &[0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x0c],
@@ -318,7 +303,6 @@ pub(super) const DIGESTS: &[DigestEntry] = &[
     ),
     #[cfg(feature = "blake2b-160")]
     DigestEntry::new(
-        Algorithm::Blake2b160,
         &["BLAKE2B-160"],
         &[NamedOid::new(
             &[
@@ -331,7 +315,6 @@ pub(super) const DIGESTS: &[DigestEntry] = &[
     ),
     #[cfg(feature = "blake2b-256")]
     DigestEntry::new(
-        Algorithm::Blake2b256,
         &["BLAKE2B-256"],
         &[NamedOid::new(
             &[
@@ -344,7 +327,6 @@ pub(super) const DIGESTS: &[DigestEntry] = &[
     ),
     #[cfg(feature = "blake2b-384")]
     DigestEntry::new(
-        Algorithm::Blake2b384,
         &["BLAKE2B-384"],
         &[NamedOid::new(
             &[
@@ -357,7 +339,6 @@ pub(super) const DIGESTS: &[DigestEntry] = &[
     ),
     #[cfg(feature = "blake2b-512")]
     DigestEntry::new(
-        Algorithm::Blake2b512,
         &["BLAKE2B-512"],
         &[NamedOid::new(
             &[
@@ -370,7 +351,6 @@ pub(super) const DIGESTS: &[DigestEntry] = &[
     ),
     #[cfg(feature = "blake2s-128")]
     DigestEntry::new(
-        Algorithm::Blake2s128,
         &["BLAKE2S-128"],
         &[NamedOid::new(
             &[
@@ -383,7 +363,6 @@ pub(super) const DIGESTS: &[DigestEntry] = &[
     ),
     #[cfg(feature = "blake2s-160")]
     DigestEntry::new(
-        Algorithm::Blake2s160,
         &["BLAKE2S-160"],
         &[NamedOid::new(
             &[
@@ -396,7 +375,6 @@ pub(super) const DIGESTS: &[DigestEntry] = &[
     ),
     #[cfg(feature = "blake2s-224")]
     DigestEntry::new(
-        Algorithm::Blake2s224,
         &["BLAKE2S-224"],
         &[NamedOid::new(
             &[
@@ -409,7 +387,6 @@ pub(super) const DIGESTS: &[DigestEntry] = &[
     ),
     #[cfg(feature = "blake2s-256")]
     DigestEntry::new(
-        Algorithm::Blake2s256,
         &["BLAKE2S-256"],
         &[NamedOid::new(
             &[
@@ -422,7 +399,6 @@ pub(super) const DIGESTS: &[DigestEntry] = &[
     ),
     #[cfg(feature = "blake3-256")]
     DigestEntry::new(
-        Algorithm::Blake3_256,
         &["BLAKE3-256"],
         &[NamedOid::new(
             &[
@@ -435,7 +411,6 @@ pub(super) const DIGESTS: &[DigestEntry] = &[
     ),
     #[cfg(feature = "dstu7564-256")]
     DigestEntry::new(
-        Algorithm::Dstu7564_256,
         &["DSTU7564-256"],
         &[NamedOid::new(
             &[
@@ -448,7 +423,6 @@ pub(super) const DIGESTS: &[DigestEntry] = &[
     ),
     #[cfg(feature = "dstu7564-384")]
     DigestEntry::new(
-        Algorithm::Dstu7564_384,
         &["DSTU7564-384"],
         &[NamedOid::new(
             &[
@@ -461,7 +435,6 @@ pub(super) const DIGESTS: &[DigestEntry] = &[
     ),
     #[cfg(feature = "dstu7564-512")]
     DigestEntry::new(
-        Algorithm::Dstu7564_512,
         &["DSTU7564-512"],
         &[NamedOid::new(
             &[
@@ -474,7 +447,6 @@ pub(super) const DIGESTS: &[DigestEntry] = &[
     ),
     #[cfg(feature = "gost3411")]
     DigestEntry::new(
-        Algorithm::Gost3411,
         &["GOST3411"],
         &[NamedOid::new(
             &[0x2a, 0x85, 0x03, 0x02, 0x02, 0x09],
@@ -485,7 +457,6 @@ pub(super) const DIGESTS: &[DigestEntry] = &[
     ),
     #[cfg(feature = "gost3411-2012-256")]
     DigestEntry::new(
-        Algorithm::Gost3411_2012_256,
         &["GOST3411-2012-256"],
         &[NamedOid::new(
             &[0x2a, 0x85, 0x03, 0x07, 0x01, 0x01, 0x02, 0x02],
@@ -496,7 +467,6 @@ pub(super) const DIGESTS: &[DigestEntry] = &[
     ),
     #[cfg(feature = "gost3411-2012-512")]
     DigestEntry::new(
-        Algorithm::Gost3411_2012_512,
         &["GOST3411-2012-512"],
         &[NamedOid::new(
             &[0x2a, 0x85, 0x03, 0x07, 0x01, 0x01, 0x02, 0x03],
@@ -507,7 +477,6 @@ pub(super) const DIGESTS: &[DigestEntry] = &[
     ),
     #[cfg(feature = "ripemd128")]
     DigestEntry::new(
-        Algorithm::Ripemd128,
         &["RIPEMD128", "RIPEMD-128"],
         &[NamedOid::new(
             &[0x2b, 0x24, 0x03, 0x02, 0x02],
@@ -518,7 +487,6 @@ pub(super) const DIGESTS: &[DigestEntry] = &[
     ),
     #[cfg(feature = "ripemd160")]
     DigestEntry::new(
-        Algorithm::Ripemd160,
         &["RIPEMD160", "RIPEMD-160"],
         &[NamedOid::new(
             &[0x2b, 0x24, 0x03, 0x02, 0x01],
@@ -529,7 +497,6 @@ pub(super) const DIGESTS: &[DigestEntry] = &[
     ),
     #[cfg(feature = "ripemd256")]
     DigestEntry::new(
-        Algorithm::Ripemd256,
         &["RIPEMD256", "RIPEMD-256"],
         &[NamedOid::new(
             &[0x2b, 0x24, 0x03, 0x02, 0x03],
@@ -540,15 +507,11 @@ pub(super) const DIGESTS: &[DigestEntry] = &[
     ),
     // Bouncy Castle leaves RIPEMD-320 without an OID
     #[cfg(feature = "ripemd320")]
-    DigestEntry::new(
-        Algorithm::Ripemd320,
-        &["RIPEMD320", "RIPEMD-320"],
-        &[],
-        || Box::new(tc_ripemd::RipeMd320Digest::new()),
-    ),
+    DigestEntry::new(&["RIPEMD320", "RIPEMD-320"], &[], || {
+        Box::new(tc_ripemd::RipeMd320Digest::new())
+    }),
     #[cfg(feature = "sm3")]
     DigestEntry::new(
-        Algorithm::Sm3,
         &["SM3"],
         &[NamedOid::new(
             &[0x2a, 0x81, 0x1c, 0xcf, 0x55, 0x01, 0x83, 0x11],
@@ -558,15 +521,111 @@ pub(super) const DIGESTS: &[DigestEntry] = &[
         || Box::new(tc_sm3::Sm3Digest::new()),
     ),
     #[cfg(feature = "tiger")]
-    DigestEntry::new(Algorithm::Tiger, &["TIGER"], &[], || {
+    DigestEntry::new(&["TIGER"], &[], || {
         Box::new(tc_misc_digest::TigerDigest::new())
     }),
     #[cfg(feature = "whirlpool")]
-    DigestEntry::new(Algorithm::Whirlpool, &["WHIRLPOOL"], &[], || {
+    DigestEntry::new(&["WHIRLPOOL"], &[], || {
         Box::new(tc_misc_digest::WhirlpoolDigest::new())
     }),
+    #[cfg(feature = "skein-256-128")]
+    DigestEntry::new(&["SKEIN-256-128"], &[], || {
+        Box::new(tc_skein::SkeinDigest::new(256, 128))
+    }),
+    #[cfg(feature = "skein-256-160")]
+    DigestEntry::new(&["SKEIN-256-160"], &[], || {
+        Box::new(tc_skein::SkeinDigest::new(256, 160))
+    }),
+    #[cfg(feature = "skein-256-224")]
+    DigestEntry::new(&["SKEIN-256-224"], &[], || {
+        Box::new(tc_skein::SkeinDigest::new(256, 224))
+    }),
+    #[cfg(feature = "skein-256-256")]
+    DigestEntry::new(&["SKEIN-256-256"], &[], || {
+        Box::new(tc_skein::SkeinDigest::new(256, 256))
+    }),
+    #[cfg(feature = "skein-512-128")]
+    DigestEntry::new(&["SKEIN-512-128"], &[], || {
+        Box::new(tc_skein::SkeinDigest::new(512, 128))
+    }),
+    #[cfg(feature = "skein-512-160")]
+    DigestEntry::new(&["SKEIN-512-160"], &[], || {
+        Box::new(tc_skein::SkeinDigest::new(512, 160))
+    }),
+    #[cfg(feature = "skein-512-224")]
+    DigestEntry::new(&["SKEIN-512-224"], &[], || {
+        Box::new(tc_skein::SkeinDigest::new(512, 224))
+    }),
+    #[cfg(feature = "skein-512-256")]
+    DigestEntry::new(&["SKEIN-512-256"], &[], || {
+        Box::new(tc_skein::SkeinDigest::new(512, 256))
+    }),
+    #[cfg(feature = "skein-512-384")]
+    DigestEntry::new(&["SKEIN-512-384"], &[], || {
+        Box::new(tc_skein::SkeinDigest::new(512, 384))
+    }),
+    #[cfg(feature = "skein-512-512")]
+    DigestEntry::new(&["SKEIN-512-512"], &[], || {
+        Box::new(tc_skein::SkeinDigest::new(512, 512))
+    }),
+    #[cfg(feature = "skein-1024-384")]
+    DigestEntry::new(&["SKEIN-1024-384"], &[], || {
+        Box::new(tc_skein::SkeinDigest::new(1024, 384))
+    }),
+    #[cfg(feature = "skein-1024-512")]
+    DigestEntry::new(&["SKEIN-1024-512"], &[], || {
+        Box::new(tc_skein::SkeinDigest::new(1024, 512))
+    }),
+    #[cfg(feature = "skein-1024-1024")]
+    DigestEntry::new(&["SKEIN-1024-1024"], &[], || {
+        Box::new(tc_skein::SkeinDigest::new(1024, 1024))
+    }),
+    #[cfg(feature = "esch-256")]
+    DigestEntry::new(&["ESCH-256"], &[], || {
+        Box::new(tc_misc_digest::SparkleDigest::new(
+            tc_misc_digest::SparkleParameters::Esch256,
+        ))
+    }),
+    #[cfg(feature = "esch-384")]
+    DigestEntry::new(&["ESCH-384"], &[], || {
+        Box::new(tc_misc_digest::SparkleDigest::new(
+            tc_misc_digest::SparkleParameters::Esch384,
+        ))
+    }),
+    #[cfg(feature = "xoodyak")]
+    DigestEntry::new(&["XOODYAK", "XOODYAK HASH"], &[], || {
+        Box::new(tc_misc_digest::XoodyakDigest::new())
+    }),
+    #[cfg(feature = "photon-beetle")]
+    DigestEntry::new(&["PHOTON-BEETLE", "PHOTON-BEETLE HASH"], &[], || {
+        Box::new(tc_misc_digest::PhotonBeetleDigest::new())
+    }),
+    #[cfg(feature = "ascon-hash256")]
+    DigestEntry::new(&["ASCON-HASH256"], &[], || {
+        Box::new(tc_ascon_hash::AsconHash256::new())
+    }),
+    #[cfg(feature = "ascon-hash-legacy")]
+    DigestEntry::new(&["ASCON-HASH"], &[], ascon_hash),
+    #[cfg(feature = "ascon-hash-legacy")]
+    DigestEntry::new(&["ASCON-HASHA"], &[], ascon_hasha),
+    #[cfg(feature = "isap")]
+    DigestEntry::new(&["ISAP", "ISAP HASH"], &[], || {
+        Box::new(tc_ascon_hash::IsapDigest::new())
+    }),
+    #[cfg(feature = "haraka")]
+    DigestEntry::new(&["HARAKA-256"], &[], || {
+        Box::new(super::fixed_input::FixedInput(
+            tc_misc_digest::Haraka256Digest::new(),
+        ))
+    }),
+    #[cfg(feature = "haraka")]
+    DigestEntry::new(&["HARAKA-512"], &[], || {
+        Box::new(super::fixed_input::FixedInput(
+            tc_misc_digest::Haraka512Digest::new(),
+        ))
+    }),
     #[cfg(feature = "null-digest")]
-    DigestEntry::new(Algorithm::Null, &["NONE"], &[], || {
+    DigestEntry::new(&["NONE"], &[], || {
         Box::new(tc_digest::util::NullDigest::new())
     }),
 ];

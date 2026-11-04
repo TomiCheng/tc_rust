@@ -16,14 +16,13 @@ In `tc_algo` this takes two factories: `generate::key_pair` makes the key pairs 
 
 ## Enabling ECDH
 
-ECDH and ECDHC come with the `ecdh` feature, which is in the default features. It
-enables `ec`, the EC keys and their generator on the prime curves. `ec-gost` adds the
-GOST curves and is in the default features too; `ec-f2m` adds the binary curves and
-`ec-small-curves` the weak ones, both opt-in.
+ECDH and ECDHC come with the `ecdh` feature. It enables `ec`, the EC keys and their generator
+on the prime curves. `ec-gost` adds the GOST curves, `ec-f2m` the binary curves and
+`ec-small-curves` the weak ones.
 
 ```toml
 [dependencies]
-tc_algo = "0.1"
+tc_algo = { version = "0.1", features = ["ecdh"] }
 
 # Or with the binary curves too
 tc_algo = { version = "0.1", features = ["ec-f2m"] }
@@ -243,11 +242,11 @@ data too.
 
 ## Names
 
-| Factory | Name | Aliases | OID | Feature | Default |
-|---|---|---|---|---|:---:|
-| `agreement` | ECDH | | | `ecdh` | ✓ |
-| `agreement` | ECDHC | ECCDH | | `ecdh` | ✓ |
-| `generate::key_pair` | EC | ECDH, ECIES, ECDHC, ECMQV | 15 of the ECDH and ECMQV schemes with a KDF | `ec` | ✓ |
+| Factory | Name | Aliases | OID | Feature |
+|---|---|---|---|---|
+| `agreement` | ECDH | | | `ecdh` |
+| `agreement` | ECDHC | ECCDH | | `ecdh` |
+| `generate::key_pair` | EC | ECDH, ECIES, ECDHC, ECMQV | 15 of the ECDH and ECMQV schemes with a KDF | `ec` |
 
 Names match without regard to ASCII case, and a dotted OID works wherever a name does.
 The agreements have no OID, as in Bouncy Castle: the OIDs of ECDH, such as

@@ -11,14 +11,12 @@ and like the other factories of `tc_algo`, with `get_by_name`, `get_by_oid`,
 
 ## Enabling generators
 
-Each generator comes with the feature of its algorithm, listed in the
-[tables](#algorithms) below. AES, RSA, EC on the prime curves, DH, X25519 and X448
-are all in the default features.
+Nothing is on by default. Each generator comes with the feature of its algorithm, listed in
+the [tables](#algorithms) below.
 
 ```toml
 [dependencies]
-# Keep only what you use
-tc_algo = { version = "0.1", default-features = false, features = ["aes"] }
+tc_algo = { version = "0.1", features = ["aes"] }
 ```
 
 ## Usage

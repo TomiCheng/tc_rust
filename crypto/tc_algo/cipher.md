@@ -13,18 +13,12 @@
 
 ## Enabling ciphers
 
-Each cipher has its own Cargo feature, listed in the table of its kind. AES, ChaCha,
-Salsa20 and RSA are in the default features. DES, RC4 and VMPC are weak, and HC is
-not constant time, so they are opt-in. Modes and paddings need no feature: every
-cipher comes with all of its own.
+Nothing is on by default. Each cipher has its own Cargo feature, listed in the table of its
+kind. Modes and paddings need no feature: every cipher comes with all of its own.
 
 ```toml
 [dependencies]
-# Add weak ciphers for compatibility with old data
-tc_algo = { version = "0.1", features = ["des", "rc4"] }
-
-# Or keep only what you use
-tc_algo = { version = "0.1", default-features = false, features = ["aes"] }
+tc_algo = { version = "0.1", features = ["aes"] }
 ```
 
 ## Usage
@@ -129,26 +123,26 @@ A block cipher runs in a mode, with a padding. `init` takes a secret key, and an
 of one block for every mode but ECB. A missing mode is ECB, and a missing padding is
 the mode's default.
 
-| Algorithm | Key | Mode | OID | Feature | Default | Padding |
-|---|---|---|---|---|:---:|---|
-| AES | 128 | ECB | 2.16.840.1.101.3.4.1.1 | `aes` | ✓ | PKCS7PADDING |
-| AES | 192 | ECB | 2.16.840.1.101.3.4.1.21 | `aes` | ✓ | PKCS7PADDING |
-| AES | 256 | ECB | 2.16.840.1.101.3.4.1.41 | `aes` | ✓ | PKCS7PADDING |
-| AES | 128 | CBC | 2.16.840.1.101.3.4.1.2 | `aes` | ✓ | PKCS7PADDING |
-| AES | 192 | CBC | 2.16.840.1.101.3.4.1.22 | `aes` | ✓ | PKCS7PADDING |
-| AES | 256 | CBC | 2.16.840.1.101.3.4.1.42 | `aes` | ✓ | PKCS7PADDING |
-| AES | 128 | CFB | 2.16.840.1.101.3.4.1.4 | `aes` | ✓ | NOPADDING |
-| AES | 192 | CFB | 2.16.840.1.101.3.4.1.24 | `aes` | ✓ | NOPADDING |
-| AES | 256 | CFB | 2.16.840.1.101.3.4.1.44 | `aes` | ✓ | NOPADDING |
-| AES | 128 | OFB | 2.16.840.1.101.3.4.1.3 | `aes` | ✓ | NOPADDING |
-| AES | 192 | OFB | 2.16.840.1.101.3.4.1.23 | `aes` | ✓ | NOPADDING |
-| AES | 256 | OFB | 2.16.840.1.101.3.4.1.43 | `aes` | ✓ | NOPADDING |
-| AES | 128, 192, 256 | CTR | | `aes` | ✓ | NOPADDING |
-| DES | 64 | ECB | 1.3.14.3.2.6 | `des` | | PKCS7PADDING |
-| DES | 64 | CBC | 1.3.14.3.2.7 | `des` | | PKCS7PADDING |
-| DES | 64 | CFB | 1.3.14.3.2.9 | `des` | | NOPADDING |
-| DES | 64 | OFB | 1.3.14.3.2.8 | `des` | | NOPADDING |
-| DES | 64 | CTR | | `des` | | NOPADDING |
+| Algorithm | Key | Mode | OID | Feature | Padding |
+|---|---|---|---|---|---|
+| AES | 128 | ECB | 2.16.840.1.101.3.4.1.1 | `aes` | PKCS7PADDING |
+| AES | 192 | ECB | 2.16.840.1.101.3.4.1.21 | `aes` | PKCS7PADDING |
+| AES | 256 | ECB | 2.16.840.1.101.3.4.1.41 | `aes` | PKCS7PADDING |
+| AES | 128 | CBC | 2.16.840.1.101.3.4.1.2 | `aes` | PKCS7PADDING |
+| AES | 192 | CBC | 2.16.840.1.101.3.4.1.22 | `aes` | PKCS7PADDING |
+| AES | 256 | CBC | 2.16.840.1.101.3.4.1.42 | `aes` | PKCS7PADDING |
+| AES | 128 | CFB | 2.16.840.1.101.3.4.1.4 | `aes` | NOPADDING |
+| AES | 192 | CFB | 2.16.840.1.101.3.4.1.24 | `aes` | NOPADDING |
+| AES | 256 | CFB | 2.16.840.1.101.3.4.1.44 | `aes` | NOPADDING |
+| AES | 128 | OFB | 2.16.840.1.101.3.4.1.3 | `aes` | NOPADDING |
+| AES | 192 | OFB | 2.16.840.1.101.3.4.1.23 | `aes` | NOPADDING |
+| AES | 256 | OFB | 2.16.840.1.101.3.4.1.43 | `aes` | NOPADDING |
+| AES | 128, 192, 256 | CTR | | `aes` | NOPADDING |
+| DES | 64 | ECB | 1.3.14.3.2.6 | `des` | PKCS7PADDING |
+| DES | 64 | CBC | 1.3.14.3.2.7 | `des` | PKCS7PADDING |
+| DES | 64 | CFB | 1.3.14.3.2.9 | `des` | NOPADDING |
+| DES | 64 | OFB | 1.3.14.3.2.8 | `des` | NOPADDING |
+| DES | 64 | CTR | | `des` | NOPADDING |
 
 Key is in bits. Padding is the one the row's OID gives; on a row without an OID, it is
 the default.
@@ -199,17 +193,17 @@ fn main() -> Result<(), AlgoError> {
 }
 ```
 
-| Algorithm | Key | IV | OID | Feature | Default |
-|---|---|---|---|---|:---:|
-| CHACHA | 128, 256 | 64 | | `chacha` | ✓ |
-| CHACHA7539 | 256 | 96 | | `chacha` | ✓ |
-| XCHACHA20 | 256 | 192 | | `chacha` | ✓ |
-| SALSA20 | 128, 256 | 64 | | `salsa20` | ✓ |
-| ARC4 | 8 to 2048 | | 1.2.840.113549.3.4 | `rc4` | |
-| VMPC | 128 to 512 | 128 to 512 | | `vmpc` | |
-| VMPC-KSA3 | 128 to 512 | 128 to 512 | | `vmpc` | |
-| HC128 | 128 | 128 | | `hc` | |
-| HC256 | 128, 256 | 128 or more | | `hc` | |
+| Algorithm | Key | IV | OID | Feature |
+|---|---|---|---|---|
+| CHACHA | 128, 256 | 64 | | `chacha` |
+| CHACHA7539 | 256 | 96 | | `chacha` |
+| XCHACHA20 | 256 | 192 | | `chacha` |
+| SALSA20 | 128, 256 | 64 | | `salsa20` |
+| ARC4 | 8 to 2048 | | 1.2.840.113549.3.4 | `rc4` |
+| VMPC | 128 to 512 | 128 to 512 | | `vmpc` |
+| VMPC-KSA3 | 128 to 512 | 128 to 512 | | `vmpc` |
+| HC128 | 128 | 128 | | `hc` |
+| HC256 | 128, 256 | 128 or more | | `hc` |
 
 Key and IV are in bits, in whole bytes. HC256 reads the first 256 bits of a longer
 IV, as Bouncy Castle does. The rows without an OID have none in Bouncy Castle either.
@@ -258,16 +252,16 @@ fn main() -> Result<(), AlgoError> {
 }
 ```
 
-| Algorithm | Key | Mode | OID | Feature | Default |
-|---|---|---|---|---|:---:|
-| AES | 128 | CCM | 2.16.840.1.101.3.4.1.7 | `aes` | ✓ |
-| AES | 192 | CCM | 2.16.840.1.101.3.4.1.27 | `aes` | ✓ |
-| AES | 256 | CCM | 2.16.840.1.101.3.4.1.47 | `aes` | ✓ |
-| AES | 128 | GCM | 2.16.840.1.101.3.4.1.6 | `aes` | ✓ |
-| AES | 192 | GCM | 2.16.840.1.101.3.4.1.26 | `aes` | ✓ |
-| AES | 256 | GCM | 2.16.840.1.101.3.4.1.46 | `aes` | ✓ |
-| AES | 128, 192, 256 | EAX, OCB | | `aes` | ✓ |
-| DES | 64 | EAX | | `des` | |
+| Algorithm | Key | Mode | OID | Feature |
+|---|---|---|---|---|
+| AES | 128 | CCM | 2.16.840.1.101.3.4.1.7 | `aes` |
+| AES | 192 | CCM | 2.16.840.1.101.3.4.1.27 | `aes` |
+| AES | 256 | CCM | 2.16.840.1.101.3.4.1.47 | `aes` |
+| AES | 128 | GCM | 2.16.840.1.101.3.4.1.6 | `aes` |
+| AES | 192 | GCM | 2.16.840.1.101.3.4.1.26 | `aes` |
+| AES | 256 | GCM | 2.16.840.1.101.3.4.1.46 | `aes` |
+| AES | 128, 192, 256 | EAX, OCB | | `aes` |
+| DES | 64 | EAX | | `des` |
 
 Key is in bits. Every row takes only NOPADDING, which is also its default. EAX runs
 on 64- and 128-bit blocks, but CCM, GCM and OCB only on 128-bit blocks, so DES has
@@ -307,16 +301,16 @@ fn main() -> Result<(), AlgoError> {
 }
 ```
 
-| Algorithm | Padding | OID | Feature | Default |
-|---|---|---|---|:---:|
-| RSA | NOPADDING | | `rsa` | ✓ |
-| RSA | PKCS1PADDING | 1.2.840.113549.1.1.1 | `rsa` | ✓ |
-| RSA | OAEPWITHSHA1ANDMGF1PADDING | 1.2.840.113549.1.1.7 | `rsa` | ✓ |
-| RSA | OAEPWITHSHA224ANDMGF1PADDING | | `rsa` | ✓ |
-| RSA | OAEPWITHSHA256ANDMGF1PADDING | | `rsa` | ✓ |
-| RSA | OAEPWITHSHA256ANDMGF1WITHSHA1PADDING | | `rsa` | ✓ |
-| RSA | OAEPWITHSHA384ANDMGF1PADDING | | `rsa` | ✓ |
-| RSA | OAEPWITHSHA512ANDMGF1PADDING | | `rsa` | ✓ |
+| Algorithm | Padding | OID | Feature |
+|---|---|---|---|
+| RSA | NOPADDING | | `rsa` |
+| RSA | PKCS1PADDING | 1.2.840.113549.1.1.1 | `rsa` |
+| RSA | OAEPWITHSHA1ANDMGF1PADDING | 1.2.840.113549.1.1.7 | `rsa` |
+| RSA | OAEPWITHSHA224ANDMGF1PADDING | | `rsa` |
+| RSA | OAEPWITHSHA256ANDMGF1PADDING | | `rsa` |
+| RSA | OAEPWITHSHA256ANDMGF1WITHSHA1PADDING | | `rsa` |
+| RSA | OAEPWITHSHA384ANDMGF1PADDING | | `rsa` |
+| RSA | OAEPWITHSHA512ANDMGF1PADDING | | `rsa` |
 
 Every row takes an RSA key of any size. The first hash of an OAEP name hashes the
 label, the second, if any, is that of MGF1.

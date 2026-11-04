@@ -1,15 +1,11 @@
 use tc_asn1::Asn1Oid;
 
 use super::table::DIGESTS;
-use super::{Algorithm, AnyDigest, DigestEntry};
+use super::{AnyDigest, DigestEntry};
 use crate::{AlgoError, ErrorKind};
 
 pub fn algorithms() -> impl Iterator<Item = &'static DigestEntry> {
     DIGESTS.iter()
-}
-
-pub fn get(algorithm: Algorithm) -> AnyDigest {
-    algorithm.entry().create()
 }
 
 // Names match without regard to ASCII case; a string that is not a name is parsed as a dotted
