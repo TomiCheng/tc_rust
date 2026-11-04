@@ -10,7 +10,7 @@ use crate::{AlgoError, ErrorKind};
 // Sorts the errors of the layers underneath into an ErrorKind; the error itself travels as the
 // source. Bad padding and a failed tag both come out as InvalidCiphertext: telling them apart is
 // what a padding oracle needs
-pub(super) trait Classify {
+pub(crate) trait Classify {
     fn kind(&self) -> ErrorKind;
 }
 
@@ -213,7 +213,7 @@ impl Classify for tc_rsa::RsaError {
 }
 
 // The AlgoError of an error from underneath: its kind, with the error itself as the source
-pub(super) fn to_algo_error<E>(error: E) -> AlgoError
+pub(crate) fn to_algo_error<E>(error: E) -> AlgoError
 where
     E: Classify + core::error::Error + Send + Sync + 'static,
 {

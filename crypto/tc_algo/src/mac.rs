@@ -28,12 +28,12 @@
 
 mod any_mac;
 mod any_mac_params;
-#[cfg(feature = "hmac")]
 mod classify;
 mod dyn_mac;
 mod entry;
 mod functions;
 mod helper;
+mod init_params;
 mod table;
 
 pub use any_mac::AnyMac;

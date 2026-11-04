@@ -241,8 +241,8 @@ where
         self.iv.copy_from_slice(iv);
         self.mac.copy_from_slice(iv);
 
-        for (word, bytes) in self.subkeys.iter_mut().zip(key.as_chunks::<4>().0) {
-            *word = u32::from_le_bytes(*bytes);
+        for (word, bytes) in self.subkeys.iter_mut().zip(key.chunks_exact(4)) {
+            *word = u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);
         }
         self.s_box.copy_from_slice(table);
         self.initialized = true;

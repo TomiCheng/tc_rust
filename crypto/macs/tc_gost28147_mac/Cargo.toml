@@ -3,6 +3,7 @@ name = "tc_gost28147_mac"
 description = "GOST 28147-89 MAC implementation for the tc_rust workspace."
 version = "0.1.0"
 edition.workspace = true
+rust-version = "1.85"
 license.workspace = true
 repository.workspace = true
 

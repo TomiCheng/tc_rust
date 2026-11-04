@@ -3,6 +3,7 @@ name = "tc_iso9797_mac"
 description = "ISO 9797-1 algorithm 3 retail MAC for the tc_rust workspace."
 version = "0.1.0"
 edition.workspace = true
+rust-version = "1.85"
 license.workspace = true
 repository.workspace = true
 

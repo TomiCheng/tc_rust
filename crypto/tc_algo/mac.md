@@ -141,24 +141,27 @@ Any key length is accepted; a key longer than the digest's block is hashed first
 Every digest of [the digest table](digest.md#algorithms) has a row except NONE, which
 is not a hash. These have OIDs, as in Bouncy Castle:
 
-| MAC | OIDs |
-|---|---|
-| HMAC-MD5 | hmacMD5 |
-| HMAC-SHA-1 | id-hmacWithSHA1, hmac-sha1 |
-| HMAC-SHA-224 | id-hmacWithSHA224 |
-| HMAC-SHA-256 | id-hmacWithSHA256 |
-| HMAC-SHA-384 | id-hmacWithSHA384 |
-| HMAC-SHA-512 | id-hmacWithSHA512 |
-| HMAC-SHA-512/224 | id-hmacWithSHA512-224 |
-| HMAC-SHA-512/256 | id-hmacWithSHA512-256 |
-| HMAC-SHA3-224 | id-hmacWithSHA3-224 |
-| HMAC-SHA3-256 | id-hmacWithSHA3-256 |
-| HMAC-SHA3-384 | id-hmacWithSHA3-384 |
-| HMAC-SHA3-512 | id-hmacWithSHA3-512 |
-| HMAC-GOST3411-2012-256 | id-tc26-hmac-gost-3411-12-256 |
-| HMAC-GOST3411-2012-512 | id-tc26-hmac-gost-3411-12-512 |
-| HMAC-RIPEMD160 | hmacRIPEMD160 |
-| HMAC-TIGER | hmacTiger |
+| MAC | OID | Name of the OID |
+|---|---|---|
+| HMAC-MD5 | `1.3.6.1.5.5.8.1.1` | hmacMD5 |
+| HMAC-SHA-1 | `1.2.840.113549.2.7` | id-hmacWithSHA1 |
+| HMAC-SHA-1 | `1.3.6.1.5.5.8.1.2` | hmac-sha1 |
+| HMAC-SHA-224 | `1.2.840.113549.2.8` | id-hmacWithSHA224 |
+| HMAC-SHA-256 | `1.2.840.113549.2.9` | id-hmacWithSHA256 |
+| HMAC-SHA-384 | `1.2.840.113549.2.10` | id-hmacWithSHA384 |
+| HMAC-SHA-512 | `1.2.840.113549.2.11` | id-hmacWithSHA512 |
+| HMAC-SHA-512/224 | `1.2.840.113549.2.12` | id-hmacWithSHA512-224 |
+| HMAC-SHA-512/256 | `1.2.840.113549.2.13` | id-hmacWithSHA512-256 |
+| HMAC-SHA3-224 | `2.16.840.1.101.3.4.2.13` | id-hmacWithSHA3-224 |
+| HMAC-SHA3-256 | `2.16.840.1.101.3.4.2.14` | id-hmacWithSHA3-256 |
+| HMAC-SHA3-384 | `2.16.840.1.101.3.4.2.15` | id-hmacWithSHA3-384 |
+| HMAC-SHA3-512 | `2.16.840.1.101.3.4.2.16` | id-hmacWithSHA3-512 |
+| HMAC-GOST3411-2012-256 | `1.2.643.7.1.1.4.1` | id-tc26-hmac-gost-3411-12-256 |
+| HMAC-GOST3411-2012-512 | `1.2.643.7.1.1.4.2` | id-tc26-hmac-gost-3411-12-512 |
+| HMAC-RIPEMD160 | `1.3.6.1.5.5.8.1.4` | hmacRIPEMD160 |
+| HMAC-TIGER | `1.3.6.1.5.5.8.1.3` | hmacTiger |
+
+A lookup takes the number, not the OID's name, and printing an entry shows the name.
 
 The tag is as long as the digest. HMAC over a weak digest such as MD5 needs that digest's
 feature, which is off by default.

@@ -169,7 +169,7 @@ impl Default for Iso9797Alg3Mac<NoPadding> {
 
 impl<D> Iso9797Alg3Mac<D> {
     fn build(padding: D, mac_size_bits: usize) -> Result<Self, CreateError> {
-        if mac_size_bits == 0 || !mac_size_bits.is_multiple_of(8) || mac_size_bits > 64 {
+        if mac_size_bits == 0 || mac_size_bits % 8 != 0 || mac_size_bits > 64 {
             return Err(CreateError::InvalidMacSize(mac_size_bits));
         }
         Ok(Self {

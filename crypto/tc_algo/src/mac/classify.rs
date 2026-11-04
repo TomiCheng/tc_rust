@@ -1,21 +1,7 @@
-use core::convert::Infallible;
-use core::error::Error;
-
 use tc_macs::{InitError, MacError};
 
-use crate::{AlgoError, ErrorKind};
-
-// Sorts the errors of the layers underneath into an ErrorKind; the error itself travels as the
-// source
-pub(super) trait Classify {
-    fn kind(&self) -> ErrorKind;
-}
-
-impl Classify for Infallible {
-    fn kind(&self) -> ErrorKind {
-        match *self {}
-    }
-}
+use crate::ErrorKind;
+use crate::cipher::classify::Classify;
 
 impl<E: Classify> Classify for MacError<E> {
     fn kind(&self) -> ErrorKind {
@@ -37,9 +23,23 @@ impl<E: Classify> Classify for InitError<E> {
     }
 }
 
-pub(super) fn to_algo_error<E>(error: E) -> AlgoError
-where
-    E: Classify + Error + Send + Sync + 'static,
-{
-    AlgoError::with_source(error.kind(), error)
+// tc_iso9797_mac has errors of its own
+#[cfg(feature = "iso9797-mac")]
+impl Classify for tc_iso9797_mac::InitError {
+    fn kind(&self) -> ErrorKind {
+        ErrorKind::InvalidParams
+    }
+}
+
+#[cfg(feature = "iso9797-mac")]
+impl<P> Classify for tc_iso9797_mac::Error<P> {
+    fn kind(&self) -> ErrorKind {
+        use tc_iso9797_mac::Error;
+        match self {
+            Error::NotInitialised => ErrorKind::NotInitialized,
+            Error::OutputTooShort { .. } => ErrorKind::DataLength,
+            Error::Cipher(error) => error.kind(),
+            _ => ErrorKind::InvalidParams,
+        }
+    }
 }

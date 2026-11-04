@@ -166,7 +166,9 @@ fn hmac_sha1_matches_rfc_2202() {
 fn every_row_is_rfc_2104_over_its_digest_with_short_and_long_keys() {
     let long_key = vec![0x5a; 300];
     for entry in mac::algorithms() {
-        let digest = entry.name().strip_prefix("HMAC-").unwrap();
+        let Some(digest) = entry.name().strip_prefix("HMAC-") else {
+            continue;
+        };
         for key in [&b"short"[..], &long_key] {
             assert_eq!(
                 mac::calculate(entry.name(), &params(key), b"message").unwrap(),
@@ -185,7 +187,8 @@ fn there_is_a_row_for_every_digest_but_none_and_nothing_else() {
         .filter(|name| name != "NONE")
         .collect();
     let rows: Vec<String> = mac::algorithms()
-        .map(|entry| entry.name().strip_prefix("HMAC-").unwrap().to_string())
+        .filter_map(|entry| entry.name().strip_prefix("HMAC-"))
+        .map(ToString::to_string)
         .collect();
     assert_eq!(rows, digests);
     assert_eq!(

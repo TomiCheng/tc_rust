@@ -3,7 +3,7 @@ use tc_macs::Hmac;
 
 use crate::digest::{self, DigestEntry, TryDigest};
 use crate::mac::MacEntry;
-use crate::mac::dyn_mac::KeyMac;
+use crate::mac::dyn_mac::Mapped;
 use crate::need::Need;
 
 // tc_macs refuses a shorter block, which leaves out only NONE, which is not a hash
@@ -169,6 +169,6 @@ fn row(digest: &'static DigestEntry) -> MacEntry {
         .find(|(name, _)| *name == digest.name())
         .map_or(&[][..], |(_, oids)| oids);
     MacEntry::new(names, oids, Need::Forbidden, move || {
-        Box::new(KeyMac(Hmac::new(digest.create())))
+        Box::new(Mapped::key_only(Hmac::new(digest.create())))
     })
 }

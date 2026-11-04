@@ -3,7 +3,7 @@
 //! with an [`AnyParams`](crate::params::AnyParams) for one direction, fed, then finished.
 
 mod any_cipher;
-mod classify;
+pub(crate) mod classify;
 mod dyn_cipher;
 mod engine;
 mod entry;

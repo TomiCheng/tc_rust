@@ -18,10 +18,15 @@ repository.workspace = true
 # Skipjack, TEA and XTEA. NONE stays out too: it is not a hash, so a stray "NONE" must not
 # silently stop hashing. So do Naccache-Stern, too niche to pull in for everyone, HC-128 and
 # HC-256, kept for Bouncy Castle's sake, whose lookups into secret tables are not constant time,
-# and SM2 encryption, whose names are this crate's own. The family features still include all
+# and SM2 encryption, whose names are this crate's own. The MACs over DES and GOST 28147-89 and
+# VMPC-MAC stay out as the ciphers they rest on do. The family features still include all
 # of them.
 default = [
     "hmac",
+    "cmac",
+    "cbc-mac",
+    "cfb-mac",
+    "siphash",
     "sha224",
     "sha256",
     "sha384",
@@ -148,6 +153,19 @@ whirlpool = ["dep:tc_misc_digest", "tc_misc_digest/whirlpool"]
 null-digest = ["tc_digest/alloc"]
 # HMAC over every digest enabled, whose feature decides whether its row is there
 hmac = ["tc_macs/hmac", "tc_macs/alloc"]
+# CMAC, CBC-MAC and CFB-MAC over every block cipher of Bouncy Castle's MacUtilities that is enabled,
+# whose feature decides whether its row is there
+cmac = ["tc_macs/cmac", "tc_macs/alloc"]
+cbc-mac = ["tc_macs/cbc-mac", "tc_macs/alloc"]
+cfb-mac = ["tc_macs/cfb-mac", "tc_macs/alloc"]
+# ISO 9797-1 algorithm 3, the Retail MAC over DES
+iso9797-mac = ["dep:tc_iso9797_mac"]
+# The MAC of GOST 28147-89
+gost28147-mac = ["dep:tc_gost28147_mac", "dep:tc_gost28147"]
+# The MAC of the VMPC stream cipher
+vmpc-mac = ["tc_macs/vmpc-mac"]
+# SipHash-2-4, whose 8-byte tag suits hash tables rather than general use
+siphash = ["tc_macs/siphash"]
 # AES: its key generator and its ciphers in every mode the table pairs it with
 aes = ["dep:tc_aes"]
 # DES: its ciphers in every mode the table pairs it with
@@ -305,10 +323,12 @@ tc_f2m_custom = { version = "0.1.0", optional = true }
 tc_fp_curve = { version = "0.1.1", optional = true }
 tc_fp_custom = { version = "0.1.0", optional = true }
 tc_gost28147 = { version = "0.1.0", optional = true }
+tc_gost28147_mac = { version = "0.1.0", path = "../macs/tc_gost28147_mac", optional = true }
 tc_gost3410_key = { version = "0.1.0", path = "../tc_gost3410_key", optional = true }
 tc_gost3411 = { version = "0.1.0", optional = true }
 tc_grain128_aead = { version = "0.1.0", optional = true }
 tc_hc = { version = "0.1.0", optional = true }
+tc_iso9797_mac = { version = "0.1.0", path = "../macs/tc_iso9797_mac", optional = true }
 tc_keccak = { version = "0.1.0", optional = true }
 tc_macs = "0.1.1"
 tc_md = { version = "0.1.1", optional = true }
