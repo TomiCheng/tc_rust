@@ -40,4 +40,4 @@ pub use mac::{AnyMac, AnyMacParams, Mac, MacEntry, MacFactory, MacInit};
 pub use params::{AnyEcPrivateKey, AnyEcPublicKey, EcCurve};
 pub use params::{AnyKeyParams, AnyOpParams, AnyParams, AnyPrivateKey, AnyPublicKey, SecretKey};
 pub use policy::Policy;
-pub use xof::{AnyXof, XofEntry, XofFactory};
+pub use xof::{AnyXof, AnyXofParams, XofEntry, XofFactory};

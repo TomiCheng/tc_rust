@@ -7,7 +7,7 @@ use crate::digest::{DigestEntry, DigestFactory};
 use crate::generate::key::{KeyGeneratorEntry, KeyGeneratorFactory};
 use crate::generate::key_pair::{KeyPairGeneratorEntry, KeyPairGeneratorFactory};
 use crate::mac::{MacEntry, MacFactory};
-use crate::xof::XofFactory;
+use crate::xof::{XofEntry, XofFactory};
 
 // The instance that the factories are reached through, in place of free functions. It holds what
 // they keep between calls; a table that is a constant needs only its filtered list here
@@ -15,6 +15,7 @@ use crate::xof::XofFactory;
 pub struct Algo {
     policy: Policy,
     listed_digests: OnceLock<Vec<&'static DigestEntry>>,
+    listed_xofs: OnceLock<Vec<&'static XofEntry>>,
     macs: OnceLock<Vec<MacEntry>>,
     listed_macs: OnceLock<Vec<MacEntry>>,
     ciphers: OnceLock<Vec<CipherEntry>>,
@@ -34,6 +35,7 @@ impl Algo {
     pub fn set_policy(&mut self, policy: Policy) {
         self.policy = policy;
         self.listed_digests = OnceLock::new();
+        self.listed_xofs = OnceLock::new();
         self.listed_macs = OnceLock::new();
         self.listed_ciphers = OnceLock::new();
         self.listed_key_generators = OnceLock::new();
@@ -50,7 +52,7 @@ impl Algo {
     }
 
     pub fn xof(&self) -> XofFactory<'_> {
-        XofFactory::new(&self.policy)
+        XofFactory::new(&self.policy, &self.listed_xofs)
     }
 
     pub fn mac(&self) -> MacFactory<'_> {

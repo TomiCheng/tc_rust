@@ -121,6 +121,27 @@ haraka = ["dep:tc_misc_digest", "tc_misc_digest/haraka"]
 # Bouncy Castle's NONE: passes the message through unchanged, for signers that sign it as is
 null-digest = ["tc_digest/alloc"]
 
+# Xof
+# SHAKE is the shake128 and shake256 features above, which enable its rows here too
+# cSHAKE of NIST SP 800-185, with a function name and a customization string
+cshake = ["cshake128", "cshake256"]
+cshake128 = ["dep:tc_keccak"]
+cshake256 = ["dep:tc_keccak"]
+# TupleHash of NIST SP 800-185, where each update is one element of the tuple
+tuplehash = ["tuplehash128", "tuplehash256"]
+tuplehash128 = ["dep:tc_keccak"]
+tuplehash256 = ["dep:tc_keccak"]
+# ParallelHash of NIST SP 800-185, which init must give a block size
+parallelhash = ["parallelhash128", "parallelhash256"]
+parallelhash128 = ["dep:tc_keccak"]
+parallelhash256 = ["dep:tc_keccak"]
+blake2xs = ["dep:tc_blake"]
+blake3 = ["dep:tc_blake"]
+# Ascon-XOF128 and Ascon-CXOF128 of NIST SP 800-232, and the Ascon-XOF and Ascon-XOFa from before it
+ascon-xof128 = ["dep:tc_ascon_hash"]
+ascon-cxof128 = ["dep:tc_ascon_hash"]
+ascon-xof-legacy = ["dep:tc_ascon_hash", "tc_ascon_hash/legacy"]
+
 # Mac
 # HMAC over every digest enabled, whose feature decides whether its row is there
 hmac = ["tc_macs/hmac", "tc_macs/alloc"]

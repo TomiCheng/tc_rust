@@ -54,10 +54,12 @@ pub enum ErrorKind {
     UnknownCipher,
     UnknownAgreement,
     UnknownMac,
+    UnknownXof,
     InvalidParams,
     DataLength,
     InvalidCiphertext,
     NotInitialized,
+    XofOutputStarted,
 }
 
 impl fmt::Display for ErrorKind {
@@ -69,10 +71,12 @@ impl fmt::Display for ErrorKind {
             ErrorKind::UnknownCipher => f.write_str("unknown cipher"),
             ErrorKind::UnknownAgreement => f.write_str("unknown key agreement"),
             ErrorKind::UnknownMac => f.write_str("unknown MAC"),
+            ErrorKind::UnknownXof => f.write_str("unknown XOF"),
             ErrorKind::InvalidParams => f.write_str("invalid parameters for this algorithm"),
             ErrorKind::DataLength => f.write_str("input of the wrong length for this cipher"),
             ErrorKind::InvalidCiphertext => f.write_str("invalid ciphertext"),
             ErrorKind::NotInitialized => f.write_str("used before a successful init"),
+            ErrorKind::XofOutputStarted => f.write_str("input after the XOF began its output"),
         }
     }
 }

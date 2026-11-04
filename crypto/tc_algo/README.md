@@ -9,6 +9,7 @@ of its own, which gives one type for all of its algorithms, such as `AnyCipher` 
 ## Guides
 
 - [Digests](docs/digest.md): message digests such as SHA-256, after `DigestUtilities`.
+- [XOFs](docs/xof.md): hashes of a message into as many bytes as you ask for.
 - [Ciphers](cipher.md): block, stream, AEAD and asymmetric ciphers, after
   `CipherUtilities`.
 - [Key generators](generator.md): secret keys and key pairs, after
