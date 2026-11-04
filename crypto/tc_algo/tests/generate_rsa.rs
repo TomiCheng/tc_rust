@@ -1,14 +1,22 @@
 #![cfg(feature = "rsa")]
 
+use std::sync::LazyLock;
+
 use rand::SeedableRng;
 use rand::rngs::StdRng;
-use tc_algo::ErrorKind;
-use tc_algo::generate::key_pair::KeyPair;
-use tc_algo::generate::{self, KeyGenParams, RsaKeyGenParams};
-use tc_algo::params::{AnyPrivateKey, AnyPublicKey};
+use tc_algo::{
+    Algo, AnyPrivateKey, AnyPublicKey, ErrorKind, KeyGenParams, KeyPair, RsaKeyGenParams,
+};
 use tc_asym_cipher::AsymmetricKeyParams;
 use tc_bigint::PaddedBigUint;
 use tc_rsa::{RsaKey, RsaKeyParams};
+
+// One instance for the whole file, so that its tables are built once
+#[allow(
+    dead_code,
+    reason = "unused when the features of the tests here are off"
+)]
+static ALGO: LazyLock<Algo> = LazyLock::new(Algo::new);
 
 // Small keys keep the tests quick; the size is what is checked, not its strength
 fn small_rsa() -> RsaKeyGenParams {
@@ -29,7 +37,7 @@ fn modulus(key: &RsaKey) -> &PaddedBigUint {
 
 #[test]
 fn an_rsa_key_pair_has_the_size_asked_for_and_one_modulus() {
-    let mut generator = generate::key_pair::get_by_name("RSA").unwrap();
+    let mut generator = ALGO.key_pair_generator().get_by_name("RSA").unwrap();
     generator.init(small_rsa()).unwrap();
     let pair = generator.generate().unwrap();
     let (public, private) = rsa_keys(&pair);
@@ -41,7 +49,7 @@ fn an_rsa_key_pair_has_the_size_asked_for_and_one_modulus() {
 
 #[test]
 fn the_size_alone_keeps_the_default_exponent() {
-    let mut generator = generate::key_pair::get_by_name("RSA").unwrap();
+    let mut generator = ALGO.key_pair_generator().get_by_name("RSA").unwrap();
     generator
         .init(KeyGenParams::Strength { bits: 512 })
         .unwrap();
@@ -56,7 +64,7 @@ fn the_size_alone_keeps_the_default_exponent() {
 #[test]
 fn the_same_seed_gives_the_same_key_pair() {
     let generate = || {
-        let mut generator = generate::key_pair::get_by_name("RSA").unwrap();
+        let mut generator = ALGO.key_pair_generator().get_by_name("RSA").unwrap();
         generator.init(small_rsa()).unwrap();
         generator
             .with_rng(StdRng::seed_from_u64(7))
@@ -69,7 +77,7 @@ fn the_same_seed_gives_the_same_key_pair() {
 
 #[test]
 fn without_init_the_generator_uses_bouncy_castles_defaults() {
-    let generator = generate::key_pair::get_by_name("RSA").unwrap();
+    let generator = ALGO.key_pair_generator().get_by_name("RSA").unwrap();
     assert_eq!(
         format!("{generator:?}"),
         "KeyPairGenerator { name: \"RSA\", params: Some(Rsa(RsaKeyGenParams { public_exponent: \
@@ -80,26 +88,31 @@ fn without_init_the_generator_uses_bouncy_castles_defaults() {
 #[test]
 fn the_generator_is_found_by_name_alias_case_or_oid() {
     for name in ["RSA", "rsa", "1.2.840.113549.1.1.1"] {
-        let generator = generate::key_pair::get_by_name(name).unwrap();
+        let generator = ALGO.key_pair_generator().get_by_name(name).unwrap();
         assert_eq!(generator.entry().name(), "RSA");
     }
-    let oid = generate::key_pair::algorithms()
+    let oid = ALGO
+        .key_pair_generator()
+        .algorithms()
         .find(|entry| entry.name() == "RSA")
         .unwrap()
         .oids()[0]
         .oid();
-    assert!(generate::key_pair::get_by_oid(&oid).is_ok());
+    assert!(ALGO.key_pair_generator().get_by_oid(&oid).is_ok());
 }
 
 #[test]
 fn an_unknown_name_is_reported_as_an_unknown_generator() {
-    let error = generate::key_pair::get_by_name("no-such-generator").unwrap_err();
+    let error = ALGO
+        .key_pair_generator()
+        .get_by_name("no-such-generator")
+        .unwrap_err();
     assert_eq!(error.kind(), ErrorKind::UnknownGenerator);
 }
 
 #[test]
 fn a_size_rsa_cannot_take_is_reported_with_the_rsa_error_underneath() {
-    let mut generator = generate::key_pair::get_by_name("RSA").unwrap();
+    let mut generator = ALGO.key_pair_generator().get_by_name("RSA").unwrap();
     generator.init(KeyGenParams::Strength { bits: 8 }).unwrap();
     let error = generator.generate().unwrap_err();
     assert_eq!(error.kind(), ErrorKind::InvalidKeyGenParams);
@@ -109,8 +122,8 @@ fn a_size_rsa_cannot_take_is_reported_with_the_rsa_error_underneath() {
 #[cfg(feature = "ec")]
 #[test]
 fn init_rejects_params_of_another_algorithm_and_keeps_its_own() {
-    let mut generator = generate::key_pair::get_by_name("RSA").unwrap();
-    let ec = KeyGenParams::ec(tc_algo::params::EcCurve::Secp256r1);
+    let mut generator = ALGO.key_pair_generator().get_by_name("RSA").unwrap();
+    let ec = KeyGenParams::ec(tc_algo::EcCurve::Secp256r1);
     let error = generator.init(ec).unwrap_err();
     assert_eq!(error.kind(), ErrorKind::InvalidKeyGenParams);
     assert!(format!("{generator:?}").contains("bits: 2048"));
@@ -118,7 +131,9 @@ fn init_rejects_params_of_another_algorithm_and_keeps_its_own() {
 
 #[test]
 fn the_entry_shows_its_name_and_oid() {
-    let entry = generate::key_pair::algorithms()
+    let entry = ALGO
+        .key_pair_generator()
+        .algorithms()
         .find(|entry| entry.name() == "RSA")
         .unwrap();
     assert_eq!(entry.to_string(), "RSA  [rsaEncryption]");

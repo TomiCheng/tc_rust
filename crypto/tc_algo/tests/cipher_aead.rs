@@ -9,9 +9,16 @@
     feature = "sparkle"
 ))]
 
-use tc_algo::ErrorKind;
-use tc_algo::cipher::{self, CipherDirection};
-use tc_algo::params::{AnyKeyParams, AnyParams, SecretKey};
+use std::sync::LazyLock;
+
+use tc_algo::{Algo, AnyKeyParams, AnyParams, CipherDirection, ErrorKind, SecretKey};
+
+// One instance for the whole file, so that its tables are built once
+#[allow(
+    dead_code,
+    reason = "unused when the features of the tests here are off"
+)]
+static ALGO: LazyLock<Algo> = LazyLock::new(Algo::new);
 
 fn hex(text: &str) -> Vec<u8> {
     (0..text.len())
@@ -33,12 +40,12 @@ fn params(key: &[u8], nonce: &[u8], tag_len: usize, aad: &[u8]) -> AnyParams {
 #[allow(dead_code, reason = "each known answer has its own feature")]
 fn assert_sealed(name: &str, params: &AnyParams, plaintext: &[u8], sealed: &[u8]) {
     assert_eq!(
-        cipher::encrypt(name, params, plaintext).unwrap(),
+        ALGO.cipher().encrypt(name, params, plaintext).unwrap(),
         sealed,
         "{name}"
     );
     assert_eq!(
-        cipher::decrypt(name, params, sealed).unwrap(),
+        ALGO.cipher().decrypt(name, params, sealed).unwrap(),
         plaintext,
         "{name}"
     );
@@ -168,10 +175,11 @@ const SIZES: &[(&str, usize, usize, usize)] = &[
 ];
 
 fn enabled() -> impl Iterator<Item = (&'static str, usize, usize, usize)> {
-    SIZES
-        .iter()
-        .copied()
-        .filter(|(name, ..)| cipher::algorithms().any(|entry| entry.name() == *name))
+    SIZES.iter().copied().filter(|(name, ..)| {
+        ALGO.cipher()
+            .algorithms()
+            .any(|entry| entry.name() == *name)
+    })
 }
 
 #[test]
@@ -179,22 +187,24 @@ fn every_aead_cipher_decrypts_what_it_encrypts_and_refuses_a_change() {
     let message: Vec<u8> = (0..100).collect();
     for (name, key, nonce, tag) in enabled() {
         let params = params(&vec![1; key], &vec![2; nonce], tag, b"header");
-        let mut sealed = cipher::encrypt(name, &params, &message).unwrap();
+        let mut sealed = ALGO.cipher().encrypt(name, &params, &message).unwrap();
         assert_eq!(sealed.len(), message.len() + tag, "{name}");
         assert_eq!(
-            cipher::decrypt(name, &params, &sealed).unwrap(),
+            ALGO.cipher().decrypt(name, &params, &sealed).unwrap(),
             message,
             "{name}"
         );
         sealed[50] ^= 1;
-        let error = cipher::decrypt(name, &params, &sealed).unwrap_err();
+        let error = ALGO.cipher().decrypt(name, &params, &sealed).unwrap_err();
         assert_eq!(error.kind(), ErrorKind::InvalidCiphertext, "{name}");
     }
 }
 
 #[test]
 fn the_table_has_each_aead_cipher_of_the_enabled_features() {
-    let mut listed: Vec<&str> = cipher::algorithms()
+    let mut listed: Vec<&str> = ALGO
+        .cipher()
+        .algorithms()
         .map(|entry| entry.name())
         .filter(|name| SIZES.iter().any(|(known, ..)| known == name))
         .collect();
@@ -212,7 +222,7 @@ fn an_aead_cipher_needs_a_nonce_and_a_tag_length() {
         let mut without_tag = params(&vec![1; key], &vec![2; nonce], tag, &[]);
         without_tag.op.tag_len = None;
         for params in [without_nonce, without_tag] {
-            let mut cipher = cipher::get_by_name(name).unwrap();
+            let mut cipher = ALGO.cipher().get_by_name(name).unwrap();
             let error = cipher.init(CipherDirection::Encrypt, &params).unwrap_err();
             assert_eq!(error.kind(), ErrorKind::InvalidParams, "{name}");
         }
@@ -223,7 +233,10 @@ fn an_aead_cipher_needs_a_nonce_and_a_tag_length() {
 fn an_aead_cipher_takes_neither_a_mode_nor_a_padding() {
     for (name, ..) in enabled() {
         for suffix in ["/NONE/NOPADDING", "/GCM", "/"] {
-            let error = cipher::get_by_name(&format!("{name}{suffix}")).unwrap_err();
+            let error = ALGO
+                .cipher()
+                .get_by_name(&format!("{name}{suffix}"))
+                .unwrap_err();
             assert_eq!(error.kind(), ErrorKind::UnknownCipher, "{name}{suffix}");
         }
     }
@@ -233,7 +246,7 @@ fn an_aead_cipher_takes_neither_a_mode_nor_a_padding() {
 fn encrypting_again_takes_a_new_nonce() {
     for (name, key, nonce, tag) in enabled() {
         let params = params(&vec![1; key], &vec![2; nonce], tag, &[]);
-        let mut cipher = cipher::get_by_name(name).unwrap();
+        let mut cipher = ALGO.cipher().get_by_name(name).unwrap();
         cipher.init(CipherDirection::Encrypt, &params).unwrap();
         cipher.update(b"message").unwrap();
         cipher.finalize().unwrap();
@@ -254,15 +267,16 @@ fn params_with_nonce(params: &AnyParams, nonce: &[u8]) -> AnyParams {
 #[test]
 fn chacha20_poly1305_follows_bouncy_castle_for_its_names_and_oid() {
     for name in ["ChaCha20-Poly1305", "chacha20_poly1305"] {
-        let cipher = cipher::get_by_name(name).unwrap();
+        let cipher = ALGO.cipher().get_by_name(name).unwrap();
         assert_eq!(cipher.entry().name(), "CHACHA20-POLY1305", "{name}");
     }
-    let entry = cipher::get_by_name("CHACHA20-POLY1305").unwrap().entry();
+    let found = ALGO.cipher().get_by_name("CHACHA20-POLY1305").unwrap();
+    let entry = found.entry();
     assert_eq!(
         entry.to_string(),
         "CHACHA20-POLY1305  [id-alg-AEADChaCha20Poly1305]"
     );
-    let cipher = cipher::get_by_oid(&entry.oids()[0].oid()).unwrap();
+    let cipher = ALGO.cipher().get_by_oid(&entry.oids()[0].oid()).unwrap();
     assert_eq!(cipher.entry().name(), "CHACHA20-POLY1305");
 }
 
@@ -270,7 +284,7 @@ fn chacha20_poly1305_follows_bouncy_castle_for_its_names_and_oid() {
 #[test]
 fn chacha20_poly1305_refuses_a_tag_other_than_sixteen_bytes() {
     let params = params(&[1; 32], &[2; 12], 12, &[]);
-    let mut cipher = cipher::get_by_name("CHACHA20-POLY1305").unwrap();
+    let mut cipher = ALGO.cipher().get_by_name("CHACHA20-POLY1305").unwrap();
     let error = cipher.init(CipherDirection::Encrypt, &params).unwrap_err();
     assert_eq!(error.kind(), ErrorKind::InvalidParams);
 }

@@ -14,8 +14,17 @@
 #[path = "vectors/bc_digests.rs"]
 mod bc_digests;
 
+use std::sync::LazyLock;
+
 use bc_digests::VECTORS;
-use tc_algo::digest::{self, TryDigest};
+use tc_algo::{Algo, TryDigest};
+
+// One instance for the whole file, so that its tables are built once
+#[allow(
+    dead_code,
+    reason = "unused when the features of the tests here are off"
+)]
+static ALGO: LazyLock<Algo> = LazyLock::new(Algo::new);
 
 fn unhex(text: &str) -> Vec<u8> {
     (0..text.len())
@@ -29,7 +38,10 @@ fn every_digest_is_the_one_bouncy_castle_gave() {
     assert!(VECTORS.len() > 290);
     for &(name, message, expected) in VECTORS {
         let (message, expected) = (unhex(message), unhex(expected));
-        let mut digest = digest::get_by_name(name).unwrap_or_else(|_| panic!("{name}"));
+        let mut digest = ALGO
+            .digest()
+            .get_by_name(name)
+            .unwrap_or_else(|_| panic!("{name}"));
         assert_eq!(TryDigest::digest_size(&digest), expected.len(), "{name}");
         for piece in message.chunks(7) {
             digest.update(piece);
@@ -85,7 +97,7 @@ fn the_short_names_find_the_same_digests() {
         ("haraka-256", "HARAKA-256"),
     ] {
         assert_eq!(
-            digest::get_by_name(alias).unwrap().entry().name(),
+            ALGO.digest().get_by_name(alias).unwrap().entry().name(),
             canonical
         );
     }
@@ -95,7 +107,7 @@ fn the_short_names_find_the_same_digests() {
 fn finalize_starts_the_next_message_for_every_digest_here() {
     for &(name, message, expected) in VECTORS {
         let (message, expected) = (unhex(message), unhex(expected));
-        let mut digest = digest::get_by_name(name).unwrap();
+        let mut digest = ALGO.digest().get_by_name(name).unwrap();
         digest.update(&message);
         digest.finalize();
         digest.update(&message);
@@ -106,14 +118,14 @@ fn finalize_starts_the_next_message_for_every_digest_here() {
 #[test]
 #[should_panic(expected = "HARAKA-256 takes exactly 32 bytes and HARAKA-512 exactly 64")]
 fn haraka_panics_on_an_input_that_is_too_long() {
-    let mut haraka = digest::get_by_name("HARAKA-256").unwrap();
+    let mut haraka = ALGO.digest().get_by_name("HARAKA-256").unwrap();
     haraka.update(&[0; 33]);
 }
 
 #[test]
 #[should_panic(expected = "HARAKA-256 takes exactly 32 bytes and HARAKA-512 exactly 64")]
 fn haraka_panics_on_an_input_that_is_too_short() {
-    let mut haraka = digest::get_by_name("HARAKA-512").unwrap();
+    let mut haraka = ALGO.digest().get_by_name("HARAKA-512").unwrap();
     haraka.update(&[0; 63]);
     haraka.finalize();
 }

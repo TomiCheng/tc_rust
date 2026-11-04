@@ -2,13 +2,21 @@
 
 // X448 in the agreement table, found by its name and by id-X448 as in Bouncy Castle, and the
 // agreement it gives: the secret of RFC 7748, and what init and calculate refuse
-use tc_algo::ErrorKind;
-use tc_algo::agreement::{
-    self, Agreement, AgreementInit, AgreementPeer, AnyAgreement, AnyAgreementParams,
+use std::sync::LazyLock;
+
+use tc_algo::{
+    Agreement, AgreementInit, AgreementPeer, Algo, AnyAgreement, AnyAgreementParams, AnyPrivateKey,
+    AnyPublicKey, ErrorKind,
 };
-use tc_algo::params::{AnyPrivateKey, AnyPublicKey};
 use tc_asn1::Asn1Oid;
 use tc_cfrg_curves::{X448PrivateKey, X448PublicKey};
+
+// One instance for the whole file, so that its tables are built once
+#[allow(
+    dead_code,
+    reason = "unused when the features of the tests here are off"
+)]
+static ALGO: LazyLock<Algo> = LazyLock::new(Algo::new);
 
 // RFC 7748, section 6.2
 const ALICE_PRIVATE: &str = "9a8f4925d1519f5775cf46b04b5800d4ee9ee8bae8bc5565d498c28dd9c9baf574a9419744897391006382a6f127ab1d9ac2d8c0a598726b";
@@ -34,7 +42,7 @@ fn public(u: [u8; 56]) -> AgreementPeer {
 }
 
 fn initialized(params: &AnyAgreementParams) -> AnyAgreement {
-    let mut x448 = agreement::get_by_name("X448").unwrap();
+    let mut x448 = ALGO.agreement().get_by_name("X448").unwrap();
     x448.init(params).unwrap();
     x448
 }
@@ -42,16 +50,21 @@ fn initialized(params: &AnyAgreementParams) -> AnyAgreement {
 #[test]
 fn x448_is_found_by_its_name_in_any_case_and_by_its_oid() {
     for name in ["X448", "x448", "1.3.101.111"] {
-        let x448 = agreement::get_by_name(name).unwrap();
+        let x448 = ALGO.agreement().get_by_name(name).unwrap();
         assert_eq!(x448.entry().name(), "X448", "{name}");
     }
     let oid: Asn1Oid = "1.3.101.111".parse().unwrap();
-    assert_eq!(agreement::get_by_oid(&oid).unwrap().entry().name(), "X448");
+    assert_eq!(
+        ALGO.agreement().get_by_oid(&oid).unwrap().entry().name(),
+        "X448"
+    );
 }
 
 #[test]
 fn the_entry_shows_its_name_and_its_oid() {
-    let entry = agreement::algorithms()
+    let entry = ALGO
+        .agreement()
+        .algorithms()
         .find(|entry| entry.name() == "X448")
         .unwrap();
     assert_eq!(entry.to_string(), "X448  [id-X448]");
@@ -59,15 +72,19 @@ fn the_entry_shows_its_name_and_its_oid() {
 
 #[test]
 fn both_parties_reach_the_secret_of_rfc_7748() {
-    let alice = agreement::calculate("X448", &private(ALICE_PRIVATE), &public(hex56(BOB_PUBLIC)));
-    let bob = agreement::calculate("X448", &private(BOB_PRIVATE), &public(hex56(ALICE_PUBLIC)));
+    let alice =
+        ALGO.agreement()
+            .calculate("X448", &private(ALICE_PRIVATE), &public(hex56(BOB_PUBLIC)));
+    let bob =
+        ALGO.agreement()
+            .calculate("X448", &private(BOB_PRIVATE), &public(hex56(ALICE_PUBLIC)));
     assert_eq!(alice.unwrap().as_bytes(), hex56(SHARED));
     assert_eq!(bob.unwrap().as_bytes(), hex56(SHARED));
 }
 
 #[test]
 fn the_trait_writes_the_secret_into_a_buffer_of_agreement_size() {
-    let mut x448 = agreement::get_by_name("X448").unwrap();
+    let mut x448 = ALGO.agreement().get_by_name("X448").unwrap();
     AgreementInit::init(&mut x448, &private(ALICE_PRIVATE)).unwrap();
     assert_eq!(x448.agreement_size(), 56);
     let mut output = [0; 56];
@@ -94,7 +111,7 @@ fn a_public_key_of_small_order_is_refused() {
 
 #[test]
 fn x448_refuses_user_keying_material_and_an_ephemeral_key_of_either_party() {
-    let mut x448 = agreement::get_by_name("X448").unwrap();
+    let mut x448 = ALGO.agreement().get_by_name("X448").unwrap();
     let error = x448
         .init(&private(ALICE_PRIVATE).with_ukm(vec![1, 2, 3]))
         .unwrap_err();
@@ -119,7 +136,7 @@ fn an_x25519_key_is_refused_on_either_side() {
 
     let x25519 = X25519PrivateKey::new([7; 32]);
     let x25519_public = x25519.generate_public_key();
-    let mut x448 = agreement::get_by_name("X448").unwrap();
+    let mut x448 = ALGO.agreement().get_by_name("X448").unwrap();
     let error = x448
         .init(&AnyPrivateKey::X25519(x25519).into())
         .unwrap_err();
@@ -134,7 +151,7 @@ fn an_x25519_key_is_refused_on_either_side() {
 
 #[test]
 fn calculating_before_init_is_not_initialized() {
-    let x448 = agreement::get_by_name("X448").unwrap();
+    let x448 = ALGO.agreement().get_by_name("X448").unwrap();
     let error = x448.calculate(&public(hex56(BOB_PUBLIC))).unwrap_err();
     assert_eq!(error.kind(), ErrorKind::NotInitialized);
     let error = x448

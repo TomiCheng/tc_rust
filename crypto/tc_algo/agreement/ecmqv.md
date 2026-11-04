@@ -11,8 +11,8 @@ The secret depends on both static keys, so only the holders of the static privat
 can reach it: the agreement authenticates both parties without a signature. The
 ephemeral keys make the secret of each exchange a new one.
 
-In `tc_algo` this takes two factories: `generate::key_pair` makes the key pairs and
-`agreement` calculates the secret, after Bouncy Castle's `GeneratorUtilities` and
+In `tc_algo` this takes two factories: `algo.key_pair_generator()` makes the key pairs and
+`algo.agreement()` calculates the secret, after Bouncy Castle's `GeneratorUtilities` and
 `AgreementUtilities`. The generator is `"EC"`, the agreement `"ECMQV"`.
 
 ## Enabling ECMQV
@@ -30,13 +30,11 @@ tc_algo = { version = "0.1", features = ["ecmqv"] }
 ### Both parties, step by step
 
 ```rust
-use tc_algo::AlgoError;
-use tc_algo::agreement::{self, AgreementPeer, AnyAgreementParams};
-use tc_algo::generate;
-use tc_algo::params::EcCurve;
+use tc_algo::{AgreementPeer, Algo, AlgoError, AnyAgreementParams, EcCurve};
 
 fn main() -> Result<(), AlgoError> {
-    let mut generator = generate::key_pair::get_by_name("EC")?;
+    let algo = Algo::new();
+    let mut generator = algo.key_pair_generator().get_by_name("EC")?;
     generator.init(EcCurve::Secp256r1)?;
 
     // 1. Each party has a static key pair, whose public key the other already knows ...
@@ -51,7 +49,7 @@ fn main() -> Result<(), AlgoError> {
     let params =
         AnyAgreementParams::new(alice_static.private).with_ephemeral(alice_ephemeral.private);
     let peer = AgreementPeer::new(bob_static.public).with_ephemeral(bob_ephemeral.public);
-    let mut agreement = agreement::get_by_name("ECMQV")?;
+    let mut agreement = algo.agreement().get_by_name("ECMQV")?;
     agreement.init(&params)?;
     let alice_secret = agreement.calculate(&peer)?;
 
@@ -59,7 +57,7 @@ fn main() -> Result<(), AlgoError> {
     let params =
         AnyAgreementParams::new(bob_static.private).with_ephemeral(bob_ephemeral.private);
     let peer = AgreementPeer::new(alice_static.public).with_ephemeral(alice_ephemeral.public);
-    let mut agreement = agreement::get_by_name("ECMQV")?;
+    let mut agreement = algo.agreement().get_by_name("ECMQV")?;
     agreement.init(&params)?;
     let bob_secret = agreement.calculate(&peer)?;
 
@@ -79,23 +77,21 @@ ephemeral key pair for each exchange; the static one stays.
 
 ### In one step
 
-`agreement::calculate` finds the agreement, initializes it and calculates.
+`algo.agreement().calculate` finds the agreement, initializes it and calculates.
 
 ```rust
-use tc_algo::AlgoError;
-use tc_algo::agreement::{self, AgreementPeer, AnyAgreementParams};
-use tc_algo::generate;
-use tc_algo::params::EcCurve;
+use tc_algo::{AgreementPeer, Algo, AlgoError, AnyAgreementParams, EcCurve};
 
 fn main() -> Result<(), AlgoError> {
-    let mut generator = generate::key_pair::get_by_name("EC")?;
+    let algo = Algo::new();
+    let mut generator = algo.key_pair_generator().get_by_name("EC")?;
     generator.init(EcCurve::Secp384r1)?;
     let (mine, my_ephemeral) = (generator.generate()?, generator.generate()?);
     let (theirs, their_ephemeral) = (generator.generate()?, generator.generate()?);
 
     let params = AnyAgreementParams::new(mine.private).with_ephemeral(my_ephemeral.private);
     let peer = AgreementPeer::new(theirs.public).with_ephemeral(their_ephemeral.public);
-    let secret = agreement::calculate("ECMQV", &params, &peer)?;
+    let secret = algo.agreement().calculate("ECMQV", &params, &peer)?;
     Ok(())
 }
 ```
@@ -115,22 +111,20 @@ take time that depends on its bytes.
 ### Into a buffer of your own
 
 `AnyAgreement` also implements the `Agreement` and `AgreementInit` traits, which
-`tc_algo::agreement` re-exports, so it fits generic code. `calculate_agreement`
+`tc_algo` re-exports, so it fits generic code. `calculate_agreement`
 writes the secret into the first `agreement_size` bytes of a buffer.
 
 ```rust
-use tc_algo::AlgoError;
-use tc_algo::agreement::{self, Agreement, AgreementPeer, AnyAgreementParams};
-use tc_algo::generate;
-use tc_algo::params::EcCurve;
+use tc_algo::{Agreement, AgreementPeer, Algo, AlgoError, AnyAgreementParams, EcCurve};
 
 fn main() -> Result<(), AlgoError> {
-    let mut generator = generate::key_pair::get_by_name("EC")?;
+    let algo = Algo::new();
+    let mut generator = algo.key_pair_generator().get_by_name("EC")?;
     generator.init(EcCurve::Secp256r1)?;
     let (mine, my_ephemeral) = (generator.generate()?, generator.generate()?);
     let (theirs, their_ephemeral) = (generator.generate()?, generator.generate()?);
 
-    let mut agreement = agreement::get_by_name("ECMQV")?;
+    let mut agreement = algo.agreement().get_by_name("ECMQV")?;
     agreement.init(&AnyAgreementParams::new(mine.private).with_ephemeral(my_ephemeral.private))?;
     let peer = AgreementPeer::new(theirs.public).with_ephemeral(their_ephemeral.public);
     let mut secret = vec![0; agreement.agreement_size()]; // 32 bytes
@@ -151,24 +145,22 @@ the error of the ECMQV layer underneath, where there is one.
 |---|---|
 | `UnknownAgreement` | The name is not ECMQV, or the `ecmqv` feature is off |
 | `UnknownGenerator` | The name is not EC, ECDH, ECIES, ECDHC or ECMQV, or the `ec` feature is off |
-| `InvalidKeyGenParams` | The generator has no curve: `generate` without `init`, `key_pair::generate("EC")`, or `init` with a size that names none of the curves |
+| `InvalidKeyGenParams` | The generator has no curve: `generate` without `init`, `algo.key_pair_generator().generate("EC")`, or `init` with a size that names none of the curves |
 | `InvalidParams` | `init` with a key that is not EC, without an ephemeral key, with the two keys on two curves, or with user keying material. `calculate` without the other party's ephemeral key, with a public key that is not EC or is on another curve, or with keys that give a shared point at infinity |
 | `NotInitialized` | `calculate` before a successful `init` |
 | `DataLength` | `calculate_agreement` with a buffer shorter than `agreement_size` |
 
 ```rust
-use tc_algo::agreement;
-use tc_algo::generate;
-use tc_algo::params::EcCurve;
-use tc_algo::{AlgoError, ErrorKind};
+use tc_algo::{Algo, AlgoError, EcCurve, ErrorKind};
 
 fn main() -> Result<(), AlgoError> {
-    let mut generator = generate::key_pair::get_by_name("EC")?;
+    let algo = Algo::new();
+    let mut generator = algo.key_pair_generator().get_by_name("EC")?;
     generator.init(EcCurve::Secp256r1)?;
     let mine = generator.generate()?;
 
     // The static key alone, without an ephemeral key
-    let mut agreement = agreement::get_by_name("ECMQV")?;
+    let mut agreement = algo.agreement().get_by_name("ECMQV")?;
     let error = agreement.init(&mine.private.into()).unwrap_err();
     assert_eq!(error.kind(), ErrorKind::InvalidParams);
     Ok(())
@@ -184,8 +176,8 @@ feature of each in [ecdh.md](ecdh.md#curves). For a new system, take P-256 or la
 
 | Factory | Name | Aliases | OID | Feature |
 |---|---|---|---|---|
-| `agreement` | ECMQV | | | `ecmqv` |
-| `generate::key_pair` | EC | ECDH, ECIES, ECDHC, ECMQV | 15 of the ECDH and ECMQV schemes with a KDF | `ec` |
+| `algo.agreement()` | ECMQV | | | `ecmqv` |
+| `algo.key_pair_generator()` | EC | ECDH, ECIES, ECDHC, ECMQV | 15 of the ECDH and ECMQV schemes with a KDF | `ec` |
 
 Names match without regard to ASCII case, and a dotted OID works wherever a name does.
 The agreement has no OID, as in Bouncy Castle: the OIDs of MQV, such as

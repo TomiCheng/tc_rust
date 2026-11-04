@@ -5,8 +5,8 @@ makes a key pair in the same group, they swap public keys, and each combines its
 private key with the other's public key. Both get the same secret; someone who saw
 only the public keys does not.
 
-In `tc_algo` this takes two factories: `generate::key_pair` makes the key pairs
-and `agreement` calculates the secret, after Bouncy Castle's `GeneratorUtilities` and
+In `tc_algo` this takes two factories: `algo.key_pair_generator()` makes the key pairs
+and `algo.agreement()` calculates the secret, after Bouncy Castle's `GeneratorUtilities` and
 `AgreementUtilities`. Both know DH by the name `"DH"`.
 
 ## Enabling DH
@@ -26,14 +26,13 @@ tc_dh_key = "0.1"
 ### Both parties, step by step
 
 ```rust
-use tc_algo::AlgoError;
-use tc_algo::agreement;
-use tc_algo::generate;
+use tc_algo::{Algo, AlgoError};
 use tc_dh_key::standard_groups::rfc7919_ffdhe2048;
 
 fn main() -> Result<(), AlgoError> {
+    let algo = Algo::new();
     // 1. Both parties take the same group, here ffdhe2048 of RFC 7919
-    let mut generator = generate::key_pair::get_by_name("DH")?;
+    let mut generator = algo.key_pair_generator().get_by_name("DH")?;
     generator.init(rfc7919_ffdhe2048())?;
 
     // 2. Each makes a key pair and sends the public key to the other
@@ -41,12 +40,12 @@ fn main() -> Result<(), AlgoError> {
     let bob = generator.generate()?;
 
     // 3. Alice combines her private key with Bob's public key ...
-    let mut agreement = agreement::get_by_name("DH")?;
+    let mut agreement = algo.agreement().get_by_name("DH")?;
     agreement.init(&alice.private.into())?;
     let alice_secret = agreement.calculate(&bob.public.into())?;
 
     // ... and Bob combines his with Alice's, for the same secret
-    let mut agreement = agreement::get_by_name("DH")?;
+    let mut agreement = algo.agreement().get_by_name("DH")?;
     agreement.init(&bob.private.into())?;
     let bob_secret = agreement.calculate(&alice.public.into())?;
 
@@ -64,20 +63,19 @@ was initialized with.
 
 ### In one step
 
-`agreement::calculate` finds the agreement, initializes it and calculates.
+`algo.agreement().calculate` finds the agreement, initializes it and calculates.
 
 ```rust
-use tc_algo::AlgoError;
-use tc_algo::agreement;
-use tc_algo::generate;
+use tc_algo::{Algo, AlgoError};
 use tc_dh_key::standard_groups::rfc7919_ffdhe2048;
 
 fn main() -> Result<(), AlgoError> {
-    let mut generator = generate::key_pair::get_by_name("DH")?;
+    let algo = Algo::new();
+    let mut generator = algo.key_pair_generator().get_by_name("DH")?;
     generator.init(rfc7919_ffdhe2048())?;
     let (alice, bob) = (generator.generate()?, generator.generate()?);
 
-    let secret = agreement::calculate("DH", &alice.private.into(), &bob.public.into())?;
+    let secret = algo.agreement().calculate("DH", &alice.private.into(), &bob.public.into())?;
     Ok(())
 }
 ```
@@ -88,15 +86,13 @@ When the other party chose the group, its public key carries it. Make your key p
 in that group, then answer with your public key.
 
 ```rust
-use tc_algo::AlgoError;
-use tc_algo::agreement;
-use tc_algo::generate;
-use tc_algo::params::AnyPublicKey;
+use tc_algo::{Algo, AlgoError, AnyPublicKey};
 use tc_dh_key::standard_groups::rfc3526_3072;
 
 fn main() -> Result<(), AlgoError> {
+    let algo = Algo::new();
     // The other party's public key, in a group it chose
-    let mut theirs = generate::key_pair::get_by_name("DH")?;
+    let mut theirs = algo.key_pair_generator().get_by_name("DH")?;
     theirs.init(rfc3526_3072())?;
     let their_public = theirs.generate()?.public;
 
@@ -104,11 +100,11 @@ fn main() -> Result<(), AlgoError> {
     let AnyPublicKey::Dh(their_key) = &their_public else {
         panic!("not a DH key");
     };
-    let mut generator = generate::key_pair::get_by_name("DH")?;
+    let mut generator = algo.key_pair_generator().get_by_name("DH")?;
     generator.init(their_key.params().clone())?;
     let mine = generator.generate()?;
 
-    let secret = agreement::calculate("DH", &mine.private.into(), &their_public.into())?;
+    let secret = algo.agreement().calculate("DH", &mine.private.into(), &their_public.into())?;
     // Send mine.public back to them
     Ok(())
 }
@@ -128,21 +124,20 @@ take time that depends on its bytes.
 ### Into a buffer of your own
 
 `AnyAgreement` also implements the `Agreement` and `AgreementInit` traits, which
-`tc_algo::agreement` re-exports, so it fits generic code. `calculate_agreement`
+`tc_algo` re-exports, so it fits generic code. `calculate_agreement`
 writes the secret into the first `agreement_size` bytes of a buffer.
 
 ```rust
-use tc_algo::AlgoError;
-use tc_algo::agreement::{self, Agreement};
-use tc_algo::generate;
+use tc_algo::{Agreement, Algo, AlgoError};
 use tc_dh_key::standard_groups::rfc7919_ffdhe2048;
 
 fn main() -> Result<(), AlgoError> {
-    let mut generator = generate::key_pair::get_by_name("DH")?;
+    let algo = Algo::new();
+    let mut generator = algo.key_pair_generator().get_by_name("DH")?;
     generator.init(rfc7919_ffdhe2048())?;
     let (alice, bob) = (generator.generate()?, generator.generate()?);
 
-    let mut agreement = agreement::get_by_name("DH")?;
+    let mut agreement = algo.agreement().get_by_name("DH")?;
     agreement.init(&alice.private.into())?;
     let mut secret = vec![0; agreement.agreement_size()]; // 256 bytes
     agreement.calculate_agreement(&bob.public.into(), &mut secret)?;
@@ -162,19 +157,18 @@ the error of the DH layer underneath, where there is one.
 |---|---|
 | `UnknownAgreement` | The name is not DH or DIFFIEHELLMAN, or the `dh` feature is off |
 | `UnknownGenerator` | Likewise for the generator |
-| `InvalidKeyGenParams` | The generator has no group: `generate` without `init`, `key_pair::generate("DH")`, or `init` with a size alone. Or the group is bad, such as an even p |
+| `InvalidKeyGenParams` | The generator has no group: `generate` without `init`, `algo.key_pair_generator().generate("DH")`, or `init` with a size alone. Or the group is bad, such as an even p |
 | `InvalidParams` | `init` with a key that is not DH, with an ephemeral key, or with user keying material. `calculate` with an ephemeral key, a public key that is not DH, of another group or weak, or a secret of 1 |
 | `NotInitialized` | `calculate` before a successful `init` |
 | `DataLength` | `calculate_agreement` with a buffer shorter than `agreement_size` |
 
 ```rust
-use tc_algo::agreement;
-use tc_algo::generate;
-use tc_algo::{AlgoError, ErrorKind};
+use tc_algo::{Algo, AlgoError, ErrorKind};
 use tc_dh_key::standard_groups::{rfc3526_2048, rfc7919_ffdhe2048};
 
 fn main() -> Result<(), AlgoError> {
-    let mut generator = generate::key_pair::get_by_name("DH")?;
+    let algo = Algo::new();
+    let mut generator = algo.key_pair_generator().get_by_name("DH")?;
     generator.init(rfc7919_ffdhe2048())?;
     let mine = generator.generate()?;
 
@@ -182,7 +176,7 @@ fn main() -> Result<(), AlgoError> {
     generator.init(rfc3526_2048())?;
     let other = generator.generate()?;
 
-    let error = agreement::calculate("DH", &mine.private.into(), &other.public.into())
+    let error = algo.agreement().calculate("DH", &mine.private.into(), &other.public.into())
         .unwrap_err();
     assert_eq!(error.kind(), ErrorKind::InvalidParams);
     Ok(())

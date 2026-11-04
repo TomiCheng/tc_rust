@@ -8,20 +8,18 @@ use super::{AnyMacParams, MacEntry};
 use crate::AlgoError;
 
 pub struct AnyMac {
-    entry: &'static MacEntry,
+    entry: MacEntry,
     mac: Box<dyn DynMac>,
 }
 
 impl AnyMac {
-    pub(super) fn new(entry: &'static MacEntry) -> Self {
-        Self {
-            entry,
-            mac: entry.create(),
-        }
+    pub(super) fn new(entry: MacEntry) -> Self {
+        let mac = entry.create();
+        Self { entry, mac }
     }
 
-    pub fn entry(&self) -> &'static MacEntry {
-        self.entry
+    pub fn entry(&self) -> &MacEntry {
+        &self.entry
     }
 
     // An operation field the MAC has no use for is refused, not ignored. A MAC refused here goes
@@ -162,10 +160,10 @@ mod tests {
     }
 
     fn xor_mac(iv: Need) -> AnyMac {
-        let entry = MacEntry::new(vec!["XOR-MAC".to_string()], &[], iv, || {
+        MacEntry::new(vec!["XOR-MAC".to_string()], &[], iv, || {
             Box::new(XorMac::default())
-        });
-        Box::leak(Box::new(entry)).mac()
+        })
+        .mac()
     }
 
     fn params() -> AnyMacParams {

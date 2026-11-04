@@ -26,8 +26,16 @@
     feature = "xtea"
 ))]
 
-use tc_algo::cipher::{self, CipherEntry};
-use tc_algo::params::{AnyKeyParams, AnyParams, SecretKey};
+use std::sync::LazyLock;
+
+use tc_algo::{Algo, AnyKeyParams, AnyParams, CipherEntry, SecretKey};
+
+// One instance for the whole file, so that its tables are built once
+#[allow(
+    dead_code,
+    reason = "unused when the features of the tests here are off"
+)]
+static ALGO: LazyLock<Algo> = LazyLock::new(Algo::new);
 
 fn hex(text: &str) -> Vec<u8> {
     (0..text.len())
@@ -47,10 +55,13 @@ fn params(key: &[u8], iv: Option<&[u8]>) -> AnyParams {
 fn assert_ecb(algorithm: &str, key: &str, plaintext: &str, ciphertext: &str) {
     let name = format!("{algorithm}/ECB/NOPADDING");
     let params = params(&hex(key), None);
-    let output = cipher::encrypt(&name, &params, &hex(plaintext)).unwrap();
+    let output = ALGO
+        .cipher()
+        .encrypt(&name, &params, &hex(plaintext))
+        .unwrap();
     assert_eq!(output, hex(ciphertext), "{name}");
     assert_eq!(
-        cipher::decrypt(&name, &params, &output).unwrap(),
+        ALGO.cipher().decrypt(&name, &params, &output).unwrap(),
         hex(plaintext),
         "{name}"
     );
@@ -188,7 +199,10 @@ fn rc5_64_runs_twelve_rounds() {
     engine.init(CipherDirection::Encrypt, &rc5).unwrap();
     let mut expected = [0; 16];
     engine.process_block(&plaintext, &mut expected).unwrap();
-    let output = cipher::encrypt("RC5-64/ECB/NOPADDING", &params(&key, None), &plaintext).unwrap();
+    let output = ALGO
+        .cipher()
+        .encrypt("RC5-64/ECB/NOPADDING", &params(&key, None), &plaintext)
+        .unwrap();
     assert_eq!(output, expected);
 }
 
@@ -359,7 +373,9 @@ const SIZES: &[(&str, usize, usize)] = &[
 ];
 
 fn entries_of(algorithm: &str) -> impl Iterator<Item = &'static CipherEntry> + '_ {
-    cipher::algorithms().filter(move |entry| entry.name().split('/').next() == Some(algorithm))
+    ALGO.cipher()
+        .algorithms()
+        .filter(move |entry| entry.name().split('/').next() == Some(algorithm))
 }
 
 #[test]
@@ -381,8 +397,14 @@ fn every_combination_decrypts_what_it_encrypts() {
                 ("ECB" | "CBC", "NOPADDING") => &message[..2 * block],
                 _ => &message[..],
             };
-            let ciphertext = cipher::encrypt(entry.name(), &params, message).unwrap();
-            let plaintext = cipher::decrypt(entry.name(), &params, &ciphertext).unwrap();
+            let ciphertext = ALGO
+                .cipher()
+                .encrypt(entry.name(), &params, message)
+                .unwrap();
+            let plaintext = ALGO
+                .cipher()
+                .decrypt(entry.name(), &params, &ciphertext)
+                .unwrap();
             assert_eq!(plaintext, message, "{}", entry.name());
         }
     }
@@ -429,7 +451,7 @@ fn every_oid_finds_its_mode_with_the_default_padding() {
             continue;
         }
         let oid: tc_asn1::Asn1Oid = dotted.parse().unwrap();
-        let cipher = cipher::get_by_oid(&oid).unwrap();
+        let cipher = ALGO.cipher().get_by_oid(&oid).unwrap();
         assert_eq!(cipher.entry().name(), name, "{dotted}");
     }
 }
@@ -448,7 +470,7 @@ fn bouncy_castle_aliases_find_their_ciphers() {
         if entries_of(algorithm).next().is_none() {
             continue;
         }
-        let cipher = cipher::get_by_name(alias).unwrap();
+        let cipher = ALGO.cipher().get_by_name(alias).unwrap();
         assert_eq!(cipher.entry().name(), name, "{alias}");
     }
 }
@@ -461,7 +483,7 @@ fn threefish_takes_no_aead_mode() {
         "THREEFISH-512/EAX",
         "THREEFISH-1024/OCB",
     ] {
-        let error = cipher::get_by_name(name).unwrap_err();
+        let error = ALGO.cipher().get_by_name(name).unwrap_err();
         assert_eq!(error.kind(), tc_algo::ErrorKind::UnknownCipher, "{name}");
     }
 }
@@ -469,7 +491,9 @@ fn threefish_takes_no_aead_mode() {
 #[cfg(feature = "desede")]
 #[test]
 fn desede_refuses_a_key_of_a_length_it_does_not_take() {
-    let error =
-        cipher::encrypt("DESEDE/ECB/NOPADDING", &params(&[1; 8], None), &[0; 8]).unwrap_err();
+    let error = ALGO
+        .cipher()
+        .encrypt("DESEDE/ECB/NOPADDING", &params(&[1; 8], None), &[0; 8])
+        .unwrap_err();
     assert_eq!(error.kind(), tc_algo::ErrorKind::InvalidParams);
 }

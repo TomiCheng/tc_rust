@@ -1,8 +1,15 @@
 // The MAC factory's lookups and params, whichever MACs are enabled
-use tc_algo::ErrorKind;
-use tc_algo::mac::{self, AnyMacParams};
-use tc_algo::params::SecretKey;
+use std::sync::LazyLock;
+
+use tc_algo::{Algo, AnyMacParams, ErrorKind, SecretKey};
 use tc_asn1::Asn1Oid;
+
+// One instance for the whole file, so that its tables are built once
+#[allow(
+    dead_code,
+    reason = "unused when the features of the tests here are off"
+)]
+static ALGO: LazyLock<Algo> = LazyLock::new(Algo::new);
 
 fn params() -> AnyMacParams {
     AnyMacParams::new(SecretKey::new(vec![0x42; 16]))
@@ -10,18 +17,18 @@ fn params() -> AnyMacParams {
 
 #[test]
 fn an_unknown_name_or_oid_is_an_unknown_mac() {
-    let by_name = mac::get_by_name("NO-SUCH-MAC").unwrap_err();
+    let by_name = ALGO.mac().get_by_name("NO-SUCH-MAC").unwrap_err();
     assert_eq!(by_name.kind(), ErrorKind::UnknownMac);
     assert_eq!(by_name.to_string(), "unknown MAC");
 
     let oid: Asn1Oid = "1.2.3.4.5".parse().unwrap();
     assert_eq!(
-        mac::get_by_oid(&oid).unwrap_err().kind(),
+        ALGO.mac().get_by_oid(&oid).unwrap_err().kind(),
         ErrorKind::UnknownMac
     );
     // A dotted OID is also accepted where a name is, as in Bouncy Castle
     assert_eq!(
-        mac::get_by_name("1.2.3.4.5").unwrap_err().kind(),
+        ALGO.mac().get_by_name("1.2.3.4.5").unwrap_err().kind(),
         ErrorKind::UnknownMac
     );
 }
@@ -29,7 +36,8 @@ fn an_unknown_name_or_oid_is_an_unknown_mac() {
 #[test]
 fn calculate_reports_an_unknown_mac() {
     assert_eq!(
-        mac::calculate("NO-SUCH-MAC", &params(), b"message")
+        ALGO.mac()
+            .calculate("NO-SUCH-MAC", &params(), b"message")
             .unwrap_err()
             .kind(),
         ErrorKind::UnknownMac

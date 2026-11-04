@@ -71,7 +71,6 @@ mod threefish;
 mod twofish;
 
 use core::ptr;
-use std::sync::LazyLock;
 
 #[cfg(any(feature = "rsa", feature = "elgamal", feature = "naccache-stern"))]
 use asymmetric::{ASYMMETRIC_MODE_NAMES, ASYMMETRIC_PADDINGS};
@@ -210,7 +209,7 @@ static ASYMMETRIC: &[AsymmetricSpec] = &[
 
 // One entry per valid combination: an AEAD mode only with NoPadding, a mode only on the block
 // sizes it takes, a stream cipher alone, and an asymmetric cipher with each of its paddings
-pub(super) static CIPHERS: LazyLock<Vec<CipherEntry>> = LazyLock::new(|| {
+pub(super) fn build_table() -> Vec<CipherEntry> {
     let mut entries = Vec::new();
     for algorithm in ALGORITHMS {
         for mode in MODES.iter().filter(|mode| mode.supports(algorithm)) {
@@ -264,12 +263,41 @@ pub(super) static CIPHERS: LazyLock<Vec<CipherEntry>> = LazyLock::new(|| {
         }
     }
     entries
-});
+}
+
+// Whether a rule of a Policy names this entry. Its parts match as in find, by any alias, but * or
+// an empty or missing part stands for any, so AES/CBC/*, */CBC/* and AES all name
+// AES/CBC/PKCS7PADDING.
+// A part the entry does not have matches only those, so a stream cipher is not in */CBC/*
+pub(super) fn matches_rule(entry: &CipherEntry, rule: &str) -> bool {
+    let parts: [&[&str]; 3] = match entry.kind() {
+        Kind::Block {
+            algorithm,
+            mode,
+            padding,
+        } => [algorithm.names, mode.names, padding.names],
+        Kind::Stream { algorithm } => [algorithm.names, &[], &[]],
+        Kind::Aead { algorithm } => [algorithm.names, &[], &[]],
+        #[cfg(any(feature = "rsa", feature = "elgamal", feature = "naccache-stern"))]
+        Kind::Asymmetric {
+            algorithm, padding, ..
+        } => [algorithm.names, ASYMMETRIC_MODE_NAMES, padding.names],
+        #[cfg(feature = "sm2")]
+        Kind::Message { algorithm, mode } => {
+            [algorithm.names, core::slice::from_ref(&mode.name), &[]]
+        }
+    };
+    let mut pieces = rule.split('/');
+    parts.iter().all(|names| match pieces.next() {
+        None | Some("" | "*") => true,
+        Some(piece) => known(names, piece),
+    }) && pieces.next().is_none()
+}
 
 // Splits a name such as AES/CBC/PKCS7PADDING into its three parts, as Bouncy Castle does: ASCII
 // case does not matter, '-' and '_' are the same, and what a missing mode or padding gives
 // depends on the kind of cipher
-pub(super) fn find(name: &str) -> Option<&'static CipherEntry> {
+pub(super) fn find<'a>(table: &'a [CipherEntry], name: &str) -> Option<&'a CipherEntry> {
     let mut parts = name.split('/');
     let algorithm = parts.next()?;
     let mode = parts.next().filter(|part| !part.is_empty());
@@ -278,31 +306,32 @@ pub(super) fn find(name: &str) -> Option<&'static CipherEntry> {
         return None;
     }
     if let Some(algorithm) = ALGORITHMS.iter().find(|spec| known(spec.names, algorithm)) {
-        return find_block(algorithm, mode, padding);
+        return find_block(table, algorithm, mode, padding);
     }
     if let Some(algorithm) = STREAMS.iter().find(|spec| known(spec.names, algorithm)) {
-        return find_stream(algorithm, name);
+        return find_stream(table, algorithm, name);
     }
     if let Some(algorithm) = AEADS.iter().find(|spec| known(spec.names, algorithm)) {
-        return find_aead(algorithm, name);
+        return find_aead(table, algorithm, name);
     }
     #[cfg(any(feature = "rsa", feature = "elgamal", feature = "naccache-stern"))]
     if let Some(algorithm) = ASYMMETRIC.iter().find(|spec| known(spec.names, algorithm)) {
-        return find_asymmetric(algorithm, mode, padding);
+        return find_asymmetric(table, algorithm, mode, padding);
     }
     #[cfg(feature = "sm2")]
     if let Some(algorithm) = MESSAGES.iter().find(|spec| known(spec.names, algorithm)) {
-        return find_message(algorithm, name, mode);
+        return find_message(table, algorithm, name, mode);
     }
     None
 }
 
 // A missing mode is ECB, and a missing padding is the mode's default
-fn find_block(
+fn find_block<'a>(
+    table: &'a [CipherEntry],
     algorithm: &'static AlgorithmSpec,
     mode: Option<&str>,
     padding: Option<&str>,
-) -> Option<&'static CipherEntry> {
+) -> Option<&'a CipherEntry> {
     let mode = match mode {
         Some(mode) => MODES.iter().find(|spec| known(spec.names, mode))?,
         None => &MODES[0],
@@ -313,7 +342,7 @@ fn find_block(
             .iter()
             .find(|spec| spec.kind == mode.default_padding())?,
     };
-    CIPHERS.iter().find(|entry| {
+    table.iter().find(|entry| {
         matches!(
             entry.kind(),
             Kind::Block { algorithm: a, mode: m, padding: p }
@@ -323,11 +352,15 @@ fn find_block(
 }
 
 // Neither a mode nor a padding, not even an empty one, as in Bouncy Castle
-fn find_stream(algorithm: &'static StreamSpec, name: &str) -> Option<&'static CipherEntry> {
+fn find_stream<'a>(
+    table: &'a [CipherEntry],
+    algorithm: &'static StreamSpec,
+    name: &str,
+) -> Option<&'a CipherEntry> {
     if name.contains('/') {
         return None;
     }
-    CIPHERS.iter().find(|entry| {
+    table.iter().find(|entry| {
         matches!(
             entry.kind(),
             Kind::Stream { algorithm: a } if ptr::eq(*a, algorithm)
@@ -336,11 +369,15 @@ fn find_stream(algorithm: &'static StreamSpec, name: &str) -> Option<&'static Ci
 }
 
 // Neither a mode nor a padding either, as in Bouncy Castle
-fn find_aead(algorithm: &'static AeadSpec, name: &str) -> Option<&'static CipherEntry> {
+fn find_aead<'a>(
+    table: &'a [CipherEntry],
+    algorithm: &'static AeadSpec,
+    name: &str,
+) -> Option<&'a CipherEntry> {
     if name.contains('/') {
         return None;
     }
-    CIPHERS.iter().find(|entry| {
+    table.iter().find(|entry| {
         matches!(
             entry.kind(),
             Kind::Aead { algorithm: a } if ptr::eq(*a, algorithm)
@@ -350,11 +387,12 @@ fn find_aead(algorithm: &'static AeadSpec, name: &str) -> Option<&'static Cipher
 
 // No mode, ECB or NONE; no padding is raw RSA, as in Bouncy Castle
 #[cfg(any(feature = "rsa", feature = "elgamal", feature = "naccache-stern"))]
-fn find_asymmetric(
+fn find_asymmetric<'a>(
+    table: &'a [CipherEntry],
     algorithm: &'static AsymmetricSpec,
     mode: Option<&str>,
     padding: Option<&str>,
-) -> Option<&'static CipherEntry> {
+) -> Option<&'a CipherEntry> {
     if mode.is_some_and(|mode| !known(ASYMMETRIC_MODE_NAMES, mode)) {
         return None;
     }
@@ -364,7 +402,7 @@ fn find_asymmetric(
             .find(|spec| known(spec.names, padding))?,
         None => &ASYMMETRIC_PADDINGS[0],
     };
-    CIPHERS.iter().find(|entry| {
+    table.iter().find(|entry| {
         matches!(
             entry.kind(),
             Kind::Asymmetric { algorithm: a, padding: p, .. }
@@ -375,11 +413,12 @@ fn find_asymmetric(
 
 // No mode is the first one; a padding is refused, not even an empty one
 #[cfg(feature = "sm2")]
-fn find_message(
+fn find_message<'a>(
+    table: &'a [CipherEntry],
     algorithm: &'static MessageSpec,
     name: &str,
     mode: Option<&str>,
-) -> Option<&'static CipherEntry> {
+) -> Option<&'a CipherEntry> {
     if name.matches('/').count() > 1 {
         return None;
     }
@@ -390,7 +429,7 @@ fn find_message(
             .find(|spec| same_name(spec.name, mode))?,
         None => &algorithm.modes[0],
     };
-    CIPHERS.iter().find(|entry| {
+    table.iter().find(|entry| {
         matches!(
             entry.kind(),
             Kind::Message { algorithm: a, mode: m } if ptr::eq(*a, algorithm) && ptr::eq(*m, mode)

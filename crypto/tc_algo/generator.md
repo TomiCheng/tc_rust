@@ -1,12 +1,13 @@
 # Key generators
 
-`tc_algo::generate` creates key generators and key pair generators by name or by
-OID, after Bouncy Castle's `GeneratorUtilities`, in two factories that work alike
+`algo.key_generator()` and `algo.key_pair_generator()` create key generators and key
+pair generators by name or by OID, after Bouncy Castle's `GeneratorUtilities`, in two
+factories that work alike
 and like the other factories of `tc_algo`, with `get_by_name`, `get_by_oid`,
 `algorithms` and a one-step `generate`:
 
-- `generate::key` makes a `SecretKey`, for the algorithms that take one, such as AES.
-- `generate::key_pair` makes a `KeyPair`, an `AnyPublicKey` and an `AnyPrivateKey`,
+- `algo.key_generator()` makes a `SecretKey`, for the algorithms that take one, such as AES.
+- `algo.key_pair_generator()` makes a `KeyPair`, an `AnyPublicKey` and an `AnyPrivateKey`,
   such as for RSA, EC, DH, X25519 or X448.
 
 ## Enabling generators
@@ -27,12 +28,12 @@ Find the generator by name and make one key with its defaults and the operating
 system's randomness.
 
 ```rust
-use tc_algo::AlgoError;
-use tc_algo::generate;
+use tc_algo::{Algo, AlgoError};
 
 fn main() -> Result<(), AlgoError> {
-    let key = generate::key::generate("AES256")?;
-    let pair = generate::key_pair::generate("RSA")?;
+    let algo = Algo::new();
+    let key = algo.key_generator().generate("AES256")?;
+    let pair = algo.key_pair_generator().generate("RSA")?;
     Ok(())
 }
 ```
@@ -44,12 +45,11 @@ generator uses the defaults of its row. Each key goes into the params of the fac
 that uses it.
 
 ```rust
-use tc_algo::AlgoError;
-use tc_algo::generate::{self, KeyGenParams};
-use tc_algo::params::{AnyKeyParams, AnyParams};
+use tc_algo::{Algo, AlgoError, AnyKeyParams, AnyParams, KeyGenParams};
 
 fn main() -> Result<(), AlgoError> {
-    let mut generator = generate::key::get_by_name("AES")?;
+    let algo = Algo::new();
+    let mut generator = algo.key_generator().get_by_name("AES")?;
     generator.init(KeyGenParams::Strength { bits: 256 })?;
     let key = generator.generate()?;
 
@@ -65,12 +65,11 @@ changes one of them. `KeyGenParams::Strength` sets the size alone and keeps the
 other two.
 
 ```rust
-use tc_algo::AlgoError;
-use tc_algo::generate::{self, KeyGenParams};
-use tc_algo::params::{AnyKeyParams, AnyParams};
+use tc_algo::{Algo, AlgoError, AnyKeyParams, AnyParams, KeyGenParams};
 
 fn main() -> Result<(), AlgoError> {
-    let mut generator = generate::key_pair::get_by_name("RSA")?;
+    let algo = Algo::new();
+    let mut generator = algo.key_pair_generator().get_by_name("RSA")?;
     generator.init(KeyGenParams::rsa().with_bits(3072))?;
     let pair = generator.generate()?;
 
@@ -92,16 +91,15 @@ source.
 A DH generator has no default: `init` takes the group both parties share, a
 `DhParameters` of `tc_dh_key`, the crate whose keys `AnyPrivateKey::Dh` holds, such
 as one of its `standard_groups`. A size alone names no group, so `Strength` is
-refused, as in Bouncy Castle, and `key_pair::generate("DH")` fails for want of a group.
+refused, as in Bouncy Castle, and `algo.key_pair_generator().generate("DH")` fails for want of a group.
 
 ```rust
-use tc_algo::AlgoError;
-use tc_algo::agreement::AnyAgreementParams;
-use tc_algo::generate;
+use tc_algo::{Algo, AlgoError, AnyAgreementParams};
 use tc_dh_key::standard_groups::rfc7919_ffdhe2048;
 
 fn main() -> Result<(), AlgoError> {
-    let mut generator = generate::key_pair::get_by_name("DH")?;
+    let algo = Algo::new();
+    let mut generator = algo.key_pair_generator().get_by_name("DH")?;
     generator.init(rfc7919_ffdhe2048())?;
     let pair = generator.generate()?;
 
@@ -122,12 +120,11 @@ alone, which takes the curve Bouncy Castle takes for it: P-224, P-256, P-384 or 
 for 224, 256, 384 or 521 bits.
 
 ```rust
-use tc_algo::AlgoError;
-use tc_algo::generate::{self, KeyGenParams};
-use tc_algo::params::EcCurve;
+use tc_algo::{Algo, AlgoError, EcCurve, KeyGenParams};
 
 fn main() -> Result<(), AlgoError> {
-    let mut generator = generate::key_pair::get_by_name("EC")?;
+    let algo = Algo::new();
+    let mut generator = algo.key_pair_generator().get_by_name("EC")?;
     generator.init(EcCurve::Secp256r1)?;
     let pair = generator.generate()?;
 
@@ -150,11 +147,11 @@ generator makes the same key every time, which suits tests and nothing else.
 ```rust
 use rand::SeedableRng;
 use rand::rngs::StdRng;
-use tc_algo::AlgoError;
-use tc_algo::generate;
+use tc_algo::{Algo, AlgoError};
 
 fn main() -> Result<(), AlgoError> {
-    let mut generator = generate::key::get_by_name("AES256")?;
+    let algo = Algo::new();
+    let mut generator = algo.key_generator().get_by_name("AES256")?;
     let key = generator.with_rng(StdRng::seed_from_u64(7)).generate()?;
     Ok(())
 }
@@ -166,30 +163,31 @@ Names match without regard to ASCII case, aliases are accepted, and a dotted OID
 string works wherever a name does. The generator reports its canonical name.
 
 ```rust
-use tc_algo::generate;
-use tc_algo::{AlgoError, ErrorKind};
+use tc_algo::{Algo, AlgoError, ErrorKind};
 
 fn main() -> Result<(), AlgoError> {
-    let aes = generate::key::get_by_name("2.16.840.1.101.3.4.1.46")?;
+    let algo = Algo::new();
+    let aes = algo.key_generator().get_by_name("2.16.840.1.101.3.4.1.46")?;
     assert_eq!(aes.entry().name(), "AES256");
 
-    let error = generate::key_pair::get_by_name("no-such-key").unwrap_err();
+    let error = algo.key_pair_generator().get_by_name("no-such-key").unwrap_err();
     assert_eq!(error.kind(), ErrorKind::UnknownGenerator);
     Ok(())
 }
 ```
 
-`key::get_by_oid` and `key_pair::get_by_oid` take an `Asn1Oid`.
+`algo.key_generator().get_by_oid` and `algo.key_pair_generator().get_by_oid` take an `Asn1Oid`.
 
 ### Looking at the tables
 
 ```rust
-use tc_algo::generate;
+use tc_algo::Algo;
 
-for entry in generate::key::algorithms() {
+let algo = Algo::new();
+for entry in algo.key_generator().algorithms() {
     println!("{entry}"); // e.g. `AES128  [id-aes128-ECB, id-aes128-CBC, ...]`
 }
-for entry in generate::key_pair::algorithms() {
+for entry in algo.key_pair_generator().algorithms() {
     println!("{entry}"); // e.g. `RSA  [rsaEncryption]`
 }
 ```

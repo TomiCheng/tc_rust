@@ -13,8 +13,8 @@ There are three agreements, one per hash:
 - **ECGOST3410-2012-512**: GOST R 34.11-2012, 512 bits; a 64-byte secret.
 - **ECGOST3410**: GOST R 34.11-94, the hash of GOST R 34.10-2001; a 32-byte secret.
 
-In `tc_algo` this takes two factories: `generate::key_pair` makes the key pairs and
-`agreement` calculates the secret, after Bouncy Castle's `GeneratorUtilities` and
+In `tc_algo` this takes two factories: `algo.key_pair_generator()` makes the key pairs and
+`algo.agreement()` calculates the secret, after Bouncy Castle's `GeneratorUtilities` and
 `AgreementUtilities`. The keys are EC keys, from the `"EC"` generator on a GOST curve.
 
 ## Enabling VKO
@@ -35,14 +35,12 @@ tc_algo = { version = "0.1", features = ["gost3411"] }
 ### Both parties, step by step
 
 ```rust
-use tc_algo::AlgoError;
-use tc_algo::agreement::{self, AnyAgreementParams};
-use tc_algo::generate;
-use tc_algo::params::EcCurve;
+use tc_algo::{Algo, AlgoError, AnyAgreementParams, EcCurve};
 
 fn main() -> Result<(), AlgoError> {
+    let algo = Algo::new();
     // 1. Both parties take the same GOST curve
-    let mut generator = generate::key_pair::get_by_name("EC")?;
+    let mut generator = algo.key_pair_generator().get_by_name("EC")?;
     generator.init(EcCurve::GostTc26ParamSet256A)?;
 
     // 2. Each makes a key pair and sends the public key to the other
@@ -53,12 +51,12 @@ fn main() -> Result<(), AlgoError> {
     let ukm = vec![0x1d, 0x80, 0x60, 0x3c, 0x85, 0x44, 0xc7, 0x27];
 
     // 4. Alice combines her private key and the UKM with Bob's public key ...
-    let mut agreement = agreement::get_by_name("ECGOST3410-2012-256")?;
+    let mut agreement = algo.agreement().get_by_name("ECGOST3410-2012-256")?;
     agreement.init(&AnyAgreementParams::new(alice.private).with_ukm(ukm.clone()))?;
     let alice_secret = agreement.calculate(&bob.public.into())?;
 
     // ... and Bob his with Alice's, for the same secret
-    let mut agreement = agreement::get_by_name("ECGOST3410-2012-256")?;
+    let mut agreement = algo.agreement().get_by_name("ECGOST3410-2012-256")?;
     agreement.init(&AnyAgreementParams::new(bob.private).with_ukm(ukm))?;
     let bob_secret = agreement.calculate(&alice.public.into())?;
 
@@ -77,22 +75,20 @@ The hash need not match the curve: example 7 of RFC 7836 takes the 256-bit hash 
 
 ### In one step
 
-`agreement::calculate` finds the agreement, initializes it and calculates.
+`algo.agreement().calculate` finds the agreement, initializes it and calculates.
 
 ```rust
-use tc_algo::AlgoError;
-use tc_algo::agreement::{self, AnyAgreementParams};
-use tc_algo::generate;
-use tc_algo::params::EcCurve;
+use tc_algo::{Algo, AlgoError, AnyAgreementParams, EcCurve};
 
 fn main() -> Result<(), AlgoError> {
-    let mut generator = generate::key_pair::get_by_name("EC")?;
+    let algo = Algo::new();
+    let mut generator = algo.key_pair_generator().get_by_name("EC")?;
     generator.init(EcCurve::GostTc26ParamSet512A)?;
     let (alice, bob) = (generator.generate()?, generator.generate()?);
     let ukm = vec![1, 2, 3, 4, 5, 6, 7, 8];
 
     let params = AnyAgreementParams::new(alice.private).with_ukm(ukm);
-    let secret = agreement::calculate("ECGOST3410-2012-512", &params, &bob.public.into())?;
+    let secret = algo.agreement().calculate("ECGOST3410-2012-512", &params, &bob.public.into())?;
     Ok(())
 }
 ```
@@ -109,22 +105,20 @@ would take time that depends on its bytes.
 ### Into a buffer of your own
 
 `AnyAgreement` also implements the `Agreement` and `AgreementInit` traits, which
-`tc_algo::agreement` re-exports, so it fits generic code. `calculate_agreement`
+`tc_algo` re-exports, so it fits generic code. `calculate_agreement`
 writes the secret into the first `agreement_size` bytes of a buffer: the length of the
 hash.
 
 ```rust
-use tc_algo::AlgoError;
-use tc_algo::agreement::{self, Agreement, AnyAgreementParams};
-use tc_algo::generate;
-use tc_algo::params::EcCurve;
+use tc_algo::{Agreement, Algo, AlgoError, AnyAgreementParams, EcCurve};
 
 fn main() -> Result<(), AlgoError> {
-    let mut generator = generate::key_pair::get_by_name("EC")?;
+    let algo = Algo::new();
+    let mut generator = algo.key_pair_generator().get_by_name("EC")?;
     generator.init(EcCurve::GostTc26ParamSet256A)?;
     let (alice, bob) = (generator.generate()?, generator.generate()?);
 
-    let mut agreement = agreement::get_by_name("ECGOST3410-2012-256")?;
+    let mut agreement = algo.agreement().get_by_name("ECGOST3410-2012-256")?;
     agreement.init(&AnyAgreementParams::new(alice.private).with_ukm(vec![7; 8]))?;
     let mut secret = [0; 32];
     agreement.calculate_agreement(&bob.public.into(), &mut secret)?;
@@ -148,18 +142,16 @@ the error of the VKO layer underneath, where there is one.
 | `DataLength` | `calculate_agreement` with a buffer shorter than `agreement_size` |
 
 ```rust
-use tc_algo::agreement::{self, AnyAgreementParams};
-use tc_algo::generate;
-use tc_algo::params::EcCurve;
-use tc_algo::{AlgoError, ErrorKind};
+use tc_algo::{Algo, AlgoError, AnyAgreementParams, EcCurve, ErrorKind};
 
 fn main() -> Result<(), AlgoError> {
-    let mut generator = generate::key_pair::get_by_name("EC")?;
+    let algo = Algo::new();
+    let mut generator = algo.key_pair_generator().get_by_name("EC")?;
     generator.init(EcCurve::GostTc26ParamSet256A)?;
     let mine = generator.generate()?;
 
     // The private key alone, without a UKM
-    let mut agreement = agreement::get_by_name("ECGOST3410-2012-256")?;
+    let mut agreement = algo.agreement().get_by_name("ECGOST3410-2012-256")?;
     let error = agreement
         .init(&AnyAgreementParams::new(mine.private))
         .unwrap_err();

@@ -2,15 +2,24 @@
 
 use std::sync::LazyLock;
 
-use tc_algo::ErrorKind;
-use tc_algo::cipher::{self, CipherDirection, CipherEntry};
-use tc_algo::params::{AnyKeyParams, AnyParams, AnyPrivateKey, AnyPublicKey, SecretKey};
+use tc_algo::{
+    Algo, AnyKeyParams, AnyParams, AnyPrivateKey, AnyPublicKey, CipherDirection, CipherEntry,
+    ErrorKind, SecretKey,
+};
+
 use tc_asym_cipher::{KeyPairGenerator, KeyPairGeneratorInit};
 use tc_bigint::{ArrayEncoding, PaddedBigUint};
 use tc_elgamal::{
     ElGamalKeyGenerationParams, ElGamalKeyPairGenerator, ElGamalParameters, ElGamalPrivateKey,
     ElGamalPublicKey,
 };
+
+// One instance for the whole file, so that its tables are built once
+#[allow(
+    dead_code,
+    reason = "unused when the features of the tests here are off"
+)]
+static ALGO: LazyLock<Algo> = LazyLock::new(Algo::new);
 
 fn hex(text: &str) -> Vec<u8> {
     (0..text.len())
@@ -54,16 +63,24 @@ fn private() -> AnyParams {
 }
 
 fn elgamal_entries() -> impl Iterator<Item = &'static CipherEntry> {
-    cipher::algorithms().filter(|entry| entry.name().starts_with("ELGAMAL/"))
+    ALGO.cipher()
+        .algorithms()
+        .filter(|entry| entry.name().starts_with("ELGAMAL/"))
 }
 
 #[test]
 fn every_padding_decrypts_with_the_private_key_what_the_public_key_encrypts() {
     for entry in elgamal_entries() {
-        let ciphertext = cipher::encrypt(entry.name(), &public(), b"attack at dawn").unwrap();
+        let ciphertext = ALGO
+            .cipher()
+            .encrypt(entry.name(), &public(), b"attack at dawn")
+            .unwrap();
         // Gamma and phi, each as long as p
         assert_eq!(ciphertext.len(), 512, "{}", entry.name());
-        let plaintext = cipher::decrypt(entry.name(), &private(), &ciphertext).unwrap();
+        let plaintext = ALGO
+            .cipher()
+            .decrypt(entry.name(), &private(), &ciphertext)
+            .unwrap();
         // ElGamal without padding gives the number back, without its leading zeros
         assert!(plaintext.ends_with(b"attack at dawn"), "{}", entry.name());
     }
@@ -71,8 +88,14 @@ fn every_padding_decrypts_with_the_private_key_what_the_public_key_encrypts() {
 
 #[test]
 fn encrypting_twice_gives_two_ciphertexts() {
-    let first = cipher::encrypt("ELGAMAL/NONE/PKCS1PADDING", &public(), b"message").unwrap();
-    let second = cipher::encrypt("ELGAMAL/NONE/PKCS1PADDING", &public(), b"message").unwrap();
+    let first = ALGO
+        .cipher()
+        .encrypt("ELGAMAL/NONE/PKCS1PADDING", &public(), b"message")
+        .unwrap();
+    let second = ALGO
+        .cipher()
+        .encrypt("ELGAMAL/NONE/PKCS1PADDING", &public(), b"message")
+        .unwrap();
     assert_ne!(first, second);
 }
 
@@ -82,7 +105,10 @@ fn the_public_key_only_encrypts_and_the_private_key_only_decrypts() {
         (CipherDirection::Decrypt, public()),
         (CipherDirection::Encrypt, private()),
     ] {
-        let mut cipher = cipher::get_by_name("ELGAMAL/NONE/PKCS1PADDING").unwrap();
+        let mut cipher = ALGO
+            .cipher()
+            .get_by_name("ELGAMAL/NONE/PKCS1PADDING")
+            .unwrap();
         let error = cipher.init(direction, &params).unwrap_err();
         assert_eq!(error.kind(), ErrorKind::InvalidParams);
     }
@@ -94,9 +120,12 @@ fn a_changed_ciphertext_fails_alike_under_pkcs1_and_oaep() {
         "ELGAMAL/NONE/PKCS1PADDING",
         "ELGAMAL/NONE/OAEPWITHSHA256ANDMGF1PADDING",
     ] {
-        let mut ciphertext = cipher::encrypt(name, &public(), b"message").unwrap();
+        let mut ciphertext = ALGO.cipher().encrypt(name, &public(), b"message").unwrap();
         ciphertext[400] ^= 1;
-        let error = cipher::decrypt(name, &private(), &ciphertext).unwrap_err();
+        let error = ALGO
+            .cipher()
+            .decrypt(name, &private(), &ciphertext)
+            .unwrap_err();
         assert_eq!(error.kind(), ErrorKind::InvalidCiphertext, "{name}");
     }
 }
@@ -105,9 +134,12 @@ fn a_changed_ciphertext_fails_alike_under_pkcs1_and_oaep() {
 fn a_message_longer_than_the_padding_leaves_room_for_is_a_data_length_error() {
     // The input block is 255 bytes, a byte short of p, less the other 10 of PKCS#1 v1.5
     let name = "ELGAMAL/NONE/PKCS1PADDING";
-    let error = cipher::encrypt(name, &public(), &[1; 246]).unwrap_err();
+    let error = ALGO
+        .cipher()
+        .encrypt(name, &public(), &[1; 246])
+        .unwrap_err();
     assert_eq!(error.kind(), ErrorKind::DataLength);
-    assert!(cipher::encrypt(name, &public(), &[1; 245]).is_ok());
+    assert!(ALGO.cipher().encrypt(name, &public(), &[1; 245]).is_ok());
 }
 
 #[test]
@@ -117,7 +149,7 @@ fn names_follow_bouncy_castle_and_come_back_canonical() {
         ("elgamal/ecb/pkcs1padding", "ELGAMAL/NONE/PKCS1PADDING"),
         ("ELGAMAL//OAEP", "ELGAMAL/NONE/OAEPWITHSHA1ANDMGF1PADDING"),
     ] {
-        let cipher = cipher::get_by_name(name).unwrap();
+        let cipher = ALGO.cipher().get_by_name(name).unwrap();
         assert_eq!(cipher.entry().name(), canonical, "{name}");
     }
 }
@@ -125,7 +157,10 @@ fn names_follow_bouncy_castle_and_come_back_canonical() {
 #[cfg(feature = "rsa-iso9796")]
 #[test]
 fn iso_9796_1_is_an_unknown_cipher_for_elgamal() {
-    let error = cipher::get_by_name("ELGAMAL/NONE/ISO9796-1PADDING").unwrap_err();
+    let error = ALGO
+        .cipher()
+        .get_by_name("ELGAMAL/NONE/ISO9796-1PADDING")
+        .unwrap_err();
     assert_eq!(error.kind(), ErrorKind::UnknownCipher);
 }
 
@@ -142,7 +177,10 @@ fn elgamal_refuses_a_secret_key_and_an_operation_field() {
     let mut with_iv = public();
     with_iv.op.iv = Some(vec![0; 16]);
     for params in [secret, with_iv] {
-        let mut cipher = cipher::get_by_name("ELGAMAL/NONE/PKCS1PADDING").unwrap();
+        let mut cipher = ALGO
+            .cipher()
+            .get_by_name("ELGAMAL/NONE/PKCS1PADDING")
+            .unwrap();
         let error = cipher.init(CipherDirection::Encrypt, &params).unwrap_err();
         assert_eq!(error.kind(), ErrorKind::InvalidParams);
     }

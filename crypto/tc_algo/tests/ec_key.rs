@@ -2,7 +2,7 @@
 
 use std::sync::OnceLock;
 
-use tc_algo::params::{
+use tc_algo::{
     AnyEcPrivateKey, AnyEcPublicKey, AnyKeyParams, AnyParams, AnyPrivateKey, AnyPublicKey, EcCurve,
 };
 use tc_bigint::PaddedBigUint;

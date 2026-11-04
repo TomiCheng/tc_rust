@@ -9,12 +9,10 @@ mod block;
 mod hmac;
 mod standalone;
 
-use std::sync::LazyLock;
-
 use super::MacEntry;
 
-// Built on first use, as the cipher table is: the HMAC rows come from the digest table
-pub(super) static MACS: LazyLock<Vec<MacEntry>> = LazyLock::new(|| {
+// Built at run time, as the cipher table is: the HMAC rows come from the digest table
+pub(super) fn build_table() -> Vec<MacEntry> {
     let mut rows = Vec::new();
     #[cfg(feature = "hmac")]
     rows.extend(hmac::rows());
@@ -27,7 +25,7 @@ pub(super) static MACS: LazyLock<Vec<MacEntry>> = LazyLock::new(|| {
     rows.extend(block::rows());
     rows.extend(standalone::rows());
     rows
-});
+}
 
 // The names of a row, of which the first is the canonical one
 #[allow(dead_code, reason = "unused when every MAC feature is off")]

@@ -1,12 +1,20 @@
 #![cfg(feature = "ec")]
 
+use std::sync::LazyLock;
+
 use rand::SeedableRng;
 use rand::rngs::StdRng;
-use tc_algo::ErrorKind;
-use tc_algo::generate::key_pair::KeyPair;
-use tc_algo::generate::{self, KeyGenParams};
-use tc_algo::params::{AnyEcPrivateKey, AnyPrivateKey, AnyPublicKey, EcCurve};
+use tc_algo::{
+    Algo, AnyEcPrivateKey, AnyPrivateKey, AnyPublicKey, EcCurve, ErrorKind, KeyGenParams, KeyPair,
+};
 use tc_asn1::Asn1Oid;
+
+// One instance for the whole file, so that its tables are built once
+#[allow(
+    dead_code,
+    reason = "unused when the features of the tests here are off"
+)]
+static ALGO: LazyLock<Algo> = LazyLock::new(Algo::new);
 
 fn curves(pair: &KeyPair) -> (EcCurve, EcCurve) {
     let (AnyPublicKey::Ec(public), AnyPrivateKey::Ec(private)) = (&pair.public, &pair.private)
@@ -17,7 +25,7 @@ fn curves(pair: &KeyPair) -> (EcCurve, EcCurve) {
 }
 
 fn generate_on(params: impl Into<KeyGenParams>) -> KeyPair {
-    let mut generator = generate::key_pair::get_by_name("EC").unwrap();
+    let mut generator = ALGO.key_pair_generator().get_by_name("EC").unwrap();
     generator.init(params).unwrap();
     generator.generate().unwrap()
 }
@@ -77,7 +85,7 @@ fn a_size_alone_takes_the_curve_bouncy_castle_takes() {
 // 239 bits names prime239v1, which this crate does not have; 192 bits names P-192, a small curve
 #[test]
 fn a_size_without_a_curve_is_refused() {
-    let mut generator = generate::key_pair::get_by_name("EC").unwrap();
+    let mut generator = ALGO.key_pair_generator().get_by_name("EC").unwrap();
     for bits in [
         160,
         239,
@@ -86,26 +94,24 @@ fn a_size_without_a_curve_is_refused() {
         #[cfg(not(feature = "ec-small-curves"))]
         192,
     ] {
-        let error = generator
-            .init(KeyGenParams::Strength { bits })
-            .unwrap_err();
+        let error = generator.init(KeyGenParams::Strength { bits }).unwrap_err();
         assert_eq!(error.kind(), ErrorKind::InvalidKeyGenParams, "{bits}");
     }
 }
 
 #[test]
 fn without_init_there_is_no_curve_to_generate_on() {
-    let mut generator = generate::key_pair::get_by_name("EC").unwrap();
+    let mut generator = ALGO.key_pair_generator().get_by_name("EC").unwrap();
     let error = generator.generate().unwrap_err();
     assert_eq!(error.kind(), ErrorKind::InvalidKeyGenParams);
-    let error = generate::key_pair::generate("EC").unwrap_err();
+    let error = ALGO.key_pair_generator().generate("EC").unwrap_err();
     assert_eq!(error.kind(), ErrorKind::InvalidKeyGenParams);
 }
 
 #[test]
 fn the_same_seed_gives_the_same_key_pair() {
     let generate = || {
-        let mut generator = generate::key_pair::get_by_name("EC").unwrap();
+        let mut generator = ALGO.key_pair_generator().get_by_name("EC").unwrap();
         generator.init(EcCurve::Secp256r1).unwrap();
         generator.with_rng(StdRng::seed_from_u64(7));
         generator.generate().unwrap()
@@ -120,7 +126,7 @@ fn the_same_seed_gives_the_same_key_pair() {
 #[test]
 fn the_generator_is_found_by_its_bouncy_castle_names_in_any_case() {
     for name in ["EC", "ec", "ECDH", "ECIES", "ECDHC", "ecdhc", "ECMQV"] {
-        let generator = generate::key_pair::get_by_name(name).unwrap();
+        let generator = ALGO.key_pair_generator().get_by_name(name).unwrap();
         assert_eq!(generator.entry().name(), "EC", "{name}");
     }
 }
@@ -128,7 +134,9 @@ fn the_generator_is_found_by_its_bouncy_castle_names_in_any_case() {
 // The ECDH and ECMQV schemes with a KDF of X9.63 and SEC 1, as Bouncy Castle maps them
 #[test]
 fn the_generator_is_found_by_the_oids_of_the_ecdh_and_ecmqv_kdf_schemes() {
-    let entry = generate::key_pair::algorithms()
+    let entry = ALGO
+        .key_pair_generator()
+        .algorithms()
         .find(|entry| entry.name() == "EC")
         .unwrap();
     assert_eq!(entry.oids().len(), 15);
@@ -144,7 +152,7 @@ fn the_generator_is_found_by_the_oids_of_the_ecdh_and_ecmqv_kdf_schemes() {
         "1.3.132.1.15.3",
     ] {
         let oid: Asn1Oid = dotted.parse().unwrap();
-        let generator = generate::key_pair::get_by_oid(&oid).unwrap();
+        let generator = ALGO.key_pair_generator().get_by_oid(&oid).unwrap();
         assert_eq!(generator.entry().name(), "EC", "{dotted}");
     }
     assert!(

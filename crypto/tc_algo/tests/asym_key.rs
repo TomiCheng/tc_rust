@@ -5,7 +5,7 @@
     unused_imports,
     reason = "unused when every one of these key features is off"
 )]
-use tc_algo::params::{AnyKeyParams, AnyParams, AnyPrivateKey, AnyPublicKey};
+use tc_algo::{AnyKeyParams, AnyParams, AnyPrivateKey, AnyPublicKey};
 
 fn assert_traits<T: Clone + Send + Sync + 'static>() {}
 

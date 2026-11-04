@@ -1,14 +1,22 @@
 // DH in the agreement table, found by its names as in Bouncy Castle and by nothing else, and the
 // agreement it gives: the shared secret, and what init and calculate refuse
-use tc_algo::ErrorKind;
-use tc_algo::agreement;
+use std::sync::LazyLock;
+
+use tc_algo::{Algo, ErrorKind};
 use tc_asn1::Asn1Oid;
+
+// One instance for the whole file, so that its tables are built once
+#[allow(
+    dead_code,
+    reason = "unused when the features of the tests here are off"
+)]
+static ALGO: LazyLock<Algo> = LazyLock::new(Algo::new);
 
 #[cfg(feature = "dh")]
 #[test]
 fn dh_is_found_by_its_name_and_its_bouncy_castle_alias_in_any_case() {
     for name in ["DH", "dh", "DIFFIEHELLMAN", "DiffieHellman"] {
-        let agreement = agreement::get_by_name(name).unwrap();
+        let agreement = ALGO.agreement().get_by_name(name).unwrap();
         assert_eq!(agreement.entry().name(), "DH", "{name}");
         assert_eq!(agreement.to_string(), "DH", "{name}");
     }
@@ -17,7 +25,9 @@ fn dh_is_found_by_its_name_and_its_bouncy_castle_alias_in_any_case() {
 #[cfg(feature = "dh")]
 #[test]
 fn the_table_has_dh_once_and_without_an_oid() {
-    let entries: Vec<_> = agreement::algorithms()
+    let entries: Vec<_> = ALGO
+        .agreement()
+        .algorithms()
         .filter(|entry| entry.name() == "DH")
         .collect();
     assert_eq!(entries.len(), 1);
@@ -34,7 +44,7 @@ fn a_name_not_in_the_table_is_an_unknown_agreement() {
         "DH/NONE",
         "1.2.840.113549.1.3.1",
     ] {
-        let error = agreement::get_by_name(name).unwrap_err();
+        let error = ALGO.agreement().get_by_name(name).unwrap_err();
         assert_eq!(error.kind(), ErrorKind::UnknownAgreement, "{name:?}");
     }
 }
@@ -43,24 +53,23 @@ fn a_name_not_in_the_table_is_an_unknown_agreement() {
 #[test]
 fn the_oid_of_a_dh_key_is_an_unknown_agreement() {
     let oid: Asn1Oid = "1.2.840.113549.1.3.1".parse().unwrap();
-    let error = agreement::get_by_oid(&oid).unwrap_err();
+    let error = ALGO.agreement().get_by_oid(&oid).unwrap_err();
     assert_eq!(error.kind(), ErrorKind::UnknownAgreement);
 }
 
 #[cfg(feature = "dh")]
 mod with_dh {
-    use tc_algo::ErrorKind;
-    use tc_algo::agreement::{
-        self, Agreement, AgreementInit, AgreementPeer, AnyAgreement, AnyAgreementParams,
+    use super::ALGO;
+    use tc_algo::{
+        Agreement, AgreementInit, AgreementPeer, AnyAgreement, AnyAgreementParams, AnyPrivateKey,
+        AnyPublicKey, ErrorKind,
     };
-    use tc_algo::generate;
-    use tc_algo::params::{AnyPrivateKey, AnyPublicKey};
     use tc_bigint::PaddedBigUint;
     use tc_dh_key::standard_groups::{rfc2409_1024, rfc3526_2048};
     use tc_dh_key::{DhParameters, DhPrivateKey, DhPublicKey};
 
     fn key_pair(group: DhParameters) -> (AnyPublicKey, AnyPrivateKey) {
-        let mut generator = generate::key_pair::get_by_name("DH").unwrap();
+        let mut generator = ALGO.key_pair_generator().get_by_name("DH").unwrap();
         generator.init(group).unwrap();
         let pair = generator.generate().unwrap();
         (pair.public, pair.private)
@@ -82,7 +91,7 @@ mod with_dh {
     }
 
     fn initialized(params: &AnyAgreementParams) -> AnyAgreement {
-        let mut dh = agreement::get_by_name("DH").unwrap();
+        let mut dh = ALGO.agreement().get_by_name("DH").unwrap();
         dh.init(params).unwrap();
         dh
     }
@@ -93,23 +102,31 @@ mod with_dh {
         let (bob_public, bob_private) = key_pair(rfc3526_2048());
         let alice = initialized(&alice_private.into());
         let alice_secret = alice.calculate(&bob_public.into()).unwrap();
-        let bob_secret =
-            agreement::calculate("DH", &bob_private.into(), &alice_public.into()).unwrap();
+        let bob_secret = ALGO
+            .agreement()
+            .calculate("DH", &bob_private.into(), &alice_public.into())
+            .unwrap();
         assert_eq!(alice_secret.as_bytes().len(), 256);
         assert_eq!(alice_secret.as_bytes(), bob_secret.as_bytes());
     }
 
     #[test]
     fn the_secret_in_a_toy_group_is_y_to_the_x_mod_p() {
-        let alice = agreement::calculate("DH", &toy_private(4), &toy_public(10)).unwrap();
-        let bob = agreement::calculate("DH", &toy_private(3), &toy_public(4)).unwrap();
+        let alice = ALGO
+            .agreement()
+            .calculate("DH", &toy_private(4), &toy_public(10))
+            .unwrap();
+        let bob = ALGO
+            .agreement()
+            .calculate("DH", &toy_private(3), &toy_public(4))
+            .unwrap();
         assert_eq!(alice.as_bytes(), [18]);
         assert_eq!(bob.as_bytes(), [18]);
     }
 
     #[test]
     fn the_trait_writes_the_secret_into_a_buffer_of_agreement_size() {
-        let mut dh = agreement::get_by_name("DH").unwrap();
+        let mut dh = ALGO.agreement().get_by_name("DH").unwrap();
         AgreementInit::init(&mut dh, &toy_private(4)).unwrap();
         assert_eq!(dh.agreement_size(), 1);
         let mut output = [0; 1];
@@ -124,7 +141,7 @@ mod with_dh {
 
     #[test]
     fn dh_refuses_user_keying_material() {
-        let mut dh = agreement::get_by_name("DH").unwrap();
+        let mut dh = ALGO.agreement().get_by_name("DH").unwrap();
         let error = dh
             .init(&toy_private(4).with_ukm(vec![1, 2, 3]))
             .unwrap_err();
@@ -171,13 +188,16 @@ mod with_dh {
     // 2 has order 11 modulo 23, so 2^11 = 1
     #[test]
     fn a_shared_secret_of_one_is_refused() {
-        let error = agreement::calculate("DH", &toy_private(11), &toy_public(2)).unwrap_err();
+        let error = ALGO
+            .agreement()
+            .calculate("DH", &toy_private(11), &toy_public(2))
+            .unwrap_err();
         assert_eq!(error.kind(), ErrorKind::InvalidParams);
     }
 
     #[test]
     fn calculating_before_init_is_not_initialized() {
-        let dh = agreement::get_by_name("DH").unwrap();
+        let dh = ALGO.agreement().get_by_name("DH").unwrap();
         let error = dh.calculate(&toy_public(10)).unwrap_err();
         assert_eq!(error.kind(), ErrorKind::NotInitialized);
         let error = dh

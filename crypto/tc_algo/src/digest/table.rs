@@ -30,7 +30,7 @@ fn ascon_hasha() -> Box<dyn DynDigest> {
 // name is the canonical one, the first OID is the digest's own (DigestInfo uses it), and the rest
 // map to the same row as in Bouncy Castle, HMAC OIDs included. The digests its table leaves out are
 // here too, named as their classes name themselves but in upper case, as the rest of the table is
-pub(super) const DIGESTS: &[DigestEntry] = &[
+pub(crate) const DIGESTS: &[DigestEntry] = &[
     #[cfg(feature = "md2")]
     DigestEntry::new(
         &["MD2"],

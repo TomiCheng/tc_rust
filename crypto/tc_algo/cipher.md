@@ -1,6 +1,6 @@
 # Ciphers
 
-`tc_algo::cipher` creates ciphers by name or by OID, after Bouncy Castle's
+`algo.cipher()` creates ciphers by name or by OID, after Bouncy Castle's
 `CipherUtilities`. Every cipher it creates is an `AnyCipher`, whatever its kind:
 
 - [Block ciphers](#block-ciphers), in a mode with a padding: AES and DES.
@@ -30,17 +30,15 @@ params: the key, and whatever else the cipher needs, such as an IV. `finalize`
 returns the rest of the output, with the padding or the tag.
 
 ```rust
-use tc_algo::AlgoError;
-use tc_algo::cipher::{self, CipherDirection};
-use tc_algo::generate;
-use tc_algo::params::{AnyKeyParams, AnyParams};
+use tc_algo::{Algo, AlgoError, AnyKeyParams, AnyParams, CipherDirection};
 
 fn main() -> Result<(), AlgoError> {
-    let key = generate::generate_key("AES256")?;
+    let algo = Algo::new();
+    let key = algo.key_generator().generate("AES256")?;
     let mut params = AnyParams::new(AnyKeyParams::Secret(key));
     params.op.iv = Some(rand::random::<[u8; 16]>().to_vec());
 
-    let mut aes = cipher::get_by_name("AES/CBC/PKCS7PADDING")?;
+    let mut aes = algo.cipher().get_by_name("AES/CBC/PKCS7PADDING")?;
     aes.init(CipherDirection::Encrypt, &params)?;
     let mut ciphertext = aes.update(b"hello, ")?;
     ciphertext.extend(aes.update(b"world")?);
@@ -56,18 +54,16 @@ for RSA, and a missing field it needs, such as the IV for CBC, both with
 ### In one step
 
 ```rust
-use tc_algo::AlgoError;
-use tc_algo::cipher;
-use tc_algo::generate;
-use tc_algo::params::{AnyKeyParams, AnyParams};
+use tc_algo::{Algo, AlgoError, AnyKeyParams, AnyParams};
 
 fn main() -> Result<(), AlgoError> {
-    let key = generate::generate_key("AES256")?;
+    let algo = Algo::new();
+    let key = algo.key_generator().generate("AES256")?;
     let mut params = AnyParams::new(AnyKeyParams::Secret(key));
     params.op.iv = Some(rand::random::<[u8; 16]>().to_vec());
 
-    let ciphertext = cipher::encrypt("AES/CBC/PKCS7PADDING", &params, b"hello, world")?;
-    let plaintext = cipher::decrypt("AES/CBC/PKCS7PADDING", &params, &ciphertext)?;
+    let ciphertext = algo.cipher().encrypt("AES/CBC/PKCS7PADDING", &params, b"hello, world")?;
+    let plaintext = algo.cipher().decrypt("AES/CBC/PKCS7PADDING", &params, &ciphertext)?;
     Ok(())
 }
 ```
@@ -80,14 +76,14 @@ accepted. What a missing mode or padding gives depends on the kind, as its secti
 says. The cipher reports its canonical name.
 
 ```rust
-use tc_algo::cipher;
-use tc_algo::{AlgoError, ErrorKind};
+use tc_algo::{Algo, AlgoError, ErrorKind};
 
 fn main() -> Result<(), AlgoError> {
-    let aes = cipher::get_by_name("aes/cbc")?;
+    let algo = Algo::new();
+    let aes = algo.cipher().get_by_name("aes/cbc")?;
     assert_eq!(aes.entry().name(), "AES/CBC/PKCS7PADDING");
 
-    let error = cipher::get_by_name("AES/GCM/PKCS7PADDING").unwrap_err();
+    let error = algo.cipher().get_by_name("AES/GCM/PKCS7PADDING").unwrap_err();
     assert_eq!(error.kind(), ErrorKind::UnknownCipher);
     Ok(())
 }
@@ -98,13 +94,15 @@ fn main() -> Result<(), AlgoError> {
 ### Looking at the table
 
 ```rust
-use tc_algo::cipher;
+use tc_algo::Algo;
 
-for entry in cipher::algorithms() {
+let algo = Algo::new();
+for entry in algo.cipher().algorithms() {
     println!("{entry}"); // e.g. `AES/CBC/PKCS7PADDING  [id-aes128-CBC, id-aes192-CBC, id-aes256-CBC]`
 }
 
-let entry = cipher::get_by_name("AES/GCM").unwrap().entry();
+let cipher = algo.cipher().get_by_name("AES/GCM").unwrap();
+let entry = cipher.entry();
 let name = entry.name(); // "AES/GCM/NOPADDING"
 let oids = entry.oids(); // id-aes128-GCM, id-aes192-GCM, id-aes256-GCM
 ```
@@ -112,7 +110,7 @@ let oids = entry.oids(); // id-aes128-GCM, id-aes192-GCM, id-aes256-GCM
 ### In generic code
 
 `AnyCipher` implements `BufferedCipher` and `BufferedCipherInit<AnyParams>`, which
-`tc_algo::cipher` re-exports, so it fits anywhere a `BufferedCipher` is expected,
+`tc_algo` re-exports, so it fits anywhere a `BufferedCipher` is expected,
 without a `tc_buffered_cipher` dependency of your own. It is also `Send`. Its `Debug`
 output shows only the name, never the key or the state, and its `Display` output is
 the canonical name.
@@ -178,17 +176,16 @@ A stream cipher takes neither a mode nor a padding: its name is the algorithm al
 as many bytes as it takes, and `finalize` gives none.
 
 ```rust
-use tc_algo::AlgoError;
-use tc_algo::cipher;
-use tc_algo::params::{AnyKeyParams, AnyParams, SecretKey};
+use tc_algo::{Algo, AlgoError, AnyKeyParams, AnyParams, SecretKey};
 
 fn main() -> Result<(), AlgoError> {
+    let algo = Algo::new();
     let key = SecretKey::new(rand::random::<[u8; 32]>().to_vec());
     let mut params = AnyParams::new(AnyKeyParams::Secret(key));
     params.op.iv = Some(rand::random::<[u8; 24]>().to_vec());
 
-    let ciphertext = cipher::encrypt("XCHACHA20", &params, b"hello, world")?;
-    let plaintext = cipher::decrypt("XCHACHA20", &params, &ciphertext)?;
+    let ciphertext = algo.cipher().encrypt("XCHACHA20", &params, b"hello, world")?;
+    let plaintext = algo.cipher().decrypt("XCHACHA20", &params, &ciphertext)?;
     Ok(())
 }
 ```
@@ -234,20 +231,18 @@ tag to the ciphertext; decryption fails with `InvalidCiphertext` if anything was
 changed.
 
 ```rust
-use tc_algo::AlgoError;
-use tc_algo::cipher;
-use tc_algo::generate;
-use tc_algo::params::{AnyKeyParams, AnyParams};
+use tc_algo::{Algo, AlgoError, AnyKeyParams, AnyParams};
 
 fn main() -> Result<(), AlgoError> {
-    let key = generate::generate_key("AES256")?;
+    let algo = Algo::new();
+    let key = algo.key_generator().generate("AES256")?;
     let mut params = AnyParams::new(AnyKeyParams::Secret(key));
     params.op.iv = Some(rand::random::<[u8; 12]>().to_vec());
     params.op.tag_len = Some(16);
     params.op.aad = Some(b"header".to_vec());
 
-    let sealed = cipher::encrypt("AES/GCM/NOPADDING", &params, b"hello, world")?;
-    let opened = cipher::decrypt("AES/GCM/NOPADDING", &params, &sealed)?;
+    let sealed = algo.cipher().encrypt("AES/GCM/NOPADDING", &params, b"hello, world")?;
+    let opened = algo.cipher().decrypt("AES/GCM/NOPADDING", &params, &sealed)?;
     Ok(())
 }
 ```
@@ -284,19 +279,17 @@ padding takes, and the ciphertext is as long as the modulus. It has no mode, wri
 NONE. A missing padding is NOPADDING, as in Bouncy Castle.
 
 ```rust
-use tc_algo::AlgoError;
-use tc_algo::cipher;
-use tc_algo::generate;
-use tc_algo::params::{AnyKeyParams, AnyParams};
+use tc_algo::{Algo, AlgoError, AnyKeyParams, AnyParams};
 
 fn main() -> Result<(), AlgoError> {
-    let keys = generate::generate_key_pair("RSA")?;
+    let algo = Algo::new();
+    let keys = algo.key_pair_generator().generate("RSA")?;
     let public = AnyParams::new(AnyKeyParams::Public(keys.public));
     let private = AnyParams::new(AnyKeyParams::Private(keys.private));
 
     let name = "RSA/NONE/OAEPWITHSHA256ANDMGF1PADDING";
-    let ciphertext = cipher::encrypt(name, &public, b"hello, world")?;
-    let plaintext = cipher::decrypt(name, &private, &ciphertext)?;
+    let ciphertext = algo.cipher().encrypt(name, &public, b"hello, world")?;
+    let plaintext = algo.cipher().decrypt(name, &private, &ciphertext)?;
     Ok(())
 }
 ```

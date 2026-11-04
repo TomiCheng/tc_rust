@@ -1,6 +1,6 @@
 # MACs
 
-`tc_algo::mac` creates message authentication codes by name or by OID. Every MAC it
+`algo.mac()` creates message authentication codes by name or by OID. Every MAC it
 creates is an `AnyMac`.
 
 ## Enabling MACs
@@ -22,14 +22,13 @@ tag and starts the next message under the same key, so another message needs no 
 `init`. AES-GMAC and POLY1305 are the exceptions: each needs a new `init` for each message.
 
 ```rust
-use tc_algo::AlgoError;
-use tc_algo::mac::{self, AnyMacParams};
-use tc_algo::params::SecretKey;
+use tc_algo::{Algo, AlgoError, AnyMacParams, SecretKey};
 
 fn main() -> Result<(), AlgoError> {
+    let algo = Algo::new();
     let params = AnyMacParams::new(SecretKey::new(b"a secret key".to_vec()));
 
-    let mut hmac = mac::get_by_name("HMAC-SHA256")?;
+    let mut hmac = algo.mac().get_by_name("HMAC-SHA256")?;
     hmac.init(&params)?;
     hmac.update(b"hello, ")?;
     hmac.update(b"world")?;
@@ -42,13 +41,12 @@ fn main() -> Result<(), AlgoError> {
 ### In one step
 
 ```rust
-use tc_algo::AlgoError;
-use tc_algo::mac::{self, AnyMacParams};
-use tc_algo::params::SecretKey;
+use tc_algo::{Algo, AlgoError, AnyMacParams, SecretKey};
 
 fn main() -> Result<(), AlgoError> {
+    let algo = Algo::new();
     let params = AnyMacParams::new(SecretKey::new(b"a secret key".to_vec()));
-    let tag = mac::calculate("HMAC-SHA256", &params, b"hello, world")?;
+    let tag = algo.mac().calculate("HMAC-SHA256", &params, b"hello, world")?;
     assert_eq!(tag.len(), 32);
     Ok(())
 }
@@ -61,15 +59,14 @@ stops at the first difference, which tells an attacker how much of a forged tag 
 right. After it, the MAC goes on as it does after `finalize`.
 
 ```rust
-use tc_algo::AlgoError;
-use tc_algo::mac::{self, AnyMacParams};
-use tc_algo::params::SecretKey;
+use tc_algo::{Algo, AlgoError, AnyMacParams, SecretKey};
 
 fn main() -> Result<(), AlgoError> {
+    let algo = Algo::new();
     let params = AnyMacParams::new(SecretKey::new(b"a secret key".to_vec()));
-    let received = mac::calculate("HMAC-SHA256", &params, b"hello, world")?;
+    let received = algo.mac().calculate("HMAC-SHA256", &params, b"hello, world")?;
 
-    let mut hmac = mac::get_by_name("HMAC-SHA256")?;
+    let mut hmac = algo.mac().get_by_name("HMAC-SHA256")?;
     hmac.init(&params)?;
     hmac.update(b"hello, world")?;
     assert!(hmac.verify(&received)?);
@@ -83,17 +80,17 @@ Names match without regard to ASCII case, and a string that is not a name is par
 as a dotted OID. `get_by_oid` takes an `Asn1Oid`. The MAC reports its canonical name.
 
 ```rust
-use tc_algo::mac;
-use tc_algo::{AlgoError, ErrorKind};
+use tc_algo::{Algo, AlgoError, ErrorKind};
 
 fn main() -> Result<(), AlgoError> {
-    let hmac = mac::get_by_name("hmac/sha256")?;
+    let algo = Algo::new();
+    let hmac = algo.mac().get_by_name("hmac/sha256")?;
     assert_eq!(hmac.entry().name(), "HMAC-SHA-256");
 
-    let by_oid = mac::get_by_name("1.2.840.113549.2.9")?;
+    let by_oid = algo.mac().get_by_name("1.2.840.113549.2.9")?;
     assert_eq!(by_oid.entry().name(), "HMAC-SHA-256");
 
-    let error = mac::get_by_name("NO-SUCH-MAC").unwrap_err();
+    let error = algo.mac().get_by_name("NO-SUCH-MAC").unwrap_err();
     assert_eq!(error.kind(), ErrorKind::UnknownMac);
     Ok(())
 }
@@ -102,9 +99,10 @@ fn main() -> Result<(), AlgoError> {
 ### Looking at the table
 
 ```rust
-use tc_algo::mac;
+use tc_algo::Algo;
 
-for entry in mac::algorithms() {
+let algo = Algo::new();
+for entry in algo.mac().algorithms() {
     println!("{entry}"); // e.g. `HMAC-SHA-256  [id-hmacWithSHA256]`
 }
 ```
@@ -116,14 +114,13 @@ for entry in mac::algorithms() {
 ignored, so HMAC refuses an IV.
 
 ```rust
-use tc_algo::AlgoError;
-use tc_algo::mac::{self, AnyMacParams};
-use tc_algo::params::SecretKey;
+use tc_algo::{Algo, AlgoError, AnyMacParams, SecretKey};
 
 fn main() -> Result<(), AlgoError> {
+    let algo = Algo::new();
     let key = SecretKey::new(vec![0x42; 16]);
     let params = AnyMacParams::new(key).with_iv(vec![0x24; 16]);
-    let tag = mac::calculate("VMPCMAC", &params, b"hello, world")?;
+    let tag = algo.mac().calculate("VMPCMAC", &params, b"hello, world")?;
     assert_eq!(tag.len(), 20);
     Ok(())
 }

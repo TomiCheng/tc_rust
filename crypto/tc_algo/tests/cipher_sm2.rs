@@ -2,17 +2,23 @@
 
 use std::sync::LazyLock;
 
-use tc_algo::ErrorKind;
-use tc_algo::cipher::{self, CipherDirection};
-use tc_algo::params::{
-    AnyEcPrivateKey, AnyEcPublicKey, AnyKeyParams, AnyParams, AnyPrivateKey, AnyPublicKey,
-    SecretKey,
+use tc_algo::{
+    Algo, AnyEcPrivateKey, AnyEcPublicKey, AnyKeyParams, AnyParams, AnyPrivateKey, AnyPublicKey,
+    CipherDirection, ErrorKind, SecretKey,
 };
+
 use tc_asym_cipher::{AsymmetricBlockCipherInit, KeyPairGenerator, KeyPairGeneratorInit};
 use tc_ec_key::{EcKeyGenerationParams, EcKeyPairGenerator, EcPrivateKey, EcPublicKey};
 use tc_fp_custom::named_curves::SM2P256V1;
 use tc_fp_custom::{SM2P256V1FieldElement, SecPCtCurve};
 use tc_sm2::{Sm2Engine, Sm2Mode};
+
+// One instance for the whole file, so that its tables are built once
+#[allow(
+    dead_code,
+    reason = "unused when the features of the tests here are off"
+)]
+static ALGO: LazyLock<Algo> = LazyLock::new(Algo::new);
 
 type Curve = &'static SecPCtCurve<SM2P256V1FieldElement>;
 
@@ -62,12 +68,14 @@ fn each_mode_decrypts_with_the_private_key_what_the_public_key_encrypts() {
     ] {
         for length in [1, 32, 100] {
             let message: Vec<u8> = (0..length).map(|i| i as u8).collect();
-            let ciphertext = cipher::encrypt(name, &public(), &message).unwrap();
+            let ciphertext = ALGO.cipher().encrypt(name, &public(), &message).unwrap();
             // C1, an uncompressed point, then the message and an SM3 hash
             assert_eq!(ciphertext.len(), 65 + length + 32, "{name}");
             assert_eq!(engine_decrypt(mode, &ciphertext), message, "{name}");
             assert_eq!(
-                cipher::decrypt(name, &private(), &ciphertext).unwrap(),
+                ALGO.cipher()
+                    .decrypt(name, &private(), &ciphertext)
+                    .unwrap(),
                 message,
                 "{name}"
             );
@@ -77,20 +85,28 @@ fn each_mode_decrypts_with_the_private_key_what_the_public_key_encrypts() {
 
 #[test]
 fn the_two_orders_do_not_read_each_others_ciphertext() {
-    let ciphertext = cipher::encrypt("SM2/C1C3C2", &public(), b"attack at dawn").unwrap();
-    let error = cipher::decrypt("SM2/C1C2C3", &private(), &ciphertext).unwrap_err();
+    let ciphertext = ALGO
+        .cipher()
+        .encrypt("SM2/C1C3C2", &public(), b"attack at dawn")
+        .unwrap();
+    let error = ALGO
+        .cipher()
+        .decrypt("SM2/C1C2C3", &private(), &ciphertext)
+        .unwrap_err();
     assert_eq!(error.kind(), ErrorKind::InvalidCiphertext);
 }
 
 #[test]
 fn update_keeps_the_message_and_finalize_gives_the_whole_ciphertext() {
-    let mut cipher = cipher::get_by_name("SM2").unwrap();
+    let mut cipher = ALGO.cipher().get_by_name("SM2").unwrap();
     cipher.init(CipherDirection::Encrypt, &public()).unwrap();
     assert!(cipher.update(b"attack ").unwrap().is_empty());
     assert!(cipher.update(b"at dawn").unwrap().is_empty());
     let ciphertext = cipher.finalize().unwrap();
     assert_eq!(
-        cipher::decrypt("SM2", &private(), &ciphertext).unwrap(),
+        ALGO.cipher()
+            .decrypt("SM2", &private(), &ciphertext)
+            .unwrap(),
         b"attack at dawn"
     );
     // The next message goes under the same key with a new k
@@ -100,17 +116,26 @@ fn update_keeps_the_message_and_finalize_gives_the_whole_ciphertext() {
 
 #[test]
 fn a_changed_ciphertext_is_an_invalid_ciphertext() {
-    let mut ciphertext = cipher::encrypt("SM2", &public(), b"attack at dawn").unwrap();
+    let mut ciphertext = ALGO
+        .cipher()
+        .encrypt("SM2", &public(), b"attack at dawn")
+        .unwrap();
     ciphertext[70] ^= 1;
-    let error = cipher::decrypt("SM2", &private(), &ciphertext).unwrap_err();
+    let error = ALGO
+        .cipher()
+        .decrypt("SM2", &private(), &ciphertext)
+        .unwrap_err();
     assert_eq!(error.kind(), ErrorKind::InvalidCiphertext);
 }
 
 #[test]
 fn an_empty_message_or_too_short_a_ciphertext_is_a_data_length_error() {
-    let error = cipher::encrypt("SM2", &public(), b"").unwrap_err();
+    let error = ALGO.cipher().encrypt("SM2", &public(), b"").unwrap_err();
     assert_eq!(error.kind(), ErrorKind::DataLength);
-    let error = cipher::decrypt("SM2", &private(), &[4; 96]).unwrap_err();
+    let error = ALGO
+        .cipher()
+        .decrypt("SM2", &private(), &[4; 96])
+        .unwrap_err();
     assert_eq!(error.kind(), ErrorKind::DataLength);
 }
 
@@ -120,7 +145,7 @@ fn the_public_key_only_encrypts_and_the_private_key_only_decrypts() {
         (CipherDirection::Decrypt, public()),
         (CipherDirection::Encrypt, private()),
     ] {
-        let mut cipher = cipher::get_by_name("SM2").unwrap();
+        let mut cipher = ALGO.cipher().get_by_name("SM2").unwrap();
         let error = cipher.init(direction, &params).unwrap_err();
         assert_eq!(error.kind(), ErrorKind::InvalidParams);
     }
@@ -140,7 +165,7 @@ fn sm2_refuses_a_key_off_its_curve_a_secret_key_and_an_operation_field() {
         AnyParams::new(AnyKeyParams::Secret(SecretKey::new(vec![1; 16]))),
         with_iv,
     ] {
-        let mut cipher = cipher::get_by_name("SM2").unwrap();
+        let mut cipher = ALGO.cipher().get_by_name("SM2").unwrap();
         let error = cipher.init(CipherDirection::Encrypt, &params).unwrap_err();
         assert_eq!(error.kind(), ErrorKind::InvalidParams);
     }
@@ -153,18 +178,20 @@ fn names_take_a_mode_but_no_padding() {
         ("sm2/", "SM2/C1C2C3"),
         ("sm2/c1c3c2", "SM2/C1C3C2"),
     ] {
-        let cipher = cipher::get_by_name(name).unwrap();
+        let cipher = ALGO.cipher().get_by_name(name).unwrap();
         assert_eq!(cipher.entry().name(), canonical, "{name}");
     }
     for name in ["SM2/NONE", "SM2/C1C3C2/NOPADDING", "SM2/C1C3C2/", "SM2//"] {
-        let error = cipher::get_by_name(name).unwrap_err();
+        let error = ALGO.cipher().get_by_name(name).unwrap_err();
         assert_eq!(error.kind(), ErrorKind::UnknownCipher, "{name}");
     }
 }
 
 #[test]
 fn the_table_has_sm2_in_its_two_orders() {
-    let names: Vec<&str> = cipher::algorithms()
+    let names: Vec<&str> = ALGO
+        .cipher()
+        .algorithms()
         .map(|entry| entry.name())
         .filter(|name| name.starts_with("SM2/"))
         .collect();

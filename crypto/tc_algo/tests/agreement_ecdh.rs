@@ -2,17 +2,24 @@
 
 // ECDH and ECDHC in the agreement table, found by their names as in Bouncy Castle and by nothing
 // else, and the agreements they give: the secret of RFC 5903, and what init and calculate refuse
-use std::sync::OnceLock;
+use std::sync::LazyLock;
 
-use tc_algo::ErrorKind;
-use tc_algo::agreement::{
-    self, Agreement, AgreementInit, AgreementPeer, AnyAgreement, AnyAgreementParams,
+use std::sync::OnceLock;
+use tc_algo::{
+    Agreement, AgreementInit, AgreementPeer, Algo, AnyAgreement, AnyAgreementParams,
+    AnyEcPrivateKey, AnyEcPublicKey, AnyPrivateKey, AnyPublicKey, EcCurve, ErrorKind,
 };
-use tc_algo::generate;
-use tc_algo::params::{AnyEcPrivateKey, AnyEcPublicKey, AnyPrivateKey, AnyPublicKey, EcCurve};
+
 use tc_bigint::{ArrayEncoding, PaddedBigUint};
 use tc_ec_key::{EcPrivateKey, EcPublicKey};
 use tc_fp_custom::{SecP256R1FieldElement, SecPCtCurve, SecPCtPoint};
+
+// One instance for the whole file, so that its tables are built once
+#[allow(
+    dead_code,
+    reason = "unused when the features of the tests here are off"
+)]
+static ALGO: LazyLock<Algo> = LazyLock::new(Algo::new);
 
 fn hex(text: &str) -> Vec<u8> {
     (0..text.len())
@@ -56,14 +63,14 @@ fn rfc_5903_keys() -> (AnyAgreementParams, AgreementPeer) {
 const RFC_5903_SECRET: &str = "D6840F6B42F6EDAFD13116E0E12565202FEF8E9ECE7DCE03812464D04B9442DE";
 
 fn key_pair(curve: EcCurve) -> (AnyPublicKey, AnyPrivateKey) {
-    let mut generator = generate::key_pair::get_by_name("EC").unwrap();
+    let mut generator = ALGO.key_pair_generator().get_by_name("EC").unwrap();
     generator.init(curve).unwrap();
     let pair = generator.generate().unwrap();
     (pair.public, pair.private)
 }
 
 fn initialized(name: &str, params: &AnyAgreementParams) -> AnyAgreement {
-    let mut agreement = agreement::get_by_name(name).unwrap();
+    let mut agreement = ALGO.agreement().get_by_name(name).unwrap();
     agreement.init(params).unwrap();
     agreement
 }
@@ -77,7 +84,7 @@ fn ecdh_and_ecdhc_are_found_by_their_names_and_aliases_in_any_case() {
         ("ECCDH", "ECDHC"),
         ("eccdh", "ECDHC"),
     ] {
-        let agreement = agreement::get_by_name(name).unwrap();
+        let agreement = ALGO.agreement().get_by_name(name).unwrap();
         assert_eq!(agreement.entry().name(), canonical, "{name}");
     }
 }
@@ -86,20 +93,22 @@ fn ecdh_and_ecdhc_are_found_by_their_names_and_aliases_in_any_case() {
 #[test]
 fn neither_has_an_oid_and_a_kdf_scheme_names_neither() {
     for name in ["ECDH", "ECDHC"] {
-        let entry = agreement::algorithms()
+        let entry = ALGO
+            .agreement()
+            .algorithms()
             .find(|entry| entry.name() == name)
             .unwrap();
         assert!(entry.oids().is_empty());
         assert_eq!(entry.to_string(), name);
     }
-    let error = agreement::get_by_name("1.3.132.1.11.1").unwrap_err();
+    let error = ALGO.agreement().get_by_name("1.3.132.1.11.1").unwrap_err();
     assert_eq!(error.kind(), ErrorKind::UnknownAgreement);
 }
 
 #[test]
 fn ecdh_on_p_256_gives_the_secret_of_rfc_5903() {
     let (i, gr) = rfc_5903_keys();
-    let secret = agreement::calculate("ECDH", &i, &gr).unwrap();
+    let secret = ALGO.agreement().calculate("ECDH", &i, &gr).unwrap();
     assert_eq!(secret.as_bytes(), hex(RFC_5903_SECRET));
 }
 
@@ -107,7 +116,7 @@ fn ecdh_on_p_256_gives_the_secret_of_rfc_5903() {
 #[test]
 fn with_a_cofactor_of_one_ecdhc_gives_what_ecdh_gives() {
     let (i, gr) = rfc_5903_keys();
-    let secret = agreement::calculate("ECDHC", &i, &gr).unwrap();
+    let secret = ALGO.agreement().calculate("ECDHC", &i, &gr).unwrap();
     assert_eq!(secret.as_bytes(), hex(RFC_5903_SECRET));
 }
 
@@ -120,9 +129,14 @@ fn both_parties_reach_the_same_secret_as_long_as_a_coordinate() {
     ] {
         let (alice_public, alice_private) = key_pair(curve);
         let (bob_public, bob_private) = key_pair(curve);
-        let alice =
-            agreement::calculate("ECDH", &alice_private.into(), &bob_public.into()).unwrap();
-        let bob = agreement::calculate("ECDH", &bob_private.into(), &alice_public.into()).unwrap();
+        let alice = ALGO
+            .agreement()
+            .calculate("ECDH", &alice_private.into(), &bob_public.into())
+            .unwrap();
+        let bob = ALGO
+            .agreement()
+            .calculate("ECDH", &bob_private.into(), &alice_public.into())
+            .unwrap();
         assert_eq!(alice.as_bytes().len(), size, "{curve:?}");
         assert_eq!(alice.as_bytes(), bob.as_bytes(), "{curve:?}");
     }
@@ -136,9 +150,18 @@ fn with_another_cofactor_ecdhc_agrees_on_a_secret_of_its_own() {
     let (bob_public, bob_private) = key_pair(EcCurve::Sect233k1);
     let (alice_private, bob_private) = (alice_private.into(), bob_private.into());
     let (alice_public, bob_public) = (alice_public.into(), bob_public.into());
-    let ecdh = agreement::calculate("ECDH", &alice_private, &bob_public).unwrap();
-    let alice = agreement::calculate("ECDHC", &alice_private, &bob_public).unwrap();
-    let bob = agreement::calculate("ECDHC", &bob_private, &alice_public).unwrap();
+    let ecdh = ALGO
+        .agreement()
+        .calculate("ECDH", &alice_private, &bob_public)
+        .unwrap();
+    let alice = ALGO
+        .agreement()
+        .calculate("ECDHC", &alice_private, &bob_public)
+        .unwrap();
+    let bob = ALGO
+        .agreement()
+        .calculate("ECDHC", &bob_private, &alice_public)
+        .unwrap();
     assert_eq!(alice.as_bytes(), bob.as_bytes());
     assert_ne!(alice.as_bytes(), ecdh.as_bytes());
 }
@@ -160,10 +183,14 @@ fn both_parties_agree_by_ecdh_and_ecdhc_on_every_gost_curve() {
         for name in ["ECDH", "ECDHC"] {
             let (alice_public, alice_private) = key_pair(curve);
             let (bob_public, bob_private) = key_pair(curve);
-            let alice =
-                agreement::calculate(name, &alice_private.into(), &bob_public.into()).unwrap();
-            let bob =
-                agreement::calculate(name, &bob_private.into(), &alice_public.into()).unwrap();
+            let alice = ALGO
+                .agreement()
+                .calculate(name, &alice_private.into(), &bob_public.into())
+                .unwrap();
+            let bob = ALGO
+                .agreement()
+                .calculate(name, &bob_private.into(), &alice_public.into())
+                .unwrap();
             assert_eq!(alice.as_bytes().len(), size, "{name} {curve:?}");
             assert_eq!(alice.as_bytes(), bob.as_bytes(), "{name} {curve:?}");
         }
@@ -173,7 +200,7 @@ fn both_parties_agree_by_ecdh_and_ecdhc_on_every_gost_curve() {
 #[test]
 fn the_trait_writes_the_secret_into_a_buffer_of_agreement_size() {
     let (i, gr) = rfc_5903_keys();
-    let mut ecdh = agreement::get_by_name("ECDH").unwrap();
+    let mut ecdh = ALGO.agreement().get_by_name("ECDH").unwrap();
     AgreementInit::init(&mut ecdh, &i).unwrap();
     assert_eq!(ecdh.agreement_size(), 32);
     let mut output = [0; 32];
@@ -198,8 +225,8 @@ fn a_public_key_on_another_curve_is_refused() {
 #[cfg(feature = "x25519")]
 #[test]
 fn a_key_that_is_not_ec_is_refused_on_either_side() {
-    let x25519 = generate::key_pair::generate("X25519").unwrap();
-    let mut ecdh = agreement::get_by_name("ECDH").unwrap();
+    let x25519 = ALGO.key_pair_generator().generate("X25519").unwrap();
+    let mut ecdh = ALGO.agreement().get_by_name("ECDH").unwrap();
     let error = ecdh.init(&x25519.private.into()).unwrap_err();
     assert_eq!(error.kind(), ErrorKind::InvalidParams);
 
@@ -213,7 +240,7 @@ fn a_key_that_is_not_ec_is_refused_on_either_side() {
 #[test]
 fn ecdh_refuses_user_keying_material_and_an_ephemeral_key_of_either_party() {
     let (i, gr) = rfc_5903_keys();
-    let mut ecdh = agreement::get_by_name("ECDH").unwrap();
+    let mut ecdh = ALGO.agreement().get_by_name("ECDH").unwrap();
     let error = ecdh.init(&i.clone().with_ukm(vec![1, 2, 3])).unwrap_err();
     assert_eq!(error.kind(), ErrorKind::InvalidParams);
     let error = ecdh
@@ -230,7 +257,7 @@ fn ecdh_refuses_user_keying_material_and_an_ephemeral_key_of_either_party() {
 #[test]
 fn calculating_before_init_is_not_initialized() {
     let (_, gr) = rfc_5903_keys();
-    let ecdh = agreement::get_by_name("ECDH").unwrap();
+    let ecdh = ALGO.agreement().get_by_name("ECDH").unwrap();
     let error = ecdh.calculate(&gr).unwrap_err();
     assert_eq!(error.kind(), ErrorKind::NotInitialized);
     let error = ecdh.calculate_agreement(&gr, &mut [0; 32]).unwrap_err();

@@ -3,17 +3,24 @@
 // ECMQV in the agreement table, found by its name as in Bouncy Castle and by nothing else, and the
 // agreement it gives: the GEC 2 vectors of Bouncy Castle's ECTest, and what init and calculate
 // refuse
-use tc_algo::ErrorKind;
-use tc_algo::agreement::{
-    self, Agreement, AgreementInit, AgreementPeer, AnyAgreement, AnyAgreementParams,
+use std::sync::LazyLock;
+
+use tc_algo::{
+    Agreement, AgreementInit, AgreementPeer, Algo, AnyAgreement, AnyAgreementParams, EcCurve,
+    ErrorKind,
 };
-use tc_algo::generate;
-use tc_algo::params::EcCurve;
+
+// One instance for the whole file, so that its tables are built once
+#[allow(
+    dead_code,
+    reason = "unused when the features of the tests here are off"
+)]
+static ALGO: LazyLock<Algo> = LazyLock::new(Algo::new);
 
 // A party with a static and an ephemeral key pair on the curve: its own params and what the other
 // party takes as its peer
 fn party(curve: EcCurve) -> (AnyAgreementParams, AgreementPeer) {
-    let mut generator = generate::key_pair::get_by_name("EC").unwrap();
+    let mut generator = ALGO.key_pair_generator().get_by_name("EC").unwrap();
     generator.init(curve).unwrap();
     let (key, ephemeral) = (generator.generate().unwrap(), generator.generate().unwrap());
     let params = AnyAgreementParams::new(key.private).with_ephemeral(ephemeral.private);
@@ -22,7 +29,7 @@ fn party(curve: EcCurve) -> (AnyAgreementParams, AgreementPeer) {
 }
 
 fn initialized(params: &AnyAgreementParams) -> AnyAgreement {
-    let mut ecmqv = agreement::get_by_name("ECMQV").unwrap();
+    let mut ecmqv = ALGO.agreement().get_by_name("ECMQV").unwrap();
     ecmqv.init(params).unwrap();
     ecmqv
 }
@@ -30,7 +37,7 @@ fn initialized(params: &AnyAgreementParams) -> AnyAgreement {
 #[test]
 fn ecmqv_is_found_by_its_name_in_any_case() {
     for name in ["ECMQV", "ecmqv", "EcMqv"] {
-        let ecmqv = agreement::get_by_name(name).unwrap();
+        let ecmqv = ALGO.agreement().get_by_name(name).unwrap();
         assert_eq!(ecmqv.entry().name(), "ECMQV", "{name}");
     }
 }
@@ -38,22 +45,27 @@ fn ecmqv_is_found_by_its_name_in_any_case() {
 // The OIDs of MQV name the schemes with a KDF, which this agreement is not
 #[test]
 fn it_has_no_oid_and_a_kdf_scheme_does_not_name_it() {
-    let entry = agreement::algorithms()
+    let entry = ALGO
+        .agreement()
+        .algorithms()
         .find(|entry| entry.name() == "ECMQV")
         .unwrap();
     assert!(entry.oids().is_empty());
     assert_eq!(entry.to_string(), "ECMQV");
-    let error = agreement::get_by_name("1.3.132.1.15.1").unwrap_err();
+    let error = ALGO.agreement().get_by_name("1.3.132.1.15.1").unwrap_err();
     assert_eq!(error.kind(), ErrorKind::UnknownAgreement);
 }
 
 // The GEC 2 vectors of Bouncy Castle's ECTest, on curves below 112 bits
 #[cfg(feature = "ec-small-curves")]
 mod gec2 {
+    use super::ALGO;
     use std::sync::OnceLock;
 
-    use tc_algo::agreement::{self, AgreementPeer, AnyAgreementParams};
-    use tc_algo::params::{AnyEcPrivateKey, AnyEcPublicKey, AnyPrivateKey, AnyPublicKey};
+    use tc_algo::{
+        AgreementPeer, AnyAgreementParams, AnyEcPrivateKey, AnyEcPublicKey, AnyPrivateKey,
+        AnyPublicKey,
+    };
     use tc_bigint::{ArrayEncoding, PaddedBigUint};
     use tc_ec_key::{EcPrivateKey, EcPublicKey};
 
@@ -84,8 +96,12 @@ mod gec2 {
     // and a private key; both parties reach the same secret, which this returns
     fn known_answer(keys: [(AnyEcPublicKey, AnyEcPrivateKey); 4]) -> Vec<u8> {
         let [u1, u2, v1, v2] = keys;
-        let u = agreement::calculate("ECMQV", &params(&u1.1, &u2.1), &peer(&v1.0, &v2.0));
-        let v = agreement::calculate("ECMQV", &params(&v1.1, &v2.1), &peer(&u1.0, &u2.0));
+        let u = ALGO
+            .agreement()
+            .calculate("ECMQV", &params(&u1.1, &u2.1), &peer(&v1.0, &v2.0));
+        let v = ALGO
+            .agreement()
+            .calculate("ECMQV", &params(&v1.1, &v2.1), &peer(&u1.0, &u2.0));
         let (u, v) = (u.unwrap(), v.unwrap());
         assert_eq!(u.as_bytes(), v.as_bytes());
         u.as_bytes().to_vec()
@@ -181,8 +197,14 @@ fn both_parties_reach_the_same_secret_as_long_as_a_coordinate() {
     for (curve, size) in [(EcCurve::Secp256r1, 32), (EcCurve::Secp384r1, 48)] {
         let (alice, alice_peer) = party(curve);
         let (bob, bob_peer) = party(curve);
-        let alice_secret = agreement::calculate("ECMQV", &alice, &bob_peer).unwrap();
-        let bob_secret = agreement::calculate("ECMQV", &bob, &alice_peer).unwrap();
+        let alice_secret = ALGO
+            .agreement()
+            .calculate("ECMQV", &alice, &bob_peer)
+            .unwrap();
+        let bob_secret = ALGO
+            .agreement()
+            .calculate("ECMQV", &bob, &alice_peer)
+            .unwrap();
         assert_eq!(alice_secret.as_bytes().len(), size, "{curve:?}");
         assert_eq!(alice_secret.as_bytes(), bob_secret.as_bytes(), "{curve:?}");
     }
@@ -193,7 +215,7 @@ fn either_party_without_an_ephemeral_key_is_refused() {
     let (alice, _) = party(EcCurve::Secp256r1);
     let (_, bob_peer) = party(EcCurve::Secp256r1);
 
-    let mut ecmqv = agreement::get_by_name("ECMQV").unwrap();
+    let mut ecmqv = ALGO.agreement().get_by_name("ECMQV").unwrap();
     let error = ecmqv
         .init(&AnyAgreementParams::new(alice.key().clone()))
         .unwrap_err();
@@ -208,7 +230,7 @@ fn either_party_without_an_ephemeral_key_is_refused() {
 #[test]
 fn ecmqv_refuses_user_keying_material() {
     let (alice, _) = party(EcCurve::Secp256r1);
-    let mut ecmqv = agreement::get_by_name("ECMQV").unwrap();
+    let mut ecmqv = ALGO.agreement().get_by_name("ECMQV").unwrap();
     let error = ecmqv.init(&alice.with_ukm(vec![1, 2, 3])).unwrap_err();
     assert_eq!(error.kind(), ErrorKind::InvalidParams);
 }
@@ -221,7 +243,7 @@ fn keys_on_more_than_one_curve_are_refused() {
     // This party's ephemeral key on another curve than its static key
     let mixed = AnyAgreementParams::new(p256.key().clone())
         .with_ephemeral(p384.ephemeral().unwrap().clone());
-    let mut ecmqv = agreement::get_by_name("ECMQV").unwrap();
+    let mut ecmqv = ALGO.agreement().get_by_name("ECMQV").unwrap();
     let error = ecmqv.init(&mixed).unwrap_err();
     assert_eq!(error.kind(), ErrorKind::InvalidParams);
 
@@ -238,11 +260,11 @@ fn keys_on_more_than_one_curve_are_refused() {
 #[cfg(feature = "x25519")]
 #[test]
 fn an_ephemeral_key_that_is_not_ec_is_refused_on_either_side() {
-    let x25519 = generate::key_pair::generate("X25519").unwrap();
+    let x25519 = ALGO.key_pair_generator().generate("X25519").unwrap();
     let (alice, alice_peer) = party(EcCurve::Secp256r1);
 
     let params = AnyAgreementParams::new(alice.key().clone()).with_ephemeral(x25519.private);
-    let mut ecmqv = agreement::get_by_name("ECMQV").unwrap();
+    let mut ecmqv = ALGO.agreement().get_by_name("ECMQV").unwrap();
     let error = ecmqv.init(&params).unwrap_err();
     assert_eq!(error.kind(), ErrorKind::InvalidParams);
 
@@ -255,12 +277,15 @@ fn an_ephemeral_key_that_is_not_ec_is_refused_on_either_side() {
 fn the_trait_writes_the_secret_into_a_buffer_of_agreement_size() {
     let (alice, _) = party(EcCurve::Secp256r1);
     let (_, bob_peer) = party(EcCurve::Secp256r1);
-    let mut ecmqv = agreement::get_by_name("ECMQV").unwrap();
+    let mut ecmqv = ALGO.agreement().get_by_name("ECMQV").unwrap();
     AgreementInit::init(&mut ecmqv, &alice).unwrap();
     assert_eq!(ecmqv.agreement_size(), 32);
     let mut output = [0; 32];
     ecmqv.calculate_agreement(&bob_peer, &mut output).unwrap();
-    assert_eq!(output.to_vec(), ecmqv.calculate(&bob_peer).unwrap().as_bytes());
+    assert_eq!(
+        output.to_vec(),
+        ecmqv.calculate(&bob_peer).unwrap().as_bytes()
+    );
     let error = ecmqv
         .calculate_agreement(&bob_peer, &mut [0; 31])
         .unwrap_err();
@@ -270,7 +295,7 @@ fn the_trait_writes_the_secret_into_a_buffer_of_agreement_size() {
 #[test]
 fn calculating_before_init_is_not_initialized() {
     let (_, bob_peer) = party(EcCurve::Secp256r1);
-    let ecmqv = agreement::get_by_name("ECMQV").unwrap();
+    let ecmqv = ALGO.agreement().get_by_name("ECMQV").unwrap();
     let error = ecmqv.calculate(&bob_peer).unwrap_err();
     assert_eq!(error.kind(), ErrorKind::NotInitialized);
 }

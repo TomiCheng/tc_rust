@@ -1,6 +1,6 @@
 #![cfg(any(feature = "x25519", feature = "x448"))]
 
-use tc_algo::params::{AnyKeyParams, AnyParams, AnyPrivateKey, AnyPublicKey};
+use tc_algo::{AnyKeyParams, AnyParams, AnyPrivateKey, AnyPublicKey};
 
 fn assert_traits<T: Clone + Send + Sync + 'static>() {}
 

@@ -2,11 +2,17 @@
 
 // HMAC in the MAC table: the rows it builds from the digest table, the names and OIDs of Bouncy
 // Castle's MacUtilities, the vectors of RFC 4231 and RFC 2202, and what init and the MAC refuse
-use tc_algo::ErrorKind;
-use tc_algo::digest::{self, TryDigest};
-use tc_algo::mac::{self, AnyMacParams, Mac, MacInit};
-use tc_algo::params::SecretKey;
+use std::sync::LazyLock;
+
+use tc_algo::{Algo, AnyMacParams, ErrorKind, Mac, MacInit, SecretKey, TryDigest};
 use tc_asn1::Asn1Oid;
+
+// One instance for the whole file, so that its tables are built once
+#[allow(
+    dead_code,
+    reason = "unused when the features of the tests here are off"
+)]
+static ALGO: LazyLock<Algo> = LazyLock::new(Algo::new);
 
 const HI_THERE: &[u8] = b"Hi There";
 const JEFE: &[u8] = b"what do ya want for nothing?";
@@ -25,14 +31,14 @@ fn params(key: &[u8]) -> AnyMacParams {
 
 fn assert_tag(name: &str, key: &[u8], message: &[u8], expected: &str) {
     assert_eq!(
-        mac::calculate(name, &params(key), message).unwrap(),
+        ALGO.mac().calculate(name, &params(key), message).unwrap(),
         unhex(expected),
         "{name}"
     );
 }
 
 fn digest_of(name: &str, parts: &[&[u8]]) -> Vec<u8> {
-    let mut digest = digest::get_by_name(name).unwrap();
+    let mut digest = ALGO.digest().get_by_name(name).unwrap();
     for part in parts {
         digest.update(part);
     }
@@ -41,7 +47,7 @@ fn digest_of(name: &str, parts: &[&[u8]]) -> Vec<u8> {
 
 // HMAC as RFC 2104 defines it, through the digest factory alone
 fn rfc2104(name: &str, key: &[u8], message: &[u8]) -> Vec<u8> {
-    let block = TryDigest::byte_length(&digest::get_by_name(name).unwrap());
+    let block = TryDigest::byte_length(&ALGO.digest().get_by_name(name).unwrap());
     let mut padded = if key.len() > block {
         digest_of(name, &[key])
     } else {
@@ -165,13 +171,15 @@ fn hmac_sha1_matches_rfc_2202() {
 #[test]
 fn every_row_is_rfc_2104_over_its_digest_with_short_and_long_keys() {
     let long_key = vec![0x5a; 300];
-    for entry in mac::algorithms() {
+    for entry in ALGO.mac().algorithms() {
         let Some(digest) = entry.name().strip_prefix("HMAC-") else {
             continue;
         };
         for key in [&b"short"[..], &long_key] {
             assert_eq!(
-                mac::calculate(entry.name(), &params(key), b"message").unwrap(),
+                ALGO.mac()
+                    .calculate(entry.name(), &params(key), b"message")
+                    .unwrap(),
                 rfc2104(digest, key, b"message"),
                 "{}",
                 entry.name()
@@ -182,7 +190,9 @@ fn every_row_is_rfc_2104_over_its_digest_with_short_and_long_keys() {
 
 #[test]
 fn there_is_a_row_for_every_digest_hmac_can_run_over_and_nothing_else() {
-    let digests: Vec<String> = digest::algorithms()
+    let digests: Vec<String> = ALGO
+        .digest()
+        .algorithms()
         .filter(|entry| {
             let created = entry.create();
             let block = TryDigest::byte_length(&created);
@@ -192,13 +202,15 @@ fn there_is_a_row_for_every_digest_hmac_can_run_over_and_nothing_else() {
         })
         .map(|entry| entry.name().to_string())
         .collect();
-    let rows: Vec<String> = mac::algorithms()
+    let rows: Vec<String> = ALGO
+        .mac()
+        .algorithms()
         .filter_map(|entry| entry.name().strip_prefix("HMAC-"))
         .map(ToString::to_string)
         .collect();
     assert_eq!(rows, digests);
     assert_eq!(
-        mac::get_by_name("HMAC-NONE").unwrap_err().kind(),
+        ALGO.mac().get_by_name("HMAC-NONE").unwrap_err().kind(),
         ErrorKind::UnknownMac
     );
 }
@@ -215,7 +227,7 @@ fn every_form_of_the_name_finds_the_same_row() {
         "hmac-sha256",
         "HmacSha256",
     ] {
-        let mac = mac::get_by_name(name).unwrap();
+        let mac = ALGO.mac().get_by_name(name).unwrap();
         assert_eq!(mac.entry().name(), "HMAC-SHA-256", "{name}");
         assert_eq!(mac.to_string(), "HMAC-SHA-256");
     }
@@ -243,23 +255,26 @@ fn every_oid_of_bouncy_castle_finds_its_row_when_the_digest_is_enabled() {
         ("1.3.6.1.5.5.8.1.3", "HMAC-TIGER"),
     ] {
         let parsed: Asn1Oid = oid.parse().unwrap();
-        if mac::get_by_name(row).is_err() {
+        if ALGO.mac().get_by_name(row).is_err() {
             assert_eq!(
-                mac::get_by_oid(&parsed).unwrap_err().kind(),
+                ALGO.mac().get_by_oid(&parsed).unwrap_err().kind(),
                 ErrorKind::UnknownMac,
                 "{oid}"
             );
             continue;
         }
-        assert_eq!(mac::get_by_oid(&parsed).unwrap().entry().name(), row);
-        assert_eq!(mac::get_by_name(oid).unwrap().entry().name(), row);
+        assert_eq!(ALGO.mac().get_by_oid(&parsed).unwrap().entry().name(), row);
+        assert_eq!(ALGO.mac().get_by_name(oid).unwrap().entry().name(), row);
     }
 }
 
 #[test]
 fn the_tag_can_be_built_in_pieces_and_the_next_message_needs_no_new_init() {
-    let expected = mac::calculate("HMAC-SHA256", &params(b"Jefe"), JEFE).unwrap();
-    let mut hmac = mac::get_by_name("HMAC-SHA256").unwrap();
+    let expected = ALGO
+        .mac()
+        .calculate("HMAC-SHA256", &params(b"Jefe"), JEFE)
+        .unwrap();
+    let mut hmac = ALGO.mac().get_by_name("HMAC-SHA256").unwrap();
     assert_eq!(hmac.mac_size(), 32);
     hmac.init(&params(b"Jefe")).unwrap();
     for piece in JEFE.chunks(5) {
@@ -278,8 +293,11 @@ fn the_tag_can_be_built_in_pieces_and_the_next_message_needs_no_new_init() {
 
 #[test]
 fn verify_accepts_the_right_tag_and_refuses_any_other() {
-    let tag = mac::calculate("HMAC-SHA256", &params(b"Jefe"), JEFE).unwrap();
-    let mut hmac = mac::get_by_name("HMAC-SHA256").unwrap();
+    let tag = ALGO
+        .mac()
+        .calculate("HMAC-SHA256", &params(b"Jefe"), JEFE)
+        .unwrap();
+    let mut hmac = ALGO.mac().get_by_name("HMAC-SHA256").unwrap();
     hmac.init(&params(b"Jefe")).unwrap();
 
     hmac.update(JEFE).unwrap();
@@ -296,14 +314,14 @@ fn verify_accepts_the_right_tag_and_refuses_any_other() {
 
 #[test]
 fn init_refuses_an_iv_since_hmac_has_no_use_for_one() {
-    let mut hmac = mac::get_by_name("HMAC-SHA256").unwrap();
+    let mut hmac = ALGO.mac().get_by_name("HMAC-SHA256").unwrap();
     let error = hmac.init(&params(b"key").with_iv(vec![0; 16])).unwrap_err();
     assert_eq!(error.kind(), ErrorKind::InvalidParams);
 }
 
 #[test]
 fn the_mac_refuses_to_run_before_a_successful_init() {
-    let mut hmac = mac::get_by_name("HMAC-SHA256").unwrap();
+    let mut hmac = ALGO.mac().get_by_name("HMAC-SHA256").unwrap();
     assert_eq!(
         hmac.update(b"x").unwrap_err().kind(),
         ErrorKind::NotInitialized
@@ -316,7 +334,7 @@ fn the_mac_refuses_to_run_before_a_successful_init() {
 
 #[test]
 fn a_failed_init_never_goes_on_under_the_previous_key() {
-    let mut hmac = mac::get_by_name("HMAC-SHA256").unwrap();
+    let mut hmac = ALGO.mac().get_by_name("HMAC-SHA256").unwrap();
     hmac.init(&params(b"key")).unwrap();
     assert!(hmac.init(&params(b"key").with_iv(vec![0; 16])).is_err());
     assert_eq!(
@@ -327,7 +345,7 @@ fn a_failed_init_never_goes_on_under_the_previous_key() {
 
 #[test]
 fn the_contract_traits_report_a_short_output_with_the_tc_macs_error_as_source() {
-    let mut hmac = mac::get_by_name("HMAC-SHA256").unwrap();
+    let mut hmac = ALGO.mac().get_by_name("HMAC-SHA256").unwrap();
     MacInit::init(&mut hmac, &params(b"key")).unwrap();
     Mac::update(&mut hmac, b"message").unwrap();
     let mut short = [0x55; 31];
@@ -342,7 +360,9 @@ fn the_contract_traits_report_a_short_output_with_the_tc_macs_error_as_source() 
 
 #[test]
 fn the_table_shows_each_row_with_its_oids() {
-    let row = mac::algorithms()
+    let row = ALGO
+        .mac()
+        .algorithms()
         .find(|entry| entry.name() == "HMAC-SHA-256")
         .unwrap();
     assert_eq!(row.to_string(), "HMAC-SHA-256  [id-hmacWithSHA256]");

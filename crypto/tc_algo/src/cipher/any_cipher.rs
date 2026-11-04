@@ -9,20 +9,18 @@ use crate::AlgoError;
 use crate::params::AnyParams;
 
 pub struct AnyCipher {
-    entry: &'static CipherEntry,
+    entry: CipherEntry,
     cipher: Box<dyn DynCipher>,
 }
 
 impl AnyCipher {
-    pub(super) fn new(entry: &'static CipherEntry) -> Self {
-        Self {
-            entry,
-            cipher: table::create(entry),
-        }
+    pub(super) fn new(entry: CipherEntry) -> Self {
+        let cipher = table::create(&entry);
+        Self { entry, cipher }
     }
 
-    pub fn entry(&self) -> &'static CipherEntry {
-        self.entry
+    pub fn entry(&self) -> &CipherEntry {
+        &self.entry
     }
 
     // The entry checks the params against its mode first, so the layers underneath get only

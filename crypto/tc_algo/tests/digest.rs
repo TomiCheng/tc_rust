@@ -1,7 +1,15 @@
 #![cfg(feature = "sha256")]
 
-use tc_algo::ErrorKind;
-use tc_algo::digest::{self, AnyDigest, Digest, DigestEntry, TryDigest};
+use std::sync::LazyLock;
+
+use tc_algo::{Algo, AnyDigest, Digest, DigestEntry, ErrorKind, TryDigest};
+
+// One instance for the whole file, so that its tables are built once
+#[allow(
+    dead_code,
+    reason = "unused when the features of the tests here are off"
+)]
+static ALGO: LazyLock<Algo> = LazyLock::new(Algo::new);
 
 // FIPS 180-2, appendix B.1
 const ABC_SHA256: [u8; 32] = [
@@ -10,7 +18,7 @@ const ABC_SHA256: [u8; 32] = [
 ];
 
 fn sha256() -> AnyDigest {
-    digest::get_by_name("SHA-256").unwrap()
+    ALGO.digest().get_by_name("SHA-256").unwrap()
 }
 
 fn sha256_entry() -> &'static DigestEntry {
@@ -20,7 +28,7 @@ fn sha256_entry() -> &'static DigestEntry {
 #[test]
 fn sha256_of_abc_matches_the_fips_180_vector() {
     assert_eq!(
-        digest::calculate_by_name("SHA-256", b"abc").unwrap(),
+        ALGO.digest().calculate_by_name("SHA-256", b"abc").unwrap(),
         ABC_SHA256
     );
 }
@@ -66,29 +74,36 @@ fn the_trait_path_writes_the_same_hash_as_finalize() {
 #[test]
 fn names_match_without_regard_to_case_and_aliases_resolve() {
     for name in ["SHA-256", "sha-256", "SHA256", "sha256"] {
-        assert_eq!(digest::get_by_name(name).unwrap().entry(), sha256_entry());
+        assert_eq!(
+            ALGO.digest().get_by_name(name).unwrap().entry(),
+            sha256_entry()
+        );
     }
 }
 
 #[test]
 fn a_dotted_oid_is_accepted_where_a_name_is_expected() {
-    let sha256 = digest::get_by_name("2.16.840.1.101.3.4.2.1").unwrap();
+    let sha256 = ALGO.digest().get_by_name("2.16.840.1.101.3.4.2.1").unwrap();
     assert_eq!(sha256.entry(), sha256_entry());
 }
 
 #[test]
 fn every_oid_of_the_entry_finds_the_same_digest() {
     for oid in sha256_entry().oids() {
-        let sha256 = digest::get_by_oid(&oid.oid()).unwrap();
+        let sha256 = ALGO.digest().get_by_oid(&oid.oid()).unwrap();
         assert_eq!(sha256.entry(), sha256_entry());
     }
 }
 
 #[test]
 fn an_unknown_name_is_reported_as_an_unknown_digest() {
-    let error = digest::get_by_name("no-such-digest").unwrap_err();
+    let error = ALGO.digest().get_by_name("no-such-digest").unwrap_err();
     assert_eq!(error.kind(), ErrorKind::UnknownDigest);
-    assert!(digest::calculate_by_name("no-such-digest", b"abc").is_err());
+    assert!(
+        ALGO.digest()
+            .calculate_by_name("no-such-digest", b"abc")
+            .is_err()
+    );
 }
 
 #[test]
@@ -101,24 +116,33 @@ fn the_entry_reports_the_canonical_name_and_the_digest_oid_first() {
 
 #[test]
 fn the_algorithm_list_includes_sha256() {
-    assert!(digest::algorithms().any(|entry| entry == sha256_entry()));
+    assert!(
+        ALGO.digest()
+            .algorithms()
+            .any(|entry| entry == sha256_entry())
+    );
 }
 
 #[test]
 fn the_lookups_by_name_and_oid_calculate_the_same_hash() {
     let oid = sha256_entry().oid().unwrap().oid();
     assert_eq!(
-        digest::calculate_by_name("SHA-256", b"abc").unwrap(),
+        ALGO.digest().calculate_by_name("SHA-256", b"abc").unwrap(),
         ABC_SHA256
     );
-    assert_eq!(digest::calculate_by_oid(&oid, b"abc").unwrap(), ABC_SHA256);
+    assert_eq!(
+        ALGO.digest().calculate_by_oid(&oid, b"abc").unwrap(),
+        ABC_SHA256
+    );
 }
 
 #[test]
 fn calculate_into_writes_the_hash_at_the_front_and_returns_its_length() {
     let mut output = [0xff; 40];
     assert_eq!(
-        digest::calculate_by_name_into("SHA-256", b"abc", &mut output).unwrap(),
+        ALGO.digest()
+            .calculate_by_name_into("SHA-256", b"abc", &mut output)
+            .unwrap(),
         32
     );
     assert_eq!(output[..32], ABC_SHA256);
@@ -130,13 +154,17 @@ fn the_into_lookups_by_name_and_oid_write_the_same_hash() {
     let oid = sha256_entry().oid().unwrap().oid();
     let mut output = [0; 32];
     assert_eq!(
-        digest::calculate_by_name_into("SHA-256", b"abc", &mut output).unwrap(),
+        ALGO.digest()
+            .calculate_by_name_into("SHA-256", b"abc", &mut output)
+            .unwrap(),
         32
     );
     assert_eq!(output, ABC_SHA256);
     output = [0; 32];
     assert_eq!(
-        digest::calculate_by_oid_into(&oid, b"abc", &mut output).unwrap(),
+        ALGO.digest()
+            .calculate_by_oid_into(&oid, b"abc", &mut output)
+            .unwrap(),
         32
     );
     assert_eq!(output, ABC_SHA256);
@@ -145,7 +173,9 @@ fn the_into_lookups_by_name_and_oid_write_the_same_hash() {
 #[test]
 #[should_panic(expected = "output is shorter than the digest")]
 fn calculate_into_panics_when_the_output_is_shorter_than_the_digest() {
-    digest::calculate_by_name_into("SHA-256", b"abc", &mut [0; 31]).unwrap();
+    ALGO.digest()
+        .calculate_by_name_into("SHA-256", b"abc", &mut [0; 31])
+        .unwrap();
 }
 
 #[test]

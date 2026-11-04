@@ -6,9 +6,17 @@
     feature = "hc"
 ))]
 
-use tc_algo::cipher::{self, CipherDirection};
-use tc_algo::params::{AnyKeyParams, AnyParams, SecretKey};
+use std::sync::LazyLock;
+
+use tc_algo::{Algo, AnyKeyParams, AnyParams, CipherDirection, SecretKey};
 use tc_stream_cipher::StreamCipher;
+
+// One instance for the whole file, so that its tables are built once
+#[allow(
+    dead_code,
+    reason = "unused when the features of the tests here are off"
+)]
+static ALGO: LazyLock<Algo> = LazyLock::new(Algo::new);
 
 #[cfg(any(feature = "chacha", feature = "rc4"))]
 fn hex(text: &str) -> Vec<u8> {
@@ -118,7 +126,10 @@ fn each_stream_cipher_gives_what_its_engine_gives() {
     let message: Vec<u8> = (0..100).collect();
     for (name, key_len, iv_len, engine) in cases() {
         let (key, iv) = case_params(key_len, iv_len);
-        let output = cipher::encrypt(name, &params(&key, iv.as_deref()), &message).unwrap();
+        let output = ALGO
+            .cipher()
+            .encrypt(name, &params(&key, iv.as_deref()), &message)
+            .unwrap();
         assert_eq!(output, engine(&key, iv.as_deref(), &message), "{name}");
     }
 }
@@ -129,7 +140,7 @@ fn each_stream_cipher_decrypts_what_it_encrypts_whatever_the_pieces() {
     for (name, key_len, iv_len, _) in cases() {
         let (key, iv) = case_params(key_len, iv_len);
         let params = params(&key, iv.as_deref());
-        let mut cipher = cipher::get_by_name(name).unwrap();
+        let mut cipher = ALGO.cipher().get_by_name(name).unwrap();
         cipher.init(CipherDirection::Encrypt, &params).unwrap();
         let mut ciphertext = Vec::new();
         for piece in [
@@ -145,11 +156,11 @@ fn each_stream_cipher_decrypts_what_it_encrypts_whatever_the_pieces() {
         assert!(cipher.finalize().unwrap().is_empty(), "{name}");
         assert_eq!(
             ciphertext,
-            cipher::encrypt(name, &params, &message).unwrap(),
+            ALGO.cipher().encrypt(name, &params, &message).unwrap(),
             "{name}"
         );
         assert_eq!(
-            cipher::decrypt(name, &params, &ciphertext).unwrap(),
+            ALGO.cipher().decrypt(name, &params, &ciphertext).unwrap(),
             message,
             "{name}"
         );
@@ -170,7 +181,9 @@ fn the_table_has_each_stream_cipher_of_the_enabled_features() {
         "VMPC-KSA3",
         "XCHACHA20",
     ];
-    let mut listed: Vec<&str> = cipher::algorithms()
+    let mut listed: Vec<&str> = ALGO
+        .cipher()
+        .algorithms()
         .map(|entry| entry.name())
         .filter(|name| STREAMS.contains(name))
         .collect();
@@ -198,19 +211,17 @@ fn names_follow_bouncy_castle_and_come_back_canonical() {
     #[cfg(feature = "hc")]
     names.extend([("hc128", "HC128"), ("hc256", "HC256")]);
     for (name, canonical) in names {
-        let cipher = cipher::get_by_name(name).unwrap();
+        let cipher = ALGO.cipher().get_by_name(name).unwrap();
         assert_eq!(cipher.entry().name(), canonical, "{name}");
     }
 }
 
 #[cfg(feature = "chacha")]
 mod with_chacha {
-    use tc_algo::ErrorKind;
-    use tc_algo::cipher::{self, CipherDirection};
+    use super::{ALGO, hex, params};
+    use tc_algo::{CipherDirection, ErrorKind};
     #[cfg(feature = "x25519")]
-    use tc_algo::params::{AnyKeyParams, AnyParams};
-
-    use super::{hex, params};
+    use tc_algo::{AnyKeyParams, AnyParams};
 
     #[test]
     fn chacha_and_chacha7539_give_the_rfc_8439_block_for_a_zero_key_and_iv() {
@@ -220,7 +231,7 @@ mod with_chacha {
         );
         for (name, iv_len) in [("CHACHA", 8), ("CHACHA7539", 12)] {
             let params = params(&[0; 32], Some(&vec![0; iv_len]));
-            let keystream = cipher::encrypt(name, &params, &[0; 64]).unwrap();
+            let keystream = ALGO.cipher().encrypt(name, &params, &[0; 64]).unwrap();
             assert_eq!(keystream, expected, "{name}");
         }
     }
@@ -233,14 +244,14 @@ mod with_chacha {
             "CHACHA7539/",
             "CHACHA7539//",
         ] {
-            let error = cipher::get_by_name(name).unwrap_err();
+            let error = ALGO.cipher().get_by_name(name).unwrap_err();
             assert_eq!(error.kind(), ErrorKind::UnknownCipher, "{name}");
         }
     }
 
     #[test]
     fn a_stream_cipher_with_an_iv_refuses_to_go_without_one() {
-        let mut cipher = cipher::get_by_name("CHACHA7539").unwrap();
+        let mut cipher = ALGO.cipher().get_by_name("CHACHA7539").unwrap();
         let error = cipher
             .init(CipherDirection::Encrypt, &params(&[1; 32], None))
             .unwrap_err();
@@ -254,7 +265,7 @@ mod with_chacha {
         let mut with_aad = params(&[1; 32], Some(&[2; 12]));
         with_aad.op.aad = Some(b"header".to_vec());
         for params in [with_tag, with_aad] {
-            let mut cipher = cipher::get_by_name("CHACHA7539").unwrap();
+            let mut cipher = ALGO.cipher().get_by_name("CHACHA7539").unwrap();
             let error = cipher.init(CipherDirection::Encrypt, &params).unwrap_err();
             assert_eq!(error.kind(), ErrorKind::InvalidParams);
         }
@@ -263,7 +274,7 @@ mod with_chacha {
     #[test]
     fn a_key_or_iv_of_a_length_the_cipher_does_not_take_is_invalid_params() {
         for (key, iv) in [(16, 12), (32, 8)] {
-            let mut cipher = cipher::get_by_name("CHACHA7539").unwrap();
+            let mut cipher = ALGO.cipher().get_by_name("CHACHA7539").unwrap();
             let error = cipher
                 .init(
                     CipherDirection::Encrypt,
@@ -276,14 +287,14 @@ mod with_chacha {
 
     #[test]
     fn a_stream_cipher_before_init_is_not_initialized() {
-        let mut cipher = cipher::get_by_name("CHACHA7539").unwrap();
+        let mut cipher = ALGO.cipher().get_by_name("CHACHA7539").unwrap();
         let error = cipher.update(b"message").unwrap_err();
         assert_eq!(error.kind(), ErrorKind::NotInitialized);
     }
 
     #[test]
     fn finalize_starts_the_keystream_over_as_in_bouncy_castle() {
-        let mut cipher = cipher::get_by_name("CHACHA7539").unwrap();
+        let mut cipher = ALGO.cipher().get_by_name("CHACHA7539").unwrap();
         cipher
             .init(CipherDirection::Encrypt, &params(&[1; 32], Some(&[2; 12])))
             .unwrap();
@@ -295,11 +306,11 @@ mod with_chacha {
     #[cfg(feature = "x25519")]
     #[test]
     fn a_stream_cipher_refuses_a_key_that_is_not_secret() {
-        use tc_algo::params::AnyPrivateKey;
+        use tc_algo::AnyPrivateKey;
         let key = tc_cfrg_curves::X25519PrivateKey::new([7; 32]);
         let mut params = AnyParams::new(AnyKeyParams::Private(AnyPrivateKey::X25519(key)));
         params.op.iv = Some(vec![2; 12]);
-        let mut cipher = cipher::get_by_name("CHACHA7539").unwrap();
+        let mut cipher = ALGO.cipher().get_by_name("CHACHA7539").unwrap();
         let error = cipher.init(CipherDirection::Encrypt, &params).unwrap_err();
         assert_eq!(error.kind(), ErrorKind::InvalidParams);
     }
@@ -307,8 +318,8 @@ mod with_chacha {
 
 #[cfg(feature = "rc4")]
 mod with_rc4 {
-    use tc_algo::ErrorKind;
-    use tc_algo::cipher::{self, CipherDirection};
+    use super::ALGO;
+    use tc_algo::{CipherDirection, ErrorKind};
 
     use super::{hex, params};
 
@@ -320,22 +331,26 @@ mod with_rc4 {
             ("Secret", "Attack at dawn", "45a01f645fc35b383552544b9bf5"),
         ] {
             let params = params(key.as_bytes(), None);
-            let output = cipher::encrypt("ARC4", &params, plaintext.as_bytes()).unwrap();
+            let output = ALGO
+                .cipher()
+                .encrypt("ARC4", &params, plaintext.as_bytes())
+                .unwrap();
             assert_eq!(output, hex(ciphertext), "{key}");
         }
     }
 
     #[test]
     fn the_rc4_oid_finds_arc4() {
-        let entry = cipher::get_by_name("ARC4").unwrap().entry();
+        let found = ALGO.cipher().get_by_name("ARC4").unwrap();
+        let entry = found.entry();
         assert_eq!(entry.to_string(), "ARC4  [rc4]");
-        let cipher = cipher::get_by_oid(&entry.oids()[0].oid()).unwrap();
+        let cipher = ALGO.cipher().get_by_oid(&entry.oids()[0].oid()).unwrap();
         assert_eq!(cipher.entry().name(), "ARC4");
     }
 
     #[test]
     fn rc4_refuses_an_iv() {
-        let mut cipher = cipher::get_by_name("ARC4").unwrap();
+        let mut cipher = ALGO.cipher().get_by_name("ARC4").unwrap();
         let error = cipher
             .init(CipherDirection::Encrypt, &params(&[1; 16], Some(&[2; 16])))
             .unwrap_err();

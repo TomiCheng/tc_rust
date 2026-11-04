@@ -1,6 +1,6 @@
 # Digests
 
-`tc_algo::digest` creates message digests by name or by OID. Every digest it creates is an
+`algo.digest()` creates message digests by name or by OID. Every digest it creates is an
 `AnyDigest`.
 
 ## Enabling digests
@@ -25,11 +25,11 @@ Get a digest, feed it, then finish. `finalize` returns the hash and resets the d
 next message.
 
 ```rust
-use tc_algo::AlgoError;
-use tc_algo::digest;
+use tc_algo::{Algo, AlgoError};
 
 fn main() -> Result<(), AlgoError> {
-    let mut sha256 = digest::get_by_name("SHA-256")?;
+    let algo = Algo::new();
+    let mut sha256 = algo.digest().get_by_name("SHA-256")?;
     sha256.update(b"hello, ");
     sha256.update(b"world");
     let hash = sha256.finalize();
@@ -41,16 +41,16 @@ fn main() -> Result<(), AlgoError> {
 ### In one step
 
 ```rust
-use tc_algo::AlgoError;
-use tc_algo::digest;
+use tc_algo::{Algo, AlgoError};
 
 fn main() -> Result<(), AlgoError> {
-    let hash = digest::calculate_by_name("SHA-256", b"hello, world")?;
+    let algo = Algo::new();
+    let hash = algo.digest().calculate_by_name("SHA-256", b"hello, world")?;
 
     // Into a buffer of your own: returns the length written, and panics if the
     // buffer is shorter than the digest
     let mut output = [0; 32];
-    let written = digest::calculate_by_name_into("SHA-256", b"hello, world", &mut output)?;
+    let written = algo.digest().calculate_by_name_into("SHA-256", b"hello, world", &mut output)?;
     assert_eq!(&output[..written], hash);
     Ok(())
 }
@@ -62,17 +62,17 @@ Names match without regard to ASCII case, aliases are accepted, and a dotted OID
 wherever a name does.
 
 ```rust
-use tc_algo::digest;
-use tc_algo::{AlgoError, ErrorKind};
+use tc_algo::{Algo, AlgoError, ErrorKind};
 
 fn main() -> Result<(), AlgoError> {
-    let sha256 = digest::get_by_name("sha256")?;
+    let algo = Algo::new();
+    let sha256 = algo.digest().get_by_name("sha256")?;
     assert_eq!(sha256.entry().name(), "SHA-256");
 
-    let same = digest::get_by_name("2.16.840.1.101.3.4.2.1")?;
+    let same = algo.digest().get_by_name("2.16.840.1.101.3.4.2.1")?;
     assert_eq!(same.entry().name(), "SHA-256");
 
-    let error = digest::get_by_name("no-such-digest").unwrap_err();
+    let error = algo.digest().get_by_name("no-such-digest").unwrap_err();
     assert_eq!(error.kind(), ErrorKind::UnknownDigest);
     Ok(())
 }
@@ -84,16 +84,17 @@ answer to the HMAC OID built on the digest: `id-hmacWithSHA256` finds SHA-256.
 ### Looking at the table
 
 ```rust
-use tc_algo::digest;
+use tc_algo::Algo;
 
-for entry in digest::algorithms() {
+let algo = Algo::new();
+for entry in algo.digest().algorithms() {
     println!("{entry}"); // e.g. `SHA-256  [id-sha256, id-hmacWithSHA256]`
 }
 ```
 
 ### In generic code
 
-`AnyDigest` implements `Digest` and `TryDigest`, which `tc_algo::digest` re-exports,
+`AnyDigest` implements `Digest` and `TryDigest`, which `tc_algo` re-exports,
 so it fits anywhere a `D: Digest` is expected, without a `tc_digest` dependency of
 your own. It is also `Clone`, `Send` and `Sync`. Its `Debug` output shows only the
 name, never the digest's internal state, and its `Display` output is the canonical

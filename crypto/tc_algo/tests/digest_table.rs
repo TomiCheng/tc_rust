@@ -1,10 +1,18 @@
 #![allow(deprecated, reason = "the legacy Ascon digests have rows too")]
 
 use std::collections::HashSet;
+use std::sync::LazyLock;
 
-use tc_algo::digest;
+use tc_algo::Algo;
 #[allow(unused_imports, reason = "unused when every digest feature is off")]
-use tc_algo::digest::{Digest, TryDigest};
+use tc_algo::{Digest, TryDigest};
+
+// One instance for the whole file, so that its tables are built once
+#[allow(
+    dead_code,
+    reason = "unused when the features of the tests here are off"
+)]
+static ALGO: LazyLock<Algo> = LazyLock::new(Algo::new);
 
 // Longer than any block size here, so the multi-block path is exercised too
 const INPUT: [u8; 300] = {
@@ -251,7 +259,7 @@ fn cases() -> Vec<Case> {
 #[test]
 fn every_enabled_digest_has_its_canonical_name_size_and_output() {
     for case in cases() {
-        let mut digest = digest::get_by_name(case.name).unwrap();
+        let mut digest = ALGO.digest().get_by_name(case.name).unwrap();
         assert_eq!(digest.entry().name(), case.name);
         assert_eq!(digest.digest_size(), case.size, "{}", case.name);
         digest.update(&INPUT);
@@ -261,7 +269,11 @@ fn every_enabled_digest_has_its_canonical_name_size_and_output() {
 
 #[test]
 fn the_table_lists_every_enabled_digest_exactly_once() {
-    let listed: Vec<&str> = digest::algorithms().map(|entry| entry.name()).collect();
+    let listed: Vec<&str> = ALGO
+        .digest()
+        .algorithms()
+        .map(|entry| entry.name())
+        .collect();
     let unique: HashSet<&str> = listed.iter().copied().collect();
     assert_eq!(listed.len(), unique.len());
     // Haraka takes an input of its own, so it has its tests elsewhere
@@ -273,7 +285,7 @@ fn the_table_lists_every_enabled_digest_exactly_once() {
 fn no_two_entries_share_a_name_or_an_oid() {
     let mut names = HashSet::new();
     let mut oids = HashSet::new();
-    for entry in digest::algorithms() {
+    for entry in ALGO.digest().algorithms() {
         assert!(
             names.insert(entry.name().to_ascii_uppercase()),
             "{}",
@@ -287,11 +299,11 @@ fn no_two_entries_share_a_name_or_an_oid() {
 
 #[test]
 fn every_name_and_oid_of_an_entry_finds_that_entry() {
-    for entry in digest::algorithms() {
-        let by_name = digest::get_by_name(entry.name()).unwrap();
+    for entry in ALGO.digest().algorithms() {
+        let by_name = ALGO.digest().get_by_name(entry.name()).unwrap();
         assert_eq!(by_name.entry(), entry);
         for oid in entry.oids() {
-            let by_oid = digest::get_by_oid(&oid.oid()).unwrap();
+            let by_oid = ALGO.digest().get_by_oid(&oid.oid()).unwrap();
             assert_eq!(by_oid.entry(), entry, "{}", oid.dotted());
         }
     }
@@ -299,7 +311,7 @@ fn every_name_and_oid_of_an_entry_finds_that_entry() {
 
 #[test]
 fn only_the_digests_bouncy_castle_gives_no_oid_lack_one() {
-    for entry in digest::algorithms() {
+    for entry in ALGO.digest().algorithms() {
         let name = entry.name();
         let without_oid = ["KECCAK-", "SKEIN-", "ESCH-", "ASCON-", "HARAKA-"]
             .iter()
@@ -326,8 +338,8 @@ fn the_ripemd_aliases_with_a_hyphen_find_the_same_digests() {
         ("RIPEMD-256", "RIPEMD256"),
         ("RIPEMD-320", "RIPEMD320"),
     ] {
-        if let Ok(by_canonical) = digest::get_by_name(canonical) {
-            let by_alias = digest::get_by_name(alias).unwrap();
+        if let Ok(by_canonical) = ALGO.digest().get_by_name(canonical) {
+            let by_alias = ALGO.digest().get_by_name(alias).unwrap();
             assert_eq!(by_alias.entry(), by_canonical.entry(), "{alias}");
         }
     }
@@ -336,10 +348,15 @@ fn the_ripemd_aliases_with_a_hyphen_find_the_same_digests() {
 #[cfg(feature = "null-digest")]
 #[test]
 fn none_passes_the_message_through_unchanged() {
-    assert_eq!(digest::calculate_by_name("NONE", b"abc").unwrap(), b"abc");
+    assert_eq!(
+        ALGO.digest().calculate_by_name("NONE", b"abc").unwrap(),
+        b"abc"
+    );
     let mut output = [0; 3];
     assert_eq!(
-        digest::calculate_by_name_into("NONE", b"abc", &mut output).unwrap(),
+        ALGO.digest()
+            .calculate_by_name_into("NONE", b"abc", &mut output)
+            .unwrap(),
         3
     );
     assert_eq!(&output, b"abc");
@@ -349,5 +366,7 @@ fn none_passes_the_message_through_unchanged() {
 #[test]
 #[should_panic(expected = "output is shorter than the digest")]
 fn calculate_into_with_none_panics_when_the_output_is_shorter_than_the_message() {
-    digest::calculate_by_name_into("NONE", b"abc", &mut [0; 2]).unwrap();
+    ALGO.digest()
+        .calculate_by_name_into("NONE", b"abc", &mut [0; 2])
+        .unwrap();
 }

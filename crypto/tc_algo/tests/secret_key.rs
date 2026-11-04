@@ -1,4 +1,4 @@
-use tc_algo::params::{AnyKeyParams, AnyParams, SecretKey};
+use tc_algo::{AnyKeyParams, AnyParams, SecretKey};
 
 // FIPS 197, appendix C.1: the AES-128 key
 const AES_128_KEY: [u8; 16] = [

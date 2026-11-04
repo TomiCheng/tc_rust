@@ -10,8 +10,8 @@ the cofactor of the curve as well. On a curve whose cofactor is 1, as most prime
 have, the two give the same secret; on the binary curves and two of the GOST curves
 they do not, so both parties must use the same one.
 
-In `tc_algo` this takes two factories: `generate::key_pair` makes the key pairs and
-`agreement` calculates the secret, after Bouncy Castle's `GeneratorUtilities` and
+In `tc_algo` this takes two factories: `algo.key_pair_generator()` makes the key pairs and
+`algo.agreement()` calculates the secret, after Bouncy Castle's `GeneratorUtilities` and
 `AgreementUtilities`. The generator is `"EC"`, the agreements `"ECDH"` and `"ECDHC"`.
 
 ## Enabling ECDH
@@ -33,14 +33,12 @@ tc_algo = { version = "0.1", features = ["ec-f2m"] }
 ### Both parties, step by step
 
 ```rust
-use tc_algo::AlgoError;
-use tc_algo::agreement;
-use tc_algo::generate;
-use tc_algo::params::EcCurve;
+use tc_algo::{Algo, AlgoError, EcCurve};
 
 fn main() -> Result<(), AlgoError> {
+    let algo = Algo::new();
     // 1. Both parties take the same curve, here P-256
-    let mut generator = generate::key_pair::get_by_name("EC")?;
+    let mut generator = algo.key_pair_generator().get_by_name("EC")?;
     generator.init(EcCurve::Secp256r1)?;
 
     // 2. Each makes a key pair and sends the public key to the other
@@ -48,12 +46,12 @@ fn main() -> Result<(), AlgoError> {
     let bob = generator.generate()?;
 
     // 3. Alice combines her private key with Bob's public key ...
-    let mut agreement = agreement::get_by_name("ECDH")?;
+    let mut agreement = algo.agreement().get_by_name("ECDH")?;
     agreement.init(&alice.private.into())?;
     let alice_secret = agreement.calculate(&bob.public.into())?;
 
     // ... and Bob combines his with Alice's, for the same secret
-    let mut agreement = agreement::get_by_name("ECDH")?;
+    let mut agreement = algo.agreement().get_by_name("ECDH")?;
     agreement.init(&bob.private.into())?;
     let bob_secret = agreement.calculate(&alice.public.into())?;
 
@@ -74,20 +72,18 @@ P-224, P-256, P-384 or P-521.
 
 ### In one step
 
-`agreement::calculate` finds the agreement, initializes it and calculates.
+`algo.agreement().calculate` finds the agreement, initializes it and calculates.
 
 ```rust
-use tc_algo::AlgoError;
-use tc_algo::agreement;
-use tc_algo::generate;
-use tc_algo::params::EcCurve;
+use tc_algo::{Algo, AlgoError, EcCurve};
 
 fn main() -> Result<(), AlgoError> {
-    let mut generator = generate::key_pair::get_by_name("EC")?;
+    let algo = Algo::new();
+    let mut generator = algo.key_pair_generator().get_by_name("EC")?;
     generator.init(EcCurve::Secp384r1)?;
     let (alice, bob) = (generator.generate()?, generator.generate()?);
 
-    let secret = agreement::calculate("ECDH", &alice.private.into(), &bob.public.into())?;
+    let secret = algo.agreement().calculate("ECDH", &alice.private.into(), &bob.public.into())?;
     Ok(())
 }
 ```
@@ -98,21 +94,18 @@ When the other party chose the curve, its public key tells which: `curve()` of a
 `AnyEcPublicKey`. Make your key pair on it, then answer with your public key.
 
 ```rust
-use tc_algo::AlgoError;
-use tc_algo::agreement::{self, SharedSecret};
-use tc_algo::generate;
-use tc_algo::params::AnyPublicKey;
+use tc_algo::{Algo, AlgoError, AnyPublicKey, SharedSecret};
 
 // Your public key to send back, and the secret
-fn answer(theirs: AnyPublicKey) -> Result<(AnyPublicKey, SharedSecret), AlgoError> {
+fn answer(algo: &Algo, theirs: AnyPublicKey) -> Result<(AnyPublicKey, SharedSecret), AlgoError> {
     let AnyPublicKey::Ec(key) = &theirs else {
         panic!("not an EC key");
     };
-    let mut generator = generate::key_pair::get_by_name("EC")?;
+    let mut generator = algo.key_pair_generator().get_by_name("EC")?;
     generator.init(key.curve())?;
     let mine = generator.generate()?;
 
-    let secret = agreement::calculate("ECDH", &mine.private.into(), &theirs.into())?;
+    let secret = algo.agreement().calculate("ECDH", &mine.private.into(), &theirs.into())?;
     Ok((mine.public, secret))
 }
 ```
@@ -141,21 +134,19 @@ take time that depends on its bytes.
 ### Into a buffer of your own
 
 `AnyAgreement` also implements the `Agreement` and `AgreementInit` traits, which
-`tc_algo::agreement` re-exports, so it fits generic code. `calculate_agreement`
+`tc_algo` re-exports, so it fits generic code. `calculate_agreement`
 writes the secret into the first `agreement_size` bytes of a buffer.
 
 ```rust
-use tc_algo::AlgoError;
-use tc_algo::agreement::{self, Agreement};
-use tc_algo::generate;
-use tc_algo::params::EcCurve;
+use tc_algo::{Agreement, Algo, AlgoError, EcCurve};
 
 fn main() -> Result<(), AlgoError> {
-    let mut generator = generate::key_pair::get_by_name("EC")?;
+    let algo = Algo::new();
+    let mut generator = algo.key_pair_generator().get_by_name("EC")?;
     generator.init(EcCurve::Secp256r1)?;
     let (alice, bob) = (generator.generate()?, generator.generate()?);
 
-    let mut agreement = agreement::get_by_name("ECDH")?;
+    let mut agreement = algo.agreement().get_by_name("ECDH")?;
     agreement.init(&alice.private.into())?;
     let mut secret = vec![0; agreement.agreement_size()]; // 32 bytes
     agreement.calculate_agreement(&bob.public.into(), &mut secret)?;
@@ -175,19 +166,17 @@ the error of the ECDH layer underneath, where there is one.
 |---|---|
 | `UnknownAgreement` | The name is not ECDH, ECDHC or ECCDH, or the `ecdh` feature is off |
 | `UnknownGenerator` | The name is not EC, ECDH, ECIES, ECDHC or ECMQV, or the `ec` feature is off |
-| `InvalidKeyGenParams` | The generator has no curve: `generate` without `init`, `key_pair::generate("EC")`, or `init` with a size that names none of the curves |
+| `InvalidKeyGenParams` | The generator has no curve: `generate` without `init`, `algo.key_pair_generator().generate("EC")`, or `init` with a size that names none of the curves |
 | `InvalidParams` | `init` with a key that is not EC, with an ephemeral key, or with user keying material. `calculate` with an ephemeral key, a public key that is not EC or is on another curve, or one that gives a shared point at infinity |
 | `NotInitialized` | `calculate` before a successful `init` |
 | `DataLength` | `calculate_agreement` with a buffer shorter than `agreement_size` |
 
 ```rust
-use tc_algo::agreement;
-use tc_algo::generate;
-use tc_algo::params::EcCurve;
-use tc_algo::{AlgoError, ErrorKind};
+use tc_algo::{Algo, AlgoError, EcCurve, ErrorKind};
 
 fn main() -> Result<(), AlgoError> {
-    let mut generator = generate::key_pair::get_by_name("EC")?;
+    let algo = Algo::new();
+    let mut generator = algo.key_pair_generator().get_by_name("EC")?;
     generator.init(EcCurve::Secp256r1)?;
     let mine = generator.generate()?;
 
@@ -195,7 +184,7 @@ fn main() -> Result<(), AlgoError> {
     generator.init(EcCurve::Secp384r1)?;
     let other = generator.generate()?;
 
-    let error = agreement::calculate("ECDH", &mine.private.into(), &other.public.into())
+    let error = algo.agreement().calculate("ECDH", &mine.private.into(), &other.public.into())
         .unwrap_err();
     assert_eq!(error.kind(), ErrorKind::InvalidParams);
     Ok(())
@@ -244,9 +233,9 @@ data too.
 
 | Factory | Name | Aliases | OID | Feature |
 |---|---|---|---|---|
-| `agreement` | ECDH | | | `ecdh` |
-| `agreement` | ECDHC | ECCDH | | `ecdh` |
-| `generate::key_pair` | EC | ECDH, ECIES, ECDHC, ECMQV | 15 of the ECDH and ECMQV schemes with a KDF | `ec` |
+| `algo.agreement()` | ECDH | | | `ecdh` |
+| `algo.agreement()` | ECDHC | ECCDH | | `ecdh` |
+| `algo.key_pair_generator()` | EC | ECDH, ECIES, ECDHC, ECMQV | 15 of the ECDH and ECMQV schemes with a KDF | `ec` |
 
 Names match without regard to ASCII case, and a dotted OID works wherever a name does.
 The agreements have no OID, as in Bouncy Castle: the OIDs of ECDH, such as

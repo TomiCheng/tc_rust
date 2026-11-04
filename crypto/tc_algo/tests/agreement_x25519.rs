@@ -2,13 +2,21 @@
 
 // X25519 in the agreement table, found by its name and by id-X25519 as in Bouncy Castle, and the
 // agreement it gives: the secret of RFC 7748, and what init and calculate refuse
-use tc_algo::ErrorKind;
-use tc_algo::agreement::{
-    self, Agreement, AgreementInit, AgreementPeer, AnyAgreement, AnyAgreementParams,
+use std::sync::LazyLock;
+
+use tc_algo::{
+    Agreement, AgreementInit, AgreementPeer, Algo, AnyAgreement, AnyAgreementParams, AnyPrivateKey,
+    AnyPublicKey, ErrorKind,
 };
-use tc_algo::params::{AnyPrivateKey, AnyPublicKey};
 use tc_asn1::Asn1Oid;
 use tc_cfrg_curves::{X25519PrivateKey, X25519PublicKey};
+
+// One instance for the whole file, so that its tables are built once
+#[allow(
+    dead_code,
+    reason = "unused when the features of the tests here are off"
+)]
+static ALGO: LazyLock<Algo> = LazyLock::new(Algo::new);
 
 // RFC 7748, section 6.1
 const ALICE_PRIVATE: &str = "77076d0a7318a57d3c16c17251b26645df4c2f87ebc0992ab177fba51db92c2a";
@@ -34,7 +42,7 @@ fn public(u: [u8; 32]) -> AgreementPeer {
 }
 
 fn initialized(params: &AnyAgreementParams) -> AnyAgreement {
-    let mut x25519 = agreement::get_by_name("X25519").unwrap();
+    let mut x25519 = ALGO.agreement().get_by_name("X25519").unwrap();
     x25519.init(params).unwrap();
     x25519
 }
@@ -42,16 +50,21 @@ fn initialized(params: &AnyAgreementParams) -> AnyAgreement {
 #[test]
 fn x25519_is_found_by_its_name_in_any_case_and_by_its_oid() {
     for name in ["X25519", "x25519", "1.3.101.110"] {
-        let x25519 = agreement::get_by_name(name).unwrap();
+        let x25519 = ALGO.agreement().get_by_name(name).unwrap();
         assert_eq!(x25519.entry().name(), "X25519", "{name}");
     }
     let oid: Asn1Oid = "1.3.101.110".parse().unwrap();
-    assert_eq!(agreement::get_by_oid(&oid).unwrap().entry().name(), "X25519");
+    assert_eq!(
+        ALGO.agreement().get_by_oid(&oid).unwrap().entry().name(),
+        "X25519"
+    );
 }
 
 #[test]
 fn the_entry_shows_its_name_and_its_oid() {
-    let entry = agreement::algorithms()
+    let entry = ALGO
+        .agreement()
+        .algorithms()
         .find(|entry| entry.name() == "X25519")
         .unwrap();
     assert_eq!(entry.to_string(), "X25519  [id-X25519]");
@@ -59,15 +72,23 @@ fn the_entry_shows_its_name_and_its_oid() {
 
 #[test]
 fn both_parties_reach_the_secret_of_rfc_7748() {
-    let alice = agreement::calculate("X25519", &private(ALICE_PRIVATE), &public(hex32(BOB_PUBLIC)));
-    let bob = agreement::calculate("X25519", &private(BOB_PRIVATE), &public(hex32(ALICE_PUBLIC)));
+    let alice = ALGO.agreement().calculate(
+        "X25519",
+        &private(ALICE_PRIVATE),
+        &public(hex32(BOB_PUBLIC)),
+    );
+    let bob = ALGO.agreement().calculate(
+        "X25519",
+        &private(BOB_PRIVATE),
+        &public(hex32(ALICE_PUBLIC)),
+    );
     assert_eq!(alice.unwrap().as_bytes(), hex32(SHARED));
     assert_eq!(bob.unwrap().as_bytes(), hex32(SHARED));
 }
 
 #[test]
 fn the_trait_writes_the_secret_into_a_buffer_of_agreement_size() {
-    let mut x25519 = agreement::get_by_name("X25519").unwrap();
+    let mut x25519 = ALGO.agreement().get_by_name("X25519").unwrap();
     AgreementInit::init(&mut x25519, &private(ALICE_PRIVATE)).unwrap();
     assert_eq!(x25519.agreement_size(), 32);
     let mut output = [0; 32];
@@ -95,7 +116,7 @@ fn a_public_key_of_small_order_is_refused() {
 
 #[test]
 fn x25519_refuses_user_keying_material_and_an_ephemeral_key() {
-    let mut x25519 = agreement::get_by_name("X25519").unwrap();
+    let mut x25519 = ALGO.agreement().get_by_name("X25519").unwrap();
     let error = x25519
         .init(&private(ALICE_PRIVATE).with_ukm(vec![1, 2, 3]))
         .unwrap_err();
@@ -115,7 +136,7 @@ fn an_ed25519_key_is_refused_on_either_side() {
 
     let ed25519 = Ed25519PrivateKey::new(hex32(ALICE_PRIVATE));
     let ed25519_public = ed25519.generate_public_key();
-    let mut x25519 = agreement::get_by_name("X25519").unwrap();
+    let mut x25519 = ALGO.agreement().get_by_name("X25519").unwrap();
     let error = x25519
         .init(&AnyPrivateKey::Ed25519(ed25519).into())
         .unwrap_err();
@@ -130,7 +151,7 @@ fn an_ed25519_key_is_refused_on_either_side() {
 
 #[test]
 fn calculating_before_init_is_not_initialized() {
-    let x25519 = agreement::get_by_name("X25519").unwrap();
+    let x25519 = ALGO.agreement().get_by_name("X25519").unwrap();
     let error = x25519.calculate(&public(hex32(BOB_PUBLIC))).unwrap_err();
     assert_eq!(error.kind(), ErrorKind::NotInitialized);
     let error = x25519
@@ -152,7 +173,10 @@ fn a_failed_init_leaves_no_earlier_key_behind() {
 #[test]
 fn debug_shows_the_name_and_never_the_key_or_the_secret() {
     let x25519 = initialized(&private(ALICE_PRIVATE));
-    assert_eq!(format!("{x25519:?}"), "AnyAgreement { name: \"X25519\", .. }");
+    assert_eq!(
+        format!("{x25519:?}"),
+        "AnyAgreement { name: \"X25519\", .. }"
+    );
     let secret = x25519.calculate(&public(hex32(BOB_PUBLIC))).unwrap();
     assert_eq!(format!("{secret:?}"), "SharedSecret { len: 32, .. }");
 }

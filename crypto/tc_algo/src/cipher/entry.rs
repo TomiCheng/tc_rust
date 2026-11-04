@@ -1,26 +1,30 @@
 use core::fmt;
+use std::sync::Arc;
 
 use tc_asn1::NamedOid;
 use tc_zeroize::Zeroizing;
 
-use super::AnyCipher;
 use super::init_params::{InitParams, SymmetricParams};
 use super::table::specs::{AeadSpec, AlgorithmSpec, ModeSpec, Need, PaddingSpec, StreamSpec};
 #[cfg(any(feature = "rsa", feature = "elgamal", feature = "naccache-stern"))]
 use super::table::specs::{AsymmetricPaddingSpec, AsymmetricSpec};
 #[cfg(feature = "sm2")]
 use super::table::specs::{MessageModeSpec, MessageSpec};
+use super::{AnyCipher, table};
 use crate::params::{AnyKeyParams, AnyParams};
 use crate::{AlgoError, ErrorKind};
 
+// Cheap to clone, so that an AnyCipher can keep its row and outlive the table it came from
+#[derive(Clone)]
 pub struct CipherEntry {
     // The canonical name, such as AES/CBC/PKCS7PADDING
-    name: String,
+    name: Arc<str>,
     kind: Kind,
     oids: &'static [NamedOid],
 }
 
 // What the entry is made of, one variant per kind of cipher
+#[derive(Clone, Copy)]
 pub(super) enum Kind {
     Block {
         algorithm: &'static AlgorithmSpec,
@@ -70,7 +74,11 @@ impl CipherEntry {
             #[cfg(feature = "sm2")]
             Kind::Message { algorithm, mode } => format!("{}/{}", algorithm.names[0], mode.name),
         };
-        Self { name, kind, oids }
+        Self {
+            name: name.into(),
+            kind,
+            oids,
+        }
     }
 
     pub fn name(&self) -> &str {
@@ -81,12 +89,16 @@ impl CipherEntry {
         self.oids
     }
 
-    pub fn cipher(&'static self) -> AnyCipher {
-        AnyCipher::new(self)
+    pub fn cipher(&self) -> AnyCipher {
+        AnyCipher::new(self.clone())
     }
 
     pub(super) fn kind(&self) -> &Kind {
         &self.kind
+    }
+
+    pub(super) fn matches_rule(&self, rule: &str) -> bool {
+        table::matches_rule(self, rule)
     }
 
     // Checks the params against what this entry needs and builds what the layers underneath

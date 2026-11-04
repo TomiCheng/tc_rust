@@ -1,8 +1,14 @@
-use tc_algo::ErrorKind;
+use std::sync::LazyLock;
+
 #[allow(unused_imports, reason = "unused when the des feature is off")]
-use tc_algo::cipher::{self, CipherDirection, CipherEntry};
-#[allow(unused_imports, reason = "unused when the des feature is off")]
-use tc_algo::params::{AnyKeyParams, AnyParams, SecretKey};
+use tc_algo::{Algo, AnyKeyParams, AnyParams, CipherDirection, CipherEntry, ErrorKind, SecretKey};
+
+// One instance for the whole file, so that its tables are built once
+#[allow(
+    dead_code,
+    reason = "unused when the features of the tests here are off"
+)]
+static ALGO: LazyLock<Algo> = LazyLock::new(Algo::new);
 
 #[cfg(feature = "des")]
 mod with_des {
@@ -23,7 +29,9 @@ mod with_des {
     }
 
     fn des_entries() -> impl Iterator<Item = &'static CipherEntry> {
-        cipher::algorithms().filter(|entry| entry.name().starts_with("DES/"))
+        ALGO.cipher()
+            .algorithms()
+            .filter(|entry| entry.name().starts_with("DES/"))
     }
 
     // "Now is the time for all "
@@ -54,10 +62,13 @@ mod with_des {
             ),
         ] {
             let params = params(iv);
-            let output = cipher::encrypt(name, &params, &hex(PLAINTEXT)).unwrap();
+            let output = ALGO
+                .cipher()
+                .encrypt(name, &params, &hex(PLAINTEXT))
+                .unwrap();
             assert_eq!(output, hex(ciphertext), "{name}");
             assert_eq!(
-                cipher::decrypt(name, &params, &output).unwrap(),
+                ALGO.cipher().decrypt(name, &params, &output).unwrap(),
                 hex(PLAINTEXT)
             );
         }
@@ -80,8 +91,14 @@ mod with_des {
                 ("ECB" | "CBC", "NOPADDING") => &message[..32],
                 _ => &message[..],
             };
-            let ciphertext = cipher::encrypt(entry.name(), &params, message).unwrap();
-            let plaintext = cipher::decrypt(entry.name(), &params, &ciphertext).unwrap();
+            let ciphertext = ALGO
+                .cipher()
+                .encrypt(entry.name(), &params, message)
+                .unwrap();
+            let plaintext = ALGO
+                .cipher()
+                .decrypt(entry.name(), &params, &ciphertext)
+                .unwrap();
             assert_eq!(plaintext, message, "{}", entry.name());
         }
     }
@@ -90,11 +107,11 @@ mod with_des {
     fn the_table_has_eax_but_not_the_aead_modes_for_128_bit_blocks() {
         assert_eq!(des_entries().count(), 5 * 7 + 1);
         assert_eq!(
-            cipher::get_by_name("DES/EAX").unwrap().entry().name(),
+            ALGO.cipher().get_by_name("DES/EAX").unwrap().entry().name(),
             "DES/EAX/NOPADDING"
         );
         for name in ["DES/CCM", "DES/GCM", "DES/OCB"] {
-            let error = cipher::get_by_name(name).unwrap_err();
+            let error = ALGO.cipher().get_by_name(name).unwrap_err();
             assert_eq!(error.kind(), ErrorKind::UnknownCipher, "{name}");
         }
     }
@@ -104,7 +121,7 @@ mod with_des {
         let mut found = Vec::new();
         for entry in des_entries() {
             for oid in entry.oids() {
-                let cipher = cipher::get_by_oid(&oid.oid()).unwrap();
+                let cipher = ALGO.cipher().get_by_oid(&oid.oid()).unwrap();
                 assert_eq!(cipher.entry().name(), entry.name(), "{}", oid.dotted());
                 found.push((oid.dotted().to_string(), entry.name().to_string()));
             }
@@ -126,7 +143,7 @@ mod with_des {
     fn a_key_of_another_length_than_8_bytes_is_invalid() {
         let key = SecretKey::new(vec![1; 16]);
         let params = AnyParams::new(AnyKeyParams::Secret(key));
-        let mut cipher = cipher::get_by_name("DES/ECB").unwrap();
+        let mut cipher = ALGO.cipher().get_by_name("DES/ECB").unwrap();
         let error = cipher.init(CipherDirection::Encrypt, &params).unwrap_err();
         assert_eq!(error.kind(), ErrorKind::InvalidParams);
     }
@@ -135,6 +152,6 @@ mod with_des {
 #[cfg(not(feature = "des"))]
 #[test]
 fn des_is_an_unknown_cipher_without_its_feature() {
-    let error = cipher::get_by_name("DES/CBC").unwrap_err();
+    let error = ALGO.cipher().get_by_name("DES/CBC").unwrap_err();
     assert_eq!(error.kind(), ErrorKind::UnknownCipher);
 }

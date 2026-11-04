@@ -1,6 +1,6 @@
 #![cfg(feature = "rsa")]
 
-use tc_algo::params::{AnyKeyParams, AnyParams, AnyPrivateKey, AnyPublicKey};
+use tc_algo::{AnyKeyParams, AnyParams, AnyPrivateKey, AnyPublicKey};
 use tc_bigint::PaddedBigUint;
 use tc_rsa::{RsaKey, RsaKeyOwned};
 

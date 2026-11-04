@@ -2,17 +2,24 @@
 
 use std::sync::LazyLock;
 
-use tc_algo::ErrorKind;
-use tc_algo::cipher::{self, CipherDirection, CipherEntry};
-use tc_algo::generate::key_pair::KeyPair;
-use tc_algo::generate::{self, KeyGenParams};
-use tc_algo::params::{AnyKeyParams, AnyParams, AnyPrivateKey, AnyPublicKey, SecretKey};
+use tc_algo::{
+    Algo, AnyKeyParams, AnyParams, AnyPrivateKey, AnyPublicKey, CipherDirection, CipherEntry,
+    ErrorKind, KeyGenParams, KeyPair, SecretKey,
+};
+
 use tc_asym_cipher::{AsymmetricBlockCipher, AsymmetricBlockCipherInit};
 use tc_rsa::{RsaEngine, RsaKey};
 
+// One instance for the whole file, so that its tables are built once
+#[allow(
+    dead_code,
+    reason = "unused when the features of the tests here are off"
+)]
+static ALGO: LazyLock<Algo> = LazyLock::new(Algo::new);
+
 // One key pair for every test: 1536 bits is the smallest round size that holds OAEP with SHA-512
 static KEYS: LazyLock<KeyPair> = LazyLock::new(|| {
-    let mut generator = generate::key_pair::get_by_name("RSA").unwrap();
+    let mut generator = ALGO.key_pair_generator().get_by_name("RSA").unwrap();
     generator
         .init(KeyGenParams::rsa().with_bits(1536).with_certainty(20))
         .unwrap();
@@ -36,15 +43,23 @@ fn private() -> AnyParams {
 }
 
 fn rsa_entries() -> impl Iterator<Item = &'static CipherEntry> {
-    cipher::algorithms().filter(|entry| entry.name().starts_with("RSA/"))
+    ALGO.cipher()
+        .algorithms()
+        .filter(|entry| entry.name().starts_with("RSA/"))
 }
 
 #[test]
 fn every_padding_decrypts_with_the_private_key_what_the_public_key_encrypts() {
     for entry in rsa_entries() {
-        let ciphertext = cipher::encrypt(entry.name(), &public(), b"attack at dawn").unwrap();
+        let ciphertext = ALGO
+            .cipher()
+            .encrypt(entry.name(), &public(), b"attack at dawn")
+            .unwrap();
         assert_eq!(ciphertext.len(), 192, "{}", entry.name());
-        let plaintext = cipher::decrypt(entry.name(), &private(), &ciphertext).unwrap();
+        let plaintext = ALGO
+            .cipher()
+            .decrypt(entry.name(), &private(), &ciphertext)
+            .unwrap();
         // Raw RSA gives the whole block back, the leading zeros included
         assert!(plaintext.ends_with(b"attack at dawn"), "{}", entry.name());
     }
@@ -61,27 +76,44 @@ fn raw_rsa_gives_what_the_rsa_engine_gives() {
     engine
         .process_block(b"attack at dawn", &mut expected)
         .unwrap();
-    let output = cipher::encrypt("RSA/NONE/NOPADDING", &public(), b"attack at dawn").unwrap();
+    let output = ALGO
+        .cipher()
+        .encrypt("RSA/NONE/NOPADDING", &public(), b"attack at dawn")
+        .unwrap();
     assert_eq!(output, expected);
 }
 
 #[test]
 fn oaep_with_mgf1_over_sha_1_differs_from_oaep_over_sha_256_alone() {
     let name = "RSA/NONE/OAEPWITHSHA256ANDMGF1WITHSHA1PADDING";
-    let ciphertext = cipher::encrypt(name, &public(), b"attack at dawn").unwrap();
+    let ciphertext = ALGO
+        .cipher()
+        .encrypt(name, &public(), b"attack at dawn")
+        .unwrap();
     assert_eq!(
-        cipher::decrypt(name, &private(), &ciphertext).unwrap(),
+        ALGO.cipher()
+            .decrypt(name, &private(), &ciphertext)
+            .unwrap(),
         b"attack at dawn"
     );
     let other = "RSA/NONE/OAEPWITHSHA256ANDMGF1PADDING";
-    let error = cipher::decrypt(other, &private(), &ciphertext).unwrap_err();
+    let error = ALGO
+        .cipher()
+        .decrypt(other, &private(), &ciphertext)
+        .unwrap_err();
     assert_eq!(error.kind(), ErrorKind::InvalidCiphertext);
 }
 
 #[test]
 fn pkcs1_encrypts_with_the_private_key_and_decrypts_with_the_public_one_as_bouncy_castle_does() {
-    let ciphertext = cipher::encrypt("RSA/NONE/PKCS1PADDING", &private(), b"message").unwrap();
-    let plaintext = cipher::decrypt("RSA/NONE/PKCS1PADDING", &public(), &ciphertext).unwrap();
+    let ciphertext = ALGO
+        .cipher()
+        .encrypt("RSA/NONE/PKCS1PADDING", &private(), b"message")
+        .unwrap();
+    let plaintext = ALGO
+        .cipher()
+        .decrypt("RSA/NONE/PKCS1PADDING", &public(), &ciphertext)
+        .unwrap();
     assert_eq!(plaintext, b"message");
 }
 
@@ -91,9 +123,12 @@ fn a_changed_ciphertext_fails_alike_under_pkcs1_and_oaep() {
         "RSA/NONE/PKCS1PADDING",
         "RSA/NONE/OAEPWITHSHA256ANDMGF1PADDING",
     ] {
-        let mut ciphertext = cipher::encrypt(name, &public(), b"message").unwrap();
+        let mut ciphertext = ALGO.cipher().encrypt(name, &public(), b"message").unwrap();
         ciphertext[100] ^= 1;
-        let error = cipher::decrypt(name, &private(), &ciphertext).unwrap_err();
+        let error = ALGO
+            .cipher()
+            .decrypt(name, &private(), &ciphertext)
+            .unwrap_err();
         assert_eq!(error.kind(), ErrorKind::InvalidCiphertext, "{name}");
     }
 }
@@ -101,9 +136,16 @@ fn a_changed_ciphertext_fails_alike_under_pkcs1_and_oaep() {
 #[test]
 fn a_message_longer_than_the_padding_leaves_room_for_is_a_data_length_error() {
     // PKCS#1 v1.5 takes at most 192 - 11 bytes
-    let error = cipher::encrypt("RSA/NONE/PKCS1PADDING", &public(), &[1; 182]).unwrap_err();
+    let error = ALGO
+        .cipher()
+        .encrypt("RSA/NONE/PKCS1PADDING", &public(), &[1; 182])
+        .unwrap_err();
     assert_eq!(error.kind(), ErrorKind::DataLength);
-    assert!(cipher::encrypt("RSA/NONE/PKCS1PADDING", &public(), &[1; 181]).is_ok());
+    assert!(
+        ALGO.cipher()
+            .encrypt("RSA/NONE/PKCS1PADDING", &public(), &[1; 181])
+            .is_ok()
+    );
 }
 
 #[test]
@@ -122,7 +164,7 @@ fn names_follow_bouncy_castle_and_come_back_canonical() {
             "RSA/NONE/OAEPWITHSHA256ANDMGF1PADDING",
         ),
     ] {
-        let cipher = cipher::get_by_name(name).unwrap();
+        let cipher = ALGO.cipher().get_by_name(name).unwrap();
         assert_eq!(cipher.entry().name(), canonical, "{name}");
     }
 }
@@ -134,7 +176,7 @@ fn a_mode_or_a_block_padding_is_an_unknown_cipher_for_rsa() {
         "RSA/NONE/PKCS7PADDING",
         "RSA/NONE/NOSUCH",
     ] {
-        let error = cipher::get_by_name(name).unwrap_err();
+        let error = ALGO.cipher().get_by_name(name).unwrap_err();
         assert_eq!(error.kind(), ErrorKind::UnknownCipher, "{name}");
     }
 }
@@ -144,7 +186,7 @@ fn the_pkcs_1_oids_find_pkcs1_and_oaep_with_sha_1() {
     let mut found = Vec::new();
     for entry in rsa_entries() {
         for oid in entry.oids() {
-            let cipher = cipher::get_by_oid(&oid.oid()).unwrap();
+            let cipher = ALGO.cipher().get_by_oid(&oid.oid()).unwrap();
             assert_eq!(cipher.entry().name(), entry.name(), "{}", oid.dotted());
             found.push(format!("{} {}", oid.dotted(), entry.name()));
         }
@@ -170,13 +212,16 @@ fn the_table_has_rsa_with_each_of_its_paddings() {
 #[test]
 fn iso_9796_1_finds_its_names_and_refuses_a_changed_ciphertext() {
     for name in ["RSA//ISO9796-1", "rsa/ecb/iso9796-1padding"] {
-        let cipher = cipher::get_by_name(name).unwrap();
+        let cipher = ALGO.cipher().get_by_name(name).unwrap();
         assert_eq!(cipher.entry().name(), "RSA/NONE/ISO9796-1PADDING", "{name}");
     }
     let name = "RSA/NONE/ISO9796-1PADDING";
-    let mut ciphertext = cipher::encrypt(name, &public(), b"message").unwrap();
+    let mut ciphertext = ALGO.cipher().encrypt(name, &public(), b"message").unwrap();
     ciphertext[100] ^= 1;
-    let error = cipher::decrypt(name, &private(), &ciphertext).unwrap_err();
+    let error = ALGO
+        .cipher()
+        .decrypt(name, &private(), &ciphertext)
+        .unwrap_err();
     assert_eq!(error.kind(), ErrorKind::InvalidCiphertext);
 }
 
@@ -184,9 +229,14 @@ fn iso_9796_1_finds_its_names_and_refuses_a_changed_ciphertext() {
 #[test]
 fn oaep_with_md5_comes_with_the_md5_feature() {
     let name = "RSA/NONE/OAEPWITHMD5ANDMGF1PADDING";
-    let ciphertext = cipher::encrypt(name, &public(), b"attack at dawn").unwrap();
+    let ciphertext = ALGO
+        .cipher()
+        .encrypt(name, &public(), b"attack at dawn")
+        .unwrap();
     assert_eq!(
-        cipher::decrypt(name, &private(), &ciphertext).unwrap(),
+        ALGO.cipher()
+            .decrypt(name, &private(), &ciphertext)
+            .unwrap(),
         b"attack at dawn"
     );
 }
@@ -200,7 +250,7 @@ fn rsa_refuses_an_operation_field() {
     let mut with_aad = public();
     with_aad.op.aad = Some(b"header".to_vec());
     for params in [with_iv, with_tag, with_aad] {
-        let mut cipher = cipher::get_by_name("RSA/NONE/PKCS1PADDING").unwrap();
+        let mut cipher = ALGO.cipher().get_by_name("RSA/NONE/PKCS1PADDING").unwrap();
         let error = cipher.init(CipherDirection::Encrypt, &params).unwrap_err();
         assert_eq!(error.kind(), ErrorKind::InvalidParams);
     }
@@ -209,7 +259,7 @@ fn rsa_refuses_an_operation_field() {
 #[test]
 fn rsa_refuses_a_secret_key() {
     let params = AnyParams::new(AnyKeyParams::Secret(SecretKey::new(vec![1; 16])));
-    let mut cipher = cipher::get_by_name("RSA/NONE/PKCS1PADDING").unwrap();
+    let mut cipher = ALGO.cipher().get_by_name("RSA/NONE/PKCS1PADDING").unwrap();
     let error = cipher.init(CipherDirection::Encrypt, &params).unwrap_err();
     assert_eq!(error.kind(), ErrorKind::InvalidParams);
 }
@@ -221,7 +271,7 @@ fn a_key_in_the_wrong_variant_is_refused() {
         AnyKeyParams::Public(AnyPublicKey::Rsa(private_key.clone())),
         AnyKeyParams::Private(AnyPrivateKey::Rsa(public_key.clone())),
     ] {
-        let mut cipher = cipher::get_by_name("RSA/NONE/PKCS1PADDING").unwrap();
+        let mut cipher = ALGO.cipher().get_by_name("RSA/NONE/PKCS1PADDING").unwrap();
         let error = cipher
             .init(CipherDirection::Encrypt, &AnyParams::new(key))
             .unwrap_err();
@@ -232,7 +282,7 @@ fn a_key_in_the_wrong_variant_is_refused() {
 #[cfg(feature = "aes")]
 #[test]
 fn a_block_cipher_refuses_an_rsa_key() {
-    let mut cipher = cipher::get_by_name("AES/ECB").unwrap();
+    let mut cipher = ALGO.cipher().get_by_name("AES/ECB").unwrap();
     let error = cipher
         .init(CipherDirection::Encrypt, &public())
         .unwrap_err();
@@ -241,6 +291,7 @@ fn a_block_cipher_refuses_an_rsa_key() {
 
 #[test]
 fn the_entry_shows_its_name_and_oid() {
-    let entry = cipher::get_by_name("RSA//PKCS1").unwrap().entry();
+    let found = ALGO.cipher().get_by_name("RSA//PKCS1").unwrap();
+    let entry = found.entry();
     assert_eq!(entry.to_string(), "RSA/NONE/PKCS1PADDING  [rsaEncryption]");
 }

@@ -1,1 +1,7 @@
-//! Extendable-output functions by name or OID; Bouncy Castle has no matching factory.
+mod any_xof;
+mod entry;
+mod factory;
+
+pub use any_xof::AnyXof;
+pub use entry::XofEntry;
+pub use factory::XofFactory;

@@ -1,7 +1,7 @@
 # Key agreements
 
-`tc_algo::agreement` creates key agreements by name or by OID, after Bouncy Castle's
-`AgreementUtilities`. Two parties each make a key pair with `generate::key_pair`,
+`algo.agreement()` creates key agreements by name or by OID, after Bouncy Castle's
+`AgreementUtilities`. Two parties each make a key pair with `algo.key_pair_generator()`,
 swap public keys, and each combines its own private key with the other's public key
 for the same secret.
 
@@ -34,15 +34,14 @@ agreements, the group or the curve differ. ECMQV also takes an ephemeral key of 
 party, and GOST VKO a UKM.
 
 ```rust
-use tc_algo::AlgoError;
-use tc_algo::agreement;
-use tc_algo::generate;
+use tc_algo::{Algo, AlgoError};
 
 fn main() -> Result<(), AlgoError> {
-    let alice = generate::key_pair::generate("X25519")?;
-    let bob = generate::key_pair::generate("X25519")?;
+    let algo = Algo::new();
+    let alice = algo.key_pair_generator().generate("X25519")?;
+    let bob = algo.key_pair_generator().generate("X25519")?;
 
-    let mut agreement = agreement::get_by_name("X25519")?;
+    let mut agreement = algo.agreement().get_by_name("X25519")?;
     agreement.init(&alice.private.into())?;
     let secret = agreement.calculate(&bob.public.into())?;
     Ok(())
@@ -52,7 +51,7 @@ fn main() -> Result<(), AlgoError> {
 `init` takes this party's private key in an `AnyAgreementParams` and `calculate` the
 other party's public key in an `AgreementPeer`; `.into()` makes either from the key
 alone, their `with_ephemeral` adds the ephemeral key ECMQV takes, and the params'
-`with_ukm` the UKM VKO takes. `agreement::calculate` does all three steps at once.
+`with_ukm` the UKM VKO takes. `algo.agreement().calculate` does all three steps at once.
 
 The result is a `SharedSecret`, the raw secret of the agreement. It is not yet a key:
 derive the key from it with a KDF. Its bytes are wiped when it is dropped.
@@ -60,17 +59,17 @@ derive the key from it with a KDF. Its bytes are wiped when it is dropped.
 ### By name or OID
 
 Names match without regard to ASCII case, and a dotted OID string works wherever a
-name does. `agreement::get_by_oid` takes an `Asn1Oid`.
+name does. `algo.agreement().get_by_oid` takes an `Asn1Oid`.
 
 ```rust
-use tc_algo::agreement;
-use tc_algo::{AlgoError, ErrorKind};
+use tc_algo::{Algo, AlgoError, ErrorKind};
 
 fn main() -> Result<(), AlgoError> {
-    let x25519 = agreement::get_by_name("1.3.101.110")?;
+    let algo = Algo::new();
+    let x25519 = algo.agreement().get_by_name("1.3.101.110")?;
     assert_eq!(x25519.entry().name(), "X25519");
 
-    let error = agreement::get_by_name("no-such-agreement").unwrap_err();
+    let error = algo.agreement().get_by_name("no-such-agreement").unwrap_err();
     assert_eq!(error.kind(), ErrorKind::UnknownAgreement);
     Ok(())
 }
@@ -79,9 +78,10 @@ fn main() -> Result<(), AlgoError> {
 ### Looking at the table
 
 ```rust
-use tc_algo::agreement;
+use tc_algo::Algo;
 
-for entry in agreement::algorithms() {
+let algo = Algo::new();
+for entry in algo.agreement().algorithms() {
     println!("{entry}"); // e.g. `X25519  [id-X25519]`
 }
 ```

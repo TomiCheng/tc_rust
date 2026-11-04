@@ -1,4 +1,5 @@
 use core::fmt;
+use std::sync::Arc;
 
 use tc_asn1::NamedOid;
 
@@ -8,11 +9,13 @@ use crate::AlgoError;
 use crate::need::Need;
 
 // A closure rather than a function pointer: the HMAC rows each capture their digest
-type CreateMac = Box<dyn Fn() -> Box<dyn DynMac> + Send + Sync>;
+type CreateMac = Arc<dyn Fn() -> Box<dyn DynMac> + Send + Sync>;
 
+// Cheap to clone, so that an AnyMac can keep its row and outlive the table it came from
+#[derive(Clone)]
 pub struct MacEntry {
     // The first is the canonical name, the rest are aliases
-    names: Vec<String>,
+    names: Arc<[String]>,
     oids: &'static [NamedOid],
     iv: Need,
     create: CreateMac,
@@ -27,10 +30,10 @@ impl MacEntry {
         create: impl Fn() -> Box<dyn DynMac> + Send + Sync + 'static,
     ) -> Self {
         Self {
-            names,
+            names: names.into(),
             oids,
             iv,
-            create: Box::new(create),
+            create: Arc::new(create),
         }
     }
 
@@ -46,8 +49,8 @@ impl MacEntry {
         self.oids
     }
 
-    pub fn mac(&'static self) -> AnyMac {
-        AnyMac::new(self)
+    pub fn mac(&self) -> AnyMac {
+        AnyMac::new(self.clone())
     }
 
     pub(super) fn create(&self) -> Box<dyn DynMac> {

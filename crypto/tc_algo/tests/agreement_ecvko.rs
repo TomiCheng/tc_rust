@@ -3,19 +3,26 @@
 // GOST VKO in the agreement table: ECGOST3410-2012-256, ECGOST3410-2012-512 and, with gost3411,
 // ECGOST3410, found by their names and OIDs as in Bouncy Castle, and the agreements they give:
 // RFC 7836's example 7, and what init and calculate refuse
-use std::sync::OnceLock;
+use std::sync::LazyLock;
 
-use tc_algo::ErrorKind;
-use tc_algo::agreement::{
-    self, Agreement, AgreementInit, AgreementPeer, AnyAgreement, AnyAgreementParams,
+use std::sync::OnceLock;
+use tc_algo::{
+    Agreement, AgreementInit, AgreementPeer, Algo, AnyAgreement, AnyAgreementParams,
+    AnyEcPrivateKey, AnyEcPublicKey, AnyPrivateKey, AnyPublicKey, EcCurve, ErrorKind,
 };
-use tc_algo::generate;
-use tc_algo::params::{AnyEcPrivateKey, AnyEcPublicKey, AnyPrivateKey, AnyPublicKey, EcCurve};
+
 use tc_asn1::Asn1Oid;
 use tc_bigint::{ArrayEncoding, PaddedBigUint};
 use tc_ec_key::{EcPrivateKey, EcPublicKey};
 use tc_fp_curve::named_curves::TC26_GOST_3410_12_512_PARAMSETA;
 use tc_fp_curve::{FpCtCurve, FpField};
+
+// One instance for the whole file, so that its tables are built once
+#[allow(
+    dead_code,
+    reason = "unused when the features of the tests here are off"
+)]
+static ALGO: LazyLock<Algo> = LazyLock::new(Algo::new);
 
 // RFC 7836, example 7
 const UKM: [u8; 8] = [0x1d, 0x80, 0x60, 0x3c, 0x85, 0x44, 0xc7, 0x27];
@@ -53,9 +60,9 @@ fn party(d: &str, x: &str, y: &str) -> (AnyAgreementParams, AgreementPeer) {
         .unwrap();
     let private = EcPrivateKey::new(g.clone(), little_endian(d)).unwrap();
     let public = EcPublicKey::new(g, &q).unwrap();
-    let params = AnyAgreementParams::new(AnyPrivateKey::Ec(
-        AnyEcPrivateKey::GostTc26ParamSet512A(Box::new(private)),
-    ))
+    let params = AnyAgreementParams::new(AnyPrivateKey::Ec(AnyEcPrivateKey::GostTc26ParamSet512A(
+        Box::new(private),
+    )))
     .with_ukm(UKM.to_vec());
     let peer = AgreementPeer::new(AnyPublicKey::Ec(AnyEcPublicKey::GostTc26ParamSet512A(
         Box::new(public),
@@ -80,14 +87,14 @@ fn bob() -> (AnyAgreementParams, AgreementPeer) {
 }
 
 fn key_pair(curve: EcCurve) -> (AnyPublicKey, AnyPrivateKey) {
-    let mut generator = generate::key_pair::get_by_name("EC").unwrap();
+    let mut generator = ALGO.key_pair_generator().get_by_name("EC").unwrap();
     generator.init(curve).unwrap();
     let pair = generator.generate().unwrap();
     (pair.public, pair.private)
 }
 
 fn initialized(name: &str, params: &AnyAgreementParams) -> AnyAgreement {
-    let mut agreement = agreement::get_by_name(name).unwrap();
+    let mut agreement = ALGO.agreement().get_by_name(name).unwrap();
     agreement.init(params).unwrap();
     agreement
 }
@@ -103,11 +110,11 @@ fn the_2012_agreements_are_found_by_their_names_and_oids() {
         ("1.2.643.7.1.1.6.2", "ECGOST3410-2012-512"),
         ("1.2.643.7.1.1.1.2", "ECGOST3410-2012-512"),
     ] {
-        let agreement = agreement::get_by_name(name).unwrap();
+        let agreement = ALGO.agreement().get_by_name(name).unwrap();
         assert_eq!(agreement.entry().name(), canonical, "{name}");
     }
     let oid: Asn1Oid = "1.2.643.7.1.1.6.2".parse().unwrap();
-    let agreement = agreement::get_by_oid(&oid).unwrap();
+    let agreement = ALGO.agreement().get_by_oid(&oid).unwrap();
     assert_eq!(agreement.entry().name(), "ECGOST3410-2012-512");
 }
 
@@ -121,7 +128,7 @@ fn the_2001_agreement_is_found_by_its_name_alias_and_oids() {
         "1.2.643.2.2.19",
         "1.2.643.2.2.96",
     ] {
-        let agreement = agreement::get_by_name(name).unwrap();
+        let agreement = ALGO.agreement().get_by_name(name).unwrap();
         assert_eq!(agreement.entry().name(), "ECGOST3410", "{name}");
     }
 }
@@ -129,15 +136,21 @@ fn the_2001_agreement_is_found_by_its_name_alias_and_oids() {
 #[cfg(not(feature = "gost3411"))]
 #[test]
 fn without_gost3411_the_2001_agreement_is_unknown() {
-    let error = agreement::get_by_name("ECGOST3410").unwrap_err();
+    let error = ALGO.agreement().get_by_name("ECGOST3410").unwrap_err();
     assert_eq!(error.kind(), ErrorKind::UnknownAgreement);
 }
 
 #[test]
 fn both_parties_reach_the_secret_of_rfc_7836_example_7() {
     let ((alice, alice_peer), (bob, bob_peer)) = (alice(), bob());
-    let alice_secret = agreement::calculate("ECGOST3410-2012-256", &alice, &bob_peer).unwrap();
-    let bob_secret = agreement::calculate("ECGOST3410-2012-256", &bob, &alice_peer).unwrap();
+    let alice_secret = ALGO
+        .agreement()
+        .calculate("ECGOST3410-2012-256", &alice, &bob_peer)
+        .unwrap();
+    let bob_secret = ALGO
+        .agreement()
+        .calculate("ECGOST3410-2012-256", &bob, &alice_peer)
+        .unwrap();
     assert_eq!(alice_secret.as_bytes(), bytes(SECRET));
     assert_eq!(bob_secret.as_bytes(), bytes(SECRET));
 }
@@ -156,8 +169,14 @@ fn both_parties_agree_on_a_secret_as_long_as_the_hash() {
         let (bob_public, bob_private) = key_pair(curve);
         let alice = AnyAgreementParams::new(alice_private).with_ukm(UKM.to_vec());
         let bob = AnyAgreementParams::new(bob_private).with_ukm(UKM.to_vec());
-        let alice_secret = agreement::calculate(name, &alice, &bob_public.into()).unwrap();
-        let bob_secret = agreement::calculate(name, &bob, &alice_public.into()).unwrap();
+        let alice_secret = ALGO
+            .agreement()
+            .calculate(name, &alice, &bob_public.into())
+            .unwrap();
+        let bob_secret = ALGO
+            .agreement()
+            .calculate(name, &bob, &alice_public.into())
+            .unwrap();
         assert_eq!(alice_secret.as_bytes().len(), size, "{name}");
         assert_eq!(alice_secret.as_bytes(), bob_secret.as_bytes(), "{name}");
     }
@@ -167,14 +186,17 @@ fn both_parties_agree_on_a_secret_as_long_as_the_hash() {
 fn another_ukm_gives_another_secret() {
     let ((alice, _), (_, bob_peer)) = (alice(), bob());
     let other = AnyAgreementParams::new(alice.key().clone()).with_ukm(vec![1; 8]);
-    let secret = agreement::calculate("ECGOST3410-2012-256", &other, &bob_peer).unwrap();
+    let secret = ALGO
+        .agreement()
+        .calculate("ECGOST3410-2012-256", &other, &bob_peer)
+        .unwrap();
     assert_ne!(secret.as_bytes(), bytes(SECRET));
 }
 
 #[test]
 fn the_ukm_is_required_and_a_ukm_of_zero_is_refused() {
     let ((alice, _), (_, bob_peer)) = (alice(), bob());
-    let mut vko = agreement::get_by_name("ECGOST3410-2012-256").unwrap();
+    let mut vko = ALGO.agreement().get_by_name("ECGOST3410-2012-256").unwrap();
     let error = vko
         .init(&AnyAgreementParams::new(alice.key().clone()))
         .unwrap_err();
@@ -190,7 +212,7 @@ fn the_ukm_is_required_and_a_ukm_of_zero_is_refused() {
 #[test]
 fn an_ephemeral_key_of_either_party_is_refused() {
     let ((alice, alice_peer), (_, bob_peer)) = (alice(), bob());
-    let mut vko = agreement::get_by_name("ECGOST3410-2012-256").unwrap();
+    let mut vko = ALGO.agreement().get_by_name("ECGOST3410-2012-256").unwrap();
     let error = vko
         .init(&alice.clone().with_ephemeral(alice.key().clone()))
         .unwrap_err();
@@ -216,7 +238,7 @@ fn a_public_key_on_another_curve_is_refused() {
 #[test]
 fn the_trait_writes_the_secret_into_a_buffer_of_agreement_size() {
     let ((alice, _), (_, bob_peer)) = (alice(), bob());
-    let mut vko = agreement::get_by_name("ECGOST3410-2012-256").unwrap();
+    let mut vko = ALGO.agreement().get_by_name("ECGOST3410-2012-256").unwrap();
     AgreementInit::init(&mut vko, &alice).unwrap();
     assert_eq!(vko.agreement_size(), 32);
     let mut output = [0; 32];
@@ -231,7 +253,7 @@ fn the_trait_writes_the_secret_into_a_buffer_of_agreement_size() {
 #[test]
 fn calculating_before_init_is_not_initialized() {
     let (_, bob_peer) = bob();
-    let vko = agreement::get_by_name("ECGOST3410-2012-512").unwrap();
+    let vko = ALGO.agreement().get_by_name("ECGOST3410-2012-512").unwrap();
     let error = vko.calculate(&bob_peer).unwrap_err();
     assert_eq!(error.kind(), ErrorKind::NotInitialized);
 }
