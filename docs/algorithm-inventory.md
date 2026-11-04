@@ -17,7 +17,7 @@
 | 串流加密 | chacha、salsa20、hc、rc4_family | — | — | — |
 | AEAD 專用演算法 | ascon_aead、grain128_aead、sparkle_aead、chacha_aead | — | — | — |
 | 雜湊 | sha、md、keccak、blake、ascon_hash、dstu7564、gost3411、ripemd、skein、sm3、misc_digest（haraka、photon_beetle、sparkle、tiger、whirlpool、xoodyak） | — | — | — |
-| MAC | macs、poly1305 | crypto/macs 的 dstu_macs、gost28147_mac、iso9797_mac、kmac、siphash、vmpc_mac | — | — |
+| MAC | macs、poly1305 | crypto/macs 的 dstu_macs、gost28147_mac、iso9797_mac、kmac、siphash、skein_mac、vmpc_mac | — | — |
 | Key wrap | key_wrap、des_wrap、dstu7624_wrap、rc2_wrap | — | — | — |
 | 非對稱加密 | rsa、asym_encoding、asym_iso9796 | cfrg_curves（X25519、Ed25519、X448、Ed448）、ec_key、dh_key、elgamal、naccache_stern、sm2（加密） | — | — |
 | 簽章 | — | signer、rsa_signer（PKCS#1 v1.5、PSS、X9.31、ISO 9796-2）、dsa（trait、k 計算器、DsaDigestSigner、Gost3410DigestSigner、DER 與 Plain 編碼）、dsa_key、dsa_signer、ecdsa_v2、ecnr、ecgost3410、gost3410_key、gost3410、dstu4145、sm2（簽章） | — | — |

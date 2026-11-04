@@ -2190,6 +2190,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_skein"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "01b74e6ee00e3a7f16809b7d2c006509050c47fad9b59e44a908fb31982b321f"
+dependencies = [
+ "tc_block_cipher",
+ "tc_digest",
+ "tc_threefish",
+ "tc_zeroize",
+]
+
+[[package]]
+name = "tc_skein_mac"
+version = "0.1.0"
+dependencies = [
+ "tc_macs",
+ "tc_skein",
+]
+
+[[package]]
 name = "tc_sm2"
 version = "0.1.0"
 dependencies = [

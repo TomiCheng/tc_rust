@@ -37,7 +37,7 @@ names itself through `Display`.
 | ✅ Done | `KMac` | [`tc_kmac::KMac`](tc_kmac) | KMAC128/KMAC256 fixed tags and XOF output over cSHAKE; requires `alloc`. |
 | ✅ Raw mode | `Poly1305` | [`tc_poly1305`](https://crates.io/crates/tc_poly1305) | Published from the tc_macs repository: raw Poly1305 with a caller-supplied 32-byte one-time key. The optional 128-bit block-cipher construction is not implemented. |
 | ✅ Done | `SipHash` | [`tc_siphash::SipHash`](tc_siphash) | Allocation-free SipHash-c-d; all 64 official SipHash-2-4 vectors pass. |
-| 🟢 Ready | `SkeinMac` | `tc_skein_mac` | Published `tc_skein` 0.1.0 has what it needs: `SkeinEngine::init` takes a key and the other parameters through `SkeinParams`. Only the wrapper over the `Mac` and `MacInit` contracts is missing. |
+| ✅ Done | `SkeinMac` | [`tc_skein_mac::SkeinMac`](tc_skein_mac) | Skein-MAC over the published `tc_skein`, with the key and the other parameters through `SkeinParams`; passes every vector of Bouncy Castle's `SkeinMacTest`. |
 | ✅ Done | `VMPCMac` | [`tc_vmpc_mac::VmpcMac`](tc_vmpc_mac) | Allocation-free VMPC-MAC with 16–64-byte key and IV validation. |
 
 Legend:
@@ -49,10 +49,8 @@ Legend:
 ## Prerequisite summary
 
 The shared `Mac` and `MacInit<P>` interfaces are complete. Of the 14 Bouncy
-Castle C# MAC types, twelve are fully implemented. Raw Poly1305 is implemented,
-while its optional block-cipher construction remains deferred. SkeinMac is not
-written yet, and nothing blocks it: the published `tc_skein` takes a key through
-`SkeinParams`.
+Castle C# MAC types, thirteen are fully implemented. Raw Poly1305 is implemented,
+while its optional block-cipher construction remains deferred.
 
 EAX now uses internal shared-cipher CMAC state, as recorded in the
 published [`tc_aead_cipher`](https://github.com/TomiCheng/tc_aead_cipher) crate.
@@ -64,5 +62,5 @@ Run the tests for all currently implemented MAC crates from the workspace root:
 ```bash
 cargo test \
   -p tc_dstu_macs -p tc_gost28147_mac -p tc_iso9797_mac \
-  -p tc_kmac -p tc_siphash -p tc_vmpc_mac --locked
+  -p tc_kmac -p tc_siphash -p tc_skein_mac -p tc_vmpc_mac --locked
 ```
