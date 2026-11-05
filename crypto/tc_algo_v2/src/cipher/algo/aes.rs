@@ -1,37 +1,92 @@
 use core::error::Error;
 
 use tc_aes::AesEngine;
+use tc_asn1::Asn1Oid;
 use tc_block_modes::EcbBlockCipher;
-use tc_buffered_cipher::{BufferedBlockCipher, BufferedCipher, BufferedError};
+use tc_buffered_cipher::{
+    BufferedBlockCipher, BufferedCipher, BufferedError, PaddedBufferedBlockCipher,
+};
 
 use crate::cipher::{Cipher, CipherDirection, CipherEntry};
 use crate::{AlgoError, EntryBase, ErrorKind, Params};
 
-// The row of AES/ECB/NoPadding, to give to DefaultAlgoBuilder::reg_cipher. It has no OID: in Bouncy
-// Castle the NIST ECB OIDs mean ECB with PKCS#7
-pub(super) fn aes_ecb_no_padding() -> Box<dyn CipherEntry> {
-    Box::new(AesEcbNoPaddingEntry)
+// The rows of AES, to give to DefaultAlgoBuilder::reg_cipher. Their names and OIDs are those of
+// Bouncy Castle's CipherUtilities, where the NIST ECB OIDs mean ECB with PKCS#7
+pub(super) fn aes() -> Vec<Box<dyn CipherEntry>> {
+    vec![
+        row("AES/ECB/NOPADDING", &[], &[], || {
+            Box::new(Buffered(BufferedBlockCipher::new(ecb())))
+        }),
+        row(
+            "AES/ECB/PKCS7PADDING",
+            &["AES/ECB/PKCS7", "AES/ECB/PKCS5PADDING", "AES/ECB/PKCS5"],
+            &[
+                "2.16.840.1.101.3.4.1.1",
+                "2.16.840.1.101.3.4.1.21",
+                "2.16.840.1.101.3.4.1.41",
+            ],
+            || Box::new(Buffered(PaddedBufferedBlockCipher::new(ecb()))),
+        ),
+    ]
 }
 
-struct AesEcbNoPaddingEntry;
+fn ecb() -> EcbBlockCipher<AesEngine> {
+    EcbBlockCipher::new(AesEngine::new())
+}
 
-impl EntryBase for AesEcbNoPaddingEntry {
+fn row(
+    name: &'static str,
+    aliases: &[&str],
+    oids: &[&str],
+    create: fn() -> Box<dyn Cipher>,
+) -> Box<dyn CipherEntry> {
+    Box::new(Row {
+        name,
+        aliases: aliases.iter().map(|alias| alias.to_string()).collect(),
+        oids: oids.iter().map(|dotted| oid(dotted)).collect(),
+        create,
+    })
+}
+
+fn oid(dotted: &str) -> Asn1Oid {
+    dotted.parse().expect("a valid OID")
+}
+
+struct Row {
+    name: &'static str,
+    aliases: Vec<String>,
+    oids: Vec<Asn1Oid>,
+    create: fn() -> Box<dyn Cipher>,
+}
+
+impl EntryBase for Row {
     fn name(&self) -> &str {
-        "AES/ECB/NOPADDING"
+        self.name
+    }
+
+    fn aliases(&self) -> &[String] {
+        &self.aliases
+    }
+
+    fn oids(&self) -> &[Asn1Oid] {
+        &self.oids
     }
 }
 
-impl CipherEntry for AesEcbNoPaddingEntry {
+impl CipherEntry for Row {
     fn create(&self) -> Box<dyn Cipher> {
-        Box::new(AesEcbNoPadding(BufferedBlockCipher::from_cipher(
-            AesEngine::new(),
-        )))
+        (self.create)()
     }
 }
 
-struct AesEcbNoPadding(BufferedBlockCipher<EcbBlockCipher<AesEngine>>);
+// Puts a buffered cipher, whatever its mode and padding, behind Cipher
+struct Buffered<C>(C);
 
-impl Cipher for AesEcbNoPadding {
+impl<C, E> Cipher for Buffered<C>
+where
+    C: BufferedCipher<Error = BufferedError<E>>,
+    E: Error + Send + Sync + 'static,
+{
     fn init(&mut self, _direction: CipherDirection, _params: &dyn Params) -> Result<(), AlgoError> {
         todo!()
     }
@@ -59,6 +114,7 @@ impl Cipher for AesEcbNoPadding {
 fn algo_error<E: Error + Send + Sync + 'static>(error: BufferedError<E>) -> AlgoError {
     let kind = match error {
         BufferedError::NotInitialized => ErrorKind::NotInitialized,
+        BufferedError::CorruptPadding => ErrorKind::InvalidCiphertext,
         _ => ErrorKind::DataLength,
     };
     AlgoError::with_source(kind, error)
@@ -66,12 +122,11 @@ fn algo_error<E: Error + Send + Sync + 'static>(error: BufferedError<E>) -> Algo
 
 #[cfg(test)]
 mod tests {
-    use tc_aes::AesEngine;
     use tc_block_cipher::KeyRef;
     use tc_buffered_cipher::{BufferedBlockCipher, BufferedCipherInit, CipherDirection};
 
-    use super::{AesEcbNoPadding, aes_ecb_no_padding};
-    use crate::cipher::Cipher;
+    use super::{Buffered, aes, ecb};
+    use crate::cipher::{Cipher, CipherEntry};
     use crate::{AlgoBuilder, DefaultAlgoBuilder, ErrorKind};
 
     // The example in FIPS 197, appendix C.1
@@ -89,16 +144,22 @@ mod tests {
     ];
 
     // Goes around Cipher::init, which cannot take a key from Params yet
-    fn keyed(direction: CipherDirection) -> AesEcbNoPadding {
-        let mut cipher = BufferedBlockCipher::from_cipher(AesEngine::new());
+    fn keyed(direction: CipherDirection) -> impl Cipher {
+        let mut cipher = BufferedBlockCipher::new(ecb());
         cipher.init(direction, &KeyRef::new(&KEY)).unwrap();
-        AesEcbNoPadding(cipher)
+        Buffered(cipher)
+    }
+
+    fn ecb_no_padding() -> Box<dyn CipherEntry> {
+        aes()
+            .into_iter()
+            .find(|row| row.name() == "AES/ECB/NOPADDING")
+            .expect("the row of AES/ECB/NOPADDING")
     }
 
     #[test]
-    fn the_row_says_its_name_and_has_no_aliases_or_oids() {
-        let entry = aes_ecb_no_padding();
-        assert_eq!(entry.name(), "AES/ECB/NOPADDING");
+    fn the_row_has_no_aliases_or_oids() {
+        let entry = ecb_no_padding();
         assert!(entry.aliases().is_empty());
         assert!(entry.oids().is_empty());
     }
@@ -135,7 +196,7 @@ mod tests {
 
     #[test]
     fn update_and_finalize_report_a_cipher_that_was_not_initialized() {
-        let mut cipher = aes_ecb_no_padding().create();
+        let mut cipher = ecb_no_padding().create();
         let error = cipher.update(&PLAINTEXT).unwrap_err();
         assert_eq!(error.kind(), ErrorKind::NotInitialized);
         let error = cipher.finalize().unwrap_err();

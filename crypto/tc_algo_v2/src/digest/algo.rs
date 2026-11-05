@@ -3,8 +3,10 @@ mod sha256;
 
 use super::DigestEntry;
 
+pub(crate) type CreateRows = fn() -> Vec<Box<dyn DigestEntry>>;
+
 // What DefaultAlgoBuilder starts with: the rows of the digests whose features are on
-pub(crate) const BUILT_IN: &[fn() -> Box<dyn DigestEntry>] = &[
+pub(crate) const BUILT_IN: &[CreateRows] = &[
     #[cfg(feature = "sha256")]
     sha256::sha256,
 ];

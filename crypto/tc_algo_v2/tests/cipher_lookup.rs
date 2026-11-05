@@ -84,19 +84,28 @@ fn oid(dotted: &str) -> Asn1Oid {
     dotted.parse().expect("a valid OID")
 }
 
-fn older() -> Box<dyn CipherEntry> {
-    row("TEST-CIPHER", &["TESTC"], &["1.2.3.4"], 1)
+type Rows = fn() -> Vec<Box<dyn CipherEntry>>;
+
+fn older() -> Vec<Box<dyn CipherEntry>> {
+    vec![row("TEST-CIPHER", &["TESTC"], &["1.2.3.4"], 1)]
 }
 
-fn newer() -> Box<dyn CipherEntry> {
-    row("TEST-CIPHER", &[], &["1.2.3.4"], 2)
+fn newer() -> Vec<Box<dyn CipherEntry>> {
+    vec![row("TEST-CIPHER", &[], &["1.2.3.4"], 2)]
 }
 
-fn unrelated() -> Box<dyn CipherEntry> {
-    row("UNRELATED-CIPHER", &[], &[], 3)
+fn unrelated() -> Vec<Box<dyn CipherEntry>> {
+    vec![row("UNRELATED-CIPHER", &[], &[], 3)]
 }
 
-fn builder_with(rows: &[fn() -> Box<dyn CipherEntry>]) -> DefaultAlgoBuilder {
+fn several() -> Vec<Box<dyn CipherEntry>> {
+    vec![
+        row("TEST-CIPHER", &[], &[], 4),
+        row("OTHER-TEST-CIPHER", &[], &[], 5),
+    ]
+}
+
+fn builder_with(rows: &[Rows]) -> DefaultAlgoBuilder {
     let mut builder = DefaultAlgoBuilder::default();
     for row in rows {
         builder.reg_cipher(*row);
@@ -104,14 +113,11 @@ fn builder_with(rows: &[fn() -> Box<dyn CipherEntry>]) -> DefaultAlgoBuilder {
     builder
 }
 
-fn algo_with(rows: &[fn() -> Box<dyn CipherEntry>]) -> Box<dyn Algo> {
+fn algo_with(rows: &[Rows]) -> Box<dyn Algo> {
     builder_with(rows).build()
 }
 
-fn algo_with_policy(
-    rows: &[fn() -> Box<dyn CipherEntry>],
-    policy: impl Policy + 'static,
-) -> Box<dyn Algo> {
+fn algo_with_policy(rows: &[Rows], policy: impl Policy + 'static) -> Box<dyn Algo> {
     let mut builder = builder_with(rows);
     builder.set_policy(policy);
     builder.build()
@@ -171,6 +177,21 @@ fn the_list_has_the_last_registered_first_and_keeps_the_replaced_cipher() {
         .map(|entry| mark_of(entry.create()))
         .collect();
     assert_eq!(marks, [2, 1]);
+}
+
+#[test]
+fn a_function_registers_all_its_ciphers_together_and_in_the_order_it_returns_them() {
+    let algo = algo_with(&[older, several]);
+    let marks: Vec<u8> = algo
+        .cipher()
+        .algorithms()
+        .filter(|entry| entry.name().contains("TEST-CIPHER"))
+        .map(|entry| mark_of(entry.create()))
+        .collect();
+    assert_eq!(marks, [4, 5, 1]);
+
+    assert_eq!(mark_by_name(algo.as_ref(), "TEST-CIPHER"), Some(4));
+    assert_eq!(mark_by_name(algo.as_ref(), "OTHER-TEST-CIPHER"), Some(5));
 }
 
 #[test]

@@ -65,19 +65,28 @@ fn oid(dotted: &str) -> Asn1Oid {
     dotted.parse().expect("a valid OID")
 }
 
-fn older() -> Box<dyn DigestEntry> {
-    row("TEST-DIGEST", &["TESTD"], &["1.2.3.4"], 1)
+type Rows = fn() -> Vec<Box<dyn DigestEntry>>;
+
+fn older() -> Vec<Box<dyn DigestEntry>> {
+    vec![row("TEST-DIGEST", &["TESTD"], &["1.2.3.4"], 1)]
 }
 
-fn newer() -> Box<dyn DigestEntry> {
-    row("TEST-DIGEST", &[], &["1.2.3.4"], 2)
+fn newer() -> Vec<Box<dyn DigestEntry>> {
+    vec![row("TEST-DIGEST", &[], &["1.2.3.4"], 2)]
 }
 
-fn other_name_same_alias() -> Box<dyn DigestEntry> {
-    row("OTHER-DIGEST", &["TEST-DIGEST"], &[], 3)
+fn other_name_same_alias() -> Vec<Box<dyn DigestEntry>> {
+    vec![row("OTHER-DIGEST", &["TEST-DIGEST"], &[], 3)]
 }
 
-fn algo_with(rows: &[fn() -> Box<dyn DigestEntry>]) -> Box<dyn Algo> {
+fn several() -> Vec<Box<dyn DigestEntry>> {
+    vec![
+        row("TEST-DIGEST", &[], &[], 5),
+        row("OTHER-TEST-DIGEST", &[], &[], 6),
+    ]
+}
+
+fn algo_with(rows: &[Rows]) -> Box<dyn Algo> {
     let mut builder = DefaultAlgoBuilder::default();
     for row in rows {
         builder.reg_digest(*row);
@@ -144,6 +153,24 @@ fn the_list_has_the_last_registered_first_and_keeps_the_replaced_digest() {
 }
 
 #[test]
+fn a_function_registers_all_its_digests_together_and_in_the_order_it_returns_them() {
+    let algo = algo_with(&[older, several]);
+    let marks: Vec<Vec<u8>> = algo
+        .digest()
+        .algorithms()
+        .filter(|entry| entry.name().contains("TEST-DIGEST"))
+        .map(|entry| entry.create().finalize())
+        .collect();
+    assert_eq!(marks, [[5], [6], [1]]);
+
+    assert_eq!(mark_by_name(algo.as_ref(), "TEST-DIGEST"), Some(vec![5]));
+    assert_eq!(
+        mark_by_name(algo.as_ref(), "OTHER-TEST-DIGEST"),
+        Some(vec![6])
+    );
+}
+
+#[test]
 fn the_helpers_calculate_with_the_digest_a_lookup_finds() {
     let algo = algo_with(&[older, newer]);
     let digests = algo.digest();
@@ -163,14 +190,11 @@ fn the_helpers_report_an_unknown_digest() {
     assert_eq!(by_oid.unwrap_err().kind(), ErrorKind::UnknownDigest);
 }
 
-fn unrelated() -> Box<dyn DigestEntry> {
-    row("UNRELATED-DIGEST", &[], &[], 4)
+fn unrelated() -> Vec<Box<dyn DigestEntry>> {
+    vec![row("UNRELATED-DIGEST", &[], &[], 4)]
 }
 
-fn algo_with_policy(
-    rows: &[fn() -> Box<dyn DigestEntry>],
-    policy: impl Policy + 'static,
-) -> Box<dyn Algo> {
+fn algo_with_policy(rows: &[Rows], policy: impl Policy + 'static) -> Box<dyn Algo> {
     let mut builder = DefaultAlgoBuilder::default();
     for row in rows {
         builder.reg_digest(*row);
@@ -248,8 +272,8 @@ mod sha256 {
         bytes.iter().map(|byte| format!("{byte:02x}")).collect()
     }
 
-    fn my_sha256() -> Box<dyn DigestEntry> {
-        row("SHA-256", &[], &[], 9)
+    fn my_sha256() -> Vec<Box<dyn DigestEntry>> {
+        vec![row("SHA-256", &[], &[], 9)]
     }
 
     // FIPS 180-4's example for the message "abc"

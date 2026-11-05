@@ -7,11 +7,11 @@ use crate::digest::{Digest, DigestEntry};
 
 // The row of SHA-256, to give to DefaultAlgoBuilder::reg_digest. Its names and OIDs are those of
 // Bouncy Castle's DigestUtilities, the HMAC OID included
-pub(super) fn sha256() -> Box<dyn DigestEntry> {
-    Box::new(Sha256Entry {
+pub(super) fn sha256() -> Vec<Box<dyn DigestEntry>> {
+    vec![Box::new(Sha256Entry {
         aliases: vec!["SHA256".to_string()],
         oids: vec![oid("2.16.840.1.101.3.4.2.1"), oid("1.2.840.113549.2.9")],
-    })
+    })]
 }
 
 fn oid(dotted: &str) -> Asn1Oid {
@@ -73,15 +73,20 @@ impl Digest for Sha256 {
 #[cfg(test)]
 mod tests {
     use super::sha256;
+    use crate::digest::DigestEntry;
     use crate::{AlgoBuilder, DefaultAlgoBuilder};
 
     fn hex(bytes: &[u8]) -> String {
         bytes.iter().map(|byte| format!("{byte:02x}")).collect()
     }
 
+    fn row() -> Box<dyn DigestEntry> {
+        sha256().remove(0)
+    }
+
     #[test]
     fn the_row_says_its_name_aliases_and_oids() {
-        let entry = sha256();
+        let entry = row();
         assert_eq!(entry.name(), "SHA-256");
         assert_eq!(entry.aliases(), ["SHA256"]);
         assert_eq!(entry.oids().len(), 2);
@@ -90,7 +95,7 @@ mod tests {
     // FIPS 180-4's example for the message "abc"
     #[test]
     fn the_digest_the_row_creates_gives_the_standard_hash() {
-        let mut digest = sha256().create();
+        let mut digest = row().create();
         assert_eq!(digest.digest_size(), 32);
         assert_eq!(digest.byte_length(), 64);
         digest.update(b"a");
@@ -103,7 +108,7 @@ mod tests {
 
     #[test]
     fn finalize_starts_the_next_message_and_reset_discards_the_message() {
-        let mut digest = sha256().create();
+        let mut digest = row().create();
         digest.update(b"abc");
         let first = digest.finalize();
 

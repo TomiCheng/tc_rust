@@ -8,8 +8,8 @@ use crate::{Algo, AlgoBuilder, Policy};
 
 #[derive(Clone)]
 pub struct DefaultAlgoBuilder {
-    digests: Vec<fn() -> Box<dyn DigestEntry>>,
-    ciphers: Vec<fn() -> Box<dyn CipherEntry>>,
+    digests: Vec<digest::CreateRows>,
+    ciphers: Vec<cipher::CreateRows>,
     policy: Option<Arc<dyn Policy>>,
 }
 
@@ -25,11 +25,11 @@ impl Default for DefaultAlgoBuilder {
 }
 
 impl DefaultAlgoBuilder {
-    pub fn reg_digest(&mut self, create: fn() -> Box<dyn DigestEntry>) {
+    pub fn reg_digest(&mut self, create: fn() -> Vec<Box<dyn DigestEntry>>) {
         self.digests.push(create);
     }
 
-    pub fn reg_cipher(&mut self, create: fn() -> Box<dyn CipherEntry>) {
+    pub fn reg_cipher(&mut self, create: fn() -> Vec<Box<dyn CipherEntry>>) {
         self.ciphers.push(create);
     }
 
@@ -42,14 +42,23 @@ impl DefaultAlgoBuilder {
     }
 }
 
-// The last registered comes first, so that it is the one a lookup by its name finds
+// The last registered comes first, so that it is the one a lookup by its name finds. The rows of
+// one function stay together, in the order it returns them
 impl DefaultAlgoBuilder {
     fn digest_rows(&self) -> Vec<Box<dyn DigestEntry>> {
-        self.digests.iter().rev().map(|create| create()).collect()
+        self.digests
+            .iter()
+            .rev()
+            .flat_map(|create| create())
+            .collect()
     }
 
     fn cipher_rows(&self) -> Vec<Box<dyn CipherEntry>> {
-        self.ciphers.iter().rev().map(|create| create()).collect()
+        self.ciphers
+            .iter()
+            .rev()
+            .flat_map(|create| create())
+            .collect()
     }
 }
 
@@ -94,18 +103,18 @@ mod tests {
         }
     }
 
-    fn first() -> Box<dyn DigestEntry> {
-        Box::new(Row("FIRST"))
+    fn first() -> Vec<Box<dyn DigestEntry>> {
+        vec![Box::new(Row("FIRST"))]
     }
 
-    fn second() -> Box<dyn DigestEntry> {
-        Box::new(Row("SECOND"))
+    fn second() -> Vec<Box<dyn DigestEntry>> {
+        vec![Box::new(Row("SECOND"))]
     }
 
     #[test]
     fn the_last_registered_digest_comes_first_and_the_built_in_ones_last() {
         let mut builder = DefaultAlgoBuilder::default();
-        let built_in = builder.digests.len();
+        let built_in = builder.digest_rows().len();
         builder.reg_digest(first);
         builder.reg_digest(second);
 
@@ -118,13 +127,8 @@ mod tests {
     #[cfg(feature = "sha256")]
     #[test]
     fn a_new_builder_has_sha256_when_its_feature_is_on() {
-        let builder = DefaultAlgoBuilder::default();
-        let names: Vec<String> = builder
-            .digests
-            .iter()
-            .map(|create| create().name().to_string())
-            .collect();
-        assert!(names.iter().any(|name| name == "SHA-256"));
+        let rows = DefaultAlgoBuilder::default().digest_rows();
+        assert!(rows.iter().any(|row| row.name() == "SHA-256"));
     }
 
     #[cfg(not(feature = "sha256"))]
