@@ -1,5 +1,7 @@
+use std::sync::{Arc, RwLock};
+
 use tc_algo_v2::digest::{Digest, DigestEntry};
-use tc_algo_v2::{Algo, AlgoBuilder, DefaultAlgoBuilder, EntryBase, ErrorKind};
+use tc_algo_v2::{Algo, AlgoBuilder, DefaultAlgoBuilder, EntryBase, ErrorKind, ListPolicy, Policy};
 use tc_asn1::Asn1Oid;
 
 struct Row {
@@ -159,6 +161,81 @@ fn the_helpers_report_an_unknown_digest() {
 
     let by_oid = digests.calculate_by_oid(&oid("1.2.3.5"), b"");
     assert_eq!(by_oid.unwrap_err().kind(), ErrorKind::UnknownDigest);
+}
+
+fn unrelated() -> Box<dyn DigestEntry> {
+    row("UNRELATED-DIGEST", &[], &[], 4)
+}
+
+fn algo_with_policy(
+    rows: &[fn() -> Box<dyn DigestEntry>],
+    policy: impl Policy + 'static,
+) -> Box<dyn Algo> {
+    let mut builder = DefaultAlgoBuilder::default();
+    for row in rows {
+        builder.reg_digest(*row);
+    }
+    builder.set_policy(policy);
+    builder.build()
+}
+
+fn is_listed(algo: &dyn Algo, name: &str) -> bool {
+    algo.digest().algorithms().any(|entry| entry.name() == name)
+}
+
+#[test]
+fn a_policy_leaves_a_digest_out_of_the_list_but_a_lookup_still_finds_it() {
+    let policy = ListPolicy::new().with_deny(["TEST-DIGEST"]);
+    let algo = algo_with_policy(&[older, newer, unrelated], policy);
+
+    assert!(!is_listed(algo.as_ref(), "TEST-DIGEST"));
+    assert!(is_listed(algo.as_ref(), "UNRELATED-DIGEST"));
+
+    assert_eq!(mark_by_name(algo.as_ref(), "TEST-DIGEST"), Some(vec![2]));
+    let mut digest = algo.digest().get_by_oid(&oid("1.2.3.4")).unwrap();
+    assert_eq!(digest.finalize(), [2]);
+}
+
+// What a policy over a watched file does: the file can change while the Algo is in use
+#[derive(Clone, Default)]
+struct WatchedDenyList(Arc<RwLock<Vec<String>>>);
+
+impl Policy for WatchedDenyList {
+    fn filter(&self, entry: &dyn EntryBase) -> bool {
+        let denied = self.0.read().unwrap();
+        !denied.iter().any(|name| name == entry.name())
+    }
+}
+
+#[test]
+fn a_policy_that_changes_its_answer_changes_the_next_list() {
+    let denied = WatchedDenyList::default();
+    let algo = algo_with_policy(&[older], denied.clone());
+    assert!(is_listed(algo.as_ref(), "TEST-DIGEST"));
+
+    denied.0.write().unwrap().push("TEST-DIGEST".to_string());
+    assert!(!is_listed(algo.as_ref(), "TEST-DIGEST"));
+
+    denied.0.write().unwrap().clear();
+    assert!(is_listed(algo.as_ref(), "TEST-DIGEST"));
+}
+
+struct DenyOid(&'static str);
+
+impl Policy for DenyOid {
+    fn filter(&self, entry: &dyn EntryBase) -> bool {
+        !entry.oids().contains(&oid(self.0))
+    }
+}
+
+#[test]
+fn a_policy_can_tell_a_digest_by_its_alias_or_its_oid() {
+    let by_alias = ListPolicy::new().with_deny(["TESTD"]);
+    let algo = algo_with_policy(&[older], by_alias);
+    assert!(!is_listed(algo.as_ref(), "TEST-DIGEST"));
+
+    let algo = algo_with_policy(&[older], DenyOid("1.2.3.4"));
+    assert!(!is_listed(algo.as_ref(), "TEST-DIGEST"));
 }
 
 #[cfg(feature = "sha256")]

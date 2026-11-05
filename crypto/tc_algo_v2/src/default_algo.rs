@@ -7,8 +7,6 @@ pub(crate) struct DefaultAlgo {
     digest: DefaultDigestProvider,
     #[allow(dead_code, reason = "nothing reads it yet")]
     ciphers: Vec<Box<dyn CipherEntry>>,
-    #[allow(dead_code, reason = "nothing reads it yet")]
-    policy: Option<Arc<dyn Policy>>,
 }
 
 impl DefaultAlgo {
@@ -18,9 +16,8 @@ impl DefaultAlgo {
         policy: Option<Arc<dyn Policy>>,
     ) -> Self {
         Self {
-            digest: DefaultDigestProvider::new(digests),
+            digest: DefaultDigestProvider::new(digests, policy),
             ciphers,
-            policy,
         }
     }
 }
