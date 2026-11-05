@@ -4,12 +4,14 @@ use std::sync::Arc;
 use crate::cipher::{self, CipherEntry};
 use crate::default_algo::DefaultAlgo;
 use crate::digest::{self, DigestEntry};
-use crate::{Algo, AlgoBuilder, Policy};
+use crate::generate::CreateKeyGeneratorRows;
+use crate::{Algo, AlgoBuilder, KeyGeneratorEntry, Policy};
 
 #[derive(Clone)]
 pub struct DefaultAlgoBuilder {
     digests: Vec<digest::CreateRows>,
     ciphers: Vec<cipher::CreateRows>,
+    key_generators: Vec<CreateKeyGeneratorRows>,
     policy: Option<Arc<dyn Policy>>,
 }
 
@@ -19,6 +21,7 @@ impl Default for DefaultAlgoBuilder {
         Self {
             digests: digest::BUILT_IN.to_vec(),
             ciphers: cipher::BUILT_IN.to_vec(),
+            key_generators: Vec::new(),
             policy: None,
         }
     }
@@ -31,6 +34,10 @@ impl DefaultAlgoBuilder {
 
     pub fn reg_cipher(&mut self, create: fn() -> Vec<Box<dyn CipherEntry>>) {
         self.ciphers.push(create);
+    }
+
+    pub fn reg_key_generator(&mut self, create: fn() -> Vec<Box<dyn KeyGeneratorEntry>>) {
+        self.key_generators.push(create);
     }
 
     pub fn set_policy(&mut self, policy: impl Policy + 'static) {
@@ -78,6 +85,7 @@ impl fmt::Debug for DefaultAlgoBuilder {
         f.debug_struct("DefaultAlgoBuilder")
             .field("digests", &self.digests.len())
             .field("ciphers", &self.ciphers.len())
+            .field("key_generators", &self.key_generators.len())
             .field("policy", &self.policy.is_some())
             .finish()
     }

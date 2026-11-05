@@ -1,5 +1,4 @@
-use super::Params;
-use crate::AlgoError;
+use crate::{AlgoError, Params};
 
 pub trait KeyGenerator {
     fn init(&mut self, params: &dyn Params) -> Result<(), AlgoError>;

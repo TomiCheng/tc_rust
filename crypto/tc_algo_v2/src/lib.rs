@@ -13,10 +13,10 @@ mod traits;
 
 pub use default_algo_builder::DefaultAlgoBuilder;
 pub use error::{AlgoError, ErrorKind};
+pub use generate::{
+    KeyGenerator, KeyGeneratorEntry, KeyGeneratorProvider, KeyPair, KeyPairGenerator,
+    KeyPairGeneratorEntry, KeyPairGeneratorProvider,
+};
 pub use params::{DefaultParamsOwned, DefaultParamsRef};
 pub use policy::ListPolicy;
-pub use traits::{
-    Algo, AlgoBuilder, EntryBase, KeyGenerator, KeyGeneratorEntry, KeyGeneratorProvider, KeyPair,
-    KeyPairGenerator, KeyPairGeneratorEntry, KeyPairGeneratorProvider, Mac, MacEntry, MacProvider,
-    Params, Policy,
-};
+pub use traits::{Algo, AlgoBuilder, EntryBase, Mac, MacEntry, MacProvider, Params, Policy};

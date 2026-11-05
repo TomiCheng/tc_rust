@@ -1,4 +1,4 @@
-use super::{EntryBase, KeyGenerator};
+use crate::{EntryBase, KeyGenerator};
 
 pub trait KeyGeneratorEntry: EntryBase {
     fn create(&self) -> Box<dyn KeyGenerator>;

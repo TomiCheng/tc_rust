@@ -1,5 +1,4 @@
-use super::Params;
-use crate::AlgoError;
+use crate::{AlgoError, Params};
 
 // Named, so that the public key and the private key cannot be swapped by their order
 pub struct KeyPair {

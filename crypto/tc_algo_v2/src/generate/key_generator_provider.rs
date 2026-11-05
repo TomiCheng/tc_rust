@@ -1,7 +1,6 @@
 use tc_asn1::Asn1Oid;
 
-use super::{KeyGenerator, KeyGeneratorEntry, Params};
-use crate::{AlgoError, ErrorKind};
+use crate::{AlgoError, ErrorKind, KeyGenerator, KeyGeneratorEntry, Params};
 
 pub trait KeyGeneratorProvider {
     fn algorithms(&self) -> Box<dyn Iterator<Item = &dyn KeyGeneratorEntry> + '_>;
