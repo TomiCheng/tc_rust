@@ -3,11 +3,12 @@ use std::sync::Arc;
 
 use crate::default_algo::DefaultAlgo;
 use crate::digest::{self, DigestEntry};
-use crate::{Algo, AlgoBuilder, Policy};
+use crate::{Algo, AlgoBuilder, CipherEntry, Policy};
 
 #[derive(Clone)]
 pub struct DefaultAlgoBuilder {
     digests: Vec<fn() -> Box<dyn DigestEntry>>,
+    ciphers: Vec<fn() -> Box<dyn CipherEntry>>,
     policy: Option<Arc<dyn Policy>>,
 }
 
@@ -16,6 +17,7 @@ impl Default for DefaultAlgoBuilder {
     fn default() -> Self {
         Self {
             digests: digest::BUILT_IN.to_vec(),
+            ciphers: Vec::new(),
             policy: None,
         }
     }
@@ -24,6 +26,10 @@ impl Default for DefaultAlgoBuilder {
 impl DefaultAlgoBuilder {
     pub fn reg_digest(&mut self, create: fn() -> Box<dyn DigestEntry>) {
         self.digests.push(create);
+    }
+
+    pub fn reg_cipher(&mut self, create: fn() -> Box<dyn CipherEntry>) {
+        self.ciphers.push(create);
     }
 
     pub fn set_policy(&mut self, policy: impl Policy + 'static) {
@@ -35,16 +41,24 @@ impl DefaultAlgoBuilder {
     }
 }
 
+// The last registered comes first, so that it is the one a lookup by its name finds
 impl DefaultAlgoBuilder {
-    // The last registered comes first, so that it is the one a lookup by its name finds
     fn digest_rows(&self) -> Vec<Box<dyn DigestEntry>> {
         self.digests.iter().rev().map(|create| create()).collect()
+    }
+
+    fn cipher_rows(&self) -> Vec<Box<dyn CipherEntry>> {
+        self.ciphers.iter().rev().map(|create| create()).collect()
     }
 }
 
 impl AlgoBuilder for DefaultAlgoBuilder {
     fn build(&self) -> Box<dyn Algo> {
-        Box::new(DefaultAlgo::new(self.digest_rows(), self.policy.clone()))
+        Box::new(DefaultAlgo::new(
+            self.digest_rows(),
+            self.cipher_rows(),
+            self.policy.clone(),
+        ))
     }
 }
 
@@ -53,6 +67,7 @@ impl fmt::Debug for DefaultAlgoBuilder {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("DefaultAlgoBuilder")
             .field("digests", &self.digests.len())
+            .field("ciphers", &self.ciphers.len())
             .field("policy", &self.policy.is_some())
             .finish()
     }
