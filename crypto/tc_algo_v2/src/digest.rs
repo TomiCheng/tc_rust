@@ -1,3 +1,20 @@
+//! Digests, which hash a message of any length to a fixed size.
+//!
+//! An [`Algo`](crate::Algo) finds them by name or OID:
+//!
+//! ```
+//! # #[cfg(feature = "sha256")] {
+//! use tc_algo_v2::{AlgoBuilder, DefaultAlgoBuilder};
+//!
+//! let algo = DefaultAlgoBuilder::default().build();
+//!
+//! let mut digest = algo.digest().get_by_name("SHA-256").unwrap();
+//! digest.update(b"abc");
+//! let hash = digest.finalize();
+//! assert_eq!(hash.len(), 32);
+//! # }
+//! ```
+
 mod algo;
 mod default_digest_provider;
 mod digest_entry;
