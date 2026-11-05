@@ -2,7 +2,7 @@ use core::error::Error;
 
 use tc_aes::AesEngine;
 use tc_asn1::Asn1Oid;
-use tc_block_modes::EcbBlockCipher;
+use tc_block_modes::{CbcBlockCipher, EcbBlockCipher};
 use tc_buffered_cipher::{
     BufferedBlockCipher, BufferedCipher, BufferedError, PaddedBufferedBlockCipher,
 };
@@ -11,7 +11,7 @@ use crate::cipher::{Cipher, CipherDirection, CipherEntry};
 use crate::{AlgoError, EntryBase, ErrorKind, Params};
 
 // The rows of AES, to give to DefaultAlgoBuilder::reg_cipher. Their names and OIDs are those of
-// Bouncy Castle's CipherUtilities, where the NIST ECB OIDs mean ECB with PKCS#7
+// Bouncy Castle's CipherUtilities, where the NIST ECB and CBC OIDs mean those modes with PKCS#7
 pub(super) fn aes() -> Vec<Box<dyn CipherEntry>> {
     vec![
         row("AES/ECB/NOPADDING", &[], &[], || {
@@ -27,11 +27,28 @@ pub(super) fn aes() -> Vec<Box<dyn CipherEntry>> {
             ],
             || Box::new(Buffered(PaddedBufferedBlockCipher::new(ecb()))),
         ),
+        row("AES/CBC/NOPADDING", &[], &[], || {
+            Box::new(Buffered(BufferedBlockCipher::new(cbc())))
+        }),
+        row(
+            "AES/CBC/PKCS7PADDING",
+            &["AES/CBC/PKCS7", "AES/CBC/PKCS5PADDING", "AES/CBC/PKCS5"],
+            &[
+                "2.16.840.1.101.3.4.1.2",
+                "2.16.840.1.101.3.4.1.22",
+                "2.16.840.1.101.3.4.1.42",
+            ],
+            || Box::new(Buffered(PaddedBufferedBlockCipher::new(cbc()))),
+        ),
     ]
 }
 
 fn ecb() -> EcbBlockCipher<AesEngine> {
     EcbBlockCipher::new(AesEngine::new())
+}
+
+fn cbc() -> CbcBlockCipher<AesEngine> {
+    CbcBlockCipher::new(AesEngine::new())
 }
 
 fn row(
