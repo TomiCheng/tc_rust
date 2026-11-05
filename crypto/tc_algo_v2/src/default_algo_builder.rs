@@ -1,11 +1,14 @@
 use core::fmt;
 use std::sync::Arc;
 
+use rand::rngs::SysRng;
+use rand_core::{CryptoRng, UnwrapErr};
+
 use crate::cipher::{self, CipherEntry};
 use crate::default_algo::DefaultAlgo;
 use crate::digest::{self, DigestEntry};
-use crate::generate::CreateKeyGeneratorRows;
-use crate::{Algo, AlgoBuilder, KeyGeneratorEntry, Policy};
+use crate::generate::{BUILT_IN_KEY_GENERATORS, CreateKeyGeneratorRows};
+use crate::{Algo, AlgoBuilder, DefaultAlgoContext, KeyGeneratorEntry, Policy};
 
 #[derive(Clone)]
 pub struct DefaultAlgoBuilder {
@@ -13,6 +16,12 @@ pub struct DefaultAlgoBuilder {
     ciphers: Vec<cipher::CreateRows>,
     key_generators: Vec<CreateKeyGeneratorRows>,
     policy: Option<Arc<dyn Policy>>,
+    rand: fn() -> Box<dyn CryptoRng>,
+}
+
+// The operating system's random numbers; a failure to get them panics
+fn os_rand() -> Box<dyn CryptoRng> {
+    Box::new(UnwrapErr(SysRng))
 }
 
 // Starts with the algorithms whose features are on
@@ -21,8 +30,9 @@ impl Default for DefaultAlgoBuilder {
         Self {
             digests: digest::BUILT_IN.to_vec(),
             ciphers: cipher::BUILT_IN.to_vec(),
-            key_generators: Vec::new(),
+            key_generators: BUILT_IN_KEY_GENERATORS.to_vec(),
             policy: None,
+            rand: os_rand,
         }
     }
 }
@@ -36,7 +46,10 @@ impl DefaultAlgoBuilder {
         self.ciphers.push(create);
     }
 
-    pub fn reg_key_generator(&mut self, create: fn() -> Vec<Box<dyn KeyGeneratorEntry>>) {
+    pub fn reg_key_generator(
+        &mut self,
+        create: fn(&DefaultAlgoContext) -> Vec<Box<dyn KeyGeneratorEntry>>,
+    ) {
         self.key_generators.push(create);
     }
 
@@ -46,6 +59,10 @@ impl DefaultAlgoBuilder {
 
     pub fn clear_policy(&mut self) {
         self.policy = None;
+    }
+
+    pub fn set_rand(&mut self, rand: fn() -> Box<dyn CryptoRng>) {
+        self.rand = rand;
     }
 }
 
@@ -67,6 +84,15 @@ impl DefaultAlgoBuilder {
             .flat_map(|create| create())
             .collect()
     }
+
+    fn key_generator_rows(&self) -> Vec<Box<dyn KeyGeneratorEntry>> {
+        let context = DefaultAlgoContext::new(self.rand);
+        self.key_generators
+            .iter()
+            .rev()
+            .flat_map(|create| create(&context))
+            .collect()
+    }
 }
 
 impl AlgoBuilder for DefaultAlgoBuilder {
@@ -74,6 +100,7 @@ impl AlgoBuilder for DefaultAlgoBuilder {
         Box::new(DefaultAlgo::new(
             self.digest_rows(),
             self.cipher_rows(),
+            self.key_generator_rows(),
             self.policy.clone(),
         ))
     }
@@ -87,6 +114,7 @@ impl fmt::Debug for DefaultAlgoBuilder {
             .field("ciphers", &self.ciphers.len())
             .field("key_generators", &self.key_generators.len())
             .field("policy", &self.policy.is_some())
+            .field("rand", &self.rand)
             .finish()
     }
 }

@@ -912,6 +912,8 @@ dependencies = [
 name = "tc_algo_v2"
 version = "0.1.0"
 dependencies = [
+ "rand",
+ "rand_core",
  "tc_aes",
  "tc_asn1",
  "tc_block_modes",

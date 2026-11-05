@@ -3,6 +3,7 @@
 pub mod cipher;
 mod default_algo;
 mod default_algo_builder;
+mod default_algo_context;
 pub mod digest;
 mod error;
 mod generate;
@@ -12,6 +13,7 @@ mod policy;
 mod traits;
 
 pub use default_algo_builder::DefaultAlgoBuilder;
+pub use default_algo_context::DefaultAlgoContext;
 pub use error::{AlgoError, ErrorKind};
 pub use generate::{
     KeyGenerator, KeyGeneratorEntry, KeyGeneratorProvider, KeyPair, KeyPairGenerator,
