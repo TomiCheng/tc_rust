@@ -914,6 +914,8 @@ version = "0.1.0"
 dependencies = [
  "tc_asn1",
  "tc_constant_time",
+ "tc_digest",
+ "tc_sha",
 ]
 
 [[package]]

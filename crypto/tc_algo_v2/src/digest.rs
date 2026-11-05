@@ -1,22 +1,11 @@
-mod empty_digest_provider;
+mod algo;
 mod digest_entry;
 mod digest_provider;
+mod digest_trait;
+mod empty_digest_provider;
 
-pub(crate) use empty_digest_provider::EmptyDigestProvider;
+pub(crate) use algo::BUILT_IN;
 pub use digest_entry::DigestEntry;
 pub use digest_provider::DigestProvider;
-
-pub trait Digest {
-    // The length of the hash, in bytes
-    fn digest_size(&self) -> usize;
-
-    // The length of the block it works on, in bytes, which HMAC needs
-    fn byte_length(&self) -> usize;
-
-    fn update(&mut self, input: &[u8]);
-
-    // The hash, after which the digest starts the next message
-    fn finalize(&mut self) -> Vec<u8>;
-
-    fn reset(&mut self);
-}
+pub use digest_trait::Digest;
+pub(crate) use empty_digest_provider::EmptyDigestProvider;
