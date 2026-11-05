@@ -1,13 +1,12 @@
 use std::sync::Arc;
-use crate::cipher::CipherEntry;
+use crate::cipher::{CipherEntry, CipherProvider, DefaultCipherProvider};
 use crate::digest::{DefaultDigestProvider, DigestEntry, DigestProvider};
 
 use crate::{Algo, Policy};
 
 pub(crate) struct DefaultAlgo {
     digest: DefaultDigestProvider,
-    #[allow(dead_code, reason = "nothing reads it yet")]
-    ciphers: Vec<Box<dyn CipherEntry>>,
+    cipher: DefaultCipherProvider,
 }
 
 impl DefaultAlgo {
@@ -17,8 +16,8 @@ impl DefaultAlgo {
         policy: Option<Arc<dyn Policy>>,
     ) -> Self {
         Self {
-            digest: DefaultDigestProvider::new(digests, policy),
-            ciphers,
+            digest: DefaultDigestProvider::new(digests, policy.clone()),
+            cipher: DefaultCipherProvider::new(ciphers, policy),
         }
     }
 }
@@ -26,5 +25,9 @@ impl DefaultAlgo {
 impl Algo for DefaultAlgo {
     fn digest(&self) -> &dyn DigestProvider {
         &self.digest
+    }
+
+    fn cipher(&self) -> &dyn CipherProvider {
+        &self.cipher
     }
 }
