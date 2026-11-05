@@ -1,5 +1,4 @@
-use super::Params;
-use crate::AlgoError;
+use crate::{AlgoError, Params};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum CipherDirection {

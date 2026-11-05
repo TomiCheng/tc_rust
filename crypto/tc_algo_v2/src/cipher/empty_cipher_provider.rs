@@ -2,7 +2,7 @@ use core::iter;
 
 use tc_asn1::Asn1Oid;
 
-use crate::{Cipher, CipherEntry, CipherProvider};
+use crate::cipher::{Cipher, CipherEntry, CipherProvider};
 
 pub(crate) struct EmptyCipherProvider;
 

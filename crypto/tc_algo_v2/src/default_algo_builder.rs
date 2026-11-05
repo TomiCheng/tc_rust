@@ -1,9 +1,10 @@
 use core::fmt;
 use std::sync::Arc;
 
+use crate::cipher::CipherEntry;
 use crate::default_algo::DefaultAlgo;
 use crate::digest::{self, DigestEntry};
-use crate::{Algo, AlgoBuilder, CipherEntry, Policy};
+use crate::{Algo, AlgoBuilder, Policy};
 
 #[derive(Clone)]
 pub struct DefaultAlgoBuilder {

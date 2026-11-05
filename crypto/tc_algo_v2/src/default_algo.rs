@@ -1,7 +1,8 @@
 use std::sync::Arc;
+use crate::cipher::CipherEntry;
 use crate::digest::{DefaultDigestProvider, DigestEntry, DigestProvider};
 
-use crate::{Algo, CipherEntry, Policy};
+use crate::{Algo, Policy};
 
 pub(crate) struct DefaultAlgo {
     digest: DefaultDigestProvider,

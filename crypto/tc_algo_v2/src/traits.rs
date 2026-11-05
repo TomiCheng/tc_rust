@@ -1,8 +1,5 @@
 mod algo;
 mod algo_builder;
-mod cipher;
-mod cipher_entry;
-mod cipher_provider;
 mod entry_base;
 mod key_generator;
 mod key_generator_entry;
@@ -18,9 +15,6 @@ mod policy;
 
 pub use algo::Algo;
 pub use algo_builder::AlgoBuilder;
-pub use cipher::{Cipher, CipherDirection};
-pub use cipher_entry::CipherEntry;
-pub use cipher_provider::CipherProvider;
 pub use entry_base::EntryBase;
 pub use key_generator::KeyGenerator;
 pub use key_generator_entry::KeyGeneratorEntry;

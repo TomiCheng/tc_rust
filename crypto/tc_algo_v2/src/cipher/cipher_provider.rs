@@ -1,7 +1,7 @@
 use tc_asn1::Asn1Oid;
 
-use super::{Cipher, CipherDirection, CipherEntry, Params};
-use crate::{AlgoError, ErrorKind};
+use crate::cipher::{Cipher, CipherDirection, CipherEntry};
+use crate::{AlgoError, ErrorKind, Params};
 
 pub trait CipherProvider {
     fn algorithms(&self) -> Box<dyn Iterator<Item = &dyn CipherEntry> + '_>;
