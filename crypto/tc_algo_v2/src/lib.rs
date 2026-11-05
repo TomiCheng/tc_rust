@@ -17,6 +17,5 @@ pub use generate::{
     KeyGenerator, KeyGeneratorEntry, KeyGeneratorProvider, KeyPair, KeyPairGenerator,
     KeyPairGeneratorEntry, KeyPairGeneratorProvider,
 };
-pub use params::{DefaultParamsOwned, DefaultParamsRef};
 pub use policy::ListPolicy;
 pub use traits::{Algo, AlgoBuilder, EntryBase, Mac, MacEntry, MacProvider, Params, Policy};

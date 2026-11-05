@@ -1,3 +1,5 @@
-pub trait Params {
-    fn as_bytes(&self) -> &[u8];
+use core::any::Any;
+
+pub trait Params: Any {
+    fn as_any(&self) -> &dyn Any;
 }

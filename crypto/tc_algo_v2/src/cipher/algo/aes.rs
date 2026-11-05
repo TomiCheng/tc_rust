@@ -129,9 +129,9 @@ impl CipherEntry for Row {
     }
 }
 
-// Puts a buffered cipher, whatever its padding, behind Cipher. Its params are those of
-// BlockCipherParams. Unlike Bouncy Castle, a missing or a short IV is refused: run as zeros, it
-// could repeat a keystream without anyone noticing
+// Puts a buffered cipher, whatever its padding, behind Cipher. Its params are a BlockCipherParams.
+// Unlike Bouncy Castle, a missing or a short IV is refused: run as zeros, it could repeat a
+// keystream without anyone noticing
 struct Buffered<C>(C);
 
 impl<C, E, I> Cipher for Buffered<C>
@@ -142,7 +142,7 @@ where
     I: Error + Send + Sync + 'static,
 {
     fn init(&mut self, direction: CipherDirection, params: &dyn Params) -> Result<(), AlgoError> {
-        let params = BlockCipherParams::from_bytes(params.as_bytes())?;
+        let params = block_cipher_params(params)?;
         let iv = params
             .iv()
             .filter(|iv| iv.len() == BLOCK_BYTES)
@@ -180,7 +180,7 @@ where
     I: Error + Send + Sync + 'static,
 {
     fn init(&mut self, direction: CipherDirection, params: &dyn Params) -> Result<(), AlgoError> {
-        let params = BlockCipherParams::from_bytes(params.as_bytes())?;
+        let params = block_cipher_params(params)?;
         start(&mut self.0.0, direction, params.key(), &[])
     }
 
@@ -191,6 +191,13 @@ where
     fn finalize(&mut self) -> Result<Vec<u8>, AlgoError> {
         self.0.finalize()
     }
+}
+
+fn block_cipher_params(params: &dyn Params) -> Result<&BlockCipherParams, AlgoError> {
+    params
+        .as_any()
+        .downcast_ref::<BlockCipherParams>()
+        .ok_or(AlgoError::new(ErrorKind::InvalidParams))
 }
 
 fn start<C, I>(
@@ -450,18 +457,18 @@ mod tests {
         );
     }
 
-    struct RawKey;
+    struct OtherParams;
 
-    impl Params for RawKey {
-        fn as_bytes(&self) -> &[u8] {
-            &KEY
+    impl Params for OtherParams {
+        fn as_any(&self) -> &dyn core::any::Any {
+            self
         }
     }
 
     #[test]
-    fn init_refuses_params_in_another_format() {
+    fn init_refuses_params_of_another_type() {
         assert_eq!(
-            init_error("AES/ECB/NOPADDING", &RawKey),
+            init_error("AES/ECB/NOPADDING", &OtherParams),
             ErrorKind::InvalidParams
         );
     }
