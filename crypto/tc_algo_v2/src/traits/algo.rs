@@ -1,8 +1,8 @@
 use super::{
-    CipherProvider, DigestProvider, KeyGeneratorProvider, KeyPairGeneratorProvider, MacProvider,
+    CipherProvider, KeyGeneratorProvider, KeyPairGeneratorProvider, MacProvider,
 };
 use crate::cipher::EmptyCipherProvider;
-use crate::digest::EmptyDigestProvider;
+use crate::digest::{EmptyDigestProvider, DigestProvider};
 use crate::generate::{EmptyKeyGeneratorProvider, EmptyKeyPairGeneratorProvider};
 use crate::mac::EmptyMacProvider;
 

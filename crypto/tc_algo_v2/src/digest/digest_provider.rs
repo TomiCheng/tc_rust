@@ -1,6 +1,6 @@
 use tc_asn1::Asn1Oid;
 
-use super::{Digest, DigestEntry};
+use crate::digest::{Digest, DigestEntry};
 use crate::{AlgoError, ErrorKind};
 
 pub trait DigestProvider {

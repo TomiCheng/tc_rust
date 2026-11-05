@@ -3,7 +3,7 @@
 mod cipher;
 mod default_algo;
 mod default_algo_builder;
-mod digest;
+pub mod digest;
 mod error;
 mod generate;
 mod mac;
@@ -14,8 +14,8 @@ pub use default_algo_builder::DefaultAlgoBuilder;
 pub use error::{AlgoError, ErrorKind};
 pub use policy::ListPolicy;
 pub use traits::{
-    Algo, AlgoBuilder, Cipher, CipherDirection, CipherEntry, CipherProvider, Digest, DigestEntry,
-    DigestProvider, EntryBase, KeyGenerator, KeyGeneratorEntry, KeyGeneratorProvider, KeyPair,
+    Algo, AlgoBuilder, Cipher, CipherDirection, CipherEntry, CipherProvider, 
+    EntryBase, KeyGenerator, KeyGeneratorEntry, KeyGeneratorProvider, KeyPair,
     KeyPairGenerator, KeyPairGeneratorEntry, KeyPairGeneratorProvider, Mac, MacEntry, MacProvider,
     Params, Policy,
 };

@@ -1,6 +1,7 @@
 use std::sync::Arc;
+use crate::digest::DigestEntry;
 
-use crate::{Algo, DigestEntry, Policy};
+use crate::{Algo, Policy};
 
 #[allow(dead_code, reason = "nothing reads them yet")]
 pub(crate) struct DefaultAlgo {

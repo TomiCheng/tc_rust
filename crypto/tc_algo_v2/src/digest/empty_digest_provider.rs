@@ -2,7 +2,7 @@ use core::iter;
 
 use tc_asn1::Asn1Oid;
 
-use crate::{Digest, DigestEntry, DigestProvider};
+use crate::digest::{Digest, DigestEntry, DigestProvider};
 
 pub(crate) struct EmptyDigestProvider;
 

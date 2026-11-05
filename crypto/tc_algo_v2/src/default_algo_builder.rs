@@ -2,7 +2,8 @@ use core::fmt;
 use std::sync::Arc;
 
 use crate::default_algo::DefaultAlgo;
-use crate::{Algo, AlgoBuilder, DigestEntry, Policy};
+use crate::digest::DigestEntry;
+use crate::{Algo, AlgoBuilder, Policy};
 
 #[derive(Clone, Default)]
 pub struct DefaultAlgoBuilder {
