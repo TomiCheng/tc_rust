@@ -1,8 +1,7 @@
 use rand_core::CryptoRng;
 use tc_asn1::Asn1Oid;
-use tc_zeroize::Zeroize;
 
-use crate::cipher::BlockCipherParams;
+use crate::cipher::KeyOwned;
 use crate::{AlgoError, DefaultAlgoContext, EntryBase, KeyGenerator, KeyGeneratorEntry, Params};
 
 // The rows of AES, to give to DefaultAlgoBuilder::reg_key_generator. Their names and OIDs are those
@@ -73,9 +72,7 @@ impl KeyGenerator for AesKeyGenerator {
     fn generate(&mut self) -> Result<Box<dyn Params>, AlgoError> {
         let mut key = vec![0; self.key_len];
         self.rand.fill_bytes(&mut key);
-        let params = BlockCipherParams::new().with_key(&key);
-        key.zeroize();
-        Ok(Box::new(params))
+        Ok(Box::new(KeyOwned::new(key)))
     }
 }
 
@@ -87,12 +84,12 @@ mod tests {
     use rand_core::{CryptoRng, TryCryptoRng, TryRng};
     use tc_asn1::Asn1Oid;
 
-    use crate::cipher::BlockCipherParams;
+    use crate::cipher::{KeyOwned, KeyParams};
     use crate::{AlgoBuilder, DefaultAlgoBuilder, ErrorKind, KeyGenerator, Params};
 
     fn key_of(key: &dyn Params) -> Vec<u8> {
-        let params = key.as_any().downcast_ref::<BlockCipherParams>();
-        params.expect("a BlockCipherParams").key().to_vec()
+        let key = key.as_any().downcast_ref::<KeyOwned>();
+        key.expect("a KeyOwned").key().to_vec()
     }
 
     fn oid(dotted: &str) -> Asn1Oid {

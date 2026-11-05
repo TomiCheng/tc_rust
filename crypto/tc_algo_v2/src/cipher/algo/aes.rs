@@ -2,15 +2,13 @@ use core::error::Error;
 
 use tc_aes::AesEngine;
 use tc_asn1::Asn1Oid;
-use tc_block_modes::{
-    CbcBlockCipher, CfbBlockCipher, EcbBlockCipher, KeyWithIvRef, OfbBlockCipher,
-};
+use tc_block_modes::{CbcBlockCipher, CfbBlockCipher, EcbBlockCipher, OfbBlockCipher};
 use tc_buffered_cipher::{
     BufferedBlockCipher, BufferedCipher, BufferedCipherInit, BufferedError,
     CipherDirection as BufferedDirection, PaddedBufferedBlockCipher,
 };
 
-use crate::cipher::{BlockCipherParams, Cipher, CipherDirection, CipherEntry};
+use crate::cipher::{Cipher, CipherDirection, CipherEntry, IvParams, KeyOwned, KeyWithIvOwned};
 use crate::{AlgoError, EntryBase, ErrorKind, Params};
 
 // The rows of AES, to give to DefaultAlgoBuilder::reg_cipher. Their names and OIDs are those of
@@ -129,25 +127,25 @@ impl CipherEntry for Row {
     }
 }
 
-// Puts a buffered cipher, whatever its padding, behind Cipher. Its params are a BlockCipherParams.
-// Unlike Bouncy Castle, a missing or a short IV is refused: run as zeros, it could repeat a
-// keystream without anyone noticing
+// Puts a buffered cipher, whatever its padding, behind Cipher. Its params are a KeyWithIvOwned.
+// Unlike Bouncy Castle, a short IV is refused: padded with zeros, it could repeat a keystream
+// without anyone noticing
 struct Buffered<C>(C);
 
 impl<C, E, I> Cipher for Buffered<C>
 where
-    C: BufferedCipher<Error = BufferedError<E>>
-        + for<'a> BufferedCipherInit<KeyWithIvRef<'a>, Error = I>,
+    C: BufferedCipher<Error = BufferedError<E>> + BufferedCipherInit<KeyWithIvOwned, Error = I>,
     E: Error + Send + Sync + 'static,
     I: Error + Send + Sync + 'static,
 {
     fn init(&mut self, direction: CipherDirection, params: &dyn Params) -> Result<(), AlgoError> {
-        let params = block_cipher_params(params)?;
-        let iv = params
-            .iv()
-            .filter(|iv| iv.len() == BLOCK_BYTES)
-            .ok_or(AlgoError::new(ErrorKind::InvalidParams))?;
-        start(&mut self.0, direction, params.key(), iv)
+        let params = downcast::<KeyWithIvOwned>(params)?;
+        if params.iv().len() != BLOCK_BYTES {
+            return Err(AlgoError::new(ErrorKind::InvalidParams));
+        }
+        self.0
+            .init(buffered_direction(direction), params)
+            .map_err(invalid_params)
     }
 
     fn update(&mut self, input: &[u8]) -> Result<Vec<u8>, AlgoError> {
@@ -170,18 +168,21 @@ where
     }
 }
 
-// ECB has no IV, so it does not read one it is given
+// ECB has no IV, so its params are a KeyOwned
 struct Ecb<C>(Buffered<C>);
 
 impl<C, I> Cipher for Ecb<C>
 where
     Buffered<C>: Cipher,
-    C: for<'a> BufferedCipherInit<KeyWithIvRef<'a>, Error = I>,
+    C: BufferedCipherInit<KeyOwned, Error = I>,
     I: Error + Send + Sync + 'static,
 {
     fn init(&mut self, direction: CipherDirection, params: &dyn Params) -> Result<(), AlgoError> {
-        let params = block_cipher_params(params)?;
-        start(&mut self.0.0, direction, params.key(), &[])
+        let params = downcast::<KeyOwned>(params)?;
+        self.0
+            .0
+            .init(buffered_direction(direction), params)
+            .map_err(invalid_params)
     }
 
     fn update(&mut self, input: &[u8]) -> Result<Vec<u8>, AlgoError> {
@@ -193,30 +194,22 @@ where
     }
 }
 
-fn block_cipher_params(params: &dyn Params) -> Result<&BlockCipherParams, AlgoError> {
+fn downcast<T: 'static>(params: &dyn Params) -> Result<&T, AlgoError> {
     params
         .as_any()
-        .downcast_ref::<BlockCipherParams>()
+        .downcast_ref::<T>()
         .ok_or(AlgoError::new(ErrorKind::InvalidParams))
 }
 
-fn start<C, I>(
-    cipher: &mut C,
-    direction: CipherDirection,
-    key: &[u8],
-    iv: &[u8],
-) -> Result<(), AlgoError>
-where
-    C: for<'a> BufferedCipherInit<KeyWithIvRef<'a>, Error = I>,
-    I: Error + Send + Sync + 'static,
-{
-    let direction = match direction {
+fn buffered_direction(direction: CipherDirection) -> BufferedDirection {
+    match direction {
         CipherDirection::Encrypt => BufferedDirection::Encrypt,
         CipherDirection::Decrypt => BufferedDirection::Decrypt,
-    };
-    cipher
-        .init(direction, &KeyWithIvRef::new(key, iv))
-        .map_err(|error| AlgoError::with_source(ErrorKind::InvalidParams, error))
+    }
+}
+
+fn invalid_params<E: Error + Send + Sync + 'static>(error: E) -> AlgoError {
+    AlgoError::with_source(ErrorKind::InvalidParams, error)
 }
 
 fn algo_error<E: Error + Send + Sync + 'static>(error: BufferedError<E>) -> AlgoError {
@@ -231,7 +224,7 @@ fn algo_error<E: Error + Send + Sync + 'static>(error: BufferedError<E>) -> Algo
 #[cfg(test)]
 mod tests {
     use super::aes;
-    use crate::cipher::{BlockCipherParams, Cipher, CipherDirection, CipherEntry};
+    use crate::cipher::{Cipher, CipherDirection, CipherEntry, KeyOwned, KeyWithIvOwned};
     use crate::{AlgoBuilder, DefaultAlgoBuilder, ErrorKind, Params};
 
     // The example in FIPS 197, appendix C.1
@@ -290,10 +283,17 @@ mod tests {
             .expect("a row of AES")
     }
 
+    fn key_only(key: &[u8]) -> KeyOwned {
+        KeyOwned::new(key.to_vec())
+    }
+
+    fn key_and_iv(key: &[u8], iv: &[u8]) -> KeyWithIvOwned {
+        KeyWithIvOwned::new(key.to_vec(), iv.to_vec())
+    }
+
     fn keyed(direction: CipherDirection) -> Box<dyn Cipher> {
         let mut cipher = entry("AES/ECB/NOPADDING").create();
-        let params = BlockCipherParams::new().with_key(&KEY);
-        cipher.init(direction, &params).unwrap();
+        cipher.init(direction, &key_only(&KEY)).unwrap();
         cipher
     }
 
@@ -314,7 +314,7 @@ mod tests {
     fn the_cbc_row_gives_the_standard_ciphertext_through_the_helpers() {
         let algo = DefaultAlgoBuilder::default().build();
         let ciphers = algo.cipher();
-        let params = BlockCipherParams::new().with_key(&CBC_KEY).with_iv(&CBC_IV);
+        let params = key_and_iv(&CBC_KEY, &CBC_IV);
 
         let encrypted = ciphers
             .encrypt_by_name("AES/CBC/NOPADDING", &params, &CBC_PLAINTEXT)
@@ -331,7 +331,7 @@ mod tests {
     fn the_cfb_and_ofb_rows_give_the_standard_ciphertext() {
         let algo = DefaultAlgoBuilder::default().build();
         let ciphers = algo.cipher();
-        let params = BlockCipherParams::new().with_key(&CBC_KEY).with_iv(&CBC_IV);
+        let params = key_and_iv(&CBC_KEY, &CBC_IV);
         let plaintext = [CBC_PLAINTEXT, SECOND_PLAINTEXT].concat();
 
         for (name, ciphertext) in [
@@ -350,7 +350,7 @@ mod tests {
     fn the_cfb_and_ofb_rows_take_a_partial_last_block() {
         let algo = DefaultAlgoBuilder::default().build();
         let ciphers = algo.cipher();
-        let params = BlockCipherParams::new().with_key(&CBC_KEY).with_iv(&CBC_IV);
+        let params = key_and_iv(&CBC_KEY, &CBC_IV);
         let plaintext = [CBC_PLAINTEXT, SECOND_PLAINTEXT].concat();
 
         for (name, ciphertext) in [
@@ -370,8 +370,8 @@ mod tests {
         let ciphers = algo.cipher();
         let message = b"attack at dawn";
 
-        let without_iv = BlockCipherParams::new().with_key(&KEY);
-        let with_iv = BlockCipherParams::new().with_key(&KEY).with_iv(&CBC_IV);
+        let without_iv = key_only(&KEY);
+        let with_iv = key_and_iv(&KEY, &CBC_IV);
         let rows: [(&str, &dyn Params); 2] = [
             ("AES/ECB/PKCS7PADDING", &without_iv),
             ("AES/CBC/PKCS7PADDING", &with_iv),
@@ -388,7 +388,7 @@ mod tests {
     #[test]
     fn a_padded_row_reports_a_bad_padding_as_invalid_ciphertext() {
         let algo = DefaultAlgoBuilder::default().build();
-        let params = BlockCipherParams::new().with_key(&KEY);
+        let params = key_only(&KEY);
 
         // PLAINTEXT ends in 0xff, which is no PKCS#7 padding
         let result = algo
@@ -398,22 +398,18 @@ mod tests {
     }
 
     #[test]
-    fn ecb_does_not_read_an_iv() {
-        let algo = DefaultAlgoBuilder::default().build();
-        let params = BlockCipherParams::new().with_key(&KEY).with_iv(&CBC_IV);
-
-        let encrypted = algo
-            .cipher()
-            .encrypt_by_name("AES/ECB/NOPADDING", &params, &PLAINTEXT)
-            .unwrap();
-        assert_eq!(encrypted, CIPHERTEXT);
+    fn the_ecb_rows_refuse_params_with_an_iv() {
+        let params = key_and_iv(&KEY, &CBC_IV);
+        for name in ["AES/ECB/NOPADDING", "AES/ECB/PKCS7PADDING"] {
+            assert_eq!(init_error(name, &params), ErrorKind::InvalidParams);
+        }
     }
 
     // With an IV of zeros, the first block of CBC is the same as ECB
     #[test]
     fn an_iv_of_zeros_works_when_it_is_given() {
         let algo = DefaultAlgoBuilder::default().build();
-        let params = BlockCipherParams::new().with_key(&KEY).with_iv(&[0; 16]);
+        let params = key_and_iv(&KEY, &[0; 16]);
 
         let encrypted = algo
             .cipher()
@@ -424,9 +420,10 @@ mod tests {
 
     #[test]
     fn the_modes_with_an_iv_refuse_a_missing_or_a_wrong_one() {
-        let missing = BlockCipherParams::new().with_key(&KEY);
-        let short = BlockCipherParams::new().with_key(&KEY).with_iv(&[0; 15]);
-        let long = BlockCipherParams::new().with_key(&KEY).with_iv(&[0; 17]);
+        let missing = key_only(&KEY);
+        let short = key_and_iv(&KEY, &[0; 15]);
+        let empty = key_and_iv(&KEY, &[]);
+        let long = key_and_iv(&KEY, &[0; 17]);
 
         for name in [
             "AES/CBC/NOPADDING",
@@ -434,7 +431,8 @@ mod tests {
             "AES/CFB/NOPADDING",
             "AES/OFB/NOPADDING",
         ] {
-            for params in [&missing, &short, &long] {
+            let params: [&dyn Params; 4] = [&missing, &short, &empty, &long];
+            for params in params {
                 assert_eq!(init_error(name, params), ErrorKind::InvalidParams);
             }
         }
@@ -442,17 +440,12 @@ mod tests {
 
     #[test]
     fn init_refuses_a_key_or_an_iv_of_the_wrong_length() {
-        let short_key = BlockCipherParams::new().with_key(&KEY[..15]);
         assert_eq!(
-            init_error("AES/ECB/NOPADDING", &short_key),
+            init_error("AES/ECB/NOPADDING", &key_only(&KEY[..15])),
             ErrorKind::InvalidParams
         );
-
-        let short_iv = BlockCipherParams::new()
-            .with_key(&KEY)
-            .with_iv(&CBC_IV[..15]);
         assert_eq!(
-            init_error("AES/CBC/NOPADDING", &short_iv),
+            init_error("AES/CBC/NOPADDING", &key_and_iv(&KEY[..15], &CBC_IV)),
             ErrorKind::InvalidParams
         );
     }

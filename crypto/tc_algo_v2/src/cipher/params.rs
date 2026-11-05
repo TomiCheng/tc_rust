@@ -1,3 +1,18 @@
-mod block_cipher_params;
+use core::any::Any;
 
-pub use block_cipher_params::BlockCipherParams;
+use tc_block_cipher::KeyOwned;
+use tc_block_modes::KeyWithIvOwned;
+
+use crate::Params;
+
+impl Params for KeyOwned {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
+impl Params for KeyWithIvOwned {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}

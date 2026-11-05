@@ -13,17 +13,17 @@ default = []
 sha256 = ["dep:tc_sha", "dep:tc_digest"]
 
 # Block Cipher
-aes = ["dep:tc_aes", "dep:tc_block_modes", "dep:tc_buffered_cipher"]
+aes = ["dep:tc_aes", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_buffered_cipher"]
 
 [dependencies]
 rand = { version = "0.10", default-features = false, features = ["sys_rng"] }
 rand_core = "0.10"
 tc_asn1 = "0.1.2"
+tc_block_cipher = { version = "0.1.0", features = ["alloc"], optional = true }
 tc_block_modes = { version = "0.1.1", features = ["alloc"], optional = true }
 tc_buffered_cipher = { version = "0.1.1", features = ["alloc"], optional = true }
 tc_constant_time = "0.1.0"
 tc_digest = { version = "0.1.1", optional = true }
-tc_zeroize = { version = "0.1.0", features = ["alloc"] }
 
 # Digest
 tc_sha = { version = "0.1.1", optional = true }
