@@ -1,7 +1,7 @@
 use core::fmt;
 use std::sync::Arc;
 
-use crate::cipher::CipherEntry;
+use crate::cipher::{self, CipherEntry};
 use crate::default_algo::DefaultAlgo;
 use crate::digest::{self, DigestEntry};
 use crate::{Algo, AlgoBuilder, Policy};
@@ -18,7 +18,7 @@ impl Default for DefaultAlgoBuilder {
     fn default() -> Self {
         Self {
             digests: digest::BUILT_IN.to_vec(),
-            ciphers: Vec::new(),
+            ciphers: cipher::BUILT_IN.to_vec(),
             policy: None,
         }
     }
@@ -131,5 +131,11 @@ mod tests {
     #[test]
     fn a_new_builder_has_no_digest_when_no_feature_is_on() {
         assert!(DefaultAlgoBuilder::default().digests.is_empty());
+    }
+
+    #[cfg(not(feature = "aes"))]
+    #[test]
+    fn a_new_builder_has_no_cipher_when_no_feature_is_on() {
+        assert!(DefaultAlgoBuilder::default().ciphers.is_empty());
     }
 }

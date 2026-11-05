@@ -167,6 +167,7 @@ fn the_list_has_the_last_registered_first_and_keeps_the_replaced_cipher() {
     let marks: Vec<u8> = algo
         .cipher()
         .algorithms()
+        .filter(|entry| entry.name() == "TEST-CIPHER")
         .map(|entry| mark_of(entry.create()))
         .collect();
     assert_eq!(marks, [2, 1]);

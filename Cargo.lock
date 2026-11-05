@@ -912,7 +912,11 @@ dependencies = [
 name = "tc_algo_v2"
 version = "0.1.0"
 dependencies = [
+ "tc_aes",
  "tc_asn1",
+ "tc_block_cipher",
+ "tc_block_modes",
+ "tc_buffered_cipher",
  "tc_constant_time",
  "tc_digest",
  "tc_sha",
