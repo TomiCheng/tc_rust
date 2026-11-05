@@ -9,7 +9,11 @@ use tc_asn1::Asn1Oid;
 
 struct NoParams;
 
-impl Params for NoParams {}
+impl Params for NoParams {
+    fn as_bytes(&self) -> &[u8] {
+        &[]
+    }
+}
 
 struct Row {
     name: &'static str,
