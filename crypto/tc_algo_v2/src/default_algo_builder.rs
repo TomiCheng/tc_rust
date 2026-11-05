@@ -35,10 +35,16 @@ impl DefaultAlgoBuilder {
     }
 }
 
+impl DefaultAlgoBuilder {
+    // The last registered comes first, so that it is the one a lookup by its name finds
+    fn digest_rows(&self) -> Vec<Box<dyn DigestEntry>> {
+        self.digests.iter().rev().map(|create| create()).collect()
+    }
+}
+
 impl AlgoBuilder for DefaultAlgoBuilder {
     fn build(&self) -> Box<dyn Algo> {
-        let digests = self.digests.iter().map(|create| create()).collect();
-        Box::new(DefaultAlgo::new(digests, self.policy.clone()))
+        Box::new(DefaultAlgo::new(self.digest_rows(), self.policy.clone()))
     }
 }
 
@@ -55,6 +61,43 @@ impl fmt::Debug for DefaultAlgoBuilder {
 #[cfg(test)]
 mod tests {
     use super::DefaultAlgoBuilder;
+    use crate::EntryBase;
+    use crate::digest::{Digest, DigestEntry};
+
+    struct Row(&'static str);
+
+    impl EntryBase for Row {
+        fn name(&self) -> &str {
+            self.0
+        }
+    }
+
+    impl DigestEntry for Row {
+        fn create(&self) -> Box<dyn Digest> {
+            unreachable!("these tests only read the names")
+        }
+    }
+
+    fn first() -> Box<dyn DigestEntry> {
+        Box::new(Row("FIRST"))
+    }
+
+    fn second() -> Box<dyn DigestEntry> {
+        Box::new(Row("SECOND"))
+    }
+
+    #[test]
+    fn the_last_registered_digest_comes_first_and_the_built_in_ones_last() {
+        let mut builder = DefaultAlgoBuilder::default();
+        let built_in = builder.digests.len();
+        builder.reg_digest(first);
+        builder.reg_digest(second);
+
+        let rows = builder.digest_rows();
+        assert_eq!(rows.len(), built_in + 2);
+        assert_eq!(rows[0].name(), "SECOND");
+        assert_eq!(rows[1].name(), "FIRST");
+    }
 
     #[cfg(feature = "sha256")]
     #[test]

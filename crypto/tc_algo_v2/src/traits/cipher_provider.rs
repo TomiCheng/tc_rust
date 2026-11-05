@@ -4,7 +4,6 @@ use super::{Cipher, CipherDirection, CipherEntry, Params};
 use crate::{AlgoError, ErrorKind};
 
 pub trait CipherProvider {
-    // No two of the entries have the same name
     fn algorithms(&self) -> Box<dyn Iterator<Item = &dyn CipherEntry> + '_>;
 
     fn get_by_name(&self, name: &str) -> Option<Box<dyn Cipher>>;
