@@ -1,18 +1,25 @@
 use std::sync::Arc;
-use crate::digest::DigestEntry;
+use crate::digest::{DefaultDigestProvider, DigestEntry, DigestProvider};
 
 use crate::{Algo, Policy};
 
-#[allow(dead_code, reason = "nothing reads them yet")]
 pub(crate) struct DefaultAlgo {
-    digests: Vec<Box<dyn DigestEntry>>,
+    digest: DefaultDigestProvider,
+    #[allow(dead_code, reason = "nothing reads it yet")]
     policy: Option<Arc<dyn Policy>>,
 }
 
 impl DefaultAlgo {
     pub(crate) fn new(digests: Vec<Box<dyn DigestEntry>>, policy: Option<Arc<dyn Policy>>) -> Self {
-        Self { digests, policy }
+        Self {
+            digest: DefaultDigestProvider::new(digests),
+            policy,
+        }
     }
 }
 
-impl Algo for DefaultAlgo {}
+impl Algo for DefaultAlgo {
+    fn digest(&self) -> &dyn DigestProvider {
+        &self.digest
+    }
+}
