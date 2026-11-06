@@ -110,8 +110,6 @@ fn algo_error(error: RsaDigestSignerError<RsaError>) -> AlgoError {
 mod tests {
     use std::sync::OnceLock;
 
-    use rand::rngs::SysRng;
-    use rand_core::UnwrapErr;
     use tc_asn1_x509::alg::AlgorithmIdentifier;
     use tc_rsa::{RsaEngine, RsaKey};
     use tc_rsa_signer::RsaDigestSigner;
@@ -119,7 +117,7 @@ mod tests {
     use tc_signer::{Signer as _, SignerInit};
 
     use super::oid;
-    use crate::params::{KeyLength, RsaKeyGenerationParamsOwned};
+    use crate::params::{KeyLength, RsaKeyGenParams};
     use crate::signer::Signer;
     use crate::{Algo, AlgoBuilder, DefaultAlgoBuilder, ErrorKind};
 
@@ -134,7 +132,7 @@ mod tests {
     fn keys() -> &'static (RsaKey, RsaKey) {
         static KEYS: OnceLock<(RsaKey, RsaKey)> = OnceLock::new();
         KEYS.get_or_init(|| {
-            let params = RsaKeyGenerationParamsOwned::new(UnwrapErr(SysRng)).with_strength(1024);
+            let params = RsaKeyGenParams::new(1024);
             let pair = algo()
                 .key_pair_generator()
                 .generate_by_name_with("RSA", &params)

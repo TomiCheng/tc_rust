@@ -1,11 +1,10 @@
 use rand_core::CryptoRng;
 use tc_asn1::Asn1Oid;
 use tc_asym_cipher::{KeyPairGenerator as _, KeyPairGeneratorInit};
-use tc_rsa::{
-    RsaKeyGenerationParams, RsaKeyGenerationParamsOwned, RsaKeyGenerationParamsRef, RsaKeyGenerator,
-};
+use tc_rsa::{RsaKeyGenerationParamsRef, RsaKeyGenerator};
 
 use crate::generate::{KeyPair, KeyPairGenerator, KeyPairGeneratorEntry};
+use crate::params::RsaKeyGenParams;
 use crate::{AlgoError, DefaultAlgoContext, EntryBase, ErrorKind, Params};
 
 // The row of RSA, to give to DefaultAlgoBuilder::reg_key_pair_generator. Its name and OID are those
@@ -40,33 +39,25 @@ impl KeyPairGeneratorEntry for Row {
     fn create(&self) -> Box<dyn KeyPairGenerator> {
         Box::new(Rsa {
             rand: (self.rand)(),
-            settings: None,
+            params: None,
         })
     }
 }
 
-// Its params are an RsaKeyGenerationParamsOwned. init can only read them, so it takes their exponent,
-// strength and certainty. Their random source goes unused: the keys draw from DefaultAlgoBuilder's
+// Its params are an RsaKeyGenParams, and the keys draw from DefaultAlgoBuilder's random source
 struct Rsa {
     rand: Box<dyn CryptoRng>,
-    settings: Option<Settings>,
-}
-
-#[derive(Clone, Copy)]
-struct Settings {
-    public_exponent: u32,
-    strength: u32,
-    certainty: u32,
+    params: Option<RsaKeyGenParams>,
 }
 
 fn generator<'a>(
     rand: &'a mut dyn CryptoRng,
-    settings: Settings,
+    settings: RsaKeyGenParams,
 ) -> Result<RsaKeyGenerator<'a>, AlgoError> {
     let params = RsaKeyGenerationParamsRef::new(rand)
-        .with_public_exponent(settings.public_exponent)
-        .with_strength(settings.strength)
-        .with_certainty(settings.certainty);
+        .with_public_exponent(settings.public_exponent())
+        .with_strength(settings.strength())
+        .with_certainty(settings.certainty());
     let mut generator = RsaKeyGenerator::new();
     generator
         .init(params)
@@ -76,27 +67,22 @@ fn generator<'a>(
 
 impl KeyPairGenerator for Rsa {
     fn init(&mut self, params: &dyn Params) -> Result<(), AlgoError> {
-        self.settings = None;
+        self.params = None;
         let params = params
             .as_any()
-            .downcast_ref::<RsaKeyGenerationParamsOwned>()
+            .downcast_ref::<RsaKeyGenParams>()
             .ok_or(AlgoError::new(ErrorKind::InvalidParams))?;
-        let settings = Settings {
-            public_exponent: params.public_exponent(),
-            strength: params.strength(),
-            certainty: params.certainty(),
-        };
         // tc_rsa judges the values when it is initialized, so that a bad one shows here
-        generator(self.rand.as_mut(), settings)?;
-        self.settings = Some(settings);
+        generator(self.rand.as_mut(), *params)?;
+        self.params = Some(*params);
         Ok(())
     }
 
     fn generate(&mut self) -> Result<KeyPair, AlgoError> {
-        let settings = self
-            .settings
+        let params = self
+            .params
             .ok_or(AlgoError::new(ErrorKind::NotInitialized))?;
-        let (public, private) = generator(self.rand.as_mut(), settings)?
+        let (public, private) = generator(self.rand.as_mut(), params)?
             .generate_key_pair()
             .map_err(|error| AlgoError::with_source(ErrorKind::InvalidParams, error))?;
         Ok(KeyPair::new(Box::new(public), Box::new(private)))
@@ -108,19 +94,19 @@ mod tests {
     use core::any::Any;
     use core::convert::Infallible;
 
-    use rand::rngs::SysRng;
-    use rand_core::{CryptoRng, TryCryptoRng, TryRng, UnwrapErr};
+    use rand_core::{CryptoRng, TryCryptoRng, TryRng};
     use tc_asym_cipher::AsymmetricKeyParams;
-    use tc_rsa::{RsaKey, RsaKeyGenerationParamsOwned, RsaKeyParams};
+    use tc_rsa::{RsaKey, RsaKeyParams};
 
     use crate::generate::KeyPairGenerator;
+    use crate::params::RsaKeyGenParams;
     use crate::{AlgoBuilder, DefaultAlgoBuilder, ErrorKind, Params};
 
     const NAME: &str = "RSA";
 
     // Small, since generating the primes is slow
-    fn params() -> RsaKeyGenerationParamsOwned {
-        RsaKeyGenerationParamsOwned::new(UnwrapErr(SysRng)).with_strength(1024)
+    fn params() -> RsaKeyGenParams {
+        RsaKeyGenParams::new(1024)
     }
 
     fn generator() -> Box<dyn KeyPairGenerator> {
@@ -188,7 +174,7 @@ mod tests {
 
         for bad in [
             params().with_public_exponent(4),
-            params().with_strength(8),
+            RsaKeyGenParams::new(8),
             params().with_certainty(0),
         ] {
             let error = generator.init(&bad).unwrap_err();
@@ -230,13 +216,12 @@ mod tests {
     }
 
     #[test]
-    fn the_keys_draw_from_the_builders_random_source_and_not_from_the_params() {
+    fn the_keys_draw_from_the_builders_random_source() {
         let mut builder = DefaultAlgoBuilder::default();
         builder.set_rand(seeded);
         let algo = builder.build();
         let generators = algo.key_pair_generator();
 
-        // The params bring the system's random numbers, which would differ between the two
         let first = generators.generate_by_name_with(NAME, &params()).unwrap();
         let second = generators.generate_by_name_with(NAME, &params()).unwrap();
         assert_eq!(

@@ -1,6 +1,8 @@
 #[cfg(feature = "ies")]
 mod ies_dh_params;
 mod key_length;
+#[cfg(feature = "rsa")]
+mod rsa_key_gen_params;
 
 #[cfg(any(
     feature = "aes",
@@ -16,6 +18,8 @@ use core::any::Any;
 #[cfg(feature = "ies")]
 pub use ies_dh_params::IesDhParams;
 pub use key_length::KeyLength;
+#[cfg(feature = "rsa")]
+pub use rsa_key_gen_params::RsaKeyGenParams;
 #[cfg(feature = "aes")]
 pub use tc_aead_cipher::AeadParamsOwned;
 #[cfg(any(feature = "aes", feature = "chacha", feature = "hmac-sha256"))]
@@ -31,7 +35,7 @@ pub use tc_kdf::hkdf::HkdfParamsOwned;
 #[cfg(feature = "ml-kem")]
 pub use tc_ml_kem::{MlKemParameters, MlKemPrivateKey, MlKemPublicKey};
 #[cfg(feature = "rsa")]
-pub use tc_rsa::{RsaKey, RsaKeyGenerationParamsOwned, RsaKeyParams};
+pub use tc_rsa::{RsaKey, RsaKeyParams};
 
 #[cfg(any(
     feature = "aes",
@@ -88,13 +92,6 @@ impl Params for MlKemPublicKey {
 
 #[cfg(feature = "ml-kem")]
 impl Params for MlKemPrivateKey {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-}
-
-#[cfg(feature = "rsa")]
-impl Params for RsaKeyGenerationParamsOwned {
     fn as_any(&self) -> &dyn Any {
         self
     }
