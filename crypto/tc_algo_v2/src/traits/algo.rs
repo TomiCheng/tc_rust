@@ -6,6 +6,7 @@ use crate::generate::{
     KeyPairGeneratorProvider,
 };
 use crate::mac::{EmptyMacProvider, MacProvider};
+use crate::signer::{EmptySignerProvider, SignerProvider};
 use crate::wrap::{EmptyWrapperProvider, WrapperProvider};
 use crate::xof::{EmptyXofProvider, XofProvider};
 
@@ -40,5 +41,9 @@ pub trait Algo: Send + Sync {
 
     fn agreement(&self) -> &dyn AgreementProvider {
         &EmptyAgreementProvider
+    }
+
+    fn signer(&self) -> &dyn SignerProvider {
+        &EmptySignerProvider
     }
 }

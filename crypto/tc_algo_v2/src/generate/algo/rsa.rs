@@ -5,10 +5,8 @@ use tc_rsa::{
     RsaKeyGenerationParams, RsaKeyGenerationParamsOwned, RsaKeyGenerationParamsRef, RsaKeyGenerator,
 };
 
-use crate::{
-    AlgoError, DefaultAlgoContext, EntryBase, ErrorKind, KeyPair, KeyPairGenerator,
-    KeyPairGeneratorEntry, Params,
-};
+use crate::generate::{KeyPair, KeyPairGenerator, KeyPairGeneratorEntry};
+use crate::{AlgoError, DefaultAlgoContext, EntryBase, ErrorKind, Params};
 
 // The row of RSA, to give to DefaultAlgoBuilder::reg_key_pair_generator. Its name and OID are those
 // of Bouncy Castle's GeneratorUtilities
@@ -115,7 +113,8 @@ mod tests {
     use tc_asym_cipher::AsymmetricKeyParams;
     use tc_rsa::{RsaKey, RsaKeyGenerationParamsOwned, RsaKeyParams};
 
-    use crate::{AlgoBuilder, DefaultAlgoBuilder, ErrorKind, KeyPairGenerator, Params};
+    use crate::generate::KeyPairGenerator;
+    use crate::{AlgoBuilder, DefaultAlgoBuilder, ErrorKind, Params};
 
     const NAME: &str = "RSA";
 

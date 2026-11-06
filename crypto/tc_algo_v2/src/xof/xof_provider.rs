@@ -1,6 +1,7 @@
 use tc_asn1::Asn1Oid;
 
-use crate::{AlgoError, Params, Xof, XofEntry};
+use crate::xof::{Xof, XofEntry};
+use crate::{AlgoError, Params};
 
 pub trait XofProvider: Send + Sync {
     fn algorithms(&self) -> Box<dyn Iterator<Item = &dyn XofEntry> + '_>;

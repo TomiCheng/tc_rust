@@ -1,8 +1,9 @@
 use std::any::Any;
 
+use tc_algo_v2::wrap::{WrapDirection, Wrapper, WrapperEntry};
 use tc_algo_v2::{
     Algo, AlgoBuilder, AlgoError, DefaultAlgoBuilder, DefaultAlgoContext, EntryBase, ErrorKind,
-    ListPolicy, Params, WrapDirection, Wrapper, WrapperEntry,
+    ListPolicy, Params,
 };
 use tc_asn1::Asn1Oid;
 

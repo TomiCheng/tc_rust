@@ -2,7 +2,8 @@ use core::iter;
 
 use tc_asn1::Asn1Oid;
 
-use crate::{AlgoError, ErrorKind, KeyGenerator, KeyGeneratorEntry, KeyGeneratorProvider};
+use crate::generate::{KeyGenerator, KeyGeneratorEntry, KeyGeneratorProvider};
+use crate::{AlgoError, ErrorKind};
 
 pub(crate) struct EmptyKeyGeneratorProvider;
 

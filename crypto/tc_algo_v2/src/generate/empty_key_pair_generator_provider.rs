@@ -2,9 +2,8 @@ use core::iter;
 
 use tc_asn1::Asn1Oid;
 
-use crate::{
-    AlgoError, ErrorKind, KeyPairGenerator, KeyPairGeneratorEntry, KeyPairGeneratorProvider,
-};
+use crate::generate::{KeyPairGenerator, KeyPairGeneratorEntry, KeyPairGeneratorProvider};
+use crate::{AlgoError, ErrorKind};
 
 pub(crate) struct EmptyKeyPairGeneratorProvider;
 

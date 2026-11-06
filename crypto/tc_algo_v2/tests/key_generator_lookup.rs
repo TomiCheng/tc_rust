@@ -1,8 +1,9 @@
 use std::any::Any;
 
+use tc_algo_v2::generate::{KeyGenerator, KeyGeneratorEntry};
 use tc_algo_v2::{
     Algo, AlgoBuilder, AlgoError, DefaultAlgoBuilder, DefaultAlgoContext, EntryBase, ErrorKind,
-    KeyGenerator, KeyGeneratorEntry, ListPolicy, Params,
+    ListPolicy, Params,
 };
 use tc_asn1::Asn1Oid;
 

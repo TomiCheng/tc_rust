@@ -1,9 +1,8 @@
 use rand_core::CryptoRng;
 
+use crate::generate::{KeyGenerator, KeyGeneratorEntry};
 use crate::params::{KeyLength, KeyOwned};
-use crate::{
-    AlgoError, DefaultAlgoContext, EntryBase, ErrorKind, KeyGenerator, KeyGeneratorEntry, Params,
-};
+use crate::{AlgoError, DefaultAlgoContext, EntryBase, ErrorKind, Params};
 
 // The row of a key that is only random bytes, of the length that init gives in a KeyLength. It does
 // not guess one, so generate needs init first. Not for algorithms with rules for their keys, such
@@ -64,8 +63,9 @@ impl KeyGenerator for RandomKeyGenerator {
 mod tests {
     use core::any::Any;
 
+    use crate::generate::KeyGenerator;
     use crate::params::{KeyLength, KeyOwned, KeyParams};
-    use crate::{AlgoBuilder, DefaultAlgoBuilder, ErrorKind, KeyGenerator, Params};
+    use crate::{AlgoBuilder, DefaultAlgoBuilder, ErrorKind, Params};
 
     fn generator() -> Box<dyn KeyGenerator> {
         let algo = DefaultAlgoBuilder::default().build();

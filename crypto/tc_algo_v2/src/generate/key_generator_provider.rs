@@ -1,6 +1,7 @@
 use tc_asn1::Asn1Oid;
 
-use crate::{AlgoError, KeyGenerator, KeyGeneratorEntry, Params};
+use crate::generate::{KeyGenerator, KeyGeneratorEntry};
+use crate::{AlgoError, Params};
 
 pub trait KeyGeneratorProvider: Send + Sync {
     fn algorithms(&self) -> Box<dyn Iterator<Item = &dyn KeyGeneratorEntry> + '_>;

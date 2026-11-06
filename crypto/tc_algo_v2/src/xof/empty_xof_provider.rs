@@ -2,7 +2,8 @@ use core::iter;
 
 use tc_asn1::Asn1Oid;
 
-use crate::{AlgoError, ErrorKind, Xof, XofEntry, XofProvider};
+use crate::xof::{Xof, XofEntry, XofProvider};
+use crate::{AlgoError, ErrorKind};
 
 pub(crate) struct EmptyXofProvider;
 

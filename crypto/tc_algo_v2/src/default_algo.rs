@@ -1,16 +1,17 @@
-use std::sync::Arc;
 use crate::agreement::{AgreementEntry, AgreementProvider};
 use crate::cipher::{CipherEntry, CipherProvider};
 use crate::default_provider::DefaultProvider;
 use crate::digest::{DigestEntry, DigestProvider};
 use crate::mac::{MacEntry, MacProvider};
+use crate::signer::{SignerEntry, SignerProvider};
 use crate::wrap::{WrapperEntry, WrapperProvider};
 use crate::xof::{XofEntry, XofProvider};
+use std::sync::Arc;
 
-use crate::{
-    Algo, KeyGeneratorEntry, KeyGeneratorProvider, KeyPairGeneratorEntry, KeyPairGeneratorProvider,
-    Policy,
+use crate::generate::{
+    KeyGeneratorEntry, KeyGeneratorProvider, KeyPairGeneratorEntry, KeyPairGeneratorProvider,
 };
+use crate::{Algo, Policy};
 
 pub(crate) struct DefaultAlgo {
     digest: DefaultProvider<dyn DigestEntry>,
@@ -21,6 +22,7 @@ pub(crate) struct DefaultAlgo {
     key_generator: DefaultProvider<dyn KeyGeneratorEntry>,
     key_pair_generator: DefaultProvider<dyn KeyPairGeneratorEntry>,
     agreement: DefaultProvider<dyn AgreementEntry>,
+    signer: DefaultProvider<dyn SignerEntry>,
 }
 
 impl DefaultAlgo {
@@ -34,6 +36,7 @@ impl DefaultAlgo {
         key_generators: Vec<Box<dyn KeyGeneratorEntry>>,
         key_pair_generators: Vec<Box<dyn KeyPairGeneratorEntry>>,
         agreements: Vec<Box<dyn AgreementEntry>>,
+        signers: Vec<Box<dyn SignerEntry>>,
         policy: Option<Arc<dyn Policy>>,
     ) -> Self {
         Self {
@@ -44,7 +47,8 @@ impl DefaultAlgo {
             wrap: DefaultProvider::new(wrappers, policy.clone()),
             key_generator: DefaultProvider::new(key_generators, policy.clone()),
             key_pair_generator: DefaultProvider::new(key_pair_generators, policy.clone()),
-            agreement: DefaultProvider::new(agreements, policy),
+            agreement: DefaultProvider::new(agreements, policy.clone()),
+            signer: DefaultProvider::new(signers, policy),
         }
     }
 }
@@ -80,5 +84,9 @@ impl Algo for DefaultAlgo {
 
     fn agreement(&self) -> &dyn AgreementProvider {
         &self.agreement
+    }
+
+    fn signer(&self) -> &dyn SignerProvider {
+        &self.signer
     }
 }

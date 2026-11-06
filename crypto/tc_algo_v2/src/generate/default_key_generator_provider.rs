@@ -1,7 +1,8 @@
 use tc_asn1::Asn1Oid;
 
 use crate::default_provider::DefaultProvider;
-use crate::{AlgoError, ErrorKind, KeyGenerator, KeyGeneratorEntry, KeyGeneratorProvider};
+use crate::generate::{KeyGenerator, KeyGeneratorEntry, KeyGeneratorProvider};
+use crate::{AlgoError, ErrorKind};
 
 impl KeyGeneratorProvider for DefaultProvider<dyn KeyGeneratorEntry> {
     fn algorithms(&self) -> Box<dyn Iterator<Item = &dyn KeyGeneratorEntry> + '_> {

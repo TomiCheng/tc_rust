@@ -1,7 +1,8 @@
 use tc_asn1::Asn1Oid;
 
 use crate::default_provider::DefaultProvider;
-use crate::{AlgoError, ErrorKind, Mac, MacEntry, MacProvider};
+use crate::mac::{Mac, MacEntry, MacProvider};
+use crate::{AlgoError, ErrorKind};
 
 impl MacProvider for DefaultProvider<dyn MacEntry> {
     fn algorithms(&self) -> Box<dyn Iterator<Item = &dyn MacEntry> + '_> {

@@ -8,10 +8,8 @@ use tc_key_wrap::{
 };
 
 use crate::params::{KeyOwned, KeyParams};
-use crate::{
-    AlgoError, DefaultAlgoContext, EntryBase, ErrorKind, Params, WrapDirection, Wrapper,
-    WrapperEntry,
-};
+use crate::wrap::{WrapDirection, Wrapper, WrapperEntry};
+use crate::{AlgoError, DefaultAlgoContext, EntryBase, ErrorKind, Params};
 
 // The row of AESWRAP, RFC 3394, to give to DefaultAlgoBuilder::reg_wrap. Its names and OIDs are
 // those of Bouncy Castle's WrapperUtilities. Its params are a KeyOwned, so that a generated key can
@@ -106,7 +104,8 @@ mod tests {
     use core::any::Any;
 
     use crate::params::KeyOwned;
-    use crate::{AlgoBuilder, DefaultAlgoBuilder, ErrorKind, Params, WrapDirection, Wrapper};
+    use crate::wrap::{WrapDirection, Wrapper};
+    use crate::{AlgoBuilder, DefaultAlgoBuilder, ErrorKind, Params};
 
     const NAME: &str = "AESWRAP";
 

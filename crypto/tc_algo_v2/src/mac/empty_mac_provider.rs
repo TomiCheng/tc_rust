@@ -2,7 +2,8 @@ use core::iter;
 
 use tc_asn1::Asn1Oid;
 
-use crate::{AlgoError, ErrorKind, Mac, MacEntry, MacProvider};
+use crate::mac::{Mac, MacEntry, MacProvider};
+use crate::{AlgoError, ErrorKind};
 
 pub(crate) struct EmptyMacProvider;
 

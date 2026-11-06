@@ -12,12 +12,12 @@ use crate::generate::{
     BUILT_IN_KEY_GENERATORS, BUILT_IN_KEY_PAIR_GENERATORS, CreateKeyGeneratorRows,
     CreateKeyPairGeneratorRows,
 };
+use crate::generate::{KeyGeneratorEntry, KeyPairGeneratorEntry};
 use crate::mac::{self, MacEntry};
+use crate::signer::{self, SignerEntry};
 use crate::wrap::{self, WrapperEntry};
 use crate::xof::{self, XofEntry};
-use crate::{
-    Algo, AlgoBuilder, DefaultAlgoContext, KeyGeneratorEntry, KeyPairGeneratorEntry, Policy,
-};
+use crate::{Algo, AlgoBuilder, DefaultAlgoContext, Policy};
 
 #[derive(Clone)]
 pub struct DefaultAlgoBuilder {
@@ -29,6 +29,7 @@ pub struct DefaultAlgoBuilder {
     key_generators: Vec<CreateKeyGeneratorRows>,
     key_pair_generators: Vec<CreateKeyPairGeneratorRows>,
     agreements: Vec<agreement::CreateRows>,
+    signers: Vec<signer::CreateRows>,
     policy: Option<Arc<dyn Policy>>,
     rand: fn() -> Box<dyn CryptoRng>,
 }
@@ -45,6 +46,7 @@ impl Default for DefaultAlgoBuilder {
             key_generators: BUILT_IN_KEY_GENERATORS.to_vec(),
             key_pair_generators: BUILT_IN_KEY_PAIR_GENERATORS.to_vec(),
             agreements: agreement::BUILT_IN.to_vec(),
+            signers: signer::BUILT_IN.to_vec(),
             policy: None,
             rand: os_rand,
         }
@@ -91,6 +93,10 @@ impl DefaultAlgoBuilder {
         create: fn(&DefaultAlgoContext) -> Vec<Box<dyn AgreementEntry>>,
     ) {
         self.agreements.push(create);
+    }
+
+    pub fn reg_signer(&mut self, create: fn(&DefaultAlgoContext) -> Vec<Box<dyn SignerEntry>>) {
+        self.signers.push(create);
     }
 
     pub fn set_policy(&mut self, policy: impl Policy + 'static) {
@@ -175,6 +181,14 @@ impl DefaultAlgoBuilder {
             .flat_map(|create| create(context))
             .collect()
     }
+
+    fn signer_rows(&self, context: &DefaultAlgoContext) -> Vec<Box<dyn SignerEntry>> {
+        self.signers
+            .iter()
+            .rev()
+            .flat_map(|create| create(context))
+            .collect()
+    }
 }
 
 impl AlgoBuilder for DefaultAlgoBuilder {
@@ -189,6 +203,7 @@ impl AlgoBuilder for DefaultAlgoBuilder {
             self.key_generator_rows(&context),
             self.key_pair_generator_rows(&context),
             self.agreement_rows(&context),
+            self.signer_rows(&context),
             self.policy.clone(),
         ))
     }
@@ -206,6 +221,7 @@ impl fmt::Debug for DefaultAlgoBuilder {
             .field("key_generators", &self.key_generators.len())
             .field("key_pair_generators", &self.key_pair_generators.len())
             .field("agreements", &self.agreements.len())
+            .field("signers", &self.signers.len())
             .field("policy", &self.policy.is_some())
             .field("rand", &self.rand)
             .finish()

@@ -1,7 +1,8 @@
 use tc_asn1::Asn1Oid;
 
 use crate::default_provider::DefaultProvider;
-use crate::{AlgoError, ErrorKind, Xof, XofEntry, XofProvider};
+use crate::xof::{Xof, XofEntry, XofProvider};
+use crate::{AlgoError, ErrorKind};
 
 impl XofProvider for DefaultProvider<dyn XofEntry> {
     fn algorithms(&self) -> Box<dyn Iterator<Item = &dyn XofEntry> + '_> {

@@ -1,6 +1,7 @@
 use tc_asn1::Asn1Oid;
 
-use crate::{AlgoError, Mac, MacEntry, Params};
+use crate::mac::{Mac, MacEntry};
+use crate::{AlgoError, Params};
 
 pub trait MacProvider: Send + Sync {
     fn algorithms(&self) -> Box<dyn Iterator<Item = &dyn MacEntry> + '_>;

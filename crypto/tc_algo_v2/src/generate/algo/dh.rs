@@ -2,10 +2,8 @@ use rand_core::CryptoRng;
 use tc_asym_cipher::{KeyPairGenerator as _, KeyPairGeneratorInit};
 use tc_dh_key::{DhKeyGenerationParams, DhKeyPairGenerator, DhParameters};
 
-use crate::{
-    AlgoError, DefaultAlgoContext, EntryBase, ErrorKind, KeyPair, KeyPairGenerator,
-    KeyPairGeneratorEntry, Params,
-};
+use crate::generate::{KeyPair, KeyPairGenerator, KeyPairGeneratorEntry};
+use crate::{AlgoError, DefaultAlgoContext, EntryBase, ErrorKind, Params};
 
 // The row of DH, to give to DefaultAlgoBuilder::reg_key_pair_generator. Its name and alias are those
 // of Bouncy Castle's GeneratorUtilities, which gives it no OID
@@ -116,7 +114,7 @@ mod tests {
 
         let first = generator.generate().unwrap();
         let second = generator.generate().unwrap();
-        let y = |pair: &crate::KeyPair| {
+        let y = |pair: &crate::generate::KeyPair| {
             let public = pair.public().as_any().downcast_ref::<DhPublicKey>();
             public.expect("a DhPublicKey").y().clone()
         };

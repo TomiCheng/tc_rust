@@ -1,7 +1,8 @@
+use tc_algo_v2::agreement::{Agreement, AgreementEntry, SharedSecret};
 use tc_algo_v2::params::KeyLength;
 use tc_algo_v2::{
-    Agreement, AgreementEntry, Algo, AlgoBuilder, AlgoError, DefaultAlgoBuilder,
-    DefaultAlgoContext, EntryBase, ErrorKind, ListPolicy, Params, SharedSecret,
+    Algo, AlgoBuilder, AlgoError, DefaultAlgoBuilder, DefaultAlgoContext, EntryBase, ErrorKind,
+    ListPolicy, Params,
 };
 use tc_asn1::Asn1Oid;
 

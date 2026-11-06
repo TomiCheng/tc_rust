@@ -3,7 +3,8 @@ use tc_digest::{Digest as _, TryDigest as _, Xof as _};
 use tc_keccak::ShakeDigest;
 
 use crate::digest::Digest;
-use crate::{DefaultAlgoContext, EntryBase, Xof, XofEntry};
+use crate::xof::{Xof, XofEntry};
+use crate::{DefaultAlgoContext, EntryBase};
 
 const BIT_LENGTH: usize = 256;
 
@@ -83,7 +84,8 @@ impl Xof for Shake256 {
 mod tests {
     use core::any::Any;
 
-    use crate::{AlgoBuilder, DefaultAlgoBuilder, ErrorKind, Params, Xof};
+    use crate::xof::Xof;
+    use crate::{AlgoBuilder, DefaultAlgoBuilder, ErrorKind, Params};
 
     const NAME: &str = "SHAKE256";
 

@@ -8,7 +8,8 @@ From a new KEK to the key back again, with AESWRAP. The `aes-wrap` feature of `t
 rows.
 
 ```rust
-use tc_algo_v2::{AlgoBuilder, AlgoError, DefaultAlgoBuilder, WrapDirection};
+use tc_algo_v2::wrap::WrapDirection;
+use tc_algo_v2::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
 fn main() -> Result<(), AlgoError> {
     let algo = DefaultAlgoBuilder::default().build();

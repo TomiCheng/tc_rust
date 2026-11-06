@@ -1,7 +1,8 @@
 use tc_asn1::Asn1Oid;
 
 use crate::default_provider::DefaultProvider;
-use crate::{AlgoError, ErrorKind, Wrapper, WrapperEntry, WrapperProvider};
+use crate::wrap::{Wrapper, WrapperEntry, WrapperProvider};
+use crate::{AlgoError, ErrorKind};
 
 impl WrapperProvider for DefaultProvider<dyn WrapperEntry> {
     fn algorithms(&self) -> Box<dyn Iterator<Item = &dyn WrapperEntry> + '_> {

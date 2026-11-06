@@ -2,7 +2,8 @@ use core::iter;
 
 use tc_asn1::Asn1Oid;
 
-use crate::{AlgoError, ErrorKind, Wrapper, WrapperEntry, WrapperProvider};
+use crate::wrap::{Wrapper, WrapperEntry, WrapperProvider};
+use crate::{AlgoError, ErrorKind};
 
 pub(crate) struct EmptyWrapperProvider;
 

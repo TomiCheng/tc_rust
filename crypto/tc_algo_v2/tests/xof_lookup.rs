@@ -1,9 +1,10 @@
 use std::any::Any;
 
 use tc_algo_v2::digest::Digest;
+use tc_algo_v2::xof::{Xof, XofEntry};
 use tc_algo_v2::{
     Algo, AlgoBuilder, AlgoError, DefaultAlgoBuilder, DefaultAlgoContext, EntryBase, ErrorKind,
-    ListPolicy, Params, Xof, XofEntry,
+    ListPolicy, Params,
 };
 use tc_asn1::Asn1Oid;
 

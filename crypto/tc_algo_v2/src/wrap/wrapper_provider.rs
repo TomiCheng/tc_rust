@@ -1,6 +1,7 @@
 use tc_asn1::Asn1Oid;
 
-use crate::{AlgoError, Params, WrapDirection, Wrapper, WrapperEntry};
+use crate::wrap::{WrapDirection, Wrapper, WrapperEntry};
+use crate::{AlgoError, Params};
 
 pub trait WrapperProvider: Send + Sync {
     fn algorithms(&self) -> Box<dyn Iterator<Item = &dyn WrapperEntry> + '_>;
