@@ -2,6 +2,7 @@ use crate::agreement::{AgreementEntry, AgreementProvider};
 use crate::cipher::{CipherEntry, CipherProvider};
 use crate::default_provider::DefaultProvider;
 use crate::digest::{DigestEntry, DigestProvider};
+use crate::kdf::{KdfEntry, KdfProvider};
 use crate::mac::{MacEntry, MacProvider};
 use crate::signer::{SignerEntry, SignerProvider};
 use crate::wrap::{WrapperEntry, WrapperProvider};
@@ -23,6 +24,7 @@ pub(crate) struct DefaultAlgo {
     key_pair_generator: DefaultProvider<dyn KeyPairGeneratorEntry>,
     agreement: DefaultProvider<dyn AgreementEntry>,
     signer: DefaultProvider<dyn SignerEntry>,
+    kdf: DefaultProvider<dyn KdfEntry>,
 }
 
 impl DefaultAlgo {
@@ -37,6 +39,7 @@ impl DefaultAlgo {
         key_pair_generators: Vec<Box<dyn KeyPairGeneratorEntry>>,
         agreements: Vec<Box<dyn AgreementEntry>>,
         signers: Vec<Box<dyn SignerEntry>>,
+        kdfs: Vec<Box<dyn KdfEntry>>,
         policy: Option<Arc<dyn Policy>>,
     ) -> Self {
         Self {
@@ -48,7 +51,8 @@ impl DefaultAlgo {
             key_generator: DefaultProvider::new(key_generators, policy.clone()),
             key_pair_generator: DefaultProvider::new(key_pair_generators, policy.clone()),
             agreement: DefaultProvider::new(agreements, policy.clone()),
-            signer: DefaultProvider::new(signers, policy),
+            signer: DefaultProvider::new(signers, policy.clone()),
+            kdf: DefaultProvider::new(kdfs, policy),
         }
     }
 }
@@ -88,5 +92,9 @@ impl Algo for DefaultAlgo {
 
     fn signer(&self) -> &dyn SignerProvider {
         &self.signer
+    }
+
+    fn kdf(&self) -> &dyn KdfProvider {
+        &self.kdf
     }
 }

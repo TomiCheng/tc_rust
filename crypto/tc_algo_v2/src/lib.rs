@@ -9,6 +9,7 @@ mod default_provider;
 pub mod digest;
 mod error;
 pub mod generate;
+pub mod kdf;
 pub mod mac;
 pub mod params;
 mod policy;

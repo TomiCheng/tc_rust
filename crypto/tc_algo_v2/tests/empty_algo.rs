@@ -47,6 +47,7 @@ fn an_algo_without_providers_reports_every_name_as_unknown() {
         kind_of(algo.signer().get_by_name(name)),
         ErrorKind::UnknownSigner
     );
+    assert_eq!(kind_of(algo.kdf().get_by_name(name)), ErrorKind::UnknownKdf);
 }
 
 #[test]
@@ -83,4 +84,5 @@ fn an_algo_without_providers_reports_every_oid_as_unknown() {
         kind_of(algo.signer().get_by_oid(&oid)),
         ErrorKind::UnknownSigner
     );
+    assert_eq!(kind_of(algo.kdf().get_by_oid(&oid)), ErrorKind::UnknownKdf);
 }
