@@ -20,4 +20,28 @@ pub trait KeyGeneratorProvider {
             .ok_or(AlgoError::new(ErrorKind::UnknownGenerator))?
             .generate()
     }
+
+    fn generate_by_name_with(
+        &self,
+        name: &str,
+        params: &dyn Params,
+    ) -> Result<Box<dyn Params>, AlgoError> {
+        let mut generator = self
+            .get_by_name(name)
+            .ok_or(AlgoError::new(ErrorKind::UnknownGenerator))?;
+        generator.init(params)?;
+        generator.generate()
+    }
+
+    fn generate_by_oid_with(
+        &self,
+        oid: &Asn1Oid,
+        params: &dyn Params,
+    ) -> Result<Box<dyn Params>, AlgoError> {
+        let mut generator = self
+            .get_by_oid(oid)
+            .ok_or(AlgoError::new(ErrorKind::UnknownGenerator))?;
+        generator.init(params)?;
+        generator.generate()
+    }
 }

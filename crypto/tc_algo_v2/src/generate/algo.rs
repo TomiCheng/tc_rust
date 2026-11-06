@@ -1,5 +1,7 @@
 #[cfg(feature = "aes")]
 mod aes;
+#[cfg(any(feature = "aes", feature = "hmac-sha256"))]
+mod key;
 
 use super::CreateKeyGeneratorRows;
 
@@ -7,4 +9,6 @@ use super::CreateKeyGeneratorRows;
 pub(crate) const BUILT_IN_KEY_GENERATORS: &[CreateKeyGeneratorRows] = &[
     #[cfg(feature = "aes")]
     aes::aes,
+    #[cfg(any(feature = "aes", feature = "hmac-sha256"))]
+    key::key,
 ];

@@ -33,11 +33,15 @@ impl KeyGeneratorEntry for Row {
     }
 }
 
-// Its key carries the mark of the row that created it, to tell which row a lookup found
+// Its key carries the mark of the row that created it, to tell which row a lookup found. An init
+// adds INITIALIZED to the mark, to tell that a helper called it
 struct Marked(u8);
+
+const INITIALIZED: u8 = 100;
 
 impl KeyGenerator for Marked {
     fn init(&mut self, _params: &dyn Params) -> Result<(), AlgoError> {
+        self.0 += INITIALIZED;
         Ok(())
     }
 
@@ -136,15 +140,37 @@ fn the_helpers_generate_with_the_generator_a_lookup_finds() {
 }
 
 #[test]
+fn the_helpers_with_params_init_the_generator_first() {
+    let algo = builder_with(&[older]).build();
+    let generators = algo.key_generator();
+    let params = MarkedKey(0);
+    let cases = [
+        generators.generate_by_name_with("TEST-GENERATOR", &params),
+        generators.generate_by_oid_with(&oid("1.2.3.4"), &params),
+    ];
+
+    for key in cases {
+        assert_eq!(mark_of(key), 1 + INITIALIZED);
+    }
+}
+
+#[test]
 fn the_helpers_report_an_unknown_generator() {
     let algo = builder_with(&[]).build();
     let generators = algo.key_generator();
+    let params = MarkedKey(0);
+    let unknown = oid("1.2.3.5");
+    let cases = [
+        generators.generate_by_name("NO-SUCH"),
+        generators.generate_by_oid(&unknown),
+        generators.generate_by_name_with("NO-SUCH", &params),
+        generators.generate_by_oid_with(&unknown, &params),
+    ];
 
-    let by_name = generators.generate_by_name("NO-SUCH").err().unwrap();
-    assert_eq!(by_name.kind(), ErrorKind::UnknownGenerator);
-
-    let by_oid = generators.generate_by_oid(&oid("1.2.3.5")).err().unwrap();
-    assert_eq!(by_oid.kind(), ErrorKind::UnknownGenerator);
+    for result in cases {
+        let error = result.err().unwrap();
+        assert_eq!(error.kind(), ErrorKind::UnknownGenerator);
+    }
 }
 
 #[test]

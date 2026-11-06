@@ -36,4 +36,36 @@ pub trait MacProvider {
         mac.update(input)?;
         mac.finalize()
     }
+
+    // A wrong tag is Ok(false), so the caller has to look at the answer
+    fn verify_by_name(
+        &self,
+        name: &str,
+        params: &dyn Params,
+        input: &[u8],
+        tag: &[u8],
+    ) -> Result<bool, AlgoError> {
+        let mut mac = self
+            .get_by_name(name)
+            .ok_or(AlgoError::new(ErrorKind::UnknownMac))?;
+        mac.init(params)?;
+        mac.update(input)?;
+        mac.verify(tag)
+    }
+
+    // A wrong tag is Ok(false), so the caller has to look at the answer
+    fn verify_by_oid(
+        &self,
+        oid: &Asn1Oid,
+        params: &dyn Params,
+        input: &[u8],
+        tag: &[u8],
+    ) -> Result<bool, AlgoError> {
+        let mut mac = self
+            .get_by_oid(oid)
+            .ok_or(AlgoError::new(ErrorKind::UnknownMac))?;
+        mac.init(params)?;
+        mac.update(input)?;
+        mac.verify(tag)
+    }
 }

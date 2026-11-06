@@ -27,7 +27,7 @@ impl Default for DefaultAlgoBuilder {
         Self {
             digests: digest::BUILT_IN.to_vec(),
             ciphers: cipher::BUILT_IN.to_vec(),
-            macs: Vec::new(),
+            macs: mac::BUILT_IN.to_vec(),
             key_generators: BUILT_IN_KEY_GENERATORS.to_vec(),
             policy: None,
             rand: os_rand,
@@ -87,6 +87,14 @@ impl DefaultAlgoBuilder {
             .collect()
     }
 
+    fn mac_rows(&self, context: &DefaultAlgoContext) -> Vec<Box<dyn MacEntry>> {
+        self.macs
+            .iter()
+            .rev()
+            .flat_map(|create| create(context))
+            .collect()
+    }
+
     fn key_generator_rows(&self, context: &DefaultAlgoContext) -> Vec<Box<dyn KeyGeneratorEntry>> {
         self.key_generators
             .iter()
@@ -102,6 +110,7 @@ impl AlgoBuilder for DefaultAlgoBuilder {
         Box::new(DefaultAlgo::new(
             self.digest_rows(&context),
             self.cipher_rows(&context),
+            self.mac_rows(&context),
             self.key_generator_rows(&context),
             self.policy.clone(),
         ))

@@ -921,6 +921,7 @@ dependencies = [
  "tc_buffered_cipher",
  "tc_constant_time",
  "tc_digest",
+ "tc_macs",
  "tc_sha",
 ]
 

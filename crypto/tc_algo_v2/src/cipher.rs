@@ -14,6 +14,4 @@ pub use cipher_trait::{Cipher, CipherDirection};
 pub(crate) use default_cipher_provider::DefaultCipherProvider;
 pub(crate) use empty_cipher_provider::EmptyCipherProvider;
 #[cfg(feature = "aes")]
-pub use tc_block_cipher::{KeyOwned, KeyParams};
-#[cfg(feature = "aes")]
 pub use tc_block_modes::{IvParams, KeyWithIvOwned};

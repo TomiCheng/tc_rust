@@ -6,8 +6,8 @@ of `tc_algo_v2` has the rows, and the IV here comes from `rand` and `rand_core`.
 ```rust
 use rand::rngs::SysRng;
 use rand_core::{Rng, UnwrapErr};
-use tc_algo_v2::cipher::{KeyOwned, KeyParams, KeyWithIvOwned};
-use tc_algo_v2::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
+use tc_algo_v2::cipher::KeyWithIvOwned;
+use tc_algo_v2::{AlgoBuilder, AlgoError, DefaultAlgoBuilder, KeyOwned, KeyParams};
 
 fn main() -> Result<(), AlgoError> {
     let algo = DefaultAlgoBuilder::default().build();

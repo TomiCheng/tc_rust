@@ -8,8 +8,8 @@ use tc_buffered_cipher::{
     CipherDirection as BufferedDirection, PaddedBufferedBlockCipher,
 };
 
-use crate::cipher::{Cipher, CipherDirection, CipherEntry, IvParams, KeyOwned, KeyWithIvOwned};
-use crate::{AlgoError, DefaultAlgoContext, EntryBase, ErrorKind, Params};
+use crate::cipher::{Cipher, CipherDirection, CipherEntry, IvParams, KeyWithIvOwned};
+use crate::{AlgoError, DefaultAlgoContext, EntryBase, ErrorKind, KeyOwned, Params};
 
 // The rows of AES, to give to DefaultAlgoBuilder::reg_cipher. Their names and OIDs are those of
 // Bouncy Castle's CipherUtilities, where the NIST ECB and CBC OIDs mean those modes with PKCS#7
@@ -224,8 +224,8 @@ fn algo_error<E: Error + Send + Sync + 'static>(error: BufferedError<E>) -> Algo
 #[cfg(test)]
 mod tests {
     use super::aes;
-    use crate::cipher::{Cipher, CipherDirection, CipherEntry, KeyOwned, KeyWithIvOwned};
-    use crate::{AlgoBuilder, DefaultAlgoBuilder, DefaultAlgoContext, ErrorKind, Params};
+    use crate::cipher::{Cipher, CipherDirection, CipherEntry, KeyWithIvOwned};
+    use crate::{AlgoBuilder, DefaultAlgoBuilder, DefaultAlgoContext, ErrorKind, KeyOwned, Params};
 
     // The example in FIPS 197, appendix C.1
     const KEY: [u8; 16] = [
