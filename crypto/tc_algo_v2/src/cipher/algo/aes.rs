@@ -1,7 +1,9 @@
 use core::error::Error;
 
+use tc_aead_cipher::{AeadCipher, AeadCipherInit, AeadError, AeadParamsOwned, GcmBlockCipher};
 use tc_aes::AesEngine;
 use tc_asn1::Asn1Oid;
+use tc_block_cipher::CipherDirection as BlockDirection;
 use tc_block_modes::{CbcBlockCipher, CfbBlockCipher, EcbBlockCipher, OfbBlockCipher};
 use tc_buffered_cipher::{
     BufferedBlockCipher, BufferedCipher, BufferedCipherInit, BufferedError,
@@ -60,6 +62,16 @@ pub(super) fn aes(_context: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>> {
                 "2.16.840.1.101.3.4.1.43",
             ],
             || Box::new(Buffered(BufferedBlockCipher::new(ofb()))),
+        ),
+        row(
+            "AES/GCM/NOPADDING",
+            &[],
+            &[
+                "2.16.840.1.101.3.4.1.6",
+                "2.16.840.1.101.3.4.1.26",
+                "2.16.840.1.101.3.4.1.46",
+            ],
+            || Box::new(Gcm(GcmBlockCipher::new(AesEngine::new()))),
         ),
     ]
 }
@@ -194,6 +206,39 @@ where
     }
 }
 
+// Its params are an AeadParamsOwned. Encryption ends with the tag, and decryption expects it at
+// the end of the input. As in Bouncy Castle, update may give plaintext before finalize has checked
+// the tag, so a caller that uses update has to discard it when finalize fails
+struct Gcm(GcmBlockCipher<AesEngine>);
+
+impl Cipher for Gcm {
+    fn init(&mut self, direction: CipherDirection, params: &dyn Params) -> Result<(), AlgoError> {
+        let params = downcast::<AeadParamsOwned>(params)?;
+        self.0
+            .init(block_direction(direction), params)
+            .map_err(invalid_params)
+    }
+
+    fn update(&mut self, input: &[u8]) -> Result<Vec<u8>, AlgoError> {
+        let len = self.0.update_output_len(input.len()).map_err(aead_error)?;
+        let mut output = vec![0; len];
+        let written = self
+            .0
+            .process_bytes(input, &mut output)
+            .map_err(aead_error)?;
+        output.truncate(written);
+        Ok(output)
+    }
+
+    fn finalize(&mut self) -> Result<Vec<u8>, AlgoError> {
+        let len = self.0.output_len(0).map_err(aead_error)?;
+        let mut output = vec![0; len];
+        let written = self.0.do_final(&mut output).map_err(aead_error)?;
+        output.truncate(written);
+        Ok(output)
+    }
+}
+
 fn downcast<T: 'static>(params: &dyn Params) -> Result<&T, AlgoError> {
     params
         .as_any()
@@ -205,6 +250,13 @@ fn buffered_direction(direction: CipherDirection) -> BufferedDirection {
     match direction {
         CipherDirection::Encrypt => BufferedDirection::Encrypt,
         CipherDirection::Decrypt => BufferedDirection::Decrypt,
+    }
+}
+
+fn block_direction(direction: CipherDirection) -> BlockDirection {
+    match direction {
+        CipherDirection::Encrypt => BlockDirection::Encrypt,
+        CipherDirection::Decrypt => BlockDirection::Decrypt,
     }
 }
 
@@ -221,10 +273,23 @@ fn algo_error<E: Error + Send + Sync + 'static>(error: BufferedError<E>) -> Algo
     AlgoError::with_source(kind, error)
 }
 
+fn aead_error<E: Error + Send + Sync + 'static>(error: AeadError<E>) -> AlgoError {
+    let kind = match error {
+        // A finished encryption takes a new init, so that no nonce is used twice
+        AeadError::NotInitialized | AeadError::AlreadyFinalized => ErrorKind::NotInitialized,
+        // Too short to hold the tag is told apart no more than a wrong tag
+        AeadError::AuthenticationFailed | AeadError::CiphertextTooShort { .. } => {
+            ErrorKind::InvalidCiphertext
+        }
+        _ => ErrorKind::DataLength,
+    };
+    AlgoError::with_source(kind, error)
+}
+
 #[cfg(test)]
 mod tests {
     use super::aes;
-    use crate::cipher::{Cipher, CipherDirection, CipherEntry, KeyWithIvOwned};
+    use crate::cipher::{AeadParamsOwned, Cipher, CipherDirection, CipherEntry, KeyWithIvOwned};
     use crate::{AlgoBuilder, DefaultAlgoBuilder, DefaultAlgoContext, ErrorKind, KeyOwned, Params};
 
     // The example in FIPS 197, appendix C.1
@@ -503,5 +568,122 @@ mod tests {
         assert_eq!(error.kind(), ErrorKind::NotInitialized);
         let error = cipher.finalize().unwrap_err();
         assert_eq!(error.kind(), ErrorKind::NotInitialized);
+    }
+
+    const GCM: &str = "AES/GCM/NOPADDING";
+
+    fn hex(text: &str) -> Vec<u8> {
+        (0..text.len())
+            .step_by(2)
+            .map(|at| u8::from_str_radix(&text[at..at + 2], 16).unwrap())
+            .collect()
+    }
+
+    // Test Case 4 of the GCM specification
+    fn gcm_params() -> AeadParamsOwned {
+        AeadParamsOwned::new(
+            hex("feffe9928665731c6d6a8f9467308308"),
+            hex("cafebabefacedbaddecaf888"),
+            16,
+            hex("feedfacedeadbeeffeedfacedeadbeefabaddad2"),
+        )
+    }
+
+    fn gcm_plaintext() -> Vec<u8> {
+        hex(concat!(
+            "d9313225f88406e5a55909c5aff5269a86a7a9531534f7da2e4c303d8a318a72",
+            "1c3c0c95956809532fcf0e2449a6b525b16aedf5aa0de657ba637b39",
+        ))
+    }
+
+    fn gcm_sealed() -> Vec<u8> {
+        hex(concat!(
+            "42831ec2217774244b7221b784d0d49ce3aa212f2c02a4e035c17e2329aca12e",
+            "21d514b25466931c7d8f6a5aac84aa051ba30b396a0aac973d58e091",
+            "5bc94fbc3221a5db94fae95ae7121a47",
+        ))
+    }
+
+    #[test]
+    fn the_gcm_row_gives_the_standard_ciphertext_and_tag_through_the_helpers() {
+        let algo = DefaultAlgoBuilder::default().build();
+        let sealed = algo
+            .cipher()
+            .encrypt_by_name(GCM, &gcm_params(), &gcm_plaintext())
+            .unwrap();
+        assert_eq!(sealed, gcm_sealed());
+        let opened = algo
+            .cipher()
+            .decrypt_by_name(GCM, &gcm_params(), &sealed)
+            .unwrap();
+        assert_eq!(opened, gcm_plaintext());
+    }
+
+    #[test]
+    fn the_gcm_helpers_report_a_changed_ciphertext_or_a_changed_aad_as_invalid_ciphertext() {
+        let algo = DefaultAlgoBuilder::default().build();
+        let mut changed = gcm_sealed();
+        changed[0] ^= 1;
+        let error = algo
+            .cipher()
+            .decrypt_by_name(GCM, &gcm_params(), &changed)
+            .unwrap_err();
+        assert_eq!(error.kind(), ErrorKind::InvalidCiphertext);
+
+        let other_aad = AeadParamsOwned::new(
+            hex("feffe9928665731c6d6a8f9467308308"),
+            hex("cafebabefacedbaddecaf888"),
+            16,
+            vec![],
+        );
+        let error = algo
+            .cipher()
+            .decrypt_by_name(GCM, &other_aad, &gcm_sealed())
+            .unwrap_err();
+        assert_eq!(error.kind(), ErrorKind::InvalidCiphertext);
+    }
+
+    #[test]
+    fn the_gcm_row_reports_a_ciphertext_shorter_than_the_tag_as_invalid_ciphertext() {
+        let algo = DefaultAlgoBuilder::default().build();
+        let error = algo
+            .cipher()
+            .decrypt_by_name(GCM, &gcm_params(), &[0; 15])
+            .unwrap_err();
+        assert_eq!(error.kind(), ErrorKind::InvalidCiphertext);
+    }
+
+    #[test]
+    fn the_gcm_row_refuses_params_of_another_type_or_a_key_of_the_wrong_length() {
+        assert_eq!(
+            init_error(GCM, &key_and_iv(&KEY, &CBC_IV)),
+            ErrorKind::InvalidParams
+        );
+        let short_key = AeadParamsOwned::new(KEY[..15].to_vec(), vec![0; 12], 16, vec![]);
+        assert_eq!(init_error(GCM, &short_key), ErrorKind::InvalidParams);
+    }
+
+    #[test]
+    fn the_gcm_row_reports_a_cipher_that_was_not_initialized() {
+        let mut cipher = entry(GCM).create();
+        let error = cipher.update(&PLAINTEXT).unwrap_err();
+        assert_eq!(error.kind(), ErrorKind::NotInitialized);
+        let error = cipher.finalize().unwrap_err();
+        assert_eq!(error.kind(), ErrorKind::NotInitialized);
+    }
+
+    #[test]
+    fn a_finished_gcm_encryption_refuses_more_data_and_the_same_nonce() {
+        let mut cipher = entry(GCM).create();
+        cipher
+            .init(CipherDirection::Encrypt, &gcm_params())
+            .unwrap();
+        cipher.finalize().unwrap();
+        let error = cipher.update(&PLAINTEXT).unwrap_err();
+        assert_eq!(error.kind(), ErrorKind::NotInitialized);
+        let error = cipher
+            .init(CipherDirection::Encrypt, &gcm_params())
+            .unwrap_err();
+        assert_eq!(error.kind(), ErrorKind::InvalidParams);
     }
 }

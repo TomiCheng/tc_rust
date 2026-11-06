@@ -16,7 +16,7 @@ sha256 = ["dep:tc_sha", "dep:tc_digest"]
 shake256 = ["dep:tc_keccak", "dep:tc_digest"]
 
 # Block Cipher
-aes = ["dep:tc_aes", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_buffered_cipher"]
+aes = ["dep:tc_aes", "dep:tc_aead_cipher", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_buffered_cipher"]
 
 # MAC
 hmac-sha256 = ["sha256", "dep:tc_block_cipher", "dep:tc_macs", "tc_macs/hmac", "tc_macs/alloc"]
@@ -27,6 +27,7 @@ aes-wrap = ["aes", "dep:tc_key_wrap", "tc_key_wrap/rfc3394"]
 [dependencies]
 rand = { version = "0.10", default-features = false, features = ["sys_rng"] }
 rand_core = "0.10"
+tc_aead_cipher = { version = "0.1.0", features = ["alloc"], optional = true }
 tc_asn1 = "0.1.2"
 tc_block_cipher = { version = "0.1.0", features = ["alloc"], optional = true }
 tc_block_modes = { version = "0.1.1", features = ["alloc"], optional = true }

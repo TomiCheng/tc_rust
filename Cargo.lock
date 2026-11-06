@@ -914,6 +914,7 @@ version = "0.1.0"
 dependencies = [
  "rand",
  "rand_core",
+ "tc_aead_cipher",
  "tc_aes",
  "tc_asn1",
  "tc_block_cipher",
