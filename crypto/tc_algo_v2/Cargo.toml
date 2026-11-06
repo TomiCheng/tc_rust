@@ -45,6 +45,9 @@ pbe-aes = ["aes", "dep:tc_pbe", "dep:tc_sha"]
 # KEM
 ml-kem = ["dep:tc_asym_cipher", "dep:tc_kem", "dep:tc_ml_kem"]
 
+# IES
+ies = ["dh", "dep:tc_block_cipher", "dep:tc_ies", "dep:tc_kdf", "dep:tc_macs", "tc_macs/hmac", "tc_macs/alloc", "dep:tc_sha"]
+
 [dependencies]
 rand = { version = "0.10", default-features = false, features = ["sys_rng"] }
 rand_core = "0.10"
@@ -83,6 +86,9 @@ tc_asn1_x509 = { version = "0.1.0", path = "../../asn1/tc_asn1_x509", optional =
 tc_rsa = { version = "0.1.0", optional = true }
 tc_rsa_signer = { version = "0.1.0", path = "../../signer/tc_rsa_signer", optional = true }
 tc_signer = { version = "0.1.0", path = "../../signer/tc_signer", optional = true }
+
+# IES
+tc_ies = { version = "0.1.0", path = "../../ies/tc_ies", optional = true }
 
 # KEM
 tc_kem = { version = "0.1.0", path = "../tc_kem", optional = true }

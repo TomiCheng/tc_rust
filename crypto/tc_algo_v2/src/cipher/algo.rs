@@ -2,6 +2,8 @@
 mod aes;
 #[cfg(feature = "chacha")]
 mod chacha;
+#[cfg(feature = "ies")]
+mod ies;
 #[cfg(feature = "rsa")]
 mod rsa;
 
@@ -17,4 +19,6 @@ pub(crate) const BUILT_IN: &[CreateRows] = &[
     chacha::chacha,
     #[cfg(feature = "rsa")]
     rsa::rsa,
+    #[cfg(feature = "ies")]
+    ies::ies,
 ];

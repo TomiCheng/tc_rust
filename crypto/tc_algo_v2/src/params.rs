@@ -1,3 +1,5 @@
+#[cfg(feature = "ies")]
+mod ies_dh_params;
 mod key_length;
 
 #[cfg(any(
@@ -11,6 +13,8 @@ mod key_length;
 ))]
 use core::any::Any;
 
+#[cfg(feature = "ies")]
+pub use ies_dh_params::IesDhParams;
 pub use key_length::KeyLength;
 #[cfg(feature = "aes")]
 pub use tc_aead_cipher::AeadParamsOwned;
