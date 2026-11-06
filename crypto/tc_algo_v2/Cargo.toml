@@ -18,6 +18,9 @@ aes = ["dep:tc_aes", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_buffer
 # MAC
 hmac-sha256 = ["sha256", "dep:tc_block_cipher", "dep:tc_macs", "tc_macs/hmac", "tc_macs/alloc"]
 
+# Key wrap
+aes-wrap = ["aes", "dep:tc_key_wrap", "tc_key_wrap/rfc3394"]
+
 [dependencies]
 rand = { version = "0.10", default-features = false, features = ["sys_rng"] }
 rand_core = "0.10"
@@ -36,3 +39,6 @@ tc_aes = { version = "0.1.0", optional = true }
 
 # MAC
 tc_macs = { version = "0.1.1", optional = true }
+
+# Key wrap
+tc_key_wrap = { version = "0.1.0", optional = true }

@@ -9,6 +9,7 @@ use crate::default_algo_context::os_rand;
 use crate::digest::{self, DigestEntry};
 use crate::generate::{BUILT_IN_KEY_GENERATORS, CreateKeyGeneratorRows};
 use crate::mac::{self, MacEntry};
+use crate::wrap::{self, WrapperEntry};
 use crate::{Algo, AlgoBuilder, DefaultAlgoContext, KeyGeneratorEntry, Policy};
 
 #[derive(Clone)]
@@ -16,6 +17,7 @@ pub struct DefaultAlgoBuilder {
     digests: Vec<digest::CreateRows>,
     ciphers: Vec<cipher::CreateRows>,
     macs: Vec<mac::CreateRows>,
+    wrappers: Vec<wrap::CreateRows>,
     key_generators: Vec<CreateKeyGeneratorRows>,
     policy: Option<Arc<dyn Policy>>,
     rand: fn() -> Box<dyn CryptoRng>,
@@ -28,6 +30,7 @@ impl Default for DefaultAlgoBuilder {
             digests: digest::BUILT_IN.to_vec(),
             ciphers: cipher::BUILT_IN.to_vec(),
             macs: mac::BUILT_IN.to_vec(),
+            wrappers: wrap::BUILT_IN.to_vec(),
             key_generators: BUILT_IN_KEY_GENERATORS.to_vec(),
             policy: None,
             rand: os_rand,
@@ -46,6 +49,10 @@ impl DefaultAlgoBuilder {
 
     pub fn reg_mac(&mut self, create: fn(&DefaultAlgoContext) -> Vec<Box<dyn MacEntry>>) {
         self.macs.push(create);
+    }
+
+    pub fn reg_wrap(&mut self, create: fn(&DefaultAlgoContext) -> Vec<Box<dyn WrapperEntry>>) {
+        self.wrappers.push(create);
     }
 
     pub fn reg_key_generator(
@@ -95,6 +102,14 @@ impl DefaultAlgoBuilder {
             .collect()
     }
 
+    fn wrapper_rows(&self, context: &DefaultAlgoContext) -> Vec<Box<dyn WrapperEntry>> {
+        self.wrappers
+            .iter()
+            .rev()
+            .flat_map(|create| create(context))
+            .collect()
+    }
+
     fn key_generator_rows(&self, context: &DefaultAlgoContext) -> Vec<Box<dyn KeyGeneratorEntry>> {
         self.key_generators
             .iter()
@@ -111,6 +126,7 @@ impl AlgoBuilder for DefaultAlgoBuilder {
             self.digest_rows(&context),
             self.cipher_rows(&context),
             self.mac_rows(&context),
+            self.wrapper_rows(&context),
             self.key_generator_rows(&context),
             self.policy.clone(),
         ))
@@ -124,6 +140,7 @@ impl fmt::Debug for DefaultAlgoBuilder {
             .field("digests", &self.digests.len())
             .field("ciphers", &self.ciphers.len())
             .field("macs", &self.macs.len())
+            .field("wrappers", &self.wrappers.len())
             .field("key_generators", &self.key_generators.len())
             .field("policy", &self.policy.is_some())
             .field("rand", &self.rand)

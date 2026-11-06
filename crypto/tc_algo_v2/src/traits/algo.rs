@@ -5,6 +5,7 @@ use crate::generate::{
     KeyPairGeneratorProvider,
 };
 use crate::mac::{EmptyMacProvider, MacProvider};
+use crate::wrap::{EmptyWrapperProvider, WrapperProvider};
 
 pub trait Algo {
     fn digest(&self) -> &dyn DigestProvider {
@@ -17,6 +18,10 @@ pub trait Algo {
 
     fn cipher(&self) -> &dyn CipherProvider {
         &EmptyCipherProvider
+    }
+
+    fn wrap(&self) -> &dyn WrapperProvider {
+        &EmptyWrapperProvider
     }
 
     fn key_generator(&self) -> &dyn KeyGeneratorProvider {

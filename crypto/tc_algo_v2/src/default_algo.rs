@@ -3,6 +3,7 @@ use crate::cipher::{CipherEntry, CipherProvider, DefaultCipherProvider};
 use crate::digest::{DefaultDigestProvider, DigestEntry, DigestProvider};
 use crate::generate::DefaultKeyGeneratorProvider;
 use crate::mac::{DefaultMacProvider, MacEntry, MacProvider};
+use crate::wrap::{DefaultWrapperProvider, WrapperEntry, WrapperProvider};
 
 use crate::{Algo, KeyGeneratorEntry, KeyGeneratorProvider, Policy};
 
@@ -10,6 +11,7 @@ pub(crate) struct DefaultAlgo {
     digest: DefaultDigestProvider,
     cipher: DefaultCipherProvider,
     mac: DefaultMacProvider,
+    wrap: DefaultWrapperProvider,
     key_generator: DefaultKeyGeneratorProvider,
 }
 
@@ -18,6 +20,7 @@ impl DefaultAlgo {
         digests: Vec<Box<dyn DigestEntry>>,
         ciphers: Vec<Box<dyn CipherEntry>>,
         macs: Vec<Box<dyn MacEntry>>,
+        wrappers: Vec<Box<dyn WrapperEntry>>,
         key_generators: Vec<Box<dyn KeyGeneratorEntry>>,
         policy: Option<Arc<dyn Policy>>,
     ) -> Self {
@@ -25,6 +28,7 @@ impl DefaultAlgo {
             digest: DefaultDigestProvider::new(digests, policy.clone()),
             cipher: DefaultCipherProvider::new(ciphers, policy.clone()),
             mac: DefaultMacProvider::new(macs, policy.clone()),
+            wrap: DefaultWrapperProvider::new(wrappers, policy.clone()),
             key_generator: DefaultKeyGeneratorProvider::new(key_generators, policy),
         }
     }
@@ -41,6 +45,10 @@ impl Algo for DefaultAlgo {
 
     fn mac(&self) -> &dyn MacProvider {
         &self.mac
+    }
+
+    fn wrap(&self) -> &dyn WrapperProvider {
+        &self.wrap
     }
 
     fn key_generator(&self) -> &dyn KeyGeneratorProvider {
