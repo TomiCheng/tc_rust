@@ -1,7 +1,10 @@
 use std::sync::{Arc, RwLock};
 
 use tc_algo_v2::digest::{Digest, DigestEntry};
-use tc_algo_v2::{Algo, AlgoBuilder, DefaultAlgoBuilder, EntryBase, ErrorKind, ListPolicy, Policy};
+use tc_algo_v2::{
+    Algo, AlgoBuilder, DefaultAlgoBuilder, DefaultAlgoContext, EntryBase, ErrorKind, ListPolicy,
+    Policy,
+};
 use tc_asn1::Asn1Oid;
 
 struct Row {
@@ -65,21 +68,21 @@ fn oid(dotted: &str) -> Asn1Oid {
     dotted.parse().expect("a valid OID")
 }
 
-type Rows = fn() -> Vec<Box<dyn DigestEntry>>;
+type Rows = fn(&DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>>;
 
-fn older() -> Vec<Box<dyn DigestEntry>> {
+fn older(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>> {
     vec![row("TEST-DIGEST", &["TESTD"], &["1.2.3.4"], 1)]
 }
 
-fn newer() -> Vec<Box<dyn DigestEntry>> {
+fn newer(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>> {
     vec![row("TEST-DIGEST", &[], &["1.2.3.4"], 2)]
 }
 
-fn other_name_same_alias() -> Vec<Box<dyn DigestEntry>> {
+fn other_name_same_alias(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>> {
     vec![row("OTHER-DIGEST", &["TEST-DIGEST"], &[], 3)]
 }
 
-fn several() -> Vec<Box<dyn DigestEntry>> {
+fn several(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>> {
     vec![
         row("TEST-DIGEST", &[], &[], 5),
         row("OTHER-TEST-DIGEST", &[], &[], 6),
@@ -190,7 +193,7 @@ fn the_helpers_report_an_unknown_digest() {
     assert_eq!(by_oid.unwrap_err().kind(), ErrorKind::UnknownDigest);
 }
 
-fn unrelated() -> Vec<Box<dyn DigestEntry>> {
+fn unrelated(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>> {
     vec![row("UNRELATED-DIGEST", &[], &[], 4)]
 }
 
@@ -272,7 +275,7 @@ mod sha256 {
         bytes.iter().map(|byte| format!("{byte:02x}")).collect()
     }
 
-    fn my_sha256() -> Vec<Box<dyn DigestEntry>> {
+    fn my_sha256(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>> {
         vec![row("SHA-256", &[], &[], 9)]
     }
 

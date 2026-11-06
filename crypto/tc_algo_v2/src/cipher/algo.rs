@@ -3,7 +3,7 @@ mod aes;
 
 use super::CipherEntry;
 
-pub(crate) type CreateRows = fn() -> Vec<Box<dyn CipherEntry>>;
+pub(crate) type CreateRows = fn(&crate::DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>>;
 
 // What DefaultAlgoBuilder starts with: the rows of the ciphers whose features are on
 pub(crate) const BUILT_IN: &[CreateRows] = &[

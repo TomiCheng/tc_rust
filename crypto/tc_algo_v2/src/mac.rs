@@ -7,3 +7,5 @@ pub(crate) use empty_mac_provider::EmptyMacProvider;
 pub use mac_entry::MacEntry;
 pub use mac_provider::MacProvider;
 pub use mac_trait::Mac;
+
+pub(crate) type CreateRows = fn(&crate::DefaultAlgoContext) -> Vec<Box<dyn MacEntry>>;

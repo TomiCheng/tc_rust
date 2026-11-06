@@ -2,12 +2,12 @@ use tc_asn1::Asn1Oid;
 use tc_digest::{Digest as _, TryDigest as _};
 use tc_sha::Sha256Digest;
 
-use crate::EntryBase;
 use crate::digest::{Digest, DigestEntry};
+use crate::{DefaultAlgoContext, EntryBase};
 
 // The row of SHA-256, to give to DefaultAlgoBuilder::reg_digest. Its names and OIDs are those of
 // Bouncy Castle's DigestUtilities, the HMAC OID included
-pub(super) fn sha256() -> Vec<Box<dyn DigestEntry>> {
+pub(super) fn sha256(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>> {
     vec![Box::new(Sha256Entry {
         aliases: vec!["SHA256".to_string()],
         oids: vec![oid("2.16.840.1.101.3.4.2.1"), oid("1.2.840.113549.2.9")],
@@ -74,14 +74,14 @@ impl Digest for Sha256 {
 mod tests {
     use super::sha256;
     use crate::digest::DigestEntry;
-    use crate::{AlgoBuilder, DefaultAlgoBuilder};
+    use crate::{AlgoBuilder, DefaultAlgoBuilder, DefaultAlgoContext};
 
     fn hex(bytes: &[u8]) -> String {
         bytes.iter().map(|byte| format!("{byte:02x}")).collect()
     }
 
     fn row() -> Box<dyn DigestEntry> {
-        sha256().remove(0)
+        sha256(&DefaultAlgoContext::for_tests()).remove(0)
     }
 
     #[test]

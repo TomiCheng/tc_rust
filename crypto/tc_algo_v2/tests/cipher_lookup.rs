@@ -2,8 +2,8 @@ use std::sync::{Arc, RwLock};
 
 use tc_algo_v2::cipher::{Cipher, CipherDirection, CipherEntry};
 use tc_algo_v2::{
-    Algo, AlgoBuilder, AlgoError, DefaultAlgoBuilder, EntryBase, ErrorKind, ListPolicy, Params,
-    Policy,
+    Algo, AlgoBuilder, AlgoError, DefaultAlgoBuilder, DefaultAlgoContext, EntryBase, ErrorKind,
+    ListPolicy, Params, Policy,
 };
 use tc_asn1::Asn1Oid;
 
@@ -88,21 +88,21 @@ fn oid(dotted: &str) -> Asn1Oid {
     dotted.parse().expect("a valid OID")
 }
 
-type Rows = fn() -> Vec<Box<dyn CipherEntry>>;
+type Rows = fn(&DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>>;
 
-fn older() -> Vec<Box<dyn CipherEntry>> {
+fn older(_context: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>> {
     vec![row("TEST-CIPHER", &["TESTC"], &["1.2.3.4"], 1)]
 }
 
-fn newer() -> Vec<Box<dyn CipherEntry>> {
+fn newer(_context: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>> {
     vec![row("TEST-CIPHER", &[], &["1.2.3.4"], 2)]
 }
 
-fn unrelated() -> Vec<Box<dyn CipherEntry>> {
+fn unrelated(_context: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>> {
     vec![row("UNRELATED-CIPHER", &[], &[], 3)]
 }
 
-fn several() -> Vec<Box<dyn CipherEntry>> {
+fn several(_context: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>> {
     vec![
         row("TEST-CIPHER", &[], &[], 4),
         row("OTHER-TEST-CIPHER", &[], &[], 5),

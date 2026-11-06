@@ -1,27 +1,24 @@
 use core::fmt;
 use std::sync::Arc;
 
-use rand::rngs::SysRng;
-use rand_core::{CryptoRng, UnwrapErr};
+use rand_core::CryptoRng;
 
 use crate::cipher::{self, CipherEntry};
 use crate::default_algo::DefaultAlgo;
+use crate::default_algo_context::os_rand;
 use crate::digest::{self, DigestEntry};
 use crate::generate::{BUILT_IN_KEY_GENERATORS, CreateKeyGeneratorRows};
+use crate::mac::{self, MacEntry};
 use crate::{Algo, AlgoBuilder, DefaultAlgoContext, KeyGeneratorEntry, Policy};
 
 #[derive(Clone)]
 pub struct DefaultAlgoBuilder {
     digests: Vec<digest::CreateRows>,
     ciphers: Vec<cipher::CreateRows>,
+    macs: Vec<mac::CreateRows>,
     key_generators: Vec<CreateKeyGeneratorRows>,
     policy: Option<Arc<dyn Policy>>,
     rand: fn() -> Box<dyn CryptoRng>,
-}
-
-// The operating system's random numbers; a failure to get them panics
-fn os_rand() -> Box<dyn CryptoRng> {
-    Box::new(UnwrapErr(SysRng))
 }
 
 // Starts with the algorithms whose features are on
@@ -30,6 +27,7 @@ impl Default for DefaultAlgoBuilder {
         Self {
             digests: digest::BUILT_IN.to_vec(),
             ciphers: cipher::BUILT_IN.to_vec(),
+            macs: Vec::new(),
             key_generators: BUILT_IN_KEY_GENERATORS.to_vec(),
             policy: None,
             rand: os_rand,
@@ -38,12 +36,16 @@ impl Default for DefaultAlgoBuilder {
 }
 
 impl DefaultAlgoBuilder {
-    pub fn reg_digest(&mut self, create: fn() -> Vec<Box<dyn DigestEntry>>) {
+    pub fn reg_digest(&mut self, create: fn(&DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>>) {
         self.digests.push(create);
     }
 
-    pub fn reg_cipher(&mut self, create: fn() -> Vec<Box<dyn CipherEntry>>) {
+    pub fn reg_cipher(&mut self, create: fn(&DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>>) {
         self.ciphers.push(create);
+    }
+
+    pub fn reg_mac(&mut self, create: fn(&DefaultAlgoContext) -> Vec<Box<dyn MacEntry>>) {
+        self.macs.push(create);
     }
 
     pub fn reg_key_generator(
@@ -69,38 +71,38 @@ impl DefaultAlgoBuilder {
 // The last registered comes first, so that it is the one a lookup by its name finds. The rows of
 // one function stay together, in the order it returns them
 impl DefaultAlgoBuilder {
-    fn digest_rows(&self) -> Vec<Box<dyn DigestEntry>> {
+    fn digest_rows(&self, context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>> {
         self.digests
             .iter()
             .rev()
-            .flat_map(|create| create())
+            .flat_map(|create| create(context))
             .collect()
     }
 
-    fn cipher_rows(&self) -> Vec<Box<dyn CipherEntry>> {
+    fn cipher_rows(&self, context: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>> {
         self.ciphers
             .iter()
             .rev()
-            .flat_map(|create| create())
+            .flat_map(|create| create(context))
             .collect()
     }
 
-    fn key_generator_rows(&self) -> Vec<Box<dyn KeyGeneratorEntry>> {
-        let context = DefaultAlgoContext::new(self.rand);
+    fn key_generator_rows(&self, context: &DefaultAlgoContext) -> Vec<Box<dyn KeyGeneratorEntry>> {
         self.key_generators
             .iter()
             .rev()
-            .flat_map(|create| create(&context))
+            .flat_map(|create| create(context))
             .collect()
     }
 }
 
 impl AlgoBuilder for DefaultAlgoBuilder {
     fn build(&self) -> Box<dyn Algo> {
+        let context = DefaultAlgoContext::new(self.rand);
         Box::new(DefaultAlgo::new(
-            self.digest_rows(),
-            self.cipher_rows(),
-            self.key_generator_rows(),
+            self.digest_rows(&context),
+            self.cipher_rows(&context),
+            self.key_generator_rows(&context),
             self.policy.clone(),
         ))
     }
@@ -112,6 +114,7 @@ impl fmt::Debug for DefaultAlgoBuilder {
         f.debug_struct("DefaultAlgoBuilder")
             .field("digests", &self.digests.len())
             .field("ciphers", &self.ciphers.len())
+            .field("macs", &self.macs.len())
             .field("key_generators", &self.key_generators.len())
             .field("policy", &self.policy.is_some())
             .field("rand", &self.rand)
@@ -122,8 +125,8 @@ impl fmt::Debug for DefaultAlgoBuilder {
 #[cfg(test)]
 mod tests {
     use super::DefaultAlgoBuilder;
-    use crate::EntryBase;
     use crate::digest::{Digest, DigestEntry};
+    use crate::{DefaultAlgoContext, EntryBase};
 
     struct Row(&'static str);
 
@@ -139,22 +142,23 @@ mod tests {
         }
     }
 
-    fn first() -> Vec<Box<dyn DigestEntry>> {
+    fn first(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>> {
         vec![Box::new(Row("FIRST"))]
     }
 
-    fn second() -> Vec<Box<dyn DigestEntry>> {
+    fn second(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>> {
         vec![Box::new(Row("SECOND"))]
     }
 
     #[test]
     fn the_last_registered_digest_comes_first_and_the_built_in_ones_last() {
+        let context = DefaultAlgoContext::for_tests();
         let mut builder = DefaultAlgoBuilder::default();
-        let built_in = builder.digest_rows().len();
+        let built_in = builder.digest_rows(&context).len();
         builder.reg_digest(first);
         builder.reg_digest(second);
 
-        let rows = builder.digest_rows();
+        let rows = builder.digest_rows(&context);
         assert_eq!(rows.len(), built_in + 2);
         assert_eq!(rows[0].name(), "SECOND");
         assert_eq!(rows[1].name(), "FIRST");
@@ -163,7 +167,8 @@ mod tests {
     #[cfg(feature = "sha256")]
     #[test]
     fn a_new_builder_has_sha256_when_its_feature_is_on() {
-        let rows = DefaultAlgoBuilder::default().digest_rows();
+        let context = DefaultAlgoContext::for_tests();
+        let rows = DefaultAlgoBuilder::default().digest_rows(&context);
         assert!(rows.iter().any(|row| row.name() == "SHA-256"));
     }
 

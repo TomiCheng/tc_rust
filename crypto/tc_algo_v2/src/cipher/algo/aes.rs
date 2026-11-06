@@ -9,11 +9,11 @@ use tc_buffered_cipher::{
 };
 
 use crate::cipher::{Cipher, CipherDirection, CipherEntry, IvParams, KeyOwned, KeyWithIvOwned};
-use crate::{AlgoError, EntryBase, ErrorKind, Params};
+use crate::{AlgoError, DefaultAlgoContext, EntryBase, ErrorKind, Params};
 
 // The rows of AES, to give to DefaultAlgoBuilder::reg_cipher. Their names and OIDs are those of
 // Bouncy Castle's CipherUtilities, where the NIST ECB and CBC OIDs mean those modes with PKCS#7
-pub(super) fn aes() -> Vec<Box<dyn CipherEntry>> {
+pub(super) fn aes(_context: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>> {
     vec![
         row("AES/ECB/NOPADDING", &[], &[], || {
             Box::new(Ecb(Buffered(BufferedBlockCipher::new(ecb()))))
@@ -225,7 +225,7 @@ fn algo_error<E: Error + Send + Sync + 'static>(error: BufferedError<E>) -> Algo
 mod tests {
     use super::aes;
     use crate::cipher::{Cipher, CipherDirection, CipherEntry, KeyOwned, KeyWithIvOwned};
-    use crate::{AlgoBuilder, DefaultAlgoBuilder, ErrorKind, Params};
+    use crate::{AlgoBuilder, DefaultAlgoBuilder, DefaultAlgoContext, ErrorKind, Params};
 
     // The example in FIPS 197, appendix C.1
     const KEY: [u8; 16] = [
@@ -277,7 +277,7 @@ mod tests {
     ];
 
     fn entry(name: &str) -> Box<dyn CipherEntry> {
-        aes()
+        aes(&DefaultAlgoContext::for_tests())
             .into_iter()
             .find(|row| row.name() == name)
             .expect("a row of AES")
