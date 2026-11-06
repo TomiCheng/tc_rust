@@ -98,7 +98,7 @@ fn algo_with(rows: &[Rows]) -> Box<dyn Algo> {
 }
 
 fn mark_by_name(algo: &dyn Algo, name: &str) -> Option<Vec<u8>> {
-    Some(algo.digest().get_by_name(name)?.finalize())
+    Some(algo.digest().get_by_name(name).ok()?.finalize())
 }
 
 #[test]
@@ -117,10 +117,24 @@ fn a_digest_is_found_by_its_oid() {
 }
 
 #[test]
-fn an_unknown_name_or_oid_finds_nothing() {
+fn an_unknown_name_or_oid_is_reported_as_unknown_digest() {
     let algo = algo_with(&[older]);
-    assert!(algo.digest().get_by_name("NO-SUCH-DIGEST").is_none());
-    assert!(algo.digest().get_by_oid(&oid("1.2.3.5")).is_none());
+    assert_eq!(
+        algo.digest()
+            .get_by_name("NO-SUCH-DIGEST")
+            .err()
+            .unwrap()
+            .kind(),
+        ErrorKind::UnknownDigest
+    );
+    assert_eq!(
+        algo.digest()
+            .get_by_oid(&oid("1.2.3.5"))
+            .err()
+            .unwrap()
+            .kind(),
+        ErrorKind::UnknownDigest
+    );
 }
 
 #[test]

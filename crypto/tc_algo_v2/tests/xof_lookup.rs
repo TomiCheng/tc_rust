@@ -105,7 +105,7 @@ fn mark_of(mut xof: Box<dyn Xof>) -> u8 {
 }
 
 fn mark_by_name(algo: &dyn Algo, name: &str) -> Option<u8> {
-    Some(mark_of(algo.xof().get_by_name(name)?))
+    Some(mark_of(algo.xof().get_by_name(name).ok()?))
 }
 
 #[test]
@@ -124,10 +124,16 @@ fn an_xof_is_found_by_its_oid() {
 }
 
 #[test]
-fn an_unknown_name_or_oid_finds_nothing() {
+fn an_unknown_name_or_oid_is_reported_as_unknown_xof() {
     let algo = builder_with(&[older]).build();
-    assert!(algo.xof().get_by_name("NO-SUCH").is_none());
-    assert!(algo.xof().get_by_oid(&oid("1.2.3.5")).is_none());
+    assert_eq!(
+        algo.xof().get_by_name("NO-SUCH").err().unwrap().kind(),
+        ErrorKind::UnknownXof
+    );
+    assert_eq!(
+        algo.xof().get_by_oid(&oid("1.2.3.5")).err().unwrap().kind(),
+        ErrorKind::UnknownXof
+    );
 }
 
 #[test]

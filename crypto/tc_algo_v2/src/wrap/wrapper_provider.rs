@@ -1,13 +1,13 @@
 use tc_asn1::Asn1Oid;
 
-use crate::{AlgoError, ErrorKind, Params, WrapDirection, Wrapper, WrapperEntry};
+use crate::{AlgoError, Params, WrapDirection, Wrapper, WrapperEntry};
 
 pub trait WrapperProvider: Send + Sync {
     fn algorithms(&self) -> Box<dyn Iterator<Item = &dyn WrapperEntry> + '_>;
 
-    fn get_by_name(&self, name: &str) -> Option<Box<dyn Wrapper>>;
+    fn get_by_name(&self, name: &str) -> Result<Box<dyn Wrapper>, AlgoError>;
 
-    fn get_by_oid(&self, oid: &Asn1Oid) -> Option<Box<dyn Wrapper>>;
+    fn get_by_oid(&self, oid: &Asn1Oid) -> Result<Box<dyn Wrapper>, AlgoError>;
 
     fn wrap_by_name(
         &self,
@@ -15,7 +15,7 @@ pub trait WrapperProvider: Send + Sync {
         params: &dyn Params,
         input: &[u8],
     ) -> Result<Vec<u8>, AlgoError> {
-        wrap(self.get_by_name(name), params, input)
+        wrap(self.get_by_name(name)?, params, input)
     }
 
     fn wrap_by_oid(
@@ -24,7 +24,7 @@ pub trait WrapperProvider: Send + Sync {
         params: &dyn Params,
         input: &[u8],
     ) -> Result<Vec<u8>, AlgoError> {
-        wrap(self.get_by_oid(oid), params, input)
+        wrap(self.get_by_oid(oid)?, params, input)
     }
 
     fn unwrap_by_name(
@@ -33,7 +33,7 @@ pub trait WrapperProvider: Send + Sync {
         params: &dyn Params,
         input: &[u8],
     ) -> Result<Vec<u8>, AlgoError> {
-        unwrap(self.get_by_name(name), params, input)
+        unwrap(self.get_by_name(name)?, params, input)
     }
 
     fn unwrap_by_oid(
@@ -42,26 +42,24 @@ pub trait WrapperProvider: Send + Sync {
         params: &dyn Params,
         input: &[u8],
     ) -> Result<Vec<u8>, AlgoError> {
-        unwrap(self.get_by_oid(oid), params, input)
+        unwrap(self.get_by_oid(oid)?, params, input)
     }
 }
 
 fn wrap(
-    wrapper: Option<Box<dyn Wrapper>>,
+    mut wrapper: Box<dyn Wrapper>,
     params: &dyn Params,
     input: &[u8],
 ) -> Result<Vec<u8>, AlgoError> {
-    let mut wrapper = wrapper.ok_or(AlgoError::new(ErrorKind::UnknownWrapper))?;
     wrapper.init(WrapDirection::Wrap, params)?;
     wrapper.wrap(input)
 }
 
 fn unwrap(
-    wrapper: Option<Box<dyn Wrapper>>,
+    mut wrapper: Box<dyn Wrapper>,
     params: &dyn Params,
     input: &[u8],
 ) -> Result<Vec<u8>, AlgoError> {
-    let mut wrapper = wrapper.ok_or(AlgoError::new(ErrorKind::UnknownWrapper))?;
     wrapper.init(WrapDirection::Unwrap, params)?;
     wrapper.unwrap(input)
 }

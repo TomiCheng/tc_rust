@@ -7,16 +7,13 @@ shorter of two outputs is the start of the longer.
 With SHAKE256. The `shake256` feature of `tc_algo_v2` has the row.
 
 ```rust
-use tc_algo_v2::{AlgoBuilder, AlgoError, DefaultAlgoBuilder, ErrorKind};
+use tc_algo_v2::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
 fn main() -> Result<(), AlgoError> {
     let algo = DefaultAlgoBuilder::default().build();
     let message = b"attack at dawn";
 
-    let mut xof = algo
-        .xof()
-        .get_by_name("SHAKE256")
-        .ok_or(AlgoError::new(ErrorKind::UnknownXof))?;
+    let mut xof = algo.xof().get_by_name("SHAKE256")?;
     xof.update(message)?;
 
     // Take the output in pieces

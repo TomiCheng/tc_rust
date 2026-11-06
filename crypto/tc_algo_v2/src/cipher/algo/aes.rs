@@ -469,8 +469,8 @@ mod tests {
     #[test]
     fn a_new_builder_finds_the_row_by_its_name_whatever_the_case() {
         let algo = DefaultAlgoBuilder::default().build();
-        assert!(algo.cipher().get_by_name("AES/ECB/NoPadding").is_some());
-        assert!(algo.cipher().get_by_name("aes/ecb/nopadding").is_some());
+        assert!(algo.cipher().get_by_name("AES/ECB/NoPadding").is_ok());
+        assert!(algo.cipher().get_by_name("aes/ecb/nopadding").is_ok());
     }
 
     #[test]

@@ -3,6 +3,7 @@ use core::iter;
 use tc_asn1::Asn1Oid;
 
 use crate::digest::{Digest, DigestEntry, DigestProvider};
+use crate::{AlgoError, ErrorKind};
 
 pub(crate) struct EmptyDigestProvider;
 
@@ -11,11 +12,11 @@ impl DigestProvider for EmptyDigestProvider {
         Box::new(iter::empty())
     }
 
-    fn get_by_name(&self, _name: &str) -> Option<Box<dyn Digest>> {
-        None
+    fn get_by_name(&self, _name: &str) -> Result<Box<dyn Digest>, AlgoError> {
+        Err(AlgoError::new(ErrorKind::UnknownDigest))
     }
 
-    fn get_by_oid(&self, _oid: &Asn1Oid) -> Option<Box<dyn Digest>> {
-        None
+    fn get_by_oid(&self, _oid: &Asn1Oid) -> Result<Box<dyn Digest>, AlgoError> {
+        Err(AlgoError::new(ErrorKind::UnknownDigest))
     }
 }

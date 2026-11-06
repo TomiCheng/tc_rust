@@ -2,7 +2,7 @@ use core::iter;
 
 use tc_asn1::Asn1Oid;
 
-use crate::{KeyGenerator, KeyGeneratorEntry, KeyGeneratorProvider};
+use crate::{AlgoError, ErrorKind, KeyGenerator, KeyGeneratorEntry, KeyGeneratorProvider};
 
 pub(crate) struct EmptyKeyGeneratorProvider;
 
@@ -11,11 +11,11 @@ impl KeyGeneratorProvider for EmptyKeyGeneratorProvider {
         Box::new(iter::empty())
     }
 
-    fn get_by_name(&self, _name: &str) -> Option<Box<dyn KeyGenerator>> {
-        None
+    fn get_by_name(&self, _name: &str) -> Result<Box<dyn KeyGenerator>, AlgoError> {
+        Err(AlgoError::new(ErrorKind::UnknownGenerator))
     }
 
-    fn get_by_oid(&self, _oid: &Asn1Oid) -> Option<Box<dyn KeyGenerator>> {
-        None
+    fn get_by_oid(&self, _oid: &Asn1Oid) -> Result<Box<dyn KeyGenerator>, AlgoError> {
+        Err(AlgoError::new(ErrorKind::UnknownGenerator))
     }
 }

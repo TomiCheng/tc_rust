@@ -8,7 +8,7 @@ From a new key to a verified tag, with HMAC-SHA256. The `hmac-sha256` feature of
 the rows.
 
 ```rust
-use tc_algo_v2::{AlgoBuilder, AlgoError, DefaultAlgoBuilder, ErrorKind, KeyLength};
+use tc_algo_v2::{AlgoBuilder, AlgoError, DefaultAlgoBuilder, KeyLength};
 
 fn main() -> Result<(), AlgoError> {
     let algo = DefaultAlgoBuilder::default().build();
@@ -21,10 +21,7 @@ fn main() -> Result<(), AlgoError> {
         .generate_by_name_with("KEY", &KeyLength::new(32))?;
 
     // Calculate the tag
-    let mut mac = algo
-        .mac()
-        .get_by_name(name)
-        .ok_or(AlgoError::new(ErrorKind::UnknownMac))?;
+    let mut mac = algo.mac().get_by_name(name)?;
     mac.init(key.as_ref())?;
     mac.update(message)?;
     let tag = mac.finalize()?;

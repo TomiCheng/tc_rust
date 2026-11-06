@@ -113,7 +113,7 @@ fn mark_of(mut mac: Box<dyn Mac>) -> u8 {
 }
 
 fn mark_by_name(algo: &dyn Algo, name: &str) -> Option<u8> {
-    Some(mark_of(algo.mac().get_by_name(name)?))
+    Some(mark_of(algo.mac().get_by_name(name).ok()?))
 }
 
 #[test]
@@ -132,10 +132,16 @@ fn a_mac_is_found_by_its_oid() {
 }
 
 #[test]
-fn an_unknown_name_or_oid_finds_nothing() {
+fn an_unknown_name_or_oid_is_reported_as_unknown_mac() {
     let algo = builder_with(&[older]).build();
-    assert!(algo.mac().get_by_name("NO-SUCH").is_none());
-    assert!(algo.mac().get_by_oid(&oid("1.2.3.5")).is_none());
+    assert_eq!(
+        algo.mac().get_by_name("NO-SUCH").err().unwrap().kind(),
+        ErrorKind::UnknownMac
+    );
+    assert_eq!(
+        algo.mac().get_by_oid(&oid("1.2.3.5")).err().unwrap().kind(),
+        ErrorKind::UnknownMac
+    );
 }
 
 #[test]

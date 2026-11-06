@@ -8,7 +8,7 @@ From a new KEK to the key back again, with AESWRAP. The `aes-wrap` feature of `t
 rows.
 
 ```rust
-use tc_algo_v2::{AlgoBuilder, AlgoError, DefaultAlgoBuilder, ErrorKind, WrapDirection};
+use tc_algo_v2::{AlgoBuilder, AlgoError, DefaultAlgoBuilder, WrapDirection};
 
 fn main() -> Result<(), AlgoError> {
     let algo = DefaultAlgoBuilder::default().build();
@@ -17,10 +17,7 @@ fn main() -> Result<(), AlgoError> {
     // Generate the KEK
     let kek = algo.key_generator().generate_by_name("AES256")?;
 
-    let mut wrapper = algo
-        .wrap()
-        .get_by_name("AESWRAP")
-        .ok_or(AlgoError::new(ErrorKind::UnknownWrapper))?;
+    let mut wrapper = algo.wrap().get_by_name("AESWRAP")?;
 
     // Wrap
     wrapper.init(WrapDirection::Wrap, kek.as_ref())?;

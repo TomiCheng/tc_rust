@@ -1,14 +1,14 @@
 use tc_asn1::Asn1Oid;
 
 use crate::cipher::{Cipher, CipherDirection, CipherEntry};
-use crate::{AlgoError, ErrorKind, Params};
+use crate::{AlgoError, Params};
 
 pub trait CipherProvider: Send + Sync {
     fn algorithms(&self) -> Box<dyn Iterator<Item = &dyn CipherEntry> + '_>;
 
-    fn get_by_name(&self, name: &str) -> Option<Box<dyn Cipher>>;
+    fn get_by_name(&self, name: &str) -> Result<Box<dyn Cipher>, AlgoError>;
 
-    fn get_by_oid(&self, oid: &Asn1Oid) -> Option<Box<dyn Cipher>>;
+    fn get_by_oid(&self, oid: &Asn1Oid) -> Result<Box<dyn Cipher>, AlgoError>;
 
     fn encrypt_by_name(
         &self,
@@ -17,7 +17,7 @@ pub trait CipherProvider: Send + Sync {
         input: &[u8],
     ) -> Result<Vec<u8>, AlgoError> {
         run(
-            self.get_by_name(name),
+            self.get_by_name(name)?,
             CipherDirection::Encrypt,
             params,
             input,
@@ -31,7 +31,7 @@ pub trait CipherProvider: Send + Sync {
         input: &[u8],
     ) -> Result<Vec<u8>, AlgoError> {
         run(
-            self.get_by_oid(oid),
+            self.get_by_oid(oid)?,
             CipherDirection::Encrypt,
             params,
             input,
@@ -45,7 +45,7 @@ pub trait CipherProvider: Send + Sync {
         input: &[u8],
     ) -> Result<Vec<u8>, AlgoError> {
         run(
-            self.get_by_name(name),
+            self.get_by_name(name)?,
             CipherDirection::Decrypt,
             params,
             input,
@@ -59,7 +59,7 @@ pub trait CipherProvider: Send + Sync {
         input: &[u8],
     ) -> Result<Vec<u8>, AlgoError> {
         run(
-            self.get_by_oid(oid),
+            self.get_by_oid(oid)?,
             CipherDirection::Decrypt,
             params,
             input,
@@ -68,12 +68,11 @@ pub trait CipherProvider: Send + Sync {
 }
 
 fn run(
-    cipher: Option<Box<dyn Cipher>>,
+    mut cipher: Box<dyn Cipher>,
     direction: CipherDirection,
     params: &dyn Params,
     input: &[u8],
 ) -> Result<Vec<u8>, AlgoError> {
-    let mut cipher = cipher.ok_or(AlgoError::new(ErrorKind::UnknownCipher))?;
     cipher.init(direction, params)?;
     let mut output = cipher.update(input)?;
     output.extend(cipher.finalize()?);

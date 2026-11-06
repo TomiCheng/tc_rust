@@ -132,11 +132,11 @@ fn mark_of(mut cipher: Box<dyn Cipher>) -> u8 {
 }
 
 fn mark_by_name(algo: &dyn Algo, name: &str) -> Option<u8> {
-    Some(mark_of(algo.cipher().get_by_name(name)?))
+    Some(mark_of(algo.cipher().get_by_name(name).ok()?))
 }
 
 fn mark_by_oid(algo: &dyn Algo, dotted: &str) -> Option<u8> {
-    Some(mark_of(algo.cipher().get_by_oid(&oid(dotted))?))
+    Some(mark_of(algo.cipher().get_by_oid(&oid(dotted)).ok()?))
 }
 
 fn is_listed(algo: &dyn Algo, name: &str) -> bool {
@@ -158,10 +158,24 @@ fn a_cipher_is_found_by_its_oid() {
 }
 
 #[test]
-fn an_unknown_name_or_oid_finds_nothing() {
+fn an_unknown_name_or_oid_is_reported_as_unknown_cipher() {
     let algo = algo_with(&[older]);
-    assert_eq!(mark_by_name(algo.as_ref(), "NO-SUCH-CIPHER"), None);
-    assert_eq!(mark_by_oid(algo.as_ref(), "1.2.3.5"), None);
+    assert_eq!(
+        algo.cipher()
+            .get_by_name("NO-SUCH-CIPHER")
+            .err()
+            .unwrap()
+            .kind(),
+        ErrorKind::UnknownCipher
+    );
+    assert_eq!(
+        algo.cipher()
+            .get_by_oid(&oid("1.2.3.5"))
+            .err()
+            .unwrap()
+            .kind(),
+        ErrorKind::UnknownCipher
+    );
 }
 
 #[test]

@@ -113,7 +113,7 @@ fn mark_of(mut wrapper: Box<dyn Wrapper>) -> u8 {
 }
 
 fn mark_by_name(algo: &dyn Algo, name: &str) -> Option<u8> {
-    Some(mark_of(algo.wrap().get_by_name(name)?))
+    Some(mark_of(algo.wrap().get_by_name(name).ok()?))
 }
 
 #[test]
@@ -132,10 +132,20 @@ fn a_wrapper_is_found_by_its_oid() {
 }
 
 #[test]
-fn an_unknown_name_or_oid_finds_nothing() {
+fn an_unknown_name_or_oid_is_reported_as_unknown_wrapper() {
     let algo = builder_with(&[older]).build();
-    assert!(algo.wrap().get_by_name("NO-SUCH").is_none());
-    assert!(algo.wrap().get_by_oid(&oid("1.2.3.5")).is_none());
+    assert_eq!(
+        algo.wrap().get_by_name("NO-SUCH").err().unwrap().kind(),
+        ErrorKind::UnknownWrapper
+    );
+    assert_eq!(
+        algo.wrap()
+            .get_by_oid(&oid("1.2.3.5"))
+            .err()
+            .unwrap()
+            .kind(),
+        ErrorKind::UnknownWrapper
+    );
 }
 
 #[test]

@@ -1,13 +1,13 @@
 use tc_asn1::Asn1Oid;
 
-use crate::{AlgoError, ErrorKind, Mac, MacEntry, Params};
+use crate::{AlgoError, Mac, MacEntry, Params};
 
 pub trait MacProvider: Send + Sync {
     fn algorithms(&self) -> Box<dyn Iterator<Item = &dyn MacEntry> + '_>;
 
-    fn get_by_name(&self, name: &str) -> Option<Box<dyn Mac>>;
+    fn get_by_name(&self, name: &str) -> Result<Box<dyn Mac>, AlgoError>;
 
-    fn get_by_oid(&self, oid: &Asn1Oid) -> Option<Box<dyn Mac>>;
+    fn get_by_oid(&self, oid: &Asn1Oid) -> Result<Box<dyn Mac>, AlgoError>;
 
     fn calculate_by_name(
         &self,
@@ -15,9 +15,7 @@ pub trait MacProvider: Send + Sync {
         params: &dyn Params,
         input: &[u8],
     ) -> Result<Vec<u8>, AlgoError> {
-        let mut mac = self
-            .get_by_name(name)
-            .ok_or(AlgoError::new(ErrorKind::UnknownMac))?;
+        let mut mac = self.get_by_name(name)?;
         mac.init(params)?;
         mac.update(input)?;
         mac.finalize()
@@ -29,9 +27,7 @@ pub trait MacProvider: Send + Sync {
         params: &dyn Params,
         input: &[u8],
     ) -> Result<Vec<u8>, AlgoError> {
-        let mut mac = self
-            .get_by_oid(oid)
-            .ok_or(AlgoError::new(ErrorKind::UnknownMac))?;
+        let mut mac = self.get_by_oid(oid)?;
         mac.init(params)?;
         mac.update(input)?;
         mac.finalize()
@@ -45,9 +41,7 @@ pub trait MacProvider: Send + Sync {
         input: &[u8],
         tag: &[u8],
     ) -> Result<bool, AlgoError> {
-        let mut mac = self
-            .get_by_name(name)
-            .ok_or(AlgoError::new(ErrorKind::UnknownMac))?;
+        let mut mac = self.get_by_name(name)?;
         mac.init(params)?;
         mac.update(input)?;
         mac.verify(tag)
@@ -61,9 +55,7 @@ pub trait MacProvider: Send + Sync {
         input: &[u8],
         tag: &[u8],
     ) -> Result<bool, AlgoError> {
-        let mut mac = self
-            .get_by_oid(oid)
-            .ok_or(AlgoError::new(ErrorKind::UnknownMac))?;
+        let mut mac = self.get_by_oid(oid)?;
         mac.init(params)?;
         mac.update(input)?;
         mac.verify(tag)
