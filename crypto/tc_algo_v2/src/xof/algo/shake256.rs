@@ -1,8 +1,9 @@
 use tc_asn1::Asn1Oid;
-use tc_digest::{Digest as _, Xof as _};
+use tc_digest::{Digest as _, TryDigest as _, Xof as _};
 use tc_keccak::ShakeDigest;
 
-use crate::{AlgoError, DefaultAlgoContext, EntryBase, ErrorKind, Xof, XofEntry};
+use crate::digest::Digest;
+use crate::{DefaultAlgoContext, EntryBase, Xof, XofEntry};
 
 const BIT_LENGTH: usize = 256;
 
@@ -40,43 +41,41 @@ impl EntryBase for Row {
 
 impl XofEntry for Row {
     fn create(&self) -> Box<dyn Xof> {
-        Box::new(Shake256 {
-            digest: ShakeDigest::new(BIT_LENGTH),
-            output_started: false,
-        })
+        Box::new(Shake256(ShakeDigest::new(BIT_LENGTH)))
     }
 }
 
-struct Shake256 {
-    digest: ShakeDigest,
-    output_started: bool,
-}
+struct Shake256(ShakeDigest);
 
-impl Xof for Shake256 {
-    fn update(&mut self, input: &[u8]) -> Result<(), AlgoError> {
-        if self.output_started {
-            return Err(AlgoError::new(ErrorKind::XofOutputStarted));
-        }
-        self.digest.update(input);
-        Ok(())
+impl Digest for Shake256 {
+    fn digest_size(&self) -> usize {
+        self.0.digest_size()
     }
 
-    fn output(&mut self, output: &mut [u8]) -> Result<(), AlgoError> {
-        self.digest.output(output);
-        self.output_started = true;
-        Ok(())
+    fn byte_length(&self) -> usize {
+        self.0.byte_length()
     }
 
-    fn finalize(&mut self, len: usize) -> Result<Vec<u8>, AlgoError> {
-        let mut output = vec![0; len];
-        self.digest.output_final(&mut output);
-        self.output_started = false;
-        Ok(output)
+    fn update(&mut self, input: &[u8]) {
+        self.0.update(input);
+    }
+
+    fn do_final(&mut self, output: &mut [u8]) -> usize {
+        self.0.do_final(output)
     }
 
     fn reset(&mut self) {
-        self.digest.reset();
-        self.output_started = false;
+        self.0.reset();
+    }
+}
+
+impl Xof for Shake256 {
+    fn output(&mut self, output: &mut [u8]) -> usize {
+        self.0.output(output)
+    }
+
+    fn output_final(&mut self, output: &mut [u8]) -> usize {
+        self.0.output_final(output)
     }
 }
 
@@ -132,44 +131,71 @@ mod tests {
     #[test]
     fn the_message_and_the_output_can_come_in_pieces() {
         let mut xof = xof();
-        xof.update(b"a").unwrap();
-        xof.update(b"bc").unwrap();
+        xof.update(b"a");
+        xof.update(b"bc");
 
         let mut first = [0; 20];
         let mut second = [0; 12];
-        xof.output(&mut first).unwrap();
-        xof.output(&mut second).unwrap();
-        let rest = xof.finalize(32).unwrap();
+        assert_eq!(xof.output(&mut first), 20);
+        assert_eq!(xof.output(&mut second), 12);
+        let rest = xof.finalize_len(32);
 
         let output = [&first[..], &second[..], &rest[..]].concat();
         assert_eq!(hex(&output), ABC);
     }
 
     #[test]
-    fn update_is_refused_once_output_has_begun() {
+    #[should_panic(expected = "attempt to absorb while squeezing")]
+    fn update_panics_once_output_has_begun() {
         let mut xof = xof();
-        xof.update(b"abc").unwrap();
-        xof.output(&mut [0; 1]).unwrap();
-
-        let error = xof.update(b"more").unwrap_err();
-        assert_eq!(error.kind(), ErrorKind::XofOutputStarted);
+        xof.update(b"abc");
+        xof.output(&mut [0; 1]);
+        xof.update(b"more");
     }
 
     #[test]
-    fn finalize_and_reset_start_the_next_message() {
+    fn finalize_len_and_reset_start_the_next_message() {
         let mut xof = xof();
-        xof.update(b"abc").unwrap();
-        xof.output(&mut [0; 1]).unwrap();
-        xof.finalize(1).unwrap();
+        xof.update(b"abc");
+        xof.output(&mut [0; 1]);
+        xof.finalize_len(1);
 
-        xof.update(b"abc").unwrap();
-        assert_eq!(hex(&xof.finalize(64).unwrap()), ABC);
+        xof.update(b"abc");
+        assert_eq!(hex(&xof.finalize_len(64)), ABC);
 
-        xof.update(b"other").unwrap();
-        xof.output(&mut [0; 1]).unwrap();
+        xof.update(b"other");
+        xof.output(&mut [0; 1]);
         xof.reset();
-        xof.update(b"abc").unwrap();
-        assert_eq!(hex(&xof.finalize(64).unwrap()), ABC);
+        xof.update(b"abc");
+        assert_eq!(hex(&xof.finalize_len(64)), ABC);
+    }
+
+    #[test]
+    fn output_final_fills_the_output_and_starts_the_next_message() {
+        let mut xof = xof();
+        xof.update(b"abc");
+        let mut output = [0; 64];
+        assert_eq!(xof.output_final(&mut output), 64);
+        assert_eq!(hex(&output), ABC);
+
+        assert_eq!(xof.output_final(&mut output), 64);
+        assert_eq!(hex(&output), EMPTY);
+    }
+
+    #[test]
+    fn as_a_digest_it_gives_its_digest_size_of_output() {
+        let mut xof = xof();
+        assert_eq!(xof.digest_size(), 64);
+        assert_eq!(xof.byte_length(), 136);
+
+        xof.update_byte(b'a');
+        xof.update(b"bc");
+        assert_eq!(hex(&xof.finalize()), ABC);
+
+        xof.update(b"abc");
+        let mut output = [0; 64];
+        assert_eq!(xof.do_final(&mut output), 64);
+        assert_eq!(hex(&output), ABC);
     }
 
     struct OtherParams;

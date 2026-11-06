@@ -57,6 +57,6 @@ fn calculate(
     if let Some(params) = params {
         xof.init(params)?;
     }
-    xof.update(input)?;
-    xof.finalize(len)
+    xof.update(input);
+    Ok(xof.finalize_len(len))
 }

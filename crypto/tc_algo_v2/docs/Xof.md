@@ -14,12 +14,12 @@ fn main() -> Result<(), AlgoError> {
     let message = b"attack at dawn";
 
     let mut xof = algo.xof().get_by_name("SHAKE256")?;
-    xof.update(message)?;
+    xof.update(message);
 
     // Take the output in pieces
     let mut first = [0; 32];
-    xof.output(&mut first)?;
-    let rest = xof.finalize(32)?;
+    xof.output(&mut first);
+    let rest = xof.finalize_len(32);
 
     // The same with a helper
     let output = algo.xof().calculate_by_name("SHAKE256", message, 64)?;
@@ -45,6 +45,10 @@ nothing to set, as SHAKE256 has, refuses any params with `InvalidParams`. The he
 
 ## Using it
 
-- `update` gives `XofOutputStarted` once output has begun, since the input is then closed.
+- `update` panics once output has begun, since the input is then closed. Bouncy Castle throws here.
 - `output` can be called again for the next bytes.
-- `finalize` gives the next bytes and starts the next message. `reset` discards the message so far.
+- `output_final` fills a buffer with the next bytes and starts the next message, and `finalize_len`
+  does the same with a `Vec` of the length asked for. `reset` discards the message so far.
+- An `Xof` is also a `Digest`, as in Bouncy Castle: `do_final` and `finalize` give `digest_size` bytes
+  of output, 64 for SHAKE256, and start the next message. On Rust 1.85 a `Box<dyn Xof>` does not
+  convert to a `Box<dyn Digest>`, but it does go to a function generic over `Digest + ?Sized`.

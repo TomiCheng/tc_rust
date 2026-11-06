@@ -1,5 +1,6 @@
 use std::any::Any;
 
+use tc_algo_v2::digest::Digest;
 use tc_algo_v2::{
     Algo, AlgoBuilder, AlgoError, DefaultAlgoBuilder, DefaultAlgoContext, EntryBase, ErrorKind,
     ListPolicy, Params, Xof, XofEntry,
@@ -47,26 +48,38 @@ struct Marked(u8);
 
 const INITIALIZED: u8 = 100;
 
+impl Digest for Marked {
+    fn digest_size(&self) -> usize {
+        1
+    }
+
+    fn byte_length(&self) -> usize {
+        1
+    }
+
+    fn update(&mut self, _input: &[u8]) {}
+
+    fn do_final(&mut self, output: &mut [u8]) -> usize {
+        self.output_final(output)
+    }
+
+    fn reset(&mut self) {}
+}
+
 impl Xof for Marked {
     fn init(&mut self, _params: &dyn Params) -> Result<(), AlgoError> {
         self.0 += INITIALIZED;
         Ok(())
     }
 
-    fn update(&mut self, _input: &[u8]) -> Result<(), AlgoError> {
-        Ok(())
-    }
-
-    fn output(&mut self, output: &mut [u8]) -> Result<(), AlgoError> {
+    fn output(&mut self, output: &mut [u8]) -> usize {
         output.fill(self.0);
-        Ok(())
+        output.len()
     }
 
-    fn finalize(&mut self, len: usize) -> Result<Vec<u8>, AlgoError> {
-        Ok(vec![self.0; len])
+    fn output_final(&mut self, output: &mut [u8]) -> usize {
+        self.output(output)
     }
-
-    fn reset(&mut self) {}
 }
 
 fn row(name: &'static str, aliases: &[&str], oids: &[&str], mark: u8) -> Box<dyn XofEntry> {
@@ -101,7 +114,7 @@ fn builder_with(rows: &[Rows]) -> DefaultAlgoBuilder {
 }
 
 fn mark_of(mut xof: Box<dyn Xof>) -> u8 {
-    xof.finalize(1).unwrap()[0]
+    xof.finalize_len(1)[0]
 }
 
 fn mark_by_name(algo: &dyn Algo, name: &str) -> Option<u8> {

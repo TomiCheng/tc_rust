@@ -57,7 +57,6 @@ pub enum ErrorKind {
     DataLength,
     InvalidCiphertext,
     NotInitialized,
-    XofOutputStarted,
 }
 
 impl fmt::Display for ErrorKind {
@@ -75,7 +74,6 @@ impl fmt::Display for ErrorKind {
             ErrorKind::DataLength => f.write_str("input of the wrong length for this cipher"),
             ErrorKind::InvalidCiphertext => f.write_str("invalid ciphertext"),
             ErrorKind::NotInitialized => f.write_str("used before a successful init"),
-            ErrorKind::XofOutputStarted => f.write_str("input after the XOF began its output"),
         }
     }
 }
