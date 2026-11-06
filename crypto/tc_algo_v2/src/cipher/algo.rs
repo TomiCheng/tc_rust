@@ -2,6 +2,8 @@
 mod aes;
 #[cfg(feature = "chacha")]
 mod chacha;
+#[cfg(feature = "rsa")]
+mod rsa;
 
 use super::CipherEntry;
 
@@ -13,4 +15,6 @@ pub(crate) const BUILT_IN: &[CreateRows] = &[
     aes::aes,
     #[cfg(feature = "chacha")]
     chacha::chacha,
+    #[cfg(feature = "rsa")]
+    rsa::rsa,
 ];

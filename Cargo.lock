@@ -918,6 +918,7 @@ dependencies = [
  "tc_aes",
  "tc_asn1",
  "tc_asym_cipher",
+ "tc_asym_encoding",
  "tc_block_cipher",
  "tc_block_modes",
  "tc_buffered_cipher",

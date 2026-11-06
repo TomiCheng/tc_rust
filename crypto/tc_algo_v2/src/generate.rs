@@ -1,4 +1,4 @@
-#![cfg_attr(feature = "rsa", doc = include_str!("../docs/key_pair/Rsa.md"))]
+#![cfg_attr(feature = "rsa", doc = include_str!("../docs/Rsa.md"))]
 
 mod algo;
 mod default_key_generator_provider;
