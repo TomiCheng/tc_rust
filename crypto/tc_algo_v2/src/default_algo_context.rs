@@ -11,7 +11,7 @@ impl DefaultAlgoContext {
         Self { rand }
     }
 
-    #[cfg_attr(not(any(feature = "aes", feature = "hmac-sha256")), allow(dead_code))]
+    #[cfg_attr(not(any(feature = "aes", feature = "chacha", feature = "hmac-sha256")), allow(dead_code))]
     pub(crate) fn rand(&self) -> fn() -> Box<dyn CryptoRng> {
         self.rand
     }

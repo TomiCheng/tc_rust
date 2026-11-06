@@ -54,6 +54,9 @@ Both come from the crates underneath and wipe themselves when dropped.
   ciphertext, since decrypting needs the same one.
 - The IV must be 16 bytes, or `init` gives `InvalidParams`. Unlike Bouncy Castle, a short IV is not
   padded with zeros, and there is no default of zeros: `KeyWithIvOwned` always has one to give.
+- `finalize` goes back to the same IV, as in Bouncy Castle. So give each message a new `init` with a
+  new IV: a second message without one repeats the IV, which in OFB repeats the whole keystream and
+  in CFB its first block. Nothing checks this, and `init` takes an IV it has seen before.
 - ECB has no IV. A generated key goes straight into it:
 
   ```rust

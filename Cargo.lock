@@ -920,12 +920,14 @@ dependencies = [
  "tc_block_cipher",
  "tc_block_modes",
  "tc_buffered_cipher",
+ "tc_chacha",
  "tc_constant_time",
  "tc_digest",
  "tc_keccak",
  "tc_key_wrap",
  "tc_macs",
  "tc_sha",
+ "tc_stream_cipher",
 ]
 
 [[package]]

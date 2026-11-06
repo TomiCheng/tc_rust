@@ -430,6 +430,23 @@ mod tests {
     }
 
     #[test]
+    fn finalize_goes_back_to_the_iv_as_in_bouncy_castle() {
+        let params = key_and_iv(&CBC_KEY, &CBC_IV);
+
+        for name in [
+            "AES/CBC/NOPADDING",
+            "AES/CFB/NOPADDING",
+            "AES/OFB/NOPADDING",
+        ] {
+            let mut cipher = entry(name).create();
+            cipher.init(CipherDirection::Encrypt, &params).unwrap();
+            let first = cipher.update(&CBC_PLAINTEXT).unwrap();
+            cipher.finalize().unwrap();
+            assert_eq!(cipher.update(&CBC_PLAINTEXT).unwrap(), first);
+        }
+    }
+
+    #[test]
     fn the_padded_rows_take_back_what_they_encrypted() {
         let algo = DefaultAlgoBuilder::default().build();
         let ciphers = algo.cipher();

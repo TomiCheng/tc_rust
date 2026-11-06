@@ -1,5 +1,7 @@
 #[cfg(feature = "aes")]
 mod aes;
+#[cfg(feature = "chacha")]
+mod chacha;
 
 use super::CipherEntry;
 
@@ -9,4 +11,6 @@ pub(crate) type CreateRows = fn(&crate::DefaultAlgoContext) -> Vec<Box<dyn Ciphe
 pub(crate) const BUILT_IN: &[CreateRows] = &[
     #[cfg(feature = "aes")]
     aes::aes,
+    #[cfg(feature = "chacha")]
+    chacha::chacha,
 ];

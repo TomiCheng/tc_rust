@@ -9,7 +9,7 @@ pub mod digest;
 mod error;
 mod generate;
 mod mac;
-#[cfg(any(feature = "aes", feature = "hmac-sha256"))]
+#[cfg(any(feature = "aes", feature = "chacha", feature = "hmac-sha256"))]
 mod params;
 mod policy;
 mod traits;
@@ -25,7 +25,7 @@ pub use generate::{
 };
 pub use mac::{Mac, MacEntry, MacProvider};
 pub use policy::ListPolicy;
-#[cfg(any(feature = "aes", feature = "hmac-sha256"))]
+#[cfg(any(feature = "aes", feature = "chacha", feature = "hmac-sha256"))]
 pub use tc_block_cipher::{KeyOwned, KeyParams};
 pub use traits::{Algo, AlgoBuilder, EntryBase, Params, Policy};
 pub use wrap::{WrapDirection, Wrapper, WrapperEntry, WrapperProvider};
