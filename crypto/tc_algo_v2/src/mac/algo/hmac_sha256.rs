@@ -72,11 +72,8 @@ impl Mac for HmacSha256 {
         self.0.update(input).map_err(algo_error)
     }
 
-    fn finalize(&mut self) -> Result<Vec<u8>, AlgoError> {
-        let mut output = vec![0; self.0.mac_size()];
-        let written = self.0.do_final(&mut output).map_err(algo_error)?;
-        output.truncate(written);
-        Ok(output)
+    fn do_final(&mut self, output: &mut [u8]) -> Result<usize, AlgoError> {
+        self.0.do_final(output).map_err(algo_error)
     }
 
     fn reset(&mut self) {
@@ -205,6 +202,36 @@ mod tests {
                 .verify_by_name("HMAC-SHA256", &key(), MESSAGE, &tag)
                 .unwrap()
         );
+    }
+
+    #[test]
+    fn do_final_writes_the_tag_into_the_output_and_starts_the_next_message() {
+        let mut mac = keyed();
+        mac.update(MESSAGE).unwrap();
+        let mut output = [0; 32];
+        assert_eq!(mac.do_final(&mut output).unwrap(), 32);
+        assert_eq!(hex(&output), TAG);
+
+        mac.update(MESSAGE).unwrap();
+        assert_eq!(hex(&mac.finalize().unwrap()), TAG);
+    }
+
+    #[test]
+    fn an_output_too_short_is_data_length_and_keeps_the_message() {
+        let mut mac = keyed();
+        mac.update(MESSAGE).unwrap();
+        let error = mac.do_final(&mut [0; 31]).unwrap_err();
+        assert_eq!(error.kind(), ErrorKind::DataLength);
+        assert_eq!(hex(&mac.finalize().unwrap()), TAG);
+    }
+
+    #[test]
+    fn update_byte_gives_the_same_tag_as_update() {
+        let mut mac = keyed();
+        for byte in MESSAGE {
+            mac.update_byte(*byte).unwrap();
+        }
+        assert_eq!(hex(&mac.finalize().unwrap()), TAG);
     }
 
     #[test]

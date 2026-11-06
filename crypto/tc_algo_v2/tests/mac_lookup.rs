@@ -65,9 +65,10 @@ impl Mac for Marked {
         Ok(())
     }
 
-    fn finalize(&mut self) -> Result<Vec<u8>, AlgoError> {
+    fn do_final(&mut self, output: &mut [u8]) -> Result<usize, AlgoError> {
         if self.initialized {
-            Ok(vec![self.mark])
+            output[0] = self.mark;
+            Ok(1)
         } else {
             Err(AlgoError::new(ErrorKind::NotInitialized))
         }

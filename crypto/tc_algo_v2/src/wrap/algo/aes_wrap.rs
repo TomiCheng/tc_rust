@@ -72,20 +72,20 @@ impl Wrapper for AesWrap {
             .map_err(|error| AlgoError::with_source(ErrorKind::InvalidParams, error))
     }
 
-    fn wrap(&mut self, input: &[u8]) -> Result<Vec<u8>, AlgoError> {
-        let len = self.0.wrapped_len(input.len()).map_err(algo_error)?;
-        let mut output = vec![0; len];
-        let written = self.0.wrap_into(input, &mut output).map_err(algo_error)?;
-        output.truncate(written);
-        Ok(output)
+    fn wrapped_len(&self, input_len: usize) -> Result<usize, AlgoError> {
+        self.0.wrapped_len(input_len).map_err(algo_error)
     }
 
-    fn unwrap(&mut self, input: &[u8]) -> Result<Vec<u8>, AlgoError> {
-        let len = self.0.max_unwrapped_len(input.len()).map_err(algo_error)?;
-        let mut output = vec![0; len];
-        let written = self.0.unwrap_into(input, &mut output).map_err(algo_error)?;
-        output.truncate(written);
-        Ok(output)
+    fn max_unwrapped_len(&self, input_len: usize) -> Result<usize, AlgoError> {
+        self.0.max_unwrapped_len(input_len).map_err(algo_error)
+    }
+
+    fn wrap_into(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, AlgoError> {
+        self.0.wrap_into(input, output).map_err(algo_error)
+    }
+
+    fn unwrap_into(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, AlgoError> {
+        self.0.unwrap_into(input, output).map_err(algo_error)
     }
 }
 
@@ -213,6 +213,47 @@ mod tests {
             .wrap()
             .wrap_by_name(NAME, &kek(), &KEY[..15])
             .unwrap_err();
+        assert_eq!(error.kind(), ErrorKind::DataLength);
+    }
+
+    #[test]
+    fn the_buffer_calls_give_the_standard_output() {
+        let mut wrapper = wrapper();
+        wrapper.init(WrapDirection::Wrap, &kek()).unwrap();
+        assert_eq!(wrapper.wrapped_len(KEY.len()).unwrap(), WRAPPED.len());
+        let mut wrapped = [0; 24];
+        assert_eq!(wrapper.wrap_into(&KEY, &mut wrapped).unwrap(), 24);
+        assert_eq!(wrapped, WRAPPED);
+
+        wrapper.init(WrapDirection::Unwrap, &kek()).unwrap();
+        assert_eq!(wrapper.max_unwrapped_len(WRAPPED.len()).unwrap(), KEY.len());
+        let mut key = [0; 16];
+        assert_eq!(wrapper.unwrap_into(&WRAPPED, &mut key).unwrap(), 16);
+        assert_eq!(key, KEY);
+    }
+
+    #[test]
+    fn unwrap_into_leaves_no_key_in_the_output_when_the_check_fails() {
+        let mut changed = WRAPPED;
+        changed[0] ^= 1;
+
+        let mut wrapper = wrapper();
+        wrapper.init(WrapDirection::Unwrap, &kek()).unwrap();
+        let mut key = [0; 16];
+        let error = wrapper.unwrap_into(&changed, &mut key).unwrap_err();
+        assert_eq!(error.kind(), ErrorKind::InvalidCiphertext);
+        assert_eq!(key, [0; 16]);
+    }
+
+    #[test]
+    fn an_output_too_short_is_data_length() {
+        let mut wrapper = wrapper();
+        wrapper.init(WrapDirection::Wrap, &kek()).unwrap();
+        let error = wrapper.wrap_into(&KEY, &mut [0; 23]).unwrap_err();
+        assert_eq!(error.kind(), ErrorKind::DataLength);
+
+        wrapper.init(WrapDirection::Unwrap, &kek()).unwrap();
+        let error = wrapper.unwrap_into(&WRAPPED, &mut [0; 15]).unwrap_err();
         assert_eq!(error.kind(), ErrorKind::DataLength);
     }
 

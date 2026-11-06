@@ -52,9 +52,10 @@ struct Marked {
 }
 
 impl Marked {
-    fn output(&self, direction: WrapDirection) -> Result<Vec<u8>, AlgoError> {
+    fn write(&self, direction: WrapDirection, output: &mut [u8]) -> Result<usize, AlgoError> {
         if self.direction == Some(direction) {
-            Ok(vec![self.mark])
+            output[0] = self.mark;
+            Ok(1)
         } else {
             Err(AlgoError::new(ErrorKind::NotInitialized))
         }
@@ -67,12 +68,20 @@ impl Wrapper for Marked {
         Ok(())
     }
 
-    fn wrap(&mut self, _input: &[u8]) -> Result<Vec<u8>, AlgoError> {
-        self.output(WrapDirection::Wrap)
+    fn wrapped_len(&self, _input_len: usize) -> Result<usize, AlgoError> {
+        Ok(1)
     }
 
-    fn unwrap(&mut self, _input: &[u8]) -> Result<Vec<u8>, AlgoError> {
-        self.output(WrapDirection::Unwrap)
+    fn max_unwrapped_len(&self, _input_len: usize) -> Result<usize, AlgoError> {
+        Ok(1)
+    }
+
+    fn wrap_into(&mut self, _input: &[u8], output: &mut [u8]) -> Result<usize, AlgoError> {
+        self.write(WrapDirection::Wrap, output)
+    }
+
+    fn unwrap_into(&mut self, _input: &[u8], output: &mut [u8]) -> Result<usize, AlgoError> {
+        self.write(WrapDirection::Unwrap, output)
     }
 }
 
