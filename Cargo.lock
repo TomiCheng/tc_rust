@@ -917,6 +917,7 @@ dependencies = [
  "tc_aead_cipher",
  "tc_aes",
  "tc_asn1",
+ "tc_asym_cipher",
  "tc_block_cipher",
  "tc_block_modes",
  "tc_buffered_cipher",
@@ -926,6 +927,7 @@ dependencies = [
  "tc_keccak",
  "tc_key_wrap",
  "tc_macs",
+ "tc_rsa",
  "tc_sha",
  "tc_stream_cipher",
 ]

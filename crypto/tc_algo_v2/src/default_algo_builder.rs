@@ -7,11 +7,16 @@ use crate::cipher::{self, CipherEntry};
 use crate::default_algo::DefaultAlgo;
 use crate::default_algo_context::os_rand;
 use crate::digest::{self, DigestEntry};
-use crate::generate::{BUILT_IN_KEY_GENERATORS, CreateKeyGeneratorRows};
+use crate::generate::{
+    BUILT_IN_KEY_GENERATORS, BUILT_IN_KEY_PAIR_GENERATORS, CreateKeyGeneratorRows,
+    CreateKeyPairGeneratorRows,
+};
 use crate::mac::{self, MacEntry};
 use crate::wrap::{self, WrapperEntry};
 use crate::xof::{self, XofEntry};
-use crate::{Algo, AlgoBuilder, DefaultAlgoContext, KeyGeneratorEntry, Policy};
+use crate::{
+    Algo, AlgoBuilder, DefaultAlgoContext, KeyGeneratorEntry, KeyPairGeneratorEntry, Policy,
+};
 
 #[derive(Clone)]
 pub struct DefaultAlgoBuilder {
@@ -21,6 +26,7 @@ pub struct DefaultAlgoBuilder {
     macs: Vec<mac::CreateRows>,
     wrappers: Vec<wrap::CreateRows>,
     key_generators: Vec<CreateKeyGeneratorRows>,
+    key_pair_generators: Vec<CreateKeyPairGeneratorRows>,
     policy: Option<Arc<dyn Policy>>,
     rand: fn() -> Box<dyn CryptoRng>,
 }
@@ -35,6 +41,7 @@ impl Default for DefaultAlgoBuilder {
             macs: mac::BUILT_IN.to_vec(),
             wrappers: wrap::BUILT_IN.to_vec(),
             key_generators: BUILT_IN_KEY_GENERATORS.to_vec(),
+            key_pair_generators: BUILT_IN_KEY_PAIR_GENERATORS.to_vec(),
             policy: None,
             rand: os_rand,
         }
@@ -67,6 +74,13 @@ impl DefaultAlgoBuilder {
         create: fn(&DefaultAlgoContext) -> Vec<Box<dyn KeyGeneratorEntry>>,
     ) {
         self.key_generators.push(create);
+    }
+
+    pub fn reg_key_pair_generator(
+        &mut self,
+        create: fn(&DefaultAlgoContext) -> Vec<Box<dyn KeyPairGeneratorEntry>>,
+    ) {
+        self.key_pair_generators.push(create);
     }
 
     pub fn set_policy(&mut self, policy: impl Policy + 'static) {
@@ -132,6 +146,17 @@ impl DefaultAlgoBuilder {
             .flat_map(|create| create(context))
             .collect()
     }
+
+    fn key_pair_generator_rows(
+        &self,
+        context: &DefaultAlgoContext,
+    ) -> Vec<Box<dyn KeyPairGeneratorEntry>> {
+        self.key_pair_generators
+            .iter()
+            .rev()
+            .flat_map(|create| create(context))
+            .collect()
+    }
 }
 
 impl AlgoBuilder for DefaultAlgoBuilder {
@@ -144,6 +169,7 @@ impl AlgoBuilder for DefaultAlgoBuilder {
             self.mac_rows(&context),
             self.wrapper_rows(&context),
             self.key_generator_rows(&context),
+            self.key_pair_generator_rows(&context),
             self.policy.clone(),
         ))
     }
@@ -159,6 +185,7 @@ impl fmt::Debug for DefaultAlgoBuilder {
             .field("macs", &self.macs.len())
             .field("wrappers", &self.wrappers.len())
             .field("key_generators", &self.key_generators.len())
+            .field("key_pair_generators", &self.key_pair_generators.len())
             .field("policy", &self.policy.is_some())
             .field("rand", &self.rand)
             .finish()

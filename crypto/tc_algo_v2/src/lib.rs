@@ -23,6 +23,8 @@ pub use generate::{
     KeyGenerator, KeyGeneratorEntry, KeyGeneratorProvider, KeyLength, KeyPair, KeyPairGenerator,
     KeyPairGeneratorEntry, KeyPairGeneratorProvider,
 };
+#[cfg(feature = "rsa")]
+pub use generate::{RsaKey, RsaKeyGenerationParamsOwned};
 pub use mac::{Mac, MacEntry, MacProvider};
 pub use policy::ListPolicy;
 #[cfg(any(feature = "aes", feature = "chacha", feature = "hmac-sha256"))]

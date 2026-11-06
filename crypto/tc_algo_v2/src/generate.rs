@@ -1,5 +1,8 @@
+#![cfg_attr(feature = "rsa", doc = include_str!("../docs/key_pair/Rsa.md"))]
+
 mod algo;
 mod default_key_generator_provider;
+mod default_key_pair_generator_provider;
 mod empty_key_generator_provider;
 mod empty_key_pair_generator_provider;
 mod key_generator;
@@ -9,8 +12,10 @@ mod key_length;
 mod key_pair_generator;
 mod key_pair_generator_entry;
 mod key_pair_generator_provider;
+#[cfg(feature = "rsa")]
+mod params;
 
-pub(crate) use algo::BUILT_IN_KEY_GENERATORS;
+pub(crate) use algo::{BUILT_IN_KEY_GENERATORS, BUILT_IN_KEY_PAIR_GENERATORS};
 pub(crate) use empty_key_generator_provider::EmptyKeyGeneratorProvider;
 pub(crate) use empty_key_pair_generator_provider::EmptyKeyPairGeneratorProvider;
 pub use key_generator::KeyGenerator;
@@ -20,6 +25,10 @@ pub use key_length::KeyLength;
 pub use key_pair_generator::{KeyPair, KeyPairGenerator};
 pub use key_pair_generator_entry::KeyPairGeneratorEntry;
 pub use key_pair_generator_provider::KeyPairGeneratorProvider;
+#[cfg(feature = "rsa")]
+pub use tc_rsa::{RsaKey, RsaKeyGenerationParamsOwned};
 
 pub(crate) type CreateKeyGeneratorRows =
     fn(&crate::DefaultAlgoContext) -> Vec<Box<dyn KeyGeneratorEntry>>;
+pub(crate) type CreateKeyPairGeneratorRows =
+    fn(&crate::DefaultAlgoContext) -> Vec<Box<dyn KeyPairGeneratorEntry>>;
