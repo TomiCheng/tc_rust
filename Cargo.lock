@@ -1500,12 +1500,15 @@ dependencies = [
 [[package]]
 name = "tc_dstu_macs"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2e977f1e6a56b0942fa917f8fec8a2c82c410a112c7957110e8d396c9043ba17"
 dependencies = [
  "tc_block_cipher",
  "tc_digest",
  "tc_dstu7564",
  "tc_dstu7624",
  "tc_macs",
+ "tc_zeroize",
 ]
 
 [[package]]
@@ -1736,11 +1739,14 @@ dependencies = [
 [[package]]
 name = "tc_gost28147_mac"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6c07f92bd61866f873a8724248191a97f1cb3502413da58a5ba35ce04294e850"
 dependencies = [
  "tc_block_cipher",
  "tc_block_modes",
  "tc_gost28147",
  "tc_macs",
+ "tc_zeroize",
 ]
 
 [[package]]

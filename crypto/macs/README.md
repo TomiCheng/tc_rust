@@ -28,10 +28,10 @@ names itself through `Display`.
 | ✅ Done | `CbcBlockCipherMac` | [`tc_macs::FixedCbcMac`](https://crates.io/crates/tc_macs) | Published in `tc_macs` over the published block-cipher crates: `FixedCbcMac`, `FixedPaddedCbcMac`, and with `alloc` `CbcMac` and `PaddedCbcMac`, checked against bc-csharp's DES vectors. |
 | ✅ Done | `CfbBlockCipherMac` | [`tc_macs::FixedCfbMac`](https://crates.io/crates/tc_macs) | Published in `tc_macs` over the published block-cipher crates: `FixedCfbMac`, `FixedPaddedCfbMac`, and with `alloc` `CfbMac` and `PaddedCfbMac`, checked against bc-csharp's DES vectors. The IV must be one block; Bouncy Castle also zero-extends a shorter one. |
 | ✅ Done | `CMac` | [`tc_macs::FixedCmac`](https://crates.io/crates/tc_macs) | Published in `tc_macs` over the published block-cipher crates: `FixedCmac`, and with `alloc` `Cmac`, for 64- and 128-bit blocks, checked against the NIST SP 800-38B AES vectors and bc-csharp's DESede vector. |
-| ✅ Done | `Dstu7564Mac` | `tc_dstu_macs::Dstu7564Mac` | Bouncy Castle vectors for 256-, 384-, and 512-bit tags, including the 1023-/1024-byte boundary cases. |
-| ✅ Done | `Dstu7624Mac` | [`tc_dstu_macs::Dstu7624Mac`](tc_dstu_macs) | Allocation-free 128-, 256-, and 512-bit-block variants; BC vectors cover 128- and 512-bit blocks. |
+| ✅ Done | `Dstu7564Mac` | [`tc_dstu_macs::Dstu7564Mac`](https://crates.io/crates/tc_dstu_macs) | Published from the tc_macs repository: Bouncy Castle vectors for 256-, 384-, and 512-bit tags, including the 1023-/1024-byte boundary cases. |
+| ✅ Done | `Dstu7624Mac` | [`tc_dstu_macs::Dstu7624Mac`](https://crates.io/crates/tc_dstu_macs) | Published from the tc_macs repository: allocation-free 128-, 256-, and 512-bit-block variants; BC vectors cover 128- and 512-bit blocks. |
 | ✅ Done | `GMac` | [`tc_macs::Gmac`](https://crates.io/crates/tc_macs) | Published in `tc_macs` over the published `tc_aead_cipher` GCM, checked against bc-csharp's GMacTest vectors; GCM refuses a repeated key and nonce. |
-| ✅ Done | `GOST28147Mac` | [`tc_gost28147_mac::Gost28147Mac`](tc_gost28147_mac) | Allocation-free 16-round GOST MAC core with a caller-selected S-box, E-A by default, and an 8-byte IV; as in Bouncy Castle, a message of one block ignores the IV. |
+| ✅ Done | `GOST28147Mac` | [`tc_gost28147_mac::Gost28147Mac`](https://crates.io/crates/tc_gost28147_mac) | Published from the tc_macs repository: allocation-free 16-round GOST MAC core with a caller-selected S-box, E-A by default, and an 8-byte IV; as in Bouncy Castle, a message of one block ignores the IV. |
 | ✅ Done | `HMac` | [`tc_macs::FixedHmac`](https://crates.io/crates/tc_macs) | Published in `tc_macs` with the `hmac` feature: `FixedHmac`, and with `alloc` `Hmac`, over any digest on the published `tc_digest` traits, checked against the RFC 4231 vectors. |
 | ✅ Done | `ISO9797Alg3Mac` | [`tc_iso9797_mac::Iso9797Alg3Mac`](tc_iso9797_mac) | Allocation-free two-/three-key DES Retail MAC, with tag truncation and padding, on the published `tc_des`, `tc_block_padding` and `tc_macs` traits. The IV is required and must be 8 bytes; pass zeros for Bouncy Castle's key-only form. |
 | ✅ Done | `KMac` | [`tc_kmac::KMac`](tc_kmac) | KMAC128/KMAC256 fixed tags and XOF output over cSHAKE; requires `alloc`. |
@@ -60,7 +60,5 @@ published [`tc_aead_cipher`](https://github.com/TomiCheng/tc_aead_cipher) crate.
 Run the tests for all currently implemented MAC crates from the workspace root:
 
 ```bash
-cargo test \
-  -p tc_dstu_macs -p tc_gost28147_mac -p tc_iso9797_mac \
-  -p tc_kmac -p tc_skein_mac --locked
+cargo test -p tc_iso9797_mac -p tc_kmac -p tc_skein_mac --locked
 ```

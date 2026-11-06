@@ -336,7 +336,7 @@ tc_dh_key = { version = "0.1.0", path = "../tc_dh_key", optional = true }
 tc_digest = "0.1.1"
 tc_dsa_key = { version = "0.1.0", path = "../tc_dsa_key", optional = true }
 tc_dstu7564 = { version = "0.1.0", optional = true }
-tc_dstu_macs = { version = "0.1.0", path = "../macs/tc_dstu_macs", optional = true }
+tc_dstu_macs = { version = "0.1.0", optional = true }
 tc_ec_core = { version = "0.1.0", optional = true }
 tc_ec_key = { version = "0.1.0", path = "../tc_ec_key", optional = true }
 tc_ecdh_v2 = { version = "0.1.0", path = "../agreement/tc_ecdh_v2", optional = true }
@@ -347,7 +347,7 @@ tc_f2m_custom = { version = "0.1.0", optional = true }
 tc_fp_curve = { version = "0.1.1", optional = true }
 tc_fp_custom = { version = "0.1.0", optional = true }
 tc_gost28147 = { version = "0.1.0", optional = true }
-tc_gost28147_mac = { version = "0.1.0", path = "../macs/tc_gost28147_mac", optional = true }
+tc_gost28147_mac = { version = "0.1.0", optional = true }
 tc_gost3410_key = { version = "0.1.0", path = "../tc_gost3410_key", optional = true }
 tc_gost3411 = { version = "0.1.0", optional = true }
 tc_grain128_aead = { version = "0.1.0", optional = true }
