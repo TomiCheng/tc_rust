@@ -1,7 +1,6 @@
 use tc_constant_time::fixed_time_eq;
 
-use super::Params;
-use crate::AlgoError;
+use crate::{AlgoError, Params};
 
 pub trait Mac {
     fn init(&mut self, params: &dyn Params) -> Result<(), AlgoError>;

@@ -1,11 +1,10 @@
-use super::MacProvider;
 use crate::cipher::{CipherProvider, EmptyCipherProvider};
 use crate::digest::{EmptyDigestProvider, DigestProvider};
 use crate::generate::{
     EmptyKeyGeneratorProvider, EmptyKeyPairGeneratorProvider, KeyGeneratorProvider,
     KeyPairGeneratorProvider,
 };
-use crate::mac::EmptyMacProvider;
+use crate::mac::{EmptyMacProvider, MacProvider};
 
 pub trait Algo {
     fn digest(&self) -> &dyn DigestProvider {

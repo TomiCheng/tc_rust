@@ -1,7 +1,6 @@
 use tc_asn1::Asn1Oid;
 
-use super::{Mac, MacEntry, Params};
-use crate::{AlgoError, ErrorKind};
+use crate::{AlgoError, ErrorKind, Mac, MacEntry, Params};
 
 pub trait MacProvider {
     fn algorithms(&self) -> Box<dyn Iterator<Item = &dyn MacEntry> + '_>;
