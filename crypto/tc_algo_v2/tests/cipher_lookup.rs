@@ -61,18 +61,34 @@ impl Cipher for Marked {
         Ok(())
     }
 
-    fn update(&mut self, input: &[u8]) -> Result<Vec<u8>, AlgoError> {
-        Ok(input.to_vec())
+    fn block_size(&self) -> usize {
+        0
     }
 
-    fn finalize(&mut self) -> Result<Vec<u8>, AlgoError> {
-        let direction = match self.direction {
+    fn update_output_len(&self, input_len: usize) -> Result<usize, AlgoError> {
+        Ok(input_len)
+    }
+
+    fn output_len(&self, input_len: usize) -> Result<usize, AlgoError> {
+        Ok(input_len + 2)
+    }
+
+    fn process_bytes(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, AlgoError> {
+        output[..input.len()].copy_from_slice(input);
+        Ok(input.len())
+    }
+
+    fn do_final(&mut self, output: &mut [u8]) -> Result<usize, AlgoError> {
+        output[0] = self.mark;
+        output[1] = match self.direction {
             Some(CipherDirection::Encrypt) => ENCRYPTED,
             Some(CipherDirection::Decrypt) => DECRYPTED,
             None => 0,
         };
-        Ok(vec![self.mark, direction])
+        Ok(2)
     }
+
+    fn reset(&mut self) {}
 }
 
 fn row(name: &'static str, aliases: &[&str], oids: &[&str], mark: u8) -> Box<dyn CipherEntry> {

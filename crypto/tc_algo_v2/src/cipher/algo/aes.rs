@@ -1,6 +1,8 @@
 use core::error::Error;
 
-use tc_aead_cipher::{AeadCipher, AeadCipherInit, AeadError, AeadParamsOwned, GcmBlockCipher};
+use tc_aead_cipher::{
+    AeadBlockCipher, AeadCipher, AeadCipherInit, AeadError, AeadParamsOwned, GcmBlockCipher,
+};
 use tc_aes::AesEngine;
 use tc_asn1::Asn1Oid;
 use tc_block_cipher::CipherDirection as BlockDirection;
@@ -160,23 +162,28 @@ where
             .map_err(invalid_params)
     }
 
-    fn update(&mut self, input: &[u8]) -> Result<Vec<u8>, AlgoError> {
-        let len = self.0.update_output_len(input.len()).map_err(algo_error)?;
-        let mut output = vec![0; len];
-        let written = self
-            .0
-            .process_bytes(input, &mut output)
-            .map_err(algo_error)?;
-        output.truncate(written);
-        Ok(output)
+    fn block_size(&self) -> usize {
+        self.0.block_size()
     }
 
-    fn finalize(&mut self) -> Result<Vec<u8>, AlgoError> {
-        let len = self.0.output_len(0).map_err(algo_error)?;
-        let mut output = vec![0; len];
-        let written = self.0.do_final(&mut output).map_err(algo_error)?;
-        output.truncate(written);
-        Ok(output)
+    fn update_output_len(&self, input_len: usize) -> Result<usize, AlgoError> {
+        self.0.update_output_len(input_len).map_err(algo_error)
+    }
+
+    fn output_len(&self, input_len: usize) -> Result<usize, AlgoError> {
+        self.0.output_len(input_len).map_err(algo_error)
+    }
+
+    fn process_bytes(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, AlgoError> {
+        self.0.process_bytes(input, output).map_err(algo_error)
+    }
+
+    fn do_final(&mut self, output: &mut [u8]) -> Result<usize, AlgoError> {
+        self.0.do_final(output).map_err(algo_error)
+    }
+
+    fn reset(&mut self) {
+        self.0.reset();
     }
 }
 
@@ -197,12 +204,28 @@ where
             .map_err(invalid_params)
     }
 
-    fn update(&mut self, input: &[u8]) -> Result<Vec<u8>, AlgoError> {
-        self.0.update(input)
+    fn block_size(&self) -> usize {
+        self.0.block_size()
     }
 
-    fn finalize(&mut self) -> Result<Vec<u8>, AlgoError> {
-        self.0.finalize()
+    fn update_output_len(&self, input_len: usize) -> Result<usize, AlgoError> {
+        self.0.update_output_len(input_len)
+    }
+
+    fn output_len(&self, input_len: usize) -> Result<usize, AlgoError> {
+        self.0.output_len(input_len)
+    }
+
+    fn process_bytes(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, AlgoError> {
+        self.0.process_bytes(input, output)
+    }
+
+    fn do_final(&mut self, output: &mut [u8]) -> Result<usize, AlgoError> {
+        self.0.do_final(output)
+    }
+
+    fn reset(&mut self) {
+        self.0.reset();
     }
 }
 
@@ -219,23 +242,28 @@ impl Cipher for Gcm {
             .map_err(invalid_params)
     }
 
-    fn update(&mut self, input: &[u8]) -> Result<Vec<u8>, AlgoError> {
-        let len = self.0.update_output_len(input.len()).map_err(aead_error)?;
-        let mut output = vec![0; len];
-        let written = self
-            .0
-            .process_bytes(input, &mut output)
-            .map_err(aead_error)?;
-        output.truncate(written);
-        Ok(output)
+    fn block_size(&self) -> usize {
+        self.0.block_size()
     }
 
-    fn finalize(&mut self) -> Result<Vec<u8>, AlgoError> {
-        let len = self.0.output_len(0).map_err(aead_error)?;
-        let mut output = vec![0; len];
-        let written = self.0.do_final(&mut output).map_err(aead_error)?;
-        output.truncate(written);
-        Ok(output)
+    fn update_output_len(&self, input_len: usize) -> Result<usize, AlgoError> {
+        self.0.update_output_len(input_len).map_err(aead_error)
+    }
+
+    fn output_len(&self, input_len: usize) -> Result<usize, AlgoError> {
+        self.0.output_len(input_len).map_err(aead_error)
+    }
+
+    fn process_bytes(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, AlgoError> {
+        self.0.process_bytes(input, output).map_err(aead_error)
+    }
+
+    fn do_final(&mut self, output: &mut [u8]) -> Result<usize, AlgoError> {
+        self.0.do_final(output).map_err(aead_error)
+    }
+
+    fn reset(&mut self) {
+        self.0.reset();
     }
 }
 
@@ -686,6 +714,90 @@ mod tests {
         let error = cipher.update(&PLAINTEXT).unwrap_err();
         assert_eq!(error.kind(), ErrorKind::NotInitialized);
         let error = cipher.finalize().unwrap_err();
+        assert_eq!(error.kind(), ErrorKind::NotInitialized);
+    }
+
+    #[test]
+    fn the_block_size_is_that_of_aes_in_every_row() {
+        for row in aes(&DefaultAlgoContext::for_tests()) {
+            assert_eq!(row.create().block_size(), 16, "{}", row.name());
+        }
+    }
+
+    #[test]
+    fn the_buffer_calls_give_the_same_output_as_update_and_finalize() {
+        let params = key_and_iv(&CBC_KEY, &CBC_IV);
+        let name = "AES/CBC/PKCS7PADDING";
+        let expected = DefaultAlgoBuilder::default()
+            .build()
+            .cipher()
+            .encrypt_by_name(name, &params, &CBC_PLAINTEXT)
+            .unwrap();
+
+        let mut cipher = entry(name).create();
+        cipher.init(CipherDirection::Encrypt, &params).unwrap();
+        let mut output = vec![0; cipher.output_len(CBC_PLAINTEXT.len()).unwrap()];
+        let mut written = cipher.process_bytes(&CBC_PLAINTEXT, &mut output).unwrap();
+        written += cipher.do_final(&mut output[written..]).unwrap();
+        assert_eq!(output[..written], expected);
+    }
+
+    #[test]
+    fn process_byte_gives_the_same_output_as_process_bytes() {
+        let mut cipher = keyed(CipherDirection::Encrypt);
+        let mut output = [0; 16];
+        let mut written = 0;
+        for byte in PLAINTEXT {
+            written += cipher.process_byte(byte, &mut output[written..]).unwrap();
+        }
+        assert_eq!(written, 16);
+        assert_eq!(output, CIPHERTEXT);
+    }
+
+    #[test]
+    fn an_output_too_short_is_reported_as_data_length() {
+        let mut cipher = keyed(CipherDirection::Encrypt);
+        let error = cipher.process_bytes(&PLAINTEXT, &mut [0; 8]).unwrap_err();
+        assert_eq!(error.kind(), ErrorKind::DataLength);
+
+        let mut cipher = entry(GCM).create();
+        cipher
+            .init(CipherDirection::Encrypt, &gcm_params())
+            .unwrap();
+        let error = cipher.do_final(&mut [0; 8]).unwrap_err();
+        assert_eq!(error.kind(), ErrorKind::DataLength);
+    }
+
+    #[test]
+    fn reset_discards_the_message_so_far() {
+        let mut cipher = keyed(CipherDirection::Encrypt);
+        assert!(cipher.update(&PLAINTEXT[..5]).unwrap().is_empty());
+        cipher.reset();
+        assert_eq!(cipher.update(&PLAINTEXT).unwrap(), CIPHERTEXT);
+    }
+
+    #[test]
+    fn reset_starts_a_gcm_decryption_over() {
+        let mut cipher = entry(GCM).create();
+        cipher
+            .init(CipherDirection::Decrypt, &gcm_params())
+            .unwrap();
+        cipher.update(&gcm_sealed()[..20]).unwrap();
+        cipher.reset();
+        let mut opened = cipher.update(&gcm_sealed()).unwrap();
+        opened.extend(cipher.finalize().unwrap());
+        assert_eq!(opened, gcm_plaintext());
+    }
+
+    #[test]
+    fn reset_does_not_let_a_gcm_encryption_reuse_its_nonce() {
+        let mut cipher = entry(GCM).create();
+        cipher
+            .init(CipherDirection::Encrypt, &gcm_params())
+            .unwrap();
+        cipher.update(&gcm_plaintext()).unwrap();
+        cipher.reset();
+        let error = cipher.update(&gcm_plaintext()).unwrap_err();
         assert_eq!(error.kind(), ErrorKind::NotInitialized);
     }
 

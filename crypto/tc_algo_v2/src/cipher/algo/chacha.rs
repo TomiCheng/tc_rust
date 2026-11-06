@@ -62,17 +62,28 @@ impl Cipher for ChaCha7539 {
             .map_err(|error| AlgoError::with_source(ErrorKind::InvalidParams, error))
     }
 
-    fn update(&mut self, input: &[u8]) -> Result<Vec<u8>, AlgoError> {
-        let mut output = vec![0; input.len()];
-        self.0
-            .process_bytes(input, &mut output)
-            .map_err(algo_error)?;
-        Ok(output)
+    fn block_size(&self) -> usize {
+        self.0.block_size()
     }
 
-    fn finalize(&mut self) -> Result<Vec<u8>, AlgoError> {
-        self.0.do_final(&mut []).map_err(algo_error)?;
-        Ok(Vec::new())
+    fn update_output_len(&self, input_len: usize) -> Result<usize, AlgoError> {
+        self.0.update_output_len(input_len).map_err(algo_error)
+    }
+
+    fn output_len(&self, input_len: usize) -> Result<usize, AlgoError> {
+        self.0.output_len(input_len).map_err(algo_error)
+    }
+
+    fn process_bytes(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, AlgoError> {
+        self.0.process_bytes(input, output).map_err(algo_error)
+    }
+
+    fn do_final(&mut self, output: &mut [u8]) -> Result<usize, AlgoError> {
+        self.0.do_final(output).map_err(algo_error)
+    }
+
+    fn reset(&mut self) {
+        self.0.reset();
     }
 }
 
@@ -212,6 +223,41 @@ mod tests {
         assert_eq!(error.kind(), ErrorKind::NotInitialized);
         let error = cipher.finalize().unwrap_err();
         assert_eq!(error.kind(), ErrorKind::NotInitialized);
+    }
+
+    #[test]
+    fn the_buffer_calls_write_as_much_as_they_read_with_a_block_size_of_zero() {
+        let message = from_block_one(PLAINTEXT);
+        let mut cipher = entry().create();
+        cipher.init(CipherDirection::Encrypt, &params()).unwrap();
+        assert_eq!(cipher.block_size(), 0);
+        assert_eq!(cipher.output_len(0).unwrap(), 0);
+
+        let mut sealed = vec![0; cipher.output_len(message.len()).unwrap()];
+        let mut written = cipher.process_byte(message[0], &mut sealed).unwrap();
+        written += cipher
+            .process_bytes(&message[1..], &mut sealed[written..])
+            .unwrap();
+        written += cipher.do_final(&mut sealed[written..]).unwrap();
+        assert_eq!(written, message.len());
+        assert_eq!(sealed[64..], ciphertext());
+    }
+
+    #[test]
+    fn an_output_shorter_than_the_input_is_reported_as_data_length() {
+        let mut cipher = entry().create();
+        cipher.init(CipherDirection::Encrypt, &params()).unwrap();
+        let error = cipher.process_bytes(PLAINTEXT, &mut [0; 8]).unwrap_err();
+        assert_eq!(error.kind(), ErrorKind::DataLength);
+    }
+
+    #[test]
+    fn reset_starts_the_keystream_over() {
+        let mut cipher = entry().create();
+        cipher.init(CipherDirection::Encrypt, &params()).unwrap();
+        let first = cipher.update(PLAINTEXT).unwrap();
+        cipher.reset();
+        assert_eq!(cipher.update(PLAINTEXT).unwrap(), first);
     }
 
     #[test]
