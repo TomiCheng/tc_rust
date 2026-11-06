@@ -2,7 +2,7 @@ use tc_asn1::Asn1Oid;
 
 use crate::{AlgoError, ErrorKind, Params, Xof, XofEntry};
 
-pub trait XofProvider {
+pub trait XofProvider: Send + Sync {
     fn algorithms(&self) -> Box<dyn Iterator<Item = &dyn XofEntry> + '_>;
 
     fn get_by_name(&self, name: &str) -> Option<Box<dyn Xof>>;

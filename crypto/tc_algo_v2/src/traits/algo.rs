@@ -8,7 +8,7 @@ use crate::mac::{EmptyMacProvider, MacProvider};
 use crate::wrap::{EmptyWrapperProvider, WrapperProvider};
 use crate::xof::{EmptyXofProvider, XofProvider};
 
-pub trait Algo {
+pub trait Algo: Send + Sync {
     fn digest(&self) -> &dyn DigestProvider {
         &EmptyDigestProvider
     }

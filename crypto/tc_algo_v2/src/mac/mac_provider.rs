@@ -2,7 +2,7 @@ use tc_asn1::Asn1Oid;
 
 use crate::{AlgoError, ErrorKind, Mac, MacEntry, Params};
 
-pub trait MacProvider {
+pub trait MacProvider: Send + Sync {
     fn algorithms(&self) -> Box<dyn Iterator<Item = &dyn MacEntry> + '_>;
 
     fn get_by_name(&self, name: &str) -> Option<Box<dyn Mac>>;

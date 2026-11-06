@@ -3,7 +3,7 @@ use tc_asn1::Asn1Oid;
 use crate::cipher::{Cipher, CipherDirection, CipherEntry};
 use crate::{AlgoError, ErrorKind, Params};
 
-pub trait CipherProvider {
+pub trait CipherProvider: Send + Sync {
     fn algorithms(&self) -> Box<dyn Iterator<Item = &dyn CipherEntry> + '_>;
 
     fn get_by_name(&self, name: &str) -> Option<Box<dyn Cipher>>;

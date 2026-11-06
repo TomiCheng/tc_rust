@@ -2,7 +2,7 @@ use tc_asn1::Asn1Oid;
 
 use crate::{AlgoError, ErrorKind, KeyPair, KeyPairGenerator, KeyPairGeneratorEntry};
 
-pub trait KeyPairGeneratorProvider {
+pub trait KeyPairGeneratorProvider: Send + Sync {
     fn algorithms(&self) -> Box<dyn Iterator<Item = &dyn KeyPairGeneratorEntry> + '_>;
 
     fn get_by_name(&self, name: &str) -> Option<Box<dyn KeyPairGenerator>>;
