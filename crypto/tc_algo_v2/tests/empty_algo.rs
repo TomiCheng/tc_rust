@@ -39,6 +39,10 @@ fn an_algo_without_providers_reports_every_name_as_unknown() {
         kind_of(algo.key_pair_generator().get_by_name(name)),
         ErrorKind::UnknownGenerator
     );
+    assert_eq!(
+        kind_of(algo.agreement().get_by_name(name)),
+        ErrorKind::UnknownAgreement
+    );
 }
 
 #[test]
@@ -66,5 +70,9 @@ fn an_algo_without_providers_reports_every_oid_as_unknown() {
     assert_eq!(
         kind_of(algo.key_pair_generator().get_by_oid(&oid)),
         ErrorKind::UnknownGenerator
+    );
+    assert_eq!(
+        kind_of(algo.agreement().get_by_oid(&oid)),
+        ErrorKind::UnknownAgreement
     );
 }

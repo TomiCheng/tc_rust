@@ -1,5 +1,6 @@
 //! Name- and OID-based factories for algorithms, after Bouncy Castle's `Org.BouncyCastle.Security`.
 
+mod agreement;
 pub mod cipher;
 mod default_algo;
 mod default_algo_builder;
@@ -15,6 +16,7 @@ mod traits;
 mod wrap;
 mod xof;
 
+pub use agreement::{Agreement, AgreementEntry, AgreementProvider, SharedSecret};
 pub use default_algo_builder::DefaultAlgoBuilder;
 pub use default_algo_context::DefaultAlgoContext;
 pub use error::{AlgoError, ErrorKind};

@@ -30,6 +30,9 @@ aes-wrap = ["aes", "dep:tc_key_wrap", "tc_key_wrap/rfc3394"]
 # Key pair
 rsa = ["dep:tc_rsa", "dep:tc_asym_cipher", "dep:tc_asym_encoding", "dep:tc_buffered_cipher", "dep:tc_sha"]
 
+# Agreement
+dh = ["dep:tc_agreement", "dep:tc_asym_cipher", "dep:tc_bigint", "dep:tc_dh", "dep:tc_dh_key"]
+
 [dependencies]
 rand = { version = "0.10", default-features = false, features = ["sys_rng"] }
 rand_core = "0.10"
@@ -39,6 +42,7 @@ tc_block_cipher = { version = "0.1.0", features = ["alloc"], optional = true }
 tc_block_modes = { version = "0.1.1", features = ["alloc"], optional = true }
 tc_buffered_cipher = { version = "0.1.1", features = ["alloc"], optional = true }
 tc_constant_time = "0.1.0"
+tc_zeroize = { version = "0.1.0", features = ["alloc"] }
 tc_digest = { version = "0.1.1", optional = true }
 
 # Digest
@@ -64,3 +68,9 @@ tc_key_wrap = { version = "0.1.0", optional = true }
 tc_asym_cipher = { version = "0.1.0", optional = true }
 tc_asym_encoding = { version = "0.1.0", optional = true }
 tc_rsa = { version = "0.1.0", optional = true }
+
+# Agreement
+tc_agreement = { version = "0.1.0", path = "../agreement/tc_agreement", optional = true }
+tc_bigint = { version = "0.1.0", features = ["alloc"], optional = true }
+tc_dh = { version = "0.1.0", path = "../agreement/tc_dh", optional = true }
+tc_dh_key = { version = "0.1.0", path = "../tc_dh_key", optional = true }

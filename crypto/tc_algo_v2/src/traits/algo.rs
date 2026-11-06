@@ -1,5 +1,6 @@
+use crate::agreement::{AgreementProvider, EmptyAgreementProvider};
 use crate::cipher::{CipherProvider, EmptyCipherProvider};
-use crate::digest::{EmptyDigestProvider, DigestProvider};
+use crate::digest::{DigestProvider, EmptyDigestProvider};
 use crate::generate::{
     EmptyKeyGeneratorProvider, EmptyKeyPairGeneratorProvider, KeyGeneratorProvider,
     KeyPairGeneratorProvider,
@@ -35,5 +36,9 @@ pub trait Algo: Send + Sync {
 
     fn key_pair_generator(&self) -> &dyn KeyPairGeneratorProvider {
         &EmptyKeyPairGeneratorProvider
+    }
+
+    fn agreement(&self) -> &dyn AgreementProvider {
+        &EmptyAgreementProvider
     }
 }

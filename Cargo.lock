@@ -916,14 +916,18 @@ dependencies = [
  "rand_core",
  "tc_aead_cipher",
  "tc_aes",
+ "tc_agreement",
  "tc_asn1",
  "tc_asym_cipher",
  "tc_asym_encoding",
+ "tc_bigint",
  "tc_block_cipher",
  "tc_block_modes",
  "tc_buffered_cipher",
  "tc_chacha",
  "tc_constant_time",
+ "tc_dh",
+ "tc_dh_key",
  "tc_digest",
  "tc_keccak",
  "tc_key_wrap",
@@ -931,6 +935,7 @@ dependencies = [
  "tc_rsa",
  "tc_sha",
  "tc_stream_cipher",
+ "tc_zeroize",
 ]
 
 [[package]]

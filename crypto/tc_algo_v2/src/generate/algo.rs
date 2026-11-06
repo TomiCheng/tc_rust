@@ -1,5 +1,7 @@
 #[cfg(feature = "aes")]
 mod aes;
+#[cfg(feature = "dh")]
+mod dh;
 #[cfg(any(feature = "aes", feature = "chacha", feature = "hmac-sha256"))]
 mod key;
 #[cfg(feature = "rsa")]
@@ -19,4 +21,6 @@ pub(crate) const BUILT_IN_KEY_GENERATORS: &[CreateKeyGeneratorRows] = &[
 pub(crate) const BUILT_IN_KEY_PAIR_GENERATORS: &[CreateKeyPairGeneratorRows] = &[
     #[cfg(feature = "rsa")]
     rsa::rsa,
+    #[cfg(feature = "dh")]
+    dh::dh,
 ];

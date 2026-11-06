@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use crate::agreement::{AgreementEntry, AgreementProvider};
 use crate::cipher::{CipherEntry, CipherProvider};
 use crate::default_provider::DefaultProvider;
 use crate::digest::{DigestEntry, DigestProvider};
@@ -19,6 +20,7 @@ pub(crate) struct DefaultAlgo {
     wrap: DefaultProvider<dyn WrapperEntry>,
     key_generator: DefaultProvider<dyn KeyGeneratorEntry>,
     key_pair_generator: DefaultProvider<dyn KeyPairGeneratorEntry>,
+    agreement: DefaultProvider<dyn AgreementEntry>,
 }
 
 impl DefaultAlgo {
@@ -31,6 +33,7 @@ impl DefaultAlgo {
         wrappers: Vec<Box<dyn WrapperEntry>>,
         key_generators: Vec<Box<dyn KeyGeneratorEntry>>,
         key_pair_generators: Vec<Box<dyn KeyPairGeneratorEntry>>,
+        agreements: Vec<Box<dyn AgreementEntry>>,
         policy: Option<Arc<dyn Policy>>,
     ) -> Self {
         Self {
@@ -40,7 +43,8 @@ impl DefaultAlgo {
             mac: DefaultProvider::new(macs, policy.clone()),
             wrap: DefaultProvider::new(wrappers, policy.clone()),
             key_generator: DefaultProvider::new(key_generators, policy.clone()),
-            key_pair_generator: DefaultProvider::new(key_pair_generators, policy),
+            key_pair_generator: DefaultProvider::new(key_pair_generators, policy.clone()),
+            agreement: DefaultProvider::new(agreements, policy),
         }
     }
 }
@@ -72,5 +76,9 @@ impl Algo for DefaultAlgo {
 
     fn key_pair_generator(&self) -> &dyn KeyPairGeneratorProvider {
         &self.key_pair_generator
+    }
+
+    fn agreement(&self) -> &dyn AgreementProvider {
+        &self.agreement
     }
 }

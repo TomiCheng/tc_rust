@@ -4,7 +4,8 @@ mod key_length;
     feature = "aes",
     feature = "chacha",
     feature = "hmac-sha256",
-    feature = "rsa"
+    feature = "rsa",
+    feature = "dh"
 ))]
 use core::any::Any;
 
@@ -15,6 +16,10 @@ pub use tc_aead_cipher::AeadParamsOwned;
 pub use tc_block_cipher::{KeyOwned, KeyParams};
 #[cfg(any(feature = "aes", feature = "chacha"))]
 pub use tc_block_modes::{IvParams, KeyWithIvOwned};
+#[cfg(feature = "dh")]
+pub use tc_dh_key::standard_groups as dh_groups;
+#[cfg(feature = "dh")]
+pub use tc_dh_key::{DhParameters, DhPrivateKey, DhPublicKey};
 #[cfg(feature = "rsa")]
 pub use tc_rsa::{RsaKey, RsaKeyGenerationParamsOwned, RsaKeyParams};
 
@@ -22,7 +27,8 @@ pub use tc_rsa::{RsaKey, RsaKeyGenerationParamsOwned, RsaKeyParams};
     feature = "aes",
     feature = "chacha",
     feature = "hmac-sha256",
-    feature = "rsa"
+    feature = "rsa",
+    feature = "dh"
 ))]
 use crate::Params;
 
@@ -56,6 +62,27 @@ impl Params for RsaKeyGenerationParamsOwned {
 
 #[cfg(feature = "rsa")]
 impl Params for RsaKey {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
+#[cfg(feature = "dh")]
+impl Params for DhParameters {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
+#[cfg(feature = "dh")]
+impl Params for DhPrivateKey {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
+#[cfg(feature = "dh")]
+impl Params for DhPublicKey {
     fn as_any(&self) -> &dyn Any {
         self
     }
