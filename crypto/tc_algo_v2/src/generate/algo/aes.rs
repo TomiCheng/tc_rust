@@ -1,9 +1,8 @@
 use rand_core::CryptoRng;
 use tc_asn1::Asn1Oid;
 
-use crate::{
-    AlgoError, DefaultAlgoContext, EntryBase, KeyGenerator, KeyGeneratorEntry, KeyOwned, Params,
-};
+use crate::params::KeyOwned;
+use crate::{AlgoError, DefaultAlgoContext, EntryBase, KeyGenerator, KeyGeneratorEntry, Params};
 
 // The rows of AES, to give to DefaultAlgoBuilder::reg_key_generator. Their names and OIDs are those
 // of Bouncy Castle's GeneratorUtilities, without its aliases for the OIDs it calls wrong. An OID
@@ -85,9 +84,8 @@ mod tests {
     use rand_core::{CryptoRng, TryCryptoRng, TryRng};
     use tc_asn1::Asn1Oid;
 
-    use crate::{
-        AlgoBuilder, DefaultAlgoBuilder, ErrorKind, KeyGenerator, KeyOwned, KeyParams, Params,
-    };
+    use crate::params::{KeyOwned, KeyParams};
+    use crate::{AlgoBuilder, DefaultAlgoBuilder, ErrorKind, KeyGenerator, Params};
 
     fn key_of(key: &dyn Params) -> Vec<u8> {
         let key = key.as_any().downcast_ref::<KeyOwned>();

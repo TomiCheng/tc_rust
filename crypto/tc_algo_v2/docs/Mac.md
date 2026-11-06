@@ -8,7 +8,8 @@ From a new key to a verified tag, with HMAC-SHA256. The `hmac-sha256` feature of
 the rows.
 
 ```rust
-use tc_algo_v2::{AlgoBuilder, AlgoError, DefaultAlgoBuilder, KeyLength};
+use tc_algo_v2::params::KeyLength;
+use tc_algo_v2::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
 fn main() -> Result<(), AlgoError> {
     let algo = DefaultAlgoBuilder::default().build();
@@ -37,7 +38,8 @@ fn main() -> Result<(), AlgoError> {
 The same with helpers, when the whole message is at hand:
 
 ```rust
-use tc_algo_v2::{AlgoBuilder, AlgoError, DefaultAlgoBuilder, KeyLength};
+use tc_algo_v2::params::KeyLength;
+use tc_algo_v2::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
 fn main() -> Result<(), AlgoError> {
     let algo = DefaultAlgoBuilder::default().build();

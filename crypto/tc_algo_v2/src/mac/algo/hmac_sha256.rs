@@ -3,7 +3,8 @@ use tc_macs::{Hmac, Mac as _, MacError, MacInit as _};
 use tc_sha::Sha256Digest;
 
 use crate::mac::{Mac, MacEntry};
-use crate::{AlgoError, DefaultAlgoContext, EntryBase, ErrorKind, KeyOwned, Params};
+use crate::params::KeyOwned;
+use crate::{AlgoError, DefaultAlgoContext, EntryBase, ErrorKind, Params};
 
 // The row of HMAC-SHA256, to give to DefaultAlgoBuilder::reg_mac. Its names and OID are those of
 // Bouncy Castle's MacUtilities
@@ -94,7 +95,8 @@ mod tests {
     use core::any::Any;
 
     use crate::mac::Mac;
-    use crate::{AlgoBuilder, DefaultAlgoBuilder, ErrorKind, KeyOwned, Params};
+    use crate::params::KeyOwned;
+    use crate::{AlgoBuilder, DefaultAlgoBuilder, ErrorKind, Params};
 
     // Test case 2 of RFC 4231
     const KEY: &[u8] = b"Jefe";

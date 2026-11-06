@@ -7,9 +7,10 @@ use tc_key_wrap::{
     WrapDirection as KeyWrapDirection,
 };
 
+use crate::params::{KeyOwned, KeyParams};
 use crate::{
-    AlgoError, DefaultAlgoContext, EntryBase, ErrorKind, KeyOwned, KeyParams, Params,
-    WrapDirection, Wrapper, WrapperEntry,
+    AlgoError, DefaultAlgoContext, EntryBase, ErrorKind, Params, WrapDirection, Wrapper,
+    WrapperEntry,
 };
 
 // The row of AESWRAP, RFC 3394, to give to DefaultAlgoBuilder::reg_wrap. Its names and OIDs are
@@ -104,9 +105,8 @@ fn algo_error<E: Error + Send + Sync + 'static>(error: KeyWrapError<E>) -> AlgoE
 mod tests {
     use core::any::Any;
 
-    use crate::{
-        AlgoBuilder, DefaultAlgoBuilder, ErrorKind, KeyOwned, Params, WrapDirection, Wrapper,
-    };
+    use crate::params::KeyOwned;
+    use crate::{AlgoBuilder, DefaultAlgoBuilder, ErrorKind, Params, WrapDirection, Wrapper};
 
     const NAME: &str = "AESWRAP";
 

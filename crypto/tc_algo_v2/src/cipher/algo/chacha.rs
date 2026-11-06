@@ -8,7 +8,8 @@ use tc_buffered_cipher::{
 use tc_chacha::ChaCha7539Engine;
 use tc_stream_cipher::{KeyWithIvRef, StreamError};
 
-use crate::cipher::{Cipher, CipherDirection, CipherEntry, KeyWithIvOwned};
+use crate::cipher::{Cipher, CipherDirection, CipherEntry};
+use crate::params::KeyWithIvOwned;
 use crate::{AlgoError, DefaultAlgoContext, EntryBase, ErrorKind, Params};
 
 // The row of ChaCha20 (RFC 8439), to give to DefaultAlgoBuilder::reg_cipher. Its name and alias are
@@ -105,8 +106,9 @@ fn algo_error(error: BufferedError<StreamError>) -> AlgoError {
 #[cfg(test)]
 mod tests {
     use super::chacha;
-    use crate::cipher::{Cipher, CipherDirection, CipherEntry, KeyWithIvOwned};
-    use crate::{AlgoBuilder, DefaultAlgoBuilder, DefaultAlgoContext, ErrorKind, KeyOwned};
+    use crate::cipher::{Cipher, CipherDirection, CipherEntry};
+    use crate::params::{KeyOwned, KeyWithIvOwned};
+    use crate::{AlgoBuilder, DefaultAlgoBuilder, DefaultAlgoContext, ErrorKind};
 
     const NAME: &str = "CHACHA7539";
 

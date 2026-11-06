@@ -9,8 +9,8 @@ that the params ask for comes from `rand` and `rand_core`.
 ```rust
 use rand::rngs::SysRng;
 use rand_core::UnwrapErr;
-use tc_algo_v2::{AlgoBuilder, AlgoError, DefaultAlgoBuilder, RsaKey, RsaKeyGenerationParamsOwned};
-use tc_rsa::RsaKeyParams;
+use tc_algo_v2::params::{RsaKey, RsaKeyGenerationParamsOwned, RsaKeyParams};
+use tc_algo_v2::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
 fn main() -> Result<(), AlgoError> {
     let algo = DefaultAlgoBuilder::default().build();
