@@ -11,16 +11,9 @@ impl DefaultAlgoContext {
         Self { rand }
     }
 
-    #[cfg_attr(
-        not(any(
-            feature = "aes",
-            feature = "chacha",
-            feature = "hmac-sha256",
-            feature = "rsa"
-        )),
-        allow(dead_code)
-    )]
-    pub(crate) fn rand(&self) -> fn() -> Box<dyn CryptoRng> {
+    // What DefaultAlgoBuilder::set_rand was given, for a row to keep and call when it needs random
+    // numbers
+    pub fn rand(&self) -> fn() -> Box<dyn CryptoRng> {
         self.rand
     }
 
