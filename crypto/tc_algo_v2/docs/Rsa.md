@@ -2,7 +2,8 @@
 
 An RSA key pair is a public key anyone may hold and a private key only you hold. Both share a modulus,
 the product of two secret primes, and the size of that modulus in bits is the size of the key. What
-the public key encrypts, only the private key can decrypt.
+the public key encrypts, only the private key can decrypt, and what the private key signs, anyone
+with the public key can check.
 
 The `rsa` feature of `tc_algo_v2` has the rows. The random source that the params ask for comes from
 `rand` and `rand_core`.
@@ -140,3 +141,67 @@ works in either direction, so it is up to the caller to encrypt with the public 
 - A changed ciphertext is `InvalidCiphertext` with a padding, but `RSA` without one cannot tell, and
   gives back a wrong block.
 - The padding and the blinding draw from the source of `DefaultAlgoBuilder::set_rand`.
+
+## Signing
+
+From a new pair to a verified signature, with PKCS#1 v1.5 over SHA-256. The keys of a pair go straight
+in as params:
+
+```rust
+use rand::rngs::SysRng;
+use rand_core::UnwrapErr;
+use tc_algo_v2::params::RsaKeyGenerationParamsOwned;
+use tc_algo_v2::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
+
+fn main() -> Result<(), AlgoError> {
+    let algo = DefaultAlgoBuilder::default().build();
+    let name = "SHA-256withRSA";
+    let message = b"attack at dawn";
+
+    // Generate a pair
+    let params = RsaKeyGenerationParamsOwned::new(UnwrapErr(SysRng)).with_strength(2048);
+    let pair = algo.key_pair_generator().generate_by_name_with("RSA", &params)?;
+
+    // Sign with the private key
+    let mut signer = algo.signer().get_by_name(name)?;
+    signer.init(pair.private())?;
+    signer.update(message)?;
+    let signature = signer.sign()?;
+
+    // Verify with the public key
+    let mut verifier = algo.signer().get_by_name(name)?;
+    verifier.init(pair.public())?;
+    verifier.update(message)?;
+    assert!(verifier.verify_signature(&signature)?);
+
+    Ok(())
+}
+```
+
+### Algorithms
+
+| Name | OID | Feature | Signature bytes |
+|---|---|---|---|
+| `SHA-256withRSA` | `1.2.840.113549.1.1.11` | `rsa` | the size of the modulus |
+
+`SHA256withRSA`, `SHA256withRSAEncryption` and `SHA-256withRSAEncryption` find it too, and the case of
+a name does not matter.
+
+### Params
+
+The row takes an `RsaKey`, and any other type is `InvalidParams`. The key tells the direction: a
+private key signs, and a public key verifies.
+
+### Using it
+
+- **Look at the answer of `verify_signature`.** A wrong signature gives `Ok(false)`, not an error, so
+  a bare `?` on the call lets a forged message through.
+- A message can come in pieces, over several calls of `update`.
+- `sign` gives the signature in a `Vec`. `generate_signature` writes it into a buffer of
+  `max_signature_size` bytes, and one too short is `DataLength`.
+- `sign`, `generate_signature` and `verify_signature` start the next message under the same key.
+  `reset` discards the message so far.
+- `update`, `generate_signature` and `verify_signature` give `NotInitialized` before an `init` that
+  succeeded. So do `generate_signature` with a public key and `verify_signature` with a private one.
+- PKCS#1 v1.5 gives the same signature for the same key and message. The blinding draws from the
+  source of `DefaultAlgoBuilder::set_rand`.

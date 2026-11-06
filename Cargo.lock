@@ -918,6 +918,7 @@ dependencies = [
  "tc_aes",
  "tc_agreement",
  "tc_asn1",
+ "tc_asn1_x509",
  "tc_asym_cipher",
  "tc_asym_encoding",
  "tc_bigint",
@@ -933,7 +934,9 @@ dependencies = [
  "tc_key_wrap",
  "tc_macs",
  "tc_rsa",
+ "tc_rsa_signer",
  "tc_sha",
+ "tc_signer",
  "tc_stream_cipher",
  "tc_zeroize",
 ]

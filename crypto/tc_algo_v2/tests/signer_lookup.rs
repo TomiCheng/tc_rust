@@ -1,5 +1,5 @@
 use tc_algo_v2::params::KeyLength;
-use tc_algo_v2::signer::{SignDirection, Signer, SignerEntry};
+use tc_algo_v2::signer::{Signer, SignerEntry};
 use tc_algo_v2::{
     Algo, AlgoBuilder, AlgoError, DefaultAlgoBuilder, DefaultAlgoContext, EntryBase, ErrorKind,
     ListPolicy, Params,
@@ -31,7 +31,7 @@ impl SignerEntry for Row {
     fn create(&self) -> Box<dyn Signer> {
         Box::new(Marked {
             mark: self.mark,
-            direction: None,
+            initialized: false,
         })
     }
 }
@@ -39,12 +39,12 @@ impl SignerEntry for Row {
 // Its signature is the mark of the row that created it, to tell which row a lookup found
 struct Marked {
     mark: u8,
-    direction: Option<SignDirection>,
+    initialized: bool,
 }
 
 impl Signer for Marked {
-    fn init(&mut self, direction: SignDirection, _params: &dyn Params) -> Result<(), AlgoError> {
-        self.direction = Some(direction);
+    fn init(&mut self, _params: &dyn Params) -> Result<(), AlgoError> {
+        self.initialized = true;
         Ok(())
     }
 
@@ -57,20 +57,18 @@ impl Signer for Marked {
     }
 
     fn generate_signature(&mut self, output: &mut [u8]) -> Result<usize, AlgoError> {
-        match self.direction {
-            Some(SignDirection::Sign) => {
-                output[0] = self.mark;
-                Ok(1)
-            }
-            _ => Err(AlgoError::new(ErrorKind::NotInitialized)),
+        if !self.initialized {
+            return Err(AlgoError::new(ErrorKind::NotInitialized));
         }
+        output[0] = self.mark;
+        Ok(1)
     }
 
     fn verify_signature(&mut self, signature: &[u8]) -> Result<bool, AlgoError> {
-        match self.direction {
-            Some(SignDirection::Verify) => Ok(signature == [self.mark]),
-            _ => Err(AlgoError::new(ErrorKind::NotInitialized)),
+        if !self.initialized {
+            return Err(AlgoError::new(ErrorKind::NotInitialized));
         }
+        Ok(signature == [self.mark])
     }
 
     fn reset(&mut self) {}
@@ -108,9 +106,7 @@ fn builder_with(rows: &[Rows]) -> DefaultAlgoBuilder {
 }
 
 fn mark_of(mut signer: Box<dyn Signer>) -> u8 {
-    signer
-        .init(SignDirection::Sign, &KeyLength::new(0))
-        .unwrap();
+    signer.init(&KeyLength::new(0)).unwrap();
     signer.sign().unwrap()[0]
 }
 
@@ -160,9 +156,7 @@ fn the_last_registered_signer_is_the_one_found_by_a_shared_name() {
 fn sign_gives_as_many_bytes_as_generate_signature_wrote() {
     let algo = builder_with(&[older]).build();
     let mut signer = algo.signer().get_by_name("TEST-SIGNER").unwrap();
-    signer
-        .init(SignDirection::Sign, &KeyLength::new(0))
-        .unwrap();
+    signer.init(&KeyLength::new(0)).unwrap();
     assert_eq!(signer.sign().unwrap(), [1]);
 }
 

@@ -1,14 +1,8 @@
 use crate::{AlgoError, Params};
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum SignDirection {
-    Sign,
-    Verify,
-}
-
 pub trait Signer {
-    // Takes the private key to sign, and the public key to verify
-    fn init(&mut self, direction: SignDirection, params: &dyn Params) -> Result<(), AlgoError>;
+    // The key tells the direction: a private key signs, and a public key verifies
+    fn init(&mut self, params: &dyn Params) -> Result<(), AlgoError>;
 
     // The most that generate_signature writes, in bytes
     fn max_signature_size(&self) -> usize;
