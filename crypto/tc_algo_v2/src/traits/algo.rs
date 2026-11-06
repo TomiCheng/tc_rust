@@ -6,10 +6,15 @@ use crate::generate::{
 };
 use crate::mac::{EmptyMacProvider, MacProvider};
 use crate::wrap::{EmptyWrapperProvider, WrapperProvider};
+use crate::xof::{EmptyXofProvider, XofProvider};
 
 pub trait Algo {
     fn digest(&self) -> &dyn DigestProvider {
         &EmptyDigestProvider
+    }
+
+    fn xof(&self) -> &dyn XofProvider {
+        &EmptyXofProvider
     }
 
     fn mac(&self) -> &dyn MacProvider {

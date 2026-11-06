@@ -11,7 +11,6 @@ mod key_pair_generator_entry;
 mod key_pair_generator_provider;
 
 pub(crate) use algo::BUILT_IN_KEY_GENERATORS;
-pub(crate) use default_key_generator_provider::DefaultKeyGeneratorProvider;
 pub(crate) use empty_key_generator_provider::EmptyKeyGeneratorProvider;
 pub(crate) use empty_key_pair_generator_provider::EmptyKeyPairGeneratorProvider;
 pub use key_generator::KeyGenerator;

@@ -8,7 +8,6 @@ mod mac_provider;
 mod mac_trait;
 
 pub(crate) use algo::{BUILT_IN, CreateRows};
-pub(crate) use default_mac_provider::DefaultMacProvider;
 pub(crate) use empty_mac_provider::EmptyMacProvider;
 pub use mac_entry::MacEntry;
 pub use mac_provider::MacProvider;

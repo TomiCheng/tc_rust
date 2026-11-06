@@ -8,7 +8,6 @@ mod wrapper_entry;
 mod wrapper_provider;
 
 pub(crate) use algo::{BUILT_IN, CreateRows};
-pub(crate) use default_wrapper_provider::DefaultWrapperProvider;
 pub(crate) use empty_wrapper_provider::EmptyWrapperProvider;
 pub use wrapper::{WrapDirection, Wrapper};
 pub use wrapper_entry::WrapperEntry;

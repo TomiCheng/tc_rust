@@ -23,7 +23,6 @@ mod digest_trait;
 mod empty_digest_provider;
 
 pub(crate) use algo::{BUILT_IN, CreateRows};
-pub(crate) use default_digest_provider::DefaultDigestProvider;
 pub use digest_entry::DigestEntry;
 pub use digest_provider::DigestProvider;
 pub use digest_trait::Digest;

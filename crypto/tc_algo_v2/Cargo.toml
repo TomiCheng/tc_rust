@@ -12,6 +12,9 @@ default = []
 # Digest
 sha256 = ["dep:tc_sha", "dep:tc_digest"]
 
+# XOF
+shake256 = ["dep:tc_keccak", "dep:tc_digest"]
+
 # Block Cipher
 aes = ["dep:tc_aes", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_buffered_cipher"]
 
@@ -33,6 +36,9 @@ tc_digest = { version = "0.1.1", optional = true }
 
 # Digest
 tc_sha = { version = "0.1.1", optional = true }
+
+# XOF
+tc_keccak = { version = "0.1.0", optional = true }
 
 # Block Cipher
 tc_aes = { version = "0.1.0", optional = true }

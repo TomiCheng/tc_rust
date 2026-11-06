@@ -10,11 +10,13 @@ use crate::digest::{self, DigestEntry};
 use crate::generate::{BUILT_IN_KEY_GENERATORS, CreateKeyGeneratorRows};
 use crate::mac::{self, MacEntry};
 use crate::wrap::{self, WrapperEntry};
+use crate::xof::{self, XofEntry};
 use crate::{Algo, AlgoBuilder, DefaultAlgoContext, KeyGeneratorEntry, Policy};
 
 #[derive(Clone)]
 pub struct DefaultAlgoBuilder {
     digests: Vec<digest::CreateRows>,
+    xofs: Vec<xof::CreateRows>,
     ciphers: Vec<cipher::CreateRows>,
     macs: Vec<mac::CreateRows>,
     wrappers: Vec<wrap::CreateRows>,
@@ -28,6 +30,7 @@ impl Default for DefaultAlgoBuilder {
     fn default() -> Self {
         Self {
             digests: digest::BUILT_IN.to_vec(),
+            xofs: xof::BUILT_IN.to_vec(),
             ciphers: cipher::BUILT_IN.to_vec(),
             macs: mac::BUILT_IN.to_vec(),
             wrappers: wrap::BUILT_IN.to_vec(),
@@ -41,6 +44,10 @@ impl Default for DefaultAlgoBuilder {
 impl DefaultAlgoBuilder {
     pub fn reg_digest(&mut self, create: fn(&DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>>) {
         self.digests.push(create);
+    }
+
+    pub fn reg_xof(&mut self, create: fn(&DefaultAlgoContext) -> Vec<Box<dyn XofEntry>>) {
+        self.xofs.push(create);
     }
 
     pub fn reg_cipher(&mut self, create: fn(&DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>>) {
@@ -86,6 +93,14 @@ impl DefaultAlgoBuilder {
             .collect()
     }
 
+    fn xof_rows(&self, context: &DefaultAlgoContext) -> Vec<Box<dyn XofEntry>> {
+        self.xofs
+            .iter()
+            .rev()
+            .flat_map(|create| create(context))
+            .collect()
+    }
+
     fn cipher_rows(&self, context: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>> {
         self.ciphers
             .iter()
@@ -124,6 +139,7 @@ impl AlgoBuilder for DefaultAlgoBuilder {
         let context = DefaultAlgoContext::new(self.rand);
         Box::new(DefaultAlgo::new(
             self.digest_rows(&context),
+            self.xof_rows(&context),
             self.cipher_rows(&context),
             self.mac_rows(&context),
             self.wrapper_rows(&context),
@@ -138,6 +154,7 @@ impl fmt::Debug for DefaultAlgoBuilder {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("DefaultAlgoBuilder")
             .field("digests", &self.digests.len())
+            .field("xofs", &self.xofs.len())
             .field("ciphers", &self.ciphers.len())
             .field("macs", &self.macs.len())
             .field("wrappers", &self.wrappers.len())
