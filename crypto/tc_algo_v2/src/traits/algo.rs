@@ -7,6 +7,7 @@ use crate::generate::{
 };
 use crate::kdf::{EmptyKdfProvider, KdfProvider};
 use crate::mac::{EmptyMacProvider, MacProvider};
+use crate::pbe::{EmptyPbeProvider, PbeProvider};
 use crate::signer::{EmptySignerProvider, SignerProvider};
 use crate::wrap::{EmptyWrapperProvider, WrapperProvider};
 use crate::xof::{EmptyXofProvider, XofProvider};
@@ -50,5 +51,9 @@ pub trait Algo: Send + Sync {
 
     fn kdf(&self) -> &dyn KdfProvider {
         &EmptyKdfProvider
+    }
+
+    fn pbe(&self) -> &dyn PbeProvider {
+        &EmptyPbeProvider
     }
 }

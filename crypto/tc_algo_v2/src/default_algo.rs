@@ -4,6 +4,7 @@ use crate::default_provider::DefaultProvider;
 use crate::digest::{DigestEntry, DigestProvider};
 use crate::kdf::{KdfEntry, KdfProvider};
 use crate::mac::{MacEntry, MacProvider};
+use crate::pbe::{PbeEntry, PbeProvider};
 use crate::signer::{SignerEntry, SignerProvider};
 use crate::wrap::{WrapperEntry, WrapperProvider};
 use crate::xof::{XofEntry, XofProvider};
@@ -25,6 +26,7 @@ pub(crate) struct DefaultAlgo {
     agreement: DefaultProvider<dyn AgreementEntry>,
     signer: DefaultProvider<dyn SignerEntry>,
     kdf: DefaultProvider<dyn KdfEntry>,
+    pbe: DefaultProvider<dyn PbeEntry>,
 }
 
 impl DefaultAlgo {
@@ -40,6 +42,7 @@ impl DefaultAlgo {
         agreements: Vec<Box<dyn AgreementEntry>>,
         signers: Vec<Box<dyn SignerEntry>>,
         kdfs: Vec<Box<dyn KdfEntry>>,
+        pbes: Vec<Box<dyn PbeEntry>>,
         policy: Option<Arc<dyn Policy>>,
     ) -> Self {
         Self {
@@ -52,7 +55,8 @@ impl DefaultAlgo {
             key_pair_generator: DefaultProvider::new(key_pair_generators, policy.clone()),
             agreement: DefaultProvider::new(agreements, policy.clone()),
             signer: DefaultProvider::new(signers, policy.clone()),
-            kdf: DefaultProvider::new(kdfs, policy),
+            kdf: DefaultProvider::new(kdfs, policy.clone()),
+            pbe: DefaultProvider::new(pbes, policy),
         }
     }
 }
@@ -96,5 +100,9 @@ impl Algo for DefaultAlgo {
 
     fn kdf(&self) -> &dyn KdfProvider {
         &self.kdf
+    }
+
+    fn pbe(&self) -> &dyn PbeProvider {
+        &self.pbe
     }
 }

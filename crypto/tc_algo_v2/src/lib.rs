@@ -13,6 +13,7 @@ pub mod kdf;
 pub mod mac;
 pub mod params;
 mod policy;
+pub mod pbe;
 pub mod signer;
 mod traits;
 pub mod wrap;

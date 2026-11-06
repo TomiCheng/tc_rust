@@ -934,6 +934,7 @@ dependencies = [
  "tc_keccak",
  "tc_key_wrap",
  "tc_macs",
+ "tc_pbe",
  "tc_rsa",
  "tc_rsa_signer",
  "tc_sha",

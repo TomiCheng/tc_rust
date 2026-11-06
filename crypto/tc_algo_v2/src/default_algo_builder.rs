@@ -15,6 +15,7 @@ use crate::generate::{
 use crate::generate::{KeyGeneratorEntry, KeyPairGeneratorEntry};
 use crate::kdf::{self, KdfEntry};
 use crate::mac::{self, MacEntry};
+use crate::pbe::{self, PbeEntry};
 use crate::signer::{self, SignerEntry};
 use crate::wrap::{self, WrapperEntry};
 use crate::xof::{self, XofEntry};
@@ -32,6 +33,7 @@ pub struct DefaultAlgoBuilder {
     agreements: Vec<agreement::CreateRows>,
     signers: Vec<signer::CreateRows>,
     kdfs: Vec<kdf::CreateRows>,
+    pbes: Vec<pbe::CreateRows>,
     policy: Option<Arc<dyn Policy>>,
     rand: fn() -> Box<dyn CryptoRng>,
 }
@@ -50,6 +52,7 @@ impl Default for DefaultAlgoBuilder {
             agreements: agreement::BUILT_IN.to_vec(),
             signers: signer::BUILT_IN.to_vec(),
             kdfs: kdf::BUILT_IN.to_vec(),
+            pbes: pbe::BUILT_IN.to_vec(),
             policy: None,
             rand: os_rand,
         }
@@ -104,6 +107,10 @@ impl DefaultAlgoBuilder {
 
     pub fn reg_kdf(&mut self, create: fn(&DefaultAlgoContext) -> Vec<Box<dyn KdfEntry>>) {
         self.kdfs.push(create);
+    }
+
+    pub fn reg_pbe(&mut self, create: fn(&DefaultAlgoContext) -> Vec<Box<dyn PbeEntry>>) {
+        self.pbes.push(create);
     }
 
     pub fn set_policy(&mut self, policy: impl Policy + 'static) {
@@ -189,6 +196,14 @@ impl DefaultAlgoBuilder {
             .collect()
     }
 
+    fn pbe_rows(&self, context: &DefaultAlgoContext) -> Vec<Box<dyn PbeEntry>> {
+        self.pbes
+            .iter()
+            .rev()
+            .flat_map(|create| create(context))
+            .collect()
+    }
+
     fn kdf_rows(&self, context: &DefaultAlgoContext) -> Vec<Box<dyn KdfEntry>> {
         self.kdfs
             .iter()
@@ -220,6 +235,7 @@ impl AlgoBuilder for DefaultAlgoBuilder {
             self.agreement_rows(&context),
             self.signer_rows(&context),
             self.kdf_rows(&context),
+            self.pbe_rows(&context),
             self.policy.clone(),
         ))
     }
@@ -239,6 +255,7 @@ impl fmt::Debug for DefaultAlgoBuilder {
             .field("agreements", &self.agreements.len())
             .field("signers", &self.signers.len())
             .field("kdfs", &self.kdfs.len())
+            .field("pbes", &self.pbes.len())
             .field("policy", &self.policy.is_some())
             .field("rand", &self.rand)
             .finish()
