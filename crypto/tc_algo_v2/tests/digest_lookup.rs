@@ -48,8 +48,9 @@ impl Digest for Marked {
 
     fn update(&mut self, _input: &[u8]) {}
 
-    fn finalize(&mut self) -> Vec<u8> {
-        vec![self.0]
+    fn do_final(&mut self, output: &mut [u8]) -> usize {
+        output[0] = self.0;
+        1
     }
 
     fn reset(&mut self) {}

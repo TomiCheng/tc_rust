@@ -58,11 +58,8 @@ impl Digest for Sha256 {
         self.0.update(input);
     }
 
-    fn finalize(&mut self) -> Vec<u8> {
-        let mut output = vec![0; self.0.digest_size()];
-        let written = self.0.do_final(&mut output);
-        output.truncate(written);
-        output
+    fn do_final(&mut self, output: &mut [u8]) -> usize {
+        self.0.do_final(output)
     }
 
     fn reset(&mut self) {
@@ -82,6 +79,36 @@ mod tests {
 
     fn row() -> Box<dyn DigestEntry> {
         sha256(&DefaultAlgoContext::for_tests()).remove(0)
+    }
+
+    const ABC_HASH: &str = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad";
+    const EMPTY_HASH: &str = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+
+    #[test]
+    fn do_final_writes_the_hash_into_the_output_and_starts_the_next_message() {
+        let mut digest = row().create();
+        digest.update(b"abc");
+        let mut output = [0; 32];
+        assert_eq!(digest.do_final(&mut output), 32);
+        assert_eq!(hex(&output), ABC_HASH);
+
+        assert_eq!(digest.do_final(&mut output), 32);
+        assert_eq!(hex(&output), EMPTY_HASH);
+    }
+
+    #[test]
+    fn update_byte_gives_the_same_hash_as_update() {
+        let mut digest = row().create();
+        for byte in b"abc" {
+            digest.update_byte(*byte);
+        }
+        assert_eq!(hex(&digest.finalize()), ABC_HASH);
+    }
+
+    #[test]
+    #[should_panic(expected = "output buffer shorter")]
+    fn do_final_panics_on_an_output_shorter_than_the_hash() {
+        row().create().do_final(&mut [0; 31]);
     }
 
     #[test]
