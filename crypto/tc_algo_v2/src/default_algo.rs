@@ -3,6 +3,7 @@ use crate::cipher::{CipherEntry, CipherProvider};
 use crate::default_provider::DefaultProvider;
 use crate::digest::{DigestEntry, DigestProvider};
 use crate::kdf::{KdfEntry, KdfProvider};
+use crate::kem::{KemEntry, KemProvider};
 use crate::mac::{MacEntry, MacProvider};
 use crate::pbe::{PbeEntry, PbeProvider};
 use crate::signer::{SignerEntry, SignerProvider};
@@ -27,6 +28,7 @@ pub(crate) struct DefaultAlgo {
     signer: DefaultProvider<dyn SignerEntry>,
     kdf: DefaultProvider<dyn KdfEntry>,
     pbe: DefaultProvider<dyn PbeEntry>,
+    kem: DefaultProvider<dyn KemEntry>,
 }
 
 impl DefaultAlgo {
@@ -43,6 +45,7 @@ impl DefaultAlgo {
         signers: Vec<Box<dyn SignerEntry>>,
         kdfs: Vec<Box<dyn KdfEntry>>,
         pbes: Vec<Box<dyn PbeEntry>>,
+        kems: Vec<Box<dyn KemEntry>>,
         policy: Option<Arc<dyn Policy>>,
     ) -> Self {
         Self {
@@ -56,7 +59,8 @@ impl DefaultAlgo {
             agreement: DefaultProvider::new(agreements, policy.clone()),
             signer: DefaultProvider::new(signers, policy.clone()),
             kdf: DefaultProvider::new(kdfs, policy.clone()),
-            pbe: DefaultProvider::new(pbes, policy),
+            pbe: DefaultProvider::new(pbes, policy.clone()),
+            kem: DefaultProvider::new(kems, policy),
         }
     }
 }
@@ -104,5 +108,9 @@ impl Algo for DefaultAlgo {
 
     fn pbe(&self) -> &dyn PbeProvider {
         &self.pbe
+    }
+
+    fn kem(&self) -> &dyn KemProvider {
+        &self.kem
     }
 }

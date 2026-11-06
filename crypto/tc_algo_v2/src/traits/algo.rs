@@ -6,6 +6,7 @@ use crate::generate::{
     KeyPairGeneratorProvider,
 };
 use crate::kdf::{EmptyKdfProvider, KdfProvider};
+use crate::kem::{EmptyKemProvider, KemProvider};
 use crate::mac::{EmptyMacProvider, MacProvider};
 use crate::pbe::{EmptyPbeProvider, PbeProvider};
 use crate::signer::{EmptySignerProvider, SignerProvider};
@@ -55,5 +56,9 @@ pub trait Algo: Send + Sync {
 
     fn pbe(&self) -> &dyn PbeProvider {
         &EmptyPbeProvider
+    }
+
+    fn kem(&self) -> &dyn KemProvider {
+        &EmptyKemProvider
     }
 }

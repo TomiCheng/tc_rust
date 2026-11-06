@@ -10,6 +10,7 @@ pub mod digest;
 mod error;
 pub mod generate;
 pub mod kdf;
+pub mod kem;
 pub mod mac;
 pub mod params;
 mod policy;

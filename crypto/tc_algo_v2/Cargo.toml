@@ -42,6 +42,9 @@ hkdf-sha512 = ["hkdf"]
 # PBE
 pbe-aes = ["aes", "dep:tc_pbe", "dep:tc_sha"]
 
+# KEM
+ml-kem = ["dep:tc_asym_cipher", "dep:tc_kem", "dep:tc_ml_kem"]
+
 [dependencies]
 rand = { version = "0.10", default-features = false, features = ["sys_rng"] }
 rand_core = "0.10"
@@ -80,6 +83,10 @@ tc_asn1_x509 = { version = "0.1.0", path = "../../asn1/tc_asn1_x509", optional =
 tc_rsa = { version = "0.1.0", optional = true }
 tc_rsa_signer = { version = "0.1.0", path = "../../signer/tc_rsa_signer", optional = true }
 tc_signer = { version = "0.1.0", path = "../../signer/tc_signer", optional = true }
+
+# KEM
+tc_kem = { version = "0.1.0", path = "../tc_kem", optional = true }
+tc_ml_kem = { version = "0.1.0", path = "../tc_ml_kem", optional = true }
 
 # PBE
 tc_pbe = { version = "0.1.0", path = "../../kdf/tc_pbe", optional = true }

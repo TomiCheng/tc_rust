@@ -6,7 +6,8 @@ mod key_length;
     feature = "hmac-sha256",
     feature = "rsa",
     feature = "dh",
-    feature = "hkdf"
+    feature = "hkdf",
+    feature = "ml-kem"
 ))]
 use core::any::Any;
 
@@ -23,6 +24,8 @@ pub use tc_dh_key::standard_groups as dh_groups;
 pub use tc_dh_key::{DhParameters, DhPrivateKey, DhPublicKey};
 #[cfg(feature = "hkdf")]
 pub use tc_kdf::hkdf::HkdfParamsOwned;
+#[cfg(feature = "ml-kem")]
+pub use tc_ml_kem::{MlKemParameters, MlKemPrivateKey, MlKemPublicKey};
 #[cfg(feature = "rsa")]
 pub use tc_rsa::{RsaKey, RsaKeyGenerationParamsOwned, RsaKeyParams};
 
@@ -32,7 +35,8 @@ pub use tc_rsa::{RsaKey, RsaKeyGenerationParamsOwned, RsaKeyParams};
     feature = "hmac-sha256",
     feature = "rsa",
     feature = "dh",
-    feature = "hkdf"
+    feature = "hkdf",
+    feature = "ml-kem"
 ))]
 use crate::Params;
 
@@ -59,6 +63,27 @@ impl Params for AeadParamsOwned {
 
 #[cfg(feature = "hkdf")]
 impl Params for HkdfParamsOwned {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
+#[cfg(feature = "ml-kem")]
+impl Params for MlKemParameters {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
+#[cfg(feature = "ml-kem")]
+impl Params for MlKemPublicKey {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
+#[cfg(feature = "ml-kem")]
+impl Params for MlKemPrivateKey {
     fn as_any(&self) -> &dyn Any {
         self
     }
