@@ -5,6 +5,8 @@ use tc_asn1_x509::{
     ext::Extension,
 };
 
+use crate::cert::X509CertificateV3Generator;
+
 /// BC's `X509V3CertificateGenerator`: the fields of a version 3 certificate to be signed.
 /// Nothing is checked here. Every method is variable time, for public values only.
 #[derive(Clone, Debug, Default)]
@@ -42,3 +44,5 @@ impl DefaultX509V3CertificateGenerator {
         self.extensions.push(extension);
     }
 }
+
+impl X509CertificateV3Generator for DefaultX509V3CertificateGenerator {}
