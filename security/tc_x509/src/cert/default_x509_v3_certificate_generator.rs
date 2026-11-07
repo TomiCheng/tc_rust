@@ -8,7 +8,7 @@ use tc_asn1_x509::{
 /// BC's `X509V3CertificateGenerator`: the fields of a version 3 certificate to be signed.
 /// Nothing is checked here. Every method is variable time, for public values only.
 #[derive(Clone, Debug, Default)]
-pub struct X509V3CertificateGenerator {
+pub struct DefaultX509V3CertificateGenerator {
     serial_number: Option<Asn1Integer>,
     issuer: Option<Name>,
     validity: Option<Validity>,
@@ -17,7 +17,7 @@ pub struct X509V3CertificateGenerator {
     extensions: Vec<Extension>,
 }
 
-impl X509V3CertificateGenerator {
+impl DefaultX509V3CertificateGenerator {
     pub fn set_serial_number(&mut self, serial_number: Asn1Integer) {
         self.serial_number = Some(serial_number);
     }

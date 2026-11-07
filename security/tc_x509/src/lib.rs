@@ -5,7 +5,9 @@ pub mod cert;
 pub mod crl;
 mod default_x509_operator;
 mod default_x509_operator_builder;
+mod default_x509_operator_context;
 mod traits;
 
 pub use default_x509_operator_builder::DefaultX509OperatorBuilder;
+pub use default_x509_operator_context::DefaultX509OperatorContext;
 pub use traits::{X509Operator, X509OperatorBuilder};
