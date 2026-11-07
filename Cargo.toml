@@ -7,6 +7,7 @@ members = [
     "crypto/macs/*",
     "ies/*",
     "kdf/*",
+    "security/*",
     "signer/*",
     "x509/*",
     "util/*",

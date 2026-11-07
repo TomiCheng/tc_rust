@@ -2022,6 +2022,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_operator_v2"
+version = "0.1.0"
+dependencies = [
+ "tc_algo_v2",
+ "tc_asn1",
+ "tc_asn1_x509",
+]
+
+[[package]]
 name = "tc_pbe"
 version = "0.1.0"
 dependencies = [
