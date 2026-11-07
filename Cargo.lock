@@ -2384,6 +2384,7 @@ dependencies = [
 name = "tc_x509"
 version = "0.1.0"
 dependencies = [
+ "tc_algo_v2",
  "tc_asn1",
  "tc_asn1_x500",
  "tc_asn1_x509",
