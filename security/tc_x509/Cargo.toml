@@ -8,6 +8,7 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
+tc_algo_v2 = { version = "0.1.0", path = "../../crypto/tc_algo_v2" }
 tc_asn1 = "0.1.1"
 tc_asn1_x500 = "0.1.0"
 tc_asn1_x509 = { version = "0.1.0", path = "../../asn1/tc_asn1_x509" }

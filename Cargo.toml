@@ -9,7 +9,6 @@ members = [
     "kdf/*",
     "security/*",
     "signer/*",
-    "x509/*",
     "util/*",
     "tc_openpgp/*",
 ]
