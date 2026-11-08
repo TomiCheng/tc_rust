@@ -18,6 +18,11 @@ impl KeyPair {
     pub fn private(&self) -> &dyn Params {
         self.private.as_ref()
     }
+
+    // The two keys to own apart, public first: (public, private)
+    pub fn into_parts(self) -> (Box<dyn Params>, Box<dyn Params>) {
+        (self.public, self.private)
+    }
 }
 
 pub trait KeyPairGenerator {

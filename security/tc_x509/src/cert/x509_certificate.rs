@@ -14,6 +14,11 @@ pub struct X509Certificate {
 }
 
 impl X509Certificate {
+    /// Wraps a certificate already decoded or built, as BC's constructor does.
+    pub fn new(certificate: Certificate) -> Self {
+        Self { certificate }
+    }
+
     /// Decodes one BER or DER certificate, keeping the TBS octets as received. Trailing
     /// bytes are `TrailingData`.
     pub fn decode(bytes: &[u8]) -> Result<Self, Asn1Error> {

@@ -1,5 +1,6 @@
 use core::error::Error;
 use core::fmt;
+use std::io;
 
 use tc_algo_v2::AlgoError;
 use tc_asn1::Asn1Error;
@@ -10,6 +11,8 @@ use tc_asn1::Asn1Error;
 pub enum X509Error {
     Algo(AlgoError),
     Asn1(Asn1Error),
+    // Writing into a calculator failed; the error of its algorithm is inside
+    Io(io::Error),
     // No row knows the key
     UnknownPublicKey,
     // A private key was given where a public one is needed
@@ -20,6 +23,12 @@ pub enum X509Error {
     InvalidSerialNumber,
     // An extension with the same OID is already added
     DuplicateExtension,
+    // The output buffer is shorter than the result
+    OutputTooShort,
+    // No row has the signature algorithm
+    UnknownSigner,
+    // A field a certificate needs is not set; the name of the field
+    MissingField(&'static str),
 }
 
 impl fmt::Display for X509Error {
@@ -27,11 +36,15 @@ impl fmt::Display for X509Error {
         match self {
             Self::Algo(_) => f.write_str("algorithm failure"),
             Self::Asn1(_) => f.write_str("ASN.1 failure"),
+            Self::Io(_) => f.write_str("calculator failure"),
             Self::UnknownPublicKey => f.write_str("unknown public key"),
             Self::NotPublicKey => f.write_str("a private key where a public key is needed"),
             Self::InvalidPublicKey => f.write_str("invalid public key encoding"),
             Self::InvalidSerialNumber => f.write_str("serial number must be a positive integer"),
             Self::DuplicateExtension => f.write_str("extension already added"),
+            Self::OutputTooShort => f.write_str("output buffer too short"),
+            Self::UnknownSigner => f.write_str("unknown signature algorithm"),
+            Self::MissingField(field) => write!(f, "{field} is not set"),
         }
     }
 }
@@ -41,11 +54,15 @@ impl Error for X509Error {
         match self {
             Self::Algo(error) => Some(error),
             Self::Asn1(error) => Some(error),
+            Self::Io(error) => Some(error),
             Self::UnknownPublicKey
             | Self::NotPublicKey
             | Self::InvalidPublicKey
             | Self::InvalidSerialNumber
-            | Self::DuplicateExtension => None,
+            | Self::DuplicateExtension
+            | Self::OutputTooShort
+            | Self::UnknownSigner
+            | Self::MissingField(_) => None,
         }
     }
 }
@@ -59,5 +76,11 @@ impl From<AlgoError> for X509Error {
 impl From<Asn1Error> for X509Error {
     fn from(error: Asn1Error) -> Self {
         Self::Asn1(error)
+    }
+}
+
+impl From<io::Error> for X509Error {
+    fn from(error: io::Error) -> Self {
+        Self::Io(error)
     }
 }
