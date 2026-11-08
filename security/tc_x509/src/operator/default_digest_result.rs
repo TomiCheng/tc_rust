@@ -20,12 +20,7 @@ impl BlockResult for DefaultDigestResult {
         self.digest.digest_size()
     }
 
-    // Digest::do_final may panic on a short output, so the length is checked here first
     fn collect_into(&mut self, output: &mut [u8]) -> Result<usize, X509Error> {
-        let required = self.digest.digest_size();
-        if output.len() < required {
-            return Err(X509Error::OutputTooShort);
-        }
-        Ok(self.digest.do_final(output))
+        Ok(self.digest.do_final(output)?)
     }
 }

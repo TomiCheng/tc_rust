@@ -2,8 +2,8 @@ use std::sync::{Arc, RwLock};
 
 use tc_algo_v2::digest::{Digest, DigestEntry};
 use tc_algo_v2::{
-    Algo, AlgoBuilder, DefaultAlgoBuilder, DefaultAlgoContext, EntryBase, ErrorKind, ListPolicy,
-    Policy,
+    Algo, AlgoBuilder, AlgoError, DefaultAlgoBuilder, DefaultAlgoContext, EntryBase, ErrorKind,
+    ListPolicy, Policy,
 };
 use tc_asn1::Asn1Oid;
 
@@ -48,9 +48,12 @@ impl Digest for Marked {
 
     fn update(&mut self, _input: &[u8]) {}
 
-    fn do_final(&mut self, output: &mut [u8]) -> usize {
-        output[0] = self.0;
-        1
+    fn do_final(&mut self, output: &mut [u8]) -> Result<usize, AlgoError> {
+        let first = output
+            .first_mut()
+            .ok_or(AlgoError::new(ErrorKind::DataLength))?;
+        *first = self.0;
+        Ok(1)
     }
 
     fn reset(&mut self) {}

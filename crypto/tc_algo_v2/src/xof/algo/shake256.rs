@@ -4,7 +4,7 @@ use tc_keccak::ShakeDigest;
 
 use crate::digest::Digest;
 use crate::xof::{Xof, XofEntry};
-use crate::{DefaultAlgoContext, EntryBase};
+use crate::{AlgoError, DefaultAlgoContext, EntryBase, ErrorKind};
 
 const BIT_LENGTH: usize = 256;
 
@@ -61,8 +61,12 @@ impl Digest for Shake256 {
         self.0.update(input);
     }
 
-    fn do_final(&mut self, output: &mut [u8]) -> usize {
-        self.0.do_final(output)
+    // tc_digest panics on a short output, so the length is checked here first
+    fn do_final(&mut self, output: &mut [u8]) -> Result<usize, AlgoError> {
+        if output.len() < self.digest_size() {
+            return Err(AlgoError::new(ErrorKind::DataLength));
+        }
+        Ok(self.0.do_final(output))
     }
 
     fn reset(&mut self) {
@@ -196,7 +200,7 @@ mod tests {
 
         xof.update(b"abc");
         let mut output = [0; 64];
-        assert_eq!(xof.do_final(&mut output), 64);
+        assert_eq!(xof.do_final(&mut output).unwrap(), 64);
         assert_eq!(hex(&output), ABC);
     }
 

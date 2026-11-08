@@ -60,8 +60,8 @@ impl Digest for Marked {
 
     fn update(&mut self, _input: &[u8]) {}
 
-    fn do_final(&mut self, output: &mut [u8]) -> usize {
-        self.output_final(output)
+    fn do_final(&mut self, output: &mut [u8]) -> Result<usize, AlgoError> {
+        Ok(self.output_final(output))
     }
 
     fn reset(&mut self) {}

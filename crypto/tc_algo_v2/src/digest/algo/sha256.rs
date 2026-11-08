@@ -3,7 +3,7 @@ use tc_digest::{Digest as _, TryDigest as _};
 use tc_sha::Sha256Digest;
 
 use crate::digest::{Digest, DigestEntry};
-use crate::{DefaultAlgoContext, EntryBase};
+use crate::{AlgoError, DefaultAlgoContext, EntryBase, ErrorKind};
 
 // The row of SHA-256, to give to DefaultAlgoBuilder::reg_digest. Its names and OIDs are those of
 // Bouncy Castle's DigestUtilities, the HMAC OID included
@@ -58,8 +58,12 @@ impl Digest for Sha256 {
         self.0.update(input);
     }
 
-    fn do_final(&mut self, output: &mut [u8]) -> usize {
-        self.0.do_final(output)
+    // tc_digest panics on a short output, so the length is checked here first
+    fn do_final(&mut self, output: &mut [u8]) -> Result<usize, AlgoError> {
+        if output.len() < self.digest_size() {
+            return Err(AlgoError::new(ErrorKind::DataLength));
+        }
+        Ok(self.0.do_final(output))
     }
 
     fn reset(&mut self) {
@@ -71,7 +75,7 @@ impl Digest for Sha256 {
 mod tests {
     use super::sha256;
     use crate::digest::DigestEntry;
-    use crate::{AlgoBuilder, DefaultAlgoBuilder, DefaultAlgoContext};
+    use crate::{AlgoBuilder, DefaultAlgoBuilder, DefaultAlgoContext, ErrorKind};
 
     fn hex(bytes: &[u8]) -> String {
         bytes.iter().map(|byte| format!("{byte:02x}")).collect()
@@ -89,10 +93,10 @@ mod tests {
         let mut digest = row().create();
         digest.update(b"abc");
         let mut output = [0; 32];
-        assert_eq!(digest.do_final(&mut output), 32);
+        assert_eq!(digest.do_final(&mut output).unwrap(), 32);
         assert_eq!(hex(&output), ABC_HASH);
 
-        assert_eq!(digest.do_final(&mut output), 32);
+        assert_eq!(digest.do_final(&mut output).unwrap(), 32);
         assert_eq!(hex(&output), EMPTY_HASH);
     }
 
@@ -106,9 +110,13 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "output buffer shorter")]
-    fn do_final_panics_on_an_output_shorter_than_the_hash() {
-        row().create().do_final(&mut [0; 31]);
+    fn an_output_shorter_than_the_hash_is_data_length_and_keeps_the_message() {
+        let mut digest = row().create();
+        digest.update(b"abc");
+
+        let error = digest.do_final(&mut [0; 31]).unwrap_err();
+        assert_eq!(error.kind(), ErrorKind::DataLength);
+        assert_eq!(hex(&digest.finalize()), ABC_HASH);
     }
 
     #[test]

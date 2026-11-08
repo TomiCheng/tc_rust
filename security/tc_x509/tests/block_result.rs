@@ -1,5 +1,5 @@
 use tc_algo_v2::params::{KeyOwned, RsaKeyGenParams};
-use tc_algo_v2::{AlgoBuilder, DefaultAlgoBuilder};
+use tc_algo_v2::{AlgoBuilder, DefaultAlgoBuilder, ErrorKind};
 use tc_x509::X509Error;
 use tc_x509::operator::{
     BlockResult, DefaultDigestResult, DefaultMacResult, DefaultSignatureResult, SimpleBlockResult,
@@ -29,7 +29,7 @@ fn a_digest_result_refuses_a_short_output_instead_of_panicking() {
 
     let mut result = DefaultDigestResult::new(digest);
     let error = result.collect_into(&mut [0; 31]).unwrap_err();
-    assert!(matches!(error, X509Error::OutputTooShort));
+    assert!(matches!(error, X509Error::Algo(error) if error.kind() == ErrorKind::DataLength));
 }
 
 #[test]
