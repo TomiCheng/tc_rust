@@ -45,6 +45,9 @@ pbe-aes = ["aes", "dep:tc_pbe", "dep:tc_sha"]
 # KEM
 ml-kem = ["dep:tc_asym_cipher", "dep:tc_kem", "dep:tc_ml_kem"]
 
+# DRBG
+drbg-hmac-sha256 = ["hmac-sha256", "dep:tc_drbg"]
+
 # IES
 ies = ["dh", "dep:tc_block_cipher", "dep:tc_ies", "dep:tc_kdf", "dep:tc_macs", "tc_macs/hmac", "tc_macs/alloc", "dep:tc_sha"]
 
@@ -89,6 +92,9 @@ tc_signer = { version = "0.1.0", path = "../../signer/tc_signer", optional = tru
 
 # IES
 tc_ies = { version = "0.1.0", path = "../../ies/tc_ies", optional = true }
+
+# DRBG
+tc_drbg = { version = "0.1.0", path = "../tc_drbg", optional = true }
 
 # KEM
 tc_kem = { version = "0.1.0", path = "../tc_kem", optional = true }

@@ -2,6 +2,7 @@ use crate::agreement::{AgreementEntry, AgreementProvider};
 use crate::cipher::{CipherEntry, CipherProvider};
 use crate::default_provider::DefaultProvider;
 use crate::digest::{DigestEntry, DigestProvider};
+use crate::drbg::{DrbgEntry, DrbgProvider};
 use crate::kdf::{KdfEntry, KdfProvider};
 use crate::kem::{KemEntry, KemProvider};
 use crate::mac::{MacEntry, MacProvider};
@@ -29,6 +30,7 @@ pub(crate) struct DefaultAlgo {
     kdf: DefaultProvider<dyn KdfEntry>,
     pbe: DefaultProvider<dyn PbeEntry>,
     kem: DefaultProvider<dyn KemEntry>,
+    drbg: DefaultProvider<dyn DrbgEntry>,
 }
 
 impl DefaultAlgo {
@@ -46,6 +48,7 @@ impl DefaultAlgo {
         kdfs: Vec<Box<dyn KdfEntry>>,
         pbes: Vec<Box<dyn PbeEntry>>,
         kems: Vec<Box<dyn KemEntry>>,
+        drbgs: Vec<Box<dyn DrbgEntry>>,
         policy: Option<Arc<dyn Policy>>,
     ) -> Self {
         Self {
@@ -60,7 +63,8 @@ impl DefaultAlgo {
             signer: DefaultProvider::new(signers, policy.clone()),
             kdf: DefaultProvider::new(kdfs, policy.clone()),
             pbe: DefaultProvider::new(pbes, policy.clone()),
-            kem: DefaultProvider::new(kems, policy),
+            kem: DefaultProvider::new(kems, policy.clone()),
+            drbg: DefaultProvider::new(drbgs, policy),
         }
     }
 }
@@ -112,5 +116,9 @@ impl Algo for DefaultAlgo {
 
     fn kem(&self) -> &dyn KemProvider {
         &self.kem
+    }
+
+    fn drbg(&self) -> &dyn DrbgProvider {
+        &self.drbg
     }
 }

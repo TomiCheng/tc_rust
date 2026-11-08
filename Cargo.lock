@@ -977,6 +977,7 @@ dependencies = [
  "tc_dh",
  "tc_dh_key",
  "tc_digest",
+ "tc_drbg",
  "tc_ies",
  "tc_kdf",
  "tc_keccak",

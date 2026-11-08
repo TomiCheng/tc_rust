@@ -1,3 +1,5 @@
+#[cfg(feature = "drbg-hmac-sha256")]
+mod drbg_params;
 #[cfg(feature = "ies")]
 mod ies_dh_params;
 mod key_length;
@@ -15,6 +17,8 @@ mod rsa_key_gen_params;
 ))]
 use core::any::Any;
 
+#[cfg(feature = "drbg-hmac-sha256")]
+pub use drbg_params::DrbgParams;
 #[cfg(feature = "ies")]
 pub use ies_dh_params::IesDhParams;
 pub use key_length::KeyLength;

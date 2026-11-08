@@ -7,6 +7,7 @@ mod default_algo_builder;
 mod default_algo_context;
 mod default_provider;
 pub mod digest;
+pub mod drbg;
 mod error;
 pub mod generate;
 pub mod kdf;
