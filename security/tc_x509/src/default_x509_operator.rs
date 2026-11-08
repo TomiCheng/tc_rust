@@ -5,6 +5,10 @@ use tc_algo_v2::{Algo, Params};
 
 use crate::operator::signer::{DefaultSignatureFactory, SignatureFactory, SignerEntry};
 use crate::operator::spki::{DefaultSpkiProvider, SpkiProvider};
+use crate::operator::verifier::{
+    DefaultVerifierFactory, DefaultVerifierFactoryProvider, VerifierFactory,
+    VerifierFactoryProvider,
+};
 use crate::{X509Error, X509Operator};
 
 pub(crate) struct DefaultX509Operator {
@@ -58,5 +62,30 @@ impl X509Operator for DefaultX509Operator {
             row.clone(),
             private_key,
         )?))
+    }
+
+    fn verifier_factory(
+        &self,
+        name: &str,
+        public_key: Arc<dyn Params>,
+    ) -> Result<Box<dyn VerifierFactory>, X509Error> {
+        let row = self.find_signer(name).ok_or(X509Error::UnknownSigner)?;
+        Ok(Box::new(DefaultVerifierFactory::new(
+            self.algo.clone(),
+            row.clone(),
+            row.algorithm().clone(),
+            public_key,
+        )?))
+    }
+
+    fn verifier_factory_provider(
+        &self,
+        public_key: Arc<dyn Params>,
+    ) -> Box<dyn VerifierFactoryProvider> {
+        Box::new(DefaultVerifierFactoryProvider::new(
+            self.algo.clone(),
+            self.signers.clone(),
+            public_key,
+        ))
     }
 }

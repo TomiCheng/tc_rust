@@ -6,6 +6,7 @@ use tc_algo_v2::generate::KeyPairGeneratorProvider;
 use crate::X509Error;
 use crate::operator::signer::SignatureFactory;
 use crate::operator::spki::SpkiProvider;
+use crate::operator::verifier::{VerifierFactory, VerifierFactoryProvider};
 
 pub trait X509Operator: Send + Sync {
     fn key_pair_generator(&self) -> &dyn KeyPairGeneratorProvider;
@@ -21,4 +22,19 @@ pub trait X509Operator: Send + Sync {
         name: &str,
         private_key: Arc<dyn Params>,
     ) -> Result<Box<dyn SignatureFactory>, X509Error>;
+
+    // A factory that verifies with the public key under the named algorithm, as signature_factory
+    // signs with a private one
+    fn verifier_factory(
+        &self,
+        name: &str,
+        public_key: Arc<dyn Params>,
+    ) -> Result<Box<dyn VerifierFactory>, X509Error>;
+
+    // The public key, waiting for the algorithm that comes with what is verified, such as the
+    // signature algorithm of a certificate
+    fn verifier_factory_provider(
+        &self,
+        public_key: Arc<dyn Params>,
+    ) -> Box<dyn VerifierFactoryProvider>;
 }
