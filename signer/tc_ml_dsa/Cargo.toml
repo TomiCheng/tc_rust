@@ -1,0 +1,21 @@
+[package]
+name = "tc_ml_dsa"
+description = "ML-DSA (FIPS 204) signatures, ported from Bouncy Castle C#."
+version.workspace = true
+edition.workspace = true
+rust-version = "1.85"
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+rand_core = { workspace = true }
+tc_asym_cipher = "0.1.0"
+tc_constant_time = "0.1.0"
+tc_digest = "0.1.0"
+tc_keccak = "0.1.0"
+tc_sha = "0.1.1"
+tc_signer = { version = "0.1.0", path = "../tc_signer" }
+tc_zeroize = { version = "0.1.0", features = ["alloc"] }
+
+[dev-dependencies]
+rand = { workspace = true }

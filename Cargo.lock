@@ -2005,6 +2005,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_ml_dsa"
+version = "0.1.0"
+dependencies = [
+ "rand",
+ "rand_core",
+ "tc_asym_cipher",
+ "tc_constant_time",
+ "tc_digest",
+ "tc_keccak",
+ "tc_sha",
+ "tc_signer",
+ "tc_zeroize",
+]
+
+[[package]]
 name = "tc_ml_kem"
 version = "0.1.0"
 dependencies = [
@@ -2310,6 +2325,20 @@ checksum = "96cf0ae015b198f7f666ac3d99e980ad006f6298db5b2072d38e24a05d71bcb7"
 dependencies = [
  "tc_macs",
  "tc_skein",
+]
+
+[[package]]
+name = "tc_slh_dsa"
+version = "0.1.0"
+dependencies = [
+ "rand",
+ "rand_core",
+ "tc_asym_cipher",
+ "tc_digest",
+ "tc_keccak",
+ "tc_sha",
+ "tc_signer",
+ "tc_zeroize",
 ]
 
 [[package]]
