@@ -23,6 +23,8 @@ pub enum X509Error {
     InvalidSerialNumber,
     // An extension with the same OID is already added
     DuplicateExtension,
+    // An attribute of the same type is already added
+    DuplicateAttribute,
     // The output buffer is shorter than the result
     OutputTooShort,
     // No row has the signature algorithm
@@ -46,6 +48,7 @@ impl fmt::Display for X509Error {
             Self::InvalidPublicKey => f.write_str("invalid public key encoding"),
             Self::InvalidSerialNumber => f.write_str("serial number must be a positive integer"),
             Self::DuplicateExtension => f.write_str("extension already added"),
+            Self::DuplicateAttribute => f.write_str("attribute already added"),
             Self::OutputTooShort => f.write_str("output buffer too short"),
             Self::UnknownSigner => f.write_str("unknown signature algorithm"),
             Self::MissingField(field) => write!(f, "{field} is not set"),
@@ -68,6 +71,7 @@ impl Error for X509Error {
             | Self::InvalidPublicKey
             | Self::InvalidSerialNumber
             | Self::DuplicateExtension
+            | Self::DuplicateAttribute
             | Self::OutputTooShort
             | Self::UnknownSigner
             | Self::MissingField(_)

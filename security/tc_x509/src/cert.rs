@@ -1,10 +1,14 @@
 //! Certificates: BC's `X509Certificate` and the parsing, writing, verification and
 //! generation around it.
 
+mod x509_attribute_certificate;
 mod x509_certificate;
 mod x509_v1_certificate_generator;
+mod x509_v2_attribute_certificate_generator;
 mod x509_v3_certificate_generator;
 
+pub use x509_attribute_certificate::X509AttributeCertificate;
 pub use x509_certificate::X509Certificate;
 pub use x509_v1_certificate_generator::X509V1CertificateGenerator;
+pub use x509_v2_attribute_certificate_generator::X509V2AttributeCertificateGenerator;
 pub use x509_v3_certificate_generator::X509V3CertificateGenerator;

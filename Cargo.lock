@@ -1033,6 +1033,7 @@ version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f47eeaa19506c517e2eb20c70e0e2ce05e1c30ce620e5b0a1c5f99509291dfae"
 dependencies = [
+ "chrono",
  "tc_zeroize",
 ]
 
