@@ -1,3 +1,5 @@
+use std::io::Write;
+
 use tc_asn1::{Asn1BitString, Asn1Error, Asn1Integer, Decode, DecodingOptions};
 use tc_asn1_x500::Name;
 use tc_asn1_x509::{
@@ -5,6 +7,9 @@ use tc_asn1_x509::{
     cert::{Certificate, SubjectPublicKeyInfo, Time, Version},
     ext::Extensions,
 };
+
+use crate::X509Error;
+use crate::operator::verifier::VerifierFactoryProvider;
 
 /// BC's `X509Certificate`: a certificate as received, with the accessors of its fields.
 /// Every method is variable time, for public values only, as a certificate is.
@@ -92,5 +97,31 @@ impl X509Certificate {
 
     pub fn extensions(&self) -> Option<&Extensions> {
         self.certificate.extensions()
+    }
+
+    /// Whether the signature verifies with the issuer's key the provider holds, BC's
+    /// `IsSignatureValid`. `AlgorithmMismatch` when the algorithm inside the TBS differs from
+    /// the outer one.
+    pub fn is_signature_valid(
+        &self,
+        provider: &dyn VerifierFactoryProvider,
+    ) -> Result<bool, X509Error> {
+        if self.signature_algorithm() != self.certificate.tbs().signature() {
+            return Err(X509Error::AlgorithmMismatch);
+        }
+        let factory = provider.create_verifier_factory(self.signature_algorithm())?;
+        let mut calculator = factory.create_calculator()?;
+        calculator.write_all(self.tbs_certificate())?;
+        calculator.result().is_verified(self.signature())
+    }
+
+    /// As `is_signature_valid`, with `InvalidSignature` for a signature that does not
+    /// verify, BC's `Verify`.
+    pub fn verify(&self, provider: &dyn VerifierFactoryProvider) -> Result<(), X509Error> {
+        if self.is_signature_valid(provider)? {
+            Ok(())
+        } else {
+            Err(X509Error::InvalidSignature)
+        }
     }
 }

@@ -107,4 +107,28 @@ fn a_self_signed_certificate_verifies_with_the_key_it_holds() {
         certificate.tbs_certificate(),
         certificate.signature()
     ));
+    certificate.verify(provider.as_ref()).unwrap();
+}
+
+#[test]
+fn a_certificate_does_not_verify_with_a_key_other_than_its_issuers() {
+    let oper = DefaultX509OperatorBuilder::default().build();
+    let (public, private) = keys(oper.as_ref());
+    let (other, _) = keys(oper.as_ref());
+
+    let mut generator = X509V3CertificateGenerator::new();
+    generator.set_issuer_by_str("CN=Test CA").unwrap();
+    generator.set_subject_by_str("CN=Leaf").unwrap();
+    generator.set_validity_days(30).unwrap();
+    generator.set_subject_public_key_info(oper.spki().encode(other.as_ref()).unwrap());
+    let signer = oper.signature_factory("SHA-256withRSA", private).unwrap();
+    let certificate = generator.generate(signer.as_ref()).unwrap();
+
+    let issuer = oper.verifier_factory_provider(public);
+    assert!(certificate.is_signature_valid(issuer.as_ref()).unwrap());
+
+    let subject = oper.verifier_factory_provider(other);
+    assert!(!certificate.is_signature_valid(subject.as_ref()).unwrap());
+    let error = certificate.verify(subject.as_ref()).err().unwrap();
+    assert!(matches!(error, X509Error::InvalidSignature));
 }
