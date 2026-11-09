@@ -172,8 +172,6 @@ and the crates that remain here depend on the published version.
   hashing (bcrypt, scrypt and Argon2)
 - [`ies`](ies) — the Integrated Encryption Scheme over a key agreement, a
   KDF and a MAC
-- [`crypto/macs`](crypto/macs) — MAC families not yet graduated, such as
-  KMAC and the DSTU MACs
 
 ## Implemented algorithms
 

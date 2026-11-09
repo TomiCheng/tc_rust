@@ -17,7 +17,7 @@
 | 串流加密 | chacha、salsa20、hc、rc4_family | — | — | — |
 | AEAD 專用演算法 | ascon_aead、grain128_aead、sparkle_aead、chacha_aead | — | — | — |
 | 雜湊 | sha、md、keccak、blake、ascon_hash、dstu7564、gost3411、ripemd、skein、sm3、misc_digest（haraka、photon_beetle、sparkle、tiger、whirlpool、xoodyak） | — | — | — |
-| MAC | macs（含 SipHash、VMPC-MAC）、poly1305 | crypto/macs 的 dstu_macs、gost28147_mac、iso9797_mac、kmac、skein_mac | — | — |
+| MAC | macs（含 SipHash、VMPC-MAC）、poly1305、dstu_macs、gost28147_mac、iso9797_mac、kmac、skein_mac | — | — | — |
 | Key wrap | key_wrap、des_wrap、dstu7624_wrap、rc2_wrap | — | — | — |
 | 非對稱加密 | rsa、asym_encoding、asym_iso9796 | cfrg_curves（X25519、Ed25519、X448、Ed448）、ec_key、dh_key、elgamal、naccache_stern、sm2（加密） | — | — |
 | 簽章 | — | signer、rsa_signer（PKCS#1 v1.5、PSS、X9.31、ISO 9796-2）、dsa（trait、k 計算器、DsaDigestSigner、Gost3410DigestSigner、DER 與 Plain 編碼）、dsa_key、dsa_signer、ecdsa_v2、ecnr、ecgost3410、gost3410_key、gost3410、dstu4145、sm2（簽章） | — | — |
@@ -31,7 +31,7 @@ macs、asym_cipher、key_wrap、zeroize、runtime、constant_time 已發行；si
 
 ## 觀察
 
-1. 對稱演算法幾乎都已發行。剩下的是孵化池的 10 個區塊加密與 crypto/macs 的 MAC
+1. 對稱演算法幾乎都已發行。剩下的是孵化池的 10 個區塊加密
    等畢業；它們都已接在新的 trait 上。
 2. 非對稱是空洞最大的一側：簽章、金鑰協商都還沒發行，但兩者的演算法都已齊全。ecdsa_v2
    現在可經 DsaDigestSigner 當成 tc_signer 的簽章器，但 tc_security 的工廠還沒接上。

@@ -1883,12 +1883,15 @@ dependencies = [
 [[package]]
 name = "tc_iso9797_mac"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "062ec734b8995eb44e8d26ad365a8be7327a36ab450e4e7aca1a4e0f8b2bc506"
 dependencies = [
  "tc_block_cipher",
  "tc_block_modes",
  "tc_block_padding",
  "tc_des",
  "tc_macs",
+ "tc_zeroize",
 ]
 
 [[package]]
@@ -1947,10 +1950,13 @@ dependencies = [
 [[package]]
 name = "tc_kmac"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fc69cd637c5eae5acd38476ab4cedc2885b826662dbaa9b81f737c40bf88f492"
 dependencies = [
  "tc_digest",
  "tc_keccak",
  "tc_macs",
+ "tc_zeroize",
 ]
 
 [[package]]
@@ -2323,6 +2329,8 @@ dependencies = [
 [[package]]
 name = "tc_skein_mac"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "96cf0ae015b198f7f666ac3d99e980ad006f6298db5b2072d38e24a05d71bcb7"
 dependencies = [
  "tc_macs",
  "tc_skein",

@@ -23,27 +23,6 @@ impl<E: Classify> Classify for InitError<E> {
     }
 }
 
-// tc_iso9797_mac has errors of its own
-#[cfg(feature = "iso9797-mac")]
-impl Classify for tc_iso9797_mac::InitError {
-    fn kind(&self) -> ErrorKind {
-        ErrorKind::InvalidParams
-    }
-}
-
-#[cfg(feature = "iso9797-mac")]
-impl<P> Classify for tc_iso9797_mac::Error<P> {
-    fn kind(&self) -> ErrorKind {
-        use tc_iso9797_mac::Error;
-        match self {
-            Error::NotInitialised => ErrorKind::NotInitialized,
-            Error::OutputTooShort { .. } => ErrorKind::DataLength,
-            Error::Cipher(error) => error.kind(),
-            _ => ErrorKind::InvalidParams,
-        }
-    }
-}
-
 // tc_dstu_macs has an error of its own for DSTU 7624
 #[cfg(feature = "dstu7624-mac")]
 impl Classify for tc_dstu_macs::Dstu7624MacError {
