@@ -1,6 +1,8 @@
 use std::io::Write;
 
-use tc_asn1::{Asn1BitString, Asn1Error, Asn1Integer, Decode, DecodingOptions};
+use tc_asn1::{
+    Asn1BitString, Asn1Error, Asn1Integer, Decode, DecodingOptions, Encode, EncodingOptions,
+};
 use tc_asn1_x500::Name;
 use tc_asn1_x509::{
     alg::AlgorithmIdentifier,
@@ -13,6 +15,8 @@ use crate::operator::verifier::VerifierFactoryProvider;
 
 /// BC's `X509Certificate`: a certificate as received, with the accessors of its fields.
 /// Every method is variable time, for public values only, as a certificate is.
+///
+#[doc = include_str!("../../docs/X509Certificate.md")]
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct X509Certificate {
     certificate: Certificate,
@@ -32,6 +36,12 @@ impl X509Certificate {
             return Err(Asn1Error::TrailingData);
         }
         Ok(Self { certificate })
+    }
+
+    /// The DER octets, BC's `GetEncoded`. The TBS octets are written as received, so that
+    /// the signature stays valid; a certificate received in BER keeps its TBS in BER.
+    pub fn encode(&self) -> Result<Vec<u8>, Asn1Error> {
+        self.certificate.encode_to_vec(&EncodingOptions::DER)
     }
 
     /// The ASN.1 structure, BC's `CertificateStructure`.

@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use tc_algo_v2::{AlgoBuilder, DefaultAlgoBuilder, Params};
-use tc_asn1::{Asn1Integer, Encode, EncodingOptions};
+use tc_asn1::Asn1Integer;
 use tc_asn1_x509::cert::Version;
 use tc_asn1_x509::ext::BasicConstraints;
 use tc_x509::cert::{X509Certificate, X509V3CertificateGenerator};
@@ -56,10 +56,7 @@ fn a_self_signed_certificate_verifies_and_reads_back_as_it_was_made() {
         certificate.signature()
     ));
 
-    let der = certificate
-        .certificate()
-        .encode_to_vec(&EncodingOptions::DER)
-        .unwrap();
+    let der = certificate.encode().unwrap();
     let decoded = X509Certificate::decode(&der).unwrap();
     assert_eq!(decoded, certificate);
 }

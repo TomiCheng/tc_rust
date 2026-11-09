@@ -41,3 +41,9 @@ fn trailing_bytes_after_the_certificate_are_rejected() {
         Err(Asn1Error::TrailingData)
     );
 }
+
+#[test]
+fn a_decoded_der_certificate_encodes_back_to_the_same_bytes() {
+    let certificate = X509Certificate::decode(RFC_8410).unwrap();
+    assert_eq!(certificate.encode().unwrap(), RFC_8410);
+}
