@@ -19,7 +19,7 @@ use crate::operator::signer::SignatureFactory;
 // data, with the top bit clear so that the number is positive
 const RANDOM_SERIAL_BYTES: usize = 16;
 
-fn random_serial_number() -> Asn1Integer {
+pub(super) fn random_serial_number() -> Asn1Integer {
     let mut rng = UnwrapErr(SysRng);
     let mut bytes = [0; RANDOM_SERIAL_BYTES];
     loop {
