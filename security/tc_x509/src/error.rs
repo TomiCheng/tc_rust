@@ -31,6 +31,8 @@ pub enum X509Error {
     UnknownSigner,
     // A field a certificate needs is not set; the name of the field
     MissingField(&'static str),
+    // An extension a certificate needs to have is absent; the name of the extension
+    MissingExtension(&'static str),
     // The signature algorithm inside the TBS differs from the one outside it
     AlgorithmMismatch,
     // The signature does not verify with the key
@@ -52,6 +54,7 @@ impl fmt::Display for X509Error {
             Self::OutputTooShort => f.write_str("output buffer too short"),
             Self::UnknownSigner => f.write_str("unknown signature algorithm"),
             Self::MissingField(field) => write!(f, "{field} is not set"),
+            Self::MissingExtension(extension) => write!(f, "the {extension} extension is absent"),
             Self::AlgorithmMismatch => {
                 f.write_str("signature algorithm in TBS differs from the outer one")
             }
@@ -75,6 +78,7 @@ impl Error for X509Error {
             | Self::OutputTooShort
             | Self::UnknownSigner
             | Self::MissingField(_)
+            | Self::MissingExtension(_)
             | Self::AlgorithmMismatch
             | Self::InvalidSignature => None,
         }

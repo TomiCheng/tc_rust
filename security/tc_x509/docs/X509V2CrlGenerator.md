@@ -31,7 +31,7 @@ fn main() -> Result<(), X509Error> {
     // Fill in the fields, and sign
     let mut generator = X509V2CrlGenerator::new();
     generator.set_issuer_by_str("CN=My CA,O=Acme")?;
-    generator.set_this_update_by_datetime(chrono::Utc::now())?;
+    generator.set_next_update_after(chrono::TimeDelta::days(7));
     let crl = generator.generate(factory.as_ref())?;
 
     assert_eq!(crl.issuer().to_string(), "CN=My CA,O=Acme");
@@ -46,10 +46,15 @@ is a plain type that holds the fields.
 
 | Set by | Required |
 |---|---|
-| `set_issuer`, `set_issuer_by_str` | yes |
-| `set_this_update`, `set_this_update_by_datetime` | yes |
+| `set_issuer`, `set_issuer_by_str`, `set_issuer_by_certificate` | yes |
+| `set_this_update`, `set_this_update_by_datetime` | no: the time `generate` runs when it is not set |
+| `set_next_update`, `set_next_update_by_datetime`, `set_next_update_after` | no, but RFC 5280 requires it: left out when it is not set |
+| `add_crl_entry`, `add_crl_entry_with_extensions`, `add_crl` | no |
+| `add_extension`, `add_crl_number`, `add_authority_key_identifier` | no, but RFC 5280 requires the CRL number and the authority key identifier |
 
-Each `set_` has a `clear_`. The signature algorithm comes from the factory, and goes into the
+Each `set_` has a `clear_`; entries and extensions have `remove_` and `clear_`. `reset` clears them all.
+`from_crl` starts from another CRL, as Bouncy Castle's constructor with a template does, and
+`add_crl` adds the entries of another CRL, to carry the last CRL's revocations into the next. The signature algorithm comes from the factory, and goes into the
 signed part of the CRL.
 
 ## Using it
@@ -57,4 +62,6 @@ signed part of the CRL.
 - The issuer is the CA that signs the CRL, so its name is the subject of the CA's certificate,
   and the factory holds the CA's private key.
 - `generate` reports a field not set as `MissingField`.
+- Without a this update, each CRL generated is dated when `generate` runs, so a test that needs
+  the same CRL each time sets one; Bouncy Castle requires it.
 - `generate` leaves the generator as it was, so it can make more than one CRL.
