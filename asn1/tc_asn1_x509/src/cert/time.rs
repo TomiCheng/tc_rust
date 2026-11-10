@@ -123,6 +123,9 @@ impl From<Asn1UtcTime> for Time {
 }
 
 impl From<Asn1GeneralizedTime> for Time {
+    /// The same instant to the second. A PKIX time carries no fractional
+    /// seconds, RFC 5280 §4.1.2.5.2, so any are dropped, rounding down, as
+    /// `TryFrom<DateTime<Utc>>` does. Constant time.
     fn from(value: Asn1GeneralizedTime) -> Self {
         Self::GeneralizedTime(value)
     }
