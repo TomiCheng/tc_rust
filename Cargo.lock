@@ -1158,6 +1158,8 @@ dependencies = [
 [[package]]
 name = "tc_asn1_x509"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9d840210e4a1b3cc66aa13f84e3fb6968b3b416331a3d9218c0257078498588c"
 dependencies = [
  "chrono",
  "tc_asn1",

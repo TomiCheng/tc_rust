@@ -9,7 +9,7 @@ repository.workspace = true
 
 [dependencies]
 tc_agreement = { version = "0.1.0", path = "../tc_agreement" }
-tc_asn1_x509 = { version = "0.1.0", path = "../../../asn1/tc_asn1_x509" }
+tc_asn1_x509 = "0.1.0"
 tc_ecdh_kek = { version = "0.1.0", path = "../../../kdf/tc_ecdh_kek" }
 tc_kdf = { version = "0.1.0", path = "../../../kdf/tc_kdf" }
 tc_zeroize = { version = "0.1.0", features = ["alloc"] }

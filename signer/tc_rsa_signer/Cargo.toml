@@ -10,7 +10,7 @@ repository.workspace = true
 [dependencies]
 rand_core = { workspace = true }
 tc_asn1 = "0.1.1"
-tc_asn1_x509 = { version = "0.1.0", path = "../../asn1/tc_asn1_x509" }
+tc_asn1_x509 = "0.1.0"
 tc_asym_cipher = "0.1.0"
 tc_asym_encoding = "0.1.0"
 tc_bigint = { version = "0.1.0", features = ["alloc"] }

@@ -85,7 +85,7 @@ tc_key_wrap = { version = "0.1.0", optional = true }
 # Key pair
 tc_asym_cipher = { version = "0.1.0", optional = true }
 tc_asym_encoding = { version = "0.1.0", optional = true }
-tc_asn1_x509 = { version = "0.1.0", path = "../../asn1/tc_asn1_x509", optional = true }
+tc_asn1_x509 = { version = "0.1.0", optional = true }
 tc_rsa = { version = "0.1.0", optional = true }
 tc_rsa_signer = { version = "0.1.0", path = "../../signer/tc_rsa_signer", optional = true }
 tc_signer = { version = "0.1.0", path = "../../signer/tc_signer", optional = true }

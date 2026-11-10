@@ -11,4 +11,4 @@ repository.workspace = true
 tc_asn1 = "0.1.2"
 tc_asn1_x500 = "0.1.0"
 tc_asn1_ocsp = { version = "0.1.0", path = "../tc_asn1_ocsp" }
-tc_asn1_x509 = { version = "0.1.0", path = "../tc_asn1_x509" }
+tc_asn1_x509 = "0.1.0"

@@ -12,4 +12,4 @@ tc_asn1 = { version = "0.1.2", features = ["zeroize"] }
 tc_zeroize = "0.1.0"
 tc_asn1_x500 = "0.1.0"
 tc_asn1_cms = { version = "0.1.0", path = "../tc_asn1_cms" }
-tc_asn1_x509 = { version = "0.1.0", path = "../tc_asn1_x509" }
+tc_asn1_x509 = "0.1.0"
