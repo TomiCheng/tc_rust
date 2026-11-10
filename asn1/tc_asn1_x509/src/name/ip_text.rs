@@ -1,12 +1,13 @@
 //! The octets of an iPAddress written as text, after `GeneralName`'s
 //! `ToGeneralNameEncoding` in Bouncy Castle.
 //!
-//! The text is validated by `tc_net` first, so the parsers below only see
-//! well-formed input; they still return `None` rather than panic.
+//! The text is validated by `ip_address` first, as Bouncy Castle validates it
+//! with `IPAddress`, so the parsers below only see well-formed input; they
+//! still return `None` rather than panic.
 
 use alloc::vec::Vec;
 
-use tc_net::ip_address::{
+use super::ip_address::{
     is_valid_ipv4, is_valid_ipv4_with_netmask, is_valid_ipv6, is_valid_ipv6_with_netmask,
 };
 

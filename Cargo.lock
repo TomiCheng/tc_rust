@@ -1162,7 +1162,6 @@ dependencies = [
  "chrono",
  "tc_asn1",
  "tc_asn1_x500",
- "tc_net",
 ]
 
 [[package]]
@@ -2059,10 +2058,6 @@ dependencies = [
  "tc_prime",
  "tc_zeroize",
 ]
-
-[[package]]
-name = "tc_net"
-version = "0.1.0"
 
 [[package]]
 name = "tc_openpgp"

@@ -3,6 +3,7 @@
 mod edi_party_name;
 mod general_name;
 mod general_names;
+mod ip_address;
 mod ip_text;
 mod other_name;
 
