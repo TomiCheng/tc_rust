@@ -57,18 +57,19 @@ fn bc_granted_responses_round_trip_and_hold_a_tst_info() {
     }
 }
 
-/// tc_asn1's GeneralizedTime follows the RFC 5280 profile, which forbids
-/// fractional seconds; RFC 3161 allows them in `genTime`.
+/// RFC 3161 allows fractional seconds in `genTime`, and Bouncy Castle's
+/// token carries them.
 #[test]
-fn bc_tst_info_with_fractional_seconds_is_rejected_by_the_rfc_5280_time_profile() {
+fn bc_tst_info_keeps_the_fractional_seconds_of_its_gen_time() {
     let response: TimeStampResp = round_trip(GENERALIZED_TIME);
     let token = response.time_stamp_token().unwrap();
     let signed: SignedData = der(token.content().unwrap().raw());
     let content = der::<Asn1OctetString>(signed.encap_content_info().content().unwrap().raw());
-    assert_eq!(
-        TstInfo::decode_der(content.as_bytes(), &DecodingOptions::default()).unwrap_err(),
-        Asn1Error::MalformedValue
-    );
+    let info: TstInfo = der(content.as_bytes());
+    let gen_time = info.gen_time();
+    assert_eq!(gen_time.millisecond(), 933);
+    assert_eq!(gen_time.to_string(), "2005-03-10T10:58:43.933Z");
+    assert_eq!(info.encode_to_vec(&EncodingOptions::DER).unwrap(), content.as_bytes());
 }
 
 #[test]

@@ -8,7 +8,9 @@
 //! ```
 //!
 //! Dates through 2049 MUST use UTCTime and dates from 2050 on MUST use
-//! GeneralizedTime; [`Time::new`] picks the alternative by year.
+//! GeneralizedTime; [`Time::new`] picks the alternative by year. Both are to
+//! the second: RFC 5280 §4.1.2.5.2 forbids fractional seconds, so decoding
+//! refuses them and encoding leaves them out.
 
 use core::{cmp::Ordering, fmt};
 
@@ -21,6 +23,10 @@ use tc_asn1::{
 
 /// A CHOICE between the two time types, so it has no single identifier.
 /// Ordering is chronological whichever alternative carries the instant.
+///
+/// A PKIX time has no fractional seconds. [`Time::new`] and the `From`
+/// conversions never give it any; a `GeneralizedTime` built with some and
+/// wrapped directly is written and displayed to the second.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 pub enum Time {
     UtcTime(Asn1UtcTime),
@@ -83,6 +89,11 @@ impl Time {
         }
     }
 
+    // The GeneralizedTime alternative to the second, as it is written
+    fn whole(time: &Asn1GeneralizedTime) -> Asn1GeneralizedTime {
+        time.with_nanosecond(0).expect("zero is below one second")
+    }
+
     fn sort_key(&self) -> (u16, u8, u8, u8, u8, u8, u8) {
         let alternative = match self {
             Self::UtcTime(_) => 0,
@@ -127,7 +138,7 @@ impl From<Asn1GeneralizedTime> for Time {
     /// seconds, RFC 5280 §4.1.2.5.2, so any are dropped, rounding down, as
     /// `TryFrom<DateTime<Utc>>` does. Constant time.
     fn from(value: Asn1GeneralizedTime) -> Self {
-        Self::GeneralizedTime(value)
+        Self::GeneralizedTime(Self::whole(&value))
     }
 }
 
@@ -193,13 +204,15 @@ impl fmt::Display for Time {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::UtcTime(t) => t.fmt(f),
-            Self::GeneralizedTime(t) => t.fmt(f),
+            Self::GeneralizedTime(t) => Self::whole(t).fmt(f),
         }
     }
 }
 
 impl DecodeInner for Time {
-    /// The identifier selects the alternative. Variable time: branches only on the tag.
+    /// The identifier selects the alternative. A GeneralizedTime with
+    /// fractional seconds is `MalformedValue`, as RFC 5280 §4.1.2.5.2 forbids
+    /// them. Variable time: branches only on the tag and the fraction.
     fn decode_inner(
         buff: &[u8],
         context: &mut DecodingContext,
@@ -210,6 +223,9 @@ impl DecodeInner for Time {
             Ok((used, Self::UtcTime(value)))
         } else if element.tag() == Asn1GeneralizedTime::TAG {
             let (used, value) = Asn1GeneralizedTime::decode_inner(buff, context)?;
+            if value.nanosecond() != 0 {
+                return Err(Asn1Error::MalformedValue);
+            }
             Ok((used, Self::GeneralizedTime(value)))
         } else {
             Err(Asn1Error::UnexpectedTag)
@@ -223,14 +239,14 @@ impl EncodeContent for Time {
     fn content_len(&self, rules: &EncodingOptions) -> usize {
         match self {
             Self::UtcTime(t) => t.content_len(rules),
-            Self::GeneralizedTime(t) => t.content_len(rules),
+            Self::GeneralizedTime(t) => Self::whole(t).content_len(rules),
         }
     }
 
     fn encode_content(&self, rules: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         match self {
             Self::UtcTime(t) => t.encode_content(rules, out),
-            Self::GeneralizedTime(t) => t.encode_content(rules, out),
+            Self::GeneralizedTime(t) => Self::whole(t).encode_content(rules, out),
         }
     }
 }
@@ -242,14 +258,14 @@ impl Encode for Time {
     fn encoded_len(&self, rules: &EncodingOptions) -> usize {
         match self {
             Self::UtcTime(t) => t.encoded_len(rules),
-            Self::GeneralizedTime(t) => t.encoded_len(rules),
+            Self::GeneralizedTime(t) => Self::whole(t).encoded_len(rules),
         }
     }
 
     fn encode(&self, rules: &EncodingOptions, out: &mut [u8]) -> Result<usize, Asn1Error> {
         match self {
             Self::UtcTime(t) => t.encode(rules, out),
-            Self::GeneralizedTime(t) => t.encode(rules, out),
+            Self::GeneralizedTime(t) => Self::whole(t).encode(rules, out),
         }
     }
 }
@@ -258,6 +274,36 @@ impl Encode for Time {
 mod tests {
     use alloc::string::ToString;
     use core::cmp::Ordering;
+
+    #[test]
+    fn a_generalizedtime_with_fractional_seconds_is_not_a_pkix_time() {
+        use super::Time;
+        use tc_asn1::{
+            Asn1Error, Asn1GeneralizedTime, Decode, DecodingOptions, Encode, EncodingOptions,
+        };
+
+        let options = DecodingOptions::default();
+        let fraction = b"\x18\x1120501231235959.5Z";
+        assert!(Asn1GeneralizedTime::decode(fraction, &options).is_ok());
+        assert!(matches!(
+            Time::decode(fraction, &options),
+            Err(Asn1Error::MalformedValue)
+        ));
+
+        let stamp = Asn1GeneralizedTime::new(2050, 12, 31, 23, 59, 59)
+            .unwrap()
+            .with_millisecond(500)
+            .unwrap();
+        let whole = Time::new(2050, 12, 31, 23, 59, 59).unwrap();
+        assert_eq!(Time::from(stamp), whole);
+
+        let wrapped = Time::GeneralizedTime(stamp);
+        assert_eq!(
+            wrapped.encode_to_vec(&EncodingOptions::DER).unwrap(),
+            whole.encode_to_vec(&EncodingOptions::DER).unwrap()
+        );
+        assert_eq!(wrapped.to_string(), "2050-12-31T23:59:59Z");
+    }
 
     use tc_asn1::{
         Asn1Error, Asn1GeneralizedTime, Decode, DecodingOptions, Encode, EncodingOptions,

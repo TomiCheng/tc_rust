@@ -5,9 +5,8 @@
 //! These types encode structure; checking the token's signature and that it
 //! matches the request is the caller's job.
 //!
-//! `genTime` is a tc_asn1 `Asn1GeneralizedTime`, which follows the RFC 5280
-//! profile and rejects fractional seconds; RFC 3161 allows them, so tokens that
-//! use them do not decode.
+//! `genTime` is a tc_asn1 `Asn1GeneralizedTime`, which keeps the fractional
+//! seconds RFC 3161 allows, to the nanosecond.
 
 #![no_std]
 
