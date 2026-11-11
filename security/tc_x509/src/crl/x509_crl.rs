@@ -54,6 +54,16 @@ impl X509Crl {
         self.list.encode_to_vec(&EncodingOptions::DER)
     }
 
+    /// Writes [`encode`](Self::encode) to `out`. An encoding failure is
+    /// `io::ErrorKind::InvalidData` carrying the [`Asn1Error`], with nothing written.
+    /// Variable time, for public values only.
+    pub fn encode_to<W: Write>(&self, out: &mut W) -> std::io::Result<()> {
+        let encoding = self
+            .encode()
+            .map_err(|error| std::io::Error::new(std::io::ErrorKind::InvalidData, error))?;
+        out.write_all(&encoding)
+    }
+
     /// The ASN.1 structure, BC's `CertificateList`.
     pub fn certificate_list(&self) -> &CertificateList {
         &self.list
