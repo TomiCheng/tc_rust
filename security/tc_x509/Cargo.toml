@@ -13,7 +13,7 @@ rand = { version = "0.10", default-features = false, features = ["sys_rng"] }
 rand_core = "0.10"
 # The algorithms a certificate needs are always on, not behind features
 tc_algo_v2 = { version = "0.1.0", path = "../../crypto/tc_algo_v2", features = ["rsa"] }
-tc_asn1 = { version = "0.1.2", features = ["chrono"] }
+tc_asn1 = { version = "0.1.4", features = ["chrono", "std"] }
 tc_asn1_pkcs = { version = "0.1.0", path = "../../asn1/tc_asn1_pkcs" }
 tc_asn1_x500 = "0.1.0"
 tc_asn1_x509 = { version = "0.1.0", features = ["chrono"] }

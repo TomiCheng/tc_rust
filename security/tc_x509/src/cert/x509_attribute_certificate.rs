@@ -1,9 +1,10 @@
-use std::io::Write;
+use std::io::{self, Read, Write};
 
 use tc_asn1::{
     Asn1BitString, Asn1Error, Asn1GeneralizedTime, Asn1Integer, Asn1Oid, Decode, DecodingOptions,
     Encode, EncodingOptions,
 };
+use tc_asn1::io::Asn1Reader;
 use tc_asn1_x500::Attribute;
 use tc_asn1_x509::{
     alg::AlgorithmIdentifier,
@@ -35,6 +36,17 @@ impl X509AttributeCertificate {
             return Err(Asn1Error::TrailingData);
         }
         Ok(Self { certificate })
+    }
+
+    /// Reads one BER or DER attribute certificate from `input` and nothing past it, so what follows
+    /// stays in `input` for the next call; `None` when the input ends before a value
+    /// starts. Read it through a `BufReader` for a file or a socket. A value that does
+    /// not decode is `io::ErrorKind::InvalidData` carrying the [`Asn1Error`]; input that
+    /// ends inside it is `io::ErrorKind::UnexpectedEof`. Variable time, for public
+    /// values only.
+    pub fn decode_from<R: Read>(input: R) -> io::Result<Option<Self>> {
+        let mut reader = Asn1Reader::new(input, DecodingOptions::default());
+        Ok(reader.read_value::<AttributeCertificate>()?.map(Self::new))
     }
 
     /// The DER octets, BC's `GetEncoded`. The signed octets are written as received, so that the

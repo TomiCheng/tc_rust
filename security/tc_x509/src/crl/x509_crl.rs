@@ -1,8 +1,9 @@
-use std::io::Write;
+use std::io::{self, Read, Write};
 
 use tc_asn1::{
     Asn1Error, Asn1Integer, Decode, DecodingContext, DecodingOptions, Encode, EncodingOptions,
 };
+use tc_asn1::io::Asn1Reader;
 use tc_asn1_x500::Name;
 use tc_asn1_x509::{alg::AlgorithmIdentifier, cert::Time, crl::CertificateList, ext::Extensions};
 
@@ -46,6 +47,21 @@ impl X509Crl {
             return Err(Asn1Error::TrailingData);
         }
         Self::new(list)
+    }
+
+    /// Reads one BER or DER CRL from `input` and nothing past it, so what follows
+    /// stays in `input` for the next call; `None` when the input ends before a value
+    /// starts. Read it through a `BufReader` for a file or a socket. A value that does
+    /// not decode is `io::ErrorKind::InvalidData` carrying the [`Asn1Error`]; input that
+    /// ends inside it is `io::ErrorKind::UnexpectedEof`. Variable time, for public
+    /// values only.
+    pub fn decode_from<R: Read>(input: R) -> io::Result<Option<Self>> {
+        let mut reader = Asn1Reader::new(input, DecodingOptions::default());
+        reader
+            .read_value::<CertificateList>()?
+            .map(Self::new)
+            .transpose()
+            .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))
     }
 
     /// The DER octets, BC's `GetEncoded`. The signed octets are written as received, so that the

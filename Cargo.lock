@@ -1029,9 +1029,9 @@ dependencies = [
 
 [[package]]
 name = "tc_asn1"
-version = "0.1.3"
+version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4c72152bdf6990742d7769884eb236b18c2b87d2db3daf251b13a7ba4ddcf5b9"
+checksum = "fec6d951e16be715a44d8bc23087e1daae377720d81940af431eab81c5aacdb6"
 dependencies = [
  "chrono",
  "tc_zeroize",
