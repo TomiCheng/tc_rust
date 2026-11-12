@@ -63,25 +63,37 @@ runs with nothing set: empty strings, no key. One with nothing to set refuses an
 helpers ending in `_with` call `init` first, and the others do not call it.
 
 - `CShakeParams`: the function name N and the customization string S of SP 800-185. Both empty
-  is SHAKE.
-- `TupleHashParams`: the customization string S of SP 800-185.
+  is SHAKE. See [cSHAKE](CShake.md).
+- `TupleHashParams`: the customization string S of SP 800-185. See [TupleHash](TupleHash.md).
 - `ParallelHashParams`: the block size B in bytes, more than 0, and the customization string S
   of SP 800-185. SP 800-185 has no default B, and B is part of what is hashed: without `init`,
   ParallelHash runs with blocks of 8192 bytes, a choice of this crate, so another
-  implementation gives the same output only when given that block size too.
-- `AsconCXofParams`: the customization string Z of SP 800-232, at most 256 bytes.
+  implementation gives the same output only when given that block size too. See
+  [ParallelHash](ParallelHash.md).
+- `AsconCXofParams`: the customization string Z of SP 800-232, at most 256 bytes. See
+  [Ascon-CXOF128](AsconCXof.md).
 - `Blake2xsParams`: a key of at most 32 bytes, a salt of 8 and a personalization of 8, each
-  optional.
+  optional. See [BLAKE2xs](Blake2xs.md).
 - `Blake3Params`: `keyed` with a 32-byte key, for the keyed hash, or `derive_key` with a context
-  string, for key derivation, after Bouncy Castle's `Blake3Parameters`.
-
+  string, for key derivation, after Bouncy Castle's `Blake3Parameters`. See [BLAKE3](Blake3.md).
 
 ## Using it
 
 - `update` panics once output has begun, since the input is then closed. Bouncy Castle throws here.
-- `output` can be called again for the next bytes.
+- `output` can be called again for the next bytes. TupleHash and ParallelHash hash an output
+  length into `finalize_len`, so for them a shorter `finalize_len` is not the start of a longer
+  one; their pages tell how.
 - `output_final` fills a buffer with the next bytes and starts the next message, and `finalize_len`
   does the same with a `Vec` of the length asked for. `reset` discards the message so far.
 - An `Xof` is also a `Digest`, as in Bouncy Castle: `do_final` and `finalize` give `digest_size` bytes
   of output, 64 for SHAKE256, and start the next message. On Rust 1.85 a `Box<dyn Xof>` does not
   convert to a `Box<dyn Digest>`, but it does go to a function generic over `Digest + ?Sized`.
+
+## More
+
+- [cSHAKE](CShake.md): customization strings, and what the function name is for
+- [TupleHash](TupleHash.md): hashing a tuple, one element per update, and its two output modes
+- [ParallelHash](ParallelHash.md): the block size, and its two output modes
+- [Ascon-CXOF128](AsconCXof.md): the customization string
+- [BLAKE2xs](Blake2xs.md): key, salt and personalization
+- [BLAKE3](Blake3.md): keyed hash and key derivation
