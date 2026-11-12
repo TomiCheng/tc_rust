@@ -1,11 +1,11 @@
-use tc_algo_v2::Algo;
-use tc_algo_v2::signer::Signer;
+use tc_algo::Algo;
+use tc_algo::signer::Signer;
 use tc_asn1_x509::alg::AlgorithmIdentifier;
 
 use crate::X509Error;
 
 // A row of signature algorithms: the AlgorithmIdentifier a certificate records for it, which
-// tc_algo_v2 does not know, and the signer of tc_algo_v2 that computes it
+// tc_algo does not know, and the signer of tc_algo that computes it
 pub trait SignerEntry: Send + Sync {
     fn name(&self) -> &str;
 

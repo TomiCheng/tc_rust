@@ -1,6 +1,6 @@
 use std::io;
 
-use tc_algo_v2::digest::Digest;
+use tc_algo::digest::Digest;
 
 use crate::operator::{BlockResult, DefaultDigestResult, StreamCalculator};
 

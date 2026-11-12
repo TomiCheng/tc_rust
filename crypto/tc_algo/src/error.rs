@@ -10,16 +10,13 @@ pub struct AlgoError {
 }
 
 impl AlgoError {
-    pub(crate) const fn new(kind: ErrorKind) -> Self {
+    // Public, so that an algorithm from outside this crate can implement the traits
+    pub const fn new(kind: ErrorKind) -> Self {
         Self { kind, source: None }
     }
 
     // Carries the error of the algorithm crate underneath, for source() to hand out
-    #[allow(
-        dead_code,
-        reason = "unused when no algorithm that can fail is enabled"
-    )]
-    pub(crate) fn with_source(kind: ErrorKind, source: impl Error + Send + Sync + 'static) -> Self {
+    pub fn with_source(kind: ErrorKind, source: impl Error + Send + Sync + 'static) -> Self {
         Self {
             kind,
             source: Some(Box::new(source)),
@@ -56,11 +53,15 @@ pub enum ErrorKind {
     UnknownMac,
     UnknownXof,
     UnknownWrapper,
+    UnknownSigner,
+    UnknownKdf,
+    UnknownPbe,
+    UnknownKem,
+    UnknownDrbg,
     InvalidParams,
     DataLength,
     InvalidCiphertext,
     NotInitialized,
-    XofOutputStarted,
 }
 
 impl fmt::Display for ErrorKind {
@@ -74,11 +75,15 @@ impl fmt::Display for ErrorKind {
             ErrorKind::UnknownMac => f.write_str("unknown MAC"),
             ErrorKind::UnknownXof => f.write_str("unknown XOF"),
             ErrorKind::UnknownWrapper => f.write_str("unknown key wrapper"),
+            ErrorKind::UnknownSigner => f.write_str("unknown signer"),
+            ErrorKind::UnknownKdf => f.write_str("unknown KDF"),
+            ErrorKind::UnknownPbe => f.write_str("unknown PBE scheme"),
+            ErrorKind::UnknownKem => f.write_str("unknown KEM"),
+            ErrorKind::UnknownDrbg => f.write_str("unknown DRBG"),
             ErrorKind::InvalidParams => f.write_str("invalid parameters for this algorithm"),
             ErrorKind::DataLength => f.write_str("input of the wrong length for this cipher"),
             ErrorKind::InvalidCiphertext => f.write_str("invalid ciphertext"),
             ErrorKind::NotInitialized => f.write_str("used before a successful init"),
-            ErrorKind::XofOutputStarted => f.write_str("input after the XOF began its output"),
         }
     }
 }

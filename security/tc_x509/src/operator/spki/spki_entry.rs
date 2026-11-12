@@ -1,4 +1,4 @@
-use tc_algo_v2::Params;
+use tc_algo::Params;
 use tc_asn1_x509::cert::SubjectPublicKeyInfo;
 
 use crate::X509Error;

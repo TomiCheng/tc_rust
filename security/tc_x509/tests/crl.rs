@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use tc_algo_v2::Params;
+use tc_algo::Params;
 use tc_asn1::{Asn1BitString, Asn1Integer};
 use tc_asn1_x509::alg::AlgorithmIdentifier;
 use tc_asn1_x509::cert::{Time, Version};

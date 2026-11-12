@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use tc_algo_v2::{Algo, Params};
+use tc_algo::{Algo, Params};
 use tc_asn1_x509::alg::AlgorithmIdentifier;
 
 use crate::X509Error;
@@ -32,7 +32,7 @@ impl DefaultSignatureFactory {
         Ok(factory)
     }
 
-    fn signer(&self) -> Result<Box<dyn tc_algo_v2::signer::Signer>, X509Error> {
+    fn signer(&self) -> Result<Box<dyn tc_algo::signer::Signer>, X509Error> {
         let mut signer = self.row.create(self.algo.as_ref())?;
         signer.init(self.private_key.as_ref())?;
         Ok(signer)

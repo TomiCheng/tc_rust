@@ -1,7 +1,7 @@
 use std::any::Any;
 
-use tc_algo_v2::Params;
-use tc_algo_v2::generate::KeyPair;
+use tc_algo::Params;
+use tc_algo::generate::KeyPair;
 use tc_asn1::{Asn1BitString, Decode, DecodingOptions};
 use tc_asn1_pkcs::RsaPublicKey;
 use tc_asn1_x509::alg::AlgorithmIdentifier;

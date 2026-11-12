@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use tc_algo_v2::Params;
+use tc_algo::Params;
 use tc_asn1::Asn1Oid;
 use tc_asn1_x500::{Attribute, DirectoryString};
 use tc_x509::cert::{

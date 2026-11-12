@@ -1,6 +1,6 @@
 use std::io;
 
-use tc_algo_v2::signer::Signer;
+use tc_algo::signer::Signer;
 
 use crate::operator::verifier::Verifier;
 use crate::operator::{DefaultVerifierResult, StreamCalculator};

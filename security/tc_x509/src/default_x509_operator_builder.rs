@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use tc_algo_v2::{Algo, AlgoBuilder, DefaultAlgoBuilder};
+use tc_algo::{Algo, AlgoBuilder, DefaultAlgoBuilder};
 
 use crate::cert::{X509AttributeCertificate, X509Certificate};
 use crate::crl::X509Crl;

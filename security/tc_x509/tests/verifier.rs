@@ -1,7 +1,7 @@
 use std::io::Write;
 use std::sync::Arc;
 
-use tc_algo_v2::Params;
+use tc_algo::Params;
 use tc_asn1_x509::alg::AlgorithmIdentifier;
 use tc_asn1_x509::ext::BasicConstraints;
 use tc_x509::cert::X509V3CertificateGenerator;

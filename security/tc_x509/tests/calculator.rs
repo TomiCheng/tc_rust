@@ -1,7 +1,7 @@
 use std::io::Write;
 
-use tc_algo_v2::params::{KeyOwned, RsaKeyGenParams};
-use tc_algo_v2::{AlgoBuilder, DefaultAlgoBuilder};
+use tc_algo::params::{KeyOwned, RsaKeyGenParams};
+use tc_algo::{AlgoBuilder, DefaultAlgoBuilder};
 use tc_x509::operator::{
     DefaultDigestCalculator, DefaultMacCalculator, DefaultSignatureCalculator, StreamCalculator,
 };

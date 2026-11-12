@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
-use tc_algo_v2::signer::Signer;
-use tc_algo_v2::{Algo, Params};
+use tc_algo::signer::Signer;
+use tc_algo::{Algo, Params};
 use tc_asn1_x509::alg::AlgorithmIdentifier;
 
 use crate::X509Error;

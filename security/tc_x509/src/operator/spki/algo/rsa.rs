@@ -1,5 +1,5 @@
-use tc_algo_v2::Params;
-use tc_algo_v2::params::{RsaKey, RsaKeyParams};
+use tc_algo::Params;
+use tc_algo::params::{RsaKey, RsaKeyParams};
 use tc_asn1::{
     Asn1BitString, Asn1Error, Asn1Integer, Asn1Oid, Decode, DecodingOptions, Encode,
     EncodingOptions, NamedOid,

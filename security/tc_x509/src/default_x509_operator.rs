@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
-use tc_algo_v2::generate::KeyPairGeneratorProvider;
-use tc_algo_v2::{Algo, Params};
+use tc_algo::generate::KeyPairGeneratorProvider;
+use tc_algo::{Algo, Params};
 
 use crate::cert::{X509AttributeCertificate, X509Certificate};
 use crate::crl::X509Crl;

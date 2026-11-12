@@ -1,13 +1,16 @@
-mod any_cipher;
-pub(crate) mod classify;
-mod dyn_cipher;
-mod engine;
-mod entry;
-mod factory;
-mod init_params;
-mod table;
+#![cfg_attr(feature = "aes", doc = include_str!("../docs/AeadCipher.md"))]
+#![cfg_attr(feature = "chacha", doc = include_str!("../docs/StreamCipher.md"))]
+#![cfg_attr(feature = "ies", doc = include_str!("../docs/IES.md"))]
 
-pub use any_cipher::AnyCipher;
-pub use entry::CipherEntry;
-pub use factory::CipherFactory;
-pub use tc_buffered_cipher::{BufferedCipher, BufferedCipherInit, CipherDirection};
+mod algo;
+mod cipher_entry;
+mod cipher_provider;
+mod cipher_trait;
+mod default_cipher_provider;
+mod empty_cipher_provider;
+
+pub(crate) use algo::{BUILT_IN, CreateRows};
+pub use cipher_entry::CipherEntry;
+pub use cipher_provider::CipherProvider;
+pub use cipher_trait::{Cipher, CipherDirection};
+pub(crate) use empty_cipher_provider::EmptyCipherProvider;

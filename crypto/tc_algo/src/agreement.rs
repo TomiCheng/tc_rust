@@ -1,16 +1,16 @@
-mod agreement_peer;
-mod any_agreement;
-mod any_agreement_params;
-mod dyn_agreement;
-mod entry;
-mod factory;
-mod shared_secret;
-mod table;
+#![cfg_attr(feature = "dh", doc = include_str!("../docs/Dh.md"))]
 
-pub use agreement_peer::AgreementPeer;
-pub use any_agreement::AnyAgreement;
-pub use any_agreement_params::AnyAgreementParams;
-pub use entry::AgreementEntry;
-pub use factory::AgreementFactory;
+mod agreement_entry;
+mod agreement_provider;
+mod agreement_trait;
+mod algo;
+mod default_agreement_provider;
+mod empty_agreement_provider;
+mod shared_secret;
+
+pub use agreement_entry::AgreementEntry;
+pub use agreement_provider::AgreementProvider;
+pub use agreement_trait::Agreement;
+pub(crate) use algo::{BUILT_IN, CreateRows};
+pub(crate) use empty_agreement_provider::EmptyAgreementProvider;
 pub use shared_secret::SharedSecret;
-pub use tc_agreement::{Agreement, AgreementInit};

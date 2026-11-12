@@ -1,5 +1,5 @@
-use tc_algo_v2::params::{KeyOwned, RsaKeyGenParams};
-use tc_algo_v2::{AlgoBuilder, DefaultAlgoBuilder, ErrorKind};
+use tc_algo::params::{KeyOwned, RsaKeyGenParams};
+use tc_algo::{AlgoBuilder, DefaultAlgoBuilder, ErrorKind};
 use tc_x509::X509Error;
 use tc_x509::operator::{
     BlockResult, DefaultDigestResult, DefaultMacResult, DefaultSignatureResult, SimpleBlockResult,

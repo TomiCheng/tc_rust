@@ -1,14 +1,14 @@
-mod any_mac;
-mod any_mac_params;
-mod classify;
-mod dyn_mac;
-mod entry;
-mod factory;
-mod init_params;
-mod table;
+#![cfg_attr(feature = "hmac-sha256", doc = include_str!("../docs/Mac.md"))]
 
-pub use any_mac::AnyMac;
-pub use any_mac_params::AnyMacParams;
-pub use entry::MacEntry;
-pub use factory::MacFactory;
-pub use tc_macs::{Mac, MacInit};
+mod algo;
+mod default_mac_provider;
+mod empty_mac_provider;
+mod mac_entry;
+mod mac_provider;
+mod mac_trait;
+
+pub(crate) use algo::{BUILT_IN, CreateRows};
+pub(crate) use empty_mac_provider::EmptyMacProvider;
+pub use mac_entry::MacEntry;
+pub use mac_provider::MacProvider;
+pub use mac_trait::Mac;

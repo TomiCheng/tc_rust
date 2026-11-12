@@ -1,6 +1,6 @@
 use std::io;
 
-use tc_algo_v2::mac::Mac;
+use tc_algo::mac::Mac;
 
 use crate::operator::{BlockResult, DefaultMacResult, StreamCalculator};
 

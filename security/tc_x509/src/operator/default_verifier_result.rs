@@ -1,4 +1,4 @@
-use tc_algo_v2::signer::Signer;
+use tc_algo::signer::Signer;
 
 use crate::X509Error;
 use crate::operator::verifier::Verifier;

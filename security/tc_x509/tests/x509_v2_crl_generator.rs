@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use chrono::{TimeDelta, TimeZone, Utc};
-use tc_algo_v2::Params;
+use tc_algo::Params;
 use tc_asn1::{Asn1Integer, DecodingContext, DecodingOptions};
 use tc_asn1_x509::cert::{Time, Version};
 use tc_asn1_x509::crl::CrlReason;

@@ -1,13 +1,14 @@
-mod any_wrap_params;
-mod any_wrapper;
-mod classify;
-mod dyn_wrapper;
-mod entry;
-mod factory;
-mod table;
+#![cfg_attr(feature = "aes-wrap", doc = include_str!("../docs/KeyWrap.md"))]
 
-pub use any_wrap_params::AnyWrapParams;
-pub use any_wrapper::AnyWrapper;
-pub use entry::WrapEntry;
-pub use factory::WrapFactory;
-pub use tc_key_wrap::WrapDirection;
+mod algo;
+mod default_wrapper_provider;
+mod empty_wrapper_provider;
+mod wrapper;
+mod wrapper_entry;
+mod wrapper_provider;
+
+pub(crate) use algo::{BUILT_IN, CreateRows};
+pub(crate) use empty_wrapper_provider::EmptyWrapperProvider;
+pub use wrapper::{WrapDirection, Wrapper};
+pub use wrapper_entry::WrapperEntry;
+pub use wrapper_provider::WrapperProvider;

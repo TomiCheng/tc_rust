@@ -37,7 +37,7 @@ its signature as a certificate does.
 ## X509Operator
 
 Where the algorithms are, found by name. `DefaultX509OperatorBuilder` builds one, with the
-algorithms of `tc_algo_v2` unless `set_algo` gives others. It gives:
+algorithms of `tc_algo` unless `set_algo` gives others. It gives:
 
 - `key_pair_generator`, for new key pairs, such as `"RSA"`;
 - `spki`, which turns a public key into the `SubjectPublicKeyInfo` a certificate holds, and back;

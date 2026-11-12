@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use chrono::{TimeZone, Utc};
-use tc_algo_v2::Params;
+use tc_algo::Params;
 use tc_asn1::{
     Asn1Any, Asn1GeneralizedTime, Asn1Integer, Asn1Oid, Decode, DecodingOptions, Encode,
     EncodingOptions,

@@ -2,7 +2,7 @@ use core::error::Error;
 use core::fmt;
 use std::io;
 
-use tc_algo_v2::AlgoError;
+use tc_algo::AlgoError;
 use tc_asn1::Asn1Error;
 
 // The error of this crate, wrapping those of the crates underneath

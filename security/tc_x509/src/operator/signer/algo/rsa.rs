@@ -1,5 +1,5 @@
-use tc_algo_v2::Algo;
-use tc_algo_v2::signer::Signer;
+use tc_algo::Algo;
+use tc_algo::signer::Signer;
 use tc_asn1_x509::alg::AlgorithmIdentifier;
 
 use crate::operator::signer::SignerEntry;

@@ -9,7 +9,7 @@ A CRL signed with the CA's private key:
 ```rust
 use std::sync::Arc;
 
-use tc_algo_v2::Params;
+use tc_algo::Params;
 use tc_x509::crl::X509V2CrlGenerator;
 use tc_x509::{DefaultX509OperatorBuilder, X509Error, X509OperatorBuilder};
 

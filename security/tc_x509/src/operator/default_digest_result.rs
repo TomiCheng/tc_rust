@@ -1,4 +1,4 @@
-use tc_algo_v2::digest::Digest;
+use tc_algo::digest::Digest;
 
 use crate::X509Error;
 use crate::operator::BlockResult;

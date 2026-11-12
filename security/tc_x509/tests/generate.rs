@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use tc_algo_v2::{AlgoBuilder, DefaultAlgoBuilder, Params};
+use tc_algo::{AlgoBuilder, DefaultAlgoBuilder, Params};
 use tc_asn1::Asn1Integer;
 use tc_asn1_x509::cert::Version;
 use tc_asn1_x509::ext::BasicConstraints;

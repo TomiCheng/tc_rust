@@ -2,8 +2,8 @@ use std::any::Any;
 use std::io::Write;
 use std::sync::Arc;
 
-use tc_algo_v2::generate::KeyPair;
-use tc_algo_v2::{AlgoBuilder, DefaultAlgoBuilder, Params};
+use tc_algo::generate::KeyPair;
+use tc_algo::{AlgoBuilder, DefaultAlgoBuilder, Params};
 use tc_x509::operator::params::RsaKeyGenParams;
 use tc_x509::{DefaultX509OperatorBuilder, X509Error, X509Operator, X509OperatorBuilder};
 
@@ -14,7 +14,7 @@ fn rsa_pair(oper: &dyn X509Operator) -> KeyPair {
     key_gen.generate().unwrap()
 }
 
-// Checked with tc_algo_v2 directly, apart from the factory under test
+// Checked with tc_algo directly, apart from the factory under test
 fn verifies(public: &dyn Params, data: &[u8], signature: &[u8]) -> bool {
     let algo = DefaultAlgoBuilder::default().build();
     let mut verifier = algo.signer().get_by_name("SHA-256withRSA").unwrap();

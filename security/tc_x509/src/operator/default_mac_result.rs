@@ -1,4 +1,4 @@
-use tc_algo_v2::mac::Mac;
+use tc_algo::mac::Mac;
 
 use crate::X509Error;
 use crate::operator::BlockResult;
