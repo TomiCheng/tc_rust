@@ -98,16 +98,7 @@ impl X509CertSelector {
         let Some(wanted) = &self.subject_key_identifier else {
             return true;
         };
-        let mut context = DecodingContext::new(DecodingOptions::default());
-        certificate
-            .extensions()
-            .and_then(|extensions| {
-                extensions
-                    .get_subject_key_identifier(&mut context)
-                    .ok()
-                    .flatten()
-            })
-            .is_some_and(|found| found.key_identifier() == wanted.as_slice())
+        subject_key_identifier_of(certificate).is_some_and(|found| found == *wanted)
     }
 
     fn matches_authority_key_identifier(&self, certificate: &X509Certificate) -> bool {
@@ -149,4 +140,16 @@ impl X509CertSelector {
             && self.matches_subject_key_identifier(certificate)
             && self.matches_authority_key_identifier(certificate)
     }
+}
+
+// The key identifier of the subjectKeyIdentifier extension; none when it is absent or does not
+// decode
+pub(crate) fn subject_key_identifier_of(certificate: &X509Certificate) -> Option<Vec<u8>> {
+    let mut context = DecodingContext::new(DecodingOptions::default());
+    certificate
+        .extensions()?
+        .get_subject_key_identifier(&mut context)
+        .ok()
+        .flatten()
+        .map(|found| found.key_identifier().to_vec())
 }
