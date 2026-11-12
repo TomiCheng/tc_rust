@@ -3,8 +3,7 @@ use std::io::Read;
 use tc_x509::cert::X509Certificate;
 use tc_x509::operator::parser::{Parser, ParserEntry};
 use tc_x509::{
-    DefaultX509OperatorBuilder, DefaultX509OperatorContext, X509Error, X509Operator,
-    X509OperatorBuilder,
+    DefaultX509OperatorBuilder, DefaultX509OperatorContext, X509Error, X509OperatorBuilder,
 };
 
 const CA: &[u8] = include_bytes!("data/crl/ca.der");
