@@ -1,3 +1,11 @@
+#[cfg(feature = "ascon-cxof128")]
+mod ascon_cxof_params;
+#[cfg(feature = "blake2xs")]
+mod blake2xs_params;
+#[cfg(feature = "blake3")]
+mod blake3_params;
+#[cfg(any(feature = "cshake128", feature = "cshake256"))]
+mod cshake_params;
 #[cfg(feature = "drbg-hmac-sha256")]
 mod drbg_params;
 #[cfg(feature = "ies")]
@@ -5,6 +13,8 @@ mod ies_dh_params;
 mod key_length;
 #[cfg(feature = "rsa")]
 mod rsa_key_gen_params;
+#[cfg(any(feature = "tuplehash128", feature = "tuplehash256"))]
+mod tuple_hash_params;
 
 #[cfg(any(
     feature = "aes",
@@ -17,6 +27,14 @@ mod rsa_key_gen_params;
 ))]
 use core::any::Any;
 
+#[cfg(feature = "ascon-cxof128")]
+pub use ascon_cxof_params::AsconCXofParams;
+#[cfg(feature = "blake2xs")]
+pub use blake2xs_params::Blake2xsParams;
+#[cfg(feature = "blake3")]
+pub use blake3_params::Blake3Params;
+#[cfg(any(feature = "cshake128", feature = "cshake256"))]
+pub use cshake_params::CShakeParams;
 #[cfg(feature = "drbg-hmac-sha256")]
 pub use drbg_params::DrbgParams;
 #[cfg(feature = "ies")]
@@ -40,6 +58,8 @@ pub use tc_kdf::hkdf::HkdfParamsOwned;
 pub use tc_ml_kem::{MlKemParameters, MlKemPrivateKey, MlKemPublicKey};
 #[cfg(feature = "rsa")]
 pub use tc_rsa::{RsaKey, RsaKeyParams};
+#[cfg(any(feature = "tuplehash128", feature = "tuplehash256"))]
+pub use tuple_hash_params::TupleHashParams;
 
 #[cfg(any(
     feature = "aes",

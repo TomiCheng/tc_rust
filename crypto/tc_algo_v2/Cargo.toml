@@ -79,7 +79,18 @@ haraka-512 = ["dep:tc_misc_digest", "dep:tc_digest", "tc_misc_digest/haraka"]
 null-digest = ["dep:tc_digest", "tc_digest/alloc"]
 
 # XOF
+shake128 = ["dep:tc_keccak", "dep:tc_digest"]
 shake256 = ["dep:tc_keccak", "dep:tc_digest"]
+cshake128 = ["dep:tc_keccak", "dep:tc_digest"]
+cshake256 = ["dep:tc_keccak", "dep:tc_digest"]
+tuplehash128 = ["dep:tc_keccak", "dep:tc_digest"]
+tuplehash256 = ["dep:tc_keccak", "dep:tc_digest"]
+blake2xs = ["dep:tc_blake", "dep:tc_digest"]
+blake3 = ["dep:tc_blake", "dep:tc_digest"]
+ascon-xof128 = ["dep:tc_ascon_hash", "dep:tc_digest"]
+ascon-cxof128 = ["dep:tc_ascon_hash", "dep:tc_digest"]
+ascon-xof = ["dep:tc_ascon_hash", "dep:tc_digest", "tc_ascon_hash/legacy"]
+ascon-xofa = ["dep:tc_ascon_hash", "dep:tc_digest", "tc_ascon_hash/legacy"]
 
 # Block Cipher
 aes = ["dep:tc_aes", "dep:tc_aead_cipher", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_buffered_cipher"]
