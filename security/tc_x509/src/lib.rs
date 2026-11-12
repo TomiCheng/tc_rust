@@ -7,6 +7,7 @@ mod default_x509_operator;
 mod default_x509_operator_builder;
 mod default_x509_operator_context;
 mod error;
+pub mod extension;
 pub mod operator;
 pub mod store;
 mod traits;

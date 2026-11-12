@@ -2454,8 +2454,10 @@ dependencies = [
  "tc_asn1_x509",
  "tc_asym_cipher",
  "tc_bigint",
+ "tc_digest",
  "tc_pem",
  "tc_rsa",
+ "tc_sha",
 ]
 
 [[package]]
