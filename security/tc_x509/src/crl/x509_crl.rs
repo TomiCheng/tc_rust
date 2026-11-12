@@ -5,7 +5,12 @@ use tc_asn1::{
 };
 use tc_asn1::io::Asn1Reader;
 use tc_asn1_x500::Name;
-use tc_asn1_x509::{alg::AlgorithmIdentifier, cert::Time, crl::CertificateList, ext::Extensions};
+use tc_asn1_x509::{
+    alg::AlgorithmIdentifier,
+    cert::Time,
+    crl::{CertificateList, CrlReason},
+    ext::Extensions,
+};
 
 use crate::X509Error;
 use crate::cert::X509Certificate;
@@ -152,9 +157,21 @@ impl X509Crl {
         None
     }
 
-    /// Whether the certificate is listed, BC's `IsRevoked`.
+    /// Whether the certificate is listed as revoked, BC's `IsRevoked`: listed under its issuer
+    /// and serial number, with any reason but `removeFromCRL`, which a delta CRL gives a
+    /// certificate whose hold is lifted. A reason that does not decode counts as revoked. A
+    /// CRL of another issuer is `false`; its signature is the caller's to verify with the key
+    /// of the issuer. Variable time, for public values only.
     pub fn is_revoked(&self, certificate: &X509Certificate) -> bool {
-        self.revoked_certificate_of(certificate).is_some()
+        self.revoked_certificate_of(certificate).is_some_and(|entry| {
+            let mut context = DecodingContext::new(DecodingOptions::default());
+            !entry.extensions().is_some_and(|extensions| {
+                matches!(
+                    extensions.get_crl_reason(&mut context),
+                    Ok(Some(CrlReason::RemoveFromCrl))
+                )
+            })
+        })
     }
 
     /// Every entry, in the order of the list, BC's `GetRevokedCertificates`; empty when there is
