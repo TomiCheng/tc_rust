@@ -13,6 +13,35 @@ use crate::cert::X509Certificate;
 /// thousands of certificates costs a hash and a few comparisons; one with neither is answered
 /// by a pass over every certificate. Names are not indexed, since they match by equivalence
 /// rather than by their octets.
+///
+/// # Examples
+///
+/// ```
+/// use tc_x509::cert::X509Certificate;
+/// use tc_x509::store::{X509CertSelector, X509CertificateStore};
+///
+/// let load = |name: &str| -> Result<X509Certificate, Box<dyn std::error::Error>> {
+///     let path = format!("{}/tests/data/crl/{name}.der", env!("CARGO_MANIFEST_DIR"));
+///     Ok(X509Certificate::decode(&std::fs::read(path)?)?)
+/// };
+/// let mut store: X509CertificateStore = [load("ca")?, load("good")?].into_iter().collect();
+/// store.add(load("revoked")?);
+///
+/// // By serial number, through the index
+/// let revoked = &store.certificates()[2];
+/// let selector = X509CertSelector::new()
+///     .with_issuer(revoked.issuer().clone())
+///     .with_serial_number(revoked.serial_number().clone());
+/// let found = store.find(&selector).expect("the certificate");
+/// println!("found {}", found.subject());
+///
+/// // By issuer alone, through a pass
+/// let selector = X509CertSelector::new().with_issuer(revoked.issuer().clone());
+/// for certificate in store.select(&selector) {
+///     println!("{}", certificate.subject());
+/// }
+/// # Ok::<(), Box<dyn std::error::Error>>(())
+/// ```
 #[derive(Clone, Default)]
 pub struct X509CertificateStore {
     certificates: Vec<X509Certificate>,

@@ -10,6 +10,47 @@ use crate::cert::X509Certificate;
 ///
 /// Names are compared as RFC 5280 matches them, a key identifier as its octets; a
 /// certificate whose extension does not decode is not selected by it.
+///
+/// # Examples
+///
+/// A CA, CN=Test CA, and two certificates it issued, as read from files:
+///
+/// ```
+/// use chrono::Utc;
+/// use tc_asn1_x509::cert::Time;
+/// use tc_x509::cert::X509Certificate;
+/// use tc_x509::store::X509CertSelector;
+///
+/// let load = |name: &str| -> Result<X509Certificate, Box<dyn std::error::Error>> {
+///     let path = format!("{}/tests/data/crl/{name}.der", env!("CARGO_MANIFEST_DIR"));
+///     Ok(X509Certificate::decode(&std::fs::read(path)?)?)
+/// };
+/// let certs = vec![load("ca")?, load("good")?, load("revoked")?];
+/// let good = &certs[1];
+///
+/// // The issuer of a certificate: the one whose subject is its issuer
+/// let selector = X509CertSelector::new().with_subject(good.issuer().clone());
+/// let issuer = certs.iter().find(|c| selector.matches(c)).expect("its issuer");
+/// println!("{} issued {}", issuer.subject(), good.subject());
+///
+/// // One certificate, by its issuer and serial number
+/// let selector = X509CertSelector::new()
+///     .with_issuer(issuer.subject().clone())
+///     .with_serial_number(good.serial_number().clone());
+/// assert_eq!(certs.iter().filter(|c| selector.matches(c)).count(), 1);
+///
+/// // Every certificate of the CA still valid now, with a condition of one's own
+/// let selector = X509CertSelector::new()
+///     .with_issuer(issuer.subject().clone())
+///     .with_valid_at(Time::try_from(Utc::now())?);
+/// let issued: Vec<_> = certs
+///     .iter()
+///     .filter(|c| selector.matches(c))
+///     .filter(|c| !c.subject().equivalent(c.issuer()))
+///     .collect();
+/// println!("{} certificates", issued.len());
+/// # Ok::<(), Box<dyn std::error::Error>>(())
+/// ```
 #[derive(Clone, Debug, Default)]
 pub struct X509CertSelector {
     serial_number: Option<Asn1Integer>,

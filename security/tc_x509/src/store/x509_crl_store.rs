@@ -8,6 +8,37 @@ use crate::crl::{X509Crl, X509CrlEntry};
 /// serial numbers, built on its first lookup. The signature of every CRL is the caller's to
 /// verify with the key of its issuer before adding it. A delta CRL is read on its own, not
 /// merged with its base CRL.
+///
+/// # Examples
+///
+/// The CRL of CN=Test CA, verified with the key of the CA, then asked about two certificates:
+///
+/// ```
+/// use tc_x509::cert::X509Certificate;
+/// use tc_x509::crl::X509Crl;
+/// use tc_x509::store::X509CrlStore;
+/// use tc_x509::{DefaultX509OperatorBuilder, X509Operator, X509OperatorBuilder};
+///
+/// let read = |name: &str| {
+///     std::fs::read(format!("{}/tests/data/crl/{name}.der", env!("CARGO_MANIFEST_DIR")))
+/// };
+/// let ca = X509Certificate::decode(&read("ca")?)?;
+/// let crl = X509Crl::decode(&read("crl")?)?;
+///
+/// // Verify the CRL with the key of its issuer before trusting it
+/// let operator = DefaultX509OperatorBuilder::default().build();
+/// let key = operator.spki().decode(ca.subject_public_key_info())?;
+/// crl.verify(operator.verifier_factory_provider(key.into()).as_ref())?;
+///
+/// let mut store = X509CrlStore::default();
+/// store.add(crl);
+///
+/// let revoked = X509Certificate::decode(&read("revoked")?)?;
+/// let good = X509Certificate::decode(&read("good")?)?;
+/// assert!(store.is_revoked(&revoked));
+/// assert!(!store.is_revoked(&good));
+/// # Ok::<(), Box<dyn std::error::Error>>(())
+/// ```
 #[derive(Clone, Debug, Default)]
 pub struct X509CrlStore {
     crls: Vec<X509Crl>,
