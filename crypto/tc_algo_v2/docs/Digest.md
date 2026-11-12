@@ -1,6 +1,7 @@
 # Digest
 
-`algo.digest()` gives message digests by name or by OID: SHA-1, the SHA-2 family, MD2, MD4, MD5 and `NONE`.
+`algo.digest()` gives message digests by name or by OID: SHA-1 and SHA-2, MD2, MD4 and MD5,
+BLAKE2 and BLAKE3, RIPEMD, SM3, GOST R 34.11, DSTU 7564, Tiger, Whirlpool, and `NONE`.
 
 ```rust
 use tc_algo_v2::{AlgoBuilder, DefaultAlgoBuilder};
@@ -31,13 +32,35 @@ assert_eq!(digest.finalize(), hash);
 | `MD2` |  | `1.2.840.113549.2.2` | `md2` | weak, variable time |
 | `MD4` |  | `1.2.840.113549.2.4` | `md4` | weak |
 | `MD5` |  | `1.2.840.113549.2.5` | `md5` | weak |
+| `BLAKE2B-160` |  | `1.3.6.1.4.1.1722.12.2.1.5` | `blake2b-160` |  |
+| `BLAKE2B-256` |  | `1.3.6.1.4.1.1722.12.2.1.8` | `blake2b-256` |  |
+| `BLAKE2B-384` |  | `1.3.6.1.4.1.1722.12.2.1.12` | `blake2b-384` |  |
+| `BLAKE2B-512` |  | `1.3.6.1.4.1.1722.12.2.1.16` | `blake2b-512` |  |
+| `BLAKE2S-128` |  | `1.3.6.1.4.1.1722.12.2.2.4` | `blake2s-128` |  |
+| `BLAKE2S-160` |  | `1.3.6.1.4.1.1722.12.2.2.5` | `blake2s-160` |  |
+| `BLAKE2S-224` |  | `1.3.6.1.4.1.1722.12.2.2.7` | `blake2s-224` |  |
+| `BLAKE2S-256` |  | `1.3.6.1.4.1.1722.12.2.2.8` | `blake2s-256` |  |
+| `BLAKE3-256` |  | `1.3.6.1.4.1.1722.12.2.3.8` | `blake3-256` |  |
+| `RIPEMD128` | `RIPEMD-128` | `1.3.36.3.2.2` | `ripemd128` |  |
+| `RIPEMD160` | `RIPEMD-160` | `1.3.36.3.2.1` | `ripemd160` |  |
+| `RIPEMD256` | `RIPEMD-256` | `1.3.36.3.2.3` | `ripemd256` |  |
+| `RIPEMD320` | `RIPEMD-320` |  | `ripemd320` |  |
+| `SM3` |  | `1.2.156.10197.1.401` | `sm3` |  |
+| `GOST3411` |  | `1.2.643.2.2.9` | `gost3411` | variable time |
+| `GOST3411-2012-256` |  | `1.2.643.7.1.1.2.2` | `gost3411-2012-256` | variable time |
+| `GOST3411-2012-512` |  | `1.2.643.7.1.1.2.3` | `gost3411-2012-512` | variable time |
+| `DSTU7564-256` |  | `1.2.804.2.1.1.1.1.2.2.1` | `dstu7564-256` | variable time |
+| `DSTU7564-384` |  | `1.2.804.2.1.1.1.1.2.2.2` | `dstu7564-384` | variable time |
+| `DSTU7564-512` |  | `1.2.804.2.1.1.1.1.2.2.3` | `dstu7564-512` | variable time |
+| `TIGER` |  |  | `tiger` | variable time |
+| `WHIRLPOOL` |  |  | `whirlpool` | variable time |
 | `NONE` |  |  | `null-digest` | not a hash |
 
 The OIDs after the first of each row are those of HMAC with the digest (and, for SHA-1, the
 IPsec one), which Bouncy Castle also maps to the digest; they find the digest but are not its
-OID. A weak digest is broken for collisions and is here for old data only. MD2 looks up a
-table by the message, so it can leak the message through cache timing: hash only public data
-with it.
+OID. A weak digest is broken for collisions and is here for old data only. A variable-time
+digest looks up tables by the message, so it can leak the message through cache timing: hash
+only public data with it.
 
 `NONE` is Bouncy Castle's `NullDigest`: it gives back what it was fed, for a signer given a
 digest computed elsewhere. Its size is the length fed so far.

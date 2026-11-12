@@ -17,9 +17,9 @@ rows it turns on, and a name it did not turn on is an error, not a fallback.
 
 ## Supported algorithms
 
-- Digest: `SHA-1`, `SHA-224`, `SHA-256`, `SHA-384`, `SHA-512`, `SHA-512/224`, `SHA-512/256`
-  (`sha1`, `sha224`, `sha256`, `sha384`, `sha512`, `sha512-224`, `sha512-256`); `MD2`,
-  `MD4`, `MD5` (`md2`, `md4`, `md5`); `NONE` (`null-digest`)
+- Digest: SHA-1, SHA-2, MD2, MD4, MD5, BLAKE2b, BLAKE2s, BLAKE3, RIPEMD, SM3, GOST R 34.11,
+  DSTU 7564, Tiger, Whirlpool and `NONE`, each name behind a feature of its own, such as `sha256`
+  or `blake2b-512`; see [Digest](docs/Digest.md)
 - XOF: `SHAKE256` (`shake256`)
 - MAC: `HMAC-SHA256` (`hmac-sha256`)
 - Cipher
