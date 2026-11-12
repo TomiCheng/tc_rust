@@ -1,4 +1,8 @@
+use std::collections::HashMap;
+use std::fmt;
+use std::hash::{Hash, Hasher};
 use std::io::{self, Read, Write};
+use std::sync::OnceLock;
 
 use tc_asn1::{
     Asn1Error, Asn1Integer, Decode, DecodingContext, DecodingOptions, Encode, EncodingOptions,
@@ -22,10 +26,87 @@ use crate::operator::verifier::VerifierFactoryProvider;
 /// is.
 ///
 #[doc = include_str!("../../docs/X509Crl.md")]
-#[derive(Clone, Debug, Eq, PartialEq, Hash)]
+#[derive(Clone)]
 pub struct X509Crl {
     list: CertificateList,
     is_indirect: bool,
+    index: OnceLock<EntryIndex>,
+}
+
+// The entries by serial number, built on the first lookup so that a lookup costs one hash
+// rather than a pass over every entry
+#[derive(Clone)]
+struct EntryIndex {
+    // The positions of the entries with each serial number, in list order
+    by_serial: HashMap<Vec<u8>, Vec<usize>>,
+    // For an indirect CRL, the issuer each entry falls under, as a position in `issuers`, which
+    // holds each run of the same issuer once
+    issuer_of: Vec<usize>,
+    issuers: Vec<Option<Name>>,
+}
+
+impl EntryIndex {
+    fn build(list: &CertificateList, is_indirect: bool) -> Self {
+        let mut by_serial: HashMap<Vec<u8>, Vec<usize>> = HashMap::new();
+        let mut issuer_of = Vec::new();
+        let mut issuers: Vec<Option<Name>> = Vec::new();
+        let mut issuer = None;
+        for (position, entry) in list.revoked_certificates().iter().enumerate() {
+            by_serial
+                .entry(entry.user_certificate().as_bytes().to_vec())
+                .or_default()
+                .push(position);
+            if is_indirect {
+                issuer = X509CrlEntry::load_certificate_issuer(entry, true, issuer.take());
+                if issuers.last() != Some(&issuer) {
+                    issuers.push(issuer.clone());
+                }
+                issuer_of.push(issuers.len() - 1);
+            }
+        }
+        Self {
+            by_serial,
+            issuer_of,
+            issuers,
+        }
+    }
+
+    fn positions(&self, serial_number: &Asn1Integer) -> &[usize] {
+        self.by_serial
+            .get(serial_number.as_bytes())
+            .map_or(&[], Vec::as_slice)
+    }
+
+    fn issuer_at(&self, position: usize) -> Option<Name> {
+        self.issuer_of
+            .get(position)
+            .and_then(|&run| self.issuers[run].clone())
+    }
+}
+
+// The index is derived from the list, so it takes no part in comparing or hashing
+impl PartialEq for X509Crl {
+    fn eq(&self, other: &Self) -> bool {
+        self.list == other.list && self.is_indirect == other.is_indirect
+    }
+}
+
+impl Eq for X509Crl {}
+
+impl Hash for X509Crl {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.list.hash(state);
+        self.is_indirect.hash(state);
+    }
+}
+
+impl fmt::Debug for X509Crl {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("X509Crl")
+            .field("list", &self.list)
+            .field("is_indirect", &self.is_indirect)
+            .finish_non_exhaustive()
+    }
 }
 
 impl X509Crl {
@@ -41,7 +122,11 @@ impl X509Crl {
             }
             None => false,
         };
-        Ok(Self { list, is_indirect })
+        Ok(Self {
+            list,
+            is_indirect,
+            index: OnceLock::new(),
+        })
     }
 
     /// Decodes one BER or DER CRL, keeping the signed octets as received. Trailing bytes are
@@ -114,15 +199,11 @@ impl X509Crl {
 
     /// The entry with the serial number, BC's `GetRevokedCertificate(BigInteger)`. In an indirect
     /// CRL a serial number is unique only within its issuer, so prefer `revoked_certificate_of`.
+    /// The first lookup indexes the entries by serial number, so later ones cost a hash.
     pub fn revoked_certificate(&self, serial_number: &Asn1Integer) -> Option<X509CrlEntry<'_>> {
-        let mut issuer = None;
-        for entry in self.list.revoked_certificates() {
-            issuer = X509CrlEntry::load_certificate_issuer(entry, self.is_indirect, issuer);
-            if entry.user_certificate() == serial_number {
-                return Some(X509CrlEntry::new(entry, issuer));
-            }
-        }
-        None
+        let index = self.index();
+        let &position = index.positions(serial_number).first()?;
+        Some(self.entry_at(index, position))
     }
 
     /// The entry of the certificate, matching its issuer as well as its serial number, BC's
@@ -140,21 +221,27 @@ impl X509Crl {
             };
         }
 
-        let mut issuer: Option<Name> = None;
-        for entry in self.list.revoked_certificates() {
-            issuer = X509CrlEntry::load_certificate_issuer(entry, true, issuer);
-            if entry.user_certificate() != certificate.serial_number() {
-                continue;
-            }
-            let matches = match &issuer {
+        let index = self.index();
+        index
+            .positions(certificate.serial_number())
+            .iter()
+            .map(|&position| self.entry_at(index, position))
+            .find(|entry| match entry.certificate_issuer() {
                 Some(issuer) => certificate.issuer().equivalent(issuer),
                 None => issued_by_crl_issuer,
-            };
-            if matches {
-                return Some(X509CrlEntry::new(entry, issuer));
-            }
-        }
-        None
+            })
+    }
+
+    fn index(&self) -> &EntryIndex {
+        self.index
+            .get_or_init(|| EntryIndex::build(&self.list, self.is_indirect))
+    }
+
+    fn entry_at(&self, index: &EntryIndex, position: usize) -> X509CrlEntry<'_> {
+        X509CrlEntry::new(
+            &self.list.revoked_certificates()[position],
+            index.issuer_at(position),
+        )
     }
 
     /// Whether the certificate is listed as revoked, BC's `IsRevoked`: listed under its issuer
