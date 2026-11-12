@@ -53,8 +53,8 @@ the operator. The certificate is a plain type that holds the fields.
 
 | Method | Bouncy Castle |
 |---|---|
-| `decode`, `new` | the constructors |
-| `encode` | `GetEncoded` |
+| `decode`, `decode_from`, `new` | the constructors |
+| `encode`, `encode_to` | `GetEncoded` |
 | `version`, `serial_number`, `issuer`, `subject`, `not_before`, `not_after` | the properties of the same names |
 | `is_valid_at` | `IsValid` |
 | `tbs_certificate`, `signature`, `signature_algorithm` | `GetTbsCertificate`, `GetSignature`, `SignatureAlgorithm` |
@@ -66,6 +66,8 @@ the operator. The certificate is a plain type that holds the fields.
 ## Using it
 
 - `decode` takes one certificate in BER or DER; bytes after it are `TrailingData`.
+  `decode_from` reads one from a stream and nothing past it, `None` at its end, and
+  `encode_to` writes the DER to one.
 - `encode` writes DER, but the signed part as received, so that the signature stays valid. A
   certificate received in BER keeps that part in BER.
 - The public key is decoded anew on each call to `oper.spki().decode`, a key of its own that

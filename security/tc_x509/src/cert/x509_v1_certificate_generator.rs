@@ -16,6 +16,8 @@ use crate::operator::signer::SignatureFactory;
 /// BC's `X509V1CertificateGenerator`: the fields of a version 1 certificate to be signed, which
 /// has no extensions. A missing field is reported when the certificate is generated. Every method
 /// is variable time, for public values only.
+///
+#[doc = include_str!("../../docs/X509CertificateV1Generator.md")]
 #[derive(Clone, Debug, Default)]
 pub struct X509V1CertificateGenerator {
     serial_number: Option<Asn1Integer>,

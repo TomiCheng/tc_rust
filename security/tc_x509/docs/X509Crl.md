@@ -63,8 +63,8 @@ issuer, and in a CRL that is not indirect.
 
 | Method | Bouncy Castle |
 |---|---|
-| `decode`, `new` | the constructors |
-| `encode` | `GetEncoded` |
+| `decode`, `decode_from`, `new` | the constructors |
+| `encode`, `encode_to` | `GetEncoded` |
 | `version`, `issuer`, `this_update`, `next_update`, `extensions` | `Version`, `IssuerDN`, `ThisUpdate`, `NextUpdate`, the extensions |
 | `revoked_certificate` | `GetRevokedCertificate(BigInteger)` |
 | `revoked_certificate_of`, `is_revoked` | `GetRevokedCertificate(X509Certificate)`, `IsRevoked` |
@@ -87,7 +87,11 @@ And of an entry:
 - Check the signature first: a CRL is only as good as the key it verifies with, the key of the
   CRL's issuer, which is the issuer of the certificates it lists unless it is indirect.
 - `is_revoked` matches the issuer of the certificate as well as its serial number, since a serial
-  number is unique only within its issuer. `revoked_certificate` matches the serial number alone,
+  number is unique only within its issuer. An entry with the reason `removeFromCRL`, which a
+  delta CRL gives a certificate whose hold is lifted, does not count as revoked, and a reason
+  that does not decode does.
+- The first lookup builds an index of the entries by serial number, so each one after it is a
+  hash rather than a pass over every entry. `revoked_certificate` matches the serial number alone,
   so prefer `revoked_certificate_of` for an indirect CRL.
 - A certificate of another issuer is not on a CRL that is not indirect, whatever its serial number.
 - `revoked_certificates` is empty for a CRL that lists none, where Bouncy Castle gives null.

@@ -28,6 +28,8 @@ fn directory_names(name: Name) -> Result<GeneralNames, X509Error> {
 /// to be signed, which binds attributes such as roles to a holder rather than a public key. A
 /// missing field is reported when the certificate is generated. Every method is variable time,
 /// for public values only.
+///
+#[doc = include_str!("../../docs/X509V2AttributeCertificateGenerator.md")]
 #[derive(Clone, Debug, Default)]
 pub struct X509V2AttributeCertificateGenerator {
     holder: Option<Holder>,
