@@ -13,7 +13,19 @@ use crate::cert::{X509AttributeCertificate, X509Certificate};
 use crate::crl::X509Crl;
 
 // Takes the values of its type out of a SignedData
-type Extract<T> = fn(&SignedData) -> Result<Vec<T>, X509Error>;
+pub(super) type Extract<T> = fn(&SignedData) -> Result<Vec<T>, X509Error>;
+
+// The values of its type a ContentInfo of SignedData carries
+pub(super) fn values_of<T>(info: &ContentInfo, extract: Extract<T>) -> Result<Vec<T>, X509Error> {
+    if ContentType::SIGNED_DATA != *info.content_type() {
+        return Err(X509Error::Asn1(Asn1Error::UnexpectedTag));
+    }
+    let content = info
+        .content()
+        .ok_or(X509Error::Asn1(Asn1Error::MalformedValue))?;
+    let (_, signed_data) = SignedData::decode(content.raw(), &DecodingOptions::default())?;
+    extract(&signed_data)
+}
 
 // The "PKCS7" format: PKCS #7 SignedData, one after another, as a .p7b carries certificates
 // and CRLs. The values of each are given one per call, those of its type only; the signers are
@@ -33,20 +45,13 @@ impl<T> Parser<T> for Pkcs7Parser<T> {
             let Some(info) = reader.read_value::<ContentInfo>().map_err(from_io)? else {
                 return Ok(None);
             };
-            if ContentType::SIGNED_DATA != *info.content_type() {
-                return Err(X509Error::Asn1(Asn1Error::UnexpectedTag));
-            }
-            let content = info
-                .content()
-                .ok_or(X509Error::Asn1(Asn1Error::MalformedValue))?;
-            let (_, signed_data) = SignedData::decode(content.raw(), &DecodingOptions::default())?;
-            self.pending = (self.extract)(&signed_data)?.into_iter();
+            self.pending = values_of(&info, self.extract)?.into_iter();
         }
     }
 }
 
 pub(crate) struct Pkcs7ParserEntry<T> {
-    extract: Extract<T>,
+    pub(super) extract: Extract<T>,
 }
 
 impl Pkcs7ParserEntry<X509Certificate> {

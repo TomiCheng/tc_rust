@@ -12,3 +12,4 @@
   -outform DER`.
   `chain.pem` is the same in PEM, `openssl x509` and `openssl crl` output put one after
   another: `ca`, the CRL, `good`, `revoked`.
+  `bundle.pem` is `bundle.p7b` in PEM, labelled PKCS7, by `openssl pkcs7 -outform PEM`.

@@ -9,13 +9,23 @@ use crate::cert::{X509AttributeCertificate, X509Certificate};
 use crate::crl::X509Crl;
 
 // Decodes the content of one PEM block
-type Decode<T> = fn(&[u8]) -> Result<T, Asn1Error>;
+pub(super) type Decode<T> = fn(&[u8]) -> Result<T, Asn1Error>;
 
 // A BufRead that holds one octet at most, so that reading a PEM block takes nothing past it
-struct OneOctet<'a> {
+pub(super) struct OneOctet<'a> {
     inner: &'a mut dyn Read,
     octet: [u8; 1],
     held: bool,
+}
+
+impl<'a> OneOctet<'a> {
+    pub(super) fn new(inner: &'a mut dyn Read) -> Self {
+        Self {
+            inner,
+            octet: [0],
+            held: false,
+        }
+    }
 }
 
 impl Read for OneOctet<'_> {
@@ -61,11 +71,7 @@ pub(crate) struct PemParser<T> {
 
 impl<T> Parser<T> for PemParser<T> {
     fn parse(&mut self, input: &mut dyn Read) -> Result<Option<T>, X509Error> {
-        let mut reader = PemReader::new(OneOctet {
-            inner: input,
-            octet: [0],
-            held: false,
-        });
+        let mut reader = PemReader::new(OneOctet::new(input));
         while let Some(object) = reader.read_pem_object()? {
             if self.labels.contains(&object.pem_type()) {
                 return Ok(Some((self.decode)(object.content())?));
@@ -76,8 +82,8 @@ impl<T> Parser<T> for PemParser<T> {
 }
 
 pub(crate) struct PemParserEntry<T> {
-    labels: &'static [&'static str],
-    decode: Decode<T>,
+    pub(super) labels: &'static [&'static str],
+    pub(super) decode: Decode<T>,
 }
 
 impl PemParserEntry<X509Certificate> {

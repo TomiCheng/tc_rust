@@ -2,6 +2,7 @@
 //! for one format, found by name through an `X509Operator`: BC's `X509CertificateParser` and
 //! `X509CrlParser`, split by format and open to formats of one's own.
 
+mod auto_parser;
 mod default_parser_provider;
 mod der_parser;
 mod pem_parser;
@@ -29,6 +30,7 @@ fn certificate_rows(_: &DefaultX509OperatorContext) -> Vec<Box<dyn ParserEntry<X
         Box::new(der_parser::DerParserEntry::certificates()),
         Box::new(pem_parser::PemParserEntry::certificates()),
         Box::new(pkcs7_parser::Pkcs7ParserEntry::certificates()),
+        Box::new(auto_parser::AutoParserEntry::certificates()),
     ]
 }
 
@@ -37,6 +39,7 @@ fn crl_rows(_: &DefaultX509OperatorContext) -> Vec<Box<dyn ParserEntry<X509Crl>>
         Box::new(der_parser::DerParserEntry::crls()),
         Box::new(pem_parser::PemParserEntry::crls()),
         Box::new(pkcs7_parser::Pkcs7ParserEntry::crls()),
+        Box::new(auto_parser::AutoParserEntry::crls()),
     ]
 }
 
@@ -47,5 +50,6 @@ fn attribute_certificate_rows(
         Box::new(der_parser::DerParserEntry::attribute_certificates()),
         Box::new(pem_parser::PemParserEntry::attribute_certificates()),
         Box::new(pkcs7_parser::Pkcs7ParserEntry::attribute_certificates()),
+        Box::new(auto_parser::AutoParserEntry::attribute_certificates()),
     ]
 }

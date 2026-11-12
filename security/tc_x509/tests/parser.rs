@@ -12,13 +12,15 @@ const GOOD: &[u8] = include_bytes!("data/crl/good.der");
 const CRL: &[u8] = include_bytes!("data/crl/crl.der");
 const BUNDLE: &[u8] = include_bytes!("data/crl/bundle.p7b");
 const CHAIN: &[u8] = include_bytes!("data/crl/chain.pem");
+const BUNDLE_PEM: &[u8] = include_bytes!("data/crl/bundle.pem");
+const REVOKED: &[u8] = include_bytes!("data/crl/revoked.der");
 
 #[test]
 fn the_operator_gives_a_der_parser_by_name_in_any_case() {
     let operator = DefaultX509OperatorBuilder::default().build();
     assert_eq!(
         operator.certificate_parser().names(),
-        ["DER", "PEM", "PKCS7"]
+        ["DER", "PEM", "PKCS7", "AUTO"]
     );
 
     let input = [CA, GOOD].concat();
@@ -81,7 +83,7 @@ fn a_registered_parser_is_found_by_its_name_beside_the_built_in_ones() {
     let operator = builder.build();
     assert_eq!(
         operator.certificate_parser().names(),
-        ["FIXED", "DER", "PEM", "PKCS7"]
+        ["FIXED", "DER", "PEM", "PKCS7", "AUTO"]
     );
 
     let mut parser = operator.certificate_parser().get_by_name("fixed").unwrap();
@@ -165,4 +167,47 @@ fn a_block_that_is_not_base64_is_an_error() {
 -----END CERTIFICATE-----
 ";
     assert!(parser.parse(&mut &broken[..]).is_err());
+}
+
+fn subjects_by_auto(input: &[u8]) -> Vec<String> {
+    let operator = DefaultX509OperatorBuilder::default().build();
+    let mut parser = operator.certificate_parser().get_by_name("AUTO").unwrap();
+    let mut source = input;
+    let mut subjects = Vec::new();
+    while let Some(certificate) = parser.parse(&mut source).unwrap() {
+        subjects.push(certificate.subject().to_string());
+    }
+    subjects
+}
+
+#[test]
+fn auto_reads_the_certificates_of_every_format_the_same() {
+    let all = ["CN=Test CA", "CN=good", "CN=revoked"];
+    assert_eq!(subjects_by_auto(&[CA, GOOD, REVOKED].concat()), all);
+    assert_eq!(subjects_by_auto(CHAIN), all);
+    assert_eq!(subjects_by_auto(BUNDLE), all);
+    assert_eq!(subjects_by_auto(BUNDLE_PEM), all);
+    assert!(subjects_by_auto(&[]).is_empty());
+}
+
+#[test]
+fn auto_reads_the_crl_of_every_format_the_same() {
+    let operator = DefaultX509OperatorBuilder::default().build();
+    for input in [CRL, CHAIN, BUNDLE, BUNDLE_PEM] {
+        let mut parser = operator.crl_parser().get_by_name("AUTO").unwrap();
+        let mut source = input;
+        let crl = parser.parse(&mut source).unwrap().unwrap();
+        assert_eq!(crl.encode().unwrap(), CRL);
+        assert!(parser.parse(&mut source).unwrap().is_none());
+    }
+}
+
+#[test]
+fn auto_refuses_input_that_is_none_of_the_formats() {
+    let operator = DefaultX509OperatorBuilder::default().build();
+    let mut parser = operator.certificate_parser().get_by_name("AUTO").unwrap();
+    assert!(matches!(
+        parser.parse(&mut &b"hello"[..]),
+        Err(X509Error::Asn1(_))
+    ));
 }
