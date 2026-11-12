@@ -29,6 +29,8 @@ pub enum X509Error {
     OutputTooShort,
     // No row has the signature algorithm
     UnknownSigner,
+    // No parser has the name of the format
+    UnknownParser,
     // A field a certificate needs is not set; the name of the field
     MissingField(&'static str),
     // An extension a certificate needs to have is absent; the name of the extension
@@ -53,6 +55,7 @@ impl fmt::Display for X509Error {
             Self::DuplicateAttribute => f.write_str("attribute already added"),
             Self::OutputTooShort => f.write_str("output buffer too short"),
             Self::UnknownSigner => f.write_str("unknown signature algorithm"),
+            Self::UnknownParser => f.write_str("unknown parser format"),
             Self::MissingField(field) => write!(f, "{field} is not set"),
             Self::MissingExtension(extension) => write!(f, "the {extension} extension is absent"),
             Self::AlgorithmMismatch => {
@@ -77,6 +80,7 @@ impl Error for X509Error {
             | Self::DuplicateAttribute
             | Self::OutputTooShort
             | Self::UnknownSigner
+            | Self::UnknownParser
             | Self::MissingField(_)
             | Self::MissingExtension(_)
             | Self::AlgorithmMismatch

@@ -3,6 +3,9 @@ use std::sync::Arc;
 use tc_algo_v2::generate::KeyPairGeneratorProvider;
 use tc_algo_v2::{Algo, Params};
 
+use crate::cert::{X509AttributeCertificate, X509Certificate};
+use crate::crl::X509Crl;
+use crate::operator::parser::{DefaultParserProvider, ParserProvider};
 use crate::operator::signer::{DefaultSignatureFactory, SignatureFactory, SignerEntry};
 use crate::operator::spki::{DefaultSpkiProvider, SpkiProvider};
 use crate::operator::verifier::{
@@ -16,6 +19,14 @@ pub(crate) struct DefaultX509Operator {
     spki: DefaultSpkiProvider,
     // The last registered first
     signers: Vec<Arc<dyn SignerEntry>>,
+    parsers: Parsers,
+}
+
+// The parser providers of an operator, one per type parsed
+pub(crate) struct Parsers {
+    pub(crate) certificate: DefaultParserProvider<X509Certificate>,
+    pub(crate) crl: DefaultParserProvider<X509Crl>,
+    pub(crate) attribute_certificate: DefaultParserProvider<X509AttributeCertificate>,
 }
 
 impl DefaultX509Operator {
@@ -23,11 +34,13 @@ impl DefaultX509Operator {
         algo: Arc<dyn Algo>,
         spki: DefaultSpkiProvider,
         signers: Vec<Arc<dyn SignerEntry>>,
+        parsers: Parsers,
     ) -> Self {
         Self {
             algo,
             spki,
             signers,
+            parsers,
         }
     }
 
@@ -87,5 +100,17 @@ impl X509Operator for DefaultX509Operator {
             self.signers.clone(),
             public_key,
         ))
+    }
+
+    fn certificate_parser(&self) -> &dyn ParserProvider<X509Certificate> {
+        &self.parsers.certificate
+    }
+
+    fn crl_parser(&self) -> &dyn ParserProvider<X509Crl> {
+        &self.parsers.crl
+    }
+
+    fn attribute_certificate_parser(&self) -> &dyn ParserProvider<X509AttributeCertificate> {
+        &self.parsers.attribute_certificate
     }
 }

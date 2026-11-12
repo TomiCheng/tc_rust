@@ -4,6 +4,9 @@ use tc_algo_v2::Params;
 use tc_algo_v2::generate::KeyPairGeneratorProvider;
 
 use crate::X509Error;
+use crate::cert::{X509AttributeCertificate, X509Certificate};
+use crate::crl::X509Crl;
+use crate::operator::parser::ParserProvider;
 use crate::operator::signer::SignatureFactory;
 use crate::operator::spki::SpkiProvider;
 use crate::operator::verifier::{VerifierFactory, VerifierFactoryProvider};
@@ -37,4 +40,13 @@ pub trait X509Operator: Send + Sync {
         &self,
         public_key: Arc<dyn Params>,
     ) -> Box<dyn VerifierFactoryProvider>;
+
+    // Parsers of certificates by the name of their format, such as "DER"
+    fn certificate_parser(&self) -> &dyn ParserProvider<X509Certificate>;
+
+    // Parsers of CRLs by the name of their format
+    fn crl_parser(&self) -> &dyn ParserProvider<X509Crl>;
+
+    // Parsers of attribute certificates by the name of their format
+    fn attribute_certificate_parser(&self) -> &dyn ParserProvider<X509AttributeCertificate>;
 }

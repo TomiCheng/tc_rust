@@ -10,6 +10,7 @@ mod default_signature_result;
 mod default_verifier_calculator;
 mod default_verifier_result;
 pub mod params;
+pub mod parser;
 pub mod signer;
 mod simple_block_result;
 pub mod spki;
