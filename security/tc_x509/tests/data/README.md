@@ -10,3 +10,5 @@
   `bundle.p7b` is a PKCS #7 bundle of the three certificates and the CRL, made with
   `openssl crl2pkcs7 -in crl.pem -certfile ca.pem -certfile good.pem -certfile revoked.pem
   -outform DER`.
+  `chain.pem` is the same in PEM, `openssl x509` and `openssl crl` output put one after
+  another: `ca`, the CRL, `good`, `revoked`.

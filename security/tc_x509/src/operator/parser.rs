@@ -4,6 +4,7 @@
 
 mod default_parser_provider;
 mod der_parser;
+mod pem_parser;
 mod pkcs7_parser;
 mod traits;
 
@@ -26,6 +27,7 @@ pub(crate) const ATTRIBUTE_CERTIFICATE_BUILT_IN: &[CreateRows<X509AttributeCerti
 fn certificate_rows(_: &DefaultX509OperatorContext) -> Vec<Box<dyn ParserEntry<X509Certificate>>> {
     vec![
         Box::new(der_parser::DerParserEntry::certificates()),
+        Box::new(pem_parser::PemParserEntry::certificates()),
         Box::new(pkcs7_parser::Pkcs7ParserEntry::certificates()),
     ]
 }
@@ -33,6 +35,7 @@ fn certificate_rows(_: &DefaultX509OperatorContext) -> Vec<Box<dyn ParserEntry<X
 fn crl_rows(_: &DefaultX509OperatorContext) -> Vec<Box<dyn ParserEntry<X509Crl>>> {
     vec![
         Box::new(der_parser::DerParserEntry::crls()),
+        Box::new(pem_parser::PemParserEntry::crls()),
         Box::new(pkcs7_parser::Pkcs7ParserEntry::crls()),
     ]
 }
@@ -42,6 +45,7 @@ fn attribute_certificate_rows(
 ) -> Vec<Box<dyn ParserEntry<X509AttributeCertificate>>> {
     vec![
         Box::new(der_parser::DerParserEntry::attribute_certificates()),
+        Box::new(pem_parser::PemParserEntry::attribute_certificates()),
         Box::new(pkcs7_parser::Pkcs7ParserEntry::attribute_certificates()),
     ]
 }

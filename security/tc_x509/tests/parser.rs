@@ -11,11 +11,15 @@ const CA: &[u8] = include_bytes!("data/crl/ca.der");
 const GOOD: &[u8] = include_bytes!("data/crl/good.der");
 const CRL: &[u8] = include_bytes!("data/crl/crl.der");
 const BUNDLE: &[u8] = include_bytes!("data/crl/bundle.p7b");
+const CHAIN: &[u8] = include_bytes!("data/crl/chain.pem");
 
 #[test]
 fn the_operator_gives_a_der_parser_by_name_in_any_case() {
     let operator = DefaultX509OperatorBuilder::default().build();
-    assert_eq!(operator.certificate_parser().names(), ["DER", "PKCS7"]);
+    assert_eq!(
+        operator.certificate_parser().names(),
+        ["DER", "PEM", "PKCS7"]
+    );
 
     let input = [CA, GOOD].concat();
     let mut source = &input[..];
@@ -77,7 +81,7 @@ fn a_registered_parser_is_found_by_its_name_beside_the_built_in_ones() {
     let operator = builder.build();
     assert_eq!(
         operator.certificate_parser().names(),
-        ["FIXED", "DER", "PKCS7"]
+        ["FIXED", "DER", "PEM", "PKCS7"]
     );
 
     let mut parser = operator.certificate_parser().get_by_name("fixed").unwrap();
@@ -122,4 +126,43 @@ fn a_der_certificate_given_to_the_pkcs7_parser_is_an_asn1_error() {
         parser.parse(&mut &CA[..]),
         Err(X509Error::Asn1(_))
     ));
+}
+
+#[test]
+fn the_pem_parser_takes_the_blocks_of_its_type_and_passes_over_the_others() {
+    let operator = DefaultX509OperatorBuilder::default().build();
+    let mut parser = operator.certificate_parser().get_by_name("PEM").unwrap();
+    let mut source = CHAIN;
+    let mut subjects = Vec::new();
+    while let Some(certificate) = parser.parse(&mut source).unwrap() {
+        subjects.push(certificate.subject().to_string());
+    }
+    assert_eq!(subjects, ["CN=Test CA", "CN=good", "CN=revoked"]);
+
+    let mut parser = operator.crl_parser().get_by_name("PEM").unwrap();
+    let mut source = CHAIN;
+    let crl = parser.parse(&mut source).unwrap().unwrap();
+    assert_eq!(crl.encode().unwrap(), CRL);
+    assert!(parser.parse(&mut source).unwrap().is_none());
+}
+
+#[test]
+fn the_pem_parser_reads_nothing_past_the_block_it_gives() {
+    let operator = DefaultX509OperatorBuilder::default().build();
+    let mut parser = operator.certificate_parser().get_by_name("PEM").unwrap();
+    let mut source = CHAIN;
+    parser.parse(&mut source).unwrap().unwrap();
+    let rest = std::str::from_utf8(source).unwrap();
+    assert!(rest.trim_start().starts_with("-----BEGIN X509 CRL-----"));
+}
+
+#[test]
+fn a_block_that_is_not_base64_is_an_error() {
+    let operator = DefaultX509OperatorBuilder::default().build();
+    let mut parser = operator.certificate_parser().get_by_name("PEM").unwrap();
+    let broken = b"-----BEGIN CERTIFICATE-----
+!!!!
+-----END CERTIFICATE-----
+";
+    assert!(parser.parse(&mut &broken[..]).is_err());
 }
