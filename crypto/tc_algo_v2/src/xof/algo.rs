@@ -3,6 +3,8 @@
     feature = "cshake256",
     feature = "tuplehash128",
     feature = "tuplehash256",
+    feature = "parallelhash128",
+    feature = "parallelhash256",
     feature = "ascon-cxof128",
     feature = "blake2xs",
     feature = "blake3",
@@ -15,6 +17,8 @@ mod init_xof;
     feature = "cshake256",
     feature = "tuplehash128",
     feature = "tuplehash256",
+    feature = "parallelhash128",
+    feature = "parallelhash256",
     feature = "blake2xs",
     feature = "blake3",
     feature = "ascon-xof128",
@@ -40,6 +44,8 @@ mod blake;
     feature = "cshake256",
     feature = "tuplehash128",
     feature = "tuplehash256",
+    feature = "parallelhash128",
+    feature = "parallelhash256",
 ))]
 mod keccak;
 
@@ -61,6 +67,10 @@ pub(crate) const BUILT_IN: &[CreateRows] = &[
     keccak::tuplehash128,
     #[cfg(feature = "tuplehash256")]
     keccak::tuplehash256,
+    #[cfg(feature = "parallelhash128")]
+    keccak::parallelhash128,
+    #[cfg(feature = "parallelhash256")]
+    keccak::parallelhash256,
     #[cfg(feature = "blake2xs")]
     blake::blake2xs,
     #[cfg(feature = "blake3")]

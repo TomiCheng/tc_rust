@@ -21,8 +21,8 @@ rows it turns on, and a name it did not turn on is an error, not a fallback.
   SM3, GOST R 34.11, DSTU 7564, Tiger, Whirlpool, Ascon, Skein, Haraka, PHOTON-Beetle, ESCH,
   Xoodyak and `NONE`, each name behind a feature of its own, such as `sha256` or `blake2b-512`;
   see [Digest](docs/Digest.md)
-- XOF: SHAKE, cSHAKE, TupleHash, BLAKE2xs, BLAKE3, Ascon-XOF and Ascon-CXOF, each behind a
-  feature of its own; see [XOF](docs/Xof.md)
+- XOF: SHAKE, cSHAKE, TupleHash, ParallelHash, BLAKE2xs, BLAKE3, Ascon-XOF and Ascon-CXOF, each
+  behind a feature of its own; see [XOF](docs/Xof.md)
 - MAC: `HMAC-SHA256` (`hmac-sha256`)
 - Cipher
   - AES in ECB, CBC, CFB, OFB and GCM (`aes`)

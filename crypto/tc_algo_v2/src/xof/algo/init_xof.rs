@@ -62,7 +62,13 @@ impl<D: tc_digest::Xof, P: 'static> Xof for InitXof<D, P> {
 }
 
 // The error init gives for params the XOF refuses
-#[cfg(any(feature = "ascon-cxof128", feature = "blake2xs", feature = "blake3"))]
+#[cfg(any(
+    feature = "parallelhash128",
+    feature = "parallelhash256",
+    feature = "ascon-cxof128",
+    feature = "blake2xs",
+    feature = "blake3",
+))]
 pub(super) fn invalid() -> AlgoError {
     AlgoError::new(ErrorKind::InvalidParams)
 }

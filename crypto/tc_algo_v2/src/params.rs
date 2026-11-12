@@ -11,6 +11,8 @@ mod drbg_params;
 #[cfg(feature = "ies")]
 mod ies_dh_params;
 mod key_length;
+#[cfg(any(feature = "parallelhash128", feature = "parallelhash256"))]
+mod parallel_hash_params;
 #[cfg(feature = "rsa")]
 mod rsa_key_gen_params;
 #[cfg(any(feature = "tuplehash128", feature = "tuplehash256"))]
@@ -40,6 +42,8 @@ pub use drbg_params::DrbgParams;
 #[cfg(feature = "ies")]
 pub use ies_dh_params::IesDhParams;
 pub use key_length::KeyLength;
+#[cfg(any(feature = "parallelhash128", feature = "parallelhash256"))]
+pub use parallel_hash_params::ParallelHashParams;
 #[cfg(feature = "rsa")]
 pub use rsa_key_gen_params::RsaKeyGenParams;
 #[cfg(feature = "aes")]

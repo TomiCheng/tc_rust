@@ -39,6 +39,8 @@ fn main() -> Result<(), AlgoError> {
 | `CSHAKE256` |  |  | `cshake256` | `CShakeParams` |  |
 | `TUPLEHASH128` |  |  | `tuplehash128` | `TupleHashParams` | each update is one element |
 | `TUPLEHASH256` |  |  | `tuplehash256` | `TupleHashParams` | each update is one element |
+| `PARALLELHASH128` |  |  | `parallelhash128` | `ParallelHashParams` | blocks of 8192 bytes by default |
+| `PARALLELHASH256` |  |  | `parallelhash256` | `ParallelHashParams` | blocks of 8192 bytes by default |
 | `BLAKE2XS` |  |  | `blake2xs` | `Blake2xsParams` | output length not set in advance |
 | `BLAKE3` |  |  | `blake3` | `Blake3Params` |  |
 | `ASCON-XOF128` |  |  | `ascon-xof128` |  |  |
@@ -63,13 +65,16 @@ helpers ending in `_with` call `init` first, and the others do not call it.
 - `CShakeParams`: the function name N and the customization string S of SP 800-185. Both empty
   is SHAKE.
 - `TupleHashParams`: the customization string S of SP 800-185.
+- `ParallelHashParams`: the block size B in bytes, more than 0, and the customization string S
+  of SP 800-185. SP 800-185 has no default B, and B is part of what is hashed: without `init`,
+  ParallelHash runs with blocks of 8192 bytes, a choice of this crate, so another
+  implementation gives the same output only when given that block size too.
 - `AsconCXofParams`: the customization string Z of SP 800-232, at most 256 bytes.
 - `Blake2xsParams`: a key of at most 32 bytes, a salt of 8 and a personalization of 8, each
   optional.
 - `Blake3Params`: `keyed` with a 32-byte key, for the keyed hash, or `derive_key` with a context
   string, for key derivation, after Bouncy Castle's `Blake3Parameters`.
 
-ParallelHash is not a row yet: its block size has no default to run with before `init`.
 
 ## Using it
 

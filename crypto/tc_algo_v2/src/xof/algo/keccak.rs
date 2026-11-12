@@ -6,15 +6,19 @@ use tc_keccak::ShakeDigest;
     feature = "cshake256",
     feature = "tuplehash128",
     feature = "tuplehash256",
+    feature = "parallelhash128",
+    feature = "parallelhash256",
 ))]
 use super::init_xof::InitXof;
+#[cfg(any(feature = "parallelhash128", feature = "parallelhash256"))]
+use super::init_xof::invalid;
 #[cfg(any(feature = "shake128", feature = "shake256"))]
 use super::row::TcXof;
 use super::row::row;
 use crate::DefaultAlgoContext;
 use crate::xof::XofEntry;
 
-// The rows of SHAKE, cSHAKE and TupleHash, to give to DefaultAlgoBuilder::reg_xof. SHAKE is named
+// The rows of SHAKE, cSHAKE, TupleHash and ParallelHash, to give to DefaultAlgoBuilder::reg_xof. SHAKE is named
 // as Bouncy Castle's DigestUtilities names it; the others after their XOFs, with no alias or OID
 
 #[cfg(feature = "shake128")]
@@ -91,6 +95,52 @@ pub(super) fn tuplehash256(_context: &DefaultAlgoContext) -> Vec<Box<dyn XofEntr
             tc_keccak::TupleHash::new(256, b""),
             |params: &crate::params::TupleHashParams| {
                 Ok(tc_keccak::TupleHash::new(256, params.customization()))
+            },
+        ))
+    })
+}
+
+// ParallelHash with blocks of 8192 bytes and an empty customization until init sets them. SP 800-185
+// has no default block size: 8192 is this crate's, the chunk size of KangarooTwelve, and another
+// implementation agrees only when given the same block size
+#[cfg(any(feature = "parallelhash128", feature = "parallelhash256"))]
+const DEFAULT_BLOCK_SIZE: usize = 8192;
+
+#[cfg(feature = "parallelhash128")]
+pub(super) fn parallelhash128(_context: &DefaultAlgoContext) -> Vec<Box<dyn XofEntry>> {
+    row("PARALLELHASH128", &[], &[], || {
+        Box::new(InitXof::new(
+            tc_keccak::ParallelHash::new(128, b"", DEFAULT_BLOCK_SIZE),
+            |params: &crate::params::ParallelHashParams| {
+                // tc_keccak panics on blocks of 0 bytes
+                if params.block_size() == 0 {
+                    return Err(invalid());
+                }
+                Ok(tc_keccak::ParallelHash::new(
+                    128,
+                    params.customization(),
+                    params.block_size(),
+                ))
+            },
+        ))
+    })
+}
+
+#[cfg(feature = "parallelhash256")]
+pub(super) fn parallelhash256(_context: &DefaultAlgoContext) -> Vec<Box<dyn XofEntry>> {
+    row("PARALLELHASH256", &[], &[], || {
+        Box::new(InitXof::new(
+            tc_keccak::ParallelHash::new(256, b"", DEFAULT_BLOCK_SIZE),
+            |params: &crate::params::ParallelHashParams| {
+                // tc_keccak panics on blocks of 0 bytes
+                if params.block_size() == 0 {
+                    return Err(invalid());
+                }
+                Ok(tc_keccak::ParallelHash::new(
+                    256,
+                    params.customization(),
+                    params.block_size(),
+                ))
             },
         ))
     })
@@ -264,6 +314,8 @@ mod shake128_tests {
         feature = "cshake256",
         feature = "tuplehash128",
         feature = "tuplehash256",
+        feature = "parallelhash128",
+        feature = "parallelhash256",
     )
 ))]
 mod init_tests {
@@ -381,5 +433,51 @@ mod init_tests {
             )
         );
         assert_ne!(two, output(tuple_hash.as_mut(), &[b"abc"]));
+    }
+
+    #[cfg(feature = "parallelhash128")]
+    #[test]
+    fn parallelhash_runs_with_8192_byte_blocks_until_init_sets_them() {
+        use crate::ErrorKind;
+        use crate::params::ParallelHashParams;
+
+        let message = vec![7; 20000];
+        let mut parallel_hash = xof("PARALLELHASH128");
+        assert_eq!(
+            output(parallel_hash.as_mut(), &[&message]),
+            direct(tc_keccak::ParallelHash::new(128, b"", 8192), &[&message])
+        );
+
+        let params = ParallelHashParams::new(8).with_customization(b"Parallel Data".to_vec());
+        parallel_hash.init(&params).unwrap();
+        assert_eq!(
+            output(parallel_hash.as_mut(), &[&message]),
+            direct(
+                tc_keccak::ParallelHash::new(128, b"Parallel Data", 8),
+                &[&message]
+            )
+        );
+
+        let error = parallel_hash.init(&ParallelHashParams::new(0)).unwrap_err();
+        assert_eq!(error.kind(), ErrorKind::InvalidParams);
+    }
+
+    #[cfg(feature = "parallelhash256")]
+    #[test]
+    fn parallelhash256_takes_its_block_size_from_init() {
+        use crate::params::ParallelHashParams;
+
+        let mut parallel_hash = xof("PARALLELHASH256");
+        parallel_hash.init(&ParallelHashParams::new(16)).unwrap();
+        assert_eq!(
+            output(
+                parallel_hash.as_mut(),
+                &[b"abc", b"defghijklmnopqrstuvwxyz"]
+            ),
+            direct(
+                tc_keccak::ParallelHash::new(256, b"", 16),
+                &[b"abcdefghijklmnopqrstuvwxyz"]
+            )
+        );
     }
 }
