@@ -77,6 +77,9 @@ fn main() -> Result<(), AlgoError> {
 
 The case of the name does not matter. The output is the length of the message plus 20 bytes of tag.
 
+Bouncy Castle's `CipherUtilities` also has `ECIES`: the same parts, with ECDH for the agreement.
+It is not a row yet, since `tc_algo` has no EC keys to give it.
+
 The name and parts are those of Bouncy Castle's `CipherUtilities`, but there is no behaviour of its
 to compare with: the `Init` of its `BufferedIesCipher` throws `NotImplementedException`. This row
 follows that class, and gives the same output as `IesEngine` of `tc_ies` over the same parts.

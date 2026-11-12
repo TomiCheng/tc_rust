@@ -37,6 +37,22 @@ fn main() -> Result<(), AlgoError> {
 }
 ```
 
+## Algorithms
+
+| Name | Aliases | OIDs | Feature | Params |
+|---|---|---|---|---|
+| `AES/ECB/NOPADDING` |  |  | `aes` | `KeyOwned` |
+| `AES/ECB/PKCS7PADDING` | `AES/ECB/PKCS7`, `AES/ECB/PKCS5PADDING`, `AES/ECB/PKCS5` | `2.16.840.1.101.3.4.1.1`, `.21`, `.41` | `aes` | `KeyOwned` |
+| `AES/CBC/NOPADDING` |  |  | `aes` | `KeyWithIvOwned` |
+| `AES/CBC/PKCS7PADDING` | `AES/CBC/PKCS7`, `AES/CBC/PKCS5PADDING`, `AES/CBC/PKCS5` | `2.16.840.1.101.3.4.1.2`, `.22`, `.42` | `aes` | `KeyWithIvOwned` |
+| `AES/CFB/NOPADDING` |  | `2.16.840.1.101.3.4.1.4`, `.24`, `.44` | `aes` | `KeyWithIvOwned` |
+| `AES/OFB/NOPADDING` |  | `2.16.840.1.101.3.4.1.3`, `.23`, `.43` | `aes` | `KeyWithIvOwned` |
+
+A name is `ALGORITHM/MODE/PADDING`, after Bouncy Castle's `CipherUtilities`, and its case does not
+matter. The OIDs are NIST's for AES-128, AES-192 and AES-256 in each mode; as in Bouncy Castle,
+those of ECB and CBC mean PKCS#7 padding. All three find the same row, so the length of the key
+comes from the params.
+
 ## Params
 
 Each kind of row takes the type of its mode, and any other type is `InvalidParams`:
@@ -76,3 +92,14 @@ Both come from the crates underneath and wipe themselves when dropped.
 
 CBC does not detect a changed ciphertext, and the padding check can reveal the plaintext to whoever
 can see it fail. Authenticate the ciphertext before decrypting it, or use an AEAD mode.
+
+## Using it
+
+- `encrypt_by_name` and `decrypt_by_name` take the whole message at once and give the whole
+  result; `by_oid` does the same by OID.
+- For a message in parts, `get_by_name` gives a `Cipher`: `init` with the direction and the
+  params, then `update` for each part, then `finalize`. `output_len` tells how large a buffer the
+  next call needs, for `process_bytes` and `do_final`.
+- With no padding, ECB and CBC take whole blocks only: a message of another length is
+  `DataLength` from `finalize`. CFB and OFB take any length.
+- `reset` starts over with the same key and IV.

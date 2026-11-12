@@ -24,11 +24,13 @@ rows it turns on, and a name it did not turn on is an error, not a fallback.
 - XOF: SHAKE, cSHAKE, TupleHash, ParallelHash, BLAKE2xs, BLAKE3, Ascon-XOF and Ascon-CXOF, each
   behind a feature of its own; see [XOF](docs/Xof.md)
 - MAC: `HMAC-SHA256` (`hmac-sha256`)
-- Cipher
-  - AES in ECB, CBC, CFB, OFB and GCM (`aes`)
-  - `CHACHA7539` (`chacha`)
-  - RSA raw, PKCS#1 v1.5 and OAEP (`rsa`)
-  - `IES` (`ies`)
+- Ciphers, all from `algo.cipher()`:
+  - Block cipher: AES in ECB, CBC, CFB and OFB (`aes`); see [Block ciphers](docs/BlockCipher.md)
+  - Stream cipher: `CHACHA7539` (`chacha`); see [Stream ciphers](docs/StreamCipher.md)
+  - AEAD cipher: AES in GCM (`aes`); see [AEAD ciphers](docs/AeadCipher.md)
+  - IES: `IES` (`ies`); see [IES](docs/IES.md)
+  - Asymmetric cipher: RSA raw, PKCS#1 v1.5 and OAEP (`rsa`); see
+    [Asymmetric ciphers](docs/AsymCipher.md)
 - Key wrap: `AESWRAP` (`aes-wrap`)
 - Key generation: `AES128`, `AES192`, `AES256`, `KEY` (`aes`); key pairs `RSA` (`rsa`), `DH`
   (`dh`), `ML-KEM` (`ml-kem`)
@@ -41,6 +43,5 @@ rows it turns on, and a name it did not turn on is an error, not a fallback.
 
 ## More
 
-- [Cipher](docs/Cipher.md): names, params, and encrypting with a cipher
 - [Digest](docs/Digest.md): names, OIDs, and hashing at once or in parts
 - [Key generation](docs/KeyGeneration.md): secret keys and key pairs
