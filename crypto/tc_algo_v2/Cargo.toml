@@ -42,6 +42,40 @@ dstu7564-384 = ["dep:tc_dstu7564", "dep:tc_digest"]
 dstu7564-512 = ["dep:tc_dstu7564", "dep:tc_digest"]
 tiger = ["dep:tc_misc_digest", "dep:tc_digest", "tc_misc_digest/tiger"]
 whirlpool = ["dep:tc_misc_digest", "dep:tc_digest", "tc_misc_digest/whirlpool"]
+keccak-224 = ["dep:tc_keccak", "dep:tc_digest"]
+keccak-256 = ["dep:tc_keccak", "dep:tc_digest"]
+keccak-288 = ["dep:tc_keccak", "dep:tc_digest"]
+keccak-384 = ["dep:tc_keccak", "dep:tc_digest"]
+keccak-512 = ["dep:tc_keccak", "dep:tc_digest"]
+sha3-224 = ["dep:tc_keccak", "dep:tc_digest"]
+sha3-256 = ["dep:tc_keccak", "dep:tc_digest"]
+sha3-384 = ["dep:tc_keccak", "dep:tc_digest"]
+sha3-512 = ["dep:tc_keccak", "dep:tc_digest"]
+shake128-256 = ["dep:tc_keccak", "dep:tc_digest"]
+shake256-512 = ["dep:tc_keccak", "dep:tc_digest"]
+ascon-hash256 = ["dep:tc_ascon_hash", "dep:tc_digest"]
+ascon-hash = ["dep:tc_ascon_hash", "dep:tc_digest", "tc_ascon_hash/legacy"]
+ascon-hasha = ["dep:tc_ascon_hash", "dep:tc_digest", "tc_ascon_hash/legacy"]
+isap = ["dep:tc_ascon_hash", "dep:tc_digest", "tc_ascon_hash/legacy"]
+skein-256-128 = ["dep:tc_skein", "dep:tc_digest"]
+skein-256-160 = ["dep:tc_skein", "dep:tc_digest"]
+skein-256-224 = ["dep:tc_skein", "dep:tc_digest"]
+skein-256-256 = ["dep:tc_skein", "dep:tc_digest"]
+skein-512-128 = ["dep:tc_skein", "dep:tc_digest"]
+skein-512-160 = ["dep:tc_skein", "dep:tc_digest"]
+skein-512-224 = ["dep:tc_skein", "dep:tc_digest"]
+skein-512-256 = ["dep:tc_skein", "dep:tc_digest"]
+skein-512-384 = ["dep:tc_skein", "dep:tc_digest"]
+skein-512-512 = ["dep:tc_skein", "dep:tc_digest"]
+skein-1024-384 = ["dep:tc_skein", "dep:tc_digest"]
+skein-1024-512 = ["dep:tc_skein", "dep:tc_digest"]
+skein-1024-1024 = ["dep:tc_skein", "dep:tc_digest"]
+photon-beetle = ["dep:tc_misc_digest", "dep:tc_digest", "tc_misc_digest/photon-beetle"]
+esch-256 = ["dep:tc_misc_digest", "dep:tc_digest", "tc_misc_digest/sparkle"]
+esch-384 = ["dep:tc_misc_digest", "dep:tc_digest", "tc_misc_digest/sparkle"]
+xoodyak = ["dep:tc_misc_digest", "dep:tc_digest", "tc_misc_digest/xoodyak"]
+haraka-256 = ["dep:tc_misc_digest", "dep:tc_digest", "tc_misc_digest/haraka"]
+haraka-512 = ["dep:tc_misc_digest", "dep:tc_digest", "tc_misc_digest/haraka"]
 null-digest = ["dep:tc_digest", "tc_digest/alloc"]
 
 # XOF
@@ -96,6 +130,7 @@ tc_zeroize = { version = "0.1.0", features = ["alloc"] }
 tc_digest = { version = "0.1.1", optional = true }
 
 # Digest
+tc_ascon_hash = { version = "0.1.0", optional = true }
 tc_blake = { version = "0.1.0", optional = true }
 tc_dstu7564 = { version = "0.1.0", optional = true }
 tc_gost3411 = { version = "0.1.0", optional = true }
@@ -103,6 +138,7 @@ tc_md = { version = "0.1.1", optional = true }
 tc_misc_digest = { version = "0.1.0", optional = true }
 tc_ripemd = { version = "0.1.0", optional = true }
 tc_sha = { version = "0.1.1", optional = true }
+tc_skein = { version = "0.1.0", optional = true }
 tc_sm3 = { version = "0.1.0", optional = true }
 
 # XOF
