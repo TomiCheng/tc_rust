@@ -353,7 +353,8 @@ mod tests {
         feature = "sha384",
         feature = "sha512",
         feature = "sha512-224",
-        feature = "sha512-256"
+        feature = "sha512-256",
+        feature = "null-digest"
     )))]
     #[test]
     fn a_new_builder_has_no_digest_when_no_feature_is_on() {

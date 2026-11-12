@@ -8,6 +8,8 @@
     feature = "sha512-256"
 ))]
 mod sha;
+#[cfg(feature = "null-digest")]
+mod null;
 
 use super::DigestEntry;
 
@@ -29,4 +31,6 @@ pub(crate) const BUILT_IN: &[CreateRows] = &[
     sha::sha512_224,
     #[cfg(feature = "sha512-256")]
     sha::sha512_256,
+    #[cfg(feature = "null-digest")]
+    null::null_digest,
 ];
