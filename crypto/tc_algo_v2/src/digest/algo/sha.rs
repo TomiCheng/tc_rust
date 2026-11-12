@@ -1,7 +1,6 @@
-use tc_asn1::Asn1Oid;
-
-use crate::digest::{Digest, DigestEntry};
-use crate::{AlgoError, DefaultAlgoContext, EntryBase, ErrorKind};
+use super::row::{TcDigest, row};
+use crate::DefaultAlgoContext;
+use crate::digest::DigestEntry;
 
 // The rows of SHA-1 and SHA-2, to give to DefaultAlgoBuilder::reg_digest. Their names and OIDs
 // are those of Bouncy Castle's DigestUtilities, the HMAC OIDs included
@@ -12,7 +11,7 @@ pub(super) fn sha1(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>> {
         "SHA-1",
         &["SHA1"],
         &["1.3.14.3.2.26", "1.2.840.113549.2.7", "1.3.6.1.5.5.8.1.2"],
-        || Box::new(Sha(tc_sha::Sha1Digest::new())),
+        || Box::new(TcDigest(tc_sha::Sha1Digest::new())),
     )
 }
 
@@ -22,7 +21,7 @@ pub(super) fn sha224(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>>
         "SHA-224",
         &["SHA224"],
         &["2.16.840.1.101.3.4.2.4", "1.2.840.113549.2.8"],
-        || Box::new(Sha(tc_sha::Sha224Digest::new())),
+        || Box::new(TcDigest(tc_sha::Sha224Digest::new())),
     )
 }
 
@@ -32,7 +31,7 @@ pub(super) fn sha256(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>>
         "SHA-256",
         &["SHA256"],
         &["2.16.840.1.101.3.4.2.1", "1.2.840.113549.2.9"],
-        || Box::new(Sha(tc_sha::Sha256Digest::new())),
+        || Box::new(TcDigest(tc_sha::Sha256Digest::new())),
     )
 }
 
@@ -42,7 +41,7 @@ pub(super) fn sha384(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>>
         "SHA-384",
         &["SHA384"],
         &["2.16.840.1.101.3.4.2.2", "1.2.840.113549.2.10"],
-        || Box::new(Sha(tc_sha::Sha384Digest::new())),
+        || Box::new(TcDigest(tc_sha::Sha384Digest::new())),
     )
 }
 
@@ -52,7 +51,7 @@ pub(super) fn sha512(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>>
         "SHA-512",
         &["SHA512"],
         &["2.16.840.1.101.3.4.2.3", "1.2.840.113549.2.11"],
-        || Box::new(Sha(tc_sha::Sha512Digest::new())),
+        || Box::new(TcDigest(tc_sha::Sha512Digest::new())),
     )
 }
 
@@ -62,7 +61,7 @@ pub(super) fn sha512_224(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEnt
         "SHA-512/224",
         &["SHA512/224", "SHA512-224", "SHA512(224)", "SHA-512(224)"],
         &["2.16.840.1.101.3.4.2.5", "1.2.840.113549.2.12"],
-        || Box::new(Sha(tc_sha::Sha512tDigest::new(224))),
+        || Box::new(TcDigest(tc_sha::Sha512tDigest::new(224))),
     )
 }
 
@@ -72,83 +71,14 @@ pub(super) fn sha512_256(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEnt
         "SHA-512/256",
         &["SHA512/256", "SHA512-256", "SHA512(256)", "SHA-512(256)"],
         &["2.16.840.1.101.3.4.2.6", "1.2.840.113549.2.13"],
-        || Box::new(Sha(tc_sha::Sha512tDigest::new(256))),
+        || Box::new(TcDigest(tc_sha::Sha512tDigest::new(256))),
     )
-}
-
-fn row(
-    name: &'static str,
-    aliases: &[&str],
-    oids: &[&str],
-    create: fn() -> Box<dyn Digest>,
-) -> Vec<Box<dyn DigestEntry>> {
-    vec![Box::new(ShaEntry {
-        name,
-        aliases: aliases.iter().map(|alias| alias.to_string()).collect(),
-        oids: oids.iter().map(|oid| oid.parse().expect("a valid OID")).collect(),
-        create,
-    })]
-}
-
-struct ShaEntry {
-    name: &'static str,
-    aliases: Vec<String>,
-    oids: Vec<Asn1Oid>,
-    create: fn() -> Box<dyn Digest>,
-}
-
-impl EntryBase for ShaEntry {
-    fn name(&self) -> &str {
-        self.name
-    }
-
-    fn aliases(&self) -> &[String] {
-        &self.aliases
-    }
-
-    fn oids(&self) -> &[Asn1Oid] {
-        &self.oids
-    }
-}
-
-impl DigestEntry for ShaEntry {
-    fn create(&self) -> Box<dyn Digest> {
-        (self.create)()
-    }
-}
-
-struct Sha<D>(D);
-
-impl<D: tc_digest::Digest> Digest for Sha<D> {
-    fn digest_size(&self) -> usize {
-        self.0.digest_size()
-    }
-
-    fn byte_length(&self) -> usize {
-        self.0.byte_length()
-    }
-
-    fn update(&mut self, input: &[u8]) {
-        self.0.update(input);
-    }
-
-    // tc_digest panics on a short output, so the length is checked here first
-    fn do_final(&mut self, output: &mut [u8]) -> Result<usize, AlgoError> {
-        if output.len() < self.digest_size() {
-            return Err(AlgoError::new(ErrorKind::DataLength));
-        }
-        Ok(self.0.do_final(output))
-    }
-
-    fn reset(&mut self) {
-        self.0.reset();
-    }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::digest::DigestEntry;
     use crate::DefaultAlgoContext;
+    use crate::digest::DigestEntry;
 
     fn hex(bytes: &[u8]) -> String {
         bytes.iter().map(|byte| format!("{byte:02x}")).collect()
@@ -169,8 +99,8 @@ mod tests {
     mod sha256 {
         use super::super::sha256;
         use super::{context, hex};
-        use crate::digest::DigestEntry;
         use crate::ErrorKind;
+        use crate::digest::DigestEntry;
 
         fn row() -> Box<dyn DigestEntry> {
             sha256(&context()).remove(0)

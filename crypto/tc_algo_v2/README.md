@@ -18,8 +18,8 @@ rows it turns on, and a name it did not turn on is an error, not a fallback.
 ## Supported algorithms
 
 - Digest: `SHA-1`, `SHA-224`, `SHA-256`, `SHA-384`, `SHA-512`, `SHA-512/224`, `SHA-512/256`
-  (`sha1`, `sha224`, `sha256`, `sha384`, `sha512`, `sha512-224`, `sha512-256`); `NONE`
-  (`null-digest`)
+  (`sha1`, `sha224`, `sha256`, `sha384`, `sha512`, `sha512-224`, `sha512-256`); `MD2`,
+  `MD4`, `MD5` (`md2`, `md4`, `md5`); `NONE` (`null-digest`)
 - XOF: `SHAKE256` (`shake256`)
 - MAC: `HMAC-SHA256` (`hmac-sha256`)
 - Cipher

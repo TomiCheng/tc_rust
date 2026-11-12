@@ -17,6 +17,9 @@ sha384 = ["dep:tc_sha", "dep:tc_digest"]
 sha512 = ["dep:tc_sha", "dep:tc_digest"]
 sha512-224 = ["dep:tc_sha", "dep:tc_digest"]
 sha512-256 = ["dep:tc_sha", "dep:tc_digest"]
+md2 = ["dep:tc_md", "dep:tc_digest"]
+md4 = ["dep:tc_md", "dep:tc_digest"]
+md5 = ["dep:tc_md", "dep:tc_digest"]
 null-digest = ["dep:tc_digest", "tc_digest/alloc"]
 
 # XOF
@@ -71,6 +74,7 @@ tc_zeroize = { version = "0.1.0", features = ["alloc"] }
 tc_digest = { version = "0.1.1", optional = true }
 
 # Digest
+tc_md = { version = "0.1.1", optional = true }
 tc_sha = { version = "0.1.1", optional = true }
 
 # XOF

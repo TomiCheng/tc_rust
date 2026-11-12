@@ -984,6 +984,7 @@ dependencies = [
  "tc_kem",
  "tc_key_wrap",
  "tc_macs",
+ "tc_md",
  "tc_ml_kem",
  "tc_pbe",
  "tc_rsa",

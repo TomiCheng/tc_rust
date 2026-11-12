@@ -5,11 +5,28 @@
     feature = "sha384",
     feature = "sha512",
     feature = "sha512-224",
-    feature = "sha512-256"
+    feature = "sha512-256",
+    feature = "md2",
+    feature = "md4",
+    feature = "md5",
+    feature = "null-digest",
 ))]
-mod sha;
+mod row;
+
+#[cfg(any(feature = "md2", feature = "md4", feature = "md5",))]
+mod md;
 #[cfg(feature = "null-digest")]
 mod null;
+#[cfg(any(
+    feature = "sha1",
+    feature = "sha224",
+    feature = "sha256",
+    feature = "sha384",
+    feature = "sha512",
+    feature = "sha512-224",
+    feature = "sha512-256",
+))]
+mod sha;
 
 use super::DigestEntry;
 
@@ -31,6 +48,12 @@ pub(crate) const BUILT_IN: &[CreateRows] = &[
     sha::sha512_224,
     #[cfg(feature = "sha512-256")]
     sha::sha512_256,
+    #[cfg(feature = "md2")]
+    md::md2,
+    #[cfg(feature = "md4")]
+    md::md4,
+    #[cfg(feature = "md5")]
+    md::md5,
     #[cfg(feature = "null-digest")]
     null::null_digest,
 ];

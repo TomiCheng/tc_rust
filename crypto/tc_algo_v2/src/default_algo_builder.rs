@@ -354,6 +354,9 @@ mod tests {
         feature = "sha512",
         feature = "sha512-224",
         feature = "sha512-256",
+        feature = "md2",
+        feature = "md4",
+        feature = "md5",
         feature = "null-digest"
     )))]
     #[test]

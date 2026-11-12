@@ -1,65 +1,13 @@
-use tc_asn1::Asn1Oid;
 use tc_digest::util::NullDigest;
-use tc_digest::{Digest as _, TryDigest as _};
 
-use crate::digest::{Digest, DigestEntry};
-use crate::{AlgoError, DefaultAlgoContext, EntryBase, ErrorKind};
+use super::row::{TcDigest, row};
+use crate::DefaultAlgoContext;
+use crate::digest::DigestEntry;
 
 // The row of NONE, Bouncy Castle's NullDigest: not a hash, it gives back what it was fed, for a
-// signer that signs a digest computed elsewhere
+// signer that signs a digest computed elsewhere. Its size is what was fed so far
 pub(super) fn null_digest(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>> {
-    vec![Box::new(NullEntry)]
-}
-
-struct NullEntry;
-
-impl EntryBase for NullEntry {
-    fn name(&self) -> &str {
-        "NONE"
-    }
-
-    fn aliases(&self) -> &[String] {
-        &[]
-    }
-
-    fn oids(&self) -> &[Asn1Oid] {
-        &[]
-    }
-}
-
-impl DigestEntry for NullEntry {
-    fn create(&self) -> Box<dyn Digest> {
-        Box::new(Null(NullDigest::new()))
-    }
-}
-
-struct Null(NullDigest);
-
-impl Digest for Null {
-    // What was fed so far, since the output is the input
-    fn digest_size(&self) -> usize {
-        self.0.digest_size()
-    }
-
-    fn byte_length(&self) -> usize {
-        self.0.byte_length()
-    }
-
-    fn update(&mut self, input: &[u8]) {
-        self.0.update(input);
-    }
-
-    // tc_digest panics on a short output, so the length is checked here first
-    fn do_final(&mut self, output: &mut [u8]) -> Result<usize, AlgoError> {
-        if output.len() < self.digest_size() {
-            return Err(AlgoError::new(ErrorKind::DataLength));
-        }
-        Ok(self.0.do_final(output))
-    }
-
-    fn reset(&mut self) {
-        self.0.reset();
-    }
+    row("NONE", &[], &[], || Box::new(TcDigest(NullDigest::new())))
 }
 
 #[cfg(test)]
@@ -115,7 +63,10 @@ mod tests {
     #[test]
     fn the_row_is_named_none_with_no_alias_or_oid() {
         let algo = DefaultAlgoBuilder::default().build();
-        assert_eq!(algo.digest().calculate_by_name("NONE", b"abc").unwrap(), b"abc");
+        assert_eq!(
+            algo.digest().calculate_by_name("NONE", b"abc").unwrap(),
+            b"abc"
+        );
 
         let entry = row();
         assert!(entry.aliases().is_empty());

@@ -1,6 +1,6 @@
 # Digest
 
-`algo.digest()` gives message digests by name or by OID: SHA-1, the SHA-2 family, and `NONE`.
+`algo.digest()` gives message digests by name or by OID: SHA-1, the SHA-2 family, MD2, MD4, MD5 and `NONE`.
 
 ```rust
 use tc_algo_v2::{AlgoBuilder, DefaultAlgoBuilder};
@@ -28,11 +28,16 @@ assert_eq!(digest.finalize(), hash);
 | `SHA-512` | `SHA512` | `2.16.840.1.101.3.4.2.3`, `1.2.840.113549.2.11` | `sha512` |  |
 | `SHA-512/224` | `SHA512/224`, `SHA512-224`, `SHA512(224)`, `SHA-512(224)` | `2.16.840.1.101.3.4.2.5`, `1.2.840.113549.2.12` | `sha512-224` |  |
 | `SHA-512/256` | `SHA512/256`, `SHA512-256`, `SHA512(256)`, `SHA-512(256)` | `2.16.840.1.101.3.4.2.6`, `1.2.840.113549.2.13` | `sha512-256` |  |
+| `MD2` |  | `1.2.840.113549.2.2` | `md2` | weak, variable time |
+| `MD4` |  | `1.2.840.113549.2.4` | `md4` | weak |
+| `MD5` |  | `1.2.840.113549.2.5` | `md5` | weak |
 | `NONE` |  |  | `null-digest` | not a hash |
 
 The OIDs after the first of each row are those of HMAC with the digest (and, for SHA-1, the
 IPsec one), which Bouncy Castle also maps to the digest; they find the digest but are not its
-OID. SHA-1 is broken for collisions and is here for old data only.
+OID. A weak digest is broken for collisions and is here for old data only. MD2 looks up a
+table by the message, so it can leak the message through cache timing: hash only public data
+with it.
 
 `NONE` is Bouncy Castle's `NullDigest`: it gives back what it was fed, for a signer given a
 digest computed elsewhere. Its size is the length fed so far.
