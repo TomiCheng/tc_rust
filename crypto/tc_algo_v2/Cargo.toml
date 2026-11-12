@@ -10,7 +10,13 @@ repository.workspace = true
 [features]
 default = []
 # Digest
+sha1 = ["dep:tc_sha", "dep:tc_digest"]
+sha224 = ["dep:tc_sha", "dep:tc_digest"]
 sha256 = ["dep:tc_sha", "dep:tc_digest"]
+sha384 = ["dep:tc_sha", "dep:tc_digest"]
+sha512 = ["dep:tc_sha", "dep:tc_digest"]
+sha512-224 = ["dep:tc_sha", "dep:tc_digest"]
+sha512-256 = ["dep:tc_sha", "dep:tc_digest"]
 
 # XOF
 shake256 = ["dep:tc_keccak", "dep:tc_digest"]

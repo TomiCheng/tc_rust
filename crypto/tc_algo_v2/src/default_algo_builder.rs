@@ -346,7 +346,15 @@ mod tests {
         assert!(rows.iter().any(|row| row.name() == "SHA-256"));
     }
 
-    #[cfg(not(feature = "sha256"))]
+    #[cfg(not(any(
+        feature = "sha1",
+        feature = "sha224",
+        feature = "sha256",
+        feature = "sha384",
+        feature = "sha512",
+        feature = "sha512-224",
+        feature = "sha512-256"
+    )))]
     #[test]
     fn a_new_builder_has_no_digest_when_no_feature_is_on() {
         assert!(DefaultAlgoBuilder::default().digests.is_empty());
