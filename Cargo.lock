@@ -2448,6 +2448,7 @@ dependencies = [
  "rand_core",
  "tc_algo_v2",
  "tc_asn1",
+ "tc_asn1_cms",
  "tc_asn1_pkcs",
  "tc_asn1_x500",
  "tc_asn1_x509",

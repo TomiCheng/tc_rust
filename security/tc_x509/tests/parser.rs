@@ -10,11 +10,12 @@ use tc_x509::{
 const CA: &[u8] = include_bytes!("data/crl/ca.der");
 const GOOD: &[u8] = include_bytes!("data/crl/good.der");
 const CRL: &[u8] = include_bytes!("data/crl/crl.der");
+const BUNDLE: &[u8] = include_bytes!("data/crl/bundle.p7b");
 
 #[test]
 fn the_operator_gives_a_der_parser_by_name_in_any_case() {
     let operator = DefaultX509OperatorBuilder::default().build();
-    assert_eq!(operator.certificate_parser().names(), ["DER"]);
+    assert_eq!(operator.certificate_parser().names(), ["DER", "PKCS7"]);
 
     let input = [CA, GOOD].concat();
     let mut source = &input[..];
@@ -74,9 +75,51 @@ fn a_registered_parser_is_found_by_its_name_beside_the_built_in_ones() {
     let mut builder = DefaultX509OperatorBuilder::default();
     builder.reg_certificate_parser(fixed_rows);
     let operator = builder.build();
-    assert_eq!(operator.certificate_parser().names(), ["FIXED", "DER"]);
+    assert_eq!(
+        operator.certificate_parser().names(),
+        ["FIXED", "DER", "PKCS7"]
+    );
 
     let mut parser = operator.certificate_parser().get_by_name("fixed").unwrap();
     assert!(parser.parse(&mut &[][..]).unwrap().is_some());
     assert!(parser.parse(&mut &[][..]).unwrap().is_none());
+}
+
+#[test]
+fn the_pkcs7_parser_gives_the_certificates_of_a_bundle_one_at_a_time() {
+    let operator = DefaultX509OperatorBuilder::default().build();
+    let mut parser = operator.certificate_parser().get_by_name("PKCS7").unwrap();
+    let mut source = BUNDLE;
+    let mut subjects = Vec::new();
+    while let Some(certificate) = parser.parse(&mut source).unwrap() {
+        subjects.push(certificate.subject().to_string());
+    }
+    assert_eq!(subjects, ["CN=Test CA", "CN=good", "CN=revoked"]);
+    assert!(source.is_empty());
+}
+
+#[test]
+fn the_same_bundle_gives_its_crls_to_a_crl_parser() {
+    let operator = DefaultX509OperatorBuilder::default().build();
+    let mut parser = operator.crl_parser().get_by_name("pkcs7").unwrap();
+    let mut source = BUNDLE;
+    let crl = parser.parse(&mut source).unwrap().unwrap();
+    assert_eq!(crl.encode().unwrap(), CRL);
+    assert!(parser.parse(&mut source).unwrap().is_none());
+
+    let mut parser = operator
+        .attribute_certificate_parser()
+        .get_by_name("PKCS7")
+        .unwrap();
+    assert!(parser.parse(&mut &BUNDLE[..]).unwrap().is_none());
+}
+
+#[test]
+fn a_der_certificate_given_to_the_pkcs7_parser_is_an_asn1_error() {
+    let operator = DefaultX509OperatorBuilder::default().build();
+    let mut parser = operator.certificate_parser().get_by_name("PKCS7").unwrap();
+    assert!(matches!(
+        parser.parse(&mut &CA[..]),
+        Err(X509Error::Asn1(_))
+    ));
 }

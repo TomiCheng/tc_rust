@@ -7,3 +7,6 @@
 - `crl/`: made with `openssl` 3. `ca.der` is a self-signed RSA 2048 CA, CN=Test CA, which issued
   `revoked.der` (CN=revoked) and `good.der` (CN=good). `crl.der` is its v2 CRL, signed with
   SHA-256withRSA, with a CRL number and one entry, `revoked.der`'s, with reason keyCompromise.
+  `bundle.p7b` is a PKCS #7 bundle of the three certificates and the CRL, made with
+  `openssl crl2pkcs7 -in crl.pem -certfile ca.pem -certfile good.pem -certfile revoked.pem
+  -outform DER`.
