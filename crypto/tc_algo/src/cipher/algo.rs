@@ -1,7 +1,13 @@
 #[cfg(feature = "aes")]
 mod aes;
+#[cfg(any(feature = "aes", feature = "des", feature = "desede"))]
+mod block;
+#[cfg(any(feature = "aes", feature = "des", feature = "desede"))]
+mod buffered;
 #[cfg(feature = "chacha")]
 mod chacha;
+#[cfg(any(feature = "des", feature = "desede"))]
+mod des;
 #[cfg(feature = "ies")]
 mod ies;
 #[cfg(feature = "rsa")]
@@ -15,6 +21,10 @@ pub(crate) type CreateRows = fn(&crate::DefaultAlgoContext) -> Vec<Box<dyn Ciphe
 pub(crate) const BUILT_IN: &[CreateRows] = &[
     #[cfg(feature = "aes")]
     aes::aes,
+    #[cfg(feature = "des")]
+    des::des,
+    #[cfg(feature = "desede")]
+    des::desede,
     #[cfg(feature = "chacha")]
     chacha::chacha,
     #[cfg(feature = "rsa")]

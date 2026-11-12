@@ -420,7 +420,14 @@ mod tests {
         assert!(DefaultAlgoBuilder::default().digests.is_empty());
     }
 
-    #[cfg(not(any(feature = "aes", feature = "chacha", feature = "rsa", feature = "ies")))]
+    #[cfg(not(any(
+        feature = "aes",
+        feature = "des",
+        feature = "desede",
+        feature = "chacha",
+        feature = "rsa",
+        feature = "ies"
+    )))]
     #[test]
     fn a_new_builder_has_no_cipher_when_no_feature_is_on() {
         assert!(DefaultAlgoBuilder::default().ciphers.is_empty());

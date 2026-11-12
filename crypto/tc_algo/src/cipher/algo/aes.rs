@@ -6,96 +6,72 @@ use tc_aead_cipher::{
 use tc_aes::AesEngine;
 use tc_asn1::Asn1Oid;
 use tc_block_cipher::CipherDirection as BlockDirection;
-use tc_block_modes::{CbcBlockCipher, CfbBlockCipher, EcbBlockCipher, OfbBlockCipher};
-use tc_buffered_cipher::{
-    BufferedBlockCipher, BufferedCipher, BufferedCipherInit, BufferedError,
-    CipherDirection as BufferedDirection, PaddedBufferedBlockCipher,
-};
 
+use super::block::{Mode, Padding, Rand, block_cipher, block_rows};
+use super::buffered::{downcast, invalid_params};
 use crate::cipher::{Cipher, CipherDirection, CipherEntry};
-use crate::params::{IvParams, KeyOwned, KeyWithIvOwned};
 use crate::{AlgoError, DefaultAlgoContext, EntryBase, ErrorKind, Params};
 
-// The rows of AES, to give to DefaultAlgoBuilder::reg_cipher. Their names and OIDs are those of
-// Bouncy Castle's CipherUtilities, where the NIST ECB and CBC OIDs mean those modes with PKCS#7
-pub(super) fn aes(_context: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>> {
-    vec![
-        row("AES/ECB/NOPADDING", &[], &[], || {
-            Box::new(Ecb(Buffered(BufferedBlockCipher::new(ecb()))))
-        }),
-        row(
-            "AES/ECB/PKCS7PADDING",
-            &["AES/ECB/PKCS7", "AES/ECB/PKCS5PADDING", "AES/ECB/PKCS5"],
-            &[
-                "2.16.840.1.101.3.4.1.1",
-                "2.16.840.1.101.3.4.1.21",
-                "2.16.840.1.101.3.4.1.41",
-            ],
-            || Box::new(Ecb(Buffered(PaddedBufferedBlockCipher::new(ecb())))),
-        ),
-        row("AES/CBC/NOPADDING", &[], &[], || {
-            Box::new(Buffered(BufferedBlockCipher::new(cbc())))
-        }),
-        row(
-            "AES/CBC/PKCS7PADDING",
-            &["AES/CBC/PKCS7", "AES/CBC/PKCS5PADDING", "AES/CBC/PKCS5"],
-            &[
-                "2.16.840.1.101.3.4.1.2",
-                "2.16.840.1.101.3.4.1.22",
-                "2.16.840.1.101.3.4.1.42",
-            ],
-            || Box::new(Buffered(PaddedBufferedBlockCipher::new(cbc()))),
-        ),
-        row(
-            "AES/CFB/NOPADDING",
-            &[],
-            &[
-                "2.16.840.1.101.3.4.1.4",
-                "2.16.840.1.101.3.4.1.24",
-                "2.16.840.1.101.3.4.1.44",
-            ],
-            || Box::new(Buffered(BufferedBlockCipher::new(cfb()))),
-        ),
-        row(
-            "AES/OFB/NOPADDING",
-            &[],
-            &[
-                "2.16.840.1.101.3.4.1.3",
-                "2.16.840.1.101.3.4.1.23",
-                "2.16.840.1.101.3.4.1.43",
-            ],
-            || Box::new(Buffered(BufferedBlockCipher::new(ofb()))),
-        ),
-        row(
-            "AES/GCM/NOPADDING",
-            &[],
-            &[
-                "2.16.840.1.101.3.4.1.6",
-                "2.16.840.1.101.3.4.1.26",
-                "2.16.840.1.101.3.4.1.46",
-            ],
-            || Box::new(Gcm(GcmBlockCipher::new(AesEngine::new()))),
-        ),
-    ]
+// The rows of AES, to give to DefaultAlgoBuilder::reg_cipher: each mode with each padding it takes,
+// then GCM. Their names and OIDs are those of Bouncy Castle's CipherUtilities, where the NIST ECB and
+// CBC OIDs mean those modes with PKCS#7, and the CFB and OFB ones those with none
+pub(super) fn aes(context: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>> {
+    let rand: Rand = context.rand();
+    let mut rows = block_rows(
+        &["AES"],
+        block_cipher!(AesEngine::new()),
+        rand,
+        &[
+            (
+                Mode::Ecb,
+                Padding::Pkcs7,
+                &[
+                    "2.16.840.1.101.3.4.1.1",
+                    "2.16.840.1.101.3.4.1.21",
+                    "2.16.840.1.101.3.4.1.41",
+                ],
+            ),
+            (
+                Mode::Cbc,
+                Padding::Pkcs7,
+                &[
+                    "2.16.840.1.101.3.4.1.2",
+                    "2.16.840.1.101.3.4.1.22",
+                    "2.16.840.1.101.3.4.1.42",
+                ],
+            ),
+            (
+                Mode::Cfb,
+                Padding::None,
+                &[
+                    "2.16.840.1.101.3.4.1.4",
+                    "2.16.840.1.101.3.4.1.24",
+                    "2.16.840.1.101.3.4.1.44",
+                ],
+            ),
+            (
+                Mode::Ofb,
+                Padding::None,
+                &[
+                    "2.16.840.1.101.3.4.1.3",
+                    "2.16.840.1.101.3.4.1.23",
+                    "2.16.840.1.101.3.4.1.43",
+                ],
+            ),
+        ],
+    );
+    rows.push(row(
+        "AES/GCM/NOPADDING",
+        &[],
+        &[
+            "2.16.840.1.101.3.4.1.6",
+            "2.16.840.1.101.3.4.1.26",
+            "2.16.840.1.101.3.4.1.46",
+        ],
+        || Box::new(Gcm(GcmBlockCipher::new(AesEngine::new()))),
+    ));
+    rows
 }
-
-fn ecb() -> EcbBlockCipher<AesEngine> {
-    EcbBlockCipher::new(AesEngine::new())
-}
-
-fn cbc() -> CbcBlockCipher<AesEngine> {
-    CbcBlockCipher::new(AesEngine::new())
-}
-
-fn cfb() -> CfbBlockCipher<AesEngine> {
-    CfbBlockCipher::new(AesEngine::new(), BLOCK_BYTES * 8)
-}
-
-fn ofb() -> OfbBlockCipher<AesEngine> {
-    OfbBlockCipher::new(AesEngine::new(), BLOCK_BYTES * 8)
-}
-
-const BLOCK_BYTES: usize = 16;
 
 fn row(
     name: &'static str,
@@ -142,94 +118,6 @@ impl CipherEntry for Row {
     }
 }
 
-// Puts a buffered cipher, whatever its padding, behind Cipher. Its params are a KeyWithIvOwned.
-// Unlike Bouncy Castle, a short IV is refused: padded with zeros, it could repeat a keystream
-// without anyone noticing
-struct Buffered<C>(C);
-
-impl<C, E, I> Cipher for Buffered<C>
-where
-    C: BufferedCipher<Error = BufferedError<E>> + BufferedCipherInit<KeyWithIvOwned, Error = I>,
-    E: Error + Send + Sync + 'static,
-    I: Error + Send + Sync + 'static,
-{
-    fn init(&mut self, direction: CipherDirection, params: &dyn Params) -> Result<(), AlgoError> {
-        let params = downcast::<KeyWithIvOwned>(params)?;
-        if params.iv().len() != BLOCK_BYTES {
-            return Err(AlgoError::new(ErrorKind::InvalidParams));
-        }
-        self.0
-            .init(buffered_direction(direction), params)
-            .map_err(invalid_params)
-    }
-
-    fn block_size(&self) -> usize {
-        self.0.block_size()
-    }
-
-    fn update_output_len(&self, input_len: usize) -> Result<usize, AlgoError> {
-        self.0.update_output_len(input_len).map_err(algo_error)
-    }
-
-    fn output_len(&self, input_len: usize) -> Result<usize, AlgoError> {
-        self.0.output_len(input_len).map_err(algo_error)
-    }
-
-    fn process_bytes(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, AlgoError> {
-        self.0.process_bytes(input, output).map_err(algo_error)
-    }
-
-    fn do_final(&mut self, output: &mut [u8]) -> Result<usize, AlgoError> {
-        self.0.do_final(output).map_err(algo_error)
-    }
-
-    fn reset(&mut self) {
-        self.0.reset();
-    }
-}
-
-// ECB has no IV, so its params are a KeyOwned
-struct Ecb<C>(Buffered<C>);
-
-impl<C, I> Cipher for Ecb<C>
-where
-    Buffered<C>: Cipher,
-    C: BufferedCipherInit<KeyOwned, Error = I>,
-    I: Error + Send + Sync + 'static,
-{
-    fn init(&mut self, direction: CipherDirection, params: &dyn Params) -> Result<(), AlgoError> {
-        let params = downcast::<KeyOwned>(params)?;
-        self.0
-            .0
-            .init(buffered_direction(direction), params)
-            .map_err(invalid_params)
-    }
-
-    fn block_size(&self) -> usize {
-        self.0.block_size()
-    }
-
-    fn update_output_len(&self, input_len: usize) -> Result<usize, AlgoError> {
-        self.0.update_output_len(input_len)
-    }
-
-    fn output_len(&self, input_len: usize) -> Result<usize, AlgoError> {
-        self.0.output_len(input_len)
-    }
-
-    fn process_bytes(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, AlgoError> {
-        self.0.process_bytes(input, output)
-    }
-
-    fn do_final(&mut self, output: &mut [u8]) -> Result<usize, AlgoError> {
-        self.0.do_final(output)
-    }
-
-    fn reset(&mut self) {
-        self.0.reset();
-    }
-}
-
 // Its params are an AeadParamsOwned. Encryption ends with the tag, and decryption expects it at
 // the end of the input. As in Bouncy Castle, update may give plaintext before finalize has checked
 // the tag, so a caller that uses update has to discard it when finalize fails
@@ -268,38 +156,11 @@ impl Cipher for Gcm {
     }
 }
 
-fn downcast<T: 'static>(params: &dyn Params) -> Result<&T, AlgoError> {
-    params
-        .as_any()
-        .downcast_ref::<T>()
-        .ok_or(AlgoError::new(ErrorKind::InvalidParams))
-}
-
-fn buffered_direction(direction: CipherDirection) -> BufferedDirection {
-    match direction {
-        CipherDirection::Encrypt => BufferedDirection::Encrypt,
-        CipherDirection::Decrypt => BufferedDirection::Decrypt,
-    }
-}
-
 fn block_direction(direction: CipherDirection) -> BlockDirection {
     match direction {
         CipherDirection::Encrypt => BlockDirection::Encrypt,
         CipherDirection::Decrypt => BlockDirection::Decrypt,
     }
-}
-
-fn invalid_params<E: Error + Send + Sync + 'static>(error: E) -> AlgoError {
-    AlgoError::with_source(ErrorKind::InvalidParams, error)
-}
-
-fn algo_error<E: Error + Send + Sync + 'static>(error: BufferedError<E>) -> AlgoError {
-    let kind = match error {
-        BufferedError::NotInitialized => ErrorKind::NotInitialized,
-        BufferedError::CorruptPadding => ErrorKind::InvalidCiphertext,
-        _ => ErrorKind::DataLength,
-    };
-    AlgoError::with_source(kind, error)
 }
 
 fn aead_error<E: Error + Send + Sync + 'static>(error: AeadError<E>) -> AlgoError {
@@ -816,5 +677,53 @@ mod tests {
             .init(CipherDirection::Encrypt, &gcm_params())
             .unwrap_err();
         assert_eq!(error.kind(), ErrorKind::InvalidParams);
+    }
+
+    // NIST SP 800-38A, F.5.1: CTR-AES128, the first block
+    #[test]
+    fn the_ctr_row_gives_the_example_of_sp_800_38a() {
+        let key = [
+            0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf,
+            0x4f, 0x3c,
+        ];
+        let counter: Vec<u8> = (0xf0..=0xff).collect();
+        let plaintext = [
+            0x6b, 0xc1, 0xbe, 0xe2, 0x2e, 0x40, 0x9f, 0x96, 0xe9, 0x3d, 0x7e, 0x11, 0x73, 0x93,
+            0x17, 0x2a,
+        ];
+        let expected = [
+            0x87, 0x4d, 0x61, 0x91, 0xb6, 0x20, 0xe3, 0x26, 0x1b, 0xef, 0x68, 0x64, 0x99, 0x0d,
+            0xb6, 0xce,
+        ];
+        let algo = DefaultAlgoBuilder::default().build();
+        let params = KeyWithIvOwned::new(key.to_vec(), counter);
+        for name in ["AES/CTR/NOPADDING", "AES/SIC/NOPADDING"] {
+            let output = algo
+                .cipher()
+                .encrypt_by_name(name, &params, &plaintext)
+                .unwrap();
+            assert_eq!(output, expected, "{name}");
+        }
+    }
+
+    #[test]
+    fn aes_has_a_row_for_each_mode_with_each_padding_it_takes_and_gcm() {
+        let algo = DefaultAlgoBuilder::default().build();
+        let names: Vec<String> = algo
+            .cipher()
+            .algorithms()
+            .map(|entry| entry.name().to_string())
+            .filter(|name| name.starts_with("AES/"))
+            .collect();
+        assert_eq!(names.len(), 18);
+        for name in [
+            "AES/ECB/X923PADDING",
+            "AES/CBC/ISO7816-4PADDING",
+            "AES/CBC/ZEROBYTEPADDING",
+            "AES/CTR/NOPADDING",
+            "AES/GCM/NOPADDING",
+        ] {
+            assert!(names.iter().any(|found| found == name), "{name}");
+        }
     }
 }

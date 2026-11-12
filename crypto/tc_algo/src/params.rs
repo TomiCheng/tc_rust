@@ -20,6 +20,8 @@ mod tuple_hash_params;
 
 #[cfg(any(
     feature = "aes",
+    feature = "des",
+    feature = "desede",
     feature = "chacha",
     feature = "hmac-sha256",
     feature = "rsa",
@@ -48,9 +50,20 @@ pub use parallel_hash_params::ParallelHashParams;
 pub use rsa_key_gen_params::RsaKeyGenParams;
 #[cfg(feature = "aes")]
 pub use tc_aead_cipher::AeadParamsOwned;
-#[cfg(any(feature = "aes", feature = "chacha", feature = "hmac-sha256"))]
+#[cfg(any(
+    feature = "aes",
+    feature = "des",
+    feature = "desede",
+    feature = "chacha",
+    feature = "hmac-sha256"
+))]
 pub use tc_block_cipher::{KeyOwned, KeyParams};
-#[cfg(any(feature = "aes", feature = "chacha"))]
+#[cfg(any(
+    feature = "aes",
+    feature = "des",
+    feature = "desede",
+    feature = "chacha"
+))]
 pub use tc_block_modes::{IvParams, KeyWithIvOwned};
 #[cfg(feature = "dh")]
 pub use tc_dh_key::standard_groups as dh_groups;
@@ -67,6 +80,8 @@ pub use tuple_hash_params::TupleHashParams;
 
 #[cfg(any(
     feature = "aes",
+    feature = "des",
+    feature = "desede",
     feature = "chacha",
     feature = "hmac-sha256",
     feature = "rsa",
@@ -76,14 +91,25 @@ pub use tuple_hash_params::TupleHashParams;
 ))]
 use crate::Params;
 
-#[cfg(any(feature = "aes", feature = "chacha", feature = "hmac-sha256"))]
+#[cfg(any(
+    feature = "aes",
+    feature = "des",
+    feature = "desede",
+    feature = "chacha",
+    feature = "hmac-sha256"
+))]
 impl Params for KeyOwned {
     fn as_any(&self) -> &dyn Any {
         self
     }
 }
 
-#[cfg(any(feature = "aes", feature = "chacha"))]
+#[cfg(any(
+    feature = "aes",
+    feature = "des",
+    feature = "desede",
+    feature = "chacha"
+))]
 impl Params for KeyWithIvOwned {
     fn as_any(&self) -> &dyn Any {
         self
