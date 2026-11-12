@@ -8,6 +8,7 @@ mod default_x509_operator_builder;
 mod default_x509_operator_context;
 mod error;
 pub mod operator;
+pub mod store;
 mod traits;
 
 pub use default_x509_operator_builder::DefaultX509OperatorBuilder;
