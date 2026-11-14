@@ -40,13 +40,13 @@ mod tests {
     }
 
     #[test]
-    fn there_are_seventeen_rows_found_by_their_oids() {
+    fn there_are_eighteen_rows_with_openpgp_cfb_found_by_their_oids() {
         let algo = DefaultAlgoBuilder::default().build();
         let rows = algo
             .cipher()
             .algorithms()
             .filter(|entry| entry.name().starts_with("CAST6/"))
             .count();
-        assert_eq!(rows, 17);
+        assert_eq!(rows, 18);
     }
 }

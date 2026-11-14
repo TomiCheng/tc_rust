@@ -84,6 +84,7 @@ The `aes` feature has the rows.
 | `AES/CFB/NOPADDING` | `AES/CFB/RAW`, `AES/CFB/`, `AES/CFB`, `AES/CFB{8..128}/NOPADDING`, `AES/CFB{8..128}/RAW`, `AES/CFB{8..128}/`, `AES/CFB{8..128}` | `2.16.840.1.101.3.4.1.4`, `.24`, `.44` | `KeyWithIvOwned` |  |
 | `AES/OFB/NOPADDING` | `AES/OFB/RAW`, `AES/OFB/`, `AES/OFB`, `AES/OFB{8..128}/NOPADDING`, `AES/OFB{8..128}/RAW`, `AES/OFB{8..128}/`, `AES/OFB{8..128}` | `2.16.840.1.101.3.4.1.3`, `.23`, `.43` | `KeyWithIvOwned` |  |
 | `AES/CTR/NOPADDING` | `AES/SIC/NOPADDING`, `AES/CTR/RAW`, `AES/CTR/`, `AES/CTR`, `AES/SIC/RAW`, `AES/SIC/`, `AES/SIC` |  | `KeyWithIvOwned` |  |
+| `AES/OPENPGPCFB/NOPADDING` | `AES/OPENPGPCFB/RAW`, `AES/OPENPGPCFB/`, `AES/OPENPGPCFB` |  | `KeyWithIvOwned` |  |
 
 The OIDs are NIST's for AES-128, AES-192 and AES-256 in each mode; as in Bouncy Castle, those of ECB
 and CBC mean PKCS#7 padding. All three find the same row, so the length of the key comes from the
@@ -115,6 +116,7 @@ The `des` feature has the rows.
 | `DES/OFB/NOPADDING` | `DES/OFB/RAW`, `DES/OFB/`, `DES/OFB`, `DES/OFB{8..64}/NOPADDING`, `DES/OFB{8..64}/RAW`, `DES/OFB{8..64}/`, `DES/OFB{8..64}` | `1.3.14.3.2.8` | `KeyWithIvOwned` | weak |
 | `DES/CTR/NOPADDING` | `DES/SIC/NOPADDING`, `DES/CTR/RAW`, `DES/CTR/`, `DES/CTR`, `DES/SIC/RAW`, `DES/SIC/`, `DES/SIC` |  | `KeyWithIvOwned` | weak |
 | `DES/GOFB/NOPADDING` | `DES/GOFB/RAW`, `DES/GOFB/`, `DES/GOFB` |  | `KeyWithIvOwned` | weak |
+| `DES/OPENPGPCFB/NOPADDING` | `DES/OPENPGPCFB/RAW`, `DES/OPENPGPCFB/`, `DES/OPENPGPCFB` |  | `KeyWithIvOwned` | weak |
 
 The OIDs are OIW's, and as in Bouncy Castle those of ECB and CBC mean PKCS#7 padding.
 
@@ -144,6 +146,7 @@ first.
 | `DESEDE/OFB/NOPADDING` | `TDEA/OFB/NOPADDING`, `DESEDE/OFB/RAW`, `DESEDE/OFB/`, `DESEDE/OFB`, `TDEA/OFB/RAW`, `TDEA/OFB/`, `TDEA/OFB`, `DESEDE/OFB{8..64}/NOPADDING`, `DESEDE/OFB{8..64}/RAW`, `DESEDE/OFB{8..64}/`, `DESEDE/OFB{8..64}`, `TDEA/OFB{8..64}/NOPADDING`, `TDEA/OFB{8..64}/RAW`, `TDEA/OFB{8..64}/`, `TDEA/OFB{8..64}` |  | `KeyWithIvOwned` | legacy |
 | `DESEDE/CTR/NOPADDING` | `DESEDE/SIC/NOPADDING`, `TDEA/CTR/NOPADDING`, `TDEA/SIC/NOPADDING`, `DESEDE/CTR/RAW`, `DESEDE/CTR/`, `DESEDE/CTR`, `DESEDE/SIC/RAW`, `DESEDE/SIC/`, `DESEDE/SIC`, `TDEA/CTR/RAW`, `TDEA/CTR/`, `TDEA/CTR`, `TDEA/SIC/RAW`, `TDEA/SIC/`, `TDEA/SIC` |  | `KeyWithIvOwned` | legacy |
 | `DESEDE/GOFB/NOPADDING` | `TDEA/GOFB/NOPADDING`, `DESEDE/GOFB/RAW`, `DESEDE/GOFB/`, `DESEDE/GOFB`, `TDEA/GOFB/RAW`, `TDEA/GOFB/`, `TDEA/GOFB` |  | `KeyWithIvOwned` | legacy |
+| `DESEDE/OPENPGPCFB/NOPADDING` | `TDEA/OPENPGPCFB/NOPADDING`, `DESEDE/OPENPGPCFB/RAW`, `DESEDE/OPENPGPCFB/`, `DESEDE/OPENPGPCFB`, `TDEA/OPENPGPCFB/RAW`, `TDEA/OPENPGPCFB/`, `TDEA/OPENPGPCFB` |  | `KeyWithIvOwned` | legacy |
 
 The OIDs are OIW's DESede, which means ECB with PKCS#7 padding, and RSA's DES-EDE3-CBC, which means
 CBC with PKCS#7 padding.
@@ -172,6 +175,7 @@ Japanese and ISO standard.
 | `CAMELLIA/CFB/NOPADDING` | `CAMELLIA/CFB/RAW`, `CAMELLIA/CFB/`, `CAMELLIA/CFB`, `CAMELLIA/CFB{8..128}/NOPADDING`, `CAMELLIA/CFB{8..128}/RAW`, `CAMELLIA/CFB{8..128}/`, `CAMELLIA/CFB{8..128}` |  | `KeyWithIvOwned` | variable time |
 | `CAMELLIA/OFB/NOPADDING` | `CAMELLIA/OFB/RAW`, `CAMELLIA/OFB/`, `CAMELLIA/OFB`, `CAMELLIA/OFB{8..128}/NOPADDING`, `CAMELLIA/OFB{8..128}/RAW`, `CAMELLIA/OFB{8..128}/`, `CAMELLIA/OFB{8..128}` |  | `KeyWithIvOwned` | variable time |
 | `CAMELLIA/CTR/NOPADDING` | `CAMELLIA/SIC/NOPADDING`, `CAMELLIA/CTR/RAW`, `CAMELLIA/CTR/`, `CAMELLIA/CTR`, `CAMELLIA/SIC/RAW`, `CAMELLIA/SIC/`, `CAMELLIA/SIC` |  | `KeyWithIvOwned` | variable time |
+| `CAMELLIA/OPENPGPCFB/NOPADDING` | `CAMELLIA/OPENPGPCFB/RAW`, `CAMELLIA/OPENPGPCFB/`, `CAMELLIA/OPENPGPCFB` |  | `KeyWithIvOwned` | variable time |
 
 The OIDs are NTT's for 128-, 192- and 256-bit keys, and mean CBC with PKCS#7 padding.
 
@@ -199,6 +203,7 @@ standard.
 | `ARIA/CFB/NOPADDING` | `ARIA/CFB/RAW`, `ARIA/CFB/`, `ARIA/CFB`, `ARIA/CFB{8..128}/NOPADDING`, `ARIA/CFB{8..128}/RAW`, `ARIA/CFB{8..128}/`, `ARIA/CFB{8..128}` | `1.2.410.200046.1.1.3`, `.8`, `.13` | `KeyWithIvOwned` | variable time |
 | `ARIA/OFB/NOPADDING` | `ARIA/OFB/RAW`, `ARIA/OFB/`, `ARIA/OFB`, `ARIA/OFB{8..128}/NOPADDING`, `ARIA/OFB{8..128}/RAW`, `ARIA/OFB{8..128}/`, `ARIA/OFB{8..128}` | `1.2.410.200046.1.1.4`, `.9`, `.14` | `KeyWithIvOwned` | variable time |
 | `ARIA/CTR/NOPADDING` | `ARIA/SIC/NOPADDING`, `ARIA/CTR/RAW`, `ARIA/CTR/`, `ARIA/CTR`, `ARIA/SIC/RAW`, `ARIA/SIC/`, `ARIA/SIC` | `1.2.410.200046.1.1.5`, `.10`, `.15` | `KeyWithIvOwned` | variable time |
+| `ARIA/OPENPGPCFB/NOPADDING` | `ARIA/OPENPGPCFB/RAW`, `ARIA/OPENPGPCFB/`, `ARIA/OPENPGPCFB` |  | `KeyWithIvOwned` | variable time |
 
 The OIDs are NSRI's for 128-, 192- and 256-bit keys in each mode. Bouncy Castle also has ARIA in GCM
 and CCM, and `ARIA//PKCS7` and the like for ECB with PKCS#7 padding; they are not rows yet.
@@ -226,6 +231,7 @@ The `sm4` feature has the rows. A block of 16 bytes and a key of 16; the Chinese
 | `SM4/CFB/NOPADDING` | `SM4/CFB/RAW`, `SM4/CFB/`, `SM4/CFB`, `SM4/CFB{8..128}/NOPADDING`, `SM4/CFB{8..128}/RAW`, `SM4/CFB{8..128}/`, `SM4/CFB{8..128}` |  | `KeyWithIvOwned` | variable time |
 | `SM4/OFB/NOPADDING` | `SM4/OFB/RAW`, `SM4/OFB/`, `SM4/OFB`, `SM4/OFB{8..128}/NOPADDING`, `SM4/OFB{8..128}/RAW`, `SM4/OFB{8..128}/`, `SM4/OFB{8..128}` |  | `KeyWithIvOwned` | variable time |
 | `SM4/CTR/NOPADDING` | `SM4/SIC/NOPADDING`, `SM4/CTR/RAW`, `SM4/CTR/`, `SM4/CTR`, `SM4/SIC/RAW`, `SM4/SIC/`, `SM4/SIC` |  | `KeyWithIvOwned` | variable time |
+| `SM4/OPENPGPCFB/NOPADDING` | `SM4/OPENPGPCFB/RAW`, `SM4/OPENPGPCFB/`, `SM4/OPENPGPCFB` |  | `KeyWithIvOwned` | variable time |
 
 Bouncy Castle gives SM4 no OID here.
 
@@ -252,6 +258,7 @@ The `seed` feature has the rows. A block of 16 bytes and a key of 16; a Korean s
 | `SEED/CFB/NOPADDING` | `SEED/CFB/RAW`, `SEED/CFB/`, `SEED/CFB`, `SEED/CFB{8..128}/NOPADDING`, `SEED/CFB{8..128}/RAW`, `SEED/CFB{8..128}/`, `SEED/CFB{8..128}` |  | `KeyWithIvOwned` | variable time |
 | `SEED/OFB/NOPADDING` | `SEED/OFB/RAW`, `SEED/OFB/`, `SEED/OFB`, `SEED/OFB{8..128}/NOPADDING`, `SEED/OFB{8..128}/RAW`, `SEED/OFB{8..128}/`, `SEED/OFB{8..128}` |  | `KeyWithIvOwned` | variable time |
 | `SEED/CTR/NOPADDING` | `SEED/SIC/NOPADDING`, `SEED/CTR/RAW`, `SEED/CTR/`, `SEED/CTR`, `SEED/SIC/RAW`, `SEED/SIC/`, `SEED/SIC` |  | `KeyWithIvOwned` | variable time |
+| `SEED/OPENPGPCFB/NOPADDING` | `SEED/OPENPGPCFB/RAW`, `SEED/OPENPGPCFB/`, `SEED/OPENPGPCFB` |  | `KeyWithIvOwned` | variable time |
 
 The OID is KISA's, and means CBC with PKCS#7 padding.
 
@@ -279,6 +286,7 @@ The `blowfish` feature has the rows. A block of 8 bytes and a key of 4 to 56 byt
 | `BLOWFISH/OFB/NOPADDING` | `BLOWFISH/OFB/RAW`, `BLOWFISH/OFB/`, `BLOWFISH/OFB`, `BLOWFISH/OFB{8..64}/NOPADDING`, `BLOWFISH/OFB{8..64}/RAW`, `BLOWFISH/OFB{8..64}/`, `BLOWFISH/OFB{8..64}` |  | `KeyWithIvOwned` | legacy, variable time |
 | `BLOWFISH/CTR/NOPADDING` | `BLOWFISH/SIC/NOPADDING`, `BLOWFISH/CTR/RAW`, `BLOWFISH/CTR/`, `BLOWFISH/CTR`, `BLOWFISH/SIC/RAW`, `BLOWFISH/SIC/`, `BLOWFISH/SIC` |  | `KeyWithIvOwned` | legacy, variable time |
 | `BLOWFISH/GOFB/NOPADDING` | `BLOWFISH/GOFB/RAW`, `BLOWFISH/GOFB/`, `BLOWFISH/GOFB` |  | `KeyWithIvOwned` | legacy, variable time |
+| `BLOWFISH/OPENPGPCFB/NOPADDING` | `BLOWFISH/OPENPGPCFB/RAW`, `BLOWFISH/OPENPGPCFB/`, `BLOWFISH/OPENPGPCFB` |  | `KeyWithIvOwned` | legacy, variable time |
 
 The OIDs are cryptlib's, both for CBC with PKCS#7 padding, as in Bouncy Castle.
 
@@ -306,6 +314,7 @@ for AES.
 | `TWOFISH/CFB/NOPADDING` | `TWOFISH/CFB/RAW`, `TWOFISH/CFB/`, `TWOFISH/CFB`, `TWOFISH/CFB{8..128}/NOPADDING`, `TWOFISH/CFB{8..128}/RAW`, `TWOFISH/CFB{8..128}/`, `TWOFISH/CFB{8..128}` |  | `KeyWithIvOwned` | variable time |
 | `TWOFISH/OFB/NOPADDING` | `TWOFISH/OFB/RAW`, `TWOFISH/OFB/`, `TWOFISH/OFB`, `TWOFISH/OFB{8..128}/NOPADDING`, `TWOFISH/OFB{8..128}/RAW`, `TWOFISH/OFB{8..128}/`, `TWOFISH/OFB{8..128}` |  | `KeyWithIvOwned` | variable time |
 | `TWOFISH/CTR/NOPADDING` | `TWOFISH/SIC/NOPADDING`, `TWOFISH/CTR/RAW`, `TWOFISH/CTR/`, `TWOFISH/CTR`, `TWOFISH/SIC/RAW`, `TWOFISH/SIC/`, `TWOFISH/SIC` |  | `KeyWithIvOwned` | variable time |
+| `TWOFISH/OPENPGPCFB/NOPADDING` | `TWOFISH/OPENPGPCFB/RAW`, `TWOFISH/OPENPGPCFB/`, `TWOFISH/OPENPGPCFB` |  | `KeyWithIvOwned` | variable time |
 
 ### Serpent
 
@@ -331,6 +340,7 @@ The `serpent` feature has the rows. A block of 16 bytes and a key of 4 to 32 byt
 | `SERPENT/CFB/NOPADDING` | `SERPENT/CFB/RAW`, `SERPENT/CFB/`, `SERPENT/CFB`, `SERPENT/CFB{8..128}/NOPADDING`, `SERPENT/CFB{8..128}/RAW`, `SERPENT/CFB{8..128}/`, `SERPENT/CFB{8..128}` |  | `KeyWithIvOwned` |  |
 | `SERPENT/OFB/NOPADDING` | `SERPENT/OFB/RAW`, `SERPENT/OFB/`, `SERPENT/OFB`, `SERPENT/OFB{8..128}/NOPADDING`, `SERPENT/OFB{8..128}/RAW`, `SERPENT/OFB{8..128}/`, `SERPENT/OFB{8..128}` |  | `KeyWithIvOwned` |  |
 | `SERPENT/CTR/NOPADDING` | `SERPENT/SIC/NOPADDING`, `SERPENT/CTR/RAW`, `SERPENT/CTR/`, `SERPENT/CTR`, `SERPENT/SIC/RAW`, `SERPENT/SIC/`, `SERPENT/SIC` |  | `KeyWithIvOwned` |  |
+| `SERPENT/OPENPGPCFB/NOPADDING` | `SERPENT/OPENPGPCFB/RAW`, `SERPENT/OPENPGPCFB/`, `SERPENT/OPENPGPCFB` |  | `KeyWithIvOwned` |  |
 
 ### Tnepres
 
@@ -357,6 +367,7 @@ in that form; new data takes `SERPENT`.
 | `TNEPRES/CFB/NOPADDING` | `TNEPRES/CFB/RAW`, `TNEPRES/CFB/`, `TNEPRES/CFB`, `TNEPRES/CFB{8..128}/NOPADDING`, `TNEPRES/CFB{8..128}/RAW`, `TNEPRES/CFB{8..128}/`, `TNEPRES/CFB{8..128}` |  | `KeyWithIvOwned` |  |
 | `TNEPRES/OFB/NOPADDING` | `TNEPRES/OFB/RAW`, `TNEPRES/OFB/`, `TNEPRES/OFB`, `TNEPRES/OFB{8..128}/NOPADDING`, `TNEPRES/OFB{8..128}/RAW`, `TNEPRES/OFB{8..128}/`, `TNEPRES/OFB{8..128}` |  | `KeyWithIvOwned` |  |
 | `TNEPRES/CTR/NOPADDING` | `TNEPRES/SIC/NOPADDING`, `TNEPRES/CTR/RAW`, `TNEPRES/CTR/`, `TNEPRES/CTR`, `TNEPRES/SIC/RAW`, `TNEPRES/SIC/`, `TNEPRES/SIC` |  | `KeyWithIvOwned` |  |
+| `TNEPRES/OPENPGPCFB/NOPADDING` | `TNEPRES/OPENPGPCFB/RAW`, `TNEPRES/OPENPGPCFB/`, `TNEPRES/OPENPGPCFB` |  | `KeyWithIvOwned` |  |
 
 ### CAST5
 
@@ -383,6 +394,7 @@ CAST-128.
 | `CAST5/OFB/NOPADDING` | `CAST5/OFB/RAW`, `CAST5/OFB/`, `CAST5/OFB`, `CAST5/OFB{8..64}/NOPADDING`, `CAST5/OFB{8..64}/RAW`, `CAST5/OFB{8..64}/`, `CAST5/OFB{8..64}` |  | `KeyWithIvOwned` | legacy, variable time |
 | `CAST5/CTR/NOPADDING` | `CAST5/SIC/NOPADDING`, `CAST5/CTR/RAW`, `CAST5/CTR/`, `CAST5/CTR`, `CAST5/SIC/RAW`, `CAST5/SIC/`, `CAST5/SIC` |  | `KeyWithIvOwned` | legacy, variable time |
 | `CAST5/GOFB/NOPADDING` | `CAST5/GOFB/RAW`, `CAST5/GOFB/`, `CAST5/GOFB` |  | `KeyWithIvOwned` | legacy, variable time |
+| `CAST5/OPENPGPCFB/NOPADDING` | `CAST5/OPENPGPCFB/RAW`, `CAST5/OPENPGPCFB/`, `CAST5/OPENPGPCFB` |  | `KeyWithIvOwned` | legacy, variable time |
 
 The OID is Entrust's, and means CBC with PKCS#7 padding.
 
@@ -410,6 +422,7 @@ also called CAST-256.
 | `CAST6/CFB/NOPADDING` | `CAST6/CFB/RAW`, `CAST6/CFB/`, `CAST6/CFB`, `CAST6/CFB{8..128}/NOPADDING`, `CAST6/CFB{8..128}/RAW`, `CAST6/CFB{8..128}/`, `CAST6/CFB{8..128}` |  | `KeyWithIvOwned` | variable time |
 | `CAST6/OFB/NOPADDING` | `CAST6/OFB/RAW`, `CAST6/OFB/`, `CAST6/OFB`, `CAST6/OFB{8..128}/NOPADDING`, `CAST6/OFB{8..128}/RAW`, `CAST6/OFB{8..128}/`, `CAST6/OFB{8..128}` |  | `KeyWithIvOwned` | variable time |
 | `CAST6/CTR/NOPADDING` | `CAST6/SIC/NOPADDING`, `CAST6/CTR/RAW`, `CAST6/CTR/`, `CAST6/CTR`, `CAST6/SIC/RAW`, `CAST6/SIC/`, `CAST6/SIC` |  | `KeyWithIvOwned` | variable time |
+| `CAST6/OPENPGPCFB/NOPADDING` | `CAST6/OPENPGPCFB/RAW`, `CAST6/OPENPGPCFB/`, `CAST6/OPENPGPCFB` |  | `KeyWithIvOwned` | variable time |
 
 ### IDEA
 
@@ -435,6 +448,7 @@ The `idea` feature has the rows. A block of 8 bytes and a key of 16 bytes.
 | `IDEA/OFB/NOPADDING` | `IDEA/OFB/RAW`, `IDEA/OFB/`, `IDEA/OFB`, `IDEA/OFB{8..64}/NOPADDING`, `IDEA/OFB{8..64}/RAW`, `IDEA/OFB{8..64}/`, `IDEA/OFB{8..64}` |  | `KeyWithIvOwned` | legacy, variable time |
 | `IDEA/CTR/NOPADDING` | `IDEA/SIC/NOPADDING`, `IDEA/CTR/RAW`, `IDEA/CTR/`, `IDEA/CTR`, `IDEA/SIC/RAW`, `IDEA/SIC/`, `IDEA/SIC` |  | `KeyWithIvOwned` | legacy, variable time |
 | `IDEA/GOFB/NOPADDING` | `IDEA/GOFB/RAW`, `IDEA/GOFB/`, `IDEA/GOFB` |  | `KeyWithIvOwned` | legacy, variable time |
+| `IDEA/OPENPGPCFB/NOPADDING` | `IDEA/OPENPGPCFB/RAW`, `IDEA/OPENPGPCFB/`, `IDEA/OPENPGPCFB` |  | `KeyWithIvOwned` | legacy, variable time |
 
 The OID is Ascom's, and means CBC with PKCS#7 padding.
 
@@ -462,6 +476,7 @@ mode of Bouncy Castle.
 | `NOEKEON/CFB/NOPADDING` | `NOEKEON/CFB/RAW`, `NOEKEON/CFB/`, `NOEKEON/CFB`, `NOEKEON/CFB{8..128}/NOPADDING`, `NOEKEON/CFB{8..128}/RAW`, `NOEKEON/CFB{8..128}/`, `NOEKEON/CFB{8..128}` |  | `KeyWithIvOwned` |  |
 | `NOEKEON/OFB/NOPADDING` | `NOEKEON/OFB/RAW`, `NOEKEON/OFB/`, `NOEKEON/OFB`, `NOEKEON/OFB{8..128}/NOPADDING`, `NOEKEON/OFB{8..128}/RAW`, `NOEKEON/OFB{8..128}/`, `NOEKEON/OFB{8..128}` |  | `KeyWithIvOwned` |  |
 | `NOEKEON/CTR/NOPADDING` | `NOEKEON/SIC/NOPADDING`, `NOEKEON/CTR/RAW`, `NOEKEON/CTR/`, `NOEKEON/CTR`, `NOEKEON/SIC/RAW`, `NOEKEON/SIC/`, `NOEKEON/SIC` |  | `KeyWithIvOwned` |  |
+| `NOEKEON/OPENPGPCFB/NOPADDING` | `NOEKEON/OPENPGPCFB/RAW`, `NOEKEON/OPENPGPCFB/`, `NOEKEON/OPENPGPCFB` |  | `KeyWithIvOwned` |  |
 
 ### Rijndael
 
@@ -488,6 +503,7 @@ of 16, 24 or 32 bytes.
 | `RIJNDAEL/CFB/NOPADDING` | `RIJNDAEL/CFB/RAW`, `RIJNDAEL/CFB/`, `RIJNDAEL/CFB`, `RIJNDAEL/CFB{8..128}/NOPADDING`, `RIJNDAEL/CFB{8..128}/RAW`, `RIJNDAEL/CFB{8..128}/`, `RIJNDAEL/CFB{8..128}` |  | `KeyWithIvOwned` | variable time |
 | `RIJNDAEL/OFB/NOPADDING` | `RIJNDAEL/OFB/RAW`, `RIJNDAEL/OFB/`, `RIJNDAEL/OFB`, `RIJNDAEL/OFB{8..128}/NOPADDING`, `RIJNDAEL/OFB{8..128}/RAW`, `RIJNDAEL/OFB{8..128}/`, `RIJNDAEL/OFB{8..128}` |  | `KeyWithIvOwned` | variable time |
 | `RIJNDAEL/CTR/NOPADDING` | `RIJNDAEL/SIC/NOPADDING`, `RIJNDAEL/CTR/RAW`, `RIJNDAEL/CTR/`, `RIJNDAEL/CTR`, `RIJNDAEL/SIC/RAW`, `RIJNDAEL/SIC/`, `RIJNDAEL/SIC` |  | `KeyWithIvOwned` | variable time |
+| `RIJNDAEL/OPENPGPCFB/NOPADDING` | `RIJNDAEL/OPENPGPCFB/RAW`, `RIJNDAEL/OPENPGPCFB/`, `RIJNDAEL/OPENPGPCFB` |  | `KeyWithIvOwned` | variable time |
 
 For new data, take `AES`, which is constant time where `tc_aes` can be.
 
@@ -515,6 +531,7 @@ The `skipjack` feature has the rows. A block of 8 bytes and a key of 10 bytes.
 | `SKIPJACK/OFB/NOPADDING` | `SKIPJACK/OFB/RAW`, `SKIPJACK/OFB/`, `SKIPJACK/OFB`, `SKIPJACK/OFB{8..64}/NOPADDING`, `SKIPJACK/OFB{8..64}/RAW`, `SKIPJACK/OFB{8..64}/`, `SKIPJACK/OFB{8..64}` |  | `KeyWithIvOwned` | legacy, variable time |
 | `SKIPJACK/CTR/NOPADDING` | `SKIPJACK/SIC/NOPADDING`, `SKIPJACK/CTR/RAW`, `SKIPJACK/CTR/`, `SKIPJACK/CTR`, `SKIPJACK/SIC/RAW`, `SKIPJACK/SIC/`, `SKIPJACK/SIC` |  | `KeyWithIvOwned` | legacy, variable time |
 | `SKIPJACK/GOFB/NOPADDING` | `SKIPJACK/GOFB/RAW`, `SKIPJACK/GOFB/`, `SKIPJACK/GOFB` |  | `KeyWithIvOwned` | legacy, variable time |
+| `SKIPJACK/OPENPGPCFB/NOPADDING` | `SKIPJACK/OPENPGPCFB/RAW`, `SKIPJACK/OPENPGPCFB/`, `SKIPJACK/OPENPGPCFB` |  | `KeyWithIvOwned` | legacy, variable time |
 
 ### TEA
 
@@ -540,6 +557,7 @@ The `tea` feature has the rows. A block of 8 bytes and a key of 16 bytes.
 | `TEA/OFB/NOPADDING` | `TEA/OFB/RAW`, `TEA/OFB/`, `TEA/OFB`, `TEA/OFB{8..64}/NOPADDING`, `TEA/OFB{8..64}/RAW`, `TEA/OFB{8..64}/`, `TEA/OFB{8..64}` |  | `KeyWithIvOwned` | legacy |
 | `TEA/CTR/NOPADDING` | `TEA/SIC/NOPADDING`, `TEA/CTR/RAW`, `TEA/CTR/`, `TEA/CTR`, `TEA/SIC/RAW`, `TEA/SIC/`, `TEA/SIC` |  | `KeyWithIvOwned` | legacy |
 | `TEA/GOFB/NOPADDING` | `TEA/GOFB/RAW`, `TEA/GOFB/`, `TEA/GOFB` |  | `KeyWithIvOwned` | legacy |
+| `TEA/OPENPGPCFB/NOPADDING` | `TEA/OPENPGPCFB/RAW`, `TEA/OPENPGPCFB/`, `TEA/OPENPGPCFB` |  | `KeyWithIvOwned` | legacy |
 
 ### XTEA
 
@@ -566,6 +584,7 @@ repaired. Bouncy Castle has it as an engine, not in its CipherUtilities.
 | `XTEA/OFB/NOPADDING` | `XTEA/OFB/RAW`, `XTEA/OFB/`, `XTEA/OFB`, `XTEA/OFB{8..64}/NOPADDING`, `XTEA/OFB{8..64}/RAW`, `XTEA/OFB{8..64}/`, `XTEA/OFB{8..64}` |  | `KeyWithIvOwned` | legacy |
 | `XTEA/CTR/NOPADDING` | `XTEA/SIC/NOPADDING`, `XTEA/CTR/RAW`, `XTEA/CTR/`, `XTEA/CTR`, `XTEA/SIC/RAW`, `XTEA/SIC/`, `XTEA/SIC` |  | `KeyWithIvOwned` | legacy |
 | `XTEA/GOFB/NOPADDING` | `XTEA/GOFB/RAW`, `XTEA/GOFB/`, `XTEA/GOFB` |  | `KeyWithIvOwned` | legacy |
+| `XTEA/OPENPGPCFB/NOPADDING` | `XTEA/OPENPGPCFB/RAW`, `XTEA/OPENPGPCFB/`, `XTEA/OPENPGPCFB` |  | `KeyWithIvOwned` | legacy |
 
 ### RC2
 
@@ -593,6 +612,7 @@ a plain key gives an effective key size of the whole key, and RC2's own params g
 | `RC2/OFB/NOPADDING` | `RC2/OFB/RAW`, `RC2/OFB/`, `RC2/OFB`, `RC2/OFB{8..64}/NOPADDING`, `RC2/OFB{8..64}/RAW`, `RC2/OFB{8..64}/`, `RC2/OFB{8..64}` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc2ParamsOwned>`](Rc2.md) | legacy, variable time |
 | `RC2/CTR/NOPADDING` | `RC2/SIC/NOPADDING`, `RC2/CTR/RAW`, `RC2/CTR/`, `RC2/CTR`, `RC2/SIC/RAW`, `RC2/SIC/`, `RC2/SIC` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc2ParamsOwned>`](Rc2.md) | legacy, variable time |
 | `RC2/GOFB/NOPADDING` | `RC2/GOFB/RAW`, `RC2/GOFB/`, `RC2/GOFB` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc2ParamsOwned>`](Rc2.md) | legacy, variable time |
+| `RC2/OPENPGPCFB/NOPADDING` | `RC2/OPENPGPCFB/RAW`, `RC2/OPENPGPCFB/`, `RC2/OPENPGPCFB` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc2ParamsOwned>`](Rc2.md) | legacy, variable time |
 
 The OID is RSA's, and means CBC with PKCS#7 padding. Its parameters in a certificate or CMS can name
 another effective key size, which these rows take in a `ParamsWithIvOwned<Rc2ParamsOwned>`; see
@@ -624,6 +644,7 @@ see [RC5](Rc5.md). `RC5-32` is another name of it.
 | `RC5/OFB/NOPADDING` | `RC5-32/OFB/NOPADDING`, `RC5/OFB/RAW`, `RC5/OFB/`, `RC5/OFB`, `RC5-32/OFB/RAW`, `RC5-32/OFB/`, `RC5-32/OFB`, `RC5/OFB{8..64}/NOPADDING`, `RC5/OFB{8..64}/RAW`, `RC5/OFB{8..64}/`, `RC5/OFB{8..64}`, `RC5-32/OFB{8..64}/NOPADDING`, `RC5-32/OFB{8..64}/RAW`, `RC5-32/OFB{8..64}/`, `RC5-32/OFB{8..64}` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) | legacy |
 | `RC5/CTR/NOPADDING` | `RC5/SIC/NOPADDING`, `RC5-32/CTR/NOPADDING`, `RC5-32/SIC/NOPADDING`, `RC5/CTR/RAW`, `RC5/CTR/`, `RC5/CTR`, `RC5/SIC/RAW`, `RC5/SIC/`, `RC5/SIC`, `RC5-32/CTR/RAW`, `RC5-32/CTR/`, `RC5-32/CTR`, `RC5-32/SIC/RAW`, `RC5-32/SIC/`, `RC5-32/SIC` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) | legacy |
 | `RC5/GOFB/NOPADDING` | `RC5-32/GOFB/NOPADDING`, `RC5/GOFB/RAW`, `RC5/GOFB/`, `RC5/GOFB`, `RC5-32/GOFB/RAW`, `RC5-32/GOFB/`, `RC5-32/GOFB` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) | legacy |
+| `RC5/OPENPGPCFB/NOPADDING` | `RC5-32/OPENPGPCFB/NOPADDING`, `RC5/OPENPGPCFB/RAW`, `RC5/OPENPGPCFB/`, `RC5/OPENPGPCFB`, `RC5-32/OPENPGPCFB/RAW`, `RC5-32/OPENPGPCFB/`, `RC5-32/OPENPGPCFB` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) | legacy |
 
 ### RC5-64
 
@@ -649,6 +670,7 @@ bytes, with 12 rounds, or the number RC5's own params give; see [RC5](Rc5.md).
 | `RC5-64/CFB/NOPADDING` | `RC5-64/CFB/RAW`, `RC5-64/CFB/`, `RC5-64/CFB`, `RC5-64/CFB{8..128}/NOPADDING`, `RC5-64/CFB{8..128}/RAW`, `RC5-64/CFB{8..128}/`, `RC5-64/CFB{8..128}` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) |  |
 | `RC5-64/OFB/NOPADDING` | `RC5-64/OFB/RAW`, `RC5-64/OFB/`, `RC5-64/OFB`, `RC5-64/OFB{8..128}/NOPADDING`, `RC5-64/OFB{8..128}/RAW`, `RC5-64/OFB{8..128}/`, `RC5-64/OFB{8..128}` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) |  |
 | `RC5-64/CTR/NOPADDING` | `RC5-64/SIC/NOPADDING`, `RC5-64/CTR/RAW`, `RC5-64/CTR/`, `RC5-64/CTR`, `RC5-64/SIC/RAW`, `RC5-64/SIC/`, `RC5-64/SIC` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) |  |
+| `RC5-64/OPENPGPCFB/NOPADDING` | `RC5-64/OPENPGPCFB/RAW`, `RC5-64/OPENPGPCFB/`, `RC5-64/OPENPGPCFB` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) |  |
 
 ### RC6
 
@@ -674,6 +696,7 @@ AES.
 | `RC6/CFB/NOPADDING` | `RC6/CFB/RAW`, `RC6/CFB/`, `RC6/CFB`, `RC6/CFB{8..128}/NOPADDING`, `RC6/CFB{8..128}/RAW`, `RC6/CFB{8..128}/`, `RC6/CFB{8..128}` |  | `KeyWithIvOwned` |  |
 | `RC6/OFB/NOPADDING` | `RC6/OFB/RAW`, `RC6/OFB/`, `RC6/OFB`, `RC6/OFB{8..128}/NOPADDING`, `RC6/OFB{8..128}/RAW`, `RC6/OFB{8..128}/`, `RC6/OFB{8..128}` |  | `KeyWithIvOwned` |  |
 | `RC6/CTR/NOPADDING` | `RC6/SIC/NOPADDING`, `RC6/CTR/RAW`, `RC6/CTR/`, `RC6/CTR`, `RC6/SIC/RAW`, `RC6/SIC/`, `RC6/SIC` |  | `KeyWithIvOwned` |  |
+| `RC6/OPENPGPCFB/NOPADDING` | `RC6/OPENPGPCFB/RAW`, `RC6/OPENPGPCFB/`, `RC6/OPENPGPCFB` |  | `KeyWithIvOwned` |  |
 
 ### GOST28147
 
@@ -701,6 +724,7 @@ named `GOST` and `GOST-28147`. A plain key takes the default S-box, as Bouncy Ca
 | `GOST28147/OFB/NOPADDING` | `GOST/OFB/NOPADDING`, `GOST-28147/OFB/NOPADDING`, `GOST28147/OFB/RAW`, `GOST28147/OFB/`, `GOST28147/OFB`, `GOST/OFB/RAW`, `GOST/OFB/`, `GOST/OFB`, `GOST-28147/OFB/RAW`, `GOST-28147/OFB/`, `GOST-28147/OFB`, `GOST28147/OFB{8..64}/NOPADDING`, `GOST28147/OFB{8..64}/RAW`, `GOST28147/OFB{8..64}/`, `GOST28147/OFB{8..64}`, `GOST/OFB{8..64}/NOPADDING`, `GOST/OFB{8..64}/RAW`, `GOST/OFB{8..64}/`, `GOST/OFB{8..64}`, `GOST-28147/OFB{8..64}/NOPADDING`, `GOST-28147/OFB{8..64}/RAW`, `GOST-28147/OFB{8..64}/`, `GOST-28147/OFB{8..64}` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Gost28147ParamsOwned>`](Gost28147.md) | legacy, variable time |
 | `GOST28147/CTR/NOPADDING` | `GOST28147/SIC/NOPADDING`, `GOST/CTR/NOPADDING`, `GOST/SIC/NOPADDING`, `GOST-28147/CTR/NOPADDING`, `GOST-28147/SIC/NOPADDING`, `GOST28147/CTR/RAW`, `GOST28147/CTR/`, `GOST28147/CTR`, `GOST28147/SIC/RAW`, `GOST28147/SIC/`, `GOST28147/SIC`, `GOST/CTR/RAW`, `GOST/CTR/`, `GOST/CTR`, `GOST/SIC/RAW`, `GOST/SIC/`, `GOST/SIC`, `GOST-28147/CTR/RAW`, `GOST-28147/CTR/`, `GOST-28147/CTR`, `GOST-28147/SIC/RAW`, `GOST-28147/SIC/`, `GOST-28147/SIC` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Gost28147ParamsOwned>`](Gost28147.md) | legacy, variable time |
 | `GOST28147/GOFB/NOPADDING` | `GOST/GOFB/NOPADDING`, `GOST-28147/GOFB/NOPADDING`, `GOST28147/GOFB/RAW`, `GOST28147/GOFB/`, `GOST28147/GOFB`, `GOST/GOFB/RAW`, `GOST/GOFB/`, `GOST/GOFB`, `GOST-28147/GOFB/RAW`, `GOST-28147/GOFB/`, `GOST-28147/GOFB` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Gost28147ParamsOwned>`](Gost28147.md) | legacy, variable time |
+| `GOST28147/OPENPGPCFB/NOPADDING` | `GOST/OPENPGPCFB/NOPADDING`, `GOST-28147/OPENPGPCFB/NOPADDING`, `GOST28147/OPENPGPCFB/RAW`, `GOST28147/OPENPGPCFB/`, `GOST28147/OPENPGPCFB`, `GOST/OPENPGPCFB/RAW`, `GOST/OPENPGPCFB/`, `GOST/OPENPGPCFB`, `GOST-28147/OPENPGPCFB/RAW`, `GOST-28147/OPENPGPCFB/`, `GOST-28147/OPENPGPCFB` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Gost28147ParamsOwned>`](Gost28147.md) | legacy, variable time |
 
 The OID is CryptoPro's `id-Gost28147-89`, which Bouncy Castle gives to CBC with PKCS#7 padding, and
 so do these rows; in CryptoPro's own formats it names GOST 28147 in its CFB mode, with the S-box in
@@ -731,6 +755,7 @@ params take another; see [Threefish](Threefish.md).
 | `THREEFISH-256/CFB/NOPADDING` | `THREEFISH-256/CFB/RAW`, `THREEFISH-256/CFB/`, `THREEFISH-256/CFB`, `THREEFISH-256/CFB{8..256}/NOPADDING`, `THREEFISH-256/CFB{8..256}/RAW`, `THREEFISH-256/CFB{8..256}/`, `THREEFISH-256/CFB{8..256}` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
 | `THREEFISH-256/OFB/NOPADDING` | `THREEFISH-256/OFB/RAW`, `THREEFISH-256/OFB/`, `THREEFISH-256/OFB`, `THREEFISH-256/OFB{8..256}/NOPADDING`, `THREEFISH-256/OFB{8..256}/RAW`, `THREEFISH-256/OFB{8..256}/`, `THREEFISH-256/OFB{8..256}` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
 | `THREEFISH-256/CTR/NOPADDING` | `THREEFISH-256/SIC/NOPADDING`, `THREEFISH-256/CTR/RAW`, `THREEFISH-256/CTR/`, `THREEFISH-256/CTR`, `THREEFISH-256/SIC/RAW`, `THREEFISH-256/SIC/`, `THREEFISH-256/SIC` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
+| `THREEFISH-256/OPENPGPCFB/NOPADDING` | `THREEFISH-256/OPENPGPCFB/RAW`, `THREEFISH-256/OPENPGPCFB/`, `THREEFISH-256/OPENPGPCFB` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
 
 ### Threefish-512
 
@@ -757,6 +782,7 @@ params take another; see [Threefish](Threefish.md).
 | `THREEFISH-512/CFB/NOPADDING` | `THREEFISH-512/CFB/RAW`, `THREEFISH-512/CFB/`, `THREEFISH-512/CFB`, `THREEFISH-512/CFB{8..512}/NOPADDING`, `THREEFISH-512/CFB{8..512}/RAW`, `THREEFISH-512/CFB{8..512}/`, `THREEFISH-512/CFB{8..512}` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
 | `THREEFISH-512/OFB/NOPADDING` | `THREEFISH-512/OFB/RAW`, `THREEFISH-512/OFB/`, `THREEFISH-512/OFB`, `THREEFISH-512/OFB{8..512}/NOPADDING`, `THREEFISH-512/OFB{8..512}/RAW`, `THREEFISH-512/OFB{8..512}/`, `THREEFISH-512/OFB{8..512}` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
 | `THREEFISH-512/CTR/NOPADDING` | `THREEFISH-512/SIC/NOPADDING`, `THREEFISH-512/CTR/RAW`, `THREEFISH-512/CTR/`, `THREEFISH-512/CTR`, `THREEFISH-512/SIC/RAW`, `THREEFISH-512/SIC/`, `THREEFISH-512/SIC` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
+| `THREEFISH-512/OPENPGPCFB/NOPADDING` | `THREEFISH-512/OPENPGPCFB/RAW`, `THREEFISH-512/OPENPGPCFB/`, `THREEFISH-512/OPENPGPCFB` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
 
 ### Threefish-1024
 
@@ -783,6 +809,7 @@ params take another; see [Threefish](Threefish.md).
 | `THREEFISH-1024/CFB/NOPADDING` | `THREEFISH-1024/CFB/RAW`, `THREEFISH-1024/CFB/`, `THREEFISH-1024/CFB`, `THREEFISH-1024/CFB{8..1024}/NOPADDING`, `THREEFISH-1024/CFB{8..1024}/RAW`, `THREEFISH-1024/CFB{8..1024}/`, `THREEFISH-1024/CFB{8..1024}` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
 | `THREEFISH-1024/OFB/NOPADDING` | `THREEFISH-1024/OFB/RAW`, `THREEFISH-1024/OFB/`, `THREEFISH-1024/OFB`, `THREEFISH-1024/OFB{8..1024}/NOPADDING`, `THREEFISH-1024/OFB{8..1024}/RAW`, `THREEFISH-1024/OFB{8..1024}/`, `THREEFISH-1024/OFB{8..1024}` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
 | `THREEFISH-1024/CTR/NOPADDING` | `THREEFISH-1024/SIC/NOPADDING`, `THREEFISH-1024/CTR/RAW`, `THREEFISH-1024/CTR/`, `THREEFISH-1024/CTR`, `THREEFISH-1024/SIC/RAW`, `THREEFISH-1024/SIC/`, `THREEFISH-1024/SIC` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
+| `THREEFISH-1024/OPENPGPCFB/NOPADDING` | `THREEFISH-1024/OPENPGPCFB/RAW`, `THREEFISH-1024/OPENPGPCFB/`, `THREEFISH-1024/OPENPGPCFB` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
 
 ### Weak, legacy and variable-time rows
 
@@ -820,6 +847,10 @@ Each algorithm has a row for each mode with each padding it takes:
 - GOFB, GOST 28147's counter mode (GCTR), takes a partial last block too, so `NOPADDING` only. Its
   counter is two words of 32 bits, so only the algorithms of a block of 8 bytes have its rows, as
   Bouncy Castle's `GOfbBlockCipher` refuses any other.
+- OPENPGPCFB, the CFB of OpenPGP (RFC 4880), takes a partial last block too, so `NOPADDING` only.
+  It resynchronizes after the first block and two bytes, which OpenPGP fills with a random prefix
+  whose last two bytes repeat; OpenPGP passes an IV of zeros. The rows encrypt and decrypt only:
+  making and checking the prefix is the caller's, as with Bouncy Castle's `OpenPgpCfbBlockCipher`.
 
 The padding aliases of Bouncy Castle find the same rows: `PKCS7`, `PKCS5PADDING` and `PKCS5` for
 `PKCS7PADDING`, `ISO10126D2PADDING` and `ISO10126-2PADDING` for `ISO10126PADDING`, and
@@ -836,7 +867,7 @@ As in Bouncy Castle, a name may also leave the mode or the padding out:
 
 - An empty or missing mode is ECB: `AES//PKCS7PADDING` and `AES` alone are ECB rows.
 - An empty or missing padding, or `RAW`, is the mode's default: `PKCS7PADDING` in ECB and CBC,
-  and `NOPADDING` in CFB, OFB, CTR and GOFB. So `AES` is `AES/ECB/PKCS7PADDING`, `AES/CBC` and
+  and `NOPADDING` in CFB, OFB, CTR, GOFB and OPENPGPCFB. So `AES` is `AES/ECB/PKCS7PADDING`, `AES/CBC` and
   `AES/CBC/RAW` are `AES/CBC/PKCS7PADDING`, and `AES/CTR` is `AES/CTR/NOPADDING`.
 
 - `ISO10126PADDING` fills with random bytes, from the source of `DefaultAlgoBuilder::set_rand`.
@@ -850,7 +881,7 @@ Each kind of row takes the type of its mode, and any other type is `InvalidParam
 | Rows | Params |
 |---|---|
 | ECB | `KeyOwned` |
-| CBC, CFB, OFB, CTR, GOFB | `KeyWithIvOwned` |
+| CBC, CFB, OFB, CTR, GOFB, OPENPGPCFB | `KeyWithIvOwned` |
 
 Both come from the crates underneath and wipe themselves when dropped.
 

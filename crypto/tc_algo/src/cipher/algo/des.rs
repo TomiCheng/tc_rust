@@ -157,7 +157,8 @@ mod tests {
     }
 
     #[test]
-    fn there_are_eighteen_rows_with_gofb_and_the_aliases_and_oids_of_bouncy_castle() {
+    fn there_are_nineteen_rows_with_gofb_and_openpgp_cfb_and_the_aliases_and_oids_of_bouncy_castle()
+    {
         let algo = DefaultAlgoBuilder::default().build();
         let names: Vec<String> = algo
             .cipher()
@@ -165,7 +166,7 @@ mod tests {
             .map(|entry| entry.name().to_string())
             .filter(|name| name.starts_with("DES/"))
             .collect();
-        assert_eq!(names.len(), 18);
+        assert_eq!(names.len(), 19);
 
         let cbc = "DES/CBC/PKCS7PADDING";
         for alias in ["des/cbc/pkcs5", "DES/CBC/PKCS7", "DES/CBC/PKCS5PADDING"] {
@@ -263,7 +264,7 @@ mod desede_tests {
     }
 
     #[test]
-    fn desede_has_eighteen_rows_with_gofb_named_desede_or_tdea_with_two_oids() {
+    fn desede_has_nineteen_rows_with_gofb_and_openpgp_cfb_named_desede_or_tdea_with_two_oids() {
         let algo = DefaultAlgoBuilder::default().build();
         let names: Vec<String> = algo
             .cipher()
@@ -271,7 +272,7 @@ mod desede_tests {
             .map(|entry| entry.name().to_string())
             .filter(|name| name.starts_with("DESEDE/"))
             .collect();
-        assert_eq!(names.len(), 18);
+        assert_eq!(names.len(), 19);
 
         // A two-key DESede key, of 16 bytes
         let params = KeyWithIvOwned::new(vec![7; 16], vec![9; 8]);

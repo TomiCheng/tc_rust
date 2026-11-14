@@ -40,7 +40,7 @@ the three sizes; only the key, the block and so the IV differ.
 | Rows | Params |
 |---|---|
 | ECB | `KeyOwned` or `ThreefishParamsOwned` |
-| CBC, CFB, OFB, CTR | `KeyWithIvOwned` or `ParamsWithIvOwned<ThreefishParamsOwned>` |
+| CBC, CFB, OFB, CTR, OPENPGPCFB | `KeyWithIvOwned` or `ParamsWithIvOwned<ThreefishParamsOwned>` |
 
 The IV is one block in every mode but CTR, which takes it as `tc_block_modes` does. The key and
 the tweak are checked when the row is initialized, not when the params are built; a key that is

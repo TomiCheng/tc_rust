@@ -324,6 +324,33 @@ mod tests {
         );
     }
 
+    // The vector tc_block_modes takes from Bouncy Castle's OpenPgpCfbBlockCipher, with the IV of
+    // zeros OpenPGP uses
+    #[test]
+    fn openpgp_cfb_gives_bouncy_castle_s_vector_with_an_iv_of_zeros() {
+        let params = KeyWithIvOwned::new(unhex("000102030405060708090a0b0c0d0e0f"), vec![0; 16]);
+        let plaintext: Vec<u8> = (0..64).collect();
+        let expected = unhex(concat!(
+            "c6a03934838a5d8567468b69adc5d676",
+            "a59b6214586273366f14c5ba4fd7b4f3",
+            "aac96e3ece517e590c11d41154ca3f74",
+            "46c67e57a75188a9a1b186e0e57590db",
+        ));
+        let algo = DefaultAlgoBuilder::default().build();
+        let ciphers = algo.cipher();
+        for name in ["AES/OPENPGPCFB/NOPADDING", "aes/openpgpcfb"] {
+            let ciphertext = ciphers.encrypt_by_name(name, &params, &plaintext).unwrap();
+            assert_eq!(ciphertext, expected, "{name}");
+            let recovered = ciphers.decrypt_by_name(name, &params, &ciphertext).unwrap();
+            assert_eq!(recovered, plaintext, "{name}");
+        }
+        // It is not plain CFB
+        let cfb = ciphers
+            .encrypt_by_name("AES/CFB/NOPADDING", &params, &plaintext)
+            .unwrap();
+        assert_ne!(cfb, expected);
+    }
+
     #[test]
     fn a_feedback_size_out_of_range_or_on_another_mode_names_no_row() {
         let algo = DefaultAlgoBuilder::default().build();
@@ -841,7 +868,7 @@ mod tests {
             .map(|entry| entry.name().to_string())
             .filter(|name| name.starts_with("AES/"))
             .collect();
-        assert_eq!(names.len(), 18);
+        assert_eq!(names.len(), 19);
         for name in [
             "AES/ECB/X923PADDING",
             "AES/CBC/ISO7816-4PADDING",

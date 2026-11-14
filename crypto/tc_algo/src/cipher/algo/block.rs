@@ -20,16 +20,19 @@ pub(super) enum Mode {
     Ctr,
     // GOST 28147's counter mode, GCTR, which Bouncy Castle calls GOFB: only for a block of 8 bytes
     Gofb,
+    // The CFB of OpenPGP, RFC 4880, which resynchronizes after its prefix of a block and two bytes
+    OpenPgpCfb,
 }
 
 impl Mode {
-    const ALL: [Mode; 6] = [
+    const ALL: [Mode; 7] = [
         Mode::Ecb,
         Mode::Cbc,
         Mode::Cfb,
         Mode::Ofb,
         Mode::Ctr,
         Mode::Gofb,
+        Mode::OpenPgpCfb,
     ];
 
     // The name first, then the aliases of Bouncy Castle's CipherUtilities, where NONE and a mode
@@ -42,6 +45,7 @@ impl Mode {
             Mode::Ofb => &["OFB"],
             Mode::Ctr => &["CTR", "SIC"],
             Mode::Gofb => &["GOFB"],
+            Mode::OpenPgpCfb => &["OPENPGPCFB"],
         }
     }
 
@@ -50,7 +54,7 @@ impl Mode {
     fn default_padding(self) -> Padding {
         match self {
             Mode::Ecb | Mode::Cbc => Padding::Pkcs7,
-            Mode::Cfb | Mode::Ofb | Mode::Ctr | Mode::Gofb => Padding::None,
+            Mode::Cfb | Mode::Ofb | Mode::Ctr | Mode::Gofb | Mode::OpenPgpCfb => Padding::None,
         }
     }
 
@@ -59,7 +63,7 @@ impl Mode {
     fn paddings(self) -> &'static [Padding] {
         match self {
             Mode::Ecb | Mode::Cbc => &Padding::ALL,
-            Mode::Cfb | Mode::Ofb | Mode::Ctr | Mode::Gofb => &[Padding::None],
+            Mode::Cfb | Mode::Ofb | Mode::Ctr | Mode::Gofb | Mode::OpenPgpCfb => &[Padding::None],
         }
     }
 }
@@ -321,7 +325,7 @@ macro_rules! block_cipher {
             use tc_block_cipher::BlockCipher as _;
             use tc_block_modes::{
                 CbcBlockCipher, CfbBlockCipher, CtrBlockCipher, EcbBlockCipher, GofbBlockCipher,
-                OfbBlockCipher,
+                OfbBlockCipher, OpenPgpCfbBlockCipher,
             };
             use tc_buffered_cipher::BufferedBlockCipher;
 
@@ -358,6 +362,11 @@ macro_rules! block_cipher {
                 ))),
                 Mode::Gofb => Box::new(Buffered::<_, $own>(
                     BufferedBlockCipher::new(GofbBlockCipher::new(engine)),
+                    block,
+                    PhantomData,
+                )),
+                Mode::OpenPgpCfb => Box::new(Buffered::<_, $own>(
+                    BufferedBlockCipher::new(OpenPgpCfbBlockCipher::new(engine)),
                     block,
                     PhantomData,
                 )),
