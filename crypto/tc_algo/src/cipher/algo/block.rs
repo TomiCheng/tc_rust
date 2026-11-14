@@ -22,13 +22,24 @@ pub(super) enum Mode {
 impl Mode {
     const ALL: [Mode; 5] = [Mode::Ecb, Mode::Cbc, Mode::Cfb, Mode::Ofb, Mode::Ctr];
 
+    // The name first, then the aliases of Bouncy Castle's CipherUtilities, where NONE and a mode
+    // left empty are ECB
     fn names(self) -> &'static [&'static str] {
         match self {
-            Mode::Ecb => &["ECB"],
+            Mode::Ecb => &["ECB", "NONE", ""],
             Mode::Cbc => &["CBC"],
             Mode::Cfb => &["CFB"],
             Mode::Ofb => &["OFB"],
             Mode::Ctr => &["CTR", "SIC"],
+        }
+    }
+
+    // The padding Bouncy Castle gives the mode when the name leaves it out, leaves it empty or
+    // names RAW: PKCS#7 for the modes of whole blocks, none for the others
+    fn default_padding(self) -> Padding {
+        match self {
+            Mode::Ecb | Mode::Cbc => Padding::Pkcs7,
+            Mode::Cfb | Mode::Ofb | Mode::Ctr => Padding::None,
         }
     }
 
@@ -71,7 +82,7 @@ impl Padding {
             Padding::Pkcs7 => &["PKCS7PADDING", "PKCS7", "PKCS5PADDING", "PKCS5"],
             Padding::Iso10126 => &["ISO10126PADDING", "ISO10126D2PADDING", "ISO10126-2PADDING"],
             Padding::Iso7816d4 => &["ISO7816-4PADDING", "ISO9797-1PADDING"],
-            Padding::X923 => &["X923PADDING"],
+            Padding::X923 => &["X923PADDING", "X9.23PADDING"],
             Padding::Tbc => &["TBCPADDING"],
             Padding::ZeroByte => &["ZEROBYTEPADDING"],
         }
@@ -80,7 +91,10 @@ impl Padding {
 
 // Every row of one block cipher: each mode with each padding it takes, named
 // `ALGORITHM/MODE/PADDING` after the first of `algorithms`, with every other name of the algorithm,
-// the mode and the padding as aliases. `oids` gives the OIDs of the rows that have them
+// the mode and the padding as aliases. The row of a mode's default padding also takes the names
+// that leave the padding out, leave it empty or name RAW, as `AES/CBC`, `AES/CBC/` and
+// `AES/CBC/RAW`; with ECB, whose name may be empty, that includes `AES/` and `AES` alone, as in
+// Bouncy Castle's CipherUtilities. `oids` gives the OIDs of the rows that have them
 pub(super) fn block_rows(
     algorithms: &[&'static str],
     create: Create,
@@ -101,6 +115,19 @@ pub(super) fn block_rows(
             let name = names
                 .next()
                 .expect("an algorithm, a mode and a padding have a name");
+            let mut aliases: Vec<String> = names.collect();
+            if padding == mode.default_padding() {
+                for algorithm in algorithms {
+                    for mode_name in mode.names() {
+                        aliases.push(format!("{algorithm}/{mode_name}/RAW"));
+                        aliases.push(format!("{algorithm}/{mode_name}/"));
+                        aliases.push(format!("{algorithm}/{mode_name}"));
+                    }
+                    if mode == Mode::Ecb {
+                        aliases.push(algorithm.to_string());
+                    }
+                }
+            }
             let oids = oids
                 .iter()
                 .filter(|(m, p, _)| *m == mode && *p == padding)
@@ -109,7 +136,7 @@ pub(super) fn block_rows(
                 .collect();
             rows.push(Box::new(Row {
                 name,
-                aliases: names.collect(),
+                aliases,
                 oids,
                 mode,
                 padding,

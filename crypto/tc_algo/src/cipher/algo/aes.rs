@@ -256,10 +256,59 @@ mod tests {
     }
 
     #[test]
-    fn the_row_has_no_aliases_or_oids() {
+    fn the_ecb_row_takes_bouncy_castle_s_none_and_an_empty_mode_and_has_no_oids() {
         let entry = entry("AES/ECB/NOPADDING");
-        assert!(entry.aliases().is_empty());
+        assert_eq!(
+            entry.aliases(),
+            [
+                "AES/NONE/NOPADDING".to_string(),
+                "AES//NOPADDING".to_string()
+            ]
+        );
         assert!(entry.oids().is_empty());
+    }
+
+    // As Bouncy Castle's CipherUtilities: an empty or missing mode is ECB, and an empty, missing
+    // or RAW padding is PKCS#7 in ECB and CBC and none in the other modes
+    #[test]
+    fn a_name_that_leaves_out_the_mode_or_the_padding_finds_bouncy_castle_s_default() {
+        let algo = DefaultAlgoBuilder::default().build();
+        let ciphers = algo.cipher();
+        let name_of = |name: &str| ciphers.get_by_name(name).map(|_| ()).is_ok();
+        let row_of = |name: &str| {
+            ciphers
+                .algorithms()
+                .find(|entry| {
+                    entry.name().eq_ignore_ascii_case(name)
+                        || entry
+                            .aliases()
+                            .iter()
+                            .any(|alias| alias.eq_ignore_ascii_case(name))
+                })
+                .map(|entry| entry.name().to_string())
+        };
+        for (name, row) in [
+            ("AES", "AES/ECB/PKCS7PADDING"),
+            ("aes/", "AES/ECB/PKCS7PADDING"),
+            ("AES//", "AES/ECB/PKCS7PADDING"),
+            ("AES//PKCS7", "AES/ECB/PKCS7PADDING"),
+            ("AES//PKCS5PADDING", "AES/ECB/PKCS7PADDING"),
+            ("AES/ECB", "AES/ECB/PKCS7PADDING"),
+            ("AES/NONE/RAW", "AES/ECB/PKCS7PADDING"),
+            ("AES/CBC", "AES/CBC/PKCS7PADDING"),
+            ("AES/CBC/", "AES/CBC/PKCS7PADDING"),
+            ("AES/CBC/RAW", "AES/CBC/PKCS7PADDING"),
+            ("AES/CFB", "AES/CFB/NOPADDING"),
+            ("AES/OFB/RAW", "AES/OFB/NOPADDING"),
+            ("AES/SIC", "AES/CTR/NOPADDING"),
+            ("AES/CBC/X9.23PADDING", "AES/CBC/X923PADDING"),
+            ("AES//NOPADDING", "AES/ECB/NOPADDING"),
+        ] {
+            assert!(name_of(name), "{name}");
+            assert_eq!(row_of(name).as_deref(), Some(row), "{name}");
+        }
+        // A padding left out is not NOPADDING in the modes of whole blocks
+        assert_ne!(row_of("AES/CBC").as_deref(), Some("AES/CBC/NOPADDING"));
     }
 
     #[test]

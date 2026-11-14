@@ -57,31 +57,33 @@ fn main() -> Result<(), AlgoError> {
 ## Algorithms
 
 A name is `ALGORITHM/MODE/PADDING`, after Bouncy Castle's `CipherUtilities`, and its case does not
-matter. The aliases of modes and paddings are under [Modes and paddings](#modes-and-paddings).
+matter. The Aliases column gives every other name that finds the row: the other names of the
+algorithm, as `TDEA` for `DESEDE`, of the mode and of the padding, and the names that leave the mode
+or the padding out. The rules they follow are under [Modes and paddings](#modes-and-paddings).
 
 ### AES
 
 The `aes` feature has the rows.
 
-| Name | OIDs | Params | Note |
-|---|---|---|---|
-| `AES/ECB/NOPADDING` |  | `KeyOwned` | weak |
-| `AES/ECB/PKCS7PADDING` | `2.16.840.1.101.3.4.1.1`, `.21`, `.41` | `KeyOwned` | weak |
-| `AES/ECB/ISO10126PADDING` |  | `KeyOwned` | weak |
-| `AES/ECB/ISO7816-4PADDING` |  | `KeyOwned` | weak |
-| `AES/ECB/X923PADDING` |  | `KeyOwned` | weak |
-| `AES/ECB/TBCPADDING` |  | `KeyOwned` | weak |
-| `AES/ECB/ZEROBYTEPADDING` |  | `KeyOwned` | weak |
-| `AES/CBC/NOPADDING` |  | `KeyWithIvOwned` |  |
-| `AES/CBC/PKCS7PADDING` | `2.16.840.1.101.3.4.1.2`, `.22`, `.42` | `KeyWithIvOwned` |  |
-| `AES/CBC/ISO10126PADDING` |  | `KeyWithIvOwned` |  |
-| `AES/CBC/ISO7816-4PADDING` |  | `KeyWithIvOwned` |  |
-| `AES/CBC/X923PADDING` |  | `KeyWithIvOwned` |  |
-| `AES/CBC/TBCPADDING` |  | `KeyWithIvOwned` |  |
-| `AES/CBC/ZEROBYTEPADDING` |  | `KeyWithIvOwned` |  |
-| `AES/CFB/NOPADDING` | `2.16.840.1.101.3.4.1.4`, `.24`, `.44` | `KeyWithIvOwned` |  |
-| `AES/OFB/NOPADDING` | `2.16.840.1.101.3.4.1.3`, `.23`, `.43` | `KeyWithIvOwned` |  |
-| `AES/CTR/NOPADDING` |  | `KeyWithIvOwned` |  |
+| Name | Aliases | OIDs | Params | Note |
+|---|---|---|---|---|
+| `AES/ECB/NOPADDING` | `AES/NONE/NOPADDING`, `AES//NOPADDING` |  | `KeyOwned` | weak |
+| `AES/ECB/PKCS7PADDING` | `AES/ECB/PKCS7`, `AES/ECB/PKCS5PADDING`, `AES/ECB/PKCS5`, `AES/NONE/PKCS7PADDING`, `AES/NONE/PKCS7`, `AES/NONE/PKCS5PADDING`, `AES/NONE/PKCS5`, `AES//PKCS7PADDING`, `AES//PKCS7`, `AES//PKCS5PADDING`, `AES//PKCS5`, `AES/ECB/RAW`, `AES/ECB/`, `AES/ECB`, `AES/NONE/RAW`, `AES/NONE/`, `AES/NONE`, `AES//RAW`, `AES//`, `AES/`, `AES` | `2.16.840.1.101.3.4.1.1`, `.21`, `.41` | `KeyOwned` | weak |
+| `AES/ECB/ISO10126PADDING` | `AES/ECB/ISO10126D2PADDING`, `AES/ECB/ISO10126-2PADDING`, `AES/NONE/ISO10126PADDING`, `AES/NONE/ISO10126D2PADDING`, `AES/NONE/ISO10126-2PADDING`, `AES//ISO10126PADDING`, `AES//ISO10126D2PADDING`, `AES//ISO10126-2PADDING` |  | `KeyOwned` | weak |
+| `AES/ECB/ISO7816-4PADDING` | `AES/ECB/ISO9797-1PADDING`, `AES/NONE/ISO7816-4PADDING`, `AES/NONE/ISO9797-1PADDING`, `AES//ISO7816-4PADDING`, `AES//ISO9797-1PADDING` |  | `KeyOwned` | weak |
+| `AES/ECB/X923PADDING` | `AES/ECB/X9.23PADDING`, `AES/NONE/X923PADDING`, `AES/NONE/X9.23PADDING`, `AES//X923PADDING`, `AES//X9.23PADDING` |  | `KeyOwned` | weak |
+| `AES/ECB/TBCPADDING` | `AES/NONE/TBCPADDING`, `AES//TBCPADDING` |  | `KeyOwned` | weak |
+| `AES/ECB/ZEROBYTEPADDING` | `AES/NONE/ZEROBYTEPADDING`, `AES//ZEROBYTEPADDING` |  | `KeyOwned` | weak |
+| `AES/CBC/NOPADDING` |  |  | `KeyWithIvOwned` |  |
+| `AES/CBC/PKCS7PADDING` | `AES/CBC/PKCS7`, `AES/CBC/PKCS5PADDING`, `AES/CBC/PKCS5`, `AES/CBC/RAW`, `AES/CBC/`, `AES/CBC` | `2.16.840.1.101.3.4.1.2`, `.22`, `.42` | `KeyWithIvOwned` |  |
+| `AES/CBC/ISO10126PADDING` | `AES/CBC/ISO10126D2PADDING`, `AES/CBC/ISO10126-2PADDING` |  | `KeyWithIvOwned` |  |
+| `AES/CBC/ISO7816-4PADDING` | `AES/CBC/ISO9797-1PADDING` |  | `KeyWithIvOwned` |  |
+| `AES/CBC/X923PADDING` | `AES/CBC/X9.23PADDING` |  | `KeyWithIvOwned` |  |
+| `AES/CBC/TBCPADDING` |  |  | `KeyWithIvOwned` |  |
+| `AES/CBC/ZEROBYTEPADDING` |  |  | `KeyWithIvOwned` |  |
+| `AES/CFB/NOPADDING` | `AES/CFB/RAW`, `AES/CFB/`, `AES/CFB` | `2.16.840.1.101.3.4.1.4`, `.24`, `.44` | `KeyWithIvOwned` |  |
+| `AES/OFB/NOPADDING` | `AES/OFB/RAW`, `AES/OFB/`, `AES/OFB` | `2.16.840.1.101.3.4.1.3`, `.23`, `.43` | `KeyWithIvOwned` |  |
+| `AES/CTR/NOPADDING` | `AES/SIC/NOPADDING`, `AES/CTR/RAW`, `AES/CTR/`, `AES/CTR`, `AES/SIC/RAW`, `AES/SIC/`, `AES/SIC` |  | `KeyWithIvOwned` |  |
 
 The OIDs are NIST's for AES-128, AES-192 and AES-256 in each mode; as in Bouncy Castle, those of ECB
 and CBC mean PKCS#7 padding. All three find the same row, so the length of the key comes from the
@@ -93,25 +95,25 @@ params.
 
 The `des` feature has the rows.
 
-| Name | OIDs | Params | Note |
-|---|---|---|---|
-| `DES/ECB/NOPADDING` |  | `KeyOwned` | weak |
-| `DES/ECB/PKCS7PADDING` | `1.3.14.3.2.6` | `KeyOwned` | weak |
-| `DES/ECB/ISO10126PADDING` |  | `KeyOwned` | weak |
-| `DES/ECB/ISO7816-4PADDING` |  | `KeyOwned` | weak |
-| `DES/ECB/X923PADDING` |  | `KeyOwned` | weak |
-| `DES/ECB/TBCPADDING` |  | `KeyOwned` | weak |
-| `DES/ECB/ZEROBYTEPADDING` |  | `KeyOwned` | weak |
-| `DES/CBC/NOPADDING` |  | `KeyWithIvOwned` | weak |
-| `DES/CBC/PKCS7PADDING` | `1.3.14.3.2.7` | `KeyWithIvOwned` | weak |
-| `DES/CBC/ISO10126PADDING` |  | `KeyWithIvOwned` | weak |
-| `DES/CBC/ISO7816-4PADDING` |  | `KeyWithIvOwned` | weak |
-| `DES/CBC/X923PADDING` |  | `KeyWithIvOwned` | weak |
-| `DES/CBC/TBCPADDING` |  | `KeyWithIvOwned` | weak |
-| `DES/CBC/ZEROBYTEPADDING` |  | `KeyWithIvOwned` | weak |
-| `DES/CFB/NOPADDING` | `1.3.14.3.2.9` | `KeyWithIvOwned` | weak |
-| `DES/OFB/NOPADDING` | `1.3.14.3.2.8` | `KeyWithIvOwned` | weak |
-| `DES/CTR/NOPADDING` |  | `KeyWithIvOwned` | weak |
+| Name | Aliases | OIDs | Params | Note |
+|---|---|---|---|---|
+| `DES/ECB/NOPADDING` | `DES/NONE/NOPADDING`, `DES//NOPADDING` |  | `KeyOwned` | weak |
+| `DES/ECB/PKCS7PADDING` | `DES/ECB/PKCS7`, `DES/ECB/PKCS5PADDING`, `DES/ECB/PKCS5`, `DES/NONE/PKCS7PADDING`, `DES/NONE/PKCS7`, `DES/NONE/PKCS5PADDING`, `DES/NONE/PKCS5`, `DES//PKCS7PADDING`, `DES//PKCS7`, `DES//PKCS5PADDING`, `DES//PKCS5`, `DES/ECB/RAW`, `DES/ECB/`, `DES/ECB`, `DES/NONE/RAW`, `DES/NONE/`, `DES/NONE`, `DES//RAW`, `DES//`, `DES/`, `DES` | `1.3.14.3.2.6` | `KeyOwned` | weak |
+| `DES/ECB/ISO10126PADDING` | `DES/ECB/ISO10126D2PADDING`, `DES/ECB/ISO10126-2PADDING`, `DES/NONE/ISO10126PADDING`, `DES/NONE/ISO10126D2PADDING`, `DES/NONE/ISO10126-2PADDING`, `DES//ISO10126PADDING`, `DES//ISO10126D2PADDING`, `DES//ISO10126-2PADDING` |  | `KeyOwned` | weak |
+| `DES/ECB/ISO7816-4PADDING` | `DES/ECB/ISO9797-1PADDING`, `DES/NONE/ISO7816-4PADDING`, `DES/NONE/ISO9797-1PADDING`, `DES//ISO7816-4PADDING`, `DES//ISO9797-1PADDING` |  | `KeyOwned` | weak |
+| `DES/ECB/X923PADDING` | `DES/ECB/X9.23PADDING`, `DES/NONE/X923PADDING`, `DES/NONE/X9.23PADDING`, `DES//X923PADDING`, `DES//X9.23PADDING` |  | `KeyOwned` | weak |
+| `DES/ECB/TBCPADDING` | `DES/NONE/TBCPADDING`, `DES//TBCPADDING` |  | `KeyOwned` | weak |
+| `DES/ECB/ZEROBYTEPADDING` | `DES/NONE/ZEROBYTEPADDING`, `DES//ZEROBYTEPADDING` |  | `KeyOwned` | weak |
+| `DES/CBC/NOPADDING` |  |  | `KeyWithIvOwned` | weak |
+| `DES/CBC/PKCS7PADDING` | `DES/CBC/PKCS7`, `DES/CBC/PKCS5PADDING`, `DES/CBC/PKCS5`, `DES/CBC/RAW`, `DES/CBC/`, `DES/CBC` | `1.3.14.3.2.7` | `KeyWithIvOwned` | weak |
+| `DES/CBC/ISO10126PADDING` | `DES/CBC/ISO10126D2PADDING`, `DES/CBC/ISO10126-2PADDING` |  | `KeyWithIvOwned` | weak |
+| `DES/CBC/ISO7816-4PADDING` | `DES/CBC/ISO9797-1PADDING` |  | `KeyWithIvOwned` | weak |
+| `DES/CBC/X923PADDING` | `DES/CBC/X9.23PADDING` |  | `KeyWithIvOwned` | weak |
+| `DES/CBC/TBCPADDING` |  |  | `KeyWithIvOwned` | weak |
+| `DES/CBC/ZEROBYTEPADDING` |  |  | `KeyWithIvOwned` | weak |
+| `DES/CFB/NOPADDING` | `DES/CFB/RAW`, `DES/CFB/`, `DES/CFB` | `1.3.14.3.2.9` | `KeyWithIvOwned` | weak |
+| `DES/OFB/NOPADDING` | `DES/OFB/RAW`, `DES/OFB/`, `DES/OFB` | `1.3.14.3.2.8` | `KeyWithIvOwned` | weak |
+| `DES/CTR/NOPADDING` | `DES/SIC/NOPADDING`, `DES/CTR/RAW`, `DES/CTR/`, `DES/CTR`, `DES/SIC/RAW`, `DES/SIC/`, `DES/SIC` |  | `KeyWithIvOwned` | weak |
 
 The OIDs are OIW's, and as in Bouncy Castle those of ECB and CBC mean PKCS#7 padding.
 
@@ -121,25 +123,25 @@ The `desede` feature has the rows. `TDEA` is another name of `DESEDE`, as in
 `TDEA/CBC/PKCS7PADDING`. The key is 24 bytes for three keys, or 16 for two, the third key being the
 first.
 
-| Name | OIDs | Params | Note |
-|---|---|---|---|
-| `DESEDE/ECB/NOPADDING` |  | `KeyOwned` | weak |
-| `DESEDE/ECB/PKCS7PADDING` | `1.3.14.3.2.17` | `KeyOwned` | weak |
-| `DESEDE/ECB/ISO10126PADDING` |  | `KeyOwned` | weak |
-| `DESEDE/ECB/ISO7816-4PADDING` |  | `KeyOwned` | weak |
-| `DESEDE/ECB/X923PADDING` |  | `KeyOwned` | weak |
-| `DESEDE/ECB/TBCPADDING` |  | `KeyOwned` | weak |
-| `DESEDE/ECB/ZEROBYTEPADDING` |  | `KeyOwned` | weak |
-| `DESEDE/CBC/NOPADDING` |  | `KeyWithIvOwned` | legacy |
-| `DESEDE/CBC/PKCS7PADDING` | `1.2.840.113549.3.7` | `KeyWithIvOwned` | legacy |
-| `DESEDE/CBC/ISO10126PADDING` |  | `KeyWithIvOwned` | legacy |
-| `DESEDE/CBC/ISO7816-4PADDING` |  | `KeyWithIvOwned` | legacy |
-| `DESEDE/CBC/X923PADDING` |  | `KeyWithIvOwned` | legacy |
-| `DESEDE/CBC/TBCPADDING` |  | `KeyWithIvOwned` | legacy |
-| `DESEDE/CBC/ZEROBYTEPADDING` |  | `KeyWithIvOwned` | legacy |
-| `DESEDE/CFB/NOPADDING` |  | `KeyWithIvOwned` | legacy |
-| `DESEDE/OFB/NOPADDING` |  | `KeyWithIvOwned` | legacy |
-| `DESEDE/CTR/NOPADDING` |  | `KeyWithIvOwned` | legacy |
+| Name | Aliases | OIDs | Params | Note |
+|---|---|---|---|---|
+| `DESEDE/ECB/NOPADDING` | `DESEDE/NONE/NOPADDING`, `DESEDE//NOPADDING`, `TDEA/ECB/NOPADDING`, `TDEA/NONE/NOPADDING`, `TDEA//NOPADDING` |  | `KeyOwned` | weak |
+| `DESEDE/ECB/PKCS7PADDING` | `DESEDE/ECB/PKCS7`, `DESEDE/ECB/PKCS5PADDING`, `DESEDE/ECB/PKCS5`, `DESEDE/NONE/PKCS7PADDING`, `DESEDE/NONE/PKCS7`, `DESEDE/NONE/PKCS5PADDING`, `DESEDE/NONE/PKCS5`, `DESEDE//PKCS7PADDING`, `DESEDE//PKCS7`, `DESEDE//PKCS5PADDING`, `DESEDE//PKCS5`, `TDEA/ECB/PKCS7PADDING`, `TDEA/ECB/PKCS7`, `TDEA/ECB/PKCS5PADDING`, `TDEA/ECB/PKCS5`, `TDEA/NONE/PKCS7PADDING`, `TDEA/NONE/PKCS7`, `TDEA/NONE/PKCS5PADDING`, `TDEA/NONE/PKCS5`, `TDEA//PKCS7PADDING`, `TDEA//PKCS7`, `TDEA//PKCS5PADDING`, `TDEA//PKCS5`, `DESEDE/ECB/RAW`, `DESEDE/ECB/`, `DESEDE/ECB`, `DESEDE/NONE/RAW`, `DESEDE/NONE/`, `DESEDE/NONE`, `DESEDE//RAW`, `DESEDE//`, `DESEDE/`, `DESEDE`, `TDEA/ECB/RAW`, `TDEA/ECB/`, `TDEA/ECB`, `TDEA/NONE/RAW`, `TDEA/NONE/`, `TDEA/NONE`, `TDEA//RAW`, `TDEA//`, `TDEA/`, `TDEA` | `1.3.14.3.2.17` | `KeyOwned` | weak |
+| `DESEDE/ECB/ISO10126PADDING` | `DESEDE/ECB/ISO10126D2PADDING`, `DESEDE/ECB/ISO10126-2PADDING`, `DESEDE/NONE/ISO10126PADDING`, `DESEDE/NONE/ISO10126D2PADDING`, `DESEDE/NONE/ISO10126-2PADDING`, `DESEDE//ISO10126PADDING`, `DESEDE//ISO10126D2PADDING`, `DESEDE//ISO10126-2PADDING`, `TDEA/ECB/ISO10126PADDING`, `TDEA/ECB/ISO10126D2PADDING`, `TDEA/ECB/ISO10126-2PADDING`, `TDEA/NONE/ISO10126PADDING`, `TDEA/NONE/ISO10126D2PADDING`, `TDEA/NONE/ISO10126-2PADDING`, `TDEA//ISO10126PADDING`, `TDEA//ISO10126D2PADDING`, `TDEA//ISO10126-2PADDING` |  | `KeyOwned` | weak |
+| `DESEDE/ECB/ISO7816-4PADDING` | `DESEDE/ECB/ISO9797-1PADDING`, `DESEDE/NONE/ISO7816-4PADDING`, `DESEDE/NONE/ISO9797-1PADDING`, `DESEDE//ISO7816-4PADDING`, `DESEDE//ISO9797-1PADDING`, `TDEA/ECB/ISO7816-4PADDING`, `TDEA/ECB/ISO9797-1PADDING`, `TDEA/NONE/ISO7816-4PADDING`, `TDEA/NONE/ISO9797-1PADDING`, `TDEA//ISO7816-4PADDING`, `TDEA//ISO9797-1PADDING` |  | `KeyOwned` | weak |
+| `DESEDE/ECB/X923PADDING` | `DESEDE/ECB/X9.23PADDING`, `DESEDE/NONE/X923PADDING`, `DESEDE/NONE/X9.23PADDING`, `DESEDE//X923PADDING`, `DESEDE//X9.23PADDING`, `TDEA/ECB/X923PADDING`, `TDEA/ECB/X9.23PADDING`, `TDEA/NONE/X923PADDING`, `TDEA/NONE/X9.23PADDING`, `TDEA//X923PADDING`, `TDEA//X9.23PADDING` |  | `KeyOwned` | weak |
+| `DESEDE/ECB/TBCPADDING` | `DESEDE/NONE/TBCPADDING`, `DESEDE//TBCPADDING`, `TDEA/ECB/TBCPADDING`, `TDEA/NONE/TBCPADDING`, `TDEA//TBCPADDING` |  | `KeyOwned` | weak |
+| `DESEDE/ECB/ZEROBYTEPADDING` | `DESEDE/NONE/ZEROBYTEPADDING`, `DESEDE//ZEROBYTEPADDING`, `TDEA/ECB/ZEROBYTEPADDING`, `TDEA/NONE/ZEROBYTEPADDING`, `TDEA//ZEROBYTEPADDING` |  | `KeyOwned` | weak |
+| `DESEDE/CBC/NOPADDING` | `TDEA/CBC/NOPADDING` |  | `KeyWithIvOwned` | legacy |
+| `DESEDE/CBC/PKCS7PADDING` | `DESEDE/CBC/PKCS7`, `DESEDE/CBC/PKCS5PADDING`, `DESEDE/CBC/PKCS5`, `TDEA/CBC/PKCS7PADDING`, `TDEA/CBC/PKCS7`, `TDEA/CBC/PKCS5PADDING`, `TDEA/CBC/PKCS5`, `DESEDE/CBC/RAW`, `DESEDE/CBC/`, `DESEDE/CBC`, `TDEA/CBC/RAW`, `TDEA/CBC/`, `TDEA/CBC` | `1.2.840.113549.3.7` | `KeyWithIvOwned` | legacy |
+| `DESEDE/CBC/ISO10126PADDING` | `DESEDE/CBC/ISO10126D2PADDING`, `DESEDE/CBC/ISO10126-2PADDING`, `TDEA/CBC/ISO10126PADDING`, `TDEA/CBC/ISO10126D2PADDING`, `TDEA/CBC/ISO10126-2PADDING` |  | `KeyWithIvOwned` | legacy |
+| `DESEDE/CBC/ISO7816-4PADDING` | `DESEDE/CBC/ISO9797-1PADDING`, `TDEA/CBC/ISO7816-4PADDING`, `TDEA/CBC/ISO9797-1PADDING` |  | `KeyWithIvOwned` | legacy |
+| `DESEDE/CBC/X923PADDING` | `DESEDE/CBC/X9.23PADDING`, `TDEA/CBC/X923PADDING`, `TDEA/CBC/X9.23PADDING` |  | `KeyWithIvOwned` | legacy |
+| `DESEDE/CBC/TBCPADDING` | `TDEA/CBC/TBCPADDING` |  | `KeyWithIvOwned` | legacy |
+| `DESEDE/CBC/ZEROBYTEPADDING` | `TDEA/CBC/ZEROBYTEPADDING` |  | `KeyWithIvOwned` | legacy |
+| `DESEDE/CFB/NOPADDING` | `TDEA/CFB/NOPADDING`, `DESEDE/CFB/RAW`, `DESEDE/CFB/`, `DESEDE/CFB`, `TDEA/CFB/RAW`, `TDEA/CFB/`, `TDEA/CFB` |  | `KeyWithIvOwned` | legacy |
+| `DESEDE/OFB/NOPADDING` | `TDEA/OFB/NOPADDING`, `DESEDE/OFB/RAW`, `DESEDE/OFB/`, `DESEDE/OFB`, `TDEA/OFB/RAW`, `TDEA/OFB/`, `TDEA/OFB` |  | `KeyWithIvOwned` | legacy |
+| `DESEDE/CTR/NOPADDING` | `DESEDE/SIC/NOPADDING`, `TDEA/CTR/NOPADDING`, `TDEA/SIC/NOPADDING`, `DESEDE/CTR/RAW`, `DESEDE/CTR/`, `DESEDE/CTR`, `DESEDE/SIC/RAW`, `DESEDE/SIC/`, `DESEDE/SIC`, `TDEA/CTR/RAW`, `TDEA/CTR/`, `TDEA/CTR`, `TDEA/SIC/RAW`, `TDEA/SIC/`, `TDEA/SIC` |  | `KeyWithIvOwned` | legacy |
 
 The OIDs are OIW's DESede, which means ECB with PKCS#7 padding, and RSA's DES-EDE3-CBC, which means
 CBC with PKCS#7 padding.
@@ -149,25 +151,25 @@ CBC with PKCS#7 padding.
 The `camellia` feature has the rows. A block of 16 bytes and a key of 16, 24 or 32, as AES; a
 Japanese and ISO standard.
 
-| Name | OIDs | Params | Note |
-|---|---|---|---|
-| `CAMELLIA/ECB/NOPADDING` |  | `KeyOwned` | weak, variable time |
-| `CAMELLIA/ECB/PKCS7PADDING` |  | `KeyOwned` | weak, variable time |
-| `CAMELLIA/ECB/ISO10126PADDING` |  | `KeyOwned` | weak, variable time |
-| `CAMELLIA/ECB/ISO7816-4PADDING` |  | `KeyOwned` | weak, variable time |
-| `CAMELLIA/ECB/X923PADDING` |  | `KeyOwned` | weak, variable time |
-| `CAMELLIA/ECB/TBCPADDING` |  | `KeyOwned` | weak, variable time |
-| `CAMELLIA/ECB/ZEROBYTEPADDING` |  | `KeyOwned` | weak, variable time |
-| `CAMELLIA/CBC/NOPADDING` |  | `KeyWithIvOwned` | variable time |
-| `CAMELLIA/CBC/PKCS7PADDING` | `1.2.392.200011.61.1.1.1.2`, `.3`, `.4` | `KeyWithIvOwned` | variable time |
-| `CAMELLIA/CBC/ISO10126PADDING` |  | `KeyWithIvOwned` | variable time |
-| `CAMELLIA/CBC/ISO7816-4PADDING` |  | `KeyWithIvOwned` | variable time |
-| `CAMELLIA/CBC/X923PADDING` |  | `KeyWithIvOwned` | variable time |
-| `CAMELLIA/CBC/TBCPADDING` |  | `KeyWithIvOwned` | variable time |
-| `CAMELLIA/CBC/ZEROBYTEPADDING` |  | `KeyWithIvOwned` | variable time |
-| `CAMELLIA/CFB/NOPADDING` |  | `KeyWithIvOwned` | variable time |
-| `CAMELLIA/OFB/NOPADDING` |  | `KeyWithIvOwned` | variable time |
-| `CAMELLIA/CTR/NOPADDING` |  | `KeyWithIvOwned` | variable time |
+| Name | Aliases | OIDs | Params | Note |
+|---|---|---|---|---|
+| `CAMELLIA/ECB/NOPADDING` | `CAMELLIA/NONE/NOPADDING`, `CAMELLIA//NOPADDING` |  | `KeyOwned` | weak, variable time |
+| `CAMELLIA/ECB/PKCS7PADDING` | `CAMELLIA/ECB/PKCS7`, `CAMELLIA/ECB/PKCS5PADDING`, `CAMELLIA/ECB/PKCS5`, `CAMELLIA/NONE/PKCS7PADDING`, `CAMELLIA/NONE/PKCS7`, `CAMELLIA/NONE/PKCS5PADDING`, `CAMELLIA/NONE/PKCS5`, `CAMELLIA//PKCS7PADDING`, `CAMELLIA//PKCS7`, `CAMELLIA//PKCS5PADDING`, `CAMELLIA//PKCS5`, `CAMELLIA/ECB/RAW`, `CAMELLIA/ECB/`, `CAMELLIA/ECB`, `CAMELLIA/NONE/RAW`, `CAMELLIA/NONE/`, `CAMELLIA/NONE`, `CAMELLIA//RAW`, `CAMELLIA//`, `CAMELLIA/`, `CAMELLIA` |  | `KeyOwned` | weak, variable time |
+| `CAMELLIA/ECB/ISO10126PADDING` | `CAMELLIA/ECB/ISO10126D2PADDING`, `CAMELLIA/ECB/ISO10126-2PADDING`, `CAMELLIA/NONE/ISO10126PADDING`, `CAMELLIA/NONE/ISO10126D2PADDING`, `CAMELLIA/NONE/ISO10126-2PADDING`, `CAMELLIA//ISO10126PADDING`, `CAMELLIA//ISO10126D2PADDING`, `CAMELLIA//ISO10126-2PADDING` |  | `KeyOwned` | weak, variable time |
+| `CAMELLIA/ECB/ISO7816-4PADDING` | `CAMELLIA/ECB/ISO9797-1PADDING`, `CAMELLIA/NONE/ISO7816-4PADDING`, `CAMELLIA/NONE/ISO9797-1PADDING`, `CAMELLIA//ISO7816-4PADDING`, `CAMELLIA//ISO9797-1PADDING` |  | `KeyOwned` | weak, variable time |
+| `CAMELLIA/ECB/X923PADDING` | `CAMELLIA/ECB/X9.23PADDING`, `CAMELLIA/NONE/X923PADDING`, `CAMELLIA/NONE/X9.23PADDING`, `CAMELLIA//X923PADDING`, `CAMELLIA//X9.23PADDING` |  | `KeyOwned` | weak, variable time |
+| `CAMELLIA/ECB/TBCPADDING` | `CAMELLIA/NONE/TBCPADDING`, `CAMELLIA//TBCPADDING` |  | `KeyOwned` | weak, variable time |
+| `CAMELLIA/ECB/ZEROBYTEPADDING` | `CAMELLIA/NONE/ZEROBYTEPADDING`, `CAMELLIA//ZEROBYTEPADDING` |  | `KeyOwned` | weak, variable time |
+| `CAMELLIA/CBC/NOPADDING` |  |  | `KeyWithIvOwned` | variable time |
+| `CAMELLIA/CBC/PKCS7PADDING` | `CAMELLIA/CBC/PKCS7`, `CAMELLIA/CBC/PKCS5PADDING`, `CAMELLIA/CBC/PKCS5`, `CAMELLIA/CBC/RAW`, `CAMELLIA/CBC/`, `CAMELLIA/CBC` | `1.2.392.200011.61.1.1.1.2`, `.3`, `.4` | `KeyWithIvOwned` | variable time |
+| `CAMELLIA/CBC/ISO10126PADDING` | `CAMELLIA/CBC/ISO10126D2PADDING`, `CAMELLIA/CBC/ISO10126-2PADDING` |  | `KeyWithIvOwned` | variable time |
+| `CAMELLIA/CBC/ISO7816-4PADDING` | `CAMELLIA/CBC/ISO9797-1PADDING` |  | `KeyWithIvOwned` | variable time |
+| `CAMELLIA/CBC/X923PADDING` | `CAMELLIA/CBC/X9.23PADDING` |  | `KeyWithIvOwned` | variable time |
+| `CAMELLIA/CBC/TBCPADDING` |  |  | `KeyWithIvOwned` | variable time |
+| `CAMELLIA/CBC/ZEROBYTEPADDING` |  |  | `KeyWithIvOwned` | variable time |
+| `CAMELLIA/CFB/NOPADDING` | `CAMELLIA/CFB/RAW`, `CAMELLIA/CFB/`, `CAMELLIA/CFB` |  | `KeyWithIvOwned` | variable time |
+| `CAMELLIA/OFB/NOPADDING` | `CAMELLIA/OFB/RAW`, `CAMELLIA/OFB/`, `CAMELLIA/OFB` |  | `KeyWithIvOwned` | variable time |
+| `CAMELLIA/CTR/NOPADDING` | `CAMELLIA/SIC/NOPADDING`, `CAMELLIA/CTR/RAW`, `CAMELLIA/CTR/`, `CAMELLIA/CTR`, `CAMELLIA/SIC/RAW`, `CAMELLIA/SIC/`, `CAMELLIA/SIC` |  | `KeyWithIvOwned` | variable time |
 
 The OIDs are NTT's for 128-, 192- and 256-bit keys, and mean CBC with PKCS#7 padding.
 
@@ -176,25 +178,25 @@ The OIDs are NTT's for 128-, 192- and 256-bit keys, and mean CBC with PKCS#7 pad
 The `aria` feature has the rows. A block of 16 bytes and a key of 16, 24 or 32, as AES; the Korean
 standard.
 
-| Name | OIDs | Params | Note |
-|---|---|---|---|
-| `ARIA/ECB/NOPADDING` |  | `KeyOwned` | weak, variable time |
-| `ARIA/ECB/PKCS7PADDING` | `1.2.410.200046.1.1.1`, `.6`, `.11` | `KeyOwned` | weak, variable time |
-| `ARIA/ECB/ISO10126PADDING` |  | `KeyOwned` | weak, variable time |
-| `ARIA/ECB/ISO7816-4PADDING` |  | `KeyOwned` | weak, variable time |
-| `ARIA/ECB/X923PADDING` |  | `KeyOwned` | weak, variable time |
-| `ARIA/ECB/TBCPADDING` |  | `KeyOwned` | weak, variable time |
-| `ARIA/ECB/ZEROBYTEPADDING` |  | `KeyOwned` | weak, variable time |
-| `ARIA/CBC/NOPADDING` |  | `KeyWithIvOwned` | variable time |
-| `ARIA/CBC/PKCS7PADDING` | `1.2.410.200046.1.1.2`, `.7`, `.12` | `KeyWithIvOwned` | variable time |
-| `ARIA/CBC/ISO10126PADDING` |  | `KeyWithIvOwned` | variable time |
-| `ARIA/CBC/ISO7816-4PADDING` |  | `KeyWithIvOwned` | variable time |
-| `ARIA/CBC/X923PADDING` |  | `KeyWithIvOwned` | variable time |
-| `ARIA/CBC/TBCPADDING` |  | `KeyWithIvOwned` | variable time |
-| `ARIA/CBC/ZEROBYTEPADDING` |  | `KeyWithIvOwned` | variable time |
-| `ARIA/CFB/NOPADDING` | `1.2.410.200046.1.1.3`, `.8`, `.13` | `KeyWithIvOwned` | variable time |
-| `ARIA/OFB/NOPADDING` | `1.2.410.200046.1.1.4`, `.9`, `.14` | `KeyWithIvOwned` | variable time |
-| `ARIA/CTR/NOPADDING` | `1.2.410.200046.1.1.5`, `.10`, `.15` | `KeyWithIvOwned` | variable time |
+| Name | Aliases | OIDs | Params | Note |
+|---|---|---|---|---|
+| `ARIA/ECB/NOPADDING` | `ARIA/NONE/NOPADDING`, `ARIA//NOPADDING` |  | `KeyOwned` | weak, variable time |
+| `ARIA/ECB/PKCS7PADDING` | `ARIA/ECB/PKCS7`, `ARIA/ECB/PKCS5PADDING`, `ARIA/ECB/PKCS5`, `ARIA/NONE/PKCS7PADDING`, `ARIA/NONE/PKCS7`, `ARIA/NONE/PKCS5PADDING`, `ARIA/NONE/PKCS5`, `ARIA//PKCS7PADDING`, `ARIA//PKCS7`, `ARIA//PKCS5PADDING`, `ARIA//PKCS5`, `ARIA/ECB/RAW`, `ARIA/ECB/`, `ARIA/ECB`, `ARIA/NONE/RAW`, `ARIA/NONE/`, `ARIA/NONE`, `ARIA//RAW`, `ARIA//`, `ARIA/`, `ARIA` | `1.2.410.200046.1.1.1`, `.6`, `.11` | `KeyOwned` | weak, variable time |
+| `ARIA/ECB/ISO10126PADDING` | `ARIA/ECB/ISO10126D2PADDING`, `ARIA/ECB/ISO10126-2PADDING`, `ARIA/NONE/ISO10126PADDING`, `ARIA/NONE/ISO10126D2PADDING`, `ARIA/NONE/ISO10126-2PADDING`, `ARIA//ISO10126PADDING`, `ARIA//ISO10126D2PADDING`, `ARIA//ISO10126-2PADDING` |  | `KeyOwned` | weak, variable time |
+| `ARIA/ECB/ISO7816-4PADDING` | `ARIA/ECB/ISO9797-1PADDING`, `ARIA/NONE/ISO7816-4PADDING`, `ARIA/NONE/ISO9797-1PADDING`, `ARIA//ISO7816-4PADDING`, `ARIA//ISO9797-1PADDING` |  | `KeyOwned` | weak, variable time |
+| `ARIA/ECB/X923PADDING` | `ARIA/ECB/X9.23PADDING`, `ARIA/NONE/X923PADDING`, `ARIA/NONE/X9.23PADDING`, `ARIA//X923PADDING`, `ARIA//X9.23PADDING` |  | `KeyOwned` | weak, variable time |
+| `ARIA/ECB/TBCPADDING` | `ARIA/NONE/TBCPADDING`, `ARIA//TBCPADDING` |  | `KeyOwned` | weak, variable time |
+| `ARIA/ECB/ZEROBYTEPADDING` | `ARIA/NONE/ZEROBYTEPADDING`, `ARIA//ZEROBYTEPADDING` |  | `KeyOwned` | weak, variable time |
+| `ARIA/CBC/NOPADDING` |  |  | `KeyWithIvOwned` | variable time |
+| `ARIA/CBC/PKCS7PADDING` | `ARIA/CBC/PKCS7`, `ARIA/CBC/PKCS5PADDING`, `ARIA/CBC/PKCS5`, `ARIA/CBC/RAW`, `ARIA/CBC/`, `ARIA/CBC` | `1.2.410.200046.1.1.2`, `.7`, `.12` | `KeyWithIvOwned` | variable time |
+| `ARIA/CBC/ISO10126PADDING` | `ARIA/CBC/ISO10126D2PADDING`, `ARIA/CBC/ISO10126-2PADDING` |  | `KeyWithIvOwned` | variable time |
+| `ARIA/CBC/ISO7816-4PADDING` | `ARIA/CBC/ISO9797-1PADDING` |  | `KeyWithIvOwned` | variable time |
+| `ARIA/CBC/X923PADDING` | `ARIA/CBC/X9.23PADDING` |  | `KeyWithIvOwned` | variable time |
+| `ARIA/CBC/TBCPADDING` |  |  | `KeyWithIvOwned` | variable time |
+| `ARIA/CBC/ZEROBYTEPADDING` |  |  | `KeyWithIvOwned` | variable time |
+| `ARIA/CFB/NOPADDING` | `ARIA/CFB/RAW`, `ARIA/CFB/`, `ARIA/CFB` | `1.2.410.200046.1.1.3`, `.8`, `.13` | `KeyWithIvOwned` | variable time |
+| `ARIA/OFB/NOPADDING` | `ARIA/OFB/RAW`, `ARIA/OFB/`, `ARIA/OFB` | `1.2.410.200046.1.1.4`, `.9`, `.14` | `KeyWithIvOwned` | variable time |
+| `ARIA/CTR/NOPADDING` | `ARIA/SIC/NOPADDING`, `ARIA/CTR/RAW`, `ARIA/CTR/`, `ARIA/CTR`, `ARIA/SIC/RAW`, `ARIA/SIC/`, `ARIA/SIC` | `1.2.410.200046.1.1.5`, `.10`, `.15` | `KeyWithIvOwned` | variable time |
 
 The OIDs are NSRI's for 128-, 192- and 256-bit keys in each mode. Bouncy Castle also has ARIA in GCM
 and CCM, and `ARIA//PKCS7` and the like for ECB with PKCS#7 padding; they are not rows yet.
@@ -203,25 +205,25 @@ and CCM, and `ARIA//PKCS7` and the like for ECB with PKCS#7 padding; they are no
 
 The `sm4` feature has the rows. A block of 16 bytes and a key of 16; the Chinese standard.
 
-| Name | OIDs | Params | Note |
-|---|---|---|---|
-| `SM4/ECB/NOPADDING` |  | `KeyOwned` | weak, variable time |
-| `SM4/ECB/PKCS7PADDING` |  | `KeyOwned` | weak, variable time |
-| `SM4/ECB/ISO10126PADDING` |  | `KeyOwned` | weak, variable time |
-| `SM4/ECB/ISO7816-4PADDING` |  | `KeyOwned` | weak, variable time |
-| `SM4/ECB/X923PADDING` |  | `KeyOwned` | weak, variable time |
-| `SM4/ECB/TBCPADDING` |  | `KeyOwned` | weak, variable time |
-| `SM4/ECB/ZEROBYTEPADDING` |  | `KeyOwned` | weak, variable time |
-| `SM4/CBC/NOPADDING` |  | `KeyWithIvOwned` | variable time |
-| `SM4/CBC/PKCS7PADDING` |  | `KeyWithIvOwned` | variable time |
-| `SM4/CBC/ISO10126PADDING` |  | `KeyWithIvOwned` | variable time |
-| `SM4/CBC/ISO7816-4PADDING` |  | `KeyWithIvOwned` | variable time |
-| `SM4/CBC/X923PADDING` |  | `KeyWithIvOwned` | variable time |
-| `SM4/CBC/TBCPADDING` |  | `KeyWithIvOwned` | variable time |
-| `SM4/CBC/ZEROBYTEPADDING` |  | `KeyWithIvOwned` | variable time |
-| `SM4/CFB/NOPADDING` |  | `KeyWithIvOwned` | variable time |
-| `SM4/OFB/NOPADDING` |  | `KeyWithIvOwned` | variable time |
-| `SM4/CTR/NOPADDING` |  | `KeyWithIvOwned` | variable time |
+| Name | Aliases | OIDs | Params | Note |
+|---|---|---|---|---|
+| `SM4/ECB/NOPADDING` | `SM4/NONE/NOPADDING`, `SM4//NOPADDING` |  | `KeyOwned` | weak, variable time |
+| `SM4/ECB/PKCS7PADDING` | `SM4/ECB/PKCS7`, `SM4/ECB/PKCS5PADDING`, `SM4/ECB/PKCS5`, `SM4/NONE/PKCS7PADDING`, `SM4/NONE/PKCS7`, `SM4/NONE/PKCS5PADDING`, `SM4/NONE/PKCS5`, `SM4//PKCS7PADDING`, `SM4//PKCS7`, `SM4//PKCS5PADDING`, `SM4//PKCS5`, `SM4/ECB/RAW`, `SM4/ECB/`, `SM4/ECB`, `SM4/NONE/RAW`, `SM4/NONE/`, `SM4/NONE`, `SM4//RAW`, `SM4//`, `SM4/`, `SM4` |  | `KeyOwned` | weak, variable time |
+| `SM4/ECB/ISO10126PADDING` | `SM4/ECB/ISO10126D2PADDING`, `SM4/ECB/ISO10126-2PADDING`, `SM4/NONE/ISO10126PADDING`, `SM4/NONE/ISO10126D2PADDING`, `SM4/NONE/ISO10126-2PADDING`, `SM4//ISO10126PADDING`, `SM4//ISO10126D2PADDING`, `SM4//ISO10126-2PADDING` |  | `KeyOwned` | weak, variable time |
+| `SM4/ECB/ISO7816-4PADDING` | `SM4/ECB/ISO9797-1PADDING`, `SM4/NONE/ISO7816-4PADDING`, `SM4/NONE/ISO9797-1PADDING`, `SM4//ISO7816-4PADDING`, `SM4//ISO9797-1PADDING` |  | `KeyOwned` | weak, variable time |
+| `SM4/ECB/X923PADDING` | `SM4/ECB/X9.23PADDING`, `SM4/NONE/X923PADDING`, `SM4/NONE/X9.23PADDING`, `SM4//X923PADDING`, `SM4//X9.23PADDING` |  | `KeyOwned` | weak, variable time |
+| `SM4/ECB/TBCPADDING` | `SM4/NONE/TBCPADDING`, `SM4//TBCPADDING` |  | `KeyOwned` | weak, variable time |
+| `SM4/ECB/ZEROBYTEPADDING` | `SM4/NONE/ZEROBYTEPADDING`, `SM4//ZEROBYTEPADDING` |  | `KeyOwned` | weak, variable time |
+| `SM4/CBC/NOPADDING` |  |  | `KeyWithIvOwned` | variable time |
+| `SM4/CBC/PKCS7PADDING` | `SM4/CBC/PKCS7`, `SM4/CBC/PKCS5PADDING`, `SM4/CBC/PKCS5`, `SM4/CBC/RAW`, `SM4/CBC/`, `SM4/CBC` |  | `KeyWithIvOwned` | variable time |
+| `SM4/CBC/ISO10126PADDING` | `SM4/CBC/ISO10126D2PADDING`, `SM4/CBC/ISO10126-2PADDING` |  | `KeyWithIvOwned` | variable time |
+| `SM4/CBC/ISO7816-4PADDING` | `SM4/CBC/ISO9797-1PADDING` |  | `KeyWithIvOwned` | variable time |
+| `SM4/CBC/X923PADDING` | `SM4/CBC/X9.23PADDING` |  | `KeyWithIvOwned` | variable time |
+| `SM4/CBC/TBCPADDING` |  |  | `KeyWithIvOwned` | variable time |
+| `SM4/CBC/ZEROBYTEPADDING` |  |  | `KeyWithIvOwned` | variable time |
+| `SM4/CFB/NOPADDING` | `SM4/CFB/RAW`, `SM4/CFB/`, `SM4/CFB` |  | `KeyWithIvOwned` | variable time |
+| `SM4/OFB/NOPADDING` | `SM4/OFB/RAW`, `SM4/OFB/`, `SM4/OFB` |  | `KeyWithIvOwned` | variable time |
+| `SM4/CTR/NOPADDING` | `SM4/SIC/NOPADDING`, `SM4/CTR/RAW`, `SM4/CTR/`, `SM4/CTR`, `SM4/SIC/RAW`, `SM4/SIC/`, `SM4/SIC` |  | `KeyWithIvOwned` | variable time |
 
 Bouncy Castle gives SM4 no OID here.
 
@@ -229,25 +231,25 @@ Bouncy Castle gives SM4 no OID here.
 
 The `seed` feature has the rows. A block of 16 bytes and a key of 16; a Korean standard.
 
-| Name | OIDs | Params | Note |
-|---|---|---|---|
-| `SEED/ECB/NOPADDING` |  | `KeyOwned` | weak, variable time |
-| `SEED/ECB/PKCS7PADDING` |  | `KeyOwned` | weak, variable time |
-| `SEED/ECB/ISO10126PADDING` |  | `KeyOwned` | weak, variable time |
-| `SEED/ECB/ISO7816-4PADDING` |  | `KeyOwned` | weak, variable time |
-| `SEED/ECB/X923PADDING` |  | `KeyOwned` | weak, variable time |
-| `SEED/ECB/TBCPADDING` |  | `KeyOwned` | weak, variable time |
-| `SEED/ECB/ZEROBYTEPADDING` |  | `KeyOwned` | weak, variable time |
-| `SEED/CBC/NOPADDING` |  | `KeyWithIvOwned` | variable time |
-| `SEED/CBC/PKCS7PADDING` | `1.2.410.200004.1.4` | `KeyWithIvOwned` | variable time |
-| `SEED/CBC/ISO10126PADDING` |  | `KeyWithIvOwned` | variable time |
-| `SEED/CBC/ISO7816-4PADDING` |  | `KeyWithIvOwned` | variable time |
-| `SEED/CBC/X923PADDING` |  | `KeyWithIvOwned` | variable time |
-| `SEED/CBC/TBCPADDING` |  | `KeyWithIvOwned` | variable time |
-| `SEED/CBC/ZEROBYTEPADDING` |  | `KeyWithIvOwned` | variable time |
-| `SEED/CFB/NOPADDING` |  | `KeyWithIvOwned` | variable time |
-| `SEED/OFB/NOPADDING` |  | `KeyWithIvOwned` | variable time |
-| `SEED/CTR/NOPADDING` |  | `KeyWithIvOwned` | variable time |
+| Name | Aliases | OIDs | Params | Note |
+|---|---|---|---|---|
+| `SEED/ECB/NOPADDING` | `SEED/NONE/NOPADDING`, `SEED//NOPADDING` |  | `KeyOwned` | weak, variable time |
+| `SEED/ECB/PKCS7PADDING` | `SEED/ECB/PKCS7`, `SEED/ECB/PKCS5PADDING`, `SEED/ECB/PKCS5`, `SEED/NONE/PKCS7PADDING`, `SEED/NONE/PKCS7`, `SEED/NONE/PKCS5PADDING`, `SEED/NONE/PKCS5`, `SEED//PKCS7PADDING`, `SEED//PKCS7`, `SEED//PKCS5PADDING`, `SEED//PKCS5`, `SEED/ECB/RAW`, `SEED/ECB/`, `SEED/ECB`, `SEED/NONE/RAW`, `SEED/NONE/`, `SEED/NONE`, `SEED//RAW`, `SEED//`, `SEED/`, `SEED` |  | `KeyOwned` | weak, variable time |
+| `SEED/ECB/ISO10126PADDING` | `SEED/ECB/ISO10126D2PADDING`, `SEED/ECB/ISO10126-2PADDING`, `SEED/NONE/ISO10126PADDING`, `SEED/NONE/ISO10126D2PADDING`, `SEED/NONE/ISO10126-2PADDING`, `SEED//ISO10126PADDING`, `SEED//ISO10126D2PADDING`, `SEED//ISO10126-2PADDING` |  | `KeyOwned` | weak, variable time |
+| `SEED/ECB/ISO7816-4PADDING` | `SEED/ECB/ISO9797-1PADDING`, `SEED/NONE/ISO7816-4PADDING`, `SEED/NONE/ISO9797-1PADDING`, `SEED//ISO7816-4PADDING`, `SEED//ISO9797-1PADDING` |  | `KeyOwned` | weak, variable time |
+| `SEED/ECB/X923PADDING` | `SEED/ECB/X9.23PADDING`, `SEED/NONE/X923PADDING`, `SEED/NONE/X9.23PADDING`, `SEED//X923PADDING`, `SEED//X9.23PADDING` |  | `KeyOwned` | weak, variable time |
+| `SEED/ECB/TBCPADDING` | `SEED/NONE/TBCPADDING`, `SEED//TBCPADDING` |  | `KeyOwned` | weak, variable time |
+| `SEED/ECB/ZEROBYTEPADDING` | `SEED/NONE/ZEROBYTEPADDING`, `SEED//ZEROBYTEPADDING` |  | `KeyOwned` | weak, variable time |
+| `SEED/CBC/NOPADDING` |  |  | `KeyWithIvOwned` | variable time |
+| `SEED/CBC/PKCS7PADDING` | `SEED/CBC/PKCS7`, `SEED/CBC/PKCS5PADDING`, `SEED/CBC/PKCS5`, `SEED/CBC/RAW`, `SEED/CBC/`, `SEED/CBC` | `1.2.410.200004.1.4` | `KeyWithIvOwned` | variable time |
+| `SEED/CBC/ISO10126PADDING` | `SEED/CBC/ISO10126D2PADDING`, `SEED/CBC/ISO10126-2PADDING` |  | `KeyWithIvOwned` | variable time |
+| `SEED/CBC/ISO7816-4PADDING` | `SEED/CBC/ISO9797-1PADDING` |  | `KeyWithIvOwned` | variable time |
+| `SEED/CBC/X923PADDING` | `SEED/CBC/X9.23PADDING` |  | `KeyWithIvOwned` | variable time |
+| `SEED/CBC/TBCPADDING` |  |  | `KeyWithIvOwned` | variable time |
+| `SEED/CBC/ZEROBYTEPADDING` |  |  | `KeyWithIvOwned` | variable time |
+| `SEED/CFB/NOPADDING` | `SEED/CFB/RAW`, `SEED/CFB/`, `SEED/CFB` |  | `KeyWithIvOwned` | variable time |
+| `SEED/OFB/NOPADDING` | `SEED/OFB/RAW`, `SEED/OFB/`, `SEED/OFB` |  | `KeyWithIvOwned` | variable time |
+| `SEED/CTR/NOPADDING` | `SEED/SIC/NOPADDING`, `SEED/CTR/RAW`, `SEED/CTR/`, `SEED/CTR`, `SEED/SIC/RAW`, `SEED/SIC/`, `SEED/SIC` |  | `KeyWithIvOwned` | variable time |
 
 The OID is KISA's, and means CBC with PKCS#7 padding.
 
@@ -255,25 +257,25 @@ The OID is KISA's, and means CBC with PKCS#7 padding.
 
 The `blowfish` feature has the rows. A block of 8 bytes and a key of 4 to 56 bytes.
 
-| Name | OIDs | Params | Note |
-|---|---|---|---|
-| `BLOWFISH/ECB/NOPADDING` |  | `KeyOwned` | weak, legacy, variable time |
-| `BLOWFISH/ECB/PKCS7PADDING` |  | `KeyOwned` | weak, legacy, variable time |
-| `BLOWFISH/ECB/ISO10126PADDING` |  | `KeyOwned` | weak, legacy, variable time |
-| `BLOWFISH/ECB/ISO7816-4PADDING` |  | `KeyOwned` | weak, legacy, variable time |
-| `BLOWFISH/ECB/X923PADDING` |  | `KeyOwned` | weak, legacy, variable time |
-| `BLOWFISH/ECB/TBCPADDING` |  | `KeyOwned` | weak, legacy, variable time |
-| `BLOWFISH/ECB/ZEROBYTEPADDING` |  | `KeyOwned` | weak, legacy, variable time |
-| `BLOWFISH/CBC/NOPADDING` |  | `KeyWithIvOwned` | legacy, variable time |
-| `BLOWFISH/CBC/PKCS7PADDING` | `1.3.6.1.4.1.3029.1.2`, `1.3.6.1.4.1.3029.1.1.2` | `KeyWithIvOwned` | legacy, variable time |
-| `BLOWFISH/CBC/ISO10126PADDING` |  | `KeyWithIvOwned` | legacy, variable time |
-| `BLOWFISH/CBC/ISO7816-4PADDING` |  | `KeyWithIvOwned` | legacy, variable time |
-| `BLOWFISH/CBC/X923PADDING` |  | `KeyWithIvOwned` | legacy, variable time |
-| `BLOWFISH/CBC/TBCPADDING` |  | `KeyWithIvOwned` | legacy, variable time |
-| `BLOWFISH/CBC/ZEROBYTEPADDING` |  | `KeyWithIvOwned` | legacy, variable time |
-| `BLOWFISH/CFB/NOPADDING` |  | `KeyWithIvOwned` | legacy, variable time |
-| `BLOWFISH/OFB/NOPADDING` |  | `KeyWithIvOwned` | legacy, variable time |
-| `BLOWFISH/CTR/NOPADDING` |  | `KeyWithIvOwned` | legacy, variable time |
+| Name | Aliases | OIDs | Params | Note |
+|---|---|---|---|---|
+| `BLOWFISH/ECB/NOPADDING` | `BLOWFISH/NONE/NOPADDING`, `BLOWFISH//NOPADDING` |  | `KeyOwned` | weak, legacy, variable time |
+| `BLOWFISH/ECB/PKCS7PADDING` | `BLOWFISH/ECB/PKCS7`, `BLOWFISH/ECB/PKCS5PADDING`, `BLOWFISH/ECB/PKCS5`, `BLOWFISH/NONE/PKCS7PADDING`, `BLOWFISH/NONE/PKCS7`, `BLOWFISH/NONE/PKCS5PADDING`, `BLOWFISH/NONE/PKCS5`, `BLOWFISH//PKCS7PADDING`, `BLOWFISH//PKCS7`, `BLOWFISH//PKCS5PADDING`, `BLOWFISH//PKCS5`, `BLOWFISH/ECB/RAW`, `BLOWFISH/ECB/`, `BLOWFISH/ECB`, `BLOWFISH/NONE/RAW`, `BLOWFISH/NONE/`, `BLOWFISH/NONE`, `BLOWFISH//RAW`, `BLOWFISH//`, `BLOWFISH/`, `BLOWFISH` |  | `KeyOwned` | weak, legacy, variable time |
+| `BLOWFISH/ECB/ISO10126PADDING` | `BLOWFISH/ECB/ISO10126D2PADDING`, `BLOWFISH/ECB/ISO10126-2PADDING`, `BLOWFISH/NONE/ISO10126PADDING`, `BLOWFISH/NONE/ISO10126D2PADDING`, `BLOWFISH/NONE/ISO10126-2PADDING`, `BLOWFISH//ISO10126PADDING`, `BLOWFISH//ISO10126D2PADDING`, `BLOWFISH//ISO10126-2PADDING` |  | `KeyOwned` | weak, legacy, variable time |
+| `BLOWFISH/ECB/ISO7816-4PADDING` | `BLOWFISH/ECB/ISO9797-1PADDING`, `BLOWFISH/NONE/ISO7816-4PADDING`, `BLOWFISH/NONE/ISO9797-1PADDING`, `BLOWFISH//ISO7816-4PADDING`, `BLOWFISH//ISO9797-1PADDING` |  | `KeyOwned` | weak, legacy, variable time |
+| `BLOWFISH/ECB/X923PADDING` | `BLOWFISH/ECB/X9.23PADDING`, `BLOWFISH/NONE/X923PADDING`, `BLOWFISH/NONE/X9.23PADDING`, `BLOWFISH//X923PADDING`, `BLOWFISH//X9.23PADDING` |  | `KeyOwned` | weak, legacy, variable time |
+| `BLOWFISH/ECB/TBCPADDING` | `BLOWFISH/NONE/TBCPADDING`, `BLOWFISH//TBCPADDING` |  | `KeyOwned` | weak, legacy, variable time |
+| `BLOWFISH/ECB/ZEROBYTEPADDING` | `BLOWFISH/NONE/ZEROBYTEPADDING`, `BLOWFISH//ZEROBYTEPADDING` |  | `KeyOwned` | weak, legacy, variable time |
+| `BLOWFISH/CBC/NOPADDING` |  |  | `KeyWithIvOwned` | legacy, variable time |
+| `BLOWFISH/CBC/PKCS7PADDING` | `BLOWFISH/CBC/PKCS7`, `BLOWFISH/CBC/PKCS5PADDING`, `BLOWFISH/CBC/PKCS5`, `BLOWFISH/CBC/RAW`, `BLOWFISH/CBC/`, `BLOWFISH/CBC` | `1.3.6.1.4.1.3029.1.2`, `1.3.6.1.4.1.3029.1.1.2` | `KeyWithIvOwned` | legacy, variable time |
+| `BLOWFISH/CBC/ISO10126PADDING` | `BLOWFISH/CBC/ISO10126D2PADDING`, `BLOWFISH/CBC/ISO10126-2PADDING` |  | `KeyWithIvOwned` | legacy, variable time |
+| `BLOWFISH/CBC/ISO7816-4PADDING` | `BLOWFISH/CBC/ISO9797-1PADDING` |  | `KeyWithIvOwned` | legacy, variable time |
+| `BLOWFISH/CBC/X923PADDING` | `BLOWFISH/CBC/X9.23PADDING` |  | `KeyWithIvOwned` | legacy, variable time |
+| `BLOWFISH/CBC/TBCPADDING` |  |  | `KeyWithIvOwned` | legacy, variable time |
+| `BLOWFISH/CBC/ZEROBYTEPADDING` |  |  | `KeyWithIvOwned` | legacy, variable time |
+| `BLOWFISH/CFB/NOPADDING` | `BLOWFISH/CFB/RAW`, `BLOWFISH/CFB/`, `BLOWFISH/CFB` |  | `KeyWithIvOwned` | legacy, variable time |
+| `BLOWFISH/OFB/NOPADDING` | `BLOWFISH/OFB/RAW`, `BLOWFISH/OFB/`, `BLOWFISH/OFB` |  | `KeyWithIvOwned` | legacy, variable time |
+| `BLOWFISH/CTR/NOPADDING` | `BLOWFISH/SIC/NOPADDING`, `BLOWFISH/CTR/RAW`, `BLOWFISH/CTR/`, `BLOWFISH/CTR`, `BLOWFISH/SIC/RAW`, `BLOWFISH/SIC/`, `BLOWFISH/SIC` |  | `KeyWithIvOwned` | legacy, variable time |
 
 The OIDs are cryptlib's, both for CBC with PKCS#7 padding, as in Bouncy Castle.
 
@@ -282,50 +284,50 @@ The OIDs are cryptlib's, both for CBC with PKCS#7 padding, as in Bouncy Castle.
 The `twofish` feature has the rows. A block of 16 bytes and a key of 16, 24 or 32 bytes; a finalist
 for AES.
 
-| Name | OIDs | Params | Note |
-|---|---|---|---|
-| `TWOFISH/ECB/NOPADDING` |  | `KeyOwned` | weak, variable time |
-| `TWOFISH/ECB/PKCS7PADDING` |  | `KeyOwned` | weak, variable time |
-| `TWOFISH/ECB/ISO10126PADDING` |  | `KeyOwned` | weak, variable time |
-| `TWOFISH/ECB/ISO7816-4PADDING` |  | `KeyOwned` | weak, variable time |
-| `TWOFISH/ECB/X923PADDING` |  | `KeyOwned` | weak, variable time |
-| `TWOFISH/ECB/TBCPADDING` |  | `KeyOwned` | weak, variable time |
-| `TWOFISH/ECB/ZEROBYTEPADDING` |  | `KeyOwned` | weak, variable time |
-| `TWOFISH/CBC/NOPADDING` |  | `KeyWithIvOwned` | variable time |
-| `TWOFISH/CBC/PKCS7PADDING` |  | `KeyWithIvOwned` | variable time |
-| `TWOFISH/CBC/ISO10126PADDING` |  | `KeyWithIvOwned` | variable time |
-| `TWOFISH/CBC/ISO7816-4PADDING` |  | `KeyWithIvOwned` | variable time |
-| `TWOFISH/CBC/X923PADDING` |  | `KeyWithIvOwned` | variable time |
-| `TWOFISH/CBC/TBCPADDING` |  | `KeyWithIvOwned` | variable time |
-| `TWOFISH/CBC/ZEROBYTEPADDING` |  | `KeyWithIvOwned` | variable time |
-| `TWOFISH/CFB/NOPADDING` |  | `KeyWithIvOwned` | variable time |
-| `TWOFISH/OFB/NOPADDING` |  | `KeyWithIvOwned` | variable time |
-| `TWOFISH/CTR/NOPADDING` |  | `KeyWithIvOwned` | variable time |
+| Name | Aliases | OIDs | Params | Note |
+|---|---|---|---|---|
+| `TWOFISH/ECB/NOPADDING` | `TWOFISH/NONE/NOPADDING`, `TWOFISH//NOPADDING` |  | `KeyOwned` | weak, variable time |
+| `TWOFISH/ECB/PKCS7PADDING` | `TWOFISH/ECB/PKCS7`, `TWOFISH/ECB/PKCS5PADDING`, `TWOFISH/ECB/PKCS5`, `TWOFISH/NONE/PKCS7PADDING`, `TWOFISH/NONE/PKCS7`, `TWOFISH/NONE/PKCS5PADDING`, `TWOFISH/NONE/PKCS5`, `TWOFISH//PKCS7PADDING`, `TWOFISH//PKCS7`, `TWOFISH//PKCS5PADDING`, `TWOFISH//PKCS5`, `TWOFISH/ECB/RAW`, `TWOFISH/ECB/`, `TWOFISH/ECB`, `TWOFISH/NONE/RAW`, `TWOFISH/NONE/`, `TWOFISH/NONE`, `TWOFISH//RAW`, `TWOFISH//`, `TWOFISH/`, `TWOFISH` |  | `KeyOwned` | weak, variable time |
+| `TWOFISH/ECB/ISO10126PADDING` | `TWOFISH/ECB/ISO10126D2PADDING`, `TWOFISH/ECB/ISO10126-2PADDING`, `TWOFISH/NONE/ISO10126PADDING`, `TWOFISH/NONE/ISO10126D2PADDING`, `TWOFISH/NONE/ISO10126-2PADDING`, `TWOFISH//ISO10126PADDING`, `TWOFISH//ISO10126D2PADDING`, `TWOFISH//ISO10126-2PADDING` |  | `KeyOwned` | weak, variable time |
+| `TWOFISH/ECB/ISO7816-4PADDING` | `TWOFISH/ECB/ISO9797-1PADDING`, `TWOFISH/NONE/ISO7816-4PADDING`, `TWOFISH/NONE/ISO9797-1PADDING`, `TWOFISH//ISO7816-4PADDING`, `TWOFISH//ISO9797-1PADDING` |  | `KeyOwned` | weak, variable time |
+| `TWOFISH/ECB/X923PADDING` | `TWOFISH/ECB/X9.23PADDING`, `TWOFISH/NONE/X923PADDING`, `TWOFISH/NONE/X9.23PADDING`, `TWOFISH//X923PADDING`, `TWOFISH//X9.23PADDING` |  | `KeyOwned` | weak, variable time |
+| `TWOFISH/ECB/TBCPADDING` | `TWOFISH/NONE/TBCPADDING`, `TWOFISH//TBCPADDING` |  | `KeyOwned` | weak, variable time |
+| `TWOFISH/ECB/ZEROBYTEPADDING` | `TWOFISH/NONE/ZEROBYTEPADDING`, `TWOFISH//ZEROBYTEPADDING` |  | `KeyOwned` | weak, variable time |
+| `TWOFISH/CBC/NOPADDING` |  |  | `KeyWithIvOwned` | variable time |
+| `TWOFISH/CBC/PKCS7PADDING` | `TWOFISH/CBC/PKCS7`, `TWOFISH/CBC/PKCS5PADDING`, `TWOFISH/CBC/PKCS5`, `TWOFISH/CBC/RAW`, `TWOFISH/CBC/`, `TWOFISH/CBC` |  | `KeyWithIvOwned` | variable time |
+| `TWOFISH/CBC/ISO10126PADDING` | `TWOFISH/CBC/ISO10126D2PADDING`, `TWOFISH/CBC/ISO10126-2PADDING` |  | `KeyWithIvOwned` | variable time |
+| `TWOFISH/CBC/ISO7816-4PADDING` | `TWOFISH/CBC/ISO9797-1PADDING` |  | `KeyWithIvOwned` | variable time |
+| `TWOFISH/CBC/X923PADDING` | `TWOFISH/CBC/X9.23PADDING` |  | `KeyWithIvOwned` | variable time |
+| `TWOFISH/CBC/TBCPADDING` |  |  | `KeyWithIvOwned` | variable time |
+| `TWOFISH/CBC/ZEROBYTEPADDING` |  |  | `KeyWithIvOwned` | variable time |
+| `TWOFISH/CFB/NOPADDING` | `TWOFISH/CFB/RAW`, `TWOFISH/CFB/`, `TWOFISH/CFB` |  | `KeyWithIvOwned` | variable time |
+| `TWOFISH/OFB/NOPADDING` | `TWOFISH/OFB/RAW`, `TWOFISH/OFB/`, `TWOFISH/OFB` |  | `KeyWithIvOwned` | variable time |
+| `TWOFISH/CTR/NOPADDING` | `TWOFISH/SIC/NOPADDING`, `TWOFISH/CTR/RAW`, `TWOFISH/CTR/`, `TWOFISH/CTR`, `TWOFISH/SIC/RAW`, `TWOFISH/SIC/`, `TWOFISH/SIC` |  | `KeyWithIvOwned` | variable time |
 
 ### Serpent
 
 The `serpent` feature has the rows. A block of 16 bytes and a key of 4 to 32 bytes, in steps of
 4; a finalist for AES, in the byte order of NESSIE.
 
-| Name | OIDs | Params | Note |
-|---|---|---|---|
-| `SERPENT/ECB/NOPADDING` |  | `KeyOwned` | weak |
-| `SERPENT/ECB/PKCS7PADDING` |  | `KeyOwned` | weak |
-| `SERPENT/ECB/ISO10126PADDING` |  | `KeyOwned` | weak |
-| `SERPENT/ECB/ISO7816-4PADDING` |  | `KeyOwned` | weak |
-| `SERPENT/ECB/X923PADDING` |  | `KeyOwned` | weak |
-| `SERPENT/ECB/TBCPADDING` |  | `KeyOwned` | weak |
-| `SERPENT/ECB/ZEROBYTEPADDING` |  | `KeyOwned` | weak |
-| `SERPENT/CBC/NOPADDING` |  | `KeyWithIvOwned` |  |
-| `SERPENT/CBC/PKCS7PADDING` |  | `KeyWithIvOwned` |  |
-| `SERPENT/CBC/ISO10126PADDING` |  | `KeyWithIvOwned` |  |
-| `SERPENT/CBC/ISO7816-4PADDING` |  | `KeyWithIvOwned` |  |
-| `SERPENT/CBC/X923PADDING` |  | `KeyWithIvOwned` |  |
-| `SERPENT/CBC/TBCPADDING` |  | `KeyWithIvOwned` |  |
-| `SERPENT/CBC/ZEROBYTEPADDING` |  | `KeyWithIvOwned` |  |
-| `SERPENT/CFB/NOPADDING` |  | `KeyWithIvOwned` |  |
-| `SERPENT/OFB/NOPADDING` |  | `KeyWithIvOwned` |  |
-| `SERPENT/CTR/NOPADDING` |  | `KeyWithIvOwned` |  |
+| Name | Aliases | OIDs | Params | Note |
+|---|---|---|---|---|
+| `SERPENT/ECB/NOPADDING` | `SERPENT/NONE/NOPADDING`, `SERPENT//NOPADDING` |  | `KeyOwned` | weak |
+| `SERPENT/ECB/PKCS7PADDING` | `SERPENT/ECB/PKCS7`, `SERPENT/ECB/PKCS5PADDING`, `SERPENT/ECB/PKCS5`, `SERPENT/NONE/PKCS7PADDING`, `SERPENT/NONE/PKCS7`, `SERPENT/NONE/PKCS5PADDING`, `SERPENT/NONE/PKCS5`, `SERPENT//PKCS7PADDING`, `SERPENT//PKCS7`, `SERPENT//PKCS5PADDING`, `SERPENT//PKCS5`, `SERPENT/ECB/RAW`, `SERPENT/ECB/`, `SERPENT/ECB`, `SERPENT/NONE/RAW`, `SERPENT/NONE/`, `SERPENT/NONE`, `SERPENT//RAW`, `SERPENT//`, `SERPENT/`, `SERPENT` |  | `KeyOwned` | weak |
+| `SERPENT/ECB/ISO10126PADDING` | `SERPENT/ECB/ISO10126D2PADDING`, `SERPENT/ECB/ISO10126-2PADDING`, `SERPENT/NONE/ISO10126PADDING`, `SERPENT/NONE/ISO10126D2PADDING`, `SERPENT/NONE/ISO10126-2PADDING`, `SERPENT//ISO10126PADDING`, `SERPENT//ISO10126D2PADDING`, `SERPENT//ISO10126-2PADDING` |  | `KeyOwned` | weak |
+| `SERPENT/ECB/ISO7816-4PADDING` | `SERPENT/ECB/ISO9797-1PADDING`, `SERPENT/NONE/ISO7816-4PADDING`, `SERPENT/NONE/ISO9797-1PADDING`, `SERPENT//ISO7816-4PADDING`, `SERPENT//ISO9797-1PADDING` |  | `KeyOwned` | weak |
+| `SERPENT/ECB/X923PADDING` | `SERPENT/ECB/X9.23PADDING`, `SERPENT/NONE/X923PADDING`, `SERPENT/NONE/X9.23PADDING`, `SERPENT//X923PADDING`, `SERPENT//X9.23PADDING` |  | `KeyOwned` | weak |
+| `SERPENT/ECB/TBCPADDING` | `SERPENT/NONE/TBCPADDING`, `SERPENT//TBCPADDING` |  | `KeyOwned` | weak |
+| `SERPENT/ECB/ZEROBYTEPADDING` | `SERPENT/NONE/ZEROBYTEPADDING`, `SERPENT//ZEROBYTEPADDING` |  | `KeyOwned` | weak |
+| `SERPENT/CBC/NOPADDING` |  |  | `KeyWithIvOwned` |  |
+| `SERPENT/CBC/PKCS7PADDING` | `SERPENT/CBC/PKCS7`, `SERPENT/CBC/PKCS5PADDING`, `SERPENT/CBC/PKCS5`, `SERPENT/CBC/RAW`, `SERPENT/CBC/`, `SERPENT/CBC` |  | `KeyWithIvOwned` |  |
+| `SERPENT/CBC/ISO10126PADDING` | `SERPENT/CBC/ISO10126D2PADDING`, `SERPENT/CBC/ISO10126-2PADDING` |  | `KeyWithIvOwned` |  |
+| `SERPENT/CBC/ISO7816-4PADDING` | `SERPENT/CBC/ISO9797-1PADDING` |  | `KeyWithIvOwned` |  |
+| `SERPENT/CBC/X923PADDING` | `SERPENT/CBC/X9.23PADDING` |  | `KeyWithIvOwned` |  |
+| `SERPENT/CBC/TBCPADDING` |  |  | `KeyWithIvOwned` |  |
+| `SERPENT/CBC/ZEROBYTEPADDING` |  |  | `KeyWithIvOwned` |  |
+| `SERPENT/CFB/NOPADDING` | `SERPENT/CFB/RAW`, `SERPENT/CFB/`, `SERPENT/CFB` |  | `KeyWithIvOwned` |  |
+| `SERPENT/OFB/NOPADDING` | `SERPENT/OFB/RAW`, `SERPENT/OFB/`, `SERPENT/OFB` |  | `KeyWithIvOwned` |  |
+| `SERPENT/CTR/NOPADDING` | `SERPENT/SIC/NOPADDING`, `SERPENT/CTR/RAW`, `SERPENT/CTR/`, `SERPENT/CTR`, `SERPENT/SIC/RAW`, `SERPENT/SIC/`, `SERPENT/SIC` |  | `KeyWithIvOwned` |  |
 
 ### Tnepres
 
@@ -333,50 +335,50 @@ The `tnepres` feature has the rows. Serpent in the byte- and word-reversed form 
 submission, which Bouncy Castle's first Serpent used, with the key of Serpent. It is for data made
 in that form; new data takes `SERPENT`.
 
-| Name | OIDs | Params | Note |
-|---|---|---|---|
-| `TNEPRES/ECB/NOPADDING` |  | `KeyOwned` | weak |
-| `TNEPRES/ECB/PKCS7PADDING` |  | `KeyOwned` | weak |
-| `TNEPRES/ECB/ISO10126PADDING` |  | `KeyOwned` | weak |
-| `TNEPRES/ECB/ISO7816-4PADDING` |  | `KeyOwned` | weak |
-| `TNEPRES/ECB/X923PADDING` |  | `KeyOwned` | weak |
-| `TNEPRES/ECB/TBCPADDING` |  | `KeyOwned` | weak |
-| `TNEPRES/ECB/ZEROBYTEPADDING` |  | `KeyOwned` | weak |
-| `TNEPRES/CBC/NOPADDING` |  | `KeyWithIvOwned` |  |
-| `TNEPRES/CBC/PKCS7PADDING` |  | `KeyWithIvOwned` |  |
-| `TNEPRES/CBC/ISO10126PADDING` |  | `KeyWithIvOwned` |  |
-| `TNEPRES/CBC/ISO7816-4PADDING` |  | `KeyWithIvOwned` |  |
-| `TNEPRES/CBC/X923PADDING` |  | `KeyWithIvOwned` |  |
-| `TNEPRES/CBC/TBCPADDING` |  | `KeyWithIvOwned` |  |
-| `TNEPRES/CBC/ZEROBYTEPADDING` |  | `KeyWithIvOwned` |  |
-| `TNEPRES/CFB/NOPADDING` |  | `KeyWithIvOwned` |  |
-| `TNEPRES/OFB/NOPADDING` |  | `KeyWithIvOwned` |  |
-| `TNEPRES/CTR/NOPADDING` |  | `KeyWithIvOwned` |  |
+| Name | Aliases | OIDs | Params | Note |
+|---|---|---|---|---|
+| `TNEPRES/ECB/NOPADDING` | `TNEPRES/NONE/NOPADDING`, `TNEPRES//NOPADDING` |  | `KeyOwned` | weak |
+| `TNEPRES/ECB/PKCS7PADDING` | `TNEPRES/ECB/PKCS7`, `TNEPRES/ECB/PKCS5PADDING`, `TNEPRES/ECB/PKCS5`, `TNEPRES/NONE/PKCS7PADDING`, `TNEPRES/NONE/PKCS7`, `TNEPRES/NONE/PKCS5PADDING`, `TNEPRES/NONE/PKCS5`, `TNEPRES//PKCS7PADDING`, `TNEPRES//PKCS7`, `TNEPRES//PKCS5PADDING`, `TNEPRES//PKCS5`, `TNEPRES/ECB/RAW`, `TNEPRES/ECB/`, `TNEPRES/ECB`, `TNEPRES/NONE/RAW`, `TNEPRES/NONE/`, `TNEPRES/NONE`, `TNEPRES//RAW`, `TNEPRES//`, `TNEPRES/`, `TNEPRES` |  | `KeyOwned` | weak |
+| `TNEPRES/ECB/ISO10126PADDING` | `TNEPRES/ECB/ISO10126D2PADDING`, `TNEPRES/ECB/ISO10126-2PADDING`, `TNEPRES/NONE/ISO10126PADDING`, `TNEPRES/NONE/ISO10126D2PADDING`, `TNEPRES/NONE/ISO10126-2PADDING`, `TNEPRES//ISO10126PADDING`, `TNEPRES//ISO10126D2PADDING`, `TNEPRES//ISO10126-2PADDING` |  | `KeyOwned` | weak |
+| `TNEPRES/ECB/ISO7816-4PADDING` | `TNEPRES/ECB/ISO9797-1PADDING`, `TNEPRES/NONE/ISO7816-4PADDING`, `TNEPRES/NONE/ISO9797-1PADDING`, `TNEPRES//ISO7816-4PADDING`, `TNEPRES//ISO9797-1PADDING` |  | `KeyOwned` | weak |
+| `TNEPRES/ECB/X923PADDING` | `TNEPRES/ECB/X9.23PADDING`, `TNEPRES/NONE/X923PADDING`, `TNEPRES/NONE/X9.23PADDING`, `TNEPRES//X923PADDING`, `TNEPRES//X9.23PADDING` |  | `KeyOwned` | weak |
+| `TNEPRES/ECB/TBCPADDING` | `TNEPRES/NONE/TBCPADDING`, `TNEPRES//TBCPADDING` |  | `KeyOwned` | weak |
+| `TNEPRES/ECB/ZEROBYTEPADDING` | `TNEPRES/NONE/ZEROBYTEPADDING`, `TNEPRES//ZEROBYTEPADDING` |  | `KeyOwned` | weak |
+| `TNEPRES/CBC/NOPADDING` |  |  | `KeyWithIvOwned` |  |
+| `TNEPRES/CBC/PKCS7PADDING` | `TNEPRES/CBC/PKCS7`, `TNEPRES/CBC/PKCS5PADDING`, `TNEPRES/CBC/PKCS5`, `TNEPRES/CBC/RAW`, `TNEPRES/CBC/`, `TNEPRES/CBC` |  | `KeyWithIvOwned` |  |
+| `TNEPRES/CBC/ISO10126PADDING` | `TNEPRES/CBC/ISO10126D2PADDING`, `TNEPRES/CBC/ISO10126-2PADDING` |  | `KeyWithIvOwned` |  |
+| `TNEPRES/CBC/ISO7816-4PADDING` | `TNEPRES/CBC/ISO9797-1PADDING` |  | `KeyWithIvOwned` |  |
+| `TNEPRES/CBC/X923PADDING` | `TNEPRES/CBC/X9.23PADDING` |  | `KeyWithIvOwned` |  |
+| `TNEPRES/CBC/TBCPADDING` |  |  | `KeyWithIvOwned` |  |
+| `TNEPRES/CBC/ZEROBYTEPADDING` |  |  | `KeyWithIvOwned` |  |
+| `TNEPRES/CFB/NOPADDING` | `TNEPRES/CFB/RAW`, `TNEPRES/CFB/`, `TNEPRES/CFB` |  | `KeyWithIvOwned` |  |
+| `TNEPRES/OFB/NOPADDING` | `TNEPRES/OFB/RAW`, `TNEPRES/OFB/`, `TNEPRES/OFB` |  | `KeyWithIvOwned` |  |
+| `TNEPRES/CTR/NOPADDING` | `TNEPRES/SIC/NOPADDING`, `TNEPRES/CTR/RAW`, `TNEPRES/CTR/`, `TNEPRES/CTR`, `TNEPRES/SIC/RAW`, `TNEPRES/SIC/`, `TNEPRES/SIC` |  | `KeyWithIvOwned` |  |
 
 ### CAST5
 
 The `cast5` feature has the rows. A block of 8 bytes and a key of 5 to 16 bytes; also called
 CAST-128.
 
-| Name | OIDs | Params | Note |
-|---|---|---|---|
-| `CAST5/ECB/NOPADDING` |  | `KeyOwned` | weak, legacy, variable time |
-| `CAST5/ECB/PKCS7PADDING` |  | `KeyOwned` | weak, legacy, variable time |
-| `CAST5/ECB/ISO10126PADDING` |  | `KeyOwned` | weak, legacy, variable time |
-| `CAST5/ECB/ISO7816-4PADDING` |  | `KeyOwned` | weak, legacy, variable time |
-| `CAST5/ECB/X923PADDING` |  | `KeyOwned` | weak, legacy, variable time |
-| `CAST5/ECB/TBCPADDING` |  | `KeyOwned` | weak, legacy, variable time |
-| `CAST5/ECB/ZEROBYTEPADDING` |  | `KeyOwned` | weak, legacy, variable time |
-| `CAST5/CBC/NOPADDING` |  | `KeyWithIvOwned` | legacy, variable time |
-| `CAST5/CBC/PKCS7PADDING` | `1.2.840.113533.7.66.10` | `KeyWithIvOwned` | legacy, variable time |
-| `CAST5/CBC/ISO10126PADDING` |  | `KeyWithIvOwned` | legacy, variable time |
-| `CAST5/CBC/ISO7816-4PADDING` |  | `KeyWithIvOwned` | legacy, variable time |
-| `CAST5/CBC/X923PADDING` |  | `KeyWithIvOwned` | legacy, variable time |
-| `CAST5/CBC/TBCPADDING` |  | `KeyWithIvOwned` | legacy, variable time |
-| `CAST5/CBC/ZEROBYTEPADDING` |  | `KeyWithIvOwned` | legacy, variable time |
-| `CAST5/CFB/NOPADDING` |  | `KeyWithIvOwned` | legacy, variable time |
-| `CAST5/OFB/NOPADDING` |  | `KeyWithIvOwned` | legacy, variable time |
-| `CAST5/CTR/NOPADDING` |  | `KeyWithIvOwned` | legacy, variable time |
+| Name | Aliases | OIDs | Params | Note |
+|---|---|---|---|---|
+| `CAST5/ECB/NOPADDING` | `CAST5/NONE/NOPADDING`, `CAST5//NOPADDING` |  | `KeyOwned` | weak, legacy, variable time |
+| `CAST5/ECB/PKCS7PADDING` | `CAST5/ECB/PKCS7`, `CAST5/ECB/PKCS5PADDING`, `CAST5/ECB/PKCS5`, `CAST5/NONE/PKCS7PADDING`, `CAST5/NONE/PKCS7`, `CAST5/NONE/PKCS5PADDING`, `CAST5/NONE/PKCS5`, `CAST5//PKCS7PADDING`, `CAST5//PKCS7`, `CAST5//PKCS5PADDING`, `CAST5//PKCS5`, `CAST5/ECB/RAW`, `CAST5/ECB/`, `CAST5/ECB`, `CAST5/NONE/RAW`, `CAST5/NONE/`, `CAST5/NONE`, `CAST5//RAW`, `CAST5//`, `CAST5/`, `CAST5` |  | `KeyOwned` | weak, legacy, variable time |
+| `CAST5/ECB/ISO10126PADDING` | `CAST5/ECB/ISO10126D2PADDING`, `CAST5/ECB/ISO10126-2PADDING`, `CAST5/NONE/ISO10126PADDING`, `CAST5/NONE/ISO10126D2PADDING`, `CAST5/NONE/ISO10126-2PADDING`, `CAST5//ISO10126PADDING`, `CAST5//ISO10126D2PADDING`, `CAST5//ISO10126-2PADDING` |  | `KeyOwned` | weak, legacy, variable time |
+| `CAST5/ECB/ISO7816-4PADDING` | `CAST5/ECB/ISO9797-1PADDING`, `CAST5/NONE/ISO7816-4PADDING`, `CAST5/NONE/ISO9797-1PADDING`, `CAST5//ISO7816-4PADDING`, `CAST5//ISO9797-1PADDING` |  | `KeyOwned` | weak, legacy, variable time |
+| `CAST5/ECB/X923PADDING` | `CAST5/ECB/X9.23PADDING`, `CAST5/NONE/X923PADDING`, `CAST5/NONE/X9.23PADDING`, `CAST5//X923PADDING`, `CAST5//X9.23PADDING` |  | `KeyOwned` | weak, legacy, variable time |
+| `CAST5/ECB/TBCPADDING` | `CAST5/NONE/TBCPADDING`, `CAST5//TBCPADDING` |  | `KeyOwned` | weak, legacy, variable time |
+| `CAST5/ECB/ZEROBYTEPADDING` | `CAST5/NONE/ZEROBYTEPADDING`, `CAST5//ZEROBYTEPADDING` |  | `KeyOwned` | weak, legacy, variable time |
+| `CAST5/CBC/NOPADDING` |  |  | `KeyWithIvOwned` | legacy, variable time |
+| `CAST5/CBC/PKCS7PADDING` | `CAST5/CBC/PKCS7`, `CAST5/CBC/PKCS5PADDING`, `CAST5/CBC/PKCS5`, `CAST5/CBC/RAW`, `CAST5/CBC/`, `CAST5/CBC` | `1.2.840.113533.7.66.10` | `KeyWithIvOwned` | legacy, variable time |
+| `CAST5/CBC/ISO10126PADDING` | `CAST5/CBC/ISO10126D2PADDING`, `CAST5/CBC/ISO10126-2PADDING` |  | `KeyWithIvOwned` | legacy, variable time |
+| `CAST5/CBC/ISO7816-4PADDING` | `CAST5/CBC/ISO9797-1PADDING` |  | `KeyWithIvOwned` | legacy, variable time |
+| `CAST5/CBC/X923PADDING` | `CAST5/CBC/X9.23PADDING` |  | `KeyWithIvOwned` | legacy, variable time |
+| `CAST5/CBC/TBCPADDING` |  |  | `KeyWithIvOwned` | legacy, variable time |
+| `CAST5/CBC/ZEROBYTEPADDING` |  |  | `KeyWithIvOwned` | legacy, variable time |
+| `CAST5/CFB/NOPADDING` | `CAST5/CFB/RAW`, `CAST5/CFB/`, `CAST5/CFB` |  | `KeyWithIvOwned` | legacy, variable time |
+| `CAST5/OFB/NOPADDING` | `CAST5/OFB/RAW`, `CAST5/OFB/`, `CAST5/OFB` |  | `KeyWithIvOwned` | legacy, variable time |
+| `CAST5/CTR/NOPADDING` | `CAST5/SIC/NOPADDING`, `CAST5/CTR/RAW`, `CAST5/CTR/`, `CAST5/CTR`, `CAST5/SIC/RAW`, `CAST5/SIC/`, `CAST5/SIC` |  | `KeyWithIvOwned` | legacy, variable time |
 
 The OID is Entrust's, and means CBC with PKCS#7 padding.
 
@@ -385,49 +387,49 @@ The OID is Entrust's, and means CBC with PKCS#7 padding.
 The `cast6` feature has the rows. A block of 16 bytes and a key of 16 to 32 bytes, in steps of 4;
 also called CAST-256.
 
-| Name | OIDs | Params | Note |
-|---|---|---|---|
-| `CAST6/ECB/NOPADDING` |  | `KeyOwned` | weak, variable time |
-| `CAST6/ECB/PKCS7PADDING` |  | `KeyOwned` | weak, variable time |
-| `CAST6/ECB/ISO10126PADDING` |  | `KeyOwned` | weak, variable time |
-| `CAST6/ECB/ISO7816-4PADDING` |  | `KeyOwned` | weak, variable time |
-| `CAST6/ECB/X923PADDING` |  | `KeyOwned` | weak, variable time |
-| `CAST6/ECB/TBCPADDING` |  | `KeyOwned` | weak, variable time |
-| `CAST6/ECB/ZEROBYTEPADDING` |  | `KeyOwned` | weak, variable time |
-| `CAST6/CBC/NOPADDING` |  | `KeyWithIvOwned` | variable time |
-| `CAST6/CBC/PKCS7PADDING` |  | `KeyWithIvOwned` | variable time |
-| `CAST6/CBC/ISO10126PADDING` |  | `KeyWithIvOwned` | variable time |
-| `CAST6/CBC/ISO7816-4PADDING` |  | `KeyWithIvOwned` | variable time |
-| `CAST6/CBC/X923PADDING` |  | `KeyWithIvOwned` | variable time |
-| `CAST6/CBC/TBCPADDING` |  | `KeyWithIvOwned` | variable time |
-| `CAST6/CBC/ZEROBYTEPADDING` |  | `KeyWithIvOwned` | variable time |
-| `CAST6/CFB/NOPADDING` |  | `KeyWithIvOwned` | variable time |
-| `CAST6/OFB/NOPADDING` |  | `KeyWithIvOwned` | variable time |
-| `CAST6/CTR/NOPADDING` |  | `KeyWithIvOwned` | variable time |
+| Name | Aliases | OIDs | Params | Note |
+|---|---|---|---|---|
+| `CAST6/ECB/NOPADDING` | `CAST6/NONE/NOPADDING`, `CAST6//NOPADDING` |  | `KeyOwned` | weak, variable time |
+| `CAST6/ECB/PKCS7PADDING` | `CAST6/ECB/PKCS7`, `CAST6/ECB/PKCS5PADDING`, `CAST6/ECB/PKCS5`, `CAST6/NONE/PKCS7PADDING`, `CAST6/NONE/PKCS7`, `CAST6/NONE/PKCS5PADDING`, `CAST6/NONE/PKCS5`, `CAST6//PKCS7PADDING`, `CAST6//PKCS7`, `CAST6//PKCS5PADDING`, `CAST6//PKCS5`, `CAST6/ECB/RAW`, `CAST6/ECB/`, `CAST6/ECB`, `CAST6/NONE/RAW`, `CAST6/NONE/`, `CAST6/NONE`, `CAST6//RAW`, `CAST6//`, `CAST6/`, `CAST6` |  | `KeyOwned` | weak, variable time |
+| `CAST6/ECB/ISO10126PADDING` | `CAST6/ECB/ISO10126D2PADDING`, `CAST6/ECB/ISO10126-2PADDING`, `CAST6/NONE/ISO10126PADDING`, `CAST6/NONE/ISO10126D2PADDING`, `CAST6/NONE/ISO10126-2PADDING`, `CAST6//ISO10126PADDING`, `CAST6//ISO10126D2PADDING`, `CAST6//ISO10126-2PADDING` |  | `KeyOwned` | weak, variable time |
+| `CAST6/ECB/ISO7816-4PADDING` | `CAST6/ECB/ISO9797-1PADDING`, `CAST6/NONE/ISO7816-4PADDING`, `CAST6/NONE/ISO9797-1PADDING`, `CAST6//ISO7816-4PADDING`, `CAST6//ISO9797-1PADDING` |  | `KeyOwned` | weak, variable time |
+| `CAST6/ECB/X923PADDING` | `CAST6/ECB/X9.23PADDING`, `CAST6/NONE/X923PADDING`, `CAST6/NONE/X9.23PADDING`, `CAST6//X923PADDING`, `CAST6//X9.23PADDING` |  | `KeyOwned` | weak, variable time |
+| `CAST6/ECB/TBCPADDING` | `CAST6/NONE/TBCPADDING`, `CAST6//TBCPADDING` |  | `KeyOwned` | weak, variable time |
+| `CAST6/ECB/ZEROBYTEPADDING` | `CAST6/NONE/ZEROBYTEPADDING`, `CAST6//ZEROBYTEPADDING` |  | `KeyOwned` | weak, variable time |
+| `CAST6/CBC/NOPADDING` |  |  | `KeyWithIvOwned` | variable time |
+| `CAST6/CBC/PKCS7PADDING` | `CAST6/CBC/PKCS7`, `CAST6/CBC/PKCS5PADDING`, `CAST6/CBC/PKCS5`, `CAST6/CBC/RAW`, `CAST6/CBC/`, `CAST6/CBC` |  | `KeyWithIvOwned` | variable time |
+| `CAST6/CBC/ISO10126PADDING` | `CAST6/CBC/ISO10126D2PADDING`, `CAST6/CBC/ISO10126-2PADDING` |  | `KeyWithIvOwned` | variable time |
+| `CAST6/CBC/ISO7816-4PADDING` | `CAST6/CBC/ISO9797-1PADDING` |  | `KeyWithIvOwned` | variable time |
+| `CAST6/CBC/X923PADDING` | `CAST6/CBC/X9.23PADDING` |  | `KeyWithIvOwned` | variable time |
+| `CAST6/CBC/TBCPADDING` |  |  | `KeyWithIvOwned` | variable time |
+| `CAST6/CBC/ZEROBYTEPADDING` |  |  | `KeyWithIvOwned` | variable time |
+| `CAST6/CFB/NOPADDING` | `CAST6/CFB/RAW`, `CAST6/CFB/`, `CAST6/CFB` |  | `KeyWithIvOwned` | variable time |
+| `CAST6/OFB/NOPADDING` | `CAST6/OFB/RAW`, `CAST6/OFB/`, `CAST6/OFB` |  | `KeyWithIvOwned` | variable time |
+| `CAST6/CTR/NOPADDING` | `CAST6/SIC/NOPADDING`, `CAST6/CTR/RAW`, `CAST6/CTR/`, `CAST6/CTR`, `CAST6/SIC/RAW`, `CAST6/SIC/`, `CAST6/SIC` |  | `KeyWithIvOwned` | variable time |
 
 ### IDEA
 
 The `idea` feature has the rows. A block of 8 bytes and a key of 16 bytes.
 
-| Name | OIDs | Params | Note |
-|---|---|---|---|
-| `IDEA/ECB/NOPADDING` |  | `KeyOwned` | weak, legacy, variable time |
-| `IDEA/ECB/PKCS7PADDING` |  | `KeyOwned` | weak, legacy, variable time |
-| `IDEA/ECB/ISO10126PADDING` |  | `KeyOwned` | weak, legacy, variable time |
-| `IDEA/ECB/ISO7816-4PADDING` |  | `KeyOwned` | weak, legacy, variable time |
-| `IDEA/ECB/X923PADDING` |  | `KeyOwned` | weak, legacy, variable time |
-| `IDEA/ECB/TBCPADDING` |  | `KeyOwned` | weak, legacy, variable time |
-| `IDEA/ECB/ZEROBYTEPADDING` |  | `KeyOwned` | weak, legacy, variable time |
-| `IDEA/CBC/NOPADDING` |  | `KeyWithIvOwned` | legacy, variable time |
-| `IDEA/CBC/PKCS7PADDING` | `1.3.6.1.4.1.188.7.1.1.2` | `KeyWithIvOwned` | legacy, variable time |
-| `IDEA/CBC/ISO10126PADDING` |  | `KeyWithIvOwned` | legacy, variable time |
-| `IDEA/CBC/ISO7816-4PADDING` |  | `KeyWithIvOwned` | legacy, variable time |
-| `IDEA/CBC/X923PADDING` |  | `KeyWithIvOwned` | legacy, variable time |
-| `IDEA/CBC/TBCPADDING` |  | `KeyWithIvOwned` | legacy, variable time |
-| `IDEA/CBC/ZEROBYTEPADDING` |  | `KeyWithIvOwned` | legacy, variable time |
-| `IDEA/CFB/NOPADDING` |  | `KeyWithIvOwned` | legacy, variable time |
-| `IDEA/OFB/NOPADDING` |  | `KeyWithIvOwned` | legacy, variable time |
-| `IDEA/CTR/NOPADDING` |  | `KeyWithIvOwned` | legacy, variable time |
+| Name | Aliases | OIDs | Params | Note |
+|---|---|---|---|---|
+| `IDEA/ECB/NOPADDING` | `IDEA/NONE/NOPADDING`, `IDEA//NOPADDING` |  | `KeyOwned` | weak, legacy, variable time |
+| `IDEA/ECB/PKCS7PADDING` | `IDEA/ECB/PKCS7`, `IDEA/ECB/PKCS5PADDING`, `IDEA/ECB/PKCS5`, `IDEA/NONE/PKCS7PADDING`, `IDEA/NONE/PKCS7`, `IDEA/NONE/PKCS5PADDING`, `IDEA/NONE/PKCS5`, `IDEA//PKCS7PADDING`, `IDEA//PKCS7`, `IDEA//PKCS5PADDING`, `IDEA//PKCS5`, `IDEA/ECB/RAW`, `IDEA/ECB/`, `IDEA/ECB`, `IDEA/NONE/RAW`, `IDEA/NONE/`, `IDEA/NONE`, `IDEA//RAW`, `IDEA//`, `IDEA/`, `IDEA` |  | `KeyOwned` | weak, legacy, variable time |
+| `IDEA/ECB/ISO10126PADDING` | `IDEA/ECB/ISO10126D2PADDING`, `IDEA/ECB/ISO10126-2PADDING`, `IDEA/NONE/ISO10126PADDING`, `IDEA/NONE/ISO10126D2PADDING`, `IDEA/NONE/ISO10126-2PADDING`, `IDEA//ISO10126PADDING`, `IDEA//ISO10126D2PADDING`, `IDEA//ISO10126-2PADDING` |  | `KeyOwned` | weak, legacy, variable time |
+| `IDEA/ECB/ISO7816-4PADDING` | `IDEA/ECB/ISO9797-1PADDING`, `IDEA/NONE/ISO7816-4PADDING`, `IDEA/NONE/ISO9797-1PADDING`, `IDEA//ISO7816-4PADDING`, `IDEA//ISO9797-1PADDING` |  | `KeyOwned` | weak, legacy, variable time |
+| `IDEA/ECB/X923PADDING` | `IDEA/ECB/X9.23PADDING`, `IDEA/NONE/X923PADDING`, `IDEA/NONE/X9.23PADDING`, `IDEA//X923PADDING`, `IDEA//X9.23PADDING` |  | `KeyOwned` | weak, legacy, variable time |
+| `IDEA/ECB/TBCPADDING` | `IDEA/NONE/TBCPADDING`, `IDEA//TBCPADDING` |  | `KeyOwned` | weak, legacy, variable time |
+| `IDEA/ECB/ZEROBYTEPADDING` | `IDEA/NONE/ZEROBYTEPADDING`, `IDEA//ZEROBYTEPADDING` |  | `KeyOwned` | weak, legacy, variable time |
+| `IDEA/CBC/NOPADDING` |  |  | `KeyWithIvOwned` | legacy, variable time |
+| `IDEA/CBC/PKCS7PADDING` | `IDEA/CBC/PKCS7`, `IDEA/CBC/PKCS5PADDING`, `IDEA/CBC/PKCS5`, `IDEA/CBC/RAW`, `IDEA/CBC/`, `IDEA/CBC` | `1.3.6.1.4.1.188.7.1.1.2` | `KeyWithIvOwned` | legacy, variable time |
+| `IDEA/CBC/ISO10126PADDING` | `IDEA/CBC/ISO10126D2PADDING`, `IDEA/CBC/ISO10126-2PADDING` |  | `KeyWithIvOwned` | legacy, variable time |
+| `IDEA/CBC/ISO7816-4PADDING` | `IDEA/CBC/ISO9797-1PADDING` |  | `KeyWithIvOwned` | legacy, variable time |
+| `IDEA/CBC/X923PADDING` | `IDEA/CBC/X9.23PADDING` |  | `KeyWithIvOwned` | legacy, variable time |
+| `IDEA/CBC/TBCPADDING` |  |  | `KeyWithIvOwned` | legacy, variable time |
+| `IDEA/CBC/ZEROBYTEPADDING` |  |  | `KeyWithIvOwned` | legacy, variable time |
+| `IDEA/CFB/NOPADDING` | `IDEA/CFB/RAW`, `IDEA/CFB/`, `IDEA/CFB` |  | `KeyWithIvOwned` | legacy, variable time |
+| `IDEA/OFB/NOPADDING` | `IDEA/OFB/RAW`, `IDEA/OFB/`, `IDEA/OFB` |  | `KeyWithIvOwned` | legacy, variable time |
+| `IDEA/CTR/NOPADDING` | `IDEA/SIC/NOPADDING`, `IDEA/CTR/RAW`, `IDEA/CTR/`, `IDEA/CTR`, `IDEA/SIC/RAW`, `IDEA/SIC/`, `IDEA/SIC` |  | `KeyWithIvOwned` | legacy, variable time |
 
 The OID is Ascom's, and means CBC with PKCS#7 padding.
 
@@ -436,25 +438,25 @@ The OID is Ascom's, and means CBC with PKCS#7 padding.
 The `noekeon` feature has the rows. A block of 16 bytes and a key of 16 bytes, in the direct-key
 mode of Bouncy Castle.
 
-| Name | OIDs | Params | Note |
-|---|---|---|---|
-| `NOEKEON/ECB/NOPADDING` |  | `KeyOwned` | weak |
-| `NOEKEON/ECB/PKCS7PADDING` |  | `KeyOwned` | weak |
-| `NOEKEON/ECB/ISO10126PADDING` |  | `KeyOwned` | weak |
-| `NOEKEON/ECB/ISO7816-4PADDING` |  | `KeyOwned` | weak |
-| `NOEKEON/ECB/X923PADDING` |  | `KeyOwned` | weak |
-| `NOEKEON/ECB/TBCPADDING` |  | `KeyOwned` | weak |
-| `NOEKEON/ECB/ZEROBYTEPADDING` |  | `KeyOwned` | weak |
-| `NOEKEON/CBC/NOPADDING` |  | `KeyWithIvOwned` |  |
-| `NOEKEON/CBC/PKCS7PADDING` |  | `KeyWithIvOwned` |  |
-| `NOEKEON/CBC/ISO10126PADDING` |  | `KeyWithIvOwned` |  |
-| `NOEKEON/CBC/ISO7816-4PADDING` |  | `KeyWithIvOwned` |  |
-| `NOEKEON/CBC/X923PADDING` |  | `KeyWithIvOwned` |  |
-| `NOEKEON/CBC/TBCPADDING` |  | `KeyWithIvOwned` |  |
-| `NOEKEON/CBC/ZEROBYTEPADDING` |  | `KeyWithIvOwned` |  |
-| `NOEKEON/CFB/NOPADDING` |  | `KeyWithIvOwned` |  |
-| `NOEKEON/OFB/NOPADDING` |  | `KeyWithIvOwned` |  |
-| `NOEKEON/CTR/NOPADDING` |  | `KeyWithIvOwned` |  |
+| Name | Aliases | OIDs | Params | Note |
+|---|---|---|---|---|
+| `NOEKEON/ECB/NOPADDING` | `NOEKEON/NONE/NOPADDING`, `NOEKEON//NOPADDING` |  | `KeyOwned` | weak |
+| `NOEKEON/ECB/PKCS7PADDING` | `NOEKEON/ECB/PKCS7`, `NOEKEON/ECB/PKCS5PADDING`, `NOEKEON/ECB/PKCS5`, `NOEKEON/NONE/PKCS7PADDING`, `NOEKEON/NONE/PKCS7`, `NOEKEON/NONE/PKCS5PADDING`, `NOEKEON/NONE/PKCS5`, `NOEKEON//PKCS7PADDING`, `NOEKEON//PKCS7`, `NOEKEON//PKCS5PADDING`, `NOEKEON//PKCS5`, `NOEKEON/ECB/RAW`, `NOEKEON/ECB/`, `NOEKEON/ECB`, `NOEKEON/NONE/RAW`, `NOEKEON/NONE/`, `NOEKEON/NONE`, `NOEKEON//RAW`, `NOEKEON//`, `NOEKEON/`, `NOEKEON` |  | `KeyOwned` | weak |
+| `NOEKEON/ECB/ISO10126PADDING` | `NOEKEON/ECB/ISO10126D2PADDING`, `NOEKEON/ECB/ISO10126-2PADDING`, `NOEKEON/NONE/ISO10126PADDING`, `NOEKEON/NONE/ISO10126D2PADDING`, `NOEKEON/NONE/ISO10126-2PADDING`, `NOEKEON//ISO10126PADDING`, `NOEKEON//ISO10126D2PADDING`, `NOEKEON//ISO10126-2PADDING` |  | `KeyOwned` | weak |
+| `NOEKEON/ECB/ISO7816-4PADDING` | `NOEKEON/ECB/ISO9797-1PADDING`, `NOEKEON/NONE/ISO7816-4PADDING`, `NOEKEON/NONE/ISO9797-1PADDING`, `NOEKEON//ISO7816-4PADDING`, `NOEKEON//ISO9797-1PADDING` |  | `KeyOwned` | weak |
+| `NOEKEON/ECB/X923PADDING` | `NOEKEON/ECB/X9.23PADDING`, `NOEKEON/NONE/X923PADDING`, `NOEKEON/NONE/X9.23PADDING`, `NOEKEON//X923PADDING`, `NOEKEON//X9.23PADDING` |  | `KeyOwned` | weak |
+| `NOEKEON/ECB/TBCPADDING` | `NOEKEON/NONE/TBCPADDING`, `NOEKEON//TBCPADDING` |  | `KeyOwned` | weak |
+| `NOEKEON/ECB/ZEROBYTEPADDING` | `NOEKEON/NONE/ZEROBYTEPADDING`, `NOEKEON//ZEROBYTEPADDING` |  | `KeyOwned` | weak |
+| `NOEKEON/CBC/NOPADDING` |  |  | `KeyWithIvOwned` |  |
+| `NOEKEON/CBC/PKCS7PADDING` | `NOEKEON/CBC/PKCS7`, `NOEKEON/CBC/PKCS5PADDING`, `NOEKEON/CBC/PKCS5`, `NOEKEON/CBC/RAW`, `NOEKEON/CBC/`, `NOEKEON/CBC` |  | `KeyWithIvOwned` |  |
+| `NOEKEON/CBC/ISO10126PADDING` | `NOEKEON/CBC/ISO10126D2PADDING`, `NOEKEON/CBC/ISO10126-2PADDING` |  | `KeyWithIvOwned` |  |
+| `NOEKEON/CBC/ISO7816-4PADDING` | `NOEKEON/CBC/ISO9797-1PADDING` |  | `KeyWithIvOwned` |  |
+| `NOEKEON/CBC/X923PADDING` | `NOEKEON/CBC/X9.23PADDING` |  | `KeyWithIvOwned` |  |
+| `NOEKEON/CBC/TBCPADDING` |  |  | `KeyWithIvOwned` |  |
+| `NOEKEON/CBC/ZEROBYTEPADDING` |  |  | `KeyWithIvOwned` |  |
+| `NOEKEON/CFB/NOPADDING` | `NOEKEON/CFB/RAW`, `NOEKEON/CFB/`, `NOEKEON/CFB` |  | `KeyWithIvOwned` |  |
+| `NOEKEON/OFB/NOPADDING` | `NOEKEON/OFB/RAW`, `NOEKEON/OFB/`, `NOEKEON/OFB` |  | `KeyWithIvOwned` |  |
+| `NOEKEON/CTR/NOPADDING` | `NOEKEON/SIC/NOPADDING`, `NOEKEON/CTR/RAW`, `NOEKEON/CTR/`, `NOEKEON/CTR`, `NOEKEON/SIC/RAW`, `NOEKEON/SIC/`, `NOEKEON/SIC` |  | `KeyWithIvOwned` |  |
 
 ### Rijndael
 
@@ -462,25 +464,25 @@ The `rijndael` feature has the rows. Rijndael with a block of 16 bytes, as Bounc
 CipherUtilities builds it: the same cipher as AES, under the name it had before it became AES. A key
 of 16, 24 or 32 bytes.
 
-| Name | OIDs | Params | Note |
-|---|---|---|---|
-| `RIJNDAEL/ECB/NOPADDING` |  | `KeyOwned` | weak, variable time |
-| `RIJNDAEL/ECB/PKCS7PADDING` |  | `KeyOwned` | weak, variable time |
-| `RIJNDAEL/ECB/ISO10126PADDING` |  | `KeyOwned` | weak, variable time |
-| `RIJNDAEL/ECB/ISO7816-4PADDING` |  | `KeyOwned` | weak, variable time |
-| `RIJNDAEL/ECB/X923PADDING` |  | `KeyOwned` | weak, variable time |
-| `RIJNDAEL/ECB/TBCPADDING` |  | `KeyOwned` | weak, variable time |
-| `RIJNDAEL/ECB/ZEROBYTEPADDING` |  | `KeyOwned` | weak, variable time |
-| `RIJNDAEL/CBC/NOPADDING` |  | `KeyWithIvOwned` | variable time |
-| `RIJNDAEL/CBC/PKCS7PADDING` |  | `KeyWithIvOwned` | variable time |
-| `RIJNDAEL/CBC/ISO10126PADDING` |  | `KeyWithIvOwned` | variable time |
-| `RIJNDAEL/CBC/ISO7816-4PADDING` |  | `KeyWithIvOwned` | variable time |
-| `RIJNDAEL/CBC/X923PADDING` |  | `KeyWithIvOwned` | variable time |
-| `RIJNDAEL/CBC/TBCPADDING` |  | `KeyWithIvOwned` | variable time |
-| `RIJNDAEL/CBC/ZEROBYTEPADDING` |  | `KeyWithIvOwned` | variable time |
-| `RIJNDAEL/CFB/NOPADDING` |  | `KeyWithIvOwned` | variable time |
-| `RIJNDAEL/OFB/NOPADDING` |  | `KeyWithIvOwned` | variable time |
-| `RIJNDAEL/CTR/NOPADDING` |  | `KeyWithIvOwned` | variable time |
+| Name | Aliases | OIDs | Params | Note |
+|---|---|---|---|---|
+| `RIJNDAEL/ECB/NOPADDING` | `RIJNDAEL/NONE/NOPADDING`, `RIJNDAEL//NOPADDING` |  | `KeyOwned` | weak, variable time |
+| `RIJNDAEL/ECB/PKCS7PADDING` | `RIJNDAEL/ECB/PKCS7`, `RIJNDAEL/ECB/PKCS5PADDING`, `RIJNDAEL/ECB/PKCS5`, `RIJNDAEL/NONE/PKCS7PADDING`, `RIJNDAEL/NONE/PKCS7`, `RIJNDAEL/NONE/PKCS5PADDING`, `RIJNDAEL/NONE/PKCS5`, `RIJNDAEL//PKCS7PADDING`, `RIJNDAEL//PKCS7`, `RIJNDAEL//PKCS5PADDING`, `RIJNDAEL//PKCS5`, `RIJNDAEL/ECB/RAW`, `RIJNDAEL/ECB/`, `RIJNDAEL/ECB`, `RIJNDAEL/NONE/RAW`, `RIJNDAEL/NONE/`, `RIJNDAEL/NONE`, `RIJNDAEL//RAW`, `RIJNDAEL//`, `RIJNDAEL/`, `RIJNDAEL` |  | `KeyOwned` | weak, variable time |
+| `RIJNDAEL/ECB/ISO10126PADDING` | `RIJNDAEL/ECB/ISO10126D2PADDING`, `RIJNDAEL/ECB/ISO10126-2PADDING`, `RIJNDAEL/NONE/ISO10126PADDING`, `RIJNDAEL/NONE/ISO10126D2PADDING`, `RIJNDAEL/NONE/ISO10126-2PADDING`, `RIJNDAEL//ISO10126PADDING`, `RIJNDAEL//ISO10126D2PADDING`, `RIJNDAEL//ISO10126-2PADDING` |  | `KeyOwned` | weak, variable time |
+| `RIJNDAEL/ECB/ISO7816-4PADDING` | `RIJNDAEL/ECB/ISO9797-1PADDING`, `RIJNDAEL/NONE/ISO7816-4PADDING`, `RIJNDAEL/NONE/ISO9797-1PADDING`, `RIJNDAEL//ISO7816-4PADDING`, `RIJNDAEL//ISO9797-1PADDING` |  | `KeyOwned` | weak, variable time |
+| `RIJNDAEL/ECB/X923PADDING` | `RIJNDAEL/ECB/X9.23PADDING`, `RIJNDAEL/NONE/X923PADDING`, `RIJNDAEL/NONE/X9.23PADDING`, `RIJNDAEL//X923PADDING`, `RIJNDAEL//X9.23PADDING` |  | `KeyOwned` | weak, variable time |
+| `RIJNDAEL/ECB/TBCPADDING` | `RIJNDAEL/NONE/TBCPADDING`, `RIJNDAEL//TBCPADDING` |  | `KeyOwned` | weak, variable time |
+| `RIJNDAEL/ECB/ZEROBYTEPADDING` | `RIJNDAEL/NONE/ZEROBYTEPADDING`, `RIJNDAEL//ZEROBYTEPADDING` |  | `KeyOwned` | weak, variable time |
+| `RIJNDAEL/CBC/NOPADDING` |  |  | `KeyWithIvOwned` | variable time |
+| `RIJNDAEL/CBC/PKCS7PADDING` | `RIJNDAEL/CBC/PKCS7`, `RIJNDAEL/CBC/PKCS5PADDING`, `RIJNDAEL/CBC/PKCS5`, `RIJNDAEL/CBC/RAW`, `RIJNDAEL/CBC/`, `RIJNDAEL/CBC` |  | `KeyWithIvOwned` | variable time |
+| `RIJNDAEL/CBC/ISO10126PADDING` | `RIJNDAEL/CBC/ISO10126D2PADDING`, `RIJNDAEL/CBC/ISO10126-2PADDING` |  | `KeyWithIvOwned` | variable time |
+| `RIJNDAEL/CBC/ISO7816-4PADDING` | `RIJNDAEL/CBC/ISO9797-1PADDING` |  | `KeyWithIvOwned` | variable time |
+| `RIJNDAEL/CBC/X923PADDING` | `RIJNDAEL/CBC/X9.23PADDING` |  | `KeyWithIvOwned` | variable time |
+| `RIJNDAEL/CBC/TBCPADDING` |  |  | `KeyWithIvOwned` | variable time |
+| `RIJNDAEL/CBC/ZEROBYTEPADDING` |  |  | `KeyWithIvOwned` | variable time |
+| `RIJNDAEL/CFB/NOPADDING` | `RIJNDAEL/CFB/RAW`, `RIJNDAEL/CFB/`, `RIJNDAEL/CFB` |  | `KeyWithIvOwned` | variable time |
+| `RIJNDAEL/OFB/NOPADDING` | `RIJNDAEL/OFB/RAW`, `RIJNDAEL/OFB/`, `RIJNDAEL/OFB` |  | `KeyWithIvOwned` | variable time |
+| `RIJNDAEL/CTR/NOPADDING` | `RIJNDAEL/SIC/NOPADDING`, `RIJNDAEL/CTR/RAW`, `RIJNDAEL/CTR/`, `RIJNDAEL/CTR`, `RIJNDAEL/SIC/RAW`, `RIJNDAEL/SIC/`, `RIJNDAEL/SIC` |  | `KeyWithIvOwned` | variable time |
 
 For new data, take `AES`, which is constant time where `tc_aes` can be.
 
@@ -488,74 +490,74 @@ For new data, take `AES`, which is constant time where `tc_aes` can be.
 
 The `skipjack` feature has the rows. A block of 8 bytes and a key of 10 bytes.
 
-| Name | OIDs | Params | Note |
-|---|---|---|---|
-| `SKIPJACK/ECB/NOPADDING` |  | `KeyOwned` | weak, legacy, variable time |
-| `SKIPJACK/ECB/PKCS7PADDING` |  | `KeyOwned` | weak, legacy, variable time |
-| `SKIPJACK/ECB/ISO10126PADDING` |  | `KeyOwned` | weak, legacy, variable time |
-| `SKIPJACK/ECB/ISO7816-4PADDING` |  | `KeyOwned` | weak, legacy, variable time |
-| `SKIPJACK/ECB/X923PADDING` |  | `KeyOwned` | weak, legacy, variable time |
-| `SKIPJACK/ECB/TBCPADDING` |  | `KeyOwned` | weak, legacy, variable time |
-| `SKIPJACK/ECB/ZEROBYTEPADDING` |  | `KeyOwned` | weak, legacy, variable time |
-| `SKIPJACK/CBC/NOPADDING` |  | `KeyWithIvOwned` | legacy, variable time |
-| `SKIPJACK/CBC/PKCS7PADDING` |  | `KeyWithIvOwned` | legacy, variable time |
-| `SKIPJACK/CBC/ISO10126PADDING` |  | `KeyWithIvOwned` | legacy, variable time |
-| `SKIPJACK/CBC/ISO7816-4PADDING` |  | `KeyWithIvOwned` | legacy, variable time |
-| `SKIPJACK/CBC/X923PADDING` |  | `KeyWithIvOwned` | legacy, variable time |
-| `SKIPJACK/CBC/TBCPADDING` |  | `KeyWithIvOwned` | legacy, variable time |
-| `SKIPJACK/CBC/ZEROBYTEPADDING` |  | `KeyWithIvOwned` | legacy, variable time |
-| `SKIPJACK/CFB/NOPADDING` |  | `KeyWithIvOwned` | legacy, variable time |
-| `SKIPJACK/OFB/NOPADDING` |  | `KeyWithIvOwned` | legacy, variable time |
-| `SKIPJACK/CTR/NOPADDING` |  | `KeyWithIvOwned` | legacy, variable time |
+| Name | Aliases | OIDs | Params | Note |
+|---|---|---|---|---|
+| `SKIPJACK/ECB/NOPADDING` | `SKIPJACK/NONE/NOPADDING`, `SKIPJACK//NOPADDING` |  | `KeyOwned` | weak, legacy, variable time |
+| `SKIPJACK/ECB/PKCS7PADDING` | `SKIPJACK/ECB/PKCS7`, `SKIPJACK/ECB/PKCS5PADDING`, `SKIPJACK/ECB/PKCS5`, `SKIPJACK/NONE/PKCS7PADDING`, `SKIPJACK/NONE/PKCS7`, `SKIPJACK/NONE/PKCS5PADDING`, `SKIPJACK/NONE/PKCS5`, `SKIPJACK//PKCS7PADDING`, `SKIPJACK//PKCS7`, `SKIPJACK//PKCS5PADDING`, `SKIPJACK//PKCS5`, `SKIPJACK/ECB/RAW`, `SKIPJACK/ECB/`, `SKIPJACK/ECB`, `SKIPJACK/NONE/RAW`, `SKIPJACK/NONE/`, `SKIPJACK/NONE`, `SKIPJACK//RAW`, `SKIPJACK//`, `SKIPJACK/`, `SKIPJACK` |  | `KeyOwned` | weak, legacy, variable time |
+| `SKIPJACK/ECB/ISO10126PADDING` | `SKIPJACK/ECB/ISO10126D2PADDING`, `SKIPJACK/ECB/ISO10126-2PADDING`, `SKIPJACK/NONE/ISO10126PADDING`, `SKIPJACK/NONE/ISO10126D2PADDING`, `SKIPJACK/NONE/ISO10126-2PADDING`, `SKIPJACK//ISO10126PADDING`, `SKIPJACK//ISO10126D2PADDING`, `SKIPJACK//ISO10126-2PADDING` |  | `KeyOwned` | weak, legacy, variable time |
+| `SKIPJACK/ECB/ISO7816-4PADDING` | `SKIPJACK/ECB/ISO9797-1PADDING`, `SKIPJACK/NONE/ISO7816-4PADDING`, `SKIPJACK/NONE/ISO9797-1PADDING`, `SKIPJACK//ISO7816-4PADDING`, `SKIPJACK//ISO9797-1PADDING` |  | `KeyOwned` | weak, legacy, variable time |
+| `SKIPJACK/ECB/X923PADDING` | `SKIPJACK/ECB/X9.23PADDING`, `SKIPJACK/NONE/X923PADDING`, `SKIPJACK/NONE/X9.23PADDING`, `SKIPJACK//X923PADDING`, `SKIPJACK//X9.23PADDING` |  | `KeyOwned` | weak, legacy, variable time |
+| `SKIPJACK/ECB/TBCPADDING` | `SKIPJACK/NONE/TBCPADDING`, `SKIPJACK//TBCPADDING` |  | `KeyOwned` | weak, legacy, variable time |
+| `SKIPJACK/ECB/ZEROBYTEPADDING` | `SKIPJACK/NONE/ZEROBYTEPADDING`, `SKIPJACK//ZEROBYTEPADDING` |  | `KeyOwned` | weak, legacy, variable time |
+| `SKIPJACK/CBC/NOPADDING` |  |  | `KeyWithIvOwned` | legacy, variable time |
+| `SKIPJACK/CBC/PKCS7PADDING` | `SKIPJACK/CBC/PKCS7`, `SKIPJACK/CBC/PKCS5PADDING`, `SKIPJACK/CBC/PKCS5`, `SKIPJACK/CBC/RAW`, `SKIPJACK/CBC/`, `SKIPJACK/CBC` |  | `KeyWithIvOwned` | legacy, variable time |
+| `SKIPJACK/CBC/ISO10126PADDING` | `SKIPJACK/CBC/ISO10126D2PADDING`, `SKIPJACK/CBC/ISO10126-2PADDING` |  | `KeyWithIvOwned` | legacy, variable time |
+| `SKIPJACK/CBC/ISO7816-4PADDING` | `SKIPJACK/CBC/ISO9797-1PADDING` |  | `KeyWithIvOwned` | legacy, variable time |
+| `SKIPJACK/CBC/X923PADDING` | `SKIPJACK/CBC/X9.23PADDING` |  | `KeyWithIvOwned` | legacy, variable time |
+| `SKIPJACK/CBC/TBCPADDING` |  |  | `KeyWithIvOwned` | legacy, variable time |
+| `SKIPJACK/CBC/ZEROBYTEPADDING` |  |  | `KeyWithIvOwned` | legacy, variable time |
+| `SKIPJACK/CFB/NOPADDING` | `SKIPJACK/CFB/RAW`, `SKIPJACK/CFB/`, `SKIPJACK/CFB` |  | `KeyWithIvOwned` | legacy, variable time |
+| `SKIPJACK/OFB/NOPADDING` | `SKIPJACK/OFB/RAW`, `SKIPJACK/OFB/`, `SKIPJACK/OFB` |  | `KeyWithIvOwned` | legacy, variable time |
+| `SKIPJACK/CTR/NOPADDING` | `SKIPJACK/SIC/NOPADDING`, `SKIPJACK/CTR/RAW`, `SKIPJACK/CTR/`, `SKIPJACK/CTR`, `SKIPJACK/SIC/RAW`, `SKIPJACK/SIC/`, `SKIPJACK/SIC` |  | `KeyWithIvOwned` | legacy, variable time |
 
 ### TEA
 
 The `tea` feature has the rows. A block of 8 bytes and a key of 16 bytes.
 
-| Name | OIDs | Params | Note |
-|---|---|---|---|
-| `TEA/ECB/NOPADDING` |  | `KeyOwned` | weak, legacy |
-| `TEA/ECB/PKCS7PADDING` |  | `KeyOwned` | weak, legacy |
-| `TEA/ECB/ISO10126PADDING` |  | `KeyOwned` | weak, legacy |
-| `TEA/ECB/ISO7816-4PADDING` |  | `KeyOwned` | weak, legacy |
-| `TEA/ECB/X923PADDING` |  | `KeyOwned` | weak, legacy |
-| `TEA/ECB/TBCPADDING` |  | `KeyOwned` | weak, legacy |
-| `TEA/ECB/ZEROBYTEPADDING` |  | `KeyOwned` | weak, legacy |
-| `TEA/CBC/NOPADDING` |  | `KeyWithIvOwned` | legacy |
-| `TEA/CBC/PKCS7PADDING` |  | `KeyWithIvOwned` | legacy |
-| `TEA/CBC/ISO10126PADDING` |  | `KeyWithIvOwned` | legacy |
-| `TEA/CBC/ISO7816-4PADDING` |  | `KeyWithIvOwned` | legacy |
-| `TEA/CBC/X923PADDING` |  | `KeyWithIvOwned` | legacy |
-| `TEA/CBC/TBCPADDING` |  | `KeyWithIvOwned` | legacy |
-| `TEA/CBC/ZEROBYTEPADDING` |  | `KeyWithIvOwned` | legacy |
-| `TEA/CFB/NOPADDING` |  | `KeyWithIvOwned` | legacy |
-| `TEA/OFB/NOPADDING` |  | `KeyWithIvOwned` | legacy |
-| `TEA/CTR/NOPADDING` |  | `KeyWithIvOwned` | legacy |
+| Name | Aliases | OIDs | Params | Note |
+|---|---|---|---|---|
+| `TEA/ECB/NOPADDING` | `TEA/NONE/NOPADDING`, `TEA//NOPADDING` |  | `KeyOwned` | weak, legacy |
+| `TEA/ECB/PKCS7PADDING` | `TEA/ECB/PKCS7`, `TEA/ECB/PKCS5PADDING`, `TEA/ECB/PKCS5`, `TEA/NONE/PKCS7PADDING`, `TEA/NONE/PKCS7`, `TEA/NONE/PKCS5PADDING`, `TEA/NONE/PKCS5`, `TEA//PKCS7PADDING`, `TEA//PKCS7`, `TEA//PKCS5PADDING`, `TEA//PKCS5`, `TEA/ECB/RAW`, `TEA/ECB/`, `TEA/ECB`, `TEA/NONE/RAW`, `TEA/NONE/`, `TEA/NONE`, `TEA//RAW`, `TEA//`, `TEA/`, `TEA` |  | `KeyOwned` | weak, legacy |
+| `TEA/ECB/ISO10126PADDING` | `TEA/ECB/ISO10126D2PADDING`, `TEA/ECB/ISO10126-2PADDING`, `TEA/NONE/ISO10126PADDING`, `TEA/NONE/ISO10126D2PADDING`, `TEA/NONE/ISO10126-2PADDING`, `TEA//ISO10126PADDING`, `TEA//ISO10126D2PADDING`, `TEA//ISO10126-2PADDING` |  | `KeyOwned` | weak, legacy |
+| `TEA/ECB/ISO7816-4PADDING` | `TEA/ECB/ISO9797-1PADDING`, `TEA/NONE/ISO7816-4PADDING`, `TEA/NONE/ISO9797-1PADDING`, `TEA//ISO7816-4PADDING`, `TEA//ISO9797-1PADDING` |  | `KeyOwned` | weak, legacy |
+| `TEA/ECB/X923PADDING` | `TEA/ECB/X9.23PADDING`, `TEA/NONE/X923PADDING`, `TEA/NONE/X9.23PADDING`, `TEA//X923PADDING`, `TEA//X9.23PADDING` |  | `KeyOwned` | weak, legacy |
+| `TEA/ECB/TBCPADDING` | `TEA/NONE/TBCPADDING`, `TEA//TBCPADDING` |  | `KeyOwned` | weak, legacy |
+| `TEA/ECB/ZEROBYTEPADDING` | `TEA/NONE/ZEROBYTEPADDING`, `TEA//ZEROBYTEPADDING` |  | `KeyOwned` | weak, legacy |
+| `TEA/CBC/NOPADDING` |  |  | `KeyWithIvOwned` | legacy |
+| `TEA/CBC/PKCS7PADDING` | `TEA/CBC/PKCS7`, `TEA/CBC/PKCS5PADDING`, `TEA/CBC/PKCS5`, `TEA/CBC/RAW`, `TEA/CBC/`, `TEA/CBC` |  | `KeyWithIvOwned` | legacy |
+| `TEA/CBC/ISO10126PADDING` | `TEA/CBC/ISO10126D2PADDING`, `TEA/CBC/ISO10126-2PADDING` |  | `KeyWithIvOwned` | legacy |
+| `TEA/CBC/ISO7816-4PADDING` | `TEA/CBC/ISO9797-1PADDING` |  | `KeyWithIvOwned` | legacy |
+| `TEA/CBC/X923PADDING` | `TEA/CBC/X9.23PADDING` |  | `KeyWithIvOwned` | legacy |
+| `TEA/CBC/TBCPADDING` |  |  | `KeyWithIvOwned` | legacy |
+| `TEA/CBC/ZEROBYTEPADDING` |  |  | `KeyWithIvOwned` | legacy |
+| `TEA/CFB/NOPADDING` | `TEA/CFB/RAW`, `TEA/CFB/`, `TEA/CFB` |  | `KeyWithIvOwned` | legacy |
+| `TEA/OFB/NOPADDING` | `TEA/OFB/RAW`, `TEA/OFB/`, `TEA/OFB` |  | `KeyWithIvOwned` | legacy |
+| `TEA/CTR/NOPADDING` | `TEA/SIC/NOPADDING`, `TEA/CTR/RAW`, `TEA/CTR/`, `TEA/CTR`, `TEA/SIC/RAW`, `TEA/SIC/`, `TEA/SIC` |  | `KeyWithIvOwned` | legacy |
 
 ### XTEA
 
 The `xtea` feature has the rows. A block of 8 bytes and a key of 16 bytes; TEA with its key schedule
 repaired. Bouncy Castle has it as an engine, not in its CipherUtilities.
 
-| Name | OIDs | Params | Note |
-|---|---|---|---|
-| `XTEA/ECB/NOPADDING` |  | `KeyOwned` | weak, legacy |
-| `XTEA/ECB/PKCS7PADDING` |  | `KeyOwned` | weak, legacy |
-| `XTEA/ECB/ISO10126PADDING` |  | `KeyOwned` | weak, legacy |
-| `XTEA/ECB/ISO7816-4PADDING` |  | `KeyOwned` | weak, legacy |
-| `XTEA/ECB/X923PADDING` |  | `KeyOwned` | weak, legacy |
-| `XTEA/ECB/TBCPADDING` |  | `KeyOwned` | weak, legacy |
-| `XTEA/ECB/ZEROBYTEPADDING` |  | `KeyOwned` | weak, legacy |
-| `XTEA/CBC/NOPADDING` |  | `KeyWithIvOwned` | legacy |
-| `XTEA/CBC/PKCS7PADDING` |  | `KeyWithIvOwned` | legacy |
-| `XTEA/CBC/ISO10126PADDING` |  | `KeyWithIvOwned` | legacy |
-| `XTEA/CBC/ISO7816-4PADDING` |  | `KeyWithIvOwned` | legacy |
-| `XTEA/CBC/X923PADDING` |  | `KeyWithIvOwned` | legacy |
-| `XTEA/CBC/TBCPADDING` |  | `KeyWithIvOwned` | legacy |
-| `XTEA/CBC/ZEROBYTEPADDING` |  | `KeyWithIvOwned` | legacy |
-| `XTEA/CFB/NOPADDING` |  | `KeyWithIvOwned` | legacy |
-| `XTEA/OFB/NOPADDING` |  | `KeyWithIvOwned` | legacy |
-| `XTEA/CTR/NOPADDING` |  | `KeyWithIvOwned` | legacy |
+| Name | Aliases | OIDs | Params | Note |
+|---|---|---|---|---|
+| `XTEA/ECB/NOPADDING` | `XTEA/NONE/NOPADDING`, `XTEA//NOPADDING` |  | `KeyOwned` | weak, legacy |
+| `XTEA/ECB/PKCS7PADDING` | `XTEA/ECB/PKCS7`, `XTEA/ECB/PKCS5PADDING`, `XTEA/ECB/PKCS5`, `XTEA/NONE/PKCS7PADDING`, `XTEA/NONE/PKCS7`, `XTEA/NONE/PKCS5PADDING`, `XTEA/NONE/PKCS5`, `XTEA//PKCS7PADDING`, `XTEA//PKCS7`, `XTEA//PKCS5PADDING`, `XTEA//PKCS5`, `XTEA/ECB/RAW`, `XTEA/ECB/`, `XTEA/ECB`, `XTEA/NONE/RAW`, `XTEA/NONE/`, `XTEA/NONE`, `XTEA//RAW`, `XTEA//`, `XTEA/`, `XTEA` |  | `KeyOwned` | weak, legacy |
+| `XTEA/ECB/ISO10126PADDING` | `XTEA/ECB/ISO10126D2PADDING`, `XTEA/ECB/ISO10126-2PADDING`, `XTEA/NONE/ISO10126PADDING`, `XTEA/NONE/ISO10126D2PADDING`, `XTEA/NONE/ISO10126-2PADDING`, `XTEA//ISO10126PADDING`, `XTEA//ISO10126D2PADDING`, `XTEA//ISO10126-2PADDING` |  | `KeyOwned` | weak, legacy |
+| `XTEA/ECB/ISO7816-4PADDING` | `XTEA/ECB/ISO9797-1PADDING`, `XTEA/NONE/ISO7816-4PADDING`, `XTEA/NONE/ISO9797-1PADDING`, `XTEA//ISO7816-4PADDING`, `XTEA//ISO9797-1PADDING` |  | `KeyOwned` | weak, legacy |
+| `XTEA/ECB/X923PADDING` | `XTEA/ECB/X9.23PADDING`, `XTEA/NONE/X923PADDING`, `XTEA/NONE/X9.23PADDING`, `XTEA//X923PADDING`, `XTEA//X9.23PADDING` |  | `KeyOwned` | weak, legacy |
+| `XTEA/ECB/TBCPADDING` | `XTEA/NONE/TBCPADDING`, `XTEA//TBCPADDING` |  | `KeyOwned` | weak, legacy |
+| `XTEA/ECB/ZEROBYTEPADDING` | `XTEA/NONE/ZEROBYTEPADDING`, `XTEA//ZEROBYTEPADDING` |  | `KeyOwned` | weak, legacy |
+| `XTEA/CBC/NOPADDING` |  |  | `KeyWithIvOwned` | legacy |
+| `XTEA/CBC/PKCS7PADDING` | `XTEA/CBC/PKCS7`, `XTEA/CBC/PKCS5PADDING`, `XTEA/CBC/PKCS5`, `XTEA/CBC/RAW`, `XTEA/CBC/`, `XTEA/CBC` |  | `KeyWithIvOwned` | legacy |
+| `XTEA/CBC/ISO10126PADDING` | `XTEA/CBC/ISO10126D2PADDING`, `XTEA/CBC/ISO10126-2PADDING` |  | `KeyWithIvOwned` | legacy |
+| `XTEA/CBC/ISO7816-4PADDING` | `XTEA/CBC/ISO9797-1PADDING` |  | `KeyWithIvOwned` | legacy |
+| `XTEA/CBC/X923PADDING` | `XTEA/CBC/X9.23PADDING` |  | `KeyWithIvOwned` | legacy |
+| `XTEA/CBC/TBCPADDING` |  |  | `KeyWithIvOwned` | legacy |
+| `XTEA/CBC/ZEROBYTEPADDING` |  |  | `KeyWithIvOwned` | legacy |
+| `XTEA/CFB/NOPADDING` | `XTEA/CFB/RAW`, `XTEA/CFB/`, `XTEA/CFB` |  | `KeyWithIvOwned` | legacy |
+| `XTEA/OFB/NOPADDING` | `XTEA/OFB/RAW`, `XTEA/OFB/`, `XTEA/OFB` |  | `KeyWithIvOwned` | legacy |
+| `XTEA/CTR/NOPADDING` | `XTEA/SIC/NOPADDING`, `XTEA/CTR/RAW`, `XTEA/CTR/`, `XTEA/CTR`, `XTEA/SIC/RAW`, `XTEA/SIC/`, `XTEA/SIC` |  | `KeyWithIvOwned` | legacy |
 
 ### RC2
 
@@ -563,25 +565,25 @@ The `rc2` feature has the rows. A block of 8 bytes and a key of 1 to 128 bytes. 
 a plain key gives an effective key size of the whole key, and RC2's own params give another; see
 [RC2](Rc2.md).
 
-| Name | OIDs | Params | Note |
-|---|---|---|---|
-| `RC2/ECB/NOPADDING` |  | `KeyOwned`, [`Rc2ParamsOwned`](Rc2.md) | weak, legacy, variable time |
-| `RC2/ECB/PKCS7PADDING` |  | `KeyOwned`, [`Rc2ParamsOwned`](Rc2.md) | weak, legacy, variable time |
-| `RC2/ECB/ISO10126PADDING` |  | `KeyOwned`, [`Rc2ParamsOwned`](Rc2.md) | weak, legacy, variable time |
-| `RC2/ECB/ISO7816-4PADDING` |  | `KeyOwned`, [`Rc2ParamsOwned`](Rc2.md) | weak, legacy, variable time |
-| `RC2/ECB/X923PADDING` |  | `KeyOwned`, [`Rc2ParamsOwned`](Rc2.md) | weak, legacy, variable time |
-| `RC2/ECB/TBCPADDING` |  | `KeyOwned`, [`Rc2ParamsOwned`](Rc2.md) | weak, legacy, variable time |
-| `RC2/ECB/ZEROBYTEPADDING` |  | `KeyOwned`, [`Rc2ParamsOwned`](Rc2.md) | weak, legacy, variable time |
-| `RC2/CBC/NOPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc2ParamsOwned>`](Rc2.md) | legacy, variable time |
-| `RC2/CBC/PKCS7PADDING` | `1.2.840.113549.3.2` | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc2ParamsOwned>`](Rc2.md) | legacy, variable time |
-| `RC2/CBC/ISO10126PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc2ParamsOwned>`](Rc2.md) | legacy, variable time |
-| `RC2/CBC/ISO7816-4PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc2ParamsOwned>`](Rc2.md) | legacy, variable time |
-| `RC2/CBC/X923PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc2ParamsOwned>`](Rc2.md) | legacy, variable time |
-| `RC2/CBC/TBCPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc2ParamsOwned>`](Rc2.md) | legacy, variable time |
-| `RC2/CBC/ZEROBYTEPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc2ParamsOwned>`](Rc2.md) | legacy, variable time |
-| `RC2/CFB/NOPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc2ParamsOwned>`](Rc2.md) | legacy, variable time |
-| `RC2/OFB/NOPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc2ParamsOwned>`](Rc2.md) | legacy, variable time |
-| `RC2/CTR/NOPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc2ParamsOwned>`](Rc2.md) | legacy, variable time |
+| Name | Aliases | OIDs | Params | Note |
+|---|---|---|---|---|
+| `RC2/ECB/NOPADDING` | `RC2/NONE/NOPADDING`, `RC2//NOPADDING` |  | `KeyOwned`, [`Rc2ParamsOwned`](Rc2.md) | weak, legacy, variable time |
+| `RC2/ECB/PKCS7PADDING` | `RC2/ECB/PKCS7`, `RC2/ECB/PKCS5PADDING`, `RC2/ECB/PKCS5`, `RC2/NONE/PKCS7PADDING`, `RC2/NONE/PKCS7`, `RC2/NONE/PKCS5PADDING`, `RC2/NONE/PKCS5`, `RC2//PKCS7PADDING`, `RC2//PKCS7`, `RC2//PKCS5PADDING`, `RC2//PKCS5`, `RC2/ECB/RAW`, `RC2/ECB/`, `RC2/ECB`, `RC2/NONE/RAW`, `RC2/NONE/`, `RC2/NONE`, `RC2//RAW`, `RC2//`, `RC2/`, `RC2` |  | `KeyOwned`, [`Rc2ParamsOwned`](Rc2.md) | weak, legacy, variable time |
+| `RC2/ECB/ISO10126PADDING` | `RC2/ECB/ISO10126D2PADDING`, `RC2/ECB/ISO10126-2PADDING`, `RC2/NONE/ISO10126PADDING`, `RC2/NONE/ISO10126D2PADDING`, `RC2/NONE/ISO10126-2PADDING`, `RC2//ISO10126PADDING`, `RC2//ISO10126D2PADDING`, `RC2//ISO10126-2PADDING` |  | `KeyOwned`, [`Rc2ParamsOwned`](Rc2.md) | weak, legacy, variable time |
+| `RC2/ECB/ISO7816-4PADDING` | `RC2/ECB/ISO9797-1PADDING`, `RC2/NONE/ISO7816-4PADDING`, `RC2/NONE/ISO9797-1PADDING`, `RC2//ISO7816-4PADDING`, `RC2//ISO9797-1PADDING` |  | `KeyOwned`, [`Rc2ParamsOwned`](Rc2.md) | weak, legacy, variable time |
+| `RC2/ECB/X923PADDING` | `RC2/ECB/X9.23PADDING`, `RC2/NONE/X923PADDING`, `RC2/NONE/X9.23PADDING`, `RC2//X923PADDING`, `RC2//X9.23PADDING` |  | `KeyOwned`, [`Rc2ParamsOwned`](Rc2.md) | weak, legacy, variable time |
+| `RC2/ECB/TBCPADDING` | `RC2/NONE/TBCPADDING`, `RC2//TBCPADDING` |  | `KeyOwned`, [`Rc2ParamsOwned`](Rc2.md) | weak, legacy, variable time |
+| `RC2/ECB/ZEROBYTEPADDING` | `RC2/NONE/ZEROBYTEPADDING`, `RC2//ZEROBYTEPADDING` |  | `KeyOwned`, [`Rc2ParamsOwned`](Rc2.md) | weak, legacy, variable time |
+| `RC2/CBC/NOPADDING` |  |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc2ParamsOwned>`](Rc2.md) | legacy, variable time |
+| `RC2/CBC/PKCS7PADDING` | `RC2/CBC/PKCS7`, `RC2/CBC/PKCS5PADDING`, `RC2/CBC/PKCS5`, `RC2/CBC/RAW`, `RC2/CBC/`, `RC2/CBC` | `1.2.840.113549.3.2` | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc2ParamsOwned>`](Rc2.md) | legacy, variable time |
+| `RC2/CBC/ISO10126PADDING` | `RC2/CBC/ISO10126D2PADDING`, `RC2/CBC/ISO10126-2PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc2ParamsOwned>`](Rc2.md) | legacy, variable time |
+| `RC2/CBC/ISO7816-4PADDING` | `RC2/CBC/ISO9797-1PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc2ParamsOwned>`](Rc2.md) | legacy, variable time |
+| `RC2/CBC/X923PADDING` | `RC2/CBC/X9.23PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc2ParamsOwned>`](Rc2.md) | legacy, variable time |
+| `RC2/CBC/TBCPADDING` |  |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc2ParamsOwned>`](Rc2.md) | legacy, variable time |
+| `RC2/CBC/ZEROBYTEPADDING` |  |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc2ParamsOwned>`](Rc2.md) | legacy, variable time |
+| `RC2/CFB/NOPADDING` | `RC2/CFB/RAW`, `RC2/CFB/`, `RC2/CFB` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc2ParamsOwned>`](Rc2.md) | legacy, variable time |
+| `RC2/OFB/NOPADDING` | `RC2/OFB/RAW`, `RC2/OFB/`, `RC2/OFB` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc2ParamsOwned>`](Rc2.md) | legacy, variable time |
+| `RC2/CTR/NOPADDING` | `RC2/SIC/NOPADDING`, `RC2/CTR/RAW`, `RC2/CTR/`, `RC2/CTR`, `RC2/SIC/RAW`, `RC2/SIC/`, `RC2/SIC` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc2ParamsOwned>`](Rc2.md) | legacy, variable time |
 
 The OID is RSA's, and means CBC with PKCS#7 padding. Its parameters in a certificate or CMS can name
 another effective key size, which these rows take in a `ParamsWithIvOwned<Rc2ParamsOwned>`; see
@@ -593,75 +595,75 @@ The `rc5` feature has the rows. RC5 with 32-bit words: a block of 8 bytes and a 
 bytes, with 12 rounds, as Bouncy Castle gives a plain key, and RC5's own params give another number;
 see [RC5](Rc5.md). `RC5-32` is another name of it.
 
-| Name | OIDs | Params | Note |
-|---|---|---|---|
-| `RC5/ECB/NOPADDING` |  | `KeyOwned`, [`Rc5ParamsOwned`](Rc5.md) | weak, legacy |
-| `RC5/ECB/PKCS7PADDING` |  | `KeyOwned`, [`Rc5ParamsOwned`](Rc5.md) | weak, legacy |
-| `RC5/ECB/ISO10126PADDING` |  | `KeyOwned`, [`Rc5ParamsOwned`](Rc5.md) | weak, legacy |
-| `RC5/ECB/ISO7816-4PADDING` |  | `KeyOwned`, [`Rc5ParamsOwned`](Rc5.md) | weak, legacy |
-| `RC5/ECB/X923PADDING` |  | `KeyOwned`, [`Rc5ParamsOwned`](Rc5.md) | weak, legacy |
-| `RC5/ECB/TBCPADDING` |  | `KeyOwned`, [`Rc5ParamsOwned`](Rc5.md) | weak, legacy |
-| `RC5/ECB/ZEROBYTEPADDING` |  | `KeyOwned`, [`Rc5ParamsOwned`](Rc5.md) | weak, legacy |
-| `RC5/CBC/NOPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) | legacy |
-| `RC5/CBC/PKCS7PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) | legacy |
-| `RC5/CBC/ISO10126PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) | legacy |
-| `RC5/CBC/ISO7816-4PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) | legacy |
-| `RC5/CBC/X923PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) | legacy |
-| `RC5/CBC/TBCPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) | legacy |
-| `RC5/CBC/ZEROBYTEPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) | legacy |
-| `RC5/CFB/NOPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) | legacy |
-| `RC5/OFB/NOPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) | legacy |
-| `RC5/CTR/NOPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) | legacy |
+| Name | Aliases | OIDs | Params | Note |
+|---|---|---|---|---|
+| `RC5/ECB/NOPADDING` | `RC5/NONE/NOPADDING`, `RC5//NOPADDING`, `RC5-32/ECB/NOPADDING`, `RC5-32/NONE/NOPADDING`, `RC5-32//NOPADDING` |  | `KeyOwned`, [`Rc5ParamsOwned`](Rc5.md) | weak, legacy |
+| `RC5/ECB/PKCS7PADDING` | `RC5/ECB/PKCS7`, `RC5/ECB/PKCS5PADDING`, `RC5/ECB/PKCS5`, `RC5/NONE/PKCS7PADDING`, `RC5/NONE/PKCS7`, `RC5/NONE/PKCS5PADDING`, `RC5/NONE/PKCS5`, `RC5//PKCS7PADDING`, `RC5//PKCS7`, `RC5//PKCS5PADDING`, `RC5//PKCS5`, `RC5-32/ECB/PKCS7PADDING`, `RC5-32/ECB/PKCS7`, `RC5-32/ECB/PKCS5PADDING`, `RC5-32/ECB/PKCS5`, `RC5-32/NONE/PKCS7PADDING`, `RC5-32/NONE/PKCS7`, `RC5-32/NONE/PKCS5PADDING`, `RC5-32/NONE/PKCS5`, `RC5-32//PKCS7PADDING`, `RC5-32//PKCS7`, `RC5-32//PKCS5PADDING`, `RC5-32//PKCS5`, `RC5/ECB/RAW`, `RC5/ECB/`, `RC5/ECB`, `RC5/NONE/RAW`, `RC5/NONE/`, `RC5/NONE`, `RC5//RAW`, `RC5//`, `RC5/`, `RC5`, `RC5-32/ECB/RAW`, `RC5-32/ECB/`, `RC5-32/ECB`, `RC5-32/NONE/RAW`, `RC5-32/NONE/`, `RC5-32/NONE`, `RC5-32//RAW`, `RC5-32//`, `RC5-32/`, `RC5-32` |  | `KeyOwned`, [`Rc5ParamsOwned`](Rc5.md) | weak, legacy |
+| `RC5/ECB/ISO10126PADDING` | `RC5/ECB/ISO10126D2PADDING`, `RC5/ECB/ISO10126-2PADDING`, `RC5/NONE/ISO10126PADDING`, `RC5/NONE/ISO10126D2PADDING`, `RC5/NONE/ISO10126-2PADDING`, `RC5//ISO10126PADDING`, `RC5//ISO10126D2PADDING`, `RC5//ISO10126-2PADDING`, `RC5-32/ECB/ISO10126PADDING`, `RC5-32/ECB/ISO10126D2PADDING`, `RC5-32/ECB/ISO10126-2PADDING`, `RC5-32/NONE/ISO10126PADDING`, `RC5-32/NONE/ISO10126D2PADDING`, `RC5-32/NONE/ISO10126-2PADDING`, `RC5-32//ISO10126PADDING`, `RC5-32//ISO10126D2PADDING`, `RC5-32//ISO10126-2PADDING` |  | `KeyOwned`, [`Rc5ParamsOwned`](Rc5.md) | weak, legacy |
+| `RC5/ECB/ISO7816-4PADDING` | `RC5/ECB/ISO9797-1PADDING`, `RC5/NONE/ISO7816-4PADDING`, `RC5/NONE/ISO9797-1PADDING`, `RC5//ISO7816-4PADDING`, `RC5//ISO9797-1PADDING`, `RC5-32/ECB/ISO7816-4PADDING`, `RC5-32/ECB/ISO9797-1PADDING`, `RC5-32/NONE/ISO7816-4PADDING`, `RC5-32/NONE/ISO9797-1PADDING`, `RC5-32//ISO7816-4PADDING`, `RC5-32//ISO9797-1PADDING` |  | `KeyOwned`, [`Rc5ParamsOwned`](Rc5.md) | weak, legacy |
+| `RC5/ECB/X923PADDING` | `RC5/ECB/X9.23PADDING`, `RC5/NONE/X923PADDING`, `RC5/NONE/X9.23PADDING`, `RC5//X923PADDING`, `RC5//X9.23PADDING`, `RC5-32/ECB/X923PADDING`, `RC5-32/ECB/X9.23PADDING`, `RC5-32/NONE/X923PADDING`, `RC5-32/NONE/X9.23PADDING`, `RC5-32//X923PADDING`, `RC5-32//X9.23PADDING` |  | `KeyOwned`, [`Rc5ParamsOwned`](Rc5.md) | weak, legacy |
+| `RC5/ECB/TBCPADDING` | `RC5/NONE/TBCPADDING`, `RC5//TBCPADDING`, `RC5-32/ECB/TBCPADDING`, `RC5-32/NONE/TBCPADDING`, `RC5-32//TBCPADDING` |  | `KeyOwned`, [`Rc5ParamsOwned`](Rc5.md) | weak, legacy |
+| `RC5/ECB/ZEROBYTEPADDING` | `RC5/NONE/ZEROBYTEPADDING`, `RC5//ZEROBYTEPADDING`, `RC5-32/ECB/ZEROBYTEPADDING`, `RC5-32/NONE/ZEROBYTEPADDING`, `RC5-32//ZEROBYTEPADDING` |  | `KeyOwned`, [`Rc5ParamsOwned`](Rc5.md) | weak, legacy |
+| `RC5/CBC/NOPADDING` | `RC5-32/CBC/NOPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) | legacy |
+| `RC5/CBC/PKCS7PADDING` | `RC5/CBC/PKCS7`, `RC5/CBC/PKCS5PADDING`, `RC5/CBC/PKCS5`, `RC5-32/CBC/PKCS7PADDING`, `RC5-32/CBC/PKCS7`, `RC5-32/CBC/PKCS5PADDING`, `RC5-32/CBC/PKCS5`, `RC5/CBC/RAW`, `RC5/CBC/`, `RC5/CBC`, `RC5-32/CBC/RAW`, `RC5-32/CBC/`, `RC5-32/CBC` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) | legacy |
+| `RC5/CBC/ISO10126PADDING` | `RC5/CBC/ISO10126D2PADDING`, `RC5/CBC/ISO10126-2PADDING`, `RC5-32/CBC/ISO10126PADDING`, `RC5-32/CBC/ISO10126D2PADDING`, `RC5-32/CBC/ISO10126-2PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) | legacy |
+| `RC5/CBC/ISO7816-4PADDING` | `RC5/CBC/ISO9797-1PADDING`, `RC5-32/CBC/ISO7816-4PADDING`, `RC5-32/CBC/ISO9797-1PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) | legacy |
+| `RC5/CBC/X923PADDING` | `RC5/CBC/X9.23PADDING`, `RC5-32/CBC/X923PADDING`, `RC5-32/CBC/X9.23PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) | legacy |
+| `RC5/CBC/TBCPADDING` | `RC5-32/CBC/TBCPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) | legacy |
+| `RC5/CBC/ZEROBYTEPADDING` | `RC5-32/CBC/ZEROBYTEPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) | legacy |
+| `RC5/CFB/NOPADDING` | `RC5-32/CFB/NOPADDING`, `RC5/CFB/RAW`, `RC5/CFB/`, `RC5/CFB`, `RC5-32/CFB/RAW`, `RC5-32/CFB/`, `RC5-32/CFB` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) | legacy |
+| `RC5/OFB/NOPADDING` | `RC5-32/OFB/NOPADDING`, `RC5/OFB/RAW`, `RC5/OFB/`, `RC5/OFB`, `RC5-32/OFB/RAW`, `RC5-32/OFB/`, `RC5-32/OFB` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) | legacy |
+| `RC5/CTR/NOPADDING` | `RC5/SIC/NOPADDING`, `RC5-32/CTR/NOPADDING`, `RC5-32/SIC/NOPADDING`, `RC5/CTR/RAW`, `RC5/CTR/`, `RC5/CTR`, `RC5/SIC/RAW`, `RC5/SIC/`, `RC5/SIC`, `RC5-32/CTR/RAW`, `RC5-32/CTR/`, `RC5-32/CTR`, `RC5-32/SIC/RAW`, `RC5-32/SIC/`, `RC5-32/SIC` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) | legacy |
 
 ### RC5-64
 
 The `rc5-64` feature has the rows. RC5 with 64-bit words: a block of 16 bytes and a key of up to 255
 bytes, with 12 rounds, or the number RC5's own params give; see [RC5](Rc5.md).
 
-| Name | OIDs | Params | Note |
-|---|---|---|---|
-| `RC5-64/ECB/NOPADDING` |  | `KeyOwned`, [`Rc5ParamsOwned`](Rc5.md) | weak |
-| `RC5-64/ECB/PKCS7PADDING` |  | `KeyOwned`, [`Rc5ParamsOwned`](Rc5.md) | weak |
-| `RC5-64/ECB/ISO10126PADDING` |  | `KeyOwned`, [`Rc5ParamsOwned`](Rc5.md) | weak |
-| `RC5-64/ECB/ISO7816-4PADDING` |  | `KeyOwned`, [`Rc5ParamsOwned`](Rc5.md) | weak |
-| `RC5-64/ECB/X923PADDING` |  | `KeyOwned`, [`Rc5ParamsOwned`](Rc5.md) | weak |
-| `RC5-64/ECB/TBCPADDING` |  | `KeyOwned`, [`Rc5ParamsOwned`](Rc5.md) | weak |
-| `RC5-64/ECB/ZEROBYTEPADDING` |  | `KeyOwned`, [`Rc5ParamsOwned`](Rc5.md) | weak |
-| `RC5-64/CBC/NOPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) |  |
-| `RC5-64/CBC/PKCS7PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) |  |
-| `RC5-64/CBC/ISO10126PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) |  |
-| `RC5-64/CBC/ISO7816-4PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) |  |
-| `RC5-64/CBC/X923PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) |  |
-| `RC5-64/CBC/TBCPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) |  |
-| `RC5-64/CBC/ZEROBYTEPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) |  |
-| `RC5-64/CFB/NOPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) |  |
-| `RC5-64/OFB/NOPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) |  |
-| `RC5-64/CTR/NOPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) |  |
+| Name | Aliases | OIDs | Params | Note |
+|---|---|---|---|---|
+| `RC5-64/ECB/NOPADDING` | `RC5-64/NONE/NOPADDING`, `RC5-64//NOPADDING` |  | `KeyOwned`, [`Rc5ParamsOwned`](Rc5.md) | weak |
+| `RC5-64/ECB/PKCS7PADDING` | `RC5-64/ECB/PKCS7`, `RC5-64/ECB/PKCS5PADDING`, `RC5-64/ECB/PKCS5`, `RC5-64/NONE/PKCS7PADDING`, `RC5-64/NONE/PKCS7`, `RC5-64/NONE/PKCS5PADDING`, `RC5-64/NONE/PKCS5`, `RC5-64//PKCS7PADDING`, `RC5-64//PKCS7`, `RC5-64//PKCS5PADDING`, `RC5-64//PKCS5`, `RC5-64/ECB/RAW`, `RC5-64/ECB/`, `RC5-64/ECB`, `RC5-64/NONE/RAW`, `RC5-64/NONE/`, `RC5-64/NONE`, `RC5-64//RAW`, `RC5-64//`, `RC5-64/`, `RC5-64` |  | `KeyOwned`, [`Rc5ParamsOwned`](Rc5.md) | weak |
+| `RC5-64/ECB/ISO10126PADDING` | `RC5-64/ECB/ISO10126D2PADDING`, `RC5-64/ECB/ISO10126-2PADDING`, `RC5-64/NONE/ISO10126PADDING`, `RC5-64/NONE/ISO10126D2PADDING`, `RC5-64/NONE/ISO10126-2PADDING`, `RC5-64//ISO10126PADDING`, `RC5-64//ISO10126D2PADDING`, `RC5-64//ISO10126-2PADDING` |  | `KeyOwned`, [`Rc5ParamsOwned`](Rc5.md) | weak |
+| `RC5-64/ECB/ISO7816-4PADDING` | `RC5-64/ECB/ISO9797-1PADDING`, `RC5-64/NONE/ISO7816-4PADDING`, `RC5-64/NONE/ISO9797-1PADDING`, `RC5-64//ISO7816-4PADDING`, `RC5-64//ISO9797-1PADDING` |  | `KeyOwned`, [`Rc5ParamsOwned`](Rc5.md) | weak |
+| `RC5-64/ECB/X923PADDING` | `RC5-64/ECB/X9.23PADDING`, `RC5-64/NONE/X923PADDING`, `RC5-64/NONE/X9.23PADDING`, `RC5-64//X923PADDING`, `RC5-64//X9.23PADDING` |  | `KeyOwned`, [`Rc5ParamsOwned`](Rc5.md) | weak |
+| `RC5-64/ECB/TBCPADDING` | `RC5-64/NONE/TBCPADDING`, `RC5-64//TBCPADDING` |  | `KeyOwned`, [`Rc5ParamsOwned`](Rc5.md) | weak |
+| `RC5-64/ECB/ZEROBYTEPADDING` | `RC5-64/NONE/ZEROBYTEPADDING`, `RC5-64//ZEROBYTEPADDING` |  | `KeyOwned`, [`Rc5ParamsOwned`](Rc5.md) | weak |
+| `RC5-64/CBC/NOPADDING` |  |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) |  |
+| `RC5-64/CBC/PKCS7PADDING` | `RC5-64/CBC/PKCS7`, `RC5-64/CBC/PKCS5PADDING`, `RC5-64/CBC/PKCS5`, `RC5-64/CBC/RAW`, `RC5-64/CBC/`, `RC5-64/CBC` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) |  |
+| `RC5-64/CBC/ISO10126PADDING` | `RC5-64/CBC/ISO10126D2PADDING`, `RC5-64/CBC/ISO10126-2PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) |  |
+| `RC5-64/CBC/ISO7816-4PADDING` | `RC5-64/CBC/ISO9797-1PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) |  |
+| `RC5-64/CBC/X923PADDING` | `RC5-64/CBC/X9.23PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) |  |
+| `RC5-64/CBC/TBCPADDING` |  |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) |  |
+| `RC5-64/CBC/ZEROBYTEPADDING` |  |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) |  |
+| `RC5-64/CFB/NOPADDING` | `RC5-64/CFB/RAW`, `RC5-64/CFB/`, `RC5-64/CFB` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) |  |
+| `RC5-64/OFB/NOPADDING` | `RC5-64/OFB/RAW`, `RC5-64/OFB/`, `RC5-64/OFB` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) |  |
+| `RC5-64/CTR/NOPADDING` | `RC5-64/SIC/NOPADDING`, `RC5-64/CTR/RAW`, `RC5-64/CTR/`, `RC5-64/CTR`, `RC5-64/SIC/RAW`, `RC5-64/SIC/`, `RC5-64/SIC` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) |  |
 
 ### RC6
 
 The `rc6` feature has the rows. A block of 16 bytes and a key of up to 255 bytes; a finalist for
 AES.
 
-| Name | OIDs | Params | Note |
-|---|---|---|---|
-| `RC6/ECB/NOPADDING` |  | `KeyOwned` | weak |
-| `RC6/ECB/PKCS7PADDING` |  | `KeyOwned` | weak |
-| `RC6/ECB/ISO10126PADDING` |  | `KeyOwned` | weak |
-| `RC6/ECB/ISO7816-4PADDING` |  | `KeyOwned` | weak |
-| `RC6/ECB/X923PADDING` |  | `KeyOwned` | weak |
-| `RC6/ECB/TBCPADDING` |  | `KeyOwned` | weak |
-| `RC6/ECB/ZEROBYTEPADDING` |  | `KeyOwned` | weak |
-| `RC6/CBC/NOPADDING` |  | `KeyWithIvOwned` |  |
-| `RC6/CBC/PKCS7PADDING` |  | `KeyWithIvOwned` |  |
-| `RC6/CBC/ISO10126PADDING` |  | `KeyWithIvOwned` |  |
-| `RC6/CBC/ISO7816-4PADDING` |  | `KeyWithIvOwned` |  |
-| `RC6/CBC/X923PADDING` |  | `KeyWithIvOwned` |  |
-| `RC6/CBC/TBCPADDING` |  | `KeyWithIvOwned` |  |
-| `RC6/CBC/ZEROBYTEPADDING` |  | `KeyWithIvOwned` |  |
-| `RC6/CFB/NOPADDING` |  | `KeyWithIvOwned` |  |
-| `RC6/OFB/NOPADDING` |  | `KeyWithIvOwned` |  |
-| `RC6/CTR/NOPADDING` |  | `KeyWithIvOwned` |  |
+| Name | Aliases | OIDs | Params | Note |
+|---|---|---|---|---|
+| `RC6/ECB/NOPADDING` | `RC6/NONE/NOPADDING`, `RC6//NOPADDING` |  | `KeyOwned` | weak |
+| `RC6/ECB/PKCS7PADDING` | `RC6/ECB/PKCS7`, `RC6/ECB/PKCS5PADDING`, `RC6/ECB/PKCS5`, `RC6/NONE/PKCS7PADDING`, `RC6/NONE/PKCS7`, `RC6/NONE/PKCS5PADDING`, `RC6/NONE/PKCS5`, `RC6//PKCS7PADDING`, `RC6//PKCS7`, `RC6//PKCS5PADDING`, `RC6//PKCS5`, `RC6/ECB/RAW`, `RC6/ECB/`, `RC6/ECB`, `RC6/NONE/RAW`, `RC6/NONE/`, `RC6/NONE`, `RC6//RAW`, `RC6//`, `RC6/`, `RC6` |  | `KeyOwned` | weak |
+| `RC6/ECB/ISO10126PADDING` | `RC6/ECB/ISO10126D2PADDING`, `RC6/ECB/ISO10126-2PADDING`, `RC6/NONE/ISO10126PADDING`, `RC6/NONE/ISO10126D2PADDING`, `RC6/NONE/ISO10126-2PADDING`, `RC6//ISO10126PADDING`, `RC6//ISO10126D2PADDING`, `RC6//ISO10126-2PADDING` |  | `KeyOwned` | weak |
+| `RC6/ECB/ISO7816-4PADDING` | `RC6/ECB/ISO9797-1PADDING`, `RC6/NONE/ISO7816-4PADDING`, `RC6/NONE/ISO9797-1PADDING`, `RC6//ISO7816-4PADDING`, `RC6//ISO9797-1PADDING` |  | `KeyOwned` | weak |
+| `RC6/ECB/X923PADDING` | `RC6/ECB/X9.23PADDING`, `RC6/NONE/X923PADDING`, `RC6/NONE/X9.23PADDING`, `RC6//X923PADDING`, `RC6//X9.23PADDING` |  | `KeyOwned` | weak |
+| `RC6/ECB/TBCPADDING` | `RC6/NONE/TBCPADDING`, `RC6//TBCPADDING` |  | `KeyOwned` | weak |
+| `RC6/ECB/ZEROBYTEPADDING` | `RC6/NONE/ZEROBYTEPADDING`, `RC6//ZEROBYTEPADDING` |  | `KeyOwned` | weak |
+| `RC6/CBC/NOPADDING` |  |  | `KeyWithIvOwned` |  |
+| `RC6/CBC/PKCS7PADDING` | `RC6/CBC/PKCS7`, `RC6/CBC/PKCS5PADDING`, `RC6/CBC/PKCS5`, `RC6/CBC/RAW`, `RC6/CBC/`, `RC6/CBC` |  | `KeyWithIvOwned` |  |
+| `RC6/CBC/ISO10126PADDING` | `RC6/CBC/ISO10126D2PADDING`, `RC6/CBC/ISO10126-2PADDING` |  | `KeyWithIvOwned` |  |
+| `RC6/CBC/ISO7816-4PADDING` | `RC6/CBC/ISO9797-1PADDING` |  | `KeyWithIvOwned` |  |
+| `RC6/CBC/X923PADDING` | `RC6/CBC/X9.23PADDING` |  | `KeyWithIvOwned` |  |
+| `RC6/CBC/TBCPADDING` |  |  | `KeyWithIvOwned` |  |
+| `RC6/CBC/ZEROBYTEPADDING` |  |  | `KeyWithIvOwned` |  |
+| `RC6/CFB/NOPADDING` | `RC6/CFB/RAW`, `RC6/CFB/`, `RC6/CFB` |  | `KeyWithIvOwned` |  |
+| `RC6/OFB/NOPADDING` | `RC6/OFB/RAW`, `RC6/OFB/`, `RC6/OFB` |  | `KeyWithIvOwned` |  |
+| `RC6/CTR/NOPADDING` | `RC6/SIC/NOPADDING`, `RC6/CTR/RAW`, `RC6/CTR/`, `RC6/CTR`, `RC6/SIC/RAW`, `RC6/SIC/`, `RC6/SIC` |  | `KeyWithIvOwned` |  |
 
 ### GOST28147
 
@@ -669,25 +671,25 @@ The `gost28147` feature has the rows. GOST 28147-89: a block of 8 bytes and a ke
 named `GOST` and `GOST-28147`. A plain key takes the default S-box, as Bouncy Castle gives a
 `KeyParameter`, and GOST 28147's own params take another; see [GOST 28147](Gost28147.md).
 
-| Name | OIDs | Params | Note |
-|---|---|---|---|
-| `GOST28147/ECB/NOPADDING` |  | `KeyOwned`, [`Gost28147ParamsOwned`](Gost28147.md) | weak, legacy, variable time |
-| `GOST28147/ECB/PKCS7PADDING` |  | `KeyOwned`, [`Gost28147ParamsOwned`](Gost28147.md) | weak, legacy, variable time |
-| `GOST28147/ECB/ISO10126PADDING` |  | `KeyOwned`, [`Gost28147ParamsOwned`](Gost28147.md) | weak, legacy, variable time |
-| `GOST28147/ECB/ISO7816-4PADDING` |  | `KeyOwned`, [`Gost28147ParamsOwned`](Gost28147.md) | weak, legacy, variable time |
-| `GOST28147/ECB/X923PADDING` |  | `KeyOwned`, [`Gost28147ParamsOwned`](Gost28147.md) | weak, legacy, variable time |
-| `GOST28147/ECB/TBCPADDING` |  | `KeyOwned`, [`Gost28147ParamsOwned`](Gost28147.md) | weak, legacy, variable time |
-| `GOST28147/ECB/ZEROBYTEPADDING` |  | `KeyOwned`, [`Gost28147ParamsOwned`](Gost28147.md) | weak, legacy, variable time |
-| `GOST28147/CBC/NOPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Gost28147ParamsOwned>`](Gost28147.md) | legacy, variable time |
-| `GOST28147/CBC/PKCS7PADDING` | `1.2.643.2.2.21` | `KeyWithIvOwned`, [`ParamsWithIvOwned<Gost28147ParamsOwned>`](Gost28147.md) | legacy, variable time |
-| `GOST28147/CBC/ISO10126PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Gost28147ParamsOwned>`](Gost28147.md) | legacy, variable time |
-| `GOST28147/CBC/ISO7816-4PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Gost28147ParamsOwned>`](Gost28147.md) | legacy, variable time |
-| `GOST28147/CBC/X923PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Gost28147ParamsOwned>`](Gost28147.md) | legacy, variable time |
-| `GOST28147/CBC/TBCPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Gost28147ParamsOwned>`](Gost28147.md) | legacy, variable time |
-| `GOST28147/CBC/ZEROBYTEPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Gost28147ParamsOwned>`](Gost28147.md) | legacy, variable time |
-| `GOST28147/CFB/NOPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Gost28147ParamsOwned>`](Gost28147.md) | legacy, variable time |
-| `GOST28147/OFB/NOPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Gost28147ParamsOwned>`](Gost28147.md) | legacy, variable time |
-| `GOST28147/CTR/NOPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Gost28147ParamsOwned>`](Gost28147.md) | legacy, variable time |
+| Name | Aliases | OIDs | Params | Note |
+|---|---|---|---|---|
+| `GOST28147/ECB/NOPADDING` | `GOST28147/NONE/NOPADDING`, `GOST28147//NOPADDING`, `GOST/ECB/NOPADDING`, `GOST/NONE/NOPADDING`, `GOST//NOPADDING`, `GOST-28147/ECB/NOPADDING`, `GOST-28147/NONE/NOPADDING`, `GOST-28147//NOPADDING` |  | `KeyOwned`, [`Gost28147ParamsOwned`](Gost28147.md) | weak, legacy, variable time |
+| `GOST28147/ECB/PKCS7PADDING` | `GOST28147/ECB/PKCS7`, `GOST28147/ECB/PKCS5PADDING`, `GOST28147/ECB/PKCS5`, `GOST28147/NONE/PKCS7PADDING`, `GOST28147/NONE/PKCS7`, `GOST28147/NONE/PKCS5PADDING`, `GOST28147/NONE/PKCS5`, `GOST28147//PKCS7PADDING`, `GOST28147//PKCS7`, `GOST28147//PKCS5PADDING`, `GOST28147//PKCS5`, `GOST/ECB/PKCS7PADDING`, `GOST/ECB/PKCS7`, `GOST/ECB/PKCS5PADDING`, `GOST/ECB/PKCS5`, `GOST/NONE/PKCS7PADDING`, `GOST/NONE/PKCS7`, `GOST/NONE/PKCS5PADDING`, `GOST/NONE/PKCS5`, `GOST//PKCS7PADDING`, `GOST//PKCS7`, `GOST//PKCS5PADDING`, `GOST//PKCS5`, `GOST-28147/ECB/PKCS7PADDING`, `GOST-28147/ECB/PKCS7`, `GOST-28147/ECB/PKCS5PADDING`, `GOST-28147/ECB/PKCS5`, `GOST-28147/NONE/PKCS7PADDING`, `GOST-28147/NONE/PKCS7`, `GOST-28147/NONE/PKCS5PADDING`, `GOST-28147/NONE/PKCS5`, `GOST-28147//PKCS7PADDING`, `GOST-28147//PKCS7`, `GOST-28147//PKCS5PADDING`, `GOST-28147//PKCS5`, `GOST28147/ECB/RAW`, `GOST28147/ECB/`, `GOST28147/ECB`, `GOST28147/NONE/RAW`, `GOST28147/NONE/`, `GOST28147/NONE`, `GOST28147//RAW`, `GOST28147//`, `GOST28147/`, `GOST28147`, `GOST/ECB/RAW`, `GOST/ECB/`, `GOST/ECB`, `GOST/NONE/RAW`, `GOST/NONE/`, `GOST/NONE`, `GOST//RAW`, `GOST//`, `GOST/`, `GOST`, `GOST-28147/ECB/RAW`, `GOST-28147/ECB/`, `GOST-28147/ECB`, `GOST-28147/NONE/RAW`, `GOST-28147/NONE/`, `GOST-28147/NONE`, `GOST-28147//RAW`, `GOST-28147//`, `GOST-28147/`, `GOST-28147` |  | `KeyOwned`, [`Gost28147ParamsOwned`](Gost28147.md) | weak, legacy, variable time |
+| `GOST28147/ECB/ISO10126PADDING` | `GOST28147/ECB/ISO10126D2PADDING`, `GOST28147/ECB/ISO10126-2PADDING`, `GOST28147/NONE/ISO10126PADDING`, `GOST28147/NONE/ISO10126D2PADDING`, `GOST28147/NONE/ISO10126-2PADDING`, `GOST28147//ISO10126PADDING`, `GOST28147//ISO10126D2PADDING`, `GOST28147//ISO10126-2PADDING`, `GOST/ECB/ISO10126PADDING`, `GOST/ECB/ISO10126D2PADDING`, `GOST/ECB/ISO10126-2PADDING`, `GOST/NONE/ISO10126PADDING`, `GOST/NONE/ISO10126D2PADDING`, `GOST/NONE/ISO10126-2PADDING`, `GOST//ISO10126PADDING`, `GOST//ISO10126D2PADDING`, `GOST//ISO10126-2PADDING`, `GOST-28147/ECB/ISO10126PADDING`, `GOST-28147/ECB/ISO10126D2PADDING`, `GOST-28147/ECB/ISO10126-2PADDING`, `GOST-28147/NONE/ISO10126PADDING`, `GOST-28147/NONE/ISO10126D2PADDING`, `GOST-28147/NONE/ISO10126-2PADDING`, `GOST-28147//ISO10126PADDING`, `GOST-28147//ISO10126D2PADDING`, `GOST-28147//ISO10126-2PADDING` |  | `KeyOwned`, [`Gost28147ParamsOwned`](Gost28147.md) | weak, legacy, variable time |
+| `GOST28147/ECB/ISO7816-4PADDING` | `GOST28147/ECB/ISO9797-1PADDING`, `GOST28147/NONE/ISO7816-4PADDING`, `GOST28147/NONE/ISO9797-1PADDING`, `GOST28147//ISO7816-4PADDING`, `GOST28147//ISO9797-1PADDING`, `GOST/ECB/ISO7816-4PADDING`, `GOST/ECB/ISO9797-1PADDING`, `GOST/NONE/ISO7816-4PADDING`, `GOST/NONE/ISO9797-1PADDING`, `GOST//ISO7816-4PADDING`, `GOST//ISO9797-1PADDING`, `GOST-28147/ECB/ISO7816-4PADDING`, `GOST-28147/ECB/ISO9797-1PADDING`, `GOST-28147/NONE/ISO7816-4PADDING`, `GOST-28147/NONE/ISO9797-1PADDING`, `GOST-28147//ISO7816-4PADDING`, `GOST-28147//ISO9797-1PADDING` |  | `KeyOwned`, [`Gost28147ParamsOwned`](Gost28147.md) | weak, legacy, variable time |
+| `GOST28147/ECB/X923PADDING` | `GOST28147/ECB/X9.23PADDING`, `GOST28147/NONE/X923PADDING`, `GOST28147/NONE/X9.23PADDING`, `GOST28147//X923PADDING`, `GOST28147//X9.23PADDING`, `GOST/ECB/X923PADDING`, `GOST/ECB/X9.23PADDING`, `GOST/NONE/X923PADDING`, `GOST/NONE/X9.23PADDING`, `GOST//X923PADDING`, `GOST//X9.23PADDING`, `GOST-28147/ECB/X923PADDING`, `GOST-28147/ECB/X9.23PADDING`, `GOST-28147/NONE/X923PADDING`, `GOST-28147/NONE/X9.23PADDING`, `GOST-28147//X923PADDING`, `GOST-28147//X9.23PADDING` |  | `KeyOwned`, [`Gost28147ParamsOwned`](Gost28147.md) | weak, legacy, variable time |
+| `GOST28147/ECB/TBCPADDING` | `GOST28147/NONE/TBCPADDING`, `GOST28147//TBCPADDING`, `GOST/ECB/TBCPADDING`, `GOST/NONE/TBCPADDING`, `GOST//TBCPADDING`, `GOST-28147/ECB/TBCPADDING`, `GOST-28147/NONE/TBCPADDING`, `GOST-28147//TBCPADDING` |  | `KeyOwned`, [`Gost28147ParamsOwned`](Gost28147.md) | weak, legacy, variable time |
+| `GOST28147/ECB/ZEROBYTEPADDING` | `GOST28147/NONE/ZEROBYTEPADDING`, `GOST28147//ZEROBYTEPADDING`, `GOST/ECB/ZEROBYTEPADDING`, `GOST/NONE/ZEROBYTEPADDING`, `GOST//ZEROBYTEPADDING`, `GOST-28147/ECB/ZEROBYTEPADDING`, `GOST-28147/NONE/ZEROBYTEPADDING`, `GOST-28147//ZEROBYTEPADDING` |  | `KeyOwned`, [`Gost28147ParamsOwned`](Gost28147.md) | weak, legacy, variable time |
+| `GOST28147/CBC/NOPADDING` | `GOST/CBC/NOPADDING`, `GOST-28147/CBC/NOPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Gost28147ParamsOwned>`](Gost28147.md) | legacy, variable time |
+| `GOST28147/CBC/PKCS7PADDING` | `GOST28147/CBC/PKCS7`, `GOST28147/CBC/PKCS5PADDING`, `GOST28147/CBC/PKCS5`, `GOST/CBC/PKCS7PADDING`, `GOST/CBC/PKCS7`, `GOST/CBC/PKCS5PADDING`, `GOST/CBC/PKCS5`, `GOST-28147/CBC/PKCS7PADDING`, `GOST-28147/CBC/PKCS7`, `GOST-28147/CBC/PKCS5PADDING`, `GOST-28147/CBC/PKCS5`, `GOST28147/CBC/RAW`, `GOST28147/CBC/`, `GOST28147/CBC`, `GOST/CBC/RAW`, `GOST/CBC/`, `GOST/CBC`, `GOST-28147/CBC/RAW`, `GOST-28147/CBC/`, `GOST-28147/CBC` | `1.2.643.2.2.21` | `KeyWithIvOwned`, [`ParamsWithIvOwned<Gost28147ParamsOwned>`](Gost28147.md) | legacy, variable time |
+| `GOST28147/CBC/ISO10126PADDING` | `GOST28147/CBC/ISO10126D2PADDING`, `GOST28147/CBC/ISO10126-2PADDING`, `GOST/CBC/ISO10126PADDING`, `GOST/CBC/ISO10126D2PADDING`, `GOST/CBC/ISO10126-2PADDING`, `GOST-28147/CBC/ISO10126PADDING`, `GOST-28147/CBC/ISO10126D2PADDING`, `GOST-28147/CBC/ISO10126-2PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Gost28147ParamsOwned>`](Gost28147.md) | legacy, variable time |
+| `GOST28147/CBC/ISO7816-4PADDING` | `GOST28147/CBC/ISO9797-1PADDING`, `GOST/CBC/ISO7816-4PADDING`, `GOST/CBC/ISO9797-1PADDING`, `GOST-28147/CBC/ISO7816-4PADDING`, `GOST-28147/CBC/ISO9797-1PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Gost28147ParamsOwned>`](Gost28147.md) | legacy, variable time |
+| `GOST28147/CBC/X923PADDING` | `GOST28147/CBC/X9.23PADDING`, `GOST/CBC/X923PADDING`, `GOST/CBC/X9.23PADDING`, `GOST-28147/CBC/X923PADDING`, `GOST-28147/CBC/X9.23PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Gost28147ParamsOwned>`](Gost28147.md) | legacy, variable time |
+| `GOST28147/CBC/TBCPADDING` | `GOST/CBC/TBCPADDING`, `GOST-28147/CBC/TBCPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Gost28147ParamsOwned>`](Gost28147.md) | legacy, variable time |
+| `GOST28147/CBC/ZEROBYTEPADDING` | `GOST/CBC/ZEROBYTEPADDING`, `GOST-28147/CBC/ZEROBYTEPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Gost28147ParamsOwned>`](Gost28147.md) | legacy, variable time |
+| `GOST28147/CFB/NOPADDING` | `GOST/CFB/NOPADDING`, `GOST-28147/CFB/NOPADDING`, `GOST28147/CFB/RAW`, `GOST28147/CFB/`, `GOST28147/CFB`, `GOST/CFB/RAW`, `GOST/CFB/`, `GOST/CFB`, `GOST-28147/CFB/RAW`, `GOST-28147/CFB/`, `GOST-28147/CFB` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Gost28147ParamsOwned>`](Gost28147.md) | legacy, variable time |
+| `GOST28147/OFB/NOPADDING` | `GOST/OFB/NOPADDING`, `GOST-28147/OFB/NOPADDING`, `GOST28147/OFB/RAW`, `GOST28147/OFB/`, `GOST28147/OFB`, `GOST/OFB/RAW`, `GOST/OFB/`, `GOST/OFB`, `GOST-28147/OFB/RAW`, `GOST-28147/OFB/`, `GOST-28147/OFB` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Gost28147ParamsOwned>`](Gost28147.md) | legacy, variable time |
+| `GOST28147/CTR/NOPADDING` | `GOST28147/SIC/NOPADDING`, `GOST/CTR/NOPADDING`, `GOST/SIC/NOPADDING`, `GOST-28147/CTR/NOPADDING`, `GOST-28147/SIC/NOPADDING`, `GOST28147/CTR/RAW`, `GOST28147/CTR/`, `GOST28147/CTR`, `GOST28147/SIC/RAW`, `GOST28147/SIC/`, `GOST28147/SIC`, `GOST/CTR/RAW`, `GOST/CTR/`, `GOST/CTR`, `GOST/SIC/RAW`, `GOST/SIC/`, `GOST/SIC`, `GOST-28147/CTR/RAW`, `GOST-28147/CTR/`, `GOST-28147/CTR`, `GOST-28147/SIC/RAW`, `GOST-28147/SIC/`, `GOST-28147/SIC` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Gost28147ParamsOwned>`](Gost28147.md) | legacy, variable time |
 
 The OID is CryptoPro's `id-Gost28147-89`, which Bouncy Castle gives to CBC with PKCS#7 padding, and
 so do these rows; in CryptoPro's own formats it names GOST 28147 in its CFB mode, with the S-box in
@@ -699,25 +701,25 @@ The `threefish-256` feature has the rows. A block and a key of 32 bytes, and a t
 a plain key takes a tweak of zeros, as Bouncy Castle gives a `KeyParameter`, and Threefish's own
 params take another; see [Threefish](Threefish.md).
 
-| Name | OIDs | Params | Note |
-|---|---|---|---|
-| `THREEFISH-256/ECB/NOPADDING` |  | `KeyOwned`, [`ThreefishParamsOwned`](Threefish.md) | weak |
-| `THREEFISH-256/ECB/PKCS7PADDING` |  | `KeyOwned`, [`ThreefishParamsOwned`](Threefish.md) | weak |
-| `THREEFISH-256/ECB/ISO10126PADDING` |  | `KeyOwned`, [`ThreefishParamsOwned`](Threefish.md) | weak |
-| `THREEFISH-256/ECB/ISO7816-4PADDING` |  | `KeyOwned`, [`ThreefishParamsOwned`](Threefish.md) | weak |
-| `THREEFISH-256/ECB/X923PADDING` |  | `KeyOwned`, [`ThreefishParamsOwned`](Threefish.md) | weak |
-| `THREEFISH-256/ECB/TBCPADDING` |  | `KeyOwned`, [`ThreefishParamsOwned`](Threefish.md) | weak |
-| `THREEFISH-256/ECB/ZEROBYTEPADDING` |  | `KeyOwned`, [`ThreefishParamsOwned`](Threefish.md) | weak |
-| `THREEFISH-256/CBC/NOPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
-| `THREEFISH-256/CBC/PKCS7PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
-| `THREEFISH-256/CBC/ISO10126PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
-| `THREEFISH-256/CBC/ISO7816-4PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
-| `THREEFISH-256/CBC/X923PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
-| `THREEFISH-256/CBC/TBCPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
-| `THREEFISH-256/CBC/ZEROBYTEPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
-| `THREEFISH-256/CFB/NOPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
-| `THREEFISH-256/OFB/NOPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
-| `THREEFISH-256/CTR/NOPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
+| Name | Aliases | OIDs | Params | Note |
+|---|---|---|---|---|
+| `THREEFISH-256/ECB/NOPADDING` | `THREEFISH-256/NONE/NOPADDING`, `THREEFISH-256//NOPADDING` |  | `KeyOwned`, [`ThreefishParamsOwned`](Threefish.md) | weak |
+| `THREEFISH-256/ECB/PKCS7PADDING` | `THREEFISH-256/ECB/PKCS7`, `THREEFISH-256/ECB/PKCS5PADDING`, `THREEFISH-256/ECB/PKCS5`, `THREEFISH-256/NONE/PKCS7PADDING`, `THREEFISH-256/NONE/PKCS7`, `THREEFISH-256/NONE/PKCS5PADDING`, `THREEFISH-256/NONE/PKCS5`, `THREEFISH-256//PKCS7PADDING`, `THREEFISH-256//PKCS7`, `THREEFISH-256//PKCS5PADDING`, `THREEFISH-256//PKCS5`, `THREEFISH-256/ECB/RAW`, `THREEFISH-256/ECB/`, `THREEFISH-256/ECB`, `THREEFISH-256/NONE/RAW`, `THREEFISH-256/NONE/`, `THREEFISH-256/NONE`, `THREEFISH-256//RAW`, `THREEFISH-256//`, `THREEFISH-256/`, `THREEFISH-256` |  | `KeyOwned`, [`ThreefishParamsOwned`](Threefish.md) | weak |
+| `THREEFISH-256/ECB/ISO10126PADDING` | `THREEFISH-256/ECB/ISO10126D2PADDING`, `THREEFISH-256/ECB/ISO10126-2PADDING`, `THREEFISH-256/NONE/ISO10126PADDING`, `THREEFISH-256/NONE/ISO10126D2PADDING`, `THREEFISH-256/NONE/ISO10126-2PADDING`, `THREEFISH-256//ISO10126PADDING`, `THREEFISH-256//ISO10126D2PADDING`, `THREEFISH-256//ISO10126-2PADDING` |  | `KeyOwned`, [`ThreefishParamsOwned`](Threefish.md) | weak |
+| `THREEFISH-256/ECB/ISO7816-4PADDING` | `THREEFISH-256/ECB/ISO9797-1PADDING`, `THREEFISH-256/NONE/ISO7816-4PADDING`, `THREEFISH-256/NONE/ISO9797-1PADDING`, `THREEFISH-256//ISO7816-4PADDING`, `THREEFISH-256//ISO9797-1PADDING` |  | `KeyOwned`, [`ThreefishParamsOwned`](Threefish.md) | weak |
+| `THREEFISH-256/ECB/X923PADDING` | `THREEFISH-256/ECB/X9.23PADDING`, `THREEFISH-256/NONE/X923PADDING`, `THREEFISH-256/NONE/X9.23PADDING`, `THREEFISH-256//X923PADDING`, `THREEFISH-256//X9.23PADDING` |  | `KeyOwned`, [`ThreefishParamsOwned`](Threefish.md) | weak |
+| `THREEFISH-256/ECB/TBCPADDING` | `THREEFISH-256/NONE/TBCPADDING`, `THREEFISH-256//TBCPADDING` |  | `KeyOwned`, [`ThreefishParamsOwned`](Threefish.md) | weak |
+| `THREEFISH-256/ECB/ZEROBYTEPADDING` | `THREEFISH-256/NONE/ZEROBYTEPADDING`, `THREEFISH-256//ZEROBYTEPADDING` |  | `KeyOwned`, [`ThreefishParamsOwned`](Threefish.md) | weak |
+| `THREEFISH-256/CBC/NOPADDING` |  |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
+| `THREEFISH-256/CBC/PKCS7PADDING` | `THREEFISH-256/CBC/PKCS7`, `THREEFISH-256/CBC/PKCS5PADDING`, `THREEFISH-256/CBC/PKCS5`, `THREEFISH-256/CBC/RAW`, `THREEFISH-256/CBC/`, `THREEFISH-256/CBC` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
+| `THREEFISH-256/CBC/ISO10126PADDING` | `THREEFISH-256/CBC/ISO10126D2PADDING`, `THREEFISH-256/CBC/ISO10126-2PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
+| `THREEFISH-256/CBC/ISO7816-4PADDING` | `THREEFISH-256/CBC/ISO9797-1PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
+| `THREEFISH-256/CBC/X923PADDING` | `THREEFISH-256/CBC/X9.23PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
+| `THREEFISH-256/CBC/TBCPADDING` |  |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
+| `THREEFISH-256/CBC/ZEROBYTEPADDING` |  |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
+| `THREEFISH-256/CFB/NOPADDING` | `THREEFISH-256/CFB/RAW`, `THREEFISH-256/CFB/`, `THREEFISH-256/CFB` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
+| `THREEFISH-256/OFB/NOPADDING` | `THREEFISH-256/OFB/RAW`, `THREEFISH-256/OFB/`, `THREEFISH-256/OFB` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
+| `THREEFISH-256/CTR/NOPADDING` | `THREEFISH-256/SIC/NOPADDING`, `THREEFISH-256/CTR/RAW`, `THREEFISH-256/CTR/`, `THREEFISH-256/CTR`, `THREEFISH-256/SIC/RAW`, `THREEFISH-256/SIC/`, `THREEFISH-256/SIC` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
 
 ### Threefish-512
 
@@ -725,25 +727,25 @@ The `threefish-512` feature has the rows. A block and a key of 64 bytes, and a t
 a plain key takes a tweak of zeros, as Bouncy Castle gives a `KeyParameter`, and Threefish's own
 params take another; see [Threefish](Threefish.md).
 
-| Name | OIDs | Params | Note |
-|---|---|---|---|
-| `THREEFISH-512/ECB/NOPADDING` |  | `KeyOwned`, [`ThreefishParamsOwned`](Threefish.md) | weak |
-| `THREEFISH-512/ECB/PKCS7PADDING` |  | `KeyOwned`, [`ThreefishParamsOwned`](Threefish.md) | weak |
-| `THREEFISH-512/ECB/ISO10126PADDING` |  | `KeyOwned`, [`ThreefishParamsOwned`](Threefish.md) | weak |
-| `THREEFISH-512/ECB/ISO7816-4PADDING` |  | `KeyOwned`, [`ThreefishParamsOwned`](Threefish.md) | weak |
-| `THREEFISH-512/ECB/X923PADDING` |  | `KeyOwned`, [`ThreefishParamsOwned`](Threefish.md) | weak |
-| `THREEFISH-512/ECB/TBCPADDING` |  | `KeyOwned`, [`ThreefishParamsOwned`](Threefish.md) | weak |
-| `THREEFISH-512/ECB/ZEROBYTEPADDING` |  | `KeyOwned`, [`ThreefishParamsOwned`](Threefish.md) | weak |
-| `THREEFISH-512/CBC/NOPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
-| `THREEFISH-512/CBC/PKCS7PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
-| `THREEFISH-512/CBC/ISO10126PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
-| `THREEFISH-512/CBC/ISO7816-4PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
-| `THREEFISH-512/CBC/X923PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
-| `THREEFISH-512/CBC/TBCPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
-| `THREEFISH-512/CBC/ZEROBYTEPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
-| `THREEFISH-512/CFB/NOPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
-| `THREEFISH-512/OFB/NOPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
-| `THREEFISH-512/CTR/NOPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
+| Name | Aliases | OIDs | Params | Note |
+|---|---|---|---|---|
+| `THREEFISH-512/ECB/NOPADDING` | `THREEFISH-512/NONE/NOPADDING`, `THREEFISH-512//NOPADDING` |  | `KeyOwned`, [`ThreefishParamsOwned`](Threefish.md) | weak |
+| `THREEFISH-512/ECB/PKCS7PADDING` | `THREEFISH-512/ECB/PKCS7`, `THREEFISH-512/ECB/PKCS5PADDING`, `THREEFISH-512/ECB/PKCS5`, `THREEFISH-512/NONE/PKCS7PADDING`, `THREEFISH-512/NONE/PKCS7`, `THREEFISH-512/NONE/PKCS5PADDING`, `THREEFISH-512/NONE/PKCS5`, `THREEFISH-512//PKCS7PADDING`, `THREEFISH-512//PKCS7`, `THREEFISH-512//PKCS5PADDING`, `THREEFISH-512//PKCS5`, `THREEFISH-512/ECB/RAW`, `THREEFISH-512/ECB/`, `THREEFISH-512/ECB`, `THREEFISH-512/NONE/RAW`, `THREEFISH-512/NONE/`, `THREEFISH-512/NONE`, `THREEFISH-512//RAW`, `THREEFISH-512//`, `THREEFISH-512/`, `THREEFISH-512` |  | `KeyOwned`, [`ThreefishParamsOwned`](Threefish.md) | weak |
+| `THREEFISH-512/ECB/ISO10126PADDING` | `THREEFISH-512/ECB/ISO10126D2PADDING`, `THREEFISH-512/ECB/ISO10126-2PADDING`, `THREEFISH-512/NONE/ISO10126PADDING`, `THREEFISH-512/NONE/ISO10126D2PADDING`, `THREEFISH-512/NONE/ISO10126-2PADDING`, `THREEFISH-512//ISO10126PADDING`, `THREEFISH-512//ISO10126D2PADDING`, `THREEFISH-512//ISO10126-2PADDING` |  | `KeyOwned`, [`ThreefishParamsOwned`](Threefish.md) | weak |
+| `THREEFISH-512/ECB/ISO7816-4PADDING` | `THREEFISH-512/ECB/ISO9797-1PADDING`, `THREEFISH-512/NONE/ISO7816-4PADDING`, `THREEFISH-512/NONE/ISO9797-1PADDING`, `THREEFISH-512//ISO7816-4PADDING`, `THREEFISH-512//ISO9797-1PADDING` |  | `KeyOwned`, [`ThreefishParamsOwned`](Threefish.md) | weak |
+| `THREEFISH-512/ECB/X923PADDING` | `THREEFISH-512/ECB/X9.23PADDING`, `THREEFISH-512/NONE/X923PADDING`, `THREEFISH-512/NONE/X9.23PADDING`, `THREEFISH-512//X923PADDING`, `THREEFISH-512//X9.23PADDING` |  | `KeyOwned`, [`ThreefishParamsOwned`](Threefish.md) | weak |
+| `THREEFISH-512/ECB/TBCPADDING` | `THREEFISH-512/NONE/TBCPADDING`, `THREEFISH-512//TBCPADDING` |  | `KeyOwned`, [`ThreefishParamsOwned`](Threefish.md) | weak |
+| `THREEFISH-512/ECB/ZEROBYTEPADDING` | `THREEFISH-512/NONE/ZEROBYTEPADDING`, `THREEFISH-512//ZEROBYTEPADDING` |  | `KeyOwned`, [`ThreefishParamsOwned`](Threefish.md) | weak |
+| `THREEFISH-512/CBC/NOPADDING` |  |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
+| `THREEFISH-512/CBC/PKCS7PADDING` | `THREEFISH-512/CBC/PKCS7`, `THREEFISH-512/CBC/PKCS5PADDING`, `THREEFISH-512/CBC/PKCS5`, `THREEFISH-512/CBC/RAW`, `THREEFISH-512/CBC/`, `THREEFISH-512/CBC` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
+| `THREEFISH-512/CBC/ISO10126PADDING` | `THREEFISH-512/CBC/ISO10126D2PADDING`, `THREEFISH-512/CBC/ISO10126-2PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
+| `THREEFISH-512/CBC/ISO7816-4PADDING` | `THREEFISH-512/CBC/ISO9797-1PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
+| `THREEFISH-512/CBC/X923PADDING` | `THREEFISH-512/CBC/X9.23PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
+| `THREEFISH-512/CBC/TBCPADDING` |  |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
+| `THREEFISH-512/CBC/ZEROBYTEPADDING` |  |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
+| `THREEFISH-512/CFB/NOPADDING` | `THREEFISH-512/CFB/RAW`, `THREEFISH-512/CFB/`, `THREEFISH-512/CFB` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
+| `THREEFISH-512/OFB/NOPADDING` | `THREEFISH-512/OFB/RAW`, `THREEFISH-512/OFB/`, `THREEFISH-512/OFB` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
+| `THREEFISH-512/CTR/NOPADDING` | `THREEFISH-512/SIC/NOPADDING`, `THREEFISH-512/CTR/RAW`, `THREEFISH-512/CTR/`, `THREEFISH-512/CTR`, `THREEFISH-512/SIC/RAW`, `THREEFISH-512/SIC/`, `THREEFISH-512/SIC` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
 
 ### Threefish-1024
 
@@ -751,25 +753,25 @@ The `threefish-1024` feature has the rows. A block and a key of 128 bytes, and a
 a plain key takes a tweak of zeros, as Bouncy Castle gives a `KeyParameter`, and Threefish's own
 params take another; see [Threefish](Threefish.md).
 
-| Name | OIDs | Params | Note |
-|---|---|---|---|
-| `THREEFISH-1024/ECB/NOPADDING` |  | `KeyOwned`, [`ThreefishParamsOwned`](Threefish.md) | weak |
-| `THREEFISH-1024/ECB/PKCS7PADDING` |  | `KeyOwned`, [`ThreefishParamsOwned`](Threefish.md) | weak |
-| `THREEFISH-1024/ECB/ISO10126PADDING` |  | `KeyOwned`, [`ThreefishParamsOwned`](Threefish.md) | weak |
-| `THREEFISH-1024/ECB/ISO7816-4PADDING` |  | `KeyOwned`, [`ThreefishParamsOwned`](Threefish.md) | weak |
-| `THREEFISH-1024/ECB/X923PADDING` |  | `KeyOwned`, [`ThreefishParamsOwned`](Threefish.md) | weak |
-| `THREEFISH-1024/ECB/TBCPADDING` |  | `KeyOwned`, [`ThreefishParamsOwned`](Threefish.md) | weak |
-| `THREEFISH-1024/ECB/ZEROBYTEPADDING` |  | `KeyOwned`, [`ThreefishParamsOwned`](Threefish.md) | weak |
-| `THREEFISH-1024/CBC/NOPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
-| `THREEFISH-1024/CBC/PKCS7PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
-| `THREEFISH-1024/CBC/ISO10126PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
-| `THREEFISH-1024/CBC/ISO7816-4PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
-| `THREEFISH-1024/CBC/X923PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
-| `THREEFISH-1024/CBC/TBCPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
-| `THREEFISH-1024/CBC/ZEROBYTEPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
-| `THREEFISH-1024/CFB/NOPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
-| `THREEFISH-1024/OFB/NOPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
-| `THREEFISH-1024/CTR/NOPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
+| Name | Aliases | OIDs | Params | Note |
+|---|---|---|---|---|
+| `THREEFISH-1024/ECB/NOPADDING` | `THREEFISH-1024/NONE/NOPADDING`, `THREEFISH-1024//NOPADDING` |  | `KeyOwned`, [`ThreefishParamsOwned`](Threefish.md) | weak |
+| `THREEFISH-1024/ECB/PKCS7PADDING` | `THREEFISH-1024/ECB/PKCS7`, `THREEFISH-1024/ECB/PKCS5PADDING`, `THREEFISH-1024/ECB/PKCS5`, `THREEFISH-1024/NONE/PKCS7PADDING`, `THREEFISH-1024/NONE/PKCS7`, `THREEFISH-1024/NONE/PKCS5PADDING`, `THREEFISH-1024/NONE/PKCS5`, `THREEFISH-1024//PKCS7PADDING`, `THREEFISH-1024//PKCS7`, `THREEFISH-1024//PKCS5PADDING`, `THREEFISH-1024//PKCS5`, `THREEFISH-1024/ECB/RAW`, `THREEFISH-1024/ECB/`, `THREEFISH-1024/ECB`, `THREEFISH-1024/NONE/RAW`, `THREEFISH-1024/NONE/`, `THREEFISH-1024/NONE`, `THREEFISH-1024//RAW`, `THREEFISH-1024//`, `THREEFISH-1024/`, `THREEFISH-1024` |  | `KeyOwned`, [`ThreefishParamsOwned`](Threefish.md) | weak |
+| `THREEFISH-1024/ECB/ISO10126PADDING` | `THREEFISH-1024/ECB/ISO10126D2PADDING`, `THREEFISH-1024/ECB/ISO10126-2PADDING`, `THREEFISH-1024/NONE/ISO10126PADDING`, `THREEFISH-1024/NONE/ISO10126D2PADDING`, `THREEFISH-1024/NONE/ISO10126-2PADDING`, `THREEFISH-1024//ISO10126PADDING`, `THREEFISH-1024//ISO10126D2PADDING`, `THREEFISH-1024//ISO10126-2PADDING` |  | `KeyOwned`, [`ThreefishParamsOwned`](Threefish.md) | weak |
+| `THREEFISH-1024/ECB/ISO7816-4PADDING` | `THREEFISH-1024/ECB/ISO9797-1PADDING`, `THREEFISH-1024/NONE/ISO7816-4PADDING`, `THREEFISH-1024/NONE/ISO9797-1PADDING`, `THREEFISH-1024//ISO7816-4PADDING`, `THREEFISH-1024//ISO9797-1PADDING` |  | `KeyOwned`, [`ThreefishParamsOwned`](Threefish.md) | weak |
+| `THREEFISH-1024/ECB/X923PADDING` | `THREEFISH-1024/ECB/X9.23PADDING`, `THREEFISH-1024/NONE/X923PADDING`, `THREEFISH-1024/NONE/X9.23PADDING`, `THREEFISH-1024//X923PADDING`, `THREEFISH-1024//X9.23PADDING` |  | `KeyOwned`, [`ThreefishParamsOwned`](Threefish.md) | weak |
+| `THREEFISH-1024/ECB/TBCPADDING` | `THREEFISH-1024/NONE/TBCPADDING`, `THREEFISH-1024//TBCPADDING` |  | `KeyOwned`, [`ThreefishParamsOwned`](Threefish.md) | weak |
+| `THREEFISH-1024/ECB/ZEROBYTEPADDING` | `THREEFISH-1024/NONE/ZEROBYTEPADDING`, `THREEFISH-1024//ZEROBYTEPADDING` |  | `KeyOwned`, [`ThreefishParamsOwned`](Threefish.md) | weak |
+| `THREEFISH-1024/CBC/NOPADDING` |  |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
+| `THREEFISH-1024/CBC/PKCS7PADDING` | `THREEFISH-1024/CBC/PKCS7`, `THREEFISH-1024/CBC/PKCS5PADDING`, `THREEFISH-1024/CBC/PKCS5`, `THREEFISH-1024/CBC/RAW`, `THREEFISH-1024/CBC/`, `THREEFISH-1024/CBC` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
+| `THREEFISH-1024/CBC/ISO10126PADDING` | `THREEFISH-1024/CBC/ISO10126D2PADDING`, `THREEFISH-1024/CBC/ISO10126-2PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
+| `THREEFISH-1024/CBC/ISO7816-4PADDING` | `THREEFISH-1024/CBC/ISO9797-1PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
+| `THREEFISH-1024/CBC/X923PADDING` | `THREEFISH-1024/CBC/X9.23PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
+| `THREEFISH-1024/CBC/TBCPADDING` |  |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
+| `THREEFISH-1024/CBC/ZEROBYTEPADDING` |  |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
+| `THREEFISH-1024/CFB/NOPADDING` | `THREEFISH-1024/CFB/RAW`, `THREEFISH-1024/CFB/`, `THREEFISH-1024/CFB` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
+| `THREEFISH-1024/OFB/NOPADDING` | `THREEFISH-1024/OFB/RAW`, `THREEFISH-1024/OFB/`, `THREEFISH-1024/OFB` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
+| `THREEFISH-1024/CTR/NOPADDING` | `THREEFISH-1024/SIC/NOPADDING`, `THREEFISH-1024/CTR/RAW`, `THREEFISH-1024/CTR/`, `THREEFISH-1024/CTR`, `THREEFISH-1024/SIC/RAW`, `THREEFISH-1024/SIC/`, `THREEFISH-1024/SIC` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
 
 ### Weak, legacy and variable-time rows
 
@@ -807,7 +809,15 @@ Each algorithm has a row for each mode with each padding it takes:
 
 The padding aliases of Bouncy Castle find the same rows: `PKCS7`, `PKCS5PADDING` and `PKCS5` for
 `PKCS7PADDING`, `ISO10126D2PADDING` and `ISO10126-2PADDING` for `ISO10126PADDING`, and
-`ISO9797-1PADDING` for `ISO7816-4PADDING`; `SIC` is another name of `CTR`.
+`ISO9797-1PADDING` for `ISO7816-4PADDING`, and `X9.23PADDING` for `X923PADDING`; `NONE` is
+another name of `ECB`, and `SIC` of `CTR`.
+
+As in Bouncy Castle, a name may also leave the mode or the padding out:
+
+- An empty or missing mode is ECB: `AES//PKCS7PADDING` and `AES` alone are ECB rows.
+- An empty or missing padding, or `RAW`, is the mode's default: `PKCS7PADDING` in ECB and CBC,
+  and `NOPADDING` in CFB, OFB and CTR. So `AES` is `AES/ECB/PKCS7PADDING`, `AES/CBC` and
+  `AES/CBC/RAW` are `AES/CBC/PKCS7PADDING`, and `AES/CTR` is `AES/CTR/NOPADDING`.
 
 - `ISO10126PADDING` fills with random bytes, from the source of `DefaultAlgoBuilder::set_rand`.
 - `ZEROBYTEPADDING` drops every zero byte at the end on decryption, so a message that ends in zero
