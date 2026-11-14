@@ -103,6 +103,12 @@ camellia = ["dep:tc_camellia", "dep:tc_block_cipher", "dep:tc_block_modes", "dep
 aria = ["dep:tc_aria", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core", "dep:tc_buffered_cipher"]
 sm4 = ["dep:tc_sm4", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core", "dep:tc_buffered_cipher"]
 seed = ["dep:tc_seed", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core", "dep:tc_buffered_cipher"]
+blowfish = ["dep:tc_blowfish", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core", "dep:tc_buffered_cipher"]
+twofish = ["dep:tc_twofish", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core", "dep:tc_buffered_cipher"]
+serpent = ["dep:tc_serpent", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core", "dep:tc_buffered_cipher"]
+tnepres = ["dep:tc_serpent", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core", "dep:tc_buffered_cipher"]
+cast5 = ["dep:tc_cast", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core", "dep:tc_buffered_cipher"]
+cast6 = ["dep:tc_cast", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core", "dep:tc_buffered_cipher"]
 
 # Stream cipher
 chacha = ["dep:tc_chacha", "dep:tc_stream_cipher", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_buffered_cipher"]
@@ -172,6 +178,10 @@ tc_camellia = { version = "0.1.0", optional = true }
 tc_aria = { version = "0.1.0", optional = true }
 tc_sm4 = { version = "0.1.0", optional = true }
 tc_seed = { version = "0.1.0", optional = true }
+tc_blowfish = { version = "0.1.0", optional = true }
+tc_twofish = { version = "0.1.0", optional = true }
+tc_serpent = { version = "0.1.0", optional = true }
+tc_cast = { version = "0.1.0", optional = true }
 
 # Stream cipher
 tc_chacha = { version = "0.1.0", optional = true }

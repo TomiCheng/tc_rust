@@ -26,6 +26,12 @@ mod tuple_hash_params;
     feature = "aria",
     feature = "sm4",
     feature = "seed",
+    feature = "blowfish",
+    feature = "twofish",
+    feature = "serpent",
+    feature = "tnepres",
+    feature = "cast5",
+    feature = "cast6",
     feature = "chacha",
     feature = "hmac-sha256",
     feature = "rsa",
@@ -62,6 +68,12 @@ pub use tc_aead_cipher::AeadParamsOwned;
     feature = "aria",
     feature = "sm4",
     feature = "seed",
+    feature = "blowfish",
+    feature = "twofish",
+    feature = "serpent",
+    feature = "tnepres",
+    feature = "cast5",
+    feature = "cast6",
     feature = "chacha",
     feature = "hmac-sha256"
 ))]
@@ -74,6 +86,12 @@ pub use tc_block_cipher::{KeyOwned, KeyParams};
     feature = "aria",
     feature = "sm4",
     feature = "seed",
+    feature = "blowfish",
+    feature = "twofish",
+    feature = "serpent",
+    feature = "tnepres",
+    feature = "cast5",
+    feature = "cast6",
     feature = "chacha"
 ))]
 pub use tc_block_modes::{IvParams, KeyWithIvOwned};
@@ -98,6 +116,12 @@ pub use tuple_hash_params::TupleHashParams;
     feature = "aria",
     feature = "sm4",
     feature = "seed",
+    feature = "blowfish",
+    feature = "twofish",
+    feature = "serpent",
+    feature = "tnepres",
+    feature = "cast5",
+    feature = "cast6",
     feature = "chacha",
     feature = "hmac-sha256",
     feature = "rsa",
@@ -115,6 +139,12 @@ use crate::Params;
     feature = "aria",
     feature = "sm4",
     feature = "seed",
+    feature = "blowfish",
+    feature = "twofish",
+    feature = "serpent",
+    feature = "tnepres",
+    feature = "cast5",
+    feature = "cast6",
     feature = "chacha",
     feature = "hmac-sha256"
 ))]
@@ -132,6 +162,12 @@ impl Params for KeyOwned {
     feature = "aria",
     feature = "sm4",
     feature = "seed",
+    feature = "blowfish",
+    feature = "twofish",
+    feature = "serpent",
+    feature = "tnepres",
+    feature = "cast5",
+    feature = "cast6",
     feature = "chacha"
 ))]
 impl Params for KeyWithIvOwned {

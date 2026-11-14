@@ -10,8 +10,16 @@ mod aria;
     feature = "aria",
     feature = "sm4",
     feature = "seed",
+    feature = "blowfish",
+    feature = "twofish",
+    feature = "serpent",
+    feature = "tnepres",
+    feature = "cast5",
+    feature = "cast6",
 ))]
 mod block;
+#[cfg(feature = "blowfish")]
+mod blowfish;
 #[cfg(any(
     feature = "aes",
     feature = "des",
@@ -20,10 +28,20 @@ mod block;
     feature = "aria",
     feature = "sm4",
     feature = "seed",
+    feature = "blowfish",
+    feature = "twofish",
+    feature = "serpent",
+    feature = "tnepres",
+    feature = "cast5",
+    feature = "cast6",
 ))]
 mod buffered;
 #[cfg(feature = "camellia")]
 mod camellia;
+#[cfg(feature = "cast5")]
+mod cast5;
+#[cfg(feature = "cast6")]
+mod cast6;
 #[cfg(feature = "chacha")]
 mod chacha;
 #[cfg(any(feature = "des", feature = "desede"))]
@@ -34,8 +52,14 @@ mod ies;
 mod rsa;
 #[cfg(feature = "seed")]
 mod seed;
+#[cfg(feature = "serpent")]
+mod serpent;
 #[cfg(feature = "sm4")]
 mod sm4;
+#[cfg(feature = "tnepres")]
+mod tnepres;
+#[cfg(feature = "twofish")]
+mod twofish;
 
 use super::CipherEntry;
 
@@ -57,6 +81,18 @@ pub(crate) const BUILT_IN: &[CreateRows] = &[
     sm4::sm4,
     #[cfg(feature = "seed")]
     seed::seed,
+    #[cfg(feature = "blowfish")]
+    blowfish::blowfish,
+    #[cfg(feature = "twofish")]
+    twofish::twofish,
+    #[cfg(feature = "serpent")]
+    serpent::serpent,
+    #[cfg(feature = "tnepres")]
+    tnepres::tnepres,
+    #[cfg(feature = "cast5")]
+    cast5::cast5,
+    #[cfg(feature = "cast6")]
+    cast6::cast6,
     #[cfg(feature = "chacha")]
     chacha::chacha,
     #[cfg(feature = "rsa")]

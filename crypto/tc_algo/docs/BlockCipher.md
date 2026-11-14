@@ -4,6 +4,13 @@ A block cipher keeps a message secret but does not show whether it was changed. 
 an AEAD cipher such as `AES/GCM/NOPADDING`, which does both; see [AEAD ciphers](AeadCipher.md).
 The rows here are for formats and protocols that need a mode of their own.
 
+Algorithms: [AES](#aes) · [DES](#des) · [DESede](#desede) · [Camellia](#camellia) ·
+[ARIA](#aria) · [SM4](#sm4) · [SEED](#seed) · [Blowfish](#blowfish) · [Twofish](#twofish) ·
+[Serpent](#serpent) · [Tnepres](#tnepres) · [CAST5](#cast5) · [CAST6](#cast6)
+
+See also: [Weak, legacy and variable-time rows](#weak-legacy-and-variable-time-rows) ·
+[Modes and paddings](#modes-and-paddings) · [Params](#params) · [The IV](#the-iv)
+
 From a new key to the decrypted message, with AES in CBC mode and PKCS#7 padding. The `aes` feature
 of `tc_algo` has the rows, and the IV here comes from `rand` and `rand_core`.
 
@@ -238,6 +245,160 @@ The `seed` feature has the rows. A block of 16 bytes and a key of 16; a Korean s
 
 The OID is KISA's, and means CBC with PKCS#7 padding.
 
+### Blowfish
+
+The `blowfish` feature has the rows. A block of 8 bytes and a key of 4 to 56 bytes.
+
+| Name | OIDs | Params | Note |
+|---|---|---|---|
+| `BLOWFISH/ECB/NOPADDING` |  | `KeyOwned` | weak, legacy, variable time |
+| `BLOWFISH/ECB/PKCS7PADDING` |  | `KeyOwned` | weak, legacy, variable time |
+| `BLOWFISH/ECB/ISO10126PADDING` |  | `KeyOwned` | weak, legacy, variable time |
+| `BLOWFISH/ECB/ISO7816-4PADDING` |  | `KeyOwned` | weak, legacy, variable time |
+| `BLOWFISH/ECB/X923PADDING` |  | `KeyOwned` | weak, legacy, variable time |
+| `BLOWFISH/ECB/TBCPADDING` |  | `KeyOwned` | weak, legacy, variable time |
+| `BLOWFISH/ECB/ZEROBYTEPADDING` |  | `KeyOwned` | weak, legacy, variable time |
+| `BLOWFISH/CBC/NOPADDING` |  | `KeyWithIvOwned` | legacy, variable time |
+| `BLOWFISH/CBC/PKCS7PADDING` | `1.3.6.1.4.1.3029.1.2`, `1.3.6.1.4.1.3029.1.1.2` | `KeyWithIvOwned` | legacy, variable time |
+| `BLOWFISH/CBC/ISO10126PADDING` |  | `KeyWithIvOwned` | legacy, variable time |
+| `BLOWFISH/CBC/ISO7816-4PADDING` |  | `KeyWithIvOwned` | legacy, variable time |
+| `BLOWFISH/CBC/X923PADDING` |  | `KeyWithIvOwned` | legacy, variable time |
+| `BLOWFISH/CBC/TBCPADDING` |  | `KeyWithIvOwned` | legacy, variable time |
+| `BLOWFISH/CBC/ZEROBYTEPADDING` |  | `KeyWithIvOwned` | legacy, variable time |
+| `BLOWFISH/CFB/NOPADDING` |  | `KeyWithIvOwned` | legacy, variable time |
+| `BLOWFISH/OFB/NOPADDING` |  | `KeyWithIvOwned` | legacy, variable time |
+| `BLOWFISH/CTR/NOPADDING` |  | `KeyWithIvOwned` | legacy, variable time |
+
+The OIDs are cryptlib's, both for CBC with PKCS#7 padding, as in Bouncy Castle.
+
+### Twofish
+
+The `twofish` feature has the rows. A block of 16 bytes and a key of 16, 24 or 32 bytes; a finalist
+for AES.
+
+| Name | OIDs | Params | Note |
+|---|---|---|---|
+| `TWOFISH/ECB/NOPADDING` |  | `KeyOwned` | weak, variable time |
+| `TWOFISH/ECB/PKCS7PADDING` |  | `KeyOwned` | weak, variable time |
+| `TWOFISH/ECB/ISO10126PADDING` |  | `KeyOwned` | weak, variable time |
+| `TWOFISH/ECB/ISO7816-4PADDING` |  | `KeyOwned` | weak, variable time |
+| `TWOFISH/ECB/X923PADDING` |  | `KeyOwned` | weak, variable time |
+| `TWOFISH/ECB/TBCPADDING` |  | `KeyOwned` | weak, variable time |
+| `TWOFISH/ECB/ZEROBYTEPADDING` |  | `KeyOwned` | weak, variable time |
+| `TWOFISH/CBC/NOPADDING` |  | `KeyWithIvOwned` | variable time |
+| `TWOFISH/CBC/PKCS7PADDING` |  | `KeyWithIvOwned` | variable time |
+| `TWOFISH/CBC/ISO10126PADDING` |  | `KeyWithIvOwned` | variable time |
+| `TWOFISH/CBC/ISO7816-4PADDING` |  | `KeyWithIvOwned` | variable time |
+| `TWOFISH/CBC/X923PADDING` |  | `KeyWithIvOwned` | variable time |
+| `TWOFISH/CBC/TBCPADDING` |  | `KeyWithIvOwned` | variable time |
+| `TWOFISH/CBC/ZEROBYTEPADDING` |  | `KeyWithIvOwned` | variable time |
+| `TWOFISH/CFB/NOPADDING` |  | `KeyWithIvOwned` | variable time |
+| `TWOFISH/OFB/NOPADDING` |  | `KeyWithIvOwned` | variable time |
+| `TWOFISH/CTR/NOPADDING` |  | `KeyWithIvOwned` | variable time |
+
+### Serpent
+
+The `serpent` feature has the rows. A block of 16 bytes and a key of 4 to 32 bytes, in steps of
+4; a finalist for AES, in the byte order of NESSIE.
+
+| Name | OIDs | Params | Note |
+|---|---|---|---|
+| `SERPENT/ECB/NOPADDING` |  | `KeyOwned` | weak |
+| `SERPENT/ECB/PKCS7PADDING` |  | `KeyOwned` | weak |
+| `SERPENT/ECB/ISO10126PADDING` |  | `KeyOwned` | weak |
+| `SERPENT/ECB/ISO7816-4PADDING` |  | `KeyOwned` | weak |
+| `SERPENT/ECB/X923PADDING` |  | `KeyOwned` | weak |
+| `SERPENT/ECB/TBCPADDING` |  | `KeyOwned` | weak |
+| `SERPENT/ECB/ZEROBYTEPADDING` |  | `KeyOwned` | weak |
+| `SERPENT/CBC/NOPADDING` |  | `KeyWithIvOwned` |  |
+| `SERPENT/CBC/PKCS7PADDING` |  | `KeyWithIvOwned` |  |
+| `SERPENT/CBC/ISO10126PADDING` |  | `KeyWithIvOwned` |  |
+| `SERPENT/CBC/ISO7816-4PADDING` |  | `KeyWithIvOwned` |  |
+| `SERPENT/CBC/X923PADDING` |  | `KeyWithIvOwned` |  |
+| `SERPENT/CBC/TBCPADDING` |  | `KeyWithIvOwned` |  |
+| `SERPENT/CBC/ZEROBYTEPADDING` |  | `KeyWithIvOwned` |  |
+| `SERPENT/CFB/NOPADDING` |  | `KeyWithIvOwned` |  |
+| `SERPENT/OFB/NOPADDING` |  | `KeyWithIvOwned` |  |
+| `SERPENT/CTR/NOPADDING` |  | `KeyWithIvOwned` |  |
+
+### Tnepres
+
+The `tnepres` feature has the rows. Serpent in the byte- and word-reversed form of its AES
+submission, which Bouncy Castle's first Serpent used, with the key of Serpent. It is for data made
+in that form; new data takes `SERPENT`.
+
+| Name | OIDs | Params | Note |
+|---|---|---|---|
+| `TNEPRES/ECB/NOPADDING` |  | `KeyOwned` | weak |
+| `TNEPRES/ECB/PKCS7PADDING` |  | `KeyOwned` | weak |
+| `TNEPRES/ECB/ISO10126PADDING` |  | `KeyOwned` | weak |
+| `TNEPRES/ECB/ISO7816-4PADDING` |  | `KeyOwned` | weak |
+| `TNEPRES/ECB/X923PADDING` |  | `KeyOwned` | weak |
+| `TNEPRES/ECB/TBCPADDING` |  | `KeyOwned` | weak |
+| `TNEPRES/ECB/ZEROBYTEPADDING` |  | `KeyOwned` | weak |
+| `TNEPRES/CBC/NOPADDING` |  | `KeyWithIvOwned` |  |
+| `TNEPRES/CBC/PKCS7PADDING` |  | `KeyWithIvOwned` |  |
+| `TNEPRES/CBC/ISO10126PADDING` |  | `KeyWithIvOwned` |  |
+| `TNEPRES/CBC/ISO7816-4PADDING` |  | `KeyWithIvOwned` |  |
+| `TNEPRES/CBC/X923PADDING` |  | `KeyWithIvOwned` |  |
+| `TNEPRES/CBC/TBCPADDING` |  | `KeyWithIvOwned` |  |
+| `TNEPRES/CBC/ZEROBYTEPADDING` |  | `KeyWithIvOwned` |  |
+| `TNEPRES/CFB/NOPADDING` |  | `KeyWithIvOwned` |  |
+| `TNEPRES/OFB/NOPADDING` |  | `KeyWithIvOwned` |  |
+| `TNEPRES/CTR/NOPADDING` |  | `KeyWithIvOwned` |  |
+
+### CAST5
+
+The `cast5` feature has the rows. A block of 8 bytes and a key of 5 to 16 bytes; also called
+CAST-128.
+
+| Name | OIDs | Params | Note |
+|---|---|---|---|
+| `CAST5/ECB/NOPADDING` |  | `KeyOwned` | weak, legacy, variable time |
+| `CAST5/ECB/PKCS7PADDING` |  | `KeyOwned` | weak, legacy, variable time |
+| `CAST5/ECB/ISO10126PADDING` |  | `KeyOwned` | weak, legacy, variable time |
+| `CAST5/ECB/ISO7816-4PADDING` |  | `KeyOwned` | weak, legacy, variable time |
+| `CAST5/ECB/X923PADDING` |  | `KeyOwned` | weak, legacy, variable time |
+| `CAST5/ECB/TBCPADDING` |  | `KeyOwned` | weak, legacy, variable time |
+| `CAST5/ECB/ZEROBYTEPADDING` |  | `KeyOwned` | weak, legacy, variable time |
+| `CAST5/CBC/NOPADDING` |  | `KeyWithIvOwned` | legacy, variable time |
+| `CAST5/CBC/PKCS7PADDING` | `1.2.840.113533.7.66.10` | `KeyWithIvOwned` | legacy, variable time |
+| `CAST5/CBC/ISO10126PADDING` |  | `KeyWithIvOwned` | legacy, variable time |
+| `CAST5/CBC/ISO7816-4PADDING` |  | `KeyWithIvOwned` | legacy, variable time |
+| `CAST5/CBC/X923PADDING` |  | `KeyWithIvOwned` | legacy, variable time |
+| `CAST5/CBC/TBCPADDING` |  | `KeyWithIvOwned` | legacy, variable time |
+| `CAST5/CBC/ZEROBYTEPADDING` |  | `KeyWithIvOwned` | legacy, variable time |
+| `CAST5/CFB/NOPADDING` |  | `KeyWithIvOwned` | legacy, variable time |
+| `CAST5/OFB/NOPADDING` |  | `KeyWithIvOwned` | legacy, variable time |
+| `CAST5/CTR/NOPADDING` |  | `KeyWithIvOwned` | legacy, variable time |
+
+The OID is Entrust's, and means CBC with PKCS#7 padding.
+
+### CAST6
+
+The `cast6` feature has the rows. A block of 16 bytes and a key of 16 to 32 bytes, in steps of 4;
+also called CAST-256.
+
+| Name | OIDs | Params | Note |
+|---|---|---|---|
+| `CAST6/ECB/NOPADDING` |  | `KeyOwned` | weak, variable time |
+| `CAST6/ECB/PKCS7PADDING` |  | `KeyOwned` | weak, variable time |
+| `CAST6/ECB/ISO10126PADDING` |  | `KeyOwned` | weak, variable time |
+| `CAST6/ECB/ISO7816-4PADDING` |  | `KeyOwned` | weak, variable time |
+| `CAST6/ECB/X923PADDING` |  | `KeyOwned` | weak, variable time |
+| `CAST6/ECB/TBCPADDING` |  | `KeyOwned` | weak, variable time |
+| `CAST6/ECB/ZEROBYTEPADDING` |  | `KeyOwned` | weak, variable time |
+| `CAST6/CBC/NOPADDING` |  | `KeyWithIvOwned` | variable time |
+| `CAST6/CBC/PKCS7PADDING` |  | `KeyWithIvOwned` | variable time |
+| `CAST6/CBC/ISO10126PADDING` |  | `KeyWithIvOwned` | variable time |
+| `CAST6/CBC/ISO7816-4PADDING` |  | `KeyWithIvOwned` | variable time |
+| `CAST6/CBC/X923PADDING` |  | `KeyWithIvOwned` | variable time |
+| `CAST6/CBC/TBCPADDING` |  | `KeyWithIvOwned` | variable time |
+| `CAST6/CBC/ZEROBYTEPADDING` |  | `KeyWithIvOwned` | variable time |
+| `CAST6/CFB/NOPADDING` |  | `KeyWithIvOwned` | variable time |
+| `CAST6/OFB/NOPADDING` |  | `KeyWithIvOwned` | variable time |
+| `CAST6/CTR/NOPADDING` |  | `KeyWithIvOwned` | variable time |
+
 ### Weak, legacy and variable-time rows
 
 ECB is weak: it encrypts equal blocks into equal blocks, so the ciphertext shows where the
@@ -250,6 +411,9 @@ here for old data only.
 DESede is legacy: NIST withdrew it for encryption at the end of 2023. Its block of 8 bytes lets
 two blocks of a long message under one key collide, which leaks their XOR (Sweet32), and two-key
 DESede has the strength of about 80 bits. It is here for old data only.
+
+Blowfish and CAST5 are legacy for the same reason: a block of 8 bytes, which Sweet32 turns against
+long messages under one key. They are here for old data only.
 
 A variable-time cipher looks up tables by bytes of the key and the data, so it can leak them through
 cache timing to code that shares the processor. Where that matters, prefer AES, which `tc_aes` runs
@@ -288,9 +452,9 @@ Both come from the crates underneath and wipe themselves when dropped.
 
 - Use a new IV for every message under the same key. It is not secret: send it along with the
   ciphertext, since decrypting needs the same one.
-- The IV must be one block, 8 bytes for DES and DESede and 16 for the others, or `init` gives
-  `InvalidParams`. Unlike Bouncy Castle, a short IV is not padded with zeros, and there is no
-  default of zeros: `KeyWithIvOwned` always has one to give.
+- The IV must be one block, 8 bytes for DES, DESede, Blowfish and CAST5 and 16 for the others,
+  or `init` gives `InvalidParams`. Unlike Bouncy Castle, a short IV is not padded with zeros, and
+  there is no default of zeros: `KeyWithIvOwned` always has one to give.
 - CTR is the exception: its IV may be shorter than a block, and the rest of the block is the
   counter, which starts at zero.
 - `finalize` goes back to the same IV, as in Bouncy Castle. So give each message a new `init` with a

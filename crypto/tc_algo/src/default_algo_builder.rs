@@ -428,6 +428,12 @@ mod tests {
         feature = "aria",
         feature = "sm4",
         feature = "seed",
+        feature = "blowfish",
+        feature = "twofish",
+        feature = "serpent",
+        feature = "tnepres",
+        feature = "cast5",
+        feature = "cast6",
         feature = "chacha",
         feature = "rsa",
         feature = "ies"
