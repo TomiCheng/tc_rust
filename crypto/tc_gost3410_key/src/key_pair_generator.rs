@@ -1,5 +1,6 @@
 use crate::math::{naf_weight, random_bits};
 use crate::{Gost3410Error, Gost3410KeyGenerationParams, Gost3410PrivateKey, Gost3410PublicKey};
+use rand_core::CryptoRng;
 use tc_asym_cipher::{KeyPairGenerator, KeyPairGeneratorInit};
 use tc_bigint::PaddedBigUint;
 use tc_modular::{Odd, PaddedMontyForm, PaddedMontyParams};
@@ -10,38 +11,33 @@ const MIN_WEIGHT: u32 = 64;
 
 /// BC 的 `Gost3410KeyPairGenerator`：x 是 256 位元的隨機值，落在 `[1, q − 1]` 且 NAF 權重
 /// 至少 64，y = a^x mod p。`init` 檢查參數並為 p 建好 Montgomery 參數。
-pub struct Gost3410KeyPairGenerator<'a> {
-    state: Option<(Gost3410KeyGenerationParams<'a>, PaddedMontyParams)>,
+pub struct Gost3410KeyPairGenerator<R> {
+    rng: R,
+    state: Option<(Gost3410KeyGenerationParams, PaddedMontyParams)>,
 }
 
-impl Gost3410KeyPairGenerator<'_> {
-    /// 尚未 `init` 的產生器。常數時間。
-    pub fn new() -> Self {
-        Self { state: None }
+impl<R> Gost3410KeyPairGenerator<R> {
+    /// 從 `rng` 取亂數、尚未 `init` 的產生器。常數時間。
+    pub fn new(rng: R) -> Self {
+        Self { rng, state: None }
     }
 }
 
-impl Default for Gost3410KeyPairGenerator<'_> {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl<'a> KeyPairGeneratorInit<Gost3410KeyGenerationParams<'a>> for Gost3410KeyPairGenerator<'a> {
+impl<R> KeyPairGeneratorInit<Gost3410KeyGenerationParams> for Gost3410KeyPairGenerator<R> {
     type Error = Gost3410Error;
 
     /// 以 [`Gost3410Parameters::validate`](crate::Gost3410Parameters::validate) 檢查參數，
     /// 並為 p 建好 Montgomery 參數。變動時間：參數是公開值。
-    fn init(&mut self, params: Gost3410KeyGenerationParams<'a>) -> Result<(), Gost3410Error> {
+    fn init(&mut self, params: &Gost3410KeyGenerationParams) -> Result<(), Gost3410Error> {
         self.state = None;
         params.params.validate()?;
         let p = Odd::new(params.params.p().clone()).ok_or(Gost3410Error::InvalidModulus)?;
-        self.state = Some((params, PaddedMontyParams::new(p)));
+        self.state = Some((params.clone(), PaddedMontyParams::new(p)));
         Ok(())
     }
 }
 
-impl KeyPairGenerator for Gost3410KeyPairGenerator<'_> {
+impl<R: CryptoRng> KeyPairGenerator for Gost3410KeyPairGenerator<R> {
     type PublicKey = Gost3410PublicKey;
     type PrivateKey = Gost3410PrivateKey;
     type Error = Gost3410Error;
@@ -56,7 +52,7 @@ impl KeyPairGenerator for Gost3410KeyPairGenerator<'_> {
         let q = params.params.q();
         let one = PaddedBigUint::from(1u8);
         let x = loop {
-            let mut x = random_bits(params.rng, 256);
+            let mut x = random_bits(&mut self.rng, 256);
             if x >= one && &x < q && naf_weight(x.as_limbs()) >= MIN_WEIGHT {
                 break x;
             }

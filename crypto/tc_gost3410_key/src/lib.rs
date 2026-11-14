@@ -15,8 +15,8 @@
 //! let params = parameters.generate_parameters()?;
 //!
 //! let mut rng = rand::rng();
-//! let mut generator = Gost3410KeyPairGenerator::new();
-//! generator.init(Gost3410KeyGenerationParams::new(params, &mut rng))?;
+//! let mut generator = Gost3410KeyPairGenerator::new(&mut rng);
+//! generator.init(&Gost3410KeyGenerationParams::new(params))?;
 //! let (public_key, private_key) = generator.generate_key_pair()?;
 //! assert!(public_key.validate().is_ok() && private_key.validate().is_ok());
 //! # Ok::<(), Box<dyn std::error::Error>>(())

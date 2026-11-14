@@ -2,46 +2,41 @@ use crate::{
     ElGamalError, ElGamalKeyGenerationParams, ElGamalParameters, ElGamalPrivateKey,
     ElGamalPublicKey,
 };
+use rand_core::CryptoRng;
 use tc_asym_cipher::{KeyPairGenerator, KeyPairGeneratorInit};
 use tc_dh_key::{DhKeyGenerationParams, DhKeyPairGenerator};
 
 /// BC 的 `ElGamalKeyPairGenerator`：把參數轉成沒有 q、m = 0 的 DH 參數，交給
 /// `tc_dh_key` 的 [`DhKeyPairGenerator`] 產生 x 與 y = g^x mod p。
-pub struct ElGamalKeyPairGenerator<'a> {
-    inner: DhKeyPairGenerator<'a>,
+pub struct ElGamalKeyPairGenerator<R> {
+    inner: DhKeyPairGenerator<R>,
     params: Option<ElGamalParameters>,
 }
 
-impl ElGamalKeyPairGenerator<'_> {
-    /// 尚未 `init` 的產生器。常數時間。
-    pub fn new() -> Self {
+impl<R> ElGamalKeyPairGenerator<R> {
+    /// 從 `rng` 取亂數、尚未 `init` 的產生器。常數時間。
+    pub fn new(rng: R) -> Self {
         Self {
-            inner: DhKeyPairGenerator::new(),
+            inner: DhKeyPairGenerator::new(rng),
             params: None,
         }
     }
 }
 
-impl Default for ElGamalKeyPairGenerator<'_> {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl<'a> KeyPairGeneratorInit<ElGamalKeyGenerationParams<'a>> for ElGamalKeyPairGenerator<'a> {
+impl<R> KeyPairGeneratorInit<ElGamalKeyGenerationParams> for ElGamalKeyPairGenerator<R> {
     type Error = ElGamalError;
 
     /// 以 DH 的檢查驗證參數。變動時間：參數是公開值。
-    fn init(&mut self, params: ElGamalKeyGenerationParams<'a>) -> Result<(), ElGamalError> {
+    fn init(&mut self, params: &ElGamalKeyGenerationParams) -> Result<(), ElGamalError> {
         self.params = None;
-        let dh = DhKeyGenerationParams::new(params.params.to_dh(), params.rng);
-        self.inner.init(dh)?;
-        self.params = Some(params.params);
+        let dh = DhKeyGenerationParams::new(params.params.to_dh());
+        self.inner.init(&dh)?;
+        self.params = Some(params.params.clone());
         Ok(())
     }
 }
 
-impl KeyPairGenerator for ElGamalKeyPairGenerator<'_> {
+impl<R: CryptoRng> KeyPairGenerator for ElGamalKeyPairGenerator<R> {
     type PublicKey = ElGamalPublicKey;
     type PrivateKey = ElGamalPrivateKey;
     type Error = ElGamalError;

@@ -14,8 +14,8 @@
 //! let curve = SM2P256V1.ct_curve();
 //! let g = SM2P256V1.ct_generator(&curve);
 //! let mut rng = rand::rng();
-//! let mut generator = EcKeyPairGenerator::<&SecPCtCurve<SM2P256V1FieldElement>>::new();
-//! generator.init(EcKeyGenerationParams::new(g, &mut rng))?;
+//! let mut generator = EcKeyPairGenerator::<&SecPCtCurve<SM2P256V1FieldElement>, _>::new(&mut rng);
+//! generator.init(&EcKeyGenerationParams::new(g))?;
 //! let (public_key, private_key) = generator.generate_key_pair()?;
 //!
 //! // 寄件人以公鑰加密，收件人以私鑰解密。

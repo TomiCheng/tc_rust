@@ -294,9 +294,9 @@ fn the_key_pair_generator_negates_the_public_point() {
     let (g_key, _) = keys(&curve, &DOMAIN_163);
     let g = g_key.g().clone();
     let mut rng = rand::rng();
-    let mut generator = Dstu4145KeyPairGenerator::<Ct<'_>>::new();
+    let mut generator = Dstu4145KeyPairGenerator::<Ct<'_>, _>::new(&mut rng);
     generator
-        .init(EcKeyGenerationParams::new(g.clone(), &mut rng))
+        .init(&EcKeyGenerationParams::new(g.clone()))
         .unwrap();
     let (public_key, private_key) = generator.generate_key_pair().unwrap();
     let expected = <Ct<'_>>::multiply(&g, private_key.d()).negate();

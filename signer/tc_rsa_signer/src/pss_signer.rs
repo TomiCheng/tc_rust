@@ -22,13 +22,13 @@ use tc_zeroize::Zeroizing;
 ///
 /// ```
 /// use tc_asym_cipher::{KeyPairGenerator, KeyPairGeneratorInit};
-/// use tc_rsa::{RsaEngine, RsaKeyGenerationParamsOwned, RsaKeyGenerator};
+/// use tc_rsa::{RsaEngine, RsaKeyGenerationParams, RsaKeyGenerator};
 /// use tc_rsa_signer::PssSigner;
 /// use tc_sha::Sha256Digest;
 /// use tc_signer::{Signer, SignerInit};
 ///
-/// let mut generator = RsaKeyGenerator::new();
-/// generator.init(RsaKeyGenerationParamsOwned::new(rand::rng()))?;
+/// let mut generator = RsaKeyGenerator::new(rand::rng());
+/// generator.init(&RsaKeyGenerationParams::new())?;
 /// let (public_key, private_key) = generator.generate_key_pair()?;
 ///
 /// // 以私鑰簽章；每次抽一個新的 salt，所以同一則訊息的簽章每次都不同。

@@ -1,16 +1,15 @@
 use crate::DsaParameters;
-use rand_core::CryptoRng;
 
-/// BC 的 `DsaKeyGenerationParameters`：參數與亂數來源。
-pub struct DsaKeyGenerationParams<'a> {
+/// BC 的 `DsaKeyGenerationParameters`，不含亂數來源：亂數來源在產生器建構時給。
+#[derive(Clone)]
+pub struct DsaKeyGenerationParams {
     pub(crate) params: DsaParameters,
-    pub(crate) rng: &'a mut dyn CryptoRng,
 }
 
-impl<'a> DsaKeyGenerationParams<'a> {
-    /// 包起參數與亂數來源；參數在產生器 `init` 時檢查。常數時間。
-    pub fn new(params: DsaParameters, rng: &'a mut dyn CryptoRng) -> Self {
-        Self { params, rng }
+impl DsaKeyGenerationParams {
+    /// 包起參數；參數在產生器 `init` 時檢查。常數時間。
+    pub fn new(params: DsaParameters) -> Self {
+        Self { params }
     }
 
     /// 參數。常數時間。

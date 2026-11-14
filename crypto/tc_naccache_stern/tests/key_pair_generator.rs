@@ -13,11 +13,9 @@ use tc_naccache_stern::{
 /// 產生金鑰並檢查各部分吻合，再以前幾個位元組加解密一次。
 fn generate_and_round_trip(strength: u32, count: usize) {
     let mut rng = rand::rng();
-    let mut generator = NaccacheSternKeyPairGenerator::new();
+    let mut generator = NaccacheSternKeyPairGenerator::new(&mut rng);
     generator
-        .init(NaccacheSternKeyGenerationParams::new(
-            &mut rng, strength, 8, count,
-        ))
+        .init(&NaccacheSternKeyGenerationParams::new(strength, 8, count))
         .unwrap();
     let (public_key, private_key) = generator.generate_key_pair().unwrap();
 
@@ -73,25 +71,23 @@ fn init_checks_the_generation_parameters() {
         (102, NaccacheSternError::InvalidSmallPrimeCount),
     ] {
         assert_eq!(
-            NaccacheSternKeyPairGenerator::new().init(NaccacheSternKeyGenerationParams::new(
-                &mut rng, 768, 8, count
-            )),
+            NaccacheSternKeyPairGenerator::new(&mut rng).init(&NaccacheSternKeyGenerationParams::new(768, 8, count)),
             Err(error),
             "{count} small primes"
         );
     }
     assert_eq!(
-        NaccacheSternKeyPairGenerator::new()
-            .init(NaccacheSternKeyGenerationParams::new(&mut rng, 768, 0, 30)),
+        NaccacheSternKeyPairGenerator::new(&mut rng)
+            .init(&NaccacheSternKeyGenerationParams::new(768, 0, 30)),
         Err(NaccacheSternError::InvalidCertainty)
     );
     assert_eq!(
-        NaccacheSternKeyPairGenerator::new()
-            .init(NaccacheSternKeyGenerationParams::new(&mut rng, 200, 8, 30)),
+        NaccacheSternKeyPairGenerator::new(&mut rng)
+            .init(&NaccacheSternKeyGenerationParams::new(200, 8, 30)),
         Err(NaccacheSternError::StrengthTooSmall)
     );
     assert_eq!(
-        NaccacheSternKeyPairGenerator::new()
+        NaccacheSternKeyPairGenerator::new(rand::rng())
             .generate_key_pair()
             .err(),
         Some(NaccacheSternError::NotInitialized)

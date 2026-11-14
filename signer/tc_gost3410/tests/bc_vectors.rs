@@ -164,8 +164,8 @@ fn run(case: &Case) {
     assert_eq!(params.q(), &integer(case.q), "{}: q", case.name);
 
     let mut key_random = Source(Repeating(bytes(case.x)));
-    let mut keys = Gost3410KeyPairGenerator::new();
-    keys.init(Gost3410KeyGenerationParams::new(params, &mut key_random))
+    let mut keys = Gost3410KeyPairGenerator::new(&mut key_random);
+    keys.init(&Gost3410KeyGenerationParams::new(params))
         .unwrap();
     let (public_key, private_key) = keys.generate_key_pair().unwrap();
 

@@ -27,9 +27,9 @@ fn key_pair<C>(
 where
     C: Curve<Scalar = PaddedBigUint>,
 {
-    let mut generator = EcKeyPairGenerator::<C>::new();
+    let mut generator = EcKeyPairGenerator::<C, _>::new(rng);
     generator
-        .init(EcKeyGenerationParams::new(g, rng))
+        .init(&EcKeyGenerationParams::new(g))
         .map_err(AnyError::new)?;
     let (public_key, private_key) = generator.generate_key_pair().map_err(AnyError::new)?;
     Ok((public(Box::new(public_key)), private(Box::new(private_key))))

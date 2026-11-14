@@ -20,9 +20,9 @@ fn keys() -> &'static (ElGamalPublicKey, ElGamalPrivateKey) {
     static KEYS: OnceLock<(ElGamalPublicKey, ElGamalPrivateKey)> = OnceLock::new();
     KEYS.get_or_init(|| {
         let mut rng = rand::rng();
-        let mut generator = ElGamalKeyPairGenerator::new();
+        let mut generator = ElGamalKeyPairGenerator::new(&mut rng);
         generator
-            .init(ElGamalKeyGenerationParams::new(group14(), &mut rng))
+            .init(&ElGamalKeyGenerationParams::new(group14()))
             .unwrap();
         generator.generate_key_pair().unwrap()
     })

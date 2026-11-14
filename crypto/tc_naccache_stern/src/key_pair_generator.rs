@@ -14,25 +14,20 @@ use tc_prime::Primality;
 ///
 /// 產生金鑰是變動時間：大數以 `BigUint` 計算，質數搜尋、取冪與比較都依秘密的值分支，
 /// 同 `tc_rsa` 產生金鑰時的取捨。產生的金鑰本身與加解密的時間性無關。
-pub struct NaccacheSternKeyPairGenerator<'a> {
-    params: Option<NaccacheSternKeyGenerationParams<'a>>,
+pub struct NaccacheSternKeyPairGenerator<R> {
+    rng: R,
+    params: Option<NaccacheSternKeyGenerationParams>,
 }
 
-impl NaccacheSternKeyPairGenerator<'_> {
-    /// 尚未 `init` 的產生器。常數時間。
-    pub fn new() -> Self {
-        Self { params: None }
+impl<R> NaccacheSternKeyPairGenerator<R> {
+    /// 從 `rng` 取亂數、尚未 `init` 的產生器。常數時間。
+    pub fn new(rng: R) -> Self {
+        Self { rng, params: None }
     }
 }
 
-impl Default for NaccacheSternKeyPairGenerator<'_> {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl<'a> KeyPairGeneratorInit<NaccacheSternKeyGenerationParams<'a>>
-    for NaccacheSternKeyPairGenerator<'a>
+impl<R> KeyPairGeneratorInit<NaccacheSternKeyGenerationParams>
+    for NaccacheSternKeyPairGenerator<R>
 {
     type Error = NaccacheSternError;
 
@@ -41,7 +36,7 @@ impl<'a> KeyPairGeneratorInit<NaccacheSternKeyGenerationParams<'a>>
     /// BC 要到產生時才失敗。變動時間：參數是公開值。
     fn init(
         &mut self,
-        params: NaccacheSternKeyGenerationParams<'a>,
+        params: &NaccacheSternKeyGenerationParams,
     ) -> Result<(), NaccacheSternError> {
         self.params = None;
         let count = params.count_small_primes;
@@ -57,12 +52,12 @@ impl<'a> KeyPairGeneratorInit<NaccacheSternKeyGenerationParams<'a>>
         if remaining_strength(params.strength, &sigma) / 2 + 1 < 2 {
             return Err(NaccacheSternError::StrengthTooSmall);
         }
-        self.params = Some(params);
+        self.params = Some(*params);
         Ok(())
     }
 }
 
-impl KeyPairGenerator for NaccacheSternKeyPairGenerator<'_> {
+impl<R: CryptoRng> KeyPairGenerator for NaccacheSternKeyPairGenerator<R> {
     type PublicKey = NaccacheSternPublicKey;
     type PrivateKey = NaccacheSternPrivateKey;
     type Error = NaccacheSternError;
@@ -78,7 +73,7 @@ impl KeyPairGenerator for NaccacheSternKeyPairGenerator<'_> {
             .as_mut()
             .ok_or(NaccacheSternError::NotInitialized)?;
         let (strength, certainty) = (params.strength, params.certainty);
-        let rng = &mut *params.rng;
+        let rng = &mut self.rng;
 
         let primes = permute(&SMALL_PRIMES[..params.count_small_primes], rng);
         let half = primes.len() / 2;

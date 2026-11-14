@@ -26,8 +26,8 @@ use tc_zeroize::Zeroizing;
 /// let params = generator.generate_parameters()?;
 ///
 /// let mut rng = rand::rng();
-/// let mut keys = DsaKeyPairGenerator::new();
-/// keys.init(DsaKeyGenerationParams::new(params, &mut rng))?;
+/// let mut keys = DsaKeyPairGenerator::new(&mut rng);
+/// keys.init(&DsaKeyGenerationParams::new(params))?;
 /// let (public_key, private_key) = keys.generate_key_pair()?;
 ///
 /// // 以 RFC 6979 的確定性 k 簽一則訊息的雜湊。

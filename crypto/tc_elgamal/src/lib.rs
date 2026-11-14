@@ -23,8 +23,8 @@
 //! let params = parameters_generator.generate_parameters()?;
 //!
 //! // 收件人的金鑰對。
-//! let mut generator = ElGamalKeyPairGenerator::new();
-//! generator.init(ElGamalKeyGenerationParams::new(params, &mut rng))?;
+//! let mut generator = ElGamalKeyPairGenerator::new(&mut rng);
+//! generator.init(&ElGamalKeyGenerationParams::new(params))?;
 //! let (public_key, private_key) = generator.generate_key_pair()?;
 //!
 //! // 寄件人以公鑰加密，收件人以私鑰解密。

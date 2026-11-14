@@ -17,9 +17,9 @@ fn big(value: &PaddedBigUint) -> BigUint {
 
 fn key_pairs(params: DhParameters) -> [(DhPublicKey, DhPrivateKey); 2] {
     let mut rng = rand::rng();
-    let mut generator = DhKeyPairGenerator::new();
+    let mut generator = DhKeyPairGenerator::new(&mut rng);
     generator
-        .init(DhKeyGenerationParams::new(params, &mut rng))
+        .init(&DhKeyGenerationParams::new(params))
         .unwrap();
     [
         generator.generate_key_pair().unwrap(),

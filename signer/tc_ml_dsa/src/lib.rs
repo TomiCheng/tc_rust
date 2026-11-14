@@ -8,8 +8,8 @@
 //!
 //! let params = MlDsaParameters::ML_DSA_65;
 //! let mut rng = rand::rng();
-//! let mut generator = MlDsaKeyPairGenerator::new();
-//! generator.init(MlDsaKeyGenerationParams::new(params, &mut rng))?;
+//! let mut generator = MlDsaKeyPairGenerator::new(&mut rng);
+//! generator.init(&MlDsaKeyGenerationParams::new(params))?;
 //! let (public_key, private_key) = generator.generate_key_pair()?;
 //!
 //! let mut signer = MlDsaSigner::new(params, rand::rng());

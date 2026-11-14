@@ -17,7 +17,7 @@ tc_zeroize = "0.1.0"
 
 [dev-dependencies]
 rand = { workspace = true }
-tc_asym_cipher = "0.1.0"
+tc_asym_cipher = "0.2.0"
 tc_digest = "0.1.0"
 tc_f2m_curve = "0.1.0"
 tc_f2m_custom = "0.1.0"

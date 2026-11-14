@@ -109,8 +109,8 @@ fn generated_keys_lie_in_range_and_y_is_a_to_the_x() {
     params.validate().unwrap();
 
     let mut rng = rand::rng();
-    let mut keys = Gost3410KeyPairGenerator::new();
-    keys.init(Gost3410KeyGenerationParams::new(params.clone(), &mut rng))
+    let mut keys = Gost3410KeyPairGenerator::new(&mut rng);
+    keys.init(&Gost3410KeyGenerationParams::new(params.clone()))
         .unwrap();
     let (public_key, private_key) = keys.generate_key_pair().unwrap();
     public_key.validate().unwrap();

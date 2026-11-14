@@ -1,3 +1,4 @@
+use rand_core::CryptoRng;
 use tc_asym_cipher::{KeyPairGenerator, KeyPairGeneratorInit};
 use tc_bigint::PaddedBigUint;
 use tc_ec_core::{Curve, Point};
@@ -5,37 +6,33 @@ use tc_ec_key::{EcError, EcKeyGenerationParams, EcKeyPairGenerator, EcPrivateKey
 
 /// BC 的 `Dstu4145KeyPairGenerator`：同 `EcKeyPairGenerator` 產生 d，但公鑰是 Q = −d·G，
 /// DSTU 4145 的慣例。
-pub struct Dstu4145KeyPairGenerator<'a, C: Curve> {
-    inner: EcKeyPairGenerator<'a, C>,
+pub struct Dstu4145KeyPairGenerator<C: Curve, R> {
+    inner: EcKeyPairGenerator<C, R>,
 }
 
-impl<C: Curve> Dstu4145KeyPairGenerator<'_, C> {
-    /// 尚未 `init` 的產生器。常數時間。
-    pub fn new() -> Self {
+impl<C: Curve, R> Dstu4145KeyPairGenerator<C, R> {
+    /// 從 `rng` 取亂數、尚未 `init` 的產生器。常數時間。
+    pub fn new(rng: R) -> Self {
         Self {
-            inner: EcKeyPairGenerator::new(),
+            inner: EcKeyPairGenerator::new(rng),
         }
     }
 }
 
-impl<C: Curve> Default for Dstu4145KeyPairGenerator<'_, C> {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl<'a, C: Curve<Scalar = PaddedBigUint>> KeyPairGeneratorInit<EcKeyGenerationParams<'a, C>>
-    for Dstu4145KeyPairGenerator<'a, C>
+impl<C: Curve<Scalar = PaddedBigUint>, R> KeyPairGeneratorInit<EcKeyGenerationParams<C>>
+    for Dstu4145KeyPairGenerator<C, R>
 {
     type Error = EcError;
 
     /// 交給 `EcKeyPairGenerator::init`。變動時間：只依公開的 G。
-    fn init(&mut self, params: EcKeyGenerationParams<'a, C>) -> Result<(), EcError> {
+    fn init(&mut self, params: &EcKeyGenerationParams<C>) -> Result<(), EcError> {
         self.inner.init(params)
     }
 }
 
-impl<C: Curve<Scalar = PaddedBigUint>> KeyPairGenerator for Dstu4145KeyPairGenerator<'_, C> {
+impl<C: Curve<Scalar = PaddedBigUint>, R: CryptoRng> KeyPairGenerator
+    for Dstu4145KeyPairGenerator<C, R>
+{
     type PublicKey = EcPublicKey<C>;
     type PrivateKey = EcPrivateKey<C>;
     type Error = EcError;

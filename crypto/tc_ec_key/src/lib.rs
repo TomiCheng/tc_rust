@@ -15,8 +15,8 @@
 //! let g = SECP256R1.ct_generator(&curve);
 //!
 //! let mut rng = rand::rng();
-//! let mut generator = EcKeyPairGenerator::<&FpCtCurve<'_>>::new();
-//! generator.init(EcKeyGenerationParams::new(g, &mut rng))?;
+//! let mut generator = EcKeyPairGenerator::<&FpCtCurve<'_>, _>::new(&mut rng);
+//! generator.init(&EcKeyGenerationParams::new(g))?;
 //! // Q goes to the other party; d stays here and is wiped when dropped.
 //! let (public_key, private_key) = generator.generate_key_pair()?;
 //! # Ok::<(), tc_ec_key::EcError>(())

@@ -38,9 +38,9 @@ fn agree<C: Curve<Scalar = PaddedBigUint>>(
 // Two parties agree, and on the x coordinate of d_A·d_B·G, whatever the cofactor step did.
 fn two_parties_agree<C: Curve<Scalar = PaddedBigUint>>(g: C::Point) {
     let mut rng = rand::rng();
-    let mut generator = EcKeyPairGenerator::<C>::new();
+    let mut generator = EcKeyPairGenerator::<C, _>::new(&mut rng);
     generator
-        .init(EcKeyGenerationParams::new(g.clone(), &mut rng))
+        .init(&EcKeyGenerationParams::new(g.clone()))
         .unwrap();
     let (public_a, private_a) = generator.generate_key_pair().unwrap();
     let (public_b, private_b) = generator.generate_key_pair().unwrap();

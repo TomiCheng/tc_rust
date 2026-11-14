@@ -99,9 +99,9 @@ fn key_pair<'a>(
     g: <Curve<'a> as tc_ec_core::Curve>::Point,
 ) -> (EcPublicKey<Curve<'a>>, EcPrivateKey<Curve<'a>>) {
     let mut rng = rand::rng();
-    let mut generator = EcKeyPairGenerator::<Curve<'_>>::new();
+    let mut generator = EcKeyPairGenerator::<Curve<'_>, _>::new(&mut rng);
     generator
-        .init(EcKeyGenerationParams::new(g, &mut rng))
+        .init(&EcKeyGenerationParams::new(g))
         .unwrap();
     generator.generate_key_pair().unwrap()
 }

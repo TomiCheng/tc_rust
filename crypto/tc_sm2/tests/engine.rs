@@ -192,9 +192,9 @@ type Sm2P256 = SecPCtCurve<SM2P256V1FieldElement>;
 fn sm2p256v1_keys(curve: &Sm2P256) -> (EcPublicKey<&Sm2P256>, EcPrivateKey<&Sm2P256>) {
     let g = SM2P256V1.ct_generator(curve);
     let mut rng = rand::rng();
-    let mut generator = EcKeyPairGenerator::<&Sm2P256>::new();
+    let mut generator = EcKeyPairGenerator::<&Sm2P256, _>::new(&mut rng);
     generator
-        .init(EcKeyGenerationParams::new(g, &mut rng))
+        .init(&EcKeyGenerationParams::new(g))
         .unwrap();
     generator.generate_key_pair().unwrap()
 }

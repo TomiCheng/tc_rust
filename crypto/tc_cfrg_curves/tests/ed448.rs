@@ -222,8 +222,8 @@ fn a_signer_refuses_the_wrong_mode_a_missing_init_and_a_short_output() {
 #[test]
 fn generated_key_pairs_sign_and_verify() {
     let mut rng = rand::rng();
-    let mut generator = Ed448KeyPairGenerator::new();
-    generator.init(KeyGenerationParams::new(&mut rng)).unwrap();
+    let mut generator = Ed448KeyPairGenerator::new(&mut rng);
+    generator.init(&KeyGenerationParams::new()).unwrap();
     let (public_key, private_key) = generator.generate_key_pair().unwrap();
     assert_eq!(private_key.generate_public_key(), public_key);
     let signature = sign(Ed448PhSigner::new(b""), &private_key, b"message");

@@ -164,7 +164,7 @@ rustcrypto = [
 tc_aead_cipher = { version = "0.1.0", features = ["alloc"] }
 tc_block_cipher = "0.1.0"
 tc_block_modes = { version = "0.1.0", features = ["alloc"] }
-tc_buffered_cipher = { version = "0.1.1", features = ["alloc"] }
+tc_buffered_cipher = { version = "0.2.0", features = ["alloc"] }
 tc_block_padding = { version = "0.1.0", features = ["rand_core"] }
 tc_agreement = { version = "0.1.0", path = "../agreement/tc_agreement" }
 tc_asn1 = "0.1.1"
@@ -187,10 +187,10 @@ tc_chacha = { version = "0.1.0", optional = true }
 tc_hc = { version = "0.1.0", optional = true }
 tc_rc4_family = { version = "0.1.0", optional = true }
 tc_salsa20 = { version = "0.1.0", optional = true }
-tc_rsa = { version = "0.1.0", optional = true }
-tc_asym_cipher = { version = "0.1.0", optional = true }
-tc_asym_encoding = { version = "0.1.0", optional = true }
-tc_asym_iso9796 = { version = "0.1.0", optional = true }
+tc_rsa = { version = "0.2.0", optional = true }
+tc_asym_cipher = { version = "0.2.0", optional = true }
+tc_asym_encoding = { version = "0.2.0", optional = true }
+tc_asym_iso9796 = { version = "0.2.0", optional = true }
 tc_bigint = { version = "0.1.0", optional = true }
 tc_cfrg_curves = { version = "0.1.0", path = "../tc_cfrg_curves", optional = true }
 tc_ec_core = { version = "0.1.0", optional = true }
@@ -209,4 +209,4 @@ tc_zeroize = "0.1.0"
 rand = { workspace = true }
 
 [dev-dependencies]
-tc_asym_cipher = "0.1.0"
+tc_asym_cipher = "0.2.0"

@@ -17,18 +17,17 @@ fn check_params(params: &KeyGenParams) -> Result<(), SecurityError> {
     }
 }
 
-fn key_pair<'a, G>(
+fn key_pair<G>(
     mut generator: G,
-    rng: &'a mut dyn CryptoRng,
     public: fn(G::PublicKey) -> AnyParams,
     private: fn(G::PrivateKey) -> AnyParams,
 ) -> Result<(AnyParams, AnyParams), AnyError>
 where
     G: KeyPairGenerator<Error = CfrgError>
-        + KeyPairGeneratorInit<KeyGenerationParams<'a>, Error = CfrgError>,
+        + KeyPairGeneratorInit<KeyGenerationParams, Error = CfrgError>,
 {
     generator
-        .init(KeyGenerationParams::new(rng))
+        .init(&KeyGenerationParams::new())
         .map_err(AnyError::new)?;
     let (public_key, private_key) = generator.generate_key_pair().map_err(AnyError::new)?;
     Ok((public(public_key), private(private_key)))
@@ -37,8 +36,7 @@ where
 #[cfg(feature = "x25519")]
 fn x25519(_: &KeyGenParams, rng: &mut dyn CryptoRng) -> Result<(AnyParams, AnyParams), AnyError> {
     key_pair(
-        tc_cfrg_curves::X25519KeyPairGenerator::new(),
-        rng,
+        tc_cfrg_curves::X25519KeyPairGenerator::new(rng),
         |key| AnyParams::X25519Public { key },
         |key| AnyParams::X25519Private { key },
     )
@@ -47,8 +45,7 @@ fn x25519(_: &KeyGenParams, rng: &mut dyn CryptoRng) -> Result<(AnyParams, AnyPa
 #[cfg(feature = "x448")]
 fn x448(_: &KeyGenParams, rng: &mut dyn CryptoRng) -> Result<(AnyParams, AnyParams), AnyError> {
     key_pair(
-        tc_cfrg_curves::X448KeyPairGenerator::new(),
-        rng,
+        tc_cfrg_curves::X448KeyPairGenerator::new(rng),
         |key| AnyParams::X448Public { key },
         |key| AnyParams::X448Private { key },
     )
@@ -57,8 +54,7 @@ fn x448(_: &KeyGenParams, rng: &mut dyn CryptoRng) -> Result<(AnyParams, AnyPara
 #[cfg(feature = "ed25519")]
 fn ed25519(_: &KeyGenParams, rng: &mut dyn CryptoRng) -> Result<(AnyParams, AnyParams), AnyError> {
     key_pair(
-        tc_cfrg_curves::Ed25519KeyPairGenerator::new(),
-        rng,
+        tc_cfrg_curves::Ed25519KeyPairGenerator::new(rng),
         |key| AnyParams::Ed25519Public { key },
         |key| AnyParams::Ed25519Private { key },
     )
@@ -67,8 +63,7 @@ fn ed25519(_: &KeyGenParams, rng: &mut dyn CryptoRng) -> Result<(AnyParams, AnyP
 #[cfg(feature = "ed448")]
 fn ed448(_: &KeyGenParams, rng: &mut dyn CryptoRng) -> Result<(AnyParams, AnyParams), AnyError> {
     key_pair(
-        tc_cfrg_curves::Ed448KeyPairGenerator::new(),
-        rng,
+        tc_cfrg_curves::Ed448KeyPairGenerator::new(rng),
         |key| AnyParams::Ed448Public { key },
         |key| AnyParams::Ed448Private { key },
     )

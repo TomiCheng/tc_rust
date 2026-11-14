@@ -114,9 +114,9 @@ fn the_gec2_vector_on_sect163k1_with_cofactor_two_matches_bouncy_castle() {
 
 fn key_pairs<C: Curve<Scalar = PaddedBigUint>>(g: C::Point) -> [Pair<C>; 4] {
     let mut rng = rand::rng();
-    let mut generator = EcKeyPairGenerator::<C>::new();
+    let mut generator = EcKeyPairGenerator::<C, _>::new(&mut rng);
     generator
-        .init(EcKeyGenerationParams::new(g, &mut rng))
+        .init(&EcKeyGenerationParams::new(g))
         .unwrap();
     core::array::from_fn(|_| generator.generate_key_pair().unwrap())
 }

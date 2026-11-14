@@ -15,8 +15,8 @@
 //! let params = parameters_generator.generate_parameters()?;
 //!
 //! // 依參數產生金鑰對：y 交給對方，x 留在這裡，drop 時清除。
-//! let mut generator = DhKeyPairGenerator::new();
-//! generator.init(DhKeyGenerationParams::new(params, &mut rng))?;
+//! let mut generator = DhKeyPairGenerator::new(&mut rng);
+//! generator.init(&DhKeyGenerationParams::new(params))?;
 //! let (public_key, private_key) = generator.generate_key_pair()?;
 //! public_key.validate()?;
 //! # Ok::<(), tc_dh_key::DhError>(())

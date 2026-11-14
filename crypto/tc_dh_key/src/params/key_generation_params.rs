@@ -1,16 +1,15 @@
 use crate::DhParameters;
-use rand_core::CryptoRng;
 
-/// BC 的 `DHKeyGenerationParameters`：參數與亂數來源。
-pub struct DhKeyGenerationParams<'a> {
+/// BC 的 `DHKeyGenerationParameters`，不含亂數來源：亂數來源在產生器建構時給。
+#[derive(Clone, Debug)]
+pub struct DhKeyGenerationParams {
     pub(crate) params: DhParameters,
-    pub(crate) rng: &'a mut dyn CryptoRng,
 }
 
-impl<'a> DhKeyGenerationParams<'a> {
-    /// 包起參數與亂數來源；參數在產生器 `init` 時檢查。常數時間。
-    pub fn new(params: DhParameters, rng: &'a mut dyn CryptoRng) -> Self {
-        Self { params, rng }
+impl DhKeyGenerationParams {
+    /// 包起參數；參數在產生器 `init` 時檢查。常數時間。
+    pub fn new(params: DhParameters) -> Self {
+        Self { params }
     }
 
     /// 參數。常數時間。

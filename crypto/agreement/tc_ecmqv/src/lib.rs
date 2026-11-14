@@ -16,8 +16,8 @@
 //! let curve = SECP256R1.ct_curve(&field);
 //! let g = SECP256R1.ct_generator(&curve);
 //! let mut rng = rand::rng();
-//! let mut generator = EcKeyPairGenerator::<&FpCtCurve<'_>>::new();
-//! generator.init(EcKeyGenerationParams::new(g, &mut rng))?;
+//! let mut generator = EcKeyPairGenerator::<&FpCtCurve<'_>, _>::new(&mut rng);
+//! generator.init(&EcKeyGenerationParams::new(g))?;
 //!
 //! // 長期金鑰對事先就有；臨時金鑰對每次協商重新產生。
 //! let (alice_static_public, alice_static) = generator.generate_key_pair()?;

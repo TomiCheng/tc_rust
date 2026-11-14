@@ -16,9 +16,9 @@ fn big(value: &PaddedBigUint) -> BigUint {
 fn the_public_value_is_g_to_the_private_value() {
     let params = group14();
     let mut rng = rand::rng();
-    let mut generator = DhKeyPairGenerator::new();
+    let mut generator = DhKeyPairGenerator::new(&mut rng);
     generator
-        .init(DhKeyGenerationParams::new(params.clone(), &mut rng))
+        .init(&DhKeyGenerationParams::new(params.clone()))
         .unwrap();
     let p = NonZero::new(big(params.p())).unwrap();
     let q = big(params.q().unwrap());
@@ -38,9 +38,9 @@ fn the_public_value_is_g_to_the_private_value() {
 fn a_set_length_gives_private_values_of_exactly_that_many_bits() {
     let params = group14().with_l(256);
     let mut rng = rand::rng();
-    let mut generator = DhKeyPairGenerator::new();
+    let mut generator = DhKeyPairGenerator::new(&mut rng);
     generator
-        .init(DhKeyGenerationParams::new(params, &mut rng))
+        .init(&DhKeyGenerationParams::new(params))
         .unwrap();
     for _ in 0..3 {
         let (_, private_key) = generator.generate_key_pair().unwrap();
@@ -50,13 +50,12 @@ fn a_set_length_gives_private_values_of_exactly_that_many_bits() {
 
 #[test]
 fn the_strength_is_l_or_the_bit_length_of_p() {
-    let mut rng = rand::rng();
     assert_eq!(
-        DhKeyGenerationParams::new(group14(), &mut rng).strength(),
+        DhKeyGenerationParams::new(group14()).strength(),
         2048
     );
     assert_eq!(
-        DhKeyGenerationParams::new(group14().with_l(256), &mut rng).strength(),
+        DhKeyGenerationParams::new(group14().with_l(256)).strength(),
         256
     );
 }
@@ -64,10 +63,10 @@ fn the_strength_is_l_or_the_bit_length_of_p() {
 #[test]
 fn init_rejects_invalid_parameters() {
     let mut rng = rand::rng();
-    let mut generator = DhKeyPairGenerator::new();
+    let mut generator = DhKeyPairGenerator::new(&mut rng);
     let params = DhParameters::new(n(24), n(2));
     assert_eq!(
-        generator.init(DhKeyGenerationParams::new(params, &mut rng)),
+        generator.init(&DhKeyGenerationParams::new(params)),
         Err(DhError::InvalidModulus)
     );
 }
@@ -75,7 +74,7 @@ fn init_rejects_invalid_parameters() {
 #[test]
 fn generating_before_init_is_an_error() {
     assert_eq!(
-        DhKeyPairGenerator::new().generate_key_pair().err(),
+        DhKeyPairGenerator::new(rand::rng()).generate_key_pair().err(),
         Some(DhError::NotInitialized)
     );
 }

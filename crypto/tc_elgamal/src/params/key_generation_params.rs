@@ -1,16 +1,15 @@
 use crate::ElGamalParameters;
-use rand_core::CryptoRng;
 
-/// BC 的 `ElGamalKeyGenerationParameters`：參數與亂數來源。
-pub struct ElGamalKeyGenerationParams<'a> {
+/// BC 的 `ElGamalKeyGenerationParameters`，不含亂數來源：亂數來源在產生器建構時給。
+#[derive(Clone)]
+pub struct ElGamalKeyGenerationParams {
     pub(crate) params: ElGamalParameters,
-    pub(crate) rng: &'a mut dyn CryptoRng,
 }
 
-impl<'a> ElGamalKeyGenerationParams<'a> {
-    /// 包起參數與亂數來源；參數在產生器 `init` 時檢查。常數時間。
-    pub fn new(params: ElGamalParameters, rng: &'a mut dyn CryptoRng) -> Self {
-        Self { params, rng }
+impl ElGamalKeyGenerationParams {
+    /// 包起參數；參數在產生器 `init` 時檢查。常數時間。
+    pub fn new(params: ElGamalParameters) -> Self {
+        Self { params }
     }
 
     /// 參數。常數時間。

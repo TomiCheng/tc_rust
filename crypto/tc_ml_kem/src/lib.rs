@@ -12,8 +12,8 @@
 //! // 收件人產生金鑰對，公開封裝金鑰。
 //! let params = MlKemParameters::ML_KEM_768;
 //! let mut rng = rand::rng();
-//! let mut generator = MlKemKeyPairGenerator::new();
-//! generator.init(MlKemKeyGenerationParams::new(params, &mut rng))?;
+//! let mut generator = MlKemKeyPairGenerator::new(&mut rng);
+//! generator.init(&MlKemKeyGenerationParams::new(params))?;
 //! let (public_key, private_key) = generator.generate_key_pair()?;
 //!
 //! // 寄件人以公鑰封裝，得到要寄出的密文與自己的共享秘密。

@@ -1,11 +1,10 @@
-use rand_core::CryptoRng;
+/// BC 的 `KeyGenerationParameters`，不含亂數來源：亂數來源在產生器建構時給。
+/// CFRG 曲線的金鑰長度固定，所以沒有欄位。
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct KeyGenerationParams;
 
-pub struct KeyGenerationParams<'a> {
-    pub(crate) rng: &'a mut dyn CryptoRng,
-}
-
-impl<'a> KeyGenerationParams<'a> {
-    pub fn new(rng: &'a mut dyn CryptoRng) -> Self {
-        Self { rng }
+impl KeyGenerationParams {
+    pub const fn new() -> Self {
+        Self
     }
 }

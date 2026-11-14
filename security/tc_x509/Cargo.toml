@@ -19,11 +19,11 @@ tc_asn1_pkcs = { version = "0.1.0", path = "../../asn1/tc_asn1_pkcs" }
 tc_asn1_x500 = "0.1.0"
 tc_asn1_x509 = { version = "0.1.0", features = ["chrono"] }
 tc_pem = { version = "0.1.0", path = "../../util/tc_pem" }
-tc_asym_cipher = "0.1.0"
+tc_asym_cipher = "0.2.0"
 tc_digest = "0.1.1"
 tc_sha = "0.1.1"
 tc_bigint = "0.1.0"
-tc_rsa = "0.1.0"
+tc_rsa = "0.2.0"
 
 [dev-dependencies]
 tc_algo = { version = "0.1.0", path = "../../crypto/tc_algo", features = ["rsa", "sha256", "hmac-sha256"] }

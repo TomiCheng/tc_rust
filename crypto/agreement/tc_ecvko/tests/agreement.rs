@@ -104,12 +104,9 @@ fn random_keys_agree_and_the_ukm_changes_the_secret() {
     let field = SECP256R1.field();
     let curve = SECP256R1.ct_curve(&field);
     let mut rng = rand::rng();
-    let mut generator = EcKeyPairGenerator::<Curve<'_>>::new();
+    let mut generator = EcKeyPairGenerator::<Curve<'_>, _>::new(&mut rng);
     generator
-        .init(EcKeyGenerationParams::new(
-            SECP256R1.ct_generator(&curve),
-            &mut rng,
-        ))
+        .init(&EcKeyGenerationParams::new(SECP256R1.ct_generator(&curve)))
         .unwrap();
     let (alice_public, alice_private) = generator.generate_key_pair().unwrap();
     let (bob_public, bob_private) = generator.generate_key_pair().unwrap();
@@ -133,20 +130,14 @@ fn errors_are_reported() {
     let other_field = SECP256K1.field();
     let other_curve = SECP256K1.ct_curve(&other_field);
     let mut rng = rand::rng();
-    let mut generator = EcKeyPairGenerator::<Curve<'_>>::new();
+    let mut generator = EcKeyPairGenerator::<Curve<'_>, _>::new(&mut rng);
     generator
-        .init(EcKeyGenerationParams::new(
-            SECP256R1.ct_generator(&curve),
-            &mut rng,
-        ))
+        .init(&EcKeyGenerationParams::new(SECP256R1.ct_generator(&curve)))
         .unwrap();
     let (public_key, private_key) = generator.generate_key_pair().unwrap();
-    let mut other = EcKeyPairGenerator::<Curve<'_>>::new();
+    let mut other = EcKeyPairGenerator::<Curve<'_>, _>::new(&mut rng);
     other
-        .init(EcKeyGenerationParams::new(
-            SECP256K1.ct_generator(&other_curve),
-            &mut rng,
-        ))
+        .init(&EcKeyGenerationParams::new(SECP256K1.ct_generator(&other_curve)))
         .unwrap();
     let (other_public, _) = other.generate_key_pair().unwrap();
 

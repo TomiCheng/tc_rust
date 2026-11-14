@@ -59,11 +59,11 @@ fn parameters_without_an_iv_or_nonce_report_empty_ones_for_init_to_reject() {
 #[test]
 fn an_rsa_key_carries_no_symmetric_key_or_iv() {
     use tc_asym_cipher::{KeyPairGenerator, KeyPairGeneratorInit};
-    use tc_rsa::{RsaKeyGenerationParamsOwned, RsaKeyGenerator};
+    use tc_rsa::{RsaKeyGenerationParams, RsaKeyGenerator};
 
-    let mut generator = RsaKeyGenerator::new();
+    let mut generator = RsaKeyGenerator::new(rand::rng());
     generator
-        .init(RsaKeyGenerationParamsOwned::new(rand::rng()).with_strength(1024))
+        .init(&RsaKeyGenerationParams::new().with_strength(1024))
         .unwrap();
     let (public, _) = generator.generate_key_pair().unwrap();
 

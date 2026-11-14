@@ -14,7 +14,7 @@ alloc = ["tc_zeroize/alloc"]
 [dependencies]
 tc_block_cipher = "0.1.0"
 tc_block_modes = "0.1.0"
-tc_buffered_cipher = "0.1.1"
+tc_buffered_cipher = "0.2.0"
 tc_zeroize = "0.1.0"
 
 [dev-dependencies]

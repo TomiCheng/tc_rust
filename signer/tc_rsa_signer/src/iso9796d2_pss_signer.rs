@@ -22,13 +22,13 @@ use tc_zeroize::{Zeroize, Zeroizing};
 ///
 /// ```
 /// use tc_asym_cipher::{KeyPairGenerator, KeyPairGeneratorInit};
-/// use tc_rsa::{RsaEngine, RsaKeyGenerationParamsOwned, RsaKeyGenerator};
+/// use tc_rsa::{RsaEngine, RsaKeyGenerationParams, RsaKeyGenerator};
 /// use tc_rsa_signer::Iso9796d2PssSigner;
 /// use tc_sha::Sha256Digest;
 /// use tc_signer::{Signer, SignerInit, SignerWithRecovery};
 ///
-/// let mut generator = RsaKeyGenerator::new();
-/// generator.init(RsaKeyGenerationParamsOwned::new(rand::rng()))?;
+/// let mut generator = RsaKeyGenerator::new(rand::rng());
+/// generator.init(&RsaKeyGenerationParams::new())?;
 /// let (public_key, private_key) = generator.generate_key_pair()?;
 ///
 /// let mut signer = Iso9796d2PssSigner::new(RsaEngine::new(), Sha256Digest::default(), 20, rand::rng());

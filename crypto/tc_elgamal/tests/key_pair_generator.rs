@@ -19,9 +19,9 @@ use tc_modular::{ModPow, NonZero};
 fn the_public_value_is_g_to_a_private_value_in_two_to_p_minus_two() {
     let params = group14();
     let mut rng = rand::rng();
-    let mut generator = ElGamalKeyPairGenerator::new();
+    let mut generator = ElGamalKeyPairGenerator::new(&mut rng);
     generator
-        .init(ElGamalKeyGenerationParams::new(params.clone(), &mut rng))
+        .init(&ElGamalKeyGenerationParams::new(params.clone()))
         .unwrap();
     let p = big(params.p());
     let modulus = NonZero::new(p.clone()).unwrap();
@@ -42,10 +42,10 @@ fn the_public_value_is_g_to_a_private_value_in_two_to_p_minus_two() {
 #[test]
 fn a_set_length_gives_private_values_of_exactly_that_many_bits() {
     let mut rng = rand::rng();
-    let mut generator = ElGamalKeyPairGenerator::new();
+    let mut generator = ElGamalKeyPairGenerator::new(&mut rng);
     let params = group14().with_l(256);
     generator
-        .init(ElGamalKeyGenerationParams::new(params, &mut rng))
+        .init(&ElGamalKeyGenerationParams::new(params))
         .unwrap();
     let (_, private_key) = generator.generate_key_pair().unwrap();
     assert_eq!(big(private_key.x()).bits(), 256);
@@ -54,27 +54,26 @@ fn a_set_length_gives_private_values_of_exactly_that_many_bits() {
 #[test]
 fn invalid_parameters_and_an_uninitialized_generator_are_errors() {
     let mut rng = rand::rng();
-    let mut generator = ElGamalKeyPairGenerator::new();
+    let mut generator = ElGamalKeyPairGenerator::new(&mut rng);
     let params = ElGamalParameters::new(PaddedBigUint::from(24u8), PaddedBigUint::from(2u8));
     assert_eq!(
-        generator.init(ElGamalKeyGenerationParams::new(params, &mut rng)),
+        generator.init(&ElGamalKeyGenerationParams::new(params)),
         Err(ElGamalError::InvalidParameters(DhError::InvalidModulus))
     );
     assert_eq!(
-        ElGamalKeyPairGenerator::new().generate_key_pair().err(),
+        ElGamalKeyPairGenerator::new(&mut rng).generate_key_pair().err(),
         Some(ElGamalError::NotInitialized)
     );
 }
 
 #[test]
 fn the_strength_is_l_or_the_bit_length_of_p() {
-    let mut rng = rand::rng();
     assert_eq!(
-        ElGamalKeyGenerationParams::new(group14(), &mut rng).strength(),
+        ElGamalKeyGenerationParams::new(group14()).strength(),
         2048
     );
     assert_eq!(
-        ElGamalKeyGenerationParams::new(group14().with_l(300), &mut rng).strength(),
+        ElGamalKeyGenerationParams::new(group14().with_l(300)).strength(),
         300
     );
 }
@@ -90,9 +89,9 @@ fn generated_parameters_carry_a_round_trip() {
     assert_eq!(params.l(), 0);
 
     let mut key_rng = rand::rng();
-    let mut generator = ElGamalKeyPairGenerator::new();
+    let mut generator = ElGamalKeyPairGenerator::new(&mut key_rng);
     generator
-        .init(ElGamalKeyGenerationParams::new(params, &mut key_rng))
+        .init(&ElGamalKeyGenerationParams::new(params))
         .unwrap();
     let (public_key, private_key) = generator.generate_key_pair().unwrap();
 

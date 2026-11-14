@@ -1,40 +1,41 @@
 use crate::rfc7748::x448;
 use crate::{CfrgError, KeyGenerationParams, X448PrivateKey, X448PublicKey};
+use rand_core::CryptoRng;
 use tc_asym_cipher::{KeyPairGenerator, KeyPairGeneratorInit};
 
-pub struct X448KeyPairGenerator<'a> {
-    params: Option<KeyGenerationParams<'a>>,
+pub struct X448KeyPairGenerator<R> {
+    rng: R,
+    initialized: bool,
 }
 
-impl X448KeyPairGenerator<'_> {
-    pub fn new() -> Self {
-        Self { params: None }
+impl<R> X448KeyPairGenerator<R> {
+    pub const fn new(rng: R) -> Self {
+        Self {
+            rng,
+            initialized: false,
+        }
     }
 }
 
-impl Default for X448KeyPairGenerator<'_> {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl<'a> KeyPairGeneratorInit<KeyGenerationParams<'a>> for X448KeyPairGenerator<'a> {
+impl<R> KeyPairGeneratorInit<KeyGenerationParams> for X448KeyPairGenerator<R> {
     type Error = CfrgError;
 
-    fn init(&mut self, params: KeyGenerationParams<'a>) -> Result<(), CfrgError> {
-        self.params = Some(params);
+    fn init(&mut self, _params: &KeyGenerationParams) -> Result<(), CfrgError> {
+        self.initialized = true;
         Ok(())
     }
 }
 
-impl KeyPairGenerator for X448KeyPairGenerator<'_> {
+impl<R: CryptoRng> KeyPairGenerator for X448KeyPairGenerator<R> {
     type PublicKey = X448PublicKey;
     type PrivateKey = X448PrivateKey;
     type Error = CfrgError;
 
     fn generate_key_pair(&mut self) -> Result<(X448PublicKey, X448PrivateKey), CfrgError> {
-        let params = self.params.as_mut().ok_or(CfrgError::NotInitialized)?;
-        let private_key = X448PrivateKey::new(x448::generate_private_key(params.rng));
+        if !self.initialized {
+            return Err(CfrgError::NotInitialized);
+        }
+        let private_key = X448PrivateKey::new(x448::generate_private_key(&mut self.rng));
         let public_key = private_key.generate_public_key();
         Ok((public_key, private_key))
     }

@@ -18,8 +18,8 @@
 //! parameters.init(512, 1, &mut rng)?;
 //! let params = parameters.generate_parameters()?;
 //! let mut rng = rand::rng();
-//! let mut generator = Gost3410KeyPairGenerator::new();
-//! generator.init(Gost3410KeyGenerationParams::new(params, &mut rng))?;
+//! let mut generator = Gost3410KeyPairGenerator::new(&mut rng);
+//! generator.init(&Gost3410KeyGenerationParams::new(params))?;
 //! let (public_key, private_key) = generator.generate_key_pair()?;
 //!
 //! // 以 GOST R 34.11-94 雜湊簽章，簽章是 s ‖ r。

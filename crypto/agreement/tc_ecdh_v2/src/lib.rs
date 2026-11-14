@@ -19,8 +19,8 @@
 //! let curve = SECP256R1.ct_curve(&field);
 //! let g = SECP256R1.ct_generator(&curve);
 //! let mut rng = rand::rng();
-//! let mut generator = EcKeyPairGenerator::<&FpCtCurve<'_>>::new();
-//! generator.init(EcKeyGenerationParams::new(g, &mut rng))?;
+//! let mut generator = EcKeyPairGenerator::<&FpCtCurve<'_>, _>::new(&mut rng);
+//! generator.init(&EcKeyGenerationParams::new(g))?;
 //!
 //! // Each makes a key pair and sends the other the public key.
 //! let (alice_public, alice_private) = generator.generate_key_pair()?;

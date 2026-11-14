@@ -937,88 +937,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tc_algo_old"
-version = "0.1.0"
-dependencies = [
- "rand",
- "rand_core",
- "tc_aead_cipher",
- "tc_aes",
- "tc_agreement",
- "tc_aria",
- "tc_ascon_aead",
- "tc_ascon_hash",
- "tc_asn1",
- "tc_asym_cipher",
- "tc_asym_encoding",
- "tc_asym_iso9796",
- "tc_bigint",
- "tc_blake",
- "tc_block_cipher",
- "tc_block_modes",
- "tc_block_padding",
- "tc_blowfish",
- "tc_buffered_cipher",
- "tc_camellia",
- "tc_cast",
- "tc_cfrg_curves",
- "tc_chacha",
- "tc_chacha_aead",
- "tc_constant_time",
- "tc_des",
- "tc_dh",
- "tc_dh_key",
- "tc_digest",
- "tc_dsa_key",
- "tc_dstu7564",
- "tc_dstu_macs",
- "tc_ec_core",
- "tc_ec_key",
- "tc_ecdh_v2",
- "tc_ecmqv",
- "tc_ecvko",
- "tc_elgamal",
- "tc_f2m_custom",
- "tc_fp_curve",
- "tc_fp_custom",
- "tc_gost28147",
- "tc_gost28147_mac",
- "tc_gost3410_key",
- "tc_gost3411",
- "tc_grain128_aead",
- "tc_hc",
- "tc_iso9797_mac",
- "tc_keccak",
- "tc_key_wrap",
- "tc_kmac",
- "tc_macs",
- "tc_md",
- "tc_misc_block_cipher",
- "tc_misc_digest",
- "tc_ml_kem",
- "tc_naccache_stern",
- "tc_poly1305",
- "tc_rc4_family",
- "tc_rc_cipher",
- "tc_ripemd",
- "tc_rsa",
- "tc_salsa20",
- "tc_seed",
- "tc_serpent",
- "tc_sha",
- "tc_skein",
- "tc_skein_mac",
- "tc_sm2",
- "tc_sm3",
- "tc_sm4",
- "tc_sparkle_aead",
- "tc_stream_cipher",
- "tc_threefish",
- "tc_twofish",
- "tc_zeroize",
-]
-
-[[package]]
 name = "tc_aria"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1200,15 +1118,15 @@ dependencies = [
 
 [[package]]
 name = "tc_asym_cipher"
-version = "0.1.0"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "728e908bd7a2ec354a667a7520c0be5b12fc7f51731e5aea2bf5010e59ad127c"
+checksum = "3fa3176b9a4bad48d0a16f5d0315714a4a8cdaeaad7438361b3e2f8923ffb31b"
 
 [[package]]
 name = "tc_asym_encoding"
-version = "0.1.0"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3257e241c63ff4172997dfd376909b46997ce046487095002ce0db69ab0a652b"
+checksum = "812285595c08c6c0ae8a6fb754ff2c3d626ad17169bcee3fb449f892eccca45e"
 dependencies = [
  "rand_core",
  "tc_asym_cipher",
@@ -1218,9 +1136,9 @@ dependencies = [
 
 [[package]]
 name = "tc_asym_iso9796"
-version = "0.1.0"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4f596ba11d870ff412175067b855c1f96a10ce1aea50b7e63d9da5e656c2d488"
+checksum = "c80224b2f511c2ac42ea634feefc13f6630f722d89ab12f4b9226d2dcc913a3d"
 dependencies = [
  "rand_core",
  "tc_asym_cipher",
@@ -1302,9 +1220,9 @@ dependencies = [
 
 [[package]]
 name = "tc_buffered_cipher"
-version = "0.1.1"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3af3483315b3962f5b7810d9749a2e5c48d1a85b86d6ca784f12ccce7106b1fb"
+checksum = "8ac8ec816d72d4165c0005c3de690f3e6def1135b1fa66156950b4c3bd1f60c0"
 dependencies = [
  "tc_aead_cipher",
  "tc_asym_cipher",
@@ -1368,22 +1286,6 @@ checksum = "45bd0f17ff2f67f358b14f0e2d9ce32cdc519d1428da9e2bdfd0f6461730b500"
 dependencies = [
  "chacha20",
  "cipher",
- "tc_stream_cipher",
- "tc_zeroize",
-]
-
-[[package]]
-name = "tc_chacha_aead"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "526faae84a266127c4f5d4de15bc44116c3bc60d22f31a97aa2dce4e68ce1760"
-dependencies = [
- "tc_aead_cipher",
- "tc_block_cipher",
- "tc_chacha",
- "tc_constant_time",
- "tc_macs",
- "tc_poly1305",
  "tc_stream_cipher",
  "tc_zeroize",
 ]
@@ -1558,30 +1460,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "be12c1faf1286d2ec5eb954faadab86c2bd92d10d1717046f4b209e79074655f"
 dependencies = [
  "tc_digest",
- "tc_zeroize",
-]
-
-[[package]]
-name = "tc_dstu7624"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c26e5319b34a61d3cef6d5d4d0e93fdbff40f69b5b2d967c51d5f6ac1576b366"
-dependencies = [
- "tc_block_cipher",
- "tc_zeroize",
-]
-
-[[package]]
-name = "tc_dstu_macs"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2e977f1e6a56b0942fa917f8fec8a2c82c410a112c7957110e8d396c9043ba17"
-dependencies = [
- "tc_block_cipher",
- "tc_digest",
- "tc_dstu7564",
- "tc_dstu7624",
- "tc_macs",
  "tc_zeroize",
 ]
 
@@ -1811,19 +1689,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tc_gost28147_mac"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6c07f92bd61866f873a8724248191a97f1cb3502413da58a5ba35ce04294e850"
-dependencies = [
- "tc_block_cipher",
- "tc_block_modes",
- "tc_gost28147",
- "tc_macs",
- "tc_zeroize",
-]
-
-[[package]]
 name = "tc_gost3410"
 version = "0.1.0"
 dependencies = [
@@ -1864,18 +1729,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tc_grain128_aead"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d815a6e3336597a73270d5cfdffb495ae951e1f83cbfc922072a846e1255e656"
-dependencies = [
- "tc_aead_cipher",
- "tc_block_cipher",
- "tc_constant_time",
- "tc_zeroize",
-]
-
-[[package]]
 name = "tc_hc"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1902,20 +1755,6 @@ dependencies = [
  "tc_macs",
  "tc_sha",
  "tc_twofish",
- "tc_zeroize",
-]
-
-[[package]]
-name = "tc_iso9797_mac"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "062ec734b8995eb44e8d26ad365a8be7327a36ab450e4e7aca1a4e0f8b2bc506"
-dependencies = [
- "tc_block_cipher",
- "tc_block_modes",
- "tc_block_padding",
- "tc_des",
- "tc_macs",
  "tc_zeroize",
 ]
 
@@ -1966,21 +1805,8 @@ version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9e85f9d8eda74441aeca5b2f0fb2ca035c4faba955bd73ae53748f24883360ab"
 dependencies = [
- "rand_core",
  "tc_block_cipher",
  "tc_constant_time",
- "tc_zeroize",
-]
-
-[[package]]
-name = "tc_kmac"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fc69cd637c5eae5acd38476ab4cedc2885b826662dbaa9b81f737c40bf88f492"
-dependencies = [
- "tc_digest",
- "tc_keccak",
- "tc_macs",
  "tc_zeroize",
 ]
 
@@ -1990,7 +1816,6 @@ version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2cdad045880de68459b3cdd2654abf07f4faf336398bbe55c5d08ac906f122f"
 dependencies = [
- "tc_aead_cipher",
  "tc_block_cipher",
  "tc_block_modes",
  "tc_block_padding",
@@ -2117,16 +1942,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tc_poly1305"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "27b2c81ed81cbae113b1915a9f9a4c9fd9ccdd2fb44732e0e8a3c7089b87ed6d"
-dependencies = [
- "tc_macs",
- "tc_zeroize",
-]
-
-[[package]]
 name = "tc_prime"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2184,9 +1999,9 @@ dependencies = [
 
 [[package]]
 name = "tc_rsa"
-version = "0.1.0"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bbc1738fce9354391cdb5650979996c22a05ddec67fe85b41b25e6021d582d33"
+checksum = "b1a89f2a12436f89af62cd7dcd513899a84b7c2591192baa6bcd337d07530b13"
 dependencies = [
  "num-traits",
  "rand_core",
@@ -2339,16 +2154,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tc_skein_mac"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "96cf0ae015b198f7f666ac3d99e980ad006f6298db5b2072d38e24a05d71bcb7"
-dependencies = [
- "tc_macs",
- "tc_skein",
-]
-
-[[package]]
 name = "tc_slh_dsa"
 version = "0.1.0"
 dependencies = [
@@ -2402,19 +2207,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "959d33ac80f2e25ba7130fa1bf4d613354535e13c406184a1345a294cefaddcd"
 dependencies = [
  "tc_block_cipher",
- "tc_zeroize",
-]
-
-[[package]]
-name = "tc_sparkle_aead"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dc45f35e97cb8c7c37996d71a635a46044791a834904559c3673aedfad9ccf00"
-dependencies = [
- "tc_aead_cipher",
- "tc_block_cipher",
- "tc_constant_time",
- "tc_runtime",
  "tc_zeroize",
 ]
 

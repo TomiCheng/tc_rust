@@ -55,8 +55,8 @@ fn alice_and_bob_reach_the_rfc_7748_shared_secret() {
 #[test]
 fn generated_key_pairs_agree_with_each_other() {
     let mut rng = rand::rng();
-    let mut generator = X448KeyPairGenerator::new();
-    generator.init(KeyGenerationParams::new(&mut rng)).unwrap();
+    let mut generator = X448KeyPairGenerator::new(&mut rng);
+    generator.init(&KeyGenerationParams::new()).unwrap();
     let (alice_public, alice) = generator.generate_key_pair().unwrap();
     let (bob_public, bob) = generator.generate_key_pair().unwrap();
     assert_eq!(&alice.generate_public_key(), &alice_public);
@@ -91,7 +91,7 @@ fn a_zero_shared_secret_or_a_short_output_is_refused() {
 
 #[test]
 fn an_uninitialized_generator_is_refused() {
-    let mut generator = X448KeyPairGenerator::new();
+    let mut generator = X448KeyPairGenerator::new(rand::rng());
     assert_eq!(
         generator.generate_key_pair().err(),
         Some(CfrgError::NotInitialized)

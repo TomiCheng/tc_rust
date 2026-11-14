@@ -8,7 +8,8 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
-tc_asym_cipher = "0.1.0"
+rand_core = { workspace = true }
+tc_asym_cipher = "0.2.0"
 tc_bigint = { version = "0.1.0", features = ["alloc"] }
 tc_dsa = { version = "0.1.0", path = "../tc_dsa" }
 tc_ec_core = "0.1.0"
@@ -19,7 +20,6 @@ tc_zeroize = "0.1.0"
 
 [dev-dependencies]
 rand = { workspace = true }
-rand_core = { workspace = true }
 tc_digest = "0.1.0"
 tc_sha = "0.1.1"
 tc_signer = { version = "0.1.0", path = "../tc_signer" }

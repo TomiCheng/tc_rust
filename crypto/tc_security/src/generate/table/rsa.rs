@@ -1,7 +1,7 @@
 use rand::CryptoRng;
 use tc_asn1::NamedOid;
 use tc_asym_cipher::{KeyPairGenerator, KeyPairGeneratorInit};
-use tc_rsa::{RsaKeyGenerationParamsRef, RsaKeyGenerator};
+use tc_rsa::{RsaKeyGenerationParams, RsaKeyGenerator};
 
 use super::no_key;
 use crate::generate::{GeneratorEntry, KeyGenParams};
@@ -37,12 +37,12 @@ fn generate_key_pair(
     };
     let strength = u32::try_from(params.strength())
         .map_err(|_| AnyError::new(SecurityError::InvalidKeyGenParams))?;
-    let rsa_params = RsaKeyGenerationParamsRef::new(rng)
+    let rsa_params = RsaKeyGenerationParams::new()
         .with_public_exponent(public_exponent)
         .with_strength(strength)
         .with_certainty(certainty);
-    let mut generator = RsaKeyGenerator::new();
-    generator.init(rsa_params).map_err(AnyError::new)?;
+    let mut generator = RsaKeyGenerator::new(rng);
+    generator.init(&rsa_params).map_err(AnyError::new)?;
     let (public, private) = generator.generate_key_pair().map_err(AnyError::new)?;
     Ok((AnyParams::rsa(public), AnyParams::rsa(private)))
 }

@@ -1,7 +1,7 @@
 use rand_core::CryptoRng;
 use tc_asn1::Asn1Oid;
 use tc_asym_cipher::KeyPairGeneratorInit;
-use tc_rsa::{RsaKeyGenerationParamsRef, RsaKeyGenerator};
+use tc_rsa::{RsaKeyGenerationParams, RsaKeyGenerator};
 
 use crate::generate::{KeyPairGenerator, KeyPairGeneratorEntry};
 use crate::params::RsaKeyGenParams;
@@ -53,14 +53,14 @@ struct Rsa {
 fn generator<'a>(
     rand: &'a mut dyn CryptoRng,
     settings: RsaKeyGenParams,
-) -> Result<RsaKeyGenerator<'a>, AlgoError> {
-    let params = RsaKeyGenerationParamsRef::new(rand)
+) -> Result<RsaKeyGenerator<&'a mut dyn CryptoRng>, AlgoError> {
+    let params = RsaKeyGenerationParams::new()
         .with_public_exponent(settings.public_exponent())
         .with_strength(settings.strength())
         .with_certainty(settings.certainty());
-    let mut generator = RsaKeyGenerator::new();
+    let mut generator = RsaKeyGenerator::new(rand);
     generator
-        .init(params)
+        .init(&params)
         .map_err(|error| AlgoError::with_source(ErrorKind::InvalidParams, error))?;
     Ok(generator)
 }
@@ -81,10 +81,10 @@ impl tc_asym_cipher::KeyPairGenerator for Rsa {
     }
 }
 
-impl<'a> tc_asym_cipher::KeyPairGeneratorInit<&'a dyn Params> for Rsa {
+impl tc_asym_cipher::KeyPairGeneratorInit<dyn Params> for Rsa {
     type Error = AlgoError;
 
-    fn init(&mut self, params: &'a dyn Params) -> Result<(), AlgoError> {
+    fn init(&mut self, params: &dyn Params) -> Result<(), AlgoError> {
         self.params = None;
         let params = params
             .as_any()

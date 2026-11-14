@@ -17,9 +17,9 @@ type Pair<C> = (EcPublicKey<C>, EcPrivateKey<C>);
 
 fn key_pairs<C: Curve<Scalar = PaddedBigUint>>(g: C::Point) -> [Pair<C>; 2] {
     let mut rng = rand::rng();
-    let mut generator = EcKeyPairGenerator::<C>::new();
+    let mut generator = EcKeyPairGenerator::<C, _>::new(&mut rng);
     generator
-        .init(EcKeyGenerationParams::new(g, &mut rng))
+        .init(&EcKeyGenerationParams::new(g))
         .unwrap();
     [
         generator.generate_key_pair().unwrap(),

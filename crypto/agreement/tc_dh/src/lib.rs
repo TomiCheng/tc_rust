@@ -13,8 +13,8 @@
 //!
 //! // 雙方用同一組公開的參數：RFC 3526 的 2048 位元群組。
 //! let mut rng = rand::rng();
-//! let mut generator = DhKeyPairGenerator::new();
-//! generator.init(DhKeyGenerationParams::new(rfc3526_2048(), &mut rng))?;
+//! let mut generator = DhKeyPairGenerator::new(&mut rng);
+//! generator.init(&DhKeyGenerationParams::new(rfc3526_2048()))?;
 //!
 //! // 各自產生金鑰對，把公鑰寄給對方。
 //! let (alice_public, alice_private) = generator.generate_key_pair()?;

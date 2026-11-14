@@ -16,8 +16,8 @@
 //! let curve = SECT163R2.ct_curve();
 //! let g = SECT163R2.ct_generator(&curve);
 //! let mut rng = rand::rng();
-//! let mut generator = Dstu4145KeyPairGenerator::<&F2mCtCurve>::new();
-//! generator.init(EcKeyGenerationParams::new(g, &mut rng))?;
+//! let mut generator = Dstu4145KeyPairGenerator::<&F2mCtCurve, _>::new(&mut rng);
+//! generator.init(&EcKeyGenerationParams::new(g))?;
 //! let (public_key, private_key) = generator.generate_key_pair()?;
 //!
 //! // 以隨機的 e 簽章，r ‖ s 不經 DER。

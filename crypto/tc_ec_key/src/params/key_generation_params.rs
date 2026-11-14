@@ -1,16 +1,20 @@
-use rand_core::CryptoRng;
 use tc_ec_core::Curve;
 
-/// BC's `ECKeyGenerationParameters`: the generator G, which carries its curve and so the
-/// whole domain, and the random source.
-pub struct EcKeyGenerationParams<'a, C: Curve> {
+/// BC's `ECKeyGenerationParameters` without its random source, which a generator takes when
+/// it is constructed: the generator G, which carries its curve and so the whole domain.
+pub struct EcKeyGenerationParams<C: Curve> {
     pub(crate) g: C::Point,
-    pub(crate) rng: &'a mut dyn CryptoRng,
 }
 
-impl<'a, C: Curve> EcKeyGenerationParams<'a, C> {
+impl<C: Curve> EcKeyGenerationParams<C> {
     /// G is checked when a generator is initialized with these.
-    pub fn new(g: C::Point, rng: &'a mut dyn CryptoRng) -> Self {
-        Self { g, rng }
+    pub fn new(g: C::Point) -> Self {
+        Self { g }
+    }
+}
+
+impl<C: Curve> Clone for EcKeyGenerationParams<C> {
+    fn clone(&self) -> Self {
+        Self { g: self.g.clone() }
     }
 }

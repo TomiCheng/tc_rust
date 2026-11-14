@@ -35,7 +35,7 @@ pub trait KeyPairGenerator:
         PublicKey = Box<dyn Params>,
         PrivateKey = Box<dyn Params>,
         Error = AlgoError,
-    > + for<'a> KeyPairGeneratorInit<&'a dyn Params, Error = AlgoError>
+    > + KeyPairGeneratorInit<dyn Params, Error = AlgoError>
 {
     // generate_key_pair as a KeyPair, whose two keys are named
     fn generate(&mut self) -> Result<KeyPair, AlgoError> {

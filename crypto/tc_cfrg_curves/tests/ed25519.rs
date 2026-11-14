@@ -258,8 +258,8 @@ fn a_signer_starts_afresh_after_each_signature() {
 #[test]
 fn generated_key_pairs_sign_and_verify() {
     let mut rng = rand::rng();
-    let mut generator = Ed25519KeyPairGenerator::new();
-    generator.init(KeyGenerationParams::new(&mut rng)).unwrap();
+    let mut generator = Ed25519KeyPairGenerator::new(&mut rng);
+    generator.init(&KeyGenerationParams::new()).unwrap();
     let (public_key, private_key) = generator.generate_key_pair().unwrap();
     assert_eq!(private_key.generate_public_key(), public_key);
     let signature = sign(Ed25519Signer::new(), &private_key, b"message");

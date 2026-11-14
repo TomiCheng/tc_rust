@@ -8,37 +8,32 @@ use tc_zeroize::Zeroize;
 
 /// BC 的 `DHKeyPairGenerator`（`DHBasicKeyPairGenerator` 在 BC 已標為過時，做同一件事）。
 /// `init` 檢查參數並為 p 建好 Montgomery 參數，之後每對金鑰共用。
-pub struct DhKeyPairGenerator<'a> {
-    state: Option<(DhKeyGenerationParams<'a>, PaddedMontyParams)>,
+pub struct DhKeyPairGenerator<R> {
+    rng: R,
+    state: Option<(DhKeyGenerationParams, PaddedMontyParams)>,
 }
 
-impl DhKeyPairGenerator<'_> {
-    /// 尚未 `init` 的產生器。常數時間。
-    pub fn new() -> Self {
-        Self { state: None }
+impl<R> DhKeyPairGenerator<R> {
+    /// 從 `rng` 取亂數、尚未 `init` 的產生器。常數時間。
+    pub fn new(rng: R) -> Self {
+        Self { rng, state: None }
     }
 }
 
-impl Default for DhKeyPairGenerator<'_> {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl<'a> KeyPairGeneratorInit<DhKeyGenerationParams<'a>> for DhKeyPairGenerator<'a> {
+impl<R> KeyPairGeneratorInit<DhKeyGenerationParams> for DhKeyPairGenerator<R> {
     type Error = DhError;
 
     /// 以 [`DhParameters::validate`] 檢查參數，並為 p 建好 Montgomery 參數。變動時間：
     /// 參數是公開值。
-    fn init(&mut self, params: DhKeyGenerationParams<'a>) -> Result<(), DhError> {
+    fn init(&mut self, params: &DhKeyGenerationParams) -> Result<(), DhError> {
         params.params.validate()?;
         let p = Odd::new(params.params.p().clone()).ok_or(DhError::InvalidModulus)?;
-        self.state = Some((params, PaddedMontyParams::new(p)));
+        self.state = Some((params.clone(), PaddedMontyParams::new(p)));
         Ok(())
     }
 }
 
-impl KeyPairGenerator for DhKeyPairGenerator<'_> {
+impl<R: CryptoRng> KeyPairGenerator for DhKeyPairGenerator<R> {
     type PublicKey = DhPublicKey;
     type PrivateKey = DhPrivateKey;
     type Error = DhError;
@@ -46,8 +41,8 @@ impl KeyPairGenerator for DhKeyPairGenerator<'_> {
     /// BC 的 `GenerateKeyPair`：x 由 [`private_value`] 取得，y = g^x mod p。對 x 是常數
     /// 時間，只有被丟棄的候選值多少會反映在時間上。
     fn generate_key_pair(&mut self) -> Result<(DhPublicKey, DhPrivateKey), DhError> {
-        let (params, monty) = self.state.as_mut().ok_or(DhError::NotInitialized)?;
-        let x = private_value(&params.params, params.rng);
+        let (params, monty) = self.state.as_ref().ok_or(DhError::NotInitialized)?;
+        let x = private_value(&params.params, &mut self.rng);
         let y = public_value(monty, params.params.g(), &x);
         Ok((
             DhPublicKey::new(y, params.params.clone()),

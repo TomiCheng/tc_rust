@@ -9,7 +9,7 @@ repository.workspace = true
 
 [dependencies]
 rand_core = { workspace = true }
-tc_asym_cipher = "0.1.0"
+tc_asym_cipher = "0.2.0"
 tc_constant_time = "0.1.0"
 tc_digest = "0.1.0"
 tc_kem = { version = "0.1.0", path = "../tc_kem" }

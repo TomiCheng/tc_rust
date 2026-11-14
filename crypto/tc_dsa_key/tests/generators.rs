@@ -193,9 +193,9 @@ fn key_generation_reads_x_as_bouncy_castle_does_and_y_is_g_to_the_x() {
     ] {
         let params = DsaParameters::new(integer(p), integer(q), integer(g));
         let mut rng = Fixed::new(x);
-        let mut generator = DsaKeyPairGenerator::new();
+        let mut generator = DsaKeyPairGenerator::new(&mut rng);
         generator
-            .init(DsaKeyGenerationParams::new(params, &mut rng))
+            .init(&DsaKeyGenerationParams::new(params))
             .unwrap();
         let (public_key, private_key) = generator.generate_key_pair().unwrap();
         assert_eq!(private_key.x(), &integer(x));

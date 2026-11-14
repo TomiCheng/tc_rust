@@ -48,19 +48,19 @@ impl tc_asym_cipher::KeyPairGenerator for MlKem {
             .params
             .ok_or(AlgoError::new(ErrorKind::NotInitialized))?;
         let invalid = |error| AlgoError::with_source(ErrorKind::InvalidParams, error);
-        let mut generator = MlKemKeyPairGenerator::new();
+        let mut generator = MlKemKeyPairGenerator::new(self.rand.as_mut());
         generator
-            .init(MlKemKeyGenerationParams::new(params, self.rand.as_mut()))
+            .init(&MlKemKeyGenerationParams::new(params))
             .map_err(invalid)?;
         let (public, private) = generator.generate_key_pair().map_err(invalid)?;
         Ok((Box::new(public), Box::new(private)))
     }
 }
 
-impl<'a> tc_asym_cipher::KeyPairGeneratorInit<&'a dyn Params> for MlKem {
+impl tc_asym_cipher::KeyPairGeneratorInit<dyn Params> for MlKem {
     type Error = AlgoError;
 
-    fn init(&mut self, params: &'a dyn Params) -> Result<(), AlgoError> {
+    fn init(&mut self, params: &dyn Params) -> Result<(), AlgoError> {
         self.params = None;
         let params = params
             .as_any()

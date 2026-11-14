@@ -20,8 +20,8 @@ use tc_zeroize::Zeroizing;
 ///
 /// // 雙方事先各有一對長期金鑰，並取得對方的長期公鑰。
 /// let mut rng = rand::rng();
-/// let mut generator = DhKeyPairGenerator::new();
-/// generator.init(DhKeyGenerationParams::new(rfc3526_2048(), &mut rng))?;
+/// let mut generator = DhKeyPairGenerator::new(&mut rng);
+/// generator.init(&DhKeyGenerationParams::new(rfc3526_2048()))?;
 /// let (alice_public, alice_private) = generator.generate_key_pair()?;
 /// let (bob_public, bob_private) = generator.generate_key_pair()?;
 ///
@@ -82,9 +82,9 @@ impl<R: CryptoRng> DhAgreement<R> {
             ephemeral,
         } = self;
         let (key, _) = state.as_ref().ok_or(DhAgreementError::NotInitialized)?;
-        let mut generator = DhKeyPairGenerator::new();
+        let mut generator = DhKeyPairGenerator::new(rng);
         generator
-            .init(DhKeyGenerationParams::new(key.params().clone(), rng))
+            .init(&DhKeyGenerationParams::new(key.params().clone()))
             .map_err(DhAgreementError::InvalidParameters)?;
         let (public_key, private_key) = generator
             .generate_key_pair()

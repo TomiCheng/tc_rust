@@ -9,8 +9,8 @@
 //!
 //! let params = SlhDsaParameters::SHAKE_128F;
 //! let mut rng = rand::rng();
-//! let mut generator = SlhDsaKeyPairGenerator::new();
-//! generator.init(SlhDsaKeyGenerationParams::new(params, &mut rng))?;
+//! let mut generator = SlhDsaKeyPairGenerator::new(&mut rng);
+//! generator.init(&SlhDsaKeyGenerationParams::new(params))?;
 //! let (public_key, private_key) = generator.generate_key_pair()?;
 //!
 //! let mut signer = SlhDsaSigner::new(params, rand::rng());

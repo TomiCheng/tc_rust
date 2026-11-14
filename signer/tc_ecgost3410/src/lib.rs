@@ -31,8 +31,8 @@
 //! )?;
 //!
 //! let mut rng = rand::rng();
-//! let mut generator = EcKeyPairGenerator::<&FpCtCurve<'_>>::new();
-//! generator.init(EcKeyGenerationParams::new(g, &mut rng))?;
+//! let mut generator = EcKeyPairGenerator::<&FpCtCurve<'_>, _>::new(&mut rng);
+//! generator.init(&EcKeyGenerationParams::new(g))?;
 //! let (public_key, private_key) = generator.generate_key_pair()?;
 //!
 //! // 以隨機的 k 簽章；簽章是 s ‖ r。

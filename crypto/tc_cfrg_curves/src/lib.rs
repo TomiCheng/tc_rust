@@ -9,8 +9,8 @@
 //! use tc_cfrg_curves::{KeyGenerationParams, X25519Agreement, X25519KeyPairGenerator};
 //!
 //! let mut rng = rand::rng();
-//! let mut generator = X25519KeyPairGenerator::new();
-//! generator.init(KeyGenerationParams::new(&mut rng))?;
+//! let mut generator = X25519KeyPairGenerator::new(&mut rng);
+//! generator.init(&KeyGenerationParams::new())?;
 //! let (alice_public, alice_private) = generator.generate_key_pair()?;
 //! let (bob_public, bob_private) = generator.generate_key_pair()?;
 //!
@@ -37,8 +37,8 @@
 //! use tc_signer::{Signer, SignerInit};
 //!
 //! let mut rng = rand::rng();
-//! let mut generator = Ed25519KeyPairGenerator::new();
-//! generator.init(KeyGenerationParams::new(&mut rng))?;
+//! let mut generator = Ed25519KeyPairGenerator::new(&mut rng);
+//! generator.init(&KeyGenerationParams::new())?;
 //! let (public_key, private_key) = generator.generate_key_pair()?;
 //!
 //! let mut signer = Ed25519Signer::new();

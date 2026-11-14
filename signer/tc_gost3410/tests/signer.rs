@@ -17,8 +17,8 @@ fn key_pair() -> (Gost3410PublicKey, Gost3410PrivateKey) {
     generator.init(512, 2, &mut rng).unwrap();
     let params = generator.generate_parameters().unwrap();
     let mut rng = rand::rng();
-    let mut keys = Gost3410KeyPairGenerator::new();
-    keys.init(Gost3410KeyGenerationParams::new(params, &mut rng))
+    let mut keys = Gost3410KeyPairGenerator::new(&mut rng);
+    keys.init(&Gost3410KeyGenerationParams::new(params))
         .unwrap();
     keys.generate_key_pair().unwrap()
 }

@@ -47,10 +47,10 @@ struct Dh {
 fn generator<'a>(
     rand: &'a mut dyn CryptoRng,
     group: &DhParameters,
-) -> Result<DhKeyPairGenerator<'a>, AlgoError> {
-    let mut generator = DhKeyPairGenerator::new();
+) -> Result<DhKeyPairGenerator<&'a mut dyn CryptoRng>, AlgoError> {
+    let mut generator = DhKeyPairGenerator::new(rand);
     generator
-        .init(DhKeyGenerationParams::new(group.clone(), rand))
+        .init(&DhKeyGenerationParams::new(group.clone()))
         .map_err(|error| AlgoError::with_source(ErrorKind::InvalidParams, error))?;
     Ok(generator)
 }
@@ -72,10 +72,10 @@ impl tc_asym_cipher::KeyPairGenerator for Dh {
     }
 }
 
-impl<'a> tc_asym_cipher::KeyPairGeneratorInit<&'a dyn Params> for Dh {
+impl tc_asym_cipher::KeyPairGeneratorInit<dyn Params> for Dh {
     type Error = AlgoError;
 
-    fn init(&mut self, params: &'a dyn Params) -> Result<(), AlgoError> {
+    fn init(&mut self, params: &dyn Params) -> Result<(), AlgoError> {
         self.group = None;
         let group = params
             .as_any()

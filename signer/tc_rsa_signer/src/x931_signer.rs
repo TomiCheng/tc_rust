@@ -20,13 +20,13 @@ use tc_zeroize::Zeroizing;
 ///
 /// ```
 /// use tc_asym_cipher::{KeyPairGenerator, KeyPairGeneratorInit};
-/// use tc_rsa::{RsaEngine, RsaKeyGenerationParamsOwned, RsaKeyGenerator};
+/// use tc_rsa::{RsaEngine, RsaKeyGenerationParams, RsaKeyGenerator};
 /// use tc_rsa_signer::X931Signer;
 /// use tc_sha::Sha256Digest;
 /// use tc_signer::{Signer, SignerInit};
 ///
-/// let mut generator = RsaKeyGenerator::new();
-/// generator.init(RsaKeyGenerationParamsOwned::new(rand::rng()))?;
+/// let mut generator = RsaKeyGenerator::new(rand::rng());
+/// generator.init(&RsaKeyGenerationParams::new())?;
 /// let (public_key, private_key) = generator.generate_key_pair()?;
 ///
 /// // 結尾標明 SHA-256 的代號 0x34CC。

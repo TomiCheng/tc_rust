@@ -55,10 +55,10 @@ impl tc_asym_cipher::KeyPairGenerator for Marked {
     }
 }
 
-impl<'a> tc_asym_cipher::KeyPairGeneratorInit<&'a dyn Params> for Marked {
+impl tc_asym_cipher::KeyPairGeneratorInit<dyn Params> for Marked {
     type Error = AlgoError;
 
-    fn init(&mut self, _params: &'a dyn Params) -> Result<(), AlgoError> {
+    fn init(&mut self, _params: &dyn Params) -> Result<(), AlgoError> {
         Ok(())
     }
 }

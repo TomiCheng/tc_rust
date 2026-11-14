@@ -6,14 +6,14 @@
 //! use tc_asn1_pkcs::Pkcs1Algorithm;
 //! use tc_asn1_x509::alg::AlgorithmIdentifier;
 //! use tc_asym_cipher::{KeyPairGenerator, KeyPairGeneratorInit};
-//! use tc_rsa::{RsaEngine, RsaKeyGenerationParamsOwned, RsaKeyGenerator};
+//! use tc_rsa::{RsaEngine, RsaKeyGenerationParams, RsaKeyGenerator};
 //! use tc_rsa_signer::RsaDigestSigner;
 //! use tc_sha::Sha256Digest;
 //! use tc_signer::{Signer, SignerInit};
 //!
 //! // Alice makes a 2048-bit key pair.
-//! let mut generator = RsaKeyGenerator::new();
-//! generator.init(RsaKeyGenerationParamsOwned::new(rand::rng()))?;
+//! let mut generator = RsaKeyGenerator::new(rand::rng());
+//! generator.init(&RsaKeyGenerationParams::new())?;
 //! let (public_key, private_key) = generator.generate_key_pair()?;
 //!
 //! // The signer hashes with SHA-256, and names it in the DigestInfo it signs.

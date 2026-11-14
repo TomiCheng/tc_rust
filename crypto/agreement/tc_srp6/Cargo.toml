@@ -17,6 +17,6 @@ tc_zeroize = { version = "0.1.0", features = ["alloc"] }
 
 [dev-dependencies]
 rand = { workspace = true }
-tc_asym_cipher = "0.1.0"
+tc_asym_cipher = "0.2.0"
 tc_dh_key = { version = "0.1.0", path = "../../tc_dh_key" }
 tc_sha = "0.1.1"

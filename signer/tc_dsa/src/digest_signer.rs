@@ -22,8 +22,8 @@ use tc_signer::{Signer, SignerInit};
 /// let curve = SECP256R1.ct_curve(&field);
 /// let g = SECP256R1.ct_generator(&curve);
 /// let mut rng = rand::rng();
-/// let mut generator = EcKeyPairGenerator::<&FpCtCurve<'_>>::new();
-/// generator.init(EcKeyGenerationParams::new(g, &mut rng))?;
+/// let mut generator = EcKeyPairGenerator::<&FpCtCurve<'_>, _>::new(&mut rng);
+/// generator.init(&EcKeyGenerationParams::new(g))?;
 /// let (public_key, private_key) = generator.generate_key_pair()?;
 ///
 /// // 以 RFC 6979 的確定性 k 做 ECDSA，簽章編成 DER。

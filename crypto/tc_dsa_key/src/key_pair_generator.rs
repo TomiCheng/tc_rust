@@ -1,5 +1,6 @@
 use crate::math::{naf_weight, random_in_range};
 use crate::{DsaError, DsaKeyGenerationParams, DsaPrivateKey, DsaPublicKey};
+use rand_core::CryptoRng;
 use tc_asym_cipher::{KeyPairGenerator, KeyPairGeneratorInit};
 use tc_bigint::PaddedBigUint;
 use tc_modular::{Odd, PaddedMontyForm, PaddedMontyParams};
@@ -7,38 +8,33 @@ use tc_zeroize::{Zeroize, Zeroizing};
 
 /// BC 的 `DsaKeyPairGenerator`：x 在 `[1, q − 1]` 且 NAF 權重至少是 q 的位元數的四分之一，
 /// y = g^x mod p。`init` 檢查參數並為 p 建好 Montgomery 參數。
-pub struct DsaKeyPairGenerator<'a> {
-    state: Option<(DsaKeyGenerationParams<'a>, PaddedMontyParams)>,
+pub struct DsaKeyPairGenerator<R> {
+    rng: R,
+    state: Option<(DsaKeyGenerationParams, PaddedMontyParams)>,
 }
 
-impl DsaKeyPairGenerator<'_> {
-    /// 尚未 `init` 的產生器。常數時間。
-    pub fn new() -> Self {
-        Self { state: None }
+impl<R> DsaKeyPairGenerator<R> {
+    /// 從 `rng` 取亂數、尚未 `init` 的產生器。常數時間。
+    pub fn new(rng: R) -> Self {
+        Self { rng, state: None }
     }
 }
 
-impl Default for DsaKeyPairGenerator<'_> {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl<'a> KeyPairGeneratorInit<DsaKeyGenerationParams<'a>> for DsaKeyPairGenerator<'a> {
+impl<R> KeyPairGeneratorInit<DsaKeyGenerationParams> for DsaKeyPairGenerator<R> {
     type Error = DsaError;
 
     /// 以 [`DsaParameters::validate`](crate::DsaParameters::validate) 檢查參數，並為 p 建好
     /// Montgomery 參數。變動時間：參數是公開值。
-    fn init(&mut self, params: DsaKeyGenerationParams<'a>) -> Result<(), DsaError> {
+    fn init(&mut self, params: &DsaKeyGenerationParams) -> Result<(), DsaError> {
         self.state = None;
         params.params.validate()?;
         let p = Odd::new(params.params.p().clone()).ok_or(DsaError::InvalidModulus)?;
-        self.state = Some((params, PaddedMontyParams::new(p)));
+        self.state = Some((params.clone(), PaddedMontyParams::new(p)));
         Ok(())
     }
 }
 
-impl KeyPairGenerator for DsaKeyPairGenerator<'_> {
+impl<R: CryptoRng> KeyPairGenerator for DsaKeyPairGenerator<R> {
     type PublicKey = DsaPublicKey;
     type PrivateKey = DsaPrivateKey;
     type Error = DsaError;
@@ -53,7 +49,7 @@ impl KeyPairGenerator for DsaKeyPairGenerator<'_> {
         let high = q - 1u32;
         let min_weight = q.bits() >> 2;
         let x = loop {
-            let mut x = random_in_range(params.rng, &one, &high);
+            let mut x = random_in_range(&mut self.rng, &one, &high);
             if naf_weight(x.as_limbs()) >= min_weight {
                 break x;
             }

@@ -113,9 +113,9 @@ fn keys_ciphertexts_and_secrets_match_bouncy_castle_for_every_parameter_set() {
 fn random_key_pairs_round_trip_and_a_key_from_its_encoding_works_too() {
     for (params, _) in SETS {
         let mut rng = rand::rng();
-        let mut generator = MlKemKeyPairGenerator::new();
+        let mut generator = MlKemKeyPairGenerator::new(&mut rng);
         generator
-            .init(MlKemKeyGenerationParams::new(params, &mut rng))
+            .init(&MlKemKeyGenerationParams::new(params))
             .unwrap();
         let (public_key, private_key) = generator.generate_key_pair().unwrap();
         assert_eq!(public_key.encoding().len(), params.public_key_length());
