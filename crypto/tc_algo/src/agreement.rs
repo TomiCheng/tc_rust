@@ -6,12 +6,10 @@ mod agreement_trait;
 mod algo;
 mod default_agreement_provider;
 mod empty_agreement_provider;
-mod shared_secret;
 
 pub use agreement_entry::AgreementEntry;
 pub use agreement_provider::AgreementProvider;
 pub use agreement_trait::Agreement;
-pub use tc_agreement::AgreementInit;
 pub(crate) use algo::{BUILT_IN, CreateRows};
 pub(crate) use empty_agreement_provider::EmptyAgreementProvider;
-pub use shared_secret::SharedSecret;
+pub use tc_agreement::AgreementInit;

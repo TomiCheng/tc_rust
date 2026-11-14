@@ -92,14 +92,16 @@ fn main() -> Result<(), AlgoError> {
     // Alice's private key with Bob's public key
     let mut agreement = algo.agreement().get_by_name("DH")?;
     agreement.init(alice.private())?;
-    let alice_secret = agreement.calculate_shared_secret(bob.public())?;
+    let mut alice_secret = vec![0; agreement.agreement_size()];
+    agreement.calculate_agreement(bob.public(), &mut alice_secret)?;
 
     // Bob's private key with Alice's public key gives the same secret
     let mut agreement = algo.agreement().get_by_name("DH")?;
     agreement.init(bob.private())?;
-    let bob_secret = agreement.calculate_shared_secret(alice.public())?;
+    let mut bob_secret = vec![0; agreement.agreement_size()];
+    agreement.calculate_agreement(alice.public(), &mut bob_secret)?;
 
-    assert_eq!(alice_secret.as_bytes(), bob_secret.as_bytes());
+    assert_eq!(alice_secret, bob_secret);
     Ok(())
 }
 ```
@@ -119,9 +121,10 @@ fn main() -> Result<(), AlgoError> {
   before using them.
 - **DH alone does not say who is on the other side.** Someone in the middle can run an agreement with
   each party, so authenticate the public keys, for instance with a signature.
-- `calculate_shared_secret` gives a `SharedSecret`. `as_bytes` reads it, it wipes itself when dropped, and
-  it has no `Clone`, `==` or `Debug`. Its length is that of `p`, with zeros in front where needed,
-  whereas Bouncy Castle gives an integer that loses them.
+- `calculate_agreement` writes the secret into a buffer of `agreement_size` bytes, as the
+  `Agreement` of `tc_agreement` does. Its length is that of `p`, with zeros in front where needed,
+  whereas Bouncy Castle gives an integer that loses them. The buffer is the caller's, and so is
+  wiping it when the secret is done with, for instance with `tc_zeroize`.
 - It refuses a public key of another group, one outside `[2, p - 2]`, one outside the subgroup when
   the group has a `q`, and a secret of 1, all as `InvalidParams`.
 - It gives `NotInitialized` before an `init` that succeeded.

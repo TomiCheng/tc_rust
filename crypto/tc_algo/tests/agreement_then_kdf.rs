@@ -15,14 +15,11 @@ fn both_sides_of_an_agreement_derive_one_key_through_the_kdf() {
     let derive = |private, public| {
         let mut agreement = algo.agreement().get_by_name("DH").unwrap();
         agreement.init(private).unwrap();
-        let secret = agreement.calculate_shared_secret(public).unwrap();
+        let mut secret = vec![0; agreement.agreement_size()];
+        agreement.calculate_agreement(public, &mut secret).unwrap();
 
         let mut kdf = algo.kdf().get_by_name("HKDF-SHA256").unwrap();
-        let params = HkdfParamsOwned::new(
-            secret.as_bytes().to_vec(),
-            vec![0xa5; 32],
-            b"label".to_vec(),
-        );
+        let params = HkdfParamsOwned::new(secret, vec![0xa5; 32], b"label".to_vec());
         kdf.init(&params).unwrap();
         let mut key = [0; 32];
         kdf.generate_bytes(&mut key).unwrap();

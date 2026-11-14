@@ -30,7 +30,7 @@ fn main() -> Result<(), AlgoError> {
     // The receiver gets the same secret from the encapsulation
     let receiver_secret = kem.decapsulate(receiver.private(), &encapsulation)?;
 
-    assert_eq!(sender_secret.as_bytes(), receiver_secret.as_bytes());
+    assert_eq!(sender_secret, receiver_secret);
     Ok(())
 }
 ```
@@ -75,6 +75,6 @@ type or parameter set is `InvalidParams`.
 - **It does not say who sent the encapsulation.** Anyone with the public key can make one, so
   authenticate the sender in some other way, for instance with a signature.
 - An encapsulation of the wrong length is `DataLength`.
-- The secret is a `SharedSecret`, from `tc_algo::agreement`. `as_bytes` reads it, it wipes itself
-  when dropped, and it has no `Clone`, `==` or `Debug`.
+- The secret is a `Vec<u8>`, the caller's to wipe when it is done with, for instance with
+  `tc_zeroize`.
 - The encapsulation draws from the source of `DefaultAlgoBuilder::set_rand`.

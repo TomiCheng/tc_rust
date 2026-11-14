@@ -111,9 +111,16 @@ mod tests {
 
     use crate::agreement::Agreement;
     use crate::params::KeyLength;
-    use crate::{AlgoBuilder, DefaultAlgoBuilder, ErrorKind};
+    use crate::{AlgoBuilder, AlgoError, DefaultAlgoBuilder, ErrorKind, Params};
 
     const NAME: &str = "DH";
+
+    // The secret with the other side's key, into a buffer of agreement_size bytes
+    fn secret(agreement: &dyn Agreement, public_key: &dyn Params) -> Result<Vec<u8>, AlgoError> {
+        let mut secret = vec![0; agreement.agreement_size()];
+        agreement.calculate_agreement(public_key, &mut secret)?;
+        Ok(secret)
+    }
 
     fn pair(group: DhParameters) -> (DhPublicKey, DhPrivateKey) {
         let mut rng = UnwrapErr(SysRng);
@@ -136,15 +143,11 @@ mod tests {
         let (alice_public, alice_private) = pair(rfc3526_2048());
         let (bob_public, bob_private) = pair(rfc3526_2048());
 
-        let alice = agreement(&alice_private)
-            .calculate_shared_secret(&bob_public)
-            .unwrap();
-        let bob = agreement(&bob_private)
-            .calculate_shared_secret(&alice_public)
-            .unwrap();
+        let alice = secret(agreement(&alice_private).as_ref(), &bob_public).unwrap();
+        let bob = secret(agreement(&bob_private).as_ref(), &alice_public).unwrap();
 
-        assert_eq!(alice.as_bytes(), bob.as_bytes());
-        assert_eq!(alice.as_bytes().len(), 256);
+        assert_eq!(alice, bob);
+        assert_eq!(alice.len(), 256);
     }
 
     #[test]
@@ -160,11 +163,11 @@ mod tests {
         let algo = DefaultAlgoBuilder::default().build();
         let mut agreement = algo.agreement().get_by_name(NAME).unwrap();
 
-        let error = agreement.calculate_shared_secret(&public).err().unwrap();
+        let error = secret(agreement.as_ref(), &public).unwrap_err();
         assert_eq!(error.kind(), ErrorKind::NotInitialized);
 
         assert!(agreement.init(&KeyLength::new(1)).is_err());
-        let error = agreement.calculate_shared_secret(&public).err().unwrap();
+        let error = secret(agreement.as_ref(), &public).unwrap_err();
         assert_eq!(error.kind(), ErrorKind::NotInitialized);
     }
 
@@ -176,10 +179,7 @@ mod tests {
         let error = uninitialized.init(&KeyLength::new(1)).unwrap_err();
         assert_eq!(error.kind(), ErrorKind::InvalidParams);
 
-        let error = agreement(&private)
-            .calculate_shared_secret(&KeyLength::new(1))
-            .err()
-            .unwrap();
+        let error = secret(agreement(&private).as_ref(), &KeyLength::new(1)).unwrap_err();
         assert_eq!(error.kind(), ErrorKind::InvalidParams);
     }
 
@@ -189,11 +189,11 @@ mod tests {
         let agreement = agreement(&private);
 
         let (other_group, _) = pair(rfc3526_3072());
-        let error = agreement.calculate_shared_secret(&other_group).err().unwrap();
+        let error = secret(agreement.as_ref(), &other_group).unwrap_err();
         assert_eq!(error.kind(), ErrorKind::InvalidParams);
 
         let one = DhPublicKey::new(PaddedBigUint::from(1u8), rfc3526_2048());
-        let error = agreement.calculate_shared_secret(&one).err().unwrap();
+        let error = secret(agreement.as_ref(), &one).unwrap_err();
         assert_eq!(error.kind(), ErrorKind::InvalidParams);
     }
 }

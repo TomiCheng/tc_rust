@@ -6,7 +6,6 @@ use tc_ml_kem::{
     MlKemPublicKey,
 };
 
-use crate::agreement::SharedSecret;
 use crate::kem::{Kem, KemEntry};
 use crate::{AlgoError, DefaultAlgoContext, EntryBase, ErrorKind, Params};
 
@@ -65,7 +64,7 @@ struct MlKem {
 }
 
 impl Kem for MlKem {
-    fn encapsulate(&self, public_key: &dyn Params) -> Result<(Vec<u8>, SharedSecret), AlgoError> {
+    fn encapsulate(&self, public_key: &dyn Params) -> Result<(Vec<u8>, Vec<u8>), AlgoError> {
         let key = public_key
             .as_any()
             .downcast_ref::<MlKemPublicKey>()
@@ -78,14 +77,14 @@ impl Kem for MlKem {
         encapsulator
             .encapsulate(&mut encapsulation, &mut secret)
             .map_err(algo_error)?;
-        Ok((encapsulation, SharedSecret::new(secret)))
+        Ok((encapsulation, secret))
     }
 
     fn decapsulate(
         &self,
         private_key: &dyn Params,
         encapsulation: &[u8],
-    ) -> Result<SharedSecret, AlgoError> {
+    ) -> Result<Vec<u8>, AlgoError> {
         let key = private_key
             .as_any()
             .downcast_ref::<MlKemPrivateKey>()
@@ -97,7 +96,7 @@ impl Kem for MlKem {
         decapsulator
             .decapsulate(encapsulation, &mut secret)
             .map_err(algo_error)?;
-        Ok(SharedSecret::new(secret))
+        Ok(secret)
     }
 }
 
@@ -168,10 +167,10 @@ mod tests {
             for kem in [kem(name), by_oid] {
                 let (encapsulation, sent) = kem.encapsulate(pair.public()).unwrap();
                 assert_eq!(encapsulation.len(), encapsulation_bytes, "{name}");
-                assert_eq!(sent.as_bytes().len(), 32, "{name}");
+                assert_eq!(sent.len(), 32, "{name}");
 
                 let received = kem.decapsulate(pair.private(), &encapsulation).unwrap();
-                assert_eq!(sent.as_bytes(), received.as_bytes(), "{name}");
+                assert_eq!(sent, received, "{name}");
             }
         }
     }
@@ -189,7 +188,7 @@ mod tests {
         decapsulator
             .decapsulate(&encapsulation, &mut received)
             .unwrap();
-        assert_eq!(sent.as_bytes(), received);
+        assert_eq!(sent, received);
     }
 
     #[test]
@@ -200,7 +199,7 @@ mod tests {
         encapsulation[0] ^= 1;
 
         let received = kem.decapsulate(pair.private(), &encapsulation).unwrap();
-        assert_ne!(sent.as_bytes(), received.as_bytes());
+        assert_ne!(sent, received);
     }
 
     #[test]

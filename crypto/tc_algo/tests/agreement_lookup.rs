@@ -96,10 +96,11 @@ fn builder_with(rows: &[Rows]) -> DefaultAlgoBuilder {
 }
 
 fn mark_of(agreement: Box<dyn Agreement>) -> u8 {
-    let secret = agreement
-        .calculate_shared_secret(&KeyLength::new(0))
+    let mut secret = vec![0; agreement.agreement_size()];
+    agreement
+        .calculate_agreement(&KeyLength::new(0), &mut secret)
         .unwrap();
-    secret.as_bytes()[0]
+    secret[0]
 }
 
 fn mark_by_name(algo: &dyn Algo, name: &str) -> Option<u8> {

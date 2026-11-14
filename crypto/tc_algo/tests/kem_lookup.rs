@@ -1,4 +1,3 @@
-use tc_algo::agreement::SharedSecret;
 use tc_algo::kem::{Kem, KemEntry};
 use tc_algo::params::KeyLength;
 use tc_algo::{
@@ -38,16 +37,16 @@ impl KemEntry for Row {
 struct Marked(u8);
 
 impl Kem for Marked {
-    fn encapsulate(&self, _public_key: &dyn Params) -> Result<(Vec<u8>, SharedSecret), AlgoError> {
-        Ok((vec![self.0], SharedSecret::new(vec![self.0])))
+    fn encapsulate(&self, _public_key: &dyn Params) -> Result<(Vec<u8>, Vec<u8>), AlgoError> {
+        Ok((vec![self.0], vec![self.0]))
     }
 
     fn decapsulate(
         &self,
         _private_key: &dyn Params,
         encapsulation: &[u8],
-    ) -> Result<SharedSecret, AlgoError> {
-        Ok(SharedSecret::new(encapsulation.to_vec()))
+    ) -> Result<Vec<u8>, AlgoError> {
+        Ok(encapsulation.to_vec())
     }
 }
 
@@ -84,7 +83,7 @@ fn builder_with(rows: &[Rows]) -> DefaultAlgoBuilder {
 
 fn mark_of(kem: Box<dyn Kem>) -> u8 {
     let (_, secret) = kem.encapsulate(&KeyLength::new(0)).unwrap();
-    secret.as_bytes()[0]
+    secret[0]
 }
 
 fn mark_by_name(algo: &dyn Algo, name: &str) -> Option<u8> {

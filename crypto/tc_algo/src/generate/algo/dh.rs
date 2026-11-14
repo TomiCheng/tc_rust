@@ -141,11 +141,17 @@ mod tests {
 
         let mut agreement = algo.agreement().get_by_name(NAME).unwrap();
         agreement.init(alice.private()).unwrap();
-        let alice_secret = agreement.calculate_shared_secret(bob.public()).unwrap();
+        let mut alice_secret = vec![0; agreement.agreement_size()];
+        agreement
+            .calculate_agreement(bob.public(), &mut alice_secret)
+            .unwrap();
         agreement.init(bob.private()).unwrap();
-        let bob_secret = agreement.calculate_shared_secret(alice.public()).unwrap();
+        let mut bob_secret = vec![0; agreement.agreement_size()];
+        agreement
+            .calculate_agreement(alice.public(), &mut bob_secret)
+            .unwrap();
 
-        assert_eq!(alice_secret.as_bytes(), bob_secret.as_bytes());
+        assert_eq!(alice_secret, bob_secret);
     }
 
     #[test]
