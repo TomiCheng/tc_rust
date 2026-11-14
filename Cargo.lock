@@ -905,6 +905,7 @@ dependencies = [
  "tc_digest",
  "tc_drbg",
  "tc_dstu7564",
+ "tc_gost28147",
  "tc_gost3411",
  "tc_hc",
  "tc_ies",
@@ -932,6 +933,7 @@ dependencies = [
  "tc_sm3",
  "tc_sm4",
  "tc_stream_cipher",
+ "tc_threefish",
  "tc_twofish",
  "tc_zeroize",
 ]
@@ -1191,9 +1193,9 @@ dependencies = [
 
 [[package]]
 name = "tc_block_modes"
-version = "0.1.1"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5f110f48772d055a3586982a3fdc77bc5f6486a4b5ce833980e2188846a9d07c"
+checksum = "6ab2c1d0eba6c78b5a15a79aa3fedeed068843d1654afc25d472a63bb4f29daf"
 dependencies = [
  "tc_block_cipher",
  "tc_zeroize",

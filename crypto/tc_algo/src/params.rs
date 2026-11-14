@@ -42,6 +42,10 @@ mod tuple_hash_params;
     feature = "rc5",
     feature = "rc5-64",
     feature = "rc6",
+    feature = "gost28147",
+    feature = "threefish-256",
+    feature = "threefish-512",
+    feature = "threefish-1024",
     feature = "chacha",
     feature = "xchacha20",
     feature = "rc4",
@@ -103,6 +107,10 @@ pub use tc_aead_cipher::AeadParamsOwned;
     feature = "rc5",
     feature = "rc5-64",
     feature = "rc6",
+    feature = "gost28147",
+    feature = "threefish-256",
+    feature = "threefish-512",
+    feature = "threefish-1024",
     feature = "chacha",
     feature = "xchacha20",
     feature = "rc4",
@@ -116,6 +124,16 @@ pub use tc_aead_cipher::AeadParamsOwned;
     feature = "hmac-sha256"
 ))]
 pub use tc_block_cipher::{KeyOwned, KeyParams};
+#[cfg(any(
+    feature = "rc2",
+    feature = "rc5",
+    feature = "rc5-64",
+    feature = "gost28147",
+    feature = "threefish-256",
+    feature = "threefish-512",
+    feature = "threefish-1024"
+))]
+pub use tc_block_modes::ParamsWithIvOwned;
 #[cfg(any(
     feature = "aes",
     feature = "des",
@@ -140,6 +158,10 @@ pub use tc_block_cipher::{KeyOwned, KeyParams};
     feature = "rc5",
     feature = "rc5-64",
     feature = "rc6",
+    feature = "gost28147",
+    feature = "threefish-256",
+    feature = "threefish-512",
+    feature = "threefish-1024",
     feature = "chacha",
     feature = "xchacha20",
     feature = "rc4",
@@ -156,12 +178,24 @@ pub use tc_block_modes::{IvParams, KeyWithIvOwned};
 pub use tc_dh_key::standard_groups as dh_groups;
 #[cfg(feature = "dh")]
 pub use tc_dh_key::{DhParameters, DhPrivateKey, DhPublicKey};
+#[cfg(feature = "gost28147")]
+pub use tc_gost28147::{Gost28147ParamsOwned, s_box as gost28147_s_box};
 #[cfg(feature = "hkdf")]
 pub use tc_kdf::hkdf::HkdfParamsOwned;
 #[cfg(feature = "ml-kem")]
 pub use tc_ml_kem::{MlKemParameters, MlKemPrivateKey, MlKemPublicKey};
+#[cfg(feature = "rc2")]
+pub use tc_rc_cipher::Rc2ParamsOwned;
+#[cfg(any(feature = "rc5", feature = "rc5-64"))]
+pub use tc_rc_cipher::Rc5ParamsOwned;
 #[cfg(feature = "rsa")]
 pub use tc_rsa::{RsaKey, RsaKeyParams};
+#[cfg(any(
+    feature = "threefish-256",
+    feature = "threefish-512",
+    feature = "threefish-1024"
+))]
+pub use tc_threefish::ThreefishParamsOwned;
 #[cfg(any(feature = "tuplehash128", feature = "tuplehash256"))]
 pub use tuple_hash_params::TupleHashParams;
 
@@ -189,6 +223,10 @@ pub use tuple_hash_params::TupleHashParams;
     feature = "rc5",
     feature = "rc5-64",
     feature = "rc6",
+    feature = "gost28147",
+    feature = "threefish-256",
+    feature = "threefish-512",
+    feature = "threefish-1024",
     feature = "chacha",
     feature = "xchacha20",
     feature = "rc4",
@@ -231,6 +269,10 @@ use crate::Params;
     feature = "rc5",
     feature = "rc5-64",
     feature = "rc6",
+    feature = "gost28147",
+    feature = "threefish-256",
+    feature = "threefish-512",
+    feature = "threefish-1024",
     feature = "chacha",
     feature = "xchacha20",
     feature = "rc4",
@@ -273,6 +315,10 @@ impl Params for KeyOwned {
     feature = "rc5",
     feature = "rc5-64",
     feature = "rc6",
+    feature = "gost28147",
+    feature = "threefish-256",
+    feature = "threefish-512",
+    feature = "threefish-1024",
     feature = "chacha",
     feature = "xchacha20",
     feature = "rc4",
@@ -285,6 +331,55 @@ impl Params for KeyOwned {
     feature = "hc256"
 ))]
 impl Params for KeyWithIvOwned {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
+// An engine's own params with an IV, as Bouncy Castle's ParametersWithIV. Each TParams is a type
+// of its own, which a row downcasts to
+#[cfg(any(
+    feature = "rc2",
+    feature = "rc5",
+    feature = "rc5-64",
+    feature = "gost28147",
+    feature = "threefish-256",
+    feature = "threefish-512",
+    feature = "threefish-1024"
+))]
+impl<TParams: Send + Sync + 'static> Params for ParamsWithIvOwned<TParams> {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
+#[cfg(feature = "rc2")]
+impl Params for Rc2ParamsOwned {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
+#[cfg(any(feature = "rc5", feature = "rc5-64"))]
+impl Params for Rc5ParamsOwned {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
+#[cfg(feature = "gost28147")]
+impl Params for Gost28147ParamsOwned {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
+#[cfg(any(
+    feature = "threefish-256",
+    feature = "threefish-512",
+    feature = "threefish-1024"
+))]
+impl Params for ThreefishParamsOwned {
     fn as_any(&self) -> &dyn Any {
         self
     }

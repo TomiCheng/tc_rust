@@ -26,5 +26,5 @@ pub(crate) use algo::{BUILT_IN, CreateRows};
 pub use digest_entry::DigestEntry;
 pub use digest_provider::DigestProvider;
 pub use digest_trait::Digest;
-pub use tc_digest::TryDigest;
 pub(crate) use empty_digest_provider::EmptyDigestProvider;
+pub use tc_digest::TryDigest;

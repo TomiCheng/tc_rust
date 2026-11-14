@@ -1,10 +1,3 @@
-#[cfg(any(feature = "rc2", feature = "rc5", feature = "rc5-64"))]
-use core::fmt;
-
-#[cfg(any(feature = "rc2", feature = "rc5", feature = "rc5-64"))]
-use tc_block_cipher::{
-    BlockCipher, BlockCipherInit, BlockError, CipherDirection, InitError, KeyParams,
-};
 #[cfg(feature = "rc6")]
 use tc_rc_cipher::Rc6Engine;
 #[cfg(feature = "rc5")]
@@ -12,24 +5,30 @@ use tc_rc_cipher::Rc532Engine;
 #[cfg(feature = "rc5-64")]
 use tc_rc_cipher::Rc564Engine;
 #[cfg(any(feature = "rc5", feature = "rc5-64"))]
-use tc_rc_cipher::{RC5_DEFAULT_ROUNDS, Rc5ParamsRef};
+use tc_rc_cipher::{RC5_DEFAULT_ROUNDS, Rc5ParamsOwned, Rc5ParamsRef};
 #[cfg(feature = "rc2")]
-use tc_rc_cipher::{Rc2Engine, Rc2ParamsRef};
+use tc_rc_cipher::{Rc2Engine, Rc2ParamsOwned, Rc2ParamsRef};
 
 #[cfg(feature = "rc2")]
 use super::block::{Mode, Padding};
 use super::block::{Rand, block_cipher, block_rows};
+#[cfg(any(feature = "rc2", feature = "rc5", feature = "rc5-64"))]
+use super::buffered::Own;
+#[cfg(any(feature = "rc2", feature = "rc5", feature = "rc5-64"))]
+use super::keyed::{Keyed, keyed};
 use crate::DefaultAlgoContext;
 use crate::cipher::CipherEntry;
 
 // The rows of RC2, RC5 and RC6, as in Bouncy Castle's CipherUtilities: each mode with each padding
-// it takes. RC2's OID is RSA's for CBC, and the others have none
+// it takes. RC2's OID is RSA's for CBC, and the others have none. RC2 and RC5 take a bare key, as
+// Bouncy Castle's KeyParameter, or their own params, as its RC2Parameters and RC5Parameters: an
+// Rc2ParamsOwned or Rc5ParamsOwned in ECB and a ParamsWithIvOwned of one in the other modes
 #[cfg(feature = "rc2")]
 pub(super) fn rc2(context: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>> {
     let rand: Rand = context.rand();
     block_rows(
         &["RC2"],
-        block_cipher!(Keyed(Rc2Engine::new())),
+        block_cipher!(Keyed(Rc2Engine::new()), Own<Rc2ParamsOwned>),
         rand,
         &[(Mode::Cbc, Padding::Pkcs7, &["1.2.840.113549.3.2"])],
     )
@@ -41,7 +40,7 @@ pub(super) fn rc5(context: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>> {
     let rand: Rand = context.rand();
     block_rows(
         &["RC5", "RC5-32"],
-        block_cipher!(Keyed(Rc532Engine::new())),
+        block_cipher!(Keyed(Rc532Engine::new()), Own<Rc5ParamsOwned>),
         rand,
         &[],
     )
@@ -53,7 +52,7 @@ pub(super) fn rc5_64(context: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>> 
     let rand: Rand = context.rand();
     block_rows(
         &["RC5-64"],
-        block_cipher!(Keyed(Rc564Engine::new())),
+        block_cipher!(Keyed(Rc564Engine::new()), Own<Rc5ParamsOwned>),
         rand,
         &[],
     )
@@ -65,60 +64,18 @@ pub(super) fn rc6(context: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>> {
     block_rows(&["RC6"], block_cipher!(Rc6Engine::new()), rand, &[])
 }
 
-// An RC2 or RC5 engine keyed by a plain key, as Bouncy Castle's engines take a KeyParameter: RC2
-// with an effective key size of the whole key, RC5 with 12 rounds. Their own engines take only
-// params of their own
-#[cfg(any(feature = "rc2", feature = "rc5", feature = "rc5-64"))]
-struct Keyed<E>(E);
-
-#[cfg(any(feature = "rc2", feature = "rc5", feature = "rc5-64"))]
-impl<E: BlockCipher<Error = BlockError>> BlockCipher for Keyed<E> {
-    type Error = BlockError;
-
-    fn block_size(&self) -> usize {
-        self.0.block_size()
-    }
-
-    fn process_block(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, BlockError> {
-        self.0.process_block(input, output)
-    }
-}
-
 #[cfg(feature = "rc2")]
-impl<P: KeyParams + ?Sized> BlockCipherInit<P> for Keyed<Rc2Engine> {
-    type Error = InitError;
-
-    fn init(&mut self, direction: CipherDirection, params: &P) -> Result<(), InitError> {
-        self.0.init(direction, &Rc2ParamsRef::new(params.key()))
-    }
-}
-
+keyed!(Rc2Engine, Rc2ParamsOwned, |key| Rc2ParamsRef::new(key));
 #[cfg(feature = "rc5")]
-impl<P: KeyParams + ?Sized> BlockCipherInit<P> for Keyed<Rc532Engine> {
-    type Error = InitError;
-
-    fn init(&mut self, direction: CipherDirection, params: &P) -> Result<(), InitError> {
-        let params = Rc5ParamsRef::new(params.key(), RC5_DEFAULT_ROUNDS);
-        self.0.init(direction, &params)
-    }
-}
-
+keyed!(Rc532Engine, Rc5ParamsOwned, |key| Rc5ParamsRef::new(
+    key,
+    RC5_DEFAULT_ROUNDS
+));
 #[cfg(feature = "rc5-64")]
-impl<P: KeyParams + ?Sized> BlockCipherInit<P> for Keyed<Rc564Engine> {
-    type Error = InitError;
-
-    fn init(&mut self, direction: CipherDirection, params: &P) -> Result<(), InitError> {
-        let params = Rc5ParamsRef::new(params.key(), RC5_DEFAULT_ROUNDS);
-        self.0.init(direction, &params)
-    }
-}
-
-#[cfg(any(feature = "rc2", feature = "rc5", feature = "rc5-64"))]
-impl<E: fmt::Display> fmt::Display for Keyed<E> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.0.fmt(f)
-    }
-}
+keyed!(Rc564Engine, Rc5ParamsOwned, |key| Rc5ParamsRef::new(
+    key,
+    RC5_DEFAULT_ROUNDS
+));
 
 #[cfg(test)]
 mod tests {
@@ -161,6 +118,92 @@ mod tests {
             .get_by_oid(&"1.2.840.113549.3.2".parse().unwrap())
             .unwrap();
         assert_eq!(by_oid.block_size(), 8);
+    }
+
+    // RFC 2268, section 5: a 16-byte key with an effective key size of 64 bits, through RC2's own
+    // params in ECB, and alone in CBC with an IV of zeros, which gives the same first block
+    #[cfg(feature = "rc2")]
+    #[test]
+    fn rc2_takes_its_effective_key_size_from_its_own_params_in_every_mode() {
+        use crate::params::{ParamsWithIvOwned, Rc2ParamsOwned};
+
+        let key = unhex("88bca90e90875a7f0f79c384627bafb2");
+        let block = unhex("0000000000000000");
+        let expected = unhex("1a807d272bbe5db1");
+        let algo = DefaultAlgoBuilder::default().build();
+        let ciphers = algo.cipher();
+
+        let own = Rc2ParamsOwned::with_effective_key_bits(key.clone(), 64);
+        let ecb = ciphers
+            .encrypt_by_name("RC2/ECB/NOPADDING", &own, &block)
+            .unwrap();
+        assert_eq!(ecb, expected);
+
+        let with_iv = ParamsWithIvOwned::new(
+            Rc2ParamsOwned::with_effective_key_bits(key.clone(), 64),
+            vec![0; 8],
+        );
+        let cbc = ciphers
+            .encrypt_by_name("RC2/CBC/NOPADDING", &with_iv, &block)
+            .unwrap();
+        assert_eq!(cbc, expected);
+        let recovered = ciphers
+            .decrypt_by_name("RC2/CBC/NOPADDING", &with_iv, &cbc)
+            .unwrap();
+        assert_eq!(recovered, block);
+
+        // A bare key takes its whole length, 128 bits, as before, which RFC 2268 also gives
+        let bare = ciphers
+            .encrypt_by_name("RC2/ECB/NOPADDING", &KeyOwned::new(key), &block)
+            .unwrap();
+        assert_eq!(bare, unhex("2269552ab0f85ca6"));
+    }
+
+    #[cfg(feature = "rc2")]
+    #[test]
+    fn rc2_refuses_its_own_params_with_an_iv_of_another_length_than_a_block() {
+        use crate::ErrorKind;
+        use crate::params::{ParamsWithIvOwned, Rc2ParamsOwned};
+
+        let algo = DefaultAlgoBuilder::default().build();
+        let params = ParamsWithIvOwned::new(Rc2ParamsOwned::new(vec![0x42; 16]), vec![0; 7]);
+        let error = algo
+            .cipher()
+            .encrypt_by_name("RC2/CBC/PKCS7PADDING", &params, b"message")
+            .unwrap_err();
+        assert_eq!(error.kind(), ErrorKind::InvalidParams);
+    }
+
+    // RC5's own params give it its rounds: 12 gives what a bare key gives, 16 something else, and
+    // CTR takes them with an IV
+    #[cfg(feature = "rc5")]
+    #[test]
+    fn rc5_takes_its_rounds_from_its_own_params() {
+        use crate::params::{ParamsWithIvOwned, Rc5ParamsOwned};
+
+        let key = unhex("000102030405060708090a0b0c0d0e0f");
+        let block = unhex("0011223344556677");
+        let algo = DefaultAlgoBuilder::default().build();
+        let ciphers = algo.cipher();
+        let encrypt = |params: &dyn crate::Params| {
+            ciphers
+                .encrypt_by_name("RC5/ECB/NOPADDING", params, &block)
+                .unwrap()
+        };
+
+        let bare = encrypt(&KeyOwned::new(key.clone()));
+        assert_eq!(encrypt(&Rc5ParamsOwned::new(key.clone(), 12)), bare);
+        assert_ne!(encrypt(&Rc5ParamsOwned::new(key.clone(), 16)), bare);
+
+        let message = b"a message of no particular length";
+        let with_iv = ParamsWithIvOwned::new(Rc5ParamsOwned::new(key, 16), vec![0x24; 8]);
+        let sealed = ciphers
+            .encrypt_by_name("RC5/CTR/NOPADDING", &with_iv, message)
+            .unwrap();
+        let opened = ciphers
+            .decrypt_by_name("RC5/CTR/NOPADDING", &with_iv, &sealed)
+            .unwrap();
+        assert_eq!(opened, message);
     }
 
     // Rivest's RC5 paper: RC5-32/12/16 with the zero key and block

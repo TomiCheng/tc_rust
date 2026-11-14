@@ -50,10 +50,10 @@ struct Rsa {
     params: Option<RsaKeyGenParams>,
 }
 
-fn generator<'a>(
-    rand: &'a mut dyn CryptoRng,
+fn generator(
+    rand: &mut dyn CryptoRng,
     settings: RsaKeyGenParams,
-) -> Result<RsaKeyGenerator<&'a mut dyn CryptoRng>, AlgoError> {
+) -> Result<RsaKeyGenerator<&mut dyn CryptoRng>, AlgoError> {
     let params = RsaKeyGenerationParams::new()
         .with_public_exponent(settings.public_exponent())
         .with_strength(settings.strength())

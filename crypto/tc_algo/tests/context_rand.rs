@@ -3,9 +3,7 @@ use std::convert::Infallible;
 
 use rand_core::{CryptoRng, TryCryptoRng, TryRng};
 use tc_algo::generate::{KeyGenerator, KeyGeneratorEntry};
-use tc_algo::{
-    AlgoBuilder, AlgoError, DefaultAlgoBuilder, DefaultAlgoContext, EntryBase, Params,
-};
+use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder, DefaultAlgoContext, EntryBase, Params};
 
 // Every byte is 7
 struct Sevens;

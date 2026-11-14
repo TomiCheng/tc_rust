@@ -1,4 +1,5 @@
 use core::error::Error;
+use core::marker::PhantomData;
 
 use tc_buffered_cipher::{BufferedCipher, BufferedCipherInit, BufferedError};
 
@@ -6,14 +7,122 @@ use crate::cipher::{Cipher, CipherDirection};
 use crate::params::{IvParams, KeyOwned, KeyWithIvOwned};
 use crate::{AlgoError, ErrorKind, Params};
 
+// The params of an engine's own that a row takes besides a bare key, as Bouncy Castle's
+// CipherUtilities takes RC2Parameters besides a KeyParameter: Own<O> takes an O in ECB and a
+// ParamsWithIvOwned<O> in the modes with an IV, and NoOwn takes none
+pub(super) struct NoOwn;
+
+#[cfg(any(
+    feature = "rc2",
+    feature = "rc5",
+    feature = "rc5-64",
+    feature = "gost28147",
+    feature = "threefish-256",
+    feature = "threefish-512",
+    feature = "threefish-1024"
+))]
+pub(super) struct Own<O>(PhantomData<fn() -> O>);
+
+// Inits a mode with an IV when params are the row's own params with an IV, and gives None when
+// they are not. `iv_len` is the IV length the row requires, if it requires one
+pub(super) trait OwnWithIv<C> {
+    fn init(
+        cipher: &mut C,
+        direction: CipherDirection,
+        params: &dyn Params,
+        iv_len: Option<usize>,
+    ) -> Option<Result<(), AlgoError>>;
+}
+
+// Inits ECB when params are the row's own params, and gives None when they are not
+pub(super) trait OwnKey<C> {
+    fn init(
+        cipher: &mut C,
+        direction: CipherDirection,
+        params: &dyn Params,
+    ) -> Option<Result<(), AlgoError>>;
+}
+
+impl<C> OwnWithIv<C> for NoOwn {
+    fn init(
+        _: &mut C,
+        _: CipherDirection,
+        _: &dyn Params,
+        _: Option<usize>,
+    ) -> Option<Result<(), AlgoError>> {
+        None
+    }
+}
+
+impl<C> OwnKey<C> for NoOwn {
+    fn init(_: &mut C, _: CipherDirection, _: &dyn Params) -> Option<Result<(), AlgoError>> {
+        None
+    }
+}
+
+#[cfg(any(
+    feature = "rc2",
+    feature = "rc5",
+    feature = "rc5-64",
+    feature = "gost28147",
+    feature = "threefish-256",
+    feature = "threefish-512",
+    feature = "threefish-1024"
+))]
+impl<C, O: 'static> OwnWithIv<C> for Own<O>
+where
+    C: BufferedCipherInit<crate::params::ParamsWithIvOwned<O>>,
+    <C as BufferedCipherInit<crate::params::ParamsWithIvOwned<O>>>::Error:
+        Error + Send + Sync + 'static,
+{
+    fn init(
+        cipher: &mut C,
+        direction: CipherDirection,
+        params: &dyn Params,
+        iv_len: Option<usize>,
+    ) -> Option<Result<(), AlgoError>> {
+        let params = params
+            .as_any()
+            .downcast_ref::<crate::params::ParamsWithIvOwned<O>>()?;
+        if iv_len.is_some_and(|len| params.iv().len() != len) {
+            return Some(Err(AlgoError::new(ErrorKind::InvalidParams)));
+        }
+        Some(cipher.init(direction, params).map_err(invalid_params))
+    }
+}
+
+#[cfg(any(
+    feature = "rc2",
+    feature = "rc5",
+    feature = "rc5-64",
+    feature = "gost28147",
+    feature = "threefish-256",
+    feature = "threefish-512",
+    feature = "threefish-1024"
+))]
+impl<C, O: 'static> OwnKey<C> for Own<O>
+where
+    C: BufferedCipherInit<O>,
+    <C as BufferedCipherInit<O>>::Error: Error + Send + Sync + 'static,
+{
+    fn init(
+        cipher: &mut C,
+        direction: CipherDirection,
+        params: &dyn Params,
+    ) -> Option<Result<(), AlgoError>> {
+        let params = params.as_any().downcast_ref::<O>()?;
+        Some(cipher.init(direction, params).map_err(invalid_params))
+    }
+}
+
 // Puts a buffered cipher, whatever its padding, behind Cipher. Its params are a KeyWithIvOwned.
 // Unlike Bouncy Castle, a short IV is refused: padded with zeros, it could repeat a keystream
 // without anyone noticing
 // A mode under tc_buffered_cipher, keyed by a KeyWithIvOwned with an IV of one block, as CBC, CFB
 // and OFB take it
-pub(super) struct Buffered<C>(pub(super) C);
+pub(super) struct Buffered<C, O = NoOwn>(pub(super) C, pub(super) PhantomData<fn() -> O>);
 
-impl<C, E, I> BufferedCipher for Buffered<C>
+impl<C, O, E, I> BufferedCipher for Buffered<C, O>
 where
     C: BufferedCipher<Error = BufferedError<E>> + BufferedCipherInit<KeyWithIvOwned, Error = I>,
     E: Error + Send + Sync + 'static,
@@ -46,13 +155,18 @@ where
     }
 }
 
-impl<C, E, I> Cipher for Buffered<C>
+impl<C, O, E, I> Cipher for Buffered<C, O>
 where
     C: BufferedCipher<Error = BufferedError<E>> + BufferedCipherInit<KeyWithIvOwned, Error = I>,
     E: Error + Send + Sync + 'static,
     I: Error + Send + Sync + 'static,
+    O: OwnWithIv<C>,
 {
     fn init(&mut self, direction: CipherDirection, params: &dyn Params) -> Result<(), AlgoError> {
+        let block_size = self.0.block_size();
+        if let Some(result) = O::init(&mut self.0, direction, params, Some(block_size)) {
+            return result;
+        }
         let params = downcast::<KeyWithIvOwned>(params)?;
         if params.iv().len() != self.0.block_size() {
             return Err(AlgoError::new(ErrorKind::InvalidParams));
@@ -63,11 +177,11 @@ where
 
 // ECB has no IV, so its params are a KeyOwned
 // ECB, keyed by a KeyOwned, since it takes no IV
-pub(super) struct Ecb<C>(pub(super) Buffered<C>);
+pub(super) struct Ecb<C, O = NoOwn>(pub(super) Buffered<C, O>);
 
-impl<C, I> BufferedCipher for Ecb<C>
+impl<C, O, I> BufferedCipher for Ecb<C, O>
 where
-    Buffered<C>: Cipher,
+    Buffered<C, O>: BufferedCipher<Error = AlgoError>,
     C: BufferedCipherInit<KeyOwned, Error = I>,
     I: Error + Send + Sync + 'static,
 {
@@ -98,13 +212,17 @@ where
     }
 }
 
-impl<C, I> Cipher for Ecb<C>
+impl<C, O, I> Cipher for Ecb<C, O>
 where
-    Buffered<C>: Cipher,
+    Buffered<C, O>: BufferedCipher<Error = AlgoError>,
     C: BufferedCipherInit<KeyOwned, Error = I>,
     I: Error + Send + Sync + 'static,
+    O: OwnKey<C>,
 {
     fn init(&mut self, direction: CipherDirection, params: &dyn Params) -> Result<(), AlgoError> {
+        if let Some(result) = O::init(&mut self.0.0, direction, params) {
+            return result;
+        }
         let params = downcast::<KeyOwned>(params)?;
         self.0.0.init(direction, params).map_err(invalid_params)
     }
@@ -112,11 +230,11 @@ where
 
 // CTR, keyed by a KeyWithIvOwned whose IV tc_block_modes checks, since it may be shorter than a
 // block
-pub(super) struct Ctr<C>(pub(super) Buffered<C>);
+pub(super) struct Ctr<C, O = NoOwn>(pub(super) Buffered<C, O>);
 
-impl<C, I> BufferedCipher for Ctr<C>
+impl<C, O, I> BufferedCipher for Ctr<C, O>
 where
-    Buffered<C>: Cipher,
+    Buffered<C, O>: BufferedCipher<Error = AlgoError>,
     C: BufferedCipherInit<KeyWithIvOwned, Error = I>,
     I: Error + Send + Sync + 'static,
 {
@@ -147,13 +265,17 @@ where
     }
 }
 
-impl<C, I> Cipher for Ctr<C>
+impl<C, O, I> Cipher for Ctr<C, O>
 where
-    Buffered<C>: Cipher,
+    Buffered<C, O>: BufferedCipher<Error = AlgoError>,
     C: BufferedCipherInit<KeyWithIvOwned, Error = I>,
     I: Error + Send + Sync + 'static,
+    O: OwnWithIv<C>,
 {
     fn init(&mut self, direction: CipherDirection, params: &dyn Params) -> Result<(), AlgoError> {
+        if let Some(result) = O::init(&mut self.0.0, direction, params, None) {
+            return result;
+        }
         let params = downcast::<KeyWithIvOwned>(params)?;
         self.0.0.init(direction, params).map_err(invalid_params)
     }

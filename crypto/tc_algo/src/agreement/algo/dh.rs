@@ -125,9 +125,7 @@ mod tests {
     fn pair(group: DhParameters) -> (DhPublicKey, DhPrivateKey) {
         let mut rng = UnwrapErr(SysRng);
         let mut generator = DhKeyPairGenerator::new(&mut rng);
-        generator
-            .init(&DhKeyGenerationParams::new(group))
-            .unwrap();
+        generator.init(&DhKeyGenerationParams::new(group)).unwrap();
         generator.generate_key_pair().unwrap()
     }
 

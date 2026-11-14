@@ -8,10 +8,14 @@ Algorithms: [AES](#aes) · [DES](#des) · [DESede](#desede) · [Camellia](#camel
 [SM4](#sm4) · [SEED](#seed) · [Blowfish](#blowfish) · [Twofish](#twofish) · [Serpent](#serpent) ·
 [Tnepres](#tnepres) · [CAST5](#cast5) · [CAST6](#cast6) · [IDEA](#idea) · [Noekeon](#noekeon) ·
 [Rijndael](#rijndael) · [Skipjack](#skipjack) · [TEA](#tea) · [XTEA](#xtea) · [RC2](#rc2) ·
-[RC5](#rc5) · [RC5-64](#rc5-64) · [RC6](#rc6)
+[RC5](#rc5) · [RC5-64](#rc5-64) · [RC6](#rc6) · [GOST28147](#gost28147) ·
+[Threefish-256](#threefish-256) · [Threefish-512](#threefish-512) ·
+[Threefish-1024](#threefish-1024)
 
 See also: [Weak, legacy and variable-time rows](#weak-legacy-and-variable-time-rows) ·
-[Modes and paddings](#modes-and-paddings) · [Params](#params) · [The IV](#the-iv)
+[Modes and paddings](#modes-and-paddings) · [Params](#params) · [The IV](#the-iv) ·
+[RC2's effective key size](Rc2.md) · [RC5's rounds](Rc5.md) · [GOST 28147's S-box](Gost28147.md) ·
+[Threefish's tweak](Threefish.md)
 
 From a new key to the decrypted message, with AES in CBC mode and PKCS#7 padding. The `aes` feature
 of `tc_algo` has the rows, and the IV here comes from `rand` and `rand_core`.
@@ -556,80 +560,83 @@ repaired. Bouncy Castle has it as an engine, not in its CipherUtilities.
 ### RC2
 
 The `rc2` feature has the rows. A block of 8 bytes and a key of 1 to 128 bytes. As in Bouncy Castle,
-a plain key gives an effective key size of the whole key.
+a plain key gives an effective key size of the whole key, and RC2's own params give another; see
+[RC2](Rc2.md).
 
 | Name | OIDs | Params | Note |
 |---|---|---|---|
-| `RC2/ECB/NOPADDING` |  | `KeyOwned` | weak, legacy, variable time |
-| `RC2/ECB/PKCS7PADDING` |  | `KeyOwned` | weak, legacy, variable time |
-| `RC2/ECB/ISO10126PADDING` |  | `KeyOwned` | weak, legacy, variable time |
-| `RC2/ECB/ISO7816-4PADDING` |  | `KeyOwned` | weak, legacy, variable time |
-| `RC2/ECB/X923PADDING` |  | `KeyOwned` | weak, legacy, variable time |
-| `RC2/ECB/TBCPADDING` |  | `KeyOwned` | weak, legacy, variable time |
-| `RC2/ECB/ZEROBYTEPADDING` |  | `KeyOwned` | weak, legacy, variable time |
-| `RC2/CBC/NOPADDING` |  | `KeyWithIvOwned` | legacy, variable time |
-| `RC2/CBC/PKCS7PADDING` | `1.2.840.113549.3.2` | `KeyWithIvOwned` | legacy, variable time |
-| `RC2/CBC/ISO10126PADDING` |  | `KeyWithIvOwned` | legacy, variable time |
-| `RC2/CBC/ISO7816-4PADDING` |  | `KeyWithIvOwned` | legacy, variable time |
-| `RC2/CBC/X923PADDING` |  | `KeyWithIvOwned` | legacy, variable time |
-| `RC2/CBC/TBCPADDING` |  | `KeyWithIvOwned` | legacy, variable time |
-| `RC2/CBC/ZEROBYTEPADDING` |  | `KeyWithIvOwned` | legacy, variable time |
-| `RC2/CFB/NOPADDING` |  | `KeyWithIvOwned` | legacy, variable time |
-| `RC2/OFB/NOPADDING` |  | `KeyWithIvOwned` | legacy, variable time |
-| `RC2/CTR/NOPADDING` |  | `KeyWithIvOwned` | legacy, variable time |
+| `RC2/ECB/NOPADDING` |  | `KeyOwned`, [`Rc2ParamsOwned`](Rc2.md) | weak, legacy, variable time |
+| `RC2/ECB/PKCS7PADDING` |  | `KeyOwned`, [`Rc2ParamsOwned`](Rc2.md) | weak, legacy, variable time |
+| `RC2/ECB/ISO10126PADDING` |  | `KeyOwned`, [`Rc2ParamsOwned`](Rc2.md) | weak, legacy, variable time |
+| `RC2/ECB/ISO7816-4PADDING` |  | `KeyOwned`, [`Rc2ParamsOwned`](Rc2.md) | weak, legacy, variable time |
+| `RC2/ECB/X923PADDING` |  | `KeyOwned`, [`Rc2ParamsOwned`](Rc2.md) | weak, legacy, variable time |
+| `RC2/ECB/TBCPADDING` |  | `KeyOwned`, [`Rc2ParamsOwned`](Rc2.md) | weak, legacy, variable time |
+| `RC2/ECB/ZEROBYTEPADDING` |  | `KeyOwned`, [`Rc2ParamsOwned`](Rc2.md) | weak, legacy, variable time |
+| `RC2/CBC/NOPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc2ParamsOwned>`](Rc2.md) | legacy, variable time |
+| `RC2/CBC/PKCS7PADDING` | `1.2.840.113549.3.2` | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc2ParamsOwned>`](Rc2.md) | legacy, variable time |
+| `RC2/CBC/ISO10126PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc2ParamsOwned>`](Rc2.md) | legacy, variable time |
+| `RC2/CBC/ISO7816-4PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc2ParamsOwned>`](Rc2.md) | legacy, variable time |
+| `RC2/CBC/X923PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc2ParamsOwned>`](Rc2.md) | legacy, variable time |
+| `RC2/CBC/TBCPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc2ParamsOwned>`](Rc2.md) | legacy, variable time |
+| `RC2/CBC/ZEROBYTEPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc2ParamsOwned>`](Rc2.md) | legacy, variable time |
+| `RC2/CFB/NOPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc2ParamsOwned>`](Rc2.md) | legacy, variable time |
+| `RC2/OFB/NOPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc2ParamsOwned>`](Rc2.md) | legacy, variable time |
+| `RC2/CTR/NOPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc2ParamsOwned>`](Rc2.md) | legacy, variable time |
 
 The OID is RSA's, and means CBC with PKCS#7 padding. Its parameters in a certificate or CMS can name
-another effective key size; these rows do not take one.
+another effective key size, which these rows take in a `ParamsWithIvOwned<Rc2ParamsOwned>`; see
+[RC2](Rc2.md#the-effective-key-size-in-cms).
 
 ### RC5
 
 The `rc5` feature has the rows. RC5 with 32-bit words: a block of 8 bytes and a key of up to 255
-bytes, with 12 rounds, as Bouncy Castle gives a plain key. `RC5-32` is another name of it.
+bytes, with 12 rounds, as Bouncy Castle gives a plain key, and RC5's own params give another number;
+see [RC5](Rc5.md). `RC5-32` is another name of it.
 
 | Name | OIDs | Params | Note |
 |---|---|---|---|
-| `RC5/ECB/NOPADDING` |  | `KeyOwned` | weak, legacy |
-| `RC5/ECB/PKCS7PADDING` |  | `KeyOwned` | weak, legacy |
-| `RC5/ECB/ISO10126PADDING` |  | `KeyOwned` | weak, legacy |
-| `RC5/ECB/ISO7816-4PADDING` |  | `KeyOwned` | weak, legacy |
-| `RC5/ECB/X923PADDING` |  | `KeyOwned` | weak, legacy |
-| `RC5/ECB/TBCPADDING` |  | `KeyOwned` | weak, legacy |
-| `RC5/ECB/ZEROBYTEPADDING` |  | `KeyOwned` | weak, legacy |
-| `RC5/CBC/NOPADDING` |  | `KeyWithIvOwned` | legacy |
-| `RC5/CBC/PKCS7PADDING` |  | `KeyWithIvOwned` | legacy |
-| `RC5/CBC/ISO10126PADDING` |  | `KeyWithIvOwned` | legacy |
-| `RC5/CBC/ISO7816-4PADDING` |  | `KeyWithIvOwned` | legacy |
-| `RC5/CBC/X923PADDING` |  | `KeyWithIvOwned` | legacy |
-| `RC5/CBC/TBCPADDING` |  | `KeyWithIvOwned` | legacy |
-| `RC5/CBC/ZEROBYTEPADDING` |  | `KeyWithIvOwned` | legacy |
-| `RC5/CFB/NOPADDING` |  | `KeyWithIvOwned` | legacy |
-| `RC5/OFB/NOPADDING` |  | `KeyWithIvOwned` | legacy |
-| `RC5/CTR/NOPADDING` |  | `KeyWithIvOwned` | legacy |
+| `RC5/ECB/NOPADDING` |  | `KeyOwned`, [`Rc5ParamsOwned`](Rc5.md) | weak, legacy |
+| `RC5/ECB/PKCS7PADDING` |  | `KeyOwned`, [`Rc5ParamsOwned`](Rc5.md) | weak, legacy |
+| `RC5/ECB/ISO10126PADDING` |  | `KeyOwned`, [`Rc5ParamsOwned`](Rc5.md) | weak, legacy |
+| `RC5/ECB/ISO7816-4PADDING` |  | `KeyOwned`, [`Rc5ParamsOwned`](Rc5.md) | weak, legacy |
+| `RC5/ECB/X923PADDING` |  | `KeyOwned`, [`Rc5ParamsOwned`](Rc5.md) | weak, legacy |
+| `RC5/ECB/TBCPADDING` |  | `KeyOwned`, [`Rc5ParamsOwned`](Rc5.md) | weak, legacy |
+| `RC5/ECB/ZEROBYTEPADDING` |  | `KeyOwned`, [`Rc5ParamsOwned`](Rc5.md) | weak, legacy |
+| `RC5/CBC/NOPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) | legacy |
+| `RC5/CBC/PKCS7PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) | legacy |
+| `RC5/CBC/ISO10126PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) | legacy |
+| `RC5/CBC/ISO7816-4PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) | legacy |
+| `RC5/CBC/X923PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) | legacy |
+| `RC5/CBC/TBCPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) | legacy |
+| `RC5/CBC/ZEROBYTEPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) | legacy |
+| `RC5/CFB/NOPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) | legacy |
+| `RC5/OFB/NOPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) | legacy |
+| `RC5/CTR/NOPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) | legacy |
 
 ### RC5-64
 
 The `rc5-64` feature has the rows. RC5 with 64-bit words: a block of 16 bytes and a key of up to 255
-bytes, with 12 rounds.
+bytes, with 12 rounds, or the number RC5's own params give; see [RC5](Rc5.md).
 
 | Name | OIDs | Params | Note |
 |---|---|---|---|
-| `RC5-64/ECB/NOPADDING` |  | `KeyOwned` | weak |
-| `RC5-64/ECB/PKCS7PADDING` |  | `KeyOwned` | weak |
-| `RC5-64/ECB/ISO10126PADDING` |  | `KeyOwned` | weak |
-| `RC5-64/ECB/ISO7816-4PADDING` |  | `KeyOwned` | weak |
-| `RC5-64/ECB/X923PADDING` |  | `KeyOwned` | weak |
-| `RC5-64/ECB/TBCPADDING` |  | `KeyOwned` | weak |
-| `RC5-64/ECB/ZEROBYTEPADDING` |  | `KeyOwned` | weak |
-| `RC5-64/CBC/NOPADDING` |  | `KeyWithIvOwned` |  |
-| `RC5-64/CBC/PKCS7PADDING` |  | `KeyWithIvOwned` |  |
-| `RC5-64/CBC/ISO10126PADDING` |  | `KeyWithIvOwned` |  |
-| `RC5-64/CBC/ISO7816-4PADDING` |  | `KeyWithIvOwned` |  |
-| `RC5-64/CBC/X923PADDING` |  | `KeyWithIvOwned` |  |
-| `RC5-64/CBC/TBCPADDING` |  | `KeyWithIvOwned` |  |
-| `RC5-64/CBC/ZEROBYTEPADDING` |  | `KeyWithIvOwned` |  |
-| `RC5-64/CFB/NOPADDING` |  | `KeyWithIvOwned` |  |
-| `RC5-64/OFB/NOPADDING` |  | `KeyWithIvOwned` |  |
-| `RC5-64/CTR/NOPADDING` |  | `KeyWithIvOwned` |  |
+| `RC5-64/ECB/NOPADDING` |  | `KeyOwned`, [`Rc5ParamsOwned`](Rc5.md) | weak |
+| `RC5-64/ECB/PKCS7PADDING` |  | `KeyOwned`, [`Rc5ParamsOwned`](Rc5.md) | weak |
+| `RC5-64/ECB/ISO10126PADDING` |  | `KeyOwned`, [`Rc5ParamsOwned`](Rc5.md) | weak |
+| `RC5-64/ECB/ISO7816-4PADDING` |  | `KeyOwned`, [`Rc5ParamsOwned`](Rc5.md) | weak |
+| `RC5-64/ECB/X923PADDING` |  | `KeyOwned`, [`Rc5ParamsOwned`](Rc5.md) | weak |
+| `RC5-64/ECB/TBCPADDING` |  | `KeyOwned`, [`Rc5ParamsOwned`](Rc5.md) | weak |
+| `RC5-64/ECB/ZEROBYTEPADDING` |  | `KeyOwned`, [`Rc5ParamsOwned`](Rc5.md) | weak |
+| `RC5-64/CBC/NOPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) |  |
+| `RC5-64/CBC/PKCS7PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) |  |
+| `RC5-64/CBC/ISO10126PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) |  |
+| `RC5-64/CBC/ISO7816-4PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) |  |
+| `RC5-64/CBC/X923PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) |  |
+| `RC5-64/CBC/TBCPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) |  |
+| `RC5-64/CBC/ZEROBYTEPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) |  |
+| `RC5-64/CFB/NOPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) |  |
+| `RC5-64/OFB/NOPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) |  |
+| `RC5-64/CTR/NOPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Rc5ParamsOwned>`](Rc5.md) |  |
 
 ### RC6
 
@@ -656,6 +663,114 @@ AES.
 | `RC6/OFB/NOPADDING` |  | `KeyWithIvOwned` |  |
 | `RC6/CTR/NOPADDING` |  | `KeyWithIvOwned` |  |
 
+### GOST28147
+
+The `gost28147` feature has the rows. GOST 28147-89: a block of 8 bytes and a key of 32 bytes, also
+named `GOST` and `GOST-28147`. A plain key takes the default S-box, as Bouncy Castle gives a
+`KeyParameter`, and GOST 28147's own params take another; see [GOST 28147](Gost28147.md).
+
+| Name | OIDs | Params | Note |
+|---|---|---|---|
+| `GOST28147/ECB/NOPADDING` |  | `KeyOwned`, [`Gost28147ParamsOwned`](Gost28147.md) | weak, legacy, variable time |
+| `GOST28147/ECB/PKCS7PADDING` |  | `KeyOwned`, [`Gost28147ParamsOwned`](Gost28147.md) | weak, legacy, variable time |
+| `GOST28147/ECB/ISO10126PADDING` |  | `KeyOwned`, [`Gost28147ParamsOwned`](Gost28147.md) | weak, legacy, variable time |
+| `GOST28147/ECB/ISO7816-4PADDING` |  | `KeyOwned`, [`Gost28147ParamsOwned`](Gost28147.md) | weak, legacy, variable time |
+| `GOST28147/ECB/X923PADDING` |  | `KeyOwned`, [`Gost28147ParamsOwned`](Gost28147.md) | weak, legacy, variable time |
+| `GOST28147/ECB/TBCPADDING` |  | `KeyOwned`, [`Gost28147ParamsOwned`](Gost28147.md) | weak, legacy, variable time |
+| `GOST28147/ECB/ZEROBYTEPADDING` |  | `KeyOwned`, [`Gost28147ParamsOwned`](Gost28147.md) | weak, legacy, variable time |
+| `GOST28147/CBC/NOPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Gost28147ParamsOwned>`](Gost28147.md) | legacy, variable time |
+| `GOST28147/CBC/PKCS7PADDING` | `1.2.643.2.2.21` | `KeyWithIvOwned`, [`ParamsWithIvOwned<Gost28147ParamsOwned>`](Gost28147.md) | legacy, variable time |
+| `GOST28147/CBC/ISO10126PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Gost28147ParamsOwned>`](Gost28147.md) | legacy, variable time |
+| `GOST28147/CBC/ISO7816-4PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Gost28147ParamsOwned>`](Gost28147.md) | legacy, variable time |
+| `GOST28147/CBC/X923PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Gost28147ParamsOwned>`](Gost28147.md) | legacy, variable time |
+| `GOST28147/CBC/TBCPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Gost28147ParamsOwned>`](Gost28147.md) | legacy, variable time |
+| `GOST28147/CBC/ZEROBYTEPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Gost28147ParamsOwned>`](Gost28147.md) | legacy, variable time |
+| `GOST28147/CFB/NOPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Gost28147ParamsOwned>`](Gost28147.md) | legacy, variable time |
+| `GOST28147/OFB/NOPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Gost28147ParamsOwned>`](Gost28147.md) | legacy, variable time |
+| `GOST28147/CTR/NOPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<Gost28147ParamsOwned>`](Gost28147.md) | legacy, variable time |
+
+The OID is CryptoPro's `id-Gost28147-89`, which Bouncy Castle gives to CBC with PKCS#7 padding, and
+so do these rows; in CryptoPro's own formats it names GOST 28147 in its CFB mode, with the S-box in
+its parameters.
+
+### Threefish-256
+
+The `threefish-256` feature has the rows. A block and a key of 32 bytes, and a tweak of 16 bytes:
+a plain key takes a tweak of zeros, as Bouncy Castle gives a `KeyParameter`, and Threefish's own
+params take another; see [Threefish](Threefish.md).
+
+| Name | OIDs | Params | Note |
+|---|---|---|---|
+| `THREEFISH-256/ECB/NOPADDING` |  | `KeyOwned`, [`ThreefishParamsOwned`](Threefish.md) | weak |
+| `THREEFISH-256/ECB/PKCS7PADDING` |  | `KeyOwned`, [`ThreefishParamsOwned`](Threefish.md) | weak |
+| `THREEFISH-256/ECB/ISO10126PADDING` |  | `KeyOwned`, [`ThreefishParamsOwned`](Threefish.md) | weak |
+| `THREEFISH-256/ECB/ISO7816-4PADDING` |  | `KeyOwned`, [`ThreefishParamsOwned`](Threefish.md) | weak |
+| `THREEFISH-256/ECB/X923PADDING` |  | `KeyOwned`, [`ThreefishParamsOwned`](Threefish.md) | weak |
+| `THREEFISH-256/ECB/TBCPADDING` |  | `KeyOwned`, [`ThreefishParamsOwned`](Threefish.md) | weak |
+| `THREEFISH-256/ECB/ZEROBYTEPADDING` |  | `KeyOwned`, [`ThreefishParamsOwned`](Threefish.md) | weak |
+| `THREEFISH-256/CBC/NOPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
+| `THREEFISH-256/CBC/PKCS7PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
+| `THREEFISH-256/CBC/ISO10126PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
+| `THREEFISH-256/CBC/ISO7816-4PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
+| `THREEFISH-256/CBC/X923PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
+| `THREEFISH-256/CBC/TBCPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
+| `THREEFISH-256/CBC/ZEROBYTEPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
+| `THREEFISH-256/CFB/NOPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
+| `THREEFISH-256/OFB/NOPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
+| `THREEFISH-256/CTR/NOPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
+
+### Threefish-512
+
+The `threefish-512` feature has the rows. A block and a key of 64 bytes, and a tweak of 16 bytes:
+a plain key takes a tweak of zeros, as Bouncy Castle gives a `KeyParameter`, and Threefish's own
+params take another; see [Threefish](Threefish.md).
+
+| Name | OIDs | Params | Note |
+|---|---|---|---|
+| `THREEFISH-512/ECB/NOPADDING` |  | `KeyOwned`, [`ThreefishParamsOwned`](Threefish.md) | weak |
+| `THREEFISH-512/ECB/PKCS7PADDING` |  | `KeyOwned`, [`ThreefishParamsOwned`](Threefish.md) | weak |
+| `THREEFISH-512/ECB/ISO10126PADDING` |  | `KeyOwned`, [`ThreefishParamsOwned`](Threefish.md) | weak |
+| `THREEFISH-512/ECB/ISO7816-4PADDING` |  | `KeyOwned`, [`ThreefishParamsOwned`](Threefish.md) | weak |
+| `THREEFISH-512/ECB/X923PADDING` |  | `KeyOwned`, [`ThreefishParamsOwned`](Threefish.md) | weak |
+| `THREEFISH-512/ECB/TBCPADDING` |  | `KeyOwned`, [`ThreefishParamsOwned`](Threefish.md) | weak |
+| `THREEFISH-512/ECB/ZEROBYTEPADDING` |  | `KeyOwned`, [`ThreefishParamsOwned`](Threefish.md) | weak |
+| `THREEFISH-512/CBC/NOPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
+| `THREEFISH-512/CBC/PKCS7PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
+| `THREEFISH-512/CBC/ISO10126PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
+| `THREEFISH-512/CBC/ISO7816-4PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
+| `THREEFISH-512/CBC/X923PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
+| `THREEFISH-512/CBC/TBCPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
+| `THREEFISH-512/CBC/ZEROBYTEPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
+| `THREEFISH-512/CFB/NOPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
+| `THREEFISH-512/OFB/NOPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
+| `THREEFISH-512/CTR/NOPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
+
+### Threefish-1024
+
+The `threefish-1024` feature has the rows. A block and a key of 128 bytes, and a tweak of 16 bytes:
+a plain key takes a tweak of zeros, as Bouncy Castle gives a `KeyParameter`, and Threefish's own
+params take another; see [Threefish](Threefish.md).
+
+| Name | OIDs | Params | Note |
+|---|---|---|---|
+| `THREEFISH-1024/ECB/NOPADDING` |  | `KeyOwned`, [`ThreefishParamsOwned`](Threefish.md) | weak |
+| `THREEFISH-1024/ECB/PKCS7PADDING` |  | `KeyOwned`, [`ThreefishParamsOwned`](Threefish.md) | weak |
+| `THREEFISH-1024/ECB/ISO10126PADDING` |  | `KeyOwned`, [`ThreefishParamsOwned`](Threefish.md) | weak |
+| `THREEFISH-1024/ECB/ISO7816-4PADDING` |  | `KeyOwned`, [`ThreefishParamsOwned`](Threefish.md) | weak |
+| `THREEFISH-1024/ECB/X923PADDING` |  | `KeyOwned`, [`ThreefishParamsOwned`](Threefish.md) | weak |
+| `THREEFISH-1024/ECB/TBCPADDING` |  | `KeyOwned`, [`ThreefishParamsOwned`](Threefish.md) | weak |
+| `THREEFISH-1024/ECB/ZEROBYTEPADDING` |  | `KeyOwned`, [`ThreefishParamsOwned`](Threefish.md) | weak |
+| `THREEFISH-1024/CBC/NOPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
+| `THREEFISH-1024/CBC/PKCS7PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
+| `THREEFISH-1024/CBC/ISO10126PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
+| `THREEFISH-1024/CBC/ISO7816-4PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
+| `THREEFISH-1024/CBC/X923PADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
+| `THREEFISH-1024/CBC/TBCPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
+| `THREEFISH-1024/CBC/ZEROBYTEPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
+| `THREEFISH-1024/CFB/NOPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
+| `THREEFISH-1024/OFB/NOPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
+| `THREEFISH-1024/CTR/NOPADDING` |  | `KeyWithIvOwned`, [`ParamsWithIvOwned<ThreefishParamsOwned>`](Threefish.md) |  |
+
 ### Weak, legacy and variable-time rows
 
 ECB is weak: it encrypts equal blocks into equal blocks, so the ciphertext shows where the
@@ -669,8 +784,8 @@ DESede is legacy: NIST withdrew it for encryption at the end of 2023. Its block 
 two blocks of a long message under one key collide, which leaks their XOR (Sweet32), and two-key
 DESede has the strength of about 80 bits. It is here for old data only.
 
-Blowfish, CAST5, IDEA, Skipjack, TEA, XTEA, RC2 and RC5 are legacy for the same reason: a block of
-8 bytes, which Sweet32 turns against long messages under one key. Skipjack's key of 80 bits is short
+Blowfish, CAST5, IDEA, Skipjack, TEA, XTEA, RC2, RC5 and GOST28147 are legacy for the same reason:
+a block of 8 bytes, which Sweet32 turns against long messages under one key. Skipjack's key of 80 bits is short
 too, and RC2's key schedule is weak. They are here for old data only.
 
 RC5 and RC6 rotate by amounts that depend on the data, which is constant time on processors whose
@@ -708,6 +823,11 @@ Each kind of row takes the type of its mode, and any other type is `InvalidParam
 | CBC, CFB, OFB, CTR | `KeyWithIvOwned` |
 
 Both come from the crates underneath and wipe themselves when dropped.
+
+RC2, RC5, RC5-64, GOST28147 and the Threefish rows also take params of their own, as Bouncy
+Castle's `RC2Parameters`, `RC5Parameters`, `ParametersWithSBox` and `TweakableBlockCipherParameters`:
+alone in ECB and with the IV in a `ParamsWithIvOwned` in the other modes. See [RC2](Rc2.md),
+[RC5](Rc5.md), [GOST 28147](Gost28147.md) and [Threefish](Threefish.md).
 
 ## The IV
 

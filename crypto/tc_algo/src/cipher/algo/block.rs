@@ -151,51 +151,67 @@ impl CipherEntry for Row {
     }
 }
 
-// The rows of one padding: `padded!(padding, rand, Ecb, EcbBlockCipher::new(engine))` puts the
-// mode under tc_buffered_cipher with the padding, then in the wrapper of the mode's params
+// The rows of one padding: `padded!(padding, rand, Ecb, NoOwn, EcbBlockCipher::new(engine))` puts
+// the mode under tc_buffered_cipher with the padding, then in the wrapper of the mode's params,
+// which also takes the engine's own params `own`
 macro_rules! padded {
-    ($padding:expr, $rand:expr, $wrap:path, $mode:expr) => {{
+    ($padding:expr, $rand:expr, $wrap:path, $own:ty, $mode:expr) => {{
         use tc_block_padding::{
             Iso7816d4Padding, Iso10126Padding, Pkcs7Padding, TbcPadding, X923Padding,
             ZeroBytePadding,
         };
         use tc_buffered_cipher::{BufferedBlockCipher, PaddedBufferedBlockCipher};
 
+        use core::marker::PhantomData;
+
         use $crate::cipher::algo::block::Padding;
         use $crate::cipher::algo::buffered::Buffered;
 
-        let cipher: Box<dyn $crate::cipher::Cipher> =
-            match $padding {
-                Padding::None => Box::new($wrap(Buffered(BufferedBlockCipher::new($mode)))),
-                Padding::Pkcs7 => Box::new($wrap(Buffered(
-                    PaddedBufferedBlockCipher::with_padding($mode, Pkcs7Padding::new()),
-                ))),
-                Padding::Iso10126 => Box::new($wrap(Buffered(
-                    PaddedBufferedBlockCipher::with_padding($mode, Iso10126Padding::new($rand())),
-                ))),
-                Padding::Iso7816d4 => Box::new($wrap(Buffered(
-                    PaddedBufferedBlockCipher::with_padding($mode, Iso7816d4Padding::new()),
-                ))),
-                Padding::X923 => Box::new($wrap(Buffered(
-                    PaddedBufferedBlockCipher::with_padding($mode, X923Padding::new()),
-                ))),
-                Padding::Tbc => Box::new($wrap(Buffered(PaddedBufferedBlockCipher::with_padding(
-                    $mode,
-                    TbcPadding::new(),
-                )))),
-                Padding::ZeroByte => Box::new($wrap(Buffered(
-                    PaddedBufferedBlockCipher::with_padding($mode, ZeroBytePadding::new()),
-                ))),
-            };
+        let cipher: Box<dyn $crate::cipher::Cipher> = match $padding {
+            Padding::None => Box::new($wrap(Buffered::<_, $own>(
+                BufferedBlockCipher::new($mode),
+                PhantomData,
+            ))),
+            Padding::Pkcs7 => Box::new($wrap(Buffered::<_, $own>(
+                PaddedBufferedBlockCipher::with_padding($mode, Pkcs7Padding::new()),
+                PhantomData,
+            ))),
+            Padding::Iso10126 => Box::new($wrap(Buffered::<_, $own>(
+                PaddedBufferedBlockCipher::with_padding($mode, Iso10126Padding::new($rand())),
+                PhantomData,
+            ))),
+            Padding::Iso7816d4 => Box::new($wrap(Buffered::<_, $own>(
+                PaddedBufferedBlockCipher::with_padding($mode, Iso7816d4Padding::new()),
+                PhantomData,
+            ))),
+            Padding::X923 => Box::new($wrap(Buffered::<_, $own>(
+                PaddedBufferedBlockCipher::with_padding($mode, X923Padding::new()),
+                PhantomData,
+            ))),
+            Padding::Tbc => Box::new($wrap(Buffered::<_, $own>(
+                PaddedBufferedBlockCipher::with_padding($mode, TbcPadding::new()),
+                PhantomData,
+            ))),
+            Padding::ZeroByte => Box::new($wrap(Buffered::<_, $own>(
+                PaddedBufferedBlockCipher::with_padding($mode, ZeroBytePadding::new()),
+                PhantomData,
+            ))),
+        };
         cipher
     }};
 }
 
 // A Create for one engine, as `block_cipher!(DesEngine::new())`: the engine in the mode, under
-// tc_buffered_cipher, with the padding. CFB and OFB feed back a whole block
+// tc_buffered_cipher, with the padding. CFB and OFB feed back a whole block.
+// `block_cipher!(engine, Own<Rc2ParamsOwned>)` also takes the engine's own params
 macro_rules! block_cipher {
     ($engine:expr) => {
+        $crate::cipher::algo::block::block_cipher!($engine, $crate::cipher::algo::buffered::NoOwn)
+    };
+    ($engine:expr, $own:ty) => {
         |mode, padding, rand| {
+            use core::marker::PhantomData;
+
             use tc_block_cipher::BlockCipher as _;
             use tc_block_modes::{
                 CbcBlockCipher, CfbBlockCipher, CtrBlockCipher, EcbBlockCipher, OfbBlockCipher,
@@ -208,22 +224,26 @@ macro_rules! block_cipher {
             let engine = $engine;
             let bits = engine.block_size() * 8;
             match mode {
-                Mode::Ecb => padded!(padding, rand, Ecb, EcbBlockCipher::new(engine)),
+                Mode::Ecb => padded!(padding, rand, Ecb, $own, EcbBlockCipher::new(engine)),
                 Mode::Cbc => padded!(
                     padding,
                     rand,
                     core::convert::identity,
+                    $own,
                     CbcBlockCipher::new(engine)
                 ),
-                Mode::Cfb => Box::new(Buffered(BufferedBlockCipher::new(CfbBlockCipher::new(
-                    engine, bits,
-                )))),
-                Mode::Ofb => Box::new(Buffered(BufferedBlockCipher::new(OfbBlockCipher::new(
-                    engine, bits,
-                )))),
-                Mode::Ctr => Box::new(Ctr(Buffered(BufferedBlockCipher::new(
-                    CtrBlockCipher::new(engine),
-                )))),
+                Mode::Cfb => Box::new(Buffered::<_, $own>(
+                    BufferedBlockCipher::new(CfbBlockCipher::new(engine, bits)),
+                    PhantomData,
+                )),
+                Mode::Ofb => Box::new(Buffered::<_, $own>(
+                    BufferedBlockCipher::new(OfbBlockCipher::new(engine, bits)),
+                    PhantomData,
+                )),
+                Mode::Ctr => Box::new(Ctr(Buffered::<_, $own>(
+                    BufferedBlockCipher::new(CtrBlockCipher::new(engine)),
+                    PhantomData,
+                ))),
             }
         }
     };

@@ -26,6 +26,10 @@ mod aria;
     feature = "rc5",
     feature = "rc5-64",
     feature = "rc6",
+    feature = "gost28147",
+    feature = "threefish-256",
+    feature = "threefish-512",
+    feature = "threefish-1024",
 ))]
 mod block;
 #[cfg(feature = "blowfish")]
@@ -54,6 +58,10 @@ mod blowfish;
     feature = "rc5",
     feature = "rc5-64",
     feature = "rc6",
+    feature = "gost28147",
+    feature = "threefish-256",
+    feature = "threefish-512",
+    feature = "threefish-1024",
 ))]
 mod buffered;
 #[cfg(feature = "camellia")]
@@ -66,12 +74,24 @@ mod cast6;
 mod chacha;
 #[cfg(any(feature = "des", feature = "desede"))]
 mod des;
+#[cfg(feature = "gost28147")]
+mod gost28147;
 #[cfg(any(feature = "hc128", feature = "hc256"))]
 mod hc;
 #[cfg(feature = "idea")]
 mod idea;
 #[cfg(feature = "ies")]
 mod ies;
+#[cfg(any(
+    feature = "rc2",
+    feature = "rc5",
+    feature = "rc5-64",
+    feature = "gost28147",
+    feature = "threefish-256",
+    feature = "threefish-512",
+    feature = "threefish-1024"
+))]
+mod keyed;
 #[cfg(feature = "noekeon")]
 mod noekeon;
 #[cfg(any(feature = "rc2", feature = "rc5", feature = "rc5-64", feature = "rc6"))]
@@ -112,6 +132,12 @@ mod sm4;
 mod stream;
 #[cfg(feature = "tea")]
 mod tea;
+#[cfg(any(
+    feature = "threefish-256",
+    feature = "threefish-512",
+    feature = "threefish-1024"
+))]
+mod threefish;
 #[cfg(feature = "tnepres")]
 mod tnepres;
 #[cfg(feature = "twofish")]
@@ -171,6 +197,14 @@ pub(crate) const BUILT_IN: &[CreateRows] = &[
     rc::rc5_64,
     #[cfg(feature = "rc6")]
     rc::rc6,
+    #[cfg(feature = "gost28147")]
+    gost28147::gost28147,
+    #[cfg(feature = "threefish-256")]
+    threefish::threefish_256,
+    #[cfg(feature = "threefish-512")]
+    threefish::threefish_512,
+    #[cfg(feature = "threefish-1024")]
+    threefish::threefish_1024,
     #[cfg(feature = "chacha")]
     chacha::chacha,
     #[cfg(feature = "xchacha20")]

@@ -27,7 +27,7 @@ rows it turns on, and a name it did not turn on is an error, not a fallback.
 - Ciphers, all from `algo.cipher()`, each a `BufferedCipher` of `tc_buffered_cipher` that code
   written for that trait takes as it is:
   - Block cipher: AES, DES, DESede, Camellia, ARIA, SM4, SEED, Blowfish, Twofish, Serpent, CAST5,
-    CAST6, IDEA, RC2, RC5, RC6 and more, in ECB, CBC, CFB, OFB and CTR; see
+    CAST6, IDEA, RC2, RC5, RC6, GOST 28147, Threefish and more, in ECB, CBC, CFB, OFB and CTR; see
     [Block ciphers](docs/BlockCipher.md)
   - Stream cipher: ChaCha20, XChaCha20, Salsa20, XSalsa20, HC-128, HC-256, RC4, VMPC and ISAAC;
     see [Stream ciphers](docs/StreamCipher.md)
