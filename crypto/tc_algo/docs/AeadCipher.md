@@ -163,6 +163,16 @@ The feature of the algorithm has its rows, and the key is the algorithm's; see
 | `RC5/EAX/NOPADDING` | `RC5-32/EAX/NOPADDING`, `RC5/EAX/`, `RC5/EAX`, `RC5-32/EAX/`, `RC5-32/EAX` |  | `rc5` |
 | `GOST28147/EAX/NOPADDING` | `GOST/EAX/NOPADDING`, `GOST-28147/EAX/NOPADDING`, `GOST28147/EAX/`, `GOST28147/EAX`, `GOST/EAX/`, `GOST/EAX`, `GOST-28147/EAX/`, `GOST-28147/EAX` |  | `gost28147` |
 
+Two AEAD ciphers are algorithms of their own, not modes of a block cipher, as in Bouncy Castle:
+
+| Name | OIDs | Feature | Key bytes | Nonce bytes | Tag bytes |
+|---|---|---|---|---|---|
+| `CHACHA20-POLY1305` | `1.2.840.113549.1.9.16.3.18` | `chacha20-poly1305` | 32 | 12 | 16 |
+| `XCHACHA20-POLY1305` |  | `xchacha20-poly1305` | 32 | 24 | 16 |
+
+ChaCha20-Poly1305 is that of RFC 8439, and its OID that of RFC 8103. XChaCha20-Poly1305 takes a
+nonce of 24 bytes, long enough to draw at random for every message. Both are constant time.
+
 There is no `AES/GCM/PKCS7PADDING`. An AEAD mode needs no padding, and Bouncy Castle refuses any but
 `NOPADDING`, `RAW` among them; the names that leave the padding out or empty find the row.
 

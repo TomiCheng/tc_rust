@@ -56,6 +56,8 @@ mod tuple_hash_params;
     feature = "xsalsa20",
     feature = "hc128",
     feature = "hc256",
+    feature = "chacha20-poly1305",
+    feature = "xchacha20-poly1305",
     feature = "hmac-sha256",
     feature = "rsa",
     feature = "dh",
@@ -81,7 +83,37 @@ pub use key_length::KeyLength;
 pub use parallel_hash_params::ParallelHashParams;
 #[cfg(feature = "rsa")]
 pub use rsa_key_gen_params::RsaKeyGenParams;
-#[cfg(feature = "aes")]
+#[cfg(any(
+    feature = "aes",
+    feature = "des",
+    feature = "desede",
+    feature = "camellia",
+    feature = "aria",
+    feature = "sm4",
+    feature = "seed",
+    feature = "blowfish",
+    feature = "twofish",
+    feature = "serpent",
+    feature = "tnepres",
+    feature = "cast5",
+    feature = "cast6",
+    feature = "idea",
+    feature = "noekeon",
+    feature = "rijndael",
+    feature = "skipjack",
+    feature = "tea",
+    feature = "xtea",
+    feature = "rc2",
+    feature = "rc5",
+    feature = "rc5-64",
+    feature = "rc6",
+    feature = "gost28147",
+    feature = "threefish-256",
+    feature = "threefish-512",
+    feature = "threefish-1024",
+    feature = "chacha20-poly1305",
+    feature = "xchacha20-poly1305",
+))]
 pub use tc_aead_cipher::AeadParamsOwned;
 #[cfg(any(
     feature = "aes",
@@ -121,6 +153,8 @@ pub use tc_aead_cipher::AeadParamsOwned;
     feature = "xsalsa20",
     feature = "hc128",
     feature = "hc256",
+    feature = "chacha20-poly1305",
+    feature = "xchacha20-poly1305",
     feature = "hmac-sha256"
 ))]
 pub use tc_block_cipher::{KeyOwned, KeyParams};
@@ -171,7 +205,9 @@ pub use tc_block_modes::ParamsWithIvOwned;
     feature = "salsa20",
     feature = "xsalsa20",
     feature = "hc128",
-    feature = "hc256"
+    feature = "hc256",
+    feature = "chacha20-poly1305",
+    feature = "xchacha20-poly1305"
 ))]
 pub use tc_block_modes::{IvParams, KeyWithIvOwned};
 #[cfg(feature = "dh")]
@@ -237,6 +273,8 @@ pub use tuple_hash_params::TupleHashParams;
     feature = "xsalsa20",
     feature = "hc128",
     feature = "hc256",
+    feature = "chacha20-poly1305",
+    feature = "xchacha20-poly1305",
     feature = "hmac-sha256",
     feature = "rsa",
     feature = "dh",
@@ -283,6 +321,8 @@ use crate::Params;
     feature = "xsalsa20",
     feature = "hc128",
     feature = "hc256",
+    feature = "chacha20-poly1305",
+    feature = "xchacha20-poly1305",
     feature = "hmac-sha256"
 ))]
 impl Params for KeyOwned {
@@ -328,7 +368,9 @@ impl Params for KeyOwned {
     feature = "salsa20",
     feature = "xsalsa20",
     feature = "hc128",
-    feature = "hc256"
+    feature = "hc256",
+    feature = "chacha20-poly1305",
+    feature = "xchacha20-poly1305"
 ))]
 impl Params for KeyWithIvOwned {
     fn as_any(&self) -> &dyn Any {
@@ -385,7 +427,37 @@ impl Params for ThreefishParamsOwned {
     }
 }
 
-#[cfg(feature = "aes")]
+#[cfg(any(
+    feature = "aes",
+    feature = "des",
+    feature = "desede",
+    feature = "camellia",
+    feature = "aria",
+    feature = "sm4",
+    feature = "seed",
+    feature = "blowfish",
+    feature = "twofish",
+    feature = "serpent",
+    feature = "tnepres",
+    feature = "cast5",
+    feature = "cast6",
+    feature = "idea",
+    feature = "noekeon",
+    feature = "rijndael",
+    feature = "skipjack",
+    feature = "tea",
+    feature = "xtea",
+    feature = "rc2",
+    feature = "rc5",
+    feature = "rc5-64",
+    feature = "rc6",
+    feature = "gost28147",
+    feature = "threefish-256",
+    feature = "threefish-512",
+    feature = "threefish-1024",
+    feature = "chacha20-poly1305",
+    feature = "xchacha20-poly1305",
+))]
 impl Params for AeadParamsOwned {
     fn as_any(&self) -> &dyn Any {
         self

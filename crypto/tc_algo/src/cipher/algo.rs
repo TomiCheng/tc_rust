@@ -102,6 +102,8 @@ mod cast5;
 mod cast6;
 #[cfg(any(feature = "chacha", feature = "xchacha20"))]
 mod chacha;
+#[cfg(any(feature = "chacha20-poly1305", feature = "xchacha20-poly1305"))]
+mod chacha_aead;
 #[cfg(any(feature = "des", feature = "desede"))]
 mod des;
 #[cfg(feature = "gost28147")]
@@ -239,6 +241,10 @@ pub(crate) const BUILT_IN: &[CreateRows] = &[
     chacha::chacha,
     #[cfg(feature = "xchacha20")]
     chacha::xchacha20,
+    #[cfg(feature = "chacha20-poly1305")]
+    chacha_aead::chacha20_poly1305,
+    #[cfg(feature = "xchacha20-poly1305")]
+    chacha_aead::xchacha20_poly1305,
     #[cfg(feature = "rc4")]
     rc4::rc4,
     #[cfg(feature = "vmpc")]

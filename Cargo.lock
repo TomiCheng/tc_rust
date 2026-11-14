@@ -898,6 +898,7 @@ dependencies = [
  "tc_camellia",
  "tc_cast",
  "tc_chacha",
+ "tc_chacha_aead",
  "tc_constant_time",
  "tc_cts_modes",
  "tc_des",
@@ -1289,6 +1290,22 @@ checksum = "45bd0f17ff2f67f358b14f0e2d9ce32cdc519d1428da9e2bdfd0f6461730b500"
 dependencies = [
  "chacha20",
  "cipher",
+ "tc_stream_cipher",
+ "tc_zeroize",
+]
+
+[[package]]
+name = "tc_chacha_aead"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "526faae84a266127c4f5d4de15bc44116c3bc60d22f31a97aa2dce4e68ce1760"
+dependencies = [
+ "tc_aead_cipher",
+ "tc_block_cipher",
+ "tc_chacha",
+ "tc_constant_time",
+ "tc_macs",
+ "tc_poly1305",
  "tc_stream_cipher",
  "tc_zeroize",
 ]
@@ -1941,6 +1958,16 @@ name = "tc_pem"
 version = "0.1.0"
 dependencies = [
  "tc_encoders",
+ "tc_zeroize",
+]
+
+[[package]]
+name = "tc_poly1305"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "27b2c81ed81cbae113b1915a9f9a4c9fd9ccdd2fb44732e0e8a3c7089b87ed6d"
+dependencies = [
+ "tc_macs",
  "tc_zeroize",
 ]
 

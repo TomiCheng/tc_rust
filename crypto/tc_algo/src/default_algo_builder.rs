@@ -458,6 +458,8 @@ mod tests {
         feature = "xsalsa20",
         feature = "hc128",
         feature = "hc256",
+        feature = "chacha20-poly1305",
+        feature = "xchacha20-poly1305",
         feature = "rsa",
         feature = "ies"
     )))]
