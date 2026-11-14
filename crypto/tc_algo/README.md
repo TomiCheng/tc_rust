@@ -24,7 +24,8 @@ rows it turns on, and a name it did not turn on is an error, not a fallback.
 - XOF: SHAKE, cSHAKE, TupleHash, ParallelHash, BLAKE2xs, BLAKE3, Ascon-XOF and Ascon-CXOF, each
   behind a feature of its own; see [XOF](docs/Xof.md)
 - MAC: `HMAC-SHA256` (`hmac-sha256`)
-- Ciphers, all from `algo.cipher()`:
+- Ciphers, all from `algo.cipher()`, each a `BufferedCipher` of `tc_buffered_cipher` that code
+  written for that trait takes as it is:
   - Block cipher: AES in ECB, CBC, CFB and OFB (`aes`); see [Block ciphers](docs/BlockCipher.md)
   - Stream cipher: `CHACHA7539` (`chacha`); see [Stream ciphers](docs/StreamCipher.md)
   - AEAD cipher: AES in GCM (`aes`); see [AEAD ciphers](docs/AeadCipher.md)

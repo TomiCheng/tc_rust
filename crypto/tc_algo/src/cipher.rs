@@ -14,3 +14,4 @@ pub use cipher_entry::CipherEntry;
 pub use cipher_provider::CipherProvider;
 pub use cipher_trait::{Cipher, CipherDirection};
 pub(crate) use empty_cipher_provider::EmptyCipherProvider;
+pub use tc_buffered_cipher::BufferedCipher;

@@ -1,6 +1,6 @@
 use std::sync::{Arc, RwLock};
 
-use tc_algo::cipher::{Cipher, CipherDirection, CipherEntry};
+use tc_algo::cipher::{BufferedCipher, Cipher, CipherDirection, CipherEntry};
 use tc_algo::{
     Algo, AlgoBuilder, AlgoError, DefaultAlgoBuilder, DefaultAlgoContext, EntryBase, ErrorKind,
     ListPolicy, Params, Policy,
@@ -55,11 +55,8 @@ struct Marked {
 const ENCRYPTED: u8 = 0xE;
 const DECRYPTED: u8 = 0xD;
 
-impl Cipher for Marked {
-    fn init(&mut self, direction: CipherDirection, _params: &dyn Params) -> Result<(), AlgoError> {
-        self.direction = Some(direction);
-        Ok(())
-    }
+impl BufferedCipher for Marked {
+    type Error = AlgoError;
 
     fn block_size(&self) -> usize {
         0
@@ -89,6 +86,13 @@ impl Cipher for Marked {
     }
 
     fn reset(&mut self) {}
+}
+
+impl Cipher for Marked {
+    fn init(&mut self, direction: CipherDirection, _params: &dyn Params) -> Result<(), AlgoError> {
+        self.direction = Some(direction);
+        Ok(())
+    }
 }
 
 fn row(name: &'static str, aliases: &[&str], oids: &[&str], mark: u8) -> Box<dyn CipherEntry> {

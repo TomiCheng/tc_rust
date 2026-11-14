@@ -1,41 +1,15 @@
+use tc_buffered_cipher::BufferedCipher;
+
 use crate::{AlgoError, Params};
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum CipherDirection {
-    Encrypt,
-    Decrypt,
-}
+pub use tc_buffered_cipher::CipherDirection;
 
-// Bouncy Castle's IBufferedCipher, with a fixed error type and init taking any params, so that every
-// row fits behind Box<dyn Cipher>
-pub trait Cipher {
+// A BufferedCipher of tc_buffered_cipher, with AlgoError for its errors, and with an init taking
+// any params, so that every row fits behind Box<dyn Cipher> and still goes wherever a
+// BufferedCipher does
+pub trait Cipher: BufferedCipher<Error = AlgoError> {
+    // Keys the cipher for a message. Params of another type than the row takes are InvalidParams
     fn init(&mut self, direction: CipherDirection, params: &dyn Params) -> Result<(), AlgoError>;
-
-    // Zero for a stream cipher
-    fn block_size(&self) -> usize;
-
-    // How much process_bytes may write for this much further input
-    fn update_output_len(&self, input_len: usize) -> Result<usize, AlgoError>;
-
-    // How much process_bytes and do_final may write together for this much further input, so
-    // output_len(0) sizes the buffer of do_final
-    fn output_len(&self, input_len: usize) -> Result<usize, AlgoError>;
-
-    fn process_byte(&mut self, input: u8, output: &mut [u8]) -> Result<usize, AlgoError> {
-        self.process_bytes(&[input], output)
-    }
-
-    // Writes what this input completes and returns its length; a block cipher keeps a partial block
-    // for later
-    fn process_bytes(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, AlgoError>;
-
-    // Writes the rest, with the padding or the tag, and returns its length. What can follow differs
-    // by row, so give the next message a new init, with a new IV or nonce
-    fn do_final(&mut self, output: &mut [u8]) -> Result<usize, AlgoError>;
-
-    // Discards the message so far. This goes back to the IV or the start of the keystream, so it is
-    // for starting the same message over, not for sending another one
-    fn reset(&mut self);
 
     // process_bytes with an output of its own
     fn update(&mut self, input: &[u8]) -> Result<Vec<u8>, AlgoError> {
@@ -51,5 +25,44 @@ pub trait Cipher {
         let written = self.do_final(&mut output)?;
         output.truncate(written);
         Ok(output)
+    }
+}
+
+#[cfg(all(test, feature = "aes"))]
+mod tests {
+    use tc_buffered_cipher::BufferedCipher;
+
+    use super::CipherDirection;
+    use crate::params::KeyWithIvOwned;
+    use crate::{AlgoBuilder, DefaultAlgoBuilder};
+
+    // Code written for any BufferedCipher, knowing nothing of tc_algo
+    fn encrypt_all<C: BufferedCipher + ?Sized>(cipher: &mut C, input: &[u8]) -> Vec<u8>
+    where
+        C::Error: core::fmt::Debug,
+    {
+        let mut output = vec![0; cipher.output_len(input.len()).unwrap()];
+        let mut written = cipher.process_bytes(input, &mut output).unwrap();
+        written += cipher.do_final(&mut output[written..]).unwrap();
+        output.truncate(written);
+        output
+    }
+
+    #[test]
+    fn a_cipher_from_the_factory_goes_where_a_buffered_cipher_does() {
+        let algo = DefaultAlgoBuilder::default().build();
+        let name = "AES/CBC/PKCS7PADDING";
+        let params = KeyWithIvOwned::new(vec![7; 16], vec![9; 16]);
+        let message = b"attack at dawn";
+
+        let mut cipher = algo.cipher().get_by_name(name).unwrap();
+        cipher.init(CipherDirection::Encrypt, &params).unwrap();
+        let output = encrypt_all(cipher.as_mut(), message);
+
+        let expected = algo
+            .cipher()
+            .encrypt_by_name(name, &params, message)
+            .unwrap();
+        assert_eq!(output, expected);
     }
 }

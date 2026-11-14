@@ -1,10 +1,7 @@
 use tc_asn1::Asn1Oid;
 use tc_block_cipher::KeyParams;
 use tc_block_modes::IvParams;
-use tc_buffered_cipher::{
-    BufferedCipher, BufferedCipherInit, BufferedError, BufferedStreamCipher,
-    CipherDirection as BufferedDirection,
-};
+use tc_buffered_cipher::{BufferedCipher, BufferedCipherInit, BufferedError, BufferedStreamCipher};
 use tc_chacha::ChaCha7539Engine;
 use tc_stream_cipher::{KeyWithIvRef, StreamError};
 
@@ -49,19 +46,8 @@ impl CipherEntry for Row {
 // Its params are a KeyWithIvOwned, the same as for the block modes with an IV
 struct ChaCha7539(BufferedStreamCipher<ChaCha7539Engine>);
 
-impl Cipher for ChaCha7539 {
-    fn init(&mut self, direction: CipherDirection, params: &dyn Params) -> Result<(), AlgoError> {
-        let params = params
-            .as_any()
-            .downcast_ref::<KeyWithIvOwned>()
-            .ok_or(AlgoError::new(ErrorKind::InvalidParams))?;
-        self.0
-            .init(
-                buffered_direction(direction),
-                &KeyWithIvRef::new(params.key(), params.iv()),
-            )
-            .map_err(|error| AlgoError::with_source(ErrorKind::InvalidParams, error))
-    }
+impl BufferedCipher for ChaCha7539 {
+    type Error = AlgoError;
 
     fn block_size(&self) -> usize {
         self.0.block_size()
@@ -88,10 +74,15 @@ impl Cipher for ChaCha7539 {
     }
 }
 
-fn buffered_direction(direction: CipherDirection) -> BufferedDirection {
-    match direction {
-        CipherDirection::Encrypt => BufferedDirection::Encrypt,
-        CipherDirection::Decrypt => BufferedDirection::Decrypt,
+impl Cipher for ChaCha7539 {
+    fn init(&mut self, direction: CipherDirection, params: &dyn Params) -> Result<(), AlgoError> {
+        let params = params
+            .as_any()
+            .downcast_ref::<KeyWithIvOwned>()
+            .ok_or(AlgoError::new(ErrorKind::InvalidParams))?;
+        self.0
+            .init(direction, &KeyWithIvRef::new(params.key(), params.iv()))
+            .map_err(|error| AlgoError::with_source(ErrorKind::InvalidParams, error))
     }
 }
 

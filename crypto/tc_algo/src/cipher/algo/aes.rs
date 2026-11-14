@@ -5,11 +5,10 @@ use tc_aead_cipher::{
 };
 use tc_aes::AesEngine;
 use tc_asn1::Asn1Oid;
-use tc_block_cipher::CipherDirection as BlockDirection;
 
 use super::block::{Mode, Padding, Rand, block_cipher, block_rows};
 use super::buffered::{downcast, invalid_params};
-use crate::cipher::{Cipher, CipherDirection, CipherEntry};
+use crate::cipher::{BufferedCipher, Cipher, CipherDirection, CipherEntry};
 use crate::{AlgoError, DefaultAlgoContext, EntryBase, ErrorKind, Params};
 
 // The rows of AES, to give to DefaultAlgoBuilder::reg_cipher: each mode with each padding it takes,
@@ -123,13 +122,8 @@ impl CipherEntry for Row {
 // the tag, so a caller that uses update has to discard it when finalize fails
 struct Gcm(GcmBlockCipher<AesEngine>);
 
-impl Cipher for Gcm {
-    fn init(&mut self, direction: CipherDirection, params: &dyn Params) -> Result<(), AlgoError> {
-        let params = downcast::<AeadParamsOwned>(params)?;
-        self.0
-            .init(block_direction(direction), params)
-            .map_err(invalid_params)
-    }
+impl BufferedCipher for Gcm {
+    type Error = AlgoError;
 
     fn block_size(&self) -> usize {
         self.0.block_size()
@@ -156,10 +150,12 @@ impl Cipher for Gcm {
     }
 }
 
-fn block_direction(direction: CipherDirection) -> BlockDirection {
-    match direction {
-        CipherDirection::Encrypt => BlockDirection::Encrypt,
-        CipherDirection::Decrypt => BlockDirection::Decrypt,
+impl Cipher for Gcm {
+    fn init(&mut self, direction: CipherDirection, params: &dyn Params) -> Result<(), AlgoError> {
+        let params = downcast::<AeadParamsOwned>(params)?;
+        self.0
+            .init(direction.into(), params)
+            .map_err(invalid_params)
     }
 }
 

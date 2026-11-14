@@ -1,5 +1,4 @@
 use tc_asn1::Asn1Oid;
-use tc_block_cipher::CipherDirection as BlockDirection;
 use tc_dh::DhBasicAgreement;
 use tc_ies::{IesEngine, IesError, IesParamsRef};
 use tc_kdf::kdf::Kdf2;
@@ -7,7 +6,7 @@ use tc_macs::{Hmac, Mac};
 use tc_sha::Sha1Digest;
 use tc_zeroize::Zeroize;
 
-use crate::cipher::{Cipher, CipherDirection, CipherEntry};
+use crate::cipher::{BufferedCipher, Cipher, CipherDirection, CipherEntry};
 use crate::params::IesDhParams;
 use crate::{AlgoError, DefaultAlgoContext, EntryBase, ErrorKind, Params};
 
@@ -58,33 +57,8 @@ impl Ies {
     }
 }
 
-impl Cipher for Ies {
-    fn init(&mut self, direction: CipherDirection, params: &dyn Params) -> Result<(), AlgoError> {
-        self.direction = None;
-        self.buffer.zeroize();
-        let params = params
-            .as_any()
-            .downcast_ref::<IesDhParams>()
-            .ok_or(AlgoError::new(ErrorKind::InvalidParams))?;
-        let block_direction = match direction {
-            CipherDirection::Encrypt => BlockDirection::Encrypt,
-            CipherDirection::Decrypt => BlockDirection::Decrypt,
-        };
-        self.engine
-            .init(
-                block_direction,
-                params.private_key(),
-                params.public_key(),
-                &IesParamsRef::new(
-                    params.derivation_v(),
-                    params.encoding_v(),
-                    params.mac_key_bits(),
-                ),
-            )
-            .map_err(|error| AlgoError::with_source(ErrorKind::InvalidParams, error))?;
-        self.direction = Some(direction);
-        Ok(())
-    }
+impl BufferedCipher for Ies {
+    type Error = AlgoError;
 
     // Not a block cipher, as in Bouncy Castle
     fn block_size(&self) -> usize {
@@ -125,6 +99,31 @@ impl Cipher for Ies {
 
     fn reset(&mut self) {
         self.buffer.zeroize();
+    }
+}
+
+impl Cipher for Ies {
+    fn init(&mut self, direction: CipherDirection, params: &dyn Params) -> Result<(), AlgoError> {
+        self.direction = None;
+        self.buffer.zeroize();
+        let params = params
+            .as_any()
+            .downcast_ref::<IesDhParams>()
+            .ok_or(AlgoError::new(ErrorKind::InvalidParams))?;
+        self.engine
+            .init(
+                direction.into(),
+                params.private_key(),
+                params.public_key(),
+                &IesParamsRef::new(
+                    params.derivation_v(),
+                    params.encoding_v(),
+                    params.mac_key_bits(),
+                ),
+            )
+            .map_err(|error| AlgoError::with_source(ErrorKind::InvalidParams, error))?;
+        self.direction = Some(direction);
+        Ok(())
     }
 }
 

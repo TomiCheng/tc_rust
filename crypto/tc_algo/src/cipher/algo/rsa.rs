@@ -5,7 +5,6 @@ use tc_asn1::Asn1Oid;
 use tc_asym_encoding::{EncodingError, OaepEncoding, Pkcs1Encoding};
 use tc_buffered_cipher::{
     BufferedAsymmetricBlockCipher, BufferedCipher, BufferedCipherInit, BufferedError,
-    CipherDirection as BufferedDirection,
 };
 use tc_rsa::{RsaBlindedEngine, RsaEngine, RsaError, RsaKey};
 use tc_sha::{Sha1Digest, Sha256Digest};
@@ -133,25 +132,13 @@ impl CipherEntry for Row {
 // is one block, so nothing comes out before do_final
 struct Rsa<C>(C);
 
-impl<C, E, I> Cipher for Rsa<C>
+impl<C, E, I> BufferedCipher for Rsa<C>
 where
     C: BufferedCipher<Error = BufferedError<E>> + BufferedCipherInit<RsaKey, Error = I>,
     E: Kind + Error + Send + Sync + 'static,
     I: Error + Send + Sync + 'static,
 {
-    fn init(&mut self, direction: CipherDirection, params: &dyn Params) -> Result<(), AlgoError> {
-        let key = params
-            .as_any()
-            .downcast_ref::<RsaKey>()
-            .ok_or(AlgoError::new(ErrorKind::InvalidParams))?;
-        let direction = match direction {
-            CipherDirection::Encrypt => BufferedDirection::Encrypt,
-            CipherDirection::Decrypt => BufferedDirection::Decrypt,
-        };
-        self.0
-            .init(direction, key)
-            .map_err(|error| AlgoError::with_source(ErrorKind::InvalidParams, error))
-    }
+    type Error = AlgoError;
 
     fn block_size(&self) -> usize {
         self.0.block_size()
@@ -175,6 +162,23 @@ where
 
     fn reset(&mut self) {
         self.0.reset();
+    }
+}
+
+impl<C, E, I> Cipher for Rsa<C>
+where
+    C: BufferedCipher<Error = BufferedError<E>> + BufferedCipherInit<RsaKey, Error = I>,
+    E: Kind + Error + Send + Sync + 'static,
+    I: Error + Send + Sync + 'static,
+{
+    fn init(&mut self, direction: CipherDirection, params: &dyn Params) -> Result<(), AlgoError> {
+        let key = params
+            .as_any()
+            .downcast_ref::<RsaKey>()
+            .ok_or(AlgoError::new(ErrorKind::InvalidParams))?;
+        self.0
+            .init(direction, key)
+            .map_err(|error| AlgoError::with_source(ErrorKind::InvalidParams, error))
     }
 }
 

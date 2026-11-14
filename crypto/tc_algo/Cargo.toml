@@ -95,33 +95,33 @@ ascon-xof = ["dep:tc_ascon_hash", "dep:tc_digest", "tc_ascon_hash/legacy"]
 ascon-xofa = ["dep:tc_ascon_hash", "dep:tc_digest", "tc_ascon_hash/legacy"]
 
 # Block Cipher
-aes = ["dep:tc_aes", "dep:tc_aead_cipher", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core", "dep:tc_buffered_cipher"]
+aes = ["dep:tc_aes", "dep:tc_aead_cipher", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core"]
 
-des = ["dep:tc_des", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core", "dep:tc_buffered_cipher"]
-desede = ["dep:tc_des", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core", "dep:tc_buffered_cipher"]
-camellia = ["dep:tc_camellia", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core", "dep:tc_buffered_cipher"]
-aria = ["dep:tc_aria", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core", "dep:tc_buffered_cipher"]
-sm4 = ["dep:tc_sm4", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core", "dep:tc_buffered_cipher"]
-seed = ["dep:tc_seed", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core", "dep:tc_buffered_cipher"]
-blowfish = ["dep:tc_blowfish", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core", "dep:tc_buffered_cipher"]
-twofish = ["dep:tc_twofish", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core", "dep:tc_buffered_cipher"]
-serpent = ["dep:tc_serpent", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core", "dep:tc_buffered_cipher"]
-tnepres = ["dep:tc_serpent", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core", "dep:tc_buffered_cipher"]
-cast5 = ["dep:tc_cast", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core", "dep:tc_buffered_cipher"]
-cast6 = ["dep:tc_cast", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core", "dep:tc_buffered_cipher"]
-idea = ["dep:tc_misc_block_cipher", "tc_misc_block_cipher/idea", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core", "dep:tc_buffered_cipher"]
-noekeon = ["dep:tc_misc_block_cipher", "tc_misc_block_cipher/noekeon", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core", "dep:tc_buffered_cipher"]
-rijndael = ["dep:tc_misc_block_cipher", "tc_misc_block_cipher/rijndael", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core", "dep:tc_buffered_cipher"]
-skipjack = ["dep:tc_misc_block_cipher", "tc_misc_block_cipher/skipjack", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core", "dep:tc_buffered_cipher"]
-tea = ["dep:tc_misc_block_cipher", "tc_misc_block_cipher/tea", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core", "dep:tc_buffered_cipher"]
-xtea = ["dep:tc_misc_block_cipher", "tc_misc_block_cipher/tea", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core", "dep:tc_buffered_cipher"]
-rc2 = ["dep:tc_rc_cipher", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core", "dep:tc_buffered_cipher"]
-rc5 = ["dep:tc_rc_cipher", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core", "dep:tc_buffered_cipher"]
-rc5-64 = ["dep:tc_rc_cipher", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core", "dep:tc_buffered_cipher"]
-rc6 = ["dep:tc_rc_cipher", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core", "dep:tc_buffered_cipher"]
+des = ["dep:tc_des", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core"]
+desede = ["dep:tc_des", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core"]
+camellia = ["dep:tc_camellia", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core"]
+aria = ["dep:tc_aria", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core"]
+sm4 = ["dep:tc_sm4", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core"]
+seed = ["dep:tc_seed", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core"]
+blowfish = ["dep:tc_blowfish", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core"]
+twofish = ["dep:tc_twofish", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core"]
+serpent = ["dep:tc_serpent", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core"]
+tnepres = ["dep:tc_serpent", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core"]
+cast5 = ["dep:tc_cast", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core"]
+cast6 = ["dep:tc_cast", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core"]
+idea = ["dep:tc_misc_block_cipher", "tc_misc_block_cipher/idea", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core"]
+noekeon = ["dep:tc_misc_block_cipher", "tc_misc_block_cipher/noekeon", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core"]
+rijndael = ["dep:tc_misc_block_cipher", "tc_misc_block_cipher/rijndael", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core"]
+skipjack = ["dep:tc_misc_block_cipher", "tc_misc_block_cipher/skipjack", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core"]
+tea = ["dep:tc_misc_block_cipher", "tc_misc_block_cipher/tea", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core"]
+xtea = ["dep:tc_misc_block_cipher", "tc_misc_block_cipher/tea", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core"]
+rc2 = ["dep:tc_rc_cipher", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core"]
+rc5 = ["dep:tc_rc_cipher", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core"]
+rc5-64 = ["dep:tc_rc_cipher", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core"]
+rc6 = ["dep:tc_rc_cipher", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core"]
 
 # Stream cipher
-chacha = ["dep:tc_chacha", "dep:tc_stream_cipher", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_buffered_cipher"]
+chacha = ["dep:tc_chacha", "dep:tc_stream_cipher", "dep:tc_block_cipher", "dep:tc_block_modes"]
 
 # MAC
 hmac-sha256 = ["sha256", "dep:tc_block_cipher", "dep:tc_macs", "tc_macs/hmac", "tc_macs/alloc"]
@@ -130,7 +130,7 @@ hmac-sha256 = ["sha256", "dep:tc_block_cipher", "dep:tc_macs", "tc_macs/hmac", "
 aes-wrap = ["aes", "dep:tc_key_wrap", "tc_key_wrap/rfc3394"]
 
 # Key pair
-rsa = ["dep:tc_asn1_x509", "dep:tc_asym_cipher", "dep:tc_asym_encoding", "dep:tc_buffered_cipher", "dep:tc_rsa", "dep:tc_rsa_signer", "dep:tc_sha", "dep:tc_signer"]
+rsa = ["dep:tc_asn1_x509", "dep:tc_asym_cipher", "dep:tc_asym_encoding", "dep:tc_rsa", "dep:tc_rsa_signer", "dep:tc_sha", "dep:tc_signer"]
 
 # Agreement
 dh = ["dep:tc_agreement", "dep:tc_asym_cipher", "dep:tc_bigint", "dep:tc_dh", "dep:tc_dh_key"]
@@ -160,7 +160,7 @@ tc_aead_cipher = { version = "0.1.0", features = ["alloc"], optional = true }
 tc_asn1 = "0.1.2"
 tc_block_cipher = { version = "0.1.0", features = ["alloc"], optional = true }
 tc_block_modes = { version = "0.1.1", features = ["alloc"], optional = true }
-tc_buffered_cipher = { version = "0.1.1", features = ["alloc"], optional = true }
+tc_buffered_cipher = { version = "0.1.1", features = ["alloc"] }
 tc_constant_time = "0.1.0"
 tc_zeroize = { version = "0.1.0", features = ["alloc"] }
 tc_digest = { version = "0.1.1", optional = true }
