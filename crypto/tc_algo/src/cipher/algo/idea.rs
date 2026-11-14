@@ -41,14 +41,14 @@ mod tests {
     }
 
     #[test]
-    fn there_are_twenty_one_rows_with_gofb_openpgp_cfb_and_cts_found_by_their_oids() {
+    fn there_are_twenty_two_rows_with_gofb_openpgp_cfb_cts_and_eax_found_by_their_oids() {
         let algo = DefaultAlgoBuilder::default().build();
         let rows = algo
             .cipher()
             .algorithms()
             .filter(|entry| entry.name().starts_with("IDEA/"))
             .count();
-        assert_eq!(rows, 21);
+        assert_eq!(rows, 22);
         let by_oid = algo
             .cipher()
             .get_by_oid(&"1.3.6.1.4.1.188.7.1.1.2".parse().unwrap())

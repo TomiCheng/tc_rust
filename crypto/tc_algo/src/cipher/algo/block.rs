@@ -22,10 +22,16 @@ pub(super) enum Mode {
     Gofb,
     // The CFB of OpenPGP, RFC 4880, which resynchronizes after its prefix of a block and two bytes
     OpenPgpCfb,
+    // The AEAD modes of tc_aead_cipher: GCM, CCM and OCB for a block of 16 bytes, EAX for one of 8
+    // or 16, as Bouncy Castle's take
+    Gcm,
+    Ccm,
+    Eax,
+    Ocb,
 }
 
 impl Mode {
-    const ALL: [Mode; 7] = [
+    const ALL: [Mode; 11] = [
         Mode::Ecb,
         Mode::Cbc,
         Mode::Cfb,
@@ -33,7 +39,25 @@ impl Mode {
         Mode::Ctr,
         Mode::Gofb,
         Mode::OpenPgpCfb,
+        Mode::Gcm,
+        Mode::Ccm,
+        Mode::Eax,
+        Mode::Ocb,
     ];
+
+    fn is_aead(self) -> bool {
+        matches!(self, Mode::Gcm | Mode::Ccm | Mode::Eax | Mode::Ocb)
+    }
+
+    // Whether the mode takes a block of that many bits
+    fn takes_block(self, bits: usize) -> bool {
+        match self {
+            Mode::Gofb => bits == 64,
+            Mode::Gcm | Mode::Ccm | Mode::Ocb => bits == 128,
+            Mode::Eax => bits == 64 || bits == 128,
+            _ => true,
+        }
+    }
 
     // The name first, then the aliases of Bouncy Castle's CipherUtilities, where NONE and a mode
     // left empty are ECB
@@ -46,6 +70,10 @@ impl Mode {
             Mode::Ctr => &["CTR", "SIC"],
             Mode::Gofb => &["GOFB"],
             Mode::OpenPgpCfb => &["OPENPGPCFB"],
+            Mode::Gcm => &["GCM"],
+            Mode::Ccm => &["CCM"],
+            Mode::Eax => &["EAX"],
+            Mode::Ocb => &["OCB"],
         }
     }
 
@@ -54,7 +82,7 @@ impl Mode {
     fn default_padding(self) -> Padding {
         match self {
             Mode::Ecb | Mode::Cbc => Padding::Pkcs7,
-            Mode::Cfb | Mode::Ofb | Mode::Ctr | Mode::Gofb | Mode::OpenPgpCfb => Padding::None,
+            _ => Padding::None,
         }
     }
 
@@ -63,7 +91,7 @@ impl Mode {
     fn paddings(self) -> &'static [Padding] {
         match self {
             Mode::Ecb | Mode::Cbc => &Padding::ALL,
-            Mode::Cfb | Mode::Ofb | Mode::Ctr | Mode::Gofb | Mode::OpenPgpCfb => &[Padding::None],
+            _ => &[Padding::None],
         }
     }
 }
@@ -124,8 +152,8 @@ pub(super) fn block_rows(
     let mut rows: Vec<Box<dyn CipherEntry>> = Vec::new();
     let block_bits = create(Mode::Ecb, Padding::None, rand, None).block_size() * 8;
     for mode in Mode::ALL {
-        // GOFB's counter is two words of 32 bits, so it takes a block of 8 bytes only
-        if mode == Mode::Gofb && block_bits != 64 {
+        // GOFB's counter is two words of 32 bits, and GCM, CCM and OCB work in blocks of 16 bytes
+        if !mode.takes_block(block_bits) {
             continue;
         }
         for &padding in mode.paddings() {
@@ -144,7 +172,10 @@ pub(super) fn block_rows(
             if padding == mode.default_padding() {
                 for algorithm in algorithms {
                     for mode_name in mode.names() {
-                        aliases.push(format!("{algorithm}/{mode_name}/RAW"));
+                        // Bouncy Castle refuses RAW, as any padding but NOPADDING, for an AEAD mode
+                        if !mode.is_aead() {
+                            aliases.push(format!("{algorithm}/{mode_name}/RAW"));
+                        }
                         aliases.push(format!("{algorithm}/{mode_name}/"));
                         aliases.push(format!("{algorithm}/{mode_name}"));
                     }
@@ -339,6 +370,7 @@ macro_rules! block_cipher {
         |mode, padding, rand, feedback_bits| {
             use core::marker::PhantomData;
 
+            use tc_aead_cipher::{CcmBlockCipher, EaxBlockCipher, GcmBlockCipher, OcbBlockCipher};
             use tc_block_cipher::BlockCipher as _;
             use tc_block_modes::{
                 CbcBlockCipher, CfbBlockCipher, CtrBlockCipher, EcbBlockCipher, GofbBlockCipher,
@@ -346,6 +378,8 @@ macro_rules! block_cipher {
             };
             use tc_buffered_cipher::BufferedBlockCipher;
             use tc_cts_modes::CtsBlockCipher;
+
+            use $crate::cipher::algo::aead_mode::Aead;
 
             use $crate::cipher::algo::block::{Mode, Padding, padded};
             use $crate::cipher::algo::buffered::{Buffered, Ctr, CtsOwn, Ecb};
@@ -400,6 +434,11 @@ macro_rules! block_cipher {
                     block,
                     PhantomData,
                 )),
+                Mode::Gcm => Box::new(Aead(GcmBlockCipher::new(engine))),
+                Mode::Ccm => Box::new(Aead(CcmBlockCipher::new(engine))),
+                Mode::Eax => Box::new(Aead(EaxBlockCipher::new(engine))),
+                // OCB takes a second engine of the same kind for its hash
+                Mode::Ocb => Box::new(Aead(OcbBlockCipher::new(engine, $engine))),
             }
         }
     };

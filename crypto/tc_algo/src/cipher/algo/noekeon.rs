@@ -48,13 +48,13 @@ mod tests {
     }
 
     #[test]
-    fn there_are_twenty_rows_with_openpgp_cfb_and_cts_found_by_their_oids() {
+    fn there_are_twenty_four_rows_with_openpgp_cfb_cts_and_the_aead_modes_found_by_their_oids() {
         let algo = DefaultAlgoBuilder::default().build();
         let rows = algo
             .cipher()
             .algorithms()
             .filter(|entry| entry.name().starts_with("NOEKEON/"))
             .count();
-        assert_eq!(rows, 20);
+        assert_eq!(rows, 24);
     }
 }

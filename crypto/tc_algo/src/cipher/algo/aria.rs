@@ -58,6 +58,24 @@ pub(super) fn aria(context: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>> {
                     "1.2.410.200046.1.1.15",
                 ],
             ),
+            (
+                Mode::Gcm,
+                Padding::None,
+                &[
+                    "1.2.410.200046.1.1.34",
+                    "1.2.410.200046.1.1.35",
+                    "1.2.410.200046.1.1.36",
+                ],
+            ),
+            (
+                Mode::Ccm,
+                Padding::None,
+                &[
+                    "1.2.410.200046.1.1.37",
+                    "1.2.410.200046.1.1.38",
+                    "1.2.410.200046.1.1.39",
+                ],
+            ),
         ],
     )
 }
@@ -91,14 +109,14 @@ mod tests {
     }
 
     #[test]
-    fn there_are_twenty_rows_with_openpgp_cfb_and_cts_found_by_their_oids() {
+    fn there_are_twenty_four_rows_with_openpgp_cfb_cts_and_the_aead_modes_found_by_their_oids() {
         let algo = DefaultAlgoBuilder::default().build();
         let rows = algo
             .cipher()
             .algorithms()
             .filter(|entry| entry.name().starts_with("ARIA/"))
             .count();
-        assert_eq!(rows, 20);
+        assert_eq!(rows, 24);
         for (oid, name) in [
             ("1.2.410.200046.1.1.1", "ARIA/ECB/PKCS7PADDING"),
             ("1.2.410.200046.1.1.6", "ARIA/ECB/PKCS7PADDING"),
@@ -115,6 +133,12 @@ mod tests {
             ("1.2.410.200046.1.1.5", "ARIA/CTR/NOPADDING"),
             ("1.2.410.200046.1.1.10", "ARIA/CTR/NOPADDING"),
             ("1.2.410.200046.1.1.15", "ARIA/CTR/NOPADDING"),
+            ("1.2.410.200046.1.1.34", "ARIA/GCM/NOPADDING"),
+            ("1.2.410.200046.1.1.35", "ARIA/GCM/NOPADDING"),
+            ("1.2.410.200046.1.1.36", "ARIA/GCM/NOPADDING"),
+            ("1.2.410.200046.1.1.37", "ARIA/CCM/NOPADDING"),
+            ("1.2.410.200046.1.1.38", "ARIA/CCM/NOPADDING"),
+            ("1.2.410.200046.1.1.39", "ARIA/CCM/NOPADDING"),
         ] {
             let by_oid = algo.cipher().get_by_oid(&oid.parse().unwrap()).unwrap();
             let by_name = algo.cipher().get_by_name(name).unwrap();

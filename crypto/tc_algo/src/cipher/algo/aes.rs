@@ -1,22 +1,16 @@
-use core::error::Error;
-
-use tc_aead_cipher::{
-    AeadBlockCipher, AeadCipher, AeadCipherInit, AeadError, AeadParamsOwned, GcmBlockCipher,
-};
 use tc_aes::AesEngine;
-use tc_asn1::Asn1Oid;
 
 use super::block::{Mode, Padding, Rand, block_cipher, block_rows};
-use super::buffered::{downcast, invalid_params};
-use crate::cipher::{BufferedCipher, Cipher, CipherDirection, CipherEntry};
-use crate::{AlgoError, DefaultAlgoContext, EntryBase, ErrorKind, Params};
+use crate::DefaultAlgoContext;
+use crate::cipher::CipherEntry;
 
 // The rows of AES, to give to DefaultAlgoBuilder::reg_cipher: each mode with each padding it takes,
-// then GCM. Their names and OIDs are those of Bouncy Castle's CipherUtilities, where the NIST ECB and
-// CBC OIDs mean those modes with PKCS#7, and the CFB and OFB ones those with none
+// the AEAD modes among them. Their names and OIDs are those of Bouncy Castle's CipherUtilities,
+// where the NIST ECB and CBC OIDs mean those modes with PKCS#7, and the CFB and OFB ones those with
+// none
 pub(super) fn aes(context: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>> {
     let rand: Rand = context.rand();
-    let mut rows = block_rows(
+    block_rows(
         &["AES"],
         block_cipher!(AesEngine::new()),
         rand,
@@ -57,119 +51,26 @@ pub(super) fn aes(context: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>> {
                     "2.16.840.1.101.3.4.1.43",
                 ],
             ),
+            (
+                Mode::Gcm,
+                Padding::None,
+                &[
+                    "2.16.840.1.101.3.4.1.6",
+                    "2.16.840.1.101.3.4.1.26",
+                    "2.16.840.1.101.3.4.1.46",
+                ],
+            ),
+            (
+                Mode::Ccm,
+                Padding::None,
+                &[
+                    "2.16.840.1.101.3.4.1.7",
+                    "2.16.840.1.101.3.4.1.27",
+                    "2.16.840.1.101.3.4.1.47",
+                ],
+            ),
         ],
-    );
-    rows.push(row(
-        "AES/GCM/NOPADDING",
-        &[],
-        &[
-            "2.16.840.1.101.3.4.1.6",
-            "2.16.840.1.101.3.4.1.26",
-            "2.16.840.1.101.3.4.1.46",
-        ],
-        || Box::new(Gcm(GcmBlockCipher::new(AesEngine::new()))),
-    ));
-    rows
-}
-
-fn row(
-    name: &'static str,
-    aliases: &[&str],
-    oids: &[&str],
-    create: fn() -> Box<dyn Cipher>,
-) -> Box<dyn CipherEntry> {
-    Box::new(Row {
-        name,
-        aliases: aliases.iter().map(|alias| alias.to_string()).collect(),
-        oids: oids.iter().map(|dotted| oid(dotted)).collect(),
-        create,
-    })
-}
-
-fn oid(dotted: &str) -> Asn1Oid {
-    dotted.parse().expect("a valid OID")
-}
-
-struct Row {
-    name: &'static str,
-    aliases: Vec<String>,
-    oids: Vec<Asn1Oid>,
-    create: fn() -> Box<dyn Cipher>,
-}
-
-impl EntryBase for Row {
-    fn name(&self) -> &str {
-        self.name
-    }
-
-    fn aliases(&self) -> &[String] {
-        &self.aliases
-    }
-
-    fn oids(&self) -> &[Asn1Oid] {
-        &self.oids
-    }
-}
-
-impl CipherEntry for Row {
-    fn create(&self) -> Box<dyn Cipher> {
-        (self.create)()
-    }
-}
-
-// Its params are an AeadParamsOwned. Encryption ends with the tag, and decryption expects it at
-// the end of the input. As in Bouncy Castle, update may give plaintext before finalize has checked
-// the tag, so a caller that uses update has to discard it when finalize fails
-struct Gcm(GcmBlockCipher<AesEngine>);
-
-impl BufferedCipher for Gcm {
-    type Error = AlgoError;
-
-    fn block_size(&self) -> usize {
-        self.0.block_size()
-    }
-
-    fn update_output_len(&self, input_len: usize) -> Result<usize, AlgoError> {
-        self.0.update_output_len(input_len).map_err(aead_error)
-    }
-
-    fn output_len(&self, input_len: usize) -> Result<usize, AlgoError> {
-        self.0.output_len(input_len).map_err(aead_error)
-    }
-
-    fn process_bytes(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, AlgoError> {
-        self.0.process_bytes(input, output).map_err(aead_error)
-    }
-
-    fn do_final(&mut self, output: &mut [u8]) -> Result<usize, AlgoError> {
-        self.0.do_final(output).map_err(aead_error)
-    }
-
-    fn reset(&mut self) {
-        self.0.reset();
-    }
-}
-
-impl Cipher for Gcm {
-    fn init(&mut self, direction: CipherDirection, params: &dyn Params) -> Result<(), AlgoError> {
-        let params = downcast::<AeadParamsOwned>(params)?;
-        self.0
-            .init(direction.into(), params)
-            .map_err(invalid_params)
-    }
-}
-
-fn aead_error<E: Error + Send + Sync + 'static>(error: AeadError<E>) -> AlgoError {
-    let kind = match error {
-        // A finished encryption takes a new init, so that no nonce is used twice
-        AeadError::NotInitialized | AeadError::AlreadyFinalized => ErrorKind::NotInitialized,
-        // Too short to hold the tag is told apart no more than a wrong tag
-        AeadError::AuthenticationFailed | AeadError::CiphertextTooShort { .. } => {
-            ErrorKind::InvalidCiphertext
-        }
-        _ => ErrorKind::DataLength,
-    };
-    AlgoError::with_source(kind, error)
+    )
 }
 
 #[cfg(test)]
@@ -408,6 +309,80 @@ mod tests {
             .encrypt_by_name("AES/CBC/WITHCTS", &params, &[0; 15])
             .unwrap_err();
         assert_eq!(error.kind(), ErrorKind::DataLength);
+    }
+
+    // A standard example of each AEAD mode: SP 800-38C, example 1, for CCM; the EAX paper's first
+    // test vector; RFC 7253's first sample for OCB. Each sealed message ends with its tag
+    #[test]
+    fn ccm_eax_and_ocb_give_their_standard_examples() {
+        let algo = DefaultAlgoBuilder::default().build();
+        let ciphers = algo.cipher();
+        for (name, key, nonce, tag, aad, plaintext, sealed) in [
+            (
+                "AES/CCM/NOPADDING",
+                "404142434445464748494a4b4c4d4e4f",
+                "10111213141516",
+                4,
+                "0001020304050607",
+                "20212223",
+                "7162015b4dac255d",
+            ),
+            (
+                "AES/EAX/NOPADDING",
+                "233952dee4d5ed5f9b9c6d6ff80ff478",
+                "62ec67f9c3a4a407fcb2a8c49031a8b3",
+                16,
+                "6bfb914fd07eae6b",
+                "",
+                "e037830e8389f27b025a2d6527e79d01",
+            ),
+            (
+                "AES/OCB/NOPADDING",
+                "000102030405060708090a0b0c0d0e0f",
+                "bbaa99887766554433221100",
+                16,
+                "",
+                "",
+                "785407bfffc8ad9edcc5520ac9111ee6",
+            ),
+        ] {
+            let params = AeadParamsOwned::new(unhex(key), unhex(nonce), tag, unhex(aad));
+            let output = ciphers
+                .encrypt_by_name(name, &params, &unhex(plaintext))
+                .unwrap();
+            assert_eq!(output, unhex(sealed), "{name}");
+            let opened = ciphers.decrypt_by_name(name, &params, &output).unwrap();
+            assert_eq!(opened, unhex(plaintext), "{name}");
+        }
+    }
+
+    // The AEAD modes take the names that leave the padding out or empty, but not RAW, as Bouncy
+    // Castle refuses any padding but NOPADDING for them; GCM, CCM and OCB want a block of 16 bytes
+    #[test]
+    fn the_aead_modes_reach_every_engine_of_their_block_size() {
+        let algo = DefaultAlgoBuilder::default().build();
+        let ciphers = algo.cipher();
+        let found = |name: &str| ciphers.get_by_name(name).is_ok();
+        assert!(found("AES/GCM") && found("AES/GCM/") && found("aes/ocb/nopadding"));
+        assert!(!found("AES/GCM/RAW") && !found("AES/GCM/PKCS7PADDING"));
+        #[cfg(feature = "des")]
+        {
+            assert!(found("DES/EAX/NOPADDING"));
+            for mode in ["GCM", "CCM", "OCB"] {
+                assert!(!found(&format!("DES/{mode}/NOPADDING")), "{mode}");
+            }
+        }
+        #[cfg(feature = "camellia")]
+        {
+            let params = AeadParamsOwned::new(vec![0x42; 16], vec![0x24; 12], 16, b"aad".to_vec());
+            for mode in ["GCM", "CCM", "EAX", "OCB"] {
+                let name = format!("CAMELLIA/{mode}/NOPADDING");
+                let sealed = ciphers.encrypt_by_name(&name, &params, b"message").unwrap();
+                assert_eq!(sealed.len(), 7 + 16, "{name}");
+                let opened = ciphers.decrypt_by_name(&name, &params, &sealed).unwrap();
+                assert_eq!(opened, b"message", "{name}");
+            }
+        }
     }
 
     #[test]
@@ -919,7 +894,7 @@ mod tests {
     }
 
     #[test]
-    fn aes_has_a_row_for_each_mode_with_each_padding_it_takes_and_gcm() {
+    fn aes_has_a_row_for_each_mode_with_each_padding_it_takes_and_the_aead_modes() {
         let algo = DefaultAlgoBuilder::default().build();
         let names: Vec<String> = algo
             .cipher()
@@ -927,7 +902,7 @@ mod tests {
             .map(|entry| entry.name().to_string())
             .filter(|name| name.starts_with("AES/"))
             .collect();
-        assert_eq!(names.len(), 21);
+        assert_eq!(names.len(), 24);
         for name in [
             "AES/ECB/X923PADDING",
             "AES/CBC/ISO7816-4PADDING",

@@ -1,3 +1,33 @@
+#[cfg(any(
+    feature = "aes",
+    feature = "des",
+    feature = "desede",
+    feature = "camellia",
+    feature = "aria",
+    feature = "sm4",
+    feature = "seed",
+    feature = "blowfish",
+    feature = "twofish",
+    feature = "serpent",
+    feature = "tnepres",
+    feature = "cast5",
+    feature = "cast6",
+    feature = "idea",
+    feature = "noekeon",
+    feature = "rijndael",
+    feature = "skipjack",
+    feature = "tea",
+    feature = "xtea",
+    feature = "rc2",
+    feature = "rc5",
+    feature = "rc5-64",
+    feature = "rc6",
+    feature = "gost28147",
+    feature = "threefish-256",
+    feature = "threefish-512",
+    feature = "threefish-1024",
+))]
+mod aead_mode;
 #[cfg(feature = "aes")]
 mod aes;
 #[cfg(feature = "aria")]

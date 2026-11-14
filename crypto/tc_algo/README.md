@@ -32,7 +32,8 @@ rows it turns on, and a name it did not turn on is an error, not a fallback.
     [Block ciphers](docs/BlockCipher.md)
   - Stream cipher: ChaCha20, XChaCha20, Salsa20, XSalsa20, HC-128, HC-256, RC4, VMPC and ISAAC;
     see [Stream ciphers](docs/StreamCipher.md)
-  - AEAD cipher: AES in GCM (`aes`); see [AEAD ciphers](docs/AeadCipher.md)
+  - AEAD cipher: GCM, CCM, EAX and OCB over the block ciphers of a block of 16 bytes, EAX over
+    those of 8; see [AEAD ciphers](docs/AeadCipher.md)
   - IES: `IES` (`ies`); see [IES](docs/IES.md)
   - Asymmetric cipher: RSA raw, PKCS#1 v1.5 and OAEP (`rsa`); see
     [Asymmetric ciphers](docs/AsymCipher.md)

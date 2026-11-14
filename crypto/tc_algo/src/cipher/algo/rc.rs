@@ -110,7 +110,7 @@ mod tests {
     fn rc2_gives_the_example_of_rfc_2268_with_the_key_s_whole_size() {
         let output = ecb("RC2/ECB/NOPADDING", "ffffffffffffffff", "ffffffffffffffff");
         assert_eq!(output, unhex("278b27e42e2f0d49"));
-        assert_eq!(rows("RC2/"), 21);
+        assert_eq!(rows("RC2/"), 22);
 
         let algo = DefaultAlgoBuilder::default().build();
         let by_oid = algo
@@ -247,7 +247,7 @@ mod tests {
                 "{name}"
             );
         }
-        assert_eq!(rows("RC5/"), 21);
+        assert_eq!(rows("RC5/"), 22);
     }
 
     // RC5-64 has no published example to hand: the row gives what the engine gives with 12 rounds
@@ -274,7 +274,7 @@ mod tests {
             ),
             expected
         );
-        assert_eq!(rows("RC5-64/"), 20);
+        assert_eq!(rows("RC5-64/"), 24);
     }
 
     // The RC6 paper: the zero 128-bit key and block
@@ -287,6 +287,6 @@ mod tests {
             "00000000000000000000000000000000",
         );
         assert_eq!(output, unhex("8fc3a53656b1f778c129df4e9848a41e"));
-        assert_eq!(rows("RC6/"), 20);
+        assert_eq!(rows("RC6/"), 24);
     }
 }

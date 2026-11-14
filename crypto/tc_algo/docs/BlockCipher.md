@@ -92,7 +92,8 @@ The OIDs are NIST's for AES-128, AES-192 and AES-256 in each mode; as in Bouncy 
 and CBC mean PKCS#7 padding. All three find the same row, so the length of the key comes from the
 params.
 
-`AES/GCM/NOPADDING` is an AEAD cipher, on [AEAD ciphers](AeadCipher.md).
+The AEAD modes, `AES/GCM/NOPADDING`, `AES/CCM/NOPADDING`, `AES/EAX/NOPADDING` and
+`AES/OCB/NOPADDING`, are on [AEAD ciphers](AeadCipher.md), with those of the other algorithms.
 
 ### DES
 
@@ -215,8 +216,8 @@ standard.
 | `ARIA/CTR/NOPADDING` | `ARIA/SIC/NOPADDING`, `ARIA/CTR/RAW`, `ARIA/CTR/`, `ARIA/CTR`, `ARIA/SIC/RAW`, `ARIA/SIC/`, `ARIA/SIC` | `1.2.410.200046.1.1.5`, `.10`, `.15` | `KeyWithIvOwned` | variable time |
 | `ARIA/OPENPGPCFB/NOPADDING` | `ARIA/OPENPGPCFB/RAW`, `ARIA/OPENPGPCFB/`, `ARIA/OPENPGPCFB` |  | `KeyWithIvOwned` | variable time |
 
-The OIDs are NSRI's for 128-, 192- and 256-bit keys in each mode. Bouncy Castle also has ARIA in GCM
-and CCM, and `ARIA//PKCS7` and the like for ECB with PKCS#7 padding; they are not rows yet.
+The OIDs are NSRI's for 128-, 192- and 256-bit keys in each mode; those of GCM and CCM are on
+[AEAD ciphers](AeadCipher.md).
 
 ### SM4
 
@@ -902,6 +903,7 @@ Each algorithm has a row for each mode with each padding it takes:
 - GOFB, GOST 28147's counter mode (GCTR), takes a partial last block too, so `NOPADDING` only. Its
   counter is two words of 32 bits, so only the algorithms of a block of 8 bytes have its rows, as
   Bouncy Castle's `GOfbBlockCipher` refuses any other.
+- GCM, CCM, EAX and OCB, the AEAD modes, are on [AEAD ciphers](AeadCipher.md).
 - `WITHCTS`, which Bouncy Castle names as a padding, is ciphertext stealing over ECB or CBC, through
   `tc_cts_modes`: a message of at least one block, and a ciphertext of its length, the last two
   blocks swapped as RFC 3962 does. A message shorter than a block is `DataLength`. Bouncy Castle's
