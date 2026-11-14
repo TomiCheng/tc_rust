@@ -16,6 +16,16 @@ mod aria;
     feature = "tnepres",
     feature = "cast5",
     feature = "cast6",
+    feature = "idea",
+    feature = "noekeon",
+    feature = "rijndael",
+    feature = "skipjack",
+    feature = "tea",
+    feature = "xtea",
+    feature = "rc2",
+    feature = "rc5",
+    feature = "rc5-64",
+    feature = "rc6",
 ))]
 mod block;
 #[cfg(feature = "blowfish")]
@@ -34,6 +44,16 @@ mod blowfish;
     feature = "tnepres",
     feature = "cast5",
     feature = "cast6",
+    feature = "idea",
+    feature = "noekeon",
+    feature = "rijndael",
+    feature = "skipjack",
+    feature = "tea",
+    feature = "xtea",
+    feature = "rc2",
+    feature = "rc5",
+    feature = "rc5-64",
+    feature = "rc6",
 ))]
 mod buffered;
 #[cfg(feature = "camellia")]
@@ -46,20 +66,34 @@ mod cast6;
 mod chacha;
 #[cfg(any(feature = "des", feature = "desede"))]
 mod des;
+#[cfg(feature = "idea")]
+mod idea;
 #[cfg(feature = "ies")]
 mod ies;
+#[cfg(feature = "noekeon")]
+mod noekeon;
+#[cfg(any(feature = "rc2", feature = "rc5", feature = "rc5-64", feature = "rc6"))]
+mod rc;
+#[cfg(feature = "rijndael")]
+mod rijndael;
 #[cfg(feature = "rsa")]
 mod rsa;
 #[cfg(feature = "seed")]
 mod seed;
 #[cfg(feature = "serpent")]
 mod serpent;
+#[cfg(feature = "skipjack")]
+mod skipjack;
 #[cfg(feature = "sm4")]
 mod sm4;
+#[cfg(feature = "tea")]
+mod tea;
 #[cfg(feature = "tnepres")]
 mod tnepres;
 #[cfg(feature = "twofish")]
 mod twofish;
+#[cfg(feature = "xtea")]
+mod xtea;
 
 use super::CipherEntry;
 
@@ -93,6 +127,26 @@ pub(crate) const BUILT_IN: &[CreateRows] = &[
     cast5::cast5,
     #[cfg(feature = "cast6")]
     cast6::cast6,
+    #[cfg(feature = "idea")]
+    idea::idea,
+    #[cfg(feature = "noekeon")]
+    noekeon::noekeon,
+    #[cfg(feature = "rijndael")]
+    rijndael::rijndael,
+    #[cfg(feature = "skipjack")]
+    skipjack::skipjack,
+    #[cfg(feature = "tea")]
+    tea::tea,
+    #[cfg(feature = "xtea")]
+    xtea::xtea,
+    #[cfg(feature = "rc2")]
+    rc::rc2,
+    #[cfg(feature = "rc5")]
+    rc::rc5,
+    #[cfg(feature = "rc5-64")]
+    rc::rc5_64,
+    #[cfg(feature = "rc6")]
+    rc::rc6,
     #[cfg(feature = "chacha")]
     chacha::chacha,
     #[cfg(feature = "rsa")]

@@ -109,6 +109,16 @@ serpent = ["dep:tc_serpent", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:t
 tnepres = ["dep:tc_serpent", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core", "dep:tc_buffered_cipher"]
 cast5 = ["dep:tc_cast", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core", "dep:tc_buffered_cipher"]
 cast6 = ["dep:tc_cast", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core", "dep:tc_buffered_cipher"]
+idea = ["dep:tc_misc_block_cipher", "tc_misc_block_cipher/idea", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core", "dep:tc_buffered_cipher"]
+noekeon = ["dep:tc_misc_block_cipher", "tc_misc_block_cipher/noekeon", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core", "dep:tc_buffered_cipher"]
+rijndael = ["dep:tc_misc_block_cipher", "tc_misc_block_cipher/rijndael", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core", "dep:tc_buffered_cipher"]
+skipjack = ["dep:tc_misc_block_cipher", "tc_misc_block_cipher/skipjack", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core", "dep:tc_buffered_cipher"]
+tea = ["dep:tc_misc_block_cipher", "tc_misc_block_cipher/tea", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core", "dep:tc_buffered_cipher"]
+xtea = ["dep:tc_misc_block_cipher", "tc_misc_block_cipher/tea", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core", "dep:tc_buffered_cipher"]
+rc2 = ["dep:tc_rc_cipher", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core", "dep:tc_buffered_cipher"]
+rc5 = ["dep:tc_rc_cipher", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core", "dep:tc_buffered_cipher"]
+rc5-64 = ["dep:tc_rc_cipher", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core", "dep:tc_buffered_cipher"]
+rc6 = ["dep:tc_rc_cipher", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core", "dep:tc_buffered_cipher"]
 
 # Stream cipher
 chacha = ["dep:tc_chacha", "dep:tc_stream_cipher", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_buffered_cipher"]
@@ -182,6 +192,8 @@ tc_blowfish = { version = "0.1.0", optional = true }
 tc_twofish = { version = "0.1.0", optional = true }
 tc_serpent = { version = "0.1.0", optional = true }
 tc_cast = { version = "0.1.0", optional = true }
+tc_misc_block_cipher = { version = "0.1.0", optional = true }
+tc_rc_cipher = { version = "0.1.0", optional = true }
 
 # Stream cipher
 tc_chacha = { version = "0.1.0", optional = true }

@@ -4,9 +4,11 @@ A block cipher keeps a message secret but does not show whether it was changed. 
 an AEAD cipher such as `AES/GCM/NOPADDING`, which does both; see [AEAD ciphers](AeadCipher.md).
 The rows here are for formats and protocols that need a mode of their own.
 
-Algorithms: [AES](#aes) · [DES](#des) · [DESede](#desede) · [Camellia](#camellia) ·
-[ARIA](#aria) · [SM4](#sm4) · [SEED](#seed) · [Blowfish](#blowfish) · [Twofish](#twofish) ·
-[Serpent](#serpent) · [Tnepres](#tnepres) · [CAST5](#cast5) · [CAST6](#cast6)
+Algorithms: [AES](#aes) · [DES](#des) · [DESede](#desede) · [Camellia](#camellia) · [ARIA](#aria) ·
+[SM4](#sm4) · [SEED](#seed) · [Blowfish](#blowfish) · [Twofish](#twofish) · [Serpent](#serpent) ·
+[Tnepres](#tnepres) · [CAST5](#cast5) · [CAST6](#cast6) · [IDEA](#idea) · [Noekeon](#noekeon) ·
+[Rijndael](#rijndael) · [Skipjack](#skipjack) · [TEA](#tea) · [XTEA](#xtea) · [RC2](#rc2) ·
+[RC5](#rc5) · [RC5-64](#rc5-64) · [RC6](#rc6)
 
 See also: [Weak, legacy and variable-time rows](#weak-legacy-and-variable-time-rows) ·
 [Modes and paddings](#modes-and-paddings) · [Params](#params) · [The IV](#the-iv)
@@ -399,6 +401,261 @@ also called CAST-256.
 | `CAST6/OFB/NOPADDING` |  | `KeyWithIvOwned` | variable time |
 | `CAST6/CTR/NOPADDING` |  | `KeyWithIvOwned` | variable time |
 
+### IDEA
+
+The `idea` feature has the rows. A block of 8 bytes and a key of 16 bytes.
+
+| Name | OIDs | Params | Note |
+|---|---|---|---|
+| `IDEA/ECB/NOPADDING` |  | `KeyOwned` | weak, legacy, variable time |
+| `IDEA/ECB/PKCS7PADDING` |  | `KeyOwned` | weak, legacy, variable time |
+| `IDEA/ECB/ISO10126PADDING` |  | `KeyOwned` | weak, legacy, variable time |
+| `IDEA/ECB/ISO7816-4PADDING` |  | `KeyOwned` | weak, legacy, variable time |
+| `IDEA/ECB/X923PADDING` |  | `KeyOwned` | weak, legacy, variable time |
+| `IDEA/ECB/TBCPADDING` |  | `KeyOwned` | weak, legacy, variable time |
+| `IDEA/ECB/ZEROBYTEPADDING` |  | `KeyOwned` | weak, legacy, variable time |
+| `IDEA/CBC/NOPADDING` |  | `KeyWithIvOwned` | legacy, variable time |
+| `IDEA/CBC/PKCS7PADDING` | `1.3.6.1.4.1.188.7.1.1.2` | `KeyWithIvOwned` | legacy, variable time |
+| `IDEA/CBC/ISO10126PADDING` |  | `KeyWithIvOwned` | legacy, variable time |
+| `IDEA/CBC/ISO7816-4PADDING` |  | `KeyWithIvOwned` | legacy, variable time |
+| `IDEA/CBC/X923PADDING` |  | `KeyWithIvOwned` | legacy, variable time |
+| `IDEA/CBC/TBCPADDING` |  | `KeyWithIvOwned` | legacy, variable time |
+| `IDEA/CBC/ZEROBYTEPADDING` |  | `KeyWithIvOwned` | legacy, variable time |
+| `IDEA/CFB/NOPADDING` |  | `KeyWithIvOwned` | legacy, variable time |
+| `IDEA/OFB/NOPADDING` |  | `KeyWithIvOwned` | legacy, variable time |
+| `IDEA/CTR/NOPADDING` |  | `KeyWithIvOwned` | legacy, variable time |
+
+The OID is Ascom's, and means CBC with PKCS#7 padding.
+
+### Noekeon
+
+The `noekeon` feature has the rows. A block of 16 bytes and a key of 16 bytes, in the direct-key
+mode of Bouncy Castle.
+
+| Name | OIDs | Params | Note |
+|---|---|---|---|
+| `NOEKEON/ECB/NOPADDING` |  | `KeyOwned` | weak |
+| `NOEKEON/ECB/PKCS7PADDING` |  | `KeyOwned` | weak |
+| `NOEKEON/ECB/ISO10126PADDING` |  | `KeyOwned` | weak |
+| `NOEKEON/ECB/ISO7816-4PADDING` |  | `KeyOwned` | weak |
+| `NOEKEON/ECB/X923PADDING` |  | `KeyOwned` | weak |
+| `NOEKEON/ECB/TBCPADDING` |  | `KeyOwned` | weak |
+| `NOEKEON/ECB/ZEROBYTEPADDING` |  | `KeyOwned` | weak |
+| `NOEKEON/CBC/NOPADDING` |  | `KeyWithIvOwned` |  |
+| `NOEKEON/CBC/PKCS7PADDING` |  | `KeyWithIvOwned` |  |
+| `NOEKEON/CBC/ISO10126PADDING` |  | `KeyWithIvOwned` |  |
+| `NOEKEON/CBC/ISO7816-4PADDING` |  | `KeyWithIvOwned` |  |
+| `NOEKEON/CBC/X923PADDING` |  | `KeyWithIvOwned` |  |
+| `NOEKEON/CBC/TBCPADDING` |  | `KeyWithIvOwned` |  |
+| `NOEKEON/CBC/ZEROBYTEPADDING` |  | `KeyWithIvOwned` |  |
+| `NOEKEON/CFB/NOPADDING` |  | `KeyWithIvOwned` |  |
+| `NOEKEON/OFB/NOPADDING` |  | `KeyWithIvOwned` |  |
+| `NOEKEON/CTR/NOPADDING` |  | `KeyWithIvOwned` |  |
+
+### Rijndael
+
+The `rijndael` feature has the rows. Rijndael with a block of 16 bytes, as Bouncy Castle's
+CipherUtilities builds it: the same cipher as AES, under the name it had before it became AES. A key
+of 16, 24 or 32 bytes.
+
+| Name | OIDs | Params | Note |
+|---|---|---|---|
+| `RIJNDAEL/ECB/NOPADDING` |  | `KeyOwned` | weak, variable time |
+| `RIJNDAEL/ECB/PKCS7PADDING` |  | `KeyOwned` | weak, variable time |
+| `RIJNDAEL/ECB/ISO10126PADDING` |  | `KeyOwned` | weak, variable time |
+| `RIJNDAEL/ECB/ISO7816-4PADDING` |  | `KeyOwned` | weak, variable time |
+| `RIJNDAEL/ECB/X923PADDING` |  | `KeyOwned` | weak, variable time |
+| `RIJNDAEL/ECB/TBCPADDING` |  | `KeyOwned` | weak, variable time |
+| `RIJNDAEL/ECB/ZEROBYTEPADDING` |  | `KeyOwned` | weak, variable time |
+| `RIJNDAEL/CBC/NOPADDING` |  | `KeyWithIvOwned` | variable time |
+| `RIJNDAEL/CBC/PKCS7PADDING` |  | `KeyWithIvOwned` | variable time |
+| `RIJNDAEL/CBC/ISO10126PADDING` |  | `KeyWithIvOwned` | variable time |
+| `RIJNDAEL/CBC/ISO7816-4PADDING` |  | `KeyWithIvOwned` | variable time |
+| `RIJNDAEL/CBC/X923PADDING` |  | `KeyWithIvOwned` | variable time |
+| `RIJNDAEL/CBC/TBCPADDING` |  | `KeyWithIvOwned` | variable time |
+| `RIJNDAEL/CBC/ZEROBYTEPADDING` |  | `KeyWithIvOwned` | variable time |
+| `RIJNDAEL/CFB/NOPADDING` |  | `KeyWithIvOwned` | variable time |
+| `RIJNDAEL/OFB/NOPADDING` |  | `KeyWithIvOwned` | variable time |
+| `RIJNDAEL/CTR/NOPADDING` |  | `KeyWithIvOwned` | variable time |
+
+For new data, take `AES`, which is constant time where `tc_aes` can be.
+
+### Skipjack
+
+The `skipjack` feature has the rows. A block of 8 bytes and a key of 10 bytes.
+
+| Name | OIDs | Params | Note |
+|---|---|---|---|
+| `SKIPJACK/ECB/NOPADDING` |  | `KeyOwned` | weak, legacy, variable time |
+| `SKIPJACK/ECB/PKCS7PADDING` |  | `KeyOwned` | weak, legacy, variable time |
+| `SKIPJACK/ECB/ISO10126PADDING` |  | `KeyOwned` | weak, legacy, variable time |
+| `SKIPJACK/ECB/ISO7816-4PADDING` |  | `KeyOwned` | weak, legacy, variable time |
+| `SKIPJACK/ECB/X923PADDING` |  | `KeyOwned` | weak, legacy, variable time |
+| `SKIPJACK/ECB/TBCPADDING` |  | `KeyOwned` | weak, legacy, variable time |
+| `SKIPJACK/ECB/ZEROBYTEPADDING` |  | `KeyOwned` | weak, legacy, variable time |
+| `SKIPJACK/CBC/NOPADDING` |  | `KeyWithIvOwned` | legacy, variable time |
+| `SKIPJACK/CBC/PKCS7PADDING` |  | `KeyWithIvOwned` | legacy, variable time |
+| `SKIPJACK/CBC/ISO10126PADDING` |  | `KeyWithIvOwned` | legacy, variable time |
+| `SKIPJACK/CBC/ISO7816-4PADDING` |  | `KeyWithIvOwned` | legacy, variable time |
+| `SKIPJACK/CBC/X923PADDING` |  | `KeyWithIvOwned` | legacy, variable time |
+| `SKIPJACK/CBC/TBCPADDING` |  | `KeyWithIvOwned` | legacy, variable time |
+| `SKIPJACK/CBC/ZEROBYTEPADDING` |  | `KeyWithIvOwned` | legacy, variable time |
+| `SKIPJACK/CFB/NOPADDING` |  | `KeyWithIvOwned` | legacy, variable time |
+| `SKIPJACK/OFB/NOPADDING` |  | `KeyWithIvOwned` | legacy, variable time |
+| `SKIPJACK/CTR/NOPADDING` |  | `KeyWithIvOwned` | legacy, variable time |
+
+### TEA
+
+The `tea` feature has the rows. A block of 8 bytes and a key of 16 bytes.
+
+| Name | OIDs | Params | Note |
+|---|---|---|---|
+| `TEA/ECB/NOPADDING` |  | `KeyOwned` | weak, legacy |
+| `TEA/ECB/PKCS7PADDING` |  | `KeyOwned` | weak, legacy |
+| `TEA/ECB/ISO10126PADDING` |  | `KeyOwned` | weak, legacy |
+| `TEA/ECB/ISO7816-4PADDING` |  | `KeyOwned` | weak, legacy |
+| `TEA/ECB/X923PADDING` |  | `KeyOwned` | weak, legacy |
+| `TEA/ECB/TBCPADDING` |  | `KeyOwned` | weak, legacy |
+| `TEA/ECB/ZEROBYTEPADDING` |  | `KeyOwned` | weak, legacy |
+| `TEA/CBC/NOPADDING` |  | `KeyWithIvOwned` | legacy |
+| `TEA/CBC/PKCS7PADDING` |  | `KeyWithIvOwned` | legacy |
+| `TEA/CBC/ISO10126PADDING` |  | `KeyWithIvOwned` | legacy |
+| `TEA/CBC/ISO7816-4PADDING` |  | `KeyWithIvOwned` | legacy |
+| `TEA/CBC/X923PADDING` |  | `KeyWithIvOwned` | legacy |
+| `TEA/CBC/TBCPADDING` |  | `KeyWithIvOwned` | legacy |
+| `TEA/CBC/ZEROBYTEPADDING` |  | `KeyWithIvOwned` | legacy |
+| `TEA/CFB/NOPADDING` |  | `KeyWithIvOwned` | legacy |
+| `TEA/OFB/NOPADDING` |  | `KeyWithIvOwned` | legacy |
+| `TEA/CTR/NOPADDING` |  | `KeyWithIvOwned` | legacy |
+
+### XTEA
+
+The `xtea` feature has the rows. A block of 8 bytes and a key of 16 bytes; TEA with its key schedule
+repaired. Bouncy Castle has it as an engine, not in its CipherUtilities.
+
+| Name | OIDs | Params | Note |
+|---|---|---|---|
+| `XTEA/ECB/NOPADDING` |  | `KeyOwned` | weak, legacy |
+| `XTEA/ECB/PKCS7PADDING` |  | `KeyOwned` | weak, legacy |
+| `XTEA/ECB/ISO10126PADDING` |  | `KeyOwned` | weak, legacy |
+| `XTEA/ECB/ISO7816-4PADDING` |  | `KeyOwned` | weak, legacy |
+| `XTEA/ECB/X923PADDING` |  | `KeyOwned` | weak, legacy |
+| `XTEA/ECB/TBCPADDING` |  | `KeyOwned` | weak, legacy |
+| `XTEA/ECB/ZEROBYTEPADDING` |  | `KeyOwned` | weak, legacy |
+| `XTEA/CBC/NOPADDING` |  | `KeyWithIvOwned` | legacy |
+| `XTEA/CBC/PKCS7PADDING` |  | `KeyWithIvOwned` | legacy |
+| `XTEA/CBC/ISO10126PADDING` |  | `KeyWithIvOwned` | legacy |
+| `XTEA/CBC/ISO7816-4PADDING` |  | `KeyWithIvOwned` | legacy |
+| `XTEA/CBC/X923PADDING` |  | `KeyWithIvOwned` | legacy |
+| `XTEA/CBC/TBCPADDING` |  | `KeyWithIvOwned` | legacy |
+| `XTEA/CBC/ZEROBYTEPADDING` |  | `KeyWithIvOwned` | legacy |
+| `XTEA/CFB/NOPADDING` |  | `KeyWithIvOwned` | legacy |
+| `XTEA/OFB/NOPADDING` |  | `KeyWithIvOwned` | legacy |
+| `XTEA/CTR/NOPADDING` |  | `KeyWithIvOwned` | legacy |
+
+### RC2
+
+The `rc2` feature has the rows. A block of 8 bytes and a key of 1 to 128 bytes. As in Bouncy Castle,
+a plain key gives an effective key size of the whole key.
+
+| Name | OIDs | Params | Note |
+|---|---|---|---|
+| `RC2/ECB/NOPADDING` |  | `KeyOwned` | weak, legacy, variable time |
+| `RC2/ECB/PKCS7PADDING` |  | `KeyOwned` | weak, legacy, variable time |
+| `RC2/ECB/ISO10126PADDING` |  | `KeyOwned` | weak, legacy, variable time |
+| `RC2/ECB/ISO7816-4PADDING` |  | `KeyOwned` | weak, legacy, variable time |
+| `RC2/ECB/X923PADDING` |  | `KeyOwned` | weak, legacy, variable time |
+| `RC2/ECB/TBCPADDING` |  | `KeyOwned` | weak, legacy, variable time |
+| `RC2/ECB/ZEROBYTEPADDING` |  | `KeyOwned` | weak, legacy, variable time |
+| `RC2/CBC/NOPADDING` |  | `KeyWithIvOwned` | legacy, variable time |
+| `RC2/CBC/PKCS7PADDING` | `1.2.840.113549.3.2` | `KeyWithIvOwned` | legacy, variable time |
+| `RC2/CBC/ISO10126PADDING` |  | `KeyWithIvOwned` | legacy, variable time |
+| `RC2/CBC/ISO7816-4PADDING` |  | `KeyWithIvOwned` | legacy, variable time |
+| `RC2/CBC/X923PADDING` |  | `KeyWithIvOwned` | legacy, variable time |
+| `RC2/CBC/TBCPADDING` |  | `KeyWithIvOwned` | legacy, variable time |
+| `RC2/CBC/ZEROBYTEPADDING` |  | `KeyWithIvOwned` | legacy, variable time |
+| `RC2/CFB/NOPADDING` |  | `KeyWithIvOwned` | legacy, variable time |
+| `RC2/OFB/NOPADDING` |  | `KeyWithIvOwned` | legacy, variable time |
+| `RC2/CTR/NOPADDING` |  | `KeyWithIvOwned` | legacy, variable time |
+
+The OID is RSA's, and means CBC with PKCS#7 padding. Its parameters in a certificate or CMS can name
+another effective key size; these rows do not take one.
+
+### RC5
+
+The `rc5` feature has the rows. RC5 with 32-bit words: a block of 8 bytes and a key of up to 255
+bytes, with 12 rounds, as Bouncy Castle gives a plain key. `RC5-32` is another name of it.
+
+| Name | OIDs | Params | Note |
+|---|---|---|---|
+| `RC5/ECB/NOPADDING` |  | `KeyOwned` | weak, legacy |
+| `RC5/ECB/PKCS7PADDING` |  | `KeyOwned` | weak, legacy |
+| `RC5/ECB/ISO10126PADDING` |  | `KeyOwned` | weak, legacy |
+| `RC5/ECB/ISO7816-4PADDING` |  | `KeyOwned` | weak, legacy |
+| `RC5/ECB/X923PADDING` |  | `KeyOwned` | weak, legacy |
+| `RC5/ECB/TBCPADDING` |  | `KeyOwned` | weak, legacy |
+| `RC5/ECB/ZEROBYTEPADDING` |  | `KeyOwned` | weak, legacy |
+| `RC5/CBC/NOPADDING` |  | `KeyWithIvOwned` | legacy |
+| `RC5/CBC/PKCS7PADDING` |  | `KeyWithIvOwned` | legacy |
+| `RC5/CBC/ISO10126PADDING` |  | `KeyWithIvOwned` | legacy |
+| `RC5/CBC/ISO7816-4PADDING` |  | `KeyWithIvOwned` | legacy |
+| `RC5/CBC/X923PADDING` |  | `KeyWithIvOwned` | legacy |
+| `RC5/CBC/TBCPADDING` |  | `KeyWithIvOwned` | legacy |
+| `RC5/CBC/ZEROBYTEPADDING` |  | `KeyWithIvOwned` | legacy |
+| `RC5/CFB/NOPADDING` |  | `KeyWithIvOwned` | legacy |
+| `RC5/OFB/NOPADDING` |  | `KeyWithIvOwned` | legacy |
+| `RC5/CTR/NOPADDING` |  | `KeyWithIvOwned` | legacy |
+
+### RC5-64
+
+The `rc5-64` feature has the rows. RC5 with 64-bit words: a block of 16 bytes and a key of up to 255
+bytes, with 12 rounds.
+
+| Name | OIDs | Params | Note |
+|---|---|---|---|
+| `RC5-64/ECB/NOPADDING` |  | `KeyOwned` | weak |
+| `RC5-64/ECB/PKCS7PADDING` |  | `KeyOwned` | weak |
+| `RC5-64/ECB/ISO10126PADDING` |  | `KeyOwned` | weak |
+| `RC5-64/ECB/ISO7816-4PADDING` |  | `KeyOwned` | weak |
+| `RC5-64/ECB/X923PADDING` |  | `KeyOwned` | weak |
+| `RC5-64/ECB/TBCPADDING` |  | `KeyOwned` | weak |
+| `RC5-64/ECB/ZEROBYTEPADDING` |  | `KeyOwned` | weak |
+| `RC5-64/CBC/NOPADDING` |  | `KeyWithIvOwned` |  |
+| `RC5-64/CBC/PKCS7PADDING` |  | `KeyWithIvOwned` |  |
+| `RC5-64/CBC/ISO10126PADDING` |  | `KeyWithIvOwned` |  |
+| `RC5-64/CBC/ISO7816-4PADDING` |  | `KeyWithIvOwned` |  |
+| `RC5-64/CBC/X923PADDING` |  | `KeyWithIvOwned` |  |
+| `RC5-64/CBC/TBCPADDING` |  | `KeyWithIvOwned` |  |
+| `RC5-64/CBC/ZEROBYTEPADDING` |  | `KeyWithIvOwned` |  |
+| `RC5-64/CFB/NOPADDING` |  | `KeyWithIvOwned` |  |
+| `RC5-64/OFB/NOPADDING` |  | `KeyWithIvOwned` |  |
+| `RC5-64/CTR/NOPADDING` |  | `KeyWithIvOwned` |  |
+
+### RC6
+
+The `rc6` feature has the rows. A block of 16 bytes and a key of up to 255 bytes; a finalist for
+AES.
+
+| Name | OIDs | Params | Note |
+|---|---|---|---|
+| `RC6/ECB/NOPADDING` |  | `KeyOwned` | weak |
+| `RC6/ECB/PKCS7PADDING` |  | `KeyOwned` | weak |
+| `RC6/ECB/ISO10126PADDING` |  | `KeyOwned` | weak |
+| `RC6/ECB/ISO7816-4PADDING` |  | `KeyOwned` | weak |
+| `RC6/ECB/X923PADDING` |  | `KeyOwned` | weak |
+| `RC6/ECB/TBCPADDING` |  | `KeyOwned` | weak |
+| `RC6/ECB/ZEROBYTEPADDING` |  | `KeyOwned` | weak |
+| `RC6/CBC/NOPADDING` |  | `KeyWithIvOwned` |  |
+| `RC6/CBC/PKCS7PADDING` |  | `KeyWithIvOwned` |  |
+| `RC6/CBC/ISO10126PADDING` |  | `KeyWithIvOwned` |  |
+| `RC6/CBC/ISO7816-4PADDING` |  | `KeyWithIvOwned` |  |
+| `RC6/CBC/X923PADDING` |  | `KeyWithIvOwned` |  |
+| `RC6/CBC/TBCPADDING` |  | `KeyWithIvOwned` |  |
+| `RC6/CBC/ZEROBYTEPADDING` |  | `KeyWithIvOwned` |  |
+| `RC6/CFB/NOPADDING` |  | `KeyWithIvOwned` |  |
+| `RC6/OFB/NOPADDING` |  | `KeyWithIvOwned` |  |
+| `RC6/CTR/NOPADDING` |  | `KeyWithIvOwned` |  |
+
 ### Weak, legacy and variable-time rows
 
 ECB is weak: it encrypts equal blocks into equal blocks, so the ciphertext shows where the
@@ -412,8 +669,12 @@ DESede is legacy: NIST withdrew it for encryption at the end of 2023. Its block 
 two blocks of a long message under one key collide, which leaks their XOR (Sweet32), and two-key
 DESede has the strength of about 80 bits. It is here for old data only.
 
-Blowfish and CAST5 are legacy for the same reason: a block of 8 bytes, which Sweet32 turns against
-long messages under one key. They are here for old data only.
+Blowfish, CAST5, IDEA, Skipjack, TEA, XTEA, RC2 and RC5 are legacy for the same reason: a block of
+8 bytes, which Sweet32 turns against long messages under one key. Skipjack's key of 80 bits is short
+too, and RC2's key schedule is weak. They are here for old data only.
+
+RC5 and RC6 rotate by amounts that depend on the data, which is constant time on processors whose
+rotations are, as most are today.
 
 A variable-time cipher looks up tables by bytes of the key and the data, so it can leak them through
 cache timing to code that shares the processor. Where that matters, prefer AES, which `tc_aes` runs
@@ -452,8 +713,8 @@ Both come from the crates underneath and wipe themselves when dropped.
 
 - Use a new IV for every message under the same key. It is not secret: send it along with the
   ciphertext, since decrypting needs the same one.
-- The IV must be one block, 8 bytes for DES, DESede, Blowfish and CAST5 and 16 for the others,
-  or `init` gives `InvalidParams`. Unlike Bouncy Castle, a short IV is not padded with zeros, and
+- The IV must be one block, 8 bytes for the ciphers of 8-byte blocks and 16 for the others, or
+  `init` gives `InvalidParams`. Unlike Bouncy Castle, a short IV is not padded with zeros, and
   there is no default of zeros: `KeyWithIvOwned` always has one to give.
 - CTR is the exception: its IV may be shorter than a block, and the rest of the block is the
   counter, which starts at zero.
