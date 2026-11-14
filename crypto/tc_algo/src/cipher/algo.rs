@@ -62,10 +62,12 @@ mod camellia;
 mod cast5;
 #[cfg(feature = "cast6")]
 mod cast6;
-#[cfg(feature = "chacha")]
+#[cfg(any(feature = "chacha", feature = "xchacha20"))]
 mod chacha;
 #[cfg(any(feature = "des", feature = "desede"))]
 mod des;
+#[cfg(any(feature = "hc128", feature = "hc256"))]
+mod hc;
 #[cfg(feature = "idea")]
 mod idea;
 #[cfg(feature = "ies")]
@@ -74,10 +76,19 @@ mod ies;
 mod noekeon;
 #[cfg(any(feature = "rc2", feature = "rc5", feature = "rc5-64", feature = "rc6"))]
 mod rc;
+#[cfg(any(
+    feature = "rc4",
+    feature = "vmpc",
+    feature = "vmpc-ksa3",
+    feature = "isaac"
+))]
+mod rc4;
 #[cfg(feature = "rijndael")]
 mod rijndael;
 #[cfg(feature = "rsa")]
 mod rsa;
+#[cfg(any(feature = "salsa20", feature = "xsalsa20"))]
+mod salsa20;
 #[cfg(feature = "seed")]
 mod seed;
 #[cfg(feature = "serpent")]
@@ -86,6 +97,19 @@ mod serpent;
 mod skipjack;
 #[cfg(feature = "sm4")]
 mod sm4;
+#[cfg(any(
+    feature = "chacha",
+    feature = "xchacha20",
+    feature = "rc4",
+    feature = "vmpc",
+    feature = "vmpc-ksa3",
+    feature = "isaac",
+    feature = "salsa20",
+    feature = "xsalsa20",
+    feature = "hc128",
+    feature = "hc256",
+))]
+mod stream;
 #[cfg(feature = "tea")]
 mod tea;
 #[cfg(feature = "tnepres")]
@@ -149,6 +173,24 @@ pub(crate) const BUILT_IN: &[CreateRows] = &[
     rc::rc6,
     #[cfg(feature = "chacha")]
     chacha::chacha,
+    #[cfg(feature = "xchacha20")]
+    chacha::xchacha20,
+    #[cfg(feature = "rc4")]
+    rc4::rc4,
+    #[cfg(feature = "vmpc")]
+    rc4::vmpc,
+    #[cfg(feature = "vmpc-ksa3")]
+    rc4::vmpc_ksa3,
+    #[cfg(feature = "isaac")]
+    rc4::isaac,
+    #[cfg(feature = "salsa20")]
+    salsa20::salsa20,
+    #[cfg(feature = "xsalsa20")]
+    salsa20::xsalsa20,
+    #[cfg(feature = "hc128")]
+    hc::hc128,
+    #[cfg(feature = "hc256")]
+    hc::hc256,
     #[cfg(feature = "rsa")]
     rsa::rsa,
     #[cfg(feature = "ies")]

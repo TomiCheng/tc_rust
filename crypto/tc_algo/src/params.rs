@@ -43,6 +43,15 @@ mod tuple_hash_params;
     feature = "rc5-64",
     feature = "rc6",
     feature = "chacha",
+    feature = "xchacha20",
+    feature = "rc4",
+    feature = "vmpc",
+    feature = "vmpc-ksa3",
+    feature = "isaac",
+    feature = "salsa20",
+    feature = "xsalsa20",
+    feature = "hc128",
+    feature = "hc256",
     feature = "hmac-sha256",
     feature = "rsa",
     feature = "dh",
@@ -95,6 +104,15 @@ pub use tc_aead_cipher::AeadParamsOwned;
     feature = "rc5-64",
     feature = "rc6",
     feature = "chacha",
+    feature = "xchacha20",
+    feature = "rc4",
+    feature = "vmpc",
+    feature = "vmpc-ksa3",
+    feature = "isaac",
+    feature = "salsa20",
+    feature = "xsalsa20",
+    feature = "hc128",
+    feature = "hc256",
     feature = "hmac-sha256"
 ))]
 pub use tc_block_cipher::{KeyOwned, KeyParams};
@@ -122,7 +140,16 @@ pub use tc_block_cipher::{KeyOwned, KeyParams};
     feature = "rc5",
     feature = "rc5-64",
     feature = "rc6",
-    feature = "chacha"
+    feature = "chacha",
+    feature = "xchacha20",
+    feature = "rc4",
+    feature = "vmpc",
+    feature = "vmpc-ksa3",
+    feature = "isaac",
+    feature = "salsa20",
+    feature = "xsalsa20",
+    feature = "hc128",
+    feature = "hc256"
 ))]
 pub use tc_block_modes::{IvParams, KeyWithIvOwned};
 #[cfg(feature = "dh")]
@@ -163,6 +190,15 @@ pub use tuple_hash_params::TupleHashParams;
     feature = "rc5-64",
     feature = "rc6",
     feature = "chacha",
+    feature = "xchacha20",
+    feature = "rc4",
+    feature = "vmpc",
+    feature = "vmpc-ksa3",
+    feature = "isaac",
+    feature = "salsa20",
+    feature = "xsalsa20",
+    feature = "hc128",
+    feature = "hc256",
     feature = "hmac-sha256",
     feature = "rsa",
     feature = "dh",
@@ -196,6 +232,15 @@ use crate::Params;
     feature = "rc5-64",
     feature = "rc6",
     feature = "chacha",
+    feature = "xchacha20",
+    feature = "rc4",
+    feature = "vmpc",
+    feature = "vmpc-ksa3",
+    feature = "isaac",
+    feature = "salsa20",
+    feature = "xsalsa20",
+    feature = "hc128",
+    feature = "hc256",
     feature = "hmac-sha256"
 ))]
 impl Params for KeyOwned {
@@ -228,7 +273,16 @@ impl Params for KeyOwned {
     feature = "rc5",
     feature = "rc5-64",
     feature = "rc6",
-    feature = "chacha"
+    feature = "chacha",
+    feature = "xchacha20",
+    feature = "rc4",
+    feature = "vmpc",
+    feature = "vmpc-ksa3",
+    feature = "isaac",
+    feature = "salsa20",
+    feature = "xsalsa20",
+    feature = "hc128",
+    feature = "hc256"
 ))]
 impl Params for KeyWithIvOwned {
     fn as_any(&self) -> &dyn Any {

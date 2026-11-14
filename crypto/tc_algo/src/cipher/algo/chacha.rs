@@ -1,100 +1,37 @@
-use tc_asn1::Asn1Oid;
-use tc_block_cipher::KeyParams;
-use tc_block_modes::IvParams;
-use tc_buffered_cipher::{BufferedCipher, BufferedCipherInit, BufferedError, BufferedStreamCipher};
-use tc_chacha::ChaCha7539Engine;
-use tc_stream_cipher::{KeyWithIvRef, StreamError};
+use tc_buffered_cipher::BufferedStreamCipher;
+#[cfg(feature = "xchacha20")]
+use tc_chacha::XChaCha20Engine;
+#[cfg(feature = "chacha")]
+use tc_chacha::{ChaCha7539Engine, ChaChaEngine};
 
-use crate::cipher::{Cipher, CipherDirection, CipherEntry};
-use crate::params::KeyWithIvOwned;
-use crate::{AlgoError, DefaultAlgoContext, EntryBase, ErrorKind, Params};
+use super::stream::{Nonced, stream_row};
+use crate::DefaultAlgoContext;
+use crate::cipher::CipherEntry;
 
-// The row of ChaCha20 (RFC 8439), to give to DefaultAlgoBuilder::reg_cipher. Its name and alias are
-// those of Bouncy Castle's CipherUtilities
+// The rows of ChaCha20, to give to DefaultAlgoBuilder::reg_cipher. Their names and alias are those
+// of Bouncy Castle's CipherUtilities: CHACHA7539 is that of RFC 8439, with a nonce of 12 bytes;
+// CHACHA the original, with a nonce of 8
+#[cfg(feature = "chacha")]
 pub(super) fn chacha(_context: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>> {
-    vec![Box::new(Row {
-        aliases: vec!["CHACHA20".to_string()],
+    vec![
+        stream_row(&["CHACHA7539", "CHACHA20"], &[], || {
+            Box::new(Nonced(BufferedStreamCipher::new(ChaCha7539Engine::new())))
+        }),
+        stream_row(&["CHACHA"], &[], || {
+            Box::new(Nonced(BufferedStreamCipher::new(ChaChaEngine::new())))
+        }),
+    ]
+}
+
+// XChaCha20, ChaCha20 with a nonce of 24 bytes
+#[cfg(feature = "xchacha20")]
+pub(super) fn xchacha20(_context: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>> {
+    vec![stream_row(&["XCHACHA20"], &[], || {
+        Box::new(Nonced(BufferedStreamCipher::new(XChaCha20Engine::new())))
     })]
 }
 
-struct Row {
-    aliases: Vec<String>,
-}
-
-impl EntryBase for Row {
-    fn name(&self) -> &str {
-        "CHACHA7539"
-    }
-
-    fn aliases(&self) -> &[String] {
-        &self.aliases
-    }
-
-    fn oids(&self) -> &[Asn1Oid] {
-        &[]
-    }
-}
-
-impl CipherEntry for Row {
-    fn create(&self) -> Box<dyn Cipher> {
-        Box::new(ChaCha7539(BufferedStreamCipher::new(
-            ChaCha7539Engine::new(),
-        )))
-    }
-}
-
-// Its params are a KeyWithIvOwned, the same as for the block modes with an IV
-struct ChaCha7539(BufferedStreamCipher<ChaCha7539Engine>);
-
-impl BufferedCipher for ChaCha7539 {
-    type Error = AlgoError;
-
-    fn block_size(&self) -> usize {
-        self.0.block_size()
-    }
-
-    fn update_output_len(&self, input_len: usize) -> Result<usize, AlgoError> {
-        self.0.update_output_len(input_len).map_err(algo_error)
-    }
-
-    fn output_len(&self, input_len: usize) -> Result<usize, AlgoError> {
-        self.0.output_len(input_len).map_err(algo_error)
-    }
-
-    fn process_bytes(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, AlgoError> {
-        self.0.process_bytes(input, output).map_err(algo_error)
-    }
-
-    fn do_final(&mut self, output: &mut [u8]) -> Result<usize, AlgoError> {
-        self.0.do_final(output).map_err(algo_error)
-    }
-
-    fn reset(&mut self) {
-        self.0.reset();
-    }
-}
-
-impl Cipher for ChaCha7539 {
-    fn init(&mut self, direction: CipherDirection, params: &dyn Params) -> Result<(), AlgoError> {
-        let params = params
-            .as_any()
-            .downcast_ref::<KeyWithIvOwned>()
-            .ok_or(AlgoError::new(ErrorKind::InvalidParams))?;
-        self.0
-            .init(direction, &KeyWithIvRef::new(params.key(), params.iv()))
-            .map_err(|error| AlgoError::with_source(ErrorKind::InvalidParams, error))
-    }
-}
-
-fn algo_error(error: BufferedError<StreamError>) -> AlgoError {
-    let kind = match error {
-        BufferedError::NotInitialized => ErrorKind::NotInitialized,
-        _ => ErrorKind::DataLength,
-    };
-    AlgoError::with_source(kind, error)
-}
-
-#[cfg(test)]
+#[cfg(all(test, feature = "chacha"))]
 mod tests {
     use super::chacha;
     use crate::cipher::{Cipher, CipherDirection, CipherEntry};
@@ -260,5 +197,75 @@ mod tests {
         let first = cipher.update(PLAINTEXT).unwrap();
         cipher.finalize().unwrap();
         assert_eq!(cipher.update(PLAINTEXT).unwrap(), first);
+    }
+}
+
+#[cfg(all(test, any(feature = "chacha", feature = "xchacha20")))]
+mod variant_tests {
+    #![allow(unused_imports)]
+    use tc_stream_cipher::{CipherDirection, KeyRef, KeyWithIvRef, StreamCipher, StreamCipherInit};
+
+    use crate::params::{KeyOwned, KeyWithIvOwned};
+    use crate::{AlgoBuilder, DefaultAlgoBuilder};
+
+    #[allow(dead_code)]
+    const MESSAGE: &[u8] = b"attack at dawn, then retreat at dusk";
+
+    fn unhex(hex: &str) -> Vec<u8> {
+        (0..hex.len())
+            .step_by(2)
+            .map(|i| u8::from_str_radix(&hex[i..i + 2], 16).unwrap())
+            .collect()
+    }
+
+    // RFC 8439, appendix A.1, test vector 1: the zero key and nonce, block 0, which the original
+    // ChaCha with its 8-byte nonce gives too
+    #[cfg(feature = "chacha")]
+    #[test]
+    fn the_original_chacha_gives_the_zero_vector_of_rfc_8439() {
+        let algo = DefaultAlgoBuilder::default().build();
+        let params = KeyWithIvOwned::new(vec![0; 32], vec![0; 8]);
+        let output = algo
+            .cipher()
+            .encrypt_by_name("CHACHA", &params, &[0; 32])
+            .unwrap();
+        assert_eq!(
+            output,
+            unhex("76b8e0ada0f13d90405d6ae55386bd28bdd219b8a08ded1aa836efcc8b770dc7")
+        );
+    }
+
+    #[cfg(feature = "xchacha20")]
+    #[test]
+    fn xchacha20_gives_what_its_engine_gives() {
+        let key = unhex("000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f");
+        let iv = unhex("000102030405060708090a0b0c0d0e0f1011121314151617");
+        let _ = &iv;
+        let mut engine = tc_chacha::XChaCha20Engine::new();
+        engine
+            .init(CipherDirection::Encrypt, &KeyWithIvRef::new(&key, &iv))
+            .unwrap();
+        let mut expected = vec![0; MESSAGE.len()];
+        engine.process_bytes(MESSAGE, &mut expected).unwrap();
+
+        let algo = DefaultAlgoBuilder::default().build();
+        let output = algo
+            .cipher()
+            .encrypt_by_name(
+                "XCHACHA20",
+                &KeyWithIvOwned::new(key.clone(), iv.clone()),
+                MESSAGE,
+            )
+            .unwrap();
+        assert_eq!(output, expected);
+        let back = algo
+            .cipher()
+            .decrypt_by_name(
+                "XCHACHA20",
+                &KeyWithIvOwned::new(key.clone(), iv.clone()),
+                &output,
+            )
+            .unwrap();
+        assert_eq!(back, MESSAGE);
     }
 }

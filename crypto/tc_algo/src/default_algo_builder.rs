@@ -445,6 +445,15 @@ mod tests {
         feature = "rc5-64",
         feature = "rc6",
         feature = "chacha",
+        feature = "xchacha20",
+        feature = "rc4",
+        feature = "vmpc",
+        feature = "vmpc-ksa3",
+        feature = "isaac",
+        feature = "salsa20",
+        feature = "xsalsa20",
+        feature = "hc128",
+        feature = "hc256",
         feature = "rsa",
         feature = "ies"
     )))]
