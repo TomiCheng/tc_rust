@@ -899,6 +899,7 @@ dependencies = [
  "tc_cast",
  "tc_chacha",
  "tc_constant_time",
+ "tc_cts_modes",
  "tc_des",
  "tc_dh",
  "tc_dh_key",

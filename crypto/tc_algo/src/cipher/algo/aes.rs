@@ -351,6 +351,65 @@ mod tests {
         assert_ne!(cfb, expected);
     }
 
+    // RFC 3962, appendix B: AES in CBC with ciphertext stealing and an IV of zeros, through each name
+    // of the row; and the ECB result Bouncy Castle gives, as tc_cts_modes tests it
+    #[test]
+    fn cts_gives_the_vectors_of_rfc_3962_and_a_ciphertext_of_the_message_s_length() {
+        let key = unhex("636869636b656e207465726979616b69");
+        let message = unhex(concat!(
+            "4920776f756c64206c696b65207468652047656e6572616c20476175277320436869636b656e2c2070",
+            "6c656173652c20616e64207769746820626f74746f6d6c657373",
+        ));
+        let params = KeyWithIvOwned::new(key.clone(), vec![0; 16]);
+        let algo = DefaultAlgoBuilder::default().build();
+        let ciphers = algo.cipher();
+        for (len, expected) in [
+            (17, "c6353568f2bf8cb4d8a580362da7ff7f97"),
+            (
+                31,
+                "fc00783e0efdb2c1d445d4c8eff7ed2297687268d6ecccc0c07b25e25ecfe5",
+            ),
+            (
+                64,
+                concat!(
+                    "97687268d6ecccc0c07b25e25ecfe58439312523a78662d5be7fcbcc98ebf5a8",
+                    "426cff30b100ed348cf882311b3266069dad8bbb96c4cdc03bc103e1a194bbd8",
+                ),
+            ),
+        ] {
+            for name in ["AES/CBC/WITHCTS", "AES/CTS/NOPADDING", "aes/cts"] {
+                let ciphertext = ciphers
+                    .encrypt_by_name(name, &params, &message[..len])
+                    .unwrap();
+                assert_eq!(ciphertext, unhex(expected), "{name} {len}");
+                let recovered = ciphers.decrypt_by_name(name, &params, &ciphertext).unwrap();
+                assert_eq!(recovered, &message[..len], "{name} {len}");
+            }
+        }
+
+        let ecb = ciphers
+            .encrypt_by_name("AES/ECB/WITHCTS", &KeyOwned::new(key), &message[..47])
+            .unwrap();
+        assert_eq!(
+            ecb,
+            unhex(concat!(
+                "97687268d6ecccc0c07b25e25ecfe5842f0f4df59a97fd3fb99cbd0c0786a184",
+                "230c15eacecdc08fc1e2b658760fff",
+            ))
+        );
+    }
+
+    #[test]
+    fn cts_refuses_a_message_shorter_than_a_block() {
+        let params = KeyWithIvOwned::new(vec![0x42; 16], vec![0; 16]);
+        let algo = DefaultAlgoBuilder::default().build();
+        let error = algo
+            .cipher()
+            .encrypt_by_name("AES/CBC/WITHCTS", &params, &[0; 15])
+            .unwrap_err();
+        assert_eq!(error.kind(), ErrorKind::DataLength);
+    }
+
     #[test]
     fn a_feedback_size_out_of_range_or_on_another_mode_names_no_row() {
         let algo = DefaultAlgoBuilder::default().build();
@@ -868,7 +927,7 @@ mod tests {
             .map(|entry| entry.name().to_string())
             .filter(|name| name.starts_with("AES/"))
             .collect();
-        assert_eq!(names.len(), 19);
+        assert_eq!(names.len(), 21);
         for name in [
             "AES/ECB/X923PADDING",
             "AES/CBC/ISO7816-4PADDING",

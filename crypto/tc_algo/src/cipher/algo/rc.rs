@@ -110,7 +110,7 @@ mod tests {
     fn rc2_gives_the_example_of_rfc_2268_with_the_key_s_whole_size() {
         let output = ecb("RC2/ECB/NOPADDING", "ffffffffffffffff", "ffffffffffffffff");
         assert_eq!(output, unhex("278b27e42e2f0d49"));
-        assert_eq!(rows("RC2/"), 19);
+        assert_eq!(rows("RC2/"), 21);
 
         let algo = DefaultAlgoBuilder::default().build();
         let by_oid = algo
@@ -157,6 +157,35 @@ mod tests {
             .encrypt_by_name("RC2/ECB/NOPADDING", &KeyOwned::new(key), &block)
             .unwrap();
         assert_eq!(bare, unhex("2269552ab0f85ca6"));
+    }
+
+    // CTS in CBC passes RC2's own params on to the engine: 40 effective bits give another
+    // ciphertext than the whole key, of the message's length, and decrypt back
+    #[cfg(feature = "rc2")]
+    #[test]
+    fn rc2_takes_its_own_params_through_cts() {
+        use crate::params::{ParamsWithIvOwned, Rc2ParamsOwned};
+
+        let key = unhex("88bca90e90875a7f0f79c384627bafb2");
+        let message = b"twenty bytes of text";
+        let algo = DefaultAlgoBuilder::default().build();
+        let ciphers = algo.cipher();
+        let own = ParamsWithIvOwned::new(
+            Rc2ParamsOwned::with_effective_key_bits(key.clone(), 40),
+            vec![0x24; 8],
+        );
+        let sealed = ciphers
+            .encrypt_by_name("RC2/CBC/WITHCTS", &own, message)
+            .unwrap();
+        assert_eq!(sealed.len(), message.len());
+        let opened = ciphers.decrypt_by_name("RC2/CTS", &own, &sealed).unwrap();
+        assert_eq!(opened, message);
+
+        let bare = crate::params::KeyWithIvOwned::new(key, vec![0x24; 8]);
+        let whole = ciphers
+            .encrypt_by_name("RC2/CBC/WITHCTS", &bare, message)
+            .unwrap();
+        assert_ne!(whole, sealed);
     }
 
     #[cfg(feature = "rc2")]
@@ -218,7 +247,7 @@ mod tests {
                 "{name}"
             );
         }
-        assert_eq!(rows("RC5/"), 19);
+        assert_eq!(rows("RC5/"), 21);
     }
 
     // RC5-64 has no published example to hand: the row gives what the engine gives with 12 rounds
@@ -245,7 +274,7 @@ mod tests {
             ),
             expected
         );
-        assert_eq!(rows("RC5-64/"), 18);
+        assert_eq!(rows("RC5-64/"), 20);
     }
 
     // The RC6 paper: the zero 128-bit key and block
@@ -258,6 +287,6 @@ mod tests {
             "00000000000000000000000000000000",
         );
         assert_eq!(output, unhex("8fc3a53656b1f778c129df4e9848a41e"));
-        assert_eq!(rows("RC6/"), 18);
+        assert_eq!(rows("RC6/"), 20);
     }
 }

@@ -23,6 +23,108 @@ pub(super) struct NoOwn;
 ))]
 pub(super) struct Own<O>(PhantomData<fn() -> O>);
 
+// Which own params a CTS row in CBC takes: tc_cts_modes takes params with an IV through IvParams
+// and gives them to the engine whole, so the own params reach it in an IvView, which Keyed opens
+pub(super) trait CtsOwn {
+    type Cts;
+}
+
+impl CtsOwn for NoOwn {
+    type Cts = NoOwn;
+}
+
+#[cfg(any(
+    feature = "rc2",
+    feature = "rc5",
+    feature = "rc5-64",
+    feature = "gost28147",
+    feature = "threefish-256",
+    feature = "threefish-512",
+    feature = "threefish-1024"
+))]
+impl<O> CtsOwn for Own<O> {
+    type Cts = OwnViaIv<O>;
+}
+
+// The engine's own params and their IV, borrowed, as a type of this crate that implements
+// IvParams
+#[cfg(any(
+    feature = "rc2",
+    feature = "rc5",
+    feature = "rc5-64",
+    feature = "gost28147",
+    feature = "threefish-256",
+    feature = "threefish-512",
+    feature = "threefish-1024"
+))]
+pub(super) struct IvView<'a, O> {
+    pub(super) params: &'a O,
+    iv: &'a [u8],
+}
+
+#[cfg(any(
+    feature = "rc2",
+    feature = "rc5",
+    feature = "rc5-64",
+    feature = "gost28147",
+    feature = "threefish-256",
+    feature = "threefish-512",
+    feature = "threefish-1024"
+))]
+impl<O> IvParams for IvView<'_, O> {
+    fn iv(&self) -> &[u8] {
+        self.iv
+    }
+}
+
+// The own params O in a ParamsWithIvOwned<O>, given to the cipher as an IvView
+#[cfg(any(
+    feature = "rc2",
+    feature = "rc5",
+    feature = "rc5-64",
+    feature = "gost28147",
+    feature = "threefish-256",
+    feature = "threefish-512",
+    feature = "threefish-1024"
+))]
+pub(super) struct OwnViaIv<O>(PhantomData<fn() -> O>);
+
+#[cfg(any(
+    feature = "rc2",
+    feature = "rc5",
+    feature = "rc5-64",
+    feature = "gost28147",
+    feature = "threefish-256",
+    feature = "threefish-512",
+    feature = "threefish-1024"
+))]
+impl<C, O: 'static> OwnWithIv<C> for OwnViaIv<O>
+where
+    C: for<'a> BufferedCipherInit<
+            IvView<'a, O>,
+            Error = tc_block_modes::BlockModeInitError<tc_block_cipher::InitError>,
+        >,
+{
+    fn init(
+        cipher: &mut C,
+        direction: CipherDirection,
+        params: &dyn Params,
+        iv_len: Option<usize>,
+    ) -> Option<Result<(), AlgoError>> {
+        let params = params
+            .as_any()
+            .downcast_ref::<crate::params::ParamsWithIvOwned<O>>()?;
+        if iv_len.is_some_and(|len| params.iv().len() != len) {
+            return Some(Err(AlgoError::new(ErrorKind::InvalidParams)));
+        }
+        let view = IvView {
+            params: params.params(),
+            iv: params.iv(),
+        };
+        Some(cipher.init(direction, &view).map_err(invalid_params))
+    }
+}
+
 // Inits a mode with an IV when params are the row's own params with an IV, and gives None when
 // they are not. `iv_len` is the IV length the row requires, if it requires one
 pub(super) trait OwnWithIv<C> {

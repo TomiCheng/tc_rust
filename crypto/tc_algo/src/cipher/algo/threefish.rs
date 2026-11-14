@@ -119,7 +119,7 @@ mod tests {
             .encrypt_by_name("THREEFISH-256/CBC/NOPADDING", &with_iv, &block)
             .unwrap();
         assert_eq!(cbc, expected);
-        assert_eq!(rows("THREEFISH-256/"), 18);
+        assert_eq!(rows("THREEFISH-256/"), 20);
     }
 
     #[cfg(feature = "threefish-256")]
@@ -153,7 +153,7 @@ mod tests {
             let opened = ciphers.decrypt_by_name(name, &params, &sealed).unwrap();
             assert_eq!(opened, message, "{name}");
         }
-        assert_eq!(rows("THREEFISH-512/"), 18);
-        assert_eq!(rows("THREEFISH-1024/"), 18);
+        assert_eq!(rows("THREEFISH-512/"), 20);
+        assert_eq!(rows("THREEFISH-1024/"), 20);
     }
 }

@@ -62,6 +62,21 @@ macro_rules! keyed {
             }
         }
 
+        // The engine's own params with an IV, as CTS in CBC passes them on whole
+        impl<'v> tc_block_cipher::BlockCipherInit<$crate::cipher::algo::buffered::IvView<'v, $own>>
+            for $crate::cipher::algo::keyed::Keyed<$engine>
+        {
+            type Error = tc_block_cipher::InitError;
+
+            fn init(
+                &mut self,
+                direction: tc_block_cipher::CipherDirection,
+                params: &$crate::cipher::algo::buffered::IvView<'v, $own>,
+            ) -> Result<(), tc_block_cipher::InitError> {
+                tc_block_cipher::BlockCipherInit::init(&mut self.0, direction, params.params)
+            }
+        }
+
         impl tc_block_cipher::BlockCipherInit<$own>
             for $crate::cipher::algo::keyed::Keyed<$engine>
         {

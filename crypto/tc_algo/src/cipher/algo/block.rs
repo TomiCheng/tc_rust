@@ -77,10 +77,13 @@ pub(super) enum Padding {
     X923,
     Tbc,
     ZeroByte,
+    // Ciphertext stealing, which Bouncy Castle names as a padding: tc_cts_modes over ECB or CBC
+    // instead of the mode, for a message of at least a block and a ciphertext of its length
+    Cts,
 }
 
 impl Padding {
-    const ALL: [Padding; 7] = [
+    const ALL: [Padding; 8] = [
         Padding::None,
         Padding::Pkcs7,
         Padding::Iso10126,
@@ -88,6 +91,7 @@ impl Padding {
         Padding::X923,
         Padding::Tbc,
         Padding::ZeroByte,
+        Padding::Cts,
     ];
 
     // The name first, then the aliases of Bouncy Castle's CipherUtilities
@@ -100,6 +104,7 @@ impl Padding {
             Padding::X923 => &["X923PADDING", "X9.23PADDING"],
             Padding::Tbc => &["TBCPADDING"],
             Padding::ZeroByte => &["ZEROBYTEPADDING"],
+            Padding::Cts => &["WITHCTS"],
         }
     }
 }
@@ -146,6 +151,16 @@ pub(super) fn block_rows(
                     if mode == Mode::Ecb {
                         aliases.push(algorithm.to_string());
                     }
+                }
+            }
+            // Bouncy Castle's CTS mode is CBC with ciphertext stealing, whatever padding it names;
+            // these rows take the names of it that name none
+            if mode == Mode::Cbc && padding == Padding::Cts {
+                for algorithm in algorithms {
+                    aliases.push(format!("{algorithm}/CTS/NOPADDING"));
+                    aliases.push(format!("{algorithm}/CTS/RAW"));
+                    aliases.push(format!("{algorithm}/CTS/"));
+                    aliases.push(format!("{algorithm}/CTS"));
                 }
             }
             let oids = oids
@@ -306,6 +321,8 @@ macro_rules! padded {
                 $block,
                 PhantomData,
             ))),
+            // block_cipher! builds CTS over the engine itself, not over the mode
+            Padding::Cts => unreachable!("CTS is not a padding of a mode"),
         };
         cipher
     }};
@@ -328,14 +345,27 @@ macro_rules! block_cipher {
                 OfbBlockCipher, OpenPgpCfbBlockCipher,
             };
             use tc_buffered_cipher::BufferedBlockCipher;
+            use tc_cts_modes::CtsBlockCipher;
 
-            use $crate::cipher::algo::block::{Mode, padded};
-            use $crate::cipher::algo::buffered::{Buffered, Ctr, Ecb};
+            use $crate::cipher::algo::block::{Mode, Padding, padded};
+            use $crate::cipher::algo::buffered::{Buffered, Ctr, CtsOwn, Ecb};
 
             let engine = $engine;
             let block = engine.block_size();
             let bits = feedback_bits.unwrap_or(block * 8);
             match mode {
+                Mode::Ecb if padding == Padding::Cts => Box::new(Ecb(Buffered::<_, $own>(
+                    CtsBlockCipher::ecb(engine),
+                    block,
+                    PhantomData,
+                ))),
+                Mode::Cbc if padding == Padding::Cts => {
+                    Box::new(Buffered::<_, <$own as CtsOwn>::Cts>(
+                        CtsBlockCipher::cbc(engine),
+                        block,
+                        PhantomData,
+                    ))
+                }
                 Mode::Ecb => padded!(padding, rand, Ecb, $own, block, EcbBlockCipher::new(engine)),
                 Mode::Cbc => padded!(
                     padding,

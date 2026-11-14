@@ -78,14 +78,15 @@ mod tests {
     }
 
     #[test]
-    fn the_rows_have_every_mode_and_padding_with_gofb_and_openpgp_cfb_and_bouncy_castle_s_oid() {
+    fn the_rows_have_every_mode_and_padding_with_gofb_openpgp_cfb_and_cts_and_bouncy_castle_s_oid()
+    {
         let algo = DefaultAlgoBuilder::default().build();
         let rows = algo
             .cipher()
             .algorithms()
             .filter(|entry| entry.name().starts_with("GOST28147/"))
             .count();
-        assert_eq!(rows, 19);
+        assert_eq!(rows, 21);
         let by_oid = algo
             .cipher()
             .get_by_oid(&"1.2.643.2.2.21".parse().unwrap())
