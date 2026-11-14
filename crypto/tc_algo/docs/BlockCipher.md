@@ -131,7 +131,114 @@ first.
 The OIDs are OIW's DESede, which means ECB with PKCS#7 padding, and RSA's DES-EDE3-CBC, which means
 CBC with PKCS#7 padding.
 
-### Weak rows
+### Camellia
+
+The `camellia` feature has the rows. A block of 16 bytes and a key of 16, 24 or 32, as AES; a
+Japanese and ISO standard.
+
+| Name | OIDs | Params | Note |
+|---|---|---|---|
+| `CAMELLIA/ECB/NOPADDING` |  | `KeyOwned` | weak, variable time |
+| `CAMELLIA/ECB/PKCS7PADDING` |  | `KeyOwned` | weak, variable time |
+| `CAMELLIA/ECB/ISO10126PADDING` |  | `KeyOwned` | weak, variable time |
+| `CAMELLIA/ECB/ISO7816-4PADDING` |  | `KeyOwned` | weak, variable time |
+| `CAMELLIA/ECB/X923PADDING` |  | `KeyOwned` | weak, variable time |
+| `CAMELLIA/ECB/TBCPADDING` |  | `KeyOwned` | weak, variable time |
+| `CAMELLIA/ECB/ZEROBYTEPADDING` |  | `KeyOwned` | weak, variable time |
+| `CAMELLIA/CBC/NOPADDING` |  | `KeyWithIvOwned` | variable time |
+| `CAMELLIA/CBC/PKCS7PADDING` | `1.2.392.200011.61.1.1.1.2`, `.3`, `.4` | `KeyWithIvOwned` | variable time |
+| `CAMELLIA/CBC/ISO10126PADDING` |  | `KeyWithIvOwned` | variable time |
+| `CAMELLIA/CBC/ISO7816-4PADDING` |  | `KeyWithIvOwned` | variable time |
+| `CAMELLIA/CBC/X923PADDING` |  | `KeyWithIvOwned` | variable time |
+| `CAMELLIA/CBC/TBCPADDING` |  | `KeyWithIvOwned` | variable time |
+| `CAMELLIA/CBC/ZEROBYTEPADDING` |  | `KeyWithIvOwned` | variable time |
+| `CAMELLIA/CFB/NOPADDING` |  | `KeyWithIvOwned` | variable time |
+| `CAMELLIA/OFB/NOPADDING` |  | `KeyWithIvOwned` | variable time |
+| `CAMELLIA/CTR/NOPADDING` |  | `KeyWithIvOwned` | variable time |
+
+The OIDs are NTT's for 128-, 192- and 256-bit keys, and mean CBC with PKCS#7 padding.
+
+### ARIA
+
+The `aria` feature has the rows. A block of 16 bytes and a key of 16, 24 or 32, as AES; the Korean
+standard.
+
+| Name | OIDs | Params | Note |
+|---|---|---|---|
+| `ARIA/ECB/NOPADDING` |  | `KeyOwned` | weak, variable time |
+| `ARIA/ECB/PKCS7PADDING` | `1.2.410.200046.1.1.1`, `.6`, `.11` | `KeyOwned` | weak, variable time |
+| `ARIA/ECB/ISO10126PADDING` |  | `KeyOwned` | weak, variable time |
+| `ARIA/ECB/ISO7816-4PADDING` |  | `KeyOwned` | weak, variable time |
+| `ARIA/ECB/X923PADDING` |  | `KeyOwned` | weak, variable time |
+| `ARIA/ECB/TBCPADDING` |  | `KeyOwned` | weak, variable time |
+| `ARIA/ECB/ZEROBYTEPADDING` |  | `KeyOwned` | weak, variable time |
+| `ARIA/CBC/NOPADDING` |  | `KeyWithIvOwned` | variable time |
+| `ARIA/CBC/PKCS7PADDING` | `1.2.410.200046.1.1.2`, `.7`, `.12` | `KeyWithIvOwned` | variable time |
+| `ARIA/CBC/ISO10126PADDING` |  | `KeyWithIvOwned` | variable time |
+| `ARIA/CBC/ISO7816-4PADDING` |  | `KeyWithIvOwned` | variable time |
+| `ARIA/CBC/X923PADDING` |  | `KeyWithIvOwned` | variable time |
+| `ARIA/CBC/TBCPADDING` |  | `KeyWithIvOwned` | variable time |
+| `ARIA/CBC/ZEROBYTEPADDING` |  | `KeyWithIvOwned` | variable time |
+| `ARIA/CFB/NOPADDING` | `1.2.410.200046.1.1.3`, `.8`, `.13` | `KeyWithIvOwned` | variable time |
+| `ARIA/OFB/NOPADDING` | `1.2.410.200046.1.1.4`, `.9`, `.14` | `KeyWithIvOwned` | variable time |
+| `ARIA/CTR/NOPADDING` | `1.2.410.200046.1.1.5`, `.10`, `.15` | `KeyWithIvOwned` | variable time |
+
+The OIDs are NSRI's for 128-, 192- and 256-bit keys in each mode. Bouncy Castle also has ARIA in GCM
+and CCM, and `ARIA//PKCS7` and the like for ECB with PKCS#7 padding; they are not rows yet.
+
+### SM4
+
+The `sm4` feature has the rows. A block of 16 bytes and a key of 16; the Chinese standard.
+
+| Name | OIDs | Params | Note |
+|---|---|---|---|
+| `SM4/ECB/NOPADDING` |  | `KeyOwned` | weak, variable time |
+| `SM4/ECB/PKCS7PADDING` |  | `KeyOwned` | weak, variable time |
+| `SM4/ECB/ISO10126PADDING` |  | `KeyOwned` | weak, variable time |
+| `SM4/ECB/ISO7816-4PADDING` |  | `KeyOwned` | weak, variable time |
+| `SM4/ECB/X923PADDING` |  | `KeyOwned` | weak, variable time |
+| `SM4/ECB/TBCPADDING` |  | `KeyOwned` | weak, variable time |
+| `SM4/ECB/ZEROBYTEPADDING` |  | `KeyOwned` | weak, variable time |
+| `SM4/CBC/NOPADDING` |  | `KeyWithIvOwned` | variable time |
+| `SM4/CBC/PKCS7PADDING` |  | `KeyWithIvOwned` | variable time |
+| `SM4/CBC/ISO10126PADDING` |  | `KeyWithIvOwned` | variable time |
+| `SM4/CBC/ISO7816-4PADDING` |  | `KeyWithIvOwned` | variable time |
+| `SM4/CBC/X923PADDING` |  | `KeyWithIvOwned` | variable time |
+| `SM4/CBC/TBCPADDING` |  | `KeyWithIvOwned` | variable time |
+| `SM4/CBC/ZEROBYTEPADDING` |  | `KeyWithIvOwned` | variable time |
+| `SM4/CFB/NOPADDING` |  | `KeyWithIvOwned` | variable time |
+| `SM4/OFB/NOPADDING` |  | `KeyWithIvOwned` | variable time |
+| `SM4/CTR/NOPADDING` |  | `KeyWithIvOwned` | variable time |
+
+Bouncy Castle gives SM4 no OID here.
+
+### SEED
+
+The `seed` feature has the rows. A block of 16 bytes and a key of 16; a Korean standard.
+
+| Name | OIDs | Params | Note |
+|---|---|---|---|
+| `SEED/ECB/NOPADDING` |  | `KeyOwned` | weak, variable time |
+| `SEED/ECB/PKCS7PADDING` |  | `KeyOwned` | weak, variable time |
+| `SEED/ECB/ISO10126PADDING` |  | `KeyOwned` | weak, variable time |
+| `SEED/ECB/ISO7816-4PADDING` |  | `KeyOwned` | weak, variable time |
+| `SEED/ECB/X923PADDING` |  | `KeyOwned` | weak, variable time |
+| `SEED/ECB/TBCPADDING` |  | `KeyOwned` | weak, variable time |
+| `SEED/ECB/ZEROBYTEPADDING` |  | `KeyOwned` | weak, variable time |
+| `SEED/CBC/NOPADDING` |  | `KeyWithIvOwned` | variable time |
+| `SEED/CBC/PKCS7PADDING` | `1.2.410.200004.1.4` | `KeyWithIvOwned` | variable time |
+| `SEED/CBC/ISO10126PADDING` |  | `KeyWithIvOwned` | variable time |
+| `SEED/CBC/ISO7816-4PADDING` |  | `KeyWithIvOwned` | variable time |
+| `SEED/CBC/X923PADDING` |  | `KeyWithIvOwned` | variable time |
+| `SEED/CBC/TBCPADDING` |  | `KeyWithIvOwned` | variable time |
+| `SEED/CBC/ZEROBYTEPADDING` |  | `KeyWithIvOwned` | variable time |
+| `SEED/CFB/NOPADDING` |  | `KeyWithIvOwned` | variable time |
+| `SEED/OFB/NOPADDING` |  | `KeyWithIvOwned` | variable time |
+| `SEED/CTR/NOPADDING` |  | `KeyWithIvOwned` | variable time |
+
+The OID is KISA's, and means CBC with PKCS#7 padding.
+
+### Weak, legacy and variable-time rows
 
 ECB is weak: it encrypts equal blocks into equal blocks, so the ciphertext shows where the
 message repeats. It is here for old data and for building other schemes; for new data, use a mode
@@ -143,6 +250,10 @@ here for old data only.
 DESede is legacy: NIST withdrew it for encryption at the end of 2023. Its block of 8 bytes lets
 two blocks of a long message under one key collide, which leaks their XOR (Sweet32), and two-key
 DESede has the strength of about 80 bits. It is here for old data only.
+
+A variable-time cipher looks up tables by bytes of the key and the data, so it can leak them through
+cache timing to code that shares the processor. Where that matters, prefer AES, which `tc_aes` runs
+in constant time with AES-NI or with its `rustcrypto` feature.
 
 ## Modes and paddings
 
@@ -177,7 +288,7 @@ Both come from the crates underneath and wipe themselves when dropped.
 
 - Use a new IV for every message under the same key. It is not secret: send it along with the
   ciphertext, since decrypting needs the same one.
-- The IV must be one block, 16 bytes for AES and 8 for DES and DESede, or `init` gives
+- The IV must be one block, 8 bytes for DES and DESede and 16 for the others, or `init` gives
   `InvalidParams`. Unlike Bouncy Castle, a short IV is not padded with zeros, and there is no
   default of zeros: `KeyWithIvOwned` always has one to give.
 - CTR is the exception: its IV may be shorter than a block, and the rest of the block is the

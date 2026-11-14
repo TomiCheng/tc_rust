@@ -99,6 +99,10 @@ aes = ["dep:tc_aes", "dep:tc_aead_cipher", "dep:tc_block_cipher", "dep:tc_block_
 
 des = ["dep:tc_des", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core", "dep:tc_buffered_cipher"]
 desede = ["dep:tc_des", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core", "dep:tc_buffered_cipher"]
+camellia = ["dep:tc_camellia", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core", "dep:tc_buffered_cipher"]
+aria = ["dep:tc_aria", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core", "dep:tc_buffered_cipher"]
+sm4 = ["dep:tc_sm4", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core", "dep:tc_buffered_cipher"]
+seed = ["dep:tc_seed", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_block_padding", "tc_block_padding/rand_core", "dep:tc_buffered_cipher"]
 
 # Stream cipher
 chacha = ["dep:tc_chacha", "dep:tc_stream_cipher", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_buffered_cipher"]
@@ -164,6 +168,10 @@ tc_keccak = { version = "0.1.0", optional = true }
 tc_aes = { version = "0.1.0", optional = true }
 tc_block_padding = { version = "0.1.0", optional = true }
 tc_des = { version = "0.1.1", optional = true }
+tc_camellia = { version = "0.1.0", optional = true }
+tc_aria = { version = "0.1.0", optional = true }
+tc_sm4 = { version = "0.1.0", optional = true }
+tc_seed = { version = "0.1.0", optional = true }
 
 # Stream cipher
 tc_chacha = { version = "0.1.0", optional = true }

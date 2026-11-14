@@ -424,6 +424,10 @@ mod tests {
         feature = "aes",
         feature = "des",
         feature = "desede",
+        feature = "camellia",
+        feature = "aria",
+        feature = "sm4",
+        feature = "seed",
         feature = "chacha",
         feature = "rsa",
         feature = "ies"

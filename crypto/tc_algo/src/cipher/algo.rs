@@ -1,9 +1,29 @@
 #[cfg(feature = "aes")]
 mod aes;
-#[cfg(any(feature = "aes", feature = "des", feature = "desede"))]
+#[cfg(feature = "aria")]
+mod aria;
+#[cfg(any(
+    feature = "aes",
+    feature = "des",
+    feature = "desede",
+    feature = "camellia",
+    feature = "aria",
+    feature = "sm4",
+    feature = "seed",
+))]
 mod block;
-#[cfg(any(feature = "aes", feature = "des", feature = "desede"))]
+#[cfg(any(
+    feature = "aes",
+    feature = "des",
+    feature = "desede",
+    feature = "camellia",
+    feature = "aria",
+    feature = "sm4",
+    feature = "seed",
+))]
 mod buffered;
+#[cfg(feature = "camellia")]
+mod camellia;
 #[cfg(feature = "chacha")]
 mod chacha;
 #[cfg(any(feature = "des", feature = "desede"))]
@@ -12,6 +32,10 @@ mod des;
 mod ies;
 #[cfg(feature = "rsa")]
 mod rsa;
+#[cfg(feature = "seed")]
+mod seed;
+#[cfg(feature = "sm4")]
+mod sm4;
 
 use super::CipherEntry;
 
@@ -25,6 +49,14 @@ pub(crate) const BUILT_IN: &[CreateRows] = &[
     des::des,
     #[cfg(feature = "desede")]
     des::desede,
+    #[cfg(feature = "camellia")]
+    camellia::camellia,
+    #[cfg(feature = "aria")]
+    aria::aria,
+    #[cfg(feature = "sm4")]
+    sm4::sm4,
+    #[cfg(feature = "seed")]
+    seed::seed,
     #[cfg(feature = "chacha")]
     chacha::chacha,
     #[cfg(feature = "rsa")]
