@@ -145,7 +145,7 @@ hkdf-sha512 = ["hkdf"]
 pbe-aes = ["aes", "dep:tc_pbe", "dep:tc_sha"]
 
 # KEM
-ml-kem = ["dep:tc_kem", "dep:tc_ml_kem"]
+ml-kem = ["dep:tc_ml_kem"]
 
 # DRBG
 drbg-hmac-sha256 = ["hmac-sha256", "dep:tc_drbg"]
@@ -220,7 +220,7 @@ tc_ies = { version = "0.1.0", path = "../../ies/tc_ies", optional = true }
 tc_drbg = { version = "0.1.0", path = "../tc_drbg", optional = true }
 
 # KEM
-tc_kem = { version = "0.1.0", path = "../tc_kem", optional = true }
+tc_kem = { version = "0.1.0", path = "../tc_kem" }
 tc_ml_kem = { version = "0.1.0", path = "../tc_ml_kem", optional = true }
 
 # PBE

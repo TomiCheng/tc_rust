@@ -11,4 +11,5 @@ pub(crate) use algo::{BUILT_IN, CreateRows};
 pub(crate) use empty_kem_provider::EmptyKemProvider;
 pub use kem_entry::KemEntry;
 pub use kem_provider::KemProvider;
-pub use kem_trait::Kem;
+pub use kem_trait::{Decapsulator, Encapsulator};
+pub use tc_kem::{KemDecapsulator, KemEncapsulator, KemInit};

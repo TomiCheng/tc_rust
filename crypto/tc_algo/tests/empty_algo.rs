@@ -49,7 +49,14 @@ fn an_algo_without_providers_reports_every_name_as_unknown() {
     );
     assert_eq!(kind_of(algo.kdf().get_by_name(name)), ErrorKind::UnknownKdf);
     assert_eq!(kind_of(algo.pbe().get_by_name(name)), ErrorKind::UnknownPbe);
-    assert_eq!(kind_of(algo.kem().get_by_name(name)), ErrorKind::UnknownKem);
+    assert_eq!(
+        kind_of(algo.kem().get_encapsulator_by_name(name)),
+        ErrorKind::UnknownKem
+    );
+    assert_eq!(
+        kind_of(algo.kem().get_decapsulator_by_name(name)),
+        ErrorKind::UnknownKem
+    );
 }
 
 #[test]
@@ -88,5 +95,12 @@ fn an_algo_without_providers_reports_every_oid_as_unknown() {
     );
     assert_eq!(kind_of(algo.kdf().get_by_oid(&oid)), ErrorKind::UnknownKdf);
     assert_eq!(kind_of(algo.pbe().get_by_oid(&oid)), ErrorKind::UnknownPbe);
-    assert_eq!(kind_of(algo.kem().get_by_oid(&oid)), ErrorKind::UnknownKem);
+    assert_eq!(
+        kind_of(algo.kem().get_encapsulator_by_oid(&oid)),
+        ErrorKind::UnknownKem
+    );
+    assert_eq!(
+        kind_of(algo.kem().get_decapsulator_by_oid(&oid)),
+        ErrorKind::UnknownKem
+    );
 }

@@ -22,13 +22,15 @@ fn main() -> Result<(), AlgoError> {
         .key_pair_generator()
         .generate_by_name_with("ML-KEM", &MlKemParameters::ML_KEM_768)?;
 
-    let kem = algo.kem().get_by_name("ML-KEM-768")?;
+    let name = "ML-KEM-768";
 
     // The sender keeps the secret, and sends the encapsulation
-    let (encapsulation, sender_secret) = kem.encapsulate(receiver.public())?;
+    let (encapsulation, sender_secret) = algo.kem().encapsulate_by_name(name, receiver.public())?;
 
     // The receiver gets the same secret from the encapsulation
-    let receiver_secret = kem.decapsulate(receiver.private(), &encapsulation)?;
+    let receiver_secret =
+        algo.kem()
+            .decapsulate_by_name(name, receiver.private(), &encapsulation)?;
 
     assert_eq!(sender_secret, receiver_secret);
     Ok(())
@@ -61,9 +63,17 @@ There is no default, so `generate_by_name` and `generate_by_oid`, which do not c
 
 ## Params
 
-`encapsulate` takes an `MlKemPublicKey` and `decapsulate` an `MlKemPrivateKey`, both in
-`tc_algo::params`, of the parameter set of the row. The keys of a pair go straight in. Any other
-type or parameter set is `InvalidParams`.
+As in Bouncy Castle's `KemUtilities`, each row gives two objects: an `Encapsulator`, from
+`get_encapsulator_by_name`, for the side that sends, and a `Decapsulator`, from
+`get_decapsulator_by_name`, for the side that receives. They are the `KemEncapsulator` and
+`KemDecapsulator` of `tc_kem`, with `init` taking any params, and write into buffers of
+`encapsulation_length` and `secret_length` bytes. The helpers `encapsulate_by_name` and
+`decapsulate_by_name` do all of it at once.
+
+The encapsulator's `init` takes an `MlKemPublicKey` and the decapsulator's an `MlKemPrivateKey`,
+both in `tc_algo::params`, of the parameter set of the row. The keys of a pair go straight in. Any
+other type or parameter set is `InvalidParams`, and encapsulating or decapsulating before an `init`
+that succeeded is `NotInitialized`.
 
 ## Using it
 

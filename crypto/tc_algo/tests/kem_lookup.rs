@@ -1,4 +1,6 @@
-use tc_algo::kem::{Kem, KemEntry};
+use tc_algo::kem::{
+    Decapsulator, Encapsulator, KemDecapsulator, KemEncapsulator, KemEntry, KemInit,
+};
 use tc_algo::params::KeyLength;
 use tc_algo::{
     Algo, AlgoBuilder, AlgoError, DefaultAlgoBuilder, DefaultAlgoContext, EntryBase, ErrorKind,
@@ -28,7 +30,11 @@ impl EntryBase for Row {
 }
 
 impl KemEntry for Row {
-    fn create(&self) -> Box<dyn Kem> {
+    fn create_encapsulator(&self) -> Box<dyn Encapsulator> {
+        Box::new(Marked(self.mark))
+    }
+
+    fn create_decapsulator(&self) -> Box<dyn Decapsulator> {
         Box::new(Marked(self.mark))
     }
 }
@@ -36,19 +42,56 @@ impl KemEntry for Row {
 // Its secret is the mark of the row that created it, to tell which row a lookup found
 struct Marked(u8);
 
-impl Kem for Marked {
-    fn encapsulate(&self, _public_key: &dyn Params) -> Result<(Vec<u8>, Vec<u8>), AlgoError> {
-        Ok((vec![self.0], vec![self.0]))
+impl KemEncapsulator for Marked {
+    type Error = AlgoError;
+
+    fn encapsulation_length(&self) -> usize {
+        1
     }
 
-    fn decapsulate(
-        &self,
-        _private_key: &dyn Params,
-        encapsulation: &[u8],
-    ) -> Result<Vec<u8>, AlgoError> {
-        Ok(encapsulation.to_vec())
+    fn secret_length(&self) -> usize {
+        1
+    }
+
+    fn encapsulate(
+        &mut self,
+        encapsulation: &mut [u8],
+        secret: &mut [u8],
+    ) -> Result<(), AlgoError> {
+        encapsulation[0] = self.0;
+        secret[0] = self.0;
+        Ok(())
     }
 }
+
+impl KemDecapsulator for Marked {
+    type Error = AlgoError;
+
+    fn encapsulation_length(&self) -> usize {
+        1
+    }
+
+    fn secret_length(&self) -> usize {
+        1
+    }
+
+    fn decapsulate(&mut self, encapsulation: &[u8], secret: &mut [u8]) -> Result<(), AlgoError> {
+        secret[0] = encapsulation[0];
+        Ok(())
+    }
+}
+
+impl KemInit<dyn Params> for Marked {
+    type Error = AlgoError;
+
+    fn init(&mut self, _params: &dyn Params) -> Result<(), AlgoError> {
+        Ok(())
+    }
+}
+
+impl Encapsulator for Marked {}
+
+impl Decapsulator for Marked {}
 
 fn row(name: &'static str, aliases: &[&str], oids: &[&str], mark: u8) -> Box<dyn KemEntry> {
     Box::new(Row {
@@ -81,13 +124,12 @@ fn builder_with(rows: &[Rows]) -> DefaultAlgoBuilder {
     builder
 }
 
-fn mark_of(kem: Box<dyn Kem>) -> u8 {
-    let (_, secret) = kem.encapsulate(&KeyLength::new(0)).unwrap();
-    secret[0]
-}
-
 fn mark_by_name(algo: &dyn Algo, name: &str) -> Option<u8> {
-    Some(mark_of(algo.kem().get_by_name(name).ok()?))
+    let (_, secret) = algo
+        .kem()
+        .encapsulate_by_name(name, &KeyLength::new(0))
+        .ok()?;
+    Some(secret[0])
 }
 
 #[test]
@@ -101,19 +143,30 @@ fn a_kem_is_found_by_its_name_or_alias_whatever_their_case() {
 #[test]
 fn a_kem_is_found_by_its_oid() {
     let algo = builder_with(&[older]).build();
-    let kem = algo.kem().get_by_oid(&oid("1.2.3.4")).unwrap();
-    assert_eq!(mark_of(kem), 1);
+    let (_, secret) = algo
+        .kem()
+        .encapsulate_by_oid(&oid("1.2.3.4"), &KeyLength::new(0))
+        .unwrap();
+    assert_eq!(secret[0], 1);
 }
 
 #[test]
 fn an_unknown_name_or_oid_is_reported_as_unknown_kem() {
     let algo = builder_with(&[older]).build();
     assert_eq!(
-        algo.kem().get_by_name("NO-SUCH").err().unwrap().kind(),
+        algo.kem()
+            .get_encapsulator_by_name("NO-SUCH")
+            .err()
+            .unwrap()
+            .kind(),
         ErrorKind::UnknownKem
     );
     assert_eq!(
-        algo.kem().get_by_oid(&oid("1.2.3.5")).err().unwrap().kind(),
+        algo.kem()
+            .get_decapsulator_by_oid(&oid("1.2.3.5"))
+            .err()
+            .unwrap()
+            .kind(),
         ErrorKind::UnknownKem
     );
 }

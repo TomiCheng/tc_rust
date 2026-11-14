@@ -55,11 +55,13 @@ errors and an init that takes any params, so code written for those traits takes
 - `Kdf`: `Kdf` and `KdfInit` of `tc_kdf`
 - `Agreement`: `Agreement` and `AgreementInit` of `tc_agreement`
 - `KeyPairGenerator`: `KeyPairGenerator` and `KeyPairGeneratorInit` of `tc_asym_cipher`
+- `Encapsulator`, `Decapsulator`: `KemEncapsulator`, `KemDecapsulator` and `KemInit` of `tc_kem`,
+  one of each for a row, as Bouncy Castle's `KemUtilities` gives them
 - `Drbg`: `CryptoRng` of `rand_core`
 
 Each adds only what its crate lacks, such as `finalize` returning a `Vec`. `Xof::init` is its own,
-since `tc_digest`'s XOFs take their params when they are made. `Kem`, `Pbe` and `KeyGenerator`
-are this crate's own.
+since `tc_digest`'s XOFs take their params when they are made. `Pbe` and `KeyGenerator` are this
+crate's own.
 
 ## More
 
