@@ -53,14 +53,14 @@ mod tests {
     }
 
     #[test]
-    fn there_are_twenty_four_rows_with_openpgp_cfb_cts_and_the_aead_modes_found_by_their_oids() {
+    fn there_are_twenty_six_rows_with_openpgp_cfb_cts_and_the_aead_modes_found_by_their_oids() {
         let algo = DefaultAlgoBuilder::default().build();
         let rows = algo
             .cipher()
             .algorithms()
             .filter(|entry| entry.name().starts_with("CAMELLIA/"))
             .count();
-        assert_eq!(rows, 24);
+        assert_eq!(rows, 26);
         for (oid, name) in [
             ("1.2.392.200011.61.1.1.1.2", "CAMELLIA/CBC/PKCS7PADDING"),
             ("1.2.392.200011.61.1.1.1.3", "CAMELLIA/CBC/PKCS7PADDING"),

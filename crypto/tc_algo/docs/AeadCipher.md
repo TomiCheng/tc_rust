@@ -84,7 +84,8 @@ fn main() -> Result<(), AlgoError> {
 
 ## Algorithms
 
-The AEAD modes of Bouncy Castle's `CipherUtilities` take a block cipher of their block size:
+The AEAD modes of Bouncy Castle's `CipherUtilities`, GCM, CCM, EAX and OCB, and two more of
+`tc_aead_cipher` it does not name, GCM-SIV and KCCM, take a block cipher of their block size:
 
 | Mode | Block | Nonce bytes | Tag bytes |
 |---|---|---|---|
@@ -92,8 +93,16 @@ The AEAD modes of Bouncy Castle's `CipherUtilities` take a block cipher of their
 | CCM | 16 bytes | 7 to 13 | 4 to 16, even |
 | EAX | 8 or 16 bytes | any | 4 to a block |
 | OCB | 16 bytes | up to 15; use 12 | 8 to 16 |
+| GCM-SIV | 16 bytes | 12 | 16 |
+| KCCM | 16, 32 or 64 bytes | up to a block | 8, 16, 32, 48 or 64, up to a block |
 
-So each algorithm of a block of 16 bytes has the four, and each of a block of 8 bytes has EAX alone.
+So each algorithm of a block of 16 bytes has the six, each of a block of 8 bytes has EAX alone, and
+Threefish-256 and Threefish-512 have KCCM.
+
+GCM-SIV, of RFC 8452, resists the reuse of a nonce: a repeated nonce shows only whether two
+messages are equal, where in GCM it gives the key of the tag away. KCCM, of DSTU 7624, the CCM of
+Ukraine, takes messages and AAD of whole blocks only; a partial block is `DataLength`, and its
+counter is of 4 bytes, the standard's default. Their names, `GCM-SIV` and `KCCM`, are this crate's.
 The feature of the algorithm has its rows, and the key is the algorithm's; see
 [Block ciphers](BlockCipher.md).
 
@@ -103,54 +112,80 @@ The feature of the algorithm has its rows, and the key is the algorithm's; see
 | `AES/CCM/NOPADDING` | `AES/CCM/`, `AES/CCM` | `2.16.840.1.101.3.4.1.7`, `.27`, `.47` | `aes` |
 | `AES/EAX/NOPADDING` | `AES/EAX/`, `AES/EAX` |  | `aes` |
 | `AES/OCB/NOPADDING` | `AES/OCB/`, `AES/OCB` |  | `aes` |
+| `AES/GCM-SIV/NOPADDING` | `AES/GCM-SIV/`, `AES/GCM-SIV` |  | `aes` |
+| `AES/KCCM/NOPADDING` | `AES/KCCM/`, `AES/KCCM` |  | `aes` |
 | `ARIA/GCM/NOPADDING` | `ARIA/GCM/`, `ARIA/GCM` | `1.2.410.200046.1.1.34`, `.35`, `.36` | `aria` |
 | `ARIA/CCM/NOPADDING` | `ARIA/CCM/`, `ARIA/CCM` | `1.2.410.200046.1.1.37`, `.38`, `.39` | `aria` |
 | `ARIA/EAX/NOPADDING` | `ARIA/EAX/`, `ARIA/EAX` |  | `aria` |
 | `ARIA/OCB/NOPADDING` | `ARIA/OCB/`, `ARIA/OCB` |  | `aria` |
+| `ARIA/GCM-SIV/NOPADDING` | `ARIA/GCM-SIV/`, `ARIA/GCM-SIV` |  | `aria` |
+| `ARIA/KCCM/NOPADDING` | `ARIA/KCCM/`, `ARIA/KCCM` |  | `aria` |
 | `CAMELLIA/GCM/NOPADDING` | `CAMELLIA/GCM/`, `CAMELLIA/GCM` |  | `camellia` |
 | `CAMELLIA/CCM/NOPADDING` | `CAMELLIA/CCM/`, `CAMELLIA/CCM` |  | `camellia` |
 | `CAMELLIA/EAX/NOPADDING` | `CAMELLIA/EAX/`, `CAMELLIA/EAX` |  | `camellia` |
 | `CAMELLIA/OCB/NOPADDING` | `CAMELLIA/OCB/`, `CAMELLIA/OCB` |  | `camellia` |
+| `CAMELLIA/GCM-SIV/NOPADDING` | `CAMELLIA/GCM-SIV/`, `CAMELLIA/GCM-SIV` |  | `camellia` |
+| `CAMELLIA/KCCM/NOPADDING` | `CAMELLIA/KCCM/`, `CAMELLIA/KCCM` |  | `camellia` |
 | `SM4/GCM/NOPADDING` | `SM4/GCM/`, `SM4/GCM` |  | `sm4` |
 | `SM4/CCM/NOPADDING` | `SM4/CCM/`, `SM4/CCM` |  | `sm4` |
 | `SM4/EAX/NOPADDING` | `SM4/EAX/`, `SM4/EAX` |  | `sm4` |
 | `SM4/OCB/NOPADDING` | `SM4/OCB/`, `SM4/OCB` |  | `sm4` |
+| `SM4/GCM-SIV/NOPADDING` | `SM4/GCM-SIV/`, `SM4/GCM-SIV` |  | `sm4` |
+| `SM4/KCCM/NOPADDING` | `SM4/KCCM/`, `SM4/KCCM` |  | `sm4` |
 | `SEED/GCM/NOPADDING` | `SEED/GCM/`, `SEED/GCM` |  | `seed` |
 | `SEED/CCM/NOPADDING` | `SEED/CCM/`, `SEED/CCM` |  | `seed` |
 | `SEED/EAX/NOPADDING` | `SEED/EAX/`, `SEED/EAX` |  | `seed` |
 | `SEED/OCB/NOPADDING` | `SEED/OCB/`, `SEED/OCB` |  | `seed` |
+| `SEED/GCM-SIV/NOPADDING` | `SEED/GCM-SIV/`, `SEED/GCM-SIV` |  | `seed` |
+| `SEED/KCCM/NOPADDING` | `SEED/KCCM/`, `SEED/KCCM` |  | `seed` |
 | `TWOFISH/GCM/NOPADDING` | `TWOFISH/GCM/`, `TWOFISH/GCM` |  | `twofish` |
 | `TWOFISH/CCM/NOPADDING` | `TWOFISH/CCM/`, `TWOFISH/CCM` |  | `twofish` |
 | `TWOFISH/EAX/NOPADDING` | `TWOFISH/EAX/`, `TWOFISH/EAX` |  | `twofish` |
 | `TWOFISH/OCB/NOPADDING` | `TWOFISH/OCB/`, `TWOFISH/OCB` |  | `twofish` |
+| `TWOFISH/GCM-SIV/NOPADDING` | `TWOFISH/GCM-SIV/`, `TWOFISH/GCM-SIV` |  | `twofish` |
+| `TWOFISH/KCCM/NOPADDING` | `TWOFISH/KCCM/`, `TWOFISH/KCCM` |  | `twofish` |
 | `SERPENT/GCM/NOPADDING` | `SERPENT/GCM/`, `SERPENT/GCM` |  | `serpent` |
 | `SERPENT/CCM/NOPADDING` | `SERPENT/CCM/`, `SERPENT/CCM` |  | `serpent` |
 | `SERPENT/EAX/NOPADDING` | `SERPENT/EAX/`, `SERPENT/EAX` |  | `serpent` |
 | `SERPENT/OCB/NOPADDING` | `SERPENT/OCB/`, `SERPENT/OCB` |  | `serpent` |
+| `SERPENT/GCM-SIV/NOPADDING` | `SERPENT/GCM-SIV/`, `SERPENT/GCM-SIV` |  | `serpent` |
+| `SERPENT/KCCM/NOPADDING` | `SERPENT/KCCM/`, `SERPENT/KCCM` |  | `serpent` |
 | `TNEPRES/GCM/NOPADDING` | `TNEPRES/GCM/`, `TNEPRES/GCM` |  | `tnepres` |
 | `TNEPRES/CCM/NOPADDING` | `TNEPRES/CCM/`, `TNEPRES/CCM` |  | `tnepres` |
 | `TNEPRES/EAX/NOPADDING` | `TNEPRES/EAX/`, `TNEPRES/EAX` |  | `tnepres` |
 | `TNEPRES/OCB/NOPADDING` | `TNEPRES/OCB/`, `TNEPRES/OCB` |  | `tnepres` |
+| `TNEPRES/GCM-SIV/NOPADDING` | `TNEPRES/GCM-SIV/`, `TNEPRES/GCM-SIV` |  | `tnepres` |
+| `TNEPRES/KCCM/NOPADDING` | `TNEPRES/KCCM/`, `TNEPRES/KCCM` |  | `tnepres` |
 | `CAST6/GCM/NOPADDING` | `CAST6/GCM/`, `CAST6/GCM` |  | `cast6` |
 | `CAST6/CCM/NOPADDING` | `CAST6/CCM/`, `CAST6/CCM` |  | `cast6` |
 | `CAST6/EAX/NOPADDING` | `CAST6/EAX/`, `CAST6/EAX` |  | `cast6` |
 | `CAST6/OCB/NOPADDING` | `CAST6/OCB/`, `CAST6/OCB` |  | `cast6` |
+| `CAST6/GCM-SIV/NOPADDING` | `CAST6/GCM-SIV/`, `CAST6/GCM-SIV` |  | `cast6` |
+| `CAST6/KCCM/NOPADDING` | `CAST6/KCCM/`, `CAST6/KCCM` |  | `cast6` |
 | `NOEKEON/GCM/NOPADDING` | `NOEKEON/GCM/`, `NOEKEON/GCM` |  | `noekeon` |
 | `NOEKEON/CCM/NOPADDING` | `NOEKEON/CCM/`, `NOEKEON/CCM` |  | `noekeon` |
 | `NOEKEON/EAX/NOPADDING` | `NOEKEON/EAX/`, `NOEKEON/EAX` |  | `noekeon` |
 | `NOEKEON/OCB/NOPADDING` | `NOEKEON/OCB/`, `NOEKEON/OCB` |  | `noekeon` |
+| `NOEKEON/GCM-SIV/NOPADDING` | `NOEKEON/GCM-SIV/`, `NOEKEON/GCM-SIV` |  | `noekeon` |
+| `NOEKEON/KCCM/NOPADDING` | `NOEKEON/KCCM/`, `NOEKEON/KCCM` |  | `noekeon` |
 | `RIJNDAEL/GCM/NOPADDING` | `RIJNDAEL/GCM/`, `RIJNDAEL/GCM` |  | `rijndael` |
 | `RIJNDAEL/CCM/NOPADDING` | `RIJNDAEL/CCM/`, `RIJNDAEL/CCM` |  | `rijndael` |
 | `RIJNDAEL/EAX/NOPADDING` | `RIJNDAEL/EAX/`, `RIJNDAEL/EAX` |  | `rijndael` |
 | `RIJNDAEL/OCB/NOPADDING` | `RIJNDAEL/OCB/`, `RIJNDAEL/OCB` |  | `rijndael` |
+| `RIJNDAEL/GCM-SIV/NOPADDING` | `RIJNDAEL/GCM-SIV/`, `RIJNDAEL/GCM-SIV` |  | `rijndael` |
+| `RIJNDAEL/KCCM/NOPADDING` | `RIJNDAEL/KCCM/`, `RIJNDAEL/KCCM` |  | `rijndael` |
 | `RC6/GCM/NOPADDING` | `RC6/GCM/`, `RC6/GCM` |  | `rc6` |
 | `RC6/CCM/NOPADDING` | `RC6/CCM/`, `RC6/CCM` |  | `rc6` |
 | `RC6/EAX/NOPADDING` | `RC6/EAX/`, `RC6/EAX` |  | `rc6` |
 | `RC6/OCB/NOPADDING` | `RC6/OCB/`, `RC6/OCB` |  | `rc6` |
+| `RC6/GCM-SIV/NOPADDING` | `RC6/GCM-SIV/`, `RC6/GCM-SIV` |  | `rc6` |
+| `RC6/KCCM/NOPADDING` | `RC6/KCCM/`, `RC6/KCCM` |  | `rc6` |
 | `RC5-64/GCM/NOPADDING` | `RC5-64/GCM/`, `RC5-64/GCM` |  | `rc5-64` |
 | `RC5-64/CCM/NOPADDING` | `RC5-64/CCM/`, `RC5-64/CCM` |  | `rc5-64` |
 | `RC5-64/EAX/NOPADDING` | `RC5-64/EAX/`, `RC5-64/EAX` |  | `rc5-64` |
 | `RC5-64/OCB/NOPADDING` | `RC5-64/OCB/`, `RC5-64/OCB` |  | `rc5-64` |
+| `RC5-64/GCM-SIV/NOPADDING` | `RC5-64/GCM-SIV/`, `RC5-64/GCM-SIV` |  | `rc5-64` |
+| `RC5-64/KCCM/NOPADDING` | `RC5-64/KCCM/`, `RC5-64/KCCM` |  | `rc5-64` |
 | `DES/EAX/NOPADDING` | `DES/EAX/`, `DES/EAX` |  | `des` |
 | `DESEDE/EAX/NOPADDING` | `TDEA/EAX/NOPADDING`, `DESEDE/EAX/`, `DESEDE/EAX`, `TDEA/EAX/`, `TDEA/EAX` |  | `desede` |
 | `BLOWFISH/EAX/NOPADDING` | `BLOWFISH/EAX/`, `BLOWFISH/EAX` |  | `blowfish` |
@@ -162,6 +197,8 @@ The feature of the algorithm has its rows, and the key is the algorithm's; see
 | `RC2/EAX/NOPADDING` | `RC2/EAX/`, `RC2/EAX` |  | `rc2` |
 | `RC5/EAX/NOPADDING` | `RC5-32/EAX/NOPADDING`, `RC5/EAX/`, `RC5/EAX`, `RC5-32/EAX/`, `RC5-32/EAX` |  | `rc5` |
 | `GOST28147/EAX/NOPADDING` | `GOST/EAX/NOPADDING`, `GOST-28147/EAX/NOPADDING`, `GOST28147/EAX/`, `GOST28147/EAX`, `GOST/EAX/`, `GOST/EAX`, `GOST-28147/EAX/`, `GOST-28147/EAX` |  | `gost28147` |
+| `THREEFISH-256/KCCM/NOPADDING` | `THREEFISH-256/KCCM/`, `THREEFISH-256/KCCM` |  | `threefish-256` |
+| `THREEFISH-512/KCCM/NOPADDING` | `THREEFISH-512/KCCM/`, `THREEFISH-512/KCCM` |  | `threefish-512` |
 
 Two AEAD ciphers are algorithms of their own, not modes of a block cipher, as in Bouncy Castle:
 

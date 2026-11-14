@@ -28,10 +28,14 @@ pub(super) enum Mode {
     Ccm,
     Eax,
     Ocb,
+    // Two AEAD modes of tc_aead_cipher that Bouncy Castle's CipherUtilities does not name: GCM-SIV of
+    // RFC 8452, for a block of 16 bytes, and KCCM of DSTU 7624, for one of 16, 32 or 64
+    GcmSiv,
+    Kccm,
 }
 
 impl Mode {
-    const ALL: [Mode; 11] = [
+    const ALL: [Mode; 13] = [
         Mode::Ecb,
         Mode::Cbc,
         Mode::Cfb,
@@ -43,17 +47,23 @@ impl Mode {
         Mode::Ccm,
         Mode::Eax,
         Mode::Ocb,
+        Mode::GcmSiv,
+        Mode::Kccm,
     ];
 
     fn is_aead(self) -> bool {
-        matches!(self, Mode::Gcm | Mode::Ccm | Mode::Eax | Mode::Ocb)
+        matches!(
+            self,
+            Mode::Gcm | Mode::Ccm | Mode::Eax | Mode::Ocb | Mode::GcmSiv | Mode::Kccm
+        )
     }
 
     // Whether the mode takes a block of that many bits
     fn takes_block(self, bits: usize) -> bool {
         match self {
             Mode::Gofb => bits == 64,
-            Mode::Gcm | Mode::Ccm | Mode::Ocb => bits == 128,
+            Mode::Gcm | Mode::Ccm | Mode::Ocb | Mode::GcmSiv => bits == 128,
+            Mode::Kccm => matches!(bits, 128 | 256 | 512),
             Mode::Eax => bits == 64 || bits == 128,
             _ => true,
         }
@@ -74,6 +84,8 @@ impl Mode {
             Mode::Ccm => &["CCM"],
             Mode::Eax => &["EAX"],
             Mode::Ocb => &["OCB"],
+            Mode::GcmSiv => &["GCM-SIV"],
+            Mode::Kccm => &["KCCM"],
         }
     }
 
@@ -370,7 +382,10 @@ macro_rules! block_cipher {
         |mode, padding, rand, feedback_bits| {
             use core::marker::PhantomData;
 
-            use tc_aead_cipher::{CcmBlockCipher, EaxBlockCipher, GcmBlockCipher, OcbBlockCipher};
+            use tc_aead_cipher::{
+                CcmBlockCipher, EaxBlockCipher, GcmBlockCipher, GcmSivBlockCipher, KccmBlockCipher,
+                OcbBlockCipher,
+            };
             use tc_block_cipher::BlockCipher as _;
             use tc_block_modes::{
                 CbcBlockCipher, CfbBlockCipher, CtrBlockCipher, EcbBlockCipher, GofbBlockCipher,
@@ -439,6 +454,9 @@ macro_rules! block_cipher {
                 Mode::Eax => Box::new(Aead(EaxBlockCipher::new(engine))),
                 // OCB takes a second engine of the same kind for its hash
                 Mode::Ocb => Box::new(Aead(OcbBlockCipher::new(engine, $engine))),
+                Mode::GcmSiv => Box::new(Aead(GcmSivBlockCipher::new(engine))),
+                // NB = 4, the standard's practical default
+                Mode::Kccm => Box::new(Aead(KccmBlockCipher::<_, 4>::new(engine))),
             }
         }
     };

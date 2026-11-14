@@ -62,6 +62,22 @@ macro_rules! keyed {
             }
         }
 
+        // A borrowed key, as GCM-SIV keys the engine with the keys it derives
+        impl<'k> tc_block_cipher::BlockCipherInit<tc_block_cipher::KeyRef<'k>>
+            for $crate::cipher::algo::keyed::Keyed<$engine>
+        {
+            type Error = tc_block_cipher::InitError;
+
+            fn init(
+                &mut self,
+                direction: tc_block_cipher::CipherDirection,
+                params: &tc_block_cipher::KeyRef<'k>,
+            ) -> Result<(), tc_block_cipher::InitError> {
+                let $key = tc_block_cipher::KeyParams::key(params);
+                tc_block_cipher::BlockCipherInit::init(&mut self.0, direction, &$params)
+            }
+        }
+
         // The params of an AEAD mode, which passes them on whole: the engine takes only the key
         impl tc_block_cipher::BlockCipherInit<tc_aead_cipher::AeadParamsOwned>
             for $crate::cipher::algo::keyed::Keyed<$engine>

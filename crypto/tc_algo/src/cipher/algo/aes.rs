@@ -356,6 +356,63 @@ mod tests {
         }
     }
 
+    // RFC 8452, appendix C.1: AEAD_AES_128_GCM_SIV with an empty and an 8-byte plaintext, and no AAD
+    #[test]
+    fn gcm_siv_gives_the_examples_of_rfc_8452() {
+        let algo = DefaultAlgoBuilder::default().build();
+        let ciphers = algo.cipher();
+        let params = AeadParamsOwned::new(
+            unhex("01000000000000000000000000000000"),
+            unhex("030000000000000000000000"),
+            16,
+            Vec::new(),
+        );
+        for (plaintext, sealed) in [
+            ("", "dc20e2d83f25705bb49e439eca56de25"),
+            (
+                "0100000000000000",
+                "b5d839330ac7b786578782fff6013b815b287c22493a364c",
+            ),
+        ] {
+            let output = ciphers
+                .encrypt_by_name("AES/GCM-SIV/NOPADDING", &params, &unhex(plaintext))
+                .unwrap();
+            assert_eq!(output, unhex(sealed), "{plaintext}");
+            let opened = ciphers
+                .decrypt_by_name("aes/gcm-siv", &params, &output)
+                .unwrap();
+            assert_eq!(opened, unhex(plaintext));
+        }
+        // GCM-SIV takes a nonce of 12 bytes and a tag of 16 only
+        let short_tag = AeadParamsOwned::new(vec![1; 16], vec![3; 12], 12, Vec::new());
+        let error = ciphers
+            .encrypt_by_name("AES/GCM-SIV/NOPADDING", &short_tag, b"")
+            .unwrap_err();
+        assert_eq!(error.kind(), ErrorKind::InvalidParams);
+    }
+
+    // KCCM of DSTU 7624 over AES: whole blocks of message and AAD decrypt back, and a partial block
+    // is refused
+    #[test]
+    fn kccm_takes_whole_blocks_and_decrypts_back() {
+        let algo = DefaultAlgoBuilder::default().build();
+        let ciphers = algo.cipher();
+        let params = AeadParamsOwned::new(vec![0x42; 16], vec![0x24; 16], 16, vec![0x5a; 16]);
+        let message = [0x33; 32];
+        let sealed = ciphers
+            .encrypt_by_name("AES/KCCM/NOPADDING", &params, &message)
+            .unwrap();
+        assert_eq!(sealed.len(), 32 + 16);
+        let opened = ciphers
+            .decrypt_by_name("AES/KCCM", &params, &sealed)
+            .unwrap();
+        assert_eq!(opened, message);
+        let error = ciphers
+            .encrypt_by_name("AES/KCCM/NOPADDING", &params, &message[..20])
+            .unwrap_err();
+        assert_eq!(error.kind(), ErrorKind::DataLength);
+    }
+
     // The AEAD modes take the names that leave the padding out or empty, but not RAW, as Bouncy
     // Castle refuses any padding but NOPADDING for them; GCM, CCM and OCB want a block of 16 bytes
     #[test]
@@ -902,7 +959,7 @@ mod tests {
             .map(|entry| entry.name().to_string())
             .filter(|name| name.starts_with("AES/"))
             .collect();
-        assert_eq!(names.len(), 24);
+        assert_eq!(names.len(), 26);
         for name in [
             "AES/ECB/X923PADDING",
             "AES/CBC/ISO7816-4PADDING",

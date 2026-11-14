@@ -274,7 +274,7 @@ mod tests {
             ),
             expected
         );
-        assert_eq!(rows("RC5-64/"), 24);
+        assert_eq!(rows("RC5-64/"), 26);
     }
 
     // The RC6 paper: the zero 128-bit key and block
@@ -287,6 +287,6 @@ mod tests {
             "00000000000000000000000000000000",
         );
         assert_eq!(output, unhex("8fc3a53656b1f778c129df4e9848a41e"));
-        assert_eq!(rows("RC6/"), 24);
+        assert_eq!(rows("RC6/"), 26);
     }
 }

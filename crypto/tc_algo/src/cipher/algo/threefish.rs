@@ -119,7 +119,32 @@ mod tests {
             .encrypt_by_name("THREEFISH-256/CBC/NOPADDING", &with_iv, &block)
             .unwrap();
         assert_eq!(cbc, expected);
-        assert_eq!(rows("THREEFISH-256/"), 20);
+        assert_eq!(rows("THREEFISH-256/"), 21);
+    }
+
+    // KCCM takes a block of 32 or 64 bytes too, and so Threefish-256 and -512, but not -1024
+    #[cfg(all(feature = "threefish-256", feature = "threefish-1024"))]
+    #[test]
+    fn kccm_runs_over_threefish_256_and_not_over_threefish_1024() {
+        use crate::params::AeadParamsOwned;
+
+        let algo = DefaultAlgoBuilder::default().build();
+        let ciphers = algo.cipher();
+        let params = AeadParamsOwned::new(vec![0x42; 32], vec![0x24; 32], 32, vec![0x5a; 32]);
+        let message = [0x33; 64];
+        let sealed = ciphers
+            .encrypt_by_name("THREEFISH-256/KCCM/NOPADDING", &params, &message)
+            .unwrap();
+        assert_eq!(sealed.len(), 64 + 32);
+        let opened = ciphers
+            .decrypt_by_name("THREEFISH-256/KCCM/NOPADDING", &params, &sealed)
+            .unwrap();
+        assert_eq!(opened, message);
+        let error = ciphers
+            .get_by_name("THREEFISH-1024/KCCM/NOPADDING")
+            .err()
+            .unwrap();
+        assert_eq!(error.kind(), ErrorKind::UnknownCipher);
     }
 
     #[cfg(feature = "threefish-256")]
@@ -153,7 +178,7 @@ mod tests {
             let opened = ciphers.decrypt_by_name(name, &params, &sealed).unwrap();
             assert_eq!(opened, message, "{name}");
         }
-        assert_eq!(rows("THREEFISH-512/"), 20);
+        assert_eq!(rows("THREEFISH-512/"), 21);
         assert_eq!(rows("THREEFISH-1024/"), 20);
     }
 }
