@@ -44,19 +44,19 @@ fn main() -> Result<(), AlgoError> {
 
 ## Algorithms
 
-| Name | Aliases | OID | Feature | Key bytes | Nonce bytes | Note |
-|---|---|---|---|---|---|---|
-| `CHACHA7539` | `CHACHA20` |  | `chacha` | 32 | 12 |  |
-| `CHACHA` |  |  | `chacha` | 16, 32 | 8 |  |
-| `XCHACHA20` |  |  | `xchacha20` | 32 | 24 |  |
-| `SALSA20` |  |  | `salsa20` | 16, 32 | 8 |  |
-| `XSALSA20` |  |  | `xsalsa20` | 32 | 24 |  |
-| `HC128` |  |  | `hc128` | 16 | 16 | variable time |
-| `HC256` |  |  | `hc256` | 16, 32 | 16 to 32 | variable time |
-| `ARC4` | `RC4`, `ARCFOUR` | `1.2.840.113549.3.4` | `rc4` | 1 to 256 | none | weak, variable time |
-| `VMPC` | `VMPC-MAC` |  | `vmpc` | 16 to 64 | 16 to 64 | variable time |
-| `VMPC-KSA3` |  |  | `vmpc-ksa3` | 16 to 64 | 16 to 64 | variable time |
-| `ISAAC` |  |  | `isaac` | up to 1024 | none | variable time |
+| Name | Aliases | OID | Feature | Params | Key bytes | Nonce bytes | Note |
+|---|---|---|---|---|---|---|---|
+| `CHACHA7539` | `CHACHA20` |  | `chacha` | `KeyWithIvOwned` | 32 | 12 |  |
+| `CHACHA` |  |  | `chacha` | `KeyWithIvOwned` | 16, 32 | 8 |  |
+| `XCHACHA20` |  |  | `xchacha20` | `KeyWithIvOwned` | 32 | 24 |  |
+| `SALSA20` |  |  | `salsa20` | `KeyWithIvOwned` | 16, 32 | 8 |  |
+| `XSALSA20` |  |  | `xsalsa20` | `KeyWithIvOwned` | 32 | 24 |  |
+| `HC128` |  |  | `hc128` | `KeyWithIvOwned` | 16 | 16 | variable time |
+| `HC256` |  |  | `hc256` | `KeyWithIvOwned` | 16, 32 | 16 to 32 | variable time |
+| `ARC4` | `RC4`, `ARCFOUR` | `1.2.840.113549.3.4` | `rc4` | `KeyOwned` | 1 to 256 | none | weak, variable time |
+| `VMPC` | `VMPC-MAC` |  | `vmpc` | `KeyWithIvOwned` | 16 to 64 | 16 to 64 | variable time |
+| `VMPC-KSA3` |  |  | `vmpc-ksa3` | `KeyWithIvOwned` | 16 to 64 | 16 to 64 | variable time |
+| `ISAAC` |  |  | `isaac` | `KeyOwned` | up to 1024 | none | variable time |
 
 The names, aliases and OID are those of Bouncy Castle's `CipherUtilities`, and the case of a name
 does not matter. `XSALSA20` and `ISAAC`, which Bouncy Castle has as engines but not there, are named
