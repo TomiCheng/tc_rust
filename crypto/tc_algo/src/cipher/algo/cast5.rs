@@ -41,14 +41,14 @@ mod tests {
     }
 
     #[test]
-    fn there_are_seventeen_rows_found_by_their_oids() {
+    fn there_are_eighteen_rows_with_gofb_found_by_their_oids() {
         let algo = DefaultAlgoBuilder::default().build();
         let rows = algo
             .cipher()
             .algorithms()
             .filter(|entry| entry.name().starts_with("CAST5/"))
             .count();
-        assert_eq!(rows, 17);
+        assert_eq!(rows, 18);
         let by_oid = algo
             .cipher()
             .get_by_oid(&"1.2.840.113533.7.66.10".parse().unwrap())

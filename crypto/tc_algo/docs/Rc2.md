@@ -40,7 +40,7 @@ fn main() -> Result<(), AlgoError> {
 | Rows | Params |
 |---|---|
 | ECB | `KeyOwned` or `Rc2ParamsOwned` |
-| CBC, CFB, OFB, CTR | `KeyWithIvOwned` or `ParamsWithIvOwned<Rc2ParamsOwned>` |
+| CBC, CFB, OFB, CTR, GOFB | `KeyWithIvOwned` or `ParamsWithIvOwned<Rc2ParamsOwned>` |
 
 The IV is one block, 8 bytes, in every mode but CTR, which takes it as `tc_block_modes` does.
 The effective key size is checked when the row is initialized, not when the params are built; a

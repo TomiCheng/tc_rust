@@ -78,19 +78,40 @@ mod tests {
     }
 
     #[test]
-    fn the_rows_have_every_mode_and_padding_and_bouncy_castle_s_oid() {
+    fn the_rows_have_every_mode_and_padding_with_gofb_and_bouncy_castle_s_oid() {
         let algo = DefaultAlgoBuilder::default().build();
         let rows = algo
             .cipher()
             .algorithms()
             .filter(|entry| entry.name().starts_with("GOST28147/"))
             .count();
-        assert_eq!(rows, 17);
+        assert_eq!(rows, 18);
         let by_oid = algo
             .cipher()
             .get_by_oid(&"1.2.643.2.2.21".parse().unwrap())
             .unwrap();
         assert_eq!(by_oid.block_size(), 8);
+    }
+
+    // Bouncy Castle's GOFB vector with the default S-box, as tc_block_modes tests it. GOFB takes a
+    // block of 8 bytes only, so AES has no such row
+    #[test]
+    fn gofb_gives_bouncy_castle_s_vector_and_only_eight_byte_blocks_have_it() {
+        let algo = DefaultAlgoBuilder::default().build();
+        let ciphers = algo.cipher();
+        let params = crate::params::KeyWithIvOwned::new(
+            unhex("0011223344556677889900112233445566778899001122334455667788990011"),
+            unhex("1234567890abcdef"),
+        );
+        let plaintext = unhex("bc350e71aa113457");
+        for name in ["GOST28147/GOFB/NOPADDING", "gost/gofb"] {
+            let ciphertext = ciphers.encrypt_by_name(name, &params, &plaintext).unwrap();
+            assert_eq!(ciphertext, unhex("8824c124c4fd1430"), "{name}");
+            let recovered = ciphers.decrypt_by_name(name, &params, &ciphertext).unwrap();
+            assert_eq!(recovered, plaintext, "{name}");
+        }
+        let error = ciphers.get_by_name("AES/GOFB/NOPADDING").err().unwrap();
+        assert_eq!(error.kind(), ErrorKind::UnknownCipher);
     }
 
     #[test]

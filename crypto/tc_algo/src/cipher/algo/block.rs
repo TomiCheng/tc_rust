@@ -18,10 +18,19 @@ pub(super) enum Mode {
     Cfb,
     Ofb,
     Ctr,
+    // GOST 28147's counter mode, GCTR, which Bouncy Castle calls GOFB: only for a block of 8 bytes
+    Gofb,
 }
 
 impl Mode {
-    const ALL: [Mode; 5] = [Mode::Ecb, Mode::Cbc, Mode::Cfb, Mode::Ofb, Mode::Ctr];
+    const ALL: [Mode; 6] = [
+        Mode::Ecb,
+        Mode::Cbc,
+        Mode::Cfb,
+        Mode::Ofb,
+        Mode::Ctr,
+        Mode::Gofb,
+    ];
 
     // The name first, then the aliases of Bouncy Castle's CipherUtilities, where NONE and a mode
     // left empty are ECB
@@ -32,6 +41,7 @@ impl Mode {
             Mode::Cfb => &["CFB"],
             Mode::Ofb => &["OFB"],
             Mode::Ctr => &["CTR", "SIC"],
+            Mode::Gofb => &["GOFB"],
         }
     }
 
@@ -40,7 +50,7 @@ impl Mode {
     fn default_padding(self) -> Padding {
         match self {
             Mode::Ecb | Mode::Cbc => Padding::Pkcs7,
-            Mode::Cfb | Mode::Ofb | Mode::Ctr => Padding::None,
+            Mode::Cfb | Mode::Ofb | Mode::Ctr | Mode::Gofb => Padding::None,
         }
     }
 
@@ -49,7 +59,7 @@ impl Mode {
     fn paddings(self) -> &'static [Padding] {
         match self {
             Mode::Ecb | Mode::Cbc => &Padding::ALL,
-            Mode::Cfb | Mode::Ofb | Mode::Ctr => &[Padding::None],
+            Mode::Cfb | Mode::Ofb | Mode::Ctr | Mode::Gofb => &[Padding::None],
         }
     }
 }
@@ -105,6 +115,10 @@ pub(super) fn block_rows(
     let mut rows: Vec<Box<dyn CipherEntry>> = Vec::new();
     let block_bits = create(Mode::Ecb, Padding::None, rand, None).block_size() * 8;
     for mode in Mode::ALL {
+        // GOFB's counter is two words of 32 bits, so it takes a block of 8 bytes only
+        if mode == Mode::Gofb && block_bits != 64 {
+            continue;
+        }
         for &padding in mode.paddings() {
             let mut names = algorithms.iter().flat_map(|algorithm| {
                 mode.names().iter().flat_map(move |mode| {
@@ -306,7 +320,8 @@ macro_rules! block_cipher {
 
             use tc_block_cipher::BlockCipher as _;
             use tc_block_modes::{
-                CbcBlockCipher, CfbBlockCipher, CtrBlockCipher, EcbBlockCipher, OfbBlockCipher,
+                CbcBlockCipher, CfbBlockCipher, CtrBlockCipher, EcbBlockCipher, GofbBlockCipher,
+                OfbBlockCipher,
             };
             use tc_buffered_cipher::BufferedBlockCipher;
 
@@ -341,6 +356,11 @@ macro_rules! block_cipher {
                     block,
                     PhantomData,
                 ))),
+                Mode::Gofb => Box::new(Buffered::<_, $own>(
+                    BufferedBlockCipher::new(GofbBlockCipher::new(engine)),
+                    block,
+                    PhantomData,
+                )),
             }
         }
     };

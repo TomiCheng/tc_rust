@@ -35,12 +35,13 @@ fn main() -> Result<(), AlgoError> {
 }
 ```
 
-The same `Rc5ParamsOwned` serves `RC5` and `RC5-64`; only the block, and so the IV, differ.
+The same `Rc5ParamsOwned` serves `RC5` and `RC5-64`; only the block, and so the IV, differ, and only
+`RC5`, of a block of 8 bytes, has GOFB.
 
 | Rows | Params |
 |---|---|
 | ECB | `KeyOwned` or `Rc5ParamsOwned` |
-| CBC, CFB, OFB, CTR | `KeyWithIvOwned` or `ParamsWithIvOwned<Rc5ParamsOwned>` |
+| CBC, CFB, OFB, CTR, GOFB | `KeyWithIvOwned` or `ParamsWithIvOwned<Rc5ParamsOwned>` |
 
 The IV is one block in every mode but CTR, which takes it as `tc_block_modes` does. The number of
 rounds is checked when the row is initialized, not when the params are built; one the engine does
