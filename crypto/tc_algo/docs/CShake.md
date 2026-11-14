@@ -24,11 +24,11 @@ fn main() -> Result<(), AlgoError> {
     cshake.init(&params)?;
 
     // The message, in any number of updates
-    cshake.update(b"user 42, ");
-    cshake.update(b"2026-11-12");
+    cshake.try_update(b"user 42, ")?;
+    cshake.try_update(b"2026-11-12")?;
 
     // 32 bytes of output
-    let id = cshake.finalize_len(32);
+    let id = cshake.finalize_len(32)?;
 
     // The same at once
     let message = b"user 42, 2026-11-12";
@@ -54,11 +54,11 @@ Neither string has a limit, and `init` takes any. Params of another type are `In
 
 - `init` is optional: without it, cSHAKE runs with both strings empty, and its output is that of
   SHAKE128 or SHAKE256.
-- `init` starts a new message, and `reset` keeps the strings it set. A new `init` replaces them.
+- `init` starts a new message, and `try_reset` keeps the strings it set. A new `init` replaces them.
 - The message may come in any number of updates: `update(b"ab")` then `update(b"c")` is the same
   as `update(b"abc")`.
-- The output may be taken in pieces with `output`, and a shorter output is the start of a longer
-  one, as with SHAKE. `finalize_len` and `output_final` end the message.
+- The output may be taken in pieces with `try_output`, and a shorter output is the start of a longer
+  one, as with SHAKE. `finalize_len` and `try_output_final` end the message.
 - As a `Digest`, `finalize` gives 32 bytes for `CSHAKE128` and 64 for `CSHAKE256`.
 - Both sides must use the same strings: an output under one S is not the output under another,
   nor under none.

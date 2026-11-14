@@ -26,10 +26,10 @@ fn main() -> Result<(), AlgoError> {
     xof.init(&params)?;
 
     // The message
-    xof.update(b"attack at dawn");
+    xof.try_update(b"attack at dawn")?;
 
     // 48 bytes of keyed output
-    let output = xof.finalize_len(48);
+    let output = xof.finalize_len(48)?;
     Ok(())
 }
 ```
@@ -48,10 +48,10 @@ A value of another length is `InvalidParams` from `init`, as are params of anoth
 ## Using it
 
 - `init` is optional: without it, there is no key, salt or personalization.
-- `init` starts a new message, and `reset` keeps what it set.
+- `init` starts a new message, and `try_reset` keeps what it set.
 - The output length is not set in advance, so a shorter output is the start of a longer one. It
   can reach 2^32 blocks of 32 bytes, and asking for more panics.
 - As a `Digest`, `digest_size` is 65535 and `finalize` gives that many bytes, the marker of an
-  unknown length. Take the output with `finalize_len` or `output` instead.
+  unknown length. Take the output with `finalize_len` or `try_output` instead.
 - For a MAC of a set length, the `mac` factory is the usual place; BLAKE2xs with a key is for
   output of any length.

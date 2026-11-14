@@ -33,10 +33,11 @@ mod tests {
 
     fn hash_of_abc(row: Box<dyn DigestEntry>) -> String {
         let mut digest = row.create();
-        digest.update(b"a");
-        digest.update(b"bc");
+        digest.try_update(b"a").unwrap();
+        digest.try_update(b"bc").unwrap();
         digest
             .finalize()
+            .unwrap()
             .iter()
             .map(|byte| format!("{byte:02x}"))
             .collect()

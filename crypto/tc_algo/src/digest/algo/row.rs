@@ -1,4 +1,5 @@
 use tc_asn1::Asn1Oid;
+use tc_digest::TryDigest;
 
 use crate::digest::{Digest, DigestEntry};
 use crate::{AlgoError, EntryBase, ErrorKind};
@@ -50,7 +51,9 @@ impl DigestEntry for Entry {
 
 pub(super) struct TcDigest<D>(pub(super) D);
 
-impl<D: tc_digest::Digest> Digest for TcDigest<D> {
+impl<D: tc_digest::Digest> TryDigest for TcDigest<D> {
+    type Error = AlgoError;
+
     fn digest_size(&self) -> usize {
         self.0.digest_size()
     }
@@ -59,19 +62,23 @@ impl<D: tc_digest::Digest> Digest for TcDigest<D> {
         self.0.byte_length()
     }
 
-    fn update(&mut self, input: &[u8]) {
+    fn try_update(&mut self, input: &[u8]) -> Result<(), AlgoError> {
         self.0.update(input);
+        Ok(())
     }
 
     // tc_digest panics on a short output, so the length is checked here first
-    fn do_final(&mut self, output: &mut [u8]) -> Result<usize, AlgoError> {
+    fn try_do_final(&mut self, output: &mut [u8]) -> Result<usize, AlgoError> {
         if output.len() < self.digest_size() {
             return Err(AlgoError::new(ErrorKind::DataLength));
         }
         Ok(self.0.do_final(output))
     }
 
-    fn reset(&mut self) {
+    fn try_reset(&mut self) -> Result<(), AlgoError> {
         self.0.reset();
+        Ok(())
     }
 }
+
+impl<D: tc_digest::Digest> Digest for TcDigest<D> {}

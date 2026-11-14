@@ -1,3 +1,5 @@
+use tc_digest::{TryDigest, TryXof};
+
 use super::row::TcXof;
 use crate::digest::Digest;
 use crate::xof::Xof;
@@ -19,7 +21,9 @@ impl<D, P> InitXof<D, P> {
     }
 }
 
-impl<D: tc_digest::Xof, P> Digest for InitXof<D, P> {
+impl<D: tc_digest::Xof, P> TryDigest for InitXof<D, P> {
+    type Error = AlgoError;
+
     fn digest_size(&self) -> usize {
         self.xof.digest_size()
     }
@@ -28,18 +32,30 @@ impl<D: tc_digest::Xof, P> Digest for InitXof<D, P> {
         self.xof.byte_length()
     }
 
-    fn update(&mut self, input: &[u8]) {
-        self.xof.update(input);
+    fn try_update(&mut self, input: &[u8]) -> Result<(), AlgoError> {
+        self.xof.try_update(input)
     }
 
-    fn do_final(&mut self, output: &mut [u8]) -> Result<usize, AlgoError> {
-        self.xof.do_final(output)
+    fn try_do_final(&mut self, output: &mut [u8]) -> Result<usize, AlgoError> {
+        self.xof.try_do_final(output)
     }
 
-    fn reset(&mut self) {
-        self.xof.reset();
+    fn try_reset(&mut self) -> Result<(), AlgoError> {
+        self.xof.try_reset()
     }
 }
+
+impl<D: tc_digest::Xof, P> TryXof for InitXof<D, P> {
+    fn try_output(&mut self, output: &mut [u8]) -> Result<usize, AlgoError> {
+        self.xof.try_output(output)
+    }
+
+    fn try_output_final(&mut self, output: &mut [u8]) -> Result<usize, AlgoError> {
+        self.xof.try_output_final(output)
+    }
+}
+
+impl<D: tc_digest::Xof, P> Digest for InitXof<D, P> {}
 
 impl<D: tc_digest::Xof, P: 'static> Xof for InitXof<D, P> {
     // Params of another type, or that the XOF refuses, are InvalidParams and change nothing
@@ -50,14 +66,6 @@ impl<D: tc_digest::Xof, P: 'static> Xof for InitXof<D, P> {
             .ok_or_else(|| AlgoError::new(ErrorKind::InvalidParams))?;
         self.xof = TcXof((self.init)(params)?);
         Ok(())
-    }
-
-    fn output(&mut self, output: &mut [u8]) -> usize {
-        self.xof.output(output)
-    }
-
-    fn output_final(&mut self, output: &mut [u8]) -> usize {
-        self.xof.output_final(output)
     }
 }
 

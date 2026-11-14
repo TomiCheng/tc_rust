@@ -1,32 +1,16 @@
+use tc_digest::TryDigest;
+
 use crate::AlgoError;
 
-pub trait Digest {
-    // The length of the hash, in bytes
-    fn digest_size(&self) -> usize;
-
-    // The length of the block it works on, in bytes, which HMAC needs
-    fn byte_length(&self) -> usize;
-
-    fn update(&mut self, input: &[u8]);
-
-    fn update_byte(&mut self, input: u8) {
-        self.update(&[input]);
-    }
-
-    // Writes the hash and returns its length, after which the digest starts the next message. An
-    // output shorter than digest_size is DataLength, and the message is left in place, as Mac and
-    // Signer report it
-    fn do_final(&mut self, output: &mut [u8]) -> Result<usize, AlgoError>;
-
-    // do_final with an output of its own, which is always long enough, so it cannot fail
-    fn finalize(&mut self) -> Vec<u8> {
+// A TryDigest of tc_digest, with AlgoError for its errors, so that every row fits behind
+// Box<dyn Digest> and still goes wherever a TryDigest does. try_do_final with an output shorter
+// than digest_size is DataLength, and leaves the message in place, as Mac and Signer report it
+pub trait Digest: TryDigest<Error = AlgoError> {
+    // try_do_final with an output of its own, then the next message
+    fn finalize(&mut self) -> Result<Vec<u8>, AlgoError> {
         let mut output = vec![0; self.digest_size()];
-        let written = self
-            .do_final(&mut output)
-            .expect("an output of digest_size bytes is long enough");
+        let written = self.try_do_final(&mut output)?;
         output.truncate(written);
-        output
+        Ok(output)
     }
-
-    fn reset(&mut self);
 }

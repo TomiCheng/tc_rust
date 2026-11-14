@@ -20,8 +20,8 @@ fn main() -> Result<(), AlgoError> {
 
     let mut xof = algo.xof().get_by_name("BLAKE3")?;
     xof.init(&Blake3Params::keyed(key))?;
-    xof.update(b"attack at dawn");
-    let tag = xof.finalize_len(32);
+    xof.try_update(b"attack at dawn")?;
+    let tag = xof.finalize_len(32)?;
     Ok(())
 }
 ```
@@ -43,8 +43,8 @@ fn main() -> Result<(), AlgoError> {
     let mut xof = algo.xof().get_by_name("BLAKE3")?;
     let context = b"MyApp 2026-11-12 session encryption key".to_vec();
     xof.init(&Blake3Params::derive_key(context))?;
-    xof.update(&shared_secret);
-    let session_key = xof.finalize_len(32);
+    xof.try_update(&shared_secret)?;
+    let session_key = xof.finalize_len(32)?;
     Ok(())
 }
 ```
@@ -62,9 +62,9 @@ A key of another length is `InvalidParams` from `init`, as are params of another
 ## Using it
 
 - `init` is optional: without it, BLAKE3 is the plain hash.
-- `init` starts a new message, and `reset` keeps the mode it set.
-- The message may come in any number of updates, and the output be taken in pieces with `output`;
-  a shorter output is the start of a longer one.
+- `init` starts a new message, and `try_reset` keeps the mode it set.
+- The message may come in any number of updates, and the output be taken in pieces with
+  `try_output`; a shorter output is the start of a longer one.
 - As a `Digest`, `finalize` gives 32 bytes.
-- The context is not a secret and not a salt: it should not hold data that changes from one call
-  to the next. Put that in the input.
+- The context is not a secret and not a salt: it should not hold data that changes from one call to
+  the next. Put that in the input.

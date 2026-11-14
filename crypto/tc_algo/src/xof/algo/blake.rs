@@ -55,11 +55,11 @@ mod tests {
     // The row gives the output of the XOF it wraps, taken in pieces
     fn check(rows: Vec<Box<dyn XofEntry>>, mut direct: impl tc_digest::Xof) {
         let mut xof = rows[0].create();
-        xof.update(b"a");
-        xof.update(b"bc");
+        xof.try_update(b"a").unwrap();
+        xof.try_update(b"bc").unwrap();
         let mut first = [0; 40];
-        xof.output(&mut first);
-        let output = [&first[..], &xof.finalize_len(60)].concat();
+        xof.try_output(&mut first).unwrap();
+        let output = [&first[..], &xof.finalize_len(60).unwrap()].concat();
 
         direct.update(b"abc");
         let mut expected = vec![0; 100];
@@ -115,7 +115,7 @@ mod tests {
             .with_salt(vec![2; 8])
             .with_personalization(vec![3; 8]);
         xof.init(&params).unwrap();
-        xof.update(b"abc");
+        xof.try_update(b"abc").unwrap();
         let mut direct = tc_blake::Blake2xsDigest::with_parameters(
             tc_blake::Blake2xsDigest::UNKNOWN_DIGEST_LENGTH,
             Some(&[1; 32]),
@@ -125,7 +125,7 @@ mod tests {
         tc_digest::Digest::update(&mut direct, b"abc");
         let mut expected = vec![0; 100];
         tc_digest::Xof::output_final(&mut direct, &mut expected);
-        assert_eq!(xof.finalize_len(100), expected);
+        assert_eq!(xof.finalize_len(100).unwrap(), expected);
 
         for params in [
             Blake2xsParams::new().with_key(vec![0; 33]),
@@ -157,11 +157,11 @@ mod tests {
         ];
         for (params, mut direct) in cases {
             xof.init(&params).unwrap();
-            xof.update(b"abc");
+            xof.try_update(b"abc").unwrap();
             tc_digest::Digest::update(&mut direct, b"abc");
             let mut expected = vec![0; 100];
             tc_digest::Xof::output_final(&mut direct, &mut expected);
-            assert_eq!(xof.finalize_len(100), expected);
+            assert_eq!(xof.finalize_len(100).unwrap(), expected);
         }
 
         let error = xof.init(&Blake3Params::keyed(vec![0; 31])).unwrap_err();

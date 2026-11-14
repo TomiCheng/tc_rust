@@ -24,10 +24,10 @@ fn main() -> Result<(), AlgoError> {
     cxof.init(&params)?;
 
     // The message, in any number of updates
-    cxof.update(b"reading 17.4 C");
+    cxof.try_update(b"reading 17.4 C")?;
 
     // 32 bytes of output
-    let tag = cxof.finalize_len(32);
+    let tag = cxof.finalize_len(32)?;
     Ok(())
 }
 ```
@@ -44,10 +44,10 @@ A longer Z is `InvalidParams` from `init`, as are params of another type.
 
 ## Using it
 
-- `init` is optional: without it, Z is empty. That is still Ascon-CXOF128, not Ascon-XOF128: the
-  two give different outputs for the same message.
-- `init` starts a new message, and `reset` keeps the string it set.
-- The message may come in any number of updates, and the output be taken in pieces with `output`;
-  a shorter output is the start of a longer one.
+- `init` is optional: without it, Z is empty. That is still Ascon-CXOF128, not Ascon-XOF128: the two
+  give different outputs for the same message.
+- `init` starts a new message, and `try_reset` keeps the string it set.
+- The message may come in any number of updates, and the output be taken in pieces with
+  `try_output`; a shorter output is the start of a longer one.
 - As a `Digest`, `finalize` gives 32 bytes.
 - Both sides must use the same Z.

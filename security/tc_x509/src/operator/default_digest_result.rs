@@ -21,6 +21,6 @@ impl BlockResult for DefaultDigestResult {
     }
 
     fn collect_into(&mut self, output: &mut [u8]) -> Result<usize, X509Error> {
-        Ok(self.digest.do_final(output)?)
+        Ok(self.digest.try_do_final(output)?)
     }
 }

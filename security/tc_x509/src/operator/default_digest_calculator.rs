@@ -18,7 +18,7 @@ impl DefaultDigestCalculator {
 
 impl io::Write for DefaultDigestCalculator {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        self.digest.update(buf);
+        self.digest.try_update(buf).map_err(io::Error::other)?;
         Ok(buf.len())
     }
 

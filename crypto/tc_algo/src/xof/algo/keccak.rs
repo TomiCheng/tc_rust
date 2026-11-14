@@ -199,14 +199,14 @@ mod tests {
     #[test]
     fn the_message_and_the_output_can_come_in_pieces() {
         let mut xof = xof();
-        xof.update(b"a");
-        xof.update(b"bc");
+        xof.try_update(b"a").unwrap();
+        xof.try_update(b"bc").unwrap();
 
         let mut first = [0; 20];
         let mut second = [0; 12];
-        assert_eq!(xof.output(&mut first), 20);
-        assert_eq!(xof.output(&mut second), 12);
-        let rest = xof.finalize_len(32);
+        assert_eq!(xof.try_output(&mut first).unwrap(), 20);
+        assert_eq!(xof.try_output(&mut second).unwrap(), 12);
+        let rest = xof.finalize_len(32).unwrap();
 
         let output = [&first[..], &second[..], &rest[..]].concat();
         assert_eq!(hex(&output), ABC);
@@ -216,37 +216,37 @@ mod tests {
     #[should_panic(expected = "attempt to absorb while squeezing")]
     fn update_panics_once_output_has_begun() {
         let mut xof = xof();
-        xof.update(b"abc");
-        xof.output(&mut [0; 1]);
-        xof.update(b"more");
+        xof.try_update(b"abc").unwrap();
+        xof.try_output(&mut [0; 1]).unwrap();
+        xof.try_update(b"more").unwrap();
     }
 
     #[test]
     fn finalize_len_and_reset_start_the_next_message() {
         let mut xof = xof();
-        xof.update(b"abc");
-        xof.output(&mut [0; 1]);
-        xof.finalize_len(1);
+        xof.try_update(b"abc").unwrap();
+        xof.try_output(&mut [0; 1]).unwrap();
+        xof.finalize_len(1).unwrap();
 
-        xof.update(b"abc");
-        assert_eq!(hex(&xof.finalize_len(64)), ABC);
+        xof.try_update(b"abc").unwrap();
+        assert_eq!(hex(&xof.finalize_len(64).unwrap()), ABC);
 
-        xof.update(b"other");
-        xof.output(&mut [0; 1]);
-        xof.reset();
-        xof.update(b"abc");
-        assert_eq!(hex(&xof.finalize_len(64)), ABC);
+        xof.try_update(b"other").unwrap();
+        xof.try_output(&mut [0; 1]).unwrap();
+        xof.try_reset().unwrap();
+        xof.try_update(b"abc").unwrap();
+        assert_eq!(hex(&xof.finalize_len(64).unwrap()), ABC);
     }
 
     #[test]
     fn output_final_fills_the_output_and_starts_the_next_message() {
         let mut xof = xof();
-        xof.update(b"abc");
+        xof.try_update(b"abc").unwrap();
         let mut output = [0; 64];
-        assert_eq!(xof.output_final(&mut output), 64);
+        assert_eq!(xof.try_output_final(&mut output).unwrap(), 64);
         assert_eq!(hex(&output), ABC);
 
-        assert_eq!(xof.output_final(&mut output), 64);
+        assert_eq!(xof.try_output_final(&mut output).unwrap(), 64);
         assert_eq!(hex(&output), EMPTY);
     }
 
@@ -256,13 +256,13 @@ mod tests {
         assert_eq!(xof.digest_size(), 64);
         assert_eq!(xof.byte_length(), 136);
 
-        xof.update_byte(b'a');
-        xof.update(b"bc");
-        assert_eq!(hex(&xof.finalize()), ABC);
+        xof.try_update_byte(b'a').unwrap();
+        xof.try_update(b"bc").unwrap();
+        assert_eq!(hex(&xof.finalize().unwrap()), ABC);
 
-        xof.update(b"abc");
+        xof.try_update(b"abc").unwrap();
         let mut output = [0; 64];
-        assert_eq!(xof.do_final(&mut output).unwrap(), 64);
+        assert_eq!(xof.try_do_final(&mut output).unwrap(), 64);
         assert_eq!(hex(&output), ABC);
     }
 
@@ -329,17 +329,17 @@ mod init_tests {
 
     fn output(xof: &mut dyn Xof, parts: &[&[u8]]) -> Vec<u8> {
         for part in parts {
-            xof.update(part);
+            xof.try_update(part).unwrap();
         }
-        xof.finalize_len(48)
+        xof.finalize_len(48).unwrap()
     }
 
     fn direct(mut xof: impl tc_digest::Xof, parts: &[&[u8]]) -> Vec<u8> {
         for part in parts {
-            xof.update(part);
+            xof.try_update(part).unwrap();
         }
         let mut output = vec![0; 48];
-        xof.output_final(&mut output);
+        xof.try_output_final(&mut output).unwrap();
         output
     }
 
@@ -364,8 +364,8 @@ mod init_tests {
         );
         assert_eq!(output(cshake.as_mut(), &[b"abc"]), expected);
 
-        cshake.update(b"other");
-        cshake.reset();
+        cshake.try_update(b"other").unwrap();
+        cshake.try_reset().unwrap();
         assert_eq!(output(cshake.as_mut(), &[b"abc"]), expected);
     }
 

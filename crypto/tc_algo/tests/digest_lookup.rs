@@ -1,6 +1,6 @@
 use std::sync::{Arc, RwLock};
 
-use tc_algo::digest::{Digest, DigestEntry};
+use tc_algo::digest::{Digest, DigestEntry, TryDigest};
 use tc_algo::{
     Algo, AlgoBuilder, AlgoError, DefaultAlgoBuilder, DefaultAlgoContext, EntryBase, ErrorKind,
     ListPolicy, Policy,
@@ -37,7 +37,9 @@ impl DigestEntry for Row {
 // Its hash is the mark of the row that created it, to tell which row a lookup found
 struct Marked(u8);
 
-impl Digest for Marked {
+impl TryDigest for Marked {
+    type Error = AlgoError;
+
     fn digest_size(&self) -> usize {
         1
     }
@@ -46,9 +48,11 @@ impl Digest for Marked {
         1
     }
 
-    fn update(&mut self, _input: &[u8]) {}
+    fn try_update(&mut self, _input: &[u8]) -> Result<(), AlgoError> {
+        Ok(())
+    }
 
-    fn do_final(&mut self, output: &mut [u8]) -> Result<usize, AlgoError> {
+    fn try_do_final(&mut self, output: &mut [u8]) -> Result<usize, AlgoError> {
         let first = output
             .first_mut()
             .ok_or(AlgoError::new(ErrorKind::DataLength))?;
@@ -56,8 +60,12 @@ impl Digest for Marked {
         Ok(1)
     }
 
-    fn reset(&mut self) {}
+    fn try_reset(&mut self) -> Result<(), AlgoError> {
+        Ok(())
+    }
 }
+
+impl Digest for Marked {}
 
 fn row(name: &'static str, aliases: &[&str], oids: &[&str], mark: u8) -> Box<dyn DigestEntry> {
     Box::new(Row {
@@ -102,7 +110,7 @@ fn algo_with(rows: &[Rows]) -> Box<dyn Algo> {
 }
 
 fn mark_by_name(algo: &dyn Algo, name: &str) -> Option<Vec<u8>> {
-    Some(algo.digest().get_by_name(name).ok()?.finalize())
+    algo.digest().get_by_name(name).ok()?.finalize().ok()
 }
 
 #[test]
@@ -117,7 +125,7 @@ fn a_digest_is_found_by_its_name_or_alias_whatever_their_case() {
 fn a_digest_is_found_by_its_oid() {
     let algo = algo_with(&[older]);
     let mut digest = algo.digest().get_by_oid(&oid("1.2.3.4")).unwrap();
-    assert_eq!(digest.finalize(), [1]);
+    assert_eq!(digest.finalize().unwrap(), [1]);
 }
 
 #[test]
@@ -146,7 +154,7 @@ fn the_last_registered_digest_is_the_one_found_by_a_shared_name_or_oid() {
     let algo = algo_with(&[older, newer]);
     assert_eq!(mark_by_name(algo.as_ref(), "TEST-DIGEST"), Some(vec![2]));
     let mut digest = algo.digest().get_by_oid(&oid("1.2.3.4")).unwrap();
-    assert_eq!(digest.finalize(), [2]);
+    assert_eq!(digest.finalize().unwrap(), [2]);
 }
 
 #[test]
@@ -168,7 +176,7 @@ fn the_list_has_the_last_registered_first_and_keeps_the_replaced_digest() {
         .digest()
         .algorithms()
         .filter(|entry| entry.name() == "TEST-DIGEST")
-        .map(|entry| entry.create().finalize())
+        .map(|entry| entry.create().finalize().unwrap())
         .collect();
     assert_eq!(marks, [[2], [1]]);
 }
@@ -180,7 +188,7 @@ fn a_function_registers_all_its_digests_together_and_in_the_order_it_returns_the
         .digest()
         .algorithms()
         .filter(|entry| entry.name().contains("TEST-DIGEST"))
-        .map(|entry| entry.create().finalize())
+        .map(|entry| entry.create().finalize().unwrap())
         .collect();
     assert_eq!(marks, [[5], [6], [1]]);
 
@@ -238,7 +246,7 @@ fn a_policy_leaves_a_digest_out_of_the_list_but_a_lookup_still_finds_it() {
 
     assert_eq!(mark_by_name(algo.as_ref(), "TEST-DIGEST"), Some(vec![2]));
     let mut digest = algo.digest().get_by_oid(&oid("1.2.3.4")).unwrap();
-    assert_eq!(digest.finalize(), [2]);
+    assert_eq!(digest.finalize().unwrap(), [2]);
 }
 
 // What a policy over a watched file does: the file can change while the Algo is in use

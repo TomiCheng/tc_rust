@@ -110,13 +110,13 @@ mod tests {
         let row = &rows[0];
         let mut digest = row.create();
         assert_eq!(digest.digest_size(), size);
-        digest.update(b"a");
-        digest.update(b"bc");
+        digest.try_update(b"a").unwrap();
+        digest.try_update(b"bc").unwrap();
 
         direct.update(b"abc");
         let mut expected = vec![0; size];
         direct.do_final(&mut expected);
-        assert_eq!(digest.finalize(), expected);
+        assert_eq!(digest.finalize().unwrap(), expected);
     }
 
     // Every name, alias and OID of the row finds it through the factory

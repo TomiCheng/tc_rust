@@ -86,9 +86,9 @@ mod tests {
 
     fn hash_of_abc(row: Box<dyn DigestEntry>) -> String {
         let mut digest = row.create();
-        digest.update(b"a");
-        digest.update(b"bc");
-        hex(&digest.finalize())
+        digest.try_update(b"a").unwrap();
+        digest.try_update(b"bc").unwrap();
+        hex(&digest.finalize().unwrap())
     }
 
     fn context() -> DefaultAlgoContext {
@@ -112,12 +112,12 @@ mod tests {
         #[test]
         fn do_final_writes_the_hash_into_the_output_and_starts_the_next_message() {
             let mut digest = row().create();
-            digest.update(b"abc");
+            digest.try_update(b"abc").unwrap();
             let mut output = [0; 32];
-            assert_eq!(digest.do_final(&mut output).unwrap(), 32);
+            assert_eq!(digest.try_do_final(&mut output).unwrap(), 32);
             assert_eq!(hex(&output), ABC_HASH);
 
-            assert_eq!(digest.do_final(&mut output).unwrap(), 32);
+            assert_eq!(digest.try_do_final(&mut output).unwrap(), 32);
             assert_eq!(hex(&output), EMPTY_HASH);
         }
 
@@ -125,19 +125,19 @@ mod tests {
         fn update_byte_gives_the_same_hash_as_update() {
             let mut digest = row().create();
             for byte in b"abc" {
-                digest.update_byte(*byte);
+                digest.try_update_byte(*byte).unwrap();
             }
-            assert_eq!(hex(&digest.finalize()), ABC_HASH);
+            assert_eq!(hex(&digest.finalize().unwrap()), ABC_HASH);
         }
 
         #[test]
         fn an_output_shorter_than_the_hash_is_data_length_and_keeps_the_message() {
             let mut digest = row().create();
-            digest.update(b"abc");
+            digest.try_update(b"abc").unwrap();
 
-            let error = digest.do_final(&mut [0; 31]).unwrap_err();
+            let error = digest.try_do_final(&mut [0; 31]).unwrap_err();
             assert_eq!(error.kind(), ErrorKind::DataLength);
-            assert_eq!(hex(&digest.finalize()), ABC_HASH);
+            assert_eq!(hex(&digest.finalize().unwrap()), ABC_HASH);
         }
 
         #[test]
@@ -151,13 +151,13 @@ mod tests {
         #[test]
         fn finalize_starts_the_next_message_and_reset_discards_the_message() {
             let mut digest = row().create();
-            digest.update(b"abc");
-            let first = digest.finalize();
+            digest.try_update(b"abc").unwrap();
+            let first = digest.finalize().unwrap();
 
-            digest.update(b"other");
-            digest.reset();
-            digest.update(b"abc");
-            assert_eq!(digest.finalize(), first);
+            digest.try_update(b"other").unwrap();
+            digest.try_reset().unwrap();
+            digest.try_update(b"abc").unwrap();
+            assert_eq!(digest.finalize().unwrap(), first);
         }
     }
 

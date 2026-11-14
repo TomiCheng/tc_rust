@@ -45,8 +45,8 @@ fn each_thread_gets_its_own_digest_from_a_shared_algo() {
             let algo = Arc::clone(&algo);
             thread::spawn(move || {
                 let mut digest = algo.digest().get_by_name("SHA-256").unwrap();
-                digest.update(b"abc");
-                digest.finalize()
+                digest.try_update(b"abc").unwrap();
+                digest.finalize().unwrap()
             })
         })
         .collect();

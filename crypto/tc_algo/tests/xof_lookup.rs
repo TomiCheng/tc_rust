@@ -1,7 +1,7 @@
 use std::any::Any;
 
-use tc_algo::digest::Digest;
-use tc_algo::xof::{Xof, XofEntry};
+use tc_algo::digest::{Digest, TryDigest};
+use tc_algo::xof::{TryXof, Xof, XofEntry};
 use tc_algo::{
     Algo, AlgoBuilder, AlgoError, DefaultAlgoBuilder, DefaultAlgoContext, EntryBase, ErrorKind,
     ListPolicy, Params,
@@ -49,7 +49,9 @@ struct Marked(u8);
 
 const INITIALIZED: u8 = 100;
 
-impl Digest for Marked {
+impl TryDigest for Marked {
+    type Error = AlgoError;
+
     fn digest_size(&self) -> usize {
         1
     }
@@ -58,28 +60,36 @@ impl Digest for Marked {
         1
     }
 
-    fn update(&mut self, _input: &[u8]) {}
-
-    fn do_final(&mut self, output: &mut [u8]) -> Result<usize, AlgoError> {
-        Ok(self.output_final(output))
+    fn try_update(&mut self, _input: &[u8]) -> Result<(), AlgoError> {
+        Ok(())
     }
 
-    fn reset(&mut self) {}
+    fn try_do_final(&mut self, output: &mut [u8]) -> Result<usize, AlgoError> {
+        self.try_output_final(output)
+    }
+
+    fn try_reset(&mut self) -> Result<(), AlgoError> {
+        Ok(())
+    }
 }
+
+impl TryXof for Marked {
+    fn try_output(&mut self, output: &mut [u8]) -> Result<usize, AlgoError> {
+        output.fill(self.0);
+        Ok(output.len())
+    }
+
+    fn try_output_final(&mut self, output: &mut [u8]) -> Result<usize, AlgoError> {
+        self.try_output(output)
+    }
+}
+
+impl Digest for Marked {}
 
 impl Xof for Marked {
     fn init(&mut self, _params: &dyn Params) -> Result<(), AlgoError> {
         self.0 += INITIALIZED;
         Ok(())
-    }
-
-    fn output(&mut self, output: &mut [u8]) -> usize {
-        output.fill(self.0);
-        output.len()
-    }
-
-    fn output_final(&mut self, output: &mut [u8]) -> usize {
-        self.output(output)
     }
 }
 
@@ -115,7 +125,7 @@ fn builder_with(rows: &[Rows]) -> DefaultAlgoBuilder {
 }
 
 fn mark_of(mut xof: Box<dyn Xof>) -> u8 {
-    xof.finalize_len(1)[0]
+    xof.finalize_len(1).unwrap()[0]
 }
 
 fn mark_by_name(algo: &dyn Algo, name: &str) -> Option<u8> {

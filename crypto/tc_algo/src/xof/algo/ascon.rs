@@ -67,11 +67,11 @@ mod tests {
     // The row gives the output of the XOF it wraps, taken in pieces
     fn check(rows: Vec<Box<dyn XofEntry>>, mut direct: impl tc_digest::Xof) {
         let mut xof = rows[0].create();
-        xof.update(b"a");
-        xof.update(b"bc");
+        xof.try_update(b"a").unwrap();
+        xof.try_update(b"bc").unwrap();
         let mut first = [0; 40];
-        xof.output(&mut first);
-        let output = [&first[..], &xof.finalize_len(60)].concat();
+        xof.try_output(&mut first).unwrap();
+        let output = [&first[..], &xof.finalize_len(60).unwrap()].concat();
 
         direct.update(b"abc");
         let mut expected = vec![0; 100];
@@ -142,12 +142,12 @@ mod tests {
         let mut xof = algo.xof().get_by_name("ASCON-CXOF128").unwrap();
         let params = AsconCXofParams::new().with_customization(b"Z".to_vec());
         xof.init(&params).unwrap();
-        xof.update(b"abc");
+        xof.try_update(b"abc").unwrap();
         let mut direct = tc_ascon_hash::AsconCXof128::with_customization(b"Z");
         tc_digest::Digest::update(&mut direct, b"abc");
         let mut expected = vec![0; 32];
         tc_digest::Xof::output_final(&mut direct, &mut expected);
-        assert_eq!(xof.finalize_len(32), expected);
+        assert_eq!(xof.finalize_len(32).unwrap(), expected);
 
         let too_long = AsconCXofParams::new().with_customization(vec![0; 257]);
         let error = xof.init(&too_long).unwrap_err();

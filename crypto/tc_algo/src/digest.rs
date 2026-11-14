@@ -9,8 +9,8 @@
 //! let algo = DefaultAlgoBuilder::default().build();
 //!
 //! let mut digest = algo.digest().get_by_name("SHA-256").unwrap();
-//! digest.update(b"abc");
-//! let hash = digest.finalize();
+//! digest.try_update(b"abc").unwrap();
+//! let hash = digest.finalize().unwrap();
 //! assert_eq!(hash.len(), 32);
 //! # }
 //! ```
@@ -26,4 +26,5 @@ pub(crate) use algo::{BUILT_IN, CreateRows};
 pub use digest_entry::DigestEntry;
 pub use digest_provider::DigestProvider;
 pub use digest_trait::Digest;
+pub use tc_digest::TryDigest;
 pub(crate) use empty_digest_provider::EmptyDigestProvider;

@@ -35,11 +35,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         if read == 0 {
             break;
         }
-        parallel_hash.update(&buffer[..read]);
+        parallel_hash.try_update(&buffer[..read])?;
     }
 
     // 32 bytes of ParallelHash128
-    let hash = parallel_hash.finalize();
+    let hash = parallel_hash.finalize()?;
     Ok(())
 }
 ```
@@ -58,17 +58,17 @@ given 8192 too. To work with others, set B with `init`.
 
 SP 800-185 defines two functions:
 
-- **ParallelHash**, of a length set in advance: `finalize` and `do_final` as a `Digest`, 32 bytes
-  for `PARALLELHASH128` and 64 for `PARALLELHASH256`. The length is hashed in.
-- **ParallelHashXOF**, of any length: `output`, called as many times as needed. A shorter output
+- **ParallelHash**, of a length set in advance: `finalize` and `try_do_final` as a `Digest`, 32
+  bytes for `PARALLELHASH128` and 64 for `PARALLELHASH256`. The length is hashed in.
+- **ParallelHashXOF**, of any length: `try_output`, called as many times as needed. A shorter output
   is the start of a longer one.
 
-The first `output` call chooses ParallelHashXOF for the rest of the message.
+The first `try_output` call chooses ParallelHashXOF for the rest of the message.
 
-`finalize_len` and `output_final`, as in Bouncy Castle, hash in the length of `finalize` whatever
-length they are asked for: `finalize_len(32)` on `PARALLELHASH128` is ParallelHash of 32 bytes,
-but `finalize_len(64)` is not ParallelHash of 64 bytes, and no other implementation gives it. For
-another length, use `output`.
+`finalize_len` and `try_output_final`, as in Bouncy Castle, hash in the length of `finalize`
+whatever length they are asked for: `finalize_len(32)` on `PARALLELHASH128` is ParallelHash of 32
+bytes, but `finalize_len(64)` is not ParallelHash of 64 bytes, and no other implementation gives it.
+For another length, use `try_output`.
 
 ## Params
 
@@ -81,7 +81,7 @@ B of 0 is `InvalidParams` from `init`, as are params of another type.
 
 ## Using it
 
-- `init` starts a new message, and `reset` keeps what it set.
+- `init` starts a new message, and `try_reset` keeps what it set.
 - The message may come in any number of updates, of any size: `update(b"ab")` then `update(b"c")`
   is the same as `update(b"abc")`.
 - A small B makes long messages slow: each block costs a hash of its own.

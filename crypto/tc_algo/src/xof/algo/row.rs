@@ -1,4 +1,5 @@
 use tc_asn1::Asn1Oid;
+use tc_digest::{TryDigest, TryXof};
 
 use crate::digest::Digest;
 use crate::xof::{Xof, XofEntry};
@@ -52,7 +53,9 @@ impl XofEntry for Entry {
 // An XOF with nothing to set, so init keeps the default that refuses any params
 pub(super) struct TcXof<D>(pub(super) D);
 
-impl<D: tc_digest::Xof> Digest for TcXof<D> {
+impl<D: tc_digest::Xof> TryDigest for TcXof<D> {
+    type Error = AlgoError;
+
     fn digest_size(&self) -> usize {
         self.0.digest_size()
     }
@@ -61,29 +64,35 @@ impl<D: tc_digest::Xof> Digest for TcXof<D> {
         self.0.byte_length()
     }
 
-    fn update(&mut self, input: &[u8]) {
+    fn try_update(&mut self, input: &[u8]) -> Result<(), AlgoError> {
         self.0.update(input);
+        Ok(())
     }
 
     // tc_digest panics on a short output, so the length is checked here first
-    fn do_final(&mut self, output: &mut [u8]) -> Result<usize, AlgoError> {
+    fn try_do_final(&mut self, output: &mut [u8]) -> Result<usize, AlgoError> {
         if output.len() < self.digest_size() {
             return Err(AlgoError::new(ErrorKind::DataLength));
         }
         Ok(self.0.do_final(output))
     }
 
-    fn reset(&mut self) {
+    fn try_reset(&mut self) -> Result<(), AlgoError> {
         self.0.reset();
+        Ok(())
     }
 }
 
-impl<D: tc_digest::Xof> Xof for TcXof<D> {
-    fn output(&mut self, output: &mut [u8]) -> usize {
-        self.0.output(output)
+impl<D: tc_digest::Xof> TryXof for TcXof<D> {
+    fn try_output(&mut self, output: &mut [u8]) -> Result<usize, AlgoError> {
+        Ok(self.0.output(output))
     }
 
-    fn output_final(&mut self, output: &mut [u8]) -> usize {
-        self.0.output_final(output)
+    fn try_output_final(&mut self, output: &mut [u8]) -> Result<usize, AlgoError> {
+        Ok(self.0.output_final(output))
     }
 }
+
+impl<D: tc_digest::Xof> Digest for TcXof<D> {}
+
+impl<D: tc_digest::Xof> Xof for TcXof<D> {}

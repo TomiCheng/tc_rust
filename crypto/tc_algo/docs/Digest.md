@@ -14,9 +14,9 @@ let hash = algo.digest().calculate_by_name("SHA-256", b"abc")?;
 
 // In parts
 let mut digest = algo.digest().get_by_name("SHA-256")?;
-digest.update(b"a");
-digest.update(b"bc");
-assert_eq!(digest.finalize(), hash);
+digest.try_update(b"a")?;
+digest.try_update(b"bc")?;
+assert_eq!(digest.finalize()?, hash);
 ```
 
 ## Algorithms
@@ -100,7 +100,7 @@ only public data with it.
 Bouncy Castle's `DigestUtilities` has no row from `ASCON-HASH256` to `XOODYAK`; they are here
 by the names of their digests, with no alias or OID. A pre-standard digest is the Ascon of
 before NIST's SP 800-232, for old data only. Haraka takes exactly 32 or 64 bytes: an input of
-another length is `DataLength` from `do_final`.
+another length is `DataLength` from `try_do_final`.
 
 `SHAKE128-256` and `SHAKE256-512` are SHAKE cut to 256 and 512 bits, as Bouncy Castle gives
 them; `SHAKE256` here is that digest, not the XOF of `algo.xof()`, which gives any length.
@@ -111,9 +111,11 @@ digest computed elsewhere. Its size is the length fed so far.
 ## Using it
 
 - `calculate_by_name` and `calculate_by_oid` hash a whole message at once.
-- `get_by_name` and `get_by_oid` give a `Digest` to feed in parts with `update` or
-  `update_byte`.
-- `finalize` gives the hash and resets the digest; `do_final` writes it into a buffer of
-  `digest_size` bytes. `reset` drops what was fed.
+- `get_by_name` and `get_by_oid` give a `Digest`, which is a `TryDigest` of `tc_digest` with
+  `AlgoError` for its errors, so code written for `TryDigest` takes it as it is. Feed it in parts
+  with `try_update` or `try_update_byte`.
+- `finalize` gives the hash and starts the next message; `try_do_final` writes it into a buffer of
+  `digest_size` bytes. `try_reset` drops what was fed. An output shorter than the hash is
+  `DataLength`, and the message stays in place.
 - `byte_length` is the size of the block the digest works on, as HMAC needs.
 - `algorithms` lists the rows turned on. A name or OID not turned on is an error.

@@ -14,12 +14,12 @@ fn main() -> Result<(), AlgoError> {
     let message = b"attack at dawn";
 
     let mut xof = algo.xof().get_by_name("SHAKE256")?;
-    xof.update(message);
+    xof.try_update(message)?;
 
     // Take the output in pieces
     let mut first = [0; 32];
-    xof.output(&mut first);
-    let rest = xof.finalize_len(32);
+    xof.try_output(&mut first)?;
+    let rest = xof.finalize_len(32)?;
 
     // The same with a helper
     let output = algo.xof().calculate_by_name("SHAKE256", message, 64)?;
@@ -52,12 +52,12 @@ The case of a name does not matter. Bouncy Castle has no factory of XOFs; the SH
 named as its `DigestUtilities` names SHAKE, and the others by the names of their XOFs, with no
 alias or OID. A pre-standard XOF is the Ascon of before NIST's SP 800-232, for old data only.
 `BLAKE2XS` is BLAKE2xs of an unknown output length, so the output does not depend on the length
-asked for. TupleHash takes each `update` as one element of the tuple, as Bouncy Castle does, so
+asked for. TupleHash takes each `try_update` as one element of the tuple, as Bouncy Castle does, so
 a message given in two updates hashes as another tuple than in one.
 
 ## Params
 
-`init` is optional, and starts a new message; `reset` keeps what it set. Without it, each XOF
+`init` is optional, and starts a new message; `try_reset` keeps what it set. Without it, each XOF
 runs with nothing set: empty strings, no key. One with nothing to set refuses any params with
 `InvalidParams`, as does one given params of another type or of a length it does not take. The
 helpers ending in `_with` call `init` first, and the others do not call it.
@@ -79,15 +79,19 @@ helpers ending in `_with` call `init` first, and the others do not call it.
 
 ## Using it
 
-- `update` panics once output has begun, since the input is then closed. Bouncy Castle throws here.
-- `output` can be called again for the next bytes. TupleHash and ParallelHash hash an output
+- An `Xof` is a `TryXof` of `tc_digest` with `AlgoError` for its errors, so code written for
+  `TryXof` takes it as it is. `init` is the one call of its own: `tc_digest` has no trait for it,
+  since its XOFs take their params when they are made.
+- `try_update` panics once output has begun, since the input is then closed. Bouncy Castle throws
+  here.
+- `try_output` can be called again for the next bytes. TupleHash and ParallelHash hash an output
   length into `finalize_len`, so for them a shorter `finalize_len` is not the start of a longer
   one; their pages tell how.
-- `output_final` fills a buffer with the next bytes and starts the next message, and `finalize_len`
-  does the same with a `Vec` of the length asked for. `reset` discards the message so far.
-- An `Xof` is also a `Digest`, as in Bouncy Castle: `do_final` and `finalize` give `digest_size` bytes
-  of output, 64 for SHAKE256, and start the next message. On Rust 1.85 a `Box<dyn Xof>` does not
-  convert to a `Box<dyn Digest>`, but it does go to a function generic over `Digest + ?Sized`.
+- `try_output_final` fills a buffer with the next bytes and starts the next message, and
+  `finalize_len` does the same with a `Vec` of the length asked for. `try_reset` discards the
+  message so far.
+- An `Xof` is also a `Digest`, as in Bouncy Castle: `try_do_final` and `finalize` give
+  `digest_size` bytes of output, 64 for SHAKE256, and start the next message.
 
 ## More
 

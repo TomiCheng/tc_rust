@@ -15,7 +15,7 @@ const ABC_HASH: [u8; 32] = [
 fn a_digest_result_collects_the_hash_of_what_the_digest_took_in() {
     let algo = DefaultAlgoBuilder::default().build();
     let mut digest = algo.digest().get_by_name("SHA-256").unwrap();
-    digest.update(b"abc");
+    digest.try_update(b"abc").unwrap();
 
     let mut result = DefaultDigestResult::new(digest);
     assert_eq!(result.max_result_length(), 32);

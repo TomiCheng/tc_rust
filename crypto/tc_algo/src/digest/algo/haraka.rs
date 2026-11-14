@@ -50,54 +50,46 @@ impl DigestEntry for HarakaEntry {
     }
 }
 
-// Digest::update cannot fail, so an update past the fixed input is kept as a flag and reported
-// by do_final, which starts the next message
-struct Haraka<D> {
-    digest: D,
-    too_long: bool,
-}
+// A Haraka of tc_misc_digest, with its errors as DataLength: an input past the fixed length when it
+// comes, and an input short of it, or an output shorter than the hash, at try_do_final, which then
+// leaves the input in place
+struct Haraka<D>(D);
 
 impl<D> Haraka<D> {
     fn new(digest: D) -> Self {
-        Self {
-            digest,
-            too_long: false,
-        }
+        Self(digest)
     }
 }
 
-impl<D: TryDigest<Error = HarakaError>> Digest for Haraka<D> {
+impl<D: TryDigest<Error = HarakaError>> TryDigest for Haraka<D> {
+    type Error = AlgoError;
+
     fn digest_size(&self) -> usize {
-        self.digest.digest_size()
+        self.0.digest_size()
     }
 
     // The fixed length of the input
     fn byte_length(&self) -> usize {
-        self.digest.byte_length()
+        self.0.byte_length()
     }
 
-    fn update(&mut self, input: &[u8]) {
-        if self.too_long || self.digest.try_update(input).is_err() {
-            self.too_long = true;
-        }
+    fn try_update(&mut self, input: &[u8]) -> Result<(), AlgoError> {
+        self.0.try_update(input).map_err(data_length)
     }
 
-    // DataLength for an input not of the fixed length, or an output shorter than the hash; a
-    // short output keeps the input
-    fn do_final(&mut self, output: &mut [u8]) -> Result<usize, AlgoError> {
-        if self.too_long {
-            self.reset();
-            return Err(AlgoError::new(ErrorKind::DataLength));
-        }
-        self.digest
-            .try_do_final(output)
-            .map_err(|_| AlgoError::new(ErrorKind::DataLength))
+    fn try_do_final(&mut self, output: &mut [u8]) -> Result<usize, AlgoError> {
+        self.0.try_do_final(output).map_err(data_length)
     }
 
-    fn reset(&mut self) {
-        self.too_long = false;
-        let _ = self.digest.try_reset();
+    fn try_reset(&mut self) -> Result<(), AlgoError> {
+        self.0.try_reset().map_err(data_length)
     }
+}
+
+impl<D: TryDigest<Error = HarakaError>> Digest for Haraka<D> {}
+
+fn data_length(error: HarakaError) -> AlgoError {
+    AlgoError::with_source(ErrorKind::DataLength, error)
 }
 
 #[cfg(test)]
@@ -124,10 +116,10 @@ mod tests {
         let input: Vec<u8> = (0..32).collect();
         let mut digest = row256().create();
         assert_eq!(digest.byte_length(), 32);
-        digest.update(&input[..10]);
-        digest.update(&input[10..]);
+        digest.try_update(&input[..10]).unwrap();
+        digest.try_update(&input[10..]).unwrap();
         assert_eq!(
-            digest.finalize(),
+            digest.finalize().unwrap(),
             direct(tc_misc_digest::Haraka256Digest::new(), &input)
         );
     }
@@ -140,28 +132,25 @@ mod tests {
             .remove(0)
             .create();
         assert_eq!(digest.byte_length(), 64);
-        digest.update(&input);
+        digest.try_update(&input).unwrap();
         assert_eq!(
-            digest.finalize(),
+            digest.finalize().unwrap(),
             direct(tc_misc_digest::Haraka512Digest::new(), &input)
         );
     }
 
     #[cfg(feature = "haraka-256")]
     #[test]
-    fn an_input_past_32_bytes_is_data_length_at_do_final_which_starts_over() {
+    fn an_update_past_32_bytes_is_data_length_at_once_and_keeps_the_input() {
         let mut digest = row256().create();
-        digest.update(&[0; 20]);
-        digest.update(&[0; 20]);
-        digest.update(&[0; 1]);
-        let error = digest.do_final(&mut [0; 32]).unwrap_err();
+        digest.try_update(&[7; 20]).unwrap();
+        let error = digest.try_update(&[7; 13]).unwrap_err();
         assert_eq!(error.kind(), ErrorKind::DataLength);
 
-        let input = [7; 32];
-        digest.update(&input);
+        digest.try_update(&[7; 12]).unwrap();
         assert_eq!(
-            digest.finalize(),
-            direct(tc_misc_digest::Haraka256Digest::new(), &input)
+            digest.finalize().unwrap(),
+            direct(tc_misc_digest::Haraka256Digest::new(), &[7; 32])
         );
     }
 
@@ -169,27 +158,30 @@ mod tests {
     #[test]
     fn an_input_short_of_32_bytes_or_a_short_output_is_data_length_and_keeps_the_input() {
         let mut digest = row256().create();
-        digest.update(&[7; 31]);
-        let error = digest.do_final(&mut [0; 32]).unwrap_err();
+        digest.try_update(&[7; 31]).unwrap();
+        let error = digest.try_do_final(&mut [0; 32]).unwrap_err();
         assert_eq!(error.kind(), ErrorKind::DataLength);
 
-        digest.update(&[7]);
-        let error = digest.do_final(&mut [0; 31]).unwrap_err();
+        digest.try_update(&[7]).unwrap();
+        let error = digest.try_do_final(&mut [0; 31]).unwrap_err();
         assert_eq!(error.kind(), ErrorKind::DataLength);
         assert_eq!(
-            digest.finalize(),
+            digest.finalize().unwrap(),
             direct(tc_misc_digest::Haraka256Digest::new(), &[7; 32])
         );
     }
 
     #[cfg(feature = "haraka-256")]
     #[test]
-    fn reset_clears_an_input_past_32_bytes() {
+    fn reset_discards_the_input() {
         let mut digest = row256().create();
-        digest.update(&[0; 33]);
-        digest.reset();
-        digest.update(&[7; 32]);
-        assert!(digest.do_final(&mut [0; 32]).is_ok());
+        digest.try_update(&[0; 32]).unwrap();
+        digest.try_reset().unwrap();
+        digest.try_update(&[7; 32]).unwrap();
+        assert_eq!(
+            digest.finalize().unwrap(),
+            direct(tc_misc_digest::Haraka256Digest::new(), &[7; 32])
+        );
     }
 
     #[cfg(feature = "haraka-256")]

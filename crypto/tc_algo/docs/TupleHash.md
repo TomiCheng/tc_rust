@@ -9,7 +9,7 @@ fields, such as a user name, a date and a key ID, hashed or signed as a whole.
 
 ## Hashing a tuple
 
-Each `update` is one element of the tuple.
+Each `try_update` is one element of the tuple.
 
 ```rust
 use tc_algo::params::TupleHashParams;
@@ -26,12 +26,12 @@ fn main() -> Result<(), AlgoError> {
     tuple_hash.init(&params)?;
 
     // Three elements, one update each
-    tuple_hash.update(b"alice");
-    tuple_hash.update(b"2026-11-12");
-    tuple_hash.update(b"key-7");
+    tuple_hash.try_update(b"alice")?;
+    tuple_hash.try_update(b"2026-11-12")?;
+    tuple_hash.try_update(b"key-7")?;
 
     // 64 bytes of TupleHash
-    let hash = tuple_hash.finalize_len(64);
+    let hash = tuple_hash.finalize_len(64)?;
     Ok(())
 }
 ```
@@ -44,23 +44,23 @@ so it hashes a tuple of one element.
 
 SP 800-185 defines two functions, and the length asked for is part of the first:
 
-- **TupleHash**, of a length set in advance: `finalize_len(n)`, `output_final` and `finalize` as
+- **TupleHash**, of a length set in advance: `finalize_len(n)`, `try_output_final` and `finalize` as
   a `Digest`. The length is hashed in, so 32 bytes are not the start of 64 bytes.
-- **TupleHashXOF**, of any length: `output`, called as many times as needed. A shorter output is
+- **TupleHashXOF**, of any length: `try_output`, called as many times as needed. A shorter output is
   the start of a longer one.
 
-Both sides must use the same one: the first `output` call chooses TupleHashXOF for the rest of
+Both sides must use the same one: the first `try_output` call chooses TupleHashXOF for the rest of
 the message, and anything else chooses TupleHash.
 
 ```rust
 // TupleHashXOF: 100 bytes, read in two pieces
-tuple_hash.update(b"alice");
-tuple_hash.update(b"key-7");
+tuple_hash.try_update(b"alice")?;
+tuple_hash.try_update(b"key-7")?;
 let mut first = [0; 40];
 let mut rest = [0; 60];
-tuple_hash.output(&mut first);
-tuple_hash.output(&mut rest);
-tuple_hash.reset();
+tuple_hash.try_output(&mut first)?;
+tuple_hash.try_output(&mut rest)?;
+tuple_hash.try_reset()?;
 ```
 
 ## Params
@@ -76,8 +76,8 @@ The string has no limit, and `init` takes any. Params of another type are `Inval
 ## Using it
 
 - `init` is optional: without it, the customization string is empty.
-- `init` starts a new message, and `reset` keeps the string it set.
+- `init` starts a new message, and `try_reset` keeps the string it set.
 - An empty element is an element too: `update(b"")` changes the hash.
-- `update_byte` is an element of one byte, so a field fed byte by byte becomes as many elements.
+- `try_update_byte` is an element of one byte, so a field fed byte by byte becomes as many elements.
 - As a `Digest`, `finalize` gives TupleHash of 32 bytes for `TUPLEHASH128` and 64 for
   `TUPLEHASH256`.

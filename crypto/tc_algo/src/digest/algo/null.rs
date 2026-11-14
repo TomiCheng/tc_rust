@@ -23,20 +23,20 @@ mod tests {
     #[test]
     fn the_digest_gives_back_what_it_was_fed() {
         let mut digest = row().create();
-        digest.update(b"a");
-        digest.update_byte(b'b');
-        digest.update(b"c");
+        digest.try_update(b"a").unwrap();
+        digest.try_update_byte(b'b').unwrap();
+        digest.try_update(b"c").unwrap();
         assert_eq!(digest.digest_size(), 3);
         assert_eq!(digest.byte_length(), 0);
-        assert_eq!(digest.finalize(), b"abc");
+        assert_eq!(digest.finalize().unwrap(), b"abc");
     }
 
     #[test]
     fn do_final_starts_the_next_message() {
         let mut digest = row().create();
-        digest.update(b"abc");
+        digest.try_update(b"abc").unwrap();
         let mut output = [0; 3];
-        assert_eq!(digest.do_final(&mut output).unwrap(), 3);
+        assert_eq!(digest.try_do_final(&mut output).unwrap(), 3);
         assert_eq!(&output, b"abc");
         assert_eq!(digest.digest_size(), 0);
     }
@@ -44,20 +44,20 @@ mod tests {
     #[test]
     fn an_output_shorter_than_the_input_is_data_length_and_keeps_the_input() {
         let mut digest = row().create();
-        digest.update(b"abc");
+        digest.try_update(b"abc").unwrap();
 
-        let error = digest.do_final(&mut [0; 2]).unwrap_err();
+        let error = digest.try_do_final(&mut [0; 2]).unwrap_err();
         assert_eq!(error.kind(), ErrorKind::DataLength);
-        assert_eq!(digest.finalize(), b"abc");
+        assert_eq!(digest.finalize().unwrap(), b"abc");
     }
 
     #[test]
     fn reset_discards_the_input() {
         let mut digest = row().create();
-        digest.update(b"other");
-        digest.reset();
-        digest.update(b"abc");
-        assert_eq!(digest.finalize(), b"abc");
+        digest.try_update(b"other").unwrap();
+        digest.try_reset().unwrap();
+        digest.try_update(b"abc").unwrap();
+        assert_eq!(digest.finalize().unwrap(), b"abc");
     }
 
     #[test]
