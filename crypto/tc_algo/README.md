@@ -42,6 +42,25 @@ rows it turns on, and a name it did not turn on is an error, not a fallback.
 - KEM: `ML-KEM-512`, `ML-KEM-768`, `ML-KEM-1024` (`ml-kem`)
 - DRBG: `HMAC/SHA-256` (`drbg-hmac-sha256`)
 
+## Traits
+
+What the factories hand out are the traits of the crates underneath, with `AlgoError` for their
+errors and an init that takes any params, so code written for those traits takes them as they are:
+
+- `Cipher`: `BufferedCipher` and `BufferedCipherInit` of `tc_buffered_cipher`
+- `Digest`, `Xof`: `TryDigest`, `TryXof` of `tc_digest`
+- `Mac`: `Mac` and `MacInit` of `tc_macs`
+- `Wrapper`: `KeyWrap` and `KeyWrapInit` of `tc_key_wrap`
+- `Signer`: `Signer` and `SignerInit` of `tc_signer`
+- `Kdf`: `Kdf` and `KdfInit` of `tc_kdf`
+- `Agreement`: `Agreement` and `AgreementInit` of `tc_agreement`
+- `KeyPairGenerator`: `KeyPairGenerator` and `KeyPairGeneratorInit` of `tc_asym_cipher`
+- `Drbg`: `CryptoRng` of `rand_core`
+
+Each adds only what its crate lacks, such as `finalize` returning a `Vec`. `Xof::init` is its own,
+since `tc_digest`'s XOFs take their params when they are made. `Kem`, `Pbe` and `KeyGenerator`
+are this crate's own.
+
 ## More
 
 - [Digest](docs/Digest.md): names, OIDs, and hashing at once or in parts

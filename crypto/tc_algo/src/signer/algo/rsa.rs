@@ -4,7 +4,6 @@ use tc_asn1_x509::alg::AlgorithmIdentifier;
 use tc_rsa::{RsaBlindedEngine, RsaEngine, RsaError, RsaKey};
 use tc_rsa_signer::{RsaDigestSigner, RsaDigestSignerError};
 use tc_sha::Sha256Digest;
-use tc_signer::{Signer as _, SignerInit};
 
 use crate::signer::{Signer, SignerEntry};
 use crate::{AlgoError, DefaultAlgoContext, EntryBase, ErrorKind, Params};
@@ -64,16 +63,8 @@ impl SignerEntry for Row {
 // Its params are an RsaKey: private to sign, and public to verify
 struct Rsa(RsaDigestSigner<RsaBlindedEngine<RsaEngine, Box<dyn CryptoRng>>, Sha256Digest>);
 
-impl Signer for Rsa {
-    fn init(&mut self, params: &dyn Params) -> Result<(), AlgoError> {
-        let key = params
-            .as_any()
-            .downcast_ref::<RsaKey>()
-            .ok_or(AlgoError::new(ErrorKind::InvalidParams))?;
-        self.0
-            .init(key)
-            .map_err(|error| AlgoError::with_source(ErrorKind::InvalidParams, error))
-    }
+impl tc_signer::Signer for Rsa {
+    type Error = AlgoError;
 
     fn max_signature_size(&self) -> usize {
         self.0.max_signature_size()
@@ -95,6 +86,22 @@ impl Signer for Rsa {
         self.0.reset();
     }
 }
+
+impl tc_signer::SignerInit<dyn Params> for Rsa {
+    type Error = AlgoError;
+
+    fn init(&mut self, params: &dyn Params) -> Result<(), AlgoError> {
+        let key = params
+            .as_any()
+            .downcast_ref::<RsaKey>()
+            .ok_or(AlgoError::new(ErrorKind::InvalidParams))?;
+        self.0
+            .init(key)
+            .map_err(|error| AlgoError::with_source(ErrorKind::InvalidParams, error))
+    }
+}
+
+impl Signer for Rsa {}
 
 fn algo_error(error: RsaDigestSignerError<RsaError>) -> AlgoError {
     let kind = match error {

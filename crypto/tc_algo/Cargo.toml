@@ -124,19 +124,19 @@ rc6 = ["dep:tc_rc_cipher", "dep:tc_block_cipher", "dep:tc_block_modes", "dep:tc_
 chacha = ["dep:tc_chacha", "dep:tc_stream_cipher", "dep:tc_block_cipher", "dep:tc_block_modes"]
 
 # MAC
-hmac-sha256 = ["sha256", "dep:tc_block_cipher", "dep:tc_macs", "tc_macs/hmac", "tc_macs/alloc"]
+hmac-sha256 = ["sha256", "dep:tc_block_cipher", "tc_macs/hmac", "tc_macs/alloc"]
 
 # Key wrap
-aes-wrap = ["aes", "dep:tc_key_wrap", "tc_key_wrap/rfc3394"]
+aes-wrap = ["aes", "tc_key_wrap/rfc3394"]
 
 # Key pair
-rsa = ["dep:tc_asn1_x509", "dep:tc_asym_cipher", "dep:tc_asym_encoding", "dep:tc_rsa", "dep:tc_rsa_signer", "dep:tc_sha", "dep:tc_signer"]
+rsa = ["dep:tc_asn1_x509", "dep:tc_asym_encoding", "dep:tc_rsa", "dep:tc_rsa_signer", "dep:tc_sha"]
 
 # Agreement
-dh = ["dep:tc_agreement", "dep:tc_asym_cipher", "dep:tc_bigint", "dep:tc_dh", "dep:tc_dh_key"]
+dh = ["dep:tc_bigint", "dep:tc_dh", "dep:tc_dh_key"]
 
 # KDF
-hkdf = ["dep:tc_kdf", "dep:tc_macs", "tc_macs/hmac", "tc_macs/alloc", "dep:tc_sha"]
+hkdf = ["tc_macs/hmac", "tc_macs/alloc", "dep:tc_sha"]
 hkdf-sha256 = ["hkdf"]
 hkdf-sha384 = ["hkdf"]
 hkdf-sha512 = ["hkdf"]
@@ -145,13 +145,13 @@ hkdf-sha512 = ["hkdf"]
 pbe-aes = ["aes", "dep:tc_pbe", "dep:tc_sha"]
 
 # KEM
-ml-kem = ["dep:tc_asym_cipher", "dep:tc_kem", "dep:tc_ml_kem"]
+ml-kem = ["dep:tc_kem", "dep:tc_ml_kem"]
 
 # DRBG
 drbg-hmac-sha256 = ["hmac-sha256", "dep:tc_drbg"]
 
 # IES
-ies = ["dh", "dep:tc_block_cipher", "dep:tc_ies", "dep:tc_kdf", "dep:tc_macs", "tc_macs/hmac", "tc_macs/alloc", "dep:tc_sha"]
+ies = ["dh", "dep:tc_block_cipher", "dep:tc_ies", "tc_macs/hmac", "tc_macs/alloc", "dep:tc_sha"]
 
 [dependencies]
 rand = { version = "0.10", default-features = false, features = ["sys_rng"] }
@@ -200,18 +200,18 @@ tc_chacha = { version = "0.1.0", optional = true }
 tc_stream_cipher = { version = "0.1.0", optional = true }
 
 # MAC
-tc_macs = { version = "0.1.1", optional = true }
+tc_macs = "0.1.1"
 
 # Key wrap
-tc_key_wrap = { version = "0.1.0", optional = true }
+tc_key_wrap = "0.1.0"
 
 # Key pair
-tc_asym_cipher = { version = "0.1.0", optional = true }
+tc_asym_cipher = "0.1.0"
 tc_asym_encoding = { version = "0.1.0", optional = true }
 tc_asn1_x509 = { version = "0.1.0", optional = true }
 tc_rsa = { version = "0.1.0", optional = true }
 tc_rsa_signer = { version = "0.1.0", path = "../../signer/tc_rsa_signer", optional = true }
-tc_signer = { version = "0.1.0", path = "../../signer/tc_signer", optional = true }
+tc_signer = { version = "0.1.0", path = "../../signer/tc_signer" }
 
 # IES
 tc_ies = { version = "0.1.0", path = "../../ies/tc_ies", optional = true }
@@ -227,10 +227,10 @@ tc_ml_kem = { version = "0.1.0", path = "../tc_ml_kem", optional = true }
 tc_pbe = { version = "0.1.0", path = "../../kdf/tc_pbe", optional = true }
 
 # KDF
-tc_kdf = { version = "0.1.0", path = "../../kdf/tc_kdf", optional = true }
+tc_kdf = { version = "0.1.0", path = "../../kdf/tc_kdf" }
 
 # Agreement
-tc_agreement = { version = "0.1.0", path = "../agreement/tc_agreement", optional = true }
+tc_agreement = { version = "0.1.0", path = "../agreement/tc_agreement" }
 tc_bigint = { version = "0.1.0", features = ["alloc"], optional = true }
 tc_dh = { version = "0.1.0", path = "../agreement/tc_dh", optional = true }
 tc_dh_key = { version = "0.1.0", path = "../tc_dh_key", optional = true }

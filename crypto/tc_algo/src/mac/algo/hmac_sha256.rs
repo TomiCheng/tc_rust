@@ -1,5 +1,5 @@
 use tc_asn1::Asn1Oid;
-use tc_macs::{Hmac, Mac as _, MacError, MacInit as _};
+use tc_macs::{Hmac, MacError};
 use tc_sha::Sha256Digest;
 
 use crate::mac::{Mac, MacEntry};
@@ -54,16 +54,8 @@ impl MacEntry for HmacSha256Entry {
 
 struct HmacSha256(Hmac<Sha256Digest>);
 
-impl Mac for HmacSha256 {
-    fn init(&mut self, params: &dyn Params) -> Result<(), AlgoError> {
-        let key = params
-            .as_any()
-            .downcast_ref::<KeyOwned>()
-            .ok_or(AlgoError::new(ErrorKind::InvalidParams))?;
-        // HMAC takes a key of any length
-        let Ok(()) = self.0.init(key);
-        Ok(())
-    }
+impl tc_macs::Mac for HmacSha256 {
+    type Error = AlgoError;
 
     fn mac_size(&self) -> usize {
         self.0.mac_size()
@@ -81,6 +73,22 @@ impl Mac for HmacSha256 {
         self.0.reset();
     }
 }
+
+impl tc_macs::MacInit<dyn Params> for HmacSha256 {
+    type Error = AlgoError;
+
+    fn init(&mut self, params: &dyn Params) -> Result<(), AlgoError> {
+        let key = params
+            .as_any()
+            .downcast_ref::<KeyOwned>()
+            .ok_or(AlgoError::new(ErrorKind::InvalidParams))?;
+        // HMAC takes a key of any length
+        let Ok(()) = self.0.init(key);
+        Ok(())
+    }
+}
+
+impl Mac for HmacSha256 {}
 
 fn algo_error(error: MacError) -> AlgoError {
     let kind = match error {

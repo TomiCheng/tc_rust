@@ -45,18 +45,25 @@ impl Params for MarkedKey {
     }
 }
 
-impl KeyPairGenerator for Marked {
-    fn init(&mut self, _params: &dyn Params) -> Result<(), AlgoError> {
-        Ok(())
-    }
+impl tc_asym_cipher::KeyPairGenerator for Marked {
+    type PublicKey = Box<dyn Params>;
+    type PrivateKey = Box<dyn Params>;
+    type Error = AlgoError;
 
-    fn generate(&mut self) -> Result<KeyPair, AlgoError> {
-        Ok(KeyPair::new(
-            Box::new(MarkedKey(self.0)),
-            Box::new(MarkedKey(self.0)),
-        ))
+    fn generate_key_pair(&mut self) -> Result<(Box<dyn Params>, Box<dyn Params>), AlgoError> {
+        Ok((Box::new(MarkedKey(self.0)), Box::new(MarkedKey(self.0))))
     }
 }
+
+impl<'a> tc_asym_cipher::KeyPairGeneratorInit<&'a dyn Params> for Marked {
+    type Error = AlgoError;
+
+    fn init(&mut self, _params: &'a dyn Params) -> Result<(), AlgoError> {
+        Ok(())
+    }
+}
+
+impl KeyPairGenerator for Marked {}
 
 fn row(
     name: &'static str,

@@ -1,9 +1,9 @@
 use rand_core::CryptoRng;
 use tc_asn1::Asn1Oid;
-use tc_asym_cipher::{KeyPairGenerator as _, KeyPairGeneratorInit};
+use tc_asym_cipher::KeyPairGeneratorInit;
 use tc_rsa::{RsaKeyGenerationParamsRef, RsaKeyGenerator};
 
-use crate::generate::{KeyPair, KeyPairGenerator, KeyPairGeneratorEntry};
+use crate::generate::{KeyPairGenerator, KeyPairGeneratorEntry};
 use crate::params::RsaKeyGenParams;
 use crate::{AlgoError, DefaultAlgoContext, EntryBase, ErrorKind, Params};
 
@@ -65,8 +65,26 @@ fn generator<'a>(
     Ok(generator)
 }
 
-impl KeyPairGenerator for Rsa {
-    fn init(&mut self, params: &dyn Params) -> Result<(), AlgoError> {
+impl tc_asym_cipher::KeyPairGenerator for Rsa {
+    type PublicKey = Box<dyn Params>;
+    type PrivateKey = Box<dyn Params>;
+    type Error = AlgoError;
+
+    fn generate_key_pair(&mut self) -> Result<(Box<dyn Params>, Box<dyn Params>), AlgoError> {
+        let params = self
+            .params
+            .ok_or(AlgoError::new(ErrorKind::NotInitialized))?;
+        let (public, private) = generator(self.rand.as_mut(), params)?
+            .generate_key_pair()
+            .map_err(|error| AlgoError::with_source(ErrorKind::InvalidParams, error))?;
+        Ok((Box::new(public), Box::new(private)))
+    }
+}
+
+impl<'a> tc_asym_cipher::KeyPairGeneratorInit<&'a dyn Params> for Rsa {
+    type Error = AlgoError;
+
+    fn init(&mut self, params: &'a dyn Params) -> Result<(), AlgoError> {
         self.params = None;
         let params = params
             .as_any()
@@ -77,17 +95,9 @@ impl KeyPairGenerator for Rsa {
         self.params = Some(*params);
         Ok(())
     }
-
-    fn generate(&mut self) -> Result<KeyPair, AlgoError> {
-        let params = self
-            .params
-            .ok_or(AlgoError::new(ErrorKind::NotInitialized))?;
-        let (public, private) = generator(self.rand.as_mut(), params)?
-            .generate_key_pair()
-            .map_err(|error| AlgoError::with_source(ErrorKind::InvalidParams, error))?;
-        Ok(KeyPair::new(Box::new(public), Box::new(private)))
-    }
 }
+
+impl KeyPairGenerator for Rsa {}
 
 #[cfg(test)]
 mod tests {

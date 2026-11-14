@@ -1,20 +1,14 @@
 use tc_constant_time::fixed_time_eq;
+use tc_macs::MacInit;
 
 use crate::{AlgoError, Params};
 
-pub trait Mac {
-    fn init(&mut self, params: &dyn Params) -> Result<(), AlgoError>;
-
-    fn mac_size(&self) -> usize;
-
-    fn update(&mut self, input: &[u8]) -> Result<(), AlgoError>;
-
+// A Mac of tc_macs, with AlgoError for its errors and an init taking any params, so that every row
+// fits behind Box<dyn Mac> and still goes wherever a tc_macs Mac does
+pub trait Mac: tc_macs::Mac<Error = AlgoError> + MacInit<dyn Params, Error = AlgoError> {
     fn update_byte(&mut self, input: u8) -> Result<(), AlgoError> {
         self.update(&[input])
     }
-
-    // Writes the tag and returns its length. The output must hold mac_size bytes
-    fn do_final(&mut self, output: &mut [u8]) -> Result<usize, AlgoError>;
 
     // do_final with an output of its own
     fn finalize(&mut self) -> Result<Vec<u8>, AlgoError> {
@@ -30,6 +24,4 @@ pub trait Mac {
     fn verify(&mut self, tag: &[u8]) -> Result<bool, AlgoError> {
         Ok(fixed_time_eq(&self.finalize()?, tag))
     }
-
-    fn reset(&mut self);
 }

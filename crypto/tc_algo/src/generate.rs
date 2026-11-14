@@ -21,6 +21,7 @@ pub use key_generator_provider::KeyGeneratorProvider;
 pub use key_pair_generator::{KeyPair, KeyPairGenerator};
 pub use key_pair_generator_entry::KeyPairGeneratorEntry;
 pub use key_pair_generator_provider::KeyPairGeneratorProvider;
+pub use tc_asym_cipher::KeyPairGeneratorInit;
 
 pub(crate) type CreateKeyGeneratorRows =
     fn(&crate::DefaultAlgoContext) -> Vec<Box<dyn KeyGeneratorEntry>>;

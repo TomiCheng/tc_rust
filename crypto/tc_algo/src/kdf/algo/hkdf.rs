@@ -1,7 +1,7 @@
 use tc_asn1::Asn1Oid;
 use tc_digest::Digest;
+use tc_kdf::KdfError;
 use tc_kdf::hkdf::{Hkdf, HkdfParamsOwned};
-use tc_kdf::{Kdf as _, KdfError, KdfInit};
 use tc_macs::MacError;
 #[cfg(feature = "hkdf-sha256")]
 use tc_sha::Sha256Digest;
@@ -70,7 +70,17 @@ impl KdfEntry for Row {
 // Its params are an HkdfParamsOwned
 struct HkdfKdf<D>(Hkdf<D>);
 
-impl<D: Digest> Kdf for HkdfKdf<D> {
+impl<D: Digest> tc_kdf::Kdf for HkdfKdf<D> {
+    type Error = AlgoError;
+
+    fn generate_bytes(&mut self, output: &mut [u8]) -> Result<usize, AlgoError> {
+        self.0.generate_bytes(output).map_err(algo_error)
+    }
+}
+
+impl<D: Digest> tc_kdf::KdfInit<dyn Params> for HkdfKdf<D> {
+    type Error = AlgoError;
+
     fn init(&mut self, params: &dyn Params) -> Result<(), AlgoError> {
         let params = params
             .as_any()
@@ -80,11 +90,9 @@ impl<D: Digest> Kdf for HkdfKdf<D> {
             .init(params)
             .map_err(|error| AlgoError::with_source(ErrorKind::InvalidParams, error))
     }
-
-    fn generate_bytes(&mut self, output: &mut [u8]) -> Result<usize, AlgoError> {
-        self.0.generate_bytes(output).map_err(algo_error)
-    }
 }
+
+impl<D: Digest> Kdf for HkdfKdf<D> {}
 
 fn algo_error(error: KdfError<MacError>) -> AlgoError {
     let kind = match error {

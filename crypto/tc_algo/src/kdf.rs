@@ -12,3 +12,4 @@ pub(crate) use empty_kdf_provider::EmptyKdfProvider;
 pub use kdf_entry::KdfEntry;
 pub use kdf_provider::KdfProvider;
 pub use kdf_trait::Kdf;
+pub use tc_kdf::KdfInit;

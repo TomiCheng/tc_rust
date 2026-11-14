@@ -1,10 +1,9 @@
+use tc_kdf::KdfInit;
+
 use crate::{AlgoError, Params};
 
-// Bouncy Castle's IDerivationFunction: a secret and its context in, as many key bytes as asked for
-// out. It stands apart from Agreement, since which KDF follows which agreement is up to the protocol
-pub trait Kdf {
-    fn init(&mut self, params: &dyn Params) -> Result<(), AlgoError>;
-
-    // Fills `output` with key bytes and returns their length
-    fn generate_bytes(&mut self, output: &mut [u8]) -> Result<usize, AlgoError>;
-}
+// A Kdf of tc_kdf, Bouncy Castle's IDerivationFunction, with AlgoError for its errors and an init
+// taking any params, so that every row fits behind Box<dyn Kdf> and still goes wherever a tc_kdf
+// Kdf does. It stands apart from Agreement, since which KDF follows which agreement is up to the
+// protocol
+pub trait Kdf: tc_kdf::Kdf<Error = AlgoError> + KdfInit<dyn Params, Error = AlgoError> {}

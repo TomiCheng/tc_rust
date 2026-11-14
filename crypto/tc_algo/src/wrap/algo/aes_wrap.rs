@@ -3,8 +3,7 @@ use core::error::Error;
 use tc_aes::AesEngine;
 use tc_asn1::Asn1Oid;
 use tc_key_wrap::{
-    KeyWithIvOptRef, KeyWrap, KeyWrapError, KeyWrapInit, Rfc3394WrapEngine,
-    WrapDirection as KeyWrapDirection,
+    KeyWithIvOptRef, KeyWrapError, Rfc3394WrapEngine, WrapDirection as KeyWrapDirection,
 };
 
 use crate::params::{KeyOwned, KeyParams};
@@ -56,20 +55,8 @@ impl WrapperEntry for Row {
 
 struct AesWrap(Rfc3394WrapEngine<AesEngine>);
 
-impl Wrapper for AesWrap {
-    fn init(&mut self, direction: WrapDirection, params: &dyn Params) -> Result<(), AlgoError> {
-        let key = params
-            .as_any()
-            .downcast_ref::<KeyOwned>()
-            .ok_or(AlgoError::new(ErrorKind::InvalidParams))?;
-        let direction = match direction {
-            WrapDirection::Wrap => KeyWrapDirection::Wrap,
-            WrapDirection::Unwrap => KeyWrapDirection::Unwrap,
-        };
-        self.0
-            .init(direction, &KeyWithIvOptRef::new(key.key(), None))
-            .map_err(|error| AlgoError::with_source(ErrorKind::InvalidParams, error))
-    }
+impl tc_key_wrap::KeyWrap for AesWrap {
+    type Error = AlgoError;
 
     fn wrapped_len(&self, input_len: usize) -> Result<usize, AlgoError> {
         self.0.wrapped_len(input_len).map_err(algo_error)
@@ -87,6 +74,26 @@ impl Wrapper for AesWrap {
         self.0.unwrap_into(input, output).map_err(algo_error)
     }
 }
+
+impl tc_key_wrap::KeyWrapInit<dyn Params> for AesWrap {
+    type Error = AlgoError;
+
+    fn init(&mut self, direction: WrapDirection, params: &dyn Params) -> Result<(), AlgoError> {
+        let key = params
+            .as_any()
+            .downcast_ref::<KeyOwned>()
+            .ok_or(AlgoError::new(ErrorKind::InvalidParams))?;
+        let direction = match direction {
+            WrapDirection::Wrap => KeyWrapDirection::Wrap,
+            WrapDirection::Unwrap => KeyWrapDirection::Unwrap,
+        };
+        self.0
+            .init(direction, &KeyWithIvOptRef::new(key.key(), None))
+            .map_err(|error| AlgoError::with_source(ErrorKind::InvalidParams, error))
+    }
+}
+
+impl Wrapper for AesWrap {}
 
 fn algo_error<E: Error + Send + Sync + 'static>(error: KeyWrapError<E>) -> AlgoError {
     let kind = match error {

@@ -63,11 +63,8 @@ impl Marked {
     }
 }
 
-impl Wrapper for Marked {
-    fn init(&mut self, direction: WrapDirection, _params: &dyn Params) -> Result<(), AlgoError> {
-        self.direction = Some(direction);
-        Ok(())
-    }
+impl tc_key_wrap::KeyWrap for Marked {
+    type Error = AlgoError;
 
     fn wrapped_len(&self, _input_len: usize) -> Result<usize, AlgoError> {
         Ok(1)
@@ -85,6 +82,17 @@ impl Wrapper for Marked {
         self.write(WrapDirection::Unwrap, output)
     }
 }
+
+impl tc_key_wrap::KeyWrapInit<dyn Params> for Marked {
+    type Error = AlgoError;
+
+    fn init(&mut self, direction: WrapDirection, _params: &dyn Params) -> Result<(), AlgoError> {
+        self.direction = Some(direction);
+        Ok(())
+    }
+}
+
+impl Wrapper for Marked {}
 
 fn row(name: &'static str, aliases: &[&str], oids: &[&str], mark: u8) -> Box<dyn WrapperEntry> {
     Box::new(Row {

@@ -2,7 +2,7 @@ use tc_agreement::{Agreement as _, AgreementInit};
 use tc_dh::{DhAgreementError, DhBasicAgreement};
 use tc_dh_key::{DhPrivateKey, DhPublicKey};
 
-use crate::agreement::{Agreement, AgreementEntry, SharedSecret};
+use crate::agreement::{Agreement, AgreementEntry};
 use crate::{AlgoError, DefaultAlgoContext, EntryBase, ErrorKind, Params};
 
 // The row of DH, to give to DefaultAlgoBuilder::reg_agreement. Its name and alias are those of
@@ -43,7 +43,34 @@ struct Dh {
     size: Option<usize>,
 }
 
-impl Agreement for Dh {
+impl tc_agreement::Agreement for Dh {
+    type PublicKey = dyn Params;
+    type Error = AlgoError;
+
+    // The length of p in bytes, or 0 before init
+    fn agreement_size(&self) -> usize {
+        self.size.unwrap_or(0)
+    }
+
+    fn calculate_agreement(
+        &self,
+        public_key: &dyn Params,
+        output: &mut [u8],
+    ) -> Result<(), AlgoError> {
+        self.size.ok_or(AlgoError::new(ErrorKind::NotInitialized))?;
+        let public_key = public_key
+            .as_any()
+            .downcast_ref::<DhPublicKey>()
+            .ok_or(AlgoError::new(ErrorKind::InvalidParams))?;
+        self.agreement
+            .calculate_agreement(public_key, output)
+            .map_err(algo_error)
+    }
+}
+
+impl AgreementInit<dyn Params> for Dh {
+    type Error = AlgoError;
+
     fn init(&mut self, params: &dyn Params) -> Result<(), AlgoError> {
         self.size = None;
         let key = params
@@ -54,20 +81,9 @@ impl Agreement for Dh {
         self.size = Some(self.agreement.agreement_size());
         Ok(())
     }
-
-    fn calculate_agreement(&self, public_key: &dyn Params) -> Result<SharedSecret, AlgoError> {
-        let size = self.size.ok_or(AlgoError::new(ErrorKind::NotInitialized))?;
-        let public_key = public_key
-            .as_any()
-            .downcast_ref::<DhPublicKey>()
-            .ok_or(AlgoError::new(ErrorKind::InvalidParams))?;
-        let mut output = vec![0; size];
-        self.agreement
-            .calculate_agreement(public_key, &mut output)
-            .map_err(algo_error)?;
-        Ok(SharedSecret::new(output))
-    }
 }
+
+impl Agreement for Dh {}
 
 // A bad group, a public key of another group or outside the subgroup, and a shared secret of 1 all
 // come from the keys, so all are InvalidParams
@@ -121,10 +137,10 @@ mod tests {
         let (bob_public, bob_private) = pair(rfc3526_2048());
 
         let alice = agreement(&alice_private)
-            .calculate_agreement(&bob_public)
+            .calculate_shared_secret(&bob_public)
             .unwrap();
         let bob = agreement(&bob_private)
-            .calculate_agreement(&alice_public)
+            .calculate_shared_secret(&alice_public)
             .unwrap();
 
         assert_eq!(alice.as_bytes(), bob.as_bytes());
@@ -144,11 +160,11 @@ mod tests {
         let algo = DefaultAlgoBuilder::default().build();
         let mut agreement = algo.agreement().get_by_name(NAME).unwrap();
 
-        let error = agreement.calculate_agreement(&public).err().unwrap();
+        let error = agreement.calculate_shared_secret(&public).err().unwrap();
         assert_eq!(error.kind(), ErrorKind::NotInitialized);
 
         assert!(agreement.init(&KeyLength::new(1)).is_err());
-        let error = agreement.calculate_agreement(&public).err().unwrap();
+        let error = agreement.calculate_shared_secret(&public).err().unwrap();
         assert_eq!(error.kind(), ErrorKind::NotInitialized);
     }
 
@@ -161,7 +177,7 @@ mod tests {
         assert_eq!(error.kind(), ErrorKind::InvalidParams);
 
         let error = agreement(&private)
-            .calculate_agreement(&KeyLength::new(1))
+            .calculate_shared_secret(&KeyLength::new(1))
             .err()
             .unwrap();
         assert_eq!(error.kind(), ErrorKind::InvalidParams);
@@ -173,11 +189,11 @@ mod tests {
         let agreement = agreement(&private);
 
         let (other_group, _) = pair(rfc3526_3072());
-        let error = agreement.calculate_agreement(&other_group).err().unwrap();
+        let error = agreement.calculate_shared_secret(&other_group).err().unwrap();
         assert_eq!(error.kind(), ErrorKind::InvalidParams);
 
         let one = DhPublicKey::new(PaddedBigUint::from(1u8), rfc3526_2048());
-        let error = agreement.calculate_agreement(&one).err().unwrap();
+        let error = agreement.calculate_shared_secret(&one).err().unwrap();
         assert_eq!(error.kind(), ErrorKind::InvalidParams);
     }
 }

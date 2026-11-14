@@ -1,8 +1,8 @@
 use rand_core::CryptoRng;
-use tc_asym_cipher::{KeyPairGenerator as _, KeyPairGeneratorInit};
+use tc_asym_cipher::KeyPairGeneratorInit;
 use tc_dh_key::{DhKeyGenerationParams, DhKeyPairGenerator, DhParameters};
 
-use crate::generate::{KeyPair, KeyPairGenerator, KeyPairGeneratorEntry};
+use crate::generate::{KeyPairGenerator, KeyPairGeneratorEntry};
 use crate::{AlgoError, DefaultAlgoContext, EntryBase, ErrorKind, Params};
 
 // The row of DH, to give to DefaultAlgoBuilder::reg_key_pair_generator. Its name and alias are those
@@ -55,8 +55,27 @@ fn generator<'a>(
     Ok(generator)
 }
 
-impl KeyPairGenerator for Dh {
-    fn init(&mut self, params: &dyn Params) -> Result<(), AlgoError> {
+impl tc_asym_cipher::KeyPairGenerator for Dh {
+    type PublicKey = Box<dyn Params>;
+    type PrivateKey = Box<dyn Params>;
+    type Error = AlgoError;
+
+    fn generate_key_pair(&mut self) -> Result<(Box<dyn Params>, Box<dyn Params>), AlgoError> {
+        let group = self
+            .group
+            .as_ref()
+            .ok_or(AlgoError::new(ErrorKind::NotInitialized))?;
+        let (public, private) = generator(self.rand.as_mut(), group)?
+            .generate_key_pair()
+            .map_err(|error| AlgoError::with_source(ErrorKind::InvalidParams, error))?;
+        Ok((Box::new(public), Box::new(private)))
+    }
+}
+
+impl<'a> tc_asym_cipher::KeyPairGeneratorInit<&'a dyn Params> for Dh {
+    type Error = AlgoError;
+
+    fn init(&mut self, params: &'a dyn Params) -> Result<(), AlgoError> {
         self.group = None;
         let group = params
             .as_any()
@@ -67,18 +86,9 @@ impl KeyPairGenerator for Dh {
         self.group = Some(group.clone());
         Ok(())
     }
-
-    fn generate(&mut self) -> Result<KeyPair, AlgoError> {
-        let group = self
-            .group
-            .as_ref()
-            .ok_or(AlgoError::new(ErrorKind::NotInitialized))?;
-        let (public, private) = generator(self.rand.as_mut(), group)?
-            .generate_key_pair()
-            .map_err(|error| AlgoError::with_source(ErrorKind::InvalidParams, error))?;
-        Ok(KeyPair::new(Box::new(public), Box::new(private)))
-    }
 }
+
+impl KeyPairGenerator for Dh {}
 
 #[cfg(test)]
 mod tests {
@@ -131,9 +141,9 @@ mod tests {
 
         let mut agreement = algo.agreement().get_by_name(NAME).unwrap();
         agreement.init(alice.private()).unwrap();
-        let alice_secret = agreement.calculate_agreement(bob.public()).unwrap();
+        let alice_secret = agreement.calculate_shared_secret(bob.public()).unwrap();
         agreement.init(bob.private()).unwrap();
-        let bob_secret = agreement.calculate_agreement(alice.public()).unwrap();
+        let bob_secret = agreement.calculate_shared_secret(alice.public()).unwrap();
 
         assert_eq!(alice_secret.as_bytes(), bob_secret.as_bytes());
     }

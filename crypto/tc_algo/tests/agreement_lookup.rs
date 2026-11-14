@@ -1,4 +1,4 @@
-use tc_algo::agreement::{Agreement, AgreementEntry, SharedSecret};
+use tc_algo::agreement::{Agreement, AgreementEntry};
 use tc_algo::params::KeyLength;
 use tc_algo::{
     Algo, AlgoBuilder, AlgoError, DefaultAlgoBuilder, DefaultAlgoContext, EntryBase, ErrorKind,
@@ -36,15 +36,33 @@ impl AgreementEntry for Row {
 // Its secret is the mark of the row that created it, to tell which row a lookup found
 struct Marked(u8);
 
-impl Agreement for Marked {
+impl tc_agreement::Agreement for Marked {
+    type PublicKey = dyn Params;
+    type Error = AlgoError;
+
+    fn agreement_size(&self) -> usize {
+        1
+    }
+
+    fn calculate_agreement(
+        &self,
+        _public_key: &dyn Params,
+        output: &mut [u8],
+    ) -> Result<(), AlgoError> {
+        output[0] = self.0;
+        Ok(())
+    }
+}
+
+impl tc_agreement::AgreementInit<dyn Params> for Marked {
+    type Error = AlgoError;
+
     fn init(&mut self, _params: &dyn Params) -> Result<(), AlgoError> {
         Ok(())
     }
-
-    fn calculate_agreement(&self, _public_key: &dyn Params) -> Result<SharedSecret, AlgoError> {
-        Ok(SharedSecret::new(vec![self.0]))
-    }
 }
+
+impl Agreement for Marked {}
 
 fn row(name: &'static str, aliases: &[&str], oids: &[&str], mark: u8) -> Box<dyn AgreementEntry> {
     Box::new(Row {
@@ -78,7 +96,9 @@ fn builder_with(rows: &[Rows]) -> DefaultAlgoBuilder {
 }
 
 fn mark_of(agreement: Box<dyn Agreement>) -> u8 {
-    let secret = agreement.calculate_agreement(&KeyLength::new(0)).unwrap();
+    let secret = agreement
+        .calculate_shared_secret(&KeyLength::new(0))
+        .unwrap();
     secret.as_bytes()[0]
 }
 

@@ -9,6 +9,7 @@ mod wrapper_provider;
 
 pub(crate) use algo::{BUILT_IN, CreateRows};
 pub(crate) use empty_wrapper_provider::EmptyWrapperProvider;
+pub use tc_key_wrap::{KeyWrap, KeyWrapInit};
 pub use wrapper::{WrapDirection, Wrapper};
 pub use wrapper_entry::WrapperEntry;
 pub use wrapper_provider::WrapperProvider;

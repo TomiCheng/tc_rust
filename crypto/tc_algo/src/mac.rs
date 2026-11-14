@@ -12,3 +12,4 @@ pub(crate) use empty_mac_provider::EmptyMacProvider;
 pub use mac_entry::MacEntry;
 pub use mac_provider::MacProvider;
 pub use mac_trait::Mac;
+pub use tc_macs::MacInit;

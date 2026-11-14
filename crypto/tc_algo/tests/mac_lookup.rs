@@ -52,11 +52,8 @@ struct Marked {
     initialized: bool,
 }
 
-impl Mac for Marked {
-    fn init(&mut self, _params: &dyn Params) -> Result<(), AlgoError> {
-        self.initialized = true;
-        Ok(())
-    }
+impl tc_macs::Mac for Marked {
+    type Error = AlgoError;
 
     fn mac_size(&self) -> usize {
         1
@@ -77,6 +74,17 @@ impl Mac for Marked {
 
     fn reset(&mut self) {}
 }
+
+impl tc_macs::MacInit<dyn Params> for Marked {
+    type Error = AlgoError;
+
+    fn init(&mut self, _params: &dyn Params) -> Result<(), AlgoError> {
+        self.initialized = true;
+        Ok(())
+    }
+}
+
+impl Mac for Marked {}
 
 fn row(name: &'static str, aliases: &[&str], oids: &[&str], mark: u8) -> Box<dyn MacEntry> {
     Box::new(Row {

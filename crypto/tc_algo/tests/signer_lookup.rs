@@ -42,11 +42,8 @@ struct Marked {
     initialized: bool,
 }
 
-impl Signer for Marked {
-    fn init(&mut self, _params: &dyn Params) -> Result<(), AlgoError> {
-        self.initialized = true;
-        Ok(())
-    }
+impl tc_signer::Signer for Marked {
+    type Error = AlgoError;
 
     fn max_signature_size(&self) -> usize {
         4
@@ -73,6 +70,17 @@ impl Signer for Marked {
 
     fn reset(&mut self) {}
 }
+
+impl tc_signer::SignerInit<dyn Params> for Marked {
+    type Error = AlgoError;
+
+    fn init(&mut self, _params: &dyn Params) -> Result<(), AlgoError> {
+        self.initialized = true;
+        Ok(())
+    }
+}
+
+impl Signer for Marked {}
 
 fn row(name: &'static str, aliases: &[&str], oids: &[&str], mark: u8) -> Box<dyn SignerEntry> {
     Box::new(Row {

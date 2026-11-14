@@ -92,12 +92,12 @@ fn main() -> Result<(), AlgoError> {
     // Alice's private key with Bob's public key
     let mut agreement = algo.agreement().get_by_name("DH")?;
     agreement.init(alice.private())?;
-    let alice_secret = agreement.calculate_agreement(bob.public())?;
+    let alice_secret = agreement.calculate_shared_secret(bob.public())?;
 
     // Bob's private key with Alice's public key gives the same secret
     let mut agreement = algo.agreement().get_by_name("DH")?;
     agreement.init(bob.private())?;
-    let bob_secret = agreement.calculate_agreement(alice.public())?;
+    let bob_secret = agreement.calculate_shared_secret(alice.public())?;
 
     assert_eq!(alice_secret.as_bytes(), bob_secret.as_bytes());
     Ok(())
@@ -119,7 +119,7 @@ fn main() -> Result<(), AlgoError> {
   before using them.
 - **DH alone does not say who is on the other side.** Someone in the middle can run an agreement with
   each party, so authenticate the public keys, for instance with a signature.
-- `calculate_agreement` gives a `SharedSecret`. `as_bytes` reads it, it wipes itself when dropped, and
+- `calculate_shared_secret` gives a `SharedSecret`. `as_bytes` reads it, it wipes itself when dropped, and
   it has no `Clone`, `==` or `Debug`. Its length is that of `p`, with zeros in front where needed,
   whereas Bouncy Castle gives an integer that loses them.
 - It refuses a public key of another group, one outside `[2, p - 2]`, one outside the subgroup when

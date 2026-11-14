@@ -1,8 +1,8 @@
 use rand_core::CryptoRng;
-use tc_asym_cipher::{KeyPairGenerator as _, KeyPairGeneratorInit};
+use tc_asym_cipher::KeyPairGeneratorInit;
 use tc_ml_kem::{MlKemKeyGenerationParams, MlKemKeyPairGenerator, MlKemParameters};
 
-use crate::generate::{KeyPair, KeyPairGenerator, KeyPairGeneratorEntry};
+use crate::generate::{KeyPairGenerator, KeyPairGeneratorEntry};
 use crate::{AlgoError, DefaultAlgoContext, EntryBase, ErrorKind, Params};
 
 // The row of ML-KEM, to give to DefaultAlgoBuilder::reg_key_pair_generator. Its name is that of
@@ -38,18 +38,12 @@ struct MlKem {
     params: Option<MlKemParameters>,
 }
 
-impl KeyPairGenerator for MlKem {
-    fn init(&mut self, params: &dyn Params) -> Result<(), AlgoError> {
-        self.params = None;
-        let params = params
-            .as_any()
-            .downcast_ref::<MlKemParameters>()
-            .ok_or(AlgoError::new(ErrorKind::InvalidParams))?;
-        self.params = Some(*params);
-        Ok(())
-    }
+impl tc_asym_cipher::KeyPairGenerator for MlKem {
+    type PublicKey = Box<dyn Params>;
+    type PrivateKey = Box<dyn Params>;
+    type Error = AlgoError;
 
-    fn generate(&mut self) -> Result<KeyPair, AlgoError> {
+    fn generate_key_pair(&mut self) -> Result<(Box<dyn Params>, Box<dyn Params>), AlgoError> {
         let params = self
             .params
             .ok_or(AlgoError::new(ErrorKind::NotInitialized))?;
@@ -59,9 +53,25 @@ impl KeyPairGenerator for MlKem {
             .init(MlKemKeyGenerationParams::new(params, self.rand.as_mut()))
             .map_err(invalid)?;
         let (public, private) = generator.generate_key_pair().map_err(invalid)?;
-        Ok(KeyPair::new(Box::new(public), Box::new(private)))
+        Ok((Box::new(public), Box::new(private)))
     }
 }
+
+impl<'a> tc_asym_cipher::KeyPairGeneratorInit<&'a dyn Params> for MlKem {
+    type Error = AlgoError;
+
+    fn init(&mut self, params: &'a dyn Params) -> Result<(), AlgoError> {
+        self.params = None;
+        let params = params
+            .as_any()
+            .downcast_ref::<MlKemParameters>()
+            .ok_or(AlgoError::new(ErrorKind::InvalidParams))?;
+        self.params = Some(*params);
+        Ok(())
+    }
+}
+
+impl KeyPairGenerator for MlKem {}
 
 #[cfg(test)]
 mod tests {

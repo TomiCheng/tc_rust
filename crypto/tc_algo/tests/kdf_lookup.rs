@@ -35,16 +35,24 @@ impl KdfEntry for Row {
 // Its output repeats the mark of the row that created it, to tell which row a lookup found
 struct Marked(u8);
 
-impl Kdf for Marked {
-    fn init(&mut self, _params: &dyn Params) -> Result<(), AlgoError> {
-        Ok(())
-    }
+impl tc_kdf::Kdf for Marked {
+    type Error = AlgoError;
 
     fn generate_bytes(&mut self, output: &mut [u8]) -> Result<usize, AlgoError> {
         output.fill(self.0);
         Ok(output.len())
     }
 }
+
+impl tc_kdf::KdfInit<dyn Params> for Marked {
+    type Error = AlgoError;
+
+    fn init(&mut self, _params: &dyn Params) -> Result<(), AlgoError> {
+        Ok(())
+    }
+}
+
+impl Kdf for Marked {}
 
 fn row(name: &'static str, aliases: &[&str], oids: &[&str], mark: u8) -> Box<dyn KdfEntry> {
     Box::new(Row {

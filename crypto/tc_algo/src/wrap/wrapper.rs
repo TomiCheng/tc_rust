@@ -1,26 +1,12 @@
+use tc_key_wrap::{KeyWrap, KeyWrapInit};
+
 use crate::{AlgoError, Params};
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum WrapDirection {
-    Wrap,
-    Unwrap,
-}
+pub use tc_key_wrap::WrapDirection;
 
-pub trait Wrapper {
-    fn init(&mut self, direction: WrapDirection, params: &dyn Params) -> Result<(), AlgoError>;
-
-    // How much wrap_into writes for this much input
-    fn wrapped_len(&self, input_len: usize) -> Result<usize, AlgoError>;
-
-    // The most unwrap_into can write for this much input; what it returns can be less
-    fn max_unwrapped_len(&self, input_len: usize) -> Result<usize, AlgoError>;
-
-    // Writes the wrapped key and returns its length
-    fn wrap_into(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, AlgoError>;
-
-    // Writes the key and returns its length, leaving no key in the output if the check fails
-    fn unwrap_into(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, AlgoError>;
-
+// A KeyWrap of tc_key_wrap, with AlgoError for its errors and an init taking any params, so that
+// every row fits behind Box<dyn Wrapper> and still goes wherever a KeyWrap does
+pub trait Wrapper: KeyWrap<Error = AlgoError> + KeyWrapInit<dyn Params, Error = AlgoError> {
     // wrap_into with an output of its own
     fn wrap(&mut self, input: &[u8]) -> Result<Vec<u8>, AlgoError> {
         let mut output = vec![0; self.wrapped_len(input.len())?];

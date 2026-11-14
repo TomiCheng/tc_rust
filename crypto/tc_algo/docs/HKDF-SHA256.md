@@ -38,7 +38,7 @@ two together, and the caller passes the secret across. With the `dh` feature too
 ```rust,ignore
 let mut agreement = algo.agreement().get_by_name("DH")?;
 agreement.init(alice.private())?;
-let secret = agreement.calculate_agreement(bob.public())?;
+let secret = agreement.calculate_shared_secret(bob.public())?;
 
 let mut kdf = algo.kdf().get_by_name("HKDF-SHA256")?;
 kdf.init(&HkdfParamsOwned::new(secret.as_bytes().to_vec(), salt, info))?;

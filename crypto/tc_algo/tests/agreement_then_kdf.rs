@@ -15,7 +15,7 @@ fn both_sides_of_an_agreement_derive_one_key_through_the_kdf() {
     let derive = |private, public| {
         let mut agreement = algo.agreement().get_by_name("DH").unwrap();
         agreement.init(private).unwrap();
-        let secret = agreement.calculate_agreement(public).unwrap();
+        let secret = agreement.calculate_shared_secret(public).unwrap();
 
         let mut kdf = algo.kdf().get_by_name("HKDF-SHA256").unwrap();
         let params = HkdfParamsOwned::new(

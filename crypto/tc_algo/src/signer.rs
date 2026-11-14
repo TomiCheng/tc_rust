@@ -10,3 +10,4 @@ pub(crate) use empty_signer_provider::EmptySignerProvider;
 pub use signer_entry::SignerEntry;
 pub use signer_provider::SignerProvider;
 pub use signer_trait::Signer;
+pub use tc_signer::SignerInit;
