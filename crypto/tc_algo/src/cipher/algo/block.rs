@@ -7,8 +7,9 @@ use crate::cipher::{Cipher, CipherEntry};
 // The source of randomness ISO 10126 padding draws from
 pub(super) type Rand = fn() -> Box<dyn CryptoRng>;
 
-// What builds a cipher of one engine in a mode and with a padding; block_cipher! writes one
-pub(super) type Create = fn(Mode, Padding, Rand) -> Box<dyn Cipher>;
+// What builds a cipher of one engine in a mode and with a padding, and for CFB and OFB with a
+// feedback of that many bits, or of a whole block; block_cipher! writes one
+pub(super) type Create = fn(Mode, Padding, Rand, Option<usize>) -> Box<dyn Cipher>;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub(super) enum Mode {
@@ -102,6 +103,7 @@ pub(super) fn block_rows(
     oids: &[(Mode, Padding, &[&str])],
 ) -> Vec<Box<dyn CipherEntry>> {
     let mut rows: Vec<Box<dyn CipherEntry>> = Vec::new();
+    let block_bits = create(Mode::Ecb, Padding::None, rand, None).block_size() * 8;
     for mode in Mode::ALL {
         for &padding in mode.paddings() {
             let mut names = algorithms.iter().flat_map(|algorithm| {
@@ -142,6 +144,7 @@ pub(super) fn block_rows(
                 padding,
                 rand,
                 create,
+                block_bits,
             }));
         }
     }
@@ -156,6 +159,43 @@ struct Row {
     padding: Padding,
     rand: Rand,
     create: Create,
+    block_bits: usize,
+}
+
+impl Row {
+    // The feedback size of a CFB or OFB name, as Bouncy Castle reads `AES/CFB8/NOPADDING`: the
+    // digits after the mode, a multiple of 8 from 8 to the bits of a block. Gives the name without
+    // them and the size, or None when the name has none or the row is of another mode
+    fn feedback_bits(&self, name: &str) -> Option<(String, usize)> {
+        let mode = match self.mode {
+            Mode::Cfb => "CFB",
+            Mode::Ofb => "OFB",
+            _ => return None,
+        };
+        let mut parts: Vec<&str> = name.split('/').collect();
+        let segment = parts.get(1)?;
+        let digits = segment
+            .get(..mode.len())
+            .filter(|prefix| prefix.eq_ignore_ascii_case(mode))
+            .map(|_| &segment[mode.len()..])?;
+        if digits.is_empty() || !digits.bytes().all(|byte| byte.is_ascii_digit()) {
+            return None;
+        }
+        let bits: usize = digits.parse().ok()?;
+        if bits == 0 || bits % 8 != 0 || bits > self.block_bits {
+            return None;
+        }
+        parts[1] = mode;
+        Some((parts.join("/"), bits))
+    }
+
+    fn matches_plain_name(&self, name: &str) -> bool {
+        self.name.eq_ignore_ascii_case(name)
+            || self
+                .aliases
+                .iter()
+                .any(|alias| alias.eq_ignore_ascii_case(name))
+    }
 }
 
 impl EntryBase for Row {
@@ -170,19 +210,37 @@ impl EntryBase for Row {
     fn oids(&self) -> &[Asn1Oid] {
         &self.oids
     }
-}
 
-impl CipherEntry for Row {
-    fn create(&self) -> Box<dyn Cipher> {
-        (self.create)(self.mode, self.padding, self.rand)
+    // Its names, and for CFB and OFB the same with a feedback size after the mode
+    fn matches_name(&self, name: &str) -> bool {
+        self.matches_plain_name(name)
+            || self
+                .feedback_bits(name)
+                .is_some_and(|(plain, _)| self.matches_plain_name(&plain))
     }
 }
 
-// The rows of one padding: `padded!(padding, rand, Ecb, NoOwn, EcbBlockCipher::new(engine))` puts
+impl CipherEntry for Row {
+    // CFB and OFB with a feedback of a whole block
+    fn create(&self) -> Box<dyn Cipher> {
+        (self.create)(self.mode, self.padding, self.rand, None)
+    }
+
+    fn create_by_name(&self, name: &str) -> Box<dyn Cipher> {
+        let bits = self
+            .feedback_bits(name)
+            .filter(|(plain, _)| self.matches_plain_name(plain))
+            .map(|(_, bits)| bits);
+        (self.create)(self.mode, self.padding, self.rand, bits)
+    }
+}
+
+// The rows of one padding: `padded!(padding, rand, Ecb, NoOwn, block, EcbBlockCipher::new(engine))`, with
+// the engine's block in bytes, puts
 // the mode under tc_buffered_cipher with the padding, then in the wrapper of the mode's params,
 // which also takes the engine's own params `own`
 macro_rules! padded {
-    ($padding:expr, $rand:expr, $wrap:path, $own:ty, $mode:expr) => {{
+    ($padding:expr, $rand:expr, $wrap:path, $own:ty, $block:expr, $mode:expr) => {{
         use tc_block_padding::{
             Iso7816d4Padding, Iso10126Padding, Pkcs7Padding, TbcPadding, X923Padding,
             ZeroBytePadding,
@@ -197,30 +255,37 @@ macro_rules! padded {
         let cipher: Box<dyn $crate::cipher::Cipher> = match $padding {
             Padding::None => Box::new($wrap(Buffered::<_, $own>(
                 BufferedBlockCipher::new($mode),
+                $block,
                 PhantomData,
             ))),
             Padding::Pkcs7 => Box::new($wrap(Buffered::<_, $own>(
                 PaddedBufferedBlockCipher::with_padding($mode, Pkcs7Padding::new()),
+                $block,
                 PhantomData,
             ))),
             Padding::Iso10126 => Box::new($wrap(Buffered::<_, $own>(
                 PaddedBufferedBlockCipher::with_padding($mode, Iso10126Padding::new($rand())),
+                $block,
                 PhantomData,
             ))),
             Padding::Iso7816d4 => Box::new($wrap(Buffered::<_, $own>(
                 PaddedBufferedBlockCipher::with_padding($mode, Iso7816d4Padding::new()),
+                $block,
                 PhantomData,
             ))),
             Padding::X923 => Box::new($wrap(Buffered::<_, $own>(
                 PaddedBufferedBlockCipher::with_padding($mode, X923Padding::new()),
+                $block,
                 PhantomData,
             ))),
             Padding::Tbc => Box::new($wrap(Buffered::<_, $own>(
                 PaddedBufferedBlockCipher::with_padding($mode, TbcPadding::new()),
+                $block,
                 PhantomData,
             ))),
             Padding::ZeroByte => Box::new($wrap(Buffered::<_, $own>(
                 PaddedBufferedBlockCipher::with_padding($mode, ZeroBytePadding::new()),
+                $block,
                 PhantomData,
             ))),
         };
@@ -236,7 +301,7 @@ macro_rules! block_cipher {
         $crate::cipher::algo::block::block_cipher!($engine, $crate::cipher::algo::buffered::NoOwn)
     };
     ($engine:expr, $own:ty) => {
-        |mode, padding, rand| {
+        |mode, padding, rand, feedback_bits| {
             use core::marker::PhantomData;
 
             use tc_block_cipher::BlockCipher as _;
@@ -249,26 +314,31 @@ macro_rules! block_cipher {
             use $crate::cipher::algo::buffered::{Buffered, Ctr, Ecb};
 
             let engine = $engine;
-            let bits = engine.block_size() * 8;
+            let block = engine.block_size();
+            let bits = feedback_bits.unwrap_or(block * 8);
             match mode {
-                Mode::Ecb => padded!(padding, rand, Ecb, $own, EcbBlockCipher::new(engine)),
+                Mode::Ecb => padded!(padding, rand, Ecb, $own, block, EcbBlockCipher::new(engine)),
                 Mode::Cbc => padded!(
                     padding,
                     rand,
                     core::convert::identity,
                     $own,
+                    block,
                     CbcBlockCipher::new(engine)
                 ),
                 Mode::Cfb => Box::new(Buffered::<_, $own>(
                     BufferedBlockCipher::new(CfbBlockCipher::new(engine, bits)),
+                    block,
                     PhantomData,
                 )),
                 Mode::Ofb => Box::new(Buffered::<_, $own>(
                     BufferedBlockCipher::new(OfbBlockCipher::new(engine, bits)),
+                    block,
                     PhantomData,
                 )),
                 Mode::Ctr => Box::new(Ctr(Buffered::<_, $own>(
                     BufferedBlockCipher::new(CtrBlockCipher::new(engine)),
+                    block,
                     PhantomData,
                 ))),
             }

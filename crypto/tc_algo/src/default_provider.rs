@@ -32,13 +32,7 @@ impl<E: EntryBase + ?Sized> DefaultProvider<E> {
     }
 
     pub(crate) fn find_by_name(&self, name: &str) -> Option<&E> {
-        let row = self.rows.iter().find(|row| {
-            row.name().eq_ignore_ascii_case(name)
-                || row
-                    .aliases()
-                    .iter()
-                    .any(|alias| alias.eq_ignore_ascii_case(name))
-        })?;
+        let row = self.rows.iter().find(|row| row.matches_name(name))?;
         Some(row.as_ref())
     }
 

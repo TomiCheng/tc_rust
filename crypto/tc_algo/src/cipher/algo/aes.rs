@@ -235,6 +235,13 @@ mod tests {
             .expect("a row of AES")
     }
 
+    fn unhex(hex: &str) -> Vec<u8> {
+        (0..hex.len())
+            .step_by(2)
+            .map(|i| u8::from_str_radix(&hex[i..i + 2], 16).unwrap())
+            .collect()
+    }
+
     fn key_only(key: &[u8]) -> KeyOwned {
         KeyOwned::new(key.to_vec())
     }
@@ -266,6 +273,80 @@ mod tests {
             ]
         );
         assert!(entry.oids().is_empty());
+    }
+
+    // NIST SP 800-38A, F.3.7: CFB8-AES128, the first 18 bytes
+    #[test]
+    fn cfb_takes_a_feedback_size_after_its_name_as_bouncy_castle_does() {
+        let key = unhex("2b7e151628aed2a6abf7158809cf4f3c");
+        let iv = unhex("000102030405060708090a0b0c0d0e0f");
+        let plaintext = unhex("6bc1bee22e409f96e93d7e117393172aae2d");
+        let params = KeyWithIvOwned::new(key, iv);
+        let algo = DefaultAlgoBuilder::default().build();
+        let ciphers = algo.cipher();
+        for name in ["AES/CFB8/NOPADDING", "aes/cfb8", "AES/CFB8/RAW"] {
+            let ciphertext = ciphers.encrypt_by_name(name, &params, &plaintext).unwrap();
+            assert_eq!(
+                ciphertext,
+                unhex("3b79424c9c0dd436bace9e0ed4586a4f32b9"),
+                "{name}"
+            );
+            let recovered = ciphers.decrypt_by_name(name, &params, &ciphertext).unwrap();
+            assert_eq!(recovered, plaintext, "{name}");
+        }
+
+        // A whole block is the row without a size
+        for mode in ["CFB", "OFB"] {
+            let whole = ciphers
+                .encrypt_by_name(&format!("AES/{mode}/NOPADDING"), &params, &plaintext)
+                .unwrap();
+            let sized = ciphers
+                .encrypt_by_name(&format!("AES/{mode}128/NOPADDING"), &params, &plaintext)
+                .unwrap();
+            assert_eq!(sized, whole, "{mode}");
+        }
+
+        // OFB with 64 bits differs from a whole block, and decrypts back
+        let ofb64 = ciphers
+            .encrypt_by_name("AES/OFB64/NOPADDING", &params, &plaintext)
+            .unwrap();
+        assert_ne!(
+            ofb64,
+            ciphers
+                .encrypt_by_name("AES/OFB/NOPADDING", &params, &plaintext)
+                .unwrap()
+        );
+        assert_eq!(
+            ciphers
+                .decrypt_by_name("AES/OFB64/NOPADDING", &params, &ofb64)
+                .unwrap(),
+            plaintext
+        );
+    }
+
+    #[test]
+    fn a_feedback_size_out_of_range_or_on_another_mode_names_no_row() {
+        let algo = DefaultAlgoBuilder::default().build();
+        let ciphers = algo.cipher();
+        for name in [
+            "AES/CFB0/NOPADDING",
+            "AES/CFB12/NOPADDING",
+            "AES/CFB136/NOPADDING",
+            "AES/OFB256/NOPADDING",
+            "AES/CBC8/PKCS7PADDING",
+            "AES/CTR8/NOPADDING",
+            "AES/CFB8/PKCS7PADDING",
+            "AES/CFB+8/NOPADDING",
+        ] {
+            let error = ciphers.get_by_name(name).err().unwrap();
+            assert_eq!(error.kind(), ErrorKind::UnknownCipher, "{name}");
+        }
+        // The rows are listed once, whatever their feedback size
+        let cfb = ciphers
+            .algorithms()
+            .filter(|entry| entry.name().starts_with("AES/CFB"))
+            .count();
+        assert_eq!(cfb, 1);
     }
 
     // As Bouncy Castle's CipherUtilities: an empty or missing mode is ECB, and an empty, missing

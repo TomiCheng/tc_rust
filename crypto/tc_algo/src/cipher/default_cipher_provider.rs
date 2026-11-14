@@ -11,7 +11,7 @@ impl CipherProvider for DefaultProvider<dyn CipherEntry> {
 
     fn get_by_name(&self, name: &str) -> Result<Box<dyn Cipher>, AlgoError> {
         self.find_by_name(name)
-            .map(|row| row.create())
+            .map(|row| row.create_by_name(name))
             .ok_or(AlgoError::new(ErrorKind::UnknownCipher))
     }
 

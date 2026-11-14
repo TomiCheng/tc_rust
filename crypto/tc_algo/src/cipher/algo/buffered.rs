@@ -120,7 +120,13 @@ where
 // without anyone noticing
 // A mode under tc_buffered_cipher, keyed by a KeyWithIvOwned with an IV of one block, as CBC, CFB
 // and OFB take it
-pub(super) struct Buffered<C, O = NoOwn>(pub(super) C, pub(super) PhantomData<fn() -> O>);
+// The second field is the engine's block in bytes, the IV CBC, CFB and OFB take: the block of the
+// cipher under tc_buffered_cipher is a segment, a byte for CFB8
+pub(super) struct Buffered<C, O = NoOwn>(
+    pub(super) C,
+    pub(super) usize,
+    pub(super) PhantomData<fn() -> O>,
+);
 
 impl<C, O, E, I> BufferedCipher for Buffered<C, O>
 where
@@ -163,12 +169,11 @@ where
     O: OwnWithIv<C>,
 {
     fn init(&mut self, direction: CipherDirection, params: &dyn Params) -> Result<(), AlgoError> {
-        let block_size = self.0.block_size();
-        if let Some(result) = O::init(&mut self.0, direction, params, Some(block_size)) {
+        if let Some(result) = O::init(&mut self.0, direction, params, Some(self.1)) {
             return result;
         }
         let params = downcast::<KeyWithIvOwned>(params)?;
-        if params.iv().len() != self.0.block_size() {
+        if params.iv().len() != self.1 {
             return Err(AlgoError::new(ErrorKind::InvalidParams));
         }
         self.0.init(direction, params).map_err(invalid_params)
