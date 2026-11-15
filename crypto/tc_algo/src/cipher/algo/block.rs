@@ -155,11 +155,27 @@ impl Padding {
 // that leave the padding out, leave it empty or name RAW, as `AES/CBC`, `AES/CBC/` and
 // `AES/CBC/RAW`; with ECB, whose name may be empty, that includes `AES/` and `AES` alone, as in
 // Bouncy Castle's CipherUtilities. `oids` gives the OIDs of the rows that have them
+#[allow(
+    dead_code,
+    reason = "unused when only the algorithms with PBE names, which call block_rows_with_aliases, are on"
+)]
 pub(super) fn block_rows(
     algorithms: &[&'static str],
     create: Create,
     rand: Rand,
     oids: &[(Mode, Padding, &[&str])],
+) -> Vec<Box<dyn CipherEntry>> {
+    block_rows_with_aliases(algorithms, create, rand, oids, &[])
+}
+
+// block_rows, with further names of the rows that have them: the PBE names of Bouncy Castle's
+// CipherUtilities, which name the cipher a PBE scheme encrypts with
+pub(super) fn block_rows_with_aliases(
+    algorithms: &[&'static str],
+    create: Create,
+    rand: Rand,
+    oids: &[(Mode, Padding, &[&str])],
+    extra_names: &[(Mode, Padding, &[&str])],
 ) -> Vec<Box<dyn CipherEntry>> {
     let mut rows: Vec<Box<dyn CipherEntry>> = Vec::new();
     let block_bits = create(Mode::Ecb, Padding::None, rand, None).block_size() * 8;
@@ -206,6 +222,12 @@ pub(super) fn block_rows(
                     aliases.push(format!("{algorithm}/CTS"));
                 }
             }
+            aliases.extend(
+                extra_names
+                    .iter()
+                    .filter(|(m, p, _)| *m == mode && *p == padding)
+                    .flat_map(|(_, _, names)| names.iter().map(|name| name.to_string())),
+            );
             let oids = oids
                 .iter()
                 .filter(|(m, p, _)| *m == mode && *p == padding)

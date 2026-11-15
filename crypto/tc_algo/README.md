@@ -27,15 +27,15 @@ rows it turns on, and a name it did not turn on is an error, not a fallback.
 - Ciphers, all from `algo.cipher()`, each a `BufferedCipher` of `tc_buffered_cipher` that code
   written for that trait takes as it is:
   - Block cipher: AES, DES, DESede, Camellia, ARIA, SM4, SEED, Blowfish, Twofish, Serpent, CAST5,
-    CAST6, IDEA, RC2, RC5, RC6, GOST 28147, Threefish and more, in ECB, CBC, CFB, OFB, CTR and
-    OpenPGP's CFB, with ciphertext stealing in ECB and CBC, and GOFB for a block of 8 bytes; see
-    [Block ciphers](docs/BlockCipher.md)
+    CAST6, IDEA, RC2, RC5, RC6, GOST 28147, Threefish, DSTU 7624 and more, in ECB, CBC, CFB, OFB,
+    CTR and OpenPGP's CFB, with ciphertext stealing in ECB and CBC, and GOFB for a block of 8
+    bytes; see [Block ciphers](docs/BlockCipher.md)
   - Stream cipher: ChaCha20, XChaCha20, Salsa20, XSalsa20, HC-128, HC-256, RC4, VMPC and ISAAC;
     see [Stream ciphers](docs/StreamCipher.md)
   - AEAD cipher: GCM, CCM, EAX, OCB, GCM-SIV and KCCM over the block ciphers of a block of 16
-    bytes, EAX over those of 8, KCCM over Threefish-256 and -512, and ChaCha20-Poly1305,
-    XChaCha20-Poly1305, Ascon, Grain-128AEAD and Schwaemm, each behind a feature of its own; see
-    [AEAD ciphers](docs/AeadCipher.md)
+    bytes, EAX over those of 8, KCCM over Threefish-256 and -512 and DSTU 7624 of 256 and 512
+    bits, and ChaCha20-Poly1305, XChaCha20-Poly1305, Ascon, Grain-128AEAD and Schwaemm, each
+    behind a feature of its own; see [AEAD ciphers](docs/AeadCipher.md)
   - IES: `IES` (`ies`); see [IES](docs/IES.md)
   - Asymmetric cipher: RSA raw, PKCS#1 v1.5 and OAEP (`rsa`); see
     [Asymmetric ciphers](docs/AsymCipher.md)

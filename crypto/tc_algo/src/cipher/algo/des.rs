@@ -3,43 +3,74 @@ use tc_des::DesEdeEngine;
 #[cfg(feature = "des")]
 use tc_des::DesEngine;
 
-use super::block::{Mode, Padding, Rand, block_cipher, block_rows};
+use super::block::{Mode, Padding, Rand, block_cipher, block_rows_with_aliases};
 use crate::DefaultAlgoContext;
 use crate::cipher::CipherEntry;
 
 // The rows of DES, to give to DefaultAlgoBuilder::reg_cipher: each mode with each padding it takes.
 // The OIDs are those of Bouncy Castle's CipherUtilities, where the OIW ones of ECB and CBC mean those
-// modes with PKCS#7, and of CFB and OFB those with none
+// modes with PKCS#7, and of CFB and OFB those with none. CBC with PKCS#7 also has the PBE names and
+// OID of PKCS#5's DES, the cipher of that scheme
 #[cfg(feature = "des")]
 pub(super) fn des(context: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>> {
     let rand: Rand = context.rand();
-    block_rows(
+    block_rows_with_aliases(
         &["DES"],
         block_cipher!(DesEngine::new()),
         rand,
         &[
             (Mode::Ecb, Padding::Pkcs7, &["1.3.14.3.2.6"]),
-            (Mode::Cbc, Padding::Pkcs7, &["1.3.14.3.2.7"]),
+            (
+                Mode::Cbc,
+                Padding::Pkcs7,
+                &["1.3.14.3.2.7", "1.2.840.113549.1.5.10"],
+            ),
             (Mode::Ofb, Padding::None, &["1.3.14.3.2.8"]),
             (Mode::Cfb, Padding::None, &["1.3.14.3.2.9"]),
         ],
+        &[(
+            Mode::Cbc,
+            Padding::Pkcs7,
+            &["PBEWITHSHA1ANDDES-CBC", "PBEWITHSHA1ANDDES"],
+        )],
     )
 }
 
 // The rows of DESede, three-key or two-key triple DES: each mode with each padding it takes, also
 // named TDEA, as in Bouncy Castle's CipherUtilities. Its OIDs are OIW's DESede, which means ECB with
-// PKCS#7, and RSA's DES-EDE3-CBC, CBC with PKCS#7
+// PKCS#7, and RSA's DES-EDE3-CBC, CBC with PKCS#7, which also has the PBE names and OIDs of
+// PKCS#12's three-key and two-key triple DES, the cipher of those schemes
 #[cfg(feature = "desede")]
 pub(super) fn desede(context: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>> {
     let rand: Rand = context.rand();
-    block_rows(
+    block_rows_with_aliases(
         &["DESEDE", "TDEA"],
         block_cipher!(DesEdeEngine::new()),
         rand,
         &[
             (Mode::Ecb, Padding::Pkcs7, &["1.3.14.3.2.17"]),
-            (Mode::Cbc, Padding::Pkcs7, &["1.2.840.113549.3.7"]),
+            (
+                Mode::Cbc,
+                Padding::Pkcs7,
+                &[
+                    "1.2.840.113549.3.7",
+                    "1.2.840.113549.1.12.1.3",
+                    "1.2.840.113549.1.12.1.4",
+                ],
+            ),
         ],
+        &[(
+            Mode::Cbc,
+            Padding::Pkcs7,
+            &[
+                "PBEWITHSHAAND3-KEYTRIPLEDES-CBC",
+                "PBEWITHSHA1AND3-KEYTRIPLEDES-CBC",
+                "PBEWITHSHAAND3KEYTRIPLEDES",
+                "PBEWITHSHA1ANDDESEDE",
+                "PBEWITHSHAAND2-KEYTRIPLEDES-CBC",
+                "PBEWITHSHA1AND2-KEYTRIPLEDES-CBC",
+            ],
+        )],
     )
 }
 

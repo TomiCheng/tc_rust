@@ -97,8 +97,9 @@ The AEAD modes of Bouncy Castle's `CipherUtilities`, GCM, CCM, EAX and OCB, and 
 | KCCM | 16, 32, 64 bytes | ..block | 8, 16, 32, 48, 64 |
 
 So each algorithm of a block of 16 bytes has the six, each of a block of 8 bytes has EAX alone, and
-Threefish-256 and Threefish-512 have KCCM. `block` is the block of the algorithm in bytes, and the
-tag of KCCM is no longer than a block; the table of rows below gives each row its own numbers.
+Threefish-256, Threefish-512, DSTU7624-256 and DSTU7624-512 have KCCM. `block` is the block of the
+algorithm in bytes, and the tag of KCCM is no longer than a block; the table of rows below gives
+each row its own numbers.
 Sizes are lists (`8, 16`), ranges with both ends included (`4..16`), with no lower end (`..15`),
 with no upper end (`1..`), or of any length (`..`).
 
@@ -205,6 +206,12 @@ Every row, of a mode or of an algorithm of its own:
 | `RC5-64/OCB/NOPADDING` | `RC5-64/OCB/`, `RC5-64/OCB` |  | `AeadParamsOwned`, [`ParamsWithAeadOwned<Rc5ParamsOwned>`](Rc5.md) | `rc5-64` | 1..255 | ..15 | 8..16 |
 | `RC5-64/GCM-SIV/NOPADDING` | `RC5-64/GCM-SIV/`, `RC5-64/GCM-SIV` |  | `AeadParamsOwned` | `rc5-64` | 1..255 | 12 | 16 |
 | `RC5-64/KCCM/NOPADDING` | `RC5-64/KCCM/`, `RC5-64/KCCM` |  | `AeadParamsOwned`, [`ParamsWithAeadOwned<Rc5ParamsOwned>`](Rc5.md) | `rc5-64` | 1..255 | ..16 | 8, 16 |
+| `DSTU7624-128/GCM/NOPADDING` | `DSTU7624-128/GCM/`, `DSTU7624-128/GCM` |  | `AeadParamsOwned` | `dstu7624-128` | 16, 32 | 1.. | 4..16 |
+| `DSTU7624-128/CCM/NOPADDING` | `DSTU7624-128/CCM/`, `DSTU7624-128/CCM` |  | `AeadParamsOwned` | `dstu7624-128` | 16, 32 | 7..13 | 4, 6, 8, 10, 12, 14, 16 |
+| `DSTU7624-128/EAX/NOPADDING` | `DSTU7624-128/EAX/`, `DSTU7624-128/EAX` |  | `AeadParamsOwned` | `dstu7624-128` | 16, 32 | .. | 4..16 |
+| `DSTU7624-128/OCB/NOPADDING` | `DSTU7624-128/OCB/`, `DSTU7624-128/OCB` |  | `AeadParamsOwned` | `dstu7624-128` | 16, 32 | ..15 | 8..16 |
+| `DSTU7624-128/GCM-SIV/NOPADDING` | `DSTU7624-128/GCM-SIV/`, `DSTU7624-128/GCM-SIV` |  | `AeadParamsOwned` | `dstu7624-128` | 16, 32 | 12 | 16 |
+| `DSTU7624-128/KCCM/NOPADDING` | `DSTU7624-128/KCCM/`, `DSTU7624-128/KCCM` |  | `AeadParamsOwned` | `dstu7624-128` | 16, 32 | ..16 | 8, 16 |
 | `DES/EAX/NOPADDING` | `DES/EAX/`, `DES/EAX` |  | `AeadParamsOwned` | `des` | 8 | .. | 4..8 |
 | `DESEDE/EAX/NOPADDING` | `TDEA/EAX/NOPADDING`, `DESEDE/EAX/`, `DESEDE/EAX`, `TDEA/EAX/`, `TDEA/EAX` |  | `AeadParamsOwned` | `desede` | 16, 24 | .. | 4..8 |
 | `BLOWFISH/EAX/NOPADDING` | `BLOWFISH/EAX/`, `BLOWFISH/EAX` |  | `AeadParamsOwned` | `blowfish` | 4..56 | .. | 4..8 |
@@ -218,6 +225,8 @@ Every row, of a mode or of an algorithm of its own:
 | `GOST28147/EAX/NOPADDING` | `GOST/EAX/NOPADDING`, `GOST-28147/EAX/NOPADDING`, `GOST28147/EAX/`, `GOST28147/EAX`, `GOST/EAX/`, `GOST/EAX`, `GOST-28147/EAX/`, `GOST-28147/EAX` |  | `AeadParamsOwned`, [`ParamsWithAeadOwned<Gost28147ParamsOwned>`](Gost28147.md) | `gost28147` | 32 | .. | 4..8 |
 | `THREEFISH-256/KCCM/NOPADDING` | `THREEFISH-256/KCCM/`, `THREEFISH-256/KCCM` |  | `AeadParamsOwned`, [`ParamsWithAeadOwned<ThreefishParamsOwned>`](Threefish.md) | `threefish-256` | 32 | ..32 | 8, 16, 32 |
 | `THREEFISH-512/KCCM/NOPADDING` | `THREEFISH-512/KCCM/`, `THREEFISH-512/KCCM` |  | `AeadParamsOwned`, [`ParamsWithAeadOwned<ThreefishParamsOwned>`](Threefish.md) | `threefish-512` | 64 | ..64 | 8, 16, 32, 48, 64 |
+| `DSTU7624-256/KCCM/NOPADDING` | `DSTU7624-256/KCCM/`, `DSTU7624-256/KCCM` |  | `AeadParamsOwned` | `dstu7624-256` | 32, 64 | ..32 | 8, 16, 32 |
+| `DSTU7624-512/KCCM/NOPADDING` | `DSTU7624-512/KCCM/`, `DSTU7624-512/KCCM` |  | `AeadParamsOwned` | `dstu7624-512` | 64 | ..64 | 8, 16, 32, 48, 64 |
 | `CHACHA20-POLY1305` |  | `1.2.840.113549.1.9.16.3.18` | `AeadParamsOwned` | `chacha20-poly1305` | 32 | 12 | 16 |
 | `XCHACHA20-POLY1305` |  |  | `AeadParamsOwned` | `xchacha20-poly1305` | 32 | 24 | 16 |
 | `ASCON-AEAD128` |  |  | `AeadParamsOwned` | `ascon-aead128` | 16 | 16 | 4..16 |

@@ -14,9 +14,22 @@ use crate::cipher::CipherEntry;
 
 #[cfg(feature = "rc4")]
 pub(super) fn rc4(_context: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>> {
+    // Also the PBE names and OIDs of PKCS#12's RC4, the cipher of those schemes
     vec![stream_row(
-        &["ARC4", "RC4", "ARCFOUR"],
-        &["1.2.840.113549.3.4"],
+        &[
+            "ARC4",
+            "RC4",
+            "ARCFOUR",
+            "PBEWITHSHAAND128BITRC4",
+            "PBEWITHSHA1AND128BITRC4",
+            "PBEWITHSHAAND40BITRC4",
+            "PBEWITHSHA1AND40BITRC4",
+        ],
+        &[
+            "1.2.840.113549.3.4",
+            "1.2.840.113549.1.12.1.1",
+            "1.2.840.113549.1.12.1.2",
+        ],
         || {
             Box::new(Keyed(BufferedStreamCipher::new(
                 tc_rc4_family::Rc4Engine::new(),

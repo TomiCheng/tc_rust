@@ -1,16 +1,16 @@
 use tc_aes::AesEngine;
 
-use super::block::{Mode, Padding, Rand, block_cipher, block_rows};
+use super::block::{Mode, Padding, Rand, block_cipher, block_rows_with_aliases};
 use crate::DefaultAlgoContext;
 use crate::cipher::CipherEntry;
 
 // The rows of AES, to give to DefaultAlgoBuilder::reg_cipher: each mode with each padding it takes,
 // the AEAD modes among them. Their names and OIDs are those of Bouncy Castle's CipherUtilities,
 // where the NIST ECB and CBC OIDs mean those modes with PKCS#7, and the CFB and OFB ones those with
-// none
+// none. CBC with PKCS#7 also has Bouncy Castle's PBE names of AES, the cipher of those schemes
 pub(super) fn aes(context: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>> {
     let rand: Rand = context.rand();
-    block_rows(
+    block_rows_with_aliases(
         &["AES"],
         block_cipher!(AesEngine::new()),
         rand,
@@ -70,6 +70,30 @@ pub(super) fn aes(context: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>> {
                 ],
             ),
         ],
+        &[(
+            Mode::Cbc,
+            Padding::Pkcs7,
+            &[
+                "PBEWITHSHAAND128BITAES-CBC-BC",
+                "PBEWITHSHA1AND128BITAES-CBC-BC",
+                "PBEWITHSHA-1AND128BITAES-CBC-BC",
+                "PBEWITHSHAAND192BITAES-CBC-BC",
+                "PBEWITHSHA1AND192BITAES-CBC-BC",
+                "PBEWITHSHA-1AND192BITAES-CBC-BC",
+                "PBEWITHSHAAND256BITAES-CBC-BC",
+                "PBEWITHSHA1AND256BITAES-CBC-BC",
+                "PBEWITHSHA-1AND256BITAES-CBC-BC",
+                "PBEWITHSHA256AND128BITAES-CBC-BC",
+                "PBEWITHSHA-256AND128BITAES-CBC-BC",
+                "PBEWITHSHA256AND192BITAES-CBC-BC",
+                "PBEWITHSHA-256AND192BITAES-CBC-BC",
+                "PBEWITHSHA256AND256BITAES-CBC-BC",
+                "PBEWITHSHA-256AND256BITAES-CBC-BC",
+                "PBEWITHMD5AND128BITAES-CBC-OPENSSL",
+                "PBEWITHMD5AND192BITAES-CBC-OPENSSL",
+                "PBEWITHMD5AND256BITAES-CBC-OPENSSL",
+            ],
+        )],
     )
 }
 

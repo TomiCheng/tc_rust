@@ -20,6 +20,9 @@ mod aead_engine;
     feature = "aria",
     feature = "sm4",
     feature = "seed",
+    feature = "dstu7624-128",
+    feature = "dstu7624-256",
+    feature = "dstu7624-512",
     feature = "blowfish",
     feature = "twofish",
     feature = "serpent",
@@ -61,6 +64,9 @@ mod ascon_aead;
     feature = "aria",
     feature = "sm4",
     feature = "seed",
+    feature = "dstu7624-128",
+    feature = "dstu7624-256",
+    feature = "dstu7624-512",
     feature = "blowfish",
     feature = "twofish",
     feature = "serpent",
@@ -93,6 +99,9 @@ mod blowfish;
     feature = "aria",
     feature = "sm4",
     feature = "seed",
+    feature = "dstu7624-128",
+    feature = "dstu7624-256",
+    feature = "dstu7624-512",
     feature = "blowfish",
     feature = "twofish",
     feature = "serpent",
@@ -127,6 +136,12 @@ mod chacha;
 mod chacha_aead;
 #[cfg(any(feature = "des", feature = "desede"))]
 mod des;
+#[cfg(any(
+    feature = "dstu7624-128",
+    feature = "dstu7624-256",
+    feature = "dstu7624-512"
+))]
+mod dstu7624;
 #[cfg(feature = "gost28147")]
 mod gost28147;
 #[cfg(feature = "grain128-aead")]
@@ -227,6 +242,12 @@ pub(crate) const BUILT_IN: &[CreateRows] = &[
     sm4::sm4,
     #[cfg(feature = "seed")]
     seed::seed,
+    #[cfg(feature = "dstu7624-128")]
+    dstu7624::dstu7624_128,
+    #[cfg(feature = "dstu7624-256")]
+    dstu7624::dstu7624_256,
+    #[cfg(feature = "dstu7624-512")]
+    dstu7624::dstu7624_512,
     #[cfg(feature = "blowfish")]
     blowfish::blowfish,
     #[cfg(feature = "twofish")]

@@ -9,9 +9,11 @@ use tc_rc_cipher::{RC5_DEFAULT_ROUNDS, Rc5ParamsOwned, Rc5ParamsRef};
 #[cfg(feature = "rc2")]
 use tc_rc_cipher::{Rc2Engine, Rc2ParamsOwned, Rc2ParamsRef};
 
+#[cfg(any(feature = "rc5", feature = "rc5-64", feature = "rc6"))]
+use super::block::block_rows;
 #[cfg(feature = "rc2")]
-use super::block::{Mode, Padding};
-use super::block::{Rand, block_cipher, block_rows};
+use super::block::{Mode, Padding, block_rows_with_aliases};
+use super::block::{Rand, block_cipher};
 #[cfg(any(feature = "rc2", feature = "rc5", feature = "rc5-64"))]
 use super::buffered::Own;
 #[cfg(any(feature = "rc2", feature = "rc5", feature = "rc5-64"))]
@@ -26,11 +28,34 @@ use crate::cipher::CipherEntry;
 #[cfg(feature = "rc2")]
 pub(super) fn rc2(context: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>> {
     let rand: Rand = context.rand();
-    block_rows(
+    // CBC with PKCS#7 also has the PBE names and OIDs of PKCS#5's and PKCS#12's RC2, the cipher of
+    // those schemes; the 5-byte key of the 40-bit one gives 40 effective bits, as a bare key does
+    block_rows_with_aliases(
         &["RC2"],
         block_cipher!(Keyed(Rc2Engine::new()), Own<Rc2ParamsOwned>),
         rand,
-        &[(Mode::Cbc, Padding::Pkcs7, &["1.2.840.113549.3.2"])],
+        &[(
+            Mode::Cbc,
+            Padding::Pkcs7,
+            &[
+                "1.2.840.113549.3.2",
+                "1.2.840.113549.1.5.11",
+                "1.2.840.113549.1.12.1.5",
+                "1.2.840.113549.1.12.1.6",
+            ],
+        )],
+        &[(
+            Mode::Cbc,
+            Padding::Pkcs7,
+            &[
+                "PBEWITHSHA1ANDRC2-CBC",
+                "PBEWITHSHA1ANDRC2",
+                "PBEWITHSHAAND128BITRC2-CBC",
+                "PBEWITHSHA1AND128BITRC2-CBC",
+                "PBEWITHSHAAND40BITRC2-CBC",
+                "PBEWITHSHA1AND40BITRC2-CBC",
+            ],
+        )],
     )
 }
 
