@@ -20,6 +20,8 @@ In the AEAD modes they go with the nonce, the tag size and the initial AAD in a
 `ParamsWithAeadOwned`, which Bouncy Castle has no counterpart of: its `AeadParameters` takes a
 `KeyParameter` alone.
 
+In a block cipher mode, CBC here:
+
 ```rust
 use tc_algo::params::{ParamsWithIvOwned, ThreefishParamsOwned};
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
@@ -33,6 +35,27 @@ fn main() -> Result<(), AlgoError> {
     let params = ParamsWithIvOwned::new(threefish, iv.to_vec());
 
     let ciphertext = algo.cipher().encrypt_by_name(name, &params, message)?;
+    Ok(())
+}
+```
+
+In an AEAD mode, KCCM, the only one of Threefish-256 and -512; Threefish-1024 has none:
+
+```rust
+use tc_algo::params::{ParamsWithAeadOwned, ThreefishParamsOwned};
+use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
+
+fn main() -> Result<(), AlgoError> {
+    let algo = DefaultAlgoBuilder::default().build();
+    let name = "THREEFISH-512/KCCM/NOPADDING";
+
+    // A 64-byte key with a 16-byte tweak, a nonce of up to a block, a tag of 64 bytes, and AAD
+    // of whole blocks
+    let threefish = ThreefishParamsOwned::with_tweak(key.to_vec(), tweak.to_vec());
+    let params = ParamsWithAeadOwned::new(threefish, nonce.to_vec(), 64, aad.to_vec());
+
+    // KCCM takes a message of whole blocks, 64 bytes each, and the tag ends the output
+    let sealed = algo.cipher().encrypt_by_name(name, &params, message)?;
     Ok(())
 }
 ```

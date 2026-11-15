@@ -21,6 +21,8 @@ In the AEAD modes they go with the nonce, the tag size and the initial AAD in a
 `ParamsWithAeadOwned`, which Bouncy Castle has no counterpart of: its `AeadParameters` takes a
 `KeyParameter` alone.
 
+In a block cipher mode, CBC here:
+
 ```rust
 use tc_algo::params::{ParamsWithIvOwned, Rc2ParamsOwned};
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
@@ -34,6 +36,26 @@ fn main() -> Result<(), AlgoError> {
     let params = ParamsWithIvOwned::new(rc2, iv.to_vec());
 
     let plaintext = algo.cipher().decrypt_by_name(name, &params, &ciphertext)?;
+    Ok(())
+}
+```
+
+In an AEAD mode, EAX, the only one of RC2's 8-byte block:
+
+```rust
+use tc_algo::params::{ParamsWithAeadOwned, Rc2ParamsOwned};
+use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
+
+fn main() -> Result<(), AlgoError> {
+    let algo = DefaultAlgoBuilder::default().build();
+    let name = "RC2/EAX/NOPADDING";
+
+    // A 16-byte key with 40 effective bits, a nonce, a tag of 8 bytes and the AAD
+    let rc2 = Rc2ParamsOwned::with_effective_key_bits(key.to_vec(), 40);
+    let params = ParamsWithAeadOwned::new(rc2, nonce.to_vec(), 8, aad.to_vec());
+
+    // The tag at the end of the input is checked; a wrong one is InvalidCiphertext
+    let plaintext = algo.cipher().decrypt_by_name(name, &params, &sealed)?;
     Ok(())
 }
 ```
