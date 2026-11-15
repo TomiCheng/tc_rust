@@ -397,7 +397,7 @@ macro_rules! block_cipher {
             use $crate::cipher::algo::aead_mode::Aead;
 
             use $crate::cipher::algo::block::{Mode, Padding, padded};
-            use $crate::cipher::algo::buffered::{Buffered, Ctr, CtsOwn, Ecb};
+            use $crate::cipher::algo::buffered::{Buffered, Ctr, CtsOwn, Ecb, NoOwn};
 
             let engine = $engine;
             let block = engine.block_size();
@@ -449,14 +449,24 @@ macro_rules! block_cipher {
                     block,
                     PhantomData,
                 )),
-                Mode::Gcm => Box::new(Aead(GcmBlockCipher::new(engine))),
-                Mode::Ccm => Box::new(Aead(CcmBlockCipher::new(engine))),
-                Mode::Eax => Box::new(Aead(EaxBlockCipher::new(engine))),
+                Mode::Gcm => Box::new(Aead::<_, $own>(GcmBlockCipher::new(engine), PhantomData)),
+                Mode::Ccm => Box::new(Aead::<_, $own>(CcmBlockCipher::new(engine), PhantomData)),
+                Mode::Eax => Box::new(Aead::<_, $own>(EaxBlockCipher::new(engine), PhantomData)),
                 // OCB takes a second engine of the same kind for its hash
-                Mode::Ocb => Box::new(Aead(OcbBlockCipher::new(engine, $engine))),
-                Mode::GcmSiv => Box::new(Aead(GcmSivBlockCipher::new(engine))),
+                Mode::Ocb => Box::new(Aead::<_, $own>(
+                    OcbBlockCipher::new(engine, $engine),
+                    PhantomData,
+                )),
+                // GCM-SIV derives its message keys from the key bytes, so it takes no own params
+                Mode::GcmSiv => Box::new(Aead::<_, NoOwn>(
+                    GcmSivBlockCipher::new(engine),
+                    PhantomData,
+                )),
                 // NB = 4, the standard's practical default
-                Mode::Kccm => Box::new(Aead(KccmBlockCipher::<_, 4>::new(engine))),
+                Mode::Kccm => Box::new(Aead::<_, $own>(
+                    KccmBlockCipher::<_, 4>::new(engine),
+                    PhantomData,
+                )),
             }
         }
     };

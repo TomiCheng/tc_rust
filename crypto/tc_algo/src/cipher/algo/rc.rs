@@ -289,4 +289,97 @@ mod tests {
         assert_eq!(output, unhex("8fc3a53656b1f778c129df4e9848a41e"));
         assert_eq!(rows("RC6/"), 26);
     }
+
+    // RC2's own params reach the engine under EAX, the AEAD mode of its 8-byte block: the row gives
+    // what EaxBlockCipher gives over Rc2Engine with the same params, and a bare key, which takes
+    // the whole key size, something else
+    #[cfg(feature = "rc2")]
+    #[test]
+    fn rc2_takes_its_effective_key_size_from_its_own_params_under_eax() {
+        use tc_aead_cipher::{AeadCipher, AeadCipherInit, EaxBlockCipher, ParamsWithAeadRef};
+        use tc_block_cipher::CipherDirection;
+        use tc_rc_cipher::{Rc2Engine, Rc2ParamsRef};
+
+        use crate::params::{AeadParamsOwned, ParamsWithAeadOwned, Rc2ParamsOwned};
+
+        let key = unhex("88bca90e90875a7f0f79c384627bafb2");
+        let (nonce, aad) = (vec![0x24; 8], b"header".to_vec());
+        let message = b"a message of no particular length";
+        let algo = DefaultAlgoBuilder::default().build();
+        let ciphers = algo.cipher();
+
+        let own = ParamsWithAeadOwned::new(
+            Rc2ParamsOwned::with_effective_key_bits(key.clone(), 40),
+            nonce.clone(),
+            8,
+            aad.clone(),
+        );
+        let sealed = ciphers
+            .encrypt_by_name("RC2/EAX/NOPADDING", &own, message)
+            .unwrap();
+
+        let rc2 = Rc2ParamsRef::with_effective_key_bits(&key, 40);
+        let mut eax = EaxBlockCipher::new(Rc2Engine::new());
+        eax.init(
+            CipherDirection::Encrypt,
+            &ParamsWithAeadRef::new(&rc2, &nonce, 8, &aad),
+        )
+        .unwrap();
+        let mut expected = vec![0; eax.output_len(message.len()).unwrap()];
+        let written = eax.process_bytes(message, &mut expected).unwrap();
+        let written = written + eax.do_final(&mut expected[written..]).unwrap();
+        expected.truncate(written);
+        assert_eq!(sealed, expected);
+
+        let opened = ciphers.decrypt_by_name("RC2/EAX", &own, &sealed).unwrap();
+        assert_eq!(opened, message);
+
+        let bare = AeadParamsOwned::new(key, nonce, 8, aad);
+        let whole = ciphers
+            .encrypt_by_name("RC2/EAX/NOPADDING", &bare, message)
+            .unwrap();
+        assert_ne!(whole, sealed);
+    }
+
+    // RC5-64's own params give it its rounds under GCM, CCM, EAX, OCB and KCCM, but GCM-SIV, which
+    // derives its message keys from the key bytes, takes only a bare key
+    #[cfg(feature = "rc5-64")]
+    #[test]
+    fn rc5_64_takes_its_rounds_under_every_aead_mode_but_gcm_siv() {
+        use crate::ErrorKind;
+        use crate::params::{AeadParamsOwned, ParamsWithAeadOwned, Rc5ParamsOwned};
+
+        let key = unhex("000102030405060708090a0b0c0d0e0f");
+        let message = [0x33; 32];
+        let algo = DefaultAlgoBuilder::default().build();
+        let ciphers = algo.cipher();
+        for (name, nonce) in [
+            ("RC5-64/GCM/NOPADDING", 12),
+            ("RC5-64/CCM/NOPADDING", 12),
+            ("RC5-64/EAX/NOPADDING", 12),
+            ("RC5-64/OCB/NOPADDING", 12),
+            ("RC5-64/KCCM/NOPADDING", 16),
+        ] {
+            let own = ParamsWithAeadOwned::new(
+                Rc5ParamsOwned::new(key.clone(), 16),
+                vec![0x24; nonce],
+                16,
+                Vec::new(),
+            );
+            let sealed = ciphers.encrypt_by_name(name, &own, &message).unwrap();
+            let opened = ciphers.decrypt_by_name(name, &own, &sealed).unwrap();
+            assert_eq!(opened, message, "{name}");
+
+            let bare = AeadParamsOwned::new(key.clone(), vec![0x24; nonce], 16, Vec::new());
+            let twelve = ciphers.encrypt_by_name(name, &bare, &message).unwrap();
+            assert_ne!(twelve, sealed, "{name}");
+        }
+
+        let own =
+            ParamsWithAeadOwned::new(Rc5ParamsOwned::new(key, 16), vec![0x24; 12], 16, Vec::new());
+        let error = ciphers
+            .encrypt_by_name("RC5-64/GCM-SIV/NOPADDING", &own, &message)
+            .unwrap_err();
+        assert_eq!(error.kind(), ErrorKind::InvalidParams);
+    }
 }

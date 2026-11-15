@@ -181,4 +181,34 @@ mod tests {
         assert_eq!(rows("THREEFISH-512/"), 21);
         assert_eq!(rows("THREEFISH-1024/"), 20);
     }
+
+    // Threefish-256's own tweak reaches the engine under KCCM, the AEAD mode of its 32-byte block
+    #[cfg(feature = "threefish-256")]
+    #[test]
+    fn kccm_takes_the_tweak_of_its_own_params() {
+        use crate::params::{AeadParamsOwned, ParamsWithAeadOwned};
+
+        let algo = DefaultAlgoBuilder::default().build();
+        let ciphers = algo.cipher();
+        let message = [0x33; 64];
+        let own = ParamsWithAeadOwned::new(
+            ThreefishParamsOwned::with_tweak(vec![0x42; 32], vec![0x11; 16]),
+            vec![0x24; 32],
+            32,
+            vec![0x5a; 32],
+        );
+        let sealed = ciphers
+            .encrypt_by_name("THREEFISH-256/KCCM/NOPADDING", &own, &message)
+            .unwrap();
+        let opened = ciphers
+            .decrypt_by_name("THREEFISH-256/KCCM/NOPADDING", &own, &sealed)
+            .unwrap();
+        assert_eq!(opened, message);
+
+        let bare = AeadParamsOwned::new(vec![0x42; 32], vec![0x24; 32], 32, vec![0x5a; 32]);
+        let zero_tweak = ciphers
+            .encrypt_by_name("THREEFISH-256/KCCM/NOPADDING", &bare, &message)
+            .unwrap();
+        assert_ne!(zero_tweak, sealed);
+    }
 }

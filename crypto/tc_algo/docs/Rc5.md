@@ -17,6 +17,9 @@ A `KeyOwned`, or a `KeyWithIvOwned` with an IV, gives 12 rounds, as Bouncy Castl
 `Rc5ParamsOwned::new(key, rounds)` sets it. In ECB the params go to the row as they are; in the
 modes with an IV they go with the IV in a `ParamsWithIvOwned`, as Bouncy Castle's
 `ParametersWithIV(RC5Parameters, iv)`.
+In the AEAD modes they go with the nonce, the tag size and the initial AAD in a
+`ParamsWithAeadOwned`, which Bouncy Castle has no counterpart of: its `AeadParameters` takes a
+`KeyParameter` alone.
 
 ```rust
 use tc_algo::params::{ParamsWithIvOwned, Rc5ParamsOwned};
@@ -42,6 +45,8 @@ The same `Rc5ParamsOwned` serves `RC5` and `RC5-64`; only the block, and so the 
 |---|---|
 | ECB | `KeyOwned` or `Rc5ParamsOwned` |
 | CBC, CFB, OFB, CTR, GOFB, OPENPGPCFB | `KeyWithIvOwned` or `ParamsWithIvOwned<Rc5ParamsOwned>` |
+| EAX; for RC5-64 also GCM, CCM, OCB, KCCM | `AeadParamsOwned` or `ParamsWithAeadOwned<Rc5ParamsOwned>` |
+| GCM-SIV of RC5-64 | `AeadParamsOwned` |
 
 The IV is one block in every mode but CTR, which takes it as `tc_block_modes` does. The number of
 rounds is checked when the row is initialized, not when the params are built; one the engine does

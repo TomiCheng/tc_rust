@@ -17,6 +17,9 @@ Bouncy Castle gives a `KeyParameter`: a 16-byte key has 128 effective bits.
 `Rc2ParamsOwned::with_effective_key_bits` sets it. In ECB the params go to the row as they are; in
 the modes with an IV they go with the IV in a `ParamsWithIvOwned`, as Bouncy Castle's
 `ParametersWithIV(RC2Parameters, iv)`.
+In the AEAD modes they go with the nonce, the tag size and the initial AAD in a
+`ParamsWithAeadOwned`, which Bouncy Castle has no counterpart of: its `AeadParameters` takes a
+`KeyParameter` alone.
 
 ```rust
 use tc_algo::params::{ParamsWithIvOwned, Rc2ParamsOwned};
@@ -41,6 +44,7 @@ fn main() -> Result<(), AlgoError> {
 |---|---|
 | ECB | `KeyOwned` or `Rc2ParamsOwned` |
 | CBC, CFB, OFB, CTR, GOFB, OPENPGPCFB | `KeyWithIvOwned` or `ParamsWithIvOwned<Rc2ParamsOwned>` |
+| EAX | `AeadParamsOwned` or `ParamsWithAeadOwned<Rc2ParamsOwned>` |
 
 The IV is one block, 8 bytes, in every mode but CTR, which takes it as `tc_block_modes` does.
 The effective key size is checked when the row is initialized, not when the params are built; a

@@ -125,4 +125,31 @@ mod tests {
             .unwrap_err();
         assert_eq!(error.kind(), ErrorKind::InvalidParams);
     }
+
+    // GOST 28147's own S-box reaches the engine under EAX, the AEAD mode of its 8-byte block
+    #[test]
+    fn eax_takes_the_s_box_of_its_own_params() {
+        use crate::params::{AeadParamsOwned, ParamsWithAeadOwned};
+
+        let algo = DefaultAlgoBuilder::default().build();
+        let ciphers = algo.cipher();
+        let message = b"a message of no particular length";
+        let own = ParamsWithAeadOwned::new(
+            Gost28147ParamsOwned::with_s_box(unhex(KEY), gost28147_s_box::E_A.to_vec()),
+            vec![0x24; 8],
+            8,
+            b"header".to_vec(),
+        );
+        let sealed = ciphers
+            .encrypt_by_name("GOST28147/EAX/NOPADDING", &own, message)
+            .unwrap();
+        let opened = ciphers.decrypt_by_name("GOST/EAX", &own, &sealed).unwrap();
+        assert_eq!(opened, message);
+
+        let bare = AeadParamsOwned::new(unhex(KEY), vec![0x24; 8], 8, b"header".to_vec());
+        let default_s_box = ciphers
+            .encrypt_by_name("GOST28147/EAX/NOPADDING", &bare, message)
+            .unwrap();
+        assert_ne!(default_s_box, sealed);
+    }
 }

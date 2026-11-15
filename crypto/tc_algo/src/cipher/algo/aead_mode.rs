@@ -1,18 +1,77 @@
 use core::error::Error;
+use core::marker::PhantomData;
 
 use tc_aead_cipher::{AeadBlockCipher, AeadCipherInit, AeadError, AeadParamsOwned};
 
-use super::buffered::{downcast, invalid_params};
+#[cfg(any(
+    feature = "rc2",
+    feature = "rc5",
+    feature = "rc5-64",
+    feature = "gost28147",
+    feature = "threefish-256",
+    feature = "threefish-512",
+    feature = "threefish-1024"
+))]
+use super::buffered::Own;
+use super::buffered::{NoOwn, downcast, invalid_params};
 use crate::cipher::{BufferedCipher, Cipher, CipherDirection};
 use crate::{AlgoError, ErrorKind, Params};
 
-// A block cipher in an AEAD mode of tc_aead_cipher, GCM, CCM, EAX or OCB, behind Cipher. Its params
-// are an AeadParamsOwned. Encryption ends with the tag, and decryption expects it at the end of the
-// input. As in Bouncy Castle, update may give plaintext before finalize has checked the tag, so a
-// caller that uses update has to discard it when finalize fails
-pub(super) struct Aead<C>(pub(super) C);
+// A block cipher in an AEAD mode of tc_aead_cipher behind Cipher. Its params are an
+// AeadParamsOwned and, with Own<O>, a ParamsWithAeadOwned<O> of the engine's own params, which the
+// mode gives the engine alone. Encryption ends with the tag, and decryption expects it at the end of
+// the input. As in Bouncy Castle, update may give plaintext before finalize has checked the tag, so
+// a caller that uses update has to discard it when finalize fails
+pub(super) struct Aead<C, O = NoOwn>(pub(super) C, pub(super) PhantomData<fn() -> O>);
 
-impl<C, E> BufferedCipher for Aead<C>
+// Inits the mode when params are the row's own params with the AEAD values, and gives None when
+// they are not
+pub(super) trait OwnAead<C> {
+    fn init(
+        cipher: &mut C,
+        direction: CipherDirection,
+        params: &dyn Params,
+    ) -> Option<Result<(), AlgoError>>;
+}
+
+impl<C> OwnAead<C> for NoOwn {
+    fn init(_: &mut C, _: CipherDirection, _: &dyn Params) -> Option<Result<(), AlgoError>> {
+        None
+    }
+}
+
+#[cfg(any(
+    feature = "rc2",
+    feature = "rc5",
+    feature = "rc5-64",
+    feature = "gost28147",
+    feature = "threefish-256",
+    feature = "threefish-512",
+    feature = "threefish-1024"
+))]
+impl<C, O: 'static> OwnAead<C> for Own<O>
+where
+    C: AeadCipherInit<crate::params::ParamsWithAeadOwned<O>>,
+    <C as AeadCipherInit<crate::params::ParamsWithAeadOwned<O>>>::Error:
+        Error + Send + Sync + 'static,
+{
+    fn init(
+        cipher: &mut C,
+        direction: CipherDirection,
+        params: &dyn Params,
+    ) -> Option<Result<(), AlgoError>> {
+        let params = params
+            .as_any()
+            .downcast_ref::<crate::params::ParamsWithAeadOwned<O>>()?;
+        Some(
+            cipher
+                .init(direction.into(), params)
+                .map_err(invalid_params),
+        )
+    }
+}
+
+impl<C, O, E> BufferedCipher for Aead<C, O>
 where
     C: AeadBlockCipher<Error = AeadError<E>>,
     E: Error + Send + Sync + 'static,
@@ -44,13 +103,17 @@ where
     }
 }
 
-impl<C, E, I> Cipher for Aead<C>
+impl<C, O, E, I> Cipher for Aead<C, O>
 where
     C: AeadBlockCipher<Error = AeadError<E>> + AeadCipherInit<AeadParamsOwned, Error = I>,
     E: Error + Send + Sync + 'static,
     I: Error + Send + Sync + 'static,
+    O: OwnAead<C>,
 {
     fn init(&mut self, direction: CipherDirection, params: &dyn Params) -> Result<(), AlgoError> {
+        if let Some(result) = O::init(&mut self.0, direction, params) {
+            return result;
+        }
         let params = downcast::<AeadParamsOwned>(params)?;
         self.0
             .init(direction.into(), params)

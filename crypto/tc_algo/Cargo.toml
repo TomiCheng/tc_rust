@@ -180,7 +180,7 @@ ies = ["dh", "dep:tc_block_cipher", "dep:tc_ies", "tc_macs/hmac", "tc_macs/alloc
 [dependencies]
 rand = { version = "0.10", default-features = false, features = ["sys_rng"] }
 rand_core = "0.10"
-tc_aead_cipher = { version = "0.1.0", features = ["alloc"], optional = true }
+tc_aead_cipher = { version = "0.1.1", features = ["alloc"], optional = true }
 tc_asn1 = "0.1.2"
 tc_block_cipher = { version = "0.1.0", features = ["alloc"], optional = true }
 tc_block_modes = { version = "0.1.2", features = ["alloc"], optional = true }

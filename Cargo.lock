@@ -827,9 +827,9 @@ dependencies = [
 
 [[package]]
 name = "tc_aead_cipher"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ca1165dc61cb2b773050c5629156d656096e40a0c73f8aa1230029e49f29f5d9"
+checksum = "9fea9ae2f4db00ea53a22f658caf63f0356d2431499c2cb2037827d4e24b9b66"
 dependencies = [
  "tc_block_cipher",
  "tc_constant_time",

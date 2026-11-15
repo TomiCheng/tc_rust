@@ -16,6 +16,9 @@ A `KeyOwned`, or a `KeyWithIvOwned` with an IV, takes a tweak of zeros, as Bounc
 `ThreefishParamsOwned::with_tweak` sets it. In ECB the params go to the row as they are; in the
 modes with an IV they go with the IV in a `ParamsWithIvOwned`, as Bouncy Castle's
 `ParametersWithIV(TweakableBlockCipherParameters(key, tweak), iv)`.
+In the AEAD modes they go with the nonce, the tag size and the initial AAD in a
+`ParamsWithAeadOwned`, which Bouncy Castle has no counterpart of: its `AeadParameters` takes a
+`KeyParameter` alone.
 
 ```rust
 use tc_algo::params::{ParamsWithIvOwned, ThreefishParamsOwned};
@@ -41,6 +44,7 @@ the three sizes; only the key, the block and so the IV differ.
 |---|---|
 | ECB | `KeyOwned` or `ThreefishParamsOwned` |
 | CBC, CFB, OFB, CTR, OPENPGPCFB | `KeyWithIvOwned` or `ParamsWithIvOwned<ThreefishParamsOwned>` |
+| KCCM, for Threefish-256 and -512 | `AeadParamsOwned` or `ParamsWithAeadOwned<ThreefishParamsOwned>` |
 
 The IV is one block in every mode but CTR, which takes it as `tc_block_modes` does. The key and
 the tweak are checked when the row is initialized, not when the params are built; a key that is

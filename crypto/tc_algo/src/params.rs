@@ -134,6 +134,16 @@ pub use rsa_key_gen_params::RsaKeyGenParams;
 ))]
 pub use tc_aead_cipher::AeadParamsOwned;
 #[cfg(any(
+    feature = "rc2",
+    feature = "rc5",
+    feature = "rc5-64",
+    feature = "gost28147",
+    feature = "threefish-256",
+    feature = "threefish-512",
+    feature = "threefish-1024"
+))]
+pub use tc_aead_cipher::ParamsWithAeadOwned;
+#[cfg(any(
     feature = "aes",
     feature = "des",
     feature = "desede",
@@ -453,6 +463,23 @@ impl Params for KeyWithIvOwned {
     feature = "threefish-1024"
 ))]
 impl<TParams: Send + Sync + 'static> Params for ParamsWithIvOwned<TParams> {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
+// An engine's own params with the nonce, tag size and initial AAD of an AEAD mode, which gives the
+// engine the own params alone
+#[cfg(any(
+    feature = "rc2",
+    feature = "rc5",
+    feature = "rc5-64",
+    feature = "gost28147",
+    feature = "threefish-256",
+    feature = "threefish-512",
+    feature = "threefish-1024"
+))]
+impl<TParams: Send + Sync + 'static> Params for ParamsWithAeadOwned<TParams> {
     fn as_any(&self) -> &dyn Any {
         self
     }
