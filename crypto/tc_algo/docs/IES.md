@@ -74,11 +74,14 @@ fn main() -> Result<(), AlgoError> {
 | Name | OID | Feature | Agreement | KDF | MAC | Encryption |
 |---|---|---|---|---|---|---|
 | `IES` | none | `ies` | DH | KDF2 over SHA-1 | HMAC-SHA1 | XOR |
+| `ECIES` | none | `ecies` | ECDH | KDF2 over SHA-1 | HMAC-SHA1 | XOR |
 
 The case of the name does not matter. The output is the length of the message plus 20 bytes of tag.
 
-Bouncy Castle's `CipherUtilities` also has `ECIES`: the same parts, with ECDH for the agreement.
-It is not a row yet, since `tc_algo` has no EC keys to give it.
+`ECIES` is the same scheme with ECDH. As in Bouncy Castle, the curve comes from the keys, so one row
+takes any curve: the generic prime and binary curves of `tc_fp_curve` and `tc_f2m_curve`, and the
+special prime curves of `tc_fp_custom`, each in constant time. It gives Bouncy Castle's ECIESTest
+vector on secp192r1.
 
 The name and parts are those of Bouncy Castle's `CipherUtilities`, but there is no behaviour of its
 to compare with: the `Init` of its `BufferedIesCipher` throws `NotImplementedException`. This row
@@ -86,7 +89,12 @@ follows that class, and gives the same output as `IesEngine` of `tc_ies` over th
 
 ## Params
 
-The row takes an `IesDhParams`, in `tc_algo::params`, and any other type is `InvalidParams`.
+`IES` takes an `IesDhParams` and `ECIES` an `IesEcParams`, both in `tc_algo::params`; any other
+type is `InvalidParams`. They take the same arguments, but the keys: an `IesDhParams` holds a
+`DhPrivateKey` and a `DhPublicKey`, an `IesEcParams<C>` an `EcPrivateKey<C>` and an `EcPublicKey<C>`
+of `tc_ec_key`, where `C` is the curve type, a `'static` reference to a curve such as
+`&'static FpCtCurve<'static>` or `&'static SecPCtCurve<SecP256R1FieldElement>`. Keys on a curve
+built in a function cannot go in: build it once, as in a `static` with `LazyLock`.
 
 | Argument of `new` | What it is | Secret |
 |---|---|---|
@@ -97,7 +105,7 @@ The row takes an `IesDhParams`, in `tc_algo::params`, and any other type is `Inv
 | `mac_key_bits` | the length of `K2`, a whole number of bytes | no |
 
 Both sides must use the same `derivation_v`, `encoding_v` and `mac_key_bits`. The keys must be of the
-same group, or `init` gives `InvalidParams`.
+same group or curve, or `init` gives `InvalidParams`.
 
 ## Using it
 

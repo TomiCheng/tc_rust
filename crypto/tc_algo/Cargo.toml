@@ -182,6 +182,7 @@ drbg-hmac-sha256 = ["hmac-sha256", "dep:tc_drbg"]
 
 # IES
 ies = ["dh", "dep:tc_block_cipher", "dep:tc_ies", "tc_macs/hmac", "tc_macs/alloc", "dep:tc_sha"]
+ecies = ["ies", "dep:tc_bigint", "dep:tc_ec_core", "dep:tc_ec_key", "dep:tc_ecdh_v2", "dep:tc_f2m_curve", "dep:tc_fp_curve", "dep:tc_fp_custom"]
 
 [dependencies]
 rand = { version = "0.10", default-features = false, features = ["sys_rng"] }
@@ -280,4 +281,8 @@ tc_elgamal = { version = "0.1.0", path = "../tc_elgamal", optional = true }
 tc_naccache_stern = { version = "0.1.0", path = "../tc_naccache_stern", optional = true }
 tc_sm2 = { version = "0.1.0", path = "../tc_sm2", optional = true }
 tc_ec_key = { version = "0.1.0", path = "../tc_ec_key", optional = true }
+tc_ec_core = { version = "0.1.0", optional = true }
+tc_ecdh_v2 = { version = "0.1.0", path = "../agreement/tc_ecdh_v2", optional = true }
+tc_f2m_curve = { version = "0.1.1", optional = true }
+tc_fp_curve = { version = "0.1.1", optional = true }
 tc_fp_custom = { version = "0.1.0", optional = true }

@@ -36,7 +36,7 @@ rows it turns on, and a name it did not turn on is an error, not a fallback.
     bytes, EAX over those of 8, KCCM over Threefish-256 and -512 and DSTU 7624 of 256 and 512
     bits, and ChaCha20-Poly1305, XChaCha20-Poly1305, Ascon, Grain-128AEAD and Schwaemm, each
     behind a feature of its own; see [AEAD ciphers](docs/AeadCipher.md)
-  - IES: `IES` (`ies`); see [IES](docs/IES.md)
+  - IES: `IES` (`ies`), `ECIES` (`ecies`); see [IES](docs/IES.md)
   - Asymmetric cipher: RSA and ElGamal, raw, with PKCS#1 v1.5 or with OAEP over MD5 and the SHA-1
     and SHA-2 digests, and RSA with ISO 9796-1, Naccache-Stern and SM2 (`rsa`, `elgamal`,
     `naccache-stern`, `sm2`); see [Asymmetric ciphers](docs/AsymCipher.md)

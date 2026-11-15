@@ -10,6 +10,8 @@ mod cshake_params;
 mod drbg_params;
 #[cfg(feature = "ies")]
 mod ies_dh_params;
+#[cfg(feature = "ecies")]
+mod ies_ec_params;
 mod key_length;
 #[cfg(any(feature = "parallelhash128", feature = "parallelhash256"))]
 mod parallel_hash_params;
@@ -95,6 +97,8 @@ pub use cshake_params::CShakeParams;
 pub use drbg_params::DrbgParams;
 #[cfg(feature = "ies")]
 pub use ies_dh_params::IesDhParams;
+#[cfg(feature = "ecies")]
+pub use ies_ec_params::IesEcParams;
 pub use key_length::KeyLength;
 #[cfg(any(feature = "parallelhash128", feature = "parallelhash256"))]
 pub use parallel_hash_params::ParallelHashParams;

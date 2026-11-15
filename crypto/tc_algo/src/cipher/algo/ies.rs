@@ -30,34 +30,48 @@ impl EntryBase for Row {
 
 impl CipherEntry for Row {
     fn create(&self) -> Box<dyn Cipher> {
-        let mac = Hmac::new(Sha1Digest::new());
-        let mac_size = mac.mac_size();
-        Box::new(Ies {
-            engine: IesEngine::new(DhBasicAgreement::new(), Kdf2::new(Sha1Digest::new()), mac),
-            mac_size,
-            direction: None,
-            buffer: Vec::new(),
-        })
+        let engine = IesEngine::new(
+            DhBasicAgreement::new(),
+            Kdf2::new(Sha1Digest::new()),
+            Hmac::new(Sha1Digest::new()),
+        );
+        Box::new(Ies::new(DhIes(engine)))
     }
 }
 
+// The engine of an IES row: init takes the row's params, and process_block a whole message
+pub(super) trait IesInit {
+    fn init(&mut self, direction: CipherDirection, params: &dyn Params) -> Result<(), AlgoError>;
+
+    fn process_block(&mut self, input: &[u8]) -> Result<Vec<u8>, IesError>;
+}
+
 // Bouncy Castle's BufferedIesCipher: the engine takes a whole message, so the input waits in a
-// buffer until do_final. Its params are an IesDhParams. The output is the ciphertext, then the tag
-struct Ies {
-    engine: IesEngine<DhBasicAgreement, Kdf2<Sha1Digest>, Hmac<Sha1Digest>>,
+// buffer until do_final. The output is the ciphertext, then the tag of HMAC-SHA1
+pub(super) struct Ies<E> {
+    engine: E,
     mac_size: usize,
     direction: Option<CipherDirection>,
     buffer: Vec<u8>,
 }
 
-impl Ies {
+impl<E> Ies<E> {
+    pub(super) fn new(engine: E) -> Self {
+        Self {
+            engine,
+            mac_size: Hmac::new(Sha1Digest::new()).mac_size(),
+            direction: None,
+            buffer: Vec::new(),
+        }
+    }
+
     fn direction(&self) -> Result<CipherDirection, AlgoError> {
         self.direction
             .ok_or(AlgoError::new(ErrorKind::NotInitialized))
     }
 }
 
-impl BufferedCipher for Ies {
+impl<E: IesInit> BufferedCipher for Ies<E> {
     type Error = AlgoError;
 
     // Not a block cipher, as in Bouncy Castle
@@ -102,15 +116,32 @@ impl BufferedCipher for Ies {
     }
 }
 
-impl Cipher for Ies {
+impl<E: IesInit> Cipher for Ies<E> {
     fn init(&mut self, direction: CipherDirection, params: &dyn Params) -> Result<(), AlgoError> {
         self.direction = None;
         self.buffer.zeroize();
+        self.engine.init(direction, params)?;
+        self.direction = Some(direction);
+        Ok(())
+    }
+}
+
+impl<E> Drop for Ies<E> {
+    fn drop(&mut self) {
+        self.buffer.zeroize();
+    }
+}
+
+// IES over DH, whose params are an IesDhParams
+struct DhIes(IesEngine<DhBasicAgreement, Kdf2<Sha1Digest>, Hmac<Sha1Digest>>);
+
+impl IesInit for DhIes {
+    fn init(&mut self, direction: CipherDirection, params: &dyn Params) -> Result<(), AlgoError> {
         let params = params
             .as_any()
             .downcast_ref::<IesDhParams>()
             .ok_or(AlgoError::new(ErrorKind::InvalidParams))?;
-        self.engine
+        self.0
             .init(
                 direction.into(),
                 params.private_key(),
@@ -121,15 +152,11 @@ impl Cipher for Ies {
                     params.mac_key_bits(),
                 ),
             )
-            .map_err(|error| AlgoError::with_source(ErrorKind::InvalidParams, error))?;
-        self.direction = Some(direction);
-        Ok(())
+            .map_err(|error| AlgoError::with_source(ErrorKind::InvalidParams, error))
     }
-}
 
-impl Drop for Ies {
-    fn drop(&mut self) {
-        self.buffer.zeroize();
+    fn process_block(&mut self, input: &[u8]) -> Result<Vec<u8>, IesError> {
+        self.0.process_block(input)
     }
 }
 

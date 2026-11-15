@@ -149,6 +149,8 @@ mod des;
     feature = "dstu7624-512"
 ))]
 mod dstu7624;
+#[cfg(feature = "ecies")]
+mod ecies;
 #[cfg(feature = "elgamal")]
 mod elgamal;
 #[cfg(feature = "gost28147")]
@@ -353,4 +355,6 @@ pub(crate) const BUILT_IN: &[CreateRows] = &[
     sm2::sm2,
     #[cfg(feature = "ies")]
     ies::ies,
+    #[cfg(feature = "ecies")]
+    ecies::ecies,
 ];
