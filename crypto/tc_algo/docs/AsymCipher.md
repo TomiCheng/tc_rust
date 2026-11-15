@@ -75,3 +75,5 @@ the private key to decrypt of a pair from the `SM2` row of `algo.key_pair_genera
 ## More
 
 - [RSA](Rsa.md): key pairs, encrypting and signing, step by step
+- [ElGamal](ElGamal.md), [Naccache-Stern](NaccacheStern.md) and [SM2](Sm2.md): key pairs and
+  encrypting, step by step

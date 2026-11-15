@@ -2,6 +2,8 @@
 mod aes;
 #[cfg(feature = "dh")]
 mod dh;
+#[cfg(feature = "ec")]
+mod ec;
 #[cfg(feature = "elgamal")]
 mod elgamal;
 #[cfg(any(feature = "aes", feature = "chacha", feature = "hmac-sha256"))]
@@ -39,4 +41,6 @@ pub(crate) const BUILT_IN_KEY_PAIR_GENERATORS: &[CreateKeyPairGeneratorRows] = &
     naccache_stern::naccache_stern,
     #[cfg(feature = "sm2")]
     sm2::sm2,
+    #[cfg(feature = "ec")]
+    ec::ec,
 ];

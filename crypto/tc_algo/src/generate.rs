@@ -1,4 +1,8 @@
 #![cfg_attr(feature = "rsa", doc = include_str!("../docs/Rsa.md"))]
+#![cfg_attr(feature = "elgamal", doc = include_str!("../docs/ElGamal.md"))]
+#![cfg_attr(feature = "naccache-stern", doc = include_str!("../docs/NaccacheStern.md"))]
+#![cfg_attr(feature = "sm2", doc = include_str!("../docs/Sm2.md"))]
+#![cfg_attr(feature = "ec", doc = include_str!("../docs/Ec.md"))]
 
 mod algo;
 mod default_key_generator_provider;

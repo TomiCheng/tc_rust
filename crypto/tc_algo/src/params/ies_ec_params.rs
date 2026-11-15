@@ -1,26 +1,23 @@
 use core::any::Any;
 
-use tc_bigint::PaddedBigUint;
-use tc_ec_core::Curve;
-use tc_ec_key::{EcPrivateKey, EcPublicKey};
-
 use crate::Params;
 
 // The params of the ECIES row, as IesDhParams for IES: this side's private key and the other side's
-// public key on one curve, with what Bouncy Castle's IesParameters holds. The curve is the type C of
-// the keys, such as &'static FpCtCurve<'static> or &'static SecPCtCurve<SecP256R1FieldElement>
-pub struct IesEcParams<C: Curve<Scalar = PaddedBigUint>> {
-    private_key: EcPrivateKey<C>,
-    public_key: EcPublicKey<C>,
+// public key, with what Bouncy Castle's IesParameters holds. The keys are as the EC key pair
+// generator gives them, behind dyn Params, since each curve is a type of its own; the row finds the
+// curve when it is initialized, and refuses keys on two curves
+pub struct IesEcParams {
+    private_key: Box<dyn Params>,
+    public_key: Box<dyn Params>,
     derivation_v: Vec<u8>,
     encoding_v: Vec<u8>,
     mac_key_bits: usize,
 }
 
-impl<C: Curve<Scalar = PaddedBigUint>> IesEcParams<C> {
+impl IesEcParams {
     pub fn new(
-        private_key: EcPrivateKey<C>,
-        public_key: EcPublicKey<C>,
+        private_key: Box<dyn Params>,
+        public_key: Box<dyn Params>,
         derivation_v: Vec<u8>,
         encoding_v: Vec<u8>,
         mac_key_bits: usize,
@@ -34,12 +31,12 @@ impl<C: Curve<Scalar = PaddedBigUint>> IesEcParams<C> {
         }
     }
 
-    pub fn private_key(&self) -> &EcPrivateKey<C> {
-        &self.private_key
+    pub fn private_key(&self) -> &dyn Params {
+        self.private_key.as_ref()
     }
 
-    pub fn public_key(&self) -> &EcPublicKey<C> {
-        &self.public_key
+    pub fn public_key(&self) -> &dyn Params {
+        self.public_key.as_ref()
     }
 
     pub fn derivation_v(&self) -> &[u8] {
@@ -55,12 +52,7 @@ impl<C: Curve<Scalar = PaddedBigUint>> IesEcParams<C> {
     }
 }
 
-impl<C> Params for IesEcParams<C>
-where
-    C: Curve<Scalar = PaddedBigUint> + 'static,
-    EcPrivateKey<C>: Send + Sync,
-    EcPublicKey<C>: Send + Sync,
-{
+impl Params for IesEcParams {
     fn as_any(&self) -> &dyn Any {
         self
     }

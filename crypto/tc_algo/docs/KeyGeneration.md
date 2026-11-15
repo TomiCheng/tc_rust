@@ -34,12 +34,14 @@ Each gives a `KeyOwned`. The `aes` feature has the rows.
 - `ML-KEM`, with `MlKemParameters`, such as `MlKemParameters::ML_KEM_768`: an `MlKemPublicKey` and
   an `MlKemPrivateKey`; see [KEM](KEM.md)
 - `ELGAMAL`, with the group in `ElGamalParameters` of `tc_elgamal`: an `ElGamalPublicKey` and an
-  `ElGamalPrivateKey`; see [Asymmetric ciphers](AsymCipher.md)
+  `ElGamalPrivateKey`; see [ElGamal](ElGamal.md)
 - `NACCACHESTERN`, with `NaccacheSternKeyGenerationParams` of `tc_naccache_stern`, the size of `n`,
   the certainty and the count of small primes: a `NaccacheSternPublicKey` and a
-  `NaccacheSternPrivateKey`
+  `NaccacheSternPrivateKey`; see [Naccache-Stern](NaccacheStern.md)
+- `EC`, also `ECDH`, `ECIES`, `ECDHC`, `ECMQV` and `ECDSA`, with the curve in `EcKeyGenParams`, by
+  name or OID: an EC key pair on any of 94 named curves; see [EC](Ec.md)
 - `SM2`, with no params: an EC key pair on sm2p256v1, for the SM2 rows of the cipher factory; init
-  refuses any params, since the curve is fixed
+  refuses any params, since the curve is fixed; see [SM2](Sm2.md)
 
 ## Using it
 

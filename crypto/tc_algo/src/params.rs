@@ -8,6 +8,10 @@ mod blake3_params;
 mod cshake_params;
 #[cfg(feature = "drbg-hmac-sha256")]
 mod drbg_params;
+#[cfg(feature = "ec")]
+pub(crate) mod ec_curves;
+#[cfg(feature = "ec")]
+mod ec_key_gen_params;
 #[cfg(feature = "ies")]
 mod ies_dh_params;
 #[cfg(feature = "ecies")]
@@ -17,7 +21,7 @@ mod key_length;
 mod parallel_hash_params;
 #[cfg(feature = "rsa")]
 mod rsa_key_gen_params;
-#[cfg(feature = "sm2")]
+#[cfg(any(feature = "sm2", feature = "ec"))]
 pub(crate) mod sm2_keys;
 #[cfg(any(feature = "tuplehash128", feature = "tuplehash256"))]
 mod tuple_hash_params;
@@ -79,6 +83,7 @@ mod tuple_hash_params;
     feature = "elgamal",
     feature = "naccache-stern",
     feature = "sm2",
+    feature = "ec",
     feature = "dh",
     feature = "hkdf",
     feature = "ml-kem"
@@ -95,6 +100,8 @@ pub use blake3_params::Blake3Params;
 pub use cshake_params::CShakeParams;
 #[cfg(feature = "drbg-hmac-sha256")]
 pub use drbg_params::DrbgParams;
+#[cfg(feature = "ec")]
+pub use ec_key_gen_params::EcKeyGenParams;
 #[cfg(feature = "ies")]
 pub use ies_dh_params::IesDhParams;
 #[cfg(feature = "ecies")]
@@ -359,6 +366,7 @@ pub use tuple_hash_params::TupleHashParams;
     feature = "elgamal",
     feature = "naccache-stern",
     feature = "sm2",
+    feature = "ec",
     feature = "dh",
     feature = "hkdf",
     feature = "ml-kem"
@@ -679,16 +687,24 @@ impl Params for tc_naccache_stern::NaccacheSternKeyGenerationParams {
     }
 }
 
-// The EC keys of SM2 on sm2p256v1, as its key pair generator gives them
-#[cfg(feature = "sm2")]
-impl Params for sm2_keys::Sm2PublicKey {
+// The EC keys of tc_ec_key on a 'static curve, as the EC and SM2 key pair generators give them
+#[cfg(any(feature = "sm2", feature = "ec"))]
+impl<C> Params for tc_ec_key::EcPublicKey<C>
+where
+    C: tc_ec_core::Curve + 'static,
+    tc_ec_key::EcPublicKey<C>: Send + Sync,
+{
     fn as_any(&self) -> &dyn Any {
         self
     }
 }
 
-#[cfg(feature = "sm2")]
-impl Params for sm2_keys::Sm2PrivateKey {
+#[cfg(any(feature = "sm2", feature = "ec"))]
+impl<C> Params for tc_ec_key::EcPrivateKey<C>
+where
+    C: tc_ec_core::Curve<Scalar = tc_bigint::PaddedBigUint> + 'static,
+    tc_ec_key::EcPrivateKey<C>: Send + Sync,
+{
     fn as_any(&self) -> &dyn Any {
         self
     }
