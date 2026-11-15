@@ -58,6 +58,15 @@ mod tuple_hash_params;
     feature = "hc256",
     feature = "chacha20-poly1305",
     feature = "xchacha20-poly1305",
+    feature = "ascon-aead128",
+    feature = "ascon128",
+    feature = "ascon128a",
+    feature = "ascon80pq",
+    feature = "grain128-aead",
+    feature = "schwaemm128-128",
+    feature = "schwaemm256-128",
+    feature = "schwaemm192-192",
+    feature = "schwaemm256-256",
     feature = "hmac-sha256",
     feature = "rsa",
     feature = "dh",
@@ -113,6 +122,15 @@ pub use rsa_key_gen_params::RsaKeyGenParams;
     feature = "threefish-1024",
     feature = "chacha20-poly1305",
     feature = "xchacha20-poly1305",
+    feature = "ascon-aead128",
+    feature = "ascon128",
+    feature = "ascon128a",
+    feature = "ascon80pq",
+    feature = "grain128-aead",
+    feature = "schwaemm128-128",
+    feature = "schwaemm256-128",
+    feature = "schwaemm192-192",
+    feature = "schwaemm256-256",
 ))]
 pub use tc_aead_cipher::AeadParamsOwned;
 #[cfg(any(
@@ -155,6 +173,15 @@ pub use tc_aead_cipher::AeadParamsOwned;
     feature = "hc256",
     feature = "chacha20-poly1305",
     feature = "xchacha20-poly1305",
+    feature = "ascon-aead128",
+    feature = "ascon128",
+    feature = "ascon128a",
+    feature = "ascon80pq",
+    feature = "grain128-aead",
+    feature = "schwaemm128-128",
+    feature = "schwaemm256-128",
+    feature = "schwaemm192-192",
+    feature = "schwaemm256-256",
     feature = "hmac-sha256"
 ))]
 pub use tc_block_cipher::{KeyOwned, KeyParams};
@@ -207,7 +234,16 @@ pub use tc_block_modes::ParamsWithIvOwned;
     feature = "hc128",
     feature = "hc256",
     feature = "chacha20-poly1305",
-    feature = "xchacha20-poly1305"
+    feature = "xchacha20-poly1305",
+    feature = "ascon-aead128",
+    feature = "ascon128",
+    feature = "ascon128a",
+    feature = "ascon80pq",
+    feature = "grain128-aead",
+    feature = "schwaemm128-128",
+    feature = "schwaemm256-128",
+    feature = "schwaemm192-192",
+    feature = "schwaemm256-256"
 ))]
 pub use tc_block_modes::{IvParams, KeyWithIvOwned};
 #[cfg(feature = "dh")]
@@ -275,6 +311,15 @@ pub use tuple_hash_params::TupleHashParams;
     feature = "hc256",
     feature = "chacha20-poly1305",
     feature = "xchacha20-poly1305",
+    feature = "ascon-aead128",
+    feature = "ascon128",
+    feature = "ascon128a",
+    feature = "ascon80pq",
+    feature = "grain128-aead",
+    feature = "schwaemm128-128",
+    feature = "schwaemm256-128",
+    feature = "schwaemm192-192",
+    feature = "schwaemm256-256",
     feature = "hmac-sha256",
     feature = "rsa",
     feature = "dh",
@@ -323,6 +368,15 @@ use crate::Params;
     feature = "hc256",
     feature = "chacha20-poly1305",
     feature = "xchacha20-poly1305",
+    feature = "ascon-aead128",
+    feature = "ascon128",
+    feature = "ascon128a",
+    feature = "ascon80pq",
+    feature = "grain128-aead",
+    feature = "schwaemm128-128",
+    feature = "schwaemm256-128",
+    feature = "schwaemm192-192",
+    feature = "schwaemm256-256",
     feature = "hmac-sha256"
 ))]
 impl Params for KeyOwned {
@@ -370,7 +424,16 @@ impl Params for KeyOwned {
     feature = "hc128",
     feature = "hc256",
     feature = "chacha20-poly1305",
-    feature = "xchacha20-poly1305"
+    feature = "xchacha20-poly1305",
+    feature = "ascon-aead128",
+    feature = "ascon128",
+    feature = "ascon128a",
+    feature = "ascon80pq",
+    feature = "grain128-aead",
+    feature = "schwaemm128-128",
+    feature = "schwaemm256-128",
+    feature = "schwaemm192-192",
+    feature = "schwaemm256-256"
 ))]
 impl Params for KeyWithIvOwned {
     fn as_any(&self) -> &dyn Any {
@@ -457,6 +520,15 @@ impl Params for ThreefishParamsOwned {
     feature = "threefish-1024",
     feature = "chacha20-poly1305",
     feature = "xchacha20-poly1305",
+    feature = "ascon-aead128",
+    feature = "ascon128",
+    feature = "ascon128a",
+    feature = "ascon80pq",
+    feature = "grain128-aead",
+    feature = "schwaemm128-128",
+    feature = "schwaemm256-128",
+    feature = "schwaemm192-192",
+    feature = "schwaemm256-256",
 ))]
 impl Params for AeadParamsOwned {
     fn as_any(&self) -> &dyn Any {

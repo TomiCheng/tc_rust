@@ -460,6 +460,15 @@ mod tests {
         feature = "hc256",
         feature = "chacha20-poly1305",
         feature = "xchacha20-poly1305",
+        feature = "ascon-aead128",
+        feature = "ascon128",
+        feature = "ascon128a",
+        feature = "ascon80pq",
+        feature = "grain128-aead",
+        feature = "schwaemm128-128",
+        feature = "schwaemm256-128",
+        feature = "schwaemm192-192",
+        feature = "schwaemm256-256",
         feature = "rsa",
         feature = "ies"
     )))]

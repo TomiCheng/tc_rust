@@ -883,6 +883,7 @@ dependencies = [
  "tc_aes",
  "tc_agreement",
  "tc_aria",
+ "tc_ascon_aead",
  "tc_ascon_hash",
  "tc_asn1",
  "tc_asn1_x509",
@@ -909,6 +910,7 @@ dependencies = [
  "tc_dstu7564",
  "tc_gost28147",
  "tc_gost3411",
+ "tc_grain128_aead",
  "tc_hc",
  "tc_ies",
  "tc_kdf",
@@ -934,6 +936,7 @@ dependencies = [
  "tc_skein",
  "tc_sm3",
  "tc_sm4",
+ "tc_sparkle_aead",
  "tc_stream_cipher",
  "tc_threefish",
  "tc_twofish",
@@ -1749,6 +1752,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_grain128_aead"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d815a6e3336597a73270d5cfdffb495ae951e1f83cbfc922072a846e1255e656"
+dependencies = [
+ "tc_aead_cipher",
+ "tc_block_cipher",
+ "tc_constant_time",
+ "tc_zeroize",
+]
+
+[[package]]
 name = "tc_hc"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2237,6 +2252,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "959d33ac80f2e25ba7130fa1bf4d613354535e13c406184a1345a294cefaddcd"
 dependencies = [
  "tc_block_cipher",
+ "tc_zeroize",
+]
+
+[[package]]
+name = "tc_sparkle_aead"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dc45f35e97cb8c7c37996d71a635a46044791a834904559c3673aedfad9ccf00"
+dependencies = [
+ "tc_aead_cipher",
+ "tc_block_cipher",
+ "tc_constant_time",
+ "tc_runtime",
  "tc_zeroize",
 ]
 

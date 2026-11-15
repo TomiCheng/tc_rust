@@ -1,14 +1,11 @@
-use core::error::Error;
-
-use tc_aead_cipher::{AeadCipher, AeadCipherInit, AeadError, AeadParamsOwned};
-use tc_asn1::Asn1Oid;
 #[cfg(feature = "chacha20-poly1305")]
 use tc_chacha_aead::ChaCha20Poly1305Engine;
 #[cfg(feature = "xchacha20-poly1305")]
 use tc_chacha_aead::XChaCha20Poly1305Engine;
 
-use crate::cipher::{BufferedCipher, Cipher, CipherDirection, CipherEntry};
-use crate::{AlgoError, DefaultAlgoContext, EntryBase, ErrorKind, Params};
+use super::aead_engine::{AeadEngine, row};
+use crate::DefaultAlgoContext;
+use crate::cipher::CipherEntry;
 
 // ChaCha20-Poly1305 of RFC 8439, as Bouncy Castle's CipherUtilities names it, with the OID of RFC
 // 8103 that it gives the same row
@@ -17,7 +14,7 @@ pub(super) fn chacha20_poly1305(_: &DefaultAlgoContext) -> Vec<Box<dyn CipherEnt
     vec![row(
         "CHACHA20-POLY1305",
         &["1.2.840.113549.1.9.16.3.18"],
-        || Box::new(ChaChaAead(ChaCha20Poly1305Engine::new())),
+        || Box::new(AeadEngine(ChaCha20Poly1305Engine::new())),
     )]
 }
 
@@ -25,107 +22,8 @@ pub(super) fn chacha20_poly1305(_: &DefaultAlgoContext) -> Vec<Box<dyn CipherEnt
 #[cfg(feature = "xchacha20-poly1305")]
 pub(super) fn xchacha20_poly1305(_: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>> {
     vec![row("XCHACHA20-POLY1305", &[], || {
-        Box::new(ChaChaAead(XChaCha20Poly1305Engine::new()))
+        Box::new(AeadEngine(XChaCha20Poly1305Engine::new()))
     })]
-}
-
-fn row(name: &'static str, oids: &[&str], create: fn() -> Box<dyn Cipher>) -> Box<dyn CipherEntry> {
-    Box::new(Row {
-        name,
-        oids: oids
-            .iter()
-            .map(|dotted| dotted.parse().expect("a valid OID"))
-            .collect(),
-        create,
-    })
-}
-
-struct Row {
-    name: &'static str,
-    oids: Vec<Asn1Oid>,
-    create: fn() -> Box<dyn Cipher>,
-}
-
-impl EntryBase for Row {
-    fn name(&self) -> &str {
-        self.name
-    }
-
-    fn oids(&self) -> &[Asn1Oid] {
-        &self.oids
-    }
-}
-
-impl CipherEntry for Row {
-    fn create(&self) -> Box<dyn Cipher> {
-        (self.create)()
-    }
-}
-
-// An AEAD engine of tc_chacha_aead behind Cipher. Its params are an AeadParamsOwned, with a key of
-// 32 bytes and a tag of 16. Encryption ends with the tag, and decryption expects it at the end of
-// the input; as in Bouncy Castle, update may give plaintext before finalize has checked the tag
-struct ChaChaAead<C>(C);
-
-impl<C> BufferedCipher for ChaChaAead<C>
-where
-    C: AeadCipher<Error = AeadError>,
-{
-    type Error = AlgoError;
-
-    // Zero, as for a stream cipher
-    fn block_size(&self) -> usize {
-        0
-    }
-
-    fn update_output_len(&self, input_len: usize) -> Result<usize, AlgoError> {
-        self.0.update_output_len(input_len).map_err(aead_error)
-    }
-
-    fn output_len(&self, input_len: usize) -> Result<usize, AlgoError> {
-        self.0.output_len(input_len).map_err(aead_error)
-    }
-
-    fn process_bytes(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, AlgoError> {
-        self.0.process_bytes(input, output).map_err(aead_error)
-    }
-
-    fn do_final(&mut self, output: &mut [u8]) -> Result<usize, AlgoError> {
-        self.0.do_final(output).map_err(aead_error)
-    }
-
-    fn reset(&mut self) {
-        self.0.reset();
-    }
-}
-
-impl<C, I> Cipher for ChaChaAead<C>
-where
-    C: AeadCipher<Error = AeadError> + AeadCipherInit<AeadParamsOwned, Error = I>,
-    I: Error + Send + Sync + 'static,
-{
-    fn init(&mut self, direction: CipherDirection, params: &dyn Params) -> Result<(), AlgoError> {
-        let params = params
-            .as_any()
-            .downcast_ref::<AeadParamsOwned>()
-            .ok_or(AlgoError::new(ErrorKind::InvalidParams))?;
-        self.0
-            .init(direction.into(), params)
-            .map_err(|error| AlgoError::with_source(ErrorKind::InvalidParams, error))
-    }
-}
-
-fn aead_error(error: AeadError) -> AlgoError {
-    let kind = match error {
-        // A finished encryption takes a new init, so that no nonce is used twice
-        AeadError::NotInitialized | AeadError::AlreadyFinalized => ErrorKind::NotInitialized,
-        // Too short to hold the tag is told apart no more than a wrong tag
-        AeadError::AuthenticationFailed | AeadError::CiphertextTooShort { .. } => {
-            ErrorKind::InvalidCiphertext
-        }
-        _ => ErrorKind::DataLength,
-    };
-    AlgoError::with_source(kind, error)
 }
 
 #[cfg(test)]

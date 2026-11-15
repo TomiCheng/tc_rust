@@ -1,4 +1,18 @@
 #[cfg(any(
+    feature = "chacha20-poly1305",
+    feature = "xchacha20-poly1305",
+    feature = "ascon-aead128",
+    feature = "ascon128",
+    feature = "ascon128a",
+    feature = "ascon80pq",
+    feature = "grain128-aead",
+    feature = "schwaemm128-128",
+    feature = "schwaemm256-128",
+    feature = "schwaemm192-192",
+    feature = "schwaemm256-256"
+))]
+mod aead_engine;
+#[cfg(any(
     feature = "aes",
     feature = "des",
     feature = "desede",
@@ -32,6 +46,13 @@ mod aead_mode;
 mod aes;
 #[cfg(feature = "aria")]
 mod aria;
+#[cfg(any(
+    feature = "ascon-aead128",
+    feature = "ascon128",
+    feature = "ascon128a",
+    feature = "ascon80pq"
+))]
+mod ascon_aead;
 #[cfg(any(
     feature = "aes",
     feature = "des",
@@ -108,6 +129,8 @@ mod chacha_aead;
 mod des;
 #[cfg(feature = "gost28147")]
 mod gost28147;
+#[cfg(feature = "grain128-aead")]
+mod grain128_aead;
 #[cfg(any(feature = "hc128", feature = "hc256"))]
 mod hc;
 #[cfg(feature = "idea")]
@@ -149,6 +172,13 @@ mod serpent;
 mod skipjack;
 #[cfg(feature = "sm4")]
 mod sm4;
+#[cfg(any(
+    feature = "schwaemm128-128",
+    feature = "schwaemm256-128",
+    feature = "schwaemm192-192",
+    feature = "schwaemm256-256"
+))]
+mod sparkle_aead;
 #[cfg(any(
     feature = "chacha",
     feature = "xchacha20",
@@ -245,6 +275,24 @@ pub(crate) const BUILT_IN: &[CreateRows] = &[
     chacha_aead::chacha20_poly1305,
     #[cfg(feature = "xchacha20-poly1305")]
     chacha_aead::xchacha20_poly1305,
+    #[cfg(feature = "ascon-aead128")]
+    ascon_aead::ascon_aead128,
+    #[cfg(feature = "ascon128")]
+    ascon_aead::ascon128,
+    #[cfg(feature = "ascon128a")]
+    ascon_aead::ascon128a,
+    #[cfg(feature = "ascon80pq")]
+    ascon_aead::ascon80pq,
+    #[cfg(feature = "grain128-aead")]
+    grain128_aead::grain128_aead,
+    #[cfg(feature = "schwaemm128-128")]
+    sparkle_aead::schwaemm128_128,
+    #[cfg(feature = "schwaemm256-128")]
+    sparkle_aead::schwaemm256_128,
+    #[cfg(feature = "schwaemm192-192")]
+    sparkle_aead::schwaemm192_192,
+    #[cfg(feature = "schwaemm256-256")]
+    sparkle_aead::schwaemm256_256,
     #[cfg(feature = "rc4")]
     rc4::rc4,
     #[cfg(feature = "vmpc")]

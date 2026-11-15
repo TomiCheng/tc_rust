@@ -137,6 +137,15 @@ hc128 = ["dep:tc_hc", "dep:tc_stream_cipher", "dep:tc_block_cipher", "dep:tc_blo
 hc256 = ["dep:tc_hc", "dep:tc_stream_cipher", "dep:tc_block_cipher", "dep:tc_block_modes"]
 chacha20-poly1305 = ["dep:tc_chacha_aead", "dep:tc_aead_cipher", "dep:tc_block_cipher", "dep:tc_block_modes"]
 xchacha20-poly1305 = ["dep:tc_chacha_aead", "dep:tc_aead_cipher", "dep:tc_block_cipher", "dep:tc_block_modes"]
+ascon-aead128 = ["dep:tc_ascon_aead", "dep:tc_aead_cipher", "dep:tc_block_cipher", "dep:tc_block_modes"]
+ascon128 = ["dep:tc_ascon_aead", "dep:tc_aead_cipher", "dep:tc_block_cipher", "dep:tc_block_modes"]
+ascon128a = ["dep:tc_ascon_aead", "dep:tc_aead_cipher", "dep:tc_block_cipher", "dep:tc_block_modes"]
+ascon80pq = ["dep:tc_ascon_aead", "dep:tc_aead_cipher", "dep:tc_block_cipher", "dep:tc_block_modes"]
+grain128-aead = ["dep:tc_grain128_aead", "tc_grain128_aead/alloc", "dep:tc_aead_cipher", "dep:tc_block_cipher", "dep:tc_block_modes"]
+schwaemm128-128 = ["dep:tc_sparkle_aead", "dep:tc_aead_cipher", "dep:tc_block_cipher", "dep:tc_block_modes"]
+schwaemm256-128 = ["dep:tc_sparkle_aead", "dep:tc_aead_cipher", "dep:tc_block_cipher", "dep:tc_block_modes"]
+schwaemm192-192 = ["dep:tc_sparkle_aead", "dep:tc_aead_cipher", "dep:tc_block_cipher", "dep:tc_block_modes"]
+schwaemm256-256 = ["dep:tc_sparkle_aead", "dep:tc_aead_cipher", "dep:tc_block_cipher", "dep:tc_block_modes"]
 
 # MAC
 hmac-sha256 = ["sha256", "dep:tc_block_cipher", "tc_macs/hmac", "tc_macs/alloc"]
@@ -216,6 +225,9 @@ tc_threefish = { version = "0.1.0", features = ["alloc"], optional = true }
 # Stream cipher
 tc_chacha = { version = "0.1.0", optional = true }
 tc_chacha_aead = { version = "0.1.0", optional = true }
+tc_ascon_aead = { version = "0.1.0", optional = true }
+tc_grain128_aead = { version = "0.1.0", optional = true }
+tc_sparkle_aead = { version = "0.1.0", optional = true }
 tc_hc = { version = "0.1.0", optional = true }
 tc_rc4_family = { version = "0.1.0", optional = true }
 tc_salsa20 = { version = "0.1.0", optional = true }
