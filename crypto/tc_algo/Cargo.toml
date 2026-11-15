@@ -159,6 +159,8 @@ aes-wrap = ["aes", "tc_key_wrap/rfc3394"]
 # Key pair
 rsa = ["dep:tc_asn1_x509", "dep:tc_asym_encoding", "dep:tc_asym_iso9796", "dep:tc_md", "dep:tc_rsa", "dep:tc_rsa_signer", "dep:tc_sha"]
 elgamal = ["dep:tc_elgamal", "dep:tc_asym_encoding", "dep:tc_dh_key", "dep:tc_md", "dep:tc_sha"]
+naccache-stern = ["dep:tc_naccache_stern"]
+sm2 = ["dep:tc_sm2", "dep:tc_ec_key", "dep:tc_fp_custom"]
 
 # Agreement
 dh = ["dep:tc_bigint", "dep:tc_dh", "dep:tc_dh_key"]
@@ -275,3 +277,7 @@ tc_bigint = { version = "0.1.0", features = ["alloc"], optional = true }
 tc_dh = { version = "0.1.0", path = "../agreement/tc_dh", optional = true }
 tc_dh_key = { version = "0.1.0", path = "../tc_dh_key", optional = true }
 tc_elgamal = { version = "0.1.0", path = "../tc_elgamal", optional = true }
+tc_naccache_stern = { version = "0.1.0", path = "../tc_naccache_stern", optional = true }
+tc_sm2 = { version = "0.1.0", path = "../tc_sm2", optional = true }
+tc_ec_key = { version = "0.1.0", path = "../tc_ec_key", optional = true }
+tc_fp_custom = { version = "0.1.0", optional = true }

@@ -15,6 +15,8 @@ mod key_length;
 mod parallel_hash_params;
 #[cfg(feature = "rsa")]
 mod rsa_key_gen_params;
+#[cfg(feature = "sm2")]
+pub(crate) mod sm2_keys;
 #[cfg(any(feature = "tuplehash128", feature = "tuplehash256"))]
 mod tuple_hash_params;
 
@@ -73,6 +75,8 @@ mod tuple_hash_params;
     feature = "hmac-sha256",
     feature = "rsa",
     feature = "elgamal",
+    feature = "naccache-stern",
+    feature = "sm2",
     feature = "dh",
     feature = "hkdf",
     feature = "ml-kem"
@@ -349,6 +353,8 @@ pub use tuple_hash_params::TupleHashParams;
     feature = "hmac-sha256",
     feature = "rsa",
     feature = "elgamal",
+    feature = "naccache-stern",
+    feature = "sm2",
     feature = "dh",
     feature = "hkdf",
     feature = "ml-kem"
@@ -635,6 +641,50 @@ impl Params for tc_elgamal::ElGamalPublicKey {
 
 #[cfg(feature = "elgamal")]
 impl Params for tc_elgamal::ElGamalPrivateKey {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
+#[cfg(feature = "elgamal")]
+impl Params for tc_elgamal::ElGamalParameters {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
+// The keys of Naccache-Stern and the params of its key pair generator, which tc_naccache_stern has
+#[cfg(feature = "naccache-stern")]
+impl Params for tc_naccache_stern::NaccacheSternPublicKey {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
+#[cfg(feature = "naccache-stern")]
+impl Params for tc_naccache_stern::NaccacheSternPrivateKey {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
+#[cfg(feature = "naccache-stern")]
+impl Params for tc_naccache_stern::NaccacheSternKeyGenerationParams {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
+// The EC keys of SM2 on sm2p256v1, as its key pair generator gives them
+#[cfg(feature = "sm2")]
+impl Params for sm2_keys::Sm2PublicKey {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
+#[cfg(feature = "sm2")]
+impl Params for sm2_keys::Sm2PrivateKey {
     fn as_any(&self) -> &dyn Any {
         self
     }

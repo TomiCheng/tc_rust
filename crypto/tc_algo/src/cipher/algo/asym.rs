@@ -1,13 +1,21 @@
+#[cfg(any(feature = "rsa", feature = "elgamal", feature = "naccache-stern"))]
 use core::error::Error;
+#[cfg(any(feature = "rsa", feature = "elgamal", feature = "naccache-stern"))]
 use core::marker::PhantomData;
 
 use rand_core::CryptoRng;
 use tc_asn1::Asn1Oid;
+#[cfg(any(feature = "rsa", feature = "elgamal"))]
 use tc_asym_encoding::EncodingError;
+#[cfg(any(feature = "rsa", feature = "elgamal", feature = "naccache-stern"))]
 use tc_buffered_cipher::{BufferedCipher, BufferedError};
 
-use crate::cipher::{Cipher, CipherDirection, CipherEntry};
-use crate::{AlgoError, EntryBase, ErrorKind, Params};
+use crate::EntryBase;
+#[cfg(any(feature = "rsa", feature = "elgamal", feature = "naccache-stern"))]
+use crate::cipher::CipherDirection;
+use crate::cipher::{Cipher, CipherEntry};
+#[cfg(any(feature = "rsa", feature = "elgamal", feature = "naccache-stern"))]
+use crate::{AlgoError, ErrorKind, Params};
 
 pub(super) type Rand = fn() -> Box<dyn CryptoRng>;
 
@@ -70,6 +78,7 @@ impl CipherEntry for Row {
     }
 }
 
+#[cfg(any(feature = "rsa", feature = "elgamal", feature = "naccache-stern"))]
 // Inits an asymmetric cipher with the key types of its algorithm, and refuses any other params
 pub(super) trait Keys<C> {
     fn init(
@@ -79,16 +88,19 @@ pub(super) trait Keys<C> {
     ) -> Result<(), AlgoError>;
 }
 
+#[cfg(any(feature = "rsa", feature = "elgamal", feature = "naccache-stern"))]
 // An asymmetric cipher behind Cipher, its key of the types K takes. One message is one block, so
 // nothing comes out before do_final
 pub(super) struct Asym<C, K>(pub(super) C, pub(super) PhantomData<fn() -> K>);
 
+#[cfg(any(feature = "rsa", feature = "elgamal", feature = "naccache-stern"))]
 impl<C, K> Asym<C, K> {
     pub(super) fn new(cipher: C) -> Self {
         Self(cipher, PhantomData)
     }
 }
 
+#[cfg(any(feature = "rsa", feature = "elgamal", feature = "naccache-stern"))]
 impl<C, K, E> BufferedCipher for Asym<C, K>
 where
     C: BufferedCipher<Error = BufferedError<E>>,
@@ -121,6 +133,7 @@ where
     }
 }
 
+#[cfg(any(feature = "rsa", feature = "elgamal", feature = "naccache-stern"))]
 impl<C, K, E> Cipher for Asym<C, K>
 where
     C: BufferedCipher<Error = BufferedError<E>>,
@@ -132,15 +145,18 @@ where
     }
 }
 
+#[cfg(any(feature = "rsa", feature = "elgamal", feature = "naccache-stern"))]
 pub(super) fn invalid_params<E: Error + Send + Sync + 'static>(error: E) -> AlgoError {
     AlgoError::with_source(ErrorKind::InvalidParams, error)
 }
 
+#[cfg(any(feature = "rsa", feature = "elgamal", feature = "naccache-stern"))]
 // The kind of an error of the engine or of an encoding over it
 pub(super) trait Kind {
     fn kind(&self) -> ErrorKind;
 }
 
+#[cfg(any(feature = "rsa", feature = "elgamal"))]
 impl<E: Kind> Kind for EncodingError<E> {
     fn kind(&self) -> ErrorKind {
         match self {
@@ -153,6 +169,7 @@ impl<E: Kind> Kind for EncodingError<E> {
     }
 }
 
+#[cfg(any(feature = "rsa", feature = "elgamal", feature = "naccache-stern"))]
 fn algo_error<E: Kind + Error + Send + Sync + 'static>(error: BufferedError<E>) -> AlgoError {
     let kind = match &error {
         BufferedError::NotInitialized => ErrorKind::NotInitialized,

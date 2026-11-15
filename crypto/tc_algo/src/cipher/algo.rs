@@ -56,7 +56,12 @@ mod aria;
     feature = "ascon80pq"
 ))]
 mod ascon_aead;
-#[cfg(any(feature = "rsa", feature = "elgamal"))]
+#[cfg(any(
+    feature = "rsa",
+    feature = "elgamal",
+    feature = "naccache-stern",
+    feature = "sm2"
+))]
 mod asym;
 #[cfg(any(
     feature = "aes",
@@ -166,6 +171,8 @@ mod ies;
     feature = "threefish-1024"
 ))]
 mod keyed;
+#[cfg(feature = "naccache-stern")]
+mod naccache_stern;
 #[cfg(feature = "noekeon")]
 mod noekeon;
 #[cfg(any(feature = "rc2", feature = "rc5", feature = "rc5-64", feature = "rc6"))]
@@ -189,6 +196,8 @@ mod seed;
 mod serpent;
 #[cfg(feature = "skipjack")]
 mod skipjack;
+#[cfg(feature = "sm2")]
+mod sm2;
 #[cfg(feature = "sm4")]
 mod sm4;
 #[cfg(any(
@@ -338,6 +347,10 @@ pub(crate) const BUILT_IN: &[CreateRows] = &[
     rsa::rsa,
     #[cfg(feature = "elgamal")]
     elgamal::elgamal,
+    #[cfg(feature = "naccache-stern")]
+    naccache_stern::naccache_stern,
+    #[cfg(feature = "sm2")]
+    sm2::sm2,
     #[cfg(feature = "ies")]
     ies::ies,
 ];

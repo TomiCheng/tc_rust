@@ -27,6 +27,9 @@ short data, such as a key for a symmetric cipher, not for messages.
 | `ELGAMAL//OAEPWITHSHA256ANDMGF1WITHSHA1PADDING` | `OAEPWITHSHA-256ANDMGF1WITHSHA-1PADDING` |  | `elgamal` | `ElGamalPublicKey`, `ElGamalPrivateKey` | OAEP over SHA-256, MGF1 over SHA-1 |
 | `ELGAMAL//OAEPWITHSHA384ANDMGF1PADDING` | `OAEPWITHSHA-384ANDMGF1PADDING` |  | `elgamal` | `ElGamalPublicKey`, `ElGamalPrivateKey` | OAEP over SHA-384 |
 | `ELGAMAL//OAEPWITHSHA512ANDMGF1PADDING` | `OAEPWITHSHA-512ANDMGF1PADDING` |  | `elgamal` | `ElGamalPublicKey`, `ElGamalPrivateKey` | OAEP over SHA-512 |
+| `NACCACHESTERN` | `NOPADDING`, `RAW` |  | `naccache-stern` | `NaccacheSternPublicKey`, `NaccacheSternPrivateKey` | additively homomorphic |
+| `SM2` | `C1C2C3` |  | `sm2` | SM2 key pair | SM2 over sm2p256v1 and SM3, C1 ‖ C2 ‖ C3 |
+| `SM2//C1C3C2` | `C1C3C2` |  | `sm2` | SM2 key pair | SM2 over sm2p256v1 and SM3, C1 ‖ C3 ‖ C2 |
 
 The names, aliases and OIDs are those of Bouncy Castle's `CipherUtilities`. The aliases are
 paddings: each goes after `RSA//`, `RSA/NONE/` or `RSA/ECB/`, and the same for `ELGAMAL`, so
@@ -42,12 +45,23 @@ ISO 9796-1 is RSA's alone, as in Bouncy Castle, whose encoding takes an RSA key;
 data only. ElGamal has no OID in Bouncy Castle, and its ciphertext is two numbers of the size of
 `p`, twice the block of its input.
 
+Bouncy Castle has the engines of Naccache-Stern and SM2 but no names for them in
+`CipherUtilities`, so their names are this crate's. Naccache-Stern takes no padding: the product of
+two ciphertexts decrypts to the sum of their messages, which a padding would undo, and its messages
+are numbers below the product of its small primes. SM2 is GM/T 0003 over its curve, sm2p256v1, with
+SM3; its ciphertext is a point, the message and a hash, so it is as long as the message and 97 bytes,
+and the order of the three parts takes the place of the padding: `SM2` alone is C1C2C3, Bouncy
+Castle's default, where the standard of 2012 has C1C3C2. The two do not open each other's.
+
 ## Params
 
 The RSA rows take an `RsaKey`, from `tc_algo::params`: the public key to encrypt, the private key
 to decrypt. A key pair from `algo.key_pair_generator()` goes straight in. The ElGamal rows take an
-`ElGamalPublicKey` to encrypt and an `ElGamalPrivateKey` to decrypt, from `tc_elgamal`. Params of
-another type are `InvalidParams` from `init`.
+`ElGamalPublicKey` to encrypt and an `ElGamalPrivateKey` to decrypt, from `tc_elgamal`, and
+Naccache-Stern the same from `tc_naccache_stern`. The SM2 rows take the public key to encrypt and
+the private key to decrypt of a pair from the `SM2` row of `algo.key_pair_generator()`, keys of
+`tc_ec_key` on sm2p256v1. Params of another type, or a key for the other direction, are
+`InvalidParams` from `init`.
 
 ## Using it
 

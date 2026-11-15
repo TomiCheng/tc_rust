@@ -2,12 +2,18 @@
 mod aes;
 #[cfg(feature = "dh")]
 mod dh;
+#[cfg(feature = "elgamal")]
+mod elgamal;
 #[cfg(any(feature = "aes", feature = "chacha", feature = "hmac-sha256"))]
 mod key;
 #[cfg(feature = "ml-kem")]
 mod ml_kem;
+#[cfg(feature = "naccache-stern")]
+mod naccache_stern;
 #[cfg(feature = "rsa")]
 mod rsa;
+#[cfg(feature = "sm2")]
+mod sm2;
 
 use super::{CreateKeyGeneratorRows, CreateKeyPairGeneratorRows};
 
@@ -27,4 +33,10 @@ pub(crate) const BUILT_IN_KEY_PAIR_GENERATORS: &[CreateKeyPairGeneratorRows] = &
     dh::dh,
     #[cfg(feature = "ml-kem")]
     ml_kem::ml_kem,
+    #[cfg(feature = "elgamal")]
+    elgamal::elgamal,
+    #[cfg(feature = "naccache-stern")]
+    naccache_stern::naccache_stern,
+    #[cfg(feature = "sm2")]
+    sm2::sm2,
 ];
