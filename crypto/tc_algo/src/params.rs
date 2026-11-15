@@ -72,6 +72,7 @@ mod tuple_hash_params;
     feature = "schwaemm256-256",
     feature = "hmac-sha256",
     feature = "rsa",
+    feature = "elgamal",
     feature = "dh",
     feature = "hkdf",
     feature = "ml-kem"
@@ -347,6 +348,7 @@ pub use tuple_hash_params::TupleHashParams;
     feature = "schwaemm256-256",
     feature = "hmac-sha256",
     feature = "rsa",
+    feature = "elgamal",
     feature = "dh",
     feature = "hkdf",
     feature = "ml-kem"
@@ -617,6 +619,22 @@ impl Params for MlKemPrivateKey {
 
 #[cfg(feature = "rsa")]
 impl Params for RsaKey {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
+// The keys of ElGamal encryption, which tc_elgamal has; whether tc_algo re-exports them is yet to be
+// decided, as for the other key types of DH
+#[cfg(feature = "elgamal")]
+impl Params for tc_elgamal::ElGamalPublicKey {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
+#[cfg(feature = "elgamal")]
+impl Params for tc_elgamal::ElGamalPrivateKey {
     fn as_any(&self) -> &dyn Any {
         self
     }

@@ -157,7 +157,8 @@ hmac-sha256 = ["sha256", "dep:tc_block_cipher", "tc_macs/hmac", "tc_macs/alloc"]
 aes-wrap = ["aes", "tc_key_wrap/rfc3394"]
 
 # Key pair
-rsa = ["dep:tc_asn1_x509", "dep:tc_asym_encoding", "dep:tc_rsa", "dep:tc_rsa_signer", "dep:tc_sha"]
+rsa = ["dep:tc_asn1_x509", "dep:tc_asym_encoding", "dep:tc_asym_iso9796", "dep:tc_md", "dep:tc_rsa", "dep:tc_rsa_signer", "dep:tc_sha"]
+elgamal = ["dep:tc_elgamal", "dep:tc_asym_encoding", "dep:tc_dh_key", "dep:tc_md", "dep:tc_sha"]
 
 # Agreement
 dh = ["dep:tc_bigint", "dep:tc_dh", "dep:tc_dh_key"]
@@ -246,6 +247,7 @@ tc_key_wrap = "0.1.0"
 # Key pair
 tc_asym_cipher = "0.2.0"
 tc_asym_encoding = { version = "0.2.0", optional = true }
+tc_asym_iso9796 = { version = "0.2.0", optional = true }
 tc_asn1_x509 = { version = "0.1.0", optional = true }
 tc_rsa = { version = "0.2.0", optional = true }
 tc_rsa_signer = { version = "0.1.0", path = "../../signer/tc_rsa_signer", optional = true }
@@ -272,3 +274,4 @@ tc_agreement = { version = "0.1.0", path = "../agreement/tc_agreement" }
 tc_bigint = { version = "0.1.0", features = ["alloc"], optional = true }
 tc_dh = { version = "0.1.0", path = "../agreement/tc_dh", optional = true }
 tc_dh_key = { version = "0.1.0", path = "../tc_dh_key", optional = true }
+tc_elgamal = { version = "0.1.0", path = "../tc_elgamal", optional = true }

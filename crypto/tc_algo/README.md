@@ -37,7 +37,8 @@ rows it turns on, and a name it did not turn on is an error, not a fallback.
     bits, and ChaCha20-Poly1305, XChaCha20-Poly1305, Ascon, Grain-128AEAD and Schwaemm, each
     behind a feature of its own; see [AEAD ciphers](docs/AeadCipher.md)
   - IES: `IES` (`ies`); see [IES](docs/IES.md)
-  - Asymmetric cipher: RSA raw, PKCS#1 v1.5 and OAEP (`rsa`); see
+  - Asymmetric cipher: RSA and ElGamal, raw, with PKCS#1 v1.5 or with OAEP over MD5 and the SHA-1
+    and SHA-2 digests, and RSA with ISO 9796-1 (`rsa`, `elgamal`); see
     [Asymmetric ciphers](docs/AsymCipher.md)
 - Key wrap: `AESWRAP` (`aes-wrap`)
 - Key generation: `AES128`, `AES192`, `AES256`, `KEY` (`aes`); key pairs `RSA` (`rsa`), `DH`

@@ -1,39 +1,44 @@
 use core::error::Error;
 
 use rand_core::CryptoRng;
-use tc_asn1::Asn1Oid;
-use tc_asym_encoding::{EncodingError, OaepEncoding, Pkcs1Encoding};
-use tc_buffered_cipher::{
-    BufferedAsymmetricBlockCipher, BufferedCipher, BufferedCipherInit, BufferedError,
-};
+use tc_asym_encoding::{OaepEncoding, Pkcs1Encoding};
+use tc_asym_iso9796::{Iso9796Error, Iso9796d1Encoding};
+use tc_buffered_cipher::{BufferedAsymmetricBlockCipher, BufferedCipherInit};
+use tc_md::Md5Digest;
 use tc_rsa::{RsaBlindedEngine, RsaEngine, RsaError, RsaKey};
-use tc_sha::{Sha1Digest, Sha256Digest};
+use tc_sha::{Sha1Digest, Sha224Digest, Sha256Digest, Sha384Digest, Sha512Digest};
 
-use crate::cipher::{Cipher, CipherDirection, CipherEntry};
-use crate::{AlgoError, DefaultAlgoContext, EntryBase, ErrorKind, Params};
-
-type Rand = fn() -> Box<dyn CryptoRng>;
+use super::asym::{Asym, Keys, Kind, Rand, invalid_params, row};
+use crate::cipher::{CipherDirection, CipherEntry};
+use crate::{AlgoError, DefaultAlgoContext, ErrorKind, Params};
 
 // The rows of RSA, to give to DefaultAlgoBuilder::reg_cipher. Their names and OIDs are those of
 // Bouncy Castle's CipherUtilities, where a name may give the mode as NONE or ECB, or leave it out,
-// and where rsaEncryption is PKCS#1 v1.5 and id-RSAES-OAEP is OAEP with SHA-1
+// and where rsaEncryption is PKCS#1 v1.5 and id-RSAES-OAEP is OAEP with SHA-1. OAEP takes one digest
+// for the label and MGF1, but SHA-256 with MGF1 over SHA-1, for the data of Java's default
 pub(super) fn rsa(context: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>> {
     let rand = context.rand();
     vec![
-        row("RSA", &["NOPADDING"], &[], rand, |rand| {
-            Box::new(Rsa(BufferedAsymmetricBlockCipher::new(engine(rand))))
+        row("RSA", "RSA", &["NOPADDING", "RAW"], &[], rand, |rand| {
+            Box::new(Asym::<_, RsaKeys>::new(BufferedAsymmetricBlockCipher::new(
+                engine(rand),
+            )))
         }),
         row(
+            "RSA",
             "RSA//PKCS1PADDING",
             &["PKCS1PADDING", "PKCS1"],
             &["1.2.840.113549.1.1.1"],
             rand,
             |rand| {
                 let encoding = Pkcs1Encoding::from_parts(engine(rand), rand());
-                Box::new(Rsa(BufferedAsymmetricBlockCipher::new(encoding)))
+                Box::new(Asym::<_, RsaKeys>::new(BufferedAsymmetricBlockCipher::new(
+                    encoding,
+                )))
             },
         ),
         row(
+            "RSA",
             "RSA//OAEPPADDING",
             &[
                 "OAEPPADDING",
@@ -43,12 +48,29 @@ pub(super) fn rsa(context: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>> {
             ],
             &["1.2.840.113549.1.1.7"],
             rand,
-            |rand| {
-                let encoding = OaepEncoding::from_parts(engine(rand), Sha1Digest::new(), rand());
-                Box::new(Rsa(BufferedAsymmetricBlockCipher::new(encoding)))
-            },
+            |rand| oaep(engine(rand), Sha1Digest::new(), rand),
         ),
         row(
+            "RSA",
+            "RSA//OAEPWITHMD5ANDMGF1PADDING",
+            &["OAEPWITHMD5ANDMGF1PADDING"],
+            &[],
+            rand,
+            |rand| oaep(engine(rand), Md5Digest::new(), rand),
+        ),
+        row(
+            "RSA",
+            "RSA//OAEPWITHSHA224ANDMGF1PADDING",
+            &[
+                "OAEPWITHSHA224ANDMGF1PADDING",
+                "OAEPWITHSHA-224ANDMGF1PADDING",
+            ],
+            &[],
+            rand,
+            |rand| oaep(engine(rand), Sha224Digest::new(), rand),
+        ),
+        row(
+            "RSA",
             "RSA//OAEPWITHSHA256ANDMGF1PADDING",
             &[
                 "OAEPWITHSHA256ANDMGF1PADDING",
@@ -58,9 +80,60 @@ pub(super) fn rsa(context: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>> {
             ],
             &[],
             rand,
+            |rand| oaep(engine(rand), Sha256Digest::new(), rand),
+        ),
+        row(
+            "RSA",
+            "RSA//OAEPWITHSHA256ANDMGF1WITHSHA1PADDING",
+            &[
+                "OAEPWITHSHA256ANDMGF1WITHSHA1PADDING",
+                "OAEPWITHSHA-256ANDMGF1WITHSHA-1PADDING",
+            ],
+            &[],
+            rand,
             |rand| {
-                let encoding = OaepEncoding::from_parts(engine(rand), Sha256Digest::new(), rand());
-                Box::new(Rsa(BufferedAsymmetricBlockCipher::new(encoding)))
+                // MGF1 over SHA-1, and SHA-256 for the label, whose hash sets the seed's length
+                let encoding = OaepEncoding::from_parts(engine(rand), Sha1Digest::new(), rand())
+                    .with_label_digest(Sha256Digest::new(), &[]);
+                Box::new(Asym::<_, RsaKeys>::new(BufferedAsymmetricBlockCipher::new(
+                    encoding,
+                )))
+            },
+        ),
+        row(
+            "RSA",
+            "RSA//OAEPWITHSHA384ANDMGF1PADDING",
+            &[
+                "OAEPWITHSHA384ANDMGF1PADDING",
+                "OAEPWITHSHA-384ANDMGF1PADDING",
+            ],
+            &[],
+            rand,
+            |rand| oaep(engine(rand), Sha384Digest::new(), rand),
+        ),
+        row(
+            "RSA",
+            "RSA//OAEPWITHSHA512ANDMGF1PADDING",
+            &[
+                "OAEPWITHSHA512ANDMGF1PADDING",
+                "OAEPWITHSHA-512ANDMGF1PADDING",
+            ],
+            &[],
+            rand,
+            |rand| oaep(engine(rand), Sha512Digest::new(), rand),
+        ),
+        row(
+            "RSA",
+            "RSA//ISO9796-1PADDING",
+            &["ISO9796-1PADDING", "ISO9796-1"],
+            &[],
+            rand,
+            |rand| {
+                // Its engine is blinded RSA of its own
+                let encoding = Iso9796d1Encoding::new(rand());
+                Box::new(Asym::<_, RsaKeys>::new(BufferedAsymmetricBlockCipher::new(
+                    encoding,
+                )))
             },
         ),
     ]
@@ -72,118 +145,36 @@ fn engine(rand: Rand) -> RsaBlindedEngine<RsaEngine, Box<dyn CryptoRng>> {
     RsaBlindedEngine::from_parts(RsaEngine::new(), rand())
 }
 
-fn row(
-    name: &'static str,
-    paddings: &[&str],
-    oids: &[&str],
+fn oaep<D: tc_digest::Digest + 'static>(
+    engine: RsaBlindedEngine<RsaEngine, Box<dyn CryptoRng>>,
+    digest: D,
     rand: Rand,
-    create: fn(Rand) -> Box<dyn Cipher>,
-) -> Box<dyn CipherEntry> {
-    let aliases = ["RSA//", "RSA/NONE/", "RSA/ECB/"]
-        .iter()
-        .flat_map(|mode| {
-            paddings
-                .iter()
-                .map(move |padding| format!("{mode}{padding}"))
-        })
-        .filter(|alias| alias != name)
-        .collect();
-    Box::new(Row {
-        name,
-        aliases,
-        oids: oids
-            .iter()
-            .map(|dotted| dotted.parse().expect("a valid OID"))
-            .collect(),
-        rand,
-        create,
-    })
+) -> Box<dyn crate::cipher::Cipher> {
+    let encoding = OaepEncoding::from_parts(engine, digest, rand());
+    Box::new(Asym::<_, RsaKeys>::new(BufferedAsymmetricBlockCipher::new(
+        encoding,
+    )))
 }
 
-struct Row {
-    name: &'static str,
-    aliases: Vec<String>,
-    oids: Vec<Asn1Oid>,
-    rand: Rand,
-    create: fn(Rand) -> Box<dyn Cipher>,
-}
+// An RsaKey, public or private, in either direction, as in Bouncy Castle
+struct RsaKeys;
 
-impl EntryBase for Row {
-    fn name(&self) -> &str {
-        self.name
-    }
-
-    fn aliases(&self) -> &[String] {
-        &self.aliases
-    }
-
-    fn oids(&self) -> &[Asn1Oid] {
-        &self.oids
-    }
-}
-
-impl CipherEntry for Row {
-    fn create(&self) -> Box<dyn Cipher> {
-        (self.create)(self.rand)
-    }
-}
-
-// Its params are an RsaKey, public or private, in either direction, as in Bouncy Castle. One message
-// is one block, so nothing comes out before do_final
-struct Rsa<C>(C);
-
-impl<C, E, I> BufferedCipher for Rsa<C>
+impl<C, I> Keys<C> for RsaKeys
 where
-    C: BufferedCipher<Error = BufferedError<E>> + BufferedCipherInit<RsaKey, Error = I>,
-    E: Kind + Error + Send + Sync + 'static,
+    C: BufferedCipherInit<RsaKey, Error = I>,
     I: Error + Send + Sync + 'static,
 {
-    type Error = AlgoError;
-
-    fn block_size(&self) -> usize {
-        self.0.block_size()
-    }
-
-    fn update_output_len(&self, input_len: usize) -> Result<usize, AlgoError> {
-        self.0.update_output_len(input_len).map_err(algo_error)
-    }
-
-    fn output_len(&self, input_len: usize) -> Result<usize, AlgoError> {
-        self.0.output_len(input_len).map_err(algo_error)
-    }
-
-    fn process_bytes(&mut self, input: &[u8], output: &mut [u8]) -> Result<usize, AlgoError> {
-        self.0.process_bytes(input, output).map_err(algo_error)
-    }
-
-    fn do_final(&mut self, output: &mut [u8]) -> Result<usize, AlgoError> {
-        self.0.do_final(output).map_err(algo_error)
-    }
-
-    fn reset(&mut self) {
-        self.0.reset();
-    }
-}
-
-impl<C, E, I> Cipher for Rsa<C>
-where
-    C: BufferedCipher<Error = BufferedError<E>> + BufferedCipherInit<RsaKey, Error = I>,
-    E: Kind + Error + Send + Sync + 'static,
-    I: Error + Send + Sync + 'static,
-{
-    fn init(&mut self, direction: CipherDirection, params: &dyn Params) -> Result<(), AlgoError> {
+    fn init(
+        cipher: &mut C,
+        direction: CipherDirection,
+        params: &dyn Params,
+    ) -> Result<(), AlgoError> {
         let key = params
             .as_any()
             .downcast_ref::<RsaKey>()
             .ok_or(AlgoError::new(ErrorKind::InvalidParams))?;
-        self.0
-            .init(direction, key)
-            .map_err(|error| AlgoError::with_source(ErrorKind::InvalidParams, error))
+        cipher.init(direction, key).map_err(invalid_params)
     }
-}
-
-trait Kind {
-    fn kind(&self) -> ErrorKind;
 }
 
 impl Kind for RsaError {
@@ -198,25 +189,19 @@ impl Kind for RsaError {
     }
 }
 
-impl<E: Kind> Kind for EncodingError<E> {
+impl Kind for Iso9796Error {
     fn kind(&self) -> ErrorKind {
         match self {
-            EncodingError::Cipher(error) => error.kind(),
-            EncodingError::NotInitialized => ErrorKind::NotInitialized,
-            // A block that is not a valid PKCS#1 or OAEP encoding
-            EncodingError::InvalidBlock => ErrorKind::InvalidCiphertext,
+            Iso9796Error::Cipher(error) => error.kind(),
+            Iso9796Error::NotInitialized => ErrorKind::NotInitialized,
+            // A block that is not a valid ISO 9796-1 encoding
+            Iso9796Error::InvalidBlock => ErrorKind::InvalidCiphertext,
+            Iso9796Error::UnsupportedKeySize | Iso9796Error::InvalidPadBits => {
+                ErrorKind::InvalidParams
+            }
             _ => ErrorKind::DataLength,
         }
     }
-}
-
-fn algo_error<E: Kind + Error + Send + Sync + 'static>(error: BufferedError<E>) -> AlgoError {
-    let kind = match &error {
-        BufferedError::NotInitialized => ErrorKind::NotInitialized,
-        BufferedError::Cipher(error) => error.kind(),
-        _ => ErrorKind::DataLength,
-    };
-    AlgoError::with_source(kind, error)
 }
 
 #[cfg(test)]
@@ -294,6 +279,12 @@ mod tests {
             "RSA/ECB/OAEPWITHSHA-1ANDMGF1PADDING",
             OAEP_SHA256,
             "RSA/ECB/OAEPWITHSHA-256ANDMGF1PADDING",
+            "RSA//OAEPWITHMD5ANDMGF1PADDING",
+            "RSA/NONE/OAEPWITHSHA-224ANDMGF1PADDING",
+            "RSA//OAEPWITHSHA256ANDMGF1WITHSHA1PADDING",
+            "RSA/ECB/OAEPWITHSHA-384ANDMGF1PADDING",
+            "RSA//ISO9796-1PADDING",
+            "RSA/ECB/ISO9796-1",
         ] {
             let sealed = algo
                 .cipher()
@@ -437,5 +428,50 @@ mod tests {
         assert_eq!(error.kind(), ErrorKind::NotInitialized);
         let error = cipher.finalize().unwrap_err();
         assert_eq!(error.kind(), ErrorKind::NotInitialized);
+    }
+
+    // OAEP over SHA-512 spends 130 bytes of the block on its hashes, more than a 1024-bit key has,
+    // but takes a 2048-bit one
+    #[test]
+    fn oaep_over_sha512_needs_a_key_of_more_than_1024_bits() {
+        let (public, _) = keys();
+        let algo = algo();
+        let error = algo
+            .cipher()
+            .encrypt_by_name("RSA//OAEPWITHSHA512ANDMGF1PADDING", public, MESSAGE)
+            .unwrap_err();
+        assert_eq!(error.kind(), ErrorKind::DataLength);
+
+        let params = RsaKeyGenParams::new(2048);
+        let pair = algo
+            .key_pair_generator()
+            .generate_by_name_with("RSA", &params)
+            .unwrap();
+        let name = "RSA/ECB/OAEPWITHSHA-512ANDMGF1PADDING";
+        let sealed = algo
+            .cipher()
+            .encrypt_by_name(name, pair.public(), MESSAGE)
+            .unwrap();
+        let opened = algo
+            .cipher()
+            .decrypt_by_name(name, pair.private(), &sealed)
+            .unwrap();
+        assert_eq!(opened, MESSAGE);
+    }
+
+    // SHA-256 with MGF1 over SHA-1 is not SHA-256 throughout: each opens only its own
+    #[test]
+    fn oaep_with_mgf1_over_sha1_differs_from_sha256_throughout() {
+        let (public, private) = keys();
+        let algo = algo();
+        let sealed = algo
+            .cipher()
+            .encrypt_by_name("RSA//OAEPWITHSHA256ANDMGF1WITHSHA1PADDING", public, MESSAGE)
+            .unwrap();
+        let error = algo
+            .cipher()
+            .decrypt_by_name(OAEP_SHA256, private, &sealed)
+            .unwrap_err();
+        assert_eq!(error.kind(), ErrorKind::InvalidCiphertext);
     }
 }

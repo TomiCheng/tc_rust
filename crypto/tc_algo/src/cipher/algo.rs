@@ -56,6 +56,8 @@ mod aria;
     feature = "ascon80pq"
 ))]
 mod ascon_aead;
+#[cfg(any(feature = "rsa", feature = "elgamal"))]
+mod asym;
 #[cfg(any(
     feature = "aes",
     feature = "des",
@@ -142,6 +144,8 @@ mod des;
     feature = "dstu7624-512"
 ))]
 mod dstu7624;
+#[cfg(feature = "elgamal")]
+mod elgamal;
 #[cfg(feature = "gost28147")]
 mod gost28147;
 #[cfg(feature = "grain128-aead")]
@@ -332,6 +336,8 @@ pub(crate) const BUILT_IN: &[CreateRows] = &[
     hc::hc256,
     #[cfg(feature = "rsa")]
     rsa::rsa,
+    #[cfg(feature = "elgamal")]
+    elgamal::elgamal,
     #[cfg(feature = "ies")]
     ies::ies,
 ];
