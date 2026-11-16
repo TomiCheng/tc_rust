@@ -247,13 +247,13 @@ fn cmac<E: Engine>(cipher: &str, engine: fn() -> E) -> Box<dyn MacEntry> {
     )
 }
 
-// GMAC with a tag of 16 bytes, named AES-GMAC as in Bouncy Castle's provider, or AESGMAC; a key and
-// an IV
+// GMAC with a tag of 16 bytes, named AESGMAC as CMAC is, or AES-GMAC as in Bouncy Castle's
+// provider; a key and an IV
 #[cfg(feature = "gmac")]
 fn gmac<E: Engine>(cipher: &str, engine: fn() -> E) -> Box<dyn MacEntry> {
     row(
-        format!("{cipher}-GMAC"),
-        vec![format!("{cipher}GMAC")],
+        format!("{cipher}GMAC"),
+        vec![format!("{cipher}-GMAC")],
         &[],
         Box::new(move || -> Box<dyn Mac> {
             Box::new(RowMac::new(tc_macs::Gmac::new(engine()), Iv::Required))
