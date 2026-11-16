@@ -99,3 +99,55 @@ way round, or any other type, is `InvalidParams`.
 - A changed ciphertext is `InvalidCiphertext`, and the hash is checked in fixed time.
 - `update` keeps the input, and everything comes out of `finalize`.
 - The random number of each encryption draws from the source of `DefaultAlgoBuilder::set_rand`.
+
+## Signing
+
+From a new pair to a verified signature, over SM3:
+
+```rust
+use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
+
+fn main() -> Result<(), AlgoError> {
+    let algo = DefaultAlgoBuilder::default().build();
+    let name = "SM3withSM2";
+    let message = b"attack at dawn";
+
+    // Generate a pair
+    let pair = algo.key_pair_generator().generate_by_name("SM2")?;
+
+    // Sign with the private key
+    let mut signer = algo.signer().get_by_name(name)?;
+    signer.init(pair.private())?;
+    signer.update(message)?;
+    let signature = signer.sign()?;
+
+    // Verify with the public key
+    let mut verifier = algo.signer().get_by_name(name)?;
+    verifier.init(pair.public())?;
+    verifier.update(message)?;
+    assert!(verifier.verify_signature(&signature)?);
+
+    Ok(())
+}
+```
+
+### Algorithms
+
+| Name | OID | Features |
+|---|---|---|
+| `SM3withSM2` | `1.2.156.10197.1.501` | `sm2` |
+| `SHA256withSM2` | `1.2.156.10197.1.503` | `sm2` and `sha256` |
+
+The names and OIDs are those of Bouncy Castle's `SignerUtilities`, and the case of a name does not
+matter. The signature is r and s in DER.
+
+### Params
+
+Each row takes the `Sm2PrivateKey` to sign and the `Sm2PublicKey` to verify, as the `SM2` key pair
+generator gives them, and any other type is `InvalidParams`. The user ID is the default of
+GM/T 0003, `1234567812345678`.
+
+### Using it
+
+- k is drawn at random for each signature, from the source of `DefaultAlgoBuilder::set_rand`.
+- The rest is common to every signer: [Signers](Signer.md#using-it).

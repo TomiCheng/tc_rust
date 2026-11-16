@@ -1,3 +1,8 @@
+#![cfg_attr(
+    all(feature = "ecdsa", feature = "sha256"),
+    doc = include_str!("../docs/Signer.md")
+)]
+
 mod algo;
 mod default_signer_provider;
 mod empty_signer_provider;

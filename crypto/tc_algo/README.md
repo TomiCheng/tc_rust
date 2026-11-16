@@ -47,8 +47,8 @@ exception is `KEY`, a secret key of any length, which is always on.
     any length to a public key. Mainstream: ECIES. More: [ECIES](docs/Ecies.md)
 - **[MAC](docs/Mac.md)**: a tag that shows data was not changed and came from someone with the key.
   Mainstream: HMAC-SHA256, AES-CMAC, KMAC and Poly1305.
-- **Signer**: a signature made with a private key, which anyone with the public key can check.
-  Mainstream: RSA with SHA-256. More: [RSA](docs/Rsa.md#signing)
+- **[Signer](docs/Signer.md)**: a signature made with a private key, which anyone with the public
+  key can check. Mainstream: ECDSA and RSA-PSS with SHA-256.
 - **DRBG**: stretches a little entropy into as many random bytes as wanted. Mainstream: HMAC-DRBG
   over SHA-256. More: [DRBG](docs/Drbg.md)
 - **[Key wrap](docs/KeyWrap.md)**: encrypts one key under another, to store or send it. Mainstream:

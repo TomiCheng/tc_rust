@@ -173,31 +173,59 @@ fn main() -> Result<(), AlgoError> {
 
 ### Algorithms
 
-| Name | OID | Feature | Signature bytes |
-|---|---|---|---|
-| `SHA-256withRSA` | `1.2.840.113549.1.1.11` | `rsa` | the size of the modulus |
+The names and OIDs are those of Bouncy Castle's `SignerUtilities`, and the case of a name does not
+matter. A row over a digest needs `rsa` and the digest's feature, as `rsa` and `sha256`. The
+signature is the size of the modulus.
 
-`SHA256withRSA`, `SHA256withRSAEncryption` and `SHA-256withRSAEncryption` find it too, and the case of
-a name does not matter.
+| Name | Aliases | OIDs | Features |
+|---|---|---|---|
+| `MD2withRSA` | `MD2WITHRSAENCRYPTION` | `1.2.840.113549.1.1.2` | `rsa` and `md2` |
+| `MD4withRSA` | `MD4WITHRSAENCRYPTION` | `1.2.840.113549.1.1.3`, `1.3.14.3.2.2`, `1.3.14.3.2.4` | `rsa` and `md4` |
+| `MD5withRSA` | `MD5WITHRSAENCRYPTION` | `1.2.840.113549.1.1.4`, `1.3.14.3.2.3` | `rsa` and `md5` |
+| `SHA-1withRSA` | `SHA1WITHRSA`, `SHA1WITHRSAENCRYPTION` | `1.2.840.113549.1.1.5`, `1.3.14.3.2.29` | `rsa` and `sha1` |
+| `SHA-224withRSA` | `SHA224WITHRSA`, `SHA224WITHRSAENCRYPTION` | `1.2.840.113549.1.1.14` | `rsa` and `sha224` |
+| `SHA-256withRSA` | `SHA256WITHRSA`, `SHA256WITHRSAENCRYPTION` | `1.2.840.113549.1.1.11` | `rsa` and `sha256` |
+| `SHA-384withRSA` | `SHA384WITHRSA`, `SHA384WITHRSAENCRYPTION` | `1.2.840.113549.1.1.12` | `rsa` and `sha384` |
+| `SHA-512withRSA` | `SHA512WITHRSA`, `SHA512WITHRSAENCRYPTION` | `1.2.840.113549.1.1.13` | `rsa` and `sha512` |
+| `SHA-512(224)withRSA` | `SHA512(224)WITHRSA`, `SHA-512/224WITHRSA` | `1.2.840.113549.1.1.15` | `rsa` and `sha512-224` |
+| `SHA-512(256)withRSA` | `SHA512(256)WITHRSA`, `SHA-512/256WITHRSA` | `1.2.840.113549.1.1.16` | `rsa` and `sha512-256` |
+| `SHA3-224withRSA` | `SHA3-224WITHRSAENCRYPTION` | `2.16.840.1.101.3.4.3.13` | `rsa` and `sha3-224` |
+| `SHA3-256withRSA` | `SHA3-256WITHRSAENCRYPTION` | `2.16.840.1.101.3.4.3.14` | `rsa` and `sha3-256` |
+| `SHA3-384withRSA` | `SHA3-384WITHRSAENCRYPTION` | `2.16.840.1.101.3.4.3.15` | `rsa` and `sha3-384` |
+| `SHA3-512withRSA` | `SHA3-512WITHRSAENCRYPTION` | `2.16.840.1.101.3.4.3.16` | `rsa` and `sha3-512` |
+| `RIPEMD128withRSA` | `RIPEMD128WITHRSAENCRYPTION` | `1.3.36.3.3.1.3` | `rsa` and `ripemd128` |
+| `RIPEMD160withRSA` | `RIPEMD160WITHRSAENCRYPTION` | `1.3.36.3.3.1.2` | `rsa` and `ripemd160` |
+| `RIPEMD256withRSA` | `RIPEMD256WITHRSAENCRYPTION` | `1.3.36.3.3.1.4` | `rsa` and `ripemd256` |
+| `<DIGEST>withRSAandMGF1`, for every digest but `NONE` | `<DIGEST>WITHRSA/PSS`, `<DIGEST>WITHRSASSA-PSS` |  | `rsa` and the digest's |
+| `<DIGEST>withRSA/X9.31`, for the digests below |  |  | `rsa` and the digest's |
+| `<DIGEST>withRSA/ISO9796-2`, for the digests below |  |  | `rsa` and the digest's |
+| `PSSwithRSA` | `RSASSA-PSS`, `RSAPSS` | `1.2.840.113549.1.1.10` | `rsa` and `sha1` |
+| `RAWRSASSA-PSS` | `RAWRSAPSS`, `NONEWITHRSAPSS`, `NONEWITHRSASSA-PSS` |  | `rsa` and `sha1` |
+| `NONEwithRSA` | `RSA`, `RSAWITHNONE`, `RAWRSA` |  | `rsa` |
+
+`<DIGEST>` is any name of the digest, so `SHA256withRSA` and `SHA-256WITHRSA` are the same row.
+
+- **PKCS#1 v1.5**, the `withRSA` rows: deterministic, the same signature for the same key and
+  message. Its DigestInfo names the digest, so it is for the digests above alone.
+- **PSS**, the `withRSAandMGF1` rows: MGF1 over the same digest and a salt of its size, as Bouncy
+  Castle builds it, so a new signature each time. `PSSwithRSA` is PSS over SHA-1, Bouncy Castle's
+  default for the OID of RSASSA-PSS.
+- **X9.31**: for SHA-1, SHA-224, SHA-256, SHA-384, SHA-512, SHA-512/224, SHA-512/256, RIPEMD128,
+  RIPEMD160 and WHIRLPOOL, the digests with a trailer.
+- **ISO 9796-2**: for SHA-1, MD5 and RIPEMD160, with the implicit trailer, as Bouncy Castle builds
+  it.
+- **`NONEwithRSA`** signs what it is given, as a hash with its DigestInfo, and **`RAWRSASSA-PSS`** a
+  SHA-1 hash: they are for a hash made elsewhere.
 
 ### Params
 
-The row takes an `RsaKey`, and any other type is `InvalidParams`. The key tells the direction: a
+Every row takes an `RsaKey`, and any other type is `InvalidParams`. The key tells the direction: a
 private key signs, and a public key verifies.
 
 ### Using it
 
-- `get_by_name` and `get_by_oid` give a `Signer`, which is a `Signer` and a `SignerInit` of
-  `tc_signer` with `AlgoError` for its errors, so code written for those traits takes it as it
-  is.
-- **Look at the answer of `verify_signature`.** A wrong signature gives `Ok(false)`, not an error, so
-  a bare `?` on the call lets a forged message through.
-- A message can come in pieces, over several calls of `update`.
-- `sign` gives the signature in a `Vec`. `generate_signature` writes it into a buffer of
-  `max_signature_size` bytes, and one too short is `DataLength`.
-- `sign`, `generate_signature` and `verify_signature` start the next message under the same key.
-  `reset` discards the message so far.
-- `update`, `generate_signature` and `verify_signature` give `NotInitialized` before an `init` that
-  succeeded. So do `generate_signature` with a public key and `verify_signature` with a private one.
-- PKCS#1 v1.5 gives the same signature for the same key and message. The blinding draws from the
-  source of `DefaultAlgoBuilder::set_rand`.
+- The engine is blinded, as Bouncy Castle builds it, and the blinding draws from the source of
+  `DefaultAlgoBuilder::set_rand`.
+- A key too small for the digest, as for PSS over SHA-512 with a modulus of 1024 bits, is
+  `InvalidParams`.
+- The rest is common to every signer: [Signers](Signer.md#using-it).

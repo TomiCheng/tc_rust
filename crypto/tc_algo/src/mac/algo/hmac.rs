@@ -1,10 +1,9 @@
-use core::convert::Infallible;
+use std::sync::Arc;
 
 use tc_asn1::Asn1Oid;
-use tc_digest::TryDigest;
 use tc_macs::{Hmac, MacError};
 
-use crate::digest::DigestEntry;
+use crate::digest::{DigestEntry, RowDigest};
 use crate::mac::{Mac, MacEntry};
 use crate::params::KeyOwned;
 use crate::{AlgoError, DefaultAlgoContext, EntryBase, ErrorKind, Params};
@@ -24,7 +23,7 @@ pub(super) fn hmac(context: &DefaultAlgoContext) -> Vec<Box<dyn MacEntry>> {
             let digest = digest.create();
             digest.byte_length() >= 16 && digest.digest_size() <= digest.byte_length()
         })
-        .map(|digest| Box::new(Row::new(digest)) as Box<dyn MacEntry>)
+        .map(|digest| Box::new(Row::new(Arc::from(digest))) as Box<dyn MacEntry>)
         .collect()
 }
 
@@ -52,14 +51,14 @@ struct Row {
     name: String,
     aliases: Vec<String>,
     oids: Vec<Asn1Oid>,
-    digest: Box<dyn DigestEntry>,
+    digest: Arc<dyn DigestEntry>,
 }
 
 impl Row {
     // The name of Bouncy Castle's MacUtilities: HMAC- and the digest's name, without the dash of
     // SHA- and with a dash for the slash of SHA-512/256. Every name of the digest, after HMAC-,
     // HMAC/ or HMAC alone, is an alias
-    fn new(digest: Box<dyn DigestEntry>) -> Self {
+    fn new(digest: Arc<dyn DigestEntry>) -> Self {
         let digest_name = digest.name().replacen("SHA-", "SHA", 1).replace('/', "-");
         let name = format!("HMAC-{digest_name}");
         let mut aliases: Vec<String> = Vec::new();
@@ -104,39 +103,7 @@ impl EntryBase for Row {
 
 impl MacEntry for Row {
     fn create(&self) -> Box<dyn Mac> {
-        Box::new(HmacMac(Hmac::new(RowDigest(self.digest.create()))))
-    }
-}
-
-// A digest row as the infallible digest Hmac takes. A row other than NONE and Haraka fails only to
-// write into an output shorter than its size, which Hmac never gives it
-struct RowDigest(Box<dyn crate::digest::Digest>);
-
-const INFALLIBLE: &str = "a digest row other than NONE and Haraka fails only on a short output";
-
-impl TryDigest for RowDigest {
-    type Error = Infallible;
-
-    fn digest_size(&self) -> usize {
-        self.0.digest_size()
-    }
-
-    fn byte_length(&self) -> usize {
-        self.0.byte_length()
-    }
-
-    fn try_update(&mut self, input: &[u8]) -> Result<(), Infallible> {
-        self.0.try_update(input).expect(INFALLIBLE);
-        Ok(())
-    }
-
-    fn try_do_final(&mut self, output: &mut [u8]) -> Result<usize, Infallible> {
-        Ok(self.0.try_do_final(output).expect(INFALLIBLE))
-    }
-
-    fn try_reset(&mut self) -> Result<(), Infallible> {
-        self.0.try_reset().expect(INFALLIBLE);
-        Ok(())
+        Box::new(HmacMac(Hmac::new(RowDigest::new(self.digest.clone()))))
     }
 }
 

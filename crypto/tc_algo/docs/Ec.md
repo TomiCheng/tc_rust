@@ -166,6 +166,97 @@ gives a key back with that `C`.
   long as the program.
 - The keys draw from the source of `DefaultAlgoBuilder::set_rand`.
 
+## Signing
+
+From a new pair to a verified signature, with ECDSA over SHA-256 on P-256:
+
+```rust
+use tc_algo::params::EcKeyGenParams;
+use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
+
+fn main() -> Result<(), AlgoError> {
+    let algo = DefaultAlgoBuilder::default().build();
+    let name = "SHA-256withECDSA";
+    let message = b"attack at dawn";
+
+    // Generate a pair
+    let params = EcKeyGenParams::new("P-256");
+    let pair = algo.key_pair_generator().generate_by_name_with("EC", &params)?;
+
+    // Sign with the private key
+    let mut signer = algo.signer().get_by_name(name)?;
+    signer.init(pair.private())?;
+    signer.update(message)?;
+    let signature = signer.sign()?;
+
+    // Verify with the public key
+    let mut verifier = algo.signer().get_by_name(name)?;
+    verifier.init(pair.public())?;
+    verifier.update(message)?;
+    assert!(verifier.verify_signature(&signature)?);
+
+    Ok(())
+}
+```
+
+### Algorithms
+
+The names and OIDs are those of Bouncy Castle's `SignerUtilities`, and the case of a name does not
+matter. Each row needs the scheme's feature and the digest's, as `ecdsa` and `sha256`.
+
+| Name | Aliases | OIDs | Features |
+|---|---|---|---|
+| `SHA-1withECDSA` | `ECDSA` | `1.2.840.10045.4.1`, `1.3.36.3.3.2.1` | `ecdsa` and `sha1` |
+| `SHA-224withECDSA` |  | `1.2.840.10045.4.3.1` | `ecdsa` and `sha224` |
+| `SHA-256withECDSA` |  | `1.2.840.10045.4.3.2` | `ecdsa` and `sha256` |
+| `SHA-384withECDSA` |  | `1.2.840.10045.4.3.3` | `ecdsa` and `sha384` |
+| `SHA-512withECDSA` |  | `1.2.840.10045.4.3.4` | `ecdsa` and `sha512` |
+| `RIPEMD160withECDSA` |  | `1.3.36.3.3.2.2` | `ecdsa` and `ripemd160` |
+| `SHA3-224withECDSA` |  | `2.16.840.1.101.3.4.3.9` | `ecdsa` and `sha3-224` |
+| `SHA3-256withECDSA` |  | `2.16.840.1.101.3.4.3.10` | `ecdsa` and `sha3-256` |
+| `SHA3-384withECDSA` |  | `2.16.840.1.101.3.4.3.11` | `ecdsa` and `sha3-384` |
+| `SHA3-512withECDSA` |  | `2.16.840.1.101.3.4.3.12` | `ecdsa` and `sha3-512` |
+| `SHA-1withPLAIN-ECDSA` |  | `0.4.0.127.0.7.1.1.4.1.1` | `ecdsa` and `sha1` |
+| `SHA-224withPLAIN-ECDSA` |  | `0.4.0.127.0.7.1.1.4.1.2` | `ecdsa` and `sha224` |
+| `SHA-256withPLAIN-ECDSA` |  | `0.4.0.127.0.7.1.1.4.1.3` | `ecdsa` and `sha256` |
+| `SHA-384withPLAIN-ECDSA` |  | `0.4.0.127.0.7.1.1.4.1.4` | `ecdsa` and `sha384` |
+| `SHA-512withPLAIN-ECDSA` |  | `0.4.0.127.0.7.1.1.4.1.5` | `ecdsa` and `sha512` |
+| `RIPEMD160withPLAIN-ECDSA` |  | `0.4.0.127.0.7.1.1.4.1.6` | `ecdsa` and `ripemd160` |
+| `SHA3-224withPLAIN-ECDSA` |  | `0.4.0.127.0.7.1.1.4.1.8` | `ecdsa` and `sha3-224` |
+| `SHA3-256withPLAIN-ECDSA` |  | `0.4.0.127.0.7.1.1.4.1.9` | `ecdsa` and `sha3-256` |
+| `SHA3-384withPLAIN-ECDSA` |  | `0.4.0.127.0.7.1.1.4.1.10` | `ecdsa` and `sha3-384` |
+| `SHA3-512withPLAIN-ECDSA` |  | `0.4.0.127.0.7.1.1.4.1.11` | `ecdsa` and `sha3-512` |
+| `SHA-1withCVC-ECDSA` |  | `0.4.0.127.0.7.2.2.2.2.1` | `ecdsa` and `sha1` |
+| `SHA-224withCVC-ECDSA` |  | `0.4.0.127.0.7.2.2.2.2.2` | `ecdsa` and `sha224` |
+| `SHA-256withCVC-ECDSA` |  | `0.4.0.127.0.7.2.2.2.2.3` | `ecdsa` and `sha256` |
+| `SHA-384withCVC-ECDSA` |  | `0.4.0.127.0.7.2.2.2.2.4` | `ecdsa` and `sha384` |
+| `SHA-512withCVC-ECDSA` |  | `0.4.0.127.0.7.2.2.2.2.5` | `ecdsa` and `sha512` |
+| `<DIGEST>withECDSA`, for every other digest | `<DIGEST>/ECDSA`, `ECDSAWITH<DIGEST>` |  | `ecdsa` and the digest's |
+| `<DIGEST>withPLAIN-ECDSA`, for every other digest | `<DIGEST>/PLAIN-ECDSA`, `PLAIN-ECDSAWITH<DIGEST>` |  | `ecdsa` and the digest's |
+| `<DIGEST>withCVC-ECDSA`, for every other digest | `<DIGEST>/CVC-ECDSA`, `CVC-ECDSAWITH<DIGEST>` |  | `ecdsa` and the digest's |
+| `<DIGEST>withECNR`, for every digest | `<DIGEST>/ECNR`, `ECNRWITH<DIGEST>` |  | `ecnr` and the digest's |
+
+`<DIGEST>` is any name of the digest, so every row is also `SHA256withECDSA`, `SHA-256/ECDSA` and
+`ECDSAWITHSHA-256`, after the pattern of the last rows. `NONE`, with the `null-digest` feature, signs
+a hash made elsewhere, as `NONEwithECDSA`.
+
+- **ECDSA** gives its signature, r and s, in DER.
+- **PLAIN-ECDSA** and **CVC-ECDSA** give r and s side by side, each the size of the curve's order,
+  as BSI TR-03111 and the card-verifiable certificates of EAC have it; the two differ in their OIDs
+  alone.
+- **ECNR** is Nyberg-Rueppel over the curve, in DER.
+
+### Params
+
+Every row takes an `EcPrivateKey<C>` to sign and an `EcPublicKey<C>` to verify, on any curve of the
+key pair generator above, and any other type is `InvalidParams`.
+
+### Using it
+
+- k is drawn at random for each signature, as Bouncy Castle does, from the source of
+  `DefaultAlgoBuilder::set_rand`.
+- The rest is common to every signer: [Signers](Signer.md#using-it).
+
 ## More
 
 - [ECIES](Ecies.md): encrypting with EC key pairs
