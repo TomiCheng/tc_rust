@@ -1,4 +1,5 @@
-use super::fixed::{Rule, row};
+use super::fixed::{Lengths, row};
+use super::random::Rule;
 use crate::DefaultAlgoContext;
 use crate::generate::KeyGeneratorEntry;
 
@@ -10,34 +11,64 @@ use crate::generate::KeyGeneratorEntry;
 pub(super) fn stream(context: &DefaultAlgoContext) -> Vec<Box<dyn KeyGeneratorEntry>> {
     let rand = context.rand();
     let mut rows: Vec<Box<dyn KeyGeneratorEntry>> = Vec::new();
-    let mut add = |name, aliases: &[&'static str], oids: &[&str], key_len| {
-        rows.push(row(name, aliases, oids, key_len, Rule::Random, rand));
+    let mut add = |name, aliases: &[&'static str], oids: &[&str], key_len, lengths, rule| {
+        rows.push(row(name, aliases, oids, key_len, lengths, rule, rand));
     };
     #[cfg(feature = "chacha")]
-    add("CHACHA", &[], &[], 16);
+    add("CHACHA", &[], &[], 16, Lengths::Of(&[16, 32]), Rule::Random);
     #[cfg(any(feature = "chacha", feature = "chacha20-poly1305"))]
     add(
         "CHACHA7539",
         &["CHACHA20", "CHACHA20-POLY1305"],
         &["1.2.840.113549.1.9.16.3.18"],
         32,
+        Lengths::Of(&[32]),
+        Rule::Random,
     );
     #[cfg(any(feature = "xchacha20", feature = "xchacha20-poly1305"))]
-    add("XCHACHA20", &["XCHACHA20-POLY1305"], &[], 32);
+    add(
+        "XCHACHA20",
+        &["XCHACHA20-POLY1305"],
+        &[],
+        32,
+        Lengths::Of(&[32]),
+        Rule::Random,
+    );
     #[cfg(feature = "hc128")]
-    add("HC128", &[], &[], 16);
+    add("HC128", &[], &[], 16, Lengths::Of(&[16]), Rule::Random);
     #[cfg(feature = "hc256")]
-    add("HC256", &[], &[], 32);
+    add("HC256", &[], &[], 32, Lengths::Of(&[16, 32]), Rule::Random);
     #[cfg(feature = "rc4")]
-    add("RC4", &["ARC4"], &["1.2.840.113549.3.4"], 16);
+    add(
+        "RC4",
+        &["ARC4"],
+        &["1.2.840.113549.3.4"],
+        16,
+        Lengths::range(1, 256),
+        Rule::Random,
+    );
     #[cfg(feature = "salsa20")]
-    add("SALSA20", &[], &[], 16);
+    add(
+        "SALSA20",
+        &[],
+        &[],
+        16,
+        Lengths::Of(&[16, 32]),
+        Rule::Random,
+    );
     #[cfg(feature = "xsalsa20")]
-    add("XSALSA20", &[], &[], 32);
+    add("XSALSA20", &[], &[], 32, Lengths::Of(&[32]), Rule::Random);
     #[cfg(feature = "vmpc")]
-    add("VMPC", &[], &[], 16);
+    add("VMPC", &[], &[], 16, Lengths::range(16, 64), Rule::Random);
     #[cfg(feature = "vmpc-ksa3")]
-    add("VMPC-KSA3", &[], &[], 16);
+    add(
+        "VMPC-KSA3",
+        &[],
+        &[],
+        16,
+        Lengths::range(16, 64),
+        Rule::Random,
+    );
     rows
 }
 
@@ -96,5 +127,25 @@ mod tests {
             .decrypt_by_name("CHACHA7539", &params, &sealed)
             .unwrap();
         assert_eq!(opened, b"attack at dawn");
+    }
+
+    // Without init a row gives its default length; init sets another the cipher takes, and a
+    // length it does not take is InvalidParams, which keeps the length before
+    #[test]
+    fn init_sets_a_length_the_cipher_takes() {
+        use crate::params::KeyLength;
+
+        let algo = DefaultAlgoBuilder::default().build();
+        let mut generator = algo.key_generator().get_by_name("VMPC").unwrap();
+        assert_eq!(key_of(generator.generate().unwrap().as_ref()).len(), 16);
+
+        generator.init(&KeyLength::new(64)).unwrap();
+        assert_eq!(key_of(generator.generate().unwrap().as_ref()).len(), 64);
+
+        for bytes in [8, 65] {
+            let error = generator.init(&KeyLength::new(bytes)).unwrap_err();
+            assert_eq!(error.kind(), crate::ErrorKind::InvalidParams, "{bytes}");
+        }
+        assert_eq!(key_of(generator.generate().unwrap().as_ref()).len(), 64);
     }
 }

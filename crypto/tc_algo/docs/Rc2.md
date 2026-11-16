@@ -72,6 +72,35 @@ The IV is one block, 8 bytes, in every mode but CTR, which takes it as `tc_block
 The effective key size is checked when the row is initialized, not when the params are built; a
 size outside 1 to 1024 bits is `InvalidParams`.
 
+## Key generation
+
+The `RC2` row of `algo.key_generator()` gives an `Rc2ParamsOwned`, the key with what the cipher
+takes besides it, which goes straight into the rows above. `init` takes an `Rc2KeyGenParams`; see
+[Key generation](KeyGeneration.md).
+
+```rust
+use tc_algo::params::{Rc2KeyGenParams, Rc2ParamsOwned};
+use tc_rc_cipher::Rc2Params;
+use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
+
+fn main() -> Result<(), AlgoError> {
+    let algo = DefaultAlgoBuilder::default().build();
+
+    // A 5-byte key of 40 effective bits, as the 40-bit RC2 of old S/MIME and PKCS#12
+    let params = Rc2KeyGenParams::new(5);
+    let rc2 = algo.key_generator().generate_by_name_with("RC2", &params)?;
+    let rc2 = rc2.as_any().downcast_ref::<Rc2ParamsOwned>().expect("an Rc2ParamsOwned");
+    assert_eq!(rc2.effective_key_bits(), 40);
+    Ok(())
+}
+```
+
+`Rc2KeyGenParams::new(key_bytes)` sets the length of the key, 1 to 128 bytes, and
+`with_effective_key_bits` the effective key size, 1 to 1024 bits; without it, the size is that of
+the whole key. Without `init`, the row gives a key of 16 bytes and 128 effective bits. The values
+are checked when the row is initialized, not when the params are built; one out of range is
+`InvalidParams`.
+
 ## The effective key size in CMS
 
 RFC 8018 and RFC 3370 write the size as an RC2 parameter version: 160 for 40 bits, 120 for 64 and

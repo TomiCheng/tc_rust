@@ -1,4 +1,5 @@
-use super::fixed::{Rule, row};
+use super::fixed::{Lengths, row};
+use super::random::Rule;
 use crate::DefaultAlgoContext;
 use crate::generate::KeyGeneratorEntry;
 
@@ -10,27 +11,69 @@ use crate::generate::KeyGeneratorEntry;
 pub(super) fn aead(context: &DefaultAlgoContext) -> Vec<Box<dyn KeyGeneratorEntry>> {
     let rand = context.rand();
     let mut rows: Vec<Box<dyn KeyGeneratorEntry>> = Vec::new();
-    let mut add = |name, key_len| {
-        rows.push(row(name, &[], &[], key_len, Rule::Random, rand));
+    let mut add = |name, aliases: &[&'static str], oids: &[&str], key_len, lengths, rule| {
+        rows.push(row(name, aliases, oids, key_len, lengths, rule, rand));
     };
     #[cfg(feature = "ascon-aead128")]
-    add("ASCON-AEAD128", 16);
+    add(
+        "ASCON-AEAD128",
+        &[],
+        &[],
+        16,
+        Lengths::Of(&[16]),
+        Rule::Random,
+    );
     #[cfg(feature = "ascon128")]
-    add("ASCON-128", 16);
+    add("ASCON-128", &[], &[], 16, Lengths::Of(&[16]), Rule::Random);
     #[cfg(feature = "ascon128a")]
-    add("ASCON-128A", 16);
+    add("ASCON-128A", &[], &[], 16, Lengths::Of(&[16]), Rule::Random);
     #[cfg(feature = "ascon80pq")]
-    add("ASCON-80PQ", 20);
+    add("ASCON-80PQ", &[], &[], 20, Lengths::Of(&[20]), Rule::Random);
     #[cfg(feature = "grain128-aead")]
-    add("GRAIN-128AEAD", 16);
+    add(
+        "GRAIN-128AEAD",
+        &[],
+        &[],
+        16,
+        Lengths::Of(&[16]),
+        Rule::Random,
+    );
     #[cfg(feature = "schwaemm128-128")]
-    add("SCHWAEMM128-128", 16);
+    add(
+        "SCHWAEMM128-128",
+        &[],
+        &[],
+        16,
+        Lengths::Of(&[16]),
+        Rule::Random,
+    );
     #[cfg(feature = "schwaemm256-128")]
-    add("SCHWAEMM256-128", 16);
+    add(
+        "SCHWAEMM256-128",
+        &[],
+        &[],
+        16,
+        Lengths::Of(&[16]),
+        Rule::Random,
+    );
     #[cfg(feature = "schwaemm192-192")]
-    add("SCHWAEMM192-192", 24);
+    add(
+        "SCHWAEMM192-192",
+        &[],
+        &[],
+        24,
+        Lengths::Of(&[24]),
+        Rule::Random,
+    );
     #[cfg(feature = "schwaemm256-256")]
-    add("SCHWAEMM256-256", 32);
+    add(
+        "SCHWAEMM256-256",
+        &[],
+        &[],
+        32,
+        Lengths::Of(&[32]),
+        Rule::Random,
+    );
     rows
 }
 

@@ -1,22 +1,47 @@
 use rand_core::CryptoRng;
 use tc_asn1::Asn1Oid;
 
+use super::random::{Rule, random_key};
 use crate::generate::{KeyGenerator, KeyGeneratorEntry};
-use crate::params::KeyOwned;
-use crate::{AlgoError, EntryBase, Params};
+use crate::params::{KeyLength, KeyOwned};
+use crate::{AlgoError, EntryBase, ErrorKind, Params};
 
-// A row of a key of fixed length, as the block and stream ciphers have
-// What a key must keep to besides being random: DES and DESede, as Bouncy Castle's DesKeyGenerator
-// and DesEdeKeyGenerator, set the parity bits and draw again for a weak key, and for DESede again
-// for a key whose parts repeat, which is DES in disguise
+// The rows of a secret key that is the key alone: a key of the row's length without init, and of
+// another length the cipher takes with init and a KeyLength
+
+// The lengths in bytes that the cipher of a row takes, as its engine checks them
 #[derive(Clone, Copy)]
-pub(super) enum Rule {
-    #[allow(dead_code, reason = "unused when only DES or DESede is on")]
-    Random,
-    #[cfg(feature = "des")]
-    Des,
-    #[cfg(feature = "desede")]
-    DesEde,
+pub(super) enum Lengths {
+    // These alone
+    #[allow(dead_code, reason = "a feature may have rows of ranges alone")]
+    Of(&'static [usize]),
+    // From min to max, both in, by step
+    #[allow(dead_code, reason = "a feature may have rows of fixed lengths alone")]
+    Range { min: usize, max: usize, step: usize },
+}
+
+impl Lengths {
+    #[allow(dead_code, reason = "a feature may have rows of fixed lengths alone")]
+    pub(super) const fn range(min: usize, max: usize) -> Self {
+        Self::Range { min, max, step: 1 }
+    }
+
+    pub(super) fn allows(self, len: usize) -> bool {
+        match self {
+            Self::Of(lens) => lens.contains(&len),
+            Self::Range { min, max, step } => (min..=max).contains(&len) && (len - min) % step == 0,
+        }
+    }
+}
+
+// The length of a KeyLength that `lengths` allows, or InvalidParams
+pub(super) fn key_length(params: &dyn Params, lengths: Lengths) -> Result<usize, AlgoError> {
+    params
+        .as_any()
+        .downcast_ref::<KeyLength>()
+        .map(KeyLength::bytes)
+        .filter(|len| lengths.allows(*len))
+        .ok_or(AlgoError::new(ErrorKind::InvalidParams))
 }
 
 pub(super) fn row(
@@ -24,9 +49,11 @@ pub(super) fn row(
     aliases: &[&'static str],
     oids: &[&str],
     key_len: usize,
+    lengths: Lengths,
     rule: Rule,
     rand: fn() -> Box<dyn CryptoRng>,
 ) -> Box<dyn KeyGeneratorEntry> {
+    debug_assert!(lengths.allows(key_len), "{name}");
     Box::new(Row {
         name,
         aliases: aliases.iter().map(|alias| alias.to_string()).collect(),
@@ -35,6 +62,7 @@ pub(super) fn row(
             .map(|dotted| dotted.parse().expect("a valid OID"))
             .collect(),
         key_len,
+        lengths,
         rule,
         rand,
     })
@@ -45,6 +73,7 @@ struct Row {
     aliases: Vec<String>,
     oids: Vec<Asn1Oid>,
     key_len: usize,
+    lengths: Lengths,
     rule: Rule,
     rand: fn() -> Box<dyn CryptoRng>,
 }
@@ -67,40 +96,30 @@ impl KeyGeneratorEntry for Row {
     fn create(&self) -> Box<dyn KeyGenerator> {
         Box::new(FixedKeyGenerator {
             key_len: self.key_len,
+            lengths: self.lengths,
             rule: self.rule,
             rand: (self.rand)(),
         })
     }
 }
 
-// A key of the row's length, with no params to set
+// A KeyOwned of the row's length, or of that of the last init that succeeded
 struct FixedKeyGenerator {
     key_len: usize,
+    lengths: Lengths,
     rule: Rule,
     rand: Box<dyn CryptoRng>,
 }
 
 impl KeyGenerator for FixedKeyGenerator {
+    // A length the cipher does not take is InvalidParams, and keeps the length before
+    fn init(&mut self, params: &dyn Params) -> Result<(), AlgoError> {
+        self.key_len = key_length(params, self.lengths)?;
+        Ok(())
+    }
+
     fn generate(&mut self) -> Result<Box<dyn Params>, AlgoError> {
-        let mut key = vec![0; self.key_len];
-        loop {
-            self.rand.fill_bytes(&mut key);
-            let done = match self.rule {
-                Rule::Random => true,
-                #[cfg(feature = "des")]
-                Rule::Des => {
-                    tc_des::set_odd_parity(&mut key);
-                    !tc_des::is_weak_key(key.as_slice().try_into().expect("8 bytes"))
-                }
-                #[cfg(feature = "desede")]
-                Rule::DesEde => {
-                    tc_des::set_odd_parity(&mut key);
-                    !tc_des::is_weak_ede_key(&key) && tc_des::is_real_ede_key(&key)
-                }
-            };
-            if done {
-                return Ok(Box::new(KeyOwned::new(key)));
-            }
-        }
+        let key = random_key(self.rand.as_mut(), self.key_len, self.rule);
+        Ok(Box::new(KeyOwned::new(key)))
     }
 }

@@ -1,105 +1,160 @@
-use super::fixed::{Rule, row};
+use super::fixed::{Lengths, row};
+use super::random::Rule;
 use crate::DefaultAlgoContext;
 use crate::generate::KeyGeneratorEntry;
 
-// The rows of the keys of the block ciphers but AES128, AES192 and AES256, to give to
-// DefaultAlgoBuilder::reg_key_generator. Their names, aliases, OIDs and key lengths are those of
-// Bouncy Castle's GeneratorUtilities, with DESEDE16 and DESEDE24 besides for the two lengths of
-// DESede. Each is behind the feature of its cipher
+// The rows of the keys of the block ciphers but AES128, AES192 and AES256, and but those with
+// params of their own, RC2, RC5 and GOST 28147, to give to DefaultAlgoBuilder::reg_key_generator.
+// Their names, aliases, OIDs and default lengths are those of Bouncy Castle's GeneratorUtilities,
+// with DESEDE16 and DESEDE24 besides for the two lengths of DESede; init with a KeyLength sets
+// another length the cipher takes. Each is behind the feature of its cipher
 pub(super) fn block(context: &DefaultAlgoContext) -> Vec<Box<dyn KeyGeneratorEntry>> {
     let rand = context.rand();
     let mut rows: Vec<Box<dyn KeyGeneratorEntry>> = Vec::new();
-    let mut add = |name, aliases: &[&'static str], oids: &[&str], key_len, rule| {
-        rows.push(row(name, aliases, oids, key_len, rule, rand));
+    let mut add = |name, aliases: &[&'static str], oids: &[&str], key_len, lengths, rule| {
+        rows.push(row(name, aliases, oids, key_len, lengths, rule, rand));
     };
     #[cfg(feature = "aes")]
-    add("AES", &["AESWRAP"], &[], 24, Rule::Random);
-    // CBC, CCM, CFB, CTR, ECB, GCM, KW, KWP, OCB2 and OFB of NSRI
+    add(
+        "AES",
+        &["AESWRAP"],
+        &[],
+        24,
+        Lengths::Of(&[16, 24, 32]),
+        Rule::Random,
+    );
     #[cfg(feature = "aria")]
-    {
-        add("ARIA", &[], &[], 32, Rule::Random);
-        add(
-            "ARIA128",
-            &[],
-            &[
-                "1.2.410.200046.1.1.2",
-                "1.2.410.200046.1.1.37",
-                "1.2.410.200046.1.1.3",
-                "1.2.410.200046.1.1.5",
-                "1.2.410.200046.1.1.1",
-                "1.2.410.200046.1.1.34",
-                "1.2.410.200046.1.1.40",
-                "1.2.410.200046.1.1.43",
-                "1.2.410.200046.1.1.31",
-                "1.2.410.200046.1.1.4",
-            ],
-            16,
-            Rule::Random,
-        );
-        add(
-            "ARIA192",
-            &[],
-            &[
-                "1.2.410.200046.1.1.7",
-                "1.2.410.200046.1.1.38",
-                "1.2.410.200046.1.1.8",
-                "1.2.410.200046.1.1.10",
-                "1.2.410.200046.1.1.6",
-                "1.2.410.200046.1.1.35",
-                "1.2.410.200046.1.1.41",
-                "1.2.410.200046.1.1.44",
-                "1.2.410.200046.1.1.32",
-                "1.2.410.200046.1.1.9",
-            ],
-            24,
-            Rule::Random,
-        );
-        add(
-            "ARIA256",
-            &[],
-            &[
-                "1.2.410.200046.1.1.12",
-                "1.2.410.200046.1.1.39",
-                "1.2.410.200046.1.1.13",
-                "1.2.410.200046.1.1.15",
-                "1.2.410.200046.1.1.11",
-                "1.2.410.200046.1.1.36",
-                "1.2.410.200046.1.1.42",
-                "1.2.410.200046.1.1.45",
-                "1.2.410.200046.1.1.33",
-                "1.2.410.200046.1.1.14",
-            ],
-            32,
-            Rule::Random,
-        );
-    }
+    add(
+        "ARIA",
+        &[],
+        &[],
+        32,
+        Lengths::Of(&[16, 24, 32]),
+        Rule::Random,
+    );
+    #[cfg(feature = "aria")]
+    add(
+        "ARIA128",
+        &[],
+        &[
+            "1.2.410.200046.1.1.2",
+            "1.2.410.200046.1.1.37",
+            "1.2.410.200046.1.1.3",
+            "1.2.410.200046.1.1.5",
+            "1.2.410.200046.1.1.1",
+            "1.2.410.200046.1.1.34",
+            "1.2.410.200046.1.1.40",
+            "1.2.410.200046.1.1.43",
+            "1.2.410.200046.1.1.31",
+            "1.2.410.200046.1.1.4",
+        ],
+        16,
+        Lengths::Of(&[16]),
+        Rule::Random,
+    );
+    #[cfg(feature = "aria")]
+    add(
+        "ARIA192",
+        &[],
+        &[
+            "1.2.410.200046.1.1.7",
+            "1.2.410.200046.1.1.38",
+            "1.2.410.200046.1.1.8",
+            "1.2.410.200046.1.1.10",
+            "1.2.410.200046.1.1.6",
+            "1.2.410.200046.1.1.35",
+            "1.2.410.200046.1.1.41",
+            "1.2.410.200046.1.1.44",
+            "1.2.410.200046.1.1.32",
+            "1.2.410.200046.1.1.9",
+        ],
+        24,
+        Lengths::Of(&[24]),
+        Rule::Random,
+    );
+    #[cfg(feature = "aria")]
+    add(
+        "ARIA256",
+        &[],
+        &[
+            "1.2.410.200046.1.1.12",
+            "1.2.410.200046.1.1.39",
+            "1.2.410.200046.1.1.13",
+            "1.2.410.200046.1.1.15",
+            "1.2.410.200046.1.1.11",
+            "1.2.410.200046.1.1.36",
+            "1.2.410.200046.1.1.42",
+            "1.2.410.200046.1.1.45",
+            "1.2.410.200046.1.1.33",
+            "1.2.410.200046.1.1.14",
+        ],
+        32,
+        Lengths::Of(&[32]),
+        Rule::Random,
+    );
     #[cfg(feature = "blowfish")]
     add(
         "BLOWFISH",
         &[],
         &["1.3.6.1.4.1.3029.1.2", "1.3.6.1.4.1.3029.1.1.2"],
         16,
+        Lengths::range(4, 56),
         Rule::Random,
     );
     #[cfg(feature = "camellia")]
-    {
-        add("CAMELLIA", &["CAMELLIAWRAP"], &[], 32, Rule::Random);
-        for (name, arc, key_len) in [
-            ("CAMELLIA128", 2, 16),
-            ("CAMELLIA192", 3, 24),
-            ("CAMELLIA256", 4, 32),
-        ] {
-            let oids = [
-                format!("1.2.392.200011.61.1.1.1.{arc}"),
-                format!("1.2.392.200011.61.1.1.3.{arc}"),
-            ];
-            add(name, &[], &[&oids[0], &oids[1]], key_len, Rule::Random);
-        }
-    }
+    add(
+        "CAMELLIA",
+        &["CAMELLIAWRAP"],
+        &[],
+        32,
+        Lengths::Of(&[16, 24, 32]),
+        Rule::Random,
+    );
+    #[cfg(feature = "camellia")]
+    add(
+        "CAMELLIA128",
+        &[],
+        &["1.2.392.200011.61.1.1.1.2", "1.2.392.200011.61.1.1.3.2"],
+        16,
+        Lengths::Of(&[16]),
+        Rule::Random,
+    );
+    #[cfg(feature = "camellia")]
+    add(
+        "CAMELLIA192",
+        &[],
+        &["1.2.392.200011.61.1.1.1.3", "1.2.392.200011.61.1.1.3.3"],
+        24,
+        Lengths::Of(&[24]),
+        Rule::Random,
+    );
+    #[cfg(feature = "camellia")]
+    add(
+        "CAMELLIA256",
+        &[],
+        &["1.2.392.200011.61.1.1.1.4", "1.2.392.200011.61.1.1.3.4"],
+        32,
+        Lengths::Of(&[32]),
+        Rule::Random,
+    );
     #[cfg(feature = "cast5")]
-    add("CAST5", &[], &["1.2.840.113533.7.66.10"], 16, Rule::Random);
+    add(
+        "CAST5",
+        &[],
+        &["1.2.840.113533.7.66.10"],
+        16,
+        Lengths::range(5, 16),
+        Rule::Random,
+    );
     #[cfg(feature = "cast6")]
-    add("CAST6", &[], &[], 32, Rule::Random);
+    add(
+        "CAST6",
+        &[],
+        &[],
+        32,
+        Lengths::Of(&[16, 20, 24, 28, 32]),
+        Rule::Random,
+    );
     #[cfg(feature = "des")]
     add(
         "DES",
@@ -111,81 +166,128 @@ pub(super) fn block(context: &DefaultAlgoContext) -> Vec<Box<dyn KeyGeneratorEnt
             "1.3.14.3.2.8",
         ],
         8,
+        Lengths::Of(&[8]),
         Rule::Des,
     );
     #[cfg(feature = "desede")]
-    {
-        add(
-            "DESEDE",
-            &["DESEDEWRAP", "TDEA", "DESEDE16"],
-            &["1.3.14.3.2.17"],
-            16,
-            Rule::DesEde,
-        );
-        add(
-            "DESEDE3",
-            &["DESEDE24"],
-            &["1.2.840.113549.3.7", "1.2.840.113549.1.9.16.3.6"],
-            24,
-            Rule::DesEde,
-        );
-    }
-    #[cfg(feature = "gost28147")]
     add(
-        "GOST28147",
-        &["GOST", "GOST-28147"],
-        &["1.2.643.2.2.21"],
-        32,
-        Rule::Random,
+        "DESEDE",
+        &["DESEDEWRAP", "TDEA", "DESEDE16"],
+        &["1.3.14.3.2.17"],
+        16,
+        Lengths::Of(&[16, 24]),
+        Rule::DesEde,
+    );
+    #[cfg(feature = "desede")]
+    add(
+        "DESEDE3",
+        &["DESEDE24"],
+        &["1.2.840.113549.3.7", "1.2.840.113549.1.9.16.3.6"],
+        24,
+        Lengths::Of(&[16, 24]),
+        Rule::DesEde,
     );
     #[cfg(feature = "idea")]
-    add("IDEA", &[], &["1.3.6.1.4.1.188.7.1.1.2"], 16, Rule::Random);
-    #[cfg(feature = "noekeon")]
-    add("NOEKEON", &[], &[], 16, Rule::Random);
-    #[cfg(feature = "rc2")]
     add(
-        "RC2",
+        "IDEA",
         &[],
-        &["1.2.840.113549.3.2", "1.2.840.113549.1.9.16.3.7"],
+        &["1.3.6.1.4.1.188.7.1.1.2"],
         16,
+        Lengths::Of(&[16]),
         Rule::Random,
     );
-    #[cfg(feature = "rc5")]
-    add("RC5", &["RC5-32"], &[], 16, Rule::Random);
-    #[cfg(feature = "rc5-64")]
-    add("RC5-64", &[], &[], 32, Rule::Random);
+    #[cfg(feature = "noekeon")]
+    add("NOEKEON", &[], &[], 16, Lengths::Of(&[16]), Rule::Random);
     #[cfg(feature = "rc6")]
-    add("RC6", &[], &[], 32, Rule::Random);
+    add("RC6", &[], &[], 32, Lengths::range(1, 255), Rule::Random);
     #[cfg(feature = "rijndael")]
-    add("RIJNDAEL", &[], &[], 24, Rule::Random);
+    add(
+        "RIJNDAEL",
+        &[],
+        &[],
+        24,
+        Lengths::Of(&[16, 20, 24, 28, 32]),
+        Rule::Random,
+    );
     #[cfg(feature = "seed")]
     add(
         "SEED",
         &[],
         &["1.2.410.200004.7.1.1.1", "1.2.410.200004.1.4"],
         16,
+        Lengths::Of(&[16]),
         Rule::Random,
     );
     #[cfg(feature = "serpent")]
-    add("SERPENT", &[], &[], 24, Rule::Random);
+    add(
+        "SERPENT",
+        &[],
+        &[],
+        24,
+        Lengths::Range {
+            min: 4,
+            max: 32,
+            step: 4,
+        },
+        Rule::Random,
+    );
     #[cfg(feature = "skipjack")]
-    add("SKIPJACK", &[], &[], 10, Rule::Random);
+    add("SKIPJACK", &[], &[], 10, Lengths::Of(&[10]), Rule::Random);
     #[cfg(feature = "sm4")]
-    add("SM4", &[], &[], 16, Rule::Random);
+    add("SM4", &[], &[], 16, Lengths::Of(&[16]), Rule::Random);
     #[cfg(feature = "tea")]
-    add("TEA", &[], &[], 16, Rule::Random);
+    add("TEA", &[], &[], 16, Lengths::Of(&[16]), Rule::Random);
     #[cfg(feature = "threefish-256")]
-    add("THREEFISH-256", &[], &[], 32, Rule::Random);
+    add(
+        "THREEFISH-256",
+        &[],
+        &[],
+        32,
+        Lengths::Of(&[32]),
+        Rule::Random,
+    );
     #[cfg(feature = "threefish-512")]
-    add("THREEFISH-512", &[], &[], 64, Rule::Random);
+    add(
+        "THREEFISH-512",
+        &[],
+        &[],
+        64,
+        Lengths::Of(&[64]),
+        Rule::Random,
+    );
     #[cfg(feature = "threefish-1024")]
-    add("THREEFISH-1024", &[], &[], 128, Rule::Random);
+    add(
+        "THREEFISH-1024",
+        &[],
+        &[],
+        128,
+        Lengths::Of(&[128]),
+        Rule::Random,
+    );
     #[cfg(feature = "tnepres")]
-    add("TNEPRES", &[], &[], 24, Rule::Random);
+    add(
+        "TNEPRES",
+        &[],
+        &[],
+        24,
+        Lengths::Range {
+            min: 4,
+            max: 32,
+            step: 4,
+        },
+        Rule::Random,
+    );
     #[cfg(feature = "twofish")]
-    add("TWOFISH", &[], &[], 32, Rule::Random);
+    add(
+        "TWOFISH",
+        &[],
+        &[],
+        32,
+        Lengths::Of(&[16, 24, 32]),
+        Rule::Random,
+    );
     #[cfg(feature = "xtea")]
-    add("XTEA", &[], &[], 16, Rule::Random);
+    add("XTEA", &[], &[], 16, Lengths::Of(&[16]), Rule::Random);
     rows
 }
 
@@ -224,14 +326,8 @@ mod tests {
             ("TDEA", 16),
             ("DESEDE3", 24),
             ("DESEDE24", 24),
-            ("GOST28147", 32),
-            ("GOST", 32),
             ("IDEA", 16),
             ("NOEKEON", 16),
-            ("RC2", 16),
-            ("RC5", 16),
-            ("RC5-32", 16),
-            ("RC5-64", 32),
             ("RC6", 32),
             ("RIJNDAEL", 24),
             ("SEED", 16),
@@ -305,5 +401,35 @@ mod tests {
             .decrypt_by_name("DESEDE/CBC/PKCS7PADDING", &params, &sealed)
             .unwrap();
         assert_eq!(opened, b"attack at dawn");
+    }
+
+    // A length the cipher takes is set, by a range, a set of lengths or a step, and one it does not
+    // take is InvalidParams; DES takes 8 alone, and DESede 16 and 24 under either name
+    #[test]
+    fn init_takes_the_lengths_of_each_cipher() {
+        use crate::ErrorKind;
+        use crate::params::KeyLength;
+
+        let algo = DefaultAlgoBuilder::default().build();
+        let generators = algo.key_generator();
+        for (name, good, bad) in [
+            ("BLOWFISH", 56, 57),
+            ("TWOFISH", 24, 20),
+            ("SERPENT", 28, 30),
+            ("DES", 8, 16),
+            ("DESEDE", 24, 8),
+            ("DESEDE3", 16, 32),
+            ("ARIA128", 16, 32),
+        ] {
+            let key = generators
+                .generate_by_name_with(name, &KeyLength::new(good))
+                .unwrap();
+            assert_eq!(key_of(key.as_ref()).len(), good, "{name}");
+            let error = generators
+                .generate_by_name_with(name, &KeyLength::new(bad))
+                .err()
+                .unwrap();
+            assert_eq!(error.kind(), ErrorKind::InvalidParams, "{name} {bad}");
+        }
     }
 }

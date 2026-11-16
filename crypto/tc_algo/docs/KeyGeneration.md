@@ -32,91 +32,102 @@ fn main() -> Result<(), AlgoError> {
 
 ## Algorithms
 
-| Name | Aliases | OIDs | Feature | Key bytes | Returns |
-|---|---|---|---|---|---|
-| `AES128` |  | the eight of AES-128, `2.16.840.1.101.3.4.1.1` to `.8` | `aes` | 16 | `KeyOwned` |
-| `AES192` |  | the eight of AES-192, `2.16.840.1.101.3.4.1.21` to `.28` | `aes` | 24 | `KeyOwned` |
-| `AES256` |  | the eight of AES-256, `2.16.840.1.101.3.4.1.41` to `.48` | `aes` | 32 | `KeyOwned` |
-| `AES` | `AESWRAP` |  | `aes` | 24 | `KeyOwned` |
-| `ARIA` |  |  | `aria` | 32 | `KeyOwned` |
-| `ARIA128` |  | the ten of ARIA-128 of NSRI | `aria` | 16 | `KeyOwned` |
-| `ARIA192` |  | the ten of ARIA-192 of NSRI | `aria` | 24 | `KeyOwned` |
-| `ARIA256` |  | the ten of ARIA-256 of NSRI | `aria` | 32 | `KeyOwned` |
-| `BLOWFISH` |  | `1.3.6.1.4.1.3029.1.1.2`, `1.3.6.1.4.1.3029.1.2` | `blowfish` | 16 | `KeyOwned` |
-| `CAMELLIA` | `CAMELLIAWRAP` |  | `camellia` | 32 | `KeyOwned` |
-| `CAMELLIA128` |  | `1.2.392.200011.61.1.1.1.2`, `1.2.392.200011.61.1.1.3.2` | `camellia` | 16 | `KeyOwned` |
-| `CAMELLIA192` |  | `1.2.392.200011.61.1.1.1.3`, `1.2.392.200011.61.1.1.3.3` | `camellia` | 24 | `KeyOwned` |
-| `CAMELLIA256` |  | `1.2.392.200011.61.1.1.1.4`, `1.2.392.200011.61.1.1.3.4` | `camellia` | 32 | `KeyOwned` |
-| `CAST5` |  | `1.2.840.113533.7.66.10` | `cast5` | 16 | `KeyOwned` |
-| `CAST6` |  |  | `cast6` | 32 | `KeyOwned` |
-| `DES` |  | `1.3.14.3.2.6` to `.9` | `des` | 8 | `KeyOwned` |
-| `DESEDE` | `DESEDE16`, `DESEDEWRAP`, `TDEA` | `1.3.14.3.2.17` | `desede` | 16 | `KeyOwned` |
-| `DESEDE3` | `DESEDE24` | `1.2.840.113549.3.7`, `1.2.840.113549.1.9.16.3.6` | `desede` | 24 | `KeyOwned` |
-| `GOST28147` | `GOST`, `GOST-28147` | `1.2.643.2.2.21` | `gost28147` | 32 | `KeyOwned` |
-| `IDEA` |  | `1.3.6.1.4.1.188.7.1.1.2` | `idea` | 16 | `KeyOwned` |
-| `NOEKEON` |  |  | `noekeon` | 16 | `KeyOwned` |
-| `RC2` |  | `1.2.840.113549.3.2`, `1.2.840.113549.1.9.16.3.7` | `rc2` | 16 | `KeyOwned` |
-| `RC5` | `RC5-32` |  | `rc5` | 16 | `KeyOwned` |
-| `RC5-64` |  |  | `rc5-64` | 32 | `KeyOwned` |
-| `RC6` |  |  | `rc6` | 32 | `KeyOwned` |
-| `RIJNDAEL` |  |  | `rijndael` | 24 | `KeyOwned` |
-| `SEED` |  | `1.2.410.200004.1.4`, `1.2.410.200004.7.1.1.1` | `seed` | 16 | `KeyOwned` |
-| `SERPENT` |  |  | `serpent` | 24 | `KeyOwned` |
-| `SKIPJACK` |  |  | `skipjack` | 10 | `KeyOwned` |
-| `SM4` |  |  | `sm4` | 16 | `KeyOwned` |
-| `TEA` |  |  | `tea` | 16 | `KeyOwned` |
-| `THREEFISH-256` |  |  | `threefish-256` | 32 | `KeyOwned` |
-| `THREEFISH-512` |  |  | `threefish-512` | 64 | `KeyOwned` |
-| `THREEFISH-1024` |  |  | `threefish-1024` | 128 | `KeyOwned` |
-| `TNEPRES` |  |  | `tnepres` | 24 | `KeyOwned` |
-| `TWOFISH` |  |  | `twofish` | 32 | `KeyOwned` |
-| `XTEA` |  |  | `xtea` | 16 | `KeyOwned` |
-| `CHACHA` |  |  | `chacha` | 16 | `KeyOwned` |
-| `CHACHA7539` | `CHACHA20`, `CHACHA20-POLY1305` | `1.2.840.113549.1.9.16.3.18` | `chacha` or `chacha20-poly1305` | 32 | `KeyOwned` |
-| `XCHACHA20` | `XCHACHA20-POLY1305` |  | `xchacha20` or `xchacha20-poly1305` | 32 | `KeyOwned` |
-| `HC128` |  |  | `hc128` | 16 | `KeyOwned` |
-| `HC256` |  |  | `hc256` | 32 | `KeyOwned` |
-| `RC4` | `ARC4` | `1.2.840.113549.3.4` | `rc4` | 16 | `KeyOwned` |
-| `SALSA20` |  |  | `salsa20` | 16 | `KeyOwned` |
-| `XSALSA20` |  |  | `xsalsa20` | 32 | `KeyOwned` |
-| `VMPC` |  |  | `vmpc` | 16 | `KeyOwned` |
-| `VMPC-KSA3` |  |  | `vmpc-ksa3` | 16 | `KeyOwned` |
-| `ASCON-AEAD128` |  |  | `ascon-aead128` | 16 | `KeyOwned` |
-| `ASCON-128` |  |  | `ascon128` | 16 | `KeyOwned` |
-| `ASCON-128A` |  |  | `ascon128a` | 16 | `KeyOwned` |
-| `ASCON-80PQ` |  |  | `ascon80pq` | 20 | `KeyOwned` |
-| `GRAIN-128AEAD` |  |  | `grain128-aead` | 16 | `KeyOwned` |
-| `SCHWAEMM128-128` |  |  | `schwaemm128-128` | 16 | `KeyOwned` |
-| `SCHWAEMM256-128` |  |  | `schwaemm256-128` | 16 | `KeyOwned` |
-| `SCHWAEMM192-192` |  |  | `schwaemm192-192` | 24 | `KeyOwned` |
-| `SCHWAEMM256-256` |  |  | `schwaemm256-256` | 32 | `KeyOwned` |
-| `KEY` |  |  | `aes`, `chacha` or `hmac-sha256` | that of `KeyLength` | `KeyOwned` |
+| Name | Aliases | OIDs | Feature | Default bytes | Bytes | Params | Returns |
+|---|---|---|---|---|---|---|---|
+| `AES128` |  | the eight of AES-128, `2.16.840.1.101.3.4.1.1` to `.8` | `aes` | 16 | 16 | `KeyLength` | `KeyOwned` |
+| `AES192` |  | the eight of AES-192, `2.16.840.1.101.3.4.1.21` to `.28` | `aes` | 24 | 24 | `KeyLength` | `KeyOwned` |
+| `AES256` |  | the eight of AES-256, `2.16.840.1.101.3.4.1.41` to `.48` | `aes` | 32 | 32 | `KeyLength` | `KeyOwned` |
+| `AES` | `AESWRAP` |  | `aes` | 24 | 16, 24, 32 | `KeyLength` | `KeyOwned` |
+| `ARIA` |  |  | `aria` | 32 | 16, 24, 32 | `KeyLength` | `KeyOwned` |
+| `ARIA128` |  | the ten of ARIA-128 of NSRI | `aria` | 16 | 16 | `KeyLength` | `KeyOwned` |
+| `ARIA192` |  | the ten of ARIA-192 of NSRI | `aria` | 24 | 24 | `KeyLength` | `KeyOwned` |
+| `ARIA256` |  | the ten of ARIA-256 of NSRI | `aria` | 32 | 32 | `KeyLength` | `KeyOwned` |
+| `BLOWFISH` |  | `1.3.6.1.4.1.3029.1.2`, `1.3.6.1.4.1.3029.1.1.2` | `blowfish` | 16 | 4..56 | `KeyLength` | `KeyOwned` |
+| `CAMELLIA` | `CAMELLIAWRAP` |  | `camellia` | 32 | 16, 24, 32 | `KeyLength` | `KeyOwned` |
+| `CAMELLIA128` |  | `1.2.392.200011.61.1.1.1.2`, `1.2.392.200011.61.1.1.3.2` | `camellia` | 16 | 16 | `KeyLength` | `KeyOwned` |
+| `CAMELLIA192` |  | `1.2.392.200011.61.1.1.1.3`, `1.2.392.200011.61.1.1.3.3` | `camellia` | 24 | 24 | `KeyLength` | `KeyOwned` |
+| `CAMELLIA256` |  | `1.2.392.200011.61.1.1.1.4`, `1.2.392.200011.61.1.1.3.4` | `camellia` | 32 | 32 | `KeyLength` | `KeyOwned` |
+| `CAST5` |  | `1.2.840.113533.7.66.10` | `cast5` | 16 | 5..16 | `KeyLength` | `KeyOwned` |
+| `CAST6` |  |  | `cast6` | 32 | 16, 20, 24, 28, 32 | `KeyLength` | `KeyOwned` |
+| `DES` |  | `1.3.14.3.2.7`, `1.3.14.3.2.9`, `1.3.14.3.2.6`, `1.3.14.3.2.8` | `des` | 8 | 8 | `KeyLength` | `KeyOwned` |
+| `DESEDE` | `DESEDEWRAP`, `TDEA`, `DESEDE16` | `1.3.14.3.2.17` | `desede` | 16 | 16, 24 | `KeyLength` | `KeyOwned` |
+| `DESEDE3` | `DESEDE24` | `1.2.840.113549.3.7`, `1.2.840.113549.1.9.16.3.6` | `desede` | 24 | 16, 24 | `KeyLength` | `KeyOwned` |
+| `IDEA` |  | `1.3.6.1.4.1.188.7.1.1.2` | `idea` | 16 | 16 | `KeyLength` | `KeyOwned` |
+| `NOEKEON` |  |  | `noekeon` | 16 | 16 | `KeyLength` | `KeyOwned` |
+| `RC6` |  |  | `rc6` | 32 | 1..255 | `KeyLength` | `KeyOwned` |
+| `RIJNDAEL` |  |  | `rijndael` | 24 | 16, 20, 24, 28, 32 | `KeyLength` | `KeyOwned` |
+| `SEED` |  | `1.2.410.200004.7.1.1.1`, `1.2.410.200004.1.4` | `seed` | 16 | 16 | `KeyLength` | `KeyOwned` |
+| `SERPENT` |  |  | `serpent` | 24 | 4..32, by 4 | `KeyLength` | `KeyOwned` |
+| `SKIPJACK` |  |  | `skipjack` | 10 | 10 | `KeyLength` | `KeyOwned` |
+| `SM4` |  |  | `sm4` | 16 | 16 | `KeyLength` | `KeyOwned` |
+| `TEA` |  |  | `tea` | 16 | 16 | `KeyLength` | `KeyOwned` |
+| `THREEFISH-256` |  |  | `threefish-256` | 32 | 32 | `KeyLength` | `KeyOwned` |
+| `THREEFISH-512` |  |  | `threefish-512` | 64 | 64 | `KeyLength` | `KeyOwned` |
+| `THREEFISH-1024` |  |  | `threefish-1024` | 128 | 128 | `KeyLength` | `KeyOwned` |
+| `TNEPRES` |  |  | `tnepres` | 24 | 4..32, by 4 | `KeyLength` | `KeyOwned` |
+| `TWOFISH` |  |  | `twofish` | 32 | 16, 24, 32 | `KeyLength` | `KeyOwned` |
+| `XTEA` |  |  | `xtea` | 16 | 16 | `KeyLength` | `KeyOwned` |
+| `CHACHA` |  |  | `chacha` | 16 | 16, 32 | `KeyLength` | `KeyOwned` |
+| `CHACHA7539` | `CHACHA20`, `CHACHA20-POLY1305` | `1.2.840.113549.1.9.16.3.18` | `chacha` or `chacha20-poly1305` | 32 | 32 | `KeyLength` | `KeyOwned` |
+| `XCHACHA20` | `XCHACHA20-POLY1305` |  | `xchacha20` or `xchacha20-poly1305` | 32 | 32 | `KeyLength` | `KeyOwned` |
+| `HC128` |  |  | `hc128` | 16 | 16 | `KeyLength` | `KeyOwned` |
+| `HC256` |  |  | `hc256` | 32 | 16, 32 | `KeyLength` | `KeyOwned` |
+| `RC4` | `ARC4` | `1.2.840.113549.3.4` | `rc4` | 16 | 1..256 | `KeyLength` | `KeyOwned` |
+| `SALSA20` |  |  | `salsa20` | 16 | 16, 32 | `KeyLength` | `KeyOwned` |
+| `XSALSA20` |  |  | `xsalsa20` | 32 | 32 | `KeyLength` | `KeyOwned` |
+| `VMPC` |  |  | `vmpc` | 16 | 16..64 | `KeyLength` | `KeyOwned` |
+| `VMPC-KSA3` |  |  | `vmpc-ksa3` | 16 | 16..64 | `KeyLength` | `KeyOwned` |
+| `ASCON-AEAD128` |  |  | `ascon-aead128` | 16 | 16 | `KeyLength` | `KeyOwned` |
+| `ASCON-128` |  |  | `ascon128` | 16 | 16 | `KeyLength` | `KeyOwned` |
+| `ASCON-128A` |  |  | `ascon128a` | 16 | 16 | `KeyLength` | `KeyOwned` |
+| `ASCON-80PQ` |  |  | `ascon80pq` | 20 | 20 | `KeyLength` | `KeyOwned` |
+| `GRAIN-128AEAD` |  |  | `grain128-aead` | 16 | 16 | `KeyLength` | `KeyOwned` |
+| `SCHWAEMM128-128` |  |  | `schwaemm128-128` | 16 | 16 | `KeyLength` | `KeyOwned` |
+| `SCHWAEMM256-128` |  |  | `schwaemm256-128` | 16 | 16 | `KeyLength` | `KeyOwned` |
+| `SCHWAEMM192-192` |  |  | `schwaemm192-192` | 24 | 24 | `KeyLength` | `KeyOwned` |
+| `SCHWAEMM256-256` |  |  | `schwaemm256-256` | 32 | 32 | `KeyLength` | `KeyOwned` |
+| `RC2` |  | `1.2.840.113549.3.2`, `1.2.840.113549.1.9.16.3.7` | `rc2` | 16 | 1..128 | [`Rc2KeyGenParams`](Rc2.md#key-generation) | `Rc2ParamsOwned` |
+| `RC5` | `RC5-32` |  | `rc5` | 16 | 1..255 | [`Rc5KeyGenParams`](Rc5.md#key-generation) | `Rc5ParamsOwned` |
+| `RC5-64` |  |  | `rc5-64` | 32 | 1..255 | [`Rc5KeyGenParams`](Rc5.md#key-generation) | `Rc5ParamsOwned` |
+| `GOST28147` | `GOST`, `GOST-28147` | `1.2.643.2.2.21` | `gost28147` | 32 | 32 | [`Gost28147KeyGenParams`](Gost28147.md#key-generation) | `Gost28147ParamsOwned` |
+| `KEY` |  |  | `aes`, `chacha` or `hmac-sha256` | none | 1.. | `KeyLength` | `KeyOwned` |
 
-The names, aliases, OIDs and lengths are those of Bouncy Castle's `GeneratorUtilities`, but
+Bytes are lists (`16, 24, 32`), ranges with both ends included (`16..64`), or with no upper end
+(`1..`).
+
+The names, aliases, OIDs and default lengths are those of Bouncy Castle's `GeneratorUtilities`, but
 `DESEDE16` and `DESEDE24`, which name the two lengths of DESede, `XSALSA20` and `KEY`, which are
 this crate's, as are the AEAD ciphers of their own, Ascon, Grain-128AEAD and Schwaemm, named after
 their cipher rows, which Bouncy Castle has no names for there. ChaCha20-Poly1305 and
 XChaCha20-Poly1305 take the keys of `CHACHA7539` and `XCHACHA20`, whose aliases they are, and the
 AEAD modes of a block cipher, such as `AES/GCM/NOPADDING`, the key of the cipher. ISAAC takes a key
-of any length and has no row of its own: `KEY` gives one. Each row is behind the feature of its
-cipher, and the case of a name does not matter. An OID of a cipher finds the row of its key, so that
-the OID read from a certificate or a CMS message finds the generator of its key: the OIDs of AES and
-ARIA are those of each mode and key wrap of the key length, of ECB, CBC, CFB, OFB, CCM and GCM and
-more.
+of any length and has no row of its own: `KEY` gives one.
+
+Each row is behind the feature of its cipher, and the case of a name does not matter. An OID of a
+cipher finds the row of its key, so that the OID read from a certificate or a CMS message finds the
+generator of its key: the OIDs of AES and ARIA are those of each mode and key wrap of the key
+length, of ECB, CBC, CFB, OFB, CCM and GCM and more.
 
 ## Params
 
-- The rows of the ciphers take none: `generate_by_name` gives a key at once, and `init` refuses
-  any params as `InvalidParams`. The length is the row's, as the table gives it.
-- `KEY` takes a `KeyLength`, the length in bytes, and has no default: `generate_by_name` gives
-  `NotInitialized`, so use `generate_by_name_with`, or `get_by_name`, `init` and `generate`.
+- Without `init`, a row gives a key of its default length, with the defaults of its cipher.
+- `init` with a `KeyLength` sets another length the cipher takes, as the Bytes column gives them;
+  a length it does not take is `InvalidParams`, and keeps the length before. `AES128`, `AES192` and
+  `AES256` take the length of their name alone.
+- RC2, RC5, RC5-64 and GOST 28147 have params of their own, so their rows give those params, the key
+  with what the cipher takes besides it, and `init` takes a params type of each instead of a
+  `KeyLength`; see [RC2](Rc2.md#key-generation), [RC5](Rc5.md#key-generation) and
+  [GOST 28147](Gost28147.md#key-generation). What they give goes straight into the rows of their
+  cipher, in ECB as it is, and with an IV in a `ParamsWithIvOwned`.
+- `KEY` has no default: it needs `init` with a `KeyLength`, and `generate_by_name` gives
+  `NotInitialized`.
 
 ## Using it
 
 - `get_by_name` and `get_by_oid` give a `KeyGenerator`, a trait of this crate's own. `init` is
   optional, and `generate` can be called again and again for new keys.
-- Each key is a `KeyOwned`, behind `Box<dyn Params>`, which goes straight into what takes a key:
-  `as_any().downcast_ref::<KeyOwned>()` gives it, and `key()` its bytes.
+- Each key is behind `Box<dyn Params>`, of the type of the Returns column, which goes straight into
+  what takes it: `as_any().downcast_ref::<KeyOwned>()` gives a `KeyOwned`, and `key()` its bytes.
 - `DES`, `DESEDE` and `DESEDE3` keep to the rules of their keys, as Bouncy Castle's
   `DesKeyGenerator` and `DesEdeKeyGenerator` do: each byte has odd parity, a weak key is drawn
   again, and so is a DESede key whose parts repeat, which would be DES. `KEY` is only random

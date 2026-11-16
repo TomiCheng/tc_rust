@@ -17,6 +17,13 @@ mod ies_dh_params;
 #[cfg(feature = "ecies")]
 mod ies_ec_params;
 mod key_length;
+#[cfg(any(
+    feature = "rc2",
+    feature = "rc5",
+    feature = "rc5-64",
+    feature = "gost28147"
+))]
+mod own_key_gen_params;
 #[cfg(any(feature = "parallelhash128", feature = "parallelhash256"))]
 mod parallel_hash_params;
 #[cfg(feature = "rsa")]
@@ -107,6 +114,12 @@ pub use ies_dh_params::IesDhParams;
 #[cfg(feature = "ecies")]
 pub use ies_ec_params::IesEcParams;
 pub use key_length::KeyLength;
+#[cfg(feature = "gost28147")]
+pub use own_key_gen_params::Gost28147KeyGenParams;
+#[cfg(feature = "rc2")]
+pub use own_key_gen_params::Rc2KeyGenParams;
+#[cfg(any(feature = "rc5", feature = "rc5-64"))]
+pub use own_key_gen_params::Rc5KeyGenParams;
 #[cfg(any(feature = "parallelhash128", feature = "parallelhash256"))]
 pub use parallel_hash_params::ParallelHashParams;
 #[cfg(feature = "rsa")]

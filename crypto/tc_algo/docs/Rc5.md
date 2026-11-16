@@ -40,7 +40,8 @@ fn main() -> Result<(), AlgoError> {
 }
 ```
 
-In an AEAD mode, GCM here, of RC5-64 and its 16-byte block; `RC5`, of an 8-byte block, has EAX alone:
+In an AEAD mode, GCM here, of RC5-64 and its 16-byte block; `RC5`, of an 8-byte block, has EAX
+alone:
 
 ```rust
 use tc_algo::params::{ParamsWithAeadOwned, Rc5ParamsOwned};
@@ -73,3 +74,31 @@ The same `Rc5ParamsOwned` serves `RC5` and `RC5-64`; only the block, and so the 
 The IV is one block in every mode but CTR, which takes it as `tc_block_modes` does. The number of
 rounds is checked when the row is initialized, not when the params are built; one the engine does
 not take is `InvalidParams`.
+
+## Key generation
+
+The `RC5` row of `algo.key_generator()` gives an `Rc5ParamsOwned`, the key with what the cipher
+takes besides it, which goes straight into the rows above. `init` takes an `Rc5KeyGenParams`; see
+[Key generation](KeyGeneration.md).
+
+```rust
+use tc_algo::params::{Rc5KeyGenParams, Rc5ParamsOwned};
+use tc_rc_cipher::Rc5Params;
+use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
+
+fn main() -> Result<(), AlgoError> {
+    let algo = DefaultAlgoBuilder::default().build();
+
+    // A 16-byte key with 16 rounds
+    let params = Rc5KeyGenParams::new(16).with_rounds(16);
+    let rc5 = algo.key_generator().generate_by_name_with("RC5", &params)?;
+    let rc5 = rc5.as_any().downcast_ref::<Rc5ParamsOwned>().expect("an Rc5ParamsOwned");
+    assert_eq!(rc5.rounds(), 16);
+    Ok(())
+}
+```
+
+`Rc5KeyGenParams::new(key_bytes)` sets the length of the key, 1 to 255 bytes, and `with_rounds` the
+number of rounds, 0 to 255; without it, 12. Without `init`, `RC5` gives a key of 16 bytes and
+`RC5-64` one of 32, each with 12 rounds. The values are checked when the row is initialized, not
+when the params are built; one out of range is `InvalidParams`.

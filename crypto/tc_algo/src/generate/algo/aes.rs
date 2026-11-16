@@ -2,8 +2,8 @@ use rand_core::CryptoRng;
 use tc_asn1::Asn1Oid;
 
 use crate::generate::{KeyGenerator, KeyGeneratorEntry};
-use crate::params::KeyOwned;
-use crate::{AlgoError, DefaultAlgoContext, EntryBase, Params};
+use crate::params::{KeyLength, KeyOwned};
+use crate::{AlgoError, DefaultAlgoContext, EntryBase, ErrorKind, Params};
 
 // The rows of AES, to give to DefaultAlgoBuilder::reg_key_generator. Their names and OIDs are those
 // of Bouncy Castle's GeneratorUtilities, without its aliases for the OIDs it calls wrong. An OID
@@ -70,6 +70,16 @@ struct AesKeyGenerator {
 }
 
 impl KeyGenerator for AesKeyGenerator {
+    // The name gives the length, so a KeyLength of it alone; another is InvalidParams
+    fn init(&mut self, params: &dyn Params) -> Result<(), AlgoError> {
+        params
+            .as_any()
+            .downcast_ref::<KeyLength>()
+            .filter(|length| length.bytes() == self.key_len)
+            .map(|_| ())
+            .ok_or(AlgoError::new(ErrorKind::InvalidParams))
+    }
+
     fn generate(&mut self) -> Result<Box<dyn Params>, AlgoError> {
         let mut key = vec![0; self.key_len];
         self.rand.fill_bytes(&mut key);
@@ -189,13 +199,20 @@ mod tests {
         }
     }
 
+    // The name gives the length: init takes a KeyLength of it alone, and refuses any other
     #[test]
-    fn a_row_has_nothing_to_set_so_init_refuses_any_params() {
+    fn init_takes_the_length_of_the_name_alone() {
+        use crate::params::KeyLength;
+
         let algo = DefaultAlgoBuilder::default().build();
         let mut generator: Box<dyn KeyGenerator> =
             algo.key_generator().get_by_name("AES128").unwrap();
 
-        let error = generator.init(&OtherParams).unwrap_err();
-        assert_eq!(error.kind(), ErrorKind::InvalidParams);
+        generator.init(&KeyLength::new(16)).unwrap();
+        assert_eq!(key_of(generator.generate().unwrap().as_ref()).len(), 16);
+        for params in [&KeyLength::new(32) as &dyn Params, &OtherParams] {
+            let error = generator.init(params).unwrap_err();
+            assert_eq!(error.kind(), ErrorKind::InvalidParams);
+        }
     }
 }
