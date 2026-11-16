@@ -72,6 +72,19 @@ fn init_rejects_invalid_parameters() {
 }
 
 #[test]
+fn init_rejects_a_subgroup_order_that_leaves_no_private_value() {
+    let mut rng = rand::rng();
+    let mut generator = DhKeyPairGenerator::new(&mut rng);
+    // q = 1 使 q − 2 為負；64 位元的 q 小於 m = 160 的下限 2^159。
+    for q in [n(1), n(u64::MAX)] {
+        assert_eq!(
+            generator.init(&DhKeyGenerationParams::new(group14().with_q(q))),
+            Err(DhError::InvalidPrivateValueLength)
+        );
+    }
+}
+
+#[test]
 fn generating_before_init_is_an_error() {
     assert_eq!(
         DhKeyPairGenerator::new(rand::rng()).generate_key_pair().err(),

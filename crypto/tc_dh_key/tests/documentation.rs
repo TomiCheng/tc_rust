@@ -1,10 +1,11 @@
-const METHODS: [&str; 10] = [
+const METHODS: [&str; 11] = [
     "fmt",
     "drop",
     "eq",
     "init",
     "generate_key_pair",
     "private_value",
+    "private_range",
     "public_value",
     "has_any_small_factors_safe",
     "rounds",

@@ -23,10 +23,13 @@ impl<R> DhKeyPairGenerator<R> {
 impl<R> KeyPairGeneratorInit<DhKeyGenerationParams> for DhKeyPairGenerator<R> {
     type Error = DhError;
 
-    /// 以 [`DhParameters::validate`] 檢查參數，並為 p 建好 Montgomery 參數。變動時間：
-    /// 參數是公開值。
+    /// 以 [`DhParameters::validate`] 檢查參數，l 沒設定時再確認 x 的範圍不是空的（見
+    /// [`private_range`]），並為 p 建好 Montgomery 參數。變動時間：參數是公開值。
     fn init(&mut self, params: &DhKeyGenerationParams) -> Result<(), DhError> {
         params.params.validate()?;
+        if params.params.l() == 0 {
+            private_range(&params.params)?;
+        }
         let p = Odd::new(params.params.p().clone()).ok_or(DhError::InvalidModulus)?;
         self.state = Some((params.clone(), PaddedMontyParams::new(p)));
         Ok(())
@@ -71,6 +74,22 @@ fn private_value(params: &DhParameters, rng: &mut dyn CryptoRng) -> PaddedBigUin
         }
     }
 
+    let (min, high) = private_range(params).expect("init checks the range");
+    let min_weight = (&high - 1u32).bits() >> 2;
+    loop {
+        let mut x = PaddedBigUint::random_range(rng, &min, &high);
+        if naf_weight(x.as_limbs()) >= min_weight {
+            return x;
+        }
+        x.zeroize();
+    }
+}
+
+/// l 沒設定時 x 的範圍：BC 的 `CreateRandomInRange(min, q - 2)` 含上限，這裡回傳半開的
+/// `[min, q - 1)`，min 是 2^(m - 1)，m 為 0 時是 2，沒有 q 時用 p。範圍是空的時（q 太小，
+/// 或 2^(m - 1) 超過 q - 2）回傳 [`DhError::InvalidPrivateValueLength`]，BC 是到產生時才丟出。
+/// 變動時間：只用於公開值。
+fn private_range(params: &DhParameters) -> Result<(PaddedBigUint, PaddedBigUint), DhError> {
     let m = params.m();
     let min = if m != 0 {
         let mut min = BigUint::from(0u8);
@@ -80,17 +99,10 @@ fn private_value(params: &DhParameters, rng: &mut dyn CryptoRng) -> PaddedBigUin
         PaddedBigUint::from(2u8)
     };
     let order = params.q().unwrap_or(params.p());
-    let max = order - 2u32;
-    let min_weight = max.bits() >> 2;
-    // `random_range` 取半開區間，BC 的 `CreateRandomInRange` 含上限。
-    let high = &max + 1u32;
-    loop {
-        let mut x = PaddedBigUint::random_range(rng, &min, &high);
-        if naf_weight(x.as_limbs()) >= min_weight {
-            return x;
-        }
-        x.zeroize();
+    if *order < &min + 2u32 {
+        return Err(DhError::InvalidPrivateValueLength);
     }
+    Ok((min, order - 1u32))
 }
 
 /// BC `DHKeyGeneratorHelper.CalculatePublic`：g^x mod p，以 Montgomery 形式取冪。對 x 是

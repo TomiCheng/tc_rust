@@ -13,7 +13,8 @@ pub enum DhError {
     InvalidGenerator,
     /// q 的位元數不小於 p 的，不可能是 p − 1 的因數。
     InvalidSubgroupOrder,
-    /// m 不小於 p 的位元數；或 l 有設定卻不小於 p 的位元數、或小於 m。
+    /// m 不小於 p 的位元數；或 l 有設定卻不小於 p 的位元數、或小於 m；或 l 沒設定時，
+    /// 私鑰的範圍 `[2^(m - 1), q - 2]` 是空的。
     InvalidPrivateValueLength,
     /// 餘因子 j 小於 2。
     InvalidCofactor,
