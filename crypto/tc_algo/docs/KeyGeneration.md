@@ -71,14 +71,38 @@ fn main() -> Result<(), AlgoError> {
 | `TNEPRES` |  |  | `tnepres` | 24 | `KeyOwned` |
 | `TWOFISH` |  |  | `twofish` | 32 | `KeyOwned` |
 | `XTEA` |  |  | `xtea` | 16 | `KeyOwned` |
+| `CHACHA` |  |  | `chacha` | 16 | `KeyOwned` |
+| `CHACHA7539` | `CHACHA20`, `CHACHA20-POLY1305` | `1.2.840.113549.1.9.16.3.18` | `chacha` or `chacha20-poly1305` | 32 | `KeyOwned` |
+| `XCHACHA20` | `XCHACHA20-POLY1305` |  | `xchacha20` or `xchacha20-poly1305` | 32 | `KeyOwned` |
+| `HC128` |  |  | `hc128` | 16 | `KeyOwned` |
+| `HC256` |  |  | `hc256` | 32 | `KeyOwned` |
+| `RC4` | `ARC4` | `1.2.840.113549.3.4` | `rc4` | 16 | `KeyOwned` |
+| `SALSA20` |  |  | `salsa20` | 16 | `KeyOwned` |
+| `XSALSA20` |  |  | `xsalsa20` | 32 | `KeyOwned` |
+| `VMPC` |  |  | `vmpc` | 16 | `KeyOwned` |
+| `VMPC-KSA3` |  |  | `vmpc-ksa3` | 16 | `KeyOwned` |
+| `ASCON-AEAD128` |  |  | `ascon-aead128` | 16 | `KeyOwned` |
+| `ASCON-128` |  |  | `ascon128` | 16 | `KeyOwned` |
+| `ASCON-128A` |  |  | `ascon128a` | 16 | `KeyOwned` |
+| `ASCON-80PQ` |  |  | `ascon80pq` | 20 | `KeyOwned` |
+| `GRAIN-128AEAD` |  |  | `grain128-aead` | 16 | `KeyOwned` |
+| `SCHWAEMM128-128` |  |  | `schwaemm128-128` | 16 | `KeyOwned` |
+| `SCHWAEMM256-128` |  |  | `schwaemm256-128` | 16 | `KeyOwned` |
+| `SCHWAEMM192-192` |  |  | `schwaemm192-192` | 24 | `KeyOwned` |
+| `SCHWAEMM256-256` |  |  | `schwaemm256-256` | 32 | `KeyOwned` |
 | `KEY` |  |  | `aes`, `chacha` or `hmac-sha256` | that of `KeyLength` | `KeyOwned` |
 
 The names, aliases, OIDs and lengths are those of Bouncy Castle's `GeneratorUtilities`, but
-`DESEDE16` and `DESEDE24`, which name the two lengths of DESede, and `KEY`, which are this crate's.
-Each row is behind the feature of its cipher, and the case of a name does not matter. An OID of a
-cipher finds the row of its key, so that the OID read from a certificate or a CMS message finds the
-generator of its key: the OIDs of AES and ARIA are those of each mode and key wrap of the key
-length, of ECB, CBC, CFB, OFB, CCM and GCM and more.
+`DESEDE16` and `DESEDE24`, which name the two lengths of DESede, `XSALSA20` and `KEY`, which are
+this crate's, as are the AEAD ciphers of their own, Ascon, Grain-128AEAD and Schwaemm, named after
+their cipher rows, which Bouncy Castle has no names for there. ChaCha20-Poly1305 and
+XChaCha20-Poly1305 take the keys of `CHACHA7539` and `XCHACHA20`, whose aliases they are, and the
+AEAD modes of a block cipher, such as `AES/GCM/NOPADDING`, the key of the cipher. ISAAC takes a key
+of any length and has no row of its own: `KEY` gives one. Each row is behind the feature of its
+cipher, and the case of a name does not matter. An OID of a cipher finds the row of its key, so that
+the OID read from a certificate or a CMS message finds the generator of its key: the OIDs of AES and
+ARIA are those of each mode and key wrap of the key length, of ECB, CBC, CFB, OFB, CCM and GCM and
+more.
 
 ## Params
 

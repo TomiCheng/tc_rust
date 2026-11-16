@@ -1,3 +1,15 @@
+#[cfg(any(
+    feature = "ascon-aead128",
+    feature = "ascon128",
+    feature = "ascon128a",
+    feature = "ascon80pq",
+    feature = "grain128-aead",
+    feature = "schwaemm128-128",
+    feature = "schwaemm256-128",
+    feature = "schwaemm192-192",
+    feature = "schwaemm256-256",
+))]
+mod aead;
 #[cfg(feature = "aes")]
 mod aes;
 #[cfg(any(
@@ -36,6 +48,56 @@ mod dh;
 mod ec;
 #[cfg(feature = "elgamal")]
 mod elgamal;
+#[cfg(any(
+    feature = "aes",
+    feature = "aria",
+    feature = "blowfish",
+    feature = "camellia",
+    feature = "cast5",
+    feature = "cast6",
+    feature = "des",
+    feature = "desede",
+    feature = "gost28147",
+    feature = "idea",
+    feature = "noekeon",
+    feature = "rc2",
+    feature = "rc5",
+    feature = "rc5-64",
+    feature = "rc6",
+    feature = "rijndael",
+    feature = "seed",
+    feature = "serpent",
+    feature = "skipjack",
+    feature = "sm4",
+    feature = "tea",
+    feature = "threefish-256",
+    feature = "threefish-512",
+    feature = "threefish-1024",
+    feature = "tnepres",
+    feature = "twofish",
+    feature = "xtea",
+    feature = "chacha",
+    feature = "chacha20-poly1305",
+    feature = "xchacha20",
+    feature = "xchacha20-poly1305",
+    feature = "hc128",
+    feature = "hc256",
+    feature = "rc4",
+    feature = "salsa20",
+    feature = "xsalsa20",
+    feature = "vmpc",
+    feature = "vmpc-ksa3",
+    feature = "ascon-aead128",
+    feature = "ascon128",
+    feature = "ascon128a",
+    feature = "ascon80pq",
+    feature = "grain128-aead",
+    feature = "schwaemm128-128",
+    feature = "schwaemm256-128",
+    feature = "schwaemm192-192",
+    feature = "schwaemm256-256",
+))]
+mod fixed;
 #[cfg(any(feature = "aes", feature = "chacha", feature = "hmac-sha256"))]
 mod key;
 #[cfg(feature = "ml-kem")]
@@ -46,6 +108,20 @@ mod naccache_stern;
 mod rsa;
 #[cfg(feature = "sm2")]
 mod sm2;
+#[cfg(any(
+    feature = "chacha",
+    feature = "chacha20-poly1305",
+    feature = "xchacha20",
+    feature = "xchacha20-poly1305",
+    feature = "hc128",
+    feature = "hc256",
+    feature = "rc4",
+    feature = "salsa20",
+    feature = "xsalsa20",
+    feature = "vmpc",
+    feature = "vmpc-ksa3",
+))]
+mod stream;
 
 use super::{CreateKeyGeneratorRows, CreateKeyPairGeneratorRows};
 
@@ -83,6 +159,32 @@ pub(crate) const BUILT_IN_KEY_GENERATORS: &[CreateKeyGeneratorRows] = &[
         feature = "xtea",
     ))]
     block::block,
+    #[cfg(any(
+        feature = "chacha",
+        feature = "chacha20-poly1305",
+        feature = "xchacha20",
+        feature = "xchacha20-poly1305",
+        feature = "hc128",
+        feature = "hc256",
+        feature = "rc4",
+        feature = "salsa20",
+        feature = "xsalsa20",
+        feature = "vmpc",
+        feature = "vmpc-ksa3",
+    ))]
+    stream::stream,
+    #[cfg(any(
+        feature = "ascon-aead128",
+        feature = "ascon128",
+        feature = "ascon128a",
+        feature = "ascon80pq",
+        feature = "grain128-aead",
+        feature = "schwaemm128-128",
+        feature = "schwaemm256-128",
+        feature = "schwaemm192-192",
+        feature = "schwaemm256-256",
+    ))]
+    aead::aead,
     #[cfg(any(feature = "aes", feature = "chacha", feature = "hmac-sha256"))]
     key::key,
 ];
