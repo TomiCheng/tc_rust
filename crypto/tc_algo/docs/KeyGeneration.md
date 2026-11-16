@@ -45,6 +45,9 @@ Each gives a `KeyOwned`. The `aes` feature has the rows.
 
 ## Using it
 
+- `algo.key_pair_generator()` gives a `KeyPairGenerator`, which is a `KeyPairGenerator` and a
+  `KeyPairGeneratorInit` of `tc_asym_cipher` with `AlgoError` for its errors, so code written
+  for those traits takes it as it is. A `KeyGenerator`, for secret keys, is this crate's own.
 - `generate_by_name` uses the params the row has by default; `generate_by_name_with` takes
   them. `by_oid` does the same by OID.
 - `get_by_name` gives a generator to `init` once and `generate` from many times.

@@ -187,6 +187,9 @@ private key signs, and a public key verifies.
 
 ### Using it
 
+- `get_by_name` and `get_by_oid` give a `Signer`, which is a `Signer` and a `SignerInit` of
+  `tc_signer` with `AlgoError` for its errors, so code written for those traits takes it as it
+  is.
 - **Look at the answer of `verify_signature`.** A wrong signature gives `Ok(false)`, not an error, so
   a bare `?` on the call lets a forged message through.
 - A message can come in pieces, over several calls of `update`.

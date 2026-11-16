@@ -65,6 +65,9 @@ the private key to decrypt of a pair from the `SM2` row of `algo.key_pair_genera
 
 ## Using it
 
+- `get_by_name` and `get_by_oid` give a `Cipher`, which is a `BufferedCipher` and a
+  `BufferedCipherInit` of `tc_buffered_cipher` with `AlgoError` for its errors, so code written
+  for those traits takes it as it is.
 - For new data, use OAEP. PKCS#1 v1.5 can be broken by whoever sees its padding checks fail, and
   `RSA` without padding is for building other schemes only.
 - One message is one block: a longer one is `DataLength`. To encrypt more, encrypt a key for a

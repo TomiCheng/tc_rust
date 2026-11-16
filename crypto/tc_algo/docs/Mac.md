@@ -77,6 +77,8 @@ params, `generate_by_name_with`. A key from elsewhere goes in with `KeyOwned::ne
 
 ## Using it
 
+- `get_by_name` and `get_by_oid` give a `Mac`, which is a `Mac` and a `MacInit` of `tc_macs`
+  with `AlgoError` for its errors, so code written for those traits takes it as it is.
 - Check a tag with `verify`, or `verify_by_name` and `verify_by_oid`, never with `==`. They compare
   in constant time, whereas `==` stops at the first difference and tells an attacker how much of a
   forged tag is right.

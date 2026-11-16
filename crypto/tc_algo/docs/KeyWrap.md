@@ -72,6 +72,9 @@ keeps to the IV of the standard: a custom IV is not supported yet.
 
 ## Using it
 
+- `get_by_name` and `get_by_oid` give a `Wrapper`, which is a `KeyWrap` and a `KeyWrapInit` of
+  `tc_key_wrap` with `AlgoError` for its errors, so code written for those traits takes it as it
+  is.
 - `init` gives the direction, and the wrapper then works only that way. The other call gives
   `NotInitialized`, as both do before an `init` that succeeded.
 - `unwrap` gives `InvalidCiphertext` for a changed input or a wrong KEK, and no output.

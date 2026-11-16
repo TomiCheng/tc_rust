@@ -102,6 +102,9 @@ same group, or `init` gives `InvalidParams`.
 
 ## Using it
 
+- `get_by_name` and `get_by_oid` give a `Cipher`, which is a `BufferedCipher` and a
+  `BufferedCipherInit` of `tc_buffered_cipher` with `AlgoError` for its errors, so code written
+  for those traits takes it as it is.
 - **Use a new `derivation_v` for each message.** Both keys are static, so `Z` never changes, and the
   keystream depends only on `Z` and `derivation_v`. If the value repeats, so does the keystream, and
   the XOR of two ciphertexts is the XOR of their messages. Nothing checks this. Reversing the

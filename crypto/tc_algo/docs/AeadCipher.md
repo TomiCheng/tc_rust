@@ -273,6 +273,9 @@ table of its mode.
 
 ## Using it
 
+- `get_by_name` and `get_by_oid` give a `Cipher`, which is a `BufferedCipher` and a
+  `BufferedCipherInit` of `tc_buffered_cipher` with `AlgoError` for its errors, so code written
+  for those traits takes it as it is.
 - A wrong tag, a changed AAD, or a ciphertext too short to hold the tag is `InvalidCiphertext`. They
   are not told apart.
 - As in Bouncy Castle, `update` may give plaintext before `finalize` has checked the tag. Use none of

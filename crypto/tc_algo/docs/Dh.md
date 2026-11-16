@@ -117,6 +117,9 @@ fn main() -> Result<(), AlgoError> {
 
 ### Using it
 
+- `get_by_name` and `get_by_oid` give an `Agreement`, which is an `Agreement` and an
+  `AgreementInit` of `tc_agreement` with `AlgoError` for its errors, so code written for those
+  traits takes it as it is.
 - **The secret is not yet a key.** Its bytes are not uniformly random, so put them through a KDF
   before using them.
 - **DH alone does not say who is on the other side.** Someone in the middle can run an agreement with

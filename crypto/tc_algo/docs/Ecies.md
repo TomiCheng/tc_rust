@@ -79,6 +79,9 @@ keys, are `InvalidParams` from `init`.
 
 ## Using it
 
+- `get_by_name` and `get_by_oid` give a `Cipher`, which is a `BufferedCipher` and a
+  `BufferedCipherInit` of `tc_buffered_cipher` with `AlgoError` for its errors, so code written
+  for those traits takes it as it is.
 What [IES](IES.md#using-it) says holds here too:
 
 - **Use a new `derivation_v` for each message.** The keys are static, so the keystream depends

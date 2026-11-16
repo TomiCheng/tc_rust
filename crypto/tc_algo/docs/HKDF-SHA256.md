@@ -71,6 +71,8 @@ wipes itself when dropped.
 
 ## Using it
 
+- `get_by_name` and `get_by_oid` give a `Kdf`, which is a `Kdf` and a `KdfInit` of `tc_kdf`
+  with `AlgoError` for its errors, so code written for those traits takes it as it is.
 - `generate_bytes` fills the buffer and returns its length. Keeping the key safe and wiping it is up
   to the caller.
 - Each call goes on where the last one stopped, so the output can come in pieces.

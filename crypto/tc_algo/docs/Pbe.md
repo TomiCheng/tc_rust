@@ -73,6 +73,7 @@ padding of the scheme.
 
 ## Using it
 
+- `get_by_name` and `get_by_oid` give a `Pbe`, a trait of this crate's own.
 - **It is only as strong as the password.** A count slows guessing down, but a short or common password
   still falls.
 - **CBC does not detect a changed ciphertext.** Authenticate the ciphertext before decrypting it.

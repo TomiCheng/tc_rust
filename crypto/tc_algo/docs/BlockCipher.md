@@ -1094,6 +1094,9 @@ can see it fail. Authenticate the ciphertext before decrypting it, or use an AEA
 
 ## Using it
 
+- `get_by_name` and `get_by_oid` give a `Cipher`, which is a `BufferedCipher` and a
+  `BufferedCipherInit` of `tc_buffered_cipher` with `AlgoError` for its errors, so code written
+  for those traits takes it as it is.
 - `encrypt_by_name` and `decrypt_by_name` take the whole message at once and give the whole
   result; `by_oid` does the same by OID.
 - For a message in parts, `get_by_name` gives a `Cipher`: `init` with the direction and the

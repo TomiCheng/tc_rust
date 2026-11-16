@@ -90,6 +90,9 @@ or a nonce of a length the table does not give. Both wipe themselves when droppe
 
 ## Using it
 
+- `get_by_name` and `get_by_oid` give a `Cipher`, which is a `BufferedCipher` and a
+  `BufferedCipherInit` of `tc_buffered_cipher` with `AlgoError` for its errors, so code written
+  for those traits takes it as it is.
 - **It does not detect a changed ciphertext.** Flipping a bit of the ciphertext flips the same bit of
   the plaintext, and decrypting succeeds. To protect a message, use an AEAD cipher, or authenticate
   the ciphertext before decrypting it.
