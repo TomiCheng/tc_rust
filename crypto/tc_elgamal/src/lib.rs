@@ -5,25 +5,24 @@
 //! 引擎實作 `tc_asym_cipher` 的非對稱加密 trait，區塊大小與 `tc_rsa` 一致，可以直接套上
 //! PKCS#1 或 OAEP。
 //!
-//! ```
+//! ```no_run
 //! use tc_asym_cipher::{
 //!     AsymmetricBlockCipher, AsymmetricBlockCipherInit, CipherDirection, KeyPairGenerator,
 //!     KeyPairGeneratorInit,
 //! };
+//! use tc_dh_key::DhGroupGenerationParams;
 //! use tc_elgamal::{
 //!     ElGamalEngine, ElGamalKeyGenerationParams, ElGamalKeyPairGenerator,
 //!     ElGamalParametersGenerator,
 //! };
 //!
-//! let mut rng = rand::rng();
-//!
-//! // 參數：安全質數 p 與 g = 2；真實用途要 2048 位元以上。
-//! let mut parameters_generator = ElGamalParametersGenerator::new();
-//! parameters_generator.init(256, 20, &mut rng)?;
+//! // 參數：2048 位元的安全質數 p 與 g = 2；很慢，可能要數十秒到數分鐘。
+//! let mut parameters_generator = ElGamalParametersGenerator::new(rand::rng());
+//! parameters_generator.init(&DhGroupGenerationParams::new())?;
 //! let params = parameters_generator.generate_parameters()?;
 //!
 //! // 收件人的金鑰對。
-//! let mut generator = ElGamalKeyPairGenerator::new(&mut rng);
+//! let mut generator = ElGamalKeyPairGenerator::new(rand::rng());
 //! generator.init(&ElGamalKeyGenerationParams::new(params))?;
 //! let (public_key, private_key) = generator.generate_key_pair()?;
 //!

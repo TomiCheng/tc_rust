@@ -8,7 +8,7 @@ use tc_asym_cipher::{
     KeyPairGenerator, KeyPairGeneratorInit,
 };
 use tc_bigint::{BigUint, PaddedBigUint};
-use tc_dh_key::DhError;
+use tc_dh_key::{DhError, DhGroupGenerationParams};
 use tc_elgamal::{
     ElGamalEngine, ElGamalError, ElGamalKeyGenerationParams, ElGamalKeyPairGenerator,
     ElGamalParameters, ElGamalParametersGenerator,
@@ -80,9 +80,10 @@ fn the_strength_is_l_or_the_bit_length_of_p() {
 
 #[test]
 fn generated_parameters_carry_a_round_trip() {
-    let mut rng = rand::rng();
-    let mut parameters_generator = ElGamalParametersGenerator::new();
-    parameters_generator.init(192, 20, &mut rng).unwrap();
+    let mut parameters_generator = ElGamalParametersGenerator::new(rand::rng());
+    parameters_generator
+        .init(&DhGroupGenerationParams::new().with_size(192).with_certainty(20))
+        .unwrap();
     let params = parameters_generator.generate_parameters().unwrap();
     assert_eq!(params.p().bits(), 192);
     assert_eq!(big(params.g()), BigUint::from(2u8));
@@ -115,13 +116,13 @@ fn generated_parameters_carry_a_round_trip() {
 
 #[test]
 fn the_parameters_generator_checks_its_settings() {
-    let mut rng = rand::rng();
     assert_eq!(
-        ElGamalParametersGenerator::new().init(63, 20, &mut rng),
+        ElGamalParametersGenerator::new(rand::rng())
+            .init(&DhGroupGenerationParams::new().with_size(63)),
         Err(ElGamalError::InvalidParameters(DhError::InvalidSize))
     );
     assert_eq!(
-        ElGamalParametersGenerator::new()
+        ElGamalParametersGenerator::new(rand::rng())
             .generate_parameters()
             .err(),
         Some(ElGamalError::InvalidParameters(DhError::NotInitialized))

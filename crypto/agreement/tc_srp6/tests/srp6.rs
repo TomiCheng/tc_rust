@@ -3,7 +3,7 @@
 
 use rand::rngs::ThreadRng;
 use tc_bigint::{ArrayEncoding, PaddedBigUint};
-use tc_dh_key::DhParametersGenerator;
+use tc_dh_key::{DhGroupGenerationParams, DhGroupGenerator};
 use tc_sha::Sha256Digest;
 use tc_srp6::standard_groups::{
     rfc5054_1024, rfc5054_1536, rfc5054_2048, rfc5054_3072, rfc5054_4096, rfc5054_6144,
@@ -75,13 +75,14 @@ fn client_and_server_agree_over_the_rfc_5054_1024_bit_group() {
 #[test]
 fn client_and_server_agree_over_generated_safe_prime_groups() {
     for bits in [256, 384, 512] {
-        let mut rng = rand::rng();
-        let mut generator = DhParametersGenerator::new();
-        generator.init(bits, 25, &mut rng).unwrap();
-        let params = generator.generate_parameters().unwrap();
+        let mut generator = DhGroupGenerator::new(rand::rng());
+        generator
+            .init(&DhGroupGenerationParams::new().with_size(bits).with_certainty(25))
+            .unwrap();
+        let group = generator.generate_group().unwrap();
         mutual_verification(&Srp6GroupParameters::new(
-            params.p().clone(),
-            params.g().clone(),
+            group.p().clone(),
+            group.g().clone(),
         ));
     }
 }
