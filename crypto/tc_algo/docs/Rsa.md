@@ -35,9 +35,9 @@ fn main() -> Result<(), AlgoError> {
 
 ### Algorithms
 
-| Name | OID | Feature | Params |
-|---|---|---|---|
-| `RSA` | `1.2.840.113549.1.1.1` | `rsa` | `RsaKeyGenParams` |
+| Name | OID | Feature | Params | Public key | Private key |
+|---|---|---|---|---|---|
+| `RSA` | `1.2.840.113549.1.1.1` | `rsa` | `RsaKeyGenParams` | `RsaKey` | `RsaKey` |
 
 The case of the name does not matter.
 

@@ -37,9 +37,9 @@ fn main() -> Result<(), AlgoError> {
 
 ### Algorithms
 
-| Name | OID | Feature | Params |
-|---|---|---|---|
-| `ELGAMAL` | none | `elgamal` | `ElGamalParameters` |
+| Name | OID | Feature | Params | Public key | Private key |
+|---|---|---|---|---|---|
+| `ELGAMAL` | none | `elgamal` | `ElGamalParameters` | `ElGamalPublicKey` | `ElGamalPrivateKey` |
 
 The name is that of Bouncy Castle's `GeneratorUtilities`, which gives it no OID. The case of the name
 does not matter.

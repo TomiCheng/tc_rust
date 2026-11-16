@@ -37,9 +37,9 @@ fn main() -> Result<(), AlgoError> {
 
 ### Algorithms
 
-| Name | OID | Feature | Params |
-|---|---|---|---|
-| `NACCACHESTERN` | none | `naccache-stern` | `NaccacheSternKeyGenerationParams` |
+| Name | OID | Feature | Params | Public key | Private key |
+|---|---|---|---|---|---|
+| `NACCACHESTERN` | none | `naccache-stern` | `NaccacheSternKeyGenerationParams` | `NaccacheSternPublicKey` | `NaccacheSternPrivateKey` |
 
 Bouncy Castle has the generator but no name for it in `GeneratorUtilities`, so the name is this
 crate's, that of the engine. The case of the name does not matter.

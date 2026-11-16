@@ -1,55 +1,101 @@
 # Key generation
 
-`algo.key_generator()` makes secret keys, for ciphers and MACs; `algo.key_pair_generator()` makes
-key pairs, a public key and a private one.
+A secret key is one key that both sides share and keep secret, for a block, stream or AEAD cipher,
+a MAC or a key wrap. `algo.key_generator()` makes it from a random source. For a public key and a
+private key, see [Key pair generation](KeyPairGeneration.md).
+
+From a name to a new key, and the key straight into a cipher:
 
 ```rust
-use tc_algo::params::{KeyOwned, RsaKeyGenParams};
-use tc_algo::{AlgoBuilder, DefaultAlgoBuilder};
+use tc_algo::params::{AeadParamsOwned, KeyLength, KeyOwned, KeyParams};
+use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
-let algo = DefaultAlgoBuilder::default().build();
+fn main() -> Result<(), AlgoError> {
+    let algo = DefaultAlgoBuilder::default().build();
 
-// A secret key
-let key = algo.key_generator().generate_by_name("AES256")?;
-let key = key.as_any().downcast_ref::<KeyOwned>().expect("a KeyOwned");
+    // A 256-bit AES key
+    let key = algo.key_generator().generate_by_name("AES256")?;
+    let key = key.as_any().downcast_ref::<KeyOwned>().expect("a KeyOwned");
+    assert_eq!(key.key().len(), 32);
 
-// A key pair
-let pair = algo
-    .key_pair_generator()
-    .generate_by_name_with("RSA", &RsaKeyGenParams::new(2048))?;
+    // The key in AES-GCM
+    let params = AeadParamsOwned::new(key.key().to_vec(), vec![0; 12], 16, Vec::new());
+    let sealed = algo.cipher().encrypt_by_name("AES/GCM/NOPADDING", &params, b"attack at dawn")?;
+    assert_eq!(sealed.len(), 14 + 16);
+
+    // A key of any length, such as for HMAC
+    let key = algo.key_generator().generate_by_name_with("KEY", &KeyLength::new(64))?;
+    assert!(key.as_any().is::<KeyOwned>());
+    Ok(())
+}
 ```
 
-## Secret keys
+## Algorithms
 
-- `AES128`, `AES192`, `AES256`: an AES key of that many bits
-- `KEY`: a key of any length, given in `KeyLength`
+| Name | Aliases | OIDs | Feature | Key bytes | Returns |
+|---|---|---|---|---|---|
+| `AES128` |  | the eight of AES-128, `2.16.840.1.101.3.4.1.1` to `.8` | `aes` | 16 | `KeyOwned` |
+| `AES192` |  | the eight of AES-192, `2.16.840.1.101.3.4.1.21` to `.28` | `aes` | 24 | `KeyOwned` |
+| `AES256` |  | the eight of AES-256, `2.16.840.1.101.3.4.1.41` to `.48` | `aes` | 32 | `KeyOwned` |
+| `AES` | `AESWRAP` |  | `aes` | 24 | `KeyOwned` |
+| `ARIA` |  |  | `aria` | 32 | `KeyOwned` |
+| `ARIA128` |  | the ten of ARIA-128 of NSRI | `aria` | 16 | `KeyOwned` |
+| `ARIA192` |  | the ten of ARIA-192 of NSRI | `aria` | 24 | `KeyOwned` |
+| `ARIA256` |  | the ten of ARIA-256 of NSRI | `aria` | 32 | `KeyOwned` |
+| `BLOWFISH` |  | `1.3.6.1.4.1.3029.1.1.2`, `1.3.6.1.4.1.3029.1.2` | `blowfish` | 16 | `KeyOwned` |
+| `CAMELLIA` | `CAMELLIAWRAP` |  | `camellia` | 32 | `KeyOwned` |
+| `CAMELLIA128` |  | `1.2.392.200011.61.1.1.1.2`, `1.2.392.200011.61.1.1.3.2` | `camellia` | 16 | `KeyOwned` |
+| `CAMELLIA192` |  | `1.2.392.200011.61.1.1.1.3`, `1.2.392.200011.61.1.1.3.3` | `camellia` | 24 | `KeyOwned` |
+| `CAMELLIA256` |  | `1.2.392.200011.61.1.1.1.4`, `1.2.392.200011.61.1.1.3.4` | `camellia` | 32 | `KeyOwned` |
+| `CAST5` |  | `1.2.840.113533.7.66.10` | `cast5` | 16 | `KeyOwned` |
+| `CAST6` |  |  | `cast6` | 32 | `KeyOwned` |
+| `DES` |  | `1.3.14.3.2.6` to `.9` | `des` | 8 | `KeyOwned` |
+| `DESEDE` | `DESEDE16`, `DESEDEWRAP`, `TDEA` | `1.3.14.3.2.17` | `desede` | 16 | `KeyOwned` |
+| `DESEDE3` | `DESEDE24` | `1.2.840.113549.3.7`, `1.2.840.113549.1.9.16.3.6` | `desede` | 24 | `KeyOwned` |
+| `GOST28147` | `GOST`, `GOST-28147` | `1.2.643.2.2.21` | `gost28147` | 32 | `KeyOwned` |
+| `IDEA` |  | `1.3.6.1.4.1.188.7.1.1.2` | `idea` | 16 | `KeyOwned` |
+| `NOEKEON` |  |  | `noekeon` | 16 | `KeyOwned` |
+| `RC2` |  | `1.2.840.113549.3.2`, `1.2.840.113549.1.9.16.3.7` | `rc2` | 16 | `KeyOwned` |
+| `RC5` | `RC5-32` |  | `rc5` | 16 | `KeyOwned` |
+| `RC5-64` |  |  | `rc5-64` | 32 | `KeyOwned` |
+| `RC6` |  |  | `rc6` | 32 | `KeyOwned` |
+| `RIJNDAEL` |  |  | `rijndael` | 24 | `KeyOwned` |
+| `SEED` |  | `1.2.410.200004.1.4`, `1.2.410.200004.7.1.1.1` | `seed` | 16 | `KeyOwned` |
+| `SERPENT` |  |  | `serpent` | 24 | `KeyOwned` |
+| `SKIPJACK` |  |  | `skipjack` | 10 | `KeyOwned` |
+| `SM4` |  |  | `sm4` | 16 | `KeyOwned` |
+| `TEA` |  |  | `tea` | 16 | `KeyOwned` |
+| `THREEFISH-256` |  |  | `threefish-256` | 32 | `KeyOwned` |
+| `THREEFISH-512` |  |  | `threefish-512` | 64 | `KeyOwned` |
+| `THREEFISH-1024` |  |  | `threefish-1024` | 128 | `KeyOwned` |
+| `TNEPRES` |  |  | `tnepres` | 24 | `KeyOwned` |
+| `TWOFISH` |  |  | `twofish` | 32 | `KeyOwned` |
+| `XTEA` |  |  | `xtea` | 16 | `KeyOwned` |
+| `KEY` |  |  | `aes`, `chacha` or `hmac-sha256` | that of `KeyLength` | `KeyOwned` |
 
-Each gives a `KeyOwned`. The `aes` feature has the rows.
+The names, aliases, OIDs and lengths are those of Bouncy Castle's `GeneratorUtilities`, but
+`DESEDE16` and `DESEDE24`, which name the two lengths of DESede, and `KEY`, which are this crate's.
+Each row is behind the feature of its cipher, and the case of a name does not matter. An OID of a
+cipher finds the row of its key, so that the OID read from a certificate or a CMS message finds the
+generator of its key: the OIDs of AES and ARIA are those of each mode and key wrap of the key
+length, of ECB, CBC, CFB, OFB, CCM and GCM and more.
 
-## Key pairs
+## Params
 
-- `RSA`, with `RsaKeyGenParams`: an `RsaKey` each; see [RSA](Rsa.md)
-- `DH`, also `DIFFIEHELLMAN`, with the group in `DhParameters`: a `DhPublicKey` and a
-  `DhPrivateKey`; see [Diffie-Hellman](Dh.md)
-- `ML-KEM`, with `MlKemParameters`, such as `MlKemParameters::ML_KEM_768`: an `MlKemPublicKey` and
-  an `MlKemPrivateKey`; see [KEM](KEM.md)
-- `ELGAMAL`, with the group in `ElGamalParameters` of `tc_elgamal`: an `ElGamalPublicKey` and an
-  `ElGamalPrivateKey`; see [ElGamal](ElGamal.md)
-- `NACCACHESTERN`, with `NaccacheSternKeyGenerationParams` of `tc_naccache_stern`, the size of `n`,
-  the certainty and the count of small primes: a `NaccacheSternPublicKey` and a
-  `NaccacheSternPrivateKey`; see [Naccache-Stern](NaccacheStern.md)
-- `EC`, also `ECDH`, `ECIES`, `ECDHC`, `ECMQV` and `ECDSA`, with the curve in `EcKeyGenParams`, by
-  name or OID: an EC key pair on any of 94 named curves; see [EC](Ec.md)
-- `SM2`, with no params: an EC key pair on sm2p256v1, for the SM2 rows of the cipher factory; init
-  refuses any params, since the curve is fixed; see [SM2](Sm2.md)
+- The rows of the ciphers take none: `generate_by_name` gives a key at once, and `init` refuses
+  any params as `InvalidParams`. The length is the row's, as the table gives it.
+- `KEY` takes a `KeyLength`, the length in bytes, and has no default: `generate_by_name` gives
+  `NotInitialized`, so use `generate_by_name_with`, or `get_by_name`, `init` and `generate`.
 
 ## Using it
 
-- `algo.key_pair_generator()` gives a `KeyPairGenerator`, which is a `KeyPairGenerator` and a
-  `KeyPairGeneratorInit` of `tc_asym_cipher` with `AlgoError` for its errors, so code written
-  for those traits takes it as it is. A `KeyGenerator`, for secret keys, is this crate's own.
-- `generate_by_name` uses the params the row has by default; `generate_by_name_with` takes
-  them. `by_oid` does the same by OID.
-- `get_by_name` gives a generator to `init` once and `generate` from many times.
-- Keys come back as `&dyn Params`; `as_any().downcast_ref` gives the type above.
-- The randomness is the system's, unless the builder's `set_rand` gives another source.
+- `get_by_name` and `get_by_oid` give a `KeyGenerator`, a trait of this crate's own. `init` is
+  optional, and `generate` can be called again and again for new keys.
+- Each key is a `KeyOwned`, behind `Box<dyn Params>`, which goes straight into what takes a key:
+  `as_any().downcast_ref::<KeyOwned>()` gives it, and `key()` its bytes.
+- `DES`, `DESEDE` and `DESEDE3` keep to the rules of their keys, as Bouncy Castle's
+  `DesKeyGenerator` and `DesEdeKeyGenerator` do: each byte has odd parity, a weak key is drawn
+  again, and so is a DESede key whose parts repeat, which would be DES. `KEY` is only random
+  bytes, so it keeps to no rule; use the row of the cipher.
+- The keys draw from the source of `DefaultAlgoBuilder::set_rand`, the operating system's unless it
+  is given another.

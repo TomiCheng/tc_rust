@@ -1,5 +1,35 @@
 #[cfg(feature = "aes")]
 mod aes;
+#[cfg(any(
+    feature = "aes",
+    feature = "aria",
+    feature = "blowfish",
+    feature = "camellia",
+    feature = "cast5",
+    feature = "cast6",
+    feature = "des",
+    feature = "desede",
+    feature = "gost28147",
+    feature = "idea",
+    feature = "noekeon",
+    feature = "rc2",
+    feature = "rc5",
+    feature = "rc5-64",
+    feature = "rc6",
+    feature = "rijndael",
+    feature = "seed",
+    feature = "serpent",
+    feature = "skipjack",
+    feature = "sm4",
+    feature = "tea",
+    feature = "threefish-256",
+    feature = "threefish-512",
+    feature = "threefish-1024",
+    feature = "tnepres",
+    feature = "twofish",
+    feature = "xtea",
+))]
+mod block;
 #[cfg(feature = "dh")]
 mod dh;
 #[cfg(feature = "ec")]
@@ -23,6 +53,36 @@ use super::{CreateKeyGeneratorRows, CreateKeyPairGeneratorRows};
 pub(crate) const BUILT_IN_KEY_GENERATORS: &[CreateKeyGeneratorRows] = &[
     #[cfg(feature = "aes")]
     aes::aes,
+    #[cfg(any(
+        feature = "aes",
+        feature = "aria",
+        feature = "blowfish",
+        feature = "camellia",
+        feature = "cast5",
+        feature = "cast6",
+        feature = "des",
+        feature = "desede",
+        feature = "gost28147",
+        feature = "idea",
+        feature = "noekeon",
+        feature = "rc2",
+        feature = "rc5",
+        feature = "rc5-64",
+        feature = "rc6",
+        feature = "rijndael",
+        feature = "seed",
+        feature = "serpent",
+        feature = "skipjack",
+        feature = "sm4",
+        feature = "tea",
+        feature = "threefish-256",
+        feature = "threefish-512",
+        feature = "threefish-1024",
+        feature = "tnepres",
+        feature = "twofish",
+        feature = "xtea",
+    ))]
+    block::block,
     #[cfg(any(feature = "aes", feature = "chacha", feature = "hmac-sha256"))]
     key::key,
 ];

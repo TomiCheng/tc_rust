@@ -1,3 +1,5 @@
+#![cfg_attr(feature = "aes", doc = include_str!("../docs/KeyGeneration.md"))]
+#![cfg_attr(feature = "rsa", doc = include_str!("../docs/KeyPairGeneration.md"))]
 #![cfg_attr(feature = "rsa", doc = include_str!("../docs/Rsa.md"))]
 #![cfg_attr(feature = "elgamal", doc = include_str!("../docs/ElGamal.md"))]
 #![cfg_attr(feature = "naccache-stern", doc = include_str!("../docs/NaccacheStern.md"))]

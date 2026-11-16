@@ -27,12 +27,12 @@ algorithms it turns on, and a name it did not turn on is an error, not a fallbac
   SHA-384 and SHA-512, SHA-3 and BLAKE3.
 - **[XOF](docs/Xof.md)**: a digest of any length that is asked for. Mainstream: SHAKE128 and
   SHAKE256.
-- **Key generation**: a new secret key for a cipher or a MAC, drawn from a random source.
-  Mainstream: AES-128 and AES-256. More: [Key generation](docs/KeyGeneration.md)
+- **[Key generation](docs/KeyGeneration.md)**: a new secret key for a cipher or a MAC, drawn from a
+  random source. Mainstream: AES-128 and AES-256.
 - **Key pair generation**: a new public key and private key, the public one to share and the private
   one to keep. Mainstream: RSA of 2048 bits or more, EC on P-256 and P-384, and ML-KEM for a
   quantum-safe exchange; also DH, ElGamal, Naccache-Stern and SM2, and EC on 94 named curves. More:
-  [Key generation](docs/KeyGeneration.md), [EC](docs/Ec.md)
+  [Key pair generation](docs/KeyPairGeneration.md), [EC](docs/Ec.md)
 - **Cipher**: keeps data secret, so that only the holder of the key reads it.
   - Block cipher: encrypts in blocks, in a mode such as CBC or CTR. Mainstream: AES; the others are
     for formats that name them. More: [Block ciphers](docs/BlockCipher.md)

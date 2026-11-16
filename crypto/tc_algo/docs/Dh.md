@@ -28,9 +28,9 @@ fn main() -> Result<(), AlgoError> {
 
 ### Algorithms
 
-| Name | OID | Feature | Params |
-|---|---|---|---|
-| `DH` | none | `dh` | `DhParameters` |
+| Name | OID | Feature | Params | Public key | Private key |
+|---|---|---|---|---|---|
+| `DH` | none | `dh` | `DhParameters` | `DhPublicKey` | `DhPrivateKey` |
 
 `DIFFIEHELLMAN` finds it too, and the case of a name does not matter.
 
