@@ -18,7 +18,8 @@ fn main() -> Result<(), AlgoError> {
 ```
 
 Every algorithm is behind a feature, and no feature is on by default: a program builds only the
-algorithms it turns on, and a name it did not turn on is an error, not a fallback.
+algorithms it turns on, and a name it did not turn on is an error, not a fallback. The one
+exception is `KEY`, a secret key of any length, which is always on.
 
 ## Algorithms
 

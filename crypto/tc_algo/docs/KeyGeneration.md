@@ -34,6 +34,7 @@ fn main() -> Result<(), AlgoError> {
 
 | Name | Aliases | OIDs | Feature | Default bytes | Bytes | Params | Returns |
 |---|---|---|---|---|---|---|---|
+| `KEY` |  |  | none, always on | none | 1.. | `KeyLength` | `KeyOwned` |
 | `AES128` |  | the eight of AES-128, `2.16.840.1.101.3.4.1.1` to `.8` | `aes` | 16 | 16 | `KeyLength` | `KeyOwned` |
 | `AES192` |  | the eight of AES-192, `2.16.840.1.101.3.4.1.21` to `.28` | `aes` | 24 | 24 | `KeyLength` | `KeyOwned` |
 | `AES256` |  | the eight of AES-256, `2.16.840.1.101.3.4.1.41` to `.48` | `aes` | 32 | 32 | `KeyLength` | `KeyOwned` |
@@ -90,7 +91,6 @@ fn main() -> Result<(), AlgoError> {
 | `RC5` | `RC5-32` |  | `rc5` | 16 | 1..255 | [`Rc5KeyGenParams`](Rc5.md#key-generation) | `Rc5ParamsOwned` |
 | `RC5-64` |  |  | `rc5-64` | 32 | 1..255 | [`Rc5KeyGenParams`](Rc5.md#key-generation) | `Rc5ParamsOwned` |
 | `GOST28147` | `GOST`, `GOST-28147` | `1.2.643.2.2.21` | `gost28147` | 32 | 32 | [`Gost28147KeyGenParams`](Gost28147.md#key-generation) | `Gost28147ParamsOwned` |
-| `KEY` |  |  | `aes`, `chacha` or `hmac-sha256` | none | 1.. | `KeyLength` | `KeyOwned` |
 
 Bytes are lists (`16, 24, 32`), ranges with both ends included (`16..64`), or with no upper end
 (`1..`).
@@ -103,7 +103,8 @@ XChaCha20-Poly1305 take the keys of `CHACHA7539` and `XCHACHA20`, whose aliases 
 AEAD modes of a block cipher, such as `AES/GCM/NOPADDING`, the key of the cipher. ISAAC takes a key
 of any length and has no row of its own: `KEY` gives one.
 
-Each row is behind the feature of its cipher, and the case of a name does not matter. An OID of a
+`KEY` needs no feature: it is always on, whatever else a program turns on. Each other row is behind
+the feature of its cipher, and the case of a name does not matter. An OID of a
 cipher finds the row of its key, so that the OID read from a certificate or a CMS message finds the
 generator of its key: the OIDs of AES and ARIA are those of each mode and key wrap of the key
 length, of ECB, CBC, CFB, OFB, CCM and GCM and more.
@@ -120,8 +121,9 @@ length, of ECB, CBC, CFB, OFB, CCM and GCM and more.
   28147](Gost28147.md#key-generation) and [Threefish](Threefish.md#key-generation). What they give
   goes straight into the rows of their cipher, in ECB as it is, and with an IV in a
   `ParamsWithIvOwned`.
-- `KEY` has no default: it needs `init` with a `KeyLength`, and `generate_by_name` gives
-  `NotInitialized`.
+- `KEY` has no default length: it needs `init` with a `KeyLength`, of any length but 0, and
+  `generate_by_name` gives `NotInitialized`; `generate_by_name_with("KEY", &KeyLength::new(32))`
+  gives a key at once.
 
 ## Using it
 

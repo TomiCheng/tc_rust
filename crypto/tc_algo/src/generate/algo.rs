@@ -84,7 +84,6 @@ mod elgamal;
     feature = "schwaemm256-256",
 ))]
 mod fixed;
-#[cfg(any(feature = "aes", feature = "chacha", feature = "hmac-sha256"))]
 mod key;
 #[cfg(feature = "ml-kem")]
 mod ml_kem;
@@ -234,7 +233,6 @@ pub(crate) const BUILT_IN_KEY_GENERATORS: &[CreateKeyGeneratorRows] = &[
         feature = "schwaemm256-256",
     ))]
     aead::aead,
-    #[cfg(any(feature = "aes", feature = "chacha", feature = "hmac-sha256"))]
     key::key,
 ];
 
