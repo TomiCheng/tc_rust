@@ -1,4 +1,5 @@
-const METHODS: [&str; 11] = [
+const METHODS: [&str; 12] = [
+    "default",
     "fmt",
     "drop",
     "eq",
@@ -13,7 +14,10 @@ const METHODS: [&str; 11] = [
 ];
 
 fn checked(line: &str) -> bool {
-    if line.starts_with("pub fn ") || line.starts_with("pub(crate) fn ") {
+    if ["pub fn ", "pub const fn ", "pub(crate) fn "]
+        .iter()
+        .any(|prefix| line.starts_with(prefix))
+    {
         return true;
     }
     line.strip_prefix("fn ")
@@ -65,9 +69,14 @@ fn every_public_method_and_helper_states_constant_or_variable_time() {
         ),
         ("math.rs", include_str!("../src/math.rs"), 3),
         (
-            "parameters_generator.rs",
-            include_str!("../src/parameters_generator.rs"),
+            "group_generator.rs",
+            include_str!("../src/group_generator.rs"),
             5,
+        ),
+        (
+            "params/group_generation_params.rs",
+            include_str!("../src/params/group_generation_params.rs"),
+            6,
         ),
         (
             "params/key_generation_params.rs",

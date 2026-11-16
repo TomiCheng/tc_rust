@@ -1,9 +1,11 @@
+mod group_generation_params;
 mod key_generation_params;
 mod parameters;
 mod private_key;
 mod public_key;
 mod validation_parameters;
 
+pub use group_generation_params::DhGroupGenerationParams;
 pub use key_generation_params::DhKeyGenerationParams;
 pub use parameters::DhParameters;
 pub use private_key::DhPrivateKey;

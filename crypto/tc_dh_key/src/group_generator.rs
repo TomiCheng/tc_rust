@@ -1,6 +1,6 @@
 use crate::math::{naf_weight, rem_u32};
 use crate::small_primes::PRIME_LISTS;
-use crate::{DhError, DhParameters};
+use crate::{DhError, DhGroupGenerationParams, DhParameters};
 use alloc::vec;
 use rand_core::CryptoRng;
 use tc_bigint::{ArrayEncoding, BigUint, PaddedBigUint};
@@ -9,50 +9,42 @@ use tc_prime::Primality;
 
 /// BC 的 `DHParametersGenerator`：產生安全質數 p = 2q + 1，g 固定為 2，j 為 2。
 /// 產生很慢，2048 位元可能要數十秒到數分鐘。
-pub struct DhParametersGenerator<'a> {
-    state: Option<(u32, u32, &'a mut dyn CryptoRng)>,
+pub struct DhGroupGenerator<R> {
+    rng: R,
+    params: Option<DhGroupGenerationParams>,
 }
 
-impl<'a> DhParametersGenerator<'a> {
-    /// 尚未 `init` 的產生器。常數時間。
-    pub fn new() -> Self {
-        Self { state: None }
+impl<R> DhGroupGenerator<R> {
+    /// 從 `rng` 取亂數、尚未 `init` 的產生器。常數時間。
+    pub fn new(rng: R) -> Self {
+        Self { rng, params: None }
     }
 
-    /// 設定 p 的位元數、質數檢定的 certainty 與亂數來源（BC 的 `Init`）。p 少於 64 位元或
-    /// certainty 為 0 時回傳錯誤；BC 要到產生時才丟出。常數時間。
-    pub fn init(
-        &mut self,
-        size: u32,
-        certainty: u32,
-        rng: &'a mut dyn CryptoRng,
-    ) -> Result<(), DhError> {
-        if size < 64 {
+    /// BC 的 `Init`：設定 p 的位元數與質數檢定的 certainty。p 少於 64 位元或 certainty 為 0
+    /// 時回傳錯誤；BC 要到產生時才丟出。常數時間。
+    pub fn init(&mut self, params: &DhGroupGenerationParams) -> Result<(), DhError> {
+        if params.size() < 64 {
             return Err(DhError::InvalidSize);
         }
-        if certainty == 0 {
+        if params.certainty() == 0 {
             return Err(DhError::InvalidCertainty);
         }
-        self.state = Some((size, certainty, rng));
+        self.params = Some(*params);
         Ok(())
     }
+}
 
+impl<R: CryptoRng> DhGroupGenerator<R> {
     /// BC 的 `GenerateParameters`：p 為安全質數且 p ≡ 7 (mod 8)，使 2 生成 q 階子群，
     /// 回傳 p、g = 2、q 與 j = 2。變動時間：產生的是公開值。
-    pub fn generate_parameters(&mut self) -> Result<DhParameters, DhError> {
-        let (size, certainty, rng) = self.state.as_mut().ok_or(DhError::NotInitialized)?;
-        let (p, q) = safe_primes(*size, *certainty, &mut **rng, true);
+    pub fn generate_group(&mut self) -> Result<DhParameters, DhError> {
+        let params = self.params.ok_or(DhError::NotInitialized)?;
+        let (p, q) = safe_primes(params.size(), params.certainty(), &mut self.rng, true);
         Ok(
             DhParameters::new(PaddedBigUint::from(p), PaddedBigUint::from(2u8))
                 .with_q(PaddedBigUint::from(q))
                 .with_j(PaddedBigUint::from(2u8)),
         )
-    }
-}
-
-impl Default for DhParametersGenerator<'_> {
-    fn default() -> Self {
-        Self::new()
     }
 }
 
