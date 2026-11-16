@@ -110,3 +110,46 @@ impl Params for Gost28147KeyGenParams {
         self
     }
 }
+
+// The params of the Threefish key generators: the tweak, of 16 bytes, zeros unless set. The key is
+// always one block. Not checked until init
+#[cfg(any(
+    feature = "threefish-256",
+    feature = "threefish-512",
+    feature = "threefish-1024"
+))]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct ThreefishKeyGenParams {
+    tweak: Option<Vec<u8>>,
+}
+
+#[cfg(any(
+    feature = "threefish-256",
+    feature = "threefish-512",
+    feature = "threefish-1024"
+))]
+impl ThreefishKeyGenParams {
+    pub const fn new() -> Self {
+        Self { tweak: None }
+    }
+
+    pub fn with_tweak(mut self, tweak: Vec<u8>) -> Self {
+        self.tweak = Some(tweak);
+        self
+    }
+
+    pub fn tweak(&self) -> Option<&[u8]> {
+        self.tweak.as_deref()
+    }
+}
+
+#[cfg(any(
+    feature = "threefish-256",
+    feature = "threefish-512",
+    feature = "threefish-1024"
+))]
+impl Params for ThreefishKeyGenParams {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}

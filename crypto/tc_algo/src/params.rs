@@ -21,7 +21,10 @@ mod key_length;
     feature = "rc2",
     feature = "rc5",
     feature = "rc5-64",
-    feature = "gost28147"
+    feature = "gost28147",
+    feature = "threefish-256",
+    feature = "threefish-512",
+    feature = "threefish-1024"
 ))]
 mod own_key_gen_params;
 #[cfg(any(feature = "parallelhash128", feature = "parallelhash256"))]
@@ -120,6 +123,12 @@ pub use own_key_gen_params::Gost28147KeyGenParams;
 pub use own_key_gen_params::Rc2KeyGenParams;
 #[cfg(any(feature = "rc5", feature = "rc5-64"))]
 pub use own_key_gen_params::Rc5KeyGenParams;
+#[cfg(any(
+    feature = "threefish-256",
+    feature = "threefish-512",
+    feature = "threefish-1024"
+))]
+pub use own_key_gen_params::ThreefishKeyGenParams;
 #[cfg(any(feature = "parallelhash128", feature = "parallelhash256"))]
 pub use parallel_hash_params::ParallelHashParams;
 #[cfg(feature = "rsa")]

@@ -61,9 +61,9 @@ fn main() -> Result<(), AlgoError> {
 | `SKIPJACK` |  |  | `skipjack` | 10 | 10 | `KeyLength` | `KeyOwned` |
 | `SM4` |  |  | `sm4` | 16 | 16 | `KeyLength` | `KeyOwned` |
 | `TEA` |  |  | `tea` | 16 | 16 | `KeyLength` | `KeyOwned` |
-| `THREEFISH-256` |  |  | `threefish-256` | 32 | 32 | `KeyLength` | `KeyOwned` |
-| `THREEFISH-512` |  |  | `threefish-512` | 64 | 64 | `KeyLength` | `KeyOwned` |
-| `THREEFISH-1024` |  |  | `threefish-1024` | 128 | 128 | `KeyLength` | `KeyOwned` |
+| `THREEFISH-256` |  |  | `threefish-256` | 32 | 32 | [`ThreefishKeyGenParams`](Threefish.md#key-generation) | `ThreefishParamsOwned` |
+| `THREEFISH-512` |  |  | `threefish-512` | 64 | 64 | [`ThreefishKeyGenParams`](Threefish.md#key-generation) | `ThreefishParamsOwned` |
+| `THREEFISH-1024` |  |  | `threefish-1024` | 128 | 128 | [`ThreefishKeyGenParams`](Threefish.md#key-generation) | `ThreefishParamsOwned` |
 | `TNEPRES` |  |  | `tnepres` | 24 | 4..32, by 4 | `KeyLength` | `KeyOwned` |
 | `TWOFISH` |  |  | `twofish` | 32 | 16, 24, 32 | `KeyLength` | `KeyOwned` |
 | `XTEA` |  |  | `xtea` | 16 | 16 | `KeyLength` | `KeyOwned` |
@@ -114,11 +114,12 @@ length, of ECB, CBC, CFB, OFB, CCM and GCM and more.
 - `init` with a `KeyLength` sets another length the cipher takes, as the Bytes column gives them;
   a length it does not take is `InvalidParams`, and keeps the length before. `AES128`, `AES192` and
   `AES256` take the length of their name alone.
-- RC2, RC5, RC5-64 and GOST 28147 have params of their own, so their rows give those params, the key
-  with what the cipher takes besides it, and `init` takes a params type of each instead of a
-  `KeyLength`; see [RC2](Rc2.md#key-generation), [RC5](Rc5.md#key-generation) and
-  [GOST 28147](Gost28147.md#key-generation). What they give goes straight into the rows of their
-  cipher, in ECB as it is, and with an IV in a `ParamsWithIvOwned`.
+- RC2, RC5, RC5-64, GOST 28147 and Threefish have params of their own, so their rows give those
+  params, the key with what the cipher takes besides it, and `init` takes a params type of each
+  instead of a `KeyLength`; see [RC2](Rc2.md#key-generation), [RC5](Rc5.md#key-generation), [GOST
+  28147](Gost28147.md#key-generation) and [Threefish](Threefish.md#key-generation). What they give
+  goes straight into the rows of their cipher, in ECB as it is, and with an IV in a
+  `ParamsWithIvOwned`.
 - `KEY` has no default: it needs `init` with a `KeyLength`, and `generate_by_name` gives
   `NotInitialized`.
 

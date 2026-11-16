@@ -76,3 +76,31 @@ not one block, or a tweak that is not 16 bytes, is `InvalidParams`.
 The rows encrypt in a mode as any block cipher does, and keep one tweak for the whole message. A
 scheme that changes the tweak per block, as Skein's UBI does, builds on the engine of
 `tc_threefish` instead.
+
+## Key generation
+
+The `THREEFISH-256`, `THREEFISH-512` and `THREEFISH-1024` rows of `algo.key_generator()` give a
+`ThreefishParamsOwned`, a key of one block with the tweak, which goes straight into the rows above.
+`init` takes a `ThreefishKeyGenParams`; see [Key generation](KeyGeneration.md).
+
+```rust
+use tc_algo::params::{ThreefishKeyGenParams, ThreefishParamsOwned};
+use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
+use tc_threefish::ThreefishParams;
+
+fn main() -> Result<(), AlgoError> {
+    let algo = DefaultAlgoBuilder::default().build();
+
+    // A 64-byte key with a tweak of 16 bytes
+    let params = ThreefishKeyGenParams::new().with_tweak(tweak.to_vec());
+    let threefish = algo.key_generator().generate_by_name_with("THREEFISH-512", &params)?;
+    let threefish = threefish.as_any().downcast_ref::<ThreefishParamsOwned>();
+    assert_eq!(threefish.expect("a ThreefishParamsOwned").tweak(), Some(&tweak[..]));
+    Ok(())
+}
+```
+
+`ThreefishKeyGenParams::new()` takes a tweak of zeros, and `with_tweak` another of 16 bytes. The key
+is always one block, 32, 64 or 128 bytes, and the generator draws it; the tweak is the caller's.
+Without `init`, a row gives a key with a tweak of zeros. The tweak is checked when the row is
+initialized, not when the params are built; one of another length is `InvalidParams`.

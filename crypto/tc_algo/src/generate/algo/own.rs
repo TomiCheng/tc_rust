@@ -5,7 +5,8 @@ use super::random::{Rule, random_key};
 use crate::generate::{KeyGenerator, KeyGeneratorEntry};
 use crate::{AlgoError, DefaultAlgoContext, EntryBase, ErrorKind, Params};
 
-// The rows of the keys of the block ciphers with params of their own, to give to
+// The rows of the keys of the block ciphers with params of their own, RC2, RC5, GOST 28147 and
+// Threefish, to give to
 // DefaultAlgoBuilder::reg_key_generator: each gives those params, the key with what the cipher
 // takes besides it, so that they go straight into its rows. Their names, aliases, OIDs and default
 // lengths are those of Bouncy Castle's GeneratorUtilities; init takes a params type of each, and
@@ -43,6 +44,17 @@ pub(super) fn own(context: &DefaultAlgoContext) -> Vec<Box<dyn KeyGeneratorEntry
         &["1.2.643.2.2.21"],
         Kind::Gost28147,
     );
+    #[cfg(feature = "threefish-256")]
+    add("THREEFISH-256", &[], &[], Kind::Threefish { key_bytes: 32 });
+    #[cfg(feature = "threefish-512")]
+    add("THREEFISH-512", &[], &[], Kind::Threefish { key_bytes: 64 });
+    #[cfg(feature = "threefish-1024")]
+    add(
+        "THREEFISH-1024",
+        &[],
+        &[],
+        Kind::Threefish { key_bytes: 128 },
+    );
     rows
 }
 
@@ -54,6 +66,12 @@ enum Kind {
     Rc5 { key_bytes: usize },
     #[cfg(feature = "gost28147")]
     Gost28147,
+    #[cfg(any(
+        feature = "threefish-256",
+        feature = "threefish-512",
+        feature = "threefish-1024"
+    ))]
+    Threefish { key_bytes: usize },
 }
 
 struct Row {
@@ -95,6 +113,16 @@ impl KeyGeneratorEntry for Row {
             #[cfg(feature = "gost28147")]
             Kind::Gost28147 => Box::new(Gost28147 {
                 params: crate::params::Gost28147KeyGenParams::new(),
+                rand,
+            }),
+            #[cfg(any(
+                feature = "threefish-256",
+                feature = "threefish-512",
+                feature = "threefish-1024"
+            ))]
+            Kind::Threefish { key_bytes } => Box::new(Threefish {
+                key_bytes,
+                params: crate::params::ThreefishKeyGenParams::new(),
                 rand,
             }),
         }
@@ -194,6 +222,47 @@ impl KeyGenerator for Gost28147 {
         Ok(Box::new(match self.params.s_box() {
             Some(s_box) => crate::params::Gost28147ParamsOwned::with_s_box(key, s_box.to_vec()),
             None => crate::params::Gost28147ParamsOwned::new(key),
+        }))
+    }
+}
+
+// A ThreefishParamsOwned: a key of one block, and a tweak of 16 bytes, zeros unless set
+#[cfg(any(
+    feature = "threefish-256",
+    feature = "threefish-512",
+    feature = "threefish-1024"
+))]
+struct Threefish {
+    key_bytes: usize,
+    params: crate::params::ThreefishKeyGenParams,
+    rand: Box<dyn CryptoRng>,
+}
+
+#[cfg(any(
+    feature = "threefish-256",
+    feature = "threefish-512",
+    feature = "threefish-1024"
+))]
+impl KeyGenerator for Threefish {
+    fn init(&mut self, params: &dyn Params) -> Result<(), AlgoError> {
+        let params = params
+            .as_any()
+            .downcast_ref::<crate::params::ThreefishKeyGenParams>()
+            .filter(|params| {
+                params
+                    .tweak()
+                    .is_none_or(|tweak| tweak.len() == tc_threefish::TWEAK_BYTES)
+            })
+            .ok_or(AlgoError::new(ErrorKind::InvalidParams))?;
+        self.params = params.clone();
+        Ok(())
+    }
+
+    fn generate(&mut self) -> Result<Box<dyn Params>, AlgoError> {
+        let key = random_key(self.rand.as_mut(), self.key_bytes, Rule::Random);
+        Ok(Box::new(match self.params.tweak() {
+            Some(tweak) => crate::params::ThreefishParamsOwned::with_tweak(key, tweak.to_vec()),
+            None => crate::params::ThreefishParamsOwned::new(key),
         }))
     }
 }
@@ -322,6 +391,66 @@ mod tests {
             .generate_by_name_with(
                 "GOST28147",
                 &Gost28147KeyGenParams::new().with_s_box(vec![0; 64]),
+            )
+            .err()
+            .unwrap();
+        assert_eq!(error.kind(), ErrorKind::InvalidParams);
+    }
+
+    // Threefish gives a key of its block with a tweak of zeros unless set, which its rows take
+    #[cfg(all(
+        feature = "threefish-256",
+        feature = "threefish-512",
+        feature = "threefish-1024"
+    ))]
+    #[test]
+    fn threefish_gives_its_params_of_a_block_and_the_set_tweak() {
+        use tc_threefish::ThreefishParams;
+
+        use crate::params::{ThreefishKeyGenParams, ThreefishParamsOwned};
+
+        let algo = DefaultAlgoBuilder::default().build();
+        let generators = algo.key_generator();
+        for (name, bytes) in [
+            ("THREEFISH-256", 32),
+            ("THREEFISH-512", 64),
+            ("THREEFISH-1024", 128),
+        ] {
+            let params = generators.generate_by_name(name).unwrap();
+            let params = params
+                .as_any()
+                .downcast_ref::<ThreefishParamsOwned>()
+                .unwrap();
+            assert_eq!(params.key().len(), bytes, "{name}");
+            assert_eq!(params.tweak(), None, "{name}");
+        }
+
+        let tweak = vec![0x11; 16];
+        let params = generators
+            .generate_by_name_with(
+                "THREEFISH-256",
+                &ThreefishKeyGenParams::new().with_tweak(tweak.clone()),
+            )
+            .unwrap();
+        let sealed = algo
+            .cipher()
+            .encrypt_by_name("THREEFISH-256/ECB/NOPADDING", params.as_ref(), &[0x33; 32])
+            .unwrap();
+        let opened = algo
+            .cipher()
+            .decrypt_by_name("THREEFISH-256/ECB/NOPADDING", params.as_ref(), &sealed)
+            .unwrap();
+        assert_eq!(opened, [0x33; 32]);
+        let params = params
+            .as_any()
+            .downcast_ref::<ThreefishParamsOwned>()
+            .unwrap();
+        assert_eq!(params.tweak(), Some(tweak.as_slice()));
+
+        let error = generators
+            .generate_by_name_with(
+                "THREEFISH-512",
+                &ThreefishKeyGenParams::new().with_tweak(vec![0; 8]),
             )
             .err()
             .unwrap();

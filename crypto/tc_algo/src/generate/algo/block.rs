@@ -4,7 +4,7 @@ use crate::DefaultAlgoContext;
 use crate::generate::KeyGeneratorEntry;
 
 // The rows of the keys of the block ciphers but AES128, AES192 and AES256, and but those with
-// params of their own, RC2, RC5 and GOST 28147, to give to DefaultAlgoBuilder::reg_key_generator.
+// params of their own, RC2, RC5, GOST 28147 and Threefish, to give to DefaultAlgoBuilder::reg_key_generator.
 // Their names, aliases, OIDs and default lengths are those of Bouncy Castle's GeneratorUtilities,
 // with DESEDE16 and DESEDE24 besides for the two lengths of DESede; init with a KeyLength sets
 // another length the cipher takes. Each is behind the feature of its cipher
@@ -237,33 +237,6 @@ pub(super) fn block(context: &DefaultAlgoContext) -> Vec<Box<dyn KeyGeneratorEnt
     add("SM4", &[], &[], 16, Lengths::Of(&[16]), Rule::Random);
     #[cfg(feature = "tea")]
     add("TEA", &[], &[], 16, Lengths::Of(&[16]), Rule::Random);
-    #[cfg(feature = "threefish-256")]
-    add(
-        "THREEFISH-256",
-        &[],
-        &[],
-        32,
-        Lengths::Of(&[32]),
-        Rule::Random,
-    );
-    #[cfg(feature = "threefish-512")]
-    add(
-        "THREEFISH-512",
-        &[],
-        &[],
-        64,
-        Lengths::Of(&[64]),
-        Rule::Random,
-    );
-    #[cfg(feature = "threefish-1024")]
-    add(
-        "THREEFISH-1024",
-        &[],
-        &[],
-        128,
-        Lengths::Of(&[128]),
-        Rule::Random,
-    );
     #[cfg(feature = "tnepres")]
     add(
         "TNEPRES",
@@ -335,9 +308,6 @@ mod tests {
             ("SKIPJACK", 10),
             ("SM4", 16),
             ("TEA", 16),
-            ("THREEFISH-256", 32),
-            ("THREEFISH-512", 64),
-            ("THREEFISH-1024", 128),
             ("TNEPRES", 24),
             ("TWOFISH", 32),
             ("XTEA", 16),

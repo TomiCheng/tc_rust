@@ -30,9 +30,6 @@ mod aes;
     feature = "skipjack",
     feature = "sm4",
     feature = "tea",
-    feature = "threefish-256",
-    feature = "threefish-512",
-    feature = "threefish-1024",
     feature = "tnepres",
     feature = "twofish",
     feature = "xtea",
@@ -62,9 +59,6 @@ mod elgamal;
     feature = "skipjack",
     feature = "sm4",
     feature = "tea",
-    feature = "threefish-256",
-    feature = "threefish-512",
-    feature = "threefish-1024",
     feature = "tnepres",
     feature = "twofish",
     feature = "xtea",
@@ -101,6 +95,9 @@ mod naccache_stern;
     feature = "rc5",
     feature = "rc5-64",
     feature = "gost28147",
+    feature = "threefish-256",
+    feature = "threefish-512",
+    feature = "threefish-1024",
 ))]
 mod own;
 #[cfg(any(
@@ -196,9 +193,6 @@ pub(crate) const BUILT_IN_KEY_GENERATORS: &[CreateKeyGeneratorRows] = &[
         feature = "skipjack",
         feature = "sm4",
         feature = "tea",
-        feature = "threefish-256",
-        feature = "threefish-512",
-        feature = "threefish-1024",
         feature = "tnepres",
         feature = "twofish",
         feature = "xtea",
@@ -209,6 +203,9 @@ pub(crate) const BUILT_IN_KEY_GENERATORS: &[CreateKeyGeneratorRows] = &[
         feature = "rc5",
         feature = "rc5-64",
         feature = "gost28147",
+        feature = "threefish-256",
+        feature = "threefish-512",
+        feature = "threefish-1024",
     ))]
     own::own,
     #[cfg(any(
