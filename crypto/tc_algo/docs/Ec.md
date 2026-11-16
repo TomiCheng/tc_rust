@@ -51,9 +51,9 @@ Neither checks the curve; `init` does, and a curve the table does not have is `I
 
 The names and OIDs are those of Bouncy Castle's `ECNamedCurveTable`, which joins X9.62, SEC, NIST,
 TeleTrusT, ANSSI, GOST and GM, and the curves of DSTU 4145, which Bouncy Castle gives by OID alone.
-The keys are an `EcPublicKey<C>` and an `EcPrivateKey<C>` of `tc_ec_key`, where `C` is the type
-of the curve, as the table gives it for each: a curve with a special form of its own runs on the
-faster arithmetic of `tc_fp_custom` or `tc_f2m_custom`, the others on the generic one of
+The keys are an `EcPublicKey<C>` and an `EcPrivateKey<C>`, in `tc_algo::params`, where `C` is the
+type of the curve, as the table gives it for each: a curve with a special form of its own runs on
+the faster arithmetic of `tc_fp_custom` or `tc_f2m_custom`, the others on the generic one of
 `tc_fp_curve` or `tc_f2m_curve`, all in constant time. `as_any().downcast_ref::<EcPublicKey<C>>()`
 gives a key back with that `C`.
 

@@ -79,8 +79,7 @@ takes besides it, which goes straight into the rows above. `init` takes an `Rc2K
 [Key generation](KeyGeneration.md).
 
 ```rust
-use tc_algo::params::{Rc2KeyGenParams, Rc2ParamsOwned};
-use tc_rc_cipher::Rc2Params;
+use tc_algo::params::{Rc2KeyGenParams, Rc2Params, Rc2ParamsOwned};
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
 fn main() -> Result<(), AlgoError> {

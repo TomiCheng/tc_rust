@@ -71,6 +71,8 @@ pub use own_key_gen_params::ThreefishKeyGenParams;
 pub use parallel_hash_params::ParallelHashParams;
 #[cfg(feature = "rsa")]
 pub use rsa_key_gen_params::RsaKeyGenParams;
+#[cfg(feature = "sm2")]
+pub use sm2_keys::{Sm2PrivateKey, Sm2PublicKey};
 #[cfg(any(
     feature = "aes",
     feature = "des",
@@ -190,20 +192,30 @@ pub use tc_block_modes::ParamsWithIvOwned;
     feature = "schwaemm256-256"
 ))]
 pub use tc_block_modes::{IvParams, KeyWithIvOwned};
-#[cfg(feature = "dh")]
+#[cfg(any(feature = "dh", feature = "elgamal"))]
+pub use tc_dh_key::DhParameters;
+#[cfg(any(feature = "dh", feature = "elgamal"))]
 pub use tc_dh_key::standard_groups as dh_groups;
 #[cfg(feature = "dh")]
-pub use tc_dh_key::{DhParameters, DhPrivateKey, DhPublicKey};
+pub use tc_dh_key::{DhPrivateKey, DhPublicKey};
+#[cfg(any(feature = "ec", feature = "sm2"))]
+pub use tc_ec_key::{EcPrivateKey, EcPublicKey};
+#[cfg(feature = "elgamal")]
+pub use tc_elgamal::{ElGamalParameters, ElGamalPrivateKey, ElGamalPublicKey};
 #[cfg(feature = "gost28147")]
-pub use tc_gost28147::{Gost28147ParamsOwned, s_box as gost28147_s_box};
+pub use tc_gost28147::{Gost28147Params, Gost28147ParamsOwned, s_box as gost28147_s_box};
 #[cfg(feature = "hkdf")]
 pub use tc_kdf::hkdf::HkdfParamsOwned;
 #[cfg(feature = "ml-kem")]
 pub use tc_ml_kem::{MlKemParameters, MlKemPrivateKey, MlKemPublicKey};
+#[cfg(feature = "naccache-stern")]
+pub use tc_naccache_stern::{
+    NaccacheSternKeyGenerationParams, NaccacheSternPrivateKey, NaccacheSternPublicKey,
+};
 #[cfg(feature = "rc2")]
-pub use tc_rc_cipher::Rc2ParamsOwned;
+pub use tc_rc_cipher::{Rc2Params, Rc2ParamsOwned};
 #[cfg(any(feature = "rc5", feature = "rc5-64"))]
-pub use tc_rc_cipher::Rc5ParamsOwned;
+pub use tc_rc_cipher::{Rc5Params, Rc5ParamsOwned};
 #[cfg(feature = "rsa")]
 pub use tc_rsa::{RsaKey, RsaKeyParams};
 #[cfg(any(
@@ -211,7 +223,7 @@ pub use tc_rsa::{RsaKey, RsaKeyParams};
     feature = "threefish-512",
     feature = "threefish-1024"
 ))]
-pub use tc_threefish::ThreefishParamsOwned;
+pub use tc_threefish::{ThreefishParams, ThreefishParamsOwned};
 #[cfg(any(feature = "tuplehash128", feature = "tuplehash256"))]
 pub use tuple_hash_params::TupleHashParams;
 
@@ -432,8 +444,7 @@ impl Params for RsaKey {
     }
 }
 
-// The keys of ElGamal encryption, which tc_elgamal has; whether tc_algo re-exports them is yet to be
-// decided, as for the other key types of DH
+// The keys and the group of ElGamal encryption, from tc_elgamal
 #[cfg(feature = "elgamal")]
 impl Params for tc_elgamal::ElGamalPublicKey {
     fn as_any(&self) -> &dyn Any {

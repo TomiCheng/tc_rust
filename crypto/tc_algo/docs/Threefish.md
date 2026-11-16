@@ -84,9 +84,8 @@ The `THREEFISH-256`, `THREEFISH-512` and `THREEFISH-1024` rows of `algo.key_gene
 `init` takes a `ThreefishKeyGenParams`; see [Key generation](KeyGeneration.md).
 
 ```rust
-use tc_algo::params::{ThreefishKeyGenParams, ThreefishParamsOwned};
+use tc_algo::params::{ThreefishKeyGenParams, ThreefishParams, ThreefishParamsOwned};
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
-use tc_threefish::ThreefishParams;
 
 fn main() -> Result<(), AlgoError> {
     let algo = DefaultAlgoBuilder::default().build();

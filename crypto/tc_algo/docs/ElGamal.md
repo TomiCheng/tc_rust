@@ -5,17 +5,16 @@ of numbers modulo a prime `p`, the same groups as Diffie-Hellman's. What the pub
 only the private key can decrypt. Each encryption draws a new random number, so the same message
 gives a new ciphertext each time.
 
-The `elgamal` feature of `tc_algo` has the rows. The keys and the group are the types of
-`tc_elgamal`.
+The `elgamal` feature of `tc_algo` has the rows. The keys and the group are in `tc_algo::params`.
 
 ## Key pairs
 
 From a group to a new pair:
 
 ```rust
+use tc_algo::params::dh_groups::rfc3526_2048;
+use tc_algo::params::{ElGamalParameters, ElGamalPrivateKey, ElGamalPublicKey};
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
-use tc_dh_key::standard_groups::rfc3526_2048;
-use tc_elgamal::{ElGamalParameters, ElGamalPrivateKey, ElGamalPublicKey};
 
 fn main() -> Result<(), AlgoError> {
     let algo = DefaultAlgoBuilder::default().build();
@@ -63,9 +62,9 @@ generating one, which is slow. `init` has `tc_elgamal` judge the group, so a bad
 From a new pair to the decrypted message, with OAEP over SHA-256:
 
 ```rust
+use tc_algo::params::ElGamalParameters;
+use tc_algo::params::dh_groups::rfc3526_2048;
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
-use tc_dh_key::standard_groups::rfc3526_2048;
-use tc_elgamal::ElGamalParameters;
 
 fn main() -> Result<(), AlgoError> {
     let algo = DefaultAlgoBuilder::default().build();

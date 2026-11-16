@@ -10,10 +10,11 @@ use tc_fp_custom::{SM2P256V1FieldElement, SecPCtCurve, SecPCtPoint};
 // on the same curve
 #[cfg(feature = "sm2")]
 pub(crate) type Sm2Curve = &'static SecPCtCurve<SM2P256V1FieldElement>;
+// The keys of the SM2 rows, on sm2p256v1
 #[cfg(feature = "sm2")]
-pub(crate) type Sm2PublicKey = EcPublicKey<Sm2Curve>;
+pub type Sm2PublicKey = EcPublicKey<Sm2Curve>;
 #[cfg(feature = "sm2")]
-pub(crate) type Sm2PrivateKey = EcPrivateKey<Sm2Curve>;
+pub type Sm2PrivateKey = EcPrivateKey<Sm2Curve>;
 
 // Its generator
 pub(crate) fn sm2p256v1() -> SecPCtPoint<'static, SM2P256V1FieldElement> {

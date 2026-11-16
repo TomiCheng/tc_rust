@@ -5,18 +5,18 @@ decrypts to the sum of their messages, modulo `σ`, the product of the small pri
 message is a number below `σ`. It is built like RSA, on a modulus `n` of two secret primes, but each
 of those primes is one more than a product of many small primes.
 
-The `naccache-stern` feature of `tc_algo` has the rows. The keys and the params are the types of
-`tc_naccache_stern`.
+The `naccache-stern` feature of `tc_algo` has the rows. The keys and the params are in
+`tc_algo::params`.
 
 ## Key pairs
 
 From the params to a new pair:
 
 ```rust
-use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
-use tc_naccache_stern::{
+use tc_algo::params::{
     NaccacheSternKeyGenerationParams, NaccacheSternPrivateKey, NaccacheSternPublicKey,
 };
+use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
 fn main() -> Result<(), AlgoError> {
     let algo = DefaultAlgoBuilder::default().build();
@@ -70,8 +70,8 @@ count of small primes, is `InvalidParams` there.
 From a new pair to the decrypted message:
 
 ```rust
+use tc_algo::params::NaccacheSternKeyGenerationParams;
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
-use tc_naccache_stern::NaccacheSternKeyGenerationParams;
 
 fn main() -> Result<(), AlgoError> {
     let algo = DefaultAlgoBuilder::default().build();

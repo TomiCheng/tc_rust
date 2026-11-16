@@ -32,7 +32,7 @@ fn main() -> Result<(), AlgoError> {
 
 | Name | OID | Feature | Params | Public key | Private key |
 |---|---|---|---|---|---|
-| `SM2` | none | `sm2` | none | `EcPublicKey<C>` on sm2p256v1 | `EcPrivateKey<C>` on sm2p256v1 |
+| `SM2` | none | `sm2` | none | `Sm2PublicKey` | `Sm2PrivateKey` |
 
 Bouncy Castle makes SM2 keys with its EC generator and the domain of sm2p256v1; here the curve is the
 row's, so the name is this crate's. The case of the name does not matter.

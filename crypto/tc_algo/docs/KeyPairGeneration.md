@@ -38,7 +38,7 @@ fn main() -> Result<(), AlgoError> {
 | [`ML-KEM`](KEM.md) |  |  | `ml-kem` | `MlKemParameters` | `MlKemPublicKey` | `MlKemPrivateKey` |
 | [`ELGAMAL`](ElGamal.md) |  |  | `elgamal` | `ElGamalParameters` | `ElGamalPublicKey` | `ElGamalPrivateKey` |
 | [`NACCACHESTERN`](NaccacheStern.md) |  |  | `naccache-stern` | `NaccacheSternKeyGenerationParams` | `NaccacheSternPublicKey` | `NaccacheSternPrivateKey` |
-| [`SM2`](Sm2.md) |  |  | `sm2` | none | `EcPublicKey<C>` on sm2p256v1 | `EcPrivateKey<C>` on sm2p256v1 |
+| [`SM2`](Sm2.md) |  |  | `sm2` | none | `Sm2PublicKey` | `Sm2PrivateKey` |
 
 The names, aliases and OIDs are those of Bouncy Castle's `GeneratorUtilities`, but those of
 Naccache-Stern and SM2, which it has no names for. The case of a name does not matter.
