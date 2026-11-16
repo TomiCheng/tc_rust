@@ -151,7 +151,19 @@ schwaemm192-192 = ["dep:tc_sparkle_aead", "dep:tc_aead_cipher", "dep:tc_block_mo
 schwaemm256-256 = ["dep:tc_sparkle_aead", "dep:tc_aead_cipher", "dep:tc_block_modes"]
 
 # MAC
-hmac-sha256 = ["sha256", "tc_macs/hmac", "tc_macs/alloc"]
+hmac = ["tc_macs/hmac", "tc_macs/alloc"]
+hmac-sha256 = ["hmac", "sha256"]
+cbc-mac = ["tc_macs/cbc-mac", "tc_macs/alloc", "dep:tc_block_modes", "dep:tc_block_padding"]
+cfb-mac = ["tc_macs/cfb-mac", "tc_macs/alloc", "dep:tc_block_modes"]
+cmac = ["tc_macs/cmac", "tc_macs/alloc", "dep:tc_block_modes"]
+gmac = ["tc_macs/gmac", "tc_macs/alloc", "dep:tc_block_modes"]
+iso9797-alg3-mac = ["des", "dep:tc_iso9797_mac"]
+gost28147-mac = ["gost28147", "dep:tc_gost28147_mac"]
+vmpc-mac = ["tc_macs/vmpc-mac", "dep:tc_block_modes"]
+siphash = ["tc_macs/siphash", "dep:tc_block_modes"]
+kmac = ["dep:tc_kmac", "dep:tc_block_modes"]
+poly1305 = ["dep:tc_poly1305", "dep:tc_block_modes"]
+skein-mac = ["dep:tc_skein_mac", "dep:tc_block_modes"]
 
 # Key wrap
 aes-wrap = ["aes", "tc_key_wrap/rfc3394"]
@@ -244,6 +256,11 @@ tc_stream_cipher = { version = "0.1.0", optional = true }
 
 # MAC
 tc_macs = "0.1.1"
+tc_gost28147_mac = { version = "0.1.0", optional = true }
+tc_iso9797_mac = { version = "0.1.0", optional = true }
+tc_kmac = { version = "0.1.0", optional = true }
+tc_poly1305 = { version = "0.1.0", optional = true }
+tc_skein_mac = { version = "0.1.0", optional = true }
 
 # Key wrap
 tc_key_wrap = "0.1.0"

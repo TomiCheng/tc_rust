@@ -189,7 +189,8 @@ pub use tc_block_modes::ParamsWithIvOwned;
     feature = "schwaemm128-128",
     feature = "schwaemm256-128",
     feature = "schwaemm192-192",
-    feature = "schwaemm256-256"
+    feature = "schwaemm256-256",
+    feature = "vmpc-mac"
 ))]
 pub use tc_block_modes::{IvParams, KeyWithIvOwned};
 #[cfg(any(feature = "dh", feature = "elgamal"))]

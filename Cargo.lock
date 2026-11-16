@@ -919,14 +919,17 @@ dependencies = [
  "tc_fp_curve",
  "tc_fp_custom",
  "tc_gost28147",
+ "tc_gost28147_mac",
  "tc_gost3411",
  "tc_grain128_aead",
  "tc_hc",
  "tc_ies",
+ "tc_iso9797_mac",
  "tc_kdf",
  "tc_keccak",
  "tc_kem",
  "tc_key_wrap",
+ "tc_kmac",
  "tc_macs",
  "tc_md",
  "tc_misc_block_cipher",
@@ -934,6 +937,7 @@ dependencies = [
  "tc_ml_kem",
  "tc_naccache_stern",
  "tc_pbe",
+ "tc_poly1305",
  "tc_rc4_family",
  "tc_rc_cipher",
  "tc_ripemd",
@@ -945,6 +949,7 @@ dependencies = [
  "tc_sha",
  "tc_signer",
  "tc_skein",
+ "tc_skein_mac",
  "tc_sm2",
  "tc_sm3",
  "tc_sm4",
@@ -1734,6 +1739,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_gost28147_mac"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6c07f92bd61866f873a8724248191a97f1cb3502413da58a5ba35ce04294e850"
+dependencies = [
+ "tc_block_cipher",
+ "tc_block_modes",
+ "tc_gost28147",
+ "tc_macs",
+ "tc_zeroize",
+]
+
+[[package]]
 name = "tc_gost3410"
 version = "0.1.0"
 dependencies = [
@@ -1816,6 +1834,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_iso9797_mac"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "062ec734b8995eb44e8d26ad365a8be7327a36ab450e4e7aca1a4e0f8b2bc506"
+dependencies = [
+ "tc_block_cipher",
+ "tc_block_modes",
+ "tc_block_padding",
+ "tc_des",
+ "tc_macs",
+ "tc_zeroize",
+]
+
+[[package]]
 name = "tc_jpake"
 version = "0.1.0"
 dependencies = [
@@ -1868,11 +1900,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_kmac"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fc69cd637c5eae5acd38476ab4cedc2885b826662dbaa9b81f737c40bf88f492"
+dependencies = [
+ "tc_digest",
+ "tc_keccak",
+ "tc_macs",
+ "tc_zeroize",
+]
+
+[[package]]
 name = "tc_macs"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2cdad045880de68459b3cdd2654abf07f4faf336398bbe55c5d08ac906f122f"
 dependencies = [
+ "tc_aead_cipher",
  "tc_block_cipher",
  "tc_block_modes",
  "tc_block_padding",
@@ -2218,6 +2263,16 @@ dependencies = [
  "tc_digest",
  "tc_threefish",
  "tc_zeroize",
+]
+
+[[package]]
+name = "tc_skein_mac"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "96cf0ae015b198f7f666ac3d99e980ad006f6298db5b2072d38e24a05d71bcb7"
+dependencies = [
+ "tc_macs",
+ "tc_skein",
 ]
 
 [[package]]
