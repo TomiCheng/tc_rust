@@ -336,6 +336,7 @@ mod tests {
     }
 
     // DES and DESede keys have odd parity and are not weak, and a DESede key is not DES again
+    #[cfg(all(feature = "des", feature = "desede"))]
     #[test]
     fn des_and_desede_keys_keep_their_rules() {
         let algo = DefaultAlgoBuilder::default().build();
