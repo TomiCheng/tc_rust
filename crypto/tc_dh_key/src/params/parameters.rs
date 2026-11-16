@@ -105,7 +105,10 @@ impl DhParameters {
 
     /// BC `DHParameters` 建構子的檢查：p 是大於 2 的奇數，g 在 `[2, p - 2]`，q 的位元數
     /// 小於 p 的，m 小於 p 的位元數，l 有設定時小於 p 的位元數且不小於 m，j 至少是 2。
-    /// 不檢查 p、q 是否為質數，同 BC。變動時間：參數是公開值。
+    /// 另外拒絕小於 3 的 q，BC 不擋：q = 0 會讓 [`DhPublicKey::validate`] 的子群檢查接受
+    /// 任何 y。不檢查 p、q 是否為質數，同 BC。變動時間：參數是公開值。
+    ///
+    /// [`DhPublicKey::validate`]: crate::DhPublicKey::validate
     pub fn validate(&self) -> Result<(), DhError> {
         let two = PaddedBigUint::from(2u8);
         if !self.p.bit(0) || self.p <= two {
@@ -115,7 +118,8 @@ impl DhParameters {
             return Err(DhError::InvalidGenerator);
         }
         let p_bits = self.p.bits();
-        if self.q.as_ref().is_some_and(|q| q.bits() >= p_bits) {
+        let three = PaddedBigUint::from(3u8);
+        if self.q.as_ref().is_some_and(|q| *q < three || q.bits() >= p_bits) {
             return Err(DhError::InvalidSubgroupOrder);
         }
         let m = self.m();

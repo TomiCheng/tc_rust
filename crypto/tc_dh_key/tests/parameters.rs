@@ -46,6 +46,18 @@ fn a_subgroup_order_as_wide_as_p_is_rejected() {
 }
 
 #[test]
+fn a_subgroup_order_below_three_is_rejected() {
+    // q = 0 會讓公鑰的子群檢查 y^0 = 1 接受任何 y。
+    let params = DhParameters::new(n(23), n(2)).with_m(0);
+    for q in [0, 1, 2] {
+        assert_eq!(
+            params.clone().with_q(n(q)).validate(),
+            Err(DhError::InvalidSubgroupOrder)
+        );
+    }
+}
+
+#[test]
 fn the_private_value_lengths_must_fit_below_p() {
     let params = DhParameters::new(n(23), n(2));
     // 沒設 m 時預設 160，大於 23 的 5 個位元。

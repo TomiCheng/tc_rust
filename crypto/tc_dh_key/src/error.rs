@@ -2,6 +2,7 @@ use core::fmt;
 
 /// BC 的 DH 參數類別會拒絕的參數或金鑰。
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum DhError {
     /// 在 `init` 之前就要求產生。
     NotInitialized,
@@ -11,7 +12,7 @@ pub enum DhError {
     ModulusTooLarge,
     /// g 不在 `[2, p - 2]`。
     InvalidGenerator,
-    /// q 的位元數不小於 p 的，不可能是 p − 1 的因數。
+    /// q 小於 3，或 q 的位元數不小於 p 的，不可能是 p − 1 的因數。
     InvalidSubgroupOrder,
     /// m 不小於 p 的位元數；或 l 有設定卻不小於 p 的位元數、或小於 m；或 l 沒設定時，
     /// 私鑰的範圍 `[2^(m - 1), q - 2]` 是空的。
@@ -36,7 +37,7 @@ impl fmt::Display for DhError {
             Self::InvalidModulus => "field must be an odd prime",
             Self::ModulusTooLarge => "DH modulus out of range",
             Self::InvalidGenerator => "generator must in the range [2, p - 2]",
-            Self::InvalidSubgroupOrder => "q too big to be a factor of (p-1)",
+            Self::InvalidSubgroupOrder => "q must be at least 3 and shorter than p",
             Self::InvalidPrivateValueLength => {
                 "private value length must be below the bit length of p and l not below m"
             }
