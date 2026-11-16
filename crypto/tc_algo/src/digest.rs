@@ -23,6 +23,8 @@ mod digest_trait;
 mod empty_digest_provider;
 #[cfg(any(
     feature = "hmac",
+    feature = "hmac-drbg",
+    feature = "hash-drbg",
     feature = "rsa",
     feature = "dsa",
     feature = "ecdsa",
@@ -37,6 +39,8 @@ pub use digest_trait::Digest;
 pub(crate) use empty_digest_provider::EmptyDigestProvider;
 #[cfg(any(
     feature = "hmac",
+    feature = "hmac-drbg",
+    feature = "hash-drbg",
     feature = "rsa",
     feature = "dsa",
     feature = "ecdsa",

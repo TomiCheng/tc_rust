@@ -6,7 +6,7 @@ mod blake2xs_params;
 mod blake3_params;
 #[cfg(any(feature = "cshake128", feature = "cshake256"))]
 mod cshake_params;
-#[cfg(feature = "drbg-hmac-sha256")]
+#[cfg(any(feature = "hmac-drbg", feature = "hash-drbg", feature = "ctr-drbg"))]
 mod drbg_params;
 #[cfg(feature = "dsa")]
 mod dsa_key_gen_params;
@@ -50,7 +50,7 @@ pub use blake2xs_params::Blake2xsParams;
 pub use blake3_params::Blake3Params;
 #[cfg(any(feature = "cshake128", feature = "cshake256"))]
 pub use cshake_params::CShakeParams;
-#[cfg(feature = "drbg-hmac-sha256")]
+#[cfg(any(feature = "hmac-drbg", feature = "hash-drbg", feature = "ctr-drbg"))]
 pub use drbg_params::DrbgParams;
 #[cfg(feature = "dsa")]
 pub use dsa_key_gen_params::DsaKeyGenParams;

@@ -6,7 +6,8 @@ so a whole program can draw from one generator without asking the operating syst
 SP 800-90A defines three kinds, over HMAC, over a hash, and over a block cipher in CTR mode.
 
 A DRBG here is a random source in its own right: it implements `rand_core`'s `CryptoRng`, so it can
-be given wherever one is wanted. The `drbg-hmac-sha256` feature of `tc_algo` has the row.
+be given wherever one is wanted. The `hmac-drbg` and `sha256` features of `tc_algo` have the row of
+the example.
 
 ```rust
 use rand_core::Rng;
@@ -35,13 +36,34 @@ fn main() -> Result<(), AlgoError> {
 
 ## Algorithms
 
-| Name | Feature | Security strength | Entropy bytes | Nonce bytes |
+| Name | Features | Security strength | Entropy bytes | Nonce bytes |
 |---|---|---|---|---|
-| `HMAC/SHA-256` | `drbg-hmac-sha256` | 256 bits | 32 | 16 |
+| `HMAC/SHA-1` | `hmac-drbg` and `sha1` | 128 bits | 16 | 8 |
+| `HMAC/SHA-224` | `hmac-drbg` and `sha224` | 192 bits | 24 | 12 |
+| `HMAC/SHA-256` | `hmac-drbg` and `sha256` | 256 bits | 32 | 16 |
+| `HMAC/SHA-384` | `hmac-drbg` and `sha384` | 256 bits | 32 | 16 |
+| `HMAC/SHA-512` | `hmac-drbg` and `sha512` | 256 bits | 32 | 16 |
+| `HMAC/SHA-512/224` | `hmac-drbg` and `sha512-224` | 192 bits | 24 | 12 |
+| `HMAC/SHA-512/256` | `hmac-drbg` and `sha512-256` | 256 bits | 32 | 16 |
+| `HASH/SHA-1` | `hash-drbg` and `sha1` | 128 bits | 16 | 8 |
+| `HASH/SHA-224` | `hash-drbg` and `sha224` | 192 bits | 24 | 12 |
+| `HASH/SHA-256` | `hash-drbg` and `sha256` | 256 bits | 32 | 16 |
+| `HASH/SHA-384` | `hash-drbg` and `sha384` | 256 bits | 32 | 16 |
+| `HASH/SHA-512` | `hash-drbg` and `sha512` | 256 bits | 32 | 16 |
+| `HASH/SHA-512/224` | `hash-drbg` and `sha512-224` | 192 bits | 24 | 12 |
+| `HASH/SHA-512/256` | `hash-drbg` and `sha512-256` | 256 bits | 32 | 16 |
+| `CTR/AES-128` | `ctr-drbg` and `aes` | 128 bits | 16 | 8 |
+| `CTR/AES-192` | `ctr-drbg` and `aes` | 192 bits | 24 | 12 |
+| `CTR/AES-256` | `ctr-drbg` and `aes` | 256 bits | 32 | 16 |
 
-`HMAC/SHA256` finds it too, and the case of a name does not matter. A DRBG has no OID. Bouncy Castle
-has no names for its DRBGs, so these are the `Mechanism/Base` of SP 800-90A; the others to come are
-`HASH/SHA-256` and `CTR/AES-256` and their kin.
+- **HMAC_DRBG** and **Hash_DRBG** are over the digests SP 800-90A takes, each at the most security
+  strength the digest gives. `HMAC/` or `HASH/` before any other name of the digest finds the row
+  too, as `HMAC/SHA256`.
+- **CTR_DRBG** is over AES with the derivation function, as Bouncy Castle builds it, at the strength
+  of the key. `CTR/AES256` finds the row too.
+
+The case of a name does not matter, and a DRBG has no OID. Bouncy Castle has no names for its DRBGs,
+so these are the `Mechanism/Base` of SP 800-90A.
 
 ## Params
 
@@ -50,7 +72,7 @@ type is `InvalidParams`:
 
 | Set by | Default |
 |---|---|
-| `with_nonce` | empty: 16 bytes are drawn from the random source |
+| `with_nonce` | empty: the nonce bytes of the table are drawn from the random source |
 | `with_personalization` | empty |
 
 `init` starts the generator over from new entropy with these, so what it gave before tells nothing

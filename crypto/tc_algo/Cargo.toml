@@ -203,7 +203,9 @@ pbe-aes = ["aes", "dep:tc_pbe", "dep:tc_sha"]
 ml-kem = ["dep:tc_ml_kem"]
 
 # DRBG
-drbg-hmac-sha256 = ["hmac-sha256", "dep:tc_drbg"]
+hmac-drbg = ["dep:tc_drbg", "tc_macs/hmac", "tc_macs/alloc"]
+hash-drbg = ["dep:tc_drbg"]
+ctr-drbg = ["dep:tc_drbg"]
 
 # IES
 ies = ["dh", "dep:tc_ies", "tc_macs/hmac", "tc_macs/alloc", "dep:tc_sha"]

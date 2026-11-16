@@ -49,8 +49,8 @@ exception is `KEY`, a secret key of any length, which is always on.
   Mainstream: HMAC-SHA256, AES-CMAC, KMAC and Poly1305.
 - **[Signer](docs/Signer.md)**: a signature made with a private key, which anyone with the public
   key can check. Mainstream: ECDSA, Ed25519 and RSA-PSS with SHA-256, and ML-DSA.
-- **DRBG**: stretches a little entropy into as many random bytes as wanted. Mainstream: HMAC-DRBG
-  over SHA-256. More: [DRBG](docs/Drbg.md)
+- **[DRBG](docs/Drbg.md)**: stretches a little entropy into as many random bytes as wanted.
+  Mainstream: HMAC_DRBG over SHA-256 and CTR_DRBG over AES-256.
 - **[Key wrap](docs/KeyWrap.md)**: encrypts one key under another, to store or send it. Mainstream:
   AES Key Wrap and AES Key Wrap with Padding.
 - **KDF**: derives keys from a shared secret or another key. Mainstream: HKDF over SHA-256. More:
