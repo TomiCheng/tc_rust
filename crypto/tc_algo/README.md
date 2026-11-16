@@ -17,14 +17,16 @@ rows it turns on, and a name it did not turn on is an error, not a fallback.
 
 ## Supported algorithms
 
+- Key generation: `AES128`, `AES192`, `AES256`, `KEY` (`aes`); see
+  [Key generation](docs/KeyGeneration.md)
+- Key pair generation: `RSA` (`rsa`), `DH` (`dh`), `ML-KEM` (`ml-kem`), `ELGAMAL` (`elgamal`),
+  `NACCACHESTERN` (`naccache-stern`), `SM2` (`sm2`), and `EC` on 94 named curves (`ec`); see
+  [Key generation](docs/KeyGeneration.md) and [EC](docs/Ec.md)
 - Digest: SHA-1, SHA-2, SHA-3, Keccak, SHAKE, MD2, MD4, MD5, BLAKE2b, BLAKE2s, BLAKE3, RIPEMD,
   SM3, GOST R 34.11, DSTU 7564, Tiger, Whirlpool, Ascon, Skein, Haraka, PHOTON-Beetle, ESCH,
   Xoodyak and `NONE`, each name behind a feature of its own, such as `sha256` or `blake2b-512`;
   see [Digest](docs/Digest.md)
-- XOF: SHAKE, cSHAKE, TupleHash, ParallelHash, BLAKE2xs, BLAKE3, Ascon-XOF and Ascon-CXOF, each
-  behind a feature of its own; see [XOF](docs/Xof.md)
-- MAC: `HMAC-SHA256` (`hmac-sha256`)
-- Ciphers, all from `algo.cipher()`, each a `BufferedCipher` of `tc_buffered_cipher` that code
+- Cipher, all from `algo.cipher()`, each a `BufferedCipher` of `tc_buffered_cipher` that code
   written for that trait takes as it is:
   - Block cipher: AES, DES, DESede, Camellia, ARIA, SM4, SEED, Blowfish, Twofish, Serpent, CAST5,
     CAST6, IDEA, RC2, RC5, RC6, GOST 28147, Threefish, DSTU 7624 and more, in ECB, CBC, CFB, OFB,
@@ -36,20 +38,22 @@ rows it turns on, and a name it did not turn on is an error, not a fallback.
     bytes, EAX over those of 8, KCCM over Threefish-256 and -512 and DSTU 7624 of 256 and 512
     bits, and ChaCha20-Poly1305, XChaCha20-Poly1305, Ascon, Grain-128AEAD and Schwaemm, each
     behind a feature of its own; see [AEAD ciphers](docs/AeadCipher.md)
-  - IES: `IES` (`ies`), `ECIES` (`ecies`); see [IES](docs/IES.md) and [ECIES](docs/Ecies.md)
   - Asymmetric cipher: RSA and ElGamal, raw, with PKCS#1 v1.5 or with OAEP over MD5 and the SHA-1
     and SHA-2 digests, and RSA with ISO 9796-1, Naccache-Stern and SM2 (`rsa`, `elgamal`,
-    `naccache-stern`, `sm2`); see [Asymmetric ciphers](docs/AsymCipher.md)
-- Key wrap: `AESWRAP` (`aes-wrap`)
-- Key generation: `AES128`, `AES192`, `AES256`, `KEY` (`aes`); key pairs `RSA` (`rsa`), `DH`
-  (`dh`), `ML-KEM` (`ml-kem`), `ELGAMAL` (`elgamal`), `NACCACHESTERN` (`naccache-stern`), `SM2`
-  (`sm2`), `EC` on 94 named curves (`ec`)
-- Signer: `SHA-256withRSA` (`rsa`)
-- Agreement: `DH` (`dh`)
-- KDF: `HKDF-SHA256`, `HKDF-SHA384`, `HKDF-SHA512` (`hkdf-sha256`, `hkdf-sha384`, `hkdf-sha512`)
-- PBE: PKCS#12 with SHA-256 and AES-CBC (`pbe-aes`)
-- KEM: `ML-KEM-512`, `ML-KEM-768`, `ML-KEM-1024` (`ml-kem`)
-- DRBG: `HMAC/SHA-256` (`drbg-hmac-sha256`)
+    `naccache-stern`, `sm2`); see [Asymmetric ciphers](docs/AsymCipher.md), [RSA](docs/Rsa.md),
+    [ElGamal](docs/ElGamal.md), [Naccache-Stern](docs/NaccacheStern.md) and [SM2](docs/Sm2.md)
+  - IES: `IES` (`ies`), `ECIES` (`ecies`); see [IES](docs/IES.md) and [ECIES](docs/Ecies.md)
+- MAC: `HMAC-SHA256` (`hmac-sha256`); see [MAC](docs/Mac.md)
+- Signer: `SHA-256withRSA` (`rsa`); see [RSA](docs/Rsa.md#signing)
+- DRBG: `HMAC/SHA-256` (`drbg-hmac-sha256`); see [DRBG](docs/Drbg.md)
+- Key wrap: `AESWRAP` (`aes-wrap`); see [Key wrap](docs/KeyWrap.md)
+- XOF: SHAKE, cSHAKE, TupleHash, ParallelHash, BLAKE2xs, BLAKE3, Ascon-XOF and Ascon-CXOF, each
+  behind a feature of its own; see [XOF](docs/Xof.md)
+- KDF: `HKDF-SHA256`, `HKDF-SHA384`, `HKDF-SHA512` (`hkdf-sha256`, `hkdf-sha384`, `hkdf-sha512`);
+  see [HKDF](docs/HKDF-SHA256.md)
+- KEM: `ML-KEM-512`, `ML-KEM-768`, `ML-KEM-1024` (`ml-kem`); see [KEM](docs/KEM.md)
+- Agreement: `DH` (`dh`); see [Diffie-Hellman](docs/Dh.md)
+- PBE: PKCS#12 with SHA-256 and AES-CBC (`pbe-aes`); see [PBE](docs/Pbe.md)
 
 ## Traits
 
