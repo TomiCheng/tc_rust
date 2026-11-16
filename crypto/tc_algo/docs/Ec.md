@@ -32,7 +32,7 @@ fn main() -> Result<(), AlgoError> {
 
 | Name | Aliases | OIDs | Feature | Params | Public key | Private key |
 |---|---|---|---|---|---|---|
-| `EC` | `ECDH`, `ECIES`, `ECDHC`, `ECMQV`, `ECDSA` | X9.63 and SEC schemes, below | `ec` | `EcKeyGenParams` | `EcPublicKey<C>` | `EcPrivateKey<C>` |
+| `EC` | `ECDH`, `ECIES`, `ECDHC`, `ECMQV`, `ECDSA` | `1.3.133.16.840.63.0.2`, `.3`, `.16`; `1.3.132.1.11.0` to `.3`; `1.3.132.1.14.0` to `.3`; `1.3.132.1.15.0` to `.3` | `ec` | `EcKeyGenParams` | `EcPublicKey<C>` | `EcPrivateKey<C>` |
 
 Bouncy Castle's `GeneratorUtilities` names `EC`, `ECDH` with `ECIES`, `ECDHC`, `ECMQV` and `ECDSA`,
 each its `ECKeyPairGenerator`; here they are one row, and the case of a name does not matter. The

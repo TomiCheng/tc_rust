@@ -30,19 +30,18 @@ fn main() -> Result<(), AlgoError> {
 
 ## Algorithms
 
-| Name | Aliases | OID | Feature | Params | Public key | Private key | Page |
-|---|---|---|---|---|---|---|---|
-| `RSA` |  | `1.2.840.113549.1.1.1` | `rsa` | `RsaKeyGenParams` | `RsaKey` | `RsaKey` | [RSA](Rsa.md) |
-| `EC` | `ECDH`, `ECIES`, `ECDHC`, `ECMQV`, `ECDSA` | the X9.63 and SEC schemes | `ec` | `EcKeyGenParams` | `EcPublicKey<C>` | `EcPrivateKey<C>` | [EC](Ec.md) |
-| `DH` | `DIFFIEHELLMAN` |  | `dh` | `DhParameters` | `DhPublicKey` | `DhPrivateKey` | [Diffie-Hellman](Dh.md) |
-| `ML-KEM` |  |  | `ml-kem` | `MlKemParameters` | `MlKemPublicKey` | `MlKemPrivateKey` | [KEM](KEM.md) |
-| `ELGAMAL` |  |  | `elgamal` | `ElGamalParameters` | `ElGamalPublicKey` | `ElGamalPrivateKey` | [ElGamal](ElGamal.md) |
-| `NACCACHESTERN` |  |  | `naccache-stern` | `NaccacheSternKeyGenerationParams` | `NaccacheSternPublicKey` | `NaccacheSternPrivateKey` | [Naccache-Stern](NaccacheStern.md) |
-| `SM2` |  |  | `sm2` | none | `EcPublicKey<C>` on sm2p256v1 | `EcPrivateKey<C>` on sm2p256v1 | [SM2](Sm2.md) |
+| Name | Aliases | OID | Feature | Params | Public key | Private key |
+|---|---|---|---|---|---|---|
+| [`RSA`](Rsa.md) |  | `1.2.840.113549.1.1.1` | `rsa` | `RsaKeyGenParams` | `RsaKey` | `RsaKey` |
+| [`EC`](Ec.md) | `ECDH`, `ECIES`, `ECDHC`, `ECMQV`, `ECDSA` | `1.3.133.16.840.63.0.2`, `.3`, `.16`; `1.3.132.1.11.0` to `.3`; `1.3.132.1.14.0` to `.3`; `1.3.132.1.15.0` to `.3` | `ec` | `EcKeyGenParams` | `EcPublicKey<C>` | `EcPrivateKey<C>` |
+| [`DH`](Dh.md) | `DIFFIEHELLMAN` |  | `dh` | `DhParameters` | `DhPublicKey` | `DhPrivateKey` |
+| [`ML-KEM`](KEM.md) |  |  | `ml-kem` | `MlKemParameters` | `MlKemPublicKey` | `MlKemPrivateKey` |
+| [`ELGAMAL`](ElGamal.md) |  |  | `elgamal` | `ElGamalParameters` | `ElGamalPublicKey` | `ElGamalPrivateKey` |
+| [`NACCACHESTERN`](NaccacheStern.md) |  |  | `naccache-stern` | `NaccacheSternKeyGenerationParams` | `NaccacheSternPublicKey` | `NaccacheSternPrivateKey` |
+| [`SM2`](Sm2.md) |  |  | `sm2` | none | `EcPublicKey<C>` on sm2p256v1 | `EcPrivateKey<C>` on sm2p256v1 |
 
 The names, aliases and OIDs are those of Bouncy Castle's `GeneratorUtilities`, but those of
-Naccache-Stern and SM2, which it has no names for. The case of a name does not matter. Each page
-gives the keys the row makes and what takes them.
+Naccache-Stern and SM2, which it has no names for. The case of a name does not matter.
 
 ## Params
 
