@@ -1,5 +1,5 @@
 use crate::math::{naf_weight, rem_u32};
-use crate::small_primes::PRIME_LISTS;
+use crate::small_primes::{PRIME_LISTS, PRIME_PRODUCTS};
 use crate::{DhError, DhGroupGenerationParams, DhParameters};
 use alloc::vec;
 use rand_core::CryptoRng;
@@ -117,8 +117,7 @@ pub(crate) fn safe_primes(
 /// BC `DHParametersHelper.HasAnySmallFactorsSafe`：餘數為 0 表示 p 有該小質因數，為 1
 /// 表示 p − 1 有，也就是 q 有。變動時間：只用於公開值。
 fn has_any_small_factors_safe(x: &BigUint) -> bool {
-    PRIME_LISTS.iter().any(|primes| {
-        let product = primes.iter().product::<u32>();
+    PRIME_LISTS.iter().zip(PRIME_PRODUCTS).any(|(primes, product)| {
         let r = rem_u32(x, product);
         primes.iter().any(|&prime| r % prime < 2)
     })

@@ -66,3 +66,18 @@ pub(crate) const PRIME_LISTS: [&[u32]; 64] = [
     &[1249, 1259, 1277],
     &[1279, 1283, 1289],
 ];
+
+// BC 的 `BigInteger.primeProducts`：每組質數的乘積，編譯時算好；溢位會編譯失敗。
+pub(crate) const PRIME_PRODUCTS: [u32; 64] = {
+    let mut products = [1u32; 64];
+    let mut i = 0;
+    while i < PRIME_LISTS.len() {
+        let mut j = 0;
+        while j < PRIME_LISTS[i].len() {
+            products[i] *= PRIME_LISTS[i][j];
+            j += 1;
+        }
+        i += 1;
+    }
+    products
+};
