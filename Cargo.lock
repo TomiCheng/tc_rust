@@ -1401,8 +1401,9 @@ dependencies = [
 [[package]]
 name = "tc_dh_key"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "20f25416eeacd8d4f8d6f3c23cba957078358a1bb2e2afbc8daa58b28f99ac20"
 dependencies = [
- "rand",
  "rand_core",
  "tc_asym_cipher",
  "tc_bigint",

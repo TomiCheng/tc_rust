@@ -13,7 +13,7 @@ tc_agreement = { version = "0.1.0", path = "../tc_agreement" }
 tc_asym_cipher = "0.2.0"
 tc_bigint = { version = "0.1.0", features = ["alloc"] }
 tc_constant_time = "0.1.0"
-tc_dh_key = { version = "0.1.0", path = "../../tc_dh_key" }
+tc_dh_key = "0.1.0"
 tc_modular = { version = "0.1.0", features = ["alloc"] }
 tc_zeroize = "0.1.0"
 
