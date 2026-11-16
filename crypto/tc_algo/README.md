@@ -51,8 +51,8 @@ exception is `KEY`, a secret key of any length, which is always on.
   Mainstream: RSA with SHA-256. More: [RSA](docs/Rsa.md#signing)
 - **DRBG**: stretches a little entropy into as many random bytes as wanted. Mainstream: HMAC-DRBG
   over SHA-256. More: [DRBG](docs/Drbg.md)
-- **Key wrap**: encrypts one key under another, to store or send it. Mainstream: AES Key Wrap. More:
-  [Key wrap](docs/KeyWrap.md)
+- **[Key wrap](docs/KeyWrap.md)**: encrypts one key under another, to store or send it. Mainstream:
+  AES Key Wrap and AES Key Wrap with Padding.
 - **KDF**: derives keys from a shared secret or another key. Mainstream: HKDF over SHA-256. More:
   [HKDF](docs/HKDF-SHA256.md)
 - **KEM**: gives two sides one secret, using only the public key of one of them. Mainstream:

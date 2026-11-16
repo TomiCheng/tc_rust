@@ -166,7 +166,9 @@ poly1305 = ["dep:tc_poly1305", "dep:tc_block_modes"]
 skein-mac = ["dep:tc_skein_mac", "dep:tc_block_modes"]
 
 # Key wrap
-aes-wrap = ["aes", "tc_key_wrap/rfc3394"]
+rfc3394-wrap = ["tc_key_wrap/rfc3394", "dep:tc_block_modes"]
+rfc5649-wrap = ["tc_key_wrap/rfc5649", "dep:tc_block_modes"]
+rfc3211-wrap = ["tc_key_wrap/rfc3211", "dep:tc_block_modes"]
 
 # Key pair
 rsa = ["dep:tc_asn1_x509", "dep:tc_asym_encoding", "dep:tc_asym_iso9796", "dep:tc_md", "dep:tc_rsa", "dep:tc_rsa_signer", "dep:tc_sha"]
