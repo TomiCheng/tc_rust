@@ -34,19 +34,17 @@ exception is `KEY`, a secret key of any length, which is always on.
   one to share and the private one to keep. Mainstream: RSA of 2048 bits or more, EC on P-256 and
   P-384, and ML-KEM.
 - **Cipher**: keeps data secret, so that only the holder of the key reads it.
-  - Block cipher: encrypts in blocks, in a mode such as CBC or CTR. Mainstream: AES; the others are
-    for formats that name them. More: [Block ciphers](docs/BlockCipher.md)
-  - Stream cipher: encrypts byte by byte with a keystream. Mainstream: ChaCha20. More: [Stream
-    ciphers](docs/StreamCipher.md)
-  - AEAD cipher: encrypts and also shows that nothing was changed; the one to use for new data.
-    Mainstream: AES-GCM and ChaCha20-Poly1305, and Ascon for small devices. More: [AEAD
-    ciphers](docs/AeadCipher.md)
-  - Asymmetric cipher: encrypts with a public key what only the private key decrypts, for short data
-    such as a key. Mainstream: RSA with OAEP. More: [Asymmetric ciphers](docs/AsymCipher.md),
-    [RSA](docs/Rsa.md), [ElGamal](docs/ElGamal.md), [Naccache-Stern](docs/NaccacheStern.md),
-    [SM2](docs/Sm2.md)
-  - IES: an agreement, a KDF, a MAC and a cipher in one, to encrypt a message of any length to a
-    public key. Mainstream: ECIES. More: [IES](docs/IES.md), [ECIES](docs/Ecies.md)
+  - **[Block cipher](docs/BlockCipher.md)**: encrypts in blocks, in a mode such as CBC or CTR.
+    Mainstream: AES; the others are for formats that name them.
+  - **[Stream cipher](docs/StreamCipher.md)**: encrypts byte by byte with a keystream. Mainstream:
+    ChaCha20.
+  - **[AEAD cipher](docs/AeadCipher.md)**: encrypts and also shows that nothing was changed; the one
+    to use for new data. Mainstream: AES-GCM and ChaCha20-Poly1305, and Ascon for small devices.
+  - **[Asymmetric cipher](docs/AsymCipher.md)**: encrypts with a public key what only the private
+    key decrypts, for short data such as a key. Mainstream: RSA with OAEP. More: [RSA](docs/Rsa.md),
+    [ElGamal](docs/ElGamal.md), [Naccache-Stern](docs/NaccacheStern.md), [SM2](docs/Sm2.md)
+  - **[IES](docs/IES.md)**: an agreement, a KDF, a MAC and a cipher in one, to encrypt a message of
+    any length to a public key. Mainstream: ECIES. More: [ECIES](docs/Ecies.md)
 - **MAC**: a tag that shows data was not changed and came from someone with the key. Mainstream:
   HMAC-SHA256. More: [MAC](docs/Mac.md)
 - **Signer**: a signature made with a private key, which anyone with the public key can check.
