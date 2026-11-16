@@ -140,12 +140,23 @@ and `TWOFISH`.
 | `KMAC128` |  | `2.16.840.1.101.3.4.2.19` | `kmac` | `KeyOwned` | .. | 32 |
 | `KMAC256` |  | `2.16.840.1.101.3.4.2.20` | `kmac` | `KeyOwned` | .. | 64 |
 | `POLY1305` |  |  | `poly1305` | `KeyOwned` | 32 | 16 |
-| `SKEIN-MAC-<state>-<tag>` | `SKEINMAC-<state>-<tag>` |  | `skein-mac` | `KeyOwned` | .. | the tag |
+| `SKEIN-MAC-256-128` | `SKEINMAC-256-128` |  | `skein-mac` | `KeyOwned` | .. | 16 |
+| `SKEIN-MAC-256-160` | `SKEINMAC-256-160` |  | `skein-mac` | `KeyOwned` | .. | 20 |
+| `SKEIN-MAC-256-224` | `SKEINMAC-256-224` |  | `skein-mac` | `KeyOwned` | .. | 28 |
+| `SKEIN-MAC-256-256` | `SKEINMAC-256-256` |  | `skein-mac` | `KeyOwned` | .. | 32 |
+| `SKEIN-MAC-512-128` | `SKEINMAC-512-128` |  | `skein-mac` | `KeyOwned` | .. | 16 |
+| `SKEIN-MAC-512-160` | `SKEINMAC-512-160` |  | `skein-mac` | `KeyOwned` | .. | 20 |
+| `SKEIN-MAC-512-224` | `SKEINMAC-512-224` |  | `skein-mac` | `KeyOwned` | .. | 28 |
+| `SKEIN-MAC-512-256` | `SKEINMAC-512-256` |  | `skein-mac` | `KeyOwned` | .. | 32 |
+| `SKEIN-MAC-512-384` | `SKEINMAC-512-384` |  | `skein-mac` | `KeyOwned` | .. | 48 |
+| `SKEIN-MAC-512-512` | `SKEINMAC-512-512` |  | `skein-mac` | `KeyOwned` | .. | 64 |
+| `SKEIN-MAC-1024-384` | `SKEINMAC-1024-384` |  | `skein-mac` | `KeyOwned` | .. | 48 |
+| `SKEIN-MAC-1024-512` | `SKEINMAC-1024-512` |  | `skein-mac` | `KeyOwned` | .. | 64 |
+| `SKEIN-MAC-1024-1024` | `SKEINMAC-1024-1024` |  | `skein-mac` | `KeyOwned` | .. | 128 |
 
 ISO 9797-1 algorithm 3 is the retail MAC over DES: CBC-MAC under the first key, and the last block
-under the two-key or three-key triple DES. KMAC has an empty customization string. Skein-MAC is in
-bits: 256 with a tag of 128, 160, 224 or 256; 512 with 128, 160, 224, 256, 384 or 512; 1024 with 384,
-512 or 1024.
+under the two-key or three-key triple DES. KMAC has an empty customization string. Skein-MAC is named
+by its state and tag in bits.
 
 ## Params
 
