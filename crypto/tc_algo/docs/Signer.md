@@ -46,8 +46,14 @@ the scheme and of the digest, as `ecdsa` and `sha256`.
 - **[EC](Ec.md#signing)**: ECDSA, with its signature in DER or plain, with the `ecdsa` feature, and
   ECNR, with the `ecnr` feature.
 - **[SM2](Sm2.md#signing)**: over SM3 or SHA-256, with the `sm2` feature.
+- **[EdDSA](EdDSA.md#signing)**: Ed25519 and Ed448, with the `ed25519` and `ed448` features.
+- **[ML-DSA](MlDsa.md#signing)** and **[SLH-DSA](SlhDsa.md#signing)**: the signatures of FIPS 204
+  and 205, made to resist a quantum computer, with the `ml-dsa` and `slh-dsa` features.
+- **[DSA](Dsa.md#signing)**, with the `dsa` feature, **[GOST R 34.10-94](Gost3410.md#signing)**, with
+  the `gost3410` feature, and GOST R 34.10-2001 and -2012 over EC keys, with the `ecgost3410`
+  feature: for old data and the formats that name them.
 
-DSA, GOST R 34.10, DSTU 4145, Ed25519, Ed448, ML-DSA and SLH-DSA are not here yet.
+DSTU 4145 is not here: Bouncy Castle's `SignerUtilities` does not name it.
 
 ## Params
 

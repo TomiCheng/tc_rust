@@ -33,24 +33,33 @@ fn main() -> Result<(), AlgoError> {
 | Name | Aliases | OID | Feature | Params | Public key | Private key |
 |---|---|---|---|---|---|---|
 | [`RSA`](Rsa.md) |  | `1.2.840.113549.1.1.1` | `rsa` | `RsaKeyGenParams` | `RsaKey` | `RsaKey` |
-| [`EC`](Ec.md) | `ECDH`, `ECIES`, `ECDHC`, `ECMQV`, `ECDSA` | `1.3.133.16.840.63.0.2`, `.3`, `.16`; `1.3.132.1.11.0` to `.3`; `1.3.132.1.14.0` to `.3`; `1.3.132.1.15.0` to `.3` | `ec` | `EcKeyGenParams` | `EcPublicKey<C>` | `EcPrivateKey<C>` |
+| [`EC`](Ec.md) | `ECDH`, `ECIES`, `ECDHC`, `ECMQV`, `ECDSA`, `ECGOST3410`, `ECGOST-3410`, `GOST-3410-2001`, `ECGOST3410-2012`, `GOST-3410-2012` | `1.3.133.16.840.63.0.2`, `.3`, `.16`; `1.3.132.1.11.0` to `.3`; `1.3.132.1.14.0` to `.3`; `1.3.132.1.15.0` to `.3` | `ec` | `EcKeyGenParams` | `EcPublicKey<C>` | `EcPrivateKey<C>` |
 | [`DH`](Dh.md) | `DIFFIEHELLMAN` |  | `dh` | `DhParameters` | `DhPublicKey` | `DhPrivateKey` |
 | [`ML-KEM`](KEM.md) |  |  | `ml-kem` | `MlKemParameters` | `MlKemPublicKey` | `MlKemPrivateKey` |
 | [`ELGAMAL`](ElGamal.md) |  |  | `elgamal` | `ElGamalParameters` | `ElGamalPublicKey` | `ElGamalPrivateKey` |
 | [`NACCACHESTERN`](NaccacheStern.md) |  |  | `naccache-stern` | `NaccacheSternKeyGenerationParams` | `NaccacheSternPublicKey` | `NaccacheSternPrivateKey` |
 | [`SM2`](Sm2.md) |  |  | `sm2` | none | `Sm2PublicKey` | `Sm2PrivateKey` |
+| [`Ed25519`](EdDSA.md) | `Ed25519ctx`, `Ed25519ph` | `1.3.101.112` | `ed25519` | none | `Ed25519PublicKey` | `Ed25519PrivateKey` |
+| [`Ed448`](EdDSA.md) | `Ed448ph` | `1.3.101.113` | `ed448` | none | `Ed448PublicKey` | `Ed448PrivateKey` |
+| [`ML-DSA`](MlDsa.md) |  |  | `ml-dsa` | `MlDsaParameters` | `MlDsaPublicKey` | `MlDsaPrivateKey` |
+| [`SLH-DSA`](SlhDsa.md) |  |  | `slh-dsa` | `SlhDsaParameters` | `SlhDsaPublicKey` | `SlhDsaPrivateKey` |
+| [`DSA`](Dsa.md) |  |  | `dsa` | `DsaKeyGenParams`, `DsaParameters` | `DsaPublicKey` | `DsaPrivateKey` |
+| [`GOST3410`](Gost3410.md) | `GOST-3410`, `GOST-3410-94` |  | `gost3410` | `Gost3410KeyGenParams`, `Gost3410Parameters` | `Gost3410PublicKey` | `Gost3410PrivateKey` |
 
 The names, aliases and OIDs are those of Bouncy Castle's `GeneratorUtilities`, but those of
 Naccache-Stern and SM2, which it has no names for. The case of a name does not matter.
 
 ## Params
 
-- Every row but `SM2` needs `init`, since none has params to assume: the size of an RSA key, the
-  curve of an EC key, the group of DH and ElGamal, the parameter set of ML-KEM. `generate_by_name`
+- Every row but `SM2`, `Ed25519` and `Ed448` needs `init`, since none has params to assume: the
+  size of an RSA key, the curve of an EC key, the group of DH and ElGamal, the domain of DSA and GOST
+  R 34.10-94, the parameter set of ML-KEM, ML-DSA and SLH-DSA. `generate_by_name`
   gives `NotInitialized` there, so use `generate_by_name_with`, or `get_by_name`, `init` and
   `generate`.
-- `SM2` has its curve fixed: `generate_by_name` gives a pair at once, and `init` refuses any params
-  as `InvalidParams`.
+- `SM2`, `Ed25519` and `Ed448` have their curves fixed: `generate_by_name` gives a pair at once,
+  and `init` refuses any params as `InvalidParams`.
+- `DSA` and `GOST3410` take either a domain, or the size of a new one to generate at `init`, which
+  takes a while; one `init` serves any number of pairs.
 - `init` has the crate underneath judge the params, so a bad one is `InvalidParams` there and not at
   `generate`.
 

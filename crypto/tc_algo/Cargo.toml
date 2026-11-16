@@ -179,6 +179,13 @@ sm2 = ["dep:tc_sm2", "dep:tc_bigint", "dep:tc_dsa", "dep:tc_ec_core", "dep:tc_ec
 # Signer
 ecdsa = ["ec", "dep:tc_dsa", "dep:tc_ecdsa_v2"]
 ecnr = ["ec", "dep:tc_dsa", "dep:tc_ecnr"]
+ecgost3410 = ["ec", "dep:tc_dsa", "dep:tc_ecgost3410", "dep:tc_gost3411"]
+dsa = ["dep:tc_bigint", "dep:tc_dsa", "dep:tc_dsa_key", "dep:tc_dsa_signer", "dep:tc_sha"]
+gost3410 = ["dep:tc_bigint", "dep:tc_dsa", "dep:tc_gost3410", "dep:tc_gost3410_key", "dep:tc_gost3411"]
+ed25519 = ["dep:tc_cfrg_curves"]
+ed448 = ["dep:tc_cfrg_curves", "tc_cfrg_curves/ed448"]
+ml-dsa = ["dep:tc_ml_dsa"]
+slh-dsa = ["dep:tc_slh_dsa"]
 
 # Agreement
 dh = ["dep:tc_bigint", "dep:tc_dh", "dep:tc_dh_key"]
@@ -282,6 +289,14 @@ tc_signer = { version = "0.1.0", path = "../../signer/tc_signer" }
 tc_dsa = { version = "0.1.0", path = "../../signer/tc_dsa", optional = true }
 tc_ecdsa_v2 = { version = "0.1.0", path = "../../signer/tc_ecdsa_v2", optional = true }
 tc_ecnr = { version = "0.1.0", path = "../../signer/tc_ecnr", optional = true }
+tc_ecgost3410 = { version = "0.1.0", path = "../../signer/tc_ecgost3410", optional = true }
+tc_dsa_key = { version = "0.1.0", path = "../tc_dsa_key", optional = true }
+tc_dsa_signer = { version = "0.1.0", path = "../../signer/tc_dsa_signer", optional = true }
+tc_gost3410 = { version = "0.1.0", path = "../../signer/tc_gost3410", optional = true }
+tc_gost3410_key = { version = "0.1.0", path = "../tc_gost3410_key", optional = true }
+tc_cfrg_curves = { version = "0.1.0", path = "../tc_cfrg_curves", optional = true }
+tc_ml_dsa = { version = "0.1.0", path = "../../signer/tc_ml_dsa", optional = true }
+tc_slh_dsa = { version = "0.1.0", path = "../../signer/tc_slh_dsa", optional = true }
 
 # IES
 tc_ies = { version = "0.1.0", path = "../../ies/tc_ies", optional = true }

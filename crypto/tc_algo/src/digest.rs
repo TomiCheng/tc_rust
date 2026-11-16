@@ -21,7 +21,13 @@ mod digest_entry;
 mod digest_provider;
 mod digest_trait;
 mod empty_digest_provider;
-#[cfg(any(feature = "hmac", feature = "rsa", feature = "ecdsa", feature = "ecnr"))]
+#[cfg(any(
+    feature = "hmac",
+    feature = "rsa",
+    feature = "dsa",
+    feature = "ecdsa",
+    feature = "ecnr"
+))]
 mod row_digest;
 
 pub(crate) use algo::{BUILT_IN, CreateRows};
@@ -29,6 +35,12 @@ pub use digest_entry::DigestEntry;
 pub use digest_provider::DigestProvider;
 pub use digest_trait::Digest;
 pub(crate) use empty_digest_provider::EmptyDigestProvider;
-#[cfg(any(feature = "hmac", feature = "rsa", feature = "ecdsa", feature = "ecnr"))]
+#[cfg(any(
+    feature = "hmac",
+    feature = "rsa",
+    feature = "dsa",
+    feature = "ecdsa",
+    feature = "ecnr"
+))]
 pub(crate) use row_digest::RowDigest;
 pub use tc_digest::TryDigest;

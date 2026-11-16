@@ -1,8 +1,9 @@
+#[cfg(feature = "ecgost3410")]
 use std::sync::Arc;
 
-use rand_core::CryptoRng;
 use tc_bigint::PaddedBigUint;
-use tc_dsa::{DsaDigestSigner, DsaDigestSignerError, RandomDsaKCalculator};
+#[cfg(any(feature = "ecdsa", feature = "ecnr"))]
+use tc_dsa::DsaDigestSigner;
 use tc_ec_core::Curve;
 use tc_ec_key::{EcPrivateKey, EcPublicKey};
 use tc_f2m_curve::F2mCtCurve;
@@ -19,22 +20,21 @@ use tc_fp_custom::{
     SecPCtCurve,
 };
 
-use super::row::{Inner, Kind, Row, digest_names, digests, keyed, oids_of, signer_digest_name};
-use crate::digest::{DigestEntry, RowDigest};
+#[cfg(any(feature = "ecdsa", feature = "ecnr"))]
+use super::digest_dsa::{Spec, k, row};
+#[cfg(feature = "ecgost3410")]
+use super::row::Row;
+#[cfg(any(feature = "ecdsa", feature = "ecnr"))]
+use super::row::digests;
+use super::row::{Inner, keyed};
+#[cfg(feature = "ecgost3410")]
+use crate::ErrorKind;
+#[cfg(any(feature = "ecdsa", feature = "ecnr"))]
+use crate::digest::RowDigest;
 use crate::signer::SignerEntry;
-use crate::{AlgoError, DefaultAlgoContext, ErrorKind, Params};
+use crate::{AlgoError, DefaultAlgoContext, Params};
 
-type Rand = fn() -> Box<dyn CryptoRng>;
-type KCalculator = RandomDsaKCalculator<Box<dyn CryptoRng>>;
-
-// What a row signs with, and the digest and randomness it takes
-struct Spec {
-    digest: Arc<dyn DigestEntry>,
-    rand: Rand,
-}
-
-// A signer over the curve C, keyed, when the params are a key on C; None when they are not
-type Try = fn(&dyn Params, &Spec) -> Option<Result<Box<dyn Inner>, AlgoError>>;
+type Rand = fn() -> Box<dyn rand_core::CryptoRng>;
 
 // The curve types the rows take: the generic ones of tc_fp_curve and tc_f2m_curve, which hold any
 // prime or binary curve, and the special ones of tc_fp_custom and tc_f2m_custom, those of the keys
@@ -99,74 +99,58 @@ const ECDSA_OIDS: &[(&str, &[&str])] = &[
     ("SHA-512withCVC-ECDSA", &["0.4.0.127.0.7.2.2.2.2.5"]),
 ];
 
-// The rows of the DSA-like signatures over EC keys, to give to DefaultAlgoBuilder::reg_signer, with
-// the names, aliases and OIDs of Bouncy Castle's SignerUtilities, over each digest row that is on:
+// The rows of the signatures over EC keys, to give to DefaultAlgoBuilder::reg_signer, with the
+// names, aliases and OIDs of Bouncy Castle's SignerUtilities. Over each digest row that is on:
 // ECDSA, with its signature in DER; PLAIN-ECDSA and CVC-ECDSA, ECDSA with r and s side by side; and
-// ECNR. NONE signs a message that is the hash itself. Each takes an EcPrivateKey to sign and an
-// EcPublicKey to verify, on any curve of the EC key pair generator, and draws k at random, as
-// Bouncy Castle does
+// ECNR. NONE signs a message that is the hash itself. And GOST R 34.10-2001 and -2012 over their
+// GOST R 34.11 digests. Each takes an EcPrivateKey to sign and an EcPublicKey to verify, on any
+// curve of the EC key pair generator, and draws k at random, as Bouncy Castle does
 pub(super) fn ec(context: &DefaultAlgoContext) -> Vec<Box<dyn SignerEntry>> {
+    #[allow(unused_variables, reason = "ECGOST 3410 alone draws no digest row")]
     let rand: Rand = context.rand();
+    #[allow(unused_mut, reason = "empty when no scheme is on")]
     let mut rows: Vec<Box<dyn SignerEntry>> = Vec::new();
+    #[cfg(any(feature = "ecdsa", feature = "ecnr"))]
     for digest in digests(context) {
         #[cfg(feature = "ecdsa")]
         {
-            rows.push(row(&digest, "ECDSA", curves!(ecdsa), rand));
-            rows.push(row(&digest, "PLAIN-ECDSA", curves!(plain_ecdsa), rand));
-            rows.push(row(&digest, "CVC-ECDSA", curves!(plain_ecdsa), rand));
+            let extra = &[("SHA-1", "ECDSA")];
+            rows.push(row(
+                &digest,
+                "ECDSA",
+                curves!(ecdsa),
+                ECDSA_OIDS,
+                extra,
+                rand,
+            ));
+            rows.push(row(
+                &digest,
+                "PLAIN-ECDSA",
+                curves!(plain_ecdsa),
+                ECDSA_OIDS,
+                &[],
+                rand,
+            ));
+            rows.push(row(
+                &digest,
+                "CVC-ECDSA",
+                curves!(plain_ecdsa),
+                ECDSA_OIDS,
+                &[],
+                rand,
+            ));
         }
         #[cfg(feature = "ecnr")]
-        rows.push(row(&digest, "ECNR", curves!(ecnr), rand));
+        rows.push(row(&digest, "ECNR", curves!(ecnr), &[], &[], rand));
     }
+    #[cfg(feature = "ecgost3410")]
+    rows.extend(ecgost3410(context.rand()));
     rows
-}
-
-// The row of a digest and a scheme, named SHA-256withECDSA, also SHA256WITHECDSA, SHA-256/ECDSA
-// and ECDSAWITHSHA-256, after every name of the digest. ECDSA alone is SHA-1withECDSA, as in Bouncy
-// Castle
-fn row(
-    digest: &Arc<dyn DigestEntry>,
-    scheme: &str,
-    curves: &'static [Try],
-    rand: Rand,
-) -> Box<dyn SignerEntry> {
-    let name = format!("{}with{scheme}", signer_digest_name(&**digest));
-    let mut aliases: Vec<String> = digest_names(&**digest)
-        .iter()
-        .flat_map(|digest| {
-            [
-                format!("{digest}WITH{scheme}"),
-                format!("{digest}/{scheme}"),
-                format!("{scheme}WITH{digest}"),
-            ]
-        })
-        .collect();
-    if digest.name() == "SHA-1" && scheme == "ECDSA" {
-        aliases.push("ECDSA".to_string());
-    }
-    #[cfg(feature = "ecdsa")]
-    let oids = oids_of(ECDSA_OIDS, &name);
-    #[cfg(not(feature = "ecdsa"))]
-    let oids = oids_of(&[], &name);
-    let spec = Arc::new(Spec {
-        digest: digest.clone(),
-        rand,
-    });
-    Box::new(Row::new(
-        name,
-        aliases,
-        oids,
-        Arc::new(move |params| {
-            curves
-                .iter()
-                .find_map(|on| on(params, &spec))
-                .unwrap_or(Err(AlgoError::new(ErrorKind::InvalidParams)))
-        }),
-    ))
 }
 
 // The key of the params on the curve C, as the private key to sign with or the public one to verify
 // with, given to sign
+#[allow(dead_code, reason = "unused when no scheme is on")]
 fn on<C, F>(params: &dyn Params, sign: F) -> Option<Result<Box<dyn Inner>, AlgoError>>
 where
     C: Curve<Scalar = PaddedBigUint> + 'static,
@@ -180,13 +164,20 @@ where
     Some(sign(Key::Public(key)))
 }
 
+#[allow(dead_code, reason = "unused when no scheme is on")]
 enum Key<'a, C: Curve<Scalar = PaddedBigUint>> {
     Private(&'a EcPrivateKey<C>),
     Public(&'a EcPublicKey<C>),
 }
 
-fn k(spec: &Spec) -> KCalculator {
-    RandomDsaKCalculator::new((spec.rand)())
+// Keys a signer that takes either key of C
+macro_rules! keyed_by {
+    ($key:expr, $signer:expr) => {
+        match $key {
+            Key::Private(key) => keyed($signer, key),
+            Key::Public(key) => keyed($signer, key),
+        }
+    };
 }
 
 #[cfg(feature = "ecdsa")]
@@ -195,14 +186,13 @@ where
     C: Curve<Scalar = PaddedBigUint> + 'static,
 {
     on::<C, _>(params, |key| {
-        let signer = DsaDigestSigner::new(
-            tc_ecdsa_v2::EcdsaSigner::<C, _>::new(k(spec)),
-            RowDigest::new(spec.digest.clone()),
-        );
-        match key {
-            Key::Private(key) => keyed(signer, key),
-            Key::Public(key) => keyed(signer, key),
-        }
+        keyed_by!(
+            key,
+            DsaDigestSigner::new(
+                tc_ecdsa_v2::EcdsaSigner::<C, _>::new(k(spec)),
+                RowDigest::new(spec.digest.clone()),
+            )
+        )
     })
 }
 
@@ -212,15 +202,14 @@ where
     C: Curve<Scalar = PaddedBigUint> + 'static,
 {
     on::<C, _>(params, |key| {
-        let signer = DsaDigestSigner::with_encoding(
-            tc_ecdsa_v2::EcdsaSigner::<C, _>::new(k(spec)),
-            RowDigest::new(spec.digest.clone()),
-            tc_dsa::PlainDsaEncoding,
-        );
-        match key {
-            Key::Private(key) => keyed(signer, key),
-            Key::Public(key) => keyed(signer, key),
-        }
+        keyed_by!(
+            key,
+            DsaDigestSigner::with_encoding(
+                tc_ecdsa_v2::EcdsaSigner::<C, _>::new(k(spec)),
+                RowDigest::new(spec.digest.clone()),
+                tc_dsa::PlainDsaEncoding,
+            )
+        )
     })
 }
 
@@ -230,26 +219,121 @@ where
     C: Curve<Scalar = PaddedBigUint> + 'static,
 {
     on::<C, _>(params, |key| {
-        let signer = DsaDigestSigner::new(
-            tc_ecnr::EcnrSigner::<C, _>::new(k(spec)),
-            RowDigest::new(spec.digest.clone()),
-        );
-        match key {
-            Key::Private(key) => keyed(signer, key),
-            Key::Public(key) => keyed(signer, key),
-        }
+        keyed_by!(
+            key,
+            DsaDigestSigner::new(
+                tc_ecnr::EcnrSigner::<C, _>::new(k(spec)),
+                RowDigest::new(spec.digest.clone()),
+            )
+        )
     })
 }
 
-impl<E> Kind for DsaDigestSignerError<E> {
-    fn kind(&self) -> ErrorKind {
-        match self {
-            DsaDigestSignerError::NotInitialized
-            | DsaDigestSignerError::NotForSigning
-            | DsaDigestSignerError::NotForVerifying => ErrorKind::NotInitialized,
-            _ => ErrorKind::DataLength,
-        }
+// GOST R 34.10-2001 over GOST R 34.11-94, and GOST R 34.10-2012 over GOST R 34.11-2012 of 256 and
+// 512 bits, with the names, aliases and OIDs of Bouncy Castle's SignerUtilities. The digest is the
+// scheme's, so the rows need no digest feature
+#[cfg(feature = "ecgost3410")]
+fn ecgost3410(rand: Rand) -> Vec<Box<dyn SignerEntry>> {
+    type EcgTry = fn(&dyn Params, Rand) -> Option<Result<Box<dyn Inner>, AlgoError>>;
+
+    fn gost<C, D>(
+        params: &dyn Params,
+        rand: Rand,
+        digest: D,
+    ) -> Option<Result<Box<dyn Inner>, AlgoError>>
+    where
+        C: Curve<Scalar = PaddedBigUint> + 'static,
+        D: tc_digest::Digest + 'static,
+    {
+        on::<C, _>(params, |key| {
+            let signer = tc_dsa::Gost3410DigestSigner::new(
+                tc_ecgost3410::EcGost3410Signer::<C, _>::new(tc_dsa::RandomDsaKCalculator::new(
+                    rand(),
+                )),
+                digest,
+            );
+            keyed_by!(key, signer)
+        })
     }
+    fn gost3411<C>(params: &dyn Params, rand: Rand) -> Option<Result<Box<dyn Inner>, AlgoError>>
+    where
+        C: Curve<Scalar = PaddedBigUint> + 'static,
+    {
+        gost::<C, _>(params, rand, tc_gost3411::Gost3411Digest::new())
+    }
+    fn gost3411_2012_256<C>(
+        params: &dyn Params,
+        rand: Rand,
+    ) -> Option<Result<Box<dyn Inner>, AlgoError>>
+    where
+        C: Curve<Scalar = PaddedBigUint> + 'static,
+    {
+        gost::<C, _>(params, rand, tc_gost3411::Gost3411_2012_256Digest::new())
+    }
+    fn gost3411_2012_512<C>(
+        params: &dyn Params,
+        rand: Rand,
+    ) -> Option<Result<Box<dyn Inner>, AlgoError>>
+    where
+        C: Curve<Scalar = PaddedBigUint> + 'static,
+    {
+        gost::<C, _>(params, rand, tc_gost3411::Gost3411_2012_512Digest::new())
+    }
+
+    let rows: [(&str, &[&str], &[&str], &'static [EcgTry]); 3] = [
+        (
+            "ECGOST3410",
+            &[
+                "ECGOST-3410",
+                "GOST-3410-2001",
+                "GOST3411WITHECGOST3410",
+                "GOST3411/ECGOST3410",
+            ],
+            &["1.2.643.2.2.3"],
+            curves!(gost3411),
+        ),
+        (
+            "ECGOST3410-2012-256",
+            &[
+                "GOST-3410-2012-256",
+                "GOST3411WITHECGOST3410-2012-256",
+                "GOST3411-2012-256WITHECGOST3410",
+                "GOST3411-2012-256WITHECGOST3410-2012-256",
+                "GOST3411-2012-256/ECGOST3410",
+                "GOST3411-2012-256/ECGOST3410-2012-256",
+            ],
+            &["1.2.643.7.1.1.3.2"],
+            curves!(gost3411_2012_256),
+        ),
+        (
+            "ECGOST3410-2012-512",
+            &[
+                "GOST-3410-2012-512",
+                "GOST3411WITHECGOST3410-2012-512",
+                "GOST3411-2012-512WITHECGOST3410",
+                "GOST3411-2012-512WITHECGOST3410-2012-512",
+                "GOST3411-2012-512/ECGOST3410",
+                "GOST3411-2012-512/ECGOST3410-2012-512",
+            ],
+            &["1.2.643.7.1.1.3.3"],
+            curves!(gost3411_2012_512),
+        ),
+    ];
+    rows.into_iter()
+        .map(|(name, aliases, oids, tries)| -> Box<dyn SignerEntry> {
+            Box::new(Row::new(
+                name.to_string(),
+                aliases.iter().map(|alias| alias.to_string()).collect(),
+                oids,
+                Arc::new(move |params| {
+                    tries
+                        .iter()
+                        .find_map(|on| on(params, rand))
+                        .unwrap_or(Err(AlgoError::new(ErrorKind::InvalidParams)))
+                }),
+            ))
+        })
+        .collect()
 }
 
 #[cfg(all(
@@ -371,5 +455,55 @@ mod tests {
         signer.update(MESSAGE).unwrap();
         let error = signer.sign().unwrap_err();
         assert_eq!(error.kind(), ErrorKind::NotInitialized);
+    }
+}
+
+#[cfg(all(test, feature = "ecgost3410"))]
+mod gost_tests {
+    use crate::params::EcKeyGenParams;
+    use crate::{AlgoBuilder, DefaultAlgoBuilder};
+
+    #[test]
+    fn ecgost3410_verifies_what_it_signs_on_the_gost_curves() {
+        let algo = DefaultAlgoBuilder::default().build();
+        for (curve, names, oid) in [
+            (
+                "GostR3410-2001-CryptoPro-A",
+                ["ECGOST3410", "GOST-3410-2001"],
+                "1.2.643.2.2.3",
+            ),
+            (
+                "Tc26-Gost-3410-12-512-paramSetA",
+                ["ECGOST3410-2012-512", "GOST3411-2012-512/ECGOST3410"],
+                "1.2.643.7.1.1.3.3",
+            ),
+            (
+                "GostR3410-2001-CryptoPro-A",
+                ["ECGOST3410-2012-256", "GOST-3410-2012-256"],
+                "1.2.643.7.1.1.3.2",
+            ),
+        ] {
+            let pair = algo
+                .key_pair_generator()
+                .generate_by_name_with("ECGOST3410", &EcKeyGenParams::new(curve))
+                .unwrap();
+            for name in names {
+                let mut signer = algo.signer().get_by_name(name).unwrap();
+                signer.init(pair.private()).unwrap();
+                signer.update(b"attack at dawn").unwrap();
+                let signature = signer.sign().unwrap();
+
+                let mut verifier = algo.signer().get_by_name(name).unwrap();
+                verifier.init(pair.public()).unwrap();
+                verifier.update(b"attack at dawn").unwrap();
+                assert!(verifier.verify_signature(&signature).unwrap(), "{name}");
+                verifier.update(b"attack at dusk").unwrap();
+                assert!(!verifier.verify_signature(&signature).unwrap(), "{name}");
+            }
+            assert!(
+                algo.signer().get_by_oid(&oid.parse().unwrap()).is_ok(),
+                "{oid}"
+            );
+        }
     }
 }

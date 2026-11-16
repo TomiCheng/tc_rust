@@ -8,10 +8,14 @@ mod blake3_params;
 mod cshake_params;
 #[cfg(feature = "drbg-hmac-sha256")]
 mod drbg_params;
+#[cfg(feature = "dsa")]
+mod dsa_key_gen_params;
 #[cfg(feature = "ec")]
 pub(crate) mod ec_curves;
 #[cfg(feature = "ec")]
 mod ec_key_gen_params;
+#[cfg(feature = "gost3410")]
+mod gost3410_key_gen_params;
 #[cfg(feature = "ies")]
 mod ies_dh_params;
 #[cfg(feature = "ecies")]
@@ -48,8 +52,12 @@ pub use blake3_params::Blake3Params;
 pub use cshake_params::CShakeParams;
 #[cfg(feature = "drbg-hmac-sha256")]
 pub use drbg_params::DrbgParams;
+#[cfg(feature = "dsa")]
+pub use dsa_key_gen_params::DsaKeyGenParams;
 #[cfg(feature = "ec")]
 pub use ec_key_gen_params::EcKeyGenParams;
+#[cfg(feature = "gost3410")]
+pub use gost3410_key_gen_params::Gost3410KeyGenParams;
 #[cfg(feature = "ies")]
 pub use ies_dh_params::IesDhParams;
 #[cfg(feature = "ecies")]
@@ -193,20 +201,30 @@ pub use tc_block_modes::ParamsWithIvOwned;
     feature = "vmpc-mac"
 ))]
 pub use tc_block_modes::{IvParams, KeyWithIvOwned};
+#[cfg(feature = "ed448")]
+pub use tc_cfrg_curves::{Ed448PrivateKey, Ed448PublicKey};
+#[cfg(feature = "ed25519")]
+pub use tc_cfrg_curves::{Ed25519PrivateKey, Ed25519PublicKey};
 #[cfg(any(feature = "dh", feature = "elgamal"))]
 pub use tc_dh_key::DhParameters;
 #[cfg(any(feature = "dh", feature = "elgamal"))]
 pub use tc_dh_key::standard_groups as dh_groups;
 #[cfg(feature = "dh")]
 pub use tc_dh_key::{DhPrivateKey, DhPublicKey};
+#[cfg(feature = "dsa")]
+pub use tc_dsa_key::{DsaParameters, DsaPrivateKey, DsaPublicKey};
 #[cfg(any(feature = "ec", feature = "sm2"))]
 pub use tc_ec_key::{EcPrivateKey, EcPublicKey};
 #[cfg(feature = "elgamal")]
 pub use tc_elgamal::{ElGamalParameters, ElGamalPrivateKey, ElGamalPublicKey};
+#[cfg(feature = "gost3410")]
+pub use tc_gost3410_key::{Gost3410Parameters, Gost3410PrivateKey, Gost3410PublicKey};
 #[cfg(feature = "gost28147")]
 pub use tc_gost28147::{Gost28147Params, Gost28147ParamsOwned, s_box as gost28147_s_box};
 #[cfg(feature = "hkdf")]
 pub use tc_kdf::hkdf::HkdfParamsOwned;
+#[cfg(feature = "ml-dsa")]
+pub use tc_ml_dsa::{MlDsaParameters, MlDsaPrivateKey, MlDsaPublicKey};
 #[cfg(feature = "ml-kem")]
 pub use tc_ml_kem::{MlKemParameters, MlKemPrivateKey, MlKemPublicKey};
 #[cfg(feature = "naccache-stern")]
@@ -219,6 +237,8 @@ pub use tc_rc_cipher::{Rc2Params, Rc2ParamsOwned};
 pub use tc_rc_cipher::{Rc5Params, Rc5ParamsOwned};
 #[cfg(feature = "rsa")]
 pub use tc_rsa::{RsaKey, RsaKeyParams};
+#[cfg(feature = "slh-dsa")]
+pub use tc_slh_dsa::{SlhDsaParameters, SlhDsaPrivateKey, SlhDsaPublicKey};
 #[cfg(any(
     feature = "threefish-256",
     feature = "threefish-512",
@@ -528,6 +548,118 @@ impl Params for DhPrivateKey {
 
 #[cfg(feature = "dh")]
 impl Params for DhPublicKey {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
+#[cfg(feature = "dsa")]
+impl Params for DsaParameters {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
+#[cfg(feature = "dsa")]
+impl Params for DsaPrivateKey {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
+#[cfg(feature = "dsa")]
+impl Params for DsaPublicKey {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
+#[cfg(feature = "gost3410")]
+impl Params for Gost3410Parameters {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
+#[cfg(feature = "gost3410")]
+impl Params for Gost3410PrivateKey {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
+#[cfg(feature = "gost3410")]
+impl Params for Gost3410PublicKey {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
+#[cfg(feature = "ed25519")]
+impl Params for Ed25519PrivateKey {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
+#[cfg(feature = "ed25519")]
+impl Params for Ed25519PublicKey {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
+#[cfg(feature = "ed448")]
+impl Params for Ed448PrivateKey {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
+#[cfg(feature = "ed448")]
+impl Params for Ed448PublicKey {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
+#[cfg(feature = "ml-dsa")]
+impl Params for MlDsaParameters {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
+#[cfg(feature = "ml-dsa")]
+impl Params for MlDsaPrivateKey {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
+#[cfg(feature = "ml-dsa")]
+impl Params for MlDsaPublicKey {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
+#[cfg(feature = "slh-dsa")]
+impl Params for SlhDsaParameters {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
+#[cfg(feature = "slh-dsa")]
+impl Params for SlhDsaPrivateKey {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
+#[cfg(feature = "slh-dsa")]
+impl Params for SlhDsaPublicKey {
     fn as_any(&self) -> &dyn Any {
         self
     }

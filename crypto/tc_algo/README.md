@@ -32,7 +32,7 @@ exception is `KEY`, a secret key of any length, which is always on.
   random source. Mainstream: AES-128 and AES-256.
 - **[Key pair generation](docs/KeyPairGeneration.md)**: a new public key and private key, the public
   one to share and the private one to keep. Mainstream: RSA of 2048 bits or more, EC on P-256 and
-  P-384, and ML-KEM.
+  P-384, Ed25519, ML-KEM and ML-DSA.
 - **Cipher**: keeps data secret, so that only the holder of the key reads it.
   - **[Block cipher](docs/BlockCipher.md)**: encrypts in blocks, in a mode such as CBC or CTR.
     Mainstream: AES; the others are for formats that name them.
@@ -48,7 +48,7 @@ exception is `KEY`, a secret key of any length, which is always on.
 - **[MAC](docs/Mac.md)**: a tag that shows data was not changed and came from someone with the key.
   Mainstream: HMAC-SHA256, AES-CMAC, KMAC and Poly1305.
 - **[Signer](docs/Signer.md)**: a signature made with a private key, which anyone with the public
-  key can check. Mainstream: ECDSA and RSA-PSS with SHA-256.
+  key can check. Mainstream: ECDSA, Ed25519 and RSA-PSS with SHA-256, and ML-DSA.
 - **DRBG**: stretches a little entropy into as many random bytes as wanted. Mainstream: HMAC-DRBG
   over SHA-256. More: [DRBG](docs/Drbg.md)
 - **[Key wrap](docs/KeyWrap.md)**: encrypts one key under another, to store or send it. Mainstream:

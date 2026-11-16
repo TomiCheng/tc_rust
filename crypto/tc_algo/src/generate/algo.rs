@@ -151,6 +151,15 @@ mod own;
 mod random;
 #[cfg(feature = "rsa")]
 mod rsa;
+#[cfg(any(
+    feature = "dsa",
+    feature = "gost3410",
+    feature = "ed25519",
+    feature = "ed448",
+    feature = "ml-dsa",
+    feature = "slh-dsa"
+))]
+mod signing_keys;
 #[cfg(feature = "sm2")]
 mod sm2;
 #[cfg(any(
@@ -167,6 +176,15 @@ mod sm2;
     feature = "vmpc-ksa3",
 ))]
 mod stream;
+#[cfg(any(
+    feature = "dsa",
+    feature = "gost3410",
+    feature = "ed25519",
+    feature = "ed448",
+    feature = "ml-dsa",
+    feature = "slh-dsa"
+))]
+mod with_params;
 
 use super::{CreateKeyGeneratorRows, CreateKeyPairGeneratorRows};
 
@@ -252,4 +270,13 @@ pub(crate) const BUILT_IN_KEY_PAIR_GENERATORS: &[CreateKeyPairGeneratorRows] = &
     sm2::sm2,
     #[cfg(feature = "ec")]
     ec::ec,
+    #[cfg(any(
+        feature = "dsa",
+        feature = "gost3410",
+        feature = "ed25519",
+        feature = "ed448",
+        feature = "ml-dsa",
+        feature = "slh-dsa"
+    ))]
+    signing_keys::signing_keys,
 ];

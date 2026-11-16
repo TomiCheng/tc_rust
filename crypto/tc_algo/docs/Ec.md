@@ -32,10 +32,10 @@ fn main() -> Result<(), AlgoError> {
 
 | Name | Aliases | OIDs | Feature | Params | Public key | Private key |
 |---|---|---|---|---|---|---|
-| `EC` | `ECDH`, `ECIES`, `ECDHC`, `ECMQV`, `ECDSA` | `1.3.133.16.840.63.0.2`, `.3`, `.16`; `1.3.132.1.11.0` to `.3`; `1.3.132.1.14.0` to `.3`; `1.3.132.1.15.0` to `.3` | `ec` | `EcKeyGenParams` | `EcPublicKey<C>` | `EcPrivateKey<C>` |
+| `EC` | `ECDH`, `ECIES`, `ECDHC`, `ECMQV`, `ECDSA`, `ECGOST3410`, `ECGOST-3410`, `GOST-3410-2001`, `ECGOST3410-2012`, `GOST-3410-2012` | `1.3.133.16.840.63.0.2`, `.3`, `.16`; `1.3.132.1.11.0` to `.3`; `1.3.132.1.14.0` to `.3`; `1.3.132.1.15.0` to `.3` | `ec` | `EcKeyGenParams` | `EcPublicKey<C>` | `EcPrivateKey<C>` |
 
-Bouncy Castle's `GeneratorUtilities` names `EC`, `ECDH` with `ECIES`, `ECDHC`, `ECMQV` and `ECDSA`,
-each its `ECKeyPairGenerator`; here they are one row, and the case of a name does not matter. The
+Bouncy Castle's `GeneratorUtilities` names `EC`, `ECDH` with `ECIES`, `ECDHC`, `ECMQV`, `ECDSA`,
+`ECGOST3410` and `ECGOST3410-2012`, each its `ECKeyPairGenerator`; here they are one row, and the case of a name does not matter. The
 OIDs are those it gives `EC` and `ECMQV`: dhSinglePass with standard and with cofactor DH, and
 mqvSinglePass, each of X9.63 over SHA-1, `1.3.133.16.840.63.0.2`, `.3` and `.16`, and of SEC over
 SHA-224 to SHA-512, `1.3.132.1.11.0` to `.3`, `1.3.132.1.14.0` to `.3` and `1.3.132.1.15.0` to `.3`.
@@ -235,6 +235,9 @@ matter. Each row needs the scheme's feature and the digest's, as `ecdsa` and `sh
 | `<DIGEST>withPLAIN-ECDSA`, for every other digest | `<DIGEST>/PLAIN-ECDSA`, `PLAIN-ECDSAWITH<DIGEST>` |  | `ecdsa` and the digest's |
 | `<DIGEST>withCVC-ECDSA`, for every other digest | `<DIGEST>/CVC-ECDSA`, `CVC-ECDSAWITH<DIGEST>` |  | `ecdsa` and the digest's |
 | `<DIGEST>withECNR`, for every digest | `<DIGEST>/ECNR`, `ECNRWITH<DIGEST>` |  | `ecnr` and the digest's |
+| `ECGOST3410` | `ECGOST-3410`, `GOST-3410-2001`, `GOST3411WITHECGOST3410`, `GOST3411/ECGOST3410` | `1.2.643.2.2.3` | `ecgost3410` |
+| `ECGOST3410-2012-256` | `GOST-3410-2012-256`, `GOST3411-2012-256WITHECGOST3410`, `GOST3411-2012-256/ECGOST3410` and the like | `1.2.643.7.1.1.3.2` | `ecgost3410` |
+| `ECGOST3410-2012-512` | `GOST-3410-2012-512`, `GOST3411-2012-512WITHECGOST3410`, `GOST3411-2012-512/ECGOST3410` and the like | `1.2.643.7.1.1.3.3` | `ecgost3410` |
 
 `<DIGEST>` is any name of the digest, so every row is also `SHA256withECDSA`, `SHA-256/ECDSA` and
 `ECDSAWITHSHA-256`, after the pattern of the last rows. `NONE`, with the `null-digest` feature, signs
@@ -245,6 +248,9 @@ a hash made elsewhere, as `NONEwithECDSA`.
   as BSI TR-03111 and the card-verifiable certificates of EAC have it; the two differ in their OIDs
   alone.
 - **ECNR** is Nyberg-Rueppel over the curve, in DER.
+- **ECGOST3410** is GOST R 34.10-2001 over GOST R 34.11-94, and **ECGOST3410-2012** GOST R
+  34.10-2012 over GOST R 34.11-2012 of the same size, on any curve, the GOST curves of the table
+  above among them. The digest is the scheme's own, so these rows need no digest feature.
 
 ### Params
 

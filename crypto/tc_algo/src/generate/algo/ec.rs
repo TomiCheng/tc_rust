@@ -32,9 +32,20 @@ pub(super) fn ec(context: &DefaultAlgoContext) -> Vec<Box<dyn KeyPairGeneratorEn
         "1.3.132.1.15.3",
     ];
     vec![Box::new(Row {
-        aliases: ["ECDH", "ECIES", "ECDHC", "ECMQV", "ECDSA"]
-            .map(String::from)
-            .to_vec(),
+        aliases: [
+            "ECDH",
+            "ECIES",
+            "ECDHC",
+            "ECMQV",
+            "ECDSA",
+            "ECGOST3410",
+            "ECGOST-3410",
+            "GOST-3410-2001",
+            "ECGOST3410-2012",
+            "GOST-3410-2012",
+        ]
+        .map(String::from)
+        .to_vec(),
         oids: oids
             .iter()
             .map(|dotted| dotted.parse().expect("a valid OID"))

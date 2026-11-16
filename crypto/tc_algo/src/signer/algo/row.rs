@@ -220,3 +220,22 @@ pub(super) fn oids_of<'a>(table: &[(&str, &'a [&'a str])], name: &str) -> &'a [&
         .find(|(row, _)| *row == name)
         .map_or(&[], |(_, oids)| oids)
 }
+
+// The errors of the digest signers of tc_dsa, DSA-like and GOST
+#[cfg(any(
+    feature = "dsa",
+    feature = "ecdsa",
+    feature = "ecnr",
+    feature = "ecgost3410",
+    feature = "gost3410"
+))]
+impl<E> Kind for tc_dsa::DsaDigestSignerError<E> {
+    fn kind(&self) -> ErrorKind {
+        match self {
+            tc_dsa::DsaDigestSignerError::NotInitialized
+            | tc_dsa::DsaDigestSignerError::NotForSigning
+            | tc_dsa::DsaDigestSignerError::NotForVerifying => ErrorKind::NotInitialized,
+            _ => ErrorKind::DataLength,
+        }
+    }
+}
