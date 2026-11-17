@@ -67,10 +67,11 @@ impl<C: Curve<Scalar = PaddedBigUint>> Agreement for EcMqvBasicAgreement<C> {
     type PublicKey = MqvPublicParams<C>;
     type Error = EcMqvError;
 
-    /// BC 的 `GetFieldSize`：一個座標的位元組數。`init` 之前呼叫會 panic。常數時間。
+    /// BC 的 `GetFieldSize`：一個座標的位元組數；`init` 成功之前是 0。常數時間。
     fn agreement_size(&self) -> usize {
-        let state = self.state.as_ref().expect("the agreement is initialized");
-        state.static_key.g().curve().one().encoded_length()
+        self.state
+            .as_ref()
+            .map_or(0, |state| state.static_key.g().curve().one().encoded_length())
     }
 
     /// 共享點的 x 座標，大端序寫入 `output` 的前段。對私鑰的常數時間程度同曲線的乘點。

@@ -39,10 +39,11 @@ impl<C: Curve<Scalar = PaddedBigUint>> Agreement for EcdhBasicAgreement<C> {
     type PublicKey = EcPublicKey<C>;
     type Error = EcdhError;
 
-    /// BC's `GetFieldSize`: the bytes of a coordinate. Panics before `init`.
+    /// BC's `GetFieldSize`: the bytes of a coordinate, or 0 until `init` succeeds.
     fn agreement_size(&self) -> usize {
-        let key = self.key.as_ref().expect("the agreement is initialized");
-        key.g().curve().one().encoded_length()
+        self.key
+            .as_ref()
+            .map_or(0, |key| key.g().curve().one().encoded_length())
     }
 
     /// The x coordinate of dQ, big-endian, into the front of `output`. As constant time in d

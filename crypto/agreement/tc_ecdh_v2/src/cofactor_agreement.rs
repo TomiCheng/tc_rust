@@ -42,10 +42,11 @@ impl<C: Curve<Scalar = PaddedBigUint>> Agreement for EcdhcBasicAgreement<C> {
     type PublicKey = EcPublicKey<C>;
     type Error = EcdhError;
 
-    /// BC 的 `GetFieldSize`：一個座標的位元組數。`init` 之前呼叫會 panic。常數時間。
+    /// BC 的 `GetFieldSize`：一個座標的位元組數；`init` 成功之前是 0。常數時間。
     fn agreement_size(&self) -> usize {
-        let key = self.key.as_ref().expect("the agreement is initialized");
-        key.g().curve().one().encoded_length()
+        self.key
+            .as_ref()
+            .map_or(0, |key| key.g().curve().one().encoded_length())
     }
 
     /// BC 的 `CalculateAgreementFieldElement`：對方的公鑰要在同一個網域、不是無窮遠點；

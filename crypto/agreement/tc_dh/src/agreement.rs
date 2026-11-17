@@ -93,10 +93,11 @@ impl<R: CryptoRng> DhAgreement<R> {
         Ok(public_key.y().clone())
     }
 
-    /// p 的位元組數。`init` 之前呼叫會 panic。常數時間。
+    /// p 的位元組數；`init` 成功之前是 0。常數時間。
     pub fn agreement_size(&self) -> usize {
-        let (key, _) = self.state.as_ref().expect("the agreement is initialized");
-        (key.params().p().bits() as usize).div_ceil(8)
+        self.state
+            .as_ref()
+            .map_or(0, |(key, _)| (key.params().p().bits() as usize).div_ceil(8))
     }
 
     /// BC 的 `CalculateAgreement`：對方的長期公鑰要與自己的參數相同；它與 `message` 都要

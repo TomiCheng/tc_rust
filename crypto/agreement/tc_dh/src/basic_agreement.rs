@@ -49,10 +49,11 @@ impl Agreement for DhBasicAgreement {
     type PublicKey = DhPublicKey;
     type Error = DhAgreementError;
 
-    /// BC 的 `GetFieldSize`：p 的位元組數。`init` 之前呼叫會 panic。常數時間。
+    /// BC 的 `GetFieldSize`：p 的位元組數；`init` 成功之前是 0。常數時間。
     fn agreement_size(&self) -> usize {
-        let (key, _) = self.state.as_ref().expect("the agreement is initialized");
-        (key.params().p().bits() as usize).div_ceil(8)
+        self.state
+            .as_ref()
+            .map_or(0, |(key, _)| (key.params().p().bits() as usize).div_ceil(8))
     }
 
     /// BC 的 `CalculateAgreement`：對方的參數要相同，公鑰要通過 `DhPublicKey::validate`
