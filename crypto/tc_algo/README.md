@@ -55,8 +55,8 @@ exception is `KEY`, a secret key of any length, which is always on.
   AES Key Wrap and AES Key Wrap with Padding.
 - **[KDF](docs/Kdf.md)**: derives keys from a shared secret or another key. Mainstream: HKDF over
   SHA-256. More: [HKDF](docs/HKDF-SHA256.md)
-- **KEM**: gives two sides one secret, using only the public key of one of them. Mainstream:
-  ML-KEM-768. More: [KEM](docs/KEM.md)
+- **[KEM](docs/KEM.md)**: gives two sides one secret, using only the public key of one of them.
+  Mainstream: ML-KEM-768.
 - **[Agreement](docs/Agreement.md)**: two sides, each with a key pair, reach one shared secret.
   Mainstream: X25519 and ECDH on P-256. More: [Diffie-Hellman](docs/Dh.md)
 - **[PBE](docs/Pbe.md)**: a key from a password, for encrypting with it. Mainstream: PKCS#12 with
