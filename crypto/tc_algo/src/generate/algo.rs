@@ -12,6 +12,8 @@
 mod aead;
 #[cfg(feature = "aes")]
 mod aes;
+#[cfg(any(feature = "x25519", feature = "x448"))]
+mod agreement_keys;
 #[cfg(any(
     feature = "aes",
     feature = "aria",
@@ -182,7 +184,9 @@ mod stream;
     feature = "ed25519",
     feature = "ed448",
     feature = "ml-dsa",
-    feature = "slh-dsa"
+    feature = "slh-dsa",
+    feature = "x25519",
+    feature = "x448"
 ))]
 mod with_params;
 
@@ -279,4 +283,6 @@ pub(crate) const BUILT_IN_KEY_PAIR_GENERATORS: &[CreateKeyPairGeneratorRows] = &
         feature = "slh-dsa"
     ))]
     signing_keys::signing_keys,
+    #[cfg(any(feature = "x25519", feature = "x448"))]
+    agreement_keys::agreement_keys,
 ];

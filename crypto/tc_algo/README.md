@@ -32,7 +32,7 @@ exception is `KEY`, a secret key of any length, which is always on.
   random source. Mainstream: AES-128 and AES-256.
 - **[Key pair generation](docs/KeyPairGeneration.md)**: a new public key and private key, the public
   one to share and the private one to keep. Mainstream: RSA of 2048 bits or more, EC on P-256 and
-  P-384, Ed25519, ML-KEM and ML-DSA.
+  P-384, Ed25519, X25519, ML-KEM and ML-DSA.
 - **Cipher**: keeps data secret, so that only the holder of the key reads it.
   - **[Block cipher](docs/BlockCipher.md)**: encrypts in blocks, in a mode such as CBC or CTR.
     Mainstream: AES; the others are for formats that name them.
@@ -57,7 +57,7 @@ exception is `KEY`, a secret key of any length, which is always on.
   [HKDF](docs/HKDF-SHA256.md)
 - **KEM**: gives two sides one secret, using only the public key of one of them. Mainstream:
   ML-KEM-768. More: [KEM](docs/KEM.md)
-- **Agreement**: two sides, each with a key pair, reach one shared secret. Mainstream: DH over the
-  groups of RFC 3526 and RFC 7919. More: [Diffie-Hellman](docs/Dh.md)
+- **[Agreement](docs/Agreement.md)**: two sides, each with a key pair, reach one shared secret.
+  Mainstream: X25519 and ECDH on P-256. More: [Diffie-Hellman](docs/Dh.md)
 - **PBE**: a key from a password, for encrypting with it. Mainstream: PKCS#12 with SHA-256 and
   AES-CBC. More: [PBE](docs/Pbe.md)

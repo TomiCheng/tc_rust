@@ -41,6 +41,8 @@ fn main() -> Result<(), AlgoError> {
 | [`SM2`](Sm2.md) |  |  | `sm2` | none | `Sm2PublicKey` | `Sm2PrivateKey` |
 | [`Ed25519`](EdDSA.md) | `Ed25519ctx`, `Ed25519ph` | `1.3.101.112` | `ed25519` | none | `Ed25519PublicKey` | `Ed25519PrivateKey` |
 | [`Ed448`](EdDSA.md) | `Ed448ph` | `1.3.101.113` | `ed448` | none | `Ed448PublicKey` | `Ed448PrivateKey` |
+| [`X25519`](Agreement.md) |  | `1.3.101.110` | `x25519` | none | `X25519PublicKey` | `X25519PrivateKey` |
+| [`X448`](Agreement.md) |  | `1.3.101.111` | `x448` | none | `X448PublicKey` | `X448PrivateKey` |
 | [`ML-DSA`](MlDsa.md) |  |  | `ml-dsa` | `MlDsaParameters` | `MlDsaPublicKey` | `MlDsaPrivateKey` |
 | [`SLH-DSA`](SlhDsa.md) |  |  | `slh-dsa` | `SlhDsaParameters` | `SlhDsaPublicKey` | `SlhDsaPrivateKey` |
 | [`DSA`](Dsa.md) |  |  | `dsa` | `DsaKeyGenParams`, `DsaParameters` | `DsaPublicKey` | `DsaPrivateKey` |
@@ -51,13 +53,13 @@ Naccache-Stern and SM2, which it has no names for. The case of a name does not m
 
 ## Params
 
-- Every row but `SM2`, `Ed25519` and `Ed448` needs `init`, since none has params to assume: the
-  size of an RSA key, the curve of an EC key, the group of DH and ElGamal, the domain of DSA and GOST
-  R 34.10-94, the parameter set of ML-KEM, ML-DSA and SLH-DSA. `generate_by_name`
+- Every row but `SM2`, `Ed25519`, `Ed448`, `X25519` and `X448` needs `init`, since none has params
+  to assume: the size of an RSA key, the curve of an EC key, the group of DH and ElGamal, the domain
+  of DSA and GOST R 34.10-94, the parameter set of ML-KEM, ML-DSA and SLH-DSA. `generate_by_name`
   gives `NotInitialized` there, so use `generate_by_name_with`, or `get_by_name`, `init` and
   `generate`.
-- `SM2`, `Ed25519` and `Ed448` have their curves fixed: `generate_by_name` gives a pair at once,
-  and `init` refuses any params as `InvalidParams`.
+- `SM2`, `Ed25519`, `Ed448`, `X25519` and `X448` have their curves fixed: `generate_by_name` gives a
+  pair at once, and `init` refuses any params as `InvalidParams`.
 - `DSA` and `GOST3410` take either a domain, or the size of a new one to generate at `init`, which
   takes a while; one `init` serves any number of pairs.
 - `init` has the crate underneath judge the params, so a bad one is `InvalidParams` there and not at

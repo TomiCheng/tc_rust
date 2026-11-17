@@ -1,3 +1,4 @@
+#![cfg_attr(feature = "ecdh", doc = include_str!("../docs/Agreement.md"))]
 #![cfg_attr(feature = "dh", doc = include_str!("../docs/Dh.md"))]
 
 mod agreement_entry;
