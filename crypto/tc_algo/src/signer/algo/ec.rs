@@ -6,19 +6,6 @@ use tc_bigint::PaddedBigUint;
 use tc_dsa::DsaDigestSigner;
 use tc_ec_core::Curve;
 use tc_ec_key::{EcPrivateKey, EcPublicKey};
-use tc_f2m_curve::F2mCtCurve;
-use tc_f2m_custom::{
-    SecT113FieldElement, SecT131FieldElement, SecT163FieldElement, SecT193FieldElement,
-    SecT233FieldElement, SecT239FieldElement, SecT283FieldElement, SecT409FieldElement,
-    SecT571FieldElement, SecTCtCurve,
-};
-use tc_fp_curve::FpCtCurve;
-use tc_fp_custom::{
-    SM2P256V1FieldElement, SecP128R1FieldElement, SecP160R1FieldElement, SecP160R2FieldElement,
-    SecP192K1FieldElement, SecP192R1FieldElement, SecP224K1FieldElement, SecP224R1FieldElement,
-    SecP256K1FieldElement, SecP256R1FieldElement, SecP384R1FieldElement, SecP521R1FieldElement,
-    SecPCtCurve,
-};
 
 #[cfg(any(feature = "ecdsa", feature = "ecnr"))]
 use super::digest_dsa::{Spec, k, row};
@@ -36,38 +23,7 @@ use crate::{AlgoError, DefaultAlgoContext, Params};
 
 type Rand = fn() -> Box<dyn rand_core::CryptoRng>;
 
-// The curve types the rows take: the generic ones of tc_fp_curve and tc_f2m_curve, which hold any
-// prime or binary curve, and the special ones of tc_fp_custom and tc_f2m_custom, those of the keys
-// of the EC key pair generator
-macro_rules! curves {
-    ($on:ident) => {
-        &[
-            $on::<&'static FpCtCurve<'static>>,
-            $on::<&'static F2mCtCurve>,
-            $on::<&'static SecPCtCurve<SecP128R1FieldElement>>,
-            $on::<&'static SecPCtCurve<SecP160R1FieldElement>>,
-            $on::<&'static SecPCtCurve<SecP160R2FieldElement>>,
-            $on::<&'static SecPCtCurve<SecP192K1FieldElement>>,
-            $on::<&'static SecPCtCurve<SecP192R1FieldElement>>,
-            $on::<&'static SecPCtCurve<SecP224K1FieldElement>>,
-            $on::<&'static SecPCtCurve<SecP224R1FieldElement>>,
-            $on::<&'static SecPCtCurve<SecP256K1FieldElement>>,
-            $on::<&'static SecPCtCurve<SecP256R1FieldElement>>,
-            $on::<&'static SecPCtCurve<SecP384R1FieldElement>>,
-            $on::<&'static SecPCtCurve<SecP521R1FieldElement>>,
-            $on::<&'static SecPCtCurve<SM2P256V1FieldElement>>,
-            $on::<&'static SecTCtCurve<SecT113FieldElement>>,
-            $on::<&'static SecTCtCurve<SecT131FieldElement>>,
-            $on::<&'static SecTCtCurve<SecT163FieldElement>>,
-            $on::<&'static SecTCtCurve<SecT193FieldElement>>,
-            $on::<&'static SecTCtCurve<SecT233FieldElement>>,
-            $on::<&'static SecTCtCurve<SecT239FieldElement>>,
-            $on::<&'static SecTCtCurve<SecT283FieldElement>>,
-            $on::<&'static SecTCtCurve<SecT409FieldElement>>,
-            $on::<&'static SecTCtCurve<SecT571FieldElement>>,
-        ]
-    };
-}
+use crate::params::ec_curves::ct_curves as curves;
 
 // The OIDs of Bouncy Castle's SignerUtilities, by the name of the row
 #[cfg(feature = "ecdsa")]

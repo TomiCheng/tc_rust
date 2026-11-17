@@ -1,6 +1,7 @@
 use core::iter;
 
 use tc_asn1::Asn1Oid;
+use tc_asn1_x509::alg::AlgorithmIdentifier;
 
 use crate::agreement::{Agreement, AgreementEntry, AgreementProvider};
 use crate::{AlgoError, ErrorKind};
@@ -17,6 +18,22 @@ impl AgreementProvider for EmptyAgreementProvider {
     }
 
     fn get_by_oid(&self, _oid: &Asn1Oid) -> Result<Box<dyn Agreement>, AlgoError> {
+        Err(AlgoError::new(ErrorKind::UnknownAgreement))
+    }
+
+    fn get_with_kdf_by_name(
+        &self,
+        _name: &str,
+        _wrap: &AlgorithmIdentifier,
+    ) -> Result<Box<dyn Agreement>, AlgoError> {
+        Err(AlgoError::new(ErrorKind::UnknownAgreement))
+    }
+
+    fn get_with_kdf_by_oid(
+        &self,
+        _oid: &Asn1Oid,
+        _wrap: &AlgorithmIdentifier,
+    ) -> Result<Box<dyn Agreement>, AlgoError> {
         Err(AlgoError::new(ErrorKind::UnknownAgreement))
     }
 }

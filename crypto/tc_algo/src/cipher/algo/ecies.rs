@@ -6,19 +6,6 @@ use tc_bigint::PaddedBigUint;
 use tc_ec_core::Curve;
 use tc_ec_key::{EcPrivateKey, EcPublicKey};
 use tc_ecdh_v2::EcdhBasicAgreement;
-use tc_f2m_curve::F2mCtCurve;
-use tc_f2m_custom::{
-    SecT113FieldElement, SecT131FieldElement, SecT163FieldElement, SecT193FieldElement,
-    SecT233FieldElement, SecT239FieldElement, SecT283FieldElement, SecT409FieldElement,
-    SecT571FieldElement, SecTCtCurve,
-};
-use tc_fp_curve::FpCtCurve;
-use tc_fp_custom::{
-    SM2P256V1FieldElement, SecP128R1FieldElement, SecP160R1FieldElement, SecP160R2FieldElement,
-    SecP192K1FieldElement, SecP192R1FieldElement, SecP224K1FieldElement, SecP224R1FieldElement,
-    SecP256K1FieldElement, SecP256R1FieldElement, SecP384R1FieldElement, SecP521R1FieldElement,
-    SecPCtCurve,
-};
 use tc_ies::{IesEngine, IesError, IesParamsRef};
 use tc_kdf::kdf::Kdf2;
 use tc_macs::Hmac;
@@ -27,6 +14,7 @@ use tc_sha::Sha1Digest;
 use super::ies::{Ies, IesInit};
 use crate::cipher::{Cipher, CipherDirection, CipherEntry};
 use crate::params::IesEcParams;
+use crate::params::ec_curves::ct_curves;
 use crate::{AlgoError, DefaultAlgoContext, EntryBase, ErrorKind, Params};
 
 // The row of ECIES, to give to DefaultAlgoBuilder::reg_cipher. Its name and parts are those of
@@ -70,34 +58,8 @@ struct EcIes(Option<Box<dyn Process>>);
 
 type Try = fn(CipherDirection, &IesEcParams) -> Option<Result<Box<dyn Process>, AlgoError>>;
 
-// The curve types the row takes: the generic ones of tc_fp_curve and tc_f2m_curve, which hold any
-// prime or binary curve, and the special ones of tc_fp_custom and tc_f2m_custom, those of the keys
-// of the EC key pair generator
-const CURVES: &[Try] = &[
-    engine::<&'static FpCtCurve<'static>>,
-    engine::<&'static F2mCtCurve>,
-    engine::<&'static SecPCtCurve<SecP128R1FieldElement>>,
-    engine::<&'static SecPCtCurve<SecP160R1FieldElement>>,
-    engine::<&'static SecPCtCurve<SecP160R2FieldElement>>,
-    engine::<&'static SecPCtCurve<SecP192K1FieldElement>>,
-    engine::<&'static SecPCtCurve<SecP192R1FieldElement>>,
-    engine::<&'static SecPCtCurve<SecP224K1FieldElement>>,
-    engine::<&'static SecPCtCurve<SecP224R1FieldElement>>,
-    engine::<&'static SecPCtCurve<SecP256K1FieldElement>>,
-    engine::<&'static SecPCtCurve<SecP256R1FieldElement>>,
-    engine::<&'static SecPCtCurve<SecP384R1FieldElement>>,
-    engine::<&'static SecPCtCurve<SecP521R1FieldElement>>,
-    engine::<&'static SecPCtCurve<SM2P256V1FieldElement>>,
-    engine::<&'static SecTCtCurve<SecT113FieldElement>>,
-    engine::<&'static SecTCtCurve<SecT131FieldElement>>,
-    engine::<&'static SecTCtCurve<SecT163FieldElement>>,
-    engine::<&'static SecTCtCurve<SecT193FieldElement>>,
-    engine::<&'static SecTCtCurve<SecT233FieldElement>>,
-    engine::<&'static SecTCtCurve<SecT239FieldElement>>,
-    engine::<&'static SecTCtCurve<SecT283FieldElement>>,
-    engine::<&'static SecTCtCurve<SecT409FieldElement>>,
-    engine::<&'static SecTCtCurve<SecT571FieldElement>>,
-];
+// The curve types the row takes, those of the EC keys
+const CURVES: &[Try] = ct_curves!(engine);
 
 // The engine over the curve C, initialized, when the private key is on C; None when it is not
 fn engine<C>(

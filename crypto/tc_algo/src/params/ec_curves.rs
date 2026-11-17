@@ -1202,3 +1202,37 @@ pub(crate) const CURVES: &[NamedCurve] = &[
         generate: |rand| key_pair::<&'static F2mCtCurve>(dstu4145_431(), rand),
     },
 ];
+
+// The curve types that take EC keys: the generic ones of tc_fp_curve and tc_f2m_curve, which hold
+// any prime or binary curve, and the special ones of tc_fp_custom and tc_f2m_custom, those of the
+// keys of the EC key pair generator. It gives `$on::<C>` for each of them
+macro_rules! ct_curves {
+    ($on:ident) => {
+        &[
+            $on::<&'static ::tc_fp_curve::FpCtCurve<'static>>,
+            $on::<&'static ::tc_f2m_curve::F2mCtCurve>,
+            $on::<&'static ::tc_fp_custom::SecPCtCurve<::tc_fp_custom::SecP128R1FieldElement>>,
+            $on::<&'static ::tc_fp_custom::SecPCtCurve<::tc_fp_custom::SecP160R1FieldElement>>,
+            $on::<&'static ::tc_fp_custom::SecPCtCurve<::tc_fp_custom::SecP160R2FieldElement>>,
+            $on::<&'static ::tc_fp_custom::SecPCtCurve<::tc_fp_custom::SecP192K1FieldElement>>,
+            $on::<&'static ::tc_fp_custom::SecPCtCurve<::tc_fp_custom::SecP192R1FieldElement>>,
+            $on::<&'static ::tc_fp_custom::SecPCtCurve<::tc_fp_custom::SecP224K1FieldElement>>,
+            $on::<&'static ::tc_fp_custom::SecPCtCurve<::tc_fp_custom::SecP224R1FieldElement>>,
+            $on::<&'static ::tc_fp_custom::SecPCtCurve<::tc_fp_custom::SecP256K1FieldElement>>,
+            $on::<&'static ::tc_fp_custom::SecPCtCurve<::tc_fp_custom::SecP256R1FieldElement>>,
+            $on::<&'static ::tc_fp_custom::SecPCtCurve<::tc_fp_custom::SecP384R1FieldElement>>,
+            $on::<&'static ::tc_fp_custom::SecPCtCurve<::tc_fp_custom::SecP521R1FieldElement>>,
+            $on::<&'static ::tc_fp_custom::SecPCtCurve<::tc_fp_custom::SM2P256V1FieldElement>>,
+            $on::<&'static ::tc_f2m_custom::SecTCtCurve<::tc_f2m_custom::SecT113FieldElement>>,
+            $on::<&'static ::tc_f2m_custom::SecTCtCurve<::tc_f2m_custom::SecT131FieldElement>>,
+            $on::<&'static ::tc_f2m_custom::SecTCtCurve<::tc_f2m_custom::SecT163FieldElement>>,
+            $on::<&'static ::tc_f2m_custom::SecTCtCurve<::tc_f2m_custom::SecT193FieldElement>>,
+            $on::<&'static ::tc_f2m_custom::SecTCtCurve<::tc_f2m_custom::SecT233FieldElement>>,
+            $on::<&'static ::tc_f2m_custom::SecTCtCurve<::tc_f2m_custom::SecT239FieldElement>>,
+            $on::<&'static ::tc_f2m_custom::SecTCtCurve<::tc_f2m_custom::SecT283FieldElement>>,
+            $on::<&'static ::tc_f2m_custom::SecTCtCurve<::tc_f2m_custom::SecT409FieldElement>>,
+            $on::<&'static ::tc_f2m_custom::SecTCtCurve<::tc_f2m_custom::SecT571FieldElement>>,
+        ]
+    };
+}
+pub(crate) use ct_curves;

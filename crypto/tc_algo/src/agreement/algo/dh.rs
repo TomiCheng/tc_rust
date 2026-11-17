@@ -28,11 +28,11 @@ impl EntryBase for Row {
 }
 
 impl AgreementEntry for Row {
-    fn create(&self) -> Box<dyn Agreement> {
-        Box::new(Dh {
+    fn create(&self) -> Option<Box<dyn Agreement>> {
+        Some(Box::new(Dh {
             agreement: DhBasicAgreement::new(),
             size: None,
-        })
+        }))
     }
 }
 

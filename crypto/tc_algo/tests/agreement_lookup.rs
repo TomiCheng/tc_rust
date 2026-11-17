@@ -28,8 +28,8 @@ impl EntryBase for Row {
 }
 
 impl AgreementEntry for Row {
-    fn create(&self) -> Box<dyn Agreement> {
-        Box::new(Marked(self.mark))
+    fn create(&self) -> Option<Box<dyn Agreement>> {
+        Some(Box::new(Marked(self.mark)))
     }
 }
 

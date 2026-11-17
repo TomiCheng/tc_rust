@@ -135,6 +135,8 @@ pub use tc_aead_cipher::AeadParamsOwned;
     feature = "threefish-1024"
 ))]
 pub use tc_aead_cipher::ParamsWithAeadOwned;
+#[cfg(any(feature = "ecdh", feature = "ecdhc", feature = "ecmqv"))]
+pub use tc_agreement_kdf::UkmParams;
 pub use tc_block_cipher::{KeyOwned, KeyParams};
 #[cfg(any(
     feature = "rc2",
@@ -205,6 +207,10 @@ pub use tc_block_modes::{IvParams, KeyWithIvOwned};
 pub use tc_cfrg_curves::{Ed448PrivateKey, Ed448PublicKey};
 #[cfg(feature = "ed25519")]
 pub use tc_cfrg_curves::{Ed25519PrivateKey, Ed25519PublicKey};
+#[cfg(feature = "x448")]
+pub use tc_cfrg_curves::{X448PrivateKey, X448PublicKey};
+#[cfg(feature = "x25519")]
+pub use tc_cfrg_curves::{X25519PrivateKey, X25519PublicKey};
 #[cfg(any(feature = "dh", feature = "elgamal"))]
 pub use tc_dh_key::DhParameters;
 #[cfg(any(feature = "dh", feature = "elgamal"))]
@@ -215,6 +221,10 @@ pub use tc_dh_key::{DhPrivateKey, DhPublicKey};
 pub use tc_dsa_key::{DsaParameters, DsaPrivateKey, DsaPublicKey};
 #[cfg(any(feature = "ec", feature = "sm2"))]
 pub use tc_ec_key::{EcPrivateKey, EcPublicKey};
+#[cfg(feature = "ecmqv")]
+pub use tc_ecmqv::{MqvPrivateParams, MqvPublicParams};
+#[cfg(feature = "ecgost3410")]
+pub use tc_ecvko::EcVkoParams;
 #[cfg(feature = "elgamal")]
 pub use tc_elgamal::{ElGamalParameters, ElGamalPrivateKey, ElGamalPublicKey};
 #[cfg(feature = "gost3410")]
@@ -618,6 +628,76 @@ impl Params for Ed448PrivateKey {
 
 #[cfg(feature = "ed448")]
 impl Params for Ed448PublicKey {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
+#[cfg(feature = "x25519")]
+impl Params for X25519PrivateKey {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
+#[cfg(feature = "x25519")]
+impl Params for X25519PublicKey {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
+#[cfg(feature = "x448")]
+impl Params for X448PrivateKey {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
+#[cfg(feature = "x448")]
+impl Params for X448PublicKey {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
+// A private key of an agreement with a KDF, with the UKM the KDF takes, as Bouncy Castle's
+// ParametersWithUkm wraps it
+#[cfg(any(feature = "ecdh", feature = "ecdhc", feature = "ecmqv"))]
+impl<P: Send + Sync + 'static> Params for UkmParams<P> {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
+#[cfg(feature = "ecmqv")]
+impl<C> Params for MqvPrivateParams<C>
+where
+    C: tc_ec_core::Curve<Scalar = tc_bigint::PaddedBigUint> + 'static,
+    MqvPrivateParams<C>: Send + Sync,
+{
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
+#[cfg(feature = "ecmqv")]
+impl<C> Params for MqvPublicParams<C>
+where
+    C: tc_ec_core::Curve + 'static,
+    MqvPublicParams<C>: Send + Sync,
+{
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
+#[cfg(feature = "ecgost3410")]
+impl<C> Params for EcVkoParams<C>
+where
+    C: tc_ec_core::Curve<Scalar = tc_bigint::PaddedBigUint> + 'static,
+    EcVkoParams<C>: Send + Sync,
+{
     fn as_any(&self) -> &dyn Any {
         self
     }
