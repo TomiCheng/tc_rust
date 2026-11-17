@@ -234,6 +234,12 @@ pub use tc_gost3410_key::{Gost3410Parameters, Gost3410PrivateKey, Gost3410Public
 pub use tc_gost28147::{Gost28147Params, Gost28147ParamsOwned, s_box as gost28147_s_box};
 #[cfg(feature = "hkdf")]
 pub use tc_kdf::hkdf::HkdfParamsOwned;
+#[cfg(any(feature = "kdf1", feature = "kdf2", feature = "concat-kdf"))]
+pub use tc_kdf::kdf::KdfParamsOwned;
+#[cfg(feature = "sp800-108")]
+pub use tc_kdf::sp800_108::{
+    KdfCounterParamsOwned, KdfDoublePipelineParamsOwned, KdfFeedbackParamsOwned,
+};
 #[cfg(feature = "ml-dsa")]
 pub use tc_ml_dsa::{MlDsaParameters, MlDsaPrivateKey, MlDsaPublicKey};
 #[cfg(feature = "ml-kem")]
@@ -444,6 +450,34 @@ impl Params for AeadParamsOwned {
 
 #[cfg(feature = "hkdf")]
 impl Params for HkdfParamsOwned {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
+#[cfg(any(feature = "kdf1", feature = "kdf2", feature = "concat-kdf"))]
+impl Params for KdfParamsOwned {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
+#[cfg(feature = "sp800-108")]
+impl Params for KdfCounterParamsOwned {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
+#[cfg(feature = "sp800-108")]
+impl Params for KdfFeedbackParamsOwned {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
+#[cfg(feature = "sp800-108")]
+impl Params for KdfDoublePipelineParamsOwned {
     fn as_any(&self) -> &dyn Any {
         self
     }

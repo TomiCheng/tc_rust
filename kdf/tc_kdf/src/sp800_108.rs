@@ -7,6 +7,7 @@ mod double_pipeline;
 mod feedback;
 mod init_error;
 mod params;
+mod params_owned;
 mod params_ref;
 
 pub use counter::KdfCounter;
@@ -14,4 +15,7 @@ pub use double_pipeline::KdfDoublePipeline;
 pub use feedback::KdfFeedback;
 pub use init_error::KdfInitError;
 pub use params::{KdfCounterParams, KdfDoublePipelineParams, KdfFeedbackParams};
+pub use params_owned::{
+    KdfCounterParamsOwned, KdfDoublePipelineParamsOwned, KdfFeedbackParamsOwned,
+};
 pub use params_ref::{KdfCounterParamsRef, KdfDoublePipelineParamsRef, KdfFeedbackParamsRef};

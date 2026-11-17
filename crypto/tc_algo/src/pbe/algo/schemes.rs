@@ -71,7 +71,11 @@ pub(super) fn schemes(_context: &DefaultAlgoContext) -> Vec<Box<dyn PbeEntry>> {
     #[cfg(all(feature = "sha1", feature = "des"))]
     rows.push(cipher(
         "PBEwithSHA-1andDES-CBC",
-        &["PBEWITHSHA1ANDDES", "PBEWITHSHA-1ANDDES", "PBEWITHSHA1ANDDES-CBC"],
+        &[
+            "PBEWITHSHA1ANDDES",
+            "PBEWITHSHA-1ANDDES",
+            "PBEWITHSHA1ANDDES-CBC",
+        ],
         &["1.2.840.113549.1.5.10"],
         Scheme::Pkcs5S1,
         sha1,
@@ -81,7 +85,11 @@ pub(super) fn schemes(_context: &DefaultAlgoContext) -> Vec<Box<dyn PbeEntry>> {
     #[cfg(all(feature = "sha1", feature = "rc2"))]
     rows.push(cipher(
         "PBEwithSHA-1andRC2-CBC",
-        &["PBEWITHSHA1ANDRC2", "PBEWITHSHA-1ANDRC2", "PBEWITHSHA1ANDRC2-CBC"],
+        &[
+            "PBEWITHSHA1ANDRC2",
+            "PBEWITHSHA-1ANDRC2",
+            "PBEWITHSHA1ANDRC2-CBC",
+        ],
         &["1.2.840.113549.1.5.11"],
         Scheme::Pkcs5S1,
         sha1,
@@ -165,7 +173,10 @@ pub(super) fn schemes(_context: &DefaultAlgoContext) -> Vec<Box<dyn PbeEntry>> {
     #[cfg(all(feature = "sha1", feature = "aes"))]
     rows.push(cipher(
         "PBEwithSHA-1and128bitAES-CBC-BC",
-        &["PBEWITHSHAAND128BITAES-CBC-BC", "PBEWITHSHA1AND128BITAES-CBC-BC"],
+        &[
+            "PBEWITHSHAAND128BITAES-CBC-BC",
+            "PBEWITHSHA1AND128BITAES-CBC-BC",
+        ],
         &["1.3.6.1.4.1.22554.1.1.2.1.2"],
         Scheme::Pkcs12,
         sha1,
@@ -175,7 +186,10 @@ pub(super) fn schemes(_context: &DefaultAlgoContext) -> Vec<Box<dyn PbeEntry>> {
     #[cfg(all(feature = "sha1", feature = "aes"))]
     rows.push(cipher(
         "PBEwithSHA-1and192bitAES-CBC-BC",
-        &["PBEWITHSHAAND192BITAES-CBC-BC", "PBEWITHSHA1AND192BITAES-CBC-BC"],
+        &[
+            "PBEWITHSHAAND192BITAES-CBC-BC",
+            "PBEWITHSHA1AND192BITAES-CBC-BC",
+        ],
         &["1.3.6.1.4.1.22554.1.1.2.1.22"],
         Scheme::Pkcs12,
         sha1,
@@ -185,7 +199,10 @@ pub(super) fn schemes(_context: &DefaultAlgoContext) -> Vec<Box<dyn PbeEntry>> {
     #[cfg(all(feature = "sha1", feature = "aes"))]
     rows.push(cipher(
         "PBEwithSHA-1and256bitAES-CBC-BC",
-        &["PBEWITHSHAAND256BITAES-CBC-BC", "PBEWITHSHA1AND256BITAES-CBC-BC"],
+        &[
+            "PBEWITHSHAAND256BITAES-CBC-BC",
+            "PBEWITHSHA1AND256BITAES-CBC-BC",
+        ],
         &["1.3.6.1.4.1.22554.1.1.2.1.42"],
         Scheme::Pkcs12,
         sha1,
@@ -337,7 +354,10 @@ pub(super) fn schemes(_context: &DefaultAlgoContext) -> Vec<Box<dyn PbeEntry>> {
 }
 
 // The generator a scheme derives with, and how it turns the password into bytes
-#[allow(dead_code, reason = "a scheme whose digests and ciphers are off has no row")]
+#[allow(
+    dead_code,
+    reason = "a scheme whose digests and ciphers are off has no row"
+)]
 #[derive(Clone, Copy)]
 enum Scheme {
     Pkcs5S1,
@@ -378,8 +398,14 @@ impl Target {
 
 #[derive(Clone, Copy)]
 enum Purpose {
-    Cipher { target: Target, key_bytes: usize },
-    Mac { target: &'static str, key_bytes: usize },
+    Cipher {
+        target: Target,
+        key_bytes: usize,
+    },
+    Mac {
+        target: &'static str,
+        key_bytes: usize,
+    },
 }
 
 #[allow(dead_code, reason = "unused when no cipher is on")]
@@ -711,16 +737,46 @@ mod tests {
             ("PBEwithSHA-1andRC2-CBC", Some("1.2.840.113549.1.5.11")),
             ("PBEwithSHA-1and128bitRC4", Some("1.2.840.113549.1.12.1.1")),
             ("PBEwithSHA-1and40bitRC4", Some("1.2.840.113549.1.12.1.2")),
-            ("PBEwithSHA-1and3-keyDESEDE-CBC", Some("1.2.840.113549.1.12.1.3")),
-            ("PBEwithSHA-1and2-keyDESEDE-CBC", Some("1.2.840.113549.1.12.1.4")),
-            ("PBEwithSHA-1and128bitRC2-CBC", Some("1.2.840.113549.1.12.1.5")),
-            ("PBEwithSHA-1and40bitRC2-CBC", Some("1.2.840.113549.1.12.1.6")),
-            ("PBEwithSHA-1and128bitAES-CBC-BC", Some("1.3.6.1.4.1.22554.1.1.2.1.2")),
-            ("PBEwithSHA-1and192bitAES-CBC-BC", Some("1.3.6.1.4.1.22554.1.1.2.1.22")),
-            ("PBEwithSHA-1and256bitAES-CBC-BC", Some("1.3.6.1.4.1.22554.1.1.2.1.42")),
-            ("PBEwithSHA-256and128bitAES-CBC-BC", Some("1.3.6.1.4.1.22554.1.2.1.2.1.2")),
-            ("PBEwithSHA-256and192bitAES-CBC-BC", Some("1.3.6.1.4.1.22554.1.2.1.2.1.22")),
-            ("PBEwithSHA-256and256bitAES-CBC-BC", Some("1.3.6.1.4.1.22554.1.2.1.2.1.42")),
+            (
+                "PBEwithSHA-1and3-keyDESEDE-CBC",
+                Some("1.2.840.113549.1.12.1.3"),
+            ),
+            (
+                "PBEwithSHA-1and2-keyDESEDE-CBC",
+                Some("1.2.840.113549.1.12.1.4"),
+            ),
+            (
+                "PBEwithSHA-1and128bitRC2-CBC",
+                Some("1.2.840.113549.1.12.1.5"),
+            ),
+            (
+                "PBEwithSHA-1and40bitRC2-CBC",
+                Some("1.2.840.113549.1.12.1.6"),
+            ),
+            (
+                "PBEwithSHA-1and128bitAES-CBC-BC",
+                Some("1.3.6.1.4.1.22554.1.1.2.1.2"),
+            ),
+            (
+                "PBEwithSHA-1and192bitAES-CBC-BC",
+                Some("1.3.6.1.4.1.22554.1.1.2.1.22"),
+            ),
+            (
+                "PBEwithSHA-1and256bitAES-CBC-BC",
+                Some("1.3.6.1.4.1.22554.1.1.2.1.42"),
+            ),
+            (
+                "PBEwithSHA-256and128bitAES-CBC-BC",
+                Some("1.3.6.1.4.1.22554.1.2.1.2.1.2"),
+            ),
+            (
+                "PBEwithSHA-256and192bitAES-CBC-BC",
+                Some("1.3.6.1.4.1.22554.1.2.1.2.1.22"),
+            ),
+            (
+                "PBEwithSHA-256and256bitAES-CBC-BC",
+                Some("1.3.6.1.4.1.22554.1.2.1.2.1.42"),
+            ),
             ("PBEwithMD5and128bitAES-CBC-OpenSSL", None),
             ("PBEwithMD5and192bitAES-CBC-OpenSSL", None),
             ("PBEwithMD5and256bitAES-CBC-OpenSSL", None),
@@ -781,7 +837,12 @@ mod tests {
         }
     }
 
-    #[cfg(all(feature = "sha1", feature = "rc4", feature = "hmac", feature = "sha512"))]
+    #[cfg(all(
+        feature = "sha1",
+        feature = "rc4",
+        feature = "hmac",
+        feature = "sha512"
+    ))]
     #[test]
     fn rc4_takes_a_key_alone_and_hmac_a_key_as_long_as_the_digest() {
         let algo = DefaultAlgoBuilder::default().build();

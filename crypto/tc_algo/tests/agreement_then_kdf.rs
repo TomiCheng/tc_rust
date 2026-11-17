@@ -1,4 +1,4 @@
-#![cfg(all(feature = "dh", feature = "hkdf-sha256"))]
+#![cfg(all(feature = "dh", feature = "hkdf", feature = "sha256"))]
 
 use tc_algo::params::HkdfParamsOwned;
 use tc_algo::params::dh_groups::rfc3526_2048;

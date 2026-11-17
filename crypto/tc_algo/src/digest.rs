@@ -28,7 +28,11 @@ mod empty_digest_provider;
     feature = "rsa",
     feature = "dsa",
     feature = "ecdsa",
-    feature = "ecnr"
+    feature = "ecnr",
+    feature = "hkdf",
+    feature = "kdf1",
+    feature = "kdf2",
+    feature = "concat-kdf"
 ))]
 mod row_digest;
 
@@ -44,7 +48,11 @@ pub(crate) use empty_digest_provider::EmptyDigestProvider;
     feature = "rsa",
     feature = "dsa",
     feature = "ecdsa",
-    feature = "ecnr"
+    feature = "ecnr",
+    feature = "hkdf",
+    feature = "kdf1",
+    feature = "kdf2",
+    feature = "concat-kdf"
 ))]
 pub(crate) use row_digest::RowDigest;
 pub use tc_digest::TryDigest;

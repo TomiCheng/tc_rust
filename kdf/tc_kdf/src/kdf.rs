@@ -4,9 +4,11 @@
 mod base_kdf;
 mod concatenation_kdf;
 mod params;
+mod params_owned;
 mod params_ref;
 
 pub use base_kdf::{BaseKdf, Kdf1, Kdf2};
 pub use concatenation_kdf::ConcatenationKdf;
 pub use params::KdfParams;
+pub use params_owned::KdfParamsOwned;
 pub use params_ref::KdfParamsRef;

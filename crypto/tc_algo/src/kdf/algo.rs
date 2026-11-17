@@ -1,5 +1,20 @@
-#[cfg(feature = "hkdf")]
-mod hkdf;
+#[cfg(any(
+    feature = "hkdf",
+    feature = "kdf1",
+    feature = "kdf2",
+    feature = "concat-kdf"
+))]
+mod digest;
+#[cfg(feature = "sp800-108")]
+mod sp800_108;
+#[cfg(any(
+    feature = "hkdf",
+    feature = "kdf1",
+    feature = "kdf2",
+    feature = "concat-kdf",
+    feature = "sp800-108"
+))]
+mod typed;
 
 use super::KdfEntry;
 
@@ -7,10 +22,13 @@ pub(crate) type CreateRows = fn(&crate::DefaultAlgoContext) -> Vec<Box<dyn KdfEn
 
 // What DefaultAlgoBuilder starts with: the rows of the KDFs whose features are on
 pub(crate) const BUILT_IN: &[CreateRows] = &[
-    #[cfg(feature = "hkdf-sha256")]
-    hkdf::hkdf_sha256,
-    #[cfg(feature = "hkdf-sha384")]
-    hkdf::hkdf_sha384,
-    #[cfg(feature = "hkdf-sha512")]
-    hkdf::hkdf_sha512,
+    #[cfg(any(
+        feature = "hkdf",
+        feature = "kdf1",
+        feature = "kdf2",
+        feature = "concat-kdf"
+    ))]
+    digest::digest,
+    #[cfg(feature = "sp800-108")]
+    sp800_108::sp800_108,
 ];

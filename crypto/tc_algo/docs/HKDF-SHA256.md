@@ -5,7 +5,8 @@ is not a key yet, and one secret may need to become several keys. HKDF (RFC 5869
 extracts a pseudorandom key from the secret, and expands that into as many bytes as asked for. It
 always runs over HMAC, so a row names only the digest.
 
-With SHA-256. The `hkdf-sha256` feature of `tc_algo` has the row.
+With SHA-256. The `hkdf` and `sha256` features of `tc_algo` have the row. [KDFs](Kdf.md) has the
+other functions.
 
 ```rust
 use tc_algo::params::HkdfParamsOwned;
@@ -51,12 +52,14 @@ The secret moves into the params, which wipe it when they are dropped.
 
 | Name | OID | Feature | Most bytes |
 |---|---|---|---|
-| `HKDF-SHA256` | `1.2.840.113549.1.9.16.3.28` | `hkdf-sha256` | 8160 |
-| `HKDF-SHA384` | `1.2.840.113549.1.9.16.3.29` | `hkdf-sha384` | 12240 |
-| `HKDF-SHA512` | `1.2.840.113549.1.9.16.3.30` | `hkdf-sha512` | 16320 |
+| `HKDF-SHA256` | `1.2.840.113549.1.9.16.3.28` | `hkdf`, `sha256` | 8160 |
+| `HKDF-SHA384` | `1.2.840.113549.1.9.16.3.29` | `hkdf`, `sha384` | 12240 |
+| `HKDF-SHA512` | `1.2.840.113549.1.9.16.3.30` | `hkdf`, `sha512` | 16320 |
 
-The case of a name does not matter. The OIDs are those of RFC 8619. Bouncy Castle has no factory of
-KDFs, so the names are this crate's own.
+HKDF over every other digest that HMAC takes is there too, without an OID, as `HKDF-SHA3-256` with
+the `hkdf` and `sha3-256` features; it gives at most 255 of its hashes. The case of a name does not
+matter, and the digest's other names work too, as `HKDF-SHA-256`. The OIDs are those of RFC 8619.
+Bouncy Castle has no factory of KDFs, so the names are this crate's own.
 
 ## Params
 

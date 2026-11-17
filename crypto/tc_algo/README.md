@@ -53,8 +53,8 @@ exception is `KEY`, a secret key of any length, which is always on.
   Mainstream: HMAC_DRBG over SHA-256 and CTR_DRBG over AES-256.
 - **[Key wrap](docs/KeyWrap.md)**: encrypts one key under another, to store or send it. Mainstream:
   AES Key Wrap and AES Key Wrap with Padding.
-- **KDF**: derives keys from a shared secret or another key. Mainstream: HKDF over SHA-256. More:
-  [HKDF](docs/HKDF-SHA256.md)
+- **[KDF](docs/Kdf.md)**: derives keys from a shared secret or another key. Mainstream: HKDF over
+  SHA-256. More: [HKDF](docs/HKDF-SHA256.md)
 - **KEM**: gives two sides one secret, using only the public key of one of them. Mainstream:
   ML-KEM-768. More: [KEM](docs/KEM.md)
 - **[Agreement](docs/Agreement.md)**: two sides, each with a key pair, reach one shared secret.

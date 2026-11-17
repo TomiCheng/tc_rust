@@ -196,10 +196,11 @@ x25519 = ["dep:tc_cfrg_curves"]
 x448 = ["dep:tc_cfrg_curves", "tc_cfrg_curves/x448"]
 
 # KDF
-hkdf = ["tc_macs/hmac", "tc_macs/alloc", "dep:tc_sha"]
-hkdf-sha256 = ["hkdf"]
-hkdf-sha384 = ["hkdf"]
-hkdf-sha512 = ["hkdf"]
+hkdf = ["tc_macs/hmac", "tc_macs/alloc"]
+kdf1 = []
+kdf2 = []
+concat-kdf = []
+sp800-108 = []
 
 # PBE
 pbe = ["dep:tc_pbe", "dep:tc_block_modes"]

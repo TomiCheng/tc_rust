@@ -1,4 +1,11 @@
-#![cfg_attr(feature = "hkdf-sha256", doc = include_str!("../docs/HKDF-SHA256.md"))]
+#![cfg_attr(
+    all(feature = "hkdf", feature = "sha256"),
+    doc = include_str!("../docs/Kdf.md")
+)]
+#![cfg_attr(
+    all(feature = "hkdf", feature = "sha256"),
+    doc = include_str!("../docs/HKDF-SHA256.md")
+)]
 
 mod algo;
 mod default_kdf_provider;
