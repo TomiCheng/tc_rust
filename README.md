@@ -154,10 +154,10 @@ and the crates that remain here depend on the published version.
 
 ## Incubating in this workspace
 
-- [`crypto/tc_security`](crypto/tc_security) — name- and OID-based factories
-  after Bouncy Castle's `Org.BouncyCastle.Security`: digests, ciphers, MACs,
-  key wrap, key and parameter generation, key agreement and signers, wired to
-  the published crates above
+- [`crypto/tc_algo`](crypto/tc_algo) — name- and OID-based factories after
+  Bouncy Castle's `Org.BouncyCastle.Security`: digests, ciphers, MACs, key
+  wrap, key and key pair generation, agreements, KDFs, PBE, KEMs and signers,
+  wired to the published crates above
 - [`crypto/tc_cfrg_curves`](crypto/tc_cfrg_curves) — X25519, X448, Ed25519 and
   Ed448 in one crate
 - [`crypto/tc_ec_key`](crypto/tc_ec_key),

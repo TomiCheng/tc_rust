@@ -34,7 +34,7 @@ macs、asym_cipher、key_wrap、zeroize、runtime、constant_time 已發行；si
 1. 對稱演算法幾乎都已發行。剩下的是孵化池的 10 個區塊加密
    等畢業；它們都已接在新的 trait 上。
 2. 非對稱是空洞最大的一側：簽章、金鑰協商都還沒發行，但兩者的演算法都已齊全。ecdsa_v2
-   現在可經 DsaDigestSigner 當成 tc_signer 的簽章器，但 tc_security 的工廠還沒接上。
+   現在可經 DsaDigestSigner 當成 tc_signer 的簽章器，tc_algo 的工廠也已接上。
 3. 後量子只做了 ML-KEM（純軟體），見下一節。
 
 ## 區塊加密的畢業順序
