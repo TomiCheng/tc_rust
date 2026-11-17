@@ -202,7 +202,7 @@ hkdf-sha384 = ["hkdf"]
 hkdf-sha512 = ["hkdf"]
 
 # PBE
-pbe-aes = ["aes", "dep:tc_pbe", "dep:tc_sha"]
+pbe = ["dep:tc_pbe", "dep:tc_block_modes"]
 
 # KEM
 ml-kem = ["dep:tc_ml_kem"]

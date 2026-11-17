@@ -59,5 +59,5 @@ exception is `KEY`, a secret key of any length, which is always on.
   ML-KEM-768. More: [KEM](docs/KEM.md)
 - **[Agreement](docs/Agreement.md)**: two sides, each with a key pair, reach one shared secret.
   Mainstream: X25519 and ECDH on P-256. More: [Diffie-Hellman](docs/Dh.md)
-- **PBE**: a key from a password, for encrypting with it. Mainstream: PKCS#12 with SHA-256 and
-  AES-CBC. More: [PBE](docs/Pbe.md)
+- **[PBE](docs/Pbe.md)**: a key from a password, for encrypting with it. Mainstream: PKCS#12 with
+  SHA-256 and AES-CBC.

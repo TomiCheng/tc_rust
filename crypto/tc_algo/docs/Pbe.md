@@ -8,8 +8,8 @@ a cipher. It does not encrypt anything itself, and it is not a way of encrypting
 password + salt + iteration count -> PBE -> key + IV -> cipher -> ciphertext
 ```
 
-From a password to the decrypted message. The `pbe-aes` feature of `tc_algo` has the rows, and the
-salt here comes from `rand` and `rand_core`.
+From a password to the decrypted message. The `pbe`, `sha256` and `aes` features of `tc_algo` have
+the row, and the salt here comes from `rand` and `rand_core`.
 
 ```rust
 use rand::rngs::SysRng;
@@ -44,32 +44,52 @@ fn main() -> Result<(), AlgoError> {
 
 ## Algorithms
 
-| Name | OID | Feature | Key bytes | IV bytes | Target |
-|---|---|---|---|---|---|
-| `PBEwithSHA-256and128bitAES-CBC-BC` | `1.3.6.1.4.1.22554.1.2.1.2.1.2` | `pbe-aes` | 16 | 16 | `AES/CBC/PKCS7PADDING` |
-| `PBEwithSHA-256and192bitAES-CBC-BC` | `1.3.6.1.4.1.22554.1.2.1.2.1.22` | `pbe-aes` | 24 | 16 | `AES/CBC/PKCS7PADDING` |
-| `PBEwithSHA-256and256bitAES-CBC-BC` | `1.3.6.1.4.1.22554.1.2.1.2.1.42` | `pbe-aes` | 32 | 16 | `AES/CBC/PKCS7PADDING` |
+The names, aliases and OIDs are those of Bouncy Castle's `PbeUtilities`, and the case of a name does
+not matter. A row is there when the `pbe` feature and those of its digest and of its cipher or HMAC
+are on, as `pbe`, `sha1` and `desede` for `PBEwithSHA-1and3-keyDESEDE-CBC`.
 
-`PBEWITHSHA256AND128BITAES-CBC-BC` and its like find them too, and the case of a name does not
-matter. The names and OIDs are those of Bouncy Castle's `PbeUtilities`, and all three use the PKCS#12
-generator of RFC 7292 over SHA-256.
+- **PKCS#12**, of RFC 7292, the scheme of PKCS#12 files. Over SHA-256: AES-128, -192 and -256 in
+  CBC mode, as `PBEwithSHA-256and256bitAES-CBC-BC`. Over SHA-1: the same AES, 3-key and 2-key
+  DESede, RC2 of 128 and 40 bits in CBC mode, and RC4 of 128 and 40 bits, as
+  `PBEwithSHA-1and3-keyDESEDE-CBC`, with the OIDs of RFC 7292 and Bouncy Castle.
+- **PKCS#5 v1**, of RFC 8018: MD2, MD5 or SHA-1 with DES or RC2 in CBC mode, as
+  `PBEwithMD5andDES-CBC`. Its key is 8 bytes, so it is for old data only.
+- **OpenSSL**, the `EVP_BytesToKey` of `openssl enc` over MD5: AES-128, -192 and -256 in CBC mode,
+  as `PBEwithMD5and256bitAES-CBC-OpenSSL`, for files that tool made. It has no OID, and it ignores
+  the iteration count.
+- **HMAC keys**, by PKCS#12: `PBEwithHmacSHA-1`, `-224`, `-256`, `-384` and `-512`,
+  `PBEwithHmacRipeMD128`, `160` and `256`, and `PBEwithHmacTiger`, with the `hmac` feature. Their
+  OID is that of the digest, as in Bouncy Castle.
+
+`PBEwithSHA-1andIDEA-CBC` and `PBEwithSHA-1andTWOFISH-CBC` are not here: Bouncy Castle names them
+but generates no params for them.
 
 ## The params
 
-`generate_params` gives a `KeyWithIvOwned`, as used with any row of AES in CBC mode, and it wipes
-itself when dropped. `target` names the row it is for, so nothing else needs to know the mode or
-padding of the scheme.
+`generate_params` gives what the row named by `target` takes, and it wipes itself when dropped:
+
+- A `KeyWithIvOwned` for a cipher in CBC mode, with an IV of one block. The keys of DES and DESede
+  get odd parity, as Bouncy Castle gives them, and RC2 takes the whole key as its effective key
+  size.
+- A `KeyOwned` for RC4, which has no IV, and for HMAC, as long as its digest.
+
+`target` names the row of `algo.cipher()` or `algo.mac()`, as `AES/CBC/PKCS7PADDING` or
+`HMAC-SHA256`, so nothing else needs to know the mode or padding of the scheme.
 
 ## The inputs
 
-- **Password.** Do not store it. A `&str`, since a scheme decides how to encode it: the PKCS#12
-  generator encodes it as UTF-16. Wiping the `&str` is up to the caller.
+- **Password.** Do not store it. A `&str`, since a scheme decides how to encode it: PKCS#12 encodes
+  it as UTF-16, while PKCS#5 v1 and OpenSSL keep the low byte of each UTF-16 unit, as Bouncy Castle
+  does, so only an ASCII password keeps all of its bits there. Wiping the `&str` is up to the
+  caller.
 - **Salt.** Use a new random one for each message, of at least 16 bytes. It is not secret: keep it with
   the ciphertext. The IV is derived too, so the same password and salt give the same key and the same
   IV, which is why a salt must not be used twice.
 - **Iteration count.** It makes each guess at the password slower, for an attacker and for you alike.
-  It is not secret: keep it with the ciphertext. Only 0 is refused, as `InvalidParams`, so choosing one
-  high enough is up to the caller.
+  It is not secret: keep it with the ciphertext. PKCS#12 and PKCS#5 v1 refuse only 0, as
+  `InvalidParams`, so choosing one high enough is up to the caller. **OpenSSL ignores it** and runs
+  once, as Bouncy Castle and `openssl enc` without `-pbkdf2` do, so its rows do nothing to slow
+  guessing.
 
 ## Using it
 

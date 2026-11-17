@@ -1,4 +1,7 @@
-#![cfg_attr(feature = "pbe-aes", doc = include_str!("../docs/Pbe.md"))]
+#![cfg_attr(
+    all(feature = "pbe", feature = "sha256", feature = "aes"),
+    doc = include_str!("../docs/Pbe.md")
+)]
 
 mod algo;
 mod default_pbe_provider;

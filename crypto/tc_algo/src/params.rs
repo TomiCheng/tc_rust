@@ -200,7 +200,8 @@ pub use tc_block_modes::ParamsWithIvOwned;
     feature = "schwaemm256-128",
     feature = "schwaemm192-192",
     feature = "schwaemm256-256",
-    feature = "vmpc-mac"
+    feature = "vmpc-mac",
+    feature = "pbe"
 ))]
 pub use tc_block_modes::{IvParams, KeyWithIvOwned};
 #[cfg(feature = "ed448")]
@@ -317,7 +318,8 @@ impl Params for KeyOwned {
     feature = "schwaemm128-128",
     feature = "schwaemm256-128",
     feature = "schwaemm192-192",
-    feature = "schwaemm256-256"
+    feature = "schwaemm256-256",
+    feature = "pbe"
 ))]
 impl Params for KeyWithIvOwned {
     fn as_any(&self) -> &dyn Any {
