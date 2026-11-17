@@ -13,7 +13,7 @@ default = []
 cipher = ["dep:tc_buffered_cipher", "dep:tc_block_modes"]
 
 [dependencies]
-tc_agreement = { version = "0.1.0", path = "../../crypto/agreement/tc_agreement" }
+tc_agreement = "0.1.0"
 # CipherDirection，以及給 MAC 與 cipher 的 KeyRef
 tc_block_cipher = "0.1.0"
 # 解密時比對 MAC 不提早結束

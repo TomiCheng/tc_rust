@@ -851,6 +851,8 @@ dependencies = [
 [[package]]
 name = "tc_agreement"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1a235ecc11d3600edf2d7466a4023ea76a587e32d2084820ad434fb53a266d55"
 
 [[package]]
 name = "tc_agreement_kdf"
@@ -1378,8 +1380,9 @@ dependencies = [
 [[package]]
 name = "tc_dh"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e530f4cdabe33048c52a564feeac978cff133c170f2223ba6b126e7c75d7ba61"
 dependencies = [
- "rand",
  "rand_core",
  "tc_agreement",
  "tc_asym_cipher",

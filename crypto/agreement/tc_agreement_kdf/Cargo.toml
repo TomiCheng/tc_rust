@@ -8,7 +8,7 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
-tc_agreement = { version = "0.1.0", path = "../tc_agreement" }
+tc_agreement = "0.1.0"
 tc_asn1_x509 = "0.1.0"
 tc_ecdh_kek = { version = "0.1.0", path = "../../../kdf/tc_ecdh_kek" }
 tc_kdf = { version = "0.1.0", path = "../../../kdf/tc_kdf" }

@@ -8,7 +8,7 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
-tc_agreement = { version = "0.1.0", path = "../tc_agreement" }
+tc_agreement = "0.1.0"
 tc_bigint = { version = "0.1.0", features = ["alloc"] }
 tc_ec_core = "0.1.0"
 tc_ec_key = { version = "0.1.0", path = "../../tc_ec_key" }
