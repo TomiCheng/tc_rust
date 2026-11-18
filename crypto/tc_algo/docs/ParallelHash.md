@@ -5,8 +5,7 @@ own, then hashes the results together. The blocks are independent, so an impleme
 them in parallel; this one, as Bouncy Castle's, hashes them in turn. It suits large inputs, such
 as files.
 
-`PARALLELHASH128` and `PARALLELHASH256` are behind the `parallelhash128` and `parallelhash256`
-features.
+`PARALLELHASH128` and `PARALLELHASH256` are behind the `keccak` feature.
 
 ## Hashing a file
 
