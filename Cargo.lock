@@ -1848,6 +1848,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_pkcs"
+version = "0.1.0"
+dependencies = [
+ "tc_algo",
+ "tc_asn1",
+ "tc_asn1_pkcs",
+ "tc_asn1_x509",
+ "tc_x509",
+]
+
+[[package]]
 name = "tc_poly1305"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

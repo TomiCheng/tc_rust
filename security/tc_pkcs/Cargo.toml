@@ -1,0 +1,15 @@
+[package]
+name = "tc_pkcs"
+description = "PKCS#8 private keys, PKCS#10 certification requests and PKCS#12 stores, after Bouncy Castle C#'s Org.BouncyCastle.Pkcs."
+version.workspace = true
+edition.workspace = true
+rust-version = "1.85"
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+tc_algo = { version = "0.1.0", path = "../../crypto/tc_algo" }
+tc_asn1 = { version = "0.1.4", features = ["std"] }
+tc_asn1_pkcs = { version = "0.1.0", path = "../../asn1/tc_asn1_pkcs" }
+tc_asn1_x509 = "0.1.0"
+tc_x509 = { version = "0.1.0", path = "../tc_x509" }
