@@ -47,7 +47,8 @@ not matter.
   `ecdh` and `ecdhc` features; `ECCDH` finds ECDHC too.
 - **ECMQV**: MQV over an elliptic curve, from a static and an ephemeral key on each side, with the
   `ecmqv` feature.
-- **X25519** and **X448**: the agreements of RFC 7748, with the `x25519` and `x448` features.
+- **[X25519 and X448](X25519.md#agreement)**: the agreements of RFC 7748, with the `x25519` and
+  `x448` features.
 - **ECGOST3410**, **ECGOST3410-2012-256** and **ECGOST3410-2012-512**: VKO, the GOST R 34.10
   agreement, which hashes its secret with GOST R 34.11, with the `ecgost3410` feature;
   `GOST-3410-2001` finds the first too.
