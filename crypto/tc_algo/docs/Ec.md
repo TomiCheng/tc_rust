@@ -14,7 +14,7 @@ and has the curves of those that are; `fp-custom` alone covers the curves of TLS
 From a curve to a new pair:
 
 ```rust
-use tc_algo::params::EcKeyGenParams;
+use tc_algo::params::generate::EcKeyGenParams;
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
 fn main() -> Result<(), AlgoError> {
@@ -175,7 +175,7 @@ gives a key back with that `C`.
 From a new pair to a verified signature, with ECDSA over SHA-256 on P-256:
 
 ```rust
-use tc_algo::params::EcKeyGenParams;
+use tc_algo::params::generate::EcKeyGenParams;
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
 fn main() -> Result<(), AlgoError> {

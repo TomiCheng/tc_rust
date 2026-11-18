@@ -218,7 +218,7 @@ mod tests {
     use tc_sha::Sha256Digest;
 
     use crate::cipher::CipherDirection;
-    use crate::params::{KeyLength, RsaKeyGenParams};
+    use crate::params::{generate::KeyLength, generate::RsaKeyGenParams};
     use crate::{Algo, AlgoBuilder, DefaultAlgoBuilder, ErrorKind};
 
     const PKCS1: &str = "RSA//PKCS1PADDING";

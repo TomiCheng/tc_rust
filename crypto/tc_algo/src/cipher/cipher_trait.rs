@@ -33,7 +33,7 @@ mod tests {
     use tc_buffered_cipher::BufferedCipher;
 
     use super::CipherDirection;
-    use crate::params::KeyWithIvOwned;
+    use crate::params::cipher::KeyWithIvOwned;
     use crate::{AlgoBuilder, DefaultAlgoBuilder};
 
     // Code written for any BufferedCipher, knowing nothing of tc_algo

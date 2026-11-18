@@ -2,7 +2,7 @@ use rand_core::CryptoRng;
 use tc_asn1::Asn1Oid;
 
 use crate::generate::{KeyGenerator, KeyGeneratorEntry};
-use crate::params::{KeyLength, KeyOwned};
+use crate::params::{generate::KeyLength, key::KeyOwned};
 use crate::{AlgoError, DefaultAlgoContext, EntryBase, ErrorKind, Params};
 
 // The rows of AES, to give to DefaultAlgoBuilder::reg_key_generator. Their names and OIDs are those
@@ -96,7 +96,7 @@ mod tests {
     use tc_asn1::Asn1Oid;
 
     use crate::generate::KeyGenerator;
-    use crate::params::{KeyOwned, KeyParams};
+    use crate::params::{key::KeyOwned, key::KeyParams};
     use crate::{AlgoBuilder, DefaultAlgoBuilder, ErrorKind, Params};
 
     fn key_of(key: &dyn Params) -> Vec<u8> {
@@ -202,7 +202,7 @@ mod tests {
     // The name gives the length: init takes a KeyLength of it alone, and refuses any other
     #[test]
     fn init_takes_the_length_of_the_name_alone() {
-        use crate::params::KeyLength;
+        use crate::params::generate::KeyLength;
 
         let algo = DefaultAlgoBuilder::default().build();
         let mut generator: Box<dyn KeyGenerator> =

@@ -5,7 +5,7 @@ use tc_macs::{Hmac, MacError};
 
 use crate::digest::{DigestEntry, RowDigest};
 use crate::mac::{Mac, MacEntry};
-use crate::params::KeyOwned;
+use crate::params::key::KeyOwned;
 use crate::{AlgoError, DefaultAlgoContext, EntryBase, ErrorKind, Params};
 
 // The rows of HMAC, to give to DefaultAlgoBuilder::reg_mac: one over each digest row that is on, as
@@ -158,7 +158,7 @@ mod tests {
     use core::any::Any;
 
     use crate::mac::Mac;
-    use crate::params::KeyOwned;
+    use crate::params::key::KeyOwned;
     use crate::{AlgoBuilder, DefaultAlgoBuilder, ErrorKind, Params};
 
     // Test case 2 of RFC 4231

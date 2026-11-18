@@ -33,7 +33,7 @@ pub(super) fn signing_keys(context: &DefaultAlgoContext) -> Vec<Box<dyn KeyPairG
             }
             let params = params
                 .as_any()
-                .downcast_ref::<crate::params::DsaKeyGenParams>()
+                .downcast_ref::<crate::params::generate::DsaKeyGenParams>()
                 .ok_or(AlgoError::new(ErrorKind::InvalidParams))?;
             let mut generator = DsaParametersGenerator::with_digest(tc_sha::Sha256Digest::new());
             generator
@@ -69,7 +69,7 @@ pub(super) fn signing_keys(context: &DefaultAlgoContext) -> Vec<Box<dyn KeyPairG
             }
             let params = params
                 .as_any()
-                .downcast_ref::<crate::params::Gost3410KeyGenParams>()
+                .downcast_ref::<crate::params::generate::Gost3410KeyGenParams>()
                 .ok_or(AlgoError::new(ErrorKind::InvalidParams))?;
             let mut generator = tc_gost3410_key::Gost3410ParametersGenerator::new();
             generator

@@ -7,7 +7,7 @@ use tc_block_modes::KeyWithIvOwned;
 use tc_key_wrap::{KeyWrap, KeyWrapError, KeyWrapInit, WrapDirection as KeyWrapDirection};
 use tc_zeroize::Zeroize;
 
-use crate::params::KeyOwned;
+use crate::params::key::KeyOwned;
 use crate::wrap::{WrapDirection, Wrapper, WrapperEntry};
 use crate::{AlgoError, EntryBase, ErrorKind, Params};
 

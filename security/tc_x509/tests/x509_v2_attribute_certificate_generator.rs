@@ -6,7 +6,7 @@ use tc_asn1_x500::{Attribute, DirectoryString};
 use tc_x509::cert::{
     X509AttributeCertificate, X509V2AttributeCertificateGenerator, X509V3CertificateGenerator,
 };
-use tc_x509::operator::params::RsaKeyGenParams;
+use tc_x509::operator::params::generate::RsaKeyGenParams;
 use tc_x509::{DefaultX509OperatorBuilder, X509Error, X509Operator, X509OperatorBuilder};
 
 fn keys(oper: &dyn X509Operator) -> (Arc<dyn Params>, Arc<dyn Params>) {

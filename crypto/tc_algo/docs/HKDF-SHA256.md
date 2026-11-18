@@ -9,7 +9,7 @@ With SHA-256. The `kdf` and `sha` features of `tc_algo` have the row. [KDFs](Kdf
 other functions.
 
 ```rust
-use tc_algo::params::HkdfParamsOwned;
+use tc_algo::params::kdf::HkdfParamsOwned;
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
 fn main() -> Result<(), AlgoError> {

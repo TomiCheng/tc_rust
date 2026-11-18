@@ -12,7 +12,7 @@ pub(super) fn blake2xs(_context: &DefaultAlgoContext) -> Vec<Box<dyn XofEntry>> 
     row("BLAKE2XS", &[], &[], || {
         Box::new(InitXof::new(
             tc_blake::Blake2xsDigest::new(),
-            |params: &crate::params::Blake2xsParams| {
+            |params: &crate::params::xof::Blake2xsParams| {
                 // BLAKE2s's limits, which tc_blake panics past
                 let key_fits = params.key().is_none_or(|key| key.len() <= 32);
                 let salt_fits = params.salt().is_none_or(|salt| salt.len() == 8);
@@ -38,7 +38,7 @@ pub(super) fn blake3(_context: &DefaultAlgoContext) -> Vec<Box<dyn XofEntry>> {
     row("BLAKE3", &[], &[], || {
         Box::new(InitXof::new(
             tc_blake::Blake3Digest::new(),
-            |params: &crate::params::Blake3Params| match (params.key(), params.context()) {
+            |params: &crate::params::xof::Blake3Params| match (params.key(), params.context()) {
                 (Some(key), _) if key.len() == 32 => Ok(tc_blake::Blake3Digest::with_key(256, key)),
                 (None, Some(context)) => Ok(tc_blake::Blake3Digest::with_derive_key(256, context)),
                 _ => Err(invalid()),
@@ -105,7 +105,7 @@ mod tests {
     #[cfg(feature = "blake")]
     #[test]
     fn blake2xs_takes_a_key_salt_and_personalization_of_their_lengths_from_init() {
-        use crate::params::Blake2xsParams;
+        use crate::params::xof::Blake2xsParams;
         use crate::{AlgoBuilder as _, ErrorKind};
 
         let algo = crate::DefaultAlgoBuilder::default().build();
@@ -140,7 +140,7 @@ mod tests {
     #[cfg(feature = "blake")]
     #[test]
     fn blake3_takes_a_32_byte_key_or_a_context_from_init() {
-        use crate::params::Blake3Params;
+        use crate::params::xof::Blake3Params;
         use crate::{AlgoBuilder as _, ErrorKind};
 
         let algo = crate::DefaultAlgoBuilder::default().build();

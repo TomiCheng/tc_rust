@@ -11,7 +11,7 @@ is here for old data and for keys that are already in use.
 A new domain and a pair over it:
 
 ```rust
-use tc_algo::params::DsaKeyGenParams;
+use tc_algo::params::generate::DsaKeyGenParams;
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
 fn main() -> Result<(), AlgoError> {
@@ -49,7 +49,7 @@ Any other type is `InvalidParams`, and so is a domain that tc_dsa_key refuses.
 From a new pair to a verified signature, with DSA over SHA-256:
 
 ```rust
-use tc_algo::params::DsaKeyGenParams;
+use tc_algo::params::generate::DsaKeyGenParams;
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
 fn main() -> Result<(), AlgoError> {

@@ -107,7 +107,7 @@ pub(super) fn keyed(_context: &DefaultAlgoContext) -> Vec<Box<dyn MacEntry>> {
     feature = "poly1305"
 ))]
 mod tests {
-    use crate::params::KeyOwned;
+    use crate::params::key::KeyOwned;
     use crate::{AlgoBuilder, DefaultAlgoBuilder};
 
     fn unhex(text: &str) -> Vec<u8> {

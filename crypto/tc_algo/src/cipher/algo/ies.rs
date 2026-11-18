@@ -7,7 +7,7 @@ use tc_sha::Sha1Digest;
 use tc_zeroize::Zeroize;
 
 use crate::cipher::{BufferedCipher, Cipher, CipherDirection, CipherEntry};
-use crate::params::IesDhParams;
+use crate::params::cipher::IesDhParams;
 use crate::{AlgoError, DefaultAlgoContext, EntryBase, ErrorKind, Params};
 
 // The row of IES, to give to DefaultAlgoBuilder::reg_cipher. Its name and parts are those of Bouncy
@@ -180,8 +180,10 @@ mod tests {
 
     use crate::cipher::CipherDirection;
     use crate::generate::KeyPair;
-    use crate::params::dh_groups::rfc3526_2048;
-    use crate::params::{DhPrivateKey, DhPublicKey, IesDhParams, KeyLength};
+    use crate::params::key::dh::dh_groups::rfc3526_2048;
+    use crate::params::{
+        cipher::IesDhParams, generate::KeyLength, key::dh::DhPrivateKey, key::dh::DhPublicKey,
+    };
     use crate::{AlgoBuilder, DefaultAlgoBuilder, ErrorKind};
 
     const NAME: &str = "IES";

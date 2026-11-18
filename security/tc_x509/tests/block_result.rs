@@ -1,4 +1,4 @@
-use tc_algo::params::{KeyOwned, RsaKeyGenParams};
+use tc_algo::params::{generate::RsaKeyGenParams, key::KeyOwned};
 use tc_algo::{AlgoBuilder, DefaultAlgoBuilder, ErrorKind};
 use tc_x509::X509Error;
 use tc_x509::operator::{

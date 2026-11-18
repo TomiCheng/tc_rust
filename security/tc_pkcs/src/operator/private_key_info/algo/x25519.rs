@@ -1,5 +1,5 @@
 use tc_algo::Params;
-use tc_algo::params::X25519PrivateKey;
+use tc_algo::params::key::cfrg::X25519PrivateKey;
 use tc_asn1::{Asn1BitString, Asn1OctetString, Encode, EncodingOptions, NamedOid};
 use tc_asn1_pkcs::PrivateKeyInfo;
 use tc_asn1_x509::alg::AlgorithmIdentifier;

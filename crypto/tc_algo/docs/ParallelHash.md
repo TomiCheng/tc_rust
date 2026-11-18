@@ -13,7 +13,7 @@ as files.
 use std::fs::File;
 use std::io::Read;
 
-use tc_algo::params::ParallelHashParams;
+use tc_algo::params::xof::ParallelHashParams;
 use tc_algo::{AlgoBuilder, DefaultAlgoBuilder};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

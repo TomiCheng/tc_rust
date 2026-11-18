@@ -110,7 +110,7 @@ mod tests {
     };
 
     use crate::agreement::Agreement;
-    use crate::params::KeyLength;
+    use crate::params::generate::KeyLength;
     use crate::{AlgoBuilder, AlgoError, DefaultAlgoBuilder, ErrorKind, Params};
 
     const NAME: &str = "DH";

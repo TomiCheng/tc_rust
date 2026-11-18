@@ -22,8 +22,8 @@ derivation value here comes from `rand` and `rand_core`.
 use rand::rngs::SysRng;
 use rand_core::{Rng, UnwrapErr};
 use tc_algo::generate::KeyPair;
-use tc_algo::params::dh_groups::rfc3526_2048;
-use tc_algo::params::{DhPrivateKey, DhPublicKey, IesDhParams};
+use tc_algo::params::key::dh::dh_groups::rfc3526_2048;
+use tc_algo::params::{key::dh::DhPrivateKey, key::dh::DhPublicKey, cipher::IesDhParams};
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
 fn private(pair: &KeyPair) -> DhPrivateKey {

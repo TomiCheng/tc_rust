@@ -8,7 +8,7 @@ that both sides share, see [Key generation](KeyGeneration.md).
 From a name and its params to a new pair, and the pair straight into a cipher:
 
 ```rust
-use tc_algo::params::RsaKeyGenParams;
+use tc_algo::params::generate::RsaKeyGenParams;
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
 fn main() -> Result<(), AlgoError> {

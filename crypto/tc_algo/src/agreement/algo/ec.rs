@@ -646,8 +646,8 @@ mod tests {
     use tc_fp_custom::{SecP256R1FieldElement, SecPCtCurve};
 
     use crate::agreement::Agreement;
-    use crate::params::KeyLength;
     use crate::params::ec_curves::by_name;
+    use crate::params::generate::KeyLength;
     use crate::{AlgoBuilder, DefaultAlgoBuilder, ErrorKind, Params};
 
     type P256 = &'static SecPCtCurve<SecP256R1FieldElement>;
@@ -737,7 +737,7 @@ mod tests {
                 .get_with_kdf_by_oid(&"1.3.132.1.11.1".parse().unwrap(), &aes128_wrap())
                 .unwrap();
             agreement
-                .init(&crate::params::UkmParams::new(private).with_ukm(ukm.clone()))
+                .init(&crate::params::agreement::UkmParams::new(private).with_ukm(ukm.clone()))
                 .unwrap();
             agreement
         };

@@ -4,7 +4,7 @@ use core::marker::PhantomData;
 use tc_buffered_cipher::{BufferedCipher, BufferedCipherInit, BufferedError};
 
 use crate::cipher::{Cipher, CipherDirection};
-use crate::params::{IvParams, KeyOwned, KeyWithIvOwned};
+use crate::params::{cipher::IvParams, cipher::KeyWithIvOwned, key::KeyOwned};
 use crate::{AlgoError, ErrorKind, Params};
 
 // The params of an engine's own that a row takes besides a bare key, as Bouncy Castle's
@@ -65,7 +65,7 @@ where
     ) -> Option<Result<(), AlgoError>> {
         let params = params
             .as_any()
-            .downcast_ref::<crate::params::ParamsWithIvOwned<O>>()?;
+            .downcast_ref::<crate::params::cipher::ParamsWithIvOwned<O>>()?;
         if iv_len.is_some_and(|len| params.iv().len() != len) {
             return Some(Err(AlgoError::new(ErrorKind::InvalidParams)));
         }
@@ -117,8 +117,8 @@ impl<C> OwnKey<C> for NoOwn {
 #[cfg(any(feature = "rc-cipher", feature = "gost28147", feature = "threefish"))]
 impl<C, O: 'static> OwnWithIv<C> for Own<O>
 where
-    C: BufferedCipherInit<crate::params::ParamsWithIvOwned<O>>,
-    <C as BufferedCipherInit<crate::params::ParamsWithIvOwned<O>>>::Error:
+    C: BufferedCipherInit<crate::params::cipher::ParamsWithIvOwned<O>>,
+    <C as BufferedCipherInit<crate::params::cipher::ParamsWithIvOwned<O>>>::Error:
         Error + Send + Sync + 'static,
 {
     fn init(
@@ -129,7 +129,7 @@ where
     ) -> Option<Result<(), AlgoError>> {
         let params = params
             .as_any()
-            .downcast_ref::<crate::params::ParamsWithIvOwned<O>>()?;
+            .downcast_ref::<crate::params::cipher::ParamsWithIvOwned<O>>()?;
         if iv_len.is_some_and(|len| params.iv().len() != len) {
             return Some(Err(AlgoError::new(ErrorKind::InvalidParams)));
         }

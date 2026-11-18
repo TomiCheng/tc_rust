@@ -12,7 +12,7 @@ The `rsa` feature of `tc_algo` has the rows.
 From the params to a new pair:
 
 ```rust
-use tc_algo::params::{RsaKey, RsaKeyGenParams, RsaKeyParams};
+use tc_algo::params::{key::rsa::RsaKey, generate::RsaKeyGenParams, key::rsa::RsaKeyParams};
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
 fn main() -> Result<(), AlgoError> {
@@ -77,7 +77,7 @@ From a new pair to the decrypted message, with OAEP over SHA-256. The keys of a 
 as params:
 
 ```rust
-use tc_algo::params::RsaKeyGenParams;
+use tc_algo::params::generate::RsaKeyGenParams;
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
 fn main() -> Result<(), AlgoError> {
@@ -143,7 +143,7 @@ From a new pair to a verified signature, with PKCS#1 v1.5 over SHA-256. The keys
 in as params:
 
 ```rust
-use tc_algo::params::RsaKeyGenParams;
+use tc_algo::params::generate::RsaKeyGenParams;
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
 fn main() -> Result<(), AlgoError> {

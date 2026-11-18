@@ -19,7 +19,7 @@ pub(super) fn rijndael(context: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>
 
 #[cfg(test)]
 mod tests {
-    use crate::params::KeyOwned;
+    use crate::params::key::KeyOwned;
     use crate::{AlgoBuilder, DefaultAlgoBuilder};
 
     fn unhex(hex: &str) -> Vec<u8> {

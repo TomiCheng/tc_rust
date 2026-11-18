@@ -1,4 +1,6 @@
-use tc_x509::operator::params::{RsaKey, RsaKeyGenParams, RsaKeyParams};
+use tc_x509::operator::params::{
+    generate::RsaKeyGenParams, key::rsa::RsaKey, key::rsa::RsaKeyParams,
+};
 use tc_x509::{DefaultX509OperatorBuilder, X509OperatorBuilder};
 
 #[test]

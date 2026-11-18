@@ -64,7 +64,7 @@ pub(super) fn threefish_1024(context: &DefaultAlgoContext) -> Vec<Box<dyn Cipher
 
 #[cfg(test)]
 mod tests {
-    use crate::params::{KeyOwned, ParamsWithIvOwned, ThreefishParamsOwned};
+    use crate::params::{cipher::ParamsWithIvOwned, key::KeyOwned, key::ThreefishParamsOwned};
     use crate::{AlgoBuilder, DefaultAlgoBuilder, ErrorKind};
 
     fn unhex(hex: &str) -> Vec<u8> {
@@ -126,7 +126,7 @@ mod tests {
     #[cfg(feature = "threefish")]
     #[test]
     fn kccm_runs_over_threefish_256_and_not_over_threefish_1024() {
-        use crate::params::AeadParamsOwned;
+        use crate::params::cipher::AeadParamsOwned;
 
         let algo = DefaultAlgoBuilder::default().build();
         let ciphers = algo.cipher();
@@ -186,7 +186,7 @@ mod tests {
     #[cfg(feature = "threefish")]
     #[test]
     fn kccm_takes_the_tweak_of_its_own_params() {
-        use crate::params::{AeadParamsOwned, ParamsWithAeadOwned};
+        use crate::params::{cipher::AeadParamsOwned, cipher::ParamsWithAeadOwned};
 
         let algo = DefaultAlgoBuilder::default().build();
         let ciphers = algo.cipher();

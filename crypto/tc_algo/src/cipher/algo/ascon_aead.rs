@@ -62,7 +62,7 @@ mod tests {
     #[cfg(feature = "ascon-aead")]
     #[test]
     fn the_legacy_variants_decrypt_back_and_differ_from_the_standard() {
-        use crate::params::AeadParamsOwned;
+        use crate::params::cipher::AeadParamsOwned;
         use crate::{AlgoBuilder, DefaultAlgoBuilder};
 
         let algo = DefaultAlgoBuilder::default().build();

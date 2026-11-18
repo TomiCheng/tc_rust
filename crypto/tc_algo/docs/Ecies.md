@@ -10,7 +10,7 @@ derivation value here comes from `rand` and `rand_core`.
 ```rust
 use rand::rngs::SysRng;
 use rand_core::{Rng, UnwrapErr};
-use tc_algo::params::{EcKeyGenParams, IesEcParams};
+use tc_algo::params::{generate::EcKeyGenParams, cipher::IesEcParams};
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
 fn main() -> Result<(), AlgoError> {

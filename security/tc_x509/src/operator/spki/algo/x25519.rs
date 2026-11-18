@@ -1,5 +1,5 @@
 use tc_algo::Params;
-use tc_algo::params::X25519PublicKey;
+use tc_algo::params::key::cfrg::X25519PublicKey;
 use tc_asn1::{Asn1BitString, NamedOid};
 use tc_asn1_x509::alg::AlgorithmIdentifier;
 use tc_asn1_x509::cert::SubjectPublicKeyInfo;

@@ -23,7 +23,7 @@ In the AEAD modes they go with the nonce, the tag size and the initial AAD in a
 In a block cipher mode, CBC here:
 
 ```rust
-use tc_algo::params::{ParamsWithIvOwned, ThreefishParamsOwned};
+use tc_algo::params::{cipher::ParamsWithIvOwned, key::ThreefishParamsOwned};
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
 fn main() -> Result<(), AlgoError> {
@@ -42,7 +42,7 @@ fn main() -> Result<(), AlgoError> {
 In an AEAD mode, KCCM, the only one of Threefish-256 and -512; Threefish-1024 has none:
 
 ```rust
-use tc_algo::params::{ParamsWithAeadOwned, ThreefishParamsOwned};
+use tc_algo::params::{cipher::ParamsWithAeadOwned, key::ThreefishParamsOwned};
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
 fn main() -> Result<(), AlgoError> {
@@ -84,7 +84,7 @@ The `THREEFISH-256`, `THREEFISH-512` and `THREEFISH-1024` rows of `algo.key_gene
 `init` takes a `ThreefishKeyGenParams`; see [Key generation](KeyGeneration.md).
 
 ```rust
-use tc_algo::params::{ThreefishKeyGenParams, ThreefishParams, ThreefishParamsOwned};
+use tc_algo::params::{generate::ThreefishKeyGenParams, key::ThreefishParams, key::ThreefishParamsOwned};
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
 fn main() -> Result<(), AlgoError> {

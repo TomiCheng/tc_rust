@@ -11,7 +11,7 @@ the example.
 
 ```rust
 use rand_core::Rng;
-use tc_algo::params::DrbgParams;
+use tc_algo::params::drbg::DrbgParams;
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
 fn main() -> Result<(), AlgoError> {

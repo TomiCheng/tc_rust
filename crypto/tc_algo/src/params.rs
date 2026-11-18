@@ -53,55 +53,6 @@ mod tuple_hash_params;
 
 use core::any::Any;
 
-#[cfg(feature = "ascon-hash")]
-pub use ascon_cxof_params::AsconCXofParams;
-#[cfg(feature = "blake")]
-pub use blake2xs_params::Blake2xsParams;
-#[cfg(feature = "blake")]
-pub use blake3_params::Blake3Params;
-#[cfg(feature = "keccak")]
-pub use cshake_params::CShakeParams;
-#[cfg(feature = "drbg")]
-pub use drbg_params::DrbgParams;
-#[cfg(feature = "dsa")]
-pub use dsa_key_gen_params::DsaKeyGenParams;
-#[cfg(any(
-    feature = "fp-custom",
-    feature = "fp-curve",
-    feature = "f2m-custom",
-    feature = "f2m-curve"
-))]
-pub use ec_key_gen_params::EcKeyGenParams;
-#[cfg(feature = "gost3410")]
-pub use gost3410_key_gen_params::Gost3410KeyGenParams;
-#[cfg(feature = "ies")]
-pub use ies_dh_params::IesDhParams;
-#[cfg(all(
-    feature = "ies",
-    feature = "ecdh",
-    any(
-        feature = "fp-custom",
-        feature = "fp-curve",
-        feature = "f2m-custom",
-        feature = "f2m-curve"
-    )
-))]
-pub use ies_ec_params::IesEcParams;
-pub use key_length::KeyLength;
-#[cfg(feature = "gost28147")]
-pub use own_key_gen_params::Gost28147KeyGenParams;
-#[cfg(feature = "rc-cipher")]
-pub use own_key_gen_params::Rc2KeyGenParams;
-#[cfg(feature = "rc-cipher")]
-pub use own_key_gen_params::Rc5KeyGenParams;
-#[cfg(feature = "threefish")]
-pub use own_key_gen_params::ThreefishKeyGenParams;
-#[cfg(feature = "keccak")]
-pub use parallel_hash_params::ParallelHashParams;
-#[cfg(feature = "rsa")]
-pub use rsa_key_gen_params::RsaKeyGenParams;
-#[cfg(feature = "sm2")]
-pub use sm2_keys::{Sm2PrivateKey, Sm2PublicKey};
 #[cfg(any(
     feature = "aes",
     feature = "des",
@@ -123,9 +74,9 @@ pub use sm2_keys::{Sm2PrivateKey, Sm2PublicKey};
     feature = "grain128-aead",
     feature = "sparkle-aead"
 ))]
-pub use tc_aead_cipher::AeadParamsOwned;
+use tc_aead_cipher::AeadParamsOwned;
 #[cfg(any(feature = "rc-cipher", feature = "gost28147", feature = "threefish"))]
-pub use tc_aead_cipher::ParamsWithAeadOwned;
+use tc_aead_cipher::ParamsWithAeadOwned;
 #[cfg(any(
     all(
         feature = "ecdh",
@@ -146,10 +97,8 @@ pub use tc_aead_cipher::ParamsWithAeadOwned;
         )
     )
 ))]
-pub use tc_agreement_kdf::UkmParams;
-pub use tc_block_cipher::{KeyOwned, KeyParams};
-#[cfg(any(feature = "rc-cipher", feature = "gost28147", feature = "threefish"))]
-pub use tc_block_modes::ParamsWithIvOwned;
+use tc_agreement_kdf::UkmParams;
+use tc_block_cipher::KeyOwned;
 #[cfg(any(
     feature = "aes",
     feature = "des",
@@ -177,31 +126,23 @@ pub use tc_block_modes::ParamsWithIvOwned;
     feature = "macs",
     feature = "pbe"
 ))]
-pub use tc_block_modes::{IvParams, KeyWithIvOwned};
+use tc_block_modes::KeyWithIvOwned;
+#[cfg(any(feature = "rc-cipher", feature = "gost28147", feature = "threefish"))]
+use tc_block_modes::ParamsWithIvOwned;
 #[cfg(feature = "cfrg-curves")]
-pub use tc_cfrg_curves::{Ed448PrivateKey, Ed448PublicKey};
+use tc_cfrg_curves::{Ed448PrivateKey, Ed448PublicKey};
 #[cfg(feature = "cfrg-curves")]
-pub use tc_cfrg_curves::{Ed25519PrivateKey, Ed25519PublicKey};
+use tc_cfrg_curves::{Ed25519PrivateKey, Ed25519PublicKey};
 #[cfg(feature = "cfrg-curves")]
-pub use tc_cfrg_curves::{X448PrivateKey, X448PublicKey};
+use tc_cfrg_curves::{X448PrivateKey, X448PublicKey};
 #[cfg(feature = "cfrg-curves")]
-pub use tc_cfrg_curves::{X25519PrivateKey, X25519PublicKey};
+use tc_cfrg_curves::{X25519PrivateKey, X25519PublicKey};
 #[cfg(any(feature = "dh", feature = "elgamal"))]
-pub use tc_dh_key::DhParameters;
-#[cfg(any(feature = "dh", feature = "elgamal"))]
-pub use tc_dh_key::standard_groups as dh_groups;
+use tc_dh_key::DhParameters;
 #[cfg(feature = "dh")]
-pub use tc_dh_key::{DhPrivateKey, DhPublicKey};
+use tc_dh_key::{DhPrivateKey, DhPublicKey};
 #[cfg(feature = "dsa")]
-pub use tc_dsa_key::{DsaParameters, DsaPrivateKey, DsaPublicKey};
-#[cfg(any(
-    feature = "fp-custom",
-    feature = "fp-curve",
-    feature = "f2m-custom",
-    feature = "f2m-curve",
-    feature = "sm2"
-))]
-pub use tc_ec_key::{EcPrivateKey, EcPublicKey};
+use tc_dsa_key::{DsaParameters, DsaPrivateKey, DsaPublicKey};
 #[cfg(all(
     feature = "ecmqv",
     any(
@@ -211,7 +152,7 @@ pub use tc_ec_key::{EcPrivateKey, EcPublicKey};
         feature = "f2m-curve"
     )
 ))]
-pub use tc_ecmqv::{MqvPrivateParams, MqvPublicParams};
+use tc_ecmqv::{MqvPrivateParams, MqvPublicParams};
 #[cfg(all(
     feature = "ecgost3410",
     any(
@@ -221,43 +162,35 @@ pub use tc_ecmqv::{MqvPrivateParams, MqvPublicParams};
         feature = "f2m-curve"
     )
 ))]
-pub use tc_ecvko::EcVkoParams;
-#[cfg(feature = "elgamal")]
-pub use tc_elgamal::{ElGamalParameters, ElGamalPrivateKey, ElGamalPublicKey};
+use tc_ecvko::EcVkoParams;
 #[cfg(feature = "gost3410")]
-pub use tc_gost3410_key::{Gost3410Parameters, Gost3410PrivateKey, Gost3410PublicKey};
+use tc_gost3410_key::{Gost3410Parameters, Gost3410PrivateKey, Gost3410PublicKey};
 #[cfg(feature = "gost28147")]
-pub use tc_gost28147::{Gost28147Params, Gost28147ParamsOwned, s_box as gost28147_s_box};
+use tc_gost28147::Gost28147ParamsOwned;
 #[cfg(feature = "kdf")]
-pub use tc_kdf::hkdf::HkdfParamsOwned;
+use tc_kdf::hkdf::HkdfParamsOwned;
 #[cfg(feature = "kdf")]
-pub use tc_kdf::kdf::KdfParamsOwned;
+use tc_kdf::kdf::KdfParamsOwned;
 #[cfg(feature = "kdf")]
-pub use tc_kdf::sp800_108::{
+use tc_kdf::sp800_108::{
     KdfCounterParamsOwned, KdfDoublePipelineParamsOwned, KdfFeedbackParamsOwned,
 };
 #[cfg(feature = "ml-dsa")]
-pub use tc_ml_dsa::{MlDsaParameters, MlDsaPrivateKey, MlDsaPublicKey};
+use tc_ml_dsa::{MlDsaParameters, MlDsaPrivateKey, MlDsaPublicKey};
 #[cfg(feature = "ml-kem")]
-pub use tc_ml_kem::{MlKemParameters, MlKemPrivateKey, MlKemPublicKey};
-#[cfg(feature = "naccache-stern")]
-pub use tc_naccache_stern::{
-    NaccacheSternKeyGenerationParams, NaccacheSternPrivateKey, NaccacheSternPublicKey,
-};
+use tc_ml_kem::{MlKemParameters, MlKemPrivateKey, MlKemPublicKey};
 #[cfg(feature = "pbe")]
-pub use tc_pbe::PbeParamsOwned;
+use tc_pbe::PbeParamsOwned;
 #[cfg(feature = "rc-cipher")]
-pub use tc_rc_cipher::{Rc2Params, Rc2ParamsOwned};
+use tc_rc_cipher::Rc2ParamsOwned;
 #[cfg(feature = "rc-cipher")]
-pub use tc_rc_cipher::{Rc5Params, Rc5ParamsOwned};
+use tc_rc_cipher::Rc5ParamsOwned;
 #[cfg(feature = "rsa")]
-pub use tc_rsa::{RsaKey, RsaKeyParams};
+use tc_rsa::RsaKey;
 #[cfg(feature = "slh-dsa")]
-pub use tc_slh_dsa::{SlhDsaParameters, SlhDsaPrivateKey, SlhDsaPublicKey};
+use tc_slh_dsa::{SlhDsaParameters, SlhDsaPrivateKey, SlhDsaPublicKey};
 #[cfg(feature = "threefish")]
-pub use tc_threefish::{ThreefishParams, ThreefishParamsOwned};
-#[cfg(feature = "keccak")]
-pub use tuple_hash_params::TupleHashParams;
+use tc_threefish::ThreefishParamsOwned;
 
 use crate::Params;
 
@@ -291,6 +224,7 @@ impl Params for KeyOwned {
     feature = "ascon-aead",
     feature = "grain128-aead",
     feature = "sparkle-aead",
+    feature = "macs",
     feature = "pbe"
 ))]
 impl Params for KeyWithIvOwned {
@@ -521,7 +455,7 @@ where
     }
 }
 
-#[cfg(feature = "dh")]
+#[cfg(any(feature = "dh", feature = "elgamal"))]
 impl Params for DhParameters {
     fn as_any(&self) -> &dyn Any {
         self
@@ -765,4 +699,699 @@ impl Params for SlhDsaPublicKey {
     fn as_any(&self) -> &dyn Any {
         self
     }
+}
+
+// The params by what takes them. A type that more than one category takes is in each of them
+
+// The keys: symmetric ones here, and the keys, domains and parameter sets of each asymmetric
+// family in a module of its own
+pub mod key {
+    pub use crate::params::key_length::KeyLength;
+    pub use tc_block_cipher::KeyOwned;
+    pub use tc_block_cipher::KeyParams;
+    #[cfg(feature = "gost28147")]
+    pub use tc_gost28147::Gost28147Params;
+    #[cfg(feature = "gost28147")]
+    pub use tc_gost28147::Gost28147ParamsOwned;
+    #[cfg(feature = "gost28147")]
+    pub use tc_gost28147::s_box as gost28147_s_box;
+    #[cfg(feature = "rc-cipher")]
+    pub use tc_rc_cipher::Rc2Params;
+    #[cfg(feature = "rc-cipher")]
+    pub use tc_rc_cipher::Rc2ParamsOwned;
+    #[cfg(feature = "rc-cipher")]
+    pub use tc_rc_cipher::Rc5Params;
+    #[cfg(feature = "rc-cipher")]
+    pub use tc_rc_cipher::Rc5ParamsOwned;
+    #[cfg(feature = "threefish")]
+    pub use tc_threefish::ThreefishParams;
+    #[cfg(feature = "threefish")]
+    pub use tc_threefish::ThreefishParamsOwned;
+
+    pub mod rsa {
+        #[cfg(feature = "rsa")]
+        pub use tc_rsa::RsaKey;
+        #[cfg(feature = "rsa")]
+        pub use tc_rsa::RsaKeyParams;
+    }
+
+    pub mod ec {
+        #[cfg(any(
+            feature = "fp-custom",
+            feature = "fp-curve",
+            feature = "f2m-custom",
+            feature = "f2m-curve",
+            feature = "sm2"
+        ))]
+        pub use tc_ec_key::EcPrivateKey;
+        #[cfg(any(
+            feature = "fp-custom",
+            feature = "fp-curve",
+            feature = "f2m-custom",
+            feature = "f2m-curve",
+            feature = "sm2"
+        ))]
+        pub use tc_ec_key::EcPublicKey;
+
+        // The curves the keys are generic over, from the crates tc_algo builds them with
+        #[cfg(any(
+            feature = "fp-custom",
+            feature = "fp-curve",
+            feature = "f2m-custom",
+            feature = "f2m-curve"
+        ))]
+        pub use tc_ec_core;
+        #[cfg(feature = "f2m-curve")]
+        pub use tc_f2m_curve;
+        #[cfg(feature = "f2m-custom")]
+        pub use tc_f2m_custom;
+        #[cfg(feature = "fp-curve")]
+        pub use tc_fp_curve;
+        #[cfg(feature = "fp-custom")]
+        pub use tc_fp_custom;
+    }
+
+    pub mod sm2 {
+        #[cfg(feature = "sm2")]
+        pub use crate::params::sm2_keys::Sm2PrivateKey;
+        #[cfg(feature = "sm2")]
+        pub use crate::params::sm2_keys::Sm2PublicKey;
+    }
+
+    pub mod cfrg {
+        #[cfg(feature = "cfrg-curves")]
+        pub use tc_cfrg_curves::Ed448PrivateKey;
+        #[cfg(feature = "cfrg-curves")]
+        pub use tc_cfrg_curves::Ed448PublicKey;
+        #[cfg(feature = "cfrg-curves")]
+        pub use tc_cfrg_curves::Ed25519PrivateKey;
+        #[cfg(feature = "cfrg-curves")]
+        pub use tc_cfrg_curves::Ed25519PublicKey;
+        #[cfg(feature = "cfrg-curves")]
+        pub use tc_cfrg_curves::X448PrivateKey;
+        #[cfg(feature = "cfrg-curves")]
+        pub use tc_cfrg_curves::X448PublicKey;
+        #[cfg(feature = "cfrg-curves")]
+        pub use tc_cfrg_curves::X25519PrivateKey;
+        #[cfg(feature = "cfrg-curves")]
+        pub use tc_cfrg_curves::X25519PublicKey;
+    }
+
+    pub mod dh {
+        #[cfg(any(feature = "dh", feature = "elgamal"))]
+        pub use tc_dh_key::DhParameters;
+        #[cfg(feature = "dh")]
+        pub use tc_dh_key::DhPrivateKey;
+        #[cfg(feature = "dh")]
+        pub use tc_dh_key::DhPublicKey;
+        #[cfg(any(feature = "dh", feature = "elgamal"))]
+        pub use tc_dh_key::standard_groups as dh_groups;
+    }
+
+    pub mod dsa {
+        #[cfg(feature = "dsa")]
+        pub use tc_dsa_key::DsaParameters;
+        #[cfg(feature = "dsa")]
+        pub use tc_dsa_key::DsaPrivateKey;
+        #[cfg(feature = "dsa")]
+        pub use tc_dsa_key::DsaPublicKey;
+    }
+
+    pub mod gost3410 {
+        #[cfg(feature = "gost3410")]
+        pub use tc_gost3410_key::Gost3410Parameters;
+        #[cfg(feature = "gost3410")]
+        pub use tc_gost3410_key::Gost3410PrivateKey;
+        #[cfg(feature = "gost3410")]
+        pub use tc_gost3410_key::Gost3410PublicKey;
+    }
+
+    pub mod elgamal {
+        #[cfg(feature = "elgamal")]
+        pub use tc_elgamal::ElGamalParameters;
+        #[cfg(feature = "elgamal")]
+        pub use tc_elgamal::ElGamalPrivateKey;
+        #[cfg(feature = "elgamal")]
+        pub use tc_elgamal::ElGamalPublicKey;
+    }
+
+    pub mod naccache_stern {
+        #[cfg(feature = "naccache-stern")]
+        pub use tc_naccache_stern::NaccacheSternPrivateKey;
+        #[cfg(feature = "naccache-stern")]
+        pub use tc_naccache_stern::NaccacheSternPublicKey;
+    }
+
+    pub mod ml_dsa {
+        #[cfg(feature = "ml-dsa")]
+        pub use tc_ml_dsa::MlDsaParameters;
+        #[cfg(feature = "ml-dsa")]
+        pub use tc_ml_dsa::MlDsaPrivateKey;
+        #[cfg(feature = "ml-dsa")]
+        pub use tc_ml_dsa::MlDsaPublicKey;
+    }
+
+    pub mod ml_kem {
+        #[cfg(feature = "ml-kem")]
+        pub use tc_ml_kem::MlKemParameters;
+        #[cfg(feature = "ml-kem")]
+        pub use tc_ml_kem::MlKemPrivateKey;
+        #[cfg(feature = "ml-kem")]
+        pub use tc_ml_kem::MlKemPublicKey;
+    }
+
+    pub mod slh_dsa {
+        #[cfg(feature = "slh-dsa")]
+        pub use tc_slh_dsa::SlhDsaParameters;
+        #[cfg(feature = "slh-dsa")]
+        pub use tc_slh_dsa::SlhDsaPrivateKey;
+        #[cfg(feature = "slh-dsa")]
+        pub use tc_slh_dsa::SlhDsaPublicKey;
+    }
+}
+
+// The params of the agreements beside their keys, which are in `key`
+pub mod agreement {
+    #[cfg(any(
+        all(
+            feature = "ecdh",
+            any(
+                feature = "fp-custom",
+                feature = "fp-curve",
+                feature = "f2m-custom",
+                feature = "f2m-curve"
+            )
+        ),
+        all(
+            feature = "ecmqv",
+            any(
+                feature = "fp-custom",
+                feature = "fp-curve",
+                feature = "f2m-custom",
+                feature = "f2m-curve"
+            )
+        )
+    ))]
+    pub use tc_agreement_kdf::UkmParams;
+    #[cfg(all(
+        feature = "ecmqv",
+        any(
+            feature = "fp-custom",
+            feature = "fp-curve",
+            feature = "f2m-custom",
+            feature = "f2m-curve"
+        )
+    ))]
+    pub use tc_ecmqv::MqvPrivateParams;
+    #[cfg(all(
+        feature = "ecmqv",
+        any(
+            feature = "fp-custom",
+            feature = "fp-curve",
+            feature = "f2m-custom",
+            feature = "f2m-curve"
+        )
+    ))]
+    pub use tc_ecmqv::MqvPublicParams;
+    #[cfg(all(
+        feature = "ecgost3410",
+        any(
+            feature = "fp-custom",
+            feature = "fp-curve",
+            feature = "f2m-custom",
+            feature = "f2m-curve"
+        )
+    ))]
+    pub use tc_ecvko::EcVkoParams;
+}
+
+// The params of the ciphers: keys, IVs, AEAD and IES
+pub mod cipher {
+    #[cfg(feature = "ies")]
+    pub use crate::params::ies_dh_params::IesDhParams;
+    #[cfg(all(
+        feature = "ies",
+        feature = "ecdh",
+        any(
+            feature = "fp-custom",
+            feature = "fp-curve",
+            feature = "f2m-custom",
+            feature = "f2m-curve"
+        )
+    ))]
+    pub use crate::params::ies_ec_params::IesEcParams;
+    #[cfg(any(
+        feature = "aes",
+        feature = "des",
+        feature = "camellia",
+        feature = "aria",
+        feature = "sm4",
+        feature = "seed",
+        feature = "dstu7624",
+        feature = "blowfish",
+        feature = "twofish",
+        feature = "serpent",
+        feature = "cast",
+        feature = "misc-block-cipher",
+        feature = "rc-cipher",
+        feature = "gost28147",
+        feature = "threefish",
+        feature = "chacha-aead",
+        feature = "ascon-aead",
+        feature = "grain128-aead",
+        feature = "sparkle-aead"
+    ))]
+    pub use tc_aead_cipher::AeadParamsOwned;
+    #[cfg(any(feature = "rc-cipher", feature = "gost28147", feature = "threefish"))]
+    pub use tc_aead_cipher::ParamsWithAeadOwned;
+    pub use tc_block_cipher::KeyOwned;
+    pub use tc_block_cipher::KeyParams;
+    #[cfg(any(
+        feature = "aes",
+        feature = "des",
+        feature = "camellia",
+        feature = "aria",
+        feature = "sm4",
+        feature = "seed",
+        feature = "dstu7624",
+        feature = "blowfish",
+        feature = "twofish",
+        feature = "serpent",
+        feature = "cast",
+        feature = "misc-block-cipher",
+        feature = "rc-cipher",
+        feature = "gost28147",
+        feature = "threefish",
+        feature = "chacha",
+        feature = "rc4-family",
+        feature = "salsa20",
+        feature = "hc",
+        feature = "chacha-aead",
+        feature = "ascon-aead",
+        feature = "grain128-aead",
+        feature = "sparkle-aead",
+        feature = "macs",
+        feature = "pbe"
+    ))]
+    pub use tc_block_modes::IvParams;
+    #[cfg(any(
+        feature = "aes",
+        feature = "des",
+        feature = "camellia",
+        feature = "aria",
+        feature = "sm4",
+        feature = "seed",
+        feature = "dstu7624",
+        feature = "blowfish",
+        feature = "twofish",
+        feature = "serpent",
+        feature = "cast",
+        feature = "misc-block-cipher",
+        feature = "rc-cipher",
+        feature = "gost28147",
+        feature = "threefish",
+        feature = "chacha",
+        feature = "rc4-family",
+        feature = "salsa20",
+        feature = "hc",
+        feature = "chacha-aead",
+        feature = "ascon-aead",
+        feature = "grain128-aead",
+        feature = "sparkle-aead",
+        feature = "macs",
+        feature = "pbe"
+    ))]
+    pub use tc_block_modes::KeyWithIvOwned;
+    #[cfg(any(feature = "rc-cipher", feature = "gost28147", feature = "threefish"))]
+    pub use tc_block_modes::ParamsWithIvOwned;
+    #[cfg(feature = "gost28147")]
+    pub use tc_gost28147::Gost28147Params;
+    #[cfg(feature = "gost28147")]
+    pub use tc_gost28147::Gost28147ParamsOwned;
+    #[cfg(feature = "gost28147")]
+    pub use tc_gost28147::s_box as gost28147_s_box;
+    #[cfg(feature = "rc-cipher")]
+    pub use tc_rc_cipher::Rc2Params;
+    #[cfg(feature = "rc-cipher")]
+    pub use tc_rc_cipher::Rc2ParamsOwned;
+    #[cfg(feature = "rc-cipher")]
+    pub use tc_rc_cipher::Rc5Params;
+    #[cfg(feature = "rc-cipher")]
+    pub use tc_rc_cipher::Rc5ParamsOwned;
+    #[cfg(feature = "threefish")]
+    pub use tc_threefish::ThreefishParams;
+    #[cfg(feature = "threefish")]
+    pub use tc_threefish::ThreefishParamsOwned;
+}
+
+// The params of the DRBGs
+pub mod drbg {
+    #[cfg(feature = "drbg")]
+    pub use crate::params::drbg_params::DrbgParams;
+}
+
+// The params of the key and key pair generators, and the domains they take
+pub mod generate {
+    #[cfg(feature = "dsa")]
+    pub use crate::params::dsa_key_gen_params::DsaKeyGenParams;
+    #[cfg(any(
+        feature = "fp-custom",
+        feature = "fp-curve",
+        feature = "f2m-custom",
+        feature = "f2m-curve"
+    ))]
+    pub use crate::params::ec_key_gen_params::EcKeyGenParams;
+    #[cfg(feature = "gost3410")]
+    pub use crate::params::gost3410_key_gen_params::Gost3410KeyGenParams;
+    pub use crate::params::key_length::KeyLength;
+    #[cfg(feature = "gost28147")]
+    pub use crate::params::own_key_gen_params::Gost28147KeyGenParams;
+    #[cfg(feature = "rc-cipher")]
+    pub use crate::params::own_key_gen_params::Rc2KeyGenParams;
+    #[cfg(feature = "rc-cipher")]
+    pub use crate::params::own_key_gen_params::Rc5KeyGenParams;
+    #[cfg(feature = "threefish")]
+    pub use crate::params::own_key_gen_params::ThreefishKeyGenParams;
+    #[cfg(feature = "rsa")]
+    pub use crate::params::rsa_key_gen_params::RsaKeyGenParams;
+    #[cfg(any(feature = "dh", feature = "elgamal"))]
+    pub use tc_dh_key::DhParameters;
+    #[cfg(any(feature = "dh", feature = "elgamal"))]
+    pub use tc_dh_key::standard_groups as dh_groups;
+    #[cfg(feature = "dsa")]
+    pub use tc_dsa_key::DsaParameters;
+    #[cfg(feature = "elgamal")]
+    pub use tc_elgamal::ElGamalParameters;
+    #[cfg(feature = "gost3410")]
+    pub use tc_gost3410_key::Gost3410Parameters;
+    #[cfg(feature = "ml-dsa")]
+    pub use tc_ml_dsa::MlDsaParameters;
+    #[cfg(feature = "ml-kem")]
+    pub use tc_ml_kem::MlKemParameters;
+    #[cfg(feature = "naccache-stern")]
+    pub use tc_naccache_stern::NaccacheSternKeyGenerationParams;
+    #[cfg(feature = "slh-dsa")]
+    pub use tc_slh_dsa::SlhDsaParameters;
+}
+
+// The params of the KDFs
+pub mod kdf {
+    #[cfg(feature = "kdf")]
+    pub use tc_kdf::hkdf::HkdfParamsOwned;
+    #[cfg(feature = "kdf")]
+    pub use tc_kdf::kdf::KdfParamsOwned;
+    #[cfg(feature = "kdf")]
+    pub use tc_kdf::sp800_108::KdfCounterParamsOwned;
+    #[cfg(feature = "kdf")]
+    pub use tc_kdf::sp800_108::KdfDoublePipelineParamsOwned;
+    #[cfg(feature = "kdf")]
+    pub use tc_kdf::sp800_108::KdfFeedbackParamsOwned;
+    #[cfg(feature = "pbe")]
+    pub use tc_pbe::PbeParamsOwned;
+}
+
+// The keys and parameter sets of the KEMs
+pub mod kem {
+    #[cfg(feature = "ml-kem")]
+    pub use tc_ml_kem::MlKemParameters;
+    #[cfg(feature = "ml-kem")]
+    pub use tc_ml_kem::MlKemPrivateKey;
+    #[cfg(feature = "ml-kem")]
+    pub use tc_ml_kem::MlKemPublicKey;
+}
+
+// The params of the MACs: keys and IVs
+pub mod mac {
+    pub use tc_block_cipher::KeyOwned;
+    pub use tc_block_cipher::KeyParams;
+    #[cfg(any(
+        feature = "aes",
+        feature = "des",
+        feature = "camellia",
+        feature = "aria",
+        feature = "sm4",
+        feature = "seed",
+        feature = "dstu7624",
+        feature = "blowfish",
+        feature = "twofish",
+        feature = "serpent",
+        feature = "cast",
+        feature = "misc-block-cipher",
+        feature = "rc-cipher",
+        feature = "gost28147",
+        feature = "threefish",
+        feature = "chacha",
+        feature = "rc4-family",
+        feature = "salsa20",
+        feature = "hc",
+        feature = "chacha-aead",
+        feature = "ascon-aead",
+        feature = "grain128-aead",
+        feature = "sparkle-aead",
+        feature = "macs",
+        feature = "pbe"
+    ))]
+    pub use tc_block_modes::IvParams;
+    #[cfg(any(
+        feature = "aes",
+        feature = "des",
+        feature = "camellia",
+        feature = "aria",
+        feature = "sm4",
+        feature = "seed",
+        feature = "dstu7624",
+        feature = "blowfish",
+        feature = "twofish",
+        feature = "serpent",
+        feature = "cast",
+        feature = "misc-block-cipher",
+        feature = "rc-cipher",
+        feature = "gost28147",
+        feature = "threefish",
+        feature = "chacha",
+        feature = "rc4-family",
+        feature = "salsa20",
+        feature = "hc",
+        feature = "chacha-aead",
+        feature = "ascon-aead",
+        feature = "grain128-aead",
+        feature = "sparkle-aead",
+        feature = "macs",
+        feature = "pbe"
+    ))]
+    pub use tc_block_modes::KeyWithIvOwned;
+    #[cfg(any(feature = "rc-cipher", feature = "gost28147", feature = "threefish"))]
+    pub use tc_block_modes::ParamsWithIvOwned;
+    #[cfg(feature = "gost28147")]
+    pub use tc_gost28147::Gost28147Params;
+    #[cfg(feature = "gost28147")]
+    pub use tc_gost28147::Gost28147ParamsOwned;
+    #[cfg(feature = "gost28147")]
+    pub use tc_gost28147::s_box as gost28147_s_box;
+    #[cfg(feature = "rc-cipher")]
+    pub use tc_rc_cipher::Rc2Params;
+    #[cfg(feature = "rc-cipher")]
+    pub use tc_rc_cipher::Rc2ParamsOwned;
+}
+
+// What the PBE schemes give, the params of their ciphers and MACs
+pub mod pbe {
+    pub use tc_block_cipher::KeyOwned;
+    pub use tc_block_cipher::KeyParams;
+    #[cfg(any(
+        feature = "aes",
+        feature = "des",
+        feature = "camellia",
+        feature = "aria",
+        feature = "sm4",
+        feature = "seed",
+        feature = "dstu7624",
+        feature = "blowfish",
+        feature = "twofish",
+        feature = "serpent",
+        feature = "cast",
+        feature = "misc-block-cipher",
+        feature = "rc-cipher",
+        feature = "gost28147",
+        feature = "threefish",
+        feature = "chacha",
+        feature = "rc4-family",
+        feature = "salsa20",
+        feature = "hc",
+        feature = "chacha-aead",
+        feature = "ascon-aead",
+        feature = "grain128-aead",
+        feature = "sparkle-aead",
+        feature = "macs",
+        feature = "pbe"
+    ))]
+    pub use tc_block_modes::IvParams;
+    #[cfg(any(
+        feature = "aes",
+        feature = "des",
+        feature = "camellia",
+        feature = "aria",
+        feature = "sm4",
+        feature = "seed",
+        feature = "dstu7624",
+        feature = "blowfish",
+        feature = "twofish",
+        feature = "serpent",
+        feature = "cast",
+        feature = "misc-block-cipher",
+        feature = "rc-cipher",
+        feature = "gost28147",
+        feature = "threefish",
+        feature = "chacha",
+        feature = "rc4-family",
+        feature = "salsa20",
+        feature = "hc",
+        feature = "chacha-aead",
+        feature = "ascon-aead",
+        feature = "grain128-aead",
+        feature = "sparkle-aead",
+        feature = "macs",
+        feature = "pbe"
+    ))]
+    pub use tc_block_modes::KeyWithIvOwned;
+    #[cfg(feature = "pbe")]
+    pub use tc_pbe::PbeParamsOwned;
+}
+
+// The keys of the signers
+pub mod signer {
+    #[cfg(feature = "sm2")]
+    pub use crate::params::sm2_keys::Sm2PrivateKey;
+    #[cfg(feature = "sm2")]
+    pub use crate::params::sm2_keys::Sm2PublicKey;
+    #[cfg(feature = "cfrg-curves")]
+    pub use tc_cfrg_curves::Ed448PrivateKey;
+    #[cfg(feature = "cfrg-curves")]
+    pub use tc_cfrg_curves::Ed448PublicKey;
+    #[cfg(feature = "cfrg-curves")]
+    pub use tc_cfrg_curves::Ed25519PrivateKey;
+    #[cfg(feature = "cfrg-curves")]
+    pub use tc_cfrg_curves::Ed25519PublicKey;
+    #[cfg(feature = "dsa")]
+    pub use tc_dsa_key::DsaParameters;
+    #[cfg(feature = "dsa")]
+    pub use tc_dsa_key::DsaPrivateKey;
+    #[cfg(feature = "dsa")]
+    pub use tc_dsa_key::DsaPublicKey;
+    #[cfg(any(
+        feature = "fp-custom",
+        feature = "fp-curve",
+        feature = "f2m-custom",
+        feature = "f2m-curve",
+        feature = "sm2"
+    ))]
+    pub use tc_ec_key::EcPrivateKey;
+    #[cfg(any(
+        feature = "fp-custom",
+        feature = "fp-curve",
+        feature = "f2m-custom",
+        feature = "f2m-curve",
+        feature = "sm2"
+    ))]
+    pub use tc_ec_key::EcPublicKey;
+    #[cfg(feature = "gost3410")]
+    pub use tc_gost3410_key::Gost3410Parameters;
+    #[cfg(feature = "gost3410")]
+    pub use tc_gost3410_key::Gost3410PrivateKey;
+    #[cfg(feature = "gost3410")]
+    pub use tc_gost3410_key::Gost3410PublicKey;
+    #[cfg(feature = "ml-dsa")]
+    pub use tc_ml_dsa::MlDsaParameters;
+    #[cfg(feature = "ml-dsa")]
+    pub use tc_ml_dsa::MlDsaPrivateKey;
+    #[cfg(feature = "ml-dsa")]
+    pub use tc_ml_dsa::MlDsaPublicKey;
+    #[cfg(feature = "rsa")]
+    pub use tc_rsa::RsaKey;
+    #[cfg(feature = "rsa")]
+    pub use tc_rsa::RsaKeyParams;
+    #[cfg(feature = "slh-dsa")]
+    pub use tc_slh_dsa::SlhDsaParameters;
+    #[cfg(feature = "slh-dsa")]
+    pub use tc_slh_dsa::SlhDsaPrivateKey;
+    #[cfg(feature = "slh-dsa")]
+    pub use tc_slh_dsa::SlhDsaPublicKey;
+}
+
+// The params of the key wraps: keys and IVs
+pub mod wrap {
+    pub use tc_block_cipher::KeyOwned;
+    pub use tc_block_cipher::KeyParams;
+    #[cfg(any(
+        feature = "aes",
+        feature = "des",
+        feature = "camellia",
+        feature = "aria",
+        feature = "sm4",
+        feature = "seed",
+        feature = "dstu7624",
+        feature = "blowfish",
+        feature = "twofish",
+        feature = "serpent",
+        feature = "cast",
+        feature = "misc-block-cipher",
+        feature = "rc-cipher",
+        feature = "gost28147",
+        feature = "threefish",
+        feature = "chacha",
+        feature = "rc4-family",
+        feature = "salsa20",
+        feature = "hc",
+        feature = "chacha-aead",
+        feature = "ascon-aead",
+        feature = "grain128-aead",
+        feature = "sparkle-aead",
+        feature = "macs",
+        feature = "pbe"
+    ))]
+    pub use tc_block_modes::IvParams;
+    #[cfg(any(
+        feature = "aes",
+        feature = "des",
+        feature = "camellia",
+        feature = "aria",
+        feature = "sm4",
+        feature = "seed",
+        feature = "dstu7624",
+        feature = "blowfish",
+        feature = "twofish",
+        feature = "serpent",
+        feature = "cast",
+        feature = "misc-block-cipher",
+        feature = "rc-cipher",
+        feature = "gost28147",
+        feature = "threefish",
+        feature = "chacha",
+        feature = "rc4-family",
+        feature = "salsa20",
+        feature = "hc",
+        feature = "chacha-aead",
+        feature = "ascon-aead",
+        feature = "grain128-aead",
+        feature = "sparkle-aead",
+        feature = "macs",
+        feature = "pbe"
+    ))]
+    pub use tc_block_modes::KeyWithIvOwned;
+}
+
+// The params of the XOFs
+pub mod xof {
+    #[cfg(feature = "ascon-hash")]
+    pub use crate::params::ascon_cxof_params::AsconCXofParams;
+    #[cfg(feature = "blake")]
+    pub use crate::params::blake2xs_params::Blake2xsParams;
+    #[cfg(feature = "blake")]
+    pub use crate::params::blake3_params::Blake3Params;
+    #[cfg(feature = "keccak")]
+    pub use crate::params::cshake_params::CShakeParams;
+    #[cfg(feature = "keccak")]
+    pub use crate::params::parallel_hash_params::ParallelHashParams;
+    #[cfg(feature = "keccak")]
+    pub use crate::params::tuple_hash_params::TupleHashParams;
 }

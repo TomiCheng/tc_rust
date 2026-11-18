@@ -43,7 +43,7 @@ pub(super) fn gost3410(context: &DefaultAlgoContext) -> Vec<Box<dyn SignerEntry>
 
 #[cfg(test)]
 mod tests {
-    use crate::params::Gost3410KeyGenParams;
+    use crate::params::generate::Gost3410KeyGenParams;
     use crate::{AlgoBuilder, DefaultAlgoBuilder};
 
     #[test]

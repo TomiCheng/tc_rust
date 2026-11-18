@@ -35,7 +35,7 @@ pub(super) fn xchacha20(_context: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntr
 mod tests {
     use super::chacha;
     use crate::cipher::{Cipher, CipherDirection, CipherEntry};
-    use crate::params::{KeyOwned, KeyWithIvOwned};
+    use crate::params::{cipher::KeyWithIvOwned, key::KeyOwned};
     use crate::{AlgoBuilder, DefaultAlgoBuilder, DefaultAlgoContext, ErrorKind};
 
     const NAME: &str = "CHACHA7539";
@@ -205,7 +205,7 @@ mod variant_tests {
     #![allow(unused_imports)]
     use tc_stream_cipher::{CipherDirection, KeyRef, KeyWithIvRef, StreamCipher, StreamCipherInit};
 
-    use crate::params::{KeyOwned, KeyWithIvOwned};
+    use crate::params::{cipher::KeyWithIvOwned, key::KeyOwned};
     use crate::{AlgoBuilder, DefaultAlgoBuilder};
 
     #[allow(dead_code)]

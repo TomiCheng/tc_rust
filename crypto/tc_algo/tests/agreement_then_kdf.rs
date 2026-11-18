@@ -1,7 +1,7 @@
 #![cfg(all(feature = "dh", feature = "kdf", feature = "sha"))]
 
-use tc_algo::params::HkdfParamsOwned;
-use tc_algo::params::dh_groups::rfc3526_2048;
+use tc_algo::params::kdf::HkdfParamsOwned;
+use tc_algo::params::key::dh::dh_groups::rfc3526_2048;
 use tc_algo::{AlgoBuilder, DefaultAlgoBuilder};
 
 #[test]

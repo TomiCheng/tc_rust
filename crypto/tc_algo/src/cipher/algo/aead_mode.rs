@@ -35,8 +35,8 @@ impl<C> OwnAead<C> for NoOwn {
 #[cfg(any(feature = "rc-cipher", feature = "gost28147", feature = "threefish"))]
 impl<C, O: 'static> OwnAead<C> for Own<O>
 where
-    C: AeadCipherInit<crate::params::ParamsWithAeadOwned<O>>,
-    <C as AeadCipherInit<crate::params::ParamsWithAeadOwned<O>>>::Error:
+    C: AeadCipherInit<crate::params::cipher::ParamsWithAeadOwned<O>>,
+    <C as AeadCipherInit<crate::params::cipher::ParamsWithAeadOwned<O>>>::Error:
         Error + Send + Sync + 'static,
 {
     fn init(
@@ -46,7 +46,7 @@ where
     ) -> Option<Result<(), AlgoError>> {
         let params = params
             .as_any()
-            .downcast_ref::<crate::params::ParamsWithAeadOwned<O>>()?;
+            .downcast_ref::<crate::params::cipher::ParamsWithAeadOwned<O>>()?;
         Some(
             cipher
                 .init(direction.into(), params)

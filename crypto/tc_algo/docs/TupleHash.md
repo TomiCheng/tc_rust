@@ -12,7 +12,7 @@ fields, such as a user name, a date and a key ID, hashed or signed as a whole.
 Each `try_update` is one element of the tuple.
 
 ```rust
-use tc_algo::params::TupleHashParams;
+use tc_algo::params::xof::TupleHashParams;
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
 fn main() -> Result<(), AlgoError> {

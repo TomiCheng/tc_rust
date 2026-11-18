@@ -10,7 +10,7 @@ the row, and the nonce here comes from `rand` and `rand_core`.
 ```rust
 use rand::rngs::SysRng;
 use rand_core::{Rng, UnwrapErr};
-use tc_algo::params::{AeadParamsOwned, KeyOwned, KeyParams};
+use tc_algo::params::{cipher::AeadParamsOwned, key::KeyOwned, key::KeyParams};
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
 fn main() -> Result<(), AlgoError> {
@@ -48,7 +48,7 @@ The same in pieces, when the message does not come all at once:
 use rand::rngs::SysRng;
 use rand_core::{Rng, UnwrapErr};
 use tc_algo::cipher::CipherDirection;
-use tc_algo::params::{AeadParamsOwned, KeyOwned, KeyParams};
+use tc_algo::params::{cipher::AeadParamsOwned, key::KeyOwned, key::KeyParams};
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
 fn main() -> Result<(), AlgoError> {

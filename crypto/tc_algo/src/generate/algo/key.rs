@@ -1,7 +1,7 @@
 use rand_core::CryptoRng;
 
 use crate::generate::{KeyGenerator, KeyGeneratorEntry};
-use crate::params::{KeyLength, KeyOwned};
+use crate::params::{generate::KeyLength, key::KeyOwned};
 use crate::{AlgoError, DefaultAlgoContext, EntryBase, ErrorKind, Params};
 
 // The row of a key that is only random bytes, of the length that init gives in a KeyLength. It does
@@ -64,7 +64,7 @@ mod tests {
     use core::any::Any;
 
     use crate::generate::KeyGenerator;
-    use crate::params::{KeyLength, KeyOwned, KeyParams};
+    use crate::params::{generate::KeyLength, key::KeyOwned, key::KeyParams};
     use crate::{AlgoBuilder, DefaultAlgoBuilder, ErrorKind, Params};
 
     fn generator() -> Box<dyn KeyGenerator> {

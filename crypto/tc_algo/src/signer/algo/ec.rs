@@ -489,7 +489,7 @@ fn ecgost3410(rand: Rand) -> Vec<Box<dyn SignerEntry>> {
 ))]
 mod tests {
     use crate::generate::KeyPair;
-    use crate::params::{EcKeyGenParams, KeyLength};
+    use crate::params::{generate::EcKeyGenParams, generate::KeyLength};
     use crate::{Algo, AlgoBuilder, DefaultAlgoBuilder, ErrorKind};
 
     const MESSAGE: &[u8] = b"attack at dawn";
@@ -613,7 +613,7 @@ mod tests {
     )
 ))]
 mod gost_tests {
-    use crate::params::EcKeyGenParams;
+    use crate::params::generate::EcKeyGenParams;
     use crate::{AlgoBuilder, DefaultAlgoBuilder};
 
     #[test]

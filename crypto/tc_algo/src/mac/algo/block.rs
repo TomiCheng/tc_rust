@@ -263,7 +263,7 @@ fn gmac<E: Engine>(cipher: &str, engine: fn() -> E) -> Box<dyn MacEntry> {
 
 #[cfg(all(test, feature = "macs", feature = "des"))]
 mod tests {
-    use crate::params::{KeyOwned, KeyWithIvOwned};
+    use crate::params::{cipher::KeyWithIvOwned, key::KeyOwned};
     use crate::{AlgoBuilder, DefaultAlgoBuilder};
 
     fn unhex(text: &str) -> Vec<u8> {
@@ -340,7 +340,7 @@ mod tests {
 
 #[cfg(all(test, feature = "macs", feature = "aes"))]
 mod aes_tests {
-    use crate::params::{KeyOwned, KeyWithIvOwned};
+    use crate::params::{cipher::KeyWithIvOwned, key::KeyOwned};
     use crate::{AlgoBuilder, DefaultAlgoBuilder, ErrorKind};
 
     fn unhex(text: &str) -> Vec<u8> {

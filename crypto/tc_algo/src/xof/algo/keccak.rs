@@ -39,7 +39,7 @@ pub(super) fn cshake128(_context: &DefaultAlgoContext) -> Vec<Box<dyn XofEntry>>
     row("CSHAKE128", &[], &[], || {
         Box::new(InitXof::new(
             tc_keccak::CShakeDigest::new(128, b"", b""),
-            |params: &crate::params::CShakeParams| {
+            |params: &crate::params::xof::CShakeParams| {
                 Ok(tc_keccak::CShakeDigest::new(
                     128,
                     params.function_name(),
@@ -55,7 +55,7 @@ pub(super) fn cshake256(_context: &DefaultAlgoContext) -> Vec<Box<dyn XofEntry>>
     row("CSHAKE256", &[], &[], || {
         Box::new(InitXof::new(
             tc_keccak::CShakeDigest::new(256, b"", b""),
-            |params: &crate::params::CShakeParams| {
+            |params: &crate::params::xof::CShakeParams| {
                 Ok(tc_keccak::CShakeDigest::new(
                     256,
                     params.function_name(),
@@ -74,7 +74,7 @@ pub(super) fn tuplehash128(_context: &DefaultAlgoContext) -> Vec<Box<dyn XofEntr
     row("TUPLEHASH128", &[], &[], || {
         Box::new(InitXof::new(
             tc_keccak::TupleHash::new(128, b""),
-            |params: &crate::params::TupleHashParams| {
+            |params: &crate::params::xof::TupleHashParams| {
                 Ok(tc_keccak::TupleHash::new(128, params.customization()))
             },
         ))
@@ -86,7 +86,7 @@ pub(super) fn tuplehash256(_context: &DefaultAlgoContext) -> Vec<Box<dyn XofEntr
     row("TUPLEHASH256", &[], &[], || {
         Box::new(InitXof::new(
             tc_keccak::TupleHash::new(256, b""),
-            |params: &crate::params::TupleHashParams| {
+            |params: &crate::params::xof::TupleHashParams| {
                 Ok(tc_keccak::TupleHash::new(256, params.customization()))
             },
         ))
@@ -104,7 +104,7 @@ pub(super) fn parallelhash128(_context: &DefaultAlgoContext) -> Vec<Box<dyn XofE
     row("PARALLELHASH128", &[], &[], || {
         Box::new(InitXof::new(
             tc_keccak::ParallelHash::new(128, b"", DEFAULT_BLOCK_SIZE),
-            |params: &crate::params::ParallelHashParams| {
+            |params: &crate::params::xof::ParallelHashParams| {
                 // tc_keccak panics on blocks of 0 bytes
                 if params.block_size() == 0 {
                     return Err(invalid());
@@ -124,7 +124,7 @@ pub(super) fn parallelhash256(_context: &DefaultAlgoContext) -> Vec<Box<dyn XofE
     row("PARALLELHASH256", &[], &[], || {
         Box::new(InitXof::new(
             tc_keccak::ParallelHash::new(256, b"", DEFAULT_BLOCK_SIZE),
-            |params: &crate::params::ParallelHashParams| {
+            |params: &crate::params::xof::ParallelHashParams| {
                 // tc_keccak panics on blocks of 0 bytes
                 if params.block_size() == 0 {
                     return Err(invalid());
@@ -329,7 +329,7 @@ mod init_tests {
     #[cfg(feature = "keccak")]
     #[test]
     fn cshake_is_shake_until_init_sets_its_strings_which_reset_keeps() {
-        use crate::params::CShakeParams;
+        use crate::params::xof::CShakeParams;
 
         let mut cshake = xof("CSHAKE128");
         assert_eq!(
@@ -374,7 +374,7 @@ mod init_tests {
     #[cfg(feature = "keccak")]
     #[test]
     fn cshake256_takes_its_strings_from_init() {
-        use crate::params::CShakeParams;
+        use crate::params::xof::CShakeParams;
 
         let mut cshake = xof("CSHAKE256");
         let params = CShakeParams::new().with_customization(b"S".to_vec());
@@ -388,7 +388,7 @@ mod init_tests {
     #[cfg(feature = "keccak")]
     #[test]
     fn tuplehash128_takes_its_customization_from_init() {
-        use crate::params::TupleHashParams;
+        use crate::params::xof::TupleHashParams;
 
         let mut tuple_hash = xof("TUPLEHASH128");
         let params = TupleHashParams::new().with_customization(b"S".to_vec());
@@ -402,7 +402,7 @@ mod init_tests {
     #[cfg(feature = "keccak")]
     #[test]
     fn each_update_of_tuplehash_is_one_element_of_the_tuple() {
-        use crate::params::TupleHashParams;
+        use crate::params::xof::TupleHashParams;
 
         let mut tuple_hash = xof("TUPLEHASH256");
         let params = TupleHashParams::new().with_customization(b"My Tuple App".to_vec());
@@ -422,7 +422,7 @@ mod init_tests {
     #[test]
     fn parallelhash_runs_with_8192_byte_blocks_until_init_sets_them() {
         use crate::ErrorKind;
-        use crate::params::ParallelHashParams;
+        use crate::params::xof::ParallelHashParams;
 
         let message = vec![7; 20000];
         let mut parallel_hash = xof("PARALLELHASH128");
@@ -448,7 +448,7 @@ mod init_tests {
     #[cfg(feature = "keccak")]
     #[test]
     fn parallelhash256_takes_its_block_size_from_init() {
-        use crate::params::ParallelHashParams;
+        use crate::params::xof::ParallelHashParams;
 
         let mut parallel_hash = xof("PARALLELHASH256");
         parallel_hash.init(&ParallelHashParams::new(16)).unwrap();

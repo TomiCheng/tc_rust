@@ -47,7 +47,7 @@ pub(super) fn dstu7624_512(context: &DefaultAlgoContext) -> Vec<Box<dyn CipherEn
 
 #[cfg(test)]
 mod tests {
-    use crate::params::KeyOwned;
+    use crate::params::key::KeyOwned;
     use crate::{AlgoBuilder, DefaultAlgoBuilder};
 
     fn unhex(hex: &str) -> Vec<u8> {

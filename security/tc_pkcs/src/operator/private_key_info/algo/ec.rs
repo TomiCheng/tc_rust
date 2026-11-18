@@ -1,7 +1,7 @@
 use std::sync::OnceLock;
 
 use tc_algo::Params;
-use tc_algo::params::EcPrivateKey;
+use tc_algo::params::key::ec::EcPrivateKey;
 use tc_asn1::{
     Asn1BitString, Asn1Object, Asn1OctetString, Asn1Oid, Encode, EncodingOptions, NamedOid,
 };
@@ -1244,7 +1244,7 @@ fn sm2p256v1() -> SecPCtPoint<'static, SM2P256V1FieldElement> {
 
 #[cfg(test)]
 mod tests {
-    use tc_algo::params::EcKeyGenParams;
+    use tc_algo::params::generate::EcKeyGenParams;
 
     use super::CURVES;
     use crate::{DefaultPkcsOperatorBuilder, PkcsOperatorBuilder};

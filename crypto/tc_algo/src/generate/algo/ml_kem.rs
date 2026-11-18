@@ -77,7 +77,7 @@ impl KeyPairGenerator for MlKem {}
 mod tests {
     use tc_ml_kem::{MlKemParameters, MlKemPublicKey};
 
-    use crate::params::KeyLength;
+    use crate::params::generate::KeyLength;
     use crate::{AlgoBuilder, DefaultAlgoBuilder, ErrorKind};
 
     #[test]

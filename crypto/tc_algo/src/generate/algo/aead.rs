@@ -79,7 +79,7 @@ pub(super) fn aead(context: &DefaultAlgoContext) -> Vec<Box<dyn KeyGeneratorEntr
 
 #[cfg(test)]
 mod tests {
-    use crate::params::{AeadParamsOwned, KeyOwned, KeyParams};
+    use crate::params::{cipher::AeadParamsOwned, key::KeyOwned, key::KeyParams};
     use crate::{AlgoBuilder, DefaultAlgoBuilder};
 
     // Each row gives a key of its cipher's length, which the cipher takes as it is

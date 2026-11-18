@@ -1,4 +1,4 @@
-use tc_algo::params::KeyLength;
+use tc_algo::params::generate::KeyLength;
 use tc_algo::signer::{Signer, SignerEntry};
 use tc_algo::{
     Algo, AlgoBuilder, AlgoError, DefaultAlgoBuilder, DefaultAlgoContext, EntryBase, ErrorKind,

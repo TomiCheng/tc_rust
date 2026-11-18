@@ -70,7 +70,7 @@ mod tests {
     #![allow(unused_imports)]
     use tc_stream_cipher::{CipherDirection, KeyRef, KeyWithIvRef, StreamCipher, StreamCipherInit};
 
-    use crate::params::{KeyOwned, KeyWithIvOwned};
+    use crate::params::{cipher::KeyWithIvOwned, key::KeyOwned};
     use crate::{AlgoBuilder, DefaultAlgoBuilder};
 
     #[allow(dead_code)]

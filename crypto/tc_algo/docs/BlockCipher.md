@@ -24,7 +24,7 @@ of `tc_algo` has the rows, and the IV here comes from `rand` and `rand_core`.
 ```rust
 use rand::rngs::SysRng;
 use rand_core::{Rng, UnwrapErr};
-use tc_algo::params::{KeyOwned, KeyParams, KeyWithIvOwned};
+use tc_algo::params::{key::KeyOwned, key::KeyParams, cipher::KeyWithIvOwned};
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
 fn main() -> Result<(), AlgoError> {

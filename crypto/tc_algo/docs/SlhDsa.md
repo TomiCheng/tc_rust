@@ -11,7 +11,7 @@ The `slh-dsa` feature of `tc_algo` has the rows.
 A parameter set and a new pair:
 
 ```rust
-use tc_algo::params::SlhDsaParameters;
+use tc_algo::params::key::slh_dsa::SlhDsaParameters;
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
 fn main() -> Result<(), AlgoError> {
@@ -44,7 +44,7 @@ default, so `generate_by_name` gives `NotInitialized`, and any other type is `In
 From a new pair to a verified signature:
 
 ```rust
-use tc_algo::params::SlhDsaParameters;
+use tc_algo::params::key::slh_dsa::SlhDsaParameters;
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
 fn main() -> Result<(), AlgoError> {

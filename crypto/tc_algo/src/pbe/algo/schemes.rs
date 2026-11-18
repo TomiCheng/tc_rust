@@ -7,7 +7,7 @@ use tc_pbe::{
 };
 use tc_zeroize::Zeroizing;
 
-use crate::params::{KeyOwned, KeyWithIvOwned};
+use crate::params::{cipher::KeyWithIvOwned, key::KeyOwned};
 use crate::pbe::{Pbe, PbeEntry};
 use crate::{AlgoError, DefaultAlgoContext, EntryBase, ErrorKind, Params};
 
@@ -654,7 +654,7 @@ fn tiger(scheme: Scheme, params: &PbeParamsRef<'_>) -> Result<Generator, PbeErro
 #[cfg(test)]
 mod tests {
     #[allow(unused_imports, reason = "each test uses some")]
-    use crate::params::{IvParams, KeyOwned, KeyParams, KeyWithIvOwned};
+    use crate::params::{cipher::IvParams, cipher::KeyWithIvOwned, key::KeyOwned, key::KeyParams};
     #[allow(unused_imports, reason = "each test uses some")]
     use crate::{AlgoBuilder, DefaultAlgoBuilder, ErrorKind};
 

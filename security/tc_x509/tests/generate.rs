@@ -5,7 +5,7 @@ use tc_asn1::Asn1Integer;
 use tc_asn1_x509::cert::Version;
 use tc_asn1_x509::ext::BasicConstraints;
 use tc_x509::cert::{X509Certificate, X509V3CertificateGenerator};
-use tc_x509::operator::params::RsaKeyGenParams;
+use tc_x509::operator::params::generate::RsaKeyGenParams;
 use tc_x509::{DefaultX509OperatorBuilder, X509Error, X509Operator, X509OperatorBuilder};
 
 // A self-signed generator with every field the certificate needs, and the public key to check it

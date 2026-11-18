@@ -22,7 +22,7 @@ pub(super) fn ascon_cxof128(_context: &DefaultAlgoContext) -> Vec<Box<dyn XofEnt
     row("ASCON-CXOF128", &[], &[], || {
         Box::new(InitXof::new(
             tc_ascon_hash::AsconCXof128::new(),
-            |params: &crate::params::AsconCXofParams| {
+            |params: &crate::params::xof::AsconCXofParams| {
                 // SP 800-232's limit on Z, which tc_ascon_hash panics past
                 if params.customization().len() > 256 {
                     return Err(invalid());
@@ -125,7 +125,7 @@ mod tests {
     #[cfg(feature = "ascon-hash")]
     #[test]
     fn ascon_cxof128_takes_its_customization_from_init_up_to_256_bytes() {
-        use crate::params::AsconCXofParams;
+        use crate::params::xof::AsconCXofParams;
         use crate::{AlgoBuilder as _, ErrorKind};
 
         check(

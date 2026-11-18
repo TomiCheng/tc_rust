@@ -108,7 +108,7 @@ fn hmac_takes(digest: &dyn DigestEntry) -> bool {
 #[cfg(all(test, feature = "kdf", feature = "sha"))]
 mod hkdf_tests {
     use crate::kdf::Kdf;
-    use crate::params::{HkdfParamsOwned, KeyLength};
+    use crate::params::{generate::KeyLength, kdf::HkdfParamsOwned};
     use crate::{AlgoBuilder, DefaultAlgoBuilder, ErrorKind};
 
     const SHA256: &str = "HKDF-SHA256";
@@ -239,7 +239,7 @@ mod digest_kdf_tests {
     use tc_kdf::{Kdf as _, KdfInit as _};
     use tc_sha::Sha256Digest;
 
-    use crate::params::{KdfParamsOwned, KeyLength};
+    use crate::params::{generate::KeyLength, kdf::KdfParamsOwned};
     use crate::{AlgoBuilder, DefaultAlgoBuilder, ErrorKind};
 
     const SECRET: [u8; 32] = [0x5a; 32];

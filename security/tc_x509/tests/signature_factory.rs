@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use tc_algo::generate::KeyPair;
 use tc_algo::{AlgoBuilder, DefaultAlgoBuilder, Params};
-use tc_x509::operator::params::RsaKeyGenParams;
+use tc_x509::operator::params::generate::RsaKeyGenParams;
 use tc_x509::{DefaultX509OperatorBuilder, X509Error, X509Operator, X509OperatorBuilder};
 
 fn rsa_pair(oper: &dyn X509Operator) -> KeyPair {

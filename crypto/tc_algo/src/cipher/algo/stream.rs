@@ -13,15 +13,15 @@ use tc_stream_cipher::StreamError;
 
 use crate::cipher::{Cipher, CipherDirection, CipherEntry};
 #[cfg(feature = "rc4-family")]
-use crate::params::KeyOwned;
-use crate::params::KeyParams;
+use crate::params::key::KeyOwned;
+use crate::params::key::KeyParams;
 #[cfg(any(
     feature = "chacha",
     feature = "rc4-family",
     feature = "salsa20",
     feature = "hc"
 ))]
-use crate::params::{IvParams, KeyWithIvOwned};
+use crate::params::{cipher::IvParams, cipher::KeyWithIvOwned};
 use crate::{AlgoError, EntryBase, ErrorKind, Params};
 
 // The row of one stream cipher, named after the first of `names` with the others as aliases

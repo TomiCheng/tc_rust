@@ -10,7 +10,7 @@ devices and short messages.
 ## Hashing with a customization string
 
 ```rust
-use tc_algo::params::AsconCXofParams;
+use tc_algo::params::xof::AsconCXofParams;
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
 fn main() -> Result<(), AlgoError> {

@@ -61,7 +61,7 @@ mod tests {
     #[cfg(feature = "sparkle-aead")]
     #[test]
     fn each_member_takes_its_sizes_and_decrypts_back() {
-        use crate::params::AeadParamsOwned;
+        use crate::params::cipher::AeadParamsOwned;
         use crate::{AlgoBuilder, DefaultAlgoBuilder};
 
         let algo = DefaultAlgoBuilder::default().build();

@@ -266,7 +266,11 @@ mod tests {
         assert_eq!(error.kind(), ErrorKind::InvalidCiphertext);
 
         let error = ciphers
-            .encrypt_by_name(name, &crate::params::KeyOwned::new(vec![0; 16]), MESSAGE)
+            .encrypt_by_name(
+                name,
+                &crate::params::key::KeyOwned::new(vec![0; 16]),
+                MESSAGE,
+            )
             .unwrap_err();
         assert_eq!(error.kind(), ErrorKind::InvalidParams);
     }

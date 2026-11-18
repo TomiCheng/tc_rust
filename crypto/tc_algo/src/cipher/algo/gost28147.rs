@@ -27,7 +27,9 @@ pub(super) fn gost28147(context: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry
 
 #[cfg(test)]
 mod tests {
-    use crate::params::{Gost28147ParamsOwned, KeyOwned, ParamsWithIvOwned, gost28147_s_box};
+    use crate::params::{
+        cipher::ParamsWithIvOwned, key::Gost28147ParamsOwned, key::KeyOwned, key::gost28147_s_box,
+    };
     use crate::{AlgoBuilder, DefaultAlgoBuilder, ErrorKind};
 
     const KEY: &str = "546d203368656c326973652073736e62206167796967747473656865202c3d73";
@@ -100,7 +102,7 @@ mod tests {
     fn gofb_gives_bouncy_castle_s_vector_and_only_eight_byte_blocks_have_it() {
         let algo = DefaultAlgoBuilder::default().build();
         let ciphers = algo.cipher();
-        let params = crate::params::KeyWithIvOwned::new(
+        let params = crate::params::cipher::KeyWithIvOwned::new(
             unhex("0011223344556677889900112233445566778899001122334455667788990011"),
             unhex("1234567890abcdef"),
         );
@@ -129,7 +131,7 @@ mod tests {
     // GOST 28147's own S-box reaches the engine under EAX, the AEAD mode of its 8-byte block
     #[test]
     fn eax_takes_the_s_box_of_its_own_params() {
-        use crate::params::{AeadParamsOwned, ParamsWithAeadOwned};
+        use crate::params::{cipher::AeadParamsOwned, cipher::ParamsWithAeadOwned};
 
         let algo = DefaultAlgoBuilder::default().build();
         let ciphers = algo.cipher();

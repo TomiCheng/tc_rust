@@ -8,7 +8,7 @@ From two new pairs to one shared secret, with ECDH on P-256. The `ecdh` feature 
 the row.
 
 ```rust
-use tc_algo::params::EcKeyGenParams;
+use tc_algo::params::generate::EcKeyGenParams;
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
 fn main() -> Result<(), AlgoError> {

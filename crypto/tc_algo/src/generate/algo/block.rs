@@ -266,7 +266,7 @@ pub(super) fn block(context: &DefaultAlgoContext) -> Vec<Box<dyn KeyGeneratorEnt
 
 #[cfg(test)]
 mod tests {
-    use crate::params::{KeyOwned, KeyParams};
+    use crate::params::{key::KeyOwned, key::KeyParams};
     use crate::{AlgoBuilder, DefaultAlgoBuilder, Params};
 
     fn key_of(key: &dyn Params) -> Vec<u8> {
@@ -358,7 +358,7 @@ mod tests {
     // A generated key goes straight into its cipher
     #[test]
     fn a_generated_key_goes_into_its_cipher() {
-        use crate::params::KeyWithIvOwned;
+        use crate::params::cipher::KeyWithIvOwned;
 
         let algo = DefaultAlgoBuilder::default().build();
         let key = algo.key_generator().generate_by_name("DESEDE24").unwrap();
@@ -379,7 +379,7 @@ mod tests {
     #[test]
     fn init_takes_the_lengths_of_each_cipher() {
         use crate::ErrorKind;
-        use crate::params::KeyLength;
+        use crate::params::generate::KeyLength;
 
         let algo = DefaultAlgoBuilder::default().build();
         let generators = algo.key_generator();

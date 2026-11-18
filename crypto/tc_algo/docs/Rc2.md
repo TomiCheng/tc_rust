@@ -24,7 +24,7 @@ In the AEAD modes they go with the nonce, the tag size and the initial AAD in a
 In a block cipher mode, CBC here:
 
 ```rust
-use tc_algo::params::{ParamsWithIvOwned, Rc2ParamsOwned};
+use tc_algo::params::{cipher::ParamsWithIvOwned, key::Rc2ParamsOwned};
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
 fn main() -> Result<(), AlgoError> {
@@ -43,7 +43,7 @@ fn main() -> Result<(), AlgoError> {
 In an AEAD mode, EAX, the only one of RC2's 8-byte block:
 
 ```rust
-use tc_algo::params::{ParamsWithAeadOwned, Rc2ParamsOwned};
+use tc_algo::params::{cipher::ParamsWithAeadOwned, key::Rc2ParamsOwned};
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
 fn main() -> Result<(), AlgoError> {
@@ -79,7 +79,7 @@ takes besides it, which goes straight into the rows above. `init` takes an `Rc2K
 [Key generation](KeyGeneration.md).
 
 ```rust
-use tc_algo::params::{Rc2KeyGenParams, Rc2Params, Rc2ParamsOwned};
+use tc_algo::params::{generate::Rc2KeyGenParams, key::Rc2Params, key::Rc2ParamsOwned};
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
 fn main() -> Result<(), AlgoError> {

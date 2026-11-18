@@ -4,7 +4,7 @@ use tc_asym_cipher::KeyPairGeneratorInit;
 use tc_rsa::{RsaKeyGenerationParams, RsaKeyGenerator};
 
 use crate::generate::{KeyPairGenerator, KeyPairGeneratorEntry};
-use crate::params::RsaKeyGenParams;
+use crate::params::generate::RsaKeyGenParams;
 use crate::{AlgoError, DefaultAlgoContext, EntryBase, ErrorKind, Params};
 
 // The row of RSA, to give to DefaultAlgoBuilder::reg_key_pair_generator. Its name and OID are those
@@ -109,7 +109,7 @@ mod tests {
     use tc_rsa::{RsaKey, RsaKeyParams};
 
     use crate::generate::KeyPairGenerator;
-    use crate::params::RsaKeyGenParams;
+    use crate::params::generate::RsaKeyGenParams;
     use crate::{AlgoBuilder, DefaultAlgoBuilder, ErrorKind, Params};
 
     const NAME: &str = "RSA";

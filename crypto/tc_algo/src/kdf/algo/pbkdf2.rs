@@ -51,7 +51,7 @@ impl Kdf for Pbkdf2 {}
 
 #[cfg(all(test, feature = "sha"))]
 mod tests {
-    use crate::params::{KeyLength, PbeParamsOwned};
+    use crate::params::{generate::KeyLength, kdf::PbeParamsOwned};
     use crate::{AlgoBuilder, DefaultAlgoBuilder, ErrorKind};
 
     fn hex(text: &str) -> Vec<u8> {

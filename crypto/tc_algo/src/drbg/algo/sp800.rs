@@ -5,7 +5,7 @@ use rand_core::{CryptoRng, TryCryptoRng, TryRng};
 use tc_drbg::DrbgError;
 
 use crate::drbg::{Drbg, DrbgEntry};
-use crate::params::DrbgParams;
+use crate::params::drbg::DrbgParams;
 use crate::{AlgoError, DefaultAlgoContext, EntryBase, ErrorKind, Params};
 
 // The most this row asks for in one request: 2^18 bits, under the limit of every kind of SP 800-90A;
@@ -308,7 +308,7 @@ mod tests {
 
     use rand_core::{CryptoRng, Rng, TryCryptoRng, TryRng};
 
-    use crate::params::DrbgParams;
+    use crate::params::drbg::DrbgParams;
     use crate::{AlgoBuilder, DefaultAlgoBuilder, ErrorKind, Params};
 
     const NAME: &str = "HMAC/SHA-256";
@@ -428,7 +428,7 @@ mod cavp_tests {
 
     use rand_core::{CryptoRng, Rng, TryCryptoRng, TryRng};
 
-    use crate::params::DrbgParams;
+    use crate::params::drbg::DrbgParams;
     use crate::{AlgoBuilder, DefaultAlgoBuilder};
 
     // A random source that gives the same entropy at each call, from its start

@@ -11,7 +11,7 @@ which RSA and DH are not.
 From a new pair to one shared secret. The `ml-kem` feature of `tc_algo` has the rows.
 
 ```rust
-use tc_algo::params::MlKemParameters;
+use tc_algo::params::key::ml_kem::MlKemParameters;
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
 fn main() -> Result<(), AlgoError> {

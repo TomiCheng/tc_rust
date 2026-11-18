@@ -32,7 +32,7 @@ impl<E: fmt::Display> fmt::Display for Keyed<E> {
 // modes, go to it as they are
 macro_rules! keyed {
     ($engine:ty, $own:ty, |$key:ident| $params:expr) => {
-        impl tc_block_cipher::BlockCipherInit<$crate::params::KeyOwned>
+        impl tc_block_cipher::BlockCipherInit<$crate::params::key::KeyOwned>
             for $crate::cipher::algo::keyed::Keyed<$engine>
         {
             type Error = tc_block_cipher::InitError;
@@ -40,14 +40,14 @@ macro_rules! keyed {
             fn init(
                 &mut self,
                 direction: tc_block_cipher::CipherDirection,
-                params: &$crate::params::KeyOwned,
+                params: &$crate::params::key::KeyOwned,
             ) -> Result<(), tc_block_cipher::InitError> {
                 let $key = tc_block_cipher::KeyParams::key(params);
                 tc_block_cipher::BlockCipherInit::init(&mut self.0, direction, &$params)
             }
         }
 
-        impl tc_block_cipher::BlockCipherInit<$crate::params::KeyWithIvOwned>
+        impl tc_block_cipher::BlockCipherInit<$crate::params::cipher::KeyWithIvOwned>
             for $crate::cipher::algo::keyed::Keyed<$engine>
         {
             type Error = tc_block_cipher::InitError;
@@ -55,7 +55,7 @@ macro_rules! keyed {
             fn init(
                 &mut self,
                 direction: tc_block_cipher::CipherDirection,
-                params: &$crate::params::KeyWithIvOwned,
+                params: &$crate::params::cipher::KeyWithIvOwned,
             ) -> Result<(), tc_block_cipher::InitError> {
                 let $key = tc_block_cipher::KeyParams::key(params);
                 tc_block_cipher::BlockCipherInit::init(&mut self.0, direction, &$params)

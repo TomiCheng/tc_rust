@@ -28,7 +28,7 @@ pub(super) fn xchacha20_poly1305(_: &DefaultAlgoContext) -> Vec<Box<dyn CipherEn
 
 #[cfg(test)]
 mod tests {
-    use crate::params::AeadParamsOwned;
+    use crate::params::cipher::AeadParamsOwned;
     use crate::{AlgoBuilder, DefaultAlgoBuilder, ErrorKind};
 
     fn unhex(hex: &str) -> Vec<u8> {

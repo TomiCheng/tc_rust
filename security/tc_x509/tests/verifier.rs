@@ -5,7 +5,7 @@ use tc_algo::Params;
 use tc_asn1_x509::alg::AlgorithmIdentifier;
 use tc_asn1_x509::ext::BasicConstraints;
 use tc_x509::cert::X509V3CertificateGenerator;
-use tc_x509::operator::params::RsaKeyGenParams;
+use tc_x509::operator::params::generate::RsaKeyGenParams;
 use tc_x509::operator::signer::SignatureFactory;
 use tc_x509::operator::verifier::VerifierFactory;
 use tc_x509::{DefaultX509OperatorBuilder, X509Error, X509Operator, X509OperatorBuilder};

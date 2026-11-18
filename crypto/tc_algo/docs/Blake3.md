@@ -11,7 +11,7 @@ key derivation. `init` picks the mode with `Blake3Params`, after Bouncy Castle's
 With a 32-byte key, the output is a MAC of the message.
 
 ```rust
-use tc_algo::params::Blake3Params;
+use tc_algo::params::xof::Blake3Params;
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
 fn main() -> Result<(), AlgoError> {
@@ -33,7 +33,7 @@ is fixed in the application's source, and names the application and the purpose 
 that two uses never derive the same key.
 
 ```rust
-use tc_algo::params::Blake3Params;
+use tc_algo::params::xof::Blake3Params;
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
 fn main() -> Result<(), AlgoError> {

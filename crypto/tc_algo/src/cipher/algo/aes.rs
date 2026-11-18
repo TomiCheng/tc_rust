@@ -101,7 +101,7 @@ pub(super) fn aes(context: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>> {
 mod tests {
     use super::aes;
     use crate::cipher::{Cipher, CipherDirection, CipherEntry};
-    use crate::params::{AeadParamsOwned, KeyOwned, KeyWithIvOwned};
+    use crate::params::{cipher::AeadParamsOwned, cipher::KeyWithIvOwned, key::KeyOwned};
     use crate::{AlgoBuilder, DefaultAlgoBuilder, DefaultAlgoContext, ErrorKind, Params};
 
     // The example in FIPS 197, appendix C.1

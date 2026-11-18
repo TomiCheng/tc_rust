@@ -373,7 +373,7 @@ mod tests {
     use tc_sha::Sha256Digest;
     use tc_signer::{Signer as _, SignerInit};
 
-    use crate::params::{KeyLength, RsaKeyGenParams};
+    use crate::params::{generate::KeyLength, generate::RsaKeyGenParams};
     use crate::signer::Signer;
     use crate::{Algo, AlgoBuilder, DefaultAlgoBuilder, ErrorKind};
 
@@ -538,7 +538,7 @@ mod family_tests {
 
     use tc_rsa::RsaKey;
 
-    use crate::params::RsaKeyGenParams;
+    use crate::params::generate::RsaKeyGenParams;
     use crate::{Algo, AlgoBuilder, DefaultAlgoBuilder, ErrorKind, Params};
 
     const MESSAGE: &[u8] = b"attack at dawn";

@@ -74,7 +74,7 @@ pub(super) fn stream(context: &DefaultAlgoContext) -> Vec<Box<dyn KeyGeneratorEn
 
 #[cfg(test)]
 mod tests {
-    use crate::params::{KeyOwned, KeyParams, KeyWithIvOwned};
+    use crate::params::{cipher::KeyWithIvOwned, key::KeyOwned, key::KeyParams};
     use crate::{AlgoBuilder, DefaultAlgoBuilder, Params};
 
     fn key_of(key: &dyn Params) -> Vec<u8> {
@@ -133,7 +133,7 @@ mod tests {
     // length it does not take is InvalidParams, which keeps the length before
     #[test]
     fn init_sets_a_length_the_cipher_takes() {
-        use crate::params::KeyLength;
+        use crate::params::generate::KeyLength;
 
         let algo = DefaultAlgoBuilder::default().build();
         let mut generator = algo.key_generator().get_by_name("VMPC").unwrap();

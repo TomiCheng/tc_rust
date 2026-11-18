@@ -3,7 +3,7 @@ use tc_asn1::Asn1Oid;
 
 use super::random::{Rule, random_key};
 use crate::generate::{KeyGenerator, KeyGeneratorEntry};
-use crate::params::{KeyLength, KeyOwned};
+use crate::params::{generate::KeyLength, key::KeyOwned};
 use crate::{AlgoError, EntryBase, ErrorKind, Params};
 
 // The rows of a secret key that is the key alone: a key of the row's length without init, and of

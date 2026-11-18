@@ -1,5 +1,5 @@
 use tc_algo::agreement::{Agreement, AgreementEntry};
-use tc_algo::params::KeyLength;
+use tc_algo::params::generate::KeyLength;
 use tc_algo::{
     Algo, AlgoBuilder, AlgoError, DefaultAlgoBuilder, DefaultAlgoContext, EntryBase, ErrorKind,
     ListPolicy, Params,

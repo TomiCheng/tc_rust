@@ -11,7 +11,7 @@ use tc_asn1_x509::ext::{Extension, ExtensionId, Extensions};
 use tc_asn1_x509::name::{GeneralName, GeneralNames};
 use tc_x509::cert::{X509Certificate, X509V3CertificateGenerator};
 use tc_x509::crl::X509Crl;
-use tc_x509::operator::params::RsaKeyGenParams;
+use tc_x509::operator::params::generate::RsaKeyGenParams;
 use tc_x509::{DefaultX509OperatorBuilder, X509Error, X509Operator, X509OperatorBuilder};
 
 const CA: &[u8] = include_bytes!("data/crl/ca.der");

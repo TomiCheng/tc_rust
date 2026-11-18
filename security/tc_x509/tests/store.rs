@@ -17,7 +17,7 @@ use tc_x509::cert::{
 };
 use tc_x509::crl::{X509Crl, X509V2CrlGenerator};
 use tc_x509::extension::key_identifier_of;
-use tc_x509::operator::params::RsaKeyGenParams;
+use tc_x509::operator::params::generate::RsaKeyGenParams;
 use tc_x509::store::{
     X509AttrCertSelector, X509CertSelector, X509CertificateStore, X509CrlSelector, X509CrlStore,
 };

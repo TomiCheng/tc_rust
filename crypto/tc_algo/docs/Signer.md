@@ -8,7 +8,7 @@ From a new pair to a verified signature, with ECDSA over SHA-256 on P-256. The `
 and `sha` features of `tc_algo` have the row.
 
 ```rust
-use tc_algo::params::EcKeyGenParams;
+use tc_algo::params::generate::EcKeyGenParams;
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
 fn main() -> Result<(), AlgoError> {

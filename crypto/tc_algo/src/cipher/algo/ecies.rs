@@ -13,7 +13,7 @@ use tc_sha::Sha1Digest;
 
 use super::ies::{Ies, IesInit};
 use crate::cipher::{Cipher, CipherDirection, CipherEntry};
-use crate::params::IesEcParams;
+use crate::params::cipher::IesEcParams;
 use crate::params::ec_curves::ct_curves;
 use crate::{AlgoError, DefaultAlgoContext, EntryBase, ErrorKind, Params};
 
@@ -140,7 +140,7 @@ mod tests {
     use tc_fp_custom::{SecP192R1FieldElement, SecPCtCurve};
 
     use crate::generate::KeyPair;
-    use crate::params::{EcKeyGenParams, IesEcParams};
+    use crate::params::{cipher::IesEcParams, generate::EcKeyGenParams};
     use crate::{AlgoBuilder, DefaultAlgoBuilder, ErrorKind, Params};
 
     type Secp192r1 = &'static SecPCtCurve<SecP192R1FieldElement>;

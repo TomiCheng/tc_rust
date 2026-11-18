@@ -1,7 +1,7 @@
 use tc_algo::kem::{
     Decapsulator, Encapsulator, KemDecapsulator, KemEncapsulator, KemEntry, KemInit,
 };
-use tc_algo::params::KeyLength;
+use tc_algo::params::generate::KeyLength;
 use tc_algo::{
     Algo, AlgoBuilder, AlgoError, DefaultAlgoBuilder, DefaultAlgoContext, EntryBase, ErrorKind,
     ListPolicy, Params,

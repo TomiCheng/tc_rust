@@ -7,7 +7,7 @@ private key, see [Key pair generation](KeyPairGeneration.md).
 From a name to a new key, and the key straight into a cipher:
 
 ```rust
-use tc_algo::params::{AeadParamsOwned, KeyLength, KeyOwned, KeyParams};
+use tc_algo::params::{cipher::AeadParamsOwned, generate::KeyLength, key::KeyOwned, key::KeyParams};
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
 fn main() -> Result<(), AlgoError> {

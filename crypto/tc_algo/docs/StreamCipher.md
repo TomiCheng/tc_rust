@@ -9,7 +9,7 @@ row, and the nonce here comes from `rand` and `rand_core`.
 ```rust
 use rand::rngs::SysRng;
 use rand_core::{Rng, UnwrapErr};
-use tc_algo::params::{KeyLength, KeyOwned, KeyParams, KeyWithIvOwned};
+use tc_algo::params::{generate::KeyLength, key::KeyOwned, key::KeyParams, cipher::KeyWithIvOwned};
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
 fn main() -> Result<(), AlgoError> {

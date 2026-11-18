@@ -9,7 +9,7 @@ use tc_macs::{KeyParams, KeyRef, MacInit};
 use super::typed::{Row, Typed};
 use crate::kdf::KdfEntry;
 use crate::mac::{Mac, MacEntry};
-use crate::params::KeyOwned;
+use crate::params::key::KeyOwned;
 use crate::{AlgoError, DefaultAlgoContext};
 
 // The rows of the SP 800-108 KDFs, to give to DefaultAlgoBuilder::reg_kdf: the counter, feedback
@@ -111,7 +111,7 @@ mod tests {
     use tc_sha::Sha256Digest;
 
     use super::*;
-    use crate::params::KeyLength;
+    use crate::params::generate::KeyLength;
     use crate::{AlgoBuilder, DefaultAlgoBuilder, ErrorKind, Params};
 
     const KI: [u8; 16] = [0x3c; 16];

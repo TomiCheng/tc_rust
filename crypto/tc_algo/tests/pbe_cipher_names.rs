@@ -5,7 +5,7 @@
     feature = "rc4-family"
 ))]
 
-use tc_algo::params::{KeyOwned, KeyWithIvOwned};
+use tc_algo::params::{cipher::KeyWithIvOwned, key::KeyOwned};
 use tc_algo::{AlgoBuilder, DefaultAlgoBuilder};
 
 // The PBE names of Bouncy Castle's CipherUtilities, with the cipher each names

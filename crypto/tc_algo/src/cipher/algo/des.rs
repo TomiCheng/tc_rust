@@ -77,7 +77,7 @@ pub(super) fn desede(context: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>> 
 #[cfg(all(test, feature = "des"))]
 mod tests {
     use crate::cipher::CipherDirection;
-    use crate::params::{KeyOwned, KeyWithIvOwned};
+    use crate::params::{cipher::KeyWithIvOwned, key::KeyOwned};
     use crate::{AlgoBuilder, DefaultAlgoBuilder, ErrorKind};
 
     // The examples of FIPS 81, appendix B
@@ -244,7 +244,7 @@ mod tests {
 
 #[cfg(all(test, feature = "des"))]
 mod desede_tests {
-    use crate::params::{KeyOwned, KeyWithIvOwned};
+    use crate::params::{cipher::KeyWithIvOwned, key::KeyOwned};
     use crate::{AlgoBuilder, DefaultAlgoBuilder};
 
     fn hex(bytes: &[u8]) -> String {

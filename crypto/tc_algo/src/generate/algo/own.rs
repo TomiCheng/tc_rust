@@ -98,23 +98,23 @@ impl KeyGeneratorEntry for Row {
         match self.kind {
             #[cfg(feature = "rc-cipher")]
             Kind::Rc2 => Box::new(Rc2 {
-                params: crate::params::Rc2KeyGenParams::new(16),
+                params: crate::params::generate::Rc2KeyGenParams::new(16),
                 rand,
             }),
             #[cfg(feature = "rc-cipher")]
             Kind::Rc5 { key_bytes } => Box::new(Rc5 {
-                params: crate::params::Rc5KeyGenParams::new(key_bytes),
+                params: crate::params::generate::Rc5KeyGenParams::new(key_bytes),
                 rand,
             }),
             #[cfg(feature = "gost28147")]
             Kind::Gost28147 => Box::new(Gost28147 {
-                params: crate::params::Gost28147KeyGenParams::new(),
+                params: crate::params::generate::Gost28147KeyGenParams::new(),
                 rand,
             }),
             #[cfg(feature = "threefish")]
             Kind::Threefish { key_bytes } => Box::new(Threefish {
                 key_bytes,
-                params: crate::params::ThreefishKeyGenParams::new(),
+                params: crate::params::generate::ThreefishKeyGenParams::new(),
                 rand,
             }),
         }
@@ -125,7 +125,7 @@ impl KeyGeneratorEntry for Row {
 // 1 to 1024 bits, that of the whole key unless set
 #[cfg(feature = "rc-cipher")]
 struct Rc2 {
-    params: crate::params::Rc2KeyGenParams,
+    params: crate::params::generate::Rc2KeyGenParams,
     rand: Box<dyn CryptoRng>,
 }
 
@@ -134,7 +134,7 @@ impl KeyGenerator for Rc2 {
     fn init(&mut self, params: &dyn Params) -> Result<(), AlgoError> {
         let params = params
             .as_any()
-            .downcast_ref::<crate::params::Rc2KeyGenParams>()
+            .downcast_ref::<crate::params::generate::Rc2KeyGenParams>()
             .filter(|params| (1..=tc_rc_cipher::RC2_MAX_KEY_BYTES).contains(&params.key_bytes()))
             .filter(|params| {
                 params.effective_key_bits().is_none_or(|bits| {
@@ -149,8 +149,8 @@ impl KeyGenerator for Rc2 {
     fn generate(&mut self) -> Result<Box<dyn Params>, AlgoError> {
         let key = random_key(self.rand.as_mut(), self.params.key_bytes(), Rule::Random);
         Ok(Box::new(match self.params.effective_key_bits() {
-            Some(bits) => crate::params::Rc2ParamsOwned::with_effective_key_bits(key, bits),
-            None => crate::params::Rc2ParamsOwned::new(key),
+            Some(bits) => crate::params::key::Rc2ParamsOwned::with_effective_key_bits(key, bits),
+            None => crate::params::key::Rc2ParamsOwned::new(key),
         }))
     }
 }
@@ -159,7 +159,7 @@ impl KeyGenerator for Rc2 {
 // rounds, 12 unless set
 #[cfg(feature = "rc-cipher")]
 struct Rc5 {
-    params: crate::params::Rc5KeyGenParams,
+    params: crate::params::generate::Rc5KeyGenParams,
     rand: Box<dyn CryptoRng>,
 }
 
@@ -168,7 +168,7 @@ impl KeyGenerator for Rc5 {
     fn init(&mut self, params: &dyn Params) -> Result<(), AlgoError> {
         let params = params
             .as_any()
-            .downcast_ref::<crate::params::Rc5KeyGenParams>()
+            .downcast_ref::<crate::params::generate::Rc5KeyGenParams>()
             .filter(|params| (1..=tc_rc_cipher::RC5_MAX_KEY_BYTES).contains(&params.key_bytes()))
             .filter(|params| {
                 params
@@ -186,14 +186,16 @@ impl KeyGenerator for Rc5 {
             .params
             .rounds()
             .unwrap_or(tc_rc_cipher::RC5_DEFAULT_ROUNDS);
-        Ok(Box::new(crate::params::Rc5ParamsOwned::new(key, rounds)))
+        Ok(Box::new(crate::params::key::Rc5ParamsOwned::new(
+            key, rounds,
+        )))
     }
 }
 
 // A Gost28147ParamsOwned: a key of 32 bytes, and the default S-box unless set, of 128 bytes
 #[cfg(feature = "gost28147")]
 struct Gost28147 {
-    params: crate::params::Gost28147KeyGenParams,
+    params: crate::params::generate::Gost28147KeyGenParams,
     rand: Box<dyn CryptoRng>,
 }
 
@@ -202,7 +204,7 @@ impl KeyGenerator for Gost28147 {
     fn init(&mut self, params: &dyn Params) -> Result<(), AlgoError> {
         let params = params
             .as_any()
-            .downcast_ref::<crate::params::Gost28147KeyGenParams>()
+            .downcast_ref::<crate::params::generate::Gost28147KeyGenParams>()
             .filter(|params| params.s_box().is_none_or(|s_box| s_box.len() == 128))
             .ok_or(AlgoError::new(ErrorKind::InvalidParams))?;
         self.params = params.clone();
@@ -212,8 +214,10 @@ impl KeyGenerator for Gost28147 {
     fn generate(&mut self) -> Result<Box<dyn Params>, AlgoError> {
         let key = random_key(self.rand.as_mut(), 32, Rule::Random);
         Ok(Box::new(match self.params.s_box() {
-            Some(s_box) => crate::params::Gost28147ParamsOwned::with_s_box(key, s_box.to_vec()),
-            None => crate::params::Gost28147ParamsOwned::new(key),
+            Some(s_box) => {
+                crate::params::key::Gost28147ParamsOwned::with_s_box(key, s_box.to_vec())
+            }
+            None => crate::params::key::Gost28147ParamsOwned::new(key),
         }))
     }
 }
@@ -222,7 +226,7 @@ impl KeyGenerator for Gost28147 {
 #[cfg(feature = "threefish")]
 struct Threefish {
     key_bytes: usize,
-    params: crate::params::ThreefishKeyGenParams,
+    params: crate::params::generate::ThreefishKeyGenParams,
     rand: Box<dyn CryptoRng>,
 }
 
@@ -231,7 +235,7 @@ impl KeyGenerator for Threefish {
     fn init(&mut self, params: &dyn Params) -> Result<(), AlgoError> {
         let params = params
             .as_any()
-            .downcast_ref::<crate::params::ThreefishKeyGenParams>()
+            .downcast_ref::<crate::params::generate::ThreefishKeyGenParams>()
             .filter(|params| {
                 params
                     .tweak()
@@ -245,8 +249,10 @@ impl KeyGenerator for Threefish {
     fn generate(&mut self) -> Result<Box<dyn Params>, AlgoError> {
         let key = random_key(self.rand.as_mut(), self.key_bytes, Rule::Random);
         Ok(Box::new(match self.params.tweak() {
-            Some(tweak) => crate::params::ThreefishParamsOwned::with_tweak(key, tweak.to_vec()),
-            None => crate::params::ThreefishParamsOwned::new(key),
+            Some(tweak) => {
+                crate::params::key::ThreefishParamsOwned::with_tweak(key, tweak.to_vec())
+            }
+            None => crate::params::key::ThreefishParamsOwned::new(key),
         }))
     }
 }
@@ -260,7 +266,7 @@ mod tests {
     #[cfg(feature = "rc-cipher")]
     use tc_rc_cipher::Rc5Params;
 
-    use crate::params::KeyParams;
+    use crate::params::key::KeyParams;
     use crate::{AlgoBuilder, DefaultAlgoBuilder, ErrorKind};
 
     // Without init, RC2 gives a 16-byte key of 128 effective bits; with init, the key and size set,
@@ -268,7 +274,9 @@ mod tests {
     #[cfg(feature = "rc-cipher")]
     #[test]
     fn rc2_gives_its_params_of_the_default_or_the_set_size() {
-        use crate::params::{ParamsWithIvOwned, Rc2KeyGenParams, Rc2ParamsOwned};
+        use crate::params::{
+            cipher::ParamsWithIvOwned, generate::Rc2KeyGenParams, key::Rc2ParamsOwned,
+        };
 
         let algo = DefaultAlgoBuilder::default().build();
         let generators = algo.key_generator();
@@ -318,7 +326,7 @@ mod tests {
     #[cfg(feature = "rc-cipher")]
     #[test]
     fn rc5_gives_its_params_of_the_default_or_the_set_rounds() {
-        use crate::params::{Rc5KeyGenParams, Rc5ParamsOwned};
+        use crate::params::{generate::Rc5KeyGenParams, key::Rc5ParamsOwned};
 
         let algo = DefaultAlgoBuilder::default().build();
         let generators = algo.key_generator();
@@ -347,7 +355,9 @@ mod tests {
     #[cfg(feature = "gost28147")]
     #[test]
     fn gost28147_gives_its_params_of_the_default_or_the_set_s_box() {
-        use crate::params::{Gost28147KeyGenParams, Gost28147ParamsOwned, gost28147_s_box};
+        use crate::params::{
+            generate::Gost28147KeyGenParams, key::Gost28147ParamsOwned, key::gost28147_s_box,
+        };
 
         let algo = DefaultAlgoBuilder::default().build();
         let generators = algo.key_generator();
@@ -387,7 +397,7 @@ mod tests {
     fn threefish_gives_its_params_of_a_block_and_the_set_tweak() {
         use tc_threefish::ThreefishParams;
 
-        use crate::params::{ThreefishKeyGenParams, ThreefishParamsOwned};
+        use crate::params::{generate::ThreefishKeyGenParams, key::ThreefishParamsOwned};
 
         let algo = DefaultAlgoBuilder::default().build();
         let generators = algo.key_generator();

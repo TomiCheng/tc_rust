@@ -7,7 +7,8 @@ use tc_asn1_pkcs::RsaPublicKey;
 use tc_asn1_x509::alg::AlgorithmIdentifier;
 use tc_asn1_x509::cert::SubjectPublicKeyInfo;
 use tc_x509::operator::params::{
-    EcKeyGenParams, RsaKey, RsaKeyGenParams, RsaKeyParams, X25519PublicKey,
+    generate::EcKeyGenParams, generate::RsaKeyGenParams, key::cfrg::X25519PublicKey,
+    key::rsa::RsaKey, key::rsa::RsaKeyParams,
 };
 use tc_x509::{DefaultX509OperatorBuilder, X509Error, X509Operator, X509OperatorBuilder};
 

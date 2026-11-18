@@ -104,7 +104,7 @@ keyed!(Rc564Engine, Rc5ParamsOwned, |key| Rc5ParamsRef::new(
 
 #[cfg(test)]
 mod tests {
-    use crate::params::KeyOwned;
+    use crate::params::key::KeyOwned;
     use crate::{AlgoBuilder, DefaultAlgoBuilder};
 
     fn unhex(hex: &str) -> Vec<u8> {
@@ -150,7 +150,7 @@ mod tests {
     #[cfg(feature = "rc-cipher")]
     #[test]
     fn rc2_takes_its_effective_key_size_from_its_own_params_in_every_mode() {
-        use crate::params::{ParamsWithIvOwned, Rc2ParamsOwned};
+        use crate::params::{cipher::ParamsWithIvOwned, key::Rc2ParamsOwned};
 
         let key = unhex("88bca90e90875a7f0f79c384627bafb2");
         let block = unhex("0000000000000000");
@@ -189,7 +189,7 @@ mod tests {
     #[cfg(feature = "rc-cipher")]
     #[test]
     fn rc2_takes_its_own_params_through_cts() {
-        use crate::params::{ParamsWithIvOwned, Rc2ParamsOwned};
+        use crate::params::{cipher::ParamsWithIvOwned, key::Rc2ParamsOwned};
 
         let key = unhex("88bca90e90875a7f0f79c384627bafb2");
         let message = b"twenty bytes of text";
@@ -206,7 +206,7 @@ mod tests {
         let opened = ciphers.decrypt_by_name("RC2/CTS", &own, &sealed).unwrap();
         assert_eq!(opened, message);
 
-        let bare = crate::params::KeyWithIvOwned::new(key, vec![0x24; 8]);
+        let bare = crate::params::cipher::KeyWithIvOwned::new(key, vec![0x24; 8]);
         let whole = ciphers
             .encrypt_by_name("RC2/CBC/WITHCTS", &bare, message)
             .unwrap();
@@ -217,7 +217,7 @@ mod tests {
     #[test]
     fn rc2_refuses_its_own_params_with_an_iv_of_another_length_than_a_block() {
         use crate::ErrorKind;
-        use crate::params::{ParamsWithIvOwned, Rc2ParamsOwned};
+        use crate::params::{cipher::ParamsWithIvOwned, key::Rc2ParamsOwned};
 
         let algo = DefaultAlgoBuilder::default().build();
         let params = ParamsWithIvOwned::new(Rc2ParamsOwned::new(vec![0x42; 16]), vec![0; 7]);
@@ -233,7 +233,7 @@ mod tests {
     #[cfg(feature = "rc-cipher")]
     #[test]
     fn rc5_takes_its_rounds_from_its_own_params() {
-        use crate::params::{ParamsWithIvOwned, Rc5ParamsOwned};
+        use crate::params::{cipher::ParamsWithIvOwned, key::Rc5ParamsOwned};
 
         let key = unhex("000102030405060708090a0b0c0d0e0f");
         let block = unhex("0011223344556677");
@@ -325,7 +325,9 @@ mod tests {
         use tc_block_cipher::CipherDirection;
         use tc_rc_cipher::{Rc2Engine, Rc2ParamsRef};
 
-        use crate::params::{AeadParamsOwned, ParamsWithAeadOwned, Rc2ParamsOwned};
+        use crate::params::{
+            cipher::AeadParamsOwned, cipher::ParamsWithAeadOwned, key::Rc2ParamsOwned,
+        };
 
         let key = unhex("88bca90e90875a7f0f79c384627bafb2");
         let (nonce, aad) = (vec![0x24; 8], b"header".to_vec());
@@ -372,7 +374,9 @@ mod tests {
     #[test]
     fn rc5_64_takes_its_rounds_under_every_aead_mode_but_gcm_siv() {
         use crate::ErrorKind;
-        use crate::params::{AeadParamsOwned, ParamsWithAeadOwned, Rc5ParamsOwned};
+        use crate::params::{
+            cipher::AeadParamsOwned, cipher::ParamsWithAeadOwned, key::Rc5ParamsOwned,
+        };
 
         let key = unhex("000102030405060708090a0b0c0d0e0f");
         let message = [0x33; 32];

@@ -10,7 +10,7 @@ another. With both strings empty it is SHAKE itself.
 ## Hashing with a customization string
 
 ```rust
-use tc_algo::params::CShakeParams;
+use tc_algo::params::xof::CShakeParams;
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
 fn main() -> Result<(), AlgoError> {

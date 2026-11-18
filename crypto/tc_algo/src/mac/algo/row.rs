@@ -7,7 +7,7 @@ use tc_macs::{MacError, MacInit};
 use tc_zeroize::Zeroize;
 
 use crate::mac::{Mac, MacEntry};
-use crate::params::KeyOwned;
+use crate::params::key::KeyOwned;
 use crate::{AlgoError, EntryBase, ErrorKind, Params};
 
 // What a row's MAC takes as an IV

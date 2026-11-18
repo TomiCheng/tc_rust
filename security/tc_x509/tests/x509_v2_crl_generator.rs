@@ -8,7 +8,7 @@ use tc_asn1_x509::crl::CrlReason;
 use tc_asn1_x509::ext::ExtensionId;
 use tc_x509::cert::{X509Certificate, X509V3CertificateGenerator};
 use tc_x509::crl::{X509Crl, X509V2CrlGenerator};
-use tc_x509::operator::params::RsaKeyGenParams;
+use tc_x509::operator::params::generate::RsaKeyGenParams;
 use tc_x509::{DefaultX509OperatorBuilder, X509Error, X509Operator, X509OperatorBuilder};
 
 // Made with openssl, with a subjectKeyIdentifier

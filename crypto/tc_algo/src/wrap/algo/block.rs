@@ -193,7 +193,7 @@ fn rfc3211<E: Engine>(
 mod tests {
     use core::any::Any;
 
-    use crate::params::KeyOwned;
+    use crate::params::key::KeyOwned;
     use crate::wrap::{WrapDirection, Wrapper};
     use crate::{AlgoBuilder, DefaultAlgoBuilder, ErrorKind, Params};
 
@@ -388,7 +388,7 @@ mod tests {
     feature = "des"
 ))]
 mod family_tests {
-    use crate::params::{KeyOwned, KeyWithIvOwned};
+    use crate::params::{cipher::KeyWithIvOwned, key::KeyOwned};
     use crate::{AlgoBuilder, DefaultAlgoBuilder, ErrorKind};
 
     fn unhex(text: &str) -> Vec<u8> {

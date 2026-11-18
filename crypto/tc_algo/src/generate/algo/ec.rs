@@ -2,8 +2,8 @@ use rand_core::CryptoRng;
 use tc_asn1::Asn1Oid;
 
 use crate::generate::{KeyPairGenerator, KeyPairGeneratorEntry};
-use crate::params::EcKeyGenParams;
 use crate::params::ec_curves::NamedCurve;
+use crate::params::generate::EcKeyGenParams;
 use crate::{AlgoError, DefaultAlgoContext, EntryBase, ErrorKind, Params};
 
 // The row of EC, to give to DefaultAlgoBuilder::reg_key_pair_generator. Bouncy Castle's
@@ -125,8 +125,8 @@ impl KeyPairGenerator for Ec {}
 
 #[cfg(test)]
 mod tests {
-    use crate::params::EcKeyGenParams;
     use crate::params::ec_curves::CURVES;
+    use crate::params::generate::EcKeyGenParams;
     use crate::{AlgoBuilder, DefaultAlgoBuilder, ErrorKind};
 
     // Every curve of the table, by its first name or, for DSTU 4145, by its OID, gives a pair

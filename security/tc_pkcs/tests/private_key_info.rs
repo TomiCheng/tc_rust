@@ -7,7 +7,8 @@ use tc_asn1_pkcs::PrivateKeyInfo;
 use tc_asn1_x509::alg::AlgorithmIdentifier;
 use tc_pkcs::{DefaultPkcsOperatorBuilder, PkcsError, PkcsOperator, PkcsOperatorBuilder};
 use tc_x509::operator::params::{
-    EcKeyGenParams, RsaKey, RsaKeyGenParams, RsaKeyParams, X25519PrivateKey,
+    generate::EcKeyGenParams, generate::RsaKeyGenParams, key::cfrg::X25519PrivateKey,
+    key::rsa::RsaKey, key::rsa::RsaKeyParams,
 };
 
 fn pair(oper: &dyn PkcsOperator, name: &str, params: Option<&dyn Params>) -> KeyPair {

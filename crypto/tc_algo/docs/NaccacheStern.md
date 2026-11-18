@@ -14,7 +14,7 @@ From the params to a new pair:
 
 ```rust
 use tc_algo::params::{
-    NaccacheSternKeyGenerationParams, NaccacheSternPrivateKey, NaccacheSternPublicKey,
+    generate::NaccacheSternKeyGenerationParams, key::naccache_stern::NaccacheSternPrivateKey, key::naccache_stern::NaccacheSternPublicKey,
 };
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
@@ -70,7 +70,7 @@ count of small primes, is `InvalidParams` there.
 From a new pair to the decrypted message:
 
 ```rust
-use tc_algo::params::NaccacheSternKeyGenerationParams;
+use tc_algo::params::generate::NaccacheSternKeyGenerationParams;
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
 fn main() -> Result<(), AlgoError> {

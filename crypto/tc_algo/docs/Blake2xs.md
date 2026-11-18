@@ -9,7 +9,7 @@ and a personalization string, which keeps one use apart from another.
 ## Keyed output
 
 ```rust
-use tc_algo::params::Blake2xsParams;
+use tc_algo::params::xof::Blake2xsParams;
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
 fn main() -> Result<(), AlgoError> {

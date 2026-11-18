@@ -1,7 +1,7 @@
 use std::sync::OnceLock;
 
 use tc_algo::Params;
-use tc_algo::params::EcPublicKey;
+use tc_algo::params::key::ec::EcPublicKey;
 use tc_asn1::{Asn1BitString, Asn1Object, Asn1Oid, NamedOid};
 use tc_asn1_x509::alg::AlgorithmIdentifier;
 use tc_asn1_x509::cert::SubjectPublicKeyInfo;
@@ -1224,7 +1224,7 @@ fn sm2p256v1() -> SecPCtPoint<'static, SM2P256V1FieldElement> {
 
 #[cfg(test)]
 mod tests {
-    use tc_algo::params::EcKeyGenParams;
+    use tc_algo::params::generate::EcKeyGenParams;
     use tc_asn1::{Asn1BitString, Asn1Object};
     use tc_asn1_x509::alg::AlgorithmIdentifier;
     use tc_asn1_x509::cert::SubjectPublicKeyInfo;

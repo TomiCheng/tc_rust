@@ -152,7 +152,7 @@ mod tests {
     use tc_ml_kem::{MlKemDecapsulator, MlKemParameters, MlKemPrivateKey};
 
     use crate::generate::KeyPair;
-    use crate::params::KeyLength;
+    use crate::params::generate::KeyLength;
     use crate::{AlgoBuilder, DefaultAlgoBuilder, ErrorKind};
 
     const ROWS: [(&str, MlKemParameters, &str, usize); 3] = [
