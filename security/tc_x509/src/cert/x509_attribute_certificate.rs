@@ -1,10 +1,10 @@
 use std::io::{self, Read, Write};
 
+use tc_asn1::io::Asn1Reader;
 use tc_asn1::{
     Asn1BitString, Asn1Error, Asn1GeneralizedTime, Asn1Integer, Asn1Oid, Decode, DecodingOptions,
     Encode, EncodingOptions,
 };
-use tc_asn1::io::Asn1Reader;
 use tc_asn1_x500::Attribute;
 use tc_asn1_x509::{
     alg::AlgorithmIdentifier,

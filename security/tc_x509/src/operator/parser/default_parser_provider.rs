@@ -31,7 +31,10 @@ impl<T> ParserProvider<T> for DefaultParserProvider<T> {
     fn names(&self) -> Vec<&str> {
         let mut names: Vec<&str> = Vec::new();
         for row in &self.rows {
-            if !names.iter().any(|name| name.eq_ignore_ascii_case(row.name())) {
+            if !names
+                .iter()
+                .any(|name| name.eq_ignore_ascii_case(row.name()))
+            {
                 names.push(row.name());
             }
         }

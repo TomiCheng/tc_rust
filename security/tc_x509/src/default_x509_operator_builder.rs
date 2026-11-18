@@ -73,7 +73,9 @@ impl DefaultX509OperatorBuilder {
     // As reg_certificate_parser, for attribute certificates
     pub fn reg_attribute_certificate_parser(
         &mut self,
-        create: fn(&DefaultX509OperatorContext) -> Vec<Box<dyn ParserEntry<X509AttributeCertificate>>>,
+        create: fn(
+            &DefaultX509OperatorContext,
+        ) -> Vec<Box<dyn ParserEntry<X509AttributeCertificate>>>,
     ) {
         self.attribute_certificate_parsers.push(create);
     }

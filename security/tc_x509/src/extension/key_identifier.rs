@@ -74,7 +74,9 @@ pub fn authority_key_identifier(issuer: &X509Certificate) -> Result<Extension, X
         None => None,
     };
     let value = match carried {
-        Some(identifier) => AuthorityKeyIdentifier::from_key_identifier(identifier.key_identifier())?,
+        Some(identifier) => {
+            AuthorityKeyIdentifier::from_key_identifier(identifier.key_identifier())?
+        }
         None => AuthorityKeyIdentifier::from_key_identifier(&key_identifier_of(
             issuer.subject_public_key_info(),
         ))?,

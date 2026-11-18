@@ -1,5 +1,5 @@
 use tc_asn1::{DecodingContext, DecodingOptions};
-use tc_asn1_x509::ext::{Extensions, ExtensionId};
+use tc_asn1_x509::ext::{ExtensionId, Extensions};
 use tc_x509::cert::X509Certificate;
 use tc_x509::extension::{authority_key_identifier, key_identifier_of, subject_key_identifier};
 
@@ -48,7 +48,10 @@ fn the_authority_key_identifier_of_a_certificate_is_the_one_openssl_wrote() {
 
     let extension = authority_key_identifier(&ca).unwrap();
     assert!(!extension.critical());
-    assert_eq!(extension.extn_id(), &ExtensionId::AUTHORITY_KEY_IDENTIFIER.oid());
+    assert_eq!(
+        extension.extn_id(),
+        &ExtensionId::AUTHORITY_KEY_IDENTIFIER.oid()
+    );
     let made = single(extension)
         .get_authority_key_identifier(&mut context)
         .unwrap()

@@ -97,8 +97,8 @@ impl X509CrlSelector {
     /// Whether `crl` meets every criterion set. Variable time, for public values only.
     pub fn matches(&self, crl: &X509Crl) -> bool {
         if let Some(time) = &self.date_and_time {
-            let in_force = crl.this_update() <= *time
-                && crl.next_update().is_some_and(|next| *time < next);
+            let in_force =
+                crl.this_update() <= *time && crl.next_update().is_some_and(|next| *time < next);
             if !in_force {
                 return false;
             }

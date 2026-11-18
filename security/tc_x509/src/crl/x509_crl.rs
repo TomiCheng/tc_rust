@@ -4,10 +4,10 @@ use std::hash::{Hash, Hasher};
 use std::io::{self, Read, Write};
 use std::sync::OnceLock;
 
+use tc_asn1::io::Asn1Reader;
 use tc_asn1::{
     Asn1Error, Asn1Integer, Decode, DecodingContext, DecodingOptions, Encode, EncodingOptions,
 };
-use tc_asn1::io::Asn1Reader;
 use tc_asn1_x500::Name;
 use tc_asn1_x509::{
     alg::AlgorithmIdentifier,
@@ -250,15 +250,16 @@ impl X509Crl {
     /// CRL of another issuer is `false`; its signature is the caller's to verify with the key
     /// of the issuer. Variable time, for public values only.
     pub fn is_revoked(&self, certificate: &X509Certificate) -> bool {
-        self.revoked_certificate_of(certificate).is_some_and(|entry| {
-            let mut context = DecodingContext::new(DecodingOptions::default());
-            !entry.extensions().is_some_and(|extensions| {
-                matches!(
-                    extensions.get_crl_reason(&mut context),
-                    Ok(Some(CrlReason::RemoveFromCrl))
-                )
+        self.revoked_certificate_of(certificate)
+            .is_some_and(|entry| {
+                let mut context = DecodingContext::new(DecodingOptions::default());
+                !entry.extensions().is_some_and(|extensions| {
+                    matches!(
+                        extensions.get_crl_reason(&mut context),
+                        Ok(Some(CrlReason::RemoveFromCrl))
+                    )
+                })
             })
-        })
     }
 
     /// Every entry, in the order of the list, BC's `GetRevokedCertificates`; empty when there is
