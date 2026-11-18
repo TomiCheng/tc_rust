@@ -4,7 +4,7 @@ A KDF turns a secret into key bytes. A shared secret from an agreement is not un
 it is not a key yet, and one secret may need to become several keys, each with its own label. A KDF
 is for secrets that are already hard to guess, but PBKDF2, which is slow on purpose, for passwords.
 
-From a shared secret to a key, with HKDF over SHA-256. The `hkdf` and `sha256` features of
+From a shared secret to a key, with HKDF over SHA-256. The `kdf` and `sha` features of
 `tc_algo` have the row.
 
 ```rust
@@ -38,17 +38,16 @@ names of that row work too, as `HKDF-SHA-256`. A row is there when the feature o
 those of its digest or MAC are on.
 
 - **[HKDF](HKDF-SHA256.md)**, of RFC 5869, over every digest that HMAC takes, as `HKDF-SHA256`, with
-  the `hkdf` feature. Over SHA-256, -384 and -512 it has the OIDs of RFC 8619. The one to use for
+  the `kdf` feature. Over SHA-256, -384 and -512 it has the OIDs of RFC 8619. The one to use for
   new protocols.
-- **KDF1** and **KDF2**, of ISO 18033-2 and ANSI X9.63, as `KDF2-SHA256`, with the `kdf1` and
-  `kdf2` features, and the one-step **concatenation KDF** of SP 800-56C, as `CONCAT-SHA256`, with
-  the `concat-kdf` feature: a digest run over a counter, the secret and the context. Each is over
+- **KDF1** and **KDF2**, of ISO 18033-2 and ANSI X9.63, as `KDF2-SHA256`, and the one-step
+  **concatenation KDF** of SP 800-56C, as `CONCAT-SHA256`, all with the `kdf` feature: a digest run over a counter, the secret and the context. Each is over
   every digest but NONE and Haraka, for the formats and standards that name them.
 - **PBKDF2**, of RFC 8018, over every digest that HMAC takes, as `PBKDF2-HMAC-SHA256`, with the
-  `pbkdf2` feature: the KDF for a password, as CMS and PBES2 take it. [PBE](Pbe.md) gives the params
+  `pbe` feature: the KDF for a password, as CMS and PBES2 take it. [PBE](Pbe.md) gives the params
   of a cipher from a password instead.
 - **SP 800-108**, in counter, feedback and double-pipeline mode, as `KDF-COUNTER-HMAC-SHA256` or
-  `KDF-FEEDBACK-AESCMAC`, with the `sp800-108` feature: a MAC run over a counter and fixed input,
+  `KDF-FEEDBACK-AESCMAC`, with the `kdf` feature: a MAC run over a counter and fixed input,
   over every HMAC and CMAC row, the PRFs SP 800-108 names.
 
 The DH and ECDH key-encryption-key KDFs of RFC 2631 and RFC 5753 are not rows of their own: the

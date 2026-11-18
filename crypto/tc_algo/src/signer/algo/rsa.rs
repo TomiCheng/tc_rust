@@ -363,7 +363,7 @@ impl<E> Kind for Iso9796d2Error<E> {
     }
 }
 
-#[cfg(all(test, feature = "sha256"))]
+#[cfg(all(test, feature = "sha"))]
 mod tests {
     use std::sync::OnceLock;
 
@@ -532,13 +532,7 @@ mod tests {
     }
 }
 
-#[cfg(all(
-    test,
-    feature = "sha1",
-    feature = "sha256",
-    feature = "md5",
-    feature = "ripemd160"
-))]
+#[cfg(all(test, feature = "sha", feature = "md", feature = "ripemd"))]
 mod family_tests {
     use std::sync::OnceLock;
 

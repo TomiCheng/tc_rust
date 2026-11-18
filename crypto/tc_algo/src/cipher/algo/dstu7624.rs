@@ -1,8 +1,8 @@
-#[cfg(feature = "dstu7624-128")]
+#[cfg(feature = "dstu7624")]
 use tc_dstu7624::Dstu7624Engine128;
-#[cfg(feature = "dstu7624-256")]
+#[cfg(feature = "dstu7624")]
 use tc_dstu7624::Dstu7624Engine256;
-#[cfg(feature = "dstu7624-512")]
+#[cfg(feature = "dstu7624")]
 use tc_dstu7624::Dstu7624Engine512;
 
 use super::block::{Rand, block_cipher, block_rows};
@@ -12,7 +12,7 @@ use crate::cipher::CipherEntry;
 // The rows of DSTU 7624, Kalyna, the block cipher of Ukraine, by its block in bits: each mode with
 // each padding it takes. Bouncy Castle has the engine but no name for it in CipherUtilities, so the
 // names are this crate's, after the block as THREEFISH-256's, and carry no OID
-#[cfg(feature = "dstu7624-128")]
+#[cfg(feature = "dstu7624")]
 pub(super) fn dstu7624_128(context: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>> {
     let rand: Rand = context.rand();
     block_rows(
@@ -23,7 +23,7 @@ pub(super) fn dstu7624_128(context: &DefaultAlgoContext) -> Vec<Box<dyn CipherEn
     )
 }
 
-#[cfg(feature = "dstu7624-256")]
+#[cfg(feature = "dstu7624")]
 pub(super) fn dstu7624_256(context: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>> {
     let rand: Rand = context.rand();
     block_rows(
@@ -34,7 +34,7 @@ pub(super) fn dstu7624_256(context: &DefaultAlgoContext) -> Vec<Box<dyn CipherEn
     )
 }
 
-#[cfg(feature = "dstu7624-512")]
+#[cfg(feature = "dstu7624")]
 pub(super) fn dstu7624_512(context: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>> {
     let rand: Rand = context.rand();
     block_rows(
@@ -78,7 +78,7 @@ mod tests {
 
     // The examples of DSTU 7624:2014, as tc_dstu7624 tests them, and the AEAD modes of a 16-byte
     // block
-    #[cfg(feature = "dstu7624-128")]
+    #[cfg(feature = "dstu7624")]
     #[test]
     fn dstu7624_128_gives_the_examples_of_the_standard_and_has_every_aead_mode() {
         let output = ecb(
@@ -102,7 +102,7 @@ mod tests {
     }
 
     // Kalyna-256 and -512 have KCCM, of a block of 32 or 64 bytes, and none of the other AEAD modes
-    #[cfg(all(feature = "dstu7624-256", feature = "dstu7624-512"))]
+    #[cfg(feature = "dstu7624")]
     #[test]
     fn dstu7624_256_and_512_give_the_examples_of_the_standard_and_have_kccm_alone() {
         let output = ecb(

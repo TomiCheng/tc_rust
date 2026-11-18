@@ -11,9 +11,9 @@ type Init = fn(&dyn Params) -> Option<Result<Box<dyn Inner>, AlgoError>>;
 // the other side's key its public key; the secret is 32 or 56 bytes
 pub(super) fn cfrg(_context: &DefaultAlgoContext) -> Vec<Box<dyn AgreementEntry>> {
     let mut rows: Vec<Box<dyn AgreementEntry>> = Vec::new();
-    #[cfg(feature = "x25519")]
+    #[cfg(feature = "cfrg-curves")]
     rows.push(row("X25519", "1.3.101.110", x25519));
-    #[cfg(feature = "x448")]
+    #[cfg(feature = "cfrg-curves")]
     rows.push(row("X448", "1.3.101.111", x448));
     rows
 }
@@ -48,12 +48,12 @@ impl AgreementEntry for Row {
     }
 }
 
-#[cfg(feature = "x25519")]
+#[cfg(feature = "cfrg-curves")]
 fn x25519(params: &dyn Params) -> Option<Result<Box<dyn Inner>, AlgoError>> {
     init_as::<tc_cfrg_curves::X25519PrivateKey, _>(tc_cfrg_curves::X25519Agreement::new(), params)
 }
 
-#[cfg(feature = "x448")]
+#[cfg(feature = "cfrg-curves")]
 fn x448(params: &dyn Params) -> Option<Result<Box<dyn Inner>, AlgoError>> {
     init_as::<tc_cfrg_curves::X448PrivateKey, _>(tc_cfrg_curves::X448Agreement::new(), params)
 }
@@ -71,7 +71,7 @@ mod tests {
         secret
     }
 
-    #[cfg(feature = "x25519")]
+    #[cfg(feature = "cfrg-curves")]
     #[test]
     fn both_sides_of_x25519_calculate_the_same_32_byte_secret() {
         use tc_cfrg_curves::X25519PrivateKey;
@@ -84,7 +84,7 @@ mod tests {
         assert_eq!(shared.len(), 32);
     }
 
-    #[cfg(feature = "x448")]
+    #[cfg(feature = "cfrg-curves")]
     #[test]
     fn both_sides_of_x448_calculate_the_same_56_byte_secret() {
         use tc_cfrg_curves::X448PrivateKey;

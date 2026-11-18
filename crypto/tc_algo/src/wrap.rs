@@ -1,4 +1,4 @@
-#![cfg_attr(all(feature = "rfc3394-wrap", feature = "aes"), doc = include_str!("../docs/KeyWrap.md"))]
+#![cfg_attr(all(feature = "key-wrap", feature = "aes"), doc = include_str!("../docs/KeyWrap.md"))]
 
 mod algo;
 mod default_wrapper_provider;

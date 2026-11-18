@@ -5,42 +5,42 @@ use crate::digest::DigestEntry;
 // The rows of Keccak, SHA-3 and SHAKE at a fixed size, to give to DefaultAlgoBuilder::reg_digest.
 // Their names and OIDs are those of Bouncy Castle's DigestUtilities, the HMAC OIDs included
 
-#[cfg(feature = "keccak-224")]
+#[cfg(feature = "keccak")]
 pub(super) fn keccak_224(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>> {
     row("KECCAK-224", &["KECCAK224"], &[], || {
         Box::new(TcDigest(tc_keccak::KeccakDigest::new(224)))
     })
 }
 
-#[cfg(feature = "keccak-256")]
+#[cfg(feature = "keccak")]
 pub(super) fn keccak_256(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>> {
     row("KECCAK-256", &["KECCAK256"], &[], || {
         Box::new(TcDigest(tc_keccak::KeccakDigest::new(256)))
     })
 }
 
-#[cfg(feature = "keccak-288")]
+#[cfg(feature = "keccak")]
 pub(super) fn keccak_288(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>> {
     row("KECCAK-288", &["KECCAK288"], &[], || {
         Box::new(TcDigest(tc_keccak::KeccakDigest::new(288)))
     })
 }
 
-#[cfg(feature = "keccak-384")]
+#[cfg(feature = "keccak")]
 pub(super) fn keccak_384(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>> {
     row("KECCAK-384", &["KECCAK384"], &[], || {
         Box::new(TcDigest(tc_keccak::KeccakDigest::new(384)))
     })
 }
 
-#[cfg(feature = "keccak-512")]
+#[cfg(feature = "keccak")]
 pub(super) fn keccak_512(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>> {
     row("KECCAK-512", &["KECCAK512"], &[], || {
         Box::new(TcDigest(tc_keccak::KeccakDigest::new(512)))
     })
 }
 
-#[cfg(feature = "sha3-224")]
+#[cfg(feature = "keccak")]
 pub(super) fn sha3_224(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>> {
     row(
         "SHA3-224",
@@ -50,7 +50,7 @@ pub(super) fn sha3_224(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry
     )
 }
 
-#[cfg(feature = "sha3-256")]
+#[cfg(feature = "keccak")]
 pub(super) fn sha3_256(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>> {
     row(
         "SHA3-256",
@@ -60,7 +60,7 @@ pub(super) fn sha3_256(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry
     )
 }
 
-#[cfg(feature = "sha3-384")]
+#[cfg(feature = "keccak")]
 pub(super) fn sha3_384(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>> {
     row(
         "SHA3-384",
@@ -70,7 +70,7 @@ pub(super) fn sha3_384(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry
     )
 }
 
-#[cfg(feature = "sha3-512")]
+#[cfg(feature = "keccak")]
 pub(super) fn sha3_512(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>> {
     row(
         "SHA3-512",
@@ -80,7 +80,7 @@ pub(super) fn sha3_512(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry
     )
 }
 
-#[cfg(feature = "shake128-256")]
+#[cfg(feature = "keccak")]
 pub(super) fn shake128_256(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>> {
     row(
         "SHAKE128-256",
@@ -90,7 +90,7 @@ pub(super) fn shake128_256(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestE
     )
 }
 
-#[cfg(feature = "shake256-512")]
+#[cfg(feature = "keccak")]
 pub(super) fn shake256_512(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>> {
     row(
         "SHAKE256-512",
@@ -134,7 +134,7 @@ mod tests {
         }
     }
 
-    #[cfg(feature = "keccak-224")]
+    #[cfg(feature = "keccak")]
     #[test]
     fn the_keccak_224_row_gives_the_hash_of_its_digest_and_is_found_by_its_names() {
         check(
@@ -145,7 +145,7 @@ mod tests {
         find("KECCAK-224", &["KECCAK224"], &[]);
     }
 
-    #[cfg(feature = "keccak-256")]
+    #[cfg(feature = "keccak")]
     #[test]
     fn the_keccak_256_row_gives_the_hash_of_its_digest_and_is_found_by_its_names() {
         check(
@@ -156,7 +156,7 @@ mod tests {
         find("KECCAK-256", &["KECCAK256"], &[]);
     }
 
-    #[cfg(feature = "keccak-288")]
+    #[cfg(feature = "keccak")]
     #[test]
     fn the_keccak_288_row_gives_the_hash_of_its_digest_and_is_found_by_its_names() {
         check(
@@ -167,7 +167,7 @@ mod tests {
         find("KECCAK-288", &["KECCAK288"], &[]);
     }
 
-    #[cfg(feature = "keccak-384")]
+    #[cfg(feature = "keccak")]
     #[test]
     fn the_keccak_384_row_gives_the_hash_of_its_digest_and_is_found_by_its_names() {
         check(
@@ -178,7 +178,7 @@ mod tests {
         find("KECCAK-384", &["KECCAK384"], &[]);
     }
 
-    #[cfg(feature = "keccak-512")]
+    #[cfg(feature = "keccak")]
     #[test]
     fn the_keccak_512_row_gives_the_hash_of_its_digest_and_is_found_by_its_names() {
         check(
@@ -189,7 +189,7 @@ mod tests {
         find("KECCAK-512", &["KECCAK512"], &[]);
     }
 
-    #[cfg(feature = "sha3-224")]
+    #[cfg(feature = "keccak")]
     #[test]
     fn the_sha3_224_row_gives_the_hash_of_its_digest_and_is_found_by_its_names() {
         check(
@@ -204,7 +204,7 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "sha3-256")]
+    #[cfg(feature = "keccak")]
     #[test]
     fn the_sha3_256_row_gives_the_hash_of_its_digest_and_is_found_by_its_names() {
         check(
@@ -219,7 +219,7 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "sha3-384")]
+    #[cfg(feature = "keccak")]
     #[test]
     fn the_sha3_384_row_gives_the_hash_of_its_digest_and_is_found_by_its_names() {
         check(
@@ -234,7 +234,7 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "sha3-512")]
+    #[cfg(feature = "keccak")]
     #[test]
     fn the_sha3_512_row_gives_the_hash_of_its_digest_and_is_found_by_its_names() {
         check(
@@ -249,7 +249,7 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "shake128-256")]
+    #[cfg(feature = "keccak")]
     #[test]
     fn the_shake128_256_row_gives_the_hash_of_its_digest_and_is_found_by_its_names() {
         check(
@@ -264,7 +264,7 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "shake256-512")]
+    #[cfg(feature = "keccak")]
     #[test]
     fn the_shake256_512_row_gives_the_hash_of_its_digest_and_is_found_by_its_names() {
         check(

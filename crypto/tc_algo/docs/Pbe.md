@@ -8,7 +8,7 @@ a cipher. It does not encrypt anything itself, and it is not a way of encrypting
 password + salt + iteration count -> PBE -> key + IV -> cipher -> ciphertext
 ```
 
-From a password to the decrypted message. The `pbe`, `sha256` and `aes` features of `tc_algo` have
+From a password to the decrypted message. The `pbe`, `sha` and `aes` features of `tc_algo` have
 the row, and the salt here comes from `rand` and `rand_core`.
 
 ```rust
@@ -46,7 +46,7 @@ fn main() -> Result<(), AlgoError> {
 
 The names, aliases and OIDs are those of Bouncy Castle's `PbeUtilities`, and the case of a name does
 not matter. A row is there when the `pbe` feature and those of its digest and of its cipher or HMAC
-are on, as `pbe`, `sha1` and `desede` for `PBEwithSHA-1and3-keyDESEDE-CBC`.
+are on, as `pbe`, `sha` and `des` for `PBEwithSHA-1and3-keyDESEDE-CBC`.
 
 - **PKCS#12**, of RFC 7292, the scheme of PKCS#12 files. Over SHA-256: AES-128, -192 and -256 in
   CBC mode, as `PBEwithSHA-256and256bitAES-CBC-BC`. Over SHA-1: the same AES, 3-key and 2-key
@@ -58,7 +58,7 @@ are on, as `pbe`, `sha1` and `desede` for `PBEwithSHA-1and3-keyDESEDE-CBC`.
   as `PBEwithMD5and256bitAES-CBC-OpenSSL`, for files that tool made. It has no OID, and it ignores
   the iteration count.
 - **HMAC keys**, by PKCS#12: `PBEwithHmacSHA-1`, `-224`, `-256`, `-384` and `-512`,
-  `PBEwithHmacRipeMD128`, `160` and `256`, and `PBEwithHmacTiger`, with the `hmac` feature. Their
+  `PBEwithHmacRipeMD128`, `160` and `256`, and `PBEwithHmacTiger`, with the `macs` feature. Their
   OID is that of the digest, as in Bouncy Castle.
 
 `PBEwithSHA-1andIDEA-CBC` and `PBEwithSHA-1andTWOFISH-CBC` are not here: Bouncy Castle names them

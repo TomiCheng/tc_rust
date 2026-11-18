@@ -1,60 +1,33 @@
 #[cfg(any(
-    feature = "chacha20-poly1305",
-    feature = "xchacha20-poly1305",
-    feature = "ascon-aead128",
-    feature = "ascon128",
-    feature = "ascon128a",
-    feature = "ascon80pq",
+    feature = "chacha-aead",
+    feature = "ascon-aead",
     feature = "grain128-aead",
-    feature = "schwaemm128-128",
-    feature = "schwaemm256-128",
-    feature = "schwaemm192-192",
-    feature = "schwaemm256-256"
+    feature = "sparkle-aead"
 ))]
 mod aead_engine;
 #[cfg(any(
     feature = "aes",
     feature = "des",
-    feature = "desede",
     feature = "camellia",
     feature = "aria",
     feature = "sm4",
     feature = "seed",
-    feature = "dstu7624-128",
-    feature = "dstu7624-256",
-    feature = "dstu7624-512",
+    feature = "dstu7624",
     feature = "blowfish",
     feature = "twofish",
     feature = "serpent",
-    feature = "tnepres",
-    feature = "cast5",
-    feature = "cast6",
-    feature = "idea",
-    feature = "noekeon",
-    feature = "rijndael",
-    feature = "skipjack",
-    feature = "tea",
-    feature = "xtea",
-    feature = "rc2",
-    feature = "rc5",
-    feature = "rc5-64",
-    feature = "rc6",
+    feature = "cast",
+    feature = "misc-block-cipher",
+    feature = "rc-cipher",
     feature = "gost28147",
-    feature = "threefish-256",
-    feature = "threefish-512",
-    feature = "threefish-1024",
+    feature = "threefish"
 ))]
 mod aead_mode;
 #[cfg(feature = "aes")]
 mod aes;
 #[cfg(feature = "aria")]
 mod aria;
-#[cfg(any(
-    feature = "ascon-aead128",
-    feature = "ascon128",
-    feature = "ascon128a",
-    feature = "ascon80pq"
-))]
+#[cfg(feature = "ascon-aead")]
 mod ascon_aead;
 #[cfg(any(
     feature = "rsa",
@@ -66,34 +39,19 @@ mod asym;
 #[cfg(any(
     feature = "aes",
     feature = "des",
-    feature = "desede",
     feature = "camellia",
     feature = "aria",
     feature = "sm4",
     feature = "seed",
-    feature = "dstu7624-128",
-    feature = "dstu7624-256",
-    feature = "dstu7624-512",
+    feature = "dstu7624",
     feature = "blowfish",
     feature = "twofish",
     feature = "serpent",
-    feature = "tnepres",
-    feature = "cast5",
-    feature = "cast6",
-    feature = "idea",
-    feature = "noekeon",
-    feature = "rijndael",
-    feature = "skipjack",
-    feature = "tea",
-    feature = "xtea",
-    feature = "rc2",
-    feature = "rc5",
-    feature = "rc5-64",
-    feature = "rc6",
+    feature = "cast",
+    feature = "misc-block-cipher",
+    feature = "rc-cipher",
     feature = "gost28147",
-    feature = "threefish-256",
-    feature = "threefish-512",
-    feature = "threefish-1024",
+    feature = "threefish"
 ))]
 mod block;
 #[cfg(feature = "blowfish")]
@@ -101,55 +59,45 @@ mod blowfish;
 #[cfg(any(
     feature = "aes",
     feature = "des",
-    feature = "desede",
     feature = "camellia",
     feature = "aria",
     feature = "sm4",
     feature = "seed",
-    feature = "dstu7624-128",
-    feature = "dstu7624-256",
-    feature = "dstu7624-512",
+    feature = "dstu7624",
     feature = "blowfish",
     feature = "twofish",
     feature = "serpent",
-    feature = "tnepres",
-    feature = "cast5",
-    feature = "cast6",
-    feature = "idea",
-    feature = "noekeon",
-    feature = "rijndael",
-    feature = "skipjack",
-    feature = "tea",
-    feature = "xtea",
-    feature = "rc2",
-    feature = "rc5",
-    feature = "rc5-64",
-    feature = "rc6",
+    feature = "cast",
+    feature = "misc-block-cipher",
+    feature = "rc-cipher",
     feature = "gost28147",
-    feature = "threefish-256",
-    feature = "threefish-512",
-    feature = "threefish-1024",
+    feature = "threefish"
 ))]
 mod buffered;
 #[cfg(feature = "camellia")]
 mod camellia;
-#[cfg(feature = "cast5")]
+#[cfg(feature = "cast")]
 mod cast5;
-#[cfg(feature = "cast6")]
+#[cfg(feature = "cast")]
 mod cast6;
-#[cfg(any(feature = "chacha", feature = "xchacha20"))]
+#[cfg(feature = "chacha")]
 mod chacha;
-#[cfg(any(feature = "chacha20-poly1305", feature = "xchacha20-poly1305"))]
+#[cfg(feature = "chacha-aead")]
 mod chacha_aead;
-#[cfg(any(feature = "des", feature = "desede"))]
+#[cfg(feature = "des")]
 mod des;
-#[cfg(any(
-    feature = "dstu7624-128",
-    feature = "dstu7624-256",
-    feature = "dstu7624-512"
-))]
+#[cfg(feature = "dstu7624")]
 mod dstu7624;
-#[cfg(feature = "ecies")]
+#[cfg(all(
+    feature = "ies",
+    feature = "ecdh",
+    any(
+        feature = "fp-custom",
+        feature = "fp-curve",
+        feature = "f2m-custom",
+        feature = "f2m-curve"
+    )
+))]
 mod ecies;
 #[cfg(feature = "elgamal")]
 mod elgamal;
@@ -157,84 +105,56 @@ mod elgamal;
 mod gost28147;
 #[cfg(feature = "grain128-aead")]
 mod grain128_aead;
-#[cfg(any(feature = "hc128", feature = "hc256"))]
+#[cfg(feature = "hc")]
 mod hc;
-#[cfg(feature = "idea")]
+#[cfg(feature = "misc-block-cipher")]
 mod idea;
 #[cfg(feature = "ies")]
 mod ies;
-#[cfg(any(
-    feature = "rc2",
-    feature = "rc5",
-    feature = "rc5-64",
-    feature = "gost28147",
-    feature = "threefish-256",
-    feature = "threefish-512",
-    feature = "threefish-1024"
-))]
+#[cfg(any(feature = "rc-cipher", feature = "gost28147", feature = "threefish"))]
 mod keyed;
 #[cfg(feature = "naccache-stern")]
 mod naccache_stern;
-#[cfg(feature = "noekeon")]
+#[cfg(feature = "misc-block-cipher")]
 mod noekeon;
-#[cfg(any(feature = "rc2", feature = "rc5", feature = "rc5-64", feature = "rc6"))]
+#[cfg(feature = "rc-cipher")]
 mod rc;
-#[cfg(any(
-    feature = "rc4",
-    feature = "vmpc",
-    feature = "vmpc-ksa3",
-    feature = "isaac"
-))]
+#[cfg(feature = "rc4-family")]
 mod rc4;
-#[cfg(feature = "rijndael")]
+#[cfg(feature = "misc-block-cipher")]
 mod rijndael;
 #[cfg(feature = "rsa")]
 mod rsa;
-#[cfg(any(feature = "salsa20", feature = "xsalsa20"))]
+#[cfg(feature = "salsa20")]
 mod salsa20;
 #[cfg(feature = "seed")]
 mod seed;
 #[cfg(feature = "serpent")]
 mod serpent;
-#[cfg(feature = "skipjack")]
+#[cfg(feature = "misc-block-cipher")]
 mod skipjack;
 #[cfg(feature = "sm2")]
 mod sm2;
 #[cfg(feature = "sm4")]
 mod sm4;
-#[cfg(any(
-    feature = "schwaemm128-128",
-    feature = "schwaemm256-128",
-    feature = "schwaemm192-192",
-    feature = "schwaemm256-256"
-))]
+#[cfg(feature = "sparkle-aead")]
 mod sparkle_aead;
 #[cfg(any(
     feature = "chacha",
-    feature = "xchacha20",
-    feature = "rc4",
-    feature = "vmpc",
-    feature = "vmpc-ksa3",
-    feature = "isaac",
+    feature = "rc4-family",
     feature = "salsa20",
-    feature = "xsalsa20",
-    feature = "hc128",
-    feature = "hc256",
+    feature = "hc"
 ))]
 mod stream;
-#[cfg(feature = "tea")]
+#[cfg(feature = "misc-block-cipher")]
 mod tea;
-#[cfg(any(
-    feature = "threefish-256",
-    feature = "threefish-512",
-    feature = "threefish-1024"
-))]
+#[cfg(feature = "threefish")]
 mod threefish;
-#[cfg(feature = "tnepres")]
+#[cfg(feature = "serpent")]
 mod tnepres;
 #[cfg(feature = "twofish")]
 mod twofish;
-#[cfg(feature = "xtea")]
+#[cfg(feature = "misc-block-cipher")]
 mod xtea;
 
 use super::CipherEntry;
@@ -247,7 +167,7 @@ pub(crate) const BUILT_IN: &[CreateRows] = &[
     aes::aes,
     #[cfg(feature = "des")]
     des::des,
-    #[cfg(feature = "desede")]
+    #[cfg(feature = "des")]
     des::desede,
     #[cfg(feature = "camellia")]
     camellia::camellia,
@@ -257,11 +177,11 @@ pub(crate) const BUILT_IN: &[CreateRows] = &[
     sm4::sm4,
     #[cfg(feature = "seed")]
     seed::seed,
-    #[cfg(feature = "dstu7624-128")]
+    #[cfg(feature = "dstu7624")]
     dstu7624::dstu7624_128,
-    #[cfg(feature = "dstu7624-256")]
+    #[cfg(feature = "dstu7624")]
     dstu7624::dstu7624_256,
-    #[cfg(feature = "dstu7624-512")]
+    #[cfg(feature = "dstu7624")]
     dstu7624::dstu7624_512,
     #[cfg(feature = "blowfish")]
     blowfish::blowfish,
@@ -269,81 +189,81 @@ pub(crate) const BUILT_IN: &[CreateRows] = &[
     twofish::twofish,
     #[cfg(feature = "serpent")]
     serpent::serpent,
-    #[cfg(feature = "tnepres")]
+    #[cfg(feature = "serpent")]
     tnepres::tnepres,
-    #[cfg(feature = "cast5")]
+    #[cfg(feature = "cast")]
     cast5::cast5,
-    #[cfg(feature = "cast6")]
+    #[cfg(feature = "cast")]
     cast6::cast6,
-    #[cfg(feature = "idea")]
+    #[cfg(feature = "misc-block-cipher")]
     idea::idea,
-    #[cfg(feature = "noekeon")]
+    #[cfg(feature = "misc-block-cipher")]
     noekeon::noekeon,
-    #[cfg(feature = "rijndael")]
+    #[cfg(feature = "misc-block-cipher")]
     rijndael::rijndael,
-    #[cfg(feature = "skipjack")]
+    #[cfg(feature = "misc-block-cipher")]
     skipjack::skipjack,
-    #[cfg(feature = "tea")]
+    #[cfg(feature = "misc-block-cipher")]
     tea::tea,
-    #[cfg(feature = "xtea")]
+    #[cfg(feature = "misc-block-cipher")]
     xtea::xtea,
-    #[cfg(feature = "rc2")]
+    #[cfg(feature = "rc-cipher")]
     rc::rc2,
-    #[cfg(feature = "rc5")]
+    #[cfg(feature = "rc-cipher")]
     rc::rc5,
-    #[cfg(feature = "rc5-64")]
+    #[cfg(feature = "rc-cipher")]
     rc::rc5_64,
-    #[cfg(feature = "rc6")]
+    #[cfg(feature = "rc-cipher")]
     rc::rc6,
     #[cfg(feature = "gost28147")]
     gost28147::gost28147,
-    #[cfg(feature = "threefish-256")]
+    #[cfg(feature = "threefish")]
     threefish::threefish_256,
-    #[cfg(feature = "threefish-512")]
+    #[cfg(feature = "threefish")]
     threefish::threefish_512,
-    #[cfg(feature = "threefish-1024")]
+    #[cfg(feature = "threefish")]
     threefish::threefish_1024,
     #[cfg(feature = "chacha")]
     chacha::chacha,
-    #[cfg(feature = "xchacha20")]
+    #[cfg(feature = "chacha")]
     chacha::xchacha20,
-    #[cfg(feature = "chacha20-poly1305")]
+    #[cfg(feature = "chacha-aead")]
     chacha_aead::chacha20_poly1305,
-    #[cfg(feature = "xchacha20-poly1305")]
+    #[cfg(feature = "chacha-aead")]
     chacha_aead::xchacha20_poly1305,
-    #[cfg(feature = "ascon-aead128")]
+    #[cfg(feature = "ascon-aead")]
     ascon_aead::ascon_aead128,
-    #[cfg(feature = "ascon128")]
+    #[cfg(feature = "ascon-aead")]
     ascon_aead::ascon128,
-    #[cfg(feature = "ascon128a")]
+    #[cfg(feature = "ascon-aead")]
     ascon_aead::ascon128a,
-    #[cfg(feature = "ascon80pq")]
+    #[cfg(feature = "ascon-aead")]
     ascon_aead::ascon80pq,
     #[cfg(feature = "grain128-aead")]
     grain128_aead::grain128_aead,
-    #[cfg(feature = "schwaemm128-128")]
+    #[cfg(feature = "sparkle-aead")]
     sparkle_aead::schwaemm128_128,
-    #[cfg(feature = "schwaemm256-128")]
+    #[cfg(feature = "sparkle-aead")]
     sparkle_aead::schwaemm256_128,
-    #[cfg(feature = "schwaemm192-192")]
+    #[cfg(feature = "sparkle-aead")]
     sparkle_aead::schwaemm192_192,
-    #[cfg(feature = "schwaemm256-256")]
+    #[cfg(feature = "sparkle-aead")]
     sparkle_aead::schwaemm256_256,
-    #[cfg(feature = "rc4")]
+    #[cfg(feature = "rc4-family")]
     rc4::rc4,
-    #[cfg(feature = "vmpc")]
+    #[cfg(feature = "rc4-family")]
     rc4::vmpc,
-    #[cfg(feature = "vmpc-ksa3")]
+    #[cfg(feature = "rc4-family")]
     rc4::vmpc_ksa3,
-    #[cfg(feature = "isaac")]
+    #[cfg(feature = "rc4-family")]
     rc4::isaac,
     #[cfg(feature = "salsa20")]
     salsa20::salsa20,
-    #[cfg(feature = "xsalsa20")]
+    #[cfg(feature = "salsa20")]
     salsa20::xsalsa20,
-    #[cfg(feature = "hc128")]
+    #[cfg(feature = "hc")]
     hc::hc128,
-    #[cfg(feature = "hc256")]
+    #[cfg(feature = "hc")]
     hc::hc256,
     #[cfg(feature = "rsa")]
     rsa::rsa,
@@ -355,6 +275,15 @@ pub(crate) const BUILT_IN: &[CreateRows] = &[
     sm2::sm2,
     #[cfg(feature = "ies")]
     ies::ies,
-    #[cfg(feature = "ecies")]
+    #[cfg(all(
+        feature = "ies",
+        feature = "ecdh",
+        any(
+            feature = "fp-custom",
+            feature = "fp-curve",
+            feature = "f2m-custom",
+            feature = "f2m-curve"
+        )
+    ))]
     ecies::ecies,
 ];

@@ -1,4 +1,4 @@
-#![cfg_attr(feature = "shake256", doc = include_str!("../docs/Xof.md"))]
+#![cfg_attr(feature = "keccak", doc = include_str!("../docs/Xof.md"))]
 
 mod algo;
 mod default_xof_provider;

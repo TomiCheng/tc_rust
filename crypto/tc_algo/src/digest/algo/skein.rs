@@ -5,91 +5,91 @@ use crate::digest::DigestEntry;
 // The rows of Skein, at the state and digest sizes Bouncy Castle registers, to give to DefaultAlgoBuilder::reg_digest.
 // Bouncy Castle's DigestUtilities has none of them, so they have no alias or OID
 
-#[cfg(feature = "skein-256-128")]
+#[cfg(feature = "skein")]
 pub(super) fn skein_256_128(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>> {
     row("SKEIN-256-128", &[], &[], || {
         Box::new(TcDigest(tc_skein::SkeinDigest::new(256, 128)))
     })
 }
 
-#[cfg(feature = "skein-256-160")]
+#[cfg(feature = "skein")]
 pub(super) fn skein_256_160(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>> {
     row("SKEIN-256-160", &[], &[], || {
         Box::new(TcDigest(tc_skein::SkeinDigest::new(256, 160)))
     })
 }
 
-#[cfg(feature = "skein-256-224")]
+#[cfg(feature = "skein")]
 pub(super) fn skein_256_224(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>> {
     row("SKEIN-256-224", &[], &[], || {
         Box::new(TcDigest(tc_skein::SkeinDigest::new(256, 224)))
     })
 }
 
-#[cfg(feature = "skein-256-256")]
+#[cfg(feature = "skein")]
 pub(super) fn skein_256_256(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>> {
     row("SKEIN-256-256", &[], &[], || {
         Box::new(TcDigest(tc_skein::SkeinDigest::new(256, 256)))
     })
 }
 
-#[cfg(feature = "skein-512-128")]
+#[cfg(feature = "skein")]
 pub(super) fn skein_512_128(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>> {
     row("SKEIN-512-128", &[], &[], || {
         Box::new(TcDigest(tc_skein::SkeinDigest::new(512, 128)))
     })
 }
 
-#[cfg(feature = "skein-512-160")]
+#[cfg(feature = "skein")]
 pub(super) fn skein_512_160(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>> {
     row("SKEIN-512-160", &[], &[], || {
         Box::new(TcDigest(tc_skein::SkeinDigest::new(512, 160)))
     })
 }
 
-#[cfg(feature = "skein-512-224")]
+#[cfg(feature = "skein")]
 pub(super) fn skein_512_224(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>> {
     row("SKEIN-512-224", &[], &[], || {
         Box::new(TcDigest(tc_skein::SkeinDigest::new(512, 224)))
     })
 }
 
-#[cfg(feature = "skein-512-256")]
+#[cfg(feature = "skein")]
 pub(super) fn skein_512_256(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>> {
     row("SKEIN-512-256", &[], &[], || {
         Box::new(TcDigest(tc_skein::SkeinDigest::new(512, 256)))
     })
 }
 
-#[cfg(feature = "skein-512-384")]
+#[cfg(feature = "skein")]
 pub(super) fn skein_512_384(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>> {
     row("SKEIN-512-384", &[], &[], || {
         Box::new(TcDigest(tc_skein::SkeinDigest::new(512, 384)))
     })
 }
 
-#[cfg(feature = "skein-512-512")]
+#[cfg(feature = "skein")]
 pub(super) fn skein_512_512(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>> {
     row("SKEIN-512-512", &[], &[], || {
         Box::new(TcDigest(tc_skein::SkeinDigest::new(512, 512)))
     })
 }
 
-#[cfg(feature = "skein-1024-384")]
+#[cfg(feature = "skein")]
 pub(super) fn skein_1024_384(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>> {
     row("SKEIN-1024-384", &[], &[], || {
         Box::new(TcDigest(tc_skein::SkeinDigest::new(1024, 384)))
     })
 }
 
-#[cfg(feature = "skein-1024-512")]
+#[cfg(feature = "skein")]
 pub(super) fn skein_1024_512(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>> {
     row("SKEIN-1024-512", &[], &[], || {
         Box::new(TcDigest(tc_skein::SkeinDigest::new(1024, 512)))
     })
 }
 
-#[cfg(feature = "skein-1024-1024")]
+#[cfg(feature = "skein")]
 pub(super) fn skein_1024_1024(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>> {
     row("SKEIN-1024-1024", &[], &[], || {
         Box::new(TcDigest(tc_skein::SkeinDigest::new(1024, 1024)))
@@ -130,7 +130,7 @@ mod tests {
         }
     }
 
-    #[cfg(feature = "skein-256-128")]
+    #[cfg(feature = "skein")]
     #[test]
     fn the_skein_256_128_row_gives_the_hash_of_its_digest_and_is_found_by_its_names() {
         check(
@@ -141,7 +141,7 @@ mod tests {
         find("SKEIN-256-128", &[], &[]);
     }
 
-    #[cfg(feature = "skein-256-160")]
+    #[cfg(feature = "skein")]
     #[test]
     fn the_skein_256_160_row_gives_the_hash_of_its_digest_and_is_found_by_its_names() {
         check(
@@ -152,7 +152,7 @@ mod tests {
         find("SKEIN-256-160", &[], &[]);
     }
 
-    #[cfg(feature = "skein-256-224")]
+    #[cfg(feature = "skein")]
     #[test]
     fn the_skein_256_224_row_gives_the_hash_of_its_digest_and_is_found_by_its_names() {
         check(
@@ -163,7 +163,7 @@ mod tests {
         find("SKEIN-256-224", &[], &[]);
     }
 
-    #[cfg(feature = "skein-256-256")]
+    #[cfg(feature = "skein")]
     #[test]
     fn the_skein_256_256_row_gives_the_hash_of_its_digest_and_is_found_by_its_names() {
         check(
@@ -174,7 +174,7 @@ mod tests {
         find("SKEIN-256-256", &[], &[]);
     }
 
-    #[cfg(feature = "skein-512-128")]
+    #[cfg(feature = "skein")]
     #[test]
     fn the_skein_512_128_row_gives_the_hash_of_its_digest_and_is_found_by_its_names() {
         check(
@@ -185,7 +185,7 @@ mod tests {
         find("SKEIN-512-128", &[], &[]);
     }
 
-    #[cfg(feature = "skein-512-160")]
+    #[cfg(feature = "skein")]
     #[test]
     fn the_skein_512_160_row_gives_the_hash_of_its_digest_and_is_found_by_its_names() {
         check(
@@ -196,7 +196,7 @@ mod tests {
         find("SKEIN-512-160", &[], &[]);
     }
 
-    #[cfg(feature = "skein-512-224")]
+    #[cfg(feature = "skein")]
     #[test]
     fn the_skein_512_224_row_gives_the_hash_of_its_digest_and_is_found_by_its_names() {
         check(
@@ -207,7 +207,7 @@ mod tests {
         find("SKEIN-512-224", &[], &[]);
     }
 
-    #[cfg(feature = "skein-512-256")]
+    #[cfg(feature = "skein")]
     #[test]
     fn the_skein_512_256_row_gives_the_hash_of_its_digest_and_is_found_by_its_names() {
         check(
@@ -218,7 +218,7 @@ mod tests {
         find("SKEIN-512-256", &[], &[]);
     }
 
-    #[cfg(feature = "skein-512-384")]
+    #[cfg(feature = "skein")]
     #[test]
     fn the_skein_512_384_row_gives_the_hash_of_its_digest_and_is_found_by_its_names() {
         check(
@@ -229,7 +229,7 @@ mod tests {
         find("SKEIN-512-384", &[], &[]);
     }
 
-    #[cfg(feature = "skein-512-512")]
+    #[cfg(feature = "skein")]
     #[test]
     fn the_skein_512_512_row_gives_the_hash_of_its_digest_and_is_found_by_its_names() {
         check(
@@ -240,7 +240,7 @@ mod tests {
         find("SKEIN-512-512", &[], &[]);
     }
 
-    #[cfg(feature = "skein-1024-384")]
+    #[cfg(feature = "skein")]
     #[test]
     fn the_skein_1024_384_row_gives_the_hash_of_its_digest_and_is_found_by_its_names() {
         check(
@@ -251,7 +251,7 @@ mod tests {
         find("SKEIN-1024-384", &[], &[]);
     }
 
-    #[cfg(feature = "skein-1024-512")]
+    #[cfg(feature = "skein")]
     #[test]
     fn the_skein_1024_512_row_gives_the_hash_of_its_digest_and_is_found_by_its_names() {
         check(
@@ -262,7 +262,7 @@ mod tests {
         find("SKEIN-1024-512", &[], &[]);
     }
 
-    #[cfg(feature = "skein-1024-1024")]
+    #[cfg(feature = "skein")]
     #[test]
     fn the_skein_1024_1024_row_gives_the_hash_of_its_digest_and_is_found_by_its_names() {
         check(

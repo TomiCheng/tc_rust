@@ -33,16 +33,16 @@ fn main() -> Result<(), AlgoError> {
 | Name | Aliases | OID | Feature | Params | Public key | Private key |
 |---|---|---|---|---|---|---|
 | [`RSA`](Rsa.md) |  | `1.2.840.113549.1.1.1` | `rsa` | `RsaKeyGenParams` | `RsaKey` | `RsaKey` |
-| [`EC`](Ec.md) | `ECDH`, `ECIES`, `ECDHC`, `ECMQV`, `ECDSA`, `ECGOST3410`, `ECGOST-3410`, `GOST-3410-2001`, `ECGOST3410-2012`, `GOST-3410-2012` | `1.3.133.16.840.63.0.2`, `.3`, `.16`; `1.3.132.1.11.0` to `.3`; `1.3.132.1.14.0` to `.3`; `1.3.132.1.15.0` to `.3` | `ec` | `EcKeyGenParams` | `EcPublicKey<C>` | `EcPrivateKey<C>` |
+| [`EC`](Ec.md) | `ECDH`, `ECIES`, `ECDHC`, `ECMQV`, `ECDSA`, `ECGOST3410`, `ECGOST-3410`, `GOST-3410-2001`, `ECGOST3410-2012`, `GOST-3410-2012` | `1.3.133.16.840.63.0.2`, `.3`, `.16`; `1.3.132.1.11.0` to `.3`; `1.3.132.1.14.0` to `.3`; `1.3.132.1.15.0` to `.3` | `ec-key` | `EcKeyGenParams` | `EcPublicKey<C>` | `EcPrivateKey<C>` |
 | [`DH`](Dh.md) | `DIFFIEHELLMAN` |  | `dh` | `DhParameters` | `DhPublicKey` | `DhPrivateKey` |
 | [`ML-KEM`](KEM.md) |  |  | `ml-kem` | `MlKemParameters` | `MlKemPublicKey` | `MlKemPrivateKey` |
 | [`ELGAMAL`](ElGamal.md) |  |  | `elgamal` | `ElGamalParameters` | `ElGamalPublicKey` | `ElGamalPrivateKey` |
 | [`NACCACHESTERN`](NaccacheStern.md) |  |  | `naccache-stern` | `NaccacheSternKeyGenerationParams` | `NaccacheSternPublicKey` | `NaccacheSternPrivateKey` |
 | [`SM2`](Sm2.md) |  |  | `sm2` | none | `Sm2PublicKey` | `Sm2PrivateKey` |
-| [`Ed25519`](EdDSA.md) | `Ed25519ctx`, `Ed25519ph` | `1.3.101.112` | `ed25519` | none | `Ed25519PublicKey` | `Ed25519PrivateKey` |
-| [`Ed448`](EdDSA.md) | `Ed448ph` | `1.3.101.113` | `ed448` | none | `Ed448PublicKey` | `Ed448PrivateKey` |
-| [`X25519`](X25519.md) |  | `1.3.101.110` | `x25519` | none | `X25519PublicKey` | `X25519PrivateKey` |
-| [`X448`](X25519.md) |  | `1.3.101.111` | `x448` | none | `X448PublicKey` | `X448PrivateKey` |
+| [`Ed25519`](EdDSA.md) | `Ed25519ctx`, `Ed25519ph` | `1.3.101.112` | `cfrg-curves` | none | `Ed25519PublicKey` | `Ed25519PrivateKey` |
+| [`Ed448`](EdDSA.md) | `Ed448ph` | `1.3.101.113` | `cfrg-curves` | none | `Ed448PublicKey` | `Ed448PrivateKey` |
+| [`X25519`](X25519.md) |  | `1.3.101.110` | `cfrg-curves` | none | `X25519PublicKey` | `X25519PrivateKey` |
+| [`X448`](X25519.md) |  | `1.3.101.111` | `cfrg-curves` | none | `X448PublicKey` | `X448PrivateKey` |
 | [`ML-DSA`](MlDsa.md) |  |  | `ml-dsa` | `MlDsaParameters` | `MlDsaPublicKey` | `MlDsaPrivateKey` |
 | [`SLH-DSA`](SlhDsa.md) |  |  | `slh-dsa` | `SlhDsaParameters` | `SlhDsaPublicKey` | `SlhDsaPrivateKey` |
 | [`DSA`](Dsa.md) |  |  | `dsa` | `DsaKeyGenParams`, `DsaParameters` | `DsaPublicKey` | `DsaPrivateKey` |

@@ -4,7 +4,7 @@ An extendable-output function hashes a message into as many bytes as you ask for
 gives a fixed size. The length is not set in advance: it is given when the output is taken, and the
 shorter of two outputs is the start of the longer.
 
-With SHAKE256, whose row is behind the `shake256` feature.
+With SHAKE256, whose row is behind the `keccak` feature.
 
 ```rust
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
@@ -33,20 +33,20 @@ fn main() -> Result<(), AlgoError> {
 
 | Name | Aliases | OIDs | Feature | Params | Note |
 |---|---|---|---|---|---|
-| `SHAKE128` | `SHAKE-128` | `2.16.840.1.101.3.4.2.11` | `shake128` |  |  |
-| `SHAKE256` | `SHAKE-256` | `2.16.840.1.101.3.4.2.12` | `shake256` |  |  |
-| `CSHAKE128` |  |  | `cshake128` | `CShakeParams` |  |
-| `CSHAKE256` |  |  | `cshake256` | `CShakeParams` |  |
-| `TUPLEHASH128` |  |  | `tuplehash128` | `TupleHashParams` | each update is one element |
-| `TUPLEHASH256` |  |  | `tuplehash256` | `TupleHashParams` | each update is one element |
-| `PARALLELHASH128` |  |  | `parallelhash128` | `ParallelHashParams` | blocks of 8192 bytes by default |
-| `PARALLELHASH256` |  |  | `parallelhash256` | `ParallelHashParams` | blocks of 8192 bytes by default |
-| `BLAKE2XS` |  |  | `blake2xs` | `Blake2xsParams` | output length not set in advance |
-| `BLAKE3` |  |  | `blake3` | `Blake3Params` |  |
-| `ASCON-XOF128` |  |  | `ascon-xof128` |  |  |
-| `ASCON-CXOF128` |  |  | `ascon-cxof128` | `AsconCXofParams` |  |
-| `ASCON-XOF` |  |  | `ascon-xof` |  | pre-standard |
-| `ASCON-XOFA` |  |  | `ascon-xofa` |  | pre-standard |
+| `SHAKE128` | `SHAKE-128` | `2.16.840.1.101.3.4.2.11` | `keccak` |  |  |
+| `SHAKE256` | `SHAKE-256` | `2.16.840.1.101.3.4.2.12` | `keccak` |  |  |
+| `CSHAKE128` |  |  | `keccak` | `CShakeParams` |  |
+| `CSHAKE256` |  |  | `keccak` | `CShakeParams` |  |
+| `TUPLEHASH128` |  |  | `keccak` | `TupleHashParams` | each update is one element |
+| `TUPLEHASH256` |  |  | `keccak` | `TupleHashParams` | each update is one element |
+| `PARALLELHASH128` |  |  | `keccak` | `ParallelHashParams` | blocks of 8192 bytes by default |
+| `PARALLELHASH256` |  |  | `keccak` | `ParallelHashParams` | blocks of 8192 bytes by default |
+| `BLAKE2XS` |  |  | `blake` | `Blake2xsParams` | output length not set in advance |
+| `BLAKE3` |  |  | `blake` | `Blake3Params` |  |
+| `ASCON-XOF128` |  |  | `ascon-hash` |  |  |
+| `ASCON-CXOF128` |  |  | `ascon-hash` | `AsconCXofParams` |  |
+| `ASCON-XOF` |  |  | `ascon-hash` |  | pre-standard |
+| `ASCON-XOFA` |  |  | `ascon-hash` |  | pre-standard |
 
 The case of a name does not matter. Bouncy Castle has no factory of XOFs; the SHAKE rows are
 named as its `DigestUtilities` names SHAKE, and the others by the names of their XOFs, with no

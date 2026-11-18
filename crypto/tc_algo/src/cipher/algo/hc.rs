@@ -7,14 +7,14 @@ use crate::cipher::CipherEntry;
 // The rows of HC-128 and HC-256, as Bouncy Castle's CipherUtilities names them, with no OID. Each
 // takes a key and an IV
 
-#[cfg(feature = "hc128")]
+#[cfg(feature = "hc")]
 pub(super) fn hc128(_context: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>> {
     vec![stream_row(&["HC128"], &[], || {
         Box::new(Nonced(BufferedStreamCipher::new(tc_hc::Hc128Engine::new())))
     })]
 }
 
-#[cfg(feature = "hc256")]
+#[cfg(feature = "hc")]
 pub(super) fn hc256(_context: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>> {
     vec![stream_row(&["HC256"], &[], || {
         Box::new(Nonced(BufferedStreamCipher::new(tc_hc::Hc256Engine::new())))
@@ -39,7 +39,7 @@ mod tests {
             .collect()
     }
 
-    #[cfg(feature = "hc128")]
+    #[cfg(feature = "hc")]
     #[test]
     fn hc128_gives_what_its_engine_gives() {
         let key = unhex("000102030405060708090a0b0c0d0e0f");
@@ -73,7 +73,7 @@ mod tests {
         assert_eq!(back, MESSAGE);
     }
 
-    #[cfg(feature = "hc256")]
+    #[cfg(feature = "hc")]
     #[test]
     fn hc256_gives_what_its_engine_gives() {
         let key = unhex("000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f");

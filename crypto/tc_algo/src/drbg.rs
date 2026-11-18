@@ -1,6 +1,6 @@
 //! Deterministic random bit generators, after NIST SP 800-90A and Bouncy Castle's `SP80090Drbg`.
-#![cfg_attr(all(feature = "hmac-drbg", feature = "sha256"), doc = "")]
-#![cfg_attr(all(feature = "hmac-drbg", feature = "sha256"), doc = include_str!("../docs/Drbg.md"))]
+#![cfg_attr(all(feature = "drbg", feature = "sha"), doc = "")]
+#![cfg_attr(all(feature = "drbg", feature = "sha"), doc = include_str!("../docs/Drbg.md"))]
 
 mod algo;
 mod default_drbg_provider;

@@ -13,7 +13,7 @@ use crate::{AlgoError, DefaultAlgoContext, EntryBase, ErrorKind, Params};
 const MAX_REQUEST_BYTES: usize = (1 << 18) / 8;
 
 // The digests SP 800-90A takes for HMAC_DRBG and Hash_DRBG, with the security strength each gives
-#[cfg(any(feature = "hmac-drbg", feature = "hash-drbg"))]
+#[cfg(feature = "drbg")]
 const DIGESTS: &[(&str, usize)] = &[
     ("SHA-1", 128),
     ("SHA-224", 192),
@@ -67,7 +67,7 @@ pub(super) fn sp800(context: &DefaultAlgoContext) -> Vec<Box<dyn DrbgEntry>> {
     #[allow(unused_variables, reason = "unused when no kind has its base")]
     let rand = context.rand();
 
-    #[cfg(any(feature = "hmac-drbg", feature = "hash-drbg"))]
+    #[cfg(feature = "drbg")]
     for digest in crate::digest::BUILT_IN
         .iter()
         .flat_map(|create| create(context))
@@ -85,7 +85,7 @@ pub(super) fn sp800(context: &DefaultAlgoContext) -> Vec<Box<dyn DrbgEntry>> {
                 .collect();
             (name, aliases)
         };
-        #[cfg(feature = "hmac-drbg")]
+        #[cfg(feature = "drbg")]
         {
             let (name, aliases) = names("HMAC");
             let digest = digest.clone();
@@ -108,7 +108,7 @@ pub(super) fn sp800(context: &DefaultAlgoContext) -> Vec<Box<dyn DrbgEntry>> {
                 }),
             ));
         }
-        #[cfg(feature = "hash-drbg")]
+        #[cfg(feature = "drbg")]
         {
             let (name, aliases) = names("HASH");
             let digest = digest.clone();
@@ -132,7 +132,7 @@ pub(super) fn sp800(context: &DefaultAlgoContext) -> Vec<Box<dyn DrbgEntry>> {
         }
     }
 
-    #[cfg(all(feature = "ctr-drbg", feature = "aes"))]
+    #[cfg(all(feature = "drbg", feature = "aes"))]
     for bits in [128, 192, 256] {
         rows.push(row(
             format!("CTR/AES-{bits}"),
@@ -301,7 +301,7 @@ impl Drbg for RowDrbg {
     }
 }
 
-#[cfg(all(test, feature = "hmac-drbg", feature = "sha256"))]
+#[cfg(all(test, feature = "drbg", feature = "sha"))]
 mod tests {
     use core::any::Any;
     use core::convert::Infallible;
@@ -422,15 +422,7 @@ mod tests {
 // The vectors of NIST CAVP, drbgvectors_no_reseed, COUNT = 0, through the rows: the entropy comes
 // from the random source, the nonce from DrbgParams, and the second of two outputs is compared, as
 // CAVP does
-#[cfg(all(
-    test,
-    feature = "hmac-drbg",
-    feature = "hash-drbg",
-    feature = "ctr-drbg",
-    feature = "aes",
-    feature = "sha256",
-    feature = "sha512"
-))]
+#[cfg(all(test, feature = "drbg", feature = "aes", feature = "sha"))]
 mod cavp_tests {
     use core::convert::Infallible;
 

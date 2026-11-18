@@ -14,7 +14,7 @@ pub(super) fn aead(context: &DefaultAlgoContext) -> Vec<Box<dyn KeyGeneratorEntr
     let mut add = |name, aliases: &[&'static str], oids: &[&str], key_len, lengths, rule| {
         rows.push(row(name, aliases, oids, key_len, lengths, rule, rand));
     };
-    #[cfg(feature = "ascon-aead128")]
+    #[cfg(feature = "ascon-aead")]
     add(
         "ASCON-AEAD128",
         &[],
@@ -23,11 +23,11 @@ pub(super) fn aead(context: &DefaultAlgoContext) -> Vec<Box<dyn KeyGeneratorEntr
         Lengths::Of(&[16]),
         Rule::Random,
     );
-    #[cfg(feature = "ascon128")]
+    #[cfg(feature = "ascon-aead")]
     add("ASCON-128", &[], &[], 16, Lengths::Of(&[16]), Rule::Random);
-    #[cfg(feature = "ascon128a")]
+    #[cfg(feature = "ascon-aead")]
     add("ASCON-128A", &[], &[], 16, Lengths::Of(&[16]), Rule::Random);
-    #[cfg(feature = "ascon80pq")]
+    #[cfg(feature = "ascon-aead")]
     add("ASCON-80PQ", &[], &[], 20, Lengths::Of(&[20]), Rule::Random);
     #[cfg(feature = "grain128-aead")]
     add(
@@ -38,7 +38,7 @@ pub(super) fn aead(context: &DefaultAlgoContext) -> Vec<Box<dyn KeyGeneratorEntr
         Lengths::Of(&[16]),
         Rule::Random,
     );
-    #[cfg(feature = "schwaemm128-128")]
+    #[cfg(feature = "sparkle-aead")]
     add(
         "SCHWAEMM128-128",
         &[],
@@ -47,7 +47,7 @@ pub(super) fn aead(context: &DefaultAlgoContext) -> Vec<Box<dyn KeyGeneratorEntr
         Lengths::Of(&[16]),
         Rule::Random,
     );
-    #[cfg(feature = "schwaemm256-128")]
+    #[cfg(feature = "sparkle-aead")]
     add(
         "SCHWAEMM256-128",
         &[],
@@ -56,7 +56,7 @@ pub(super) fn aead(context: &DefaultAlgoContext) -> Vec<Box<dyn KeyGeneratorEntr
         Lengths::Of(&[16]),
         Rule::Random,
     );
-    #[cfg(feature = "schwaemm192-192")]
+    #[cfg(feature = "sparkle-aead")]
     add(
         "SCHWAEMM192-192",
         &[],
@@ -65,7 +65,7 @@ pub(super) fn aead(context: &DefaultAlgoContext) -> Vec<Box<dyn KeyGeneratorEntr
         Lengths::Of(&[24]),
         Rule::Random,
     );
-    #[cfg(feature = "schwaemm256-256")]
+    #[cfg(feature = "sparkle-aead")]
     add(
         "SCHWAEMM256-256",
         &[],

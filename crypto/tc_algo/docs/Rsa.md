@@ -174,33 +174,33 @@ fn main() -> Result<(), AlgoError> {
 ### Algorithms
 
 The names and OIDs are those of Bouncy Castle's `SignerUtilities`, and the case of a name does not
-matter. A row over a digest needs `rsa` and the digest's feature, as `rsa` and `sha256`. The
+matter. A row over a digest needs `rsa` and the digest's feature, as `rsa` and `sha`. The
 signature is the size of the modulus.
 
 | Name | Aliases | OIDs | Features |
 |---|---|---|---|
-| `MD2withRSA` | `MD2WITHRSAENCRYPTION` | `1.2.840.113549.1.1.2` | `rsa` and `md2` |
-| `MD4withRSA` | `MD4WITHRSAENCRYPTION` | `1.2.840.113549.1.1.3`, `1.3.14.3.2.2`, `1.3.14.3.2.4` | `rsa` and `md4` |
-| `MD5withRSA` | `MD5WITHRSAENCRYPTION` | `1.2.840.113549.1.1.4`, `1.3.14.3.2.3` | `rsa` and `md5` |
-| `SHA-1withRSA` | `SHA1WITHRSA`, `SHA1WITHRSAENCRYPTION` | `1.2.840.113549.1.1.5`, `1.3.14.3.2.29` | `rsa` and `sha1` |
-| `SHA-224withRSA` | `SHA224WITHRSA`, `SHA224WITHRSAENCRYPTION` | `1.2.840.113549.1.1.14` | `rsa` and `sha224` |
-| `SHA-256withRSA` | `SHA256WITHRSA`, `SHA256WITHRSAENCRYPTION` | `1.2.840.113549.1.1.11` | `rsa` and `sha256` |
-| `SHA-384withRSA` | `SHA384WITHRSA`, `SHA384WITHRSAENCRYPTION` | `1.2.840.113549.1.1.12` | `rsa` and `sha384` |
-| `SHA-512withRSA` | `SHA512WITHRSA`, `SHA512WITHRSAENCRYPTION` | `1.2.840.113549.1.1.13` | `rsa` and `sha512` |
-| `SHA-512(224)withRSA` | `SHA512(224)WITHRSA`, `SHA-512/224WITHRSA` | `1.2.840.113549.1.1.15` | `rsa` and `sha512-224` |
-| `SHA-512(256)withRSA` | `SHA512(256)WITHRSA`, `SHA-512/256WITHRSA` | `1.2.840.113549.1.1.16` | `rsa` and `sha512-256` |
-| `SHA3-224withRSA` | `SHA3-224WITHRSAENCRYPTION` | `2.16.840.1.101.3.4.3.13` | `rsa` and `sha3-224` |
-| `SHA3-256withRSA` | `SHA3-256WITHRSAENCRYPTION` | `2.16.840.1.101.3.4.3.14` | `rsa` and `sha3-256` |
-| `SHA3-384withRSA` | `SHA3-384WITHRSAENCRYPTION` | `2.16.840.1.101.3.4.3.15` | `rsa` and `sha3-384` |
-| `SHA3-512withRSA` | `SHA3-512WITHRSAENCRYPTION` | `2.16.840.1.101.3.4.3.16` | `rsa` and `sha3-512` |
-| `RIPEMD128withRSA` | `RIPEMD128WITHRSAENCRYPTION` | `1.3.36.3.3.1.3` | `rsa` and `ripemd128` |
-| `RIPEMD160withRSA` | `RIPEMD160WITHRSAENCRYPTION` | `1.3.36.3.3.1.2` | `rsa` and `ripemd160` |
-| `RIPEMD256withRSA` | `RIPEMD256WITHRSAENCRYPTION` | `1.3.36.3.3.1.4` | `rsa` and `ripemd256` |
+| `MD2withRSA` | `MD2WITHRSAENCRYPTION` | `1.2.840.113549.1.1.2` | `rsa` and `md` |
+| `MD4withRSA` | `MD4WITHRSAENCRYPTION` | `1.2.840.113549.1.1.3`, `1.3.14.3.2.2`, `1.3.14.3.2.4` | `rsa` and `md` |
+| `MD5withRSA` | `MD5WITHRSAENCRYPTION` | `1.2.840.113549.1.1.4`, `1.3.14.3.2.3` | `rsa` and `md` |
+| `SHA-1withRSA` | `SHA1WITHRSA`, `SHA1WITHRSAENCRYPTION` | `1.2.840.113549.1.1.5`, `1.3.14.3.2.29` | `rsa` and `sha` |
+| `SHA-224withRSA` | `SHA224WITHRSA`, `SHA224WITHRSAENCRYPTION` | `1.2.840.113549.1.1.14` | `rsa` and `sha` |
+| `SHA-256withRSA` | `SHA256WITHRSA`, `SHA256WITHRSAENCRYPTION` | `1.2.840.113549.1.1.11` | `rsa` and `sha` |
+| `SHA-384withRSA` | `SHA384WITHRSA`, `SHA384WITHRSAENCRYPTION` | `1.2.840.113549.1.1.12` | `rsa` and `sha` |
+| `SHA-512withRSA` | `SHA512WITHRSA`, `SHA512WITHRSAENCRYPTION` | `1.2.840.113549.1.1.13` | `rsa` and `sha` |
+| `SHA-512(224)withRSA` | `SHA512(224)WITHRSA`, `SHA-512/224WITHRSA` | `1.2.840.113549.1.1.15` | `rsa` and `sha` |
+| `SHA-512(256)withRSA` | `SHA512(256)WITHRSA`, `SHA-512/256WITHRSA` | `1.2.840.113549.1.1.16` | `rsa` and `sha` |
+| `SHA3-224withRSA` | `SHA3-224WITHRSAENCRYPTION` | `2.16.840.1.101.3.4.3.13` | `rsa` and `keccak` |
+| `SHA3-256withRSA` | `SHA3-256WITHRSAENCRYPTION` | `2.16.840.1.101.3.4.3.14` | `rsa` and `keccak` |
+| `SHA3-384withRSA` | `SHA3-384WITHRSAENCRYPTION` | `2.16.840.1.101.3.4.3.15` | `rsa` and `keccak` |
+| `SHA3-512withRSA` | `SHA3-512WITHRSAENCRYPTION` | `2.16.840.1.101.3.4.3.16` | `rsa` and `keccak` |
+| `RIPEMD128withRSA` | `RIPEMD128WITHRSAENCRYPTION` | `1.3.36.3.3.1.3` | `rsa` and `ripemd` |
+| `RIPEMD160withRSA` | `RIPEMD160WITHRSAENCRYPTION` | `1.3.36.3.3.1.2` | `rsa` and `ripemd` |
+| `RIPEMD256withRSA` | `RIPEMD256WITHRSAENCRYPTION` | `1.3.36.3.3.1.4` | `rsa` and `ripemd` |
 | `<DIGEST>withRSAandMGF1`, for every digest but `NONE` | `<DIGEST>WITHRSA/PSS`, `<DIGEST>WITHRSASSA-PSS` |  | `rsa` and the digest's |
 | `<DIGEST>withRSA/X9.31`, for the digests below |  |  | `rsa` and the digest's |
 | `<DIGEST>withRSA/ISO9796-2`, for the digests below |  |  | `rsa` and the digest's |
-| `PSSwithRSA` | `RSASSA-PSS`, `RSAPSS` | `1.2.840.113549.1.1.10` | `rsa` and `sha1` |
-| `RAWRSASSA-PSS` | `RAWRSAPSS`, `NONEWITHRSAPSS`, `NONEWITHRSASSA-PSS` |  | `rsa` and `sha1` |
+| `PSSwithRSA` | `RSASSA-PSS`, `RSAPSS` | `1.2.840.113549.1.1.10` | `rsa` and `sha` |
+| `RAWRSASSA-PSS` | `RAWRSAPSS`, `NONEWITHRSAPSS`, `NONEWITHRSASSA-PSS` |  | `rsa` and `sha` |
 | `NONEwithRSA` | `RSA`, `RSAWITHNONE`, `RAWRSA` |  | `rsa` |
 
 `<DIGEST>` is any name of the digest, so `SHA256withRSA` and `SHA-256WITHRSA` are the same row.

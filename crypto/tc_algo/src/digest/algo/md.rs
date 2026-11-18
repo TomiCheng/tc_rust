@@ -5,21 +5,21 @@ use crate::digest::DigestEntry;
 // The rows of MD2, MD4 and MD5, to give to DefaultAlgoBuilder::reg_digest. Their names and OIDs
 // are those of Bouncy Castle's DigestUtilities. All three are broken, kept for old data
 
-#[cfg(feature = "md2")]
+#[cfg(feature = "md")]
 pub(super) fn md2(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>> {
     row("MD2", &[], &["1.2.840.113549.2.2"], || {
         Box::new(TcDigest(tc_md::Md2Digest::new()))
     })
 }
 
-#[cfg(feature = "md4")]
+#[cfg(feature = "md")]
 pub(super) fn md4(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>> {
     row("MD4", &[], &["1.2.840.113549.2.4"], || {
         Box::new(TcDigest(tc_md::Md4Digest::new()))
     })
 }
 
-#[cfg(feature = "md5")]
+#[cfg(feature = "md")]
 pub(super) fn md5(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>> {
     row("MD5", &[], &["1.2.840.113549.2.5"], || {
         Box::new(TcDigest(tc_md::Md5Digest::new()))
@@ -49,7 +49,7 @@ mod tests {
 
     // The examples of RFC 1319, RFC 1320 and RFC 1321 for the message "abc"
 
-    #[cfg(feature = "md2")]
+    #[cfg(feature = "md")]
     #[test]
     fn md2_gives_the_standard_hash() {
         let row = super::md2(&context()).remove(0);
@@ -57,7 +57,7 @@ mod tests {
         assert_eq!(hash_of_abc(row), "da853b0d3f88d99b30283a69e6ded6bb");
     }
 
-    #[cfg(feature = "md4")]
+    #[cfg(feature = "md")]
     #[test]
     fn md4_gives_the_standard_hash() {
         let row = super::md4(&context()).remove(0);
@@ -65,7 +65,7 @@ mod tests {
         assert_eq!(hash_of_abc(row), "a448017aaf21d8525fc10ae87aa6729d");
     }
 
-    #[cfg(feature = "md5")]
+    #[cfg(feature = "md")]
     #[test]
     fn md5_gives_the_standard_hash() {
         let row = super::md5(&context()).remove(0);
@@ -73,7 +73,7 @@ mod tests {
         assert_eq!(hash_of_abc(row), "900150983cd24fb0d6963f7d28e17f72");
     }
 
-    #[cfg(feature = "md5")]
+    #[cfg(feature = "md")]
     #[test]
     fn md5_is_found_by_its_oid() {
         use crate::AlgoBuilder as _;

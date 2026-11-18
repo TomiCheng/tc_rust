@@ -6,28 +6,28 @@ use crate::digest::DigestEntry;
 // DefaultAlgoBuilder::reg_digest. Tiger and Whirlpool are named as Bouncy Castle's DigestUtilities
 // names them; it has none of the others, so they have no alias or OID
 
-#[cfg(feature = "tiger")]
+#[cfg(feature = "misc-digest")]
 pub(super) fn tiger(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>> {
     row("TIGER", &[], &[], || {
         Box::new(TcDigest(tc_misc_digest::TigerDigest::default()))
     })
 }
 
-#[cfg(feature = "whirlpool")]
+#[cfg(feature = "misc-digest")]
 pub(super) fn whirlpool(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>> {
     row("WHIRLPOOL", &[], &[], || {
         Box::new(TcDigest(tc_misc_digest::WhirlpoolDigest::default()))
     })
 }
 
-#[cfg(feature = "photon-beetle")]
+#[cfg(feature = "misc-digest")]
 pub(super) fn photon_beetle(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>> {
     row("PHOTON-BEETLE", &[], &[], || {
         Box::new(TcDigest(tc_misc_digest::PhotonBeetleDigest::new()))
     })
 }
 
-#[cfg(feature = "esch-256")]
+#[cfg(feature = "misc-digest")]
 pub(super) fn esch_256(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>> {
     row("ESCH-256", &[], &[], || {
         Box::new(TcDigest(tc_misc_digest::SparkleDigest::new(
@@ -36,7 +36,7 @@ pub(super) fn esch_256(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry
     })
 }
 
-#[cfg(feature = "esch-384")]
+#[cfg(feature = "misc-digest")]
 pub(super) fn esch_384(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>> {
     row("ESCH-384", &[], &[], || {
         Box::new(TcDigest(tc_misc_digest::SparkleDigest::new(
@@ -45,7 +45,7 @@ pub(super) fn esch_384(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry
     })
 }
 
-#[cfg(feature = "xoodyak")]
+#[cfg(feature = "misc-digest")]
 pub(super) fn xoodyak(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>> {
     row("XOODYAK", &[], &[], || {
         Box::new(TcDigest(tc_misc_digest::XoodyakDigest::new()))
@@ -86,7 +86,7 @@ mod tests {
         }
     }
 
-    #[cfg(feature = "tiger")]
+    #[cfg(feature = "misc-digest")]
     #[test]
     fn the_tiger_row_gives_the_hash_of_its_digest_and_is_found_by_its_names() {
         check(
@@ -97,7 +97,7 @@ mod tests {
         find("TIGER", &[], &[]);
     }
 
-    #[cfg(feature = "whirlpool")]
+    #[cfg(feature = "misc-digest")]
     #[test]
     fn the_whirlpool_row_gives_the_hash_of_its_digest_and_is_found_by_its_names() {
         check(
@@ -108,7 +108,7 @@ mod tests {
         find("WHIRLPOOL", &[], &[]);
     }
 
-    #[cfg(feature = "photon-beetle")]
+    #[cfg(feature = "misc-digest")]
     #[test]
     fn the_photon_beetle_row_gives_the_hash_of_its_digest_and_is_found_by_its_names() {
         check(
@@ -119,7 +119,7 @@ mod tests {
         find("PHOTON-BEETLE", &[], &[]);
     }
 
-    #[cfg(feature = "esch-256")]
+    #[cfg(feature = "misc-digest")]
     #[test]
     fn the_esch_256_row_gives_the_hash_of_its_digest_and_is_found_by_its_names() {
         check(
@@ -130,7 +130,7 @@ mod tests {
         find("ESCH-256", &[], &[]);
     }
 
-    #[cfg(feature = "esch-384")]
+    #[cfg(feature = "misc-digest")]
     #[test]
     fn the_esch_384_row_gives_the_hash_of_its_digest_and_is_found_by_its_names() {
         check(
@@ -141,7 +141,7 @@ mod tests {
         find("ESCH-384", &[], &[]);
     }
 
-    #[cfg(feature = "xoodyak")]
+    #[cfg(feature = "misc-digest")]
     #[test]
     fn the_xoodyak_row_gives_the_hash_of_its_digest_and_is_found_by_its_names() {
         check(

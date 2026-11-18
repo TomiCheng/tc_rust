@@ -10,7 +10,7 @@ pub(super) fn keyed(_context: &DefaultAlgoContext) -> Vec<Box<dyn MacEntry>> {
     let mut rows: Vec<Box<dyn MacEntry>> = Vec::new();
 
     // A key of 16 or 24 bytes, and an IV of 8 bytes or none
-    #[cfg(feature = "iso9797-alg3-mac")]
+    #[cfg(feature = "iso9797-mac")]
     {
         use tc_iso9797_mac::Iso9797Alg3Mac;
         rows.push(named(
@@ -39,11 +39,11 @@ pub(super) fn keyed(_context: &DefaultAlgoContext) -> Vec<Box<dyn MacEntry>> {
             Iv::Optional(8),
         ))
     }));
-    #[cfg(feature = "vmpc-mac")]
+    #[cfg(feature = "macs")]
     rows.push(named("VMPCMAC", &["VMPC", "VMPC-MAC"], &[], || {
         Box::new(RowMac::new(tc_macs::VmpcMac::new(), Iv::Required))
     }));
-    #[cfg(feature = "siphash")]
+    #[cfg(feature = "macs")]
     {
         rows.push(named("SIPHASH-2-4", &["SIPHASH"], &[], || {
             Box::new(RowMac::new(tc_macs::SipHash::new(), Iv::None))
@@ -101,8 +101,8 @@ pub(super) fn keyed(_context: &DefaultAlgoContext) -> Vec<Box<dyn MacEntry>> {
 
 #[cfg(all(
     test,
-    feature = "iso9797-alg3-mac",
-    feature = "siphash",
+    feature = "iso9797-mac",
+    feature = "macs",
     feature = "kmac",
     feature = "poly1305"
 ))]

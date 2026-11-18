@@ -135,7 +135,7 @@ mod tests {
         assert_eq!(error.kind(), ErrorKind::InvalidParams);
     }
 
-    #[cfg(feature = "hmac-sha256")]
+    #[cfg(all(feature = "macs", feature = "sha"))]
     #[test]
     fn a_generated_key_goes_straight_into_a_mac() {
         let algo = DefaultAlgoBuilder::default().build();

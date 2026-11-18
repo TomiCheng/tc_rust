@@ -1,4 +1,4 @@
-#[cfg(feature = "desede")]
+#[cfg(feature = "des")]
 use tc_des::DesEdeEngine;
 #[cfg(feature = "des")]
 use tc_des::DesEngine;
@@ -40,7 +40,7 @@ pub(super) fn des(context: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>> {
 // named TDEA, as in Bouncy Castle's CipherUtilities. Its OIDs are OIW's DESede, which means ECB with
 // PKCS#7, and RSA's DES-EDE3-CBC, CBC with PKCS#7, which also has the PBE names and OIDs of
 // PKCS#12's three-key and two-key triple DES, the cipher of those schemes
-#[cfg(feature = "desede")]
+#[cfg(feature = "des")]
 pub(super) fn desede(context: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>> {
     let rand: Rand = context.rand();
     block_rows_with_aliases(
@@ -242,7 +242,7 @@ mod tests {
     }
 }
 
-#[cfg(all(test, feature = "desede"))]
+#[cfg(all(test, feature = "des"))]
 mod desede_tests {
     use crate::params::{KeyOwned, KeyWithIvOwned};
     use crate::{AlgoBuilder, DefaultAlgoBuilder};

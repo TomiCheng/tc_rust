@@ -53,7 +53,7 @@ fn on(params: &dyn Params, spec: &Spec) -> Option<Result<Box<dyn Inner>, AlgoErr
     Some(keyed(signer(), key))
 }
 
-#[cfg(all(test, feature = "sha1", feature = "sha256"))]
+#[cfg(all(test, feature = "sha"))]
 mod tests {
     use std::sync::OnceLock;
 

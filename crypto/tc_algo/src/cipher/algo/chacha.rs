@@ -1,5 +1,5 @@
 use tc_buffered_cipher::BufferedStreamCipher;
-#[cfg(feature = "xchacha20")]
+#[cfg(feature = "chacha")]
 use tc_chacha::XChaCha20Engine;
 #[cfg(feature = "chacha")]
 use tc_chacha::{ChaCha7539Engine, ChaChaEngine};
@@ -24,7 +24,7 @@ pub(super) fn chacha(_context: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>>
 }
 
 // XChaCha20, ChaCha20 with a nonce of 24 bytes
-#[cfg(feature = "xchacha20")]
+#[cfg(feature = "chacha")]
 pub(super) fn xchacha20(_context: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>> {
     vec![stream_row(&["XCHACHA20"], &[], || {
         Box::new(Nonced(BufferedStreamCipher::new(XChaCha20Engine::new())))
@@ -200,7 +200,7 @@ mod tests {
     }
 }
 
-#[cfg(all(test, any(feature = "chacha", feature = "xchacha20")))]
+#[cfg(all(test, feature = "chacha"))]
 mod variant_tests {
     #![allow(unused_imports)]
     use tc_stream_cipher::{CipherDirection, KeyRef, KeyWithIvRef, StreamCipher, StreamCipherInit};
@@ -235,7 +235,7 @@ mod variant_tests {
         );
     }
 
-    #[cfg(feature = "xchacha20")]
+    #[cfg(feature = "chacha")]
     #[test]
     fn xchacha20_gives_what_its_engine_gives() {
         let key = unhex("000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f");

@@ -1,6 +1,6 @@
-#[cfg(feature = "chacha20-poly1305")]
+#[cfg(feature = "chacha-aead")]
 use tc_chacha_aead::ChaCha20Poly1305Engine;
-#[cfg(feature = "xchacha20-poly1305")]
+#[cfg(feature = "chacha-aead")]
 use tc_chacha_aead::XChaCha20Poly1305Engine;
 
 use super::aead_engine::{AeadEngine, row};
@@ -9,7 +9,7 @@ use crate::cipher::CipherEntry;
 
 // ChaCha20-Poly1305 of RFC 8439, as Bouncy Castle's CipherUtilities names it, with the OID of RFC
 // 8103 that it gives the same row
-#[cfg(feature = "chacha20-poly1305")]
+#[cfg(feature = "chacha-aead")]
 pub(super) fn chacha20_poly1305(_: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>> {
     vec![row(
         "CHACHA20-POLY1305",
@@ -19,7 +19,7 @@ pub(super) fn chacha20_poly1305(_: &DefaultAlgoContext) -> Vec<Box<dyn CipherEnt
 }
 
 // XChaCha20-Poly1305, its extension to a nonce of 24 bytes, as Bouncy Castle names it, with no OID
-#[cfg(feature = "xchacha20-poly1305")]
+#[cfg(feature = "chacha-aead")]
 pub(super) fn xchacha20_poly1305(_: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>> {
     vec![row("XCHACHA20-POLY1305", &[], || {
         Box::new(AeadEngine(XChaCha20Poly1305Engine::new()))
@@ -39,7 +39,7 @@ mod tests {
     }
 
     // RFC 8439, section 2.8.2: the sunscreen message, sealed with its tag
-    #[cfg(feature = "chacha20-poly1305")]
+    #[cfg(feature = "chacha-aead")]
     #[test]
     fn chacha20_poly1305_gives_the_example_of_rfc_8439() {
         let params = AeadParamsOwned::new(
@@ -81,7 +81,7 @@ mod tests {
     }
 
     // A nonce of 24 bytes, which may be drawn at random; one of 12 is refused
-    #[cfg(feature = "xchacha20-poly1305")]
+    #[cfg(feature = "chacha-aead")]
     #[test]
     fn xchacha20_poly1305_takes_a_nonce_of_24_bytes_and_decrypts_back() {
         let algo = DefaultAlgoBuilder::default().build();

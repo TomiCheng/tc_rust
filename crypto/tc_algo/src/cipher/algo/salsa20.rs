@@ -16,7 +16,7 @@ pub(super) fn salsa20(_context: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>
     })]
 }
 
-#[cfg(feature = "xsalsa20")]
+#[cfg(feature = "salsa20")]
 pub(super) fn xsalsa20(_context: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>> {
     vec![stream_row(&["XSALSA20"], &[], || {
         Box::new(Nonced(BufferedStreamCipher::new(
@@ -77,7 +77,7 @@ mod tests {
         assert_eq!(back, MESSAGE);
     }
 
-    #[cfg(feature = "xsalsa20")]
+    #[cfg(feature = "salsa20")]
     #[test]
     fn xsalsa20_gives_what_its_engine_gives() {
         let key = unhex("000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f");

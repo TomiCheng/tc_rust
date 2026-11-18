@@ -1,8 +1,8 @@
 use tc_buffered_cipher::BufferedStreamCipher;
 
-#[cfg(any(feature = "rc4", feature = "isaac"))]
+#[cfg(feature = "rc4-family")]
 use super::stream::Keyed;
-#[cfg(any(feature = "vmpc", feature = "vmpc-ksa3"))]
+#[cfg(feature = "rc4-family")]
 use super::stream::Nonced;
 use super::stream::stream_row;
 use crate::DefaultAlgoContext;
@@ -12,7 +12,7 @@ use crate::cipher::CipherEntry;
 // those of Bouncy Castle's CipherUtilities, as are VMPC's; ISAAC, which Bouncy Castle has as an
 // engine but not there, has no alias or OID. RC4 and ISAAC take a key alone, VMPC a key and an IV
 
-#[cfg(feature = "rc4")]
+#[cfg(feature = "rc4-family")]
 pub(super) fn rc4(_context: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>> {
     // Also the PBE names and OIDs of PKCS#12's RC4, the cipher of those schemes
     vec![stream_row(
@@ -38,7 +38,7 @@ pub(super) fn rc4(_context: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>> {
     )]
 }
 
-#[cfg(feature = "vmpc")]
+#[cfg(feature = "rc4-family")]
 pub(super) fn vmpc(_context: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>> {
     vec![stream_row(&["VMPC", "VMPC-MAC"], &[], || {
         Box::new(Nonced(BufferedStreamCipher::new(
@@ -47,7 +47,7 @@ pub(super) fn vmpc(_context: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>> {
     })]
 }
 
-#[cfg(feature = "vmpc-ksa3")]
+#[cfg(feature = "rc4-family")]
 pub(super) fn vmpc_ksa3(_context: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>> {
     vec![stream_row(&["VMPC-KSA3"], &[], || {
         Box::new(Nonced(BufferedStreamCipher::new(
@@ -56,7 +56,7 @@ pub(super) fn vmpc_ksa3(_context: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntr
     })]
 }
 
-#[cfg(feature = "isaac")]
+#[cfg(feature = "rc4-family")]
 pub(super) fn isaac(_context: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>> {
     vec![stream_row(&["ISAAC"], &[], || {
         Box::new(Keyed(BufferedStreamCipher::new(
@@ -84,7 +84,7 @@ mod tests {
     }
 
     // RFC 6229: the 40-bit key 0102030405, the keystream at offset 0
-    #[cfg(feature = "rc4")]
+    #[cfg(feature = "rc4-family")]
     #[test]
     fn arc4_gives_the_keystream_of_rfc_6229_and_is_found_by_its_names() {
         let algo = DefaultAlgoBuilder::default().build();
@@ -98,7 +98,7 @@ mod tests {
         assert_eq!(output, unhex("b2396305f03dc027ccc3524a0a1118a8"));
     }
 
-    #[cfg(feature = "vmpc")]
+    #[cfg(feature = "rc4-family")]
     #[test]
     fn vmpc_gives_what_its_engine_gives() {
         let key = unhex("000102030405060708090a0b0c0d0e0f");
@@ -132,7 +132,7 @@ mod tests {
         assert_eq!(back, MESSAGE);
     }
 
-    #[cfg(feature = "vmpc-ksa3")]
+    #[cfg(feature = "rc4-family")]
     #[test]
     fn vmpc_ksa3_gives_what_its_engine_gives() {
         let key = unhex("000102030405060708090a0b0c0d0e0f");
@@ -166,7 +166,7 @@ mod tests {
         assert_eq!(back, MESSAGE);
     }
 
-    #[cfg(feature = "isaac")]
+    #[cfg(feature = "rc4-family")]
     #[test]
     fn isaac_gives_what_its_engine_gives() {
         let key = unhex("000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f");

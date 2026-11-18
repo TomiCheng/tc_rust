@@ -4,14 +4,14 @@ use crate::Params;
 
 // The params of the RC2 key generator: the length of the key in bytes, and the effective key size
 // in bits, which is that of the whole key unless set. They are not checked until init
-#[cfg(feature = "rc2")]
+#[cfg(feature = "rc-cipher")]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Rc2KeyGenParams {
     key_bytes: usize,
     effective_key_bits: Option<usize>,
 }
 
-#[cfg(feature = "rc2")]
+#[cfg(feature = "rc-cipher")]
 impl Rc2KeyGenParams {
     pub const fn new(key_bytes: usize) -> Self {
         Self {
@@ -34,7 +34,7 @@ impl Rc2KeyGenParams {
     }
 }
 
-#[cfg(feature = "rc2")]
+#[cfg(feature = "rc-cipher")]
 impl Params for Rc2KeyGenParams {
     fn as_any(&self) -> &dyn Any {
         self
@@ -43,14 +43,14 @@ impl Params for Rc2KeyGenParams {
 
 // The params of the RC5 and RC5-64 key generators: the length of the key in bytes, and the number of
 // rounds, 12 unless set. They are not checked until init
-#[cfg(any(feature = "rc5", feature = "rc5-64"))]
+#[cfg(feature = "rc-cipher")]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Rc5KeyGenParams {
     key_bytes: usize,
     rounds: Option<usize>,
 }
 
-#[cfg(any(feature = "rc5", feature = "rc5-64"))]
+#[cfg(feature = "rc-cipher")]
 impl Rc5KeyGenParams {
     pub const fn new(key_bytes: usize) -> Self {
         Self {
@@ -73,7 +73,7 @@ impl Rc5KeyGenParams {
     }
 }
 
-#[cfg(any(feature = "rc5", feature = "rc5-64"))]
+#[cfg(feature = "rc-cipher")]
 impl Params for Rc5KeyGenParams {
     fn as_any(&self) -> &dyn Any {
         self
@@ -113,21 +113,13 @@ impl Params for Gost28147KeyGenParams {
 
 // The params of the Threefish key generators: the tweak, of 16 bytes, zeros unless set. The key is
 // always one block. Not checked until init
-#[cfg(any(
-    feature = "threefish-256",
-    feature = "threefish-512",
-    feature = "threefish-1024"
-))]
+#[cfg(feature = "threefish")]
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct ThreefishKeyGenParams {
     tweak: Option<Vec<u8>>,
 }
 
-#[cfg(any(
-    feature = "threefish-256",
-    feature = "threefish-512",
-    feature = "threefish-1024"
-))]
+#[cfg(feature = "threefish")]
 impl ThreefishKeyGenParams {
     pub const fn new() -> Self {
         Self { tweak: None }
@@ -143,11 +135,7 @@ impl ThreefishKeyGenParams {
     }
 }
 
-#[cfg(any(
-    feature = "threefish-256",
-    feature = "threefish-512",
-    feature = "threefish-1024"
-))]
+#[cfg(feature = "threefish")]
 impl Params for ThreefishKeyGenParams {
     fn as_any(&self) -> &dyn Any {
         self

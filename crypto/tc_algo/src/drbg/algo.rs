@@ -1,4 +1,4 @@
-#[cfg(any(feature = "hmac-drbg", feature = "hash-drbg", feature = "ctr-drbg"))]
+#[cfg(feature = "drbg")]
 mod sp800;
 
 use super::DrbgEntry;
@@ -7,6 +7,6 @@ pub(crate) type CreateRows = fn(&crate::DefaultAlgoContext) -> Vec<Box<dyn DrbgE
 
 // What DefaultAlgoBuilder starts with: the rows of the DRBGs whose features are on
 pub(crate) const BUILT_IN: &[CreateRows] = &[
-    #[cfg(any(feature = "hmac-drbg", feature = "hash-drbg", feature = "ctr-drbg"))]
+    #[cfg(feature = "drbg")]
     sp800::sp800,
 ];

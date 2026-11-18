@@ -1,6 +1,6 @@
-#![cfg_attr(feature = "ecdh", doc = include_str!("../docs/Agreement.md"))]
+#![cfg_attr(all(feature = "ecdh", feature = "fp-custom"), doc = include_str!("../docs/Agreement.md"))]
 #![cfg_attr(feature = "dh", doc = include_str!("../docs/Dh.md"))]
-#![cfg_attr(feature = "x25519", doc = include_str!("../docs/X25519.md"))]
+#![cfg_attr(feature = "cfrg-curves", doc = include_str!("../docs/X25519.md"))]
 
 mod agreement_entry;
 mod agreement_provider;

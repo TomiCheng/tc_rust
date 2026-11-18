@@ -1,45 +1,36 @@
 #[cfg(any(
-    feature = "ascon-aead128",
-    feature = "ascon128",
-    feature = "ascon128a",
-    feature = "ascon80pq",
+    feature = "ascon-aead",
     feature = "grain128-aead",
-    feature = "schwaemm128-128",
-    feature = "schwaemm256-128",
-    feature = "schwaemm192-192",
-    feature = "schwaemm256-256",
+    feature = "sparkle-aead"
 ))]
 mod aead;
 #[cfg(feature = "aes")]
 mod aes;
-#[cfg(any(feature = "x25519", feature = "x448"))]
+#[cfg(feature = "cfrg-curves")]
 mod agreement_keys;
 #[cfg(any(
     feature = "aes",
     feature = "aria",
     feature = "blowfish",
     feature = "camellia",
-    feature = "cast5",
-    feature = "cast6",
+    feature = "cast",
     feature = "des",
-    feature = "desede",
-    feature = "idea",
-    feature = "noekeon",
-    feature = "rc6",
-    feature = "rijndael",
+    feature = "misc-block-cipher",
+    feature = "rc-cipher",
     feature = "seed",
     feature = "serpent",
-    feature = "skipjack",
     feature = "sm4",
-    feature = "tea",
-    feature = "tnepres",
-    feature = "twofish",
-    feature = "xtea",
+    feature = "twofish"
 ))]
 mod block;
 #[cfg(feature = "dh")]
 mod dh;
-#[cfg(feature = "ec")]
+#[cfg(any(
+    feature = "fp-custom",
+    feature = "fp-curve",
+    feature = "f2m-custom",
+    feature = "f2m-curve"
+))]
 mod ec;
 #[cfg(feature = "elgamal")]
 mod elgamal;
@@ -48,42 +39,22 @@ mod elgamal;
     feature = "aria",
     feature = "blowfish",
     feature = "camellia",
-    feature = "cast5",
-    feature = "cast6",
+    feature = "cast",
     feature = "des",
-    feature = "desede",
-    feature = "idea",
-    feature = "noekeon",
-    feature = "rc6",
-    feature = "rijndael",
+    feature = "misc-block-cipher",
+    feature = "rc-cipher",
     feature = "seed",
     feature = "serpent",
-    feature = "skipjack",
     feature = "sm4",
-    feature = "tea",
-    feature = "tnepres",
     feature = "twofish",
-    feature = "xtea",
     feature = "chacha",
-    feature = "chacha20-poly1305",
-    feature = "xchacha20",
-    feature = "xchacha20-poly1305",
-    feature = "hc128",
-    feature = "hc256",
-    feature = "rc4",
+    feature = "chacha-aead",
+    feature = "hc",
+    feature = "rc4-family",
     feature = "salsa20",
-    feature = "xsalsa20",
-    feature = "vmpc",
-    feature = "vmpc-ksa3",
-    feature = "ascon-aead128",
-    feature = "ascon128",
-    feature = "ascon128a",
-    feature = "ascon80pq",
+    feature = "ascon-aead",
     feature = "grain128-aead",
-    feature = "schwaemm128-128",
-    feature = "schwaemm256-128",
-    feature = "schwaemm192-192",
-    feature = "schwaemm256-256",
+    feature = "sparkle-aead"
 ))]
 mod fixed;
 mod key;
@@ -91,64 +62,31 @@ mod key;
 mod ml_kem;
 #[cfg(feature = "naccache-stern")]
 mod naccache_stern;
-#[cfg(any(
-    feature = "rc2",
-    feature = "rc5",
-    feature = "rc5-64",
-    feature = "gost28147",
-    feature = "threefish-256",
-    feature = "threefish-512",
-    feature = "threefish-1024",
-))]
+#[cfg(any(feature = "rc-cipher", feature = "gost28147", feature = "threefish"))]
 mod own;
 #[cfg(any(
-    feature = "rc2",
-    feature = "rc5",
-    feature = "rc5-64",
+    feature = "rc-cipher",
     feature = "gost28147",
     feature = "aes",
     feature = "aria",
     feature = "blowfish",
     feature = "camellia",
-    feature = "cast5",
-    feature = "cast6",
+    feature = "cast",
     feature = "des",
-    feature = "desede",
-    feature = "idea",
-    feature = "noekeon",
-    feature = "rc6",
-    feature = "rijndael",
+    feature = "misc-block-cipher",
     feature = "seed",
     feature = "serpent",
-    feature = "skipjack",
     feature = "sm4",
-    feature = "tea",
-    feature = "threefish-256",
-    feature = "threefish-512",
-    feature = "threefish-1024",
-    feature = "tnepres",
+    feature = "threefish",
     feature = "twofish",
-    feature = "xtea",
     feature = "chacha",
-    feature = "chacha20-poly1305",
-    feature = "xchacha20",
-    feature = "xchacha20-poly1305",
-    feature = "hc128",
-    feature = "hc256",
-    feature = "rc4",
+    feature = "chacha-aead",
+    feature = "hc",
+    feature = "rc4-family",
     feature = "salsa20",
-    feature = "xsalsa20",
-    feature = "vmpc",
-    feature = "vmpc-ksa3",
-    feature = "ascon-aead128",
-    feature = "ascon128",
-    feature = "ascon128a",
-    feature = "ascon80pq",
+    feature = "ascon-aead",
     feature = "grain128-aead",
-    feature = "schwaemm128-128",
-    feature = "schwaemm256-128",
-    feature = "schwaemm192-192",
-    feature = "schwaemm256-256",
+    feature = "sparkle-aead"
 ))]
 mod random;
 #[cfg(feature = "rsa")]
@@ -156,8 +94,7 @@ mod rsa;
 #[cfg(any(
     feature = "dsa",
     feature = "gost3410",
-    feature = "ed25519",
-    feature = "ed448",
+    feature = "cfrg-curves",
     feature = "ml-dsa",
     feature = "slh-dsa"
 ))]
@@ -166,27 +103,18 @@ mod signing_keys;
 mod sm2;
 #[cfg(any(
     feature = "chacha",
-    feature = "chacha20-poly1305",
-    feature = "xchacha20",
-    feature = "xchacha20-poly1305",
-    feature = "hc128",
-    feature = "hc256",
-    feature = "rc4",
-    feature = "salsa20",
-    feature = "xsalsa20",
-    feature = "vmpc",
-    feature = "vmpc-ksa3",
+    feature = "chacha-aead",
+    feature = "hc",
+    feature = "rc4-family",
+    feature = "salsa20"
 ))]
 mod stream;
 #[cfg(any(
     feature = "dsa",
     feature = "gost3410",
-    feature = "ed25519",
-    feature = "ed448",
+    feature = "cfrg-curves",
     feature = "ml-dsa",
-    feature = "slh-dsa",
-    feature = "x25519",
-    feature = "x448"
+    feature = "slh-dsa"
 ))]
 mod with_params;
 
@@ -201,58 +129,30 @@ pub(crate) const BUILT_IN_KEY_GENERATORS: &[CreateKeyGeneratorRows] = &[
         feature = "aria",
         feature = "blowfish",
         feature = "camellia",
-        feature = "cast5",
-        feature = "cast6",
+        feature = "cast",
         feature = "des",
-        feature = "desede",
-        feature = "idea",
-        feature = "noekeon",
-        feature = "rc6",
-        feature = "rijndael",
+        feature = "misc-block-cipher",
+        feature = "rc-cipher",
         feature = "seed",
         feature = "serpent",
-        feature = "skipjack",
         feature = "sm4",
-        feature = "tea",
-        feature = "tnepres",
-        feature = "twofish",
-        feature = "xtea",
+        feature = "twofish"
     ))]
     block::block,
-    #[cfg(any(
-        feature = "rc2",
-        feature = "rc5",
-        feature = "rc5-64",
-        feature = "gost28147",
-        feature = "threefish-256",
-        feature = "threefish-512",
-        feature = "threefish-1024",
-    ))]
+    #[cfg(any(feature = "rc-cipher", feature = "gost28147", feature = "threefish"))]
     own::own,
     #[cfg(any(
         feature = "chacha",
-        feature = "chacha20-poly1305",
-        feature = "xchacha20",
-        feature = "xchacha20-poly1305",
-        feature = "hc128",
-        feature = "hc256",
-        feature = "rc4",
-        feature = "salsa20",
-        feature = "xsalsa20",
-        feature = "vmpc",
-        feature = "vmpc-ksa3",
+        feature = "chacha-aead",
+        feature = "hc",
+        feature = "rc4-family",
+        feature = "salsa20"
     ))]
     stream::stream,
     #[cfg(any(
-        feature = "ascon-aead128",
-        feature = "ascon128",
-        feature = "ascon128a",
-        feature = "ascon80pq",
+        feature = "ascon-aead",
         feature = "grain128-aead",
-        feature = "schwaemm128-128",
-        feature = "schwaemm256-128",
-        feature = "schwaemm192-192",
-        feature = "schwaemm256-256",
+        feature = "sparkle-aead"
     ))]
     aead::aead,
     key::key,
@@ -272,17 +172,21 @@ pub(crate) const BUILT_IN_KEY_PAIR_GENERATORS: &[CreateKeyPairGeneratorRows] = &
     naccache_stern::naccache_stern,
     #[cfg(feature = "sm2")]
     sm2::sm2,
-    #[cfg(feature = "ec")]
+    #[cfg(any(
+        feature = "fp-custom",
+        feature = "fp-curve",
+        feature = "f2m-custom",
+        feature = "f2m-curve"
+    ))]
     ec::ec,
     #[cfg(any(
         feature = "dsa",
         feature = "gost3410",
-        feature = "ed25519",
-        feature = "ed448",
+        feature = "cfrg-curves",
         feature = "ml-dsa",
         feature = "slh-dsa"
     ))]
     signing_keys::signing_keys,
-    #[cfg(any(feature = "x25519", feature = "x448"))]
+    #[cfg(feature = "cfrg-curves")]
     agreement_keys::agreement_keys,
 ];

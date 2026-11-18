@@ -49,7 +49,7 @@ impl KdfInit<dyn Params> for Pbkdf2 {
 
 impl Kdf for Pbkdf2 {}
 
-#[cfg(all(test, feature = "sha1", feature = "sha256"))]
+#[cfg(all(test, feature = "sha"))]
 mod tests {
     use crate::params::{KeyLength, PbeParamsOwned};
     use crate::{AlgoBuilder, DefaultAlgoBuilder, ErrorKind};

@@ -4,7 +4,7 @@ BLAKE2xs turns BLAKE2s into an XOF: it hashes the message once, then draws outpu
 in blocks of 32 bytes. It takes the parameters of BLAKE2s: a key, which makes it a MAC, a salt,
 and a personalization string, which keeps one use apart from another.
 
-`BLAKE2XS` is behind the `blake2xs` feature.
+`BLAKE2XS` is behind the `blake` feature.
 
 ## Keyed output
 

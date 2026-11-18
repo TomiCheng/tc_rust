@@ -291,7 +291,7 @@ fn a_policy_can_tell_a_digest_by_its_alias_or_its_oid() {
     assert!(!is_listed(algo.as_ref(), "TEST-DIGEST"));
 }
 
-#[cfg(feature = "sha256")]
+#[cfg(feature = "sha")]
 mod sha256 {
     use super::*;
 

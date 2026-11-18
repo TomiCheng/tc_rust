@@ -137,7 +137,7 @@ pub(super) fn block(context: &DefaultAlgoContext) -> Vec<Box<dyn KeyGeneratorEnt
         Lengths::Of(&[32]),
         Rule::Random,
     );
-    #[cfg(feature = "cast5")]
+    #[cfg(feature = "cast")]
     add(
         "CAST5",
         &[],
@@ -146,7 +146,7 @@ pub(super) fn block(context: &DefaultAlgoContext) -> Vec<Box<dyn KeyGeneratorEnt
         Lengths::range(5, 16),
         Rule::Random,
     );
-    #[cfg(feature = "cast6")]
+    #[cfg(feature = "cast")]
     add(
         "CAST6",
         &[],
@@ -169,7 +169,7 @@ pub(super) fn block(context: &DefaultAlgoContext) -> Vec<Box<dyn KeyGeneratorEnt
         Lengths::Of(&[8]),
         Rule::Des,
     );
-    #[cfg(feature = "desede")]
+    #[cfg(feature = "des")]
     add(
         "DESEDE",
         &["DESEDEWRAP", "TDEA", "DESEDE16"],
@@ -178,7 +178,7 @@ pub(super) fn block(context: &DefaultAlgoContext) -> Vec<Box<dyn KeyGeneratorEnt
         Lengths::Of(&[16, 24]),
         Rule::DesEde,
     );
-    #[cfg(feature = "desede")]
+    #[cfg(feature = "des")]
     add(
         "DESEDE3",
         &["DESEDE24"],
@@ -187,7 +187,7 @@ pub(super) fn block(context: &DefaultAlgoContext) -> Vec<Box<dyn KeyGeneratorEnt
         Lengths::Of(&[16, 24]),
         Rule::DesEde,
     );
-    #[cfg(feature = "idea")]
+    #[cfg(feature = "misc-block-cipher")]
     add(
         "IDEA",
         &[],
@@ -196,11 +196,11 @@ pub(super) fn block(context: &DefaultAlgoContext) -> Vec<Box<dyn KeyGeneratorEnt
         Lengths::Of(&[16]),
         Rule::Random,
     );
-    #[cfg(feature = "noekeon")]
+    #[cfg(feature = "misc-block-cipher")]
     add("NOEKEON", &[], &[], 16, Lengths::Of(&[16]), Rule::Random);
-    #[cfg(feature = "rc6")]
+    #[cfg(feature = "rc-cipher")]
     add("RC6", &[], &[], 32, Lengths::range(1, 255), Rule::Random);
-    #[cfg(feature = "rijndael")]
+    #[cfg(feature = "misc-block-cipher")]
     add(
         "RIJNDAEL",
         &[],
@@ -231,13 +231,13 @@ pub(super) fn block(context: &DefaultAlgoContext) -> Vec<Box<dyn KeyGeneratorEnt
         },
         Rule::Random,
     );
-    #[cfg(feature = "skipjack")]
+    #[cfg(feature = "misc-block-cipher")]
     add("SKIPJACK", &[], &[], 10, Lengths::Of(&[10]), Rule::Random);
     #[cfg(feature = "sm4")]
     add("SM4", &[], &[], 16, Lengths::Of(&[16]), Rule::Random);
-    #[cfg(feature = "tea")]
+    #[cfg(feature = "misc-block-cipher")]
     add("TEA", &[], &[], 16, Lengths::Of(&[16]), Rule::Random);
-    #[cfg(feature = "tnepres")]
+    #[cfg(feature = "serpent")]
     add(
         "TNEPRES",
         &[],
@@ -259,7 +259,7 @@ pub(super) fn block(context: &DefaultAlgoContext) -> Vec<Box<dyn KeyGeneratorEnt
         Lengths::Of(&[16, 24, 32]),
         Rule::Random,
     );
-    #[cfg(feature = "xtea")]
+    #[cfg(feature = "misc-block-cipher")]
     add("XTEA", &[], &[], 16, Lengths::Of(&[16]), Rule::Random);
     rows
 }
@@ -336,7 +336,7 @@ mod tests {
     }
 
     // DES and DESede keys have odd parity and are not weak, and a DESede key is not DES again
-    #[cfg(all(feature = "des", feature = "desede"))]
+    #[cfg(feature = "des")]
     #[test]
     fn des_and_desede_keys_keep_their_rules() {
         let algo = DefaultAlgoBuilder::default().build();

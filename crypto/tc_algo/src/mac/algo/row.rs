@@ -71,7 +71,7 @@ impl MacKey {
             self.key = KeyParams::key(params).to_vec();
             return Some(Some(IvParams::iv(params)));
         }
-        #[cfg(feature = "rc2")]
+        #[cfg(feature = "rc-cipher")]
         {
             use tc_block_modes::ParamsWithIvOwned;
             use tc_rc_cipher::{Rc2Params, Rc2ParamsOwned};
@@ -89,7 +89,7 @@ impl MacKey {
                 return Some(Some(params.iv()));
             }
         }
-        #[cfg(any(feature = "rc5", feature = "rc5-64"))]
+        #[cfg(feature = "rc-cipher")]
         {
             use tc_block_modes::ParamsWithIvOwned;
             use tc_rc_cipher::{Rc5Params, Rc5ParamsOwned};
@@ -150,7 +150,7 @@ impl IvParams for MacKey {
 
 // A bare key has the effective size of tc_rc_cipher's default, as Bouncy Castle's RC2 takes a
 // KeyParameter
-#[cfg(feature = "rc2")]
+#[cfg(feature = "rc-cipher")]
 impl tc_rc_cipher::Rc2Params for MacKey {
     fn effective_key_bits(&self) -> usize {
         self.rc2_bits.unwrap_or_else(|| {
@@ -160,7 +160,7 @@ impl tc_rc_cipher::Rc2Params for MacKey {
 }
 
 // A bare key has 12 rounds, as Bouncy Castle's RC5 takes a KeyParameter
-#[cfg(any(feature = "rc5", feature = "rc5-64"))]
+#[cfg(feature = "rc-cipher")]
 impl tc_rc_cipher::Rc5Params for MacKey {
     fn rounds(&self) -> usize {
         self.rc5_rounds.unwrap_or(tc_rc_cipher::RC5_DEFAULT_ROUNDS)

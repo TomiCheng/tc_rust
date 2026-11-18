@@ -1,9 +1,7 @@
-#![cfg_attr(
-    all(feature = "hkdf", feature = "sha256"),
+#![cfg_attr(all(feature = "kdf", feature = "sha"),
     doc = include_str!("../docs/Kdf.md")
 )]
-#![cfg_attr(
-    all(feature = "hkdf", feature = "sha256"),
+#![cfg_attr(all(feature = "kdf", feature = "sha"),
     doc = include_str!("../docs/HKDF-SHA256.md")
 )]
 

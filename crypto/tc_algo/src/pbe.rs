@@ -1,5 +1,4 @@
-#![cfg_attr(
-    all(feature = "pbe", feature = "sha256", feature = "aes"),
+#![cfg_attr(all(feature = "pbe", feature = "sha", feature = "aes"),
     doc = include_str!("../docs/Pbe.md")
 )]
 

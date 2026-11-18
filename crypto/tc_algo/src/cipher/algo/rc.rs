@@ -1,22 +1,22 @@
-#[cfg(feature = "rc6")]
+#[cfg(feature = "rc-cipher")]
 use tc_rc_cipher::Rc6Engine;
-#[cfg(feature = "rc5")]
+#[cfg(feature = "rc-cipher")]
 use tc_rc_cipher::Rc532Engine;
-#[cfg(feature = "rc5-64")]
+#[cfg(feature = "rc-cipher")]
 use tc_rc_cipher::Rc564Engine;
-#[cfg(any(feature = "rc5", feature = "rc5-64"))]
+#[cfg(feature = "rc-cipher")]
 use tc_rc_cipher::{RC5_DEFAULT_ROUNDS, Rc5ParamsOwned, Rc5ParamsRef};
-#[cfg(feature = "rc2")]
+#[cfg(feature = "rc-cipher")]
 use tc_rc_cipher::{Rc2Engine, Rc2ParamsOwned, Rc2ParamsRef};
 
-#[cfg(any(feature = "rc5", feature = "rc5-64", feature = "rc6"))]
+#[cfg(feature = "rc-cipher")]
 use super::block::block_rows;
-#[cfg(feature = "rc2")]
+#[cfg(feature = "rc-cipher")]
 use super::block::{Mode, Padding, block_rows_with_aliases};
 use super::block::{Rand, block_cipher};
-#[cfg(any(feature = "rc2", feature = "rc5", feature = "rc5-64"))]
+#[cfg(feature = "rc-cipher")]
 use super::buffered::Own;
-#[cfg(any(feature = "rc2", feature = "rc5", feature = "rc5-64"))]
+#[cfg(feature = "rc-cipher")]
 use super::keyed::{Keyed, keyed};
 use crate::DefaultAlgoContext;
 use crate::cipher::CipherEntry;
@@ -25,7 +25,7 @@ use crate::cipher::CipherEntry;
 // it takes. RC2's OID is RSA's for CBC, and the others have none. RC2 and RC5 take a bare key, as
 // Bouncy Castle's KeyParameter, or their own params, as its RC2Parameters and RC5Parameters: an
 // Rc2ParamsOwned or Rc5ParamsOwned in ECB and a ParamsWithIvOwned of one in the other modes
-#[cfg(feature = "rc2")]
+#[cfg(feature = "rc-cipher")]
 pub(super) fn rc2(context: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>> {
     let rand: Rand = context.rand();
     // CBC with PKCS#7 also has the PBE names and OIDs of PKCS#5's and PKCS#12's RC2, the cipher of
@@ -60,7 +60,7 @@ pub(super) fn rc2(context: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>> {
 }
 
 // RC5 with 32-bit words, also named RC5-32
-#[cfg(feature = "rc5")]
+#[cfg(feature = "rc-cipher")]
 pub(super) fn rc5(context: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>> {
     let rand: Rand = context.rand();
     block_rows(
@@ -72,7 +72,7 @@ pub(super) fn rc5(context: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>> {
 }
 
 // RC5 with 64-bit words, and so a block of 16 bytes
-#[cfg(feature = "rc5-64")]
+#[cfg(feature = "rc-cipher")]
 pub(super) fn rc5_64(context: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>> {
     let rand: Rand = context.rand();
     block_rows(
@@ -83,20 +83,20 @@ pub(super) fn rc5_64(context: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>> 
     )
 }
 
-#[cfg(feature = "rc6")]
+#[cfg(feature = "rc-cipher")]
 pub(super) fn rc6(context: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>> {
     let rand: Rand = context.rand();
     block_rows(&["RC6"], block_cipher!(Rc6Engine::new()), rand, &[])
 }
 
-#[cfg(feature = "rc2")]
+#[cfg(feature = "rc-cipher")]
 keyed!(Rc2Engine, Rc2ParamsOwned, |key| Rc2ParamsRef::new(key));
-#[cfg(feature = "rc5")]
+#[cfg(feature = "rc-cipher")]
 keyed!(Rc532Engine, Rc5ParamsOwned, |key| Rc5ParamsRef::new(
     key,
     RC5_DEFAULT_ROUNDS
 ));
-#[cfg(feature = "rc5-64")]
+#[cfg(feature = "rc-cipher")]
 keyed!(Rc564Engine, Rc5ParamsOwned, |key| Rc5ParamsRef::new(
     key,
     RC5_DEFAULT_ROUNDS
@@ -130,7 +130,7 @@ mod tests {
     }
 
     // RFC 2268, section 5: an 8-byte key of all ones, with an effective size of its whole 64 bits
-    #[cfg(feature = "rc2")]
+    #[cfg(feature = "rc-cipher")]
     #[test]
     fn rc2_gives_the_example_of_rfc_2268_with_the_key_s_whole_size() {
         let output = ecb("RC2/ECB/NOPADDING", "ffffffffffffffff", "ffffffffffffffff");
@@ -147,7 +147,7 @@ mod tests {
 
     // RFC 2268, section 5: a 16-byte key with an effective key size of 64 bits, through RC2's own
     // params in ECB, and alone in CBC with an IV of zeros, which gives the same first block
-    #[cfg(feature = "rc2")]
+    #[cfg(feature = "rc-cipher")]
     #[test]
     fn rc2_takes_its_effective_key_size_from_its_own_params_in_every_mode() {
         use crate::params::{ParamsWithIvOwned, Rc2ParamsOwned};
@@ -186,7 +186,7 @@ mod tests {
 
     // CTS in CBC passes RC2's own params on to the engine: 40 effective bits give another
     // ciphertext than the whole key, of the message's length, and decrypt back
-    #[cfg(feature = "rc2")]
+    #[cfg(feature = "rc-cipher")]
     #[test]
     fn rc2_takes_its_own_params_through_cts() {
         use crate::params::{ParamsWithIvOwned, Rc2ParamsOwned};
@@ -213,7 +213,7 @@ mod tests {
         assert_ne!(whole, sealed);
     }
 
-    #[cfg(feature = "rc2")]
+    #[cfg(feature = "rc-cipher")]
     #[test]
     fn rc2_refuses_its_own_params_with_an_iv_of_another_length_than_a_block() {
         use crate::ErrorKind;
@@ -230,7 +230,7 @@ mod tests {
 
     // RC5's own params give it its rounds: 12 gives what a bare key gives, 16 something else, and
     // CTR takes them with an IV
-    #[cfg(feature = "rc5")]
+    #[cfg(feature = "rc-cipher")]
     #[test]
     fn rc5_takes_its_rounds_from_its_own_params() {
         use crate::params::{ParamsWithIvOwned, Rc5ParamsOwned};
@@ -261,7 +261,7 @@ mod tests {
     }
 
     // Rivest's RC5 paper: RC5-32/12/16 with the zero key and block
-    #[cfg(feature = "rc5")]
+    #[cfg(feature = "rc-cipher")]
     #[test]
     fn rc5_gives_the_example_of_rivest_with_12_rounds() {
         let key = "00000000000000000000000000000000";
@@ -276,7 +276,7 @@ mod tests {
     }
 
     // RC5-64 has no published example to hand: the row gives what the engine gives with 12 rounds
-    #[cfg(feature = "rc5-64")]
+    #[cfg(feature = "rc-cipher")]
     #[test]
     fn rc5_64_gives_what_its_engine_gives_with_12_rounds() {
         use tc_block_cipher::{BlockCipher, BlockCipherInit, CipherDirection};
@@ -303,7 +303,7 @@ mod tests {
     }
 
     // The RC6 paper: the zero 128-bit key and block
-    #[cfg(feature = "rc6")]
+    #[cfg(feature = "rc-cipher")]
     #[test]
     fn rc6_gives_the_example_of_its_paper() {
         let output = ecb(
@@ -318,7 +318,7 @@ mod tests {
     // RC2's own params reach the engine under EAX, the AEAD mode of its 8-byte block: the row gives
     // what EaxBlockCipher gives over Rc2Engine with the same params, and a bare key, which takes
     // the whole key size, something else
-    #[cfg(feature = "rc2")]
+    #[cfg(feature = "rc-cipher")]
     #[test]
     fn rc2_takes_its_effective_key_size_from_its_own_params_under_eax() {
         use tc_aead_cipher::{AeadCipher, AeadCipherInit, EaxBlockCipher, ParamsWithAeadRef};
@@ -368,7 +368,7 @@ mod tests {
 
     // RC5-64's own params give it its rounds under GCM, CCM, EAX, OCB and KCCM, but GCM-SIV, which
     // derives its message keys from the key bytes, takes only a bare key
-    #[cfg(feature = "rc5-64")]
+    #[cfg(feature = "rc-cipher")]
     #[test]
     fn rc5_64_takes_its_rounds_under_every_aead_mode_but_gcm_siv() {
         use crate::ErrorKind;

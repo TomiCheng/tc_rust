@@ -1,9 +1,8 @@
 #![cfg(all(
     feature = "aes",
     feature = "des",
-    feature = "desede",
-    feature = "rc2",
-    feature = "rc4"
+    feature = "rc-cipher",
+    feature = "rc4-family"
 ))]
 
 use tc_algo::params::{KeyOwned, KeyWithIvOwned};

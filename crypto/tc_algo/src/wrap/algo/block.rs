@@ -37,7 +37,7 @@ pub(super) fn block(context: &DefaultAlgoContext) -> Vec<Box<dyn WrapperEntry>> 
     #[allow(unused_variables, reason = "only RFC 3211 draws randomness")]
     let rand = context.rand();
 
-    #[cfg(feature = "rfc3394-wrap")]
+    #[cfg(feature = "key-wrap")]
     {
         #[cfg(feature = "aes")]
         rows.push(rfc3394(
@@ -80,7 +80,7 @@ pub(super) fn block(context: &DefaultAlgoContext) -> Vec<Box<dyn WrapperEntry>> 
             tc_seed::SeedEngine::new,
         ));
     }
-    #[cfg(feature = "rfc5649-wrap")]
+    #[cfg(feature = "key-wrap")]
     {
         #[cfg(feature = "aes")]
         rows.push(rfc5649(
@@ -105,7 +105,7 @@ pub(super) fn block(context: &DefaultAlgoContext) -> Vec<Box<dyn WrapperEntry>> 
             tc_aria::AriaEngine::new,
         ));
     }
-    #[cfg(feature = "rfc3211-wrap")]
+    #[cfg(feature = "key-wrap")]
     {
         #[cfg(feature = "aes")]
         rows.push(rfc3211("AESRFC3211WRAP", tc_aes::AesEngine::new, rand));
@@ -119,7 +119,7 @@ pub(super) fn block(context: &DefaultAlgoContext) -> Vec<Box<dyn WrapperEntry>> 
         ));
         #[cfg(feature = "des")]
         rows.push(rfc3211("DESRFC3211WRAP", tc_des::DesEngine::new, rand));
-        #[cfg(feature = "desede")]
+        #[cfg(feature = "des")]
         rows.push(rfc3211(
             "DESEDERFC3211WRAP",
             tc_des::DesEdeEngine::new,
@@ -131,7 +131,7 @@ pub(super) fn block(context: &DefaultAlgoContext) -> Vec<Box<dyn WrapperEntry>> 
 }
 
 // RFC 3394, with the standard IV unless the params have one
-#[cfg(feature = "rfc3394-wrap")]
+#[cfg(feature = "key-wrap")]
 fn rfc3394<E: Engine>(
     name: &str,
     aliases: &[&str],
@@ -151,7 +151,7 @@ fn rfc3394<E: Engine>(
 }
 
 // RFC 5649, a key of any length, with the standard IV unless the params have one
-#[cfg(feature = "rfc5649-wrap")]
+#[cfg(feature = "key-wrap")]
 fn rfc5649<E: Engine>(
     name: &str,
     aliases: &[&str],
@@ -171,7 +171,7 @@ fn rfc5649<E: Engine>(
 }
 
 // RFC 3211, the password-based key wrap of CMS, which needs an IV and pads with random bytes
-#[cfg(feature = "rfc3211-wrap")]
+#[cfg(feature = "key-wrap")]
 fn rfc3211<E: Engine>(
     name: &str,
     engine: fn() -> E,
@@ -189,7 +189,7 @@ fn rfc3211<E: Engine>(
     )
 }
 
-#[cfg(all(test, feature = "rfc3394-wrap", feature = "aes"))]
+#[cfg(all(test, feature = "key-wrap", feature = "aes"))]
 mod tests {
     use core::any::Any;
 
@@ -380,15 +380,12 @@ mod tests {
 
 #[cfg(all(
     test,
-    feature = "rfc3394-wrap",
-    feature = "rfc5649-wrap",
-    feature = "rfc3211-wrap",
+    feature = "key-wrap",
     feature = "aes",
     feature = "aria",
     feature = "camellia",
     feature = "seed",
-    feature = "des",
-    feature = "desede"
+    feature = "des"
 ))]
 mod family_tests {
     use crate::params::{KeyOwned, KeyWithIvOwned};

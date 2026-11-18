@@ -9,7 +9,7 @@ pub(super) enum Rule {
     Random,
     #[cfg(feature = "des")]
     Des,
-    #[cfg(feature = "desede")]
+    #[cfg(feature = "des")]
     DesEde,
 }
 
@@ -25,7 +25,7 @@ pub(super) fn random_key(rand: &mut dyn CryptoRng, len: usize, rule: Rule) -> Ve
                 tc_des::set_odd_parity(&mut key);
                 !tc_des::is_weak_key(key.as_slice().try_into().expect("8 bytes"))
             }
-            #[cfg(feature = "desede")]
+            #[cfg(feature = "des")]
             Rule::DesEde => {
                 tc_des::set_odd_parity(&mut key);
                 !tc_des::is_weak_ede_key(&key) && tc_des::is_real_ede_key(&key)

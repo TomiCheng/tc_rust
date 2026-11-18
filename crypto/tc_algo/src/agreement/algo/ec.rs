@@ -7,7 +7,15 @@ use tc_asn1_x509::alg::AlgorithmIdentifier;
 use tc_bigint::PaddedBigUint;
 use tc_digest::Digest;
 use tc_ec_core::Curve;
-#[cfg(any(feature = "ecdh", feature = "ecdhc"))]
+#[cfg(all(
+    feature = "ecdh",
+    any(
+        feature = "fp-custom",
+        feature = "fp-curve",
+        feature = "f2m-custom",
+        feature = "f2m-curve"
+    )
+))]
 use tc_ec_key::EcPrivateKey;
 use tc_ecdh_kek::EcdhKek;
 
@@ -29,42 +37,111 @@ type KdfTry =
 // digest are on
 pub(super) fn ec(_context: &DefaultAlgoContext) -> Vec<Box<dyn AgreementEntry>> {
     let mut rows: Vec<Box<dyn AgreementEntry>> = Vec::new();
-    #[cfg(feature = "ecdh")]
+    #[cfg(all(
+        feature = "ecdh",
+        any(
+            feature = "fp-custom",
+            feature = "fp-curve",
+            feature = "f2m-custom",
+            feature = "f2m-curve"
+        )
+    ))]
     rows.push(row("ECDH", &[], ct_curves!(ecdh)));
-    #[cfg(feature = "ecdhc")]
+    #[cfg(all(
+        feature = "ecdh",
+        any(
+            feature = "fp-custom",
+            feature = "fp-curve",
+            feature = "f2m-custom",
+            feature = "f2m-curve"
+        )
+    ))]
     rows.push(row("ECDHC", &["ECCDH"], ct_curves!(ecdhc)));
-    #[cfg(feature = "ecmqv")]
+    #[cfg(all(
+        feature = "ecmqv",
+        any(
+            feature = "fp-custom",
+            feature = "fp-curve",
+            feature = "f2m-custom",
+            feature = "f2m-curve"
+        )
+    ))]
     rows.push(row("ECMQV", &[], ct_curves!(ecmqv)));
 
-    #[cfg(all(feature = "ecdh", feature = "sha1"))]
+    #[cfg(all(
+        feature = "ecdh",
+        any(
+            feature = "fp-custom",
+            feature = "fp-curve",
+            feature = "f2m-custom",
+            feature = "f2m-curve"
+        ),
+        feature = "sha"
+    ))]
     rows.push(kdf_row(
         "ECDHWITHSHA1KDF",
         &["DHWITHSHA1KDF"],
         "1.3.133.16.840.63.0.2",
         ct_curves!(ecdh_sha1),
     ));
-    #[cfg(all(feature = "ecdh", feature = "sha224"))]
+    #[cfg(all(
+        feature = "ecdh",
+        any(
+            feature = "fp-custom",
+            feature = "fp-curve",
+            feature = "f2m-custom",
+            feature = "f2m-curve"
+        ),
+        feature = "sha"
+    ))]
     rows.push(kdf_row(
         "ECDHWITHSHA224KDF",
         &[],
         "1.3.132.1.11.0",
         ct_curves!(ecdh_sha224),
     ));
-    #[cfg(all(feature = "ecdh", feature = "sha256"))]
+    #[cfg(all(
+        feature = "ecdh",
+        any(
+            feature = "fp-custom",
+            feature = "fp-curve",
+            feature = "f2m-custom",
+            feature = "f2m-curve"
+        ),
+        feature = "sha"
+    ))]
     rows.push(kdf_row(
         "ECDHWITHSHA256KDF",
         &[],
         "1.3.132.1.11.1",
         ct_curves!(ecdh_sha256),
     ));
-    #[cfg(all(feature = "ecdh", feature = "sha384"))]
+    #[cfg(all(
+        feature = "ecdh",
+        any(
+            feature = "fp-custom",
+            feature = "fp-curve",
+            feature = "f2m-custom",
+            feature = "f2m-curve"
+        ),
+        feature = "sha"
+    ))]
     rows.push(kdf_row(
         "ECDHWITHSHA384KDF",
         &[],
         "1.3.132.1.11.2",
         ct_curves!(ecdh_sha384),
     ));
-    #[cfg(all(feature = "ecdh", feature = "sha512"))]
+    #[cfg(all(
+        feature = "ecdh",
+        any(
+            feature = "fp-custom",
+            feature = "fp-curve",
+            feature = "f2m-custom",
+            feature = "f2m-curve"
+        ),
+        feature = "sha"
+    ))]
     rows.push(kdf_row(
         "ECDHWITHSHA512KDF",
         &[],
@@ -72,35 +149,80 @@ pub(super) fn ec(_context: &DefaultAlgoContext) -> Vec<Box<dyn AgreementEntry>> 
         ct_curves!(ecdh_sha512),
     ));
 
-    #[cfg(all(feature = "ecdhc", feature = "sha1"))]
+    #[cfg(all(
+        feature = "ecdh",
+        any(
+            feature = "fp-custom",
+            feature = "fp-curve",
+            feature = "f2m-custom",
+            feature = "f2m-curve"
+        ),
+        feature = "sha"
+    ))]
     rows.push(kdf_row(
         "ECCDHWITHSHA1KDF",
         &[],
         "1.3.133.16.840.63.0.3",
         ct_curves!(ecdhc_sha1),
     ));
-    #[cfg(all(feature = "ecdhc", feature = "sha224"))]
+    #[cfg(all(
+        feature = "ecdh",
+        any(
+            feature = "fp-custom",
+            feature = "fp-curve",
+            feature = "f2m-custom",
+            feature = "f2m-curve"
+        ),
+        feature = "sha"
+    ))]
     rows.push(kdf_row(
         "ECCDHWITHSHA224KDF",
         &[],
         "1.3.132.1.14.0",
         ct_curves!(ecdhc_sha224),
     ));
-    #[cfg(all(feature = "ecdhc", feature = "sha256"))]
+    #[cfg(all(
+        feature = "ecdh",
+        any(
+            feature = "fp-custom",
+            feature = "fp-curve",
+            feature = "f2m-custom",
+            feature = "f2m-curve"
+        ),
+        feature = "sha"
+    ))]
     rows.push(kdf_row(
         "ECCDHWITHSHA256KDF",
         &[],
         "1.3.132.1.14.1",
         ct_curves!(ecdhc_sha256),
     ));
-    #[cfg(all(feature = "ecdhc", feature = "sha384"))]
+    #[cfg(all(
+        feature = "ecdh",
+        any(
+            feature = "fp-custom",
+            feature = "fp-curve",
+            feature = "f2m-custom",
+            feature = "f2m-curve"
+        ),
+        feature = "sha"
+    ))]
     rows.push(kdf_row(
         "ECCDHWITHSHA384KDF",
         &[],
         "1.3.132.1.14.2",
         ct_curves!(ecdhc_sha384),
     ));
-    #[cfg(all(feature = "ecdhc", feature = "sha512"))]
+    #[cfg(all(
+        feature = "ecdh",
+        any(
+            feature = "fp-custom",
+            feature = "fp-curve",
+            feature = "f2m-custom",
+            feature = "f2m-curve"
+        ),
+        feature = "sha"
+    ))]
     rows.push(kdf_row(
         "ECCDHWITHSHA512KDF",
         &[],
@@ -108,35 +230,80 @@ pub(super) fn ec(_context: &DefaultAlgoContext) -> Vec<Box<dyn AgreementEntry>> 
         ct_curves!(ecdhc_sha512),
     ));
 
-    #[cfg(all(feature = "ecmqv", feature = "sha1"))]
+    #[cfg(all(
+        feature = "ecmqv",
+        any(
+            feature = "fp-custom",
+            feature = "fp-curve",
+            feature = "f2m-custom",
+            feature = "f2m-curve"
+        ),
+        feature = "sha"
+    ))]
     rows.push(kdf_row(
         "ECMQVWITHSHA1KDF",
         &[],
         "1.3.133.16.840.63.0.16",
         ct_curves!(ecmqv_sha1),
     ));
-    #[cfg(all(feature = "ecmqv", feature = "sha224"))]
+    #[cfg(all(
+        feature = "ecmqv",
+        any(
+            feature = "fp-custom",
+            feature = "fp-curve",
+            feature = "f2m-custom",
+            feature = "f2m-curve"
+        ),
+        feature = "sha"
+    ))]
     rows.push(kdf_row(
         "ECMQVWITHSHA224KDF",
         &[],
         "1.3.132.1.15.0",
         ct_curves!(ecmqv_sha224),
     ));
-    #[cfg(all(feature = "ecmqv", feature = "sha256"))]
+    #[cfg(all(
+        feature = "ecmqv",
+        any(
+            feature = "fp-custom",
+            feature = "fp-curve",
+            feature = "f2m-custom",
+            feature = "f2m-curve"
+        ),
+        feature = "sha"
+    ))]
     rows.push(kdf_row(
         "ECMQVWITHSHA256KDF",
         &[],
         "1.3.132.1.15.1",
         ct_curves!(ecmqv_sha256),
     ));
-    #[cfg(all(feature = "ecmqv", feature = "sha384"))]
+    #[cfg(all(
+        feature = "ecmqv",
+        any(
+            feature = "fp-custom",
+            feature = "fp-curve",
+            feature = "f2m-custom",
+            feature = "f2m-curve"
+        ),
+        feature = "sha"
+    ))]
     rows.push(kdf_row(
         "ECMQVWITHSHA384KDF",
         &[],
         "1.3.132.1.15.2",
         ct_curves!(ecmqv_sha384),
     ));
-    #[cfg(all(feature = "ecmqv", feature = "sha512"))]
+    #[cfg(all(
+        feature = "ecmqv",
+        any(
+            feature = "fp-custom",
+            feature = "fp-curve",
+            feature = "f2m-custom",
+            feature = "f2m-curve"
+        ),
+        feature = "sha"
+    ))]
     rows.push(kdf_row(
         "ECMQVWITHSHA512KDF",
         &[],
@@ -286,21 +453,61 @@ where
     Some(init_with(agreement, &UkmParams::new(key.clone())))
 }
 
-#[cfg(feature = "ecdh")]
+#[cfg(all(
+    feature = "ecdh",
+    any(
+        feature = "fp-custom",
+        feature = "fp-curve",
+        feature = "f2m-custom",
+        feature = "f2m-curve"
+    )
+))]
 use tc_ecdh_v2::EcdhBasicAgreement;
-#[cfg(feature = "ecdhc")]
+#[cfg(all(
+    feature = "ecdh",
+    any(
+        feature = "fp-custom",
+        feature = "fp-curve",
+        feature = "f2m-custom",
+        feature = "f2m-curve"
+    )
+))]
 use tc_ecdh_v2::EcdhcBasicAgreement;
-#[cfg(feature = "ecmqv")]
+#[cfg(all(
+    feature = "ecmqv",
+    any(
+        feature = "fp-custom",
+        feature = "fp-curve",
+        feature = "f2m-custom",
+        feature = "f2m-curve"
+    )
+))]
 use tc_ecmqv::{EcMqvBasicAgreement, MqvPrivateParams};
 
-#[cfg(feature = "ecdh")]
+#[cfg(all(
+    feature = "ecdh",
+    any(
+        feature = "fp-custom",
+        feature = "fp-curve",
+        feature = "f2m-custom",
+        feature = "f2m-curve"
+    )
+))]
 fn ecdh<C: Curve<Scalar = PaddedBigUint> + 'static>(
     params: &dyn Params,
 ) -> Option<Result<Box<dyn Inner>, AlgoError>> {
     init_as::<EcPrivateKey<C>, _>(EcdhBasicAgreement::<C>::new(), params)
 }
 
-#[cfg(feature = "ecdhc")]
+#[cfg(all(
+    feature = "ecdh",
+    any(
+        feature = "fp-custom",
+        feature = "fp-curve",
+        feature = "f2m-custom",
+        feature = "f2m-curve"
+    )
+))]
 fn ecdhc<C: Curve<Scalar = PaddedBigUint> + 'static>(
     params: &dyn Params,
 ) -> Option<Result<Box<dyn Inner>, AlgoError>> {
@@ -309,14 +516,30 @@ fn ecdhc<C: Curve<Scalar = PaddedBigUint> + 'static>(
 
 // Its params are a MqvPrivateParams of the static and ephemeral private keys, and the other side's
 // a MqvPublicParams
-#[cfg(feature = "ecmqv")]
+#[cfg(all(
+    feature = "ecmqv",
+    any(
+        feature = "fp-custom",
+        feature = "fp-curve",
+        feature = "f2m-custom",
+        feature = "f2m-curve"
+    )
+))]
 fn ecmqv<C: Curve<Scalar = PaddedBigUint> + 'static>(
     params: &dyn Params,
 ) -> Option<Result<Box<dyn Inner>, AlgoError>> {
     init_as::<MqvPrivateParams<C>, _>(EcMqvBasicAgreement::<C>::new(), params)
 }
 
-#[cfg(feature = "ecdh")]
+#[cfg(all(
+    feature = "ecdh",
+    any(
+        feature = "fp-custom",
+        feature = "fp-curve",
+        feature = "f2m-custom",
+        feature = "f2m-curve"
+    )
+))]
 #[allow(dead_code)]
 fn ecdh_kdf<C, D>(
     params: &dyn Params,
@@ -332,7 +555,15 @@ where
     ukm_or_key::<EcPrivateKey<C>, _>(agreement, params)
 }
 
-#[cfg(feature = "ecdhc")]
+#[cfg(all(
+    feature = "ecdh",
+    any(
+        feature = "fp-custom",
+        feature = "fp-curve",
+        feature = "f2m-custom",
+        feature = "f2m-curve"
+    )
+))]
 #[allow(dead_code)]
 fn ecdhc_kdf<C, D>(
     params: &dyn Params,
@@ -348,7 +579,15 @@ where
     ukm_or_key::<EcPrivateKey<C>, _>(agreement, params)
 }
 
-#[cfg(feature = "ecmqv")]
+#[cfg(all(
+    feature = "ecmqv",
+    any(
+        feature = "fp-custom",
+        feature = "fp-curve",
+        feature = "f2m-custom",
+        feature = "f2m-curve"
+    )
+))]
 #[allow(dead_code)]
 fn ecmqv_kdf<C, D>(
     params: &dyn Params,
@@ -381,21 +620,21 @@ macro_rules! with_digest {
 }
 
 with_digest! {
-    "ecdh", "sha1", ecdh_sha1, ecdh_kdf, tc_sha::Sha1Digest;
-    "ecdh", "sha224", ecdh_sha224, ecdh_kdf, tc_sha::Sha224Digest;
-    "ecdh", "sha256", ecdh_sha256, ecdh_kdf, tc_sha::Sha256Digest;
-    "ecdh", "sha384", ecdh_sha384, ecdh_kdf, tc_sha::Sha384Digest;
-    "ecdh", "sha512", ecdh_sha512, ecdh_kdf, tc_sha::Sha512Digest;
-    "ecdhc", "sha1", ecdhc_sha1, ecdhc_kdf, tc_sha::Sha1Digest;
-    "ecdhc", "sha224", ecdhc_sha224, ecdhc_kdf, tc_sha::Sha224Digest;
-    "ecdhc", "sha256", ecdhc_sha256, ecdhc_kdf, tc_sha::Sha256Digest;
-    "ecdhc", "sha384", ecdhc_sha384, ecdhc_kdf, tc_sha::Sha384Digest;
-    "ecdhc", "sha512", ecdhc_sha512, ecdhc_kdf, tc_sha::Sha512Digest;
-    "ecmqv", "sha1", ecmqv_sha1, ecmqv_kdf, tc_sha::Sha1Digest;
-    "ecmqv", "sha224", ecmqv_sha224, ecmqv_kdf, tc_sha::Sha224Digest;
-    "ecmqv", "sha256", ecmqv_sha256, ecmqv_kdf, tc_sha::Sha256Digest;
-    "ecmqv", "sha384", ecmqv_sha384, ecmqv_kdf, tc_sha::Sha384Digest;
-    "ecmqv", "sha512", ecmqv_sha512, ecmqv_kdf, tc_sha::Sha512Digest;
+    "ecdh", "sha", ecdh_sha1, ecdh_kdf, tc_sha::Sha1Digest;
+    "ecdh", "sha", ecdh_sha224, ecdh_kdf, tc_sha::Sha224Digest;
+    "ecdh", "sha", ecdh_sha256, ecdh_kdf, tc_sha::Sha256Digest;
+    "ecdh", "sha", ecdh_sha384, ecdh_kdf, tc_sha::Sha384Digest;
+    "ecdh", "sha", ecdh_sha512, ecdh_kdf, tc_sha::Sha512Digest;
+    "ecdh", "sha", ecdhc_sha1, ecdhc_kdf, tc_sha::Sha1Digest;
+    "ecdh", "sha", ecdhc_sha224, ecdhc_kdf, tc_sha::Sha224Digest;
+    "ecdh", "sha", ecdhc_sha256, ecdhc_kdf, tc_sha::Sha256Digest;
+    "ecdh", "sha", ecdhc_sha384, ecdhc_kdf, tc_sha::Sha384Digest;
+    "ecdh", "sha", ecdhc_sha512, ecdhc_kdf, tc_sha::Sha512Digest;
+    "ecmqv", "sha", ecmqv_sha1, ecmqv_kdf, tc_sha::Sha1Digest;
+    "ecmqv", "sha", ecmqv_sha224, ecmqv_kdf, tc_sha::Sha224Digest;
+    "ecmqv", "sha", ecmqv_sha256, ecmqv_kdf, tc_sha::Sha256Digest;
+    "ecmqv", "sha", ecmqv_sha384, ecmqv_kdf, tc_sha::Sha384Digest;
+    "ecmqv", "sha", ecmqv_sha512, ecmqv_kdf, tc_sha::Sha512Digest;
 }
 
 #[cfg(test)]

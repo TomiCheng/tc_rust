@@ -1,5 +1,4 @@
-#![cfg_attr(
-    all(feature = "ecdsa", feature = "sha256"),
+#![cfg_attr(all(feature = "ecdsa", feature = "fp-custom", feature = "sha"),
     doc = include_str!("../docs/Signer.md")
 )]
 

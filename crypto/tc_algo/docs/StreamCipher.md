@@ -48,15 +48,15 @@ fn main() -> Result<(), AlgoError> {
 |---|---|---|---|---|---|---|---|
 | `CHACHA7539` | `CHACHA20` |  | `chacha` | `KeyWithIvOwned` | 32 | 12 |  |
 | `CHACHA` |  |  | `chacha` | `KeyWithIvOwned` | 16, 32 | 8 |  |
-| `XCHACHA20` |  |  | `xchacha20` | `KeyWithIvOwned` | 32 | 24 |  |
+| `XCHACHA20` |  |  | `chacha` | `KeyWithIvOwned` | 32 | 24 |  |
 | `SALSA20` |  |  | `salsa20` | `KeyWithIvOwned` | 16, 32 | 8 |  |
-| `XSALSA20` |  |  | `xsalsa20` | `KeyWithIvOwned` | 32 | 24 |  |
-| `HC128` |  |  | `hc128` | `KeyWithIvOwned` | 16 | 16 | variable time |
-| `HC256` |  |  | `hc256` | `KeyWithIvOwned` | 16, 32 | 16..32 | variable time |
-| `ARC4` | `RC4`, `ARCFOUR`, `PBEWITHSHAAND128BITRC4`, `PBEWITHSHA1AND128BITRC4`, `PBEWITHSHAAND40BITRC4`, `PBEWITHSHA1AND40BITRC4` | `1.2.840.113549.3.4`, `1.2.840.113549.1.12.1.1`, `1.2.840.113549.1.12.1.2` | `rc4` | `KeyOwned` | 1..256 | none | weak, variable time |
-| `VMPC` | `VMPC-MAC` |  | `vmpc` | `KeyWithIvOwned` | 16..64 | 16..64 | variable time |
-| `VMPC-KSA3` |  |  | `vmpc-ksa3` | `KeyWithIvOwned` | 16..64 | 16..64 | variable time |
-| `ISAAC` |  |  | `isaac` | `KeyOwned` | ..1024 | none | variable time |
+| `XSALSA20` |  |  | `salsa20` | `KeyWithIvOwned` | 32 | 24 |  |
+| `HC128` |  |  | `hc` | `KeyWithIvOwned` | 16 | 16 | variable time |
+| `HC256` |  |  | `hc` | `KeyWithIvOwned` | 16, 32 | 16..32 | variable time |
+| `ARC4` | `RC4`, `ARCFOUR`, `PBEWITHSHAAND128BITRC4`, `PBEWITHSHA1AND128BITRC4`, `PBEWITHSHAAND40BITRC4`, `PBEWITHSHA1AND40BITRC4` | `1.2.840.113549.3.4`, `1.2.840.113549.1.12.1.1`, `1.2.840.113549.1.12.1.2` | `rc4-family` | `KeyOwned` | 1..256 | none | weak, variable time |
+| `VMPC` | `VMPC-MAC` |  | `rc4-family` | `KeyWithIvOwned` | 16..64 | 16..64 | variable time |
+| `VMPC-KSA3` |  |  | `rc4-family` | `KeyWithIvOwned` | 16..64 | 16..64 | variable time |
+| `ISAAC` |  |  | `rc4-family` | `KeyOwned` | ..1024 | none | variable time |
 
 Sizes are lists (`16, 32`), ranges with both ends included (`16..64`), or with no lower end
 (`..1024`); `none` takes no nonce.

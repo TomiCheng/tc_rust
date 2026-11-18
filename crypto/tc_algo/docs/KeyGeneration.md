@@ -48,48 +48,48 @@ fn main() -> Result<(), AlgoError> {
 | `CAMELLIA128` |  | `1.2.392.200011.61.1.1.1.2`, `1.2.392.200011.61.1.1.3.2` | `camellia` | 16 | 16 | `KeyLength` | `KeyOwned` |
 | `CAMELLIA192` |  | `1.2.392.200011.61.1.1.1.3`, `1.2.392.200011.61.1.1.3.3` | `camellia` | 24 | 24 | `KeyLength` | `KeyOwned` |
 | `CAMELLIA256` |  | `1.2.392.200011.61.1.1.1.4`, `1.2.392.200011.61.1.1.3.4` | `camellia` | 32 | 32 | `KeyLength` | `KeyOwned` |
-| `CAST5` |  | `1.2.840.113533.7.66.10` | `cast5` | 16 | 5..16 | `KeyLength` | `KeyOwned` |
-| `CAST6` |  |  | `cast6` | 32 | 16, 20, 24, 28, 32 | `KeyLength` | `KeyOwned` |
+| `CAST5` |  | `1.2.840.113533.7.66.10` | `cast` | 16 | 5..16 | `KeyLength` | `KeyOwned` |
+| `CAST6` |  |  | `cast` | 32 | 16, 20, 24, 28, 32 | `KeyLength` | `KeyOwned` |
 | `DES` |  | `1.3.14.3.2.7`, `1.3.14.3.2.9`, `1.3.14.3.2.6`, `1.3.14.3.2.8` | `des` | 8 | 8 | `KeyLength` | `KeyOwned` |
-| `DESEDE` | `DESEDEWRAP`, `TDEA`, `DESEDE16` | `1.3.14.3.2.17` | `desede` | 16 | 16, 24 | `KeyLength` | `KeyOwned` |
-| `DESEDE3` | `DESEDE24` | `1.2.840.113549.3.7`, `1.2.840.113549.1.9.16.3.6` | `desede` | 24 | 16, 24 | `KeyLength` | `KeyOwned` |
-| `IDEA` |  | `1.3.6.1.4.1.188.7.1.1.2` | `idea` | 16 | 16 | `KeyLength` | `KeyOwned` |
-| `NOEKEON` |  |  | `noekeon` | 16 | 16 | `KeyLength` | `KeyOwned` |
-| `RC6` |  |  | `rc6` | 32 | 1..255 | `KeyLength` | `KeyOwned` |
-| `RIJNDAEL` |  |  | `rijndael` | 24 | 16, 20, 24, 28, 32 | `KeyLength` | `KeyOwned` |
+| `DESEDE` | `DESEDEWRAP`, `TDEA`, `DESEDE16` | `1.3.14.3.2.17` | `des` | 16 | 16, 24 | `KeyLength` | `KeyOwned` |
+| `DESEDE3` | `DESEDE24` | `1.2.840.113549.3.7`, `1.2.840.113549.1.9.16.3.6` | `des` | 24 | 16, 24 | `KeyLength` | `KeyOwned` |
+| `IDEA` |  | `1.3.6.1.4.1.188.7.1.1.2` | `misc-block-cipher` | 16 | 16 | `KeyLength` | `KeyOwned` |
+| `NOEKEON` |  |  | `misc-block-cipher` | 16 | 16 | `KeyLength` | `KeyOwned` |
+| `RC6` |  |  | `rc-cipher` | 32 | 1..255 | `KeyLength` | `KeyOwned` |
+| `RIJNDAEL` |  |  | `misc-block-cipher` | 24 | 16, 20, 24, 28, 32 | `KeyLength` | `KeyOwned` |
 | `SEED` |  | `1.2.410.200004.7.1.1.1`, `1.2.410.200004.1.4` | `seed` | 16 | 16 | `KeyLength` | `KeyOwned` |
 | `SERPENT` |  |  | `serpent` | 24 | 4..32, by 4 | `KeyLength` | `KeyOwned` |
-| `SKIPJACK` |  |  | `skipjack` | 10 | 10 | `KeyLength` | `KeyOwned` |
+| `SKIPJACK` |  |  | `misc-block-cipher` | 10 | 10 | `KeyLength` | `KeyOwned` |
 | `SM4` |  |  | `sm4` | 16 | 16 | `KeyLength` | `KeyOwned` |
-| `TEA` |  |  | `tea` | 16 | 16 | `KeyLength` | `KeyOwned` |
-| `THREEFISH-256` |  |  | `threefish-256` | 32 | 32 | [`ThreefishKeyGenParams`](Threefish.md#key-generation) | `ThreefishParamsOwned` |
-| `THREEFISH-512` |  |  | `threefish-512` | 64 | 64 | [`ThreefishKeyGenParams`](Threefish.md#key-generation) | `ThreefishParamsOwned` |
-| `THREEFISH-1024` |  |  | `threefish-1024` | 128 | 128 | [`ThreefishKeyGenParams`](Threefish.md#key-generation) | `ThreefishParamsOwned` |
-| `TNEPRES` |  |  | `tnepres` | 24 | 4..32, by 4 | `KeyLength` | `KeyOwned` |
+| `TEA` |  |  | `misc-block-cipher` | 16 | 16 | `KeyLength` | `KeyOwned` |
+| `THREEFISH-256` |  |  | `threefish` | 32 | 32 | [`ThreefishKeyGenParams`](Threefish.md#key-generation) | `ThreefishParamsOwned` |
+| `THREEFISH-512` |  |  | `threefish` | 64 | 64 | [`ThreefishKeyGenParams`](Threefish.md#key-generation) | `ThreefishParamsOwned` |
+| `THREEFISH-1024` |  |  | `threefish` | 128 | 128 | [`ThreefishKeyGenParams`](Threefish.md#key-generation) | `ThreefishParamsOwned` |
+| `TNEPRES` |  |  | `serpent` | 24 | 4..32, by 4 | `KeyLength` | `KeyOwned` |
 | `TWOFISH` |  |  | `twofish` | 32 | 16, 24, 32 | `KeyLength` | `KeyOwned` |
-| `XTEA` |  |  | `xtea` | 16 | 16 | `KeyLength` | `KeyOwned` |
+| `XTEA` |  |  | `misc-block-cipher` | 16 | 16 | `KeyLength` | `KeyOwned` |
 | `CHACHA` |  |  | `chacha` | 16 | 16, 32 | `KeyLength` | `KeyOwned` |
-| `CHACHA7539` | `CHACHA20`, `CHACHA20-POLY1305` | `1.2.840.113549.1.9.16.3.18` | `chacha` or `chacha20-poly1305` | 32 | 32 | `KeyLength` | `KeyOwned` |
-| `XCHACHA20` | `XCHACHA20-POLY1305` |  | `xchacha20` or `xchacha20-poly1305` | 32 | 32 | `KeyLength` | `KeyOwned` |
-| `HC128` |  |  | `hc128` | 16 | 16 | `KeyLength` | `KeyOwned` |
-| `HC256` |  |  | `hc256` | 32 | 16, 32 | `KeyLength` | `KeyOwned` |
-| `RC4` | `ARC4` | `1.2.840.113549.3.4` | `rc4` | 16 | 1..256 | `KeyLength` | `KeyOwned` |
+| `CHACHA7539` | `CHACHA20`, `CHACHA20-POLY1305` | `1.2.840.113549.1.9.16.3.18` | `chacha` or `chacha-aead` | 32 | 32 | `KeyLength` | `KeyOwned` |
+| `XCHACHA20` | `XCHACHA20-POLY1305` |  | `chacha` or `chacha-aead` | 32 | 32 | `KeyLength` | `KeyOwned` |
+| `HC128` |  |  | `hc` | 16 | 16 | `KeyLength` | `KeyOwned` |
+| `HC256` |  |  | `hc` | 32 | 16, 32 | `KeyLength` | `KeyOwned` |
+| `RC4` | `ARC4` | `1.2.840.113549.3.4` | `rc4-family` | 16 | 1..256 | `KeyLength` | `KeyOwned` |
 | `SALSA20` |  |  | `salsa20` | 16 | 16, 32 | `KeyLength` | `KeyOwned` |
-| `XSALSA20` |  |  | `xsalsa20` | 32 | 32 | `KeyLength` | `KeyOwned` |
-| `VMPC` |  |  | `vmpc` | 16 | 16..64 | `KeyLength` | `KeyOwned` |
-| `VMPC-KSA3` |  |  | `vmpc-ksa3` | 16 | 16..64 | `KeyLength` | `KeyOwned` |
-| `ASCON-AEAD128` |  |  | `ascon-aead128` | 16 | 16 | `KeyLength` | `KeyOwned` |
-| `ASCON-128` |  |  | `ascon128` | 16 | 16 | `KeyLength` | `KeyOwned` |
-| `ASCON-128A` |  |  | `ascon128a` | 16 | 16 | `KeyLength` | `KeyOwned` |
-| `ASCON-80PQ` |  |  | `ascon80pq` | 20 | 20 | `KeyLength` | `KeyOwned` |
+| `XSALSA20` |  |  | `salsa20` | 32 | 32 | `KeyLength` | `KeyOwned` |
+| `VMPC` |  |  | `rc4-family` | 16 | 16..64 | `KeyLength` | `KeyOwned` |
+| `VMPC-KSA3` |  |  | `rc4-family` | 16 | 16..64 | `KeyLength` | `KeyOwned` |
+| `ASCON-AEAD128` |  |  | `ascon-aead` | 16 | 16 | `KeyLength` | `KeyOwned` |
+| `ASCON-128` |  |  | `ascon-aead` | 16 | 16 | `KeyLength` | `KeyOwned` |
+| `ASCON-128A` |  |  | `ascon-aead` | 16 | 16 | `KeyLength` | `KeyOwned` |
+| `ASCON-80PQ` |  |  | `ascon-aead` | 20 | 20 | `KeyLength` | `KeyOwned` |
 | `GRAIN-128AEAD` |  |  | `grain128-aead` | 16 | 16 | `KeyLength` | `KeyOwned` |
-| `SCHWAEMM128-128` |  |  | `schwaemm128-128` | 16 | 16 | `KeyLength` | `KeyOwned` |
-| `SCHWAEMM256-128` |  |  | `schwaemm256-128` | 16 | 16 | `KeyLength` | `KeyOwned` |
-| `SCHWAEMM192-192` |  |  | `schwaemm192-192` | 24 | 24 | `KeyLength` | `KeyOwned` |
-| `SCHWAEMM256-256` |  |  | `schwaemm256-256` | 32 | 32 | `KeyLength` | `KeyOwned` |
-| `RC2` |  | `1.2.840.113549.3.2`, `1.2.840.113549.1.9.16.3.7` | `rc2` | 16 | 1..128 | [`Rc2KeyGenParams`](Rc2.md#key-generation) | `Rc2ParamsOwned` |
-| `RC5` | `RC5-32` |  | `rc5` | 16 | 1..255 | [`Rc5KeyGenParams`](Rc5.md#key-generation) | `Rc5ParamsOwned` |
-| `RC5-64` |  |  | `rc5-64` | 32 | 1..255 | [`Rc5KeyGenParams`](Rc5.md#key-generation) | `Rc5ParamsOwned` |
+| `SCHWAEMM128-128` |  |  | `sparkle-aead` | 16 | 16 | `KeyLength` | `KeyOwned` |
+| `SCHWAEMM256-128` |  |  | `sparkle-aead` | 16 | 16 | `KeyLength` | `KeyOwned` |
+| `SCHWAEMM192-192` |  |  | `sparkle-aead` | 24 | 24 | `KeyLength` | `KeyOwned` |
+| `SCHWAEMM256-256` |  |  | `sparkle-aead` | 32 | 32 | `KeyLength` | `KeyOwned` |
+| `RC2` |  | `1.2.840.113549.3.2`, `1.2.840.113549.1.9.16.3.7` | `rc-cipher` | 16 | 1..128 | [`Rc2KeyGenParams`](Rc2.md#key-generation) | `Rc2ParamsOwned` |
+| `RC5` | `RC5-32` |  | `rc-cipher` | 16 | 1..255 | [`Rc5KeyGenParams`](Rc5.md#key-generation) | `Rc5ParamsOwned` |
+| `RC5-64` |  |  | `rc-cipher` | 32 | 1..255 | [`Rc5KeyGenParams`](Rc5.md#key-generation) | `Rc5ParamsOwned` |
 | `GOST28147` | `GOST`, `GOST-28147` | `1.2.643.2.2.21` | `gost28147` | 32 | 32 | [`Gost28147KeyGenParams`](Gost28147.md#key-generation) | `Gost28147ParamsOwned` |
 
 Bytes are lists (`16, 24, 32`), ranges with both ends included (`16..64`), or with no upper end

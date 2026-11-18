@@ -116,9 +116,9 @@ fn aead_error(error: AeadError) -> AlgoError {
 #[cfg(all(
     test,
     any(
-        feature = "ascon-aead128",
+        feature = "ascon-aead",
         feature = "grain128-aead",
-        feature = "schwaemm128-128"
+        feature = "sparkle-aead"
     )
 ))]
 pub(super) fn assert_empty_vector(name: &str, key: &str, nonce: &str, tag: &str) {

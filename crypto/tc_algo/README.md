@@ -18,8 +18,13 @@ fn main() -> Result<(), AlgoError> {
 ```
 
 Every algorithm is behind a feature, and no feature is on by default: a program builds only the
-algorithms it turns on, and a name it did not turn on is an error, not a fallback. The one
-exception is `KEY`, a secret key of any length, which is always on.
+algorithms it turns on, and a name it did not turn on is an error, not a fallback. The exceptions
+are `KEY`, a secret key of any length, and the `NONE` digest, which are always on.
+
+A feature is a crate the algorithms come from, named as the crate without `tc_`: `sha` turns on
+SHA-1 and SHA-2, `aes` AES in every mode, `keccak` SHA-3 and SHAKE. A row built of more than one,
+as HMAC over SHA-256 or ECDSA on P-256, is there when each feature is on: `macs` and `sha`, or
+`ecdsa`, `fp-custom` and `sha`.
 
 ## Algorithms
 

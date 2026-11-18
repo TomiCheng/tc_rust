@@ -1,10 +1,6 @@
-#[cfg(feature = "ascon-cxof128")]
+#[cfg(feature = "ascon-hash")]
 use super::init_xof::{InitXof, invalid};
-#[cfg(any(
-    feature = "ascon-xof128",
-    feature = "ascon-xof",
-    feature = "ascon-xofa"
-))]
+#[cfg(feature = "ascon-hash")]
 use super::row::TcXof;
 use super::row::row;
 use crate::DefaultAlgoContext;
@@ -14,14 +10,14 @@ use crate::xof::XofEntry;
 // SP 800-232, to give to DefaultAlgoBuilder::reg_xof. Bouncy Castle has no factory of XOFs, so
 // they are named after their XOFs, with no alias or OID
 
-#[cfg(feature = "ascon-xof128")]
+#[cfg(feature = "ascon-hash")]
 pub(super) fn ascon_xof128(_context: &DefaultAlgoContext) -> Vec<Box<dyn XofEntry>> {
     row("ASCON-XOF128", &[], &[], || {
         Box::new(TcXof(tc_ascon_hash::AsconXof128::new()))
     })
 }
 
-#[cfg(feature = "ascon-cxof128")]
+#[cfg(feature = "ascon-hash")]
 pub(super) fn ascon_cxof128(_context: &DefaultAlgoContext) -> Vec<Box<dyn XofEntry>> {
     row("ASCON-CXOF128", &[], &[], || {
         Box::new(InitXof::new(
@@ -39,7 +35,7 @@ pub(super) fn ascon_cxof128(_context: &DefaultAlgoContext) -> Vec<Box<dyn XofEnt
     })
 }
 
-#[cfg(feature = "ascon-xof")]
+#[cfg(feature = "ascon-hash")]
 #[allow(deprecated)]
 pub(super) fn ascon_xof(_context: &DefaultAlgoContext) -> Vec<Box<dyn XofEntry>> {
     row("ASCON-XOF", &[], &[], || {
@@ -49,7 +45,7 @@ pub(super) fn ascon_xof(_context: &DefaultAlgoContext) -> Vec<Box<dyn XofEntry>>
     })
 }
 
-#[cfg(feature = "ascon-xofa")]
+#[cfg(feature = "ascon-hash")]
 #[allow(deprecated)]
 pub(super) fn ascon_xofa(_context: &DefaultAlgoContext) -> Vec<Box<dyn XofEntry>> {
     row("ASCON-XOFA", &[], &[], || {
@@ -94,7 +90,7 @@ mod tests {
         }
     }
 
-    #[cfg(feature = "ascon-xof128")]
+    #[cfg(feature = "ascon-hash")]
     #[test]
     fn the_ascon_xof128_row_gives_the_output_of_its_xof_and_is_found_by_its_names() {
         check(
@@ -104,7 +100,7 @@ mod tests {
         find("ASCON-XOF128", &[], &[]);
     }
 
-    #[cfg(feature = "ascon-xof")]
+    #[cfg(feature = "ascon-hash")]
     #[allow(deprecated)]
     #[test]
     fn the_ascon_xof_row_gives_the_output_of_its_xof_and_is_found_by_its_names() {
@@ -115,7 +111,7 @@ mod tests {
         find("ASCON-XOF", &[], &[]);
     }
 
-    #[cfg(feature = "ascon-xofa")]
+    #[cfg(feature = "ascon-hash")]
     #[allow(deprecated)]
     #[test]
     fn the_ascon_xofa_row_gives_the_output_of_its_xof_and_is_found_by_its_names() {
@@ -126,7 +122,7 @@ mod tests {
         find("ASCON-XOFA", &[], &[]);
     }
 
-    #[cfg(feature = "ascon-cxof128")]
+    #[cfg(feature = "ascon-hash")]
     #[test]
     fn ascon_cxof128_takes_its_customization_from_init_up_to_256_bytes() {
         use crate::params::AsconCXofParams;

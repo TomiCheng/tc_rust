@@ -5,21 +5,21 @@ use crate::digest::DigestEntry;
 // The rows of DSTU 7564 (Kupyna), to give to DefaultAlgoBuilder::reg_digest. Their names and OIDs
 // are those of Bouncy Castle's DigestUtilities
 
-#[cfg(feature = "dstu7564-256")]
+#[cfg(feature = "dstu7564")]
 pub(super) fn dstu7564_256(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>> {
     row("DSTU7564-256", &[], &["1.2.804.2.1.1.1.1.2.2.1"], || {
         Box::new(TcDigest(tc_dstu7564::Dstu7564Digest::new(256)))
     })
 }
 
-#[cfg(feature = "dstu7564-384")]
+#[cfg(feature = "dstu7564")]
 pub(super) fn dstu7564_384(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>> {
     row("DSTU7564-384", &[], &["1.2.804.2.1.1.1.1.2.2.2"], || {
         Box::new(TcDigest(tc_dstu7564::Dstu7564Digest::new(384)))
     })
 }
 
-#[cfg(feature = "dstu7564-512")]
+#[cfg(feature = "dstu7564")]
 pub(super) fn dstu7564_512(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>> {
     row("DSTU7564-512", &[], &["1.2.804.2.1.1.1.1.2.2.3"], || {
         Box::new(TcDigest(tc_dstu7564::Dstu7564Digest::new(512)))
@@ -60,7 +60,7 @@ mod tests {
         }
     }
 
-    #[cfg(feature = "dstu7564-256")]
+    #[cfg(feature = "dstu7564")]
     #[test]
     fn the_dstu7564_256_row_gives_the_hash_of_its_digest_and_is_found_by_its_names() {
         check(
@@ -71,7 +71,7 @@ mod tests {
         find("DSTU7564-256", &[], &["1.2.804.2.1.1.1.1.2.2.1"]);
     }
 
-    #[cfg(feature = "dstu7564-384")]
+    #[cfg(feature = "dstu7564")]
     #[test]
     fn the_dstu7564_384_row_gives_the_hash_of_its_digest_and_is_found_by_its_names() {
         check(
@@ -82,7 +82,7 @@ mod tests {
         find("DSTU7564-384", &[], &["1.2.804.2.1.1.1.1.2.2.2"]);
     }
 
-    #[cfg(feature = "dstu7564-512")]
+    #[cfg(feature = "dstu7564")]
     #[test]
     fn the_dstu7564_512_row_gives_the_hash_of_its_digest_and_is_found_by_its_names() {
         check(

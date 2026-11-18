@@ -1,19 +1,68 @@
-#[cfg(any(feature = "x25519", feature = "x448"))]
+#[cfg(feature = "cfrg-curves")]
 mod cfrg;
 #[cfg(feature = "dh")]
 mod dh;
-#[cfg(any(feature = "ecdh", feature = "ecdhc", feature = "ecmqv"))]
+#[cfg(any(
+    all(
+        feature = "ecdh",
+        any(
+            feature = "fp-custom",
+            feature = "fp-curve",
+            feature = "f2m-custom",
+            feature = "f2m-curve"
+        )
+    ),
+    all(
+        feature = "ecmqv",
+        any(
+            feature = "fp-custom",
+            feature = "fp-curve",
+            feature = "f2m-custom",
+            feature = "f2m-curve"
+        )
+    )
+))]
 mod ec;
 #[cfg(any(
-    feature = "ecdh",
-    feature = "ecdhc",
-    feature = "ecmqv",
-    feature = "ecgost3410",
-    feature = "x25519",
-    feature = "x448"
+    all(
+        feature = "ecdh",
+        any(
+            feature = "fp-custom",
+            feature = "fp-curve",
+            feature = "f2m-custom",
+            feature = "f2m-curve"
+        )
+    ),
+    all(
+        feature = "ecmqv",
+        any(
+            feature = "fp-custom",
+            feature = "fp-curve",
+            feature = "f2m-custom",
+            feature = "f2m-curve"
+        )
+    ),
+    all(
+        feature = "ecgost3410",
+        any(
+            feature = "fp-custom",
+            feature = "fp-curve",
+            feature = "f2m-custom",
+            feature = "f2m-curve"
+        )
+    ),
+    feature = "cfrg-curves"
 ))]
 mod typed;
-#[cfg(feature = "ecgost3410")]
+#[cfg(all(
+    feature = "ecgost3410",
+    any(
+        feature = "fp-custom",
+        feature = "fp-curve",
+        feature = "f2m-custom",
+        feature = "f2m-curve"
+    )
+))]
 mod vko;
 
 use super::AgreementEntry;
@@ -24,10 +73,37 @@ pub(crate) type CreateRows = fn(&crate::DefaultAlgoContext) -> Vec<Box<dyn Agree
 pub(crate) const BUILT_IN: &[CreateRows] = &[
     #[cfg(feature = "dh")]
     dh::dh,
-    #[cfg(any(feature = "ecdh", feature = "ecdhc", feature = "ecmqv"))]
+    #[cfg(any(
+        all(
+            feature = "ecdh",
+            any(
+                feature = "fp-custom",
+                feature = "fp-curve",
+                feature = "f2m-custom",
+                feature = "f2m-curve"
+            )
+        ),
+        all(
+            feature = "ecmqv",
+            any(
+                feature = "fp-custom",
+                feature = "fp-curve",
+                feature = "f2m-custom",
+                feature = "f2m-curve"
+            )
+        )
+    ))]
     ec::ec,
-    #[cfg(feature = "ecgost3410")]
+    #[cfg(all(
+        feature = "ecgost3410",
+        any(
+            feature = "fp-custom",
+            feature = "fp-curve",
+            feature = "f2m-custom",
+            feature = "f2m-curve"
+        )
+    ))]
     vko::vko,
-    #[cfg(any(feature = "x25519", feature = "x448"))]
+    #[cfg(feature = "cfrg-curves")]
     cfrg::cfrg,
 ];

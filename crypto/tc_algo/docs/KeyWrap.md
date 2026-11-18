@@ -4,7 +4,7 @@ A key wrap encrypts one key under another, the key-encryption key or KEK, so tha
 stored or sent. Both sides hold the same KEK, and unwrapping detects a change to the wrapped key or
 a wrong KEK. Encrypting a key with someone's public key, such as RSA-OAEP, is a cipher instead.
 
-From a new KEK to the key back again, with AESWRAP. The `rfc3394-wrap` and `aes` features of
+From a new KEK to the key back again, with AESWRAP. The `key-wrap` and `aes` features of
 `tc_algo` have the row.
 
 ```rust
@@ -62,17 +62,17 @@ lengths, `x..y` for a range, and `..` for any length.
 
 | Name | Aliases | OIDs | Features | Params | Key to wrap | Added bytes |
 |---|---|---|---|---|---|---|
-| `AESWRAP` | `AESKW` | `2.16.840.1.101.3.4.1.5`, `2.16.840.1.101.3.4.1.25`, `2.16.840.1.101.3.4.1.45` | `rfc3394-wrap` and `aes` | `KeyOwned`, `KeyWithIvOwned` | `8..`, in multiples of 8 | 8 |
-| `ARIAWRAP` | `ARIAKW` | `1.2.410.200046.1.1.40`, `1.2.410.200046.1.1.41`, `1.2.410.200046.1.1.42` | `rfc3394-wrap` and `aria` | `KeyOwned`, `KeyWithIvOwned` | `8..`, in multiples of 8 | 8 |
-| `CAMELLIAWRAP` |  | `1.2.392.200011.61.1.1.3.2`, `1.2.392.200011.61.1.1.3.3`, `1.2.392.200011.61.1.1.3.4` | `rfc3394-wrap` and `camellia` | `KeyOwned`, `KeyWithIvOwned` | `8..`, in multiples of 8 | 8 |
-| `SEEDWRAP` | `SEEDKW` | `1.2.410.200004.7.1.1.1` | `rfc3394-wrap` and `seed` | `KeyOwned`, `KeyWithIvOwned` | `8..`, in multiples of 8 | 8 |
-| `AESWRAPPAD` | `AESKWP`, `AESRFC5649WRAP` | `2.16.840.1.101.3.4.1.8`, `2.16.840.1.101.3.4.1.28`, `2.16.840.1.101.3.4.1.48` | `rfc5649-wrap` and `aes` | `KeyOwned`, `KeyWithIvOwned` | `1..` | `8..15` |
-| `ARIAWRAPPAD` | `ARIAKWP` | `1.2.410.200046.1.1.43`, `1.2.410.200046.1.1.44`, `1.2.410.200046.1.1.45` | `rfc5649-wrap` and `aria` | `KeyOwned`, `KeyWithIvOwned` | `1..` | `8..15` |
-| `AESRFC3211WRAP` |  |  | `rfc3211-wrap` and `aes` | `KeyWithIvOwned` | `..255` | to two blocks or more |
-| `ARIARFC3211WRAP` |  |  | `rfc3211-wrap` and `aria` | `KeyWithIvOwned` | `..255` | to two blocks or more |
-| `CAMELLIARFC3211WRAP` |  |  | `rfc3211-wrap` and `camellia` | `KeyWithIvOwned` | `..255` | to two blocks or more |
-| `DESRFC3211WRAP` |  |  | `rfc3211-wrap` and `des` | `KeyWithIvOwned` | `..255` | to two blocks or more |
-| `DESEDERFC3211WRAP` |  |  | `rfc3211-wrap` and `desede` | `KeyWithIvOwned` | `..255` | to two blocks or more |
+| `AESWRAP` | `AESKW` | `2.16.840.1.101.3.4.1.5`, `2.16.840.1.101.3.4.1.25`, `2.16.840.1.101.3.4.1.45` | `key-wrap` and `aes` | `KeyOwned`, `KeyWithIvOwned` | `8..`, in multiples of 8 | 8 |
+| `ARIAWRAP` | `ARIAKW` | `1.2.410.200046.1.1.40`, `1.2.410.200046.1.1.41`, `1.2.410.200046.1.1.42` | `key-wrap` and `aria` | `KeyOwned`, `KeyWithIvOwned` | `8..`, in multiples of 8 | 8 |
+| `CAMELLIAWRAP` |  | `1.2.392.200011.61.1.1.3.2`, `1.2.392.200011.61.1.1.3.3`, `1.2.392.200011.61.1.1.3.4` | `key-wrap` and `camellia` | `KeyOwned`, `KeyWithIvOwned` | `8..`, in multiples of 8 | 8 |
+| `SEEDWRAP` | `SEEDKW` | `1.2.410.200004.7.1.1.1` | `key-wrap` and `seed` | `KeyOwned`, `KeyWithIvOwned` | `8..`, in multiples of 8 | 8 |
+| `AESWRAPPAD` | `AESKWP`, `AESRFC5649WRAP` | `2.16.840.1.101.3.4.1.8`, `2.16.840.1.101.3.4.1.28`, `2.16.840.1.101.3.4.1.48` | `key-wrap` and `aes` | `KeyOwned`, `KeyWithIvOwned` | `1..` | `8..15` |
+| `ARIAWRAPPAD` | `ARIAKWP` | `1.2.410.200046.1.1.43`, `1.2.410.200046.1.1.44`, `1.2.410.200046.1.1.45` | `key-wrap` and `aria` | `KeyOwned`, `KeyWithIvOwned` | `1..` | `8..15` |
+| `AESRFC3211WRAP` |  |  | `key-wrap` and `aes` | `KeyWithIvOwned` | `..255` | to two blocks or more |
+| `ARIARFC3211WRAP` |  |  | `key-wrap` and `aria` | `KeyWithIvOwned` | `..255` | to two blocks or more |
+| `CAMELLIARFC3211WRAP` |  |  | `key-wrap` and `camellia` | `KeyWithIvOwned` | `..255` | to two blocks or more |
+| `DESRFC3211WRAP` |  |  | `key-wrap` and `des` | `KeyWithIvOwned` | `..255` | to two blocks or more |
+| `DESEDERFC3211WRAP` |  |  | `key-wrap` and `des` | `KeyWithIvOwned` | `..255` | to two blocks or more |
 
 The `WRAP` rows are RFC 3394, which SEED's RFC 4010 and Camellia's RFC 3657 follow, and the
 `WRAPPAD` rows RFC 5649, which pads a key of any length. Each OID says a length of KEK, but its row

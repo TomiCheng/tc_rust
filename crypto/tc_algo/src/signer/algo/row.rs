@@ -224,9 +224,33 @@ pub(super) fn oids_of<'a>(table: &[(&str, &'a [&'a str])], name: &str) -> &'a [&
 // The errors of the digest signers of tc_dsa, DSA-like and GOST
 #[cfg(any(
     feature = "dsa",
-    feature = "ecdsa",
-    feature = "ecnr",
-    feature = "ecgost3410",
+    all(
+        feature = "ecdsa",
+        any(
+            feature = "fp-custom",
+            feature = "fp-curve",
+            feature = "f2m-custom",
+            feature = "f2m-curve"
+        )
+    ),
+    all(
+        feature = "ecnr",
+        any(
+            feature = "fp-custom",
+            feature = "fp-curve",
+            feature = "f2m-custom",
+            feature = "f2m-curve"
+        )
+    ),
+    all(
+        feature = "ecgost3410",
+        any(
+            feature = "fp-custom",
+            feature = "fp-curve",
+            feature = "f2m-custom",
+            feature = "f2m-curve"
+        )
+    ),
     feature = "gost3410"
 ))]
 impl<E> Kind for tc_dsa::DsaDigestSignerError<E> {

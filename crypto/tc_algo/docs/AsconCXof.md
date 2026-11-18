@@ -5,7 +5,7 @@ the message. Under two customization strings the same message gives two unrelate
 function serves several purposes without one standing in for another. Ascon is light, for small
 devices and short messages.
 
-`ASCON-CXOF128` is behind the `ascon-cxof128` feature.
+`ASCON-CXOF128` is behind the `ascon-hash` feature.
 
 ## Hashing with a customization string
 

@@ -5,7 +5,7 @@ taken with its length, so the list is read back without ambiguity: `("ab", "c")`
 hash differently, where a plain hash of their concatenation would not. It suits a record of
 fields, such as a user name, a date and a key ID, hashed or signed as a whole.
 
-`TUPLEHASH128` and `TUPLEHASH256` are behind the `tuplehash128` and `tuplehash256` features.
+`TUPLEHASH128` and `TUPLEHASH256` are behind the `keccak` feature.
 
 ## Hashing a tuple
 

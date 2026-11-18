@@ -101,13 +101,7 @@ impl MacInit<KeyRef<'_>> for RowMac {
     }
 }
 
-#[cfg(all(
-    test,
-    feature = "hmac",
-    feature = "sha256",
-    feature = "cmac",
-    feature = "aes"
-))]
+#[cfg(all(test, feature = "macs", feature = "sha", feature = "aes"))]
 mod tests {
     use tc_kdf::sp800_108::{
         KdfCounterParamsRef, KdfDoublePipelineParamsRef, KdfFeedbackParamsRef,

@@ -1,22 +1,122 @@
-#[cfg(feature = "ecgost3410")]
+#[cfg(all(
+    feature = "ecgost3410",
+    any(
+        feature = "fp-custom",
+        feature = "fp-curve",
+        feature = "f2m-custom",
+        feature = "f2m-curve"
+    )
+))]
 use std::sync::Arc;
 
 use tc_bigint::PaddedBigUint;
-#[cfg(any(feature = "ecdsa", feature = "ecnr"))]
+#[cfg(any(
+    all(
+        feature = "ecdsa",
+        any(
+            feature = "fp-custom",
+            feature = "fp-curve",
+            feature = "f2m-custom",
+            feature = "f2m-curve"
+        )
+    ),
+    all(
+        feature = "ecnr",
+        any(
+            feature = "fp-custom",
+            feature = "fp-curve",
+            feature = "f2m-custom",
+            feature = "f2m-curve"
+        )
+    )
+))]
 use tc_dsa::DsaDigestSigner;
 use tc_ec_core::Curve;
 use tc_ec_key::{EcPrivateKey, EcPublicKey};
 
-#[cfg(any(feature = "ecdsa", feature = "ecnr"))]
+#[cfg(any(
+    all(
+        feature = "ecdsa",
+        any(
+            feature = "fp-custom",
+            feature = "fp-curve",
+            feature = "f2m-custom",
+            feature = "f2m-curve"
+        )
+    ),
+    all(
+        feature = "ecnr",
+        any(
+            feature = "fp-custom",
+            feature = "fp-curve",
+            feature = "f2m-custom",
+            feature = "f2m-curve"
+        )
+    )
+))]
 use super::digest_dsa::{Spec, k, row};
-#[cfg(feature = "ecgost3410")]
+#[cfg(all(
+    feature = "ecgost3410",
+    any(
+        feature = "fp-custom",
+        feature = "fp-curve",
+        feature = "f2m-custom",
+        feature = "f2m-curve"
+    )
+))]
 use super::row::Row;
-#[cfg(any(feature = "ecdsa", feature = "ecnr"))]
+#[cfg(any(
+    all(
+        feature = "ecdsa",
+        any(
+            feature = "fp-custom",
+            feature = "fp-curve",
+            feature = "f2m-custom",
+            feature = "f2m-curve"
+        )
+    ),
+    all(
+        feature = "ecnr",
+        any(
+            feature = "fp-custom",
+            feature = "fp-curve",
+            feature = "f2m-custom",
+            feature = "f2m-curve"
+        )
+    )
+))]
 use super::row::digests;
 use super::row::{Inner, keyed};
-#[cfg(feature = "ecgost3410")]
+#[cfg(all(
+    feature = "ecgost3410",
+    any(
+        feature = "fp-custom",
+        feature = "fp-curve",
+        feature = "f2m-custom",
+        feature = "f2m-curve"
+    )
+))]
 use crate::ErrorKind;
-#[cfg(any(feature = "ecdsa", feature = "ecnr"))]
+#[cfg(any(
+    all(
+        feature = "ecdsa",
+        any(
+            feature = "fp-custom",
+            feature = "fp-curve",
+            feature = "f2m-custom",
+            feature = "f2m-curve"
+        )
+    ),
+    all(
+        feature = "ecnr",
+        any(
+            feature = "fp-custom",
+            feature = "fp-curve",
+            feature = "f2m-custom",
+            feature = "f2m-curve"
+        )
+    )
+))]
 use crate::digest::RowDigest;
 use crate::signer::SignerEntry;
 use crate::{AlgoError, DefaultAlgoContext, Params};
@@ -26,7 +126,15 @@ type Rand = fn() -> Box<dyn rand_core::CryptoRng>;
 use crate::params::ec_curves::ct_curves as curves;
 
 // The OIDs of Bouncy Castle's SignerUtilities, by the name of the row
-#[cfg(feature = "ecdsa")]
+#[cfg(all(
+    feature = "ecdsa",
+    any(
+        feature = "fp-custom",
+        feature = "fp-curve",
+        feature = "f2m-custom",
+        feature = "f2m-curve"
+    )
+))]
 const ECDSA_OIDS: &[(&str, &[&str])] = &[
     ("SHA-1withECDSA", &["1.2.840.10045.4.1", "1.3.36.3.3.2.1"]),
     ("SHA-224withECDSA", &["1.2.840.10045.4.3.1"]),
@@ -66,9 +174,36 @@ pub(super) fn ec(context: &DefaultAlgoContext) -> Vec<Box<dyn SignerEntry>> {
     let rand: Rand = context.rand();
     #[allow(unused_mut, reason = "empty when no scheme is on")]
     let mut rows: Vec<Box<dyn SignerEntry>> = Vec::new();
-    #[cfg(any(feature = "ecdsa", feature = "ecnr"))]
+    #[cfg(any(
+        all(
+            feature = "ecdsa",
+            any(
+                feature = "fp-custom",
+                feature = "fp-curve",
+                feature = "f2m-custom",
+                feature = "f2m-curve"
+            )
+        ),
+        all(
+            feature = "ecnr",
+            any(
+                feature = "fp-custom",
+                feature = "fp-curve",
+                feature = "f2m-custom",
+                feature = "f2m-curve"
+            )
+        )
+    ))]
     for digest in digests(context) {
-        #[cfg(feature = "ecdsa")]
+        #[cfg(all(
+            feature = "ecdsa",
+            any(
+                feature = "fp-custom",
+                feature = "fp-curve",
+                feature = "f2m-custom",
+                feature = "f2m-curve"
+            )
+        ))]
         {
             let extra = &[("SHA-1", "ECDSA")];
             rows.push(row(
@@ -96,10 +231,26 @@ pub(super) fn ec(context: &DefaultAlgoContext) -> Vec<Box<dyn SignerEntry>> {
                 rand,
             ));
         }
-        #[cfg(feature = "ecnr")]
+        #[cfg(all(
+            feature = "ecnr",
+            any(
+                feature = "fp-custom",
+                feature = "fp-curve",
+                feature = "f2m-custom",
+                feature = "f2m-curve"
+            )
+        ))]
         rows.push(row(&digest, "ECNR", curves!(ecnr), &[], &[], rand));
     }
-    #[cfg(feature = "ecgost3410")]
+    #[cfg(all(
+        feature = "ecgost3410",
+        any(
+            feature = "fp-custom",
+            feature = "fp-curve",
+            feature = "f2m-custom",
+            feature = "f2m-curve"
+        )
+    ))]
     rows.extend(ecgost3410(context.rand()));
     rows
 }
@@ -136,7 +287,15 @@ macro_rules! keyed_by {
     };
 }
 
-#[cfg(feature = "ecdsa")]
+#[cfg(all(
+    feature = "ecdsa",
+    any(
+        feature = "fp-custom",
+        feature = "fp-curve",
+        feature = "f2m-custom",
+        feature = "f2m-curve"
+    )
+))]
 fn ecdsa<C>(params: &dyn Params, spec: &Spec) -> Option<Result<Box<dyn Inner>, AlgoError>>
 where
     C: Curve<Scalar = PaddedBigUint> + 'static,
@@ -152,7 +311,15 @@ where
     })
 }
 
-#[cfg(feature = "ecdsa")]
+#[cfg(all(
+    feature = "ecdsa",
+    any(
+        feature = "fp-custom",
+        feature = "fp-curve",
+        feature = "f2m-custom",
+        feature = "f2m-curve"
+    )
+))]
 fn plain_ecdsa<C>(params: &dyn Params, spec: &Spec) -> Option<Result<Box<dyn Inner>, AlgoError>>
 where
     C: Curve<Scalar = PaddedBigUint> + 'static,
@@ -169,7 +336,15 @@ where
     })
 }
 
-#[cfg(feature = "ecnr")]
+#[cfg(all(
+    feature = "ecnr",
+    any(
+        feature = "fp-custom",
+        feature = "fp-curve",
+        feature = "f2m-custom",
+        feature = "f2m-curve"
+    )
+))]
 fn ecnr<C>(params: &dyn Params, spec: &Spec) -> Option<Result<Box<dyn Inner>, AlgoError>>
 where
     C: Curve<Scalar = PaddedBigUint> + 'static,
@@ -188,7 +363,15 @@ where
 // GOST R 34.10-2001 over GOST R 34.11-94, and GOST R 34.10-2012 over GOST R 34.11-2012 of 256 and
 // 512 bits, with the names, aliases and OIDs of Bouncy Castle's SignerUtilities. The digest is the
 // scheme's, so the rows need no digest feature
-#[cfg(feature = "ecgost3410")]
+#[cfg(all(
+    feature = "ecgost3410",
+    any(
+        feature = "fp-custom",
+        feature = "fp-curve",
+        feature = "f2m-custom",
+        feature = "f2m-curve"
+    )
+))]
 fn ecgost3410(rand: Rand) -> Vec<Box<dyn SignerEntry>> {
     type EcgTry = fn(&dyn Params, Rand) -> Option<Result<Box<dyn Inner>, AlgoError>>;
 
@@ -295,9 +478,14 @@ fn ecgost3410(rand: Rand) -> Vec<Box<dyn SignerEntry>> {
 #[cfg(all(
     test,
     feature = "ecdsa",
+    any(
+        feature = "fp-custom",
+        feature = "fp-curve",
+        feature = "f2m-custom",
+        feature = "f2m-curve"
+    ),
     feature = "ecnr",
-    feature = "sha1",
-    feature = "sha256"
+    feature = "sha"
 ))]
 mod tests {
     use crate::generate::KeyPair;
@@ -363,7 +551,7 @@ mod tests {
     }
 
     // NONEwithECDSA signs the hash it is given, as SHA-256withECDSA signs the hash of the message
-    #[cfg(feature = "null-digest")]
+    #[cfg(all())]
     #[test]
     fn none_with_ecdsa_over_the_hash_verifies_as_sha256_with_ecdsa() {
         let pair = pair("secp256r1");
@@ -414,7 +602,16 @@ mod tests {
     }
 }
 
-#[cfg(all(test, feature = "ecgost3410"))]
+#[cfg(all(
+    test,
+    feature = "ecgost3410",
+    any(
+        feature = "fp-custom",
+        feature = "fp-curve",
+        feature = "f2m-custom",
+        feature = "f2m-curve"
+    )
+))]
 mod gost_tests {
     use crate::params::EcKeyGenParams;
     use crate::{AlgoBuilder, DefaultAlgoBuilder};

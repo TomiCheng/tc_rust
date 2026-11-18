@@ -1,6 +1,6 @@
-#[cfg(feature = "ascon-aead128")]
+#[cfg(feature = "ascon-aead")]
 use tc_ascon_aead::AsconAead128Engine;
-#[cfg(any(feature = "ascon128", feature = "ascon128a", feature = "ascon80pq"))]
+#[cfg(feature = "ascon-aead")]
 use tc_ascon_aead::{AsconLegacyEngine, AsconLegacyVariant};
 
 use super::aead_engine::{AeadEngine, row};
@@ -9,7 +9,7 @@ use crate::cipher::CipherEntry;
 
 // Ascon-AEAD128 of NIST SP 800-232. Bouncy Castle's CipherUtilities has no Ascon, so the name is
 // the standard's
-#[cfg(feature = "ascon-aead128")]
+#[cfg(feature = "ascon-aead")]
 pub(super) fn ascon_aead128(_: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>> {
     vec![row("ASCON-AEAD128", &[], || {
         Box::new(AeadEngine(AsconAead128Engine::new()))
@@ -17,7 +17,7 @@ pub(super) fn ascon_aead128(_: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>>
 }
 
 // The variants of Ascon v1.2 that SP 800-232 supersedes, for data made before it
-#[cfg(feature = "ascon128")]
+#[cfg(feature = "ascon-aead")]
 pub(super) fn ascon128(_: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>> {
     vec![row("ASCON-128", &[], || {
         Box::new(AeadEngine(AsconLegacyEngine::new(
@@ -26,7 +26,7 @@ pub(super) fn ascon128(_: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>> {
     })]
 }
 
-#[cfg(feature = "ascon128a")]
+#[cfg(feature = "ascon-aead")]
 pub(super) fn ascon128a(_: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>> {
     vec![row("ASCON-128A", &[], || {
         Box::new(AeadEngine(AsconLegacyEngine::new(
@@ -35,7 +35,7 @@ pub(super) fn ascon128a(_: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>> {
     })]
 }
 
-#[cfg(feature = "ascon80pq")]
+#[cfg(feature = "ascon-aead")]
 pub(super) fn ascon80pq(_: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>> {
     vec![row("ASCON-80PQ", &[], || {
         Box::new(AeadEngine(AsconLegacyEngine::new(
@@ -47,7 +47,7 @@ pub(super) fn ascon80pq(_: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>> {
 #[cfg(test)]
 mod tests {
     // The first known answer of the official ascon-c KATs, as tc_ascon_aead tests it
-    #[cfg(feature = "ascon-aead128")]
+    #[cfg(feature = "ascon-aead")]
     #[test]
     fn ascon_aead128_gives_the_first_known_answer_of_ascon_c() {
         super::super::aead_engine::assert_empty_vector(
@@ -59,12 +59,7 @@ mod tests {
     }
 
     // The legacy variants decrypt what they encrypt, and are not the standard
-    #[cfg(all(
-        feature = "ascon-aead128",
-        feature = "ascon128",
-        feature = "ascon128a",
-        feature = "ascon80pq"
-    ))]
+    #[cfg(feature = "ascon-aead")]
     #[test]
     fn the_legacy_variants_decrypt_back_and_differ_from_the_standard() {
         use crate::params::AeadParamsOwned;

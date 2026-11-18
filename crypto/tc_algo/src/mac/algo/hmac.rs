@@ -153,7 +153,7 @@ fn algo_error(error: MacError) -> AlgoError {
     AlgoError::with_source(kind, error)
 }
 
-#[cfg(all(test, feature = "sha256"))]
+#[cfg(all(test, feature = "sha"))]
 mod tests {
     use core::any::Any;
 
@@ -328,7 +328,7 @@ mod tests {
     }
 
     // RFC 2202, test case 2, over MD5 and SHA-1, by the names and OIDs of Bouncy Castle
-    #[cfg(all(feature = "md5", feature = "sha1"))]
+    #[cfg(all(feature = "md", feature = "sha"))]
     #[test]
     fn hmac_over_md5_and_sha1_gives_the_tags_of_rfc_2202() {
         let algo = DefaultAlgoBuilder::default().build();

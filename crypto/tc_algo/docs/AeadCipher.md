@@ -170,74 +170,74 @@ Every row, of a mode or of an algorithm of its own:
 | `SERPENT/OCB/NOPADDING` | `SERPENT/OCB/`, `SERPENT/OCB` |  | `AeadParamsOwned` | `serpent` | 4..32, by 4 | ..15 | 8..16 |
 | `SERPENT/GCM-SIV/NOPADDING` | `SERPENT/GCM-SIV/`, `SERPENT/GCM-SIV` |  | `AeadParamsOwned` | `serpent` | 4..32, by 4 | 12 | 16 |
 | `SERPENT/KCCM/NOPADDING` | `SERPENT/KCCM/`, `SERPENT/KCCM` |  | `AeadParamsOwned` | `serpent` | 4..32, by 4 | ..16 | 8, 16 |
-| `TNEPRES/GCM/NOPADDING` | `TNEPRES/GCM/`, `TNEPRES/GCM` |  | `AeadParamsOwned` | `tnepres` | 4..32, by 4 | 1.. | 4..16 |
-| `TNEPRES/CCM/NOPADDING` | `TNEPRES/CCM/`, `TNEPRES/CCM` |  | `AeadParamsOwned` | `tnepres` | 4..32, by 4 | 7..13 | 4, 6, 8, 10, 12, 14, 16 |
-| `TNEPRES/EAX/NOPADDING` | `TNEPRES/EAX/`, `TNEPRES/EAX` |  | `AeadParamsOwned` | `tnepres` | 4..32, by 4 | .. | 4..16 |
-| `TNEPRES/OCB/NOPADDING` | `TNEPRES/OCB/`, `TNEPRES/OCB` |  | `AeadParamsOwned` | `tnepres` | 4..32, by 4 | ..15 | 8..16 |
-| `TNEPRES/GCM-SIV/NOPADDING` | `TNEPRES/GCM-SIV/`, `TNEPRES/GCM-SIV` |  | `AeadParamsOwned` | `tnepres` | 4..32, by 4 | 12 | 16 |
-| `TNEPRES/KCCM/NOPADDING` | `TNEPRES/KCCM/`, `TNEPRES/KCCM` |  | `AeadParamsOwned` | `tnepres` | 4..32, by 4 | ..16 | 8, 16 |
-| `CAST6/GCM/NOPADDING` | `CAST6/GCM/`, `CAST6/GCM` |  | `AeadParamsOwned` | `cast6` | 16, 20, 24, 28, 32 | 1.. | 4..16 |
-| `CAST6/CCM/NOPADDING` | `CAST6/CCM/`, `CAST6/CCM` |  | `AeadParamsOwned` | `cast6` | 16, 20, 24, 28, 32 | 7..13 | 4, 6, 8, 10, 12, 14, 16 |
-| `CAST6/EAX/NOPADDING` | `CAST6/EAX/`, `CAST6/EAX` |  | `AeadParamsOwned` | `cast6` | 16, 20, 24, 28, 32 | .. | 4..16 |
-| `CAST6/OCB/NOPADDING` | `CAST6/OCB/`, `CAST6/OCB` |  | `AeadParamsOwned` | `cast6` | 16, 20, 24, 28, 32 | ..15 | 8..16 |
-| `CAST6/GCM-SIV/NOPADDING` | `CAST6/GCM-SIV/`, `CAST6/GCM-SIV` |  | `AeadParamsOwned` | `cast6` | 16, 20, 24, 28, 32 | 12 | 16 |
-| `CAST6/KCCM/NOPADDING` | `CAST6/KCCM/`, `CAST6/KCCM` |  | `AeadParamsOwned` | `cast6` | 16, 20, 24, 28, 32 | ..16 | 8, 16 |
-| `NOEKEON/GCM/NOPADDING` | `NOEKEON/GCM/`, `NOEKEON/GCM` |  | `AeadParamsOwned` | `noekeon` | 16 | 1.. | 4..16 |
-| `NOEKEON/CCM/NOPADDING` | `NOEKEON/CCM/`, `NOEKEON/CCM` |  | `AeadParamsOwned` | `noekeon` | 16 | 7..13 | 4, 6, 8, 10, 12, 14, 16 |
-| `NOEKEON/EAX/NOPADDING` | `NOEKEON/EAX/`, `NOEKEON/EAX` |  | `AeadParamsOwned` | `noekeon` | 16 | .. | 4..16 |
-| `NOEKEON/OCB/NOPADDING` | `NOEKEON/OCB/`, `NOEKEON/OCB` |  | `AeadParamsOwned` | `noekeon` | 16 | ..15 | 8..16 |
-| `NOEKEON/GCM-SIV/NOPADDING` | `NOEKEON/GCM-SIV/`, `NOEKEON/GCM-SIV` |  | `AeadParamsOwned` | `noekeon` | 16 | 12 | 16 |
-| `NOEKEON/KCCM/NOPADDING` | `NOEKEON/KCCM/`, `NOEKEON/KCCM` |  | `AeadParamsOwned` | `noekeon` | 16 | ..16 | 8, 16 |
-| `RIJNDAEL/GCM/NOPADDING` | `RIJNDAEL/GCM/`, `RIJNDAEL/GCM` |  | `AeadParamsOwned` | `rijndael` | 16, 20, 24, 28, 32 | 1.. | 4..16 |
-| `RIJNDAEL/CCM/NOPADDING` | `RIJNDAEL/CCM/`, `RIJNDAEL/CCM` |  | `AeadParamsOwned` | `rijndael` | 16, 20, 24, 28, 32 | 7..13 | 4, 6, 8, 10, 12, 14, 16 |
-| `RIJNDAEL/EAX/NOPADDING` | `RIJNDAEL/EAX/`, `RIJNDAEL/EAX` |  | `AeadParamsOwned` | `rijndael` | 16, 20, 24, 28, 32 | .. | 4..16 |
-| `RIJNDAEL/OCB/NOPADDING` | `RIJNDAEL/OCB/`, `RIJNDAEL/OCB` |  | `AeadParamsOwned` | `rijndael` | 16, 20, 24, 28, 32 | ..15 | 8..16 |
-| `RIJNDAEL/GCM-SIV/NOPADDING` | `RIJNDAEL/GCM-SIV/`, `RIJNDAEL/GCM-SIV` |  | `AeadParamsOwned` | `rijndael` | 16, 20, 24, 28, 32 | 12 | 16 |
-| `RIJNDAEL/KCCM/NOPADDING` | `RIJNDAEL/KCCM/`, `RIJNDAEL/KCCM` |  | `AeadParamsOwned` | `rijndael` | 16, 20, 24, 28, 32 | ..16 | 8, 16 |
-| `RC6/GCM/NOPADDING` | `RC6/GCM/`, `RC6/GCM` |  | `AeadParamsOwned` | `rc6` | 1..255 | 1.. | 4..16 |
-| `RC6/CCM/NOPADDING` | `RC6/CCM/`, `RC6/CCM` |  | `AeadParamsOwned` | `rc6` | 1..255 | 7..13 | 4, 6, 8, 10, 12, 14, 16 |
-| `RC6/EAX/NOPADDING` | `RC6/EAX/`, `RC6/EAX` |  | `AeadParamsOwned` | `rc6` | 1..255 | .. | 4..16 |
-| `RC6/OCB/NOPADDING` | `RC6/OCB/`, `RC6/OCB` |  | `AeadParamsOwned` | `rc6` | 1..255 | ..15 | 8..16 |
-| `RC6/GCM-SIV/NOPADDING` | `RC6/GCM-SIV/`, `RC6/GCM-SIV` |  | `AeadParamsOwned` | `rc6` | 1..255 | 12 | 16 |
-| `RC6/KCCM/NOPADDING` | `RC6/KCCM/`, `RC6/KCCM` |  | `AeadParamsOwned` | `rc6` | 1..255 | ..16 | 8, 16 |
-| `RC5-64/GCM/NOPADDING` | `RC5-64/GCM/`, `RC5-64/GCM` |  | `AeadParamsOwned`, [`ParamsWithAeadOwned<Rc5ParamsOwned>`](Rc5.md) | `rc5-64` | 1..255 | 1.. | 4..16 |
-| `RC5-64/CCM/NOPADDING` | `RC5-64/CCM/`, `RC5-64/CCM` |  | `AeadParamsOwned`, [`ParamsWithAeadOwned<Rc5ParamsOwned>`](Rc5.md) | `rc5-64` | 1..255 | 7..13 | 4, 6, 8, 10, 12, 14, 16 |
-| `RC5-64/EAX/NOPADDING` | `RC5-64/EAX/`, `RC5-64/EAX` |  | `AeadParamsOwned`, [`ParamsWithAeadOwned<Rc5ParamsOwned>`](Rc5.md) | `rc5-64` | 1..255 | .. | 4..16 |
-| `RC5-64/OCB/NOPADDING` | `RC5-64/OCB/`, `RC5-64/OCB` |  | `AeadParamsOwned`, [`ParamsWithAeadOwned<Rc5ParamsOwned>`](Rc5.md) | `rc5-64` | 1..255 | ..15 | 8..16 |
-| `RC5-64/GCM-SIV/NOPADDING` | `RC5-64/GCM-SIV/`, `RC5-64/GCM-SIV` |  | `AeadParamsOwned` | `rc5-64` | 1..255 | 12 | 16 |
-| `RC5-64/KCCM/NOPADDING` | `RC5-64/KCCM/`, `RC5-64/KCCM` |  | `AeadParamsOwned`, [`ParamsWithAeadOwned<Rc5ParamsOwned>`](Rc5.md) | `rc5-64` | 1..255 | ..16 | 8, 16 |
-| `DSTU7624-128/GCM/NOPADDING` | `DSTU7624-128/GCM/`, `DSTU7624-128/GCM` |  | `AeadParamsOwned` | `dstu7624-128` | 16, 32 | 1.. | 4..16 |
-| `DSTU7624-128/CCM/NOPADDING` | `DSTU7624-128/CCM/`, `DSTU7624-128/CCM` |  | `AeadParamsOwned` | `dstu7624-128` | 16, 32 | 7..13 | 4, 6, 8, 10, 12, 14, 16 |
-| `DSTU7624-128/EAX/NOPADDING` | `DSTU7624-128/EAX/`, `DSTU7624-128/EAX` |  | `AeadParamsOwned` | `dstu7624-128` | 16, 32 | .. | 4..16 |
-| `DSTU7624-128/OCB/NOPADDING` | `DSTU7624-128/OCB/`, `DSTU7624-128/OCB` |  | `AeadParamsOwned` | `dstu7624-128` | 16, 32 | ..15 | 8..16 |
-| `DSTU7624-128/GCM-SIV/NOPADDING` | `DSTU7624-128/GCM-SIV/`, `DSTU7624-128/GCM-SIV` |  | `AeadParamsOwned` | `dstu7624-128` | 16, 32 | 12 | 16 |
-| `DSTU7624-128/KCCM/NOPADDING` | `DSTU7624-128/KCCM/`, `DSTU7624-128/KCCM` |  | `AeadParamsOwned` | `dstu7624-128` | 16, 32 | ..16 | 8, 16 |
+| `TNEPRES/GCM/NOPADDING` | `TNEPRES/GCM/`, `TNEPRES/GCM` |  | `AeadParamsOwned` | `serpent` | 4..32, by 4 | 1.. | 4..16 |
+| `TNEPRES/CCM/NOPADDING` | `TNEPRES/CCM/`, `TNEPRES/CCM` |  | `AeadParamsOwned` | `serpent` | 4..32, by 4 | 7..13 | 4, 6, 8, 10, 12, 14, 16 |
+| `TNEPRES/EAX/NOPADDING` | `TNEPRES/EAX/`, `TNEPRES/EAX` |  | `AeadParamsOwned` | `serpent` | 4..32, by 4 | .. | 4..16 |
+| `TNEPRES/OCB/NOPADDING` | `TNEPRES/OCB/`, `TNEPRES/OCB` |  | `AeadParamsOwned` | `serpent` | 4..32, by 4 | ..15 | 8..16 |
+| `TNEPRES/GCM-SIV/NOPADDING` | `TNEPRES/GCM-SIV/`, `TNEPRES/GCM-SIV` |  | `AeadParamsOwned` | `serpent` | 4..32, by 4 | 12 | 16 |
+| `TNEPRES/KCCM/NOPADDING` | `TNEPRES/KCCM/`, `TNEPRES/KCCM` |  | `AeadParamsOwned` | `serpent` | 4..32, by 4 | ..16 | 8, 16 |
+| `CAST6/GCM/NOPADDING` | `CAST6/GCM/`, `CAST6/GCM` |  | `AeadParamsOwned` | `cast` | 16, 20, 24, 28, 32 | 1.. | 4..16 |
+| `CAST6/CCM/NOPADDING` | `CAST6/CCM/`, `CAST6/CCM` |  | `AeadParamsOwned` | `cast` | 16, 20, 24, 28, 32 | 7..13 | 4, 6, 8, 10, 12, 14, 16 |
+| `CAST6/EAX/NOPADDING` | `CAST6/EAX/`, `CAST6/EAX` |  | `AeadParamsOwned` | `cast` | 16, 20, 24, 28, 32 | .. | 4..16 |
+| `CAST6/OCB/NOPADDING` | `CAST6/OCB/`, `CAST6/OCB` |  | `AeadParamsOwned` | `cast` | 16, 20, 24, 28, 32 | ..15 | 8..16 |
+| `CAST6/GCM-SIV/NOPADDING` | `CAST6/GCM-SIV/`, `CAST6/GCM-SIV` |  | `AeadParamsOwned` | `cast` | 16, 20, 24, 28, 32 | 12 | 16 |
+| `CAST6/KCCM/NOPADDING` | `CAST6/KCCM/`, `CAST6/KCCM` |  | `AeadParamsOwned` | `cast` | 16, 20, 24, 28, 32 | ..16 | 8, 16 |
+| `NOEKEON/GCM/NOPADDING` | `NOEKEON/GCM/`, `NOEKEON/GCM` |  | `AeadParamsOwned` | `misc-block-cipher` | 16 | 1.. | 4..16 |
+| `NOEKEON/CCM/NOPADDING` | `NOEKEON/CCM/`, `NOEKEON/CCM` |  | `AeadParamsOwned` | `misc-block-cipher` | 16 | 7..13 | 4, 6, 8, 10, 12, 14, 16 |
+| `NOEKEON/EAX/NOPADDING` | `NOEKEON/EAX/`, `NOEKEON/EAX` |  | `AeadParamsOwned` | `misc-block-cipher` | 16 | .. | 4..16 |
+| `NOEKEON/OCB/NOPADDING` | `NOEKEON/OCB/`, `NOEKEON/OCB` |  | `AeadParamsOwned` | `misc-block-cipher` | 16 | ..15 | 8..16 |
+| `NOEKEON/GCM-SIV/NOPADDING` | `NOEKEON/GCM-SIV/`, `NOEKEON/GCM-SIV` |  | `AeadParamsOwned` | `misc-block-cipher` | 16 | 12 | 16 |
+| `NOEKEON/KCCM/NOPADDING` | `NOEKEON/KCCM/`, `NOEKEON/KCCM` |  | `AeadParamsOwned` | `misc-block-cipher` | 16 | ..16 | 8, 16 |
+| `RIJNDAEL/GCM/NOPADDING` | `RIJNDAEL/GCM/`, `RIJNDAEL/GCM` |  | `AeadParamsOwned` | `misc-block-cipher` | 16, 20, 24, 28, 32 | 1.. | 4..16 |
+| `RIJNDAEL/CCM/NOPADDING` | `RIJNDAEL/CCM/`, `RIJNDAEL/CCM` |  | `AeadParamsOwned` | `misc-block-cipher` | 16, 20, 24, 28, 32 | 7..13 | 4, 6, 8, 10, 12, 14, 16 |
+| `RIJNDAEL/EAX/NOPADDING` | `RIJNDAEL/EAX/`, `RIJNDAEL/EAX` |  | `AeadParamsOwned` | `misc-block-cipher` | 16, 20, 24, 28, 32 | .. | 4..16 |
+| `RIJNDAEL/OCB/NOPADDING` | `RIJNDAEL/OCB/`, `RIJNDAEL/OCB` |  | `AeadParamsOwned` | `misc-block-cipher` | 16, 20, 24, 28, 32 | ..15 | 8..16 |
+| `RIJNDAEL/GCM-SIV/NOPADDING` | `RIJNDAEL/GCM-SIV/`, `RIJNDAEL/GCM-SIV` |  | `AeadParamsOwned` | `misc-block-cipher` | 16, 20, 24, 28, 32 | 12 | 16 |
+| `RIJNDAEL/KCCM/NOPADDING` | `RIJNDAEL/KCCM/`, `RIJNDAEL/KCCM` |  | `AeadParamsOwned` | `misc-block-cipher` | 16, 20, 24, 28, 32 | ..16 | 8, 16 |
+| `RC6/GCM/NOPADDING` | `RC6/GCM/`, `RC6/GCM` |  | `AeadParamsOwned` | `rc-cipher` | 1..255 | 1.. | 4..16 |
+| `RC6/CCM/NOPADDING` | `RC6/CCM/`, `RC6/CCM` |  | `AeadParamsOwned` | `rc-cipher` | 1..255 | 7..13 | 4, 6, 8, 10, 12, 14, 16 |
+| `RC6/EAX/NOPADDING` | `RC6/EAX/`, `RC6/EAX` |  | `AeadParamsOwned` | `rc-cipher` | 1..255 | .. | 4..16 |
+| `RC6/OCB/NOPADDING` | `RC6/OCB/`, `RC6/OCB` |  | `AeadParamsOwned` | `rc-cipher` | 1..255 | ..15 | 8..16 |
+| `RC6/GCM-SIV/NOPADDING` | `RC6/GCM-SIV/`, `RC6/GCM-SIV` |  | `AeadParamsOwned` | `rc-cipher` | 1..255 | 12 | 16 |
+| `RC6/KCCM/NOPADDING` | `RC6/KCCM/`, `RC6/KCCM` |  | `AeadParamsOwned` | `rc-cipher` | 1..255 | ..16 | 8, 16 |
+| `RC5-64/GCM/NOPADDING` | `RC5-64/GCM/`, `RC5-64/GCM` |  | `AeadParamsOwned`, [`ParamsWithAeadOwned<Rc5ParamsOwned>`](Rc5.md) | `rc-cipher` | 1..255 | 1.. | 4..16 |
+| `RC5-64/CCM/NOPADDING` | `RC5-64/CCM/`, `RC5-64/CCM` |  | `AeadParamsOwned`, [`ParamsWithAeadOwned<Rc5ParamsOwned>`](Rc5.md) | `rc-cipher` | 1..255 | 7..13 | 4, 6, 8, 10, 12, 14, 16 |
+| `RC5-64/EAX/NOPADDING` | `RC5-64/EAX/`, `RC5-64/EAX` |  | `AeadParamsOwned`, [`ParamsWithAeadOwned<Rc5ParamsOwned>`](Rc5.md) | `rc-cipher` | 1..255 | .. | 4..16 |
+| `RC5-64/OCB/NOPADDING` | `RC5-64/OCB/`, `RC5-64/OCB` |  | `AeadParamsOwned`, [`ParamsWithAeadOwned<Rc5ParamsOwned>`](Rc5.md) | `rc-cipher` | 1..255 | ..15 | 8..16 |
+| `RC5-64/GCM-SIV/NOPADDING` | `RC5-64/GCM-SIV/`, `RC5-64/GCM-SIV` |  | `AeadParamsOwned` | `rc-cipher` | 1..255 | 12 | 16 |
+| `RC5-64/KCCM/NOPADDING` | `RC5-64/KCCM/`, `RC5-64/KCCM` |  | `AeadParamsOwned`, [`ParamsWithAeadOwned<Rc5ParamsOwned>`](Rc5.md) | `rc-cipher` | 1..255 | ..16 | 8, 16 |
+| `DSTU7624-128/GCM/NOPADDING` | `DSTU7624-128/GCM/`, `DSTU7624-128/GCM` |  | `AeadParamsOwned` | `dstu7624` | 16, 32 | 1.. | 4..16 |
+| `DSTU7624-128/CCM/NOPADDING` | `DSTU7624-128/CCM/`, `DSTU7624-128/CCM` |  | `AeadParamsOwned` | `dstu7624` | 16, 32 | 7..13 | 4, 6, 8, 10, 12, 14, 16 |
+| `DSTU7624-128/EAX/NOPADDING` | `DSTU7624-128/EAX/`, `DSTU7624-128/EAX` |  | `AeadParamsOwned` | `dstu7624` | 16, 32 | .. | 4..16 |
+| `DSTU7624-128/OCB/NOPADDING` | `DSTU7624-128/OCB/`, `DSTU7624-128/OCB` |  | `AeadParamsOwned` | `dstu7624` | 16, 32 | ..15 | 8..16 |
+| `DSTU7624-128/GCM-SIV/NOPADDING` | `DSTU7624-128/GCM-SIV/`, `DSTU7624-128/GCM-SIV` |  | `AeadParamsOwned` | `dstu7624` | 16, 32 | 12 | 16 |
+| `DSTU7624-128/KCCM/NOPADDING` | `DSTU7624-128/KCCM/`, `DSTU7624-128/KCCM` |  | `AeadParamsOwned` | `dstu7624` | 16, 32 | ..16 | 8, 16 |
 | `DES/EAX/NOPADDING` | `DES/EAX/`, `DES/EAX` |  | `AeadParamsOwned` | `des` | 8 | .. | 4..8 |
-| `DESEDE/EAX/NOPADDING` | `TDEA/EAX/NOPADDING`, `DESEDE/EAX/`, `DESEDE/EAX`, `TDEA/EAX/`, `TDEA/EAX` |  | `AeadParamsOwned` | `desede` | 16, 24 | .. | 4..8 |
+| `DESEDE/EAX/NOPADDING` | `TDEA/EAX/NOPADDING`, `DESEDE/EAX/`, `DESEDE/EAX`, `TDEA/EAX/`, `TDEA/EAX` |  | `AeadParamsOwned` | `des` | 16, 24 | .. | 4..8 |
 | `BLOWFISH/EAX/NOPADDING` | `BLOWFISH/EAX/`, `BLOWFISH/EAX` |  | `AeadParamsOwned` | `blowfish` | 4..56 | .. | 4..8 |
-| `CAST5/EAX/NOPADDING` | `CAST5/EAX/`, `CAST5/EAX` |  | `AeadParamsOwned` | `cast5` | 5..16 | .. | 4..8 |
-| `IDEA/EAX/NOPADDING` | `IDEA/EAX/`, `IDEA/EAX` |  | `AeadParamsOwned` | `idea` | 16 | .. | 4..8 |
-| `SKIPJACK/EAX/NOPADDING` | `SKIPJACK/EAX/`, `SKIPJACK/EAX` |  | `AeadParamsOwned` | `skipjack` | 10 | .. | 4..8 |
-| `TEA/EAX/NOPADDING` | `TEA/EAX/`, `TEA/EAX` |  | `AeadParamsOwned` | `tea` | 16 | .. | 4..8 |
-| `XTEA/EAX/NOPADDING` | `XTEA/EAX/`, `XTEA/EAX` |  | `AeadParamsOwned` | `xtea` | 16 | .. | 4..8 |
-| `RC2/EAX/NOPADDING` | `RC2/EAX/`, `RC2/EAX` |  | `AeadParamsOwned`, [`ParamsWithAeadOwned<Rc2ParamsOwned>`](Rc2.md) | `rc2` | 1..128 | .. | 4..8 |
-| `RC5/EAX/NOPADDING` | `RC5-32/EAX/NOPADDING`, `RC5/EAX/`, `RC5/EAX`, `RC5-32/EAX/`, `RC5-32/EAX` |  | `AeadParamsOwned`, [`ParamsWithAeadOwned<Rc5ParamsOwned>`](Rc5.md) | `rc5` | 1..255 | .. | 4..8 |
+| `CAST5/EAX/NOPADDING` | `CAST5/EAX/`, `CAST5/EAX` |  | `AeadParamsOwned` | `cast` | 5..16 | .. | 4..8 |
+| `IDEA/EAX/NOPADDING` | `IDEA/EAX/`, `IDEA/EAX` |  | `AeadParamsOwned` | `misc-block-cipher` | 16 | .. | 4..8 |
+| `SKIPJACK/EAX/NOPADDING` | `SKIPJACK/EAX/`, `SKIPJACK/EAX` |  | `AeadParamsOwned` | `misc-block-cipher` | 10 | .. | 4..8 |
+| `TEA/EAX/NOPADDING` | `TEA/EAX/`, `TEA/EAX` |  | `AeadParamsOwned` | `misc-block-cipher` | 16 | .. | 4..8 |
+| `XTEA/EAX/NOPADDING` | `XTEA/EAX/`, `XTEA/EAX` |  | `AeadParamsOwned` | `misc-block-cipher` | 16 | .. | 4..8 |
+| `RC2/EAX/NOPADDING` | `RC2/EAX/`, `RC2/EAX` |  | `AeadParamsOwned`, [`ParamsWithAeadOwned<Rc2ParamsOwned>`](Rc2.md) | `rc-cipher` | 1..128 | .. | 4..8 |
+| `RC5/EAX/NOPADDING` | `RC5-32/EAX/NOPADDING`, `RC5/EAX/`, `RC5/EAX`, `RC5-32/EAX/`, `RC5-32/EAX` |  | `AeadParamsOwned`, [`ParamsWithAeadOwned<Rc5ParamsOwned>`](Rc5.md) | `rc-cipher` | 1..255 | .. | 4..8 |
 | `GOST28147/EAX/NOPADDING` | `GOST/EAX/NOPADDING`, `GOST-28147/EAX/NOPADDING`, `GOST28147/EAX/`, `GOST28147/EAX`, `GOST/EAX/`, `GOST/EAX`, `GOST-28147/EAX/`, `GOST-28147/EAX` |  | `AeadParamsOwned`, [`ParamsWithAeadOwned<Gost28147ParamsOwned>`](Gost28147.md) | `gost28147` | 32 | .. | 4..8 |
-| `THREEFISH-256/KCCM/NOPADDING` | `THREEFISH-256/KCCM/`, `THREEFISH-256/KCCM` |  | `AeadParamsOwned`, [`ParamsWithAeadOwned<ThreefishParamsOwned>`](Threefish.md) | `threefish-256` | 32 | ..32 | 8, 16, 32 |
-| `THREEFISH-512/KCCM/NOPADDING` | `THREEFISH-512/KCCM/`, `THREEFISH-512/KCCM` |  | `AeadParamsOwned`, [`ParamsWithAeadOwned<ThreefishParamsOwned>`](Threefish.md) | `threefish-512` | 64 | ..64 | 8, 16, 32, 48, 64 |
-| `DSTU7624-256/KCCM/NOPADDING` | `DSTU7624-256/KCCM/`, `DSTU7624-256/KCCM` |  | `AeadParamsOwned` | `dstu7624-256` | 32, 64 | ..32 | 8, 16, 32 |
-| `DSTU7624-512/KCCM/NOPADDING` | `DSTU7624-512/KCCM/`, `DSTU7624-512/KCCM` |  | `AeadParamsOwned` | `dstu7624-512` | 64 | ..64 | 8, 16, 32, 48, 64 |
-| `CHACHA20-POLY1305` |  | `1.2.840.113549.1.9.16.3.18` | `AeadParamsOwned` | `chacha20-poly1305` | 32 | 12 | 16 |
-| `XCHACHA20-POLY1305` |  |  | `AeadParamsOwned` | `xchacha20-poly1305` | 32 | 24 | 16 |
-| `ASCON-AEAD128` |  |  | `AeadParamsOwned` | `ascon-aead128` | 16 | 16 | 4..16 |
-| `ASCON-128` |  |  | `AeadParamsOwned` | `ascon128` | 16 | 16 | 16 |
-| `ASCON-128A` |  |  | `AeadParamsOwned` | `ascon128a` | 16 | 16 | 16 |
-| `ASCON-80PQ` |  |  | `AeadParamsOwned` | `ascon80pq` | 20 | 16 | 16 |
+| `THREEFISH-256/KCCM/NOPADDING` | `THREEFISH-256/KCCM/`, `THREEFISH-256/KCCM` |  | `AeadParamsOwned`, [`ParamsWithAeadOwned<ThreefishParamsOwned>`](Threefish.md) | `threefish` | 32 | ..32 | 8, 16, 32 |
+| `THREEFISH-512/KCCM/NOPADDING` | `THREEFISH-512/KCCM/`, `THREEFISH-512/KCCM` |  | `AeadParamsOwned`, [`ParamsWithAeadOwned<ThreefishParamsOwned>`](Threefish.md) | `threefish` | 64 | ..64 | 8, 16, 32, 48, 64 |
+| `DSTU7624-256/KCCM/NOPADDING` | `DSTU7624-256/KCCM/`, `DSTU7624-256/KCCM` |  | `AeadParamsOwned` | `dstu7624` | 32, 64 | ..32 | 8, 16, 32 |
+| `DSTU7624-512/KCCM/NOPADDING` | `DSTU7624-512/KCCM/`, `DSTU7624-512/KCCM` |  | `AeadParamsOwned` | `dstu7624` | 64 | ..64 | 8, 16, 32, 48, 64 |
+| `CHACHA20-POLY1305` |  | `1.2.840.113549.1.9.16.3.18` | `AeadParamsOwned` | `chacha-aead` | 32 | 12 | 16 |
+| `XCHACHA20-POLY1305` |  |  | `AeadParamsOwned` | `chacha-aead` | 32 | 24 | 16 |
+| `ASCON-AEAD128` |  |  | `AeadParamsOwned` | `ascon-aead` | 16 | 16 | 4..16 |
+| `ASCON-128` |  |  | `AeadParamsOwned` | `ascon-aead` | 16 | 16 | 16 |
+| `ASCON-128A` |  |  | `AeadParamsOwned` | `ascon-aead` | 16 | 16 | 16 |
+| `ASCON-80PQ` |  |  | `AeadParamsOwned` | `ascon-aead` | 20 | 16 | 16 |
 | `GRAIN-128AEAD` |  |  | `AeadParamsOwned` | `grain128-aead` | 16 | 12 | 8 |
-| `SCHWAEMM128-128` |  |  | `AeadParamsOwned` | `schwaemm128-128` | 16 | 16 | 16 |
-| `SCHWAEMM256-128` |  |  | `AeadParamsOwned` | `schwaemm256-128` | 16 | 32 | 16 |
-| `SCHWAEMM192-192` |  |  | `AeadParamsOwned` | `schwaemm192-192` | 24 | 24 | 24 |
-| `SCHWAEMM256-256` |  |  | `AeadParamsOwned` | `schwaemm256-256` | 32 | 32 | 32 |
+| `SCHWAEMM128-128` |  |  | `AeadParamsOwned` | `sparkle-aead` | 16 | 16 | 16 |
+| `SCHWAEMM256-128` |  |  | `AeadParamsOwned` | `sparkle-aead` | 16 | 32 | 16 |
+| `SCHWAEMM192-192` |  |  | `AeadParamsOwned` | `sparkle-aead` | 24 | 24 | 24 |
+| `SCHWAEMM256-256` |  |  | `AeadParamsOwned` | `sparkle-aead` | 32 | 32 | 32 |
 
 There is no `AES/GCM/PKCS7PADDING`. An AEAD mode needs no padding, and Bouncy Castle refuses any but
 `NOPADDING`, `RAW` among them; the names that leave the padding out or empty find the row.

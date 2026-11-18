@@ -2,8 +2,8 @@
 
 Threefish, the block cipher of Skein, takes a tweak besides its key: 16 bytes that change the
 cipher without a new key schedule, so a disk sector or a block number can select its own
-permutation. Its block and key are the same size, 32, 64 or 128 bytes. The `threefish-256`,
-`threefish-512` and `threefish-1024` features have the rows; see
+permutation. Its block and key are the same size, 32, 64 or 128 bytes. The `threefish` feature has
+the rows; see
 [Block ciphers](BlockCipher.md#threefish-256) for their names.
 
 ## A key alone

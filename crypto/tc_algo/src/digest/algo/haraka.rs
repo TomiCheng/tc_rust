@@ -9,7 +9,7 @@ use crate::{AlgoError, DefaultAlgoContext, EntryBase, ErrorKind};
 // Castle's DigestUtilities has neither, so they have no alias or OID. Each takes exactly 32 or
 // 64 bytes of input
 
-#[cfg(feature = "haraka-256")]
+#[cfg(feature = "misc-digest")]
 pub(super) fn haraka256(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>> {
     vec![Box::new(HarakaEntry {
         name: "HARAKA-256",
@@ -17,7 +17,7 @@ pub(super) fn haraka256(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntr
     })]
 }
 
-#[cfg(feature = "haraka-512")]
+#[cfg(feature = "misc-digest")]
 pub(super) fn haraka512(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>> {
     vec![Box::new(HarakaEntry {
         name: "HARAKA-512",
@@ -95,7 +95,7 @@ fn data_length(error: HarakaError) -> AlgoError {
 #[cfg(test)]
 mod tests {
     use crate::DefaultAlgoContext;
-    #[cfg(feature = "haraka-256")]
+    #[cfg(feature = "misc-digest")]
     use crate::{ErrorKind, digest::DigestEntry};
 
     fn direct(mut digest: impl tc_digest::TryDigest, input: &[u8]) -> Vec<u8> {
@@ -105,12 +105,12 @@ mod tests {
         output
     }
 
-    #[cfg(feature = "haraka-256")]
+    #[cfg(feature = "misc-digest")]
     fn row256() -> Box<dyn DigestEntry> {
         super::haraka256(&DefaultAlgoContext::for_tests()).remove(0)
     }
 
-    #[cfg(feature = "haraka-256")]
+    #[cfg(feature = "misc-digest")]
     #[test]
     fn the_haraka_256_row_gives_the_hash_of_32_bytes_in_parts() {
         let input: Vec<u8> = (0..32).collect();
@@ -124,7 +124,7 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "haraka-512")]
+    #[cfg(feature = "misc-digest")]
     #[test]
     fn the_haraka_512_row_gives_the_hash_of_64_bytes() {
         let input: Vec<u8> = (0..64).collect();
@@ -139,7 +139,7 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "haraka-256")]
+    #[cfg(feature = "misc-digest")]
     #[test]
     fn an_update_past_32_bytes_is_data_length_at_once_and_keeps_the_input() {
         let mut digest = row256().create();
@@ -154,7 +154,7 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "haraka-256")]
+    #[cfg(feature = "misc-digest")]
     #[test]
     fn an_input_short_of_32_bytes_or_a_short_output_is_data_length_and_keeps_the_input() {
         let mut digest = row256().create();
@@ -171,7 +171,7 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "haraka-256")]
+    #[cfg(feature = "misc-digest")]
     #[test]
     fn reset_discards_the_input() {
         let mut digest = row256().create();
@@ -184,7 +184,7 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "haraka-256")]
+    #[cfg(feature = "misc-digest")]
     #[test]
     fn the_haraka_rows_are_found_by_name() {
         use crate::AlgoBuilder as _;

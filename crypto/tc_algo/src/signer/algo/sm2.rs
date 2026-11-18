@@ -29,7 +29,7 @@ pub(super) fn sm2(context: &DefaultAlgoContext) -> Vec<Box<dyn SignerEntry>> {
             )
         }),
     ))];
-    #[cfg(feature = "sha256")]
+    #[cfg(feature = "sha")]
     rows.push(Box::new(Row::new(
         "SHA256withSM2".to_string(),
         Vec::new(),
@@ -77,7 +77,7 @@ impl Kind for Sm2Error {
     }
 }
 
-#[cfg(all(test, feature = "sha256"))]
+#[cfg(all(test, feature = "sha"))]
 mod tests {
     use crate::generate::KeyPair;
     use crate::{Algo, AlgoBuilder, DefaultAlgoBuilder};

@@ -5,7 +5,7 @@ name N and a customization string S. The same message under two customization st
 unrelated outputs, so one hash function serves several purposes without one standing in for
 another. With both strings empty it is SHAKE itself.
 
-`CSHAKE128` and `CSHAKE256` are behind the `cshake128` and `cshake256` features.
+`CSHAKE128` and `CSHAKE256` are behind the `keccak` feature.
 
 ## Hashing with a customization string
 

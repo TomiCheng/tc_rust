@@ -10,7 +10,7 @@ pub(super) fn agreement_keys(context: &DefaultAlgoContext) -> Vec<Box<dyn KeyPai
     let rand = context.rand();
     let mut rows: Vec<Box<dyn KeyPairGeneratorEntry>> = Vec::new();
 
-    #[cfg(feature = "x25519")]
+    #[cfg(feature = "cfrg-curves")]
     rows.push(Box::new(
         Row::<()>::new("X25519", &[], &["1.3.101.110"], rand, refuse, |rand, ()| {
             let mut generator = tc_cfrg_curves::X25519KeyPairGenerator::new(rand);
@@ -22,7 +22,7 @@ pub(super) fn agreement_keys(context: &DefaultAlgoContext) -> Vec<Box<dyn KeyPai
         })
         .with_default(|| ()),
     ));
-    #[cfg(feature = "x448")]
+    #[cfg(feature = "cfrg-curves")]
     rows.push(Box::new(
         Row::<()>::new("X448", &[], &["1.3.101.111"], rand, refuse, |rand, ()| {
             let mut generator = tc_cfrg_curves::X448KeyPairGenerator::new(rand);
@@ -59,13 +59,13 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "x25519")]
+    #[cfg(feature = "cfrg-curves")]
     #[test]
     fn generated_x25519_pairs_reach_one_secret() {
         agreed("X25519");
     }
 
-    #[cfg(feature = "x448")]
+    #[cfg(feature = "cfrg-curves")]
     #[test]
     fn generated_x448_pairs_reach_one_secret() {
         agreed("X448");

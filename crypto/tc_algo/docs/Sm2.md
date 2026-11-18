@@ -136,7 +136,7 @@ fn main() -> Result<(), AlgoError> {
 | Name | OID | Features |
 |---|---|---|
 | `SM3withSM2` | `1.2.156.10197.1.501` | `sm2` |
-| `SHA256withSM2` | `1.2.156.10197.1.503` | `sm2` and `sha256` |
+| `SHA256withSM2` | `1.2.156.10197.1.503` | `sm2` and `sha` |
 
 The names and OIDs are those of Bouncy Castle's `SignerUtilities`, and the case of a name does not
 matter. The signature is r and s in DER.

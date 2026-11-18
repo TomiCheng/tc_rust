@@ -1,8 +1,8 @@
-#[cfg(feature = "threefish-256")]
+#[cfg(feature = "threefish")]
 use tc_threefish::Threefish256Engine;
-#[cfg(feature = "threefish-512")]
+#[cfg(feature = "threefish")]
 use tc_threefish::Threefish512Engine;
-#[cfg(feature = "threefish-1024")]
+#[cfg(feature = "threefish")]
 use tc_threefish::Threefish1024Engine;
 use tc_threefish::{ThreefishParamsOwned, ThreefishParamsRef};
 
@@ -12,15 +12,15 @@ use super::keyed::{Keyed, keyed};
 use crate::DefaultAlgoContext;
 use crate::cipher::CipherEntry;
 
-#[cfg(feature = "threefish-256")]
+#[cfg(feature = "threefish")]
 keyed!(Threefish256Engine, ThreefishParamsOwned, |key| {
     ThreefishParamsRef::new(key)
 });
-#[cfg(feature = "threefish-512")]
+#[cfg(feature = "threefish")]
 keyed!(Threefish512Engine, ThreefishParamsOwned, |key| {
     ThreefishParamsRef::new(key)
 });
-#[cfg(feature = "threefish-1024")]
+#[cfg(feature = "threefish")]
 keyed!(Threefish1024Engine, ThreefishParamsOwned, |key| {
     ThreefishParamsRef::new(key)
 });
@@ -29,7 +29,7 @@ keyed!(Threefish1024Engine, ThreefishParamsOwned, |key| {
 // takes, for a block and key of 256, 512 or 1024 bits. A bare key gives a tweak of zeros, as Bouncy
 // Castle gives a KeyParameter; a ThreefishParamsOwned gives a tweak of its own, alone in ECB and in
 // a ParamsWithIvOwned in the other modes. They have no OIDs
-#[cfg(feature = "threefish-256")]
+#[cfg(feature = "threefish")]
 pub(super) fn threefish_256(context: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>> {
     let rand: Rand = context.rand();
     block_rows(
@@ -40,7 +40,7 @@ pub(super) fn threefish_256(context: &DefaultAlgoContext) -> Vec<Box<dyn CipherE
     )
 }
 
-#[cfg(feature = "threefish-512")]
+#[cfg(feature = "threefish")]
 pub(super) fn threefish_512(context: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>> {
     let rand: Rand = context.rand();
     block_rows(
@@ -51,7 +51,7 @@ pub(super) fn threefish_512(context: &DefaultAlgoContext) -> Vec<Box<dyn CipherE
     )
 }
 
-#[cfg(feature = "threefish-1024")]
+#[cfg(feature = "threefish")]
 pub(super) fn threefish_1024(context: &DefaultAlgoContext) -> Vec<Box<dyn CipherEntry>> {
     let rand: Rand = context.rand();
     block_rows(
@@ -84,7 +84,7 @@ mod tests {
 
     // The Threefish-256 vectors of the Skein reference, as tc_threefish tests them: a bare key with
     // a tweak of zeros, and own params with a tweak
-    #[cfg(feature = "threefish-256")]
+    #[cfg(feature = "threefish")]
     #[test]
     fn threefish_256_takes_a_tweak_of_zeros_or_its_own() {
         let algo = DefaultAlgoBuilder::default().build();
@@ -123,7 +123,7 @@ mod tests {
     }
 
     // KCCM takes a block of 32 or 64 bytes too, and so Threefish-256 and -512, but not -1024
-    #[cfg(all(feature = "threefish-256", feature = "threefish-1024"))]
+    #[cfg(feature = "threefish")]
     #[test]
     fn kccm_runs_over_threefish_256_and_not_over_threefish_1024() {
         use crate::params::AeadParamsOwned;
@@ -147,7 +147,7 @@ mod tests {
         assert_eq!(error.kind(), ErrorKind::UnknownCipher);
     }
 
-    #[cfg(feature = "threefish-256")]
+    #[cfg(feature = "threefish")]
     #[test]
     fn a_tweak_of_another_length_is_invalid_params() {
         let algo = DefaultAlgoBuilder::default().build();
@@ -160,7 +160,7 @@ mod tests {
     }
 
     // The wider blocks take their own params with an IV of one block and decrypt back
-    #[cfg(all(feature = "threefish-512", feature = "threefish-1024"))]
+    #[cfg(feature = "threefish")]
     #[test]
     fn threefish_512_and_1024_take_their_own_params_with_an_iv_and_decrypt_back() {
         let algo = DefaultAlgoBuilder::default().build();
@@ -183,7 +183,7 @@ mod tests {
     }
 
     // Threefish-256's own tweak reaches the engine under KCCM, the AEAD mode of its 32-byte block
-    #[cfg(feature = "threefish-256")]
+    #[cfg(feature = "threefish")]
     #[test]
     fn kccm_takes_the_tweak_of_its_own_params() {
         use crate::params::{AeadParamsOwned, ParamsWithAeadOwned};

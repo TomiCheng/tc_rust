@@ -1,33 +1,25 @@
 use tc_asn1::Asn1Oid;
 use tc_buffered_cipher::{BufferedCipher, BufferedCipherInit, BufferedError, BufferedStreamCipher};
-#[cfg(any(feature = "rc4", feature = "isaac"))]
+#[cfg(feature = "rc4-family")]
 use tc_stream_cipher::KeyRef;
 #[cfg(any(
     feature = "chacha",
-    feature = "xchacha20",
-    feature = "vmpc",
-    feature = "vmpc-ksa3",
+    feature = "rc4-family",
     feature = "salsa20",
-    feature = "xsalsa20",
-    feature = "hc128",
-    feature = "hc256",
+    feature = "hc"
 ))]
 use tc_stream_cipher::KeyWithIvRef;
 use tc_stream_cipher::StreamError;
 
 use crate::cipher::{Cipher, CipherDirection, CipherEntry};
-#[cfg(any(feature = "rc4", feature = "isaac"))]
+#[cfg(feature = "rc4-family")]
 use crate::params::KeyOwned;
 use crate::params::KeyParams;
 #[cfg(any(
     feature = "chacha",
-    feature = "xchacha20",
-    feature = "vmpc",
-    feature = "vmpc-ksa3",
+    feature = "rc4-family",
     feature = "salsa20",
-    feature = "xsalsa20",
-    feature = "hc128",
-    feature = "hc256",
+    feature = "hc"
 ))]
 use crate::params::{IvParams, KeyWithIvOwned};
 use crate::{AlgoError, EntryBase, ErrorKind, Params};
@@ -78,18 +70,14 @@ impl CipherEntry for Row {
 
 #[cfg(any(
     feature = "chacha",
-    feature = "xchacha20",
-    feature = "vmpc",
-    feature = "vmpc-ksa3",
+    feature = "rc4-family",
     feature = "salsa20",
-    feature = "xsalsa20",
-    feature = "hc128",
-    feature = "hc256",
+    feature = "hc"
 ))]
 // A stream cipher keyed by a KeyWithIvOwned: a key and a nonce, as the block modes with an IV
 pub(super) struct Nonced<E>(pub(super) BufferedStreamCipher<E>);
 
-#[cfg(any(feature = "rc4", feature = "isaac"))]
+#[cfg(feature = "rc4-family")]
 // A stream cipher keyed by a KeyOwned alone, as RC4 and ISAAC, which take no nonce
 pub(super) struct Keyed<E>(pub(super) BufferedStreamCipher<E>);
 
@@ -135,27 +123,19 @@ macro_rules! buffered {
 
 #[cfg(any(
     feature = "chacha",
-    feature = "xchacha20",
-    feature = "vmpc",
-    feature = "vmpc-ksa3",
+    feature = "rc4-family",
     feature = "salsa20",
-    feature = "xsalsa20",
-    feature = "hc128",
-    feature = "hc256",
+    feature = "hc"
 ))]
 buffered!(Nonced);
-#[cfg(any(feature = "rc4", feature = "isaac"))]
+#[cfg(feature = "rc4-family")]
 buffered!(Keyed);
 
 #[cfg(any(
     feature = "chacha",
-    feature = "xchacha20",
-    feature = "vmpc",
-    feature = "vmpc-ksa3",
+    feature = "rc4-family",
     feature = "salsa20",
-    feature = "xsalsa20",
-    feature = "hc128",
-    feature = "hc256",
+    feature = "hc"
 ))]
 impl<E, I> Cipher for Nonced<E>
 where
@@ -174,7 +154,7 @@ where
     }
 }
 
-#[cfg(any(feature = "rc4", feature = "isaac"))]
+#[cfg(feature = "rc4-family")]
 impl<E, I> Cipher for Keyed<E>
 where
     BufferedStreamCipher<E>: BufferedCipher<Error = BufferedError<StreamError>>

@@ -1,81 +1,102 @@
-#[cfg(feature = "ascon-cxof128")]
+#[cfg(feature = "ascon-hash")]
 mod ascon_cxof_params;
-#[cfg(feature = "blake2xs")]
+#[cfg(feature = "blake")]
 mod blake2xs_params;
-#[cfg(feature = "blake3")]
+#[cfg(feature = "blake")]
 mod blake3_params;
-#[cfg(any(feature = "cshake128", feature = "cshake256"))]
+#[cfg(feature = "keccak")]
 mod cshake_params;
-#[cfg(any(feature = "hmac-drbg", feature = "hash-drbg", feature = "ctr-drbg"))]
+#[cfg(feature = "drbg")]
 mod drbg_params;
 #[cfg(feature = "dsa")]
 mod dsa_key_gen_params;
-#[cfg(feature = "ec")]
+#[cfg(any(
+    feature = "fp-custom",
+    feature = "fp-curve",
+    feature = "f2m-custom",
+    feature = "f2m-curve"
+))]
 pub(crate) mod ec_curves;
-#[cfg(feature = "ec")]
+#[cfg(any(
+    feature = "fp-custom",
+    feature = "fp-curve",
+    feature = "f2m-custom",
+    feature = "f2m-curve"
+))]
 mod ec_key_gen_params;
 #[cfg(feature = "gost3410")]
 mod gost3410_key_gen_params;
 #[cfg(feature = "ies")]
 mod ies_dh_params;
-#[cfg(feature = "ecies")]
+#[cfg(all(
+    feature = "ies",
+    feature = "ecdh",
+    any(
+        feature = "fp-custom",
+        feature = "fp-curve",
+        feature = "f2m-custom",
+        feature = "f2m-curve"
+    )
+))]
 mod ies_ec_params;
 mod key_length;
-#[cfg(any(
-    feature = "rc2",
-    feature = "rc5",
-    feature = "rc5-64",
-    feature = "gost28147",
-    feature = "threefish-256",
-    feature = "threefish-512",
-    feature = "threefish-1024"
-))]
+#[cfg(any(feature = "rc-cipher", feature = "gost28147", feature = "threefish"))]
 mod own_key_gen_params;
-#[cfg(any(feature = "parallelhash128", feature = "parallelhash256"))]
+#[cfg(feature = "keccak")]
 mod parallel_hash_params;
 #[cfg(feature = "rsa")]
 mod rsa_key_gen_params;
-#[cfg(any(feature = "sm2", feature = "ec"))]
+#[cfg(feature = "fp-custom")]
 pub(crate) mod sm2_keys;
-#[cfg(any(feature = "tuplehash128", feature = "tuplehash256"))]
+#[cfg(feature = "keccak")]
 mod tuple_hash_params;
 
 use core::any::Any;
 
-#[cfg(feature = "ascon-cxof128")]
+#[cfg(feature = "ascon-hash")]
 pub use ascon_cxof_params::AsconCXofParams;
-#[cfg(feature = "blake2xs")]
+#[cfg(feature = "blake")]
 pub use blake2xs_params::Blake2xsParams;
-#[cfg(feature = "blake3")]
+#[cfg(feature = "blake")]
 pub use blake3_params::Blake3Params;
-#[cfg(any(feature = "cshake128", feature = "cshake256"))]
+#[cfg(feature = "keccak")]
 pub use cshake_params::CShakeParams;
-#[cfg(any(feature = "hmac-drbg", feature = "hash-drbg", feature = "ctr-drbg"))]
+#[cfg(feature = "drbg")]
 pub use drbg_params::DrbgParams;
 #[cfg(feature = "dsa")]
 pub use dsa_key_gen_params::DsaKeyGenParams;
-#[cfg(feature = "ec")]
+#[cfg(any(
+    feature = "fp-custom",
+    feature = "fp-curve",
+    feature = "f2m-custom",
+    feature = "f2m-curve"
+))]
 pub use ec_key_gen_params::EcKeyGenParams;
 #[cfg(feature = "gost3410")]
 pub use gost3410_key_gen_params::Gost3410KeyGenParams;
 #[cfg(feature = "ies")]
 pub use ies_dh_params::IesDhParams;
-#[cfg(feature = "ecies")]
+#[cfg(all(
+    feature = "ies",
+    feature = "ecdh",
+    any(
+        feature = "fp-custom",
+        feature = "fp-curve",
+        feature = "f2m-custom",
+        feature = "f2m-curve"
+    )
+))]
 pub use ies_ec_params::IesEcParams;
 pub use key_length::KeyLength;
 #[cfg(feature = "gost28147")]
 pub use own_key_gen_params::Gost28147KeyGenParams;
-#[cfg(feature = "rc2")]
+#[cfg(feature = "rc-cipher")]
 pub use own_key_gen_params::Rc2KeyGenParams;
-#[cfg(any(feature = "rc5", feature = "rc5-64"))]
+#[cfg(feature = "rc-cipher")]
 pub use own_key_gen_params::Rc5KeyGenParams;
-#[cfg(any(
-    feature = "threefish-256",
-    feature = "threefish-512",
-    feature = "threefish-1024"
-))]
+#[cfg(feature = "threefish")]
 pub use own_key_gen_params::ThreefishKeyGenParams;
-#[cfg(any(feature = "parallelhash128", feature = "parallelhash256"))]
+#[cfg(feature = "keccak")]
 pub use parallel_hash_params::ParallelHashParams;
 #[cfg(feature = "rsa")]
 pub use rsa_key_gen_params::RsaKeyGenParams;
@@ -84,133 +105,86 @@ pub use sm2_keys::{Sm2PrivateKey, Sm2PublicKey};
 #[cfg(any(
     feature = "aes",
     feature = "des",
-    feature = "desede",
     feature = "camellia",
     feature = "aria",
     feature = "sm4",
     feature = "seed",
-    feature = "dstu7624-128",
-    feature = "dstu7624-256",
-    feature = "dstu7624-512",
+    feature = "dstu7624",
     feature = "blowfish",
     feature = "twofish",
     feature = "serpent",
-    feature = "tnepres",
-    feature = "cast5",
-    feature = "cast6",
-    feature = "idea",
-    feature = "noekeon",
-    feature = "rijndael",
-    feature = "skipjack",
-    feature = "tea",
-    feature = "xtea",
-    feature = "rc2",
-    feature = "rc5",
-    feature = "rc5-64",
-    feature = "rc6",
+    feature = "cast",
+    feature = "misc-block-cipher",
+    feature = "rc-cipher",
     feature = "gost28147",
-    feature = "threefish-256",
-    feature = "threefish-512",
-    feature = "threefish-1024",
-    feature = "chacha20-poly1305",
-    feature = "xchacha20-poly1305",
-    feature = "ascon-aead128",
-    feature = "ascon128",
-    feature = "ascon128a",
-    feature = "ascon80pq",
+    feature = "threefish",
+    feature = "chacha-aead",
+    feature = "ascon-aead",
     feature = "grain128-aead",
-    feature = "schwaemm128-128",
-    feature = "schwaemm256-128",
-    feature = "schwaemm192-192",
-    feature = "schwaemm256-256",
+    feature = "sparkle-aead"
 ))]
 pub use tc_aead_cipher::AeadParamsOwned;
-#[cfg(any(
-    feature = "rc2",
-    feature = "rc5",
-    feature = "rc5-64",
-    feature = "gost28147",
-    feature = "threefish-256",
-    feature = "threefish-512",
-    feature = "threefish-1024"
-))]
+#[cfg(any(feature = "rc-cipher", feature = "gost28147", feature = "threefish"))]
 pub use tc_aead_cipher::ParamsWithAeadOwned;
-#[cfg(any(feature = "ecdh", feature = "ecdhc", feature = "ecmqv"))]
+#[cfg(any(
+    all(
+        feature = "ecdh",
+        any(
+            feature = "fp-custom",
+            feature = "fp-curve",
+            feature = "f2m-custom",
+            feature = "f2m-curve"
+        )
+    ),
+    all(
+        feature = "ecmqv",
+        any(
+            feature = "fp-custom",
+            feature = "fp-curve",
+            feature = "f2m-custom",
+            feature = "f2m-curve"
+        )
+    )
+))]
 pub use tc_agreement_kdf::UkmParams;
 pub use tc_block_cipher::{KeyOwned, KeyParams};
-#[cfg(any(
-    feature = "rc2",
-    feature = "rc5",
-    feature = "rc5-64",
-    feature = "gost28147",
-    feature = "threefish-256",
-    feature = "threefish-512",
-    feature = "threefish-1024"
-))]
+#[cfg(any(feature = "rc-cipher", feature = "gost28147", feature = "threefish"))]
 pub use tc_block_modes::ParamsWithIvOwned;
 #[cfg(any(
     feature = "aes",
     feature = "des",
-    feature = "desede",
     feature = "camellia",
     feature = "aria",
     feature = "sm4",
     feature = "seed",
-    feature = "dstu7624-128",
-    feature = "dstu7624-256",
-    feature = "dstu7624-512",
+    feature = "dstu7624",
     feature = "blowfish",
     feature = "twofish",
     feature = "serpent",
-    feature = "tnepres",
-    feature = "cast5",
-    feature = "cast6",
-    feature = "idea",
-    feature = "noekeon",
-    feature = "rijndael",
-    feature = "skipjack",
-    feature = "tea",
-    feature = "xtea",
-    feature = "rc2",
-    feature = "rc5",
-    feature = "rc5-64",
-    feature = "rc6",
+    feature = "cast",
+    feature = "misc-block-cipher",
+    feature = "rc-cipher",
     feature = "gost28147",
-    feature = "threefish-256",
-    feature = "threefish-512",
-    feature = "threefish-1024",
+    feature = "threefish",
     feature = "chacha",
-    feature = "xchacha20",
-    feature = "rc4",
-    feature = "vmpc",
-    feature = "vmpc-ksa3",
-    feature = "isaac",
+    feature = "rc4-family",
     feature = "salsa20",
-    feature = "xsalsa20",
-    feature = "hc128",
-    feature = "hc256",
-    feature = "chacha20-poly1305",
-    feature = "xchacha20-poly1305",
-    feature = "ascon-aead128",
-    feature = "ascon128",
-    feature = "ascon128a",
-    feature = "ascon80pq",
+    feature = "hc",
+    feature = "chacha-aead",
+    feature = "ascon-aead",
     feature = "grain128-aead",
-    feature = "schwaemm128-128",
-    feature = "schwaemm256-128",
-    feature = "schwaemm192-192",
-    feature = "schwaemm256-256",
-    feature = "vmpc-mac",
+    feature = "sparkle-aead",
+    feature = "macs",
     feature = "pbe"
 ))]
 pub use tc_block_modes::{IvParams, KeyWithIvOwned};
-#[cfg(feature = "ed448")]
+#[cfg(feature = "cfrg-curves")]
 pub use tc_cfrg_curves::{Ed448PrivateKey, Ed448PublicKey};
-#[cfg(feature = "ed25519")]
+#[cfg(feature = "cfrg-curves")]
 pub use tc_cfrg_curves::{Ed25519PrivateKey, Ed25519PublicKey};
-#[cfg(feature = "x448")]
+#[cfg(feature = "cfrg-curves")]
 pub use tc_cfrg_curves::{X448PrivateKey, X448PublicKey};
-#[cfg(feature = "x25519")]
+#[cfg(feature = "cfrg-curves")]
 pub use tc_cfrg_curves::{X25519PrivateKey, X25519PublicKey};
 #[cfg(any(feature = "dh", feature = "elgamal"))]
 pub use tc_dh_key::DhParameters;
@@ -220,11 +194,33 @@ pub use tc_dh_key::standard_groups as dh_groups;
 pub use tc_dh_key::{DhPrivateKey, DhPublicKey};
 #[cfg(feature = "dsa")]
 pub use tc_dsa_key::{DsaParameters, DsaPrivateKey, DsaPublicKey};
-#[cfg(any(feature = "ec", feature = "sm2"))]
+#[cfg(any(
+    feature = "fp-custom",
+    feature = "fp-curve",
+    feature = "f2m-custom",
+    feature = "f2m-curve",
+    feature = "sm2"
+))]
 pub use tc_ec_key::{EcPrivateKey, EcPublicKey};
-#[cfg(feature = "ecmqv")]
+#[cfg(all(
+    feature = "ecmqv",
+    any(
+        feature = "fp-custom",
+        feature = "fp-curve",
+        feature = "f2m-custom",
+        feature = "f2m-curve"
+    )
+))]
 pub use tc_ecmqv::{MqvPrivateParams, MqvPublicParams};
-#[cfg(feature = "ecgost3410")]
+#[cfg(all(
+    feature = "ecgost3410",
+    any(
+        feature = "fp-custom",
+        feature = "fp-curve",
+        feature = "f2m-custom",
+        feature = "f2m-curve"
+    )
+))]
 pub use tc_ecvko::EcVkoParams;
 #[cfg(feature = "elgamal")]
 pub use tc_elgamal::{ElGamalParameters, ElGamalPrivateKey, ElGamalPublicKey};
@@ -232,11 +228,11 @@ pub use tc_elgamal::{ElGamalParameters, ElGamalPrivateKey, ElGamalPublicKey};
 pub use tc_gost3410_key::{Gost3410Parameters, Gost3410PrivateKey, Gost3410PublicKey};
 #[cfg(feature = "gost28147")]
 pub use tc_gost28147::{Gost28147Params, Gost28147ParamsOwned, s_box as gost28147_s_box};
-#[cfg(feature = "hkdf")]
+#[cfg(feature = "kdf")]
 pub use tc_kdf::hkdf::HkdfParamsOwned;
-#[cfg(any(feature = "kdf1", feature = "kdf2", feature = "concat-kdf"))]
+#[cfg(feature = "kdf")]
 pub use tc_kdf::kdf::KdfParamsOwned;
-#[cfg(feature = "sp800-108")]
+#[cfg(feature = "kdf")]
 pub use tc_kdf::sp800_108::{
     KdfCounterParamsOwned, KdfDoublePipelineParamsOwned, KdfFeedbackParamsOwned,
 };
@@ -248,23 +244,19 @@ pub use tc_ml_kem::{MlKemParameters, MlKemPrivateKey, MlKemPublicKey};
 pub use tc_naccache_stern::{
     NaccacheSternKeyGenerationParams, NaccacheSternPrivateKey, NaccacheSternPublicKey,
 };
-#[cfg(feature = "pbkdf2")]
+#[cfg(feature = "pbe")]
 pub use tc_pbe::PbeParamsOwned;
-#[cfg(feature = "rc2")]
+#[cfg(feature = "rc-cipher")]
 pub use tc_rc_cipher::{Rc2Params, Rc2ParamsOwned};
-#[cfg(any(feature = "rc5", feature = "rc5-64"))]
+#[cfg(feature = "rc-cipher")]
 pub use tc_rc_cipher::{Rc5Params, Rc5ParamsOwned};
 #[cfg(feature = "rsa")]
 pub use tc_rsa::{RsaKey, RsaKeyParams};
 #[cfg(feature = "slh-dsa")]
 pub use tc_slh_dsa::{SlhDsaParameters, SlhDsaPrivateKey, SlhDsaPublicKey};
-#[cfg(any(
-    feature = "threefish-256",
-    feature = "threefish-512",
-    feature = "threefish-1024"
-))]
+#[cfg(feature = "threefish")]
 pub use tc_threefish::{ThreefishParams, ThreefishParamsOwned};
-#[cfg(any(feature = "tuplehash128", feature = "tuplehash256"))]
+#[cfg(feature = "keccak")]
 pub use tuple_hash_params::TupleHashParams;
 
 use crate::Params;
@@ -278,55 +270,27 @@ impl Params for KeyOwned {
 #[cfg(any(
     feature = "aes",
     feature = "des",
-    feature = "desede",
     feature = "camellia",
     feature = "aria",
     feature = "sm4",
     feature = "seed",
-    feature = "dstu7624-128",
-    feature = "dstu7624-256",
-    feature = "dstu7624-512",
+    feature = "dstu7624",
     feature = "blowfish",
     feature = "twofish",
     feature = "serpent",
-    feature = "tnepres",
-    feature = "cast5",
-    feature = "cast6",
-    feature = "idea",
-    feature = "noekeon",
-    feature = "rijndael",
-    feature = "skipjack",
-    feature = "tea",
-    feature = "xtea",
-    feature = "rc2",
-    feature = "rc5",
-    feature = "rc5-64",
-    feature = "rc6",
+    feature = "cast",
+    feature = "misc-block-cipher",
+    feature = "rc-cipher",
     feature = "gost28147",
-    feature = "threefish-256",
-    feature = "threefish-512",
-    feature = "threefish-1024",
+    feature = "threefish",
     feature = "chacha",
-    feature = "xchacha20",
-    feature = "rc4",
-    feature = "vmpc",
-    feature = "vmpc-ksa3",
-    feature = "isaac",
+    feature = "rc4-family",
     feature = "salsa20",
-    feature = "xsalsa20",
-    feature = "hc128",
-    feature = "hc256",
-    feature = "chacha20-poly1305",
-    feature = "xchacha20-poly1305",
-    feature = "ascon-aead128",
-    feature = "ascon128",
-    feature = "ascon128a",
-    feature = "ascon80pq",
+    feature = "hc",
+    feature = "chacha-aead",
+    feature = "ascon-aead",
     feature = "grain128-aead",
-    feature = "schwaemm128-128",
-    feature = "schwaemm256-128",
-    feature = "schwaemm192-192",
-    feature = "schwaemm256-256",
+    feature = "sparkle-aead",
     feature = "pbe"
 ))]
 impl Params for KeyWithIvOwned {
@@ -337,15 +301,7 @@ impl Params for KeyWithIvOwned {
 
 // An engine's own params with an IV, as Bouncy Castle's ParametersWithIV. Each TParams is a type
 // of its own, which a row downcasts to
-#[cfg(any(
-    feature = "rc2",
-    feature = "rc5",
-    feature = "rc5-64",
-    feature = "gost28147",
-    feature = "threefish-256",
-    feature = "threefish-512",
-    feature = "threefish-1024"
-))]
+#[cfg(any(feature = "rc-cipher", feature = "gost28147", feature = "threefish"))]
 impl<TParams: Send + Sync + 'static> Params for ParamsWithIvOwned<TParams> {
     fn as_any(&self) -> &dyn Any {
         self
@@ -354,29 +310,21 @@ impl<TParams: Send + Sync + 'static> Params for ParamsWithIvOwned<TParams> {
 
 // An engine's own params with the nonce, tag size and initial AAD of an AEAD mode, which gives the
 // engine the own params alone
-#[cfg(any(
-    feature = "rc2",
-    feature = "rc5",
-    feature = "rc5-64",
-    feature = "gost28147",
-    feature = "threefish-256",
-    feature = "threefish-512",
-    feature = "threefish-1024"
-))]
+#[cfg(any(feature = "rc-cipher", feature = "gost28147", feature = "threefish"))]
 impl<TParams: Send + Sync + 'static> Params for ParamsWithAeadOwned<TParams> {
     fn as_any(&self) -> &dyn Any {
         self
     }
 }
 
-#[cfg(feature = "rc2")]
+#[cfg(feature = "rc-cipher")]
 impl Params for Rc2ParamsOwned {
     fn as_any(&self) -> &dyn Any {
         self
     }
 }
 
-#[cfg(any(feature = "rc5", feature = "rc5-64"))]
+#[cfg(feature = "rc-cipher")]
 impl Params for Rc5ParamsOwned {
     fn as_any(&self) -> &dyn Any {
         self
@@ -390,11 +338,7 @@ impl Params for Gost28147ParamsOwned {
     }
 }
 
-#[cfg(any(
-    feature = "threefish-256",
-    feature = "threefish-512",
-    feature = "threefish-1024"
-))]
+#[cfg(feature = "threefish")]
 impl Params for ThreefishParamsOwned {
     fn as_any(&self) -> &dyn Any {
         self
@@ -404,45 +348,23 @@ impl Params for ThreefishParamsOwned {
 #[cfg(any(
     feature = "aes",
     feature = "des",
-    feature = "desede",
     feature = "camellia",
     feature = "aria",
     feature = "sm4",
     feature = "seed",
-    feature = "dstu7624-128",
-    feature = "dstu7624-256",
-    feature = "dstu7624-512",
+    feature = "dstu7624",
     feature = "blowfish",
     feature = "twofish",
     feature = "serpent",
-    feature = "tnepres",
-    feature = "cast5",
-    feature = "cast6",
-    feature = "idea",
-    feature = "noekeon",
-    feature = "rijndael",
-    feature = "skipjack",
-    feature = "tea",
-    feature = "xtea",
-    feature = "rc2",
-    feature = "rc5",
-    feature = "rc5-64",
-    feature = "rc6",
+    feature = "cast",
+    feature = "misc-block-cipher",
+    feature = "rc-cipher",
     feature = "gost28147",
-    feature = "threefish-256",
-    feature = "threefish-512",
-    feature = "threefish-1024",
-    feature = "chacha20-poly1305",
-    feature = "xchacha20-poly1305",
-    feature = "ascon-aead128",
-    feature = "ascon128",
-    feature = "ascon128a",
-    feature = "ascon80pq",
+    feature = "threefish",
+    feature = "chacha-aead",
+    feature = "ascon-aead",
     feature = "grain128-aead",
-    feature = "schwaemm128-128",
-    feature = "schwaemm256-128",
-    feature = "schwaemm192-192",
-    feature = "schwaemm256-256",
+    feature = "sparkle-aead"
 ))]
 impl Params for AeadParamsOwned {
     fn as_any(&self) -> &dyn Any {
@@ -450,42 +372,42 @@ impl Params for AeadParamsOwned {
     }
 }
 
-#[cfg(feature = "hkdf")]
+#[cfg(feature = "kdf")]
 impl Params for HkdfParamsOwned {
     fn as_any(&self) -> &dyn Any {
         self
     }
 }
 
-#[cfg(feature = "pbkdf2")]
+#[cfg(feature = "pbe")]
 impl Params for PbeParamsOwned {
     fn as_any(&self) -> &dyn Any {
         self
     }
 }
 
-#[cfg(any(feature = "kdf1", feature = "kdf2", feature = "concat-kdf"))]
+#[cfg(feature = "kdf")]
 impl Params for KdfParamsOwned {
     fn as_any(&self) -> &dyn Any {
         self
     }
 }
 
-#[cfg(feature = "sp800-108")]
+#[cfg(feature = "kdf")]
 impl Params for KdfCounterParamsOwned {
     fn as_any(&self) -> &dyn Any {
         self
     }
 }
 
-#[cfg(feature = "sp800-108")]
+#[cfg(feature = "kdf")]
 impl Params for KdfFeedbackParamsOwned {
     fn as_any(&self) -> &dyn Any {
         self
     }
 }
 
-#[cfg(feature = "sp800-108")]
+#[cfg(feature = "kdf")]
 impl Params for KdfDoublePipelineParamsOwned {
     fn as_any(&self) -> &dyn Any {
         self
@@ -565,7 +487,13 @@ impl Params for tc_naccache_stern::NaccacheSternKeyGenerationParams {
 }
 
 // The EC keys of tc_ec_key on a 'static curve, as the EC and SM2 key pair generators give them
-#[cfg(any(feature = "sm2", feature = "ec"))]
+#[cfg(any(
+    feature = "sm2",
+    feature = "fp-custom",
+    feature = "fp-curve",
+    feature = "f2m-custom",
+    feature = "f2m-curve"
+))]
 impl<C> Params for tc_ec_key::EcPublicKey<C>
 where
     C: tc_ec_core::Curve + 'static,
@@ -576,7 +504,13 @@ where
     }
 }
 
-#[cfg(any(feature = "sm2", feature = "ec"))]
+#[cfg(any(
+    feature = "sm2",
+    feature = "fp-custom",
+    feature = "fp-curve",
+    feature = "f2m-custom",
+    feature = "f2m-curve"
+))]
 impl<C> Params for tc_ec_key::EcPrivateKey<C>
 where
     C: tc_ec_core::Curve<Scalar = tc_bigint::PaddedBigUint> + 'static,
@@ -650,56 +584,56 @@ impl Params for Gost3410PublicKey {
     }
 }
 
-#[cfg(feature = "ed25519")]
+#[cfg(feature = "cfrg-curves")]
 impl Params for Ed25519PrivateKey {
     fn as_any(&self) -> &dyn Any {
         self
     }
 }
 
-#[cfg(feature = "ed25519")]
+#[cfg(feature = "cfrg-curves")]
 impl Params for Ed25519PublicKey {
     fn as_any(&self) -> &dyn Any {
         self
     }
 }
 
-#[cfg(feature = "ed448")]
+#[cfg(feature = "cfrg-curves")]
 impl Params for Ed448PrivateKey {
     fn as_any(&self) -> &dyn Any {
         self
     }
 }
 
-#[cfg(feature = "ed448")]
+#[cfg(feature = "cfrg-curves")]
 impl Params for Ed448PublicKey {
     fn as_any(&self) -> &dyn Any {
         self
     }
 }
 
-#[cfg(feature = "x25519")]
+#[cfg(feature = "cfrg-curves")]
 impl Params for X25519PrivateKey {
     fn as_any(&self) -> &dyn Any {
         self
     }
 }
 
-#[cfg(feature = "x25519")]
+#[cfg(feature = "cfrg-curves")]
 impl Params for X25519PublicKey {
     fn as_any(&self) -> &dyn Any {
         self
     }
 }
 
-#[cfg(feature = "x448")]
+#[cfg(feature = "cfrg-curves")]
 impl Params for X448PrivateKey {
     fn as_any(&self) -> &dyn Any {
         self
     }
 }
 
-#[cfg(feature = "x448")]
+#[cfg(feature = "cfrg-curves")]
 impl Params for X448PublicKey {
     fn as_any(&self) -> &dyn Any {
         self
@@ -708,14 +642,41 @@ impl Params for X448PublicKey {
 
 // A private key of an agreement with a KDF, with the UKM the KDF takes, as Bouncy Castle's
 // ParametersWithUkm wraps it
-#[cfg(any(feature = "ecdh", feature = "ecdhc", feature = "ecmqv"))]
+#[cfg(any(
+    all(
+        feature = "ecdh",
+        any(
+            feature = "fp-custom",
+            feature = "fp-curve",
+            feature = "f2m-custom",
+            feature = "f2m-curve"
+        )
+    ),
+    all(
+        feature = "ecmqv",
+        any(
+            feature = "fp-custom",
+            feature = "fp-curve",
+            feature = "f2m-custom",
+            feature = "f2m-curve"
+        )
+    )
+))]
 impl<P: Send + Sync + 'static> Params for UkmParams<P> {
     fn as_any(&self) -> &dyn Any {
         self
     }
 }
 
-#[cfg(feature = "ecmqv")]
+#[cfg(all(
+    feature = "ecmqv",
+    any(
+        feature = "fp-custom",
+        feature = "fp-curve",
+        feature = "f2m-custom",
+        feature = "f2m-curve"
+    )
+))]
 impl<C> Params for MqvPrivateParams<C>
 where
     C: tc_ec_core::Curve<Scalar = tc_bigint::PaddedBigUint> + 'static,
@@ -726,7 +687,15 @@ where
     }
 }
 
-#[cfg(feature = "ecmqv")]
+#[cfg(all(
+    feature = "ecmqv",
+    any(
+        feature = "fp-custom",
+        feature = "fp-curve",
+        feature = "f2m-custom",
+        feature = "f2m-curve"
+    )
+))]
 impl<C> Params for MqvPublicParams<C>
 where
     C: tc_ec_core::Curve + 'static,
@@ -737,7 +706,15 @@ where
     }
 }
 
-#[cfg(feature = "ecgost3410")]
+#[cfg(all(
+    feature = "ecgost3410",
+    any(
+        feature = "fp-custom",
+        feature = "fp-curve",
+        feature = "f2m-custom",
+        feature = "f2m-curve"
+    )
+))]
 impl<C> Params for EcVkoParams<C>
 where
     C: tc_ec_core::Curve<Scalar = tc_bigint::PaddedBigUint> + 'static,

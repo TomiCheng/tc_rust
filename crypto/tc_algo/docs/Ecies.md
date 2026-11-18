@@ -4,7 +4,7 @@ ECIES is [IES](IES.md) with ECDH for the agreement: each side puts its own priva
 other's public key, both reach the same shared secret, and the KDF, the MAC and the XOR follow as in
 IES.
 
-From two key pairs to the decrypted message. The `ecies` feature of `tc_algo` has the row, and the
+From two key pairs to the decrypted message. The `ies` and `ecdh` feature of `tc_algo` has the row, and the
 derivation value here comes from `rand` and `rand_core`.
 
 ```rust
@@ -52,7 +52,7 @@ fn main() -> Result<(), AlgoError> {
 
 | Name | OID | Feature | Agreement | KDF | MAC | Encryption |
 |---|---|---|---|---|---|---|
-| `ECIES` | none | `ecies` | ECDH | KDF2 over SHA-1 | HMAC-SHA1 | XOR |
+| `ECIES` | none | `ies` and `ecdh` | ECDH | KDF2 over SHA-1 | HMAC-SHA1 | XOR |
 
 The name and parts are those of Bouncy Castle's `CipherUtilities`, and the row gives the vector of
 its ECIESTest on secp192r1. The case of the name does not matter. The output is the length of the

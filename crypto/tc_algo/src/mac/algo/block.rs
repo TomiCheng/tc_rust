@@ -34,20 +34,20 @@ pub(super) fn block(_context: &DefaultAlgoContext) -> Vec<Box<dyn MacEntry>> {
     #[cfg(feature = "des")]
     {
         use tc_des::DesEngine;
-        #[cfg(feature = "cbc-mac")]
+        #[cfg(feature = "macs")]
         {
             rows.push(cbc("DESMAC", &["DES"], &[], DesEngine::new, None));
             rows.push(cbc("DESMAC64", &["DES64"], &[], DesEngine::new, Some(8)));
         }
-        #[cfg(feature = "cfb-mac")]
+        #[cfg(feature = "macs")]
         rows.push(cfb("DESMAC/CFB8", &["DES/CFB8"], DesEngine::new));
-        #[cfg(feature = "cmac")]
+        #[cfg(feature = "macs")]
         rows.push(cmac("DES", DesEngine::new));
     }
-    #[cfg(feature = "desede")]
+    #[cfg(feature = "des")]
     {
         use tc_des::DesEdeEngine;
-        #[cfg(feature = "cbc-mac")]
+        #[cfg(feature = "macs")]
         {
             rows.push(cbc(
                 "DESEDEMAC",
@@ -83,15 +83,15 @@ pub(super) fn block(_context: &DefaultAlgoContext) -> Vec<Box<dyn MacEntry>> {
                 },
             ));
         }
-        #[cfg(feature = "cfb-mac")]
+        #[cfg(feature = "macs")]
         rows.push(cfb("DESEDEMAC/CFB8", &["DESEDE/CFB8"], DesEdeEngine::new));
-        #[cfg(feature = "cmac")]
+        #[cfg(feature = "macs")]
         rows.push(cmac("DESEDE", DesEdeEngine::new));
     }
-    #[cfg(feature = "skipjack")]
+    #[cfg(feature = "misc-block-cipher")]
     {
         use tc_misc_block_cipher::skipjack::SkipjackEngine;
-        #[cfg(feature = "cbc-mac")]
+        #[cfg(feature = "macs")]
         rows.push(cbc(
             "SKIPJACKMAC",
             &["SKIPJACK"],
@@ -99,56 +99,56 @@ pub(super) fn block(_context: &DefaultAlgoContext) -> Vec<Box<dyn MacEntry>> {
             SkipjackEngine::new,
             None,
         ));
-        #[cfg(feature = "cfb-mac")]
+        #[cfg(feature = "macs")]
         rows.push(cfb(
             "SKIPJACKMAC/CFB8",
             &["SKIPJACK/CFB8"],
             SkipjackEngine::new,
         ));
-        #[cfg(feature = "cmac")]
+        #[cfg(feature = "macs")]
         rows.push(cmac("SKIPJACK", SkipjackEngine::new));
     }
-    #[cfg(feature = "idea")]
+    #[cfg(feature = "misc-block-cipher")]
     {
         use tc_misc_block_cipher::idea::IdeaEngine;
-        #[cfg(feature = "cbc-mac")]
+        #[cfg(feature = "macs")]
         rows.push(cbc("IDEAMAC", &["IDEA"], &[], IdeaEngine::new, None));
-        #[cfg(feature = "cfb-mac")]
+        #[cfg(feature = "macs")]
         rows.push(cfb("IDEAMAC/CFB8", &["IDEA/CFB8"], IdeaEngine::new));
-        #[cfg(feature = "cmac")]
+        #[cfg(feature = "macs")]
         rows.push(cmac("IDEA", IdeaEngine::new));
     }
-    #[cfg(feature = "rc2")]
+    #[cfg(feature = "rc-cipher")]
     {
         use tc_rc_cipher::Rc2Engine;
-        #[cfg(feature = "cbc-mac")]
+        #[cfg(feature = "macs")]
         rows.push(cbc("RC2MAC", &["RC2"], &[], Rc2Engine::new, None));
-        #[cfg(feature = "cfb-mac")]
+        #[cfg(feature = "macs")]
         rows.push(cfb("RC2MAC/CFB8", &["RC2/CFB8"], Rc2Engine::new));
-        #[cfg(feature = "cmac")]
+        #[cfg(feature = "macs")]
         rows.push(cmac("RC2", Rc2Engine::new));
     }
-    #[cfg(feature = "rc5")]
+    #[cfg(feature = "rc-cipher")]
     {
         use tc_rc_cipher::Rc532Engine;
-        #[cfg(feature = "cbc-mac")]
+        #[cfg(feature = "macs")]
         rows.push(cbc("RC5MAC", &["RC5"], &[], Rc532Engine::new, None));
-        #[cfg(feature = "cfb-mac")]
+        #[cfg(feature = "macs")]
         rows.push(cfb("RC5MAC/CFB8", &["RC5/CFB8"], Rc532Engine::new));
-        #[cfg(feature = "cmac")]
+        #[cfg(feature = "macs")]
         rows.push(cmac("RC5", Rc532Engine::new));
     }
 
     // CMAC over the other ciphers of 8 bytes
-    #[cfg(feature = "cmac")]
+    #[cfg(feature = "macs")]
     {
         #[cfg(feature = "blowfish")]
         rows.push(cmac("BLOWFISH", tc_blowfish::BlowfishEngine::new));
-        #[cfg(feature = "cast5")]
+        #[cfg(feature = "cast")]
         rows.push(cmac("CAST5", tc_cast::Cast5Engine::new));
-        #[cfg(feature = "tea")]
+        #[cfg(feature = "misc-block-cipher")]
         rows.push(cmac("TEA", tc_misc_block_cipher::tea::TeaEngine::new));
-        #[cfg(feature = "xtea")]
+        #[cfg(feature = "misc-block-cipher")]
         rows.push(cmac("XTEA", tc_misc_block_cipher::tea::XteaEngine::new));
         #[cfg(feature = "gost28147")]
         rows.push(cmac("GOST28147", tc_gost28147::Gost28147Engine::new));
@@ -157,9 +157,9 @@ pub(super) fn block(_context: &DefaultAlgoContext) -> Vec<Box<dyn MacEntry>> {
     // CMAC and GMAC over the ciphers of 16 bytes
     macro_rules! wide {
         ($name:literal, $engine:path) => {{
-            #[cfg(feature = "cmac")]
+            #[cfg(feature = "macs")]
             rows.push(cmac($name, $engine));
-            #[cfg(feature = "gmac")]
+            #[cfg(feature = "macs")]
             rows.push(gmac($name, $engine));
         }};
     }
@@ -177,22 +177,22 @@ pub(super) fn block(_context: &DefaultAlgoContext) -> Vec<Box<dyn MacEntry>> {
     wide!("TWOFISH", tc_twofish::TwofishEngine::new);
     #[cfg(feature = "serpent")]
     wide!("SERPENT", tc_serpent::SerpentEngine::new);
-    #[cfg(feature = "tnepres")]
+    #[cfg(feature = "serpent")]
     wide!("TNEPRES", tc_serpent::TnepresEngine::new);
-    #[cfg(feature = "cast6")]
+    #[cfg(feature = "cast")]
     wide!("CAST6", tc_cast::Cast6Engine::new);
-    #[cfg(feature = "noekeon")]
+    #[cfg(feature = "misc-block-cipher")]
     wide!("NOEKEON", tc_misc_block_cipher::noekeon::NoekeonEngine::new);
-    #[cfg(feature = "rc6")]
+    #[cfg(feature = "rc-cipher")]
     wide!("RC6", tc_rc_cipher::Rc6Engine::new);
-    #[cfg(feature = "rc5-64")]
+    #[cfg(feature = "rc-cipher")]
     wide!("RC5-64", tc_rc_cipher::Rc564Engine::new);
 
     rows
 }
 
 // CBC-MAC, with a tag of half a block or of mac_size bytes; a zero IV unless the params have one
-#[cfg(feature = "cbc-mac")]
+#[cfg(feature = "macs")]
 fn cbc<E: Engine>(
     name: &str,
     aliases: &[&str],
@@ -217,7 +217,7 @@ fn cbc<E: Engine>(
 }
 
 // CFB-MAC of 8 bits, with a tag of half a block; a zero IV unless the params have one
-#[cfg(feature = "cfb-mac")]
+#[cfg(feature = "macs")]
 fn cfb<E: Engine>(name: &str, aliases: &[&str], engine: fn() -> E) -> Box<dyn MacEntry> {
     row(
         name.to_string(),
@@ -235,7 +235,7 @@ fn cfb<E: Engine>(name: &str, aliases: &[&str], engine: fn() -> E) -> Box<dyn Ma
 }
 
 // CMAC with a tag of a block, named AESCMAC as in Bouncy Castle, or AES-CMAC; a key alone
-#[cfg(feature = "cmac")]
+#[cfg(feature = "macs")]
 fn cmac<E: Engine>(cipher: &str, engine: fn() -> E) -> Box<dyn MacEntry> {
     row(
         format!("{cipher}CMAC"),
@@ -249,7 +249,7 @@ fn cmac<E: Engine>(cipher: &str, engine: fn() -> E) -> Box<dyn MacEntry> {
 
 // GMAC with a tag of 16 bytes, named AESGMAC as CMAC is, or AES-GMAC as in Bouncy Castle's
 // provider; a key and an IV
-#[cfg(feature = "gmac")]
+#[cfg(feature = "macs")]
 fn gmac<E: Engine>(cipher: &str, engine: fn() -> E) -> Box<dyn MacEntry> {
     row(
         format!("{cipher}GMAC"),
@@ -261,13 +261,7 @@ fn gmac<E: Engine>(cipher: &str, engine: fn() -> E) -> Box<dyn MacEntry> {
     )
 }
 
-#[cfg(all(
-    test,
-    feature = "cbc-mac",
-    feature = "cfb-mac",
-    feature = "des",
-    feature = "desede"
-))]
+#[cfg(all(test, feature = "macs", feature = "des"))]
 mod tests {
     use crate::params::{KeyOwned, KeyWithIvOwned};
     use crate::{AlgoBuilder, DefaultAlgoBuilder};
@@ -344,7 +338,7 @@ mod tests {
     }
 }
 
-#[cfg(all(test, feature = "cmac", feature = "gmac", feature = "aes"))]
+#[cfg(all(test, feature = "macs", feature = "aes"))]
 mod aes_tests {
     use crate::params::{KeyOwned, KeyWithIvOwned};
     use crate::{AlgoBuilder, DefaultAlgoBuilder, ErrorKind};

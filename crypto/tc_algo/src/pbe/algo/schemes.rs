@@ -28,7 +28,7 @@ pub(super) fn schemes(_context: &DefaultAlgoContext) -> Vec<Box<dyn PbeEntry>> {
     let mut rows: Vec<Box<dyn PbeEntry>> = Vec::new();
 
     // PKCS#5 v1, of RFC 8018
-    #[cfg(all(feature = "md2", feature = "des"))]
+    #[cfg(all(feature = "md", feature = "des"))]
     rows.push(cipher(
         "PBEwithMD2andDES-CBC",
         &[],
@@ -38,7 +38,7 @@ pub(super) fn schemes(_context: &DefaultAlgoContext) -> Vec<Box<dyn PbeEntry>> {
         Target::Des,
         8,
     ));
-    #[cfg(all(feature = "md2", feature = "rc2"))]
+    #[cfg(all(feature = "md", feature = "rc-cipher"))]
     rows.push(cipher(
         "PBEwithMD2andRC2-CBC",
         &[],
@@ -48,7 +48,7 @@ pub(super) fn schemes(_context: &DefaultAlgoContext) -> Vec<Box<dyn PbeEntry>> {
         Target::Rc2,
         8,
     ));
-    #[cfg(all(feature = "md5", feature = "des"))]
+    #[cfg(all(feature = "md", feature = "des"))]
     rows.push(cipher(
         "PBEwithMD5andDES-CBC",
         &[],
@@ -58,7 +58,7 @@ pub(super) fn schemes(_context: &DefaultAlgoContext) -> Vec<Box<dyn PbeEntry>> {
         Target::Des,
         8,
     ));
-    #[cfg(all(feature = "md5", feature = "rc2"))]
+    #[cfg(all(feature = "md", feature = "rc-cipher"))]
     rows.push(cipher(
         "PBEwithMD5andRC2-CBC",
         &[],
@@ -68,7 +68,7 @@ pub(super) fn schemes(_context: &DefaultAlgoContext) -> Vec<Box<dyn PbeEntry>> {
         Target::Rc2,
         8,
     ));
-    #[cfg(all(feature = "sha1", feature = "des"))]
+    #[cfg(all(feature = "sha", feature = "des"))]
     rows.push(cipher(
         "PBEwithSHA-1andDES-CBC",
         &[
@@ -82,7 +82,7 @@ pub(super) fn schemes(_context: &DefaultAlgoContext) -> Vec<Box<dyn PbeEntry>> {
         Target::Des,
         8,
     ));
-    #[cfg(all(feature = "sha1", feature = "rc2"))]
+    #[cfg(all(feature = "sha", feature = "rc-cipher"))]
     rows.push(cipher(
         "PBEwithSHA-1andRC2-CBC",
         &[
@@ -98,7 +98,7 @@ pub(super) fn schemes(_context: &DefaultAlgoContext) -> Vec<Box<dyn PbeEntry>> {
     ));
 
     // PKCS#12, of RFC 7292, over SHA-1
-    #[cfg(all(feature = "sha1", feature = "rc4"))]
+    #[cfg(all(feature = "sha", feature = "rc4-family"))]
     rows.push(cipher(
         "PBEwithSHA-1and128bitRC4",
         &["PBEWITHSHAAND128BITRC4", "PBEWITHSHA1AND128BITRC4"],
@@ -108,7 +108,7 @@ pub(super) fn schemes(_context: &DefaultAlgoContext) -> Vec<Box<dyn PbeEntry>> {
         Target::Rc4,
         16,
     ));
-    #[cfg(all(feature = "sha1", feature = "rc4"))]
+    #[cfg(all(feature = "sha", feature = "rc4-family"))]
     rows.push(cipher(
         "PBEwithSHA-1and40bitRC4",
         &["PBEWITHSHAAND40BITRC4", "PBEWITHSHA1AND40BITRC4"],
@@ -118,7 +118,7 @@ pub(super) fn schemes(_context: &DefaultAlgoContext) -> Vec<Box<dyn PbeEntry>> {
         Target::Rc4,
         5,
     ));
-    #[cfg(all(feature = "sha1", feature = "desede"))]
+    #[cfg(all(feature = "sha", feature = "des"))]
     rows.push(cipher(
         "PBEwithSHA-1and3-keyDESEDE-CBC",
         &[
@@ -134,7 +134,7 @@ pub(super) fn schemes(_context: &DefaultAlgoContext) -> Vec<Box<dyn PbeEntry>> {
         Target::DesEde,
         24,
     ));
-    #[cfg(all(feature = "sha1", feature = "desede"))]
+    #[cfg(all(feature = "sha", feature = "des"))]
     rows.push(cipher(
         "PBEwithSHA-1and2-keyDESEDE-CBC",
         &[
@@ -150,7 +150,7 @@ pub(super) fn schemes(_context: &DefaultAlgoContext) -> Vec<Box<dyn PbeEntry>> {
         Target::DesEde,
         16,
     ));
-    #[cfg(all(feature = "sha1", feature = "rc2"))]
+    #[cfg(all(feature = "sha", feature = "rc-cipher"))]
     rows.push(cipher(
         "PBEwithSHA-1and128bitRC2-CBC",
         &["PBEWITHSHAAND128BITRC2-CBC", "PBEWITHSHA1AND128BITRC2-CBC"],
@@ -160,7 +160,7 @@ pub(super) fn schemes(_context: &DefaultAlgoContext) -> Vec<Box<dyn PbeEntry>> {
         Target::Rc2,
         16,
     ));
-    #[cfg(all(feature = "sha1", feature = "rc2"))]
+    #[cfg(all(feature = "sha", feature = "rc-cipher"))]
     rows.push(cipher(
         "PBEwithSHA-1and40bitRC2-CBC",
         &["PBEWITHSHAAND40BITRC2-CBC", "PBEWITHSHA1AND40BITRC2-CBC"],
@@ -170,7 +170,7 @@ pub(super) fn schemes(_context: &DefaultAlgoContext) -> Vec<Box<dyn PbeEntry>> {
         Target::Rc2,
         5,
     ));
-    #[cfg(all(feature = "sha1", feature = "aes"))]
+    #[cfg(all(feature = "sha", feature = "aes"))]
     rows.push(cipher(
         "PBEwithSHA-1and128bitAES-CBC-BC",
         &[
@@ -183,7 +183,7 @@ pub(super) fn schemes(_context: &DefaultAlgoContext) -> Vec<Box<dyn PbeEntry>> {
         Target::Aes,
         16,
     ));
-    #[cfg(all(feature = "sha1", feature = "aes"))]
+    #[cfg(all(feature = "sha", feature = "aes"))]
     rows.push(cipher(
         "PBEwithSHA-1and192bitAES-CBC-BC",
         &[
@@ -196,7 +196,7 @@ pub(super) fn schemes(_context: &DefaultAlgoContext) -> Vec<Box<dyn PbeEntry>> {
         Target::Aes,
         24,
     ));
-    #[cfg(all(feature = "sha1", feature = "aes"))]
+    #[cfg(all(feature = "sha", feature = "aes"))]
     rows.push(cipher(
         "PBEwithSHA-1and256bitAES-CBC-BC",
         &[
@@ -211,7 +211,7 @@ pub(super) fn schemes(_context: &DefaultAlgoContext) -> Vec<Box<dyn PbeEntry>> {
     ));
 
     // PKCS#12 over SHA-256
-    #[cfg(all(feature = "sha256", feature = "aes"))]
+    #[cfg(all(feature = "sha", feature = "aes"))]
     rows.push(cipher(
         "PBEwithSHA-256and128bitAES-CBC-BC",
         &["PBEWITHSHA256AND128BITAES-CBC-BC"],
@@ -221,7 +221,7 @@ pub(super) fn schemes(_context: &DefaultAlgoContext) -> Vec<Box<dyn PbeEntry>> {
         Target::Aes,
         16,
     ));
-    #[cfg(all(feature = "sha256", feature = "aes"))]
+    #[cfg(all(feature = "sha", feature = "aes"))]
     rows.push(cipher(
         "PBEwithSHA-256and192bitAES-CBC-BC",
         &["PBEWITHSHA256AND192BITAES-CBC-BC"],
@@ -231,7 +231,7 @@ pub(super) fn schemes(_context: &DefaultAlgoContext) -> Vec<Box<dyn PbeEntry>> {
         Target::Aes,
         24,
     ));
-    #[cfg(all(feature = "sha256", feature = "aes"))]
+    #[cfg(all(feature = "sha", feature = "aes"))]
     rows.push(cipher(
         "PBEwithSHA-256and256bitAES-CBC-BC",
         &["PBEWITHSHA256AND256BITAES-CBC-BC"],
@@ -243,7 +243,7 @@ pub(super) fn schemes(_context: &DefaultAlgoContext) -> Vec<Box<dyn PbeEntry>> {
     ));
 
     // OpenSSL's EVP_BytesToKey over MD5
-    #[cfg(all(feature = "md5", feature = "aes"))]
+    #[cfg(all(feature = "md", feature = "aes"))]
     rows.push(cipher(
         "PBEwithMD5and128bitAES-CBC-OpenSSL",
         &[],
@@ -253,7 +253,7 @@ pub(super) fn schemes(_context: &DefaultAlgoContext) -> Vec<Box<dyn PbeEntry>> {
         Target::Aes,
         16,
     ));
-    #[cfg(all(feature = "md5", feature = "aes"))]
+    #[cfg(all(feature = "md", feature = "aes"))]
     rows.push(cipher(
         "PBEwithMD5and192bitAES-CBC-OpenSSL",
         &[],
@@ -263,7 +263,7 @@ pub(super) fn schemes(_context: &DefaultAlgoContext) -> Vec<Box<dyn PbeEntry>> {
         Target::Aes,
         24,
     ));
-    #[cfg(all(feature = "md5", feature = "aes"))]
+    #[cfg(all(feature = "md", feature = "aes"))]
     rows.push(cipher(
         "PBEwithMD5and256bitAES-CBC-OpenSSL",
         &[],
@@ -275,7 +275,7 @@ pub(super) fn schemes(_context: &DefaultAlgoContext) -> Vec<Box<dyn PbeEntry>> {
     ));
 
     // PKCS#12 keys for HMAC, as long as the digest
-    #[cfg(all(feature = "hmac", feature = "sha1"))]
+    #[cfg(all(feature = "macs", feature = "sha"))]
     rows.push(mac(
         "PBEwithHmacSHA-1",
         &["PBEWITHHMACSHA1"],
@@ -284,7 +284,7 @@ pub(super) fn schemes(_context: &DefaultAlgoContext) -> Vec<Box<dyn PbeEntry>> {
         "HMAC-SHA1",
         20,
     ));
-    #[cfg(all(feature = "hmac", feature = "sha224"))]
+    #[cfg(all(feature = "macs", feature = "sha"))]
     rows.push(mac(
         "PBEwithHmacSHA-224",
         &["PBEWITHHMACSHA224"],
@@ -293,7 +293,7 @@ pub(super) fn schemes(_context: &DefaultAlgoContext) -> Vec<Box<dyn PbeEntry>> {
         "HMAC-SHA224",
         28,
     ));
-    #[cfg(all(feature = "hmac", feature = "sha256"))]
+    #[cfg(all(feature = "macs", feature = "sha"))]
     rows.push(mac(
         "PBEwithHmacSHA-256",
         &["PBEWITHHMACSHA256"],
@@ -302,7 +302,7 @@ pub(super) fn schemes(_context: &DefaultAlgoContext) -> Vec<Box<dyn PbeEntry>> {
         "HMAC-SHA256",
         32,
     ));
-    #[cfg(all(feature = "hmac", feature = "sha384"))]
+    #[cfg(all(feature = "macs", feature = "sha"))]
     rows.push(mac(
         "PBEwithHmacSHA-384",
         &["PBEWITHHMACSHA384"],
@@ -311,7 +311,7 @@ pub(super) fn schemes(_context: &DefaultAlgoContext) -> Vec<Box<dyn PbeEntry>> {
         "HMAC-SHA384",
         48,
     ));
-    #[cfg(all(feature = "hmac", feature = "sha512"))]
+    #[cfg(all(feature = "macs", feature = "sha"))]
     rows.push(mac(
         "PBEwithHmacSHA-512",
         &["PBEWITHHMACSHA512"],
@@ -320,7 +320,7 @@ pub(super) fn schemes(_context: &DefaultAlgoContext) -> Vec<Box<dyn PbeEntry>> {
         "HMAC-SHA512",
         64,
     ));
-    #[cfg(all(feature = "hmac", feature = "ripemd128"))]
+    #[cfg(all(feature = "macs", feature = "ripemd"))]
     rows.push(mac(
         "PBEwithHmacRipeMD128",
         &[],
@@ -329,7 +329,7 @@ pub(super) fn schemes(_context: &DefaultAlgoContext) -> Vec<Box<dyn PbeEntry>> {
         "HMAC-RIPEMD128",
         16,
     ));
-    #[cfg(all(feature = "hmac", feature = "ripemd160"))]
+    #[cfg(all(feature = "macs", feature = "ripemd"))]
     rows.push(mac(
         "PBEwithHmacRipeMD160",
         &[],
@@ -338,7 +338,7 @@ pub(super) fn schemes(_context: &DefaultAlgoContext) -> Vec<Box<dyn PbeEntry>> {
         "HMAC-RIPEMD160",
         20,
     ));
-    #[cfg(all(feature = "hmac", feature = "ripemd256"))]
+    #[cfg(all(feature = "macs", feature = "ripemd"))]
     rows.push(mac(
         "PBEwithHmacRipeMD256",
         &[],
@@ -347,7 +347,7 @@ pub(super) fn schemes(_context: &DefaultAlgoContext) -> Vec<Box<dyn PbeEntry>> {
         "HMAC-RIPEMD256",
         32,
     ));
-    #[cfg(all(feature = "hmac", feature = "tiger"))]
+    #[cfg(all(feature = "macs", feature = "misc-digest"))]
     rows.push(mac("PBEwithHmacTiger", &[], &[], tiger, "HMAC-TIGER", 24));
 
     rows
@@ -540,7 +540,7 @@ impl Pbe for Derivation {
                 generator
                     .derive_key_and_iv(&mut key, &mut iv)
                     .map_err(invalid)?;
-                #[cfg(any(feature = "des", feature = "desede"))]
+                #[cfg(feature = "des")]
                 if matches!(target, Target::Des | Target::DesEde) {
                     tc_des::set_odd_parity(&mut key);
                 }
@@ -585,67 +585,67 @@ where
     Ok(Box::new(generator))
 }
 
-#[cfg(feature = "md2")]
+#[cfg(feature = "md")]
 #[allow(dead_code, reason = "unused when no cipher of it is on")]
 fn md2(scheme: Scheme, params: &PbeParamsRef<'_>) -> Result<Generator, PbeError> {
     generator(scheme, tc_md::Md2Digest::new(), params)
 }
 
-#[cfg(feature = "md5")]
+#[cfg(feature = "md")]
 #[allow(dead_code, reason = "unused when no cipher of it is on")]
 fn md5(scheme: Scheme, params: &PbeParamsRef<'_>) -> Result<Generator, PbeError> {
     generator(scheme, tc_md::Md5Digest::new(), params)
 }
 
-#[cfg(feature = "sha1")]
+#[cfg(feature = "sha")]
 #[allow(dead_code, reason = "unused when no cipher of it is on")]
 fn sha1(scheme: Scheme, params: &PbeParamsRef<'_>) -> Result<Generator, PbeError> {
     generator(scheme, tc_sha::Sha1Digest::new(), params)
 }
 
-#[cfg(feature = "sha224")]
+#[cfg(feature = "sha")]
 #[allow(dead_code, reason = "unused when hmac is off")]
 fn sha224(scheme: Scheme, params: &PbeParamsRef<'_>) -> Result<Generator, PbeError> {
     generator(scheme, tc_sha::Sha224Digest::new(), params)
 }
 
-#[cfg(feature = "sha256")]
+#[cfg(feature = "sha")]
 #[allow(dead_code, reason = "unused when no cipher of it is on")]
 fn sha256(scheme: Scheme, params: &PbeParamsRef<'_>) -> Result<Generator, PbeError> {
     generator(scheme, tc_sha::Sha256Digest::new(), params)
 }
 
-#[cfg(feature = "sha384")]
+#[cfg(feature = "sha")]
 #[allow(dead_code, reason = "unused when hmac is off")]
 fn sha384(scheme: Scheme, params: &PbeParamsRef<'_>) -> Result<Generator, PbeError> {
     generator(scheme, tc_sha::Sha384Digest::new(), params)
 }
 
-#[cfg(feature = "sha512")]
+#[cfg(feature = "sha")]
 #[allow(dead_code, reason = "unused when hmac is off")]
 fn sha512(scheme: Scheme, params: &PbeParamsRef<'_>) -> Result<Generator, PbeError> {
     generator(scheme, tc_sha::Sha512Digest::new(), params)
 }
 
-#[cfg(feature = "ripemd128")]
+#[cfg(feature = "ripemd")]
 #[allow(dead_code, reason = "unused when hmac is off")]
 fn ripemd128(scheme: Scheme, params: &PbeParamsRef<'_>) -> Result<Generator, PbeError> {
     generator(scheme, tc_ripemd::RipeMd128Digest::default(), params)
 }
 
-#[cfg(feature = "ripemd160")]
+#[cfg(feature = "ripemd")]
 #[allow(dead_code, reason = "unused when hmac is off")]
 fn ripemd160(scheme: Scheme, params: &PbeParamsRef<'_>) -> Result<Generator, PbeError> {
     generator(scheme, tc_ripemd::RipeMd160Digest::default(), params)
 }
 
-#[cfg(feature = "ripemd256")]
+#[cfg(feature = "ripemd")]
 #[allow(dead_code, reason = "unused when hmac is off")]
 fn ripemd256(scheme: Scheme, params: &PbeParamsRef<'_>) -> Result<Generator, PbeError> {
     generator(scheme, tc_ripemd::RipeMd256Digest::default(), params)
 }
 
-#[cfg(feature = "tiger")]
+#[cfg(feature = "misc-digest")]
 #[allow(dead_code, reason = "unused when hmac is off")]
 fn tiger(scheme: Scheme, params: &PbeParamsRef<'_>) -> Result<Generator, PbeError> {
     generator(scheme, tc_misc_digest::TigerDigest::default(), params)
@@ -663,7 +663,7 @@ mod tests {
     #[allow(dead_code, reason = "unused when no row is on")]
     const ITERATIONS: usize = 2048;
 
-    #[cfg(all(feature = "sha256", feature = "aes"))]
+    #[cfg(all(feature = "sha", feature = "aes"))]
     fn hex(text: &str) -> Vec<u8> {
         (0..text.len())
             .step_by(2)
@@ -671,7 +671,7 @@ mod tests {
             .collect()
     }
 
-    #[cfg(all(feature = "sha256", feature = "aes"))]
+    #[cfg(all(feature = "sha", feature = "aes"))]
     #[test]
     fn the_sha_256_aes_rows_derive_the_expected_key_and_iv_by_name_and_oid() {
         // RFC 7292 has no vectors for SHA-256, so these come from its appendix B written out in
@@ -708,23 +708,15 @@ mod tests {
 
     // Every row Bouncy Castle can generate params for, with its OID if it has one, and an alias
     #[cfg(all(
-        feature = "md2",
-        feature = "md5",
-        feature = "sha1",
-        feature = "sha224",
-        feature = "sha256",
-        feature = "sha384",
-        feature = "sha512",
-        feature = "ripemd128",
-        feature = "ripemd160",
-        feature = "ripemd256",
-        feature = "tiger",
+        feature = "md",
+        feature = "sha",
+        feature = "ripemd",
+        feature = "misc-digest",
         feature = "des",
-        feature = "desede",
-        feature = "rc2",
-        feature = "rc4",
+        feature = "rc-cipher",
+        feature = "rc4-family",
         feature = "aes",
-        feature = "hmac"
+        feature = "macs"
     ))]
     #[test]
     fn every_row_finds_by_name_and_oid_and_its_params_work_on_its_target() {
@@ -821,7 +813,7 @@ mod tests {
         }
     }
 
-    #[cfg(all(feature = "md5", feature = "des", feature = "sha1", feature = "desede"))]
+    #[cfg(all(feature = "md", feature = "des", feature = "sha"))]
     #[test]
     fn des_and_desede_keys_get_odd_parity() {
         let algo = DefaultAlgoBuilder::default().build();
@@ -837,12 +829,7 @@ mod tests {
         }
     }
 
-    #[cfg(all(
-        feature = "sha1",
-        feature = "rc4",
-        feature = "hmac",
-        feature = "sha512"
-    ))]
+    #[cfg(all(feature = "sha", feature = "rc4-family", feature = "macs"))]
     #[test]
     fn rc4_takes_a_key_alone_and_hmac_a_key_as_long_as_the_digest() {
         let algo = DefaultAlgoBuilder::default().build();
@@ -854,7 +841,7 @@ mod tests {
         }
     }
 
-    #[cfg(all(feature = "sha256", feature = "aes"))]
+    #[cfg(all(feature = "sha", feature = "aes"))]
     #[test]
     fn another_password_or_salt_derives_another_key_and_a_count_of_0_is_refused() {
         let algo = DefaultAlgoBuilder::default().build();

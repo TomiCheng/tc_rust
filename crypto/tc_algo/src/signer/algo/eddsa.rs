@@ -14,7 +14,7 @@ use crate::{AlgoError, DefaultAlgoContext, ErrorKind, Params};
 pub(super) fn eddsa(_context: &DefaultAlgoContext) -> Vec<Box<dyn SignerEntry>> {
     #[allow(unused_mut, reason = "Ed448 alone or Ed25519 alone")]
     let mut rows: Vec<Box<dyn SignerEntry>> = Vec::new();
-    #[cfg(feature = "ed25519")]
+    #[cfg(feature = "cfrg-curves")]
     {
         use tc_cfrg_curves::{
             Ed25519CtxSigner, Ed25519PhSigner, Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signer,
@@ -36,7 +36,7 @@ pub(super) fn eddsa(_context: &DefaultAlgoContext) -> Vec<Box<dyn SignerEntry>> 
             Arc::new(|params| either::<Keys, _>(params, Ed25519PhSigner::new(&[]))),
         ));
     }
-    #[cfg(feature = "ed448")]
+    #[cfg(feature = "cfrg-curves")]
     {
         use tc_cfrg_curves::{Ed448PhSigner, Ed448PrivateKey, Ed448PublicKey, Ed448Signer};
         type Keys = (Ed448PrivateKey, Ed448PublicKey);
@@ -99,7 +99,7 @@ impl Kind for CfrgError {
     }
 }
 
-#[cfg(all(test, feature = "ed25519", feature = "ed448"))]
+#[cfg(all(test, feature = "cfrg-curves"))]
 mod tests {
     use crate::params::{Ed25519PrivateKey, Ed25519PublicKey};
     use crate::{Algo, AlgoBuilder, DefaultAlgoBuilder, ErrorKind, Params};

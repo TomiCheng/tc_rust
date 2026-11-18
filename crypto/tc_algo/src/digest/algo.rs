@@ -1,164 +1,29 @@
-#[cfg(any(
-    feature = "sha1",
-    feature = "sha224",
-    feature = "sha256",
-    feature = "sha384",
-    feature = "sha512",
-    feature = "sha512-224",
-    feature = "sha512-256",
-    feature = "md2",
-    feature = "md4",
-    feature = "md5",
-    feature = "blake2b-160",
-    feature = "blake2b-256",
-    feature = "blake2b-384",
-    feature = "blake2b-512",
-    feature = "blake2s-128",
-    feature = "blake2s-160",
-    feature = "blake2s-224",
-    feature = "blake2s-256",
-    feature = "blake3-256",
-    feature = "ripemd128",
-    feature = "ripemd160",
-    feature = "ripemd256",
-    feature = "ripemd320",
-    feature = "sm3",
-    feature = "gost3411",
-    feature = "gost3411-2012-256",
-    feature = "gost3411-2012-512",
-    feature = "dstu7564-256",
-    feature = "dstu7564-384",
-    feature = "dstu7564-512",
-    feature = "tiger",
-    feature = "whirlpool",
-    feature = "keccak-224",
-    feature = "keccak-256",
-    feature = "keccak-288",
-    feature = "keccak-384",
-    feature = "keccak-512",
-    feature = "sha3-224",
-    feature = "sha3-256",
-    feature = "sha3-384",
-    feature = "sha3-512",
-    feature = "shake128-256",
-    feature = "shake256-512",
-    feature = "ascon-hash256",
-    feature = "ascon-hash",
-    feature = "ascon-hasha",
-    feature = "isap",
-    feature = "skein-256-128",
-    feature = "skein-256-160",
-    feature = "skein-256-224",
-    feature = "skein-256-256",
-    feature = "skein-512-128",
-    feature = "skein-512-160",
-    feature = "skein-512-224",
-    feature = "skein-512-256",
-    feature = "skein-512-384",
-    feature = "skein-512-512",
-    feature = "skein-1024-384",
-    feature = "skein-1024-512",
-    feature = "skein-1024-1024",
-    feature = "photon-beetle",
-    feature = "esch-256",
-    feature = "esch-384",
-    feature = "xoodyak",
-    feature = "null-digest",
-))]
+#[cfg(all())]
 mod row;
 
-#[cfg(any(
-    feature = "ascon-hash256",
-    feature = "ascon-hash",
-    feature = "ascon-hasha",
-    feature = "isap",
-))]
+#[cfg(feature = "ascon-hash")]
 mod ascon;
-#[cfg(any(
-    feature = "blake2b-160",
-    feature = "blake2b-256",
-    feature = "blake2b-384",
-    feature = "blake2b-512",
-    feature = "blake2s-128",
-    feature = "blake2s-160",
-    feature = "blake2s-224",
-    feature = "blake2s-256",
-    feature = "blake3-256",
-))]
+#[cfg(feature = "blake")]
 mod blake;
-#[cfg(any(
-    feature = "dstu7564-256",
-    feature = "dstu7564-384",
-    feature = "dstu7564-512",
-))]
+#[cfg(feature = "dstu7564")]
 mod dstu7564;
-#[cfg(any(
-    feature = "gost3411",
-    feature = "gost3411-2012-256",
-    feature = "gost3411-2012-512",
-))]
+#[cfg(feature = "gost3411")]
 mod gost3411;
-#[cfg(any(feature = "haraka-256", feature = "haraka-512",))]
+#[cfg(feature = "misc-digest")]
 mod haraka;
-#[cfg(any(
-    feature = "keccak-224",
-    feature = "keccak-256",
-    feature = "keccak-288",
-    feature = "keccak-384",
-    feature = "keccak-512",
-    feature = "sha3-224",
-    feature = "sha3-256",
-    feature = "sha3-384",
-    feature = "sha3-512",
-    feature = "shake128-256",
-    feature = "shake256-512",
-))]
+#[cfg(feature = "keccak")]
 mod keccak;
-#[cfg(any(feature = "md2", feature = "md4", feature = "md5",))]
+#[cfg(feature = "md")]
 mod md;
-#[cfg(any(
-    feature = "tiger",
-    feature = "whirlpool",
-    feature = "photon-beetle",
-    feature = "esch-256",
-    feature = "esch-384",
-    feature = "xoodyak",
-))]
+#[cfg(feature = "misc-digest")]
 mod misc;
-#[cfg(feature = "null-digest")]
+#[cfg(all())]
 mod null;
-#[cfg(any(
-    feature = "ripemd128",
-    feature = "ripemd160",
-    feature = "ripemd256",
-    feature = "ripemd320",
-))]
+#[cfg(feature = "ripemd")]
 mod ripemd;
-#[cfg(any(
-    feature = "sha1",
-    feature = "sha224",
-    feature = "sha256",
-    feature = "sha384",
-    feature = "sha512",
-    feature = "sha512-224",
-    feature = "sha512-256",
-))]
+#[cfg(feature = "sha")]
 mod sha;
-#[cfg(any(
-    feature = "skein-256-128",
-    feature = "skein-256-160",
-    feature = "skein-256-224",
-    feature = "skein-256-256",
-    feature = "skein-512-128",
-    feature = "skein-512-160",
-    feature = "skein-512-224",
-    feature = "skein-512-256",
-    feature = "skein-512-384",
-    feature = "skein-512-512",
-    feature = "skein-1024-384",
-    feature = "skein-1024-512",
-    feature = "skein-1024-1024",
-))]
+#[cfg(feature = "skein")]
 mod skein;
 #[cfg(feature = "sm3")]
 mod sm3;
@@ -169,138 +34,138 @@ pub(crate) type CreateRows = fn(&crate::DefaultAlgoContext) -> Vec<Box<dyn Diges
 
 // What DefaultAlgoBuilder starts with: the rows of the digests whose features are on
 pub(crate) const BUILT_IN: &[CreateRows] = &[
-    #[cfg(feature = "sha1")]
+    #[cfg(feature = "sha")]
     sha::sha1,
-    #[cfg(feature = "sha224")]
+    #[cfg(feature = "sha")]
     sha::sha224,
-    #[cfg(feature = "sha256")]
+    #[cfg(feature = "sha")]
     sha::sha256,
-    #[cfg(feature = "sha384")]
+    #[cfg(feature = "sha")]
     sha::sha384,
-    #[cfg(feature = "sha512")]
+    #[cfg(feature = "sha")]
     sha::sha512,
-    #[cfg(feature = "sha512-224")]
+    #[cfg(feature = "sha")]
     sha::sha512_224,
-    #[cfg(feature = "sha512-256")]
+    #[cfg(feature = "sha")]
     sha::sha512_256,
-    #[cfg(feature = "md2")]
+    #[cfg(feature = "md")]
     md::md2,
-    #[cfg(feature = "md4")]
+    #[cfg(feature = "md")]
     md::md4,
-    #[cfg(feature = "md5")]
+    #[cfg(feature = "md")]
     md::md5,
-    #[cfg(feature = "blake2b-160")]
+    #[cfg(feature = "blake")]
     blake::blake2b_160,
-    #[cfg(feature = "blake2b-256")]
+    #[cfg(feature = "blake")]
     blake::blake2b_256,
-    #[cfg(feature = "blake2b-384")]
+    #[cfg(feature = "blake")]
     blake::blake2b_384,
-    #[cfg(feature = "blake2b-512")]
+    #[cfg(feature = "blake")]
     blake::blake2b_512,
-    #[cfg(feature = "blake2s-128")]
+    #[cfg(feature = "blake")]
     blake::blake2s_128,
-    #[cfg(feature = "blake2s-160")]
+    #[cfg(feature = "blake")]
     blake::blake2s_160,
-    #[cfg(feature = "blake2s-224")]
+    #[cfg(feature = "blake")]
     blake::blake2s_224,
-    #[cfg(feature = "blake2s-256")]
+    #[cfg(feature = "blake")]
     blake::blake2s_256,
-    #[cfg(feature = "blake3-256")]
+    #[cfg(feature = "blake")]
     blake::blake3_256,
-    #[cfg(feature = "ripemd128")]
+    #[cfg(feature = "ripemd")]
     ripemd::ripemd128,
-    #[cfg(feature = "ripemd160")]
+    #[cfg(feature = "ripemd")]
     ripemd::ripemd160,
-    #[cfg(feature = "ripemd256")]
+    #[cfg(feature = "ripemd")]
     ripemd::ripemd256,
-    #[cfg(feature = "ripemd320")]
+    #[cfg(feature = "ripemd")]
     ripemd::ripemd320,
     #[cfg(feature = "sm3")]
     sm3::sm3,
     #[cfg(feature = "gost3411")]
     gost3411::gost3411,
-    #[cfg(feature = "gost3411-2012-256")]
+    #[cfg(feature = "gost3411")]
     gost3411::gost3411_2012_256,
-    #[cfg(feature = "gost3411-2012-512")]
+    #[cfg(feature = "gost3411")]
     gost3411::gost3411_2012_512,
-    #[cfg(feature = "dstu7564-256")]
+    #[cfg(feature = "dstu7564")]
     dstu7564::dstu7564_256,
-    #[cfg(feature = "dstu7564-384")]
+    #[cfg(feature = "dstu7564")]
     dstu7564::dstu7564_384,
-    #[cfg(feature = "dstu7564-512")]
+    #[cfg(feature = "dstu7564")]
     dstu7564::dstu7564_512,
-    #[cfg(feature = "tiger")]
+    #[cfg(feature = "misc-digest")]
     misc::tiger,
-    #[cfg(feature = "whirlpool")]
+    #[cfg(feature = "misc-digest")]
     misc::whirlpool,
-    #[cfg(feature = "keccak-224")]
+    #[cfg(feature = "keccak")]
     keccak::keccak_224,
-    #[cfg(feature = "keccak-256")]
+    #[cfg(feature = "keccak")]
     keccak::keccak_256,
-    #[cfg(feature = "keccak-288")]
+    #[cfg(feature = "keccak")]
     keccak::keccak_288,
-    #[cfg(feature = "keccak-384")]
+    #[cfg(feature = "keccak")]
     keccak::keccak_384,
-    #[cfg(feature = "keccak-512")]
+    #[cfg(feature = "keccak")]
     keccak::keccak_512,
-    #[cfg(feature = "sha3-224")]
+    #[cfg(feature = "keccak")]
     keccak::sha3_224,
-    #[cfg(feature = "sha3-256")]
+    #[cfg(feature = "keccak")]
     keccak::sha3_256,
-    #[cfg(feature = "sha3-384")]
+    #[cfg(feature = "keccak")]
     keccak::sha3_384,
-    #[cfg(feature = "sha3-512")]
+    #[cfg(feature = "keccak")]
     keccak::sha3_512,
-    #[cfg(feature = "shake128-256")]
+    #[cfg(feature = "keccak")]
     keccak::shake128_256,
-    #[cfg(feature = "shake256-512")]
+    #[cfg(feature = "keccak")]
     keccak::shake256_512,
-    #[cfg(feature = "ascon-hash256")]
+    #[cfg(feature = "ascon-hash")]
     ascon::ascon_hash256,
     #[cfg(feature = "ascon-hash")]
     ascon::ascon_hash,
-    #[cfg(feature = "ascon-hasha")]
+    #[cfg(feature = "ascon-hash")]
     ascon::ascon_hasha,
-    #[cfg(feature = "isap")]
+    #[cfg(feature = "ascon-hash")]
     ascon::isap,
-    #[cfg(feature = "skein-256-128")]
+    #[cfg(feature = "skein")]
     skein::skein_256_128,
-    #[cfg(feature = "skein-256-160")]
+    #[cfg(feature = "skein")]
     skein::skein_256_160,
-    #[cfg(feature = "skein-256-224")]
+    #[cfg(feature = "skein")]
     skein::skein_256_224,
-    #[cfg(feature = "skein-256-256")]
+    #[cfg(feature = "skein")]
     skein::skein_256_256,
-    #[cfg(feature = "skein-512-128")]
+    #[cfg(feature = "skein")]
     skein::skein_512_128,
-    #[cfg(feature = "skein-512-160")]
+    #[cfg(feature = "skein")]
     skein::skein_512_160,
-    #[cfg(feature = "skein-512-224")]
+    #[cfg(feature = "skein")]
     skein::skein_512_224,
-    #[cfg(feature = "skein-512-256")]
+    #[cfg(feature = "skein")]
     skein::skein_512_256,
-    #[cfg(feature = "skein-512-384")]
+    #[cfg(feature = "skein")]
     skein::skein_512_384,
-    #[cfg(feature = "skein-512-512")]
+    #[cfg(feature = "skein")]
     skein::skein_512_512,
-    #[cfg(feature = "skein-1024-384")]
+    #[cfg(feature = "skein")]
     skein::skein_1024_384,
-    #[cfg(feature = "skein-1024-512")]
+    #[cfg(feature = "skein")]
     skein::skein_1024_512,
-    #[cfg(feature = "skein-1024-1024")]
+    #[cfg(feature = "skein")]
     skein::skein_1024_1024,
-    #[cfg(feature = "photon-beetle")]
+    #[cfg(feature = "misc-digest")]
     misc::photon_beetle,
-    #[cfg(feature = "esch-256")]
+    #[cfg(feature = "misc-digest")]
     misc::esch_256,
-    #[cfg(feature = "esch-384")]
+    #[cfg(feature = "misc-digest")]
     misc::esch_384,
-    #[cfg(feature = "xoodyak")]
+    #[cfg(feature = "misc-digest")]
     misc::xoodyak,
-    #[cfg(feature = "haraka-256")]
+    #[cfg(feature = "misc-digest")]
     haraka::haraka256,
-    #[cfg(feature = "haraka-512")]
+    #[cfg(feature = "misc-digest")]
     haraka::haraka512,
-    #[cfg(feature = "null-digest")]
+    #[cfg(all())]
     null::null_digest,
 ];

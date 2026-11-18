@@ -30,7 +30,7 @@ pub(super) fn digest(context: &DefaultAlgoContext) -> Vec<Box<dyn KdfEntry>> {
         let mut others = vec![digest.name()];
         others.extend(digest.aliases().iter().map(String::as_str));
 
-        #[cfg(feature = "hkdf")]
+        #[cfg(feature = "kdf")]
         if hmac_takes(digest.as_ref()) {
             use tc_kdf::hkdf::{Hkdf, HkdfParamsOwned};
             let oids = HKDF_OIDS
@@ -43,7 +43,7 @@ pub(super) fn digest(context: &DefaultAlgoContext) -> Vec<Box<dyn KdfEntry>> {
                 Typed::<_, HkdfParamsOwned>::boxed(Hkdf::new(RowDigest::new(entry.clone())))
             }));
         }
-        #[cfg(feature = "kdf1")]
+        #[cfg(feature = "kdf")]
         {
             use tc_kdf::kdf::{Kdf1, KdfParamsOwned};
             let entry = digest.clone();
@@ -51,7 +51,7 @@ pub(super) fn digest(context: &DefaultAlgoContext) -> Vec<Box<dyn KdfEntry>> {
                 Typed::<_, KdfParamsOwned>::boxed(Kdf1::new(RowDigest::new(entry.clone())))
             }));
         }
-        #[cfg(feature = "kdf2")]
+        #[cfg(feature = "kdf")]
         {
             use tc_kdf::kdf::{Kdf2, KdfParamsOwned};
             let entry = digest.clone();
@@ -59,7 +59,7 @@ pub(super) fn digest(context: &DefaultAlgoContext) -> Vec<Box<dyn KdfEntry>> {
                 Typed::<_, KdfParamsOwned>::boxed(Kdf2::new(RowDigest::new(entry.clone())))
             }));
         }
-        #[cfg(feature = "concat-kdf")]
+        #[cfg(feature = "kdf")]
         {
             use tc_kdf::kdf::{ConcatenationKdf, KdfParamsOwned};
             let entry = digest.clone();
@@ -69,7 +69,7 @@ pub(super) fn digest(context: &DefaultAlgoContext) -> Vec<Box<dyn KdfEntry>> {
                 )))
             }));
         }
-        #[cfg(feature = "pbkdf2")]
+        #[cfg(feature = "pbe")]
         if hmac_takes(digest.as_ref()) {
             let entry = digest.clone();
             rows.push(Row::boxed(
@@ -105,13 +105,7 @@ fn hmac_takes(digest: &dyn DigestEntry) -> bool {
     digest.byte_length() >= 16 && digest.digest_size() <= digest.byte_length()
 }
 
-#[cfg(all(
-    test,
-    feature = "hkdf",
-    feature = "sha256",
-    feature = "sha384",
-    feature = "sha512"
-))]
+#[cfg(all(test, feature = "kdf", feature = "sha"))]
 mod hkdf_tests {
     use crate::kdf::Kdf;
     use crate::params::{HkdfParamsOwned, KeyLength};
@@ -239,13 +233,7 @@ mod hkdf_tests {
     }
 }
 
-#[cfg(all(
-    test,
-    feature = "kdf1",
-    feature = "kdf2",
-    feature = "concat-kdf",
-    feature = "sha256"
-))]
+#[cfg(all(test, feature = "kdf", feature = "sha"))]
 mod digest_kdf_tests {
     use tc_kdf::kdf::{ConcatenationKdf, Kdf1, Kdf2, KdfParamsRef};
     use tc_kdf::{Kdf as _, KdfInit as _};

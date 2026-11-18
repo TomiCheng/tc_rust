@@ -5,28 +5,28 @@ use crate::digest::DigestEntry;
 // The rows of RIPEMD-128, RIPEMD-160, RIPEMD-256 and RIPEMD-320, to give to DefaultAlgoBuilder::reg_digest. Their names and OIDs
 // are those of Bouncy Castle's DigestUtilities
 
-#[cfg(feature = "ripemd128")]
+#[cfg(feature = "ripemd")]
 pub(super) fn ripemd128(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>> {
     row("RIPEMD128", &["RIPEMD-128"], &["1.3.36.3.2.2"], || {
         Box::new(TcDigest(tc_ripemd::RipeMd128Digest::default()))
     })
 }
 
-#[cfg(feature = "ripemd160")]
+#[cfg(feature = "ripemd")]
 pub(super) fn ripemd160(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>> {
     row("RIPEMD160", &["RIPEMD-160"], &["1.3.36.3.2.1"], || {
         Box::new(TcDigest(tc_ripemd::RipeMd160Digest::default()))
     })
 }
 
-#[cfg(feature = "ripemd256")]
+#[cfg(feature = "ripemd")]
 pub(super) fn ripemd256(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>> {
     row("RIPEMD256", &["RIPEMD-256"], &["1.3.36.3.2.3"], || {
         Box::new(TcDigest(tc_ripemd::RipeMd256Digest::default()))
     })
 }
 
-#[cfg(feature = "ripemd320")]
+#[cfg(feature = "ripemd")]
 pub(super) fn ripemd320(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>> {
     row("RIPEMD320", &["RIPEMD-320"], &[], || {
         Box::new(TcDigest(tc_ripemd::RipeMd320Digest::default()))
@@ -67,7 +67,7 @@ mod tests {
         }
     }
 
-    #[cfg(feature = "ripemd128")]
+    #[cfg(feature = "ripemd")]
     #[test]
     fn the_ripemd128_row_gives_the_hash_of_its_digest_and_is_found_by_its_names() {
         check(
@@ -78,7 +78,7 @@ mod tests {
         find("RIPEMD128", &["RIPEMD-128"], &["1.3.36.3.2.2"]);
     }
 
-    #[cfg(feature = "ripemd160")]
+    #[cfg(feature = "ripemd")]
     #[test]
     fn the_ripemd160_row_gives_the_hash_of_its_digest_and_is_found_by_its_names() {
         check(
@@ -89,7 +89,7 @@ mod tests {
         find("RIPEMD160", &["RIPEMD-160"], &["1.3.36.3.2.1"]);
     }
 
-    #[cfg(feature = "ripemd256")]
+    #[cfg(feature = "ripemd")]
     #[test]
     fn the_ripemd256_row_gives_the_hash_of_its_digest_and_is_found_by_its_names() {
         check(
@@ -100,7 +100,7 @@ mod tests {
         find("RIPEMD256", &["RIPEMD-256"], &["1.3.36.3.2.3"]);
     }
 
-    #[cfg(feature = "ripemd320")]
+    #[cfg(feature = "ripemd")]
     #[test]
     fn the_ripemd320_row_gives_the_hash_of_its_digest_and_is_found_by_its_names() {
         check(

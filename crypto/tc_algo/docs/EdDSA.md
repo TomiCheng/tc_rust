@@ -4,7 +4,7 @@ EdDSA, RFC 8032, signs over the twisted Edwards curves edwards25519 and edwards4
 is 32 or 57 random bytes, and a signature is 64 or 114 bytes. It draws no randomness when it signs:
 the same key and message give the same signature.
 
-The `ed25519` feature of `tc_algo` has the rows of Ed25519, and the `ed448` feature those of Ed448.
+The `cfrg-curves` feature of `tc_algo` has the rows of Ed25519 and Ed448.
 
 ## Key pairs
 
@@ -27,8 +27,8 @@ fn main() -> Result<(), AlgoError> {
 
 | Name | Aliases | OID | Feature | Params | Public key | Private key |
 |---|---|---|---|---|---|---|
-| `Ed25519` | `Ed25519ctx`, `Ed25519ph` | `1.3.101.112` | `ed25519` | none | `Ed25519PublicKey` | `Ed25519PrivateKey` |
-| `Ed448` | `Ed448ph` | `1.3.101.113` | `ed448` | none | `Ed448PublicKey` | `Ed448PrivateKey` |
+| `Ed25519` | `Ed25519ctx`, `Ed25519ph` | `1.3.101.112` | `cfrg-curves` | none | `Ed25519PublicKey` | `Ed25519PrivateKey` |
+| `Ed448` | `Ed448ph` | `1.3.101.113` | `cfrg-curves` | none | `Ed448PublicKey` | `Ed448PrivateKey` |
 
 The names, aliases and OIDs are those of Bouncy Castle's `GeneratorUtilities`, and the case of a
 name does not matter.
@@ -73,11 +73,11 @@ fn main() -> Result<(), AlgoError> {
 
 | Name | OID | Feature | Signature bytes |
 |---|---|---|---|
-| `Ed25519` | `1.3.101.112` | `ed25519` | 64 |
-| `Ed25519ctx` |  | `ed25519` | 64 |
-| `Ed25519ph` |  | `ed25519` | 64 |
-| `Ed448` | `1.3.101.113` | `ed448` | 114 |
-| `Ed448ph` |  | `ed448` | 114 |
+| `Ed25519` | `1.3.101.112` | `cfrg-curves` | 64 |
+| `Ed25519ctx` |  | `cfrg-curves` | 64 |
+| `Ed25519ph` |  | `cfrg-curves` | 64 |
+| `Ed448` | `1.3.101.113` | `cfrg-curves` | 114 |
+| `Ed448ph` |  | `cfrg-curves` | 114 |
 
 The names and OIDs are those of Bouncy Castle's `SignerUtilities`, and the case of a name does not
 matter. `ph` signs the SHA-512 or SHAKE256 hash of the message, and `ctx` and `ph` take a context,

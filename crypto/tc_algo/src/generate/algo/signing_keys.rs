@@ -90,7 +90,7 @@ pub(super) fn signing_keys(context: &DefaultAlgoContext) -> Vec<Box<dyn KeyPairG
     )));
 
     // No params: the curve is fixed
-    #[cfg(feature = "ed25519")]
+    #[cfg(feature = "cfrg-curves")]
     rows.push(Box::new(
         Row::<()>::new(
             "Ed25519",
@@ -109,7 +109,7 @@ pub(super) fn signing_keys(context: &DefaultAlgoContext) -> Vec<Box<dyn KeyPairG
         )
         .with_default(|| ()),
     ));
-    #[cfg(feature = "ed448")]
+    #[cfg(feature = "cfrg-curves")]
     rows.push(Box::new(
         Row::<()>::new(
             "Ed448",

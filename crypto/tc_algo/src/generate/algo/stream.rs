@@ -16,7 +16,7 @@ pub(super) fn stream(context: &DefaultAlgoContext) -> Vec<Box<dyn KeyGeneratorEn
     };
     #[cfg(feature = "chacha")]
     add("CHACHA", &[], &[], 16, Lengths::Of(&[16, 32]), Rule::Random);
-    #[cfg(any(feature = "chacha", feature = "chacha20-poly1305"))]
+    #[cfg(any(feature = "chacha", feature = "chacha-aead"))]
     add(
         "CHACHA7539",
         &["CHACHA20", "CHACHA20-POLY1305"],
@@ -25,7 +25,7 @@ pub(super) fn stream(context: &DefaultAlgoContext) -> Vec<Box<dyn KeyGeneratorEn
         Lengths::Of(&[32]),
         Rule::Random,
     );
-    #[cfg(any(feature = "xchacha20", feature = "xchacha20-poly1305"))]
+    #[cfg(any(feature = "chacha", feature = "chacha-aead"))]
     add(
         "XCHACHA20",
         &["XCHACHA20-POLY1305"],
@@ -34,11 +34,11 @@ pub(super) fn stream(context: &DefaultAlgoContext) -> Vec<Box<dyn KeyGeneratorEn
         Lengths::Of(&[32]),
         Rule::Random,
     );
-    #[cfg(feature = "hc128")]
+    #[cfg(feature = "hc")]
     add("HC128", &[], &[], 16, Lengths::Of(&[16]), Rule::Random);
-    #[cfg(feature = "hc256")]
+    #[cfg(feature = "hc")]
     add("HC256", &[], &[], 32, Lengths::Of(&[16, 32]), Rule::Random);
-    #[cfg(feature = "rc4")]
+    #[cfg(feature = "rc4-family")]
     add(
         "RC4",
         &["ARC4"],
@@ -56,11 +56,11 @@ pub(super) fn stream(context: &DefaultAlgoContext) -> Vec<Box<dyn KeyGeneratorEn
         Lengths::Of(&[16, 32]),
         Rule::Random,
     );
-    #[cfg(feature = "xsalsa20")]
+    #[cfg(feature = "salsa20")]
     add("XSALSA20", &[], &[], 32, Lengths::Of(&[32]), Rule::Random);
-    #[cfg(feature = "vmpc")]
+    #[cfg(feature = "rc4-family")]
     add("VMPC", &[], &[], 16, Lengths::range(16, 64), Rule::Random);
-    #[cfg(feature = "vmpc-ksa3")]
+    #[cfg(feature = "rc4-family")]
     add(
         "VMPC-KSA3",
         &[],

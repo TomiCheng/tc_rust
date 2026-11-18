@@ -3,7 +3,7 @@
 //! An [`Algo`](crate::Algo) finds them by name or OID:
 //!
 //! ```
-//! # #[cfg(feature = "sha256")] {
+//! # #[cfg(feature = "sha")] {
 //! use tc_algo::{AlgoBuilder, DefaultAlgoBuilder};
 //!
 //! let algo = DefaultAlgoBuilder::default().build();
@@ -22,18 +22,30 @@ mod digest_provider;
 mod digest_trait;
 mod empty_digest_provider;
 #[cfg(any(
-    feature = "hmac",
-    feature = "hmac-drbg",
-    feature = "hash-drbg",
+    feature = "macs",
+    feature = "drbg",
     feature = "rsa",
     feature = "dsa",
-    feature = "ecdsa",
-    feature = "ecnr",
-    feature = "hkdf",
-    feature = "kdf1",
-    feature = "kdf2",
-    feature = "concat-kdf",
-    feature = "pbkdf2"
+    all(
+        feature = "ecdsa",
+        any(
+            feature = "fp-custom",
+            feature = "fp-curve",
+            feature = "f2m-custom",
+            feature = "f2m-curve"
+        )
+    ),
+    all(
+        feature = "ecnr",
+        any(
+            feature = "fp-custom",
+            feature = "fp-curve",
+            feature = "f2m-custom",
+            feature = "f2m-curve"
+        )
+    ),
+    feature = "kdf",
+    feature = "pbe"
 ))]
 mod row_digest;
 
@@ -43,18 +55,30 @@ pub use digest_provider::DigestProvider;
 pub use digest_trait::Digest;
 pub(crate) use empty_digest_provider::EmptyDigestProvider;
 #[cfg(any(
-    feature = "hmac",
-    feature = "hmac-drbg",
-    feature = "hash-drbg",
+    feature = "macs",
+    feature = "drbg",
     feature = "rsa",
     feature = "dsa",
-    feature = "ecdsa",
-    feature = "ecnr",
-    feature = "hkdf",
-    feature = "kdf1",
-    feature = "kdf2",
-    feature = "concat-kdf",
-    feature = "pbkdf2"
+    all(
+        feature = "ecdsa",
+        any(
+            feature = "fp-custom",
+            feature = "fp-curve",
+            feature = "f2m-custom",
+            feature = "f2m-curve"
+        )
+    ),
+    all(
+        feature = "ecnr",
+        any(
+            feature = "fp-custom",
+            feature = "fp-curve",
+            feature = "f2m-custom",
+            feature = "f2m-curve"
+        )
+    ),
+    feature = "kdf",
+    feature = "pbe"
 ))]
 pub(crate) use row_digest::RowDigest;
 pub use tc_digest::TryDigest;

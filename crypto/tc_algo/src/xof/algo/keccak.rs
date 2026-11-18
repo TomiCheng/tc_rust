@@ -1,18 +1,11 @@
-#[cfg(any(feature = "shake128", feature = "shake256"))]
+#[cfg(feature = "keccak")]
 use tc_keccak::ShakeDigest;
 
-#[cfg(any(
-    feature = "cshake128",
-    feature = "cshake256",
-    feature = "tuplehash128",
-    feature = "tuplehash256",
-    feature = "parallelhash128",
-    feature = "parallelhash256",
-))]
+#[cfg(feature = "keccak")]
 use super::init_xof::InitXof;
-#[cfg(any(feature = "parallelhash128", feature = "parallelhash256"))]
+#[cfg(feature = "keccak")]
 use super::init_xof::invalid;
-#[cfg(any(feature = "shake128", feature = "shake256"))]
+#[cfg(feature = "keccak")]
 use super::row::TcXof;
 use super::row::row;
 use crate::DefaultAlgoContext;
@@ -21,7 +14,7 @@ use crate::xof::XofEntry;
 // The rows of SHAKE, cSHAKE, TupleHash and ParallelHash, to give to DefaultAlgoBuilder::reg_xof. SHAKE is named
 // as Bouncy Castle's DigestUtilities names it; the others after their XOFs, with no alias or OID
 
-#[cfg(feature = "shake128")]
+#[cfg(feature = "keccak")]
 pub(super) fn shake128(_context: &DefaultAlgoContext) -> Vec<Box<dyn XofEntry>> {
     row(
         "SHAKE128",
@@ -31,7 +24,7 @@ pub(super) fn shake128(_context: &DefaultAlgoContext) -> Vec<Box<dyn XofEntry>> 
     )
 }
 
-#[cfg(feature = "shake256")]
+#[cfg(feature = "keccak")]
 pub(super) fn shake256(_context: &DefaultAlgoContext) -> Vec<Box<dyn XofEntry>> {
     row(
         "SHAKE256",
@@ -41,7 +34,7 @@ pub(super) fn shake256(_context: &DefaultAlgoContext) -> Vec<Box<dyn XofEntry>> 
     )
 }
 
-#[cfg(feature = "cshake128")]
+#[cfg(feature = "keccak")]
 pub(super) fn cshake128(_context: &DefaultAlgoContext) -> Vec<Box<dyn XofEntry>> {
     row("CSHAKE128", &[], &[], || {
         Box::new(InitXof::new(
@@ -57,7 +50,7 @@ pub(super) fn cshake128(_context: &DefaultAlgoContext) -> Vec<Box<dyn XofEntry>>
     })
 }
 
-#[cfg(feature = "cshake256")]
+#[cfg(feature = "keccak")]
 pub(super) fn cshake256(_context: &DefaultAlgoContext) -> Vec<Box<dyn XofEntry>> {
     row("CSHAKE256", &[], &[], || {
         Box::new(InitXof::new(
@@ -76,7 +69,7 @@ pub(super) fn cshake256(_context: &DefaultAlgoContext) -> Vec<Box<dyn XofEntry>>
 // TupleHash with an empty customization until init sets one. Each update is one element of the
 // tuple, as in Bouncy Castle, so a message in two updates is another tuple than in one
 
-#[cfg(feature = "tuplehash128")]
+#[cfg(feature = "keccak")]
 pub(super) fn tuplehash128(_context: &DefaultAlgoContext) -> Vec<Box<dyn XofEntry>> {
     row("TUPLEHASH128", &[], &[], || {
         Box::new(InitXof::new(
@@ -88,7 +81,7 @@ pub(super) fn tuplehash128(_context: &DefaultAlgoContext) -> Vec<Box<dyn XofEntr
     })
 }
 
-#[cfg(feature = "tuplehash256")]
+#[cfg(feature = "keccak")]
 pub(super) fn tuplehash256(_context: &DefaultAlgoContext) -> Vec<Box<dyn XofEntry>> {
     row("TUPLEHASH256", &[], &[], || {
         Box::new(InitXof::new(
@@ -103,10 +96,10 @@ pub(super) fn tuplehash256(_context: &DefaultAlgoContext) -> Vec<Box<dyn XofEntr
 // ParallelHash with blocks of 8192 bytes and an empty customization until init sets them. SP 800-185
 // has no default block size: 8192 is this crate's, the chunk size of KangarooTwelve, and another
 // implementation agrees only when given the same block size
-#[cfg(any(feature = "parallelhash128", feature = "parallelhash256"))]
+#[cfg(feature = "keccak")]
 const DEFAULT_BLOCK_SIZE: usize = 8192;
 
-#[cfg(feature = "parallelhash128")]
+#[cfg(feature = "keccak")]
 pub(super) fn parallelhash128(_context: &DefaultAlgoContext) -> Vec<Box<dyn XofEntry>> {
     row("PARALLELHASH128", &[], &[], || {
         Box::new(InitXof::new(
@@ -126,7 +119,7 @@ pub(super) fn parallelhash128(_context: &DefaultAlgoContext) -> Vec<Box<dyn XofE
     })
 }
 
-#[cfg(feature = "parallelhash256")]
+#[cfg(feature = "keccak")]
 pub(super) fn parallelhash256(_context: &DefaultAlgoContext) -> Vec<Box<dyn XofEntry>> {
     row("PARALLELHASH256", &[], &[], || {
         Box::new(InitXof::new(
@@ -146,7 +139,7 @@ pub(super) fn parallelhash256(_context: &DefaultAlgoContext) -> Vec<Box<dyn XofE
     })
 }
 
-#[cfg(all(test, feature = "shake256"))]
+#[cfg(all(test, feature = "keccak"))]
 mod tests {
     use core::any::Any;
 
@@ -281,7 +274,7 @@ mod tests {
     }
 }
 
-#[cfg(all(test, feature = "shake128"))]
+#[cfg(all(test, feature = "keccak"))]
 mod shake128_tests {
     use crate::{AlgoBuilder, DefaultAlgoBuilder};
 
@@ -307,17 +300,7 @@ mod shake128_tests {
     }
 }
 
-#[cfg(all(
-    test,
-    any(
-        feature = "cshake128",
-        feature = "cshake256",
-        feature = "tuplehash128",
-        feature = "tuplehash256",
-        feature = "parallelhash128",
-        feature = "parallelhash256",
-    )
-))]
+#[cfg(all(test, feature = "keccak"))]
 mod init_tests {
     use crate::xof::Xof;
     use crate::{AlgoBuilder, DefaultAlgoBuilder};
@@ -343,7 +326,7 @@ mod init_tests {
         output
     }
 
-    #[cfg(feature = "cshake128")]
+    #[cfg(feature = "keccak")]
     #[test]
     fn cshake_is_shake_until_init_sets_its_strings_which_reset_keeps() {
         use crate::params::CShakeParams;
@@ -369,7 +352,7 @@ mod init_tests {
         assert_eq!(output(cshake.as_mut(), &[b"abc"]), expected);
     }
 
-    #[cfg(feature = "cshake128")]
+    #[cfg(feature = "keccak")]
     #[test]
     fn init_with_params_of_another_type_is_invalid_params() {
         use core::any::Any;
@@ -388,7 +371,7 @@ mod init_tests {
         assert_eq!(error.kind(), ErrorKind::InvalidParams);
     }
 
-    #[cfg(feature = "cshake256")]
+    #[cfg(feature = "keccak")]
     #[test]
     fn cshake256_takes_its_strings_from_init() {
         use crate::params::CShakeParams;
@@ -402,7 +385,7 @@ mod init_tests {
         );
     }
 
-    #[cfg(feature = "tuplehash128")]
+    #[cfg(feature = "keccak")]
     #[test]
     fn tuplehash128_takes_its_customization_from_init() {
         use crate::params::TupleHashParams;
@@ -416,7 +399,7 @@ mod init_tests {
         );
     }
 
-    #[cfg(feature = "tuplehash256")]
+    #[cfg(feature = "keccak")]
     #[test]
     fn each_update_of_tuplehash_is_one_element_of_the_tuple() {
         use crate::params::TupleHashParams;
@@ -435,7 +418,7 @@ mod init_tests {
         assert_ne!(two, output(tuple_hash.as_mut(), &[b"abc"]));
     }
 
-    #[cfg(feature = "parallelhash128")]
+    #[cfg(feature = "keccak")]
     #[test]
     fn parallelhash_runs_with_8192_byte_blocks_until_init_sets_them() {
         use crate::ErrorKind;
@@ -462,7 +445,7 @@ mod init_tests {
         assert_eq!(error.kind(), ErrorKind::InvalidParams);
     }
 
-    #[cfg(feature = "parallelhash256")]
+    #[cfg(feature = "keccak")]
     #[test]
     fn parallelhash256_takes_its_block_size_from_init() {
         use crate::params::ParallelHashParams;

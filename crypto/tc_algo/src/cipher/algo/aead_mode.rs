@@ -3,15 +3,7 @@ use core::marker::PhantomData;
 
 use tc_aead_cipher::{AeadBlockCipher, AeadCipherInit, AeadError, AeadParamsOwned};
 
-#[cfg(any(
-    feature = "rc2",
-    feature = "rc5",
-    feature = "rc5-64",
-    feature = "gost28147",
-    feature = "threefish-256",
-    feature = "threefish-512",
-    feature = "threefish-1024"
-))]
+#[cfg(any(feature = "rc-cipher", feature = "gost28147", feature = "threefish"))]
 use super::buffered::Own;
 use super::buffered::{NoOwn, downcast, invalid_params};
 use crate::cipher::{BufferedCipher, Cipher, CipherDirection};
@@ -40,15 +32,7 @@ impl<C> OwnAead<C> for NoOwn {
     }
 }
 
-#[cfg(any(
-    feature = "rc2",
-    feature = "rc5",
-    feature = "rc5-64",
-    feature = "gost28147",
-    feature = "threefish-256",
-    feature = "threefish-512",
-    feature = "threefish-1024"
-))]
+#[cfg(any(feature = "rc-cipher", feature = "gost28147", feature = "threefish"))]
 impl<C, O: 'static> OwnAead<C> for Own<O>
 where
     C: AeadCipherInit<crate::params::ParamsWithAeadOwned<O>>,

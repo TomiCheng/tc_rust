@@ -4,7 +4,7 @@ BLAKE3 is a fast hash with output of any length, and three modes: a plain hash, 
 key derivation. `init` picks the mode with `Blake3Params`, after Bouncy Castle's
 `Blake3Parameters`.
 
-`BLAKE3` is behind the `blake3` feature.
+`BLAKE3` is behind the `blake` feature.
 
 ## Keyed hash
 

@@ -26,16 +26,16 @@ pub(super) fn own(context: &DefaultAlgoContext) -> Vec<Box<dyn KeyGeneratorEntry
             rand,
         }));
     };
-    #[cfg(feature = "rc2")]
+    #[cfg(feature = "rc-cipher")]
     add(
         "RC2",
         &[],
         &["1.2.840.113549.3.2", "1.2.840.113549.1.9.16.3.7"],
         Kind::Rc2,
     );
-    #[cfg(feature = "rc5")]
+    #[cfg(feature = "rc-cipher")]
     add("RC5", &["RC5-32"], &[], Kind::Rc5 { key_bytes: 16 });
-    #[cfg(feature = "rc5-64")]
+    #[cfg(feature = "rc-cipher")]
     add("RC5-64", &[], &[], Kind::Rc5 { key_bytes: 32 });
     #[cfg(feature = "gost28147")]
     add(
@@ -44,11 +44,11 @@ pub(super) fn own(context: &DefaultAlgoContext) -> Vec<Box<dyn KeyGeneratorEntry
         &["1.2.643.2.2.21"],
         Kind::Gost28147,
     );
-    #[cfg(feature = "threefish-256")]
+    #[cfg(feature = "threefish")]
     add("THREEFISH-256", &[], &[], Kind::Threefish { key_bytes: 32 });
-    #[cfg(feature = "threefish-512")]
+    #[cfg(feature = "threefish")]
     add("THREEFISH-512", &[], &[], Kind::Threefish { key_bytes: 64 });
-    #[cfg(feature = "threefish-1024")]
+    #[cfg(feature = "threefish")]
     add(
         "THREEFISH-1024",
         &[],
@@ -60,17 +60,13 @@ pub(super) fn own(context: &DefaultAlgoContext) -> Vec<Box<dyn KeyGeneratorEntry
 
 #[derive(Clone, Copy)]
 enum Kind {
-    #[cfg(feature = "rc2")]
+    #[cfg(feature = "rc-cipher")]
     Rc2,
-    #[cfg(any(feature = "rc5", feature = "rc5-64"))]
+    #[cfg(feature = "rc-cipher")]
     Rc5 { key_bytes: usize },
     #[cfg(feature = "gost28147")]
     Gost28147,
-    #[cfg(any(
-        feature = "threefish-256",
-        feature = "threefish-512",
-        feature = "threefish-1024"
-    ))]
+    #[cfg(feature = "threefish")]
     Threefish { key_bytes: usize },
 }
 
@@ -100,12 +96,12 @@ impl KeyGeneratorEntry for Row {
     fn create(&self) -> Box<dyn KeyGenerator> {
         let rand = (self.rand)();
         match self.kind {
-            #[cfg(feature = "rc2")]
+            #[cfg(feature = "rc-cipher")]
             Kind::Rc2 => Box::new(Rc2 {
                 params: crate::params::Rc2KeyGenParams::new(16),
                 rand,
             }),
-            #[cfg(any(feature = "rc5", feature = "rc5-64"))]
+            #[cfg(feature = "rc-cipher")]
             Kind::Rc5 { key_bytes } => Box::new(Rc5 {
                 params: crate::params::Rc5KeyGenParams::new(key_bytes),
                 rand,
@@ -115,11 +111,7 @@ impl KeyGeneratorEntry for Row {
                 params: crate::params::Gost28147KeyGenParams::new(),
                 rand,
             }),
-            #[cfg(any(
-                feature = "threefish-256",
-                feature = "threefish-512",
-                feature = "threefish-1024"
-            ))]
+            #[cfg(feature = "threefish")]
             Kind::Threefish { key_bytes } => Box::new(Threefish {
                 key_bytes,
                 params: crate::params::ThreefishKeyGenParams::new(),
@@ -131,13 +123,13 @@ impl KeyGeneratorEntry for Row {
 
 // An Rc2ParamsOwned: the key, 16 bytes unless set, of 1 to 128 bytes, and an effective key size of
 // 1 to 1024 bits, that of the whole key unless set
-#[cfg(feature = "rc2")]
+#[cfg(feature = "rc-cipher")]
 struct Rc2 {
     params: crate::params::Rc2KeyGenParams,
     rand: Box<dyn CryptoRng>,
 }
 
-#[cfg(feature = "rc2")]
+#[cfg(feature = "rc-cipher")]
 impl KeyGenerator for Rc2 {
     fn init(&mut self, params: &dyn Params) -> Result<(), AlgoError> {
         let params = params
@@ -165,13 +157,13 @@ impl KeyGenerator for Rc2 {
 
 // An Rc5ParamsOwned: the key, of the row's length unless set, of 1 to 255 bytes, and 0 to 255
 // rounds, 12 unless set
-#[cfg(any(feature = "rc5", feature = "rc5-64"))]
+#[cfg(feature = "rc-cipher")]
 struct Rc5 {
     params: crate::params::Rc5KeyGenParams,
     rand: Box<dyn CryptoRng>,
 }
 
-#[cfg(any(feature = "rc5", feature = "rc5-64"))]
+#[cfg(feature = "rc-cipher")]
 impl KeyGenerator for Rc5 {
     fn init(&mut self, params: &dyn Params) -> Result<(), AlgoError> {
         let params = params
@@ -227,22 +219,14 @@ impl KeyGenerator for Gost28147 {
 }
 
 // A ThreefishParamsOwned: a key of one block, and a tweak of 16 bytes, zeros unless set
-#[cfg(any(
-    feature = "threefish-256",
-    feature = "threefish-512",
-    feature = "threefish-1024"
-))]
+#[cfg(feature = "threefish")]
 struct Threefish {
     key_bytes: usize,
     params: crate::params::ThreefishKeyGenParams,
     rand: Box<dyn CryptoRng>,
 }
 
-#[cfg(any(
-    feature = "threefish-256",
-    feature = "threefish-512",
-    feature = "threefish-1024"
-))]
+#[cfg(feature = "threefish")]
 impl KeyGenerator for Threefish {
     fn init(&mut self, params: &dyn Params) -> Result<(), AlgoError> {
         let params = params
@@ -271,9 +255,9 @@ impl KeyGenerator for Threefish {
 mod tests {
     #[cfg(feature = "gost28147")]
     use tc_gost28147::Gost28147Params;
-    #[cfg(feature = "rc2")]
+    #[cfg(feature = "rc-cipher")]
     use tc_rc_cipher::Rc2Params;
-    #[cfg(any(feature = "rc5", feature = "rc5-64"))]
+    #[cfg(feature = "rc-cipher")]
     use tc_rc_cipher::Rc5Params;
 
     use crate::params::KeyParams;
@@ -281,7 +265,7 @@ mod tests {
 
     // Without init, RC2 gives a 16-byte key of 128 effective bits; with init, the key and size set,
     // which encrypt as Rc2ParamsOwned of them does
-    #[cfg(feature = "rc2")]
+    #[cfg(feature = "rc-cipher")]
     #[test]
     fn rc2_gives_its_params_of_the_default_or_the_set_size() {
         use crate::params::{ParamsWithIvOwned, Rc2KeyGenParams, Rc2ParamsOwned};
@@ -331,7 +315,7 @@ mod tests {
     }
 
     // RC5 and RC5-64 give their params with 12 rounds unless set
-    #[cfg(all(feature = "rc5", feature = "rc5-64"))]
+    #[cfg(feature = "rc-cipher")]
     #[test]
     fn rc5_gives_its_params_of_the_default_or_the_set_rounds() {
         use crate::params::{Rc5KeyGenParams, Rc5ParamsOwned};
@@ -398,11 +382,7 @@ mod tests {
     }
 
     // Threefish gives a key of its block with a tweak of zeros unless set, which its rows take
-    #[cfg(all(
-        feature = "threefish-256",
-        feature = "threefish-512",
-        feature = "threefish-1024"
-    ))]
+    #[cfg(feature = "threefish")]
     #[test]
     fn threefish_gives_its_params_of_a_block_and_the_set_tweak() {
         use tc_threefish::ThreefishParams;

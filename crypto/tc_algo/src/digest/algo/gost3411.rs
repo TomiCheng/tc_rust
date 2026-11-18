@@ -12,14 +12,14 @@ pub(super) fn gost3411(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry
     })
 }
 
-#[cfg(feature = "gost3411-2012-256")]
+#[cfg(feature = "gost3411")]
 pub(super) fn gost3411_2012_256(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>> {
     row("GOST3411-2012-256", &[], &["1.2.643.7.1.1.2.2"], || {
         Box::new(TcDigest(tc_gost3411::Gost3411_2012_256Digest::default()))
     })
 }
 
-#[cfg(feature = "gost3411-2012-512")]
+#[cfg(feature = "gost3411")]
 pub(super) fn gost3411_2012_512(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>> {
     row("GOST3411-2012-512", &[], &["1.2.643.7.1.1.2.3"], || {
         Box::new(TcDigest(tc_gost3411::Gost3411_2012_512Digest::default()))
@@ -71,7 +71,7 @@ mod tests {
         find("GOST3411", &[], &["1.2.643.2.2.9"]);
     }
 
-    #[cfg(feature = "gost3411-2012-256")]
+    #[cfg(feature = "gost3411")]
     #[test]
     fn the_gost3411_2012_256_row_gives_the_hash_of_its_digest_and_is_found_by_its_names() {
         check(
@@ -82,7 +82,7 @@ mod tests {
         find("GOST3411-2012-256", &[], &["1.2.643.7.1.1.2.2"]);
     }
 
-    #[cfg(feature = "gost3411-2012-512")]
+    #[cfg(feature = "gost3411")]
     #[test]
     fn the_gost3411_2012_512_row_gives_the_hash_of_its_digest_and_is_found_by_its_names() {
         check(

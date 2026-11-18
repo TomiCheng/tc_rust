@@ -7,7 +7,7 @@ use crate::xof::XofEntry;
 // factory of XOFs, so they are named after their XOFs, with no alias or OID. Init gives BLAKE2xs a
 // key, salt or personalization, and BLAKE3 a key or a context for key derivation
 
-#[cfg(feature = "blake2xs")]
+#[cfg(feature = "blake")]
 pub(super) fn blake2xs(_context: &DefaultAlgoContext) -> Vec<Box<dyn XofEntry>> {
     row("BLAKE2XS", &[], &[], || {
         Box::new(InitXof::new(
@@ -33,7 +33,7 @@ pub(super) fn blake2xs(_context: &DefaultAlgoContext) -> Vec<Box<dyn XofEntry>> 
     })
 }
 
-#[cfg(feature = "blake3")]
+#[cfg(feature = "blake")]
 pub(super) fn blake3(_context: &DefaultAlgoContext) -> Vec<Box<dyn XofEntry>> {
     row("BLAKE3", &[], &[], || {
         Box::new(InitXof::new(
@@ -82,7 +82,7 @@ mod tests {
         }
     }
 
-    #[cfg(feature = "blake2xs")]
+    #[cfg(feature = "blake")]
     #[test]
     fn the_blake2xs_row_gives_the_output_of_its_xof_and_is_found_by_its_names() {
         check(
@@ -92,7 +92,7 @@ mod tests {
         find("BLAKE2XS", &[], &[]);
     }
 
-    #[cfg(feature = "blake3")]
+    #[cfg(feature = "blake")]
     #[test]
     fn the_blake3_row_gives_the_output_of_its_xof_and_is_found_by_its_names() {
         check(
@@ -102,7 +102,7 @@ mod tests {
         find("BLAKE3", &[], &[]);
     }
 
-    #[cfg(feature = "blake2xs")]
+    #[cfg(feature = "blake")]
     #[test]
     fn blake2xs_takes_a_key_salt_and_personalization_of_their_lengths_from_init() {
         use crate::params::Blake2xsParams;
@@ -137,7 +137,7 @@ mod tests {
         }
     }
 
-    #[cfg(feature = "blake3")]
+    #[cfg(feature = "blake")]
     #[test]
     fn blake3_takes_a_32_byte_key_or_a_context_from_init() {
         use crate::params::Blake3Params;

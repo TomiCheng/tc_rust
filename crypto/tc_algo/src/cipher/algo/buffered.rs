@@ -12,15 +12,7 @@ use crate::{AlgoError, ErrorKind, Params};
 // ParamsWithIvOwned<O> in the modes with an IV, and NoOwn takes none
 pub(super) struct NoOwn;
 
-#[cfg(any(
-    feature = "rc2",
-    feature = "rc5",
-    feature = "rc5-64",
-    feature = "gost28147",
-    feature = "threefish-256",
-    feature = "threefish-512",
-    feature = "threefish-1024"
-))]
+#[cfg(any(feature = "rc-cipher", feature = "gost28147", feature = "threefish"))]
 pub(super) struct Own<O>(PhantomData<fn() -> O>);
 
 // Which own params a CTS row in CBC takes: tc_cts_modes takes params with an IV through IvParams
@@ -33,44 +25,20 @@ impl CtsOwn for NoOwn {
     type Cts = NoOwn;
 }
 
-#[cfg(any(
-    feature = "rc2",
-    feature = "rc5",
-    feature = "rc5-64",
-    feature = "gost28147",
-    feature = "threefish-256",
-    feature = "threefish-512",
-    feature = "threefish-1024"
-))]
+#[cfg(any(feature = "rc-cipher", feature = "gost28147", feature = "threefish"))]
 impl<O> CtsOwn for Own<O> {
     type Cts = OwnViaIv<O>;
 }
 
 // The engine's own params and their IV, borrowed, as a type of this crate that implements
 // IvParams
-#[cfg(any(
-    feature = "rc2",
-    feature = "rc5",
-    feature = "rc5-64",
-    feature = "gost28147",
-    feature = "threefish-256",
-    feature = "threefish-512",
-    feature = "threefish-1024"
-))]
+#[cfg(any(feature = "rc-cipher", feature = "gost28147", feature = "threefish"))]
 pub(super) struct IvView<'a, O> {
     pub(super) params: &'a O,
     iv: &'a [u8],
 }
 
-#[cfg(any(
-    feature = "rc2",
-    feature = "rc5",
-    feature = "rc5-64",
-    feature = "gost28147",
-    feature = "threefish-256",
-    feature = "threefish-512",
-    feature = "threefish-1024"
-))]
+#[cfg(any(feature = "rc-cipher", feature = "gost28147", feature = "threefish"))]
 impl<O> IvParams for IvView<'_, O> {
     fn iv(&self) -> &[u8] {
         self.iv
@@ -78,26 +46,10 @@ impl<O> IvParams for IvView<'_, O> {
 }
 
 // The own params O in a ParamsWithIvOwned<O>, given to the cipher as an IvView
-#[cfg(any(
-    feature = "rc2",
-    feature = "rc5",
-    feature = "rc5-64",
-    feature = "gost28147",
-    feature = "threefish-256",
-    feature = "threefish-512",
-    feature = "threefish-1024"
-))]
+#[cfg(any(feature = "rc-cipher", feature = "gost28147", feature = "threefish"))]
 pub(super) struct OwnViaIv<O>(PhantomData<fn() -> O>);
 
-#[cfg(any(
-    feature = "rc2",
-    feature = "rc5",
-    feature = "rc5-64",
-    feature = "gost28147",
-    feature = "threefish-256",
-    feature = "threefish-512",
-    feature = "threefish-1024"
-))]
+#[cfg(any(feature = "rc-cipher", feature = "gost28147", feature = "threefish"))]
 impl<C, O: 'static> OwnWithIv<C> for OwnViaIv<O>
 where
     C: for<'a> BufferedCipherInit<
@@ -162,15 +114,7 @@ impl<C> OwnKey<C> for NoOwn {
     }
 }
 
-#[cfg(any(
-    feature = "rc2",
-    feature = "rc5",
-    feature = "rc5-64",
-    feature = "gost28147",
-    feature = "threefish-256",
-    feature = "threefish-512",
-    feature = "threefish-1024"
-))]
+#[cfg(any(feature = "rc-cipher", feature = "gost28147", feature = "threefish"))]
 impl<C, O: 'static> OwnWithIv<C> for Own<O>
 where
     C: BufferedCipherInit<crate::params::ParamsWithIvOwned<O>>,
@@ -193,15 +137,7 @@ where
     }
 }
 
-#[cfg(any(
-    feature = "rc2",
-    feature = "rc5",
-    feature = "rc5-64",
-    feature = "gost28147",
-    feature = "threefish-256",
-    feature = "threefish-512",
-    feature = "threefish-1024"
-))]
+#[cfg(any(feature = "rc-cipher", feature = "gost28147", feature = "threefish"))]
 impl<C, O: 'static> OwnKey<C> for Own<O>
 where
     C: BufferedCipherInit<O>,

@@ -4,8 +4,8 @@ A signature is made with a private key, and anyone with the public key can check
 the message was not changed and that it came from the holder of the private key. Unlike a MAC, the
 two sides do not share a secret.
 
-From a new pair to a verified signature, with ECDSA over SHA-256 on P-256. The `ecdsa` and `sha256`
-features of `tc_algo` have the row.
+From a new pair to a verified signature, with ECDSA over SHA-256 on P-256. The `ecdsa`, `fp-custom`
+and `sha` features of `tc_algo` have the row.
 
 ```rust
 use tc_algo::params::EcKeyGenParams;
@@ -40,13 +40,13 @@ fn main() -> Result<(), AlgoError> {
 
 The names and OIDs are those of Bouncy Castle's `SignerUtilities`, and the case of a name does not
 matter. Most rows pair a scheme with a digest, named as `SHA-256withECDSA`, and need the feature of
-the scheme and of the digest, as `ecdsa` and `sha256`.
+the scheme and of the digest, as `ecdsa` and `sha`.
 
 - **[RSA](Rsa.md#signing)**: PKCS#1 v1.5, PSS, X9.31 and ISO 9796-2, with the `rsa` feature.
 - **[EC](Ec.md#signing)**: ECDSA, with its signature in DER or plain, with the `ecdsa` feature, and
   ECNR, with the `ecnr` feature.
 - **[SM2](Sm2.md#signing)**: over SM3 or SHA-256, with the `sm2` feature.
-- **[EdDSA](EdDSA.md#signing)**: Ed25519 and Ed448, with the `ed25519` and `ed448` features.
+- **[EdDSA](EdDSA.md#signing)**: Ed25519 and Ed448, with the `cfrg-curves` feature.
 - **[ML-DSA](MlDsa.md#signing)** and **[SLH-DSA](SlhDsa.md#signing)**: the signatures of FIPS 204
   and 205, made to resist a quantum computer, with the `ml-dsa` and `slh-dsa` features.
 - **[DSA](Dsa.md#signing)**, with the `dsa` feature, **[GOST R 34.10-94](Gost3410.md#signing)**, with

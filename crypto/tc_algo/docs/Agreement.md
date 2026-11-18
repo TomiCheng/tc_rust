@@ -44,18 +44,18 @@ not matter.
 - **[DH](Dh.md#agreement)**: Diffie-Hellman over a group such as those of RFC 3526 and RFC 7919,
   with the `dh` feature; `DIFFIEHELLMAN` finds it too.
 - **ECDH** and **ECDHC**: Diffie-Hellman over an elliptic curve, ECDHC with the cofactor, with the
-  `ecdh` and `ecdhc` features; `ECCDH` finds ECDHC too.
+  `ecdh` feature; `ECCDH` finds ECDHC too.
 - **ECMQV**: MQV over an elliptic curve, from a static and an ephemeral key on each side, with the
   `ecmqv` feature.
-- **[X25519 and X448](X25519.md#agreement)**: the agreements of RFC 7748, with the `x25519` and
-  `x448` features.
+- **[X25519 and X448](X25519.md#agreement)**: the agreements of RFC 7748, with the `cfrg-curves`
+  feature.
 - **ECGOST3410**, **ECGOST3410-2012-256** and **ECGOST3410-2012-512**: VKO, the GOST R 34.10
-  agreement, which hashes its secret with GOST R 34.11, with the `ecgost3410` feature;
+  agreement, which hashes its secret with GOST R 34.11, with the `ecvko` feature;
   `GOST-3410-2001` finds the first too.
 - **ECDH**, **ECCDH** or **ECMQV** **WITH** **SHA1**, **SHA224**, **SHA256**, **SHA384** or
   **SHA512** **KDF**, as `ECDHWITHSHA256KDF`: the EC agreements with the KDF of RFC 5753, which
   turns the secret into a key for a key-wrap algorithm. They need the feature of the agreement and
-  of the digest, as `ecdh` and `sha256`; `DHWITHSHA1KDF` finds `ECDHWITHSHA1KDF` too.
+  of the digest, as `ecdh` and `sha`; `DHWITHSHA1KDF` finds `ECDHWITHSHA1KDF` too.
 
 ## Params
 

@@ -34,7 +34,7 @@ fn a_provider_can_be_shared_between_threads() {
     });
 }
 
-#[cfg(feature = "sha256")]
+#[cfg(feature = "sha")]
 #[test]
 fn each_thread_gets_its_own_digest_from_a_shared_algo() {
     let algo: Arc<dyn Algo> = DefaultAlgoBuilder::default().build().into();

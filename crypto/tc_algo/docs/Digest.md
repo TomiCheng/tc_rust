@@ -23,73 +23,73 @@ assert_eq!(digest.finalize()?, hash);
 
 | Name | Aliases | OIDs | Feature | Note |
 |---|---|---|---|---|
-| `SHA-1` | `SHA1` | `1.3.14.3.2.26`, `1.2.840.113549.2.7`, `1.3.6.1.5.5.8.1.2` | `sha1` | weak |
-| `SHA-224` | `SHA224` | `2.16.840.1.101.3.4.2.4`, `1.2.840.113549.2.8` | `sha224` |  |
-| `SHA-256` | `SHA256` | `2.16.840.1.101.3.4.2.1`, `1.2.840.113549.2.9` | `sha256` |  |
-| `SHA-384` | `SHA384` | `2.16.840.1.101.3.4.2.2`, `1.2.840.113549.2.10` | `sha384` |  |
-| `SHA-512` | `SHA512` | `2.16.840.1.101.3.4.2.3`, `1.2.840.113549.2.11` | `sha512` |  |
-| `SHA-512/224` | `SHA512/224`, `SHA512-224`, `SHA512(224)`, `SHA-512(224)` | `2.16.840.1.101.3.4.2.5`, `1.2.840.113549.2.12` | `sha512-224` |  |
-| `SHA-512/256` | `SHA512/256`, `SHA512-256`, `SHA512(256)`, `SHA-512(256)` | `2.16.840.1.101.3.4.2.6`, `1.2.840.113549.2.13` | `sha512-256` |  |
-| `KECCAK-224` | `KECCAK224` |  | `keccak-224` |  |
-| `KECCAK-256` | `KECCAK256` |  | `keccak-256` |  |
-| `KECCAK-288` | `KECCAK288` |  | `keccak-288` |  |
-| `KECCAK-384` | `KECCAK384` |  | `keccak-384` |  |
-| `KECCAK-512` | `KECCAK512` |  | `keccak-512` |  |
-| `SHA3-224` |  | `2.16.840.1.101.3.4.2.7`, `2.16.840.1.101.3.4.2.13` | `sha3-224` |  |
-| `SHA3-256` |  | `2.16.840.1.101.3.4.2.8`, `2.16.840.1.101.3.4.2.14` | `sha3-256` |  |
-| `SHA3-384` |  | `2.16.840.1.101.3.4.2.9`, `2.16.840.1.101.3.4.2.15` | `sha3-384` |  |
-| `SHA3-512` |  | `2.16.840.1.101.3.4.2.10`, `2.16.840.1.101.3.4.2.16` | `sha3-512` |  |
-| `SHAKE128-256` | `SHAKE128`, `SHAKE-128` | `2.16.840.1.101.3.4.2.11` | `shake128-256` |  |
-| `SHAKE256-512` | `SHAKE256`, `SHAKE-256` | `2.16.840.1.101.3.4.2.12` | `shake256-512` |  |
-| `MD2` |  | `1.2.840.113549.2.2` | `md2` | weak, variable time |
-| `MD4` |  | `1.2.840.113549.2.4` | `md4` | weak |
-| `MD5` |  | `1.2.840.113549.2.5` | `md5` | weak |
-| `BLAKE2B-160` |  | `1.3.6.1.4.1.1722.12.2.1.5` | `blake2b-160` |  |
-| `BLAKE2B-256` |  | `1.3.6.1.4.1.1722.12.2.1.8` | `blake2b-256` |  |
-| `BLAKE2B-384` |  | `1.3.6.1.4.1.1722.12.2.1.12` | `blake2b-384` |  |
-| `BLAKE2B-512` |  | `1.3.6.1.4.1.1722.12.2.1.16` | `blake2b-512` |  |
-| `BLAKE2S-128` |  | `1.3.6.1.4.1.1722.12.2.2.4` | `blake2s-128` |  |
-| `BLAKE2S-160` |  | `1.3.6.1.4.1.1722.12.2.2.5` | `blake2s-160` |  |
-| `BLAKE2S-224` |  | `1.3.6.1.4.1.1722.12.2.2.7` | `blake2s-224` |  |
-| `BLAKE2S-256` |  | `1.3.6.1.4.1.1722.12.2.2.8` | `blake2s-256` |  |
-| `BLAKE3-256` |  | `1.3.6.1.4.1.1722.12.2.3.8` | `blake3-256` |  |
-| `RIPEMD128` | `RIPEMD-128` | `1.3.36.3.2.2` | `ripemd128` |  |
-| `RIPEMD160` | `RIPEMD-160` | `1.3.36.3.2.1` | `ripemd160` |  |
-| `RIPEMD256` | `RIPEMD-256` | `1.3.36.3.2.3` | `ripemd256` |  |
-| `RIPEMD320` | `RIPEMD-320` |  | `ripemd320` |  |
+| `SHA-1` | `SHA1` | `1.3.14.3.2.26`, `1.2.840.113549.2.7`, `1.3.6.1.5.5.8.1.2` | `sha` | weak |
+| `SHA-224` | `SHA224` | `2.16.840.1.101.3.4.2.4`, `1.2.840.113549.2.8` | `sha` |  |
+| `SHA-256` | `SHA256` | `2.16.840.1.101.3.4.2.1`, `1.2.840.113549.2.9` | `sha` |  |
+| `SHA-384` | `SHA384` | `2.16.840.1.101.3.4.2.2`, `1.2.840.113549.2.10` | `sha` |  |
+| `SHA-512` | `SHA512` | `2.16.840.1.101.3.4.2.3`, `1.2.840.113549.2.11` | `sha` |  |
+| `SHA-512/224` | `SHA512/224`, `SHA512-224`, `SHA512(224)`, `SHA-512(224)` | `2.16.840.1.101.3.4.2.5`, `1.2.840.113549.2.12` | `sha` |  |
+| `SHA-512/256` | `SHA512/256`, `SHA512-256`, `SHA512(256)`, `SHA-512(256)` | `2.16.840.1.101.3.4.2.6`, `1.2.840.113549.2.13` | `sha` |  |
+| `KECCAK-224` | `KECCAK224` |  | `keccak` |  |
+| `KECCAK-256` | `KECCAK256` |  | `keccak` |  |
+| `KECCAK-288` | `KECCAK288` |  | `keccak` |  |
+| `KECCAK-384` | `KECCAK384` |  | `keccak` |  |
+| `KECCAK-512` | `KECCAK512` |  | `keccak` |  |
+| `SHA3-224` |  | `2.16.840.1.101.3.4.2.7`, `2.16.840.1.101.3.4.2.13` | `keccak` |  |
+| `SHA3-256` |  | `2.16.840.1.101.3.4.2.8`, `2.16.840.1.101.3.4.2.14` | `keccak` |  |
+| `SHA3-384` |  | `2.16.840.1.101.3.4.2.9`, `2.16.840.1.101.3.4.2.15` | `keccak` |  |
+| `SHA3-512` |  | `2.16.840.1.101.3.4.2.10`, `2.16.840.1.101.3.4.2.16` | `keccak` |  |
+| `SHAKE128-256` | `SHAKE128`, `SHAKE-128` | `2.16.840.1.101.3.4.2.11` | `keccak` |  |
+| `SHAKE256-512` | `SHAKE256`, `SHAKE-256` | `2.16.840.1.101.3.4.2.12` | `keccak` |  |
+| `MD2` |  | `1.2.840.113549.2.2` | `md` | weak, variable time |
+| `MD4` |  | `1.2.840.113549.2.4` | `md` | weak |
+| `MD5` |  | `1.2.840.113549.2.5` | `md` | weak |
+| `BLAKE2B-160` |  | `1.3.6.1.4.1.1722.12.2.1.5` | `blake` |  |
+| `BLAKE2B-256` |  | `1.3.6.1.4.1.1722.12.2.1.8` | `blake` |  |
+| `BLAKE2B-384` |  | `1.3.6.1.4.1.1722.12.2.1.12` | `blake` |  |
+| `BLAKE2B-512` |  | `1.3.6.1.4.1.1722.12.2.1.16` | `blake` |  |
+| `BLAKE2S-128` |  | `1.3.6.1.4.1.1722.12.2.2.4` | `blake` |  |
+| `BLAKE2S-160` |  | `1.3.6.1.4.1.1722.12.2.2.5` | `blake` |  |
+| `BLAKE2S-224` |  | `1.3.6.1.4.1.1722.12.2.2.7` | `blake` |  |
+| `BLAKE2S-256` |  | `1.3.6.1.4.1.1722.12.2.2.8` | `blake` |  |
+| `BLAKE3-256` |  | `1.3.6.1.4.1.1722.12.2.3.8` | `blake` |  |
+| `RIPEMD128` | `RIPEMD-128` | `1.3.36.3.2.2` | `ripemd` |  |
+| `RIPEMD160` | `RIPEMD-160` | `1.3.36.3.2.1` | `ripemd` |  |
+| `RIPEMD256` | `RIPEMD-256` | `1.3.36.3.2.3` | `ripemd` |  |
+| `RIPEMD320` | `RIPEMD-320` |  | `ripemd` |  |
 | `SM3` |  | `1.2.156.10197.1.401` | `sm3` |  |
 | `GOST3411` |  | `1.2.643.2.2.9` | `gost3411` | variable time |
-| `GOST3411-2012-256` |  | `1.2.643.7.1.1.2.2` | `gost3411-2012-256` | variable time |
-| `GOST3411-2012-512` |  | `1.2.643.7.1.1.2.3` | `gost3411-2012-512` | variable time |
-| `DSTU7564-256` |  | `1.2.804.2.1.1.1.1.2.2.1` | `dstu7564-256` | variable time |
-| `DSTU7564-384` |  | `1.2.804.2.1.1.1.1.2.2.2` | `dstu7564-384` | variable time |
-| `DSTU7564-512` |  | `1.2.804.2.1.1.1.1.2.2.3` | `dstu7564-512` | variable time |
-| `TIGER` |  |  | `tiger` | variable time |
-| `WHIRLPOOL` |  |  | `whirlpool` | variable time |
-| `ASCON-HASH256` |  |  | `ascon-hash256` |  |
+| `GOST3411-2012-256` |  | `1.2.643.7.1.1.2.2` | `gost3411` | variable time |
+| `GOST3411-2012-512` |  | `1.2.643.7.1.1.2.3` | `gost3411` | variable time |
+| `DSTU7564-256` |  | `1.2.804.2.1.1.1.1.2.2.1` | `dstu7564` | variable time |
+| `DSTU7564-384` |  | `1.2.804.2.1.1.1.1.2.2.2` | `dstu7564` | variable time |
+| `DSTU7564-512` |  | `1.2.804.2.1.1.1.1.2.2.3` | `dstu7564` | variable time |
+| `TIGER` |  |  | `misc-digest` | variable time |
+| `WHIRLPOOL` |  |  | `misc-digest` | variable time |
+| `ASCON-HASH256` |  |  | `ascon-hash` |  |
 | `ASCON-HASH` |  |  | `ascon-hash` | pre-standard |
-| `ASCON-HASHA` |  |  | `ascon-hasha` | pre-standard |
-| `ISAP` |  |  | `isap` | pre-standard |
-| `SKEIN-256-128` |  |  | `skein-256-128` |  |
-| `SKEIN-256-160` |  |  | `skein-256-160` |  |
-| `SKEIN-256-224` |  |  | `skein-256-224` |  |
-| `SKEIN-256-256` |  |  | `skein-256-256` |  |
-| `SKEIN-512-128` |  |  | `skein-512-128` |  |
-| `SKEIN-512-160` |  |  | `skein-512-160` |  |
-| `SKEIN-512-224` |  |  | `skein-512-224` |  |
-| `SKEIN-512-256` |  |  | `skein-512-256` |  |
-| `SKEIN-512-384` |  |  | `skein-512-384` |  |
-| `SKEIN-512-512` |  |  | `skein-512-512` |  |
-| `SKEIN-1024-384` |  |  | `skein-1024-384` |  |
-| `SKEIN-1024-512` |  |  | `skein-1024-512` |  |
-| `SKEIN-1024-1024` |  |  | `skein-1024-1024` |  |
-| `HARAKA-256` |  |  | `haraka-256` | fixed input, variable time without AES-NI |
-| `HARAKA-512` |  |  | `haraka-512` | fixed input, variable time without AES-NI |
-| `PHOTON-BEETLE` |  |  | `photon-beetle` | variable time |
-| `ESCH-256` |  |  | `esch-256` |  |
-| `ESCH-384` |  |  | `esch-384` |  |
-| `XOODYAK` |  |  | `xoodyak` |  |
-| `NONE` |  |  | `null-digest` | not a hash |
+| `ASCON-HASHA` |  |  | `ascon-hash` | pre-standard |
+| `ISAP` |  |  | `ascon-hash` | pre-standard |
+| `SKEIN-256-128` |  |  | `skein` |  |
+| `SKEIN-256-160` |  |  | `skein` |  |
+| `SKEIN-256-224` |  |  | `skein` |  |
+| `SKEIN-256-256` |  |  | `skein` |  |
+| `SKEIN-512-128` |  |  | `skein` |  |
+| `SKEIN-512-160` |  |  | `skein` |  |
+| `SKEIN-512-224` |  |  | `skein` |  |
+| `SKEIN-512-256` |  |  | `skein` |  |
+| `SKEIN-512-384` |  |  | `skein` |  |
+| `SKEIN-512-512` |  |  | `skein` |  |
+| `SKEIN-1024-384` |  |  | `skein` |  |
+| `SKEIN-1024-512` |  |  | `skein` |  |
+| `SKEIN-1024-1024` |  |  | `skein` |  |
+| `HARAKA-256` |  |  | `misc-digest` | fixed input, variable time without AES-NI |
+| `HARAKA-512` |  |  | `misc-digest` | fixed input, variable time without AES-NI |
+| `PHOTON-BEETLE` |  |  | `misc-digest` | variable time |
+| `ESCH-256` |  |  | `misc-digest` |  |
+| `ESCH-384` |  |  | `misc-digest` |  |
+| `XOODYAK` |  |  | `misc-digest` |  |
+| `NONE` |  |  | always on | not a hash |
 
 The OIDs after the first of each row are those of HMAC with the digest (and, for SHA-1, the
 IPsec one), which Bouncy Castle also maps to the digest; they find the digest but are not its

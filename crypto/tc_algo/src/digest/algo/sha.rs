@@ -5,7 +5,7 @@ use crate::digest::DigestEntry;
 // The rows of SHA-1 and SHA-2, to give to DefaultAlgoBuilder::reg_digest. Their names and OIDs
 // are those of Bouncy Castle's DigestUtilities, the HMAC OIDs included
 
-#[cfg(feature = "sha1")]
+#[cfg(feature = "sha")]
 pub(super) fn sha1(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>> {
     row(
         "SHA-1",
@@ -15,7 +15,7 @@ pub(super) fn sha1(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>> {
     )
 }
 
-#[cfg(feature = "sha224")]
+#[cfg(feature = "sha")]
 pub(super) fn sha224(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>> {
     row(
         "SHA-224",
@@ -25,7 +25,7 @@ pub(super) fn sha224(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>>
     )
 }
 
-#[cfg(feature = "sha256")]
+#[cfg(feature = "sha")]
 pub(super) fn sha256(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>> {
     row(
         "SHA-256",
@@ -35,7 +35,7 @@ pub(super) fn sha256(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>>
     )
 }
 
-#[cfg(feature = "sha384")]
+#[cfg(feature = "sha")]
 pub(super) fn sha384(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>> {
     row(
         "SHA-384",
@@ -45,7 +45,7 @@ pub(super) fn sha384(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>>
     )
 }
 
-#[cfg(feature = "sha512")]
+#[cfg(feature = "sha")]
 pub(super) fn sha512(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>> {
     row(
         "SHA-512",
@@ -55,7 +55,7 @@ pub(super) fn sha512(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>>
     )
 }
 
-#[cfg(feature = "sha512-224")]
+#[cfg(feature = "sha")]
 pub(super) fn sha512_224(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>> {
     row(
         "SHA-512/224",
@@ -65,7 +65,7 @@ pub(super) fn sha512_224(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEnt
     )
 }
 
-#[cfg(feature = "sha512-256")]
+#[cfg(feature = "sha")]
 pub(super) fn sha512_256(_context: &DefaultAlgoContext) -> Vec<Box<dyn DigestEntry>> {
     row(
         "SHA-512/256",
@@ -95,7 +95,7 @@ mod tests {
         DefaultAlgoContext::for_tests()
     }
 
-    #[cfg(feature = "sha256")]
+    #[cfg(feature = "sha")]
     mod sha256 {
         use super::super::sha256;
         use super::{context, hex};
@@ -163,7 +163,7 @@ mod tests {
 
     // FIPS 180-4's examples for the message "abc"
 
-    #[cfg(feature = "sha1")]
+    #[cfg(feature = "sha")]
     #[test]
     fn sha1_gives_the_standard_hash() {
         let row = super::sha1(&context()).remove(0);
@@ -171,7 +171,7 @@ mod tests {
         assert_eq!(hash_of_abc(row), "a9993e364706816aba3e25717850c26c9cd0d89d");
     }
 
-    #[cfg(feature = "sha224")]
+    #[cfg(feature = "sha")]
     #[test]
     fn sha224_gives_the_standard_hash() {
         let row = super::sha224(&context()).remove(0);
@@ -182,7 +182,7 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "sha256")]
+    #[cfg(feature = "sha")]
     #[test]
     fn sha256_gives_the_standard_hash() {
         let row = super::sha256(&context()).remove(0);
@@ -193,7 +193,7 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "sha384")]
+    #[cfg(feature = "sha")]
     #[test]
     fn sha384_gives_the_standard_hash() {
         let row = super::sha384(&context()).remove(0);
@@ -205,7 +205,7 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "sha512")]
+    #[cfg(feature = "sha")]
     #[test]
     fn sha512_gives_the_standard_hash() {
         let row = super::sha512(&context()).remove(0);
@@ -216,7 +216,7 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "sha512-224")]
+    #[cfg(feature = "sha")]
     #[test]
     fn sha512_224_gives_the_standard_hash() {
         let row = super::sha512_224(&context()).remove(0);
@@ -226,7 +226,7 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "sha512-256")]
+    #[cfg(feature = "sha")]
     #[test]
     fn sha512_256_gives_the_standard_hash() {
         let row = super::sha512_256(&context()).remove(0);
@@ -236,7 +236,7 @@ mod tests {
         );
     }
 
-    #[cfg(all(feature = "sha512-224", feature = "sha512-256"))]
+    #[cfg(feature = "sha")]
     #[test]
     fn the_sha512_t_rows_take_bouncy_castles_aliases() {
         use crate::AlgoBuilder as _;
@@ -249,7 +249,7 @@ mod tests {
         }
     }
 
-    #[cfg(feature = "sha1")]
+    #[cfg(feature = "sha")]
     #[test]
     fn sha1_is_found_by_each_of_its_three_oids() {
         use crate::AlgoBuilder as _;
@@ -260,7 +260,7 @@ mod tests {
         }
     }
 
-    #[cfg(feature = "sha256")]
+    #[cfg(feature = "sha")]
     #[test]
     fn the_function_is_what_the_builder_takes() {
         use crate::AlgoBuilder as _;

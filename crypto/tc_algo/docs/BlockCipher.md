@@ -129,7 +129,7 @@ also has the PBE names and OID of PKCS#5's DES; see [PBE names](#pbe-names).
 
 ### DESede
 
-The `desede` feature has the rows. `TDEA` is another name of `DESEDE`, as in
+The `des` feature has the rows. `TDEA` is another name of `DESEDE`, as in
 `TDEA/CBC/PKCS7PADDING`. The key is 24 bytes for three keys, or 16 for two, the third key being the
 first.
 
@@ -367,7 +367,7 @@ The `serpent` feature has the rows. A block of 16 bytes and a key of 4 to 32 byt
 
 ### Tnepres
 
-The `tnepres` feature has the rows. Serpent in the byte- and word-reversed form of its AES
+The `serpent` feature has the rows. Serpent in the byte- and word-reversed form of its AES
 submission, which Bouncy Castle's first Serpent used, with the key of Serpent. It is for data made
 in that form; new data takes `SERPENT`.
 
@@ -396,7 +396,7 @@ in that form; new data takes `SERPENT`.
 
 ### CAST5
 
-The `cast5` feature has the rows. A block of 8 bytes and a key of 5 to 16 bytes; also called
+The `cast` feature has the rows. A block of 8 bytes and a key of 5 to 16 bytes; also called
 CAST-128.
 
 | Name | Aliases | OIDs | Params | Note |
@@ -427,7 +427,7 @@ The OID is Entrust's, and means CBC with PKCS#7 padding.
 
 ### CAST6
 
-The `cast6` feature has the rows. A block of 16 bytes and a key of 16 to 32 bytes, in steps of 4;
+The `cast` feature has the rows. A block of 16 bytes and a key of 16 to 32 bytes, in steps of 4;
 also called CAST-256.
 
 | Name | Aliases | OIDs | Params | Note |
@@ -455,7 +455,7 @@ also called CAST-256.
 
 ### IDEA
 
-The `idea` feature has the rows. A block of 8 bytes and a key of 16 bytes.
+The `misc-block-cipher` feature has the rows. A block of 8 bytes and a key of 16 bytes.
 
 | Name | Aliases | OIDs | Params | Note |
 |---|---|---|---|---|
@@ -485,7 +485,7 @@ The OID is Ascom's, and means CBC with PKCS#7 padding.
 
 ### Noekeon
 
-The `noekeon` feature has the rows. A block of 16 bytes and a key of 16 bytes, in the direct-key
+The `misc-block-cipher` feature has the rows. A block of 16 bytes and a key of 16 bytes, in the direct-key
 mode of Bouncy Castle.
 
 | Name | Aliases | OIDs | Params | Note |
@@ -513,7 +513,7 @@ mode of Bouncy Castle.
 
 ### Rijndael
 
-The `rijndael` feature has the rows. Rijndael with a block of 16 bytes, as Bouncy Castle's
+The `misc-block-cipher` feature has the rows. Rijndael with a block of 16 bytes, as Bouncy Castle's
 CipherUtilities builds it: the same cipher as AES, under the name it had before it became AES. A key
 of 16, 24 or 32 bytes.
 
@@ -544,7 +544,7 @@ For new data, take `AES`, which is constant time where `tc_aes` can be.
 
 ### Skipjack
 
-The `skipjack` feature has the rows. A block of 8 bytes and a key of 10 bytes.
+The `misc-block-cipher` feature has the rows. A block of 8 bytes and a key of 10 bytes.
 
 | Name | Aliases | OIDs | Params | Note |
 |---|---|---|---|---|
@@ -572,7 +572,7 @@ The `skipjack` feature has the rows. A block of 8 bytes and a key of 10 bytes.
 
 ### TEA
 
-The `tea` feature has the rows. A block of 8 bytes and a key of 16 bytes.
+The `misc-block-cipher` feature has the rows. A block of 8 bytes and a key of 16 bytes.
 
 | Name | Aliases | OIDs | Params | Note |
 |---|---|---|---|---|
@@ -600,7 +600,7 @@ The `tea` feature has the rows. A block of 8 bytes and a key of 16 bytes.
 
 ### XTEA
 
-The `xtea` feature has the rows. A block of 8 bytes and a key of 16 bytes; TEA with its key schedule
+The `misc-block-cipher` feature has the rows. A block of 8 bytes and a key of 16 bytes; TEA with its key schedule
 repaired. Bouncy Castle has it as an engine, not in its CipherUtilities.
 
 | Name | Aliases | OIDs | Params | Note |
@@ -629,7 +629,7 @@ repaired. Bouncy Castle has it as an engine, not in its CipherUtilities.
 
 ### RC2
 
-The `rc2` feature has the rows. A block of 8 bytes and a key of 1 to 128 bytes. As in Bouncy Castle,
+The `rc-cipher` feature has the rows. A block of 8 bytes and a key of 1 to 128 bytes. As in Bouncy Castle,
 a plain key gives an effective key size of the whole key, and RC2's own params give another; see
 [RC2](Rc2.md).
 
@@ -663,7 +663,7 @@ another effective key size, which these rows take in a `ParamsWithIvOwned<Rc2Par
 
 ### RC5
 
-The `rc5` feature has the rows. RC5 with 32-bit words: a block of 8 bytes and a key of up to 255
+The `rc-cipher` feature has the rows. RC5 with 32-bit words: a block of 8 bytes and a key of up to 255
 bytes, with 12 rounds, as Bouncy Castle gives a plain key, and RC5's own params give another number;
 see [RC5](Rc5.md). `RC5-32` is another name of it.
 
@@ -693,7 +693,7 @@ see [RC5](Rc5.md). `RC5-32` is another name of it.
 
 ### RC5-64
 
-The `rc5-64` feature has the rows. RC5 with 64-bit words: a block of 16 bytes and a key of up to 255
+The `rc-cipher` feature has the rows. RC5 with 64-bit words: a block of 16 bytes and a key of up to 255
 bytes, with 12 rounds, or the number RC5's own params give; see [RC5](Rc5.md).
 
 | Name | Aliases | OIDs | Params | Note |
@@ -721,7 +721,7 @@ bytes, with 12 rounds, or the number RC5's own params give; see [RC5](Rc5.md).
 
 ### RC6
 
-The `rc6` feature has the rows. A block of 16 bytes and a key of up to 255 bytes; a finalist for
+The `rc-cipher` feature has the rows. A block of 16 bytes and a key of up to 255 bytes; a finalist for
 AES.
 
 | Name | Aliases | OIDs | Params | Note |
@@ -783,7 +783,7 @@ its parameters.
 
 ### Threefish-256
 
-The `threefish-256` feature has the rows. A block and a key of 32 bytes, and a tweak of 16 bytes:
+The `threefish` feature has the rows. A block and a key of 32 bytes, and a tweak of 16 bytes:
 a plain key takes a tweak of zeros, as Bouncy Castle gives a `KeyParameter`, and Threefish's own
 params take another; see [Threefish](Threefish.md).
 
@@ -812,7 +812,7 @@ params take another; see [Threefish](Threefish.md).
 
 ### Threefish-512
 
-The `threefish-512` feature has the rows. A block and a key of 64 bytes, and a tweak of 16 bytes:
+The `threefish` feature has the rows. A block and a key of 64 bytes, and a tweak of 16 bytes:
 a plain key takes a tweak of zeros, as Bouncy Castle gives a `KeyParameter`, and Threefish's own
 params take another; see [Threefish](Threefish.md).
 
@@ -841,7 +841,7 @@ params take another; see [Threefish](Threefish.md).
 
 ### Threefish-1024
 
-The `threefish-1024` feature has the rows. A block and a key of 128 bytes, and a tweak of 16 bytes:
+The `threefish` feature has the rows. A block and a key of 128 bytes, and a tweak of 16 bytes:
 a plain key takes a tweak of zeros, as Bouncy Castle gives a `KeyParameter`, and Threefish's own
 params take another; see [Threefish](Threefish.md).
 
@@ -870,7 +870,7 @@ params take another; see [Threefish](Threefish.md).
 
 ### DSTU7624-128
 
-The `dstu7624-128` feature has the rows. A block of 16 bytes and a key of 16 or 32; Kalyna, the block
+The `dstu7624` feature has the rows. A block of 16 bytes and a key of 16 or 32; Kalyna, the block
 cipher of Ukraine, of DSTU 7624:2014. Bouncy Castle has the engine but does not name it in
 `CipherUtilities`, so the name is this crate's, after the block in bits, and has no OID.
 
@@ -899,7 +899,7 @@ cipher of Ukraine, of DSTU 7624:2014. Bouncy Castle has the engine but does not 
 
 ### DSTU7624-256
 
-The `dstu7624-256` feature has the rows. A block of 32 bytes and a key of 32 or 64; Kalyna, the block
+The `dstu7624` feature has the rows. A block of 32 bytes and a key of 32 or 64; Kalyna, the block
 cipher of Ukraine, of DSTU 7624:2014. Bouncy Castle has the engine but does not name it in
 `CipherUtilities`, so the name is this crate's, after the block in bits, and has no OID.
 
@@ -928,7 +928,7 @@ cipher of Ukraine, of DSTU 7624:2014. Bouncy Castle has the engine but does not 
 
 ### DSTU7624-512
 
-The `dstu7624-512` feature has the rows. A block of 64 bytes and a key of 64; Kalyna, the block
+The `dstu7624` feature has the rows. A block of 64 bytes and a key of 64; Kalyna, the block
 cipher of Ukraine, of DSTU 7624:2014. Bouncy Castle has the engine but does not name it in
 `CipherUtilities`, so the name is this crate's, after the block in bits, and has no OID.
 

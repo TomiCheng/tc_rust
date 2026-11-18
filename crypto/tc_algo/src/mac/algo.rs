@@ -1,31 +1,20 @@
-#[cfg(any(
-    feature = "cbc-mac",
-    feature = "cfb-mac",
-    feature = "cmac",
-    feature = "gmac"
-))]
+#[cfg(feature = "macs")]
 mod block;
-#[cfg(feature = "hmac")]
+#[cfg(feature = "macs")]
 mod hmac;
 #[cfg(any(
-    feature = "iso9797-alg3-mac",
+    feature = "iso9797-mac",
     feature = "gost28147-mac",
-    feature = "vmpc-mac",
-    feature = "siphash",
+    feature = "macs",
     feature = "kmac",
     feature = "poly1305",
     feature = "skein-mac"
 ))]
 mod keyed;
 #[cfg(any(
-    feature = "cbc-mac",
-    feature = "cfb-mac",
-    feature = "cmac",
-    feature = "gmac",
-    feature = "iso9797-alg3-mac",
+    feature = "macs",
+    feature = "iso9797-mac",
     feature = "gost28147-mac",
-    feature = "vmpc-mac",
-    feature = "siphash",
     feature = "kmac",
     feature = "poly1305",
     feature = "skein-mac"
@@ -38,20 +27,14 @@ pub(crate) type CreateRows = fn(&crate::DefaultAlgoContext) -> Vec<Box<dyn MacEn
 
 // What DefaultAlgoBuilder starts with: the rows of the MACs whose features are on
 pub(crate) const BUILT_IN: &[CreateRows] = &[
-    #[cfg(feature = "hmac")]
+    #[cfg(feature = "macs")]
     hmac::hmac,
-    #[cfg(any(
-        feature = "cbc-mac",
-        feature = "cfb-mac",
-        feature = "cmac",
-        feature = "gmac"
-    ))]
+    #[cfg(feature = "macs")]
     block::block,
     #[cfg(any(
-        feature = "iso9797-alg3-mac",
+        feature = "iso9797-mac",
         feature = "gost28147-mac",
-        feature = "vmpc-mac",
-        feature = "siphash",
+        feature = "macs",
         feature = "kmac",
         feature = "poly1305",
         feature = "skein-mac"

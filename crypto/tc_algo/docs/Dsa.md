@@ -84,19 +84,19 @@ matter. Each row needs `dsa` and the digest's feature.
 
 | Name | Aliases | OIDs | Features |
 |---|---|---|---|
-| `SHA-1withDSA` | `DSA` | `1.2.840.10040.4.3`, `1.3.14.3.2.27` | `dsa` and `sha1` |
-| `SHA-224withDSA` |  | `2.16.840.1.101.3.4.3.1` | `dsa` and `sha224` |
-| `SHA-256withDSA` |  | `2.16.840.1.101.3.4.3.2` | `dsa` and `sha256` |
-| `SHA-384withDSA` |  | `2.16.840.1.101.3.4.3.3` | `dsa` and `sha384` |
-| `SHA-512withDSA` |  | `2.16.840.1.101.3.4.3.4` | `dsa` and `sha512` |
-| `SHA3-224withDSA` |  | `2.16.840.1.101.3.4.3.5` | `dsa` and `sha3-224` |
-| `SHA3-256withDSA` |  | `2.16.840.1.101.3.4.3.6` | `dsa` and `sha3-256` |
-| `SHA3-384withDSA` |  | `2.16.840.1.101.3.4.3.7` | `dsa` and `sha3-384` |
-| `SHA3-512withDSA` |  | `2.16.840.1.101.3.4.3.8` | `dsa` and `sha3-512` |
+| `SHA-1withDSA` | `DSA` | `1.2.840.10040.4.3`, `1.3.14.3.2.27` | `dsa` and `sha` |
+| `SHA-224withDSA` |  | `2.16.840.1.101.3.4.3.1` | `dsa` and `sha` |
+| `SHA-256withDSA` |  | `2.16.840.1.101.3.4.3.2` | `dsa` and `sha` |
+| `SHA-384withDSA` |  | `2.16.840.1.101.3.4.3.3` | `dsa` and `sha` |
+| `SHA-512withDSA` |  | `2.16.840.1.101.3.4.3.4` | `dsa` and `sha` |
+| `SHA3-224withDSA` |  | `2.16.840.1.101.3.4.3.5` | `dsa` and `keccak` |
+| `SHA3-256withDSA` |  | `2.16.840.1.101.3.4.3.6` | `dsa` and `keccak` |
+| `SHA3-384withDSA` |  | `2.16.840.1.101.3.4.3.7` | `dsa` and `keccak` |
+| `SHA3-512withDSA` |  | `2.16.840.1.101.3.4.3.8` | `dsa` and `keccak` |
 | `<DIGEST>withDSA`, for every other digest | `<DIGEST>/DSA`, `DSAWITH<DIGEST>` |  | `dsa` and the digest's |
 
 `<DIGEST>` is any name of the digest, so every row is also `SHA256withDSA`, `SHA-256/DSA` and
-`DSAWITHSHA-256`. `NONEwithDSA`, also `RAWDSA`, with the `null-digest` feature, signs a hash made
+`DSAWITHSHA-256`. `NONEwithDSA`, also `RAWDSA`, always there with the row, signs a hash made
 elsewhere. The signature is r and s in DER.
 
 ### Params

@@ -1,4 +1,4 @@
-#![cfg_attr(feature = "hmac-sha256", doc = include_str!("../docs/Mac.md"))]
+#![cfg_attr(all(feature = "macs", feature = "sha"), doc = include_str!("../docs/Mac.md"))]
 
 mod algo;
 mod default_mac_provider;

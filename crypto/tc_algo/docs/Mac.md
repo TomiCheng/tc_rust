@@ -4,7 +4,7 @@ A MAC turns a message and a secret key into a short tag. Whoever has the same ke
 which shows that the message was not changed and that it came from someone with the key. Unlike a
 digest it needs a key, and unlike a signature both sides hold the same one.
 
-From a new key to a verified tag, with HMAC-SHA256. The `hmac-sha256` feature of `tc_algo` has
+From a new key to a verified tag, with HMAC-SHA256. The `macs` and `sha` feature of `tc_algo` has
 the rows.
 
 ```rust
@@ -67,7 +67,7 @@ range, and `..` for any length.
 ### HMAC
 
 `HMAC-` and the name of a digest, for every [digest](Digest.md) whose feature is on, with the
-`hmac` feature: `hmac-sha256` is `hmac` with `sha256`. The dash of `SHA-` goes, and a slash becomes a
+`macs` feature, and the digest's feature, as `macs` and `sha` for `HMAC-SHA256`. The dash of `SHA-` goes, and a slash becomes a
 dash, so SHA-512/256 gives `HMAC-SHA512-256`. `HMAC/` or `HMAC` before any name of the digest finds
 it too, as `HMAC/SHA-256` and `HMACSHA256`. The key takes any length, and the tag is the size of the
 digest. `NONE`, Haraka and the digests whose block is shorter than 16 bytes or than their digest,
@@ -75,22 +75,22 @@ such as Ascon and PHOTON-Beetle, have none.
 
 | Name | Aliases | OIDs | Features | Params | Tag bytes |
 |---|---|---|---|---|---|
-| `HMAC-MD5` | `HMAC/MD5`, `HMACMD5` | `1.3.6.1.5.5.8.1.1` | `hmac` and `md5` | `KeyOwned` | 16 |
-| `HMAC-SHA1` | `HMAC-SHA-1`, `HMAC/SHA-1`, `HMACSHA-1`, `HMAC/SHA1`, `HMACSHA1` | `1.3.6.1.5.5.8.1.2`, `1.2.840.113549.2.7` | `hmac` and `sha1` | `KeyOwned` | 20 |
-| `HMAC-TIGER` | `HMAC/TIGER`, `HMACTIGER` | `1.3.6.1.5.5.8.1.3` | `hmac` and `tiger` | `KeyOwned` | 24 |
-| `HMAC-RIPEMD160` | `HMAC/RIPEMD160`, `HMACRIPEMD160`, `HMAC-RIPEMD-160`, `HMAC/RIPEMD-160`, `HMACRIPEMD-160` | `1.3.6.1.5.5.8.1.4` | `hmac` and `ripemd160` | `KeyOwned` | 20 |
-| `HMAC-SHA224` | `HMAC-SHA-224`, `HMAC/SHA-224`, `HMACSHA-224`, `HMAC/SHA224`, `HMACSHA224` | `1.2.840.113549.2.8` | `hmac` and `sha224` | `KeyOwned` | 28 |
-| `HMAC-SHA256` | `HMAC-SHA-256`, `HMAC/SHA-256`, `HMACSHA-256`, `HMAC/SHA256`, `HMACSHA256` | `1.2.840.113549.2.9` | `hmac` and `sha256` | `KeyOwned` | 32 |
-| `HMAC-SHA384` | `HMAC-SHA-384`, `HMAC/SHA-384`, `HMACSHA-384`, `HMAC/SHA384`, `HMACSHA384` | `1.2.840.113549.2.10` | `hmac` and `sha384` | `KeyOwned` | 48 |
-| `HMAC-SHA512` | `HMAC-SHA-512`, `HMAC/SHA-512`, `HMACSHA-512`, `HMAC/SHA512`, `HMACSHA512` | `1.2.840.113549.2.11` | `hmac` and `sha512` | `KeyOwned` | 64 |
-| `HMAC-SHA512-224` | `HMAC-SHA-512/224`, `HMAC/SHA-512/224`, `HMACSHA-512/224`, `HMAC-SHA512/224`, `HMAC/SHA512/224`, `HMACSHA512/224`, `HMAC/SHA512-224`, `HMACSHA512-224`, `HMAC-SHA512(224)`, `HMAC/SHA512(224)`, `HMACSHA512(224)`, `HMAC-SHA-512(224)`, `HMAC/SHA-512(224)`, `HMACSHA-512(224)` | `1.2.840.113549.2.12` | `hmac` and `sha512-224` | `KeyOwned` | 28 |
-| `HMAC-SHA512-256` | `HMAC-SHA-512/256`, `HMAC/SHA-512/256`, `HMACSHA-512/256`, `HMAC-SHA512/256`, `HMAC/SHA512/256`, `HMACSHA512/256`, `HMAC/SHA512-256`, `HMACSHA512-256`, `HMAC-SHA512(256)`, `HMAC/SHA512(256)`, `HMACSHA512(256)`, `HMAC-SHA-512(256)`, `HMAC/SHA-512(256)`, `HMACSHA-512(256)` | `1.2.840.113549.2.13` | `hmac` and `sha512-256` | `KeyOwned` | 32 |
-| `HMAC-SHA3-224` | `HMAC/SHA3-224`, `HMACSHA3-224` | `2.16.840.1.101.3.4.2.13` | `hmac` and `sha3-224` | `KeyOwned` | 28 |
-| `HMAC-SHA3-256` | `HMAC/SHA3-256`, `HMACSHA3-256` | `2.16.840.1.101.3.4.2.14` | `hmac` and `sha3-256` | `KeyOwned` | 32 |
-| `HMAC-SHA3-384` | `HMAC/SHA3-384`, `HMACSHA3-384` | `2.16.840.1.101.3.4.2.15` | `hmac` and `sha3-384` | `KeyOwned` | 48 |
-| `HMAC-SHA3-512` | `HMAC/SHA3-512`, `HMACSHA3-512` | `2.16.840.1.101.3.4.2.16` | `hmac` and `sha3-512` | `KeyOwned` | 64 |
-| `HMAC-GOST3411-2012-256` | `HMAC/GOST3411-2012-256`, `HMACGOST3411-2012-256` | `1.2.643.7.1.1.4.1` | `hmac` and `gost3411-2012-256` | `KeyOwned` | 32 |
-| `HMAC-GOST3411-2012-512` | `HMAC/GOST3411-2012-512`, `HMACGOST3411-2012-512` | `1.2.643.7.1.1.4.2` | `hmac` and `gost3411-2012-512` | `KeyOwned` | 64 |
+| `HMAC-MD5` | `HMAC/MD5`, `HMACMD5` | `1.3.6.1.5.5.8.1.1` | `macs` and `md` | `KeyOwned` | 16 |
+| `HMAC-SHA1` | `HMAC-SHA-1`, `HMAC/SHA-1`, `HMACSHA-1`, `HMAC/SHA1`, `HMACSHA1` | `1.3.6.1.5.5.8.1.2`, `1.2.840.113549.2.7` | `macs` and `sha` | `KeyOwned` | 20 |
+| `HMAC-TIGER` | `HMAC/TIGER`, `HMACTIGER` | `1.3.6.1.5.5.8.1.3` | `macs` and `misc-digest` | `KeyOwned` | 24 |
+| `HMAC-RIPEMD160` | `HMAC/RIPEMD160`, `HMACRIPEMD160`, `HMAC-RIPEMD-160`, `HMAC/RIPEMD-160`, `HMACRIPEMD-160` | `1.3.6.1.5.5.8.1.4` | `macs` and `ripemd` | `KeyOwned` | 20 |
+| `HMAC-SHA224` | `HMAC-SHA-224`, `HMAC/SHA-224`, `HMACSHA-224`, `HMAC/SHA224`, `HMACSHA224` | `1.2.840.113549.2.8` | `macs` and `sha` | `KeyOwned` | 28 |
+| `HMAC-SHA256` | `HMAC-SHA-256`, `HMAC/SHA-256`, `HMACSHA-256`, `HMAC/SHA256`, `HMACSHA256` | `1.2.840.113549.2.9` | `macs` and `sha` | `KeyOwned` | 32 |
+| `HMAC-SHA384` | `HMAC-SHA-384`, `HMAC/SHA-384`, `HMACSHA-384`, `HMAC/SHA384`, `HMACSHA384` | `1.2.840.113549.2.10` | `macs` and `sha` | `KeyOwned` | 48 |
+| `HMAC-SHA512` | `HMAC-SHA-512`, `HMAC/SHA-512`, `HMACSHA-512`, `HMAC/SHA512`, `HMACSHA512` | `1.2.840.113549.2.11` | `macs` and `sha` | `KeyOwned` | 64 |
+| `HMAC-SHA512-224` | `HMAC-SHA-512/224`, `HMAC/SHA-512/224`, `HMACSHA-512/224`, `HMAC-SHA512/224`, `HMAC/SHA512/224`, `HMACSHA512/224`, `HMAC/SHA512-224`, `HMACSHA512-224`, `HMAC-SHA512(224)`, `HMAC/SHA512(224)`, `HMACSHA512(224)`, `HMAC-SHA-512(224)`, `HMAC/SHA-512(224)`, `HMACSHA-512(224)` | `1.2.840.113549.2.12` | `macs` and `sha` | `KeyOwned` | 28 |
+| `HMAC-SHA512-256` | `HMAC-SHA-512/256`, `HMAC/SHA-512/256`, `HMACSHA-512/256`, `HMAC-SHA512/256`, `HMAC/SHA512/256`, `HMACSHA512/256`, `HMAC/SHA512-256`, `HMACSHA512-256`, `HMAC-SHA512(256)`, `HMAC/SHA512(256)`, `HMACSHA512(256)`, `HMAC-SHA-512(256)`, `HMAC/SHA-512(256)`, `HMACSHA-512(256)` | `1.2.840.113549.2.13` | `macs` and `sha` | `KeyOwned` | 32 |
+| `HMAC-SHA3-224` | `HMAC/SHA3-224`, `HMACSHA3-224` | `2.16.840.1.101.3.4.2.13` | `macs` and `keccak` | `KeyOwned` | 28 |
+| `HMAC-SHA3-256` | `HMAC/SHA3-256`, `HMACSHA3-256` | `2.16.840.1.101.3.4.2.14` | `macs` and `keccak` | `KeyOwned` | 32 |
+| `HMAC-SHA3-384` | `HMAC/SHA3-384`, `HMACSHA3-384` | `2.16.840.1.101.3.4.2.15` | `macs` and `keccak` | `KeyOwned` | 48 |
+| `HMAC-SHA3-512` | `HMAC/SHA3-512`, `HMACSHA3-512` | `2.16.840.1.101.3.4.2.16` | `macs` and `keccak` | `KeyOwned` | 64 |
+| `HMAC-GOST3411-2012-256` | `HMAC/GOST3411-2012-256`, `HMACGOST3411-2012-256` | `1.2.643.7.1.1.4.1` | `macs` and `gost3411` | `KeyOwned` | 32 |
+| `HMAC-GOST3411-2012-512` | `HMAC/GOST3411-2012-512`, `HMACGOST3411-2012-512` | `1.2.643.7.1.1.4.2` | `macs` and `gost3411` | `KeyOwned` | 64 |
 
 ### Block cipher MACs
 
@@ -99,23 +99,23 @@ cipher, as `cbc-mac` and `des`.
 
 | Name | Aliases | OIDs | Features | Params | Tag bytes |
 |---|---|---|---|---|---|
-| `DESMAC` | `DES` |  | `cbc-mac` and `des` | `KeyOwned`, `KeyWithIvOwned` | 4 |
-| `DESMAC64` | `DES64` |  | `cbc-mac` and `des` | `KeyOwned`, `KeyWithIvOwned` | 8 |
-| `DESMAC/CFB8` | `DES/CFB8` |  | `cfb-mac` and `des` | `KeyOwned`, `KeyWithIvOwned` | 4 |
-| `DESEDEMAC` | `DESEDE` | `1.2.840.113549.3.7` | `cbc-mac` and `desede` | `KeyOwned`, `KeyWithIvOwned` | 4 |
-| `DESEDEMAC64` | `DESEDE64` |  | `cbc-mac` and `desede` | `KeyOwned`, `KeyWithIvOwned` | 8 |
-| `DESEDEMAC64WITHISO7816-4PADDING` | `DESEDE64WITHISO7816-4PADDING`, `DESEDEISO9797ALG1MACWITHISO7816-4PADDING`, `DESEDEISO9797ALG1WITHISO7816-4PADDING` |  | `cbc-mac` and `desede` | `KeyOwned`, `KeyWithIvOwned` | 8 |
-| `DESEDEMAC/CFB8` | `DESEDE/CFB8` |  | `cfb-mac` and `desede` | `KeyOwned`, `KeyWithIvOwned` | 4 |
-| `SKIPJACKMAC` | `SKIPJACK` |  | `cbc-mac` and `skipjack` | `KeyOwned`, `KeyWithIvOwned` | 4 |
-| `SKIPJACKMAC/CFB8` | `SKIPJACK/CFB8` |  | `cfb-mac` and `skipjack` | `KeyOwned`, `KeyWithIvOwned` | 4 |
-| `IDEAMAC` | `IDEA` |  | `cbc-mac` and `idea` | `KeyOwned`, `KeyWithIvOwned` | 4 |
-| `IDEAMAC/CFB8` | `IDEA/CFB8` |  | `cfb-mac` and `idea` | `KeyOwned`, `KeyWithIvOwned` | 4 |
-| [`RC2MAC`](Rc2.md) | `RC2` |  | `cbc-mac` and `rc2` | `KeyOwned`, `KeyWithIvOwned`, [`Rc2ParamsOwned`](Rc2.md), `ParamsWithIvOwned<Rc2ParamsOwned>` | 4 |
-| [`RC2MAC/CFB8`](Rc2.md) | `RC2/CFB8` |  | `cfb-mac` and `rc2` | `KeyOwned`, `KeyWithIvOwned`, [`Rc2ParamsOwned`](Rc2.md), `ParamsWithIvOwned<Rc2ParamsOwned>` | 4 |
-| [`RC5MAC`](Rc5.md) | `RC5` |  | `cbc-mac` and `rc5` | `KeyOwned`, `KeyWithIvOwned`, [`Rc5ParamsOwned`](Rc5.md), `ParamsWithIvOwned<Rc5ParamsOwned>` | 4 |
-| [`RC5MAC/CFB8`](Rc5.md) | `RC5/CFB8` |  | `cfb-mac` and `rc5` | `KeyOwned`, `KeyWithIvOwned`, [`Rc5ParamsOwned`](Rc5.md), `ParamsWithIvOwned<Rc5ParamsOwned>` | 4 |
-| `<CIPHER>CMAC`, for the ciphers below | `<CIPHER>-CMAC` |  | `cmac` and the cipher's | `KeyOwned`; RC2, RC5 and GOST 28147 also their own | the block |
-| `<CIPHER>GMAC`, for the ciphers below | `<CIPHER>-GMAC` |  | `gmac` and the cipher's | `KeyWithIvOwned`; RC5-64 also `ParamsWithIvOwned<Rc5ParamsOwned>` | 16 |
+| `DESMAC` | `DES` |  | `macs` and `des` | `KeyOwned`, `KeyWithIvOwned` | 4 |
+| `DESMAC64` | `DES64` |  | `macs` and `des` | `KeyOwned`, `KeyWithIvOwned` | 8 |
+| `DESMAC/CFB8` | `DES/CFB8` |  | `macs` and `des` | `KeyOwned`, `KeyWithIvOwned` | 4 |
+| `DESEDEMAC` | `DESEDE` | `1.2.840.113549.3.7` | `macs` and `des` | `KeyOwned`, `KeyWithIvOwned` | 4 |
+| `DESEDEMAC64` | `DESEDE64` |  | `macs` and `des` | `KeyOwned`, `KeyWithIvOwned` | 8 |
+| `DESEDEMAC64WITHISO7816-4PADDING` | `DESEDE64WITHISO7816-4PADDING`, `DESEDEISO9797ALG1MACWITHISO7816-4PADDING`, `DESEDEISO9797ALG1WITHISO7816-4PADDING` |  | `macs` and `des` | `KeyOwned`, `KeyWithIvOwned` | 8 |
+| `DESEDEMAC/CFB8` | `DESEDE/CFB8` |  | `macs` and `des` | `KeyOwned`, `KeyWithIvOwned` | 4 |
+| `SKIPJACKMAC` | `SKIPJACK` |  | `macs` and `misc-block-cipher` | `KeyOwned`, `KeyWithIvOwned` | 4 |
+| `SKIPJACKMAC/CFB8` | `SKIPJACK/CFB8` |  | `macs` and `misc-block-cipher` | `KeyOwned`, `KeyWithIvOwned` | 4 |
+| `IDEAMAC` | `IDEA` |  | `macs` and `misc-block-cipher` | `KeyOwned`, `KeyWithIvOwned` | 4 |
+| `IDEAMAC/CFB8` | `IDEA/CFB8` |  | `macs` and `misc-block-cipher` | `KeyOwned`, `KeyWithIvOwned` | 4 |
+| [`RC2MAC`](Rc2.md) | `RC2` |  | `macs` and `rc-cipher` | `KeyOwned`, `KeyWithIvOwned`, [`Rc2ParamsOwned`](Rc2.md), `ParamsWithIvOwned<Rc2ParamsOwned>` | 4 |
+| [`RC2MAC/CFB8`](Rc2.md) | `RC2/CFB8` |  | `macs` and `rc-cipher` | `KeyOwned`, `KeyWithIvOwned`, [`Rc2ParamsOwned`](Rc2.md), `ParamsWithIvOwned<Rc2ParamsOwned>` | 4 |
+| [`RC5MAC`](Rc5.md) | `RC5` |  | `macs` and `rc-cipher` | `KeyOwned`, `KeyWithIvOwned`, [`Rc5ParamsOwned`](Rc5.md), `ParamsWithIvOwned<Rc5ParamsOwned>` | 4 |
+| [`RC5MAC/CFB8`](Rc5.md) | `RC5/CFB8` |  | `macs` and `rc-cipher` | `KeyOwned`, `KeyWithIvOwned`, [`Rc5ParamsOwned`](Rc5.md), `ParamsWithIvOwned<Rc5ParamsOwned>` | 4 |
+| `<CIPHER>CMAC`, for the ciphers below | `<CIPHER>-CMAC` |  | `macs` and the cipher's | `KeyOwned`; RC2, RC5 and GOST 28147 also their own | the block |
+| `<CIPHER>GMAC`, for the ciphers below | `<CIPHER>-GMAC` |  | `macs` and the cipher's | `KeyWithIvOwned`; RC5-64 also `ParamsWithIvOwned<Rc5ParamsOwned>` | 16 |
 
 The `MAC` rows are CBC-MAC, and the `MAC/CFB8` rows CFB-MAC with a feedback of 8 bits, both with a
 tag of half a block unless the name says 64 bits. The last block is padded with zeros, or with
@@ -131,12 +131,12 @@ and `TWOFISH`.
 
 | Name | Aliases | OIDs | Feature | Params | Key bytes | Tag bytes |
 |---|---|---|---|---|---|---|
-| `ISO9797ALG3MAC` | `ISO9797ALG3`, `DESWITHISO9797`, `DESISO9797MAC` |  | `iso9797-alg3-mac` | `KeyOwned`, `KeyWithIvOwned` | 16, 24 | 8 |
-| `ISO9797ALG3WITHISO7816-4PADDING` | `ISO9797ALG3MACWITHISO7816-4PADDING` |  | `iso9797-alg3-mac` | `KeyOwned`, `KeyWithIvOwned` | 16, 24 | 8 |
+| `ISO9797ALG3MAC` | `ISO9797ALG3`, `DESWITHISO9797`, `DESISO9797MAC` |  | `iso9797-mac` | `KeyOwned`, `KeyWithIvOwned` | 16, 24 | 8 |
+| `ISO9797ALG3WITHISO7816-4PADDING` | `ISO9797ALG3MACWITHISO7816-4PADDING` |  | `iso9797-mac` | `KeyOwned`, `KeyWithIvOwned` | 16, 24 | 8 |
 | [`GOST28147MAC`](Gost28147.md) | `GOST28147` |  | `gost28147-mac` | `KeyOwned`, `KeyWithIvOwned`, [`Gost28147ParamsOwned`](Gost28147.md), `ParamsWithIvOwned<Gost28147ParamsOwned>` | 32 | 4 |
-| `VMPCMAC` | `VMPC`, `VMPC-MAC` |  | `vmpc-mac` | `KeyWithIvOwned` | 16..64 | 20 |
-| `SIPHASH-2-4` | `SIPHASH` |  | `siphash` | `KeyOwned` | 16 | 8 |
-| `SIPHASH-4-8` |  |  | `siphash` | `KeyOwned` | 16 | 8 |
+| `VMPCMAC` | `VMPC`, `VMPC-MAC` |  | `macs` | `KeyWithIvOwned` | 16..64 | 20 |
+| `SIPHASH-2-4` | `SIPHASH` |  | `macs` | `KeyOwned` | 16 | 8 |
+| `SIPHASH-4-8` |  |  | `macs` | `KeyOwned` | 16 | 8 |
 | `KMAC128` |  | `2.16.840.1.101.3.4.2.19` | `kmac` | `KeyOwned` | .. | 32 |
 | `KMAC256` |  | `2.16.840.1.101.3.4.2.20` | `kmac` | `KeyOwned` | .. | 64 |
 | `POLY1305` |  |  | `poly1305` | `KeyOwned` | 32 | 16 |
