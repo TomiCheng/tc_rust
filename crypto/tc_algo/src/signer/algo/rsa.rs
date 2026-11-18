@@ -547,12 +547,14 @@ mod family_tests {
         DefaultAlgoBuilder::default().build()
     }
 
+    // 2048 bits, as large a key as is quick to generate; PSS over a digest of more than 127 bytes
+    // needs a larger one, which the test below checks is refused
     fn keys() -> &'static (RsaKey, RsaKey) {
         static KEYS: OnceLock<(RsaKey, RsaKey)> = OnceLock::new();
         KEYS.get_or_init(|| {
             let pair = algo()
                 .key_pair_generator()
-                .generate_by_name_with("RSA", &RsaKeyGenParams::new(1024))
+                .generate_by_name_with("RSA", &RsaKeyGenParams::new(2048))
                 .unwrap();
             let key =
                 |params: &dyn Params| params.as_any().downcast_ref::<RsaKey>().unwrap().clone();
@@ -585,6 +587,14 @@ mod family_tests {
             .collect();
         assert!(names.len() >= 15, "{names:?}");
         for name in &names {
+            // PSS needs two hashes and two bytes more than the 256 of the key, so a hash of
+            // 128 bytes, as SKEIN-1024-1024 gives, is too long for it
+            if name.starts_with("SKEIN-1024-1024with") && name.ends_with("andMGF1") {
+                let mut signer = algo().signer().get_by_name(name).unwrap();
+                let error = signer.init(&keys().1).unwrap_err();
+                assert_eq!(error.kind(), ErrorKind::InvalidParams, "{name}");
+                continue;
+            }
             let message: &[u8] = if name == "NONEwithRSA" {
                 &[7; 32]
             } else {
