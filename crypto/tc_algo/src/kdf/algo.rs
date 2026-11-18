@@ -2,9 +2,12 @@
     feature = "hkdf",
     feature = "kdf1",
     feature = "kdf2",
-    feature = "concat-kdf"
+    feature = "concat-kdf",
+    feature = "pbkdf2"
 ))]
 mod digest;
+#[cfg(feature = "pbkdf2")]
+mod pbkdf2;
 #[cfg(feature = "sp800-108")]
 mod sp800_108;
 #[cfg(any(
@@ -12,6 +15,7 @@ mod sp800_108;
     feature = "kdf1",
     feature = "kdf2",
     feature = "concat-kdf",
+    feature = "pbkdf2",
     feature = "sp800-108"
 ))]
 mod typed;
@@ -26,7 +30,8 @@ pub(crate) const BUILT_IN: &[CreateRows] = &[
         feature = "hkdf",
         feature = "kdf1",
         feature = "kdf2",
-        feature = "concat-kdf"
+        feature = "concat-kdf",
+        feature = "pbkdf2"
     ))]
     digest::digest,
     #[cfg(feature = "sp800-108")]

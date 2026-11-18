@@ -32,7 +32,8 @@ mod empty_digest_provider;
     feature = "hkdf",
     feature = "kdf1",
     feature = "kdf2",
-    feature = "concat-kdf"
+    feature = "concat-kdf",
+    feature = "pbkdf2"
 ))]
 mod row_digest;
 
@@ -52,7 +53,8 @@ pub(crate) use empty_digest_provider::EmptyDigestProvider;
     feature = "hkdf",
     feature = "kdf1",
     feature = "kdf2",
-    feature = "concat-kdf"
+    feature = "concat-kdf",
+    feature = "pbkdf2"
 ))]
 pub(crate) use row_digest::RowDigest;
 pub use tc_digest::TryDigest;

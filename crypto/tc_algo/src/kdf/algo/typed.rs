@@ -68,12 +68,14 @@ impl KdfEntry for Row {
 
 // A KDF of tc_kdf whose params are a P, behind the Kdf of this crate: params of another type are
 // InvalidParams, and so is any failure of init, which comes from the params
+#[allow(dead_code, reason = "unused when pbkdf2 is the only KDF on")]
 pub(super) struct Typed<K, P> {
     kdf: K,
     params: PhantomData<fn() -> P>,
 }
 
 impl<K, P> Typed<K, P> {
+    #[allow(dead_code, reason = "unused when pbkdf2 is the only KDF on")]
     pub(super) fn boxed(kdf: K) -> Box<dyn Kdf>
     where
         Self: Kdf + 'static,

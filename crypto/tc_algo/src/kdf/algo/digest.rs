@@ -9,15 +9,15 @@ use crate::DefaultAlgoContext;
 use crate::digest::DigestEntry;
 #[allow(unused_imports, reason = "each family uses it")]
 use crate::digest::RowDigest;
-#[allow(unused_imports, reason = "used by hkdf alone")]
+#[allow(unused_imports, reason = "used by hkdf and pbkdf2 alone")]
 use crate::digest::TryDigest as _;
 use crate::kdf::KdfEntry;
 
 // The rows of the KDFs over a digest, to give to DefaultAlgoBuilder::reg_kdf: HKDF of RFC 5869,
-// KDF1 and KDF2 of ISO 18033-2 and the concatenation KDF of SP 800-56C, each over every digest row
-// that is on, named as HMAC is, HKDF-SHA256. Bouncy Castle has no factory of KDFs, so the names are
+// KDF1 and KDF2 of ISO 18033-2, the concatenation KDF of SP 800-56C and PBKDF2 of RFC 8018, each
+// over every digest row that is on, named as HMAC is, HKDF-SHA256 or PBKDF2-HMAC-SHA256. Bouncy Castle has no factory of KDFs, so the names are
 // this crate's own; the OIDs of HKDF are those of RFC 8619. NONE and Haraka, which takes inputs of
-// one length alone, have none, and HKDF needs a digest that HMAC takes
+// one length alone, have none, and HKDF and PBKDF2 need a digest that HMAC takes
 pub(super) fn digest(context: &DefaultAlgoContext) -> Vec<Box<dyn KdfEntry>> {
     let mut rows = Vec::new();
     let digests = crate::digest::BUILT_IN
@@ -69,6 +69,17 @@ pub(super) fn digest(context: &DefaultAlgoContext) -> Vec<Box<dyn KdfEntry>> {
                 )))
             }));
         }
+        #[cfg(feature = "pbkdf2")]
+        if hmac_takes(digest.as_ref()) {
+            let entry = digest.clone();
+            rows.push(Row::boxed(
+                "PBKDF2-HMAC",
+                &name,
+                &others,
+                no_oids(),
+                move || super::pbkdf2::Pbkdf2::boxed(RowDigest::new(entry.clone())),
+            ));
+        }
     }
     rows
 }
@@ -88,7 +99,7 @@ fn no_oids() -> Vec<Asn1Oid> {
 
 // tc_macs's Hmac takes a digest of a block of 16 bytes or more, and no longer than its digest, as
 // the HMAC rows do
-#[allow(dead_code, reason = "unused when hkdf is off")]
+#[allow(dead_code, reason = "unused when hkdf and pbkdf2 are off")]
 fn hmac_takes(digest: &dyn DigestEntry) -> bool {
     let digest = digest.create();
     digest.byte_length() >= 16 && digest.digest_size() <= digest.byte_length()

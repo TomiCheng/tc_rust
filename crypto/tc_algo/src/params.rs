@@ -248,6 +248,8 @@ pub use tc_ml_kem::{MlKemParameters, MlKemPrivateKey, MlKemPublicKey};
 pub use tc_naccache_stern::{
     NaccacheSternKeyGenerationParams, NaccacheSternPrivateKey, NaccacheSternPublicKey,
 };
+#[cfg(feature = "pbkdf2")]
+pub use tc_pbe::PbeParamsOwned;
 #[cfg(feature = "rc2")]
 pub use tc_rc_cipher::{Rc2Params, Rc2ParamsOwned};
 #[cfg(any(feature = "rc5", feature = "rc5-64"))]
@@ -450,6 +452,13 @@ impl Params for AeadParamsOwned {
 
 #[cfg(feature = "hkdf")]
 impl Params for HkdfParamsOwned {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
+#[cfg(feature = "pbkdf2")]
+impl Params for PbeParamsOwned {
     fn as_any(&self) -> &dyn Any {
         self
     }

@@ -200,6 +200,7 @@ hkdf = ["tc_macs/hmac", "tc_macs/alloc"]
 kdf1 = []
 kdf2 = []
 concat-kdf = []
+pbkdf2 = ["dep:tc_pbe"]
 sp800-108 = []
 
 # PBE
