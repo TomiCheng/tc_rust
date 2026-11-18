@@ -1206,6 +1206,7 @@ pub(crate) const CURVES: &[NamedCurve] = &[
 // The curve types that take EC keys: the generic ones of tc_fp_curve and tc_f2m_curve, which hold
 // any prime or binary curve, and the special ones of tc_fp_custom and tc_f2m_custom, those of the
 // keys of the EC key pair generator. It gives `$on::<C>` for each of them
+#[allow(unused_macros, reason = "unused when ec is on without a signer, agreement or ECIES")]
 macro_rules! ct_curves {
     ($on:ident) => {
         &[
@@ -1235,4 +1236,5 @@ macro_rules! ct_curves {
         ]
     };
 }
+#[allow(unused_imports, reason = "unused when ec is on without a signer, agreement or ECIES")]
 pub(crate) use ct_curves;

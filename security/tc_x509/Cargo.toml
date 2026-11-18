@@ -12,7 +12,13 @@ chrono = { version = "0.4.38", default-features = false, features = ["clock"] }
 rand = { version = "0.10", default-features = false, features = ["sys_rng"] }
 rand_core = "0.10"
 # The algorithms a certificate needs are always on, not behind features
-tc_algo = { version = "0.1.0", path = "../../crypto/tc_algo", features = ["rsa", "x25519"] }
+tc_algo = { version = "0.1.0", path = "../../crypto/tc_algo", features = ["rsa", "ec", "x25519"] }
+tc_ec_core = "0.1.0"
+tc_ec_key = { version = "0.1.0", path = "../../crypto/tc_ec_key" }
+tc_f2m_curve = { version = "0.1.1", features = ["small-curves"] }
+tc_f2m_custom = { version = "0.1.0", features = ["small-curves"] }
+tc_fp_curve = { version = "0.1.1", features = ["small-curves"] }
+tc_fp_custom = { version = "0.1.0", features = ["small-curves"] }
 tc_asn1 = { version = "0.1.4", features = ["chrono", "std"] }
 tc_asn1_cms = { version = "0.1.0", path = "../../asn1/tc_asn1_cms" }
 tc_asn1_pkcs = { version = "0.1.0", path = "../../asn1/tc_asn1_pkcs" }

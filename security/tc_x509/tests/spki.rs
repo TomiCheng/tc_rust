@@ -2,11 +2,13 @@ use std::any::Any;
 
 use tc_algo::Params;
 use tc_algo::generate::KeyPair;
-use tc_asn1::{Asn1BitString, Decode, DecodingOptions};
+use tc_asn1::{Asn1BitString, Asn1Object, Decode, DecodingOptions};
 use tc_asn1_pkcs::RsaPublicKey;
 use tc_asn1_x509::alg::AlgorithmIdentifier;
 use tc_asn1_x509::cert::SubjectPublicKeyInfo;
-use tc_x509::operator::params::{RsaKey, RsaKeyGenParams, RsaKeyParams, X25519PublicKey};
+use tc_x509::operator::params::{
+    EcKeyGenParams, RsaKey, RsaKeyGenParams, RsaKeyParams, X25519PublicKey,
+};
 use tc_x509::{DefaultX509OperatorBuilder, X509Error, X509Operator, X509OperatorBuilder};
 
 fn rsa_pair(oper: &dyn X509Operator) -> KeyPair {
@@ -128,4 +130,78 @@ fn an_x25519_spki_with_parameters_or_a_short_key_is_invalid() {
         let error = oper.spki().decode(&spki).err().unwrap();
         assert!(matches!(error, X509Error::InvalidPublicKey));
     }
+}
+
+fn ec_spki(oper: &dyn X509Operator, curve: &str) -> SubjectPublicKeyInfo {
+    let mut key_gen = oper.key_pair_generator().get_by_name("EC").unwrap();
+    key_gen.init(&EcKeyGenParams::new(curve)).unwrap();
+    let pair = key_gen.generate().unwrap();
+    oper.spki().encode(pair.public()).unwrap()
+}
+
+fn curve_oid(spki: &SubjectPublicKeyInfo) -> String {
+    match spki.algorithm().parameters() {
+        Some(Asn1Object::Oid(oid)) => oid.to_string(),
+        _ => panic!("no named curve"),
+    }
+}
+
+#[test]
+fn an_ec_public_key_becomes_id_ec_public_key_with_its_curve_and_reads_back() {
+    let oper = DefaultX509OperatorBuilder::default().build();
+    let spki = ec_spki(oper.as_ref(), "P-256");
+
+    assert_eq!(
+        spki.algorithm().algorithm().to_string(),
+        "1.2.840.10045.2.1"
+    );
+    assert_eq!(curve_oid(&spki), "1.2.840.10045.3.1.7");
+    let point = spki.subject_public_key().as_bytes();
+    assert_eq!((point.len(), point[0]), (65, 0x04));
+
+    let key = oper.spki().decode(&spki).unwrap();
+    assert_eq!(oper.spki().encode(key.as_ref()).unwrap(), spki);
+}
+
+#[test]
+fn curves_that_share_a_type_get_their_own_oids() {
+    let oper = DefaultX509OperatorBuilder::default().build();
+    for (curve, oid) in [
+        ("secp112r1", "1.3.132.0.6"),
+        ("secp112r2", "1.3.132.0.7"),
+        ("brainpoolP256r1", "1.3.36.3.3.2.8.1.1.7"),
+        ("sect163k1", "1.3.132.0.1"),
+        ("sect163r2", "1.3.132.0.15"),
+    ] {
+        let spki = ec_spki(oper.as_ref(), curve);
+        assert_eq!(curve_oid(&spki), oid, "{curve}");
+        let key = oper.spki().decode(&spki).unwrap();
+        assert_eq!(oper.spki().encode(key.as_ref()).unwrap(), spki, "{curve}");
+    }
+}
+
+#[test]
+fn an_ec_spki_without_a_named_curve_or_of_an_unknown_one_is_refused() {
+    let oper = DefaultX509OperatorBuilder::default().build();
+    let point = ec_spki(oper.as_ref(), "P-256")
+        .subject_public_key()
+        .as_bytes()
+        .to_vec();
+
+    let implicit = SubjectPublicKeyInfo::new(
+        AlgorithmIdentifier::with_null("1.2.840.10045.2.1".parse().unwrap()),
+        Asn1BitString::from_bytes(&point),
+    );
+    let error = oper.spki().decode(&implicit).err().unwrap();
+    assert!(matches!(error, X509Error::InvalidPublicKey));
+
+    let unknown = SubjectPublicKeyInfo::new(
+        AlgorithmIdentifier::with_parameters(
+            "1.2.840.10045.2.1".parse().unwrap(),
+            Asn1Object::Oid("1.2.3.4".parse().unwrap()),
+        ),
+        Asn1BitString::from_bytes(&point),
+    );
+    let error = oper.spki().decode(&unknown).err().unwrap();
+    assert!(matches!(error, X509Error::UnknownPublicKey));
 }
