@@ -1855,7 +1855,18 @@ dependencies = [
  "tc_asn1",
  "tc_asn1_pkcs",
  "tc_asn1_x509",
+ "tc_asn1_x9",
+ "tc_asym_cipher",
+ "tc_bigint",
+ "tc_ec_core",
+ "tc_ec_key",
+ "tc_f2m_curve",
+ "tc_f2m_custom",
+ "tc_fp_curve",
+ "tc_fp_custom",
+ "tc_rsa",
  "tc_x509",
+ "tc_zeroize",
 ]
 
 [[package]]
