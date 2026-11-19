@@ -11,6 +11,8 @@ use crate::signed::SignerInformation;
 pub struct CmsSignedData {
     signed_data: SignedData,
     content: Option<Vec<u8>>,
+    // 串流讀取時邊讀邊算的摘要，依摘要演算法；內容不留
+    digests: Vec<(Asn1Oid, Vec<u8>)>,
 }
 
 impl CmsSignedData {
@@ -23,6 +25,7 @@ impl CmsSignedData {
         Ok(Self {
             signed_data,
             content,
+            digests: Vec::new(),
         })
     }
 
@@ -31,6 +34,7 @@ impl CmsSignedData {
         Self {
             signed_data,
             content: Some(content),
+            digests: Vec::new(),
         }
     }
 
@@ -48,6 +52,22 @@ impl CmsSignedData {
         let info = ContentInfo::new(ContentType::SIGNED_DATA.oid())
             .with_content(convert(&self.signed_data)?);
         Ok(info.encode_to_vec(&EncodingOptions::DER)?)
+    }
+
+    // 串流讀出的：沒有內容，只有每個摘要演算法算出的摘要
+    pub(crate) fn with_digests(signed_data: SignedData, digests: Vec<(Asn1Oid, Vec<u8>)>) -> Self {
+        Self {
+            signed_data,
+            content: None,
+            digests,
+        }
+    }
+
+    pub(crate) fn digest(&self, algorithm: &Asn1Oid) -> Option<&[u8]> {
+        self.digests
+            .iter()
+            .find(|(known, _)| known == algorithm)
+            .map(|(_, digest)| digest.as_slice())
     }
 
     pub fn signed_data(&self) -> &SignedData {

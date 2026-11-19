@@ -1,4 +1,4 @@
-use std::io::Write;
+use std::io::{Read, Write};
 use std::sync::Arc;
 
 use chrono::Utc;
@@ -16,9 +16,10 @@ use crate::CmsError;
 use crate::algorithms::{RSA_ENCRYPTION, digest_name, equivalent};
 use crate::default_cms_operator::DefaultCmsOperator;
 use crate::der::convert;
+use crate::signed::signed_data_parser;
 use crate::signed::{
-    CmsSignedData, CmsSignedDataGenerator, SignedDataProvider, SignerInfoGenerator,
-    SignerInformation,
+    CmsSignedData, CmsSignedDataGenerator, SignedDataProvider, SignedDataWriter,
+    SignerInfoGenerator, SignerInformation,
 };
 
 impl SignedDataProvider for DefaultCmsOperator {
@@ -61,6 +62,36 @@ impl SignedDataProvider for DefaultCmsOperator {
         ))
     }
 
+    fn open<'a>(
+        &'a self,
+        generator: &'a CmsSignedDataGenerator,
+        output: Box<dyn Write + 'a>,
+        encapsulate: bool,
+    ) -> Result<SignedDataWriter<'a>, CmsError> {
+        SignedDataWriter::open(self.algo.as_ref(), generator, output, encapsulate)
+    }
+
+    fn parse(
+        &self,
+        input: &mut dyn Read,
+        content: &mut dyn Write,
+    ) -> Result<CmsSignedData, CmsError> {
+        signed_data_parser::parse(self.algo.as_ref(), input, content, None)
+    }
+
+    fn parse_detached(
+        &self,
+        input: &mut dyn Read,
+        content: &mut dyn Read,
+    ) -> Result<CmsSignedData, CmsError> {
+        signed_data_parser::parse(
+            self.algo.as_ref(),
+            input,
+            &mut std::io::sink(),
+            Some(content),
+        )
+    }
+
     fn verify(
         &self,
         signed: &CmsSignedData,
@@ -89,14 +120,21 @@ impl SignedDataProvider for DefaultCmsOperator {
         public_key: Arc<dyn Params>,
     ) -> Result<(), CmsError> {
         let info = signer.signer_info();
+        // 串流讀出的 SignedData 不留內容，只留邊讀邊算的摘要
         let content = match signer.countersigned() {
-            Some(signature) => signature,
-            None => signed.signed_content().ok_or(CmsError::MissingContent)?,
+            Some(signature) => Some(signature),
+            None => signed.signed_content(),
         };
-        let digest = self
-            .algo
-            .digest()
-            .calculate_by_oid(info.digest_algorithm().algorithm(), content)?;
+        let digest = match content {
+            Some(content) => self
+                .algo
+                .digest()
+                .calculate_by_oid(info.digest_algorithm().algorithm(), content)?,
+            None => signed
+                .digest(info.digest_algorithm().algorithm())
+                .ok_or(CmsError::MissingContent)?
+                .to_vec(),
+        };
 
         if info.signed_attrs().is_some() {
             if signer.is_counter_signature() {
@@ -154,7 +192,7 @@ impl SignedDataProvider for DefaultCmsOperator {
         let mut calculator = factory.create_calculator()?;
         match info.signed_attrs_der()? {
             Some(attributes) => calculator.write_all(&attributes),
-            None => calculator.write_all(content),
+            None => calculator.write_all(content.ok_or(CmsError::MissingContent)?),
         }
         .map_err(tc_x509::X509Error::from)?;
         if calculator.result().is_verified(signer.signature())? {
@@ -237,43 +275,18 @@ impl DefaultCmsOperator {
         content_type: Option<&Asn1Oid>,
         content: &[u8],
     ) -> Result<SignerInfo, CmsError> {
-        let digest_algorithm = &signer.digest_algorithm;
-        let signature_algorithm = signer.factory.algorithm().clone();
-        let digest = self
-            .algo
-            .digest()
-            .calculate_by_oid(digest_algorithm.algorithm(), content)?;
-
-        let mut calculator = signer.factory.create_calculator()?;
-        let signed_attributes = if signer.signed_attributes {
-            let attributes =
-                standard_attributes(signer, content_type, &digest, &signature_algorithm)?;
-            let der = Asn1SetOf::new(attributes.clone()).encode_to_vec(&EncodingOptions::DER)?;
-            calculator
-                .write_all(&der)
-                .map_err(tc_x509::X509Error::from)?;
-            Some(attributes)
-        } else {
+        if !signer.signed_attributes {
+            let mut calculator = signer.factory.create_calculator()?;
             calculator
                 .write_all(content)
                 .map_err(tc_x509::X509Error::from)?;
-            None
-        };
-        let signature = calculator.result().collect()?;
-
-        let mut info = SignerInfo::new(
-            signer.sid.clone(),
-            digest_algorithm.clone(),
-            signature_algorithm,
-            Asn1OctetString::new(&signature),
-        );
-        if let Some(attributes) = signed_attributes {
-            info = info.with_signed_attrs(attributes);
+            return finish_signer_info(signer, None, calculator.result().collect()?);
         }
-        if !signer.unsigned.is_empty() {
-            info = info.with_unsigned_attrs(signer.unsigned.clone());
-        }
-        Ok(info)
+        let digest = self
+            .algo
+            .digest()
+            .calculate_by_oid(signer.digest_algorithm.algorithm(), content)?;
+        sign_digest(signer, content_type, &digest)
     }
 
     // 簽章演算法是 rsaEncryption 時，依摘要組出 SHA-256withRSA 這樣的名稱，同 BC 的
@@ -297,6 +310,42 @@ impl DefaultCmsOperator {
         let provider = self.x509.verifier_factory_provider(public_key);
         Ok(provider.create_verifier_factory(signature)?)
     }
+}
+
+// 有 signed attributes 的簽署者：簽的是它們的 DER，內容只以摘要出現，所以串流時也用得上
+pub(crate) fn sign_digest(
+    signer: &SignerInfoGenerator,
+    content_type: Option<&Asn1Oid>,
+    digest: &[u8],
+) -> Result<SignerInfo, CmsError> {
+    let signature_algorithm = signer.factory.algorithm().clone();
+    let attributes = standard_attributes(signer, content_type, digest, &signature_algorithm)?;
+    let der = Asn1SetOf::new(attributes.clone()).encode_to_vec(&EncodingOptions::DER)?;
+    let mut calculator = signer.factory.create_calculator()?;
+    calculator
+        .write_all(&der)
+        .map_err(tc_x509::X509Error::from)?;
+    finish_signer_info(signer, Some(attributes), calculator.result().collect()?)
+}
+
+pub(crate) fn finish_signer_info(
+    signer: &SignerInfoGenerator,
+    signed_attributes: Option<Vec<Attribute>>,
+    signature: Vec<u8>,
+) -> Result<SignerInfo, CmsError> {
+    let mut info = SignerInfo::new(
+        signer.sid.clone(),
+        signer.digest_algorithm.clone(),
+        signer.factory.algorithm().clone(),
+        Asn1OctetString::new(&signature),
+    );
+    if let Some(attributes) = signed_attributes {
+        info = info.with_signed_attrs(attributes);
+    }
+    if !signer.unsigned.is_empty() {
+        info = info.with_unsigned_attrs(signer.unsigned.clone());
+    }
+    Ok(info)
 }
 
 // 同 BC DefaultSignedAttributeTableGenerator：另外給的屬性優先，缺的才補上

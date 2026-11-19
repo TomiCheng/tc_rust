@@ -3,12 +3,15 @@
 mod cms_signed_data;
 mod cms_signed_data_generator;
 mod default_signed_data_provider;
+mod signed_data_parser;
 mod signed_data_provider;
+mod signed_data_writer;
 mod signer_info_generator;
 mod signer_information;
 
 pub use cms_signed_data::CmsSignedData;
 pub use cms_signed_data_generator::CmsSignedDataGenerator;
 pub use signed_data_provider::SignedDataProvider;
+pub use signed_data_writer::SignedDataWriter;
 pub use signer_info_generator::SignerInfoGenerator;
 pub use signer_information::SignerInformation;

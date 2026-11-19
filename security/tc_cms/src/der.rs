@@ -16,6 +16,18 @@ pub(crate) fn convert<T: Encode, U: Decode>(value: &T) -> Result<U, CmsError> {
     decode_all(&value.encode_to_vec(&EncodingOptions::DER)?)
 }
 
+// DER 的長度八位元組，接在 out 後面
+pub(crate) fn length(out: &mut Vec<u8>, len: usize) {
+    if len < 0x80 {
+        out.push(len as u8);
+        return;
+    }
+    let bytes = len.to_be_bytes();
+    let skip = bytes.iter().take_while(|&&byte| byte == 0).count();
+    out.push(0x80 | (bytes.len() - skip) as u8);
+    out.extend(&bytes[skip..]);
+}
+
 // eContent 的 OCTET STRING，BER 分段的（constructed，0x24）也接受，各段依序串起來；tc_asn1 的
 // Asn1OctetString 只讀單一段
 pub(crate) fn octets(any: &tc_asn1::Asn1Any) -> Result<Vec<u8>, CmsError> {
