@@ -9,6 +9,7 @@ mod parallel_hash;
 #[cfg(feature = "keccak")]
 mod tuple_hash;
 
+#[cfg(feature = "ascon-hash")]
 mod ascon;
 
 #[cfg(feature = "ascon-hash")]
