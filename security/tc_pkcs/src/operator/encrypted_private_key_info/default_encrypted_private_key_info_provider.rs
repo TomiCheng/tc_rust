@@ -26,6 +26,33 @@ impl DefaultEncryptedPrivateKeyInfoProvider {
     }
 }
 
+// Any bytes, not only a PrivateKeyInfo, for the encryptedData of PKCS#12, which takes the same
+// AlgorithmIdentifier
+impl DefaultEncryptedPrivateKeyInfoProvider {
+    pub(crate) fn encrypt_bytes_by_oid(
+        &self,
+        oid: &Asn1Oid,
+        params: &dyn Params,
+        plain: &[u8],
+    ) -> Result<EncryptedPrivateKeyInfo, PkcsError> {
+        self.rows
+            .iter()
+            .find_map(|row| row.encrypt_by_oid(self.algo.as_ref(), oid, params, plain))
+            .unwrap_or(Err(PkcsError::UnknownEncryption))
+    }
+
+    pub(crate) fn decrypt_bytes(
+        &self,
+        password: &str,
+        info: &EncryptedPrivateKeyInfo,
+    ) -> Result<Zeroizing<Vec<u8>>, PkcsError> {
+        self.rows
+            .iter()
+            .find_map(|row| row.decrypt(self.algo.as_ref(), password, info))
+            .unwrap_or(Err(PkcsError::UnknownEncryption))
+    }
+}
+
 fn plain(info: &PrivateKeyInfo) -> Result<Zeroizing<Vec<u8>>, PkcsError> {
     Ok(Zeroizing::new(info.encode_to_vec(&EncodingOptions::DER)?))
 }
@@ -50,11 +77,7 @@ impl EncryptedPrivateKeyInfoProvider for DefaultEncryptedPrivateKeyInfoProvider 
         params: &dyn Params,
         info: &PrivateKeyInfo,
     ) -> Result<EncryptedPrivateKeyInfo, PkcsError> {
-        let plain = plain(info)?;
-        self.rows
-            .iter()
-            .find_map(|row| row.encrypt_by_oid(self.algo.as_ref(), oid, params, &plain))
-            .unwrap_or(Err(PkcsError::UnknownEncryption))
+        self.encrypt_bytes_by_oid(oid, params, &plain(info)?)
     }
 
     fn decrypt(
@@ -62,11 +85,6 @@ impl EncryptedPrivateKeyInfoProvider for DefaultEncryptedPrivateKeyInfoProvider 
         password: &str,
         info: &EncryptedPrivateKeyInfo,
     ) -> Result<PrivateKeyInfo, PkcsError> {
-        let plain = self
-            .rows
-            .iter()
-            .find_map(|row| row.decrypt(self.algo.as_ref(), password, info))
-            .unwrap_or(Err(PkcsError::UnknownEncryption))?;
-        decode_all(&plain)
+        decode_all(&self.decrypt_bytes(password, info)?)
     }
 }

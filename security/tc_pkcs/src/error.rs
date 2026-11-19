@@ -28,6 +28,16 @@ pub enum PkcsError {
     InvalidRequest,
     // A signature that does not verify
     InvalidSignature,
+    // A PKCS#12 file with a MAC or encrypted contents was loaded without a password
+    MissingPassword,
+    // The MAC of a PKCS#12 file does not verify: a wrong password or a changed file
+    InvalidMac,
+    // A PKCS#12 file whose structure is not what Bouncy Castle reads
+    InvalidStore,
+    // A key entry was set without a certificate chain
+    NoCertificateChain,
+    // A certificate entry was set under the alias of a key
+    AliasInUse,
 }
 
 impl fmt::Display for PkcsError {
@@ -44,6 +54,13 @@ impl fmt::Display for PkcsError {
             Self::MissingField(field) => write!(f, "missing field: {field}"),
             Self::InvalidRequest => f.write_str("invalid certification request"),
             Self::InvalidSignature => f.write_str("the signature does not verify"),
+            Self::MissingPassword => f.write_str("a password is needed"),
+            Self::InvalidMac => {
+                f.write_str("the MAC does not verify: wrong password or corrupted file")
+            }
+            Self::InvalidStore => f.write_str("invalid PKCS#12 store"),
+            Self::NoCertificateChain => f.write_str("no certificate chain for the private key"),
+            Self::AliasInUse => f.write_str("a key entry has the alias"),
         }
     }
 }

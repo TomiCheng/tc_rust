@@ -1851,8 +1851,11 @@ dependencies = [
 name = "tc_pkcs"
 version = "0.1.0"
 dependencies = [
+ "rand",
+ "rand_core",
  "tc_algo",
  "tc_asn1",
+ "tc_asn1_cms",
  "tc_asn1_pkcs",
  "tc_asn1_x500",
  "tc_asn1_x509",

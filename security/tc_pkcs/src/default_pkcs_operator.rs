@@ -8,14 +8,13 @@ use crate::operator::encrypted_private_key_info::{
     DefaultEncryptedPrivateKeyInfoProvider, EncryptedPrivateKeyInfoProvider,
 };
 use crate::operator::private_key_info::{DefaultPrivateKeyInfoProvider, PrivateKeyInfoProvider};
+use crate::pkcs12::Pkcs12Provider;
 
 pub(crate) struct DefaultPkcsOperator {
-    #[allow(dead_code, reason = "PKCS#12 stores will use it")]
-    algo: Arc<dyn Algo>,
-    #[allow(dead_code, reason = "certification requests and PKCS#12 will use it")]
-    x509: Arc<dyn X509Operator>,
-    private_key_info: DefaultPrivateKeyInfoProvider,
-    encrypted_private_key_info: DefaultEncryptedPrivateKeyInfoProvider,
+    pub(crate) algo: Arc<dyn Algo>,
+    pub(crate) x509: Arc<dyn X509Operator>,
+    pub(crate) private_key_info: DefaultPrivateKeyInfoProvider,
+    pub(crate) encrypted_private_key_info: DefaultEncryptedPrivateKeyInfoProvider,
 }
 
 impl DefaultPkcsOperator {
@@ -41,5 +40,9 @@ impl PkcsOperator for DefaultPkcsOperator {
 
     fn encrypted_private_key_info(&self) -> &dyn EncryptedPrivateKeyInfoProvider {
         &self.encrypted_private_key_info
+    }
+
+    fn pkcs12(&self) -> &dyn Pkcs12Provider {
+        self
     }
 }

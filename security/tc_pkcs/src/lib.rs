@@ -8,6 +8,7 @@ mod default_pkcs_operator_context;
 mod der;
 mod error;
 pub mod operator;
+pub mod pkcs12;
 mod traits;
 
 pub use default_pkcs_operator_builder::DefaultPkcsOperatorBuilder;
