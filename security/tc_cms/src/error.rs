@@ -36,6 +36,10 @@ pub enum CmsError {
     NoRecipient,
     // AuthenticatedData 的 MAC 驗不過
     MacMismatch,
+    // 解壓的內容超過上限
+    ContentTooLarge,
+    // 壓縮或解壓失敗，例如資料不是 zlib
+    Io(std::io::Error),
     // 簽章時間不在憑證的有效期間內
     CertificateNotValid,
 }
@@ -61,6 +65,8 @@ impl fmt::Display for CmsError {
             Self::MissingContent => f.write_str("the content is not encapsulated"),
             Self::UnexpectedContentType => f.write_str("unexpected content type"),
             Self::InvalidKey => f.write_str("the content encryption key has the wrong length"),
+            Self::ContentTooLarge => f.write_str("the decompressed content exceeds the limit"),
+            Self::Io(error) => write!(f, "{error}"),
             Self::MacMismatch => f.write_str("the MAC does not verify"),
             Self::NoRecipient => f.write_str("no recipient to agree a key with"),
             Self::WrongRecipientKey => {
@@ -79,6 +85,7 @@ impl Error for CmsError {
             Self::Algo(error) => Some(error),
             Self::Asn1(error) => Some(error),
             Self::X509(error) => Some(error),
+            Self::Io(error) => Some(error),
             _ => None,
         }
     }

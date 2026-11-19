@@ -1137,6 +1137,7 @@ dependencies = [
  "tc_pkcs",
  "tc_x509",
  "tc_zeroize",
+ "tc_zlib",
 ]
 
 [[package]]

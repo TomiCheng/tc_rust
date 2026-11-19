@@ -3,9 +3,11 @@
 mod algorithms;
 pub mod auth_enveloped;
 pub mod authenticated;
+pub mod compressed;
 mod default_cms_operator;
 mod default_cms_operator_builder;
 mod der;
+pub mod digested;
 pub mod enveloped;
 mod error;
 pub mod signed;

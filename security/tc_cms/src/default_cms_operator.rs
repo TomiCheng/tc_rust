@@ -6,6 +6,7 @@ use tc_x509::X509Operator;
 use crate::CmsOperator;
 use crate::auth_enveloped::AuthEnvelopedDataProvider;
 use crate::authenticated::AuthenticatedDataProvider;
+use crate::digested::DigestedDataProvider;
 use crate::enveloped::EnvelopedDataProvider;
 use crate::signed::SignedDataProvider;
 
@@ -34,6 +35,10 @@ impl CmsOperator for DefaultCmsOperator {
     }
 
     fn authenticated_data(&self) -> &dyn AuthenticatedDataProvider {
+        self
+    }
+
+    fn digested_data(&self) -> &dyn DigestedDataProvider {
         self
     }
 }

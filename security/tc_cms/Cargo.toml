@@ -19,6 +19,7 @@ tc_asn1_x500 = "0.1.0"
 tc_asn1_x509 = { version = "0.1.0", features = ["chrono"] }
 tc_x509 = { version = "0.1.0", path = "../tc_x509" }
 tc_zeroize = "0.1.0"
+tc_zlib = { version = "0.1.0", path = "../../util/tc_zlib" }
 
 [dev-dependencies]
 tc_pkcs = { version = "0.1.0", path = "../tc_pkcs" }
