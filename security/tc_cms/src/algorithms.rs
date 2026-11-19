@@ -103,3 +103,50 @@ pub(crate) fn content_key_length(cipher: &Asn1Oid) -> Result<usize, CmsError> {
         .map(|(_, length)| *length)
         .ok_or(CmsError::UnknownAlgorithm)
 }
+
+// AES key wrap of RFC 3394 by the length of the KEK, as BC's KekRecipientInfoGenerator takes it
+const AES_WRAPS: &[(usize, &str)] = &[
+    (16, "2.16.840.1.101.3.4.1.5"),
+    (24, "2.16.840.1.101.3.4.1.25"),
+    (32, "2.16.840.1.101.3.4.1.45"),
+];
+
+pub(crate) fn aes_wrap(kek_length: usize) -> Result<Asn1Oid, CmsError> {
+    let (_, dotted) = AES_WRAPS
+        .iter()
+        .find(|(length, _)| *length == kek_length)
+        .ok_or(CmsError::InvalidKey)?;
+    Ok(dotted.parse()?)
+}
+
+// id-alg-PWRI-KEK of RFC 3211
+pub(crate) const PWRI_KEK: &str = "1.2.840.113549.1.9.16.3.9";
+
+// RFC 3211 的 wrap 列，依 PWRI-KEK 參數裡的 cipher，同 BC CmsEnvelopedHelper.GetRfc3211WrapperName
+pub(crate) fn rfc3211_wrapper(cipher: &Asn1Oid) -> Result<&'static str, CmsError> {
+    match cipher.to_string().as_str() {
+        "2.16.840.1.101.3.4.1.2" | "2.16.840.1.101.3.4.1.22" | "2.16.840.1.101.3.4.1.42" => {
+            Ok("AESRFC3211WRAP")
+        }
+        "1.2.840.113549.3.7" => Ok("DESEDERFC3211WRAP"),
+        _ => Err(CmsError::UnknownAlgorithm),
+    }
+}
+
+// PBKDF2 的 PRF 對到 tc_algo 的 KDF 列；沒寫時是 hmacWithSHA1
+const PBKDF2_PRFS: &[(&str, &str)] = &[
+    ("1.2.840.113549.2.7", "PBKDF2-HMAC-SHA1"),
+    ("1.2.840.113549.2.8", "PBKDF2-HMAC-SHA224"),
+    ("1.2.840.113549.2.9", "PBKDF2-HMAC-SHA256"),
+    ("1.2.840.113549.2.10", "PBKDF2-HMAC-SHA384"),
+    ("1.2.840.113549.2.11", "PBKDF2-HMAC-SHA512"),
+];
+
+pub(crate) fn pbkdf2(prf: &Asn1Oid) -> Result<&'static str, CmsError> {
+    let dotted = prf.to_string();
+    PBKDF2_PRFS
+        .iter()
+        .find(|(oid, _)| *oid == dotted)
+        .map(|(_, name)| *name)
+        .ok_or(CmsError::UnknownAlgorithm)
+}

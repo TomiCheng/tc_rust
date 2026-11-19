@@ -4,19 +4,25 @@ use rand::rngs::SysRng;
 use rand_core::{Rng, UnwrapErr};
 use tc_algo::Params;
 use tc_algo::params::cipher::KeyWithIvOwned;
-use tc_asn1::{Asn1Object, Asn1OctetString, Asn1Oid};
+use tc_algo::params::key::KeyOwned;
+use tc_asn1::{Asn1Object, Asn1OctetString, Asn1Oid, Asn1SequenceOf};
 use tc_asn1_cms::content::{EncryptedContentInfo, EnvelopedData};
-use tc_asn1_cms::recipient::RecipientInfo;
-use tc_asn1_pkcs::{Pkcs1Algorithm, RsaesOaepParams};
+use tc_asn1_cms::recipient::{PasswordRecipientInfo, RecipientInfo};
+use tc_asn1_pkcs::{Pbkdf2Params, Pkcs1Algorithm, Pkcs5Algorithm, RsaesOaepParams};
 use tc_asn1_x509::alg::AlgorithmIdentifier;
 use tc_zeroize::Zeroizing;
 
 use crate::CmsError;
-use crate::algorithms::{RSA_ENCRYPTION, RSAES_OAEP, content_key_length, equivalent, oaep_digest};
+use crate::algorithms::{
+    PWRI_KEK, RSA_ENCRYPTION, RSAES_OAEP, content_key_length, equivalent, oaep_digest,
+    rfc3211_wrapper,
+};
 use crate::default_cms_operator::DefaultCmsOperator;
 use crate::der::convert;
+use crate::enveloped::password_key::derive;
 use crate::enveloped::{
-    CmsEnvelopedData, CmsEnvelopedDataGenerator, EnvelopedDataProvider, RecipientInformation,
+    CmsEnvelopedData, CmsEnvelopedDataGenerator, EnvelopedDataProvider, PasswordKey,
+    RecipientInformation,
 };
 
 impl EnvelopedDataProvider for DefaultCmsOperator {
@@ -54,17 +60,37 @@ impl EnvelopedDataProvider for DefaultCmsOperator {
         &self,
         enveloped: &CmsEnvelopedData,
         recipient: &RecipientInformation,
-        private_key: &dyn Params,
+        key: &dyn Params,
     ) -> Result<Zeroizing<Vec<u8>>, CmsError> {
-        let RecipientInfo::KeyTrans(info) = recipient.recipient_info() else {
-            return Err(CmsError::UnknownAlgorithm);
+        let key = match recipient.recipient_info() {
+            RecipientInfo::KeyTrans(info) => {
+                let name = key_trans_cipher(info.key_encryption_algorithm())?;
+                Zeroizing::new(self.algo.cipher().decrypt_by_name(
+                    &name,
+                    key,
+                    info.encrypted_key().as_bytes(),
+                )?)
+            }
+            RecipientInfo::Kek(info) => {
+                let kek = key
+                    .as_any()
+                    .downcast_ref::<KeyOwned>()
+                    .ok_or(CmsError::WrongRecipientKey)?;
+                Zeroizing::new(self.algo.wrap().unwrap_by_oid(
+                    info.key_encryption_algorithm().algorithm(),
+                    kek,
+                    info.encrypted_key().as_bytes(),
+                )?)
+            }
+            RecipientInfo::Password(info) => {
+                let password = key
+                    .as_any()
+                    .downcast_ref::<PasswordKey>()
+                    .ok_or(CmsError::WrongRecipientKey)?;
+                self.unwrap_with_password(info, password)?
+            }
+            _ => return Err(CmsError::UnknownAlgorithm),
         };
-        let name = key_trans_cipher(info.key_encryption_algorithm())?;
-        let key = Zeroizing::new(self.algo.cipher().decrypt_by_name(
-            &name,
-            private_key,
-            info.encrypted_key().as_bytes(),
-        )?);
 
         let encrypted = enveloped.enveloped_data().encrypted_content_info();
         let algorithm = encrypted.content_encryption_algorithm();
@@ -81,6 +107,47 @@ impl EnvelopedDataProvider for DefaultCmsOperator {
             algorithm.algorithm(),
             &KeyWithIvOwned::new(key.to_vec(), iv.as_bytes().to_vec()),
             sealed.as_bytes(),
+        )?))
+    }
+}
+
+impl DefaultCmsOperator {
+    // 同 BC 的 PasswordRecipientInformation：PBKDF2 推出 KEK，長度是 PWRI-KEK 參數裡 cipher 的
+    // 金鑰長度，再以 RFC 3211 解開
+    fn unwrap_with_password(
+        &self,
+        info: &PasswordRecipientInfo,
+        password: &PasswordKey,
+    ) -> Result<Zeroizing<Vec<u8>>, CmsError> {
+        let derivation = info
+            .key_derivation_algorithm()
+            .ok_or(CmsError::UnknownAlgorithm)?;
+        if Pkcs5Algorithm::PBKDF2 != *derivation.algorithm() {
+            return Err(CmsError::UnknownAlgorithm);
+        }
+        let pbkdf2: Pbkdf2Params =
+            convert(derivation.parameters().ok_or(CmsError::UnknownAlgorithm)?)?;
+
+        let algorithm = info.key_encryption_algorithm();
+        if algorithm.algorithm().to_string() != PWRI_KEK {
+            return Err(CmsError::UnknownAlgorithm);
+        }
+        let params: Asn1SequenceOf<Asn1Object> =
+            convert(algorithm.parameters().ok_or(CmsError::UnknownAlgorithm)?)?;
+        let [Asn1Object::Oid(cipher), Asn1Object::OctetString(iv)] = params.elements() else {
+            return Err(CmsError::UnknownAlgorithm);
+        };
+        let wrapper = rfc3211_wrapper(cipher)?;
+        let kek = derive(
+            self.algo.as_ref(),
+            &pbkdf2,
+            password.bytes(),
+            content_key_length(cipher)?,
+        )?;
+        Ok(Zeroizing::new(self.algo.wrap().unwrap_by_name(
+            wrapper,
+            &KeyWithIvOwned::new(kek.to_vec(), iv.as_bytes().to_vec()),
+            info.encrypted_key().as_bytes(),
         )?))
     }
 }

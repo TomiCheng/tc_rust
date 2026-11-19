@@ -2,7 +2,7 @@ use tc_asn1::{DecodingContext, DecodingOptions};
 use tc_asn1_cms::recipient::{RecipientIdentifier, RecipientInfo};
 use tc_x509::cert::X509Certificate;
 
-// BC 的 RecipientInformation：一個收件人。目前只有 KeyTrans 解得開
+// BC 的 RecipientInformation：一個收件人。KeyTrans、KEK 與 Password 解得開
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct RecipientInformation {
     info: RecipientInfo,
@@ -15,6 +15,18 @@ impl RecipientInformation {
 
     pub fn recipient_info(&self) -> &RecipientInfo {
         &self.info
+    }
+
+    // KEK 收件人的金鑰識別碼，其他種類是 None
+    pub fn kek_identifier(&self) -> Option<&[u8]> {
+        match &self.info {
+            RecipientInfo::Kek(info) => Some(info.kekid().key_identifier().as_bytes()),
+            _ => None,
+        }
+    }
+
+    pub fn is_password(&self) -> bool {
+        matches!(self.info, RecipientInfo::Password(_))
     }
 
     // 憑證是不是這個收件人的，同 BC RecipientID.Match：KeyTrans 依簽發者與序號或
