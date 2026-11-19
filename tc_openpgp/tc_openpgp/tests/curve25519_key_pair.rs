@@ -9,7 +9,7 @@ fn generates_matching_ed25519_keys() {
     let tag = PublicKeyAlgorithmTag::Ed25519;
     let operator = DefaultPgpOperatorBuilder::default().build();
     let mut generator = operator.key_pair_generator().get_by_algorithm(tag).unwrap();
-    let (public, private) = generator.generate_without_params().unwrap();
+    let (public, private) = generator.generate().unwrap().into_parts();
     assert_eq!(public.algorithm(), tag);
     assert_eq!(private.algorithm(), tag);
     let public = public
@@ -30,7 +30,7 @@ fn generates_matching_x25519_keys() {
     let tag = PublicKeyAlgorithmTag::X25519;
     let operator = DefaultPgpOperatorBuilder::default().build();
     let mut generator = operator.key_pair_generator().get_by_algorithm(tag).unwrap();
-    let (public, private) = generator.generate_without_params().unwrap();
+    let (public, private) = generator.generate().unwrap().into_parts();
     assert_eq!(public.algorithm(), tag);
     assert_eq!(private.algorithm(), tag);
     let public = public

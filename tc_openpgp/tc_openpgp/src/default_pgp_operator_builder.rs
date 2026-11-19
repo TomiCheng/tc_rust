@@ -25,7 +25,7 @@ impl Default for DefaultPgpOperatorBuilder {
             generators: HashMap::new(),
         };
         for &(tag, create) in BUILT_IN {
-            builder.reg_key_pair_generator(tag, create);
+            builder.generators.insert(tag, Arc::new(create));
         }
         builder
     }
@@ -46,7 +46,8 @@ impl DefaultPgpOperatorBuilder {
         + Sync
         + 'static,
     ) {
-        self.generators.insert(tag, Arc::new(create));
+        self.generators
+            .insert(tag, Arc::new(move |ctx| Ok(create(ctx))));
     }
 }
 

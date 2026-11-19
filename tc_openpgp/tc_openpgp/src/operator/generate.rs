@@ -14,5 +14,8 @@ pub(crate) use empty_pgp_key_pair_generator_provider::EmptyPgpKeyPairGeneratorPr
 pub use pgp_key_pair_generator::PgpKeyPairGenerator;
 pub use pgp_key_pair_generator_provider::PgpKeyPairGeneratorProvider;
 
-pub(crate) type GeneratorFactory =
-    Arc<dyn Fn(&DefaultPgpOperatorContext) -> Box<dyn PgpKeyPairGenerator> + Send + Sync>;
+pub(crate) type GeneratorFactory = Arc<
+    dyn Fn(&DefaultPgpOperatorContext) -> Result<Box<dyn PgpKeyPairGenerator>, tc_algo::AlgoError>
+        + Send
+        + Sync,
+>;

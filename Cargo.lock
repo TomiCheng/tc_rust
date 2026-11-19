@@ -1823,6 +1823,7 @@ name = "tc_openpgp"
 version = "0.1.0"
 dependencies = [
  "tc_algo",
+ "tc_asym_cipher",
  "tc_openpgp_packet",
 ]
 

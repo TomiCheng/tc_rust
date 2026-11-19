@@ -8,6 +8,7 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
+tc_asym_cipher = "0.2.0"
 tc_algo = { version = "0.1.0", path = "../../crypto/tc_algo" }
 tc_openpgp_packet = { version = "0.1.0", path = "../tc_openpgp_packet" }
 

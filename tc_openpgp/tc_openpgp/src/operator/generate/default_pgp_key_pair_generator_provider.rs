@@ -20,6 +20,6 @@ impl PgpKeyPairGeneratorProvider for DefaultPgpKeyPairGeneratorProvider {
             .generators
             .get(&tag)
             .ok_or_else(|| AlgoError::new(ErrorKind::UnknownGenerator))?;
-        Ok(create(&self.context))
+        create(&self.context)
     }
 }

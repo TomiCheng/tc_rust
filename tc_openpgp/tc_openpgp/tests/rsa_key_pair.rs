@@ -7,7 +7,14 @@ fn generates_a_matching_rsa_key_pair() {
     let tag = PublicKeyAlgorithmTag::RsaGeneral;
     let operator = DefaultPgpOperatorBuilder::default().build();
     let mut generator = operator.key_pair_generator().get_by_algorithm(tag).unwrap();
-    let (public, private) = generator.generate(&RsaKeyGenParams::new(3072)).unwrap();
+    assert_eq!(
+        generator.generate().err().unwrap().kind(),
+        tc_algo::ErrorKind::NotInitialized
+    );
+    generator.init(&RsaKeyGenParams::new(3072)).unwrap();
+    let pair = generator.generate().unwrap();
+    let public = pair.public();
+    let private = pair.private();
 
     assert_eq!(public.algorithm(), tag);
     assert_eq!(private.algorithm(), tag);
@@ -15,4 +22,12 @@ fn generates_a_matching_rsa_key_pair() {
     let private = private.key().as_any().downcast_ref::<RsaKey>().unwrap();
     assert_eq!(public.modulus().bits(), 3072);
     assert_eq!(public.modulus(), private.modulus());
+    let next = generator.generate().unwrap();
+    let next_public = next
+        .public()
+        .key()
+        .as_any()
+        .downcast_ref::<RsaKey>()
+        .unwrap();
+    assert_ne!(public.modulus(), next_public.modulus());
 }

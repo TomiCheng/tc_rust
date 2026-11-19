@@ -1,15 +1,15 @@
-use tc_algo::{AlgoError, ErrorKind, Params};
+use tc_algo::{AlgoError, Params};
+use tc_asym_cipher::{KeyPairGenerator, KeyPairGeneratorInit};
 
-use crate::{PgpPrivateKey, PgpPublicKey};
+use crate::{PgpKeyPair, PgpPrivateKey, PgpPublicKey};
 
-/// Generates a pair of OpenPGP keys using the selected algorithm.
-pub trait PgpKeyPairGenerator {
-    /// Returns the public key followed by the private key.
-    fn generate(&mut self, params: &dyn Params)
-    -> Result<(PgpPublicKey, PgpPrivateKey), AlgoError>;
-
-    /// Generates keys for an algorithm with fixed parameters.
-    fn generate_without_params(&mut self) -> Result<(PgpPublicKey, PgpPrivateKey), AlgoError> {
-        Err(AlgoError::new(ErrorKind::InvalidKeyGenParams))
+/// Generates OpenPGP keys using the current algorithm parameters.
+pub trait PgpKeyPairGenerator:
+    KeyPairGenerator<PublicKey = PgpPublicKey, PrivateKey = PgpPrivateKey, Error = AlgoError>
+    + KeyPairGeneratorInit<dyn Params, Error = AlgoError>
+{
+    fn generate(&mut self) -> Result<PgpKeyPair, AlgoError> {
+        let (public, private) = self.generate_key_pair()?;
+        Ok(PgpKeyPair::new(public, private))
     }
 }
