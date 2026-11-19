@@ -1,3 +1,4 @@
+mod dsa;
 mod ecdsa;
 mod eddsa;
 mod pss;
@@ -13,7 +14,8 @@ use crate::{DefaultX509OperatorContext, X509Error};
 pub(crate) type CreateRows = fn(&DefaultX509OperatorContext) -> Vec<Box<dyn SignerEntry>>;
 
 // What DefaultX509OperatorBuilder starts with. These are always on, as a certificate needs them
-pub(crate) const BUILT_IN: &[CreateRows] = &[rsa::rsa, pss::pss, ecdsa::ecdsa, eddsa::eddsa];
+pub(crate) const BUILT_IN: &[CreateRows] =
+    &[rsa::rsa, pss::pss, ecdsa::ecdsa, eddsa::eddsa, dsa::dsa];
 
 // A row whose AlgorithmIdentifier is an OID alone, or with the NULL of RSA, and whose signer is
 // the row of tc_algo by that OID

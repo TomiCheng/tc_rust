@@ -88,16 +88,11 @@ impl SignerEntry for Pss {
         if *algorithm.algorithm() != Pkcs1Algorithm::RSASSA_PSS {
             return false;
         }
-        let Some(params) = algorithm
-            .parameters()
-            .and_then(read::<RsassaPssParams>)
-        else {
+        let Some(params) = algorithm.parameters().and_then(read::<RsassaPssParams>) else {
             return false;
         };
         let mgf = params.mask_gen_algorithm();
-        let mgf_hash = mgf
-            .parameters()
-            .and_then(read::<AlgorithmIdentifier>);
+        let mgf_hash = mgf.parameters().and_then(read::<AlgorithmIdentifier>);
         equivalent(params.hash_algorithm(), self.params.hash_algorithm())
             && *mgf.algorithm() == Pkcs1Algorithm::MGF1
             && mgf_hash.is_some_and(|hash| equivalent(&hash, self.params.hash_algorithm()))

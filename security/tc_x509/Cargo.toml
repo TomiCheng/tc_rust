@@ -12,7 +12,7 @@ chrono = { version = "0.4.38", default-features = false, features = ["clock"] }
 rand = { version = "0.10", default-features = false, features = ["sys_rng"] }
 rand_core = "0.10"
 # The algorithms a certificate needs are always on, not behind features
-tc_algo = { version = "0.1.0", path = "../../crypto/tc_algo", features = ["rsa", "ecdsa", "sha", "fp-custom", "fp-curve", "f2m-custom", "f2m-curve", "cfrg-curves"] }
+tc_algo = { version = "0.1.0", path = "../../crypto/tc_algo", features = ["rsa", "ecdsa", "dsa", "sha", "fp-custom", "fp-curve", "f2m-custom", "f2m-curve", "cfrg-curves"] }
 tc_ec_core = "0.1.0"
 tc_ec_key = { version = "0.1.0", path = "../../crypto/tc_ec_key" }
 tc_f2m_curve = { version = "0.1.1", features = ["small-curves"] }
