@@ -12,8 +12,8 @@ use tc_asn1_x509::cert::Time;
 use tc_x509::cert::X509Certificate;
 use tc_x509::operator::verifier::VerifierFactory;
 
-use super::algorithms::{RSA_ENCRYPTION, digest_name, equivalent};
 use crate::CmsError;
+use crate::algorithms::{RSA_ENCRYPTION, digest_name, equivalent};
 use crate::default_cms_operator::DefaultCmsOperator;
 use crate::der::convert;
 use crate::signed::{

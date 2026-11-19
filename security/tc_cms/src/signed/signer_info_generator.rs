@@ -5,8 +5,8 @@ use tc_asn1_x509::ext::SubjectKeyIdentifier;
 use tc_x509::cert::X509Certificate;
 use tc_x509::operator::signer::SignatureFactory;
 
-use super::algorithms::digest_of;
 use crate::CmsError;
+use crate::algorithms::digest_of;
 
 // BC 的 SignerInfoGenerator：一個簽署者的簽章 factory、識別與屬性。預設有 signed attributes
 // （contentType、signingTime、messageDigest、cmsAlgorithmProtect），同 BC 的

@@ -10,7 +10,7 @@ const SHA384: &str = "2.16.840.1.101.3.4.2.2";
 const SHA512: &str = "2.16.840.1.101.3.4.2.3";
 
 // rsaEncryption，OpenSSL 在 SignerInfo 裡寫的簽章演算法
-pub(super) const RSA_ENCRYPTION: &str = "1.2.840.113549.1.1.1";
+pub(crate) const RSA_ENCRYPTION: &str = "1.2.840.113549.1.1.1";
 
 // 簽章演算法對到的摘要，同 BC DefaultDigestAlgorithmFinder 的 DigestOids
 const SIGNATURE_DIGESTS: &[(&str, &str)] = &[
@@ -36,7 +36,7 @@ const DIGEST_NAMES: &[(&str, &str)] = &[
 ];
 
 // 簽章演算法的摘要識別碼：SHA-1 帶 NULL、SHA-2 不帶參數，同 BC
-pub(super) fn digest_of(signature: &AlgorithmIdentifier) -> Result<AlgorithmIdentifier, CmsError> {
+pub(crate) fn digest_of(signature: &AlgorithmIdentifier) -> Result<AlgorithmIdentifier, CmsError> {
     let dotted = signature.algorithm().to_string();
     let (_, digest) = SIGNATURE_DIGESTS
         .iter()
@@ -50,7 +50,7 @@ pub(super) fn digest_of(signature: &AlgorithmIdentifier) -> Result<AlgorithmIden
     })
 }
 
-pub(super) fn digest_name(digest: &Asn1Oid) -> Result<&'static str, CmsError> {
+pub(crate) fn digest_name(digest: &Asn1Oid) -> Result<&'static str, CmsError> {
     let dotted = digest.to_string();
     DIGEST_NAMES
         .iter()
@@ -60,8 +60,46 @@ pub(super) fn digest_name(digest: &Asn1Oid) -> Result<&'static str, CmsError> {
 }
 
 // 同 BC X509Utilities.AreEquivalentAlgorithms：OID 相同，參數相同或都是沒有／NULL
-pub(super) fn equivalent(a: &AlgorithmIdentifier, b: &AlgorithmIdentifier) -> bool {
+pub(crate) fn equivalent(a: &AlgorithmIdentifier, b: &AlgorithmIdentifier) -> bool {
     let absent =
         |id: &AlgorithmIdentifier| matches!(id.parameters(), None | Some(Asn1Object::Null(_)));
     a.algorithm() == b.algorithm() && ((absent(a) && absent(b)) || a.parameters() == b.parameters())
+}
+
+// id-RSAES-OAEP
+pub(crate) const RSAES_OAEP: &str = "1.2.840.113549.1.1.7";
+
+// 摘要在 tc_algo OAEP 名稱裡的寫法，如 RSA//OAEPWITHSHA256ANDMGF1PADDING
+const OAEP_DIGESTS: &[(&str, &str)] = &[
+    (SHA1, "SHA1"),
+    (SHA224, "SHA224"),
+    (SHA256, "SHA256"),
+    (SHA384, "SHA384"),
+    (SHA512, "SHA512"),
+];
+
+pub(crate) fn oaep_digest(digest: &Asn1Oid) -> Result<&'static str, CmsError> {
+    let dotted = digest.to_string();
+    OAEP_DIGESTS
+        .iter()
+        .find(|(oid, _)| *oid == dotted)
+        .map(|(_, name)| *name)
+        .ok_or(CmsError::UnknownAlgorithm)
+}
+
+// 內容加密演算法與金鑰長度，同 BC GeneratorUtilities.GetDefaultKeySize；參數是 IV
+const CONTENT_CIPHERS: &[(&str, usize)] = &[
+    ("2.16.840.1.101.3.4.1.2", 16),
+    ("2.16.840.1.101.3.4.1.22", 24),
+    ("2.16.840.1.101.3.4.1.42", 32),
+    ("1.2.840.113549.3.7", 24),
+];
+
+pub(crate) fn content_key_length(cipher: &Asn1Oid) -> Result<usize, CmsError> {
+    let dotted = cipher.to_string();
+    CONTENT_CIPHERS
+        .iter()
+        .find(|(oid, _)| *oid == dotted)
+        .map(|(_, length)| *length)
+        .ok_or(CmsError::UnknownAlgorithm)
 }

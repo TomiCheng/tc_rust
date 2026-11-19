@@ -99,8 +99,8 @@ impl CmsSignedData {
 fn signed_data_of(der: &[u8]) -> Result<SignedData, CmsError> {
     let info: ContentInfo = decode_all(der)?;
     if ContentType::SIGNED_DATA != *info.content_type() {
-        return Err(CmsError::NotSignedData);
+        return Err(CmsError::UnexpectedContentType);
     }
-    let content = info.content().ok_or(CmsError::NotSignedData)?;
+    let content = info.content().ok_or(CmsError::UnexpectedContentType)?;
     decode_all(content.raw())
 }

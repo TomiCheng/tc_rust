@@ -1,6 +1,5 @@
 //! SignedData，對應 BC 的 `CmsSignedData`、`CmsSignedDataGenerator` 與 `SignerInformation`。
 
-mod algorithms;
 mod cms_signed_data;
 mod cms_signed_data_generator;
 mod default_signed_data_provider;

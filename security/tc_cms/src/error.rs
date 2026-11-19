@@ -26,8 +26,10 @@ pub enum CmsError {
     UnknownAlgorithm,
     // 內容沒有封裝，驗證要另外給
     MissingContent,
-    // ContentInfo 不是 SignedData
-    NotSignedData,
+    // ContentInfo 的型別不是要讀的那種
+    UnexpectedContentType,
+    // 解出的內容加密金鑰長度不對
+    InvalidKey,
     // 簽章時間不在憑證的有效期間內
     CertificateNotValid,
 }
@@ -51,7 +53,8 @@ impl fmt::Display for CmsError {
             }
             Self::UnknownAlgorithm => f.write_str("unknown digest or signature algorithm"),
             Self::MissingContent => f.write_str("the content is not encapsulated"),
-            Self::NotSignedData => f.write_str("the content info is not signed data"),
+            Self::UnexpectedContentType => f.write_str("unexpected content type"),
+            Self::InvalidKey => f.write_str("the content encryption key has the wrong length"),
             Self::CertificateNotValid => {
                 f.write_str("the certificate is not valid at the signing time")
             }

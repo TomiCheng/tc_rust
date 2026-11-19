@@ -4,6 +4,7 @@ use tc_algo::Algo;
 use tc_x509::X509Operator;
 
 use crate::CmsOperator;
+use crate::enveloped::EnvelopedDataProvider;
 use crate::signed::SignedDataProvider;
 
 pub(crate) struct DefaultCmsOperator {
@@ -19,6 +20,10 @@ impl DefaultCmsOperator {
 
 impl CmsOperator for DefaultCmsOperator {
     fn signed_data(&self) -> &dyn SignedDataProvider {
+        self
+    }
+
+    fn enveloped_data(&self) -> &dyn EnvelopedDataProvider {
         self
     }
 }
