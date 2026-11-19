@@ -14,7 +14,7 @@ An attribute authority gives the holder of a certificate a role:
 use tc_asn1::Asn1Oid;
 use tc_asn1_x500::{Attribute, DirectoryString};
 use tc_x509::cert::X509V2AttributeCertificateGenerator;
-use tc_x509::operator::params::RsaKeyGenParams;
+use tc_x509::operator::params::generate::RsaKeyGenParams;
 use tc_x509::{DefaultX509OperatorBuilder, X509OperatorBuilder};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

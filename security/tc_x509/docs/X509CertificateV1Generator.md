@@ -12,7 +12,7 @@ From a new key pair to a self-signed version 1 certificate:
 ```rust
 use tc_asn1_x509::cert::Version;
 use tc_x509::cert::X509V1CertificateGenerator;
-use tc_x509::operator::params::RsaKeyGenParams;
+use tc_x509::operator::params::generate::RsaKeyGenParams;
 use tc_x509::{DefaultX509OperatorBuilder, X509Error, X509OperatorBuilder};
 
 fn main() -> Result<(), X509Error> {

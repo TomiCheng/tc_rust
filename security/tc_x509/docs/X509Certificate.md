@@ -10,7 +10,7 @@ From the bytes of a certificate to its fields, its public key and its signature:
 ```rust
 use tc_asn1_x509::ext::BasicConstraints;
 use tc_x509::cert::{X509Certificate, X509V3CertificateGenerator};
-use tc_x509::operator::params::RsaKeyGenParams;
+use tc_x509::operator::params::generate::RsaKeyGenParams;
 use tc_x509::{DefaultX509OperatorBuilder, X509Error, X509OperatorBuilder};
 
 fn main() -> Result<(), X509Error> {

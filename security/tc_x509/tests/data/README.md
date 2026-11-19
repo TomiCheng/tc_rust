@@ -13,3 +13,7 @@
   `chain.pem` is the same in PEM, `openssl x509` and `openssl crl` output put one after
   another: `ca`, the CRL, `good`, `revoked`.
   `bundle.pem` is `bundle.p7b` in PEM, labelled PKCS7, by `openssl pkcs7 -outform PEM`.
+- `signer_*.der`: self-signed certificates made with `openssl req -x509` 3.5, one per signature
+  algorithm: ECDSA over P-256 with SHA-256 and over P-384 with SHA-384, Ed25519, Ed448, RSA 2048
+  with SHA-384, and RSASSA-PSS over SHA-256 with `-sigopt rsa_padding_mode:pss -sigopt
+  rsa_pss_saltlen:digest`.

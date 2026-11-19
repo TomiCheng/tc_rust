@@ -17,7 +17,7 @@ use tc_x509::{DefaultX509OperatorBuilder, X509Error, X509OperatorBuilder};
 fn get_ca_private_key() -> Result<Arc<dyn Params>, X509Error> {
 #   let oper = DefaultX509OperatorBuilder::default().build();
 #   let mut key_gen = oper.key_pair_generator().get_by_name("RSA")?;
-#   key_gen.init(&tc_x509::operator::params::RsaKeyGenParams::new(2048))?;
+#   key_gen.init(&tc_x509::operator::params::generate::RsaKeyGenParams::new(2048))?;
 #   Ok(key_gen.generate()?.into_parts().1.into())
     // ...
 }

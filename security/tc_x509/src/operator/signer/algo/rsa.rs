@@ -1,48 +1,31 @@
-use tc_algo::Algo;
-use tc_algo::signer::Signer;
 use tc_asn1_x509::alg::AlgorithmIdentifier;
 
+use super::{ByOid, oid};
+use crate::DefaultX509OperatorContext;
 use crate::operator::signer::SignerEntry;
-use crate::{DefaultX509OperatorContext, X509Error};
 
-// The rows of RSA. The names are those of Bouncy Castle, and the parameters are NULL, as RFC 4055
-// section 5 requires of PKCS #1 v1.5
+// The rows of RSA PKCS#1 v1.5. The names are those of Bouncy Castle, and the parameters are NULL,
+// as RFC 4055 section 5 requires
 pub(super) fn rsa(_context: &DefaultX509OperatorContext) -> Vec<Box<dyn SignerEntry>> {
-    vec![Box::new(Rsa {
-        name: "SHA-256withRSA",
-        aliases: vec![
-            "SHA256withRSA".to_string(),
-            "SHA256withRSAEncryption".to_string(),
-            "SHA-256withRSAEncryption".to_string(),
-        ],
-        algorithm: AlgorithmIdentifier::with_null(
-            "1.2.840.113549.1.1.11"
-                .parse()
-                .expect("sha256WithRSAEncryption is a valid OID"),
-        ),
-    })]
-}
-
-struct Rsa {
-    name: &'static str,
-    aliases: Vec<String>,
-    algorithm: AlgorithmIdentifier,
-}
-
-impl SignerEntry for Rsa {
-    fn name(&self) -> &str {
-        self.name
-    }
-
-    fn aliases(&self) -> &[String] {
-        &self.aliases
-    }
-
-    fn algorithm(&self) -> &AlgorithmIdentifier {
-        &self.algorithm
-    }
-
-    fn create(&self, algo: &dyn Algo) -> Result<Box<dyn Signer>, X509Error> {
-        Ok(algo.signer().get_by_oid(self.algorithm.algorithm())?)
-    }
+    [
+        ("SHA-1withRSA", "SHA1", "1.2.840.113549.1.1.5"),
+        ("SHA-224withRSA", "SHA224", "1.2.840.113549.1.1.14"),
+        ("SHA-256withRSA", "SHA256", "1.2.840.113549.1.1.11"),
+        ("SHA-384withRSA", "SHA384", "1.2.840.113549.1.1.12"),
+        ("SHA-512withRSA", "SHA512", "1.2.840.113549.1.1.13"),
+    ]
+    .into_iter()
+    .map(|(name, digest, dotted)| {
+        let full = &name[..name.len() - "withRSA".len()];
+        ByOid::boxed(
+            name,
+            &[
+                &format!("{digest}withRSA"),
+                &format!("{digest}withRSAEncryption"),
+                &format!("{full}withRSAEncryption"),
+            ],
+            AlgorithmIdentifier::with_null(oid(dotted)),
+        )
+    })
+    .collect()
 }
