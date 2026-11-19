@@ -1,3 +1,5 @@
+#[cfg(feature = "cfrg-curves")]
+mod curve25519;
 #[cfg(feature = "rsa")]
 mod rsa;
 
@@ -11,4 +13,8 @@ type CreateGenerator = fn(&DefaultPgpOperatorContext) -> Box<dyn PgpKeyPairGener
 pub(crate) const BUILT_IN: &[(PublicKeyAlgorithmTag, CreateGenerator)] = &[
     #[cfg(feature = "rsa")]
     (PublicKeyAlgorithmTag::RsaGeneral, rsa::create),
+    #[cfg(feature = "cfrg-curves")]
+    (PublicKeyAlgorithmTag::Ed25519, curve25519::ed25519),
+    #[cfg(feature = "cfrg-curves")]
+    (PublicKeyAlgorithmTag::X25519, curve25519::x25519),
 ];

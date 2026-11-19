@@ -12,8 +12,13 @@ tc_algo = { version = "0.1.0", path = "../../crypto/tc_algo" }
 tc_openpgp_packet = { version = "0.1.0", path = "../tc_openpgp_packet" }
 
 [features]
+cfrg-curves = ["tc_algo/cfrg-curves"]
 rsa = ["tc_algo/rsa"]
 
 [[test]]
 name = "rsa_key_pair"
 required-features = ["rsa"]
+
+[[test]]
+name = "curve25519_key_pair"
+required-features = ["cfrg-curves"]
