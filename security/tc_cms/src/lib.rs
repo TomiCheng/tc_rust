@@ -1,6 +1,7 @@
 //! CMS 的簽章、加密與 MAC 資料，對應 Bouncy Castle 的 `Org.BouncyCastle.Cms`。
 
 mod algorithms;
+pub mod auth_enveloped;
 mod default_cms_operator;
 mod default_cms_operator_builder;
 mod der;

@@ -16,6 +16,7 @@ mod recipient_information;
 
 pub use cms_enveloped_data::CmsEnvelopedData;
 pub use cms_enveloped_data_generator::CmsEnvelopedDataGenerator;
+pub(crate) use default_enveloped_data_provider::random;
 pub use enveloped_data_provider::EnvelopedDataProvider;
 pub use kek_recipient_info_generator::KekRecipientInfoGenerator;
 pub use key_agree_key::KeyAgreeKey;

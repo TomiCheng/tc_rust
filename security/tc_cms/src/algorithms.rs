@@ -150,3 +150,23 @@ pub(crate) fn pbkdf2(prf: &Asn1Oid) -> Result<&'static str, CmsError> {
         .map(|(_, name)| *name)
         .ok_or(CmsError::UnknownAlgorithm)
 }
+
+// AuthEnvelopedData 的 AEAD（RFC 5084）：AES-GCM 與 AES-CCM，金鑰長度，以及是不是 GCM
+const AEAD_CIPHERS: &[(&str, usize, bool)] = &[
+    ("2.16.840.1.101.3.4.1.6", 16, true),
+    ("2.16.840.1.101.3.4.1.26", 24, true),
+    ("2.16.840.1.101.3.4.1.46", 32, true),
+    ("2.16.840.1.101.3.4.1.7", 16, false),
+    ("2.16.840.1.101.3.4.1.27", 24, false),
+    ("2.16.840.1.101.3.4.1.47", 32, false),
+];
+
+// AEAD 的金鑰長度，與它是 GCM（true）還是 CCM（false）
+pub(crate) fn aead(cipher: &Asn1Oid) -> Result<(usize, bool), CmsError> {
+    let dotted = cipher.to_string();
+    AEAD_CIPHERS
+        .iter()
+        .find(|(oid, _, _)| *oid == dotted)
+        .map(|(_, length, gcm)| (*length, *gcm))
+        .ok_or(CmsError::UnknownAlgorithm)
+}

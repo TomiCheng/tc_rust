@@ -66,7 +66,35 @@ impl EnvelopedDataProvider for DefaultCmsOperator {
         recipient: &RecipientInformation,
         key: &dyn Params,
     ) -> Result<Zeroizing<Vec<u8>>, CmsError> {
-        let key = match recipient.recipient_info() {
+        let key = self.content_key(recipient, key)?;
+
+        let encrypted = enveloped.enveloped_data().encrypted_content_info();
+        let algorithm = encrypted.content_encryption_algorithm();
+        if key.len() != content_key_length(algorithm.algorithm())? {
+            return Err(CmsError::InvalidKey);
+        }
+        let Some(Asn1Object::OctetString(iv)) = algorithm.parameters() else {
+            return Err(CmsError::UnknownAlgorithm);
+        };
+        let sealed = encrypted
+            .encrypted_content()
+            .ok_or(CmsError::MissingContent)?;
+        Ok(Zeroizing::new(self.algo.cipher().decrypt_by_oid(
+            algorithm.algorithm(),
+            &KeyWithIvOwned::new(key.to_vec(), iv.as_bytes().to_vec()),
+            sealed.as_bytes(),
+        )?))
+    }
+}
+
+impl DefaultCmsOperator {
+    // 依收件人的種類取回內容加密金鑰，EnvelopedData 與 AuthEnvelopedData 共用
+    pub(crate) fn content_key(
+        &self,
+        recipient: &RecipientInformation,
+        key: &dyn Params,
+    ) -> Result<Zeroizing<Vec<u8>>, CmsError> {
+        Ok(match recipient.recipient_info() {
             RecipientInfo::KeyTrans(info) => {
                 let name = key_trans_cipher(info.key_encryption_algorithm())?;
                 Zeroizing::new(self.algo.cipher().decrypt_by_name(
@@ -101,28 +129,9 @@ impl EnvelopedDataProvider for DefaultCmsOperator {
                 self.unwrap_with_agreement(info, key)?
             }
             _ => return Err(CmsError::UnknownAlgorithm),
-        };
-
-        let encrypted = enveloped.enveloped_data().encrypted_content_info();
-        let algorithm = encrypted.content_encryption_algorithm();
-        if key.len() != content_key_length(algorithm.algorithm())? {
-            return Err(CmsError::InvalidKey);
-        }
-        let Some(Asn1Object::OctetString(iv)) = algorithm.parameters() else {
-            return Err(CmsError::UnknownAlgorithm);
-        };
-        let sealed = encrypted
-            .encrypted_content()
-            .ok_or(CmsError::MissingContent)?;
-        Ok(Zeroizing::new(self.algo.cipher().decrypt_by_oid(
-            algorithm.algorithm(),
-            &KeyWithIvOwned::new(key.to_vec(), iv.as_bytes().to_vec()),
-            sealed.as_bytes(),
-        )?))
+        })
     }
-}
 
-impl DefaultCmsOperator {
     // 同 BC 的 KeyAgreeRecipientInformation：寄件人的臨時公鑰以收件人憑證的演算法（曲線）讀出，
     // 與收件人私鑰協商，經 KDF 推出 KEK，解開屬於這張憑證的 RecipientEncryptedKey。帶 UKM 的
     // 訊息目前解不開：tc_algo 的 UkmParams 要具體的金鑰型別
@@ -239,7 +248,7 @@ fn key_trans_cipher(algorithm: &AlgorithmIdentifier) -> Result<String, CmsError>
     ))
 }
 
-fn random(length: usize) -> Vec<u8> {
+pub(crate) fn random(length: usize) -> Vec<u8> {
     let mut bytes = vec![0; length];
     UnwrapErr(SysRng).fill_bytes(&mut bytes);
     bytes
