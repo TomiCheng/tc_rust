@@ -5,8 +5,9 @@ use tc_algo::params::key::KeyOwned;
 use tc_asn1::{Decode, DecodingOptions};
 use tc_asn1_pkcs::PrivateKeyInfo;
 use tc_cms::enveloped::{
-    CmsEnvelopedData, CmsEnvelopedDataGenerator, KekRecipientInfoGenerator,
-    KeyTransRecipientInfoGenerator, PasswordKey, PasswordRecipientInfoGenerator,
+    CmsEnvelopedData, CmsEnvelopedDataGenerator, KekRecipientInfoGenerator, KeyAgreeKey,
+    KeyAgreeRecipientInfoGenerator, KeyTransRecipientInfoGenerator, PasswordKey,
+    PasswordRecipientInfoGenerator,
 };
 use tc_cms::{CmsOperatorBuilder, DefaultCmsOperatorBuilder};
 use tc_pkcs::{DefaultPkcsOperatorBuilder, PkcsOperatorBuilder};
@@ -196,4 +197,70 @@ fn one_message_opens_for_each_kind_of_recipient_made_here() {
         &PasswordKey::new("correct horse"),
     );
     assert!(matches!(result, Err(tc_cms::CmsError::WrongRecipientKey)));
+}
+
+fn ec_recipient() -> X509Certificate {
+    X509Certificate::decode(include_bytes!("data/env_ec_recipient.der")).unwrap()
+}
+
+fn ec_recipient_key() -> KeyAgreeKey {
+    let der = include_bytes!("data/env_ec_recipient_key.der");
+    let info = PrivateKeyInfo::decode(der, &DecodingOptions::default())
+        .unwrap()
+        .1;
+    let pkcs = DefaultPkcsOperatorBuilder::default().build();
+    let private: Arc<dyn Params> = Arc::from(pkcs.private_key_info().decode(&info).unwrap());
+    KeyAgreeKey::new(private, ec_recipient())
+}
+
+#[test]
+fn what_openssl_encrypted_to_an_ec_key_decrypts() {
+    let oper = DefaultCmsOperatorBuilder::default().build();
+    let files: [(&str, &[u8]); 2] = [
+        (
+            "SHA-1 KDF, AES-128 wrap",
+            include_bytes!("data/env_ecdh_default.der"),
+        ),
+        (
+            "SHA-256 KDF, AES-256 wrap",
+            include_bytes!("data/env_ecdh_sha256.der"),
+        ),
+    ];
+    for (name, file) in files {
+        let enveloped = CmsEnvelopedData::decode(file).unwrap();
+        let recipient = &enveloped.recipient_infos()[0];
+        assert!(recipient.is_recipient(&ec_recipient()), "{name}");
+        let content = oper
+            .enveloped_data()
+            .decrypt(&enveloped, recipient, &ec_recipient_key())
+            .unwrap_or_else(|error| panic!("{name}: {error}"));
+        assert_eq!(content.as_slice(), CONTENT, "{name}");
+    }
+}
+
+#[test]
+fn what_is_encrypted_here_to_an_ec_key_decrypts_with_each_kdf() {
+    let oper = DefaultCmsOperatorBuilder::default().build();
+    for (agreement, wrap) in [
+        ("1.3.133.16.840.63.0.2", "2.16.840.1.101.3.4.1.5"),
+        ("1.3.132.1.11.1", "2.16.840.1.101.3.4.1.45"),
+        ("1.3.132.1.11.3", "2.16.840.1.101.3.4.1.25"),
+    ] {
+        let mut recipient =
+            KeyAgreeRecipientInfoGenerator::new(agreement.parse().unwrap(), wrap.parse().unwrap());
+        recipient.add_recipient(&ec_recipient());
+        let mut generator = CmsEnvelopedDataGenerator::new();
+        generator.add_recipient(recipient);
+        let enveloped = oper
+            .enveloped_data()
+            .generate(&generator, CONTENT, &AES256.parse().unwrap())
+            .unwrap();
+        let enveloped = CmsEnvelopedData::decode(&enveloped.encode().unwrap()).unwrap();
+        let recipient = &enveloped.recipient_infos()[0];
+        let content = oper
+            .enveloped_data()
+            .decrypt(&enveloped, recipient, &ec_recipient_key())
+            .unwrap();
+        assert_eq!(content.as_slice(), CONTENT, "{agreement}");
+    }
 }

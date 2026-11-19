@@ -15,8 +15,8 @@ pub trait EnvelopedDataProvider: Send + Sync {
         encryption: &Asn1Oid,
     ) -> Result<CmsEnvelopedData, CmsError>;
 
-    // BC 的 RecipientInformation.GetContent(key)：KeyTrans 給 RSA 私鑰，KEK 給 KeyOwned，Password
-    // 給 PasswordKey；其他型別是 WrongRecipientKey。金鑰不對時通常是 padding 或 unwrap 錯誤，但
+    // BC 的 RecipientInformation.GetContent(key)：KeyTrans 給 RSA 私鑰，KeyAgree 給 KeyAgreeKey，KEK
+    // 給 KeyOwned，Password 給 PasswordKey；其他型別是 WrongRecipientKey。金鑰不對時通常是 padding 或 unwrap 錯誤，但
     // PKCS#1 v1.5 偶爾會解出錯的金鑰，於是內容的 padding 錯
     fn decrypt(
         &self,

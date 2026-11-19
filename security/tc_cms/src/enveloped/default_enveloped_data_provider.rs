@@ -7,9 +7,12 @@ use tc_algo::params::cipher::KeyWithIvOwned;
 use tc_algo::params::key::KeyOwned;
 use tc_asn1::{Asn1Object, Asn1OctetString, Asn1Oid, Asn1SequenceOf};
 use tc_asn1_cms::content::{EncryptedContentInfo, EnvelopedData};
-use tc_asn1_cms::recipient::{PasswordRecipientInfo, RecipientInfo};
+use tc_asn1_cms::recipient::{
+    KeyAgreeRecipientInfo, OriginatorIdentifierOrKey, PasswordRecipientInfo, RecipientInfo,
+};
 use tc_asn1_pkcs::{Pbkdf2Params, Pkcs1Algorithm, Pkcs5Algorithm, RsaesOaepParams};
 use tc_asn1_x509::alg::AlgorithmIdentifier;
+use tc_asn1_x509::cert::SubjectPublicKeyInfo;
 use tc_zeroize::Zeroizing;
 
 use crate::CmsError;
@@ -20,8 +23,9 @@ use crate::algorithms::{
 use crate::default_cms_operator::DefaultCmsOperator;
 use crate::der::convert;
 use crate::enveloped::password_key::derive;
+use crate::enveloped::recipient_information::is_key_agree_recipient;
 use crate::enveloped::{
-    CmsEnvelopedData, CmsEnvelopedDataGenerator, EnvelopedDataProvider, PasswordKey,
+    CmsEnvelopedData, CmsEnvelopedDataGenerator, EnvelopedDataProvider, KeyAgreeKey, PasswordKey,
     RecipientInformation,
 };
 
@@ -89,6 +93,13 @@ impl EnvelopedDataProvider for DefaultCmsOperator {
                     .ok_or(CmsError::WrongRecipientKey)?;
                 self.unwrap_with_password(info, password)?
             }
+            RecipientInfo::KeyAgree(info) => {
+                let key = key
+                    .as_any()
+                    .downcast_ref::<KeyAgreeKey>()
+                    .ok_or(CmsError::WrongRecipientKey)?;
+                self.unwrap_with_agreement(info, key)?
+            }
             _ => return Err(CmsError::UnknownAlgorithm),
         };
 
@@ -112,6 +123,52 @@ impl EnvelopedDataProvider for DefaultCmsOperator {
 }
 
 impl DefaultCmsOperator {
+    // 同 BC 的 KeyAgreeRecipientInformation：寄件人的臨時公鑰以收件人憑證的演算法（曲線）讀出，
+    // 與收件人私鑰協商，經 KDF 推出 KEK，解開屬於這張憑證的 RecipientEncryptedKey。帶 UKM 的
+    // 訊息目前解不開：tc_algo 的 UkmParams 要具體的金鑰型別
+    fn unwrap_with_agreement(
+        &self,
+        info: &KeyAgreeRecipientInfo,
+        key: &KeyAgreeKey,
+    ) -> Result<Zeroizing<Vec<u8>>, CmsError> {
+        if info.ukm().is_some() {
+            return Err(CmsError::UnknownAlgorithm);
+        }
+        let OriginatorIdentifierOrKey::OriginatorKey(originator) = info.originator() else {
+            return Err(CmsError::UnknownAlgorithm);
+        };
+        let encrypted = info
+            .recipient_encrypted_keys()
+            .iter()
+            .find(|encrypted| is_key_agree_recipient(encrypted.rid(), key.certificate()))
+            .ok_or(CmsError::WrongRecipientKey)?;
+
+        let algorithm = info.key_encryption_algorithm();
+        let wrap: AlgorithmIdentifier =
+            convert(algorithm.parameters().ok_or(CmsError::UnknownAlgorithm)?)?;
+        let spki = SubjectPublicKeyInfo::new(
+            key.certificate()
+                .subject_public_key_info()
+                .algorithm()
+                .clone(),
+            originator.public_key().clone(),
+        );
+        let originator = self.x509.spki().decode(&spki)?;
+
+        let mut agreement = self
+            .algo
+            .agreement()
+            .get_with_kdf_by_oid(algorithm.algorithm(), &wrap)?;
+        agreement.init(key.private_key())?;
+        let mut kek = Zeroizing::new(vec![0; agreement.agreement_size()]);
+        agreement.calculate_agreement(originator.as_ref(), &mut kek)?;
+        Ok(Zeroizing::new(self.algo.wrap().unwrap_by_oid(
+            wrap.algorithm(),
+            &KeyOwned::new(kek.to_vec()),
+            encrypted.encrypted_key().as_bytes(),
+        )?))
+    }
+
     // 同 BC 的 PasswordRecipientInformation：PBKDF2 推出 KEK，長度是 PWRI-KEK 參數裡 cipher 的
     // 金鑰長度，再以 RFC 3211 解開
     fn unwrap_with_password(

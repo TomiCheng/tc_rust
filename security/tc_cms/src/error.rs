@@ -32,6 +32,8 @@ pub enum CmsError {
     InvalidKey,
     // 給的金鑰不是這種收件人要的型別
     WrongRecipientKey,
+    // KeyAgree 的產生器沒有收件人
+    NoRecipient,
     // 簽章時間不在憑證的有效期間內
     CertificateNotValid,
 }
@@ -57,6 +59,7 @@ impl fmt::Display for CmsError {
             Self::MissingContent => f.write_str("the content is not encapsulated"),
             Self::UnexpectedContentType => f.write_str("unexpected content type"),
             Self::InvalidKey => f.write_str("the content encryption key has the wrong length"),
+            Self::NoRecipient => f.write_str("no recipient to agree a key with"),
             Self::WrongRecipientKey => {
                 f.write_str("the key is not of the type the recipient takes")
             }
