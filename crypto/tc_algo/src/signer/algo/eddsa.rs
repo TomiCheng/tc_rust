@@ -101,7 +101,7 @@ impl Kind for CfrgError {
 
 #[cfg(all(test, feature = "cfrg-curves"))]
 mod tests {
-    use crate::params::{key::cfrg::Ed25519PrivateKey, key::cfrg::Ed25519PublicKey};
+    use crate::params::{key::Ed25519PrivateKey, key::Ed25519PublicKey};
     use crate::{Algo, AlgoBuilder, DefaultAlgoBuilder, ErrorKind, Params};
 
     fn unhex<const N: usize>(text: &str) -> [u8; N] {

@@ -223,7 +223,7 @@ impl Kind for tc_slh_dsa::SlhDsaError {
 #[cfg(all(test, feature = "ml-dsa", feature = "slh-dsa"))]
 mod tests {
     use crate::generate::KeyPair;
-    use crate::params::{key::ml_dsa::MlDsaParameters, key::slh_dsa::SlhDsaParameters};
+    use crate::params::{key::MlDsaParameters, key::SlhDsaParameters};
     use crate::{Algo, AlgoBuilder, DefaultAlgoBuilder, ErrorKind, Params};
 
     fn algo() -> Box<dyn Algo> {

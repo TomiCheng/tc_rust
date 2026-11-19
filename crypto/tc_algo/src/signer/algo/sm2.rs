@@ -5,7 +5,7 @@ use tc_dsa::RandomDsaKCalculator;
 use tc_sm2::{Sm2Error, Sm2Signer};
 
 use super::row::{Inner, Kind, Row, keyed};
-use crate::params::sm2_keys::{Sm2Curve, Sm2PrivateKey, Sm2PublicKey};
+use crate::params::key::sm2::{Sm2Curve, Sm2PrivateKey, Sm2PublicKey};
 use crate::signer::SignerEntry;
 use crate::{AlgoError, DefaultAlgoContext, ErrorKind, Params};
 

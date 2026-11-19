@@ -1,7 +1,7 @@
 use std::sync::OnceLock;
 
 use tc_algo::Params;
-use tc_algo::params::key::ec::EcPublicKey;
+use tc_algo::params::key::EcPublicKey;
 use tc_asn1::{Asn1BitString, Asn1Object, Asn1Oid, NamedOid};
 use tc_asn1_x509::alg::AlgorithmIdentifier;
 use tc_asn1_x509::cert::SubjectPublicKeyInfo;

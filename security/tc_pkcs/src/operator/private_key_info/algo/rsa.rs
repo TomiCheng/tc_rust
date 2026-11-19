@@ -1,5 +1,5 @@
 use tc_algo::Params;
-use tc_algo::params::key::rsa::RsaKey;
+use tc_algo::params::key::RsaKey;
 use tc_asn1::{Asn1Integer, Asn1OctetString, Asn1Oid, Encode, EncodingOptions, NamedOid};
 use tc_asn1_pkcs::{Pkcs1Algorithm, PrivateKeyInfo, RsaPrivateKey};
 use tc_asn1_x509::alg::AlgorithmIdentifier;

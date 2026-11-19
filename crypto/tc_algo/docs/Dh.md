@@ -11,7 +11,7 @@ The `dh` feature of `tc_algo` has the rows.
 The group is public, and both parties use the same one:
 
 ```rust
-use tc_algo::params::key::dh::dh_groups::rfc3526_2048;
+use tc_algo::params::key::dh_groups::rfc3526_2048;
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
 fn main() -> Result<(), AlgoError> {
@@ -46,7 +46,7 @@ fn main() -> Result<(), AlgoError> {
 
 ### Standard groups
 
-`tc_algo::params::key::dh::dh_groups` has a function for each group of Bouncy Castle's `DHStandardGroups`.
+`tc_algo::params::key::dh_groups` has a function for each group of Bouncy Castle's `DHStandardGroups`.
 Each one is a safe prime `p` with `g` = 2. The private value has the length in the last column, or
 is drawn from below `q` where there is none.
 
@@ -78,7 +78,7 @@ is drawn from below `q` where there is none.
 From two key pairs to one shared secret. The keys of a pair go straight in as params:
 
 ```rust
-use tc_algo::params::key::dh::dh_groups::rfc3526_2048;
+use tc_algo::params::key::dh_groups::rfc3526_2048;
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
 fn main() -> Result<(), AlgoError> {

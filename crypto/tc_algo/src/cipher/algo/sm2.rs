@@ -4,7 +4,7 @@ use tc_zeroize::Zeroizing;
 
 use super::asym::row;
 use crate::cipher::{BufferedCipher, Cipher, CipherDirection, CipherEntry};
-use crate::params::sm2_keys::{Sm2Curve, Sm2PrivateKey, Sm2PublicKey};
+use crate::params::key::sm2::{Sm2Curve, Sm2PrivateKey, Sm2PublicKey};
 use crate::{AlgoError, DefaultAlgoContext, ErrorKind, Params};
 
 // The rows of SM2 encryption, of GM/T 0003, over sm2p256v1 with SM3. Bouncy Castle has the engine

@@ -1327,7 +1327,7 @@ pub(crate) const CURVES: &[NamedCurve] = &[
         oid: "1.2.156.10197.1.301",
         generate: |rand| {
             key_pair::<&'static SecPCtCurve<SM2P256V1FieldElement>>(
-                crate::params::sm2_keys::sm2p256v1(),
+                crate::params::key::sm2::sm2p256v1(),
                 rand,
             )
         },

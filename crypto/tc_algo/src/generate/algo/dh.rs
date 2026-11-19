@@ -96,7 +96,7 @@ mod tests {
     use tc_dh_key::{DhParameters, DhPrivateKey, DhPublicKey};
 
     use crate::params::generate::KeyLength;
-    use crate::params::key::dh::dh_groups::{rfc3526_2048, rfc3526_3072};
+    use crate::params::key::dh_groups::{rfc3526_2048, rfc3526_3072};
     use crate::{AlgoBuilder, DefaultAlgoBuilder, ErrorKind};
 
     const NAME: &str = "DH";

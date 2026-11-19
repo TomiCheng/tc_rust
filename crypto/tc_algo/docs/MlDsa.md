@@ -10,7 +10,7 @@ The `ml-dsa` feature of `tc_algo` has the rows.
 A parameter set and a new pair:
 
 ```rust
-use tc_algo::params::key::ml_dsa::MlDsaParameters;
+use tc_algo::params::key::MlDsaParameters;
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
 fn main() -> Result<(), AlgoError> {
@@ -43,7 +43,7 @@ gives `NotInitialized`, and any other type is `InvalidParams`.
 From a new pair to a verified signature:
 
 ```rust
-use tc_algo::params::key::ml_dsa::MlDsaParameters;
+use tc_algo::params::key::MlDsaParameters;
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
 fn main() -> Result<(), AlgoError> {

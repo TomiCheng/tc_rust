@@ -1,0 +1,12 @@
+#[cfg(feature = "kdf")]
+pub use tc_kdf::hkdf::HkdfParamsOwned;
+#[cfg(feature = "kdf")]
+pub use tc_kdf::kdf::KdfParamsOwned;
+#[cfg(feature = "kdf")]
+pub use tc_kdf::sp800_108::KdfCounterParamsOwned;
+#[cfg(feature = "kdf")]
+pub use tc_kdf::sp800_108::KdfDoublePipelineParamsOwned;
+#[cfg(feature = "kdf")]
+pub use tc_kdf::sp800_108::KdfFeedbackParamsOwned;
+#[cfg(feature = "pbe")]
+pub use tc_pbe::PbeParamsOwned;

@@ -3,7 +3,7 @@ use tc_asym_cipher::KeyPairGeneratorInit;
 use tc_ec_key::EcKeyPairGenerator;
 
 use crate::generate::{KeyPairGenerator, KeyPairGeneratorEntry};
-use crate::params::sm2_keys::{Sm2Curve, sm2_key_generation_params};
+use crate::params::key::sm2::{Sm2Curve, sm2_key_generation_params};
 use crate::{AlgoError, DefaultAlgoContext, EntryBase, ErrorKind, Params};
 
 // The row of SM2, to give to DefaultAlgoBuilder::reg_key_pair_generator: an EC key pair on

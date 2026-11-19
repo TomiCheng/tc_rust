@@ -180,9 +180,9 @@ mod tests {
 
     use crate::cipher::CipherDirection;
     use crate::generate::KeyPair;
-    use crate::params::key::dh::dh_groups::rfc3526_2048;
+    use crate::params::key::dh_groups::rfc3526_2048;
     use crate::params::{
-        cipher::IesDhParams, generate::KeyLength, key::dh::DhPrivateKey, key::dh::DhPublicKey,
+        cipher::IesDhParams, generate::KeyLength, key::DhPrivateKey, key::DhPublicKey,
     };
     use crate::{AlgoBuilder, DefaultAlgoBuilder, ErrorKind};
 

@@ -58,7 +58,7 @@ mod tests {
     use std::sync::OnceLock;
 
     use crate::generate::KeyPair;
-    use crate::params::{generate::DsaKeyGenParams, key::dsa::DsaPublicKey};
+    use crate::params::{generate::DsaKeyGenParams, key::DsaPublicKey};
     use crate::{Algo, AlgoBuilder, DefaultAlgoBuilder, ErrorKind};
 
     const MESSAGE: &[u8] = b"attack at dawn";
