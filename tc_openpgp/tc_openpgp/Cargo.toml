@@ -14,6 +14,6 @@ tc_openpgp_packet = { version = "0.1.0", path = "../tc_openpgp_packet" }
 [features]
 rsa = ["tc_algo/rsa"]
 
-[[example]]
+[[test]]
 name = "rsa_key_pair"
 required-features = ["rsa"]
