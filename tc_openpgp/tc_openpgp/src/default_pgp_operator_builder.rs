@@ -6,16 +6,29 @@ use tc_openpgp_packet::PublicKeyAlgorithmTag;
 
 use crate::default_pgp_operator::DefaultPgpOperator;
 use crate::operator::generate::{
-    DefaultPgpKeyPairGeneratorProvider, EmptyPgpKeyPairGeneratorProvider, GeneratorFactory,
-    PgpKeyPairGenerator, PgpKeyPairGeneratorProvider,
+    BUILT_IN, DefaultPgpKeyPairGeneratorProvider, EmptyPgpKeyPairGeneratorProvider,
+    GeneratorFactory, PgpKeyPairGenerator, PgpKeyPairGeneratorProvider,
 };
 use crate::{DefaultPgpOperatorContext, PgpOperator, PgpOperatorBuilder};
 
 /// Builder for the default OpenPGP operator.
-#[derive(Clone, Default)]
+#[derive(Clone)]
 pub struct DefaultPgpOperatorBuilder {
     algo: Option<Arc<dyn Algo>>,
     generators: HashMap<PublicKeyAlgorithmTag, GeneratorFactory>,
+}
+
+impl Default for DefaultPgpOperatorBuilder {
+    fn default() -> Self {
+        let mut builder = Self {
+            algo: None,
+            generators: HashMap::new(),
+        };
+        for &(tag, create) in BUILT_IN {
+            builder.reg_key_pair_generator(tag, create);
+        }
+        builder
+    }
 }
 
 impl DefaultPgpOperatorBuilder {
