@@ -2,6 +2,7 @@
 
 mod algorithms;
 pub mod auth_enveloped;
+pub mod authenticated;
 mod default_cms_operator;
 mod default_cms_operator_builder;
 mod der;

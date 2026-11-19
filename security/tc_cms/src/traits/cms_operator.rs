@@ -1,4 +1,5 @@
 use crate::auth_enveloped::AuthEnvelopedDataProvider;
+use crate::authenticated::AuthenticatedDataProvider;
 use crate::enveloped::EnvelopedDataProvider;
 use crate::signed::SignedDataProvider;
 
@@ -11,4 +12,7 @@ pub trait CmsOperator: Send + Sync {
 
     // AuthEnvelopedData 的加密與解密
     fn auth_enveloped_data(&self) -> &dyn AuthEnvelopedDataProvider;
+
+    // AuthenticatedData 的產生與驗證
+    fn authenticated_data(&self) -> &dyn AuthenticatedDataProvider;
 }

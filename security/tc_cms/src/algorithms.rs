@@ -170,3 +170,21 @@ pub(crate) fn aead(cipher: &Asn1Oid) -> Result<(usize, bool), CmsError> {
         .map(|(_, length, gcm)| (*length, *gcm))
         .ok_or(CmsError::UnknownAlgorithm)
 }
+
+// AuthenticatedData 的 HMAC 與金鑰長度，同 BC GeneratorUtilities 對 HMAC 的預設：摘要的長度
+const MACS: &[(&str, usize)] = &[
+    ("1.3.6.1.5.5.8.1.2", 20),
+    ("1.2.840.113549.2.7", 20),
+    ("1.2.840.113549.2.8", 28),
+    ("1.2.840.113549.2.9", 32),
+    ("1.2.840.113549.2.10", 48),
+    ("1.2.840.113549.2.11", 64),
+];
+
+pub(crate) fn mac_key_length(mac: &Asn1Oid) -> Result<usize, CmsError> {
+    let dotted = mac.to_string();
+    MACS.iter()
+        .find(|(oid, _)| *oid == dotted)
+        .map(|(_, length)| *length)
+        .ok_or(CmsError::UnknownAlgorithm)
+}

@@ -34,6 +34,8 @@ pub enum CmsError {
     WrongRecipientKey,
     // KeyAgree 的產生器沒有收件人
     NoRecipient,
+    // AuthenticatedData 的 MAC 驗不過
+    MacMismatch,
     // 簽章時間不在憑證的有效期間內
     CertificateNotValid,
 }
@@ -59,6 +61,7 @@ impl fmt::Display for CmsError {
             Self::MissingContent => f.write_str("the content is not encapsulated"),
             Self::UnexpectedContentType => f.write_str("unexpected content type"),
             Self::InvalidKey => f.write_str("the content encryption key has the wrong length"),
+            Self::MacMismatch => f.write_str("the MAC does not verify"),
             Self::NoRecipient => f.write_str("no recipient to agree a key with"),
             Self::WrongRecipientKey => {
                 f.write_str("the key is not of the type the recipient takes")
