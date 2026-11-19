@@ -1125,9 +1125,11 @@ dependencies = [
 name = "tc_cms"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "tc_algo",
  "tc_asn1",
  "tc_asn1_cms",
+ "tc_asn1_x500",
  "tc_asn1_x509",
  "tc_x509",
 ]
