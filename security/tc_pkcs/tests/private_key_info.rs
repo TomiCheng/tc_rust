@@ -10,9 +10,14 @@ use tc_x509::operator::params::{
     generate::EcKeyGenParams, generate::RsaKeyGenParams, key::RsaKey, key::RsaKeyParams,
     key::X25519PrivateKey,
 };
+use tc_x509::{DefaultX509OperatorBuilder, X509Operator, X509OperatorBuilder};
 
-fn pair(oper: &dyn PkcsOperator, name: &str, params: Option<&dyn Params>) -> KeyPair {
-    let mut key_gen = oper.x509().key_pair_generator().get_by_name(name).unwrap();
+fn x509() -> Box<dyn X509Operator> {
+    DefaultX509OperatorBuilder::default().build()
+}
+
+fn pair(name: &str, params: Option<&dyn Params>) -> KeyPair {
+    let mut key_gen = x509().key_pair_generator().get_by_name(name).unwrap();
     if let Some(params) = params {
         key_gen.init(params).unwrap();
     }
@@ -31,7 +36,7 @@ fn round_trip(oper: &dyn PkcsOperator, key: &dyn Params) -> PrivateKeyInfo {
 fn an_rsa_private_key_becomes_rsa_encryption_and_reads_back_with_its_crt_values() {
     let oper = DefaultPkcsOperatorBuilder::default().build();
     // Small, since generating the primes is slow
-    let pair = pair(oper.as_ref(), "RSA", Some(&RsaKeyGenParams::new(1024)));
+    let pair = pair("RSA", Some(&RsaKeyGenParams::new(1024)));
 
     let info = round_trip(oper.as_ref(), pair.private());
     assert_eq!(
@@ -50,7 +55,7 @@ fn an_rsa_private_key_becomes_rsa_encryption_and_reads_back_with_its_crt_values(
 #[test]
 fn a_public_key_is_refused() {
     let oper = DefaultPkcsOperatorBuilder::default().build();
-    let pair = pair(oper.as_ref(), "RSA", Some(&RsaKeyGenParams::new(1024)));
+    let pair = pair("RSA", Some(&RsaKeyGenParams::new(1024)));
 
     let error = oper.private_key_info().encode(pair.public()).unwrap_err();
     assert!(matches!(error, PkcsError::NotPrivateKey));
@@ -59,13 +64,13 @@ fn a_public_key_is_refused() {
 #[test]
 fn an_x25519_private_key_carries_its_public_key_and_reads_back() {
     let oper = DefaultPkcsOperatorBuilder::default().build();
-    let pair = pair(oper.as_ref(), "X25519", None);
+    let pair = pair("X25519", None);
 
     let info = round_trip(oper.as_ref(), pair.private());
     assert_eq!(info.algorithm().algorithm().to_string(), "1.3.101.110");
     assert!(info.algorithm().parameters().is_none());
     assert_eq!(info.version(), 1);
-    let spki = oper.x509().spki().encode(pair.public()).unwrap();
+    let spki = x509().spki().encode(pair.public()).unwrap();
     assert_eq!(
         info.public_key().unwrap().as_bytes(),
         spki.subject_public_key().as_bytes()
@@ -98,11 +103,7 @@ fn an_x25519_key_is_also_read_bare_and_under_cryptlibs_oid() {
 #[test]
 fn an_ec_private_key_carries_its_curve_and_public_key_and_reads_back() {
     let oper = DefaultPkcsOperatorBuilder::default().build();
-    let pair = pair(
-        oper.as_ref(),
-        "EC",
-        Some(&EcKeyGenParams::new("P-256") as &dyn Params),
-    );
+    let pair = pair("EC", Some(&EcKeyGenParams::new("P-256") as &dyn Params));
 
     let info = round_trip(oper.as_ref(), pair.private());
     assert_eq!(
@@ -118,11 +119,7 @@ fn an_ec_private_key_carries_its_curve_and_public_key_and_reads_back() {
 #[test]
 fn an_ec_key_without_a_named_curve_is_invalid() {
     let oper = DefaultPkcsOperatorBuilder::default().build();
-    let pair = pair(
-        oper.as_ref(),
-        "EC",
-        Some(&EcKeyGenParams::new("P-256") as &dyn Params),
-    );
+    let pair = pair("EC", Some(&EcKeyGenParams::new("P-256") as &dyn Params));
     let info = oper.private_key_info().encode(pair.private()).unwrap();
 
     let implicit = PrivateKeyInfo::new(

@@ -9,6 +9,7 @@ use crate::operator::private_key_info::{DefaultPrivateKeyInfoProvider, PrivateKe
 pub(crate) struct DefaultPkcsOperator {
     #[allow(dead_code, reason = "the PBE of encrypted keys and stores will use it")]
     algo: Arc<dyn Algo>,
+    #[allow(dead_code, reason = "certification requests and PKCS#12 will use it")]
     x509: Arc<dyn X509Operator>,
     private_key_info: DefaultPrivateKeyInfoProvider,
 }
@@ -28,10 +29,6 @@ impl DefaultPkcsOperator {
 }
 
 impl PkcsOperator for DefaultPkcsOperator {
-    fn x509(&self) -> &dyn X509Operator {
-        self.x509.as_ref()
-    }
-
     fn private_key_info(&self) -> &dyn PrivateKeyInfoProvider {
         &self.private_key_info
     }

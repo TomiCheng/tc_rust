@@ -1246,6 +1246,8 @@ fn sm2p256v1() -> SecPCtPoint<'static, SM2P256V1FieldElement> {
 mod tests {
     use tc_algo::params::generate::EcKeyGenParams;
 
+    use tc_x509::{DefaultX509OperatorBuilder, X509OperatorBuilder};
+
     use super::CURVES;
     use crate::{DefaultPkcsOperatorBuilder, PkcsOperatorBuilder};
 
@@ -1254,8 +1256,9 @@ mod tests {
     #[test]
     fn a_key_of_every_curve_reads_back_to_the_same_private_key_info() {
         let oper = DefaultPkcsOperatorBuilder::default().build();
+        let x509 = DefaultX509OperatorBuilder::default().build();
         for entry in CURVES {
-            let mut key_gen = oper.x509().key_pair_generator().get_by_name("EC").unwrap();
+            let mut key_gen = x509.key_pair_generator().get_by_name("EC").unwrap();
             key_gen
                 .init(&EcKeyGenParams::from_oid(entry.oid.parse().unwrap()))
                 .unwrap();
