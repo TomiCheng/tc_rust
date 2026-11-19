@@ -1,4 +1,4 @@
-use tc_openpgp::operator::params::{generate::RsaKeyGenParams, key::RsaKey, key::RsaKeyParams};
+use tc_algo::params::{generate::RsaKeyGenParams, key::RsaKey, key::RsaKeyParams};
 use tc_openpgp::{DefaultPgpOperatorBuilder, PgpOperatorBuilder};
 use tc_openpgp_packet::PublicKeyAlgorithmTag;
 
