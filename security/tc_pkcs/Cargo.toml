@@ -11,6 +11,7 @@ repository.workspace = true
 tc_algo = { version = "0.1.0", path = "../../crypto/tc_algo", features = ["rsa", "fp-custom", "fp-curve", "f2m-custom", "f2m-curve", "cfrg-curves", "pbe", "sha", "md", "aes", "des", "rc-cipher"] }
 tc_asn1 = { version = "0.1.4", features = ["std"] }
 tc_asn1_pkcs = { version = "0.1.0", path = "../../asn1/tc_asn1_pkcs" }
+tc_asn1_x500 = "0.1.0"
 tc_asn1_x509 = "0.1.0"
 tc_x509 = { version = "0.1.0", path = "../tc_x509" }
 tc_asn1_x9 = { version = "0.1.0", path = "../../asn1/tc_asn1_x9" }

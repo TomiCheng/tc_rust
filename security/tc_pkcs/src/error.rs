@@ -22,6 +22,12 @@ pub enum PkcsError {
     UnknownEncryption,
     // The params of an encryption scheme are not of its type, or not what it requires
     InvalidEncryptionParams,
+    // A field that generating needs was not set
+    MissingField(&'static str),
+    // A certification request whose extensionRequest is not a single Extensions
+    InvalidRequest,
+    // A signature that does not verify
+    InvalidSignature,
 }
 
 impl fmt::Display for PkcsError {
@@ -35,6 +41,9 @@ impl fmt::Display for PkcsError {
             Self::InvalidPrivateKey => f.write_str("invalid private key encoding"),
             Self::UnknownEncryption => f.write_str("no row knows the encryption scheme"),
             Self::InvalidEncryptionParams => f.write_str("invalid encryption scheme parameters"),
+            Self::MissingField(field) => write!(f, "missing field: {field}"),
+            Self::InvalidRequest => f.write_str("invalid certification request"),
+            Self::InvalidSignature => f.write_str("the signature does not verify"),
         }
     }
 }

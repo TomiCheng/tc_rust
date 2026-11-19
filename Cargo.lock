@@ -1854,6 +1854,7 @@ dependencies = [
  "tc_algo",
  "tc_asn1",
  "tc_asn1_pkcs",
+ "tc_asn1_x500",
  "tc_asn1_x509",
  "tc_asn1_x9",
  "tc_asym_cipher",

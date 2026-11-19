@@ -1,6 +1,7 @@
 //! PKCS#8 private keys, PKCS#10 certification requests and PKCS#12 stores, after Bouncy
 //! Castle's `Org.BouncyCastle.Pkcs`, over the structures of `tc_asn1_pkcs`.
 
+pub mod csr;
 mod default_pkcs_operator;
 mod default_pkcs_operator_builder;
 mod default_pkcs_operator_context;
