@@ -138,3 +138,47 @@ fn a_detached_signature_needs_the_content_and_another_key_does_not_verify() {
         .unwrap_err();
     assert!(matches!(error, CmsError::InvalidSignature));
 }
+
+#[test]
+fn a_countersignature_made_here_verifies_and_signs_the_signature() {
+    let oper = DefaultCmsOperatorBuilder::default().build();
+    let x509 = DefaultX509OperatorBuilder::default().build();
+    let (private, certificate) = signer(x509.as_ref());
+    let (counter_private, counter_certificate) = signer(x509.as_ref());
+
+    let factory = x509.signature_factory("SHA-256withRSA", private).unwrap();
+    let mut generator = CmsSignedDataGenerator::new();
+    generator.add_signer(SignerInfoGenerator::new(factory, &certificate).unwrap());
+    let signed = oper
+        .signed_data()
+        .generate(&generator, CONTENT, true)
+        .unwrap();
+
+    let factory = x509
+        .signature_factory("SHA-256withRSA", counter_private)
+        .unwrap();
+    let mut counter = CmsSignedDataGenerator::new();
+    counter.add_signer(SignerInfoGenerator::new(factory, &counter_certificate).unwrap());
+    let signer = signed.signer_infos()[0].clone();
+    let countersigned = oper
+        .signed_data()
+        .countersign(&signed, &signer, &counter)
+        .unwrap();
+
+    let countersigned = CmsSignedData::decode(&countersigned.encode().unwrap()).unwrap();
+    let signer = &countersigned.signer_infos()[0];
+    oper.signed_data()
+        .verify(&countersigned, signer, &certificate)
+        .unwrap();
+    let counters = signer.counter_signatures().unwrap();
+    assert_eq!(counters.len(), 1);
+    oper.signed_data()
+        .verify(&countersigned, &counters[0], &counter_certificate)
+        .unwrap();
+    // the countersignature covers the signature, not the content
+    assert!(
+        oper.signed_data()
+            .verify(&countersigned, &counters[0], &certificate)
+            .is_err()
+    );
+}

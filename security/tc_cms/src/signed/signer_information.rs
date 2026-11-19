@@ -1,19 +1,60 @@
 use tc_asn1::{Asn1Oid, DecodingContext, DecodingOptions};
-use tc_asn1_cms::signed::{SignerIdentifier, SignerInfo};
-use tc_asn1_x500::Attribute;
+use tc_asn1_cms::signed::{CmsAttribute, SignerIdentifier, SignerInfo};
+use tc_asn1_x500::{Attribute, AttributeValue};
 use tc_asn1_x509::alg::AlgorithmIdentifier;
 use tc_x509::cert::X509Certificate;
 
-// BC 的 SignerInformation：一個簽署者，連同所屬 SignedData 的 eContentType
+use crate::CmsError;
+use crate::der::convert;
+
+// BC 的 SignerInformation：一個簽署者，連同所屬 SignedData 的 eContentType。副署
+// （countersignature）的簽署者另外記著它副署的簽章值，那就是它簽的內容
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct SignerInformation {
     info: SignerInfo,
     content_type: Asn1Oid,
+    countersigned: Option<Vec<u8>>,
 }
 
 impl SignerInformation {
     pub(crate) fn new(info: SignerInfo, content_type: Asn1Oid) -> Self {
-        Self { info, content_type }
+        Self {
+            info,
+            content_type,
+            countersigned: None,
+        }
+    }
+
+    // BC 的 GetCounterSignatures：unsigned attributes 裡每個 countersignature 屬性的每個值。
+    // 副署的副署也從它們各自的 counter_signatures 取得
+    pub fn counter_signatures(&self) -> Result<Vec<SignerInformation>, CmsError> {
+        let mut signers = Vec::new();
+        let counter = CmsAttribute::COUNTERSIGNATURE.oid();
+        for attribute in self.info.unsigned_attrs().unwrap_or_default() {
+            if *attribute.attribute_type() != counter {
+                continue;
+            }
+            for value in attribute.values() {
+                let AttributeValue::Other(value) = value else {
+                    return Err(CmsError::InvalidAttribute("countersignature"));
+                };
+                signers.push(Self {
+                    info: convert(value)?,
+                    content_type: self.content_type.clone(),
+                    countersigned: Some(self.signature().to_vec()),
+                });
+            }
+        }
+        Ok(signers)
+    }
+
+    pub fn is_counter_signature(&self) -> bool {
+        self.countersigned.is_some()
+    }
+
+    // 副署簽的內容：被副署的簽章值
+    pub(crate) fn countersigned(&self) -> Option<&[u8]> {
+        self.countersigned.as_deref()
     }
 
     pub fn signer_info(&self) -> &SignerInfo {

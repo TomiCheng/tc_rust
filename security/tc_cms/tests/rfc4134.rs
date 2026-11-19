@@ -114,3 +114,20 @@ fn the_dsa_examples_verify() {
             .unwrap();
     verify_signatures(oper.as_ref(), &signed);
 }
+
+#[test]
+fn the_countersignature_of_example_4_4_verifies_with_alices_rsa_certificate() {
+    let oper = DefaultCmsOperatorBuilder::default().build();
+    let signed = CmsSignedData::decode(include_bytes!("data/rfc4134/4.4.bin")).unwrap();
+    let signer = &signed.signer_infos()[0];
+    let counters = signer.counter_signatures().unwrap();
+    assert_eq!(counters.len(), 1);
+    assert!(counters[0].is_counter_signature());
+
+    let alice =
+        X509Certificate::decode(include_bytes!("data/rfc4134/AliceRSASignByCarl.cer")).unwrap();
+    assert!(counters[0].is_signer(&alice));
+    oper.signed_data()
+        .verify(&signed, &counters[0], &alice)
+        .unwrap();
+}

@@ -35,7 +35,7 @@ impl SignedDataProvider for DefaultCmsOperator {
             if !digest_algorithms.contains(&signer.digest_algorithm) {
                 digest_algorithms.push(signer.digest_algorithm.clone());
             }
-            signer_infos.push(self.sign(signer, content_type, content)?);
+            signer_infos.push(self.sign(signer, Some(content_type), content)?);
         }
 
         let mut encapsulated = ContentInfo::new(content_type.clone());
@@ -80,7 +80,8 @@ impl SignedDataProvider for DefaultCmsOperator {
     }
 
     // 同 BC 的 DoVerify：先檢查 contentType、cmsAlgorithmProtect 與 messageDigest，再驗簽章。有
-    // signed attributes 時簽的是它們的 DER，沒有時簽的是內容本身
+    // signed attributes 時簽的是它們的 DER，沒有時簽的是內容本身；副署簽的是被副署的簽章值，
+    // 而且不得有 contentType
     fn verify_with_key(
         &self,
         signed: &CmsSignedData,
@@ -88,20 +89,32 @@ impl SignedDataProvider for DefaultCmsOperator {
         public_key: Arc<dyn Params>,
     ) -> Result<(), CmsError> {
         let info = signer.signer_info();
-        let content = signed.signed_content().ok_or(CmsError::MissingContent)?;
+        let content = match signer.countersigned() {
+            Some(signature) => signature,
+            None => signed.signed_content().ok_or(CmsError::MissingContent)?,
+        };
         let digest = self
             .algo
             .digest()
             .calculate_by_oid(info.digest_algorithm().algorithm(), content)?;
 
         if info.signed_attrs().is_some() {
-            let Asn1Object::Oid(content_type) =
-                single_value(info, CmsAttribute::CONTENT_TYPE, "content-type")?
-            else {
-                return Err(CmsError::InvalidAttribute("content-type"));
-            };
-            if content_type != *signer.content_type() {
-                return Err(CmsError::ContentTypeMismatch);
+            if signer.is_counter_signature() {
+                if info
+                    .signed_attr(&CmsAttribute::CONTENT_TYPE.oid())
+                    .is_some()
+                {
+                    return Err(CmsError::InvalidAttribute("content-type"));
+                }
+            } else {
+                let Asn1Object::Oid(content_type) =
+                    single_value(info, CmsAttribute::CONTENT_TYPE, "content-type")?
+                else {
+                    return Err(CmsError::InvalidAttribute("content-type"));
+                };
+                if content_type != *signer.content_type() {
+                    return Err(CmsError::ContentTypeMismatch);
+                }
             }
             if info
                 .signed_attr(&CmsAttribute::CMS_ALGORITHM_PROTECT.oid())
@@ -150,14 +163,78 @@ impl SignedDataProvider for DefaultCmsOperator {
             Err(CmsError::InvalidSignature)
         }
     }
+
+    // 同 BC 的 GenerateCounterSigners、AddCounterSigners 與 ReplaceSigners
+    fn countersign(
+        &self,
+        signed: &CmsSignedData,
+        signer: &SignerInformation,
+        generator: &CmsSignedDataGenerator,
+    ) -> Result<CmsSignedData, CmsError> {
+        let mut values = Vec::new();
+        for counter in &generator.signers {
+            let info = self.sign(counter, None, signer.signature())?;
+            values.push(AttributeValue::Other(convert(&info)?));
+        }
+        if values.is_empty() {
+            return Err(CmsError::NoSigner);
+        }
+        let mut unsigned = signer
+            .signer_info()
+            .unsigned_attrs()
+            .unwrap_or_default()
+            .to_vec();
+        unsigned.push(Attribute::new(
+            CmsAttribute::COUNTERSIGNATURE.oid(),
+            values,
+        )?);
+        let replacement = signer.signer_info().clone().with_unsigned_attrs(unsigned);
+
+        let data = signed.signed_data();
+        let mut replaced = false;
+        let signer_infos = data
+            .signer_infos()
+            .iter()
+            .map(|info| {
+                if !replaced && info == signer.signer_info() {
+                    replaced = true;
+                    replacement.clone()
+                } else {
+                    info.clone()
+                }
+            })
+            .collect();
+        if !replaced {
+            return Err(CmsError::NoSigner);
+        }
+        let mut rebuilt = SignedData::new(
+            data.digest_algorithms().to_vec(),
+            data.encap_content_info().clone(),
+            signer_infos,
+        )
+        .with_version(data.version());
+        if let Some(certificates) = data.certificates() {
+            rebuilt = rebuilt.with_certificates(certificates.to_vec());
+        }
+        if let Some(crls) = data.crls() {
+            rebuilt = rebuilt.with_crls(crls.to_vec());
+        }
+        Ok(match signed.signed_content() {
+            Some(content) if signed.is_detached() => {
+                CmsSignedData::with_detached_content(rebuilt, content.to_vec())
+            }
+            _ => CmsSignedData::new(rebuilt)?,
+        })
+    }
 }
 
 impl DefaultCmsOperator {
     // 同 BC SignerInf.ToSignerInfo
+    // content_type 是 None 時是副署，不加 contentType
     fn sign(
         &self,
         signer: &SignerInfoGenerator,
-        content_type: &Asn1Oid,
+        content_type: Option<&Asn1Oid>,
         content: &[u8],
     ) -> Result<SignerInfo, CmsError> {
         let digest_algorithm = &signer.digest_algorithm;
@@ -225,7 +302,7 @@ impl DefaultCmsOperator {
 // 同 BC DefaultSignedAttributeTableGenerator：另外給的屬性優先，缺的才補上
 fn standard_attributes(
     signer: &SignerInfoGenerator,
-    content_type: &Asn1Oid,
+    content_type: Option<&Asn1Oid>,
     digest: &[u8],
     signature_algorithm: &AlgorithmIdentifier,
 ) -> Result<Vec<Attribute>, CmsError> {
@@ -236,11 +313,13 @@ fn standard_attributes(
             .any(|attribute| attribute.attribute_type() == oid)
     };
     let content_type_oid = CmsAttribute::CONTENT_TYPE.oid();
-    if !has(&attributes, &content_type_oid) {
-        attributes.push(attribute(
-            content_type_oid,
-            Asn1Object::Oid(content_type.clone()),
-        )?);
+    if let Some(content_type) = content_type {
+        if !has(&attributes, &content_type_oid) {
+            attributes.push(attribute(
+                content_type_oid,
+                Asn1Object::Oid(content_type.clone()),
+            )?);
+        }
     }
     let signing_time = CmsAttribute::SIGNING_TIME.oid();
     if !has(&attributes, &signing_time) {

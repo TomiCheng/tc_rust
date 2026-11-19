@@ -23,6 +23,16 @@ pub trait SignedDataProvider: Send + Sync {
         certificate: &X509Certificate,
     ) -> Result<(), CmsError>;
 
+    // BC 的 GenerateCounterSigners 加 AddCounterSigners 與 ReplaceSigners：generator 的每個簽署者
+    // 副署 signer 的簽章值，寫進它的 countersignature 屬性，給出換掉這個簽署者的 SignedData。
+    // 副署不帶 contentType；signer 不在 signed 的最上層是 NoSigner，所以不能副署副署
+    fn countersign(
+        &self,
+        signed: &CmsSignedData,
+        signer: &SignerInformation,
+        generator: &CmsSignedDataGenerator,
+    ) -> Result<CmsSignedData, CmsError>;
+
     // BC 的 SignerInformation.Verify(publicKey)
     fn verify_with_key(
         &self,

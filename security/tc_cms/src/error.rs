@@ -34,6 +34,8 @@ pub enum CmsError {
     WrongRecipientKey,
     // KeyAgree 的產生器沒有收件人
     NoRecipient,
+    // 副署時沒有簽署者，或要副署的簽署者不在 SignedData 裡
+    NoSigner,
     // AuthenticatedData 的 MAC 驗不過
     MacMismatch,
     // 解壓的內容超過上限
@@ -68,6 +70,7 @@ impl fmt::Display for CmsError {
             Self::ContentTooLarge => f.write_str("the decompressed content exceeds the limit"),
             Self::Io(error) => write!(f, "{error}"),
             Self::MacMismatch => f.write_str("the MAC does not verify"),
+            Self::NoSigner => f.write_str("no signer to countersign or none to be countersigned"),
             Self::NoRecipient => f.write_str("no recipient to agree a key with"),
             Self::WrongRecipientKey => {
                 f.write_str("the key is not of the type the recipient takes")
