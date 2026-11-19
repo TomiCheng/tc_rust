@@ -18,6 +18,10 @@ pub enum PkcsError {
     NotPrivateKey,
     // The encoding of a private key is not what its algorithm requires
     InvalidPrivateKey,
+    // No row knows the encryption scheme
+    UnknownEncryption,
+    // The params of an encryption scheme are not of its type, or not what it requires
+    InvalidEncryptionParams,
 }
 
 impl fmt::Display for PkcsError {
@@ -29,6 +33,8 @@ impl fmt::Display for PkcsError {
             Self::UnknownPrivateKey => f.write_str("no row knows the private key"),
             Self::NotPrivateKey => f.write_str("a private key is needed"),
             Self::InvalidPrivateKey => f.write_str("invalid private key encoding"),
+            Self::UnknownEncryption => f.write_str("no row knows the encryption scheme"),
+            Self::InvalidEncryptionParams => f.write_str("invalid encryption scheme parameters"),
         }
     }
 }

@@ -4,6 +4,7 @@
 mod default_pkcs_operator;
 mod default_pkcs_operator_builder;
 mod default_pkcs_operator_context;
+mod der;
 mod error;
 pub mod operator;
 mod traits;

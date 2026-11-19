@@ -4,6 +4,9 @@ use tc_algo::{Algo, AlgoBuilder, DefaultAlgoBuilder};
 use tc_x509::{DefaultX509OperatorBuilder, X509Operator, X509OperatorBuilder};
 
 use crate::default_pkcs_operator::DefaultPkcsOperator;
+use crate::operator::encrypted_private_key_info::{
+    self, DefaultEncryptedPrivateKeyInfoProvider, EncryptedPrivateKeyInfoEntry,
+};
 use crate::operator::private_key_info::{self, DefaultPrivateKeyInfoProvider, PrivateKeyInfoEntry};
 use crate::{DefaultPkcsOperatorContext, PkcsOperator, PkcsOperatorBuilder};
 
@@ -12,6 +15,7 @@ pub struct DefaultPkcsOperatorBuilder {
     algo: Option<Arc<dyn Algo>>,
     x509: Option<Arc<dyn X509Operator>>,
     private_key_infos: Vec<private_key_info::CreateRows>,
+    encrypted_private_key_infos: Vec<encrypted_private_key_info::CreateRows>,
 }
 
 // Starts with the built-in rows
@@ -21,6 +25,7 @@ impl Default for DefaultPkcsOperatorBuilder {
             algo: None,
             x509: None,
             private_key_infos: private_key_info::BUILT_IN.to_vec(),
+            encrypted_private_key_infos: encrypted_private_key_info::BUILT_IN.to_vec(),
         }
     }
 }
@@ -43,6 +48,14 @@ impl DefaultPkcsOperatorBuilder {
     ) {
         self.private_key_infos.push(create);
     }
+
+    // Rows registered later are tried first, so they can take over a built-in one
+    pub fn reg_encrypted_private_key_info(
+        &mut self,
+        create: fn(&DefaultPkcsOperatorContext) -> Vec<Box<dyn EncryptedPrivateKeyInfoEntry>>,
+    ) {
+        self.encrypted_private_key_infos.push(create);
+    }
 }
 
 impl PkcsOperatorBuilder for DefaultPkcsOperatorBuilder {
@@ -63,10 +76,17 @@ impl PkcsOperatorBuilder for DefaultPkcsOperatorBuilder {
             .rev()
             .flat_map(|create| create(&context))
             .collect();
+        let encrypted_rows = self
+            .encrypted_private_key_infos
+            .iter()
+            .rev()
+            .flat_map(|create| create(&context))
+            .collect();
         Box::new(DefaultPkcsOperator::new(
-            algo,
+            algo.clone(),
             x509,
             DefaultPrivateKeyInfoProvider::new(rows),
+            DefaultEncryptedPrivateKeyInfoProvider::new(algo, encrypted_rows),
         ))
     }
 }
