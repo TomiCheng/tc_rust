@@ -40,26 +40,13 @@ impl EnvelopedDataProvider for DefaultCmsOperator {
         encryption: &Asn1Oid,
     ) -> Result<CmsEnvelopedData, CmsError> {
         let mut key = Zeroizing::new(random(content_key_length(encryption)?));
-        let block = self.algo.cipher().get_by_oid(encryption)?.block_size();
-        let iv = random(block);
-        let encrypted = self.algo.cipher().encrypt_by_oid(
-            encryption,
-            &KeyWithIvOwned::new(key.to_vec(), iv.clone()),
-            content,
-        )?;
+        let info = self.encrypt_content(&generator.content_type, encryption, &key, content)?;
 
         let mut recipients = Vec::new();
         for recipient in &generator.recipients {
             recipients.push(recipient.generate(self.algo.as_ref(), self.x509.as_ref(), &key)?);
         }
         mem::take(&mut *key);
-
-        let algorithm = AlgorithmIdentifier::with_parameters(
-            encryption.clone(),
-            Asn1Object::OctetString(Asn1OctetString::new(&iv)),
-        );
-        let info = EncryptedContentInfo::new(generator.content_type.clone(), algorithm)
-            .with_encrypted_content(Asn1OctetString::new(&encrypted));
         Ok(CmsEnvelopedData::new(EnvelopedData::new(recipients, info)))
     }
 
@@ -70,14 +57,49 @@ impl EnvelopedDataProvider for DefaultCmsOperator {
         key: &dyn Params,
     ) -> Result<Zeroizing<Vec<u8>>, CmsError> {
         let key = self.content_key(recipient, key)?;
+        self.decrypt_content(enveloped.enveloped_data().encrypted_content_info(), &key)
+    }
+}
 
-        let encrypted = enveloped.enveloped_data().encrypted_content_info();
+impl DefaultCmsOperator {
+    // 以 CBC 與亂數 IV 加密內容，參數是 IV；EnvelopedData 與 EncryptedData 共用
+    pub(crate) fn encrypt_content(
+        &self,
+        content_type: &Asn1Oid,
+        encryption: &Asn1Oid,
+        key: &[u8],
+        content: &[u8],
+    ) -> Result<EncryptedContentInfo, CmsError> {
+        if key.len() != content_key_length(encryption)? {
+            return Err(CmsError::InvalidKey);
+        }
+        let block = self.algo.cipher().get_by_oid(encryption)?.block_size();
+        let iv = random(block);
+        let encrypted = self.algo.cipher().encrypt_by_oid(
+            encryption,
+            &KeyWithIvOwned::new(key.to_vec(), iv.clone()),
+            content,
+        )?;
+        let algorithm = AlgorithmIdentifier::with_parameters(
+            encryption.clone(),
+            Asn1Object::OctetString(Asn1OctetString::new(&iv)),
+        );
+        Ok(EncryptedContentInfo::new(content_type.clone(), algorithm)
+            .with_encrypted_content(Asn1OctetString::new(&encrypted)))
+    }
+
+    // 解開 EncryptedContentInfo，RC2-CBC 也解得開；EnvelopedData 與 EncryptedData 共用
+    pub(crate) fn decrypt_content(
+        &self,
+        encrypted: &EncryptedContentInfo,
+        key: &[u8],
+    ) -> Result<Zeroizing<Vec<u8>>, CmsError> {
         let algorithm = encrypted.content_encryption_algorithm();
         let sealed = encrypted
             .encrypted_content()
             .ok_or(CmsError::MissingContent)?;
         if rc2_cbc::RC2_CBC == *algorithm.algorithm() {
-            return self.decrypt_rc2(algorithm, &key, sealed.as_bytes());
+            return self.decrypt_rc2(algorithm, key, sealed.as_bytes());
         }
         if key.len() != content_key_length(algorithm.algorithm())? {
             return Err(CmsError::InvalidKey);
@@ -91,9 +113,7 @@ impl EnvelopedDataProvider for DefaultCmsOperator {
             sealed.as_bytes(),
         )?))
     }
-}
 
-impl DefaultCmsOperator {
     // RC2-CBC 的內容，只解密，同 BC 讀舊訊息：金鑰長度就是取回的內容金鑰，有效位元數取自
     // RC2-CBC-Parameter 的 version
     fn decrypt_rc2(

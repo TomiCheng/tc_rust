@@ -7,6 +7,7 @@ use crate::CmsOperator;
 use crate::auth_enveloped::AuthEnvelopedDataProvider;
 use crate::authenticated::AuthenticatedDataProvider;
 use crate::digested::DigestedDataProvider;
+use crate::encrypted::EncryptedDataProvider;
 use crate::enveloped::EnvelopedDataProvider;
 use crate::signed::SignedDataProvider;
 
@@ -39,6 +40,10 @@ impl CmsOperator for DefaultCmsOperator {
     }
 
     fn digested_data(&self) -> &dyn DigestedDataProvider {
+        self
+    }
+
+    fn encrypted_data(&self) -> &dyn EncryptedDataProvider {
         self
     }
 }

@@ -1,6 +1,7 @@
 use crate::auth_enveloped::AuthEnvelopedDataProvider;
 use crate::authenticated::AuthenticatedDataProvider;
 use crate::digested::DigestedDataProvider;
+use crate::encrypted::EncryptedDataProvider;
 use crate::enveloped::EnvelopedDataProvider;
 use crate::signed::SignedDataProvider;
 
@@ -19,4 +20,7 @@ pub trait CmsOperator: Send + Sync {
 
     // DigestedData 的產生與驗證
     fn digested_data(&self) -> &dyn DigestedDataProvider;
+
+    // EncryptedData 的加密與解密
+    fn encrypted_data(&self) -> &dyn EncryptedDataProvider;
 }

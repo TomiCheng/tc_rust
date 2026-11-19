@@ -8,6 +8,7 @@ mod default_cms_operator;
 mod default_cms_operator_builder;
 mod der;
 pub mod digested;
+pub mod encrypted;
 pub mod enveloped;
 mod error;
 pub mod signed;
