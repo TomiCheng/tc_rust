@@ -34,7 +34,7 @@ fn what_openssl_and_rfc_4134_digested_verifies() {
     assert_eq!(oper.digested_data().verify(&data).unwrap(), CONTENT);
 
     // RFC 4134 6.0: SHA-1 over the sample content
-    let data = CmsDigestedData::decode(include_bytes!("data/rfc4134_6.0.bin")).unwrap();
+    let data = CmsDigestedData::decode(include_bytes!("data/rfc4134/6.0.bin")).unwrap();
     let content = oper.digested_data().verify(&data).unwrap();
     assert!(content.starts_with(b"This is some sample content."));
 }

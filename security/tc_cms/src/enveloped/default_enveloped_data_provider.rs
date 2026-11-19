@@ -3,14 +3,16 @@ use std::mem;
 use rand::rngs::SysRng;
 use rand_core::{Rng, UnwrapErr};
 use tc_algo::Params;
-use tc_algo::params::cipher::KeyWithIvOwned;
+use tc_algo::params::cipher::{KeyWithIvOwned, ParamsWithIvOwned, Rc2ParamsOwned};
 use tc_algo::params::key::KeyOwned;
 use tc_asn1::{Asn1Object, Asn1OctetString, Asn1Oid, Asn1SequenceOf};
 use tc_asn1_cms::content::{EncryptedContentInfo, EnvelopedData};
 use tc_asn1_cms::recipient::{
     KeyAgreeRecipientInfo, OriginatorIdentifierOrKey, PasswordRecipientInfo, RecipientInfo,
 };
-use tc_asn1_pkcs::{Pbkdf2Params, Pkcs1Algorithm, Pkcs5Algorithm, RsaesOaepParams};
+use tc_asn1_pkcs::{
+    Pbkdf2Params, Pkcs1Algorithm, Pkcs5Algorithm, Rc2CbcParameter, RsaesOaepParams,
+};
 use tc_asn1_x509::alg::AlgorithmIdentifier;
 use tc_asn1_x509::cert::SubjectPublicKeyInfo;
 use tc_zeroize::Zeroizing;
@@ -23,6 +25,7 @@ use crate::algorithms::{
 use crate::default_cms_operator::DefaultCmsOperator;
 use crate::der::convert;
 use crate::enveloped::password_key::derive;
+use crate::enveloped::rc2_cbc;
 use crate::enveloped::recipient_information::is_key_agree_recipient;
 use crate::enveloped::{
     CmsEnvelopedData, CmsEnvelopedDataGenerator, EnvelopedDataProvider, KeyAgreeKey, PasswordKey,
@@ -70,15 +73,18 @@ impl EnvelopedDataProvider for DefaultCmsOperator {
 
         let encrypted = enveloped.enveloped_data().encrypted_content_info();
         let algorithm = encrypted.content_encryption_algorithm();
+        let sealed = encrypted
+            .encrypted_content()
+            .ok_or(CmsError::MissingContent)?;
+        if rc2_cbc::RC2_CBC == *algorithm.algorithm() {
+            return self.decrypt_rc2(algorithm, &key, sealed.as_bytes());
+        }
         if key.len() != content_key_length(algorithm.algorithm())? {
             return Err(CmsError::InvalidKey);
         }
         let Some(Asn1Object::OctetString(iv)) = algorithm.parameters() else {
             return Err(CmsError::UnknownAlgorithm);
         };
-        let sealed = encrypted
-            .encrypted_content()
-            .ok_or(CmsError::MissingContent)?;
         Ok(Zeroizing::new(self.algo.cipher().decrypt_by_oid(
             algorithm.algorithm(),
             &KeyWithIvOwned::new(key.to_vec(), iv.as_bytes().to_vec()),
@@ -88,6 +94,29 @@ impl EnvelopedDataProvider for DefaultCmsOperator {
 }
 
 impl DefaultCmsOperator {
+    // RC2-CBC 的內容，只解密，同 BC 讀舊訊息：金鑰長度就是取回的內容金鑰，有效位元數取自
+    // RC2-CBC-Parameter 的 version
+    fn decrypt_rc2(
+        &self,
+        algorithm: &AlgorithmIdentifier,
+        key: &[u8],
+        sealed: &[u8],
+    ) -> Result<Zeroizing<Vec<u8>>, CmsError> {
+        let params: Rc2CbcParameter =
+            convert(algorithm.parameters().ok_or(CmsError::UnknownAlgorithm)?)?;
+        let bits =
+            rc2_cbc::effective_key_bits(params.version()).ok_or(CmsError::UnknownAlgorithm)?;
+        let params = ParamsWithIvOwned::new(
+            Rc2ParamsOwned::with_effective_key_bits(key.to_vec(), bits),
+            params.iv().as_bytes().to_vec(),
+        );
+        Ok(Zeroizing::new(self.algo.cipher().decrypt_by_oid(
+            algorithm.algorithm(),
+            &params,
+            sealed,
+        )?))
+    }
+
     // 依收件人的種類取回內容加密金鑰，EnvelopedData 與 AuthEnvelopedData 共用
     pub(crate) fn content_key(
         &self,

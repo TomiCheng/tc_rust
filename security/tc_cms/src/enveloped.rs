@@ -11,6 +11,7 @@ mod key_agree_recipient_info_generator;
 mod key_trans_recipient_info_generator;
 mod password_key;
 mod password_recipient_info_generator;
+mod rc2_cbc;
 mod recipient_info_generator;
 mod recipient_information;
 

@@ -1,11 +1,11 @@
 use std::io::Read;
 
-use tc_asn1::{Asn1OctetString, Asn1Oid, Encode, EncodingOptions};
+use tc_asn1::{Asn1Oid, Encode, EncodingOptions};
 use tc_asn1_cms::content::{CompressedData, ContentInfo, ContentType};
 use tc_zlib::{InflateOptions, ZlibReader};
 
 use crate::CmsError;
-use crate::der::{convert, decode_all};
+use crate::der::{convert, decode_all, octets};
 
 // BC 的 CmsCompressedData：壓縮過的內容
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -62,8 +62,8 @@ impl CmsCompressedData {
             .encap_content_info()
             .content()
             .ok_or(CmsError::MissingContent)?;
-        let compressed: Asn1OctetString = decode_all(content.raw())?;
-        let reader = ZlibReader::decompress(compressed.as_bytes(), InflateOptions::default());
+        let compressed = octets(content)?;
+        let reader = ZlibReader::decompress(compressed.as_slice(), InflateOptions::default());
         let mut output = Vec::new();
         match limit {
             None => {

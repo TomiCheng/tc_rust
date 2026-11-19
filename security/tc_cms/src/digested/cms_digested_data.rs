@@ -1,9 +1,9 @@
-use tc_asn1::{Asn1OctetString, Asn1Oid, Encode, EncodingOptions};
+use tc_asn1::{Asn1Oid, Encode, EncodingOptions};
 use tc_asn1_cms::content::{ContentInfo, ContentType, DigestedData};
 use tc_asn1_x509::alg::AlgorithmIdentifier;
 
 use crate::CmsError;
-use crate::der::{convert, decode_all};
+use crate::der::{convert, decode_all, octets};
 
 // BC 的 CmsDigestedData：內容與它的摘要
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -48,11 +48,7 @@ impl CmsDigestedData {
     // 封裝的內容，BC 的 GetDigestedContent；沒封裝時是 None
     pub fn content(&self) -> Result<Option<Vec<u8>>, CmsError> {
         match self.data.encap_content_info().content() {
-            Some(content) => Ok(Some(
-                decode_all::<Asn1OctetString>(content.raw())?
-                    .as_bytes()
-                    .to_vec(),
-            )),
+            Some(content) => Ok(Some(octets(content)?)),
             None => Ok(None),
         }
     }

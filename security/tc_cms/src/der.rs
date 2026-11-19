@@ -15,3 +15,31 @@ pub(crate) fn decode_all<T: Decode>(bytes: &[u8]) -> Result<T, CmsError> {
 pub(crate) fn convert<T: Encode, U: Decode>(value: &T) -> Result<U, CmsError> {
     decode_all(&value.encode_to_vec(&EncodingOptions::DER)?)
 }
+
+// eContent 的 OCTET STRING，BER 分段的（constructed，0x24）也接受，各段依序串起來；tc_asn1 的
+// Asn1OctetString 只讀單一段
+pub(crate) fn octets(any: &tc_asn1::Asn1Any) -> Result<Vec<u8>, CmsError> {
+    let mut context = tc_asn1::DecodingContext::new(DecodingOptions::default());
+    let mut out = Vec::new();
+    collect(&any.as_ref(), &mut context, &mut out)?;
+    Ok(out)
+}
+
+fn collect(
+    element: &tc_asn1::Asn1Ref<'_>,
+    context: &mut tc_asn1::DecodingContext,
+    out: &mut Vec<u8>,
+) -> Result<(), CmsError> {
+    match element.tag() {
+        [0x04] => out.extend_from_slice(element.value()),
+        [0x24] => {
+            let mut children = element.children(context)?;
+            while children.peek().is_some() {
+                let child: tc_asn1::Asn1Any = children.get()?;
+                collect(&child.as_ref(), children.context(), out)?;
+            }
+        }
+        _ => return Err(Asn1Error::UnexpectedTag.into()),
+    }
+    Ok(())
+}

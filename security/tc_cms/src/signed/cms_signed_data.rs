@@ -1,9 +1,9 @@
-use tc_asn1::{Asn1OctetString, Asn1Oid, Encode, EncodingOptions};
+use tc_asn1::{Asn1Oid, Encode, EncodingOptions};
 use tc_asn1_cms::content::{CertificateChoices, ContentInfo, ContentType, SignedData};
 use tc_x509::cert::X509Certificate;
 
 use crate::CmsError;
-use crate::der::{convert, decode_all};
+use crate::der::{convert, decode_all, octets};
 use crate::signed::SignerInformation;
 
 // BC 的 CmsSignedData：一份 SignedData，連同簽署的內容。內容沒封裝（detached）時另外給
@@ -17,11 +17,7 @@ impl CmsSignedData {
     // 內容取自 eContent，沒封裝就沒有
     pub fn new(signed_data: SignedData) -> Result<Self, CmsError> {
         let content = match signed_data.encap_content_info().content() {
-            Some(content) => Some(
-                decode_all::<Asn1OctetString>(content.raw())?
-                    .as_bytes()
-                    .to_vec(),
-            ),
+            Some(content) => Some(octets(content)?),
             None => None,
         };
         Ok(Self {

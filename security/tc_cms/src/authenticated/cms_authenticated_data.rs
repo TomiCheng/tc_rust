@@ -1,10 +1,10 @@
-use tc_asn1::{Asn1OctetString, Asn1Oid, Encode, EncodingOptions};
+use tc_asn1::{Asn1Oid, Encode, EncodingOptions};
 use tc_asn1_cms::content::{AuthenticatedData, ContentInfo, ContentType};
 use tc_asn1_x500::Attribute;
 use tc_asn1_x509::alg::AlgorithmIdentifier;
 
 use crate::CmsError;
-use crate::der::{convert, decode_all};
+use crate::der::{convert, decode_all, octets};
 use crate::enveloped::RecipientInformation;
 
 // BC 的 CmsAuthenticatedData：以 MAC 保護的內容，與能取回 MAC 金鑰的收件人。內容沒有加密
@@ -46,11 +46,7 @@ impl CmsAuthenticatedData {
     // 封裝的內容；沒封裝時是 None
     pub fn content(&self) -> Result<Option<Vec<u8>>, CmsError> {
         match self.data.encap_content_info().content() {
-            Some(content) => Ok(Some(
-                decode_all::<Asn1OctetString>(content.raw())?
-                    .as_bytes()
-                    .to_vec(),
-            )),
+            Some(content) => Ok(Some(octets(content)?)),
             None => Ok(None),
         }
     }
