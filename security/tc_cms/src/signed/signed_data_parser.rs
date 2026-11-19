@@ -2,20 +2,15 @@ use std::io::{self, BufReader, Read, Write};
 
 use tc_algo::Algo;
 use tc_algo::digest::Digest;
-use tc_asn1::io::{Asn1Body, Asn1Reader};
-use tc_asn1::{Asn1Any, Asn1Integer, Asn1Oid, Asn1SetOf, DecodingOptions, Encode, EncodingOptions};
+use tc_asn1::io::Asn1Reader;
+use tc_asn1::{Asn1Any, Asn1Integer, Asn1Oid, Asn1SetOf, Encode, EncodingOptions};
 use tc_asn1_cms::content::{ContentType, SignedData};
 use tc_asn1_x509::alg::AlgorithmIdentifier;
 
 use crate::CmsError;
 use crate::der::{decode_all, length};
 use crate::signed::CmsSignedData;
-
-// 串流讀取時內容不設上限：它不會留在記憶體裡
-fn options() -> DecodingOptions {
-    let default = DecodingOptions::default();
-    DecodingOptions::new(default.depth(), usize::MAX, default.max_children())
-}
+use crate::stream::{copy_octets, options, required};
 
 // BC 的 CmsSignedDataParser：內容邊讀邊寫到 content 並算摘要，其餘的小欄位讀進記憶體。給出的
 // CmsSignedData 沒有內容，帶著算好的摘要，verify 由摘要驗證；不帶 signed attributes 的簽署者
@@ -107,28 +102,6 @@ pub(crate) fn parse(
         computed.push((oid, digest.finalize()?));
     }
     Ok(CmsSignedData::with_digests(signed_data, computed))
-}
-
-fn required<T>(value: io::Result<Option<T>>) -> Result<T, CmsError> {
-    value
-        .map_err(CmsError::Io)?
-        .ok_or(CmsError::UnexpectedContentType)
-}
-
-// eContent 的 OCTET STRING，單一段或 BER 分段
-fn copy_octets<R: Read>(body: &mut Asn1Body<'_, R>, sink: &mut dyn Write) -> Result<(), CmsError> {
-    while let Some(tag) = body.read_header().map_err(CmsError::Io)? {
-        body.read_len().map_err(CmsError::Io)?;
-        let mut inner = body.read_body().map_err(CmsError::Io)?;
-        match tag.as_bytes() {
-            [0x04] => {
-                io::copy(&mut inner, sink).map_err(CmsError::Io)?;
-            }
-            [0x24] => copy_octets(&mut inner, sink)?,
-            _ => return Err(tc_asn1::Asn1Error::UnexpectedTag.into()),
-        }
-    }
-    Ok(())
 }
 
 struct DigestingSink<'a> {

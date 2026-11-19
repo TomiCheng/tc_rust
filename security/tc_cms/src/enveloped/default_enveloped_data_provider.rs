@@ -1,3 +1,4 @@
+use std::io::{Read, Write};
 use std::mem;
 
 use rand::rngs::SysRng;
@@ -24,12 +25,13 @@ use crate::algorithms::{
 };
 use crate::default_cms_operator::DefaultCmsOperator;
 use crate::der::convert;
+use crate::enveloped::enveloped_data_parser;
 use crate::enveloped::password_key::derive;
 use crate::enveloped::rc2_cbc;
 use crate::enveloped::recipient_information::is_key_agree_recipient;
 use crate::enveloped::{
-    CmsEnvelopedData, CmsEnvelopedDataGenerator, EnvelopedDataProvider, KeyAgreeKey, PasswordKey,
-    RecipientInformation,
+    CmsEnvelopedData, CmsEnvelopedDataGenerator, EnvelopedDataProvider, EnvelopedDataWriter,
+    KeyAgreeKey, PasswordKey, RecipientInformation,
 };
 
 impl EnvelopedDataProvider for DefaultCmsOperator {
@@ -48,6 +50,25 @@ impl EnvelopedDataProvider for DefaultCmsOperator {
         }
         mem::take(&mut *key);
         Ok(CmsEnvelopedData::new(EnvelopedData::new(recipients, info)))
+    }
+
+    fn open<'a>(
+        &self,
+        generator: &CmsEnvelopedDataGenerator,
+        output: Box<dyn Write + 'a>,
+        encryption: &Asn1Oid,
+    ) -> Result<EnvelopedDataWriter<'a>, CmsError> {
+        EnvelopedDataWriter::open(self, generator, output, encryption)
+    }
+
+    fn decrypt_stream(
+        &self,
+        input: &mut dyn Read,
+        select: &dyn Fn(&RecipientInformation) -> bool,
+        key: &dyn Params,
+        output: &mut dyn Write,
+    ) -> Result<(), CmsError> {
+        enveloped_data_parser::decrypt(self, input, select, key, output)
     }
 
     fn decrypt(
@@ -98,42 +119,11 @@ impl DefaultCmsOperator {
         let sealed = encrypted
             .encrypted_content()
             .ok_or(CmsError::MissingContent)?;
-        if rc2_cbc::RC2_CBC == *algorithm.algorithm() {
-            return self.decrypt_rc2(algorithm, key, sealed.as_bytes());
-        }
-        if key.len() != content_key_length(algorithm.algorithm())? {
-            return Err(CmsError::InvalidKey);
-        }
-        let Some(Asn1Object::OctetString(iv)) = algorithm.parameters() else {
-            return Err(CmsError::UnknownAlgorithm);
-        };
+        let params = content_params(algorithm, key)?;
         Ok(Zeroizing::new(self.algo.cipher().decrypt_by_oid(
             algorithm.algorithm(),
-            &KeyWithIvOwned::new(key.to_vec(), iv.as_bytes().to_vec()),
+            params.as_ref(),
             sealed.as_bytes(),
-        )?))
-    }
-
-    // RC2-CBC 的內容，只解密，同 BC 讀舊訊息：金鑰長度就是取回的內容金鑰，有效位元數取自
-    // RC2-CBC-Parameter 的 version
-    fn decrypt_rc2(
-        &self,
-        algorithm: &AlgorithmIdentifier,
-        key: &[u8],
-        sealed: &[u8],
-    ) -> Result<Zeroizing<Vec<u8>>, CmsError> {
-        let params: Rc2CbcParameter =
-            convert(algorithm.parameters().ok_or(CmsError::UnknownAlgorithm)?)?;
-        let bits =
-            rc2_cbc::effective_key_bits(params.version()).ok_or(CmsError::UnknownAlgorithm)?;
-        let params = ParamsWithIvOwned::new(
-            Rc2ParamsOwned::with_effective_key_bits(key.to_vec(), bits),
-            params.iv().as_bytes().to_vec(),
-        );
-        Ok(Zeroizing::new(self.algo.cipher().decrypt_by_oid(
-            algorithm.algorithm(),
-            &params,
-            sealed,
         )?))
     }
 
@@ -301,4 +291,32 @@ pub(crate) fn random(length: usize) -> Vec<u8> {
     let mut bytes = vec![0; length];
     UnwrapErr(SysRng).fill_bytes(&mut bytes);
     bytes
+}
+
+// 內容加密演算法的參數加上金鑰，給 cipher 的 init。RC2-CBC 只用於解密舊訊息：金鑰長度就是取回的
+// 內容金鑰，有效位元數取自 RC2-CBC-Parameter 的 version；其他的參數是 IV，金鑰長度要合演算法
+pub(crate) fn content_params(
+    algorithm: &AlgorithmIdentifier,
+    key: &[u8],
+) -> Result<Box<dyn Params>, CmsError> {
+    if rc2_cbc::RC2_CBC == *algorithm.algorithm() {
+        let params: Rc2CbcParameter =
+            convert(algorithm.parameters().ok_or(CmsError::UnknownAlgorithm)?)?;
+        let bits =
+            rc2_cbc::effective_key_bits(params.version()).ok_or(CmsError::UnknownAlgorithm)?;
+        return Ok(Box::new(ParamsWithIvOwned::new(
+            Rc2ParamsOwned::with_effective_key_bits(key.to_vec(), bits),
+            params.iv().as_bytes().to_vec(),
+        )));
+    }
+    if key.len() != content_key_length(algorithm.algorithm())? {
+        return Err(CmsError::InvalidKey);
+    }
+    let Some(Asn1Object::OctetString(iv)) = algorithm.parameters() else {
+        return Err(CmsError::UnknownAlgorithm);
+    };
+    Ok(Box::new(KeyWithIvOwned::new(
+        key.to_vec(),
+        iv.as_bytes().to_vec(),
+    )))
 }

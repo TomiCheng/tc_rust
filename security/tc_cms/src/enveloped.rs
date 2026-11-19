@@ -4,7 +4,9 @@
 mod cms_enveloped_data;
 mod cms_enveloped_data_generator;
 mod default_enveloped_data_provider;
+mod enveloped_data_parser;
 mod enveloped_data_provider;
+mod enveloped_data_writer;
 mod kek_recipient_info_generator;
 mod key_agree_key;
 mod key_agree_recipient_info_generator;
@@ -19,6 +21,7 @@ pub use cms_enveloped_data::CmsEnvelopedData;
 pub use cms_enveloped_data_generator::CmsEnvelopedDataGenerator;
 pub(crate) use default_enveloped_data_provider::random;
 pub use enveloped_data_provider::EnvelopedDataProvider;
+pub use enveloped_data_writer::EnvelopedDataWriter;
 pub use kek_recipient_info_generator::KekRecipientInfoGenerator;
 pub use key_agree_key::KeyAgreeKey;
 pub use key_agree_recipient_info_generator::KeyAgreeRecipientInfoGenerator;

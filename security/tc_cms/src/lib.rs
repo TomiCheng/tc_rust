@@ -12,6 +12,7 @@ pub mod encrypted;
 pub mod enveloped;
 mod error;
 pub mod signed;
+mod stream;
 mod traits;
 
 pub use default_cms_operator_builder::DefaultCmsOperatorBuilder;
