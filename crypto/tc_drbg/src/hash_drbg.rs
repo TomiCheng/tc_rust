@@ -1,17 +1,17 @@
 //! SP 800-90A Hash_DRBG。
 
 use alloc::{vec, vec::Vec};
-use core::convert::Infallible;
 
 use rand_core::{CryptoRng, TryCryptoRng, TryRng};
 use tc_digest::Digest;
 
 use crate::derivation::{hash_df, hash_seed_length, max_hash_security_strength};
-use crate::drbg::{RngResult, rng_fill, rng_next_u32, rng_next_u64, validate_security_strength};
+use crate::drbg::{
+    MAX_REQUEST_BYTES, rng_fill, rng_next_u32, rng_next_u64, validate_security_strength,
+};
 use crate::{Drbg, DrbgError};
 
 const RESEED_MAX: u64 = 1_u64 << 47;
-const MAX_REQUEST_BYTES: usize = (1_usize << 18) / 8;
 
 /// NIST SP 800-90A §10.1.1 的 Hash_DRBG。
 pub struct HashDrbg<D: Digest> {
@@ -143,19 +143,25 @@ impl<D: Digest> Drbg for HashDrbg<D> {
 }
 
 impl<D: Digest> TryRng for HashDrbg<D> {
-    type Error = Infallible;
+    type Error = DrbgError;
 
-    fn try_next_u32(&mut self) -> RngResult<u32> {
-        Ok(rng_next_u32(self))
+    /// 需要重新植入時回傳 [`DrbgError::ReseedRequired`]。
+    fn try_next_u32(&mut self) -> Result<u32, DrbgError> {
+        rng_next_u32(self)
     }
 
-    fn try_next_u64(&mut self) -> RngResult<u64> {
-        Ok(rng_next_u64(self))
+    /// 需要重新植入時回傳 [`DrbgError::ReseedRequired`]。
+    fn try_next_u64(&mut self) -> Result<u64, DrbgError> {
+        rng_next_u64(self)
     }
 
-    fn try_fill_bytes(&mut self, output: &mut [u8]) -> RngResult<()> {
-        rng_fill(self, output);
-        Ok(())
+    /// 需要重新植入時回傳 [`DrbgError::ReseedRequired`]。
+    ///
+    /// # Panics
+    ///
+    /// `output` 超過 32 KiB（2^18 bits）時 panic。
+    fn try_fill_bytes(&mut self, output: &mut [u8]) -> Result<(), DrbgError> {
+        rng_fill(self, output)
     }
 }
 

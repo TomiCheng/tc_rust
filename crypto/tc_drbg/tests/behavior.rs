@@ -1,6 +1,6 @@
 use core::convert::Infallible;
 
-use rand_core::{Rng, TryCryptoRng, TryRng};
+use rand_core::{TryCryptoRng, TryRng};
 use tc_aes::AesEngine;
 use tc_drbg::{CtrDrbg, Drbg, DrbgError, HashDrbg};
 use tc_sha::Sha256Digest;
@@ -144,6 +144,6 @@ fn rng_and_generate_without_additional_input_are_identical() {
     let mut direct_output = [0_u8; 64];
     let mut rng_output = [0_u8; 64];
     direct.generate(&mut direct_output, &[]).unwrap();
-    through_rng.fill_bytes(&mut rng_output);
+    through_rng.try_fill_bytes(&mut rng_output).unwrap();
     assert_eq!(direct_output, rng_output);
 }

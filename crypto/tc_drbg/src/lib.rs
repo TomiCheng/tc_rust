@@ -9,18 +9,18 @@
 //! 介面沒有 `prediction_resistant` 旗標。需要 prediction resistance 的呼叫端
 //! 應先呼叫 [`Drbg::reseed`]，再呼叫 [`Drbg::generate`]。
 //!
-//! 三個實作都實作 `rand_core::TryRng<Error = Infallible>` 與
-//! `rand_core::TryCryptoRng`，因此會透過 rand_core 0.10 的 blanket impl 取得
-//! `Rng`、`RngCore` 與 `CryptoRng`。`Rng::fill_bytes` 無法回傳錯誤，所以當重新
-//! 植入已成為必要條件或單次請求過大時會 panic；需要處理錯誤的呼叫端應直接使用
-//! [`Drbg::generate`]。
+//! 三個實作都實作 `rand_core::TryRng<Error = DrbgError>` 與
+//! `rand_core::TryCryptoRng`。需要重新植入時回傳 [`DrbgError::ReseedRequired`]，
+//! 由呼叫端決定要重新植入還是放棄。單次請求上限是 32 KiB（2^18 bits，同 Bouncy
+//! Castle），超過時 panic，呼叫前檢查長度即可避免。需要 `CryptoRng` 的地方，用
+//! `rand_core::UnwrapErr` 包起來，錯誤會改成 panic。
 //!
 //! 內部狀態含有秘密資料，但本 crate 不保證編譯器會抹除已被覆寫或釋放的記憶體。
 //!
 //! # 範例
 //!
 //! ```
-//! use rand_core::Rng;
+//! use rand_core::{Rng, TryRng, UnwrapErr};
 //! use tc_aes::AesEngine;
 //! use tc_drbg::{CtrDrbg, Drbg, HashDrbg, HmacDrbg};
 //! use tc_macs::Hmac;
@@ -46,8 +46,11 @@
 //! drbg.reseed(&mut entropy, &[])?;
 //! drbg.generate(&mut key, b"additional input")?;
 //!
-//! // 也能當成 rand_core 的亂數來源，例如交給需要 CryptoRng 的函式（失敗時 panic）
-//! let _ = drbg.next_u64();
+//! // 也能當成 rand_core 的亂數來源；需要重新植入時回傳錯誤
+//! let _ = drbg.try_next_u64()?;
+//!
+//! // 交給需要 CryptoRng 的函式時，用 UnwrapErr 把錯誤改成 panic
+//! let _ = UnwrapErr(&mut drbg).next_u64();
 //!
 //! // Hash_DRBG 與 CTR_DRBG 的建立方式相同，只是換掉底層元件
 //! let mut hash = HashDrbg::new(Sha256Digest::new(), 256, 32, &mut entropy, b"nonce", &[])?;

@@ -1,17 +1,17 @@
 //! SP 800-90A HMAC_DRBG。
 
 use alloc::{vec, vec::Vec};
-use core::convert::Infallible;
 
 use rand_core::{CryptoRng, TryCryptoRng, TryRng};
 use tc_macs::{KeyRef, Mac, MacInit};
 
 use crate::derivation::max_hash_security_strength;
-use crate::drbg::{RngResult, rng_fill, rng_next_u32, rng_next_u64, validate_security_strength};
+use crate::drbg::{
+    MAX_REQUEST_BYTES, rng_fill, rng_next_u32, rng_next_u64, validate_security_strength,
+};
 use crate::{Drbg, DrbgError};
 
 const RESEED_MAX: u64 = 1_u64 << 47;
-const MAX_REQUEST_BYTES: usize = (1_usize << 18) / 8;
 
 /// NIST SP 800-90A §10.1.2 的 HMAC_DRBG。
 pub struct HmacDrbg<M>
@@ -170,19 +170,25 @@ impl<M> TryRng for HmacDrbg<M>
 where
     M: Mac + for<'a> MacInit<KeyRef<'a>>,
 {
-    type Error = Infallible;
+    type Error = DrbgError;
 
-    fn try_next_u32(&mut self) -> RngResult<u32> {
-        Ok(rng_next_u32(self))
+    /// 需要重新植入時回傳 [`DrbgError::ReseedRequired`]。
+    fn try_next_u32(&mut self) -> Result<u32, DrbgError> {
+        rng_next_u32(self)
     }
 
-    fn try_next_u64(&mut self) -> RngResult<u64> {
-        Ok(rng_next_u64(self))
+    /// 需要重新植入時回傳 [`DrbgError::ReseedRequired`]。
+    fn try_next_u64(&mut self) -> Result<u64, DrbgError> {
+        rng_next_u64(self)
     }
 
-    fn try_fill_bytes(&mut self, output: &mut [u8]) -> RngResult<()> {
-        rng_fill(self, output);
-        Ok(())
+    /// 需要重新植入時回傳 [`DrbgError::ReseedRequired`]。
+    ///
+    /// # Panics
+    ///
+    /// `output` 超過 32 KiB（2^18 bits）時 panic。
+    fn try_fill_bytes(&mut self, output: &mut [u8]) -> Result<(), DrbgError> {
+        rng_fill(self, output)
     }
 }
 
@@ -192,7 +198,7 @@ impl<M> TryCryptoRng for HmacDrbg<M> where M: Mac + for<'a> MacInit<KeyRef<'a>> 
 mod tests {
     use core::convert::Infallible;
 
-    use rand_core::{Rng, TryCryptoRng, TryRng};
+    use rand_core::{Rng, TryCryptoRng, TryRng, UnwrapErr};
     use tc_macs::Hmac;
     use tc_sha::Sha256Digest;
 
@@ -243,11 +249,29 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "Rng::fill_bytes requires a usable DRBG")]
-    fn rng_fill_panics_when_reseed_is_required() {
+    fn the_rand_core_interface_reports_a_required_reseed_as_an_error() {
         let mut drbg = drbg();
         drbg.reseed_counter = RESEED_MAX + 1;
 
-        drbg.fill_bytes(&mut [0_u8; 1]);
+        assert_eq!(
+            drbg.try_fill_bytes(&mut [0_u8; 1]),
+            Err(DrbgError::ReseedRequired)
+        );
+        assert_eq!(drbg.try_next_u64(), Err(DrbgError::ReseedRequired));
+    }
+
+    #[test]
+    #[should_panic(expected = "a DRBG request is limited to 32768 bytes")]
+    fn the_rand_core_interface_panics_on_a_request_over_32_kib() {
+        let _ = drbg().try_fill_bytes(&mut [0_u8; 32 * 1024 + 1]);
+    }
+
+    #[test]
+    #[should_panic(expected = "rand_core::UnwrapErr")]
+    fn unwrap_err_turns_a_required_reseed_into_a_panic() {
+        let mut drbg = drbg();
+        drbg.reseed_counter = RESEED_MAX + 1;
+
+        UnwrapErr(&mut drbg).fill_bytes(&mut [0_u8; 1]);
     }
 }
