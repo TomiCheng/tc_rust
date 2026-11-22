@@ -10,10 +10,11 @@
 //! 應先呼叫 [`Drbg::reseed`]，再呼叫 [`Drbg::generate`]。
 //!
 //! 三個實作都實作 `rand_core::TryRng<Error = DrbgError>` 與
-//! `rand_core::TryCryptoRng`。需要重新植入時回傳 [`DrbgError::ReseedRequired`]，
-//! 由呼叫端決定要重新植入還是放棄；單次請求超過 32 KiB（2^18 bits，同 Bouncy
-//! Castle）回傳 [`DrbgError::RequestTooLarge`]。本 crate 不會因此 panic。需要
-//! `CryptoRng` 的地方，用 `rand_core::UnwrapErr` 包起來，錯誤會改成 panic。
+//! `rand_core::TryCryptoRng`，錯誤與 [`Drbg::generate`] 相同：單次請求超過 32 KiB
+//! 回傳 [`DrbgError::RequestTooLarge`]；2^47 次請求後回傳
+//! [`DrbgError::ReseedRequired`]，要由呼叫端呼叫 [`Drbg::reseed`]（本 crate 不持有
+//! 熵來源，不會自動重新植入）。兩個上限都同 Bouncy Castle，本 crate 不會因此 panic。
+//! 需要 `CryptoRng` 的地方，用 `rand_core::UnwrapErr` 包起來，錯誤會改成 panic。
 //!
 //! 內部狀態含有秘密資料，但本 crate 不保證編譯器會抹除已被覆寫或釋放的記憶體。
 //!
