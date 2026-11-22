@@ -182,11 +182,8 @@ where
         rng_next_u64(self)
     }
 
-    /// 需要重新植入時回傳 [`DrbgError::ReseedRequired`]。
-    ///
-    /// # Panics
-    ///
-    /// `output` 超過 32 KiB（2^18 bits）時 panic。
+    /// 需要重新植入時回傳 [`DrbgError::ReseedRequired`]；`output` 超過 32 KiB
+    /// （2^18 bits）時回傳 [`DrbgError::RequestTooLarge`]。
     fn try_fill_bytes(&mut self, output: &mut [u8]) -> Result<(), DrbgError> {
         rng_fill(self, output)
     }
@@ -261,9 +258,14 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "a DRBG request is limited to 32768 bytes")]
-    fn the_rand_core_interface_panics_on_a_request_over_32_kib() {
-        let _ = drbg().try_fill_bytes(&mut [0_u8; 32 * 1024 + 1]);
+    fn the_rand_core_interface_reports_a_request_over_32_kib_as_an_error() {
+        assert_eq!(
+            drbg().try_fill_bytes(&mut [0_u8; 32 * 1024 + 1]),
+            Err(DrbgError::RequestTooLarge {
+                requested: 32 * 1024 + 1,
+                maximum: 32 * 1024,
+            })
+        );
     }
 
     #[test]

@@ -155,11 +155,8 @@ impl<D: Digest> TryRng for HashDrbg<D> {
         rng_next_u64(self)
     }
 
-    /// 需要重新植入時回傳 [`DrbgError::ReseedRequired`]。
-    ///
-    /// # Panics
-    ///
-    /// `output` 超過 32 KiB（2^18 bits）時 panic。
+    /// 需要重新植入時回傳 [`DrbgError::ReseedRequired`]；`output` 超過 32 KiB
+    /// （2^18 bits）時回傳 [`DrbgError::RequestTooLarge`]。
     fn try_fill_bytes(&mut self, output: &mut [u8]) -> Result<(), DrbgError> {
         rng_fill(self, output)
     }

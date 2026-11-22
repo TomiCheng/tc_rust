@@ -24,13 +24,8 @@ pub(crate) fn validate_security_strength(
 // SP 800-90A 的單次請求上限，同 BC：2^18 bits
 pub(crate) const MAX_REQUEST_BYTES: usize = (1_usize << 18) / 8;
 
-// rand_core 介面共用：超過單次上限是呼叫端可事先檢查的前置條件，panic；
-// 需要重新植入取決於內部計數，回傳錯誤
+// rand_core 介面共用：錯誤一律回傳，要 panic 由呼叫端以 UnwrapErr 選擇
 pub(crate) fn rng_fill<D: Drbg>(drbg: &mut D, output: &mut [u8]) -> Result<(), DrbgError> {
-    assert!(
-        output.len() <= MAX_REQUEST_BYTES,
-        "a DRBG request is limited to {MAX_REQUEST_BYTES} bytes"
-    );
     drbg.generate(output, &[])
 }
 
