@@ -277,9 +277,6 @@ cargo doc --workspace --no-deps --locked
 Representative `no_std` builds:
 
 ```bash
-# Representative block-mode crate
-cargo build -p tc_cts_modes --locked
-
 # Portable digest backend without std
 cargo build -p tc_misc_digest --features haraka --locked
 ```

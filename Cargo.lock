@@ -1149,13 +1149,12 @@ checksum = "0bcfe3e4732defe64408b706121575a0fdbd7011a3647566cd0a353daf64c165"
 [[package]]
 name = "tc_cts_modes"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "613af55b05e368cf99f1539ca48ea7d793df7c8527dd7632ce99b223d496d753"
 dependencies = [
- "tc_aes",
  "tc_block_cipher",
  "tc_block_modes",
  "tc_buffered_cipher",
- "tc_des",
- "tc_misc_block_cipher",
  "tc_zeroize",
 ]
 

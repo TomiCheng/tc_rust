@@ -101,7 +101,7 @@ tc_asn1 = "0.1.2"
 tc_block_cipher = { version = "0.1.0", features = ["alloc"] }
 tc_block_modes = { version = "0.1.2", features = ["alloc"], optional = true }
 tc_buffered_cipher = { version = "0.2.0", features = ["alloc"] }
-tc_cts_modes = { version = "0.1.0", path = "../tc_cts_modes", features = ["alloc"], optional = true }
+tc_cts_modes = { version = "0.1.0", features = ["alloc"], optional = true }
 tc_constant_time = "0.1.0"
 tc_zeroize = { version = "0.1.0", features = ["alloc"] }
 tc_digest = { version = "0.1.1", features = ["alloc"] }
