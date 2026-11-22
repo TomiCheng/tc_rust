@@ -1,8 +1,8 @@
-use std::io::{self, Write};
+use std::io::{self, Read, Write};
 
 use crate::{
-    BodyLength, EncodingConfig, LiteralDataFormat, PacketHeaderFormat, PacketTag, PgpWrite,
-    PgpWriter,
+    BodyLength, DecodingConfig, EncodingConfig, LiteralDataFormat, PacketHeaderFormat, PacketTag,
+    PgpRead, PgpReader, PgpWrite, PgpWriter,
 };
 
 /// An OpenPGP Literal Data packet (Tag 11).
@@ -97,6 +97,36 @@ impl LiteralData {
     }
 }
 
+impl PgpRead for LiteralData {
+    fn decode(input: &mut dyn Read, config: &DecodingConfig) -> io::Result<Self> {
+        let mut reader = PgpReader::new(input);
+        let (tag, mut body) = reader.read_body(config)?;
+        if tag != PacketTag::LiteralData {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "expected a Literal Data packet",
+            ));
+        }
+
+        let mut prefix = [0; 2];
+        body.read_exact(&mut prefix)?;
+        let [format, filename_len] = prefix;
+        let mut filename = vec![0; usize::from(filename_len)];
+        body.read_exact(&mut filename)?;
+        let mut timestamp = [0; 4];
+        body.read_exact(&mut timestamp)?;
+        let mut data = Vec::new();
+        body.read_to_end(&mut data)?;
+
+        Ok(Self {
+            format: LiteralDataFormat::from(format),
+            filename,
+            timestamp: u32::from_be_bytes(timestamp),
+            data,
+        })
+    }
+}
+
 impl PgpWrite for LiteralData {
     /// Writes a complete Literal Data packet with a definite body length.
     /// Legacy framing is available only in builds with debug assertions.
@@ -146,6 +176,111 @@ fn validate_filename(filename: &[u8]) -> io::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn decode_enforces_total_body_limit_for_each_framing() {
+        let mut partial = b"\xcb\xe9b\x00\x00\x00\x00\x00".to_vec();
+        partial.extend_from_slice(&[b'a'; 506]);
+        partial.extend_from_slice(b"\x01b");
+        for (bytes, body_len) in [
+            (&b"\xcb\x07b\x00\x00\x00\x00\x00z"[..], 7),
+            (&b"\xac\x07b\x00\x00\x00\x00\x00z"[..], 7),
+            (&b"\xafb\x00\x00\x00\x00\x00z"[..], 7),
+            (partial.as_slice(), 513),
+        ] {
+            let mut config = DecodingConfig {
+                max_body_len: body_len,
+                ..DecodingConfig::default()
+            };
+            let packet = LiteralData::decode(&mut &bytes[..], &config).unwrap();
+            assert_eq!(packet.data().len() as u64 + 6, body_len);
+
+            config.max_body_len -= 1;
+            let error = LiteralData::decode(&mut &bytes[..], &config).unwrap_err();
+            assert_eq!(error.kind(), io::ErrorKind::InvalidData);
+        }
+    }
+
+    #[test]
+    fn decode_requires_the_configured_header_format() {
+        let current = &b"\xcb\x06b\x00\x00\x00\x00\x00"[..];
+        let legacy = &b"\xac\x06b\x00\x00\x00\x00\x00"[..];
+        for (format, accepted, rejected) in [
+            (PacketHeaderFormat::OpenPgp, current, legacy),
+            (PacketHeaderFormat::Legacy, legacy, current),
+        ] {
+            let config = DecodingConfig {
+                header_format: Some(format),
+                ..DecodingConfig::default()
+            };
+            assert!(LiteralData::decode(&mut &accepted[..], &config).is_ok());
+            let mut input = rejected;
+            let error = LiteralData::decode(&mut input, &config).unwrap_err();
+            assert_eq!(error.kind(), io::ErrorKind::InvalidData);
+            assert_eq!(input, &rejected[1..]);
+        }
+    }
+
+    #[test]
+    fn decode_reads_consecutive_current_and_legacy_packets() {
+        let mut input = &b"\xcb\x0ab\x01x\x01\x02\x03\x04abc\xac\x07u\x00\x00\x00\x00\x00z"[..];
+        let binary = LiteralData::decode(&mut input, &DecodingConfig::default()).unwrap();
+        assert_eq!(binary.format(), LiteralDataFormat::Binary);
+        assert_eq!(binary.filename(), b"x");
+        assert_eq!(binary.timestamp(), 0x0102_0304);
+        assert_eq!(binary.data(), b"abc");
+        assert_eq!(
+            LiteralData::decode(&mut input, &DecodingConfig::default()).unwrap(),
+            LiteralData::with_str("z")
+        );
+        assert!(input.is_empty());
+    }
+
+    #[test]
+    fn decode_reads_partial_chunks_and_stops_at_the_final_chunk() {
+        let mut bytes = b"\xcb\xe9b\x00\x00\x00\x00\x00".to_vec();
+        bytes.extend_from_slice(&[b'a'; 506]);
+        bytes.extend_from_slice(b"\xe0b\x00next");
+        let mut input = bytes.as_slice();
+
+        let packet = LiteralData::decode(&mut input, &DecodingConfig::default()).unwrap();
+        assert_eq!(&packet.data()[..506], &[b'a'; 506]);
+        assert_eq!(&packet.data()[506..], b"b");
+        assert_eq!(input, b"next");
+    }
+
+    #[test]
+    fn decode_rejects_truncated_packets_and_other_tags() {
+        for mut input in [
+            &b"\xcb\x07b\x00\x00\x00\x00\x00"[..],
+            &b"\xcb\x06b\x01\x00\x00\x00\x00"[..],
+            &b"\xcb\xe9b\x00\x00\x00\x00\x00"[..],
+        ] {
+            assert_eq!(
+                LiteralData::decode(&mut input, &DecodingConfig::default())
+                    .unwrap_err()
+                    .kind(),
+                io::ErrorKind::UnexpectedEof
+            );
+        }
+        let mut input = &b"\xca\x03PGP"[..];
+        assert_eq!(
+            LiteralData::decode(&mut input, &DecodingConfig::default())
+                .unwrap_err()
+                .kind(),
+            io::ErrorKind::InvalidData
+        );
+    }
+
+    #[test]
+    fn decode_reads_indeterminate_legacy_body_to_eof() {
+        let mut input = &b"\xafb\x00\x00\x00\x00\x00abc"[..];
+        assert_eq!(
+            LiteralData::decode(&mut input, &DecodingConfig::default()).unwrap(),
+            LiteralData::with_data(b"abc")
+        );
+        assert!(input.is_empty());
+    }
 
     #[test]
     fn encode_writes_the_header_and_literal_body() {
