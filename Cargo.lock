@@ -2162,6 +2162,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_tsp"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "tc_algo",
+ "tc_asn1",
+ "tc_asn1_cmp",
+ "tc_asn1_cms",
+ "tc_asn1_ess",
+ "tc_asn1_pkcs",
+ "tc_asn1_tsp",
+ "tc_asn1_x500",
+ "tc_asn1_x509",
+ "tc_cms",
+ "tc_pkcs",
+ "tc_x509",
+]
+
+[[package]]
 name = "tc_twofish"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
