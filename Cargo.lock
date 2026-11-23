@@ -1883,6 +1883,7 @@ dependencies = [
  "tc_asym_cipher",
  "tc_bigint",
  "tc_openpgp_packet",
+ "tc_pwhash",
  "tc_rsa",
  "tc_zeroize",
 ]

@@ -70,14 +70,23 @@ impl PublicKeyPacket {
     }
 }
 
-impl PgpRead for PublicKeyPacket {
-    fn decode(input: &mut dyn Read, config: &DecodingConfig) -> io::Result<Self> {
+impl PublicKeyPacket {
+    /// Reads the public key material from a Public Subkey packet (tag 14).
+    pub fn decode_subkey(input: &mut dyn Read, config: &DecodingConfig) -> io::Result<Self> {
+        Self::decode_with_tag(input, config, PacketTag::PublicSubkey)
+    }
+
+    fn decode_with_tag(
+        input: &mut dyn Read,
+        config: &DecodingConfig,
+        tag: PacketTag,
+    ) -> io::Result<Self> {
         let mut reader = PgpReader::new(input);
         let (header, mut body) = reader.read_body(config)?;
-        if header.tag() != PacketTag::PublicKey {
+        if header.tag() != tag {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidData,
-                "expected an OpenPGP Public Key packet",
+                "unexpected OpenPGP key packet tag",
             ));
         }
         let BodyLength::Fixed(body_len) = header.body_length() else {
@@ -149,10 +158,16 @@ impl PublicKeyPacket {
                 output.write_all(&body_len.to_be_bytes())?;
             }
         }
-        self.write_body(output, material_len)
+        self.write_body_fields(output, material_len)
     }
 
-    fn write_body(&self, body: &mut dyn Write, material_len: u32) -> io::Result<()> {
+    /// Writes only the public key body, without its packet header.
+    pub fn write_body(&self, output: &mut dyn Write) -> io::Result<()> {
+        let (material_len, _) = self.body_lengths()?;
+        self.write_body_fields(output, material_len)
+    }
+
+    fn write_body_fields(&self, body: &mut dyn Write, material_len: u32) -> io::Result<()> {
         body.write_all(&[self.version as u8])?;
         body.write_all(&self.creation_time.to_be_bytes())?;
         body.write_all(&[self.algorithm.into()])?;
@@ -163,18 +178,44 @@ impl PublicKeyPacket {
     }
 }
 
-impl PgpWrite for PublicKeyPacket {
-    fn encode(&self, writer: &mut dyn Write, config: &EncodingConfig) -> io::Result<u64> {
+impl PublicKeyPacket {
+    /// Writes this key body in a Public Subkey packet (tag 14).
+    pub fn encode_subkey(
+        &self,
+        writer: &mut dyn Write,
+        config: &EncodingConfig,
+    ) -> io::Result<u64> {
+        self.encode_with_tag(writer, config, PacketTag::PublicSubkey)
+    }
+
+    fn encode_with_tag(
+        &self,
+        writer: &mut dyn Write,
+        config: &EncodingConfig,
+        tag: PacketTag,
+    ) -> io::Result<u64> {
         let (material_len, body_len) = self.body_lengths()?;
         let mut writer = PgpWriter::new(writer);
         let (mut body, header_len) = writer.write_body_with_format(
-            PacketTag::PublicKey,
+            tag,
             BodyLength::Fixed(body_len),
             config.header_format,
         )?;
-        self.write_body(&mut body, material_len)?;
+        self.write_body_fields(&mut body, material_len)?;
         body.finish()?;
         Ok(header_len + u64::from(body_len))
+    }
+}
+
+impl PgpRead for PublicKeyPacket {
+    fn decode(input: &mut dyn Read, config: &DecodingConfig) -> io::Result<Self> {
+        Self::decode_with_tag(input, config, PacketTag::PublicKey)
+    }
+}
+
+impl PgpWrite for PublicKeyPacket {
+    fn encode(&self, writer: &mut dyn Write, config: &EncodingConfig) -> io::Result<u64> {
+        self.encode_with_tag(writer, config, PacketTag::PublicKey)
     }
 }
 

@@ -9,6 +9,8 @@ mod ed25519;
 
 #[cfg(feature = "cfrg-curves")]
 pub(crate) use ed25519::Ed25519DetachedSignatures;
+#[cfg(feature = "secret-key")]
+pub(super) use ed25519::matching_private_key as matching_ed25519_key;
 
 /// Signs and verifies detached document signatures.
 pub trait PgpDetachedSignatureProvider: Send + Sync {

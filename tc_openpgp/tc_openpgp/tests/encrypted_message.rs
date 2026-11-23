@@ -89,3 +89,37 @@ fn decrypts_rfc_9580_appendix_a8() {
         .unwrap();
     assert_eq!(literal.data(), b"Hello, world!");
 }
+
+#[test]
+fn all_addressed_recipients_can_decrypt_the_same_message() {
+    let operator = DefaultPgpOperatorBuilder::default().build();
+    let mut generator = operator
+        .key_pair_generator()
+        .get_by_algorithm(PublicKeyAlgorithmTag::X25519)
+        .unwrap();
+    let first = generator.generate().unwrap();
+    let second = generator.generate().unwrap();
+    let other = generator.generate().unwrap();
+    let provider = operator.encrypted_message();
+    // Three header bytes and six metadata bytes bring this to one exact 4096-byte OCB chunk.
+    let literal = LiteralData::with_data(&vec![7; 4096 - 9]);
+    let mut bytes = Vec::new();
+    assert!(provider.encrypt_to_many(&[], &literal, &mut bytes).is_err());
+    assert!(bytes.is_empty());
+    provider
+        .encrypt_to_many(&[first.public(), second.public()], &literal, &mut bytes)
+        .unwrap();
+
+    let config = DecodingConfig::default();
+    for recipient in [&first, &second] {
+        let result = provider
+            .decrypt(recipient, &mut bytes.as_slice(), &config)
+            .unwrap();
+        assert_eq!(result, literal);
+    }
+    assert!(
+        provider
+            .decrypt(&other, &mut bytes.as_slice(), &config)
+            .is_err()
+    );
+}

@@ -9,7 +9,6 @@ use tc_algo::{
     Algo, AlgoError,
     params::{
         cipher::AeadParamsOwned,
-        kdf::HkdfParamsOwned,
         key::{KeyOwned, X25519PrivateKey, X25519PublicKey},
     },
 };
@@ -20,6 +19,7 @@ use tc_openpgp_packet::{
 use tc_zeroize::Zeroizing;
 
 use super::PgpEncryptedMessageProvider;
+use crate::operator::kdf::hkdf;
 use crate::{PgpKeyPair, PgpPublicKey, operator::serializer::v6_fingerprint};
 
 const PKESK_LEN: u32 = 93;
@@ -39,65 +39,59 @@ impl PgpEncryptedMessageProvider for X25519EncryptedMessages {
         data: &LiteralData,
         output: &mut dyn Write,
     ) -> io::Result<()> {
-        let public = public_key(recipient)?;
-        let fingerprint = v6_fingerprint(&*self.algo, recipient)?;
+        self.encrypt_to_many(&[recipient], data, output)
+    }
 
-        let mut entropy = Zeroizing::new([0; 80]);
-        SysRng
-            .try_fill_bytes(&mut entropy[..])
-            .map_err(io::Error::other)?;
-        let mut scalar = Zeroizing::new([0; 32]);
-        scalar.copy_from_slice(&entropy[..32]);
-        let ephemeral_private = X25519PrivateKey::new(*scalar);
-        let ephemeral_public = ephemeral_private.generate_public_key();
-        let kek = self.wrapping_key(&ephemeral_private, public, &ephemeral_public, public)?;
-        let wrapped = self
-            .algo
-            .wrap()
-            .wrap_by_name("AESWRAP", &kek, &entropy[32..48])
-            .map_err(crypto)?;
-        if wrapped.len() != 24 {
-            return Err(io::Error::other(
-                "AES key wrap returned an invalid session key size",
+    fn encrypt_to_many(
+        &self,
+        recipients: &[&PgpPublicKey],
+        data: &LiteralData,
+        output: &mut dyn Write,
+    ) -> io::Result<()> {
+        if recipients.is_empty() {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "expected at least one recipient",
             ));
         }
-
-        let salt = &entropy[48..];
-        let mut plaintext = Zeroizing::new(Vec::new());
-        data.encode(&mut *plaintext, &EncodingConfig::default())?;
-        let ocb = OcbMessage::new(&*self.algo, &entropy[32..48], salt, CHUNK_SIZE_OCTET)?;
-        let chunk_size = ocb.chunk_size();
-        let encrypted_len = (plaintext.len() as u64)
-            + (plaintext.len().div_ceil(chunk_size) as u64 + 1) * OCB_TAG_LEN as u64
-            + 36;
+        let mut session = Zeroizing::new([0; 16]);
+        SysRng
+            .try_fill_bytes(&mut session[..])
+            .map_err(io::Error::other)?;
+        let mut salt = [0; 32];
+        SysRng.try_fill_bytes(&mut salt).map_err(io::Error::other)?;
+        let pkesks = recipients
+            .iter()
+            .map(|key| self.wrap_session(key, &session))
+            .collect::<io::Result<Vec<_>>>()?;
+        let config = EncodingConfig::default();
+        let plaintext_len = data.encode(&mut io::sink(), &config)?;
+        let ocb = OcbMessage::new(&*self.algo, &session[..], &salt, CHUNK_SIZE_OCTET)?;
+        let chunk_count = plaintext_len.div_ceil(ocb.chunk_size() as u64);
+        let encrypted_len = plaintext_len + (chunk_count + 1) * OCB_TAG_LEN as u64 + 36;
         let encrypted_len = u32::try_from(encrypted_len)
             .map_err(|_| invalid("encrypted OpenPGP message is too long"))?;
 
         let mut packets = PgpWriter::new(output);
-        let mut pkesk = packets.write_body(
-            PacketTag::PublicKeyEncryptedSession,
-            BodyLength::Fixed(PKESK_LEN),
-        )?;
-        pkesk.write_all(&[6, 33, 6])?;
-        pkesk.write_all(&fingerprint)?;
-        pkesk.write_all(&[25])?;
-        pkesk.write_all(ephemeral_public.u())?;
-        pkesk.write_all(&[24])?;
-        pkesk.write_all(&wrapped)?;
-        pkesk.finish()?;
+        for fields in pkesks {
+            let mut pkesk = packets.write_body(
+                PacketTag::PublicKeyEncryptedSession,
+                BodyLength::Fixed(PKESK_LEN),
+            )?;
+            pkesk.write_all(&fields)?;
+            pkesk.finish()?;
+        }
 
-        let mut data = packets.write_body(
+        let mut body = packets.write_body(
             PacketTag::SymmetricEncryptedIntegrityProtected,
             BodyLength::Fixed(encrypted_len),
         )?;
-        data.write_all(&ocb.aad[1..])?;
-        data.write_all(salt)?;
-        for (index, chunk) in plaintext.chunks(chunk_size).enumerate() {
-            data.write_all(&ocb.seal(index as u64, None, chunk)?)?;
-        }
-        let count = plaintext.len().div_ceil(chunk_size) as u64;
-        data.write_all(&ocb.seal(count, Some(plaintext.len() as u64), &[])?)?;
-        data.finish()
+        body.write_all(&ocb.aad[1..])?;
+        body.write_all(&salt)?;
+        let mut chunks = OcbChunkWriter::new(&ocb, &mut body);
+        data.encode(&mut chunks, &config)?;
+        chunks.finish(plaintext_len)?;
+        body.finish()
     }
 
     fn decrypt(
@@ -123,48 +117,37 @@ impl PgpEncryptedMessageProvider for X25519EncryptedMessages {
                 )
             })?;
         let mut reader = PgpReader::new(input);
-        let session = {
+        let fingerprint = v6_fingerprint(&*self.algo, recipient.public())?;
+        let mut session = None;
+        let mut body = loop {
             let (header, mut body) = reader.read_body(config)?;
-            if header.tag() != PacketTag::PublicKeyEncryptedSession
-                || header.body_length() != BodyLength::Fixed(PKESK_LEN)
+            if header.tag() == PacketTag::SymmetricEncryptedIntegrityProtected
+                && header.body_length() != BodyLength::Indeterminate
             {
-                return Err(invalid("expected a v6 X25519 encrypted session key"));
+                break body;
             }
-            let fields: [u8; PKESK_LEN as usize] = read_array(&mut body)?;
-            if fields[..3] != [6, 33, 6] || fields[35] != 25 || fields[68] != 24 {
+            if header.tag() != PacketTag::PublicKeyEncryptedSession
+                || !matches!(header.body_length(), BodyLength::Fixed(_))
+            {
                 return Err(invalid(
-                    "unsupported v6 X25519 encrypted session key fields",
+                    "expected a session key or integrity-protected data packet",
                 ));
             }
-            if fields[3..35] != v6_fingerprint(&*self.algo, recipient.public())? {
-                return Err(invalid("OpenPGP message is for a different recipient"));
+            if session.is_some() || header.body_length() != BodyLength::Fixed(PKESK_LEN) {
+                io::copy(&mut body, &mut io::sink())?;
+                continue;
             }
-            let ephemeral = X25519PublicKey::new(
-                fields[36..68]
-                    .try_into()
-                    .map_err(|_| invalid("invalid ephemeral key"))?,
-            );
-            let kek = self.wrapping_key(private, &ephemeral, &ephemeral, public)?;
-            let session = Zeroizing::new(
-                self.algo
-                    .wrap()
-                    .unwrap_by_name("AESWRAP", &kek, &fields[69..])
-                    .map_err(authentication)?,
-            );
-            if session.len() != 16 {
-                return Err(invalid("invalid AES-128 session key length"));
+            let fields: [u8; PKESK_LEN as usize] = read_array(&mut body)?;
+            if fields[..3] == [6, 33, 6]
+                && fields[3..35] == fingerprint
+                && fields[35] == 25
+                && fields[68] == 24
+            {
+                session = Some(self.unwrap_session(private, public, &fields)?);
             }
-            session
         };
-
-        let (header, mut body) = reader.read_body(config)?;
-        if header.tag() != PacketTag::SymmetricEncryptedIntegrityProtected
-            || header.body_length() == BodyLength::Indeterminate
-        {
-            return Err(invalid(
-                "expected an OpenPGP integrity-protected data packet",
-            ));
-        }
+        let session =
+            session.ok_or_else(|| invalid("OpenPGP message is for a different recipient"))?;
         let [version, cipher, mode, chunk_size] = read_array(&mut body)?;
         if [version, cipher, mode] != [2, AES128, OCB] {
             return Err(io::Error::new(
@@ -174,9 +157,7 @@ impl PgpEncryptedMessageProvider for X25519EncryptedMessages {
         }
         let salt: [u8; 32] = read_array(&mut body)?;
         let ocb = OcbMessage::new(&*self.algo, &session, &salt, chunk_size)?;
-        let mut encrypted = Vec::new();
-        body.read_to_end(&mut encrypted)?;
-        let plaintext = ocb.open(&encrypted)?;
+        let plaintext = ocb.open(&mut body)?;
         let mut packets = plaintext.as_slice();
         let inner_config = DecodingConfig {
             header_format: None,
@@ -198,6 +179,64 @@ impl PgpEncryptedMessageProvider for X25519EncryptedMessages {
 }
 
 impl X25519EncryptedMessages {
+    fn wrap_session(
+        &self,
+        recipient: &PgpPublicKey,
+        session: &[u8; 16],
+    ) -> io::Result<[u8; PKESK_LEN as usize]> {
+        let public = public_key(recipient)?;
+        let fingerprint = v6_fingerprint(&*self.algo, recipient)?;
+        let mut scalar = Zeroizing::new([0; 32]);
+        SysRng
+            .try_fill_bytes(&mut scalar[..])
+            .map_err(io::Error::other)?;
+        let ephemeral_private = X25519PrivateKey::new(*scalar);
+        let ephemeral_public = ephemeral_private.generate_public_key();
+        let kek = self.wrapping_key(&ephemeral_private, public, &ephemeral_public, public)?;
+        let wrapped = self
+            .algo
+            .wrap()
+            .wrap_by_name("AESWRAP", &kek, session)
+            .map_err(crypto)?;
+        if wrapped.len() != 24 {
+            return Err(io::Error::other(
+                "AES key wrap returned an invalid session key size",
+            ));
+        }
+        let mut fields = [0; PKESK_LEN as usize];
+        fields[..3].copy_from_slice(&[6, 33, 6]);
+        fields[3..35].copy_from_slice(&fingerprint);
+        fields[35] = 25;
+        fields[36..68].copy_from_slice(ephemeral_public.u());
+        fields[68] = 24;
+        fields[69..].copy_from_slice(&wrapped);
+        Ok(fields)
+    }
+
+    fn unwrap_session(
+        &self,
+        private: &X25519PrivateKey,
+        public: &X25519PublicKey,
+        fields: &[u8; PKESK_LEN as usize],
+    ) -> io::Result<Zeroizing<Vec<u8>>> {
+        let ephemeral = X25519PublicKey::new(
+            fields[36..68]
+                .try_into()
+                .map_err(|_| invalid("invalid ephemeral key"))?,
+        );
+        let kek = self.wrapping_key(private, &ephemeral, &ephemeral, public)?;
+        let session = Zeroizing::new(
+            self.algo
+                .wrap()
+                .unwrap_by_name("AESWRAP", &kek, &fields[69..])
+                .map_err(authentication)?,
+        );
+        if session.len() != 16 {
+            return Err(invalid("invalid AES-128 session key length"));
+        }
+        Ok(session)
+    }
+
     fn wrapping_key(
         &self,
         private: &X25519PrivateKey,
@@ -223,6 +262,65 @@ impl X25519EncryptedMessages {
         let key = hkdf(&*self.algo, &ikm, &[], b"OpenPGP X25519", 16)?;
         let mut key = key;
         Ok(KeyOwned::new(std::mem::take(&mut *key)))
+    }
+}
+
+struct OcbChunkWriter<'a, 'b> {
+    message: &'a OcbMessage<'b>,
+    output: &'a mut dyn Write,
+    chunk: Zeroizing<Vec<u8>>,
+    used: usize,
+    index: u64,
+}
+
+impl<'a, 'b> OcbChunkWriter<'a, 'b> {
+    fn new(message: &'a OcbMessage<'b>, output: &'a mut dyn Write) -> Self {
+        Self {
+            message,
+            output,
+            chunk: Zeroizing::new(vec![0; message.chunk_size()]),
+            used: 0,
+            index: 0,
+        }
+    }
+
+    fn seal_chunk(&mut self) -> io::Result<()> {
+        self.output.write_all(
+            &self
+                .message
+                .seal(self.index, None, &self.chunk[..self.used])?,
+        )?;
+        self.index += 1;
+        self.used = 0;
+        Ok(())
+    }
+
+    fn finish(mut self, plaintext_len: u64) -> io::Result<()> {
+        if self.used != 0 {
+            self.seal_chunk()?;
+        }
+        self.output
+            .write_all(&self.message.seal(self.index, Some(plaintext_len), &[])?)
+    }
+}
+
+impl Write for OcbChunkWriter<'_, '_> {
+    fn write(&mut self, mut input: &[u8]) -> io::Result<usize> {
+        let len = input.len();
+        while !input.is_empty() {
+            let count = input.len().min(self.chunk.len() - self.used);
+            self.chunk[self.used..self.used + count].copy_from_slice(&input[..count]);
+            self.used += count;
+            input = &input[count..];
+            if self.used == self.chunk.len() {
+                self.seal_chunk()?;
+            }
+        }
+        Ok(len)
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        self.output.flush()
     }
 }
 
@@ -268,33 +366,38 @@ impl<'a> OcbMessage<'a> {
         Ok(encrypted)
     }
 
-    fn open(&self, bytes: &[u8]) -> io::Result<Zeroizing<Vec<u8>>> {
-        let final_offset = bytes
-            .len()
-            .checked_sub(OCB_TAG_LEN)
-            .ok_or_else(|| invalid("missing OpenPGP authentication tag"))?;
-        let (encrypted, final_tag) = bytes.split_at(final_offset);
-        if encrypted.len() <= OCB_TAG_LEN {
-            return Err(invalid("missing encrypted OpenPGP message data"));
-        }
-
+    fn open(&self, mut input: &mut dyn Read) -> io::Result<Zeroizing<Vec<u8>>> {
         let mut plaintext = Zeroizing::new(Vec::new());
+        let mut lookahead = Vec::new();
         let mut count = 0;
-        for chunk in encrypted.chunks(self.chunk_size() + OCB_TAG_LEN) {
-            if chunk.len() <= OCB_TAG_LEN {
-                return Err(invalid("truncated OpenPGP encrypted chunk"));
+        let read_size = self.chunk_size() + 2 * OCB_TAG_LEN;
+        loop {
+            let remaining = (read_size - lookahead.len()) as u64;
+            (&mut input).take(remaining).read_to_end(&mut lookahead)?;
+            if lookahead.len() == OCB_TAG_LEN && count != 0 {
+                break;
             }
+            if lookahead.len() <= 2 * OCB_TAG_LEN {
+                return Err(invalid("missing or truncated OpenPGP encrypted chunk"));
+            }
+            let encrypted_len = lookahead.len() - OCB_TAG_LEN;
             let decoded = Zeroizing::new(
                 self.algo
                     .cipher()
-                    .decrypt_by_name("AES/OCB/NoPadding", &self.params(count, None), chunk)
+                    .decrypt_by_name(
+                        "AES/OCB/NoPadding",
+                        &self.params(count, None),
+                        &lookahead[..encrypted_len],
+                    )
                     .map_err(authentication)?,
             );
-            if decoded.len() != chunk.len() - OCB_TAG_LEN {
+            if decoded.len() != encrypted_len - OCB_TAG_LEN {
                 return Err(invalid("invalid OpenPGP decrypted chunk length"));
             }
             plaintext.extend_from_slice(&decoded);
             count += 1;
+            lookahead.copy_within(encrypted_len.., 0);
+            lookahead.truncate(OCB_TAG_LEN);
         }
         let final_plaintext = Zeroizing::new(
             self.algo
@@ -302,7 +405,7 @@ impl<'a> OcbMessage<'a> {
                 .decrypt_by_name(
                     "AES/OCB/NoPadding",
                     &self.params(count, Some(plaintext.len() as u64)),
-                    final_tag,
+                    &lookahead,
                 )
                 .map_err(authentication)?,
         );
@@ -311,27 +414,6 @@ impl<'a> OcbMessage<'a> {
         }
         Ok(plaintext)
     }
-}
-
-fn hkdf(
-    algo: &dyn Algo,
-    ikm: &[u8],
-    salt: &[u8],
-    info: &[u8],
-    length: usize,
-) -> io::Result<Zeroizing<Vec<u8>>> {
-    let mut kdf = algo.kdf().get_by_name("HKDF-SHA256").map_err(crypto)?;
-    kdf.init(&HkdfParamsOwned::new(
-        ikm.to_vec(),
-        salt.to_vec(),
-        info.to_vec(),
-    ))
-    .map_err(crypto)?;
-    let mut output = Zeroizing::new(vec![0; length]);
-    if kdf.generate_bytes(&mut output).map_err(crypto)? != length {
-        return Err(io::Error::other("HKDF returned an invalid output length"));
-    }
-    Ok(output)
 }
 
 fn public_key(key: &PgpPublicKey) -> io::Result<&X25519PublicKey> {

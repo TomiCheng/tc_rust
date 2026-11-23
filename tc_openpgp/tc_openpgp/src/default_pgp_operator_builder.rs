@@ -6,6 +6,8 @@ use tc_openpgp_packet::PublicKeyAlgorithmTag;
 
 use crate::default_pgp_operator::DefaultPgpOperator;
 #[cfg(feature = "cfrg-curves")]
+use crate::operator::certificate::V6Certificates;
+#[cfg(feature = "cfrg-curves")]
 use crate::operator::detached_signature::Ed25519DetachedSignatures;
 #[cfg(feature = "encryption")]
 use crate::operator::encrypted_message::X25519EncryptedMessages;
@@ -70,6 +72,10 @@ impl PgpOperatorBuilder for DefaultPgpOperatorBuilder {
             })
         };
         Box::new(DefaultPgpOperator {
+            #[cfg(feature = "cfrg-curves")]
+            certificates: V6Certificates {
+                signatures: Ed25519DetachedSignatures { algo: algo.clone() },
+            },
             generators,
             #[cfg(feature = "cfrg-curves")]
             signatures: Ed25519DetachedSignatures { algo: algo.clone() },

@@ -33,17 +33,21 @@ impl PgpPublicKeySerializer for DefaultPgpPublicKeySerializer {
                 ..DecodingConfig::default()
             },
         )?;
-        let key = decode_key_material(packet.algorithm(), packet.key_material())?;
-        Ok(PgpPublicKey::new_with_metadata(
-            packet.algorithm(),
-            key,
-            packet.version(),
-            packet.creation_time(),
-        ))
+        decode_key_packet(&packet)
     }
 }
 
-pub(super) fn public_key_packet(key: &PgpPublicKey) -> io::Result<PublicKeyPacket> {
+pub(in crate::operator) fn decode_key_packet(packet: &PublicKeyPacket) -> io::Result<PgpPublicKey> {
+    let key = decode_key_material(packet.algorithm(), packet.key_material())?;
+    Ok(PgpPublicKey::new_with_metadata(
+        packet.algorithm(),
+        key,
+        packet.version(),
+        packet.creation_time(),
+    ))
+}
+
+pub(in crate::operator) fn public_key_packet(key: &PgpPublicKey) -> io::Result<PublicKeyPacket> {
     Ok(PublicKeyPacket::new(
         key.version(),
         key.creation_time(),

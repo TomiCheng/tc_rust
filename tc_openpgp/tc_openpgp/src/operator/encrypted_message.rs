@@ -10,7 +10,7 @@ mod x25519;
 #[cfg(feature = "encryption")]
 pub(crate) use x25519::X25519EncryptedMessages;
 
-/// Encrypts and decrypts OpenPGP messages for a single recipient.
+/// Encrypts and decrypts OpenPGP messages for one or more recipients.
 pub trait PgpEncryptedMessageProvider: Send + Sync {
     fn encrypt(
         &self,
@@ -18,6 +18,23 @@ pub trait PgpEncryptedMessageProvider: Send + Sync {
         data: &LiteralData,
         output: &mut dyn Write,
     ) -> io::Result<()>;
+
+    /// Encrypts one message using a shared session key wrapped for each recipient.
+    fn encrypt_to_many(
+        &self,
+        recipients: &[&PgpPublicKey],
+        data: &LiteralData,
+        output: &mut dyn Write,
+    ) -> io::Result<()> {
+        match recipients {
+            [recipient] => self.encrypt(recipient, data, output),
+            [] => Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "expected at least one recipient",
+            )),
+            _ => Err(io::ErrorKind::Unsupported.into()),
+        }
+    }
 
     /// Returns the literal data after authenticating the complete encrypted message.
     fn decrypt(

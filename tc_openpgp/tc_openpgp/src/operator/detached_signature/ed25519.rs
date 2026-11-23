@@ -28,22 +28,45 @@ impl PgpDetachedSignatureProvider for Ed25519DetachedSignatures {
         document: &mut dyn Read,
         creation_time: u32,
     ) -> io::Result<SignaturePacket> {
-        let public = public_key(keys.public())?;
-        let private = keys
-            .private()
-            .key()
-            .as_any()
-            .downcast_ref::<Ed25519PrivateKey>()
-            .filter(|private| {
-                keys.private().algorithm() == PublicKeyAlgorithmTag::Ed25519
-                    && &private.generate_public_key() == public
-            })
-            .ok_or_else(|| {
-                io::Error::new(
-                    io::ErrorKind::InvalidInput,
-                    "expected a matching Ed25519 key pair",
-                )
-            })?;
+        self.sign_data(
+            keys,
+            document,
+            creation_time,
+            SignatureTypeId::BINARY_DOCUMENT,
+            &[],
+        )
+    }
+
+    fn verify(
+        &self,
+        key: &PgpPublicKey,
+        document: &mut dyn Read,
+        signature: &SignaturePacket,
+    ) -> io::Result<bool> {
+        let text = match signature.signature_type() {
+            SignatureTypeId::BINARY_DOCUMENT => false,
+            SignatureTypeId::CANONICAL_TEXT_DOCUMENT => true,
+            _ => {
+                return Err(io::Error::new(
+                    io::ErrorKind::Unsupported,
+                    "expected a document signature",
+                ));
+            }
+        };
+        self.verify_data(key, document, signature, text)
+    }
+}
+
+impl Ed25519DetachedSignatures {
+    pub(in crate::operator) fn sign_data(
+        &self,
+        keys: &PgpKeyPair,
+        document: &mut dyn Read,
+        creation_time: u32,
+        signature_type: SignatureTypeId,
+        extra_subpackets: &[u8],
+    ) -> io::Result<SignaturePacket> {
+        let private = matching_private_key(keys)?;
         let mut salt = vec![0; 32];
         SysRng.try_fill_bytes(&mut salt).map_err(io::Error::other)?;
 
@@ -52,14 +75,15 @@ impl PgpDetachedSignatureProvider for Ed25519DetachedSignatures {
         hashed.extend_from_slice(&creation_time.to_be_bytes());
         hashed.extend_from_slice(&[34, 33, 6]);
         hashed.extend_from_slice(&fingerprint);
+        hashed.extend_from_slice(extra_subpackets);
         let packet = SignaturePacket::new_v6(
-            SignatureTypeId::BINARY_DOCUMENT,
+            signature_type,
             PublicKeyAlgorithmTag::Ed25519,
             HashAlgorithmTag::Sha512,
             salt,
         )
         .with_subpackets(hashed, Vec::new());
-        let hash = self.hash_document(document, &packet)?;
+        let hash = self.hash_data(document, &packet, false)?;
         let mut signer = self.signer(private)?;
         signer.update(&hash).map_err(crypto)?;
         let signature = signer.sign().map_err(crypto)?;
@@ -71,11 +95,12 @@ impl PgpDetachedSignatureProvider for Ed25519DetachedSignatures {
         Ok(packet.with_signature(hash_prefix(&hash)?, signature))
     }
 
-    fn verify(
+    pub(in crate::operator) fn verify_data(
         &self,
         key: &PgpPublicKey,
         document: &mut dyn Read,
         signature: &SignaturePacket,
+        text: bool,
     ) -> io::Result<bool> {
         let public = public_key(key)?;
         if signature.public_key_algorithm() != PublicKeyAlgorithmTag::Ed25519 {
@@ -88,10 +113,10 @@ impl PgpDetachedSignatureProvider for Ed25519DetachedSignatures {
             return Err(invalid("incorrect Ed25519 signature length"));
         }
         let fingerprint = v6_fingerprint(&*self.algo, key)?;
-        if !verify_hashed_subpackets(signature.hashed_subpackets(), &fingerprint)? {
+        if !verify_hashed_subpackets(signature, &fingerprint)? {
             return Ok(false);
         }
-        let hash = self.hash_document(document, signature)?;
+        let hash = self.hash_data(document, signature, text)?;
         if hash_prefix(&hash)? != signature.hash_prefix() {
             return Ok(false);
         }
@@ -101,19 +126,17 @@ impl PgpDetachedSignatureProvider for Ed25519DetachedSignatures {
             .verify_signature(signature.signature())
             .map_err(crypto)
     }
-}
-
-impl Ed25519DetachedSignatures {
     fn signer(&self, key: &dyn Params) -> io::Result<Box<dyn tc_algo::signer::Signer>> {
         let mut signer = self.algo.signer().get_by_name("Ed25519").map_err(crypto)?;
         signer.init(key).map_err(crypto)?;
         Ok(signer)
     }
 
-    fn hash_document(
+    fn hash_data(
         &self,
         document: &mut dyn Read,
         packet: &SignaturePacket,
+        text: bool,
     ) -> io::Result<Vec<u8>> {
         let (name, salt_len, digest_len) = match packet.hash_algorithm() {
             HashAlgorithmTag::Sha256 => ("SHA-256", 16, 32),
@@ -129,16 +152,6 @@ impl Ed25519DetachedSignatures {
         if packet.salt().len() != salt_len {
             return Err(invalid("incorrect v6 signature salt length"));
         }
-        let text = match packet.signature_type() {
-            SignatureTypeId::BINARY_DOCUMENT => false,
-            SignatureTypeId::CANONICAL_TEXT_DOCUMENT => true,
-            _ => {
-                return Err(io::Error::new(
-                    io::ErrorKind::Unsupported,
-                    "expected a document signature",
-                ));
-            }
-        };
         let mut digest = self.algo.digest().get_by_name(name).map_err(crypto)?;
         digest.try_update(packet.salt()).map_err(crypto)?;
         hash_input(document, &mut *digest, text)?;
@@ -153,6 +166,26 @@ impl Ed25519DetachedSignatures {
         }
         Ok(bytes)
     }
+}
+
+pub(in crate::operator) fn matching_private_key(
+    keys: &PgpKeyPair,
+) -> io::Result<&Ed25519PrivateKey> {
+    let public = public_key(keys.public())?;
+    keys.private()
+        .key()
+        .as_any()
+        .downcast_ref::<Ed25519PrivateKey>()
+        .filter(|private| {
+            keys.private().algorithm() == PublicKeyAlgorithmTag::Ed25519
+                && &private.generate_public_key() == public
+        })
+        .ok_or_else(|| {
+            io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "expected a matching Ed25519 key pair",
+            )
+        })
 }
 
 fn public_key(key: &PgpPublicKey) -> io::Result<&Ed25519PublicKey> {
@@ -173,7 +206,12 @@ fn public_key(key: &PgpPublicKey) -> io::Result<&Ed25519PublicKey> {
         })
 }
 
-fn verify_hashed_subpackets(mut bytes: &[u8], fingerprint: &[u8; 32]) -> io::Result<bool> {
+fn verify_hashed_subpackets(
+    signature: &SignaturePacket,
+    fingerprint: &[u8; 32],
+) -> io::Result<bool> {
+    let mut bytes = signature.hashed_subpackets();
+    let certificate = matches!(signature.signature_type().id(), 0x10..=0x13 | 0x18 | 0x1f);
     let mut creation_seen = false;
     let mut fingerprint_seen = false;
     while !bytes.is_empty() {
@@ -206,6 +244,7 @@ fn verify_hashed_subpackets(mut bytes: &[u8], fingerprint: &[u8; 32]) -> io::Res
                     "malformed signature creation time or issuer fingerprint",
                 ));
             }
+            27 if certificate && !value.is_empty() => {}
             _ if tag & 0x80 != 0 => {
                 return Err(io::Error::new(
                     io::ErrorKind::Unsupported,
