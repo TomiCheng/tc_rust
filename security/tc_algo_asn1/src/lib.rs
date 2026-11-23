@@ -7,6 +7,7 @@ mod default_algo_asn1_context;
 mod der;
 pub mod digest;
 mod error;
+pub mod mac;
 pub mod pkcs8;
 pub mod signer;
 pub mod spki;

@@ -4,6 +4,7 @@ use tc_algo::{Algo, AlgoBuilder, DefaultAlgoBuilder};
 
 use crate::default_algo_asn1::DefaultAlgoAsn1;
 use crate::digest::{self, DefaultDigestProvider, DigestEntry};
+use crate::mac::{self, DefaultMacProvider, MacEntry};
 use crate::pkcs8::{self, DefaultPkcs8Provider, Pkcs8Entry};
 use crate::signer::{self, DefaultSignerProvider, SignerEntry};
 use crate::spki::{self, DefaultSpkiProvider, SpkiEntry};
@@ -16,6 +17,7 @@ pub struct DefaultAlgoAsn1Builder {
     pkcs8s: Vec<pkcs8::CreateRows>,
     signers: Vec<signer::CreateRows>,
     digests: Vec<digest::CreateRows>,
+    macs: Vec<mac::CreateRows>,
 }
 
 // Starts with the built-in rows
@@ -27,6 +29,7 @@ impl Default for DefaultAlgoAsn1Builder {
             pkcs8s: pkcs8::BUILT_IN.to_vec(),
             signers: signer::BUILT_IN.to_vec(),
             digests: digest::BUILT_IN.to_vec(),
+            macs: mac::BUILT_IN.to_vec(),
         }
     }
 }
@@ -55,6 +58,11 @@ impl DefaultAlgoAsn1Builder {
     // Rows registered later are found first, so they can take over a built-in one
     pub fn reg_digest(&mut self, create: fn(&DefaultAlgoAsn1Context) -> Vec<Box<dyn DigestEntry>>) {
         self.digests.push(create);
+    }
+
+    // Rows registered later are found first, so they can take over a built-in one
+    pub fn reg_mac(&mut self, create: fn(&DefaultAlgoAsn1Context) -> Vec<Box<dyn MacEntry>>) {
+        self.macs.push(create);
     }
 }
 
@@ -89,11 +97,18 @@ impl AlgoAsn1Builder for DefaultAlgoAsn1Builder {
             .rev()
             .flat_map(|create| create(&context))
             .collect();
+        let mac_rows = self
+            .macs
+            .iter()
+            .rev()
+            .flat_map(|create| create(&context))
+            .collect();
         Box::new(DefaultAlgoAsn1::new(
             DefaultSpkiProvider::new(spki_rows),
             DefaultPkcs8Provider::new(pkcs8_rows),
             DefaultSignerProvider::new(algo.clone(), signer_rows),
-            DefaultDigestProvider::new(algo, digest_rows),
+            DefaultDigestProvider::new(algo.clone(), digest_rows),
+            DefaultMacProvider::new(algo, mac_rows),
         ))
     }
 }

@@ -26,6 +26,8 @@ pub enum AlgoAsn1Error {
     UnknownSigner,
     // No row has the digest algorithm
     UnknownDigest,
+    // No row has the MAC algorithm
+    UnknownMac,
 }
 
 impl fmt::Display for AlgoAsn1Error {
@@ -41,6 +43,7 @@ impl fmt::Display for AlgoAsn1Error {
             Self::InvalidPrivateKey => f.write_str("invalid private key encoding"),
             Self::UnknownSigner => f.write_str("unknown signature algorithm"),
             Self::UnknownDigest => f.write_str("unknown digest algorithm"),
+            Self::UnknownMac => f.write_str("unknown MAC algorithm"),
         }
     }
 }
@@ -57,7 +60,8 @@ impl Error for AlgoAsn1Error {
             | Self::NotPrivateKey
             | Self::InvalidPrivateKey
             | Self::UnknownSigner
-            | Self::UnknownDigest => None,
+            | Self::UnknownDigest
+            | Self::UnknownMac => None,
         }
     }
 }

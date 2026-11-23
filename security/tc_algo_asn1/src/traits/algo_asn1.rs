@@ -1,4 +1,5 @@
 use crate::digest::DigestProvider;
+use crate::mac::MacProvider;
 use crate::pkcs8::Pkcs8Provider;
 use crate::signer::SignerProvider;
 use crate::spki::SpkiProvider;
@@ -12,4 +13,6 @@ pub trait AlgoAsn1: Send + Sync {
     fn signer(&self) -> &dyn SignerProvider;
 
     fn digest(&self) -> &dyn DigestProvider;
+
+    fn mac(&self) -> &dyn MacProvider;
 }

@@ -1,5 +1,6 @@
 use crate::AlgoAsn1;
 use crate::digest::{DefaultDigestProvider, DigestProvider};
+use crate::mac::{DefaultMacProvider, MacProvider};
 use crate::pkcs8::{DefaultPkcs8Provider, Pkcs8Provider};
 use crate::signer::{DefaultSignerProvider, SignerProvider};
 use crate::spki::{DefaultSpkiProvider, SpkiProvider};
@@ -9,6 +10,7 @@ pub(crate) struct DefaultAlgoAsn1 {
     pkcs8: DefaultPkcs8Provider,
     signer: DefaultSignerProvider,
     digest: DefaultDigestProvider,
+    mac: DefaultMacProvider,
 }
 
 impl DefaultAlgoAsn1 {
@@ -17,12 +19,14 @@ impl DefaultAlgoAsn1 {
         pkcs8: DefaultPkcs8Provider,
         signer: DefaultSignerProvider,
         digest: DefaultDigestProvider,
+        mac: DefaultMacProvider,
     ) -> Self {
         Self {
             spki,
             pkcs8,
             signer,
             digest,
+            mac,
         }
     }
 }
@@ -42,5 +46,9 @@ impl AlgoAsn1 for DefaultAlgoAsn1 {
 
     fn digest(&self) -> &dyn DigestProvider {
         &self.digest
+    }
+
+    fn mac(&self) -> &dyn MacProvider {
+        &self.mac
     }
 }
