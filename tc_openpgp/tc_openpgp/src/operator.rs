@@ -6,3 +6,6 @@ pub mod generate;
 mod kdf;
 pub mod secret_key;
 pub mod serializer;
+
+#[cfg(feature = "cfrg-curves")]
+mod signature_subpacket;

@@ -13,6 +13,7 @@ pub use default_pgp_operator_builder::DefaultPgpOperatorBuilder;
 pub use default_pgp_operator_context::DefaultPgpOperatorContext;
 pub use operator::certificate::{
     PgpCertificate, PgpCertificateProvider, PgpCertifiedSubkey, PgpCertifiedUserId,
+    PgpEncryptionPurpose, PgpKeyRevocationReason,
 };
 pub use operator::detached_signature::PgpDetachedSignatureProvider;
 pub use operator::encrypted_message::PgpEncryptedMessageProvider;

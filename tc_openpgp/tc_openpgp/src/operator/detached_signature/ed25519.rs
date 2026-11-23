@@ -15,6 +15,7 @@ use tc_openpgp_packet::{
 };
 
 use super::PgpDetachedSignatureProvider;
+use crate::operator::signature_subpacket::Subpackets;
 use crate::{PgpKeyPair, PgpPublicKey, operator::serializer::v6_fingerprint};
 
 pub(crate) struct Ed25519DetachedSignatures {
@@ -210,27 +211,12 @@ fn verify_hashed_subpackets(
     signature: &SignaturePacket,
     fingerprint: &[u8; 32],
 ) -> io::Result<bool> {
-    let mut bytes = signature.hashed_subpackets();
     let certificate = matches!(signature.signature_type().id(), 0x10..=0x13 | 0x18 | 0x1f);
+    let revocation = matches!(signature.signature_type().id(), 0x20 | 0x28);
     let mut creation_seen = false;
     let mut fingerprint_seen = false;
-    while !bytes.is_empty() {
-        let size = match take(&mut bytes, 1)?[0] {
-            first @ 0..=191 => usize::from(first),
-            first @ 192..=254 => {
-                ((usize::from(first) - 192) << 8) + usize::from(take(&mut bytes, 1)?[0]) + 192
-            }
-            255 => {
-                let encoded = take(&mut bytes, 4)?
-                    .try_into()
-                    .map_err(|_| invalid("invalid signature subpacket length"))?;
-                usize::try_from(u32::from_be_bytes(encoded))
-                    .map_err(|_| invalid("invalid signature subpacket length"))?
-            }
-        };
-        let (tag, value) = take(&mut bytes, size)?
-            .split_first()
-            .ok_or_else(|| invalid("empty signature subpacket"))?;
+    for entry in Subpackets::new(signature.hashed_subpackets()) {
+        let (tag, value) = entry?;
         match tag & 0x7f {
             2 if !creation_seen && value.len() == 4 => creation_seen = true,
             33 if !fingerprint_seen && value.len() == 33 && value[0] == 6 => {
@@ -244,7 +230,9 @@ fn verify_hashed_subpackets(
                     "malformed signature creation time or issuer fingerprint",
                 ));
             }
-            27 if certificate && !value.is_empty() => {}
+            3 | 9 if certificate && value.len() == 4 => {}
+            27 | 30 if certificate && !value.is_empty() => {}
+            29 if revocation && !value.is_empty() => {}
             _ if tag & 0x80 != 0 => {
                 return Err(io::Error::new(
                     io::ErrorKind::Unsupported,
@@ -258,14 +246,6 @@ fn verify_hashed_subpackets(
         return Err(invalid("missing hashed signature creation time"));
     }
     Ok(true)
-}
-
-fn take<'a>(bytes: &mut &'a [u8], len: usize) -> io::Result<&'a [u8]> {
-    let (field, rest) = bytes
-        .split_at_checked(len)
-        .ok_or_else(|| invalid("truncated signature subpacket"))?;
-    *bytes = rest;
-    Ok(field)
 }
 
 fn hash_input(input: &mut dyn Read, digest: &mut dyn Digest, text: bool) -> io::Result<()> {

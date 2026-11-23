@@ -4,6 +4,9 @@ use tc_openpgp_packet::{ArmorKind, AsciiArmor, DecodingConfig, SignaturePacket};
 
 use crate::{PgpKeyPair, PgpPublicKey};
 
+mod policy;
+use policy::{KeySignature, current, latest};
+
 #[cfg(feature = "cfrg-curves")]
 mod v6;
 #[cfg(feature = "cfrg-curves")]
@@ -14,7 +17,8 @@ pub(super) use v6::encode_with_keys;
 /// A v6 transferable public key with verified self-signatures and subkey bindings.
 pub struct PgpCertificate {
     primary_key: PgpPublicKey,
-    direct_signature: SignaturePacket,
+    direct_signatures: Vec<KeySignature>,
+    revocations: Vec<KeySignature>,
     user_ids: Vec<PgpCertifiedUserId>,
     subkeys: Vec<PgpCertifiedSubkey>,
 }
@@ -24,8 +28,66 @@ impl PgpCertificate {
         &self.primary_key
     }
 
+    /// Returns the newest verified Direct Key signature.
     pub fn direct_signature(&self) -> &SignaturePacket {
-        &self.direct_signature
+        &latest(&self.direct_signatures)
+            .expect("certificate has a direct signature")
+            .packet
+    }
+
+    /// Returns the verified self-issued key revocations.
+    pub fn revocations(&self) -> impl Iterator<Item = &SignaturePacket> {
+        self.revocations.iter().map(|signature| &signature.packet)
+    }
+
+    /// Checks the primary key for revocation at a Unix timestamp.
+    pub fn is_revoked_at(&self, at: u32) -> bool {
+        self.revocations
+            .iter()
+            .any(|signature| signature.revokes_at(at))
+    }
+
+    /// Finds the primary signing key if it is current and explicitly allowed to sign.
+    pub fn signing_key_at(&self, at: u32) -> Option<&PgpPublicKey> {
+        self.current_primary(at)?
+            .allows(0x02)
+            .then_some(&self.primary_key)
+    }
+
+    /// Selects the newest current, unrevoked X25519 subkey for the requested purpose.
+    ///
+    /// A subkey must have the corresponding authenticated Key Flag. The
+    /// caller establishes the trust of the certificate and its identity claims.
+    pub fn encryption_key_at(
+        &self,
+        at: u32,
+        purpose: PgpEncryptionPurpose,
+    ) -> Option<&PgpPublicKey> {
+        self.current_primary(at)?;
+        self.subkeys
+            .iter()
+            .filter_map(|subkey| {
+                let created = subkey.key.creation_time();
+                let signature = current(&subkey.signatures, created, at)?;
+                if signature.allows(purpose as u8) && !subkey.is_revoked_at(at) {
+                    Some(((created, signature.created()), &subkey.key))
+                } else {
+                    None
+                }
+            })
+            .max_by_key(|(age, _)| *age)
+            .map(|(_, key)| key)
+    }
+
+    fn current_primary(&self, at: u32) -> Option<&KeySignature> {
+        if self.is_revoked_at(at) {
+            return None;
+        }
+        current(
+            &self.direct_signatures,
+            self.primary_key.creation_time(),
+            at,
+        )
     }
 
     pub fn user_ids(&self) -> &[PgpCertifiedUserId] {
@@ -35,6 +97,24 @@ impl PgpCertificate {
     pub fn subkeys(&self) -> &[PgpCertifiedSubkey] {
         &self.subkeys
     }
+}
+
+/// Requested use of an encryption subkey.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[repr(u8)]
+pub enum PgpEncryptionPurpose {
+    Communications = 0x04,
+    Storage = 0x08,
+}
+
+/// An RFC 9580 reason for revoking a primary key or subkey.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[repr(u8)]
+pub enum PgpKeyRevocationReason {
+    Unspecified = 0,
+    Superseded = 1,
+    Compromised = 2,
+    Retired = 3,
 }
 
 /// A UTF-8 User ID and its primary-key self-signature.
@@ -56,7 +136,8 @@ impl PgpCertifiedUserId {
 /// An encryption subkey and its binding signature.
 pub struct PgpCertifiedSubkey {
     key: PgpPublicKey,
-    signature: SignaturePacket,
+    signatures: Vec<KeySignature>,
+    revocations: Vec<KeySignature>,
 }
 
 impl PgpCertifiedSubkey {
@@ -64,8 +145,23 @@ impl PgpCertifiedSubkey {
         &self.key
     }
 
+    /// Returns the newest verified binding signature.
     pub fn signature(&self) -> &SignaturePacket {
-        &self.signature
+        &latest(&self.signatures)
+            .expect("certified subkey has a binding signature")
+            .packet
+    }
+
+    /// Returns the verified primary-key-issued subkey revocations.
+    pub fn revocations(&self) -> impl Iterator<Item = &SignaturePacket> {
+        self.revocations.iter().map(|signature| &signature.packet)
+    }
+
+    /// Checks this subkey's revocations at a Unix timestamp.
+    pub fn is_revoked_at(&self, at: u32) -> bool {
+        self.revocations
+            .iter()
+            .any(|signature| signature.revokes_at(at))
     }
 }
 
@@ -80,14 +176,48 @@ pub trait PgpCertificateProvider: Send + Sync {
         creation_time: u32,
     ) -> io::Result<PgpCertificate>;
 
+    /// Appends a self-issued revocation of the primary key.
+    fn revoke_primary(
+        &self,
+        _certificate: &mut PgpCertificate,
+        _primary: &PgpKeyPair,
+        _reason: PgpKeyRevocationReason,
+        _creation_time: u32,
+    ) -> io::Result<()> {
+        Err(io::ErrorKind::Unsupported.into())
+    }
+
+    /// Appends a primary-key-issued revocation of the indexed subkey.
+    fn revoke_subkey(
+        &self,
+        _certificate: &mut PgpCertificate,
+        _primary: &PgpKeyPair,
+        _subkey_index: usize,
+        _reason: PgpKeyRevocationReason,
+        _creation_time: u32,
+    ) -> io::Result<()> {
+        Err(io::ErrorKind::Unsupported.into())
+    }
+
+    /// Verifies and applies a standalone v6 primary-key revocation certificate.
+    fn apply_primary_revocation(
+        &self,
+        _certificate: &mut PgpCertificate,
+        _bytes: &[u8],
+        _config: &DecodingConfig,
+    ) -> io::Result<()> {
+        Err(io::ErrorKind::Unsupported.into())
+    }
+
     /// Writes a transferable public key in binary packet format.
     fn encode_to(&self, certificate: &PgpCertificate, output: &mut dyn Write) -> io::Result<()>;
 
     /// Reads exactly one certificate and verifies its self-signatures and bindings.
     ///
-    /// The built-in provider supports a v6 Ed25519 primary key, a single direct
-    /// signature, and one self-signature per UTF-8 identity and X25519 subkey.
-    /// The caller establishes identity trust and evaluates expiration and usage policy.
+    /// The built-in provider supports a v6 Ed25519 primary key with Direct Key
+    /// signatures, one self-signature per UTF-8 identity, and X25519 subkeys.
+    /// Key and subkey revocations must be signed by the primary key.
+    /// The caller establishes identity trust.
     fn decode(&self, bytes: &[u8], config: &DecodingConfig) -> io::Result<PgpCertificate>;
 
     fn encode(&self, certificate: &PgpCertificate) -> io::Result<Vec<u8>> {
