@@ -7,14 +7,14 @@ use rand::rngs::SysRng;
 use rand_core::TryRng;
 use tc_algo::{
     Algo, AlgoError, Params,
-    digest::Digest,
     params::key::{Ed25519PrivateKey, Ed25519PublicKey},
 };
 use tc_openpgp_packet::{
     HashAlgorithmTag, PublicKeyAlgorithmTag, PublicKeyVersion, SignaturePacket, SignatureTypeId,
+    SignatureVersion,
 };
 
-use super::PgpDetachedSignatureProvider;
+use super::{PgpDetachedSignatureProvider, document_is_text, read_document};
 use crate::operator::signature_subpacket::Subpackets;
 use crate::{PgpKeyPair, PgpPublicKey, operator::serializer::v6_fingerprint};
 
@@ -44,16 +44,7 @@ impl PgpDetachedSignatureProvider for Ed25519DetachedSignatures {
         document: &mut dyn Read,
         signature: &SignaturePacket,
     ) -> io::Result<bool> {
-        let text = match signature.signature_type() {
-            SignatureTypeId::BINARY_DOCUMENT => false,
-            SignatureTypeId::CANONICAL_TEXT_DOCUMENT => true,
-            _ => {
-                return Err(io::Error::new(
-                    io::ErrorKind::Unsupported,
-                    "expected a document signature",
-                ));
-            }
-        };
+        let text = document_is_text(signature)?;
         self.verify_data(key, document, signature, text)
     }
 }
@@ -104,10 +95,12 @@ impl Ed25519DetachedSignatures {
         text: bool,
     ) -> io::Result<bool> {
         let public = public_key(key)?;
-        if signature.public_key_algorithm() != PublicKeyAlgorithmTag::Ed25519 {
+        if signature.version() != SignatureVersion::V6
+            || signature.public_key_algorithm() != PublicKeyAlgorithmTag::Ed25519
+        {
             return Err(io::Error::new(
                 io::ErrorKind::Unsupported,
-                "expected an Ed25519 signature",
+                "expected a v6 Ed25519 signature",
             ));
         }
         if signature.signature().len() != 64 {
@@ -155,7 +148,9 @@ impl Ed25519DetachedSignatures {
         }
         let mut digest = self.algo.digest().get_by_name(name).map_err(crypto)?;
         digest.try_update(packet.salt()).map_err(crypto)?;
-        hash_input(document, &mut *digest, text)?;
+        read_document(document, text, |bytes| {
+            digest.try_update(bytes).map_err(crypto)
+        })?;
         let mut suffix = Vec::new();
         packet.write_hash_suffix(&mut suffix)?;
         digest.try_update(&suffix).map_err(crypto)?;
@@ -246,34 +241,6 @@ fn verify_hashed_subpackets(
         return Err(invalid("missing hashed signature creation time"));
     }
     Ok(true)
-}
-
-fn hash_input(input: &mut dyn Read, digest: &mut dyn Digest, text: bool) -> io::Result<()> {
-    let mut bytes = [0; 4096];
-    let mut canonical = Vec::new();
-    let mut previous_cr = false;
-    loop {
-        let count = match input.read(&mut bytes) {
-            Ok(0) => return Ok(()),
-            Ok(count) => count,
-            Err(error) if error.kind() == io::ErrorKind::Interrupted => continue,
-            Err(error) => return Err(error),
-        };
-        let mut chunk = &bytes[..count];
-        if text {
-            canonical.clear();
-            for &byte in chunk {
-                match byte {
-                    b'\n' if previous_cr => {}
-                    b'\r' | b'\n' => canonical.extend_from_slice(b"\r\n"),
-                    _ => canonical.push(byte),
-                }
-                previous_cr = byte == b'\r';
-            }
-            chunk = &canonical;
-        }
-        digest.try_update(chunk).map_err(crypto)?;
-    }
 }
 
 fn hash_prefix(hash: &[u8]) -> io::Result<[u8; 2]> {

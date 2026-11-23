@@ -22,7 +22,7 @@ tc_openpgp_packet = { version = "0.1.0", path = "../tc_openpgp_packet" }
 cfrg-curves = ["tc_algo/cfrg-curves", "tc_algo/sha", "dep:rand", "dep:rand_core"]
 encryption = ["cfrg-curves", "tc_algo/aes", "tc_algo/key-wrap", "tc_algo/kdf", "dep:tc_zeroize"]
 secret-key = ["cfrg-curves", "tc_algo/aes", "tc_algo/kdf", "dep:tc_pwhash", "dep:tc_zeroize"]
-rsa = ["tc_algo/rsa", "dep:tc_bigint", "dep:tc_rsa"]
+rsa = ["tc_algo/rsa", "tc_algo/sha", "dep:tc_bigint", "dep:tc_rsa"]
 
 [[test]]
 name = "rsa_key_pair"

@@ -7,6 +7,8 @@ use tc_openpgp_packet::PublicKeyAlgorithmTag;
 use crate::default_pgp_operator::DefaultPgpOperator;
 #[cfg(feature = "cfrg-curves")]
 use crate::operator::certificate::V6Certificates;
+#[cfg(any(feature = "cfrg-curves", feature = "rsa"))]
+use crate::operator::detached_signature::DefaultDetachedSignatures;
 #[cfg(feature = "cfrg-curves")]
 use crate::operator::detached_signature::Ed25519DetachedSignatures;
 #[cfg(feature = "encryption")]
@@ -77,8 +79,8 @@ impl PgpOperatorBuilder for DefaultPgpOperatorBuilder {
                 signatures: Ed25519DetachedSignatures { algo: algo.clone() },
             },
             generators,
-            #[cfg(feature = "cfrg-curves")]
-            signatures: Ed25519DetachedSignatures { algo: algo.clone() },
+            #[cfg(any(feature = "cfrg-curves", feature = "rsa"))]
+            signatures: DefaultDetachedSignatures { algo: algo.clone() },
             #[cfg(feature = "encryption")]
             encrypted_messages: X25519EncryptedMessages { algo },
         })

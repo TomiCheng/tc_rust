@@ -28,6 +28,7 @@ pub use packet_header::PacketHeader;
 pub use packet_tag::PacketTag;
 pub use packets::{
     LiteralData, LiteralDataFormat, PublicKeyPacket, PublicKeyVersion, SignaturePacket,
+    SignatureVersion,
 };
 pub use pgp_reader::PgpReader;
 pub use pgp_writer::{PgpBodyWriter, PgpWriter};
