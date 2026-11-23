@@ -17,6 +17,8 @@ use crate::operator::generate::{
     BUILT_IN, DefaultPgpKeyPairGeneratorProvider, EmptyPgpKeyPairGeneratorProvider,
     GeneratorFactory, PgpKeyPairGenerator, PgpKeyPairGeneratorProvider,
 };
+#[cfg(any(feature = "secret-key", feature = "legacy-encryption"))]
+use crate::operator::secret_key::DefaultSecretKeys;
 use crate::{DefaultPgpOperatorContext, PgpOperator, PgpOperatorBuilder};
 
 /// Builder for the default OpenPGP operator.
@@ -78,6 +80,8 @@ impl PgpOperatorBuilder for DefaultPgpOperatorBuilder {
             certificates: V6Certificates {
                 signatures: Ed25519DetachedSignatures { algo: algo.clone() },
             },
+            #[cfg(any(feature = "secret-key", feature = "legacy-encryption"))]
+            secret_keys: DefaultSecretKeys { algo: algo.clone() },
             generators,
             #[cfg(any(feature = "cfrg-curves", feature = "rsa"))]
             signatures: DefaultDetachedSignatures { algo: algo.clone() },

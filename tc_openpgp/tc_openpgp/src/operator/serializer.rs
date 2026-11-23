@@ -6,7 +6,7 @@ use crate::PgpPublicKey;
 
 mod default_serializer;
 
-#[cfg(feature = "cfrg-curves")]
+#[cfg(any(feature = "cfrg-curves", feature = "legacy-encryption"))]
 pub(super) use default_serializer::decode_key_packet;
 #[cfg(any(feature = "cfrg-curves", feature = "rsa"))]
 pub(super) use default_serializer::public_key_packet;

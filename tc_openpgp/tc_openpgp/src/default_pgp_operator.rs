@@ -8,8 +8,8 @@ use crate::operator::detached_signature::{
 #[cfg(any(feature = "encryption", feature = "legacy-encryption"))]
 use crate::operator::encrypted_message::{DefaultEncryptedMessages, PgpEncryptedMessageProvider};
 use crate::operator::generate::PgpKeyPairGeneratorProvider;
-#[cfg(feature = "secret-key")]
-use crate::operator::secret_key::PgpSecretKeyProvider;
+#[cfg(any(feature = "secret-key", feature = "legacy-encryption"))]
+use crate::operator::secret_key::{DefaultSecretKeys, PgpSecretKeyProvider};
 use crate::operator::serializer::{DefaultPgpPublicKeySerializer, PgpPublicKeySerializer};
 
 pub(crate) struct DefaultPgpOperator {
@@ -19,6 +19,8 @@ pub(crate) struct DefaultPgpOperator {
     pub(crate) encrypted_messages: DefaultEncryptedMessages,
     #[cfg(feature = "cfrg-curves")]
     pub(crate) certificates: V6Certificates,
+    #[cfg(any(feature = "secret-key", feature = "legacy-encryption"))]
+    pub(crate) secret_keys: DefaultSecretKeys,
     pub(crate) generators: Box<dyn PgpKeyPairGeneratorProvider>,
 }
 
@@ -37,9 +39,9 @@ impl PgpOperator for DefaultPgpOperator {
         &self.certificates
     }
 
-    #[cfg(feature = "secret-key")]
+    #[cfg(any(feature = "secret-key", feature = "legacy-encryption"))]
     fn secret_key(&self) -> &dyn PgpSecretKeyProvider {
-        &self.certificates
+        &self.secret_keys
     }
 
     fn serializer(&self) -> &dyn PgpPublicKeySerializer {
