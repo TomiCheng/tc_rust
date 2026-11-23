@@ -1,6 +1,7 @@
 //! The ASN.1 side of tc_algo: keys as `SubjectPublicKeyInfo` and PKCS#8, and the parameters
 //! of `AlgorithmIdentifier`, for the X.509, PKCS and CMS crates. OpenPGP does not go through it.
 
+pub mod cipher;
 mod default_algo_asn1;
 mod default_algo_asn1_builder;
 mod default_algo_asn1_context;

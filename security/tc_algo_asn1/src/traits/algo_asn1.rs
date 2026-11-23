@@ -1,3 +1,4 @@
+use crate::cipher::CipherProvider;
 use crate::digest::DigestProvider;
 use crate::mac::MacProvider;
 use crate::pkcs8::Pkcs8Provider;
@@ -15,4 +16,6 @@ pub trait AlgoAsn1: Send + Sync {
     fn digest(&self) -> &dyn DigestProvider;
 
     fn mac(&self) -> &dyn MacProvider;
+
+    fn cipher(&self) -> &dyn CipherProvider;
 }

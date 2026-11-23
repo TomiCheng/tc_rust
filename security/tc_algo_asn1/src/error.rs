@@ -28,6 +28,13 @@ pub enum AlgoAsn1Error {
     UnknownDigest,
     // No row has the MAC algorithm
     UnknownMac,
+    // No row has the cipher
+    UnknownCipher,
+    // The parameters of a cipher are not what its row writes, or a cipher by name was asked to
+    // decrypt, with no parameters read to decrypt with
+    InvalidCipherParameters,
+    // The key is not a KeyOwned of the size the cipher takes
+    InvalidKey,
 }
 
 impl fmt::Display for AlgoAsn1Error {
@@ -44,6 +51,9 @@ impl fmt::Display for AlgoAsn1Error {
             Self::UnknownSigner => f.write_str("unknown signature algorithm"),
             Self::UnknownDigest => f.write_str("unknown digest algorithm"),
             Self::UnknownMac => f.write_str("unknown MAC algorithm"),
+            Self::UnknownCipher => f.write_str("unknown cipher"),
+            Self::InvalidCipherParameters => f.write_str("invalid cipher parameters"),
+            Self::InvalidKey => f.write_str("invalid key for the cipher"),
         }
     }
 }
@@ -61,7 +71,10 @@ impl Error for AlgoAsn1Error {
             | Self::InvalidPrivateKey
             | Self::UnknownSigner
             | Self::UnknownDigest
-            | Self::UnknownMac => None,
+            | Self::UnknownMac
+            | Self::UnknownCipher
+            | Self::InvalidCipherParameters
+            | Self::InvalidKey => None,
         }
     }
 }

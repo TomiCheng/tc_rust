@@ -1,8 +1,11 @@
 use std::sync::Arc;
 
+use rand_core::CryptoRng;
 use tc_algo::{Algo, AlgoBuilder, DefaultAlgoBuilder};
 
+use crate::cipher::{self, CipherEntry, DefaultCipherProvider};
 use crate::default_algo_asn1::DefaultAlgoAsn1;
+use crate::default_algo_asn1_context::os_rand;
 use crate::digest::{self, DefaultDigestProvider, DigestEntry};
 use crate::mac::{self, DefaultMacProvider, MacEntry};
 use crate::pkcs8::{self, DefaultPkcs8Provider, Pkcs8Entry};
@@ -13,11 +16,13 @@ use crate::{AlgoAsn1, AlgoAsn1Builder, DefaultAlgoAsn1Context};
 #[derive(Clone)]
 pub struct DefaultAlgoAsn1Builder {
     algo: Option<Arc<dyn Algo>>,
+    rand: fn() -> Box<dyn CryptoRng>,
     spkis: Vec<spki::CreateRows>,
     pkcs8s: Vec<pkcs8::CreateRows>,
     signers: Vec<signer::CreateRows>,
     digests: Vec<digest::CreateRows>,
     macs: Vec<mac::CreateRows>,
+    ciphers: Vec<cipher::CreateRows>,
 }
 
 // Starts with the built-in rows
@@ -25,11 +30,13 @@ impl Default for DefaultAlgoAsn1Builder {
     fn default() -> Self {
         Self {
             algo: None,
+            rand: os_rand,
             spkis: spki::BUILT_IN.to_vec(),
             pkcs8s: pkcs8::BUILT_IN.to_vec(),
             signers: signer::BUILT_IN.to_vec(),
             digests: digest::BUILT_IN.to_vec(),
             macs: mac::BUILT_IN.to_vec(),
+            ciphers: cipher::BUILT_IN.to_vec(),
         }
     }
 }
@@ -41,6 +48,12 @@ impl DefaultAlgoAsn1Builder {
     }
 
     // Rows registered later are tried first, so they can take over a built-in one
+    // Where the rows get random numbers, such as a cipher its IV; the operating system's when none
+    // is set
+    pub fn set_rand(&mut self, rand: fn() -> Box<dyn CryptoRng>) {
+        self.rand = rand;
+    }
+
     pub fn reg_spki(&mut self, create: fn(&DefaultAlgoAsn1Context) -> Vec<Box<dyn SpkiEntry>>) {
         self.spkis.push(create);
     }
@@ -64,6 +77,11 @@ impl DefaultAlgoAsn1Builder {
     pub fn reg_mac(&mut self, create: fn(&DefaultAlgoAsn1Context) -> Vec<Box<dyn MacEntry>>) {
         self.macs.push(create);
     }
+
+    // Rows registered later are found first, so they can take over a built-in one
+    pub fn reg_cipher(&mut self, create: fn(&DefaultAlgoAsn1Context) -> Vec<Box<dyn CipherEntry>>) {
+        self.ciphers.push(create);
+    }
 }
 
 impl AlgoAsn1Builder for DefaultAlgoAsn1Builder {
@@ -72,7 +90,7 @@ impl AlgoAsn1Builder for DefaultAlgoAsn1Builder {
             .algo
             .clone()
             .unwrap_or_else(|| Arc::from(DefaultAlgoBuilder::default().build()));
-        let context = DefaultAlgoAsn1Context;
+        let context = DefaultAlgoAsn1Context::new(self.rand);
         let spki_rows = self
             .spkis
             .iter()
@@ -103,12 +121,20 @@ impl AlgoAsn1Builder for DefaultAlgoAsn1Builder {
             .rev()
             .flat_map(|create| create(&context))
             .collect();
+        let cipher_rows = self
+            .ciphers
+            .iter()
+            .rev()
+            .flat_map(|create| create(&context))
+            .map(Arc::from)
+            .collect();
         Box::new(DefaultAlgoAsn1::new(
             DefaultSpkiProvider::new(spki_rows),
             DefaultPkcs8Provider::new(pkcs8_rows),
             DefaultSignerProvider::new(algo.clone(), signer_rows),
             DefaultDigestProvider::new(algo.clone(), digest_rows),
-            DefaultMacProvider::new(algo, mac_rows),
+            DefaultMacProvider::new(algo.clone(), mac_rows),
+            DefaultCipherProvider::new(algo, cipher_rows),
         ))
     }
 }
