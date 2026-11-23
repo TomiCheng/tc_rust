@@ -22,4 +22,4 @@ tc_zeroize = "0.1.0"
 rand = { workspace = true }
 tc_digest = "0.1.0"
 tc_sha = "0.1.1"
-tc_signer = { version = "0.1.0", path = "../tc_signer" }
+tc_signer = "0.1.0"

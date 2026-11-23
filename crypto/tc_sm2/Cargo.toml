@@ -20,7 +20,7 @@ tc_f2m_curve = "0.1.0"
 tc_fp_curve = "0.1.0"
 tc_fp_custom = "0.1.0"
 tc_modular = { version = "0.1.0", features = ["alloc"] }
-tc_signer = { version = "0.1.0", path = "../../signer/tc_signer" }
+tc_signer = "0.1.0"
 tc_sm3 = "0.1.0"
 tc_zeroize = "0.1.0"
 
