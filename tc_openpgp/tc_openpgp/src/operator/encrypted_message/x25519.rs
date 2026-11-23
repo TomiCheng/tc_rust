@@ -13,8 +13,8 @@ use tc_algo::{
     },
 };
 use tc_openpgp_packet::{
-    BodyLength, DecodingConfig, EncodingConfig, LiteralData, PacketTag, PgpRead, PgpReader,
-    PgpWrite, PgpWriter, PublicKeyAlgorithmTag, PublicKeyVersion,
+    BodyLength, DecodingConfig, EncodingConfig, LiteralData, PacketTag, PgpReader, PgpWrite,
+    PgpWriter, PublicKeyAlgorithmTag, PublicKeyVersion,
 };
 use tc_zeroize::Zeroizing;
 
@@ -158,23 +158,7 @@ impl PgpEncryptedMessageProvider for X25519EncryptedMessages {
         let salt: [u8; 32] = read_array(&mut body)?;
         let ocb = OcbMessage::new(&*self.algo, &session, &salt, chunk_size)?;
         let plaintext = ocb.open(&mut body)?;
-        let mut packets = plaintext.as_slice();
-        let inner_config = DecodingConfig {
-            header_format: None,
-            ..*config
-        };
-        let literal = LiteralData::decode(&mut packets, &inner_config)?;
-        while !packets.is_empty() {
-            let mut trailing = PgpReader::new(&mut packets);
-            let (header, mut body) = trailing.read_body(&inner_config)?;
-            if header.tag() != PacketTag::Padding
-                || !matches!(header.body_length(), BodyLength::Fixed(_))
-            {
-                return Err(invalid("expected only padding after OpenPGP literal data"));
-            }
-            io::copy(&mut body, &mut io::sink())?;
-        }
-        Ok(literal)
+        super::payload::decode(&plaintext, config, true)
     }
 }
 

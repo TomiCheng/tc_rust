@@ -4,6 +4,8 @@ use tc_openpgp_packet::{DecodingConfig, LiteralData};
 
 use crate::{PgpKeyPair, PgpPublicKey};
 
+#[cfg(any(feature = "encryption", feature = "legacy-encryption"))]
+mod payload;
 #[cfg(feature = "encryption")]
 mod x25519;
 
@@ -93,6 +95,8 @@ pub trait PgpEncryptedMessageProvider: Send + Sync {
     }
 
     /// Returns literal data only after checking the complete encrypted message.
+    /// ZIP and ZLIB share a cumulative expansion limit of 64 MiB or the
+    /// configured maximum packet body size, whichever is lower, and four layers.
     /// With the legacy-encryption feature the built-in provider can read
     /// addressed v3 RSA PKESK with v1 AES-CFB SEIPD, using a v4 RSA CRT key pair.
     fn decrypt(

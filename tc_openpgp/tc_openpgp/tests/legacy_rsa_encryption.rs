@@ -67,12 +67,16 @@ fn rejects_wrong_passphrase_corruption_and_excess_secret_keys() {
 }
 
 #[test]
-fn decrypts_uncompressed_gnupg_rsa_messages_with_all_aes_key_sizes() {
+fn decrypts_gnupg_rsa_messages_with_all_aes_key_sizes_and_compression_modes() {
     let operator = DefaultPgpOperatorBuilder::default().build();
     let keys = test_keys(&*operator);
     assert_eq!(keys.subkeys().len(), 1);
     let recipient = &keys.subkeys()[0];
-    for armor in MESSAGES {
+    let compressed = [
+        include_str!("fixtures/rsa_v3_zip.asc"),
+        include_str!("fixtures/rsa_v3_zlib.asc"),
+    ];
+    for armor in MESSAGES.into_iter().chain(compressed) {
         let mut bytes = AsciiArmor::decode(ArmorKind::Message, armor).unwrap();
         bytes.extend_from_slice(b"next");
         let mut input = bytes.as_slice();

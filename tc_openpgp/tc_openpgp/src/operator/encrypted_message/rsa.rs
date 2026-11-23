@@ -17,7 +17,7 @@ use tc_asym_cipher::{
 use tc_asym_encoding::Pkcs1Encoding;
 use tc_constant_time::fixed_time_eq;
 use tc_openpgp_packet::{
-    BodyLength, DecodingConfig, LiteralData, PacketTag, PgpRead, PgpReader, PublicKeyAlgorithmTag,
+    BodyLength, DecodingConfig, LiteralData, PacketTag, PgpReader, PublicKeyAlgorithmTag,
     PublicKeyVersion,
 };
 use tc_rsa::{RsaBlindedEngine, RsaEngine, RsaPrivateCrtKeyParams};
@@ -93,16 +93,7 @@ pub(super) fn decrypt(
 
     let plaintext = open_message(algo, private, &encrypted_session, &ciphertext)?;
     let data_end = plaintext.len() - MDC_HEADER.len() - MDC_HASH_LEN;
-    let config = DecodingConfig {
-        header_format: None,
-        ..*config
-    };
-    let mut packets = &plaintext[CFB_PREFIX_LEN..data_end];
-    let literal = LiteralData::decode(&mut packets, &config)?;
-    if !packets.is_empty() {
-        return Err(invalid("trailing packets after OpenPGP literal data"));
-    }
-    Ok(literal)
+    super::payload::decode(&plaintext[CFB_PREFIX_LEN..data_end], config, false)
 }
 
 fn open_message(

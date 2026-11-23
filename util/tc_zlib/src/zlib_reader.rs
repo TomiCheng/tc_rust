@@ -77,6 +77,12 @@ impl<R: Read> ZlibReader<R> {
         &self.inner
     }
 
+    /// Returns input already read from the underlying reader but not consumed by the codec.
+    /// 變動時間：不讀任何資料。
+    pub fn buffered_input(&self) -> &[u8] {
+        &self.buf[self.start..self.end]
+    }
+
     /// 交回底下的 `R`；已讀進但還沒處理的資料就此丟棄。
     /// 變動時間：不讀任何資料。
     pub fn into_inner(self) -> R {

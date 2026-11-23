@@ -1906,6 +1906,7 @@ dependencies = [
  "tc_pwhash",
  "tc_rsa",
  "tc_zeroize",
+ "tc_zlib",
 ]
 
 [[package]]

@@ -8,6 +8,7 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
+tc_zlib = { version = "0.1.0", path = "../../util/tc_zlib", optional = true }
 rand = { version = "0.10", default-features = false, features = ["sys_rng"], optional = true }
 rand_core = { workspace = true, optional = true }
 tc_asym_cipher = "0.2.0"
@@ -22,8 +23,8 @@ tc_openpgp_packet = { version = "0.1.0", path = "../tc_openpgp_packet" }
 
 [features]
 cfrg-curves = ["tc_algo/cfrg-curves", "tc_algo/sha", "dep:rand", "dep:rand_core"]
-encryption = ["cfrg-curves", "tc_algo/aes", "tc_algo/key-wrap", "tc_algo/kdf", "dep:tc_zeroize"]
-legacy-encryption = ["rsa", "tc_algo/aes", "dep:rand", "rand/std_rng", "dep:tc_asym_encoding", "dep:tc_constant_time", "dep:tc_zeroize"]
+encryption = ["dep:tc_zlib", "cfrg-curves", "tc_algo/aes", "tc_algo/key-wrap", "tc_algo/kdf", "dep:tc_zeroize"]
+legacy-encryption = ["dep:tc_zlib", "rsa", "tc_algo/aes", "dep:rand", "rand/std_rng", "dep:tc_asym_encoding", "dep:tc_constant_time", "dep:tc_zeroize"]
 secret-key = ["cfrg-curves", "tc_algo/aes", "tc_algo/kdf", "dep:tc_pwhash", "dep:tc_zeroize"]
 rsa = ["tc_algo/rsa", "tc_algo/sha", "dep:tc_bigint", "dep:tc_rsa"]
 
