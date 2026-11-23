@@ -48,6 +48,38 @@ impl PgpEncryptedMessageProvider for X25519EncryptedMessages {
         data: &LiteralData,
         output: &mut dyn Write,
     ) -> io::Result<()> {
+        let config = EncodingConfig::default();
+        let len = data.encode(&mut io::sink(), &config)?;
+        self.encrypt_payload(
+            recipients,
+            len,
+            |out| data.encode(out, &config).map(|_| ()),
+            output,
+        )
+    }
+
+    fn decrypt(
+        &self,
+        recipient: &PgpKeyPair,
+        input: &mut dyn Read,
+        config: &DecodingConfig,
+    ) -> io::Result<LiteralData> {
+        super::payload::decode(
+            &self.decrypt_payload(recipient, input, config)?,
+            config,
+            true,
+        )
+    }
+}
+
+impl X25519EncryptedMessages {
+    pub(super) fn encrypt_payload(
+        &self,
+        recipients: &[&PgpPublicKey],
+        plaintext_len: u64,
+        write_payload: impl FnOnce(&mut dyn Write) -> io::Result<()>,
+        output: &mut dyn Write,
+    ) -> io::Result<()> {
         if recipients.is_empty() {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidInput,
@@ -64,8 +96,6 @@ impl PgpEncryptedMessageProvider for X25519EncryptedMessages {
             .iter()
             .map(|key| self.wrap_session(key, &session))
             .collect::<io::Result<Vec<_>>>()?;
-        let config = EncodingConfig::default();
-        let plaintext_len = data.encode(&mut io::sink(), &config)?;
         let ocb = OcbMessage::new(&*self.algo, &session[..], &salt, CHUNK_SIZE_OCTET)?;
         let chunk_count = plaintext_len.div_ceil(ocb.chunk_size() as u64);
         let encrypted_len = plaintext_len + (chunk_count + 1) * OCB_TAG_LEN as u64 + 36;
@@ -89,17 +119,17 @@ impl PgpEncryptedMessageProvider for X25519EncryptedMessages {
         body.write_all(&ocb.aad[1..])?;
         body.write_all(&salt)?;
         let mut chunks = OcbChunkWriter::new(&ocb, &mut body);
-        data.encode(&mut chunks, &config)?;
+        write_payload(&mut chunks)?;
         chunks.finish(plaintext_len)?;
         body.finish()
     }
 
-    fn decrypt(
+    pub(super) fn decrypt_payload(
         &self,
         recipient: &PgpKeyPair,
         input: &mut dyn Read,
         config: &DecodingConfig,
-    ) -> io::Result<LiteralData> {
+    ) -> io::Result<Zeroizing<Vec<u8>>> {
         let public = public_key(recipient.public())?;
         let private = recipient
             .private()
@@ -157,8 +187,7 @@ impl PgpEncryptedMessageProvider for X25519EncryptedMessages {
         }
         let salt: [u8; 32] = read_array(&mut body)?;
         let ocb = OcbMessage::new(&*self.algo, &session, &salt, chunk_size)?;
-        let plaintext = ocb.open(&mut body)?;
-        super::payload::decode(&plaintext, config, true)
+        ocb.open(&mut body)
     }
 }
 

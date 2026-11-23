@@ -24,9 +24,31 @@ impl PgpInlineSignatureProvider for DefaultDetachedSignatures {
         creation_time: u32,
         output: &mut dyn Write,
     ) -> io::Result<()> {
-        let ed25519 = self.ed25519();
-        let signature = ed25519.sign(keys, &mut literal.data(), creation_time)?;
-        let fingerprint = v6_fingerprint(&*self.algo, keys.public())?;
+        let signature = self
+            .ed25519()
+            .sign(keys, &mut literal.data(), creation_time)?;
+        self.write_signed_message(keys.public(), literal, &signature, output)
+    }
+
+    fn verify(
+        &self,
+        key: &PgpPublicKey,
+        input: &mut dyn Read,
+        config: &DecodingConfig,
+    ) -> io::Result<LiteralData> {
+        self.verify_signed_message(key, input, config, None)
+    }
+}
+
+impl DefaultDetachedSignatures {
+    pub(in crate::operator) fn write_signed_message(
+        &self,
+        key: &PgpPublicKey,
+        literal: &LiteralData,
+        signature: &SignaturePacket,
+        output: &mut dyn Write,
+    ) -> io::Result<()> {
+        let fingerprint = v6_fingerprint(&*self.algo, key)?;
         let header = OnePassSignaturePacket::new_v6(
             signature.signature_type(),
             signature.hash_algorithm(),
@@ -42,11 +64,12 @@ impl PgpInlineSignatureProvider for DefaultDetachedSignatures {
         Ok(())
     }
 
-    fn verify(
+    pub(in crate::operator) fn verify_signed_message(
         &self,
         key: &PgpPublicKey,
         input: &mut dyn Read,
         config: &DecodingConfig,
+        recipient: Option<&[u8; 32]>,
     ) -> io::Result<LiteralData> {
         let header = OnePassSignaturePacket::decode(input, config)?;
         if header.another_follows()
@@ -98,7 +121,7 @@ impl PgpInlineSignatureProvider for DefaultDetachedSignatures {
             ));
         }
         let hash = ed25519.finish_hash(digest, digest_len, &signature)?;
-        if !ed25519.verify_prehashed(key, &signature, &hash)? {
+        if !ed25519.verify_prehashed(key, &signature, &hash, recipient)? {
             return Err(invalid("OpenPGP inline signature verification failed"));
         }
         Ok(literal)

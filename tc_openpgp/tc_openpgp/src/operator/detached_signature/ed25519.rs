@@ -95,7 +95,7 @@ impl Ed25519DetachedSignatures {
         signature: &SignaturePacket,
         text: bool,
     ) -> io::Result<bool> {
-        let Some(public) = self.verification_key(key, signature)? else {
+        let Some(public) = self.verification_key(key, signature, None)? else {
             return Ok(false);
         };
         let hash = self.hash_data(document, signature, text)?;
@@ -107,8 +107,9 @@ impl Ed25519DetachedSignatures {
         key: &PgpPublicKey,
         signature: &SignaturePacket,
         hash: &[u8],
+        recipient: Option<&[u8; 32]>,
     ) -> io::Result<bool> {
-        let Some(public) = self.verification_key(key, signature)? else {
+        let Some(public) = self.verification_key(key, signature, recipient)? else {
             return Ok(false);
         };
         self.verify_hash(public, signature, hash)
@@ -118,6 +119,7 @@ impl Ed25519DetachedSignatures {
         &self,
         key: &'a PgpPublicKey,
         signature: &SignaturePacket,
+        recipient: Option<&[u8; 32]>,
     ) -> io::Result<Option<&'a Ed25519PublicKey>> {
         let public = public_key(key)?;
         if signature.version() != SignatureVersion::V6
@@ -132,7 +134,7 @@ impl Ed25519DetachedSignatures {
             return Err(invalid("incorrect Ed25519 signature length"));
         }
         let fingerprint = v6_fingerprint(&*self.algo, key)?;
-        Ok(verify_hashed_subpackets(signature, &fingerprint)?.then_some(public))
+        Ok(verify_hashed_subpackets(signature, &fingerprint, recipient)?.then_some(public))
     }
 
     fn verify_hash(
@@ -253,11 +255,13 @@ fn public_key(key: &PgpPublicKey) -> io::Result<&Ed25519PublicKey> {
 fn verify_hashed_subpackets(
     signature: &SignaturePacket,
     fingerprint: &[u8; 32],
+    recipient: Option<&[u8; 32]>,
 ) -> io::Result<bool> {
     let certificate = matches!(signature.signature_type().id(), 0x10..=0x13 | 0x18 | 0x1f);
     let revocation = matches!(signature.signature_type().id(), 0x20 | 0x28);
     let mut creation_seen = false;
     let mut fingerprint_seen = false;
+    let mut intended_match = false;
     for entry in Subpackets::new(signature.hashed_subpackets()) {
         let (tag, value) = entry?;
         match tag & 0x7f {
@@ -276,6 +280,15 @@ fn verify_hashed_subpackets(
             3 | 9 if certificate && value.len() == 4 => {}
             27 | 30 if certificate && !value.is_empty() => {}
             29 if revocation && !value.is_empty() => {}
+            35 => {
+                let Some(recipient) = recipient else {
+                    return Ok(false);
+                };
+                if value.len() != 33 || value[0] != 6 {
+                    return Err(invalid("invalid v6 intended recipient fingerprint"));
+                }
+                intended_match |= value[1..] == recipient[..];
+            }
             _ if tag & 0x80 != 0 => {
                 return Err(io::Error::new(
                     io::ErrorKind::Unsupported,
@@ -288,7 +301,7 @@ fn verify_hashed_subpackets(
     if !creation_seen {
         return Err(invalid("missing hashed signature creation time"));
     }
-    Ok(true)
+    Ok(recipient.is_none() || intended_match)
 }
 
 fn hash_prefix(hash: &[u8]) -> io::Result<[u8; 2]> {

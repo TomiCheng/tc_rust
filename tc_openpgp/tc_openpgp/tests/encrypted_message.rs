@@ -123,3 +123,94 @@ fn all_addressed_recipients_can_decrypt_the_same_message() {
             .is_err()
     );
 }
+
+#[test]
+fn signs_and_encrypts_to_certified_recipients_and_rejects_a_different_primary() {
+    use tc_openpgp::PgpKeyPair;
+
+    let operator = DefaultPgpOperatorBuilder::default().build();
+    let generate = |algorithm| -> PgpKeyPair {
+        operator
+            .key_pair_generator()
+            .get_by_algorithm(algorithm)
+            .unwrap()
+            .generate()
+            .unwrap()
+    };
+    let signer = generate(PublicKeyAlgorithmTag::Ed25519);
+    let alice = generate(PublicKeyAlgorithmTag::Ed25519);
+    let bob = generate(PublicKeyAlgorithmTag::Ed25519);
+    let other = generate(PublicKeyAlgorithmTag::Ed25519);
+    let alice_subkey = generate(PublicKeyAlgorithmTag::X25519);
+    let bob_subkey = generate(PublicKeyAlgorithmTag::X25519);
+    let time = [
+        signer.public(),
+        alice.public(),
+        bob.public(),
+        other.public(),
+        alice_subkey.public(),
+        bob_subkey.public(),
+    ]
+    .into_iter()
+    .map(|key| key.creation_time())
+    .max()
+    .unwrap();
+    let certificates = operator.certificate();
+    let alice = certificates
+        .create(&alice, &[], &[alice_subkey.public()], time)
+        .unwrap();
+    let bob = certificates
+        .create(&bob, &[], &[bob_subkey.public()], time)
+        .unwrap();
+    // The same private subkey can open the ciphertext, but the signature
+    // must remain bound to Alice's primary key rather than this certificate.
+    let substitute = certificates
+        .create(&other, &[], &[alice_subkey.public()], time)
+        .unwrap();
+
+    let literal = LiteralData::with_data(&vec![0xa3; 9000]);
+    let encryption = operator.encrypted_message();
+    let config = DecodingConfig::default();
+    let mut bytes = Vec::new();
+    encryption
+        .sign_and_encrypt(&signer, &[&alice, &bob], &literal, time, &mut bytes)
+        .unwrap();
+    for (key, certificate) in [(&alice_subkey, &alice), (&bob_subkey, &bob)] {
+        let data = encryption
+            .decrypt_and_verify(
+                key,
+                certificate,
+                signer.public(),
+                &mut bytes.as_slice(),
+                &config,
+            )
+            .unwrap();
+        assert_eq!(data, literal);
+    }
+    for (certificate, verifier) in [(&substitute, signer.public()), (&alice, other.public())] {
+        assert!(
+            encryption
+                .decrypt_and_verify(
+                    &alice_subkey,
+                    certificate,
+                    verifier,
+                    &mut bytes.as_slice(),
+                    &config
+                )
+                .is_err()
+        );
+    }
+    let mut changed = bytes;
+    *changed.last_mut().unwrap() ^= 1;
+    assert!(
+        encryption
+            .decrypt_and_verify(
+                &alice_subkey,
+                &alice,
+                signer.public(),
+                &mut changed.as_slice(),
+                &config
+            )
+            .is_err()
+    );
+}
