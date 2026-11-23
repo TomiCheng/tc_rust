@@ -1,0 +1,18 @@
+[package]
+name = "tc_cmp"
+description = "CMP message construction and protection, after Bouncy Castle C#'s Org.BouncyCastle.Cmp."
+version.workspace = true
+edition.workspace = true
+rust-version = "1.85"
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+tc_algo = { version = "0.1.0", path = "../../crypto/tc_algo" }
+tc_asn1 = { version = "0.1.4", features = ["std"] }
+tc_asn1_cmp = { version = "0.1.0", path = "../../asn1/tc_asn1_cmp" }
+tc_asn1_x500 = "0.1.0"
+tc_asn1_x509 = "0.1.0"
+tc_constant_time = "0.1.0"
+tc_crmf = { version = "0.1.0", path = "../tc_crmf" }
+tc_x509 = { version = "0.1.0", path = "../tc_x509" }
