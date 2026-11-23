@@ -100,8 +100,8 @@ impl LiteralData {
 impl PgpRead for LiteralData {
     fn decode(input: &mut dyn Read, config: &DecodingConfig) -> io::Result<Self> {
         let mut reader = PgpReader::new(input);
-        let (tag, mut body) = reader.read_body(config)?;
-        if tag != PacketTag::LiteralData {
+        let (header, mut body) = reader.read_body(config)?;
+        if header.tag() != PacketTag::LiteralData {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidData,
                 "expected a Literal Data packet",

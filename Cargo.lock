@@ -1879,7 +1879,9 @@ version = "0.1.0"
 dependencies = [
  "tc_algo",
  "tc_asym_cipher",
+ "tc_bigint",
  "tc_openpgp_packet",
+ "tc_rsa",
 ]
 
 [[package]]

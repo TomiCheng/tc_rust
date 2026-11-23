@@ -2,6 +2,10 @@ use std::io::{self, Read, Write};
 
 use crate::PgpPublicKey;
 
+mod default_serializer;
+
+pub(crate) use default_serializer::DefaultPgpPublicKeySerializer;
+
 /// Encodes and decodes one binary OpenPGP Public Key packet (tag 6).
 pub trait PgpPublicKeySerializer: Send + Sync {
     /// Writes one complete public key packet to the output.

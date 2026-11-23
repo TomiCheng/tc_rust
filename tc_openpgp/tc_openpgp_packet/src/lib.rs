@@ -24,7 +24,7 @@ pub use hash_algorithm_tag::HashAlgorithmTag;
 pub use packet::Packet;
 pub use packet_header::PacketHeader;
 pub use packet_tag::PacketTag;
-pub use packets::{LiteralData, LiteralDataFormat};
+pub use packets::{LiteralData, LiteralDataFormat, PublicKeyPacket, PublicKeyVersion};
 pub use pgp_reader::PgpReader;
 pub use pgp_writer::{PgpBodyWriter, PgpWriter};
 pub use signature_type_id::SignatureTypeId;

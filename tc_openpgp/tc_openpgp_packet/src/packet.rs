@@ -1,9 +1,10 @@
-use crate::{LiteralData, PacketTag, UnknownPacket};
+use crate::{LiteralData, PacketTag, PublicKeyPacket, UnknownPacket};
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 #[non_exhaustive]
 pub enum Packet {
     LiteralData(LiteralData),
+    PublicKey(PublicKeyPacket),
     Unknown(UnknownPacket),
 }
 
@@ -11,6 +12,7 @@ impl Packet {
     pub fn tag(&self) -> PacketTag {
         match self {
             Self::LiteralData(_) => PacketTag::LiteralData,
+            Self::PublicKey(_) => PacketTag::PublicKey,
             Self::Unknown(packet) => packet.tag(),
         }
     }

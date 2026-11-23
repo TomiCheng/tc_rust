@@ -9,12 +9,14 @@ repository.workspace = true
 
 [dependencies]
 tc_asym_cipher = "0.2.0"
+tc_bigint = { version = "0.1.0", optional = true }
+tc_rsa = { version = "0.2.0", optional = true }
 tc_algo = { version = "0.1.0", path = "../../crypto/tc_algo" }
 tc_openpgp_packet = { version = "0.1.0", path = "../tc_openpgp_packet" }
 
 [features]
 cfrg-curves = ["tc_algo/cfrg-curves"]
-rsa = ["tc_algo/rsa"]
+rsa = ["tc_algo/rsa", "dep:tc_bigint", "dep:tc_rsa"]
 
 [[test]]
 name = "rsa_key_pair"

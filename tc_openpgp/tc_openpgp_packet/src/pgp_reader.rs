@@ -1,6 +1,6 @@
 use std::io::{self, Read};
 
-use crate::{BodyLength, DecodingConfig, PacketHeaderFormat, PacketTag};
+use crate::{BodyLength, DecodingConfig, PacketHeader, PacketHeaderFormat, PacketTag};
 
 /// Reads OpenPGP packets from an underlying byte stream.
 pub struct PgpReader<R> {
@@ -15,7 +15,7 @@ impl<R: Read> PgpReader<R> {
     pub(crate) fn read_body(
         &mut self,
         config: &DecodingConfig,
-    ) -> io::Result<(PacketTag, impl Read + '_)> {
+    ) -> io::Result<(PacketHeader, impl Read + '_)> {
         let [tag_octet] = read_bytes(&mut self.inner)?;
         if tag_octet & 0x80 == 0 {
             return Err(io::Error::new(
@@ -66,7 +66,11 @@ impl<R: Read> PgpReader<R> {
         let mut remaining_budget = config.max_body_len;
         reserve_segment(length, &mut remaining_budget)?;
         Ok((
-            PacketTag::from(tag),
+            PacketHeader::new(
+                PacketTag::from(tag),
+                header_format == PacketHeaderFormat::OpenPgp,
+                length,
+            ),
             BodyReader {
                 inner: &mut self.inner,
                 length,
