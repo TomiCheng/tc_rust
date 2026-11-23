@@ -3,6 +3,7 @@ use std::sync::Arc;
 use tc_algo::{Algo, AlgoBuilder, DefaultAlgoBuilder};
 
 use crate::default_algo_asn1::DefaultAlgoAsn1;
+use crate::digest::{self, DefaultDigestProvider, DigestEntry};
 use crate::pkcs8::{self, DefaultPkcs8Provider, Pkcs8Entry};
 use crate::signer::{self, DefaultSignerProvider, SignerEntry};
 use crate::spki::{self, DefaultSpkiProvider, SpkiEntry};
@@ -14,6 +15,7 @@ pub struct DefaultAlgoAsn1Builder {
     spkis: Vec<spki::CreateRows>,
     pkcs8s: Vec<pkcs8::CreateRows>,
     signers: Vec<signer::CreateRows>,
+    digests: Vec<digest::CreateRows>,
 }
 
 // Starts with the built-in rows
@@ -24,6 +26,7 @@ impl Default for DefaultAlgoAsn1Builder {
             spkis: spki::BUILT_IN.to_vec(),
             pkcs8s: pkcs8::BUILT_IN.to_vec(),
             signers: signer::BUILT_IN.to_vec(),
+            digests: digest::BUILT_IN.to_vec(),
         }
     }
 }
@@ -47,6 +50,11 @@ impl DefaultAlgoAsn1Builder {
     // Rows registered later are found first, so they can take over a built-in one
     pub fn reg_signer(&mut self, create: fn(&DefaultAlgoAsn1Context) -> Vec<Box<dyn SignerEntry>>) {
         self.signers.push(create);
+    }
+
+    // Rows registered later are found first, so they can take over a built-in one
+    pub fn reg_digest(&mut self, create: fn(&DefaultAlgoAsn1Context) -> Vec<Box<dyn DigestEntry>>) {
+        self.digests.push(create);
     }
 }
 
@@ -75,10 +83,17 @@ impl AlgoAsn1Builder for DefaultAlgoAsn1Builder {
             .rev()
             .flat_map(|create| create(&context))
             .collect();
+        let digest_rows = self
+            .digests
+            .iter()
+            .rev()
+            .flat_map(|create| create(&context))
+            .collect();
         Box::new(DefaultAlgoAsn1::new(
             DefaultSpkiProvider::new(spki_rows),
             DefaultPkcs8Provider::new(pkcs8_rows),
-            DefaultSignerProvider::new(algo, signer_rows),
+            DefaultSignerProvider::new(algo.clone(), signer_rows),
+            DefaultDigestProvider::new(algo, digest_rows),
         ))
     }
 }

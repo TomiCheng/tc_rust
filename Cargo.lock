@@ -766,6 +766,7 @@ dependencies = [
  "tc_asn1_x9",
  "tc_asym_cipher",
  "tc_bigint",
+ "tc_digest",
  "tc_ec_core",
  "tc_f2m_curve",
  "tc_f2m_custom",

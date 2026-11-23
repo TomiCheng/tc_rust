@@ -1,4 +1,5 @@
 use crate::AlgoAsn1;
+use crate::digest::{DefaultDigestProvider, DigestProvider};
 use crate::pkcs8::{DefaultPkcs8Provider, Pkcs8Provider};
 use crate::signer::{DefaultSignerProvider, SignerProvider};
 use crate::spki::{DefaultSpkiProvider, SpkiProvider};
@@ -7,6 +8,7 @@ pub(crate) struct DefaultAlgoAsn1 {
     spki: DefaultSpkiProvider,
     pkcs8: DefaultPkcs8Provider,
     signer: DefaultSignerProvider,
+    digest: DefaultDigestProvider,
 }
 
 impl DefaultAlgoAsn1 {
@@ -14,11 +16,13 @@ impl DefaultAlgoAsn1 {
         spki: DefaultSpkiProvider,
         pkcs8: DefaultPkcs8Provider,
         signer: DefaultSignerProvider,
+        digest: DefaultDigestProvider,
     ) -> Self {
         Self {
             spki,
             pkcs8,
             signer,
+            digest,
         }
     }
 }
@@ -34,5 +38,9 @@ impl AlgoAsn1 for DefaultAlgoAsn1 {
 
     fn signer(&self) -> &dyn SignerProvider {
         &self.signer
+    }
+
+    fn digest(&self) -> &dyn DigestProvider {
+        &self.digest
     }
 }
