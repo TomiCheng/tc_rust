@@ -1336,14 +1336,13 @@ dependencies = [
 [[package]]
 name = "tc_ec_key"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f23308268814dc0ecfbdf0fa9faa7dde6fe685dcd7b392c4ec3bf172d798678b"
 dependencies = [
- "rand",
  "rand_core",
  "tc_asym_cipher",
  "tc_bigint",
  "tc_ec_core",
- "tc_f2m_curve",
- "tc_fp_curve",
  "tc_zeroize",
 ]
 

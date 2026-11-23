@@ -30,7 +30,7 @@ tc_block_modes = { version = "0.1.0", optional = true }
 # BC 的 ECIESTest：secp192r1 上的靜態金鑰，KDF2 與 HMAC 都用 SHA-1，cipher 版用 Twofish/CBC
 tc_bigint = { version = "0.1.0", features = ["alloc"] }
 tc_block_modes = { version = "0.1.0", features = ["alloc"] }
-tc_ec_key = { version = "0.1.0", path = "../../crypto/tc_ec_key" }
+tc_ec_key = { version = "0.1.0" }
 tc_ecdh_v2 = { version = "0.1.0", path = "../../crypto/agreement/tc_ecdh_v2" }
 tc_fp_custom = { version = "0.1.0", features = ["small-curves"] }
 tc_macs = { version = "0.1.0", features = ["hmac", "alloc"] }

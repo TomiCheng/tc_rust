@@ -205,7 +205,7 @@ tc_dh_key = { version = "0.1.0", optional = true }
 tc_elgamal = { version = "0.1.0", path = "../tc_elgamal", optional = true }
 tc_naccache_stern = { version = "0.1.0", path = "../tc_naccache_stern", optional = true }
 tc_sm2 = { version = "0.1.0", path = "../tc_sm2", optional = true }
-tc_ec_key = { version = "0.1.0", path = "../tc_ec_key", optional = true }
+tc_ec_key = { version = "0.1.0", optional = true }
 tc_ec_core = { version = "0.1.0", optional = true }
 tc_ecdh_v2 = { version = "0.1.0", path = "../agreement/tc_ecdh_v2", optional = true }
 tc_ecmqv = { version = "0.1.0", path = "../agreement/tc_ecmqv", optional = true }

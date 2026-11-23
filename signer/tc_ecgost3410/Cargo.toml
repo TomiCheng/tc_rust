@@ -11,7 +11,7 @@ repository.workspace = true
 tc_bigint = { version = "0.1.0", features = ["alloc"] }
 tc_dsa = { version = "0.1.0", path = "../tc_dsa" }
 tc_ec_core = "0.1.0"
-tc_ec_key = { version = "0.1.0", path = "../../crypto/tc_ec_key" }
+tc_ec_key = { version = "0.1.0" }
 tc_modular = { version = "0.1.0", features = ["alloc"] }
 tc_zeroize = "0.1.0"
 

@@ -160,9 +160,8 @@ and the crates that remain here depend on the published version.
   wired to the published crates above
 - [`crypto/tc_cfrg_curves`](crypto/tc_cfrg_curves) — X25519, X448, Ed25519 and
   Ed448 in one crate
-- [`crypto/tc_ec_key`](crypto/tc_ec_key),
-  [`crypto/agreement`](crypto/agreement) and [`signer`](signer) — EC keys,
-  key agreement (ECDH) and signers (RSA, DSA, ECDSA)
+- [`crypto/agreement`](crypto/agreement) and [`signer`](signer) — key
+  agreement (ECDH) and signers (RSA, DSA, ECDSA) over the published EC keys
 - [`asn1`](asn1) — PKCS, X.509, X9 and CMS structures over the published
   `tc_asn1`; [`x509`](x509) has started on certificates over them
 - [`kdf`](kdf) — key derivation (KDF1/2, the concatenation KDF, HKDF and
