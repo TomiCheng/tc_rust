@@ -1823,6 +1823,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_ocsp"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "tc_algo",
+ "tc_asn1",
+ "tc_asn1_ocsp",
+ "tc_asn1_x509",
+ "tc_x509",
+]
+
+[[package]]
 name = "tc_openpgp"
 version = "0.1.0"
 dependencies = [
