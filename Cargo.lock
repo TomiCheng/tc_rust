@@ -756,6 +756,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_algo_asn1"
+version = "0.1.0"
+dependencies = [
+ "tc_algo",
+ "tc_asn1",
+ "tc_asn1_pkcs",
+ "tc_asn1_x509",
+]
+
+[[package]]
 name = "tc_aria"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
