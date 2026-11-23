@@ -13,6 +13,12 @@ pub enum AlgoAsn1Error {
     NotPublicKey,
     // 公鑰的編碼不是它的演算法要求的
     InvalidPublicKey,
+    // 沒有任何一列認得這把私鑰或這個演算法
+    UnknownPrivateKey,
+    // 需要私鑰的地方給了公鑰
+    NotPrivateKey,
+    // 私鑰的編碼不是它的演算法要求的
+    InvalidPrivateKey,
 }
 
 impl fmt::Display for AlgoAsn1Error {
@@ -22,6 +28,9 @@ impl fmt::Display for AlgoAsn1Error {
             Self::UnknownPublicKey => f.write_str("unknown public key"),
             Self::NotPublicKey => f.write_str("a private key where a public key is needed"),
             Self::InvalidPublicKey => f.write_str("invalid public key encoding"),
+            Self::UnknownPrivateKey => f.write_str("unknown private key"),
+            Self::NotPrivateKey => f.write_str("a public key where a private key is needed"),
+            Self::InvalidPrivateKey => f.write_str("invalid private key encoding"),
         }
     }
 }
@@ -30,7 +39,12 @@ impl Error for AlgoAsn1Error {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
             Self::Asn1(error) => Some(error),
-            Self::UnknownPublicKey | Self::NotPublicKey | Self::InvalidPublicKey => None,
+            Self::UnknownPublicKey
+            | Self::NotPublicKey
+            | Self::InvalidPublicKey
+            | Self::UnknownPrivateKey
+            | Self::NotPrivateKey
+            | Self::InvalidPrivateKey => None,
         }
     }
 }

@@ -4,7 +4,9 @@
 mod default_algo_asn1;
 mod default_algo_asn1_builder;
 mod default_algo_asn1_context;
+mod der;
 mod error;
+pub mod private_key_info;
 pub mod spki;
 mod traits;
 

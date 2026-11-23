@@ -4,12 +4,12 @@ use tc_algo::Params;
 use tc_algo::generate::KeyPair;
 use tc_algo::params::{
     generate::EcKeyGenParams, generate::RsaKeyGenParams, key::RsaKey, key::RsaKeyParams,
-    key::X25519PublicKey,
+    key::X448PrivateKey, key::X448PublicKey, key::X25519PublicKey,
 };
 use tc_algo::{Algo, AlgoBuilder, DefaultAlgoBuilder};
 use tc_algo_asn1::{AlgoAsn1, AlgoAsn1Builder, AlgoAsn1Error, DefaultAlgoAsn1Builder};
 use tc_asn1::{Asn1BitString, Asn1Object, Decode, DecodingOptions};
-use tc_asn1_pkcs::RsaPublicKey;
+use tc_asn1_pkcs::{PrivateKeyInfo, RsaPublicKey};
 use tc_asn1_x509::alg::AlgorithmIdentifier;
 use tc_asn1_x509::cert::SubjectPublicKeyInfo;
 
@@ -210,4 +210,47 @@ fn an_ec_spki_without_a_named_curve_or_of_an_unknown_one_is_refused() {
     );
     let error = oper.spki().decode(&unknown).err().unwrap();
     assert!(matches!(error, AlgoAsn1Error::UnknownPublicKey));
+}
+
+#[test]
+fn an_x448_public_key_becomes_id_x448_with_its_56_bytes_and_reads_back() {
+    let oper = DefaultAlgoAsn1Builder::default().build();
+    let mut key_gen = algo().key_pair_generator().get_by_name("X448").unwrap();
+    let pair = key_gen.generate().unwrap();
+    let original = pair
+        .public()
+        .as_any()
+        .downcast_ref::<X448PublicKey>()
+        .unwrap();
+
+    let spki = oper.spki().encode(pair.public()).unwrap();
+    assert_eq!(spki.algorithm().algorithm().to_string(), "1.3.101.111");
+    assert!(spki.algorithm().parameters().is_none());
+    assert_eq!(spki.subject_public_key().as_bytes(), original.u());
+
+    let key = oper.spki().decode(&spki).unwrap();
+    let key = key.as_any().downcast_ref::<X448PublicKey>().unwrap();
+    assert_eq!(key.u(), original.u());
+}
+
+// The public key OpenSSL derives from its private key reads back, and matches the one this crate
+// derives from the same private key
+#[test]
+fn the_x448_public_key_openssl_wrote_reads_back() {
+    let oper = DefaultAlgoAsn1Builder::default().build();
+    let der = include_bytes!("data/openssl_x448_spki.der");
+    let (_, spki) = SubjectPublicKeyInfo::decode(der, &DecodingOptions::default()).unwrap();
+    let key = oper.spki().decode(&spki).unwrap();
+    assert_eq!(oper.spki().encode(key.as_ref()).unwrap(), spki);
+
+    let (_, info) = PrivateKeyInfo::decode(
+        include_bytes!("data/openssl_x448.der"),
+        &DecodingOptions::default(),
+    )
+    .unwrap();
+    let private = oper.private_key_info().decode(&info).unwrap();
+    let private = private.as_any().downcast_ref::<X448PrivateKey>().unwrap();
+    let derived = private.generate_public_key();
+    let read = key.as_any().downcast_ref::<X448PublicKey>().unwrap();
+    assert_eq!(derived.u(), read.u());
 }
