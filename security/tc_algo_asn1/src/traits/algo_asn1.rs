@@ -1,9 +1,9 @@
-use crate::private_key_info::PrivateKeyInfoProvider;
+use crate::pkcs8::Pkcs8Provider;
 use crate::spki::SpkiProvider;
 
-// tc_algo 與 ASN.1 之間的轉換；各類轉換的 provider 之後加在這裡
+// The conversions between tc_algo and ASN.1, one provider per kind
 pub trait AlgoAsn1: Send + Sync {
     fn spki(&self) -> &dyn SpkiProvider;
 
-    fn private_key_info(&self) -> &dyn PrivateKeyInfoProvider;
+    fn pkcs8(&self) -> &dyn Pkcs8Provider;
 }

@@ -7,17 +7,17 @@ use tc_asn1::Asn1Error;
 #[non_exhaustive]
 pub enum AlgoAsn1Error {
     Asn1(Asn1Error),
-    // 沒有任何一列認得這把金鑰或這個演算法
+    // No row knows the public key or its algorithm
     UnknownPublicKey,
-    // 需要公鑰的地方給了私鑰
+    // A private key was given where a public one is needed
     NotPublicKey,
-    // 公鑰的編碼不是它的演算法要求的
+    // The encoding of a public key is not what its algorithm requires
     InvalidPublicKey,
-    // 沒有任何一列認得這把私鑰或這個演算法
+    // No row knows the private key or its algorithm
     UnknownPrivateKey,
-    // 需要私鑰的地方給了公鑰
+    // A public key was given where a private one is needed
     NotPrivateKey,
-    // 私鑰的編碼不是它的演算法要求的
+    // The encoding of a private key is not what its algorithm requires
     InvalidPrivateKey,
 }
 

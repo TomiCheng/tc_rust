@@ -26,7 +26,7 @@ use tc_fp_custom::{
 use tc_zeroize::Zeroizing;
 
 use super::decode_all;
-use crate::private_key_info::PrivateKeyInfoEntry;
+use crate::pkcs8::Pkcs8Entry;
 use crate::{AlgoAsn1Error, DefaultAlgoAsn1Context};
 
 // id-ecPublicKey of RFC 5480
@@ -40,13 +40,13 @@ const ID_EC_PUBLIC_KEY: NamedOid = NamedOid::new(
 // of the curves are PKCS#8's own table, as tc_x509 keeps one for SPKI: a curve may go by another
 // OID elsewhere. Many curves share a type, so a key is matched by its generator, whose equality
 // takes in the curve's parameters, not by its type alone
-pub(super) fn ec(_context: &DefaultAlgoAsn1Context) -> Vec<Box<dyn PrivateKeyInfoEntry>> {
+pub(super) fn ec(_context: &DefaultAlgoAsn1Context) -> Vec<Box<dyn Pkcs8Entry>> {
     vec![Box::new(Ec)]
 }
 
 struct Ec;
 
-impl PrivateKeyInfoEntry for Ec {
+impl Pkcs8Entry for Ec {
     // id-ecPublicKey with the curve's OID, and the ECPrivateKey of SEC 1 with d as long as the
     // order, the curve and the uncompressed public key, as Bouncy Castle's PrivateKeyInfoFactory
     // writes a key of a named curve
@@ -1254,7 +1254,7 @@ mod tests {
     // A curve that goes by several OIDs is written by the first of them in the table, since a key
     // does not keep the OID it was made by, as with SPKI
     #[test]
-    fn a_key_of_every_curve_reads_back_to_the_same_private_key_info() {
+    fn a_key_of_every_curve_reads_back_to_the_same_pkcs8() {
         let oper = DefaultAlgoAsn1Builder::default().build();
         let algo = DefaultAlgoBuilder::default().build();
         for entry in CURVES {
@@ -1263,10 +1263,10 @@ mod tests {
                 .init(&EcKeyGenParams::from_oid(entry.oid.parse().unwrap()))
                 .unwrap();
             let pair = key_gen.generate().unwrap();
-            let info = oper.private_key_info().encode(pair.private()).unwrap();
-            let key = oper.private_key_info().decode(&info).unwrap();
+            let info = oper.pkcs8().encode(pair.private()).unwrap();
+            let key = oper.pkcs8().decode(&info).unwrap();
             assert_eq!(
-                oper.private_key_info().encode(key.as_ref()).unwrap(),
+                oper.pkcs8().encode(key.as_ref()).unwrap(),
                 info,
                 "{}",
                 entry.oid

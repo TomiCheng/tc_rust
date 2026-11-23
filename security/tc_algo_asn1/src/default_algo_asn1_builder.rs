@@ -1,36 +1,33 @@
 use crate::default_algo_asn1::DefaultAlgoAsn1;
-use crate::private_key_info::{self, DefaultPrivateKeyInfoProvider, PrivateKeyInfoEntry};
+use crate::pkcs8::{self, DefaultPkcs8Provider, Pkcs8Entry};
 use crate::spki::{self, DefaultSpkiProvider, SpkiEntry};
 use crate::{AlgoAsn1, AlgoAsn1Builder, DefaultAlgoAsn1Context};
 
 #[derive(Clone)]
 pub struct DefaultAlgoAsn1Builder {
     spkis: Vec<spki::CreateRows>,
-    private_key_infos: Vec<private_key_info::CreateRows>,
+    pkcs8s: Vec<pkcs8::CreateRows>,
 }
 
-// 從內建的列開始
+// Starts with the built-in rows
 impl Default for DefaultAlgoAsn1Builder {
     fn default() -> Self {
         Self {
             spkis: spki::BUILT_IN.to_vec(),
-            private_key_infos: private_key_info::BUILT_IN.to_vec(),
+            pkcs8s: pkcs8::BUILT_IN.to_vec(),
         }
     }
 }
 
 impl DefaultAlgoAsn1Builder {
-    // 後註冊的列先試，可以取代內建的
+    // Rows registered later are tried first, so they can take over a built-in one
     pub fn reg_spki(&mut self, create: fn(&DefaultAlgoAsn1Context) -> Vec<Box<dyn SpkiEntry>>) {
         self.spkis.push(create);
     }
 
-    // 後註冊的列先試，可以取代內建的
-    pub fn reg_private_key_info(
-        &mut self,
-        create: fn(&DefaultAlgoAsn1Context) -> Vec<Box<dyn PrivateKeyInfoEntry>>,
-    ) {
-        self.private_key_infos.push(create);
+    // Rows registered later are tried first, so they can take over a built-in one
+    pub fn reg_pkcs8(&mut self, create: fn(&DefaultAlgoAsn1Context) -> Vec<Box<dyn Pkcs8Entry>>) {
+        self.pkcs8s.push(create);
     }
 }
 
@@ -43,15 +40,15 @@ impl AlgoAsn1Builder for DefaultAlgoAsn1Builder {
             .rev()
             .flat_map(|create| create(&context))
             .collect();
-        let private_key_info_rows = self
-            .private_key_infos
+        let pkcs8_rows = self
+            .pkcs8s
             .iter()
             .rev()
             .flat_map(|create| create(&context))
             .collect();
         Box::new(DefaultAlgoAsn1::new(
             DefaultSpkiProvider::new(spki_rows),
-            DefaultPrivateKeyInfoProvider::new(private_key_info_rows),
+            DefaultPkcs8Provider::new(pkcs8_rows),
         ))
     }
 }

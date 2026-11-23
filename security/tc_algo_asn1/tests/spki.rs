@@ -248,7 +248,7 @@ fn the_x448_public_key_openssl_wrote_reads_back() {
         &DecodingOptions::default(),
     )
     .unwrap();
-    let private = oper.private_key_info().decode(&info).unwrap();
+    let private = oper.pkcs8().decode(&info).unwrap();
     let private = private.as_any().downcast_ref::<X448PrivateKey>().unwrap();
     let derived = private.generate_public_key();
     let read = key.as_any().downcast_ref::<X448PublicKey>().unwrap();

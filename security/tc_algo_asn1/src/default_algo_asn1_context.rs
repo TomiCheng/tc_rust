@@ -1,2 +1,2 @@
-// DefaultAlgoAsn1Builder 交給註冊函式的內容
+// What DefaultAlgoAsn1Builder hands to the functions registered with it
 pub struct DefaultAlgoAsn1Context;

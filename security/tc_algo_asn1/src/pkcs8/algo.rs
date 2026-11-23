@@ -5,9 +5,9 @@ mod rsa;
 
 use crate::DefaultAlgoAsn1Context;
 use crate::der::decode_all;
-use crate::private_key_info::PrivateKeyInfoEntry;
+use crate::pkcs8::Pkcs8Entry;
 
-pub(crate) type CreateRows = fn(&DefaultAlgoAsn1Context) -> Vec<Box<dyn PrivateKeyInfoEntry>>;
+pub(crate) type CreateRows = fn(&DefaultAlgoAsn1Context) -> Vec<Box<dyn Pkcs8Entry>>;
 
 // What DefaultPkcsOperatorBuilder starts with. These are always on, as the keys of certificates
 // need them

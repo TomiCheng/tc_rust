@@ -7,11 +7,11 @@ use tc_asn1_x509::cert::SubjectPublicKeyInfo;
 use crate::spki::SpkiEntry;
 use crate::{AlgoAsn1Error, DefaultAlgoAsn1Context};
 
-// RFC 8410 的 id-X25519 與 id-X448
+// id-X25519 and id-X448 of RFC 8410
 const ID_X25519: NamedOid = NamedOid::new(&[0x2b, 0x65, 0x6e], "1.3.101.110", "id-X25519");
 const ID_X448: NamedOid = NamedOid::new(&[0x2b, 0x65, 0x6f], "1.3.101.111", "id-X448");
 
-// X25519 與 X448 各一列
+// One row each for X25519 and X448
 pub(super) fn xdh(_context: &DefaultAlgoAsn1Context) -> Vec<Box<dyn SpkiEntry>> {
     vec![Box::new(X25519), Box::new(X448)]
 }
@@ -23,7 +23,7 @@ struct X448;
 macro_rules! xdh_row {
     ($row:ty, $key:ty, $id:ident, $len:literal) => {
         impl SpkiEntry for $row {
-            // 沒有參數，BIT STRING 裡是 u 的原始位元組，同 RFC 8410 與 BC 的
+            // No parameters, and the raw bytes of u in the BIT STRING, as RFC 8410 and Bouncy Castle's
             // SubjectPublicKeyInfoFactory
             fn encode(
                 &self,
@@ -36,7 +36,7 @@ macro_rules! xdh_row {
                 )))
             }
 
-            // RFC 8410 規定沒有參數；有參數或長度不對都拒絕
+            // RFC 8410 has the parameters absent; any, or a key of another length, is refused
             fn decode(
                 &self,
                 spki: &SubjectPublicKeyInfo,

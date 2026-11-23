@@ -6,16 +6,16 @@ use tc_asn1_x509::alg::AlgorithmIdentifier;
 use tc_zeroize::Zeroizing;
 
 use super::decode_all;
-use crate::private_key_info::PrivateKeyInfoEntry;
+use crate::pkcs8::Pkcs8Entry;
 use crate::{AlgoAsn1Error, DefaultAlgoAsn1Context};
 
-// RFC 8410 的四個 OID
+// The four OIDs of RFC 8410
 const ID_X25519: NamedOid = NamedOid::new(&[0x2b, 0x65, 0x6e], "1.3.101.110", "id-X25519");
 const ID_X448: NamedOid = NamedOid::new(&[0x2b, 0x65, 0x6f], "1.3.101.111", "id-X448");
 const ID_ED25519: NamedOid = NamedOid::new(&[0x2b, 0x65, 0x70], "1.3.101.112", "id-Ed25519");
 const ID_ED448: NamedOid = NamedOid::new(&[0x2b, 0x65, 0x71], "1.3.101.113", "id-Ed448");
 
-// BC 的 PrivateKeyFactory 也讀的舊 OID：Cryptlib 的 X25519、GNU 的 Ed25519
+// Older OIDs Bouncy Castle's PrivateKeyFactory reads too: Cryptlib's X25519 and GNU's Ed25519
 const CURVEY25519: NamedOid = NamedOid::new(
     &[0x2b, 0x06, 0x01, 0x04, 0x01, 0x97, 0x55, 0x01, 0x05, 0x01],
     "1.3.6.1.4.1.3029.1.5.1",
@@ -27,13 +27,14 @@ const GNU_ED25519: NamedOid = NamedOid::new(
     "Ed25519",
 );
 
-// 一種 CFRG 曲線的私鑰：OID、也接受的舊 OID、能否接受沒有包 OCTET STRING 的原始值（BC 只對 X25519
-// 與 X448 接受，是 Java 11 的寫法），以及金鑰與原始位元組之間的轉換
+// The private key of one CFRG curve: its OID, an older OID also read, whether the raw key may come
+// without its OCTET STRING (Bouncy Castle takes that for X25519 and X448 alone, as Java 11 writes
+// them), and the conversions between the key and its raw bytes
 struct Cfrg {
     id: NamedOid,
     legacy: Option<NamedOid>,
     bare: bool,
-    // 私鑰的原始位元組與公鑰的原始位元組
+    // The raw private key and the raw public key
     encode: fn(&dyn Params) -> Option<(Zeroizing<Vec<u8>>, Vec<u8>)>,
     decode: fn(&[u8]) -> Option<Box<dyn Params>>,
 }
@@ -57,8 +58,8 @@ macro_rules! from_raw {
     };
 }
 
-// 四種曲線各一列
-pub(super) fn cfrg(_context: &DefaultAlgoAsn1Context) -> Vec<Box<dyn PrivateKeyInfoEntry>> {
+// One row for each of the four curves
+pub(super) fn cfrg(_context: &DefaultAlgoAsn1Context) -> Vec<Box<dyn Pkcs8Entry>> {
     vec![
         Box::new(Cfrg {
             id: ID_X25519,
@@ -97,9 +98,9 @@ impl Cfrg {
     }
 }
 
-impl PrivateKeyInfoEntry for Cfrg {
-    // 沒有參數、私鑰包在自己的 OCTET STRING 裡、旁邊附上公鑰（RFC 5958 的第 2 版），同 BC 的
-    // PrivateKeyInfoFactory
+impl Pkcs8Entry for Cfrg {
+    // No parameters, the private key in an OCTET STRING of its own and the public key beside it,
+    // version 2 of RFC 5958, as Bouncy Castle's PrivateKeyInfoFactory writes it
     fn encode(&self, key: &dyn Params) -> Option<Result<PrivateKeyInfo, AlgoAsn1Error>> {
         let (private, public) = (self.encode)(key)?;
         Some(info(self.id.oid(), &private, &public))

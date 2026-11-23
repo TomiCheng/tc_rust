@@ -1,12 +1,12 @@
-//! tc_algo 與 ASN.1 之間的序列化：金鑰的 SPKI 與 PKCS#8、`AlgorithmIdentifier` 的參數，給 X.509、
-//! PKCS、CMS 這一族使用；OpenPGP 不經過這一層。
+//! The ASN.1 side of tc_algo: keys as `SubjectPublicKeyInfo` and PKCS#8, and the parameters
+//! of `AlgorithmIdentifier`, for the X.509, PKCS and CMS crates. OpenPGP does not go through it.
 
 mod default_algo_asn1;
 mod default_algo_asn1_builder;
 mod default_algo_asn1_context;
 mod der;
 mod error;
-pub mod private_key_info;
+pub mod pkcs8;
 pub mod spki;
 mod traits;
 

@@ -2,20 +2,20 @@ use tc_algo::Params;
 use tc_asn1_pkcs::PrivateKeyInfo;
 
 use crate::AlgoAsn1Error;
-use crate::private_key_info::{PrivateKeyInfoEntry, PrivateKeyInfoProvider};
+use crate::pkcs8::{Pkcs8Entry, Pkcs8Provider};
 
 // The rows in the order they are tried, the last registered first
-pub(crate) struct DefaultPrivateKeyInfoProvider {
-    rows: Vec<Box<dyn PrivateKeyInfoEntry>>,
+pub(crate) struct DefaultPkcs8Provider {
+    rows: Vec<Box<dyn Pkcs8Entry>>,
 }
 
-impl DefaultPrivateKeyInfoProvider {
-    pub(crate) fn new(rows: Vec<Box<dyn PrivateKeyInfoEntry>>) -> Self {
+impl DefaultPkcs8Provider {
+    pub(crate) fn new(rows: Vec<Box<dyn Pkcs8Entry>>) -> Self {
         Self { rows }
     }
 }
 
-impl PrivateKeyInfoProvider for DefaultPrivateKeyInfoProvider {
+impl Pkcs8Provider for DefaultPkcs8Provider {
     fn encode(&self, key: &dyn Params) -> Result<PrivateKeyInfo, AlgoAsn1Error> {
         self.rows
             .iter()

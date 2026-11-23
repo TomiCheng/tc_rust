@@ -9,20 +9,20 @@ use tc_rsa::{RsaKeyParams, RsaPrivateCrtKeyOwned, RsaPrivateCrtKeyParams};
 use tc_zeroize::Zeroizing;
 
 use super::decode_all;
-use crate::private_key_info::PrivateKeyInfoEntry;
+use crate::pkcs8::Pkcs8Entry;
 use crate::{AlgoAsn1Error, DefaultAlgoAsn1Context};
 
 // X.509's id-ea-rsa, which Bouncy Castle also reads
 const ID_EA_RSA: NamedOid = NamedOid::new(&[0x55, 0x08, 0x01, 0x01], "2.5.8.1.1", "id-ea-rsa");
 
 // The row of RSA, which knows an RsaKey with its CRT values
-pub(super) fn rsa(_context: &DefaultAlgoAsn1Context) -> Vec<Box<dyn PrivateKeyInfoEntry>> {
+pub(super) fn rsa(_context: &DefaultAlgoAsn1Context) -> Vec<Box<dyn Pkcs8Entry>> {
     vec![Box::new(Rsa)]
 }
 
 struct Rsa;
 
-impl PrivateKeyInfoEntry for Rsa {
+impl Pkcs8Entry for Rsa {
     // rsaEncryption with NULL parameters and the RSAPrivateKey, as Bouncy Castle's
     // PrivateKeyInfoFactory writes it. A private key without its CRT values is refused: PKCS#1 has
     // no form for it, where Bouncy Castle writes zeros in their place

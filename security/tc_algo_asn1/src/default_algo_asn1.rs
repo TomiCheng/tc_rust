@@ -1,21 +1,15 @@
 use crate::AlgoAsn1;
-use crate::private_key_info::{DefaultPrivateKeyInfoProvider, PrivateKeyInfoProvider};
+use crate::pkcs8::{DefaultPkcs8Provider, Pkcs8Provider};
 use crate::spki::{DefaultSpkiProvider, SpkiProvider};
 
 pub(crate) struct DefaultAlgoAsn1 {
     spki: DefaultSpkiProvider,
-    private_key_info: DefaultPrivateKeyInfoProvider,
+    pkcs8: DefaultPkcs8Provider,
 }
 
 impl DefaultAlgoAsn1 {
-    pub(crate) fn new(
-        spki: DefaultSpkiProvider,
-        private_key_info: DefaultPrivateKeyInfoProvider,
-    ) -> Self {
-        Self {
-            spki,
-            private_key_info,
-        }
+    pub(crate) fn new(spki: DefaultSpkiProvider, pkcs8: DefaultPkcs8Provider) -> Self {
+        Self { spki, pkcs8 }
     }
 }
 
@@ -24,7 +18,7 @@ impl AlgoAsn1 for DefaultAlgoAsn1 {
         &self.spki
     }
 
-    fn private_key_info(&self) -> &dyn PrivateKeyInfoProvider {
-        &self.private_key_info
+    fn pkcs8(&self) -> &dyn Pkcs8Provider {
+        &self.pkcs8
     }
 }

@@ -27,9 +27,9 @@ fn pair(name: &str, params: Option<&dyn Params>) -> KeyPair {
 
 // The key read back writes the same PrivateKeyInfo
 fn round_trip(oper: &dyn AlgoAsn1, key: &dyn Params) -> PrivateKeyInfo {
-    let info = oper.private_key_info().encode(key).unwrap();
-    let back = oper.private_key_info().decode(&info).unwrap();
-    assert_eq!(oper.private_key_info().encode(back.as_ref()).unwrap(), info);
+    let info = oper.pkcs8().encode(key).unwrap();
+    let back = oper.pkcs8().decode(&info).unwrap();
+    assert_eq!(oper.pkcs8().encode(back.as_ref()).unwrap(), info);
     info
 }
 
@@ -46,7 +46,7 @@ fn an_rsa_private_key_becomes_rsa_encryption_and_reads_back_with_its_crt_values(
     );
     assert_eq!(info.version(), 0);
 
-    let key = oper.private_key_info().decode(&info).unwrap();
+    let key = oper.pkcs8().decode(&info).unwrap();
     let key = key.as_any().downcast_ref::<RsaKey>().unwrap();
     assert!(matches!(key, RsaKey::Crt(_)));
     let original = pair.private().as_any().downcast_ref::<RsaKey>().unwrap();
@@ -58,7 +58,7 @@ fn a_public_key_is_refused() {
     let oper = DefaultAlgoAsn1Builder::default().build();
     let pair = pair("RSA", Some(&RsaKeyGenParams::new(1024)));
 
-    let error = oper.private_key_info().encode(pair.public()).unwrap_err();
+    let error = oper.pkcs8().encode(pair.public()).unwrap_err();
     assert!(matches!(error, AlgoAsn1Error::NotPrivateKey));
 }
 
@@ -95,7 +95,7 @@ fn an_x25519_key_is_also_read_bare_and_under_cryptlibs_oid() {
             AlgorithmIdentifier::new(oid.parse().unwrap()),
             Asn1OctetString::new(&octets),
         );
-        let key = oper.private_key_info().decode(&info).unwrap();
+        let key = oper.pkcs8().decode(&info).unwrap();
         let key = key.as_any().downcast_ref::<X25519PrivateKey>().unwrap();
         assert_eq!(key.k(), &k, "{oid}");
     }
@@ -121,13 +121,13 @@ fn an_ec_private_key_carries_its_curve_and_public_key_and_reads_back() {
 fn an_ec_key_without_a_named_curve_is_invalid() {
     let oper = DefaultAlgoAsn1Builder::default().build();
     let pair = pair("EC", Some(&EcKeyGenParams::new("P-256") as &dyn Params));
-    let info = oper.private_key_info().encode(pair.private()).unwrap();
+    let info = oper.pkcs8().encode(pair.private()).unwrap();
 
     let implicit = PrivateKeyInfo::new(
         AlgorithmIdentifier::with_null("1.2.840.10045.2.1".parse().unwrap()),
         info.private_key().clone(),
     );
-    let error = oper.private_key_info().decode(&implicit).err().unwrap();
+    let error = oper.pkcs8().decode(&implicit).err().unwrap();
     assert!(matches!(error, AlgoAsn1Error::InvalidPrivateKey));
 }
 
@@ -142,14 +142,14 @@ impl Params for OtherKey {
 #[test]
 fn a_key_or_an_algorithm_no_row_knows_is_unknown() {
     let oper = DefaultAlgoAsn1Builder::default().build();
-    let error = oper.private_key_info().encode(&OtherKey).unwrap_err();
+    let error = oper.pkcs8().encode(&OtherKey).unwrap_err();
     assert!(matches!(error, AlgoAsn1Error::UnknownPrivateKey));
 
     let info = PrivateKeyInfo::new(
         AlgorithmIdentifier::new("1.2.3".parse().unwrap()),
         Asn1OctetString::new(&[0]),
     );
-    let error = oper.private_key_info().decode(&info).err().unwrap();
+    let error = oper.pkcs8().decode(&info).err().unwrap();
     assert!(matches!(error, AlgoAsn1Error::UnknownPrivateKey));
 }
 
@@ -182,7 +182,7 @@ fn an_ed25519_key_is_read_under_gnus_oid_but_not_bare() {
         AlgorithmIdentifier::new("1.3.6.1.4.1.11591.15.1".parse().unwrap()),
         Asn1OctetString::new(&wrapped),
     );
-    let key = oper.private_key_info().decode(&gnu).unwrap();
+    let key = oper.pkcs8().decode(&gnu).unwrap();
     let key = key.as_any().downcast_ref::<Ed25519PrivateKey>().unwrap();
     assert_eq!(key.k(), &k);
 
@@ -191,7 +191,7 @@ fn an_ed25519_key_is_read_under_gnus_oid_but_not_bare() {
         AlgorithmIdentifier::new("1.3.101.112".parse().unwrap()),
         Asn1OctetString::new(&k),
     );
-    assert!(oper.private_key_info().decode(&bare).is_err());
+    assert!(oper.pkcs8().decode(&bare).is_err());
 }
 
 #[test]
@@ -202,7 +202,7 @@ fn an_x448_key_is_also_read_bare() {
         AlgorithmIdentifier::new("1.3.101.111".parse().unwrap()),
         Asn1OctetString::new(&k),
     );
-    let key = oper.private_key_info().decode(&info).unwrap();
+    let key = oper.pkcs8().decode(&info).unwrap();
     let key = key.as_any().downcast_ref::<X448PrivateKey>().unwrap();
     assert_eq!(key.k(), &k);
 }
@@ -224,7 +224,7 @@ fn a_dsa_private_key_carries_its_domain_and_reads_back_with_the_same_x() {
         .as_any()
         .downcast_ref::<DsaPrivateKey>()
         .unwrap();
-    let back = oper.private_key_info().decode(&info).unwrap();
+    let back = oper.pkcs8().decode(&info).unwrap();
     let back = back.as_any().downcast_ref::<DsaPrivateKey>().unwrap();
     assert_eq!(back.x(), original.x());
     assert_eq!(back.params(), original.params());
@@ -234,7 +234,7 @@ fn a_dsa_private_key_carries_its_domain_and_reads_back_with_the_same_x() {
         AlgorithmIdentifier::new("1.2.840.10040.4.1".parse().unwrap()),
         Asn1OctetString::new(info.private_key().as_bytes()),
     );
-    let error = oper.private_key_info().decode(&bare).err().unwrap();
+    let error = oper.pkcs8().decode(&bare).err().unwrap();
     assert!(matches!(error, AlgoAsn1Error::InvalidPrivateKey));
 }
 
@@ -250,8 +250,8 @@ fn private_keys_openssl_wrote_read_back() {
         ("DSA", &include_bytes!("data/openssl_dsa.der")[..]),
     ] {
         let (_, info) = PrivateKeyInfo::decode(der, &DecodingOptions::default()).unwrap();
-        let key = oper.private_key_info().decode(&info).unwrap();
-        let written = oper.private_key_info().encode(key.as_ref()).unwrap();
+        let key = oper.pkcs8().decode(&info).unwrap();
+        let written = oper.pkcs8().encode(key.as_ref()).unwrap();
         assert_eq!(written.private_key(), info.private_key(), "{name}");
         assert_eq!(written.algorithm(), info.algorithm(), "{name}");
     }

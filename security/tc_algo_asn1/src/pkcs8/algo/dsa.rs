@@ -10,7 +10,7 @@ use tc_bigint::{ArrayEncoding, PaddedBigUint};
 use tc_zeroize::Zeroizing;
 
 use super::decode_all;
-use crate::private_key_info::PrivateKeyInfoEntry;
+use crate::pkcs8::Pkcs8Entry;
 use crate::{AlgoAsn1Error, DefaultAlgoAsn1Context};
 
 // id-dsa of RFC 3279
@@ -20,21 +20,23 @@ const ID_DSA: NamedOid = NamedOid::new(
     "id-dsa",
 );
 
-// DSA 的列，認得 DsaPrivateKey
-pub(super) fn dsa(_context: &DefaultAlgoAsn1Context) -> Vec<Box<dyn PrivateKeyInfoEntry>> {
+// The row of DSA, which knows a DsaPrivateKey
+pub(super) fn dsa(_context: &DefaultAlgoAsn1Context) -> Vec<Box<dyn Pkcs8Entry>> {
     vec![Box::new(Dsa)]
 }
 
 struct Dsa;
 
-impl PrivateKeyInfoEntry for Dsa {
-    // id-dsa 帶 Dss-Parms 的 p、q、g，私鑰是 x 的 INTEGER，同 BC 的 PrivateKeyInfoFactory
+impl Pkcs8Entry for Dsa {
+    // id-dsa with the Dss-Parms p, q and g, and x as an INTEGER, as Bouncy Castle's PrivateKeyInfoFactory
+    // writes it
     fn encode(&self, key: &dyn Params) -> Option<Result<PrivateKeyInfo, AlgoAsn1Error>> {
         let key = key.as_any().downcast_ref::<DsaPrivateKey>()?;
         Some(info(key))
     }
 
-    // BC 的 PrivateKeyFactory 允許沒有參數，但這裡的 DsaPrivateKey 一定要有，所以是 InvalidPrivateKey
+    // Bouncy Castle's PrivateKeyFactory allows the parameters to be absent, but a DsaPrivateKey needs
+    // them, so a key without them is InvalidPrivateKey
     fn decode(&self, info: &PrivateKeyInfo) -> Option<Result<Box<dyn Params>, AlgoAsn1Error>> {
         if ID_DSA != *info.algorithm().algorithm() {
             return None;
@@ -69,7 +71,7 @@ fn key(info: &PrivateKeyInfo) -> Result<Box<dyn Params>, AlgoAsn1Error> {
     if x.is_negative() {
         return Err(AlgoAsn1Error::InvalidPrivateKey);
     }
-    // 與 SPKI 那一列相同，都補到 p 的寬度
+    // Padded to the width of p, as the SPKI row does
     let width = parameter.p().as_unsigned_bytes()?.len();
     let params = DsaParameters::new(
         padded(parameter.p(), width)?,

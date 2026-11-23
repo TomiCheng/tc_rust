@@ -3,7 +3,7 @@ use tc_asn1_pkcs::PrivateKeyInfo;
 
 use crate::AlgoAsn1Error;
 
-pub trait PrivateKeyInfoProvider: Send + Sync {
+pub trait Pkcs8Provider: Send + Sync {
     // The first row that knows the key decides; UnknownPrivateKey when none does
     fn encode(&self, key: &dyn Params) -> Result<PrivateKeyInfo, AlgoAsn1Error>;
 
