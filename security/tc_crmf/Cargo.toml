@@ -1,0 +1,19 @@
+[package]
+name = "tc_crmf"
+description = "CRMF certificate request messages, after Bouncy Castle C#'s Org.BouncyCastle.Crmf."
+version.workspace = true
+edition.workspace = true
+rust-version = "1.85"
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+rand = { version = "0.10", default-features = false, features = ["sys_rng"] }
+rand_core.workspace = true
+tc_asn1_cmp = { version = "0.1.0", path = "../../asn1/tc_asn1_cmp" }
+tc_asn1 = { version = "0.1.4", features = ["std"] }
+tc_asn1_x509 = "0.1.0"
+tc_asn1_x500 = "0.1.0"
+tc_x509 = { version = "0.1.0", path = "../tc_x509" }
+tc_algo = { version = "0.1.0", path = "../../crypto/tc_algo", features = ["sha", "macs"] }
+tc_zeroize = "0.1.0"

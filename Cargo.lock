@@ -1157,6 +1157,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0bcfe3e4732defe64408b706121575a0fdbd7011a3647566cd0a353daf64c165"
 
 [[package]]
+name = "tc_crmf"
+version = "0.1.0"
+dependencies = [
+ "rand",
+ "rand_core",
+ "tc_algo",
+ "tc_asn1",
+ "tc_asn1_cmp",
+ "tc_asn1_x500",
+ "tc_asn1_x509",
+ "tc_x509",
+ "tc_zeroize",
+]
+
+[[package]]
 name = "tc_cts_modes"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
