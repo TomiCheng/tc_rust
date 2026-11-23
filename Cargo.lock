@@ -1222,14 +1222,14 @@ dependencies = [
 [[package]]
 name = "tc_drbg"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7dd27b4aba8622119145155b21ce6cf0d997e946d6c5f72d0b84770c2741741d"
 dependencies = [
- "rand",
  "rand_core",
- "tc_aes",
  "tc_block_cipher",
  "tc_digest",
  "tc_macs",
- "tc_sha",
+ "tc_zeroize",
 ]
 
 [[package]]

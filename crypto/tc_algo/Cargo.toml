@@ -185,7 +185,7 @@ tc_slh_dsa = { version = "0.1.0", path = "../../signer/tc_slh_dsa", optional = t
 tc_ies = { version = "0.1.0", path = "../../ies/tc_ies", optional = true }
 
 # DRBG
-tc_drbg = { version = "0.1.0", path = "../tc_drbg", optional = true }
+tc_drbg = { version = "0.1.0", optional = true }
 
 # KEM
 tc_kem = { version = "0.1.0", path = "../tc_kem" }

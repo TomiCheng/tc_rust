@@ -93,5 +93,5 @@ about what it gives after.
   over.
 - **A personalization string tells instances apart**, such as one per application, and need not be
   secret. It is not a seed: the entropy still comes from the random source.
-- The state is secret, as it decides every byte to come, but the generator under it, `tc_drbg`, does
-  not promise to wipe it from memory.
+- The state is secret, as it decides every byte to come; the generator under it, `tc_drbg`, wipes
+  it on drop.

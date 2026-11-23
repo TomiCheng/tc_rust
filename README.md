@@ -163,7 +163,6 @@ and the crates that remain here depend on the published version.
 - [`crypto/tc_ec_key`](crypto/tc_ec_key),
   [`crypto/agreement`](crypto/agreement) and [`signer`](signer) — EC keys,
   key agreement (ECDH) and signers (RSA, DSA, ECDSA)
-- [`crypto/tc_drbg`](crypto/tc_drbg) — deterministic random bit generators
 - [`asn1`](asn1) — PKCS, X.509, X9 and CMS structures over the published
   `tc_asn1`; [`x509`](x509) has started on certificates over them
 - [`kdf`](kdf) — key derivation (KDF1/2, the concatenation KDF, HKDF and
