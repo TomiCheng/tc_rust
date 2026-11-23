@@ -11,6 +11,8 @@ mod traits;
 
 pub use default_pgp_operator_builder::DefaultPgpOperatorBuilder;
 pub use default_pgp_operator_context::DefaultPgpOperatorContext;
+pub use operator::detached_signature::PgpDetachedSignatureProvider;
+pub use operator::encrypted_message::PgpEncryptedMessageProvider;
 pub use operator::generate::{PgpKeyPairGenerator, PgpKeyPairGeneratorProvider};
 pub use pgp_key_pair::PgpKeyPair;
 pub use pgp_private_key::PgpPrivateKey;

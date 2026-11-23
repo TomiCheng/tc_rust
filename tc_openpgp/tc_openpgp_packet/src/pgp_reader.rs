@@ -12,7 +12,9 @@ impl<R: Read> PgpReader<R> {
         Self { inner }
     }
 
-    pub(crate) fn read_body(
+    /// Reads the next header and returns a reader bounded by its packet body.
+    /// Consume the body to EOF before reading another header.
+    pub fn read_body(
         &mut self,
         config: &DecodingConfig,
     ) -> io::Result<(PacketHeader, impl Read + '_)> {

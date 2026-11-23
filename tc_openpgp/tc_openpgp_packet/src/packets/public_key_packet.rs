@@ -112,8 +112,8 @@ impl PgpRead for PublicKeyPacket {
     }
 }
 
-impl PgpWrite for PublicKeyPacket {
-    fn encode(&self, writer: &mut dyn Write, config: &EncodingConfig) -> io::Result<u64> {
+impl PublicKeyPacket {
+    fn body_lengths(&self) -> io::Result<(u32, u32)> {
         let prefix_len = match self.version {
             PublicKeyVersion::V4 => 6,
             PublicKeyVersion::V6 => 10,
@@ -127,21 +127,52 @@ impl PgpWrite for PublicKeyPacket {
                     "public key packet body is too long",
                 )
             })?;
-        let body_len = material_len + prefix_len;
+        Ok((material_len, material_len + prefix_len))
+    }
 
-        let mut writer = PgpWriter::new(writer);
-        let (mut body, header_len) = writer.write_body_with_format(
-            PacketTag::PublicKey,
-            BodyLength::Fixed(body_len),
-            config.header_format,
-        )?;
+    /// Writes the versioned prefix and key body used to calculate fingerprints.
+    pub fn write_fingerprint_input(&self, output: &mut dyn Write) -> io::Result<()> {
+        let (material_len, body_len) = self.body_lengths()?;
+        match self.version {
+            PublicKeyVersion::V4 => {
+                let len = u16::try_from(body_len).map_err(|_| {
+                    io::Error::new(
+                        io::ErrorKind::InvalidInput,
+                        "v4 public key body is too long",
+                    )
+                })?;
+                output.write_all(&[0x99])?;
+                output.write_all(&len.to_be_bytes())?;
+            }
+            PublicKeyVersion::V6 => {
+                output.write_all(&[0x9b])?;
+                output.write_all(&body_len.to_be_bytes())?;
+            }
+        }
+        self.write_body(output, material_len)
+    }
+
+    fn write_body(&self, body: &mut dyn Write, material_len: u32) -> io::Result<()> {
         body.write_all(&[self.version as u8])?;
         body.write_all(&self.creation_time.to_be_bytes())?;
         body.write_all(&[self.algorithm.into()])?;
         if self.version == PublicKeyVersion::V6 {
             body.write_all(&material_len.to_be_bytes())?;
         }
-        body.write_all(&self.key_material)?;
+        body.write_all(&self.key_material)
+    }
+}
+
+impl PgpWrite for PublicKeyPacket {
+    fn encode(&self, writer: &mut dyn Write, config: &EncodingConfig) -> io::Result<u64> {
+        let (material_len, body_len) = self.body_lengths()?;
+        let mut writer = PgpWriter::new(writer);
+        let (mut body, header_len) = writer.write_body_with_format(
+            PacketTag::PublicKey,
+            BodyLength::Fixed(body_len),
+            config.header_format,
+        )?;
+        self.write_body(&mut body, material_len)?;
         body.finish()?;
         Ok(header_len + u64::from(body_len))
     }

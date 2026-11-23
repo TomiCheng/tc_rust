@@ -21,14 +21,7 @@ pub(crate) struct DefaultPgpPublicKeySerializer;
 
 impl PgpPublicKeySerializer for DefaultPgpPublicKeySerializer {
     fn encode_to(&self, key: &PgpPublicKey, out: &mut dyn Write) -> io::Result<()> {
-        let key_material = encode_key_material(key.algorithm(), key.key())?;
-        PublicKeyPacket::new(
-            key.version(),
-            key.creation_time(),
-            key.algorithm(),
-            key_material,
-        )
-        .encode(out, &EncodingConfig::default())?;
+        public_key_packet(key)?.encode(out, &EncodingConfig::default())?;
         Ok(())
     }
 
@@ -48,6 +41,15 @@ impl PgpPublicKeySerializer for DefaultPgpPublicKeySerializer {
             packet.creation_time(),
         ))
     }
+}
+
+pub(super) fn public_key_packet(key: &PgpPublicKey) -> io::Result<PublicKeyPacket> {
+    Ok(PublicKeyPacket::new(
+        key.version(),
+        key.creation_time(),
+        key.algorithm(),
+        encode_key_material(key.algorithm(), key.key())?,
+    ))
 }
 
 fn encode_key_material(tag: PublicKeyAlgorithmTag, _key: &dyn Params) -> io::Result<Vec<u8>> {

@@ -5,6 +5,10 @@ use tc_algo::{Algo, AlgoBuilder, DefaultAlgoBuilder};
 use tc_openpgp_packet::PublicKeyAlgorithmTag;
 
 use crate::default_pgp_operator::DefaultPgpOperator;
+#[cfg(feature = "cfrg-curves")]
+use crate::operator::detached_signature::Ed25519DetachedSignatures;
+#[cfg(feature = "encryption")]
+use crate::operator::encrypted_message::X25519EncryptedMessages;
 use crate::operator::generate::{
     BUILT_IN, DefaultPgpKeyPairGeneratorProvider, EmptyPgpKeyPairGeneratorProvider,
     GeneratorFactory, PgpKeyPairGenerator, PgpKeyPairGeneratorProvider,
@@ -53,18 +57,24 @@ impl DefaultPgpOperatorBuilder {
 
 impl PgpOperatorBuilder for DefaultPgpOperatorBuilder {
     fn build(&self) -> Box<dyn PgpOperator> {
+        let algo = self
+            .algo
+            .clone()
+            .unwrap_or_else(|| DefaultAlgoBuilder::default().build().into());
         let generators: Box<dyn PgpKeyPairGeneratorProvider> = if self.generators.is_empty() {
             Box::new(EmptyPgpKeyPairGeneratorProvider)
         } else {
-            let algo = self
-                .algo
-                .clone()
-                .unwrap_or_else(|| DefaultAlgoBuilder::default().build().into());
             Box::new(DefaultPgpKeyPairGeneratorProvider {
-                context: DefaultPgpOperatorContext::new(algo),
+                context: DefaultPgpOperatorContext::new(algo.clone()),
                 generators: self.generators.clone(),
             })
         };
-        Box::new(DefaultPgpOperator { generators })
+        Box::new(DefaultPgpOperator {
+            generators,
+            #[cfg(feature = "cfrg-curves")]
+            signatures: Ed25519DetachedSignatures { algo: algo.clone() },
+            #[cfg(feature = "encryption")]
+            encrypted_messages: X25519EncryptedMessages { algo },
+        })
     }
 }

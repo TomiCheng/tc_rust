@@ -8,14 +8,18 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
+rand = { version = "0.10", default-features = false, features = ["sys_rng"], optional = true }
+rand_core = { workspace = true, optional = true }
 tc_asym_cipher = "0.2.0"
 tc_bigint = { version = "0.1.0", optional = true }
+tc_zeroize = { version = "0.1.0", optional = true }
 tc_rsa = { version = "0.2.0", optional = true }
 tc_algo = { version = "0.1.0", path = "../../crypto/tc_algo" }
 tc_openpgp_packet = { version = "0.1.0", path = "../tc_openpgp_packet" }
 
 [features]
-cfrg-curves = ["tc_algo/cfrg-curves"]
+cfrg-curves = ["tc_algo/cfrg-curves", "tc_algo/sha", "dep:rand", "dep:rand_core"]
+encryption = ["cfrg-curves", "tc_algo/aes", "tc_algo/key-wrap", "tc_algo/kdf", "dep:tc_zeroize"]
 rsa = ["tc_algo/rsa", "dep:tc_bigint", "dep:tc_rsa"]
 
 [[test]]
