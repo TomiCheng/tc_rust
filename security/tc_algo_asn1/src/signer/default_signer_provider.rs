@@ -4,7 +4,7 @@ use tc_algo::Algo;
 use tc_asn1_x509::alg::AlgorithmIdentifier;
 
 use crate::AlgoAsn1Error;
-use crate::signer::{DefaultSigner, Signer, SignerEntry, SignerProvider};
+use crate::signer::{Asn1Signer, DefaultAsn1Signer, SignerEntry, SignerProvider};
 
 // The rows in the order they are tried, the last registered first, and the algorithms the signers
 // come from
@@ -22,14 +22,14 @@ impl DefaultSignerProvider {
         &self,
         row: &dyn SignerEntry,
         algorithm: AlgorithmIdentifier,
-    ) -> Result<Box<dyn Signer>, AlgoAsn1Error> {
+    ) -> Result<Box<dyn Asn1Signer>, AlgoAsn1Error> {
         let inner = self.algo.signer().get_by_name(row.name())?;
-        Ok(Box::new(DefaultSigner::new(algorithm, inner)))
+        Ok(Box::new(DefaultAsn1Signer::new(algorithm, inner)))
     }
 }
 
 impl SignerProvider for DefaultSignerProvider {
-    fn get_by_name(&self, name: &str) -> Result<Box<dyn Signer>, AlgoAsn1Error> {
+    fn get_by_name(&self, name: &str) -> Result<Box<dyn Asn1Signer>, AlgoAsn1Error> {
         let row = self
             .rows
             .iter()
@@ -44,7 +44,10 @@ impl SignerProvider for DefaultSignerProvider {
         self.signer(row.as_ref(), row.algorithm().clone())
     }
 
-    fn get_by_id(&self, algorithm: &AlgorithmIdentifier) -> Result<Box<dyn Signer>, AlgoAsn1Error> {
+    fn get_by_id(
+        &self,
+        algorithm: &AlgorithmIdentifier,
+    ) -> Result<Box<dyn Asn1Signer>, AlgoAsn1Error> {
         let row = self
             .rows
             .iter()

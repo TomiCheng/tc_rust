@@ -772,6 +772,7 @@ dependencies = [
  "tc_fp_curve",
  "tc_fp_custom",
  "tc_rsa",
+ "tc_signer",
  "tc_zeroize",
 ]
 

@@ -25,20 +25,21 @@
 //! let mut verifier = asn1.signer().get_by_id(&algorithm)?;
 //! verifier.init(pair.public())?;
 //! verifier.update(b"to be signed")?;
-//! assert!(verifier.verify(&signature)?);
+//! assert!(verifier.verify_signature(&signature)?);
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 
 mod algo;
-mod default_signer;
+mod asn1_signer;
+mod default_asn1_signer;
 mod default_signer_provider;
 mod signer_entry;
 mod signer_provider;
-mod signer_trait;
 
 pub(crate) use algo::{BUILT_IN, CreateRows};
-pub(crate) use default_signer::DefaultSigner;
+pub use asn1_signer::Asn1Signer;
+pub(crate) use default_asn1_signer::DefaultAsn1Signer;
 pub(crate) use default_signer_provider::DefaultSignerProvider;
 pub use signer_entry::SignerEntry;
 pub use signer_provider::SignerProvider;
-pub use signer_trait::Signer;
+pub use tc_signer::SignerInit;

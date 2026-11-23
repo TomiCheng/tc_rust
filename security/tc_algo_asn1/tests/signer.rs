@@ -125,7 +125,7 @@ fn the_certificates_openssl_signed_with_each_algorithm_verify() {
         verifier.init(key.as_ref()).unwrap();
         verifier.update(certificate.tbs_raw()).unwrap();
         let signature = certificate.signature_value().as_bytes();
-        assert!(verifier.verify(signature).unwrap(), "{name}");
+        assert!(verifier.verify_signature(signature).unwrap(), "{name}");
     }
 }
 
@@ -154,10 +154,10 @@ fn an_sm2_signature_made_under_its_row_verifies_and_a_changed_message_does_not()
     let mut verifier = asn1.signer().get_by_id(signer.algorithm()).unwrap();
     verifier.init(pair.public()).unwrap();
     verifier.update(b"message").unwrap();
-    assert!(verifier.verify(&signature).unwrap());
+    assert!(verifier.verify_signature(&signature).unwrap());
 
     let mut verifier = asn1.signer().get_by_id(signer.algorithm()).unwrap();
     verifier.init(pair.public()).unwrap();
     verifier.update(b"massage").unwrap();
-    assert!(!verifier.verify(&signature).unwrap());
+    assert!(!verifier.verify_signature(&signature).unwrap());
 }
