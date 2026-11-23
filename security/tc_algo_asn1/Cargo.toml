@@ -8,7 +8,15 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
-tc_algo = { version = "0.1.0", path = "../../crypto/tc_algo" }
+tc_algo = { version = "0.1.0", path = "../../crypto/tc_algo", features = ["rsa", "ecdsa", "dsa", "sha", "fp-custom", "fp-curve", "f2m-custom", "f2m-curve", "cfrg-curves"] }
 tc_asn1 = { version = "0.1.4", features = ["std"] }
 tc_asn1_pkcs = { version = "0.1.0", path = "../../asn1/tc_asn1_pkcs" }
 tc_asn1_x509 = "0.1.0"
+tc_asym_cipher = "0.2.0"
+tc_bigint = "0.1.0"
+tc_ec_core = "0.1.0"
+tc_f2m_curve = { version = "0.1.1", features = ["small-curves"] }
+tc_f2m_custom = { version = "0.1.0", features = ["small-curves"] }
+tc_fp_curve = { version = "0.1.1", features = ["small-curves"] }
+tc_fp_custom = { version = "0.1.0", features = ["small-curves"] }
+tc_rsa = "0.2.0"

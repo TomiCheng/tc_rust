@@ -4,8 +4,11 @@
 mod default_algo_asn1;
 mod default_algo_asn1_builder;
 mod default_algo_asn1_context;
+mod error;
+pub mod spki;
 mod traits;
 
 pub use default_algo_asn1_builder::DefaultAlgoAsn1Builder;
 pub use default_algo_asn1_context::DefaultAlgoAsn1Context;
+pub use error::AlgoAsn1Error;
 pub use traits::{AlgoAsn1, AlgoAsn1Builder};

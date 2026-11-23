@@ -763,6 +763,14 @@ dependencies = [
  "tc_asn1",
  "tc_asn1_pkcs",
  "tc_asn1_x509",
+ "tc_asym_cipher",
+ "tc_bigint",
+ "tc_ec_core",
+ "tc_f2m_curve",
+ "tc_f2m_custom",
+ "tc_fp_curve",
+ "tc_fp_custom",
+ "tc_rsa",
 ]
 
 [[package]]
