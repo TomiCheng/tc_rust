@@ -99,6 +99,17 @@ impl LiteralData {
 
 impl PgpRead for LiteralData {
     fn decode(input: &mut dyn Read, config: &DecodingConfig) -> io::Result<Self> {
+        Self::decode_with_data(input, config, |_| Ok(()))
+    }
+}
+
+impl LiteralData {
+    /// Observes the payload as it is read, without including the packet metadata.
+    pub fn decode_with_data(
+        input: &mut dyn Read,
+        config: &DecodingConfig,
+        mut observe: impl FnMut(&[u8]) -> io::Result<()>,
+    ) -> io::Result<Self> {
         let mut reader = PgpReader::new(input);
         let (header, mut body) = reader.read_body(config)?;
         if header.tag() != PacketTag::LiteralData {
@@ -116,7 +127,17 @@ impl PgpRead for LiteralData {
         let mut timestamp = [0; 4];
         body.read_exact(&mut timestamp)?;
         let mut data = Vec::new();
-        body.read_to_end(&mut data)?;
+        let mut chunk = [0; 8192];
+        loop {
+            let len = match body.read(&mut chunk) {
+                Ok(0) => break,
+                Ok(len) => len,
+                Err(error) if error.kind() == io::ErrorKind::Interrupted => continue,
+                Err(error) => return Err(error),
+            };
+            observe(&chunk[..len])?;
+            data.extend_from_slice(&chunk[..len]);
+        }
 
         Ok(Self {
             format: LiteralDataFormat::from(format),

@@ -23,7 +23,7 @@ pub(crate) struct DefaultDetachedSignatures {
 
 #[cfg(feature = "cfrg-curves")]
 impl DefaultDetachedSignatures {
-    fn ed25519(&self) -> Ed25519DetachedSignatures {
+    pub(super) fn ed25519(&self) -> Ed25519DetachedSignatures {
         Ed25519DetachedSignatures {
             algo: self.algo.clone(),
         }
@@ -112,8 +112,7 @@ fn read_document(
     mut update: impl FnMut(&[u8]) -> io::Result<()>,
 ) -> io::Result<()> {
     let mut bytes = [0; 4096];
-    let mut canonical = Vec::new();
-    let mut previous_cr = false;
+    let mut canonicalizer = DocumentCanonicalizer::default();
     loop {
         let count = match input.read(&mut bytes) {
             Ok(0) => return Ok(()),
@@ -121,19 +120,35 @@ fn read_document(
             Err(error) if error.kind() == io::ErrorKind::Interrupted => continue,
             Err(error) => return Err(error),
         };
-        let mut chunk = &bytes[..count];
-        if text {
-            canonical.clear();
-            for &byte in chunk {
-                match byte {
-                    b'\n' if previous_cr => {}
-                    b'\r' | b'\n' => canonical.extend_from_slice(b"\r\n"),
-                    _ => canonical.push(byte),
-                }
-                previous_cr = byte == b'\r';
-            }
-            chunk = &canonical;
-        }
+        let bytes = &bytes[..count];
+        let chunk = if text {
+            canonicalizer.convert(bytes)
+        } else {
+            bytes
+        };
         update(chunk)?;
+    }
+}
+
+#[cfg(any(feature = "cfrg-curves", feature = "rsa"))]
+#[derive(Default)]
+pub(super) struct DocumentCanonicalizer {
+    bytes: Vec<u8>,
+    previous_cr: bool,
+}
+
+#[cfg(any(feature = "cfrg-curves", feature = "rsa"))]
+impl DocumentCanonicalizer {
+    pub(super) fn convert(&mut self, chunk: &[u8]) -> &[u8] {
+        self.bytes.clear();
+        for &byte in chunk {
+            match byte {
+                b'\n' if self.previous_cr => {}
+                b'\r' | b'\n' => self.bytes.extend_from_slice(b"\r\n"),
+                _ => self.bytes.push(byte),
+            }
+            self.previous_cr = byte == b'\r';
+        }
+        &self.bytes
     }
 }

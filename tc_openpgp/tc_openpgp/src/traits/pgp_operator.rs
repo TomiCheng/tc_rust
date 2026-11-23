@@ -6,6 +6,7 @@ use crate::operator::encrypted_message::{
     EmptyEncryptedMessageProvider, PgpEncryptedMessageProvider,
 };
 use crate::operator::generate::{EmptyPgpKeyPairGeneratorProvider, PgpKeyPairGeneratorProvider};
+use crate::operator::inline_signature::{EmptyInlineSignatureProvider, PgpInlineSignatureProvider};
 
 use crate::operator::secret_key::{EmptySecretKeyProvider, PgpSecretKeyProvider};
 use crate::operator::serializer::{EmptyPgpPublicKeySerializer, PgpPublicKeySerializer};
@@ -19,6 +20,10 @@ pub trait PgpOperator: Send + Sync {
     fn detached_signature(&self) -> &dyn PgpDetachedSignatureProvider {
         &EmptyDetachedSignatureProvider
     }
+    fn inline_signature(&self) -> &dyn PgpInlineSignatureProvider {
+        &EmptyInlineSignatureProvider
+    }
+
     fn encrypted_message(&self) -> &dyn PgpEncryptedMessageProvider {
         &EmptyEncryptedMessageProvider
     }

@@ -1,3 +1,5 @@
+#[cfg(feature = "cfrg-curves")]
+use crate::PgpInlineSignatureProvider;
 use crate::PgpOperator;
 #[cfg(feature = "cfrg-curves")]
 use crate::operator::certificate::{PgpCertificateProvider, V6Certificates};
@@ -25,6 +27,11 @@ pub(crate) struct DefaultPgpOperator {
 }
 
 impl PgpOperator for DefaultPgpOperator {
+    #[cfg(feature = "cfrg-curves")]
+    fn inline_signature(&self) -> &dyn PgpInlineSignatureProvider {
+        &self.signatures
+    }
+
     #[cfg(any(feature = "cfrg-curves", feature = "rsa"))]
     fn detached_signature(&self) -> &dyn PgpDetachedSignatureProvider {
         &self.signatures

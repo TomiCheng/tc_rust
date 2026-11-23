@@ -7,6 +7,7 @@ use rand::rngs::SysRng;
 use rand_core::TryRng;
 use tc_algo::{
     Algo, AlgoError, Params,
+    digest::Digest,
     params::key::{Ed25519PrivateKey, Ed25519PublicKey},
 };
 use tc_openpgp_packet::{
@@ -94,6 +95,30 @@ impl Ed25519DetachedSignatures {
         signature: &SignaturePacket,
         text: bool,
     ) -> io::Result<bool> {
+        let Some(public) = self.verification_key(key, signature)? else {
+            return Ok(false);
+        };
+        let hash = self.hash_data(document, signature, text)?;
+        self.verify_hash(public, signature, &hash)
+    }
+
+    pub(in crate::operator) fn verify_prehashed(
+        &self,
+        key: &PgpPublicKey,
+        signature: &SignaturePacket,
+        hash: &[u8],
+    ) -> io::Result<bool> {
+        let Some(public) = self.verification_key(key, signature)? else {
+            return Ok(false);
+        };
+        self.verify_hash(public, signature, hash)
+    }
+
+    fn verification_key<'a>(
+        &self,
+        key: &'a PgpPublicKey,
+        signature: &SignaturePacket,
+    ) -> io::Result<Option<&'a Ed25519PublicKey>> {
         let public = public_key(key)?;
         if signature.version() != SignatureVersion::V6
             || signature.public_key_algorithm() != PublicKeyAlgorithmTag::Ed25519
@@ -107,15 +132,20 @@ impl Ed25519DetachedSignatures {
             return Err(invalid("incorrect Ed25519 signature length"));
         }
         let fingerprint = v6_fingerprint(&*self.algo, key)?;
-        if !verify_hashed_subpackets(signature, &fingerprint)? {
-            return Ok(false);
-        }
-        let hash = self.hash_data(document, signature, text)?;
-        if hash_prefix(&hash)? != signature.hash_prefix() {
+        Ok(verify_hashed_subpackets(signature, &fingerprint)?.then_some(public))
+    }
+
+    fn verify_hash(
+        &self,
+        public: &Ed25519PublicKey,
+        signature: &SignaturePacket,
+        hash: &[u8],
+    ) -> io::Result<bool> {
+        if hash_prefix(hash)? != signature.hash_prefix() {
             return Ok(false);
         }
         let mut verifier = self.signer(public)?;
-        verifier.update(&hash).map_err(crypto)?;
+        verifier.update(hash).map_err(crypto)?;
         verifier
             .verify_signature(signature.signature())
             .map_err(crypto)
@@ -132,7 +162,19 @@ impl Ed25519DetachedSignatures {
         packet: &SignaturePacket,
         text: bool,
     ) -> io::Result<Vec<u8>> {
-        let (name, salt_len, digest_len) = match packet.hash_algorithm() {
+        let (mut digest, digest_len) = self.start_hash(packet.hash_algorithm(), packet.salt())?;
+        read_document(document, text, |bytes| {
+            digest.try_update(bytes).map_err(crypto)
+        })?;
+        self.finish_hash(digest, digest_len, packet)
+    }
+
+    pub(in crate::operator) fn start_hash(
+        &self,
+        algorithm: HashAlgorithmTag,
+        salt: &[u8],
+    ) -> io::Result<(Box<dyn Digest>, usize)> {
+        let (name, salt_len, digest_len) = match algorithm {
             HashAlgorithmTag::Sha256 => ("SHA-256", 16, 32),
             HashAlgorithmTag::Sha384 => ("SHA-384", 24, 48),
             HashAlgorithmTag::Sha512 => ("SHA-512", 32, 64),
@@ -143,14 +185,20 @@ impl Ed25519DetachedSignatures {
                 ));
             }
         };
-        if packet.salt().len() != salt_len {
+        if salt.len() != salt_len {
             return Err(invalid("incorrect v6 signature salt length"));
         }
         let mut digest = self.algo.digest().get_by_name(name).map_err(crypto)?;
-        digest.try_update(packet.salt()).map_err(crypto)?;
-        read_document(document, text, |bytes| {
-            digest.try_update(bytes).map_err(crypto)
-        })?;
+        digest.try_update(salt).map_err(crypto)?;
+        Ok((digest, digest_len))
+    }
+
+    pub(in crate::operator) fn finish_hash(
+        &self,
+        mut digest: Box<dyn Digest>,
+        digest_len: usize,
+        packet: &SignaturePacket,
+    ) -> io::Result<Vec<u8>> {
         let mut suffix = Vec::new();
         packet.write_hash_suffix(&mut suffix)?;
         digest.try_update(&suffix).map_err(crypto)?;

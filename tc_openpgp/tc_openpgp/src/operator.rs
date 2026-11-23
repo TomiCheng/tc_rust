@@ -2,6 +2,7 @@ pub mod certificate;
 pub mod detached_signature;
 pub mod encrypted_message;
 pub mod generate;
+pub mod inline_signature;
 #[cfg(any(feature = "encryption", feature = "secret-key"))]
 mod kdf;
 #[cfg(feature = "rsa")]

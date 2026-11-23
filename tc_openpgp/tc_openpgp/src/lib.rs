@@ -18,6 +18,7 @@ pub use operator::certificate::{
 pub use operator::detached_signature::PgpDetachedSignatureProvider;
 pub use operator::encrypted_message::PgpEncryptedMessageProvider;
 pub use operator::generate::{PgpKeyPairGenerator, PgpKeyPairGeneratorProvider};
+pub use operator::inline_signature::PgpInlineSignatureProvider;
 pub use operator::secret_key::{
     PgpRsaSecretKeys, PgpSecretKeyProvider, PgpUnlockedSecretKey, SecretKeyLimits,
 };
