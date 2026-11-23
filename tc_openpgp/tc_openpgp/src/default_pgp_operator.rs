@@ -5,8 +5,8 @@ use crate::operator::certificate::{PgpCertificateProvider, V6Certificates};
 use crate::operator::detached_signature::{
     DefaultDetachedSignatures, PgpDetachedSignatureProvider,
 };
-#[cfg(feature = "encryption")]
-use crate::operator::encrypted_message::{PgpEncryptedMessageProvider, X25519EncryptedMessages};
+#[cfg(any(feature = "encryption", feature = "legacy-encryption"))]
+use crate::operator::encrypted_message::{DefaultEncryptedMessages, PgpEncryptedMessageProvider};
 use crate::operator::generate::PgpKeyPairGeneratorProvider;
 #[cfg(feature = "secret-key")]
 use crate::operator::secret_key::PgpSecretKeyProvider;
@@ -15,8 +15,8 @@ use crate::operator::serializer::{DefaultPgpPublicKeySerializer, PgpPublicKeySer
 pub(crate) struct DefaultPgpOperator {
     #[cfg(any(feature = "cfrg-curves", feature = "rsa"))]
     pub(crate) signatures: DefaultDetachedSignatures,
-    #[cfg(feature = "encryption")]
-    pub(crate) encrypted_messages: X25519EncryptedMessages,
+    #[cfg(any(feature = "encryption", feature = "legacy-encryption"))]
+    pub(crate) encrypted_messages: DefaultEncryptedMessages,
     #[cfg(feature = "cfrg-curves")]
     pub(crate) certificates: V6Certificates,
     pub(crate) generators: Box<dyn PgpKeyPairGeneratorProvider>,
@@ -27,7 +27,7 @@ impl PgpOperator for DefaultPgpOperator {
     fn detached_signature(&self) -> &dyn PgpDetachedSignatureProvider {
         &self.signatures
     }
-    #[cfg(feature = "encryption")]
+    #[cfg(any(feature = "encryption", feature = "legacy-encryption"))]
     fn encrypted_message(&self) -> &dyn PgpEncryptedMessageProvider {
         &self.encrypted_messages
     }

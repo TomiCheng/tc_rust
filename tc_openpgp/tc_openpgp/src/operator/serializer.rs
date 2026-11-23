@@ -31,6 +31,24 @@ pub(super) fn v6_fingerprint(algo: &dyn tc_algo::Algo, key: &PgpPublicKey) -> io
         .map_err(|_| io::Error::other("invalid SHA-256 digest length"))
 }
 
+#[cfg(feature = "rsa")]
+pub(super) fn v4_fingerprint(algo: &dyn tc_algo::Algo, key: &PgpPublicKey) -> io::Result<[u8; 20]> {
+    let packet = public_key_packet(key)?;
+    if packet.version() != tc_openpgp_packet::PublicKeyVersion::V4 {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "expected a v4 public key",
+        ));
+    }
+    let mut input = Vec::new();
+    packet.write_fingerprint_input(&mut input)?;
+    algo.digest()
+        .calculate_by_name("SHA-1", &input)
+        .map_err(io::Error::other)?
+        .try_into()
+        .map_err(|_| io::Error::other("invalid v4 fingerprint length"))
+}
+
 /// Encodes and decodes one binary OpenPGP Public Key packet (tag 6).
 pub trait PgpPublicKeySerializer: Send + Sync {
     /// Writes one complete public key packet to the output.

@@ -12,7 +12,7 @@ use tc_openpgp_packet::{
 use super::{document_is_text, read_document};
 use crate::{
     PgpPublicKey,
-    operator::{rsa_mpi::read_mpi, serializer::public_key_packet, signature_subpacket::Subpackets},
+    operator::{rsa_mpi::read_mpi, serializer::v4_fingerprint, signature_subpacket::Subpackets},
 };
 
 pub(super) fn verify(
@@ -137,15 +137,7 @@ fn verify_hashed_subpackets(
     }
 
     // SHA-1 is only used for the v4 key fingerprint, never for RSA verification.
-    let mut input = Vec::new();
-    public_key_packet(key)?.write_fingerprint_input(&mut input)?;
-    let fingerprint = algo
-        .digest()
-        .calculate_by_name("SHA-1", &input)
-        .map_err(io::Error::other)?;
-    if fingerprint.len() != 20 {
-        return Err(io::Error::other("invalid v4 fingerprint length"));
-    }
+    let fingerprint = v4_fingerprint(algo, key)?;
     Ok(issuer.is_none_or(|expected| expected == fingerprint)
         && key_id.is_none_or(|expected| expected == &fingerprint[12..]))
 }

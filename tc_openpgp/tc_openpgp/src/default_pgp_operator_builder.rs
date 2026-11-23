@@ -11,8 +11,8 @@ use crate::operator::certificate::V6Certificates;
 use crate::operator::detached_signature::DefaultDetachedSignatures;
 #[cfg(feature = "cfrg-curves")]
 use crate::operator::detached_signature::Ed25519DetachedSignatures;
-#[cfg(feature = "encryption")]
-use crate::operator::encrypted_message::X25519EncryptedMessages;
+#[cfg(any(feature = "encryption", feature = "legacy-encryption"))]
+use crate::operator::encrypted_message::DefaultEncryptedMessages;
 use crate::operator::generate::{
     BUILT_IN, DefaultPgpKeyPairGeneratorProvider, EmptyPgpKeyPairGeneratorProvider,
     GeneratorFactory, PgpKeyPairGenerator, PgpKeyPairGeneratorProvider,
@@ -81,8 +81,8 @@ impl PgpOperatorBuilder for DefaultPgpOperatorBuilder {
             generators,
             #[cfg(any(feature = "cfrg-curves", feature = "rsa"))]
             signatures: DefaultDetachedSignatures { algo: algo.clone() },
-            #[cfg(feature = "encryption")]
-            encrypted_messages: X25519EncryptedMessages { algo },
+            #[cfg(any(feature = "encryption", feature = "legacy-encryption"))]
+            encrypted_messages: DefaultEncryptedMessages { algo },
         })
     }
 }
