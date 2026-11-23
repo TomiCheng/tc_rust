@@ -7,6 +7,7 @@ mod default_algo_asn1_context;
 mod der;
 mod error;
 pub mod pkcs8;
+pub mod signer;
 pub mod spki;
 mod traits;
 

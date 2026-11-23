@@ -1,15 +1,25 @@
 use crate::AlgoAsn1;
 use crate::pkcs8::{DefaultPkcs8Provider, Pkcs8Provider};
+use crate::signer::{DefaultSignerProvider, SignerProvider};
 use crate::spki::{DefaultSpkiProvider, SpkiProvider};
 
 pub(crate) struct DefaultAlgoAsn1 {
     spki: DefaultSpkiProvider,
     pkcs8: DefaultPkcs8Provider,
+    signer: DefaultSignerProvider,
 }
 
 impl DefaultAlgoAsn1 {
-    pub(crate) fn new(spki: DefaultSpkiProvider, pkcs8: DefaultPkcs8Provider) -> Self {
-        Self { spki, pkcs8 }
+    pub(crate) fn new(
+        spki: DefaultSpkiProvider,
+        pkcs8: DefaultPkcs8Provider,
+        signer: DefaultSignerProvider,
+    ) -> Self {
+        Self {
+            spki,
+            pkcs8,
+            signer,
+        }
     }
 }
 
@@ -20,5 +30,9 @@ impl AlgoAsn1 for DefaultAlgoAsn1 {
 
     fn pkcs8(&self) -> &dyn Pkcs8Provider {
         &self.pkcs8
+    }
+
+    fn signer(&self) -> &dyn SignerProvider {
+        &self.signer
     }
 }
