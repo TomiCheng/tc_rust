@@ -7,8 +7,13 @@
 pub trait DsaKCalculator<I> {
     /// Starts the k values of one signature: by the group order `n`, the private value `d`
     /// and `message`, usually a hash.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `n` is less than two.
     fn init(&mut self, n: &I, d: &I, message: &[u8]);
 
-    /// The next k in [1, n − 1]. Panics before `init`.
+    /// The next k in [1, n − 1]. Call again if signing rejected the previous k.
+    /// Panics before `init`.
     fn next_k(&mut self) -> I;
 }

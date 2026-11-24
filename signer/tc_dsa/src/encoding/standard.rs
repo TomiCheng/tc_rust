@@ -73,9 +73,13 @@ impl DsaEncoding for StandardDsaEncoding {
         order: &PaddedBigUint,
         encoding: &[u8],
     ) -> Result<(PaddedBigUint, PaddedBigUint), DsaEncodingError> {
-        let (used, sequence) =
-            Asn1SequenceOf::<Asn1Integer>::decode(encoding, &DecodingOptions::default())
-                .map_err(|_| DsaEncodingError::Malformed)?;
+        let max_len = self.max_encoding_size(order);
+        if encoding.len() > max_len {
+            return Err(DsaEncodingError::Malformed);
+        }
+        let options = DecodingOptions::new(1, max_len, 2);
+        let (used, sequence) = Asn1SequenceOf::<Asn1Integer>::decode(encoding, &options)
+            .map_err(|_| DsaEncodingError::Malformed)?;
         let [r, s] = sequence.elements() else {
             return Err(DsaEncodingError::Malformed);
         };

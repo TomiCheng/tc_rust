@@ -21,6 +21,7 @@ impl<R: CryptoRng> DsaKCalculator<PaddedBigUint> for RandomDsaKCalculator<R> {
     /// Keeps n; d and the message are not read. Variable time: only for public values, as
     /// n is.
     fn init(&mut self, n: &PaddedBigUint, _d: &PaddedBigUint, _message: &[u8]) {
+        assert!(n.bits() > 1, "the group order must exceed one");
         self.n = Some(n.clone());
     }
 

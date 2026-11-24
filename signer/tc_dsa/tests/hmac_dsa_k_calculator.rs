@@ -55,6 +55,34 @@ fn p_256_gives_the_k_of_rfc_6979_for_each_message_and_hash() {
     );
 }
 
+#[test]
+fn retry_and_reinitialization_follow_rfc_6979() {
+    let n = PaddedBigUint::from(251u8);
+    let d = PaddedBigUint::from(7u8);
+    let mut calculator = HMacDsaKCalculator::new(Sha256Digest::new());
+
+    // With an eight-bit order, bits2int takes the first HMAC output byte.
+    for _ in 0..2 {
+        calculator.init(&n, &d, &[0x42]);
+        for expected in [236u8, 89, 168] {
+            assert_eq!(calculator.next_k(), PaddedBigUint::from(expected));
+        }
+    }
+}
+
+#[test]
+fn init_rejects_empty_nonce_ranges() {
+    for order in [0u8, 1] {
+        assert!(
+            std::panic::catch_unwind(|| {
+                let mut calculator = HMacDsaKCalculator::new(Sha256Digest::new());
+                calculator.init(&PaddedBigUint::from(order), &PaddedBigUint::from(1u8), &[]);
+            })
+            .is_err()
+        );
+    }
+}
+
 // With n = 2, three in four candidates fall out of [1, n − 1] and are drawn again.
 #[test]
 fn a_k_out_of_range_is_drawn_again_until_one_falls_in_it() {

@@ -133,6 +133,23 @@ fn der_decoding_accepts_only_strict_der_with_values_below_the_order() {
 }
 
 #[test]
+fn der_decoding_bounds_the_sequence_before_converting_its_integers() {
+    // With order 7, the longest possible signature occupies eight bytes.
+    let oversized = bytes("300702020100020101");
+    assert_eq!(
+        StandardDsaEncoding.decode(&integer("07"), &oversized),
+        Err(DsaEncodingError::Malformed)
+    );
+
+    // Three small integers still fit the P-256 byte limit.
+    let extra_child = bytes("3009020101020102020103");
+    assert_eq!(
+        StandardDsaEncoding.decode(&integer(N), &extra_child),
+        Err(DsaEncodingError::Malformed)
+    );
+}
+
+#[test]
 fn plain_decoding_needs_twice_the_order_length_and_values_below_it() {
     let n = integer(N);
     let plain = [bytes(R), bytes(S)].concat();

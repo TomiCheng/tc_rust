@@ -15,6 +15,7 @@ pub struct HMacDsaKCalculator<D> {
     k: Zeroizing<Vec<u8>>,
     v: Zeroizing<Vec<u8>>,
     n: Option<PaddedBigUint>,
+    retry: bool,
 }
 
 impl<D: Digest> HMacDsaKCalculator<D> {
@@ -27,6 +28,7 @@ impl<D: Digest> HMacDsaKCalculator<D> {
             k: Zeroizing::new(vec![0; size]),
             v: Zeroizing::new(vec![0; size]),
             n: None,
+            retry: false,
         }
     }
 }
@@ -34,6 +36,7 @@ impl<D: Digest> HMacDsaKCalculator<D> {
 impl<D: Digest> DsaKCalculator<PaddedBigUint> for HMacDsaKCalculator<D> {
     /// RFC 6979 3.2 b–g. Constant time in d, as the digest is; n and the message are public.
     fn init(&mut self, n: &PaddedBigUint, d: &PaddedBigUint, message: &[u8]) {
+        assert!(n.bits() > 1, "the group order must exceed one");
         let size = byte_length(n);
         let mut m = bits_to_int(n, message);
         if m >= *n {
@@ -48,6 +51,7 @@ impl<D: Digest> DsaKCalculator<PaddedBigUint> for HMacDsaKCalculator<D> {
         rekey(&mut self.hmac, &mut self.k, &mut self.v, 0x00, &xm);
         rekey(&mut self.hmac, &mut self.k, &mut self.v, 0x01, &xm);
         self.n = Some(n.clone());
+        self.retry = false;
     }
 
     /// RFC 6979 3.2 h. Constant time in k, apart from how many are drawn, as in all drawing
@@ -58,6 +62,11 @@ impl<D: Digest> DsaKCalculator<PaddedBigUint> for HMacDsaKCalculator<D> {
         let mut t = Zeroizing::new(vec![0; byte_length(n)]);
         let block = self.v.len();
         loop {
+            // RFC 6979 §3.2(h)(3): retry after a range or signature rejection.
+            if self.retry {
+                rekey(&mut self.hmac, &mut self.k, &mut self.v, 0x00, &[]);
+            }
+            self.retry = true;
             for chunk in t.chunks_mut(block) {
                 step(&mut self.hmac, &mut self.v);
                 chunk.copy_from_slice(&self.v[..chunk.len()]);
@@ -67,7 +76,6 @@ impl<D: Digest> DsaKCalculator<PaddedBigUint> for HMacDsaKCalculator<D> {
                 return k;
             }
             k.zeroize();
-            rekey(&mut self.hmac, &mut self.k, &mut self.v, 0x00, &[]);
         }
     }
 }
