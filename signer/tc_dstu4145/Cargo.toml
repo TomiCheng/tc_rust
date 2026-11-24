@@ -11,7 +11,7 @@ repository.workspace = true
 rand_core = { workspace = true }
 tc_asym_cipher = "0.2.0"
 tc_bigint = { version = "0.1.0", features = ["alloc"] }
-tc_dsa = { version = "0.1.0", path = "../tc_dsa" }
+tc_dsa = "0.1.0"
 tc_ec_core = "0.1.0"
 tc_ec_key = { version = "0.1.0" }
 tc_f2m_curve = "0.1.0"

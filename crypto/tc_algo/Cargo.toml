@@ -169,7 +169,7 @@ tc_asn1_x509 = "0.1.0"
 tc_rsa = { version = "0.2.0", optional = true }
 tc_rsa_signer = { version = "0.1.0", path = "../../signer/tc_rsa_signer", optional = true }
 tc_signer = "0.1.0"
-tc_dsa = { version = "0.1.0", path = "../../signer/tc_dsa", optional = true }
+tc_dsa = { version = "0.1.0", optional = true }
 tc_ecdsa_v2 = { version = "0.1.0", path = "../../signer/tc_ecdsa_v2", optional = true }
 tc_ecnr = { version = "0.1.0", path = "../../signer/tc_ecnr", optional = true }
 tc_ecgost3410 = { version = "0.1.0", path = "../../signer/tc_ecgost3410", optional = true }

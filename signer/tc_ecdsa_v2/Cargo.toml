@@ -9,7 +9,7 @@ repository.workspace = true
 
 [dependencies]
 tc_bigint = { version = "0.1.0", features = ["alloc"] }
-tc_dsa = { version = "0.1.0", path = "../tc_dsa" }
+tc_dsa = "0.1.0"
 tc_ec_core = "0.1.0"
 tc_ec_key = { version = "0.1.0" }
 tc_modular = { version = "0.1.0", features = ["alloc"] }
