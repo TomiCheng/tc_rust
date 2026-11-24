@@ -7,6 +7,7 @@ mod default_algo_asn1_builder;
 mod default_algo_asn1_context;
 mod der;
 pub mod digest;
+mod elgamal_parameter;
 mod error;
 pub mod mac;
 pub mod pkcs8;

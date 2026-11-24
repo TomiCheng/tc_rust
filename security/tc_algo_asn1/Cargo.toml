@@ -8,7 +8,7 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
-tc_algo = { version = "0.1.0", path = "../../crypto/tc_algo", features = ["rsa", "ecdsa", "dsa", "sha", "fp-custom", "fp-curve", "f2m-custom", "f2m-curve", "cfrg-curves", "sm2", "sm3", "keccak", "md", "ripemd", "gost3411", "macs", "aes", "des", "camellia", "seed", "aria", "sm4", "chacha-aead"] }
+tc_algo = { version = "0.1.0", path = "../../crypto/tc_algo", features = ["rsa", "ecdsa", "dsa", "sha", "fp-custom", "fp-curve", "f2m-custom", "f2m-curve", "cfrg-curves", "sm2", "sm3", "keccak", "md", "ripemd", "gost3411", "macs", "aes", "des", "camellia", "seed", "aria", "sm4", "chacha-aead", "elgamal"] }
 tc_signer = "0.1.0"
 tc_digest = "0.1.1"
 tc_macs = "0.1.1"
@@ -30,3 +30,6 @@ tc_fp_curve = { version = "0.1.1", features = ["small-curves"] }
 tc_fp_custom = { version = "0.1.0", features = ["small-curves"] }
 tc_rsa = "0.2.0"
 tc_zeroize = "0.1.0"
+
+[dev-dependencies]
+tc_dh_key = "0.1.0"
