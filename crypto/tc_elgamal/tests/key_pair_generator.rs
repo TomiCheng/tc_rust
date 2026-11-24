@@ -1,4 +1,4 @@
-//! `ElGamalKeyPairGenerator` 與 `ElGamalParametersGenerator`：借用 DH 的產生器。
+//! `ElGamalKeyPairGenerator` 與 `ElGamalGroupGenerator`：借用 DH 的產生器。
 
 mod common;
 
@@ -10,8 +10,8 @@ use tc_asym_cipher::{
 use tc_bigint::{BigUint, PaddedBigUint};
 use tc_dh_key::{DhError, DhGroupGenerationParams};
 use tc_elgamal::{
-    ElGamalEngine, ElGamalError, ElGamalKeyGenerationParams, ElGamalKeyPairGenerator,
-    ElGamalParameters, ElGamalParametersGenerator,
+    ElGamalEngine, ElGamalError, ElGamalGroupGenerator, ElGamalKeyGenerationParams,
+    ElGamalKeyPairGenerator, ElGamalParameters,
 };
 use tc_modular::{ModPow, NonZero};
 
@@ -61,17 +61,16 @@ fn invalid_parameters_and_an_uninitialized_generator_are_errors() {
         Err(ElGamalError::InvalidParameters(DhError::InvalidModulus))
     );
     assert_eq!(
-        ElGamalKeyPairGenerator::new(&mut rng).generate_key_pair().err(),
+        ElGamalKeyPairGenerator::new(&mut rng)
+            .generate_key_pair()
+            .err(),
         Some(ElGamalError::NotInitialized)
     );
 }
 
 #[test]
 fn the_strength_is_l_or_the_bit_length_of_p() {
-    assert_eq!(
-        ElGamalKeyGenerationParams::new(group14()).strength(),
-        2048
-    );
+    assert_eq!(ElGamalKeyGenerationParams::new(group14()).strength(), 2048);
     assert_eq!(
         ElGamalKeyGenerationParams::new(group14().with_l(300)).strength(),
         300
@@ -79,12 +78,16 @@ fn the_strength_is_l_or_the_bit_length_of_p() {
 }
 
 #[test]
-fn generated_parameters_carry_a_round_trip() {
-    let mut parameters_generator = ElGamalParametersGenerator::new(rand::rng());
-    parameters_generator
-        .init(&DhGroupGenerationParams::new().with_size(192).with_certainty(20))
+fn a_generated_group_carries_a_round_trip() {
+    let mut group_generator = ElGamalGroupGenerator::new(rand::rng());
+    group_generator
+        .init(
+            &DhGroupGenerationParams::new()
+                .with_size(192)
+                .with_certainty(20),
+        )
         .unwrap();
-    let params = parameters_generator.generate_parameters().unwrap();
+    let params = group_generator.generate_group().unwrap();
     assert_eq!(params.p().bits(), 192);
     assert_eq!(big(params.g()), BigUint::from(2u8));
     assert_eq!(params.l(), 0);
@@ -115,15 +118,14 @@ fn generated_parameters_carry_a_round_trip() {
 }
 
 #[test]
-fn the_parameters_generator_checks_its_settings() {
+fn the_group_generator_checks_its_settings() {
     assert_eq!(
-        ElGamalParametersGenerator::new(rand::rng())
-            .init(&DhGroupGenerationParams::new().with_size(63)),
+        ElGamalGroupGenerator::new(rand::rng()).init(&DhGroupGenerationParams::new().with_size(63)),
         Err(ElGamalError::InvalidParameters(DhError::InvalidSize))
     );
     assert_eq!(
-        ElGamalParametersGenerator::new(rand::rng())
-            .generate_parameters()
+        ElGamalGroupGenerator::new(rand::rng())
+            .generate_group()
             .err(),
         Some(ElGamalError::InvalidParameters(DhError::NotInitialized))
     );

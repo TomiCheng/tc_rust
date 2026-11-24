@@ -13,13 +13,13 @@
 //! use tc_dh_key::DhGroupGenerationParams;
 //! use tc_elgamal::{
 //!     ElGamalEngine, ElGamalKeyGenerationParams, ElGamalKeyPairGenerator,
-//!     ElGamalParametersGenerator,
+//!     ElGamalGroupGenerator,
 //! };
 //!
 //! // 參數：2048 位元的安全質數 p 與 g = 2；很慢，可能要數十秒到數分鐘。
-//! let mut parameters_generator = ElGamalParametersGenerator::new(rand::rng());
-//! parameters_generator.init(&DhGroupGenerationParams::new())?;
-//! let params = parameters_generator.generate_parameters()?;
+//! let mut group_generator = ElGamalGroupGenerator::new(rand::rng());
+//! group_generator.init(&DhGroupGenerationParams::new())?;
+//! let params = group_generator.generate_group()?;
 //!
 //! // 收件人的金鑰對。
 //! let mut generator = ElGamalKeyPairGenerator::new(rand::rng());
@@ -46,14 +46,14 @@ extern crate alloc;
 
 mod engine;
 mod error;
+mod group_generator;
 mod key_pair_generator;
-mod parameters_generator;
 mod params;
 
 pub use engine::ElGamalEngine;
 pub use error::ElGamalError;
+pub use group_generator::ElGamalGroupGenerator;
 pub use key_pair_generator::ElGamalKeyPairGenerator;
-pub use parameters_generator::ElGamalParametersGenerator;
 pub use params::{
     ElGamalKeyGenerationParams, ElGamalParameters, ElGamalPrivateKey, ElGamalPublicKey,
 };

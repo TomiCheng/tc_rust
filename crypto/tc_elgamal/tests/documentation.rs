@@ -66,8 +66,8 @@ fn every_public_method_and_helper_states_constant_or_variable_time() {
             3,
         ),
         (
-            "parameters_generator.rs",
-            include_str!("../src/parameters_generator.rs"),
+            "group_generator.rs",
+            include_str!("../src/group_generator.rs"),
             3,
         ),
         (
