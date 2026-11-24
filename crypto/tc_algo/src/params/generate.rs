@@ -42,7 +42,7 @@ pub use tc_dh_key::DhParameters;
 #[cfg(any(feature = "dh", feature = "elgamal"))]
 pub use tc_dh_key::standard_groups as dh_groups;
 #[cfg(feature = "dsa")]
-pub use tc_dsa_key::DsaParameters;
+pub use tc_dsa_signer::DsaParameters;
 #[cfg(feature = "elgamal")]
 pub use tc_elgamal::ElGamalParameters;
 #[cfg(feature = "gost3410")]

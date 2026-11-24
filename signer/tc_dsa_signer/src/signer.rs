@@ -1,7 +1,7 @@
 use crate::DsaSignerError;
+use crate::{DsaPrivateKey, DsaPublicKey};
 use tc_bigint::{ArrayEncoding, PaddedBigUint};
 use tc_dsa::{Dsa, DsaInit, DsaKCalculator};
-use tc_dsa_key::{DsaPrivateKey, DsaPublicKey};
 use tc_modular::{ModAdd, ModInverse, ModMul, NonZero, Odd, PaddedMontyForm, PaddedMontyParams};
 use tc_zeroize::Zeroizing;
 
@@ -12,18 +12,16 @@ use tc_zeroize::Zeroizing;
 /// ```
 /// use tc_asym_cipher::{KeyPairGenerator, KeyPairGeneratorInit};
 /// use tc_dsa::{Dsa, DsaInit, HMacDsaKCalculator};
-/// use tc_dsa_key::{
-///     DsaKeyGenerationParams, DsaKeyPairGenerator, DsaParameterGenerationParams,
-///     DsaParametersGenerator,
+/// use tc_dsa_signer::{
+///     DsaGroupGenerationParams, DsaGroupGenerator, DsaKeyGenerationParams, DsaKeyPairGenerator,
+///     DsaSigner,
 /// };
-/// use tc_dsa_signer::DsaSigner;
 /// use tc_sha::Sha256Digest;
 ///
 /// // 參數由 FIPS 186-3 產生；實務上用公開的參數即可，不必每次產生。
-/// let mut rng = rand::rng();
-/// let mut generator = DsaParametersGenerator::with_digest(Sha256Digest::new());
-/// generator.init_fips186_3(DsaParameterGenerationParams::new(2048, 256, 80, &mut rng))?;
-/// let params = generator.generate_parameters()?;
+/// let mut generator = DsaGroupGenerator::with_digest(rand::rng(), Sha256Digest::new());
+/// generator.init_fips186_3(&DsaGroupGenerationParams::new(2048, 256, 80))?;
+/// let params = generator.generate_group()?;
 ///
 /// let mut rng = rand::rng();
 /// let mut keys = DsaKeyPairGenerator::new(&mut rng);
@@ -75,12 +73,10 @@ impl<K> DsaSigner<K> {
         p: &PaddedBigUint,
         q: &PaddedBigUint,
     ) -> Result<(), DsaSignerError> {
-        let p = Odd::new(p.clone()).ok_or(DsaSignerError::InvalidKey(
-            tc_dsa_key::DsaError::InvalidModulus,
-        ))?;
-        let q = NonZero::new(q.clone()).ok_or(DsaSignerError::InvalidKey(
-            tc_dsa_key::DsaError::InvalidOrder,
-        ))?;
+        let p = Odd::new(p.clone())
+            .ok_or(DsaSignerError::InvalidKey(crate::DsaError::InvalidModulus))?;
+        let q = NonZero::new(q.clone())
+            .ok_or(DsaSignerError::InvalidKey(crate::DsaError::InvalidOrder))?;
         self.state = Some(State {
             key,
             monty: PaddedMontyParams::new(p),

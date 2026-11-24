@@ -1,6 +1,6 @@
 use tc_dsa::DsaDigestSigner;
-use tc_dsa_key::{DsaPrivateKey, DsaPublicKey};
 use tc_dsa_signer::DsaSigner;
+use tc_dsa_signer::{DsaPrivateKey, DsaPublicKey};
 
 use super::digest_dsa::{Rand, Spec, k, row};
 use super::row::{Inner, digests, keyed};

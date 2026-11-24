@@ -1,4 +1,4 @@
-use crate::{DsaError, DsaParameterGenerationParams, DsaParameters, DsaValidationParameters};
+use crate::{DsaError, DsaGroupGenerationParams, DsaParameters, DsaValidationParameters};
 use alloc::string::ToString;
 use alloc::vec;
 use core::fmt::Display;
@@ -9,56 +9,47 @@ use tc_modular::{ModPow, NonZero};
 use tc_prime::Primality;
 use tc_sha::Sha1Digest;
 
-/// BC 的 `DsaParametersGenerator`：FIPS 186-2（SHA-1，p 為 512 到 1024 位元）或 FIPS 186-3
-/// （L 與 N 由 [`DsaParameterGenerationParams`] 給）產生 p、q、g 與驗證資料。雜湊預設是
-/// SHA-1。
-pub struct DsaParametersGenerator<'a, D = Sha1Digest> {
+/// BC 的 `DsaParametersGenerator`，命名照 DH 的 `DhGroupGenerator`：FIPS 186-2（SHA-1，p 為
+/// 512 到 1024 位元）或 FIPS 186-3（L 與 N 由 [`DsaGroupGenerationParams`] 給）產生 p、q、g
+/// 與驗證資料。亂數來源在建構時給；雜湊預設是 SHA-1。
+pub struct DsaGroupGenerator<R, D = Sha1Digest> {
+    rng: R,
     digest: D,
-    settings: Option<Settings<'a>>,
+    settings: Option<Settings>,
 }
 
-/// `init` 收下的長度、certainty、亂數來源與程序。
-struct Settings<'a> {
+/// `init` 收下的長度、certainty 與程序。
+#[derive(Clone, Copy)]
+struct Settings {
     l: u32,
     n: u32,
     certainty: u32,
-    rng: &'a mut dyn CryptoRng,
     fips186_3: bool,
     usage_index: Option<u8>,
 }
 
-impl DsaParametersGenerator<'_> {
-    /// 以 SHA-1 為雜湊、尚未 `init` 的產生器。常數時間。
-    pub fn new() -> Self {
-        Self::with_digest(Sha1Digest::new())
+impl<R> DsaGroupGenerator<R> {
+    /// 從 `rng` 取亂數、以 SHA-1 為雜湊、尚未 `init` 的產生器。常數時間。
+    pub fn new(rng: R) -> Self {
+        Self::with_digest(rng, Sha1Digest::new())
     }
 }
 
-impl Default for DsaParametersGenerator<'_> {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl<'a, D> DsaParametersGenerator<'a, D> {
-    /// 以 `digest` 為雜湊、尚未 `init` 的產生器。常數時間。
-    pub fn with_digest(digest: D) -> Self {
+impl<R, D> DsaGroupGenerator<R, D> {
+    /// 從 `rng` 取亂數、以 `digest` 為雜湊、尚未 `init` 的產生器。常數時間。
+    pub fn with_digest(rng: R, digest: D) -> Self {
         Self {
+            rng,
             digest,
             settings: None,
         }
     }
 }
 
-impl<'a, D: Digest + Display> DsaParametersGenerator<'a, D> {
+impl<R, D: Digest + Display> DsaGroupGenerator<R, D> {
     /// BC 的 `Init(size, certainty, random)`：FIPS 186-2，p 為 `size` 位元（512 到 1024、64 的
     /// 倍數），q 為 160 位元，雜湊要是 SHA-1。失敗時維持未初始化。變動時間：只依公開值。
-    pub fn init_fips186_2(
-        &mut self,
-        size: u32,
-        certainty: u32,
-        rng: &'a mut dyn CryptoRng,
-    ) -> Result<(), DsaError> {
+    pub fn init_fips186_2(&mut self, size: u32, certainty: u32) -> Result<(), DsaError> {
         self.settings = None;
         if !(512..=1024).contains(&size) || size % 64 != 0 {
             return Err(DsaError::InvalidSize);
@@ -73,7 +64,6 @@ impl<'a, D: Digest + Display> DsaParametersGenerator<'a, D> {
             l: size,
             n: 160,
             certainty,
-            rng,
             fips186_3: false,
             usage_index: None,
         });
@@ -83,10 +73,7 @@ impl<'a, D: Digest + Display> DsaParametersGenerator<'a, D> {
     /// BC 的 `Init(DsaParameterGenerationParameters)`：FIPS 186-3，(L, N) 要是 (1024, 160)、
     /// (2048, 224)、(2048, 256) 或 (3072, 256)，雜湊至少 N 位元。失敗時維持未初始化。變動
     /// 時間：只依公開值。
-    pub fn init_fips186_3(
-        &mut self,
-        params: DsaParameterGenerationParams<'a>,
-    ) -> Result<(), DsaError> {
+    pub fn init_fips186_3(&mut self, params: &DsaGroupGenerationParams) -> Result<(), DsaError> {
         self.settings = None;
         if !matches!(
             (params.l, params.n),
@@ -104,24 +91,23 @@ impl<'a, D: Digest + Display> DsaParametersGenerator<'a, D> {
             l: params.l,
             n: params.n,
             certainty: params.certainty,
-            rng: params.rng,
             fips186_3: true,
             usage_index: params.usage_index,
         });
         Ok(())
     }
+}
 
-    /// BC 的 `GenerateParameters`：依 `init` 選定的程序產生參數。`init` 之前回傳錯誤。變動
-    /// 時間：參數是公開的。
-    pub fn generate_parameters(&mut self) -> Result<DsaParameters, DsaError> {
-        let mut settings = self.settings.take().ok_or(DsaError::NotInitialized)?;
-        let params = if settings.fips186_3 {
-            self.fips186_3(&mut settings)
+impl<R: CryptoRng, D: Digest + Display> DsaGroupGenerator<R, D> {
+    /// BC 的 `GenerateParameters`：依 `init` 選定的程序產生群。`init` 之前回傳錯誤。變動
+    /// 時間：群是公開的。
+    pub fn generate_group(&mut self) -> Result<DsaParameters, DsaError> {
+        let settings = self.settings.ok_or(DsaError::NotInitialized)?;
+        Ok(if settings.fips186_3 {
+            self.fips186_3(&settings)
         } else {
-            self.fips186_2(&mut settings)
-        };
-        self.settings = Some(settings);
-        Ok(params)
+            self.fips186_2(&settings)
+        })
     }
 
     /// `input` 的雜湊寫進 `output`。變動時間：只用於公開的 seed。
@@ -131,14 +117,14 @@ impl<'a, D: Digest + Display> DsaParametersGenerator<'a, D> {
     }
 
     /// BC 的 `GenerateParameters_FIPS186_2`。變動時間：參數是公開的。
-    fn fips186_2(&mut self, settings: &mut Settings<'_>) -> DsaParameters {
+    fn fips186_2(&mut self, settings: &Settings) -> DsaParameters {
         let l = settings.l as usize;
         let n = (l - 1) / 160;
         let mut seed = [0u8; 20];
         let (mut part1, mut part2) = ([0u8; 20], [0u8; 20]);
         let mut w = vec![0u8; l / 8];
         loop {
-            settings.rng.fill_bytes(&mut seed);
+            self.rng.fill_bytes(&mut seed);
             self.hash(&seed, &mut part1);
             let mut next = seed;
             increment(&mut next);
@@ -150,7 +136,7 @@ impl<'a, D: Digest + Display> DsaParametersGenerator<'a, D> {
             u[0] |= 0x80;
             u[19] |= 0x01;
             let q = big(&u);
-            if !is_prime(&q, settings) {
+            if !is_prime(&q, settings, &mut self.rng) {
                 continue;
             }
 
@@ -168,8 +154,8 @@ impl<'a, D: Digest + Display> DsaParametersGenerator<'a, D> {
                 let rest = w.len() - n * 20;
                 w[..rest].copy_from_slice(&part1[20 - rest..]);
                 w[0] |= 0x80;
-                if let Some(p) = candidate_p(&big(&w), &q, settings) {
-                    let g = unverifiable_generator(&p, &q, settings);
+                if let Some(p) = candidate_p(&big(&w), &q, settings, &mut self.rng) {
+                    let g = unverifiable_generator(&p, &q, &mut self.rng);
                     return parameters(
                         p,
                         q,
@@ -182,7 +168,7 @@ impl<'a, D: Digest + Display> DsaParametersGenerator<'a, D> {
     }
 
     /// BC 的 `GenerateParameters_FIPS186_3`。變動時間：參數是公開的。
-    fn fips186_3(&mut self, settings: &mut Settings<'_>) -> DsaParameters {
+    fn fips186_3(&mut self, settings: &Settings) -> DsaParameters {
         let (l, n) = (settings.l, settings.n);
         let outlen = self.digest.digest_size() * 8;
         let blocks = (l as usize - 1) / outlen;
@@ -190,12 +176,12 @@ impl<'a, D: Digest + Display> DsaParametersGenerator<'a, D> {
         let mut seed = vec![0u8; n as usize / 8];
         let mut output = vec![0u8; self.digest.digest_size()];
         loop {
-            settings.rng.fill_bytes(&mut seed);
+            self.rng.fill_bytes(&mut seed);
             self.hash(&seed, &mut output);
             let mut q = big(&output) % &power_of_two(n - 1);
             q.set_bit(0, true);
             q.set_bit(n - 1, true);
-            if !is_prime(&q, settings) {
+            if !is_prime(&q, settings, &mut self.rng) {
                 continue;
             }
 
@@ -213,7 +199,7 @@ impl<'a, D: Digest + Display> DsaParametersGenerator<'a, D> {
                 }
                 let mut x = w;
                 x.set_bit(l - 1, true);
-                let Some(p) = candidate_p(&x, &q, settings) else {
+                let Some(p) = candidate_p(&x, &q, settings, &mut self.rng) else {
                     continue;
                 };
                 if let Some(index) = settings.usage_index {
@@ -223,7 +209,7 @@ impl<'a, D: Digest + Display> DsaParametersGenerator<'a, D> {
                         return parameters(p, q, g, validation);
                     }
                 }
-                let g = unverifiable_generator(&p, &q, settings);
+                let g = unverifiable_generator(&p, &q, &mut self.rng);
                 return parameters(p, q, g, DsaValidationParameters::new(seed.clone(), counter));
             }
         }
@@ -257,22 +243,27 @@ impl<'a, D: Digest + Display> DsaParametersGenerator<'a, D> {
 
 /// X 調成 p = X − (X mod 2q − 1)：位元數要恰好是 L，且通過質數檢定。變動時間：參數是
 /// 公開的。
-fn candidate_p(x: &BigUint, q: &BigUint, settings: &mut Settings<'_>) -> Option<BigUint> {
+fn candidate_p(
+    x: &BigUint,
+    q: &BigUint,
+    settings: &Settings,
+    rng: &mut dyn CryptoRng,
+) -> Option<BigUint> {
     let c = x % &(q << 1u32);
     let p = x - &(c - 1u32);
-    (p.bits() == settings.l && is_prime(&p, settings)).then_some(p)
+    (p.bits() == settings.l && is_prime(&p, settings, rng)).then_some(p)
 }
 
 /// BC 的 `CalculateGenerator_FIPS186_2`（也是 FIPS 186-3 不可驗證的作法）：h 在
 /// `[2, p − 2]` 均勻挑選，g = h^((p − 1) / q) mod p，直到 g > 1。h 由 `tc_bigint` 的
 /// `random_range` 抽，讀亂數的方式與 BC 不同。變動時間：參數是公開的。
-fn unverifiable_generator(p: &BigUint, q: &BigUint, settings: &mut Settings<'_>) -> BigUint {
+fn unverifiable_generator(p: &BigUint, q: &BigUint, rng: &mut dyn CryptoRng) -> BigUint {
     let e = (p - 1u32) / q;
     let modulus = NonZero::new(p.clone()).expect("p is an odd prime");
     let low = PaddedBigUint::from(2u8);
     let high = PaddedBigUint::from(p - 1u32);
     loop {
-        let h = BigUint::from(PaddedBigUint::random_range(&mut *settings.rng, &low, &high));
+        let h = BigUint::from(PaddedBigUint::random_range(&mut *rng, &low, &high));
         let g = h.mod_pow(&e, &modulus);
         if g.bits() > 1 {
             return g;
@@ -281,12 +272,9 @@ fn unverifiable_generator(p: &BigUint, q: &BigUint, settings: &mut Settings<'_>)
 }
 
 /// 以 BC 的 `IsProbablePrime(certainty)` 的強度檢定。變動時間：只用於公開的候選值。
-fn is_prime(candidate: &BigUint, settings: &mut Settings<'_>) -> bool {
+fn is_prime(candidate: &BigUint, settings: &Settings, rng: &mut dyn CryptoRng) -> bool {
     !candidate.has_small_factor()
-        && candidate.is_probable_prime(
-            rounds(settings.certainty, candidate.bits()),
-            &mut *settings.rng,
-        )
+        && candidate.is_probable_prime(rounds(settings.certainty, candidate.bits()), rng)
 }
 
 /// 隨機挑選的 `bits` 位元候選值檢定到 `certainty` 所需的 Miller-Rabin 輪數，同 BC 的

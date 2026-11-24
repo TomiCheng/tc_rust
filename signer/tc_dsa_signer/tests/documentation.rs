@@ -1,4 +1,4 @@
-const METHODS: [&str; 7] = [
+const METHODS: [&str; 26] = [
     "fmt",
     "init",
     "order",
@@ -6,6 +6,25 @@ const METHODS: [&str; 7] = [
     "verify_signature",
     "start",
     "calculate_e",
+    "generate_key_pair",
+    "eq",
+    "drop",
+    "is_private_key",
+    "hash",
+    "fips186_2",
+    "fips186_3",
+    "verifiable_generator",
+    "candidate_p",
+    "unverifiable_generator",
+    "is_prime",
+    "rounds",
+    "parameters",
+    "big",
+    "power_of_two",
+    "increment",
+    "naf_weight",
+    "random_bits",
+    "random_in_range",
 ];
 
 fn checked(line: &str) -> bool {
@@ -54,7 +73,49 @@ fn missing_timing_docs(source: &str) -> (usize, Vec<String>) {
 fn every_public_method_and_helper_states_constant_or_variable_time() {
     for (name, source, minimum) in [
         ("error.rs", include_str!("../src/error.rs"), 1),
+        ("dsa_error.rs", include_str!("../src/dsa_error.rs"), 1),
         ("signer.rs", include_str!("../src/signer.rs"), 7),
+        ("math.rs", include_str!("../src/math.rs"), 3),
+        (
+            "key_pair_generator.rs",
+            include_str!("../src/key_pair_generator.rs"),
+            3,
+        ),
+        (
+            "group_generator.rs",
+            include_str!("../src/group_generator.rs"),
+            15,
+        ),
+        (
+            "params/parameters.rs",
+            include_str!("../src/params/parameters.rs"),
+            8,
+        ),
+        (
+            "params/validation_parameters.rs",
+            include_str!("../src/params/validation_parameters.rs"),
+            6,
+        ),
+        (
+            "params/public_key.rs",
+            include_str!("../src/params/public_key.rs"),
+            5,
+        ),
+        (
+            "params/private_key.rs",
+            include_str!("../src/params/private_key.rs"),
+            6,
+        ),
+        (
+            "params/key_generation_params.rs",
+            include_str!("../src/params/key_generation_params.rs"),
+            3,
+        ),
+        (
+            "params/group_generation_params.rs",
+            include_str!("../src/params/group_generation_params.rs"),
+            6,
+        ),
     ] {
         let (count, missing) = missing_timing_docs(source);
         assert!(count >= minimum, "only {count} methods scanned in {name}");

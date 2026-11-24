@@ -1,5 +1,5 @@
+use crate::DsaError;
 use core::fmt;
-use tc_dsa_key::DsaError;
 
 /// `DsaSigner` 的錯誤。
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

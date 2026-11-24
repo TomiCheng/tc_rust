@@ -11,11 +11,11 @@ pub use tc_cfrg_curves::Ed25519PrivateKey;
 #[cfg(feature = "cfrg-curves")]
 pub use tc_cfrg_curves::Ed25519PublicKey;
 #[cfg(feature = "dsa")]
-pub use tc_dsa_key::DsaParameters;
+pub use tc_dsa_signer::DsaParameters;
 #[cfg(feature = "dsa")]
-pub use tc_dsa_key::DsaPrivateKey;
+pub use tc_dsa_signer::DsaPrivateKey;
 #[cfg(feature = "dsa")]
-pub use tc_dsa_key::DsaPublicKey;
+pub use tc_dsa_signer::DsaPublicKey;
 #[cfg(any(
     feature = "fp-custom",
     feature = "fp-curve",

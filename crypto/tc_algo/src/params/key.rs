@@ -94,11 +94,11 @@ pub use tc_dh_key::DhPublicKey;
 pub use tc_dh_key::standard_groups as dh_groups;
 
 #[cfg(feature = "dsa")]
-pub use tc_dsa_key::DsaParameters;
+pub use tc_dsa_signer::DsaParameters;
 #[cfg(feature = "dsa")]
-pub use tc_dsa_key::DsaPrivateKey;
+pub use tc_dsa_signer::DsaPrivateKey;
 #[cfg(feature = "dsa")]
-pub use tc_dsa_key::DsaPublicKey;
+pub use tc_dsa_signer::DsaPublicKey;
 
 #[cfg(feature = "gost3410")]
 pub use tc_gost3410_key::Gost3410Parameters;

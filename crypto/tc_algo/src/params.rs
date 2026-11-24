@@ -97,7 +97,7 @@ use tc_dh_key::DhParameters;
 #[cfg(feature = "dh")]
 use tc_dh_key::{DhPrivateKey, DhPublicKey};
 #[cfg(feature = "dsa")]
-use tc_dsa_key::{DsaParameters, DsaPrivateKey, DsaPublicKey};
+use tc_dsa_signer::{DsaParameters, DsaPrivateKey, DsaPublicKey};
 #[cfg(all(
     feature = "ecmqv",
     any(

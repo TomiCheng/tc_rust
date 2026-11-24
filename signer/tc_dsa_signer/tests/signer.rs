@@ -4,7 +4,7 @@
 use tc_bigint::{ArrayEncoding, BigUint, PaddedBigUint};
 use tc_digest::Digest;
 use tc_dsa::{Dsa, DsaDigestSigner, DsaInit, DsaKCalculator, HMacDsaKCalculator, PlainDsaEncoding};
-use tc_dsa_key::{DsaError, DsaParameters, DsaPrivateKey, DsaPublicKey};
+use tc_dsa_signer::{DsaError, DsaParameters, DsaPrivateKey, DsaPublicKey};
 use tc_dsa_signer::{DsaSigner, DsaSignerError};
 use tc_modular::{ModPow, NonZero};
 use tc_sha::{Sha1Digest, Sha224Digest, Sha256Digest, Sha384Digest, Sha512Digest};

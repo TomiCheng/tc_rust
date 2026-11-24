@@ -4,7 +4,7 @@ use crate::Params;
 
 // What a DSA key pair is generated to when there is no domain yet: new domain parameters of FIPS
 // 186-3, p of `l` bits and q of `n`, generated over SHA-256 at init. A domain already in hand goes
-// to the DSA row as a DsaParameters instead. Nothing is checked here: tc_dsa_key judges (l, n), which
+// to the DSA row as a DsaParameters instead. Nothing is checked here: tc_dsa_signer judges (l, n), which
 // must be (1024, 160), (2048, 224), (2048, 256) or (3072, 256)
 #[derive(Clone, Copy, Debug)]
 pub struct DsaKeyGenParams {

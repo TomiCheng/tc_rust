@@ -42,7 +42,7 @@ The name is that of Bouncy Castle's `GeneratorUtilities`, and its case does not 
 - A `DsaParameters`, the domain of another key as `DsaPublicKey::params` gives it, or one from
   elsewhere, makes more pairs over the same domain.
 
-Any other type is `InvalidParams`, and so is a domain that tc_dsa_key refuses.
+Any other type is `InvalidParams`, and so is a domain that tc_dsa_signer refuses.
 
 ## Signing
 

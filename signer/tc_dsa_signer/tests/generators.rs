@@ -1,13 +1,13 @@
-//! `tc_dsa_key`：Bouncy Castle `DSATest` 的參數產生（FIPS 186-2 的 512 位元；FIPS 186-3 的
+//! 參數與金鑰產生：Bouncy Castle `DSATest` 的參數產生（FIPS 186-2 的 512 位元；FIPS 186-3 的
 //! 1024／160、2048／224、2048／256、3072／256）、金鑰產生的 x 與 y、公鑰檢查，以及錯誤。
 
 use core::convert::Infallible;
 use rand_core::{TryCryptoRng, TryRng};
 use tc_asym_cipher::{KeyPairGenerator, KeyPairGeneratorInit};
 use tc_bigint::{ArrayEncoding, PaddedBigUint};
-use tc_dsa_key::{
-    DsaError, DsaKeyGenerationParams, DsaKeyPairGenerator, DsaParameterGenerationParams,
-    DsaParameters, DsaParametersGenerator, DsaPublicKey,
+use tc_dsa_signer::{
+    DsaError, DsaGroupGenerationParams, DsaGroupGenerator, DsaKeyGenerationParams,
+    DsaKeyPairGenerator, DsaParameters, DsaPublicKey,
 };
 use tc_modular::{ModPow, NonZero};
 use tc_sha::{Sha224Digest, Sha256Digest};
@@ -114,10 +114,9 @@ fn in_subgroup(params: &DsaParameters) -> bool {
 
 #[test]
 fn fips_186_2_gives_the_p_q_and_counter_of_bouncy_castle() {
-    let mut rng = Fixed::new(BASIC_K1);
-    let mut generator = DsaParametersGenerator::new();
-    generator.init_fips186_2(512, 80, &mut rng).unwrap();
-    let params = generator.generate_parameters().unwrap();
+    let mut generator = DsaGroupGenerator::new(Fixed::new(BASIC_K1));
+    generator.init_fips186_2(512, 80).unwrap();
+    let params = generator.generate_group().unwrap();
     assert_eq!(params.p(), &integer(BASIC_P));
     assert_eq!(params.q(), &integer(BASIC_Q));
     let validation = params.validation().unwrap();
@@ -132,12 +131,11 @@ fn fips_186_3<D: tc_digest::Digest + core::fmt::Display>(
     (seed, l, n, counter): (&str, u32, u32, u32),
     (p, q, g): (&str, &str, &str),
 ) -> DsaParameters {
-    let mut rng = Fixed::new(seed);
-    let mut generator = DsaParametersGenerator::with_digest(digest);
+    let mut generator = DsaGroupGenerator::with_digest(Fixed::new(seed), digest);
     generator
-        .init_fips186_3(DsaParameterGenerationParams::new(l, n, 80, &mut rng))
+        .init_fips186_3(&DsaGroupGenerationParams::new(l, n, 80))
         .unwrap();
-    let params = generator.generate_parameters().unwrap();
+    let params = generator.generate_group().unwrap();
     let validation = params.validation().unwrap();
     assert_eq!(validation.counter(), counter);
     assert_eq!(validation.seed(), &bytes(seed)[..]);
@@ -236,37 +234,30 @@ fn public_keys_outside_the_subgroup_or_range_are_refused() {
 
 #[test]
 fn errors_are_reported() {
-    let mut generator = DsaParametersGenerator::new();
+    let mut generator = DsaGroupGenerator::new(Fixed::new(""));
+    assert_eq!(generator.generate_group(), Err(DsaError::NotInitialized));
     assert_eq!(
-        generator.generate_parameters(),
-        Err(DsaError::NotInitialized)
-    );
-    let rng = &mut Fixed::new("");
-    assert_eq!(
-        DsaParametersGenerator::new().init_fips186_2(576 + 1, 80, rng),
+        DsaGroupGenerator::new(Fixed::new("")).init_fips186_2(576 + 1, 80),
         Err(DsaError::InvalidSize)
     );
-    let rng = &mut Fixed::new("");
     assert_eq!(
-        DsaParametersGenerator::new()
-            .init_fips186_3(DsaParameterGenerationParams::new(2048, 160, 80, rng)),
+        DsaGroupGenerator::new(Fixed::new(""))
+            .init_fips186_3(&DsaGroupGenerationParams::new(2048, 160, 80)),
         Err(DsaError::InvalidLengths)
     );
-    let rng = &mut Fixed::new("");
     assert_eq!(
-        DsaParametersGenerator::new()
-            .init_fips186_3(DsaParameterGenerationParams::new(2048, 224, 80, rng)),
+        DsaGroupGenerator::new(Fixed::new(""))
+            .init_fips186_3(&DsaGroupGenerationParams::new(2048, 224, 80)),
         Err(DsaError::UnsuitableDigest)
     );
-    let rng = &mut Fixed::new("");
     assert_eq!(
-        DsaParametersGenerator::with_digest(Sha256Digest::new()).init_fips186_2(1024, 80, rng),
+        DsaGroupGenerator::with_digest(Fixed::new(""), Sha256Digest::new())
+            .init_fips186_2(1024, 80),
         Err(DsaError::UnsuitableDigest)
     );
-    let rng = &mut Fixed::new("");
     assert_eq!(
-        DsaParametersGenerator::with_digest(Sha256Digest::new())
-            .init_fips186_3(DsaParameterGenerationParams::new(2048, 256, 0, rng)),
+        DsaGroupGenerator::with_digest(Fixed::new(""), Sha256Digest::new())
+            .init_fips186_3(&DsaGroupGenerationParams::new(2048, 256, 0)),
         Err(DsaError::InvalidCertainty)
     );
 }

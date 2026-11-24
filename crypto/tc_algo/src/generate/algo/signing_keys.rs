@@ -26,30 +26,29 @@ pub(super) fn signing_keys(context: &DefaultAlgoContext) -> Vec<Box<dyn KeyPairG
         &[],
         rand,
         |params, rand| {
-            use tc_dsa_key::{DsaParameterGenerationParams, DsaParametersGenerator};
+            use tc_dsa_signer::{DsaGroupGenerationParams, DsaGroupGenerator};
 
-            if let Some(domain) = downcast::<tc_dsa_key::DsaParameters>(params) {
+            if let Some(domain) = downcast::<tc_dsa_signer::DsaParameters>(params) {
                 return Ok(domain);
             }
             let params = params
                 .as_any()
                 .downcast_ref::<crate::params::generate::DsaKeyGenParams>()
                 .ok_or(AlgoError::new(ErrorKind::InvalidParams))?;
-            let mut generator = DsaParametersGenerator::with_digest(tc_sha::Sha256Digest::new());
+            let mut generator = DsaGroupGenerator::with_digest(rand, tc_sha::Sha256Digest::new());
             generator
-                .init_fips186_3(DsaParameterGenerationParams::new(
+                .init_fips186_3(&DsaGroupGenerationParams::new(
                     params.l(),
                     params.n(),
                     params.certainty(),
-                    rand,
                 ))
                 .map_err(invalid_params)?;
-            generator.generate_parameters().map_err(invalid_params)
+            generator.generate_group().map_err(invalid_params)
         },
         |rand, domain| {
-            let mut generator = tc_dsa_key::DsaKeyPairGenerator::new(rand);
+            let mut generator = tc_dsa_signer::DsaKeyPairGenerator::new(rand);
             generator
-                .init(&tc_dsa_key::DsaKeyGenerationParams::new(domain.clone()))
+                .init(&tc_dsa_signer::DsaKeyGenerationParams::new(domain.clone()))
                 .map_err(invalid_params)?;
             let (public, private) = generator.generate_key_pair().map_err(invalid_params)?;
             Ok((Box::new(public), Box::new(private)))

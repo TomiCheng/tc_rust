@@ -691,7 +691,6 @@ dependencies = [
  "tc_digest",
  "tc_drbg",
  "tc_dsa",
- "tc_dsa_key",
  "tc_dsa_signer",
  "tc_dstu7564",
  "tc_dstu7624",
@@ -1312,7 +1311,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "tc_dsa_key"
+name = "tc_dsa_signer"
 version = "0.1.0"
 dependencies = [
  "rand",
@@ -1320,23 +1319,9 @@ dependencies = [
  "tc_asym_cipher",
  "tc_bigint",
  "tc_digest",
+ "tc_dsa",
  "tc_modular",
  "tc_prime",
- "tc_sha",
- "tc_zeroize",
-]
-
-[[package]]
-name = "tc_dsa_signer"
-version = "0.1.0"
-dependencies = [
- "rand",
- "tc_asym_cipher",
- "tc_bigint",
- "tc_digest",
- "tc_dsa",
- "tc_dsa_key",
- "tc_modular",
  "tc_sha",
  "tc_signer",
  "tc_zeroize",
