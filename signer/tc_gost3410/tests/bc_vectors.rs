@@ -1,4 +1,4 @@
-//! `Gost3410Signer` 與 `tc_gost3410_key` 的產生器：Bouncy Castle `Gost3410Test` 的十一組
+//! `Gost3410Signer` 與群、金鑰的產生器：Bouncy Castle `Gost3410Test` 的十一組
 //! 向量。每組以固定的亂數依序產生參數（程序 A、A'、B、B'、C）、金鑰對與簽章，比對 p、q、
 //! r、s，再驗證。亂數來源照 BC 測試的 `FixedSecureRandom` 與覆寫的 `SecureRandom` 移植。
 //!
@@ -11,9 +11,7 @@ use tc_asym_cipher::{KeyPairGenerator, KeyPairGeneratorInit};
 use tc_bigint::{ArrayEncoding, PaddedBigUint};
 use tc_dsa::{Dsa, DsaInit};
 use tc_gost3410::Gost3410Signer;
-use tc_gost3410_key::{
-    Gost3410KeyGenerationParams, Gost3410KeyPairGenerator, Gost3410ParametersGenerator,
-};
+use tc_gost3410::{Gost3410GroupGenerator, Gost3410KeyGenerationParams, Gost3410KeyPairGenerator};
 
 const HASH_MESSAGE: &str = "3042453136414534424341374533364339313734453431443642453241453435";
 
@@ -155,11 +153,9 @@ fn run(case: &Case) {
             }))
         }
     };
-    let mut generator = Gost3410ParametersGenerator::new();
-    generator
-        .init(case.size, case.procedure, &mut *init)
-        .unwrap();
-    let params = generator.generate_parameters().unwrap();
+    let mut generator = Gost3410GroupGenerator::new(&mut *init);
+    generator.init(case.size, case.procedure).unwrap();
+    let params = generator.generate_group().unwrap();
     assert_eq!(params.p(), &integer(case.p), "{}: p", case.name);
     assert_eq!(params.q(), &integer(case.q), "{}: q", case.name);
 

@@ -119,7 +119,7 @@ use tc_ecmqv::{MqvPrivateParams, MqvPublicParams};
 ))]
 use tc_ecvko::EcVkoParams;
 #[cfg(feature = "gost3410")]
-use tc_gost3410_key::{Gost3410Parameters, Gost3410PrivateKey, Gost3410PublicKey};
+use tc_gost3410::{Gost3410Parameters, Gost3410PrivateKey, Gost3410PublicKey};
 #[cfg(feature = "gost28147")]
 use tc_gost28147::Gost28147ParamsOwned;
 #[cfg(feature = "kdf")]

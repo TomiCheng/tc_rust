@@ -3,19 +3,18 @@
 use tc_asym_cipher::{KeyPairGenerator, KeyPairGeneratorInit};
 use tc_bigint::PaddedBigUint;
 use tc_dsa::{Dsa, DsaInit, Gost3410DigestSigner};
-use tc_gost3410::{Gost3410Signer, Gost3410SignerError};
-use tc_gost3410_key::{
-    Gost3410Error, Gost3410KeyGenerationParams, Gost3410KeyPairGenerator, Gost3410Parameters,
-    Gost3410ParametersGenerator, Gost3410PrivateKey, Gost3410PublicKey,
+use tc_gost3410::{
+    Gost3410Error, Gost3410GroupGenerator, Gost3410KeyGenerationParams, Gost3410KeyPairGenerator,
+    Gost3410Parameters, Gost3410PrivateKey, Gost3410PublicKey,
 };
+use tc_gost3410::{Gost3410Signer, Gost3410SignerError};
 use tc_gost3411::Gost3411Digest;
 use tc_signer::{Signer, SignerInit};
 
 fn key_pair() -> (Gost3410PublicKey, Gost3410PrivateKey) {
-    let mut rng = rand::rng();
-    let mut generator = Gost3410ParametersGenerator::new();
-    generator.init(512, 2, &mut rng).unwrap();
-    let params = generator.generate_parameters().unwrap();
+    let mut generator = Gost3410GroupGenerator::new(rand::rng());
+    generator.init(512, 2).unwrap();
+    let params = generator.generate_group().unwrap();
     let mut rng = rand::rng();
     let mut keys = Gost3410KeyPairGenerator::new(&mut rng);
     keys.init(&Gost3410KeyGenerationParams::new(params))

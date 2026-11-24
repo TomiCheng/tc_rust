@@ -5,10 +5,9 @@ use core::convert::Infallible;
 use rand_core::{TryCryptoRng, TryRng};
 use tc_asym_cipher::{KeyPairGenerator, KeyPairGeneratorInit};
 use tc_bigint::{ArrayEncoding, PaddedBigUint};
-use tc_gost3410_key::{
-    Gost3410Error, Gost3410KeyGenerationParams, Gost3410KeyPairGenerator, Gost3410Parameters,
-    Gost3410ParametersGenerator, Gost3410PrivateKey, Gost3410PublicKey,
-    Gost3410ValidationParameters,
+use tc_gost3410::{
+    Gost3410Error, Gost3410GroupGenerator, Gost3410KeyGenerationParams, Gost3410KeyPairGenerator,
+    Gost3410Parameters, Gost3410PrivateKey, Gost3410PublicKey, Gost3410ValidationParameters,
 };
 
 fn bytes(hex: &str) -> Vec<u8> {
@@ -62,9 +61,9 @@ impl TryCryptoRng for Fixed {}
 #[test]
 fn procedure_a_gives_the_parameters_and_validation_data_of_bouncy_castle() {
     let mut rng = Fixed::new("00005EC900007341");
-    let mut generator = Gost3410ParametersGenerator::new();
-    generator.init(512, 1, &mut rng).unwrap();
-    let params = generator.generate_parameters().unwrap();
+    let mut generator = Gost3410GroupGenerator::new(&mut rng);
+    generator.init(512, 1).unwrap();
+    let params = generator.generate_group().unwrap();
     assert_eq!(
         params.p(),
         &integer(
@@ -84,10 +83,9 @@ fn procedure_a_gives_the_parameters_and_validation_data_of_bouncy_castle() {
 
 #[test]
 fn procedure_a_prime_keeps_the_64_bit_validation_data() {
-    let mut rng = Fixed::new("000000003DFC46F1000000000000000D");
-    let mut generator = Gost3410ParametersGenerator::new();
-    generator.init(512, 2, &mut rng).unwrap();
-    let params = generator.generate_parameters().unwrap();
+    let mut generator = Gost3410GroupGenerator::new(Fixed::new("000000003DFC46F1000000000000000D"));
+    generator.init(512, 2).unwrap();
+    let params = generator.generate_group().unwrap();
     assert_eq!(
         params.q(),
         &integer("931A58FB6F0DCDF2FE7549BC3F19F4724B56898F7F921A076601EDB18C93DC75")
@@ -102,10 +100,9 @@ fn procedure_a_prime_keeps_the_64_bit_validation_data() {
 
 #[test]
 fn generated_keys_lie_in_range_and_y_is_a_to_the_x() {
-    let mut rng = rand::rng();
-    let mut generator = Gost3410ParametersGenerator::new();
-    generator.init(512, 1, &mut rng).unwrap();
-    let params = generator.generate_parameters().unwrap();
+    let mut generator = Gost3410GroupGenerator::new(rand::rng());
+    generator.init(512, 1).unwrap();
+    let params = generator.generate_group().unwrap();
     params.validate().unwrap();
 
     let mut rng = rand::rng();
@@ -121,18 +118,17 @@ fn generated_keys_lie_in_range_and_y_is_a_to_the_x() {
 
 #[test]
 fn errors_are_reported() {
-    let mut generator = Gost3410ParametersGenerator::new();
+    let mut generator = Gost3410GroupGenerator::new(rand::rng());
     assert_eq!(
-        generator.generate_parameters().map(|_| ()),
+        generator.generate_group().map(|_| ()),
         Err(Gost3410Error::NotInitialized)
     );
     for (size, procedure, error) in [
         (768, 1, Gost3410Error::InvalidSize),
         (512, 3, Gost3410Error::InvalidProcedure),
     ] {
-        let mut rng = rand::rng();
-        let mut generator = Gost3410ParametersGenerator::new();
-        assert_eq!(generator.init(size, procedure, &mut rng), Err(error));
+        let mut generator = Gost3410GroupGenerator::new(rand::rng());
+        assert_eq!(generator.init(size, procedure), Err(error));
     }
 
     let int = |value: u32| PaddedBigUint::from(value);

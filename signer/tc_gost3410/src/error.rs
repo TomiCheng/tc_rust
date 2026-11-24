@@ -1,5 +1,5 @@
+use crate::Gost3410Error;
 use core::fmt;
-use tc_gost3410_key::Gost3410Error;
 
 /// `Gost3410Signer` 的錯誤。
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

@@ -1,4 +1,4 @@
-const METHODS: [&str; 8] = [
+const METHODS: [&str; 23] = [
     "fmt",
     "init",
     "order",
@@ -7,6 +7,21 @@ const METHODS: [&str; 8] = [
     "init_key",
     "random_bits",
     "little_endian",
+    "generate_key_pair",
+    "eq",
+    "drop",
+    "is_private_key",
+    "short",
+    "long",
+    "next",
+    "block",
+    "short_start",
+    "long_start",
+    "primes",
+    "two_power_is_one",
+    "procedure_a",
+    "procedure_b",
+    "procedure_c",
 ];
 
 fn checked(line: &str) -> bool {
@@ -59,6 +74,47 @@ fn every_public_method_and_helper_states_constant_or_variable_time() {
     for (name, source, minimum) in [
         ("signer.rs", include_str!("../src/signer.rs"), 9),
         ("error.rs", include_str!("../src/error.rs"), 1),
+        (
+            "gost3410_error.rs",
+            include_str!("../src/gost3410_error.rs"),
+            1,
+        ),
+        ("math.rs", include_str!("../src/math.rs"), 4),
+        (
+            "key_pair_generator.rs",
+            include_str!("../src/key_pair_generator.rs"),
+            3,
+        ),
+        (
+            "group_generator.rs",
+            include_str!("../src/group_generator.rs"),
+            14,
+        ),
+        (
+            "params/parameters.rs",
+            include_str!("../src/params/parameters.rs"),
+            8,
+        ),
+        (
+            "params/validation_parameters.rs",
+            include_str!("../src/params/validation_parameters.rs"),
+            6,
+        ),
+        (
+            "params/public_key.rs",
+            include_str!("../src/params/public_key.rs"),
+            5,
+        ),
+        (
+            "params/private_key.rs",
+            include_str!("../src/params/private_key.rs"),
+            6,
+        ),
+        (
+            "params/key_generation_params.rs",
+            include_str!("../src/params/key_generation_params.rs"),
+            3,
+        ),
     ] {
         let (count, missing) = missing_timing_docs(source);
         assert!(count >= minimum, "only {count} methods scanned in {name}");

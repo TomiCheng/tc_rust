@@ -3,7 +3,7 @@ use std::sync::Arc;
 use rand_core::CryptoRng;
 use tc_dsa::Gost3410DigestSigner;
 use tc_gost3410::Gost3410Signer;
-use tc_gost3410_key::{Gost3410PrivateKey, Gost3410PublicKey};
+use tc_gost3410::{Gost3410PrivateKey, Gost3410PublicKey};
 use tc_gost3411::Gost3411Digest;
 
 use super::row::{Row, keyed};

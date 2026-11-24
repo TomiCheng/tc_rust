@@ -1,10 +1,10 @@
 use crate::Gost3410SignerError;
+use crate::{Gost3410Parameters, Gost3410PrivateKey, Gost3410PublicKey};
 use alloc::vec;
 use alloc::vec::Vec;
 use rand_core::CryptoRng;
 use tc_bigint::{ArrayEncoding, PaddedBigUint};
 use tc_dsa::{Dsa, DsaInit};
-use tc_gost3410_key::{Gost3410Parameters, Gost3410PrivateKey, Gost3410PublicKey};
 use tc_modular::{Odd, PaddedMontyForm, PaddedMontyParams};
 use tc_zeroize::{Zeroize, Zeroizing};
 

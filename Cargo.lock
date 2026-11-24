@@ -711,7 +711,6 @@ dependencies = [
  "tc_gost28147",
  "tc_gost28147_mac",
  "tc_gost3410",
- "tc_gost3410_key",
  "tc_gost3411",
  "tc_grain128_aead",
  "tc_hc",
@@ -1612,22 +1611,9 @@ dependencies = [
  "tc_asym_cipher",
  "tc_bigint",
  "tc_dsa",
- "tc_gost3410_key",
  "tc_gost3411",
  "tc_modular",
  "tc_signer",
- "tc_zeroize",
-]
-
-[[package]]
-name = "tc_gost3410_key"
-version = "0.1.0"
-dependencies = [
- "rand",
- "rand_core",
- "tc_asym_cipher",
- "tc_bigint",
- "tc_modular",
  "tc_zeroize",
 ]
 

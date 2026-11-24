@@ -101,11 +101,11 @@ pub use tc_dsa_signer::DsaPrivateKey;
 pub use tc_dsa_signer::DsaPublicKey;
 
 #[cfg(feature = "gost3410")]
-pub use tc_gost3410_key::Gost3410Parameters;
+pub use tc_gost3410::Gost3410Parameters;
 #[cfg(feature = "gost3410")]
-pub use tc_gost3410_key::Gost3410PrivateKey;
+pub use tc_gost3410::Gost3410PrivateKey;
 #[cfg(feature = "gost3410")]
-pub use tc_gost3410_key::Gost3410PublicKey;
+pub use tc_gost3410::Gost3410PublicKey;
 
 #[cfg(feature = "elgamal")]
 pub use tc_elgamal::ElGamalParameters;

@@ -33,11 +33,11 @@ pub use tc_ec_key::EcPrivateKey;
 ))]
 pub use tc_ec_key::EcPublicKey;
 #[cfg(feature = "gost3410")]
-pub use tc_gost3410_key::Gost3410Parameters;
+pub use tc_gost3410::Gost3410Parameters;
 #[cfg(feature = "gost3410")]
-pub use tc_gost3410_key::Gost3410PrivateKey;
+pub use tc_gost3410::Gost3410PrivateKey;
 #[cfg(feature = "gost3410")]
-pub use tc_gost3410_key::Gost3410PublicKey;
+pub use tc_gost3410::Gost3410PublicKey;
 #[cfg(feature = "ml-dsa")]
 pub use tc_ml_dsa::MlDsaParameters;
 #[cfg(feature = "ml-dsa")]

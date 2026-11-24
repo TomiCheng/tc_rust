@@ -63,23 +63,21 @@ pub(super) fn signing_keys(context: &DefaultAlgoContext) -> Vec<Box<dyn KeyPairG
         &[],
         rand,
         |params, rand| {
-            if let Some(domain) = downcast::<tc_gost3410_key::Gost3410Parameters>(params) {
+            if let Some(domain) = downcast::<tc_gost3410::Gost3410Parameters>(params) {
                 return Ok(domain);
             }
             let params = params
                 .as_any()
                 .downcast_ref::<crate::params::generate::Gost3410KeyGenParams>()
                 .ok_or(AlgoError::new(ErrorKind::InvalidParams))?;
-            let mut generator = tc_gost3410_key::Gost3410ParametersGenerator::new();
-            generator
-                .init(params.size(), 2, rand)
-                .map_err(invalid_params)?;
-            generator.generate_parameters().map_err(invalid_params)
+            let mut generator = tc_gost3410::Gost3410GroupGenerator::new(rand);
+            generator.init(params.size(), 2).map_err(invalid_params)?;
+            generator.generate_group().map_err(invalid_params)
         },
         |rand, domain| {
-            let mut generator = tc_gost3410_key::Gost3410KeyPairGenerator::new(rand);
+            let mut generator = tc_gost3410::Gost3410KeyPairGenerator::new(rand);
             generator
-                .init(&tc_gost3410_key::Gost3410KeyGenerationParams::new(
+                .init(&tc_gost3410::Gost3410KeyGenerationParams::new(
                     domain.clone(),
                 ))
                 .map_err(invalid_params)?;

@@ -5,70 +5,67 @@ use rand_core::CryptoRng;
 use tc_bigint::{BigUint, PaddedBigUint};
 use tc_modular::{ModPow, NonZero};
 
-/// BC 的 `Gost3410ParametersGenerator`：GOST R 34.10-94 附錄 A 的程序。程序 1 以 16 位元的
-/// 線性同餘產生器（512 位元用程序 A、1024 位元用程序 B），程序 2 以 32 位元的（A'、B'），
-/// 再以程序 C 找生成元 a。亂數的讀法照 BC，同樣的亂數得到同樣的參數。
-pub struct Gost3410ParametersGenerator<'a> {
-    state: Option<(u32, u32, &'a mut dyn CryptoRng)>,
+/// BC 的 `Gost3410ParametersGenerator`，命名照 DH 的 `DhGroupGenerator`：GOST R 34.10-94
+/// 附錄 A 的程序。程序 1 以 16 位元的線性同餘產生器（512 位元用程序 A、1024 位元用程序 B），
+/// 程序 2 以 32 位元的（A'、B'），再以程序 C 找生成元 a。亂數來源在建構時給，讀法照 BC，同樣的
+/// 亂數得到同樣的群。
+pub struct Gost3410GroupGenerator<R> {
+    rng: R,
+    settings: Option<(u32, u32)>,
 }
 
-impl<'a> Gost3410ParametersGenerator<'a> {
-    /// 尚未 `init` 的產生器。常數時間。
-    pub fn new() -> Self {
-        Self { state: None }
+impl<R> Gost3410GroupGenerator<R> {
+    /// 從 `rng` 取亂數、尚未 `init` 的產生器。常數時間。
+    pub fn new(rng: R) -> Self {
+        Self {
+            rng,
+            settings: None,
+        }
     }
 
-    /// BC 的 `Init`：p 的位元數（512 或 1024）、程序（1 或 2）與亂數來源。不支援的值回傳
-    /// 錯誤；BC 要到產生時才丟出，且把 1 以外的程序都當成 2。常數時間。
-    pub fn init(
-        &mut self,
-        size: u32,
-        procedure: u32,
-        rng: &'a mut dyn CryptoRng,
-    ) -> Result<(), Gost3410Error> {
-        self.state = None;
+    /// BC 的 `Init`：p 的位元數（512 或 1024）與程序（1 或 2）。不支援的值回傳錯誤；BC 要到
+    /// 產生時才丟出，且把 1 以外的程序都當成 2。常數時間。
+    pub fn init(&mut self, size: u32, procedure: u32) -> Result<(), Gost3410Error> {
+        self.settings = None;
         if size != 512 && size != 1024 {
             return Err(Gost3410Error::InvalidSize);
         }
         if procedure != 1 && procedure != 2 {
             return Err(Gost3410Error::InvalidProcedure);
         }
-        self.state = Some((size, procedure, rng));
+        self.settings = Some((size, procedure));
         Ok(())
     }
+}
 
+impl<R: CryptoRng> Gost3410GroupGenerator<R> {
     /// BC 的 `GenerateParameters`：先讀 x0 與 c，產生 p 與 q，再以程序 C 找 a，並附上
-    /// x0、c 為驗證資料。變動時間：產生的是公開值。
-    pub fn generate_parameters(&mut self) -> Result<Gost3410Parameters, Gost3410Error> {
-        let (size, procedure, rng) = self.state.as_mut().ok_or(Gost3410Error::NotInitialized)?;
-        let (p, q, validation) = if *procedure == 1 {
-            let x0 = next_int(&mut **rng);
-            let c = next_int(&mut **rng);
-            let (y0, increment) = short_start(&mut **rng, x0, c);
+    /// x0、c 為驗證資料。變動時間：群是公開的。
+    pub fn generate_group(&mut self) -> Result<Gost3410Parameters, Gost3410Error> {
+        let (size, procedure) = self.settings.ok_or(Gost3410Error::NotInitialized)?;
+        let rng: &mut dyn CryptoRng = &mut self.rng;
+        let (p, q, validation) = if procedure == 1 {
+            let x0 = next_int(&mut *rng);
+            let c = next_int(&mut *rng);
+            let (y0, increment) = short_start(&mut *rng, x0, c);
             let lcg = Lcg::short(increment);
-            let (p, q) = primes(&lcg, *size, y0);
+            let (p, q) = primes(&lcg, size, y0);
             (p, q, Gost3410ValidationParameters::new(x0, c))
         } else {
-            let x0 = next_long(&mut **rng);
-            let c = next_long(&mut **rng);
-            let (y0, increment) = long_start(&mut **rng, x0, c);
+            let x0 = next_long(&mut *rng);
+            let c = next_long(&mut *rng);
+            let (y0, increment) = long_start(&mut *rng, x0, c);
             let lcg = Lcg::long(increment);
-            let (p, q) = primes(&lcg, *size, y0);
+            let (p, q) = primes(&lcg, size, y0);
             (p, q, Gost3410ValidationParameters::new_long(x0, c))
         };
-        let a = procedure_c(&mut **rng, &p, &q);
+        let a = procedure_c(&mut *rng, &p, &q);
         Ok(Gost3410Parameters::new(
             PaddedBigUint::from(p),
             PaddedBigUint::from(q),
             PaddedBigUint::from(a),
         )
         .with_validation(validation))
-    }
-}
-
-impl Default for Gost3410ParametersGenerator<'_> {
-    fn default() -> Self {
-        Self::new()
     }
 }
 
