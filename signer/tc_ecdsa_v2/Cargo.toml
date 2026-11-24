@@ -24,3 +24,4 @@ tc_f2m_custom = "0.1.0"
 tc_fp_curve = "0.1.0"
 tc_fp_custom = { version = "0.1.0", features = ["small-curves"] }
 tc_sha = "0.1.1"
+tc_signer = "0.1.0"

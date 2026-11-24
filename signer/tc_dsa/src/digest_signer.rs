@@ -8,38 +8,8 @@ use tc_signer::{Signer, SignerInit};
 /// BC 的 `DsaDigestSigner`：把只簽雜湊的 [`Dsa`] 接成 `tc_signer` 的 [`Signer`]。訊息以
 /// `D` 雜湊，交給 `A` 簽成 (r, s)，再以 `N` 編碼，預設是 DER 的 [`StandardDsaEncoding`]。
 ///
-/// ```
-/// use tc_asym_cipher::{KeyPairGenerator, KeyPairGeneratorInit};
-/// use tc_dsa::{DsaDigestSigner, HMacDsaKCalculator};
-/// use tc_ec_key::{EcKeyGenerationParams, EcKeyPairGenerator};
-/// use tc_ecdsa_v2::EcdsaSigner;
-/// use tc_fp_curve::FpCtCurve;
-/// use tc_fp_curve::named_curves::SECP256R1;
-/// use tc_sha::Sha256Digest;
-/// use tc_signer::{Signer, SignerInit};
-///
-/// let field = SECP256R1.field();
-/// let curve = SECP256R1.ct_curve(&field);
-/// let g = SECP256R1.ct_generator(&curve);
-/// let mut rng = rand::rng();
-/// let mut generator = EcKeyPairGenerator::<&FpCtCurve<'_>, _>::new(&mut rng);
-/// generator.init(&EcKeyGenerationParams::new(g))?;
-/// let (public_key, private_key) = generator.generate_key_pair()?;
-///
-/// // 以 RFC 6979 的確定性 k 做 ECDSA，簽章編成 DER。
-/// let ecdsa = || EcdsaSigner::new(HMacDsaKCalculator::new(Sha256Digest::new()));
-/// let mut signer = DsaDigestSigner::new(ecdsa(), Sha256Digest::new());
-/// signer.init(&private_key)?;
-/// signer.update(b"hello")?;
-/// let mut signature = vec![0; signer.max_signature_size()];
-/// let length = signer.generate_signature(&mut signature)?;
-///
-/// let mut verifier = DsaDigestSigner::new(ecdsa(), Sha256Digest::new());
-/// verifier.init(&public_key)?;
-/// verifier.update(b"hello")?;
-/// assert!(verifier.verify_signature(&signature[..length])?);
-/// # Ok::<(), Box<dyn std::error::Error>>(())
-/// ```
+/// 用法見實作 [`Dsa`] 的 crate：`tc_ecdsa_v2` 與 `tc_dsa_signer` 的 crate 文件都以它簽整則訊息。
+/// 那些 crate 依賴這裡，所以範例不能放在這裡。
 pub struct DsaDigestSigner<A, D, N = StandardDsaEncoding> {
     dsa: A,
     digest: D,

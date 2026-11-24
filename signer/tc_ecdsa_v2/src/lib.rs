@@ -37,6 +37,42 @@
 //! assert!(signer.verify_signature(&hash, &r, &s)?);
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
+//!
+//! To sign the message itself and encode the signature, wrap the signer in `tc_dsa`'s
+//! `DsaDigestSigner`, which hashes the message and writes (r, s) as DER:
+//!
+//! ```
+//! use tc_asym_cipher::{KeyPairGenerator, KeyPairGeneratorInit};
+//! use tc_dsa::{DsaDigestSigner, HMacDsaKCalculator};
+//! use tc_ec_key::{EcKeyGenerationParams, EcKeyPairGenerator};
+//! use tc_ecdsa_v2::EcdsaSigner;
+//! use tc_fp_curve::FpCtCurve;
+//! use tc_fp_curve::named_curves::SECP256R1;
+//! use tc_sha::Sha256Digest;
+//! use tc_signer::{Signer, SignerInit};
+//!
+//! let field = SECP256R1.field();
+//! let curve = SECP256R1.ct_curve(&field);
+//! let g = SECP256R1.ct_generator(&curve);
+//! let mut rng = rand::rng();
+//! let mut generator = EcKeyPairGenerator::<&FpCtCurve<'_>, _>::new(&mut rng);
+//! generator.init(&EcKeyGenerationParams::new(g))?;
+//! let (public_key, private_key) = generator.generate_key_pair()?;
+//!
+//! // ECDSA with the deterministic k of RFC 6979, the signature in DER.
+//! let ecdsa = || EcdsaSigner::new(HMacDsaKCalculator::new(Sha256Digest::new()));
+//! let mut signer = DsaDigestSigner::new(ecdsa(), Sha256Digest::new());
+//! signer.init(&private_key)?;
+//! signer.update(b"hello")?;
+//! let mut signature = vec![0; signer.max_signature_size()];
+//! let length = signer.generate_signature(&mut signature)?;
+//!
+//! let mut verifier = DsaDigestSigner::new(ecdsa(), Sha256Digest::new());
+//! verifier.init(&public_key)?;
+//! verifier.update(b"hello")?;
+//! assert!(verifier.verify_signature(&signature[..length])?);
+//! # Ok::<(), Box<dyn std::error::Error>>(())
+//! ```
 
 #![no_std]
 
