@@ -18,7 +18,7 @@ tc_agreement = "0.1.0"
 tc_block_cipher = "0.1.0"
 # 解密時比對 MAC 不提早結束
 tc_constant_time = "0.1.0"
-tc_kdf = { version = "0.1.0", path = "../../kdf/tc_kdf" }
+tc_kdf = "0.1.0"
 tc_macs = "0.1.0"
 # 共享秘密 Z 與衍生的 K1、K2 用完即清除
 tc_zeroize = { version = "0.1.0", features = ["alloc"] }

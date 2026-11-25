@@ -1650,11 +1650,11 @@ dependencies = [
 [[package]]
 name = "tc_kdf"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ea8848fcc1aea8b47c7a1150150cb1fa237ba3a39a48de83307d11c3a10a3e1d"
 dependencies = [
- "tc_aes",
  "tc_digest",
  "tc_macs",
- "tc_sha",
  "tc_zeroize",
 ]
 

@@ -191,7 +191,7 @@ tc_ml_kem = { version = "0.1.0", path = "../tc_ml_kem", optional = true }
 tc_pbe = { version = "0.1.0", path = "../../kdf/tc_pbe", optional = true }
 
 # KDF
-tc_kdf = { version = "0.1.0", path = "../../kdf/tc_kdf" }
+tc_kdf = "0.1.0"
 
 # Agreement
 tc_agreement = "0.1.0"

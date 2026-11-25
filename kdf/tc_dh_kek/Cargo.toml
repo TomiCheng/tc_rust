@@ -11,7 +11,7 @@ repository.workspace = true
 tc_asn1 = "0.1.2"
 tc_asn1_x9 = { version = "0.1.0", path = "../../asn1/tc_asn1_x9" }
 tc_digest = "0.1.0"
-tc_kdf = { version = "0.1.0", path = "../tc_kdf" }
+tc_kdf = "0.1.0"
 # init 時複製 ZZ 與 extraInfo，drop 或重新 init 時清除
 tc_zeroize = { version = "0.1.0", features = ["alloc"] }
 
