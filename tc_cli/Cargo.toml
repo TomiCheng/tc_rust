@@ -1,0 +1,18 @@
+[package]
+name = "tc_cli"
+description = "A command-line front end to tc_algo."
+version.workspace = true
+edition.workspace = true
+rust-version = "1.85"
+license.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "tcx"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4.6", features = ["derive"] }
+tc_algo = { version = "0.1.0", path = "../crypto/tc_algo", features = ["sha", "md", "blake", "keccak", "macs", "kdf", "pbe", "aes"] }
+tc_encoders = { version = "0.1.0", path = "../util/tc_encoders", features = ["std"] }
+tc_zlib = { version = "0.1.0", path = "../util/tc_zlib" }

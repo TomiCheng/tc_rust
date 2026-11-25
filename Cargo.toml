@@ -9,7 +9,7 @@ members = [
     "security/*",
     "signer/*",
     "util/*",
-    "tc_openpgp/*", "tc_tls",
+    "tc_openpgp/*", "tc_tls", "tc_cli",
 ]
 
 [workspace.package]
