@@ -633,26 +633,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1a235ecc11d3600edf2d7466a4023ea76a587e32d2084820ad434fb53a266d55"
 
 [[package]]
-name = "tc_agreement_kdf"
-version = "0.1.0"
-dependencies = [
- "rand",
- "tc_agreement",
- "tc_asn1_x509",
- "tc_asym_cipher",
- "tc_bigint",
- "tc_ec_agreement",
- "tc_ec_core",
- "tc_ec_key",
- "tc_ecdh_kek",
- "tc_f2m_curve",
- "tc_fp_curve",
- "tc_kdf",
- "tc_sha",
- "tc_zeroize",
-]
-
-[[package]]
 name = "tc_algo"
 version = "0.1.0"
 dependencies = [
@@ -661,7 +641,6 @@ dependencies = [
  "tc_aead_cipher",
  "tc_aes",
  "tc_agreement",
- "tc_agreement_kdf",
  "tc_aria",
  "tc_ascon_aead",
  "tc_ascon_hash",
@@ -1399,12 +1378,22 @@ dependencies = [
 name = "tc_ecdh_kek"
 version = "0.1.0"
 dependencies = [
+ "rand",
+ "tc_agreement",
  "tc_asn1",
  "tc_asn1_cms",
  "tc_asn1_x509",
+ "tc_asym_cipher",
+ "tc_bigint",
  "tc_digest",
+ "tc_ec_agreement",
+ "tc_ec_core",
+ "tc_ec_key",
+ "tc_f2m_curve",
+ "tc_fp_curve",
  "tc_kdf",
  "tc_sha",
+ "tc_zeroize",
 ]
 
 [[package]]

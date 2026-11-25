@@ -1,16 +1,16 @@
-//! `AgreementWithKdf`：以 Bouncy Castle 的 `ECDHWithKdfBasicAgreement`、
-//! `ECDHCWithKdfBasicAgreement` 與 `ECMqvWithKdfBasicAgreement` 算出的向量對照（AES-128
-//! key wrap、128 位元、KDF 為 SHA-256 的 `ECDHKekGenerator`）；以及錯誤。
+//! `AgreementWithKdf`: vectors made with Bouncy Castle's
+//! `ECDHWithKdfBasicAgreement`, `ECDHCWithKdfBasicAgreement` and
+//! `ECMqvWithKdfBasicAgreement` (AES-128 key wrap, 128 bits, `ECDHKekGenerator`
+//! over SHA-256), and the errors.
 
 use tc_agreement::{Agreement, AgreementInit};
-use tc_agreement_kdf::{AgreementWithKdf, AgreementWithKdfError, UkmParams};
 use tc_asn1_x509::alg::AlgorithmIdentifier;
 use tc_bigint::{ArrayEncoding, PaddedBigUint};
 use tc_ec_agreement::{EcMqvBasicAgreement, MqvPrivateParams, MqvPublicParams};
 use tc_ec_agreement::{EcdhBasicAgreement, EcdhError, EcdhcBasicAgreement};
 use tc_ec_core::Curve;
 use tc_ec_key::{EcPrivateKey, EcPublicKey};
-use tc_ecdh_kek::EcdhKek;
+use tc_ecdh_kek::{AgreementWithKdf, AgreementWithKdfError, EcdhKek, UkmParams};
 use tc_f2m_curve::F2mCtCurve;
 use tc_f2m_curve::named_curves::SECT163K1;
 use tc_fp_curve::FpCtCurve;
@@ -35,7 +35,7 @@ fn with_kdf<A>(agreement: A) -> AgreementWithKdf<A, EcdhKek<Sha256Digest>> {
     AgreementWithKdf::new(agreement, kdf, aes128_wrap(), 128)
 }
 
-/// 私鑰為 `d`（十六進位）的金鑰對。
+/// The key pair whose private scalar is `d`, in hexadecimal.
 fn key_pair<C: Curve<Scalar = PaddedBigUint>>(
     g: &C::Point,
     d: &str,

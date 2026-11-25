@@ -1,20 +1,22 @@
 use core::fmt;
 
-/// 帶 KDF 的協商的錯誤：`A` 是底層協商的錯誤，`K` 是 KDF 的錯誤。
+/// The error of an agreement with a KDF: `A` is the error of the agreement
+/// underneath, `K` that of the KDF.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum AgreementWithKdfError<A, K> {
-    /// 在 `init` 之前就要求協商。
+    /// The agreement was used before `init` succeeded.
     NotInitialized,
-    /// 輸出緩衝區短於導出的金鑰。
+    /// The output buffer is shorter than the derived key.
     BufferTooSmall,
-    /// 底層的協商失敗。
+    /// The agreement underneath failed.
     Agreement(A),
-    /// KDF 失敗。
+    /// The KDF failed.
     Kdf(K),
 }
 
 impl<A: fmt::Display, K: fmt::Display> fmt::Display for AgreementWithKdfError<A, K> {
-    /// 寫出錯誤訊息；包住的錯誤沿用它自己的訊息。常數時間；輸出時間取決於 formatter。
+    /// Writes the message; a wrapped error keeps its own. Constant time, apart
+    /// from the formatter.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::NotInitialized => f.write_str("Agreement algorithm not initialised"),

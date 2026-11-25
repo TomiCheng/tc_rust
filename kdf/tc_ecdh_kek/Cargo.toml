@@ -1,6 +1,6 @@
 [package]
 name = "tc_ecdh_kek"
-description = "The RFC 5753 ECDH KEK derivation for CMS, after Bouncy Castle's ECDHKekGenerator."
+description = "The RFC 5753 ECDH KEK derivation for CMS, and agreement with it, after Bouncy Castle's ECDHKekGenerator and ECDHWithKdfBasicAgreement."
 version = "0.1.0"
 edition.workspace = true
 rust-version = "1.85"
@@ -8,12 +8,22 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
+tc_agreement = "0.1.0"
 tc_asn1 = "0.1.2"
 tc_asn1_cms = { version = "0.1.0", path = "../../asn1/tc_asn1_cms" }
 tc_asn1_x509 = "0.1.0"
 tc_digest = "0.1.0"
 # Kdf2 在 init 時複製 Z，drop 或重新 init 時清除
 tc_kdf = { version = "0.1.0", path = "../tc_kdf" }
+tc_zeroize = { version = "0.1.0", features = ["alloc"] }
 
 [dev-dependencies]
+rand = { workspace = true }
+tc_asym_cipher = "0.2.0"
+tc_bigint = { version = "0.1.0", features = ["alloc"] }
+tc_ec_agreement = "0.1.0"
+tc_ec_core = "0.1.0"
+tc_ec_key = "0.1.0"
+tc_f2m_curve = "0.1.0"
+tc_fp_curve = "0.1.0"
 tc_sha = "0.1.1"

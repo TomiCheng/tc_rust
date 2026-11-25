@@ -32,16 +32,6 @@ use core::any::Any;
 use tc_aead_cipher::AeadParamsOwned;
 #[cfg(any(feature = "rc-cipher", feature = "gost28147", feature = "threefish"))]
 use tc_aead_cipher::ParamsWithAeadOwned;
-#[cfg(all(
-    feature = "ec-agreement",
-    any(
-        feature = "fp-custom",
-        feature = "fp-curve",
-        feature = "f2m-custom",
-        feature = "f2m-curve"
-    )
-))]
-use tc_agreement_kdf::UkmParams;
 use tc_block_cipher::KeyOwned;
 #[cfg(any(
     feature = "aes",
@@ -108,6 +98,16 @@ use tc_ec_agreement::EcVkoParams;
     )
 ))]
 use tc_ec_agreement::{MqvPrivateParams, MqvPublicParams};
+#[cfg(all(
+    feature = "ec-agreement",
+    any(
+        feature = "fp-custom",
+        feature = "fp-curve",
+        feature = "f2m-custom",
+        feature = "f2m-curve"
+    )
+))]
+use tc_ecdh_kek::UkmParams;
 #[cfg(feature = "gost3410")]
 use tc_gost3410::{Gost3410Parameters, Gost3410PrivateKey, Gost3410PublicKey};
 #[cfg(feature = "gost28147")]

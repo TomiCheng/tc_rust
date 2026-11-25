@@ -1,3 +1,6 @@
+//! The agreement with a KDF states the timing of every public method and
+//! trait method it implements.
+
 const METHODS: [&str; 4] = ["fmt", "init", "agreement_size", "calculate_agreement"];
 
 fn checked(line: &str) -> bool {
@@ -21,6 +24,7 @@ fn missing_timing_docs(source: &str) -> (usize, Vec<String>) {
         }
         if let Some(comment) = line.strip_prefix("///") {
             docs.push_str(comment.trim());
+            docs.push(' ');
             continue;
         }
         if line.starts_with("#[") || attribute_depth > 0 {
@@ -33,7 +37,8 @@ fn missing_timing_docs(source: &str) -> (usize, Vec<String>) {
         }
         if !in_tests && checked(line) {
             count += 1;
-            if docs.contains("常數時間") == docs.contains("變動時間") {
+            let docs = docs.to_ascii_lowercase();
+            if docs.contains("constant time") == docs.contains("variable time") {
                 missing.push(line.to_owned());
             }
         }
@@ -51,7 +56,11 @@ fn every_public_method_and_helper_states_constant_or_variable_time() {
             4,
         ),
         ("ukm_params.rs", include_str!("../src/ukm_params.rs"), 4),
-        ("error.rs", include_str!("../src/error.rs"), 1),
+        (
+            "agreement_with_kdf_error.rs",
+            include_str!("../src/agreement_with_kdf_error.rs"),
+            1,
+        ),
     ] {
         let (count, missing) = missing_timing_docs(source);
         assert!(count >= minimum, "only {count} methods scanned in {name}");

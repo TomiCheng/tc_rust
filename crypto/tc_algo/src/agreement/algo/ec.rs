@@ -1,7 +1,6 @@
 use core::error::Error;
 
 use tc_agreement::AgreementInit;
-use tc_agreement_kdf::{AgreementWithKdf, UkmParams};
 use tc_asn1::Asn1Oid;
 use tc_asn1_x509::alg::AlgorithmIdentifier;
 use tc_bigint::PaddedBigUint;
@@ -18,6 +17,7 @@ use tc_ec_core::Curve;
 ))]
 use tc_ec_key::EcPrivateKey;
 use tc_ecdh_kek::EcdhKek;
+use tc_ecdh_kek::{AgreementWithKdf, UkmParams};
 
 use super::typed::{Erased, Inner, init_as, init_with};
 use crate::agreement::{Agreement, AgreementEntry};
