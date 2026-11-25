@@ -16,5 +16,6 @@ tc_zeroize = { version = "0.1.0", features = ["alloc"] }
 
 [dev-dependencies]
 tc_aes = "0.1.0"
+tc_digest = { version = "0.1.1", features = ["alloc"] }
 tc_macs = { version = "0.1.0", features = ["hmac", "cmac", "alloc"] }
 tc_sha = "0.1.1"

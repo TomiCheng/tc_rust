@@ -1,6 +1,5 @@
-use core::convert::Infallible;
-
-use tc_digest::{Digest, TryDigest};
+use tc_digest::Digest;
+use tc_digest::util::ShortenedDigest;
 use tc_kdf::kdf::{Kdf1, Kdf2, KdfParamsRef};
 use tc_kdf::{Kdf, KdfError, KdfInit};
 use tc_sha::{Sha1Digest, Sha256Digest};
@@ -12,40 +11,9 @@ fn hex(text: &str) -> Vec<u8> {
         .collect()
 }
 
-/// BC 的 `ShortenedDigest(new Sha256Digest(), 20)`：只取 SHA-256 的前 20 bytes。
-struct Sha256Shortened20(Sha256Digest);
-
-impl TryDigest for Sha256Shortened20 {
-    type Error = Infallible;
-
-    fn digest_size(&self) -> usize {
-        20
-    }
-
-    fn byte_length(&self) -> usize {
-        self.0.byte_length()
-    }
-
-    fn try_update(&mut self, input: &[u8]) -> Result<(), Infallible> {
-        self.0.update(input);
-        Ok(())
-    }
-
-    fn try_do_final(&mut self, output: &mut [u8]) -> Result<usize, Infallible> {
-        let mut full = [0; 32];
-        self.0.do_final(&mut full);
-        output[..20].copy_from_slice(&full[..20]);
-        Ok(20)
-    }
-
-    fn try_reset(&mut self) -> Result<(), Infallible> {
-        self.0.reset();
-        Ok(())
-    }
-}
-
-fn shortened() -> Sha256Shortened20 {
-    Sha256Shortened20(Sha256Digest::new())
+/// BC's `ShortenedDigest(new Sha256Digest(), 20)`: the first 20 bytes of SHA-256.
+fn shortened() -> ShortenedDigest<Sha256Digest> {
+    ShortenedDigest::new(Sha256Digest::new(), 20)
 }
 
 fn derive<K>(kdf: &mut K, seed: &[u8], len: usize) -> Vec<u8>
