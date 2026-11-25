@@ -1,26 +1,16 @@
-#[cfg(any(
-    all(
-        feature = "ecdh",
-        any(
-            feature = "fp-custom",
-            feature = "fp-curve",
-            feature = "f2m-custom",
-            feature = "f2m-curve"
-        )
-    ),
-    all(
-        feature = "ecmqv",
-        any(
-            feature = "fp-custom",
-            feature = "fp-curve",
-            feature = "f2m-custom",
-            feature = "f2m-curve"
-        )
+#[cfg(all(
+    feature = "ec-agreement",
+    any(
+        feature = "fp-custom",
+        feature = "fp-curve",
+        feature = "f2m-custom",
+        feature = "f2m-curve"
     )
 ))]
 pub use tc_agreement_kdf::UkmParams;
 #[cfg(all(
-    feature = "ecmqv",
+    feature = "ec-agreement",
+    feature = "gost3411",
     any(
         feature = "fp-custom",
         feature = "fp-curve",
@@ -28,9 +18,9 @@ pub use tc_agreement_kdf::UkmParams;
         feature = "f2m-curve"
     )
 ))]
-pub use tc_ecmqv::MqvPrivateParams;
+pub use tc_ec_agreement::EcVkoParams;
 #[cfg(all(
-    feature = "ecmqv",
+    feature = "ec-agreement",
     any(
         feature = "fp-custom",
         feature = "fp-curve",
@@ -38,9 +28,9 @@ pub use tc_ecmqv::MqvPrivateParams;
         feature = "f2m-curve"
     )
 ))]
-pub use tc_ecmqv::MqvPublicParams;
+pub use tc_ec_agreement::MqvPrivateParams;
 #[cfg(all(
-    feature = "ecgost3410",
+    feature = "ec-agreement",
     any(
         feature = "fp-custom",
         feature = "fp-curve",
@@ -48,4 +38,4 @@ pub use tc_ecmqv::MqvPublicParams;
         feature = "f2m-curve"
     )
 ))]
-pub use tc_ecvko::EcVkoParams;
+pub use tc_ec_agreement::MqvPublicParams;

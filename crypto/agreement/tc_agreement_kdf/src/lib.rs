@@ -11,7 +11,7 @@
 //! use tc_asym_cipher::{KeyPairGenerator, KeyPairGeneratorInit};
 //! use tc_ec_key::{EcKeyGenerationParams, EcKeyPairGenerator};
 //! use tc_ecdh_kek::EcdhKek;
-//! use tc_ecdh_v2::EcdhBasicAgreement;
+//! use tc_ec_agreement::EcdhBasicAgreement;
 //! use tc_fp_curve::FpCtCurve;
 //! use tc_fp_curve::named_curves::SECP256R1;
 //! use tc_sha::Sha256Digest;

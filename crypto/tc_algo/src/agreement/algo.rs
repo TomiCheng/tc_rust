@@ -2,48 +2,19 @@
 mod cfrg;
 #[cfg(feature = "dh")]
 mod dh;
-#[cfg(any(
-    all(
-        feature = "ecdh",
-        any(
-            feature = "fp-custom",
-            feature = "fp-curve",
-            feature = "f2m-custom",
-            feature = "f2m-curve"
-        )
-    ),
-    all(
-        feature = "ecmqv",
-        any(
-            feature = "fp-custom",
-            feature = "fp-curve",
-            feature = "f2m-custom",
-            feature = "f2m-curve"
-        )
+#[cfg(all(
+    feature = "ec-agreement",
+    any(
+        feature = "fp-custom",
+        feature = "fp-curve",
+        feature = "f2m-custom",
+        feature = "f2m-curve"
     )
 ))]
 mod ec;
 #[cfg(any(
     all(
-        feature = "ecdh",
-        any(
-            feature = "fp-custom",
-            feature = "fp-curve",
-            feature = "f2m-custom",
-            feature = "f2m-curve"
-        )
-    ),
-    all(
-        feature = "ecmqv",
-        any(
-            feature = "fp-custom",
-            feature = "fp-curve",
-            feature = "f2m-custom",
-            feature = "f2m-curve"
-        )
-    ),
-    all(
-        feature = "ecgost3410",
+        feature = "ec-agreement",
         any(
             feature = "fp-custom",
             feature = "fp-curve",
@@ -55,7 +26,8 @@ mod ec;
 ))]
 mod typed;
 #[cfg(all(
-    feature = "ecgost3410",
+    feature = "ec-agreement",
+    feature = "gost3411",
     any(
         feature = "fp-custom",
         feature = "fp-curve",
@@ -73,29 +45,19 @@ pub(crate) type CreateRows = fn(&crate::DefaultAlgoContext) -> Vec<Box<dyn Agree
 pub(crate) const BUILT_IN: &[CreateRows] = &[
     #[cfg(feature = "dh")]
     dh::dh,
-    #[cfg(any(
-        all(
-            feature = "ecdh",
-            any(
-                feature = "fp-custom",
-                feature = "fp-curve",
-                feature = "f2m-custom",
-                feature = "f2m-curve"
-            )
-        ),
-        all(
-            feature = "ecmqv",
-            any(
-                feature = "fp-custom",
-                feature = "fp-curve",
-                feature = "f2m-custom",
-                feature = "f2m-curve"
-            )
+    #[cfg(all(
+        feature = "ec-agreement",
+        any(
+            feature = "fp-custom",
+            feature = "fp-curve",
+            feature = "f2m-custom",
+            feature = "f2m-curve"
         )
     ))]
     ec::ec,
     #[cfg(all(
-        feature = "ecgost3410",
+        feature = "ec-agreement",
+        feature = "gost3411",
         any(
             feature = "fp-custom",
             feature = "fp-curve",

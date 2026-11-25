@@ -1,7 +1,7 @@
 #![cfg_attr(feature = "aes", doc = include_str!("../docs/AeadCipher.md"))]
 #![cfg_attr(feature = "chacha", doc = include_str!("../docs/StreamCipher.md"))]
 #![cfg_attr(feature = "ies", doc = include_str!("../docs/IES.md"))]
-#![cfg_attr(all(feature = "ies", feature = "ecdh", feature = "fp-custom"), doc = include_str!("../docs/Ecies.md"))]
+#![cfg_attr(all(feature = "ies", feature = "ec-agreement", feature = "fp-custom"), doc = include_str!("../docs/Ecies.md"))]
 
 mod algo;
 mod cipher_entry;

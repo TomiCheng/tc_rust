@@ -6,7 +6,7 @@ use tc_asym_cipher::{KeyPairGenerator, KeyPairGeneratorInit};
 use tc_bigint::PaddedBigUint;
 use tc_ec_core::{Curve, FieldElement, Point};
 use tc_ec_key::{EcKeyGenerationParams, EcKeyPairGenerator, EcPrivateKey, EcPublicKey};
-use tc_ecdh_v2::{EcdhBasicAgreement, EcdhError, EcdhcBasicAgreement};
+use tc_ec_agreement::{EcdhBasicAgreement, EcdhError, EcdhcBasicAgreement};
 use tc_f2m_curve::F2mCtCurve;
 use tc_f2m_curve::named_curves::{SECT163K1, SECT233K1};
 use tc_fp_curve::FpCtCurve;

@@ -20,8 +20,7 @@ tc_asym_cipher = "0.2.0"
 tc_bigint = { version = "0.1.0", features = ["alloc"] }
 tc_ec_core = "0.1.0"
 tc_ec_key = { version = "0.1.0" }
-tc_ecdh_v2 = { version = "0.1.0", path = "../tc_ecdh_v2" }
-tc_ecmqv = { version = "0.1.0", path = "../tc_ecmqv" }
+tc_ec_agreement = { version = "0.1.0", path = "../tc_ec_agreement" }
 tc_f2m_curve = "0.1.0"
 tc_fp_curve = "0.1.0"
 tc_sha = "0.1.1"

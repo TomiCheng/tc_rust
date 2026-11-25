@@ -1,6 +1,6 @@
 [package]
-name = "tc_ecdh_v2"
-description = "ECDH key agreement over short-Weierstrass curves, ported from Bouncy Castle C#."
+name = "tc_ec_agreement"
+description = "EC key agreement (ECDH, ECDHC, EC-MQV, GOST VKO), ported from Bouncy Castle C#."
 version.workspace = true
 edition.workspace = true
 rust-version = "1.85"
@@ -10,6 +10,7 @@ repository.workspace = true
 [dependencies]
 tc_agreement = "0.1.0"
 tc_bigint = { version = "0.1.0", features = ["alloc"] }
+tc_digest = "0.1.0"
 tc_ec_core = "0.1.0"
 tc_ec_key = { version = "0.1.0" }
 tc_modular = { version = "0.1.0", features = ["alloc"] }
@@ -21,3 +22,4 @@ tc_asym_cipher = "0.2.0"
 tc_f2m_curve = "0.1.0"
 tc_fp_curve = "0.1.0"
 tc_fp_custom = { version = "0.1.0", features = ["small-curves"] }
+tc_gost3411 = "0.1.0"

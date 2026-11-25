@@ -32,24 +32,13 @@ use core::any::Any;
 use tc_aead_cipher::AeadParamsOwned;
 #[cfg(any(feature = "rc-cipher", feature = "gost28147", feature = "threefish"))]
 use tc_aead_cipher::ParamsWithAeadOwned;
-#[cfg(any(
-    all(
-        feature = "ecdh",
-        any(
-            feature = "fp-custom",
-            feature = "fp-curve",
-            feature = "f2m-custom",
-            feature = "f2m-curve"
-        )
-    ),
-    all(
-        feature = "ecmqv",
-        any(
-            feature = "fp-custom",
-            feature = "fp-curve",
-            feature = "f2m-custom",
-            feature = "f2m-curve"
-        )
+#[cfg(all(
+    feature = "ec-agreement",
+    any(
+        feature = "fp-custom",
+        feature = "fp-curve",
+        feature = "f2m-custom",
+        feature = "f2m-curve"
     )
 ))]
 use tc_agreement_kdf::UkmParams;
@@ -99,7 +88,8 @@ use tc_dh_key::{DhPrivateKey, DhPublicKey};
 #[cfg(feature = "dsa")]
 use tc_dsa_signer::{DsaParameters, DsaPrivateKey, DsaPublicKey};
 #[cfg(all(
-    feature = "ecmqv",
+    feature = "ec-agreement",
+    feature = "gost3411",
     any(
         feature = "fp-custom",
         feature = "fp-curve",
@@ -107,9 +97,9 @@ use tc_dsa_signer::{DsaParameters, DsaPrivateKey, DsaPublicKey};
         feature = "f2m-curve"
     )
 ))]
-use tc_ecmqv::{MqvPrivateParams, MqvPublicParams};
+use tc_ec_agreement::EcVkoParams;
 #[cfg(all(
-    feature = "ecgost3410",
+    feature = "ec-agreement",
     any(
         feature = "fp-custom",
         feature = "fp-curve",
@@ -117,7 +107,7 @@ use tc_ecmqv::{MqvPrivateParams, MqvPublicParams};
         feature = "f2m-curve"
     )
 ))]
-use tc_ecvko::EcVkoParams;
+use tc_ec_agreement::{MqvPrivateParams, MqvPublicParams};
 #[cfg(feature = "gost3410")]
 use tc_gost3410::{Gost3410Parameters, Gost3410PrivateKey, Gost3410PublicKey};
 #[cfg(feature = "gost28147")]
@@ -531,24 +521,13 @@ impl Params for X448PublicKey {
 
 // A private key of an agreement with a KDF, with the UKM the KDF takes, as Bouncy Castle's
 // ParametersWithUkm wraps it
-#[cfg(any(
-    all(
-        feature = "ecdh",
-        any(
-            feature = "fp-custom",
-            feature = "fp-curve",
-            feature = "f2m-custom",
-            feature = "f2m-curve"
-        )
-    ),
-    all(
-        feature = "ecmqv",
-        any(
-            feature = "fp-custom",
-            feature = "fp-curve",
-            feature = "f2m-custom",
-            feature = "f2m-curve"
-        )
+#[cfg(all(
+    feature = "ec-agreement",
+    any(
+        feature = "fp-custom",
+        feature = "fp-curve",
+        feature = "f2m-custom",
+        feature = "f2m-curve"
     )
 ))]
 impl<P: Send + Sync + 'static> Params for UkmParams<P> {
@@ -558,7 +537,7 @@ impl<P: Send + Sync + 'static> Params for UkmParams<P> {
 }
 
 #[cfg(all(
-    feature = "ecmqv",
+    feature = "ec-agreement",
     any(
         feature = "fp-custom",
         feature = "fp-curve",
@@ -577,7 +556,7 @@ where
 }
 
 #[cfg(all(
-    feature = "ecmqv",
+    feature = "ec-agreement",
     any(
         feature = "fp-custom",
         feature = "fp-curve",
@@ -596,7 +575,8 @@ where
 }
 
 #[cfg(all(
-    feature = "ecgost3410",
+    feature = "ec-agreement",
+    feature = "gost3411",
     any(
         feature = "fp-custom",
         feature = "fp-curve",

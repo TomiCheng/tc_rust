@@ -1,7 +1,7 @@
 use tc_bigint::PaddedBigUint;
 use tc_digest::Digest;
+use tc_ec_agreement::{EcVkoAgreement, EcVkoParams};
 use tc_ec_core::Curve;
-use tc_ecvko::{EcVkoAgreement, EcVkoParams};
 use tc_gost3411::{Gost3411_2012_256Digest, Gost3411_2012_512Digest, Gost3411Digest};
 
 use super::typed::{Erased, Inner, init_as};
@@ -116,8 +116,8 @@ fn gost3411_2012_512<C: Curve<Scalar = PaddedBigUint> + 'static>(
 mod tests {
     use rand::rngs::SysRng;
     use rand_core::UnwrapErr;
+    use tc_ec_agreement::EcVkoParams;
     use tc_ec_key::EcPrivateKey;
-    use tc_ecvko::EcVkoParams;
     use tc_fp_curve::FpCtCurve;
 
     use crate::params::ec_curves::by_name;

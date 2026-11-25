@@ -6,7 +6,7 @@ use tc_agreement::{Agreement, AgreementInit};
 use tc_asym_cipher::{KeyPairGenerator, KeyPairGeneratorInit};
 use tc_bigint::{ArrayEncoding, PaddedBigUint};
 use tc_ec_key::{EcKeyGenerationParams, EcKeyPairGenerator, EcPrivateKey, EcPublicKey};
-use tc_ecvko::{EcVkoAgreement, EcVkoError, EcVkoParams};
+use tc_ec_agreement::{EcVkoAgreement, EcVkoError, EcVkoParams};
 use tc_fp_curve::named_curves::{SECP256K1, SECP256R1};
 use tc_fp_curve::{FpCtCurve, FpField};
 use tc_gost3411::Gost3411_2012_256Digest;

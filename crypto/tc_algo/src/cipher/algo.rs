@@ -90,7 +90,7 @@ mod des;
 mod dstu7624;
 #[cfg(all(
     feature = "ies",
-    feature = "ecdh",
+    feature = "ec-agreement",
     any(
         feature = "fp-custom",
         feature = "fp-curve",
@@ -277,7 +277,7 @@ pub(crate) const BUILT_IN: &[CreateRows] = &[
     ies::ies,
     #[cfg(all(
         feature = "ies",
-        feature = "ecdh",
+        feature = "ec-agreement",
         any(
             feature = "fp-custom",
             feature = "fp-curve",

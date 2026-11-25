@@ -74,7 +74,7 @@ fn main() -> Result<(), AlgoError> {
 | Name | OID | Feature | Agreement | KDF | MAC | Encryption |
 |---|---|---|---|---|---|---|
 | `IES` | none | `ies` | DH | KDF2 over SHA-1 | HMAC-SHA1 | XOR |
-| `ECIES` | none | `ies` and `ecdh` | ECDH | KDF2 over SHA-1 | HMAC-SHA1 | XOR |
+| `ECIES` | none | `ies` and `ec-agreement` | ECDH | KDF2 over SHA-1 | HMAC-SHA1 | XOR |
 
 The case of the name does not matter. The output is the length of the message plus 20 bytes of tag.
 

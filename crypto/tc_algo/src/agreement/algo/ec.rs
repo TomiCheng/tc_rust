@@ -8,7 +8,7 @@ use tc_bigint::PaddedBigUint;
 use tc_digest::Digest;
 use tc_ec_core::Curve;
 #[cfg(all(
-    feature = "ecdh",
+    feature = "ec-agreement",
     any(
         feature = "fp-custom",
         feature = "fp-curve",
@@ -38,7 +38,7 @@ type KdfTry =
 pub(super) fn ec(_context: &DefaultAlgoContext) -> Vec<Box<dyn AgreementEntry>> {
     let mut rows: Vec<Box<dyn AgreementEntry>> = Vec::new();
     #[cfg(all(
-        feature = "ecdh",
+        feature = "ec-agreement",
         any(
             feature = "fp-custom",
             feature = "fp-curve",
@@ -48,7 +48,7 @@ pub(super) fn ec(_context: &DefaultAlgoContext) -> Vec<Box<dyn AgreementEntry>> 
     ))]
     rows.push(row("ECDH", &[], ct_curves!(ecdh)));
     #[cfg(all(
-        feature = "ecdh",
+        feature = "ec-agreement",
         any(
             feature = "fp-custom",
             feature = "fp-curve",
@@ -58,7 +58,7 @@ pub(super) fn ec(_context: &DefaultAlgoContext) -> Vec<Box<dyn AgreementEntry>> 
     ))]
     rows.push(row("ECDHC", &["ECCDH"], ct_curves!(ecdhc)));
     #[cfg(all(
-        feature = "ecmqv",
+        feature = "ec-agreement",
         any(
             feature = "fp-custom",
             feature = "fp-curve",
@@ -69,7 +69,7 @@ pub(super) fn ec(_context: &DefaultAlgoContext) -> Vec<Box<dyn AgreementEntry>> 
     rows.push(row("ECMQV", &[], ct_curves!(ecmqv)));
 
     #[cfg(all(
-        feature = "ecdh",
+        feature = "ec-agreement",
         any(
             feature = "fp-custom",
             feature = "fp-curve",
@@ -85,7 +85,7 @@ pub(super) fn ec(_context: &DefaultAlgoContext) -> Vec<Box<dyn AgreementEntry>> 
         ct_curves!(ecdh_sha1),
     ));
     #[cfg(all(
-        feature = "ecdh",
+        feature = "ec-agreement",
         any(
             feature = "fp-custom",
             feature = "fp-curve",
@@ -101,7 +101,7 @@ pub(super) fn ec(_context: &DefaultAlgoContext) -> Vec<Box<dyn AgreementEntry>> 
         ct_curves!(ecdh_sha224),
     ));
     #[cfg(all(
-        feature = "ecdh",
+        feature = "ec-agreement",
         any(
             feature = "fp-custom",
             feature = "fp-curve",
@@ -117,7 +117,7 @@ pub(super) fn ec(_context: &DefaultAlgoContext) -> Vec<Box<dyn AgreementEntry>> 
         ct_curves!(ecdh_sha256),
     ));
     #[cfg(all(
-        feature = "ecdh",
+        feature = "ec-agreement",
         any(
             feature = "fp-custom",
             feature = "fp-curve",
@@ -133,7 +133,7 @@ pub(super) fn ec(_context: &DefaultAlgoContext) -> Vec<Box<dyn AgreementEntry>> 
         ct_curves!(ecdh_sha384),
     ));
     #[cfg(all(
-        feature = "ecdh",
+        feature = "ec-agreement",
         any(
             feature = "fp-custom",
             feature = "fp-curve",
@@ -150,7 +150,7 @@ pub(super) fn ec(_context: &DefaultAlgoContext) -> Vec<Box<dyn AgreementEntry>> 
     ));
 
     #[cfg(all(
-        feature = "ecdh",
+        feature = "ec-agreement",
         any(
             feature = "fp-custom",
             feature = "fp-curve",
@@ -166,7 +166,7 @@ pub(super) fn ec(_context: &DefaultAlgoContext) -> Vec<Box<dyn AgreementEntry>> 
         ct_curves!(ecdhc_sha1),
     ));
     #[cfg(all(
-        feature = "ecdh",
+        feature = "ec-agreement",
         any(
             feature = "fp-custom",
             feature = "fp-curve",
@@ -182,7 +182,7 @@ pub(super) fn ec(_context: &DefaultAlgoContext) -> Vec<Box<dyn AgreementEntry>> 
         ct_curves!(ecdhc_sha224),
     ));
     #[cfg(all(
-        feature = "ecdh",
+        feature = "ec-agreement",
         any(
             feature = "fp-custom",
             feature = "fp-curve",
@@ -198,7 +198,7 @@ pub(super) fn ec(_context: &DefaultAlgoContext) -> Vec<Box<dyn AgreementEntry>> 
         ct_curves!(ecdhc_sha256),
     ));
     #[cfg(all(
-        feature = "ecdh",
+        feature = "ec-agreement",
         any(
             feature = "fp-custom",
             feature = "fp-curve",
@@ -214,7 +214,7 @@ pub(super) fn ec(_context: &DefaultAlgoContext) -> Vec<Box<dyn AgreementEntry>> 
         ct_curves!(ecdhc_sha384),
     ));
     #[cfg(all(
-        feature = "ecdh",
+        feature = "ec-agreement",
         any(
             feature = "fp-custom",
             feature = "fp-curve",
@@ -231,7 +231,7 @@ pub(super) fn ec(_context: &DefaultAlgoContext) -> Vec<Box<dyn AgreementEntry>> 
     ));
 
     #[cfg(all(
-        feature = "ecmqv",
+        feature = "ec-agreement",
         any(
             feature = "fp-custom",
             feature = "fp-curve",
@@ -247,7 +247,7 @@ pub(super) fn ec(_context: &DefaultAlgoContext) -> Vec<Box<dyn AgreementEntry>> 
         ct_curves!(ecmqv_sha1),
     ));
     #[cfg(all(
-        feature = "ecmqv",
+        feature = "ec-agreement",
         any(
             feature = "fp-custom",
             feature = "fp-curve",
@@ -263,7 +263,7 @@ pub(super) fn ec(_context: &DefaultAlgoContext) -> Vec<Box<dyn AgreementEntry>> 
         ct_curves!(ecmqv_sha224),
     ));
     #[cfg(all(
-        feature = "ecmqv",
+        feature = "ec-agreement",
         any(
             feature = "fp-custom",
             feature = "fp-curve",
@@ -279,7 +279,7 @@ pub(super) fn ec(_context: &DefaultAlgoContext) -> Vec<Box<dyn AgreementEntry>> 
         ct_curves!(ecmqv_sha256),
     ));
     #[cfg(all(
-        feature = "ecmqv",
+        feature = "ec-agreement",
         any(
             feature = "fp-custom",
             feature = "fp-curve",
@@ -295,7 +295,7 @@ pub(super) fn ec(_context: &DefaultAlgoContext) -> Vec<Box<dyn AgreementEntry>> 
         ct_curves!(ecmqv_sha384),
     ));
     #[cfg(all(
-        feature = "ecmqv",
+        feature = "ec-agreement",
         any(
             feature = "fp-custom",
             feature = "fp-curve",
@@ -454,7 +454,7 @@ where
 }
 
 #[cfg(all(
-    feature = "ecdh",
+    feature = "ec-agreement",
     any(
         feature = "fp-custom",
         feature = "fp-curve",
@@ -462,9 +462,9 @@ where
         feature = "f2m-curve"
     )
 ))]
-use tc_ecdh_v2::EcdhBasicAgreement;
+use tc_ec_agreement::EcdhBasicAgreement;
 #[cfg(all(
-    feature = "ecdh",
+    feature = "ec-agreement",
     any(
         feature = "fp-custom",
         feature = "fp-curve",
@@ -472,9 +472,9 @@ use tc_ecdh_v2::EcdhBasicAgreement;
         feature = "f2m-curve"
     )
 ))]
-use tc_ecdh_v2::EcdhcBasicAgreement;
+use tc_ec_agreement::EcdhcBasicAgreement;
 #[cfg(all(
-    feature = "ecmqv",
+    feature = "ec-agreement",
     any(
         feature = "fp-custom",
         feature = "fp-curve",
@@ -482,10 +482,10 @@ use tc_ecdh_v2::EcdhcBasicAgreement;
         feature = "f2m-curve"
     )
 ))]
-use tc_ecmqv::{EcMqvBasicAgreement, MqvPrivateParams};
+use tc_ec_agreement::{EcMqvBasicAgreement, MqvPrivateParams};
 
 #[cfg(all(
-    feature = "ecdh",
+    feature = "ec-agreement",
     any(
         feature = "fp-custom",
         feature = "fp-curve",
@@ -500,7 +500,7 @@ fn ecdh<C: Curve<Scalar = PaddedBigUint> + 'static>(
 }
 
 #[cfg(all(
-    feature = "ecdh",
+    feature = "ec-agreement",
     any(
         feature = "fp-custom",
         feature = "fp-curve",
@@ -517,7 +517,7 @@ fn ecdhc<C: Curve<Scalar = PaddedBigUint> + 'static>(
 // Its params are a MqvPrivateParams of the static and ephemeral private keys, and the other side's
 // a MqvPublicParams
 #[cfg(all(
-    feature = "ecmqv",
+    feature = "ec-agreement",
     any(
         feature = "fp-custom",
         feature = "fp-curve",
@@ -532,7 +532,7 @@ fn ecmqv<C: Curve<Scalar = PaddedBigUint> + 'static>(
 }
 
 #[cfg(all(
-    feature = "ecdh",
+    feature = "ec-agreement",
     any(
         feature = "fp-custom",
         feature = "fp-curve",
@@ -556,7 +556,7 @@ where
 }
 
 #[cfg(all(
-    feature = "ecdh",
+    feature = "ec-agreement",
     any(
         feature = "fp-custom",
         feature = "fp-curve",
@@ -580,7 +580,7 @@ where
 }
 
 #[cfg(all(
-    feature = "ecmqv",
+    feature = "ec-agreement",
     any(
         feature = "fp-custom",
         feature = "fp-curve",
@@ -620,21 +620,21 @@ macro_rules! with_digest {
 }
 
 with_digest! {
-    "ecdh", "sha", ecdh_sha1, ecdh_kdf, tc_sha::Sha1Digest;
-    "ecdh", "sha", ecdh_sha224, ecdh_kdf, tc_sha::Sha224Digest;
-    "ecdh", "sha", ecdh_sha256, ecdh_kdf, tc_sha::Sha256Digest;
-    "ecdh", "sha", ecdh_sha384, ecdh_kdf, tc_sha::Sha384Digest;
-    "ecdh", "sha", ecdh_sha512, ecdh_kdf, tc_sha::Sha512Digest;
-    "ecdh", "sha", ecdhc_sha1, ecdhc_kdf, tc_sha::Sha1Digest;
-    "ecdh", "sha", ecdhc_sha224, ecdhc_kdf, tc_sha::Sha224Digest;
-    "ecdh", "sha", ecdhc_sha256, ecdhc_kdf, tc_sha::Sha256Digest;
-    "ecdh", "sha", ecdhc_sha384, ecdhc_kdf, tc_sha::Sha384Digest;
-    "ecdh", "sha", ecdhc_sha512, ecdhc_kdf, tc_sha::Sha512Digest;
-    "ecmqv", "sha", ecmqv_sha1, ecmqv_kdf, tc_sha::Sha1Digest;
-    "ecmqv", "sha", ecmqv_sha224, ecmqv_kdf, tc_sha::Sha224Digest;
-    "ecmqv", "sha", ecmqv_sha256, ecmqv_kdf, tc_sha::Sha256Digest;
-    "ecmqv", "sha", ecmqv_sha384, ecmqv_kdf, tc_sha::Sha384Digest;
-    "ecmqv", "sha", ecmqv_sha512, ecmqv_kdf, tc_sha::Sha512Digest;
+    "ec-agreement", "sha", ecdh_sha1, ecdh_kdf, tc_sha::Sha1Digest;
+    "ec-agreement", "sha", ecdh_sha224, ecdh_kdf, tc_sha::Sha224Digest;
+    "ec-agreement", "sha", ecdh_sha256, ecdh_kdf, tc_sha::Sha256Digest;
+    "ec-agreement", "sha", ecdh_sha384, ecdh_kdf, tc_sha::Sha384Digest;
+    "ec-agreement", "sha", ecdh_sha512, ecdh_kdf, tc_sha::Sha512Digest;
+    "ec-agreement", "sha", ecdhc_sha1, ecdhc_kdf, tc_sha::Sha1Digest;
+    "ec-agreement", "sha", ecdhc_sha224, ecdhc_kdf, tc_sha::Sha224Digest;
+    "ec-agreement", "sha", ecdhc_sha256, ecdhc_kdf, tc_sha::Sha256Digest;
+    "ec-agreement", "sha", ecdhc_sha384, ecdhc_kdf, tc_sha::Sha384Digest;
+    "ec-agreement", "sha", ecdhc_sha512, ecdhc_kdf, tc_sha::Sha512Digest;
+    "ec-agreement", "sha", ecmqv_sha1, ecmqv_kdf, tc_sha::Sha1Digest;
+    "ec-agreement", "sha", ecmqv_sha224, ecmqv_kdf, tc_sha::Sha224Digest;
+    "ec-agreement", "sha", ecmqv_sha256, ecmqv_kdf, tc_sha::Sha256Digest;
+    "ec-agreement", "sha", ecmqv_sha384, ecmqv_kdf, tc_sha::Sha384Digest;
+    "ec-agreement", "sha", ecmqv_sha512, ecmqv_kdf, tc_sha::Sha512Digest;
 }
 
 #[cfg(test)]
@@ -706,7 +706,7 @@ mod tests {
 
     #[test]
     fn both_sides_of_ecmqv_calculate_the_same_secret_from_static_and_ephemeral_keys() {
-        use tc_ecmqv::{MqvPrivateParams, MqvPublicParams};
+        use tc_ec_agreement::{MqvPrivateParams, MqvPublicParams};
         let (alice, bob) = ([p256(), p256()], [p256(), p256()]);
         let private =
             |keys: &[Pair; 2]| MqvPrivateParams::new(keys[0].1.clone(), keys[1].1.clone());

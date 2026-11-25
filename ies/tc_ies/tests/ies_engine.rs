@@ -2,8 +2,8 @@
 
 use tc_bigint::{ArrayEncoding, PaddedBigUint};
 use tc_block_cipher::CipherDirection;
+use tc_ec_agreement::EcdhBasicAgreement;
 use tc_ec_key::{EcPrivateKey, EcPublicKey};
-use tc_ecdh_v2::EcdhBasicAgreement;
 use tc_fp_custom::named_curves::SECP192R1;
 use tc_fp_custom::{SecP192R1FieldElement, SecPCtCurve};
 use tc_ies::{IesEngine, IesError, IesParamsRef};

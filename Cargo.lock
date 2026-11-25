@@ -641,11 +641,10 @@ dependencies = [
  "tc_asn1_x509",
  "tc_asym_cipher",
  "tc_bigint",
+ "tc_ec_agreement",
  "tc_ec_core",
  "tc_ec_key",
  "tc_ecdh_kek",
- "tc_ecdh_v2",
- "tc_ecmqv",
  "tc_f2m_curve",
  "tc_fp_curve",
  "tc_kdf",
@@ -694,15 +693,13 @@ dependencies = [
  "tc_dsa_signer",
  "tc_dstu7564",
  "tc_dstu7624",
+ "tc_ec_agreement",
  "tc_ec_core",
  "tc_ec_key",
  "tc_ecdh_kek",
- "tc_ecdh_v2",
  "tc_ecdsa_v2",
  "tc_ecgost3410",
- "tc_ecmqv",
  "tc_ecnr",
- "tc_ecvko",
  "tc_elgamal",
  "tc_f2m_curve",
  "tc_f2m_custom",
@@ -1361,6 +1358,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "tc_ec_agreement"
+version = "0.1.0"
+dependencies = [
+ "rand",
+ "tc_agreement",
+ "tc_asym_cipher",
+ "tc_bigint",
+ "tc_digest",
+ "tc_ec_core",
+ "tc_ec_key",
+ "tc_f2m_curve",
+ "tc_fp_curve",
+ "tc_fp_custom",
+ "tc_gost3411",
+ "tc_modular",
+ "tc_zeroize",
+]
+
+[[package]]
 name = "tc_ec_core"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1393,23 +1409,6 @@ dependencies = [
  "tc_digest",
  "tc_kdf",
  "tc_sha",
-]
-
-[[package]]
-name = "tc_ecdh_v2"
-version = "0.1.0"
-dependencies = [
- "rand",
- "tc_agreement",
- "tc_asym_cipher",
- "tc_bigint",
- "tc_ec_core",
- "tc_ec_key",
- "tc_f2m_curve",
- "tc_fp_curve",
- "tc_fp_custom",
- "tc_modular",
- "tc_zeroize",
 ]
 
 [[package]]
@@ -1453,23 +1452,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tc_ecmqv"
-version = "0.1.0"
-dependencies = [
- "rand",
- "tc_agreement",
- "tc_asym_cipher",
- "tc_bigint",
- "tc_ec_core",
- "tc_ec_key",
- "tc_f2m_curve",
- "tc_fp_curve",
- "tc_fp_custom",
- "tc_modular",
- "tc_zeroize",
-]
-
-[[package]]
 name = "tc_ecnr"
 version = "0.1.0"
 dependencies = [
@@ -1483,23 +1465,6 @@ dependencies = [
  "tc_modular",
  "tc_sha",
  "tc_signer",
- "tc_zeroize",
-]
-
-[[package]]
-name = "tc_ecvko"
-version = "0.1.0"
-dependencies = [
- "rand",
- "tc_agreement",
- "tc_asym_cipher",
- "tc_bigint",
- "tc_digest",
- "tc_ec_core",
- "tc_ec_key",
- "tc_fp_curve",
- "tc_gost3411",
- "tc_modular",
  "tc_zeroize",
 ]
 
@@ -1657,8 +1622,8 @@ dependencies = [
  "tc_block_modes",
  "tc_buffered_cipher",
  "tc_constant_time",
+ "tc_ec_agreement",
  "tc_ec_key",
- "tc_ecdh_v2",
  "tc_fp_custom",
  "tc_kdf",
  "tc_macs",

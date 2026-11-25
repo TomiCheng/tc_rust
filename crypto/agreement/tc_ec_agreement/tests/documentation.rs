@@ -49,16 +49,29 @@ fn missing_timing_docs(source: &str) -> (usize, Vec<String>) {
     (count, missing)
 }
 
+/// ECDH 的 basic_agreement.rs 早於這個慣例，doc 是英文，不掃描。
 #[test]
 fn every_public_method_and_helper_states_constant_or_variable_time() {
     for (name, source, minimum) in [
         (
-            "basic_agreement.rs",
-            include_str!("../src/basic_agreement.rs"),
+            "ecdh/cofactor_agreement.rs",
+            include_str!("../src/ecdh/cofactor_agreement.rs"),
+            4,
+        ),
+        (
+            "mqv/basic_agreement.rs",
+            include_str!("../src/mqv/basic_agreement.rs"),
             6,
         ),
-        ("params.rs", include_str!("../src/params.rs"), 8),
-        ("error.rs", include_str!("../src/error.rs"), 1),
+        ("mqv/params.rs", include_str!("../src/mqv/params.rs"), 8),
+        ("mqv/error.rs", include_str!("../src/mqv/error.rs"), 1),
+        (
+            "vko/agreement.rs",
+            include_str!("../src/vko/agreement.rs"),
+            4,
+        ),
+        ("vko/params.rs", include_str!("../src/vko/params.rs"), 3),
+        ("vko/error.rs", include_str!("../src/vko/error.rs"), 1),
     ] {
         let (count, missing) = missing_timing_docs(source);
         assert!(count >= minimum, "only {count} methods scanned in {name}");

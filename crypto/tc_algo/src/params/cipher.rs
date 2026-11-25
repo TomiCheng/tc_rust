@@ -2,7 +2,7 @@
 mod ies_dh;
 #[cfg(all(
     feature = "ies",
-    feature = "ecdh",
+    feature = "ec-agreement",
     any(
         feature = "fp-custom",
         feature = "fp-curve",
@@ -16,7 +16,7 @@ mod ies_ec;
 pub use ies_dh::IesDhParams;
 #[cfg(all(
     feature = "ies",
-    feature = "ecdh",
+    feature = "ec-agreement",
     any(
         feature = "fp-custom",
         feature = "fp-curve",

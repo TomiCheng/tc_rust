@@ -82,9 +82,7 @@ ecdsa = ["ec-key", "dep:tc_dsa", "dep:tc_ecdsa_v2"]
 ecnr = ["ec-key", "dep:tc_dsa", "dep:tc_ecnr"]
 ecgost3410 = ["ec-key", "dep:tc_dsa", "dep:tc_ecgost3410", "dep:tc_gost3411"]
 sm2 = ["fp-custom", "dep:tc_sm2", "dep:tc_dsa"]
-ecdh = ["ec-key", "dep:tc_ecdh_v2", "dep:tc_agreement_kdf", "dep:tc_ecdh_kek"]
-ecmqv = ["ec-key", "dep:tc_ecmqv", "dep:tc_agreement_kdf", "dep:tc_ecdh_kek"]
-ecvko = ["ec-key", "dep:tc_ecvko", "dep:tc_gost3411"]
+ec-agreement = ["ec-key", "dep:tc_ec_agreement", "dep:tc_agreement_kdf", "dep:tc_ecdh_kek"]
 
 # Agreement, KDF, PBE, DRBG and IES
 dh = ["dep:tc_bigint", "dep:tc_dh", "dep:tc_dh_key"]
@@ -205,9 +203,7 @@ tc_naccache_stern = { version = "0.1.0", path = "../tc_naccache_stern", optional
 tc_sm2 = { version = "0.1.0", path = "../tc_sm2", optional = true }
 tc_ec_key = { version = "0.1.0", optional = true }
 tc_ec_core = { version = "0.1.0", optional = true }
-tc_ecdh_v2 = { version = "0.1.0", path = "../agreement/tc_ecdh_v2", optional = true }
-tc_ecmqv = { version = "0.1.0", path = "../agreement/tc_ecmqv", optional = true }
-tc_ecvko = { version = "0.1.0", path = "../agreement/tc_ecvko", optional = true }
+tc_ec_agreement = { version = "0.1.0", path = "../agreement/tc_ec_agreement", optional = true }
 tc_agreement_kdf = { version = "0.1.0", path = "../agreement/tc_agreement_kdf", optional = true }
 tc_ecdh_kek = { version = "0.1.0", path = "../../kdf/tc_ecdh_kek", optional = true }
 tc_f2m_curve = { version = "0.1.1", features = ["small-curves"], optional = true }
