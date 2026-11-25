@@ -8,7 +8,8 @@ use tc_zeroize::Zeroize;
 use crate::kdf::KdfParams;
 use crate::{Kdf, KdfError, KdfInit};
 
-/// The concatenation KDF of NIST SP 800-56A section 5.8.1, BC's `ConcatenationKdfGenerator`:
+/// The one-step concatenation KDF of NIST SP 800-56C, formerly SP 800-56A section 5.8.1, BC's
+/// `ConcatenationKdfGenerator`:
 /// block `i` is `Hash(counter || Z || OtherInfo)` with a 32-bit big-endian counter starting
 /// at 1. The [`KdfParams`] IV is the `OtherInfo`.
 ///
