@@ -1307,8 +1307,9 @@ dependencies = [
 [[package]]
 name = "tc_dsa_signer"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "be5043c26ac09321d657c0010e17cc3de97f3726a05bcfbe8969bbb6ced3d05f"
 dependencies = [
- "rand",
  "rand_core",
  "tc_asym_cipher",
  "tc_bigint",
@@ -1317,7 +1318,6 @@ dependencies = [
  "tc_modular",
  "tc_prime",
  "tc_sha",
- "tc_signer",
  "tc_zeroize",
 ]
 

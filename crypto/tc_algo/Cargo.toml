@@ -173,7 +173,7 @@ tc_dsa = { version = "0.1.0", optional = true }
 tc_ecdsa_v2 = { version = "0.1.0", path = "../../signer/tc_ecdsa_v2", optional = true }
 tc_ecnr = { version = "0.1.0", path = "../../signer/tc_ecnr", optional = true }
 tc_ecgost3410 = { version = "0.1.0", path = "../../signer/tc_ecgost3410", optional = true }
-tc_dsa_signer = { version = "0.1.0", path = "../../signer/tc_dsa_signer", optional = true }
+tc_dsa_signer = { version = "0.1.0", optional = true }
 tc_gost3410 = { version = "0.1.0", path = "../../signer/tc_gost3410", optional = true }
 tc_cfrg_curves = { version = "0.1.0", path = "../tc_cfrg_curves", optional = true }
 tc_ml_dsa = { version = "0.1.0", path = "../../signer/tc_ml_dsa", optional = true }
