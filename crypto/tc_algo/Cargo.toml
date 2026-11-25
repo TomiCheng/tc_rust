@@ -203,7 +203,7 @@ tc_naccache_stern = { version = "0.1.0", path = "../tc_naccache_stern", optional
 tc_sm2 = { version = "0.1.0", path = "../tc_sm2", optional = true }
 tc_ec_key = { version = "0.1.0", optional = true }
 tc_ec_core = { version = "0.1.0", optional = true }
-tc_ec_agreement = { version = "0.1.0", path = "../agreement/tc_ec_agreement", optional = true }
+tc_ec_agreement = { version = "0.1.0", optional = true }
 tc_agreement_kdf = { version = "0.1.0", path = "../agreement/tc_agreement_kdf", optional = true }
 tc_ecdh_kek = { version = "0.1.0", path = "../../kdf/tc_ecdh_kek", optional = true }
 tc_f2m_curve = { version = "0.1.1", features = ["small-curves"], optional = true }

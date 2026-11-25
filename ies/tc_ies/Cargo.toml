@@ -31,7 +31,7 @@ tc_block_modes = { version = "0.1.0", optional = true }
 tc_bigint = { version = "0.1.0", features = ["alloc"] }
 tc_block_modes = { version = "0.1.0", features = ["alloc"] }
 tc_ec_key = { version = "0.1.0" }
-tc_ec_agreement = { version = "0.1.0", path = "../../crypto/agreement/tc_ec_agreement" }
+tc_ec_agreement = { version = "0.1.0" }
 tc_fp_custom = { version = "0.1.0", features = ["small-curves"] }
 tc_macs = { version = "0.1.0", features = ["hmac", "alloc"] }
 tc_sha = "0.1.1"
