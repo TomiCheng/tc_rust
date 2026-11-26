@@ -66,3 +66,17 @@ as HMAC over SHA-256 or ECDSA on P-256, is there when each feature is on: `macs`
   Mainstream: X25519 and ECDH on P-256. More: [Diffie-Hellman](docs/Dh.md)
 - **[PBE](docs/Pbe.md)**: a key from a password, for encrypting with it. Mainstream: PKCS#12 with
   SHA-256 and AES-CBC.
+
+## The builder
+
+`DefaultAlgoBuilder::default()` starts with every row whose features are on, and three kinds of
+call change what `build()` gives:
+
+- `reg_digest`, `reg_cipher`, `reg_signer` and the other `reg_*`, one per factory, add rows: an
+  algorithm of your own, or one that replaces a built-in row of the same name.
+- `set_policy` and `clear_policy` decide which rows `algorithms()` lists; lookups by name and OID
+  still find every row.
+- `set_rand` sets the random source that keys, IVs, padding and signatures draw from; it is the
+  operating system's by default.
+
+More: [DefaultAlgoBuilder](docs/DefaultAlgoBuilder.md)

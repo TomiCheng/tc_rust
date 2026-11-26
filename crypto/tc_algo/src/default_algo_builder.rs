@@ -23,6 +23,7 @@ use crate::wrap::{self, WrapperEntry};
 use crate::xof::{self, XofEntry};
 use crate::{Algo, AlgoBuilder, DefaultAlgoContext, Policy};
 
+#[doc = include_str!("../docs/DefaultAlgoBuilder.md")]
 #[derive(Clone)]
 pub struct DefaultAlgoBuilder {
     digests: Vec<digest::CreateRows>,
