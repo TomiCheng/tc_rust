@@ -1,6 +1,7 @@
 # ParallelHash
 
-ParallelHash, of NIST SP 800-185, hashes a long message in blocks of B bytes, each hashed on its
+ParallelHash is built on the cSHAKE function of [SHA-3](https://en.wikipedia.org/wiki/SHA-3).
+NIST SP 800-185 divides the message into blocks of B bytes, each hashed on its
 own, then hashes the results together. The blocks are independent, so an implementation may hash
 them in parallel; this one, as Bouncy Castle's, hashes them in turn. It suits large inputs, such
 as files.
@@ -64,14 +65,17 @@ SP 800-185 defines two functions:
 
 The first `try_output` call chooses ParallelHashXOF for the rest of the message.
 
-`finalize_len` and `try_output_final`, as in Bouncy Castle, hash in the length of `finalize`
-whatever length they are asked for: `finalize_len(32)` on `PARALLELHASH128` is ParallelHash of 32
-bytes, but `finalize_len(64)` is not ParallelHash of 64 bytes, and no other implementation gives it.
-For another length, use `try_output`.
+When called first, `finalize_len(n)` and `try_output_final` encode the configured digest size
+(256 or 512 bits) and return the requested number of bytes. For example, `finalize_len(64)` on
+`PARALLELHASH128` encodes 256 bits and reads 64 bytes. Standard fixed-length ParallelHash128
+with a 64-byte output encodes 512 bits.
+
+For ParallelHashXOF, start with `try_output`. A subsequent `finalize_len` or `try_output_final`
+reads the next bytes from that same output stream and resets the message.
 
 ## Params
 
-`ParallelHashParams`, from `tc_algo::params`:
+`ParallelHashParams`, from `tc_algo::params::xof`:
 
 - `new(block_size)`: B in bytes, which must be more than 0, and an empty customization string.
 - `with_customization(Vec<u8>)`: S, chosen by the application.
@@ -81,6 +85,6 @@ B of 0 is `InvalidParams` from `init`, as are params of another type.
 ## Using it
 
 - `init` starts a new message, and `try_reset` keeps what it set.
-- The message may come in any number of updates, of any size: `update(b"ab")` then `update(b"c")`
-  is the same as `update(b"abc")`.
+- The message may come in any number of updates, of any size: `try_update(b"ab")` then `try_update(b"c")`
+  is the same as `try_update(b"abc")`.
 - A small B makes long messages slow: each block costs a hash of its own.

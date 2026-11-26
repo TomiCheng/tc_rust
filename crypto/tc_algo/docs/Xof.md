@@ -70,7 +70,7 @@ helpers ending in `_with` call `init` first, and the others do not call it.
   of SP 800-185. SP 800-185 has no default B, and B is part of what is hashed: without `init`,
   ParallelHash runs with blocks of 8192 bytes, a choice of this crate, so another
   implementation gives the same output only when given that block size too. See
-  [ParallelHash](ParallelHash.md).
+  [ParallelHash](Xof/ParallelHash.md).
 - `AsconCXofParams`: the customization string Z of SP 800-232, at most 256 bytes. See
   [Ascon-CXOF128](AsconCXof.md).
 - `Blake2xsParams`: a key of at most 32 bytes, a salt of 8 and a personalization of 8, each
@@ -85,9 +85,9 @@ helpers ending in `_with` call `init` first, and the others do not call it.
   since its XOFs take their params when they are made.
 - `try_update` panics once output has begun, since the input is then closed. Bouncy Castle throws
   here.
-- `try_output` can be called again for the next bytes. TupleHash and ParallelHash hash an output
-  length into `finalize_len`, so for them a shorter `finalize_len` is not the start of a longer
-  one; their pages tell how.
+- `try_output` can be called again for the next bytes. TupleHash hashes the requested output
+  length into `finalize_len`, so for TupleHash a shorter `finalize_len` is not the start of a longer
+  one. ParallelHash encodes its configured digest size when finalized first.
 - `try_output_final` fills a buffer with the next bytes and starts the next message, and
   `finalize_len` does the same with a `Vec` of the length asked for. `try_reset` discards the
   message so far.
@@ -98,7 +98,7 @@ helpers ending in `_with` call `init` first, and the others do not call it.
 
 - [cSHAKE](Xof/CShake.md): customization strings, and what the function name is for
 - [TupleHash](Xof/TupleHash.md): hashing a tuple, one element per update, and its two output modes
-- [ParallelHash](ParallelHash.md): the block size, and its two output modes
+- [ParallelHash](Xof/ParallelHash.md): the block size, and its two output modes
 - [Ascon-CXOF128](AsconCXof.md): the customization string
 - [BLAKE2xs](Blake2xs.md): key, salt and personalization
 - [BLAKE3](Blake3.md): keyed hash and key derivation
