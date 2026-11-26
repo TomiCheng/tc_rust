@@ -1936,11 +1936,11 @@ dependencies = [
 [[package]]
 name = "tc_pbe"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e553ad4dc7a2b92174b4aab6b14631d0aadd3fe12f67f932624997ef78c852bc"
 dependencies = [
  "tc_digest",
  "tc_macs",
- "tc_md",
- "tc_sha",
  "tc_zeroize",
 ]
 
