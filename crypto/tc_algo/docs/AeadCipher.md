@@ -200,12 +200,12 @@ Every row, of a mode or of an algorithm of its own:
 | `RC6/OCB/NOPADDING` | `RC6/OCB/`, `RC6/OCB` |  | `AeadParamsOwned` | `rc-cipher` | 1..255 | ..15 | 8..16 |
 | `RC6/GCM-SIV/NOPADDING` | `RC6/GCM-SIV/`, `RC6/GCM-SIV` |  | `AeadParamsOwned` | `rc-cipher` | 1..255 | 12 | 16 |
 | `RC6/KCCM/NOPADDING` | `RC6/KCCM/`, `RC6/KCCM` |  | `AeadParamsOwned` | `rc-cipher` | 1..255 | ..16 | 8, 16 |
-| `RC5-64/GCM/NOPADDING` | `RC5-64/GCM/`, `RC5-64/GCM` |  | `AeadParamsOwned`, [`ParamsWithAeadOwned<Rc5ParamsOwned>`](Rc5.md) | `rc-cipher` | 1..255 | 1.. | 4..16 |
-| `RC5-64/CCM/NOPADDING` | `RC5-64/CCM/`, `RC5-64/CCM` |  | `AeadParamsOwned`, [`ParamsWithAeadOwned<Rc5ParamsOwned>`](Rc5.md) | `rc-cipher` | 1..255 | 7..13 | 4, 6, 8, 10, 12, 14, 16 |
-| `RC5-64/EAX/NOPADDING` | `RC5-64/EAX/`, `RC5-64/EAX` |  | `AeadParamsOwned`, [`ParamsWithAeadOwned<Rc5ParamsOwned>`](Rc5.md) | `rc-cipher` | 1..255 | .. | 4..16 |
-| `RC5-64/OCB/NOPADDING` | `RC5-64/OCB/`, `RC5-64/OCB` |  | `AeadParamsOwned`, [`ParamsWithAeadOwned<Rc5ParamsOwned>`](Rc5.md) | `rc-cipher` | 1..255 | ..15 | 8..16 |
+| `RC5-64/GCM/NOPADDING` | `RC5-64/GCM/`, `RC5-64/GCM` |  | `AeadParamsOwned`, [`ParamsWithAeadOwned<Rc5ParamsOwned>`](Key/Rc5ParamsOwned.md) | `rc-cipher` | 1..255 | 1.. | 4..16 |
+| `RC5-64/CCM/NOPADDING` | `RC5-64/CCM/`, `RC5-64/CCM` |  | `AeadParamsOwned`, [`ParamsWithAeadOwned<Rc5ParamsOwned>`](Key/Rc5ParamsOwned.md) | `rc-cipher` | 1..255 | 7..13 | 4, 6, 8, 10, 12, 14, 16 |
+| `RC5-64/EAX/NOPADDING` | `RC5-64/EAX/`, `RC5-64/EAX` |  | `AeadParamsOwned`, [`ParamsWithAeadOwned<Rc5ParamsOwned>`](Key/Rc5ParamsOwned.md) | `rc-cipher` | 1..255 | .. | 4..16 |
+| `RC5-64/OCB/NOPADDING` | `RC5-64/OCB/`, `RC5-64/OCB` |  | `AeadParamsOwned`, [`ParamsWithAeadOwned<Rc5ParamsOwned>`](Key/Rc5ParamsOwned.md) | `rc-cipher` | 1..255 | ..15 | 8..16 |
 | `RC5-64/GCM-SIV/NOPADDING` | `RC5-64/GCM-SIV/`, `RC5-64/GCM-SIV` |  | `AeadParamsOwned` | `rc-cipher` | 1..255 | 12 | 16 |
-| `RC5-64/KCCM/NOPADDING` | `RC5-64/KCCM/`, `RC5-64/KCCM` |  | `AeadParamsOwned`, [`ParamsWithAeadOwned<Rc5ParamsOwned>`](Rc5.md) | `rc-cipher` | 1..255 | ..16 | 8, 16 |
+| `RC5-64/KCCM/NOPADDING` | `RC5-64/KCCM/`, `RC5-64/KCCM` |  | `AeadParamsOwned`, [`ParamsWithAeadOwned<Rc5ParamsOwned>`](Key/Rc5ParamsOwned.md) | `rc-cipher` | 1..255 | ..16 | 8, 16 |
 | `DSTU7624-128/GCM/NOPADDING` | `DSTU7624-128/GCM/`, `DSTU7624-128/GCM` |  | `AeadParamsOwned` | `dstu7624` | 16, 32 | 1.. | 4..16 |
 | `DSTU7624-128/CCM/NOPADDING` | `DSTU7624-128/CCM/`, `DSTU7624-128/CCM` |  | `AeadParamsOwned` | `dstu7624` | 16, 32 | 7..13 | 4, 6, 8, 10, 12, 14, 16 |
 | `DSTU7624-128/EAX/NOPADDING` | `DSTU7624-128/EAX/`, `DSTU7624-128/EAX` |  | `AeadParamsOwned` | `dstu7624` | 16, 32 | .. | 4..16 |
@@ -220,11 +220,11 @@ Every row, of a mode or of an algorithm of its own:
 | `SKIPJACK/EAX/NOPADDING` | `SKIPJACK/EAX/`, `SKIPJACK/EAX` |  | `AeadParamsOwned` | `misc-block-cipher` | 10 | .. | 4..8 |
 | `TEA/EAX/NOPADDING` | `TEA/EAX/`, `TEA/EAX` |  | `AeadParamsOwned` | `misc-block-cipher` | 16 | .. | 4..8 |
 | `XTEA/EAX/NOPADDING` | `XTEA/EAX/`, `XTEA/EAX` |  | `AeadParamsOwned` | `misc-block-cipher` | 16 | .. | 4..8 |
-| `RC2/EAX/NOPADDING` | `RC2/EAX/`, `RC2/EAX` |  | `AeadParamsOwned`, [`ParamsWithAeadOwned<Rc2ParamsOwned>`](Rc2.md) | `rc-cipher` | 1..128 | .. | 4..8 |
-| `RC5/EAX/NOPADDING` | `RC5-32/EAX/NOPADDING`, `RC5/EAX/`, `RC5/EAX`, `RC5-32/EAX/`, `RC5-32/EAX` |  | `AeadParamsOwned`, [`ParamsWithAeadOwned<Rc5ParamsOwned>`](Rc5.md) | `rc-cipher` | 1..255 | .. | 4..8 |
-| `GOST28147/EAX/NOPADDING` | `GOST/EAX/NOPADDING`, `GOST-28147/EAX/NOPADDING`, `GOST28147/EAX/`, `GOST28147/EAX`, `GOST/EAX/`, `GOST/EAX`, `GOST-28147/EAX/`, `GOST-28147/EAX` |  | `AeadParamsOwned`, [`ParamsWithAeadOwned<Gost28147ParamsOwned>`](Gost28147.md) | `gost28147` | 32 | .. | 4..8 |
-| `THREEFISH-256/KCCM/NOPADDING` | `THREEFISH-256/KCCM/`, `THREEFISH-256/KCCM` |  | `AeadParamsOwned`, [`ParamsWithAeadOwned<ThreefishParamsOwned>`](Threefish.md) | `threefish` | 32 | ..32 | 8, 16, 32 |
-| `THREEFISH-512/KCCM/NOPADDING` | `THREEFISH-512/KCCM/`, `THREEFISH-512/KCCM` |  | `AeadParamsOwned`, [`ParamsWithAeadOwned<ThreefishParamsOwned>`](Threefish.md) | `threefish` | 64 | ..64 | 8, 16, 32, 48, 64 |
+| `RC2/EAX/NOPADDING` | `RC2/EAX/`, `RC2/EAX` |  | `AeadParamsOwned`, [`ParamsWithAeadOwned<Rc2ParamsOwned>`](Key/Rc2ParamsOwned.md) | `rc-cipher` | 1..128 | .. | 4..8 |
+| `RC5/EAX/NOPADDING` | `RC5-32/EAX/NOPADDING`, `RC5/EAX/`, `RC5/EAX`, `RC5-32/EAX/`, `RC5-32/EAX` |  | `AeadParamsOwned`, [`ParamsWithAeadOwned<Rc5ParamsOwned>`](Key/Rc5ParamsOwned.md) | `rc-cipher` | 1..255 | .. | 4..8 |
+| `GOST28147/EAX/NOPADDING` | `GOST/EAX/NOPADDING`, `GOST-28147/EAX/NOPADDING`, `GOST28147/EAX/`, `GOST28147/EAX`, `GOST/EAX/`, `GOST/EAX`, `GOST-28147/EAX/`, `GOST-28147/EAX` |  | `AeadParamsOwned`, [`ParamsWithAeadOwned<Gost28147ParamsOwned>`](Key/Gost28147ParamsOwned.md) | `gost28147` | 32 | .. | 4..8 |
+| `THREEFISH-256/KCCM/NOPADDING` | `THREEFISH-256/KCCM/`, `THREEFISH-256/KCCM` |  | `AeadParamsOwned`, [`ParamsWithAeadOwned<ThreefishParamsOwned>`](Key/ThreefishParamsOwned.md) | `threefish` | 32 | ..32 | 8, 16, 32 |
+| `THREEFISH-512/KCCM/NOPADDING` | `THREEFISH-512/KCCM/`, `THREEFISH-512/KCCM` |  | `AeadParamsOwned`, [`ParamsWithAeadOwned<ThreefishParamsOwned>`](Key/ThreefishParamsOwned.md) | `threefish` | 64 | ..64 | 8, 16, 32, 48, 64 |
 | `DSTU7624-256/KCCM/NOPADDING` | `DSTU7624-256/KCCM/`, `DSTU7624-256/KCCM` |  | `AeadParamsOwned` | `dstu7624` | 32, 64 | ..32 | 8, 16, 32 |
 | `DSTU7624-512/KCCM/NOPADDING` | `DSTU7624-512/KCCM/`, `DSTU7624-512/KCCM` |  | `AeadParamsOwned` | `dstu7624` | 64 | ..64 | 8, 16, 32, 48, 64 |
 | `CHACHA20-POLY1305` |  | `1.2.840.113549.1.9.16.3.18` | `AeadParamsOwned` | `chacha-aead` | 32 | 12 | 16 |

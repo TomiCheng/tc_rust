@@ -28,6 +28,12 @@ count, never the key.
 | ECB | `Rc5ParamsOwned` |
 | CBC, CFB, OFB, CTR, GOFB (`RC5`), OPENPGPCFB | `ParamsWithIvOwned<Rc5ParamsOwned>` |
 | EAX; for `RC5-64` also GCM, CCM, OCB, KCCM | `ParamsWithAeadOwned<Rc5ParamsOwned>` |
+| GCM-SIV of `RC5-64` | not taken: `AeadParamsOwned` with a bare key only |
+
+In the modes with an IV the params go with the IV, as Bouncy Castle's
+`ParametersWithIV(RC5Parameters, iv)`. In the AEAD modes they go with the nonce, the tag size and
+the initial AAD in a `ParamsWithAeadOwned`, which Bouncy Castle has no counterpart of: its
+`AeadParameters` takes a `KeyParameter` alone.
 
 ```rust
 use tc_algo::params::cipher::ParamsWithIvOwned;
@@ -48,4 +54,4 @@ fn main() -> Result<(), AlgoError> {
 
 The `RC5` and `RC5-64` key generators return an `Rc5ParamsOwned`; see
 [`Rc5KeyGenParams`](../KeyGeneration/Rc5KeyGenParams.md). [Key generation](../KeyGeneration.md) ·
-[RC5](../Rc5.md)
+[RC5](../BlockCipher/RC5.md)

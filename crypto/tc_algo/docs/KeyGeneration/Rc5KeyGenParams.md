@@ -27,4 +27,4 @@ fn main() -> Result<(), AlgoError> {
 ```
 
 The generator returns an `Rc5ParamsOwned` inside `Box<dyn Params>`, carrying both the
-generated key and its round count. [Key generation](../KeyGeneration.md) · [RC5](../Rc5.md)
+generated key and its round count. [Key generation](../KeyGeneration.md) · [RC5](../BlockCipher/RC5.md)

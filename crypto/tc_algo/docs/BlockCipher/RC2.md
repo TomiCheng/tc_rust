@@ -2,18 +2,18 @@
 
 The `rc-cipher` feature has the rows. A block of 8 bytes and a key of 1 to 128 bytes. As in Bouncy
 Castle, a plain key gives an effective key size of the whole key, and RC2's own params give
-another; see [RC2](../Rc2.md).
+another; see [RC2](../Key/Rc2ParamsOwned.md).
 
 | Name | Aliases | OIDs | Params | Note |
 |---|---|---|---|---|
-| `RC2/ECB/NOPADDING` | `RC2/NONE/NOPADDING`, `RC2//NOPADDING` |  | `KeyOwned`, [`Rc2ParamsOwned`](../Rc2.md) | weak, legacy, variable time |
-| `RC2/ECB/PKCS7PADDING` | \*P3 |  | `KeyOwned`, [`Rc2ParamsOwned`](../Rc2.md) | weak, legacy, variable time |
-| `RC2/ECB/ISO10126PADDING` | `RC2/ECB/ISO10126D2PADDING`, `RC2/ECB/ISO10126-2PADDING`, `RC2/NONE/ISO10126PADDING`, `RC2/NONE/ISO10126D2PADDING`, `RC2/NONE/ISO10126-2PADDING`, `RC2//ISO10126PADDING`, `RC2//ISO10126D2PADDING`, `RC2//ISO10126-2PADDING` |  | `KeyOwned`, [`Rc2ParamsOwned`](../Rc2.md) | weak, legacy, variable time |
-| `RC2/ECB/ISO7816-4PADDING` | `RC2/ECB/ISO9797-1PADDING`, `RC2/NONE/ISO7816-4PADDING`, `RC2/NONE/ISO9797-1PADDING`, `RC2//ISO7816-4PADDING`, `RC2//ISO9797-1PADDING` |  | `KeyOwned`, [`Rc2ParamsOwned`](../Rc2.md) | weak, legacy, variable time |
-| `RC2/ECB/X923PADDING` | `RC2/ECB/X9.23PADDING`, `RC2/NONE/X923PADDING`, `RC2/NONE/X9.23PADDING`, `RC2//X923PADDING`, `RC2//X9.23PADDING` |  | `KeyOwned`, [`Rc2ParamsOwned`](../Rc2.md) | weak, legacy, variable time |
-| `RC2/ECB/TBCPADDING` | `RC2/NONE/TBCPADDING`, `RC2//TBCPADDING` |  | `KeyOwned`, [`Rc2ParamsOwned`](../Rc2.md) | weak, legacy, variable time |
-| `RC2/ECB/ZEROBYTEPADDING` | `RC2/NONE/ZEROBYTEPADDING`, `RC2//ZEROBYTEPADDING` |  | `KeyOwned`, [`Rc2ParamsOwned`](../Rc2.md) | weak, legacy, variable time |
-| `RC2/ECB/WITHCTS` | `RC2/NONE/WITHCTS`, `RC2//WITHCTS` |  | `KeyOwned`, [`Rc2ParamsOwned`](../Rc2.md) | weak, legacy, variable time |
+| `RC2/ECB/NOPADDING` | `RC2/NONE/NOPADDING`, `RC2//NOPADDING` |  | `KeyOwned`, [`Rc2ParamsOwned`](../Key/Rc2ParamsOwned.md) | weak, legacy, variable time |
+| `RC2/ECB/PKCS7PADDING` | \*P3 |  | `KeyOwned`, [`Rc2ParamsOwned`](../Key/Rc2ParamsOwned.md) | weak, legacy, variable time |
+| `RC2/ECB/ISO10126PADDING` | `RC2/ECB/ISO10126D2PADDING`, `RC2/ECB/ISO10126-2PADDING`, `RC2/NONE/ISO10126PADDING`, `RC2/NONE/ISO10126D2PADDING`, `RC2/NONE/ISO10126-2PADDING`, `RC2//ISO10126PADDING`, `RC2//ISO10126D2PADDING`, `RC2//ISO10126-2PADDING` |  | `KeyOwned`, [`Rc2ParamsOwned`](../Key/Rc2ParamsOwned.md) | weak, legacy, variable time |
+| `RC2/ECB/ISO7816-4PADDING` | `RC2/ECB/ISO9797-1PADDING`, `RC2/NONE/ISO7816-4PADDING`, `RC2/NONE/ISO9797-1PADDING`, `RC2//ISO7816-4PADDING`, `RC2//ISO9797-1PADDING` |  | `KeyOwned`, [`Rc2ParamsOwned`](../Key/Rc2ParamsOwned.md) | weak, legacy, variable time |
+| `RC2/ECB/X923PADDING` | `RC2/ECB/X9.23PADDING`, `RC2/NONE/X923PADDING`, `RC2/NONE/X9.23PADDING`, `RC2//X923PADDING`, `RC2//X9.23PADDING` |  | `KeyOwned`, [`Rc2ParamsOwned`](../Key/Rc2ParamsOwned.md) | weak, legacy, variable time |
+| `RC2/ECB/TBCPADDING` | `RC2/NONE/TBCPADDING`, `RC2//TBCPADDING` |  | `KeyOwned`, [`Rc2ParamsOwned`](../Key/Rc2ParamsOwned.md) | weak, legacy, variable time |
+| `RC2/ECB/ZEROBYTEPADDING` | `RC2/NONE/ZEROBYTEPADDING`, `RC2//ZEROBYTEPADDING` |  | `KeyOwned`, [`Rc2ParamsOwned`](../Key/Rc2ParamsOwned.md) | weak, legacy, variable time |
+| `RC2/ECB/WITHCTS` | `RC2/NONE/WITHCTS`, `RC2//WITHCTS` |  | `KeyOwned`, [`Rc2ParamsOwned`](../Key/Rc2ParamsOwned.md) | weak, legacy, variable time |
 | `RC2/CBC/NOPADDING` |  |  | \*P1 | legacy, variable time |
 | `RC2/CBC/PKCS7PADDING` | \*P2 | `1.2.840.113549.3.2`, `1.2.840.113549.1.5.11`, `1.2.840.113549.1.12.1.5`, `1.2.840.113549.1.12.1.6` | \*P1 | legacy, variable time |
 | `RC2/CBC/ISO10126PADDING` | `RC2/CBC/ISO10126D2PADDING`, `RC2/CBC/ISO10126-2PADDING` |  | \*P1 | legacy, variable time |
@@ -30,12 +30,12 @@ another; see [RC2](../Rc2.md).
 
 The OID is RSA's, and means CBC with PKCS#7 padding. Its parameters in a certificate or CMS can name
 another effective key size, which these rows take in a `ParamsWithIvOwned<Rc2ParamsOwned>`; see
-[RC2](../Rc2.md#the-effective-key-size-in-cms).
+[RC2](../Key/Rc2ParamsOwned.md#the-effective-key-size-in-cms).
 
 P1: The modes with an IV take the key and the IV in any of seven ways. A bare key, whose effective
 key size is its length: a `KeyWithIvOwned` of the bytes, or a `ParamsWithIvOwned<KeyOwned>`. RC2's
 own params, with an effective key size of their own: a
-[`ParamsWithIvOwned<Rc2ParamsOwned>`](../Rc2.md). Or a `ParamsWithIvOwned` of a `Box<dyn Params>` or
+[`ParamsWithIvOwned<Rc2ParamsOwned>`](../Key/Rc2ParamsOwned.md). Or a `ParamsWithIvOwned` of a `Box<dyn Params>` or
 an `Arc<dyn Params>` holding either a `KeyOwned` or an `Rc2ParamsOwned`, as the `RC2` key generator
 gives an `Rc2ParamsOwned`. The `Box` goes with one message; the `Arc` lets one key serve many
 messages, each with a new IV, without copying the key.

@@ -28,6 +28,11 @@ The key is wiped when the value is dropped, and `Debug` prints the key length, n
 | CBC, CFB, OFB, CTR, GOFB, OPENPGPCFB | `ParamsWithIvOwned<Rc2ParamsOwned>` |
 | EAX | `ParamsWithAeadOwned<Rc2ParamsOwned>` |
 
+In the modes with an IV the params go with the IV, as Bouncy Castle's
+`ParametersWithIV(RC2Parameters, iv)`. In EAX they go with the nonce, the tag size and the initial
+AAD in a `ParamsWithAeadOwned`, which Bouncy Castle has no counterpart of: its `AeadParameters`
+takes a `KeyParameter` alone.
+
 ```rust
 use tc_algo::params::cipher::ParamsWithIvOwned;
 use tc_algo::params::key::Rc2ParamsOwned;
@@ -45,6 +50,12 @@ fn main() -> Result<(), AlgoError> {
 }
 ```
 
+## The effective key size in CMS
+
+RFC 8018 and RFC 3370 write the size as an RC2 parameter version: 160 for 40 bits, 120 for 64 and
+58 for 128, and any number of 256 or more as the size itself. These rows take the size in bits, so
+read the version and convert it before building the params.
+
 The `RC2` key generator returns an `Rc2ParamsOwned`; see
 [`Rc2KeyGenParams`](../KeyGeneration/Rc2KeyGenParams.md). [Key generation](../KeyGeneration.md) ·
-[RC2](../Rc2.md)
+[RC2](../BlockCipher/RC2.md)

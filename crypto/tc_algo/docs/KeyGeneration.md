@@ -71,9 +71,9 @@ fn main() -> Result<(), AlgoError> {
 | `SKIPJACK` |  |  | `misc-block-cipher` | 10 | 10 |  | `KeyOwned` |
 | `SM4` |  |  | `sm4` | 16 | 16 |  | `KeyOwned` |
 | `TEA` |  |  | `misc-block-cipher` | 16 | 16 |  | `KeyOwned` |
-| `THREEFISH-256` |  |  | `threefish` | 32 | 32 | [`ThreefishKeyGenParams`](Threefish.md#key-generation) | `ThreefishParamsOwned` |
-| `THREEFISH-512` |  |  | `threefish` | 64 | 64 | [`ThreefishKeyGenParams`](Threefish.md#key-generation) | `ThreefishParamsOwned` |
-| `THREEFISH-1024` |  |  | `threefish` | 128 | 128 | [`ThreefishKeyGenParams`](Threefish.md#key-generation) | `ThreefishParamsOwned` |
+| `THREEFISH-256` |  |  | `threefish` | 32 | 32 | [`ThreefishKeyGenParams`](KeyGeneration/ThreefishKeyGenParams.md) | `ThreefishParamsOwned` |
+| `THREEFISH-512` |  |  | `threefish` | 64 | 64 | [`ThreefishKeyGenParams`](KeyGeneration/ThreefishKeyGenParams.md) | `ThreefishParamsOwned` |
+| `THREEFISH-1024` |  |  | `threefish` | 128 | 128 | [`ThreefishKeyGenParams`](KeyGeneration/ThreefishKeyGenParams.md) | `ThreefishParamsOwned` |
 | `TNEPRES` |  |  | `serpent` | 24 | 4..32, by 4 | `KeyLength` | `KeyOwned` |
 | `TWOFISH` |  |  | `twofish` | 32 | 16, 24, 32 | `KeyLength` | `KeyOwned` |
 | `XTEA` |  |  | `misc-block-cipher` | 16 | 16 |  | `KeyOwned` |
@@ -96,10 +96,10 @@ fn main() -> Result<(), AlgoError> {
 | `SCHWAEMM256-128` |  |  | `sparkle-aead` | 16 | 16 |  | `KeyOwned` |
 | `SCHWAEMM192-192` |  |  | `sparkle-aead` | 24 | 24 |  | `KeyOwned` |
 | `SCHWAEMM256-256` |  |  | `sparkle-aead` | 32 | 32 |  | `KeyOwned` |
-| `RC2` |  | `1.2.840.113549.3.2`, `1.2.840.113549.1.9.16.3.7` | `rc-cipher` | 16 | 1..128 | [`Rc2KeyGenParams`](Rc2.md#key-generation) | `Rc2ParamsOwned` |
-| `RC5` | `RC5-32` |  | `rc-cipher` | 16 | 1..255 | [`Rc5KeyGenParams`](Rc5.md#key-generation) | `Rc5ParamsOwned` |
-| `RC5-64` |  |  | `rc-cipher` | 32 | 1..255 | [`Rc5KeyGenParams`](Rc5.md#key-generation) | `Rc5ParamsOwned` |
-| `GOST28147` | `GOST`, `GOST-28147` | `1.2.643.2.2.21` | `gost28147` | 32 | 32 | [`Gost28147KeyGenParams`](Gost28147.md#key-generation) | `Gost28147ParamsOwned` |
+| `RC2` |  | `1.2.840.113549.3.2`, `1.2.840.113549.1.9.16.3.7` | `rc-cipher` | 16 | 1..128 | [`Rc2KeyGenParams`](KeyGeneration/Rc2KeyGenParams.md) | `Rc2ParamsOwned` |
+| `RC5` | `RC5-32` |  | `rc-cipher` | 16 | 1..255 | [`Rc5KeyGenParams`](KeyGeneration/Rc5KeyGenParams.md) | `Rc5ParamsOwned` |
+| `RC5-64` |  |  | `rc-cipher` | 32 | 1..255 | [`Rc5KeyGenParams`](KeyGeneration/Rc5KeyGenParams.md) | `Rc5ParamsOwned` |
+| `GOST28147` | `GOST`, `GOST-28147` | `1.2.643.2.2.21` | `gost28147` | 32 | 32 | [`Gost28147KeyGenParams`](KeyGeneration/Gost28147KeyGenParams.md) | `Gost28147ParamsOwned` |
 
 Bytes are lists (`16, 24, 32`), ranges with both ends included (`16..64`), or with no upper end
 (`1..`).

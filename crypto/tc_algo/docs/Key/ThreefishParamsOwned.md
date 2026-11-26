@@ -30,6 +30,15 @@ lengths, never their bytes.
 | CBC, CFB, OFB, CTR, OPENPGPCFB | `ParamsWithIvOwned<ThreefishParamsOwned>` |
 | KCCM (`THREEFISH-256` and `THREEFISH-512`) | `ParamsWithAeadOwned<ThreefishParamsOwned>` |
 
+In the modes with an IV the params go with the IV, as Bouncy Castle's
+`ParametersWithIV(TweakableBlockCipherParameters(key, tweak), iv)`. In KCCM they go with the nonce,
+the tag size and the initial AAD in a `ParamsWithAeadOwned`, which Bouncy Castle has no counterpart
+of: its `AeadParameters` takes a `KeyParameter` alone. Threefish-1024 has no AEAD mode.
+
+The rows encrypt in a mode as any block cipher does, and keep one tweak for the whole message. A
+scheme that changes the tweak per block, as Skein's UBI does, builds on the engine of
+`tc_threefish` instead.
+
 ```rust
 use tc_algo::params::cipher::ParamsWithIvOwned;
 use tc_algo::params::key::ThreefishParamsOwned;
@@ -49,4 +58,4 @@ fn main() -> Result<(), AlgoError> {
 
 The Threefish key generators return a `ThreefishParamsOwned`; see
 [`ThreefishKeyGenParams`](../KeyGeneration/ThreefishKeyGenParams.md).
-[Key generation](../KeyGeneration.md) · [Threefish](../Threefish.md)
+[Key generation](../KeyGeneration.md) · [Threefish](../BlockCipher/Threefish-256.md)

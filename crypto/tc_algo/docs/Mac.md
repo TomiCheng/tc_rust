@@ -110,10 +110,10 @@ cipher, as `cbc-mac` and `des`.
 | `SKIPJACKMAC/CFB8` | `SKIPJACK/CFB8` |  | `macs` and `misc-block-cipher` | `KeyOwned`, `KeyWithIvOwned` | 4 |
 | `IDEAMAC` | `IDEA` |  | `macs` and `misc-block-cipher` | `KeyOwned`, `KeyWithIvOwned` | 4 |
 | `IDEAMAC/CFB8` | `IDEA/CFB8` |  | `macs` and `misc-block-cipher` | `KeyOwned`, `KeyWithIvOwned` | 4 |
-| [`RC2MAC`](Rc2.md) | `RC2` |  | `macs` and `rc-cipher` | `KeyOwned`, `KeyWithIvOwned`, [`Rc2ParamsOwned`](Rc2.md), `ParamsWithIvOwned<Rc2ParamsOwned>` | 4 |
-| [`RC2MAC/CFB8`](Rc2.md) | `RC2/CFB8` |  | `macs` and `rc-cipher` | `KeyOwned`, `KeyWithIvOwned`, [`Rc2ParamsOwned`](Rc2.md), `ParamsWithIvOwned<Rc2ParamsOwned>` | 4 |
-| [`RC5MAC`](Rc5.md) | `RC5` |  | `macs` and `rc-cipher` | `KeyOwned`, `KeyWithIvOwned`, [`Rc5ParamsOwned`](Rc5.md), `ParamsWithIvOwned<Rc5ParamsOwned>` | 4 |
-| [`RC5MAC/CFB8`](Rc5.md) | `RC5/CFB8` |  | `macs` and `rc-cipher` | `KeyOwned`, `KeyWithIvOwned`, [`Rc5ParamsOwned`](Rc5.md), `ParamsWithIvOwned<Rc5ParamsOwned>` | 4 |
+| [`RC2MAC`](BlockCipher/RC2.md) | `RC2` |  | `macs` and `rc-cipher` | `KeyOwned`, `KeyWithIvOwned`, [`Rc2ParamsOwned`](Key/Rc2ParamsOwned.md), `ParamsWithIvOwned<Rc2ParamsOwned>` | 4 |
+| [`RC2MAC/CFB8`](BlockCipher/RC2.md) | `RC2/CFB8` |  | `macs` and `rc-cipher` | `KeyOwned`, `KeyWithIvOwned`, [`Rc2ParamsOwned`](Key/Rc2ParamsOwned.md), `ParamsWithIvOwned<Rc2ParamsOwned>` | 4 |
+| [`RC5MAC`](BlockCipher/RC5.md) | `RC5` |  | `macs` and `rc-cipher` | `KeyOwned`, `KeyWithIvOwned`, [`Rc5ParamsOwned`](Key/Rc5ParamsOwned.md), `ParamsWithIvOwned<Rc5ParamsOwned>` | 4 |
+| [`RC5MAC/CFB8`](BlockCipher/RC5.md) | `RC5/CFB8` |  | `macs` and `rc-cipher` | `KeyOwned`, `KeyWithIvOwned`, [`Rc5ParamsOwned`](Key/Rc5ParamsOwned.md), `ParamsWithIvOwned<Rc5ParamsOwned>` | 4 |
 | `<CIPHER>CMAC`, for the ciphers below | `<CIPHER>-CMAC` |  | `macs` and the cipher's | `KeyOwned`; RC2, RC5 and GOST 28147 also their own | the block |
 | `<CIPHER>GMAC`, for the ciphers below | `<CIPHER>-GMAC` |  | `macs` and the cipher's | `KeyWithIvOwned`; RC5-64 also `ParamsWithIvOwned<Rc5ParamsOwned>` | 16 |
 
@@ -133,7 +133,7 @@ and `TWOFISH`.
 |---|---|---|---|---|---|---|
 | `ISO9797ALG3MAC` | `ISO9797ALG3`, `DESWITHISO9797`, `DESISO9797MAC` |  | `iso9797-mac` | `KeyOwned`, `KeyWithIvOwned` | 16, 24 | 8 |
 | `ISO9797ALG3WITHISO7816-4PADDING` | `ISO9797ALG3MACWITHISO7816-4PADDING` |  | `iso9797-mac` | `KeyOwned`, `KeyWithIvOwned` | 16, 24 | 8 |
-| [`GOST28147MAC`](Gost28147.md) | `GOST28147` |  | `gost28147-mac` | `KeyOwned`, `KeyWithIvOwned`, [`Gost28147ParamsOwned`](Gost28147.md), `ParamsWithIvOwned<Gost28147ParamsOwned>` | 32 | 4 |
+| [`GOST28147MAC`](BlockCipher/GOST28147.md) | `GOST28147` |  | `gost28147-mac` | `KeyOwned`, `KeyWithIvOwned`, [`Gost28147ParamsOwned`](Key/Gost28147ParamsOwned.md), `ParamsWithIvOwned<Gost28147ParamsOwned>` | 32 | 4 |
 | `VMPCMAC` | `VMPC`, `VMPC-MAC` |  | `macs` | `KeyWithIvOwned` | 16..64 | 20 |
 | `SIPHASH-2-4` | `SIPHASH` |  | `macs` | `KeyOwned` | 16 | 8 |
 | `SIPHASH-4-8` |  |  | `macs` | `KeyOwned` | 16 | 8 |

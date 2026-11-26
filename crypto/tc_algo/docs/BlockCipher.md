@@ -20,8 +20,8 @@ Algorithms: [AES](BlockCipher/AES.md) · [DES](BlockCipher/DES.md) ·
 
 See also: [Weak, legacy and variable-time rows](#weak-legacy-and-variable-time-rows) ·
 [PBE names](#pbe-names) · [Modes and paddings](#modes-and-paddings) · [Params](#params) ·
-[The IV](#the-iv) · [RC2's effective key size](Rc2.md) · [RC5's rounds](Rc5.md) ·
-[GOST 28147's S-box](Gost28147.md) · [Threefish's tweak](Threefish.md)
+[The IV](#the-iv) · [RC2's effective key size](Key/Rc2ParamsOwned.md) · [RC5's rounds](Key/Rc5ParamsOwned.md) ·
+[GOST 28147's S-box](Key/Gost28147ParamsOwned.md) · [Threefish's tweak](Key/ThreefishParamsOwned.md)
 
 From a new key to the decrypted message, with AES in CBC mode and PKCS#7 padding. The `aes` feature
 of `tc_algo` has the rows, and the IV here comes from `rand` and `rand_core`.
@@ -42,6 +42,42 @@ fn main() -> Result<(), AlgoError> {
 
     // Set a new IV
     let mut iv = vec![0; 16];
+    UnwrapErr(SysRng).fill_bytes(&mut iv);
+    let params = ParamsWithIvOwned::new(key, iv);
+
+    // Encrypt
+    let ciphertext = algo.cipher().encrypt_by_name(name, &params, message)?;
+
+    // Decrypt
+    let plaintext = algo.cipher().decrypt_by_name(name, &params, &ciphertext)?;
+
+    assert_eq!(plaintext, message);
+    Ok(())
+}
+```
+
+A cipher with params of its own goes the same way. The `RC2` key generator gives an
+`Rc2ParamsOwned`, a key with its effective key size, and it goes into `ParamsWithIvOwned` as it
+is, with an IV of RC2's 8-byte block. The `rc-cipher` feature has the rows.
+
+```rust
+use rand::rngs::SysRng;
+use rand_core::{Rng, UnwrapErr};
+use tc_algo::params::cipher::ParamsWithIvOwned;
+use tc_algo::params::generate::Rc2KeyGenParams;
+use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
+
+fn main() -> Result<(), AlgoError> {
+    let algo = DefaultAlgoBuilder::default().build();
+    let name = "RC2/CBC/PKCS7PADDING";
+    let message = b"attack at dawn";
+
+    // Generate a 16-byte key of 64 effective bits
+    let key_params = Rc2KeyGenParams::new(16).with_effective_key_bits(64);
+    let key = algo.key_generator().generate_by_name_with("RC2", &key_params)?;
+
+    // Set a new IV
+    let mut iv = vec![0; 8];
     UnwrapErr(SysRng).fill_bytes(&mut iv);
     let params = ParamsWithIvOwned::new(key, iv);
 
@@ -169,8 +205,8 @@ which serves many messages without copying the key. Each algorithm's page lists 
 RC2, RC5, RC5-64, GOST28147 and the Threefish rows also take params of their own, as Bouncy
 Castle's `RC2Parameters`, `RC5Parameters`, `ParametersWithSBox` and `TweakableBlockCipherParameters`:
 alone in ECB and with the IV in a `ParamsWithIvOwned`, of the params themselves or of a `Box` or an
-`Arc` holding them, in the other modes. See [RC2](Rc2.md),
-[RC5](Rc5.md), [GOST 28147](Gost28147.md) and [Threefish](Threefish.md).
+`Arc` holding them, in the other modes. See [RC2](Key/Rc2ParamsOwned.md),
+[RC5](Key/Rc5ParamsOwned.md), [GOST 28147](Key/Gost28147ParamsOwned.md) and [Threefish](Key/ThreefishParamsOwned.md).
 
 ## The IV
 

@@ -29,6 +29,14 @@ lengths, never their bytes.
 | CBC, CFB, OFB, CTR, GOFB, OPENPGPCFB | `ParamsWithIvOwned<Gost28147ParamsOwned>` |
 | EAX | `ParamsWithAeadOwned<Gost28147ParamsOwned>` |
 
+In the modes with an IV the params go with the IV, as Bouncy Castle's
+`ParametersWithIV(ParametersWithSBox(key, sbox), iv)`. In EAX they go with the nonce, the tag size
+and the initial AAD in a `ParamsWithAeadOwned`, which Bouncy Castle has no counterpart of: its
+`AeadParameters` takes a `KeyParameter` alone.
+
+GOST's own counter mode, GCTR, which Bouncy Castle calls GOFB, is `GOST28147/GOFB/NOPADDING`, and
+takes the same params as CTR. GOST's MAC is not a cipher, and is not among the cipher rows.
+
 ```rust
 use tc_algo::params::cipher::ParamsWithIvOwned;
 use tc_algo::params::key::{Gost28147ParamsOwned, gost28147_s_box};
@@ -48,4 +56,4 @@ fn main() -> Result<(), AlgoError> {
 
 The `GOST28147` key generator returns a `Gost28147ParamsOwned`; see
 [`Gost28147KeyGenParams`](../KeyGeneration/Gost28147KeyGenParams.md).
-[Key generation](../KeyGeneration.md) · [GOST 28147](../Gost28147.md)
+[Key generation](../KeyGeneration.md) · [GOST 28147](../BlockCipher/GOST28147.md)

@@ -27,4 +27,4 @@ fn main() -> Result<(), AlgoError> {
 ```
 
 The generator returns a `Gost28147ParamsOwned` inside `Box<dyn Params>` with the generated key
-and the selected S-box. [Key generation](../KeyGeneration.md) · [GOST 28147](../Gost28147.md)
+and the selected S-box. [Key generation](../KeyGeneration.md) · [GOST 28147](../BlockCipher/GOST28147.md)

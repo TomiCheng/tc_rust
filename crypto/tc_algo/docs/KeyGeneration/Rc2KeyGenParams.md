@@ -28,4 +28,4 @@ fn main() -> Result<(), AlgoError> {
 ```
 
 The generator returns an `Rc2ParamsOwned` inside `Box<dyn Params>`, carrying both the
-generated key and its effective key size. [Key generation](../KeyGeneration.md) · [RC2](../Rc2.md)
+generated key and its effective key size. [Key generation](../KeyGeneration.md) · [RC2](../BlockCipher/RC2.md)

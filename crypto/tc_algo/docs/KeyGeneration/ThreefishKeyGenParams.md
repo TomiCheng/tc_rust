@@ -28,4 +28,4 @@ fn main() -> Result<(), AlgoError> {
 ```
 
 The generator returns a `ThreefishParamsOwned` inside `Box<dyn Params>` with the generated key
-and the selected tweak. [Key generation](../KeyGeneration.md) · [Threefish](../Threefish.md)
+and the selected tweak. [Key generation](../KeyGeneration.md) · [Threefish](../BlockCipher/Threefish-256.md)
