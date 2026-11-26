@@ -65,7 +65,7 @@ helpers ending in `_with` call `init` first, and the others do not call it.
 
 - `CShakeParams`: the function name N and the customization string S of SP 800-185. Both empty
   is SHAKE. See [cSHAKE](Xof/CShake.md).
-- `TupleHashParams`: the customization string S of SP 800-185. See [TupleHash](TupleHash.md).
+- `TupleHashParams`: the customization string S of SP 800-185. See [TupleHash](Xof/TupleHash.md).
 - `ParallelHashParams`: the block size B in bytes, more than 0, and the customization string S
   of SP 800-185. SP 800-185 has no default B, and B is part of what is hashed: without `init`,
   ParallelHash runs with blocks of 8192 bytes, a choice of this crate, so another
@@ -97,7 +97,7 @@ helpers ending in `_with` call `init` first, and the others do not call it.
 ## More
 
 - [cSHAKE](Xof/CShake.md): customization strings, and what the function name is for
-- [TupleHash](TupleHash.md): hashing a tuple, one element per update, and its two output modes
+- [TupleHash](Xof/TupleHash.md): hashing a tuple, one element per update, and its two output modes
 - [ParallelHash](ParallelHash.md): the block size, and its two output modes
 - [Ascon-CXOF128](AsconCXof.md): the customization string
 - [BLAKE2xs](Blake2xs.md): key, salt and personalization

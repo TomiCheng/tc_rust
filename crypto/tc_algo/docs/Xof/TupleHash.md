@@ -1,9 +1,10 @@
 # TupleHash
 
-TupleHash, of NIST SP 800-185, hashes a list of byte strings, not one message. Each string is
-taken with its length, so the list is read back without ambiguity: `("ab", "c")` and `("a", "bc")`
-hash differently, where a plain hash of their concatenation would not. It suits a record of
-fields, such as a user name, a date and a key ID, hashed or signed as a whole.
+TupleHash, of NIST SP 800-185 and built on the cSHAKE of
+[SHA-3](https://en.wikipedia.org/wiki/SHA-3), hashes a list of byte strings, not one message. Each
+string is taken with its length, so the list is read back without ambiguity: `("ab", "c")` and
+`("a", "bc")` hash differently, where a plain hash of their concatenation would not. It suits a
+record of fields, such as a user name, a date and a key ID, hashed or signed as a whole.
 
 `TUPLEHASH128` and `TUPLEHASH256` are behind the `keccak` feature.
 
@@ -65,7 +66,7 @@ tuple_hash.try_reset()?;
 
 ## Params
 
-`TupleHashParams`, from `tc_algo::params`:
+`TupleHashParams`, from `tc_algo::params::xof`:
 
 - `new()`: an empty customization string.
 - `with_customization(Vec<u8>)`: S, chosen by the application, such as its name and the format
@@ -77,7 +78,7 @@ The string has no limit, and `init` takes any. Params of another type are `Inval
 
 - `init` is optional: without it, the customization string is empty.
 - `init` starts a new message, and `try_reset` keeps the string it set.
-- An empty element is an element too: `update(b"")` changes the hash.
+- An empty element is an element too: `try_update(b"")` changes the hash.
 - `try_update_byte` is an element of one byte, so a field fed byte by byte becomes as many elements.
 - As a `Digest`, `finalize` gives TupleHash of 32 bytes for `TUPLEHASH128` and 64 for
   `TUPLEHASH256`.
