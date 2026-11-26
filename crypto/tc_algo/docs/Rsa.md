@@ -12,7 +12,7 @@ The `rsa` feature of `tc_algo` has the rows.
 From the params to a new pair:
 
 ```rust
-use tc_algo::params::{key::rsa::RsaKey, generate::RsaKeyGenParams, key::rsa::RsaKeyParams};
+use tc_algo::params::{key::RsaKey, generate::RsaKeyGenParams, key::RsaKeyParams};
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
 fn main() -> Result<(), AlgoError> {

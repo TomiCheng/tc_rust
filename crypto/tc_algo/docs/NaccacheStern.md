@@ -14,7 +14,7 @@ From the params to a new pair:
 
 ```rust
 use tc_algo::params::{
-    generate::NaccacheSternKeyGenerationParams, key::naccache_stern::NaccacheSternPrivateKey, key::naccache_stern::NaccacheSternPublicKey,
+    generate::NaccacheSternKeyGenerationParams, key::NaccacheSternPrivateKey, key::NaccacheSternPublicKey,
 };
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 

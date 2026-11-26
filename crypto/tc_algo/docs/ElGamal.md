@@ -13,7 +13,7 @@ From a group to a new pair:
 
 ```rust
 use tc_algo::params::key::dh_groups::rfc3526_2048;
-use tc_algo::params::{key::elgamal::ElGamalParameters, key::elgamal::ElGamalPrivateKey, key::elgamal::ElGamalPublicKey};
+use tc_algo::params::{key::ElGamalParameters, key::ElGamalPrivateKey, key::ElGamalPublicKey};
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
 fn main() -> Result<(), AlgoError> {
