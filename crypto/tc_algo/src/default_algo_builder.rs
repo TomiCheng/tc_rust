@@ -10,10 +10,10 @@ use crate::default_algo_context::os_rand;
 use crate::digest::{self, DigestEntry};
 use crate::drbg::{self, DrbgEntry};
 use crate::generate::{
-    BUILT_IN_KEY_GENERATORS, BUILT_IN_KEY_PAIR_GENERATORS, CreateKeyGeneratorRows,
-    CreateKeyPairGeneratorRows,
+    BUILT_IN_KEY_GENERATORS, BUILT_IN_KEY_PAIR_GENERATORS, BUILT_IN_PARAMS_GENERATORS,
+    CreateKeyGeneratorRows, CreateKeyPairGeneratorRows, CreateParamsGeneratorRows,
 };
-use crate::generate::{KeyGeneratorEntry, KeyPairGeneratorEntry};
+use crate::generate::{KeyGeneratorEntry, KeyPairGeneratorEntry, ParamsGeneratorEntry};
 use crate::kdf::{self, KdfEntry};
 use crate::kem::{self, KemEntry};
 use crate::mac::{self, MacEntry};
@@ -33,6 +33,7 @@ pub struct DefaultAlgoBuilder {
     wrappers: Vec<wrap::CreateRows>,
     key_generators: Vec<CreateKeyGeneratorRows>,
     key_pair_generators: Vec<CreateKeyPairGeneratorRows>,
+    params_generators: Vec<CreateParamsGeneratorRows>,
     agreements: Vec<agreement::CreateRows>,
     signers: Vec<signer::CreateRows>,
     kdfs: Vec<kdf::CreateRows>,
@@ -54,6 +55,7 @@ impl Default for DefaultAlgoBuilder {
             wrappers: wrap::BUILT_IN.to_vec(),
             key_generators: BUILT_IN_KEY_GENERATORS.to_vec(),
             key_pair_generators: BUILT_IN_KEY_PAIR_GENERATORS.to_vec(),
+            params_generators: BUILT_IN_PARAMS_GENERATORS.to_vec(),
             agreements: agreement::BUILT_IN.to_vec(),
             signers: signer::BUILT_IN.to_vec(),
             kdfs: kdf::BUILT_IN.to_vec(),
@@ -99,6 +101,13 @@ impl DefaultAlgoBuilder {
         create: fn(&DefaultAlgoContext) -> Vec<Box<dyn KeyPairGeneratorEntry>>,
     ) {
         self.key_pair_generators.push(create);
+    }
+
+    pub fn reg_params_generator(
+        &mut self,
+        create: fn(&DefaultAlgoContext) -> Vec<Box<dyn ParamsGeneratorEntry>>,
+    ) {
+        self.params_generators.push(create);
     }
 
     pub fn reg_agreement(
@@ -203,6 +212,17 @@ impl DefaultAlgoBuilder {
             .collect()
     }
 
+    fn params_generator_rows(
+        &self,
+        context: &DefaultAlgoContext,
+    ) -> Vec<Box<dyn ParamsGeneratorEntry>> {
+        self.params_generators
+            .iter()
+            .rev()
+            .flat_map(|create| create(context))
+            .collect()
+    }
+
     fn agreement_rows(&self, context: &DefaultAlgoContext) -> Vec<Box<dyn AgreementEntry>> {
         self.agreements
             .iter()
@@ -263,6 +283,7 @@ impl AlgoBuilder for DefaultAlgoBuilder {
             self.wrapper_rows(&context),
             self.key_generator_rows(&context),
             self.key_pair_generator_rows(&context),
+            self.params_generator_rows(&context),
             self.agreement_rows(&context),
             self.signer_rows(&context),
             self.kdf_rows(&context),
@@ -285,6 +306,7 @@ impl fmt::Debug for DefaultAlgoBuilder {
             .field("wrappers", &self.wrappers.len())
             .field("key_generators", &self.key_generators.len())
             .field("key_pair_generators", &self.key_pair_generators.len())
+            .field("params_generators", &self.params_generators.len())
             .field("agreements", &self.agreements.len())
             .field("signers", &self.signers.len())
             .field("kdfs", &self.kdfs.len())

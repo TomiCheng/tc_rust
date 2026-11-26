@@ -47,6 +47,7 @@ impl Error for AlgoError {
 pub enum ErrorKind {
     UnknownDigest,
     UnknownGenerator,
+    UnknownParamsGenerator,
     InvalidKeyGenParams,
     UnknownCipher,
     UnknownAgreement,
@@ -69,6 +70,7 @@ impl fmt::Display for ErrorKind {
         match self {
             ErrorKind::UnknownDigest => f.write_str("unknown digest algorithm"),
             ErrorKind::UnknownGenerator => f.write_str("unknown key generator"),
+            ErrorKind::UnknownParamsGenerator => f.write_str("unknown params generator"),
             ErrorKind::InvalidKeyGenParams => f.write_str("invalid key generation parameters"),
             ErrorKind::UnknownCipher => f.write_str("unknown cipher"),
             ErrorKind::UnknownAgreement => f.write_str("unknown key agreement"),

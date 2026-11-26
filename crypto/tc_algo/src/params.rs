@@ -400,6 +400,13 @@ where
     }
 }
 
+#[cfg(any(feature = "dh", feature = "elgamal"))]
+impl Params for tc_dh_key::DhGroupGenerationParams {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
 #[cfg(feature = "dh")]
 impl Params for DhParameters {
     fn as_any(&self) -> &dyn Any {

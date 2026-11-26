@@ -3,8 +3,8 @@ use crate::cipher::{CipherProvider, EmptyCipherProvider};
 use crate::digest::{DigestProvider, EmptyDigestProvider};
 use crate::drbg::{DrbgProvider, EmptyDrbgProvider};
 use crate::generate::{
-    EmptyKeyGeneratorProvider, EmptyKeyPairGeneratorProvider, KeyGeneratorProvider,
-    KeyPairGeneratorProvider,
+    EmptyKeyGeneratorProvider, EmptyKeyPairGeneratorProvider, EmptyParamsGeneratorProvider,
+    KeyGeneratorProvider, KeyPairGeneratorProvider, ParamsGeneratorProvider,
 };
 use crate::kdf::{EmptyKdfProvider, KdfProvider};
 use crate::kem::{EmptyKemProvider, KemProvider};
@@ -41,6 +41,10 @@ pub trait Algo: Send + Sync {
 
     fn key_pair_generator(&self) -> &dyn KeyPairGeneratorProvider {
         &EmptyKeyPairGeneratorProvider
+    }
+
+    fn params_generator(&self) -> &dyn ParamsGeneratorProvider {
+        &EmptyParamsGeneratorProvider
     }
 
     fn agreement(&self) -> &dyn AgreementProvider {

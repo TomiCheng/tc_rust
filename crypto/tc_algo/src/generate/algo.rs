@@ -25,6 +25,8 @@ mod agreement_keys;
 mod block;
 #[cfg(feature = "dh")]
 mod dh;
+#[cfg(feature = "dh")]
+mod dh_group;
 #[cfg(any(
     feature = "fp-custom",
     feature = "fp-curve",
@@ -34,6 +36,8 @@ mod dh;
 mod ec;
 #[cfg(feature = "elgamal")]
 mod elgamal;
+#[cfg(feature = "elgamal")]
+mod elgamal_group;
 #[cfg(any(
     feature = "aes",
     feature = "aria",
@@ -118,7 +122,7 @@ mod stream;
 ))]
 mod with_params;
 
-use super::{CreateKeyGeneratorRows, CreateKeyPairGeneratorRows};
+use super::{CreateKeyGeneratorRows, CreateKeyPairGeneratorRows, CreateParamsGeneratorRows};
 
 // What DefaultAlgoBuilder starts with: the rows of the key generators whose features are on
 pub(crate) const BUILT_IN_KEY_GENERATORS: &[CreateKeyGeneratorRows] = &[
@@ -189,4 +193,12 @@ pub(crate) const BUILT_IN_KEY_PAIR_GENERATORS: &[CreateKeyPairGeneratorRows] = &
     signing_keys::signing_keys,
     #[cfg(feature = "cfrg-curves")]
     agreement_keys::agreement_keys,
+];
+
+// The same for the params generators
+pub(crate) const BUILT_IN_PARAMS_GENERATORS: &[CreateParamsGeneratorRows] = &[
+    #[cfg(feature = "dh")]
+    dh_group::dh_group,
+    #[cfg(feature = "elgamal")]
+    elgamal_group::elgamal_group,
 ];

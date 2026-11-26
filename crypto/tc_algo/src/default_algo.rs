@@ -14,6 +14,7 @@ use std::sync::Arc;
 
 use crate::generate::{
     KeyGeneratorEntry, KeyGeneratorProvider, KeyPairGeneratorEntry, KeyPairGeneratorProvider,
+    ParamsGeneratorEntry, ParamsGeneratorProvider,
 };
 use crate::{Algo, Policy};
 
@@ -25,6 +26,7 @@ pub(crate) struct DefaultAlgo {
     wrap: DefaultProvider<dyn WrapperEntry>,
     key_generator: DefaultProvider<dyn KeyGeneratorEntry>,
     key_pair_generator: DefaultProvider<dyn KeyPairGeneratorEntry>,
+    params_generator: DefaultProvider<dyn ParamsGeneratorEntry>,
     agreement: DefaultProvider<dyn AgreementEntry>,
     signer: DefaultProvider<dyn SignerEntry>,
     kdf: DefaultProvider<dyn KdfEntry>,
@@ -43,6 +45,7 @@ impl DefaultAlgo {
         wrappers: Vec<Box<dyn WrapperEntry>>,
         key_generators: Vec<Box<dyn KeyGeneratorEntry>>,
         key_pair_generators: Vec<Box<dyn KeyPairGeneratorEntry>>,
+        params_generators: Vec<Box<dyn ParamsGeneratorEntry>>,
         agreements: Vec<Box<dyn AgreementEntry>>,
         signers: Vec<Box<dyn SignerEntry>>,
         kdfs: Vec<Box<dyn KdfEntry>>,
@@ -59,6 +62,7 @@ impl DefaultAlgo {
             wrap: DefaultProvider::new(wrappers, policy.clone()),
             key_generator: DefaultProvider::new(key_generators, policy.clone()),
             key_pair_generator: DefaultProvider::new(key_pair_generators, policy.clone()),
+            params_generator: DefaultProvider::new(params_generators, policy.clone()),
             agreement: DefaultProvider::new(agreements, policy.clone()),
             signer: DefaultProvider::new(signers, policy.clone()),
             kdf: DefaultProvider::new(kdfs, policy.clone()),
@@ -96,6 +100,10 @@ impl Algo for DefaultAlgo {
 
     fn key_pair_generator(&self) -> &dyn KeyPairGeneratorProvider {
         &self.key_pair_generator
+    }
+
+    fn params_generator(&self) -> &dyn ParamsGeneratorProvider {
+        &self.params_generator
     }
 
     fn agreement(&self) -> &dyn AgreementProvider {

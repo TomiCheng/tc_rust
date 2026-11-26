@@ -39,6 +39,8 @@ pub use own::Rc5KeyGenParams;
 pub use own::ThreefishKeyGenParams;
 #[cfg(feature = "rsa")]
 pub use rsa::RsaKeyGenParams;
+#[cfg(any(feature = "dh", feature = "elgamal"))]
+pub use tc_dh_key::DhGroupGenerationParams;
 #[cfg(feature = "dh")]
 pub use tc_dh_key::DhParameters;
 #[cfg(feature = "dh")]

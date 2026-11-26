@@ -14,27 +14,40 @@
 mod algo;
 mod default_key_generator_provider;
 mod default_key_pair_generator_provider;
+mod default_params_generator_provider;
 mod empty_key_generator_provider;
 mod empty_key_pair_generator_provider;
+mod empty_params_generator_provider;
 mod key_generator;
 mod key_generator_entry;
 mod key_generator_provider;
 mod key_pair_generator;
 mod key_pair_generator_entry;
 mod key_pair_generator_provider;
+mod params_generator;
+mod params_generator_entry;
+mod params_generator_provider;
 
-pub(crate) use algo::{BUILT_IN_KEY_GENERATORS, BUILT_IN_KEY_PAIR_GENERATORS};
+pub(crate) use algo::{
+    BUILT_IN_KEY_GENERATORS, BUILT_IN_KEY_PAIR_GENERATORS, BUILT_IN_PARAMS_GENERATORS,
+};
 pub(crate) use empty_key_generator_provider::EmptyKeyGeneratorProvider;
 pub(crate) use empty_key_pair_generator_provider::EmptyKeyPairGeneratorProvider;
+pub(crate) use empty_params_generator_provider::EmptyParamsGeneratorProvider;
 pub use key_generator::KeyGenerator;
 pub use key_generator_entry::KeyGeneratorEntry;
 pub use key_generator_provider::KeyGeneratorProvider;
 pub use key_pair_generator::{KeyPair, KeyPairGenerator};
 pub use key_pair_generator_entry::KeyPairGeneratorEntry;
 pub use key_pair_generator_provider::KeyPairGeneratorProvider;
+pub use params_generator::ParamsGenerator;
+pub use params_generator_entry::ParamsGeneratorEntry;
+pub use params_generator_provider::ParamsGeneratorProvider;
 pub use tc_asym_cipher::KeyPairGeneratorInit;
 
 pub(crate) type CreateKeyGeneratorRows =
     fn(&crate::DefaultAlgoContext) -> Vec<Box<dyn KeyGeneratorEntry>>;
 pub(crate) type CreateKeyPairGeneratorRows =
     fn(&crate::DefaultAlgoContext) -> Vec<Box<dyn KeyPairGeneratorEntry>>;
+pub(crate) type CreateParamsGeneratorRows =
+    fn(&crate::DefaultAlgoContext) -> Vec<Box<dyn ParamsGeneratorEntry>>;
