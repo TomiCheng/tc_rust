@@ -72,8 +72,9 @@ column, or is drawn from below `q` where there is none.
 
 The numbers are `PaddedBigUint` of `tc_bigint`, which `tc_algo` does not re-export.
 
-`tc_algo` does not generate new groups. To generate one, use `DhGroupGenerator` of `tc_dh_key`;
-it is slow, and RFC 7919 recommends a named group such as `rfc7919_ffdhe2048` instead.
+`algo.params_generator().generate_by_name("DH_GROUP")` generates a new group, 2048 bits without
+`init`, or as a `DhGroupGenerationParams` sets. It is slow, and RFC 7919 recommends a named group
+such as `rfc7919_ffdhe2048` instead.
 
 | Method | Setting | Default | Valid range |
 |---|---|---|---|

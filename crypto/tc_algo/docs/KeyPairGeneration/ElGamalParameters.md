@@ -11,26 +11,32 @@ An `ElGamalParameters` is both the input of the generator and part of each key, 
 
 ```rust
 use tc_algo::params::generate::ElGamalParameters;
-use tc_algo::params::generate::elgamal_groups::rfc7919_ffdhe2048;
 use tc_algo::params::key::{ElGamalPrivateKey, ElGamalPublicKey};
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
 fn main() -> Result<(), AlgoError> {
     let algo = DefaultAlgoBuilder::default().build();
 
+    // A new 2048-bit group, which is slow: it can take tens of seconds or minutes
+    let group = algo.params_generator().generate_by_name("ELGAMAL_GROUP")?;
+
     // The group is the input of the generator
-    let group: ElGamalParameters = rfc7919_ffdhe2048();
-    let pair = algo.key_pair_generator().generate_by_name_with("ELGAMAL", &group)?;
+    let pair = algo.key_pair_generator().generate_by_name_with("ELGAMAL", &*group)?;
 
     let public = pair.public().as_any().downcast_ref::<ElGamalPublicKey>().expect("an ElGamalPublicKey");
     let private = pair.private().as_any().downcast_ref::<ElGamalPrivateKey>().expect("an ElGamalPrivateKey");
 
     // Each key carries a copy of the group
-    let _: &ElGamalParameters = public.params();
-    assert_eq!(private.params(), &group);
+    let group = group.as_any().downcast_ref::<ElGamalParameters>().expect("an ElGamalParameters");
+    assert_eq!(public.params(), group);
+    assert_eq!(private.params(), group);
     Ok(())
 }
 ```
+
+`ELGAMAL_GROUP` gives an `ElGamalParameters` inside `Box<dyn Params>`; `&*group` lends it to the
+key pair generator as it is. A standard group of `elgamal_groups`, below, saves the wait:
+`let group: ElGamalParameters = rfc7919_ffdhe2048();` and then `&group`.
 
 The generator returns a `KeyPair` whose `public()` is an `ElGamalPublicKey` and whose `private()`
 is an `ElGamalPrivateKey`, each inside `Box<dyn Params>` and each holding a copy of the group.
@@ -84,8 +90,11 @@ checked when the parameters are built; the generator checks them during `init`. 
 prime is not checked, as in Bouncy Castle, so a group from an untrusted source is up to the
 caller.
 
-`tc_algo` does not generate new groups. To generate one, use `ElGamalGroupGenerator` of
-`tc_elgamal`; it is slow, and a standard group serves instead.
+`ELGAMAL_GROUP` generates a new group, as the example does, as Bouncy Castle's
+`ElGamalParametersGenerator` does: a safe prime `p` with `g` = 2 and no `l`. Without `init` it
+gives 2048 bits; to set the size and the certainty of the primality test, pass a
+`DhGroupGenerationParams` from `tc_algo::params::generate`, which `tc_elgamal`'s generator takes:
+`generate_by_name_with("ELGAMAL_GROUP", &DhGroupGenerationParams::new().with_size(3072))`.
 
 | Accessor | Returns |
 |---|---|
