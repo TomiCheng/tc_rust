@@ -61,7 +61,33 @@ use tc_block_cipher::KeyOwned;
     feature = "pbe"
 ))]
 use tc_block_modes::KeyWithIvOwned;
-#[cfg(any(feature = "rc-cipher", feature = "gost28147", feature = "threefish"))]
+#[cfg(any(
+    feature = "aes",
+    feature = "des",
+    feature = "camellia",
+    feature = "aria",
+    feature = "sm4",
+    feature = "seed",
+    feature = "dstu7624",
+    feature = "blowfish",
+    feature = "twofish",
+    feature = "serpent",
+    feature = "cast",
+    feature = "misc-block-cipher",
+    feature = "rc-cipher",
+    feature = "gost28147",
+    feature = "threefish",
+    feature = "chacha",
+    feature = "rc4-family",
+    feature = "salsa20",
+    feature = "hc",
+    feature = "chacha-aead",
+    feature = "ascon-aead",
+    feature = "grain128-aead",
+    feature = "sparkle-aead",
+    feature = "macs",
+    feature = "pbe"
+))]
 use tc_block_modes::ParamsWithIvOwned;
 #[cfg(feature = "cfrg-curves")]
 use tc_cfrg_curves::{Ed448PrivateKey, Ed448PublicKey};
@@ -180,7 +206,33 @@ impl Params for KeyWithIvOwned {
 
 // An engine's own params with an IV, as Bouncy Castle's ParametersWithIV. Each TParams is a type
 // of its own, which a row downcasts to
-#[cfg(any(feature = "rc-cipher", feature = "gost28147", feature = "threefish"))]
+#[cfg(any(
+    feature = "aes",
+    feature = "des",
+    feature = "camellia",
+    feature = "aria",
+    feature = "sm4",
+    feature = "seed",
+    feature = "dstu7624",
+    feature = "blowfish",
+    feature = "twofish",
+    feature = "serpent",
+    feature = "cast",
+    feature = "misc-block-cipher",
+    feature = "rc-cipher",
+    feature = "gost28147",
+    feature = "threefish",
+    feature = "chacha",
+    feature = "rc4-family",
+    feature = "salsa20",
+    feature = "hc",
+    feature = "chacha-aead",
+    feature = "ascon-aead",
+    feature = "grain128-aead",
+    feature = "sparkle-aead",
+    feature = "macs",
+    feature = "pbe"
+))]
 impl<TParams: Send + Sync + 'static> Params for ParamsWithIvOwned<TParams> {
     fn as_any(&self) -> &dyn Any {
         self
@@ -655,3 +707,4 @@ pub mod pbe;
 pub mod signer;
 pub mod wrap;
 pub mod xof;
+

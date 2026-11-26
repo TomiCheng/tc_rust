@@ -45,6 +45,24 @@ impl<O> IvParams for IvView<'_, O> {
     }
 }
 
+// The one place that opens params with an IV. It gives the row's own params O and the IV of a
+// ParamsWithIvOwned<O>, or of a ParamsWithIvOwned<Arc<dyn Params>> whose inner params are an O,
+// and None for anything else
+#[cfg(any(feature = "rc-cipher", feature = "gost28147", feature = "threefish"))]
+pub(super) fn own_and_iv<O: 'static>(params: &dyn Params) -> Option<(&O, &[u8])> {
+    if let Some(params) = params
+        .as_any()
+        .downcast_ref::<tc_block_modes::ParamsWithIvOwned<O>>()
+    {
+        return Some((params.params(), params.iv()));
+    }
+    let shared = params
+        .as_any()
+        .downcast_ref::<tc_block_modes::ParamsWithIvOwned<std::sync::Arc<dyn Params>>>()?;
+    let own = shared.params().as_any().downcast_ref::<O>()?;
+    Some((own, shared.iv()))
+}
+
 // The own params O in a ParamsWithIvOwned<O>, given to the cipher as an IvView
 #[cfg(any(feature = "rc-cipher", feature = "gost28147", feature = "threefish"))]
 pub(super) struct OwnViaIv<O>(PhantomData<fn() -> O>);
@@ -63,17 +81,55 @@ where
         params: &dyn Params,
         iv_len: Option<usize>,
     ) -> Option<Result<(), AlgoError>> {
-        let params = params
-            .as_any()
-            .downcast_ref::<crate::params::cipher::ParamsWithIvOwned<O>>()?;
-        if iv_len.is_some_and(|len| params.iv().len() != len) {
+        let (own, iv) = own_and_iv::<O>(params)?;
+        if iv_len.is_some_and(|len| iv.len() != len) {
             return Some(Err(AlgoError::new(ErrorKind::InvalidParams)));
         }
-        let view = IvView {
-            params: params.params(),
-            iv: params.iv(),
-        };
+        let view = IvView { params: own, iv };
         Some(cipher.init(direction, &view).map_err(invalid_params))
+    }
+}
+
+// The one place that opens a bare key with an IV. It gives the key bytes and the IV of a
+// KeyWithIvOwned, of a ParamsWithIvOwned<KeyOwned>, or of a ParamsWithIvOwned of a Box or an Arc of
+// dyn Params whose inner params are a KeyOwned, and None for anything else
+pub(super) fn key_and_iv(params: &dyn Params) -> Option<(&[u8], &[u8])> {
+    use tc_block_cipher::KeyParams;
+    use tc_block_modes::ParamsWithIvOwned;
+    let any = params.as_any();
+    if let Some(params) = any.downcast_ref::<KeyWithIvOwned>() {
+        return Some((params.key(), params.iv()));
+    }
+    if let Some(params) = any.downcast_ref::<ParamsWithIvOwned<KeyOwned>>() {
+        return Some((params.params().key(), params.iv()));
+    }
+    let (inner, iv): (&dyn Params, &[u8]) =
+        if let Some(params) = any.downcast_ref::<ParamsWithIvOwned<Box<dyn Params>>>() {
+            (params.params().as_ref(), params.iv())
+        } else {
+            let params = any.downcast_ref::<ParamsWithIvOwned<std::sync::Arc<dyn Params>>>()?;
+            (params.params().as_ref(), params.iv())
+        };
+    let key = inner.as_any().downcast_ref::<KeyOwned>()?;
+    Some((key.key(), iv))
+}
+
+// A key and an IV borrowed from a ParamsWithIvOwned of a KeyOwned, which every mode and
+// CTS take through KeyParams and IvParams, with no copy of the key
+pub(super) struct KeyIvView<'a> {
+    key: &'a [u8],
+    iv: &'a [u8],
+}
+
+impl tc_block_cipher::KeyParams for KeyIvView<'_> {
+    fn key(&self) -> &[u8] {
+        self.key
+    }
+}
+
+impl IvParams for KeyIvView<'_> {
+    fn iv(&self) -> &[u8] {
+        self.iv
     }
 }
 
@@ -115,11 +171,10 @@ impl<C> OwnKey<C> for NoOwn {
 }
 
 #[cfg(any(feature = "rc-cipher", feature = "gost28147", feature = "threefish"))]
-impl<C, O: 'static> OwnWithIv<C> for Own<O>
+impl<C, O: 'static, R> OwnWithIv<C> for Own<O>
 where
-    C: BufferedCipherInit<crate::params::cipher::ParamsWithIvOwned<O>>,
-    <C as BufferedCipherInit<crate::params::cipher::ParamsWithIvOwned<O>>>::Error:
-        Error + Send + Sync + 'static,
+    C: for<'a> BufferedCipherInit<tc_block_modes::ParamsWithIvRef<'a, O>, Error = R>,
+    R: Error + Send + Sync + 'static,
 {
     fn init(
         cipher: &mut C,
@@ -127,13 +182,12 @@ where
         params: &dyn Params,
         iv_len: Option<usize>,
     ) -> Option<Result<(), AlgoError>> {
-        let params = params
-            .as_any()
-            .downcast_ref::<crate::params::cipher::ParamsWithIvOwned<O>>()?;
-        if iv_len.is_some_and(|len| params.iv().len() != len) {
+        let (own, iv) = own_and_iv::<O>(params)?;
+        if iv_len.is_some_and(|len| iv.len() != len) {
             return Some(Err(AlgoError::new(ErrorKind::InvalidParams)));
         }
-        Some(cipher.init(direction, params).map_err(invalid_params))
+        let view = tc_block_modes::ParamsWithIvRef::new(own, iv);
+        Some(cipher.init(direction, &view).map_err(invalid_params))
     }
 }
 
@@ -199,22 +253,28 @@ where
     }
 }
 
-impl<C, O, E, I> Cipher for Buffered<C, O>
+impl<C, O, E, I, R> Cipher for Buffered<C, O>
 where
-    C: BufferedCipher<Error = BufferedError<E>> + BufferedCipherInit<KeyWithIvOwned, Error = I>,
+    C: BufferedCipher<Error = BufferedError<E>>
+        + BufferedCipherInit<KeyWithIvOwned, Error = I>
+        + for<'a> BufferedCipherInit<KeyIvView<'a>, Error = R>,
     E: Error + Send + Sync + 'static,
     I: Error + Send + Sync + 'static,
+    R: Error + Send + Sync + 'static,
     O: OwnWithIv<C>,
 {
     fn init(&mut self, direction: CipherDirection, params: &dyn Params) -> Result<(), AlgoError> {
         if let Some(result) = O::init(&mut self.0, direction, params, Some(self.1)) {
             return result;
         }
-        let params = downcast::<KeyWithIvOwned>(params)?;
-        if params.iv().len() != self.1 {
+        // A bare key with an IV, in any of the shapes key_and_iv knows, lent with no copy
+        let (key, iv) = key_and_iv(params).ok_or(AlgoError::new(ErrorKind::InvalidParams))?;
+        if iv.len() != self.1 {
             return Err(AlgoError::new(ErrorKind::InvalidParams));
         }
-        self.0.init(direction, params).map_err(invalid_params)
+        self.0
+            .init(direction, &KeyIvView { key, iv })
+            .map_err(invalid_params)
     }
 }
 
@@ -308,19 +368,25 @@ where
     }
 }
 
-impl<C, O, I> Cipher for Ctr<C, O>
+impl<C, O, I, R> Cipher for Ctr<C, O>
 where
     Buffered<C, O>: BufferedCipher<Error = AlgoError>,
-    C: BufferedCipherInit<KeyWithIvOwned, Error = I>,
+    C: BufferedCipherInit<KeyWithIvOwned, Error = I>
+        + for<'a> BufferedCipherInit<KeyIvView<'a>, Error = R>,
     I: Error + Send + Sync + 'static,
+    R: Error + Send + Sync + 'static,
     O: OwnWithIv<C>,
 {
     fn init(&mut self, direction: CipherDirection, params: &dyn Params) -> Result<(), AlgoError> {
         if let Some(result) = O::init(&mut self.0.0, direction, params, None) {
             return result;
         }
-        let params = downcast::<KeyWithIvOwned>(params)?;
-        self.0.0.init(direction, params).map_err(invalid_params)
+        // A bare key with an IV, in any of the shapes key_and_iv knows, lent with no copy
+        let (key, iv) = key_and_iv(params).ok_or(AlgoError::new(ErrorKind::InvalidParams))?;
+        self.0
+            .0
+            .init(direction, &KeyIvView { key, iv })
+            .map_err(invalid_params)
     }
 }
 

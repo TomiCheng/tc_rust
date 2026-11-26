@@ -62,6 +62,22 @@ macro_rules! keyed {
             }
         }
 
+        // A bare key and an IV, as key_and_iv lends them from params with an IV
+        impl<'v> tc_block_cipher::BlockCipherInit<$crate::cipher::algo::buffered::KeyIvView<'v>>
+            for $crate::cipher::algo::keyed::Keyed<$engine>
+        {
+            type Error = tc_block_cipher::InitError;
+
+            fn init(
+                &mut self,
+                direction: tc_block_cipher::CipherDirection,
+                params: &$crate::cipher::algo::buffered::KeyIvView<'v>,
+            ) -> Result<(), tc_block_cipher::InitError> {
+                let $key = tc_block_cipher::KeyParams::key(params);
+                tc_block_cipher::BlockCipherInit::init(&mut self.0, direction, &$params)
+            }
+        }
+
         // A borrowed key, as GCM-SIV keys the engine with the keys it derives
         impl<'k> tc_block_cipher::BlockCipherInit<tc_block_cipher::KeyRef<'k>>
             for $crate::cipher::algo::keyed::Keyed<$engine>
