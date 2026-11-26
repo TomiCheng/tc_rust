@@ -15,7 +15,7 @@ tc_asym_cipher = "0.2.0"
 tc_asym_encoding = { version = "0.2.0", optional = true }
 tc_constant_time = { version = "0.1.0", optional = true }
 tc_bigint = { version = "0.1.0", optional = true }
-tc_pwhash = { version = "0.1.0", path = "../../kdf/tc_pwhash", optional = true }
+tc_pwhash = { version = "0.1.0", optional = true }
 tc_zeroize = { version = "0.1.0", optional = true }
 tc_rsa = { version = "0.2.0", optional = true }
 tc_algo = { version = "0.1.0", path = "../../crypto/tc_algo" }

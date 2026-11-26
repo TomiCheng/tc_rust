@@ -2014,6 +2014,8 @@ dependencies = [
 [[package]]
 name = "tc_pwhash"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "14b34449ffa3b43ddd54cf51c09d8088dd6528c7f6f4c9484a73af33646b9e04"
 dependencies = [
  "tc_blake",
  "tc_constant_time",
