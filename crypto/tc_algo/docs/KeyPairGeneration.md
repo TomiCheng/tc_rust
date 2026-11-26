@@ -73,7 +73,7 @@ parameters return `InvalidParams` during `init` (except pre-built `DsaParameters
 - [`DsaKeyGenParams`](KeyPairGeneration/DsaKeyGenParams.md), [`DsaParameters`](KeyPairGeneration/DsaKeyGenParams.md#a-domain-in-hand): Parameters to generate a new
   domain during `init` (which is slow and can be reused for many pairs) or an existing
   domain, for `DSA`.
-- [`Gost3410KeyGenParams`](Gost3410.md), [`Gost3410Parameters`](Gost3410.md): Parameters
+- [`Gost3410KeyGenParams`](KeyPairGeneration/Gost3410KeyGenParams.md), [`Gost3410Parameters`](KeyPairGeneration/Gost3410KeyGenParams.md#a-domain-in-hand): Parameters
   to generate a new domain during `init` or an existing domain, for `GOST3410`.
 
 ## Using it
