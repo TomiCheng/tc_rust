@@ -43,6 +43,7 @@ The name is that of Bouncy Castle's `GeneratorUtilities`, and its case does not 
   elsewhere, makes more pairs over the same domain.
 
 Any other type is `InvalidParams`, and so is a domain that tc_dsa_signer refuses.
+[DsaKeyGenParams](KeyPairGeneration/DsaKeyGenParams.md) lists the settings and the checks.
 
 ## Signing
 
