@@ -29,7 +29,7 @@ of `tc_algo` has the rows, and the IV here comes from `rand` and `rand_core`.
 ```rust
 use rand::rngs::SysRng;
 use rand_core::{Rng, UnwrapErr};
-use tc_algo::params::{key::KeyOwned, key::KeyParams, cipher::KeyWithIvOwned};
+use tc_algo::params::cipher::ParamsWithIvOwned;
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
 fn main() -> Result<(), AlgoError> {
@@ -39,15 +39,11 @@ fn main() -> Result<(), AlgoError> {
 
     // Generate a key
     let key = algo.key_generator().generate_by_name("AES256")?;
-    let key = key
-        .as_any()
-        .downcast_ref::<KeyOwned>()
-        .expect("AES256 generates a KeyOwned");
 
     // Set a new IV
     let mut iv = vec![0; 16];
     UnwrapErr(SysRng).fill_bytes(&mut iv);
-    let params = KeyWithIvOwned::new(key.key().to_vec(), iv);
+    let params = ParamsWithIvOwned::new(key, iv);
 
     // Encrypt
     let ciphertext = algo.cipher().encrypt_by_name(name, &params, message)?;
@@ -164,13 +160,16 @@ Each kind of row takes the type of its mode, and any other type is `InvalidParam
 | Rows | Params |
 |---|---|
 | ECB | `KeyOwned` |
-| CBC, CFB, OFB, CTR, GOFB, OPENPGPCFB | `KeyWithIvOwned` |
+| CBC, CFB, OFB, CTR, GOFB, OPENPGPCFB | `KeyWithIvOwned`, `ParamsWithIvOwned<KeyOwned>`, or a `ParamsWithIvOwned` of a `Box<dyn Params>` or an `Arc<dyn Params>` holding a `KeyOwned` |
 
-Both come from the crates underneath and wipe themselves when dropped.
+They come from the crates underneath and wipe themselves when dropped. A `ParamsWithIvOwned` takes
+a generated key as it is: the `Box` that the generator gives, for one message, or an `Arc` of it,
+which serves many messages without copying the key. Each algorithm's page lists what its rows take.
 
 RC2, RC5, RC5-64, GOST28147 and the Threefish rows also take params of their own, as Bouncy
 Castle's `RC2Parameters`, `RC5Parameters`, `ParametersWithSBox` and `TweakableBlockCipherParameters`:
-alone in ECB and with the IV in a `ParamsWithIvOwned` in the other modes. See [RC2](Rc2.md),
+alone in ECB and with the IV in a `ParamsWithIvOwned`, of the params themselves or of a `Box` or an
+`Arc` holding them, in the other modes. See [RC2](Rc2.md),
 [RC5](Rc5.md), [GOST 28147](Gost28147.md) and [Threefish](Threefish.md).
 
 ## The IV
@@ -179,7 +178,7 @@ alone in ECB and with the IV in a `ParamsWithIvOwned` in the other modes. See [R
   ciphertext, since decrypting needs the same one.
 - The IV must be one block, 8 bytes for the ciphers of 8-byte blocks and 16 for the others, or
   `init` gives `InvalidParams`. Unlike Bouncy Castle, a short IV is not padded with zeros, and
-  there is no default of zeros: `KeyWithIvOwned` always has one to give.
+  there is no default of zeros: the params always have one to give.
 - CTR is the exception: its IV may be shorter than a block, and the rest of the block is the
   counter, which starts at zero.
 - `finalize` goes back to the same IV, as in Bouncy Castle. So give each message a new `init` with a
@@ -197,8 +196,16 @@ alone in ECB and with the IV in a `ParamsWithIvOwned` in the other modes. See [R
 
 - `AES128`, `AES192` and `AES256` generate keys of 16, 24 and 32 bytes. The NIST OID of a mode finds
   the generator of its key length too, as `id-aes256-CBC` does for `AES256`.
-- A generated key is a `KeyOwned`, so adding an IV takes a downcast and a new `KeyWithIvOwned`, as
-  above. Both hold a copy of the key.
+- A generated key is a `KeyOwned` inside the `Box<dyn Params>` the generator gives. It goes
+  straight into ECB, and into a `ParamsWithIvOwned` with an IV, as above, with no copy.
+- To encrypt many messages under one key, turn the `Box` into an `Arc<dyn Params>` with `into()`,
+  and give each message a `ParamsWithIvOwned` of a clone of the `Arc` and a new IV:
+
+  ```rust
+  let key: Arc<dyn Params> = algo.key_generator().generate_by_name("AES256")?.into();
+  let first = ParamsWithIvOwned::new(key.clone(), first_iv);
+  let second = ParamsWithIvOwned::new(key.clone(), second_iv);
+  ```
 
 ## Authentication
 
