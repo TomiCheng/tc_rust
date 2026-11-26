@@ -1731,22 +1731,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tc_jpake"
-version = "0.1.0"
-dependencies = [
- "rand",
- "rand_core",
- "tc_bigint",
- "tc_constant_time",
- "tc_digest",
- "tc_macs",
- "tc_modular",
- "tc_prime",
- "tc_sha",
- "tc_zeroize",
-]
-
-[[package]]
 name = "tc_kdf"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
