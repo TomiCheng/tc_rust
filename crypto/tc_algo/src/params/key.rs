@@ -16,6 +16,7 @@ pub(crate) mod sm2;
 ))]
 pub use named_curves::*;
 
+pub use tc_asym_cipher::AsymmetricKeyParams;
 pub use tc_block_cipher::KeyOwned;
 pub use tc_block_cipher::KeyParams;
 
@@ -42,6 +43,12 @@ pub use tc_threefish::ThreefishParamsOwned;
 pub use tc_rsa::RsaKey;
 #[cfg(feature = "rsa")]
 pub use tc_rsa::RsaKeyParams;
+#[cfg(feature = "rsa")]
+pub use tc_rsa::RsaKeyOwned;
+#[cfg(feature = "rsa")]
+pub use tc_rsa::RsaPrivateCrtKeyOwned;
+#[cfg(feature = "rsa")]
+pub use tc_rsa::RsaPrivateCrtKeyParams;
 
 #[cfg(any(
     feature = "fp-custom",

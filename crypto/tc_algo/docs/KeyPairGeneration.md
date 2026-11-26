@@ -84,7 +84,7 @@ keys directly to an algorithm that accepts them (a cipher, a signer, an agreemen
 downcast them with `as_any().downcast_ref::<T>()` to read their values. Private keys wipe their
 secret values when dropped.
 
-- [`RsaKey`](KeyPairGeneration/RsaKeyGenParams.md): Both keys; `modulus()` and `exponent()`
+- [`RsaKey`](KeyPair/RsaKey.md): Both keys; `modulus()` and `exponent()`
   through `RsaKeyParams`. The public key is `RsaKey::Core` with `e`, the private key `RsaKey::Crt`
   with `d` and its CRT values.
 - [`EcPublicKey<C>`, `EcPrivateKey<C>`](KeyPairGeneration/EcKeyGenParams.md): The point `q()` and
