@@ -4,29 +4,37 @@ A secret key is one key that both sides share and keep secret, for a block, stre
 a MAC or a key wrap. `algo.key_generator()` makes it from a random source. For a public key and a
 private key, see [Key pair generation](KeyPairGeneration.md).
 
-The following example requires the `aes` feature. It generates a fresh key for a single AES-GCM message.
+The four examples use `KEY` (always available), `AES256` (`aes`), `DESEDE3` (`des`), and
+`RC5-64` (`rc-cipher`).
 
 ```rust
-use tc_algo::params::{cipher::AeadParamsOwned, generate::KeyLength, key::KeyOwned, key::KeyParams};
+# #[cfg(feature = "rc-cipher")]
+use tc_algo::params::generate::Rc5KeyGenParams;
+use tc_algo::params::generate::KeyLength;
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
 fn main() -> Result<(), AlgoError> {
     let algo = DefaultAlgoBuilder::default().build();
+    let generators = algo.key_generator();
 
-    // A 256-bit AES key
-    let key = algo.key_generator().generate_by_name("AES256")?;
-    let key = key.as_any().downcast_ref::<KeyOwned>().expect("a KeyOwned");
-    assert_eq!(key.key().len(), 32);
+    // KEY requires an explicit length in bytes.
+    let _key = generators.generate_by_name_with("KEY", &KeyLength::new(64))?;
 
-    // This fresh key is used once. Each further message under the same key needs a unique nonce.
-    let params = AeadParamsOwned::new(key.key().to_vec(), vec![0; 12], 16, Vec::new());
-    let sealed = algo.cipher().encrypt_by_name("AES/GCM/NOPADDING", &params, b"attack at dawn")?;
-    assert_eq!(sealed.len(), b"attack at dawn".len() + 16);
+    // AES256 has a fixed length of 32 bytes.
+    # #[cfg(feature = "aes")]
+    let _aes256 = generators.generate_by_name("AES256")?;
 
-    // A key of any length, such as for HMAC
-    let key = algo.key_generator().generate_by_name_with("KEY", &KeyLength::new(64))?;
-    let key = key.as_any().downcast_ref::<KeyOwned>().expect("a KeyOwned");
-    assert_eq!(key.key().len(), 64);
+    // DESEDE3 with an explicit 24-byte key length.
+    # #[cfg(feature = "des")]
+    let _desede3 = generators.generate_by_name_with("DESEDE3", &KeyLength::new(24))?;
+
+    // RC5-64 with a 32-byte key and 16 rounds.
+    # #[cfg(feature = "rc-cipher")]
+    let _rc5 = generators.generate_by_name_with(
+        "RC5-64",
+        &Rc5KeyGenParams::new(32).with_rounds(16),
+    )?;
+
     Ok(())
 }
 ```
@@ -112,22 +120,22 @@ length, of ECB, CBC, CFB, OFB, CCM and GCM and more.
 
 ## Params
 
-Key-generation inputs live in `tc_algo::params::generate`. `KeyLength::new(n)` takes bytes.
+Import key-generation parameters from `tc_algo::params::generate`. Generators with a value
+in the Default bytes column can generate a key without calling `init`. If the Params cell
+is empty, calling `init` returns `InvalidParams`.
 
-- Algorithm-specific generators can generate immediately using the default length in the table.
-- A blank Params cell means the generator takes no parameters. Calling `init` on it returns
-  `InvalidParams`, even with a `KeyLength` equal to the fixed length.
-- For rows that accept `KeyLength`, `init` sets one of the lengths in the Bytes column. An
-  unsupported length returns `InvalidParams` and preserves the previous length.
-- RC2, RC5, RC5-64, GOST 28147 and Threefish have params of their own, so their rows give those
-  params, the key with what the cipher takes besides it, and `init` takes a params type of each
-  instead of a `KeyLength`; see [RC2](Rc2.md#key-generation), [RC5](Rc5.md#key-generation), [GOST
-  28147](Gost28147.md#key-generation) and [Threefish](Threefish.md#key-generation). What they give
-  goes straight into the rows of their cipher, in ECB as it is, and with an IV in a
-  `ParamsWithIvOwned`.
-- `KEY` has no default length: it needs `init` with a `KeyLength`, of any length but 0, and
-  `generate_by_name` gives `NotInitialized`; `generate_by_name_with("KEY", &KeyLength::new(32))`
-  gives a key at once.
+- `KeyLength`: Sets the key length in bytes. For rows that accept it, the Bytes column
+  lists the valid lengths. An invalid length returns `InvalidParams` and preserves the
+  previous length. `KEY` requires a positive length and returns `NotInitialized` if no
+  length has been set.
+- [`Rc2KeyGenParams`](KeyGeneration/Rc2KeyGenParams.md): The key length and optional
+  effective key size for RC2.
+- [`Rc5KeyGenParams`](KeyGeneration/Rc5KeyGenParams.md): The key length and optional
+  round count for RC5 and RC5-64.
+- [`Gost28147KeyGenParams`](KeyGeneration/Gost28147KeyGenParams.md): An optional S-box
+  for GOST 28147.
+- [`ThreefishKeyGenParams`](KeyGeneration/ThreefishKeyGenParams.md): An optional tweak
+  for Threefish.
 
 ## Using it
 
