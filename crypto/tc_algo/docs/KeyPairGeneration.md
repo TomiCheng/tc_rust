@@ -53,17 +53,29 @@ Naccache-Stern and SM2, which it has no names for. The case of a name does not m
 
 ## Params
 
-- Every row but `SM2`, `Ed25519`, `Ed448`, `X25519` and `X448` needs `init`, since none has params
-  to assume: the size of an RSA key, the curve of an EC key, the group of DH and ElGamal, the domain
-  of DSA and GOST R 34.10-94, the parameter set of ML-KEM, ML-DSA and SLH-DSA. `generate_by_name`
-  gives `NotInitialized` there, so use `generate_by_name_with`, or `get_by_name`, `init` and
-  `generate`.
-- `SM2`, `Ed25519`, `Ed448`, `X25519` and `X448` have their curves fixed: `generate_by_name` gives a
-  pair at once, and `init` refuses any params as `InvalidParams`.
-- `DSA` and `GOST3410` take either a domain, or the size of a new one to generate at `init`, which
-  takes a while; one `init` serves any number of pairs.
-- `init` has the crate underneath judge the params, so a bad one is `InvalidParams` there and not at
-  `generate`.
+Import key-pair generation parameters from `tc_algo::params::generate`. Fixed-curve rows
+(`SM2`, `Ed25519`, `Ed448`, `X25519`, and `X448`) take no parameters: `generate_by_name`
+generates a pair immediately, and calling `init` returns `InvalidParams`. Every other row
+has no default parameters and returns `NotInitialized` until `init` succeeds; invalid
+parameters return `InvalidParams` during `init` (except pre-built `DsaParameters` and
+`Gost3410Parameters`, which are validated during `generate`).
+
+- [`RsaKeyGenParams`](KeyPairGeneration/RsaKeyGenParams.md): Modulus size in bits, with
+  optional public exponent and prime test certainty, for `RSA`.
+- [`EcKeyGenParams`](Ec.md): Named curve for `EC`.
+- [`DhParameters`](Dh.md): Diffie-Hellman group for `DH` (standard groups are in
+  `tc_algo::params::generate::dh_groups`).
+- [`MlKemParameters`](KEM.md): Parameter set for `ML-KEM`.
+- [`ElGamalParameters`](ElGamal.md): Group parameters for `ELGAMAL`.
+- [`NaccacheSternKeyGenerationParams`](NaccacheStern.md): Modulus size, certainty, and
+  small-prime count for `NACCACHESTERN`.
+- [`MlDsaParameters`](MlDsa.md): Parameter set for `ML-DSA`.
+- [`SlhDsaParameters`](SlhDsa.md): Parameter set for `SLH-DSA`.
+- [`DsaKeyGenParams`](Dsa.md), [`DsaParameters`](Dsa.md): Parameters to generate a new
+  domain during `init` (which is slow and can be reused for many pairs) or an existing
+  domain, for `DSA`.
+- [`Gost3410KeyGenParams`](Gost3410.md), [`Gost3410Parameters`](Gost3410.md): Parameters
+  to generate a new domain during `init` or an existing domain, for `GOST3410`.
 
 ## Using it
 
