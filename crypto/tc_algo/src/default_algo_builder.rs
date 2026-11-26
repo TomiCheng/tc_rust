@@ -378,6 +378,9 @@ mod tests {
         feature = "grain128-aead",
         feature = "sparkle-aead",
         feature = "rsa",
+        feature = "elgamal",
+        feature = "naccache-stern",
+        feature = "sm2",
         feature = "ies"
     )))]
     #[test]
