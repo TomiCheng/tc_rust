@@ -5,7 +5,8 @@ of numbers modulo a prime `p`, the same groups as Diffie-Hellman's. What the pub
 only the private key can decrypt. Each encryption draws a new random number, so the same message
 gives a new ciphertext each time.
 
-The `elgamal` feature of `tc_algo` has the rows. The keys and the group are in `tc_algo::params`.
+The `elgamal` feature of `tc_algo` has the rows. The group is in `tc_algo::params::generate` and
+the keys in `tc_algo::params::key`.
 
 ## Key pairs
 
@@ -13,7 +14,8 @@ From a group to a new pair:
 
 ```rust
 use tc_algo::params::generate::dh_groups::rfc3526_2048;
-use tc_algo::params::{key::ElGamalParameters, key::ElGamalPrivateKey, key::ElGamalPublicKey};
+use tc_algo::params::generate::ElGamalParameters;
+use tc_algo::params::key::{ElGamalPrivateKey, ElGamalPublicKey};
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
 fn main() -> Result<(), AlgoError> {
@@ -21,7 +23,7 @@ fn main() -> Result<(), AlgoError> {
 
     // The 2048-bit group of RFC 3526
     let group = rfc3526_2048();
-    let params = ElGamalParameters::new(group.p().clone(), group.g().clone());
+    let params = ElGamalParameters::new(group.p().clone(), group.g().clone()).with_l(group.l());
 
     // Generate the pair
     let pair = algo.key_pair_generator().generate_by_name_with("ELGAMAL", &params)?;
@@ -45,10 +47,10 @@ does not matter.
 
 ### Params
 
-The row takes an `ElGamalParameters`, the prime `p` and the generator `g`, and any other type is
-`InvalidParams`. A standard group, as those of RFC 3526 and RFC 7919 in `tc_dh_key`, saves
-generating one, which is slow. `init` has `tc_elgamal` judge the group, so a bad one is
-`InvalidParams` there.
+The row takes an `ElGamalParameters`, the prime `p`, the generator `g` and the length of the
+private value, and any other type is `InvalidParams`. `init` has `tc_elgamal` judge the group, so a
+bad one is `InvalidParams` there. [ElGamalParameters](KeyPairGeneration/ElGamalParameters.md)
+shows how to build one from a standard group of DH.
 
 ### Using it
 
@@ -62,7 +64,7 @@ generating one, which is slow. `init` has `tc_elgamal` judge the group, so a bad
 From a new pair to the decrypted message, with OAEP over SHA-256:
 
 ```rust
-use tc_algo::params::key::ElGamalParameters;
+use tc_algo::params::generate::ElGamalParameters;
 use tc_algo::params::generate::dh_groups::rfc3526_2048;
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
@@ -73,7 +75,7 @@ fn main() -> Result<(), AlgoError> {
 
     // Generate a pair
     let group = rfc3526_2048();
-    let params = ElGamalParameters::new(group.p().clone(), group.g().clone());
+    let params = ElGamalParameters::new(group.p().clone(), group.g().clone()).with_l(group.l());
     let pair = algo.key_pair_generator().generate_by_name_with("ELGAMAL", &params)?;
 
     // Encrypt with the public key

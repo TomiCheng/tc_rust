@@ -65,7 +65,7 @@ parameters return `InvalidParams` during `init` (except pre-built `DsaParameters
 - [`EcKeyGenParams`](KeyPairGeneration/EcKeyGenParams.md): Named curve for `EC`.
 - [`DhParameters`](KeyPairGeneration/DhParameters.md): Diffie-Hellman group for `DH`.
 - [`MlKemParameters`](KEM.md): Parameter set for `ML-KEM`.
-- [`ElGamalParameters`](ElGamal.md): Group parameters for `ELGAMAL`.
+- [`ElGamalParameters`](KeyPairGeneration/ElGamalParameters.md): Group parameters for `ELGAMAL`.
 - [`NaccacheSternKeyGenerationParams`](NaccacheStern.md): Modulus size, certainty, and
   small-prime count for `NACCACHESTERN`.
 - [`MlDsaParameters`](MlDsa.md): Parameter set for `ML-DSA`.
