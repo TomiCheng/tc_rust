@@ -72,7 +72,7 @@ helpers ending in `_with` call `init` first, and the others do not call it.
   implementation gives the same output only when given that block size too. See
   [ParallelHash](Xof/ParallelHash.md).
 - `AsconCXofParams`: the customization string Z of SP 800-232, at most 256 bytes. See
-  [Ascon-CXOF128](AsconCXof.md).
+  [Ascon-CXOF128](Xof/AsconCXof.md).
 - `Blake2xsParams`: a key of at most 32 bytes, a salt of 8 and a personalization of 8, each
   optional. See [BLAKE2xs](Blake2xs.md).
 - `Blake3Params`: `keyed` with a 32-byte key, for the keyed hash, or `derive_key` with a context
@@ -99,6 +99,6 @@ helpers ending in `_with` call `init` first, and the others do not call it.
 - [cSHAKE](Xof/CShake.md): customization strings, and what the function name is for
 - [TupleHash](Xof/TupleHash.md): hashing a tuple, one element per update, and its two output modes
 - [ParallelHash](Xof/ParallelHash.md): the block size, and its two output modes
-- [Ascon-CXOF128](AsconCXof.md): the customization string
+- [Ascon-CXOF128](Xof/AsconCXof.md): the customization string
 - [BLAKE2xs](Blake2xs.md): key, salt and personalization
 - [BLAKE3](Blake3.md): keyed hash and key derivation

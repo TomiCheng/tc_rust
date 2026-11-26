@@ -1,9 +1,8 @@
 # Ascon-CXOF128
 
-Ascon-CXOF128, of NIST SP 800-232, is Ascon-XOF128 with a customization string Z mixed in before
-the message. Under two customization strings the same message gives two unrelated outputs, so one
-function serves several purposes without one standing in for another. Ascon is light, for small
-devices and short messages.
+Ascon-CXOF128 is a customizable extendable-output function for constrained devices. It absorbs
+a customization string Z before the message. An application can use Z to distinguish purposes,
+such as hashing a firmware image and hashing a sensor reading. [NIST SP 800-232](https://csrc.nist.gov/pubs/sp/800/232/final)
 
 `ASCON-CXOF128` is behind the `ascon-hash` feature.
 
@@ -26,15 +25,15 @@ fn main() -> Result<(), AlgoError> {
     // The message, in any number of updates
     cxof.try_update(b"reading 17.4 C")?;
 
-    // 32 bytes of output
-    let tag = cxof.finalize_len(32)?;
+    // Request 32 bytes. The caller chooses the output length in bytes.
+    let output = cxof.finalize_len(32)?;
     Ok(())
 }
 ```
 
 ## Params
 
-`AsconCXofParams`, from `tc_algo::params`:
+`AsconCXofParams`, from `tc_algo::params::xof`:
 
 - `new()`: an empty customization string.
 - `with_customization(Vec<u8>)`: Z, chosen by the application, at most 256 bytes as SP 800-232
@@ -44,8 +43,8 @@ A longer Z is `InvalidParams` from `init`, as are params of another type.
 
 ## Using it
 
-- `init` is optional: without it, Z is empty. That is still Ascon-CXOF128, not Ascon-XOF128: the two
-  give different outputs for the same message.
+- You can call `try_update` immediately after lookup. The default Z is empty. Even with empty Z,
+  Ascon-CXOF128 uses its own initialization and gives different output from Ascon-XOF128.
 - `init` starts a new message, and `try_reset` keeps the string it set.
 - The message may come in any number of updates, and the output be taken in pieces with
   `try_output`; a shorter output is the start of a longer one.
