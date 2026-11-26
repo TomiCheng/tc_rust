@@ -2,7 +2,7 @@
 
 RC5, of Rivest's paper and RFC 2040, takes a number of rounds besides its key. `RC5` (also
 `RC5-32`) has 32-bit words and an 8-byte block, and `RC5-64` 64-bit words and a 16-byte block,
-both behind the `rc-cipher` feature. See [Block ciphers](BlockCipher.md#rc5) for their
+both behind the `rc-cipher` feature. See [Block ciphers](BlockCipher/RC5.md) for their
 names.
 
 RC5 is legacy: use it only to read data that already uses it.

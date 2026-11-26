@@ -3,7 +3,7 @@
 RC2, of RFC 2268, has an effective key size besides its key: the key is reduced to that many bits
 before the key schedule. RSA's PKCS#5 and S/MIME named it with the key, and CMS still carries it
 in an RC2-CBC parameter. The `rc-cipher` feature has the rows; see
-[Block ciphers](BlockCipher.md#rc2) for their names.
+[Block ciphers](BlockCipher/RC2.md) for their names.
 
 RC2 is weak and legacy: use it only to read data that already uses it.
 
