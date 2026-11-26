@@ -108,6 +108,8 @@ pub use tc_dsa_signer::DsaPublicKey;
 #[cfg(feature = "gost3410")]
 pub use tc_gost3410::Gost3410Parameters;
 #[cfg(feature = "gost3410")]
+pub use tc_gost3410::named_domains as gost3410_domains;
+#[cfg(feature = "gost3410")]
 pub use tc_gost3410::Gost3410PrivateKey;
 #[cfg(feature = "gost3410")]
 pub use tc_gost3410::Gost3410PublicKey;

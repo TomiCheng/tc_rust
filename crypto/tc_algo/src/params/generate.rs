@@ -51,6 +51,8 @@ pub use tc_dsa_signer::DsaParameters;
 pub use tc_elgamal::ElGamalParameters;
 #[cfg(feature = "gost3410")]
 pub use tc_gost3410::Gost3410Parameters;
+#[cfg(feature = "gost3410")]
+pub use tc_gost3410::named_domains as gost3410_domains;
 #[cfg(feature = "ml-dsa")]
 pub use tc_ml_dsa::MlDsaParameters;
 #[cfg(feature = "ml-kem")]

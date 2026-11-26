@@ -66,6 +66,35 @@ returns `InvalidParams` for another size. Generating a domain takes a while, so 
 |---|---|
 | `size()` | Bits of `p` (`u32`) |
 
+## Named domains
+
+RFC 4357 lists these CryptoPro domains for GOST R 34.10-94. Use the OID to identify the
+domain when reading a legacy key that stores only its parameter-set identifier. Import
+`gost3410_domains` from `tc_algo::params::generate`.
+[RFC 4357 §11.3](https://www.rfc-editor.org/rfc/rfc4357.html#section-11.3)
+
+| Function | Name | OID | Bits of p |
+|---|---|---|---|
+| `cryptopro_a` | `GostR3410-94-CryptoPro-A` | `1.2.643.2.2.32.2` | 1024 |
+| `cryptopro_b` | `GostR3410-94-CryptoPro-B` | `1.2.643.2.2.32.3` | 1024 |
+| `cryptopro_xch_a` | `GostR3410-94-CryptoPro-XchA` | `1.2.643.2.2.33.1` | 1024 |
+
+```rust
+use tc_algo::params::generate::gost3410_domains;
+use tc_algo::{AlgoBuilder, DefaultAlgoBuilder};
+
+fn main() {
+    let algo = DefaultAlgoBuilder::default().build();
+
+    // Select the CryptoPro-A domain and generate a pair over it.
+    let domain = gost3410_domains::cryptopro_a();
+    let _pair = algo
+        .key_pair_generator()
+        .generate_by_name_with("GOST3410", &domain)
+        .expect("generate a GOST 34.10-94 key pair over CryptoPro-A");
+}
+```
+
 ## A domain in hand
 
 A `Gost3410Parameters` comes from a key, as `public.params()` gives it, or from elsewhere with
@@ -74,9 +103,6 @@ A `Gost3410Parameters` comes from a key, as `public.params()` gives it, or from 
 checks that `p` and `q` are odd and above 2, `q` is below `p` and `a` is in `[2, p - 1]`, and
 returns `InvalidParams` otherwise. Whether `p` and `q` are prime is not checked, so a domain from
 an untrusted source is up to the caller.
-
-The named domains of CryptoPro (RFC 4357), Bouncy Castle's `Gost3410NamedParameters`, are not
-here yet.
 
 | Accessor | Returns |
 |---|---|

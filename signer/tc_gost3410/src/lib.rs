@@ -49,6 +49,7 @@ mod gost3410_error;
 mod group_generator;
 mod key_pair_generator;
 mod math;
+pub mod named_domains;
 mod params;
 mod signer;
 
