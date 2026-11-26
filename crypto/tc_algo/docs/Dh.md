@@ -39,39 +39,17 @@ fn main() -> Result<(), AlgoError> {
 - The row takes a `DhParameters`, and any other type is `InvalidParams`, as is a bad group. There is
   no default group, so `generate_by_name` and `generate_by_oid`, which do not call `init`, give
   `NotInitialized`.
-- The public key is a `DhPublicKey` and the private key a `DhPrivateKey`, in `tc_algo::params`. The
-  private key wipes its private value when dropped, and has no `Debug` or `==`.
+- The public key is a `DhPublicKey` and the private key a `DhPrivateKey`, in
+  `tc_algo::params::key`. The private key wipes its private value when dropped, and has no
+  `Debug` or `==`.
 - The keys draw from the source of `DefaultAlgoBuilder::set_rand`, which by default is the operating
   system's.
 
 ### Standard groups
 
-`tc_algo::params::key::dh_groups` has a function for each group of Bouncy Castle's `DHStandardGroups`.
-Each one is a safe prime `p` with `g` = 2. The private value has the length in the last column, or
-is drawn from below `q` where there is none.
-
-| Function | Bits of `p` | Standard | Bits of the private value |
-|---|---|---|---|
-| `rfc7919_ffdhe2048` | 2048 | RFC 7919 | 225 |
-| `rfc7919_ffdhe3072` | 3072 | RFC 7919 | 275 |
-| `rfc7919_ffdhe4096` | 4096 | RFC 7919 | 325 |
-| `rfc7919_ffdhe6144` | 6144 | RFC 7919 | 375 |
-| `rfc7919_ffdhe8192` | 8192 | RFC 7919 | 400 |
-| `rfc3526_2048` | 2048 | RFC 3526, group 14 | 225 |
-| `rfc3526_3072` | 3072 | RFC 3526, group 15 | 275 |
-| `rfc3526_4096` | 4096 | RFC 3526, group 16 | 325 |
-| `rfc3526_6144` | 6144 | RFC 3526, group 17 | 375 |
-| `rfc3526_8192` | 8192 | RFC 3526, group 18 | 400 |
-
-**Too small to be safe**, and only for working with old systems:
-
-| Function | Bits of `p` | Standard | Bits of the private value |
-|---|---|---|---|
-| `rfc3526_1536` | 1536 | RFC 3526, group 5 | 200 |
-| `rfc2409_1024` | 1024 | RFC 2409, group 2 | |
-| `rfc2409_768` | 768 | RFC 2409, group 1 | |
-| `rfc4306_1024`, `rfc5996_1024` | 1024 | the same as `rfc2409_1024` | |
-| `rfc4306_768`, `rfc5996_768` | 768 | the same as `rfc2409_768` | |
+`tc_algo::params::key::dh_groups` has the groups of Bouncy Castle's `DHStandardGroups`.
+[DhParameters](KeyPairGeneration/DhParameters.md) lists them, and how to build a group of your
+own.
 
 ## Agreement
 
@@ -113,7 +91,7 @@ fn main() -> Result<(), AlgoError> {
 | `DH` | none | `dh` | `DhPrivateKey` | `DhPublicKey` |
 
 `DIFFIEHELLMAN` finds it too, and the case of a name does not matter. Both key types are in
-`tc_algo::params`. Any other type is `InvalidParams`.
+`tc_algo::params::key`. Any other type is `InvalidParams`.
 
 ### Using it
 
