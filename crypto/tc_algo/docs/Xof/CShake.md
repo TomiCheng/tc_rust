@@ -1,9 +1,9 @@
 # cSHAKE
 
-cSHAKE, of NIST SP 800-185, is SHAKE with two strings mixed in before the message: a function
-name N and a customization string S. The same message under two customization strings gives two
-unrelated outputs, so one hash function serves several purposes without one standing in for
-another. With both strings empty it is SHAKE itself.
+cSHAKE, of NIST SP 800-185, is [SHAKE](https://en.wikipedia.org/wiki/SHA-3) with two strings
+mixed in before the message: a function name N and a customization string S. The same message
+under two customization strings gives two unrelated outputs, so one hash function serves several
+purposes without one standing in for another. With both strings empty it is SHAKE itself.
 
 `CSHAKE128` and `CSHAKE256` are behind the `keccak` feature.
 
@@ -40,7 +40,7 @@ fn main() -> Result<(), AlgoError> {
 
 ## Params
 
-`CShakeParams`, from `tc_algo::params`:
+`CShakeParams`, from `tc_algo::params::xof`:
 
 - `new()`: both strings empty.
 - `with_customization(Vec<u8>)`: S, chosen by the application, such as its name and the purpose
@@ -55,8 +55,8 @@ Neither string has a limit, and `init` takes any. Params of another type are `In
 - `init` is optional: without it, cSHAKE runs with both strings empty, and its output is that of
   SHAKE128 or SHAKE256.
 - `init` starts a new message, and `try_reset` keeps the strings it set. A new `init` replaces them.
-- The message may come in any number of updates: `update(b"ab")` then `update(b"c")` is the same
-  as `update(b"abc")`.
+- The message may come in any number of updates: `try_update(b"ab")` then `try_update(b"c")` is
+  the same as `try_update(b"abc")`.
 - The output may be taken in pieces with `try_output`, and a shorter output is the start of a longer
   one, as with SHAKE. `finalize_len` and `try_output_final` end the message.
 - As a `Digest`, `finalize` gives 32 bytes for `CSHAKE128` and 64 for `CSHAKE256`.

@@ -1,8 +1,9 @@
 # XOFs
 
-An extendable-output function hashes a message into as many bytes as you ask for, where a digest
-gives a fixed size. The length is not set in advance: it is given when the output is taken, and the
-shorter of two outputs is the start of the longer.
+An [extendable-output function](https://en.wikipedia.org/wiki/Extendable-output_function) (XOF)
+hashes a message into as many bytes as you ask for, where a digest gives a fixed size. The length
+is not set in advance: it is given when the output is taken, and the shorter of two outputs is the
+start of the longer.
 
 With SHAKE256, whose row is behind the `keccak` feature.
 
@@ -63,7 +64,7 @@ runs with nothing set: empty strings, no key. One with nothing to set refuses an
 helpers ending in `_with` call `init` first, and the others do not call it.
 
 - `CShakeParams`: the function name N and the customization string S of SP 800-185. Both empty
-  is SHAKE. See [cSHAKE](CShake.md).
+  is SHAKE. See [cSHAKE](Xof/CShake.md).
 - `TupleHashParams`: the customization string S of SP 800-185. See [TupleHash](TupleHash.md).
 - `ParallelHashParams`: the block size B in bytes, more than 0, and the customization string S
   of SP 800-185. SP 800-185 has no default B, and B is part of what is hashed: without `init`,
@@ -95,7 +96,7 @@ helpers ending in `_with` call `init` first, and the others do not call it.
 
 ## More
 
-- [cSHAKE](CShake.md): customization strings, and what the function name is for
+- [cSHAKE](Xof/CShake.md): customization strings, and what the function name is for
 - [TupleHash](TupleHash.md): hashing a tuple, one element per update, and its two output modes
 - [ParallelHash](ParallelHash.md): the block size, and its two output modes
 - [Ascon-CXOF128](AsconCXof.md): the customization string
