@@ -1,5 +1,20 @@
+#[cfg(any(
+    feature = "fp-custom",
+    feature = "fp-curve",
+    feature = "f2m-custom",
+    feature = "f2m-curve"
+))]
+mod named_curves;
 #[cfg(feature = "fp-custom")]
 pub(crate) mod sm2;
+
+#[cfg(any(
+    feature = "fp-custom",
+    feature = "fp-curve",
+    feature = "f2m-custom",
+    feature = "f2m-curve"
+))]
+pub use named_curves::*;
 
 pub use tc_block_cipher::KeyOwned;
 pub use tc_block_cipher::KeyParams;

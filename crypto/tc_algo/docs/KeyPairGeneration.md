@@ -62,7 +62,7 @@ parameters return `InvalidParams` during `init` (except pre-built `DsaParameters
 
 - [`RsaKeyGenParams`](KeyPairGeneration/RsaKeyGenParams.md): Modulus size in bits, with
   optional public exponent and prime test certainty, for `RSA`.
-- [`EcKeyGenParams`](Ec.md): Named curve for `EC`.
+- [`EcKeyGenParams`](KeyPairGeneration/EcKeyGenParams.md): Named curve for `EC`.
 - [`DhParameters`](Dh.md): Diffie-Hellman group for `DH` (standard groups are in
   `tc_algo::params::generate::dh_groups`).
 - [`MlKemParameters`](KEM.md): Parameter set for `ML-KEM`.
