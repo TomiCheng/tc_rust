@@ -11,7 +11,7 @@ The `slh-dsa` feature of `tc_algo` has the rows.
 A parameter set and a new pair:
 
 ```rust
-use tc_algo::params::key::SlhDsaParameters;
+use tc_algo::params::generate::SlhDsaParameters;
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
 fn main() -> Result<(), AlgoError> {
@@ -38,13 +38,14 @@ The name is that of Bouncy Castle's `GeneratorUtilities`, and its case does not 
 
 One of the twelve sets of `SlhDsaParameters`, from `SHA2_128S` to `SHAKE_256F`. There is no
 default, so `generate_by_name` gives `NotInitialized`, and any other type is `InvalidParams`.
+[SlhDsaParameters](KeyPairGeneration/SlhDsaParameters.md) lists the sets with their sizes.
 
 ## Signing
 
 From a new pair to a verified signature:
 
 ```rust
-use tc_algo::params::key::SlhDsaParameters;
+use tc_algo::params::generate::SlhDsaParameters;
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
 fn main() -> Result<(), AlgoError> {

@@ -68,8 +68,8 @@ parameters return `InvalidParams` during `init` (except pre-built `DsaParameters
 - [`ElGamalParameters`](KeyPairGeneration/ElGamalParameters.md): Group parameters for `ELGAMAL`.
 - [`NaccacheSternKeyGenerationParams`](KeyPairGeneration/NaccacheSternKeyGenerationParams.md): Modulus size, certainty, and
   small-prime count for `NACCACHESTERN`.
-- [`MlDsaParameters`](MlDsa.md): Parameter set for `ML-DSA`.
-- [`SlhDsaParameters`](SlhDsa.md): Parameter set for `SLH-DSA`.
+- [`MlDsaParameters`](KeyPairGeneration/MlDsaParameters.md): Parameter set for `ML-DSA`.
+- [`SlhDsaParameters`](KeyPairGeneration/SlhDsaParameters.md): Parameter set for `SLH-DSA`.
 - [`DsaKeyGenParams`](Dsa.md), [`DsaParameters`](Dsa.md): Parameters to generate a new
   domain during `init` (which is slow and can be reused for many pairs) or an existing
   domain, for `DSA`.

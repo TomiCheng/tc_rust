@@ -10,7 +10,7 @@ The `ml-dsa` feature of `tc_algo` has the rows.
 A parameter set and a new pair:
 
 ```rust
-use tc_algo::params::key::MlDsaParameters;
+use tc_algo::params::generate::MlDsaParameters;
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
 fn main() -> Result<(), AlgoError> {
@@ -37,13 +37,14 @@ The name is that of Bouncy Castle's `GeneratorUtilities`, and its case does not 
 
 `MlDsaParameters::ML_DSA_44`, `ML_DSA_65` or `ML_DSA_87`. There is no default, so `generate_by_name`
 gives `NotInitialized`, and any other type is `InvalidParams`.
+[MlDsaParameters](KeyPairGeneration/MlDsaParameters.md) lists the sets with their sizes.
 
 ## Signing
 
 From a new pair to a verified signature:
 
 ```rust
-use tc_algo::params::key::MlDsaParameters;
+use tc_algo::params::generate::MlDsaParameters;
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
 fn main() -> Result<(), AlgoError> {
