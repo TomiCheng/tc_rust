@@ -13,7 +13,7 @@ the keys in `tc_algo::params::key`.
 From a group to a new pair:
 
 ```rust
-use tc_algo::params::generate::dh_groups::rfc3526_2048;
+use tc_algo::params::generate::elgamal_groups::rfc3526_2048;
 use tc_algo::params::generate::ElGamalParameters;
 use tc_algo::params::key::{ElGamalPrivateKey, ElGamalPublicKey};
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
@@ -22,8 +22,7 @@ fn main() -> Result<(), AlgoError> {
     let algo = DefaultAlgoBuilder::default().build();
 
     // The 2048-bit group of RFC 3526
-    let group = rfc3526_2048();
-    let params = ElGamalParameters::new(group.p().clone(), group.g().clone()).with_l(group.l());
+    let params: ElGamalParameters = rfc3526_2048();
 
     // Generate the pair
     let pair = algo.key_pair_generator().generate_by_name_with("ELGAMAL", &params)?;
@@ -50,7 +49,7 @@ does not matter.
 The row takes an `ElGamalParameters`, the prime `p`, the generator `g` and the length of the
 private value, and any other type is `InvalidParams`. `init` has `tc_elgamal` judge the group, so a
 bad one is `InvalidParams` there. [ElGamalParameters](KeyPairGeneration/ElGamalParameters.md)
-shows how to build one from a standard group of DH.
+lists the standard groups of `elgamal_groups` and how to build a group of your own.
 
 ### Using it
 
@@ -65,7 +64,7 @@ From a new pair to the decrypted message, with OAEP over SHA-256:
 
 ```rust
 use tc_algo::params::generate::ElGamalParameters;
-use tc_algo::params::generate::dh_groups::rfc3526_2048;
+use tc_algo::params::generate::elgamal_groups::rfc3526_2048;
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
 fn main() -> Result<(), AlgoError> {
@@ -74,8 +73,7 @@ fn main() -> Result<(), AlgoError> {
     let message = b"attack at dawn";
 
     // Generate a pair
-    let group = rfc3526_2048();
-    let params = ElGamalParameters::new(group.p().clone(), group.g().clone()).with_l(group.l());
+    let params: ElGamalParameters = rfc3526_2048();
     let pair = algo.key_pair_generator().generate_by_name_with("ELGAMAL", &params)?;
 
     // Encrypt with the public key

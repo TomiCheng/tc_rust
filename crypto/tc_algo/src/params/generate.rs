@@ -7,6 +7,8 @@ mod dsa;
     feature = "f2m-curve"
 ))]
 mod ec;
+#[cfg(feature = "elgamal")]
+pub mod elgamal_groups;
 #[cfg(feature = "gost3410")]
 mod gost3410;
 mod key_length;
@@ -37,9 +39,9 @@ pub use own::Rc5KeyGenParams;
 pub use own::ThreefishKeyGenParams;
 #[cfg(feature = "rsa")]
 pub use rsa::RsaKeyGenParams;
-#[cfg(any(feature = "dh", feature = "elgamal"))]
+#[cfg(feature = "dh")]
 pub use tc_dh_key::DhParameters;
-#[cfg(any(feature = "dh", feature = "elgamal"))]
+#[cfg(feature = "dh")]
 pub use tc_dh_key::standard_groups as dh_groups;
 #[cfg(feature = "dsa")]
 pub use tc_dsa_signer::DsaParameters;

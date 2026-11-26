@@ -71,7 +71,7 @@ use tc_cfrg_curves::{Ed25519PrivateKey, Ed25519PublicKey};
 use tc_cfrg_curves::{X448PrivateKey, X448PublicKey};
 #[cfg(feature = "cfrg-curves")]
 use tc_cfrg_curves::{X25519PrivateKey, X25519PublicKey};
-#[cfg(any(feature = "dh", feature = "elgamal"))]
+#[cfg(feature = "dh")]
 use tc_dh_key::DhParameters;
 #[cfg(feature = "dh")]
 use tc_dh_key::{DhPrivateKey, DhPublicKey};
@@ -400,7 +400,7 @@ where
     }
 }
 
-#[cfg(any(feature = "dh", feature = "elgamal"))]
+#[cfg(feature = "dh")]
 impl Params for DhParameters {
     fn as_any(&self) -> &dyn Any {
         self

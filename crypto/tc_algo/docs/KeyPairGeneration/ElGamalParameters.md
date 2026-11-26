@@ -1,36 +1,33 @@
 # ElGamalParameters
 
 Enable the `elgamal` feature to use the `ELGAMAL` key pair generator. Import `ElGamalParameters`
-from `tc_algo::params::generate`, and the key types from `tc_algo::params::key`. The standard
-groups are those of Diffie-Hellman, in `tc_algo::params::generate::dh_groups`, which needs the
-`dh` feature too.
+and the standard groups in `elgamal_groups` from `tc_algo::params::generate`, and the key types
+from `tc_algo::params::key`.
 
 An `ElGamalParameters` is both the input of the generator and part of each key, so
-`tc_algo::params::key` exports it too. The two paths name the same type.
+`tc_algo::params::key` exports it and `elgamal_groups` too. The two paths name the same type.
 
 ## Generate a key pair
 
 ```rust
 use tc_algo::params::generate::ElGamalParameters;
-use tc_algo::params::generate::dh_groups::rfc7919_ffdhe2048;
+use tc_algo::params::generate::elgamal_groups::rfc7919_ffdhe2048;
 use tc_algo::params::key::{ElGamalPrivateKey, ElGamalPublicKey};
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
 fn main() -> Result<(), AlgoError> {
     let algo = DefaultAlgoBuilder::default().build();
 
-    // The group is the input of the generator, made from a standard DH group
-    let group = rfc7919_ffdhe2048();
-    let params: ElGamalParameters =
-        ElGamalParameters::new(group.p().clone(), group.g().clone()).with_l(group.l());
-    let pair = algo.key_pair_generator().generate_by_name_with("ELGAMAL", &params)?;
+    // The group is the input of the generator
+    let group: ElGamalParameters = rfc7919_ffdhe2048();
+    let pair = algo.key_pair_generator().generate_by_name_with("ELGAMAL", &group)?;
 
     let public = pair.public().as_any().downcast_ref::<ElGamalPublicKey>().expect("an ElGamalPublicKey");
     let private = pair.private().as_any().downcast_ref::<ElGamalPrivateKey>().expect("an ElGamalPrivateKey");
 
     // Each key carries a copy of the group
     let _: &ElGamalParameters = public.params();
-    assert_eq!(private.params(), &params);
+    assert_eq!(private.params(), &group);
     Ok(())
 }
 ```
@@ -47,11 +44,10 @@ checks below.
 
 These groups are defined by RFCs for Diffie-Hellman: RFC 2409 and RFC 3526 for IKE, RFC 7919 for
 TLS. ElGamal works in the same kind of group, a prime `p` with a generator `g`, so they serve it
-too and save generating a group; `tc_algo` has them in `dh_groups`, from `tc_dh_key`. Each
-function gives a `DhParameters`; take `p`, `g` and `l` from it, as the example does. Each group is
-a safe prime `p` with `g` = 2. The private value has the length in the last column, or is drawn
-from all of `[2, p - 2]` where there is none. Without `with_l` it is drawn from there too, which is
-safe but makes each operation slower than the length the standard gives.
+too and save generating a group. Each function of `elgamal_groups` gives the group of the same
+name in `dh_groups` as an `ElGamalParameters`, with its private value length. Each group is a safe
+prime `p` with `g` = 2. The private value has the length in the last column, or is drawn from all
+of `[2, p - 2]` where there is none.
 
 | Function | Bits of `p` | Standard | Bits of the private value |
 |---|---|---|---|

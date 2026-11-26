@@ -82,13 +82,13 @@ pub use tc_cfrg_curves::X25519PrivateKey;
 #[cfg(feature = "cfrg-curves")]
 pub use tc_cfrg_curves::X25519PublicKey;
 
-#[cfg(any(feature = "dh", feature = "elgamal"))]
+#[cfg(feature = "dh")]
 pub use tc_dh_key::DhParameters;
 #[cfg(feature = "dh")]
 pub use tc_dh_key::DhPrivateKey;
 #[cfg(feature = "dh")]
 pub use tc_dh_key::DhPublicKey;
-#[cfg(any(feature = "dh", feature = "elgamal"))]
+#[cfg(feature = "dh")]
 pub use tc_dh_key::standard_groups as dh_groups;
 
 #[cfg(feature = "dsa")]
@@ -105,6 +105,8 @@ pub use tc_gost3410::Gost3410PrivateKey;
 #[cfg(feature = "gost3410")]
 pub use tc_gost3410::Gost3410PublicKey;
 
+#[cfg(feature = "elgamal")]
+pub use super::generate::elgamal_groups;
 #[cfg(feature = "elgamal")]
 pub use tc_elgamal::ElGamalParameters;
 #[cfg(feature = "elgamal")]
