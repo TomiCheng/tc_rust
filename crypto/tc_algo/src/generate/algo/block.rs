@@ -374,8 +374,6 @@ mod tests {
         assert_eq!(opened, b"attack at dawn");
     }
 
-    // A length the cipher takes is set, by a range, a set of lengths or a step, and one it does not
-    // take is InvalidParams; DES takes 8 alone, and DESede 16 and 24 under either name
     #[test]
     fn init_takes_the_lengths_of_each_cipher() {
         use crate::ErrorKind;
@@ -387,10 +385,8 @@ mod tests {
             ("BLOWFISH", 56, 57),
             ("TWOFISH", 24, 20),
             ("SERPENT", 28, 30),
-            ("DES", 8, 16),
             ("DESEDE", 24, 8),
             ("DESEDE3", 16, 32),
-            ("ARIA128", 16, 32),
         ] {
             let key = generators
                 .generate_by_name_with(name, &KeyLength::new(good))
@@ -401,6 +397,15 @@ mod tests {
                 .err()
                 .unwrap();
             assert_eq!(error.kind(), ErrorKind::InvalidParams, "{name} {bad}");
+        }
+        for (name, bytes) in [("DES", 8), ("ARIA128", 16)] {
+            let error = generators
+                .generate_by_name_with(name, &KeyLength::new(bytes))
+                .err()
+                .unwrap();
+            assert_eq!(error.kind(), ErrorKind::InvalidParams, "{name}");
+            let key = generators.generate_by_name(name).unwrap();
+            assert_eq!(key_of(key.as_ref()).len(), bytes, "{name}");
         }
     }
 }

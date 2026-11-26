@@ -6,8 +6,8 @@ use crate::generate::{KeyGenerator, KeyGeneratorEntry};
 use crate::params::{generate::KeyLength, key::KeyOwned};
 use crate::{AlgoError, EntryBase, ErrorKind, Params};
 
-// The rows of a secret key that is the key alone: a key of the row's length without init, and of
-// another length the cipher takes with init and a KeyLength
+// These rows generate a key of the default length. Rows with multiple supported lengths
+// also accept a KeyLength in init.
 
 // The lengths in bytes that the cipher of a row takes, as its engine checks them
 #[derive(Clone, Copy)]
@@ -112,8 +112,10 @@ struct FixedKeyGenerator {
 }
 
 impl KeyGenerator for FixedKeyGenerator {
-    // A length the cipher does not take is InvalidParams, and keeps the length before
     fn init(&mut self, params: &dyn Params) -> Result<(), AlgoError> {
+        if matches!(self.lengths, Lengths::Of([_])) {
+            return Err(AlgoError::new(ErrorKind::InvalidParams));
+        }
         self.key_len = key_length(params, self.lengths)?;
         Ok(())
     }

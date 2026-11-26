@@ -2,7 +2,7 @@ use rand_core::CryptoRng;
 use tc_asn1::Asn1Oid;
 
 use crate::generate::{KeyGenerator, KeyGeneratorEntry};
-use crate::params::{generate::KeyLength, key::KeyOwned};
+use crate::params::key::KeyOwned;
 use crate::{AlgoError, DefaultAlgoContext, EntryBase, ErrorKind, Params};
 
 // The rows of AES, to give to DefaultAlgoBuilder::reg_key_generator. Their names and OIDs are those
@@ -70,14 +70,8 @@ struct AesKeyGenerator {
 }
 
 impl KeyGenerator for AesKeyGenerator {
-    // The name gives the length, so a KeyLength of it alone; another is InvalidParams
-    fn init(&mut self, params: &dyn Params) -> Result<(), AlgoError> {
-        params
-            .as_any()
-            .downcast_ref::<KeyLength>()
-            .filter(|length| length.bytes() == self.key_len)
-            .map(|_| ())
-            .ok_or(AlgoError::new(ErrorKind::InvalidParams))
+    fn init(&mut self, _params: &dyn Params) -> Result<(), AlgoError> {
+        Err(AlgoError::new(ErrorKind::InvalidParams))
     }
 
     fn generate(&mut self) -> Result<Box<dyn Params>, AlgoError> {
@@ -199,20 +193,18 @@ mod tests {
         }
     }
 
-    // The name gives the length: init takes a KeyLength of it alone, and refuses any other
     #[test]
-    fn init_takes_the_length_of_the_name_alone() {
+    fn init_rejects_even_the_fixed_key_length() {
         use crate::params::generate::KeyLength;
 
         let algo = DefaultAlgoBuilder::default().build();
         let mut generator: Box<dyn KeyGenerator> =
             algo.key_generator().get_by_name("AES128").unwrap();
 
-        generator.init(&KeyLength::new(16)).unwrap();
-        assert_eq!(key_of(generator.generate().unwrap().as_ref()).len(), 16);
-        for params in [&KeyLength::new(32) as &dyn Params, &OtherParams] {
+        for params in [&KeyLength::new(16) as &dyn Params, &OtherParams] {
             let error = generator.init(params).unwrap_err();
             assert_eq!(error.kind(), ErrorKind::InvalidParams);
         }
+        assert_eq!(key_of(generator.generate().unwrap().as_ref()).len(), 16);
     }
 }
