@@ -46,8 +46,8 @@ impl<O> IvParams for IvView<'_, O> {
 }
 
 // The one place that opens params with an IV. It gives the row's own params O and the IV of a
-// ParamsWithIvOwned<O>, or of a ParamsWithIvOwned<Arc<dyn Params>> whose inner params are an O,
-// and None for anything else
+// ParamsWithIvOwned<O>, or of a ParamsWithIvOwned of a Box or an Arc of dyn Params whose inner
+// params are an O, and None for anything else
 #[cfg(any(feature = "rc-cipher", feature = "gost28147", feature = "threefish"))]
 pub(super) fn own_and_iv<O: 'static>(params: &dyn Params) -> Option<(&O, &[u8])> {
     if let Some(params) = params
@@ -56,11 +56,18 @@ pub(super) fn own_and_iv<O: 'static>(params: &dyn Params) -> Option<(&O, &[u8])>
     {
         return Some((params.params(), params.iv()));
     }
-    let shared = params
-        .as_any()
-        .downcast_ref::<tc_block_modes::ParamsWithIvOwned<std::sync::Arc<dyn Params>>>()?;
-    let own = shared.params().as_any().downcast_ref::<O>()?;
-    Some((own, shared.iv()))
+    let any = params.as_any();
+    let (inner, iv): (&dyn Params, &[u8]) = if let Some(params) =
+        any.downcast_ref::<tc_block_modes::ParamsWithIvOwned<Box<dyn Params>>>()
+    {
+        (params.params().as_ref(), params.iv())
+    } else {
+        let params =
+            any.downcast_ref::<tc_block_modes::ParamsWithIvOwned<std::sync::Arc<dyn Params>>>()?;
+        (params.params().as_ref(), params.iv())
+    };
+    let own = inner.as_any().downcast_ref::<O>()?;
+    Some((own, iv))
 }
 
 // The own params O in a ParamsWithIvOwned<O>, given to the cipher as an IvView
