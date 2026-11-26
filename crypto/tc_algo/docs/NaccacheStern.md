@@ -5,17 +5,16 @@ decrypts to the sum of their messages, modulo `σ`, the product of the small pri
 message is a number below `σ`. It is built like RSA, on a modulus `n` of two secret primes, but each
 of those primes is one more than a product of many small primes.
 
-The `naccache-stern` feature of `tc_algo` has the rows. The keys and the params are in
-`tc_algo::params`.
+The `naccache-stern` feature of `tc_algo` has the rows. The params are in
+`tc_algo::params::generate` and the keys in `tc_algo::params::key`.
 
 ## Key pairs
 
 From the params to a new pair:
 
 ```rust
-use tc_algo::params::{
-    generate::NaccacheSternKeyGenerationParams, key::NaccacheSternPrivateKey, key::NaccacheSternPublicKey,
-};
+use tc_algo::params::generate::NaccacheSternKeyGenerationParams;
+use tc_algo::params::key::{NaccacheSternPrivateKey, NaccacheSternPublicKey};
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
 fn main() -> Result<(), AlgoError> {
@@ -47,16 +46,10 @@ crate's, that of the engine. The case of the name does not matter.
 ### Params
 
 The row takes a `NaccacheSternKeyGenerationParams`, and any other type is `InvalidParams`.
-`new(strength, certainty, count_small_primes)` holds:
-
-| Argument | What it is |
-|---|---|
-| `strength` | the size of `n` in bits |
-| `certainty` | how sure the prime tests are, at least 1 |
-| `count_small_primes` | how many small primes make up `σ` |
-
-`init` has `tc_naccache_stern` judge these, so a bad set, such as a `strength` too small for the
+`init` has `tc_naccache_stern` judge it, so a bad set, such as a `strength` too small for the
 count of small primes, is `InvalidParams` there.
+[NaccacheSternKeyGenerationParams](KeyPairGeneration/NaccacheSternKeyGenerationParams.md) lists the
+settings and their ranges.
 
 ### Using it
 
