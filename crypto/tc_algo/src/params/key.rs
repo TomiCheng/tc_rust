@@ -60,23 +60,6 @@ pub use tc_ec_key::EcPrivateKey;
 ))]
 pub use tc_ec_key::EcPublicKey;
 
-// The curves the keys are generic over, from the crates tc_algo builds them with
-#[cfg(any(
-    feature = "fp-custom",
-    feature = "fp-curve",
-    feature = "f2m-custom",
-    feature = "f2m-curve"
-))]
-pub use tc_ec_core;
-#[cfg(feature = "f2m-curve")]
-pub use tc_f2m_curve;
-#[cfg(feature = "f2m-custom")]
-pub use tc_f2m_custom;
-#[cfg(feature = "fp-curve")]
-pub use tc_fp_curve;
-#[cfg(feature = "fp-custom")]
-pub use tc_fp_custom;
-
 #[cfg(feature = "sm2")]
 pub use sm2::Sm2PrivateKey;
 #[cfg(feature = "sm2")]
