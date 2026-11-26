@@ -80,3 +80,21 @@ call change what `build()` gives:
   operating system's by default.
 
 More: [DefaultAlgoBuilder](docs/DefaultAlgoBuilder.md)
+
+## Factories of your own
+
+The factories are traits, so a program can bring its own, for example one backed by a hardware
+module, or one that offers a narrower set:
+
+- `Algo`, the root, has one method per factory. Each has a default that finds nothing, so an
+  implementation overrides only the factories it serves.
+- `AlgoBuilder` has `build()`, which makes an `Algo`; `DefaultAlgoBuilder` is one.
+- Each factory is a provider trait, such as `digest::DigestProvider` or `cipher::CipherProvider`,
+  with `algorithms()` and lookups by name and OID, `get_by_name` and `get_by_oid` for most and an
+  encapsulator and a decapsulator for KEM, and conveniences such as `calculate_by_name` built on
+  them.
+- Each row is an entry trait, such as `digest::DigestEntry`, over `EntryBase` for its name, aliases
+  and OIDs.
+- `Policy` decides which rows `algorithms()` lists.
+
+Code written against `&dyn Algo` takes the default factory or one of these alike.
