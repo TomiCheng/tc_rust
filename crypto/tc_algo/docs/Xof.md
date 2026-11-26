@@ -74,7 +74,7 @@ helpers ending in `_with` call `init` first, and the others do not call it.
 - `AsconCXofParams`: the customization string Z of SP 800-232, at most 256 bytes. See
   [Ascon-CXOF128](Xof/AsconCXof.md).
 - `Blake2xsParams`: a key of at most 32 bytes, a salt of 8 and a personalization of 8, each
-  optional. See [BLAKE2xs](Blake2xs.md).
+  optional. See [BLAKE2xs](Xof/Blake2xs.md).
 - `Blake3Params`: `keyed` with a 32-byte key, for the keyed hash, or `derive_key` with a context
   string, for key derivation, after Bouncy Castle's `Blake3Parameters`. See [BLAKE3](Blake3.md).
 
@@ -100,5 +100,5 @@ helpers ending in `_with` call `init` first, and the others do not call it.
 - [TupleHash](Xof/TupleHash.md): hashing a tuple, one element per update, and its two output modes
 - [ParallelHash](Xof/ParallelHash.md): the block size, and its two output modes
 - [Ascon-CXOF128](Xof/AsconCXof.md): the customization string
-- [BLAKE2xs](Blake2xs.md): key, salt and personalization
+- [BLAKE2xs](Xof/Blake2xs.md): key, salt and personalization
 - [BLAKE3](Blake3.md): keyed hash and key derivation
