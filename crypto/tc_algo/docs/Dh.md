@@ -11,7 +11,7 @@ The `dh` feature of `tc_algo` has the rows.
 The group is public, and both parties use the same one:
 
 ```rust
-use tc_algo::params::key::dh_groups::rfc3526_2048;
+use tc_algo::params::generate::dh_groups::rfc3526_2048;
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
 fn main() -> Result<(), AlgoError> {
@@ -47,7 +47,8 @@ fn main() -> Result<(), AlgoError> {
 
 ### Standard groups
 
-`tc_algo::params::key::dh_groups` has the groups of Bouncy Castle's `DHStandardGroups`.
+`tc_algo::params::generate::dh_groups` has the groups of Bouncy Castle's `DHStandardGroups`;
+`tc_algo::params::key::dh_groups` is the same module.
 [DhParameters](KeyPairGeneration/DhParameters.md) lists them, and how to build a group of your
 own.
 
@@ -56,7 +57,7 @@ own.
 From two key pairs to one shared secret. The keys of a pair go straight in as params:
 
 ```rust
-use tc_algo::params::key::dh_groups::rfc3526_2048;
+use tc_algo::params::generate::dh_groups::rfc3526_2048;
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
 fn main() -> Result<(), AlgoError> {

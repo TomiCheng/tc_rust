@@ -12,7 +12,7 @@ The `elgamal` feature of `tc_algo` has the rows. The keys and the group are in `
 From a group to a new pair:
 
 ```rust
-use tc_algo::params::key::dh_groups::rfc3526_2048;
+use tc_algo::params::generate::dh_groups::rfc3526_2048;
 use tc_algo::params::{key::ElGamalParameters, key::ElGamalPrivateKey, key::ElGamalPublicKey};
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
@@ -63,7 +63,7 @@ From a new pair to the decrypted message, with OAEP over SHA-256:
 
 ```rust
 use tc_algo::params::key::ElGamalParameters;
-use tc_algo::params::key::dh_groups::rfc3526_2048;
+use tc_algo::params::generate::dh_groups::rfc3526_2048;
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
 fn main() -> Result<(), AlgoError> {

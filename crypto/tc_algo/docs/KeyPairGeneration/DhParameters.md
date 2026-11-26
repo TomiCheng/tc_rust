@@ -1,23 +1,32 @@
 # DhParameters
 
 Enable the `dh` feature to use the `DH` key pair generator. Import `DhParameters` and the
-standard groups in `dh_groups` from `tc_algo::params::key`, together with the key types.
+standard groups in `dh_groups` from `tc_algo::params::generate`, and the key types from
+`tc_algo::params::key`.
+
+A `DhParameters` is both the input of the generator and part of each key, so
+`tc_algo::params::key` exports it and `dh_groups` too. The two paths name the same type.
 
 ## Generate a key pair
 
 ```rust
-use tc_algo::params::key::dh_groups::rfc7919_ffdhe2048;
+use tc_algo::params::generate::DhParameters;
+use tc_algo::params::generate::dh_groups::rfc7919_ffdhe2048;
 use tc_algo::params::key::{DhPrivateKey, DhPublicKey};
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
 fn main() -> Result<(), AlgoError> {
     let algo = DefaultAlgoBuilder::default().build();
-    let group = rfc7919_ffdhe2048();
+
+    // The group is the input of the generator
+    let group: DhParameters = rfc7919_ffdhe2048();
     let pair = algo.key_pair_generator().generate_by_name_with("DH", &group)?;
 
     let public = pair.public().as_any().downcast_ref::<DhPublicKey>().expect("a DhPublicKey");
     let private = pair.private().as_any().downcast_ref::<DhPrivateKey>().expect("a DhPrivateKey");
-    assert_eq!(public.params(), &group);
+
+    // Each key carries a copy of the group
+    let _: &DhParameters = public.params();
     assert_eq!(private.params(), &group);
     Ok(())
 }
@@ -62,6 +71,9 @@ column, or is drawn from below `q` where there is none.
 ## A group of your own
 
 The numbers are `PaddedBigUint` of `tc_bigint`, which `tc_algo` does not re-export.
+
+`tc_algo` does not generate new groups. To generate one, use `DhGroupGenerator` of `tc_dh_key`;
+it is slow, and RFC 7919 recommends a named group such as `rfc7919_ffdhe2048` instead.
 
 | Method | Setting | Default | Valid range |
 |---|---|---|---|
