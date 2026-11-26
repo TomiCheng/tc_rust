@@ -76,6 +76,43 @@ parameters return `InvalidParams` during `init` (except pre-built `DsaParameters
 - [`Gost3410KeyGenParams`](KeyPairGeneration/Gost3410KeyGenParams.md), [`Gost3410Parameters`](KeyPairGeneration/Gost3410KeyGenParams.md#a-domain-in-hand): Parameters
   to generate a new domain during `init` or an existing domain, for `GOST3410`.
 
+## Returns
+
+Every generator returns a `KeyPair` of two `Box<dyn Params>` whose concrete types match the Public
+key and Private key columns. Import the key types from `tc_algo::params::key`. You can pass the
+keys directly to an algorithm that accepts them (a cipher, a signer, an agreement or a KEM), or
+downcast them with `as_any().downcast_ref::<T>()` to read their values. Private keys wipe their
+secret values when dropped.
+
+- [`RsaKey`](KeyPairGeneration/RsaKeyGenParams.md): Both keys; `modulus()` and `exponent()`
+  through `RsaKeyParams`. The public key is `RsaKey::Core` with `e`, the private key `RsaKey::Crt`
+  with `d` and its CRT values.
+- [`EcPublicKey<C>`, `EcPrivateKey<C>`](KeyPairGeneration/EcKeyGenParams.md): The point `q()` and
+  the scalar `d()`, with the base point `g()`, on the curve type `C`; the curve aliases name `C` and
+  the keys, such as `EcSecp256r1PublicKey`.
+- [`DhPublicKey`, `DhPrivateKey`](KeyPairGeneration/DhParameters.md): The values `y()` and `x()`,
+  with the group `params()`.
+- [`MlKemPublicKey`, `MlKemPrivateKey`](KeyPairGeneration/MlKemParameters.md): The FIPS 203
+  `encoding()` and the set `params()`; the private key also has `seed()` and `public_key()`.
+- [`ElGamalPublicKey`, `ElGamalPrivateKey`](KeyPairGeneration/ElGamalParameters.md): The values
+  `y()` and `x()`, with the group `params()`.
+- [`NaccacheSternPublicKey`, `NaccacheSternPrivateKey`](KeyPairGeneration/NaccacheSternKeyGenerationParams.md):
+  `g()`, `n()` and `lower_sigma_bound()`; the private key has `public_key()`, `small_primes()` and
+  `phi_n()`.
+- [`Sm2PublicKey`, `Sm2PrivateKey`](Sm2.md): `EcPublicKey` and `EcPrivateKey` on `sm2p256v1`.
+- [`Ed25519PublicKey`, `Ed25519PrivateKey`](EdDSA.md), [`Ed448PublicKey`, `Ed448PrivateKey`](EdDSA.md):
+  The encoded `a()` and `k()` of RFC 8032; the private key also has `generate_public_key()`.
+- [`X25519PublicKey`, `X25519PrivateKey`](X25519.md), [`X448PublicKey`, `X448PrivateKey`](X25519.md):
+  The encoded `u()` and `k()` of RFC 7748; the private key also has `generate_public_key()`.
+- [`MlDsaPublicKey`, `MlDsaPrivateKey`](KeyPairGeneration/MlDsaParameters.md): The FIPS 204
+  `encoding()` and the set `params()`; the private key also has `seed()` and `public_key()`.
+- [`SlhDsaPublicKey`, `SlhDsaPrivateKey`](KeyPairGeneration/SlhDsaParameters.md): The FIPS 205
+  `encoding()` and the set `params()`; the private key also has `public_key()`.
+- [`DsaPublicKey`, `DsaPrivateKey`](KeyPairGeneration/DsaKeyGenParams.md): The values `y()` and
+  `x()`, with the domain `params()`.
+- [`Gost3410PublicKey`, `Gost3410PrivateKey`](KeyPairGeneration/Gost3410KeyGenParams.md): The
+  values `y()` and `x()`, with the domain `params()`.
+
 ## Using it
 
 - `get_by_name` and `get_by_oid` give a `KeyPairGenerator`, which is a `KeyPairGenerator` and a
