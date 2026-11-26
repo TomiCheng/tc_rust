@@ -4,7 +4,7 @@ A secret key is one key that both sides share and keep secret, for a block, stre
 a MAC or a key wrap. `algo.key_generator()` makes it from a random source. For a public key and a
 private key, see [Key pair generation](KeyPairGeneration.md).
 
-From a name to a new key, and the key straight into a cipher:
+The following example requires the `aes` feature. It generates a fresh key for a single AES-GCM message.
 
 ```rust
 use tc_algo::params::{cipher::AeadParamsOwned, generate::KeyLength, key::KeyOwned, key::KeyParams};
@@ -18,14 +18,15 @@ fn main() -> Result<(), AlgoError> {
     let key = key.as_any().downcast_ref::<KeyOwned>().expect("a KeyOwned");
     assert_eq!(key.key().len(), 32);
 
-    // The key in AES-GCM
+    // This fresh key is used once. Each further message under the same key needs a unique nonce.
     let params = AeadParamsOwned::new(key.key().to_vec(), vec![0; 12], 16, Vec::new());
     let sealed = algo.cipher().encrypt_by_name("AES/GCM/NOPADDING", &params, b"attack at dawn")?;
-    assert_eq!(sealed.len(), 14 + 16);
+    assert_eq!(sealed.len(), b"attack at dawn".len() + 16);
 
     // A key of any length, such as for HMAC
     let key = algo.key_generator().generate_by_name_with("KEY", &KeyLength::new(64))?;
-    assert!(key.as_any().is::<KeyOwned>());
+    let key = key.as_any().downcast_ref::<KeyOwned>().expect("a KeyOwned");
+    assert_eq!(key.key().len(), 64);
     Ok(())
 }
 ```
@@ -111,7 +112,9 @@ length, of ECB, CBC, CFB, OFB, CCM and GCM and more.
 
 ## Params
 
-- Without `init`, a row gives a key of its default length, with the defaults of its cipher.
+Key-generation inputs live in `tc_algo::params::generate`. `KeyLength::new(n)` takes bytes.
+
+- Algorithm-specific generators can generate immediately using the default length in the table.
 - `init` with a `KeyLength` sets another length the cipher takes, as the Bytes column gives them;
   a length it does not take is `InvalidParams`, and keeps the length before. `AES128`, `AES192` and
   `AES256` take the length of their name alone.
@@ -127,10 +130,11 @@ length, of ECB, CBC, CFB, OFB, CCM and GCM and more.
 
 ## Using it
 
-- `get_by_name` and `get_by_oid` give a `KeyGenerator`, a trait of this crate's own. `init` is
-  optional, and `generate` can be called again and again for new keys.
+- For one key, use `generate_by_name` or `generate_by_oid`. Their `_with` variants call `init`
+  with the supplied parameters before generating. For several keys with the same settings, keep
+  the generator from `get_by_name` or `get_by_oid` and call `generate()` for each new key.
 - Each key is behind `Box<dyn Params>`, of the type of the Returns column, which goes straight into
-  what takes it: `as_any().downcast_ref::<KeyOwned>()` gives a `KeyOwned`, and `key()` its bytes.
+  what takes it: `as_any().downcast_ref::<KeyOwned>()` returns an `Option<&KeyOwned>`, and `KeyParams::key()` borrows its bytes.
 - `DES`, `DESEDE` and `DESEDE3` keep to the rules of their keys, as Bouncy Castle's
   `DesKeyGenerator` and `DesEdeKeyGenerator` do: each byte has odd parity, a weak key is drawn
   again, and so is a DESede key whose parts repeat, which would be DES. `KEY` is only random
