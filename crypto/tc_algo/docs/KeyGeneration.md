@@ -137,13 +137,29 @@ is empty, calling `init` returns `InvalidParams`.
 - [`ThreefishKeyGenParams`](KeyGeneration/ThreefishKeyGenParams.md): An optional tweak
   for Threefish.
 
+## Returns
+
+Every generator returns a `Box<dyn Params>` whose concrete type matches the Returns column.
+Import the return types and their traits from `tc_algo::params::key`. You can pass the
+returned value directly to an algorithm that accepts it (for example, an ECB cipher, a MAC,
+or a key wrap), or downcast it with `as_any().downcast_ref::<T>()` to inspect its fields or
+wrap it with an IV or AEAD parameters.
+
+- [`KeyOwned`](Key/KeyOwned.md): Holds the generated key bytes; borrow them with `KeyParams::key()`.
+- [`Rc2ParamsOwned`](Key/Rc2ParamsOwned.md): Holds the generated key and its effective key
+  size in bits (`Rc2Params`).
+- [`Rc5ParamsOwned`](Key/Rc5ParamsOwned.md): Holds the generated key and its round count
+  (`Rc5Params`).
+- [`Gost28147ParamsOwned`](Key/Gost28147ParamsOwned.md): Holds the generated key and its
+  S-box (`Gost28147Params`).
+- [`ThreefishParamsOwned`](Key/ThreefishParamsOwned.md): Holds the generated key and its
+  tweak (`ThreefishParams`).
+
 ## Using it
 
 - For one key, use `generate_by_name` or `generate_by_oid`. Their `_with` variants call `init`
   with the supplied parameters before generating. For several keys with the same settings, keep
   the generator from `get_by_name` or `get_by_oid` and call `generate()` for each new key.
-- Each key is behind `Box<dyn Params>`, of the type of the Returns column, which goes straight into
-  what takes it: `as_any().downcast_ref::<KeyOwned>()` returns an `Option<&KeyOwned>`, and `KeyParams::key()` borrows its bytes.
 - `DES`, `DESEDE` and `DESEDE3` keep to the rules of their keys, as Bouncy Castle's
   `DesKeyGenerator` and `DesEdeKeyGenerator` do: each byte has odd parity, a weak key is drawn
   again, and so is a DESede key whose parts repeat, which would be DES. `KEY` is only random
