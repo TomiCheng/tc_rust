@@ -64,7 +64,7 @@ parameters return `InvalidParams` during `init` (except pre-built `DsaParameters
   optional public exponent and prime test certainty, for `RSA`.
 - [`EcKeyGenParams`](KeyPairGeneration/EcKeyGenParams.md): Named curve for `EC`.
 - [`DhParameters`](KeyPairGeneration/DhParameters.md): Diffie-Hellman group for `DH`.
-- [`MlKemParameters`](KEM.md): Parameter set for `ML-KEM`.
+- [`MlKemParameters`](KeyPairGeneration/MlKemParameters.md): Parameter set for `ML-KEM`.
 - [`ElGamalParameters`](KeyPairGeneration/ElGamalParameters.md): Group parameters for `ELGAMAL`.
 - [`NaccacheSternKeyGenerationParams`](NaccacheStern.md): Modulus size, certainty, and
   small-prime count for `NACCACHESTERN`.

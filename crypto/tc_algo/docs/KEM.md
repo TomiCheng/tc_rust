@@ -11,7 +11,7 @@ which RSA and DH are not.
 From a new pair to one shared secret. The `ml-kem` feature of `tc_algo` has the rows.
 
 ```rust
-use tc_algo::params::key::MlKemParameters;
+use tc_algo::params::generate::MlKemParameters;
 use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
 fn main() -> Result<(), AlgoError> {
@@ -50,13 +50,9 @@ The case of a name does not matter. The names and OIDs are those of Bouncy Castl
 ## Key pairs
 
 The key pair generator is one row, `ML-KEM`, also with the `ml-kem` feature. It takes an
-`MlKemParameters`, and any other type is `InvalidParams`:
-
-| Parameter set | Row of the KEM |
-|---|---|
-| `MlKemParameters::ML_KEM_512` | `ML-KEM-512` |
-| `MlKemParameters::ML_KEM_768` | `ML-KEM-768` |
-| `MlKemParameters::ML_KEM_1024` | `ML-KEM-1024` |
+`MlKemParameters`, and any other type is `InvalidParams`.
+[MlKemParameters](KeyPairGeneration/MlKemParameters.md) lists the three sets and the KEM row of
+each.
 
 There is no default, so `generate_by_name` and `generate_by_oid`, which do not call `init`, give
 `NotInitialized`. The keys draw from the source of `DefaultAlgoBuilder::set_rand`.
@@ -71,9 +67,9 @@ As in Bouncy Castle's `KemUtilities`, each row gives two objects: an `Encapsulat
 `decapsulate_by_name` do all of it at once.
 
 The encapsulator's `init` takes an `MlKemPublicKey` and the decapsulator's an `MlKemPrivateKey`,
-both in `tc_algo::params`, of the parameter set of the row. The keys of a pair go straight in. Any
-other type or parameter set is `InvalidParams`, and encapsulating or decapsulating before an `init`
-that succeeded is `NotInitialized`.
+both in `tc_algo::params::key`, of the parameter set of the row. The keys of a pair go straight in.
+Any other type or parameter set is `InvalidParams`, and encapsulating or decapsulating before an
+`init` that succeeded is `NotInitialized`.
 
 ## Using it
 
