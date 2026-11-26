@@ -5,26 +5,40 @@ The `des` feature has the rows.
 | Name | Aliases | OIDs | Params | Note |
 |---|---|---|---|---|
 | `DES/ECB/NOPADDING` | `DES/NONE/NOPADDING`, `DES//NOPADDING` |  | `KeyOwned` | weak |
-| `DES/ECB/PKCS7PADDING` | `DES/ECB/PKCS7`, `DES/ECB/PKCS5PADDING`, `DES/ECB/PKCS5`, `DES/NONE/PKCS7PADDING`, `DES/NONE/PKCS7`, `DES/NONE/PKCS5PADDING`, `DES/NONE/PKCS5`, `DES//PKCS7PADDING`, `DES//PKCS7`, `DES//PKCS5PADDING`, `DES//PKCS5`, `DES/ECB/RAW`, `DES/ECB/`, `DES/ECB`, `DES/NONE/RAW`, `DES/NONE/`, `DES/NONE`, `DES//RAW`, `DES//`, `DES/`, `DES` | `1.3.14.3.2.6` | `KeyOwned` | weak |
+| `DES/ECB/PKCS7PADDING` | \*P3 | `1.3.14.3.2.6` | `KeyOwned` | weak |
 | `DES/ECB/ISO10126PADDING` | `DES/ECB/ISO10126D2PADDING`, `DES/ECB/ISO10126-2PADDING`, `DES/NONE/ISO10126PADDING`, `DES/NONE/ISO10126D2PADDING`, `DES/NONE/ISO10126-2PADDING`, `DES//ISO10126PADDING`, `DES//ISO10126D2PADDING`, `DES//ISO10126-2PADDING` |  | `KeyOwned` | weak |
 | `DES/ECB/ISO7816-4PADDING` | `DES/ECB/ISO9797-1PADDING`, `DES/NONE/ISO7816-4PADDING`, `DES/NONE/ISO9797-1PADDING`, `DES//ISO7816-4PADDING`, `DES//ISO9797-1PADDING` |  | `KeyOwned` | weak |
 | `DES/ECB/X923PADDING` | `DES/ECB/X9.23PADDING`, `DES/NONE/X923PADDING`, `DES/NONE/X9.23PADDING`, `DES//X923PADDING`, `DES//X9.23PADDING` |  | `KeyOwned` | weak |
 | `DES/ECB/TBCPADDING` | `DES/NONE/TBCPADDING`, `DES//TBCPADDING` |  | `KeyOwned` | weak |
 | `DES/ECB/ZEROBYTEPADDING` | `DES/NONE/ZEROBYTEPADDING`, `DES//ZEROBYTEPADDING` |  | `KeyOwned` | weak |
 | `DES/ECB/WITHCTS` | `DES/NONE/WITHCTS`, `DES//WITHCTS` |  | `KeyOwned` | weak |
-| `DES/CBC/NOPADDING` |  |  | `KeyWithIvOwned` | weak |
-| `DES/CBC/PKCS7PADDING` | `DES/CBC/PKCS7`, `DES/CBC/PKCS5PADDING`, `DES/CBC/PKCS5`, `DES/CBC/RAW`, `DES/CBC/`, `DES/CBC`, `PBEWITHSHA1ANDDES-CBC`, `PBEWITHSHA1ANDDES` | `1.3.14.3.2.7`, `1.2.840.113549.1.5.10` | `KeyWithIvOwned` | weak |
-| `DES/CBC/ISO10126PADDING` | `DES/CBC/ISO10126D2PADDING`, `DES/CBC/ISO10126-2PADDING` |  | `KeyWithIvOwned` | weak |
-| `DES/CBC/ISO7816-4PADDING` | `DES/CBC/ISO9797-1PADDING` |  | `KeyWithIvOwned` | weak |
-| `DES/CBC/X923PADDING` | `DES/CBC/X9.23PADDING` |  | `KeyWithIvOwned` | weak |
-| `DES/CBC/TBCPADDING` |  |  | `KeyWithIvOwned` | weak |
-| `DES/CBC/ZEROBYTEPADDING` |  |  | `KeyWithIvOwned` | weak |
-| `DES/CBC/WITHCTS` | `DES/CTS/NOPADDING`, `DES/CTS/RAW`, `DES/CTS/`, `DES/CTS` |  | `KeyWithIvOwned` | weak |
-| `DES/CFB/NOPADDING` | `DES/CFB/RAW`, `DES/CFB/`, `DES/CFB`, `DES/CFB{8..64}/NOPADDING`, `DES/CFB{8..64}/RAW`, `DES/CFB{8..64}/`, `DES/CFB{8..64}` | `1.3.14.3.2.9` | `KeyWithIvOwned` | weak |
-| `DES/OFB/NOPADDING` | `DES/OFB/RAW`, `DES/OFB/`, `DES/OFB`, `DES/OFB{8..64}/NOPADDING`, `DES/OFB{8..64}/RAW`, `DES/OFB{8..64}/`, `DES/OFB{8..64}` | `1.3.14.3.2.8` | `KeyWithIvOwned` | weak |
-| `DES/CTR/NOPADDING` | `DES/SIC/NOPADDING`, `DES/CTR/RAW`, `DES/CTR/`, `DES/CTR`, `DES/SIC/RAW`, `DES/SIC/`, `DES/SIC` |  | `KeyWithIvOwned` | weak |
-| `DES/GOFB/NOPADDING` | `DES/GOFB/RAW`, `DES/GOFB/`, `DES/GOFB` |  | `KeyWithIvOwned` | weak |
-| `DES/OPENPGPCFB/NOPADDING` | `DES/OPENPGPCFB/RAW`, `DES/OPENPGPCFB/`, `DES/OPENPGPCFB` |  | `KeyWithIvOwned` | weak |
+| `DES/CBC/NOPADDING` |  |  | \*P1 | weak |
+| `DES/CBC/PKCS7PADDING` | \*P2 | `1.3.14.3.2.7`, `1.2.840.113549.1.5.10` | \*P1 | weak |
+| `DES/CBC/ISO10126PADDING` | `DES/CBC/ISO10126D2PADDING`, `DES/CBC/ISO10126-2PADDING` |  | \*P1 | weak |
+| `DES/CBC/ISO7816-4PADDING` | `DES/CBC/ISO9797-1PADDING` |  | \*P1 | weak |
+| `DES/CBC/X923PADDING` | `DES/CBC/X9.23PADDING` |  | \*P1 | weak |
+| `DES/CBC/TBCPADDING` |  |  | \*P1 | weak |
+| `DES/CBC/ZEROBYTEPADDING` |  |  | \*P1 | weak |
+| `DES/CBC/WITHCTS` | `DES/CTS/NOPADDING`, `DES/CTS/RAW`, `DES/CTS/`, `DES/CTS` |  | \*P1 | weak |
+| `DES/CFB/NOPADDING` | `DES/CFB/RAW`, `DES/CFB/`, `DES/CFB`, `DES/CFB{8..64}/NOPADDING`, `DES/CFB{8..64}/RAW`, `DES/CFB{8..64}/`, `DES/CFB{8..64}` | `1.3.14.3.2.9` | \*P1 | weak |
+| `DES/OFB/NOPADDING` | `DES/OFB/RAW`, `DES/OFB/`, `DES/OFB`, `DES/OFB{8..64}/NOPADDING`, `DES/OFB{8..64}/RAW`, `DES/OFB{8..64}/`, `DES/OFB{8..64}` | `1.3.14.3.2.8` | \*P1 | weak |
+| `DES/CTR/NOPADDING` | `DES/SIC/NOPADDING`, `DES/CTR/RAW`, `DES/CTR/`, `DES/CTR`, `DES/SIC/RAW`, `DES/SIC/`, `DES/SIC` |  | \*P1 | weak |
+| `DES/GOFB/NOPADDING` | `DES/GOFB/RAW`, `DES/GOFB/`, `DES/GOFB` |  | \*P1 | weak |
+| `DES/OPENPGPCFB/NOPADDING` | `DES/OPENPGPCFB/RAW`, `DES/OPENPGPCFB/`, `DES/OPENPGPCFB` |  | \*P1 | weak |
 
-The OIDs are OIW's, and as in Bouncy Castle those of ECB and CBC mean PKCS#7 padding. CBC with PKCS#7
+The OIDs are OIW's, and as in Bouncy Castle those of ECB and CBC mean PKCS#7 padding. CBC with
+PKCS#7
 also has the PBE names and OID of PKCS#5's DES; see [PBE names](../BlockCipher.md#pbe-names).
+
+P1: The modes with an IV accept `KeyWithIvOwned`, `ParamsWithIvOwned<KeyOwned>`, or
+`ParamsWithIvOwned` holding a `Box<dyn Params>` or `Arc<dyn Params>` containing `KeyOwned`. `DES`
+generates a `KeyOwned`. The `Box` goes with one message. An `Arc` lets one key serve many messages,
+each with a fresh IV, without copying the key.
+
+P2: `DES/CBC/PKCS7`, `DES/CBC/PKCS5PADDING`, `DES/CBC/PKCS5`, `DES/CBC/RAW`, `DES/CBC/`, `DES/CBC`,
+`PBEWITHSHA1ANDDES-CBC`, `PBEWITHSHA1ANDDES`
+
+P3: `DES/ECB/PKCS7`, `DES/ECB/PKCS5PADDING`, `DES/ECB/PKCS5`, `DES/NONE/PKCS7PADDING`,
+`DES/NONE/PKCS7`, `DES/NONE/PKCS5PADDING`, `DES/NONE/PKCS5`, `DES//PKCS7PADDING`, `DES//PKCS7`,
+`DES//PKCS5PADDING`, `DES//PKCS5`, `DES/ECB/RAW`, `DES/ECB/`, `DES/ECB`, `DES/NONE/RAW`,
+`DES/NONE/`, `DES/NONE`, `DES//RAW`, `DES//`, `DES/`, `DES`
