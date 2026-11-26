@@ -1,8 +1,8 @@
 # BLAKE3
 
-BLAKE3 is a fast hash with output of any length, and three modes: a plain hash, a keyed hash, and
-key derivation. `init` picks the mode with `Blake3Params`, after Bouncy Castle's
-`Blake3Parameters`.
+The factory returns a BLAKE3 hasher in plain hash mode. You can call `try_update` immediately.
+To authenticate a message or derive a key, select the corresponding mode with `init` and
+`Blake3Params`. All three modes support extendable output. [BLAKE3 project](https://github.com/BLAKE3-team/BLAKE3)
 
 `BLAKE3` is behind the `blake` feature.
 
@@ -16,7 +16,7 @@ use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
 fn main() -> Result<(), AlgoError> {
     let algo = DefaultAlgoBuilder::default().build();
-    let key = vec![0x42; 32];
+    let key = vec![0x42; 32]; // Example key
 
     let mut xof = algo.xof().get_by_name("BLAKE3")?;
     xof.init(&Blake3Params::keyed(key))?;
@@ -28,9 +28,7 @@ fn main() -> Result<(), AlgoError> {
 
 ## Key derivation
 
-With a context string, the input is key material and the output a key derived from it. The context
-is fixed in the application's source, and names the application and the purpose of the key, so
-that two uses never derive the same key.
+With a context string, the input is key material and the output a key derived from it. Use a fixed, public context string that names the application and the purpose of the derived key.
 
 ```rust
 use tc_algo::params::xof::Blake3Params;
@@ -38,7 +36,7 @@ use tc_algo::{AlgoBuilder, AlgoError, DefaultAlgoBuilder};
 
 fn main() -> Result<(), AlgoError> {
     let algo = DefaultAlgoBuilder::default().build();
-    let shared_secret = [0x17; 32];
+    let shared_secret = [0x17; 32]; // Example key material
 
     let mut xof = algo.xof().get_by_name("BLAKE3")?;
     let context = b"MyApp 2026-11-12 session encryption key".to_vec();
@@ -51,7 +49,7 @@ fn main() -> Result<(), AlgoError> {
 
 ## Params
 
-`Blake3Params`, from `tc_algo::params`, one of:
+`Blake3Params`, is in `tc_algo::params::xof`. Choose one of its two constructors.
 
 - `keyed(Vec<u8>)`: a key of exactly 32 bytes, for the keyed hash. The key is wiped when the
   params are dropped.
@@ -59,12 +57,11 @@ fn main() -> Result<(), AlgoError> {
 
 A key of another length is `InvalidParams` from `init`, as are params of another type.
 
-## Using it
+## Output and reset
 
-- `init` is optional: without it, BLAKE3 is the plain hash.
-- `init` starts a new message, and `try_reset` keeps the mode it set.
-- The message may come in any number of updates, and the output be taken in pieces with
-  `try_output`; a shorter output is the start of a longer one.
-- As a `Digest`, `finalize` gives 32 bytes.
-- The context is not a secret and not a salt: it should not hold data that changes from one call to
-  the next. Put that in the input.
+`finalize()` returns 32 bytes. Use `finalize_len(n)` to request a length in bytes.
+For the same mode, parameters and message, a 32-byte result is the prefix of a 64-byte result.
+
+Use `try_output` to read successive chunks. After reading a chunk, `finalize_len(n)` returns
+the next `n` bytes and resets the message. Both finalization and `try_reset` preserve the
+selected mode and its parameters.
