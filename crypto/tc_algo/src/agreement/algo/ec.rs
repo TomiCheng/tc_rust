@@ -35,6 +35,7 @@ type KdfTry =
 // is made by get_with_kdf_by_name or get_with_kdf_by_oid, as Bouncy Castle's
 // GetBasicAgreementWithKdf makes it, and exists when the features of both its agreement and its
 // digest are on
+#[allow(clippy::vec_init_then_push, reason = "each push is behind a feature")]
 pub(super) fn ec(_context: &DefaultAlgoContext) -> Vec<Box<dyn AgreementEntry>> {
     let mut rows: Vec<Box<dyn AgreementEntry>> = Vec::new();
     #[cfg(all(

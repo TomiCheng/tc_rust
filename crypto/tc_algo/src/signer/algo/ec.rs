@@ -419,7 +419,14 @@ fn ecgost3410(rand: Rand) -> Vec<Box<dyn SignerEntry>> {
         gost::<C, _>(params, rand, tc_gost3411::Gost3411_2012_512Digest::new())
     }
 
-    let rows: [(&str, &[&str], &[&str], &'static [EcgTry]); 3] = [
+    // A name, its aliases, its OIDs and the digests it tries
+    type EcgRow = (
+        &'static str,
+        &'static [&'static str],
+        &'static [&'static str],
+        &'static [EcgTry],
+    );
+    let rows: [EcgRow; 3] = [
         (
             "ECGOST3410",
             &[
@@ -551,7 +558,6 @@ mod tests {
     }
 
     // NONEwithECDSA signs the hash it is given, as SHA-256withECDSA signs the hash of the message
-    #[cfg(all())]
     #[test]
     fn none_with_ecdsa_over_the_hash_verifies_as_sha256_with_ecdsa() {
         let pair = pair("secp256r1");

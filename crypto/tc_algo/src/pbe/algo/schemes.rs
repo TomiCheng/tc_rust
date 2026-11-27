@@ -23,6 +23,7 @@ type MakeGenerator = fn(Scheme, &PbeParamsRef<'_>) -> Result<Generator, PbeError
 // of its digest, as there. The lengths are those of GenerateCipherParameters, and the keys of DES
 // and DESede get odd parity, as FixDesParity gives them. PBEwithSHA-1andIDEA-CBC and
 // PBEwithSHA-1andTWOFISH-CBC are left out: Bouncy Castle names them but generates no params for them
+#[allow(clippy::vec_init_then_push, reason = "each push is behind a feature")]
 pub(super) fn schemes(_context: &DefaultAlgoContext) -> Vec<Box<dyn PbeEntry>> {
     #[allow(unused_mut, reason = "empty when no digest and cipher are on")]
     let mut rows: Vec<Box<dyn PbeEntry>> = Vec::new();

@@ -114,7 +114,7 @@ pub(super) fn rsa(context: &DefaultAlgoContext) -> Vec<Box<dyn SignerEntry>> {
         "NONEwithRSA".to_string(),
         ["RSA", "RSAWITHNONE", "RAWRSA"].map(String::from).to_vec(),
         &[],
-        Arc::new(move |params| RawRsa::new(rsa_key(params)?, rand)),
+        Arc::new(move |params| RawRsa::boxed(rsa_key(params)?, rand)),
     )];
     for digest in digests(context) {
         let base = signer_digest_name(&*digest);
@@ -251,7 +251,7 @@ struct RawRsa {
 }
 
 impl RawRsa {
-    fn new(key: &RsaKey, rand: Rand) -> Result<Box<dyn Inner>, AlgoError> {
+    fn boxed(key: &RsaKey, rand: Rand) -> Result<Box<dyn Inner>, AlgoError> {
         let private = key.is_private_key();
         let direction = if private {
             CipherDirection::Encrypt

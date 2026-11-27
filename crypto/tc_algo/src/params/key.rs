@@ -42,9 +42,9 @@ pub use tc_threefish::ThreefishParamsOwned;
 #[cfg(feature = "rsa")]
 pub use tc_rsa::RsaKey;
 #[cfg(feature = "rsa")]
-pub use tc_rsa::RsaKeyParams;
-#[cfg(feature = "rsa")]
 pub use tc_rsa::RsaKeyOwned;
+#[cfg(feature = "rsa")]
+pub use tc_rsa::RsaKeyParams;
 #[cfg(feature = "rsa")]
 pub use tc_rsa::RsaPrivateCrtKeyOwned;
 #[cfg(feature = "rsa")]
@@ -108,11 +108,11 @@ pub use tc_dsa_signer::DsaPublicKey;
 #[cfg(feature = "gost3410")]
 pub use tc_gost3410::Gost3410Parameters;
 #[cfg(feature = "gost3410")]
-pub use tc_gost3410::named_domains as gost3410_domains;
-#[cfg(feature = "gost3410")]
 pub use tc_gost3410::Gost3410PrivateKey;
 #[cfg(feature = "gost3410")]
 pub use tc_gost3410::Gost3410PublicKey;
+#[cfg(feature = "gost3410")]
+pub use tc_gost3410::named_domains as gost3410_domains;
 
 #[cfg(feature = "elgamal")]
 pub use super::generate::elgamal_groups;

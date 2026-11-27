@@ -1,4 +1,3 @@
-#[cfg(all())]
 mod row;
 
 #[cfg(feature = "ascon-hash")]
@@ -17,7 +16,6 @@ mod keccak;
 mod md;
 #[cfg(feature = "misc-digest")]
 mod misc;
-#[cfg(all())]
 mod null;
 #[cfg(feature = "ripemd")]
 mod ripemd;
@@ -166,6 +164,5 @@ pub(crate) const BUILT_IN: &[CreateRows] = &[
     haraka::haraka256,
     #[cfg(feature = "misc-digest")]
     haraka::haraka512,
-    #[cfg(all())]
     null::null_digest,
 ];

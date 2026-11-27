@@ -9,6 +9,7 @@ type Init = fn(&dyn Params) -> Option<Result<Box<dyn Inner>, AlgoError>>;
 // The rows of X25519 and X448 of RFC 7748, to give to DefaultAlgoBuilder::reg_agreement, with the
 // names and OIDs of Bouncy Castle's AgreementUtilities. The params of each are its private key,
 // the other side's key its public key; the secret is 32 or 56 bytes
+#[allow(clippy::vec_init_then_push, reason = "each push is behind a feature")]
 pub(super) fn cfrg(_context: &DefaultAlgoContext) -> Vec<Box<dyn AgreementEntry>> {
     let mut rows: Vec<Box<dyn AgreementEntry>> = Vec::new();
     #[cfg(feature = "cfrg-curves")]
