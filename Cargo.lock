@@ -779,7 +779,6 @@ dependencies = [
  "tc_gost3411",
  "tc_grain128_aead",
  "tc_hc",
- "tc_ies",
  "tc_iso9797_mac",
  "tc_kdf",
  "tc_keccak",
@@ -1130,15 +1129,19 @@ dependencies = [
 
 [[package]]
 name = "tc_buffered_cipher"
-version = "0.2.0"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8ac8ec816d72d4165c0005c3de690f3e6def1135b1fa66156950b4c3bd1f60c0"
+checksum = "a8c4d0c1f66673ec8958be21f9d1d46724da33432e2f133c84b40b598e0756df"
 dependencies = [
  "tc_aead_cipher",
+ "tc_agreement",
  "tc_asym_cipher",
  "tc_block_cipher",
  "tc_block_modes",
  "tc_block_padding",
+ "tc_constant_time",
+ "tc_kdf",
+ "tc_macs",
  "tc_stream_cipher",
  "tc_zeroize",
 ]
@@ -1693,26 +1696,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "886cb21817424d3519982f286c4961b1164283668debc304346831a5e6f31ac3"
 dependencies = [
  "tc_stream_cipher",
- "tc_zeroize",
-]
-
-[[package]]
-name = "tc_ies"
-version = "0.1.0"
-dependencies = [
- "tc_agreement",
- "tc_bigint",
- "tc_block_cipher",
- "tc_block_modes",
- "tc_buffered_cipher",
- "tc_constant_time",
- "tc_ec_agreement",
- "tc_ec_key",
- "tc_fp_custom",
- "tc_kdf",
- "tc_macs",
- "tc_sha",
- "tc_twofish",
  "tc_zeroize",
 ]
 

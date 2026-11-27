@@ -3,7 +3,6 @@ resolver = "3"
 members = [
     "asn1/*",
     "crypto/tc_*",
-    "ies/*",
     "kdf/*",
     "security/*",
     "signer/*",

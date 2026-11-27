@@ -1,6 +1,6 @@
 use tc_asn1::Asn1Oid;
+use tc_buffered_cipher::{IesEngine, IesError, IesParamsRef};
 use tc_dh::DhBasicAgreement;
-use tc_ies::{IesEngine, IesError, IesParamsRef};
 use tc_kdf::kdf::Kdf2;
 use tc_macs::{Hmac, Mac};
 use tc_sha::Sha1Digest;
@@ -143,7 +143,7 @@ impl IesInit for DhIes {
             .ok_or(AlgoError::new(ErrorKind::InvalidParams))?;
         self.0
             .init(
-                direction.into(),
+                direction,
                 params.private_key(),
                 params.public_key(),
                 &IesParamsRef::new(
@@ -171,9 +171,8 @@ fn algo_error(error: IesError) -> AlgoError {
 
 #[cfg(test)]
 mod tests {
-    use tc_block_cipher::CipherDirection as BlockDirection;
+    use tc_buffered_cipher::{IesEngine, IesParamsRef};
     use tc_dh::DhBasicAgreement;
-    use tc_ies::{IesEngine, IesParamsRef};
     use tc_kdf::kdf::Kdf2;
     use tc_macs::Hmac;
     use tc_sha::Sha1Digest;
@@ -252,7 +251,7 @@ mod tests {
         );
         engine
             .init(
-                BlockDirection::Encrypt,
+                CipherDirection::Encrypt,
                 &private(&alice),
                 &public(&bob),
                 &IesParamsRef::new(DERIVATION, ENCODING, MAC_KEY_BITS),

@@ -89,7 +89,7 @@ dh = ["dep:tc_bigint", "dep:tc_dh", "dep:tc_dh_key"]
 kdf = ["tc_macs/hmac", "tc_macs/alloc"]
 pbe = ["dep:tc_pbe", "dep:tc_block_modes"]
 drbg = ["dep:tc_drbg", "tc_macs/hmac", "tc_macs/alloc"]
-ies = ["dh", "dep:tc_ies", "tc_macs/hmac", "tc_macs/alloc", "dep:tc_sha"]
+ies = ["dh", "tc_buffered_cipher/ies", "tc_macs/hmac", "tc_macs/alloc", "dep:tc_sha"]
 
 [dependencies]
 rand = { version = "0.10", default-features = false, features = ["sys_rng"] }
@@ -98,7 +98,7 @@ tc_aead_cipher = { version = "0.1.1", features = ["alloc"], optional = true }
 tc_asn1 = "0.1.2"
 tc_block_cipher = { version = "0.1.0", features = ["alloc"] }
 tc_block_modes = { version = "0.1.2", features = ["alloc"], optional = true }
-tc_buffered_cipher = { version = "0.2.0", features = ["alloc"] }
+tc_buffered_cipher = { version = "0.2.1", features = ["alloc"] }
 tc_cts_modes = { version = "0.1.0", features = ["alloc"], optional = true }
 tc_constant_time = "0.1.0"
 tc_zeroize = { version = "0.1.0", features = ["alloc"] }
@@ -178,7 +178,6 @@ tc_ml_dsa = { version = "0.1.0", path = "../../signer/tc_ml_dsa", optional = tru
 tc_slh_dsa = { version = "0.1.0", path = "../../signer/tc_slh_dsa", optional = true }
 
 # IES
-tc_ies = { version = "0.1.0", path = "../../ies/tc_ies", optional = true }
 
 # DRBG
 tc_drbg = { version = "0.1.0", optional = true }

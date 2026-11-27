@@ -3,10 +3,10 @@ use core::error::Error;
 use tc_agreement::{Agreement, AgreementInit};
 use tc_asn1::Asn1Oid;
 use tc_bigint::PaddedBigUint;
+use tc_buffered_cipher::{IesEngine, IesError, IesParamsRef};
 use tc_ec_agreement::EcdhBasicAgreement;
 use tc_ec_core::Curve;
 use tc_ec_key::{EcPrivateKey, EcPublicKey};
-use tc_ies::{IesEngine, IesError, IesParamsRef};
 use tc_kdf::kdf::Kdf2;
 use tc_macs::Hmac;
 use tc_sha::Sha1Digest;
@@ -90,7 +90,7 @@ where
         Hmac::new(Sha1Digest::new()),
     );
     let result = engine.init(
-        direction.into(),
+        direction,
         private_key,
         public_key,
         &IesParamsRef::new(
@@ -133,7 +133,6 @@ impl IesInit for EcIes {
 mod tests {
     use std::sync::LazyLock;
 
-    use tc_asn1::Asn1Oid;
     use tc_bigint::{ArrayEncoding, PaddedBigUint};
     use tc_ec_key::{EcPrivateKey, EcPublicKey};
     use tc_fp_custom::named_curves::SECP192R1;
@@ -174,6 +173,12 @@ mod tests {
     }
 
     // Each side puts its own private key with the other's public key; both reach the same Z
+    #[cfg(all(
+        feature = "fp-custom",
+        feature = "fp-curve",
+        feature = "f2m-custom",
+        feature = "f2m-curve"
+    ))]
     fn round_trip(curve: &EcKeyGenParams) {
         let (alice, bob) = pairs(curve);
         let (alice_public, alice_private) = alice.into_parts();
@@ -226,8 +231,16 @@ mod tests {
 
     // One row takes the keys of the EC generator on a curve of each kind: a special prime curve,
     // a generic one, a special binary one, a generic one, and those of SM2 and DSTU 4145
+    #[cfg(all(
+        feature = "fp-custom",
+        feature = "fp-curve",
+        feature = "f2m-custom",
+        feature = "f2m-curve"
+    ))]
     #[test]
     fn the_row_takes_keys_of_the_ec_generator_on_every_kind_of_curve() {
+        use tc_asn1::Asn1Oid;
+
         for curve in [
             EcKeyGenParams::new("P-256"),
             EcKeyGenParams::new("brainpoolP256r1"),
